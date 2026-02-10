@@ -1,11 +1,11 @@
-"""
-<!-- Input: URL, Output Path (Optional), Wait Flag -->
-<!-- Output: Markdown File, Metadata (YAML Frontmatter) -->
-<!-- Pos: scripts/main.ts. CLI Entry Point for CDP Capturer. -->
-
-!!! Maintenance Protocol: This script orchestrates Chrome launch and page evaluation.
-!!! Dependency: Requires 'bun' runtime and local Chrome installation.
-"""
+/**
+ * <!-- Input: URL, Output Path (Optional), Wait Flag -->
+ * <!-- Output: Markdown File, Metadata (YAML Frontmatter) -->
+ * <!-- Pos: scripts/main.ts. CLI Entry Point for CDP Capturer. -->
+ *
+ * !!! Maintenance Protocol: This script orchestrates Chrome launch and page evaluation.
+ * !!! Dependency: Requires 'bun' runtime and local Chrome installation.
+ */
 
 import { createInterface } from "node:readline";
 import { writeFile, mkdir, access } from "node:fs/promises";
@@ -57,12 +57,12 @@ function parseArgs(argv: string[]): Args {
 function generateSlug(title: string, url: string): string {
   const text = title || new URL(url).pathname.replace(/\//g, "-");
   return text
-    .toLowerCase()
-    .replace(/[^\w\s-]/g, "")
+    .replace(/[\\\/:*?"<>|]/g, "") // Remove illegal filename characters
+    .trim()
     .replace(/\s+/g, "-")
     .replace(/-+/g, "-")
     .replace(/^-|-$/g, "")
-    .slice(0, 50) || "page";
+    .slice(0, 150) || "page";
 }
 
 function formatTimestamp(): string {
@@ -72,25 +72,67 @@ function formatTimestamp(): string {
 }
 
 async function generateOutputPath(url: string, title: string): Promise<string> {
-  const domain = new URL(url).hostname.replace(/^www\./, "");
   const slug = generateSlug(title, url);
-  const dataDir = resolveUrlToMarkdownDataDir();
-  const basePath = path.join(dataDir, domain, `${slug}.md`);
+  const dataDir = process.cwd(); // Save to current directory
+  const basePath = path.join(dataDir, `${slug}.md`);
 
   if (!(await fileExists(basePath))) {
     return basePath;
   }
 
   const timestampSlug = `${slug}-${formatTimestamp()}`;
-  return path.join(dataDir, domain, `${timestampSlug}.md`);
+  return path.join(dataDir, `${timestampSlug}.md`);
 }
 
-async function waitForUserSignal(): Promise<void> {
-  console.log("Page opened. Press Enter when ready to capture...");
+async function waitForPageReady(cdp: CdpConnection, sessionId: string, targetUrl: string): Promise<void> {
+  console.log("Page opened. Please log in if necessary.");
+  console.log("Waiting for target page to load... (Or press Enter to force capture)");
+
   const rl = createInterface({ input: process.stdin, output: process.stdout });
-  await new Promise<void>((resolve) => {
-    rl.once("line", () => { rl.close(); resolve(); });
+  let resolved = false;
+
+  const manualSignal = new Promise<void>((resolve) => {
+    rl.once("line", () => {
+      if (!resolved) {
+        console.log("Manual capture triggered.");
+        resolved = true;
+        rl.close();
+        resolve();
+      }
+    });
   });
+
+  const autoCheck = new Promise<void>(async (resolve) => {
+    const targetHostname = new URL(targetUrl).hostname;
+    
+    while (!resolved) {
+      try {
+        const expr = `({ url: window.location.href, title: document.title, ready: document.readyState })`;
+        // Use a short timeout for the check to avoid blocking
+        const state = await evaluateScript<{url: string, title: string, ready: string}>(cdp, sessionId, expr, 1000);
+        
+        // Logic: We are back on the target domain (e.g. draft.blogger.com) AND title doesn't look like a login page
+        if (state && state.url && state.url.includes(targetHostname)) {
+           const isLoginPage = state.title.toLowerCase().includes("sign in") || state.url.includes("accounts.google.com");
+           
+           if (!isLoginPage && state.ready === 'complete') {
+             console.log(`\nAuto-detected target page: "${state.title}"`);
+             console.log("Giving it 5 seconds to finish rendering and load iframes...");
+             await sleep(5000); // Wait for client-side hydration and iframes
+             resolved = true;
+             rl.close();
+             resolve();
+             return;
+           }
+        }
+      } catch (e) {
+        // Ignore evaluation errors during navigation/reloads
+      }
+      await sleep(1000);
+    }
+  });
+
+  await Promise.race([manualSignal, autoCheck]);
 }
 
 async function captureUrl(args: Args): Promise<ConversionResult> {
@@ -111,7 +153,7 @@ async function captureUrl(args: Args): Promise<ConversionResult> {
     await cdp.send("Page.enable", {}, { sessionId });
 
     if (args.wait) {
-      await waitForUserSignal();
+      await waitForPageReady(cdp, sessionId, args.url);
     } else {
       console.log("Waiting for page to load...");
       await Promise.race([
@@ -130,16 +172,44 @@ async function captureUrl(args: Args): Promise<ConversionResult> {
       cdp, sessionId, cleanupAndExtractScript, args.timeout
     );
 
+    let combinedHtml = extracted.html;
+    let combinedTitle = extracted.title || "";
+
+    // Try to find content in other targets (iframes that might be separate targets)
+    try {
+      for (const target of targets.targetInfos) {
+        if (target.type === "iframe" || (target.type === "page" && target.targetId !== pageTarget.targetId)) {
+          try {
+            const { sessionId: frameSessionId } = await cdp.send<{ sessionId: string }>("Target.attachToTarget", { targetId: target.targetId, flatten: true });
+            await cdp.send("Runtime.enable", {}, { sessionId: frameSessionId });
+            const frameContent = await evaluateScript<{ title: string; html: string }>(
+              cdp, frameSessionId, "({ title: document.title, html: document.body ? document.body.innerHTML : '' })", 5000
+            );
+            if (frameContent.html && frameContent.html.length > 200) {
+              console.log(`Captured additional content from target: ${target.url || frameContent.title}`);
+              combinedHtml += `\n<!-- Target Content Start: ${target.url} -->\n${frameContent.html}\n<!-- Target Content End -->\n`;
+              if (!combinedTitle || combinedTitle === "Post: Preview") {
+                combinedTitle = frameContent.title || combinedTitle;
+              }
+            }
+            await cdp.send("Target.detachFromTarget", { sessionId: frameSessionId });
+          } catch (e) {
+            // Skip frames that fail to attach or evaluate
+          }
+        }
+      }
+    } catch (e) {}
+
     const metadata: PageMetadata = {
       url: args.url,
-      title: extracted.title || "",
+      title: combinedTitle,
       description: extracted.description,
       author: extracted.author,
       published: extracted.published,
       captured_at: new Date().toISOString()
     };
 
-    const markdown = htmlToMarkdown(extracted.html);
+    const markdown = htmlToMarkdown(combinedHtml);
     return { metadata, markdown };
   } finally {
     if (cdp) {
@@ -168,9 +238,14 @@ async function main(): Promise<void> {
   console.log(`Mode: ${args.wait ? "wait" : "auto"}`);
 
   const result = await captureUrl(args);
-  const outputPath = args.output || await generateOutputPath(args.url, result.metadata.title);
+  const outputPath = path.resolve(args.output || await generateOutputPath(args.url, result.metadata.title));
   const outputDir = path.dirname(outputPath);
-  await mkdir(outputDir, { recursive: true });
+  
+  try {
+    await mkdir(outputDir, { recursive: true });
+  } catch (e: any) {
+    if (e.code !== 'EEXIST') throw e;
+  }
 
   const document = createMarkdownDocument(result);
   await writeFile(outputPath, document, "utf-8");

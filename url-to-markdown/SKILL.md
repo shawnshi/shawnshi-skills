@@ -1,5 +1,5 @@
 ---
-name: baoyu-url-to-markdown
+name: url-to-markdown
 description: Fetch any URL (including JS-heavy or login-gated pages) and convert to clean markdown. Uses Chrome CDP for high-fidelity rendering.
 ---
 
@@ -17,13 +17,13 @@ High-fidelity web scraper that converts HTML to Markdown. Supports JavaScript re
 ### 1. Standard Capture (Public Pages)
 For news, blogs, or documentation:
 ```bash
-npx -y bun C:\Users\shich\.gemini\skills\baoyu-url-to-markdown\scripts\main.ts "<URL>"
+npx -y bun C:\Users\shich\.gemini\skills\url-to-markdown\scripts\main.ts "<URL>"
 ```
 
 ### 2. Login-Gated Capture (Private Pages)
 For Twitter, Substack, or internal dashboards:
 ```bash
-npx -y bun C:\Users\shich\.gemini\skills\baoyu-url-to-markdown\scripts\main.ts "<URL>" --wait
+npx -y bun C:\Users\shich\.gemini\skills\url-to-markdown\scripts\main.ts "<URL>" --wait
 ```
 **Protocol**:
 1.  Browser window will open.
@@ -33,7 +33,7 @@ npx -y bun C:\Users\shich\.gemini\skills\baoyu-url-to-markdown\scripts\main.ts "
 ### 3. Custom Output
 Specify filename directly:
 ```bash
-npx -y bun C:\Users\shich\.gemini\skills\baoyu-url-to-markdown\scripts\main.ts "<URL>" -o "docs/article.md"
+npx -y bun C:\Users\shich\.gemini\skills\url-to-markdown\scripts\main.ts "<URL>" -o "docs/article.md"
 ```
 
 ## Troubleshooting

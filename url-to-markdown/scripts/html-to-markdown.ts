@@ -167,6 +167,22 @@ const cleanupAndExtractScriptBody = String.raw`
     } catch {}
   }
 
+  // Attempt to extract content from iframes (common in preview pages)
+  let iframeHtml = "";
+  try {
+    const iframes = document.querySelectorAll("iframe");
+    iframes.forEach((iframe) => {
+      try {
+        const doc = iframe.contentDocument || iframe.contentWindow.document;
+        if (doc && doc.body) {
+          iframeHtml += "\n<!-- Iframe Content Start -->\n" + doc.body.innerHTML + "\n<!-- Iframe Content End -->\n";
+        }
+      } catch (e) {
+        // Cross-origin iframe or inaccessible
+      }
+    });
+  } catch (e) {}
+
   function getMeta(names) {
     for (const name of names) {
       const el = document.querySelector('meta[name="' + name + '"]') || document.querySelector('meta[property="' + name + '"]');
@@ -253,7 +269,7 @@ const cleanupAndExtractScriptBody = String.raw`
     description,
     author,
     published,
-    html: document.documentElement.outerHTML,
+    html: document.documentElement.outerHTML + iframeHtml,
   };
 })()
 `;

@@ -2,7 +2,7 @@ import os from "node:os";
 import path from "node:path";
 import process from "node:process";
 
-const APP_DATA_DIR = "baoyu-skills";
+const APP_DATA_DIR = "gemini-skills";
 const URL_TO_MARKDOWN_DATA_DIR = "url-to-markdown";
 const PROFILE_DIR_NAME = "chrome-profile";
 
