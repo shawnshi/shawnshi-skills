@@ -1,0 +1,114 @@
+\documentclass[12pt, openany, a4paper]{ctexbook}
+
+% ---------------------------------------------------------
+% 1. Page Layout & Geometry
+% ---------------------------------------------------------
+\usepackage[top=3cm, bottom=3cm, left=2.5cm, right=2.5cm, headheight=15pt]{geometry}
+
+% ---------------------------------------------------------
+% 2. Essential Packages for Robustness
+% ---------------------------------------------------------
+\usepackage{amsmath, amssymb, amsfonts, bm}
+\usepackage{graphicx}
+\usepackage{booktabs}
+\usepackage{longtable}      % Multi-page tables
+\usepackage{tabularx}
+\usepackage{array}          % Complex column formats
+\usepackage{calc}           % Calculations for column widths
+\usepackage{caption}        % Better caption handling
+\usepackage{enumitem}
+\usepackage{xcolor}
+\usepackage{titlesec}
+\usepackage{setspace}
+\usepackage{fancyhdr}
+\usepackage[most]{tcolorbox}
+\usepackage{newunicodechar} % Handle missing unicode chars
+
+% ---------------------------------------------------------
+% 3. Fixes & Patches
+% ---------------------------------------------------------
+% Fix for Pandoc's \LTcaptype{none} error
+\newcounter{none}
+% Fix common missing chars
+\newunicodechar{≈}{$\approx$}
+\newunicodechar{≤}{$\le$}
+\newunicodechar{≥}{$\ge$}
+\providecommand{\tightlist}{\setlength{\itemsep}{0pt}\setlength{\parskip}{0pt}}
+
+% ---------------------------------------------------------
+% 4. Visual Styling
+% ---------------------------------------------------------
+\definecolor{primaryColor}{RGB}{0, 51, 102}   % Dark Blue
+\definecolor{accentColor}{RGB}{204, 0, 0}     % Dark Red
+
+% Header/Footer
+\pagestyle{fancy}
+\fancyhf{} % Clear defaults
+\fancyhead[L]{\small \leftmark}
+\fancyhead[R]{\thepage}
+\renewcommand{\headrulewidth}{0.4pt}
+\fancypagestyle{plain}{
+    \fancyhf{}
+    \fancyhead[R]{\thepage}
+    \renewcommand{\headrulewidth}{0pt}
+}
+
+% ---------------------------------------------------------
+% 5. Custom Box Environments
+% ---------------------------------------------------------
+\newtcolorbox{definitionBox}[1][]{% 
+    enhanced, colback=blue!5!white, colframe=primaryColor,
+    fonttitle=\bfseries, title={定义},
+    attach boxed title to top left={yshift=-2mm, xshift=2mm},
+    boxed title style={boxrule=0pt, colframe=white}, #1
+}
+
+\newtcolorbox{alertBox}[1][]{% 
+    enhanced, colback=red!5!white, colframe=accentColor,
+    fonttitle=\bfseries, title={注意},
+    attach boxed title to top left={yshift=-2mm, xshift=2mm},
+    boxed title style={boxrule=0pt, colframe=white}, #1
+}
+
+\newtcolorbox{theoremBox}[1][]{% 
+    enhanced, colback=gray!5!white, colframe=gray!60!black,
+    fonttitle=\bfseries, title={定理},
+    attach boxed title to top left={yshift=-2mm, xshift=2mm},
+    boxed title style={boxrule=0pt, colframe=white}, #1
+}
+
+% ---------------------------------------------------------
+% 6. Hyperref (Configured for no red boxes)
+% ---------------------------------------------------------
+\usepackage[hidelinks, colorlinks=true, linkcolor=black, urlcolor=primaryColor, citecolor=primaryColor]{hyperref}
+
+% ---------------------------------------------------------
+% Document Metadata
+% ---------------------------------------------------------
+\title{$title$}
+\author{$author$}
+\date{\today}
+
+\onehalfspacing
+
+\begin{document}
+
+\frontmatter
+
+% Standard elegant title page
+\begin{titlepage}
+    \centering
+    \vspace*{4cm}
+    {\Huge\bfseries $title$ \par}
+    \vspace{1cm}
+    {\Large $author$ \par}
+    \vfill
+    {\large \today \par}
+\end{titlepage}
+
+\tableofcontents
+
+\mainmatter
+$body$
+
+\end{document}

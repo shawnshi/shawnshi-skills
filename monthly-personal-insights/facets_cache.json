@@ -1,0 +1,552 @@
+{
+  "3615fe46-b11f-4ed0-92c4-a90f256e05f2": {
+    "goal_category": "write_script_tool",
+    "satisfaction": "neutral",
+    "outcome": "ongoing",
+    "friction_type": "none",
+    "session_type": "single_task",
+    "success_type": "none",
+    "summary": "The user is trying to use the Gemini CLI to generate a diagram for a medical specialized disease large model training process.",
+    "language": "zh-CN"
+  },
+  "0fa2d340-8e10-4394-9a10-b9d08dafaa2c": {
+    "goal_category": "analyze_data",
+    "satisfaction": "neutral",
+    "outcome": "ongoing",
+    "friction_type": "none",
+    "session_type": "multi_task",
+    "success_type": "none",
+    "summary": "The user attempts to update extensions, generate a diagram, retrieve reports, and summarize the gathered information, indicating a multi-step data analysis workflow that is likely still in progress.",
+    "language": "zh-CN"
+  },
+  "cd1c6779-3831-4ddf-88b6-3ff48be5bfac": {
+    "goal_category": "implement_feature",
+    "satisfaction": "neutral",
+    "outcome": "partial",
+    "friction_type": "none",
+    "session_type": "multi_task",
+    "success_type": "none",
+    "summary": "The user interacted with the Gemini CLI to authenticate, manage skills, and then requested diagrams using Mermaid and Excalidraw, likely aiming to visualize a drug research workflow and a business model.",
+    "language": "zh-CN"
+  },
+  "09ebf1b7-75e2-42ab-861b-39abf7efd49a": {
+    "goal_category": "implement_feature",
+    "satisfaction": "frustrated",
+    "outcome": "partial",
+    "friction_type": "buggy_code",
+    "session_type": "multi_task",
+    "success_type": "none",
+    "summary": "The user attempted to create and use a skill to convert documents to LaTeX format, encountering garbled characters and requesting refinement of the skill definition, but the final conversion still failed.",
+    "language": "zh-CN"
+  },
+  "621a6eea-a40c-4f01-b6ee-f5368eadc96f": {
+    "goal_category": "other",
+    "satisfaction": "frustrated",
+    "outcome": "failed",
+    "friction_type": "buggy_code",
+    "session_type": "multi_task",
+    "success_type": "none",
+    "summary": "The user attempted to generate diagrams and mind maps using a specific skill, encountered errors, and requested improvements to the diagram generation skill.",
+    "language": "mixed"
+  },
+  "01639184-296b-45a8-b089-7b983e40835c": {
+    "goal_category": "implement_feature",
+    "satisfaction": "neutral",
+    "outcome": "ongoing",
+    "friction_type": "none",
+    "session_type": "multi_task",
+    "success_type": "none",
+    "summary": "The user created a skill for generating magazine-style illustrations from text descriptions and provided an initial text input for the skill, with some additional commands interleaved.",
+    "language": "zh-CN"
+  },
+  "f04b820a-dc02-4527-932c-daa05511a92f": {
+    "goal_category": "write_script_tool",
+    "satisfaction": "neutral",
+    "outcome": "ongoing",
+    "friction_type": "none",
+    "session_type": "single_task",
+    "success_type": "none",
+    "summary": "The user requested the creation of a tool/skill to convert markdown files to Google Blogger format and publish them to Google Blogger.",
+    "language": "zh-CN"
+  },
+  "b83763f3-522b-40ea-984b-f66f523bb9bf": {
+    "goal_category": "write_script_tool",
+    "satisfaction": "okay",
+    "outcome": "ongoing",
+    "friction_type": "user_unclear",
+    "session_type": "multi_task",
+    "success_type": "none",
+    "summary": "The user is trying to create a skill that generates articles based on input, then formats them into web pages, iteratively refining prompts and content.",
+    "language": "zh-CN"
+  },
+  "4bb24023-9f01-4982-bdf6-d287d37a1625": {
+    "goal_category": "understand_codebase",
+    "satisfaction": "neutral",
+    "outcome": "partial",
+    "friction_type": "none",
+    "session_type": "single_task",
+    "success_type": "none",
+    "summary": "The user reloaded skills and then asked Gemini to explain quantum computing, followed by an unrelated image request, suggesting a possible lack of focus or a testing of capabilities.",
+    "language": "en-US"
+  },
+  "26eab605-62ef-4c87-befb-af461f97b489": {
+    "goal_category": "other",
+    "satisfaction": "neutral",
+    "outcome": "ongoing",
+    "friction_type": "none",
+    "session_type": "single_task",
+    "success_type": "none",
+    "summary": "The user asked why stars are not visible during the day and attempted authentication.",
+    "language": "zh-CN"
+  },
+  "3d9e8566-3f4c-451d-98bd-09c790d31bff": {
+    "goal_category": "other",
+    "satisfaction": "neutral",
+    "outcome": "partial",
+    "friction_type": "none",
+    "session_type": "exploratory",
+    "success_type": "none",
+    "summary": "The user asked why stars are not visible during the day and then explored model and memory commands.",
+    "language": "zh-CN"
+  },
+  "245524c9-f185-45af-a34b-8ace799de335": {
+    "goal_category": "fix_bug",
+    "satisfaction": "annoyed",
+    "outcome": "partial",
+    "friction_type": "buggy_code",
+    "session_type": "interactive_fix",
+    "success_type": "none",
+    "summary": "The user is attempting to convert Word documents to LaTeX with a specific style, but is encountering issues with the output, including incorrect table of contents, overfull hboxes, and missing characters, resulting in a frustrating experience.",
+    "language": "zh-CN"
+  },
+  "8b8f8f6e-105a-4558-b10c-5357991ac7d5": {
+    "goal_category": "implement_feature",
+    "satisfaction": "okay",
+    "outcome": "ongoing",
+    "friction_type": "none",
+    "session_type": "multi_task",
+    "success_type": "none",
+    "summary": "The user is creating a diary auditing skill, defining functionalities for daily, weekly, monthly, and yearly audits, including integrating with Google Calendar.",
+    "language": "zh-CN"
+  },
+  "07b24fbc-a346-49a9-a322-30a58ea7f2c0": {
+    "goal_category": "analyze_data",
+    "satisfaction": "neutral",
+    "outcome": "ongoing",
+    "friction_type": "user_unclear",
+    "session_type": "multi_task",
+    "success_type": "none",
+    "summary": "The user wants to analyze their website, specifically the content from the last three months, identifying strengths and weaknesses and receiving optimization suggestions, after a request to analyze themselves and query the daily logs, and then a generic website analysis request.",
+    "language": "zh-CN"
+  },
+  "94988486-2e2b-4b93-8cae-844c785d5ed6": {
+    "goal_category": "analyze_data",
+    "satisfaction": "neutral",
+    "outcome": "ongoing",
+    "friction_type": "none",
+    "session_type": "multi_task",
+    "success_type": "none",
+    "summary": "The user is asking for AI news from Hacker News and Product Hunt, and also wants to know what are the trending projects on GitHub.",
+    "language": "zh-CN"
+  },
+  "d76ee1b7-a251-4ed7-8cf2-1c15e2ba65d3": {
+    "goal_category": "write_script_tool",
+    "satisfaction": "neutral",
+    "outcome": "ongoing",
+    "friction_type": "none",
+    "session_type": "multi_task",
+    "success_type": "none",
+    "summary": "The user is using baoyu-slide-deck to create a PPT about AI hospital planning, and later requests smart-doc-latex skill to be applied following the best practices article.",
+    "language": "zh-CN"
+  },
+  "edf2c6f8-0dd9-43ab-89f2-889bdb0cf463": {
+    "goal_category": "other",
+    "satisfaction": "neutral",
+    "outcome": "ongoing",
+    "friction_type": "user_unclear",
+    "session_type": "multi_task",
+    "success_type": "none",
+    "summary": "The session involves creating and modifying skills, applying best practices, and working with a writing assistant skill, covering tasks like image downloading, content generation, and skill enhancement, but the overall goal and completion status are unclear.",
+    "language": "zh-CN"
+  },
+  "457cd68d-dcde-4a8b-8a96-f8a9c3c2ea62": {
+    "goal_category": "understand_codebase",
+    "satisfaction": "neutral",
+    "outcome": "ongoing",
+    "friction_type": "none",
+    "session_type": "single_task",
+    "success_type": "none",
+    "summary": "The user is interacting with the Gemini CLI, listing skills, accessing a notebooklm notebook, and asking for an explanation of the three-level resistance model.",
+    "language": "zh-CN"
+  },
+  "9c840051-20f4-4d00-a8f5-b202b9cf848d": {
+    "goal_category": "implement_feature",
+    "satisfaction": "neutral",
+    "outcome": "ongoing",
+    "friction_type": "user_unclear",
+    "session_type": "multi_task",
+    "success_type": "none",
+    "summary": "The user is attempting to create two different animated videos using the same skill, providing unclear or iterative inputs along the way, suggesting an ongoing and potentially iterative process.",
+    "language": "zh-CN"
+  },
+  "05b46df0-8f18-4233-bc55-e587c4092bc9": {
+    "goal_category": "debug_investigate",
+    "satisfaction": "frustrated",
+    "outcome": "partial",
+    "friction_type": "buggy_code",
+    "session_type": "multi_task",
+    "success_type": "none",
+    "summary": "The user attempts to use a research-analyst skill to generate in-depth reports but encounters issues with the skill's output being too short, incomplete, and not saving content correctly, leading to frustration and debugging attempts.",
+    "language": "zh-CN"
+  },
+  "f9a9f412-43b7-45b4-99bd-54d27432fa27": {
+    "goal_category": "write_script_tool",
+    "satisfaction": "frustrated",
+    "outcome": "partial",
+    "friction_type": "buggy_code",
+    "session_type": "multi_task",
+    "success_type": "none",
+    "summary": "The user attempted to generate a slide deck using a large language model but encountered issues with image resolution, indicating a bug or limitation in the image generation process.",
+    "language": "zh-CN"
+  },
+  "0415f947-7493-4430-9f1b-0f9312a76182": {
+    "goal_category": "fix_bug",
+    "satisfaction": "frustrated",
+    "outcome": "ongoing",
+    "friction_type": "buggy_code",
+    "session_type": "multi_task",
+    "success_type": "none",
+    "summary": "The user is debugging the 'baoyu-slide-deck' skill, identifying issues related to model usage, image resolution, and potential optimizations.",
+    "language": "zh-CN"
+  },
+  "d9c0422e-7bf3-4af7-8ec3-7e1f37d600cb": {
+    "goal_category": "other",
+    "satisfaction": "neutral",
+    "outcome": "partial",
+    "friction_type": "user_unclear",
+    "session_type": "single_task",
+    "success_type": "none",
+    "summary": "The user provided a filename and the prompt '是', making the intent unclear but suggesting a task related to the file, likely in Chinese.",
+    "language": "zh-CN"
+  },
+  "eb0d2d48-d981-43c8-9a95-55db3023df1c": {
+    "goal_category": "analyze_data",
+    "satisfaction": "neutral",
+    "outcome": "completed",
+    "friction_type": "none",
+    "session_type": "single_task",
+    "success_type": "none",
+    "summary": "The user listed skills and then seemingly analyzed a research report in Chinese related to medical AI.",
+    "language": "zh-CN"
+  },
+  "c638e584-11e6-4c75-80d0-38e5975c777a": {
+    "goal_category": "other",
+    "satisfaction": "neutral",
+    "outcome": "ongoing",
+    "friction_type": "none",
+    "session_type": "single_task",
+    "success_type": "none",
+    "summary": "The user seems to be interacting with a presentation tool to create slides from a markdown file, and the session is ongoing with the user simply providing continuation prompts.",
+    "language": "en-US"
+  },
+  "9dbcdc80-98f0-4bf8-9156-92e9e4270a98": {
+    "goal_category": "analyze_data",
+    "satisfaction": "frustrated",
+    "outcome": "failed",
+    "friction_type": "buggy_code",
+    "session_type": "multi_task",
+    "success_type": "none",
+    "summary": "The user attempted to analyze several agents based on a provided specification, but encountered multiple agent loading errors due to validation failures and YAML parsing issues.",
+    "language": "zh-CN"
+  },
+  "cbb25f1e-772d-4d5a-9406-3aef49b6148c": {
+    "goal_category": "other",
+    "satisfaction": "neutral",
+    "outcome": "ongoing",
+    "friction_type": "none",
+    "session_type": "multi_task",
+    "success_type": "none",
+    "summary": "The user is exploring agent functionalities, requesting analysis and research proposal generation, and refreshing agent lists.",
+    "language": "zh-CN"
+  },
+  "77751409-a47b-4163-91d7-b8507e7d63b7": {
+    "goal_category": "fix_bug",
+    "satisfaction": "frustrated",
+    "outcome": "ongoing",
+    "friction_type": "buggy_code",
+    "session_type": "multi_task",
+    "success_type": "proactive_fix",
+    "summary": "The user is trying to fix bugs and optimize skills related to image generation for a medical AI report, encountering API errors and iteratively refining the process, including modifying resolution and using environment variables.",
+    "language": "zh-CN"
+  },
+  "2a3c222d-e8e5-462a-bbcb-f36ca43d4375": {
+    "goal_category": "configure_system",
+    "satisfaction": "annoyed",
+    "outcome": "failed",
+    "friction_type": "wrong_approach",
+    "session_type": "single_task",
+    "success_type": "none",
+    "summary": "The user repeatedly attempted to authenticate with the same token string, likely failing to log in.",
+    "language": "en-US"
+  },
+  "01fb8b2d-4824-467d-a5c0-ce8555e7225a": {
+    "goal_category": "configure_system",
+    "satisfaction": "frustrated",
+    "outcome": "failed",
+    "friction_type": "buggy_code",
+    "session_type": "single_task",
+    "success_type": "none",
+    "summary": "The user attempted to update extensions, reload skills, and refresh agents, but encountered errors related to agent loading due to YAML parsing and validation failures, and also asked about the location of an .env file.",
+    "language": "zh-CN"
+  },
+  "ca185918-f645-4925-9206-1034e79d71b5": {
+    "goal_category": "configure_system",
+    "satisfaction": "neutral",
+    "outcome": "partial",
+    "friction_type": "none",
+    "session_type": "multi_task",
+    "success_type": "none",
+    "summary": "The user asked for the weather in Beijing, then listed chats and agents before configuring the youtube-summary agent, and finally listed chats again.",
+    "language": "zh-CN"
+  },
+  "3fff9b11-5e95-4f6c-ae87-66bb48dfc87b": {
+    "goal_category": "fix_bug",
+    "satisfaction": "annoyed",
+    "outcome": "partial",
+    "friction_type": "buggy_code",
+    "session_type": "interactive_fix",
+    "success_type": "none",
+    "summary": "The user encountered an agent loading error due to an invalid agent name and attempted to fix it, also adding a browser skill and attempting a translation task.",
+    "language": "zh-CN"
+  },
+  "89b3dcb2-5334-4ba2-a539-79786555bb87": {
+    "goal_category": "implement_feature",
+    "satisfaction": "okay",
+    "outcome": "ongoing",
+    "friction_type": "none",
+    "session_type": "multi_task",
+    "success_type": "none",
+    "summary": "The user is trying to integrate data from various sources (calendar, health metrics) into a daily log using an analysis skill, suggesting an automated diary update feature.",
+    "language": "zh-CN"
+  },
+  "2532acc5-c564-45bb-8fa4-33a0234e8933": {
+    "goal_category": "implement_feature",
+    "satisfaction": "okay",
+    "outcome": "partial",
+    "friction_type": "none",
+    "session_type": "multi_task",
+    "success_type": "none",
+    "summary": "The user interacts with a system to query stock prices using stock symbols and time ranges and attempts to improve the yahoo-finance skill with best practices from a Claude documentation link.",
+    "language": "zh-CN"
+  },
+  "f6e417fe-831c-4a59-8846-6339095bb7f6": {
+    "goal_category": "other",
+    "satisfaction": "neutral",
+    "outcome": "ongoing",
+    "friction_type": "user_unclear",
+    "session_type": "exploratory",
+    "success_type": "none",
+    "summary": "The user is asking what should be remembered from the past three months of sessions and then asking to show the memory.",
+    "language": "zh-CN"
+  },
+  "5ed4918c-646e-4217-bfe0-6ef4f12aa2ef": {
+    "goal_category": "implement_feature",
+    "satisfaction": "neutral",
+    "outcome": "ongoing",
+    "friction_type": "user_unclear",
+    "session_type": "multi_task",
+    "success_type": "none",
+    "summary": "The user interacts with multiple skills and agents, attempting to configure github access and design a user retention system for ETF products using morphism-mapper, while also pondering the relevance of knowledge organization in the age of AI.",
+    "language": "zh-CN"
+  },
+  "3303a24f-e51b-4efb-8bed-b74b6b128fc5": {
+    "goal_category": "analyze_data",
+    "satisfaction": "neutral",
+    "outcome": "ongoing",
+    "friction_type": "none",
+    "session_type": "multi_task",
+    "success_type": "none",
+    "summary": "The user interacted with the Gemini CLI, exploring various tools and skills, primarily focusing on research analysis related to electronic medical records, with some instructions in Chinese and a request to include US applications.",
+    "language": "mixed"
+  },
+  "825381f6-ebab-496a-be19-40b80e1a90a1": {
+    "goal_category": "other",
+    "satisfaction": "neutral",
+    "outcome": "ongoing",
+    "friction_type": "none",
+    "session_type": "single_task",
+    "success_type": "none",
+    "summary": "The user lists memory, then queries the day's schedule, and then lists memory again.",
+    "language": "zh-CN"
+  },
+  "8f0d159b-9d93-46d8-9e00-f07ff16dadba": {
+    "goal_category": "other",
+    "satisfaction": "neutral",
+    "outcome": "ongoing",
+    "friction_type": "user_unclear",
+    "session_type": "multi_task",
+    "success_type": "none",
+    "summary": "The user initiated several commands related to memory, skills, shells and calendar, showing an exploratory behavior but the goals remain ambiguous.",
+    "language": "mixed"
+  },
+  "bd4ffa56-f614-40b2-bb51-e60d0356c3c5": {
+    "goal_category": "other",
+    "satisfaction": "neutral",
+    "outcome": "ongoing",
+    "friction_type": "none",
+    "session_type": "single_task",
+    "success_type": "none",
+    "summary": "The user repeatedly queried their schedule for tomorrow and then initiated a login sequence, suggesting an attempt to access or modify calendar information.",
+    "language": "zh-CN"
+  },
+  "6cccf75c-3675-4117-a538-36686c9ff758": {
+    "goal_category": "implement_feature",
+    "satisfaction": "neutral",
+    "outcome": "ongoing",
+    "friction_type": "none",
+    "session_type": "multi_task",
+    "success_type": "none",
+    "summary": "The user is creating and modifying a 'monthly-personal-insights' skill in the Gemini CLI, aimed at analyzing past message history to provide project summaries, usage analysis, and workflow optimization suggestions, and is adding compliance checks to another skill.",
+    "language": "zh-CN"
+  },
+  "0e3054da-729e-4d40-918f-b671a8f478e5": {
+    "goal_category": "refactor_code",
+    "satisfaction": "neutral",
+    "outcome": "ongoing",
+    "friction_type": "none",
+    "session_type": "single_task",
+    "success_type": "none",
+    "summary": "The user is asking the model to analyze and refactor the 'monthly-personal-insights' skill, and implement suggested modifications.",
+    "language": "zh-CN"
+  },
+  "3e834140-6f39-409b-a591-63009477f573": {
+    "goal_category": "research-analyst",
+    "satisfaction": "neutral",
+    "outcome": "ongoing",
+    "friction_type": "none",
+    "session_type": "single_task",
+    "success_type": "none",
+    "summary": "The user initiated a research-analyst task related to AI-native digital hospital construction solutions.",
+    "language": "zh-CN"
+  },
+  "87996eb5-aba9-4da9-8f01-c6880a079f6d": {
+    "goal_category": "other",
+    "satisfaction": "okay",
+    "outcome": "partial",
+    "friction_type": "user_unclear",
+    "session_type": "multi_task",
+    "success_type": "none",
+    "summary": "The user iteratively refined skills, seeking to optimize them based on analysis, but the overall goal remains unclear.",
+    "language": "zh-CN"
+  },
+  "27119d4f-7248-46d7-8d40-3405fd673e63": {
+    "goal_category": "refactor_code",
+    "satisfaction": "neutral",
+    "outcome": "ongoing",
+    "friction_type": "none",
+    "session_type": "multi_task",
+    "success_type": "none",
+    "summary": "The user is iteratively analyzing and optimizing multiple skills including 'garmin-health-analysis', 'document-summarizer' and 'DiaryAudit', focusing on identifying areas for improvement and implementing changes, but hasn't completed all tasks.",
+    "language": "zh-CN"
+  },
+  "a2338027-6fda-4a41-bc40-0838127f1a0d": {
+    "goal_category": "analyze_data",
+    "satisfaction": "neutral",
+    "outcome": "ongoing",
+    "friction_type": "user_unclear",
+    "session_type": "multi_task",
+    "success_type": "none",
+    "summary": "The user explored various health data analysis tasks including Garmin data, FHIR data, personal website analysis, and AI hospital framework research, but the session ended without clear completion due to unclear instructions and modifications.",
+    "language": "zh-CN"
+  },
+  "58677035-1c47-484d-b355-976269525ace": {
+    "goal_category": "research_investigate",
+    "satisfaction": "neutral",
+    "outcome": "ongoing",
+    "friction_type": "none",
+    "session_type": "single_task",
+    "success_type": "none",
+    "summary": "The user is using the research-analyst model to investigate HITL (Human-in-the-Loop) grading standards in the medical field, and seems to be continuing the session after an initial query.",
+    "language": "zh-CN"
+  },
+  "e609cf8f-6294-4a3e-b852-310a5ea52b0b": {
+    "goal_category": "research_analyst",
+    "satisfaction": "neutral",
+    "outcome": "ongoing",
+    "friction_type": "user_unclear",
+    "session_type": "single_task",
+    "success_type": "none",
+    "summary": "The user is prompting the model repeatedly with a research task related to 'automation bias' defense mechanisms in the medical AI field, but it's unclear if any progress is being made.",
+    "language": "zh-CN"
+  },
+  "1e6284a7-f7f6-4d2c-8a9e-a23df8ecb52d": {
+    "goal_category": "refactor_code",
+    "satisfaction": "neutral",
+    "outcome": "ongoing",
+    "friction_type": "none",
+    "session_type": "multi_task",
+    "success_type": "none",
+    "summary": "The user is iteratively refining a multi-agent system skill, focusing on the research-analyst agent, by providing specific instructions and feedback to improve its performance, address missing information, and ensure compliance.",
+    "language": "zh-CN"
+  },
+  "12efc88b-0aa5-43c7-ae50-c1b840a4f11f": {
+    "goal_category": "write_docs",
+    "satisfaction": "frustrated",
+    "outcome": "failed",
+    "friction_type": "buggy_code",
+    "session_type": "recursive",
+    "success_type": "none",
+    "summary": "The user is attempting to generate a research report, but the initial output is too short, doesn't match the desired style, contains garbled text, and requires refinement of both content and writing style.",
+    "language": "zh-CN"
+  },
+  "27f3e884-980d-4543-b354-3a43a5de2c70": {
+    "goal_category": "implement_feature",
+    "satisfaction": "frustrated",
+    "outcome": "ongoing",
+    "friction_type": "misunderstood_request",
+    "session_type": "multi_task",
+    "success_type": "none",
+    "summary": "The user is iteratively modifying and optimizing the skills of an AI research analyst agent for hospital construction research, focusing on report depth, structure, content, and user interaction during finalization, while expressing frustration with initial report quality.",
+    "language": "zh-CN"
+  },
+  "32172971-1c94-4d66-8315-c84d783451e4": {
+    "goal_category": "implement_feature",
+    "satisfaction": "okay",
+    "outcome": "ongoing",
+    "friction_type": "user_unclear",
+    "session_type": "multi_task",
+    "success_type": "none",
+    "summary": "The user iteratively develops a multi-agent writing skill, refining its functionality through topic identification, user interaction, and structural improvements, encountering some ambiguity in user requests. ",
+    "language": "zh-CN"
+  },
+  "0fc75c8f-a883-4e68-8b82-b0e8978ac569": {
+    "goal_category": "implement_feature",
+    "satisfaction": "neutral",
+    "outcome": "ongoing",
+    "friction_type": "misunderstood_request",
+    "session_type": "single_task",
+    "success_type": "none",
+    "summary": "The user is trying to modify the multi-agent-writer to save articles in a specific format and location, but there's some misunderstanding regarding the base architecture (OpenAI Frontier).",
+    "language": "zh-CN"
+  },
+  "881b7072-e605-4325-9091-4158d9394549": {
+    "goal_category": "other",
+    "satisfaction": "frustrated",
+    "outcome": "failed",
+    "friction_type": "none",
+    "session_type": "single_task",
+    "success_type": "none",
+    "summary": "The user attempted to run the `monthly-personal-insights` tool but encountered an API error indicating an invalid argument.",
+    "language": "zh-CN"
+  },
+  "d4fb10e1-4a65-405d-ad35-aada6d0a7eec": {
+    "goal_category": "analyze_data",
+    "satisfaction": "neutral",
+    "outcome": "ongoing",
+    "friction_type": "none",
+    "session_type": "multi_task",
+    "success_type": "deep_insight",
+    "summary": "The user is modifying the monthly-personal-insights skill to generate an interactive HTML report summarizing Gemini usage, including session analysis and extraction of qualitative facets like goal category, satisfaction, and success type.",
+    "language": "zh-CN"
+  }
+}

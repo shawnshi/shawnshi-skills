@@ -1,0 +1,6 @@
+display_name: Yahoo Finance
+short_description: 获取实时股市行情、基本面数据与金融新闻。
+default_prompt: 获取并分析 [公司名称] 最近 [时间范围] 的表现。
+interface:
+  icon: trending_up
+  brand_color: "#7200da"

@@ -1,0 +1,6 @@
+display_name: Master Illustrator
+short_description: 文章语义配图师。分析文章结构，生成成套的高一致性插图。
+default_prompt: 分析这篇文章，找出需要配图的位置并生成插图建议。
+interface:
+  icon: image_search
+  brand_color: "#9c27b0"

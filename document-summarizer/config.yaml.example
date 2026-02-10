@@ -1,0 +1,136 @@
+# Document Summarizer 配置文件示例
+# 复制此文件为 config.yaml 并根据需要修改
+
+# 摘要生成配置
+summarizer:
+  # 摘要长度控制（中文字符数）
+  max_summary_length: 150
+  min_summary_length: 100
+
+  # 标签数量
+  tags_count: 5
+
+  # 并行处理线程数
+  workers: 5
+
+  # 自动跳过已有元数据的文件
+  skip_existing: true
+
+# 文档类型配置
+document_types:
+  - name: 信息化规划方案
+    keywords: [规划, 方案, 蓝图]
+  - name: 电子病历评级
+    keywords: [评级, 评审, 五级, 四级]
+  - name: 技术标准规范
+    keywords: [标准, 规范, 指南, 白皮书]
+  - name: 调研考察报告
+    keywords: [调研, 考察, 访谈, 报告]
+  - name: 技术交流汇报
+    keywords: [交流, 汇报, PPT]
+  - name: 合作协议文件
+    keywords: [合作, 协议, 备忘录]
+  - name: 系统集成接口
+    keywords: [接口, 集成, API, HL7]
+  - name: 数据结构文档
+    keywords: [数据, Data, Schema]
+  - name: 系统功能规范
+    keywords: [功能, Specification, 需求]
+
+# 医疗信息化关键词库
+medical_keywords:
+  systems:
+    - 电子病历
+    - EMR
+    - HIS系统
+    - PACS系统
+    - LIS系统
+    - RIS系统
+
+  certifications:
+    - 电子病历评级
+    - 智慧医院
+    - 互联互通
+    - 五级
+    - 四级
+
+  chinese_medicine:
+    - 中医信息化
+    - 中医
+    - 中西医结合
+    - 数字中医
+
+  technologies:
+    - 人工智能
+    - AI
+    - 大数据
+    - 云计算
+    - 物联网
+    - 区块链
+
+  data_governance:
+    - 数据治理
+    - 数据安全
+    - 数据标准
+    - HL7
+    - FHIR
+
+  scenarios:
+    - 医联体
+    - 互联网医疗
+    - 智能诊断
+    - CDSS
+    - 远程医疗
+
+  construction:
+    - 信息化规划
+    - 系统集成
+    - 升级改造
+    - 技术架构
+
+# 文件处理配置
+file_processing:
+  # 支持的文件扩展名
+  supported_extensions:
+    - .pdf
+    - .docx
+    - .pptx
+    - .xlsx
+    - .xlsm
+
+  # 单个文件最大提取字符数
+  max_content_length: 10000
+
+  # PDF 最多提取页数
+  pdf_max_pages: 20
+
+  # Excel 最多提取工作表数
+  excel_max_sheets: 5
+
+  # Excel 每个工作表最多提取行数
+  excel_max_rows: 100
+
+# 日志配置
+logging:
+  # 日志级别: DEBUG, INFO, WARNING, ERROR
+  level: INFO
+
+  # 是否保存详细日志
+  save_detailed_log: true
+
+  # 日志文件目录
+  log_dir: .
+
+# 输出配置
+output:
+  # 提取内容文件名
+  extracted_content_file: extracted_content_part1.json
+
+  # 文件ID映射文件名
+  file_id_mapping_file: file_id_mapping.json
+
+  # 摘要文件名
+  summaries_file: document_summaries_enhanced.json
+
+  # 失败文件列表
+  failures_file: metadata_application_failures.json

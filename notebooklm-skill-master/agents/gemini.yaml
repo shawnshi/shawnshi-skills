@@ -1,0 +1,6 @@
+display_name: Knowledge Connector
+short_description: 连接 Google NotebookLM，实现基于自有文档的确定性知识查询。
+default_prompt: 在我的 NotebookLM 中查询 [问题] 的答案。
+interface:
+  icon: library_books
+  brand_color: "#4285f4"

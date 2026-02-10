@@ -1,0 +1,134 @@
+\documentclass[11pt, openany, a4paper]{ctexbook}
+
+% ---------------------------------------------------------
+% O'Reilly-Style Tech Book Template
+% ---------------------------------------------------------
+\usepackage[top=2.5cm, bottom=2.5cm, left=2.5cm, right=2.5cm, headheight=15pt, marginparsep=10pt]{geometry}
+\usepackage{amsmath, amssymb, amsfonts}
+\usepackage{graphicx}
+\usepackage{booktabs}
+\usepackage{longtable}
+\usepackage{tabularx}
+\usepackage{array}
+\usepackage{calc}
+\usepackage{caption}
+\usepackage{xcolor}
+\usepackage{titlesec}
+\usepackage{fancyhdr}
+\usepackage[most]{tcolorbox}
+\usepackage{enumitem}
+\usepackage{parskip}
+\usepackage{newunicodechar}
+
+% ---------------------------------------------------------
+% Fixes for Pandoc
+% ---------------------------------------------------------
+\newcounter{none}
+\newunicodechar{≈}{$\approx$}
+\newunicodechar{≤}{$\le$}
+\newunicodechar{≥}{$\ge$}
+\providecommand{\tightlist}{\setlength{\itemsep}{0pt}\setlength{\parskip}{0pt}}
+
+% ---------------------------------------------------------
+% Visual Identity
+% ---------------------------------------------------------
+\definecolor{oreillyRed}{RGB}{176, 19, 26}
+\definecolor{headerColor}{RGB}{0, 0, 0}
+\definecolor{boxBg}{RGB}{245, 245, 245}
+
+% ---------------------------------------------------------
+% Header/Footer
+% ---------------------------------------------------------
+\pagestyle{fancy}
+\fancyhf{}
+\fancyhead[L]{\itshape \leftmark}
+\fancyhead[R]{\thepage}
+\renewcommand{\headrulewidth}{0.5pt}
+
+\fancypagestyle{plain}{
+    \fancyhf{}
+    \fancyfoot[C]{\thepage}
+    \renewcommand{\headrulewidth}{0pt}
+}
+
+% ---------------------------------------------------------
+% Headings
+% ---------------------------------------------------------
+\titleformat{\part}[display]
+  {\sffamily\Huge\bfseries\color{headerColor}}
+  {\partname\ \thepart}
+  {20pt}
+  {\thispagestyle{empty}}
+
+\titleformat{\chapter}[display]
+  {\sffamily\huge\bfseries\color{headerColor}}
+  {\Large\chaptertitlename\ \thechapter}
+  {20pt}
+  {\Huge}
+\titlespacing*{\chapter}{0pt}{0pt}{40pt}
+
+\titleformat{\section}
+  {\sffamily\Large\bfseries\color{oreillyRed}}
+  {\thesection}{1em}{}
+
+\titleformat{\subsection}
+  {\sffamily\large\bfseries\color{headerColor}}
+  {\thesubsection}{1em}{}
+
+% ---------------------------------------------------------
+% Custom Boxes
+% ---------------------------------------------------------
+\newtcolorbox{techNote}[1][]{
+    enhanced, colback=boxBg, colframe=boxBg,
+    borderline west={4pt}{0pt}{oreillyRed},
+    sharp corners,
+    fonttitle=\sffamily\bfseries, coltitle=black,
+    title=Note, #1
+}
+
+% ---------------------------------------------------------
+% Hyperref (Clean)
+% ---------------------------------------------------------
+\usepackage[hidelinks, colorlinks=true, linkcolor=black, urlcolor=oreillyRed, citecolor=black]{hyperref}
+
+% ---------------------------------------------------------
+% Document
+% ---------------------------------------------------------
+\title{$title$}
+\author{$author$}
+\date{\today}
+
+\begin{document}
+
+\frontmatter
+
+% Custom O'Reilly-Style Cover
+\begin{titlepage}
+    \begin{tikzpicture}[remember picture, overlay]
+        \fill[oreillyRed] (current page.north west) rectangle ([yshift=-3cm]current page.north east);
+    \end{tikzpicture}
+    
+    \vspace*{3cm} 
+    
+    \begin{center}
+        \sffamily
+        {\Large\color{gray} \textbf{TECHNICAL SERIES} \par} 
+        \vspace{2cm}
+        {\Huge\bfseries\color{black} $title$ \par}
+        \vspace{1.5cm}
+        \noindent\rule{0.6\textwidth}{1pt}
+        \vspace{1.5cm}
+        {\Large Professional Guide \par}
+        \vfill
+        {\Large\bfseries $author$ \par}
+        \vspace{1cm}
+        {\large \today \par}
+    \end{center}
+\end{titlepage}
+
+\tableofcontents
+
+\mainmatter
+$body$
+
+\end{document}

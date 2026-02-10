@@ -1,0 +1,44 @@
+{
+  "user_profile": "卫宁健康战略咨询负责人",
+  "strategic_preferences": [
+    "优先考虑鲁棒的灰度解 (Gray Solutions)：优先考虑鲁棒的灰度解（如半自动化的辅助），而非追求完美 but 脆弱的黑白解（全自动）。",
+    "HITL 2.0 分级标准：建立 L0-L5 级医疗 HITL 分级体系，将‘人在回路’升级为‘人在监控线上’，量化干预强度与风险边界。",
+    "推理中心化 (Inference-Centricity)：医疗系统核心应从‘业务数据化’转向‘推理中心化’，所有的业务流均作为推理机的下游动作。",
+    "Text-to-Action (T2A) 架构迁移：坚定从 Text-to-SQL 转向 T2A，利用医疗语义层 (MSL) 将模糊意图映射为确定性的业务 API 动作序列。",
+    "重共情 (Empathy) 胜于 重准确率 (Accuracy)：在 AI 时代，准确率是商品，而共情是稀缺资源。AI 应作为‘稀缺共情能力的放大器’。",
+    "价值导向 (Value over Volume)：数字化系统必须支持从‘按项目付费’(FFS) 向‘按价值/人头付费’(VBC) 的底层逻辑迁移，卖业务结果而非软件许可证。",
+    "韧性优先 (Resilience over Efficiency)：AI 价值标尺应从‘节省时间/提升效率’转向‘提升系统应对不确定性/冲击的韧性’，追求零灾难性错误。",
+    "激励相容 (Incentive Compatibility)：数字化转型的核心在于构建利益一致的激励机制，建立‘人机协作效率奖金’，将 AI 带来的增量价值回馈给一线医生。",
+    "主权 AI (Sovereign AI)：面对地缘政治与合规断裂，构建本地化、私有化部署、数据不出院的‘主权 AI’基础设施。",
+    "无聊 AI 的高回报 (Boring AI High ROI)：优先部署高 ROI 的行政/管理类 AI (如自动编码、预约管理，ROI 高达 451%)，反哺临床 AI 研发。",
+    "环境智能 (Ambient Intelligence)：AI 的最高境界是‘隐形’。优先采用 ACI 等零点击技术，消除‘睡衣时间’，追求零认知负荷。",
+    "走出试点炼狱 (Pilot Purgatory Defense)：拒绝盲目、分散的试点项目，建立 AI 效能办公室 (AEO) 进行集中治理，确保明确的 ROI。",
+    "平台至上 (Platform First)：做医疗领域的‘国家电网’(价值收费站/操作系统)，通过 API 和 SDK 掌握生态征税权。",
+    "Buy Infra, Build Skills：基础设施 (大模型/云) 直接采购，核心竞争力在于自研或共建具有专科 know-how 的 Skills。",
+    "订阅制转型 (SaaS Transition)：推动从 CapEx (一次性购买) 向 OpEx (持续订阅/按效果付费) 的商业模式转变。",
+    "GraphRAG 优先 (GraphRAG First)：必须采用图谱增强检索，利用知识图谱的确定性结构来约束 LLM 的概率生成。"
+  ],
+  "historical_insights": [
+    "语义层 (Semantic Layer) / 真相引擎：必须建立自主可控的医疗语义层 (MSL)，作为‘认知变压器’，利用 API 编排屏蔽底层异构数据与 LLM 的幻觉风险。",
+    "慢思考推理的临床价值：OpenAI Frontier (o1/o3) 架构标志着 AI 从‘概率预测’向‘逻辑推理’的跃迁，模拟医生的慢思考推理过程而非仅模仿语气。",
+    "防御机制 / 认知摩擦 (Cognitive Friction)：刻意引入 UI/UX 障碍（如‘遮蔽模式’、‘认知迫动函数’），强制唤醒医生的理性思考，防止自动化偏见和‘空驾驶舱效应’。",
+        "智能体范式 (Agentic AI)：从 GenAI (被动对话框) 转向 Agentic AI (主动队友)，构建 Agent 协调引擎 (ACE) 和智能体网格，实现多智能体协作。",
+    "生成式界面 (GenUI)：从‘千人一面’的静态 GUI 转向‘按需生成’的 GenUI，系统根据医生意图实时生成交互组件，对抗认知过载。",
+    "责任归因 (Liability Attribution)：AI 是‘概率机器’与‘责任黑洞’。系统设计必须包含清晰的责任归因模型，通过‘证据化固化协议’构建法律防火墙。",
+    "第二观察者效应 (Second Observer Effect)：AI 介入拔高了法律审查标准。医院若未能针对自动化偏见培训医生，将面临巨额赔偿风险。",
+    "合规三难困境 (Compliance Trilemma)：准确性、隐私性与可解释性构成不可能三角，解法是‘垂直小模型 + RAG + 主权 AI’。",
+    "工作流粘性 (Workflow Stickiness)：真正的护城河是医生的鼠标点击流 and 临床工作流的掌控力，而非易复制的模型或数据。",
+    "数据资产定义 / 修正数据 (Correction Data)：医生对 AI 错误的修正 (Correction Data) 是医院最核心的数字资产，应回流以提升模型智商。",
+    "信任审计商 (Trust Auditor)：HIT 厂商应从‘软件开发商’转型为‘信任审计商’，提供算法监察、偏见审计和合规报告服务。",
+    "技能商店 (Skill Store)：未来的交付模式类似于 App Store，医院订阅所需的原子化 Skills，而非购买庞大的单体系统。",
+    "证据网 (Evidence-Mesh) 与影子博弈：AI 智能体应具备与医保端 AI 进行对抗性进化的能力，通过构建非共识证据网（Evidence-Mesh）迫使自动化审核机转入人工复核，提升申诉成功率。",
+    "打破“税收墙” (Breaking the Tax Wall)：利用 AI 的环境智能（如 UI/Log 解析）绕过传统 IT 厂商的 API 封闭性，直接从生产环境中提取“真相”，实现对垂直业务逻辑的破壁。"
+  ],
+  "project_history": [
+    {
+      "date": "2026-02-08",
+      "topic": "AI智能体在医疗RCM中的无人驾驶实验",
+      "key_contribution": "定义了 RCM 自动化分级 L0-L5，提出了利用 MSL 对抗传统厂商 API 垄断的破壁者策略。"
+    }
+  ]
+}

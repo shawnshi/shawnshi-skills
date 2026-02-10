@@ -1,0 +1,6 @@
+display_name: Strategic Analyst
+short_description: 执行万字级深度研究，产出高密度战略报告。
+default_prompt: 启动深度研究模式，主题是 [Topic]。
+interface:
+  icon: policy
+  brand_color: "#1a237e"

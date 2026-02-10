@@ -1,0 +1,28 @@
+{
+  "domains": {
+    "EMR_Leveling": {
+      "standard": "电子病历系统应用水平分级评价",
+      "target_levels": [5, 6, 7],
+      "key_indicators": {
+        "CDSS": ["临床决策支持", "知识库", "预警", "闭环"],
+        "Integration": ["集成平台", "ESB", "数据交换", "消息队列"],
+        "Data_Quality": ["数据一致性", "完整性", "及时性"],
+        "Clinical_Closed_Loop": ["医嘱闭环", "药事管理", "标本采集"]
+      }
+    },
+    "Future_Healthcare": {
+      "themes": ["ACI", "Ambient Clinical Intelligence", "生成式AI", "医防融合", "紧密型医共体", "数据要素", "大模型落地"],
+      "strategic_impact": {
+        "ACI": "解决医生录入负担，实现环境临床智能",
+        "Generative_AI": "概率性系统向确定性医疗交付的跃迁",
+        "Integrated_Care": "实现区域医疗资源同质化"
+      }
+    }
+  },
+  "policy_mapping": {
+    "HL7": "互联互通五级乙等必要条件",
+    "FHIR": "互联互通数据交换标准趋势",
+    "CDSS_L5": "电子病历五级评审核心加分项",
+    "Zero_Trust": "医疗网络安全最高等级要求"
+  }
+}

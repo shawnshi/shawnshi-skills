@@ -1,0 +1,57 @@
+\documentclass[twocolumn, 10pt, a4paper]{ctexart}
+
+% ---------------------------------------------------------
+% 1. Layout & Fonts
+% ---------------------------------------------------------
+\usepackage{geometry}
+\geometry{
+    top=2cm, 
+    bottom=2cm, 
+    left=1.5cm, 
+    right=1.5cm
+}
+\usepackage{amsmath, amssymb, amsfonts}
+\usepackage{newtxtext, newtxmath} % Standard academic fonts (Times-like)
+\usepackage{graphicx}
+\usepackage{booktabs}
+\usepackage{url}
+\usepackage{abstract}
+
+% ---------------------------------------------------------
+% 2. Bibliography (Chinese Standard)
+% ---------------------------------------------------------
+\usepackage[super,square,sort&compress]{gbt7714} 
+
+% ---------------------------------------------------------
+% 3. Styling
+% ---------------------------------------------------------
+\usepackage{titlesec}
+\titleformat{\section}{\large\bfseries}{\thesection}{1em}{}
+\titlespacing*{\section}{0pt}{10pt}{5pt}
+
+\title{\textbf{\Large $title$}}
+\author{\large $author$}
+\date{\today}
+
+\begin{document}
+
+% Special handling for single-column abstract in two-column doc
+\twocolumn[
+  \begin{@twocolumnfalse}
+    \maketitle
+    \renewcommand{\abstractname}{\large 摘要}
+    \begin{abstract}
+      \normalsize
+      $abstract$
+    \end{abstract}
+    \vspace{1.5cm}
+  \end{@twocolumnfalse}
+]
+
+$body$
+
+% Bibliography placeholder (uncomment if using BibTeX)
+% \bibliographystyle{gbt7714-numerical}
+% \bibliography{ref}
+
+\end{document}

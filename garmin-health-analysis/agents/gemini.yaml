@@ -1,0 +1,6 @@
+display_name: Garmin Health
+short_description: 自然语言查询 Garmin 数据，分析健康趋势、恢复状况及患病风险。
+default_prompt: 分析我最近的身体状况，看看我是否有生病的征兆？
+interface:
+  icon: watch
+  brand_color: "#007cc3"

@@ -1,0 +1,94 @@
+---
+name: auditingdiary
+description: Manages personal diary entries and performs cognitive audits (weekly, monthly, annual) using structured prompts. Use when the user asks to update their daily log, or requests a weekly, monthly, or annual review/audit of their diary.
+---
+
+"""
+@Input:  Daily Context (Calendar/Health/Chat), User Reflections.
+@Output: Structured Log Entries, Markdown Audit Reports.
+@Pos:    Cognitive Layer. The "Unification State" of the system.
+
+!!! Maintenance Protocol: All file I/O MUST use scripts/diary_ops.py to ensure atomic prepends.
+!!! Semantic Compliance: Tags MUST strictly follow references/semantic_layer.md.
+"""
+
+# Auditing Diary (Strategic Architect Edition)
+
+管理个人认知熵值的核心工具。通过结构化日志与周期性审计，维持长期战略对齐。
+
+## Core Capabilities
+*   **Atomic Logging**: 安全地向日志文件顶部追加内容，绝不覆盖。
+*   **Cognitive Audit**: 基于模板的周/月/年深度复盘。
+*   **Quantified Self**: 自动生成专注度、情绪与产出的统计报告。
+*   **Semantic Alignment**: 强制对齐 `references/semantic_layer.md` 中的本体。
+
+## 1. Daily Log Workflow (`更新当日日志`)
+
+当用户要求更新日志时：
+
+1.  **Context Gathering (Auto)**:
+    *   获取日期: `YYYY-MM-DD`。
+    *   获取日程: `/calendar:get-schedule`。
+    *   获取健康数据: `${garmin-health-analysis}` (Resting HR, Body Battery, Sleep)。
+2.  **Interactive Interview**:
+    *   "核心产出是什么？" (Tag: `#Delivery/Winning` etc.)
+    *   "有什么认知洞察？" (Tag: `#Cognition/Insight`)
+    *   "专注度(1-5)与情绪？"
+    *   "明日战术锁定？"
+3.  **Execution**:
+    *   基于 `references/templates.md` 组装内容。
+    *   调用脚本写入：
+        ```bash
+        python scripts/diary_ops.py prepend --file "privacy/{YYYY}Diary.md" --content "..."
+        ```
+
+## 2. Audit Workflow (周/月/年审计)
+
+### Standard Audit
+1.  **Read Context**: 读取相关时间段的日志。
+2.  **Discovery (Auto)**: 扫描 `references/work_nodes.md` 中定义的目录，检索本周期的产出物列表。
+3.  **Work Analysis**: 对新增产出进行深度阅读，分析战略意图与认知增量。
+4.  **Generate Report**: 使用 `prompts/` 下对应的模块化提示词生成深度分析。
+5.  **Save**:
+    ```bash
+    python scripts/diary_ops.py prepend --file "privacy/{YYYY}Diary.md" --content "## {Type} Audit\n\n..."
+    ```
+6.  **Memory Synchronization (New)**:
+    *   从审计报告中提取符合“战略偏好”与“行业洞察”定义的金句。
+    *   调用脚本更新 `memory.md`：
+        ```bash
+        python scripts/memory_sync.py --category "战略偏好" --items '["观点1", "观点2"]'
+        python scripts/memory_sync.py --category "行业洞察" --items '["洞察1", "洞察2"]'
+        ```
+
+### Advanced Strategic Audit (New)
+当进行**年度审计**或用户要求**深度复盘**时，请联动外部 Agent：
+
+1.  **Identify Key Themes**: 从统计数据中提取 Top 3 标签（如 `#Strategy/MedicalAI`）。
+2.  **Call Thinker Roundtable**:
+    *   针对核心议题调用 `${thinker-roundtable}`。
+    *   Prompt: "基于我过去一年的 #Strategy/MedicalAI 记录，进行多维度的战略审视与盲区探测。"
+3.  **Synthesize**: 将 Roundtable 的结论整合进年度审计报告。
+
+## 3. Operations & Analysis
+
+### Search (`搜索日志`)
+```bash
+python scripts/diary_ops.py search --file "privacy/{YYYY}Diary.md" --query "关键词"
+```
+
+### Statistics (`生成统计`)
+生成可视化统计报告（情绪分布、专注度趋势、高频标签）。
+```bash
+python scripts/diary_ops.py stats --file "privacy/{YYYY}Diary.md"
+```
+
+### Backup (`备份日志`)
+手动触发备份（写入操作前也会自动触发）。
+```bash
+python scripts/diary_ops.py backup --file "privacy/{YYYY}Diary.md" --dir "privacy/backups"
+```
+
+## Troubleshooting
+*   **Permission Error**: 确保 `privacy/` 目录存在且可写。
+*   **Validation Error**: 若脚本提示 `Content missing date header`，请确保写入内容以 `# YYYY-MM-DD` 开头。

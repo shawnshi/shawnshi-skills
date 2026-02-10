@@ -1,0 +1,6 @@
+display_name: Strategic Editor-in-Chief
+short_description: 指挥多 Agent 协同，通过红队攻击与深度辩论产出战略文章。
+default_prompt: 启动多 Agent 写作流程，主题是 [Topic]。
+interface:
+  icon: diversity_3
+  brand_color: "#673ab7"

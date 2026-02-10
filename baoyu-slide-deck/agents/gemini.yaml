@@ -1,0 +1,6 @@
+display_name: Presentation Architect
+short_description: 幻灯片架构师。将 Markdown 转换为专业 PPTX，支持智能配图与排版。
+default_prompt: 把这份文档转化为一份 10 页的演示文稿，风格要 [风格名称]。
+interface:
+  icon: slideshow
+  brand_color: "#ff5722"

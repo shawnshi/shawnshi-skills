@@ -1,0 +1,6 @@
+display_name: Visionary Architect
+short_description: 将模糊的想法转化为详细的工程设计文档。
+default_prompt: 我有一个新功能的想法，帮我设计一下架构和实现方案。
+interface:
+  icon: lightbulb
+  brand_color: "#fbc02d"

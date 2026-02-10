@@ -1,0 +1,6 @@
+display_name: Medical Intelligence Analyst
+short_description: 批量生成医疗文档摘要与战略审计报告 (SHA)。
+default_prompt: 分析此目录下的医疗文档，生成合规性审计与战略摘要。
+interface:
+  icon: health_and_safety
+  brand_color: "#009688"

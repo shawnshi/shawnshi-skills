@@ -1,0 +1,56 @@
+{
+  "a6e0a717ed69": {
+    "alignments": [
+      "符合CDSS相关要求: 预警, 闭环"
+    ],
+    "gaps": [
+      "缺少Integration核心能力描述（评级关键点）",
+      "缺少Data_Quality核心能力描述（评级关键点）",
+      "缺少Clinical_Closed_Loop核心能力描述（评级关键点）"
+    ]
+  },
+  "5b88981e1f7d": {
+    "alignments": [
+      "符合CDSS相关要求: 预警",
+      "符合Data_Quality相关要求: 完整性"
+    ],
+    "gaps": [
+      "缺少Integration核心能力描述（评级关键点）",
+      "缺少Clinical_Closed_Loop核心能力描述（评级关键点）"
+    ]
+  },
+  "b6ad6a313c6e": {
+    "alignments": [
+      "符合CDSS相关要求: 闭环"
+    ],
+    "gaps": []
+  },
+  "d1f1be76e96b": {
+    "alignments": [
+      "符合Data_Quality相关要求: 及时性"
+    ],
+    "gaps": []
+  },
+  "255f5f47e2db": {
+    "alignments": [
+      "符合CDSS相关要求: 预警, 闭环"
+    ],
+    "gaps": []
+  },
+  "3315af36012d": {
+    "alignments": [],
+    "gaps": []
+  },
+  "58ac23800981": {
+    "alignments": [
+      "符合Data_Quality相关要求: 完整性"
+    ],
+    "gaps": []
+  },
+  "af53cac360bc": {
+    "alignments": [
+      "符合CDSS相关要求: 预警, 闭环"
+    ],
+    "gaps": []
+  }
+}

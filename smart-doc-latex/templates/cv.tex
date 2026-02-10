@@ -1,0 +1,64 @@
+\documentclass[11pt, a4paper]{article}
+
+% ---------------------------------------------------------
+% 1. Layout & Packages
+% ---------------------------------------------------------
+\usepackage[top=1cm, bottom=1cm, left=1cm, right=1cm]{geometry}
+\usepackage{titlesec}
+\usepackage{enumitem}
+\usepackage[hidelinks]{hyperref}
+\usepackage{ctex}
+\usepackage{xcolor}
+\usepackage{fontawesome5} % Icons
+\usepackage{paracol}      % Two-column layout
+
+% ---------------------------------------------------------
+% 2. Styling
+% ---------------------------------------------------------
+\pagestyle{empty} 
+\definecolor{primaryColor}{RGB}{50, 50, 50}
+\definecolor{lineColor}{RGB}{200, 200, 200}
+
+% Custom section styling with underline
+\titleformat{\section}
+  {\Large\bfseries\raggedright\color{primaryColor}}
+  {}
+  {0em}
+  {}[\]color{lineColor}\titlerule]
+\titlespacing{\section}{0pt}{10pt}{5pt}
+
+% Compact lists
+\setlist[itemize]{leftmargin=*, noitemsep, topsep=0pt}
+
+\begin{document}
+
+% ---------------------------------------------------------
+% Header
+% ---------------------------------------------------------
+\begin{center}
+    {\Huge \textbf{$title$}} \\ \vspace{5pt} 
+    \ifdefined\author $author$ \fi
+    % Example contact line (template placeholders)
+    % \faEnvelope\ email@example.com | \faPhone\ +86 123-4567-8900 | \faGithub\ github.com/user
+    \\ \vspace{5pt} 
+    $date$
+\end{center}
+
+\vspace{0.5cm}
+
+% ---------------------------------------------------------
+% Content (Supports paracol for split layout)
+% ---------------------------------------------------------
+% Usage example for user content:
+% \columnratio{0.65} % 65% Main content, 35% Sidebar
+% \begin{paracol}{2}
+% Left Column (Experience)
+% ...
+% \switchcolumn
+% Right Column (Skills)
+% ...
+% \end{paracol}
+
+$body$
+
+\end{document}

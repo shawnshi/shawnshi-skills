@@ -1,0 +1,6 @@
+display_name: Smart LaTeX Publisher
+short_description: 将 Markdown/Docx 转换为出版级 PDF (论文/书籍/简历)。
+default_prompt: 将此文档转换为 [学术论文/技术书籍/简历] 格式的 PDF。
+interface:
+  icon: description
+  brand_color: "#005b96"

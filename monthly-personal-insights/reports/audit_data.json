@@ -1,0 +1,39 @@
+{
+  "period_start": "2026-01-06",
+  "period_end": "2026-02-05",
+  "system_entropy": "🔴 High (Fragmented)",
+  "metrics": {
+    "total_sessions": 49,
+    "active_days": 15,
+    "longest_streak": 6,
+    "file_commits": 36
+  },
+  "charts": {
+    "daily_activity": "Daily Activity (Last 30 Days)\n2026-01-12 | #### (2)\n2026-01-13 | #### (2)\n2026-01-15 | ## (1)\n2026-01-16 | ## (1)\n2026-01-17 | ###### (3)\n2026-01-18 | #### (2)\n2026-01-19 | ## (1)\n2026-01-20 | ############ (6)\n2026-01-24 | ######## (4)\n2026-01-27 | ## (1)\n2026-01-29 | #################### (10)\n2026-01-30 | ######## (4)\n2026-02-01 | ######## (4)\n2026-02-04 | ## (1)\n2026-02-05 | ############## (7)",
+    "intent_dist": "Interaction Intent Distribution\nCreation | ## (4)\nDebugging | ## (4)\nMaintenance | # (3)\nOther | #################### (35)\nResearch | # (3)"
+  },
+  "top_sessions": [
+    "绘制流程图或关系图",
+    "Modify document formatting to use tabularx.",
+    "code-simplifier Simplifies and refines code for clarity, consistency, and maintainability while p...",
+    "Fix XML error in generated diagram file",
+    "生成杂志风格插画，分析文章并生成图片。"
+  ],
+  "raw_daily_data": {
+    "2026-01-12": 2,
+    "2026-01-13": 2,
+    "2026-01-15": 1,
+    "2026-01-16": 1,
+    "2026-01-17": 3,
+    "2026-01-18": 2,
+    "2026-01-19": 1,
+    "2026-01-20": 6,
+    "2026-01-24": 4,
+    "2026-01-27": 1,
+    "2026-01-29": 10,
+    "2026-01-30": 4,
+    "2026-02-01": 4,
+    "2026-02-05": 7,
+    "2026-02-04": 1
+  }
+}
