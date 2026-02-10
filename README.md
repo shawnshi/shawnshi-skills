@@ -26,7 +26,6 @@ gemini skills install https://github.com/shawnshi/shawnshi-skills.git --path res
 | **baoyu-article-illustrator** | 分析文章结构，识别需要视觉辅助的位置，生成具有类型x风格一致性的插图。 |
 | **baoyu-cover-image** | 为文章生成四维定制化（类型、风格、文字、情绪）封面图。 |
 | **baoyu-slide-deck** | 将 Markdown 内容转换为专业的演示文稿（PPTX/PDF），支持智能摘要和可编辑文本。 |
-| **baoyu-url-to-markdown** | 获取任何 URL（包括重 JavaScript 或登录限制页面）并转换为纯 Markdown。 |
 | **brainstorming** | 在实施前将抽象想法转化为具体的工程设计规范（第一性原理、权衡分析）。 |
 | **document-summarizer** | 批量总结 PDF/DOCX/PPTX/XLSX 文件，并带有智能中文摘要和标签。 |
 | **docx** | 创建、读取、编辑或操作 Word 文档（.docx），支持格式化、修订跟踪和模板处理。 |
@@ -49,6 +48,7 @@ gemini skills install https://github.com/shawnshi/shawnshi-skills.git --path res
 | **spreadsheet** | 使用 Python 创建、编辑或分析电子表格，保护公式、引用与格式。 |
 | **tuanbiaodownloader** | 批量下载团体标准图像并自动合并为 PDF，支持 ID 智能提取。 |
 | **ui-ux-pro-max** | UI/UX 设计情报库，包含 50+ 风格、97 调色板、20 种图表及 99 条 UX 准则。 |
+| **url-to-markdown** | 获取任何 URL（包括重 JavaScript 或登录限制页面）并转换为纯 Markdown。基于 Chrome CDP 高保真渲染。 |
 | **web-design-guidelines** | 根据 Web 界面指南审查 UI 代码的合规性、可访问性和设计质量。 |
 | **xlsx** | 处理 Excel 电子表格的核心技能，确保零公式错误并保留现有模板规范。 |
 | **xray-article** | 智慧 X 光机，通过 4 层漏斗方法论扫描文章以提取智慧核心 and 认知骨架。 |
