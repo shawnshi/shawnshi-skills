@@ -47,6 +47,10 @@ def init_project(project_path, topic):
         },
         "insights": [],
         "entities": {},
+        "fact_sheet": {
+            "technical_anchors": [],
+            "core_viewpoints": []
+        },
         "progress": {
             "current_chapter": 0,
             "total_chapters": 0
