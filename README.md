@@ -2,6 +2,21 @@
 
 本项目包含了为 Gemini CLI 智能体定制的一系列专业技能。每个技能都提供了特定的功能增强，旨在优化人机协作效率与决策质量。
 
+## 安装方法
+
+你可以通过 Gemini CLI 的官方命令将本仓库中的技能安装到你的环境中：
+
+### 1. 安装整个仓库
+```bash
+gemini skills install https://github.com/shawnshi/shawnshi-skills.git
+```
+
+### 2. 安装特定技能
+如果你只想安装其中的某一个技能，可以使用 `--path` 参数。例如安装 `research-analyst`：
+```bash
+gemini skills install https://github.com/shawnshi/shawnshi-skills.git --path research-analyst
+```
+
 ## 已上线技能
 
 | 技能名称 | 功能描述 |
@@ -39,9 +54,9 @@
 | **xray-article** | 智慧 X 光机，通过 4 层漏斗方法论扫描文章以提取智慧核心 and 认知骨架。 |
 | **yahoo-finance** | 获取股票价格、基本面、新闻及历史趋势，支持多代码查询与 JSON 输出。 |
 
-## 使用方法
+## 激活与使用
 
-在 Gemini CLI 会话中，通过以下指令激活特定技能：
+安装完成后，在 Gemini CLI 会话中，通过以下指令激活特定技能：
 
 ```bash
 activate_skill <技能名称>
