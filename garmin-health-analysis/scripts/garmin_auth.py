@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """
 @Input:  --email, --password (CLI args), or config.json, or Env Vars
-@Output: Auth Tokens (saved to ~/.clawdbot/garmin/), Boolean Status
+@Output: Auth Tokens (saved to ~/.gemini/garmin/), Boolean Status
 @Pos:    Infrastructure/Auth Layer. Prerequisites for all other scripts.
 
 !!! Maintenance Protocol: If auth method changes (e.g. MFA), update this and _DIR_META.md.
@@ -24,7 +24,7 @@ except ImportError:
     print("Install with: pip3 install garminconnect", file=sys.stderr)
     sys.exit(1)
 
-TOKEN_DIR = Path.home() / ".clawdbot" / "garmin"
+TOKEN_DIR = Path.home() / ".gemini" / "garmin"
 CONFIG_FILE = Path(__file__).parent.parent / "config.json"
 
 
