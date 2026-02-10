@@ -1,13 +1,13 @@
-# Gemini Skills Repository
+# Gemini 技能仓库 (Shawn Shi)
 
-This repository contains a collection of specialized skills for the Gemini CLI agent. Each skill provides specific capabilities to enhance the agent's functionality.
+本项目包含了为 Gemini CLI 智能体定制的一系列专业技能。每个技能都提供了特定的功能增强，旨在优化人机协作效率与决策质量。
 
-## Available Skills
+## 已上线技能
 
-| Skill Name | Description |
+| 技能名称 | 功能描述 |
 | :--- | :--- |
 | **DiaryAudit** | Manages personal diary entries and performs cognitive audits (weekly, monthly, annual) using structured prompts. Use when the user asks to update their daily log, or requests a weekly, monthly, or annual review/audit of their diary. |
-| **agent-browser** | Automates browser interactions for web testing, form filling, screenshots, and data extraction. Use when the user needs to navigate websites, interact with web pages, fill forms, take screenshots, test web applications, or extract information from web pages. allowed-tools: Bash(agent-browser:*) |
+| **agent-browser** | Automates browser interactions for web testing, form filling, screenshots, and data extraction. Use when the user needs to navigate websites, interact with web pages, fill forms, take screenshots, test web applications, or extract information from web pages. |
 | **baoyu-article-illustrator** | Analyzes article structure, identifies positions requiring visual aids, generates illustrations with Type × Style two-dimension approach. Use when user asks to "illustrate article", "add images", "generate images for article", or "为文章配图". |
 | **baoyu-cover-image** | 为文章生成四维定制化（类型、风格、文字、情绪）封面图。支持 20 种手绘与商业风格。使用场景：文章配图、社交媒体封面、书籍封面。 |
 | **baoyu-slide-deck** | Transform Markdown content into professional slide decks (PPTX/PDF). Features "Smart Resume" and "Editable Text". |
@@ -26,7 +26,7 @@ This repository contains a collection of specialized skills for the Gemini CLI a
 | **notebooklm-skill-master** | 使用 Google NotebookLM 深度查询自有文档。支持浏览器自动化、库管理与持久化认证。场景：基于文档的深度问答、研究分析。 |
 | **pdf** | Use this skill whenever the user wants to do anything with PDF files. This includes reading or extracting text/tables from PDFs, combining or merging multiple PDFs into one, splitting PDFs apart, rotating pages, adding watermarks, creating new PDFs, filling PDF forms, encrypting/decrypting PDFs, extracting images, and OCR on scanned PDFs to make them searchable. If the user mentions a .pdf file or asks to produce one, use this skill. |
 | **personal-writing-assistant** | A sophisticated writing assistant designed to generate insightful, resonant, and logically rigorous articles. Use when user asks for "deep dive", "insight", "strategic analysis", or "write an article about X". |
-| **planning-with-files** | Implements Manus-style file-based planning for complex tasks. Creates task_plan.md, findings.md, and progress.md. Use when starting complex multi-step tasks, research projects, or any task requiring >5 tool calls. user-invocable: true allowed-tools:   - Read   - Write   - Edit   - Bash   - Glob   - Grep   - WebFetch   - WebSearch |
+| **planning-with-files** | Implements Manus-style file-based planning for complex tasks. Creates task_plan.md, findings.md, and progress.md. Use when starting complex multi-step tasks, research projects, or any task requiring >5 tool calls. user-invocable: true |
 | **pptx** | "Use this skill any time a .pptx file is involved in any way — as input, output, or both. This includes: creating slide decks, pitch decks, or presentations; reading, parsing, or extracting text from any .pptx file (even if the extracted content will be used elsewhere, like in an email or summary); editing, modifying, or updating existing presentations; combining or splitting slide files; working with templates, layouts, speaker notes, or comments. Trigger whenever the user mentions \"deck,\" \"slides,\" \"presentation,\" or references a .pptx filename, regardless of what they plan to do with the content afterward. If a .pptx file needs to be opened, created, or touched, use this skill." |
 | **research-analyst** | 执行万字级深度研究的专家系统。V6.0 引擎版，支持分章生产、状态管理与物理拼接，产出高密度战略报告。 |
 | **skill-creator** | 创建与升级 Gemini 技能的核心指南。作为 GEB-Flow 协议的守护者，确保新技能具备“分形自描述”与“渐进式披露”的高级架构标准。 |
@@ -39,12 +39,12 @@ This repository contains a collection of specialized skills for the Gemini CLI a
 | **xray-article** | X-ray scans articles to extract wisdom cores using a 4-layer funnel methodology, generating Markdown reports with ASCII art visualizations |
 | **yahoo-finance** | 获取股票价格、基本面、新闻及历史趋势。支持多代码查询、自然语言日期解析及 JSON 输出。当用户询问“XX股价是多少”、“查看XX公司的最新新闻”或“分析XX过去一年的表现”时触发。 |
 
-## Usage
+## 使用方法
 
-To use a skill, activate it within your Gemini CLI session:
+在 Gemini CLI 会话中，通过以下指令激活特定技能：
 
 `ash
-activate_skill <skill_name>
+activate_skill <技能名称>
 `
 
-Refer to the SKILL.md file in each directory for detailed instructions and configuration.
+详情请参阅各技能目录下的 SKILL.md 文件，了解具体的配置与指令。
