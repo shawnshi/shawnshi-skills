@@ -1,3 +1,8 @@
+---
+name: medical-solution-writer
+description: 医疗数字化解决方案专家，基于 Text-to-Action 范式 design 转型规划。
+---
+
 # SKILL.md: Medical Solution Writer (医疗数字化解决方案专家)
 
 > **Version**: 2.8 | **Last Updated**: 2026-02-09 | **Context**: Visual Architecture & Text-to-Action Paradigm

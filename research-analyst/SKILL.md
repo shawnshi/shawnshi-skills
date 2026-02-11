@@ -1,3 +1,8 @@
+---
+name: research-analyst
+description: 执行万字级深度研究的专家系统，支持分章生产、状态管理与物理拼接。
+---
+
 # Research Analyst (V6.2: Forge Edition)
 
 工业级深度研究流水线。通过 `scripts/` 引擎管理状态与产物，突破 LLM 上下文限制。V6.2 版本强化了“深度守卫”与“脱模自动化”。
