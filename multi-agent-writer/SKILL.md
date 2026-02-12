@@ -1,50 +1,57 @@
 ---
 name: multi-agent-writer
-description: A high-density collaborative writing workflow using specialized agents (concept-analyzer, thinker-roundtable, writing-assistant). Features V6.2 "Deep Defense" architecture with mandatory Red-Teaming, Outline Confirmation, and Logic Auditing. Use for strategic reports, white papers, and battle-hardened articles.
+description: A consulting-grade collaborative writing workflow (Pyramid Principle). Features Storylining, Action Titles, and Visual Logic Orchestration. Version 7.0 "The Partner's Desk" Edition.
 ---
 
-# Multi-Agent Writer (V6.2: Deep Defense & Progressive Disclosure)
+# Multi-Agent Writer (V7.0: The Partner's Desk Edition)
 
-## Overview
-A "Cognitive Assembly Line" for strategic content. V6.2 moves detailed prompts to `references/` for token efficiency and introduces mandatory **Cognitive Friction** (Devil's Advocate) and **Deep Logic Auditing**.
+## Core Philosophy: Answer First & Action Driven
+The primary objective is not just "content production," but **Strategic Clarity**. V7.0 enforces the **Pyramid Principle** and **Action Titles** to ensure that headers alone tell a complete story.
 
 ## Workflow
 
-### Phase 0: Initiation & Tracker
-- **Action**: Use `google_web_search` and `ask_user` for "Ground Truth."
-- **Persistence**: Create `tmp/writing_progress_[Topic].md` to track state.
+### Phase 0: Initiation & Ground Truth
+- **定位**: 使用`ask_user`确认文章的篇幅，深度4000字|博客文章2000字|口头报告800字
+- **Action**: Use `google_web_search` and `ask_user` to align on "Success Criteria."
+- **Output**: `tmp/writing_progress_[Topic].md`.
 
-### Phase 1: Structural Analysis & Red Teaming
-1. **Analyze**: Invoke `concept-analyzer` (See `references/agents.md`). Focus on **Second-Order Effects**.
-2. **Attack**: Execute "Red Teaming". Search for failures and contradictions. 
-   - *Constraint*: Use `apify-ultimate-scraper` or `markdown-converter` for deep sampling of critical sources.
-   - *Output*: `tmp/red_team_report_[Topic].md` (See `references/templates.md`).
+### Phase 1: Strategic Synthesis (Storylining)
+1. **Analyze**: Invoke `concept-analyzer`. Focus on **Root Causes** and **Structural Tensions**.
+2. **Storylining (NEW)**: Generate a pure title-only sequence.
+   - *Constraint*: Every header MUST be an **Action Title** (a complete conclusion, not a topic description).
+   - *Audit*: If reading only the headers provides a logical decision path, proceed.
+3. **Attack**: Red Team testing of the storyline logic.
 
-### Phase 2: The "Devil's Advocate" Debate
-- **Action**: Invoke `thinker-roundtable`. 
-- **Mandatory Role**: One thinker MUST be the **Devil's Advocate**, weaponizing the Red Team Report.
-- **Output**: Unresolved tensions and defensive lines.
+### Phase 2: The "Devil's Advocate" Roundtable
+- **Action**: Invoke `thinker-roundtable`.
+- **Mandatory Role**: One thinker MUST act as the **Strategic Partner**, questioning the "So What?" of every claim.
+- **Output**: `tmp/research_context_[Topic].md` (Source of Truth).
 
-### Phase 2.5: Semantic Persistence
-- **Action**: Consolidate insights into `tmp/research_context_[Topic].md` (See `references/templates.md`). This is the **Source of Truth**.
+### Phase 3: Visual Logic & Exhibit Design (NEW)
+- **Constraint**: Before drafting text, design the **Exhibits**.
+- **Action**: For each chapter, define 1-2 core visual components (Mermaid, ASCII, or DALL-E prompts).
+- **Requirement**: The text must support and explain the visual logic, not vice versa.
 
-### Phase 3: Parameter Lock-in (HITL)
-- **Interaction**: `ask_user` for Audience, Tone, and prioritized tensions.
+### Phase 4: Parameter Lock-in (HITL)
+- **Interaction**: `ask_user` for Audience, Tone, and "Non-Consensus" Priorities.
 
-### Phase 4: Outline & Confirmation
-- **4.1 Design**: Read `tmp/research_context_[Topic].md`. Generate outline (See `references/templates.md`).
-- **4.2 Confirmation**: **STOP**. Present outline to user. Wait for approval.
+### Phase 5: Drafting under Pyramid Constraint
+- **Drafting**: Invoke `writing-assistant`.
+- **"So What?" Filter**: Every paragraph must either provide evidence for an Action Title or提炼 (extract) a decision-relevant insight.
+- **Style**: No fluff. Max signal-to-noise ratio.
 
-### Phase 5: Synthesis & Logic Audit
-- **5.1 Drafting**: Invoke `writing-assistant` (See `references/agents.md`).
-- **5.2 Auditing**: Use the **3D Logic Metric** (Fidelity, Defensibility, Entropy) to self-correct. See `references/agents.md` for definitions.
+### Phase 6: Logic & Impact Audit
+- **Audit**: Use the **MBB Logic Metric**:
+  - **MECE**: Are the sections mutually exclusive and collectively exhaustive?
+  - **Pyramid Flow**: Do sub-points logically support the main conclusion?
+  - **Impact**: Is the "So What?" explicitly clear for the target audience?
 
-### Phase 6: Final Delivery
-- **Persistence**: Save final article to `article/[Title]_[YYYY-MM-DD].md`.
-- **Constraint**: Add a "Conflict Appendix" documenting discarded alternatives.
+### Phase 7: Final Forging & Delivery
+- **Persistence**: Save final report to `article/[Title]_[YYYY-MM-DD].md` or `research_projects/[Topic]/`.
+- **Appendix**: Include the "Red-Team Residuals" (risks that remain but are acknowledged).
 
 ## Resources
-- **Personas**: `references/agents.md`
-- **Output Schemas**: `references/templates.md`
+- **Personas**: `references/agents.md` (See *Strategic Partner* & *Exhibit Architect*).
+- **Output Schemas**: `references/templates.md`.
 
-!!! **Protocol**: If you need more depth for an agent's role, read `references/agents.md` before execution.
+!!! **Protocol**: Every response from the Writer must begin with the core strategic conclusion (Answer First).

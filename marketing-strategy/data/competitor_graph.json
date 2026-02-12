@@ -1,0 +1,10 @@
+{
+  "competitors": {
+    "LocalPlayer_A": {
+      "region": "Shanxi",
+      "strengths": ["Strong relationship with provincial Health Commission", "Low price"],
+      "weaknesses": ["Legacy architecture", "No AI capability"],
+      "last_known_tactic": "Bundling cloud imaging with local maintenance"
+    }
+  }
+}

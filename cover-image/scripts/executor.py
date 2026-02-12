@@ -94,7 +94,7 @@ def main():
     # 参数处理
     filename = sys.argv[2] if len(sys.argv) > 2 else f"panda_{datetime.now().strftime('%Y%m%d_%H%M%S')}.png"
     aspect_ratio = sys.argv[3] if len(sys.argv) > 3 else "16:9"
-    quality = sys.argv[4] if len(sys.argv) > 4 else "2K"
+    quality = sys.argv[4] if len(sys.argv) > 4 else "4K"
 
     # 映射 Size (OpenAI 协议通过 extra_body 传递)
     size_map = {

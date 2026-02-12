@@ -1,0 +1,24 @@
+{
+  "hospital_tiers": {
+    "Grade3_Large": {
+      "scale": "1000+ beds",
+      "implementation_cycle": "4-6 months",
+      "value_hooks": ["National Exam Ranking (国考)", "DRG/DIP Surplus", "Research Moat"]
+    },
+    "Grade3_Medium": {
+      "scale": "500-1000 beds",
+      "implementation_cycle": "3-4 months",
+      "value_hooks": ["DRG/DIP Efficiency", "Clinical Burnout Reduction", "Special Bond Funding"]
+    },
+    "Grade2": {
+      "scale": "<500 beds",
+      "implementation_cycle": "2-3 months",
+      "value_hooks": ["Compliance (等级评审)", "Cost Control", "Cloud-based Maintenance"]
+    }
+  },
+  "default_assumptions": {
+    "pilot_phase": "1 month",
+    "full_rollout": "2-3 months",
+    "migration_safety": "24h rollback window mandatory"
+  }
+}

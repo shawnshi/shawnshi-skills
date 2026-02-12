@@ -89,8 +89,8 @@ def generate_image(prompt_text, output_path, env_vars):
     client = OpenAI(base_url=base_url, api_key=api_key)
     
     # 默认分辨率配置
-    quality = "2K"
-    target_size = "2560x1440" # 16:9 2K
+    quality = "4K"
+    target_size = "3840×2160" # 16:9 4K
 
     logging.info(f"Generating image with {model_name} | Target: {output_path}")
 
