@@ -3,17 +3,17 @@ name: multi-agent-writer
 description: A consulting-grade collaborative writing workflow (Pyramid Principle). Features Storylining, Action Titles, and Visual Logic Orchestration. Version 7.0 "The Partner's Desk" Edition.
 ---
 
-# Multi-Agent Writer (V7.0: The Partner's Desk Edition)
+# Multi-Agent Writer (V7.1: The Architect's Desk Edition)
 
 ## Core Philosophy: Answer First & Action Driven
-The primary objective is not just "content production," but **Strategic Clarity**. V7.0 enforces the **Pyramid Principle** and **Action Titles** to ensure that headers alone tell a complete story.
+The primary objective is not just "content production," but **Strategic Clarity**. V7.1 enforces the **Pyramid Principle**, **Action Titles**, and **Clean Text output** (no bold markdown) to ensure that logic alone carries the weight.
 
 ## Workflow
 
 ### Phase 0: Initiation & Ground Truth
 - **定位**: 使用`ask_user`确认文章的篇幅，深度4000字|博客文章2000字|口头报告800字
 - **Action**: Use `google_web_search` and `ask_user` to align on "Success Criteria."
-- **Output**: `tmp/writing_progress_[Topic].md`.
+- **Output**: `article/writing_progress_[Topic].md`.
 
 ### Phase 1: Strategic Synthesis (Storylining)
 1. **Analyze**: Invoke `concept-analyzer`. Focus on **Root Causes** and **Structural Tensions**.
@@ -35,10 +35,12 @@ The primary objective is not just "content production," but **Strategic Clarity*
 ### Phase 4: Parameter Lock-in (HITL)
 - **Interaction**: `ask_user` for Audience, Tone, and "Non-Consensus" Priorities.
 
-### Phase 5: Drafting under Pyramid Constraint
+### Phase 5: Drafting & Style Enforcement
 - **Drafting**: Invoke `writing-assistant`.
-- **"So What?" Filter**: Every paragraph must either provide evidence for an Action Title or提炼 (extract) a decision-relevant insight.
-- **Style**: No fluff. Max signal-to-noise ratio.
+- **"So What?" Filter**: Every paragraph must either provide evidence for an Action Title or 提炼 (extract) a decision-relevant insight.
+- **Style Constraints**: 
+  - **No Bold**: NEVER use `**` or `__` for emphasis in the main text. Use structure, indentation, or capitalization of keywords if necessary.
+  - **No Fluff**: Max signal-to-noise ratio. No buzzwords.
 
 ### Phase 6: Logic & Impact Audit
 - **Audit**: Use the **MBB Logic Metric**:
@@ -47,7 +49,7 @@ The primary objective is not just "content production," but **Strategic Clarity*
   - **Impact**: Is the "So What?" explicitly clear for the target audience?
 
 ### Phase 7: Final Forging & Delivery
-- **Persistence**: Save final report to `article/[Title]_[YYYY-MM-DD].md` or `research_projects/[Topic]/`.
+- **Persistence**: Save final report to `article/[Title]_[YYYY-MM-DD].md`.
 - **Appendix**: Include the "Red-Team Residuals" (risks that remain but are acknowledged).
 
 ## Resources

@@ -27,6 +27,7 @@
 - **Scalpel-Precision**: No buzzwords. Use high-density nouns and verbs.
 - **Defensive Writing**: Every claim must be armored against the Red Team's potential attacks.
 - **Gray Solutions**: Prefer robust trade-offs over idealized "best practices".
+- **Zero-Bolding Policy**: NEVER use `**` or `__` in the final output. Rely on high-quality writing and structure to convey importance.
 
 ## 5. Logic Proctor (Auditor)
 **Audit Scale (The 3D Logic Metric)**:

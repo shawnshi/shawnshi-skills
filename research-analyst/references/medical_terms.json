@@ -1,0 +1,29 @@
+{
+  "standard_terms": {
+    "HIS": "医院信息系统 (Hospital Information System)",
+    "EMR": "电子病历 (Electronic Medical Record)",
+    "LLM": "大语言模型 (Large Language Model)",
+    "GenAI": "生成式人工智能",
+    "Agentic AI": "智能体化人工智能",
+    "MSL": "医疗语义层 (Medical Semantic Layer)",
+    "ACE": "智能体协调引擎 (Agent Coordination Engine)",
+    "WiNEX": "卫宁健康下一代数字医疗平台 WiNEX",
+    "HITL": "人在回路 (Human-in-the-Loop)",
+    "VBC": "价值医疗 (Value-Based Care)",
+    "DRG": "按疾病诊断相关分组 (Diagnosis Related Groups)",
+    "DIP": "按病种分值付费 (Big Data Diagnosis-Intervention Groups)",
+    "RAG": "检索增强生成 (Retrieval-Augmented Generation)"
+  },
+  "restricted_words": {
+    "电脑": "工作站/服务器/终端",
+    "算命": "幻觉/概率预测",
+    "程序": "系统/软件/平台",
+    "卖软件": "数字化转型/智能化赋能",
+    "客户": "医疗机构/医院客户",
+    "用户": "医护人员/使用者"
+  },
+  "winning_specific": {
+    "卫宁": "卫宁健康 (Winning Health)",
+    "WiNGPT": "卫宁健康医疗垂直大模型 WiNGPT"
+  }
+}
