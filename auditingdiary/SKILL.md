@@ -51,14 +51,15 @@ description: Manages personal diary entries and performs cognitive audits (weekl
 1.  **Read Context**: 读取相关时间段的日志。
 2.  **Strategic Context (New)**: 读取 `memory.md`，提取“个人行业观点”作为审计的战略锚点。
 3.  **Discovery (Auto)**: 扫描 `references/work_nodes.md` 中定义的目录，检索本周期的产出物列表。
-4.  **Work Analysis**: 对新增产出进行深度阅读，分析战略意图与认知增量。
-5.  **Strategic Alignment Analysis**: 对比实战产出与 `memory.md` 中的观点，执行 `prompts/weekly/PART_VI_STRATEGIC_ALIGNMENT.md` 逻辑。
-6.  **Generate Report**: 使用 `prompts/` 下对应的模块化提示词生成深度分析。
-7.  **Save**:
+4.  **Work Analysis**: 扫描google workspace，检索本周期的产出物列表。。
+5  **Work Analysis**: 对新增产出进行深度阅读，分析战略意图与认知增量。
+6.  **Strategic Alignment Analysis**: 对比实战产出与 `memory.md` 中的观点，执行 `prompts/weekly/PART_VI_STRATEGIC_ALIGNMENT.md` 逻辑。
+7.  **Generate Report**: 使用 `prompts/` 下对应的模块化提示词生成深度分析。
+8.  **Save**:
     ```bash
     python scripts/diary_ops.py prepend --file "privacy/{YYYY}Diary.md" --content "## {Type} Audit\n\n..."
     ```
-6.  **Memory Synchronization (New)**:
+9.  **Memory Synchronization (New)**:
     *   从审计报告中提取符合“战略偏好”与“行业洞察”定义的金句。
     *   调用脚本更新 `memory.md`：
         ```bash
