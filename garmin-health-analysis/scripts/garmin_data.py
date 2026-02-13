@@ -253,6 +253,59 @@ def fetch_stress(client, days=7, start=None, end=None):
         return {"error": str(e)}
 
 
+def fetch_training_status(client, date_str=None):
+    """Fetch training status and load ratio."""
+    if not date_str:
+        date_str = datetime.now().strftime("%Y-%m-%d")
+    
+    try:
+        data = client.get_training_status(date_str)
+        if data:
+            recent_status = data.get("mostRecentTrainingStatus", {})
+            status_data_map = recent_status.get("latestTrainingStatusData", {})
+            
+            # Get the first device's status data
+            status_entry = {}
+            if status_data_map:
+                status_entry = list(status_data_map.values())[0]
+            
+            acute_chronic_ratio = status_entry.get("acuteTrainingLoadDTO", {}).get("dailyAcuteChronicWorkloadRatio", "--")
+            
+            # Extract VO2 Max from the same response if available
+            vo2_max = "--"
+            recent_vo2 = data.get("mostRecentVO2Max", {})
+            if recent_vo2:
+                vo2_max = recent_vo2.get("generic", {}).get("vo2MaxValue", "--")
+
+            return {
+                "date": date_str,
+                "status": status_entry.get("trainingStatusFeedbackPhrase", "无数据"),
+                "load_ratio": acute_chronic_ratio,
+                "load_status": status_entry.get("acwrStatusFeedback", "无数据"),
+                "vo2_max": vo2_max
+            }
+        return {}
+    except Exception:
+        return {}
+
+
+def fetch_max_metrics(client, date_str=None):
+    """Fetch Fitness Age and VO2 Max."""
+    if not date_str:
+        date_str = datetime.now().strftime("%Y-%m-%d")
+        
+    try:
+        # Get Fitness Age
+        fa_data = client.get_fitnessage_data(date_str)
+        fitness_age = round(fa_data.get("fitnessAge", 0), 1) if fa_data.get("fitnessAge") else "--"
+        
+        return {
+            "fitness_age": fitness_age
+        }
+    except Exception:
+        return {"fitness_age": "--"}
+
+
 def fetch_summary(client, days=7, start=None, end=None):
     """Fetch combined summary with key metrics."""
     start_date, end_date = get_date_range(days, start, end)
@@ -264,6 +317,11 @@ def fetch_summary(client, days=7, start=None, end=None):
         bb = fetch_body_battery(client, days, start, end).get("body_battery", [])
         hr = fetch_heart_rate(client, days, start, end).get("heart_rate", [])
         activities = fetch_activities(client, days, start, end).get("activities", [])
+        stress = fetch_stress(client, days, start, end).get("stress", [])
+        
+        # New metrics
+        training_status = fetch_training_status(client, end_date)
+        max_metrics = fetch_max_metrics(client, end_date)
         
         # Calculate averages (handle None values)
         sleep_times = [s.get("sleep_time_seconds") for s in sleep if s.get("sleep_time_seconds")]
@@ -297,7 +355,10 @@ def fetch_summary(client, days=7, start=None, end=None):
             "hrv": hrv,
             "body_battery": bb,
             "heart_rate": hr,
-            "activities": activities
+            "activities": activities,
+            "stress": stress,
+            "training_status": training_status,
+            "max_metrics": max_metrics
         }
     
     except Exception as e:
