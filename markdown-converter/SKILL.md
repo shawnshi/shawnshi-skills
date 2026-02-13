@@ -14,6 +14,12 @@ description: Convert any document (PDF, DOCX, PPTX, XLSX), image, or media file 
 
 ## Execution Workflow
 
+### 0. Pre-flight Check (依赖自愈) [NEW]
+若转换 `.docx` 或 `.pptx` 失败，提示缺少依赖，请立即尝试使用以下命令进行修复级运行：
+```bash
+uvx --with "markitdown[all]" markitdown <INPUT_FILE> -o <OUTPUT_FILE>
+```
+
 ### 1. Standard Conversion (推荐)
 直接调用包装脚本，它会自动处理 `uvx` 环境。
 
