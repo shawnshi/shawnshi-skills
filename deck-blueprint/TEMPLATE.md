@@ -2,8 +2,40 @@
 
 <!-- 
 Pos: C:\Users\shich\.gemini\skills\deck-blueprint\TEMPLATE.md
-Vision: 每一页幻灯片的极致结构化定义
+Vision: 每一页幻灯片的极致结构化定义，以及全局视觉灵魂的锁定
 -->
+
+## 0. 全局视觉风格蓝图 (Global Style Instructions)
+
+**// 视觉灵魂锁定**
+> 在进行单页设计前，必须首先锁定整套文稿的视觉 DNA。
+
+<STYLE_INSTRUCTIONS>
+
+**Design Aesthetic (设计美学):** 
+[例如: "Digital Constructivism" (数字构成主义)。结合瑞士平面设计的网格系统与终端代码（Terminal）的极客美学。]
+
+**Color Palette (调色板):**
+*   **Primary Background (主背景):** [Hex Code] - [使用场景说明]
+*   **Emphasis Background (强调背景):** [Hex Code] - [使用场景说明]
+*   **Action Color (行动色):** [Hex Code] - [高亮/引导]
+*   **Neutral/Text (中性/文字):** [Hex Code] - [正文/辅助]
+
+**Typography (字体系统):**
+*   **Title/Lead-in (标题):** [Font Name/Style Description]
+*   **Body (正文):** [Font Name/Style Description]
+*   **Data/Code (数据/代码):** [Font Name/Style Description]
+
+**Visual Elements (视觉元素):**
+*   [元素 1]: [描述其渲染特征，如“细线框图”、“磨砂玻璃效果”]
+*   [元素 2]: [禁忌事项，如“避免拟人化机器人图片”]
+
+**Layout Constraints (布局约束):**
+[例如: 统一采用 8px 网格系统，边距保持 10% 呼吸感。]
+
+</STYLE_INSTRUCTIONS>
+
+---
 
 ## 页面设计蓝图规范
 

@@ -25,7 +25,7 @@ Maintenance Protocol: 遵循 GEB-Flow 协议。严禁阶段跳跃与非授权摘
 ### 第一阶段：战略透视与初始化 (Strategic X-Ray & Init)
 1.  **物理初始化 [Gate 1]**: 必须先执行 `run_shell_command` 创建工作目录 `C:\Users\shich\.gemini\slide-deck\[项目名称]`。**未成功创建严禁向下执行。**
 2.  **战略指纹提取**: 检索 `memory.md` 确定用户的核心立场。
-3.  **校准**: 使用 `ask_user` 询问目标场景、受众、影响力目标及页面规模。
+3.  **校准**: 使用 `ask_user` 询问目标场景、受众、影响力目标、页面规模及 **视觉美学倾向 (如: 极简主义、数字构成主义、工业风)**。
 4.  **Ghost Decking**: 生成 **Ghost Title List**（叙事性 Lead-in 序列）。
 5.  **用户签收 [Gate 2]**: 必须获得用户对 Ghost Title List 的明确确认。
 
@@ -35,8 +35,9 @@ Maintenance Protocol: 遵循 GEB-Flow 协议。严禁阶段跳跃与非授权摘
 3.  **联网补全**: 对于缺乏证据的断言，主动调用 `google_web_search` 寻找最新行业数据。
 
 ### 第三阶段：精密蓝图生成 (Blueprint Execution)
-1.  **逐页执行**: 生成 `draft.md`。每页必须包含 NARRATIVE GOAL, LEAD-IN, BODY & DATA。
-2.  **结构化视觉 [Gate 3]**: 视觉描述必须采用 `VISUAL_CODE` 标准（详见 TEMPLATE.md），包含 JSON 格式的参数定义，为下游自动化做准备。
+1.  **全局风格锁定**: 在开始单页生成前，必须首先按照 `TEMPLATE.md` 生成 **0. 全局视觉风格蓝图**，并包含完整的 `<STYLE_INSTRUCTIONS>` 块。
+2.  **逐页执行**: 生成 `draft.md`。每页必须包含 NARRATIVE GOAL, LEAD-IN, BODY & DATA。
+3.  **结构化视觉 [Gate 3]**: 视觉描述必须采用 `VISUAL_CODE` 标准（详见 TEMPLATE.md），包含 JSON 格式的参数定义，为下游自动化做准备。
 
 ### 第四阶段：红队对抗审计 (Adversarial Audit)
 1.  **多角色审查**: 模拟 [怀疑论决策者]、[保守派执行者]、[风险控制官] 进行“拆台”。
