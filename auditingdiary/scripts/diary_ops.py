@@ -160,13 +160,31 @@ def backup_diary(file_path, backup_dir):
 def main():
     parser = argparse.ArgumentParser(description="Diary Operations Engine")
     subparsers = parser.add_subparsers(dest='command', required=True)
-    p_prepend = subparsers.add_parser('prepend'); p_prepend.add_argument('--file', required=True); p_prepend.add_argument('--content', required=True)
+    p_prepend = subparsers.add_parser('prepend')
+    p_prepend.add_argument('--file', required=True)
+    p_prepend.add_argument('--content')
+    p_prepend.add_argument('--content_file')
     p_search = subparsers.add_parser('search'); p_search.add_argument('--file', required=True); p_search.add_argument('--query', required=True)
     p_stats = subparsers.add_parser('stats'); p_stats.add_argument('--file', required=True)
     p_backup = subparsers.add_parser('backup'); p_backup.add_argument('--file', required=True); p_backup.add_argument('--dir', required=True)
     args = parser.parse_args(); result = {"status": "error", "message": "Unknown command"}
     if args.command == 'prepend':
-        content = args.content.replace('\\n', '\n')
+        content = ""
+        if args.content_file:
+            try:
+                with open(args.content_file, 'r', encoding='utf-8') as f:
+                    content = f.read()
+            except Exception as e:
+                result = {"status": "error", "message": f"Failed to read content file: {str(e)}"}
+                print(json.dumps(result, ensure_ascii=False, indent=2))
+                return
+        elif args.content:
+            content = args.content.replace('\\n', '\n')
+        else:
+            result = {"status": "error", "message": "Either --content or --content_file is required for prepend."}
+            print(json.dumps(result, ensure_ascii=False, indent=2))
+            return
+            
         result = safe_prepend(args.file, content)
     elif args.command == 'search': result = search_diary(args.file, args.query)
     elif args.command == 'stats': result = generate_stats(args.file)

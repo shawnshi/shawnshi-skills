@@ -69,4 +69,4 @@ description: 医疗数字化解决方案专家，基于 Text-to-Action 范式 de
 
 ## 4. 维护与资源
 - 脚本：`logic_checker.py`, `manifest_manager.py`。
-- 知识库：`medical_semantic_layer.md`, `hitl_grading.md`。
+

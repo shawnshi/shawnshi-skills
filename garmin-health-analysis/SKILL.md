@@ -57,7 +57,8 @@ python scripts/garmin_fhir_adapter.py hrv --days 30
 
 ## Key Insights Reference
 
-- **Executive Readiness (0-100)**: 综合睡眠质量(40%)、Body Battery 峰值(40%)及压力负荷(20%)得出的决策能量得分。
+- **Executive Readiness (0-100)**: 综合睡眠质量(40%)、Body Battery 峰值(40%)及压力负荷(20%)得出的决策能量得分。反映身心对高强度认知任务的准备程度。
+- **Stress Index (0-100)**: 全天压力负荷。反映自主神经系统的张力，低值 (0-25) 通常代表休息或高效专注，高值 (>50) 代表生理/心理消耗。
 - **"Garmin Flu" Pattern**: 患病前 24-48h 的生理特征：RHR 飙升 (>3-5 bpm) 且 HRV 骤降 (>10-15%)。
 
 ## Troubleshooting
