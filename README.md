@@ -5,7 +5,7 @@
 <!-- Maintenance Protocol: All new skills must be initialized via 'skill-creator'. -->
 
 ## 1. 架构总览 (Architectural Overview)
-本目录是由 36 个专业技能构成的“分形武器库”，旨在医疗智能时代构建从“情报抓取”到“顶层设计”的完整能力闭环。
+本目录是由 37 个专业技能构成的“分形武器库”，旨在医疗智能时代构建从“情报抓取”到“顶层设计”的完整能力闭环。
 
 ## 2. 安装与部署协议 (Installation & Deployment)
 
@@ -21,11 +21,12 @@ gemini skills install https://github.com/shawnshi/shawnshi-skills.git --path res
 
 ## 3. 技能列表 (Skill Inventory)
 
-> Auto-generated from SKILL.md analysis. Total: 36
+> Auto-generated from SKILL.md analysis. Total: 37
 
 | Skill Directory | Description |
 | :--- | :--- |
 | [agent-browser](./agent-browser/) | 网页自动化交互代理。用于网页测试、表单填写、截图及数据提取。 |
+| [ai-daily-digest](./ai-daily-digest/) | AI 驱动的战略级新闻聚合器。利用原生代理推理能力生成的深度简报。 |
 | [article-illustrator](./article-illustrator/) | 文章结构化配图专家。分析结构，识别配图点，生成“类型×风格”二维插图。 |
 | [auditingdiary](./auditingdiary/) | 个人认知审计系统。管理日记条目并执行周/月/年维度的认知行为审计。 |
 | [brainstorming](./brainstorming/) | 构思孵化器。在实施前通过结构化对话（第一性原理、权衡分析）将抽象想法转化为具体规格。 |
@@ -42,7 +43,7 @@ gemini skills install https://github.com/shawnshi/shawnshi-skills.git --path res
 | [monthly-personal-insights](./monthly-personal-insights/) | 战略级月度元分析。解码人机交互模式，最小化系统熵值，最大化项目速率。 |
 | [morphism-mapper-master](./morphism-mapper-master/) | 范畴论映射器 (v2.6)。将问题结构映射到异构领域生成非共识创新。 |
 | [multi-agent-writer](./multi-agent-writer/) | 咨询级协作写作流（金字塔原理）。具备故事线梳理、行动标题与视觉逻辑编排能力。 |
-| [news-aggregator-skill](./news-aggregator-skill/) | 全域情报监测中枢。从 HN/GitHub/36Kr 等源头获取并深度分析实时趋势。 |
+| [news-aggregator](./news-aggregator/) | 全域情报监测中枢。从 HN/GitHub/36Kr 等源头获取并深度分析实时趋势。 |
 | [notebooklm-skill-master](./notebooklm-skill-master/) | NoteBookLM 深度查询代理。支持自有文档的浏览器自动化与持久化认证。 |
 | [pdf](./pdf/) | PDF 全能工场。涵盖读取、提取表格、合并拆分、水印加密等全链路处理。 |
 | [personal-writing-assistant](./personal-writing-assistant/) | 深度写作助手。旨在生成深刻、共鸣且逻辑严密的战略级文章。 |
