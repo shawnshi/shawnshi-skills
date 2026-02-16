@@ -1,36 +1,47 @@
 ﻿---
 name: presentation-architect
-description: "演示文稿全栈架构师。整合战略逻辑蓝图设计与高保真自动化渲染，确保交付物具备商业穿透力与视觉一致性。"
+description: "演示文稿全栈架构师。V3.0 认知枢纽版：引入多 Agent 博弈审计、逻辑湖自动联结与视觉信噪比度量。"
 ---
 
-# SKILL.md: Presentation Architect (演示文稿逻辑与视觉专家)
+# SKILL.md: Presentation Architect V3.0 (The Cognitive Nexus)
 
-## 1. 触发逻辑 (Trigger)
-- 当用户提出“制作 PPT”、“设计演示文稿”、“生成幻灯片”或“构建战略蓝图”时激活。
+## 0. 就绪度审计 (Readiness Audit - Phase 0)
+- **环境自愈**：检测文件类型，强制执行markitdown环境检查。
+- **模板锚定**：必须定位到 `blueprint-template.md`。
 
-## 2. 核心工作流 (The Golden Path)
-本技能强制执行“逻辑先行，视觉后置”的闭环流程：
-1. **Phase 1: Strategic Blueprinting**: 构建 Ghost Decking，定义 Lead-ins 与证据网。
-2. **Phase 2: Narrative Approval**: 用户确认逻辑大纲。
-3. **Phase 3: Visual Rendering**: 自动化多模态渲染，生成 PPTX/PDF。
-
-## 3. 核心 SOP
+## 1. 核心工作流 (The Golden Path)
 
 ### 第一阶段：战略透视 (Blueprint Phase)
-1. **意图对齐**：使用 `ask_user` 确认受众、场景与核心结论。
-2. **逻辑构建**：生成 `outline.md`。要求每一页标题必须是“行动标题（Action Title）”。
-3. **证据织网**：为核心断言标注数据来源或证据点。
+0. **初始化物理目录**：初始化物理目录 `./.gemini/MEMORY/slide-deck/{Topic}_{Date}`与 `working_memory.json`
+1. **意图对齐**：使用 `ask_user` 确认受众权重、核心结论与痛点。
+2. **逻辑湖联结 (NEW)**：自动检索 `memory.md` 中的 `Project Context` 与 `Lessons Learned`，将历史经验作为约束条件注入当前蓝图。
+3. **逻辑构建**：生成 `outline.md`。**[硬约束：全量 Action Titles]**。
+4. **证据织网**：将源文档的“干货”物理索引至每一页。
+5. **全量蓝图生成**：遵循模板生成 .md。
+   - **信息熵保护**：Body 严禁摘要化。
+   - **视觉微码标准化**：遵循 Schema 生成 `VISUAL_CODE`。
+6. **视觉信噪比度量 (NEW)**：计算 `Visual_SNR`。若低于阈值，自动建议增加数据维度或拆分页面。
+7. **多 Agent 冲突审计 (NEW)**：
+   - **Customer Agent**: 质疑落地性与 ROI。
+   - **Competitor Agent**: 寻找逻辑同质化漏洞。
+   - **Financial Agent**: 计算隐性成本。
+   - **机制**: 只有当方案在三方博弈中存活，才允许进入下一阶段。
+8. **闭环修订**：保存最终版至 `.\.gemini\slide-deck\final_blueprint.md`。
 
-### 第二阶段：视觉合成 (Rendering Phase)
-1. **风格锚定**：根据内容信号从 `references/styles/` 选择最优视觉基因。
-2. **提示词工程**：调用 `scripts/generate-prompts.py` 将逻辑映射为视觉。
-3. **自动化渲染**：执行 `scripts/generate-images.py`。启用 **Smart Resume** 机制以应对网络中断。
+### 第二阶段：视觉锻造 (Forging Phase)
 
-### 第三阶段：物理固化 (Assembly Phase)
-1. **组件注入**：调用 `scripts/build-deck.py`。
-2. **可编辑性保障**：默认使用 `--editable-text` 模式，确保用户具备二次微调能力。
+1. **素材生成**：基于 `automation_prompt` 调用图像生成技能。
+2. **数据可视化**：调用 Python 脚本生成 SVG 图表。
 
-## 4. 维护与资源
-- **渲染引擎**: scripts/build-deck.py.
-- **蓝图模板**: references/blueprint-template.md.
-- **风格库**: references/styles/.
+### 第三阶段：物理组装 (Assembly Phase)
+1. **自动化合并**：调用 `scripts/build-deck.py`。
+
+## 2. 核心约束 (The Iron Rules)
+- **反熵减协议**：长文输出时，严禁使用“以此类推”。
+- **路径锁定**：所有产出锚定在 `.\.gemini\slide-deck\`。
+- **资产主权**：强调本地文件存储。
+
+## 3. 维护与资源
+- **审计维度**: 逻辑链、证据密度、视觉隐喻、三方博弈。
+- **逻辑湖**: memory.md (Project Context).
+- **模板**: references/blueprint-template.md.
