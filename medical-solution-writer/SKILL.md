@@ -17,7 +17,7 @@ description: 医疗数字化解决方案专家，基于 Text-to-Action 范式 de
 1. **任务**：使用 `ask-user` 获取背景（项目背景，方案主要内容，报告相关的用户，报告的篇幅（概要|简单（5页左右）|完整（30页以上））），随后**必须**构建一个“MECE 议题树”。
 2. **要求**：
     - 识别医院当前的三个核心矛盾（如：临床效率 vs. 数据安全）。
-    - 创建工作空间：`medical-solution/[ProjectName]_[YYYYMMDD]`。
+    - 创建工作空间：`./.gemini/MEMORY/medical-solution/[ProjectName]_[YYYYMMDD]`。
     - 生成：`manifest.json`。
 3.**Initialize**: 目录初始化。生成 `_DIR_META.md` 及 `working_memory.json`。
 

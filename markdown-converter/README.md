@@ -1,13 +1,27 @@
-# markdown-converter
-<!-- Input: Binary documents (PDF, DOCX, ZIP), media files. -->
-<!-- Output: Clean, structured Markdown semantics. -->
-<!-- Pos: Data Ingestion Layer (The Alchemist). -->
-<!-- Maintenance Protocol: Keep 'scripts/converter.py' synced with MarkItDown updates. -->
+﻿# Markdown Converter: 万能语义摄取器
 
-## 核心功能
-异构文件格式的“炼金术师”。将混乱的二进制文件统一转换为 Markdown 语义层，为下游的大模型推理提供结构化底座。
+<!-- 
+@Input: Binary Documents (PDF/DOCX/PPTX/XLSX), Media, Images
+@Output: Clean Markdown (Structure Preserved)
+@Pos: [ACE Layer: Perception/Input] | [MSL Segment: Semantic Ingestion]
+@Maintenance: Update MarkItDown & OCR dependencies.
+@Axioms: Format Agnostic | Structure Fidelity | Semantic Ingestion
+-->
 
-## 战略契约
-1. **结构保真**: 转换过程中必须保留标题层级、列表逻辑与表格语义，严禁将表格展平为纯文本。
-2. **深度提取**: 对复杂排版的 PDF 必须尝试多栏解析与图像 OCR 结合。
-3. **ZIP 遍历**: 处理压缩包时必须自动执行分形递归，生成完整的目录树内容。
+> **核心内核**：将物理世界的异构格式转化为统一的 Markdown 语义层，为下游所有 AI 分析提供高密度的纯净物料。
+
+## 0. 本质与边界 (Essence & Boundary)
+- **核心定义**: 格式炼金术士，负责打破文件格式的“黑盒”，提取其中的逻辑骨架。
+- **反向定义**: 它不是一个阅读器，而是一个语义解压引擎。
+- **费曼比喻**: 就像是把一堆用各种语言、在各种材质上写的秘密信件（各种格式的文件），统一复印并翻译成一种你可以随便涂改、搜索的白纸（Markdown）。
+
+## 1. 生态位映射 (Ecosystem DNA)
+- **MSL 契约**: 处理“二进制文档”、“非结构化媒介”等实体，将其转换为标准语义流。
+- **ACE 角色**: 作为 **Input Sensor (输入感知器)**。
+
+## 2. 逻辑机制 (Mechanism)
+- [Format Detection] -> [Structural Extraction] -> [OCR/Transcription] -> [Markdown Formatting]
+
+## 3. 策略协议 (Strategic Protocols)
+- **结构优先**：在转换过程中必须优先保留标题级联、列表与表格，这是逻辑生存的最后一道防线。
+- **ZIP 深度遍历**：遇到压缩包必须自动解压并递归转换，构建完整的上下文语义池。

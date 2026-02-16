@@ -1,13 +1,27 @@
-# slide-deck
-<!-- Input: Markdown content, style selection, language flags. -->
-<!-- Output: Presentation images, professional .pptx/.pdf files. -->
-<!-- Pos: Narrative/Visual Output Layer (The Architect). -->
-<!-- Maintenance Protocol: Sync 'scripts/generate-images.py' with rendering API updates. -->
+﻿# Slide Deck: 叙事架构师
 
-## 核心功能
-基于语义分析的幻灯片架构师。支持“断点续传”渲染逻辑，通过将 Markdown 直接转化为具备专业商务风格的演示文稿，实现叙事的可视化跃迁。
+<!-- 
+@Input: Structured Markdown, Style Templates, Rendering Models
+@Output: Professional PPTX/PDF, Visual Prompts
+@Pos: [ACE Layer: Output/Visual] | [MSL Segment: Visual Storytelling]
+@Maintenance: Update visual-semantic mapping & style assets.
+@Axioms: Semantic Mapping | Multi-Modal Rendering | Smart Resume
+-->
 
-## 战略契约
-1. **可编辑逻辑**: 优先使用 `--editable-text` 模式，确保生成的 PPT 具备原生文本框，方便下游手动微调。
-2. **断点容错**: 强制维护 `status.json`，在网络中断或生成失败时支持从断点位置物理续传，杜绝重复渲染。
-3. **大纲确认**: 生成像素前必须产出 `outline.md` 并获得用户对视觉逻辑的最终确认。
+> **核心内核**：将 Markdown 语义直接映射为具备商业穿透力的 PPTX/PDF。支持基于状态的“断点续传”渲染。
+
+## 0. 本质与边界 (Essence & Boundary)
+- **核心定义**: 幻灯片自动化编译引擎，负责将文本逻辑结构化并注入多模态视觉资产。
+- **反向定义**: 它不是一个设计软件，而是一个逻辑到视觉的翻译机。
+- **费曼比喻**: 就像是一个自动化的 PPT 制作机器人，你给他一份大纲，他就能自动找配图、排版并做成可以直接演示的文件。
+
+## 1. 生态位映射 (Ecosystem DNA)
+- **MSL 契约**: 处理“叙事大纲”、“视觉提示词”、“PPT 实体”等。
+- **ACE 角色**: 作为 **Visual Worker (视觉执行者)**。
+
+## 2. 逻辑机制 (Mechanism)
+- [Semantic Analysis] -> [Outline Approval (HITL)] -> [Prompt Synthesis] -> [Visual Rendering] -> [Final Assembly]
+
+## 3. 策略协议 (Strategic Protocols)
+- **断点续传协议**：大规模渲染任务必须记录 status.json，支持失效后自动续传。
+- **可编辑优先**：默认生成可编辑文本 Shape，严禁将所有文字硬编码进背景图。

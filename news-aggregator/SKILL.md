@@ -31,7 +31,7 @@ Agent 必须对照 `memory.md` 中的“年度战役”对采集到的物料进�
 
 ### 3. 生成并归档报告
 Agent 按照 `references/responses.md` 格式生成 Markdown 报告，精选数量固定为 10 条。**每条精选必须包含约 100 字的深度中文摘要**，要求涵盖核心问题、技术方案/逻辑路径及最终结论，并**强制保存**至：
-`C:\Users\shich\.gemini\news\intelligence_$(date +%Y%m%d_%H%M).md`
+`C:\Users\shich\.gemini\memory\news\intelligence_$(date +%Y%m%d_%H%M).md`
 
 ---
 
@@ -39,4 +39,4 @@ Agent 按照 `references/responses.md` 格式生成 Markdown 报告，精选数�
 * `scripts/fetch_news.py`: 核心采集引擎（支持随机 UA、自动重试、JSON 状态提取）。
 
 ## 存档协议
-> ⚠️ **Protocol**: 严禁仅在终端输出。所有情报必须归档至 `C:\Users\shich\.gemini\news\` 以构建个人“逻辑湖”。
+> ⚠️ **Protocol**: 严禁仅在终端输出。所有情报必须归档至 `C:\Users\shich\.gemini\memory\news\` 以构建个人“逻辑湖”。

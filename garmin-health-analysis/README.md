@@ -1,13 +1,27 @@
-# garmin-health-analysis
-<!-- Input: Garmin Connect credentials, natural language queries. -->
-<!-- Output: Interactive HTML dashboards, FHIR Observations, readiness scores. -->
-<!-- Pos: Cognitive/Health Layer (Patient Anchor). -->
-<!-- Maintenance Protocol: Update 'garmin_auth.py' upon OAuth2 flow changes. -->
+﻿# Garmin Health Analysis: 生理智能预测引擎
 
-## 核心功能
-将 Garmin 院外体征数据转化为临床级的生理智能分析。支持“Garmin 感冒”模式探测与高阶执行决策准备度评估。
+<!-- 
+@Input: Garmin Connect Metrics (Sleep/HRV/Stress), User Queries
+@Output: Interactive Health Dashboards (HTML), Physiological Risk Alerts
+@Pos: [ACE Layer: Perception] | [MSL Segment: Clinical Intelligence]
+@Maintenance: Monthly token refresh & FHIR mapping calibration.
+@Axioms: Data Before Subjective | Pattern Recognition | Readiness Over Motivation
+-->
 
-## 战略契约
-1. **数据伦理**: 严禁存储明文凭证，必须通过 Token 化 Session 进行交互。
-2. **临床互操作**: 支持将 HRV/RHR 等核心指标导出为 FHIR 标准格式，为数字健康中台提供数据锚点。
-3. **主动预防**: 当生理指标出现显著偏离（如 RHR 飙升）时，必须触发预警诊断流程。
+> **核心内核**：将原始生理体征数据转化为具备“临床可预测性”的决策准备度模型，实现环境智能 (ACI) 的生理感知。
+
+## 0. 本质与边界 (Essence & Boundary)
+- **核心定义**: 数字化身 (Digital Twin) 的健康审计器，负责解码身体发出的微弱信号（如 HRV 异动）并将其转化为行动建议。
+- **反向定义**: 它不是一个简单的计步器，而是一个基于长期趋势的生理状态预警机。
+- **费曼比喻**: 就像是在你身上装了一个“仪表盘”，它能告诉你明早可能会感冒，或者你现在的状态不适合做重大决策。
+
+## 1. 生态位映射 (Ecosystem DNA)
+- **MSL 契约**: 负责处理“生理指标”、“睡眠阶段”、“免疫指标”等实体，对齐 FHIR 标准。
+- **ACE 角色**: 作为 **Physiological Sensor (生理感知器)**，为系统提供实时的“人机回环”生理状态输入。
+
+## 2. 逻辑机制 (Mechanism)
+- [Raw Data Ingest] -> [Trend Modeling] -> [Risk Pattern Recognition] -> [Strategic Dashboarding]
+
+## 3. 策略协议 (Strategic Protocols)
+- **准备度优先 (Readiness First)**：决策前必须检查 Executive Readiness 分数，防止在高认知熵值下盲目行动。
+- **免疫预警 (Garmin Flu)**：识别 RHR 飙升与 HRV 骤降的耦合模式，强制触发休息协议。

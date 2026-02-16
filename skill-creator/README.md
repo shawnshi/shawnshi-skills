@@ -1,13 +1,27 @@
-# skill-creator
-<!-- Input: Skill names, resource specs, GEB-Flow manifests. -->
-<!-- Output: Standardized skill directories, _DIR_META.md, compliant scripts. -->
-<!-- Pos: Meta-Tool/Evolution Layer (The Guardian). -->
-<!-- Maintenance Protocol: Update 'scripts/quick_validate.py' with new architectural standards. -->
+﻿# Skill Creator: 进化守护者
 
-## 核心功能
-Gemini 技能进化的核心协议。作为 GEB-Flow 体系的守护者，确保所有新技能具备“分形自描述”与“渐进式披露”的高级架构标准。
+<!-- 
+@Input: Skill Name, Resources (Scripts/Refs), Examples
+@Output: Validated GEB-Flow Skill Directory Structure
+@Pos: [ACE Layer: Meta-Evolution] | [MSL Segment: Infrastructure]
+@Maintenance: Update standard headers & validation scripts.
+@Axioms: Root Authority | Fractal Integrity | Lagged Sync
+-->
 
-## 战略契约
-1. **分形完整性**: 任何由本技能创建的模块必须包含 `_DIR_META.md`，且所有脚本必须挂载 Standard Header。
-2. **自检机制**: 技能在上线前必须通过 `quick_validate.py` 的合规性扫描。
-3. **同步语义**: 严禁文档与逻辑脱节，任何底层逻辑变更必须强制回溯更新 `SKILL.md` 的指令清单。
+> **核心内核**：技能演进的核心协议。强制执行“分形自描述”架构，确保所有自动化模块具备一致的底层逻辑与自检能力。
+
+## 0. 本质与边界 (Essence & Boundary)
+- **核心定义**: 技能工厂，负责按照标准化协议（GEB-Flow）初始化并验证其他技能模块。
+- **反向定义**: 它不是一个简单的文件夹创建器，而是一个逻辑完整性检查器。
+- **费曼比喻**: 它像是一个细胞核，里面存储着所有技能的 DNA 模板，确保分裂出来的新细胞（新技能）都长得正确、功能完备。
+
+## 1. 生态位映射 (Ecosystem DNA)
+- **MSL 契约**: 管理“元数据规范”、“Header 标准”、“目录意图”等元实体。
+- **ACE 角色**: 作为 **Meta-Coordinator (元协调者)**。
+
+## 2. 逻辑机制 (Mechanism)
+- [Skeleton Initialization] -> [Logic Injection] -> [Instruction Design] -> [Validation Scan]
+
+## 3. 策略协议 (Strategic Protocols)
+- **根权限校验**：每一个技能目录必须包含 _DIR_META.md，否则判定为架构违规。
+- **滞后同步定律**：任何逻辑变更必须立即反向触发文档更新，确保“灵肉合一”。
