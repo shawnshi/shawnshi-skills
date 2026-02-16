@@ -13,7 +13,7 @@ The primary objective is not just "content production," but **Strategic Clarity*
 ### Phase 0: Initiation & Ground Truth
 - **定位**: 使用`ask_user`确认文章的篇幅，深度4000字|博客文章2000字|口头报告800字
 - **Action**: Use `google_web_search` and `ask_user` to align on "Success Criteria."
-- **Output**: `article/writing_progress_[Topic].md`.
+- **Output**: `./.gemini/MEMORY/article/writing_progress_[Topic].md`.
 
 ### Phase 1: Strategic Synthesis (Storylining)
 1. **Analyze**: Invoke `concept-analyzer`. Focus on **Root Causes** and **Structural Tensions**.
