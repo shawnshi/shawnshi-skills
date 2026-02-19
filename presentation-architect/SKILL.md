@@ -1,6 +1,6 @@
 ﻿---
 name: presentation-architect
-description: 演示文稿全栈架构师。V3.0 认知枢纽版：引入多 Agent 博弈审计、逻辑湖自动联结与视觉信噪比度量。
+description: "演示文稿全栈架构师。V3.0 认知枢纽版：引入多 Agent 博弈审计、逻辑湖自动联结与视觉信噪比度量。"
 ---
 
 # SKILL.md: Presentation Architect V3.0 (The Cognitive Nexus)
@@ -15,9 +15,9 @@ description: 演示文稿全栈架构师。V3.0 认知枢纽版：引入多 Agen
 0. **初始化物理目录**：初始化物理目录 `./.gemini/MEMORY/slide-deck/{Topic}_{Date}`与 `working_memory.json`
 1. **意图对齐**：使用 `ask_user` 确认受众权重、核心结论与痛点。
 2. **逻辑湖联结 (NEW)**：自动检索 `memory.md` 中的 `Project Context` 与 `Lessons Learned`，将历史经验作为约束条件注入当前蓝图。
-3. **逻辑构建**：生成 `outline.md`。**[硬约束：全量 Action Titles]**。
+3. **逻辑构建**：生成 `outline.md`，使用 `ask_user` 确认。**[硬约束：全量 Action Titles]**。
 4. **证据织网**：将源文档的“干货”物理索引至每一页。
-5. **全量蓝图生成**：遵循模板生成 .md。
+5. **全量蓝图生成**：参考“.\references\layouts.md”使用 `ask_user` 确认设计风格，遵循模板生成 .md。
    - **信息熵保护**：Body 严禁摘要化。
    - **视觉微码标准化**：遵循 Schema 生成 `VISUAL_CODE`。
 6. **视觉信噪比度量 (NEW)**：计算 `Visual_SNR`。若低于阈值，自动建议增加数据维度或拆分页面。

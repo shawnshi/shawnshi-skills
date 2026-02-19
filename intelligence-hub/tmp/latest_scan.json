@@ -1,0 +1,368 @@
+{
+  "metadata": {
+    "timestamp": "2026-02-19T11:20:25.878406",
+    "sources": {
+      "himss": "OK",
+      "v2ex": "OK",
+      "producthunt": "OK",
+      "ajmc": "OK",
+      "healthit": "OK",
+      "github": "OK",
+      "hit180": "OK",
+      "hackernews": "OK"
+    },
+    "count": 50
+  },
+  "items": [
+    {
+      "title": "那些工作中浏览器要打开 50+标签的人都是啥想法",
+      "url": "https://www.v2ex.com/t/1193193",
+      "source": "V2EX",
+      "time": "2026-02-19T11:20:16.642146",
+      "raw_desc": "非引战，单纯好奇，有些窗口挂在那里可能一辈子都不会再看一眼了，那为啥还开着。。\r\n\r\n本人习惯是超过 20 个就要清理一波，影响也不是很大\r\n\r\n我最佩服的是一个同事，开三四个 chrome 窗口，每个窗口的标签都摆满了，但是他还是能在沟通会议上精准找到自己要展示的标签页。。脑容量不够的我无法想象他是怎么做到的"
+    },
+    {
+      "title": "运营转型，独立开发了一个月，我做了一个 AI 视频/AI 图片 生成工具，想听听大家的建议",
+      "url": "https://www.v2ex.com/t/1193176",
+      "source": "V2EX",
+      "time": "2026-02-19T11:20:16.642146",
+      "raw_desc": "各位 V 友好，我是 [PopcornAI Art]( https://popcornai.art/)的开发者，从运营转型为独立开发者。花了一个月的时间，终于把这个产品做出来了，想在这里分享一下开发历程，也希望能得到大家的反馈和建议。\r\n\r\n## 一、为什么要做这个产品：\r\n25 年年底，我开始接触 vibe coding ，并尝试用 vibe coding 开发了几个小工具，实现的效果很好，那一刻我的感觉就是，终于不用被束缚了，可以在没有团队，不用花很多钱的情况下，创造产品，并且让别人使用自己的产品了——能看到别人使用自己创造出来的产品，是一件很开心的事情，也是我的心愿。\r\n\r\n从那以后，我一直在找方向，坦白讲，是有些拿锤子找钉子的感觉，期间也做了几个小产品：关于时间管理、任务规划等的，但都没有什么反响。\r\n\r\n后来通过流量分析，发现 AI 视频生成+AI 图片生成领域的流量很大；再加上我老婆就是做设计和市场方向的，对于素材和视频设计在工作中是刚需，每个月也都要花几百块钱去订购会员，而且也经常不够用；还有就是广告一直以来都是很大的市场，其中视频和图片是广告的基础载体，现在的多模态 A"
+    },
+    {
+      "title": "26 年研发环境预测，更累？",
+      "url": "https://www.v2ex.com/t/1193194",
+      "source": "V2EX",
+      "time": "2026-02-19T11:20:16.642146",
+      "raw_desc": "虽然 v 友们或者大厂可能已经 vibe coding 很久了，但是估计还没有铺的很开。\r\n\r\n今年隐约会有这样的一种趋势：\r\n\r\n部分远离一线已久的中上层管理会更“折腾”人，尤其是中小公司的那种管理，他们在宣传和 PPT 中感觉 llm 已经差不多大成，可以很好的提效了。估计会下达一些”浮夸风“的命令，他们会认为以往预估在半个月～一个月的工作量项目可以压缩到两三天。\r\n\r\n于是，他们会肆无忌惮的下达“亩产万斤”式的指令，并毫无顾忌的让一线员工使用和转换不熟悉的技术栈。快速迭代，快速上线。"
+    },
+    {
+      "title": "大过年的遇到一个诡异的网络问题",
+      "url": "https://www.v2ex.com/t/1193179",
+      "source": "V2EX",
+      "time": "2026-02-19T11:20:16.642146",
+      "raw_desc": "基本背景如下坐标重庆联通,宽带 1000M,光猫型号中兴 ZXHN F657GV9,路由器型号:中兴巡天 BE5100pro+,从办宽带开始就让师傅改了桥接,路由器 PPPOE 拨号上网,稳定运行了一年左右至今.\r\n\r\n从初一晚上回到重庆家里开始,发现抢红包啥的延迟很高,本来以为是春节网络拥堵,也没太在意,结果空下来准备 LOL 海斗两把放松,结果发现显示区服延迟在 200ms,以前都是 35ms,没太当回事儿继续登录上开始游戏,结果点排队多次一直无反应,以为电脑问题,重启之后继续排队结果提示多次退出临时被禁排队,加上老婆说看视频刷小红书都卡,才开始重大排查.\r\n\r\n排查过程,先分别重启了路由器,光猫等,发现问题依旧,电脑网线直连的路由器,ping 路由器网关,发现延迟平均在 9MS 左右,遂把电脑网线直连到光猫,ping 光猫的网关,发现延迟从几十毫秒到几百毫秒波动,感觉事情不对劲,虽然相应知识不多,但我也知道内网 ping 应该都是≤1ms 才对.\r\n联系师傅报修,次日师傅上门,了解经过之后,初步判断是光猫坏了,换了个新光猫.结果注册好之后问题依旧,师傅有些挠头,用光猫拨号,路由器"
+    },
+    {
+      "title": "BNBrain 进展更新：现在可以全程 AI 部署并自动验证合约到 BSCScan 了",
+      "url": "https://www.v2ex.com/t/1193209",
+      "source": "V2EX",
+      "time": "2026-02-19T11:20:16.642146",
+      "raw_desc": "接上篇：[https://www.v2ex.com/t/1192982]( https://www.v2ex.com/t/1192982)\r\n\r\n这两天主要在做一件事：优化体验和合约部署这条链路从头到尾打通。\r\n\r\n---\r\n![Contract Deployment Flow]( https://static.bnbrain.dev/contract.png)\r\n![Deep Token Analysis]( https://static.bnbrain.dev/deep.png)\r\n\r\n\r\n## 全流程是什么意思\r\n\r\n不是\"AI 帮你写 Solidity 代码，然后你自己去部署\"——而是真的全程：\r\n\r\n1. 你描述需求，AI 跟你澄清细节\r\n2. 自动生成 Solidity 代码\r\n3. 调用 solc 编译\r\n4. 你本地签名确认（私钥不离本地）\r\n5. 自动部署上链\r\n6. 自动提交验证到 BSCScan\r\n\r\n全程你只需要**说清楚你要什么 + 最后签一次名**。不需要装开发环境，不需要看文档，不需要手动去 BSCScan 填验证表单。\r\n\r\n---\r\n\r\n## 真实案例"
+    },
+    {
+      "title": "antigravity 的 claude 会偷换模型吗？",
+      "url": "https://www.v2ex.com/t/1193163",
+      "source": "V2EX",
+      "time": "2026-02-19T11:20:16.642146",
+      "raw_desc": "话说 antigravity 的 claude 会存在偷换模型的问题吗？跟朋友拼车一个 google ultra plan ，近半个月高强度用 opus 4.6 ，但是从来没碰到限制墙。"
+    },
+    {
+      "title": "目前干着月入 5k 的兼职要自己交社保吗？怎么缴合适？",
+      "url": "https://www.v2ex.com/t/1193172",
+      "source": "V2EX",
+      "time": "2026-02-19T11:20:16.642146",
+      "raw_desc": "01 年住苏州这边，在两家小公司来回兼职，公司不交社保，建议自己缴吗？"
+    },
+    {
+      "title": "现在入门前端还来得及吗？",
+      "url": "https://www.v2ex.com/t/1193170",
+      "source": "V2EX",
+      "time": "2026-02-19T11:20:16.642146",
+      "raw_desc": "AI 当道，技术迸发。\r\n\r\n请问我现在入门前端还来得及吗？\r\n\r\n\r\n比如说我学习 let/const/var 的区别这种基础知识，还有必要学吗？\r\n\r\n还是现在入职公司，都是用 AI 写提示词呢？\r\n\r\n有真正在公司上班的前端吗？现在真的是不写代码了吗？"
+    },
+    {
+      "title": "如果大模型按照自动驾驶的方式来分级的话，当前大模型能达到 L3 吗？",
+      "url": "https://www.v2ex.com/t/1193160",
+      "source": "V2EX",
+      "time": "2026-02-19T11:20:16.642146",
+      "raw_desc": "现在的大模型让我脱离一线开发 N 年的领导重新飘起来了。自动生成的 PPT 信手拈来，犹如蒋委员长附体，天天是“机枪往左移 5 米”这种级别的指挥，技术方案叭叭的往外冒，那种勃勃生机、万物竞发的境界，犹在眼前。但是仔细一想很多细节他是压根不考虑，贼烦的就是话里话外是你们这些人都已经不重要了。\r\n\r\n假如让这老登指挥 Agent 机枪左移 5 米这种微操，程序员彻底被替代，当前的大模型的能力还差多少？\r\n\r\n以后会不会出现一些大模型服务提供商能保证，如果使用他家大模型出了生产事故，他们也承担相应责任的。这一天有可能到来吗"
+    },
+    {
+      "title": "大家怎么解决 claude 封号的问题的啊",
+      "url": "https://www.v2ex.com/t/1193200",
+      "source": "V2EX",
+      "time": "2026-02-19T11:20:16.642146",
+      "raw_desc": "被封了四个号了，买了干净的 ip 还是被封，真的没招了，撑不过 12 个小时"
+    },
+    {
+      "title": "Product Hunt: Sonnet 4.6",
+      "url": "https://www.producthunt.com/products/claude",
+      "source": "Product Hunt",
+      "time": "2026-02-19T11:20:16.880879",
+      "raw_desc": "The most capable Sonnet model yet\n          \n\nDiscussion\n            |\n            Link"
+    },
+    {
+      "title": "Product Hunt: Empirical Health for web",
+      "url": "https://www.producthunt.com/products/empirical-health",
+      "source": "Product Hunt",
+      "time": "2026-02-19T11:20:16.880879",
+      "raw_desc": "Comprehensive preventive heart health solution scaled w/ AI\n          \n\nDiscussion\n            |\n            Link"
+    },
+    {
+      "title": "Product Hunt: Design Rails",
+      "url": "https://www.producthunt.com/products/design-rails-ai-native-brand-in-mins",
+      "source": "Product Hunt",
+      "time": "2026-02-19T11:20:16.880879",
+      "raw_desc": "Get an agent-ready brand in minutes\n          \n\nDiscussion\n            |\n            Link"
+    },
+    {
+      "title": "Product Hunt: Calendarly",
+      "url": "https://www.producthunt.com/products/calendarly-calendar-on-lock-screen",
+      "source": "Product Hunt",
+      "time": "2026-02-19T11:20:16.880879",
+      "raw_desc": "Turn your calendar into a live Lock Screen wallpaper\n          \n\nDiscussion\n            |\n            Link"
+    },
+    {
+      "title": "Product Hunt: STUD",
+      "url": "https://www.producthunt.com/products/stud",
+      "source": "Product Hunt",
+      "time": "2026-02-19T11:20:16.882424",
+      "raw_desc": "Cursor for Roblox Studio\n          \n\nDiscussion\n            |\n            Link"
+    },
+    {
+      "title": "Product Hunt: Your AI Clone",
+      "url": "https://www.producthunt.com/products/your-ai-clone",
+      "source": "Product Hunt",
+      "time": "2026-02-19T11:20:16.882424",
+      "raw_desc": "Your clone remembers people you've never met\n          \n\nDiscussion\n            |\n            Link"
+    },
+    {
+      "title": "Product Hunt: ClawMetry for OpenClaw",
+      "url": "https://www.producthunt.com/products/clawmetry",
+      "source": "Product Hunt",
+      "time": "2026-02-19T11:20:16.882424",
+      "raw_desc": "Real-time observability dashboard for OpenClaw AI agents\n          \n\nDiscussion\n            |\n            Link"
+    },
+    {
+      "title": "Product Hunt: Cencurity",
+      "url": "https://www.producthunt.com/products/cencurity",
+      "source": "Product Hunt",
+      "time": "2026-02-19T11:20:16.882424",
+      "raw_desc": "Security gateway for LLM agents\n          \n\nDiscussion\n            |\n            Link"
+    },
+    {
+      "title": "Product Hunt: yottoCode",
+      "url": "https://www.producthunt.com/products/yottocode",
+      "source": "Product Hunt",
+      "time": "2026-02-19T11:20:16.885082",
+      "raw_desc": "Claude Code, meet Telegram.\n          \n\nDiscussion\n            |\n            Link"
+    },
+    {
+      "title": "Product Hunt: Baseline Core",
+      "url": "https://www.producthunt.com/products/baseline-core",
+      "source": "Product Hunt",
+      "time": "2026-02-19T11:20:16.885082",
+      "raw_desc": "Open-source skills system that wires your business into AI\n          \n\nDiscussion\n            |\n            Link"
+    },
+    {
+      "title": "alibaba /zvec",
+      "url": "https://github.com/alibaba/zvec",
+      "source": "GitHub",
+      "time": "2026-02-19T11:20:17.874481",
+      "raw_desc": "A lightweight, lightning-fast, in-process vector database"
+    },
+    {
+      "title": "p-e-w /heretic",
+      "url": "https://github.com/p-e-w/heretic",
+      "source": "GitHub",
+      "time": "2026-02-19T11:20:17.874481",
+      "raw_desc": "Fully automatic censorship removal for language models"
+    },
+    {
+      "title": "OpenCTI-Platform /opencti",
+      "url": "https://github.com/OpenCTI-Platform/opencti",
+      "source": "GitHub",
+      "time": "2026-02-19T11:20:17.874481",
+      "raw_desc": "Open Cyber Threat Intelligence Platform"
+    },
+    {
+      "title": "QwenLM /qwen-code",
+      "url": "https://github.com/QwenLM/qwen-code",
+      "source": "GitHub",
+      "time": "2026-02-19T11:20:17.875482",
+      "raw_desc": "An open-source AI agent that lives in your terminal."
+    },
+    {
+      "title": "NirDiamant /RAG_Techniques",
+      "url": "https://github.com/NirDiamant/RAG_Techniques",
+      "source": "GitHub",
+      "time": "2026-02-19T11:20:17.875482",
+      "raw_desc": "This repository showcases various advanced techniques for Retrieval-Augmented Generation (RAG) systems. RAG systems combine information retrieval with generative models to provide accurate and contextually rich responses."
+    },
+    {
+      "title": "harvard-edge /cs249r_book",
+      "url": "https://github.com/harvard-edge/cs249r_book",
+      "source": "GitHub",
+      "time": "2026-02-19T11:20:17.875482",
+      "raw_desc": "Introduction to Machine Learning Systems"
+    },
+    {
+      "title": "obra /superpowers",
+      "url": "https://github.com/obra/superpowers",
+      "source": "GitHub",
+      "time": "2026-02-19T11:20:17.875482",
+      "raw_desc": "An agentic skills framework & software development methodology that works."
+    },
+    {
+      "title": "HailToDodongo /pyrite64",
+      "url": "https://github.com/HailToDodongo/pyrite64",
+      "source": "GitHub",
+      "time": "2026-02-19T11:20:17.875482",
+      "raw_desc": "N64 Game-Engine and Editor using libdragon & tiny3d"
+    },
+    {
+      "title": "ComposioHQ /composio",
+      "url": "https://github.com/ComposioHQ/composio",
+      "source": "GitHub",
+      "time": "2026-02-19T11:20:17.876480",
+      "raw_desc": "Composio powers 1000+ toolkits, tool search, context management, authentication, and a sandboxed workbench to help you build AI agents that turn intent into action."
+    },
+    {
+      "title": "p2r3 /convert",
+      "url": "https://github.com/p2r3/convert",
+      "source": "GitHub",
+      "time": "2026-02-19T11:20:17.876480",
+      "raw_desc": "Truly universal online file converter"
+    },
+    {
+      "title": "HIT180: 【今日看点】",
+      "url": "https://www.hit180.com/category/cio/management",
+      "source": "HIT180",
+      "time": "2026-02-19T11:20:23.404209",
+      "raw_desc": ""
+    },
+    {
+      "title": "HIT180: 2026年广东省医学会医学信息学学术年会暨第二届“南方数智医疗健康大会”通知（第一轮）",
+      "url": "https://www.hit180.com/77375.html",
+      "source": "HIT180",
+      "time": "2026-02-19T11:20:23.405777",
+      "raw_desc": ""
+    },
+    {
+      "title": "HIT180: 望海康信：在支付改革与AI浪潮中重塑价值管理｜回顾2025，展望2026",
+      "url": "https://www.hit180.com/77365.html",
+      "source": "HIT180",
+      "time": "2026-02-19T11:20:23.405777",
+      "raw_desc": ""
+    },
+    {
+      "title": "HIT180: 熙软科技陈冲：AI+运营，全域赋能医院管理跃升丨回顾2025，展望2026",
+      "url": "https://www.hit180.com/77344.html",
+      "source": "HIT180",
+      "time": "2026-02-19T11:20:23.405777",
+      "raw_desc": ""
+    },
+    {
+      "title": "HIT180: 行业首个《消化内镜中心建设与设备配置标准》正式发布",
+      "url": "https://www.hit180.com/77357.html",
+      "source": "HIT180",
+      "time": "2026-02-19T11:20:23.405777",
+      "raw_desc": ""
+    },
+    {
+      "title": "HIT180: 嘉和美康刘志华：数智融合，深耕场景再升级｜回顾2025，展望2026",
+      "url": "https://www.hit180.com/77330.html",
+      "source": "HIT180",
+      "time": "2026-02-19T11:20:23.407349",
+      "raw_desc": ""
+    },
+    {
+      "title": "HIT180: 东华医为：践行重构，筑牢AI基石｜回顾2025，展望2026",
+      "url": "https://www.hit180.com/77324.html",
+      "source": "HIT180",
+      "time": "2026-02-19T11:20:23.407349",
+      "raw_desc": ""
+    },
+    {
+      "title": "HIT180: 2026年广东省医学会医学信息学学术年会征文通知",
+      "url": "https://www.hit180.com/77305.html",
+      "source": "HIT180",
+      "time": "2026-02-19T11:20:23.407349",
+      "raw_desc": ""
+    },
+    {
+      "title": "HIT180: 国家医保局：牵头组建医保影像云跨省秒调阅医院网络",
+      "url": "https://www.hit180.com/77302.html",
+      "source": "HIT180",
+      "time": "2026-02-19T11:20:23.407349",
+      "raw_desc": ""
+    },
+    {
+      "title": "HIT180: 中科方德：破解医院信创“三本账”｜回顾2025，展望2026",
+      "url": "https://www.hit180.com/77290.html",
+      "source": "HIT180",
+      "time": "2026-02-19T11:20:23.408942",
+      "raw_desc": ""
+    },
+    {
+      "title": "Sizing chaos",
+      "url": "https://pudding.cool/2026/02/womens-sizing/",
+      "source": "Hacker News",
+      "time": "2026-02-19T05:18:20",
+      "raw_desc": ""
+    },
+    {
+      "title": "27-year-old Apple iBooks can connect to Wi-Fi and download official updates",
+      "url": "https://old.reddit.com/r/MacOS/comments/1r8900z/macos_which_officially_supports_27_year_old/",
+      "source": "Hacker News",
+      "time": "2026-02-19T04:54:31",
+      "raw_desc": ""
+    },
+    {
+      "title": "Cosmologically Unique IDs",
+      "url": "https://jasonfantl.com/posts/Universal-Unique-IDs/",
+      "source": "Hacker News",
+      "time": "2026-02-19T02:37:22",
+      "raw_desc": ""
+    },
+    {
+      "title": "How to Choose Between Hindley-Milner and Bidirectional Typing",
+      "url": "https://thunderseethe.dev/posts/how-to-choose-between-hm-and-bidir/",
+      "source": "Hacker News",
+      "time": "2026-02-16T02:07:44",
+      "raw_desc": ""
+    },
+    {
+      "title": "15 years of FP64 segmentation, and why the Blackwell Ultra breaks the pattern",
+      "url": "https://nicolasdickenmann.com/blog/the-great-fp64-divide.html",
+      "source": "Hacker News",
+      "time": "2026-02-19T09:46:07",
+      "raw_desc": ""
+    },
+    {
+      "title": "Tailscale Peer Relays is now generally available",
+      "url": "https://tailscale.com/blog/peer-relays-ga",
+      "source": "Hacker News",
+      "time": "2026-02-19T00:46:12",
+      "raw_desc": ""
+    },
+    {
+      "title": "Zero-day CSS: CVE-2026-2441 exists in the wild",
+      "url": "https://chromereleases.googleblog.com/2026/02/stable-channel-update-for-desktop_13.html",
+      "source": "Hacker News",
+      "time": "2026-02-19T00:28:19",
+      "raw_desc": ""
+    },
+    {
+      "title": "Minecraft Java is switching from OpenGL to Vulkan",
+      "url": "https://www.gamingonlinux.com/2026/02/minecraft-java-is-switching-from-opengl-to-vulkan-for-the-vibrant-visuals-update/",
+      "source": "Hacker News",
+      "time": "2026-02-19T09:55:33",
+      "raw_desc": ""
+    },
+    {
+      "title": "DNS-Persist-01: A New Model for DNS-Based Challenge Validation",
+      "url": "https://letsencrypt.org/2026/02/18/dns-persist-01.html",
+      "source": "Hacker News",
+      "time": "2026-02-19T02:04:13",
+      "raw_desc": ""
+    },
+    {
+      "title": "Anthropic officially bans using subscription auth for third party use",
+      "url": "https://code.claude.com/docs/en/legal-and-compliance",
+      "source": "Hacker News",
+      "time": "2026-02-19T10:52:26",
+      "raw_desc": ""
+    }
+  ]
+}

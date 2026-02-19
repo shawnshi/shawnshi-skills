@@ -1,12 +1,12 @@
-﻿---
+---
 name: excel-pro
-description: 重装级 Excel 治理系统。整合物理层 XML 操纵与逻辑层数据建模，实现从数据摄取到专业模型固化的全栈闭环。
+description: 重装级 Excel 治理系统。整合物理层 XML 操纵与逻辑层数据建模，实现从数据摄取到专业模型固化的全 栈闭环。
 ---
 
 # SKILL.md: Excel Pro (数据架构与治理专家)
 
 ## 1. 触发逻辑 (Trigger)
-- 当用户提出“创建/编辑/分析 Excel”、“处理 .xlsx/.csv”、“建立财务/临床模型”或“修复损坏的表格”时激活。
+- 当用户提出“创建/编辑/分析 Excel”、“处理 .xlsx/.csv”、“建立财务/临床模型”或“修复损坏的表格”时激活。      
 
 ## 2. 核心架构 (Architecture)
 本技能采用**双态架构 (Dual-State Architecture)**：
@@ -37,4 +37,5 @@ description: 重装级 Excel 治理系统。整合物理层 XML 操纵与逻辑�
 ## 4. 维护与资源
 - **底层工具**: scripts/office/ (XML Core).
 - **逻辑示例**: scripts/logic/ (Data Processing).
-- **颜色标准**: eferences/styling.md.
+- **颜色标准**:
+eferences/styling.md.

@@ -1,0 +1,21 @@
+{
+  "strategic_keywords": [
+    {"keyword": "agent", "weight": 10},
+    {"keyword": "ace", "weight": 15},
+    {"keyword": "msl", "weight": 15},
+    {"keyword": "rag", "weight": 10},
+    {"keyword": "hitl", "weight": 12},
+    {"keyword": "medical", "weight": 10},
+    {"keyword": "ai", "weight": 5},
+    {"keyword": "vector", "weight": 8},
+    {"keyword": "fhir", "weight": 12},
+    {"keyword": "drg", "weight": 12},
+    {"keyword": "llm", "weight": 5},
+    {"keyword": "vibe", "weight": 8}
+  ],
+  "categories": {
+    "AI/ML & Agents": ["agent", "ace", "ai", "vector", "rag", "llm", "vibe"],
+    "医疗数字化/MSL": ["medical", "msl", "fhir", "drg", "hospital", "clinic", "healthit", "himss", "ajmc", "hit180"],
+    "工程与底层架构": ["github", "architecture", "rust", "go", "performance", "dns", "tailscale", "browser"]
+  }
+}

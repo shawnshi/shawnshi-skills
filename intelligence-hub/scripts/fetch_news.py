@@ -1,285 +1,130 @@
 """
-<!-- Input: Source (hackernews/weibo/all/github/36kr), Limit, Keyword (List) -->
-<!-- Output: JSON array of news items with status metadata -->
-<!-- Pos: scripts/fetch_news.py. Robust multi-source data provider. -->
+<!-- Intelligence Hub: Data Fetcher V4.1 -->
+<!-- Responsibility: Fetch raw data -> Clean -> Output JSON -->
 """
-
-import argparse
-import json
-import requests
+import argparse, json, requests, re, random, os, xml.etree.ElementTree as ET
 from bs4 import BeautifulSoup
-import sys
-import re
-import random
-import concurrent.futures
 from datetime import datetime
+from concurrent.futures import ThreadPoolExecutor, as_completed
 
-# ============================================================================
-# Network Config & Robustness
-# ============================================================================
+UA = 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36'
+def get_h(): return {'User-Agent': UA, 'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8'}
 
-USER_AGENTS = [
-    'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
-    'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/119.0.0.0 Safari/537.36',
-    'Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/118.0.0.0 Safari/537.36',
-    'Mozilla/5.0 (iPhone; CPU iPhone OS 17_1_1 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/17.1 Mobile/15E148 Safari/604.1'
-]
-
-def get_headers():
-    return {
-        'User-Agent': random.choice(USER_AGENTS),
-        'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,*/*;q=0.8',
-        'Accept-Language': 'zh-CN,zh;q=0.9,en;q=0.8',
-        'Cache-Control': 'no-cache',
-    }
-
-# ============================================================================
-# Fetchers (Data Provider Mode)
-# ============================================================================
-
-def fetch_hacker_news(limit):
+# --- Parsers ---
+def parse_rss(url, name, limit=10):
     try:
-        res = requests.get("https://hacker-news.firebaseio.com/v0/topstories.json", timeout=10)
-        ids = res.json()[:limit]
+        r = requests.get(url, headers=get_h(), timeout=15)
+        root = ET.fromstring(re.sub(' xmlns="[^"]+"', '', r.text, count=1))
         items = []
-        for id in ids:
+        for e in (root.findall('.//item') or root.findall('.//entry'))[:limit]:
+            t = e.findtext('title') or "No Title"
+            l = e.findtext('link') or (e.find('link').attrib.get('href') if e.find('link') is not None else "")
+            d_e = e.find('description') or e.find('summary') or e.find('content')
+            d = BeautifulSoup(d_e.text or "", 'html.parser').get_text().strip() if d_e is not None else ""
+            items.append({"title": f"{name}: {t}", "url": l, "source": name, "time": datetime.now().isoformat(), "raw_desc": d})
+        return items, "OK"
+    except Exception as e: return [], str(e)
+
+def f_hn(limit):
+    try:
+        ids = requests.get("https://hacker-news.firebaseio.com/v0/topstories.json", timeout=10).json()[:limit]
+        items = []
+        for i in ids:
             try:
-                data = requests.get(f"https://hacker-news.firebaseio.com/v0/item/{id}.json", timeout=5).json()
-                items.append({
-                    "title": data.get("title"),
-                    "url": data.get("url", f"https://news.ycombinator.com/item?id={id}"),
-                    "source": "Hacker News",
-                    "time": datetime.fromtimestamp(data.get("time", 0)).isoformat(),
-                    "raw_desc": ""
-                })
+                d = requests.get(f"https://hacker-news.firebaseio.com/v0/item/{i}.json", timeout=5).json()
+                items.append({"title": d.get("title"), "url": d.get("url", f"https://news.ycombinator.com/item?id={i}"), "source": "Hacker News", "time": datetime.fromtimestamp(d.get("time", 0)).isoformat(), "raw_desc": ""})
             except: continue
         return items, "OK"
-    except Exception as e:
-        return [], f"Network Error: {str(e)}"
+    except Exception as e: return [], str(e)
 
-def fetch_36kr(limit):
+def f_gh():
     try:
-        res = requests.get("https://36kr.com/newsflashes", headers=get_headers(), timeout=10)
-        state_match = re.search(r'window\.initialState\s*=\s*({.*?});', res.text)
+        s = BeautifulSoup(requests.get("https://github.com/trending", headers=get_h(), timeout=15).text, 'html.parser')
         items = []
-        if state_match:
-            state = json.loads(state_match.group(1))
-            news_list = state.get('newsflashCatalogData', {}).get('data', {}).get('newsflashList', {}).get('data', [])
-            for item in news_list[:limit]:
-                items.append({
-                    "title": item.get('templateData', {}).get('title'),
-                    "url": f"https://36kr.com/newsflashes/{item.get('id')}",
-                    "source": "36Kr",
-                    "time": datetime.now().isoformat(),
-                    "raw_desc": item.get('templateData', {}).get('description', '')
-                })
-            return items, "OK (Regex)"
-        
-        # BS4 Fallback
-        soup = BeautifulSoup(res.text, 'html.parser')
-        cards = soup.find_all('div', class_='item-info')
-        for card in cards[:limit]:
-            title_tag = card.find('a', class_='item-title')
-            desc_tag = card.find('div', class_='item-desc')
-            if title_tag:
-                items.append({
-                    "title": title_tag.get_text(),
-                    "url": "https://36kr.com" + title_tag['href'],
-                    "source": "36Kr",
-                    "time": datetime.now().isoformat(),
-                    "raw_desc": desc_tag.get_text() if desc_tag else ""
-                })
-        return items, "OK (BS4)" if items else "Parse Failure"
-    except Exception as e:
-        return [], f"Network/Auth Error: {str(e)}"
-
-def fetch_weibo():
-    try:
-        res = requests.get("https://weibo.com/ajax/side/hotSearch", headers=get_headers(), timeout=10)
-        data = res.json().get('data', {}).get('realtime', [])
-        return [{
-            "title": i.get('note', i.get('word')),
-            "url": f"https://s.weibo.com/weibo?q=%23{i.get('word')}%23",
-            "source": "Weibo",
-            "time": datetime.now().isoformat(),
-            "raw_desc": f"Category: {i.get('category', 'Hot')}"
-        } for i in data[:15]], "OK"
-    except Exception as e:
-        return [], f"Scraping Blocked: {str(e)}"
-
-def fetch_github_trending():
-    try:
-        res = requests.get("https://github.com/trending", headers=get_headers(), timeout=15)
-        soup = BeautifulSoup(res.text, 'html.parser')
-        items = []
-        for article in soup.select('article.Box-row')[:10]:
-            title_tag = article.select_one('h2 a')
-            desc_tag = article.select_one('p')
-            if title_tag:
-                items.append({
-                    "title": title_tag.get_text(strip=True),
-                    "url": "https://github.com" + title_tag['href'],
-                    "source": "GitHub",
-                    "time": datetime.now().isoformat(),
-                    "raw_desc": desc_tag.get_text(strip=True) if desc_tag else ""
-                })
+        for a in s.select('article.Box-row')[:10]:
+            t = a.select_one('h2 a'); d = a.select_one('p')
+            if t: items.append({"title": t.get_text(strip=True), "url": "https://github.com" + t['href'], "source": "GitHub", "time": datetime.now().isoformat(), "raw_desc": d.get_text(strip=True) if d else ""})
         return items, "OK"
-    except Exception as e:
-        return [], f"GitHub Timeout: {str(e)}"
+    except Exception as e: return [], str(e)
 
-def fetch_v2ex():
+def f_v2ex():
     try:
-        # V2EX Hot Topics API
-        res = requests.get("https://www.v2ex.com/api/topics/hot.json", timeout=10)
-        data = res.json()
-        return [{
-            "title": i.get('title'),
-            "url": i.get('url'),
-            "source": "V2EX",
-            "time": datetime.now().isoformat(),
-            "raw_desc": i.get('content')[:200]
-        } for i in data[:10]], "OK"
-    except Exception as e:
-        return [], f"V2EX API Error: {str(e)}"
+        d = requests.get("https://www.v2ex.com/api/topics/hot.json", timeout=10).json()
+        return [{"title": i.get('title'), "url": i.get('url'), "source": "V2EX", "time": datetime.now().isoformat(), "raw_desc": i.get('content')[:500]} for i in d[:10]], "OK"
+    except Exception as e: return [], str(e)
 
-def fetch_product_hunt():
+def f_hit180():
     try:
-        # PH Scraper (using homepage as fallback for API)
-        res = requests.get("https://www.producthunt.com/", headers=get_headers(), timeout=15)
-        soup = BeautifulSoup(res.text, 'html.parser')
+        r = requests.get("https://www.hit180.com/", headers=get_h(), timeout=15); r.encoding = 'utf-8'
+        s = BeautifulSoup(r.text, 'html.parser')
         items = []
-        # Look for product titles and links
-        for post in soup.select('[data-test="post-item"]')[:10]:
-            title_tag = post.select_one('[data-test="post-name"]')
-            desc_tag = post.select_one('[data-test="post-tagline"]')
-            url_tag = post.select_one('a')
-            if title_tag:
-                items.append({
-                    "title": f"PH: {title_tag.get_text(strip=True)}",
-                    "url": "https://www.producthunt.com" + url_tag['href'] if url_tag else "",
-                    "source": "Product Hunt",
-                    "time": datetime.now().isoformat(),
-                    "raw_desc": desc_tag.get_text(strip=True) if desc_tag else ""
-                })
-        return items, "OK" if items else "PH Scrape Failure"
-    except Exception as e:
-        return [], f"Product Hunt Error: {str(e)}"
+        for a in s.select('article')[:10]:
+            t = a.select_one('h2 a'); d = a.select_one('.entry-content')
+            if t: items.append({"title": f"HIT180: {t.get_text(strip=True)}", "url": t['href'], "source": "HIT180", "time": datetime.now().isoformat(), "raw_desc": d.get_text(strip=True) if d else ""})
+        return items, "OK"
+    except Exception as e: return [], str(e)
 
-import os
+def f_himss():
+    try:
+        s = BeautifulSoup(requests.get("https://www.himss.org/news", headers=get_h(), timeout=15).text, 'html.parser')
+        items = []
+        for c in s.select('.news-card, .views-row')[:10]:
+            t = c.select_one('h3 a, .title a'); d = c.select_one('.summary, .description')
+            if t: items.append({"title": f"HIMSS: {t.get_text(strip=True)}", "url": "https://www.himss.org" + t['href'] if t['href'].startswith('/') else t['href'], "source": "HIMSS", "time": datetime.now().isoformat(), "raw_desc": d.get_text(strip=True) if d else ""})
+        return items, "OK"
+    except Exception as e: return [], str(e)
 
-# ============================================================================
-# Main Logic (Provider Interface)
-# ============================================================================
-
-def save_to_markdown(data):
-    today = datetime.now().strftime("%Y%m%d")
-    save_path = f"C:\\Users\\shich\\.gemini\\MEMORY\\news\\intelligence_{today}_briefing.md"
-    os.makedirs(os.path.dirname(save_path), exist_ok=True)
-    
-    content = [
-        f"# Intelligence Hub: 战略情报二阶推演简报 [{datetime.now().strftime('%Y-%m-%d')}]",
-        "",
-        "## 1. 扫描元数据 (Scan Metadata)",
-        f"- **扫描时间**: {data['metadata']['timestamp']}",
-        f"- **信号来源**: {', '.join(data['metadata']['sources'].keys())} (Total {data['metadata']['count']} Items)",
-        "- **分析引擎**: Intelligence Hub V3.1",
-        "",
-        "## 2. 战略锚点：二阶推演 (Digest)",
-        "> 💡 [WAITING FOR AGENT REFINEMENT] 请 Agent 基于 memory.md 执行二阶推演。",
-        "",
-        "## 3. 核心判词 (Punchline)",
-        "> 💡 [WAITING FOR AGENT REFINEMENT]",
-        "",
-        "---",
-        "",
-        "## 4. 原始信号清单与简介 (Raw Signals & Abstracts)",
-        ""
-    ]
-    
-    # Group by source
-    by_source = {}
-    for item in data['items']:
-        src = item['source']
-        if src not in by_source: by_source[src] = []
-        by_source[src].append(item)
-    
-    for src, items in by_source.items():
-        content.append(f"### {src}")
-        for i, item in enumerate(items, 1):
-            desc = item.get('raw_desc', '').strip()
-            # Clean up desc: remove newlines, truncate
-            desc = desc.replace('\r', '').replace('\n', ' ')
-            abstract = (desc[:100] + '...') if len(desc) > 100 else (desc if desc else "No description available.")
-            content.append(f"{i}. **[{src}]** {item['title']} ({item['url']})")
-            content.append(f"   - *简介*: {abstract}")
-        content.append("")
-
-    content.append("---")
-    content.append("## 📂 归档记录")
-    content.append(f"- **归档路径**: {save_path}")
-    content.append("- **状态**: Persistent (Pending Digest)")
-
-    with open(save_path, "w", encoding="utf-8") as f:
-        f.write("\n".join(content))
-    return save_path
+def f_ajmc():
+    try:
+        s = BeautifulSoup(requests.get("https://www.ajmc.com/newsroom", headers=get_h(), timeout=15).text, 'html.parser')
+        items = []
+        for r in s.select('.newsroom-item, article')[:10]:
+            t = r.select_one('h3 a, h2 a'); d = r.select_one('.summary, p')
+            if t: items.append({"title": f"AJMC: {t.get_text(strip=True)}", "url": "https://www.ajmc.com" + t['href'] if t['href'].startswith('/') else t['href'], "source": "AJMC", "time": datetime.now().isoformat(), "raw_desc": d.get_text(strip=True) if d else ""})
+        return items, "OK"
+    except Exception as e: return [], str(e)
 
 def main():
-    parser = argparse.ArgumentParser(description="Intelligence Data Provider V3.1")
-    parser.add_argument("--source", choices=['hackernews', '36kr', 'weibo', 'github', 'v2ex', 'producthunt', 'all'], default='all')
-    parser.add_argument("--limit", type=int, default=10)
-    parser.add_argument("--save", action="store_true", help="Auto-save to MEMORY/news/ as Markdown")
-    parser.add_argument("--debug", action="store_true")
+    parser = argparse.ArgumentParser()
+    parser.add_argument("--save", action="store_true", help="Legacy flag, now triggers JSON dump")
+    parser.add_argument("--output", default="latest_scan.json", help="Output JSON path")
     args = parser.parse_args()
-
-    results = []
-    status_report = {}
-    tasks = []
-
-    mapping = {
-        'hackernews': lambda: fetch_hacker_news(args.limit),
-        'github': fetch_github_trending,
-        'v2ex': fetch_v2ex,
-        'producthunt': fetch_product_hunt,
-        '36kr': lambda: fetch_36kr(args.limit),
-        'weibo': fetch_weibo
-    }
-
-    if args.source == 'all':
-        # Default strategic quartet
-        for name in ['hackernews', 'github', 'v2ex', 'producthunt']:
-            tasks.append((name, mapping[name]))
-    else:
-        tasks.append((args.source, mapping[args.source]))
-
-    with concurrent.futures.ThreadPoolExecutor(max_workers=len(tasks)) as executor:
-        future_to_source = {executor.submit(func): name for name, func in tasks}
-        for future in concurrent.futures.as_completed(future_to_source):
-            src = future_to_source[future]
+    
+    print("Intelligence Hub: Fetching data...")
+    tasks = [
+        ('hackernews', lambda: f_hn(10)), ('github', f_gh), ('v2ex', f_v2ex),
+        ('producthunt', lambda: parse_rss("https://www.producthunt.com/feed", "Product Hunt")),
+        ('healthit', lambda: parse_rss("https://www.healthit.gov/news/feed", "HealthIT.gov")),
+        ('hit180', f_hit180), ('himss', f_himss), ('ajmc', f_ajmc)
+    ]
+    
+    res = []; stats = {}
+    with ThreadPoolExecutor(max_workers=8) as ex:
+        f2n = {ex.submit(f): n for n, f in tasks}
+        for f in as_completed(f2n):
+            n = f2n[f]
             try:
-                items, status = future.result()
-                results.extend(items)
-                status_report[src] = status
+                it, st = f.result()
+                res.extend(it); stats[n] = st
+                print(f"  - {n}: {st}")
             except Exception as e:
-                status_report[src] = f"Fatal Exception: {str(e)}"
+                stats[n] = str(e)
+                print(f"  - {n}: Error")
 
-    # Always output JSON for the Agent to parse
     output_data = {
-        "metadata": {
-            "timestamp": datetime.now().isoformat(),
-            "sources": status_report,
-            "count": len(results)
-        },
-        "items": results
+        "metadata": {"timestamp": datetime.now().isoformat(), "sources": stats, "count": len(res)},
+        "items": res
     }
     
-    # Save if requested
-    if args.save:
-        save_path = save_to_markdown(output_data)
-        output_data["metadata"]["saved_path"] = save_path
-        if args.debug:
-            print(f"DEBUG: Saved to {save_path}")
-
-    print(json.dumps(output_data, ensure_ascii=False, indent=2))
+    # Save Raw Data
+    tmp_path = os.path.join(os.path.dirname(__file__), "..", "tmp")
+    os.makedirs(tmp_path, exist_ok=True)
+    out_file = os.path.join(tmp_path, args.output)
+    
+    with open(out_file, 'w', encoding='utf-8') as f:
+        json.dump(output_data, f, ensure_ascii=False, indent=2)
+    
+    print(f"Data snapshot saved to: {out_file}")
 
 if __name__ == "__main__":
     main()

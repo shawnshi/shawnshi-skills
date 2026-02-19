@@ -29,7 +29,9 @@ The primary objective is not just "content production," but **Strategic Clarity*
 
 ### Phase 3: Visual Logic & Exhibit Design (NEW)
 - **Constraint**: Before drafting text, design the **Exhibits**.
-- **Action**: For each chapter, define 1-2 core visual components (Mermaid, ASCII, or DALL-E prompts).
+- **Action**: For each chapter, define 1-2 core visual components.
+   - **Automated Charting**: Use Mermaid for process flows or describe Python scripts for data charts (e.g., `matplotlib` specs).
+   - **Visual Logic Map**: Generate a Mermaid **Pyramid Structure Map** showing how sub-arguments support the main conclusion.
 - **Requirement**: The text must support and explain the visual logic, not vice versa.
 
 ### Phase 4: Parameter Lock-in (HITL)
@@ -38,6 +40,7 @@ The primary objective is not just "content production," but **Strategic Clarity*
 ### Phase 5: Drafting & Style Enforcement
 - **Drafting**: Invoke `writing-assistant`.
 - **"So What?" Filter**: Every paragraph must either provide evidence for an Action Title or 提炼 (extract) a decision-relevant insight.
+- **Citation Protocol**: Every key claim must be followed by `[Evidence Source: X]`.
 - **Style Constraints**: 
   - **No Bold**: NEVER use `**` or `__` for emphasis in the main text. Use structure, indentation, or capitalization of keywords if necessary.
   - **No Fluff**: Max signal-to-noise ratio. No buzzwords.
@@ -45,11 +48,12 @@ The primary objective is not just "content production," but **Strategic Clarity*
 ### Phase 6: Logic & Impact Audit
 - **Audit**: Use the **MBB Logic Metric**:
   - **MECE**: Are the sections mutually exclusive and collectively exhaustive?
-  - **Pyramid Flow**: Do sub-points logically support the main conclusion?
+  - **Pyramid Flow**: Do sub-points logically support the main conclusion? Check against the **Pyramid Structure Map**.
   - **Impact**: Is the "So What?" explicitly clear for the target audience?
 
 ### Phase 7: Final Forging & Delivery
 - **Persistence**: Save final report to `article/[Title]_[YYYY-MM-DD].md`.
+- **References**: Append a `## References` section compiling all `[Evidence Source]` tags.
 - **Appendix**: Include the "Red-Team Residuals" (risks that remain but are acknowledged).
 
 ## Resources

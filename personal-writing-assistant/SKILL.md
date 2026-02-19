@@ -28,10 +28,20 @@ python scripts/assistant.py --topic "医疗AI的各种陷阱" --role "老兵" --
 ### 2. Interactive Mode (交互式)
 当用户通过 `--interactive` 触发或需要在写作前确认大纲时：
 
-1.  **Phase 0: Intent**: 确认目标读者 (Audience) 与 核心目的 (Goal)。
-2.  **Phase 1: Logic Map**: 先输出大纲，包含核心冲突 (Conflict) 与 利益相关者博弈 (Incentives)。**必须等待用户确认**。
+1.  **Phase 0: Intent**: 使用“ask_user”确认目标读者 (Audience)、核心目的 (Goal)、Templates、Styles。
+2.  **Phase 1: Logic Map**: 先输出大纲，包含核心冲突 (Conflict) 与 利益相关者博弈 (Incentives)。**使用“ask_user”确认**。
 3.  **Phase 2: Drafting**: 执行写作。
 4.  **Phase 3: Audit**: 自我执行 `references/CHECKLIST.md` 检查。
+
+### 3. Visual Logic Enhancement (Visuals)
+在 **Standard** 与 **Deep** 模式下，必须识别文章的 1-2 个逻辑枢纽，并自动建议可视化方案：
+*   **Mermaid**: 用于表达流程、状态机或因果回路。
+*   **Chart Description**: 描述需要的数据图表（如：“建议插入一张 2020-2025 供需剪刀差折线图”）。
+
+### 4. Domain Context Injection (Knowledge Base)
+若涉及特定垂直领域，**必须**主动挂载外部知识库。
+*   **Healthcare**: 自动挂载 `../medical-solution-writer/references/` 下的 `卫宁健康典型案例.md` 与 `医疗卫生政策要点.md`。
+*   **Custom**: 允许用户指定 `--context [path/to/file]`。
 
 ## Available Resources
 

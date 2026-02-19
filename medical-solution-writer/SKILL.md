@@ -47,7 +47,7 @@ description: 医疗数字化解决方案专家，基于 Text-to-Action 范式 de
     - 如果状态为 `Warning`，根据详情自动重构语义重叠或缺失的章节。
 
 ### 第六阶段：对抗式审计与风险防御 (Risk & Friction)
-1. **任务**：模拟院长与 CIO 视角进行红队攻击。
+1. **任务**：使用“logic-adversary”模拟院长与 CIO 视角进行红队攻击。
 2. **输出**：**《风险减缓矩阵 (Risk Mitigation Matrix)》**。
     - 识别组织变革阻力点。
     - 提供“灰度解”方案，设计“认知摩擦”防御协议。
