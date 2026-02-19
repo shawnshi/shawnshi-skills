@@ -1,6 +1,6 @@
 ﻿---
 name: excel-pro
-description: "重装级 Excel 治理系统。整合物理层 XML 操纵与逻辑层数据建模，实现从数据摄取到专业模型固化的全栈闭环。"
+description: 重装级 Excel 治理系统。整合物理层 XML 操纵与逻辑层数据建模，实现从数据摄取到专业模型固化的全栈闭环。
 ---
 
 # SKILL.md: Excel Pro (数据架构与治理专家)

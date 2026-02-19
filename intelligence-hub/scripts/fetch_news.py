@@ -165,14 +165,69 @@ def fetch_product_hunt():
     except Exception as e:
         return [], f"Product Hunt Error: {str(e)}"
 
+import os
+
 # ============================================================================
 # Main Logic (Provider Interface)
 # ============================================================================
+
+def save_to_markdown(data):
+    today = datetime.now().strftime("%Y%m%d")
+    save_path = f"C:\\Users\\shich\\.gemini\\MEMORY\\news\\intelligence_{today}_briefing.md"
+    os.makedirs(os.path.dirname(save_path), exist_ok=True)
+    
+    content = [
+        f"# Intelligence Hub: 战略情报二阶推演简报 [{datetime.now().strftime('%Y-%m-%d')}]",
+        "",
+        "## 1. 扫描元数据 (Scan Metadata)",
+        f"- **扫描时间**: {data['metadata']['timestamp']}",
+        f"- **信号来源**: {', '.join(data['metadata']['sources'].keys())} (Total {data['metadata']['count']} Items)",
+        "- **分析引擎**: Intelligence Hub V3.1",
+        "",
+        "## 2. 战略锚点：二阶推演 (Digest)",
+        "> 💡 [WAITING FOR AGENT REFINEMENT] 请 Agent 基于 memory.md 执行二阶推演。",
+        "",
+        "## 3. 核心判词 (Punchline)",
+        "> 💡 [WAITING FOR AGENT REFINEMENT]",
+        "",
+        "---",
+        "",
+        "## 4. 原始信号清单与简介 (Raw Signals & Abstracts)",
+        ""
+    ]
+    
+    # Group by source
+    by_source = {}
+    for item in data['items']:
+        src = item['source']
+        if src not in by_source: by_source[src] = []
+        by_source[src].append(item)
+    
+    for src, items in by_source.items():
+        content.append(f"### {src}")
+        for i, item in enumerate(items, 1):
+            desc = item.get('raw_desc', '').strip()
+            # Clean up desc: remove newlines, truncate
+            desc = desc.replace('\r', '').replace('\n', ' ')
+            abstract = (desc[:100] + '...') if len(desc) > 100 else (desc if desc else "No description available.")
+            content.append(f"{i}. **[{src}]** {item['title']} ({item['url']})")
+            content.append(f"   - *简介*: {abstract}")
+        content.append("")
+
+    content.append("---")
+    content.append("## 📂 归档记录")
+    content.append(f"- **归档路径**: {save_path}")
+    content.append("- **状态**: Persistent (Pending Digest)")
+
+    with open(save_path, "w", encoding="utf-8") as f:
+        f.write("\n".join(content))
+    return save_path
 
 def main():
     parser = argparse.ArgumentParser(description="Intelligence Data Provider V3.1")
     parser.add_argument("--source", choices=['hackernews', '36kr', 'weibo', 'github', 'v2ex', 'producthunt', 'all'], default='all')
     parser.add_argument("--limit", type=int, default=10)
+    parser.add_argument("--save", action="store_true", help="Auto-save to MEMORY/news/ as Markdown")
     parser.add_argument("--debug", action="store_true")
     args = parser.parse_args()
 
@@ -216,6 +271,14 @@ def main():
         },
         "items": results
     }
+    
+    # Save if requested
+    if args.save:
+        save_path = save_to_markdown(output_data)
+        output_data["metadata"]["saved_path"] = save_path
+        if args.debug:
+            print(f"DEBUG: Saved to {save_path}")
+
     print(json.dumps(output_data, ensure_ascii=False, indent=2))
 
 if __name__ == "__main__":

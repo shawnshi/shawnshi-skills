@@ -1,6 +1,6 @@
 ﻿---
 name: presentation-architect
-description: "演示文稿全栈架构师。V3.0 认知枢纽版：引入多 Agent 博弈审计、逻辑湖自动联结与视觉信噪比度量。"
+description: 演示文稿全栈架构师。V3.0 认知枢纽版：引入多 Agent 博弈审计、逻辑湖自动联结与视觉信噪比度量。
 ---
 
 # SKILL.md: Presentation Architect V3.0 (The Cognitive Nexus)

@@ -1,6 +1,6 @@
 ﻿---
 name: intelligence-hub
-description: "战略情报作战中枢。整合全球多源新闻抓取与二阶深度情报精炼，构建统一的个人‘逻辑湖’。"
+description: 战略情报作战中枢。整合全球多源新闻抓取与二阶深度情报精炼，构建统一的个人‘逻辑湖’。
 ---
 
 # SKILL.md: Intelligence Hub (情报侦察与分析中枢)
@@ -29,8 +29,12 @@ description: "战略情报作战中枢。整合全球多源新闻抓取与二阶
 2. **分类锚定**：必须包含 [AI/ML]、[架构/工程]、[战略/观点] 三大分类。
 
 ### 第四阶段：物理归档 (The Logic Lake)
-1. **强制持久化**：所有报告必须保存至以下路径，不得仅在终端显示：
-   `C:\Users\shich\.gemini\MEMORY\news\intelligence_[YYYYMMDD_HHMM].md`
+1. **强制持久化**：所有报告必须保存至以下路径，命名规范为 `intelligence_YYYYMMDD_briefing.md`。
+2. **结构要求**：归档文件必须严格包含以下模块：
+   - **[二阶推演 (Digest)]**: 关联 memory.md 的战略分析。
+   - **[核心判词 (Punchline)]**: 提炼当次情报的最高纲领。
+   - **[带简介的原始信号清单 (Raw Signals & Abstracts)]**: 必须包含 标题、链接 及 30-50 字的核心内容摘要。
+3. **路径锚定**: `C:\Users\shich\.gemini\MEMORY\news\`
 
 ## 4. 维护与资源
 - **采集引擎**: scripts/fetch_news.py.
