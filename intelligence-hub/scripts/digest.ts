@@ -1,3 +1,10 @@
+/**
+ * <!-- Standard Header -->
+ * @Input: tmp/raw_intelligence.json, memory.md
+ * @Output: MEMORY/news/intelligence_[DATE].md
+ * @Pos: Phase 2 (Refinement Phase)
+ * @Maintenance Protocol: Logic Refinement rules must sync SKILL.md.
+ */
 import { writeFile, mkdir } from 'node:fs/promises';
 import { dirname } from 'node:path';
 import process from 'node:process';

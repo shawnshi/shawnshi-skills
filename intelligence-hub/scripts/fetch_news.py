@@ -1,6 +1,9 @@
 """
-<!-- Intelligence Hub: Data Fetcher V4.1 -->
-<!-- Responsibility: Fetch raw data -> Clean -> Output JSON -->
+<!-- Standard Header -->
+@Input: references/strategic_focus.json
+@Output: tmp/raw_intelligence.json, terminal stdout
+@Pos: Phase 1 (Reconnaissance Phase)
+@Maintenance Protocol: Parser logic changes must sync SKILL.md.
 """
 import argparse, json, requests, re, random, os, xml.etree.ElementTree as ET
 from bs4 import BeautifulSoup

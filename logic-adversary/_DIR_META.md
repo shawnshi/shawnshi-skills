@@ -9,6 +9,8 @@
     *   `ParallelAnalysis.md`: 饱和逻辑攻击路径。
     *   `Debate.md`: 多代理共识博弈框架。
     *   `AdversarialValidation.md`: 针对确定性断言的硬核验证。
+*   **scripts/**: [Core Engines]
+    *   `game_resolver.py`: [NEW] 智力博弈论解析器，用于计算多代理辩论后的“纳什均衡解”。
 *   **references/**: [Knowledge Assets]
     *   `agents.md`: 专家代理的人格模板库。
     *   `philosophy.md`: 对抗公理（如：奥卡姆剃刀、逆火效应防御）。

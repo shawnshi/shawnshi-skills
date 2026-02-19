@@ -35,7 +35,8 @@ language: py
 
 ### 第三阶段：综合与重构 (Synthesis & Reconstruction)
 1. **冲突存证**：记录所有无法达成共识的尖锐分歧点。
-2. **钢人策略 (Steelmen)**：系统必须尝试为最脆弱的论点构建一个在逻辑上更强大的防御性版本。
+2. **博弈解析 (NEW)**：执行 `python scripts/game_resolver.py debate_results.json`，计算各选项的“稳定性得分”，确定纳什均衡解。
+3. **钢人策略 (Steelmen)**：系统必须尝试为最脆弱的论点构建一个在逻辑上更强大的防御性版本。
 
 ### 第四阶段：战略判词 (The Verdict)
 1. **输出结构**：
