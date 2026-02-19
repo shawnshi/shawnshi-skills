@@ -1,6 +1,7 @@
 ---
 name: excel-pro
-description: 重装级 Excel 治理系统。整合物理层 XML 操纵与逻辑层数据建模，实现从数据摄取到专业模型固化的全 栈闭环。
+description: 重装级 Excel 治理系统。整合物理层 XML 操纵与逻辑层数据建模，实现从数据摄取到专业模型固化的全栈闭环。
+language: py
 ---
 
 # SKILL.md: Excel Pro (数据架构与治理专家)
@@ -37,5 +38,4 @@ description: 重装级 Excel 治理系统。整合物理层 XML 操纵与逻辑�
 ## 4. 维护与资源
 - **底层工具**: scripts/office/ (XML Core).
 - **逻辑示例**: scripts/logic/ (Data Processing).
-- **颜色标准**:
-eferences/styling.md.
+- **样式指南**: references/styling.md.

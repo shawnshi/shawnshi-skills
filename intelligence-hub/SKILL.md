@@ -1,6 +1,7 @@
-﻿---
+---
 name: intelligence-hub
-description: "战略情报作战中枢。整合全球多源新闻抓取与二阶深度情报精炼，构建统一的个人‘逻辑湖’。"
+description: 战略情报作战中枢。整合全球多源新闻抓取与二阶深度情报精炼，构建统一的个人“逻辑湖”。
+language: py
 ---
 
 # SKILL.md: Intelligence Hub (情报侦察与分析中枢)
