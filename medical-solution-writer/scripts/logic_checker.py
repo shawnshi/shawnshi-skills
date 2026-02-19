@@ -1,3 +1,10 @@
+"""
+<!-- Standard Header -->
+@Input: [ProjectName]_Draft.md (Markdown file)
+@Output: MECE Audit Result (Standard Out/JSON)
+@Pos: Phase 5 (Audit Phase)
+@Maintenance Protocol: Logic rules update must sync SKILL.md.
+"""
 import re
 import sys
 import json

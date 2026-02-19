@@ -1,3 +1,10 @@
+"""
+<!-- Standard Header -->
+@Input: Draft MD file
+@Output: Scan report with forbidden terms and replacements.
+@Pos: Phase 7 (Narrative Refinement)
+@Maintenance Protocol: Vocabulary list update must sync SKILL.md and user preferences.
+"""
 import sys
 import os
 import json

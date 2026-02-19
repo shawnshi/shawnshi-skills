@@ -1,11 +1,11 @@
 ---
 name: medical-solution-writer
-description: 医疗数字化解决方案专家，基于 Text-to-Action 范式 design 转型规划。
+description: 医疗数字化解决方案专家，基于 Text-to-Action 范式设计转型规划，遵循顶级咨询 (MBB) 逻辑。
 ---
 
 # SKILL.md: Medical Solution Writer (医疗战略架构专家)
 
-> **Version**: 3.0 (MBB Pipeline Optimized) | **Last Updated**: 2026-02-12
+> **Version**: 3.1 (Consulting & GEB-Flow Optimized) | **Last Updated**: 2026-02-19
 > **Vision**: 将“生成式概率”转化为“临床确定性”与“商业逻辑性”的极致闭环。
 
 ## 1. 触发逻辑 (Trigger)
@@ -13,60 +13,63 @@ description: 医疗数字化解决方案专家，基于 Text-to-Action 范式 de
 
 ## 2. 核心指令 (Core SOP)
 
-### 第一阶段：需求诊断与议题树初始化 (MECE Initialization)
-1. **任务**：使用 `ask-user` 获取背景（项目背景，方案主要内容，报告相关的用户，报告的篇幅（概要|简单（5页左右）|完整（30页以上））），随后**必须**构建一个“MECE 议题树”。
-2. **要求**：
-    - 识别医院当前的三个核心矛盾（如：临床效率 vs. 数据安全）。
-    - 创建工作空间：`./.gemini/MEMORY/medical-solution/[ProjectName]_[YYYYMMDD]`。
-    - 生成：`manifest.json`。
-3.**Initialize**: 目录初始化。生成 `_DIR_META.md` 及 `working_memory.json`。
+### 第零阶段：初始假设生成 (Hypothesis Phase)
+1. **任务**：在深挖需求前，基于初步信息生成 **Initial Hypothesis (IH)**。
+2. **逻辑**：推测客户最核心的 3 个痛点（如：DRG 控费压力、临床文书过载、系统烟囱林立）及可能的解决方案路径。
+3. **确认**：与用户确认初始假设是否偏离核心诉求。
 
-### 第二阶段：战略对齐
-1. **分析逻辑**：与国家战略规划、行业政策与规范、医学伦理对齐。
+### 第一阶段：需求诊断与成熟度评估 (MECE Initialization)
+1. **任务**：使用 `ask_user` 获取背景信息（背景、内容、受众、篇幅），并对照 `references/maturity_model.md` 进行 **Baseline Maturity Audit**。必要时使用“google_web_search”获取信息。
+2. **要求**：
+    - 明确客户当前处于 Level 几，目标是跨越到 Level 几。
+    - 构建一个“MECE 议题树”，识别核心矛盾。
+    - 初始化目录：`./.gemini/MEMORY/medical-solution/[ProjectName]_[YYYYMMDD]`。
+
+### 第二阶段：战略对齐与案例对标
+1. **分析逻辑**：对齐国家战略、政策（`references/医疗卫生政策要点.md`）与伦理规范。
 2. **知识挂载**：
-    - 读取 `references/卫宁健康典型案例.md`，
-    - 读取 `references/卫宁健康核心产品.md`，
-    - 读取 `references/医疗卫生政策要点.md`。
+    - 参考 `references/卫宁健康典型案例.md` 与 `references/卫宁健康核心产品.md`。
+    - 强制引用至少 2 个同规模或同等级医院的标杆案例。
+    - 必要时使用“google_web_search”获取信息。
 
 ### 第三阶段：受众锚定与“So What?” 价值分析
-1. **受众权重**：院长 (50%)、CIO (30%)、科主任 (20%)。
-2. **逻辑要求**：每一个技术动作必须回答“So What?”，即：这能解决什么业务痛点？
+1. **价值逻辑**：针对不同角色（院长、CIO、科主任）设计差异化叙事。
+2. **逻辑硬约束**：每一个功能点必须通过 **[Pain Point] -> [Technical Action] -> [Value Outcome]** 的三段论验证，回答“So What?”。
 
-### 第四阶段：原子化编写与 ROI 建模 (Value Modeling)
-1.  **Outline**: 生成大纲， 展示大纲并获得批准。
-2 **任务**：按章节生产内容。
-2. **强制规则**：
-- **Action**: For each chapter, define 1-2 core visual components (Mermaid, ASCII, or DALL-E prompts).
-    - 每个业务动作描述后，**必须**挂载一个 **[Expected Outcome]**（含量化指标，如：门诊候诊时间缩短 25%）。
-    - 严禁 Bullet Points 堆砌，使用叙事化的 Prose 文风。
+### 第四阶段：方案设计与三步走路径 (Strategic Roadmap)
+1. **任务**：生成大纲，使用 `ask_user` 确认。大纲中必须包含一个 **Three-stage Roadmap**:
+    - **Step 1: Quick Wins ** - 消除痛点，快速见效。
+    - **Step 2: Strategic Shift ** - 架构升级，范式转移。
+    - **Step 3: Future Vision** - 建立护城河。
+2. **ROI 建模**：量化临床、运营与财务收益。
 
 ### 第五阶段：确定性集成与逻辑审计 (MECE Audit)
-1. **任务**：集成文稿。
+1. **任务**：按章节编写内容。
 2. **自动化校验**：
-    - 执行 `python scripts/logic_checker.py [ProjectName]_v1_Draft.md`。
-    - 如果状态为 `Warning`，根据详情自动重构语义重叠或缺失的章节。
+    - 执行 `python scripts/logic_checker.py [ProjectName]_Draft.md`。
+    - 确保逻辑链条完整，无语义重叠。
 
-### 第六阶段：对抗式审计与风险防御 (Risk & Friction)
-1. **任务**：使用“logic-adversary”模拟院长与 CIO 视角进行红队攻击。
-2. **输出**：**《风险减缓矩阵 (Risk Mitigation Matrix)》**。
-    - 识别组织变革阻力点。
-    - 提供“灰度解”方案，设计“认知摩擦”防御协议。
-   -请求用户确认。
-3. **修改**：根据建议对报告进行修改。
+### 第六阶段：对抗式审计与风险防御 (Risk Mitigation)
+1. **任务**：使用 `logic-adversary` 进行红队攻击。
+2. **输出**：生成 **《风险减缓矩阵》**，识别组织变革阻力及应对预案。
 
 ### 第七阶段：叙事重塑与执行摘要 (Answer-First Narrative)
 1. **任务**：生成 500 字的 **Executive Action Summary**。
-2. **要求**：
-    - 采用“结论先行”标题。
-    - 执行 `python scripts/buzzword_auditor.py` 拦截平庸黑话。
-3. **交付**：`[ProjectName]_vFinal_Strategic_Delivery.md`。
-4.  **Final Review (STOP)**: 确认验收。
+2. **要求**：采用“结论先行”标题。
+3. **黑话拦截**：执行 `python scripts/buzzword_auditor.py`，确保语言干练专业。
+4. **交付**：生成 `[ProjectName]_vFinal_Strategic_Delivery.md`。
 
 ## 3. 核心约束 (Constraints)
-- **严禁使用 `**` 加粗**：用逻辑结构和加粗标题体现重点。
-- **严禁被动式 BI 逻辑**：方案必须体现“主动式 AI 干预”。
-- **禁止使用“赋能”、“抓手”等黑话**。
+- **禁止使用加粗**：通过逻辑缩进和章节标题体现重点。
+- **动词原教旨主义**：禁止名词堆砌，文字必须体现动作感。
+- **禁止使用黑话**：严禁出现“赋能”、“闭环”、“抓手”等词汇。
 
-## 4. 维护与资源
-- 脚本：`logic_checker.py`, `manifest_manager.py`。
+## 4. 维护协议 (Maintenance Protocol)
+- **Logic Mutation**: 修改逻辑审计脚本逻辑后，必须同步更新 Standard Header。
+- **Knowledge Update**: 新增政策或产品案例后，同步更新 `_DIR_META.md`。
+- **Sync Rule**: 任何流程变更需反馈至 `SKILL.md`，保持文档与现实一致。
 
+## 5. 资源参考
+- **模型**: `references/maturity_model.md`。
+- **脚本**: `logic_checker.py`, `buzzword_auditor.py`, `manifest_manager.py`。
+- **案例**: `references/卫宁健康典型案例.md`。

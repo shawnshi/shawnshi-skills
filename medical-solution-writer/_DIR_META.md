@@ -1,14 +1,15 @@
 # _DIR_META.md
 
 ## Architecture Vision
-V2.7 “工业级战略引擎”。通过确定性脚本工具集（Scripts）与核心知识资产（References）的深度耦合，实现医疗数字化方案的高密度、零事故产出。
+V3.1 “咨询级战略专家系统”。通过对齐 MBB 咨询逻辑（初始假设、成熟度评估、三步走路线图）与确定性脚本工具集，实现医疗数字化方案的深度战略性产出。
 
 ## Member Index
-- `SKILL.md`: [Instruction] 核心 SOP V2.7，含审计追踪与确定性合并协议。
+- `SKILL.md`: [Instruction] 核心 SOP V3.1，包含初始假设阶段与成熟度评估逻辑。
 - `scripts/`: [Tools]
-    - `manifest_manager.py`: 确定性合并工具。
-    - `buzzword_auditor.py`: 风格与黑话自动化校验工具。
+    - `logic_checker.py`: MECE 逻辑审计工具。
+    - `buzzword_auditor.py`: 黑话拦截与叙事脱水工具。
 - `references/`: [Assets]
+    - `maturity_model.md`: [NEW] 医疗数字化成熟度分级标准。
     - `medical_semantic_layer.md`: 语义层标准定义。
     - `hitl_grading.md`: HITL 2.0 分级标准。
 - `templates/`: [Assets] 包含方案规格标准。

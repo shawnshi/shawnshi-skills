@@ -1,3 +1,10 @@
+"""
+<!-- Standard Header -->
+@Input: manifest.json
+@Output: Merged Markdown file
+@Pos: Phase 5 (Integration Phase)
+@Maintenance Protocol: File structure changes must sync manifest schema.
+"""
 import sys
 import os
 import json
