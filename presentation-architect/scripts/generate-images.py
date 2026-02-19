@@ -1,3 +1,10 @@
+"""
+<!-- Standard Header -->
+@Input: working_memory.json (prompts)
+@Output: assets/images/*.png
+@Pos: Phase 2 (Forging Phase)
+@Maintenance Protocol: API or path logic changes must sync SKILL.md.
+"""
 import os
 import glob
 import json

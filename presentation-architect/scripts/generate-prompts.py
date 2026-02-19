@@ -1,3 +1,10 @@
+"""
+<!-- Standard Header -->
+@Input: outline.md, styles/
+@Output: working_memory.json (prompts)
+@Pos: Phase 2 (Forging Phase)
+@Maintenance Protocol: Prompt template changes must sync SKILL.md.
+"""
 import os
 import re
 import argparse

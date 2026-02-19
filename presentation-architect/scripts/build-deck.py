@@ -1,3 +1,10 @@
+"""
+<!-- Standard Header -->
+@Input: outline.md, images/ (optional), blueprint-template.md
+@Output: deck.pptx, deck.pdf
+@Pos: Phase 3 (Assembly Phase)
+@Maintenance Protocol: Parameter changes must sync SKILL.md Phase 3.
+"""
 import os
 import subprocess
 import argparse
