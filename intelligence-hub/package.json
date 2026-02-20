@@ -1,0 +1,18 @@
+{
+  "name": "intelligence-hub",
+  "version": "1.0.0",
+  "description": "<!--  @Input: Multi-source Feeds (RSS/APIs), Strategic Keywords, Time Ranges @Output: Structured JSON Data, Executive Briefings, Trend Synthesis @Pos: [ACE Layer: Perception/Cognition] | [MSL Segment: Strategic Intelligence] @Maintenance: Weekly source validity check & prompt calibration for \"thought-refiner\". @Axioms: Signal Over Noise | Second-Order Insight | Logical Lake Archiving -->",
+  "main": "index.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "type": "commonjs",
+  "dependencies": {
+    "@google/generative-ai": "^0.24.1",
+    "dotenv": "^17.3.1",
+    "rss-parser": "^3.13.0"
+  }
+}

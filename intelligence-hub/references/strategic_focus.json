@@ -1,21 +1,109 @@
 {
   "strategic_keywords": [
-    {"keyword": "agent", "weight": 10},
-    {"keyword": "ace", "weight": 15},
-    {"keyword": "msl", "weight": 15},
-    {"keyword": "rag", "weight": 10},
-    {"keyword": "hitl", "weight": 12},
-    {"keyword": "medical", "weight": 10},
-    {"keyword": "ai", "weight": 5},
-    {"keyword": "vector", "weight": 8},
-    {"keyword": "fhir", "weight": 12},
-    {"keyword": "drg", "weight": 12},
-    {"keyword": "llm", "weight": 5},
-    {"keyword": "vibe", "weight": 8}
+    {
+      "keyword": "ai",
+      "weight": 10
+    },
+    {
+      "keyword": "ace",
+      "weight": 20
+    },
+    {
+      "keyword": "msl",
+      "weight": 20
+    },
+    {
+      "keyword": "fhir",
+      "weight": 15
+    },
+    {
+      "keyword": "medical",
+      "weight": 15
+    },
+    {
+      "keyword": "agent",
+      "weight": 15
+    },
+    {
+      "keyword": "clinic",
+      "weight": 10
+    },
+    {
+      "keyword": "hitl",
+      "weight": 20
+    },
+    {
+      "keyword": "vbc",
+      "weight": 10
+    },
+    {
+      "keyword": "api",
+      "weight": 8
+    },
+    {
+      "keyword": "aci",
+      "weight": 8
+    },
+    {
+      "keyword": "his",
+      "weight": 8
+    },
+    {
+      "keyword": "sql",
+      "weight": 8
+    },
+    {
+      "keyword": "gui",
+      "weight": 8
+    },
+    {
+      "keyword": "ffs",
+      "weight": 8
+    },
+    {
+      "keyword": "sdk",
+      "weight": 8
+    },
+    {
+      "keyword": "roi",
+      "weight": 8
+    },
+    {
+      "keyword": "hit",
+      "weight": 8
+    }
   ],
   "categories": {
-    "AI/ML & Agents": ["agent", "ace", "ai", "vector", "rag", "llm", "vibe"],
-    "医疗数字化/MSL": ["medical", "msl", "fhir", "drg", "hospital", "clinic", "healthit", "himss", "ajmc", "hit180"],
-    "工程与底层架构": ["github", "architecture", "rust", "go", "performance", "dns", "tailscale", "browser"]
+    "AI/ML & Agentic Mesh": [
+      "agent",
+      "ace",
+      "ai",
+      "vector",
+      "rag",
+      "llm",
+      "vibe"
+    ],
+    "医疗数字化/MSL": [
+      "medical",
+      "msl",
+      "fhir",
+      "drg",
+      "hospital",
+      "clinic",
+      "healthit",
+      "himss",
+      "ajmc",
+      "hit180"
+    ],
+    "工程与底层架构": [
+      "github",
+      "architecture",
+      "rust",
+      "go",
+      "performance",
+      "dns",
+      "tailscale",
+      "browser"
+    ]
   }
 }

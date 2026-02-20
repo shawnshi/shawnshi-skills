@@ -1,32 +1,33 @@
-# Research Analyst Workflows (V6.2)
+# Research Analyst Workflows (V9.0)
 
-## Phase 0: Alignment Protocol (MANDATORY)
-在进入任何模式前，必须执行对齐（使用 `ask_user` 工具）：
-1. **确认深度**: 标准报告(3000字) vs 深度报告(6000+字)。
-2. **确认对象**: 明确报告的读者画像。
-3. **确认核心问题**: 3-5个关键研究痛点。
-4. **大纲确认**: 生成 `outline.md` 后，使用 `ask_user` 请求用户确认。若用户提出修改建议，必须循环调整直至批准。
+## Phase 0: Alignment & SCQA (MANDATORY)
+1. **SCQA Framing**: Define Situation, Complication, Question, and the overarching Answer.
+2. **Hypothesis Matrix**: Generate 3-5 core strategic hypotheses in `hypothesis_matrix.json`.
+3. **MECE Audit**: Use `logic-adversary` to audit the structural completeness of the research plan.
+4. **Approval**: Use `ask_user` to finalize the SCQA and the initial hypothesis matrix.
 
-## Mode A: Standard (标准报告 / 约 3000 字)
-*Target: Rapid intelligence gathering and synthesis.*
+## Mode A: Strategic Brief (标准报告 / 约 4000 字)
+*Target: Rapid synthesis of core action titles and so-what analysis.*
 ...
 
-## Mode B: Deep Dive (深度研究 / 6000+ 字)
-*Target: Strategic defensibility and non-consensus insight.*
+## Mode B: The Partner's Deep Dive (深度研究 / 10000+ 字)
+*Target: Strategic defensibility, non-consensus insight, and conclusive action.*
 
-### Task 1: Intelligence Saturation
-...
+### Task 1: Intelligence Saturation & Hypothesis Testing
+1. **OSINT Discovery**: Use `retrieval_specialist` to probe data specifically to confirm/refute the hypotheses.
+2. **Evidence-Mesh**: Record every finding in `evidence_matrix.csv`.
 
-### Task 2: Structural Construction
-1. **Blueprint**: 生成详细 `outline.md`。
-2. **Approval**: **必须**使用 `ask_user` 获得批准或修改建议。
-3. **Iteration**:
-   - 逐章撰写，每章 >= 800 字。
-   - 风格要求：**Narrative Flow** (叙事流)，减少列表使用。
-   - 动态更新 Memory，确保上下文衔接。
+### Task 2: Narrative Construction (Action-Title Driven)
+1. **Action-Title Blueprint**: Create `outline.md` using COMPLETE logical statements as headers.
+2. **Approval**: **Mandatory** `ask_user` review of headers.
+3. **Recursive Drafting**:
+   - Write chapter-by-chapter, each >= 1200 words.
+   - **Mandatory "So-What" Block**: Every chapter ends with a strategic impact analysis.
+   - Use `logic-adversary` to stress-test the argument between chapters.
 
-### Task 3: Forging & 3D Audit
-1. **Assembly**: 物理拼接，输出文件名为 `{Topic}_{Date}.md`。
-2. **Logic Audit**: 执行 Fidelity/Defensibility/Entropy 校验。
-3. **Final Review**: 使用 `ask_user` 验收最终报告，支持返工指令。
-4. **Outcome**: 产出包含“灰度解”的万字级深度报告。
+### Task 3: Final Synthesis & Pythonic Assembly
+1. **Fidelity Audit**: Verify every action title is supported by the data in `working_memory.json`.
+2. **Gray Framework**: Synthesize the Ideal, Survival, and Exit strategies.
+3. **Physical Assembly**: Execute `assembler.py` for a 1:1 merge.
+4. **Hypothesis Closure**: Final status update for the hypothesis matrix.
+5. **Outcome**: A definitive, partner-grade strategic report.

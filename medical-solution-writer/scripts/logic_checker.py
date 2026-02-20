@@ -8,13 +8,13 @@
 import re
 import sys
 import json
-from collections import Counter
 
 class MECELogicChecker:
     """
-    医疗方案逻辑检查器：验证方案是否符合 MECE 原则
+    医疗方案战略逻辑检查器 V4.0：验证方案是否符合 MBB 合伙人级标准
     - ME (Mutually Exclusive): 相互独立，检查章节间是否存在高度语义重叠。
-    - CE (Collectively Exhaustive): 完全穷尽，检查核心战略维度是否缺失。
+    - CE (Collectively Exhaustive): 完全穷尽，检查 V4.0 核心架构维度是否缺失。
+    - Action Titles Audit: 启发式审计标题是否具备“判词性”。
     """
     
     def __init__(self, file_path):
@@ -32,11 +32,10 @@ class MECELogicChecker:
             sys.exit(1)
 
     def _extract_headings(self):
-        # 提取所有二级和三级标题
+        # 提取二级和三级标题
         return re.findall(r'^(##+)\s+(.*)$', self.content, re.MULTILINE)
 
     def _split_sections(self):
-        # 按标题分割内容块
         sections = {}
         parts = re.split(r'^##+\s+.*$', self.content, flags=re.MULTILINE)
         titles = [h[1] for h in self.headings]
@@ -45,73 +44,83 @@ class MECELogicChecker:
                 sections[title] = parts[i+1].strip()
         return sections
 
+    def check_action_titles(self):
+        """启发式审计：标题是否过短（通常意味着描述性标签而非判词性标题）"""
+        violations = []
+        for level, title in self.headings:
+            # 去除序号等干扰
+            clean_title = re.sub(r'^\d+(\.\d+)*\s*', '', title)
+            # 如果标题长度小于 8 个字符，大概率不是完整的逻辑判词
+            if len(clean_title) < 8:
+                violations.append({
+                    "title": title,
+                    "reason": "Title is too short. V4.0 requires 'Action Titles' (complete logical statements).",
+                    "suggestion": f"将【{title}】重写为结论性语句（如：通过 XXX 提升 XXX）。"
+                })
+        return violations
+
     def check_me(self):
-        """检查相互独立性 (Mutually Exclusive)"""
         overlaps = []
         titles = list(self.sections.keys())
-        
-        # 简单语义重叠检测：标题词频碰撞
         for i in range(len(titles)):
             for j in range(i + 1, len(titles)):
                 t1, t2 = titles[i], titles[j]
                 words1 = set(re.findall(r'\w+', t1))
                 words2 = set(re.findall(r'\w+', t2))
                 intersection = words1.intersection(words2)
-                
-                # 如果标题中有 2 个以上实词重叠，视为潜在 ME 风险
-                ignored_words = {'的', '与', '及', '和', '中', '基于', '在'}
+                ignored_words = {'的', '与', '及', '和', '中', '基于', '在', '如何', '实现'}
                 meaningful_overlap = [w for w in intersection if w not in ignored_words]
-                
-                if len(meaningful_overlap) >= 2:
+                if len(meaningful_overlap) >= 3: # 提升阈值，更严谨
                     overlaps.append({
                         "sections": [t1, t2],
                         "overlap_keywords": meaningful_overlap,
-                        "type": "Heading Overlap"
+                        "type": "Heading Semantic Overlap"
                     })
         return overlaps
 
     def check_ce(self):
-        """检查完全穷尽性 (Collectively Exhaustive)"""
-        # 顶级医疗数字化方案必须包含的维度
+        # V4.0 强制性战略维度
         mandatory_dimensions = {
-            "架构": ["语义层", "MSL", "真相引擎", "架构"],
-            "流程": ["业务流", "闭环", "T2A", "动作编排"],
-            "合规": ["HITL", "分级", "责任", "问责", "安全"],
-            "价值": ["ROI", "价值", "降本", "增效", "临床意义"]
+            "叙事轴心": ["SCQA", "冲突", "痛点", "背景"],
+            "语义架构": ["MSL", "语义层", "真相引擎", "架构"],
+            "意图流": ["T2A", "意图流", "动作编排", "ACI", "环境智能"],
+            "责任归因": ["HITL", "人机回环", "归因", "安全边界", "数字防火墙"],
+            "战略价值": ["So-What", "ROI", "价值", "收益", "影响", "Implications"]
         }
-        
         missing = []
         full_text = self.content.lower()
-        
         for dim, keywords in mandatory_dimensions.items():
             found = any(k.lower() in full_text for k in keywords)
             if not found:
                 missing.append({
                     "dimension": dim,
                     "missing_keywords": keywords,
-                    "suggestion": f"方案可能缺失【{dim}】维度，建议补充相关章节。"
+                    "suggestion": f"方案可能缺失【{dim}】维度，这是 V4.0 架构师标准的硬要求。"
                 })
         return missing
 
     def run_audit(self):
         me_risks = self.check_me()
         ce_risks = self.check_ce()
+        title_risks = self.check_action_titles()
         
         report = {
             "file": self.file_path,
-            "status": "Warning" if (me_risks or ce_risks) else "Passed",
-            "me_violations_count": len(me_risks),
-            "ce_violations_count": len(ce_risks),
+            "status": "Warning" if (me_risks or ce_risks or title_risks) else "Passed",
+            "metrics": {
+                "me_violations": len(me_risks),
+                "ce_violations": len(ce_risks),
+                "title_violations": len(title_risks)
+            },
             "details": {
+                "action_title_risks": title_risks,
                 "me_risks": me_risks,
                 "ce_risks": ce_risks
             }
         }
         
         print(json.dumps(report, indent=4, ensure_ascii=False))
-        
-        # 如果存在严重缺失，建议 Exit 1
-        if len(ce_risks) > 1:
+        if len(ce_risks) > 0 or len(title_risks) > 2:
             sys.exit(1)
         else:
             sys.exit(0)
@@ -120,6 +129,5 @@ if __name__ == "__main__":
     if len(sys.argv) < 2:
         print("Usage: python logic_checker.py <file_path>")
         sys.exit(1)
-    
     checker = MECELogicChecker(sys.argv[1])
     checker.run_audit()

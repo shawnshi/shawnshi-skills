@@ -32,20 +32,18 @@ language: py
 2. **任务**：模拟红队挑战该 Alpha 结论的鲁棒性，识别潜在的“自动化偏见”。
 
 ### 第四阶段：战略简报生成 (Strategic Briefing)
-1. **执行**：调用 `scripts/digest.ts`。
-2. **叙事纪律**：
-    - **结论先行**：标题必须是判词。
-    - **链接必达**：**[硬约束：每个资讯条目必须包含原始链接]**。
-    - **语言主权**：全篇必须使用简体中文。
+1. **注入准备**：AI 将对话中的高维洞察（insights, punchline, digest, market）写入临时交换文件 `MEMORY/news/intelligence_current_refined.json`。
+2. **执行锻造**：调用 `python scripts/forge.py`。
+3. **自愈逻辑**：`forge.py` 自动检测并注入 AI 成果，若检测到 `[WAITING]` 占位符将拒绝标记为 "Polished"。
 
 ### 第五阶段：物理归档与索引 (Archiving & Indexing)
-1. **持久化**：保存至 `C:\Users\shich\.gemini\MEMORY\news\intelligence_[YYYYMMDD].md`。
-2. **索引维护**：执行 `python scripts/update_index.py`，更新情报总目。
+1. **持久化**：文件强制保存至根目录 `MEMORY/news/intelligence_[YYYYMMDD]_briefing.md`。
+2. **清理**：归档完成后自动清理临时交换文件。
 
 ## 3. 核心约束 (Constraints)
 - **拒绝信息垃圾**：单次简报条目不得超过 12 条。
-- **链接完整性**：缺失链接的情报视为无效，不得进入简报。
-- **分类硬约束**：必须包含 [AI/Agentic]、[Medical IT/MSL]、[Engineering] 三大板块。
+- **环境一致性**：Node.js 脚本必须通过 `dotenv` 加载根目录 `.env`。
+- **路径协议**：统一使用 `pathlib` 处理 win32 路径，严禁硬编码转义字符。
 
 ## 4. 维护协议 (Maintenance Protocol)
 - **Sensor Update**: 新增采集源需同步更新 `fetch_news.py` 与 `karpathy_feeds.json`。

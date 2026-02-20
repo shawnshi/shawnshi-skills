@@ -1,22 +1,40 @@
-# Medical Solution Structure Standards
+# Medical Solution Structure Standards (V4.0)
 
-## Type A: 项目概述 (Executive Summary) - ~3 Pages
-1. **核心价值主张**：一句话定义方案灵魂。
-2. **现状挑战脉络**：从政策到临床的痛点解构。
-3. **关键能力图谱**：解决问题的 3-5 个核心功能。
-4. **预期收益对齐**：量化的 ROI 预测。
+## Type A: 战略执行摘要 (Executive Action Summary)
+1. **[SCQA 叙事锚点]**：定义方案的冲突与核心答案。
+2. **[战略判词]**：一句话定义方案的架构灵魂（如：从“烟囱式孤岛”向“意图驱动架构”的范式跃迁）。
+3. **[核心能力地图]**：支撑战略目标的 3 个关键能力（Action-oriented titles）。
+4. **[ROI 综合预估]**：临床、财务与运营的量化收益模型。
 
-## Type B: 概要方案 (High-Level Design) - ~10 Pages
-1. **项目背景与建设目标**：宏观背景与具体目标。
-2. **总体设计架构**：逻辑架构图、数据流向图。
-3. **核心功能模块描述**：业务逻辑与流程改进点。
-4. **技术实现路线**：云原生、国产化、数据安全性。
-5. **分步实施路径**：时间轴与里程碑。
+## Type B: 概要方案 (Strategic High-Level Design)
+1. **[现状诊断与成熟度对齐]**：基于 Baseline Maturity Audit 的断裂点分析。
+2. **[数字化蓝图与架构意图]**：
+    - 逻辑架构：突出 Medical Semantic Layer (MSL) 的中枢作用。
+    - 数据流向：从“点击流”向“意图流”的转换。
+3. **[核心业务场景与 T2A 编排]**：
+    - 门急诊/住院：如何通过环境智能（ACI）减少医生文书负荷。
+    - 运营管理：如何通过 MSL 实现医保控费的实时语义预警。
+4. **[技术路径与安全边界]**：国产化、信创、PIPL 安全模型、CDSS 责任归因。
+5. **[三步走转型路径 (Roadmap)]**：Quick Wins -> Strategic Shift -> Future Vision。
 
-## Type C: 完整方案 (Detailed Blueprint) - 40+ Pages
-1. **深度现状评估**：包括现有系统（HIS/EMR/PACS）集成复杂度。
-2. **多维架构体系**：业务、应用、数据、技术、安全五大架构。
-3. **详细业务场景设计**：门急诊、住院、管理、科研等全场景覆盖。
-4. **语义层与数据底座**：Medical Semantic Layer (MSL) 与数据治理方案。
-5. **运维与服务体系**：SLA 承诺、应急响应、知识转移。
-6. **财务预测与合规评估**：详细预算估算、行业标准对齐。
+## Type C: 完整技术蓝图 (Detailed Strategic Blueprint)
+1. **[深度需求解构与 MECE 议题树]**。
+2. **[五位一体架构方案]**：
+    - 业务架构：重塑临床业务流。
+    - 应用架构：微服务、API 化与 Agentic Mesh。
+    - 数据架构：MSL 语义底座与知识图谱增强检索（GraphRAG）。
+    - 技术架构：云原生与分布式。
+    - 安全架构：合规数字证据网 (Evidence-Mesh)。
+3. **[精细化业务设计与 HITL 协议]**：每一个场景必须明确 [Intention] -> [Action] -> [HITL Audit]。
+4. **[战略影响与 So-What 分析]**：
+    - 对院长的价值：财务可持续性与核心竞争力。
+    - 对 CIO 的价值：架构治理能力与安全韧性。
+    - 对科主任的价值：临床工作强度降低与效率红利。
+5. **[实施治理与运维 SLA]**。
+6. **[预算模型与分阶段 ROI 分解]**。
+
+---
+### 逻辑硬约束 (Hard Constraints)
+- **Every Heading MUST be an Action Title.**
+- **Every Feature MUST map to a Documented Pain Point.**
+- **Every Claim MUST be backed by Evidence.**

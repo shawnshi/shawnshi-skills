@@ -162,19 +162,3 @@ def main():
 
 if __name__ == "__main__":
     main()
-        "metadata": {"timestamp": datetime.now().isoformat(), "sources": stats, "count": len(res)},
-        "items": res
-    }
-    
-    # Save Raw Data
-    tmp_path = os.path.join(os.path.dirname(__file__), "..", "tmp")
-    os.makedirs(tmp_path, exist_ok=True)
-    out_file = os.path.join(tmp_path, args.output)
-    
-    with open(out_file, 'w', encoding='utf-8') as f:
-        json.dump(output_data, f, ensure_ascii=False, indent=2)
-    
-    print(f"Data snapshot saved to: {out_file}")
-
-if __name__ == "__main__":
-    main()

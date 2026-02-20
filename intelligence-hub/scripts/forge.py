@@ -1,131 +1,118 @@
 """
-<!-- Intelligence Hub: The Forge V4.1 -->
-<!-- Responsibility: Load JSON -> Score -> Render Markdown -->
+<!-- Intelligence Hub: The Forge V5.2 (Localization & Detail Enhanced) -->
+@Input: tmp/latest_scan.json, tmp/ai_refined.json, references/strategic_focus.json
+@Output: root/MEMORY/news/intelligence_[DATE]_briefing.md
+@Pos: Phase 4 (Briefing Assembly)
 """
-import json, os, sys
+import json
+import os
+from pathlib import Path
 from datetime import datetime
 
-# --- Loaders ---
-def load_json(path):
-    with open(path, 'r', encoding='utf-8') as f: return json.load(f)
-
-def load_text(path):
-    with open(path, 'r', encoding='utf-8') as f: return f.read()
-
-# --- Logic ---
 def forge_briefing():
-    base_dir = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+    # 1. Path Resolution
+    base_dir = Path(__file__).parent.parent
+    root_dir = Path("C:/Users/shich/.gemini")
     
-    # 1. Load Assets
-    data_path = os.path.join(base_dir, "tmp", "latest_scan.json")
-    config_path = os.path.join(base_dir, "references", "strategic_focus.json")
-    tpl_path = os.path.join(base_dir, "references", "briefing_template.md")
+    scan_path = base_dir / "tmp" / "latest_scan.json"
+    refined_path = root_dir / "MEMORY" / "news" / "intelligence_current_refined.json"
+    focus_path = base_dir / "references" / "strategic_focus.json"
+    template_path = base_dir / "references" / "briefing_template.md"
     
-    if not os.path.exists(data_path):
-        print(f"Error: Data file not found at {data_path}. Run fetch_news.py first.")
-        return
+    # 2. Data Loading
+    if not scan_path.exists(): return
+    with open(scan_path, 'r', encoding='utf-8') as f: scan_data = json.load(f)
+    with open(focus_path, 'r', encoding='utf-8') as f: focus_data = json.load(f)
+    ai_data = {}
+    if refined_path.exists():
+        with open(refined_path, 'r', encoding='utf-8') as f:
+            ai_data = json.load(f)
 
-    data = load_json(data_path)
-    config = load_json(config_path)
-    tpl = load_text(tpl_path)
-    
-    # 2. Score Items
-    keywords = config.get("strategic_keywords", [])
-    items = data.get("items", [])
-    
-    for item in items:
+    with open(template_path, 'r', encoding='utf-8') as f: tpl = f.read()
+
+    # 3. Scoring & Sorting
+    keywords = {kw['keyword'].lower(): kw['weight'] for kw in focus_data['strategic_keywords']}
+    scored_items = []
+    for item in scan_data['items']:
         score = 0
-        text = (item.get('title', '') + item.get('raw_desc', '')).lower()
-        for kw_obj in keywords:
-            if kw_obj['keyword'] in text:
-                score += kw_obj.get('weight', 10)
-        item['score'] = score
+        text = (item['title'] + " " + item.get('raw_desc', '')).lower()
+        for kw, weight in keywords.items():
+            if kw in text: score += weight
+        scored_items.append((score, item))
+    scored_items.sort(key=lambda x: x[0], reverse=True)
+    
+    # 4. Rendering Top 10 (Prioritizing AI Refined Summaries)
+    top_10_md = []
+    ai_top_10 = ai_data.get("top_10", [])
+    
+    for i in range(10):
+        if i >= len(scored_items): break
+        score, item = scored_items[i]
         
-    # 3. Sort
-    sorted_items = sorted(items, key=lambda x: x['score'], reverse=True)
-    top_10 = sorted_items[:10]
-    
-    # 4. Render Data Table
-    tbl_lines = ["| 数据源 | 状态 | 抓取数量 |", "| :--- | :--- | :--- |"]
-    for src, status in data['metadata']['sources'].items():
-        count = len([i for i in items if i['source'].lower().replace(" ","").replace(".","") == src.lower().replace(" ","").replace(".","")])
-        tbl_lines.append(f"| {src} | {status} | {count} |")
-    
-    # 5. Render Top 10
-    top_lines = []
-    for idx, item in enumerate(top_10, 1):
-        # Clean abstract
-        raw_d = item.get('raw_desc', '') or ""
-        clean_d = " ".join(raw_d.split())
-        abstract = (clean_d[:300] + "...") if len(clean_d) > 300 else (clean_d or "No abstract.")
+        # Check if we have an AI-refined version of this entry
+        refined_entry = next((x for x in ai_top_10 if x['url'] == item['url']), None)
         
-        # Identify Keywords
-        matched_kws = []
-        for kw_obj in keywords:
-            if kw_obj['keyword'] in (item['title'] + raw_d).lower():
-                matched_kws.append(kw_obj['keyword'])
-        kw_str = ", ".join(matched_kws) if matched_kws else "General"
+        title = refined_entry['title_zh'] if refined_entry else item['title']
+        summary = refined_entry['summary_zh'] if refined_entry else "[AI 翻译中...] " + item.get('raw_desc', '')[:150]
+        reason = refined_entry.get('reason', '') if refined_entry else ""
 
-        top_lines.append(f"### {idx}. {item['title']}")
-        top_lines.append(f"- **URL**: {item['url']}")
-        top_lines.append(f"- **中文摘要**: {abstract} [REFINEMENT: 必须补全至 100 字]")
-        top_lines.append(f"- **推荐理由**: [WAITING]")
-        top_lines.append(f"- **关键词**: {kw_str}")
-        top_lines.append("")
+        top_10_md.append(f"### {i+1}. [{title}]({item['url']})")
+        top_10_md.append(f"- **来源**: {item['source']} | **战略权重**: {score}")
+        top_10_md.append(f"- **中文摘要**: {summary}...")
+        if reason: top_10_md.append(f"- **推荐理由**: {reason}")
+        top_10_md.append("")
+    
+    # 5. Categorization & Grouped List
+    categories = focus_data.get('categories', {})
+    grouped = {cat: [] for cat in categories.keys()}
+    grouped['其他综合资讯清单'] = []
+    
+    for score, item in scored_items[10:]:
+        text = (item['title'] + " " + item.get('raw_desc', '')).lower()
+        assigned = False
+        for cat_name, cat_keywords in categories.items():
+            if any(kw.lower() in text for kw in cat_keywords):
+                grouped[cat_name].append(item)
+                assigned = True
+                break
+        if not assigned: grouped['其他综合资讯清单'].append(item)
 
-    # 6. Render Full Grouped List
-    grouped_lines = []
-    assigned_urls = set()
-    
-    # Categorized Items
-    for cat_name, cat_kws in config.get("categories", {}).items():
-        cat_items = [i for i in items if i['url'] not in assigned_urls and any(k in (i['title']+i.get('raw_desc','')).lower() for k in cat_kws)]
-        if cat_items:
-            grouped_lines.append(f"### {cat_name}")
-            for item in cat_items:
-                raw_d = item.get('raw_desc', '') or ""
-                clean_d = " ".join(raw_d.split())
-                abstract = (clean_d[:300] + "...") if len(clean_d) > 300 else (clean_d or "No abstract.")
-                
-                matched = [k for k in cat_kws if k in (item['title']+raw_d).lower()]
-                reason = f"命中关键词: {', '.join(matched)}" if matched else cat_name
-                
-                grouped_lines.append(f"- **{item['title']}** ({item['url']})")
-                grouped_lines.append(f"  - *中文摘要*: {abstract} [补全至 100 字]")
-                grouped_lines.append(f"  - *推荐理由*: [WAITING] {reason}。")
-                assigned_urls.add(item['url'])
-            grouped_lines.append("")
-            
-    # Remaining Items
-    rem_items = [i for i in items if i['url'] not in assigned_urls]
-    if rem_items:
-        grouped_lines.append("### 其他综合资讯清单")
-        for item in rem_items:
-            raw_d = item.get('raw_desc', '') or ""
-            clean_d = " ".join(raw_d.split())
-            abstract = (clean_d[:120] + "...") if len(clean_d) > 120 else clean_d
-            grouped_lines.append(f"- **{item['title']}** ({item['url']})")
-            grouped_lines.append(f"  - *中文摘要*: {abstract} [补全至 100 字]")
-            grouped_lines.append(f"  - *推荐理由*: [WAITING] 通用扫描。 ")
+    full_list_md = []
+    for cat_name, items in grouped.items():
+        if not items: continue
+        full_list_md.append(f"### {cat_name}")
+        for item in items[:12]:
+            desc = item.get('raw_desc', '').strip()[:100].replace('\n', ' ')
+            full_list_md.append(f"- **[{item['title']}]({item['url']})**")
+            if desc: full_list_md.append(f"  > *简介*: {desc}...")
+        full_list_md.append("")
 
-    # 7. Final Injection
-    today_str = datetime.now().strftime('%Y-%m-%d')
-    file_name = f"intelligence_{datetime.now().strftime('%Y%m%d')}_briefing.md"
-    save_path = os.path.join(base_dir, "..", "MEMORY", "news", file_name)
-    
-    final_md = tpl.replace("{{DATE}}", today_str)
-    final_md = final_md.replace("{{DATA_TABLE}}", "\n".join(tbl_lines))
-    final_md = final_md.replace("{{TOP_10_LIST}}", "\n".join(top_lines))
-    final_md = final_md.replace("{{GROUPED_FULL_LIST}}", "\n".join(grouped_lines))
-    final_md = final_md.replace("{{SAVE_PATH}}", save_path)
-    
-    # Ensure dir exists
-    os.makedirs(os.path.dirname(save_path), exist_ok=True)
-    
-    with open(save_path, 'w', encoding='utf-8') as f:
+    # 6. Final Assembly
+    placeholders = {
+        "{{DATE}}": datetime.now().strftime('%Y-%m-%d'),
+        "{{INSIGHTS}}": ai_data.get("insights", "> 💡 [WAITING]"),
+        "{{PUNCHLINE}}": ai_data.get("punchline", "> 💡 [WAITING]"),
+        "{{DIGEST}}": ai_data.get("digest", "> 💡 [WAITING]"),
+        "{{MARKET}}": ai_data.get("market", "* 数据未同步"),
+        "{{TOP_10_LIST}}": "\n".join(top_10_md),
+        "{{GROUPED_FULL_LIST}}": "\n".join(full_list_md),
+        "{{SAVE_PATH}}": str(root_dir / "MEMORY" / "news" / f"intelligence_{datetime.now().strftime('%Y%m%d')}_briefing.md")
+    }
+
+    final_md = tpl
+    for key, val in placeholders.items():
+        final_md = final_md.replace(key, val)
+
+    # Table Rendering
+    table_rows = ["| 数据源 | 状态 | 抓取数量 |", "| :--- | :--- | :--- |"]
+    for src, status in scan_data['metadata']['sources'].items():
+        count = sum(1 for item in scan_data['items'] if item['source'] == src)
+        table_rows.append(f"| {src} | {status} | {count} |")
+    final_md = final_md.replace("{{DATA_TABLE}}", "\n".join(table_rows))
+
+    with open(placeholders["{{SAVE_PATH}}"], 'w', encoding='utf-8') as f:
         f.write(final_md)
-        
-    print(f"Briefing forged at: {save_path}")
+    print(f"Briefing forged with localization at: {placeholders['{{SAVE_PATH}}']}")
 
 if __name__ == "__main__":
     forge_briefing()
