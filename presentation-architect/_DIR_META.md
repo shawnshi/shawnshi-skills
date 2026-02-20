@@ -1,7 +1,14 @@
+---
+title: _DIR_META.md - Presentation Architect
+date: 2026-02-20
+status: Active
+author: antigravity
+---
+
 # _DIR_META.md - Presentation Architect
 
 ## 1. Vision (架构愿景)
-作为系统内核心的“决策叙事引擎”，旨在通过“逻辑湖联结”、“Action Titles 硬约束”与“多 Agent 冲突审计”，将碎片化的原始信息转化为具备咨询级质量、逻辑自洽且视觉美学统一的专业演示文稿。
+作为 V2.0 战略操作系统内核心的“决策叙事引擎”，旨在通过“逻辑湖联结”、“Action Titles 硬约束”与“医疗垂直红队审计”，将碎片化的原始信息转化为具备咨询级质量、符合行业合规性、逻辑自洽且视觉美学统一的高管级演示文稿，且严格遵守物理区域隔离原则。
 
 ## 2. Directory Index (成员索引)
 *   **SKILL.md**: 核心 SOP、指令清单与维护协议。
