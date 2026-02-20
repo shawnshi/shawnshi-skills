@@ -1,27 +1,13 @@
-﻿# Morphism Mapper: 范畴论跨界引擎
+﻿# 态射映射器 (morphism-mapper-master)
 
-<!-- 
-@Input: Domain A Structure, Entity Relationships, Morphism Mapping
-@Output: Non-Consensus Innovation Solutions, Commutativity Checks
-@Pos: [ACE Layer: Cognition/Innovation] | [MSL Segment: Cross-Domain Knowledge]
-@Maintenance: Curate domain repository in references/ to increase mapping bandwidth.
-@Axioms: Isomorphism Recognition | Category Theory Driven | Structural Inversion
--->
+基于范畴论的跨学科思维引擎 (v2.6)。通过寻找异构领域的同构性（如同构映射至热力学或生物学），打破思维定势，生成非共识创新方案。
 
-> **核心内核**：非共识逻辑映射器。利用范畴论同构性原理，在异构领域间建立深层结构映射，突破思维定势。
+## 核心能力
+- **骨架提取 (Extract)**：分析输入的问题，提取实体 (Objects) 和关系 (Morphisms)。
+- **领域选择 (Select)**：在知识库中寻找结构相似但语义距离远的领域（内置27+学科，含物理、生物、复杂系统等）。
+- **函子映射 (Map)**：建立跨学科映射体系，借用目标领域的成熟定理或数学模型解决原问题。
+- **合成提案 (Synthesize)**：将定理反向映射回业务层，并通过逻辑验算确保创新方案的实际可行性。
+- 提供如 `yoneda_probe` 或 `natural_transformation` 等高级模块应对特定条件。
 
-## 0. 本质与边界 (Essence & Boundary)
-- **核心定义**: 跨学科创新引擎，负责寻找不同系统中隐藏的数学对等性，以解决难以攻克的僵局。
-- **反向定义**: 它不是浅层类比，而是在抽象结构层面上的严密逻辑迁移。
-- **费曼比喻**: 就像是你发现管理一家医院的难题，在物理学里的“熵增定律”中已经有了现成的公式解，你只需要把“医生”和“护士”代入到“分子”里。
-
-## 1. 生态位映射 (Ecosystem DNA)
-- **MSL 契约**: 处理“范畴对象”、“态射关系”、“函子映射”等高层抽象实体。
-- **ACE 角色**: 作为 **Innovation Architect (创新架构师)**，为复杂问题提供非共识解法。
-
-## 2. 逻辑机制 (Mechanism)
-- [Skeletal Extraction] -> [Domain Mapping] -> [Natural Transformation] -> [Logical Synthesis]
-
-## 3. 策略协议 (Strategic Protocols)
-- **交换律校验 (Commutativity)**：所有跨界方案必须通过逆映射校验，确保在目标场景中逻辑闭环。
-- **知识分形增长**：每一次成功的映射必须沉淀为“认知基石”，提升系统的联想带宽。
+## 使用场景
+通过自然语言描述遇到了思维瓶颈，自动触发第一至第四阶段的工作流，或者强制使用 `/morphism-map [Domain]` 指令进行映射演练。通过 `scripts/domain_manager.py` 管理知识网库。

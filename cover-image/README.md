@@ -1,27 +1,11 @@
-﻿# Cover Image: 视觉品牌合成器
+﻿# 封面图生成 (cover-image)
 
-<!-- 
-@Input: Article Metadata (Title, Theme, Mood)
-@Output: 16:9 High-Fidelity Cover, Visual Style Spec
-@Pos: [ACE Layer: Action/Creative] | [MSL Segment: Brand Identity]
-@Maintenance: Curate references/gallery.md for high-conversion prompts.
-@Axioms: Visual Tension First | Aesthetic Consistency | Parametric Design
--->
+提供通过简单的自然语言与命令行交互方式，自动生成针对文章、博客及报告的高度定制化封面图像的能力。
 
-> **核心内核**：利用四维参数（类型、风格、文字、情绪）实现出版级视觉包装，确保图像携带品牌基因。
+## 核心能力
+- **模块化构建配置**：提供丰富的画幅、艺术类型、风格表现、文本密度乃至情绪色彩参数选择。
+- **标准化生成流程 (SOP)**：集成底层服务的身份认证、文本情绪分析及提示词拼装闭环逻辑。
+- **自动备份防丢失**：严格的底层生成流程把控，并能妥善处理已生成图片的路径与备份保护。
 
-## 0. 本质与边界 (Essence & Boundary)
-- **核心定义**: 定制化文章封面生成器，通过参数化控制实现视觉风格的高度可预测性。
-- **反向定义**: 它不是一个随机图像搜索器，而是一个精确的品牌资产合成引擎。
-- **费曼比喻**: 它像是一个专业的出版社美编，不仅懂画画，还懂你的文章讲了什么，并能根据文章的基调配出最合适的封面。
-
-## 1. 生态位映射 (Ecosystem DNA)
-- **MSL 契约**: 处理“视觉隐喻”、“品牌情绪”等语义实体，实现文字到图像的跨界映射。
-- **ACE 角色**: 作为 **Creative Worker (创意执行者)**。
-
-## 2. 逻辑机制 (Mechanism)
-- [Content Analysis] -> [Dimension Synthesis] -> [Prompt Engineering] -> [Image Generation] -> [Version Control]
-
-## 3. 策略协议 (Strategic Protocols)
-- **视觉张力优先**：标题限制在 8 字以内，通过大留白或强对比确保封面在移动端具有极高辨识度。
-- **双冗余验证**：任何生成指令必须经过语义对齐校验，防止出现与文章主旨背离的视觉符号。
+## 使用场景
+当用户提出“帮这篇推文做个引人注目的封面”、“生成一张带赛博朋克风格的缩略图”，并需要调用自动化图像引擎时。

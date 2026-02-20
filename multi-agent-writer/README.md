@@ -1,27 +1,13 @@
-﻿# Multi-Agent Writer: 战略协作写作集群
+﻿# 多智能体作家 (multi-agent-writer)
 
-<!-- 
-@Input: Research Context, Stakeholder Intent, Audience Weights
-@Output: Action-Titled Reports, Exhibit-First Narratives, Logical Audits
-@Pos: [ACE Layer: Cognition/Output] | [MSL Segment: Consensus Engineering]
-@Maintenance: Calibrate agent personas & pyramid logic metrics.
-@Axioms: Answer First | Action Titles | Exhibit-Driven | No-Bold Style
--->
+顶级咨询级协作写作编排专家 (V8.0)。融合麦肯锡金字塔原理 (Pyramid Principle)、Ghost Deck 视觉推演与多角色红队博弈。交付具有极致“信噪比”与“叙事心跳感”的战略文本。
 
-> **核心内核**：咨询级共识构建工作流。强制执行金字塔原理，通过多智能体博弈确保交付物具备战略穿透力。
+## 核心能力
+- 强制实施结论先行 (Answer-First)、叙事流转 (Narrative Flow)、动词驱动 (Verb-Driven) 和心跳节奏 (Heartbeat Rhythm)。
+- **第一阶段：红队圆桌会议**：通过主题专家、恶人代理与合伙人视角的内部模拟博弈，提炼出 3-5 个经得起残酷推敲的核心支柱论点。
+- **第二阶段：Ghost Deck 逻辑设计**：在正式落笔前构建极简大纲，强制使用具有信息增量的“动作标题 (Action Titles)”。
+- **第三及第四阶段：精雕与审计**：起草散文体正文，物理清洗 AI 八股文与废话词组（如“赋能”、“至关重要”），并严格检验“So What (那又怎样)”指标。
+- **第五阶段：最终交付**：在正文前提供一页纸的执行摘要，并极其坦诚地附上红队残留风险或推论局限性附录。
 
-## 0. 本质与边界 (Essence & Boundary)
-- **核心定义**: 高端叙事引擎，旨在将复杂的战略思考转化为能够驱动行动的、具备极高信噪比的文稿。
-- **反向定义**: 它不是一个简单的扩写工具，而是一个逻辑编译器，目的是“减少读者的理解损耗”。
-- **费曼比喻**: 就像是一个身经百战的合伙人带着四个顶尖分析师在通宵赶一份给 CEO 的报告，每一句话都在解决“那又怎样（So What?）”的问题。
-
-## 1. 生态位映射 (Ecosystem DNA)
-- **MSL 契约**: 处理“叙事链条”、“行动标题”、“逻辑分层”等实体。
-- **ACE 角色**: 作为 **Consensus Architect (共识架构师)**，确保战略意图被无损传播。
-
-## 2. 逻辑机制 (Mechanism)
-- [Storylining] -> [Roundtable Debate] -> [Exhibit Design] -> [Drafting] -> [Impact Audit]
-
-## 3. 策略协议 (Strategic Protocols)
-- **行动标题化 (Action Titles)**：严禁使用名词标题，必须使用具备决策结论的行动标题。
-- **视觉逻辑优先**：先设计视觉展板（Exhibit），文字内容仅作为视觉逻辑的精准补全。
+## 使用场景
+用于撰写高影响力的战略备忘录、董事会级汇报、深度行业长文或任何要求极高认知清晰度和抗打压逻辑的文档工作时。

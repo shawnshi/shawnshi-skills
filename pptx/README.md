@@ -1,27 +1,13 @@
-﻿# PPTX: 高阶幻灯片工程引擎
+﻿# 幻灯片管家 (pptx)
 
-<!-- 
-@Input: Content Specs, Master Templates, Design Constraints
-@Output: Visual-Dominant Slides, XML-Precision Files, QA Reports
-@Pos: [ACE Layer: Output/Visual] | [MSL Segment: Visual Storytelling]
-@Maintenance: Update design motifs & XML repair scripts for Office compatibility.
-@Axioms: Dominance Over Equality | Visual Motif Consistency | 60-30-10 Rule
--->
+专门应对所有与 `.pptx` 扩展名（PowerPoint 演示文稿、提案甲板等）相关联的读取、拆零、提取和重构创建请求。
 
-> **核心内核**：将抽象思维转化为具象的视觉统治力。摒弃表层样式，通过底层 XML 控制确保每一个像素都服务于决策逻辑。
+## 核心能力
+- **详尽扫描提取**：搭载如 `markitdown`（提取文本）、`thumbnail.py`（进行视觉轮廓查视）及 `unpack.py`（直视底层 XML 控制码）等利器。
+- **编辑与模板复用**：从现有 `.pptx` 模板解包解析、进行无损修改后再打包汇编成崭新成品的工作流。
+- **从零搭建体系**：通过结合 `pptxgenjs` 脚本结构，依据提供的原始内容从白板状态下自动排兵布阵生成包含复杂结构的组件幻灯片。
+- **极端设计纪律**：拒绝单一乏味的纯文本排列，内置强制使用诸如留白、高对比调色板、单边框标识及统一的个性化排版哲学。
+- **多角度的质量审查 (QA)**：内建集成通过本地 LibreOffice 工具箱栅格化幻灯片为位图执行自动化界面质量（重叠、留白与对齐）深度红队缺陷评估审查机制。
 
-## 0. 本质与边界 (Essence & Boundary)
-- **核心定义**: 演示文稿的底层编译器，负责构建“逻辑-视觉”高度耦合的交付物。
-- **反向定义**: 它不是一个简单的 PPT 绘制工具，而是一个视觉叙事工程引擎。
-- **费曼比喻**: 它就像是一个顶级的舞美设计，不仅能把背景画好，还能通过灯光（视觉权重）让你一眼看到舞台上的主角（核心决策点）。
-
-## 1. 生态位映射 (Ecosystem DNA)
-- **MSL 契约**: 处理“视觉隐喻”、“逻辑层级”、“空间拓扑”等实体。
-- **ACE 角色**: 作为 **Visual Worker (视觉执行者)**。
-
-## 2. 逻辑机制 (Mechanism)
-- [Master Analysis] -> [XML Deconstruction] -> [Visual Mapping] -> [Precision Forging] -> [Sub-Agent QA]
-
-## 3. 策略协议 (Strategic Protocols)
-- **视觉统治力法则**：强制执行 60% 主色、30% 辅助色、10% 点缀色，严禁平庸的色彩平衡。
-- **XML 级精度**：所有修改必须支持 unpack -> edit -> pack 流程，杜绝脆弱的 GUI 依赖。
+## 使用场景
+每当涉及 PPT 文档的任何处理要求时（构建项目演示甲板、读取别人发来的底稿或对现有胶片文件填补模板数据）。

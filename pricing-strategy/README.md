@@ -1,27 +1,12 @@
-﻿# Pricing Strategy: SaaS 货币化战略内核
+﻿# 定价策略专家 (pricing-strategy)
 
-<!-- 
-@Input: Business Context, Value Propositions, Competitor Pricing
-@Output: Packaging Tiers, Value Metrics, Price Points (Research-Backed)
-@Pos: [ACE Layer: Cognition/Strategy] | [MSL Segment: Monetization]
-@Maintenance: Update SaaS benchmark library & research methodology templates.
-@Axioms: Value Over Cost | Metric Scaling | Psychological Anchoring
--->
+专注于 SaaS 数字化产品定价机制剖析与商业变现 (Monetization) 的研究工具，助你构建匹配市场受众与客户真实支付意愿（Willingness to Pay）的盈利架构体系。
 
-> **核心内核**：在感知价值与商业回报之间建立最优函数。利用三维定价坐标轴，捕捉每一分由于差异化带来的毛利。
+## 核心能力
+- **基础定位拆分**：将打包范围 (Packaging)、计价锚定 (Pricing Metric) 及具体货币金额标定 (Price Point) 解耦式分析论述。
+- **差异化阶梯结构构建**：建立经典的“入门、推荐与高端”（Good-Better-Best）的诱导性产品层级特征设定。
+- **定价研究模型实战**：包含进行西林价格敏感度测试 (Van Westendorp Method) 及针对买点痛点的差分偏好模型 (MaxDiff Analysis) 数据支撑方法论指南。
+- **变现执行与优化对策**：给出何时适合发起价格防守或上调建议，设计带有锚定偏差及迷惑比对效应 (Decoy effect) 的高转化率定价说明展示页。
 
-## 0. 本质与边界 (Essence & Boundary)
-- **核心定义**: 货币化战略决策器，通过精准定位用户“愿意付费”的临界点来优化增长。
-- **反向定义**: 它不是一个简单的报价计算器，而是一个商业逻辑的“抽税权”设计工具。
-- **费曼比喻**: 就像是在你为客户提供的所有服务里，找到那个让客户觉得“物超所值”同时也让你“赚得最多”的完美平衡点。
-
-## 1. 生态位映射 (Ecosystem DNA)
-- **MSL 契约**: 管理“价值锚点”、“定价度量衡”、“转化率函数”等商业实体。
-- **ACE 角色**: 作为 **Business Architect (商业架构师)**。
-
-## 2. 逻辑机制 (Mechanism)
-- [Value Assessment] -> [Metric Selection] -> [Tier Architecture] -> [WTP Research] -> [Strategic Rollout]
-
-## 3. 策略协议 (Strategic Protocols)
-- **价值度量衡驱动**：强制审计“价格随价值增长”的逻辑真实性，严禁无法规模化的固定费率。
-- **心理锚定防御**：在方案设计中必须预埋“诱饵项（Decoy）”或“高价锚点”，以保护核心利润项。
+## 使用场景
+当用户讨论“产品该如何收钱”、“如何设立免费版和企业版层级结构”、“如何应对价格战”、“我们想调整一次订阅报价”及“制定商业化路径”的情形。

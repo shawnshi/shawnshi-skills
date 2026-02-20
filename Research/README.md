@@ -1,27 +1,11 @@
-﻿# Research: 原始情报提取阵列
+﻿# 深度研究 (Research)
 
-<!-- 
-@Input: Research Queries, Target Domains, URLs (Optional)
-@Output: Verified Facts, Wisdom Fragments, Persistent Knowledge Vaults
-@Pos: [ACE Layer: Perception/Input] | [MSL Segment: Global Intelligence]
-@Maintenance: Weekly URL verification & scraping engine calibration.
-@Axioms: Proof Over Probability | Multi-Source Verification | Zero-Broken Links
--->
+全面的研究与调查技能，具备深度分析、事实核查与信息综合能力，旨在确保所有研究结论和输出的绝对严密性。
 
-> **核心内核**：在信息噪音中提取高纯度事实。通过自动化管线绕过二次解读，直接触达物理层级的底层信源。
+## 核心能力
+- **多模式调研**：支持快速摘要 (Quick)、标准调研 (Standard)、广泛分析 (Extensive) 及深度调查 (Deep Investigation) 四种模式。
+- **URL 强制验证**：内建严格的链接与出处核查协议，确保信息来源的可靠性，杜绝幻觉。
+- **深层内容剖析**：不仅提取表面文本，更能感知文本背后的深层逻辑、数据支持及事实细节，并与其它辅助性技能打通实现体系化整合。
 
-## 0. 本质与边界 (Essence & Boundary)
-- **核心定义**: 全域数据采集中心，负责将互联网的非结构化信息转化为具备“溯源能力”的实证。
-- **反向定义**: 它不是一个简单的搜索引擎，而是一个情报侦察与真伪校验阵列。
-- **费曼比喻**: 它像是一个带了显微镜和测谎仪的私人侦探，不管目标躲在 YouTube 视频里还是被墙挡住，他都能把真相挖出来。
-
-## 1. 生态位映射 (Ecosystem DNA)
-- **MSL 契约**: 处理“实证事实”、“溯源链接”、“知识图谱实体”等基础真实性实体。
-- **ACE 角色**: 作为系统的 **Scout Array (侦察阵列)**。
-
-## 2. 逻辑机制 (Mechanism)
-- [Recursive Deepening] -> [Multi-Agent Crawling] -> [Wisdom Extraction] -> [Fact Triangulation]
-
-## 3. 策略协议 (Strategic Protocols)
-- **断开链接熔断**：严禁输出任何未经验证的死链，单一断链即判定为任务失败。
-- **Fabric 智慧提取**：优先利用 Fabric 模式提取一阶信号（如视频转录），杜绝 AI 幻觉对情报的稀释。
+## 使用场景
+每当用户以任何形式（如提问、探究、指令等）涉及“研究”或“深度调查”的情境时，必须强制激活此技能工作流进行应对。

@@ -1,27 +1,11 @@
-﻿# Smart Doc LaTeX: 出版级美学排版引擎
+﻿# 智能排版印刷机 (smart-doc-latex)
 
-<!-- 
-@Input: Markdown (.md), Word (.docx), Text (.txt)
-@Output: Academic-Standard PDF, Raw TeX Source
-@Pos: [ACE Layer: Output/Precision] | [MSL Segment: Publication Engineering]
-@Maintenance: Keep XeLaTeX dependencies & style macros updated.
-@Axioms: Style Over Substance | Zero-Friction Formatting | Source Grounded
--->
+将平常的文本档一键直转输出为极具工业级出版质感的 PDF 与 LaTeX 源码的专业排版转换引擎。
 
-> **核心内核**：出版级排版标准。将通用文档自动化映射为 LaTeX 精度，为学术论文与简历提供终极视觉权威。
+## 核心能力
+- **杂食级读取匹配入库**：不仅无瑕接纳标准 `.md` 与 `.txt`，更能完美对接庞大臃肿的 `.docx` 。
+- **自带顶级视觉美学库**：内部无缝加载从硬核学术科研体系、个人精美履历 (CV) 至大型计算机科学专业著作 (Tech Book) 等四大主流美学定装预设模板。
+- **全栈式自动化挂载**：依赖底层强大的 Pandoc 及搭载了中文解析适配体系的高标准 MiKTeX 环境并自动化编译排障生成产物。
 
-## 0. 本质与边界 (Essence & Boundary)
-- **核心定义**: LaTeX 自动化管道，负责消除排版干扰，让用户专注于内容的逻辑严密性。
-- **反向定义**: 它不是一个普通的 PDF 转换器，而是一个具备排版美学的“数学级”编译器。
-- **费曼比喻**: 就像是一个极其挑剔的出版社老师傅，他能把你随手写的草稿变成像教科书一样精美的、可以直接印刷的作品。
-
-## 1. 生态位映射 (Ecosystem DNA)
-- **MSL 契约**: 处理“排版实体”、“数学公式”、“引用拓扑”等。
-- **ACE 角色**: 作为 **Precision Forger (精密锻造者)**。
-
-## 2. 逻辑机制 (Mechanism)
-- [Format Detection] -> [Style Mapping] -> [TeX Transpilation] -> [Full Compilation]
-
-## 3. 策略协议 (Strategic Protocols)
-- **自动样式探测**：严禁无脑转换，必须根据文档特征（如含数学公式、列表密度）自动匹配最优模板。
-- **双产物交付**：必须同时交付 PDF 与 .tex 源码，保留用户手动微调的权力。
+## 使用场景
+当用户希望立刻得到极具体面排版样式的发布级作品展现（如“排版我的论文”、“将其制作成高档简历” 或“作为官方科技书籍 PDF 格式发行”）时调用。

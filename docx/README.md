@@ -1,27 +1,11 @@
-﻿# DOCX: 精准 XML 文档工程师
+﻿# Word 文档处理管家 (docx)
 
-<!-- 
-@Input: Content Specs, Target Templates, Formatting Rules
-@Output: Structured .docx Files, Tracked Changes (XML Level)
-@Pos: [ACE Layer: Action] | [MSL Segment: Deliverable Synthesis]
-@Maintenance: Maintain XML repair scripts & office compatibility layer.
-@Axioms: Structure Is Code | Typography Is Logic | Atomic Edit
--->
+全面、安全且确定性的本地 `.docx` 格式文件处理工具集。负责统筹所有的 Word 文档解析、高级排版、修改乃至自动化生成创建。
 
-> **核心内核**：高精度 XML 操作引擎，专注于底层结构的重构与验证，确保交付物合规无瑕。
+## 核心能力
+- **原生文件交互**：依赖深度的底库 (`docx-js` 等) 进行原生的段落、页面、表格级别的编排。
+- **无损精细编辑**：包含极其严格的规则控制，要求明确设定精确纸张大小、对特殊图表及列表进行受控处理。
+- **修订跟踪与底层 XML 操作**：不仅能操作文本，还能解析批注记录与修订记录，必要时进行纯净的底层 XML (OOXML) 净化。
 
-## 0. 本质与边界 (Essence & Boundary)
-- **核心定义**: Word 文档的物理操纵者，通过直接编辑底层 XML 实现精确到像素的排版与修订控制。
-- **反向定义**: 它不是一个简单的文档编辑器，而是一个文档编译器。
-- **费曼比喻**: 它不是在 Word 界面上用鼠标点点画画，而是直接进入 Word 的“基因组”，通过修改基因（XML 代码）来决定文档长什么样。
-
-## 1. 生态位映射 (Ecosystem DNA)
-- **MSL 契约**: 处理“文档结构”、“层级样式”、“修订元数据”等实体。
-- **ACE 角色**: 作为 **Output Worker (交付执行者)**。
-
-## 2. 逻辑机制 (Mechanism)
-- [Unpack] -> [XML Transformation] -> [Validation] -> [Pack] -> [Compliance Check]
-
-## 3. 策略协议 (Strategic Protocols)
-- **排版即逻辑**：强制使用标准样式 ID，严禁手动插入空格或 Unicode 替代符号。
-- **修订溯源**：所有编辑操作默认开启修订模式，并使用明确的作者属性。
+## 使用场景
+任何需要把大段文字输出到标准的 Word 报告中，或要求修改、审阅、合并、格式化当前环境中的 `.docx` 文件时。

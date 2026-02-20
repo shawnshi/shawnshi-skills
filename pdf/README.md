@@ -1,27 +1,13 @@
-﻿# PDF: 结构化工程引擎
+﻿# PDF 处理全能指南 (pdf)
 
-<!-- 
-@Input: Heterogeneous PDF Files (Scanned/Digital), Formatting Specs
-@Output: Extracted Tables (Excel/DF), OCR-Enhanced Text, Merged/Split PDF
-@Pos: [ACE Layer: Action/Data] | [MSL Segment: Document Engineering]
-@Maintenance: Monitor OCR accuracy & table extraction alignment.
-@Axioms: Layout Fidelity | Semantic Extraction | Secure Processing
--->
+详尽介绍了通过 Python 原生包库与本地命令行工具结合，全方位处理与加工 PDF 文件的工具箱。
 
-> **核心内核**：非结构化数据的精密手术刀。全方位自动化处理引擎，支持从物理层（合并拆分）到语义层（表格/OCR）的深度操作。
+## 核心能力
+- **数据读取与提取**：使用 `pypdf` 和 `pdfplumber` 解析抽取常规文本及结构化表格；借助 `pytesseract` 处理扫描件的图像 OCR 提取。
+- **拆分与重组**：合并多个文件、抽取部分页面、切割页面及旋转内容。
+- **原始生成**：使用 `reportlab` 等引擎从零绘制与生成排版级别的完整新型 PDF。
+- **深度修改**：内建有进行水印添加、加密/解密文档和导出PDF嵌入图片的完备指示。
+- 调用底层的跨平台控制工具链，如 `pdftotext`, `qpdf`, 和 `pdftk`。
 
-## 0. 本质与边界 (Essence & Boundary)
-- **核心定义**: PDF 资产的操作者，负责打破 PDF 的格式壁垒，将其转化为可供计算的数据。
-- **反向定义**: 它不是一个简单的阅读器，而是一个 PDF 编译器与解构器。
-- **费曼比喻**: 就像是一个精密的扫描与重组仪，不仅能把几十本书装订成一本，还能把书里复杂的表格精确地抄到 Excel 里。
-
-## 1. 生态位映射 (Ecosystem DNA)
-- **MSL 契约**: 处理“文档层级”、“表格拓扑”、“图像语义”等实体。
-- **ACE 角色**: 作为 **Data Worker (数据执行者)**。
-
-## 2. 逻辑机制 (Mechanism)
-- [Metadata Extraction] -> [Structural Parsing] -> [OCR/Transformation] -> [Output Synthesis]
-
-## 3. 策略协议 (Strategic Protocols)
-- **排版保真**：严禁直接使用 Unicode 字符（防黑块），必须通过标准的库标记实现精密布局。
-- **结构优先**：优先使用坐标定位（pdfplumber）提取表格，确保数据与 Pandas 无缝兼容。
+## 使用场景
+由于本指南的存在，当用户提出阅读、拆解、拼合、加密、加水印、OCR解析或表单操作等只要涉及到任何针对 `.pdf` 后缀文件的处理要求时，皆可参照该文档执行。

@@ -1,27 +1,11 @@
-﻿# Agent Browser: Web 执行层的“语义锚点”
+﻿# 浏览器代理引擎 (agent-browser)
 
-<!-- 
-@Input: URL, Actions (Click/Fill/Wait), Selectors (@refs)
-@Output: Screenshots, Extracted Data, Execution Status
-@Pos: [ACE Layer: Action] | [MSL Segment: Infrastructure]
-@Maintenance: Monitor browser driver updates & selector stability patterns.
-@Axioms: Snapshot-First | No Blind Retries | Semantic Consistency
--->
+强大的自动化浏览器交互与页面信息爬取工具，专为复杂的动态网页与需要模拟真实用户的浏览场景而设计。
 
-> **核心内核**：通过“坐标定位+语义快照”双冗余机制，将模糊的网页交互转化为高可靠的工程级执行指令。
+## 核心能力
+- **全面自动化控制**：通过命令行接口支持页面导航、页面元素点击、表单填写及键盘输入等浏览器原生动作。
+- **状态及环境管理**：内置支持会话状态 (Session) 保持以通过身份验证障碍，支持 HTTP 代理及复杂环境变量的灵活调用。
+- **信息提取与追踪**：提供精确的 DOM 定位与页面信息回传，并具有强大的抓取及高级错误调试与跟踪能力。
 
-## 0. 本质与边界 (Essence & Boundary)
-- **核心定义**: 系统的外部触角，负责将抽象的导航意图翻译为精确的浏览器行为。
-- **反向定义**: 它不是一个简单的爬虫，而是一个具备环境感知能力的交互代理。
-- **费曼比喻**: 它像是一个戴着增强现实眼镜的机器人，不仅能看到网页，还能识别出哪些是按钮、哪些是输入框，并根据指令精准操作。
-
-## 1. 生态位映射 (Ecosystem DNA)
-- **MSL 契约**: 负责处理 Web 实体（Elements, Forms, Network Requests），遵循 W3C 标准。
-- **ACE 角色**: 在集群作业中充当 **Worker (执行者)**，负责物理环境的变更与数据回传。
-
-## 2. 逻辑机制 (Mechanism)
-- [Intent] -> [Snapshot Analysis] -> [Semantic Mapping] -> [Command Execution] -> [State Verification]
-
-## 3. 策略协议 (Strategic Protocols)
-- **语义优先 (Snapshot-First)**：任何操作前强制执行 snapshot，建立基于语义引用句柄的稳定操作环境。
-- **失效自校准 (Feedback Loop)**：操作失败时自动触发二次快照分析，定位 DOM 异动根源并实时更新状态共识。
+## 使用场景
+当你需要深入访问动态生成的现代网页、执行强制要求登录的表单交互、抓取复杂的非结构化信息或进行端到端自动化测试时。

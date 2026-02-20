@@ -1,27 +1,12 @@
-﻿# UI/UX Pro Max: 视觉主权引擎
+﻿# UIUX 设计智库大师 (ui-ux-pro-max)
 
-<!-- 
-@Input: UI Requirements, Brand Keywords, Tech Stacks
-@Output: Design Systems, Responsive Components, Interaction Specs
-@Pos: [ACE Layer: Strategy/Creative] | [MSL Segment: Design Governance]
-@Maintenance: Curate shadcn/ui components & typography trends.
-@Axioms: MASTER.md First | No Emoji Icons | Stable Hover States
--->
+无所不包的终端级超豪华界面设计全套美学大脑与检验查重引擎。囊括超 97 枚精细调校的商业调色板、50 余类前沿风格特征并覆盖 9 大最新主流前端部署架构的全端知识体系。
 
-> **核心内核**：全维度设计决策中心。通过 MASTER.md 确立设计真相，将抽象品牌概念转化为生产级的 UI 系统。
+## 核心能力
+- **一键配置全案系统生成**：只需提供“产品服务定位、行业特色及目标感官（Vibe）”，便可触发 `--design-system` 输出高度统一且极具辨识度与极简色彩的全栈设计白皮书规范。
+- **层次化知识长驻管理**：可生成在特定环境中用于跨进程协同作业具有覆盖式遗传记忆能力的 `MASTER.md` 及变体规范。
+- **九大编程构架专业兼容**：无暇融合并直接建议支持诸如 Tailwind 体系、现代响应式框架乃至移动端的 SwiftUI 原生方案的具体实施要点。
+- **无法妥协的铁律核查机 (Priority Enforcement)**：对所有 UI 组件进行强制性的易用性（色彩绝对反差率 4.5:1、残障辅助及触点安全热区面积等）底层纪律稽查。
 
-## 0. 本质与边界 (Essence & Boundary)
-- **核心定义**: 界面架构师，负责在代码实现前定义所有的视觉语义与交互规则。
-- **反向定义**: 它不是一个简单的 UI 库，而是一个具备“视觉治理”能力的决策系统。
-- **费曼比喻**: 就像是一个极具品味的设计总监，他不仅告诉你怎么画好看，还规定了所有按钮的大小、间距和动画节奏，让整个项目看起来像一家人。
-
-## 1. 生态位映射 (Ecosystem DNA)
-- **MSL 契约**: 处理“设计语言”、“交互实体”、“响应式阈值”等。
-- **ACE 角色**: 作为 **Design Coordinator (设计协调者)**。
-
-## 2. 逻辑机制 (Mechanism)
-- [Requirement Analysis] -> [Design System Generation] -> [Stack-Specific Implementation] -> [Visual Checklist Audit]
-
-## 3. 策略协议 (Strategic Protocols)
-- **真相源驱动 (MASTER.md)**：严禁直接写 CSS，必须先在设计系统中定义色值与间距。
-- **专业性红线**：严禁使用表情包充当图标，严禁导致布局抖动的 hover 动画。
+## 使用场景
+涉及到网站或者手机应用程序界面规划、开发设计构建、以及修复并大幅提升用户视觉界面质感的各种全栈活动流程之中。

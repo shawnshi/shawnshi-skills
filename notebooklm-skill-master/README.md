@@ -1,27 +1,14 @@
-﻿# NotebookLM Master: 主权知识挂载点
+﻿# 研究助手 (notebooklm-skill-master)
 
-<!-- 
-@Input: Private Document Library (PDF/MD/Text), User Queries
-@Output: Source-Grounded Answers, Evidence-Supported Insights
-@Pos: [ACE Layer: Perception/Grounding] | [MSL Segment: Private Knowledge Base]
-@Maintenance: Keep Google login state active & sync notebook metadata.
-@Axioms: Anti-Hallucination | Source-Grounded Only | Library Governance
--->
+整合 Google NotebookLM 提供具备“坚实证据支撑”和确定性知识的回应引擎，可深度查询自有大体量文档体系。
 
-> **核心内核**：物理隔离幻觉的知识堡垒。基于 Google NotebookLM 实现自有文档库的深度问答，确保所有输出具备证据支撑。
+## 核心能力
+- **来源绝对锚定**：所有回答均严格来源于用户上传的具体文档体系之内，杜绝 AI 大模型的发散性幻觉。
+- **自适应环境管理**：内置的脚本化封装，自动处理必要的依赖关系及浏览器驱动拉起。
+- **库管理逻辑**：支持多“笔记本(Notebook)”的系统注册、解析检索与一键即刻激活。
+- 配备启发式追问机制，在信息提取不足时自动启动多轮深入查询。
 
-## 0. 本质与边界 (Essence & Boundary)
-- **核心定义**: 主权知识检索器，负责将私有知识资产转化为实时可调用的证据网。
-- **反向定义**: 它不是一个生成模型，而是一个基于既有文档的“事实提取机”。
-- **费曼比喻**: 它就像是一个记忆力超群的图书管理员，他只根据书架上（你的文档）有的内容回答问题，绝不胡编乱造。
-
-## 1. 生态位映射 (Ecosystem DNA)
-- **MSL 契约**: 管理“私有事实”、“文献证据”、“知识实体”等底层真实性实体。
-- **ACE 角色**: 作为 **Knowledge Sensor (知识感知器)**，为推理引擎提供确定性的事实约束。
-
-## 2. 逻辑机制 (Mechanism)
-- [Auth Setup] -> [Library Discovery] -> [Grounded Querying] -> [Evidence Mapping]
-
-## 3. 策略协议 (Strategic Protocols)
-- **证据锚定**：严禁引入库外非验证信息；所有回答必须指向库内特定页码或段落。
-- **闭环追问**：信息不足时严禁盲目猜测，必须立即发起补充追问以完善证据链。
+## 使用场景
+受托基于大量文档文献进行深度问答、尽职调查与战略研究分析时调用。
+使用前通过 `python scripts/run.py auth_manager.py status` 预先查验准入状态。 
+具备 `notebook_manager.py` 与 `ask_question.py` 提供笔记本管理与结构化问答操作。

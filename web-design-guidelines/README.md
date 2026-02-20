@@ -1,27 +1,11 @@
-﻿# Web Design Guidelines: 合规性审计师
+﻿# Web 界面设计指南 (web-design-guidelines)
 
-<!-- 
-@Input: UI Code, Implementation Patterns, Live URL Screenshots
-@Output: Terse Compliance Reports (file:line), A11y Gap Analysis
-@Pos: [ACE Layer: Auditor] | [MSL Segment: UX Standards]
-@Maintenance: Periodically sync with Vercel Labs & W3C WCAG updates.
-@Axioms: Standard-Driven | Zero-Tolerance for Fragility | Terse Feedback
--->
+专注于审查、检验和排错 UI 界面源代码在合规性和体验友好程度上的指南工具。将代码基于 Vercel 远程源库发出的动态最新规范准则进行逐一条款核验。
 
-> **核心内核**：动态规则治理引擎。基于 A11y 与 Vercel 实验室标准，对 UI 实施精准的“像素级”合规性扫描。
+## 核心能力
+- **源头级动态获取抽取**：绝不依赖过时语料，直接每次从挂载的 GitHub 源拉取 1.0.0+ 版本的最新前端操作戒律及审核基准。
+- **目标全方位猎捕式扫描**：依据匹配模式对指定环境下的组件或布局页面进行无死角的合规检验及反馈。
+- **高密度反馈集成**：以极端精益的 `file:line` 断点阵列式错误输出替代啰嗦教条，为极速工程跟进整合流而服务。
 
-## 0. 本质与边界 (Essence & Boundary)
-- **核心定义**: 体验守门员，负责根据最新工业标准审计代码中的交互、辅助功能与视觉缺陷。
-- **反向定义**: 它不是一个代码美化器，而是一个硬性的合规性检查器。
-- **费曼比喻**: 就像是一个手里拿着卷尺和说明书的质检员，他会对照着最严苛的标准，检查你做的网页按钮够不够大、颜色对比度够不够。
-
-## 1. 生态位映射 (Ecosystem DNA)
-- **MSL 契约**: 处理“A11y 属性”、“UX 模式”、“布局合规性”等元实体。
-- **ACE 角色**: 作为系统的 **UX Auditor (体验审计者)**。
-
-## 2. 逻辑机制 (Mechanism)
-- [Rules Fetching] -> [Code Scanning] -> [Pattern Comparison] -> [Terse Output]
-
-## 3. 策略协议 (Strategic Protocols)
-- **实时标准同步**：审计前必须获取最新的远程规则集，确保反馈的时代先进性。
-- **精准反馈**：报告必须具体到 ile:line，严禁模棱两可的泛泛而谈。
+## 使用场景
+每当遭遇如“复核我的渲染排版”、“校验我的组件易用度”或者更偏深度的 “审计我的可用性及 UX 设计准则”等指令时运用。

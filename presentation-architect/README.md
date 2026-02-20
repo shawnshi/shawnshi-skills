@@ -1,28 +1,12 @@
-﻿# Presentation Architect: 演示文稿全栈架构师
+﻿# 演示文稿架构师 (presentation-architect)
 
-<!-- 
-@Input: Raw Research, Strategic Axioms, Markdown Outlines, Visual Preferences
-@Output: MBB-Standard Blueprints, High-Fidelity PPTX/PDF, Visual Exhibits
-@Pos: [ACE Layer: Cognition/Output] | [MSL Segment: Visual Storytelling]
-@Maintenance: Sync with latest visual styles in references/styles/ and refine rendering scripts.
-@Axioms: Logic First, Visual Second | Lead-in Dominance | Smart Resume Rendering
--->
+顶级战略演示文稿全栈架构师 (V4.0)。引入麦肯锡级别的 Ghost Deck 生成机制、幻灯片解剖学与极简的视觉信噪比质量控制。
 
-> **核心内核**：演示文稿全栈架构师。整合战略逻辑蓝图设计与高保真自动化渲染，确保交付物具备商业穿透力与像素级一致性。
+## 核心能力
+- **判词即王道 (Action Title is King)**：完全摒弃诸如“基本面”之类的泛称标题，构建具备单篇完整逻辑连贯性的大纲（The Ghost Deck）并作确认。
+- **单页解剖工程 (Slide Anatomy)**：每一张页面严格恪守判词名、导入引用 (Lead-in)、具体视觉图表承载 (Visual Body)、强有力数据 (Evidence) 以及底部对策结语 (Bumper) 五分部。
+- **深度敌对逻辑审计**：模拟由苛刻财务总监代理或挑剔客户代理发起的残酷提问（如对成本推演和实现壁垒的指控）。
+- **极度精减的视觉成模**：限定画面视觉最低信噪比 0.7（图文面积分布限制），将图表绘制要求直译映射为精准的 Mermaid 时序图，甚至是高度匹配生成的影像需求参数提示。
 
-## 0. 本质与边界 (Essence & Boundary)
-- **核心定义**: 演示文稿的“逻辑编译器”，负责在逻辑骨架上自动化包裹高质感的视觉血肉。
-- **反向定义**: 它不是一个简单的 PPT 转换工具，而是一个强制执行“逻辑先行”原则的专业创作流水线。
-- **费曼比喻**: 它像是一个顶尖咨询公司的合伙人加一个天才美编。合伙人负责把逻辑理顺（蓝图），美编负责把逻辑变成震撼的画面（渲染）。
-
-## 1. 生态位映射 (Ecosystem DNA)
-- **MSL 契约**: 处理“叙事 Lead-ins”、“证据矩阵”、“视觉隐喻”、“样式规范”等实体。
-- **ACE 角色**: 作为系统的 **Visual Coordinator (视觉协调者)**，负责将复杂的后端研究转化为易于吞噬的决策视图。
-
-## 2. 逻辑机制 (Mechanism)
-- [Strategic Blueprinting] -> [Narrative Gating (HITL)] -> [Prompt Transpilation] -> [Multi-Modal Rendering] -> [Assembly]
-
-## 3. 策略协议 (Strategic Protocols)
-- **Lead-in 统治原则**：严禁无逻辑标题，每一页必须以具备结论性的“行动标题”驱动。
-- **视觉逻辑一致性**：背景、图标、图表风格必须强制对齐 `MASTER.md`（如有）或指定的 Style 基因。
-- **状态持久化**：大规模渲染任务必须支持断点续传，严禁在网络波动时产生冗余成本。
+## 使用场景
+当负责草拟与提交高级汇报讲演、面向决策层的高阶研报演示和具备严密逻辑体系并追求视觉极简控制的企业级商业文档时调用。

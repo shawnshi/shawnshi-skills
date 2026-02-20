@@ -1,27 +1,11 @@
-﻿# Article Illustrator: 文章语义的“视觉翻译官”
+﻿# 文章插画师 (article-illustrator)
 
-<!-- 
-@Input: Article Text, Target Style (Notion/Blueprint/etc.)
-@Output: Concept-Aligned Illustrations (PNG/WebP)
-@Pos: [ACE Layer: Action/Creative] | [MSL Segment: Content Architecture]
-@Maintenance: Update style templates & visual-semantic mapping logic.
-@Axioms: Concept Over Literal | Style Consistency | Narrative First
--->
+基于长文本语义分析与情感信号感知的智能插图生成引擎，专为自动生成高质量且契合原文意境的文章配图（DALL-E 提示词等）而设。
 
-> **核心内核**：拒绝装饰性配图，通过“语义-视觉”映射矩阵，将文字中的抽象逻辑转化为具有强解释力的可视化资产。
+## 核心能力
+- **意象匹配分析**：通过提取文本的隐式情感信号与核心语义，进行精确的艺术与视觉匹配。
+- **类型与风格矩阵**：内置丰富的配图类型 (Type) 与视觉表现风格 (Style) 知识库，支持灵活混搭和最优化自排版。
+- **六步规范工作流**：从上下文预检、内容解析研判、提示词矩阵构建，一直到生成配图并规范存放至指定展示目录的完整流水线。
 
-## 0. 本质与边界 (Essence & Boundary)
-- **核心定义**: 文章逻辑的可视化增强器，负责提取文本的“逻辑骨架”并进行认知补强。
-- **反向定义**: 它不是一个随机生成插图的工具，而是一个视觉叙事引擎。
-- **费曼比喻**: 就像是在你讲课的时候，有一个天才画师在黑板上根据你的逻辑实时绘制架构图，而不是随便画几朵花。
-
-## 1. 生态位映射 (Ecosystem DNA)
-- **MSL 契约**: 处理“逻辑架构”、“流程模型”等高度抽象实体，将其翻译为视觉语言。
-- **ACE 角色**: 作为 **Creative Worker (创意执行者)**。
-
-## 2. 逻辑机制 (Mechanism)
-- [Text Analysis] -> [Visual Opportunity Mapping] -> [Prompt Synthesis] -> [Image Generation] -> [In-Situ Insertion]
-
-## 3. 策略协议 (Strategic Protocols)
-- **底层语义对齐**：严禁字面意义绘图。必须解析架构关系等深层概念，实现“概念级”可视化。
-- **资产风格锚定**：所有生成图均与特定的 Style 种子绑定，确保全篇配图视觉一致。
+## 使用场景
+当用户完成了文章、报告、博客的撰写，并要求你为其生成切题的配图、封面设计或者核心配图说明时激活。

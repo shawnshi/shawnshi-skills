@@ -1,27 +1,11 @@
-﻿# Brainstorming: 技术实施前的“架构防火墙”
+﻿# 头脑风暴与设计规划 (brainstorming)
 
-<!-- 
-@Input: Abstract Ideas, Project Constraints, Project Structure
-@Output: Structured Design Docs (Markdown), Trade-off Analysis
-@Pos: [ACE Layer: Coordinator] | [MSL Segment: Design Engineering]
-@Maintenance: Review design patterns & framework compatibility.
-@Axioms: Ask before Act | Trade-off First | YAGNI (You Ain't Gonna Need It)
--->
+致力于将发散性的灵感转化为严谨的设计规范文档。强调先问后做、优先评估取舍的创造性工程哲学。
 
-> **核心内核**：基于第一性原理，对所有项目想法进行硬性准入审查，通过强制性权衡分析杜绝盲目编码。
+## 核心能力
+- **前置发散性提问**：严格执行“谋定而后动”，通过提出针对性的权衡问题逼近设计的原始意图。
+- **四阶探索流程**：经由上下文定调 (Context)、深度探索 (Exploration)、设计合成 (Design Synthesis) 至最终敲定 (Finalization)。
+- **契约级验收设计**：生成的规范文档不仅仅是说明书，更是被视为具有合同级约束力的代码实现契约。
 
-## 0. 本质与边界 (Essence & Boundary)
-- **核心定义**: 规划层过滤器，负责将模糊的需求转化为清晰、鲁棒的工程设计规范。
-- **反向定义**: 它不是一个简单的头脑风暴工具，而是一个设计验证引擎。
-- **费曼比喻**: 就像是在动工盖房子前，建筑师和结构工程师进行的最后一次图纸审核，在这个阶段改错最便宜。
-
-## 1. 生态位映射 (Ecosystem DNA)
-- **MSL 契约**: 负责处理“设计模式”、“约束条件”、“架构方案”等实体。
-- **ACE 角色**: 扮演 **Coordinator (协调者)**，在开发前对齐所有意图。
-
-## 2. 逻辑机制 (Mechanism)
-- [Clarification Loop] -> [Framework Application] -> [Option Generation] -> [Design Synthesis] -> [Handoff]
-
-## 3. 策略协议 (Strategic Protocols)
-- **强制权衡矩阵**：必须提供至少 2 种备选路径，并基于成本、复杂度进行量化的 Trade-off 分析。
-- **YAGNI Check**：无情地剔除任何未被证明必要的非核心功能。
+## 使用场景
+在进行任何大型项目实施、复杂新功能开发，或是当用户给出模糊想法并希望你与之“碰撞”、“梳理架构思路”时调用此技能工作流。

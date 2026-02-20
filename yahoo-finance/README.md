@@ -1,27 +1,12 @@
-﻿# Yahoo Finance: 金融先知中枢
+﻿# 雅虎全球研报管家 (yahoo-finance)
 
-<!-- 
-@Input: Company Names, Tickers, Historical Ranges
-@Output: Structured Market Data (JSON), News Timelines, Fundamental Profiles
-@Pos: [ACE Layer: Perception] | [MSL Segment: Market Intelligence]
-@Maintenance: Update ticker resolution logic & financial metric mappings.
-@Axioms: JSON-Priority | Data Freshness | Zero-Guesswork
--->
+打通世界级金融底层接口数据流动的枢纽引擎。极具确定性且能返回高压缩的 JSON 及精准的数据表格式汇报，主导着股价调取、事件简报及历届深度大宗价格波动的获取分析。
 
-> **核心内核**：全球市场接入点。提供确定性的结构化金融数据，消除市场噪音，直达核心指标。
+## 核心能力
+- **市场大盘即时截获**：能够追溯极其漫长时间维度历史轨迹的高、低、开、收与大盘成交量信息集（极佳支持参数指定范围 `1d` 乃至 `max`）。
+- **情报剖析雷达网**：运用分离指令（`--info-only` 或 `--news-only`）仅做干净利落的公司资产背景定装或关联特定主代码的关键商业内幕风控收集。
+- **高阶识别模糊与确诊转换 (Smart Resolution)**：带有强大的联机词法转换本意功能，即便口述“苹果”也会不假思索对应为美股纳斯达克的“AAPL”。
+- **全序列代持 Agent JSON 最佳实践**：强调及强烈提倡为防止上下文内存超载及防范污染导致的逻辑偏移所内嵌支持的确定化解析的机器语义表达（`--json`）返回机制。
 
-## 0. 本质与边界 (Essence & Boundary)
-- **核心定义**: 金融数据接入器，负责将模糊的公司查询转化为精确的市场事实与财务数据包。
-- **反向定义**: 它不是一个投资理财顾问，而是一个客观事实的提供商。
-- **费曼比喻**: 它像是一个全天候守在证券交易所门口的播报员，不仅能告诉你现在的价格，还能把这家公司的所有底细翻出来给你看。
-
-## 1. 生态位映射 (Ecosystem DNA)
-- **MSL 契约**: 处理“证券实体”、“价格序列”、“财务指标”等标准化实体。
-- **ACE 角色**: 作为系统的 **Market Sensor (市场感知器)**。
-
-## 2. 逻辑机制 (Mechanism)
-- [Symbol Resolution] -> [Parallel Fetching] -> [Structured Normalization] -> [Analysis Feed]
-
-## 3. 策略协议 (Strategic Protocols)
-- **JSON 确定性原则**：任何数据分析任务前必须强制调用 --json 模式，确保机器可读性。
-- **时效性约束**：必须自动标注数据的时间戳，并识别当前市场的开闭盘状态。
+## 使用场景
+诸如此类“调取这间企业过去一个时段的历史最高限记录”、“盘整近期有哪些与该公司休戚相关的外媒经济信息披露”、“核算某只特定资产底仓数据如何”的任务时开启脚本控制权限进入干预作业。

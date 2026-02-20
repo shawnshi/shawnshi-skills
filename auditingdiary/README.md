@@ -1,27 +1,13 @@
-﻿# Auditing Diary: 个人成长 OS 的“认知审计器”
+﻿# 认知审计与日志管理 (auditingdiary)
 
-<!-- 
-@Input: Daily Context (Health/Chat/Calendar), Reflections
-@Output: Structured Log Entries, Strategic Audit Reports
-@Pos: [ACE Layer: Perception/Auditor] | [MSL Segment: Personal Memory]
-@Maintenance: Monthly semantic layer audit & file integrity check.
-@Axioms: Atomic Persistence | Strategic Alignment | Zero-Entropy Growth
--->
+个人日志的自动化管理与深度认知审计工具，能够收集日常上下文、分析行为模式并输出高瞻远瞩的战略校准建议。
 
-> **核心内核**：通过结构化日志管理个人认知熵值，实现从“碎片化经历”到“战略级记忆 (memory.md)”的闭环进化。
+## 核心能力
+- **日志自动化生成**：聚合上下文信息生成结构化日记，支持通过统计与聚合脚本当日回顾。
+- **双重审计模式**：
+  - 标准审计(Standard)：对日志进行日常模式化总结，提取知识与待办事项。
+  - 高级战略审计(Strategic)：引入高管视角代理，执行无情的认知摩擦盘点与成长校准。
+- **运维管理脚手架**：附带针对日志检索、高频关键词统计与容灾备份的一键操作能力。
 
-## 0. 本质与边界 (Essence & Boundary)
-- **核心定义**: 认知层核心工具，负责将日常产生的海量思维碎片进行脱水、审计与永久化留存。
-- **反向定义**: 它不是一个简单的记事本，而是一个具备自省能力的数字大脑记录仪。
-- **费曼比喻**: 就像是一个严苛的私人审计师，每天盯着你做了什么，然后帮你把这些碎片整理成一本能够指导未来的“战略手册”。
-
-## 1. 生态位映射 (Ecosystem DNA)
-- **MSL 契约**: 管理“个人经历”、“认知增量”等实体，严格对齐 semantic_layer.md。
-- **ACE 角色**: 作为系统的 **Auditor (审计者)**，监控认知偏离并触发记忆同步。
-
-## 2. 逻辑机制 (Mechanism)
-- [Context Distillation] -> [Reflective Analysis] -> [Atomic Prepending] -> [Strategic Audit] -> [Memory Sync]
-
-## 3. 策略协议 (Strategic Protocols)
-- **语义标准化**：标签体系严格对齐，确保数据具备可检索性。
-- **灵肉合一 (Sync Principle)**：审计后的洞察自动同步至 memory.md，驱动全局知识图谱进化。
+## 使用场景
+当用户希望“记录今天的工作流”、“帮我总结这一周的日志”或发起针对个人工作效率与认知盲区的“日度/周度审计”时。

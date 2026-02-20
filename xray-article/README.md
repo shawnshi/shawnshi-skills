@@ -1,27 +1,16 @@
-﻿# Wisdom X-Ray: 认知脱水机
+﻿# 智慧X光机 (xray-article)
 
-<!-- 
-@Input: Articles (Raw Text/URL)
-@Output: Wisdom Formulas, Logic Topologies, Cognitive Upgrade Reports (Org-mode)
-@Pos: [ACE Layer: Cognition/Refinement] | [MSL Segment: Wisdom Ingestion]
-@Maintenance: Update "Wisdom Formula" patterns & transfer matrix templates.
-@Axioms: Penetration Over Summary | Topology Over Listing | Transferability First
--->
+深挖并粉碎文章表层逻辑，通过一套专有的“漏斗结构型 4 层分析论”，提取并浓缩其“智慧晶核”，进而产出由 ASCII 字符矩阵艺术主导的 Org-mode 分析报告。
 
-> **核心内核**: 穿透文字表象，提取认知骨架。采用四层漏斗模型，将碎片信息重构为跨领域可迁移的“晶核公式”。
+## 核心能力
+- **跨来源聚合引擎**：无论通过粘贴入内或挂载提取外部链接均能实现极速处理。
+- **深度穿透 4 层剖析体系**：
+  - 第一层：表层扫描定位核心及论据事实；
+  - 第二层：直击潜意深层假设及思考因果点模型寻找突破反常识；
+  - 第三层：固化结晶凝合一套形式上的公式（包含限制及延展边际）；
+  - 第四层：梳理迁移能力连接及落点反馈。
+- **拓扑逻辑与认知可视化 (Topological Art)**：强硬采用最为淳朴的基础 ASCII 工具符号打造严密的逻辑与观念推演认知升级跳板。
+- **本地终端化极速输送**：强定制成支持 Emacs Org-mode 的极客档案管理形式送达至个人指定的归档文献库路径打开查阅。
 
-## 0. 本质与边界 (Essence & Boundary)
-- **核心定义**: 智慧提炼引擎，负责将“读过”转化为“内化”，实现知识的跨界降维打击。
-- **反向定义**: 它不是一个简单的摘要器，而是一个认知深度探测仪。
-- **费曼比喻**: 就像是一台极其高级的 X 光机，它能直接看到文章里的“逻辑骨头”，并把那些没用的“文字肌肉”全部剔除。
-
-## 1. 生态位映射 (Ecosystem DNA)
-- **MSL 契约**: 提取“核心公理”、“边界条件”、“迁移矩阵”等底层智慧实体。
-- **ACE 角色**: 作为 **Insight Distiller (洞察蒸馏者)**。
-
-## 2. 逻辑机制 (Mechanism)
-- [Surface Scan] -> [Deep Penetration] -> [Core Localization] -> [Wisdom Topology]
-
-## 3. 策略协议 (Strategic Protocols)
-- **晶核公式化**：每一篇深度解析必须产出一个具备普适性的数学/逻辑公式。
-- **三维迁移**：必须列出至少 3 个与原文领域完全无关的跨界应用场景。
+## 使用场景
+但凡希望将某一段长篇大论、一篇引发了深入探索思辨长文或者特定的深度观点文章连根拔升剥离提取，洞察其逻辑支点并“X光”扫射吸纳运用内化至自身思考体系之时。
