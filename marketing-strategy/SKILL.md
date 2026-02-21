@@ -1,6 +1,6 @@
 ---
 name: marketing-strategy
-version: 3.7.1
+version: 3.7.2
 description: "The AI Chief Marketing Officer (CMO). Features Audit-Driven Saturation, Mandatory Tactical Injection, and Dynamic LTV."
 ---
 

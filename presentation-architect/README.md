@@ -1,12 +1,13 @@
-﻿# 演示文稿架构师 (presentation-architect) V5.0
+﻿# 演示文稿架构师 (presentation-architect) V6.0
 
-顶级战略演示文稿全栈架构师。引入麦肯锡级别的 Ghost Deck 生成机制、幻灯片解剖学 (Slide Anatomy) 与极简视觉信噪比 (SNR) 质量控制。
+顶级战略演示文稿全栈架构师。引入麦肯锡级别的 Ghost Deck 机制、幻灯片六段式解剖学 (Slide Anatomy) 与硬核数字化的视觉信噪比 (SNR) 质量控制。
 
 ## 核心能力
+- **<Thinking_Canvas> 战略预演**：骨架产出前，强制进行“痛点 / 政策 / 壁垒”三角逻辑推演。
 - **判词即王道 (Action Title is King)**：完全摒弃描述性标题，构建具备完整逻辑连贯性的 Ghost Deck 大纲并经用户确认。
-- **单页解剖工程 (Slide Anatomy)**：每一页严格恪守 Kicker → Lead-in → Visual Body → Evidence → Bumper 五段式结构。
-- **三角红队审计 (Triple Adversary Audit)**：模拟 *医院信息科主任* (系统耦合/运维成本)、*卫健委/医保局* (DRG/DIP 合规)、*传统 IT 竞对* (壁垒穿透) 三角审计。
-- **极致视觉信噪比**：限定 SNR ≥ 0.7，图表代码直译映射为 Mermaid / Image Prompt。
+- **单页六段式解剖工程 (Slide Anatomy)**：每一页严格恪守 Kicker → Lead-in → Visual Body → Evidence → Trust_Anchor → Bumper 结构。
+- **跨界红队审计 (Multi-Agent Audit)**：模拟 *医院信息科主任*、*卫健委/医保局*、*传统 IT 竞对* 视角，或携手 `pricing-strategy` 审计商业模式。
+- **极致视觉信噪比**：硬性限制纯文本 Bullet (≤3) 且强制包含对标基线 (Baseline)，不达标禁止组装。
 - **4 阶段生命周期**：战略锚定 → 骨架编排 → 单页解剖 → 视觉转化，严守绿区沙箱隔离。
 
 ## 使用场景

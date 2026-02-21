@@ -37,6 +37,21 @@ def check_compliance(file_path, rules):
                  if re.search(rf"(?<!\w){short}(?!\w)", content):
                     issues.append(f"[High] Found informal reference '{short}'. Use formal name '{formal}'.")
 
+    # 检查战略雷达 (Strategic Radar) 高敏词汇
+    radar_keywords = [
+        "DRG/DIP 2.0", "DRG 2.0", "DIP 2.0",
+        "数据要素", "数据资产入表", 
+        "三类证", "NMPA", "FDA", "SaMD",
+        "互联互通", "电子病历评级"
+    ]
+    radar_findings = []
+    for hw in radar_keywords:
+        if hw in content:
+            radar_findings.append(hw)
+            
+    if radar_findings:
+        issues.append(f"[STRATEGIC ALERT] 报告触及《战略雷达》监控区域节点: {', '.join(radar_findings)}. 请确保进行了深度的红队压测与合规校验。")
+
     return issues
 
 if __name__ == "__main__":

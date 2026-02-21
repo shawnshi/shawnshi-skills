@@ -19,9 +19,11 @@ def clean_content(content):
     # 1. Remove GEB-Flow Metadata blocks (Triple quotes with comments)
     content = re.sub(r'"""[\s\S]*?"""', '', content)
     
-    # 2. Trim whitespace
+    # 2. Remove YAML headers (--- ... ---) from intermediate chapters to prevent clutter
+    content = re.sub(r'^---\n.*?\n---\n*', '', content, flags=re.MULTILINE | re.DOTALL)
+    
+    # 3. Trim whitespace
     return content.strip()
-
 def extract_action_titles(content):
     """Extracts H1 and H2 headers to generate a Strategic Table of Contents."""
     titles = re.findall(r'^(#|##)\s+(.*)', content, re.MULTILINE)
@@ -50,9 +52,24 @@ def assemble_report(project_path, output_filename="final_report.md", title="Stra
     scqa_path = os.path.join(project_path, "scqa_summary.md")
     hypothesis_path = os.path.join(project_path, "hypothesis_matrix.json")
 
-    # 2. Forge Final Text
+    # 2. Forge Final Text with strict YAML metadata
+    from datetime import datetime
+    current_date = datetime.now().strftime('%Y-%m-%d')
     merged_content = []
-    merged_content.append(f"# {title}\n> Strategic Intelligence Report | Research Analyst V9.0\n\n")
+    yaml_header = f"""---
+Title: {title}
+Date: {current_date}
+Status: 🔴 归档冻结
+Author: Healthcare Digital Strategy Partner
+Version: V1.0 - Final Draft
+Audience: Strategic Decision Makers
+---
+
+# {title}
+> Strategic Intelligence Report | Research Analyst V14.0
+
+"""
+    merged_content.append(yaml_header)
     
     # Add SCQA if exists
     if os.path.exists(scqa_path):

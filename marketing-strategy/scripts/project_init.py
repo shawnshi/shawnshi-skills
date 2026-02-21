@@ -7,10 +7,11 @@ Description: 初始化项目文件夹与模板。
 import os
 import sys
 import json
+import re
 from utils import normalize_path, write_json_response, safe_json_load
 
 def init_project(project_name, base_path):
-    safe_name = "".join([c for c in project_name if c.isalnum() or c in (" ", "-", "_")]).strip().replace(" ", "_")
+    safe_name = re.sub(r'[\\/:*?"<>|]', '', project_name).strip().replace(" ", "_")
     base_path = normalize_path(base_path)
     project_dir = os.path.join(base_path, "projects", safe_name)
     
@@ -31,7 +32,10 @@ def init_project(project_name, base_path):
             file_path = os.path.join(project_dir, stage)
             if not os.path.exists(file_path):
                 with open(file_path, "w", encoding="utf-8") as f:
-                    f.write(f"# Project: {project_name}\n# Stage: {stage}\n\n")
+                    if stage.endswith(".json"):
+                        f.write("{}\n")
+                    else:
+                        f.write(f"# Project: {project_name}\n# Stage: {stage}\n\n")
                 created_files.append(stage)
                 
         return {

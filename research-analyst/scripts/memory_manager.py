@@ -43,7 +43,7 @@ def init_project(project_path, topic):
         "meta": {
             "topic": topic,
             "created_at": datetime.now().isoformat(),
-            "status": "active"
+            "status": "🟢 扫描收集"
         },
         "insights": [],
         "entities": {},
@@ -58,8 +58,15 @@ def init_project(project_path, topic):
     }
     status = save_memory(project_path, memory)
     
-    # 2. Automatically generate _DIR_META.md (Optimization 3)
-    meta_content = f"""# _DIR_META.md
+    # 2. Automatically generate _DIR_META.md (Optimization 3) with GEB-Flow YAML
+    meta_content = f"""---
+Title: {topic}
+Date: {datetime.now().strftime('%Y-%m-%d')}
+Status: 🟢 扫描收集
+Author: Strategic Architect
+---
+
+# _DIR_META.md
 
 ## Architecture Vision
 Research project: {topic}. 

@@ -9,7 +9,7 @@ import sys
 import json
 from utils import normalize_path, write_json_response, safe_json_load
 
-DATA_PATH = "C:/Users/shich/.gemini/skills/marketing-strategy/data/competitor_graph.json"
+DATA_PATH = os.path.join(os.path.dirname(__file__), "..", "data", "competitor_graph.json")
 
 def manager(action, project_dir=None):
     if not os.path.exists(DATA_PATH):
