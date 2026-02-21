@@ -41,20 +41,27 @@ def get_session_list():
         return []
 
 def read_logs():
-    """Reads logs.json from the current project's tmp directory."""
+    """Reads logs.json from the most recently modified tmp subdirectory."""
     tmp_dir = GEMINI_ROOT / "tmp"
-    target_dir = tmp_dir / "83d178b438e7ebb00b918753056b7f7edda2d45f9574afd2e2fb39b15a199bef"
-    log_file = target_dir / "logs.json"
-    
-    if not log_file.exists():
-        all_logs = list(tmp_dir.glob("**/logs.json"))
-        if not all_logs: return []
-        log_file = max(all_logs, key=lambda p: p.stat().st_mtime)
+    all_logs = list(tmp_dir.glob("**/logs.json"))
+    if not all_logs:
+        print("⚠️ 未找到任何 logs.json 文件")
+        return []
+    log_file = max(all_logs, key=lambda p: p.stat().st_mtime)
+    print(f"  📂 使用日志文件: {log_file}")
 
     try:
         with open(log_file, "r", encoding="utf-8") as f:
-            return json.load(f)
-    except Exception:
+            data = json.load(f)
+            if not isinstance(data, list):
+                print("⚠️ logs.json 格式异常: 期望列表，得到 " + type(data).__name__)
+                return []
+            return data
+    except json.JSONDecodeError as e:
+        print(f"⚠️ logs.json 解析失败: {e}")
+        return []
+    except Exception as e:
+        print(f"⚠️ 读取日志异常: {e}")
         return []
 
 # --- Stage 2 & 3: Filtering & Metadata ---
@@ -525,47 +532,6 @@ def main():
     if os.name == 'nt':
         print("正在为您打开报告...")
         os.startfile(report_path)
-
-def extract_facets_builtin(sessions):
-    cache = {}
-    if CACHE_FILE.exists():
-        try:
-            with open(CACHE_FILE, "r", encoding="utf-8") as f:
-                cache = json.load(f)
-        except Exception: pass
-
-    new_sessions = [s for s in sessions if s["id"] not in cache]
-    to_analyze = new_sessions[:50] 
-    
-    for s in to_analyze:
-        transcript_parts = []
-        for m in s["messages"][:15]:
-            msg_text = m.get('message', '')
-            if len(msg_text) > 500: msg_text = msg_text[:500] + "..."
-            transcript_parts.append(f"{m['type'].upper()}: {msg_text}")
-        
-        transcript = "\n".join(transcript_parts)
-        prompt = FACET_PROMPT.format(transcript=transcript)
-        
-        print(f"  正在分析会话: {s['title'][:40]}...")
-        
-        try:
-            cmd = ["gemini", "-p", prompt, "--allowed-mcp-server-names", "none", "--extensions", "none", "--raw-output", "--approval-mode", "yolo", "--accept-raw-output-risk"]
-            result = subprocess.run(cmd, capture_output=True, text=True, shell=True, encoding='utf-8')
-            match = re.search(r"\{.*\}", result.stdout, re.DOTALL)
-            if match:
-                cache[s["id"]] = json.loads(match.group())
-            else:
-                cache[s["id"]] = {"goal_category": "other", "error": "JSON not found"}
-        except Exception as e:
-            cache[s["id"]] = {"goal_category": "other", "error": str(e)}
-            
-        with open(CACHE_FILE, "w", encoding="utf-8") as f:
-            json.dump(cache, f, indent=2, ensure_ascii=False)
-
-    for s in sessions:
-        s["facets"] = cache.get(s["id"], {"goal_category": "other", "status": "uncached"})
-    return sessions
 
 if __name__ == "__main__":
     main()

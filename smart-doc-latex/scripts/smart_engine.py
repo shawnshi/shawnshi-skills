@@ -33,7 +33,8 @@ def detect_style(file_path):
         "academic": 0,
         "cv": 0,
         "tech_report": 0,
-        "book": 0
+        "book": 0,
+        "tech_book": 0
     }
 
     # Keyword Weights
@@ -42,7 +43,7 @@ def detect_style(file_path):
         "cv": ["education", "experience", "skills", "project", "resume", "curriculum vitae", "contact", "email"],
         "tech_report": ["code", "python", "java", "function", "api", "install", "usage", "guide", "tutorial"],
         "book": ["chapter", "prologue", "once upon a time", "dialogue", "story"],
-        "tech_book": ["O'Reilly", "technical", "programming", "software", "hardware"]
+        "tech_book": ["o'reilly", "technical", "programming", "software", "hardware"]
     }
 
     for style, words in keywords.items():
@@ -142,6 +143,7 @@ def main():
     parser.add_argument('--style', default='auto', choices=['auto', 'academic', 'cv', 'tech_report', 'book', 'tech_book'], help="Target document style")
     parser.add_argument('--title', help="Document title override")
     parser.add_argument('--author', help="Document author override")
+    parser.add_argument('--output', help="Output directory (default: input file's directory)")
     
     args = parser.parse_args()
 
@@ -196,7 +198,9 @@ def main():
     final_latex = re.sub(r'\$if\(.*?\)\$.*?\$endif\$', '', final_latex, flags=re.DOTALL)
 
     # 6. Save Output
-    output_tex = f"{filename_base}_{style}.tex"
+    output_dir = args.output if args.output else os.path.dirname(os.path.abspath(args.input))
+    os.makedirs(output_dir, exist_ok=True)
+    output_tex = os.path.join(output_dir, f"{filename_base}_{style}.tex")
     with open(output_tex, 'w', encoding='utf-8') as f:
         f.write(final_latex)
     

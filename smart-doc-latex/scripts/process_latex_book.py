@@ -2,7 +2,7 @@ import re
 import sys
 import os
 
-def process_latex_book(body_tex_path, output_path):
+def process_latex_book(body_tex_path, output_path, title="Book Title", author="Author", date="\\\\today"):
     with open(body_tex_path, 'r', encoding='utf-8') as f:
         content = f.read()
 
@@ -68,6 +68,7 @@ def process_latex_book(body_tex_path, output_path):
 \usepackage{array}
 \usepackage{caption}
 \usepackage{newunicodechar}
+\usepackage{tikz}
 
 % Fix for Pandoc's \LTcaptype{none} issue with caption package
 \newcounter{none}
@@ -150,9 +151,9 @@ def process_latex_book(body_tex_path, output_path):
 % ---------------------------------------------------------
 % Metadata & Cover
 % ---------------------------------------------------------
-\title{\bfseries\sffamily 医疗大语言模型二十讲}
-\author{师成}
-\date{2025-11-12}
+\title{\bfseries\sffamily """ + title + r"""}
+\author{""" + author + r"""}
+\date{""" + date + r"""}
 
 \begin{document}
 
@@ -176,9 +177,9 @@ def process_latex_book(body_tex_path, output_path):
         \vspace{2cm}
         
         % Main Title
-        {\Huge\bfseries\color{black} 医疗大语言模型二十讲 \par}
+        {\Huge\bfseries\color{black} """ + title + r""" \par}
         \vspace{0.5cm}
-        {\Large\bfseries Medical LLM: 20 Lectures \par}
+        {\Large\bfseries """ + title + r""" \par}
         
         \vspace{1.5cm}
         \noindent\rule{0.6\textwidth}{1pt}
@@ -192,9 +193,9 @@ def process_latex_book(body_tex_path, output_path):
         \vfill
         
         % Author
-        {\Large\bfseries 师成 \par}
+        {\Large\bfseries """ + author + r""" \par}
         \vspace{1cm}
-        {\large 2025-11-12 \par}
+        {\large """ + date + r""" \par}
         
     \end{center}
 \end{titlepage}
@@ -215,11 +216,16 @@ def process_latex_book(body_tex_path, output_path):
     return True
 
 if __name__ == '__main__':
+    if len(sys.argv) < 3:
+        print("Usage: python process_latex_book.py <input.tex> <output.tex> [title] [author]")
+        sys.exit(1)
     input_file = sys.argv[1]
     output_file = sys.argv[2]
+    doc_title = sys.argv[3] if len(sys.argv) > 3 else "Book Title"
+    doc_author = sys.argv[4] if len(sys.argv) > 4 else "Author"
     
     if os.path.exists(input_file):
-        process_latex_book(input_file, output_file)
+        process_latex_book(input_file, output_file, doc_title, doc_author)
         print(f"Generated LaTeX file at {output_file}")
     else:
         print(f"Error: Input file {input_file} not found.")

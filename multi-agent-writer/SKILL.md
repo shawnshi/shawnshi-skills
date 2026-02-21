@@ -15,14 +15,30 @@ The objective is never just "content production." The objective is **Decision En
 *   **Heartbeat Rhythm (心跳节奏)**：长短句交替。短句如匕首，用来固定核心结论；长句如暗流，用来铺陈复杂博弈背景。
 *   **The Three-Bold Rule (三金句特权)**：全篇严禁使用 `**` 进行常规强调。`**加粗**` 权限全篇最多保留 3 处，必须留给“反共识、一针见血、能重塑读者认知”的终极判词。
 
+## Resource Map
+
+> 📌 以下资源在各阶段中按需加载，Agent 应根据当前 Phase 主动引用对应文件。
+
+| 类型 | 文件 | 用途 |
+|------|------|------|
+| 🎭 角色 | `references/agents.md` | 各 Phase 专家角色的人格与行为约束 |
+| 📐 模板 | `references/templates.md` | 各 Phase 的标准化输出模板 |
+| ✅ 检查 | `references/CHECKLIST.md` | Phase 4 审计时的 17 项逐条检查清单 |
+| 🚫 禁令 | `references/ANTI_PATTERNS.md` | 废话黑名单 + 10 种结构性反模式 |
+| ⚙️ 引擎 | `scripts/workflow_engine.py` | 项目状态与进度管理 CLI |
+| 🤖 身份 | `agents/gemini.yaml` | Gemini Agent UI 配置 |
+
 ## Execution Workflow (多智能体编排流)
 
-### Phase 0: Strategic Alignment & Parameter Lock-in (基准线对齐)
+### Phase 0: Strategic Alignment & Parameter Lock-in
+> 角色参见 `references/agents.md` Strategic Aligner
+
 - **任务**: 使用 `ask_user` 获取或确认以下参数，作为所有子智能体的 North Star (北极星)：
   1. **Topic & Length**: 核心议题是什么？篇幅预期（口头汇报 800字 | 深度博文 2000字 | 战略白皮书 5000字）？
   2. **Audience**: 最终读者是谁？（必须精准到角色，如：非技术的 CFO、焦虑的业务线负责人）。
   3. **Non-Consensus Goal**: 这篇文章要打破读者的哪一个固有偏见？
-- **Output**: 初始化物理目录 `./.gemini/MEMORY/article/_/`。
+- **事实下锚 (Data Anchoring)**: 必须使用搜索工具为核心议题获取至少 2 个真实数据锚点。严禁从零开始的纯推理写作。
+- **Output**: 通过 `workflow_engine.py init --topic "<Topic>"` 初始化项目目录与状态文件。
 
 ### Phase 1: The "Devil's Advocate" Roundtable (多角色博弈与收敛)
 - **模拟调用**: 模拟 `thinker-roundtable` 机制，针对核心议题生成三个视角的碰撞记录（隐式思考，不需全量输出，但必须提炼结论）：
@@ -45,12 +61,25 @@ The objective is never just "content production." The objective is **Decision En
 - **信号密度约束 (Signal-to-Noise Ratio)**: 段落中必须包含具体的人物、动作、数据或系统逻辑。剥离一切诸如“在当今快速发展的时代”、“众所周知”等废话前奏。
 
 ### Phase 4: Stylistic Hygiene & Logic Audit (文字洁癖与逻辑审计)
-- **AI-Platitude Purge (AI 味大清洗)**: 全局扫描并物理删除/替换典型废话词汇（如：赋能、底层逻辑、抓手、delve, tapestry, crucial, paramount, landscape）。
-- **The "So What" Metric**: 审计每一章的结尾，如果没有明确指向“读者的下一步行动”或“认知的颠覆”，强制重写该段。
+> → 检查清单参见 `references/CHECKLIST.md`
+> → 反模式库参见 `references/ANTI_PATTERNS.md`
+> → 角色参见 `references/agents.md` Logic Proctor
+
+- **AI-Platitude Purge (AI 味大清洗)**: 对照 `ANTI_PATTERNS.md` 的中英双语黑名单，全局扫描并物理删除/替换所有废话词汇。
+- **CHECKLIST 全量扫描**: 逐条执行 `CHECKLIST.md` 的 17 项检查，任何 FAIL 项必须修复后才能进入 Phase 5。
+- **The "So What" Metric**: 审计每一章的结尾，如果没有明确指向"读者的下一步行动"或"认知的颠覆"，强制重写该段。
 - **Formatting Check**: 确保除了 1-3 处金句外，没有任何杂乱的粗体或斜体。
+- **Output**: 逻辑审计报告（参见 `references/templates.md` T4）。
 
 ### Phase 5: Final Forging & Delivery (交付与残余风险披露)
 - **Output**: 生成最终的 Markdown 文件，命名规范 `_Strategic_Memo_vFinal.md`。
 - **Executive Summary**: 在文章最前面附上 150 字的“结论先行 (Answer-First)”执行摘要。
 - **Red-Team Residuals (Appendix)**: 在文末以引用块 `> ⚠️ Residual Risks:` 的形式，坦诚披露本文论点中尚未被完全证实的前提假设或潜在局限性（彰显客观与自信）。
 - **STOP**: 提示用户查阅，并等待反馈。
+
+## Advanced Troubleshooting
+- **Roundtable 产出平庸 (无冲突)**: Devil's Advocate 角色未激活。强制要其回答"本文最可能被哪位高管一句话打回？为什么？"
+- **Ghost Deck 沦为普通目录**: Action Title 不合格。检查标题是否含"动词+判断"而非名词短语。回退 Phase 2 重新设计。
+- **终稿信噪比低**: 退回 Phase 4，对照 `ANTI_PATTERNS.md` 全量扫描，物理删除废话词后重跑 So What 测试。
+- **Agent 跳过 Phase**: `workflow_engine.py` 内置 Phase 门控。使用 `read` 命令检查当前状态，确认 Phase 合法性再推进。
+- **深度幻觉 (Hallucination)**: 停止生成，立刻调用搜索工具补充至少 2 个真实的行业数据锚点。

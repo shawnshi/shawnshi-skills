@@ -22,9 +22,9 @@ def update_memory_section(category, items_to_add):
     except Exception as e:
         return {"status": "error", "message": f"Failed to read memory.md: {str(e)}"}
 
-    # Find the section header
-    # Format matches: * ** 战略偏好** or * ** 行业洞察**
-    pattern_section = rf"\* \*\* {category}\*\*"
+    # Find the section header (whitespace-tolerant matching)
+    # Supports various markdown formats: * ** 战略偏好** or * **战略偏好** etc.
+    pattern_section = rf"\*\*\s*{re.escape(category)}\s*\*\*"
     match = re.search(pattern_section, content)
     if not match:
         return {"status": "error", "message": f"Section '{category}' not found in memory.md"}

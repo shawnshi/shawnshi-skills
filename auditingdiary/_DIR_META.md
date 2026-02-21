@@ -11,6 +11,8 @@
 - `references/`: [Knowledge]
   - `templates.md`: 日志与审计报告的结构模板。
   - `config.md`: 路径与偏好配置。
+  - `semantic_layer.md`: 标签本体定义与语义约束。
+  - `work_nodes.md`: 审计扫描目录索引。
 - `agents/`: [UI] Gemini 适配配置。
 
 > ⚠️ **Protocol**: 任何对日志文件 I/O 逻辑的修改，必须在 `scripts/diary_ops.py` 中进行，严禁在 SKILL.md 中硬编码读写逻辑。

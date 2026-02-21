@@ -11,7 +11,7 @@ This skill generates an interactive HTML report that analyzes sessions across 6 
 
 ## 📋 Execution Workflow
 - [ ] **Stage 1: Collection**
-    *   Execute `python C:\Users\shich\.gemini\skills\monthly-personal-insights\analyze_insights_v3.py`.
+    *   Execute `python C:\Users\shich\.gemini\skills\monthly-personal-insights\analyze_insights_v4.py`.
     *   This script scrapes `gemini --list-sessions` and reads `logs.json`.
 - [ ] **Stage 2-5: Processing (Automated in script)**
     *   Filtering sessions (excludes agent sub-sessions, short/empty sessions).

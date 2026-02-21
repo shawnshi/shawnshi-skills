@@ -147,7 +147,7 @@ def generate_latex(idioms, output_path):
             
             f.write(f"\\idiomentry{{{item['id']}}}{{{item['term']}}}{{{def_text}}}{{{examples_text}}}\n")
             
-f.write(r"\\end{document}")
+        f.write(r"\end{document}")
 
 if __name__ == "__main__":
     idioms = parse_tex('intermediate.tex')

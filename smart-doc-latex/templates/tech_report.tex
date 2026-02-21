@@ -26,6 +26,12 @@
 % If minted fails, use listings as fallback: \usepackage{listings}
 
 % ---------------------------------------------------------
+% Fixes for Pandoc
+% ---------------------------------------------------------
+\newcounter{none}
+\providecommand{\tightlist}{\setlength{\itemsep}{0pt}\setlength{\parskip}{0pt}}
+
+% ---------------------------------------------------------
 % 3. Styling & Definitions
 % ---------------------------------------------------------
 \definecolor{techBlue}{RGB}{0, 102, 204}

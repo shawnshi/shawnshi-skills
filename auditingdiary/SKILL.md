@@ -49,18 +49,21 @@ description: Manages personal diary entries and performs cognitive audits (weekl
 
 ### Standard Audit
 1.  **Read Context**: 读取相关时间段的日志。
-2.  **Strategic Context (New)**: 读取 `memory.md`，提取“个人行业观点”作为审计的战略锚点。
+    ```bash
+    python scripts/diary_ops.py read --file "diary" --from "YYYY-MM-DD" --to "YYYY-MM-DD"
+    ```
+2.  **Strategic Context**: 读取 `memory.md`，提取"个人行业观点"作为审计的战略锚点。
 3.  **Discovery (Auto)**: 扫描 `references/work_nodes.md` 中定义的目录，检索本周期的产出物列表。
-4.  **Work Analysis**: 扫描google workspace，检索本周期的产出物列表。
-5  **Work Analysis**: 对新增产出进行深度阅读，分析战略意图与认知增量。
+4.  **Work Analysis (Workspace)**: 扫描 Google Workspace，检索本周期的产出物列表。
+5.  **Work Analysis (Deep Read)**: 对新增产出进行深度阅读，分析战略意图与认知增量。
 6.  **Strategic Alignment Analysis**: 对比实战产出与 `memory.md` 中的观点，执行 `prompts/weekly/PART_VI_STRATEGIC_ALIGNMENT.md` 逻辑。
-7.  **Health Data**: 制定时间范围的健康评估: `${garmin-health-analysis}` ，并将报告保存在扫描 `./.gemini/health
+7.  **Health Data**: 制定时间范围的健康评估: `${garmin-health-analysis}`，并将报告保存在 `.gemini/health/` 目录。
 8.  **Generate Report**: 使用 `prompts/` 下对应的模块化提示词生成深度分析。
 9.  **Save**:
     ```bash
-    python scripts/diary_ops.py prepend --file "privacy/{YYYY}Diary.md" --content "## {Type} Audit\n\n..."
+    python scripts/diary_ops.py prepend --file "diary" --content_file "tmp/audit_report.md"
     ```
-10. **Memory Synchronization (New)**:
+10. **Memory Synchronization**:
     *   从审计报告中提取符合“战略偏好”与“行业洞察”定义的金句。
     *   调用脚本更新 `memory.md`：
         ```bash
@@ -79,21 +82,32 @@ description: Manages personal diary entries and performs cognitive audits (weekl
 
 ## 3. Operations & Analysis
 
+### Read (`读取日志`)
+按日期范围读取日志条目：
+```bash
+python scripts/diary_ops.py read --file "diary" --from "2026-02-15" --to "2026-02-21"
+```
+
 ### Search (`搜索日志`)
 ```bash
-python scripts/diary_ops.py search --file "privacy/{YYYY}Diary.md" --query "关键词"
+python scripts/diary_ops.py search --file "diary" --query "关键词"
 ```
 
 ### Statistics (`生成统计`)
 生成可视化统计报告（情绪分布、专注度趋势、高频标签）。
 ```bash
-python scripts/diary_ops.py stats --file "privacy/{YYYY}Diary.md"
+python scripts/diary_ops.py stats --file "diary"
+```
+
+### Discovery (`扫描工作产出`)
+```bash
+python scripts/discovery_engine.py --days 7 --extensions .md .pptx .docx
 ```
 
 ### Backup (`备份日志`)
 手动触发备份（写入操作前也会自动触发）。
 ```bash
-python scripts/diary_ops.py backup --file "privacy/{YYYY}Diary.md" --dir "privacy/backups"
+python scripts/diary_ops.py backup --file "diary" --dir "privacy/backups"
 ```
 
 ## Troubleshooting

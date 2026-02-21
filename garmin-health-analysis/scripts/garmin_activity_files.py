@@ -7,11 +7,15 @@ Extract GPS, elevation, pace, heart rate, power, cadence, etc.
 import json
 import sys
 import os
+import tempfile
 from datetime import datetime
 from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).parent))
 from garmin_auth import get_client
+
+# Cross-platform default output directory
+_DEFAULT_OUTPUT_DIR = str(Path(__file__).parent.parent / "output")
 
 # Check for optional dependencies
 try:
@@ -28,7 +32,7 @@ except ImportError:
     HAS_GPXPY = False
 
 
-def download_activity_file(client, activity_id, file_format="fit", output_dir="/tmp"):
+def download_activity_file(client, activity_id, file_format="fit", output_dir=_DEFAULT_OUTPUT_DIR):
     """Download activity FIT or GPX file."""
     try:
         output_path = f"{output_dir}/activity_{activity_id}.{file_format.lower()}"
@@ -265,7 +269,7 @@ def main():
     parser.add_argument("--file", help="Path to local FIT/GPX file")
     parser.add_argument("--distance", type=float, help="Query data at distance (meters)")
     parser.add_argument("--time", help="Query data at time (ISO format)")
-    parser.add_argument("--output-dir", default="/tmp", help="Output directory")
+    parser.add_argument("--output-dir", default=_DEFAULT_OUTPUT_DIR, help="Output directory")
     
     args = parser.parse_args()
     

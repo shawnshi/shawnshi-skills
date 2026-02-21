@@ -1,5 +1,5 @@
 """
-<!-- Input: Operation (prepend/search/stats/backup), File Path, Content/Query -->
+<!-- Input: Operation (prepend/search/stats/backup/read), File Path, Content/Query -->
 <!-- Output: JSON Result or Success Message -->
 <!-- Pos: scripts/diary_ops.py. Core I/O engine for safe diary management. -->
 
@@ -12,6 +12,7 @@ import sys
 import os
 import shutil
 import re
+import tempfile
 from datetime import datetime
 import json
 
@@ -26,6 +27,40 @@ PATH_MAPPING = {
 def resolve_path(path_alias):
     """Resolves logical alias to absolute path."""
     return PATH_MAPPING.get(path_alias.lower(), path_alias)
+
+def load_config():
+    """Load configuration from references/config.md. Returns dict with parsed values."""
+    config = {
+        "max_backup_count": 50,
+        "search_result_limit": 100,
+        "context_lines": 20,
+        "auto_backup": False,
+    }
+    config_path = os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), "references", "config.md")
+    if not os.path.exists(config_path):
+        return config
+    try:
+        with open(config_path, 'r', encoding='utf-8') as f:
+            content = f.read()
+        # Parse key-value pairs from config.md format: **值:** `value`
+        mapping = {
+            "Max Backup Count": ("max_backup_count", int),
+            "Search Result Limit": ("search_result_limit", int),
+            "Context Lines in Search": ("context_lines", int),
+            "Auto Backup": ("auto_backup", lambda v: v.lower() == 'true'),
+        }
+        for label, (key, cast) in mapping.items():
+            match = re.search(rf'{re.escape(label)}.*?\*\*值:\*\*\s*`([^`]+)`', content, re.DOTALL)
+            if match:
+                try:
+                    config[key] = cast(match.group(1).strip())
+                except (ValueError, TypeError):
+                    pass
+    except Exception:
+        pass
+    return config
+
+CONFIG = load_config()
 
 def validate_content(content):
     """
@@ -68,18 +103,29 @@ def safe_prepend(file_path, new_content):
         
     full_content = new_content + existing_content
 
-    # 4. Atomic Write
+    # 4. Truly Atomic Write (tempfile + os.replace)
     try:
-        with open(file_path, 'w', encoding='utf-8') as f:
-            f.write(full_content)
+        dir_name = os.path.dirname(os.path.abspath(file_path))
+        fd, tmp_path = tempfile.mkstemp(dir=dir_name, suffix='.tmp')
+        try:
+            with os.fdopen(fd, 'w', encoding='utf-8') as f:
+                f.write(full_content)
+            os.replace(tmp_path, file_path)
+        except Exception:
+            if os.path.exists(tmp_path):
+                os.remove(tmp_path)
+            raise
         return {"status": "success", "message": f"Entry prepended to {file_path}"}
     except Exception as e:
         return {"status": "error", "message": f"Failed to write file: {str(e)}"}
 
 # ... (search_diary and generate_stats remain the same, but use resolve_path)
 
-def search_diary(file_path, query, context_lines=3):
+def search_diary(file_path, query, context_lines=None):
     file_path = resolve_path(file_path)
+    if context_lines is None:
+        context_lines = CONFIG["context_lines"]
+    search_limit = CONFIG["search_result_limit"]
     if not os.path.exists(file_path):
         return {"status": "error", "message": f"Diary file not found at {file_path}"}
 
@@ -109,9 +155,20 @@ def search_diary(file_path, query, context_lines=3):
                 "match": line.strip(),
                 "context": context
             })
-            if len(matches) >= 30: break
+            if len(matches) >= search_limit: break
     
     return {"status": "success", "count": len(matches), "results": matches}
+
+def _split_entries(content):
+    """Split diary content into individual date entries."""
+    entries = []
+    date_pattern = re.compile(r'^#\s(\d{4}-\d{2}-\d{2})', re.MULTILINE)
+    matches = list(date_pattern.finditer(content))
+    for i, m in enumerate(matches):
+        start = m.start()
+        end = matches[i + 1].start() if i + 1 < len(matches) else len(content)
+        entries.append({"date": m.group(1), "content": content[start:end]})
+    return entries
 
 def generate_stats(file_path):
     file_path = resolve_path(file_path)
@@ -126,7 +183,8 @@ def generate_stats(file_path):
     except Exception as e:
         return {"status": "error", "message": f"Failed to read file: {str(e)}"}
 
-    stats["total_entries"] = len(re.findall(r'^#\s\d{4}-\d{2}-\d{2}', content, re.MULTILINE))
+    entries = _split_entries(content)
+    stats["total_entries"] = len(entries)
     stats["audits"]["weekly"] = content.count("## 本周审计")
     stats["audits"]["monthly"] = content.count("## 月度审计")
     stats["audits"]["annual"] = content.count("## 年度审计")
@@ -134,7 +192,23 @@ def generate_stats(file_path):
     for tag in tags:
         if tag[1].isdigit(): continue 
         stats["tags"][tag] = stats["tags"].get(tag, 0) + 1
-    stats["moods"]["😊"] = content.count("😊"); stats["moods"]["😐"] = content.count("😐"); stats["moods"]["😔"] = content.count("😔")
+
+    # Per-entry emotion counting: count which mood emoji appears in the "情绪状态" line
+    mood_pattern = re.compile(r'情绪状态.*?[:：]\s*(.*)', re.MULTILINE)
+    for entry in entries:
+        mood_match = mood_pattern.search(entry["content"])
+        if mood_match:
+            mood_line = mood_match.group(1)
+            # Check which one is the active mood (not in a template choice list)
+            # Heuristic: if line has only one emoji, count it; if multiple, count the first
+            emojis_found = re.findall(r'(😊|😐|😔)', mood_line)
+            if len(emojis_found) == 1:
+                stats["moods"][emojis_found[0]] += 1
+            elif len(emojis_found) > 1:
+                # If a specific mood is selected (e.g., text follows it), count the first non-template one
+                # Fallback: count the first one
+                stats["moods"][emojis_found[0]] += 1
+
     focus_matches = re.findall(r'专注度.*?(⭐+)', content)
     for stars in focus_matches:
         stats["focus_sum"] += len(stars); stats["focus_count"] += 1
@@ -142,8 +216,33 @@ def generate_stats(file_path):
     stats["top_tags"] = sorted(stats["tags"].items(), key=lambda x: x[1], reverse=True)[:15]
     return {"status": "success", "data": stats}
 
+def read_diary(file_path, date_from=None, date_to=None):
+    """Read diary entries within an optional date range."""
+    file_path = resolve_path(file_path)
+    if not os.path.exists(file_path):
+        return {"status": "error", "message": f"Diary file not found at {file_path}"}
+    try:
+        with open(file_path, 'r', encoding='utf-8') as f:
+            content = f.read()
+    except Exception as e:
+        return {"status": "error", "message": f"Failed to read file: {str(e)}"}
+
+    entries = _split_entries(content)
+    if date_from or date_to:
+        filtered = []
+        for entry in entries:
+            d = entry["date"]
+            if date_from and d < date_from:
+                continue
+            if date_to and d > date_to:
+                continue
+            filtered.append(entry)
+        entries = filtered
+    return {"status": "success", "count": len(entries), "entries": entries}
+
 def backup_diary(file_path, backup_dir):
     file_path = resolve_path(file_path)
+    max_backups = CONFIG["max_backup_count"]
     if not os.path.exists(file_path): return {"status": "error", "message": "Diary file not found."}
     os.makedirs(backup_dir, exist_ok=True)
     timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
@@ -152,22 +251,39 @@ def backup_diary(file_path, backup_dir):
     try:
         shutil.copy2(file_path, backup_path)
         backups = sorted([os.path.join(backup_dir, f) for f in os.listdir(backup_dir) if f.startswith(os.path.splitext(filename)[0])])
-        if len(backups) > 30:
-            for old_backup in backups[:-30]: os.remove(old_backup)
+        if len(backups) > max_backups:
+            for old_backup in backups[:-max_backups]: os.remove(old_backup)
         return {"status": "success", "backup_path": backup_path}
     except Exception as e: return {"status": "error", "message": f"Backup failed: {str(e)}"}
 
 def main():
     parser = argparse.ArgumentParser(description="Diary Operations Engine")
     subparsers = parser.add_subparsers(dest='command', required=True)
-    p_prepend = subparsers.add_parser('prepend')
+
+    p_prepend = subparsers.add_parser('prepend', help='Prepend content to diary file')
     p_prepend.add_argument('--file', required=True)
     p_prepend.add_argument('--content')
     p_prepend.add_argument('--content_file')
-    p_search = subparsers.add_parser('search'); p_search.add_argument('--file', required=True); p_search.add_argument('--query', required=True)
-    p_stats = subparsers.add_parser('stats'); p_stats.add_argument('--file', required=True)
-    p_backup = subparsers.add_parser('backup'); p_backup.add_argument('--file', required=True); p_backup.add_argument('--dir', required=True)
-    args = parser.parse_args(); result = {"status": "error", "message": "Unknown command"}
+
+    p_search = subparsers.add_parser('search', help='Search diary for a keyword')
+    p_search.add_argument('--file', required=True)
+    p_search.add_argument('--query', required=True)
+
+    p_read = subparsers.add_parser('read', help='Read diary entries by date range')
+    p_read.add_argument('--file', required=True)
+    p_read.add_argument('--from', dest='date_from', help='Start date (YYYY-MM-DD)')
+    p_read.add_argument('--to', dest='date_to', help='End date (YYYY-MM-DD)')
+
+    p_stats = subparsers.add_parser('stats', help='Generate diary statistics')
+    p_stats.add_argument('--file', required=True)
+
+    p_backup = subparsers.add_parser('backup', help='Backup diary file')
+    p_backup.add_argument('--file', required=True)
+    p_backup.add_argument('--dir', required=True)
+
+    args = parser.parse_args()
+    result = {"status": "error", "message": "Unknown command"}
+
     if args.command == 'prepend':
         content = ""
         if args.content_file:
@@ -184,11 +300,16 @@ def main():
             result = {"status": "error", "message": "Either --content or --content_file is required for prepend."}
             print(json.dumps(result, ensure_ascii=False, indent=2))
             return
-            
         result = safe_prepend(args.file, content)
-    elif args.command == 'search': result = search_diary(args.file, args.query)
-    elif args.command == 'stats': result = generate_stats(args.file)
-    elif args.command == 'backup': result = backup_diary(args.file, args.dir)
+    elif args.command == 'search':
+        result = search_diary(args.file, args.query)
+    elif args.command == 'read':
+        result = read_diary(args.file, date_from=args.date_from, date_to=args.date_to)
+    elif args.command == 'stats':
+        result = generate_stats(args.file)
+    elif args.command == 'backup':
+        result = backup_diary(args.file, args.dir)
+
     print(json.dumps(result, ensure_ascii=False, indent=2))
 
 if __name__ == "__main__":

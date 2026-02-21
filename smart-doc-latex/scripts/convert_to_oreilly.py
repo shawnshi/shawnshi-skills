@@ -70,7 +70,7 @@ def parse_markdown_to_latex(md_content):
                 in_list = True
                 list_type = 'ul'
             content = line[2:].strip()
-            content = process_inline_formatting(content)
+            content = process_inline_formatting_v2(content)
             latex_lines.append(r'\item ' + content)
             continue
             
@@ -81,7 +81,7 @@ def parse_markdown_to_latex(md_content):
                 in_list = True
                 list_type = 'ol'
             content = re.sub(r'^\d+\.\s', '', line).strip()
-            content = process_inline_formatting(content)
+            content = process_inline_formatting_v2(content)
             latex_lines.append(r'\item ' + content)
             continue
         
@@ -102,7 +102,7 @@ def parse_markdown_to_latex(md_content):
             continue
             
         # Process bold/italic/code
-        content = process_inline_formatting(line)
+        content = process_inline_formatting_v2(line)
         latex_lines.append(content + '\n')
 
     if in_list:
@@ -146,7 +146,7 @@ def process_inline_formatting_v2(text):
     
     return text
 
-def generate_oreilly_latex(content_md, output_path):
+def generate_oreilly_latex(content_md, output_path, title="Book Title", author="Author", date="\\today"):
     preamble = r"""\documentclass[11pt, openany, a4paper]{ctexbook}
 
 % ---------------------------------------------------------
@@ -249,9 +249,9 @@ def generate_oreilly_latex(content_md, output_path):
 % ---------------------------------------------------------
 % Metadata
 % ---------------------------------------------------------
-\title{\bfseries\sffamily 医疗大语言模型二十讲}
-\author{师成}
-\date{2025-11-12}
+\title{\bfseries\sffamily """ + title + r"""}
+\author{""" + author + r"""}
+\date{""" + date + r"""}
 
 \begin{document}
 

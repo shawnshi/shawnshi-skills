@@ -372,8 +372,9 @@ def generate_chinese_insight(summary_data):
     intervention_msg = "【4. 战略干预：个性化健康行动建议】\n" + "\n".join([f"· {r}" for r in recs])
     overall_sections.append(intervention_msg)
 
-    risk_map = {"low": "低", "MODERATE": "中", "HIGH": "高"}
-    status_header = f"【专家审计：{period_str} | 生理风险：{risk_map.get(audit['action_protocol']['type'].lower(), '低')}】"
+    protocol_risk_map = {"GREEN": "低", "YELLOW": "中", "RED": "高", "ALERT": "危"}
+    risk_label = protocol_risk_map.get(audit['action_protocol']['type'], '中')
+    status_header = f"【专家审计：{period_str} | 生理风险：{risk_label}】"
     
     overall_combined = f"{status_header}\n\n" + "\n\n".join(overall_sections)
     

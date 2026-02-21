@@ -1,6 +1,18 @@
 display_name: Yahoo Finance
 short_description: 获取实时股市行情、基本面数据与金融新闻。
+version: "2.0"
 default_prompt: 获取并分析 [公司名称] 最近 [时间范围] 的表现。
+triggers:
+  - "股价"
+  - "stock price"
+  - "行情"
+  - "基本面"
+  - "financial news"
+  - "金融新闻"
+  - "K线"
+  - "ticker"
+  - "市值"
+  - "PE"
 interface:
   icon: trending_up
   brand_color: "#7200da"

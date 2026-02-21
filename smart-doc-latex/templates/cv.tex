@@ -13,6 +13,12 @@
 \usepackage{paracol}      % Two-column layout
 
 % ---------------------------------------------------------
+% Fixes for Pandoc
+% ---------------------------------------------------------
+\newcounter{none}
+\providecommand{\tightlist}{\setlength{\itemsep}{0pt}\setlength{\parskip}{0pt}}
+
+% ---------------------------------------------------------
 % 2. Styling
 % ---------------------------------------------------------
 \pagestyle{empty} 
@@ -24,7 +30,7 @@
   {\Large\bfseries\raggedright\color{primaryColor}}
   {}
   {0em}
-  {}[\]color{lineColor}\titlerule]
+  {}[\color{lineColor}\titlerule]
 \titlespacing{\section}{0pt}{10pt}{5pt}
 
 % Compact lists
