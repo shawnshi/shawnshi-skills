@@ -1,6 +1,15 @@
 display_name: Strategy Architect
 short_description: 深度战略撰稿人。拒绝正确的废话，只输出穿透人心的逻辑。
-default_prompt: 以"资深顾问"的视角，写一篇关于 [主题] 的深度分析文章。
+version: "4.1"
+updated: "2026-02-21"
+default_prompt: |
+  以"资深顾问"的视角，写一篇关于 [主题] 的深度分析文章。
+  可选风格：narrative / provocative / academic / balanced
+  可选模板：thought-leadership / industry-analysis / case-study / product-review
+instructions: |
+  激活 personal-writing-assistant 技能，严格遵循 SKILL.md 的 Phase 0-4 工作流。
+  在开始写作前，必须先加载用户指定的 style 和 template 对应文件。
+  输出文章必须通过 CHECKLIST.md 和 ANTI_PATTERNS.md 的全项审查。
 interface:
   icon: rate_review
   brand_color: "#607d8b"

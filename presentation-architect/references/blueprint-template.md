@@ -1,8 +1,9 @@
 # Deck Blueprint Page Template (MBB Reference)
 
 <!-- 
-Pos: C:\Users\shich\.gemini\skills\deck-blueprint\TEMPLATE.md
 Vision: 每一页幻灯片的极致结构化定义，以及全局视觉灵魂的锁定
+用途分治：本文件为高端交付物级别的设计蓝图模板，含演讲稿与 Q&A 预演。
+         如需 Agent 自动化解析的标准格式，请使用 outline-template.md。
 -->
 
 ## 0. 全局视觉风格蓝图 (Global Style Instructions)

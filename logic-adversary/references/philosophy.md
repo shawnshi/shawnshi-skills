@@ -1,37 +1,88 @@
-# Red Team Philosophy
+# 对抗公理库 (Adversarial Axiom Library)
 
-## Origin
-
-Military red teaming - dedicated teams that attack plans, strategies, and assumptions to find vulnerabilities before the enemy does.
-
-## Core Insight
-
-**The goal is NOT destruction** - it's finding the fundamental flaw that, if challenged, causes the entire structure to collapse.
-
-The most powerful critique is usually ONE core issue:
-- A hidden assumption that's actually false
-- A logical step that doesn't follow
-- A category error (treating X like Y)
-- An ignored precedent that directly contradicts
-
-## Success Criteria
-
-- Steelman is strong enough that a proponent would say "yes, that's my argument"
-- Counter-argument defeats the steelman, not a weaker strawman
-- Multiple agents converged on same insights
-- Reader says "I hadn't thought of that"
-
-## The 32 Agent Types
-
-| Type | Count | Focus |
-|------|-------|-------|
-| **Engineers** | 8 | Technical and logical rigor |
-| **Architects** | 8 | Structural and systemic issues |
-| **Pentesters** | 8 | Adversarial thinking |
-| **Interns** | 8 | Fresh perspectives |
-
-Each agent type brings unique attack angles - see `Workflows/ParallelAnalysis.md` for full roster.
+> 代理在质疑时**必须引用**本库中的公理、谬误或偏见，严禁空对空辩论。
 
 ---
 
-**Last Updated:** 2025-12-20
+## 一、经典逻辑谬误 (Logical Fallacies)
+
+| # | 名称 | 定义 | 攻击话术 |
+|---|------|------|---------|
+| F1 | **稻草人 (Straw Man)** | 曲解对方论点后攻击 | "你攻击的不是我的论点，而是一个更弱的版本。" |
+| F2 | **滑坡谬误 (Slippery Slope)** | 无证据地推导极端结论 | "从A到Z之间缺少必然的因果链。" |
+| F3 | **诉诸权威 (Appeal to Authority)** | 因为某人说了就是对的 | "权威的意见不等于证据，专家也会错。" |
+| F4 | **假两难 (False Dilemma)** | 只给两个选项，实际还有更多 | "这不是非此即彼，还有第三条路。" |
+| F5 | **循环论证 (Begging the Question)** | 结论隐藏在前提中 | "你用需要证明的结论来证明自己。" |
+| F6 | **诉诸情感 (Appeal to Emotion)** | 用情绪而非逻辑说服 | "恐惧/同情不是有效论据。" |
+| F7 | **红鲱鱼 (Red Herring)** | 引入无关议题转移注意力 | "这与核心论点无关。" |
+| F8 | **合成谬误 (Composition Fallacy)** | 部分为真推导整体为真 | "个体有效不代表整体有效。" |
+| F9 | **分割谬误 (Division Fallacy)** | 整体为真推导部分为真 | "整体有效不代表每个部分都有效。" |
+| F10 | **诉诸传统 (Appeal to Tradition)** | 因为一直这样做所以是对的 | "过去的做法不等于最优做法。" |
+| F11 | **诉诸新潮 (Appeal to Novelty)** | 因为是新的所以更好 | "新不等于好，需要证据。" |
+| F12 | **轶事谬误 (Anecdotal Fallacy)** | 用个案替代系统性数据 | "一个案例不能代表总体趋势。" |
+| F13 | **德州神枪手 (Texas Sharpshooter)** | 事后找数据支撑预设结论 | "你是先有结论再找数据。" |
+| F14 | **因果倒置 (Reverse Causation)** | 把结果当原因 | "相关不等于因果，方向可能反了。" |
+| F15 | **幸存者偏差 (Survivorship Bias)** | 只看成功案例忽略失败 | "你只看到了活下来的，死掉的呢？" |
+
+---
+
+## 二、认知偏见 (Cognitive Biases)
+
+| # | 名称 | 定义 | 防御提示 |
+|---|------|------|---------|
+| B1 | **确认偏见 (Confirmation Bias)** | 只寻找支持自己观点的证据 | 强制寻找反例。 |
+| B2 | **锚定效应 (Anchoring Effect)** | 过度依赖第一个信息 | 重置基准，用多个参照点。 |
+| B3 | **沉没成本 (Sunk Cost Fallacy)** | 因已投入而坚持错误路线 | 只看未来收益，忽略过去投入。 |
+| B4 | **光环效应 (Halo Effect)** | 一个优点掩盖所有缺点 | 逐项独立评估。 |
+| B5 | **从众效应 (Bandwagon Effect)** | 多数人做就跟着做 | 受欢迎不等于正确。 |
+| B6 | **过度自信 (Overconfidence Bias)** | 高估自己判断的准确性 | 设置预测区间，记录校准率。 |
+| B7 | **可得性启发 (Availability Heuristic)** | 容易想到的案例被高估概率 | 用基准率替代直觉。 |
+| B8 | **框架效应 (Framing Effect)** | 同样信息因表述不同而判断不同 | 用多种方式重述同一问题。 |
+| B9 | **禀赋效应 (Endowment Effect)** | 高估自己已拥有的东西 | 假设你不拥有它，还会选择吗？ |
+| B10 | **规划谬误 (Planning Fallacy)** | 低估完成任务所需时间/成本 | 用外部参照类别而非内部估计。 |
+| B11 | **逆火效应 (Backfire Effect)** | 反驳反而强化对方信念 | 先认同再引导，不正面对抗。 |
+| B12 | **达克效应 (Dunning-Kruger)** | 能力不足者高估自己 | 邀请领域专家校准。 |
+
+---
+
+## 三、博弈论基本模型 (Game Theory Models)
+
+| 模型 | 核心洞察 | 在对抗分析中的应用 |
+|------|---------|------------------|
+| **囚徒困境** | 个体理性导致集体次优 | 分析多方利益是否存在合作失败风险 |
+| **零和博弈** | 一方所得即另一方所失 | 判断竞争场景是否真的是零和 |
+| **纳什均衡** | 各方都不愿单方面改变策略 | 寻找各方都可接受的"稳定解" |
+| **帕累托最优** | 无法在不损害他人的情况下改善任何人 | 判断当前方案是否已到效率前沿 |
+| **鸡博弈 (Chicken)** | 双方冲突时谁先让步 | 分析谈判/对峙场景中的退让策略 |
+| **公地悲剧** | 共享资源被过度使用 | 分析公共资源/平台的治理风险 |
+| **信号博弈** | 通过行为传递私有信息 | 分析竞对的信号行为（招标、发布等） |
+
+---
+
+## 四、核心对抗原则 (Core Adversarial Principles)
+
+| 原则 | 说明 |
+|------|------|
+| **奥卡姆剃刀** | 如无必要，勿增实体。更简单的解释通常更接近真相。 |
+| **钢人原则 (Steelmanning)** | 在攻击前，先构建对方论点的最强版本。 |
+| **红队思维** | 目标不是破坏，而是找到"如果被挑战，整个结构会坍塌"的那个根本缺陷。 |
+| **反事实思维** | 如果关键假设不成立，结论是否依然有效？ |
+| **逆向推理** | 从期望的结论反推，需要哪些前提为真？哪些不成立？ |
+| **二阶思维** | 不只看直接后果，还要看后果的后果。 |
+
+---
+
+## 五、医疗行业特化攻击维度
+
+| 维度 | 关键问题 |
+|------|---------|
+| **政策合规性** | 是否符合最新卫健委/医保局规定？DRG/DIP 2.0 兼容？ |
+| **临床可用性** | 是否增加医护人员操作负担？符合临床工作流？ |
+| **数据安全** | 等保要求？数据出境？患者隐私保护？ |
+| **互联互通** | 是否满足互联互通评级要求？HL7/FHIR 标准？ |
+| **竞对对标** | 东软/创业慧康的同类方案？BATH 的降维打击风险？ |
+| **商业可行性** | 客户付费意愿？实施成本与回报周期？ |
+
+---
+
+**Last Updated:** 2026-02-21

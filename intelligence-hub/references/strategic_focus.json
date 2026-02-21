@@ -6,70 +6,58 @@
     },
     {
       "keyword": "ace",
-      "weight": 20
+      "weight": 23
     },
     {
       "keyword": "msl",
-      "weight": 20
+      "weight": 23
     },
     {
       "keyword": "fhir",
-      "weight": 15
+      "weight": 12
     },
     {
       "keyword": "medical",
-      "weight": 15
+      "weight": 14
     },
     {
       "keyword": "agent",
-      "weight": 15
+      "weight": 14
     },
     {
       "keyword": "clinic",
-      "weight": 10
+      "weight": 8
     },
     {
       "keyword": "hitl",
-      "weight": 20
+      "weight": 19
     },
     {
       "keyword": "vbc",
       "weight": 10
     },
     {
-      "keyword": "api",
+      "keyword": "drg",
+      "weight": 10
+    },
+    {
+      "keyword": "dip",
+      "weight": 10
+    },
+    {
+      "keyword": "信创",
+      "weight": 10
+    },
+    {
+      "keyword": "互联互通",
+      "weight": 10
+    },
+    {
+      "keyword": "hospital",
       "weight": 8
     },
     {
-      "keyword": "aci",
-      "weight": 8
-    },
-    {
-      "keyword": "his",
-      "weight": 8
-    },
-    {
-      "keyword": "sql",
-      "weight": 8
-    },
-    {
-      "keyword": "gui",
-      "weight": 8
-    },
-    {
-      "keyword": "ffs",
-      "weight": 8
-    },
-    {
-      "keyword": "sdk",
-      "weight": 8
-    },
-    {
-      "keyword": "roi",
-      "weight": 8
-    },
-    {
-      "keyword": "hit",
+      "keyword": "ehr",
       "weight": 8
     }
   ],
@@ -81,19 +69,25 @@
       "vector",
       "rag",
       "llm",
-      "vibe"
+      "vibe",
+      "reasoning",
+      "mcp"
     ],
     "医疗数字化/MSL": [
       "medical",
       "msl",
       "fhir",
       "drg",
+      "dip",
       "hospital",
       "clinic",
       "healthit",
       "himss",
       "ajmc",
-      "hit180"
+      "hit180",
+      "信创",
+      "互联互通",
+      "ehr"
     ],
     "工程与底层架构": [
       "github",
@@ -103,7 +97,8 @@
       "performance",
       "dns",
       "tailscale",
-      "browser"
+      "browser",
+      "wasm"
     ]
   }
 }

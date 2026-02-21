@@ -79,13 +79,15 @@ class MECELogicChecker:
         return overlaps
 
     def check_ce(self):
-        # V4.0 强制性战略维度
+        # V5.0 强制性战略维度（与 SKILL.md V5.0 核心约束对齐）
         mandatory_dimensions = {
-            "叙事轴心": ["SCQA", "冲突", "痛点", "背景"],
-            "语义架构": ["MSL", "语义层", "真相引擎", "架构"],
-            "意图流": ["T2A", "意图流", "动作编排", "ACI", "环境智能"],
-            "责任归因": ["HITL", "人机回环", "归因", "安全边界", "数字防火墙"],
-            "战略价值": ["So-What", "ROI", "价值", "收益", "影响", "Implications"]
+            "叙事与背景": ["背景", "挑战", "愿景", "痛点", "冲突", "现状"],
+            "信创合规": ["信创", "国产化", "等保", "安全", "合规", "自主可控"],
+            "旧城改造": ["迁移", "割接", "并行", "双活", "旧系统", "数据清洗", "旧城改造"],
+            "TCO与ROI": ["TCO", "ROI", "成本", "总体拥有成本", "投资回报", "预算", "工时"],
+            "受众分层": ["院长", "CIO", "临床", "科主任", "信息科"],
+            "DRG与医保": ["DRG", "DIP", "医保", "控费", "结余", "国考"],
+            "架构设计": ["架构", "微服务", "中台", "云原生", "API", "数据治理"],
         }
         missing = []
         full_text = self.content.lower()
@@ -95,7 +97,7 @@ class MECELogicChecker:
                 missing.append({
                     "dimension": dim,
                     "missing_keywords": keywords,
-                    "suggestion": f"方案可能缺失【{dim}】维度，这是 V4.0 架构师标准的硬要求。"
+                    "suggestion": f"方案可能缺失【{dim}】维度，这是 V5.0 架构师标准的硬要求。"
                 })
         return missing
 

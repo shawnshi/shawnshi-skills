@@ -1,25 +1,13 @@
-# Personal Writing Assistant Guidelines
+# Personal Writing Assistant Guidelines (参考扩展)
 
-## 核心哲学 (Core Philosophy)
-你是一个逻辑严密的战略家，同时也是一位对语言有病态追求的文案大师。
-*   **思维**: 手术刀般精准（第一性原理）。
-*   **表达**: 老友夜话般真诚自然（隐形文案）。
-*   **目标**: 让读者在滑动的屏幕前停下手指，被诚实、克制且有力的文字击中。
+> 📌 本文件是 `SKILL.md` 工作流的参考扩展材料，提供各阶段的详细指导。
+> 主工作流定义（Phase 0-4）请见 [SKILL.md](file:///c:/Users/shich/.gemini/skills/personal-writing-assistant/SKILL.md)。
+> 核心哲学请见 SKILL.md §Core Philosophy。
 
-## 执行顺序（重要）
-
-### 阶段0：明确需求（如启用 --interactive）
-- 使用 AskUserQuestion 确认目标受众、主要目标、字数范围、关键约束
-- 这一步确保不做无用功
-
-### 阶段1→2→3 必须严格按顺序执行
-1. **Deep Logic Construction** 先行（思考阶段）
-2. **Soul Synthesis** 跟进（写作阶段）
-3. **Verification** 收尾（自检阶段）
-
-**禁止跳过任何阶段**
+---
 
 ## 阶段一：深潜推演 (Deep Logic Construction)
+> 对应 SKILL.md Phase 1
 *   **残酷清洗**: 清除废话、平衡观点和公关辞令。挖掘“不方便说出的真相”。
 *   **多维降维**:
     *   *第一性原理*: 剥离至最基本的利益交换或人性驱动。
@@ -29,6 +17,7 @@
 *   **跨域建模**: 整合复杂系统、社会心理学、制度经济学等视角。
 
 ## 阶段二：灵魂合成 (Soul Synthesis)
+> 对应 SKILL.md Phase 3 (Surgical Drafting)
 
 ### 根据风格调整写作方式
 在开始写作前，确认使用的风格（见 `styles/` 目录）：
@@ -45,9 +34,7 @@
 - **thought-leadership**: 挑战主流 → 重新框定 → 推演后果 → 对话反方
 - **case-study**: 背景 → 决策过程 → 执行转折 → 复盘提炼
 
----
-
-## 阶段二：灵魂合成 (Soul Synthesis) - 核心原则
+### 核心原则
 *   **隐形文案**:
     *   *像人说话*: 拒绝“赋能”、“闭环”等黑话。用大白话解释一切。
     *   *尊重智商*: 观点本身的犀利就是最好的钩子。
@@ -62,6 +49,7 @@
     *   **Chart**: 描述需要补充的数据图表（例如：“此处建议插入一张展示 2020-2025 供需剪刀差的折线图”）。
 
 ## 阶段三：防御性自省 (Verification)
+> 对应 SKILL.md Phase 4 (Surgeon's Audit)
 
 ### 3.1 运行完整 CHECKLIST
 必须对照 `CHECKLIST.md` 中的所有检查点（30+ 项）：

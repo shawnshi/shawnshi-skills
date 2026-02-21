@@ -1,4 +1,4 @@
-# Red Team Parallel Analysis Workflow
+# Red Team Parallel Analysis Workflow (红队并行分析流程)
 
 ## Voice Notification
 
@@ -11,7 +11,7 @@ curl -s -X POST http://localhost:8888/notify \
 
 Running the **ParallelAnalysis** workflow in the **RedTeam** skill to red team arguments...
 
-## Overview
+## Overview (概述)
 
 Military-grade adversarial analysis using parallel agent deployment. Breaks arguments into atomic components, attacks from 32 different expert perspectives simultaneously, synthesizes findings, and produces the ultimate counter-argument.
 
@@ -19,26 +19,26 @@ Military-grade adversarial analysis using parallel agent deployment. Breaks argu
 
 ---
 
-## The Five Phases
+## The Five Phases (五个阶段)
 
-### PHASE 1: DECOMPOSITION
+### PHASE 1: DECOMPOSITION (原子化分解)
 Break the argument into 24 atomic claims using storyexplanation methodology.
 
-### PHASE 2: PARALLEL ANALYSIS
+### PHASE 2: PARALLEL ANALYSIS (并行分析)
 Launch 32 specialized agents (8 each: engineers, architects, pentesters, interns) with unique personalities to examine BOTH strengths AND weaknesses from their perspective.
 
-### PHASE 3: SYNTHESIS
+### PHASE 3: SYNTHESIS (综合)
 Collect all 32 analyses and identify convergent insights (both supporting and opposing).
 
-### PHASE 4: STEELMAN
+### PHASE 4: STEELMAN (钢人论证)
 Produce an 8-point story explanation (12-16 words each) representing the STRONGEST possible version of the original argument.
 
-### PHASE 5: COUNTER-ARGUMENT
+### PHASE 5: COUNTER-ARGUMENT (反驳裁决)
 Produce an 8-point story explanation (12-16 words each) representing the strongest possible rebuttal.
 
 ---
 
-## PHASE 1: Decomposition Protocol
+## PHASE 1: Decomposition Protocol (分解协议)
 
 ### Step 1.0: First Principles Deconstruction (NEW)
 **Before traditional decomposition, invoke FirstPrinciples/Deconstruct:**
@@ -78,7 +78,7 @@ Each claim should be:
 
 ---
 
-## PHASE 2: Parallel Agent Deployment
+## PHASE 2: Parallel Agent Deployment (并行代理部署)
 
 ### Launch Protocol
 Deploy 32 agents in a SINGLE message with multiple Task tool calls. Each agent receives:
@@ -197,7 +197,7 @@ Your job is balanced analysis from your unique perspective.
 
 ---
 
-## PHASE 3: Synthesis Protocol
+## PHASE 3: Synthesis Protocol (综合协议)
 
 ### Step 3.1: Collect All 32 Analyses
 Wait for all agents to complete. Compile their outputs.
@@ -235,7 +235,7 @@ Determine: Is the core thesis fundamentally sound with flawed execution, or fund
 
 ---
 
-## PHASE 4: Steelman Protocol
+## PHASE 4: Steelman Protocol (钢人论证协议)
 
 ### Purpose
 Before attacking, construct the STRONGEST possible version of the argument. This ensures intellectual honesty and prevents strawmanning.
@@ -276,7 +276,7 @@ If the author had made their case PERFECTLY, what would it look like?
 
 ---
 
-## PHASE 5: Counter-Argument
+## PHASE 5: Counter-Argument (反驳裁决)
 
 ### First Principles Analysis
 
@@ -448,7 +448,7 @@ The 8-point sequence should:
 
 ---
 
-## Integration Notes
+## Integration Notes (集成说明)
 
 **This workflow requires:**
 - Task tool for launching parallel agents

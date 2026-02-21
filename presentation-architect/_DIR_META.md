@@ -1,6 +1,7 @@
 ---
 title: _DIR_META.md - Presentation Architect
-date: 2026-02-20
+version: V5.0
+date: 2026-02-21
 status: Active
 author: antigravity
 ---

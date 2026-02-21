@@ -1,6 +1,7 @@
-# Debate Workflow
+# Debate Workflow (共识辩论流程)
 
 Full structured multi-agent debate with 3 rounds and visible transcript.
+完整的多代理 3 轮结构化辩论，包含可见的辩论记录。
 
 ## Voice Notification
 
@@ -20,7 +21,7 @@ Running the **Debate** workflow in the **Council** skill to run multi-agent deba
 
 ## Execution
 
-### Step 1: Announce the Council
+### Step 1: Announce the Council (宣布委员会)
 
 Output the debate header:
 
@@ -31,7 +32,7 @@ Output the debate header:
 **Rounds:** 3 (Positions → Responses → Synthesis)
 ```
 
-### Step 2: Round 1 - Initial Positions
+### Step 2: Round 1 - Initial Positions (第一轮 - 初始立场)
 
 Launch 4 parallel Task calls (one per council member).
 
@@ -75,7 +76,7 @@ Your perspective focuses on: [agent's domain]
 [Response]
 ```
 
-### Step 3: Round 2 - Responses & Challenges
+### Step 3: Round 2 - Responses & Challenges (第二轮 - 回应与挑战)
 
 Launch 4 parallel Task calls with Round 1 transcript included.
 
@@ -117,7 +118,7 @@ The value is in genuine intellectual friction—engage with their actual argumen
 [Response referencing others' points]
 ```
 
-### Step 4: Round 3 - Synthesis
+### Step 4: Round 3 - Synthesis (第三轮 - 综合)
 
 Launch 4 parallel Task calls with Round 1 + Round 2 transcripts.
 
@@ -158,7 +159,7 @@ Be honest about remaining disagreements—forced consensus is worse than acknowl
 [Final synthesis]
 ```
 
-### Step 5: Council Synthesis
+### Step 5: Council Synthesis (最终综合判定)
 
 After all rounds complete, synthesize the debate:
 
@@ -177,7 +178,7 @@ After all rounds complete, synthesize the debate:
 [Based on convergence and weight of arguments, the recommended approach is...]
 ```
 
-## Custom Council Members
+## Custom Council Members (自定义委员会成员)
 
 If user specifies custom members, adjust accordingly:
 

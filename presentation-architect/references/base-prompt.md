@@ -4,7 +4,7 @@ Create a presentation slide image following these guidelines:
 
 - **Type**: Presentation slide
 - **Aspect Ratio**: 16:9 (landscape)
-- **Resolution**: 2K (2560x1440)
+- **Resolution**: 4K (3840x2160)
 - **Style**: Professional slide deck
 
 ## Core Persona: The Architect

@@ -1,4 +1,4 @@
-# Adversarial Validation Pattern (Battle of Bots)
+# Adversarial Validation Pattern (对抗验证模式)
 
 ## Voice Notification
 
@@ -26,7 +26,7 @@ Running the **AdversarialValidation** workflow in the **RedTeam** skill to valid
 
 ## The Three-Round Protocol
 
-### Round 1: Competing Proposals
+### Round 1: Competing Proposals (第一轮：竞争方案)
 
 Launch 2-3 specialized agents to produce competing solutions from different perspectives:
 
@@ -65,7 +65,7 @@ Be specific and detailed - this will be compared against other proposals.
 - Audience Representative (clarity, engagement)
 - Editor (structure, flow)
 
-### Round 2: Brutal Critique
+### Round 2: Brutal Critique (第二轮：残酷批判)
 
 A critic agent reads ALL proposals and "brutally critiques" each:
 
@@ -99,7 +99,7 @@ Be harsh but fair. The goal is truth, not destruction.
 [Proposals from Round 1]
 ```
 
-### Round 3: Collaborative Synthesis
+### Round 3: Collaborative Synthesis (第三轮：协作综合)
 
 The original agents read the critique and collaborate on a final solution:
 
@@ -166,7 +166,7 @@ OUTPUT:
 
 ---
 
-## Integration with Existing RedTeam
+## Integration with Existing RedTeam (与现有红队的集成)
 
 **Relationship to 32-Agent Protocol:**
 - The 32-agent parallel analysis (parallelAnalysis.md) is for DEPTH - attacking one argument from 32 perspectives
@@ -227,7 +227,7 @@ Start with A's JWT approach (pragmatic), add B's short-lived tokens (15 min) and
 
 ---
 
-## Key Principles
+## Key Principles (核心原则)
 
 1. **Genuine competition** - Proposals must represent real alternatives, not strawmen
 2. **Brutal but fair critique** - Find real flaws, acknowledge real strengths
@@ -237,7 +237,7 @@ Start with A's JWT approach (pragmatic), add B's short-lived tokens (15 min) and
 
 ---
 
-## When NOT to Use
+## When NOT to Use (何时不使用)
 
 - Simple decisions with obvious answers (overkill)
 - Time-critical situations (too slow)

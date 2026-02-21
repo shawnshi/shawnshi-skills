@@ -1,10 +1,18 @@
-"""
-<!-- Input: Topic, Mode (Summary/Deep), Role, Style, Template -->
-<!-- Output: Full Prompt Context for Strategic Writing -->
-<!-- Pos: scripts/assistant.py. Context builder for the writing engine. -->
+# ---
+# Title: Personal Writing Assistant - Context Builder
+# Date: 2026-02-21
+# Status: Active
+# Author: Strategy Architect
+# Description: CLI tool to assemble full prompt context for the writing engine.
+# ---
 
-!!! Maintenance Protocol: Update file paths if directory structure changes.
-!!! Ensure references/ directory contains all required MD files.
+"""
+Context builder for the Personal Writing Assistant.
+Assembles guidelines, templates, styles, anti-patterns, and checklist
+into a single prompt for the LLM to process.
+
+Usage:
+    python assistant.py --topic "医院数字化转型" --mode Deep --role "资深顾问" --style narrative --template thought-leadership
 """
 
 import argparse
@@ -13,7 +21,6 @@ import os
 from pathlib import Path
 
 # --- Configuration ---
-# Adjusted for new directory structure: this script is in /scripts, references are in /references
 SCRIPT_DIR = Path(__file__).parent.absolute()
 ROOT_DIR = SCRIPT_DIR.parent
 REFERENCES_DIR = ROOT_DIR / "references"
@@ -22,14 +29,9 @@ GUIDELINES_PATH = REFERENCES_DIR / "GUIDELINES.md"
 EXAMPLES_PATH = REFERENCES_DIR / "EXAMPLES.md"
 CHECKLIST_PATH = REFERENCES_DIR / "CHECKLIST.md"
 ANTI_PATTERNS_PATH = REFERENCES_DIR / "ANTI_PATTERNS.md"
-TEMPLATES_DIR = ROOT_DIR / "templates" # Assuming templates are still in root or moved?
-# The analysis said templates/ exists. Let's assume it stayed in root or needs to be found.
-# Actually I should have moved templates/ to references/templates/ or kept it. 
-# The mv command `mv *.md references/` only moved files in root. Subdirs `templates/` etc stayed in root.
-# Let's keep templates in root for now or references/templates would be cleaner?
-# Standardizing: let's point to ROOT_DIR/templates for now.
 TEMPLATES_DIR = ROOT_DIR / "templates"
 STYLES_DIR = ROOT_DIR / "styles"
+
 
 def load_file(file_path):
     """Load a file with proper error handling."""
@@ -41,10 +43,13 @@ def load_file(file_path):
     except Exception as e:
         return f"[Error reading file: {str(e)}]"
 
+
 def generate_prompt(topic, mode, role, style="default", template=None):
+    """Assemble the full prompt context from all reference materials."""
     guidelines = load_file(GUIDELINES_PATH)
     examples = load_file(EXAMPLES_PATH)
     checklist = load_file(CHECKLIST_PATH)
+    anti_patterns = load_file(ANTI_PATTERNS_PATH)
 
     # Load template if specified
     template_content = ""
@@ -80,38 +85,56 @@ def generate_prompt(topic, mode, role, style="default", template=None):
 **Quality Checklist**:
 {checklist}
 
+**Anti-Pattern Alerts**:
+{anti_patterns}
+
 **Task**:
 Generate a deep, insightful article on "{topic}".
 
-**Three-Phase Process**:
-1. **Deep Logic Construction**: Find the hidden dynamics and inconvenient truths
-2. **Soul Synthesis**: Draft with conversational tone, verb-driven style
-3. **Verification**: Self-check against the checklist and append Analyst's Note
+**Five-Phase Process**:
+1. **Phase 0 - Empathy & Reconnaissance**: Align intent and anchor facts
+2. **Phase 1 - Deep Logic Construction**: Find the hidden dynamics and inconvenient truths
+3. **Phase 2 - SCQA Architecture**: Generate the skeletal outline
+4. **Phase 3 - Surgical Drafting**: Draft with verb-driven style and evidence weaving
+5. **Phase 4 - Surgeon's Audit**: Self-check against checklist, anti-patterns, and append Analyst's Note
 
 **Constraints**:
 - Do NOT use clichés like "赋能" (empower), "闭环" (closed loop), or "抓手" (grip)
 - Speak like a human expert having a late-night coffee with a peer
-- Run through the full checklist before finalizing
+- Run through the full checklist and anti-pattern scan before finalizing
 """
     return final_prompt
 
+
 def main():
-    parser = argparse.ArgumentParser(description="Personal Writing Assistant - Generate insightful articles")
+    parser = argparse.ArgumentParser(
+        description="Personal Writing Assistant - Generate insightful articles"
+    )
     parser.add_argument("--topic", required=True, help="The core subject matter")
-    parser.add_argument("--mode", default="Standard", choices=["Summary", "Standard", "Deep"],
-                        help="Writing depth (default: Standard)")
-    parser.add_argument("--role", default="Strategic Consultant",
-                        help="The persona to adopt (default: Strategic Consultant)")
-    parser.add_argument("--style", default="default",
-                        choices=["default", "narrative", "academic", "provocative", "balanced"],
-                        help="Writing style variant")
-    parser.add_argument("--template",
-                        choices=["industry-analysis", "product-review", "thought-leadership", "case-study"],
-                        help="Use a specific article template")
+    parser.add_argument(
+        "--mode", default="Standard",
+        choices=["Summary", "Standard", "Deep"],
+        help="Writing depth (default: Standard)"
+    )
+    parser.add_argument(
+        "--role", default="Strategic Consultant",
+        help="The persona to adopt (default: Strategic Consultant)"
+    )
+    parser.add_argument(
+        "--style", default="default",
+        choices=["default", "narrative", "academic", "provocative", "balanced"],
+        help="Writing style variant"
+    )
+    parser.add_argument(
+        "--template",
+        choices=["industry-analysis", "product-review", "thought-leadership", "case-study"],
+        help="Use a specific article template"
+    )
     args = parser.parse_args()
 
     # Generate and print the prompt for the LLM to process
     print(generate_prompt(args.topic, args.mode, args.role, args.style, args.template))
+
 
 if __name__ == "__main__":
     main()

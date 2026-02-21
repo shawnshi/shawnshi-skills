@@ -54,21 +54,24 @@ description: 顶级医疗数字化转型与IT架构设计专家 (V5.0)。融合M
     - ** 数据治理与合规 (Data Governance)**：明确主数据管理 (MDM) 规则，列出信创适配（OS、数据库）与加密脱敏标准。
 
 ### Phase 5：确定性集成与逻辑审计 (MECE Audit)
-1. **自动化校验**：执行 `python scripts/logic_checker.py_v1_Draft.md`。
+1. **自动化校验**：执行 `python scripts/logic_checker.py [ProjectName]_v1_Draft.md`。
 2. **修正重构**：如果状态为 `Warning`，自动重构语义重叠、遗漏信创合规或缺失 TCO 视角的章节。
 
 ### Phase 6: Adversarial Delivery Audit (旧城改造与实施红队对抗)
-1. **任务**：系统再好，也会死于数据迁移与临床抵触。使用“logic-adversary”切换至“红队（刁钻的CIO与愤怒的医生）”视角发起攻击。
-2. **输出《实施摩擦力与减缓矩阵 (Friction & Mitigation Matrix)》**：
-    - 强制评估：旧 HIS/LIS 历史数据清洗与迁移风险、第三方厂商（如 PACS/手麻系统）接口拒不对接或乱收费的风险。
-    - 应对方案：设计“新老系统双活并行期”、“灰度上线切块策略”、“科室 Key User 利益绑定机制”。
-3. **物理写入**：将减缓策略有机融合入实施路线图 (Roadmap) 章节，拒绝作为孤立附录存在。
+1. **任务**：系统再好，也会死于数据迁移与临床抵触。调用 `logic-adversary` 技能发起红队攻击。
+2. **跨技能调用规范**：
+    - *调用方式*：激活 `logic-adversary` 技能，设定角色为"刁钻的CIO与愤怒的临床主任"。
+    - *输入*：将 Phase 4 生成的方案草稿（业务蓝图 + 架构设计 + 实施路线图）作为攻击目标。
+    - *攻击维度*：旧 HIS/LIS 历史数据清洗与迁移风险、第三方厂商（如 PACS/手麻系统）接口拒不对接或乱收费风险、临床科室抵触与培训成本、信创环境性能回退风险。
+    - *期望输出格式*：结构化的《实施摩擦力与减缓矩阵 (Friction & Mitigation Matrix)》表格，每行包含：[风险项] | [影响评级(H/M/L)] | [减缓策略] | [责任方]。
+3. **应对方案融合**：将减缓矩阵的策略有机融入实施路线图 (Roadmap) 章节，拒绝作为孤立附录存在。具体包括："新老系统双活并行期"、"灰度上线切块策略"、"科室 Key User 利益绑定机制"。
 
 ### Phase 7: Delivery & Executive Summary (最终集成与高管摘要)
-1. **语义消毒**：执行 `buzzword_auditor.py`，物理删除“赋能、抓手、打通生态”等虚假咨询词汇，替换为具体的工程动作（如“通过 API 网关实现业务中台与前端解耦”）。
-2. **Executive Summary**：生成 1 页纸的“高管决策备忘录 (Answer-First)”。说明：为何现在转型？核心架构优势？硬性合规如何满足？TCO与ROI预估？
-3. **交付**：整合生成 `_Digital_Blueprint_vFinal.md`。
-4. **Final Review (STOP)**: 展示全文，并强制附带 **1 个可能导致项目延期的致命风险提示**，确认验收。
+1. **语义消毒**：执行 `python scripts/buzzword_auditor.py [ProjectName]_v1_Draft.md`，物理删除"赋能、抓手、打通生态"等虚假咨询词汇，替换为具体的工程动作（如"通过 API 网关实现业务中台与前端解耦"）。同时检测空泛量化表述（如"显著提升"）并替换为 HEOR 级量化数据。
+2. **Executive Summary**：生成 1 页纸的"高管决策备忘录 (Answer-First)"。说明：为何现在转型？核心架构优势？硬性合规如何满足？TCO与ROI预估？
+3. **文档集成**：如果方案涉及多个分章节文件，执行 `python scripts/manifest_manager.py manifest.json [ProjectName]_Digital_Blueprint_vFinal.md` 将各章节合并为完整交付物。
+4. **交付**：整合生成 `[ProjectName]_Digital_Blueprint_vFinal.md`。
+5. **Final Review (STOP)**: 展示全文，并强制附带 **1 个可能导致项目延期的致命风险提示**，确认验收。
 
 ## 4. 绝对禁令 (Anti-Patterns)
 - ❌ **禁售软件视角**：不要把方案写成产品说明书。必须从“医院痛点”推导至“IT能力”，而非罗列模块。

@@ -1,6 +1,7 @@
-# Quick Workflow
+# Quick Workflow (速查流程)
 
 Fast single-round perspective check. Use for sanity checks and quick feedback.
+快速单轮视角检查。用于直觉验证与快速反馈。
 
 ## Voice Notification
 
@@ -20,7 +21,7 @@ Running the **Quick** workflow in the **Council** skill to get fast perspectives
 
 ## Execution
 
-### Step 1: Announce Quick Council
+### Step 1: Announce Quick Council (宣布快速会议)
 
 ```markdown
 ## Quick Council: [Topic]
@@ -29,7 +30,7 @@ Running the **Quick** workflow in the **Council** skill to get fast perspectives
 **Mode:** Single round (fast perspectives)
 ```
 
-### Step 2: Parallel Perspective Gathering
+### Step 2: Parallel Perspective Gathering (并行收集视角)
 
 Launch all council members in parallel (single Task call batch).
 
@@ -49,7 +50,7 @@ Give your immediate take from your specialized perspective:
 This is a quick sanity check, not a full debate.
 ```
 
-### Step 3: Output Perspectives
+### Step 3: Output Perspectives (输出各方视角)
 
 ```markdown
 ### Perspectives
@@ -73,7 +74,7 @@ This is a quick sanity check, not a full debate.
 **Recommendation:** [Proceed / Reconsider / Need full debate]
 ```
 
-## When to Escalate
+## When to Escalate (何时升级)
 
 If the quick check reveals significant disagreement or complex trade-offs, recommend:
 

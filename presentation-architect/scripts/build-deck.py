@@ -1,9 +1,9 @@
 """
 <!-- Standard Header -->
-@Input: outline.md, images/ (optional), blueprint-template.md
+@Input: outline.md, prompts/, images/ (optional)
 @Output: deck.pptx, deck.pdf
-@Pos: Phase 3 (Assembly Phase)
-@Maintenance Protocol: Parameter changes must sync SKILL.md Phase 3.
+@Phase: Phase 4 - Visual Forging & Assembly (编排引擎)
+@Maintenance Protocol: Parameter changes must sync SKILL.md Phase 4.
 """
 import os
 import subprocess

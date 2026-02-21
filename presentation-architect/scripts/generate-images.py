@@ -1,9 +1,9 @@
 """
 <!-- Standard Header -->
-@Input: working_memory.json (prompts)
-@Output: assets/images/*.png
-@Pos: Phase 2 (Forging Phase)
-@Maintenance Protocol: API or path logic changes must sync SKILL.md.
+@Input: prompts/*.md
+@Output: NN-slide-*.png
+@Phase: Phase 4 - Visual Forging & Assembly (图像生成器)
+@Maintenance Protocol: API or path logic changes must sync SKILL.md Phase 4.
 """
 import os
 import glob

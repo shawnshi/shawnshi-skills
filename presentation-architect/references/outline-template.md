@@ -2,6 +2,8 @@
 
 Standard structure for slide deck outlines with style instructions.
 
+> **用途分治**：本文件定义 Agent 产出的标准 `outline.md` 格式，供 `generate-prompts.py` 等自动化脚本解析。如需包含演讲稿和 Q&A 预演的高端交付物蓝图，请使用 `blueprint-template.md`。
+
 ## Outline Format
 
 ```markdown

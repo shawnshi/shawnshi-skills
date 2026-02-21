@@ -1,58 +1,81 @@
 """
-<!-- Intelligence Hub: Dynamic Calibration V2.1 -->
+<!-- Intelligence Hub: Dynamic Calibration V3.0 -->
 @Input: root/pai/memory.md
 @Output: references/strategic_focus.json
 @Pos: Phase 0 (Focus Calibration)
+@Maintenance Protocol: Weight table changes must sync SKILL.md.
 """
 import json
-import os
 import re
 from pathlib import Path
 from collections import Counter
+from utils import PROJECT_ROOT, HUB_DIR
+
+# Resolve paths dynamically
+MEMORY_PATH = PROJECT_ROOT / "pai" / "memory.md"
+FOCUS_PATH = HUB_DIR / "references" / "strategic_focus.json"
+
+# Base weights for strategic domains (minimum weight even if not in memory.md)
+BASE_WEIGHTS = {
+    "msl": 15, "ace": 15, "hitl": 15,
+    "medical": 12, "agent": 12, "fhir": 12,
+    "clinic": 8, "vbc": 8, "drg": 10, "dip": 10,
+}
+
+# Frequency bonus scaling: each occurrence adds this much weight (capped)
+FREQ_BONUS_PER_HIT = 2
+MAX_BONUS = 10
+
 
 def calibrate():
-    # 1. Resolve Paths Safely
-    current_dir = Path(__file__).parent
-    root_dir = current_dir.parents[2] # .../skills/intelligence-hub/scripts -> .../.gemini
-    
-    memory_path = root_dir / "pai" / "memory.md"
-    focus_path = current_dir.parent / "references" / "strategic_focus.json"
-    
-    if not memory_path.exists():
-        print(f"Error: memory.md not found at {memory_path}")
+    if not MEMORY_PATH.exists():
+        print(f"⚠️ Warning: memory.md not found at {MEMORY_PATH}")
+        print("  Skipping calibration. Using existing strategic_focus.json as-is.")
         return
 
-    # 2. Extract Strategic Keywords
-    with open(memory_path, 'r', encoding='utf-8') as f:
-        content = f.read().lower()
-    
-    # Heuristic: Focus on MSL, ACE, HITL and Medical domains
-    words = re.findall(r'\b[a-z]{3,}\b', content)
-    weights = {
-        "msl": 20, "ace": 20, "hitl": 20, "medical": 15, 
-        "agent": 15, "fhir": 15, "clinic": 10, "vbc": 10
-    }
-    
-    # 3. Update focus.json (Skeleton)
-    with open(focus_path, 'r', encoding='utf-8') as f:
-        focus_data = json.load(f)
-    
-    # Sync weights based on occurrence frequency in memory.md
-    for kw, weight in weights.items():
-        if kw in content:
-            # Upsert into strategic_keywords
-            exists = False
-            for entry in focus_data['strategic_keywords']:
-                if entry['keyword'] == kw:
-                    entry['weight'] = weight
-                    exists = True
-            if not exists:
-                focus_data['strategic_keywords'].append({"keyword": kw, "weight": weight})
+    if not FOCUS_PATH.exists():
+        print(f"⚠️ Warning: strategic_focus.json not found at {FOCUS_PATH}")
+        return
 
-    with open(focus_path, 'w', encoding='utf-8') as f:
-        json.dump(focus_data, f, ensure_ascii=False, indent=2)
-    
-    print(f"Strategic Focus calibrated successfully at: {focus_path}")
+    # 1. Read and tokenize memory.md
+    content = MEMORY_PATH.read_text(encoding="utf-8").lower()
+    words = re.findall(r'\b[a-z]{3,}\b', content)
+    word_freq = Counter(words)
+
+    # 2. Load existing focus config
+    focus_data = json.loads(FOCUS_PATH.read_text(encoding="utf-8"))
+    existing_keywords = {
+        entry["keyword"]: entry for entry in focus_data["strategic_keywords"]
+    }
+
+    # 3. Update weights based on frequency analysis
+    updated_count = 0
+    for keyword, base_weight in BASE_WEIGHTS.items():
+        freq = word_freq.get(keyword, 0)
+        # Dynamic weight = base + frequency bonus (capped)
+        bonus = min(freq * FREQ_BONUS_PER_HIT, MAX_BONUS)
+        new_weight = base_weight + bonus
+
+        if keyword in existing_keywords:
+            old_weight = existing_keywords[keyword]["weight"]
+            existing_keywords[keyword]["weight"] = new_weight
+            if old_weight != new_weight:
+                updated_count += 1
+                print(f"  ↻ {keyword}: {old_weight} → {new_weight} (freq={freq})")
+        else:
+            focus_data["strategic_keywords"].append({
+                "keyword": keyword, "weight": new_weight
+            })
+            updated_count += 1
+            print(f"  + {keyword}: {new_weight} (new, freq={freq})")
+
+    # 4. Write back
+    FOCUS_PATH.write_text(
+        json.dumps(focus_data, ensure_ascii=False, indent=2),
+        encoding="utf-8",
+    )
+    print(f"\n✅ Strategic Focus calibrated: {updated_count} keywords updated at {FOCUS_PATH}")
+
 
 if __name__ == "__main__":
     calibrate()

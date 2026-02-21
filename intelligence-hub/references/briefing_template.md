@@ -1,4 +1,5 @@
 # Intelligence Hub: 战略情报深度简报 [{{DATE}}]
+> 生成时间: {{TIMESTAMP}} | 数据源: Intelligence Hub V4.0
 
 ## 📝 今日核心洞察
 {{INSIGHTS}}
