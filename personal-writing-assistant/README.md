@@ -1,13 +1,14 @@
 ﻿# 专栏写作助手 (personal-writing-assistant)
 
-顶级专栏作家与战略思想领袖引擎 (V4.1)。专为生成高信噪比、高穿透力且具备"反共识叙事美学"的深度文章设计。
+顶级专栏作家与战略思想领袖引擎 (V4.2)。专为生成高信噪比、高穿透力且具备"反共识叙事美学"的深度文章设计，同时具备卓越的医疗/数字健康政策纵深推演能力。
 
 ## 核心能力
 - 严格遵循专有的文字美学哲学：倡导动词骨骼 (Verb-Driven)、拒绝平铺直叙构建暗流感 (Narrative Resonance) 及使用克制冰凉的口吻 (Sincere Coldness)。
 - 强制基于 **SCQA 架构**（情境、冲突、问题、答案）产出极简与锋利的文章大纲。
 - **破除共识与侦察**：借助搜索工具动态获取真实的财报数据、宏观事件与关键人物发言点，确立冷酷的事实锚点。
 - **手术刀级的起草**：摒弃任何形式的"AI 八股文"，应用极度反差感的钩子开头 (Hook) 及留白悬念式收尾。
-- **自我残酷审查**：在对外输出文本前，对照 30+ 项检查清单与 15 条反模式逐一筛查，确保符合长短句的波浪交替韵律。
+- **自我残酷审查**：在对外输出文本前，对照 30+ 项检查清单与 18 条反模式（含医疗科技专属陷阱）逐一筛查，确保符合长短句的波浪交替韵律。
+- **数字医疗垂直打击**：内置 `digital-health` 风格与 `health-policy-analysis` 模板，强制使用"不可能三角"进行医疗政策与战略生态的降维剖析。
 
 ## 快速入门
 
@@ -18,11 +19,11 @@
 ### 2. CLI 方式（通过 assistant.py）
 ```bash
 python scripts/assistant.py \
-  --topic "医院数字化转型" \
+  --topic "DRG支付改革下的医疗科技厂商出局危机" \
   --mode Deep \
   --role "资深数字健康顾问" \
-  --style provocative \
-  --template thought-leadership
+  --style digital-health \
+  --template health-policy-analysis
 ```
 
 ### 3. 质量评分
@@ -40,6 +41,7 @@ python metrics/quality_scoring.py article.md --verbose
 | **Provocative** | `styles/provocative.md` | 挑战主流共识，激进论断，高传播性 |
 | **Academic** | `styles/academic.md` | 数据驱动，引用充分，可验证性强 |
 | **Balanced** | `styles/balanced.md` | 多视角呈现，寻求共识，政策建议 |
+| **Digital Health** | `styles/digital-health.md` | 医疗垂直特化，不可能三角推演与体制内高阶犀利透视 |
 
 ## 可用模板
 
@@ -49,6 +51,7 @@ python metrics/quality_scoring.py article.md --verbose
 | **Industry Analysis** | `templates/industry-analysis.md` | 行业现状/趋势/竞争格局分析 |
 | **Case Study** | `templates/case-study.md` | 具体案例深度剖析 |
 | **Product Review** | `templates/product-review.md` | 产品/服务/方案评测 |
+| **Health Policy Analysis** | `templates/health-policy-analysis.md` | 医疗政策解析与战略走向推演 |
 
 ## 集成工作流
 - **humanizer-zh-pro 润色流水线** (`integrations/humanizer-pipeline.md`)：写作 → 润色去 AI 味

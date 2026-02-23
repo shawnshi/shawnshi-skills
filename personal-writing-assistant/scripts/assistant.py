@@ -1,6 +1,6 @@
 # ---
 # Title: Personal Writing Assistant - Context Builder
-# Date: 2026-02-21
+# Date: 2026-02-24
 # Status: Active
 # Author: Strategy Architect
 # Description: CLI tool to assemble full prompt context for the writing engine.
@@ -12,7 +12,7 @@ Assembles guidelines, templates, styles, anti-patterns, and checklist
 into a single prompt for the LLM to process.
 
 Usage:
-    python assistant.py --topic "医院数字化转型" --mode Deep --role "资深顾问" --style narrative --template thought-leadership
+    python assistant.py --topic "医院数字化转型" --mode Deep --role "资深数字健康顾问" --style digital-health --template health-policy-analysis
 """
 
 import argparse
@@ -29,6 +29,7 @@ GUIDELINES_PATH = REFERENCES_DIR / "GUIDELINES.md"
 EXAMPLES_PATH = REFERENCES_DIR / "EXAMPLES.md"
 CHECKLIST_PATH = REFERENCES_DIR / "CHECKLIST.md"
 ANTI_PATTERNS_PATH = REFERENCES_DIR / "ANTI_PATTERNS.md"
+HEALTH_SOURCES_PATH = REFERENCES_DIR / "HEALTHCARE_SOURCES.md"
 TEMPLATES_DIR = ROOT_DIR / "templates"
 STYLES_DIR = ROOT_DIR / "styles"
 
@@ -50,6 +51,11 @@ def generate_prompt(topic, mode, role, style="default", template=None):
     examples = load_file(EXAMPLES_PATH)
     checklist = load_file(CHECKLIST_PATH)
     anti_patterns = load_file(ANTI_PATTERNS_PATH)
+    
+    # Conditionally load healthcare sources if it's a digital health style or policy template
+    health_sources = ""
+    if style == "digital-health" or template == "health-policy-analysis":
+        health_sources = load_file(HEALTH_SOURCES_PATH)
 
     # Load template if specified
     template_content = ""
@@ -81,6 +87,8 @@ def generate_prompt(topic, mode, role, style="default", template=None):
 
 **Reference Examples**:
 {examples}
+
+{f"**Healthcare Data Anchors (Mandatory)**:{chr(10)}{health_sources}" if health_sources else ""}
 
 **Quality Checklist**:
 {checklist}
@@ -122,12 +130,12 @@ def main():
     )
     parser.add_argument(
         "--style", default="default",
-        choices=["default", "narrative", "academic", "provocative", "balanced"],
+        choices=["default", "narrative", "academic", "provocative", "balanced", "digital-health"],
         help="Writing style variant"
     )
     parser.add_argument(
         "--template",
-        choices=["industry-analysis", "product-review", "thought-leadership", "case-study"],
+        choices=["industry-analysis", "product-review", "thought-leadership", "case-study", "health-policy-analysis"],
         help="Use a specific article template"
     )
     args = parser.parse_args()
@@ -138,3 +146,4 @@ def main():
 
 if __name__ == "__main__":
     main()
+
