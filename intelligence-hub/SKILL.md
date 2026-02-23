@@ -27,7 +27,7 @@ language: py
 1. **执行**：`python scripts/refine.py`。
 2. **功能**：基于战略关键词权重评分排序，生成结构化 AI 提示词至 `tmp/refinement_prompt.txt`。
 3. **AI 交互**：Agent 读取提示词，执行二阶推演（"So What?" 审计）并完成**全量列表翻译**。
-4. **输出**：Agent 将结果写入 `MEMORY/news/intelligence_current_refined.json`。**[硬约束：必须包含 top_10 和 translations 字典]**。
+4. **输出**：Agent 将结果写入 `MEMORY/news/intelligence_current_refined.json`。**[硬约束：必须包含 `top_10`, `translations`, `insights`, `punchline`, `digest`, `market` 六个核心字段]**。
 5. **逻辑湖联结**：将情报与 `memory.md` 中的现有资产进行交叉验证。
 6. **分级标注**：标注 L1-L4 等级（参见 `references/quality_standard.md`）。
 

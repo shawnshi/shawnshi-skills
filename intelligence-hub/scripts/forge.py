@@ -84,6 +84,7 @@ def forge_briefing():
         for item in items[:12]:
             # Use AI translation if available, otherwise fallback to raw desc
             trans = ai_translations.get(item['url'], {})
+            if not isinstance(trans, dict): trans = {}
             title = trans.get('title_zh', item['title'])
             desc = trans.get('desc_zh', item.get('raw_desc', '').strip()[:100].replace('\n', ' '))
             

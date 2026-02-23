@@ -1,0 +1,207 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Garmin 生物计量审计报告</title>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js@4/dist/chart.umd.min.js"></script>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+            background-color: #0F172A;
+            color: #F8FAFC;
+            padding: 20px;
+            line-height: 1.5;
+        }
+        .container { max-width: 1200px; margin: 0 auto; }
+        .header-title { text-align: center; margin-bottom: 30px; }
+        .header-title h1 { font-size: 2.5rem; font-weight: 800; }
+        .header-period { color: #94A3B8; font-weight: 600; letter-spacing: 1px; }
+        
+        .dashboard-top { display: grid; grid-template-columns: 1fr 2fr; gap: 20px; margin-bottom: 30px; }
+        .protocol-card {
+            background: #F4B942;
+            border-radius: 20px;
+            padding: 25px;
+            text-align: center;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+        }
+        .protocol-icon { font-size: 3.5rem; }
+        .protocol-move { font-size: 1.8rem; font-weight: 800; margin: 10px 0; }
+        
+        .meta-card {
+            background: #1E293B;
+            border-radius: 20px;
+            padding: 25px;
+            display: flex;
+            flex-direction: column;
+            justify-content: space-between;
+        }
+        .meta-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 15px; }
+        .meta-label { color: #94A3B8; font-size: 0.8rem; font-weight: 600; }
+        .meta-value { font-size: 1.5rem; font-weight: 700; }
+
+        .stats-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 15px; margin-bottom: 30px; }
+        .stat-card {
+            background: #1E293B;
+            border-radius: 15px;
+            padding: 20px;
+            border-left: 4px solid #0076D6;
+        }
+        .stat-label { color: #94A3B8; font-size: 0.8rem; margin-bottom: 5px; }
+        .stat-value { font-size: 1.8rem; font-weight: 800; }
+
+        .charts-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(500px, 1fr)); gap: 20px; margin-bottom: 30px; }
+        .chart-card { background: #1E293B; border-radius: 20px; padding: 25px; }
+        .chart-title { font-size: 1.1rem; font-weight: 700; margin-bottom: 15px; }
+        .chart-insight {
+            margin-top: 15px; padding: 12px; background: rgba(255,255,255,0.03);
+            border-radius: 10px; font-size: 0.85rem; color: #94A3B8;
+            border-left: 3px solid #0076D6;
+        }
+
+        .audit-section { 
+            background: #1E293B; 
+            border-radius: 24px; 
+            padding: 45px; 
+            border: 1px solid rgba(255,255,255,0.1);
+            box-shadow: 0 20px 50px rgba(0,0,0,0.4);
+            position: relative;
+            overflow: hidden;
+        }
+        .audit-section::before {
+            content: 'EXPERT STRATEGIC AUDIT';
+            position: absolute;
+            top: 0;
+            left: 0;
+            background: #0076D6;
+            color: white;
+            padding: 5px 25px;
+            font-size: 0.75rem;
+            font-weight: 900;
+            letter-spacing: 2px;
+            border-bottom-right-radius: 15px;
+        }
+        .audit-content { 
+            font-size: 1.15rem; 
+            line-height: 1.9; 
+            margin-bottom: 40px; 
+            color: #F1F5F9;
+            white-space: pre-line;
+        }
+        
+        .quant-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 20px; border-top: 1px solid rgba(255,255,255,0.1); padding-top: 20px; }
+        .bar-bg { height: 8px; background: rgba(255,255,255,0.1); border-radius: 4px; overflow: hidden; margin-top: 5px; }
+        .bar-fill { height: 100%; transition: width 1s ease; }
+        
+        .footer { text-align: center; padding: 30px; opacity: 0.5; font-size: 0.8rem; }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header-title">
+            <h1>BIO-METRIC AUDIT</h1>
+            <div class="header-period" id="header-period">PERIOD: --</div>
+        </div>
+
+        <div class="dashboard-top">
+            <div class="protocol-card">
+                <div class="protocol-icon">⚠️</div>
+                <div class="protocol-move" id="p-move">--</div>
+                <div id="p-desc" style="font-size: 0.9rem; opacity: 0.9;">--</div>
+            </div>
+            <div class="meta-card">
+                <div class="meta-grid">
+                    <div><div class="meta-label">VO2 MAX</div><div class="meta-value" id="m-vo2">--</div></div>
+                    <div><div class="meta-label">身体年龄</div><div class="meta-value" id="m-age">--</div></div>
+                    <div><div class="meta-label">HRV 状态</div><div class="meta-value" id="m-hrv">--</div></div>
+                    <div><div class="meta-label">RHR 趋势</div><div class="meta-value" id="m-rhr">--</div></div>
+                </div>
+            </div>
+        </div>
+
+        <div class="stats-grid" id="stats"></div>
+        <div class="charts-grid" id="charts"></div>
+
+        <div class="audit-section" id="audit-sec" style="display:none;">
+            <div class="audit-content" id="audit-text"></div>
+            <div class="quant-grid">
+                <div>
+                    <div style="display:flex; justify-content:space-between; font-size:0.85rem;"><span>输入 (修复)</span><span id="v-in">0</span></div>
+                    <div class="bar-bg"><div class="bar-fill" id="b-in" style="background:#44AF69; width:0%"></div></div>
+                </div>
+                <div>
+                    <div style="display:flex; justify-content:space-between; font-size:0.85rem;"><span>损耗 (应激)</span><span id="v-loss">0</span></div>
+                    <div class="bar-bg"><div class="bar-fill" id="b-loss" style="background:#D8315B; width:0%"></div></div>
+                </div>
+                <div>
+                    <div style="display:flex; justify-content:space-between; font-size:0.85rem;"><span>输出 (身心准备度)</span><span id="v-out">0</span></div>
+                    <div class="bar-bg"><div class="bar-fill" id="b-out" style="background:#0076D6; width:0%"></div></div>
+                    <div style="display:grid; grid-template-columns:1fr 1fr; gap:10px; margin-top:8px;">
+                        <div class="bar-bg" style="height:4px;"><div class="bar-fill" id="b-cog" style="background:#8E44AD; width:0%"></div></div>
+                        <div class="bar-bg" style="height:4px;"><div class="bar-fill" id="b-phy" style="background:#F58220; width:0%"></div></div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="footer">GARMIN AUDIT SYSTEM &copy; 2026</div>
+    </div>
+
+    <script>
+        const chartsData = {"stats": {"平均睡眠": "6.3h", "平均分": "72", "最高电量": "95", "平均HRV": "38ms", "平均RHR": "57bpm", "平均压力": "35", "总运动": "2"}, "charts": [{"title": "睡眠修复分析", "insight": "一致性：高。深睡占比 19.7%。节律稳定性是修复效率的第一杠杆。", "chart": {"type": "bar", "data": {"labels": ["2026-01-23", "2026-01-24", "2026-01-25", "2026-01-26", "2026-01-27", "2026-01-28", "2026-01-29", "2026-01-30", "2026-01-31", "2026-02-01", "2026-02-02", "2026-02-03", "2026-02-04", "2026-02-05", "2026-02-06", "2026-02-07", "2026-02-08", "2026-02-09", "2026-02-10", "2026-02-11", "2026-02-12", "2026-02-13", "2026-02-14", "2026-02-15", "2026-02-16", "2026-02-17", "2026-02-19", "2026-02-20", "2026-02-21"], "datasets": [{"label": "时长", "data": [5.033333333333333, 7.783333333333333, 8.416666666666666, 6.783333333333333, 4.483333333333333, 7.716666666666667, 5.466666666666667, 8.0, 6.333333333333333, 7.533333333333333, 7.55, 1.5166666666666666, 7.666666666666667, 7.533333333333333, 5.9, 8.1, 5.5, 6.5, 7.4, 4.666666666666667, 6.0, 5.983333333333333, 5.121388888888889, 6.05, 5.766666666666667, 4.116666666666666, 6.55, 7.833333333333333, 5.916666666666667], "backgroundColor": "#0076D6", "yAxisID": "y"}, {"label": "得分", "data": [41, 87, 86, 83, 61, 89, 37, 91, 81, 86, 89, 15, 73, 83, 81, 91, 71, 78, 72, 66, 74, 74, 64, 69, 74, 40, 79, 83, 72], "type": "line", "borderColor": "#F4B942", "yAxisID": "y1"}]}, "options": {"scales": {"y": {"position": "left"}, "y1": {"position": "right", "max": 100}}}}}, {"title": "身体电量 (Body Battery)", "insight": "平均充能 +49.8。起床峰值 47 反映了回血的绝对厚度。", "chart": {"type": "bar", "data": {"labels": ["2026-01-23", "2026-01-24", "2026-01-25", "2026-01-26", "2026-01-27", "2026-01-28", "2026-01-29", "2026-01-30", "2026-01-31", "2026-02-01", "2026-02-02", "2026-02-03", "2026-02-04", "2026-02-05", "2026-02-06", "2026-02-07", "2026-02-08", "2026-02-09", "2026-02-10", "2026-02-11", "2026-02-12", "2026-02-13", "2026-02-14", "2026-02-15", "2026-02-16", "2026-02-17", "2026-02-18", "2026-02-19", "2026-02-20", "2026-02-21"], "datasets": [{"label": "峰值", "data": [15, 76, 95, 67, 44, 86, 29, 80, 80, 65, 92, 6, 36, 55, 78, 91, 59, 68, 53, 82, 77, 77, 49, 56, 81, 24, 58, 83, 75, 47], "backgroundColor": "#44AF69"}]}, "options": {"scales": {"y": {"max": 100}}}}}, {"title": "HRV & 静息心率趋势", "insight": "状态：BALANCED。反映了系统对当前 被动熵增 (焦虑/代谢压力) 的适应容量。", "chart": {"type": "line", "data": {"labels": ["2026-01-23", "2026-01-24", "2026-01-25", "2026-01-26", "2026-01-27", "2026-01-28", "2026-01-29", "2026-01-30", "2026-01-31", "2026-02-01", "2026-02-02", "2026-02-03", "2026-02-04", "2026-02-05", "2026-02-06", "2026-02-07", "2026-02-08", "2026-02-09", "2026-02-10", "2026-02-11", "2026-02-12", "2026-02-13", "2026-02-14", "2026-02-15", "2026-02-16", "2026-02-17", "2026-02-19", "2026-02-20", "2026-02-21"], "datasets": [{"label": "HRV", "data": [19, 41, 42, 39, 32, 41, 24, 38, 45, 39, 45, 15, 31, 35, 44, 47, 40, 40, 35, 45, 45, 45, 34, 30, 45, 36, 43, 41, 38], "borderColor": "#8E44AD", "tension": 0.4}, {"label": "RHR", "data": [61, 55, 54, 55, 57, 54, 62, 57, 54, 55, 54, 69, 59, 59, 53, 53, 57, 58, 59, 55, 55, 56, 56, 59, 56, 63, 57, 58, 59], "borderColor": "#D8315B", "tension": 0.4}]}}}, {"title": "全天压力趋势", "insight": "平均压力 39。高压力时长过长，需警惕自主神经系统过热。", "chart": {"type": "line", "data": {"labels": ["2026-01-23", "2026-01-24", "2026-01-25", "2026-01-26", "2026-01-27", "2026-01-28", "2026-01-29", "2026-01-30", "2026-01-31", "2026-02-01", "2026-02-02", "2026-02-03", "2026-02-04", "2026-02-05", "2026-02-06", "2026-02-07", "2026-02-08", "2026-02-09", "2026-02-10", "2026-02-11", "2026-02-12", "2026-02-13", "2026-02-14", "2026-02-15", "2026-02-16", "2026-02-17", "2026-02-18", "2026-02-19", "2026-02-20", "2026-02-21"], "datasets": [{"label": "压力值", "data": [51, 26, 31, 38, 29, 41, 32, 34, 42, 28, 40, 62, 38, 29, 30, 29, 30, 37, 28, 26, 30, 37, 33, 27, 34, 52, 34, 33, 36, 39], "borderColor": "#F58220", "fill": true, "backgroundColor": "rgba(245,130,32,0.1)"}]}, "options": {"scales": {"y": {"max": 100}}}}}, {"title": "活动分布", "insight": "负载比 (ACWR): 0。长期负荷状态：无数据。", "chart": {"type": "bar", "data": {"labels": ["breathwork", "walking"], "datasets": [{"label": "次数", "data": [1, 1], "backgroundColor": "#F58220"}]}}}], "top_insights": [{"title": "行动协议", "content": "黄灯 (Fatigue) - 维护性运转"}, {"title": "审计状态", "content": "🧠 认知: 80.2 | 💪 体能: 84.8"}], "overall_insight": "【专家审计：2026-01-23 to 2026-02-22 | 生理风险：中】\n\n【1. 输入审计：生物节律与修复质量】\n周期内睡眠一致性评价为「高」（标准差 1.51h）。节律波动较大，这种“社会时差”效应会显著削弱睡眠对认知的修复效率，建议通过固定起床时间来锚定生物钟。\n深睡结构良好（19.7%），确保了物理层面的系统重建。\n\n【2. 损耗审计：代谢摩擦与负荷性质】\n当前属于「被动熵增 (焦虑/代谢压力)」模式。平均压力值 39 且缺乏运动对冲，系统正在产生由于久坐或精神焦虑导致的“无效损耗”。这会导致系统熵增过快，建议引入规律性的物理刺激（如 Zone 2 运动）来重建代谢灵活性。\n\n【3. 输出审计：身心分层执行力评估】\n综合执行准备度得分 82.5。\n- 🧠 认知端（80.2）：系统处于「高频运行」状态，前额叶皮层功能活跃，非常适合处理复杂决策与创新构思。\n- 💪 物理端（84.8）：动力充沛，神经肌肉募集能力处于波峰，适合执行力量训练或耐力攻坚。\n\n【4. 战略干预：个性化健康行动建议】\n· 【锚定生物钟】检测到节律波动。建议即使在周末也保持固定起床时间，波动应控制在 ±30min 内。\n· 【皮质醇对冲】您的压力多来源于非运动性焦虑。建议每日午后进行 15 分钟的呼吸冥想或 2km 的慢走，主动切换神经系统至副交感模式。", "audit_data": {"system_status": {"rhr": {"current": 59, "baseline": 57.0, "status": "稳定"}, "hrv": {"value": 38, "status": "BALANCED"}, "vo2_max": "--", "fitness_age": 39.4}, "recovery_loop": {"sleep_architecture": {"deep_pct": 19.7, "rem_pct": 9.9, "restlessness": 42}, "body_battery": {"charged": 43, "peak": 47}}, "load_friction": {"stress_score": 39, "training_load": {"ratio": "--", "status": "无数据"}}, "action_protocol": {"move": "黄灯 (Fatigue) - 维护性运转", "description": "保持低强度有氧 (Zone 2)，时长缩减 30%。不要追求 PR。", "type": "YELLOW"}}, "quant_scores": {"input": 58.6, "loss": 39, "output": 82.5, "cognitive": 80.2, "physical": 84.8}, "period": "2026-01-23 to 2026-02-22"};
+        Chart.defaults.color = '#94A3B8';
+
+        if (chartsData.period) document.getElementById('header-period').textContent = 'PERIOD: ' + chartsData.period;
+        if (chartsData.audit_data) {
+            const a = chartsData.audit_data;
+            document.getElementById('p-move').textContent = a.action_protocol.move.split(' ')[0];
+            document.getElementById('p-desc').textContent = a.action_protocol.description;
+            document.getElementById('m-vo2').textContent = a.system_status.vo2_max;
+            document.getElementById('m-age').textContent = a.system_status.fitness_age + (a.system_status.fitness_age !== '--' ? ' 岁' : '');
+            document.getElementById('m-hrv').textContent = a.system_status.hrv.status;
+            document.getElementById('m-rhr').textContent = a.system_status.rhr.status.split(' ')[0];
+        }
+
+        if (chartsData.stats) {
+            const sCont = document.getElementById('stats');
+            Object.entries(chartsData.stats).forEach(([l, v]) => {
+                const div = document.createElement('div');
+                div.className = 'stat-card';
+                div.innerHTML = `<div class="stat-label">${l}</div><div class="stat-value">${v}</div>`;
+                sCont.appendChild(div);
+            });
+        }
+
+        if (chartsData.charts) {
+            const cCont = document.getElementById('charts');
+            chartsData.charts.forEach(c => {
+                const div = document.createElement('div');
+                div.className = 'chart-card';
+                div.innerHTML = `<div class="chart-title">${c.title}</div><canvas></canvas>${c.insight ? `<div class="chart-insight"><strong>💡 审计:</strong> ${c.insight}</div>` : ''}`;
+                cCont.appendChild(div);
+                new Chart(div.querySelector('canvas'), c.chart);
+            });
+        }
+
+        if (chartsData.overall_insight) {
+            document.getElementById('audit-sec').style.display = 'block';
+            document.getElementById('audit-text').textContent = chartsData.overall_insight;
+            if (chartsData.quant_scores) {
+                const q = chartsData.quant_scores;
+                document.getElementById('v-in').textContent = q.input;
+                document.getElementById('b-in').style.width = q.input + '%';
+                document.getElementById('v-loss').textContent = q.loss;
+                document.getElementById('b-loss').style.width = q.loss + '%';
+                document.getElementById('v-out').textContent = q.output;
+                document.getElementById('b-out').style.width = q.output + '%';
+                document.getElementById('b-cog').style.width = q.cognitive + '%';
+                document.getElementById('b-phy').style.width = q.physical + '%';
+            }
+        }
+    </script>
+</body>
+</html>

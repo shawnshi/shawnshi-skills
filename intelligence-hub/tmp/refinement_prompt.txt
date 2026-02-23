@@ -52,63 +52,63 @@ ace(w=23), msl(w=23), hitl(w=19), medical(w=14), agent(w=14), fhir(w=12), ai(w=1
 11. [geoffreylitt.com] geoffreylitt.com: AI as teleportation | Score=43
    URL: https://geoffreylitt.com/2025/09/10/ai-as-teleportation.html
    Desc: Here’s a thought experiment for pondering the effects AI might have on society: What if we invented teleportation? A bit odd, I know, but bear with me…  The year is 2035. The Auto Go Instant (AGI) tel
-12. [daringfireball.net] daringfireball.net: IMAX and Apple Collaborate to Screen F1 Races Live in Theaters | Score=33
+12. [Product Hunt] Product Hunt: Rork Max | Score=33
+   URL: https://www.producthunt.com/products/rork-app-for-ios
+   Desc: Best AI for iOS apps. Website that replaces Xcode             Discussion             |             Link
+13. [Product Hunt] Product Hunt: Prism Videos | Score=33
+   URL: https://www.producthunt.com/products/prism-videos
+   Desc: A unified workspace to generate and edit AI videos              Discussion             |             Link
+14. [daringfireball.net] daringfireball.net: IMAX and Apple Collaborate to Screen F1 Races Live in Theaters | Score=33
    URL: https://www.motorsport.com/f1/news/f1-to-screen-live-in-imax-theatres-in-2026-as-apple-tv-unveils-new-us-viewing-experience/10798974/
    Desc: Lydia Mee, reporting for Motorsport:  IMAX has announced that a select number of races will be shown live in IMAX locations across the United States in 2026. The new fan viewing experience is part of 
-13. [lucumr.pocoo.org] lucumr.pocoo.org: The Final Bottleneck | Score=33
-   URL: https://lucumr.pocoo.org/2026/2/13/the-final-bottleneck/
-   Desc: Historically, writing code was slower than reviewing code. It might not have felt that way, because code reviews sat in queues until someone got around to picking it up.  But if you compare the actual
-14. [dynomight.net] dynomight.net: Heritability of human life span is about 50% when heritability is redefined to be something different | Score=33
+15. [dynomight.net] dynomight.net: Heritability of human life span is about 50% when heritability is redefined to be something different | Score=33
    URL: https://dynomight.net/lifespan/
    Desc: How heritable is hair color? Well, if you’re a redhead and you have an identical twin, they will definitely also be a redhead. But the age at which twins go gray seems to vary a bit based on lifestyle
-15. [dynomight.net] dynomight.net: Why read novels? | Score=33
+16. [dynomight.net] dynomight.net: Why read novels? | Score=33
    URL: https://dynomight.net/novels/
    Desc: Why should you read novels? We tell children they’re magic carpets for the mind / exercise for the soul instead of the body / lighthouses in the great sea of time. But aren’t they ultimately a form of
-16. [dynomight.net] dynomight.net: Good if make prior after data instead of before | Score=33
+17. [dynomight.net] dynomight.net: Good if make prior after data instead of before | Score=33
    URL: https://dynomight.net/prior/
    Desc: They say you’re supposed to choose your prior in advance. That’s why it’s called a “prior”. First, you’re supposed to say say how plausible different things are, and then you update your beliefs based
-17. [matklad.github.io] matklad.github.io: Diagnostics Factory | Score=33
+18. [lucumr.pocoo.org] lucumr.pocoo.org: The Final Bottleneck | Score=33
+   URL: https://lucumr.pocoo.org/2026/2/13/the-final-bottleneck/
+   Desc: Historically, writing code was slower than reviewing code. It might not have felt that way, because code reviews sat in queues until someone got around to picking it up.  But if you compare the actual
+19. [matklad.github.io] matklad.github.io: Diagnostics Factory | Score=33
    URL: https://matklad.github.io/2026/02/16/diagnostics-factory.html
    Desc: Diagnostics Factory Feb 16, 2026  In Error Codes For Control Flow, I explained that Zig’s strongly-typed error codes solve the “handling” half of error management, leaving “reporting” to the users. To
-18. [derekthompson.org] derekthompson.org: The Affordability Curse | Score=33
+20. [derekthompson.org] derekthompson.org: The Orality Theory of Everything | Score=33
+   URL: https://www.theatlantic.com/ideas/2026/02/social-media-literacy-crisis/686076/?utm_source=feed
+   Desc: The world is full of theories of everything. The smartphone theory of everything argues that our personal devices are responsible for the rise of political polarization, anxiety, depression, and consp
+21. [derekthompson.org] derekthompson.org: The Affordability Curse | Score=33
    URL: https://www.theatlantic.com/ideas/2025/11/democrats-cost-of-living-affordability-platform/684847/?utm_source=feed
    Desc: To understand what just happened in this week’s elections—notably Zohran Mamdani’s win in New York City, Mikie Sherrill’s win in New Jersey, and Abigail Spanberger’s win in Virginia—wind back the cloc
-19. [derekthompson.org] derekthompson.org: The Era of Step-on-a-Rake Capitalism | Score=33
+22. [derekthompson.org] derekthompson.org: The Era of Step-on-a-Rake Capitalism | Score=33
    URL: https://www.theatlantic.com/ideas/archive/2025/09/trump-economic-pain-strategy/684166/?utm_source=feed
    Desc: Sign up for Trump’s Return, a newsletter featuring coverage of the second Trump presidency.Is Donald Trump a staunch capitalist, a secret socialist, a blend of the two, or none of the above? Depending
-20. [derekthompson.org] derekthompson.org: The No. 1 Rule for Understanding Trump | Score=33
-   URL: https://www.theatlantic.com/politics/archive/2025/06/trump-self-destructive-agenda/683013/?utm_source=feed
-   Desc: A useful one-sentence guide to the second Trump administration might go something like this: A lot happens under Donald Trump, but a lot un-happens, too.In the past four months, President Trump has an
-21. [nesbitt.io] nesbitt.io: ActivityPub | Score=33
+23. [nesbitt.io] nesbitt.io: Forge-Specific Repository Folders | Score=33
+   URL: https://nesbitt.io/2026/02/22/forge-specific-repository-folders.html
+   Desc: Git doesn’t know about CI, code review, or issue templates, but every forge that hosts git repositories has added these features through the same trick: a dot-folder in your repo root that the forge r
+24. [nesbitt.io] nesbitt.io: Whale Fall | Score=33
+   URL: https://nesbitt.io/2026/02/21/whale-fall.html
+   Desc: When a whale dies in the open ocean, its carcass sinks to the abyssal floor and becomes an ecosystem. Marine biologists call this a whale fall, and the body sustains life in three overlapping stages: 
+25. [nesbitt.io] nesbitt.io: ActivityPub | Score=33
    URL: https://nesbitt.io/2026/02/20/activitypub.html
    Desc: ActivityPub is a federated protocol used by public houses in the United Kingdom and the Republic of Ireland for announcing scheduled events, drink promotions, and community activities to patrons and t
-22. [nesbitt.io] nesbitt.io: Go Modules for Package Management Tooling | Score=33
-   URL: https://nesbitt.io/2026/02/19/go-modules-for-package-management-tooling.html
-   Desc: I’ve been working on a reusable layer for building ecosystem-agnostic package and supply chain tools in Go: fourteen modules under git-pkgs covering manifest parsing, registry clients, license normali
-23. [nesbitt.io] nesbitt.io: What Package Registries Could Borrow from OCI | Score=33
-   URL: https://nesbitt.io/2026/02/18/what-package-registries-could-borrow-from-oci.html
-   Desc: Every package manager ships code as an archive, and every one of them has a slightly different way to do it. npm wraps tarballs in a package/ directory prefix. RubyGems nests gzipped files inside an u
-24. [tedium.co] tedium.co: Project Code Name | Score=33
+26. [tedium.co] tedium.co: Project Code Name | Score=33
    URL: https://feed.tedium.co/link/15204/17277502/corporate-turnaround-code-names-history
    Desc: Why do corporate restructuring plans get code names the way operating systems do? And why are the names often so bizarre?Today in Tedium: Recently, Amazon did something kind of annoying in the midst o
-25. [jayd.ml] jayd.ml: Microsoft Game Pass Ultimate Billing Fraud | Score=33
+27. [jayd.ml] jayd.ml: Microsoft Game Pass Ultimate Billing Fraud | Score=33
    URL: https://jayd.ml/2026/02/14/microsoft-game-pass-fraud.html
    Desc: I purchased an Xbox Series X out of some misplaced sense of nostalgia for the  360 and because I needed a 4K player. At the time you could still do the trick where you load up on Xbox Live Gold and th
-26. [eli.thegreenplace.net] eli.thegreenplace.net: Compiling Scheme to WebAssembly | Score=33
+28. [eli.thegreenplace.net] eli.thegreenplace.net: Compiling Scheme to WebAssembly | Score=33
    URL: https://eli.thegreenplace.net/2026/compiling-scheme-to-webassembly/
    Desc: One of my oldest open-source projects - Bob - has celebrated 15 a couple of months ago. Bob is a suite of implementations of the Scheme programming language in Python, including an interpreter, a comp
-27. [eli.thegreenplace.net] eli.thegreenplace.net: Summary of reading: October - December 2025 | Score=33
+29. [eli.thegreenplace.net] eli.thegreenplace.net: Summary of reading: October - December 2025 | Score=33
    URL: https://eli.thegreenplace.net/2025/summary-of-reading-october-december-2025/
    Desc: "The Origins of Political Order: From Prehuman Times to the French Revolution" by Francis Fukuyama - while reading this book it occurred to me that domains of study like political sciense must be incr
-28. [jyn.dev] jyn.dev: pre-commit hooks are fundamentally broken | Score=33
+30. [jyn.dev] jyn.dev: pre-commit hooks are fundamentally broken | Score=33
    URL: https://jyn.dev/pre-commit-hooks-are-fundamentally-broken/
    Desc: Let's start a new Rust project. $ mkdir best-fizzbuzz-ever $ cd best-fizzbuzz-ever $ cat << EOF > main.rs fn main() { for i in 0.. {     println ("fizzbuzz"); }} EOF $ git init Initialized empty Git r
-29. [hugotunius.se] hugotunius.se: What Every Argument About Sideloading Gets Wrong | Score=33
-   URL: https://hugotunius.se/2025/08/31/what-every-argument-about-sideloading-gets-wrong.html
-   Desc: Sideloading has been a hot topic for the last decade. Most recently, Google has announced further restrictions on the practice in Android. Many hundreds of comment threads have discussed these changes
-30. [hugotunius.se] hugotunius.se: On Async Rust | Score=33
-   URL: https://hugotunius.se/2024/03/08/on-async-rust.html
-   Desc: I started using Rust in 2017, before the stabilisation of async/await. When it was stabilised I managed to avoid it for a few more years before it was time to grapple with it. Itâs fair to say that 
 
 ## 输出格式
 严格输出以下 JSON（不要包含 markdown 代码块标记）：

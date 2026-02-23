@@ -83,16 +83,16 @@ python scripts/garmin_activity_files.py download --activity-id 12345678 --format
 python scripts/garmin_activity_files.py download --activity-id 12345678 --format gpx
 
 # 解析文件（提取全部数据点）
-python scripts/garmin_activity_files.py parse --file output/activity_12345678.fit
+python scripts/garmin_activity_files.py parse --file C:\Users\shich\.gemini\memory\garmin\activity_12345678_20260223_130000.fit
 
 # 按距离查询（如"5公里处的数据"）
-python scripts/garmin_activity_files.py query --file output/activity_12345678.fit --distance 5000
+python scripts/garmin_activity_files.py query --file C:\Users\shich\.gemini\memory\garmin\activity_12345678_20260223_130000.fit --distance 5000
 
 # 按时间查询
-python scripts/garmin_activity_files.py query --file output/activity_12345678.fit --time "2026-02-21T14:30:00"
+python scripts/garmin_activity_files.py query --file C:\Users\shich\.gemini\memory\garmin\activity_12345678_20260223_130000.fit --time "2026-02-21T14:30:00"
 
 # 活动统计分析
-python scripts/garmin_activity_files.py analyze --file output/activity_12345678.fit
+python scripts/garmin_activity_files.py analyze --file C:\Users\shich\.gemini\memory\garmin\activity_12345678_20260223_130000.fit
 ```
 
 ### 5. 生理智能分析 (Advanced Analysis)
@@ -123,8 +123,11 @@ python scripts/garmin_chart.py stress --days 7
 python scripts/garmin_chart.py activities --days 30
 python scripts/garmin_chart.py load --days 7
 
-# 保存为文件
-python scripts/garmin_chart.py dashboard --days 7 --output output/report.html
+# 运行不带 --output 则会自动保存至 C:\Users\shich\.gemini\memory\garmin 并打开
+python scripts/garmin_chart.py dashboard --days 7
+
+# 手动指定保存路径
+python scripts/garmin_chart.py dashboard --days 7 --output C:\Users\shich\.gemini\memory\garmin\report.html
 ```
 
 ### 7. 临床互操作 (FHIR Export)
@@ -165,5 +168,5 @@ python scripts/garmin_fhir_adapter.py stress --days 7
 ## Troubleshooting
 - **Missing Data**: 确认设备已同步至 Garmin Connect。
 - **401 Error**: Token 过期，重新运行 `garmin_auth.py login`。
-- **File Not Found**: 检查 `output/` 目录，生成的 HTML/活动文件存放在该处。
-- **Windows 路径**: 活动文件默认保存到 skill 的 `output/` 目录，无需手动指定。
+- **File Not Found**: 检查 `C:\Users\shich\.gemini\memory\garmin` 目录，生成的 HTML/活动文件存放在该处。
+- **Windows 路径**: 报告和活动文件默认保存到 `C:\Users\shich\.gemini\memory\garmin` 目录。

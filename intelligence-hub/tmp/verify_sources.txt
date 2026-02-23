@@ -1,0 +1,7 @@
+{
+  "nature_digital": "OK",
+  "science": "OK",
+  "lancet_digital": "OK",
+  "nejm": "OK",
+  "arxiv_med_ai": "400 Client Error: Bad Request for url: https://export.arxiv.org/api/query?search_query=all:medicine+AND+cat:cs.AI&sortBy=lastUpdatedDate&sortOrder=desc&max_results=5"
+}

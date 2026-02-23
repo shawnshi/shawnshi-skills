@@ -402,11 +402,15 @@ def main():
             charts_data["stats"].update(r["stats"]); charts_data["charts"].append(r["chart"])
 
     html = generate_html(charts_data)
-    if args.output: Path(args.output).write_text(html, encoding='utf-8')
+    if args.output: 
+        out_path = Path(args.output)
+        out_path.write_text(html, encoding='utf-8')
     else:
-        import tempfile
-        with tempfile.NamedTemporaryFile(mode='w', suffix='.html', delete=False, encoding='utf-8') as f:
-            f.write(html)
-            webbrowser.open(f"file://{f.name}")
+        out_dir = Path(r"C:\Users\shich\.gemini\memory\garmin")
+        out_dir.mkdir(parents=True, exist_ok=True)
+        timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
+        out_path = out_dir / f"health_report_{args.chart}_{args.days}days_{timestamp}.html"
+        out_path.write_text(html, encoding='utf-8')
+        webbrowser.open(f"file://{out_path.resolve()}")
 
 if __name__ == "__main__": main()

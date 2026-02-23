@@ -1,0 +1,161 @@
+
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <title>Gemini CLI 战略审计报告 (已缓存样本)</title>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <style>
+        :root {
+            --primary: #2c3e50;
+            --accent: #3498db;
+            --success: #27ae60;
+            --warning: #f1c40f;
+            --danger: #e74c3c;
+            --bg: #f8f9fa;
+            --text-secondary: #7f8c8d;
+        }
+        body { font-family: 'PingFang SC', 'Microsoft YaHei', sans-serif; background: var(--bg); color: var(--primary); margin: 0; padding: 40px 20px; line-height: 1.6; }
+        .container { max-width: 1200px; margin: 0 auto; }
+        header { 
+            background: linear-gradient(135deg, #1a2a3a 0%, #2c3e50 100%); 
+            color: white; padding: 40px; border-radius: 16px; margin-bottom: 30px; 
+            text-align: center; box-shadow: 0 10px 20px rgba(0,0,0,0.1);
+        }
+        header h1 { margin: 0; font-size: 32px; letter-spacing: 2px; }
+        
+        .section-header { margin: 40px 0 20px; border-bottom: 2px solid #eee; padding-bottom: 10px; display: flex; align-items: center; gap: 10px; }
+        .interpretation { margin-top: 15px; padding: 15px; background: #fcfcfc; border-radius: 8px; font-size: 14px; border-left: 4px solid var(--accent); color: #555; }
+        
+        .grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 20px; margin-bottom: 20px; }
+        .card { 
+            background: white; padding: 25px; border-radius: 16px; 
+            box-shadow: 0 4px 15px rgba(0,0,0,0.05); text-align: center;
+        }
+        .card h3 { margin: 0; font-size: 13px; color: var(--text-secondary); text-transform: uppercase; }
+        .card p { margin: 10px 0 0; font-size: 32px; font-weight: 800; color: var(--primary); }
+
+        .charts { display: grid; grid-template-columns: repeat(auto-fit, minmax(500px, 1fr)); gap: 30px; }
+        .chart-box { 
+            background: white; padding: 30px; border-radius: 16px; 
+            box-shadow: 0 4px 15px rgba(0,0,0,0.05); display: flex; flex-direction: column;
+        }
+        .chart-container { flex-grow: 1; min-height: 300px; position: relative; }
+
+        .insights { 
+            background: white; padding: 40px; border-radius: 16px; 
+            box-shadow: 0 4px 15px rgba(0,0,0,0.05); 
+        }
+        .insight-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 30px; }
+        .insight-item { padding: 20px; border-radius: 12px; background: #fdfdfd; border: 1px solid #eee; }
+        .insight-item h4 { margin: 0 0 10px; color: var(--accent); }
+        
+        .footer { text-align: center; color: #bdc3c7; font-size: 13px; margin-top: 60px; }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <header>
+            <h1>🚀 个人数字化战略审计报告 (精简样本版)</h1>
+            <p>样本量: 93 个已缓存会话 | 生成时间: 2026-02-22 17:19:01</p>
+        </header>
+
+        <h2 class="section-header">📊 核心产出指标</h2>
+        <div class="grid">
+            <div class="card"><h3>审计会话数</h3><p>93</p></div>
+            <div class="card"><h3>累计时长 (h)</h3><p>70.0</p></div>
+            <div class="card"><h3>覆盖率</h3><p>60.0%</p></div>
+            <div class="card"><h3>活跃天数</h3><p>24</p></div>
+        </div>
+        <div class="interpretation">
+            <strong>样本解读：</strong> 基于已缓存的 93 个样本，置信度极高。交互密度反映出您在医疗 IT 与 Agentic AI 领域正处于高频产出期。
+        </div>
+
+        <h2 class="section-header">📈 行为与意图扫描</h2>
+        <div class="charts">
+            <div class="chart-box">
+                <h2>活动趋势 (心流稳定性)</h2>
+                <div class="chart-container"><canvas id="dailyChart"></canvas></div>
+            </div>
+            <div class="chart-box">
+                <h2>任务目标分布 (精力分配)</h2>
+                <div class="chart-container"><canvas id="goalChart"></canvas></div>
+            </div>
+            <div class="chart-box">
+                <h2>交互满意度 (心流质量)</h2>
+                <div class="chart-container"><canvas id="satChart"></canvas></div>
+            </div>
+            <div class="chart-box">
+                <h2>流程摩擦点 (系统损耗)</h2>
+                <div class="chart-container"><canvas id="fricChart"></canvas></div>
+            </div>
+        </div>
+
+        <h2 class="section-header">💡 战略诊断与进化建议</h2>
+        <div class="insights">
+            <div class="insight-grid">
+                <div class="insight-item">
+                    <h4>🎯 核心生产力领域</h4>
+                    <p>重心在 <strong>其他</strong>。呈现‘开拓者’模式。您的产出正在从代码向更高阶的‘技能架构’转型。</p>
+                </div>
+                <div class="insight-item">
+                    <h4>🚧 流程自愈策略</h4>
+                    <p>针对 <strong>无摩擦</strong> 摩擦，建议在 <code>coding.md</code> 引入自动容错协议。</p>
+                </div>
+                <div class="insight-item">
+                    <h4>👤 交互风格画像</h4>
+                    <p>当前风格定义为 <strong>Builder (构建者)</strong>。满意度常模为 <strong>😐 中立</strong>。</p>
+                </div>
+                <div class="insight-item">
+                    <h4>🎁 彩蛋：不可磨灭的瞬间</h4>
+                    <p>审计样本已足以覆盖本月核心战略节点。</p>
+                </div>
+            </div>
+        </div>
+
+        <div class="footer">
+            由 monthly-personal-insights v4.1 生成 | 架构师视角 | 2026-02-22 17:19:01
+        </div>
+    </div>
+
+    <script>
+        const colors = ['#3498db', '#2ecc71', '#e74c3c', '#f1c40f', '#9b59b6', '#34495e', '#1abc9c', '#e67e22'];
+        
+        new Chart(document.getElementById('dailyChart'), {
+            type: 'line',
+            data: {
+                labels: ["2025-12-22", "2025-12-29", "2026-01-11", "2026-01-12", "2026-01-13", "2026-01-16", "2026-01-17", "2026-01-18", "2026-01-19", "2026-01-20", "2026-01-24", "2026-01-27", "2026-01-29", "2026-01-30", "2026-02-01", "2026-02-04", "2026-02-05", "2026-02-06", "2026-02-07", "2026-02-08", "2026-02-09", "2026-02-10", "2026-02-11", "2026-02-12"],
+                datasets: [{ label: '每日会话数', data: [1, 1, 1, 1, 2, 2, 1, 3, 1, 2, 4, 1, 8, 3, 4, 2, 8, 8, 7, 10, 1, 2, 15, 5], borderColor: '#3498db', backgroundColor: 'rgba(52, 152, 219, 0.1)', fill: true, tension: 0.4 }]
+            },
+            options: { maintainAspectRatio: false, plugins: { legend: { display: false } } }
+        });
+
+        new Chart(document.getElementById('goalChart'), {
+            type: 'doughnut',
+            data: {
+                labels: ["\u7f16\u5199\u811a\u672c", "\u6570\u636e\u5206\u6790", "\u5b9e\u73b0\u529f\u80fd", "\u5176\u4ed6", "\u7406\u89e3\u4ee3\u7801", "\u4fee\u590dBug", "\u8c03\u8bd5\u6392\u67e5", "\u7cfb\u7edf\u914d\u7f6e", "\u91cd\u6784\u4ee3\u7801", "research-analyst", "research_investigate", "research_analyst", "\u6587\u6863\u64b0\u5199"],
+                datasets: [{ data: [5, 8, 13, 50, 2, 4, 1, 3, 3, 1, 1, 1, 1], backgroundColor: colors }]
+            },
+            options: { maintainAspectRatio: false, cutout: '70%' }
+        });
+
+        new Chart(document.getElementById('satChart'), {
+            type: 'bar',
+            data: {
+                labels: ["\ud83d\ude10 \u4e2d\u7acb", "\ud83d\ude2b \u6cae\u4e27", "\ud83d\ude42 \u8fd8\u53ef\u4ee5", "\ud83d\ude20 \u70e6\u8e81", "\ud83e\udd29 \u60ca\u8273"],
+                datasets: [{ label: '会话数', data: [72, 11, 6, 3, 1], backgroundColor: '#27ae60', borderRadius: 8 }]
+            },
+            options: { maintainAspectRatio: false, plugins: { legend: { display: false } } }
+        });
+
+        new Chart(document.getElementById('fricChart'), {
+            type: 'pie',
+            data: {
+                labels: ["\u65e0\u6469\u64e6", "\u4ee3\u7801\u7f3a\u9677", "\u8868\u8fbe\u4e0d\u660e", "\u65b9\u6848\u9519\u8bef", "\u7406\u89e3\u504f\u5dee"],
+                datasets: [{ data: [67, 11, 12, 1, 2], backgroundColor: ['#e74c3c', '#e67e22', '#f39c12', '#95a5a6'] }]
+            },
+            options: { maintainAspectRatio: false }
+        });
+    </script>
+</body>
+</html>

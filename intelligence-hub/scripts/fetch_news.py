@@ -247,6 +247,11 @@ def main():
         ("healthit", lambda: parse_rss("https://www.healthit.gov/news/feed", "HealthIT.gov", proxy=proxy, cache=cache)),
         ("himss", lambda: parse_rss("https://www.himss.org/news", "HIMSS", proxy=None, cache=cache)),
         ("ajmc", lambda: parse_rss("https://www.ajmc.com/newsroom", "AJMC", proxy=proxy, cache=cache)),
+        ("nature_digital", lambda: parse_rss("https://www.nature.com/npjdigitalmed.rss", "Nature Digital Medicine", limit=5, proxy=proxy, cache=cache)),
+        ("science", lambda: parse_rss("https://www.science.org/rss/news_current.xml", "Science", limit=5, proxy=proxy, cache=cache)),
+        ("lancet_digital", lambda: parse_rss("https://www.thelancet.com/rssfeed/landig_current.xml", "The Lancet Digital Health", limit=5, proxy=proxy, cache=cache)),
+        ("nejm", lambda: parse_rss("https://www.nejm.org/action/showFeed?type=etoc&feed=rss&jc=nejm", "NEJM", limit=5, proxy=proxy, cache=cache)),
+        ("arxiv_med_ai", lambda: parse_rss("http://export.arxiv.org/api/query?search_query=all:medicine+AND+cat:cs.AI&sortBy=lastUpdatedDate&sortOrder=descending&max_results=5", "arXiv Med-AI", limit=5, proxy=proxy, cache=cache)),
     ]
 
     # Load Karpathy Feeds

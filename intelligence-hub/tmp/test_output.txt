@@ -1,0 +1,8 @@
+Success for https://www.nature.com/npjdigitalmed.rss: found 8 items.
+Success for https://www.science.org/rss/news_current.xml: found 10 items.
+Success for https://www.thelancet.com/rssfeed/landig_current.xml: found 9 items.
+Failed for https://www.nejm.org/action/showFeed?type=etoc&feed=rss&jc=nejmai: HTTP Error 404: 
+Failed for http://export.arxiv.org/api/query?search_query=cat:cs.AI+AND+all:medicine&sortBy=lastUpdatedDate&sortOrder=desc&max_results=5: HTTP Error 400: Bad Request
+Success for https://www.thelancet.com/rssfeed/lancet_current.xml: found 30 items.
+Success for https://www.nejm.org/action/showFeed?type=etoc&feed=rss&jc=nejm: found 46 items.
+Success for https://www.nature.com/nature.rss: found 75 items.

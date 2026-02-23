@@ -140,6 +140,7 @@ def refine():
         "generated_at": datetime.now().isoformat(),
         "status": "AWAITING_AI_REFINEMENT",
         "top_10": [],
+        "translations": {},
         "insights": "> 💡 [WAITING]",
         "punchline": "> 💡 [WAITING]",
         "digest": "> 💡 [WAITING]",

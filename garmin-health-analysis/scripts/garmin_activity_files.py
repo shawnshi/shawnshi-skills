@@ -15,7 +15,8 @@ sys.path.insert(0, str(Path(__file__).parent))
 from garmin_auth import get_client
 
 # Cross-platform default output directory
-_DEFAULT_OUTPUT_DIR = str(Path(__file__).parent.parent / "output")
+_DEFAULT_OUTPUT_DIR = r"C:\Users\shich\.gemini\memory\garmin"
+Path(_DEFAULT_OUTPUT_DIR).mkdir(parents=True, exist_ok=True)
 
 # Check for optional dependencies
 try:
@@ -35,7 +36,8 @@ except ImportError:
 def download_activity_file(client, activity_id, file_format="fit", output_dir=_DEFAULT_OUTPUT_DIR):
     """Download activity FIT or GPX file."""
     try:
-        output_path = f"{output_dir}/activity_{activity_id}.{file_format.lower()}"
+        timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
+        output_path = f"{output_dir}/activity_{activity_id}_{timestamp}.{file_format.lower()}"
         
         if file_format.lower() == "fit":
             data = client.download_activity(activity_id, dl_fmt=client.ActivityDownloadFormat.ORIGINAL)
