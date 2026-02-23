@@ -17,9 +17,9 @@ description: Manages personal diary entries and performs cognitive audits (weekl
 管理个人认知熵值的核心工具。通过结构化日志与周期性审计，维持长期战略对齐。
 
 ## Core Capabilities
-*   **Atomic Logging**: 安全地向日志文件顶部追加内容，绝不覆盖。
-*   **Cognitive Audit**: 基于模板的周/月/年深度复盘。
-*   **Quantified Self**: 自动生成专注度、情绪与产出的统计报告。
+*   **Atomic Logging**: 安全地向日志目录（按季度拆分的 `YYYY-Q#.md`）顶部追加内容，绝不覆盖。
+*   **Cognitive Audit**: 基于模板的周/月/年深度复盘，支持跨季度与年度连续读取。
+*   **Quantified Self**: 自动生成专注度、情绪与产出的跨季度统计报告。
 *   **Semantic Alignment**: 强制对齐 `references/semantic_layer.md` 中的本体。
 
 ## 1. Daily Log Workflow (`更新当日日志`)
@@ -40,15 +40,15 @@ description: Manages personal diary entries and performs cognitive audits (weekl
     *   **交互确认**: 补充自动分析无法获取的维度（如“专注度(1-5)”、“情绪”以及未在对话中体现的私密反思）。
 4.  **Execution**:
     *   基于 `references/templates.md` 组装最终内容。
-    *   调用脚本写入：
+    *   调用脚本写入（脚本会自动计算日期归属的 `YYYY-Q#.md` 文件并在 `Diary` 目录下创建或追加）：
         ```bash
-        python scripts/diary_ops.py prepend --file "privacy/{YYYY}Diary.md" --content "..."
+        python scripts/diary_ops.py prepend --file "diary" --content "..."
         ```
 
 ## 2. Audit Workflow (周/月/年审计)
 
 ### Standard Audit
-1.  **Read Context**: 读取相关时间段的日志。
+1.  **Read Context**: 自适应读取相邻季度文件的日志并按日期范围过滤。
     ```bash
     python scripts/diary_ops.py read --file "diary" --from "YYYY-MM-DD" --to "YYYY-MM-DD"
     ```
@@ -94,7 +94,7 @@ python scripts/diary_ops.py search --file "diary" --query "关键词"
 ```
 
 ### Statistics (`生成统计`)
-生成可视化统计报告（情绪分布、专注度趋势、高频标签）。
+跨季度生成全体数据的可视化统计日志（情绪分布、专注度趋势、高频标签）。
 ```bash
 python scripts/diary_ops.py stats --file "diary"
 ```
@@ -105,7 +105,7 @@ python scripts/discovery_engine.py --days 7 --extensions .md .pptx .docx
 ```
 
 ### Backup (`备份日志`)
-手动触发备份（写入操作前也会自动触发）。
+手动触发备份（为所有季度生成时间戳备份）。
 ```bash
 python scripts/diary_ops.py backup --file "diary" --dir "privacy/backups"
 ```

@@ -15,13 +15,14 @@ import re
 import tempfile
 from datetime import datetime
 import json
+import glob
 
 # Optimization 1: Centralized Path Mapping to bypass Shell Escaping/Workspace limits
 PATH_MAPPING = {
     "privacy": "D:/OneDrive/10-19 战略交付/15. 演讲与输出/15.3 个人文章/note-gen-sync/note-gen-sync/privacy",
     "article": "D:/OneDrive/10-19 战略交付/15. 演讲与输出/15.3 个人文章/note-gen-sync/note-gen-sync/Article",
     "winning": "D:/OneDrive/10-19 战略交付/15. 演讲与输出/15.3 个人文章/note-gen-sync/note-gen-sync/winning",
-    "diary": "D:/OneDrive/10-19 战略交付/15. 演讲与输出/15.3 个人文章/note-gen-sync/note-gen-sync/privacy/2026Diary.md"
+    "diary": "D:/OneDrive/10-19 战略交付/15. 演讲与输出/15.3 个人文章/note-gen-sync/note-gen-sync/privacy/Diary"
 }
 
 def resolve_path(path_alias):
@@ -42,7 +43,6 @@ def load_config():
     try:
         with open(config_path, 'r', encoding='utf-8') as f:
             content = f.read()
-        # Parse key-value pairs from config.md format: **值:** `value`
         mapping = {
             "Max Backup Count": ("max_backup_count", int),
             "Search Result Limit": ("search_result_limit", int),
@@ -71,10 +71,42 @@ def validate_content(content):
         return False, "Content missing standard date header (# YYYY-MM-DD)."
     return True, ""
 
+def get_quarterly_filename(date_str):
+    """Determine the filename based on the quarter of the given date."""
+    try:
+        dt = datetime.strptime(date_str, "%Y-%m-%d")
+        quarter = (dt.month - 1) // 3 + 1
+        return f"{dt.year}-Q{quarter}.md"
+    except:
+        now = datetime.now()
+        quarter = (now.month - 1) // 3 + 1
+        return f"{now.year}-Q{quarter}.md"
+
+def get_all_diary_files(base_path):
+    """Retrieve all markdown files in a directory, or the file itself if it's a file."""
+    if os.path.isfile(base_path):
+        return [base_path]
+    if os.path.isdir(base_path):
+        files = glob.glob(os.path.join(base_path, "*.md"))
+        return sorted(files)
+    return []
+
+def read_all_diary_content(base_path):
+    """Read contents of all diary files and concatenate them."""
+    files = get_all_diary_files(base_path)
+    if not files:
+        return ""
+    all_content = []
+    for file in files:
+        with open(file, 'r', encoding='utf-8') as f:
+            all_content.append(f.read())
+    return "\n\n".join(all_content)
+
 def safe_prepend(file_path, new_content):
     """
     Safely prepend content to a file.
     Creates the file if it doesn't exist.
+    If file_path is a directory (doesn't end in .md), determines the quarterly filename.
     """
     file_path = resolve_path(file_path)
     
@@ -82,6 +114,14 @@ def safe_prepend(file_path, new_content):
     is_valid, err_msg = validate_content(new_content)
     if not is_valid:
         return {"status": "error", "message": f"Validation Failed: {err_msg}"}
+
+    # Extract date for filename calculation if path is a directory
+    if not file_path.lower().endswith('.md'):
+        os.makedirs(file_path, exist_ok=True)
+        date_match = re.search(r'^#\s(\d{4}-\d{2}-\d{2})', new_content, re.MULTILINE)
+        date_str = date_match.group(1) if date_match else None
+        filename = get_quarterly_filename(date_str)
+        file_path = os.path.join(file_path, filename)
 
     # 1. Ensure directory exists
     os.makedirs(os.path.dirname(os.path.abspath(file_path)), exist_ok=True)
@@ -119,25 +159,27 @@ def safe_prepend(file_path, new_content):
     except Exception as e:
         return {"status": "error", "message": f"Failed to write file: {str(e)}"}
 
-# ... (search_diary and generate_stats remain the same, but use resolve_path)
-
 def search_diary(file_path, query, context_lines=None):
     file_path = resolve_path(file_path)
     if context_lines is None:
         context_lines = CONFIG["context_lines"]
     search_limit = CONFIG["search_result_limit"]
-    if not os.path.exists(file_path):
-        return {"status": "error", "message": f"Diary file not found at {file_path}"}
+    
+    files = get_all_diary_files(file_path)
+    if not files:
+        return {"status": "error", "message": f"Diary files not found at {file_path}"}
 
     matches = []
     current_date = "Unknown Date"
     date_pattern = re.compile(r'^#\s(\d{4}-\d{2}-\d{2})')
 
-    try:
-        with open(file_path, 'r', encoding='utf-8') as f:
-            lines = f.readlines()
-    except Exception as e:
-         return {"status": "error", "message": f"Failed to read file: {str(e)}"}
+    lines = []
+    for f_path in files:
+        try:
+            with open(f_path, 'r', encoding='utf-8') as f:
+                lines.extend(f.readlines())
+        except Exception as e:
+             return {"status": "error", "message": f"Failed to read file {f_path}: {str(e)}"}
 
     for i, line in enumerate(lines):
         date_match = date_pattern.match(line)
@@ -172,16 +214,11 @@ def _split_entries(content):
 
 def generate_stats(file_path):
     file_path = resolve_path(file_path)
-    if not os.path.exists(file_path):
-        return {"status": "error", "message": "Diary file not found."}
+    content = read_all_diary_content(file_path)
+    if not content:
+        return {"status": "error", "message": "Diary files not found."}
 
     stats = {"total_entries": 0, "audits": {"weekly": 0, "monthly": 0, "annual": 0}, "tags": {}, "moods": {"😊": 0, "😐": 0, "😔": 0}, "focus_sum": 0, "focus_count": 0}
-
-    try:
-        with open(file_path, 'r', encoding='utf-8') as f:
-            content = f.read()
-    except Exception as e:
-        return {"status": "error", "message": f"Failed to read file: {str(e)}"}
 
     entries = _split_entries(content)
     stats["total_entries"] = len(entries)
@@ -193,20 +230,15 @@ def generate_stats(file_path):
         if tag[1].isdigit(): continue 
         stats["tags"][tag] = stats["tags"].get(tag, 0) + 1
 
-    # Per-entry emotion counting: count which mood emoji appears in the "情绪状态" line
     mood_pattern = re.compile(r'情绪状态.*?[:：]\s*(.*)', re.MULTILINE)
     for entry in entries:
         mood_match = mood_pattern.search(entry["content"])
         if mood_match:
             mood_line = mood_match.group(1)
-            # Check which one is the active mood (not in a template choice list)
-            # Heuristic: if line has only one emoji, count it; if multiple, count the first
             emojis_found = re.findall(r'(😊|😐|😔)', mood_line)
             if len(emojis_found) == 1:
                 stats["moods"][emojis_found[0]] += 1
             elif len(emojis_found) > 1:
-                # If a specific mood is selected (e.g., text follows it), count the first non-template one
-                # Fallback: count the first one
                 stats["moods"][emojis_found[0]] += 1
 
     focus_matches = re.findall(r'专注度.*?(⭐+)', content)
@@ -219,13 +251,9 @@ def generate_stats(file_path):
 def read_diary(file_path, date_from=None, date_to=None):
     """Read diary entries within an optional date range."""
     file_path = resolve_path(file_path)
-    if not os.path.exists(file_path):
-        return {"status": "error", "message": f"Diary file not found at {file_path}"}
-    try:
-        with open(file_path, 'r', encoding='utf-8') as f:
-            content = f.read()
-    except Exception as e:
-        return {"status": "error", "message": f"Failed to read file: {str(e)}"}
+    content = read_all_diary_content(file_path)
+    if not content:
+        return {"status": "error", "message": f"Diary files not found at {file_path}"}
 
     entries = _split_entries(content)
     if date_from or date_to:
@@ -243,18 +271,37 @@ def read_diary(file_path, date_from=None, date_to=None):
 def backup_diary(file_path, backup_dir):
     file_path = resolve_path(file_path)
     max_backups = CONFIG["max_backup_count"]
-    if not os.path.exists(file_path): return {"status": "error", "message": "Diary file not found."}
+    files = get_all_diary_files(file_path)
+    if not files: 
+        return {"status": "error", "message": "Diary files not found."}
+    
     os.makedirs(backup_dir, exist_ok=True)
     timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
-    filename = os.path.basename(file_path)
-    backup_path = os.path.join(backup_dir, f"{os.path.splitext(filename)[0]}_backup_{timestamp}.md")
-    try:
-        shutil.copy2(file_path, backup_path)
-        backups = sorted([os.path.join(backup_dir, f) for f in os.listdir(backup_dir) if f.startswith(os.path.splitext(filename)[0])])
-        if len(backups) > max_backups:
-            for old_backup in backups[:-max_backups]: os.remove(old_backup)
-        return {"status": "success", "backup_path": backup_path}
-    except Exception as e: return {"status": "error", "message": f"Backup failed: {str(e)}"}
+    
+    backup_paths = []
+    for file in files:
+        filename = os.path.basename(file)
+        # Unique backup name for each quarter file
+        backup_path = os.path.join(backup_dir, f"{os.path.splitext(filename)[0]}_backup_{timestamp}.md")
+        try:
+            shutil.copy2(file, backup_path)
+            backup_paths.append(backup_path)
+        except Exception as e: 
+            return {"status": "error", "message": f"Backup failed for {file}: {str(e)}"}
+            
+    # Cleanup old backups per file prefix
+    for file in files:
+        filename = os.path.basename(file)
+        prefix = os.path.splitext(filename)[0] + "_backup_"
+        all_backups_for_file = sorted([os.path.join(backup_dir, f) for f in os.listdir(backup_dir) if f.startswith(prefix)])
+        if len(all_backups_for_file) > max_backups:
+            for old_backup in all_backups_for_file[:-max_backups]:
+                try:
+                    os.remove(old_backup)
+                except:
+                    pass
+
+    return {"status": "success", "backup_paths": backup_paths}
 
 def main():
     parser = argparse.ArgumentParser(description="Diary Operations Engine")

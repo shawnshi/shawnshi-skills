@@ -1,0 +1,6 @@
+Traceback (most recent call last):
+  File "C:\Users\shich\.gemini\skills\auditingdiary\scripts\test_diary_ops.py", line 66, in <module>
+    main()
+  File "C:\Users\shich\.gemini\skills\auditingdiary\scripts\test_diary_ops.py", line 47, in main
+    assert res_read and res_read.get("status") == "success", f"Read failed: {res_read}"
+AssertionError: Read failed: None
