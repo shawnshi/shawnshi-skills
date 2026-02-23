@@ -21,42 +21,54 @@ from garmin_data import fetch_summary
 
 def analyze_flu_risk(summary_data):
     """
-    Detect 'The Garmin Flu' pattern:
+    Detect 'The Garmin Flu' pattern (CMO Level):
     1. RHR spike (> 3 bpm above baseline)
     2. HRV drop (> 10% below baseline)
+    3. Respiration Rate spike (> 0.5 brpm above baseline) - Key clinical indicator
     """
     hrv_data = summary_data.get("hrv", [])
     hr_data = summary_data.get("heart_rate", [])
+    sleep_data = summary_data.get("sleep", [])
     
     # Need at least 3 days of data
     if len(hrv_data) < 3 or len(hr_data) < 3:
         return {"status": "insufficient_data"}
         
-    # Get latest data (look for last non-null values)
-    latest_hrv_entry = next((item for item in reversed(hrv_data) if item.get("last_night_avg")), hrv_data[-1])
-    latest_hr_entry = next((item for item in reversed(hr_data) if item.get("resting_hr")), hr_data[-1])
+    # Get latest data
+    latest_hrv_entry = next((item for item in reversed(hrv_data) if item.get("last_night_avg")), hrv_data[-1] if hrv_data else {})
+    latest_hr_entry = next((item for item in reversed(hr_data) if item.get("resting_hr")), hr_data[-1] if hr_data else {})
+    latest_sleep = next((item for item in reversed(sleep_data) if item.get("avg_respiration")), {})
     
     # Calculate simple baseline (avg of previous days)
     prev_hrv = [d.get("last_night_avg") for d in hrv_data if d.get("last_night_avg") and d != latest_hrv_entry]
     prev_rhr = [d.get("resting_hr") for d in hr_data if d.get("resting_hr") and d != latest_hr_entry]
+    prev_resp = [d.get("avg_respiration") for d in sleep_data if d.get("avg_respiration") and d != latest_sleep]
     
     if not prev_hrv or not prev_rhr:
         return {"status": "insufficient_baseline"}
         
     avg_hrv_baseline = sum(prev_hrv) / len(prev_hrv)
     avg_rhr_baseline = sum(prev_rhr) / len(prev_rhr)
+    avg_resp_baseline = sum(prev_resp) / len(prev_resp) if prev_resp else 14.0
     
     current_hrv = latest_hrv_entry.get("last_night_avg") or avg_hrv_baseline
     current_rhr = latest_hr_entry.get("resting_hr") or avg_rhr_baseline
+    current_resp = latest_sleep.get("avg_respiration") or avg_resp_baseline
     
     # Thresholds
     hrv_drop_pct = (avg_hrv_baseline - current_hrv) / avg_hrv_baseline * 100
     rhr_spike = current_rhr - avg_rhr_baseline
+    resp_spike = current_resp - avg_resp_baseline
     
     risk_level = "low"
     reasons = []
     
-    if rhr_spike > 5 and hrv_drop_pct > 15:
+    if rhr_spike > 5 and hrv_drop_pct > 15 and resp_spike > 0.5:
+        risk_level = "CRITICAL"
+        reasons.append(f"Respiration spike detected (+{resp_spike:.1f} brpm) - High clinical relevance for infection")
+        reasons.append(f"Significant RHR spike (+{rhr_spike:.1f} bpm)")
+        reasons.append(f"Major HRV drop (-{hrv_drop_pct:.1f}%)")
+    elif rhr_spike > 5 and hrv_drop_pct > 15:
         risk_level = "HIGH"
         reasons.append(f"Significant RHR spike (+{rhr_spike:.1f} bpm)")
         reasons.append(f"Major HRV drop (-{hrv_drop_pct:.1f}%)")
@@ -67,13 +79,15 @@ def analyze_flu_risk(summary_data):
         
     return {
         "analysis_type": "bio_entropy_flu_risk",
-        "date": latest_hrv_entry["date"],
+        "date": latest_hrv_entry.get("date", "Unknown"),
         "risk_level": risk_level,
         "metrics": {
             "current_rhr": current_rhr,
             "baseline_rhr": round(avg_rhr_baseline, 1),
             "current_hrv": current_hrv,
-            "baseline_hrv": round(avg_hrv_baseline, 1)
+            "baseline_hrv": round(avg_hrv_baseline, 1),
+            "current_resp": round(current_resp, 1) if current_resp else "--",
+            "baseline_resp": round(avg_resp_baseline, 1) if avg_resp_baseline else "--"
         },
         "insights": reasons
     }
@@ -196,6 +210,15 @@ def perform_bio_metric_audit(summary_data):
     deep_pct = (deep_sleep / total_sleep * 100) if total_sleep > 0 else 0
     rem_pct = (rem_sleep / total_sleep * 100) if total_sleep > 0 else 0
     
+    # Calculate rolling 3-day sleep debt (target 7.5h = 27000s)
+    target_sleep_s = 27000
+    sleep_debt_s = 0
+    for s in sleep_data[-3:]:
+        if s.get("sleep_time_seconds"):
+            debt = target_sleep_s - s["sleep_time_seconds"]
+            if debt > 0: sleep_debt_s += debt
+    sleep_debt_h = sleep_debt_s / 3600
+    
     bb_data = summary_data.get("body_battery", [])
     latest_bb = next((b for b in reversed(bb_data) if b.get("highest")), {})
     bb_charged = latest_bb.get("charged", 0)
@@ -205,7 +228,8 @@ def perform_bio_metric_audit(summary_data):
         "sleep_architecture": {
             "deep_pct": round(deep_pct, 1),
             "rem_pct": round(rem_pct, 1),
-            "restlessness": latest_sleep.get("restless_periods", 0)
+            "restlessness": latest_sleep.get("restless_periods", 0),
+            "sleep_debt_h": round(sleep_debt_h, 1)
         },
         "body_battery": {
             "charged": bb_charged,
@@ -227,22 +251,22 @@ def perform_bio_metric_audit(summary_data):
 
     # 4. Action Protocol Logic
     protocol = "黄灯 (Fatigue) - 维护性运转"
-    protocol_desc = "保持低强度有氧 (Zone 2)，时长缩减 30%。不要追求 PR。"
+    protocol_desc = "储备不足。保持低强度有氧 (Zone 2)，时长缩减 30%。优先补充镁/茶氨酸等神经修复剂。"
     move_type = "YELLOW"
 
     sleep_score = latest_sleep.get("sleep_score", 0) or 0
 
-    if hrv_status_raw == "BALANCED" and sleep_score > 80 and bb_peak > 80:
+    if hrv_status_raw == "BALANCED" and sleep_score > 80 and bb_peak > 80 and sleep_debt_h < 1.5:
         protocol = "绿灯 (Prime) - 推极限"
-        protocol_desc = "执行高强度间歇 (HIIT) 或长距离训练。这是打破平台的窗口期。"
+        protocol_desc = "防线巩固。执行高强度间歇 (HIIT) 或长距离训练。认知冗余充足，适合进行破局性商业决策。"
         move_type = "GREEN"
-    elif rhr_diff > 4 or (latest_stress.get("avg_stress", 0) > 45 and hrv_status_raw != "BALANCED"):
+    elif rhr_diff > 4 or (latest_stress.get("avg_stress", 0) > 45 and hrv_status_raw != "BALANCED") or sleep_debt_h > 4:
         protocol = "警报 (Infection/Overload) - 停机"
-        protocol_desc = "身体正在对抗应激或病毒。禁止训练，早睡是唯一任务。"
+        protocol_desc = "系统边缘崩溃可能。身体正在对抗过度应激或病毒，且睡眠债务极高。禁止高要求决策与大规律运动，增加深度补水，建议补充维生素C/锌预防感染。"
         move_type = "ALERT"
-    elif hrv_status_raw != "BALANCED" or sleep_score < 60:
+    elif hrv_status_raw != "BALANCED" or sleep_score < 60 or sleep_debt_h > 2.5:
         protocol = "红灯 (Critical) - 主动刹车"
-        protocol_desc = "禁止高强度运动。仅允许散步、冥想、拉伸。"
+        protocol_desc = "系统代偿严重不足。禁止神经要求高的大型决策与高强度训练。仅允许主动恢复。必须限制今日的交叉会议与咖啡因摄入。"
         move_type = "RED"
     
     if latest_hrv == 0 and latest_rhr == 0:
@@ -295,6 +319,8 @@ def generate_chinese_insight(summary_data):
     
     # 1. Input Side: Biological Rhythm & Recovery Quality
     avg_deep_pct = audit["recovery_loop"]["sleep_architecture"]["deep_pct"]
+    sleep_debt = audit["recovery_loop"]["sleep_architecture"].get("sleep_debt_h", 0)
+    
     consist_msg = f"【1. 输入审计：生物节律与修复质量】\n"
     consist_msg += f"周期内睡眠一致性评价为「{consist_status}」（标准差 {std_dev}h）。"
     if consist_status == "优":
@@ -302,6 +328,9 @@ def generate_chinese_insight(summary_data):
     else:
         consist_msg += "节律波动较大，这种“社会时差”效应会显著削弱睡眠对认知的修复效率，建议通过固定起床时间来锚定生物钟。"
     
+    if sleep_debt > 2.0:
+        consist_msg += f"\n>> 核心警报：累积睡眠债务达 {sleep_debt} 小时！系统正在透支未来储备，认知降级与免疫受损的风险呈指数上升。"
+        
     if avg_deep_pct < 15:
         consist_msg += f"\n监测到深睡占比（{avg_deep_pct}%）低于 15% 的生理修复阈值，暗示物理层面的修复受阻，长期将侵蚀基础免疫力。"
     else:

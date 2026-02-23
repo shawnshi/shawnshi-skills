@@ -2,21 +2,21 @@ import re
 import os
 
 def clean_text(text):
-    # Remove hyperref and label
+    # Remove hyperref and label robustly
     text = re.sub(r'\\hyperref\[.*?\]\{(.*?)\}', r'\1', text)
     text = re.sub(r'\\label\{.*?\}', '', text)
     # Remove textquotesingle
     text = text.replace(r'\\textquotesingle', "'")
-    # Remove \section, \subsection wrappers if they remain
-    text = re.sub(r'\\(sub)*section\{', '', text)
-    text = text.replace('}', '')
+    # Clean section wrappers more safely
+    text = re.sub(r'\\(?:sub)*section\{([^{}]+)\}', r'\1', text)
     # Remove bold markers from markdown
     text = text.replace('**', '')
-    # Remove audio IDs like 048.1, 1005.2 at end of lines
+    # Remove trailing audio IDs like 048.1, 1005.2 more specifically at the end
+    text = re.sub(r'\s+\d{3,4}\.\d+$', '', text)
     text = re.sub(r'\d{3,4}\.\d+', '', text)
     # Remove other artifacts
     text = text.replace(r'\\textless/span\textgreater{}', '')
-    text = text.replace(r'\\textless audio controls\textgreater\\textless source src="audio/', '')
+    text = re.sub(r'\\textless audio controls.*?src="audio/.*?', '', text)
     text = text.replace('"', "''") # Fix quotes roughly
     return text.strip()
 

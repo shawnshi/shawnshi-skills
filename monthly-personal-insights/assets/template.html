@@ -1,0 +1,164 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <title>{report_title_meta}</title>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <style>
+        :root {{
+            --primary: #2c3e50;
+            --accent: #3498db;
+            --success: #27ae60;
+            --warning: #f1c40f;
+            --danger: #e74c3c;
+            --bg: #f8f9fa;
+            --text-secondary: #7f8c8d;
+        }}
+        body {{ font-family: 'PingFang SC', 'Microsoft YaHei', sans-serif; background: var(--bg); color: var(--primary); margin: 0; padding: 40px 20px; line-height: 1.6; }}
+        .container {{ max-width: 1200px; margin: 0 auto; }}
+        header {{ 
+            background: linear-gradient(135deg, #1a2a3a 0%, #2c3e50 100%); 
+            color: white; padding: 40px; border-radius: 16px; margin-bottom: 30px; 
+            text-align: center; box-shadow: 0 10px 20px rgba(0,0,0,0.1);
+        }}
+        header h1 {{ margin: 0; font-size: 32px; letter-spacing: 2px; }}
+        
+        .section-header {{ margin: 40px 0 20px; border-bottom: 2px solid #eee; padding-bottom: 10px; display: flex; align-items: center; gap: 10px; }}
+        .interpretation {{ margin-top: 15px; padding: 15px; background: #fcfcfc; border-radius: 8px; font-size: 14px; border-left: 4px solid var(--accent); color: #555; }}
+        
+        .grid {{ display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 20px; margin-bottom: 20px; }}
+        .card {{ 
+            background: white; padding: 25px; border-radius: 16px; 
+            box-shadow: 0 4px 15px rgba(0,0,0,0.05); text-align: center;
+        }}
+        .card h3 {{ margin: 0; font-size: 13px; color: var(--text-secondary); text-transform: uppercase; }}
+        .card p {{ margin: 10px 0 0; font-size: 32px; font-weight: 800; color: var(--primary); }}
+
+        .charts {{ display: grid; grid-template-columns: repeat(auto-fit, minmax(500px, 1fr)); gap: 30px; }}
+        .chart-box {{ 
+            background: white; padding: 30px; border-radius: 16px; 
+            box-shadow: 0 4px 15px rgba(0,0,0,0.05); display: flex; flex-direction: column;
+        }}
+        .chart-container {{ flex-grow: 1; min-height: 300px; position: relative; }}
+
+        .insights {{ 
+            background: white; padding: 40px; border-radius: 16px; 
+            box-shadow: 0 4px 15px rgba(0,0,0,0.05); 
+        }}
+        .insight-grid {{ display: grid; grid-template-columns: 1fr 1fr; gap: 30px; }}
+        .insight-item {{ padding: 20px; border-radius: 12px; background: #fdfdfd; border: 1px solid #eee; }}
+        .insight-item h4 {{ margin: 0 0 10px; color: var(--accent); }}
+        
+        .footer {{ text-align: center; color: #bdc3c7; font-size: 13px; margin-top: 60px; }}
+    </style>
+</head>
+<body>
+    <div class="container">
+        <header>
+            <h1>{report_title}</h1>
+            <p>{report_subtitle}</p>
+        </header>
+
+        <h2 class="section-header">📊 核心产出指标</h2>
+        <div class="grid">
+            <div class="card"><h3>{card1_title}</h3><p>{card1_val}</p></div>
+            <div class="card"><h3>{card2_title}</h3><p>{card2_val}</p></div>
+            <div class="card"><h3>{card3_title}</h3><p>{card3_val}</p></div>
+            <div class="card"><h3>{card4_title}</h3><p>{card4_val}</p></div>
+        </div>
+        <div class="interpretation">
+            <strong>指标解读：</strong> {stats_interpretation}
+        </div>
+
+        <h2 class="section-header">📈 行为与意图扫描</h2>
+        <div class="charts">
+            <div class="chart-box">
+                <h2>活动趋势 (心流稳定性)</h2>
+                <div class="chart-container"><canvas id="dailyChart"></canvas></div>
+                {daily_interpretation_html}
+            </div>
+            <div class="chart-box">
+                <h2>任务目标分布 (精力分配)</h2>
+                <div class="chart-container"><canvas id="goalChart"></canvas></div>
+                {goal_interpretation_html}
+            </div>
+            <div class="chart-box">
+                <h2>交互满意度 (心流质量)</h2>
+                <div class="chart-container"><canvas id="satChart"></canvas></div>
+                {sat_interpretation_html}
+            </div>
+            <div class="chart-box">
+                <h2>流程摩擦点 (系统损耗)</h2>
+                <div class="chart-container"><canvas id="fricChart"></canvas></div>
+                {fric_interpretation_html}
+            </div>
+        </div>
+
+        <h2 class="section-header">💡 战略诊断与进化建议</h2>
+        <div class="insights">
+            <div class="insight-grid">
+                <div class="insight-item">
+                    <h4>🎯 核心生产力领域</h4>
+                    <p>重心在 <strong>{top_goal}</strong>{top_goal_note}。{insight_goal}</p>
+                </div>
+                <div class="insight-item">
+                    <h4>🚧 流程自愈策略</h4>
+                    <p>针对 <strong>{top_friction}</strong> 摩擦，建议在 <code>coding.md</code> 引入自动容错协议。{insight_fric}</p>
+                </div>
+                <div class="insight-item">
+                    <h4>👤 交互风格画像</h4>
+                    <p>当前风格定义为 <strong>{profile}</strong>。满意度常模为 <strong>{avg_satisfaction}</strong>。{insight_profile}</p>
+                </div>
+                <div class="insight-item">
+                    <h4>🎁 彩蛋：不可磨灭的瞬间</h4>
+                    <p>{easter_egg}</p>
+                </div>
+            </div>
+        </div>
+
+        <div class="footer">
+            由 monthly-personal-insights v4.1 (架构升级版) 生成 | 架构师视角 | {timestamp}
+        </div>
+    </div>
+
+    <script>
+        const colors = ['#3498db', '#2ecc71', '#e74c3c', '#f1c40f', '#9b59b6', '#34495e', '#1abc9c', '#e67e22'];
+        
+        new Chart(document.getElementById('dailyChart'), {{
+            type: 'line',
+            data: {{
+                labels: {daily_labels},
+                datasets: [{{ label: '每日会话数', data: {daily_data}, borderColor: '#3498db', backgroundColor: 'rgba(52, 152, 219, 0.1)', fill: true, tension: 0.4 }}]
+            }},
+            options: {{ maintainAspectRatio: false, plugins: {{ legend: {{ display: false }} }} }}
+        }});
+
+        new Chart(document.getElementById('goalChart'), {{
+            type: 'doughnut',
+            data: {{
+                labels: {goal_labels},
+                datasets: [{{ data: {goal_data}, backgroundColor: colors }}]
+            }},
+            options: {{ maintainAspectRatio: false, cutout: '70%' }}
+        }});
+
+        new Chart(document.getElementById('satChart'), {{
+            type: 'bar',
+            data: {{
+                labels: {sat_labels},
+                datasets: [{{ label: '会话数', data: {sat_data}, backgroundColor: '#27ae60', borderRadius: 8 }}]
+            }},
+            options: {{ maintainAspectRatio: false, plugins: {{ legend: {{ display: false }} }} }}
+        }});
+
+        new Chart(document.getElementById('fricChart'), {{
+            type: 'pie',
+            data: {{
+                labels: {fric_labels},
+                datasets: [{{ data: {fric_data}, backgroundColor: ['#e74c3c', '#e67e22', '#f39c12', '#95a5a6'] }}]
+            }},
+            options: {{ maintainAspectRatio: false }}
+        }});
+    </script>
+</body>
+</html>

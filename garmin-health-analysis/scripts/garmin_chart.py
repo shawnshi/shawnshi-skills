@@ -365,6 +365,43 @@ def create_load_chart(ts_data, insight=""):
         }
     }
 
+def create_quadrant_chart(hrv_data, hr_data, insight=""):
+    dates = [h["date"] for h in hrv_data if h.get("last_night_avg")]
+    hrv = [h.get("last_night_avg", 0) for h in hrv_data if h.get("last_night_avg")]
+    hr_map = {h["date"]: h.get("resting_hr") for h in hr_data if h.get("resting_hr")}
+    
+    scatter_data = []
+    for d, h_val in zip(dates, hrv):
+        r_val = hr_map.get(d)
+        if r_val:
+            scatter_data.append({"x": r_val, "y": h_val})
+            
+    if not scatter_data: return None
+    
+    return {
+        "stats": {},
+        "chart": {
+            "title": "体态韧性四象限 (RHR vs HRV)", "insight": insight or "左上角为最佳恢复区（副交感主导），右下角为高危损耗区（交感满载/免疫受损可能）。",
+            "chart": {
+                "type": "scatter",
+                "data": {
+                    "datasets": [{
+                        "label": "日间状态驻点",
+                        "data": scatter_data,
+                        "backgroundColor": "#44AF69",
+                        "pointRadius": 6
+                    }]
+                },
+                "options": {
+                    "scales": {
+                        "x": { "title": {"display": True, "text": "静息心率 RHR (bpm) - 越低越好"} },
+                        "y": { "title": {"display": True, "text": "夜间 HRV (ms) - 越高越好"} }
+                    }
+                }
+            }
+        }
+    }
+
 def main():
     parser = argparse.ArgumentParser()
     parser.add_argument("chart", choices=["sleep", "body_battery", "hrv", "activities", "stress", "load", "dashboard"])
@@ -391,6 +428,11 @@ def main():
         if args.chart in ["hrv", "dashboard"] and summary_data.get("hrv"):
             r = create_hrv_chart(summary_data["hrv"], summary_data["heart_rate"], ci.get("hrv"))
             charts_data["stats"].update(r["stats"]); charts_data["charts"].append(r["chart"])
+            
+            # Quadrant Insight appended for dashboard/hrv
+            q_chart = create_quadrant_chart(summary_data["hrv"], summary_data["heart_rate"])
+            if q_chart:
+                charts_data["charts"].append(q_chart["chart"])
         if args.chart in ["stress", "dashboard"] and summary_data.get("stress"):
             r = create_stress_chart(summary_data["stress"], ci.get("stress", ""))
             charts_data["stats"].update(r["stats"]); charts_data["charts"].append(r["chart"])

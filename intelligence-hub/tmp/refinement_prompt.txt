@@ -1,131 +1,223 @@
-你是一位战略情报分析师。请对以下新闻条目进行「二阶推演」精炼：
+你是一位战略情报分析师。请对提供的新闻条目进行「二阶推演」精炼，并严格按照 JSON Schema 输出。
 
 ## 任务
-1. 从以下 30 条原始情报中，**筛选出 Top 10** 最具战略价值的条目
-2. 为每条 Top 10 提供：中文标题、约100字的中文深度摘要、推荐理由
-3. 为剩余的条目提供简单的**中文标题与简介翻译**
-4. 生成以下四个战略模块：
-   - **insights**: 3-5 条今日核心洞察（编号列表）
-   - **punchline**: 一句话核心判词
-   - **digest**: 200 字二阶推演摘要
-   - **market**: 市场动态要点（3-5 条）
+1. 根据每个条目的战略评分与以下关键词权重，进一步筛选出 Top 10 最具战略价值的条目。
+2. 为选出的 Top 10 提供中文标题、约100字的中文深度摘要（事实 → 联结 → 推演）、以及推荐理由。
+3. 为剩余的条目提供简单的中文标题与简介翻译（存入 translations，键为该条目的 URL）。
+4. 基于全部情报，生成高阶视角的 insights, punchline, digest 和 market 总结。
 
 ## 质量标准
-- 禁止使用形容词修饰（如"重大进展"、"革命性"）
-- 每条摘要必须包含：事实 → 联结 → 推演 三段论
+- 严格遵循被动客观的语气，禁止使用"重大进展"、"革命性"等形容词主观修饰
+- 每条摘要必须包含：事实(发生了什么) → 联结(与战略项目有何关系) → 推演(可能导致什么后果) 三段论
 - 优先筛选反直觉或非共识情报
 
-## 当前战略关键词权重
-ace(w=23), msl(w=23), hitl(w=19), medical(w=14), agent(w=14), fhir(w=12), ai(w=10), vbc(w=10), drg(w=10), dip(w=10), 信创(w=10), 互联互通(w=10), clinic(w=8), hospital(w=8), ehr(w=8)
+## 输出格式 (强制遵守)
+必须输出且仅输出一个合法的 JSON 对象。不要输出 Markdown 代码块，不要包含 ```json 的包裹，只输出裸 JSON 数据：
 
-## 原始情报清单
-1. [lucumr.pocoo.org] lucumr.pocoo.org: A Language For Agents | Score=47
-   URL: https://lucumr.pocoo.org/2026/2/9/a-language-for-agents/
-   Desc: Last year I first started thinking about what the future of programming languages might look like now that agentic engineering is a growing thing. Initially I felt that the enormous corpus of pre-exis
-2. [lucumr.pocoo.org] lucumr.pocoo.org: Pi: The Minimal Agent Within OpenClaw | Score=47
-   URL: https://lucumr.pocoo.org/2026/1/31/pi/
-   Desc: If you haven’t been living under a rock, you will have noticed this week that a project of my friend Peter went viral on the internet.  It went by many names. The most recent one is OpenClaw but in th
-3. [matklad.github.io] matklad.github.io: Justifying text-wrap: pretty | Score=47
-   URL: https://matklad.github.io/2026/02/14/justifying-text-wrap-pretty.html
-   Desc: Justifying text-wrap: pretty Feb 14, 2026   Something truly monumental happened in the world of software development in 2025. Safari shipped a reasonable implementation of text-wrap: pretty: https://w
-4. [tedium.co] tedium.co: Markdown’s Moment | Score=47
-   URL: https://feed.tedium.co/link/15204/17278321/markdown-growing-influence-cloudflare-ai
-   Desc: For some reason, a bunch of big companies are really leaning into Markdown right now. AI may be the reason, but I kind of love the possible side benefits.So, here’s something that I didn’t expect to b
-5. [tedium.co] tedium.co: Design Deconstruction | Score=47
-   URL: https://feed.tedium.co/link/15204/17276365/text-based-design-mindset
-   Desc: Design is perhaps the software paradigm most wedded to the mouse and the GUI. But there’s no reason it can’t be text-driven.To me, the hard part about being creative is that you’re always trying to lo
-6. [geoffreylitt.com] geoffreylitt.com: Code like a surgeon | Score=47
-   URL: https://geoffreylitt.com/2025/10/24/code-like-a-surgeon.html
-   Desc: A lot of people say AI will make us all “managers” or “editors”…but I think this is a dangerously incomplete view! Personally, I’m trying to code like a surgeon. A surgeon isn’t a manager, they do the
-7. [geoffreylitt.com] geoffreylitt.com: Enough AI copilots! We need AI HUDs | Score=47
-   URL: https://geoffreylitt.com/2025/07/27/enough-ai-copilots-we-need-ai-huds.html
-   Desc: In my opinion, one of the best critiques of modern AI design comes from a 1992 talk by the researcher Mark Weiser where he ranted against “copilot” as a metaphor for AI. This was 33 years ago, but it’
-8. [eli.thegreenplace.net] eli.thegreenplace.net: Rewriting pycparser with the help of an LLM | Score=47
-   URL: https://eli.thegreenplace.net/2026/rewriting-pycparser-with-the-help-of-an-llm/
-   Desc: pycparser is my most widely used open source project (with ~20M daily downloads from PyPI [1]). It's a pure-Python parser for the C programming language, producing ASTs inspired by Python's own. Until
-9. [jyn.dev] jyn.dev: remotely unlocking an encrypted hard disk | Score=47
-   URL: https://jyn.dev/remotely-unlocking-an-encrypted-hard-disk/
-   Desc: Your mission, should you choose to accept it, is to sneak into the earliest parts of the boot process, swap the startup config without breaking anything, and leave without a trace. Are you ready? Let'
-10. [michael.stapelberg.ch] michael.stapelberg.ch: Coding Agent VMs on NixOS with microvm.nix | Score=47
-   URL: https://michael.stapelberg.ch/posts/2026-02-01-coding-agent-microvm-nix/
-   Desc: I have come to appreciate coding agents to be valuable tools for working with computer program code in any capacity, such as learning about any program’s architecture, diagnosing bugs or developing pr
-11. [geoffreylitt.com] geoffreylitt.com: AI as teleportation | Score=43
-   URL: https://geoffreylitt.com/2025/09/10/ai-as-teleportation.html
-   Desc: Here’s a thought experiment for pondering the effects AI might have on society: What if we invented teleportation? A bit odd, I know, but bear with me…  The year is 2035. The Auto Go Instant (AGI) tel
-12. [Product Hunt] Product Hunt: Rork Max | Score=33
-   URL: https://www.producthunt.com/products/rork-app-for-ios
-   Desc: Best AI for iOS apps. Website that replaces Xcode             Discussion             |             Link
-13. [Product Hunt] Product Hunt: Prism Videos | Score=33
-   URL: https://www.producthunt.com/products/prism-videos
-   Desc: A unified workspace to generate and edit AI videos              Discussion             |             Link
-14. [daringfireball.net] daringfireball.net: IMAX and Apple Collaborate to Screen F1 Races Live in Theaters | Score=33
-   URL: https://www.motorsport.com/f1/news/f1-to-screen-live-in-imax-theatres-in-2026-as-apple-tv-unveils-new-us-viewing-experience/10798974/
-   Desc: Lydia Mee, reporting for Motorsport:  IMAX has announced that a select number of races will be shown live in IMAX locations across the United States in 2026. The new fan viewing experience is part of 
-15. [dynomight.net] dynomight.net: Heritability of human life span is about 50% when heritability is redefined to be something different | Score=33
-   URL: https://dynomight.net/lifespan/
-   Desc: How heritable is hair color? Well, if you’re a redhead and you have an identical twin, they will definitely also be a redhead. But the age at which twins go gray seems to vary a bit based on lifestyle
-16. [dynomight.net] dynomight.net: Why read novels? | Score=33
-   URL: https://dynomight.net/novels/
-   Desc: Why should you read novels? We tell children they’re magic carpets for the mind / exercise for the soul instead of the body / lighthouses in the great sea of time. But aren’t they ultimately a form of
-17. [dynomight.net] dynomight.net: Good if make prior after data instead of before | Score=33
-   URL: https://dynomight.net/prior/
-   Desc: They say you’re supposed to choose your prior in advance. That’s why it’s called a “prior”. First, you’re supposed to say say how plausible different things are, and then you update your beliefs based
-18. [lucumr.pocoo.org] lucumr.pocoo.org: The Final Bottleneck | Score=33
-   URL: https://lucumr.pocoo.org/2026/2/13/the-final-bottleneck/
-   Desc: Historically, writing code was slower than reviewing code. It might not have felt that way, because code reviews sat in queues until someone got around to picking it up.  But if you compare the actual
-19. [matklad.github.io] matklad.github.io: Diagnostics Factory | Score=33
-   URL: https://matklad.github.io/2026/02/16/diagnostics-factory.html
-   Desc: Diagnostics Factory Feb 16, 2026  In Error Codes For Control Flow, I explained that Zig’s strongly-typed error codes solve the “handling” half of error management, leaving “reporting” to the users. To
-20. [derekthompson.org] derekthompson.org: The Orality Theory of Everything | Score=33
-   URL: https://www.theatlantic.com/ideas/2026/02/social-media-literacy-crisis/686076/?utm_source=feed
-   Desc: The world is full of theories of everything. The smartphone theory of everything argues that our personal devices are responsible for the rise of political polarization, anxiety, depression, and consp
-21. [derekthompson.org] derekthompson.org: The Affordability Curse | Score=33
-   URL: https://www.theatlantic.com/ideas/2025/11/democrats-cost-of-living-affordability-platform/684847/?utm_source=feed
-   Desc: To understand what just happened in this week’s elections—notably Zohran Mamdani’s win in New York City, Mikie Sherrill’s win in New Jersey, and Abigail Spanberger’s win in Virginia—wind back the cloc
-22. [derekthompson.org] derekthompson.org: The Era of Step-on-a-Rake Capitalism | Score=33
-   URL: https://www.theatlantic.com/ideas/archive/2025/09/trump-economic-pain-strategy/684166/?utm_source=feed
-   Desc: Sign up for Trump’s Return, a newsletter featuring coverage of the second Trump presidency.Is Donald Trump a staunch capitalist, a secret socialist, a blend of the two, or none of the above? Depending
-23. [nesbitt.io] nesbitt.io: Forge-Specific Repository Folders | Score=33
-   URL: https://nesbitt.io/2026/02/22/forge-specific-repository-folders.html
-   Desc: Git doesn’t know about CI, code review, or issue templates, but every forge that hosts git repositories has added these features through the same trick: a dot-folder in your repo root that the forge r
-24. [nesbitt.io] nesbitt.io: Whale Fall | Score=33
-   URL: https://nesbitt.io/2026/02/21/whale-fall.html
-   Desc: When a whale dies in the open ocean, its carcass sinks to the abyssal floor and becomes an ecosystem. Marine biologists call this a whale fall, and the body sustains life in three overlapping stages: 
-25. [nesbitt.io] nesbitt.io: ActivityPub | Score=33
-   URL: https://nesbitt.io/2026/02/20/activitypub.html
-   Desc: ActivityPub is a federated protocol used by public houses in the United Kingdom and the Republic of Ireland for announcing scheduled events, drink promotions, and community activities to patrons and t
-26. [tedium.co] tedium.co: Project Code Name | Score=33
-   URL: https://feed.tedium.co/link/15204/17277502/corporate-turnaround-code-names-history
-   Desc: Why do corporate restructuring plans get code names the way operating systems do? And why are the names often so bizarre?Today in Tedium: Recently, Amazon did something kind of annoying in the midst o
-27. [jayd.ml] jayd.ml: Microsoft Game Pass Ultimate Billing Fraud | Score=33
-   URL: https://jayd.ml/2026/02/14/microsoft-game-pass-fraud.html
-   Desc: I purchased an Xbox Series X out of some misplaced sense of nostalgia for the  360 and because I needed a 4K player. At the time you could still do the trick where you load up on Xbox Live Gold and th
-28. [eli.thegreenplace.net] eli.thegreenplace.net: Compiling Scheme to WebAssembly | Score=33
-   URL: https://eli.thegreenplace.net/2026/compiling-scheme-to-webassembly/
-   Desc: One of my oldest open-source projects - Bob - has celebrated 15 a couple of months ago. Bob is a suite of implementations of the Scheme programming language in Python, including an interpreter, a comp
-29. [eli.thegreenplace.net] eli.thegreenplace.net: Summary of reading: October - December 2025 | Score=33
-   URL: https://eli.thegreenplace.net/2025/summary-of-reading-october-december-2025/
-   Desc: "The Origins of Political Order: From Prehuman Times to the French Revolution" by Francis Fukuyama - while reading this book it occurred to me that domains of study like political sciense must be incr
-30. [jyn.dev] jyn.dev: pre-commit hooks are fundamentally broken | Score=33
-   URL: https://jyn.dev/pre-commit-hooks-are-fundamentally-broken/
-   Desc: Let's start a new Rust project. $ mkdir best-fizzbuzz-ever $ cd best-fizzbuzz-ever $ cat << EOF > main.rs fn main() { for i in 0.. {     println ("fizzbuzz"); }} EOF $ git init Initialized empty Git r
-
-## 输出格式
-严格输出以下 JSON（不要包含 markdown 代码块标记）：
 {
   "top_10": [
     {
-      "url": "原始 URL",
+      "url": "原始 url",
       "title_zh": "中文标题",
-      "summary_zh": "中文深度摘要（约100字）",
+      "summary_zh": "中文深度摘要 (100字)",
       "reason": "推荐理由"
     }
   ],
   "translations": {
-    "URL": {"title_zh": "中文标题", "desc_zh": "中文简介（约50字）"}
+    "原始 url": {
+      "title_zh": "中文标题",
+      "desc_zh": "中文简介"
+    }
   },
-  "insights": "1. **洞察标题**: 洞察内容\n2. ...",
-  "punchline": "一句话核心判词",
-  "digest": "200字二阶推演摘要",
-  "market": "* 要点1\n* 要点2\n* 要点3"
+  "insights": "1. 第一条洞察
+2. 第二条洞察",
+  "punchline": "一句话判断",
+  "digest": "200字二阶推演",
+  "market": "* 要点1
+* 要点2"
 }
+
+
+## 当前战略关键词权重
+ace(w=23), msl(w=23), ai(w=20), 战略(w=20), 输出(w=20), 医疗(w=20), 个人(w=20), hitl(w=19), 路径(w=19), medical(w=14), agent(w=14), fhir(w=12), vbc(w=10), drg(w=10), dip(w=10)
+
+## 原始情报清单
+Item 1 [Score=65]:
+Title: arXiv Med-AI: Algorithms Trained on Normal Chest X-rays Can Predict Health Insurance Types
+URL: https://arxiv.org/abs/2511.11030v5
+Source: arXiv Med-AI
+Desc: Artificial intelligence is revealing what medicine never intended to encode. Deep vision models, trained on chest X-rays, can now detect not only disease but also invisible traces of social inequality
+
+Item 2 [Score=65]:
+Title: pluralistic.net: Pluralistic: Six Years of Pluralistic (19 Feb 2026)
+URL: https://pluralistic.net/2026/02/19/now-we-are-six/
+Source: pluralistic.net
+Desc: Today's links Six years of Pluralistic: Time flies when you're writing the web. Hey look at this: Delights to delectate. Object permanence: MBA phrenology; Sony's DRM CEO is out; Midwestern Tahrir; Re
+
+Item 3 [Score=57]:
+Title: arXiv Med-AI: SEISMO: Increasing Sample Efficiency in Molecular Optimization with a Trajectory-Aware LLM Agent
+URL: https://arxiv.org/abs/2602.00663v2
+Source: arXiv Med-AI
+Desc: Optimizing the structure of molecules to achieve desired properties is a central bottleneck across the chemical sciences, particularly in the pharmaceutical industry where it underlies the discovery o
+
+Item 4 [Score=57]:
+Title: antirez.com: Reflections on AI at the end of 2025
+URL: http://antirez.com/news/157
+Source: antirez.com
+Desc: * For years, despite functional evidence and scientific hints accumulating, certain AI researchers continued to claim LLMs were stochastic parrots: probabilistic machines that would: 1. NOT have any r
+
+Item 5 [Score=57]:
+Title: pluralistic.net: Pluralistic: Deplatform yourself (23 Feb 2026)
+URL: https://pluralistic.net/2026/02/23/goodharts-lawbreaker/
+Source: pluralistic.net
+Desc: Today's links Deplatform yourself: Copyright infringement is your least entertainment dollar. Hey look at this: Delights to delectate. Object permanence: "Lawer" threatens suit; Landmark metaphotos; 3
+
+Item 6 [Score=57]:
+Title: lucumr.pocoo.org: A Language For Agents
+URL: https://lucumr.pocoo.org/2026/2/9/a-language-for-agents/
+Source: lucumr.pocoo.org
+Desc: Last year I first started thinking about what the future of programming languages might look like now that agentic engineering is a growing thing. Initially I felt that the enormous corpus of pre-exis
+
+Item 7 [Score=57]:
+Title: lucumr.pocoo.org: Pi: The Minimal Agent Within OpenClaw
+URL: https://lucumr.pocoo.org/2026/1/31/pi/
+Source: lucumr.pocoo.org
+Desc: If you haven’t been living under a rock, you will have noticed this week that a project of my friend Peter went viral on the internet.  It went by many names. The most recent one is OpenClaw but in th
+
+Item 8 [Score=57]:
+Title: gilesthomas.com: Writing an LLM from scratch, part 29 -- using DistributedDataParallel to train a base model from scratch in the cloud
+URL: https://www.gilesthomas.com/2026/01/llm-from-scratch-29-ddp-training-a-base-model-in-the-cloud
+Source: gilesthomas.com
+Desc: I'm carrying on with my "extra credit" projects after finishing the main body of Sebastian Raschka's book "Build a Large Language Model (from Scratch)". Having proven that I could train a GPT-2 small 
+
+Item 9 [Score=57]:
+Title: oldvcr.blogspot.com: Hands-on with two Apple Network Server prototype ROMs
+URL: https://oldvcr.blogspot.com/2026/01/hands-on-with-two-apple-network-server.html
+Source: oldvcr.blogspot.com
+Desc: Grateful acknowledgement made to the several former Apple employees who materially contributed to this entry. This article wouldn't have been possible without you!  Here's why I need to do inventory m
+
+Item 10 [Score=57]:
+Title: michael.stapelberg.ch: Coding Agent VMs on NixOS with microvm.nix
+URL: https://michael.stapelberg.ch/posts/2026-02-01-coding-agent-microvm-nix/
+Source: michael.stapelberg.ch
+Desc: I have come to appreciate coding agents to be valuable tools for working with computer program code in any capacity, such as learning about any program’s architecture, diagnosing bugs or developing pr
+
+Item 11 [Score=56]:
+Title: arXiv Med-AI: MedClarify: An information-seeking AI agent for medical diagnosis with case-specific follow-up questions
+URL: https://arxiv.org/abs/2602.17308v1
+Source: arXiv Med-AI
+Desc: Large language models (LLMs) are increasingly used for diagnostic tasks in medicine. In clinical practice, the correct diagnosis can rarely be immediately inferred from the initial patient presentatio
+
+Item 12 [Score=56]:
+Title: xeiaso.net: Anubis v1.25.0: Necron
+URL: https://github.com/TecharoHQ/anubis/releases/tag/v1.25.0
+Source: xeiaso.net
+Desc: Hey all, I'm sure you've all been aware that things have been slowing down a little with Anubis development, and I want to apologize for that. A lot has been going on in my life lately (my blog will h
+
+Item 13 [Score=53]:
+Title: oldvcr.blogspot.com: The Scriptovision Super Micro Script video titler is almost a home computer
+URL: https://oldvcr.blogspot.com/2026/02/the-scriptovision-super-micro-script.html
+Source: oldvcr.blogspot.com
+Desc: Canadians, rejoice! Not only do you have curling, the Big Turk and Tim Hortons (and, when I was in BC last, Dr Pepper made with real cane sugar), you also have a number of interesting indigenous compu
+
+Item 14 [Score=43]:
+Title: jeffgeerling.com: Testing Reachy Mini - Hugging Face's Pi powered robot
+URL: https://www.jeffgeerling.com/blog/2026/testing-reachy-mini-hugging-face-robot/
+Source: jeffgeerling.com
+Desc: When I saw Jensen Huang introduce the Reachy Mini at CES, I thought it was a gimmick. His keynote showed this little robot responding to human input, turning its head to look at a TODO list on the wal
+
+Item 15 [Score=43]:
+Title: daringfireball.net: IMAX and Apple Collaborate to Screen F1 Races Live in Theaters
+URL: https://www.motorsport.com/f1/news/f1-to-screen-live-in-imax-theatres-in-2026-as-apple-tv-unveils-new-us-viewing-experience/10798974/
+Source: daringfireball.net
+Desc: Lydia Mee, reporting for Motorsport:  IMAX has announced that a select number of races will be shown live in IMAX locations across the United States in 2026. The new fan viewing experience is part of 
+
+Item 16 [Score=43]:
+Title: antirez.com: Automatic programming
+URL: http://antirez.com/news/159
+Source: antirez.com
+Desc: In my YouTube channel, for some time now I started to refer to the process of writing software using AI assistance (soon to become just "the process of writing software", I believe) with the term "Aut
+
+Item 17 [Score=43]:
+Title: antirez.com: Don't fall into the anti-AI hype
+URL: http://antirez.com/news/158
+Source: antirez.com
+Desc: I love writing software, line by line. It could be said that my career was a continuous effort to create software well written, minimal, where the human touch was the fundamental feature. I also hope 
+
+Item 18 [Score=43]:
+Title: idiallo.com: The Little Red Dot
+URL: https://idiallo.com/blog/little-red-dot?src=feed
+Source: idiallo.com
+Desc: Sometimes, I have 50 tabs open. Looking for a single piece of information ends up being a rapid click on each tab until I find what I'm looking for. Somehow, every time I get to that LinkedIn tab, I p
+
+Item 19 [Score=43]:
+Title: idiallo.com: Teleoperation is Always the Butt of the Joke
+URL: https://idiallo.com/blog/teleoperation-is-the-butt-of-the-joke?src=feed
+Source: idiallo.com
+Desc: A few years back, the term "AI" took an unexpected turn when it was redefined as "Actual Indian". As in, a person in India operating the machine remotely. I first heard the term when Amazon was boasti
+
+Item 20 [Score=43]:
+Title: maurycyz.com: Inside an alpha-beta scintillator:
+URL: https://maurycyz.com/misc/ah_teardown/
+Source: maurycyz.com
+Desc: Just a heads up: this post is incomplete.  However, it may be a while before I am able to finish it. I am publishing it early in hopes that you will still find it somewhat interesting.    I've recentl
+
+Item 21 [Score=43]:
+Title: maurycyz.com: Notes on blog future-proofing
+URL: https://maurycyz.com/misc/futureproofing/
+Source: maurycyz.com
+Desc: One of the great things about web pages is that they are long-lived and mutable. There's no need to aim for perfection on the first draft: A page can continue to be improved for years after its origin
+
+Item 22 [Score=43]:
+Title: maurycyz.com: Writing my own static site generator
+URL: https://maurycyz.com/misc/new_ssg/
+Source: maurycyz.com
+Desc: In principle, a static site generator is a good idea: They automatically populate your homepage, index pages and RSS feeds, making it impossible to forget anything.  Unlike a CMS like Wordpress, they 
+
+Item 23 [Score=43]:
+Title: righto.com: Instruction decoding in the Intel 8087 floating-point chip
+URL: http://www.righto.com/2026/02/8087-instruction-decoding.html
+Source: righto.com
+Desc: In the 1980s, if you wanted your IBM PC to run faster, you could buy the Intel 8087 floating-point coprocessor chip. With this chip, CAD software, spreadsheets, flight simulators, and other programs w
+
+Item 24 [Score=43]:
+Title: righto.com: Notes on the Intel 8086 processor's arithmetic-logic unit
+URL: http://www.righto.com/2026/01/notes-on-intel-8086-processors.html
+Source: righto.com
+Desc: In 1978, Intel introduced the 8086 processor, a revolutionary chip that led to the modern x86 architecture. Unlike modern 64-bit processors, however, the 8086 is a 16-bit chip. Its arithmetic/logic un
+
+Item 25 [Score=43]:
+Title: righto.com: Conditions in the Intel 8087 floating-point chip's microcode
+URL: http://www.righto.com/2025/12/8087-microcode-conditions.html
+Source: righto.com
+Desc: In the 1980s, if you wanted your computer to do floating-point calculations faster, you could buy the Intel 8087 floating-point coprocessor chip. Plugging it into your IBM PC would make operations up 
+
+Item 26 [Score=43]:
+Title: lucumr.pocoo.org: The Final Bottleneck
+URL: https://lucumr.pocoo.org/2026/2/13/the-final-bottleneck/
+Source: lucumr.pocoo.org
+Desc: Historically, writing code was slower than reviewing code. It might not have felt that way, because code reviews sat in queues until someone got around to picking it up.  But if you compare the actual
+
+Item 27 [Score=43]:
+Title: gilesthomas.com: Writing an LLM from scratch, part 28 -- training a base model from scratch on an RTX 3090
+URL: https://www.gilesthomas.com/2025/12/llm-from-scratch-28-training-a-base-model-from-scratch
+Source: gilesthomas.com
+Desc: Having worked through the main body of Sebastian Raschka's book "Build a Large Language Model (from Scratch)", I wanted to try an experiment: is it possible to train a base model of my own, on my own 
+
+Item 28 [Score=43]:
+Title: rakhim.exotext.com: Modern UI is clean and invisible? Ha, I wish!
+URL: https://rakhim.exotext.com/modern-ui-is-not-invisible
+Source: rakhim.exotext.com
+Desc: This is an excellent video about modern UI/UX: "The Hidden Cost of 'Clean' Design." I highly recommend watching it and checking out Ilia's other work.  I agree with nearly everything in the video, inc
+
+Item 29 [Score=43]:
+Title: susam.net: Deep Blue: Chess vs Programming
+URL: https://susam.net/deep-blue.html
+Source: susam.net
+Desc: I remember how dismayed Kasparov was after losing the 1997 match to   IBM's Deep Blue, although his views on Deep Blue became more   balanced with time and he accepted that we had entered a new era in
+
+Item 30 [Score=43]:
+Title: buttondown.com/hillelwayne: Stream of Consciousness Driven Development
+URL: https://buttondown.com/hillelwayne/archive/stream-of-consciousness-driven-development/
+Source: buttondown.com/hillelwayne
+Desc: This is something I just tried out last week but it seems to have enough potential to be worth showing unpolished. I was pairing with a client on writing a spec. I saw a problem with the spec, a convo

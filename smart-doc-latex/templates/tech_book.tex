@@ -24,11 +24,15 @@
 % ---------------------------------------------------------
 % Fixes for Pandoc
 % ---------------------------------------------------------
-\newcounter{none}
-\newunicodechar{≈}{$\approx$}
-\newunicodechar{≤}{$\le$}
-\newunicodechar{≥}{$\ge$}
-\providecommand{\tightlist}{\setlength{\itemsep}{0pt}\setlength{\parskip}{0pt}}
+\newunicodechar{≈}{$$\approx$$}
+\newunicodechar{≤}{$$\le$$}
+\newunicodechar{≥}{$$\ge$$}
+\providecommand{\tightlist}{%
+  \setlength{\itemsep}{0pt}\setlength{\parskip}{0pt}}
+
+$if(highlighting-macros)$
+$highlighting-macros$
+$endif$
 
 % ---------------------------------------------------------
 % Visual Identity
@@ -95,14 +99,23 @@
 % ---------------------------------------------------------
 % Document
 % ---------------------------------------------------------
+$if(title)$
 \title{$title$}
+$endif$
+$if(author)$
 \author{$author$}
+$endif$
+$if(date)$
+\date{$date$}
+$else$
 \date{\today}
+$endif$
 
 \begin{document}
 
 \frontmatter
 
+$if(title)$
 % Custom O'Reilly-Style Cover
 \begin{titlepage}
     \begin{tikzpicture}[remember picture, overlay]
@@ -116,18 +129,29 @@
         {\Large\color{gray} \textbf{TECHNICAL SERIES} \par} 
         \vspace{2cm}
         {\Huge\bfseries\color{black} $title$ \par}
+        \vspace{0.5cm}
+        {\Large\bfseries $title$ \par}
         \vspace{1.5cm}
         \noindent\rule{0.6\textwidth}{1pt}
         \vspace{1.5cm}
         {\Large Professional Guide \par}
         \vfill
+$if(author)$
         {\Large\bfseries $author$ \par}
+$endif$
         \vspace{1cm}
+$if(date)$
+        {\large $date$ \par}
+$else$
         {\large \today \par}
+$endif$
     \end{center}
 \end{titlepage}
+$endif$
 
+$if(toc)$
 \tableofcontents
+$endif$
 
 \mainmatter
 $body$

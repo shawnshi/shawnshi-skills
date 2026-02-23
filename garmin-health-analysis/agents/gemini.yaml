@@ -1,6 +1,6 @@
 display_name: Garmin Health
-short_description: 自然语言查询 Garmin 数据，分析健康趋势、恢复状况及患病风险。
-default_prompt: 分析我最近的身体状况，看看我是否有生病的征兆？
+short_description: 私人首席医疗官(CMO)。基于客观生理数据执行全链路深度审计，管理高阶决策准备度与系统性战略风险。
+default_prompt: 作为我的私人首席医疗官(CMO)，基于过去 14 天的客观生理数据执行全链路深度审计。请重点评估我的'认知决策准备度 (Executive Cognitive Readiness)'与'积累代谢摩擦'，找出系统性漏洞，并给出未来 72 小时的执行协议。
 interface:
   icon: watch
   brand_color: "#007cc3"

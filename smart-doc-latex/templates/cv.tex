@@ -11,12 +11,20 @@
 \usepackage{xcolor}
 \usepackage{fontawesome5} % Icons
 \usepackage{paracol}      % Two-column layout
+\usepackage{longtable}
+\usepackage{booktabs}
+\usepackage{tabularx}
+\usepackage{array}
+\usepackage{calc}
 
 % ---------------------------------------------------------
 % Fixes for Pandoc
 % ---------------------------------------------------------
-\newcounter{none}
-\providecommand{\tightlist}{\setlength{\itemsep}{0pt}\setlength{\parskip}{0pt}}
+\providecommand{\tightlist}{%
+  \setlength{\itemsep}{0pt}\setlength{\parskip}{0pt}}
+$if(highlighting-macros)$
+$highlighting-macros$
+$endif$
 
 % ---------------------------------------------------------
 % 2. Styling
@@ -41,16 +49,23 @@
 % ---------------------------------------------------------
 % Header
 % ---------------------------------------------------------
+$if(title)$
 \begin{center}
     {\Huge \textbf{$title$}} \\ \vspace{5pt} 
-    \ifdefined\author $author$ \fi
+$if(author)$
+    $author$
+$endif$
     % Example contact line (template placeholders)
     % \faEnvelope\ email@example.com | \faPhone\ +86 123-4567-8900 | \faGithub\ github.com/user
     \\ \vspace{5pt} 
+$if(date)$
     $date$
+$else$
+    \today
+$endif$
 \end{center}
-
 \vspace{0.5cm}
+$endif$
 
 % ---------------------------------------------------------
 % Content (Supports paracol for split layout)

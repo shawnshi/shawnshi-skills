@@ -38,9 +38,6 @@ python C:\Users\shich\.gemini\skills\smart-doc-latex\scripts\smart_engine.py --i
 
 | Script | Purpose | Usage |
 | :--- | :--- | :--- |
-| `convert_to_oreilly.py` | 将 Markdown 直接转为 O'Reilly 风格 LaTeX 书籍 (无需 Pandoc) | `python convert_to_oreilly.py <input.md> <output.tex>` |
-| `generate_tech_book.py` | 将 Pandoc 导出的 body .tex 与 tech_book 模板合并 | `python generate_tech_book.py <body.tex> <output.tex> <title> [author]` |
-| `process_latex_book.py` | 后处理 Pandoc 导出的 .tex (去 TOC + O'Reilly 封面) | `python process_latex_book.py <input.tex> <output.tex> [title] [author]` |
 | `process_idioms.py` | **特殊用途**：解析成语字典 .tex 并重排版 | `python process_idioms.py` (硬编码输入) |
 
 ## Best Practices for Agents
@@ -58,7 +55,7 @@ python C:\Users\shich\.gemini\skills\smart-doc-latex\scripts\smart_engine.py --i
 
 ### 3. Script Selection (脚本选择)
 *   **通用转换**: 优先使用 `smart_engine.py`。
-*   **O'Reilly 风格书籍**: 若源文件为 Markdown，使用 `convert_to_oreilly.py`；若已有 Pandoc 中间体，使用 `process_latex_book.py` 或 `generate_tech_book.py`。
+*   **O'Reilly 风格书籍**: 直接使用 `smart_engine.py --style tech_book`。
 *   **成语字典**: 仅在处理成语 .tex 文件时使用 `process_idioms.py`。
 
 ### 4. Artifact Delivery (产物交付)

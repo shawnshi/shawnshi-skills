@@ -61,29 +61,48 @@ def detect_style(file_path):
     print(f"DEBUG: Detection scores: {scores}")
     return best_style
 
-def convert_to_latex_body(input_file):
+def convert_and_compile(input_file, template_path, output_tex, style, title, author):
     """
-    Use Pandoc to convert input doc to a LaTeX fragment (body only).
+    Use Pandoc to convert input doc and compile with the specified template natively.
     """
     try:
-        # Explicitly set encoding to utf-8 to avoid CP1252 errors on Windows
-        # Added --extract-media . to handle images in .docx files
-        cmd = ['pandoc', input_file, '-t', 'latex', '--extract-media', '.']
+        # Build pandoc command array natively using the template
+        cmd = [
+            'pandoc', input_file,
+            '--template', template_path,
+            '--extract-media', '.',
+            '-o', output_tex
+        ]
+        
+        # Add metadata variables
+        if title:
+            cmd.extend(['-V', f'title={title}'])
+        if author:
+            cmd.extend(['-V', f'author={author}'])
+            
+        # Add conditional variables based on style
+        if style == 'academic' or style == 'tech_report':
+            # Simplified abstract extraction placeholder. 
+            cmd.extend(['-V', 'abstract=']) 
+            if style == 'tech_report':
+                cmd.extend(['-V', 'toc=true'])
+        
+        if style == 'book' or style == 'tech_book':
+             cmd.extend(['-V', 'toc=true'])
+
         # On Windows, we might need to force the environment to use UTF-8
         env = os.environ.copy()
         env["PYTHONIOENCODING"] = "utf-8"
         
-        result = subprocess.run(cmd, capture_output=True, text=True, encoding='utf-8', check=True, env=env)
-        return result.stdout
+        print(f"Running Pandoc conversion with template: {os.path.basename(template_path)}...")
+        subprocess.run(cmd, capture_output=True, text=True, encoding='utf-8', check=True, env=env)
+        return True
     except subprocess.CalledProcessError as e:
         print(f"Error running pandoc: {e.stderr}")
         sys.exit(1)
     except FileNotFoundError:
         print("Error: 'pandoc' not found. Please install Pandoc.")
         sys.exit(1)
-    except UnicodeDecodeError as e:
-         print(f"Encoding Error: {e}")
-         sys.exit(1)
 
 def compile_tex(tex_file):
     """
@@ -93,52 +112,31 @@ def compile_tex(tex_file):
         # Run twice for references/TOC
         cmd = ['xelatex', '-interaction=nonstopmode', '-shell-escape', tex_file]
         print(f"Compiling: {' '.join(cmd)}")
-        subprocess.run(cmd, check=True, stdout=subprocess.DEVNULL) # First pass
-        subprocess.run(cmd, check=True, stdout=subprocess.DEVNULL) # Second pass
+        subprocess.run(cmd, check=True, capture_output=True, text=True) # First pass
+        subprocess.run(cmd, check=True, capture_output=True, text=True) # Second pass
         print(f"Compilation successful: {tex_file.replace('.tex', '.pdf')}")
-    except subprocess.CalledProcessError:
+    except subprocess.CalledProcessError as e:
         print("Error: Compilation failed. Please check the .log file.")
-        # Try to print last few lines of log
+        
+        # Output detailed error context from log instead of just last 20 lines
         log_file = tex_file.replace('.tex', '.log')
         if os.path.exists(log_file):
              with open(log_file, 'r', errors='ignore') as f:
-                 print("\n--- Log Tail ---")
-                 print(''.join(f.readlines()[-20:]))
-
-def post_process_latex(latex_content):
-    """
-    Apply regex replacements to improve LaTeX quality.
-    - Convert longtable to tabularx for width control.
-    """
-    # 1. Convert longtable to tabularx
-    # Note: This is a heuristic. It assumes the table environment structure matches Pandoc's output.
-    # We change the column specifier to 'X' for all columns to ensure they fit. 
-    # This is aggressive but fulfills the requirement "Use tabularx".
-    
-    # Replace \begin{longtable} with \begin{tabularx}{\linewidth}
-    # Pattern: \begin{longtable}[]{col_spec} ... \end{longtable}
-    # We capture the col_spec (e.g., @{}ll@{}), and replace 'l', 'c', 'r' with 'X'
-    
-    def replacer(match):
-        options = match.group(1) # e.g. []
-        col_spec = match.group(2) # e.g. {@{}ll@{}}
-        content = match.group(3)
-        
-        # Naive conversion of l/c/r to X to force width fitting
-        new_col_spec = col_spec.replace('l', 'X').replace('c', 'X').replace('r', 'X')
-        # Remove @{} to let X columns breathe? Or keep them. Let's keep structure but change alignment.
-        
-        return f"\\begin{{tabularx}}{{\\linewidth}}{options}{new_col_spec}{content}\\end{{tabularx}}"
-
-    # Regex to find longtable blocks
-    # Note: DOTALL is essential to match across lines
-    pattern = r'\\begin\{longtable\}(\[.*?\])?(\{.*?\})(.*?)\\end\{longtable\}'
-    processed = re.sub(pattern, replacer, latex_content, flags=re.DOTALL)
-    
-    return processed
+                 log_content = f.read()
+                 # Search for the first LaTeX Error line to provide actionable feedback
+                 error_match = re.search(r'!\s(.*?\n(?:l\.\d+.*?\n)?)', log_content, flags=re.MULTILINE)
+                 if error_match:
+                     print("\n--- LaTeX Error Detected ---")
+                     print(error_match.group(0).strip())
+                 else:
+                     print("\n--- Log Tail ---")
+                     print(''.join(log_content.splitlines()[-20:]))
+        else:
+             print("\n--- Command Output ---")
+             print(e.stdout[-500:])
 
 def main():
-    parser = argparse.ArgumentParser(description="Smart Doc-to-LaTeX Engine")
+    parser = argparse.ArgumentParser(description="Smart Doc-to-LaTeX Native Engine")
     parser.add_argument('--input', required=True, help="Input file path (.md, .docx, .txt)")
     parser.add_argument('--style', default='auto', choices=['auto', 'academic', 'cv', 'tech_report', 'book', 'tech_book'], help="Target document style")
     parser.add_argument('--title', help="Document title override")
@@ -165,48 +163,21 @@ def main():
         print(f"Error: Template for '{style}' not found at {template_path}")
         sys.exit(1)
 
-    with open(template_path, 'r', encoding='utf-8') as f:
-        template_content = f.read()
-
-    # 4. Conversion
-    print(f"Converting content using Pandoc...")
-    body_latex = convert_to_latex_body(args.input)
-    
-    # Post-process body (Tables, etc.)
-    body_latex = post_process_latex(body_latex)
-
-    # 5. Injection & Metadata
-    # Simple string replacement (in production, use Jinja2)
+    # 4. Metadata
     filename_base = os.path.splitext(os.path.basename(args.input))[0]
     title = args.title if args.title else filename_base.replace('_', ' ').title()
     author = args.author if args.author else "Author"
-    
-    # Extract abstract if academic
-    abstract = ""
-    if style == 'academic':
-        # Simple extraction: look for abstract env or use first paragraph
-        # This is a placeholder for more complex logic
-        pass 
 
-    final_latex = template_content.replace('$body$', body_latex)
-    final_latex = final_latex.replace('$title$', title)
-    final_latex = final_latex.replace('$author$', author)
-    final_latex = final_latex.replace('$date$', '\today')
-    final_latex = final_latex.replace('$abstract$', abstract)
-    
-    # Handle missing conditional blocks (simple cleanup)
-    final_latex = re.sub(r'\$if\(.*?\)\$.*?\$endif\$', '', final_latex, flags=re.DOTALL)
-
-    # 6. Save Output
+    # 5. Save Output Logic
     output_dir = args.output if args.output else os.path.dirname(os.path.abspath(args.input))
     os.makedirs(output_dir, exist_ok=True)
     output_tex = os.path.join(output_dir, f"{filename_base}_{style}.tex")
-    with open(output_tex, 'w', encoding='utf-8') as f:
-        f.write(final_latex)
-    
+
+    # 6. Conversion logic using Pandoc's Native Template Engine
+    convert_and_compile(args.input, template_path, output_tex, style, title, author)
     print(f"Generated source: {output_tex}")
 
-    # 7. Compile
+    # 7. Compile to PDF
     compile_tex(output_tex)
 
 if __name__ == "__main__":

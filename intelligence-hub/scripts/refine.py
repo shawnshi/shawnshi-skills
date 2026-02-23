@@ -1,5 +1,5 @@
 """
-<!-- Intelligence Hub: AI Refinement Engine V1.0 -->
+<!-- Intelligence Hub: AI Refinement Engine V5.1 (Gemini CLI Integration) -->
 @Input: tmp/latest_scan.json, references/strategic_focus.json
 @Output: MEMORY/news/intelligence_current_refined.json
 @Pos: Phase 2 (Deep Refinement & Deduction)
@@ -7,6 +7,7 @@
 """
 import json
 import os
+import subprocess
 from pathlib import Path
 from datetime import datetime
 from utils import PROJECT_ROOT, HUB_DIR, NEWS_DIR
@@ -16,51 +17,44 @@ SCAN_PATH = HUB_DIR / "tmp" / "latest_scan.json"
 FOCUS_PATH = HUB_DIR / "references" / "strategic_focus.json"
 OUTPUT_PATH = NEWS_DIR / "intelligence_current_refined.json"
 
-# --- Prompt Template for AI Refinement ---
-REFINEMENT_PROMPT = """你是一位战略情报分析师。请对以下新闻条目进行「二阶推演」精炼：
+# --- System Prompt ---
+SYSTEM_PROMPT = """你是一位战略情报分析师。请对提供的新闻条目进行「二阶推演」精炼，并严格按照 JSON Schema 输出。
 
 ## 任务
-1. 从以下 {count} 条原始情报中，**筛选出 Top 10** 最具战略价值的条目
-2. 为每条 Top 10 提供：中文标题、约100字的中文深度摘要、推荐理由
-3. 为剩余的条目提供简单的**中文标题与简介翻译**
-4. 生成以下四个战略模块：
-   - **insights**: 3-5 条今日核心洞察（编号列表）
-   - **punchline**: 一句话核心判词
-   - **digest**: 200 字二阶推演摘要
-   - **market**: 市场动态要点（3-5 条）
+1. 根据每个条目的战略评分与以下关键词权重，进一步筛选出 Top 10 最具战略价值的条目。
+2. 为选出的 Top 10 提供中文标题、约100字的中文深度摘要（事实 → 联结 → 推演）、以及推荐理由。
+3. 为剩余的条目提供简单的中文标题与简介翻译（存入 translations，键为该条目的 URL）。
+4. 基于全部情报，生成高阶视角的 insights, punchline, digest 和 market 总结。
 
 ## 质量标准
-- 禁止使用形容词修饰（如"重大进展"、"革命性"）
-- 每条摘要必须包含：事实 → 联结 → 推演 三段论
+- 严格遵循被动客观的语气，禁止使用"重大进展"、"革命性"等形容词主观修饰
+- 每条摘要必须包含：事实(发生了什么) → 联结(与战略项目有何关系) → 推演(可能导致什么后果) 三段论
 - 优先筛选反直觉或非共识情报
 
-## 当前战略关键词权重
-{keywords}
+## 输出格式 (强制遵守)
+必须输出且仅输出一个合法的 JSON 对象。不要输出 Markdown 代码块，不要包含 ```json 的包裹，只输出裸 JSON 数据：
 
-## 原始情报清单
-{items}
-
-## 输出格式
-严格输出以下 JSON（不要包含 markdown 代码块标记）：
-{{
+{
   "top_10": [
-    {{
-      "url": "原始 URL",
+    {
+      "url": "原始 url",
       "title_zh": "中文标题",
-      "summary_zh": "中文深度摘要（约100字）",
+      "summary_zh": "中文深度摘要 (100字)",
       "reason": "推荐理由"
-    }}
+    }
   ],
-  "translations": {{
-    "URL": {{"title_zh": "中文标题", "desc_zh": "中文简介（约50字）"}}
-  }},
-  "insights": "1. **洞察标题**: 洞察内容\\n2. ...",
-  "punchline": "一句话核心判词",
-  "digest": "200字二阶推演摘要",
-  "market": "* 要点1\\n* 要点2\\n* 要点3"
-}}
+  "translations": {
+    "原始 url": {
+      "title_zh": "中文标题",
+      "desc_zh": "中文简介"
+    }
+  },
+  "insights": "1. 第一条洞察\n2. 第二条洞察",
+  "punchline": "一句话判断",
+  "digest": "200字二阶推演",
+  "market": "* 要点1\n* 要点2"
+}
 """
-
 
 def score_and_rank(scan_data: dict, focus_data: dict) -> list:
     """Score items by strategic keyword relevance and return sorted list."""
@@ -79,35 +73,55 @@ def score_and_rank(scan_data: dict, focus_data: dict) -> list:
     return scored
 
 
-def build_prompt(scored_items: list, focus_data: dict) -> str:
+def build_user_prompt(scored_items: list, focus_data: dict) -> str:
     """Build the refinement prompt from scored items."""
-    # Format keywords for context
     kw_lines = ", ".join(
         f"{kw['keyword']}(w={kw['weight']})"
         for kw in sorted(focus_data["strategic_keywords"], key=lambda x: -x["weight"])[:15]
     )
 
-    # Format top items (send top 30 for AI to select top 10 from)
     item_lines = []
+    # Send up to top 30 to the LLM
     for i, (score, item) in enumerate(scored_items[:30]):
         desc = item.get("raw_desc", "").strip()[:200].replace("\n", " ")
         item_lines.append(
-            f"{i+1}. [{item['source']}] {item['title']} | Score={score}\n"
-            f"   URL: {item['url']}\n"
-            f"   Desc: {desc}"
+            f"Item {i+1} [Score={score}]:\n"
+            f"Title: {item['title']}\n"
+            f"URL: {item['url']}\n"
+            f"Source: {item['source']}\n"
+            f"Desc: {desc}\n"
         )
 
-    return REFINEMENT_PROMPT.format(
-        count=len(scored_items[:30]),
-        keywords=kw_lines,
-        items="\n".join(item_lines),
-    )
+    return f"## 当前战略关键词权重\n{kw_lines}\n\n## 原始情报清单\n" + "\n".join(item_lines)
 
+
+def run_gemini_cli(prompt: str) -> str:
+    """Invokes the gemini CLI."""
+    try:
+        # Run gemini ask
+        # We pass the prompt via stdin to avoid command line length limits
+        process = subprocess.Popen(
+            "gemini ask -", 
+            stdin=subprocess.PIPE, 
+            stdout=subprocess.PIPE, 
+            stderr=subprocess.PIPE,
+            text=True,
+            shell=True,
+            encoding='utf-8',
+            errors='ignore'
+        )
+        stdout, stderr = process.communicate(input=prompt)
+        
+        if process.returncode != 0:
+            raise RuntimeError(f"gemini cli failed: {stderr}")
+            
+        return stdout.strip()
+    except Exception as e:
+        raise RuntimeError(f"Failed to execute gemini cli: {e}")
 
 def refine():
-    """Main refinement workflow: score, build prompt, and output for AI processing."""
+    """Main refinement workflow: score, build prompt, and call Gemini CLI for full JSON payload."""
 
-    # 1. Load data
     if not SCAN_PATH.exists():
         print(f"❌ Error: No scan data found at {SCAN_PATH}")
         print("  Run `python scripts/fetch_news.py` first (Phase 1).")
@@ -120,45 +134,78 @@ def refine():
         print("⚠️ Warning: Scan data has no items. Nothing to refine.")
         return
 
-    # 2. Score and rank
     scored_items = score_and_rank(scan_data, focus_data)
     print(f"📊 Scored {len(scored_items)} items. Top score: {scored_items[0][0] if scored_items else 0}")
 
-    # 3. Build prompt
-    prompt = build_prompt(scored_items, focus_data)
+    user_prompt = build_user_prompt(scored_items, focus_data)
+    
+    full_prompt = SYSTEM_PROMPT + "\n\n" + user_prompt
 
-    # 4. Output prompt for AI consumption
     prompt_path = HUB_DIR / "tmp" / "refinement_prompt.txt"
     prompt_path.parent.mkdir(parents=True, exist_ok=True)
-    prompt_path.write_text(prompt, encoding="utf-8")
-    print(f"📝 Refinement prompt saved to: {prompt_path}")
-    print(f"   Prompt length: {len(prompt)} chars")
+    prompt_path.write_text(full_prompt, encoding="utf-8")
 
-    # 5. Prepare skeleton output (AI will fill this)
-    OUTPUT_PATH.parent.mkdir(parents=True, exist_ok=True)
-    skeleton = {
-        "generated_at": datetime.now().isoformat(),
-        "status": "AWAITING_AI_REFINEMENT",
-        "top_10": [],
-        "translations": {},
-        "insights": "> 💡 [WAITING]",
-        "punchline": "> 💡 [WAITING]",
-        "digest": "> 💡 [WAITING]",
-        "market": "* 数据未同步",
-        "_prompt_path": str(prompt_path),
-        "_scored_preview": [
-            {"rank": i+1, "score": s, "title": item["title"][:80], "source": item["source"]}
-            for i, (s, item) in enumerate(scored_items[:10])
-        ],
-    }
-    OUTPUT_PATH.write_text(
-        json.dumps(skeleton, ensure_ascii=False, indent=2),
-        encoding="utf-8",
-    )
-    print(f"📦 Skeleton output saved to: {OUTPUT_PATH}")
-    print(f"\n🔄 Next: AI agent should read the prompt, generate refined JSON,")
-    print(f"   and update {OUTPUT_PATH} with the results.")
-    print(f"   Then run `python scripts/forge.py` (Phase 4) to assemble the briefing.")
+    print(f"🧠 Calling Gemini CLI (gemini ask) for refinement...")
+    
+    try:
+        response_text = run_gemini_cli(full_prompt)
+        
+        # Strip potential markdown formatting if the LLM didn't listen
+        if response_text.startswith("```json"):
+            response_text = response_text[7:]
+        if response_text.startswith("```"):
+            response_text = response_text[3:]
+        if response_text.endswith("```"):
+            response_text = response_text[:-3]
+            
+        response_text = response_text.strip()
+        
+        result_data = json.loads(response_text)
+        
+        # Merge with other metadata
+        final_output = {
+            "generated_at": datetime.now().isoformat(),
+            "status": "COMPLETED",
+            "model_used": "gemini-cli",
+            **result_data,
+            "_scored_preview": [
+                {"rank": i+1, "score": s, "title": item["title"][:80], "source": item["source"]}
+                for i, (s, item) in enumerate(scored_items[:10])
+            ]
+        }
+        
+        OUTPUT_PATH.parent.mkdir(parents=True, exist_ok=True)
+        OUTPUT_PATH.write_text(
+            json.dumps(final_output, ensure_ascii=False, indent=2),
+            encoding="utf-8",
+        )
+        print(f"✅ Refinement completed! Output saved to: {OUTPUT_PATH}")
+        print(f"🔄 Next: Run adversarial audit (optional) or `python scripts/forge.py` (Phase 4).")
+        
+    except Exception as e:
+        print(f"❌ Error during Gemini CLI calling: {str(e)}")
+        # Fallback to skeleton if LLM fails
+        skeleton = {
+            "generated_at": datetime.now().isoformat(),
+            "status": f"FAILED: {str(e)}",
+            "top_10": [],
+            "translations": {},
+            "insights": "> 💡 [LLM ERROR]",
+            "punchline": "> 💡 [LLM ERROR]",
+            "digest": "> 💡 [LLM ERROR]",
+            "market": "* [LLM ERROR]",
+            "_prompt_path": str(prompt_path),
+            "_scored_preview": [
+                {"rank": i+1, "score": s, "title": item["title"][:80], "source": item["source"]}
+                for i, (s, item) in enumerate(scored_items[:10])
+            ],
+        }
+        OUTPUT_PATH.parent.mkdir(parents=True, exist_ok=True)
+        OUTPUT_PATH.write_text(
+            json.dumps(skeleton, ensure_ascii=False, indent=2),
+            encoding="utf-8",
+        )
+        print(f"📦 Error skeleton created at to: {OUTPUT_PATH}")
 
 
 if __name__ == "__main__":

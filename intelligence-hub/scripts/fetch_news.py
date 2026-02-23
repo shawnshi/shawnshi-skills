@@ -1,5 +1,5 @@
 """
-<!-- Intelligence Hub: Reconnaissance Engine V4.0 -->
+<!-- Intelligence Hub: Reconnaissance Engine V5.0 -->
 @Input: references/strategic_focus.json, references/karpathy_feeds.json
 @Output: tmp/latest_scan.json (raw intelligence)
 @Pos: Phase 1 (Multi-Source Reconnaissance)
@@ -10,10 +10,10 @@ import json
 import os
 import random
 import re
-import time
-import xml.etree.ElementTree as ET
+import asyncio
+import aiohttp
+import feedparser
 from bs4 import BeautifulSoup
-from concurrent.futures import ThreadPoolExecutor, as_completed
 from datetime import datetime, timedelta
 from pathlib import Path
 from utils import HUB_DIR
@@ -33,7 +33,6 @@ def get_headers():
 # --- Incremental Fetch Cache ---
 CACHE_PATH = HUB_DIR / "tmp" / "fetch_cache.json"
 
-
 def load_cache() -> dict:
     if CACHE_PATH.exists():
         try:
@@ -41,7 +40,6 @@ def load_cache() -> dict:
         except (json.JSONDecodeError, OSError):
             return {}
     return {}
-
 
 def save_cache(cache: dict):
     """Keep only items from the last 7 days."""
@@ -52,49 +50,43 @@ def save_cache(cache: dict):
 
 
 # --- Retry Helper ---
-def fetch_with_retry(url, *, headers=None, timeout=15, proxies=None, max_retries=2):
+async def fetch_with_retry(session: aiohttp.ClientSession, url: str, headers=None, timeout=15, proxy=None, max_retries=2, is_json=False):
     """HTTP GET with exponential backoff retry."""
     last_error = None
     for attempt in range(max_retries + 1):
         try:
-            import requests
-            resp = requests.get(url, headers=headers, timeout=timeout, proxies=proxies)
-            resp.raise_for_status()
-            return resp
+            async with session.get(url, headers=headers, timeout=timeout, proxy=proxy) as resp:
+                resp.raise_for_status()
+                if is_json:
+                    return await resp.json()
+                return await resp.text()
         except Exception as exc:
             last_error = exc
             if attempt < max_retries:
                 wait = (2 ** attempt) + random.uniform(0, 1)
-                time.sleep(wait)
+                await asyncio.sleep(wait)
     raise last_error
 
 
 # --- Parsers ---
-def parse_rss(url, name, limit=10, proxy=None, cache=None):
-    """Generic RSS/Atom feed parser."""
+async def parse_rss(session: aiohttp.ClientSession, url: str, name: str, limit=10, proxy=None, cache=None):
+    """Generic RSS/Atom feed parser using feedparser."""
     try:
-        proxies = {"http": proxy, "https": proxy} if proxy else None
-        resp = fetch_with_retry(url, headers=get_headers(), timeout=20, proxies=proxies)
-        # Strip default namespace for easier parsing
-        cleaned_xml = re.sub(r' xmlns="[^"]+"', '', resp.text, count=1)
-        root = ET.fromstring(cleaned_xml)
-
+        text = await fetch_with_retry(session, url, headers=get_headers(), timeout=20, proxy=proxy)
+        feed = feedparser.parse(text)
+        
         items = []
-        entries = (root.findall('.//item') or root.findall('.//entry'))[:limit]
-        for entry in entries:
-            title = entry.findtext('title') or "No Title"
-            link_el = entry.find('link')
-            link = entry.findtext('link') or (
-                link_el.attrib.get('href') if link_el is not None else ""
-            )
-
+        for entry in feed.entries[:limit]:
+            title = entry.get('title', 'No Title')
+            link = entry.get('link', '')
+            
             if cache and link in cache:
-                continue  # Incremental fetching
+                continue
 
-            desc_el = entry.find('description') or entry.find('summary') or entry.find('content')
             description = ""
-            if desc_el is not None and desc_el.text:
-                description = BeautifulSoup(desc_el.text, 'html.parser').get_text().strip()
+            desc_raw = entry.get('summary', '') or entry.get('description', '')
+            if desc_raw:
+                description = BeautifulSoup(desc_raw, 'html.parser').get_text().strip()
 
             items.append({
                 "title": f"{name}: {title}",
@@ -111,15 +103,15 @@ def parse_rss(url, name, limit=10, proxy=None, cache=None):
         return [], str(exc)
 
 
-def fetch_hackernews(limit=10, proxy=None, cache=None):
+async def fetch_hackernews(session: aiohttp.ClientSession, limit=10, proxy=None, cache=None):
     """Fetch top stories from Hacker News Firebase API."""
     try:
-        proxies = {"http": proxy, "https": proxy} if proxy else None
-        resp = fetch_with_retry(
+        story_ids = await fetch_with_retry(
+            session,
             "https://hacker-news.firebaseio.com/v0/topstories.json",
-            timeout=10, proxies=proxies,
+            timeout=10, proxy=proxy, is_json=True
         )
-        story_ids = resp.json()[:limit]
+        story_ids = story_ids[:limit]
 
         items = []
         for story_id in story_ids:
@@ -128,11 +120,11 @@ def fetch_hackernews(limit=10, proxy=None, cache=None):
                 continue
 
             try:
-                detail = fetch_with_retry(
+                data = await fetch_with_retry(
+                    session,
                     f"https://hacker-news.firebaseio.com/v0/item/{story_id}.json",
-                    timeout=5, proxies=proxies, max_retries=1,
+                    timeout=5, proxy=proxy, max_retries=1, is_json=True
                 )
-                data = detail.json()
                 items.append({
                     "title": data.get("title"),
                     "url": data.get("url", hn_url),
@@ -150,25 +142,22 @@ def fetch_hackernews(limit=10, proxy=None, cache=None):
         return [], str(exc)
 
 
-def fetch_github_trending(proxy=None, cache=None):
+async def fetch_github_trending(session: aiohttp.ClientSession, proxy=None, cache=None):
     """Scrape GitHub Trending page with selector fallback."""
     try:
-        proxies = {"http": proxy, "https": proxy} if proxy else None
-        resp = fetch_with_retry(
+        html = await fetch_with_retry(
+            session,
             "https://github.com/trending",
-            headers=get_headers(), timeout=15, proxies=proxies,
+            headers=get_headers(), timeout=15, proxy=proxy
         )
-        soup = BeautifulSoup(resp.text, "html.parser")
+        soup = BeautifulSoup(html, "html.parser")
 
-        # Primary selector (current GitHub DOM)
         articles = soup.select("article.Box-row")
-        # Fallback selector if GitHub changed their DOM
         if not articles:
             articles = soup.select("article[class*='Box-row']")
         if not articles:
             articles = soup.select("div.Box article")
         if not articles:
-            print("  ⚠️ GitHub Trending: All selectors failed, DOM may have changed.")
             return [], "SELECTOR_FAILED"
 
         items = []
@@ -197,15 +186,14 @@ def fetch_github_trending(proxy=None, cache=None):
         return [], str(exc)
 
 
-def fetch_v2ex(proxy=None, cache=None):
+async def fetch_v2ex(session: aiohttp.ClientSession, proxy=None, cache=None):
     """Fetch hot topics from V2EX API."""
     try:
-        proxies = {"http": proxy, "https": proxy} if proxy else None
-        resp = fetch_with_retry(
+        data = await fetch_with_retry(
+            session,
             "https://www.v2ex.com/api/topics/hot.json",
-            timeout=10, proxies=proxies,
+            timeout=10, proxy=proxy, is_json=True
         )
-        data = resp.json()
 
         items = []
         for topic in data[:10]:
@@ -228,6 +216,57 @@ def fetch_v2ex(proxy=None, cache=None):
     except Exception as exc:
         return [], str(exc)
 
+async def scan_all(proxy, cache):
+    tasks = []
+    
+    # We use a custom TCP connector to limit connections if necessary, 
+    # but for now default is fine for ~100 sources
+    async with aiohttp.ClientSession() as session:
+        # Fixed sources tasks
+        tasks_meta = [
+            ("Hacker News", fetch_hackernews(session, 10, proxy=proxy, cache=cache)),
+            ("GitHub", fetch_github_trending(session, proxy=proxy, cache=cache)),
+            ("V2EX", fetch_v2ex(session, proxy=proxy, cache=cache)),
+            ("Product Hunt", parse_rss(session, "https://www.producthunt.com/feed", "Product Hunt", proxy=proxy, cache=cache)),
+            ("HealthIT.gov", parse_rss(session, "https://www.healthit.gov/news/feed", "HealthIT.gov", proxy=proxy, cache=cache)),
+            ("HIMSS", parse_rss(session, "https://www.himss.org/news", "HIMSS", proxy=None, cache=cache)),
+            ("AJMC", parse_rss(session, "https://www.ajmc.com/newsroom", "AJMC", proxy=proxy, cache=cache)),
+            ("Nature Digital Medicine", parse_rss(session, "https://www.nature.com/npjdigitalmed.rss", "Nature Digital Medicine", limit=5, proxy=proxy, cache=cache)),
+            ("Science", parse_rss(session, "https://www.science.org/rss/news_current.xml", "Science", limit=5, proxy=proxy, cache=cache)),
+            ("The Lancet Digital Health", parse_rss(session, "https://www.thelancet.com/rssfeed/landig_current.xml", "The Lancet Digital Health", limit=5, proxy=proxy, cache=cache)),
+            ("NEJM", parse_rss(session, "https://www.nejm.org/action/showFeed?type=etoc&feed=rss&jc=nejm", "NEJM", limit=5, proxy=proxy, cache=cache)),
+            ("arXiv Med-AI", parse_rss(session, "http://export.arxiv.org/api/query?search_query=all:medicine+AND+cat:cs.AI&sortBy=lastUpdatedDate&sortOrder=descending&max_results=5", "arXiv Med-AI", limit=5, proxy=proxy, cache=cache)),
+        ]
+
+        karpathy_path = HUB_DIR / "references" / "karpathy_feeds.json"
+        if karpathy_path.exists():
+            try:
+                karpathy_feeds = json.loads(karpathy_path.read_text(encoding="utf-8"))
+                for feed in karpathy_feeds:
+                    tasks_meta.append((
+                        feed["name"],
+                        parse_rss(session, feed["url"], feed["name"], limit=3, proxy=proxy, cache=cache)
+                    ))
+            except Exception as exc:
+                print(f"Error loading Karpathy feeds: {exc}")
+
+        # Gather all coroutines
+        coroutines = [t[1] for t in tasks_meta]
+        task_names = [t[0] for t in tasks_meta]
+        
+        results_arr = await asyncio.gather(*coroutines, return_exceptions=True)
+        
+        results = []
+        stats = {}
+        for name, res in zip(task_names, results_arr):
+            if isinstance(res, Exception):
+                stats[name] = str(res)
+            else:
+                items, status = res
+                results.extend(items)
+                stats[name] = status
+
+        return results, stats
 
 def main():
     parser = argparse.ArgumentParser(description="Intelligence Hub: Multi-Source Reconnaissance Engine")
@@ -235,54 +274,22 @@ def main():
     parser.add_argument("--proxy", help="Proxy URL (e.g. http://127.0.0.1:7890)")
     args = parser.parse_args()
 
+    # Load proxy from environment if not provided
     proxy = args.proxy or os.environ.get("HTTP_PROXY") or os.environ.get("http_proxy")
+    
+    # Optional: on windows aiohttp proxy usually prefers explicit proxy URL (http://...)
+    
     cache = load_cache()
 
-    print("Intelligence Hub: Fetching data...")
-    tasks = [
-        ("hackernews", lambda: fetch_hackernews(10, proxy=proxy, cache=cache)),
-        ("github", lambda: fetch_github_trending(proxy=proxy, cache=cache)),
-        ("v2ex", lambda: fetch_v2ex(proxy=proxy, cache=cache)),
-        ("producthunt", lambda: parse_rss("https://www.producthunt.com/feed", "Product Hunt", proxy=proxy, cache=cache)),
-        ("healthit", lambda: parse_rss("https://www.healthit.gov/news/feed", "HealthIT.gov", proxy=proxy, cache=cache)),
-        ("himss", lambda: parse_rss("https://www.himss.org/news", "HIMSS", proxy=None, cache=cache)),
-        ("ajmc", lambda: parse_rss("https://www.ajmc.com/newsroom", "AJMC", proxy=proxy, cache=cache)),
-        ("nature_digital", lambda: parse_rss("https://www.nature.com/npjdigitalmed.rss", "Nature Digital Medicine", limit=5, proxy=proxy, cache=cache)),
-        ("science", lambda: parse_rss("https://www.science.org/rss/news_current.xml", "Science", limit=5, proxy=proxy, cache=cache)),
-        ("lancet_digital", lambda: parse_rss("https://www.thelancet.com/rssfeed/landig_current.xml", "The Lancet Digital Health", limit=5, proxy=proxy, cache=cache)),
-        ("nejm", lambda: parse_rss("https://www.nejm.org/action/showFeed?type=etoc&feed=rss&jc=nejm", "NEJM", limit=5, proxy=proxy, cache=cache)),
-        ("arxiv_med_ai", lambda: parse_rss("http://export.arxiv.org/api/query?search_query=all:medicine+AND+cat:cs.AI&sortBy=lastUpdatedDate&sortOrder=descending&max_results=5", "arXiv Med-AI", limit=5, proxy=proxy, cache=cache)),
-    ]
+    print("Intelligence Hub: Fetching data asynchronously...")
+    
+    # Handling specific event loop issues on Windows
+    if os.name == 'nt':
+        asyncio.set_event_loop_policy(asyncio.WindowsSelectorEventLoopPolicy())
+        
+    results, stats = asyncio.run(scan_all(proxy, cache))
 
-    # Load Karpathy Feeds
-    karpathy_path = HUB_DIR / "references" / "karpathy_feeds.json"
-    if karpathy_path.exists():
-        try:
-            karpathy_feeds = json.loads(karpathy_path.read_text(encoding="utf-8"))
-            for feed in karpathy_feeds:
-                tasks.append((
-                    feed["name"],
-                    lambda url=feed["url"], name=feed["name"]: parse_rss(
-                        url, name, limit=3, proxy=proxy, cache=cache
-                    ),
-                ))
-        except Exception as exc:
-            print(f"Error loading Karpathy feeds: {exc}")
-
-    results = []
-    stats = {}
-    with ThreadPoolExecutor(max_workers=20) as executor:
-        future_to_name = {executor.submit(func): name for name, func in tasks}
-        for future in as_completed(future_to_name):
-            source_name = future_to_name[future]
-            try:
-                items, status = future.result()
-                results.extend(items)
-                stats[source_name] = status
-            except Exception as exc:
-                stats[source_name] = str(exc)
-
-    print(f"  - Total sources scanned: {len(tasks)}")
+    print(f"  - Total sources scanned: {len(stats)}")
     print(f"  - Successful sources: {sum(1 for s in stats.values() if s == 'OK')}")
     print(f"  - New items captured: {len(results)}")
 

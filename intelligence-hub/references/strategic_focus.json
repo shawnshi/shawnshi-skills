@@ -2,7 +2,7 @@
   "strategic_keywords": [
     {
       "keyword": "ai",
-      "weight": 10
+      "weight": 20
     },
     {
       "keyword": "ace",
@@ -59,6 +59,26 @@
     {
       "keyword": "ehr",
       "weight": 8
+    },
+    {
+      "keyword": "战略",
+      "weight": 20
+    },
+    {
+      "keyword": "输出",
+      "weight": 20
+    },
+    {
+      "keyword": "路径",
+      "weight": 19
+    },
+    {
+      "keyword": "医疗",
+      "weight": 20
+    },
+    {
+      "keyword": "个人",
+      "weight": 20
     }
   ],
   "categories": {

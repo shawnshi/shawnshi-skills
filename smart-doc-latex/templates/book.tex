@@ -27,13 +27,16 @@
 % ---------------------------------------------------------
 % 3. Fixes & Patches
 % ---------------------------------------------------------
-% Fix for Pandoc's \LTcaptype{none} error
-\newcounter{none}
+$if(highlighting-macros)$
+$highlighting-macros$
+$endif$
+
 % Fix common missing chars
-\newunicodechar{≈}{$\approx$}
-\newunicodechar{≤}{$\le$}
-\newunicodechar{≥}{$\ge$}
-\providecommand{\tightlist}{\setlength{\itemsep}{0pt}\setlength{\parskip}{0pt}}
+\newunicodechar{≈}{$$\approx$$}
+\newunicodechar{≤}{$$\le$$}
+\newunicodechar{≥}{$$\ge$$}
+\providecommand{\tightlist}{%
+  \setlength{\itemsep}{0pt}\setlength{\parskip}{0pt}}
 
 % ---------------------------------------------------------
 % 4. Visual Styling
@@ -85,9 +88,17 @@
 % ---------------------------------------------------------
 % Document Metadata
 % ---------------------------------------------------------
+$if(title)$
 \title{$title$}
+$endif$
+$if(author)$
 \author{$author$}
+$endif$
+$if(date)$
+\date{$date$}
+$else$
 \date{\today}
+$endif$
 
 \onehalfspacing
 
@@ -95,18 +106,28 @@
 
 \frontmatter
 
+$if(title)$
 % Standard elegant title page
 \begin{titlepage}
     \centering
     \vspace*{4cm}
     {\Huge\bfseries $title$ \par}
     \vspace{1cm}
+$if(author)$
     {\Large $author$ \par}
+$endif$
     \vfill
+$if(date)$
+    {\large $date$ \par}
+$else$
     {\large \today \par}
+$endif$
 \end{titlepage}
+$endif$
 
+$if(toc)$
 \tableofcontents
+$endif$
 
 \mainmatter
 $body$

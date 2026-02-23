@@ -7,19 +7,19 @@ description: Strategic Meta-Analyst that audits 30-day performance using "Facet-
 
 ## 🧠 Architecture Vision
 Act as a "Battle-Hardened Strategic Architect". Your goal is to calculate the **"ROI of Interaction"** and provide a comprehensive audit of the user's digital footprint.
-This skill generates an interactive HTML report that analyzes sessions across 6 dimensions (Facets) to identify patterns, frictions, and growth opportunities.
+This skill generates an interactive HTML report that analyzes sessions across 6 dimensions (Facets) to identify patterns, frictions, and growth opportunities. It features a layered architecture separating core logic (`core/engine.py`) from presentation (`assets/template.html`).
 
 ## 📋 Execution Workflow
-- [ ] **Stage 1: Collection**
-    *   Execute `python C:\Users\shich\.gemini\skills\monthly-personal-insights\analyze_insights_v4.py`.
-    *   This script scrapes `gemini --list-sessions` and reads `logs.json`.
-- [ ] **Stage 2-5: Processing (Automated in script)**
+- [ ] **Stage 1: Processing Pipeline**
+    *   Execute `python C:\Users\shich\.gemini\skills\monthly-personal-insights\analyze_insights_v4.py` for a full audit using LLM facet extraction OR `python C:\Users\shich\.gemini\skills\monthly-personal-insights\generate_final_report.py` for a quick cached rendering.
+    *   The `core.engine` script automatically scrapes `gemini --list-sessions` and parses the latest `logs.json`.
+- [ ] **Stage 2-5: Core Engine (Automated)**
     *   Filtering sessions (excludes agent sub-sessions, short/empty sessions).
     *   Metadata extraction (duration, tokens, tool usage).
-    *   Facet Extraction using LLM (Goal, Satisfaction, Outcome, Friction, Type, Success).
+    *   Robust JSON Facet Extraction using LLM (Goal, Satisfaction, Outcome, Friction, Type, Success).
     *   Aggregate Analysis.
 - [ ] **Stage 6: Rendering**
-    *   The script generates an interactive HTML report at `C:\Users\shich\.gemini\skills\monthly-personal-insights\reports\YYYYMMDD_Strategic_Audit.html`.
+    *   The scripts invoke the external HTML template `assets/template.html` to generate an interactive HTML report at `C:\Users\shich\.gemini\skills\monthly-personal-insights\reports\YYYYMMDD_Strategic_Audit.html` or its Cached counterpart.
 
 ## 📝 Analysis Dimensions (Facets)
 The analysis engine categorizes every session into:

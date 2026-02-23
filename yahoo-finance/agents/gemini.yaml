@@ -1,18 +1,24 @@
 display_name: Yahoo Finance
 short_description: 获取实时股市行情、基本面数据与金融新闻。
 version: "2.0"
-default_prompt: 获取并分析 [公司名称] 最近 [时间范围] 的表现。
+default_prompt: 提取并计算 [公司名称] 最近 [时间范围] 的核心财务指标，包括 ROE、PB 等，并评估其最大回撤等风险要素。
 triggers:
   - "股价"
   - "stock price"
   - "行情"
   - "基本面"
+  - "基本面分析"
   - "financial news"
   - "金融新闻"
   - "K线"
   - "ticker"
   - "市值"
   - "PE"
+  - "估值对比"
+  - "回撤"
+  - "最大回撤"
+  - "ROE"
+  - "财务安全"
 interface:
   icon: trending_up
   brand_color: "#7200da"

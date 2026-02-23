@@ -46,8 +46,6 @@ INFO_KEYS_DEFAULT = [
     "currency", "currentPrice", "previousClose",
     "marketCap", "sector", "industry",
     "trailingPE", "forwardPE", "dividendYield",
-    "priceToBook", "returnOnEquity", "operatingMargins",
-    "debtToEquity", "beta", "enterpriseToEbitda",
     "fiftyTwoWeekHigh", "fiftyTwoWeekLow",
     "totalRevenue", "revenueGrowth",
     "country", "website",
@@ -210,23 +208,13 @@ def compute_summary(history) -> Optional[Dict[str, Any]]:
     closes = history['Close']
     first_close = closes.iloc[0]
     last_close = closes.iloc[-1]
-    
-    # Calculate Drawdown metrics
-    rolling_max = closes.cummax()
-    drawdowns = (closes - rolling_max) / rolling_max
-    max_drawdown = drawdowns.min() * 100
-    
-    current_high = history['High'].max()
-    dd_from_high = ((last_close - current_high) / current_high) * 100 if current_high > 0 else 0
 
     return {
         "period_return_pct": round((last_close - first_close) / first_close * 100, 2),
-        "max_drawdown_pct": round(float(max_drawdown), 2),
-        "dd_from_high_pct": round(float(dd_from_high), 2),
         "first_close": round(float(first_close), 2),
         "last_close": round(float(last_close), 2),
         "avg_close": round(float(closes.mean()), 2),
-        "max_high": round(float(current_high), 2),
+        "max_high": round(float(history['High'].max()), 2),
         "min_low": round(float(history['Low'].min()), 2),
         "avg_volume": int(history['Volume'].mean()),
         "volatility_std": round(float(closes.pct_change().std() * 100), 4),
@@ -283,11 +271,8 @@ def display_results_rich(query: str, symbol: str, history, info, news, summary):
     # Summary Statistics
     if summary:
         ret_color = "green" if summary['period_return_pct'] >= 0 else "red"
-        dd_color = "red" if summary['max_drawdown_pct'] < -10 else "yellow"
         out.print(Panel(
             f"Return: [{ret_color}]{summary['period_return_pct']:+.2f}%[/{ret_color}]  |  "
-            f"Max DD: [{dd_color}]{summary['max_drawdown_pct']:.2f}%[/{dd_color}]  |  "
-            f"Dist from High: {summary['dd_from_high_pct']:.2f}%\n"
             f"Avg Close: {summary['avg_close']}  |  "
             f"High: {summary['max_high']}  |  Low: {summary['min_low']}  |  "
             f"Avg Vol: {summary['avg_volume']:,}  |  "
@@ -368,7 +353,6 @@ def main():
 
     # Output format
     parser.add_argument("--json", action="store_true", help="Output structured JSON to stdout (recommended for agents)")
-    parser.add_argument("--lean", action="store_true", help="Agent mode: truncate long price history to save tokens while keeping full summary (Recommended)")
     parser.add_argument("--full-info", action="store_true", help="Include all raw info fields in JSON (default: curated subset)")
 
     parser.add_argument("--version", action="version", version=f"%(prog)s {__version__}")
@@ -442,17 +426,7 @@ def main():
                 if history is not None and not history.empty:
                     hist_data = history.reset_index()
                     hist_data['Date'] = hist_data['Date'].dt.strftime('%Y-%m-%d')
-                    
-                    if args.lean and len(hist_data) > 6:
-                        # Lean mode: keep just the first day and the last 5 days
-                        lean_history = hist_data.iloc[[0]].copy()
-                        lean_history = lean_history._append(hist_data.iloc[-5:], ignore_index=True)
-                        result_entry["history"] = lean_history.to_dict(orient='records')
-                        result_entry["history_truncated"] = True
-                    else:
-                        result_entry["history"] = hist_data.to_dict(orient='records')
-                        result_entry["history_truncated"] = False
-                        
+                    result_entry["history"] = hist_data.to_dict(orient='records')
                 result_entry["summary"] = summary
             if fetch_errors:
                 result_entry["errors"] = fetch_errors

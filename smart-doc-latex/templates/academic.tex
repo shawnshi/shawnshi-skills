@@ -15,13 +15,24 @@
 \usepackage{graphicx}
 \usepackage{booktabs}
 \usepackage{url}
+\usepackage{longtable}
+\usepackage{tabularx}
+\usepackage{array}
+\usepackage{calc}
 \usepackage{abstract}
+\usepackage{hyperref}
 
 % ---------------------------------------------------------
 % Fixes for Pandoc
 % ---------------------------------------------------------
-\newcounter{none}
-\providecommand{\tightlist}{\setlength{\itemsep}{0pt}\setlength{\parskip}{0pt}}
+\providecommand{\tightlist}{%
+  \setlength{\itemsep}{0pt}\setlength{\parskip}{0pt}}
+$if(highlighting-macros)$
+$highlighting-macros$
+$endif$
+$if(tables)$
+\usepackage{longtable,booktabs,array}
+$endif$
 
 % ---------------------------------------------------------
 % 2. Bibliography (Chinese Standard)
@@ -35,24 +46,38 @@
 \titleformat{\section}{\large\bfseries}{\thesection}{1em}{}
 \titlespacing*{\section}{0pt}{10pt}{5pt}
 
+$if(title)$
 \title{\textbf{\Large $title$}}
+$endif$
+
+$if(author)$
 \author{\large $author$}
+$endif$
+
+$if(date)$
+\date{$date$}
+$else$
 \date{\today}
+$endif$
 
 \begin{document}
 
 % Special handling for single-column abstract in two-column doc
+$if(title)$
 \twocolumn[
   \begin{@twocolumnfalse}
     \maketitle
+$if(abstract)$
     \renewcommand{\abstractname}{\large 摘要}
     \begin{abstract}
       \normalsize
       $abstract$
     \end{abstract}
+$endif$
     \vspace{1.5cm}
   \end{@twocolumnfalse}
 ]
+$endif$
 
 $body$
 

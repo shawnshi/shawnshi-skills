@@ -1,20 +1,20 @@
 ---
 name: garmin-health-analysis
-description: Talk to your Garmin data naturally - "what was my fastest speed snowboarding?", "how did I sleep last night?", "what was my heart rate at 3pm?". Access 20+ metrics (sleep stages, Body Battery, HRV, VO2 max, training readiness, body composition, SPO2), download FIT/GPX files for route analysis, query elevation/pace at any point, and generate interactive health dashboards. From casual "show me this week's workouts" to deep "analyze my recovery vs training load".
+description: 您的私人首席医疗官(CMO)与生理战略引擎。基于客观数据执行全链路深度审计，管理高阶决策准备度与系统性战略风险。Access 20+ metrics, track sleep debt, identify clinical "Garmin Flu" patterns (via respiration rate), and generate Executive Bio-Metric Audit dashboards with Quadrant Analysis.
 ---
 
-# Garmin Health Analysis (GEB-Flow)
+# Garmin Health Analysis (CMO/Strategic Architect Level)
 
-通过自然语言查询 Garmin Connect 数据，生成交互式 HTML 图表，并执行高级生理智能分析。
+通过自然语言查询 Garmin Connect 数据，提取临床级生理指标，生成战略级交互式审计看板，并执行高级生理智能分析（认知准备度与代谢摩擦）。
 
 ## Architecture Vision
-该技能采用 **GEB-Flow** 架构：
+该技能定位为“企业级/高管专属的前置医疗防线与战略决策引擎”，采用 **GEB-Flow** 架构：
 - **Auth Layer** (`garmin_auth.py`): 登录认证与 Token 管理。
 - **Data Layer** (`garmin_data.py`, `garmin_data_extended.py`): 原始 JSON 数据提取，覆盖 20+ 指标。
-- **Query Layer** (`garmin_query.py`): 时间点精确查询（如"下午3点心率"）。
-- **Activity Files** (`garmin_activity_files.py`): FIT/GPX/TCX 文件下载与深度解析。
-- **Intelligence Layer** (`garmin_intelligence.py`): 二阶分析（患病风险预警、决策准备度、完整审计）。
-- **Presentation Layer** (`garmin_chart.py`): 生成交互式 Bio-Metric Audit 看板。
+- **Query Layer** (`garmin_query.py`): 时间点精确查询。
+- **Activity Files** (`garmin_activity_files.py`): FIT/GPX/TCX 文件下载与解析。
+- **Intelligence Layer** (`garmin_intelligence.py`): 二阶战略审计分析（三因子患病风险预警、基于睡眠债务扣分的决策准备度）。
+- **Presentation Layer** (`garmin_chart.py`): 生成交互式 Bio-Metric Audit 看板，包含高阶 RHR vs HRV 韧性四象限分析。
 - **FHIR Adapter** (`garmin_fhir_adapter.py`): 导出 HL7 FHIR 标准格式。
 
 ## Authentication & Session
@@ -143,10 +143,10 @@ python scripts/garmin_fhir_adapter.py stress --days 7
 
 | User Question | Tooling Strategy |
 |---------------|------------------|
-| "我生病了吗？" / "有没有感冒迹象" | `garmin_intelligence.py flu_risk --days 7` |
-| "今天适合开会/做决策吗？" | `garmin_intelligence.py readiness` |
-| "我最近身体怎么样？" | `garmin_intelligence.py insight_cn --days 7` |
-| "看看我上周的运动看板" | `garmin_chart.py dashboard --days 7` |
+| "我生病了吗？" / "有没有感冒迹象" | `garmin_intelligence.py flu_risk --days 7` (结合呼吸频率三因子验证)|
+| "今天适合开会/做重大战略决策吗？" | `garmin_intelligence.py readiness` |
+| "执行高管全链路健康审计" | `garmin_intelligence.py insight_cn --days 14` |
+| "生成我的生物态势看板" | `garmin_chart.py dashboard --days 14` (含四象限图)|
 | "我昨晚睡得怎么样？" | `garmin_data.py sleep --days 1` |
 | "最近7天的 HRV 趋势" | `garmin_data.py hrv --days 7` 或 `garmin_chart.py hrv --days 7` |
 | "我下午3点心率多少？" | `garmin_query.py heart_rate "3:00 PM"` |
@@ -160,10 +160,10 @@ python scripts/garmin_fhir_adapter.py stress --days 7
 
 ## Key Insights Reference
 
-- **Executive Readiness (0-100)**: 综合睡眠质量(40%)、Body Battery 峰值(40%)及压力负荷(20%)得出的决策能量得分。分为认知端（REM、HRV、压力）和物理端（深睡、BB、RHR）两个维度。
-- **Stress Index (0-100)**: 全天压力负荷。低值 (0-25) 通常代表休息或高效专注，高值 (>50) 代表生理/心理消耗。
-- **"Garmin Flu" Pattern**: 患病前 24-48h 的生理特征：RHR 飙升 (>3-5 bpm) 且 HRV 骤降 (>10-15%)。
-- **Action Protocol**: 基于综合生理状态分为绿灯 (推极限)、黄灯 (维护运转)、红灯 (主动刹车)、警报 (停机) 四级。
+- **Executive Readiness (0-100)**: 综合睡眠质量(40%)、Body Battery 峰值(40%)及压力负荷(20%)得出的决策能量得分。结合“睡眠债务”进行宏观衰竭扣分。
+- **Stress Index (0-100)**: 全天压力负荷。
+- **"Garmin Flu" Pattern**: 患病前 24-48h 的生理特征：RHR 飙升 (>3-5 bpm)、HRV 骤降 (>10-15%)、以及 **睡眠呼吸率异常升高 (>0.5 brpm)**。
+- **Action Protocol**: 基于综合生理状态分为绿灯 (推极限/商业破局)、黄灯 (维护运转)、红灯 (警示/限制交叉会议)、警报 (停机/深度对抗应激) 四级。
 
 ## Troubleshooting
 - **Missing Data**: 确认设备已同步至 Garmin Connect。

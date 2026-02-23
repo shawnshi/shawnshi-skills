@@ -18,7 +18,10 @@
 \usepackage{amsmath, amssymb}
 \usepackage{graphicx}
 \usepackage{booktabs}
+\usepackage{longtable}
 \usepackage{tabularx}
+\usepackage{array}
+\usepackage{calc}
 \usepackage{xcolor}
 \usepackage{fancyhdr}
 \usepackage[most]{tcolorbox}
@@ -28,8 +31,11 @@
 % ---------------------------------------------------------
 % Fixes for Pandoc
 % ---------------------------------------------------------
-\newcounter{none}
-\providecommand{\tightlist}{\setlength{\itemsep}{0pt}\setlength{\parskip}{0pt}}
+\providecommand{\tightlist}{%
+  \setlength{\itemsep}{0pt}\setlength{\parskip}{0pt}}
+$if(highlighting-macros)$
+$highlighting-macros$
+$endif$
 
 % ---------------------------------------------------------
 % 3. Styling & Definitions
@@ -39,7 +45,9 @@
 
 \pagestyle{fancy}
 \fancyhf{}
+$if(title)$
 \lhead{\bfseries $title$}
+$endif$
 \rhead{\thepage}
 \renewcommand{\headrulewidth}{0.4pt}
 
@@ -75,15 +83,27 @@
 % ---------------------------------------------------------
 \usepackage[colorlinks=true, linkcolor=techBlue, urlcolor=techBlue]{hyperref}
 
+$if(title)$
 \title{$title$}
+$endif$
+$if(author)$
 \author{$author$}
+$endif$
+$if(date)$
+\date{$date$}
+$else$
 \date{\today}
+$endif$
 
 \begin{document}
 
+$if(title)$
 \maketitle
+$endif$
+$if(toc)$
 \tableofcontents
 \newpage
+$endif$
 
 $body$
 

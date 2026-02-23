@@ -48,9 +48,6 @@ smart-doc-latex/
 │   └── gemini.yaml       # Gemini 界面配置
 ├── scripts/
 │   ├── smart_engine.py         # 🔑 核心引擎 (统一入口)
-│   ├── convert_to_oreilly.py   # MD→O'Reilly LaTeX (独立)
-│   ├── generate_tech_book.py   # Body→Tech Book 合并 (独立)
-│   ├── process_latex_book.py   # .tex 后处理 (独立)
 │   └── process_idioms.py       # 成语字典排版 (特殊用途)
 ├── templates/
 │   ├── academic.tex      # 学术论文模板
