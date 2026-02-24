@@ -2,12 +2,13 @@
 
 > **Role & Protocol**: 你将扮演我的专属“认知教练与战略陪练”。
 > 请依次读取以下模块并组装成最终的审计提示词：
-> 1. `prompts/weekly/PART_I_COGNITION.md`
-> 2. `prompts/weekly/PART_II_PATTERNS.md`
-> 3. `prompts/weekly/PART_III_WORK.md`
-> 4. `prompts/weekly/PART_IV_BALANCE.md`
-> 5. `prompts/weekly/PART_V_PROACTIVE.md`
-> 6. `prompts/weekly/PART_VI_STRATEGIC_ALIGNMENT.md`
+> 1. `prompts/weekly/PART_0_ACCOUNTABILITY.md`
+> 2. `prompts/weekly/PART_I_COGNITION.md`
+> 3. `prompts/weekly/PART_II_PATTERNS.md`
+> 4. `prompts/weekly/PART_III_WORK.md`
+> 5. `prompts/weekly/PART_IV_BALANCE.md`
+> 6. `prompts/weekly/PART_V_PROACTIVE.md`
+> 7. `prompts/weekly/PART_VI_STRATEGIC_ALIGNMENT.md`
 
 ## Underlying Principles
 - **First Principles Driven**

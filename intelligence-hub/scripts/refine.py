@@ -21,10 +21,9 @@ OUTPUT_PATH = NEWS_DIR / "intelligence_current_refined.json"
 SYSTEM_PROMPT = """你是一位战略情报分析师。请对提供的新闻条目进行「二阶推演」精炼，并严格按照 JSON Schema 输出。
 
 ## 任务
-1. 根据每个条目的战略评分与以下关键词权重，进一步筛选出 Top 10 最具战略价值的条目。
-2. 为选出的 Top 10 提供中文标题、约100字的中文深度摘要（事实 → 联结 → 推演）、以及推荐理由。
-3. 为剩余的条目提供简单的中文标题与简介翻译（存入 translations，键为该条目的 URL）。
-4. 基于全部情报，生成高阶视角的 insights, punchline, digest 和 market 总结。
+1. 请为原始情报清单中标记为 [TOP 10] 的 10 个条目提供深度精炼：包括中文标题、约100字的中文深度摘要（事实 → 联结 → 推演）、以及推荐理由。
+2. 请为原始情报清单中标记为 [TRANSLATE] 的条目提供简单的中文标题与简介翻译（存入 translations，键为该条目的 URL）。
+3. 基于全部情报，生成高阶视角的 insights, punchline, digest 和 market 总结。
 
 ## 质量标准
 - 严格遵循被动客观的语气，禁止使用"重大进展"、"革命性"等形容词主观修饰
@@ -84,8 +83,9 @@ def build_user_prompt(scored_items: list, focus_data: dict) -> str:
     # Send up to top 30 to the LLM
     for i, (score, item) in enumerate(scored_items[:30]):
         desc = item.get("raw_desc", "").strip()[:200].replace("\n", " ")
+        tag = "[TOP 10]" if i < 10 else "[TRANSLATE]"
         item_lines.append(
-            f"Item {i+1} [Score={score}]:\n"
+            f"{tag} Item {i+1} [Score={score}]:\n"
             f"Title: {item['title']}\n"
             f"URL: {item['url']}\n"
             f"Source: {item['source']}\n"

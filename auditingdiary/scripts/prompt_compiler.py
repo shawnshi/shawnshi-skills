@@ -9,6 +9,7 @@ def compile_prompts():
     output_path = os.path.join(base_dir, "prompts", "compiled_weekly_prompt.md")
     
     order = [
+        "PART_0_ACCOUNTABILITY.md",
         "PART_I_COGNITION.md",
         "PART_II_PATTERNS.md",
         "PART_III_WORK.md",
