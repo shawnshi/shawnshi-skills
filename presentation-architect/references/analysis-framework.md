@@ -35,8 +35,10 @@ Identify the core message structure before designing slides.
 
 | Audience Type | Content Focus | Visual Treatment |
 |---------------|---------------|------------------|
-| Executives | Outcomes, ROI, strategic impact | High-level, clean, data highlights |
-| Technical | Architecture, implementation, specs | Detailed diagrams, code, schematics |
+| Executives (院长/CEO) | Outcomes, ROI, 国考排名, 政策红利 | High-level, clean, data highlights |
+| Technical (信息科/CIO) | Architecture, 安全等保, 互联互通, 信创 | Detailed diagrams, 架构拓扑图, 信创适配表 |
+| Clinical (医务/质管/CMO) | 医疗质量, 路径依从性, 专病上报率 | 临床路径流图, 数据漏斗, 质控预警图 |
+| Financial (财务科/医保/CFO) | DRG/DIP 结余, 控费分析, 科室核算 | 瀑布图, 盈亏平衡表, 结余/超支趋势对比图 |
 | General | Benefits, stories, relatability | Visual metaphors, simple charts |
 | Investors | Market size, traction, team | Growth charts, milestones, comparisons |
 | Learners | Step-by-step, examples, practice | Progressive reveals, exercises |

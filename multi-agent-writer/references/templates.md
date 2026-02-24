@@ -25,9 +25,12 @@
 ## T3: Ghost Deck / Article Outline (Phase 2 Output)
 - **Title**: [Strategic & Precise — must be an Action Title]
 - **Preface**: The "Why Now" and the systemic problem statement.
-- **Chapter 1**: The Structural Reality (The Base). → [配套视觉: 瀑布图/趋势线]
-- **Chapter 2**: The Lever (The Strategy). → [配套视觉: 2x2 矩阵/流程图]
-- **Chapter 3**: The Cost of Inertia (The Defense). → [配套视觉: 对比表/时间线]
+- **Chapter 1**: The Structural Reality (The Base). → [必须生成一段可渲染的 Mermaid.js 代码，如瀑布图/趋势线，展示利润侵蚀等]
+- **Chapter 2**: The Lever (The Strategy). → [必须生成一段可渲染的 Mermaid.js 代码，如 2x2 矩阵/流程图，展示战略站位]
+- **Chapter 3**: The Cost of Inertia (The Defense). → [必须生成一段可渲染的 Mermaid.js 代码，如对比表/时间线，展示不作为的代价]
+- **Conclusion**: The "Gray Solution" and the next-step trade-offs.
+
+**⚠️ V9.0 STRICT REQUIREMENT**: The visual placeholders above MUST be actual ```mermaid ... ``` code blocks. Do not describe the chart, GENERATE the mermaid code.
 - **Conclusion**: The "Gray Solution" and the next-step trade-offs.
 
 ## T4: Logic Audit Report (Phase 4 Output)

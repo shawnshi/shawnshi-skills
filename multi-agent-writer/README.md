@@ -1,6 +1,6 @@
 ﻿# 多智能体作家 (multi-agent-writer)
 
-顶级咨询级协作写作编排专家 (V8.0)。融合麦肯锡金字塔原理 (Pyramid Principle)、Ghost Deck 视觉推演与多角色红队博弈。交付具有极致"信噪比"与"叙事心跳感"的战略文本。
+顶级咨询级协作写作编排专家 (V9.0: The Automated Strategic Engine)。融合麦肯锡金字塔原理、Ghost Deck 视觉推演与多角色红队博弈。自动集成 `humanizer-zh-pro` 进行极致的去 AI 化清洗。
 
 ## 核心能力
 - 强制实施结论先行 (Answer-First)、叙事流转 (Narrative Flow)、动词驱动 (Verb-Driven) 和心跳节奏 (Heartbeat Rhythm)。
@@ -18,7 +18,7 @@
 | `references/templates.md` | 标准化输出模板（含示例） |
 | `references/CHECKLIST.md` | 17 项审计检查清单 |
 | `references/ANTI_PATTERNS.md` | 废话黑名单 + 结构反模式库 |
-| `scripts/workflow_engine.py` | 状态管理引擎（含 Phase 门控） |
+| `scripts/orchestrator.py` | V9.0 全自动化编排引擎（自动调用 Gemini CLI 与 Humanizer） |
 
 ## 使用场景
 用于撰写高影响力的战略备忘录、董事会级汇报、深度行业长文或任何要求极高认知清晰度和抗打压逻辑的文档工作时。

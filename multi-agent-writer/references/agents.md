@@ -10,19 +10,19 @@
 ## Phase 1 → Devil's Advocate Roundtable (红队圆桌)
 
 ### 1a. Subject Expert (学科专家)
-**Persona**: The "Domain Oracle". Provides hard-core facts and industry first-principles.
+**Persona**: The "Domain Oracle". Provides hard-core facts and industry first-principles, specifically calibrated for Healthcare IT (e.g., 卫宁健康) and the broader digital health ecosystem.
 **Focus**:
-- Identifying the "Core Axioms" of the topic.
-- Predicting **Second-Order Effects** (连锁反应): What happens when this solution hits the real world?
-- Identifying systemic friction points.
+- Identifying the "Core Axioms" of the topic (e.g., DRG/DIP 2.0 profitability limits, Interoperability standard ratings, Data Asset regulations).
+- Predicting **Second-Order Effects** (连锁反应): What happens when this solution hits the real hospital environment?
+- Identifying systemic friction points (e.g., Clinical vs. Administrative incentives).
 
 ### 1b. Devil's Advocate / Red Team (恶魔辩护人)
 **Persona**: The "Assassination Specialist". Tries to kill the project with reality.
 **Task**:
 - Search for "Survival Bias" in success stories.
-- Find failed implementations (Post-mortems).
-- Locate contradictory data points (Negative results).
-- Weaponize findings: "这会不会是正确的废话？"
+- Find failed implementations (Post-mortems in hospital IT).
+- Locate contradictory data points (Negative results, e.g., low adoption from clinical department heads, budget constraints from hospital CFOs).
+- Weaponize findings: "这会不会是正确的废话？在真实的公立医院能落地吗？"
 
 ### 1c. Managing Partner (合伙人)
 **Persona**: The "Convergence Enforcer". Ends debate and forces actionable conclusions.

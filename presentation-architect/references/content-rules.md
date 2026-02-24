@@ -35,12 +35,18 @@ Headlines tell the story, not label the content.
 | "Our Solution" | "One platform replaces five tools" |
 | "Benefits" | "Teams save 10 hours weekly" |
 
-### 2. Avoid AI Clichés
-Remove these patterns:
-- "Dive into", "explore", "journey"
+### 2. Avoid AI Clichés & Adopt Healthcare Terminology
+Remove these pattern/internet buzzwords:
+- "Dive into", "explore", "journey", "赋能", "抓手", "降维打击"
 - "Let's look at", "let me show you"
 - "Exciting", "amazing", "revolutionary"
-- "In conclusion", "to summarize"
+
+Adopt these healthcare strategic terms (when appropriate):
+- "闭环" (Closed-loop management)
+- "同质化" (Standardization of care)
+- "惠民善政" (Benefiting the public)
+- "精细化运营" (Fine-tuned operations)
+- "提质增效" (Quality & efficiency enhancement)
 
 ### 3. Meaningful Back Cover
 Not just "Thank you" or "Questions?"
