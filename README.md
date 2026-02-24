@@ -10,7 +10,7 @@
 > **“工具的本质是意志的延伸。在这里，我们不生产简单的功能，我们构建确定性。”**
 
 ## 1. 架构原则 (Architectural Principles)
-本目录是由 33 个专业技能构成的“分形武器库”。所有模块均遵循以下公理：
+本目录是由 38 个专业技能构成的“分形武器库”。所有模块均遵循以下公理：
 - **灵肉合一**：代码逻辑（Scripts）与架构意图（README）实时同步。
 - **双态解构**：区分物理层操作（Action）与语义层推演（Cognition）。
 - **ACE 兼容**：所有技能均可被智能体协调引擎（ACE）原子化调度。
@@ -30,43 +30,43 @@ gemini skills install https://github.com/shawnshi/shawnshi-skills.git --path res
 
 | 技能标识 (Directory) | 核心本质 (Essence & Mission) |
 | :--- | :--- |
-| **[agent-browser](./agent-browser/)** | 强大的自动化浏览器交互与页面信息爬取工具，专为复杂的动态网页与需要模拟真实用户的浏览场景而设计。 |
-| **[article-illustrator](./article-illustrator/)** | 基于长文本语义分析与情感信号感知的智能插图生成引擎，专为自动生成高质量且契合原文意境的文章配图（DALL-E 提示词等）而设。 |
-| **[auditingdiary](./auditingdiary/)** | 个人日志的自动化管理与深度认知审计工具，能够收集日常上下文、分析行为模式并输出高瞻远瞩的战略校准建议。 |
-| **[brainstorming](./brainstorming/)** | 致力于将发散性的灵感转化为严谨的设计规范文档。强调先问后做、优先评估取舍的创造性工程哲学。 |
-| **[cover-image](./cover-image/)** | 提供通过简单的自然语言与命令行交互方式，自动生成针对文章、博客及报告的高度定制化封面图像的能力。 |
-| **[document-summarizer](./document-summarizer/)** | 针对诸如医疗文档在内的大型、复杂或合规性要求极高的异构文档，进行高通量的精准聚合梳理及合规排查的提炼系统。 |
-| **[docx](./docx/)** | 全面、安全且确定性的本地 `.docx` 格式文件处理工具集。负责统筹所有的 Word 文档解析、高级排版、修改乃至自动化生成创建。 |
-| **[excel-pro](./excel-pro/)** | **[HEAVY-DUTY]** 具备双态架构 (Physical State与Logical State) 的 Excel 数据治理与自动化分析工具集。 |
-| **[FirstPrinciples](./FirstPrinciples/)** | 基于埃隆·马斯克的物理学思维框架的基础推理方法论。将问题解构为最基本的事实真理，而非通过类比进行表面推理。 |
-| **[garmin-health-analysis](./garmin-health-analysis/)** | 专为个体构建数字孪生生理模型，全面提取、处理、查询并将基于 Garmin 生态设备产生的高维健康时间序列数据转化为战略级个人洞见。 |
-| **[humanizer-zh-pro](./humanizer-zh-pro/)** | 高级智能编辑专家模型，负责彻底根治“AI八股文、机器翻译腔、机械模板味”的通病，为生成的任何 AI 文字注入自然流畅、“说人话”的灵魂重铸系统。 |
-| **[intelligence-hub](./intelligence-hub/)** | **[CORE]** V4.0 版本的复合战略情报搜集与处理指挥中心，专门负责在高难度行业与高竞争度的企业对标战中实施多源聚合情报抓取。 |
-| **[logic-adversary](./logic-adversary/)** | **[AUDITOR]** V4.0 版本的军工级逻辑对抗与博弈系统，扮演团队中不可或缺的"红队恶人 (Devil's Advocate)"，对所有计划和推演进行无情压力测试。 |
-| **[markdown-converter](./markdown-converter/)** | 将多种异构文件统一转化为纯净 Markdown 的底层语义解析工具，由 Microsoft MarkItDown 强力驱动。 |
-| **[marketing-psychology](./marketing-psychology/)** | 沉淀了 70 余个心理学原则、心智模型和行为科学理论的营销知识宝库，专门用于解答“人们为什么会这样买单”的核心疑虑并指导转化构建。 |
-| **[marketing-strategy](./marketing-strategy/)** | 搭载了审计驱动 (Audit-Driven)、战术注射与动态 LTV 增长框架的 AI 首席营销官，具有极强的商业叙事包装及全盘统筹分析能力。 |
-| **[medical-solution-writer](./medical-solution-writer/)** | 深谙医疗数字化、医疗信创生态与医院顶层设计方案，兼具 MBB 咨询宏大叙事与 HIT 落地方案撰写的战略架构合伙人。交付具备"临床价值、信创合规、TCO 最优、技术可演进"的落地方案。 |
-| **[monthly-personal-insights](./monthly-personal-insights/)** | 专门进行 30 日表现与用户 AI 交互模式审计分析的元分析引擎 (Meta-Analyst)，用以探知协作间的熵增模式并推动系统的长期进化。 |
-| **[morphism-mapper-master](./morphism-mapper-master/)** | 基于范畴论的跨学科思维引擎 (v2.6)。通过寻找异构领域的同构性（如同构映射至热力学或生物学），打破思维定势，生成非共识创新方案。 |
-| **[multi-agent-writer](./multi-agent-writer/)** | 顶级咨询级协作写作编排专家 (V8.0)。融合麦肯锡金字塔原理 (Pyramid Principle)、Ghost Deck 视觉推演与多角色红队博弈。交付具有极致"信噪比"与"叙事心跳感"的战略文本。 |
-| **[notebooklm-skill-master](./notebooklm-skill-master/)** | 整合 Google NotebookLM 提供具备“坚实证据支撑”和确定性知识的回应引擎，可深度查询自有大体量文档体系。 |
-| **[pdf](./pdf/)** | 详尽介绍了通过 Python 原生包库与本地命令行工具结合，全方位处理与加工 PDF 文件的工具箱。 |
-| **[personal-writing-assistant](./personal-writing-assistant/)** | 顶级专栏作家与战略思想领袖引擎 (V4.1)。专为生成高信噪比、高穿透力且具备"反共识叙事美学"的深度文章设计。 |
-| **[planning-with-files](./planning-with-files/)** | 像 Manus 一样工作：在应对复杂任务时，利用持久化的 Markdown 文件建立“存放在硬盘里的工作记忆 (Working Memory)”。 |
-| **[pptx](./pptx/)** | 专门应对所有与 `.pptx` 扩展名（PowerPoint 演示文稿、提案甲板等）相关联的读取、拆零、提取和重构创建请求。 |
-| **[presentation-architect](./presentation-architect/)** | **[HEAVY-DUTY]** 顶级战略演示文稿全栈架构师。引入麦肯锡级别的 Ghost Deck 机制、幻灯片六段式解剖学 (Slide Anatomy) 与硬核数字化的视觉信噪比 (SNR) 质量控制。 |
-| **[pricing-strategy](./pricing-strategy/)** | 专注于 SaaS 数字化产品定价机制剖析与商业变现 (Monetization) 的研究工具，助你构建匹配市场受众与客户真实支付意愿（Willingness to Pay）的盈利架构体系。 |
-| **[Research](./Research/)** | 全面的研究与调查技能，具备深度分析、事实核查与信息综合能力，旨在确保所有研究结论和输出的绝对严密性。 |
-| **[research-analyst](./research-analyst/)** | 顶级医疗数字化战略与行业研究专家智能体 (V13.0)。深谙中国当代医疗改革与信息化架构建设生态，融合知名咨询顾问级框架思维与行业专属实操知识。 |
-| **[skill-creator](./skill-creator/)** | 创建和升级 Gemini 技能引擎库的核心脚手架与指导说明书。作为 GEB-Flow 架构协议的官方守门员，它确保诞生的每一个新技能都具备最高层级的“分形自描述”能力和符合长期演进逻辑的高级代码标准。 |
-| **[smart-doc-latex](./smart-doc-latex/)** | 将普通文本文档一键转换为工业级出版质感的 PDF 与 LaTeX 源码的专业排版引擎。 |
-| **[tuanbiaodownloader](./tuanbiaodownloader/)** | 针对特有的中国特定“团体标准”展示库进行深度文件穿透以及页面影像批量自动提取、复合成卷的专门型智能下载脚手架程序。 |
-| **[ui-ux-pro-max](./ui-ux-pro-max/)** | 无所不包的终端级超豪华界面设计全套美学大脑与检验查重引擎。囊括超 97 枚精细调校的商业调色板、50 余类前沿风格特征并覆盖 9 大最新主流前端部署架构的全端知识体系。 |
-| **[url-to-markdown](./url-to-markdown/)** | 通过对 Chrome 开发者控制协议（CDP 引擎）进行底层驱动及控制，暴力提取并重构任意网页上的海量信息为其带来纯净极致转换体验的一环。 |
-| **[web-design-guidelines](./web-design-guidelines/)** | 专注于审查、检验和排错 UI 界面源代码在合规性和体验友好程度上的指南工具。将代码基于 Vercel 远程源库发出的动态最新规范准则进行逐一条款核验。 |
-| **[WriteStory](./WriteStory/)** | 专业级分层式虚构文学与长篇故事写作系统，在内在意义、角色演变、情节结构等七个维度上提供深度的创作指导与结构化管理。 |
-| **[xray-article](./xray-article/)** | 深挖并粉碎文章表层逻辑，通过一套专有的“漏斗结构型 4 层分析论”，提取并浓缩其“智慧晶核”，进而产出由 ASCII 字符矩阵艺术主导的 Org-mode 分析报告。 |
-| **[yahoo-finance](./yahoo-finance/)** | 全球金融市场数据的确定性访问工具。支持股价追溯、基本面核查、新闻聚合，输出结构化 JSON 或 Rich 表格。 |
+| **[agent-browser](./agent-browser/)** | 强大的自动化浏览器交互与爬虫测试引擎。专为处理动态网页、表单模拟及高保真信息数据提取场景设计。 |
+| **[article-illustrator](./article-illustrator/)** | 基于文章结构与长文本语义分析的智能插图引擎。采用“类型×风格”双维矩阵，精准生成契合叙事意境的高质量视觉配图描述。 |
+| **[auditingdiary](./auditingdiary/)** | 个人日志管理与认知审计防线系统。支持周/月/年复盘，通过结构化提示词分析行为演化模式，提供长周期的战略校准建议。 |
+| **[brainstorming](./brainstorming/)** | 前置于工程实施的思维锻造炉。运用第一性原理与权衡分析，通过结构化问询将发散性灵感收束为严谨的架构设计底稿。 |
+| **[cover-image](./cover-image/)** | 为文章、博客及报告生成四维定制化（类型/风格/文字/情绪）封面图的视觉构建器。内含 20 种手绘与顶级商业视觉呈现模板。 |
+| **[document-summarizer](./document-summarizer/)** | 针对异构复杂文档 (PDF/DOCX 等) 的高通量批处理提炼中枢。执行智能摘要萃取与结构化打标，特化支持庞杂卷宗审计与资产盘点。 |
+| **[docx](./docx/)** | 全矩阵 Word 文档处理中枢。统揽 `.docx` 格式的底层解析、图文生成、高级排版重构与自动替换，专为生成高管级专业报告与公文设计。 |
+| **[excel-pro](./excel-pro/)** | **[HEAVY-DUTY]** 具备双态架构 (物理层级操作与逻辑层面推演) 的重装级 Excel 数据治理与自动化建模分析生态。 |
+| **[FirstPrinciples](./FirstPrinciples/)** | 基于“第一性原理”的深度剥离推演工具。摒弃类比思维，将复杂系统与商业异象强制解构为最底层的客观物理规律与事实基准。 |
+| **[garmin-health-analysis](./garmin-health-analysis/)** | 私人首席医疗官 (CMO) 与数字孪生生理战略引擎。基于高维序列数据监测 20+ 项指标，提供如“睡眠负债”级别的生理战略风险审计。 |
+| **[humanizer-zh-pro](./humanizer-zh-pro/)** | 顶尖中文文本“去 AI 化”重铸引擎。彻底消除机械感、翻译腔与虚假的逻辑连接词，为生成的汇报或公文注入流畅自然的“说人话”质感。 |
+| **[intelligence-hub](./intelligence-hub/)** | **[CORE]** V4.0 复合战略情报作战指挥中心。整合全球多源新闻抓取与二阶深度情报验证，专攻高难度竞争对标的“逻辑湖”建设。 |
+| **[logic-adversary](./logic-adversary/)** | **[AUDITOR]** 军工级逻辑对抗系统。集成多专家博弈共识与饱和式逻辑攻击（红队恶人模式），旨在通过极度智力摩擦消除战略决策盲点。 |
+| **[markdown-converter](./markdown-converter/)** | 全异构格式向洁净 Markdown 的统领转换闸断器。由 Microsoft MarkItDown 强力驱动，对富媒介文件实施降维文字摄取与语义重塑。 |
+| **[marketing-psychology](./marketing-psychology/)** | 涵盖 70+ 核心心智模型与行为科学原理的商业营销武器库。专门用于破解受众转化机制、认知偏见与“人们为何买单”的底层成单逻辑。 |
+| **[marketing-strategy](./marketing-strategy/)** | 搭载可进化生命周期协议 (V4.0) 的战略营销闭环系统。审计驱动、战术注射，构建匹配动态 LTV 增长体系的商业叙事框架。 |
+| **[medical-solution-architect](./medical-solution-architect/)** | 顶级医疗数字化转型与架构设计专家 (V6.0)。融合 MBB 战略叙事与卫宁新一代架构体系，交付兼具临床、信创与经济学双优差的深水区方案。 |
+| **[monthly-personal-insights](./monthly-personal-insights/)** | 三十日维度的全域战略元分析器。运用多面体分析法 (Facet-based) 解构用户与 AI 协作模式，狙击协作熵增，拉升团队长线项目统筹动能。 |
+| **[morphism-mapper-master](./morphism-mapper-master/)** | 基于范畴论的跨界同构映射引擎 (v2.6)。通过将业务结构硬核投射至异构科学领域（如热力学、生物学），激荡并生成非共识性的颠覆创新方案。 |
+| **[multi-agent-writer](./multi-agent-writer/)** | 顶级咨询级多节点协作编排专家 (V9.0)。无源质融合金字塔原理、Ghost Deck 视觉推导与苛刻防幻觉对齐，织造极端高信噪比的战略文本。 |
+| **[notebooklm-skill-master](./notebooklm-skill-master/)** | 无缝接驳 Google NotebookLM 的私域文档知识中枢。基于严密证据链深度溯源巨量自持文档体系，提供稳若磐石的确定性检索回答。 |
+| **[pdf](./pdf/)** | 全天候本地 PDF 战术加工台。覆盖从深层文本/表格提取、无损拆解合并到加密权限注控，以及基于底层 OCR 加持的扫描件降维重构拦截。 |
+| **[personal-writing-assistant](./personal-writing-assistant/)** | 首席专栏作家与硬核思想领袖打磨引擎 (V4.2)。专为生成高信噪比、高穿透力且自带“反共识叙事质感”的深度穿透长文而设。 |
+| **[planning-with-files](./planning-with-files/)** | 对标 Manus 的纯文本级任务连贯规划枢纽。为重载长序列工况建立持久化磁盘记忆，捍卫多步骤并行与深度项目探索的绝对确定性路线。 |
+| **[pptx](./pptx/)** | 演示文稿 (`.pptx`) 的全维空间操作探针。覆盖从底层协议解析、图文剥离重组到动态脚本切片生成，无死角接管所有汇报母体的再造请求。 |
+| **[presentation-architect](./presentation-architect/)** | **[HEAVY-DUTY]** 顶级商业甲板全栈架构师 (V7.0)。植入战略 Ghost Deck 防护与 Slide 医疗级解剖法则，布控苛刻的高感官视觉信噪比 (SNR)。 |
+| **[pricing-strategy](./pricing-strategy/)** | 专门解剖 SaaS 与数字化产品定价机制的战略透镜。统筹 Van Westendorp 价格敏感度、分级解构与变现模型匹配客户真实意愿 (WTP)。 |
+| **[Research](./Research/)** | 泛用型全网深度侦察与情报梳理中枢。挂载速切/标准/纵深三境协议与 240+ 型信息收拢结构栅栏，无视噪音阻碍执行高通量知识采集穿透。 |
+| **[research-analyst](./research-analyst/)** | 头部医疗数字化行业研究专家组室 (V15.0)。死守 GEB-Flow 循环架构与高管经济学双轨审计，通过极简动词驱动叙事，深嵌卫宁视角的复利验证。 |
+| **[skill-creator](./skill-creator/)** | 技能管线核心铸造台与升级大纲核准闸口。作为 GEB-Flow 建筑级协议守门人，严控新生工具代码逻辑库的“分形自描述”能力与工业级迭代基准。 |
+| **[smart-doc-latex](./smart-doc-latex/)** | 学术级强类型一键转化引擎。将寻常文档或粗糙排版精准无损地编译为具备巅峰技术专著质感的 PDF 成卷与印刷级 LaTeX 强结构码源。 |
+| **[tuanbiaodownloader](./tuanbiaodownloader/)** | 定向中国“团体标准”系统的连铸采集装甲脚手架。依托穿透式页面影像捕获与深层 ID 探针嗅探，全自动化收拢装订为高保真的脱机 PDF 案卷。 |
+| **[ui-ux-pro-max](./ui-ux-pro-max/)** | 全视距终端交互设计中枢与视觉纪律法庭。内嵌超 97 枚精调高阶调色板与 9 大主流前端模块化预构件，主理前后端视图架构的极客级品味校验。 |
+| **[url-to-markdown](./url-to-markdown/)** | 全息网页结构级超快剥片洗刷器。底层直控 Chrome CDP 传输协议，强势击毁花哨的前端视图封装与无用信息，暴力拉取为高密度的纯净 Markdown 原质。 |
+| **[web-design-guidelines](./web-design-guidelines/)** | 前端体验法则与合规性的防线代码哨兵。依据最新版无障碍规范标准对代码栈执行外科手术级逐行核查，清剿隐蔽操作交互断层。 |
+| **[WriteStory](./WriteStory/)** | 虚构文学与超体心智推演阵列。深度熔铸 Will Storr 故事神经科学框架，在宏大情节、潜意识动机及修辞组合等非线性维度施加小说级降维操控。 |
+| **[xray-article](./xray-article/)** | 重度文字废话拦截与深层逻辑的 X 光粉碎机。运用漏斗降维四层拆解论剥离表层伪装，强力析出并输出极简且包含 ASCII 矩阵骨架的验尸官级分析报告。 |
+| **[yahoo-finance](./yahoo-finance/)** | 全天候全球级金融市场波动监听网关。即时提供跨区间个股追溯、基本面结构拆解及量化数据传导归档，保证严谨且极简的结构化财务行情交火回传。 |
 ---
-*Last Global Audit: 2026-02-20 | System State: Optimized*
+*Last Global Audit: 2026-02-24 | System State: Optimized*
