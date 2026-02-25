@@ -14,6 +14,7 @@ import argparse
 from datetime import datetime
 from collections import Counter
 from pathlib import Path
+import yaml
 
 def generate_strategic_audit(summaries_file, output_file):
     """分析文档集合并生成战略审计报告"""
@@ -21,6 +22,14 @@ def generate_strategic_audit(summaries_file, output_file):
     if not Path(summaries_file).exists():
         print(f"❌ 找不到摘要文件: {summaries_file}")
         return
+
+    # 读取 config.yaml
+    base_dir = Path(__file__).parent.parent
+    config_path = base_dir / "config.yaml"
+    config = {}
+    if config_path.exists():
+        with open(config_path, "r", encoding="utf-8") as f:
+            config = yaml.safe_load(f) or {}
 
     with open(summaries_file, "r", encoding="utf-8") as f:
         data = json.load(f)
@@ -32,16 +41,28 @@ def generate_strategic_audit(summaries_file, output_file):
     for doc in data:
         all_tags.extend(doc.get('tags', []))
         
-        # 简单从摘要中识别类型（实际项目中可从元数据获取）
-        summary = doc.get('summary', '')
-        if '评级' in summary or '评审' in summary:
-            doc_types['等级评审相关'] += 1
-        elif '规划' in summary or '方案' in summary:
-            doc_types['战略规划相关'] += 1
-        elif '接口' in summary or '标准' in summary:
-            doc_types['技术标准相关'] += 1
+        # 优先使用元数据中的类型
+        if 'doc_type' in doc:
+            doc_types[doc['doc_type']] += 1
         else:
-            doc_types['一般业务文档'] += 1
+            # 简单从摘要中识别类型（兼容旧版）
+            summary = doc.get('summary', '')
+            matched_type = '一般业务文档'
+            for dt in config.get('document_types', []):
+                name = dt.get('name', '')
+                keywords = dt.get('keywords', [])
+                if any(kw in summary for kw in keywords):
+                    matched_type = name
+                    break
+            
+            # 后备兼容
+            if matched_type == '一般业务文档':
+                if '评级' in summary or '评审' in summary:
+                    matched_type = '等级评审相关'
+                elif '规划' in summary or '方案' in summary:
+                    matched_type = '战略规划相关'
+            
+            doc_types[matched_type] += 1
 
     tag_counts = Counter(all_tags)
     top_tags = tag_counts.most_common(10)
@@ -63,8 +84,16 @@ def generate_strategic_audit(summaries_file, output_file):
 
     report.append(f"\n## 3. 战略缺口分析 (Gap Analysis)")
     
-    # 硬编码一些2026年的战略关键词
-    strategic_themes = ['ACI', '生成式AI', '数据要素', '五级评级', '互联互通五级乙等']
+    # 动态加载战略关键词 (从 config.yaml 提取核心前沿趋势)
+    strategic_themes = []
+    med_kws = config.get('medical_keywords', {})
+    if med_kws:
+        # 取技术、数据治理和评级的前几个选项作为战略追踪核心目标
+        for cat in ['technologies', 'data_governance', 'certifications']:
+            strategic_themes.extend(med_kws.get(cat, [])[:3])
+    else:
+        strategic_themes = ['人工智能', '数据治理', '评级']
+    
     found_themes = [t for t in strategic_themes if any(t in str(data) for t in strategic_themes)]
     missing_themes = [t for t in strategic_themes if t not in found_themes]
     
@@ -80,6 +109,21 @@ def generate_strategic_audit(summaries_file, output_file):
     report.append("2. **元数据治理**: 建议对“一般业务文档”进行二次精细化分类.")
     top_tag_name = top_tags[0][0] if top_tags else '核心'
     report.append(f"3. **资产活化**: 建议将高频出现的“{top_tag_name}”领域文档整理为专题知识库.")
+    
+    # 自动生成建议的目录结构
+    report.append(f"\n## 5. 建议归档结构 (Auto-Generated Taxonomy)")
+    report.append("```")
+    report.append("Knowledge_Base/")
+    
+    # 基于文档类型的一级目录
+    for dtype, _ in doc_types.most_common():
+        report.append(f"├── {dtype}/")
+        # 基于标签的二级目录建议
+        relevant_tags = [t for t, c in tag_counts.most_common(5) if t not in dtype]
+        if relevant_tags:
+            for rt in relevant_tags[:2]:
+                report.append(f"│   ├── {rt}/")
+    report.append("```")
 
     output_path = Path(output_file)
     with open(output_path, "w", encoding="utf-8") as f:

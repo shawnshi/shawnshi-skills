@@ -20,6 +20,7 @@ import re
 import argparse
 from collections import Counter
 from pathlib import Path
+import yaml
 
 # 设置标准输出编码为 UTF-8
 if sys.platform == 'win32':
@@ -39,49 +40,12 @@ class SmartSummaryGenerator:
             with open(ontology_path, "r", encoding="utf-8") as f:
                 self.ontology = json.load(f)
 
-        # 医疗信息化关键词库（扩展版）
-        self.keywords_dict = {
-            # 系统类
-            '电子病历': ['电子病历', 'EMR', '病历系统', '电子病案'],
-            'HIS系统': ['HIS', '医院信息系统', 'Hospital Information System'],
-            'PACS系统': ['PACS', '影像归档', '医学影像', '影像系统'],
-            'LIS系统': ['LIS', '检验信息系统', '实验室信息'],
-            'RIS系统': ['RIS', '放射信息系统', '放射科'],
-
-            # 评级认证
-            '电子病历评级': ['五级', '四级', '三级', '评级', '分级评价', '评审'],
-            '智慧医院': ['智慧医院', '智慧管理', '智慧服务', '智慧医疗'],
-            '互联互通': ['互联互通', '标准化', '测评', '信息共享'],
-
-            # 中医特色
-            '中医信息化': ['中医', '中西医结合', '中药', '辨证论治', '中医馆'],
-            '数字中医': ['数字中医', '中医数字化', '智慧中医'],
-
-            # 技术应用
-            '人工智能': ['AI', '人工智能', '机器学习', '深度学习', '大模型', 'ACI', 'Ambient Clinical Intelligence'],
-            '大数据': ['大数据', '数据分析', '数据挖掘', 'BI'],
-            '云计算': ['云计算', '云平台', '云HIS', '上云'],
-            '物联网': ['物联网', 'IoT', '智能设备', '传感器'],
-
-            # 数据治理
-            '数据治理': ['数据治理', '数据质量', '主数据', 'MDM', '数据要素'],
-            '数据安全': ['数据安全', '信息安全', '网络安全', '隐私保护'],
-            '数据标准': ['数据标准', '编码规范', 'HL7', 'FHIR'],
-
-            # 业务场景
-            '医联体': ['医联体', '医共体', '分级诊疗', '远程医疗'],
-            '互联网医疗': ['互联网医院', '在线诊疗', '远程问诊', '移动医疗'],
-            '智能诊断': ['辅助诊断', 'CDSS', '临床决策', '智能推荐'],
-            '药品管理': ['药品管理', '处方流转', '药库', '药房'],
-            '运营管理': ['运营管理', 'HRP', '绩效', '成本核算'],
-
-            # 建设内容
-            '信息化规划': ['规划', '顶层设计', '蓝图', '信息化建设'],
-            '系统集成': ['集成平台', 'ESB', '接口', '数据交换', 'FHIR', 'HL7'],
-            '升级改造': ['升级', '改造', '优化', '迁移'],
-            '技术架构': ['架构', '微服务', '中台', '平台化'],
-            '标准规范': ['标准', '规范', '指南', '白皮书'],
-        }
+        # 从 config.yaml 加载配置
+        config_path = base_dir / "config.yaml"
+        self.config = {}
+        if config_path.exists():
+            with open(config_path, "r", encoding="utf-8") as f:
+                self.config = yaml.safe_load(f) or {}
 
         # 停用词（用于关键词提取）
         self.stop_words = {
@@ -128,47 +92,61 @@ class SmartSummaryGenerator:
     def classify_document(self, filename, content):
         """智能分类文档类型"""
         filename_lower = filename.lower()
-        content_sample = content[:2000]
+        
+        doc_categories = self.config.get("document_types", [])
+        if doc_categories:
+            for doc_type in doc_categories:
+                name = doc_type.get("name", "")
+                keywords = doc_type.get("keywords", [])
+                if any(word in filename for word in keywords):
+                    return name
+            return '一般业务文档'
 
-        # 分类规则
-        if any(word in filename for word in ['规划', '方案', '蓝图']):
-            return '信息化规划方案'
-        elif any(word in filename for word in ['评级', '评审', '五级', '四级', '三级']):
-            return '电子病历评级'
-        elif any(word in filename for word in ['标准', '规范', '指南', '白皮书']):
+        # Fallback to old behavior if config not loaded properly
+        if any(word in filename for word in ['规划', '方案', '蓝图', '顶层设计']):
+            return '战略规划方案'
+        elif any(word in filename for word in ['评级', '评审', '五级', '四级', '互联互通', '测评']):
+            return '评级认证文档'
+        elif any(word in filename for word in ['标准', '规范', '指南', '白皮书', '定义']):
             return '技术标准规范'
-        elif any(word in filename for word in ['调研', '考察', '访谈', '报告']):
+        elif any(word in filename for word in ['调研', '考察', '访谈', '报告', '分析']):
             return '调研考察报告'
-        elif any(word in filename for word in ['交流', '汇报', 'PPT']):
+        elif any(word in filename for word in ['交流', '汇报', 'PPT', '演讲', '分享']):
             return '技术交流汇报'
-        elif any(word in filename for word in ['合作', '协议', '备忘录']):
-            return '合作协议文件'
-        elif any(word in filename for word in ['接口', '集成', 'API', 'HL7']):
+        elif any(word in filename for word in ['合作', '协议', '备忘录', '合同']):
+            return '商务合作协议'
+        elif any(word in filename for word in ['接口', '集成', 'API', 'HL7', 'FHIR']):
             return '系统集成接口'
-        elif any(word in filename for word in ['数据', 'Data', 'Schema']):
-            return '数据结构文档'
-        elif any(word in filename for word in ['功能', 'Specification', '需求']):
+        elif any(word in filename for word in ['数据', 'Data', 'Schema', '字典', '元数据']):
+            return '数据治理文档'
+        elif any(word in filename for word in ['功能', 'Specification', '需求', 'SRS']):
             return '系统功能规范'
+        elif any(word in filename for word in ['实施', '部署', '安装', '配置', '手册', '操作']):
+            return '实施运维文档'
+        elif any(word in filename for word in ['研发', '设计', '架构', '开发', '代码']):
+            return '产品研发文档'
         else:
-            return '医疗信息化文档'
+            return '一般业务文档'
 
     def extract_keywords_tfidf(self, content, filename, top_n=10):
         """使用简化的TF-IDF提取关键词"""
         # 分词（简单按字符）
         words = []
+        
+        medical_keywords = self.config.get("medical_keywords", {})
 
         # 从内容中提取关键词
-        for category, keywords in self.keywords_dict.items():
+        for category, keywords in medical_keywords.items():
             for keyword in keywords:
                 if keyword in content or keyword.lower() in content.lower():
-                    words.append(category)
+                    words.append(keyword)
 
         # 从文件名提取
-        for category, keywords in self.keywords_dict.items():
+        for category, keywords in medical_keywords.items():
             for keyword in keywords:
                 if keyword in filename or keyword.lower() in filename.lower():
-                    words.append(category)
-                    words.append(category)  # 文件名中的关键词权重加倍
+                    words.append(keyword)
+                    words.append(keyword)  # 文件名中的关键词权重加倍
 
         # 统计词频
         word_freq = Counter(words)
@@ -254,7 +232,7 @@ class SmartSummaryGenerator:
         for tag in generic_tags:
             if tag not in tags:
                 tags.append(tag)
-                if len(tags) >= 5:
+                if len(tags) >= 8:
                     break
 
         return tags[:5]
@@ -297,6 +275,9 @@ def main():
         # 获取合规性信息
         comp_info = compliance_data.get(file_id)
 
+        # 获取文档类型
+        doc_type = generator.classify_document(filename, content)
+
         # 生成摘要（100-150字）
         summary = generator.generate_summary(filename, content, comp_info)
 
@@ -306,6 +287,7 @@ def main():
         results.append({
             'id': file_id,
             'filename': filename,
+            'doc_type': doc_type,
             'summary': summary,
             'tags': tags
         })

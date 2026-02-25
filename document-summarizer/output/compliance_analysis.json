@@ -1,55 +1,45 @@
 {
-  "a6e0a717ed69": {
+  "3746309b1e83": {
     "alignments": [
-      "符合CDSS相关要求: 预警, 闭环"
+      "符合CDSS相关要求: 临床决策支持",
+      "符合Integration相关要求: 集成平台",
+      "政策价值: FHIR -> 互联互通数据交换标准趋势"
+    ],
+    "gaps": []
+  },
+  "6cf8155ebcee": {
+    "alignments": [
+      "符合CDSS相关要求: 知识库, 预警, 闭环",
+      "符合Integration相关要求: 数据交换",
+      "前瞻性对齐: ACI (解决医生录入负担，实现环境临床智能)",
+      "政策价值: HL7 -> 互联互通五级乙等必要条件",
+      "政策价值: FHIR -> 互联互通数据交换标准趋势"
     ],
     "gaps": [
-      "缺少Integration核心能力描述（评级关键点）",
       "缺少Data_Quality核心能力描述（评级关键点）",
       "缺少Clinical_Closed_Loop核心能力描述（评级关键点）"
     ]
   },
-  "5b88981e1f7d": {
+  "b054709b5abc": {
     "alignments": [
-      "符合CDSS相关要求: 预警",
-      "符合Data_Quality相关要求: 完整性"
+      "符合CDSS相关要求: 知识库, 预警, 闭环",
+      "符合Integration相关要求: 集成平台, 数据交换",
+      "前瞻性对齐: ACI (解决医生录入负担，实现环境临床智能)",
+      "前瞻性对齐: Ambient Clinical Intelligence (战略技术应用)",
+      "政策价值: FHIR -> 互联互通数据交换标准趋势"
     ],
     "gaps": [
-      "缺少Integration核心能力描述（评级关键点）",
+      "缺少Data_Quality核心能力描述（评级关键点）",
       "缺少Clinical_Closed_Loop核心能力描述（评级关键点）"
     ]
   },
-  "b6ad6a313c6e": {
+  "3dab55d6ff4c": {
     "alignments": [
-      "符合CDSS相关要求: 闭环"
-    ],
-    "gaps": []
-  },
-  "d1f1be76e96b": {
-    "alignments": [
-      "符合Data_Quality相关要求: 及时性"
-    ],
-    "gaps": []
-  },
-  "255f5f47e2db": {
-    "alignments": [
-      "符合CDSS相关要求: 预警, 闭环"
-    ],
-    "gaps": []
-  },
-  "3315af36012d": {
-    "alignments": [],
-    "gaps": []
-  },
-  "58ac23800981": {
-    "alignments": [
-      "符合Data_Quality相关要求: 完整性"
-    ],
-    "gaps": []
-  },
-  "af53cac360bc": {
-    "alignments": [
-      "符合CDSS相关要求: 预警, 闭环"
+      "符合CDSS相关要求: 临床决策支持, 闭环",
+      "符合Integration相关要求: 集成平台",
+      "前瞻性对齐: 数据要素 (战略技术应用)",
+      "政策价值: HL7 -> 互联互通五级乙等必要条件",
+      "政策价值: FHIR -> 互联互通数据交换标准趋势"
     ],
     "gaps": []
   }

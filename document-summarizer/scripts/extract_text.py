@@ -289,6 +289,7 @@ def main():
     parser.add_argument('--workers', type=int, default=5, help='并行线程数（默认: 5）')
     parser.add_argument('--force', action='store_true', help='强制重新提取所有文件')
     parser.add_argument('--output', default='extracted_content_part1.json', help='输出文件名')
+    parser.add_argument('--mapping', default='file_id_mapping.json', help='文件映射文件名')
 
     args = parser.parse_args()
 
@@ -312,7 +313,7 @@ def main():
         with open(output_path, 'w', encoding='utf-8') as f:
             json.dump(extracted_data, f, ensure_ascii=False, indent=2)
 
-        mapping_path = Path('file_id_mapping.json')
+        mapping_path = Path(args.mapping)
         with open(mapping_path, 'w', encoding='utf-8') as f:
             json.dump(file_id_mapping, f, ensure_ascii=False, indent=2)
 
