@@ -1,4 +1,4 @@
-﻿# Skills Ecosystem: The Strategic Armory (V3.0)
+# Skills Ecosystem: The Strategic Armory (V3.0)
 
 <!-- 
 @Pos: Root Level / Knowledge Sovereign 
@@ -10,7 +10,7 @@
 > **“工具的本质是意志的延伸。在这里，我们不生产简单的功能，我们构建确定性。”**
 
 ## 1. 架构原则 (Architectural Principles)
-本目录是由 39 个专业技能构成的“分形武器库”。所有模块均遵循以下公理：
+本目录是由 38 个专业技能构成的“分形武器库”。所有模块均遵循以下公理：
 - **灵肉合一**：代码逻辑（Scripts）与架构意图（README）实时同步。
 - **双态解构**：区分物理层操作（Action）与语义层推演（Cognition）。
 - **ACE 兼容**：所有技能均可被智能体协调引擎（ACE）原子化调度。
@@ -40,6 +40,7 @@ gemini skills install https://github.com/shawnshi/shawnshi-skills.git --path res
 | **[excel-pro](./excel-pro/)** | **[HEAVY-DUTY]** 具备双态架构 (物理层级操作与逻辑层面推演) 的重装级 Excel 数据治理与自动化建模分析生态。 |
 | **[FirstPrinciples](./FirstPrinciples/)** | 基于“第一性原理”的深度剥离推演工具。摒弃类比思维，将复杂系统与商业异象强制解构为最底层的客观物理规律与事实基准。 |
 | **[garmin-health-analysis](./garmin-health-analysis/)** | 私人首席医疗官 (CMO) 与数字孪生生理战略引擎。基于高维序列数据监测 20+ 项指标，提供如“睡眠负债”级别的生理战略风险审计。 |
+| **[healthcare-digital-strategy-partner](./healthcare-digital-strategy-partner/)** | 顶级医疗数字化战略与行业研究专家智能体 (V15.0)。遵循 GEB-Flow 架构，融合MBB咨询框架与医疗IT深水区认知，动词驱动叙事，强制执行四阶段生命周期与卫生经济学双轨ROI验证，具备卫宁战投视角与记忆复利机制。 |
 | **[humanizer-zh-pro](./humanizer-zh-pro/)** | 顶尖中文文本“去 AI 化”重铸引擎。彻底消除机械感、翻译腔与虚假的逻辑连接词，为生成的汇报或公文注入流畅自然的“说人话”质感。 |
 | **[intelligence-hub](./intelligence-hub/)** | **[CORE]** V4.0 复合战略情报作战指挥中心。整合全球多源新闻抓取与二阶深度情报验证，专攻高难度竞争对标的“逻辑湖”建设。 |
 | **[logic-adversary](./logic-adversary/)** | **[AUDITOR]** 军工级逻辑对抗系统。集成多专家博弈共识与饱和式逻辑攻击（红队恶人模式），旨在通过极度智力摩擦消除战略决策盲点。 |
@@ -58,7 +59,6 @@ gemini skills install https://github.com/shawnshi/shawnshi-skills.git --path res
 | **[presentation-architect](./presentation-architect/)** | **[HEAVY-DUTY]** 顶级商业甲板全栈架构师 (V7.0)。植入战略 Ghost Deck 防护与 Slide 医疗级解剖法则，布控苛刻的高感官视觉信噪比 (SNR)。 |
 | **[pricing-strategy](./pricing-strategy/)** | 专门解剖 SaaS 与数字化产品定价机制的战略透镜。统筹 Van Westendorp 价格敏感度、分级解构与变现模型匹配客户真实意愿 (WTP)。 |
 | **[Research](./Research/)** | 泛用型全网深度侦察与情报梳理中枢。挂载速切/标准/纵深三境协议与 240+ 型信息收拢结构栅栏，无视噪音阻碍执行高通量知识采集穿透。 |
-| **[research-analyst](./research-analyst/)** | 头部医疗数字化行业研究专家组室 (V15.0)。死守 GEB-Flow 循环架构与高管经济学双轨审计，通过极简动词驱动叙事，深嵌卫宁视角的复利验证。 |
 | **[skill-creator](./skill-creator/)** | 技能管线核心铸造台与升级大纲核准闸口。作为 GEB-Flow 建筑级协议守门人，严控新生工具代码逻辑库的“分形自描述”能力与工业级迭代基准。 |
 | **[smart-doc-latex](./smart-doc-latex/)** | 学术级强类型一键转化引擎。将寻常文档或粗糙排版精准无损地编译为具备巅峰技术专著质感的 PDF 成卷与印刷级 LaTeX 强结构码源。 |
 | **[tuanbiaodownloader](./tuanbiaodownloader/)** | 定向中国“团体标准”系统的连铸采集装甲脚手架。依托穿透式页面影像捕获与深层 ID 探针嗅探，全自动化收拢装订为高保真的脱机 PDF 案卷。 |
@@ -68,5 +68,6 @@ gemini skills install https://github.com/shawnshi/shawnshi-skills.git --path res
 | **[WriteStory](./WriteStory/)** | 虚构文学与超体心智推演阵列。深度熔铸 Will Storr 故事神经科学框架，在宏大情节、潜意识动机及修辞组合等非线性维度施加小说级降维操控。 |
 | **[xray-article](./xray-article/)** | 重度文字废话拦截与深层逻辑的 X 光粉碎机。运用漏斗降维四层拆解论剥离表层伪装，强力析出并输出极简且包含 ASCII 矩阵骨架的验尸官级分析报告。 |
 | **[yahoo-finance](./yahoo-finance/)** | 全天候全球级金融市场波动监听网关。即时提供跨区间个股追溯、基本面结构拆解及量化数据传导归档，保证严谨且极简的结构化财务行情交火回传。 |
+
 ---
-*Last Global Audit: 2026-02-24 | System State: Optimized*
+*Last Global Audit: 2026-02-26 | System State: Optimized*

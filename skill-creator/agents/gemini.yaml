@@ -1,6 +1,0 @@
-display_name: Skill Architect
-short_description: 技能架构师。创建符合 GEB-Flow 标准的确定性技能模块。
-default_prompt: 帮我创建一个新技能，名称是 [技能名]，用于 [功能描述]。
-interface:
-  icon: architecture
-  brand_color: "#4caf50"
