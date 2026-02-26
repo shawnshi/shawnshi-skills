@@ -52,13 +52,15 @@ description: 顶级医疗数字化转型与IT架构设计专家 (V6.0)。融合M
     - ** 业务蓝图 (Business Architecture)**：用散文描述数字化如何重塑患者旅程（Patient Journey）与医护体验（AI-Native 嵌入工作流）。高频使用 `google_web_search` 获取实证数据支撑。
     - ** 应用与数据架构 (IT & Data Architecture)**：使用表格定义核心模块。针对卫宁 WiNEX 架构强调中台标准化隔离定制化。*Action: 使用 Mermaid 生成系统交互拓扑图、数据流向图。*
     - ** 数据治理与合规 (Data Governance)**：明确主数据管理 (MDM) 规则，强制输出“数据要素脱敏与资产确权底座架构”，列出信创适配（OS、数据库）安全标准。
+    - **逐章落盘**：严格按照已确认的方案大纲，逐个章节进行起草。**每一章节起草完成后，必须将其立即保存/追加写入到项目物理 `.md` 文件中**（如 `{ProjectName}_{Chapter}_draft.md`）。后续步骤必须基于已生成的该物理文件进行读取、校对和处理，绝不能仅依赖内存上下文。
 
 ### Phase 5：确定性集成与逻辑审计 (MECE Audit)
-1. **自动化校验**：执行 `python scripts/logic_checker.py [ProjectName]_v1_Draft.md`。
-2. **修正重构**：如果状态为 `Warning`，自动重构语义重叠、遗漏信创合规或缺失 TCO 视角的章节。
+1.  **Verbatim Assembly**: 逐章完整集成，基于前期逐章保存的物理 `.md` 文件进行合并和通读校验，严禁组装时摘要化。最终生成 `{ProjectName}_{Date}_final.md`。更新状态至 `🔴 归档冻结`。
+2. **自动化校验**：执行 `python scripts/logic_checker.py [ProjectName]_v1_Draft.md`。
+3. **修正重构**：如果状态为 `Warning`，自动重构语义重叠、遗漏信创合规或缺失 TCO 视角的章节。
 
 ### Phase 6: Adversarial Delivery Audit (旧城改造与实施红队对抗)
-1. **任务**：系统再好，也会死于数据迁移与临床抵触。调用 `logic-adversary` 技能发起红队攻击。
+1. **任务**：系统再好，也会死于数据迁移与临床抵触。调用 ${logic-adversary}技能发起红队攻击。
 2. **跨技能调用规范**：
     - *调用方式*：激活 `logic-adversary` 技能，设定角色为"刁钻的CIO与愤怒的临床主任"。
     - *输入*：将 Phase 4 生成的方案草稿（业务蓝图 + 架构设计 + 实施路线图）作为攻击目标。
@@ -67,7 +69,7 @@ description: 顶级医疗数字化转型与IT架构设计专家 (V6.0)。融合M
 3. **应对方案融合**：将减缓矩阵的策略有机融入实施路线图 (Roadmap) 章节，具体包括："新老系统双活并行期"、"关键接口灰度上线"、"数据清洗确权三步走策略"、"科室 Key User 利益绑定机制"。
 
 ### Phase 7: Delivery & Executive Summary (最终集成与高管摘要)
-1. **语义消毒与拟人化润色**：执行 `python scripts/buzzword_auditor.py [ProjectName]_v1_Draft.md`，物理删除"赋能、抓手"等咨询黑话，替换为具体工程动作。随后**强制调用 `humanizer-zh-pro` 技能**对待交付文本进行“行研级”或“高管级”的非AI感深度润色。
+1. **语义消毒与拟人化润色**：执行 `python scripts/buzzword_auditor.py [ProjectName]_v1_Draft.md`，物理删除"赋能、抓手"等咨询黑话，替换为具体工程动作。随后**强制调用 ${humanizer-zh-pro} 技能**对待交付文本进行“行研级”或“高管级”的非AI感深度润色。
 2. **Executive Summary**：采用“麦肯锡式高管备忘录 (Executive Memo)”生成 1 页纸的高管决策摘要。说明：为何现在转型？核心架构优势及对 WiNEX 体系的运用？如何通过建设兼顾合法合规(如数据资产入表)的底座？必须包含一张反映TCO与医疗质量提升的“价值雷达图”或量化表格。
 3. **文档集成**：如果方案涉及多个分章节文件，执行 `python scripts/manifest_manager.py manifest.json [ProjectName]_Digital_Blueprint_vFinal.md` 将各章节合并为完整交付物。
 4. **交付**：整合生成 `[ProjectName]_Digital_Blueprint_vFinal.md`。
