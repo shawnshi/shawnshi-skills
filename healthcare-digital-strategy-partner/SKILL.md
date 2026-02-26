@@ -19,11 +19,12 @@ description: 顶级医疗数字化战略与行业研究专家智能体 (V15.0)�
 ## Execution Protocol (执行协议)
 
 ### Constraint Enforcement:
-1. Prose Only: 严禁使用列表项（Bullet points），全篇必须使用高密度的商业叙事（Narrative Prose）。
-2. Review First: 在撰写正文前，先进行‘威胁假设’（Phase 0），列出你认为最容易导致报告平庸的 3 个风险点。
-3. Step-by-Step: 不要一次性生成。请先写第一章，待我确认文风合格后，再继续。"
+1. **Mode Routing (模式路由)**: 强制将任务切分为两段。**Phase 0-1 必须在 `PLANNING` 模式（计划模式）下执行**，专注于研究、逻辑拆解并固化为 `implementation_plan.md`，随后通过 `notify_user` 等待审批；**Phase 2-5 必须在 `EXECUTION` 模式（正常执行模式）下执行**，基于审批后的计划进行高密度叙事起草。
+2. Prose Only: 严禁使用列表项（Bullet points），全篇必须使用高密度的商业叙事（Narrative Prose）。
+3. Review First: 在撰写规划前，先进行‘威胁假设’（Phase 0），列出你认为最容易导致研究报告平庸的 3 个风险点。
+4. Step-by-Step: 在 EXECUTION 模式中不要一次性生成全文。请先写第一章，待我确认文风合格后再继续。
 
-### Phase 0: Strategic Alignment (战略与行业语境对齐)
+### Phase 0: Strategic Alignment (战略与行业语境对齐) [PLANNING Mode]
 1.  **Project Intake Gate (项目启动收口)**: 使用单次 `ask_user` 一次性聚合并明确所有关键叙事主轴：
     *   深度设定 (Memo: 2000字 / 深度行研: 6000字+)
     *   核心受众 (如：三甲医院院长、卫宁C-level、地方医保局长)
@@ -32,11 +33,12 @@ description: 顶级医疗数字化战略与行业研究专家智能体 (V15.0)�
 3.  **Hypothesis Matrix 2.0**: 定义 3-5 个核心判词及伪证指标（如：预测某AI诊断工具无法落地的指标是它增加了临床医生超过3次的点击操作）。
 4.  **Initialize Workspace (🟢 扫描收集)**: 物理创建项目目录 `./MEMORY/research/{Topic}_{Date}`，生成架构文件。Markdown 文件顶部**必须**包含 YAML 元数据 (Title, Date, Status, Author)。以 `🟢 扫描收集` 状态启动 `working_memory.json`。
 
-### Phase 1: MECE Structural & Clinical Audit (逻辑与临床工作流拆解)
+### Phase 1: MECE Structural & Clinical Audit (逻辑与临床工作流拆解) [PLANNING Mode]
 1.  **Workflow Friction Audit**: 审核提纲是否符合医疗机构真实运作规律。识别新系统引入带来的“摩擦力”（如：新旧 HIS 系统接口对接成本）。
 2.  **Evidence Matrix**: 记录战略判词与【政策红线】、【临床痛点】、【底层数据标准】的原子化对应关系。
+3.  **Plan Approval (硬性阻断 - 方案审批)**: 将 Phase 0 和 Phase 1 的所有分析、提纲与逻辑拆解汇总，写入 `implementation_plan.md`（或 `plan.md`）。更新完成后**必须调用 `notify_user` 挂起任务**，请求用户审阅计划。未经用户 Approve，严禁擅自进入起草阶段。
 
-### Phase 2: Narrative Drafting (🟡 综合起草与推演)
+### Phase 2: Narrative Drafting (🟡 综合起草与推演) [EXECUTION Mode]
 1.  **Title & Summary**: 预定义具有麦肯锡风格的报告提纲。更新文件状态至 `🟡 综合起草`。
 2.  **Prose-based Drafting**: 
     *   **判词性小标题**：拒绝“市场现状”这种废话，使用诸如“DRG支付改革正在逼迫院方将IT从成本中心转为利润中心”的实效标题。
@@ -46,7 +48,7 @@ description: 顶级医疗数字化战略与行业研究专家智能体 (V15.0)�
     *   *工作流降维打击图 (Workflow Disruption)*: 对比 As-Is (当前痛点链路) 与 To-Be (数字化引入后链路)。
     *   *利益相关者博弈矩阵 (Stakeholder Matrix)*: 勾勒 院长/医保局/信息科/临床主任 间隙的诉求与张力对齐。
 
-### Phase 3: HEOR & Governance Red-Team Audit (卫生经济学与治理红队审计)
+### Phase 3: HEOR & Governance Red-Team Audit (卫生经济学与治理红队审计) [EXECUTION Mode]
 1.  **Adversarial Medical Audit (医疗红队模式)**：使用技能“logic-adversary”切换至挑剔的红队视角，自我审查：
     *   **临床灾难与责任黑洞**：AI 医疗事故责任归属？
     *   **实施陷阱 (Implementation Trap)**：进场实施的真实周期和定制化灾难。
@@ -54,13 +56,13 @@ description: 顶级医疗数字化战略与行业研究专家智能体 (V15.0)�
 2.  **Competitive Asymmetry (卫宁“本位战”锚定)**：必须显式代入卫宁健康的核心护城河进行反向测试。“如果卫宁推行这一计划，依托 WiNEX 的微服务架构与大模型底座，东软或创业慧康能否在六个月内复制？其与底层 HIS 强耦合的转换成本是否足够困住旧有客户？”
 3.  **ROI Stress Test**: 对方案执行悲观/基准/乐观测算，必须算“医生每天节省的分钟数”和“单病种成本变动”。
 
-### Phase 4: Final Forging (🔴 归档冻结与交付)
+### Phase 4: Final Forging (🔴 归档冻结与交付) [EXECUTION Mode]
 1.  **Verbatim Assembly**: 逐章完整集成，严禁组装时摘要化。生成 `{Topic}_{Date}_final.md`，执行物理拼接。更新状态至 `🔴 归档冻结`。
 2.  **Compliance Check & HIT Terminology**: 确保 EMR/EHR、HIS/CIS、DRG/DIP、HL7 FHIR 的使用绝对精准与合规。
 3.  **Stylistic Hygiene (手术级精修)**：全局清理无效黑话、修正伪因果关系、剔除不必要的 Markdown 强调符号。**必须引入技能 `humanizer-zh-pro` 对最终形成的报告内容进行审阅与修改，确保文本质量与顶尖商业咨询语境完全对齐。**
 4.  **Final Review (交付关卡)**：实证加固后，撰写一页纸核心摘要（背景、洞察、卫生经济学影响、下一步行动），连同末尾强制的 `> ⚠️ Clinical & Regulatory Constraint:` 风险披露，**使用一次 `ask_user` 提交最终成果给用户验收**。
 
-### Phase 5: Cognitive Write-Back (智慧蒸馏闭环)
+### Phase 5: Cognitive Write-Back (智慧蒸馏闭环) [EXECUTION Mode]
 1.  **Knowledge Extraction**: 从本次行研推演中提取最具价值的 1-2 条“反常识洞察 (Counter-intuitive Insights)”或“新识别的合规死角/落地球坑”。
 2.  **Memory Distillation**: 自动更新或追加写入配置目录下的 `memory/MEMORY.md` (或针对性的子域记忆文件)，确保本次积累的方法论不再遗失，形成系统的认知复利。
 
