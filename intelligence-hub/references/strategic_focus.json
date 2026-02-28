@@ -10,7 +10,7 @@
     },
     {
       "keyword": "msl",
-      "weight": 23
+      "weight": 29
     },
     {
       "keyword": "fhir",
@@ -22,7 +22,7 @@
     },
     {
       "keyword": "agent",
-      "weight": 14
+      "weight": 16
     },
     {
       "keyword": "clinic",
@@ -62,15 +62,15 @@
     },
     {
       "keyword": "战略",
-      "weight": 20
+      "weight": 15
     },
     {
       "keyword": "输出",
-      "weight": 20
+      "weight": 9
     },
     {
       "keyword": "路径",
-      "weight": 19
+      "weight": 20
     },
     {
       "keyword": "医疗",
@@ -78,7 +78,19 @@
     },
     {
       "keyword": "个人",
+      "weight": 11
+    },
+    {
+      "keyword": "逻辑",
       "weight": 20
+    },
+    {
+      "keyword": "审计",
+      "weight": 15
+    },
+    {
+      "keyword": "核心",
+      "weight": 17
     }
   ],
   "categories": {

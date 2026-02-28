@@ -19,10 +19,10 @@ import glob
 
 # Optimization 1: Centralized Path Mapping to bypass Shell Escaping/Workspace limits
 PATH_MAPPING = {
-    "privacy": "D:/OneDrive/10-19 战略交付/15. 演讲与输出/15.3 个人文章/note-gen-sync/note-gen-sync/privacy",
+    "privacy": "C:/Users/shich/.gemini/MEMORY/privacy",
     "article": "D:/OneDrive/10-19 战略交付/15. 演讲与输出/15.3 个人文章/note-gen-sync/note-gen-sync/Article",
     "winning": "D:/OneDrive/10-19 战略交付/15. 演讲与输出/15.3 个人文章/note-gen-sync/note-gen-sync/winning",
-    "diary": "D:/OneDrive/10-19 战略交付/15. 演讲与输出/15.3 个人文章/note-gen-sync/note-gen-sync/privacy/Diary"
+    "diary": "C:/Users/shich/.gemini/MEMORY/privacy/Diary"
 }
 
 def resolve_path(path_alias):

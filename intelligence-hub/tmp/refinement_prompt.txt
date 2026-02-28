@@ -38,110 +38,110 @@
 
 
 ## 当前战略关键词权重
-ace(w=23), msl(w=23), ai(w=20), 战略(w=20), 输出(w=20), 医疗(w=20), 个人(w=20), hitl(w=19), 路径(w=19), medical(w=14), agent(w=14), fhir(w=12), vbc(w=10), drg(w=10), dip(w=10)
+msl(w=29), ace(w=23), ai(w=20), 路径(w=20), 医疗(w=20), 逻辑(w=20), hitl(w=19), 核心(w=17), agent(w=16), 战略(w=15), 审计(w=15), medical(w=14), fhir(w=12), 个人(w=11), vbc(w=10)
 
 ## 原始情报清单
-[TOP 10] Item 1 [Score=62]:
+[TOP 10] Item 1 [Score=69]:
+Title: pluralistic.net: Pluralistic: If you build it (and it works), Trump will come (and take it) (26 Feb 2026)
+URL: https://pluralistic.net/2026/02/26/hanged-for-a-sheep/
+Source: pluralistic.net
+Desc: Today's links If you build it (and it works), Trump will come (and take it): Trump wants Big Tech to win, not to play fair. Hey look at this: Delights to delectate. Object permanence: Harpercollins v 
+
+[TOP 10] Item 2 [Score=62]:
 Title: seangoedecke.com: What's so hard about continuous learning?
 URL: https://seangoedecke.com/continuous-learning/
 Source: seangoedecke.com
 Desc: Why can’t models continue to get smarter after they’re deployed? If you hire a human employee, they will grow more familiar with your systems over time, and (if they stick around long enough) eventual
 
-[TOP 10] Item 2 [Score=59]:
-Title: Java 后端，被公司内部转岗到 AI 部门，现在整个人很麻，求指路
-URL: https://www.v2ex.com/t/1193907
-Source: V2EX
-Desc: [背景] Java 后端，搬砖多年，习惯了 Spring Cloud 、K8s 、MySQL 那一套确定性的东西。最近公司业务调整，领导找谈话，想把我抽调到刚成立的 AI 部门。  [现状]  技术栈断层： 除了大一学过的那点线性代数，对模型、参数、训练基本上一窍不通。  焦虑点： 担心 Python 这种动态语言写不习惯，更怕以后算法门槛太高，自己沦为“AI 搬砖工”，丢了 Jav
-
-[TOP 10] Item 3 [Score=58]:
-Title: beckershospitalreview.com: EHR strategy becomes a recruitment lever for health systems
-URL: https://www.beckershospitalreview.com/healthcare-information-technology/ehrs/ehr-strategy-becomes-a-recruitment-lever-for-health-systems/
-Source: beckershospitalreview.com
-Desc: For many chief medical information officers, technology investments are no longer framed solely as operational upgrades. Increasingly, they are being discussed in the context of clinician recruitment,
-
-[TOP 10] Item 4 [Score=57]:
-Title: arXiv Med-AI: SEISMO: Increasing Sample Efficiency in Molecular Optimization with a Trajectory-Aware LLM Agent
-URL: https://arxiv.org/abs/2602.00663v2
-Source: arXiv Med-AI
-Desc: Optimizing the structure of molecules to achieve desired properties is a central bottleneck across the chemical sciences, particularly in the pharmaceutical industry where it underlies the discovery o
-
-[TOP 10] Item 5 [Score=57]:
-Title: simonwillison.net: Claude Code Remote Control
-URL: https://simonwillison.net/2026/Feb/25/claude-code-remote-control/#atom-everything
+[TOP 10] Item 3 [Score=59]:
+Title: simonwillison.net: An AI agent coding skeptic tries AI agent coding, in excessive detail
+URL: https://simonwillison.net/2026/Feb/27/ai-agent-coding-in-excessive-detail/#atom-everything
 Source: simonwillison.net
-Desc: Claude Code Remote Control New Claude Code feature dropped yesterday: you can now run a "remote control" session on your computer and then use the Claude Code for web interfaces (on web, iOS and nativ
+Desc: An AI agent coding skeptic tries AI agent coding, in excessive detail Another in the genre of "OK, coding agents got good in November" posts, this one is by Max Woolf and is very much worth your time.
 
-[TOP 10] Item 6 [Score=57]:
-Title: simonwillison.net: I vibe coded my dream macOS presentation app
-URL: https://simonwillison.net/2026/Feb/25/present/#atom-everything
-Source: simonwillison.net
-Desc: I gave a talk this weekend at Social Science FOO Camp in Mountain View. The event was a classic unconference format where anyone could present a talk without needing to propose it in advance. I grabbe
+[TOP 10] Item 4 [Score=59]:
+Title: antirez.com: Implementing a clear room Z80 / ZX Spectrum emulator with Claude Code
+URL: http://antirez.com/news/160
+Source: antirez.com
+Desc: Anthropic recently released a blog post with the description of an experiment in which the last version of Opus, the 4.6, was instructed to write a C compiler in Rust, in a “clean room” setup.  The ex
 
-[TOP 10] Item 7 [Score=57]:
+[TOP 10] Item 5 [Score=59]:
 Title: pluralistic.net: Pluralistic: Socialist excellence in New York City (24 Feb 2026)
 URL: https://pluralistic.net/2026/02/24/mamdani-thought/
 Source: pluralistic.net
 Desc: Today's links Socialist excellence in New York City: The real efficiency is insourcing and ending public-private partnerships. Hey look at this: Delights to delectate. Object permanence: UK antipiracy
 
-[TOP 10] Item 8 [Score=57]:
-Title: pluralistic.net: Pluralistic: Deplatform yourself (23 Feb 2026)
-URL: https://pluralistic.net/2026/02/23/goodharts-lawbreaker/
-Source: pluralistic.net
-Desc: Today's links Deplatform yourself: Copyright infringement is your least entertainment dollar. Hey look at this: Delights to delectate. Object permanence: "Lawer" threatens suit; Landmark metaphotos; 3
-
-[TOP 10] Item 9 [Score=57]:
+[TOP 10] Item 6 [Score=59]:
 Title: lucumr.pocoo.org: A Language For Agents
 URL: https://lucumr.pocoo.org/2026/2/9/a-language-for-agents/
 Source: lucumr.pocoo.org
 Desc: Last year I first started thinking about what the future of programming languages might look like now that agentic engineering is a growing thing. Initially I felt that the enormous corpus of pre-exis
 
-[TOP 10] Item 10 [Score=57]:
+[TOP 10] Item 7 [Score=59]:
 Title: lucumr.pocoo.org: Pi: The Minimal Agent Within OpenClaw
 URL: https://lucumr.pocoo.org/2026/1/31/pi/
 Source: lucumr.pocoo.org
 Desc: If you haven’t been living under a rock, you will have noticed this week that a project of my friend Peter went viral on the internet.  It went by many names. The most recent one is OpenClaw but in th
 
-[TRANSLATE] Item 11 [Score=57]:
+[TOP 10] Item 8 [Score=59]:
 Title: gilesthomas.com: Writing an LLM from scratch, part 29 -- using DistributedDataParallel to train a base model from scratch in the cloud
 URL: https://www.gilesthomas.com/2026/01/llm-from-scratch-29-ddp-training-a-base-model-in-the-cloud
 Source: gilesthomas.com
 Desc: I'm carrying on with my "extra credit" projects after finishing the main body of Sebastian Raschka's book "Build a Large Language Model (from Scratch)". Having proven that I could train a GPT-2 small 
 
-[TRANSLATE] Item 12 [Score=57]:
+[TOP 10] Item 9 [Score=59]:
 Title: joanwestenberg.com: Agentic swarms are an org-chart delusion
 URL: https://www.joanwestenberg.com/agentic-swarms-are-an-org-chart-delusion/
 Source: joanwestenberg.com
 Desc: The "agentic swarm" vision of productivity is comfortingly familiar. Which should be an immediate red flag...You take the existing corporate hierarchy, you replace the bottom layers with a swarm of AI
 
-[TRANSLATE] Item 13 [Score=57]:
-Title: oldvcr.blogspot.com: Hands-on with two Apple Network Server prototype ROMs
-URL: https://oldvcr.blogspot.com/2026/01/hands-on-with-two-apple-network-server.html
-Source: oldvcr.blogspot.com
-Desc: Grateful acknowledgement made to the several former Apple employees who materially contributed to this entry. This article wouldn't have been possible without you!  Here's why I need to do inventory m
+[TOP 10] Item 10 [Score=59]:
+Title: anildash.com: Why We Speak
+URL: https://anildash.com/2026/01/26/why-we-speak/
+Source: anildash.com
+Desc: I've been working in and around the technology industry for a long time. Depending on how you count, it's 20 or 30 years. (I first started getting paid to put together PCs with a screwdriver when I wa
 
-[TRANSLATE] Item 14 [Score=57]:
+[TRANSLATE] Item 11 [Score=59]:
 Title: michael.stapelberg.ch: Coding Agent VMs on NixOS with microvm.nix
 URL: https://michael.stapelberg.ch/posts/2026-02-01-coding-agent-microvm-nix/
 Source: michael.stapelberg.ch
 Desc: I have come to appreciate coding agents to be valuable tools for working with computer program code in any capacity, such as learning about any program’s architecture, diagnosing bugs or developing pr
 
-[TRANSLATE] Item 15 [Score=56]:
-Title: arXiv Med-AI: MedClarify: An information-seeking AI agent for medical diagnosis with case-specific follow-up questions
-URL: https://arxiv.org/abs/2602.17308v1
-Source: arXiv Med-AI
-Desc: Large language models (LLMs) are increasingly used for diagnostic tasks in medicine. In clinical practice, the correct diagnosis can rarely be immediately inferred from the initial patient presentatio
-
-[TRANSLATE] Item 16 [Score=56]:
+[TRANSLATE] Item 12 [Score=58]:
 Title: xeiaso.net: Anubis v1.25.0: Necron
 URL: https://github.com/TecharoHQ/anubis/releases/tag/v1.25.0
 Source: xeiaso.net
 Desc: Hey all, I'm sure you've all been aware that things have been slowing down a little with Anubis development, and I want to apologize for that. A lot has been going on in my life lately (my blog will h
 
-[TRANSLATE] Item 17 [Score=53]:
+[TRANSLATE] Item 13 [Score=57]:
+Title: arXiv Med-AI: Med-REFL: Medical Reasoning Enhancement via Self-Corrected Fine-grained Reflection
+URL: https://arxiv.org/abs/2506.13793v4
+Source: arXiv Med-AI
+Desc: Large reasoning models excel in domains like mathematics where intermediate reasoning is straightforward to verify, but struggle to self-correct in medicine fields where evaluating intermediate reason
+
+[TRANSLATE] Item 14 [Score=57]:
+Title: oldvcr.blogspot.com: Hands-on with two Apple Network Server prototype ROMs
+URL: https://oldvcr.blogspot.com/2026/01/hands-on-with-two-apple-network-server.html
+Source: oldvcr.blogspot.com
+Desc: Grateful acknowledgement made to the several former Apple employees who materially contributed to this entry. This article wouldn't have been possible without you!  Here's why I need to do inventory m
+
+[TRANSLATE] Item 15 [Score=53]:
 Title: oldvcr.blogspot.com: The Scriptovision Super Micro Script video titler is almost a home computer
 URL: https://oldvcr.blogspot.com/2026/02/the-scriptovision-super-micro-script.html
 Source: oldvcr.blogspot.com
 Desc: Canadians, rejoice! Not only do you have curling, the Big Turk and Tim Hortons (and, when I was in BC last, Dr Pepper made with real cane sugar), you also have a number of interesting indigenous compu
+
+[TRANSLATE] Item 16 [Score=51]:
+Title: arXiv Med-AI: Atlas-free Brain Network Transformer
+URL: https://arxiv.org/abs/2510.03306v2
+Source: arXiv Med-AI
+Desc: Current atlas-based approaches to brain network analysis rely heavily on standardized anatomical or connectivity-driven brain atlases. However, these fixed atlases often introduce significant limitati
+
+[TRANSLATE] Item 17 [Score=51]:
+Title: computer.rip: cash issuing terminals
+URL: https://computer.rip/2026-02-27-ibm-atm.html
+Source: computer.rip
+Desc: In the United States, we are losing our fondness for cash. As in many other countries, cards and other types of electronic payments now dominate everyday commerce. To some, this is a loss. Cash repres
 
 [TRANSLATE] Item 18 [Score=50]:
 Title: arXiv Med-AI: Imputation of Unknown Missingness in Sparse Electronic Health Records
@@ -150,73 +150,73 @@ Source: arXiv Med-AI
 Desc: Machine learning holds great promise for advancing the field of medicine, with electronic health records (EHRs) serving as a primary data source. However, EHRs are often sparse and contain missing dat
 
 [TRANSLATE] Item 19 [Score=43]:
-Title: jeffgeerling.com: Testing Reachy Mini - Hugging Face's Pi powered robot
-URL: https://www.jeffgeerling.com/blog/2026/testing-reachy-mini-hugging-face-robot/
-Source: jeffgeerling.com
-Desc: When I saw Jensen Huang introduce the Reachy Mini at CES, I thought it was a gimmick. His keynote showed this little robot responding to human input, turning its head to look at a TODO list on the wal
+Title: daringfireball.net: How to Block the ‘Upgrade to Tahoe’ Alerts and System Settings Indicator
+URL: https://robservatory.com/block-the-upgrade-to-tahoe-alerts-and-system-settings-indicator/
+Source: daringfireball.net
+Desc: Rob Griffiths, writing at The Robservatory:  So I have macOS Tahoe on my laptop, but I’m keeping my desktop Mac on macOS Sequoia for now. Which means I have the joy of seeing things like this wonderfu
 
 [TRANSLATE] Item 20 [Score=43]:
+Title: antirez.com: Automatic programming
+URL: http://antirez.com/news/159
+Source: antirez.com
+Desc: In my YouTube channel, for some time now I started to refer to the process of writing software using AI assistance (soon to become just "the process of writing software", I believe) with the term "Aut
+
+[TRANSLATE] Item 21 [Score=43]:
+Title: antirez.com: Don't fall into the anti-AI hype
+URL: http://antirez.com/news/158
+Source: antirez.com
+Desc: I love writing software, line by line. It could be said that my career was a continuous effort to create software well written, minimal, where the human touch was the fundamental feature. I also hope 
+
+[TRANSLATE] Item 22 [Score=43]:
 Title: idiallo.com: When access to knowledge is no longer the limitation
 URL: https://idiallo.com/blog/access-to-knowledge-is-no-longer-a-limitation?src=feed
 Source: idiallo.com
 Desc: Let's do this thought experiment together. I have a little box. I'll place the box on the table. Now I'll open the little box and put all the arguments against large language models in it. I'll put al
 
-[TRANSLATE] Item 21 [Score=43]:
+[TRANSLATE] Item 23 [Score=43]:
 Title: idiallo.com: The Little Red Dot
 URL: https://idiallo.com/blog/little-red-dot?src=feed
 Source: idiallo.com
 Desc: Sometimes, I have 50 tabs open. Looking for a single piece of information ends up being a rapid click on each tab until I find what I'm looking for. Somehow, every time I get to that LinkedIn tab, I p
 
-[TRANSLATE] Item 22 [Score=43]:
+[TRANSLATE] Item 24 [Score=43]:
 Title: maurycyz.com: Inside an alpha-beta scintillator:
 URL: https://maurycyz.com/misc/ah_teardown/
 Source: maurycyz.com
 Desc: Just a heads up: this post is incomplete.  However, it may be a while before I am able to finish it. I am publishing it early in hopes that you will still find it somewhat interesting.    I've recentl
 
-[TRANSLATE] Item 23 [Score=43]:
+[TRANSLATE] Item 25 [Score=43]:
 Title: maurycyz.com: Notes on blog future-proofing
 URL: https://maurycyz.com/misc/futureproofing/
 Source: maurycyz.com
 Desc: One of the great things about web pages is that they are long-lived and mutable. There's no need to aim for perfection on the first draft: A page can continue to be improved for years after its origin
 
-[TRANSLATE] Item 24 [Score=43]:
+[TRANSLATE] Item 26 [Score=43]:
 Title: righto.com: Instruction decoding in the Intel 8087 floating-point chip
 URL: http://www.righto.com/2026/02/8087-instruction-decoding.html
 Source: righto.com
 Desc: In the 1980s, if you wanted your IBM PC to run faster, you could buy the Intel 8087 floating-point coprocessor chip. With this chip, CAD software, spreadsheets, flight simulators, and other programs w
 
-[TRANSLATE] Item 25 [Score=43]:
+[TRANSLATE] Item 27 [Score=43]:
 Title: righto.com: Notes on the Intel 8086 processor's arithmetic-logic unit
 URL: http://www.righto.com/2026/01/notes-on-intel-8086-processors.html
 Source: righto.com
 Desc: In 1978, Intel introduced the 8086 processor, a revolutionary chip that led to the modern x86 architecture. Unlike modern 64-bit processors, however, the 8086 is a 16-bit chip. Its arithmetic/logic un
 
-[TRANSLATE] Item 26 [Score=43]:
+[TRANSLATE] Item 28 [Score=43]:
 Title: righto.com: Conditions in the Intel 8087 floating-point chip's microcode
 URL: http://www.righto.com/2025/12/8087-microcode-conditions.html
 Source: righto.com
 Desc: In the 1980s, if you wanted your computer to do floating-point calculations faster, you could buy the Intel 8087 floating-point coprocessor chip. Plugging it into your IBM PC would make operations up 
 
-[TRANSLATE] Item 27 [Score=43]:
+[TRANSLATE] Item 29 [Score=43]:
 Title: lucumr.pocoo.org: The Final Bottleneck
 URL: https://lucumr.pocoo.org/2026/2/13/the-final-bottleneck/
 Source: lucumr.pocoo.org
 Desc: Historically, writing code was slower than reviewing code. It might not have felt that way, because code reviews sat in queues until someone got around to picking it up.  But if you compare the actual
 
-[TRANSLATE] Item 28 [Score=43]:
-Title: gilesthomas.com: Writing an LLM from scratch, part 28 -- training a base model from scratch on an RTX 3090
-URL: https://www.gilesthomas.com/2025/12/llm-from-scratch-28-training-a-base-model-from-scratch
-Source: gilesthomas.com
-Desc: Having worked through the main body of Sebastian Raschka's book "Build a Large Language Model (from Scratch)", I wanted to try an experiment: is it possible to train a base model of my own, on my own 
-
-[TRANSLATE] Item 29 [Score=43]:
-Title: rakhim.exotext.com: Modern UI is clean and invisible? Ha, I wish!
-URL: https://rakhim.exotext.com/modern-ui-is-not-invisible
-Source: rakhim.exotext.com
-Desc: This is an excellent video about modern UI/UX: "The Hidden Cost of 'Clean' Design." I highly recommend watching it and checking out Ilia's other work.  I agree with nearly everything in the video, inc
-
 [TRANSLATE] Item 30 [Score=43]:
-Title: susam.net: Deep Blue: Chess vs Programming
-URL: https://susam.net/deep-blue.html
-Source: susam.net
-Desc: I remember how dismayed Kasparov was after losing the 1997 match to   IBM's Deep Blue, although his views on Deep Blue became more   balanced with time and he accepted that we had entered a new era in
+Title: johndcook.com: Hyperbolic versions of latest posts
+URL: https://www.johndcook.com/blog/2026/02/25/hyperbolic-versions-of-latest-posts/
+Source: johndcook.com
+Desc: The post A curious trig identity contained the theorem that for real x and y, This theorem also holds when sine is replaced with hyperbolic sine. The post Trig of inverse trig contained a table summar
