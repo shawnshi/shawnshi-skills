@@ -28,6 +28,7 @@ import time
 from datetime import datetime
 from typing import List, Optional, Dict, Any, Tuple
 
+import pandas as pd
 import dateparser
 import requests
 import yfinance as yf
@@ -441,12 +442,32 @@ def main():
                 result_entry["history"] = []
                 if history is not None and not history.empty:
                     hist_data = history.reset_index()
-                    hist_data['Date'] = hist_data['Date'].dt.strftime('%Y-%m-%d')
+                    if 'Datetime' in hist_data.columns:
+                        hist_data['Date'] = hist_data['Datetime'].dt.strftime('%Y-%m-%d %H:%M:%S')
+                        hist_data = hist_data.drop(columns=['Datetime'])
+                    elif 'Date' in hist_data.columns:
+                        hist_data['Date'] = hist_data['Date'].dt.strftime('%Y-%m-%d')
                     
                     if args.lean and len(hist_data) > 6:
-                        # Lean mode: keep just the first day and the last 5 days
-                        lean_history = hist_data.iloc[[0]].copy()
-                        lean_history = lean_history._append(hist_data.iloc[-5:], ignore_index=True)
+                        # Lean mode: truncate long history but keep trend markers
+                        is_intraday = args.interval in ["1m", "2m", "5m", "15m", "30m", "60m", "90m", "1h"]
+                        
+                        if is_intraday and len(hist_data) > 20:
+                            # Intraday: keeps first 5, last 10, and resamples middle
+                            first_part = hist_data.iloc[:5]
+                            last_part = hist_data.iloc[-10:]
+                            mid_part = hist_data.iloc[5:-10]
+                            if len(mid_part) > 5:
+                                step = len(mid_part) // 5
+                                mid_part = mid_part.iloc[::step].head(5)
+                            lean_history = pd.concat([first_part, mid_part, last_part], ignore_index=True)
+                        elif not is_intraday:
+                            # Standard interday: keep first day and last 5 days
+                            lean_history = pd.concat([hist_data.iloc[[0]], hist_data.iloc[-5:]], ignore_index=True)
+                        else:
+                            # Fallback for short intraday
+                            lean_history = pd.concat([hist_data.iloc[:3], hist_data.iloc[-3:]], ignore_index=True)
+                            
                         result_entry["history"] = lean_history.to_dict(orient='records')
                         result_entry["history_truncated"] = True
                     else:

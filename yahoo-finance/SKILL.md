@@ -2,8 +2,9 @@
 name: yahoo-finance
 description: 获取股票价格、基本面、新闻及历史趋势。支持多代码查询、自然语言日期解析、日内K线间隔及结构化 JSON 输出。
 version: "2.0"
+type: tool-cli
 language: py
-last_updated: "2026-02-21"
+last_updated: "2026-03-01"
 ---
 
 # Yahoo Finance Skill
@@ -18,7 +19,7 @@ last_updated: "2026-02-21"
 - **News Aggregation**: 关联特定代码的最新新闻。
 - **Smart Resolution**: 自动将公司名（如 "Apple"）解析为 Ticker（"AAPL"），已知 Ticker 跳过搜索 API。
 - **Flexible Intervals**: 支持日内K线间隔（`1m` ~ `1mo`），满足日内交易分析需求。
-- **Context Optimization**: 新增 `--lean` 模式，智能截断冗长历史K线，保留首尾关键节点，为大模型极致降噪减负（最高压缩 90% Context）。
+- **Context Optimization**: 新增 `--lean` 模式，智能截断冗长历史K线，保留首尾关键节点。特别针对日内高频 K 线加入了动态等距抽样，防止趋势失真，在为大模型减负（最高压缩 90% Context）的同时维持盘感。
 - **Flexible Output**: 支持人类友好的 Rich 表格输出及机器可读的 JSON（推荐）。
 - **Robust Execution**: 内置超时控制、指数退避重试、结构化错误报告及退出码规范。
 
@@ -84,7 +85,7 @@ uv run {SKILL_DIR}/scripts/yf.py MSFT --json --news-only
 
 ## Best Practices for Agents
 
-1.  **数据分析优先 JSON + Lean**: 涉及长时间跨度时，务必联合使用 `--json --lean` 参数以保证解析的确定性，同时防止 Token 爆炸。
+1.  **数据分析优先 JSON + Lean**: 涉及长时间跨度时，务必联合使用 `--json --lean` 参数以保证解析的确定性，同时防止 Token 爆炸。`--lean` 模式已自动支持日间与日内（Intraday）的动态不同截断逻辑。
 2.  **颗粒度控制**:
     *   仅需股价时使用 `--price-only`。
     *   仅需新闻时使用 `--news-only`。
@@ -94,6 +95,7 @@ uv run {SKILL_DIR}/scripts/yf.py MSFT --json --news-only
 4.  **异常处理**: 若返回 JSON 包含 `error` 或 `errors` 字段，应告知用户问题原因。检查退出码以判断整体执行状态。
 5.  **时间灵活性**: 脚本支持自然语言日期（如 "yesterday", "3 months ago"），无需 Agent 手动转换。
 6.  **结构化基本面**: 默认 JSON 输出已包含 ROE、PB 等核心机构研判指标。仅在特殊需要时使用 `--full-info`。
+7.  **协议遵守**: 使用此技能前先明确验证 `interval` 与 `period` 等参数约束。不要臆造未提供的参数组合。
 
 ## Troubleshooting
 

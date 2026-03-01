@@ -16,31 +16,36 @@ status: Active
 *   **Ghost Deck First (骨架先行)**：在所有逻辑闭环未经过压力测试前，绝对不写单页的具体内容。
 
 ## 1. 核心工作流 (The Golden Path)
+⚠️ **执行守则**：严格利用 Gemini Agent 的 `task_boundary` 管理状态，基于 Artifact (工件) 进行交付审核。
 
-### [⏳] Phase 1: Context & Intent Alignment (战略锚定与逻辑湖 - 扫描收集)
-1. **意图获取**：使用 `ask_user` 获取：
+### [⏳] Phase 1: Context & Intent Alignment (战略锚定与逻辑湖 - 扫描收集)**[Mode: PLANNING]**
+1. **初始化任务**：创建 `task.md` 记录幻灯片生成全流程，并启动 `task_boundary (Mode: PLANNING)`。
+2. **意图获取 (First notify_user)**：主动调用 `notify_user` 询问用户：受众画像（必须带入“卫宁健康战略咨询”视角）、医疗评级诉求、汇报时长与决策目标。
    - 受众画像 (强制勾选：院长/CEO、信息科主任/CIO、医务科/质管科/CMO、财务科/医保办/CFO，必须带入“卫宁健康战略咨询总经理”的主治视角)。
    - 医疗评级映射 (是否有“互联互通”、“电子病历”、“国考”等关键诉求)。
    - 汇报时长与页数预期 (如：15分钟/10页)。
    - 核心决策目标 (汇报完希望老板批预算还是定方向？)。
-2. **知识检索**：从 `memory.md` 或项目路径下检索历史数据，提取定量证据 (Quantitative Evidence)。涉及政策合规必须核实国家卫健委(NHC)/国家医保局(NHSA)的红头文件。
-3. **环境初始化**：⚠️ **严禁污染黄区**。必须在绿区沙箱创建草稿目录：`c:\Users\shich\.gemini\tmp\slide-deck\{Topic}_{Date}`，并初始化 `working_memory.json` 。
+3. **知识检索与环境初始化**：读取 `MEMORY.md` 相关战略认知。在绿区 `c:\Users\shich\.gemini\tmp\slide-deck\{Topic}_{Date}` 创建物理沙箱目录。
 
-### [🧠] Phase 2: Ghost Deck & Storylining (骨架编排与红队审计 - 综合起草)
+
+### [🧠] Phase 2: Ghost Deck & Storylining (骨架编排与红队审计 - 综合起草) **[Mode: PLANNING]**
 1. **<Thinking_Canvas> 战略预演**：在产出实体内容前，必须首发医疗“政-技-商”三角推演：
    - *痛点约束 (业务)*：公立医院高质量发展面临的最尖锐问题是什么？(如临床提效、精细化运营)。
    - *政策约束 (合规)*：相关部委（卫健委/医保局等）底层导向如何？(如 DRG/DIP、医疗数据要素化、医疗大模型三类证)。
    - *壁垒约束 (技术)*：卫宁健康的差异化竞争优势在哪里？(如全栈底座能力与强大的医疗数据中台)。
-2. **骨架生成**：仅输出每一页的 **Action Title (判词标题)**，构建逻辑金字塔大纲 `outline.md`。
-3. **The "Elevator Pitch" Test**：检查大纲是否符合 MECE 原则，连读标题是否等同于一个完整的电梯演讲。
-4. **跨界联动与红队审计 (Multi-Agent Stress-Test)**：
-    - 建议调用 `logic-adversary` 模拟多方视角（信息科主任/医保局/IT 竞对）进行严苛拷问。
-    - 若涉及定价或商业模式，主动关联 `pricing-strategy` 模型进行校验。
-5. **用户确认**：使用 `ask_user` 展示骨架标题，确认无误后进入下一步。**（在未经批准前，严禁生成具体内容）**
+2. **生成 Implementation Plan (Ghost Deck)**：在脑图区强制生成 `implementation_plan.md`。结构只包含：
+   - Action Title (判词标题)：构成逻辑金字塔。
+   - The "Elevator Pitch" Test 结论。
+   - 红队审查备注（用技能 `${logic-adversary}` 模拟多方视角（信息科主任/医保局/IT 竞对）预判竞对或医保局可能的质疑及防御策略）。
+    - 若涉及定价或商业模式，主动关联 `${pricing-strategy}` 模型进行校验。
+3. **强制拦截与审批 (Approval Gate)**：必须调用 `notify_user(BlockedOnUser: true, PathsToReview: [".../implementation_plan.md"])`。
+   - **⚠️ 铁律**：在用户确认 Ghost Deck 骨架前，绝对禁止编写单页的具体内容或进入下一阶段！
 
-### [💡] Phase 3: Slide Anatomy & Blueprinting (单页解剖与全量蓝图 - 优化打磨)
-1.**确认风格逻辑构建**：使用 `ask_user` 确认视觉风格。
-2.遵循 `blueprint-template.md` ，将确认好的大纲扩展为具体的单页脚本，生成最终 MD 蓝图。**每一页 Slide 强制遵循以下解剖学结构 (Anatomy)**：
+### [💡] Phase 3: Slide Anatomy & Blueprinting (单页解剖与全量蓝图 - 优化打磨) **[Mode: EXECUTION]**
+1. **状态切换**：确认 Blueprint 获批后，调用 `task_boundary (Mode: EXECUTION)` 切换状态。
+2. **风格确认**：如果在此时涉及视觉配置，可短暂 `notify_user` 确认视觉风格。
+3. **生成全量单页蓝图**：依据 `implementation_plan.md` 的获批结构，开始逐页扩展单页脚本。按照“Slide 六段式解剖图 (Kicker/Lead-in/Body/Evidence/Trust_Anchor/Bumper)” 生成具体内容。
+**每一页 Slide 强制遵循以下解剖学结构 (Anatomy)**：
 
 *   **Slide 六段式解剖图 (Six-part Anatomy)**:
     *   **Kicker (判词标题)**: 限制 15-25 字，包含动词与结论。
@@ -50,12 +55,14 @@ status: Active
     *   **Trust_Anchor (信任锚点)**: 强制声明数据/论断的权威来源（严禁虚构，必须引用如：NHC发文号、CHIMA年鉴、国考指标、某核心学术期刊、卫宁真实客户标杆案例）。
     *   **Bumper (底部收言/So-What)**: 放置在页面底部的金句，提炼本页对决策者的实际行动意义（限制 20 字以内）。
 
-### [📦] Phase 4: Visual Forging & Assembly (视觉转化与物理组装 - 归档冻结)
-1. **信噪比(SNR)物理控制**：由于纯文本主体受 Bullet Limit (≤3) 及 Baseline 约束，超出信息必须拆分页或转为图表。执行自检 `Visual_SNR`，不达标禁止组装。
+### [📦] Phase 4: Visual Forging & Assembly (视觉转化与物理组装 - 归档冻结) **[Mode: VERIFICATION & EXECUTION]**
+1. **信噪比(SNR)物理控制**：执行内部逻辑验证，检查是否有超出单页 Bullet Limit 限制的内容。。
 2. **图表代码生成**：根据蓝图中的 `Visual_Code`，输出具体的 `Mermaid` 脚本图表，或生成用于 DALL-E/图像生成脚本的精确 `Image_Prompt`。
 3. **防幻觉锁机制 (Dry-run)**：在执行组装前，使用对应的命令行工具检查环境状态，确保无误。同时进行医疗术语与合规性防线的内部严查 (如：“电子病例”为错别字，正确为“电子病历”)。
-4. **自动化合并执行指令**：作为 Agent，你必须**显式调用执行命令工具**完成组装，避免只生成未执行的“口号”。（例如：`run_command python c:\Users\shich\.gemini\skills\presentation-architect\scripts\build-deck.py [参数]`）。
-5. **归档与清理**：只有当 `build-deck.py` 等脚本成功输出最终汇报文件 (`.pptx` /.pdf) 并得到最终确认后，才能将最终版本移出 `\tmp` 沙箱至正式归档路径，且必须清理 `\tmp` 沙箱草稿。
+4. **物理组装 (Tool Call)**：使用 `run_command` 调用具体的封版脚本（如 `python c:\Users\shich\.gemini\skills\presentation-architect\scripts\build-deck.py`）生成 Markdown 源码或 PPTX。
+5. **归档与冻结 (Finalization)**：
+   - 组装成功后，生成 `walkthrough.md` 记录本次 PPT 核心亮点与资产结构。
+   - 最后使用 `notify_user` 将最终的幻灯片沙箱路径推送给用户进行验收。。
 
 ## 2. 知识锚点 (Knowledge Anchors - Progressive Disclosure)
 当任务涉及特定细节时，**必须**按阶段查阅以下资源：
@@ -86,6 +93,9 @@ status: Active
 *   ❌ **禁止西瓜芝麻一把抓**：严禁在同一页上放置两张毫不相关的图表。一页只讲透一个核心洞察。
 *   ❌ **禁止模糊占位符**：严禁使用“以此类推”、“这里放置一张表现增长的图表”等模糊表述。必须写明图表的 X 轴、Y 轴是什么，数据趋势是怎样的。
 *   **路径锁定 (Zone Fencing)**：⚠️ 任何草稿阶段的产出必须且只能在绿区操作（`c:\Users\shich\.gemini\tmp\slide-deck\`）。绝对禁止未经授权污染黄区、或在当前路径随意输出。
+*   ❌ **禁止越级跳跃 (No Skip-Level Execution)**：不管用户如何催促，如果没有获得 `implementation_plan.md` 的明确 Approval，Agent `Mode` 必须锁定在 `PLANNING`。严禁在未经授权前生成单页图表或文本。
+*   ❌ **废话熔断 (Bullet-point Limit)**：在 Body 中如遇纯文本渲染，单页绝对禁止超过 3 个项目符号。强制使用“名言警句式”的高度浓缩词汇。若你发现在某张 slide 你生成了字数超过 100 字的正文，立刻停止并精简！
+*   **工件流转隔离 (Artifact Segregation)**：管理状态的 `task.md` 和 `implementation_plan.md` 只允许存在于智能体 Brain 环境中；物理组装的文件代码必须严格在绿区 `tmp/`。
 
 ## 4. 维护协议 (Maintenance Protocol)
 *   **Logic Mutation**: 修改脚本逻辑后，必须更新脚本 Standard Header 中的 `@Input/@Output`。

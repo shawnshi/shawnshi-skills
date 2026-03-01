@@ -10,7 +10,7 @@ triggers: ["心率", "睡眠", "压力", "HRV", "感冒迹象", "身体电量", 
 
 通过自然语言查询 Garmin Connect 数据，提取临床级生理指标，生成战略级交互式审计看板，并执行高级生理智能分析（认知准备度与代谢摩擦）。
 
-该技能定位为“企业级/高管专属的前置医疗防线与战略决策引擎”，采用 **GEB-Flow** 架构进行全链路审计：
+该技能定位为“企业级/高管专属的前置医疗防线与战略决策引擎（对齐 `USER.md` 中的战略咨询总经理身份）”，采用 **GEB-Flow** 架构进行全链路审计：
 - **Auth Layer** (`garmin_auth.py`): 登录认证与 Token 管理。
 - **Data Layer** (`garmin_data.py`, `garmin_data_extended.py`): 原始 JSON 数据提取，覆盖 20+ 指标。
 - **Query Layer** (`garmin_query.py`): 时间点精确查询。
@@ -19,40 +19,44 @@ triggers: ["心率", "睡眠", "压力", "HRV", "感冒迹象", "身体电量", 
 - **Presentation Layer** (`garmin_chart.py`): 生成交互式 Bio-Metric Audit 看板，包含高阶 RHR vs HRV 韧性四象限分析。
 - **FHIR Adapter** (`garmin_fhir_adapter.py`): 导出 HL7 FHIR 标准格式。
 
-## Execution Protocol (智能体执行协议)
+## Execution Protocol (智能体混合执行协议)
 
-AI 必须严格按照以下阶段线性推进，禁止跳步：
+AI 必须严格按照以下阶段线性推进，并在模式之间流转：
 
 - **[Phase 0: Pre-flight & Auth (PLANNING Mode)]**
   - **Action**: 在执行任何数据查询前，隐式检查当前是否有 401 Error 风险。如果脚本返回 401 错误，说明 Token 已过期。
   - **Failsafe**: 立即中断后续流程，引导用户运行 `python scripts/garmin_auth.py login --email YOUR_EMAIL --password YOUR_PASSWORD`。系统支持 `python scripts/garmin_auth.py status` 检查状态。
 
 - **[Phase 1: Precision Data Extraction (EXECUTION Mode)]**
-  - **Action**: 根据用户意图（User Query Mapping）选择最匹配的 1-2 个基础脚本（优先使用时间点精确查询或单项指标查询）。
-  - **Constraint**: 避免一次性拉取所有全局数据（如同时运行多个 30 天的大范围查询）以防止 Token OOM 和上下文污染。
+  - **Action**: 根据用户意图选择最匹配的基础查询脚本拉取数据（优先精确查询）。
+  - **Failsafe**: 如果 API 返回空值或 `None`，**绝对禁止** AI 自行编造或推测数据。必须挂起流程，并明确提示：“数据未同步，请打开 Garmin Connect 手机应用进行同步”。
+  - **Constraint**: 避免一次性拉取所有全局数据（如同时运行多个 30 天查询）以防 Token OOM。
 
 - **[Phase 2: Strategic Synthesis (EXECUTION Mode)]**
   - **Action**: 若涉及综合诊断（如准备度、患病风险），必须调用 `garmin_intelligence.py` 进行高阶计算。
-  - **Constraint**: 数据层结果必须交由 Intelligence 模型层二次加工。
+  - **Constraint**: 数据层结果必须交由 Intelligence 模型层二次加工，禁止 AI 仅凭原始数据进行浅层推断。
 
 - **[Phase 3: Executive Output (VERIFICATION Mode)]**
-  - **Action**: 生成最终的高管简报，并在必要时使用 `garmin_chart.py` 生成可视化报告的本地绝对路径链接供用户点击。
+  - **Action**: 生成最终的高管简报（BLUF结构），并在必要时运行 `garmin_chart.py` 生成可视化报告供审阅。
+  - **Constraint**: 输出必须锚定商业决策视角（例如：提示红灯时，建议避免高价值的商务谈判）。处理文件图表时必须展示绝对路径链接。
 
-## ⚠️ Agentic Guardrails (智能体约束)
-1. **No Hallucination**: 绝对禁止编造生理数据。如果 API 返回空值，必须报告“数据未同步”，并要求用户打开 Garmin Connect 手机端进行同步。
+## ⚠️ Agentic Guardrails (智能体硬约束)
+1. **No Hallucination**: 绝对禁止编造生理数据。
 2. **Path Resolution**: 处理活动文件（FIT/GPX）和 HTML 报告时，必须使用绝对路径展示（例如：`[查看生物态势看板](file:///C:/Users/shich/.gemini/memory/garmin/report.html)`）。所有报告和活动文件默认保存至 `C:\Users\shich\.gemini\memory\garmin`。
-3. **Pipelining**: `garmin_intelligence.py` 等分析脚本依赖基础数据正确返回。必须确保前置 API 调用不报错后再执行高阶审计。
+3. **Pipelining**: `garmin_intelligence.py` 等分析脚本依赖基础数据正确返回。严格确保前序步骤成功后再执行后续的深度审计。
 
 ## Output Schema (战略级输出规范)
-必须采用 **BLUF (结论先行)** 结构输出结果：
-- **🟢 核心判断 (Core Insight)**: 1句话概括当前的生理状态与决策建议。
+必须采用 **BLUF (结论先行)** 结构输出结果，深度融合“卫宁健康战略咨询总经理”的高管画像：
+- **🟢 核心判断 (Core Insight)**: 1句话概括当前的生理状态与商业/决策建议。
 - **📊 关键指标 (Key Metrics)**: 使用 Bullet points 列出核心数据（例如 RHR, HRV, 准备度, Body Battery）。
-- **⚠️ 摩擦与风险 (Frictions & Risks)**: 如果探测到“Garmin Flu”迹象（RHR 飙升 + HRV/睡眠质量骤降 + 睡眠呼吸率异常升高）或睡眠剥夺严重，必须加粗高亮警告。
+- **⚠️ 摩擦与风险 (Frictions & Risks)**: 如果探测到“Garmin Flu”迹象（RHR 飙升 + HRV/睡眠质量骤降 + 睡眠呼吸率异常升高）或严重睡眠剥夺，必须加粗高亮警告。
 - **🎯 行动协议 (Action Protocol)**: 基于综合生理状态给出明确指令：绿灯 (推极限/商业破局)、黄灯 (维护运转)、红灯 (警示/限制交叉会议)、警报 (停机/深度对抗应激)。
 
 ---
 
 ## Tooling Reference & Workflow
+
+**IMPORTANT**: 所有的 `python scripts/...` 命令必须通过你的 `run_command` 工具执行。
 
 ### 1. 基础查询 (Raw Data)
 ```bash

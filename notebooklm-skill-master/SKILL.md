@@ -3,44 +3,53 @@ name: notebooklm-skill-master
 description: 使用 Google NotebookLM 深度查询自有文档。支持浏览器自动化、库管理与持久化认证。场景：基于文档的深度问答、研究分析。
 ---
 
-# Research Assistant (NotebookLM Connector)
+# 🧠 NotebookLM 知识引擎专家 (NotebookLM Knowledge Engine Expert)
 
-通过 Google NotebookLM 提供具备“证据支撑”的确定性知识查询。
+## 🎯 系统定位 (System Positioning)
+通过 Google NotebookLM 提供具备“证据支撑”的确定性知识查询。作为核心智能体，深度查询自带文档，确保问答直接来源于用户上传的内容，从根本上杜绝大模型幻觉。
 
-## Core Capabilities
-*   **Source-Grounded**: 所有回答均直接来源于用户上传的文档，杜绝幻觉。
-*   **Auto-Environment**: 内置虚拟环境管理，自动处理依赖与浏览器驱动。
-*   **Library Logic**: 支持多笔记本注册、检索与一键激活。
+## ⚙️ 核心架构与能力 (Core Architecture & Capabilities)
+*   **Source-Grounded (信源溯源)**: 所有回答均被强制约束为直接来源于用户上传的 NotebookLM 文档，提供高度可靠的事实依据。
+*   **Auto-Environment (自动化沙箱)**: 内置虚拟环境隔离管理，自动处理各项依赖包与前端浏览器驱动，确保开箱即用。
+*   **Library Logic (知识库路由)**: 支持多子笔记本 (Notebooks) 单独注册、精准发现与一键路由激活，满足多维度项目并行需求。
 
-## Execution Workflow
+## 🔄 执行流 (Execution Workflow)
 
-### 1. Check Auth (首次必选)
+### 阶段 1 (Phase 1): 认证与启动 (Auth & Setup)
+> ⚠️ **前置条件与协议**: 首次执行特定环境或 Token 失效时强制执行。此步会**调起可见浏览器窗口**，Agent 须指引用户手动完成 Google 账户授权登录。
 ```bash
 python scripts/run.py auth_manager.py status
 ```
-*   若未登录，运行 `python scripts/run.py auth_manager.py setup`。
-*   **Protocol**: 此步会打开可见浏览器窗口，用户必须手动完成 Google 登录。
+*若判定为未登录状态，自动发起:*
+```bash
+python scripts/run.py auth_manager.py setup
+```
 
-### 2. Manage Library
+### 阶段 2 (Phase 2): 知识库管理 (Manage Library)
+> 列出已有的笔记本清单，或根据需要添加新知识维度。
 ```bash
 python scripts/run.py notebook_manager.py list
 ```
-*   若要添加新笔记本：`python scripts/run.py notebook_manager.py add --url "[URL]" --name "[名称]" --description "[描述]"`。
-*   详细命令见 `references/cli-reference.md`。
+*   **注册新库 (Add)**:
+```bash
+python scripts/run.py notebook_manager.py add --url "[URL]" --name "[名称]" --description "[描述]"
+```
 
-### 3. Ask Questions
+### 阶段 3 (Phase 3): 深度检索问答 (Ask Questions)
+> 核心交互环节：基于已激活或选定的 Notebook 发起深度询问。
 ```bash
 python scripts/run.py ask_question.py --question "在此输入你的问题"
 ```
-*   **Follow-up Policy**: 每个回答后，Agent 必须检查是否满足用户需求。若信息不全，立即发起追问。
 
-## Best Practices
-1.  **Always use run.py**: 严禁直接调用子脚本，必须使用包装器以确保环境正确。
-2.  **Smart Discovery**: 若用户只给了一个笔记本 URL 却没给描述，先用 `ask_question.py` 问它“这个笔记本涵盖了什么内容”，再执行 `add` 操作。
-3.  **Visible Browser**: 仅在认证或调试时显示浏览器。常规查询默认静默执行。
+## 🛠️ 最佳实践与行为准则 (Best Practices & Behavioral Protocols)
+1.  **Smart Discovery (智能探索)**: 若用户提供的需求仅包含一个笔记本 URL 却缺少内容描述，Agent 应首先调用 `ask_question.py` 询问 NotebookLM：“请告诉我这个笔记本涵盖了什么内容”，获取摘要后再执行 `add` 操作。
+2.  **Follow-up Policy (追问验证)**: Agent 必须在每次提取回答后，反思检查是否完全满足了用户的原始查询需求。若识别出信息断层或不全，应主动发起相关追问补齐拼图。
+3.  **Visible Browser (静默优先)**: 常规的问答查询默认在后台静默执行 (headless)。仅在用户认证 (Auth) 流程或深度诊断日志报错时，方可启用可视化浏览器。
 
-## Resources
-*   **CLI 手册**: `references/cli-reference.md`
-*   **故障排查**: `references/troubleshooting.md`
+## 🚨 维护红线 (Maintenance Protocol)
+*   **Always use run.py (防穿透执行)**: 严禁直接经由 `python` 直接调用内部子脚本。所有的调用树必须经过入口包装器 `scripts/run.py`，以确保具备一致的虚拟运行时与上下文注入。
+*   **依赖刚性 (Dependency Sync)**: 任何涉及 `.venv` 虚拟环境变更或外部依赖包 (pip) 的调整，必须确保 `scripts/run.py` 内部检测逻辑被同步更新。
 
-!!! Maintenance Protocol: 任何涉及 .venv 或依赖的变更，必须同步更新 scripts/run.py。
+## 📚 附属资源 (Resources)
+*   **CLI 操作详编**: `references/cli-reference.md`
+*   **故障排查矩阵**: `references/troubleshooting.md`
