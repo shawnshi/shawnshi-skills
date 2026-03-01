@@ -1,3 +1,10 @@
+---
+title: Yahoo Finance Data Engine
+date: 2026-03-01
+status: active
+author: shawnshi
+---
+
 # _DIR_META.md
 
 ## Architecture Vision

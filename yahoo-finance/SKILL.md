@@ -17,6 +17,7 @@ last_updated: "2026-03-01"
 - **Market Data**: 历史价格数据（OHLCV）+ 专业机构级摘要统计（绝对收益率、**最大回撤**、**相比最高点回撤**、波动率等）。
 - **Company Info**: 深度基本面数据（新增 **ROE**、**PB**、**营业利润率**、Beta 等核心风控与估值跳点），支持 `--full-info` 全量。
 - **News Aggregation**: 关联特定代码的最新新闻。
+- **Deep Dive Analysis**: 结合专设的 `stock_analyzer` Agent 提供从“数据流”到“投资洞察”的升维体验（见下文 Agent 用法）。
 - **Smart Resolution**: 自动将公司名（如 "Apple"）解析为 Ticker（"AAPL"），已知 Ticker 跳过搜索 API。
 - **Flexible Intervals**: 支持日内K线间隔（`1m` ~ `1mo`），满足日内交易分析需求。
 - **Context Optimization**: 新增 `--lean` 模式，智能截断冗长历史K线，保留首尾关键节点。特别针对日内高频 K 线加入了动态等距抽样，防止趋势失真，在为大模型减负（最高压缩 90% Context）的同时维持盘感。
@@ -30,6 +31,11 @@ last_updated: "2026-03-01"
 uv run {SKILL_DIR}/scripts/yf.py [SYMBOLS...] [OPTIONS]
 ```
 > `{SKILL_DIR}` 指代本技能根目录的绝对路径。
+
+### Agent 路由指引 (Agent Routing)
+为解决大模型在面临多个 Agent 设定时的混乱，请严格遵守以下分机号拨打原则：
+1. **获取原始数据与新闻**: 直接使用 CLI 命令，不需要切换 Agent。
+2. **深度投资诊断与决策**: 必须使用 `@yahoo-finance 切换到 stock analyzer` 或 `@stock_analyzer`，告诉大模型使用该专属身份来聚合数据并输出决策仪表盘。
 
 ### Options
 
@@ -82,6 +88,11 @@ uv run {SKILL_DIR}/scripts/yf.py 0700.HK --json --price-only --period 5d --inter
 ```bash
 uv run {SKILL_DIR}/scripts/yf.py MSFT --json --news-only
 ```
+
+### 智能投研分析 (结合 stock_analyzer Agent)
+本技能内置了一个专精于个股诊断的 Agent 配置文件 (`agents/stock_analyzer.yaml`)。
+当在支持 Agent 加载的环境下使用时，能够直接发起深度研判申请，大模型会自动组装底层数据生成结构化报告。
+> "@yahoo-finance 切换到 stock analyzer，请深度分析特斯拉 (Tesla) 的投资价值"
 
 ## Best Practices for Agents
 

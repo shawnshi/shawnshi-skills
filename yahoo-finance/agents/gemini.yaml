@@ -1,7 +1,7 @@
 display_name: Yahoo Finance
-short_description: 获取实时股市行情、基本面数据与金融新闻。
-version: "2.0"
-default_prompt: 提取并计算 [公司名称] 最近 [时间范围] 的核心财务指标，包括 ROE、PB 等，并评估其最大回撤等风险要素。
+short_description: 获取实时股市行情、基本面数据与金融新闻，并提供 A股趋势交易智能投研分析 (Stock Analyzer)。
+version: "2.1"
+default_prompt: 提取并计算 [公司名称] 最近 [时间范围] 的核心财务指标，包括 ROE、PB 等，并评估其最大回撤等风险要素。如需深度诊断，请切换至 stock_analyzer 进行 A股趋势研判。
 triggers:
   - "股价"
   - "stock price"
@@ -19,6 +19,11 @@ triggers:
   - "最大回撤"
   - "ROE"
   - "财务安全"
+  - "智能投研"
+  - "智能投研分析"
+  - "趋势交易"
+  - "个股深度分析"
+  - "决策仪表盘"
 interface:
   icon: trending_up
   brand_color: "#7200da"
