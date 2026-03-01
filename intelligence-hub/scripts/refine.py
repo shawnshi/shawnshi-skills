@@ -6,6 +6,7 @@
 @Maintenance Protocol: Prompt changes must sync quality_standard.md.
 """
 import json
+import re
 import os
 import subprocess
 from pathlib import Path
@@ -18,42 +19,8 @@ FOCUS_PATH = HUB_DIR / "references" / "strategic_focus.json"
 OUTPUT_PATH = NEWS_DIR / "intelligence_current_refined.json"
 
 # --- System Prompt ---
-SYSTEM_PROMPT = """你是一位战略情报分析师。请对提供的新闻条目进行「二阶推演」精炼，并严格按照 JSON Schema 输出。
-
-## 任务
-1. 请为原始情报清单中标记为 [TOP 10] 的 10 个条目提供深度精炼：包括中文标题、约300字的中文深度摘要（事实 → 联结 → 推演）、以及推荐理由。
-2. 请为原始情报清单中标记为 [TRANSLATE] 的条目提供简单的中文标题与简介翻译（存入 translations，键为该条目的 URL）。
-3. 基于全部情报，生成高阶视角的 insights, punchline, digest 和 market 总结。
-
-## 质量标准
-- 严格遵循被动客观的语气，禁止使用"重大进展"、"革命性"等形容词主观修饰
-- 每条摘要必须包含：事实(发生了什么) → 联结(与战略项目有何关系) → 推演(可能导致什么后果) 三段论
-- 优先筛选反直觉或非共识情报
-
-## 输出格式 (强制遵守)
-必须输出且仅输出一个合法的 JSON 对象。不要输出 Markdown 代码块，不要包含 ```json 的包裹，只输出裸 JSON 数据：
-
-{
-  "top_10": [
-    {
-      "url": "原始 url",
-      "title_zh": "中文标题",
-      "summary_zh": "中文深度摘要 (300字)",
-      "reason": "推荐理由（100字以内）"
-    }
-  ],
-  "translations": {
-    "原始 url": {
-      "title_zh": "中文标题",
-      "desc_zh": "中文简介"
-    }
-  },
-  "insights": "1. 第一条洞察\n2. 第二条洞察",
-  "punchline": "一句话判断",
-  "digest": "300字二阶推演",
-  "market": "* 要点1\n* 要点2"
-}
-"""
+PROMPT_PATH = HUB_DIR / "references" / "prompts" / "v1_refine_system.md"
+SYSTEM_PROMPT = PROMPT_PATH.read_text(encoding="utf-8")
 
 def score_and_rank(scan_data: dict, focus_data: dict) -> list:
     """Score items by strategic keyword relevance and return sorted list."""
@@ -150,17 +117,13 @@ def refine():
     try:
         response_text = run_gemini_cli(full_prompt)
         
-        # Strip potential markdown formatting if the LLM didn't listen
-        if response_text.startswith("```json"):
-            response_text = response_text[7:]
-        if response_text.startswith("```"):
-            response_text = response_text[3:]
-        if response_text.endswith("```"):
-            response_text = response_text[:-3]
-            
-        response_text = response_text.strip()
-        
-        result_data = json.loads(response_text)
+        # Regex parsing armor for JSON extraction
+        match = re.search(r'```(?:json)?\s*([\s\S]+?)\s*```', response_text)
+        if match:
+            result_data = json.loads(match.group(1))
+        else:
+            # Fallback for plain JSON output
+            result_data = json.loads(response_text)
         
         # Merge with other metadata
         final_output = {

@@ -5,6 +5,7 @@
 @Pos: Phase 3 (Optional Adversarial Audit)
 """
 import json
+import re
 import os
 import subprocess
 from pathlib import Path
@@ -13,26 +14,8 @@ from utils import PROJECT_ROOT, HUB_DIR, NEWS_DIR
 
 REFINED_PATH = NEWS_DIR / "intelligence_current_refined.json"
 
-SYSTEM_PROMPT = """你是一位无情的「红队」战略审计专家 (Devil's Advocate)。你的任务是挑战并寻找提供的情报推演中的漏洞。
-
-## 任务
-阅读以下的【核心判词 (Punchline)】和【战略洞察 (Insights)】。
-请尽一切可能使用第一性原理、历史经验或逆向思维，来反驳这些洞察。
-寻找其中的「自动化偏见」、「确认偏误」或「盲目乐观」。严禁重复原有的观点。
-
-## 约束
-- 保持冷酷、客观、专业的基调
-- 不要认同原文的任何观点，你的唯一目的是「进攻」和「压力测试」
-
-## 输出格式 (强制遵守)
-必须输出且仅输出一个合法的 JSON 对象。不要输出 Markdown 代码块，不要包含 ```json 的包裹，只输出裸 JSON 数据：
-
-{
-  "devil_advocate": "一段300字的红队无情批判",
-  "blind_spots": "2-3个关于现有观点的潜在认知盲区，不要使用markdown列表格式，直接输出纯文本",
-  "confidence_score": 50 // 1-100的整数，表示原洞察经受住你挑战的置信度
-}
-"""
+PROMPT_PATH = HUB_DIR / "references" / "prompts" / "v1_audit_system.md"
+SYSTEM_PROMPT = PROMPT_PATH.read_text(encoding="utf-8")
 
 def run_gemini_cli(prompt: str) -> str:
     """Invokes the gemini CLI."""
@@ -70,6 +53,13 @@ def audit():
         print("⚠️ Warning: Refined insights are not valid for audit. Skipping.")
         return
 
+    # L4 Gateway Guard
+    top_10 = data.get("top_10", [])
+    has_l4 = any(item.get("intel_grade") == "L4" for item in top_10)
+    if not has_l4:
+        print("💤 未发现 L4 Alpha 级别情报，跳过昂贵的博弈审计过程。")
+        return
+
     user_prompt = f"## 核心判词 (Punchline)\n{punchline}\n\n## 战略洞察 (Insights)\n{insights}"
     full_prompt = SYSTEM_PROMPT + "\n\n" + user_prompt
 
@@ -78,16 +68,12 @@ def audit():
     try:
         response_text = run_gemini_cli(full_prompt)
         
-        # Strip potential markdown formatting
-        if response_text.startswith("```json"):
-            response_text = response_text[7:]
-        if response_text.startswith("```"):
-            response_text = response_text[3:]
-        if response_text.endswith("```"):
-            response_text = response_text[:-3]
-            
-        response_text = response_text.strip()
-        audit_data = json.loads(response_text)
+        # Regex parsing armor for JSON extraction
+        match = re.search(r'```(?:json)?\s*([\s\S]+?)\s*```', response_text)
+        if match:
+            audit_data = json.loads(match.group(1))
+        else:
+            audit_data = json.loads(response_text)
         
         # Append to the original json
         data["adversarial_audit"] = audit_data
