@@ -27,13 +27,13 @@ language: py
 1. **执行**：`python scripts/refine.py`。
 2. **功能**：基于战略关键词权重评分排序，生成结构化 AI 提示词至 `tmp/refinement_prompt.txt`。
 3. **AI 交互**：Agent 读取提示词，执行二阶推演（"So What?" 审计）并完成**全量列表翻译**。
-4. **输出**：Agent 将结果写入 `MEMORY/news/intelligence_current_refined.json`。**[硬约束：必须包含 `top_10`, `translations`, `insights`, `punchline`, `digest`, `market` 六个核心字段]**。
+4. **输出**：Agent 将结果写入 `{root}/MEMORY/news/intelligence_current_refined.json`。**[硬约束：必须包含 `top_10`, `translations`, `insights`, `punchline`, `digest`, `market` 六个核心字段]**。
 5. **逻辑湖联结**：将情报与 `memory.md` 中的现有资产进行交叉验证。
 6. **分级标注**：标注 L1-L4 等级（参见 `references/quality_standard.md`）。
 
 ### 第三阶段：对抗性博弈审计 (Optional Adversarial Audit)
 1. **触发条件**：当发现 L4 级（Alpha）情报时，**建议**调用 `logic-adversary` 技能。
-2. **任务**：模拟红队挑战该 Alpha 结论的鲁棒性，识别潜在的"自动化偏见"。
+2. **任务**：模拟红队,从医疗数字化专家、医疗临床专家等角度挑战该 Alpha 结论的鲁棒性，识别潜在的"自动化偏见"。
 
 ### 第四阶段：战略简报生成 (Strategic Briefing)
 1. **执行**：`python scripts/forge.py`。

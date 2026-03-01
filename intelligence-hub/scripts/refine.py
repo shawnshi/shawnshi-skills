@@ -21,7 +21,7 @@ OUTPUT_PATH = NEWS_DIR / "intelligence_current_refined.json"
 SYSTEM_PROMPT = """你是一位战略情报分析师。请对提供的新闻条目进行「二阶推演」精炼，并严格按照 JSON Schema 输出。
 
 ## 任务
-1. 请为原始情报清单中标记为 [TOP 10] 的 10 个条目提供深度精炼：包括中文标题、约200字的中文深度摘要（事实 → 联结 → 推演）、以及推荐理由。
+1. 请为原始情报清单中标记为 [TOP 10] 的 10 个条目提供深度精炼：包括中文标题、约300字的中文深度摘要（事实 → 联结 → 推演）、以及推荐理由。
 2. 请为原始情报清单中标记为 [TRANSLATE] 的条目提供简单的中文标题与简介翻译（存入 translations，键为该条目的 URL）。
 3. 基于全部情报，生成高阶视角的 insights, punchline, digest 和 market 总结。
 
@@ -38,8 +38,8 @@ SYSTEM_PROMPT = """你是一位战略情报分析师。请对提供的新闻条�
     {
       "url": "原始 url",
       "title_zh": "中文标题",
-      "summary_zh": "中文深度摘要 (200字)",
-      "reason": "推荐理由"
+      "summary_zh": "中文深度摘要 (300字)",
+      "reason": "推荐理由（100字以内）"
     }
   ],
   "translations": {
@@ -50,7 +50,7 @@ SYSTEM_PROMPT = """你是一位战略情报分析师。请对提供的新闻条�
   },
   "insights": "1. 第一条洞察\n2. 第二条洞察",
   "punchline": "一句话判断",
-  "digest": "200字二阶推演",
+  "digest": "300字二阶推演",
   "market": "* 要点1\n* 要点2"
 }
 """

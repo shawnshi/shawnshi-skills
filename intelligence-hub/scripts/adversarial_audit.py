@@ -28,7 +28,7 @@ SYSTEM_PROMPT = """你是一位无情的「红队」战略审计专家 (Devil's 
 必须输出且仅输出一个合法的 JSON 对象。不要输出 Markdown 代码块，不要包含 ```json 的包裹，只输出裸 JSON 数据：
 
 {
-  "devil_advocate": "一段200字的红队无情批判",
+  "devil_advocate": "一段300字的红队无情批判",
   "blind_spots": "2-3个关于现有观点的潜在认知盲区，不要使用markdown列表格式，直接输出纯文本",
   "confidence_score": 50 // 1-100的整数，表示原洞察经受住你挑战的置信度
 }
