@@ -2,15 +2,15 @@
   "strategic_keywords": [
     {
       "keyword": "ai",
-      "weight": 20
+      "weight": 17
     },
     {
       "keyword": "ace",
-      "weight": 23
+      "weight": 21
     },
     {
       "keyword": "msl",
-      "weight": 29
+      "weight": 27
     },
     {
       "keyword": "fhir",
@@ -86,11 +86,19 @@
     },
     {
       "keyword": "审计",
-      "weight": 15
+      "weight": 11
     },
     {
       "keyword": "核心",
-      "weight": 17
+      "weight": 15
+    },
+    {
+      "keyword": "认知",
+      "weight": 13
+    },
+    {
+      "keyword": "临床",
+      "weight": 15
     }
   ],
   "categories": {
