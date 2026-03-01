@@ -338,6 +338,9 @@ def main():
     # Stats command
     subparsers.add_parser('stats', help='Show library statistics')
 
+    # Sync command
+    subparsers.add_parser('sync', help='Sync all remote notebooks to local library')
+
     args = parser.parse_args()
 
     # Initialize library
@@ -401,6 +404,53 @@ def main():
         if stats['most_used_notebook']:
             print(f"  Most used: {stats['most_used_notebook']['name']} ({stats['most_used_notebook']['use_count']} uses)")
         print(f"  Library path: {stats['library_path']}")
+
+    elif args.command == 'sync':
+        try:
+            from list_remote_notebooks import list_remote_notebooks
+        except ImportError:
+            print("❌ Cannot import list_remote_notebooks. Please ensure it's in the same directory.")
+            return
+
+        print("🔄 Starting notebook sync...")
+        notebooks = list_remote_notebooks(headless=True)
+        
+        if notebooks is None:
+            # list_remote_notebooks already prints error message if None
+            return
+            
+        if not notebooks:
+            print("📭 No notebooks found online.")
+            return
+
+        added_count = 0
+        existing_count = 0
+
+        for nb in notebooks:
+            name = nb['name']
+            url = nb['url']
+            notebook_id = name.lower().replace(' ', '-').replace('_', '-')
+            
+            # Check if this notebook already exists locally
+            if library.get_notebook(notebook_id):
+                existing_count += 1
+                continue
+                
+            try:
+                # Use default description and topics as required by add_notebook
+                library.add_notebook(
+                    url=url,
+                    name=name,
+                    description="Auto-synced from NotebookLM",
+                    topics=["auto-synced"]
+                )
+                added_count += 1
+            except Exception as e:
+                print(f"❌ Failed to add notebook '{name}': {e}")
+                
+        print(f"\n✅ Sync complete!")
+        print(f"   Added: {added_count} new notebooks")
+        print(f"   Skipped: {existing_count} existing notebooks")
 
     else:
         parser.print_help()

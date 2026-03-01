@@ -1,6 +1,6 @@
 ---
 name: notebooklm-skill-master
-description: 使用 Google NotebookLM 深度查询自有文档。支持浏览器自动化、库管理与持久化认证。场景：基于文档的深度问答、研究分析。
+description: 使用 Google NotebookLM 深度查询自有文档。支持浏览器自动化、库管理、持久化认证及自动化资产打包生成（如信息图核心内容与幻灯片框架）。场景：基于文档的深度问答、研究分析、内容创作。
 ---
 
 # 🧠 NotebookLM 知识引擎专家 (NotebookLM Knowledge Engine Expert)
@@ -34,11 +34,39 @@ python scripts/run.py notebook_manager.py list
 ```bash
 python scripts/run.py notebook_manager.py add --url "[URL]" --name "[名称]" --description "[描述]"
 ```
+*   **自动同步云端库 (Sync All)**:
+> 自动查询所有在线的知识库，并将尚未关联的知识库一键注册到本地，默认使用在线的名称。
+```bash
+python scripts/run.py notebook_manager.py sync
+```
 
-### 阶段 3 (Phase 3): 深度检索问答 (Ask Questions)
+### 阶段 3 (Phase 3): 数据源注入 (Add Source)
+> 为指定的 Notebook 知识库上传文件或添加网页链接。
+```bash
+# 上传本地文件到知识库
+python scripts/run.py add_source.py --notebook "[库名称/ID]" --type "file" --path "/绝对路径/document.pdf"
+
+# 添加网页链接到知识库
+python scripts/run.py add_source.py --notebook "[库名称/ID]" --type "link" --path "https://example.com"
+```
+
+### 阶段 4 (Phase 4): 深度检索问答 (Ask Questions)
 > 核心交互环节：基于已激活或选定的 Notebook 发起深度询问。
 ```bash
 python scripts/run.py ask_question.py --question "在此输入你的问题"
+```
+
+### 阶段 5 (Phase 5): 结构化资产生成 (Structured Asset Generation)
+> 扩展能力：在指定的知识库 (Notebook) 中，基于上传的文档全量或针对性提取，生成可视化资产与研报的核心结构数据。例如，一键生成信息图 (Infographic) 的视觉大纲、幻灯片 (Slide Deck) 的分页结构与演讲词，或深度战略研报 (Report)。
+```bash
+# 生成信息图 (Infographic) 核心数据节点与文案
+python scripts/run.py generate_asset.py --type "infographic" --notebook "[库名称]" --topic "[可选: 具体聚焦主题]"
+
+# 生成幻灯片 (Slide Deck) 分页结构、核心要点与配套演讲词
+python scripts/run.py generate_asset.py --type "slide_deck" --notebook "[库名称]" --topic "[可选: 具体聚焦主题]"
+
+# 生成深度研报 (Report) 高管简报与分析
+python scripts/run.py generate_asset.py --type "report" --notebook "[库名称]" --topic "[可选: 具体聚焦主题]"
 ```
 
 ## 🛠️ 最佳实践与行为准则 (Best Practices & Behavioral Protocols)

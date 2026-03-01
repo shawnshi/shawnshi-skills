@@ -56,6 +56,7 @@ def main():
         print("Usage: python run.py <script_name> [args...]")
         print("\nAvailable scripts:")
         print("  ask_question.py    - Query NotebookLM")
+        print("  generate_asset.py   - Generate Slide Decks or Infographics")
         print("  notebook_manager.py - Manage notebook library")
         print("  session_manager.py  - Manage sessions")
         print("  auth_manager.py     - Handle authentication")
