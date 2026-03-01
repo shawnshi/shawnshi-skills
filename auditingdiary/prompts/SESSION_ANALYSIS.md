@@ -15,17 +15,11 @@ Identify what the user accomplished and what new understanding was gained during
 ### B. Cognitive Distillation (认知结晶)
 *   **What was learned?** The core realization about system logic, a strategic insight, or a pattern recognized derived from the friction of the session.
 *   **Refinement:** Must be actionable and anti-cliché. The insight should feel "earned".
+*   **Impact Vector (影响矢量):** How will this insight specifically modify future business logic or code implementation? (e.g., "Will shift from Text-to-SQL to API-based MSL mapping").
+*   **Refuted Hypothesis (被证伪的假设):** What prior assumption or non-consensus friction point was identified or corrected in this session?
 *   **Cognitive Depth Score (认知深度):** A grade from 1 to 5.
-    *   `1`: Routine mechanical chore, no new insights.
-    *   `3`: Standard problem solving, minor structural learning.
-    *   `5`: Profound strategic shift or architectural realization. (Useful for filtering).
-
-### C. Tactical Locking (战术锁定)
-*   **Next Steps:** Concrete follow-ups explicitly mentioned or logically derived from the current session's state.
 
 ## 3. Output Format
-
-You must output a strictly valid JSON object adhering to the following structure. Do not output any Markdown wrapping like ````json` if invoking via automated scripts, but for generic chat text, provide ONLY the JSON payload.
 
 ```json
 {
@@ -34,18 +28,19 @@ You must output a strictly valid JSON object adhering to the following structure
       {
         "context_tag": "#Category/Tag",
         "description": "Brief description of work done",
-        "deliverables": ["path/to/file1.md", "path/to/file2.py"]
+        "deliverables": ["path/to/file1.md"]
       }
     ],
     "cognitive_distillation": {
       "insight_summary": "One sentence summary of the core realization.",
+      "impact_vector": "How this will change future behavior/code.",
+      "refuted_hypothesis": "What assumption was corrected or friction point identified.",
       "trigger_event": "What specific friction or discussion led to this insight.",
       "pragmatic_action": "What actionable change should we make next time.",
       "cognitive_depth_score": 4
     },
     "tactical_locking": [
-      "Task 1 to follow up",
-      "Task 2 to follow up"
+      "Task 1 to follow up"
     ]
   }
 }

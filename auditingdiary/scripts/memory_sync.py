@@ -4,14 +4,14 @@ import re
 import json
 import sys
 
-# Standard path for memory.md
-MEMORY_FILE = "C:/Users/shich/.gemini/memory.md"
+# Standard path for memory.md in PAI context
+MEMORY_FILE = "C:/Users/shich/.gemini/pai/memory.md"
 
 def update_memory_section(category, items_to_add):
     """
-    Updates a specific section in memory.md with new unique items.
-    category: '战略偏好' or '行业洞察'
-    items_to_add: list of strings
+    Updates memory.md with new unique items in the Gemini Added Memories section.
+    category: e.g., '战略偏好' or '行业洞察'
+    items_to_add: list of strings or dicts with 'content' and optional 'impact_vector'
     """
     if not os.path.exists(MEMORY_FILE):
         return {"status": "error", "message": f"memory.md not found at {MEMORY_FILE}"}
@@ -22,62 +22,50 @@ def update_memory_section(category, items_to_add):
     except Exception as e:
         return {"status": "error", "message": f"Failed to read memory.md: {str(e)}"}
 
-    # Find the section header (whitespace-tolerant matching)
-    # Supports various markdown formats: * ** 战略偏好** or * **战略偏好** etc.
-    pattern_section = rf"\*\*\s*{re.escape(category)}\s*\*\*"
-    match = re.search(pattern_section, content)
-    if not match:
-        return {"status": "error", "message": f"Section '{category}' not found in memory.md"}
-
-    section_start = match.end()
-    # Find the end of this sub-section (before the next bullet point or next main header)
-    next_section_match = re.search(r"\n\* \*\*|\n##", content[section_start:])
-    section_end = section_start + next_section_match.start() if next_section_match else len(content)
+    # Identify the 'Gemini Added Memories' section
+    marker = "## Gemini Added Memories"
+    if marker not in content:
+        # If not found, append it to the end
+        content += f"\n\n{marker}\n"
     
-    section_content = content[section_start:section_end]
-    
-    # Extract existing items (quoted strings) to prevent duplicates
-    # Matches "...", or "..." (with optional trailing comma)
-    existing_items = re.findall(r'"([^"]+)"', section_content)
-    
+    # We will append new items to the end of the file/section
     added_items = []
-    for item in items_to_add:
-        clean_item = item.strip().strip('"').strip("'")
-        if not clean_item:
-            continue
-        # Normalize for comparison (basic check)
-        if clean_item not in existing_items:
-            added_items.append(clean_item)
-            existing_items.append(clean_item) # Prevent duplicates in the same batch
+    for item_data in items_to_add:
+        if isinstance(item_data, dict):
+            content_str = item_data.get('content', '')
+            impact = item_data.get('impact_vector', '')
+            full_item = f"[{category}] {content_str}"
+            if impact:
+                full_item += f" (Impact Vector: {impact})"
+        else:
+            full_item = f"[{category}] {item_data}"
+        
+        # Prevent duplicates
+        if f"- {full_item}" not in content:
+            added_items.append(full_item)
 
     if not added_items:
         return {"status": "success", "message": f"No new unique items found for '{category}'."}
 
-    # Format the new lines. Prepend them for chronological visibility.
-    # Indentation is 4 spaces.
-    new_lines = [f'    "{item}",' for item in added_items]
-    
-    # Construct the updated section content
-    # Preserve the existing structure. We insert right after the section header line.
-    prefix = "\n" if not section_content.startswith("\n") else ""
-    updated_section_content = prefix + "\n".join(new_lines) + section_content
-    
-    new_full_content = content[:section_start] + updated_section_content + content[section_end:]
+    # Construct the new content
+    # Append new items at the end of the section (end of file for now)
+    new_lines = [f"- {item}" for item in added_items]
+    updated_content = content.strip() + "\n" + "\n".join(new_lines) + "\n"
     
     try:
         with open(MEMORY_FILE, 'w', encoding='utf-8') as f:
-            f.write(new_full_content)
+            f.write(updated_content)
         return {
             "status": "success", 
-            "message": f"Successfully added {len(added_items)} items to '{category}'.",
+            "message": f"Successfully added {len(added_items)} items to memory.",
             "added": added_items
         }
     except Exception as e:
         return {"status": "error", "message": f"Failed to write memory.md: {str(e)}"}
 
 def main():
-    parser = argparse.ArgumentParser(description="Memory Sync Utility for AuditingDiary")
-    parser.add_argument('--category', choices=['战略偏好', '行业洞察'], required=True, help="Target section in memory.md")
+    parser = argparse.ArgumentParser(description="Memory Sync Utility for AuditingDiary (Optimized)")
+    parser.add_argument('--category', required=True, help="Category prefix, e.g., '战略偏好' or '行业洞察'")
     parser.add_argument('--items', help="JSON array of items to add")
     parser.add_argument('--file', help="Path to a JSON file containing items to add")
     
@@ -102,7 +90,7 @@ def main():
         sys.exit(1)
 
     if not isinstance(items_to_add, list):
-        print(json.dumps({"status": "error", "message": "Items must be a JSON array of strings."}, ensure_ascii=False))
+        print(json.dumps({"status": "error", "message": "Items must be a JSON array."}, ensure_ascii=False))
         sys.exit(1)
         
     result = update_memory_section(args.category, items_to_add)
