@@ -220,6 +220,12 @@ def compute_summary(history) -> Optional[Dict[str, Any]]:
     current_high = history['High'].max()
     dd_from_high = ((last_close - current_high) / current_high) * 100 if current_high > 0 else 0
 
+    # Calculate MAs and Bias based on the full history before lean truncation
+    ma5 = round(float(closes.rolling(window=5, min_periods=1).mean().iloc[-1]), 2)
+    ma10 = round(float(closes.rolling(window=10, min_periods=1).mean().iloc[-1]), 2)
+    ma20 = round(float(closes.rolling(window=20, min_periods=1).mean().iloc[-1]), 2)
+    bias_ma5 = round(float((last_close - ma5) / ma5 * 100), 2) if ma5 > 0 else 0.0
+
     return {
         "period_return_pct": round((last_close - first_close) / first_close * 100, 2),
         "max_drawdown_pct": round(float(max_drawdown), 2),
@@ -232,6 +238,10 @@ def compute_summary(history) -> Optional[Dict[str, Any]]:
         "avg_volume": int(history['Volume'].mean()),
         "volatility_std": round(float(closes.pct_change().std() * 100), 4),
         "data_points": len(history),
+        "ma5": ma5,
+        "ma10": ma10,
+        "ma20": ma20,
+        "bias_ma5_pct": bias_ma5,
     }
 
 

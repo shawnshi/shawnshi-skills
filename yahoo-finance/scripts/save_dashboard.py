@@ -24,7 +24,7 @@ def save_dashboard():
         sys.exit(1)
         
     date_str = datetime.now().strftime("%Y%m%d")
-    filename = f"{args.stock}_{date_str}.json"
+    filename = f"{args.stock}_{date_str}.md"
     
     base_dir = os.path.join(os.path.expanduser("~"), ".gemini", "MEMORY", "stocks")
     
@@ -32,8 +32,25 @@ def save_dashboard():
     
     filepath = os.path.join(base_dir, filename)
     
+    date_iso = datetime.now().strftime("%Y-%m-%d")
+    md_content = f"""---
+title: {args.stock} 深度研究报告
+date: {date_iso}
+status: archived
+author: stock_analyzer
+---
+
+# 决策仪表盘: {args.stock}
+
+> 本报告由 `stock_analyzer` 基于双引擎（Yahoo Finance 量化数据与网络检索）自动生成。
+
+```json
+{formatted_content}
+```
+"""
+    
     with open(filepath, "w", encoding="utf-8") as f:
-        f.write(formatted_content)
+        f.write(md_content)
         
     print(f"Successfully saved dashboard to {filepath}")
 

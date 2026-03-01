@@ -7,7 +7,6 @@ triggers:
   - "stock price"
   - "行情"
   - "基本面"
-  - "基本面分析"
   - "financial news"
   - "金融新闻"
   - "K线"
@@ -18,12 +17,6 @@ triggers:
   - "回撤"
   - "最大回撤"
   - "ROE"
-  - "财务安全"
-  - "智能投研"
-  - "智能投研分析"
-  - "趋势交易"
-  - "个股深度分析"
-  - "决策仪表盘"
 interface:
   icon: trending_up
   brand_color: "#7200da"

@@ -64,9 +64,35 @@ uv run {SKILL_DIR}/scripts/yf.py [SYMBOLS...] [OPTIONS]
 
 ## Examples
 
-由于场景丰富，我们在 `examples` 文件夹中提供了独立的示例档：
+### 单股深度查询 (JSON 降噪模式 - 强推)
+```bash
+uv run {SKILL_DIR}/scripts/yf.py AAPL --json --lean --period 1y
+```
 
-- 请参阅 [`examples/examples.md`](./examples/examples.md) 获取包括 CLI 高频查询组合、及 `stock_analyzer` 的双引擎投研指令在内的所有使用方式与最佳场景。
+### 多股对比 (仅基本面)
+```bash
+uv run {SKILL_DIR}/scripts/yf.py AAPL MSFT GOOG --json --info-only
+```
+
+### 自然语言日期范围
+```bash
+uv run {SKILL_DIR}/scripts/yf.py "Tesla" --json --start "3 months ago" --end "yesterday"
+```
+
+### 日内K线 (1小时间隔)
+```bash
+uv run {SKILL_DIR}/scripts/yf.py 0700.HK --json --price-only --period 5d --interval 1h
+```
+
+### 仅获取新闻
+```bash
+uv run {SKILL_DIR}/scripts/yf.py MSFT --json --news-only
+```
+
+### 智能投研分析 (结合 stock_analyzer Agent)
+本技能内置了一个专精于个股诊断的 Agent 配置文件 (`agents/stock_analyzer.yaml`)。
+当在支持 Agent 加载的环境下使用时，能够直接发起深度研判申请，大模型会自动组装底层数据生成结构化报告。
+> "@yahoo-finance 切换到 stock analyzer，请深度分析特斯拉 (Tesla) 的投资价值"
 
 ## Best Practices for Agents
 
@@ -76,12 +102,11 @@ uv run {SKILL_DIR}/scripts/yf.py [SYMBOLS...] [OPTIONS]
     *   仅需新闻时使用 `--news-only`。
     *   仅需基本面时使用 `--info-only`。
     *   这能有效减少 Token 消耗。
-3.  **利用机构级摘要统计**: JSON 输出中的 `summary` 字段已包含 `ma5`, `ma10`, `ma20`, `bias_ma5_pct`(乖离率), `max_drawdown_pct`(最大回撤), `dd_from_high_pct`(高点距离), `avg_close`(均价) 等指标，**切勿自行让大模型通过截断的历史数据进行复杂计算**。
+3.  **利用机构级摘要统计**: JSON 输出中的 `summary` 字段已包含 `max_drawdown_pct`(最大回撤), `dd_from_high_pct`(高点距离), `avg_close`(均价) 等指标，**切勿自行让大模型进行复杂计算**。
 4.  **异常处理**: 若返回 JSON 包含 `error` 或 `errors` 字段，应告知用户问题原因。检查退出码以判断整体执行状态。
 5.  **时间灵活性**: 脚本支持自然语言日期（如 "yesterday", "3 months ago"），无需 Agent 手动转换。
 6.  **结构化基本面**: 默认 JSON 输出已包含 ROE、PB 等核心机构研判指标。仅在特殊需要时使用 `--full-info`。
 7.  **协议遵守**: 使用此技能前先明确验证 `interval` 与 `period` 等参数约束。不要臆造未提供的参数组合。
-8.  **动静结合 (Dynamic Supplemental Search)**: `stock_analyzer` Agent 被要求采用 "单股深度验证 + 网页搜索补全" 双引擎模式。当雅虎数据在突发事件、研报深度解读及核心政策影响上颗粒度不足时，应当自然流转到 `google_web_search` 获取交叉验证。
 
 ## Troubleshooting
 
