@@ -14,7 +14,7 @@
 Each news item MUST follow:
 - **Title**: Markdown Link `### [Title](URL)`
 - **Metadata**: `[Source] | [Time] | [Heat/Score]`
-- **Summary**: **约 200 字的深度中文摘要**。必须涵盖该动态的核心背景、所采用的技术方案或逻辑推导路径，以及最终的战略性结论。拒绝肤浅的表面陈述。
+- **Summary**: **约 300 字的深度中文摘要**。必须涵盖该动态的核心背景、所采用的技术方案或逻辑推导路径，以及最终的战略性结论。拒绝肤浅的表面陈述。
 - **Deep Interpretation**: 2-3 bullet points on technical/strategic impact.
 
 ## 4. GitHub Trending Special
