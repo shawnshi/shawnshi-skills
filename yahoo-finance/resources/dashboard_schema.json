@@ -32,15 +32,15 @@
                 "resistance_level": "压力位价格"
             },
             "volume_analysis": {
-                "volume_ratio": "量比数值",
+                "volume_ratio": "量比数值，如1.5",
                 "volume_status": "放量/缩量/平量",
-                "turnover_rate": "换手率百分比 (若缺乏真实数据则填入 'N/A - 缺乏Level 2数据源')",
+                "turnover_rate": "换手率百分比",
                 "volume_meaning": "量能含义解读（如：缩量回调表示抛压减轻）"
             },
             "chip_structure": {
-                "profit_ratio": "获利比例 (若缺乏真实数据则填入 'N/A - 缺乏Level 2数据源')",
-                "avg_cost": "平均成本 (若缺乏真实数据则填入 'N/A - 缺乏Level 2数据源')",
-                "concentration": "筹码集中度 (若缺乏真实数据则填入 'N/A - 缺乏Level 2数据源')",
+                "profit_ratio": "获利比例数值",
+                "avg_cost": "平均成本数值",
+                "concentration": "筹码集中度数值",
                 "chip_health": "健康/一般/警惕"
             }
         },

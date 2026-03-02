@@ -445,7 +445,29 @@ def main():
                 "symbol": symbol,
             }
             if fetch_info:
-                result_entry["info"] = filter_info(info, full=args.full_info)
+                # Basic info
+                curated_info = filter_info(info, full=args.full_info)
+                
+                # Enhanced A-share info 
+                if symbol and (symbol.endswith(".SS") or symbol.endswith(".SZ")):
+                    # e.g., '600519.SS' -> '600519'
+                    a_share_code = symbol.split(".")[0]
+                    if a_share_code.isdigit() and len(a_share_code) == 6:
+                        try:
+                            from akshare_fetcher import StandaloneDataFetcher
+                            fetcher = StandaloneDataFetcher()
+                            enhanced_metrics = fetcher.get_enhanced_metrics(a_share_code)
+                            # Merge into info
+                            if curated_info is None:
+                                curated_info = {}
+                            curated_info.update({
+                                k: v for k, v in enhanced_metrics.items() if v is not None
+                            })
+                        except Exception as e:
+                            # Silently fail or log for agents
+                            pass
+                
+                result_entry["info"] = curated_info
             if fetch_news:
                 result_entry["news"] = [format_news_item(n) for n in (news_raw or [])]
             if fetch_price:
