@@ -10,7 +10,7 @@
     },
     {
       "keyword": "msl",
-      "weight": 27
+      "weight": 29
     },
     {
       "keyword": "fhir",
@@ -99,6 +99,14 @@
     {
       "keyword": "临床",
       "weight": 15
+    },
+    {
+      "keyword": "语义",
+      "weight": 13
+    },
+    {
+      "keyword": "架构",
+      "weight": 13
     }
   ],
   "categories": {
