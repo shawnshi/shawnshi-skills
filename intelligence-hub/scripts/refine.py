@@ -120,10 +120,17 @@ def refine():
         # Regex parsing armor for JSON extraction
         match = re.search(r'```(?:json)?\s*([\s\S]+?)\s*```', response_text)
         if match:
-            result_data = json.loads(match.group(1))
+            json_str = match.group(1)
         else:
-            # Fallback for plain JSON output
-            result_data = json.loads(response_text)
+            # Robust extraction: find first '{' and last '}'
+            start_idx = response_text.find('{')
+            end_idx = response_text.rfind('}')
+            if start_idx != -1 and end_idx != -1:
+                json_str = response_text[start_idx:end_idx+1]
+            else:
+                json_str = response_text
+        
+        result_data = json.loads(json_str)
         
         # Merge with other metadata
         final_output = {
@@ -158,6 +165,7 @@ def refine():
             "digest": "> 💡 [LLM ERROR]",
             "market": "* [LLM ERROR]",
             "_prompt_path": str(prompt_path),
+            "_raw_response": response_text if 'response_text' in locals() else None,
             "_scored_preview": [
                 {"rank": i+1, "score": s, "title": item["title"][:80], "source": item["source"]}
                 for i, (s, item) in enumerate(scored_items[:10])
