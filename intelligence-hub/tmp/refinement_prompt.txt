@@ -42,7 +42,7 @@
 
 
 ## 当前战略关键词权重
-msl(w=29), ace(w=21), 路径(w=20), 医疗(w=20), 逻辑(w=20), hitl(w=19), ai(w=17), agent(w=16), 战略(w=15), 核心(w=15), 临床(w=15), medical(w=14), 认知(w=13), 语义(w=13), 架构(w=13)
+msl(w=30), ace(w=21), 战略(w=20), 路径(w=20), 医疗(w=20), 逻辑(w=20), hitl(w=19), ai(w=17), agent(w=16), 审计(w=15), 核心(w=15), 认知(w=15), 临床(w=15), 语义(w=15), 架构(w=15)
 
 ## 原始情报清单
 [TOP 10] Item 1 [Score=64]:
@@ -58,22 +58,22 @@ Source: seangoedecke.com
 Desc: Why can’t models continue to get smarter after they’re deployed? If you hire a human employee, they will grow more familiar with your systems over time, and (if they stick around long enough) eventual
 
 [TOP 10] Item 3 [Score=54]:
-Title: simonwillison.net: Interactive explanations
-URL: https://simonwillison.net/guides/agentic-engineering-patterns/interactive-explanations/#atom-everything
+Title: simonwillison.net: GIF optimization tool using WebAssembly and Gifsicle
+URL: https://simonwillison.net/guides/agentic-engineering-patterns/gif-optimization/#atom-everything
 Source: simonwillison.net
-Desc: Agentic Engineering Patterns > When we lose track of how code written by our agents works we take on cognitive debt. For a lot of things this doesn't matter: if the code fetches some data from a datab
+Desc: Agentic Engineering Patterns > I like to include animated GIF demos in my online writing, often recorded using LICEcap. There's an example in the Interactive explanations chapter. These GIFs can be pr
 
 [TOP 10] Item 4 [Score=54]:
-Title: daringfireball.net: The Talk Show: ‘Bad Dates’
-URL: https://daringfireball.net/thetalkshow/2026/02/28/ep-442
-Source: daringfireball.net
-Desc: Jason Snell returns to the show to discuss the 2025 Six Colors Apple Report Card, MacOS 26 Tahoe, Apple Creator Studio, along with what we expect/hope for in next week’s Apple product announcements.  
-
-[TOP 10] Item 5 [Score=54]:
 Title: antirez.com: Implementing a clear room Z80 / ZX Spectrum emulator with Claude Code
 URL: http://antirez.com/news/160
 Source: antirez.com
 Desc: Anthropic recently released a blog post with the description of an experiment in which the last version of Opus, the 4.6, was instructed to write a C compiler in Rust, in a “clean room” setup.  The ex
+
+[TOP 10] Item 5 [Score=54]:
+Title: pluralistic.net: Pluralistic: No one wants to read your AI slop (02 Mar 2026)
+URL: https://pluralistic.net/2026/03/02/nonconsensual-slopping/
+Source: pluralistic.net
+Desc: Today's links No one wants to read your AI slop: If you must do this, for god's sake, do it privately. Hey look at this: Delights to delectate. Object permanence: AOL email tax; Ebook readers' bill of
 
 [TOP 10] Item 6 [Score=54]:
 Title: pluralistic.net: Pluralistic: California can stop Larry Ellison from buying Warners (28 Feb 2026)
@@ -124,46 +124,46 @@ Source: michael.stapelberg.ch
 Desc: I have come to appreciate coding agents to be valuable tools for working with computer program code in any capacity, such as learning about any program’s architecture, diagnosing bugs or developing pr
 
 [TRANSLATE] Item 14 [Score=52]:
-Title: arXiv Med-AI: Med-REFL: Medical Reasoning Enhancement via Self-Corrected Fine-grained Reflection
-URL: https://arxiv.org/abs/2506.13793v4
-Source: arXiv Med-AI
-Desc: Large reasoning models excel in domains like mathematics where intermediate reasoning is straightforward to verify, but struggle to self-correct in medicine fields where evaluating intermediate reason
-
-[TRANSLATE] Item 15 [Score=52]:
 Title: oldvcr.blogspot.com: Hands-on with two Apple Network Server prototype ROMs
 URL: https://oldvcr.blogspot.com/2026/01/hands-on-with-two-apple-network-server.html
 Source: oldvcr.blogspot.com
 Desc: Grateful acknowledgement made to the several former Apple employees who materially contributed to this entry. This article wouldn't have been possible without you!  Here's why I need to do inventory m
 
-[TRANSLATE] Item 16 [Score=48]:
+[TRANSLATE] Item 15 [Score=48]:
 Title: oldvcr.blogspot.com: The Scriptovision Super Micro Script video titler is almost a home computer
 URL: https://oldvcr.blogspot.com/2026/02/the-scriptovision-super-micro-script.html
 Source: oldvcr.blogspot.com
 Desc: Canadians, rejoice! Not only do you have curling, the Big Turk and Tim Hortons (and, when I was in BC last, Dr Pepper made with real cane sugar), you also have a number of interesting indigenous compu
 
-[TRANSLATE] Item 17 [Score=47]:
-Title: arXiv Med-AI: Imputation of Unknown Missingness in Sparse Electronic Health Records
-URL: https://arxiv.org/abs/2602.20442v1
-Source: arXiv Med-AI
-Desc: Machine learning holds great promise for advancing the field of medicine, with electronic health records (EHRs) serving as a primary data source. However, EHRs are often sparse and contain missing dat
-
-[TRANSLATE] Item 18 [Score=46]:
+[TRANSLATE] Item 16 [Score=46]:
 Title: arXiv Med-AI: Atlas-free Brain Network Transformer
 URL: https://arxiv.org/abs/2510.03306v2
 Source: arXiv Med-AI
 Desc: Current atlas-based approaches to brain network analysis rely heavily on standardized anatomical or connectivity-driven brain atlases. However, these fixed atlases often introduce significant limitati
 
-[TRANSLATE] Item 19 [Score=46]:
+[TRANSLATE] Item 17 [Score=46]:
 Title: computer.rip: cash issuing terminals
 URL: https://computer.rip/2026-02-27-ibm-atm.html
 Source: computer.rip
 Desc: In the United States, we are losing our fondness for cash. As in many other countries, cards and other types of electronic payments now dominate everyday commerce. To some, this is a loss. Cash repres
 
-[TRANSLATE] Item 20 [Score=39]:
+[TRANSLATE] Item 18 [Score=39]:
 Title: The Lancet Digital Health: [Comment] Are we heading towards a cybersecurity crisis in health care and are actions needed?
 URL: https://www.thelancet.com/journals/landig/article/PIIS2589-7500(25)00128-1/fulltext?rss=yes
 Source: The Lancet Digital Health
 Desc: Over the past 10 years, there has been a substantial rise in the number of major cyberattacks on hospitals, medical infrastructure, and associated supply chains. The WannaCry ransomware attack hit the
+
+[TRANSLATE] Item 19 [Score=38]:
+Title: Zuckerberg's internal emails rendered as Facebook Messenger
+URL: https://zuckmail.vercel.app/
+Source: Hacker News
+Desc: 
+
+[TRANSLATE] Item 20 [Score=38]:
+Title: daringfireball.net: Unsung Heroes: Flickr’s URLs Scheme
+URL: https://unsung.aresluna.org/unsung-heroes-flickrs-urls-scheme/
+Source: daringfireball.net
+Desc: Marcin Wichary, writing at Unsung (which is just an incredibly good and fun weblog):  Half of my education in URLs as user interface came from Flickr in the late 2000s. Its URLs looked like this: flic
 
 [TRANSLATE] Item 21 [Score=38]:
 Title: antirez.com: Automatic programming
@@ -172,55 +172,55 @@ Source: antirez.com
 Desc: In my YouTube channel, for some time now I started to refer to the process of writing software using AI assistance (soon to become just "the process of writing software", I believe) with the term "Aut
 
 [TRANSLATE] Item 22 [Score=38]:
+Title: idiallo.com: Mo Samuels wrote this post
+URL: https://idiallo.com/blog/why-we-hate-llm-articles?src=feed
+Source: idiallo.com
+Desc: Last year, I pushed myself to write and publish every other day for the whole year. I had accumulated a large number of subjects over the years, and I was ready to start blogging again. After writing 
+
+[TRANSLATE] Item 23 [Score=38]:
 Title: idiallo.com: That's it, I'm cancelling my ChatGPT
 URL: https://idiallo.com/byte-size/im-cancelling-my-chatgpt-openai-account?src=feed
 Source: idiallo.com
 Desc: Just like everyone, I read Sam Altman's tweet about joining the so-called Department of War, to use ChatGPT on DoW classified networks. As others have pointed out, this is the entry point for mass sur
 
-[TRANSLATE] Item 23 [Score=38]:
+[TRANSLATE] Item 24 [Score=38]:
+Title: maurycyz.com: Why does C have the best file API?
+URL: https://maurycyz.com/misc/c_files/
+Source: maurycyz.com
+Desc: Ok, the title is a tongue-in-cheek, but there's very little thought put into files in most languages.  It always feels a bit out of place... except in C. In fact, what you get is usually a worse versi
+
+[TRANSLATE] Item 25 [Score=38]:
 Title: maurycyz.com: Inside an alpha-beta scintillator:
 URL: https://maurycyz.com/misc/ah_teardown/
 Source: maurycyz.com
 Desc: Just a heads up: this post is incomplete.  However, it may be a while before I am able to finish it. I am publishing it early in hopes that you will still find it somewhat interesting.    I've recentl
 
-[TRANSLATE] Item 24 [Score=38]:
+[TRANSLATE] Item 26 [Score=38]:
 Title: righto.com: Instruction decoding in the Intel 8087 floating-point chip
 URL: http://www.righto.com/2026/02/8087-instruction-decoding.html
 Source: righto.com
 Desc: In the 1980s, if you wanted your IBM PC to run faster, you could buy the Intel 8087 floating-point coprocessor chip. With this chip, CAD software, spreadsheets, flight simulators, and other programs w
 
-[TRANSLATE] Item 25 [Score=38]:
+[TRANSLATE] Item 27 [Score=38]:
 Title: righto.com: Notes on the Intel 8086 processor's arithmetic-logic unit
 URL: http://www.righto.com/2026/01/notes-on-intel-8086-processors.html
 Source: righto.com
 Desc: In 1978, Intel introduced the 8086 processor, a revolutionary chip that led to the modern x86 architecture. Unlike modern 64-bit processors, however, the 8086 is a 16-bit chip. Its arithmetic/logic un
 
-[TRANSLATE] Item 26 [Score=38]:
+[TRANSLATE] Item 28 [Score=38]:
 Title: righto.com: Conditions in the Intel 8087 floating-point chip's microcode
 URL: http://www.righto.com/2025/12/8087-microcode-conditions.html
 Source: righto.com
 Desc: In the 1980s, if you wanted your computer to do floating-point calculations faster, you could buy the Intel 8087 floating-point coprocessor chip. Plugging it into your IBM PC would make operations up 
 
-[TRANSLATE] Item 27 [Score=38]:
+[TRANSLATE] Item 29 [Score=38]:
 Title: lucumr.pocoo.org: The Final Bottleneck
 URL: https://lucumr.pocoo.org/2026/2/13/the-final-bottleneck/
 Source: lucumr.pocoo.org
 Desc: Historically, writing code was slower than reviewing code. It might not have felt that way, because code reviews sat in queues until someone got around to picking it up.  But if you compare the actual
 
-[TRANSLATE] Item 28 [Score=38]:
-Title: johndcook.com: Hyperbolic versions of latest posts
-URL: https://www.johndcook.com/blog/2026/02/25/hyperbolic-versions-of-latest-posts/
-Source: johndcook.com
-Desc: The post A curious trig identity contained the theorem that for real x and y, This theorem also holds when sine is replaced with hyperbolic sine. The post Trig of inverse trig contained a table summar
-
-[TRANSLATE] Item 29 [Score=38]:
+[TRANSLATE] Item 30 [Score=38]:
 Title: gilesthomas.com: Writing an LLM from scratch, part 28 -- training a base model from scratch on an RTX 3090
 URL: https://www.gilesthomas.com/2025/12/llm-from-scratch-28-training-a-base-model-from-scratch
 Source: gilesthomas.com
 Desc: Having worked through the main body of Sebastian Raschka's book "Build a Large Language Model (from Scratch)", I wanted to try an experiment: is it possible to train a base model of my own, on my own 
-
-[TRANSLATE] Item 30 [Score=38]:
-Title: evanhahn.com: The two kinds of error
-URL: https://evanhahn.com/the-two-kinds-of-error/
-Source: evanhahn.com
-Desc: In short: in my mind, errors are divided into two categories. Expected errors (think “user entered invalid data”), which are part of normal operation, aren’t the developer’s fault, and should be handl

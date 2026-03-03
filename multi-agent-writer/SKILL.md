@@ -37,7 +37,7 @@ The objective is never just "content production." The objective is **Decision En
 ### Phase 0: Strategic Alignment & Parameter Lock-in [Mode: PLANNING]
 > 角色参见 `references/agents.md` Strategic Aligner
 
-- **任务**: 明确核心议题与受众。使用 `notify_user` 获取或确认以下参数，作为所有子智能体的 North Star (北极星)：
+- **任务**: 明确核心议题与受众。使用 `ask_user` 获取或确认以下参数，作为所有子智能体的 North Star (北极星)：
   1. **Topic & Length**: 核心议题是什么？篇幅预期？
   2. **Audience**: 最终读者是谁？（必须精准到角色）。
   3. **Non-Consensus Goal**: 这篇文章要打破读者的哪一个固有偏见？

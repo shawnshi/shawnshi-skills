@@ -10,7 +10,7 @@
     },
     {
       "keyword": "msl",
-      "weight": 29
+      "weight": 30
     },
     {
       "keyword": "fhir",
@@ -62,7 +62,7 @@
     },
     {
       "keyword": "战略",
-      "weight": 15
+      "weight": 20
     },
     {
       "keyword": "输出",
@@ -86,7 +86,7 @@
     },
     {
       "keyword": "审计",
-      "weight": 11
+      "weight": 15
     },
     {
       "keyword": "核心",
@@ -94,7 +94,7 @@
     },
     {
       "keyword": "认知",
-      "weight": 13
+      "weight": 15
     },
     {
       "keyword": "临床",
@@ -102,11 +102,11 @@
     },
     {
       "keyword": "语义",
-      "weight": 13
+      "weight": 15
     },
     {
       "keyword": "架构",
-      "weight": 13
+      "weight": 15
     }
   ],
   "categories": {
