@@ -1,10 +1,8 @@
 ---
 name: yahoo-finance
 description: 获取股票价格、基本面、新闻及历史趋势。支持多代码查询、自然语言日期解析、日内K线间隔及结构化 JSON 输出。
-version: "2.0"
-type: tool-cli
 language: py
-last_updated: "2026-03-01"
+triggers: ["查询这支股票的历史走势", "调取600718的基本面", "列出昨日收盘后的美股新闻", "比较这三只ETF的日内图表", "输出该标的的量化JSON分析"]
 ---
 
 # Yahoo Finance Skill

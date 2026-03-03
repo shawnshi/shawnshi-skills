@@ -1,6 +1,7 @@
 ---
 name: notebooklm-skill-master
 description: 使用 Google NotebookLM 深度查询自有文档。支持浏览器自动化、库管理、持久化认证及自动化资产打包生成（如信息图核心内容与幻灯片框架）。场景：基于文档的深度问答、研究分析、内容创作。
+triggers: ["用NotebookLM扫描知识库", "针对我的私人文档提问", "打包知识库生成幻灯片框架", "在我的本地文档网格里搜寻", "提取内部资料库的洞察"]
 ---
 
 # 🧠 NotebookLM 知识引擎专家 (NotebookLM Knowledge Engine Expert)

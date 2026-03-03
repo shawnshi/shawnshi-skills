@@ -2,6 +2,7 @@
 name: marketing-psychology
 version: 1.0.0
 description: 将心理学原理、心智模型或行为科学应用于营销。提供 70+ 种经过整理可直接应用的心智武器库。
+triggers: ["应用营销心理学", "分析消费者心智", "利用稀缺效应", "优化定价心理学", "提升文案转化率", "基于行为科学设计", "寻找决策偏差"]
 ---
 
 # Marketing Psychology & Mental Models

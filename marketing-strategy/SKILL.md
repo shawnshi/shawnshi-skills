@@ -2,10 +2,7 @@
 name: marketing-strategy
 version: 4.0.0
 description: 搭载审计驱动、战术注射与动态 LTV 增长框架的 AI 首席营销官。深度重构为卫宁健康医疗信息化专属战略咨询引擎。
-Title: Marketing Strategy Skill
-Date: 2026-02-24
-Status: 归档冻结
-Author: 久经沙场的战略架构师
+triggers: ["GTM策略规划", "竞品阻击方案", "计算LTV与CAC", "解构医疗采购决策链", "模拟DMU穿透", "新产品冷启动方案"]
 ---
 
 # AI Chief Marketing Officer (CMO)

@@ -1,6 +1,7 @@
 ---
 name: monthly-personal-insights
 description: 运用“多面体分析”审计 30 天表现的战略元分析器，旨在解码用户与 AI 的交互协作模式。
+triggers: ["出具我本月的系统交互报告", "解码我这段时间的操作摩擦", "生成本月元分析HTML报告", "分析我的AI指令依赖度"]
 ---
 
 # monthly-personal-insights

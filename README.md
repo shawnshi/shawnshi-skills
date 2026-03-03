@@ -10,7 +10,7 @@
 > **“工具的本质是意志的延伸。在这里，我们不生产简单的功能，我们构建确定性。”**
 
 ## 1. 架构原则 (Architectural Principles)
-本目录是由 40 个专业技能构成的“分形武器库”。所有模块均遵循以下公理：
+本目录是由 38 个专业技能构成的“分形武器库”。所有模块均遵循以下公理：
 - **灵肉合一**：代码逻辑（Scripts）与架构意图（README）实时同步。
 - **双态解构**：区分物理层操作（Action）与语义层推演（Cognition）。
 - **ACE 兼容**：所有技能均可被智能体协调引擎（ACE）原子化调度。
@@ -26,7 +26,7 @@ gemini skills install https://github.com/shawnshi/shawnshi-skills.git --path res
 
 ## 3. 核心分类矩阵 (Core Skill Hierarchy)
 
-> **Total Inventory: 40 Strategic Modules across 7 Domains**
+> **Total Inventory: 38 Strategic Modules across 7 Domains**
 
 ### 🧠 深度认知与研究工作台 (Cognitive Research)
 *底层思考工具箱：第一性原理拆解、红蓝逻辑对抗、脑暴发散与情报分析。*
@@ -38,7 +38,6 @@ gemini skills install https://github.com/shawnshi/shawnshi-skills.git --path res
 | **[intelligence-hub](intelligence-hub/)** | 战略情报作战中枢。整合全球多源新闻抓取与二阶深度情报精炼，构建统一的个人"逻辑湖"。 |
 | **[logic-adversary](logic-adversary/)** | 军工级逻辑对抗系统。集成多维专家博弈（共识模式）与饱和逻辑攻击（攻击模式），旨在通过智力摩擦识别并消除决策盲区。 |
 | **[notebooklm-skill-master](notebooklm-skill-master/)** | 使用 Google NotebookLM 深度查询自有文档。支持浏览器自动化、库管理与持久化认证。场景：基于文档的深度问答、研究分析。 |
-| **[Research](Research/)** | 全面的研究、分析与内容提取系统。支持三种模式及深度的内容分析。 |
 
 ### 📝 内容创作与出版引擎 (Content Creation)
 *聚焦于长短图文写作、格式润色、排版以及演示文稿的结构化生成。*
@@ -52,7 +51,7 @@ gemini skills install https://github.com/shawnshi/shawnshi-skills.git --path res
 | **[personal-writing-assistant](personal-writing-assistant/)** | 顶级专栏作家与战略思想领袖引擎 (V4.2)。专为生成高信噪比、高穿透力深度文章设计，特化数字医疗与健康政策的垂直打击能力。 |
 | **[presentation-architect](presentation-architect/)** | 顶级战略演示文稿全栈架构师 (V7.0 - Healthcare Executive Edition)。引入 MBB Ghost Deck 机制与极简视觉信噪比控制。 |
 | **[smart-doc-latex](smart-doc-latex/)** | 智能文档转 LaTeX 引擎。可将 .docx/.md/.txt 转换为特定样式风格的专业 PDF/LaTeX 源码。 |
-| **[WriteStory](./Content_Creation/WriteStory/)** | 运用 Will Storr 故事科学和修辞手法的多层虚构文本写作系统。 |
+| **[WriteStory](WriteStory/)** | 运用 Will Storr 故事科学和修辞手法的多层虚构文本写作系统。 |
 | **[xray-article](xray-article/)** | 通过 4 层漏斗方法对文章进行 X 光扫描以提炼核心智慧，生成带有 ASCII 字符图结构的 Markdown 报告。 |
 
 ### 🏥 大健康与战略研判中枢 (Healthcare Strategy)
@@ -91,7 +90,6 @@ gemini skills install https://github.com/shawnshi/shawnshi-skills.git --path res
 | 技能标识 (Directory) | 核心本质 (Essence & Mission) |
 | :--- | :--- |
 | **[morphism-mapper-master](morphism-mapper-master/)** | Category Theory Morphism Mapper v2.6 - 将问题结构映射到异构领域（如热力学、生物学），生成非共识创新方案。 |
-| **[planning-with-files](planning-with-files/)** | 实现类似 Manus 的基于文件规划的复杂任务管理。生成 task_plan.md、findings.md 和 progress.md。 |
 | **[skill-creator](skill-creator/)** | 创建新技能，修改并强化现有技能，并评估其性能表现。 |
 | **[ui-ux-pro-max](ui-ux-pro-max/)** | UI/UX 智能设计引擎。包含 50 种风格、21 种调色板、50 种字体搭配、20 种图表及 9 大技术栈。规划、构建、创建和实施 UI。 |
 | **[web-design-guidelines](web-design-guidelines/)** | 审查 UI 代码的网页交互准则合规性。核查无障碍访问、审计设计和评估用户体验。 |

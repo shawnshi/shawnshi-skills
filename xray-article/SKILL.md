@@ -1,6 +1,7 @@
 ---
 name: xray-article
 description: 通过 4 层漏斗方法对文章进行 X 光扫描以提炼核心智慧，生成带有 ASCII 字符图结构的 Markdown 报告。
+triggers: ["文章X光透视", "提取文章骨架图", "生成ASCII文本树形结构", "深度结构化拆解长文", "提炼文章核心智慧"]
 ---
 
 # 智慧X光机 (Wisdom X-Ray Scanner)

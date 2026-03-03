@@ -2,7 +2,8 @@
 
 ---
 name: healthcare-industry-radar
-description: 【战略级特供】用于对特定HIT行业巨头检索本周最新异动，输出自带 S-T-C (Signal-Threat-Countermeasure) 实战分析的战报。**Make sure to use this skill whenever the user asks about HIT competitors, medical software news, or healthcare IT market dynamics (especially regarding Epic, Oracle, InterSystems, Winning Health, Neusoft, Donghua, B-Soft, Yidu, or DHC), even if they don't explicitly explicitly say 'radar' or 'S-T-C'. When asked to summarize recent news for these companies, trigger this skill.**
+description: 用于对特定HIT行业巨头检索本周最新异动，输出自带 S-T-C (Signal-Threat-Countermeasure) 实战分析的战报。当用户询问有关医疗信息技术 (HIT) 竞争对手、医疗软件新闻或医疗 IT 市场动态（尤其涉及 Epic、Oracle、InterSystems、Winning Health、东软、东华、B-Soft、益都或 DHC）时，即使他们没有明确提及“雷达”或“S-T-C”，也务必使用此技能。当被要求总结这些公司的最新新闻时，也应触发此技能。
+triggers: ["卫宁健康最新动向", "东软近期中标", "Epic行业新闻", "调用雷达扫描", "扫描竞争对手新闻", "HIT市场动态", "本周医疗IT战报"]
 ---
 
 ## 1. 触发逻辑 (Trigger)

@@ -1,6 +1,7 @@
 ---
 name: document-summarizer
 description: 批量总结 PDF/DOCX/PPTX/XLSX 文件，附带智能中文摘要和标签体系。
+triggers: ["智能提取文档摘要"]
 ---
 
 # Document Summarizer (Medical Intelligence Edition)

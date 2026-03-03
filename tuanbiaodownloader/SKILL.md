@@ -1,6 +1,7 @@
 ---
 name: tuanbiaodownloader
 description: 从团体标准存容库批量下载影像，并全自动合并装订为高保真 PDF 案卷。
+triggers: ["批量下载这组团体标准", "爬取特定编号的国标生成PDF"]
 ---
 
 # Tuanbiao Downloader (Strategic Edition)

@@ -1,10 +1,7 @@
 ---
 name: presentation-architect
 description: 顶级战略演示文稿全栈架构师 (V7.0 - Healthcare Executive Edition)。引入 MBB Ghost Deck 机制与极简视觉信噪比控制。
-language: zh
-author: antigravity
-date: 2026-02-21
-status: Active
+triggers: ["制作战略级PPT", "生成Ghost Deck", "构建PPT汇报大纲", "设计高级咨询级幻灯片", "精炼演讲逻辑"]
 ---
 
 # SKILL.md: Presentation Architect V7.0 (Healthcare Executive Edition)

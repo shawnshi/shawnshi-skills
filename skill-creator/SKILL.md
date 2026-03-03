@@ -1,6 +1,7 @@
 ---
 name: skill-creator
 description: 创建新技能，修改并强化现有技能，并评估其性能表现。
+triggers: ["帮我写一个新技能", "升级这个AI助手的模块", "调整当前Prompt配置", "注入一组新口令", "评估当前技能的表现", "写一段自动化连结代码"]
 ---
 
 # Skill Creator

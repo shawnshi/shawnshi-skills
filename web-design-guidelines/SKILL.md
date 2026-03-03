@@ -1,10 +1,7 @@
 ---
 name: web-design-guidelines
 description: 审查 UI 代码的网页交互准则合规性。核查无障碍访问、审计设计和评估用户体验。
-metadata:
-  author: vercel
-  version: "1.0.0"
-  argument-hint: <file-or-pattern>
+triggers: ["审查我的前端无障碍合规性", "检查这套UI的易用性漏洞", "评估此页面的UX摩擦点", "审计前端代码的最佳实践遵循度"]
 ---
 
 # Web Interface Guidelines

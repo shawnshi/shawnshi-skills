@@ -1,6 +1,7 @@
 ---
 name: url-to-markdown
 description: 抓取任何 URL（包括重度 JS 或登录隔离网页）并转换为干净的 markdown。直控 Chrome CDP 协议。
+triggers: ["将链接内容保存为MD格式", "清理该网页的干扰项转为MD"]
 ---
 
 # Web Content Miner (CDP Engine)

@@ -1,6 +1,7 @@
 ---
 name: personal-writing-assistant
 description: 顶级专栏作家与战略思想领袖引擎 (V4.2)。专为生成高信噪比、高穿透力深度文章设计，特化数字医疗与健康政策的垂直打击能力。
+triggers: ["撰写医疗专栏", "提炼高阶核心观点", "编写数字医疗深度长文", "生成思想领袖文章", "降维打击式行文铺陈"]
 ---
 
 # Personal Writing Assistant (V4.2: The Master Essayist & Healthcare Strategist)

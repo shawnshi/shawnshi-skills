@@ -1,6 +1,7 @@
 ---
 name: markdown-converter
 description: 将任何文档、图像或媒体文件转换为干净的 Markdown 原质。由 Microsoft MarkItDown 强力驱动。
+triggers: ["把这个文档转换成极其纯净的MD", "用MarkItDown提炼这段带图的内容", "格式化这份杂乱的笔记", "清洗富文本转为原质字符"]
 ---
 
 # Markdown Converter (The Format Alchemist)

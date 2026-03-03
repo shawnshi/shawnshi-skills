@@ -1,6 +1,8 @@
 ---
 name: digital-health-lectures-scout
-description: **Make sure to use this skill whenever the user asks about digital health research, medical AI papers, Nature/JAMA studies, or requests a "weekly/monthly scout" on healthcare front-line innovations.** This skill scans top-tier medical and multi-disciplinary journals (Nature, Science, NEJM, Lancet, JAMA, BMJ, medRxiv, arXiv, etc.) for AI/digital transformation papers. It automatically calculates the date window (with a rolling fallback) and applies an aggressive S-T-C and TRL (Technology Readiness Level) deduction framework anchored in "Winning Health" (卫宁健康) strategy and China's DRG/Compliance reality.
+description: 当用户询问有关数字健康研究、医学人工智能论文、Nature/JAMA 研究或要求“每周/每月搜寻”医疗前沿创新时，请务必使用此技能。** 此技能会扫描顶级医学和多学科期刊（Nature、Science、NEJM、Lancet、JAMA、BMJ、medRxiv、arXiv 等），查找人工智能/数字化转型相关的论文。它会自动计算日期窗口（并采用滚动回退机制），并应用基于“卫宁健康”战略和中国 DRG/合规实际情况的严格的 S-T-C 和技术成熟度等级 (TRL) 评估框架。
+triggers: ["检索医疗AI论文", "扫描本周前沿探索", "Nature最新数字化研究", "JAMA医疗前沿", "科研哨兵扫描", "分析医疗大模型突破", "医疗AI论文", "Nature/JAMA研究", "医疗前沿创新"]
+
 ---
 
 # SKILL.md: Digital Health Intel Scout V3.0 (医疗数字化战略侦察兵)

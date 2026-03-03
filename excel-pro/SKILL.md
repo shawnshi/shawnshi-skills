@@ -1,6 +1,7 @@
 ---
 name: excel-pro
 description: 重装级 Excel 治理系统。整合物理层 XML 操纵与逻辑层数据建模，实现从数据摄取到专业模型固化的全栈闭环。
+triggers: ["创建Excel", "编辑excel", "修复损坏的表格", "建立临床数据分析模型", "编写复杂宏指令逻辑", "清洗乱码销售数据"，"分析excel"]
 language: py
 ---
 

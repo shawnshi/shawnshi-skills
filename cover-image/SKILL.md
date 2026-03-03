@@ -1,6 +1,7 @@
 ---
 name: cover-image
 description: 为文章生成四维定制化（类型、风格、文字、情绪）封面图。支持 20 种手绘与商业风格。使用场景：文章配图、社交媒体封面等。
+triggers: ["给这篇文章画个封面图", "生成赛博朋克风插画", "配一张极简商务风头图", "定制一张四维情绪匹配的配图", "画一张微信公众号首图", "生成封面图"]
 ---
 
 # Cover Image Generator (The Visual Alchemist)

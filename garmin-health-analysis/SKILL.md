@@ -3,7 +3,7 @@ name: garmin-health-analysis
 description: 私人首席医疗官(CMO)与生理战略引擎。基于客观数据执行全链路深度审计，管理高阶决策准备度与系统性战略风险。
 category: analysis
 execution_mode: hybrid
-triggers: ["心率", "睡眠", "压力", "HRV", "感冒迹象", "身体电量", "健康审计", "准备度", "生理状态"]
+triggers: ["心率", "睡眠", "压力", "HRV", "感冒迹象", "身体电量", "健康审计", "准备度", "生理状态"，"健康洞察"，"生理洞察"，"运动分析"]
 ---
 
 # Garmin Health Analysis (CMO/Strategic Architect Level)

@@ -1,6 +1,7 @@
 ---
 name: article-illustrator
 description: 分析文章结构，识别需要视觉辅助的位置，采用“类型×风格”双维矩阵生成插图描述。
+triggers: ["给这篇长文设计插图", "在这段落加张信息图说明", "用类型x风格矩阵生成系列配图", "拆解文章寻找需要可视化的位置"]
 ---
 
 # Article Illustrator

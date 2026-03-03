@@ -3,6 +3,7 @@
 ---
 name: digital-health-weekly-brief
 description: 用于检索全球顶尖机构（分为战略、技术、宏观三大战区）本周发布的最新医疗数字化咨询报告。技能配备了防幻觉机制、S-I-A (Signal-Impact-Action) 战略推演框架，能结合卫宁健康(Winning Health)所在的行业背景进行深度解读和分析。生成的报告会自动保存在 MEMORY 归档目录中。
+triggers: ["生成数字健康周报", "检索医疗行业报告", "本周麦肯锡研报", "Digital Health Weekly Brief", "最新数字医疗白皮书", "扫描本周智库发文"]
 ---
 
 ## 1. 触发逻辑 (Trigger)

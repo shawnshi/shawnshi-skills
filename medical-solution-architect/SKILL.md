@@ -1,6 +1,7 @@
 ---
 name: medical-solution-architect
 description: 顶级医疗数字化转型与IT架构设计专家 (V6.0)。交付具备“临床价值、信创合规、数据资产确权、TCO最优、技术可演进”的落地方案。
+triggers: ["编写数字化解决方案", "设计医院转型规划", "智慧医院顶层设计", "HIS系统重构构架", "信创合规方案设计", "医疗数据资产规划"]
 ---
 
 # SKILL.md: Medical Solution Architect (医疗数字化战略与架构合伙人)

@@ -1,6 +1,7 @@
 ---
 name: morphism-mapper-master
 description: Category Theory Morphism Mapper v2.6 - 将问题结构映射到异构领域（如热力学、生物学），生成非共识创新方案。
+triggers: ["跨界思维映射", "套用热力学破局", "用生物演化分析市场", "寻找非共识解法", "升维打击策略", "拓扑学商业应用"]
 ---
 
 # Morphism Mapper (The Category Theorist)

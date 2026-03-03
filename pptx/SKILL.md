@@ -1,7 +1,7 @@
 ---
 name: pptx
 description: 全面接管演示文稿：创建幻灯片、提取文本、编辑汇报内容、合并/拆分以及模板与母版操控。
-license: Proprietary. LICENSE.txt has complete terms
+triggers: ["合并且重新排版PPT", "抽取演示文稿核心文本", "按照模板重塑这份汇报", "拆分这份幻灯片", "修改母版统一视觉", "创建PPT"，"修改PPT"]
 ---
 
 # PPTX Skill

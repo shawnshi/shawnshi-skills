@@ -1,7 +1,7 @@
 ---
 name: pdf
 description: 读取、提取、合并、拆分、旋转、加水印、创建、表单填写、加密以及对 PDF 进行底层 OCR 处理。
-license: Proprietary. LICENSE.txt has complete terms
+triggers: ["给我这篇文献加上水印", "拆分这份百页PDF", "解密这份报告", "将多份材料装订合并", "给这份表单填空并输出", "执行PDF底层OCR识别"]
 ---
 
 # PDF Processing Guide

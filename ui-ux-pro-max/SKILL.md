@@ -1,6 +1,7 @@
 ---
 name: ui-ux-pro-max
 description: UI/UX 智能设计引擎。包含 50 种风格、21 种调色板、50 种字体搭配、20 种图表及 9 大技术栈。规划、构建、创建和实施 UI。
+triggers: ["生成一份深色模式设计的UI规范", "使用21种调色板搭配一份原型", "设计一个带微动效的玻璃态组件", "规划全套前端视觉重构方案"]
 ---
 
 # UI/UX Pro Max - Design Intelligence

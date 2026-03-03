@@ -1,7 +1,7 @@
 ---
 name: docx
 description: 创建、读取、编辑或操作 Word 文档（.docx 文件）。生成带格式排版的高级专业文档。
-license: Proprietary. LICENSE.txt has complete terms
+triggers: ["生成word", "编辑word", "读取word", "分析word"]
 ---
 
 # DOCX creation, editing, and analysis

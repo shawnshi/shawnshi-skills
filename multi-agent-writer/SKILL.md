@@ -1,6 +1,7 @@
 ---
 name: multi-agent-writer
 description: 顶级咨询级协作写作编排专家 (V9.0: 本地全自动化引擎)。融合金字塔原理、Ghost Deck 视觉逻辑、医疗行业注入以及去AI化清洗。
+triggers: ["进行多方博弈创作"]
 ---
 
 # Multi-Agent Writer (V9.0: The Automated Strategic Engine)

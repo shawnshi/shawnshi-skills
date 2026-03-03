@@ -1,7 +1,7 @@
 ---
 name: pricing-strategy
-version: 1.0.0
 description: 协助制定定价决策、组合打包或变现策略。涵盖定价研究、层级解构及组合策略。
+triggers: ["制定定价策略", "设计付费层级", "免费增值转化", "测试用户支付意愿", "捆绑销售策略", "评估提价风险", "商业化变现模型"]
 ---
 
 # Pricing Strategy

@@ -1,6 +1,7 @@
 ---
 name: WriteStory
 description: 运用 Will Storr 故事科学和修辞手法的多层虚构文本写作系统。
+triggers: ["访谈我提炼故事", "优化叙事结构", "运用修辞手法改写", "采用Will Storr故事引擎", "构建冲突与高潮", "打磨个人品牌故事"]
 ---
 
 ## 🚨 MANDATORY: Voice Notification (REQUIRED BEFORE ANY ACTION)

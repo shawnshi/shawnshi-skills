@@ -1,6 +1,7 @@
 ---
 name: humanizer-zh-pro
 description: 专业的中文文本“去 AI 化”编辑器。消除机械感、翻译腔与虚假的逻辑词。使用场景：改写 AI 稿件、优化汇报、使公文“说人话”。
+triggers: ["消除AI翻译腔", "让这篇文案说人话", "剔除底层逻辑等黑话", "高层简报化润色", "重新遣词造句", "提升文本商业质感"]
 ---
 
 # Humanizer-zh-pro (Master Edition)
