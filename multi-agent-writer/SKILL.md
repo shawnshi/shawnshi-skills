@@ -32,7 +32,7 @@ The objective is never just "content production." The objective is **Decision En
 
 > ⚠️ **执行模式协议 (Execution Mode Protocol)**
 > - **阶段 0-2 (Phase 0 - Phase 2)** 必须使用 `task_boundary` 工具强制在 **PLANNING (计划) 模式** 下执行。以思考、博弈和架构设计为主，严禁在此阶段提前生成草稿正文。所有的战略锁定和 Storyline 大纲需输出为 `implementation_plan.md` 供用户审核。
-> - **阶段 3-5 (Phase 3 - Phase 5)** 必须在使用 `notify_user` 获得用户明确批准后，使用 `task_boundary` 工具切换至 **EXECUTION (执行) 模式** 下运行，正式进行起草、自动润色和最终交付。
+> - **阶段 3-5 (Phase 3 - Phase 5)** 必须在使用 `ask_user` 获得用户明确批准后，使用 `task_boundary` 工具切换至 **EXECUTION (执行) 模式** 下运行，正式进行起草、自动润色和最终交付。
 
 ### Phase 0: Strategic Alignment & Parameter Lock-in [Mode: PLANNING]
 > 角色参见 `references/agents.md` Strategic Aligner
