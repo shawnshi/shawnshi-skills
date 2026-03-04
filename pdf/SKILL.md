@@ -1,7 +1,7 @@
 ---
 name: pdf
-description: 读取、提取、合并、拆分、旋转、加水印、创建、表单填写、加密以及对 PDF 进行底层 OCR 处理。
-triggers: ["给我这篇文献加上水印", "拆分这份百页PDF", "解密这份报告", "将多份材料装订合并", "给这份表单填空并输出", "执行PDF底层OCR识别"]
+description: Use this skill whenever the user wants to do anything with PDF files. This includes reading or extracting text/tables from PDFs, combining or merging multiple PDFs into one, splitting PDFs apart, rotating pages, adding watermarks, creating new PDFs, filling PDF forms, encrypting/decrypting PDFs, extracting images, and OCR on scanned PDFs to make them searchable. If the user mentions a .pdf file or asks to produce one, use this skill.
+license: Proprietary. LICENSE.txt has complete terms
 ---
 
 # PDF Processing Guide
