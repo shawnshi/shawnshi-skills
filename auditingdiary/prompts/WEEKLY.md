@@ -8,7 +8,8 @@
 > 4. `prompts/weekly/PART_III_WORK.md`
 > 5. `prompts/weekly/PART_IV_BALANCE.md`
 > 6. `prompts/weekly/PART_V_PROACTIVE.md`
-> 7. `prompts/weekly/PART_VI_STRATEGIC_ALIGNMENT.md`
+> 6. `prompts/weekly/PART_VI_STRATEGIC_ALIGNMENT.md`
+> 7. `prompts/weekly/PART_VII_CROSS_DISCIPLINARY_PROJECTION.md`
 
 ## Underlying Principles
 - **First Principles Driven**

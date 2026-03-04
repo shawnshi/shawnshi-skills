@@ -15,7 +15,8 @@ def compile_prompts():
         "PART_III_WORK.md",
         "PART_IV_BALANCE.md",
         "PART_V_PROACTIVE.md",
-        "PART_VI_STRATEGIC_ALIGNMENT.md"
+        "PART_VI_STRATEGIC_ALIGNMENT.md",
+        "PART_VII_CROSS_DISCIPLINARY_PROJECTION.md"
     ]
     
     compiled_content = "# COMPILED WEEKLY AUDIT PROMPT\n\n"
