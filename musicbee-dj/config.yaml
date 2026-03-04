@@ -22,7 +22,7 @@ playlist:
   # DJ 能量配比引擎 (Familiarity vs. Discovery) 
   # 设置各项所占生成列表的百分比。必须相加接近 1.0
   curation:
-    anchor_ratio: 0.6    # 安全锚点：高频播放经典曲目 (Play Count > 5)
+    anchor_ratio: 0.6    # 安全锚点：高频播放经典曲目 (Play Count > 7)
     discovery_ratio: 0.3 # 库底发掘：长草曲目打捞 (Play Count 0~2)
     novelty_ratio: 0.1   # 新鲜血液：最近入库的曲目
 
