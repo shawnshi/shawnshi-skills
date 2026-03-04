@@ -70,9 +70,11 @@ default_prompt: |
 
   文件保存协议 (强制路由落盘)：
   你必须使用提供的技能根目录下的 Python 工具脚本 `scripts/save_dashboard.py` 将生成的 JSON 数据用md格式写入系统，以确保目录路径拼接与 JSON 规范绝对安全。
-  执行方式：调用 terminal/shell 工具执行以下命令，将 JSON 输出作为标准输入传给该脚本，或作为 `--content` 参数。
-  例如：`uv run {SKILL_DIR}/scripts/save_dashboard.py --stock "股票中文名"` （通过 bash 的 heredoc 或 echo 管道传入 JSON）。
-  系统会自动为你将文件保存至：`C:\Users\shich\.gemini\MEMORY\stocks\[股票名]_[YYYYMMDD].md`。绝对严禁你自己去盲猜路径并通过文本写入工具写文件。
+  由于 Windows PowerShell 管道存在中文乱码隐患，请严格执行以下两步：
+  1. 先使用工具（如 `write_file`）将生成的 JSON 保存至临时文件（例如 `C:\Users\shich\.gemini\tmp\gemini\xxx_dashboard.json`）。
+  2. 调用 shell 工具执行脚本，通过 `--file` 参数传入文件路径：
+     `uv run {SKILL_DIR}/scripts/save_dashboard.py --stock "股票中文名" --file "临时文件绝对路径"`
+  系统会自动为你将文件转换并保存至：`C:\Users\shich\.gemini\MEMORY\stocks\[股票名]_[YYYYMMDD].md`。绝对严禁你直接将文本写入最终路径。
 triggers:
   - "深度分析"
   - "个股深度分析"

@@ -8,11 +8,17 @@ def save_dashboard():
     parser = argparse.ArgumentParser(description="Save Stock Analysis Dashboard")
     parser.add_argument("--stock", required=True, help="Stock name (e.g. 腾讯)")
     parser.add_argument("--content", help="JSON content string. If not provided, reads from stdin.")
+    parser.add_argument("--file", help="Path to a JSON file containing the dashboard data.")
     
     args = parser.parse_args()
     
     content = args.content
-    if not content:
+    if args.file:
+        with open(args.file, 'r', encoding='utf-8') as f:
+            content = f.read()
+    elif not content:
+        if hasattr(sys.stdin, 'reconfigure'):
+            sys.stdin.reconfigure(encoding='utf-8')
         content = sys.stdin.read()
         
     try:
