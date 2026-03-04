@@ -17,7 +17,7 @@ playlist:
   # 拼装后的临时歌单 (.m3u) 落盘位置
   output_m3u: "C:\\Users\\shich\\.gemini\\tmp\\musicbee_jit_queue.m3u"
   # 每次生成曲目数量的硬上限
-  max_tracks_per_session: 100
+  max_tracks_per_session: 50
   
   # DJ 能量配比引擎 (Familiarity vs. Discovery) 
   # 设置各项所占生成列表的百分比。必须相加接近 1.0
@@ -35,10 +35,12 @@ energy_curves:
 # 支持配置多个可用流派，抽取器会根据 `Genre` 字段模糊或精确匹配
 scenes:
   focus:
-    genres: ["Cyberpunk", "Lo-Fi", "Ambient", "Classical", "Soundtrack", "Electronic"]
+    genres: ["Classical", "pure music", "Jazz"]
   relax:
-    genres: ["Jazz", "Acoustic", "Chillout", "New Age", "Piano", "Bossa Nova"]
+    genres: ["Jazz",  "Country", "France", "pure music"]
   energy:
-    genres: ["Rock", "Metal", "Pop", "EDM", "Dance", "Hip-Hop"]
+    genres: ["Rock", "Korean", "Jap", "eng"]
   coding:
-    genres: ["Cyberpunk", "Synthwave", "Trance", "Techno", "Outrun"]
+    genres: ["pure music", "Classical", "Jap", "eng"]
+  pop:
+    genres: ["chs", "eng", "Jap", "Korean"]

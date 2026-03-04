@@ -50,7 +50,7 @@
 # 1. 你可以将任意新生成的隐喻词条绑定到你期望的曲风上
 scenes:
   coding:
-    genres: ["Cyberpunk", "Synthwave", "Trance", "Techno"]
+    genres: ["pure music", "Classical", "Jap", "eng"]
 
 # 2. 控制听歌偏好比例 (加起来必须近似 = 1.0)
 curation:

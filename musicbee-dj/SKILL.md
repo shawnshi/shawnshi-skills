@@ -28,14 +28,16 @@ triggers: ["播放音乐", "播放 [流派/场景/歌单] 歌单", "我想听点
 ```
 
 ### 场景映射 (Scene Mapping)
-为了解决抽象化需求（如：“我想安静一会儿”），本模块自带一层概念转换。请对照 `config.yaml` 的 `scenes` 定义。常用：
-- **focus**: 深度工作、打代码、极度专注。映射至 `Cyberpunk, Lo-Fi, Ambient, Classical` 等。
-- **relax**: 休息、喝水、冥想。映射至 `Jazz, Chillout, Piano` 等。
-- **energy**: 燃向、健身、困倦时提神。映射至 `Rock, EDM, Hip-Hop` 等。
+为了解决抽象化需求（如：“我想安静一会儿”），本模块自带一层概念转换。基于你当前音乐库中的 11 个核心流派（如 chinese folk, chs, Classical, Country, eng, France, Jap, Jazz, Korean, pure music, Rock），请对照 `config.yaml` 的 `scenes` 定义。常用场景如下：
+- **focus**: 深度工作、阅读、极度专注。主要映射至 `Classical`, `pure music`, `Jazz`。
+- **relax**: 休息、冥想、舒缓。主要映射至 `Jazz`, `Country`, `France`, `pure music`。
+- **energy**: 燃向、健身、提神。主要映射至 `Rock`, `Korean`, `Jap`, `eng`。
+- **coding**: 写代码、心流状态。主要映射至 `pure music`, `Classical`, `Jap`, `eng`。
+- **pop**: 流行人声、日常听歌。主要映射至 `chs`, `eng`, `Jap`, `Korean`。
 
 ## 执行流程 (Execution Rules)
 1. **意图获取**: 你需负责与用户确认或自动判定上述 `type` 与 `value`，以及隐形的 `intensity` 参量。
-2. **场景降级 (Fallback)**: 如果用户提出的场景（如“我要学习”、“做家务”）不在映射表内，**严禁报错退出**。请自行揣摩意图，将其转换为最接近的可用 `type="genre"`（如：Classical 或 Pop）来进行兜底。
+2. **场景降级 (Fallback)**: 如果用户提出的场景（如“我要学习”、“做家务”）不在映射表内，**严禁报错退出**。请自行揣摩意图，将其转换为最接近的可用 11 个核心流派之一的 `type="genre"`（如：`pure music` 或 `chs`）来进行兜底。
 3. **底层降维执行**: 组织完备后，使用 `python` 投递至命令行：
 
 ```bash
