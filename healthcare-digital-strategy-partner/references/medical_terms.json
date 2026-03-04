@@ -7,7 +7,6 @@
     "Agentic AI": "智能体化人工智能",
     "MSL": "医疗语义层 (Medical Semantic Layer)",
     "ACE": "智能体协调引擎 (Agent Coordination Engine)",
-    "WiNEX": "卫宁健康下一代数字医疗平台 WiNEX",
     "HITL": "人在回路 (Human-in-the-Loop)",
     "VBC": "价值医疗 (Value-Based Care)",
     "DRG": "按疾病诊断相关分组 (Diagnosis Related Groups)",
@@ -24,6 +23,12 @@
   },
   "winning_specific": {
     "卫宁": "卫宁健康 (Winning Health)",
-    "WiNGPT": "卫宁健康医疗垂直大模型 WiNGPT"
+    "WiNGPT": "卫宁健康医疗垂直大模型 WiNGPT",
+"WiNEX": "卫宁健康下一代数字医疗平台 WiNEX",
+""WiNGPT": "卫宁健康医疗垂直大模型 WiNGP",
+"1+X战略": "卫宁健康核心业务战略",
+"WinDHP": "卫宁数字健康平台 (Winning Digital Health Platform)",
+"双轮驱动": "传统医疗信息化与创新业务的对冲策",
+"三中台架构": "由业务、数据、技术中台构成的底层框架"
   }
 }

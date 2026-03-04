@@ -2,7 +2,7 @@
   "strategic_keywords": [
     {
       "keyword": "ai",
-      "weight": 17
+      "weight": 19
     },
     {
       "keyword": "ace",
@@ -38,11 +38,11 @@
     },
     {
       "keyword": "drg",
-      "weight": 10
+      "weight": 12
     },
     {
       "keyword": "dip",
-      "weight": 10
+      "weight": 12
     },
     {
       "keyword": "信创",
@@ -86,19 +86,19 @@
     },
     {
       "keyword": "审计",
-      "weight": 15
+      "weight": 20
     },
     {
       "keyword": "核心",
-      "weight": 15
+      "weight": 17
     },
     {
       "keyword": "认知",
-      "weight": 15
+      "weight": 17
     },
     {
       "keyword": "临床",
-      "weight": 15
+      "weight": 17
     },
     {
       "keyword": "语义",
@@ -107,6 +107,10 @@
     {
       "keyword": "架构",
       "weight": 15
+    },
+    {
+      "keyword": "数字",
+      "weight": 20
     }
   ],
   "categories": {
