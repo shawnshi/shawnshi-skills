@@ -1,0 +1,44 @@
+# MusicBee-DJ 核心配置中心
+
+musicbee:
+  # MusicBee 核心可执行文件路径
+  exe_path: "C:\\Program Files (x86)\\MusicBee\\MusicBee.exe"
+  # iTunes 兼容 XML 的导出路径 (需在 MusicBee 设置中开启)
+  # 必须开启该功能，使得本程序能够静默、极速地爬取文件绝对路径与 Genre
+  xml_path: "C:\\Users\\shich\\Music\\MusicBee\\iTunes Music Library.xml"
+
+# 数据层与缓存策略
+cache:
+  # 为避免每次解析 50MB+ 的 XML 导致 1~3秒 的极度延迟，引入缓存映射层
+  db_path: "C:\\Users\\shich\\.gemini\\tmp\\musicbee_library_cache.json"
+
+# JIT 歌单锻造输出区 & DJ 策展逻辑池
+playlist:
+  # 拼装后的临时歌单 (.m3u) 落盘位置
+  output_m3u: "C:\\Users\\shich\\.gemini\\tmp\\musicbee_jit_queue.m3u"
+  # 每次生成曲目数量的硬上限
+  max_tracks_per_session: 100
+  
+  # DJ 能量配比引擎 (Familiarity vs. Discovery) 
+  # 设置各项所占生成列表的百分比。必须相加接近 1.0
+  curation:
+    anchor_ratio: 0.6    # 安全锚点：高频播放经典曲目 (Play Count > 5)
+    discovery_ratio: 0.3 # 库底发掘：长草曲目打捞 (Play Count 0~2)
+    novelty_ratio: 0.1   # 新鲜血液：最近入库的曲目
+
+# 能量基准与 BPM 阈值定义
+energy_curves:
+  high_intensity_min_bpm: 110 # 当触发 intensity: high 时，剔除的最低 BPM
+  low_intensity_max_bpm: 100  # 当触发 intensity: low 时，剔除的最高 BPM
+
+# 意识路由 -> 音乐流派 (场景映射表)
+# 支持配置多个可用流派，抽取器会根据 `Genre` 字段模糊或精确匹配
+scenes:
+  focus:
+    genres: ["Cyberpunk", "Lo-Fi", "Ambient", "Classical", "Soundtrack", "Electronic"]
+  relax:
+    genres: ["Jazz", "Acoustic", "Chillout", "New Age", "Piano", "Bossa Nova"]
+  energy:
+    genres: ["Rock", "Metal", "Pop", "EDM", "Dance", "Hip-Hop"]
+  coding:
+    genres: ["Cyberpunk", "Synthwave", "Trance", "Techno", "Outrun"]
