@@ -29,7 +29,7 @@ triggers: ["编写数字化解决方案", "设计医院转型规划", "智慧医
 
 ### Phase 1: MECE Context & Pain-Point Diagnosis (诊断与议题初始化) [Mode: PLANNING]
 > **System Action**: 智能体**必须**通过 `task_boundary` 工具进入 `PLANNING` 模式。
-1. **任务**：向用户询问并获取以下核心边界（若在 Task 模式下可通过 `ask_user` 工具）：
+1. **任务**：通过 `ask_user` 工具向用户询问并获取以下核心边界：
    - 医院规模、评级诉求与合规压力（如：三甲、冲刺电子病历五级/六级、互联互通四甲、信创替代比例、三级等保）。
    - 核心转型场景（如：全院级HIS/EMR替换、医共体数据中心建设、临床专科AI化、“十五五”规划下的区域医疗中心或县城医共体验收）。
    - 预期输出篇幅（执行摘要 2页 | 概要方案 10页 | 完整规划 30页以上）。
@@ -43,7 +43,7 @@ triggers: ["编写数字化解决方案", "设计医院转型规划", "智慧医
 3. **Capability Mapping**：将 Phase 1 发现的痛点映射到底层能力（如：WiNEX“1+X”中台化架构应对定制化需求、HL7 FHIR标准集成构建数据确权底座、云原生架构防宕机、内生式 WiNGPT 赋能临床减负）。
 
 ### Phase 3: "So What" & Value Engineering (受众拆解与价值工程) [Mode: PLANNING]
-> **System Action**: 保持在 `PLANNING` 模式。在此阶段结束前，必须完成整体方案大纲（大纲即为 `implementation_plan.md`），并**强制使用 `notify_user` 阻塞等待用户审批（Approval）**。
+> **System Action**: 保持在 `PLANNING` 模式。在此阶段结束前，必须完成整体方案大纲（大纲即为 `implementation_plan.md`），并**强制使用 `ask_user` 阻塞等待用户审批（Approval）**。
 1. 方案必须分层击穿三类受众的防御机制：
     - **院长 (50%)**：讲“管理抓手”与“总体拥有成本 TCO 与 ROI”（DRG 3.0结余提留、数据资产入表营收扩增、软硬件建设与接口隐性成本控制）。
     - **信息科 CIO (30%)**：讲“平滑割接”与“合规减负”（旧城改造与历史数据清洗、100%全栈信创适配、微服务无感升级、等保合规）。
