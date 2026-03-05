@@ -43,44 +43,40 @@ triggers: ["编写数字化解决方案", "设计医院转型规划", "智慧医
 3. **Capability Mapping**：将 Phase 1 发现的痛点映射到底层能力（如：WiNEX“1+X”中台化架构应对定制化需求、HL7 FHIR标准集成构建数据确权底座、云原生架构防宕机、内生式 WiNGPT 赋能临床减负）。
 
 ### Phase 3: "So What" & Value Engineering (受众拆解与价值工程) [Mode: PLANNING]
-> **System Action**: 保持在 `PLANNING` 模式。在此阶段结束前，必须完成整体方案大纲（大纲即为 `implementation_plan.md`），并**强制使用 `ask_user` 阻塞等待用户审批（Approval）**。
+> **System Action**: 保持在 `PLANNING` 模式。在此阶段结束前，必须完成整体方案大纲（大纲即为 `implementation_plan.md`）、任务计划（`task_plan.md`），并**强制使用 `ask_user` 阻塞等待用户审批（Approval）**。
 1. 方案必须分层击穿三类受众的防御机制：
     - **院长 (50%)**：讲“管理抓手”与“总体拥有成本 TCO 与 ROI”（DRG 3.0结余提留、数据资产入表营收扩增、软硬件建设与接口隐性成本控制）。
     - **信息科 CIO (30%)**：讲“平滑割接”与“合规减负”（旧城改造与历史数据清洗、100%全栈信创适配、微服务无感升级、等保合规）。
     - **临床主任 (20%)**：讲“临床减负”与“医疗质量”（WiNEX Copilot 自动生成文书压缩30%案头工作、CDSS 实时拦截医疗差错、告别加班）。
 2. **Outline Approval**：生成具备张力的方案大纲（包含业务蓝图、应用/数据/技术架构、实施割接方案、TCO测算与数据资产化路径），使用 `ask_user` 确认。
 
-### Phase 4: Architectural Forging (双轨制草拟与架构设计) [Mode: EXECUTION]
+### Phase 4: Architectural Forging (物理落盘与架构深度锻造) [Mode: EXECUTION]
 > **System Action**: 获得阶段 3 用户审批后，智能体**必须**通过 `task_boundary` 切换至 `EXECUTION` 模式。
-1. **Initialize**: 使用 `run_command` 工具创建工作空间（如指定沙箱目录 `{root}\MEMORY\med_solution ），并在该空间生成 `_DIR_META.md` 及 `working_memory.json`。
-2. **Outline Context**：基于已获审批的方案大纲（包含业务蓝图、应用/数据/技术架构、实施割接方案、TCO测算与数据资产化路径）准备执行。
-3. **Drafting (严格分层输出)**：
-    - ** 业务蓝图 (Business Architecture)**：用散文描述数字化如何重塑患者旅程（Patient Journey）与医护体验（AI-Native 嵌入工作流）。高频调用 `search_web` 工具获取实证数据支撑。
-    - ** 应用与数据架构 (IT & Data Architecture)**：使用表格定义核心模块。针对卫宁 WiNEX 架构强调中台标准化隔离定制化。*Action: 使用 Mermaid 生成系统交互拓扑图、数据流向图。*
-    - ** 数据治理与合规 (Data Governance)**：明确主数据管理 (MDM) 规则，强制输出“数据要素脱敏与资产确权底座架构”，列出信创适配（OS、数据库）安全标准。
-    - **逐章落盘**：严格按照已确认的方案大纲，逐个章节进行起草。**每一章节起草完成后，必须使用 `write_to_file` 工具将其立即保存/追加写入到步骤 1 创建的工作空间的物理 `.md` 文件中**（如 `{ProjectName}_{Chapter}_draft.md`）。后续步骤必须基于已生成的该物理文件进行读取（如使用 `view_file`）、校对和处理，绝不能仅依赖内存上下文。
+1. **Initialize & Manifest**: 
+   - 使用 `run_command` 工具创建工作空间（如指定沙箱目录 `{root}\MEMORY\med_solution ）。
+   - **[强制动作]**：在空间内生成整体方案大纲（大纲即为 `implementation_plan.md`）、 `MANIFEST.json`（用于索引所有子章节）、任务计划（`task_plan.md`）。禁止在未更新索引的情况下进行集成。
+2. **Drafting (物理落盘约束)**：
+   - **[硬性指标]**：每一章节必须包含至少一张逻辑图（Mermaid）或对比表格，禁止纯文字描述。
+   - **逐章落盘**：严格按照方案大纲起草。**每一章节起草完成后，必须使用 `write_to_file` 工具将其保存为独立的物理 `.md` 文件**。每完成一章，必须向用户通报该物理路径，严禁最后统一落盘，并更新任务计划。
 
-### Phase 5：确定性集成与逻辑审计 (MECE Audit) [Mode: EXECUTION]
-1. **语义消毒与拟人化润色**：调用技能 `${humanizer-zh-pro}` **对文本进行“行研级”或“高管级”的非AI感深度润色。
-2.  **Verbatim Assembly**: 逐章完整集成，使用 `view_file` 工具基于前期逐章保存的物理 `.md` 文件进行合并和通读校验，严禁组装时摘要化。使用 `write_to_file` 工具最终生成 `{ProjectName}_{Date}_final.md`。更新状态至 `🔴 归档冻结`。
-3. **自动化校验**：使用 `run_command` 工具，将工作目录 (`cwd`) 设置为本技能所在的根目录 (`medical-solution-architect`) 后，执行 `python scripts/logic_checker.py [ProjectName]_v1_Draft.md` (请确保传入绝对路径)。
-4. **修正重构**：如果状态为 `Warning`，自动重构语义重叠、遗漏信创合规或缺失 TCO 视角的章节。
+### Phase 5：逻辑审计与熔断机制 (MECE Audit) [Mode: EXECUTION]
+1. **自动化校验**：执行 `python scripts/logic_checker.py [ProjectName]_v1_Draft.md`。
+2. **熔断处理 (Break on Warning)**：如果脚本返回 `Warning`，**严禁**继续执行后续章节集成。智能体必须立即针对缺失维度（如：信创算力冗余、DRG 结余逻辑）进行重构，并再次审计，直到状态为 `Pass`。
 
-### Phase 6: Adversarial Delivery Audit (旧城改造与实施红队对抗) [Mode: EXECUTION]
-1. **任务**：系统再好，也会死于数据迁移与临床抵触。挂载技能`${logic-adversary}` 并扮演"刁钻的CIO与愤怒的临床主任"进行方案攻击测试。
-2. **跨技能调用规范**：
-    - *调用方式*：模拟上述角色发出尖锐质询。
-    - *输入*：将 Phase 4 生成的方案草稿（业务蓝图 + 架构设计 + 实施路线图）作为攻击目标。
-    - *攻击维度*：旧 HIS/LIS 历史数据清洗与迁移风险、第三方厂商接口拒不对接或乱收费风险、定制化接口剥离与中台标准化的阵痛期、科室抵触情绪、数据资产确权合规漏点、信创环境性能回退风险。
-    - *期望输出格式*：结构化的《实施摩擦力与减缓矩阵 (Friction & Mitigation Matrix)》表格，每行包含：[风险项] | [影响评级(H/M/L)] | [减缓策略] | [责任方]。
-3. **应对方案融合**：将减缓矩阵的策略有机融入实施路线图 (Roadmap) 章节，具体包括："新老系统双活并行期"、"关键接口灰度上线"、"数据清洗确权三步走策略"、"科室 Key User 利益绑定机制"。
+### Phase 6: Adversarial Delivery Audit (多代理红队博弈) [Mode: EXECUTION]
+1. **任务**：模拟极端实施冲突。
+2. **多角色激活**：挂载 `${logic-adversary}`。你必须至少激活两个对立角色（例如：担心绩效的临床主任、追求 100% 稳定的信息科长）。
+3. **展示辩论流**：你必须在对话框中**显式展示**这两个角色与你的架构方案之间的“火拼”过程，禁止直接输出结果。
+4. **归档要求**：辩论过程及其产生的原始冲突点，必须作为独立的 **[Audit_Logs]** 章节保留在最终全案的附录中，供管理层审计方案的抗压深度。
+5. **输出物**：基于博弈冲突生成的《实施摩擦力与减缓矩阵》，对方案中不足之处进行修改完善，确保“逻辑补丁”反向注入到方案。
+
 
 ### Phase 7: Delivery & Executive Summary (最终集成与高管摘要) [Mode: EXECUTION]
-2. **Executive Summary**：采用“麦肯锡式高管备忘录 (Executive Memo)”生成 1 页纸的高管决策摘要。说明：为何现在转型？核心架构优势及对 WiNEX 体系的运用？如何通过建设兼顾合法合规(如数据资产入表)的底座？必须包含一张反映TCO与医疗质量提升的“价值雷达图”或量化表格。
-3. 1.  ** 文字优化**:    调用agent'${text-forger}'对逐章落盘的方案进行文字优化，达到方案要求。
-4. **文档集成**：如果方案涉及多个分章节文件，使用 `run_command` 工具，将工作目录 (`cwd`) 设置为本技能所在根目录，执行 `python scripts/manifest_manager.py manifest.json [ProjectName]_Digital_Blueprint_vFinal.md` (请确保传入绝对路径) 将各章节合并为完整交付物。
-5. **交付**：整合生成 `[ProjectName]_Digital_Blueprint_vFinal.md`。
-6. **Final Review (STOP)**: 展示全文，并强制附带 **1-3 个可能导致项目延期的致命风险提示**，确认验收。
+1. **Executive Summary**：采用“麦肯锡式高管备忘录 (Executive Memo)”生成 1 页纸的高管决策摘要。说明：为何现在转型？核心架构优势及对 WiNEX 体系的运用？如何通过建设兼顾合法合规(如数据资产入表)的底座？必须包含一张反映TCO与医疗质量提升的“价值雷达图”或量化表格。
+2. **文字优化**:    调用agent'${text-forger}'对逐章落盘的方案进行文字优化，达到方案要求。
+3. **文档集成**：如果方案涉及多个分章节文件，使用 `run_command` 工具，将工作目录 (`cwd`) 设置为本技能所在根目录，执行 `python scripts/manifest_manager.py manifest.json [ProjectName]_Digital_Blueprint_vFinal.md` (请确保传入绝对路径) 将各章节合并为完整交付物。
+4. **交付**：整合生成 `[ProjectName]_Digital_Blueprint_vFinal.md`。
+5. **Final Review (STOP)**: 展示全文，并强制附带 **1-3 个可能导致项目延期的致命风险提示**，确认验收。
 
 ## 4. 绝对禁令 (Anti-Patterns)
 - ❌ **禁售软件视角**：不要把方案写成产品说明书。必须从“医院痛点”推导至“IT能力”，而非罗列模块。

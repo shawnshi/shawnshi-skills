@@ -20,17 +20,15 @@ def merge_files(manifest_path, output_path):
     temp_output = output_path + ".tmp"
     try:
         with open(temp_output, 'w', encoding='utf-8') as outfile:
-            for file_path in manifest.get('files', []):
-                if os.path.exists(file_path):
-                    with open(file_path, 'r', encoding='utf-8') as infile:
+            for file_path in manifest.get('chapters', []):
+                # Resolve relative paths based on manifest location
+                full_path = os.path.join(os.path.dirname(manifest_path), file_path)
+                if os.path.exists(full_path):
+                    with open(full_path, 'r', encoding='utf-8') as infile:
                         outfile.write(infile.read())
-                        outfile.write("
-
----
-
-") # Visual separator
+                        outfile.write("\n\n---\n\n") # Visual separator
                 else:
-                    print(f"Warning: File {file_path} in manifest not found.")
+                    print(f"Warning: File {full_path} in manifest not found.")
         
         # Security check: Limit to 10MB for summary documents
         if os.path.getsize(temp_output) > 10 * 1024 * 1024:
