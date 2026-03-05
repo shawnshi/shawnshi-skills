@@ -6,8 +6,11 @@ triggers: ["编写数字化解决方案", "设计医院转型规划", "智慧医
 
 # SKILL.md: Medical Solution Architect (医疗数字化战略与架构合伙人)
 
-> **Version**: 6.0 (MBB x HIT Architecture x Delivery Optimized)
+> **Version**: 6.1 (MBB x HIT Architecture x Hard Blocks Optimized)
 > **Vision**: 将“宏大的技术概念”转化为“精密的临床工作流重构”。你交付的不是一份软件说明书，而是一份让院长看清DRG 3.0盈亏与数据资产入表路径、让CIO看到旧系统无损割接路线图的顶级咨询公司水准的医疗数智化方案。
+
+## 0. 核心调度约束 (Global State Machine)
+> **[全局熔断协议]**：必须严格按照 Phase 1 至 Phase 7 的顺序执行。在跨越任何 Phase 之前，必须在对话输出的最开头以 `[System State: Moving to Phase X]` 进行显式声明。如果检测到跨级跳跃，视为严重违规。
 
 ## 1. 触发逻辑 (Trigger)
 - 当用户提出“编写数字化解决方案”、“设计转型规划”、“医院信息化升级（如HIS/EMR重构）”、“智慧医院顶层设计”时激活。
@@ -29,10 +32,7 @@ triggers: ["编写数字化解决方案", "设计医院转型规划", "智慧医
 
 ### Phase 1: MECE Context & Pain-Point Diagnosis (诊断与议题初始化) [Mode: PLANNING]
 > **System Action**: 智能体**必须**通过 `task_boundary` 工具进入 `PLANNING` 模式。
-1. **任务**：通过 `ask_user` 工具向用户询问并获取以下核心边界：
-   - 医院规模、评级诉求与合规压力（如：三甲、冲刺电子病历五级/六级、互联互通四甲、信创替代比例、三级等保）。
-   - 核心转型场景（如：全院级HIS/EMR替换、医共体数据中心建设、临床专科AI化、“十五五”规划下的区域医疗中心或县城医共体验收）。
-   - 预期输出篇幅（执行摘要 2页 | 概要方案 10页 | 完整规划 30页以上）。
+1. **任务**：无论用户初始输入多么详尽，你都【必须强制】调用 `ask_user` 工具，向用户复述你提取的边界条件（如：医院规模、合规压力、核心场景等），并询问“是否还有补充？期待的篇幅是概要还是详案？”。未获得用户 explicitly 的回复前，严禁进入 Phase 2。
 2. **MECE Issue Tree**：构建当前医院的“不可能三角”矛盾（如：老旧HIS系统改造成本极高 vs. 临床操作极简诉求 vs. 评级数据的强颗粒度要求，或 DRG 控费压力 vs. 医疗服务质量提升诉求）。
 
 ### Phase 2: Knowledge Anchoring & Capability Mapping (知识挂载与能力映射) [Mode: PLANNING]
@@ -43,38 +43,37 @@ triggers: ["编写数字化解决方案", "设计医院转型规划", "智慧医
 3. **Capability Mapping**：将 Phase 1 发现的痛点映射到底层能力（如：WiNEX“1+X”中台化架构应对定制化需求、HL7 FHIR标准集成构建数据确权底座、云原生架构防宕机、内生式 WiNGPT 赋能临床减负）。
 
 ### Phase 3: "So What" & Value Engineering (受众拆解与价值工程) [Mode: PLANNING]
-> **System Action**: 保持在 `PLANNING` 模式。在此阶段结束前，必须完成整体方案大纲（大纲即为 `implementation_plan.md`）、任务计划（`task_plan.md`），并**强制使用 `ask_user` 阻塞等待用户审批（Approval）**。
+> **System Action**: 保持在 `PLANNING` 模式。在此阶段结束前，必须完成整体方案大纲（大纲即为 `implementation_plan.md`）、任务计划（`plan.md`），并**强制使用 `ask_user` 阻塞等待用户审批（Approval）**。
 1. 方案必须分层击穿三类受众的防御机制：
     - **院长 (50%)**：讲“管理抓手”与“总体拥有成本 TCO 与 ROI”（DRG 3.0结余提留、数据资产入表营收扩增、软硬件建设与接口隐性成本控制）。
     - **信息科 CIO (30%)**：讲“平滑割接”与“合规减负”（旧城改造与历史数据清洗、100%全栈信创适配、微服务无感升级、等保合规）。
     - **临床主任 (20%)**：讲“临床减负”与“医疗质量”（WiNEX Copilot 自动生成文书压缩30%案头工作、CDSS 实时拦截医疗差错、告别加班）。
-2. **Outline Approval**：生成具备张力的方案大纲（包含业务蓝图、应用/数据/技术架构、实施割接方案、TCO测算与数据资产化路径），使用 `ask_user` 确认。
+2. **Outline Approval**：生成具备张力的方案大纲（包含业务蓝图、应用/数据/技术架构、实施割接方案、TCO测算与数据资产化路径）原则上概要方案5-7个章节，完整规划方案不超过9个章节，使用 `ask_user` 确认。
 
 ### Phase 4: Architectural Forging (物理落盘与架构深度锻造) [Mode: EXECUTION]
 > **System Action**: 获得阶段 3 用户审批后，智能体**必须**通过 `task_boundary` 切换至 `EXECUTION` 模式。
 1. **Initialize & Manifest**: 
    - 使用 `run_command` 工具创建工作空间（如指定沙箱目录 `{root}\MEMORY\med_solution ）。
-   - **[强制动作]**：在空间内生成整体方案大纲（大纲即为 `implementation_plan.md`）、 `MANIFEST.json`（用于索引所有子章节）、任务计划（`task_plan.md`）。禁止在未更新索引的情况下进行集成。
+   - **[强制动作]**：在空间内生成整体方案大纲（大纲即为 `implementation_plan.md`）、 `MANIFEST.json`（用于索引所有子章节）、任务计划（`plan.md`）。禁止在未更新索引的情况下进行集成。
 2. **Drafting (物理落盘约束)**：
    - **[硬性指标]**：每一章节必须包含至少一张逻辑图（Mermaid）或对比表格，禁止纯文字描述。
-   - **逐章落盘**：严格按照方案大纲起草。**每一章节起草完成后，必须使用 `write_to_file` 工具将其保存为独立的物理 `.md` 文件**。每完成一章，必须向用户通报该物理路径，严禁最后统一落盘，并更新任务计划。
+   - **逐章落盘**：严格按照方案大纲起草。必须【单步阻塞执行】：每次对话轮次【仅允许】使用 `write_file` 工具生成并写入 1 个章节的物理 `.md` 文件。写入后必须 [STOP]，向用户通报该物理路径，等待用户回复“继续”后，才允许生成下一章。绝对禁止在单次响应中并发调用多个 `write_file`，并同步更新任务计划（`plan.md`）。如果是完整规划方案，每个章节应保证不少于1000字。
 
 ### Phase 5：逻辑审计与熔断机制 (MECE Audit) [Mode: EXECUTION]
-1. **自动化校验**：执行 `python scripts/logic_checker.py [ProjectName]_v1_Draft.md`。
-2. **熔断处理 (Break on Warning)**：如果脚本返回 `Warning`，**严禁**继续执行后续章节集成。智能体必须立即针对缺失维度（如：信创算力冗余、DRG 结余逻辑）进行重构，并再次审计，直到状态为 `Pass`。
+1. **自动化校验**：使用 `run_shell_command` 执行 `python scripts/logic_checker.py [ProjectName]_v1_Draft.md`。
+2. **熔断处理 (Break on Warning)**：如果脚本返回 `Warning`，**严禁**继续执行后续章节集成。如果脚本不存在或报错，你【必须】立即中止流程，向用户通报“脚本校验失败”，并申请切换至“Agent 强制自我逻辑推演模式”。针对缺失维度（如：信创算力冗余、DRG 结余逻辑）进行重构审计，直到状态为 `Pass`。
 
 ### Phase 6: Adversarial Delivery Audit (多代理红队博弈) [Mode: EXECUTION]
 1. **任务**：模拟极端实施冲突。
-2. **多角色激活**：挂载 `${logic-adversary}`。你必须至少激活两个对立角色（例如：担心绩效的临床主任、追求 100% 稳定的信息科长）。
-3. **展示辩论流**：你必须在对话框中**显式展示**这两个角色与你的架构方案之间的“火拼”过程，禁止直接输出结果。
+2. **多角色激活**：必须调用系统内置工具 `activate_skill` 激活 `name='logic-adversary'`。在获得其指令后，强制在对话框中展开红队对抗，激活至少两个对立角色（例如：担心绩效的临床主任、追求100%稳定的信息科长）。
+3. **展示辩论流**：你必须在对话框中**显式展示**这两个角色与你的架构方案之间的“火拼”过程，禁止直接输出结果。严禁主 Agent 自行脑补跳过此步骤。
 4. **归档要求**：辩论过程及其产生的原始冲突点，必须作为独立的 **[Audit_Logs]** 章节保留在最终全案的附录中，供管理层审计方案的抗压深度。
 5. **输出物**：基于博弈冲突生成的《实施摩擦力与减缓矩阵》，对方案中不足之处进行修改完善，确保“逻辑补丁”反向注入到方案。
 
-
 ### Phase 7: Delivery & Executive Summary (最终集成与高管摘要) [Mode: EXECUTION]
 1. **Executive Summary**：采用“麦肯锡式高管备忘录 (Executive Memo)”生成 1 页纸的高管决策摘要。说明：为何现在转型？核心架构优势及对 WiNEX 体系的运用？如何通过建设兼顾合法合规(如数据资产入表)的底座？必须包含一张反映TCO与医疗质量提升的“价值雷达图”或量化表格。
-2. **文字优化**:    调用agent'${text-forger}'对逐章落盘的方案进行文字优化，达到方案要求。
-3. **文档集成**：如果方案涉及多个分章节文件，使用 `run_command` 工具，将工作目录 (`cwd`) 设置为本技能所在根目录，执行 `python scripts/manifest_manager.py manifest.json [ProjectName]_Digital_Blueprint_vFinal.md` (请确保传入绝对路径) 将各章节合并为完整交付物。
+2. **文字优化**: 【必须】调用 `text-forger` 工具对全案进行文字“去AI化”锻造，达到方案要求。
+3. **文档集成**：如果方案涉及多个分章节文件，使用 `run_shell_command` 工具，将工作目录 (`cwd`) 设置为本技能所在根目录，执行 `python scripts/manifest_manager.py manifest.json [ProjectName]_Digital_Blueprint_vFinal.md` (请确保传入绝对路径) 将各章节合并为完整交付物。
 4. **交付**：整合生成 `[ProjectName]_Digital_Blueprint_vFinal.md`。
 5. **Final Review (STOP)**: 展示全文，并强制附带 **1-3 个可能导致项目延期的致命风险提示**，确认验收。
 

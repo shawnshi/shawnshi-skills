@@ -1,13 +1,16 @@
 ---
 name: multi-agent-writer
-description: 顶级咨询级协作写作编排专家 (V9.0: 本地全自动化引擎)。融合金字塔原理、Ghost Deck 视觉逻辑、医疗行业注入以及去AI化清洗。
+description: 顶级咨询级协作写作编排专家 (V9.1: 本地全自动化引擎)。融合金字塔原理、Ghost Deck 视觉逻辑、医疗行业注入以及去AI化清洗。增加底层硬阻塞机制。
 triggers: ["进行多方博弈创作"]
 ---
 
-# Multi-Agent Writer (V9.0: The Automated Strategic Engine)
+# Multi-Agent Writer (V9.1: The Automated Strategic Engine)
+
+## 0. 核心调度约束 (Global State Machine)
+> **[全局熔断协议]**：系统必须严格依照 Phase 0 至 Phase 5 的顺序单步流转。跨越任何 Phase 前，必须在输出首行打印 `[System State: Moving to Phase X]` 探针。严禁跨级跳跃。
 
 ## Core Philosophy: Strategic Clarity Over Volume
-The objective is never just "content production." The objective is **Decision Enablement**. V9.0 introduces **fully automated LLM orchestration**, **Mermaid.js ghost decks**, and **physical AI-flavor purging via humanizer-zh-pro**.
+The objective is never just "content production." The objective is **Decision Enablement**. V9.1 introduces **fully automated LLM orchestration**, **Mermaid.js ghost decks**, and **physical AI-flavor purging via text-forger / humanizer-zh-pro**.
 
 ## The MD & Copywriting Master Perspective
 *   **Answer First (结论先行)**：每一个模块、每一段落，必须以具备信息增量的“判词”开篇。严禁悬念式写作。
@@ -38,17 +41,17 @@ The objective is never just "content production." The objective is **Decision En
 ### Phase 0: Strategic Alignment & Parameter Lock-in [Mode: PLANNING]
 > 角色参见 `references/agents.md` Strategic Aligner
 
-- **任务**: 明确核心议题与受众。使用 `ask_user` 获取或确认以下参数，作为所有子智能体的 North Star (北极星)：
+- **任务**: 明确核心议题与受众。无论用户初始需求多明确，【必须强制】调用 `ask_user` 工具，向用户复述你提取的以下参数并请求批准，未获批准前严禁推进：
   1. **Topic & Length**: 核心议题是什么？篇幅预期？
   2. **Audience**: 最终读者是谁？（必须精准到角色）。
   3. **Non-Consensus Goal**: 这篇文章要打破读者的哪一个固有偏见？
 - **事实下锚 (Data Anchoring)**: 必须为核心议题获取真实的医疗行业数据锚点。
 - **Initialize Workspace (🟢 扫描收集)**:
   - 必须创建 `task.md` 建立这 5 个 Phase 的执行清单，用于全局进度追踪。
-- **Output**: 视需要使用 `run_command` 工具运行 `python scripts/orchestrator.py --topic "<Topic>"` 触发全自动生成流，并使用 `command_status` 跟踪。
+- **Output**: 视需要使用 `run_shell_command` 工具运行 `python scripts/orchestrator.py --topic "<Topic>"` 触发全自动生成流，并使用状态跟踪。**【降级预案】**：如果 `orchestrator.py` 脚本无法运行或报错，你【必须】立即无缝切换至主 Agent 接管模式，显式在对话框中扮演各子角色继续手动推进，严禁中断。
 
 ### Phase 1: The "Devil's Advocate" Roundtable (多角色博弈与收敛) [Mode: PLANNING]
-- **模拟调用**: 模拟 `thinker-roundtable` 机制，针对核心议题生成三个视角的碰撞记录（隐式思考，提炼结论）：
+- **实体调用与显式展示**: 严禁脑补跳过，必须在对话框中显式展示 `thinker-roundtable` 机制，针对核心议题生成三个视角的剧烈碰撞记录：
   - *The Subject Expert*: 提供硬核事实与行业底层原理。
   - *The Devil's Advocate (红队)*: 攻击论点的脆弱性，质问“这会不会是正确的废话？”。
   - *The Managing Partner (合伙人)*: 收敛争议，强行逼问出“So What? (对读者的实际价值是什么)”。
@@ -58,7 +61,7 @@ The objective is never just "content production." The objective is **Decision En
 - **任务**: 在撰写任何正文之前，输出纯粹的骨架设计。
 - **Action Titles Constraint**: 每一个章节的标题必须是 **Action Title (行动/判词标题)**。不能用名词短语。
 - **Visual Logic Orchestration**: 为每一个核心章节定义逻辑图表（如：瀑布图展示利润侵蚀，Mermaid 时序图展示架构流转）。正文必须围绕解释该图表来写。
-- **Checkpoint**: 向用户展示 Storyline 大纲。必须使用 `write_to_file` 生成 `implementation_plan.md`，随后强制调用 `notify_user` 工具（必须设置 `BlockedOnUser: true`，并在 `PathsToReview` 中包含该文件路径）请求审批。获取明确批准后，方可进入 Phase 3。
+- **Checkpoint**: 向用户展示 Storyline 大纲。必须使用 `write_file` 生成 `implementation_plan.md`，随后【必须强制】调用 `ask_user` 工具请求用户审批大纲。获取明确批准后，方可进入 Phase 3。
 
 ### Phase 3: Drafting & Heartbeat Enforcement (散文体起草) [Mode: EXECUTION]
 - **任务**: 使用 `task_boundary` 声明进入 EXECUTION 模式。模拟 `writing-assistant`，根据 Phase 2 的骨架进行血肉填充。
@@ -66,11 +69,12 @@ The objective is never just "content production." The objective is **Decision En
 - **结构约束 (Pyramid Flow)**:
   - 自上而下：结论 -> 支撑论据1 -> 支撑论据2。相互独立，完全穷尽 (MECE)。
 - **信号密度约束 (Signal-to-Noise Ratio)**: 段落中必须包含具体的人物、动作、数据或系统逻辑。剥离一切诸如“众所周知”等废话前奏。
+- **【单步阻塞执行】**: 进入正式起草后，每次对话轮次【仅允许】使用 `write_file` 撰写 1 个核心章节。写完后必须立即 `[STOP]` 挂起，等待用户回复“继续”后，才允许写下一段。这迫使你将所有的算力 (Tokens) 聚焦于单一逻辑切片的深度锻造上。
 
-### Phase 4: Stylistic Hygiene & Logic Audit (自动调用 Humanizer) [Mode: EXECUTION]
+### Phase 4: Stylistic Hygiene & Logic Audit (物理调用去AI化清洗) [Mode: EXECUTION]
 > 该阶段可由 orchestrator 自动调度，或由 Agent 主动触发。
 
-- **AI-Platitude Purge (自动大清洗)**: 调用技能${humanizer-zh-pro}进行自动化润色清洗，剔除 "赋能"、"底层逻辑" 等 AI 痕迹。
+- **AI-Platitude Purge (自动大清洗)**: 【强制物理调用】：必须使用系统工具 `activate_skill` 激活 `name='humanizer-zh-pro'`，或调用内置的 `text-forger` 工具，对全案进行严格的“去AI化”物理洗稿，剔除 "赋能"、"底层逻辑" 等 AI 痕迹。严禁主流程模型擅自脑补跳过。
 - **Heartbeat Rhythm**: 重新分配长短句节奏。
 - **Output**: 生成 `4_humanized.md`。
 
@@ -85,5 +89,5 @@ The objective is never just "content production." The objective is **Decision En
 - **Roundtable 产出平庸 (无冲突)**: Devil's Advocate 角色未激活。强制要其回答"本文最可能被哪位高管一句话打回？为什么？"
 - **Ghost Deck 沦为普通目录**: Action Title 不合格。检查标题是否含"动词+判断"而非名词短语。回退 Phase 2 重新设计。
 - **终稿信噪比低**: 退回 Phase 4，对照 `ANTI_PATTERNS.md` 全量扫描，物理删除废话词后重跑 So What 测试。
-- **Agent 跳过 Phase**: 必须遵守内置的 Phase 门控机制。确保每次 Phase 流转都伴随明确的文件或 `notify_user` 审批。
+- **Agent 跳过 Phase**: 必须遵守内置的 Phase 门控机制。确保每次 Phase 流转都伴随明确的文件或 `ask_user` 审批。
 - **深度幻觉 (Hallucination)**: 停止生成，立刻调用搜索工具补充至少 2 个真实的行业数据锚点。
