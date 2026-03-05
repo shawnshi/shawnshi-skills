@@ -41,7 +41,7 @@ triggers: ["重构商业模式", "ROI测算", "高规格战略验证", "医疗IT
 4.  **Plan Approval (硬性阻断 - 方案大纲审批)**: 此阶段必须完成**方案大纲的编制**。将 Phase 0 和 Phase 1 的所有分析、详细的章节大纲与逻辑拆解汇总，写入 `plan.md`。更新完成后**必须调用 `ask_user` 挂起任务**，请求用户审阅并确认方案大纲。未经用户明确 Approve 大纲，严禁擅自进入具体章节内容的起草阶段。
 
 ### Phase 2: Narrative Drafting (🟡 综合起草与推演) [EXECUTION Mode]
-1.  **Initialize Workspace (🟢 扫描收集)**: 物理创建项目目录 `./MEMORY/research/{Topic}_{Date}`，生成架构文件。Markdown 文件顶部**必须**包含 YAML 元数据 (Title, Date, Status, Author)。使用 `task_boundary` 工具更新 UI 状态为“🟢 扫描收集”以追踪任务进度。
+1.  **Initialize Workspace (🟢 扫描收集)**: 物理创建项目目录 `{root}\MEMORY\research\{Topic}_{Date}`，生成架构文件。Markdown 文件顶部**必须**包含 YAML 元数据 (Title, Date, Status, Author)。使用 `task_boundary` 工具更新 UI 状态为“🟢 扫描收集”以追踪任务进度。
 2.  **Prose-based Chapter Drafting (章节化起草与持久化)**: 
     *   **逐章落盘**：严格按照已确认的方案大纲，逐个章节进行起草。**每一章节起草完成后，必须将其立即保存/追加写入到项目物理 `.md` 文件中**（如 `{Topic}_{Chapter}_draft.md`）。后续步骤必须基于已生成的该物理文件进行读取、校对和处理，绝不能仅依赖内存上下文。
     *   **判词性小标题**：拒绝“市场现状”这种废话，使用诸如“DRG支付改革正在逼迫院方将IT从成本中心转为利润中心”的实效标题。

@@ -20,14 +20,14 @@ The objective is never just "content production." The objective is **Decision En
 
 > 📌 以下资源在各阶段中按需加载，Agent 应根据当前 Phase 主动引用对应文件。
 
-| 类型 | 文件 | 用途 |
-|------|------|------|
-| 🎭 角色 | `references/agents.md` | 各 Phase 专家角色的人格与行为约束 |
-| 📐 模板 | `references/templates.md` | 各 Phase 的标准化输出模板 |
-| ✅ 检查 | `references/CHECKLIST.md` | Phase 4 审计时的 17 项逐条检查清单 |
-| 🚫 禁令 | `references/ANTI_PATTERNS.md` | 废话黑名单 + 10 种结构性反模式 |
-| ⚙️ 引擎 | `scripts/orchestrator.py` | 全自动化编排脚本（取代手动 Prompt）|
-| 🤖 身份 | `agents/gemini.yaml` | Gemini Agent UI 配置 |
+| 类型   | 文件                          | 用途                                |
+|--------|-------------------------------|-------------------------------------|
+| 🎭 角色 | `references/agents.md`        | 各 Phase 专家角色的人格与行为约束   |
+| 📐 模板 | `references/templates.md`     | 各 Phase 的标准化输出模板           |
+| ✅ 检查 | `references/CHECKLIST.md`     | Phase 4 审计时的 17 项逐条检查清单  |
+| 🚫 禁令 | `references/ANTI_PATTERNS.md` | 废话黑名单 + 10 种结构性反模式      |
+| ⚙️ 引擎 | `scripts/orchestrator.py`     | 全自动化编排脚本（取代手动 Prompt） |
+| 🤖 身份 | `agents/gemini.yaml`          | Gemini Agent UI 配置                |
 
 ## Execution Protocol (多智能体编排流)
 
@@ -62,7 +62,7 @@ The objective is never just "content production." The objective is **Decision En
 
 ### Phase 3: Drafting & Heartbeat Enforcement (散文体起草) [Mode: EXECUTION]
 - **任务**: 使用 `task_boundary` 声明进入 EXECUTION 模式。模拟 `writing-assistant`，根据 Phase 2 的骨架进行血肉填充。
-- **创建项目目录**: 创建项目目录 `./MEMORY/article/{Topic}_{Date}` 或将其存储在 Artifact 目录中，生成架构文件。生成所有的 Markdown 和代码文件时，**必须**在顶部包含 YAML 元数据 (Title, Date, Status, Author)，并以 `🟢 扫描收集` 状态启动 `working_memory.json`。
+- **创建项目目录**: 创建项目目录 `{root}\MEMORY\article\{Topic}_{Date}` 或将其存储在 Artifact 目录中，生成架构文件。生成所有的 Markdown 和代码文件时，**必须**在顶部包含 YAML 元数据 (Title, Date, Status, Author)，并以 `🟢 扫描收集` 状态启动 `working_memory.json`。
 - **结构约束 (Pyramid Flow)**:
   - 自上而下：结论 -> 支撑论据1 -> 支撑论据2。相互独立，完全穷尽 (MECE)。
 - **信号密度约束 (Signal-to-Noise Ratio)**: 段落中必须包含具体的人物、动作、数据或系统逻辑。剥离一切诸如“众所周知”等废话前奏。

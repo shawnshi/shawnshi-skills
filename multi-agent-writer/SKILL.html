@@ -1,0 +1,142 @@
+<hr>
+<h2 id="name-multi-agent-writerdescription-顶级咨询级协作写作编排专家-v90-本地全自动化引擎融合金字塔原理ghost-deck-视觉逻辑医疗行业注入以及去ai化清洗triggers-进行多方博弈创作">name: multi-agent-writer
+description: 顶级咨询级协作写作编排专家 (V9.0: 本地全自动化引擎)。融合金字塔原理、Ghost Deck 视觉逻辑、医疗行业注入以及去AI化清洗。
+triggers: [&quot;进行多方博弈创作&quot;]</h2>
+<h1 id="multi-agent-writer-v90-the-automated-strategic-engine">Multi-Agent Writer (V9.0: The Automated Strategic Engine)</h1>
+<h2 id="core-philosophy-strategic-clarity-over-volume">Core Philosophy: Strategic Clarity Over Volume</h2>
+<p>The objective is never just &quot;content production.&quot; The objective is <strong>Decision Enablement</strong>. V9.0 introduces <strong>fully automated LLM orchestration</strong>, <strong>Mermaid.js ghost decks</strong>, and <strong>physical AI-flavor purging via humanizer-zh-pro</strong>.</p>
+<h2 id="the-md--copywriting-master-perspective">The MD &amp; Copywriting Master Perspective</h2>
+<ul>
+<li><strong>Answer First (结论先行)</strong>：每一个模块、每一段落，必须以具备信息增量的“判词”开篇。严禁悬念式写作。</li>
+<li><strong>Narrative Flow (叙事流转与散文体)</strong>：严禁全篇列表式表达（No bullet-point dumping）。文章必须是流畅的专业散文体。每一段落是一个完整的逻辑原子：<code> -&gt; -&gt;</code>。</li>
+<li><strong>Verb-Driven (动词驱动)</strong>：物理删除 90% 的形容词与副词。动词是逻辑的骨骼。不要说“大幅提升了流程效率”，要说“系统彻底消灭了冗余审批节点”。</li>
+<li><strong>Heartbeat Rhythm (心跳节奏)</strong>：长短句交替。短句如匕首，用来固定核心结论；长句如暗流，用来铺陈复杂博弈背景。</li>
+<li><strong>The Three-Bold Rule (三金句特权)</strong>：全篇严禁使用 <code>**</code> 进行常规强调。<code>**加粗**</code> 权限全篇最多保留 3 处，必须留给“反共识、一针见血、能重塑读者认知”的终极判词。</li>
+</ul>
+<h2 id="resource-map">Resource Map</h2>
+<blockquote>
+<p>📌 以下资源在各阶段中按需加载，Agent 应根据当前 Phase 主动引用对应文件。</p>
+</blockquote>
+<table>
+<thead>
+<tr>
+<th>类型</th>
+<th>文件</th>
+<th>用途</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>🎭 角色</td>
+<td><code>references/agents.md</code></td>
+<td>各 Phase 专家角色的人格与行为约束</td>
+</tr>
+<tr>
+<td>📐 模板</td>
+<td><code>references/templates.md</code></td>
+<td>各 Phase 的标准化输出模板</td>
+</tr>
+<tr>
+<td>✅ 检查</td>
+<td><code>references/CHECKLIST.md</code></td>
+<td>Phase 4 审计时的 17 项逐条检查清单</td>
+</tr>
+<tr>
+<td>🚫 禁令</td>
+<td><code>references/ANTI_PATTERNS.md</code></td>
+<td>废话黑名单 + 10 种结构性反模式</td>
+</tr>
+<tr>
+<td>⚙️ 引擎</td>
+<td><code>scripts/orchestrator.py</code></td>
+<td>全自动化编排脚本（取代手动 Prompt）</td>
+</tr>
+<tr>
+<td>🤖 身份</td>
+<td><code>agents/gemini.yaml</code></td>
+<td>Gemini Agent UI 配置</td>
+</tr>
+</tbody>
+</table>
+<h2 id="execution-protocol-多智能体编排流">Execution Protocol (多智能体编排流)</h2>
+<blockquote>
+<p>⚠️ <strong>执行模式协议 (Execution Mode Protocol)</strong></p>
+<ul>
+<li><strong>阶段 0-2 (Phase 0 - Phase 2)</strong> 必须使用 <code>task_boundary</code> 工具强制在 <strong>PLANNING (计划) 模式</strong> 下执行。以思考、博弈和架构设计为主，严禁在此阶段提前生成草稿正文。所有的战略锁定和 Storyline 大纲需输出为 <code>implementation_plan.md</code> 供用户审核。</li>
+<li><strong>阶段 3-5 (Phase 3 - Phase 5)</strong> 必须在使用 <code>ask_user</code> 获得用户明确批准后，使用 <code>task_boundary</code> 工具切换至 <strong>EXECUTION (执行) 模式</strong> 下运行，正式进行起草、自动润色和最终交付。</li>
+</ul>
+</blockquote>
+<h3 id="phase-0-strategic-alignment--parameter-lock-in-mode-planning">Phase 0: Strategic Alignment &amp; Parameter Lock-in [Mode: PLANNING]</h3>
+<blockquote>
+<p>角色参见 <code>references/agents.md</code> Strategic Aligner</p>
+</blockquote>
+<ul>
+<li><strong>任务</strong>: 明确核心议题与受众。使用 <code>ask_user</code> 获取或确认以下参数，作为所有子智能体的 North Star (北极星)：
+<ol>
+<li><strong>Topic &amp; Length</strong>: 核心议题是什么？篇幅预期？</li>
+<li><strong>Audience</strong>: 最终读者是谁？（必须精准到角色）。</li>
+<li><strong>Non-Consensus Goal</strong>: 这篇文章要打破读者的哪一个固有偏见？</li>
+</ol>
+</li>
+<li><strong>事实下锚 (Data Anchoring)</strong>: 必须为核心议题获取真实的医疗行业数据锚点。</li>
+<li><strong>Initialize Workspace (🟢 扫描收集)</strong>:
+<ul>
+<li>必须创建 <code>task.md</code> 建立这 5 个 Phase 的执行清单，用于全局进度追踪。</li>
+</ul>
+</li>
+<li><strong>Output</strong>: 视需要使用 <code>run_command</code> 工具运行 <code>python scripts/orchestrator.py --topic &quot;&lt;Topic&gt;&quot;</code> 触发全自动生成流，并使用 <code>command_status</code> 跟踪。</li>
+</ul>
+<h3 id="phase-1-the-devils-advocate-roundtable-多角色博弈与收敛-mode-planning">Phase 1: The &quot;Devil's Advocate&quot; Roundtable (多角色博弈与收敛) [Mode: PLANNING]</h3>
+<ul>
+<li><strong>模拟调用</strong>: 模拟 <code>thinker-roundtable</code> 机制，针对核心议题生成三个视角的碰撞记录（隐式思考，提炼结论）：
+<ul>
+<li><em>The Subject Expert</em>: 提供硬核事实与行业底层原理。</li>
+<li><em>The Devil's Advocate (红队)</em>: 攻击论点的脆弱性，质问“这会不会是正确的废话？”。</li>
+<li><em>The Managing Partner (合伙人)</em>: 收敛争议，强行逼问出“So What? (对读者的实际价值是什么)”。</li>
+</ul>
+</li>
+<li><strong>Output</strong>: 确立 3-5 个经得起推敲的核心支柱论点。</li>
+</ul>
+<h3 id="phase-2-ghost-deck-storylining-视觉逻辑与故事线构建-mode-planning">Phase 2: Ghost Deck Storylining (视觉逻辑与故事线构建) [Mode: PLANNING]</h3>
+<ul>
+<li><strong>任务</strong>: 在撰写任何正文之前，输出纯粹的骨架设计。</li>
+<li><strong>Action Titles Constraint</strong>: 每一个章节的标题必须是 <strong>Action Title (行动/判词标题)</strong>。不能用名词短语。</li>
+<li><strong>Visual Logic Orchestration</strong>: 为每一个核心章节定义逻辑图表（如：瀑布图展示利润侵蚀，Mermaid 时序图展示架构流转）。正文必须围绕解释该图表来写。</li>
+<li><strong>Checkpoint</strong>: 向用户展示 Storyline 大纲。必须使用 <code>write_to_file</code> 生成 <code>implementation_plan.md</code>，随后强制调用 <code>notify_user</code> 工具（必须设置 <code>BlockedOnUser: true</code>，并在 <code>PathsToReview</code> 中包含该文件路径）请求审批。获取明确批准后，方可进入 Phase 3。</li>
+</ul>
+<h3 id="phase-3-drafting--heartbeat-enforcement-散文体起草-mode-execution">Phase 3: Drafting &amp; Heartbeat Enforcement (散文体起草) [Mode: EXECUTION]</h3>
+<ul>
+<li><strong>任务</strong>: 使用 <code>task_boundary</code> 声明进入 EXECUTION 模式。模拟 <code>writing-assistant</code>，根据 Phase 2 的骨架进行血肉填充。</li>
+<li><strong>创建项目目录</strong>: 创建项目目录 <code>{root}\MEMORY\article\{Topic}_{Date}</code> 或将其存储在 Artifact 目录中，生成架构文件。生成所有的 Markdown 和代码文件时，<strong>必须</strong>在顶部包含 YAML 元数据 (Title, Date, Status, Author)，并以 <code>🟢 扫描收集</code> 状态启动 <code>working_memory.json</code>。</li>
+<li><strong>结构约束 (Pyramid Flow)</strong>:
+<ul>
+<li>自上而下：结论 -&gt; 支撑论据1 -&gt; 支撑论据2。相互独立，完全穷尽 (MECE)。</li>
+</ul>
+</li>
+<li><strong>信号密度约束 (Signal-to-Noise Ratio)</strong>: 段落中必须包含具体的人物、动作、数据或系统逻辑。剥离一切诸如“众所周知”等废话前奏。</li>
+</ul>
+<h3 id="phase-4-stylistic-hygiene--logic-audit-自动调用-humanizer-mode-execution">Phase 4: Stylistic Hygiene &amp; Logic Audit (自动调用 Humanizer) [Mode: EXECUTION]</h3>
+<blockquote>
+<p>该阶段可由 orchestrator 自动调度，或由 Agent 主动触发。</p>
+</blockquote>
+<ul>
+<li><strong>AI-Platitude Purge (自动大清洗)</strong>: 调用技能${humanizer-zh-pro}进行自动化润色清洗，剔除 &quot;赋能&quot;、&quot;底层逻辑&quot; 等 AI 痕迹。</li>
+<li><strong>Heartbeat Rhythm</strong>: 重新分配长短句节奏。</li>
+<li><strong>Output</strong>: 生成 <code>4_humanized.md</code>。</li>
+</ul>
+<h3 id="phase-5-final-forging--delivery-交付与残余风险披露-mode-execution">Phase 5: Final Forging &amp; Delivery (交付与残余风险披露) [Mode: EXECUTION]</h3>
+<ul>
+<li><strong>Output</strong>: 生成最终的 Markdown 文件，命名规范 <code>_Strategic_Memo_vFinal.md</code>。</li>
+<li><strong>Executive Summary</strong>: 在文章最前面附上 150 字的“结论先行 (Answer-First)”执行摘要。</li>
+<li><strong>Red-Team Residuals (Appendix)</strong>: 在文末以引用块 <code>&gt; ⚠️ Residual Risks:</code> 的形式，坦诚披露本文论点中尚未被完全证实的前提假设或潜在局限性（彰显客观与自信）。</li>
+<li><strong>Archive</strong>: 检查所有工作，生成 <code>walkthrough.md</code> Artifact 记录核心逻辑流转变迁与最终成果展示，并将 <code>task.md</code> 标记为完成。</li>
+<li><strong>STOP</strong>: 提示用户查阅 <code>walkthrough.md</code> 与终稿，并等待反馈。</li>
+</ul>
+<h2 id="advanced-troubleshooting">Advanced Troubleshooting</h2>
+<ul>
+<li><strong>Roundtable 产出平庸 (无冲突)</strong>: Devil's Advocate 角色未激活。强制要其回答&quot;本文最可能被哪位高管一句话打回？为什么？&quot;</li>
+<li><strong>Ghost Deck 沦为普通目录</strong>: Action Title 不合格。检查标题是否含&quot;动词+判断&quot;而非名词短语。回退 Phase 2 重新设计。</li>
+<li><strong>终稿信噪比低</strong>: 退回 Phase 4，对照 <code>ANTI_PATTERNS.md</code> 全量扫描，物理删除废话词后重跑 So What 测试。</li>
+<li><strong>Agent 跳过 Phase</strong>: 必须遵守内置的 Phase 门控机制。确保每次 Phase 流转都伴随明确的文件或 <code>notify_user</code> 审批。</li>
+<li><strong>深度幻觉 (Hallucination)</strong>: 停止生成，立刻调用搜索工具补充至少 2 个真实的行业数据锚点。</li>
+</ul>

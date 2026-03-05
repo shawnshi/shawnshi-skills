@@ -19,26 +19,26 @@ triggers: ["撰写医疗专栏", "提炼高阶核心观点", "编写数字医疗
 
 > 📌 以下资源在各阶段中按需加载，Agent 应根据用户指定的 style/template 主动引用对应文件。
 
-| 类型 | 文件 | 用途 |
-|------|------|------|
-| 🎨 风格 | `styles/narrative.md` | 叙事驱动，通过场景和人物传递洞察 |
-| 🎨 风格 | `styles/provocative.md` | 挑战主流共识，激进论断 |
-| 🎨 风格 | `styles/academic.md` | 数据驱动，引用充分 |
-| 🎨 风格 | `styles/balanced.md` | 多视角呈现，寻求共识 |
-| 🎨 风格 | `styles/digital-health.md` | 医疗垂直特化，不可能三角推演与政策犀利解读 |
-| 📐 模板 | `templates/thought-leadership.md` | 观点文章 |
-| 📐 模板 | `templates/industry-analysis.md` | 行业分析 |
-| 📐 模板 | `templates/case-study.md` | 案例研究 |
-| 📐 模板 | `templates/product-review.md` | 产品评测 |
-| 📐 模板 | `templates/health-policy-analysis.md` | 医疗政策与战略推演 |
-| 📖 参考 | `references/GUIDELINES.md` | 深潜推演与灵魂合成的详细指导 |
-| 📖 参考 | `references/CHECKLIST.md` | 30+ 项质控检查清单 |
-| 📖 参考 | `references/ANTI_PATTERNS.md` | 18 种反模式失败案例库（含医疗雷区） |
-| 📖 参考 | `references/HEALTHCARE_SOURCES.md`| 医疗健康硬核信源与数据锚点 |
-| 📖 参考 | `references/EXAMPLES.md` | 标杆文章范例 |
-| 📖 参考 | `references/EVALUATIONS.md` | 评分标准与测试用例 |
-| 🔧 工具 | `scripts/assistant.py` | 上下文组装引擎（CLI） |
-| 🔧 工具 | `metrics/quality_scoring.py` | 量化质量评分器（需 jieba） |
+| 类型   | 文件                                  | 用途                                       |
+|--------|---------------------------------------|--------------------------------------------|
+| 🎨 风格 | `styles/narrative.md`                 | 叙事驱动，通过场景和人物传递洞察           |
+| 🎨 风格 | `styles/provocative.md`               | 挑战主流共识，激进论断                     |
+| 🎨 风格 | `styles/academic.md`                  | 数据驱动，引用充分                         |
+| 🎨 风格 | `styles/balanced.md`                  | 多视角呈现，寻求共识                       |
+| 🎨 风格 | `styles/digital-health.md`            | 医疗垂直特化，不可能三角推演与政策犀利解读 |
+| 📐 模板 | `templates/thought-leadership.md`     | 观点文章                                   |
+| 📐 模板 | `templates/industry-analysis.md`      | 行业分析                                   |
+| 📐 模板 | `templates/case-study.md`             | 案例研究                                   |
+| 📐 模板 | `templates/product-review.md`         | 产品评测                                   |
+| 📐 模板 | `templates/health-policy-analysis.md` | 医疗政策与战略推演                         |
+| 📖 参考 | `references/GUIDELINES.md`            | 深潜推演与灵魂合成的详细指导               |
+| 📖 参考 | `references/CHECKLIST.md`             | 30+ 项质控检查清单                         |
+| 📖 参考 | `references/ANTI_PATTERNS.md`         | 18 种反模式失败案例库（含医疗雷区）        |
+| 📖 参考 | `references/HEALTHCARE_SOURCES.md`    | 医疗健康硬核信源与数据锚点                 |
+| 📖 参考 | `references/EXAMPLES.md`              | 标杆文章范例                               |
+| 📖 参考 | `references/EVALUATIONS.md`           | 评分标准与测试用例                         |
+| 🔧 工具 | `scripts/assistant.py`                | 上下文组装引擎（CLI）                      |
+| 🔧 工具 | `metrics/quality_scoring.py`          | 量化质量评分器（需 jieba）                 |
 
 ## Execution Protocol (交互与创作流)
 
@@ -71,7 +71,7 @@ triggers: ["撰写医疗专栏", "提炼高阶核心观点", "编写数字医疗
 ### 🔨 [EXECUTION 模式]: 执笔起草与防御自省
 
 #### Phase 3: Surgical Drafting (手术级起草)
-1. **Initialize**: 使用 `run_command` 工具创建工作空间（如指定沙箱目录 `C:\Users\shich\.gemini\MEMORY\article` ），并在该空间生成 `_DIR_META.md` 及 `working_memory.json`。
+1. **Initialize**: 使用 `run_command` 工具创建工作空间（如指定沙箱目录 `{root}\MEMORY\article` ），并在该空间生成 `_DIR_META.md` 及 `working_memory.json`。
 2. 严格依据已批准的 Phase 2 大纲撰写正文。
 3. 🛠️ **工具约束**: 绝对禁止在聊天界面直接长篇大论。必须使用 `write_to_file` 工具创建一个独立文件（命名如 `{Topic}_{Date}_draft.md`）并在后台进行撰写。
 4. **Hook (钩子开头)**：第一段禁止背景铺垫，直接用一个反直觉的数据、一个荒诞的现实或一句极具穿透力的判词开场。
@@ -80,10 +80,11 @@ triggers: ["撰写医疗专栏", "提炼高阶核心观点", "编写数字医疗
 6. **The Drop (戛然而止的结尾)**：结尾用一个开放性的隐喻、一句冷峻的预测或一个指向行动的质问结束，留下回味的空间。禁止出现“总结全文”式的废话。
 
 #### Phase 4: The Surgeon's Audit (防御性自省)
-1. 撰写完毕后，后台自我读取草稿文件，对照 `CHECKLIST.md` 与 `ANTI_PATTERNS.md` 执行自省扫描。
-2. 🛠️ **工具约束**: 若发现违禁词汇或 AI 八股文结构，主动使用文件编辑工具 (`replace_file_content` 等) 进行重构清洗。
-3. 最终定稿以 `{Topic}_{Date}_final.md` 保存。创建 `walkthrough.md` 记录你做了哪些修改、自省了哪些反模式，并在最后用简报通知用户验收。
-4. *分析师手记*：文末必须附带【分析师手记】（150-250字），包含：最大假设、红队视角、最强反方、未解决的问题。
+1. 🛠️ **工具约束**: 若发现违禁词汇或 AI 八股文结构，主动使用文件编辑工具 (`replace_file_content` 等) 进行重构清洗。
+2. 调用技能'${humanizer-zh-pro}'对文章进行检查，实现去AI化。
+3. 调用agent'${text-forger}'对逐章落盘的方案进行文字优化。
+4. 最终定稿以 `{Topic}_{Date}_final.md` 保存。创建 `walkthrough.md` 记录你做了哪些修改、自省了哪些反模式，并在最后用简报通知用户验收。
+5. *分析师手记*：文末必须附带【分析师手记】（150-250字），包含：最大假设、红队视角、最强反方、未解决的问题。使用技能'${logic-adversary}进行分析'。
 
 > → 检查清单参见 `references/CHECKLIST.md`
 > → 反模式库参见 `references/ANTI_PATTERNS.md`
