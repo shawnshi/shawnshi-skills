@@ -2,7 +2,7 @@
   "strategic_keywords": [
     {
       "keyword": "ai",
-      "weight": 19
+      "weight": 20
     },
     {
       "keyword": "ace",
@@ -90,15 +90,15 @@
     },
     {
       "keyword": "核心",
-      "weight": 17
+      "weight": 19
     },
     {
       "keyword": "认知",
-      "weight": 17
+      "weight": 19
     },
     {
       "keyword": "临床",
-      "weight": 17
+      "weight": 19
     },
     {
       "keyword": "语义",
@@ -106,7 +106,7 @@
     },
     {
       "keyword": "架构",
-      "weight": 15
+      "weight": 17
     },
     {
       "keyword": "数字",

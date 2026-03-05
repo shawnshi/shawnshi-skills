@@ -20,7 +20,7 @@ triggers: ["重构商业模式", "ROI测算", "高规格战略验证", "医疗IT
 ## Execution Protocol (执行协议)
 
 ### Constraint Enforcement:
-1. **Mode Routing (模式路由)**: 强制将任务切分为两段。**Phase 0-1 必须在 `PLANNING` 模式（计划模式）下执行**，专注于研究、逻辑拆解并将其固化为原生的 `implementation_plan.md` Artifact，必须包含**内容大纲**与**验证计划**，随后通过 `notify_user` (BlockedOnUser: true) 阻塞等待审批；**Phase 2-5 必须在 `EXECUTION` 模式（正常执行模式）下执行**，基于审批后的计划进行高密度叙事起草。
+1. **Mode Routing (模式路由)**: 强制将任务切分为两段。**Phase 0-1 必须在 `PLANNING` 模式（计划模式）下执行**，专注于研究、逻辑拆解并将其固化为原生的 `implementation_plan.md` Artifact，必须包含**内容大纲**与**验证计划**，随后通过 `ask_user` (BlockedOnUser: true) 阻塞等待审批；**Phase 2-5 必须在 `EXECUTION` 模式（正常执行模式）下执行**，基于审批后的计划进行高密度叙事起草。
 2. Prose Only: 严禁使用列表项（Bullet points），全篇必须使用高密度的商业叙事（Narrative Prose）。
 3. Review First: 在撰写规划前，先进行‘威胁假设’（Phase 0），列出你认为最容易导致研究报告平庸的 3 个风险点。
 4. Step-by-Step Drafting & Saving: 在 EXECUTION 模式中不要一次性生成全文。必须逐章撰写，并在每一章完成后**立即保存为 .md 物理文件**，后续动作均需基于读取该物理文件进行。开始可先写第一章验证文风。
