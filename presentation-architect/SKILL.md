@@ -31,7 +31,8 @@ triggers: ["制作战略级PPT", "生成演示文稿蓝图", "构建决策型汇
 4. **强制审批 (Approval Gate)**：必须调用 `ask_user` 提交风格块与标题大纲。未获批前禁止写单页蓝图。
 
 ### [💡] Phase 3: Slide-by-Slide Blueprinting (逐页叙事蓝图) **[Mode: EXECUTION]**
-**【单步阻塞执行】：** 每次对话轮次仅允许起草 3-5 页蓝图。生成后必须 `[STOP]` 挂起，同步更新 `task.md` 。
+**Initialize Workspace (🟢 扫描收集)**: 物理创建项目目录 `{root}\slide-deck\{Topic}_{Date}`，生成`task.md`，Markdown 文件顶部**必须**包含 YAML 元数据 (Title, Date, Status, Author)。使用 `task_boundary` 工具更新 UI 状态为“🟢 扫描收集”以追踪任务进度。
+**【单步阻塞执行】：** 每次对话轮次仅允许起草 3-5 页蓝图。生成后必须 `[STOP]` 挂起，同步更新 `task.md`。
 
 **单页蓝图强制结构 (Slide Anatomy)**：
 - **Page [X]: [叙事性主题句]**
@@ -43,6 +44,8 @@ triggers: ["制作战略级PPT", "生成演示文稿蓝图", "构建决策型汇
 - **// VISUAL (视觉画面)**：描述具体图像内容，强调信息图表化。
 - **// LAYOUT (布局结构)**：描述物理区域比例（如：左侧 30% 结论 / 右侧 70% 瀑布图）。
 - **// Script**：演讲逐字稿与注意事项。
+
+**文件集成**：将第二极端生成的视觉风格指令与标题大纲与单页蓝图进行集成，生成MD文件，严禁组装时摘要化。最终生成 `{Topic}_{Date}_final.md`。更新状态至 `🔴 归档冻结`。
 
 ### [📦] Phase 4: Native Asset Forging (原生锻造与组装) **[Mode: EXECUTION]**
 1. **逻辑硬审计 (The Auditor)**：调用 `scripts/validator.py` 检查标题长度、文本密度、数据溯源性。
