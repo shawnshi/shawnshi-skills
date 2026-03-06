@@ -82,7 +82,8 @@ def main():
     style_info, slides_data = parse_narrative_blueprint(content)
     
     # 3. Native Rendering
-    print(f"\n--- Step 2: Native Object Rendering ({len(slides_data)} slides) ---")
+    total = len(slides_data)
+    print(f"\n--- Step 2: Native Object Rendering ({total} slides) ---")
     prs = Presentation()
     
     # Set 16:9 ratio (Widescreen)
@@ -92,9 +93,9 @@ def main():
     
     engine = LayoutEngine(prs)
     
-    for slide_data in slides_data:
+    for i, slide_data in enumerate(slides_data, 1):
         # Render and add notes (Narrative Goal + Script)
-        engine.render_slide(slide_data)
+        engine.render_slide(slide_data, slide_index=i, total_slides=total)
         current_slide = prs.slides[-1]
         notes_slide = current_slide.notes_slide
         notes_text_frame = notes_slide.notes_text_frame

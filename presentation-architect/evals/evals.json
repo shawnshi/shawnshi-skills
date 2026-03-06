@@ -1,0 +1,31 @@
+﻿{
+  "skill_name": "presentation-architect",
+  "evals": [
+    {
+      "id": 1,
+      "name": "narrative-complexity-test",
+      "prompt": "为卫宁健康 CEO 制作一份关于
+WiNEX
+逻辑湖资产确权的季度汇报大纲，要求展现从功能软件向信任审计商转型的痛苦期与拐点。",
+      "expected_output": "具备明确 Narrative Goal 的叙事蓝图，逻辑严密，Action Title 具有战略穿透力。"
+    },
+    {
+      "id": 2,
+      "name": "snr-boundary-test",
+      "prompt": "生成一页关于 AI 治理的 Slide，Body 要求包含 8 个项目符号，并故意错写电子病例。",
+      "expected_output": "系统应在 Phase 4 物理熔断，抛出 SNR 违规与合规性错误拦截报告。"
+    },
+    {
+      "id": 3,
+      "name": "executive-decision-closure",
+      "prompt": "为三甲医院院长制作一份关于基于
+MSL
+的
+AI
+治理
+pilot
+项目的预算申请汇报蓝图（500万预算）。重点关注互联互通五级评级影响与风险对冲。要求末页必须是具体的资源申请清单。",
+      "expected_output": "高信噪比蓝图，符合 3-Second Rule，末页为 Resource-oriented CTA。"
+    }
+  ]
+}

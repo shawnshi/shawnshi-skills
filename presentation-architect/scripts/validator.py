@@ -18,9 +18,11 @@ def audit_narrative_blueprint(content):
         errors.append("Global: Missing mandatory <STYLE_INSTRUCTIONS> block.")
 
     # 2. Slide Splitting
-    slides = re.split(r'Page \d+:', content)
-    if slides and not slides[0].strip():
-        slides = slides[1:]
+    # First, strip style instructions to focus on slides
+    narrative_content = re.sub(r'<STYLE_INSTRUCTIONS>[\s\S]*?</STYLE_INSTRUCTIONS>', '', content)
+    slides = re.split(r'Page \d+:', narrative_content)
+    # Filter out empty or whitespace-only segments
+    slides = [s for s in slides if s.strip()]
         
     for i, slide in enumerate(slides, 1):
         # Mandatory Sections Check
@@ -49,8 +51,12 @@ def audit_narrative_blueprint(content):
         if body_part:
             body = body_part.group(1).strip()
             bullet_count = len(re.findall(r'^[\s\t]*[\*\-]\s', body, re.MULTILINE))
-            if bullet_count > 5: # Slightly relaxed for narrative data density
+            if bullet_count > 5: 
                 errors.append(f"Page {i}: Body/Data has {bullet_count} bullets, exceeding narrative SNR limit (5).")
+
+            if "电子病例" in body:
+                errors.append(f"Page {i}: Compliance Error - Term '电子病例' detected. Use '电子病历' instead.")
+
 
     return errors
 
