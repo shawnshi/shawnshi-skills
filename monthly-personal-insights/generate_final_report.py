@@ -2,7 +2,7 @@ import os
 import json
 import datetime
 from core.engine import (
-    read_logs, process_sessions, aggregate_data,
+    read_logs, process_sessions, aggregate_data, sync_to_memory,
     GOAL_MAP, SAT_MAP, FRIC_MAP, CACHE_FILE, TEMPLATE_FILE, REPORTS_DIR
 )
 
@@ -84,8 +84,18 @@ def main():
     for s in sessions:
         s["facets"] = cache.get(s["id"], {"goal_category": "other", "status": "uncached"})
         
-    stats = aggregate_data(sessions)
+    stats = aggregate_data(sessions, period="30d")
     report_path = generate_report(stats, sessions)
+    
+    # Auto-sync summary to memory
+    sync_fragment = f"""
+## [Cached Audit: {datetime.date.today().isoformat()}]
+- **审计会话数**: {stats['total_sessions']}
+- **累计时长**: {stats['total_duration_hours']:.1f}h
+- **活跃天数**: {stats['active_days']}
+"""
+    sync_to_memory(sync_fragment)
+    
     print(f"REPORT_GENERATED: {report_path}")
     if os.name == 'nt':
         try: os.startfile(report_path)

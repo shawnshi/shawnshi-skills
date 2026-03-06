@@ -1,40 +1,35 @@
 ---
 name: monthly-personal-insights
-description: 运用“多面体分析”审计 30 天表现的战略元分析器，旨在解码用户与 AI 的交互协作模式。
-triggers: ["出具我本月的系统交互报告", "解码我这段时间的操作摩擦", "生成本月元分析HTML报告", "分析我的AI指令依赖度"]
+description: 生成周期性战略元分析报告，解码协作摩擦基因并自动同步洞察至记忆系统。
+triggers: ["出具我本月的系统交互报告", "分析我的指令依赖度", "最近效率很低分析下原因", "我感觉协作有摩擦", "生成本月元分析报告并同步记忆", "generate monthly insight report", "analyze my AI collaboration patterns", "run weekly digest", "本周复盘"]
 ---
 
-# monthly-personal-insights
+# monthly-personal-insights (V7.0: Claude /insights Pipeline Parity)
 
-## 🧠 Architecture Vision
-Act as a "Battle-Hardened Strategic Architect". Your goal is to calculate the **"ROI of Interaction"** and provide a comprehensive audit of the user's digital footprint.
-This skill generates an interactive HTML report that analyzes sessions across 6 dimensions (Facets) to identify patterns, frictions, and growth opportunities. It features a layered architecture separating core logic (`core/engine.py`) from presentation (`assets/template.html`).
+## 📋 6-Stage Pipeline
 
-## 📋 Execution Workflow
-- [ ] **Stage 1: Processing Pipeline**
-    *   Execute `python C:\Users\shich\.gemini\skills\monthly-personal-insights\analyze_insights_v4.py` for a full audit using LLM facet extraction OR `python C:\Users\shich\.gemini\skills\monthly-personal-insights\generate_final_report.py` for a quick cached rendering.
-    *   The `core.engine` script automatically scrapes `gemini --list-sessions` and parses the latest `logs.json`.
-- [ ] **Stage 2-5: Core Engine (Automated)**
-    *   Filtering sessions (excludes agent sub-sessions, short/empty sessions).
-    *   Metadata extraction (duration, tokens, tool usage).
-    *   Robust JSON Facet Extraction using LLM (Goal, Satisfaction, Outcome, Friction, Type, Success).
-    *   Aggregate Analysis.
-- [ ] **Stage 6: Rendering**
-    *   The scripts invoke the external HTML template `assets/template.html` to generate an interactive HTML report at `C:\Users\shich\.gemini\skills\monthly-personal-insights\reports\YYYYMMDD_Strategic_Audit.html` or its Cached counterpart.
+### Stage 1: Session Filtering & Metadata
+- Execute `python analyze_insights_v4.py --period <PERIOD>` (7d/30d/90d/year)
+- Quality gates: exclude agent sub-sessions, <2 user messages, <1 minute
+- Multi-source fusion: Gemini CLI logs + Antigravity brain logs
 
-## 📝 Analysis Dimensions (Facets)
-The analysis engine categorizes every session into:
-1.  🎯 **Goal Category**: (13 types e.g., `implement_feature`, `debug_investigate`)
-2.  😊 **Satisfaction**: (6 levels e.g., `frustrated` → `delighted`)
-3.  ✅ **Outcome**: (5 types e.g., `completed`, `partial`)
-4.  ⚠️ **Friction Type**: (12 types e.g., `misunderstood_request`, `buggy_code`)
-5.  📋 **Session Type**: (5 types e.g., `single_task`, `exploratory`)
-6.  🏆 **Success Type**: (7 types e.g., `excellent_reasoning`, `high_velocity`)
+### Stage 2: Transcript Summarization
+- Sessions >30k chars are chunked (25k) and summarized before analysis.
 
-## 📊 Report Contents
-- **Statistics Dashboard**: Sessions, messages, usage duration, token consumption, Git activity.
-- **Visual Charts**: Daily activity curve, tool usage distribution, language breakdown, satisfaction spread.
-- **Strategic Insights**: Domain identification, interaction style profile, `gemini.md` improvement suggestions, and "Interesting Moments" easter egg.
+### Stage 3: Facet Extraction (Count-Based)
+- Count-based schema: `goal_categories:{cat:count}`, `friction_counts:{type:count}`, `user_satisfaction_counts:{level:count}`
+- New dimensions: `claude_helpfulness`, `session_type`, `underlying_goal`, `friction_detail`
 
-## 🔄 Post-Audit Trigger
-After the script finishes, inform the user where the HTML report is located and offer to open it or update `memory.md` with the new findings.
+### Stage 4: 7 Specialized Analyses
+- Project Areas / Interaction Style / What Works / Friction Analysis / Suggestions / On the Horizon / Fun Ending
+
+### Stage 5: At a Glance
+- Executive summary: What's Working / What's Hindering / Quick Wins / Ambitious Workflows
+
+### Stage 6: Report & Auto-Sync
+- HTML interactive report (8 charts, 7 narrative sections, At-a-Glance cards)
+- Markdown export + auto-sync to `memory.md`
+
+## 🔄 Post-Audit Mandate
+NEVER end with just a file path. ALWAYS summarize the **Top 1 strategic adjustment** for the next period.
+
