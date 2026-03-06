@@ -1,10 +1,10 @@
 ---
 name: presentation-architect
-description: 顶级战略演示文稿全栈架构师 (V9.1 - Narrative-Driven Edition)。专门针对 CTO 汇报、战略布道、方案咨询、范式转移等高价值场景。遵循 Mentat 语义主权协议，交付 100% 可编辑的原生逻辑资产。支持 Win32 编码自动防御。
-triggers: ["制作战略级PPT", "生成演示文稿蓝图", "构建决策型汇报", "设计高级咨询级幻灯片", "CTO技术布道", "架构转型汇报"]
+description: 顶级战略演示文稿全栈架构师 (V9.0 - Narrative-Driven Edition)。遵循 Mentat 语义主权协议，交付 100% 可编辑的原生逻辑资产。
+triggers: ["制作战略级PPT", "生成演示文稿蓝图", "构建决策型汇报", "设计高级咨询级幻灯片"]
 ---
 
-# SKILL.md: Presentation Architect V9.1 (Narrative-Driven Edition)
+# SKILL.md: Presentation Architect V9.0 (Narrative-Driven Edition)
 
 ## 0. 核心调度约束 (Global State Machine)
 > **[全局熔断协议]**：系统必须严格执行 Phase 1 (校准) -> Phase 2 (骨架与风格) -> Phase 3 (叙事蓝图) -> Phase 4 (原生组装)。禁止任何跨阶段跳跃。
@@ -23,20 +23,18 @@ triggers: ["制作战略级PPT", "生成演示文稿蓝图", "构建决策型汇
    - **场景模型**：(如：咨询项目汇报 - 决策型 / 内部产品发布 - 愿景型)。
    - **核心受众**：(明确具体职能，如：卫宁健康 CEO、某三甲医院院长)。
    - **核心影响力目标**：(定义一句话的终局，如：消除对短期投入的顾虑，达成二期合同签署)。
-   - **汇报时长**：(定义汇报的时间及需要的ppt页面数量)。
 
 ### [🧠] Phase 2: Style & Ghost Deck (风格指令与骨架) **[Mode: PLANNING]**
-1. **生成视觉风格指令**：基于主题定制 `<STYLE_INSTRUCTIONS>` 标签。
+1. **生成视觉风格指令**：基于主题定制 `<STYLE_INSTRUCTIONS>`，包含 Design Aesthetic、Background Color、Primary/Secondary Font、Color Palette 及 Visual Elements 手法。
 2. **构建 Ghost Deck**：设计叙事性标题链条。
-3. **红队审计**：强制激活 `logic-adversary` 对标题链条进行鲁棒性检查。
+3. **红队审计**：激活 `logic-adversary` 对标题链条进行鲁棒性检查。
 4. **强制审批 (Approval Gate)**：【必须强制】调用 `ask_user` 提交风格块与标题大纲。未获批前禁止写单页蓝图。
 
 ### [💡] Phase 3: Slide-by-Slide Blueprinting (逐页叙事蓝图) **[Mode: EXECUTION]**
-**Initialize Workspace (🟢 扫描收集)**: 物理创建项目目录 `{root}\slide-deck\{Topic}_{Date}`。使用 `task_boundary` 工具更新 UI 状态为“🟢 扫描收集”。
-**【单步阻塞执行】：** 每次对话轮次仅允许起草 3-5 页蓝图。
+**Initialize Workspace (🟢 扫描收集)**: 物理创建项目目录 `{root}\slide-deck\{Topic}_{Date}`，生成`task.md`，Markdown 文件顶部**必须**包含 YAML 元数据 (Title, Date, Status, Author)。使用 `task_boundary` 工具更新 UI 状态为“🟢 扫描收集”以追踪任务进度。
+**【单步阻塞执行】：** 每次对话轮次仅允许起草 3-5 页蓝图。生成后必须 `[STOP]` 挂起，同步更新 `task.md`。
 
-**审计强制标记位 (Mandatory Markers)**：
-每一页蓝图必须【物理包含】以下五个标签，缺失将导致 Phase 4 审计失败：
+**单页蓝图强制结构 (Slide Anatomy)**：
 - **Page [X]: [叙事性主题句]**
 - **// NARRATIVE GOAL (叙事目标)**：解释本页如何承上启下。
 - **// KEY CONTENT (关键内容)**：
@@ -49,17 +47,16 @@ triggers: ["制作战略级PPT", "生成演示文稿蓝图", "构建决策型汇
 
 **文件集成**：将第二极端生成的视觉风格指令与标题大纲与单页蓝图进行集成，生成MD文件，严禁组装时摘要化。最终生成 `{Topic}_{Date}_final.md`。更新状态至 `🔴 归档冻结`。
 
-**Win32 编码防御**：在 Windows 环境下合并分段文件时，严禁使用 PowerShell 重定向 `>`，必须通过 `.NET` 或 Python 脚本强制指定 UTF-8 (No BOM) 编码写入。
-
 ### [📦] Phase 4: Native Asset Forging (原生锻造与组装) **[Mode: EXECUTION]**
 1. **逻辑硬审计 (The Auditor)**：调用 `scripts/validator.py` 检查标题长度、文本密度、数据溯源性。
 2. **原生渲染 (Native Rendering)**：利用 `python-pptx` 渲染可编辑的 Textbox、原生 Chart/Table。
-3. **物理校验 (Final Check)**：执行编码与路径校验，保存至项目目录。
+3. **物理校验 (Final Check)**：执行编码与路径校验，保存至绿区。
 
 ## 3. 核心约束 (Iron Rules)
 *   ❌ **禁止“谢谢聆听”**：末页必须是 Call to Action。
 *   ❌ **禁止模糊占位符**：严禁“这里放置图表”，必须写明 X/Y 轴与趋势结论。
+*   **物理隔离**：所有资产必须在 `c:\Users\shich\.gemini\tmp\slide-deck\` 下处理。
 *   **细节穿透**：所有细节需完整提及，确保设计师（或渲染引擎）无需访问源素材即可闭环。
 
 ---
-*SYS_CHECK: V9.1 Narrative Engine Ready. Encoding Guard Enabled.*
+*SYS_CHECK: V9.0 Narrative Engine Ready.*
