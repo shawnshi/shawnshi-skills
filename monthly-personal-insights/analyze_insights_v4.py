@@ -115,13 +115,38 @@ def generate_report(stats, sessions):
     peak_hours = stats.get("peak_hours", {})
     peak_hour_str = f'{list(peak_hours.keys())[0]}:00' if peak_hours else "N/A"
 
-    # --- Stage 4: Run specialized analyses ---
-    print("  🧠 启动 Stage 4 专项分析 (7 prompts)...")
-    insights = run_specialized_analyses(stats)
-    
-    # --- Stage 5: Executive summary ---
-    print("  🎯 启动 Stage 5 执行摘要...")
-    glance = generate_executive_summary(stats, insights)
+    # --- P0 Optimization: Cache Check ---
+    cache_key = f"{datetime.date.today().isoformat()}_{period_label}_{stats['total_sessions']}"
+    cache_file = REPORTS_DIR / "insights_cache_v7.json"
+    cache_data = {}
+    if cache_file.exists():
+        try:
+            with open(cache_file, "r", encoding="utf-8") as f: cache_data = json.load(f)
+        except Exception: pass
+        
+    if cache_key in cache_data and "insights" in cache_data[cache_key] and "glance" in cache_data[cache_key]:
+        print("  ⚡ 命中缓存，跳过 LLM 专项分析阶段 (Stage 4 & 5)...")
+        insights = cache_data[cache_key]["insights"]
+        glance = cache_data[cache_key]["glance"]
+    else:
+        # --- Stage 4: Run specialized analyses ---
+        print("  🧠 启动 Stage 4 专项分析 (7 prompts并发)...")
+        insights = run_specialized_analyses(stats)
+        
+        # --- Stage 5: Executive summary ---
+        print("  🎯 启动 Stage 5 执行摘要...")
+        glance = generate_executive_summary(stats, insights)
+        
+        # Write to cache
+        cache_data[cache_key] = {"insights": insights, "glance": glance}
+        try:
+            REPORTS_DIR.mkdir(parents=True, exist_ok=True)
+            with open(cache_file, "w", encoding="utf-8") as f:
+                json.dump(cache_data, f, ensure_ascii=False, indent=2)
+            print("  💾 Stage 4/5 结果已缓存")
+        except Exception as e:
+            print(f"    ⚠️ 保存缓存失败: {e}")
+
     
     # Build narrative HTML
     narrative_html = {
@@ -137,42 +162,42 @@ def generate_report(stats, sessions):
     with open(TEMPLATE_FILE, "r", encoding="utf-8") as f:
         html_template = f.read()
 
-    html = html_template.format(
-        report_title_meta=f"战略审计报告 - {period_label}",
-        report_title=f"🦅 个人数字化战略审计报告 ({period_label})",
-        report_subtitle=f"数据区间: {daily_labels[0] if daily_labels else 'N/A'} → {datetime.date.today().isoformat()} | 审计级别: 深度行为心理与架构审计",
-        # At a Glance
-        glance_working=glance.get("whats_working", ""),
-        glance_hindering=glance.get("whats_hindering", ""),
-        glance_quick_wins=glance.get("quick_wins", ""),
-        glance_ambitious=glance.get("ambitious_workflows", ""),
-        # Dashboard
-        card_sessions=stats["total_sessions"],
-        card_hours=f'{stats["total_duration_hours"]:.1f}',
-        card_commits=stats["git_commits"],
-        card_active_days=stats["active_days"],
-        card_streak=stats.get("max_streak", 0),
-        card_peak_hour=peak_hour_str,
-        # Charts
-        daily_labels=json.dumps(daily_labels), daily_data=json.dumps(daily_data),
-        goal_labels=json.dumps(goal_labels), goal_data=json.dumps(goal_data),
-        sat_labels=json.dumps(sat_labels), sat_data=json.dumps(sat_data),
-        fric_labels=json.dumps(fric_labels), fric_data=json.dumps(fric_data),
-        emotion_labels=json.dumps(emotion_labels), emotion_data=json.dumps(emotion_data),
-        radar_labels=json.dumps(radar_labels), radar_data=json.dumps(radar_data),
-        helpfulness_labels=json.dumps(helpfulness_labels), helpfulness_data=json.dumps(helpfulness_data),
-        session_type_labels=json.dumps(session_type_labels), session_type_data=json.dumps(session_type_data),
-        topic_cloud_html=topic_cloud_html,
-        # Narratives
-        narrative_project_areas=narrative_html["project_areas"],
-        narrative_interaction_style=narrative_html["interaction_style"],
-        narrative_what_works=narrative_html["what_works"],
-        narrative_friction=narrative_html["friction"],
-        narrative_suggestions=narrative_html["suggestions"],
-        narrative_horizon=narrative_html["horizon"],
-        narrative_fun=narrative_html["fun"],
-        timestamp=datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S")
-    )
+    replacements = {
+        "report_title_meta": f"战略审计报告 - {period_label}",
+        "report_title": f"🦅 个人数字化战略审计报告 ({period_label})",
+        "report_subtitle": f"数据区间: {daily_labels[0] if daily_labels else 'N/A'} → {datetime.date.today().isoformat()} | 审计级别: 深度行为心理与架构审计",
+        "glance_working": glance.get("whats_working", ""),
+        "glance_hindering": glance.get("whats_hindering", ""),
+        "glance_quick_wins": glance.get("quick_wins", ""),
+        "glance_ambitious": glance.get("ambitious_workflows", ""),
+        "card_sessions": str(stats["total_sessions"]),
+        "card_hours": f'{stats["total_duration_hours"]:.1f}',
+        "card_commits": str(stats["git_commits"]),
+        "card_active_days": str(stats["active_days"]),
+        "card_streak": str(stats.get("max_streak", 0)),
+        "card_peak_hour": peak_hour_str,
+        "daily_labels": json.dumps(daily_labels), "daily_data": json.dumps(daily_data),
+        "goal_labels": json.dumps(goal_labels), "goal_data": json.dumps(goal_data),
+        "sat_labels": json.dumps(sat_labels), "sat_data": json.dumps(sat_data),
+        "fric_labels": json.dumps(fric_labels), "fric_data": json.dumps(fric_data),
+        "emotion_labels": json.dumps(emotion_labels), "emotion_data": json.dumps(emotion_data),
+        "radar_labels": json.dumps(radar_labels), "radar_data": json.dumps(radar_data),
+        "helpfulness_labels": json.dumps(helpfulness_labels), "helpfulness_data": json.dumps(helpfulness_data),
+        "session_type_labels": json.dumps(session_type_labels), "session_type_data": json.dumps(session_type_data),
+        "topic_cloud_html": topic_cloud_html,
+        "narrative_project_areas": narrative_html["project_areas"],
+        "narrative_interaction_style": narrative_html["interaction_style"],
+        "narrative_what_works": narrative_html["what_works"],
+        "narrative_friction": narrative_html["friction"],
+        "narrative_suggestions": narrative_html["suggestions"],
+        "narrative_horizon": narrative_html["horizon"],
+        "narrative_fun": narrative_html["fun"],
+        "timestamp": datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+    }
+
+    html = html_template
+    for key, value in replacements.items():
+        html = html.replace(f"%%{key}%%", value)
     
     REPORTS_DIR.mkdir(parents=True, exist_ok=True)
     report_path = REPORTS_DIR / f"{datetime.date.today().strftime('%Y%m%d')}_Strategic_Audit_{stats.get('period', '30d')}.html"

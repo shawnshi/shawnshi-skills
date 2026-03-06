@@ -605,7 +605,7 @@ def aggregate_data(sessions, period="30d"):
     }
 
 def run_specialized_analyses(stats):
-    """Stage 4: Run 7 specialized analysis prompts against aggregated data."""
+    """Stage 4: Run 7 specialized analysis prompts against aggregated data (concurrency enabled)."""
     # Build data payload (exclude internal fields starting with _)
     data_payload = json.dumps({k: v for k, v in stats.items() if not k.startswith('_') and not isinstance(v, Counter)}, ensure_ascii=False, default=str, indent=1)[:8000]
     # Add text summaries
@@ -623,11 +623,19 @@ def run_specialized_analyses(stats):
         "fun_ending": FUN_ENDING_PROMPT,
     }
     
-    for key, prompt_template in prompts.items():
-        print(f"    🧠 Stage 4 [{key}]...")
-        result = run_llm_prompt(prompt_template.format(data=data_payload), timeout=90)
-        insights[key] = result or {}
+    print("    🧠 Stage 4 启动 7 个并发分析任务...")
     
+    def process_prompt(key, template):
+        res = run_llm_prompt(template.format(data=data_payload), timeout=120)
+        return key, res or {}
+
+    with ThreadPoolExecutor(max_workers=7) as executor:
+        future_to_key = {executor.submit(process_prompt, k, p): k for k, p in prompts.items()}
+        for future in as_completed(future_to_key):
+            key = future_to_key[future]
+            insights[key] = future.result()
+            print(f"      ✅ [{key}] 分析完成")
+            
     return insights
 
 def generate_executive_summary(stats, insights):

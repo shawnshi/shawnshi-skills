@@ -998,5 +998,815 @@
     "topic_tags": [],
     "summary": "Rule-based fallback analysis",
     "language": "zh"
+  },
+  "3fff9b11-5e95-4f6c-ae87-66bb48dfc87b": {
+    "underlying_goal": "Rule-based: unable to determine",
+    "goal_categories": {
+      "debug_investigate": 1
+    },
+    "outcome": "unclear",
+    "user_satisfaction_counts": {
+      "frustrated": 1
+    },
+    "claude_helpfulness": "moderately_helpful",
+    "session_type": "single_task",
+    "friction_counts": {
+      "buggy_code": 1
+    },
+    "friction_detail": "",
+    "primary_success": "none",
+    "emotional_tone": "neutral",
+    "topic_tags": [],
+    "brief_summary": "Rule-based fallback analysis"
+  },
+  "ca185918-f645-4925-9206-1034e79d71b5": {
+    "underlying_goal": "Rule-based: unable to determine",
+    "goal_categories": {
+      "configure_system": 1
+    },
+    "outcome": "unclear",
+    "user_satisfaction_counts": {
+      "likely_satisfied": 1
+    },
+    "claude_helpfulness": "moderately_helpful",
+    "session_type": "single_task",
+    "friction_counts": {},
+    "friction_detail": "",
+    "primary_success": "none",
+    "emotional_tone": "neutral",
+    "topic_tags": [],
+    "brief_summary": "Rule-based fallback analysis"
+  },
+  "3303a24f-e51b-4efb-8bed-b74b6b128fc5": {
+    "underlying_goal": "Rule-based: unable to determine",
+    "goal_categories": {
+      "write_script_tool": 1
+    },
+    "outcome": "unclear",
+    "user_satisfaction_counts": {
+      "likely_satisfied": 1
+    },
+    "claude_helpfulness": "moderately_helpful",
+    "session_type": "single_task",
+    "friction_counts": {},
+    "friction_detail": "",
+    "primary_success": "none",
+    "emotional_tone": "neutral",
+    "topic_tags": [],
+    "brief_summary": "Rule-based fallback analysis"
+  },
+  "01fb8b2d-4824-467d-a5c0-ce8555e7225a": {
+    "underlying_goal": "Rule-based: unable to determine",
+    "goal_categories": {
+      "debug_investigate": 1
+    },
+    "outcome": "unclear",
+    "user_satisfaction_counts": {
+      "frustrated": 1
+    },
+    "claude_helpfulness": "moderately_helpful",
+    "session_type": "single_task",
+    "friction_counts": {
+      "buggy_code": 1
+    },
+    "friction_detail": "",
+    "primary_success": "none",
+    "emotional_tone": "neutral",
+    "topic_tags": [],
+    "brief_summary": "Rule-based fallback analysis"
+  },
+  "8f0d159b-9d93-46d8-9e00-f07ff16dadba": {
+    "underlying_goal": "Rule-based: unable to determine",
+    "goal_categories": {
+      "other": 1
+    },
+    "outcome": "unclear",
+    "user_satisfaction_counts": {
+      "likely_satisfied": 1
+    },
+    "claude_helpfulness": "moderately_helpful",
+    "session_type": "single_task",
+    "friction_counts": {},
+    "friction_detail": "",
+    "primary_success": "none",
+    "emotional_tone": "neutral",
+    "topic_tags": [],
+    "brief_summary": "Rule-based fallback analysis"
+  },
+  "825381f6-ebab-496a-be19-40b80e1a90a1": {
+    "underlying_goal": "Rule-based: unable to determine",
+    "goal_categories": {
+      "other": 1
+    },
+    "outcome": "unclear",
+    "user_satisfaction_counts": {
+      "likely_satisfied": 1
+    },
+    "claude_helpfulness": "moderately_helpful",
+    "session_type": "single_task",
+    "friction_counts": {},
+    "friction_detail": "",
+    "primary_success": "none",
+    "emotional_tone": "neutral",
+    "topic_tags": [],
+    "brief_summary": "Rule-based fallback analysis"
+  },
+  "5ed4918c-646e-4217-bfe0-6ef4f12aa2ef": {
+    "underlying_goal": "Rule-based: unable to determine",
+    "goal_categories": {
+      "other": 1
+    },
+    "outcome": "unclear",
+    "user_satisfaction_counts": {
+      "likely_satisfied": 1
+    },
+    "claude_helpfulness": "moderately_helpful",
+    "session_type": "single_task",
+    "friction_counts": {},
+    "friction_detail": "",
+    "primary_success": "none",
+    "emotional_tone": "neutral",
+    "topic_tags": [],
+    "brief_summary": "Rule-based fallback analysis"
+  },
+  "f6e417fe-831c-4a59-8846-6339095bb7f6": {
+    "underlying_goal": "Rule-based: unable to determine",
+    "goal_categories": {
+      "analyze_data": 1
+    },
+    "outcome": "unclear",
+    "user_satisfaction_counts": {
+      "likely_satisfied": 1
+    },
+    "claude_helpfulness": "moderately_helpful",
+    "session_type": "single_task",
+    "friction_counts": {},
+    "friction_detail": "",
+    "primary_success": "none",
+    "emotional_tone": "neutral",
+    "topic_tags": [],
+    "brief_summary": "Rule-based fallback analysis"
+  },
+  "4272c302-e572-48d3-9b9f-5f1bb2ecb248": {
+    "underlying_goal": "Rule-based: unable to determine",
+    "goal_categories": {
+      "other": 1
+    },
+    "outcome": "unclear",
+    "user_satisfaction_counts": {
+      "likely_satisfied": 1
+    },
+    "claude_helpfulness": "moderately_helpful",
+    "session_type": "single_task",
+    "friction_counts": {},
+    "friction_detail": "",
+    "primary_success": "none",
+    "emotional_tone": "neutral",
+    "topic_tags": [],
+    "brief_summary": "Rule-based fallback analysis"
+  },
+  "d9c0422e-7bf3-4af7-8ec3-7e1f37d600cb": {
+    "underlying_goal": "Rule-based: unable to determine",
+    "goal_categories": {
+      "other": 1
+    },
+    "outcome": "unclear",
+    "user_satisfaction_counts": {
+      "likely_satisfied": 1
+    },
+    "claude_helpfulness": "moderately_helpful",
+    "session_type": "single_task",
+    "friction_counts": {},
+    "friction_detail": "",
+    "primary_success": "none",
+    "emotional_tone": "neutral",
+    "topic_tags": [],
+    "brief_summary": "Rule-based fallback analysis"
+  },
+  "eb0d2d48-d981-43c8-9a95-55db3023df1c": {
+    "underlying_goal": "Rule-based: unable to determine",
+    "goal_categories": {
+      "other": 1
+    },
+    "outcome": "unclear",
+    "user_satisfaction_counts": {
+      "likely_satisfied": 1
+    },
+    "claude_helpfulness": "moderately_helpful",
+    "session_type": "single_task",
+    "friction_counts": {},
+    "friction_detail": "",
+    "primary_success": "none",
+    "emotional_tone": "neutral",
+    "topic_tags": [],
+    "brief_summary": "Rule-based fallback analysis"
+  },
+  "cbb25f1e-772d-4d5a-9406-3aef49b6148c": {
+    "underlying_goal": "Rule-based: unable to determine",
+    "goal_categories": {
+      "other": 1
+    },
+    "outcome": "unclear",
+    "user_satisfaction_counts": {
+      "likely_satisfied": 1
+    },
+    "claude_helpfulness": "moderately_helpful",
+    "session_type": "single_task",
+    "friction_counts": {},
+    "friction_detail": "",
+    "primary_success": "none",
+    "emotional_tone": "neutral",
+    "topic_tags": [],
+    "brief_summary": "Rule-based fallback analysis"
+  },
+  "c638e584-11e6-4c75-80d0-38e5975c777a": {
+    "underlying_goal": "Rule-based: unable to determine",
+    "goal_categories": {
+      "other": 1
+    },
+    "outcome": "unclear",
+    "user_satisfaction_counts": {
+      "likely_satisfied": 1
+    },
+    "claude_helpfulness": "moderately_helpful",
+    "session_type": "single_task",
+    "friction_counts": {},
+    "friction_detail": "",
+    "primary_success": "none",
+    "emotional_tone": "neutral",
+    "topic_tags": [],
+    "brief_summary": "Rule-based fallback analysis"
+  },
+  "9dbcdc80-98f0-4bf8-9156-92e9e4270a98": {
+    "underlying_goal": "Rule-based: unable to determine",
+    "goal_categories": {
+      "debug_investigate": 1
+    },
+    "outcome": "unclear",
+    "user_satisfaction_counts": {
+      "frustrated": 1
+    },
+    "claude_helpfulness": "moderately_helpful",
+    "session_type": "single_task",
+    "friction_counts": {
+      "buggy_code": 1
+    },
+    "friction_detail": "",
+    "primary_success": "none",
+    "emotional_tone": "neutral",
+    "topic_tags": [],
+    "brief_summary": "Rule-based fallback analysis"
+  },
+  "77751409-a47b-4163-91d7-b8507e7d63b7": {
+    "underlying_goal": "Rule-based: unable to determine",
+    "goal_categories": {
+      "debug_investigate": 1
+    },
+    "outcome": "unclear",
+    "user_satisfaction_counts": {
+      "likely_satisfied": 1
+    },
+    "claude_helpfulness": "moderately_helpful",
+    "session_type": "single_task",
+    "friction_counts": {
+      "buggy_code": 1
+    },
+    "friction_detail": "",
+    "primary_success": "none",
+    "emotional_tone": "neutral",
+    "topic_tags": [],
+    "brief_summary": "Rule-based fallback analysis"
+  },
+  "f9a9f412-43b7-45b4-99bd-54d27432fa27": {
+    "underlying_goal": "Rule-based: unable to determine",
+    "goal_categories": {
+      "configure_system": 1
+    },
+    "outcome": "unclear",
+    "user_satisfaction_counts": {
+      "likely_satisfied": 1
+    },
+    "claude_helpfulness": "moderately_helpful",
+    "session_type": "single_task",
+    "friction_counts": {},
+    "friction_detail": "",
+    "primary_success": "none",
+    "emotional_tone": "neutral",
+    "topic_tags": [],
+    "brief_summary": "Rule-based fallback analysis"
+  },
+  "d44015f6-e1ac-498f-b283-dcde3d5a5d6c": {
+    "underlying_goal": "Rule-based: unable to determine",
+    "goal_categories": {
+      "other": 1
+    },
+    "outcome": "unclear",
+    "user_satisfaction_counts": {
+      "likely_satisfied": 1
+    },
+    "claude_helpfulness": "moderately_helpful",
+    "session_type": "single_task",
+    "friction_counts": {},
+    "friction_detail": "",
+    "primary_success": "none",
+    "emotional_tone": "neutral",
+    "topic_tags": [],
+    "brief_summary": "Rule-based fallback analysis"
+  },
+  "edf2c6f8-0dd9-43ab-89f2-889bdb0cf463": {
+    "underlying_goal": "Rule-based: unable to determine",
+    "goal_categories": {
+      "write_script_tool": 1
+    },
+    "outcome": "unclear",
+    "user_satisfaction_counts": {
+      "happy": 1
+    },
+    "claude_helpfulness": "moderately_helpful",
+    "session_type": "single_task",
+    "friction_counts": {
+      "buggy_code": 1
+    },
+    "friction_detail": "",
+    "primary_success": "none",
+    "emotional_tone": "neutral",
+    "topic_tags": [],
+    "brief_summary": "Rule-based fallback analysis"
+  },
+  "4323e157-f907-4636-97d0-acc9350785e6": {
+    "underlying_goal": "Rule-based: unable to determine",
+    "goal_categories": {
+      "fix_bug": 1
+    },
+    "outcome": "unclear",
+    "user_satisfaction_counts": {
+      "likely_satisfied": 1
+    },
+    "claude_helpfulness": "moderately_helpful",
+    "session_type": "single_task",
+    "friction_counts": {},
+    "friction_detail": "",
+    "primary_success": "none",
+    "emotional_tone": "neutral",
+    "topic_tags": [],
+    "brief_summary": "Rule-based fallback analysis"
+  },
+  "05b46df0-8f18-4233-bc55-e587c4092bc9": {
+    "underlying_goal": "Rule-based: unable to determine",
+    "goal_categories": {
+      "implement_feature": 1
+    },
+    "outcome": "unclear",
+    "user_satisfaction_counts": {
+      "happy": 1
+    },
+    "claude_helpfulness": "moderately_helpful",
+    "session_type": "single_task",
+    "friction_counts": {},
+    "friction_detail": "",
+    "primary_success": "none",
+    "emotional_tone": "neutral",
+    "topic_tags": [],
+    "brief_summary": "Rule-based fallback analysis"
+  },
+  "89b3dcb2-5334-4ba2-a539-79786555bb87": {
+    "underlying_goal": "Rule-based: unable to determine",
+    "goal_categories": {
+      "analyze_data": 1
+    },
+    "outcome": "unclear",
+    "user_satisfaction_counts": {
+      "likely_satisfied": 1
+    },
+    "claude_helpfulness": "moderately_helpful",
+    "session_type": "single_task",
+    "friction_counts": {},
+    "friction_detail": "",
+    "primary_success": "none",
+    "emotional_tone": "neutral",
+    "topic_tags": [],
+    "brief_summary": "Rule-based fallback analysis"
+  },
+  "457cd68d-dcde-4a8b-8a96-f8a9c3c2ea62": {
+    "underlying_goal": "Rule-based: unable to determine",
+    "goal_categories": {
+      "other": 1
+    },
+    "outcome": "unclear",
+    "user_satisfaction_counts": {
+      "likely_satisfied": 1
+    },
+    "claude_helpfulness": "moderately_helpful",
+    "session_type": "single_task",
+    "friction_counts": {},
+    "friction_detail": "",
+    "primary_success": "none",
+    "emotional_tone": "neutral",
+    "topic_tags": [],
+    "brief_summary": "Rule-based fallback analysis"
+  },
+  "2a3c222d-e8e5-462a-bbcb-f36ca43d4375": {
+    "underlying_goal": "Rule-based: unable to determine",
+    "goal_categories": {
+      "other": 1
+    },
+    "outcome": "unclear",
+    "user_satisfaction_counts": {
+      "likely_satisfied": 1
+    },
+    "claude_helpfulness": "moderately_helpful",
+    "session_type": "single_task",
+    "friction_counts": {},
+    "friction_detail": "",
+    "primary_success": "none",
+    "emotional_tone": "neutral",
+    "topic_tags": [],
+    "brief_summary": "Rule-based fallback analysis"
+  },
+  "9c840051-20f4-4d00-a8f5-b202b9cf848d": {
+    "underlying_goal": "Rule-based: unable to determine",
+    "goal_categories": {
+      "other": 1
+    },
+    "outcome": "unclear",
+    "user_satisfaction_counts": {
+      "likely_satisfied": 1
+    },
+    "claude_helpfulness": "moderately_helpful",
+    "session_type": "single_task",
+    "friction_counts": {},
+    "friction_detail": "",
+    "primary_success": "none",
+    "emotional_tone": "neutral",
+    "topic_tags": [],
+    "brief_summary": "Rule-based fallback analysis"
+  },
+  "245524c9-f185-45af-a34b-8ace799de335": {
+    "underlying_goal": "Rule-based: unable to determine",
+    "goal_categories": {
+      "debug_investigate": 1
+    },
+    "outcome": "unclear",
+    "user_satisfaction_counts": {
+      "likely_satisfied": 1
+    },
+    "claude_helpfulness": "moderately_helpful",
+    "session_type": "single_task",
+    "friction_counts": {
+      "buggy_code": 1
+    },
+    "friction_detail": "",
+    "primary_success": "none",
+    "emotional_tone": "neutral",
+    "topic_tags": [],
+    "brief_summary": "Rule-based fallback analysis"
+  },
+  "d76ee1b7-a251-4ed7-8cf2-1c15e2ba65d3": {
+    "underlying_goal": "Rule-based: unable to determine",
+    "goal_categories": {
+      "implement_feature": 1
+    },
+    "outcome": "unclear",
+    "user_satisfaction_counts": {
+      "happy": 1
+    },
+    "claude_helpfulness": "moderately_helpful",
+    "session_type": "single_task",
+    "friction_counts": {},
+    "friction_detail": "",
+    "primary_success": "none",
+    "emotional_tone": "neutral",
+    "topic_tags": [],
+    "brief_summary": "Rule-based fallback analysis"
+  },
+  "0415f947-7493-4430-9f1b-0f9312a76182": {
+    "underlying_goal": "Rule-based: unable to determine",
+    "goal_categories": {
+      "fix_bug": 1
+    },
+    "outcome": "unclear",
+    "user_satisfaction_counts": {
+      "likely_satisfied": 1
+    },
+    "claude_helpfulness": "moderately_helpful",
+    "session_type": "single_task",
+    "friction_counts": {},
+    "friction_detail": "",
+    "primary_success": "none",
+    "emotional_tone": "neutral",
+    "topic_tags": [],
+    "brief_summary": "Rule-based fallback analysis"
+  },
+  "4cd33ccb-b4b4-49be-8999-8175005f46f9": {
+    "underlying_goal": "Rule-based: unable to determine",
+    "goal_categories": {
+      "write_docs": 1
+    },
+    "outcome": "unclear",
+    "user_satisfaction_counts": {
+      "likely_satisfied": 1
+    },
+    "claude_helpfulness": "moderately_helpful",
+    "session_type": "single_task",
+    "friction_counts": {},
+    "friction_detail": "",
+    "primary_success": "none",
+    "emotional_tone": "neutral",
+    "topic_tags": [],
+    "brief_summary": "Rule-based fallback analysis"
+  },
+  "b83763f3-522b-40ea-984b-f66f523bb9bf": {
+    "underlying_goal": "Rule-based: unable to determine",
+    "goal_categories": {
+      "refactor_code": 1
+    },
+    "outcome": "unclear",
+    "user_satisfaction_counts": {
+      "happy": 1
+    },
+    "claude_helpfulness": "moderately_helpful",
+    "session_type": "single_task",
+    "friction_counts": {},
+    "friction_detail": "",
+    "primary_success": "none",
+    "emotional_tone": "neutral",
+    "topic_tags": [],
+    "brief_summary": "Rule-based fallback analysis"
+  },
+  "d5081194-79fe-4fc0-9de6-e45bd51e84db": {
+    "underlying_goal": "Rule-based: unable to determine",
+    "goal_categories": {
+      "write_docs": 1
+    },
+    "outcome": "unclear",
+    "user_satisfaction_counts": {
+      "likely_satisfied": 1
+    },
+    "claude_helpfulness": "moderately_helpful",
+    "session_type": "single_task",
+    "friction_counts": {},
+    "friction_detail": "",
+    "primary_success": "none",
+    "emotional_tone": "neutral",
+    "topic_tags": [],
+    "brief_summary": "Rule-based fallback analysis"
+  },
+  "94988486-2e2b-4b93-8cae-844c785d5ed6": {
+    "underlying_goal": "Rule-based: unable to determine",
+    "goal_categories": {
+      "other": 1
+    },
+    "outcome": "unclear",
+    "user_satisfaction_counts": {
+      "likely_satisfied": 1
+    },
+    "claude_helpfulness": "moderately_helpful",
+    "session_type": "single_task",
+    "friction_counts": {},
+    "friction_detail": "",
+    "primary_success": "none",
+    "emotional_tone": "neutral",
+    "topic_tags": [],
+    "brief_summary": "Rule-based fallback analysis"
+  },
+  "8b8f8f6e-105a-4558-b10c-5357991ac7d5": {
+    "underlying_goal": "Rule-based: unable to determine",
+    "goal_categories": {
+      "refactor_code": 1
+    },
+    "outcome": "unclear",
+    "user_satisfaction_counts": {
+      "happy": 1
+    },
+    "claude_helpfulness": "moderately_helpful",
+    "session_type": "single_task",
+    "friction_counts": {},
+    "friction_detail": "",
+    "primary_success": "none",
+    "emotional_tone": "neutral",
+    "topic_tags": [],
+    "brief_summary": "Rule-based fallback analysis"
+  },
+  "a68620e1-c78b-4db5-ba53-a0a1d384316c": {
+    "underlying_goal": "Rule-based: unable to determine",
+    "goal_categories": {
+      "write_docs": 1
+    },
+    "outcome": "unclear",
+    "user_satisfaction_counts": {
+      "likely_satisfied": 1
+    },
+    "claude_helpfulness": "moderately_helpful",
+    "session_type": "single_task",
+    "friction_counts": {},
+    "friction_detail": "",
+    "primary_success": "none",
+    "emotional_tone": "neutral",
+    "topic_tags": [],
+    "brief_summary": "Rule-based fallback analysis"
+  },
+  "470fd479-f981-4578-bf7b-6f35718074f3": {
+    "underlying_goal": "Rule-based: unable to determine",
+    "goal_categories": {
+      "other": 1
+    },
+    "outcome": "unclear",
+    "user_satisfaction_counts": {
+      "likely_satisfied": 1
+    },
+    "claude_helpfulness": "moderately_helpful",
+    "session_type": "single_task",
+    "friction_counts": {},
+    "friction_detail": "",
+    "primary_success": "none",
+    "emotional_tone": "neutral",
+    "topic_tags": [],
+    "brief_summary": "Rule-based fallback analysis"
+  },
+  "07b24fbc-a346-49a9-a322-30a58ea7f2c0": {
+    "underlying_goal": "Rule-based: unable to determine",
+    "goal_categories": {
+      "refactor_code": 1
+    },
+    "outcome": "unclear",
+    "user_satisfaction_counts": {
+      "likely_satisfied": 1
+    },
+    "claude_helpfulness": "moderately_helpful",
+    "session_type": "single_task",
+    "friction_counts": {},
+    "friction_detail": "",
+    "primary_success": "none",
+    "emotional_tone": "neutral",
+    "topic_tags": [],
+    "brief_summary": "Rule-based fallback analysis"
+  },
+  "26eab605-62ef-4c87-befb-af461f97b489": {
+    "underlying_goal": "Rule-based: unable to determine",
+    "goal_categories": {
+      "other": 1
+    },
+    "outcome": "unclear",
+    "user_satisfaction_counts": {
+      "likely_satisfied": 1
+    },
+    "claude_helpfulness": "moderately_helpful",
+    "session_type": "single_task",
+    "friction_counts": {},
+    "friction_detail": "",
+    "primary_success": "none",
+    "emotional_tone": "neutral",
+    "topic_tags": [],
+    "brief_summary": "Rule-based fallback analysis"
+  },
+  "f04b820a-dc02-4527-932c-daa05511a92f": {
+    "underlying_goal": "Rule-based: unable to determine",
+    "goal_categories": {
+      "write_script_tool": 1
+    },
+    "outcome": "unclear",
+    "user_satisfaction_counts": {
+      "likely_satisfied": 1
+    },
+    "claude_helpfulness": "moderately_helpful",
+    "session_type": "single_task",
+    "friction_counts": {},
+    "friction_detail": "",
+    "primary_success": "none",
+    "emotional_tone": "neutral",
+    "topic_tags": [],
+    "brief_summary": "Rule-based fallback analysis"
+  },
+  "4bb24023-9f01-4982-bdf6-d287d37a1625": {
+    "underlying_goal": "Rule-based: unable to determine",
+    "goal_categories": {
+      "other": 1
+    },
+    "outcome": "unclear",
+    "user_satisfaction_counts": {
+      "likely_satisfied": 1
+    },
+    "claude_helpfulness": "moderately_helpful",
+    "session_type": "single_task",
+    "friction_counts": {},
+    "friction_detail": "",
+    "primary_success": "none",
+    "emotional_tone": "neutral",
+    "topic_tags": [],
+    "brief_summary": "Rule-based fallback analysis"
+  },
+  "cd1c6779-3831-4ddf-88b6-3ff48be5bfac": {
+    "underlying_goal": "Rule-based: unable to determine",
+    "goal_categories": {
+      "other": 1
+    },
+    "outcome": "unclear",
+    "user_satisfaction_counts": {
+      "likely_satisfied": 1
+    },
+    "claude_helpfulness": "moderately_helpful",
+    "session_type": "single_task",
+    "friction_counts": {},
+    "friction_detail": "",
+    "primary_success": "none",
+    "emotional_tone": "neutral",
+    "topic_tags": [],
+    "brief_summary": "Rule-based fallback analysis"
+  },
+  "01639184-296b-45a8-b089-7b983e40835c": {
+    "underlying_goal": "Rule-based: unable to determine",
+    "goal_categories": {
+      "analyze_data": 1
+    },
+    "outcome": "unclear",
+    "user_satisfaction_counts": {
+      "likely_satisfied": 1
+    },
+    "claude_helpfulness": "moderately_helpful",
+    "session_type": "single_task",
+    "friction_counts": {},
+    "friction_detail": "",
+    "primary_success": "none",
+    "emotional_tone": "neutral",
+    "topic_tags": [],
+    "brief_summary": "Rule-based fallback analysis"
+  },
+  "09ebf1b7-75e2-42ab-861b-39abf7efd49a": {
+    "underlying_goal": "Rule-based: unable to determine",
+    "goal_categories": {
+      "implement_feature": 1
+    },
+    "outcome": "unclear",
+    "user_satisfaction_counts": {
+      "frustrated": 1
+    },
+    "claude_helpfulness": "moderately_helpful",
+    "session_type": "single_task",
+    "friction_counts": {
+      "buggy_code": 1
+    },
+    "friction_detail": "",
+    "primary_success": "none",
+    "emotional_tone": "neutral",
+    "topic_tags": [],
+    "brief_summary": "Rule-based fallback analysis"
+  },
+  "621a6eea-a40c-4f01-b6ee-f5368eadc96f": {
+    "underlying_goal": "Rule-based: unable to determine",
+    "goal_categories": {
+      "debug_investigate": 1
+    },
+    "outcome": "unclear",
+    "user_satisfaction_counts": {
+      "likely_satisfied": 1
+    },
+    "claude_helpfulness": "moderately_helpful",
+    "session_type": "single_task",
+    "friction_counts": {
+      "buggy_code": 1
+    },
+    "friction_detail": "",
+    "primary_success": "none",
+    "emotional_tone": "neutral",
+    "topic_tags": [],
+    "brief_summary": "Rule-based fallback analysis"
+  },
+  "4eca0a11-6de2-4cfd-83ff-c9a3e3119af0": {
+    "underlying_goal": "Rule-based: unable to determine",
+    "goal_categories": {
+      "debug_investigate": 1
+    },
+    "outcome": "unclear",
+    "user_satisfaction_counts": {
+      "likely_satisfied": 1
+    },
+    "claude_helpfulness": "moderately_helpful",
+    "session_type": "single_task",
+    "friction_counts": {
+      "buggy_code": 1
+    },
+    "friction_detail": "",
+    "primary_success": "none",
+    "emotional_tone": "neutral",
+    "topic_tags": [],
+    "brief_summary": "Rule-based fallback analysis"
+  },
+  "3d9e8566-3f4c-451d-98bd-09c790d31bff": {
+    "underlying_goal": "Rule-based: unable to determine",
+    "goal_categories": {
+      "other": 1
+    },
+    "outcome": "unclear",
+    "user_satisfaction_counts": {
+      "likely_satisfied": 1
+    },
+    "claude_helpfulness": "moderately_helpful",
+    "session_type": "single_task",
+    "friction_counts": {},
+    "friction_detail": "",
+    "primary_success": "none",
+    "emotional_tone": "neutral",
+    "topic_tags": [],
+    "brief_summary": "Rule-based fallback analysis"
   }
 }
