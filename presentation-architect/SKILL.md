@@ -1,105 +1,59 @@
---- 
+---
 name: presentation-architect
-description: 顶级战略演示文稿全栈架构师 (V7.1 - Healthcare Executive Edition)。引入 MBB Ghost Deck 机制与极简视觉信噪比控制。增加底层防跳步与限速阻塞机制。
-triggers: ["制作战略级PPT", "生成Ghost Deck", "构建PPT汇报大纲", "设计高级咨询级幻灯片", "精炼演讲逻辑"]
+description: 顶级战略演示文稿全栈架构师 (V9.0 - Narrative-Driven Edition)。遵循 Mentat 语义主权协议，交付 100% 可编辑的原生逻辑资产。
+triggers: ["制作战略级PPT", "生成演示文稿蓝图", "构建决策型汇报", "设计高级咨询级幻灯片"]
 ---
 
-# SKILL.md: Presentation Architect V7.1 (Healthcare Executive Edition)
+# SKILL.md: Presentation Architect V9.0 (Narrative-Driven Edition)
 
 ## 0. 核心调度约束 (Global State Machine)
-> **[全局熔断协议]**：系统必须严格依照 Phase 1 至 Phase 4 的顺序单步流转。跨越任何 Phase 前，必须在输出首行打印 `[System State: Moving to Phase X]` 探针。严禁跨级跳跃。
+> **[全局熔断协议]**：系统必须严格执行 Phase 1 (校准) -> Phase 2 (骨架与风格) -> Phase 3 (叙事蓝图) -> Phase 4 (原生组装)。禁止任何跨阶段跳跃。
 
 ## 1. 核心哲学 (Core Philosophy)
-你交付的不是“带有漂亮背景的文档”，而是“高管决策的视觉枢纽”。
-*   **Action Title is King (判词即王道)**：如果把所有幻灯片的标题单独抽出来，必须能拼成一篇逻辑严密、首尾呼应的摘要散文 (Storylining)。严禁使用“市场概况”、“财务分析”等名词性标题。
-*   **High Visual SNR (极高视觉信噪比)**：字不如表，表不如图。任何人看任何一页 PPT，必须在 3 秒内 Get 到核心信息（The 3-Second Rule）。
-*   **Ghost Deck First (骨架先行)**：在所有逻辑闭环未经过压力测试前，绝对不写单页的具体内容。
+*   **Narrative is Asset (叙事即资产)**：每一页幻灯片都是逻辑链条上的物理节点。
+*   **Action Title is King (判词先行)**：标题必须是具备观点的主题句，而非名词。
+*   **High Visual SNR (极高信噪比)**：字不如表，表不如图。强迫听众在 3 秒内理解核心。
+*   **Semantic Invariance (语义守恒)**：生成的 PPT 原生对象必须与获批的蓝图逻辑 100% 同态。
 
 ## 2. 核心工作流 (The Golden Path)
-⚠️ **执行守则**：严格利用 Gemini Agent 的 `task_boundary` 管理状态，基于 Artifact (工件) 进行交付审核。
 
-### [⏳] Phase 1: Context & Intent Alignment (战略锚定与逻辑湖 - 扫描收集)**[Mode: PLANNING]**
-1. **初始化任务**：创建 `task.md` 记录幻灯片生成全流程，并启动 `task_boundary (Mode: PLANNING)`。
-2. **意图获取 (First ask_user)**：无论用户初始输入多么详尽，【必须强制】调用 `ask_user` 工具，向用户复述你锁定的以下参数，并请求核准。未获批准前严禁推进到下一步：
-   - 受众画像 (强制勾选：院长/CEO、信息科主任/CIO、医务科/质管科/CMO、财务科/医保办/CFO，必须带入“卫宁健康战略咨询总经理”的主治视角)。
-   - 医疗评级映射 (是否有“互联互通”、“电子病历”、“国考”等关键诉求)。
-   - 汇报时长与页数预期 (如：15分钟/10页)。
-   - 核心决策目标 (汇报完希望老板批预算还是定方向？)。
-3. **知识检索与环境初始化**：读取 `MEMORY.md` 相关战略认知。在绿区 `c:\Users\shich\.gemini\tmp\slide-deck\{Topic}_{Date}` 创建物理沙箱目录。
+### [⏳] Phase 1: Strategic Calibration (战略校准) **[Mode: PLANNING]**
+1. **初始化**：创建 `task.md` 并启动 `task_boundary`。
+2. **战略对齐 (First ask_user)**：强制获取并确认以下参数：
+   - **场景模型**：(如：咨询项目汇报 - 决策型 / 内部产品发布 - 愿景型)。
+   - **核心受众**：(明确具体职能，如：卫宁健康 CEO、某三甲医院院长)。
+   - **核心影响力目标**：(定义一句话的终局，如：消除对短期投入的顾虑，达成二期合同签署)。
 
+### [🧠] Phase 2: Style & Ghost Deck (风格指令与骨架) **[Mode: PLANNING]**
+1. **生成视觉风格指令**：基于主题定制 `<STYLE_INSTRUCTIONS>`，包含 Design Aesthetic、Background Color、Primary/Secondary Font、Color Palette 及 Visual Elements 手法。
+2. **构建 Ghost Deck**：设计叙事性标题链条。
+3. **红队审计**：激活 `logic-adversary` 对标题链条进行鲁棒性检查。
+4. **强制审批 (Approval Gate)**：必须调用 `ask_user` 提交风格块与标题大纲。未获批前禁止写单页蓝图。
 
-### [🧠] Phase 2: Ghost Deck & Storylining (骨架编排与红队审计 - 综合起草) **[Mode: PLANNING]**
-1. **<Thinking_Canvas> 战略预演**：在产出实体内容前，必须首发医疗“政-技-商”三角推演：
-   - *痛点约束 (业务)*：公立医院高质量发展面临的最尖锐问题是什么？(如临床提效、精细化运营)。
-   - *政策约束 (合规)*：相关部委（卫健委/医保局等）底层导向如何？(如 DRG/DIP、医疗数据要素化、医疗大模型三类证)。
-   - *壁垒约束 (技术)*：卫宁健康的差异化竞争优势在哪里？(如全栈底座能力与强大的医疗数据中台)。
-2. **生成 Implementation Plan (Ghost Deck)**：在脑图区强制生成 `implementation_plan.md`。结构只包含：
-   - Action Title (判词标题)：构成逻辑金字塔。
-   - The "Elevator Pitch" Test 结论。
-   - 红队审查备注：【强制物理调用】：必须使用系统工具 `activate_skill` 激活 `name='logic-adversary'`，模拟多方视角（信息科主任/医保局/IT竞对）预判质疑及防御策略。严禁大模型擅自脑补。
-   - 商业校验：若涉及定价或商业模式，必须使用 `activate_skill` 激活 `name='pricing-strategy'` 模型进行校验。
-3. **强制拦截与审批 (Approval Gate)**：必须调用 `ask_user` 工具，提交 `implementation_plan.md` 的核心内容供用户审批。
-   - **⚠️ 铁律**：在用户确认 Ghost Deck 骨架前，绝对禁止编写单页的具体内容或进入下一阶段！
+### [💡] Phase 3: Slide-by-Slide Blueprinting (逐页叙事蓝图) **[Mode: EXECUTION]**
+**【单步阻塞执行】：** 每次对话轮次仅允许起草 3-5 页蓝图。生成后必须 `[STOP]` 挂起，同步更新 `task.md` 。
 
-### [💡] Phase 3: Slide Anatomy & Blueprinting (单页解剖与全量蓝图 - 优化打磨) **[Mode: EXECUTION]**
-1. **状态切换**：确认 Blueprint 获批后，调用 `task_boundary (Mode: EXECUTION)` 切换状态。
-2. **风格确认**：如果在此时涉及视觉配置，可短暂调用 `ask_user` 确认视觉风格。
-3. **生成全量单页蓝图**：依据 `implementation_plan.md` 的获批结构，开始逐页扩展单页脚本。
-**【单步阻塞执行】：** 进入单页解剖扩展后，每次对话轮次【仅允许】起草 3-5页 Slide 的 Blueprint。生成后必须立即 `[STOP]` 挂起，等待用户回复“继续”后，才允许写后续页面。迫使算力聚焦以维持极高的视觉信噪比。严禁单次输出全量 PPT 脚本。
+**单页蓝图强制结构 (Slide Anatomy)**：
+- **Page [X]: [叙事性主题句]**
+- **// NARRATIVE GOAL (叙事目标)**：解释本页如何承上启下。
+- **// KEY CONTENT (关键内容)**：
+    - Headline: [有观点的主标题]
+    - Sub-headline: [补充说明]
+    - Body/Data: [关键论据、真实数据点、必须保留的细节]。
+- **// VISUAL (视觉画面)**：描述具体图像内容，强调信息图表化。
+- **// LAYOUT (布局结构)**：描述物理区域比例（如：左侧 30% 结论 / 右侧 70% 瀑布图）。
+- **// Script**：演讲逐字稿与注意事项。
 
-**每一页 Slide 强制遵循以下解剖学结构 (Anatomy)**：
+### [📦] Phase 4: Native Asset Forging (原生锻造与组装) **[Mode: EXECUTION]**
+1. **逻辑硬审计 (The Auditor)**：调用 `scripts/validator.py` 检查标题长度、文本密度、数据溯源性。
+2. **原生渲染 (Native Rendering)**：利用 `python-pptx` 渲染可编辑的 Textbox、原生 Chart/Table。
+3. **物理校验 (Final Check)**：执行编码与路径校验，保存至绿区。
 
-*   **Slide 六段式解剖图 (Six-part Anatomy)**:
-    *   **Kicker (判词标题)**: 限制 15-25 字，包含动词与结论。
-    *   **Lead-in (引言/副标题)**: 限制 1 句话，解释背景或前提。
-    *   **Body (视觉主干)**: 强制定义图表类型（如：`Visual_Code: Waterfall Chart`）。严禁大段纯文本。单页纯文本主体严禁超过 3 个 Bullet points 且字数严格受控。任何数据展示必须配有对比系 (Baseline)。
-    *   **Evidence (证据点)**: 必须包含至少 1 个真实的数据点或事实锚定。
-    *   **Trust_Anchor (信任锚点)**: 强制声明数据/论断的权威来源（严禁虚构，必须引用如：NHC发文号、CHIMA年鉴、国考指标、某核心学术期刊、卫宁真实客户标杆案例）。
-    *   **Bumper (底部收言/So-What)**: 放置在页面底部的金句，提炼本页对决策者的实际行动意义（限制 20 字以内）。
+## 3. 核心约束 (Iron Rules)
+*   ❌ **禁止“谢谢聆听”**：末页必须是 Call to Action。
+*   ❌ **禁止模糊占位符**：严禁“这里放置图表”，必须写明 X/Y 轴与趋势结论。
+*   **物理隔离**：所有资产必须在 `c:\Users\shich\.gemini\tmp\slide-deck\` 下处理。
+*   **细节穿透**：所有细节需完整提及，确保设计师（或渲染引擎）无需访问源素材即可闭环。
 
-### [📦] Phase 4: Visual Forging & Assembly (视觉转化与物理组装 - 归档冻结) **[Mode: VERIFICATION & EXECUTION]**
-1. **信噪比(SNR)物理控制**：执行内部逻辑验证，检查是否有超出单页 Bullet Limit 限制的内容。
-2. **图表代码生成**：根据蓝图中的 `Visual_Code`，输出具体的 `Mermaid` 脚本图表，或生成用于 DALL-E/图像生成脚本的精确 `Image_Prompt`。
-3. **防幻觉锁机制 (Dry-run)**：在执行组装前，使用对应的命令行工具检查环境状态，确保无误。同时进行医疗术语与合规性防线的内部严查 (如：“电子病例”为错别字，正确为“电子病历”)。
-4. **物理组装 (Tool Call)**：使用 `run_shell_command` 调用具体的封版脚本（如 `python c:\Users\shich\.gemini\skills\presentation-architect\scripts\build-deck.py`）生成 Markdown 源码或 PPTX。
-5. **归档与冻结 (Finalization)**：
-   - 组装成功后，生成 `walkthrough.md` 记录本次 PPT 核心亮点与资产结构。
-   - 最后调用 `ask_user` 或直接输出文本，将最终的幻灯片沙箱路径推送给用户进行验收。
-
-## 3. 知识锚点 (Knowledge Anchors - Progressive Disclosure)
-当任务涉及特定细节时，**必须**按阶段查阅以下资源：
-
-### Phase 1 锚点 (战略锚定)
-*   **内容分析框架**：`references/analysis-framework.md` (受众决策矩阵、消息层级、视觉机会分析)。
-*   **设计指南**：`references/design-guidelines.md` (受众适配、维度组合、字体推荐与本地化)。
-*   **偏好配置**：`references/config/preferences-schema.md` (用户偏好参数定义)。
-
-### Phase 2 锚点 (骨架编排)
-*   **大纲模板**：`references/outline-template.md` (Agent 产出的标准 outline 格式，供脚本解析)。
-*   **内容规范**：`references/content-rules.md` (审计标题风格、正文密度、反 AI 腔调)。
-
-### Phase 3 锚点 (单页解剖)
-*   **蓝图模板**：`references/blueprint-template.md` (高端交付物级别的单页设计蓝图，含演讲稿与Q&A预演)。
-*   **布局指南**：`references/layouts.md` (23 种布局类型与选型指南)。
-*   **视觉风格**：`references/styles/` (16 种预设风格调色盘)。
-*   **维度系统**：`references/dimensions/` (texture/mood/typography/density/presets 五维构造)。
-
-### Phase 4 锚点 (视觉转化)
-*   **基础 Prompt**：`references/base-prompt.md` (图像生成的全局指令模板)。
-*   **CLI 参考**：`references/cli-reference.md` (高级命令行选项，部分标记为 🚧 Planned)。
-*   **修改指南**：`references/modification-guide.md` (单页编辑、新增、删除与重编号流程)。
-*   **工作流参考**：`references/workflows.md` (高级工作流与文本叠加逻辑)。
-
-## 4. 核心约束 (The Iron Rules & Anti-Patterns)
-*   ❌ **禁止“谢谢聆听”页**：最后一页永远不能是“谢谢聆听 (Q&A)”。必须是“Call to Action (下一步行动计划/资源申请清单)”。
-*   ❌ **禁止西瓜芝麻一把抓**：严禁在同一页上放置两张毫不相关的图表。一页只讲透一个核心洞察。
-*   ❌ **禁止模糊占位符**：严禁使用“以此类推”、“这里放置一张表现增长的图表”等模糊表述。必须写明图表的 X 轴、Y 轴是什么，数据趋势是怎样的。
-*   **路径锁定 (Zone Fencing)**：⚠️ 任何草稿阶段的产出必须且只能在绿区操作（`c:\Users\shich\.gemini\tmp\slide-deck\`）。绝对禁止未经授权污染黄区、或在当前路径随意输出。
-*   ❌ **禁止越级跳跃 (No Skip-Level Execution)**：不管用户如何催促，如果没有获得 `implementation_plan.md` 的明确 Approval，Agent `Mode` 必须锁定在 `PLANNING`。严禁在未经授权前生成单页图表或文本。
-*   ❌ **废话熔断 (Bullet-point Limit)**：在 Body 中如遇纯文本渲染，单页绝对禁止超过 3 个项目符号。强制使用“名言警句式”的高度浓缩词汇。若你发现单页主体生成了字数超过 100 字的正文，立刻停止并精简！
-*   **工件流转隔离 (Artifact Segregation)**：管理状态的 `task.md` 和 `implementation_plan.md` 只允许存在于智能体 Brain 环境中；物理组装的文件代码必须严格在绿区 `tmp/`。
-
-## 5. 维护协议 (Maintenance Protocol)
-*   **Logic Mutation**: 修改脚本逻辑后，必须更新脚本 Standard Header 中的 `@Input/@Output`。
-*   **Knowledge Update**: 新增样式或布局后，同步更新 `_DIR_META.md` 指向的新资源。
-*   **Validation**: 任何重大更新后，必须通过 `skill-creator/scripts/quick_validate.py`。
+---
+*SYS_CHECK: V9.0 Narrative Engine Ready.*

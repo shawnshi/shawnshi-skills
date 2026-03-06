@@ -53,7 +53,7 @@ triggers: ["编写数字化解决方案", "设计医院转型规划", "智慧医
 ### Phase 4: Architectural Forging (物理落盘与架构深度锻造) [Mode: EXECUTION]
 > **System Action**: 获得阶段 3 用户审批后，智能体**必须**通过 `task_boundary` 切换至 `EXECUTION` 模式。
 1. **Initialize & Manifest**: 
-   - 使用 `run_command` 工具创建工作空间（如指定沙箱目录 `{root}\MEMORY\med_solution ）。
+   - 使用 `run_command` 工具创建工作空间（如指定沙箱目录 `{root}\MEMORY\medical-solution ）。
    - **[强制动作]**：在空间内生成整体方案大纲（大纲即为 `implementation_plan.md`）、 `MANIFEST.json`（用于索引所有子章节）、任务计划（`plan.md`）。禁止在未更新索引的情况下进行集成。
 2. **Drafting (物理落盘约束)**：
    - **[硬性指标]**：每一章节必须包含至少一张逻辑图（Mermaid）或对比表格，禁止纯文字描述。
