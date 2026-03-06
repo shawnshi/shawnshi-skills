@@ -28,7 +28,7 @@ triggers: ["制作战略级PPT", "生成演示文稿蓝图", "构建决策型汇
 1. **生成视觉风格指令**：基于主题定制 `<STYLE_INSTRUCTIONS>`，包含 Design Aesthetic、Background Color、Primary/Secondary Font、Color Palette 及 Visual Elements 手法。
 2. **构建 Ghost Deck**：设计叙事性标题链条。
 3. **红队审计**：激活 `logic-adversary` 对标题链条进行鲁棒性检查。
-4. **强制审批 (Approval Gate)**：【必须强制调用 `ask_user` 提交风格块与标题大纲。未获批前禁止写单页蓝图。
+4. **强制审批 (Approval Gate)**：【必须强制】调用 `ask_user` 提交风格块与标题大纲。未获批前禁止写单页蓝图。
 
 ### [💡] Phase 3: Slide-by-Slide Blueprinting (逐页叙事蓝图) **[Mode: EXECUTION]**
 **Initialize Workspace (🟢 扫描收集)**: 物理创建项目目录 `{root}\slide-deck\{Topic}_{Date}`，生成`task.md`，Markdown 文件顶部**必须**包含 YAML 元数据 (Title, Date, Status, Author)。使用 `task_boundary` 工具更新 UI 状态为“🟢 扫描收集”以追踪任务进度。

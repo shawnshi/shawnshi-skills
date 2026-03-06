@@ -31,7 +31,7 @@ triggers: [&quot;制作战略级PPT&quot;, &quot;生成演示文稿蓝图&quot;,
 <li><strong>生成视觉风格指令</strong>：基于主题定制 <code>&lt;STYLE_INSTRUCTIONS&gt;</code>，包含 Design Aesthetic、Background Color、Primary/Secondary Font、Color Palette 及 Visual Elements 手法。</li>
 <li><strong>构建 Ghost Deck</strong>：设计叙事性标题链条。</li>
 <li><strong>红队审计</strong>：激活 <code>logic-adversary</code> 对标题链条进行鲁棒性检查。</li>
-<li><strong>强制审批 (Approval Gate)</strong>：【必须强制调用 <code>ask_user</code> 提交风格块与标题大纲。未获批前禁止写单页蓝图。</li>
+<li><strong>强制审批 (Approval Gate)</strong>：【必须强制】调用 <code>ask_user</code> 提交风格块与标题大纲。未获批前禁止写单页蓝图。</li>
 </ol>
 <h3 id="-phase-3-slide-by-slide-blueprinting-逐页叙事蓝图-mode-execution">[💡] Phase 3: Slide-by-Slide Blueprinting (逐页叙事蓝图) <strong>[Mode: EXECUTION]</strong></h3>
 <p><strong>Initialize Workspace (🟢 扫描收集)</strong>: 物理创建项目目录 <code>{root}\slide-deck\{Topic}_{Date}</code>，生成<code>task.md</code>，Markdown 文件顶部<strong>必须</strong>包含 YAML 元数据 (Title, Date, Status, Author)。使用 <code>task_boundary</code> 工具更新 UI 状态为“🟢 扫描收集”以追踪任务进度。
