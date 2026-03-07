@@ -29,16 +29,29 @@ triggers: [&quot;制作战略级PPT&quot;, &quot;生成演示文稿蓝图&quot;,
 </ol>
 <h3 id="-phase-2-style--ghost-deck-风格指令与骨架-mode-planning">[🧠] Phase 2: Style &amp; Ghost Deck (风格指令与骨架) <strong>[Mode: PLANNING]</strong></h3>
 <ol>
-<li><strong>生成视觉风格指令</strong>：基于主题定制 <code>&lt;STYLE_INSTRUCTIONS&gt;</code> 标签。</li>
-<li><strong>构建 Ghost Deck</strong>：设计叙事性标题链条。</li>
+<li><strong>生成视觉风格指令</strong>：基于主题定制 <code>&lt;STYLE_INSTRUCTIONS&gt;</code> 标签，参照blueprint-template.md中的全局视觉风格蓝图。</li>
+<li><strong>构建 Ghost Deck</strong>：设计叙事性标题链条和故事线可视化。</li>
 <li><strong>红队审计</strong>：强制激活 <code>logic-adversary</code> 对标题链条进行鲁棒性检查。</li>
 <li><strong>强制审批 (Approval Gate)</strong>：【必须强制】调用 <code>ask_user</code> 提交风格块与标题大纲。未获批前禁止写单页蓝图。</li>
 </ol>
 <h3 id="-phase-3-slide-by-slide-blueprinting-逐页叙事蓝图-mode-execution">[💡] Phase 3: Slide-by-Slide Blueprinting (逐页叙事蓝图) <strong>[Mode: EXECUTION]</strong></h3>
 <p><strong>Initialize Workspace (🟢 扫描收集)</strong>: 物理创建项目目录 <code>{root}\slide-deck\{Topic}_{Date}</code>，并基于Phase 2确定的大纲，更新<code>task.md</code> 。使用 <code>task_boundary</code> 工具更新 UI 状态为“🟢 扫描收集”。
 <strong>【单步阻塞执行】：</strong> 每次对话轮次仅允许起草 3-5 页蓝图，每完成一个任务后更新任务计划（<code>plan.md</code>）。</p>
-<p><strong>审计强制标记位 (Mandatory Markers)</strong>：
-每一页蓝图必须【物理包含】以下五个标签，缺失将导致 Phase 4 审计失败：</p>
+<p><strong>审计强制标记位 (Mandatory Markers)</strong>：</p>
+<h4 id="封面-title-slide">封面 (Title Slide)</h4>
+<ul>
+<li><strong>风格</strong>: 海报式布局 (Poster-style)。</li>
+<li><strong>视觉</strong>: 满版出血大图 (Full-bleed) 或 极端简约的几何构图。</li>
+<li><strong>文字</strong>: 只有主标题、副标题和品牌标识，严禁任何细碎文字。</li>
+</ul>
+<h4 id="封底-closing-slide">封底 (Closing Slide)</h4>
+<ul>
+<li><strong>风格</strong>: 行动锚点式 (Call to Action)。</li>
+<li><strong>视觉</strong>: 与封面遥相呼应，强调核心愿景。</li>
+<li><strong>文字</strong>: 一个强有力的金句或一个清晰的下一步行动建议。</li>
+</ul>
+<h4 id="内容页-content-slide">内容页 (Content Slide)</h4>
+<p>每一页蓝图必须【物理包含】以下五个标签，缺失将导致 Phase 4 审计失败：</p>
 <ul>
 <li><strong>Page [X]: [叙事性主题句]</strong></li>
 <li><strong>// NARRATIVE GOAL (叙事目标)</strong>：解释本页如何承上启下。</li>
