@@ -2,15 +2,15 @@
   "strategic_keywords": [
     {
       "keyword": "ai",
-      "weight": 20
+      "weight": 19
     },
     {
       "keyword": "ace",
-      "weight": 21
+      "weight": 23
     },
     {
       "keyword": "msl",
-      "weight": 30
+      "weight": 25
     },
     {
       "keyword": "fhir",
@@ -22,7 +22,7 @@
     },
     {
       "keyword": "agent",
-      "weight": 16
+      "weight": 18
     },
     {
       "keyword": "clinic",
@@ -30,19 +30,19 @@
     },
     {
       "keyword": "hitl",
-      "weight": 19
+      "weight": 17
     },
     {
       "keyword": "vbc",
-      "weight": 10
+      "weight": 8
     },
     {
       "keyword": "drg",
-      "weight": 12
+      "weight": 10
     },
     {
       "keyword": "dip",
-      "weight": 12
+      "weight": 10
     },
     {
       "keyword": "信创",
@@ -62,15 +62,15 @@
     },
     {
       "keyword": "战略",
-      "weight": 20
+      "weight": 19
     },
     {
       "keyword": "输出",
-      "weight": 9
+      "weight": 7
     },
     {
       "keyword": "路径",
-      "weight": 20
+      "weight": 13
     },
     {
       "keyword": "医疗",
@@ -90,27 +90,27 @@
     },
     {
       "keyword": "核心",
-      "weight": 19
+      "weight": 11
     },
     {
       "keyword": "认知",
-      "weight": 19
+      "weight": 11
     },
     {
       "keyword": "临床",
-      "weight": 19
+      "weight": 11
     },
     {
       "keyword": "语义",
-      "weight": 15
+      "weight": 19
     },
     {
       "keyword": "架构",
-      "weight": 17
+      "weight": 13
     },
     {
       "keyword": "数字",
-      "weight": 20
+      "weight": 15
     }
   ],
   "categories": {

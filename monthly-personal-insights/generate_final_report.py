@@ -80,7 +80,7 @@ def main():
             cache = json.load(f)
     cached_sids = list(cache.keys())
     
-    sessions = process_sessions(cached_sids, logs)
+    sessions = process_sessions([{"id": sid, "date": "unknown"} for sid in cached_sids], logs)
     for s in sessions:
         s["facets"] = cache.get(s["id"], {"goal_category": "other", "status": "uncached"})
         

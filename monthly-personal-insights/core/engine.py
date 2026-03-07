@@ -6,8 +6,6 @@ import subprocess
 import threading
 from pathlib import Path
 from collections import Counter, defaultdict
-from concurrent.futures import ThreadPoolExecutor, as_completed
-
 # --- Dynamic Configuration ---
 GEMINI_ROOT = Path(os.environ.get('USERPROFILE', 'C:/Users/default')) / ".gemini"
 SKILL_DIR = GEMINI_ROOT / "skills" / "monthly-personal-insights"
@@ -27,133 +25,6 @@ PERIOD_MAP = {
 
 # Thread safety for cache
 cache_lock = threading.Lock()
-
-# --- Prompts ---
-FACET_PROMPT = """Analyze this AI coding assistant session and extract structured facets.
-CRITICAL GUIDELINES:
-1. **goal_categories**: Count ONLY what the USER explicitly asked for.
-   - ONLY count when user says "can you...", "please...", "I need...", etc.
-2. **user_satisfaction_counts**: Base ONLY on explicit user signals.
-   - "great!", "perfect!" -> happy
-   - "thanks", "looks good" -> satisfied
-   - continuing without complaint -> likely_satisfied
-   - "that's not right", "try again" -> dissatisfied
-   - "this is broken" -> frustrated
-3. **friction_counts**: Be specific about what went wrong.
-4. If very short or just warmup, use warmup_minimal for goal_category.
-
-SESSION:
-{transcript}
-
-RESPOND WITH ONLY A VALID JSON OBJECT matching this schema:
-{{
-    "underlying_goal": "What the user fundamentally wanted to achieve",
-    "goal_categories": {{"category_name": count}},
-    "outcome": "fully_achieved | mostly_achieved | partially_achieved | not_achieved | unclear",
-    "user_satisfaction_counts": {{"level": count}},
-    "claude_helpfulness": "unhelpful | slightly_helpful | moderately_helpful | very_helpful | essential",
-    "session_type": "single_task | multi_task | iterative_refinement | exploration | quick_question",
-    "friction_counts": {{"friction_type": count}},
-    "friction_detail": "One sentence describing friction or empty",
-    "primary_success": "none | fast_accurate_search | correct_code_edits | good_explanations | proactive_help | multi_file_changes | good_debugging",
-    "emotional_tone": "anxious | frustrated | neutral | focused | flow | excited",
-    "topic_tags": ["tag1", "tag2"],
-    "brief_summary": "One sentence: what user wanted and whether they got it"
-}}
-
-Valid goal categories: debug_investigate, implement_feature, fix_bug, write_script_tool, refactor_code, configure_system, create_pr_commit, analyze_data, understand_codebase, write_tests, write_docs, deploy_infra, warmup_minimal, other
-Valid friction types: misunderstood_request, wrong_approach, buggy_code, user_rejected_action, claude_got_blocked, excessive_changes, slow_or_verbose, user_unclear, wrong_file_or_location, tool_failed, external_issue, none
-Valid satisfaction levels: frustrated, dissatisfied, likely_satisfied, satisfied, happy, unsure
-"""
-
-SUMMARIZE_PROMPT = """Summarize this portion of an AI coding session transcript. Focus on:
-1. What the user asked for
-2. What the AI did (tools used, files modified)
-3. Any friction or issues
-4. The outcome
-Keep it concise - 3-5 sentences. Preserve specific details like file names, error messages, and user feedback.
-
-TRANSCRIPT CHUNK:
-{chunk}
-"""
-
-# --- Stage 4 Specialized Analysis Prompts ---
-PROJECT_AREAS_PROMPT = """Analyze this usage data and identify project areas.
-RESPOND WITH ONLY A VALID JSON OBJECT:
-{{ "areas": [ {{ "name": "Area name", "session_count": N, "description": "2-3 sentences about what was worked on." }} ] }}
-Include 4-5 areas.
-
-DATA:
-{data}
-"""
-
-INTERACTION_STYLE_PROMPT = """Analyze this usage data and describe the user's interaction style.
-RESPOND WITH ONLY A VALID JSON OBJECT:
-{{ "narrative": "2-3 paragraphs analyzing HOW the user interacts. Use second person 'you'. Use **bold** for key insights.", "key_pattern": "One sentence summary of most distinctive interaction style" }}
-
-DATA:
-{data}
-"""
-
-WHAT_WORKS_PROMPT = """Analyze this usage data and identify what's working well. Use second person.
-RESPOND WITH ONLY A VALID JSON OBJECT:
-{{ "intro": "1 sentence of context", "impressive_workflows": [ {{ "title": "Short title", "description": "2-3 sentences describing the impressive workflow." }} ] }}
-Include 3 impressive workflows.
-
-DATA:
-{data}
-"""
-
-FRICTION_ANALYSIS_PROMPT = """Analyze this usage data and identify friction points. Use second person.
-RESPOND WITH ONLY A VALID JSON OBJECT:
-{{ "intro": "1 sentence summarizing friction patterns", "categories": [ {{ "category": "Name", "description": "1-2 sentences.", "examples": ["Specific example", "Another"] }} ] }}
-Include 3 friction categories with 2 examples each.
-
-DATA:
-{data}
-"""
-
-SUGGESTIONS_PROMPT = """Analyze this usage data and suggest improvements for the user's AI coding workflow.
-RESPOND WITH ONLY A VALID JSON OBJECT:
-{{ "config_additions": [ {{ "addition": "A specific rule or instruction to add to the AI config", "why": "1 sentence why" }} ], "usage_patterns": [ {{ "title": "Short title", "suggestion": "1-2 sentence summary", "detail": "3-4 sentences explaining how this applies" }} ] }}
-Include 2-3 items for each category. PRIORITIZE instructions that appear MULTIPLE TIMES in the data.
-
-DATA:
-{data}
-"""
-
-ON_THE_HORIZON_PROMPT = """Analyze this usage data and identify future opportunities for AI-assisted development.
-RESPOND WITH ONLY A VALID JSON OBJECT:
-{{ "intro": "1 sentence about evolving AI-assisted development", "opportunities": [ {{ "title": "Short title", "whats_possible": "2-3 ambitious sentences", "how_to_try": "1-2 sentences" }} ] }}
-Include 3 opportunities. Think BIG - autonomous workflows, parallel agents.
-
-DATA:
-{data}
-"""
-
-FUN_ENDING_PROMPT = """Analyze this usage data and find a memorable moment.
-RESPOND WITH ONLY A VALID JSON OBJECT:
-{{ "headline": "A memorable qualitative moment - something human, funny, or surprising.", "detail": "Brief context about when/where this happened" }}
-
-DATA:
-{data}
-"""
-
-AT_A_GLANCE_PROMPT = """Write an "At a Glance" summary for an AI coding usage insights report. Use this 4-part structure:
-1. **What's working** - User's unique interaction style and impactful accomplishments.
-2. **What's hindering** - Split into (a) AI's fault and (b) user-side friction. Be honest but constructive.
-3. **Quick wins to try** - Specific workflow techniques.
-4. **Ambitious workflows** - What workflows will become possible with better models?
-Keep each section to 2-3 sentences. Use a coaching tone.
-RESPOND WITH ONLY A VALID JSON OBJECT:
-{{ "whats_working": "...", "whats_hindering": "...", "quick_wins": "...", "ambitious_workflows": "..." }}
-
-DATA:
-{data}
-
-PREVIOUS INSIGHTS:
-{insights}
-"""
 
 GOAL_MAP = {
     "debug_investigate": "调试排查", "implement_feature": "实现功能", "fix_bug": "修复Bug",
@@ -287,33 +158,18 @@ def get_recent_skill_activity(days=30):
     cutoff = datetime.datetime.now().timestamp() - (days * 86400)
     recent = []
     if skills_dir.exists():
-        for p in skills_dir.rglob("*"):
+        for p in skills_dir.rglob("*\*"):
             if p.is_file() and p.stat().st_mtime > cutoff:
                 recent.append({"path": str(p.relative_to(skills_dir)), "modified": datetime.datetime.fromtimestamp(p.stat().st_mtime).isoformat()})
     return recent
 
-def summarize_long_transcript(messages, max_chars=30000, chunk_size=25000):
-    """Stage 2: Summarize long transcripts in chunks before facet extraction."""
+def summarize_long_transcript(messages, max_chars=10000):
+    """Stage 2: Truncate long transcripts to save token space for Agent log reading."""
     full_text = "\n".join([f"{m.get('type','UNK').upper()}: {str(m.get('message',''))[:1000]}" for m in messages])
     if len(full_text) <= max_chars:
         return full_text
     
-    # Split into chunks and summarize each
-    chunks = [full_text[i:i+chunk_size] for i in range(0, len(full_text), chunk_size)]
-    summaries = []
-    for i, chunk in enumerate(chunks[:5]):  # Max 5 chunks
-        prompt = SUMMARIZE_PROMPT.format(chunk=chunk)
-        try:
-            cmd = ["gemini", "-p", prompt, "--raw-output", "--approval-mode", "yolo", "--accept-raw-output-risk"]
-            result = subprocess.run(cmd, capture_output=True, text=True, shell=True, encoding='utf-8', errors='ignore', cwd=str(GEMINI_ROOT), timeout=60)
-            if result.returncode == 0 and result.stdout.strip():
-                summaries.append(result.stdout.strip())
-            else:
-                summaries.append(chunk[:500] + "...")
-        except Exception:
-            summaries.append(chunk[:500] + "...")
-    
-    return "\n---\n".join(summaries)
+    return full_text[:max_chars] + "\n...[Transcript Truncated]..."
 
 def process_sessions(raw_sessions, logs):
     session_messages = defaultdict(list)
@@ -354,135 +210,19 @@ def process_sessions(raw_sessions, logs):
             filtered_count += 1
             continue
             
+        transcript = summarize_long_transcript(msgs)
         processed.append({
-            "id": sid, "title": title, "date": s["date"], "messages": msgs,
+            "id": sid, "title": title, "date": s["date"],
             "count": len(msgs), "user_count": len(user_msgs), "duration_sec": duration,
             "tokens": sum(len(str(m.get("message", ""))) for m in msgs) // 4,
-            "timestamp": msgs[0].get("timestamp")
+            "timestamp": msgs[0].get("timestamp"),
+            "transcript_snapshot": transcript
         })
     print(f"  🎯 匹配会话: {len(processed)} (过滤了 {filtered_count} 个低质量会话)")
     return processed
 
-def run_llm_prompt(prompt, timeout=120):
-    """Utility: Run a prompt via gemini CLI and return parsed JSON or raw text."""
-    try:
-        cmd = ["gemini", "-p", prompt, "--raw-output", "--approval-mode", "yolo", "--accept-raw-output-risk"]
-        result = subprocess.run(cmd, capture_output=True, text=True, shell=True, encoding='utf-8', errors='ignore', cwd=str(GEMINI_ROOT), timeout=timeout)
-        if result.returncode == 0 and result.stdout.strip():
-            try:
-                return extract_json_from_text(result.stdout)
-            except Exception:
-                return result.stdout.strip()
-    except Exception:
-        pass
-    return None
-
-def extract_json_from_text(text):
-    pattern = re.compile(r"```(?:json)?\s*(\{.*?\})\s*```", re.DOTALL | re.IGNORECASE)
-    match = pattern.search(text)
-    if match: return json.loads(match.group(1))
-    pattern2 = re.compile(r"(\{.*\})", re.DOTALL)
-    match = pattern2.search(text)
-    if match: return json.loads(match.group(1))
-    raise ValueError("JSON not found")
-
-def analyze_session_fallback(s):
-    """Rule-based fallback when gemini CLI is unavailable. Returns count-based schema."""
-    text = " ".join([str(m.get('message', '')) for m in s["messages"][:20]]).lower()
-    
-    # Goal detection by keywords
-    goal = "other"
-    goal_keywords = {
-        "debug_investigate": ["debug", "error", "traceback", "调试", "报错"],
-        "implement_feature": ["implement", "add feature", "实现", "新增"],
-        "fix_bug": ["fix", "bug", "修复"],
-        "write_script_tool": ["script", "tool", "automate", "脚本"],
-        "refactor_code": ["refactor", "重构", "优化"],
-        "configure_system": ["config", "setup", "配置"],
-        "analyze_data": ["analyze", "analysis", "分析"],
-        "write_docs": ["doc", "readme", "文档"],
-    }
-    for cat, kws in goal_keywords.items():
-        if any(kw in text for kw in kws):
-            goal = cat
-            break
-    
-    # Friction detection
-    friction = "none"
-    if any(w in text for w in ["error", "fail", "失败"]): friction = "buggy_code"
-    elif any(w in text for w in ["wrong", "不对", "错误"]): friction = "misunderstood_request"
-    
-    # Satisfaction heuristic
-    sat = "likely_satisfied"
-    if any(w in text for w in ["✅", "完成", "done", "perfect", "great"]): sat = "happy"
-    elif any(w in text for w in ["❌", "失败", "fail"]): sat = "frustrated"
-    
-    return s["id"], {
-        "underlying_goal": "Rule-based: unable to determine",
-        "goal_categories": {goal: 1},
-        "outcome": "unclear",
-        "user_satisfaction_counts": {sat: 1},
-        "claude_helpfulness": "moderately_helpful",
-        "session_type": "single_task",
-        "friction_counts": {friction: 1} if friction != "none" else {},
-        "friction_detail": "",
-        "primary_success": "none",
-        "emotional_tone": "neutral",
-        "topic_tags": [],
-        "brief_summary": "Rule-based fallback analysis"
-    }
-
-def analyze_session(s):
-    """Worker: Stage 2+3 combined. Summarize long transcripts, then extract facets."""
-    # Stage 2: Transcript summarization for long sessions
-    transcript = summarize_long_transcript(s["messages"])
-    prompt = FACET_PROMPT.format(transcript=transcript[:15000])  # Safety cap
-    try:
-        cmd = ["gemini", "-p", prompt, "--raw-output", "--approval-mode", "yolo", "--accept-raw-output-risk"]
-        result = subprocess.run(cmd, capture_output=True, text=True, shell=True, encoding='utf-8', errors='ignore', cwd=str(GEMINI_ROOT), timeout=120)
-        if result.returncode == 0:
-            facets = extract_json_from_text(result.stdout)
-            return s["id"], facets
-    except subprocess.TimeoutExpired:
-        print(f"    ⏱️ 会话 {s['id'][:8]} 超时，回退规则引擎")
-    except Exception:
-        pass
-    return analyze_session_fallback(s)
-
-def extract_facets_builtin(sessions):
-    cache = {}
-    if CACHE_FILE.exists():
-        try:
-            with open(CACHE_FILE, "r", encoding="utf-8") as f: cache = json.load(f)
-        except Exception: pass
-    
-    sessions.sort(key=lambda x: x['date'], reverse=True)
-    current_year = str(datetime.date.today().year)
-    year_sessions = [s for s in sessions if s['date'].startswith(current_year)]
-    new_sessions = [s for s in year_sessions if s["id"] not in cache]
-    
-    batch_size = 50
-    max_workers = 10
-    
-    if new_sessions:
-        to_process = new_sessions[:batch_size]
-        print(f"  ✨ 启动并行分析: {len(to_process)} 个会话 (线程数: {max_workers})...")
-        
-        with ThreadPoolExecutor(max_workers=max_workers) as executor:
-            future_to_sid = {executor.submit(analyze_session, s): s["id"] for s in to_process}
-            for future in as_completed(future_to_sid):
-                sid, facets = future.result()
-                with cache_lock:
-                    cache[sid] = facets
-                print(f"    ✅ 已处理: {sid[:8]}...")
-        
-        # Batch flush cache after all analyses complete
-        with open(CACHE_FILE, "w", encoding="utf-8") as f:
-            json.dump(cache, f, indent=2, ensure_ascii=False)
-        print(f"  💾 缓存已批量写入 ({len(cache)} 条)")
-
-    for s in sessions: s["facets"] = cache.get(s["id"], {"goal_category": "other"})
-    return sessions
+# ALL LLM AND FACET EXTRACTION FUNCTIONS HAVE BEEN REMOVED FOR V8.0
+# The Agent will execute these cognitively.
 
 def get_git_stats():
     """Finds .git root by checking parents from current cwd."""
@@ -510,45 +250,6 @@ def filter_by_period(sessions, period="30d"):
 
 def aggregate_data(sessions, period="30d"):
     filtered = filter_by_period(sessions, period)
-    # Build topic cloud and aggregate count-based facets
-    topic_counter = Counter()
-    goal_counter = Counter()
-    sat_counter = Counter()
-    fric_counter = Counter()
-    helpfulness_counter = Counter()
-    session_type_counter = Counter()
-    outcome_counter = Counter()
-    
-    for s in filtered:
-        f = s["facets"]
-        tags = f.get("topic_tags", [])
-        if isinstance(tags, list):
-            topic_counter.update(tags)
-        
-        # Handle both count-based (v7) and single-label (v6 cache) facets
-        gc = f.get("goal_categories")
-        if isinstance(gc, dict):
-            goal_counter.update(gc)
-        else:
-            goal_counter[f.get("goal_category", f.get("goal_categories", "other"))] += 1
-        
-        sc = f.get("user_satisfaction_counts")
-        if isinstance(sc, dict):
-            sat_counter.update(sc)
-        else:
-            sat_counter[f.get("satisfaction", f.get("user_satisfaction_counts", "likely_satisfied"))] += 1
-        
-        fc = f.get("friction_counts")
-        if isinstance(fc, dict):
-            fric_counter.update(fc)
-        else:
-            ft = f.get("friction_type", "none")
-            if ft != "none":
-                fric_counter[ft] += 1
-        
-        helpfulness_counter[f.get("claude_helpfulness", "moderately_helpful")] += 1
-        session_type_counter[f.get("session_type", "single_task")] += 1
-        outcome_counter[f.get("outcome", "unclear")] += 1
     
     # Compute peak activity hours
     hour_counter = Counter()
@@ -574,11 +275,6 @@ def aggregate_data(sessions, period="30d"):
                 current_streak = 1
         except Exception: pass
     
-    # Collect summaries and friction details for Stage 4
-    summaries = [s["facets"].get("brief_summary", s["facets"].get("summary", "")) for s in filtered[:50]]
-    friction_details = [s["facets"].get("friction_detail", "") for s in filtered if s["facets"].get("friction_detail")]
-    underlying_goals = [s["facets"].get("underlying_goal", "") for s in filtered if s["facets"].get("underlying_goal")]
-    
     return {
         "period": period,
         "period_label": f"过去 {PERIOD_MAP.get(period, 30)} 天" if period != "year" else f"{datetime.date.today().year} 年度",
@@ -589,63 +285,12 @@ def aggregate_data(sessions, period="30d"):
         "active_days": len(set(s["date"] for s in filtered)),
         "max_streak": max_streak if dates_sorted else 0,
         "git_commits": get_git_stats(),
-        "goal_dist": goal_counter,
-        "satisfaction_dist": sat_counter,
-        "friction_dist": fric_counter,
-        "helpfulness_dist": helpfulness_counter,
-        "session_type_dist": session_type_counter,
-        "outcome_dist": outcome_counter,
-        "emotional_tone_dist": Counter(s["facets"].get("emotional_tone", "neutral") for s in filtered),
-        "topic_cloud": dict(topic_counter.most_common(15)),
         "peak_hours": dict(hour_counter.most_common(5)),
-        "daily_activity": Counter(s["date"] for s in filtered),
-        "_summaries": summaries[:50],
-        "_friction_details": friction_details[:20],
-        "_underlying_goals": underlying_goals[:30],
+        "daily_activity": dict(Counter(s["date"] for s in filtered)),
     }
 
-def run_specialized_analyses(stats):
-    """Stage 4: Run 7 specialized analysis prompts against aggregated data (concurrency enabled)."""
-    # Build data payload (exclude internal fields starting with _)
-    data_payload = json.dumps({k: v for k, v in stats.items() if not k.startswith('_') and not isinstance(v, Counter)}, ensure_ascii=False, default=str, indent=1)[:8000]
-    # Add text summaries
-    data_payload += "\n\nSESSION SUMMARIES:\n" + "\n".join(stats.get('_summaries', [])[:30])
-    data_payload += "\n\nFRICTION DETAILS:\n" + "\n".join(stats.get('_friction_details', [])[:15])
-    
-    insights = {}
-    prompts = {
-        "project_areas": PROJECT_AREAS_PROMPT,
-        "interaction_style": INTERACTION_STYLE_PROMPT,
-        "what_works": WHAT_WORKS_PROMPT,
-        "friction_analysis": FRICTION_ANALYSIS_PROMPT,
-        "suggestions": SUGGESTIONS_PROMPT,
-        "on_the_horizon": ON_THE_HORIZON_PROMPT,
-        "fun_ending": FUN_ENDING_PROMPT,
-    }
-    
-    print("    🧠 Stage 4 启动 7 个并发分析任务...")
-    
-    def process_prompt(key, template):
-        res = run_llm_prompt(template.format(data=data_payload), timeout=120)
-        return key, res or {}
-
-    with ThreadPoolExecutor(max_workers=7) as executor:
-        future_to_key = {executor.submit(process_prompt, k, p): k for k, p in prompts.items()}
-        for future in as_completed(future_to_key):
-            key = future_to_key[future]
-            insights[key] = future.result()
-            print(f"      ✅ [{key}] 分析完成")
-            
-    return insights
-
-def generate_executive_summary(stats, insights):
-    """Stage 5: At a Glance summary synthesizing all Stage 4 insights."""
-    data_payload = json.dumps({k: v for k, v in stats.items() if not k.startswith('_') and not isinstance(v, Counter)}, ensure_ascii=False, default=str, indent=1)[:4000]
-    insights_payload = json.dumps(insights, ensure_ascii=False, default=str, indent=1)[:6000]
-    
-    print("    🎯 Stage 5 [at_a_glance]...")
-    result = run_llm_prompt(AT_A_GLANCE_PROMPT.format(data=data_payload, insights=insights_payload), timeout=90)
-    return result or {"whats_working": "", "whats_hindering": "", "quick_wins": "", "ambitious_workflows": ""}
+# run_comprehensive_analysis has been removed for V8.0
+# The Agent will execute these cognitively.
 
 def sync_to_memory(fragment, memory_file=None):
     """Auto-append insight fragment to memory.md with dedup."""

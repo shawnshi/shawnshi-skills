@@ -3,14 +3,13 @@ import json
 import datetime
 import argparse
 from core.engine import (
-    get_session_list, read_logs, process_sessions, extract_facets_builtin, aggregate_data,
-    run_specialized_analyses, generate_executive_summary, sync_to_memory, PERIOD_MAP,
-    GOAL_MAP, SAT_MAP, FRIC_MAP, EMOTION_MAP, HELPFULNESS_MAP, SESSION_TYPE_MAP,
-    TEMPLATE_FILE, REPORTS_DIR, GEMINI_ROOT
+    get_session_list, read_logs, process_sessions, aggregate_data,
+    sync_to_memory, PERIOD_MAP, TEMPLATE_FILE, REPORTS_DIR, GEMINI_ROOT
 )
 
 def format_narrative_areas(data):
     """Format project areas analysis into HTML."""
+    if isinstance(data, str): return f"<p>{data}</p>"
     if not isinstance(data, dict): return "<p>分析数据暂不可用</p>"
     areas = data.get("areas", [])
     if not areas: return "<p>暂无项目领域数据</p>"
@@ -20,10 +19,12 @@ def format_narrative_areas(data):
     return html + "</ul>"
 
 def format_narrative_style(data):
+    if isinstance(data, str): return f"<p>{data}</p>"
     if not isinstance(data, dict): return "<p>分析数据暂不可用</p>"
     return f'<p>{data.get("narrative","")}</p><p><strong>关键模式：</strong>{data.get("key_pattern","")}</p>'
 
 def format_narrative_works(data):
+    if isinstance(data, str): return f"<p>{data}</p>"
     if not isinstance(data, dict): return "<p>分析数据暂不可用</p>"
     wfs = data.get("impressive_workflows", [])
     html = f'<p>{data.get("intro","")}</p><ul>'
@@ -32,6 +33,7 @@ def format_narrative_works(data):
     return html + "</ul>"
 
 def format_narrative_friction(data):
+    if isinstance(data, str): return f"<p>{data}</p>"
     if not isinstance(data, dict): return "<p>分析数据暂不可用</p>"
     cats = data.get("categories", [])
     html = f'<p>{data.get("intro","")}</p>'
@@ -41,6 +43,7 @@ def format_narrative_friction(data):
     return html
 
 def format_narrative_suggestions(data):
+    if isinstance(data, str): return f"<p>{data}</p>"
     if not isinstance(data, dict): return "<p>分析数据暂不可用</p>"
     html = "<h3>🔧 配置建议</h3><ul>"
     for c in data.get("config_additions", []):
@@ -51,6 +54,7 @@ def format_narrative_suggestions(data):
     return html + "</ul>"
 
 def format_narrative_horizon(data):
+    if isinstance(data, str): return f"<p>{data}</p>"
     if not isinstance(data, dict): return "<p>分析数据暂不可用</p>"
     ops = data.get("opportunities", [])
     html = f'<p>{data.get("intro","")}</p><ul>'
@@ -59,95 +63,72 @@ def format_narrative_horizon(data):
     return html + "</ul>"
 
 def format_narrative_fun(data):
-    if not isinstance(data, dict): return "<p>暂无趣味时刻</p>"
+    if isinstance(data, str): return f"<p>{data}</p>"
+    if not isinstance(data, dict): return "<p>暂无趣味时刻数据</p>"
     return f'<h3>{data.get("headline","")}</h3><p>{data.get("detail","")}</p>'
 
-def generate_report(stats, sessions):
+def format_narrative_behavioral_analysis(data):
+    if isinstance(data, str): return f"<p>{data}</p>"
+    if not isinstance(data, dict): return ""
+    pts = data.get("points", [])
+    overall = data.get("overall", "")
+    html = f'<p>{data.get("intro","")}</p>'
+    if overall:
+        html += f'<div style="background: var(--surface-2); padding: 16px; border-radius: 8px; margin-bottom: 20px; border-left: 3px solid var(--success);"><strong>🌟 总体认知评估：</strong>{overall}</div>'
+    return html
+
+def generate_report(stats, sessions, insights):
     period_label = stats.get("period_label", "N/A")
     
-    # Chart data
-    daily_sorted = sorted(stats["daily_activity"].items())
+    # Chart data (gracefully handle missing facet distributions which were removed in V8.0)
+    daily_sorted = sorted(stats.get("daily_activity", {}).items())
     daily_labels = [d[0] for d in daily_sorted]
     daily_data = [d[1] for d in daily_sorted]
-    goal_labels = [GOAL_MAP.get(k, k) for k in stats["goal_dist"].keys()]
-    goal_data = list(stats["goal_dist"].values())
-    sat_labels = [SAT_MAP.get(k, k) for k in stats["satisfaction_dist"].keys()]
-    sat_data = list(stats["satisfaction_dist"].values())
-    fric_labels = [FRIC_MAP.get(k, k) for k in stats["friction_dist"].keys()]
-    fric_data = list(stats["friction_dist"].values())
-    emotion_labels = [EMOTION_MAP.get(k, k) for k in stats["emotional_tone_dist"].keys()]
-    emotion_data = list(stats["emotional_tone_dist"].values())
-    helpfulness_labels = [HELPFULNESS_MAP.get(k, k) for k in stats["helpfulness_dist"].keys()]
-    helpfulness_data = list(stats["helpfulness_dist"].values())
-    session_type_labels = [SESSION_TYPE_MAP.get(k, k) for k in stats["session_type_dist"].keys()]
-    session_type_data = list(stats["session_type_dist"].values())
+    
+    goal_dist = insights.get("distributions", {}).get("goal_dist", {"综合": 1})
+    goal_labels = list(goal_dist.keys())
+    goal_data = list(goal_dist.values())
+    
+    sat_dist = insights.get("distributions", {}).get("satisfaction_dist", {"未知": 1})
+    sat_labels = list(sat_dist.keys())
+    sat_data = list(sat_dist.values())
+    
+    fric_dist = insights.get("distributions", {}).get("friction_dist", {"无记录": 1})
+    fric_labels = list(fric_dist.keys())
+    fric_data = list(fric_dist.values())
+    
+    emotion_dist = insights.get("distributions", {}).get("emotional_tone_dist", {"中性": 1})
+    emotion_labels = list(emotion_dist.keys())
+    emotion_data = list(emotion_dist.values())
+    
+    helpfulness_dist = insights.get("distributions", {}).get("helpfulness_dist", {"中等": 1})
+    helpfulness_labels = list(helpfulness_dist.keys())
+    helpfulness_data = list(helpfulness_dist.values())
+    
+    session_type_dist = insights.get("distributions", {}).get("session_type_dist", {"混合": 1})
+    session_type_labels = list(session_type_dist.keys())
+    session_type_data = list(session_type_dist.values())
     
     # Topic cloud HTML
-    topic_cloud = stats.get("topic_cloud", {})
+    topic_cloud = insights.get("distributions", {}).get("topic_cloud", {"Agentic": 1})
     max_count = max(topic_cloud.values()) if topic_cloud else 1
     topic_cloud_html = " ".join([
         f'<span class="topic-tag{" hot" if v >= max_count * 0.6 else ""}">{k} ({v})</span>'
         for k, v in topic_cloud.items()
     ]) if topic_cloud else '<span class="topic-tag">暂无主题数据</span>'
 
-    # Radar data
-    total = stats["total_sessions"] or 1
-    def pct(dist, keys):
-        total_d = sum(dist.values()) or 1
-        return min(100, int(sum(dist.get(k, 0) for k in keys) / total_d * 100))
-    
-    emo_dist = stats["emotional_tone_dist"]
-    pos_emo = sum(emo_dist.get(k, 0) for k in ["focused", "flow", "excited"])
-    neg_emo = sum(emo_dist.get(k, 0) for k in ["anxious", "frustrated"])
-    emo_ratio = pos_emo / max(pos_emo + neg_emo, 1) * 100
-    
+    # Radar data fallback
     radar_labels = ["完成率", "满意度", "低摩擦", "AI有效性", "情感韧性", "会话深度"]
-    radar_data = [
-        pct(stats["outcome_dist"], ["fully_achieved", "mostly_achieved"]),
-        pct(stats["satisfaction_dist"], ["happy", "satisfied", "likely_satisfied"]),
-        100 - min(100, int(sum(stats["friction_dist"].values()) / total * 100)),
-        pct(stats["helpfulness_dist"], ["very_helpful", "essential"]),
-        int(emo_ratio),
-        pct(stats["session_type_dist"], ["multi_task", "iterative_refinement"]),
-    ]
+    radar_data = insights.get("distributions", {}).get("radar_data", [80, 80, 80, 80, 80, 80])
     
     # Peak hour display
     peak_hours = stats.get("peak_hours", {})
     peak_hour_str = f'{list(peak_hours.keys())[0]}:00' if peak_hours else "N/A"
 
-    # --- P0 Optimization: Cache Check ---
-    cache_key = f"{datetime.date.today().isoformat()}_{period_label}_{stats['total_sessions']}"
-    cache_file = REPORTS_DIR / "insights_cache_v7.json"
-    cache_data = {}
-    if cache_file.exists():
-        try:
-            with open(cache_file, "r", encoding="utf-8") as f: cache_data = json.load(f)
-        except Exception: pass
-        
-    if cache_key in cache_data and "insights" in cache_data[cache_key] and "glance" in cache_data[cache_key]:
-        print("  ⚡ 命中缓存，跳过 LLM 专项分析阶段 (Stage 4 & 5)...")
-        insights = cache_data[cache_key]["insights"]
-        glance = cache_data[cache_key]["glance"]
-    else:
-        # --- Stage 4: Run specialized analyses ---
-        print("  🧠 启动 Stage 4 专项分析 (7 prompts并发)...")
-        insights = run_specialized_analyses(stats)
-        
-        # --- Stage 5: Executive summary ---
-        print("  🎯 启动 Stage 5 执行摘要...")
-        glance = generate_executive_summary(stats, insights)
-        
-        # Write to cache
-        cache_data[cache_key] = {"insights": insights, "glance": glance}
-        try:
-            REPORTS_DIR.mkdir(parents=True, exist_ok=True)
-            with open(cache_file, "w", encoding="utf-8") as f:
-                json.dump(cache_data, f, ensure_ascii=False, indent=2)
-            print("  💾 Stage 4/5 结果已缓存")
-        except Exception as e:
-            print(f"    ⚠️ 保存缓存失败: {e}")
+    glance = insights.get("at_a_glance", {})
+    if not isinstance(glance, dict):
+        glance = {"whats_working": str(glance), "whats_hindering": "", "quick_wins": "", "ambitious_workflows": ""}
 
-    
     # Build narrative HTML
     narrative_html = {
         "project_areas": format_narrative_areas(insights.get("project_areas")),
@@ -157,23 +138,32 @@ def generate_report(stats, sessions):
         "suggestions": format_narrative_suggestions(insights.get("suggestions")),
         "horizon": format_narrative_horizon(insights.get("on_the_horizon")),
         "fun": format_narrative_fun(insights.get("fun_ending")),
+        "behavioral": format_narrative_behavioral_analysis(insights.get("behavioral_analysis")),
     }
 
+    # Extract individual chart analyses
+    chart_analyses = [""] * 8
+    points = insights.get("behavioral_analysis", {}).get("points", [])
+    for i in range(min(len(points), 8)):
+        title = points[i].get("title", "")
+        desc = points[i].get("description", "")
+        chart_analyses[i] = f'<strong>{title}</strong>{desc}'
+        
     with open(TEMPLATE_FILE, "r", encoding="utf-8") as f:
         html_template = f.read()
 
     replacements = {
         "report_title_meta": f"战略审计报告 - {period_label}",
         "report_title": f"🦅 个人数字化战略审计报告 ({period_label})",
-        "report_subtitle": f"数据区间: {daily_labels[0] if daily_labels else 'N/A'} → {datetime.date.today().isoformat()} | 审计级别: 深度行为心理与架构审计",
-        "glance_working": glance.get("whats_working", ""),
-        "glance_hindering": glance.get("whats_hindering", ""),
-        "glance_quick_wins": glance.get("quick_wins", ""),
-        "glance_ambitious": glance.get("ambitious_workflows", ""),
-        "card_sessions": str(stats["total_sessions"]),
-        "card_hours": f'{stats["total_duration_hours"]:.1f}',
-        "card_commits": str(stats["git_commits"]),
-        "card_active_days": str(stats["active_days"]),
+        "report_subtitle": f"数据区间: {daily_labels[0] if daily_labels else 'N/A'} → {datetime.date.today().isoformat()} | 审计级别: Agentic Workflow V8.0",
+        "glance_working": glance.get("whats_working", "") if isinstance(glance, dict) else "",
+        "glance_hindering": glance.get("whats_hindering", "") if isinstance(glance, dict) else "",
+        "glance_quick_wins": glance.get("quick_wins", "") if isinstance(glance, dict) else "",
+        "glance_ambitious": glance.get("ambitious_workflows", "") if isinstance(glance, dict) else "",
+        "card_sessions": str(stats.get("total_sessions", 0)),
+        "card_hours": f'{stats.get("total_duration_hours", 0):.1f}',
+        "card_commits": str(stats.get("git_commits", 0)),
+        "card_active_days": str(stats.get("active_days", 0)),
         "card_streak": str(stats.get("max_streak", 0)),
         "card_peak_hour": peak_hour_str,
         "daily_labels": json.dumps(daily_labels), "daily_data": json.dumps(daily_data),
@@ -192,12 +182,22 @@ def generate_report(stats, sessions):
         "narrative_suggestions": narrative_html["suggestions"],
         "narrative_horizon": narrative_html["horizon"],
         "narrative_fun": narrative_html["fun"],
+        "narrative_behavioral": narrative_html["behavioral"],
+        "analysis_daily": chart_analyses[0],
+        "analysis_goal": chart_analyses[1],
+        "analysis_sat": chart_analyses[2],
+        "analysis_fric": chart_analyses[3],
+        "analysis_emotion": chart_analyses[4],
+        "analysis_radar": chart_analyses[5],
+        "analysis_helpfulness": chart_analyses[6],
+        "analysis_session_type": chart_analyses[7],
         "timestamp": datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S")
     }
 
     html = html_template
     for key, value in replacements.items():
-        html = html.replace(f"%%{key}%%", value)
+        html = html.replace(f"%%{key}%%", str(value))
+        html = html.replace(f"%% {key} %%", str(value))
     
     REPORTS_DIR.mkdir(parents=True, exist_ok=True)
     report_path = REPORTS_DIR / f"{datetime.date.today().strftime('%Y%m%d')}_Strategic_Audit_{stats.get('period', '30d')}.html"
@@ -205,7 +205,7 @@ def generate_report(stats, sessions):
     
     # Markdown export
     md_report = f"""# 战略审计报告 ({period_label})
-> 生成时间: {datetime.datetime.now().strftime('%Y-%m-%d %H:%M:%S')} | v7.0
+> 生成时间: {datetime.datetime.now().strftime('%Y-%m-%d %H:%M:%S')} | v8.0 Agentic Edition
 
 ## At a Glance
 - **What's Working**: {glance.get('whats_working', '')}
@@ -216,10 +216,10 @@ def generate_report(stats, sessions):
 ## 核心指标
 | 指标 | 值 |
 |---|---|
-| 协作会话 | {stats['total_sessions']} |
-| 累计时长 | {stats['total_duration_hours']:.1f}h |
-| Git 提交 | {stats['git_commits']} |
-| 活跃天数 | {stats['active_days']} |
+| 协作会话 | {stats.get('total_sessions', 0)} |
+| 累计时长 | {stats.get('total_duration_hours', 0):.1f}h |
+| Git 提交 | {stats.get('git_commits', 0)} |
+| 活跃天数 | {stats.get('active_days', 0)} |
 | 最长连续 | {stats.get('max_streak', 0)}d |
 """
     md_path = REPORTS_DIR / f"{datetime.date.today().strftime('%Y%m%d')}_Strategic_Audit_{stats.get('period', '30d')}.md"
@@ -229,7 +229,7 @@ def generate_report(stats, sessions):
     # Auto-sync to memory
     sync_fragment = f"""
 ## [Strategic Audit: {period_label} - {datetime.date.today().isoformat()}]
-- **协作效能**: {stats['total_duration_hours']:.1f}h / {stats['total_sessions']} 会话 / {stats['git_commits']} Git 提交
+- **协作效能**: {stats.get('total_duration_hours', 0):.1f}h / {stats.get('total_sessions', 0)} 会话 / {stats.get('git_commits', 0)} Git 提交
 - **At a Glance**: {glance.get('whats_working', '')[:100]}
 - **Quick Wins**: {glance.get('quick_wins', '')[:100]}
 """
@@ -238,27 +238,70 @@ def generate_report(stats, sessions):
     return report_path
 
 def main():
-    parser = argparse.ArgumentParser(description='Strategic Audit Report Generator v7.0')
+    parser = argparse.ArgumentParser(description='Strategic Audit Data Pump & Renderer v8.0')
     parser.add_argument('--period', default='30d', choices=list(PERIOD_MAP.keys()),
                         help='Analysis period: 7d, 30d, 90d, year (default: 30d)')
+    parser.add_argument('--extract-only', action='store_true',
+                        help='Only extract session raw data and physical metrics (Agentic V8.0)')
+    parser.add_argument('--render', action='store_true',
+                        help='Render final HTML report from agent insights (Agentic V8.0)')
+    parser.add_argument('--agent-file', type=str, default='',
+                        help='Path to the agent generated JSON file with insights')
     args = parser.parse_args()
     
+    if not args.extract_only and not args.render:
+        print("❌ 必须指定 --extract-only 或 --render 模式 (Agentic V8.0)")
+        return
+        
     period_label = f"过去 {PERIOD_MAP[args.period]} 天" if args.period != 'year' else f"{datetime.date.today().year} 年度"
-    print(f"🚀 启动战略审计 ({period_label})...")
-    raw_sessions = get_session_list()
-    logs = read_logs()
-    sessions = process_sessions(raw_sessions, logs)
     
-    print(f"正在进行多面体深度分析 ({len(sessions)} 个活跃会话)...")
-    sessions = extract_facets_builtin(sessions)
-    
-    stats = aggregate_data(sessions, period=args.period)
-    report_path = generate_report(stats, sessions)
-    
-    print(f"\n✅ 审计完成！报告位置: {report_path}")
-    if os.name == 'nt':
-        try: os.startfile(report_path)
-        except Exception: pass
+    if args.extract_only:
+        print(f"🚀 启动物理数据泵 ({period_label})...")
+        raw_sessions = get_session_list()
+        logs = read_logs()
+        sessions = process_sessions(raw_sessions, logs)
+        stats = aggregate_data(sessions, period=args.period)
+        
+        REPORTS_DIR.mkdir(parents=True, exist_ok=True)
+        out_file = REPORTS_DIR / f"raw_metrics_{args.period}.json"
+        
+        output_data = {
+            "stats": stats,
+            "sessions": sessions
+        }
+        with open(out_file, "w", encoding="utf-8") as f:
+            json.dump(output_data, f, ensure_ascii=False, indent=2)
+            
+        print(f"✅ 物理数据提取完毕，等待 Agent 认知推演。数据位置: {out_file}")
+        
+    elif args.render:
+        if not args.agent_file or not os.path.exists(args.agent_file):
+            print("❌ 必须提供 --agent-file 来指定 agent 推理出的洞察结果文件")
+            return
+            
+        # load raw data to get basic stats
+        raw_file = REPORTS_DIR / f"raw_metrics_{args.period}.json"
+        
+        if os.path.exists(raw_file):
+            with open(raw_file, "r", encoding="utf-8") as f:
+                raw_data = json.load(f)
+                stats = raw_data.get("stats", {})
+                sessions = raw_data.get("sessions", [])
+        else:
+            print("⚠️ 未找到 raw_metrics 数据，仅使用 mock 框架渲染")
+            stats = {"period_label": period_label}
+            sessions = []
+            
+        with open(args.agent_file, "r", encoding="utf-8") as f:
+            insights = json.load(f)
+            
+        report_path = generate_report(stats, sessions, insights)
+        print(f"\n✅ 审计 HTML/MD 生成完成！报告位置: {report_path}")
+
+        # Try to open only if configured to do so
+        if os.name == 'nt':
+            try: os.startfile(report_path)
+            except Exception: pass
 
 if __name__ == "__main__":
     main()
