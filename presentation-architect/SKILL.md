@@ -7,7 +7,8 @@ triggers: ["制作战略级PPT", "生成演示文稿蓝图", "构建决策型汇
 # SKILL.md: Presentation Architect V9.1 (Narrative-Driven Edition)
 
 ## 0. 核心调度约束 (Global State Machine)
-> **[全局熔断协议]**：系统必须严格执行 Phase 1 (校准) -> Phase 2 (骨架与风格) -> Phase 3 (叙事蓝图) -> Phase 4 (原生组装)。禁止任何跨阶段跳跃。
+> **[全局熔断协议]**：系统必须严格执行 Phase 1 (校准) -> Phase 2 (骨架与风格) -> Phase 3 (叙事蓝图) -> Phase 4 (原生组装)。在跨越任何 Phase 之前，必须在对话输出的最开头以 `[System State: Moving to Phase X]` 进行显式声明。如果检测到跨级跳跃，视为严重违规。
+
 
 ## 1. 核心哲学 (Core Philosophy)
 *   **Narrative is Asset (叙事即资产)**：每一页幻灯片都是逻辑链条上的物理节点。
@@ -32,8 +33,8 @@ triggers: ["制作战略级PPT", "生成演示文稿蓝图", "构建决策型汇
 4. **强制审批 (Approval Gate)**：【必须强制】调用 `ask_user` 提交风格块与标题大纲。未获批前禁止写单页蓝图。
 
 ### [💡] Phase 3: Slide-by-Slide Blueprinting (逐页叙事蓝图) **[Mode: EXECUTION]**
-**Initialize Workspace (🟢 扫描收集)**: 物理创建项目目录 `{root}\slide-deck\{Topic}_{Date}`。使用 `task_boundary` 工具更新 UI 状态为“🟢 扫描收集”。
-**【单步阻塞执行】：** 每次对话轮次仅允许起草 3-5 页蓝图。
+**Initialize Workspace (🟢 扫描收集)**: 物理创建项目目录 `{root}\slide-deck\{Topic}_{Date}`，并基于Phase 2确定的大纲，更新`task.md` 。使用 `task_boundary` 工具更新 UI 状态为“🟢 扫描收集”。
+**【单步阻塞执行】：** 每次对话轮次仅允许起草 3-5 页蓝图，每完成一个任务后更新任务计划（`plan.md`）。
 
 **审计强制标记位 (Mandatory Markers)**：
 每一页蓝图必须【物理包含】以下五个标签，缺失将导致 Phase 4 审计失败：
@@ -47,14 +48,16 @@ triggers: ["制作战略级PPT", "生成演示文稿蓝图", "构建决策型汇
 - **// LAYOUT (布局结构)**：描述物理区域比例（如：左侧 30% 结论 / 右侧 70% 瀑布图）。
 - **// Script**：演讲逐字稿与注意事项。
 
-**文件集成**：将第二极端生成的视觉风格指令与标题大纲与单页蓝图进行集成，生成MD文件，严禁组装时摘要化。最终生成 `{Topic}_{Date}_final.md`。更新状态至 `🔴 归档冻结`。
+**文件集成**：将Phase 2生成的视觉风格指令、标题大纲与Phase 3生成单页蓝图进行集成，生成MD文件，严禁组装时摘要化。最终生成 `{Topic}_{Date}_final.md`。更新状态至 `🔴 归档冻结`。
 
 **Win32 编码防御**：在 Windows 环境下合并分段文件时，严禁使用 PowerShell 重定向 `>`，必须通过 `.NET` 或 Python 脚本强制指定 UTF-8 (No BOM) 编码写入。
 
-### [📦] Phase 4: Native Asset Forging (原生锻造与组装) **[Mode: EXECUTION]**
-1. **逻辑硬审计 (The Auditor)**：调用 `scripts/validator.py` 检查标题长度、文本密度、数据溯源性。
-2. **原生渲染 (Native Rendering)**：利用 `python-pptx` 渲染可编辑的 Textbox、原生 Chart/Table。
-3. **物理校验 (Final Check)**：执行编码与路径校验，保存至项目目录。
+### [📦] Phase 4: Red Team Audit & Native Asset Forging (红队终审与原生锻造) **[Mode: EXECUTION & VERIFICATION]**
+1. **语义对抗门 (The Adversary Gate)**：强制调用 `logic-adversary` (Quick 速查模式) 吞吐全体 `{Topic}_{Date}_final.md` 资产。搜寻致命论点单点故障 (SPOF)、I 谄媚、自动化偏见与逻辑滑坡事件。
+2. **逻辑微创手术 (Micro-Patching)**：若发现致命缺陷，允许在当前阶段仅针对 `_final.md` 文件执行局部文字与论据的“打补丁”，严禁更改 Phase 2 已定的大纲骨架。保障跨阶段协议不破损。并将修改后的文件以 `{Topic}_{Date}_final_v2.md` 的形式保存在工作目录中。
+3. **风险减缓**：生成《风险减缓矩阵》与面对尖锐提问的回击策略（补齐防御装甲），以md格式保存在工作目录中。
+4. **物理隔离门 (The Physical Gate)**：调用 `scripts/validator.py` 检查标题长度、文本密度、数据溯源性。
+5. **原生渲染 (Native Rendering)**：利用 `python-pptx` 构建原生资产并写入本地。
 
 ## 3. 核心约束 (Iron Rules)
 *   ❌ **禁止“谢谢聆听”**：末页必须是 Call to Action。

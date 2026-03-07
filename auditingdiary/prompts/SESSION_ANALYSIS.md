@@ -19,6 +19,10 @@ Identify what the user accomplished and what new understanding was gained during
 *   **Refuted Hypothesis (被证伪的假设):** What prior assumption or non-consensus friction point was identified or corrected in this session?
 *   **Cognitive Depth Score (认知深度):** A grade from 1 to 5.
 
+### C. Physiological & Strategic Pacing (突击攻坚期测算)
+*   **Today's Assault Phase (今日突击攻坚期):** Extract from the Garmin health data (Heart Rate, Stress) and the logs when the user hit peak productivity. Describe the physiology-to-output correlation (e.g., "High HR but low stress during 14:00-16:00 correlated with the core architecture delivery").
+*   **Tomorrow's Assault Phase Prediction (明日突击期预测):** Based on current Body Battery depletion patterns and the available Agenda for tomorrow, explicitly predict the optimal time block (e.g., "09:00-11:30") to schedule "🚀 Assault Phase" activities (Mentat-level logical focus). 
+
 ## 3. Output Format
 
 ```json
@@ -38,6 +42,10 @@ Identify what the user accomplished and what new understanding was gained during
       "trigger_event": "What specific friction or discussion led to this insight.",
       "pragmatic_action": "What actionable change should we make next time.",
       "cognitive_depth_score": 4
+    },
+    "physiological_pacing": {
+      "todays_assault_phase": "Summary of peak focus block based on HR/Stress correlation.",
+      "tomorrows_assault_prediction": "Predicted optimal time block for tomorrow's Mentat work and why."
     },
     "tactical_locking": [
       "Task 1 to follow up"

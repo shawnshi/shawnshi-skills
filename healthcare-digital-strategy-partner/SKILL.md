@@ -23,7 +23,7 @@ triggers: ["重构商业模式", "ROI测算", "高规格战略验证", "医疗IT
 ## Execution Protocol (执行协议)
 
 ### Constraint Enforcement:
-1. **Mode Routing (模式路由)**: 强制将任务切分为两段。**Phase 0-1 必须在 `PLANNING` 模式（计划模式）下执行**，专注于研究、逻辑拆解并将其固化为原生的 `implementation_plan.md` Artifact，必须包含**内容大纲**与**验证计划**，随后通过 `ask_user` (BlockedOnUser: true) 阻塞等待审批；**Phase 2-5 必须在 `EXECUTION` 模式（正常执行模式）下执行**，基于审批后的计划进行高密度叙事起草。
+1. **Mode Routing (模式路由)**: 强制将任务切分为两段。**Phase 0-1 必须在 `PLANNING` 模式（计划模式）下执行**，专注于研究、逻辑拆解并请求用户审阅战略方向；**Phase 2-5 必须在 `EXECUTION` 模式（正常执行模式）下执行**，在 Phase 2 将正式落盘任务计划并固化为 `implementation_plan.md`（整体方案大纲）与 `plan.md`（任务分解），后续所有动作严格基于审批后的计划进行高密度叙事起草。
 2. Prose Only: 严禁使用列表项（Bullet points），全篇必须使用高密度的商业叙事（Narrative Prose）。
 3. Review First: 在撰写规划前，先进行‘威胁假设’（Phase 0），列出你认为最容易导致研究报告平庸的 3 个风险点。
 4. Step-by-Step Drafting & Saving: 在 EXECUTION 模式中不要一次性生成全文。必须逐章撰写，并在每一章完成后**立即保存为 .md 物理文件**，后续动作均需基于读取该物理文件进行。开始可先写第一章验证文风。
@@ -39,13 +39,19 @@ triggers: ["重构商业模式", "ROI测算", "高规格战略验证", "医疗IT
 ### Phase 1: MECE Structural & Clinical Audit (逻辑与临床工作流拆解) [PLANNING Mode]
 1.  **Workflow Friction Audit**: 审核提纲是否符合医疗机构真实运作规律。识别新系统引入带来的“摩擦力”（如：新旧 HIS 系统接口对接成本）。
 2.  **Evidence Matrix**: 记录战略判词与【政策红线】、【临床痛点】、【底层数据标准】的原子化对应关系。
-3.  **Title & Summary**: 预定义具有麦肯锡风格的报告提纲。更新文件状态至 `🟡 综合起草`。
-4.  **Plan Approval (硬性阻断 - 方案大纲审批)**: 此阶段必须完成**方案大纲的编制**。将 Phase 0 和 Phase 1 的所有分析、详细的章节大纲与逻辑拆解汇总，写入 `plan.md`。更新完成后**必须调用 `ask_user` 挂起任务**，请求用户审阅并确认方案大纲。未经用户明确 Approve 大纲，严禁擅自进入具体章节内容的起草阶段。
+3.  **Title & Summary**: 预定义具有麦肯锡风格的报告初步提纲框架。更新文件状态至 `🟡 综合起草`。
+4.  **Direction Approval (硬性阻断 - 战略方向审批)**: 汇总 Phase 0 和 Phase 1 的所有前置研判及初步框架，生成整体方案大纲（大纲即为 `implementation_plan.md`），**必须调用 `ask_user` 挂起任务**，请求用户审阅并确认战略方向。未经用户明确确认，严禁进入后续阶段。
 
-### Phase 2: Narrative Drafting (🟡 综合起草与推演) [EXECUTION Mode]
-1.  **Initialize Workspace (🟢 扫描收集)**: 物理创建项目目录 `{root}\MEMORY\research\{Topic}_{Date}`，生成架构文件。Markdown 文件顶部**必须**包含 YAML 元数据 (Title, Date, Status, Author)。使用 `task_boundary` 工具更新 UI 状态为“🟢 扫描收集”以追踪任务进度。
+### Phase 2: Narrative Drafting & Plan Generation (🟡 综合起草与推演) [EXECUTION Mode]
+1.  **Initialize Workspace & Plan Generation (生成整体方案大纲与任务计划)**: 物理创建项目目录 `{root}\MEMORY\research\{Topic}_{Date}`，生成架构文件。
+    *   **计划与大纲生成**：在此阶段，将Phase 1生成的整体方案大纲（大纲即为 `implementation_plan.md`），和基于该大纲生成的任务计划（`plan.md`），并保存在工作空间中。
+    *   **计划精细度**：任务计划（`plan.md`）必须包含每一个将被生成的章节、以及后续每一个阶段（Phase 3, Phase 4）的重点任务。
+    *   使用 `task_boundary` 工具更新 UI 状态为“🟢 扫描收集”以追踪任务进度。
 2.  **Prose-based Chapter Drafting (章节化起草与持久化)**: 
-    *   **逐章落盘**：严格按照已确认的方案大纲，逐个章节进行起草。**【单步阻塞执行】：每次对话轮次【仅允许】起草并使用 `write_file` 写入 1 个章节的物理 `.md` 文件**（如 `{Topic}_{Chapter}_draft.md`）。写入后必须立即 `[STOP]` 挂起，等待用户回复“继续”后，才允许起草下一章。严禁在单次回合中并发生成多章。后续步骤必须基于已生成的物理文件进行读取和处理，绝不能仅依赖内存上下文。
+    *   **严格遵循计划**：在章节生成过程中，必须严格按照任务计划（`plan.md`）及方案大纲（`implementation_plan.md`）逐个进行。
+    *   **逐章落盘**：每次生成必须将所撰写的章节内容以 `.md` 格式保存在工作目录（如 `{Topic}_{Chapter}_draft.md`）。文件顶部**必须**包含 YAML 元数据 (Title, Date, Status, Author)。
+    *   **任务状态追溯**：每完成一个章节生成任务，必须立即更新任务计划（`plan.md`）。
+    *   **【单步阻塞执行】**：每次对话轮次【仅允许】起草并写入 1 个章节的物理 `.md` 文件。写入后必须立即 `[STOP]` 挂起，等待用户回复“继续”后才允许起草下一章。严禁并发生成多章。
     *   **判词性小标题**：拒绝“市场现状”这种废话，使用诸如“DRG支付改革正在逼迫院方将IT从成本中心转为利润中心”的实效标题。
     *   **深度控制**：预留需精确数据的“真空地带”，高频使用 `search_web` 填补真实临床与财务实证数据。每个章节的初稿需具备 1000 汉字以上的颗粒度。
     *   **So-What 集成**：所有洞察必须自然导向 Actionable 建议，而非悬浮的学术探讨。
@@ -60,12 +66,14 @@ triggers: ["重构商业模式", "ROI测算", "高规格战略验证", "医疗IT
     *   **合规风险**：数据出境、脱敏不合规或未取得三类医疗器械注册证？
 2.  **Competitive Asymmetry (卫宁“本位战”锚定)**：必须显式代入卫宁健康的核心护城河进行反向测试。“如果卫宁推行这一计划，依托 WiNEX 的微服务架构与大模型底座，东软或创业慧康能否在六个月内复制？其与底层 HIS 强耦合的转换成本是否足够困住旧有客户？”
 3.  **ROI Stress Test**: 对方案执行悲观/基准/乐观测算，必须算“医生每天节省的分钟数”和“单病种成本变动”。
+4.  **Persistent Saving & Plan Tracking**: 也须及时将本阶段生成的审计报告或测算结果以 `.md` 格式保存在工作目录。每完成一个任务后，更新任务计划（`plan.md`）。
 
 ### Phase 4: Final Forging (🔴 归档冻结与交付) [EXECUTION Mode]
-1.  **Verbatim Assembly**: 逐章完整集成，基于前期逐章保存的物理 `.md` 文件进行合并和通读校验，严禁组装时摘要化。最终生成 `{Topic}_{Date}_final.md`。更新状态至 `🔴 归档冻结`。
+1.  **Verbatim Assembly**: 逐章完整集成，基于前期逐章保存的物理 `.md` 文件进行合并和通读校验，严禁组装时摘要化。最终生成 `{Topic}_{Date}_final.md`，及时将文件以 `.md` 格式保存在工作目录。更新状态至 `🔴 归档冻结`。
 2.  **Compliance Check & HIT Terminology**: 确保 EMR/EHR、HIS/CIS、DRG/DIP、HL7 FHIR 的使用绝对精准与合规。
 3.  **Stylistic Hygiene (手术级精修)**：全局清理无效黑话、修正伪因果关系、剔除不必要的 Markdown 强调符号。**【强制物理调用】：必须调用 `text-forger` 工具（或使用 `activate_skill` 激活对应 agent），对集成后的全案进行手术级“去AI化”洗稿，确保文本质量与顶尖商业咨询语境完全对齐。严禁主流程模型擅自模拟。**
-4.  **Final Review (交付关卡)**：实证加固后，撰写一页纸核心摘要（背景、洞察、卫生经济学影响、下一步行动），连同末尾强制的 `> ⚠️ Clinical & Regulatory Constraint:` 风险披露，**使用 `ask_user` (BlockedOnUser: true) 提交最终成果给用户验收**。
+4.  **Ongoing Plan Tracking**: 每完成本阶段的一个整合或交付审查任务，务必及时将状态更新回任务计划（`plan.md`）。
+5.  **Final Review (交付关卡)**：实证加固后，撰写一页纸核心摘要（背景、洞察、卫生经济学影响、下一步行动），连同末尾强制的 `> ⚠️ Clinical & Regulatory Constraint:` 风险披露，**使用 `ask_user` (BlockedOnUser: true) 提交最终成果给用户验收**。
 
 ### Phase 5: Cognitive Write-Back (智慧蒸馏闭环) [EXECUTION Mode]
 1.  **Knowledge Extraction**: 从本次行研推演中提取最具价值的 1-2 条“反常识洞察 (Counter-intuitive Insights)”或“新识别的合规死角/落地球坑”。
