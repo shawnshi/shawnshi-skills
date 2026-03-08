@@ -1,0 +1,685 @@
+[
+  {
+    "query": "300308.SZ",
+    "symbol": "300308.SZ",
+    "info": {
+      "longName": "Zhongji Innolight Co., Ltd.",
+      "shortName": "ZHONGJI INNOLIGHT",
+      "symbol": "300308.SZ",
+      "exchange": "SHZ",
+      "currency": "CNY",
+      "currentPrice": 545.48,
+      "previousClose": 557.0,
+      "marketCap": 606092787712,
+      "sector": "Technology",
+      "industry": "Communication Equipment",
+      "trailingPE": 71.3979,
+      "forwardPE": 17.56293,
+      "dividendYield": 0.16,
+      "priceToBook": 22.967579,
+      "returnOnEquity": 0.44705,
+      "operatingMargins": 0.37739,
+      "debtToEquity": 6.586,
+      "beta": 1.209,
+      "enterpriseToEbitda": 42.278,
+      "fiftyTwoWeekHigh": 658.8,
+      "fiftyTwoWeekLow": 67.2,
+      "totalRevenue": 38239981568,
+      "revenueGrowth": 1.021,
+      "country": "China",
+      "website": "https://www.zj-innolight.com"
+    },
+    "news": [
+      {
+        "title": "Top 3 High Growth Tech Stocks in Asia for Potential Portfolio Strength",
+        "link": "https://finance.yahoo.com/news/top-3-high-growth-tech-043828028.html",
+        "publisher": "Simply Wall St.",
+        "pub_time": "2026-02-18T04:38:28Z"
+      },
+      {
+        "title": "High Growth Tech Stocks To Watch In Asia February 2026",
+        "link": "https://finance.yahoo.com/news/high-growth-tech-stocks-watch-043802749.html",
+        "publisher": "Simply Wall St.",
+        "pub_time": "2026-02-16T04:38:02Z"
+      },
+      {
+        "title": "High Growth Tech Stocks In Asia With Promising Potential",
+        "link": "https://finance.yahoo.com/news/high-growth-tech-stocks-asia-043803959.html",
+        "publisher": "Simply Wall St.",
+        "pub_time": "2026-02-13T04:38:03Z"
+      },
+      {
+        "title": "High Growth Tech Stocks in Asia for February 2026",
+        "link": "https://finance.yahoo.com/news/high-growth-tech-stocks-asia-043824212.html",
+        "publisher": "Simply Wall St.",
+        "pub_time": "2026-02-11T04:38:24Z"
+      },
+      {
+        "title": "High Growth Tech Stocks In Asia To Watch February 2026",
+        "link": "https://finance.yahoo.com/news/high-growth-tech-stocks-asia-043844731.html",
+        "publisher": "Simply Wall St.",
+        "pub_time": "2026-02-10T04:38:44Z"
+      },
+      {
+        "title": "High Growth Tech Stocks in Asia Featuring Three Top Picks",
+        "link": "https://finance.yahoo.com/news/high-growth-tech-stocks-asia-043819068.html",
+        "publisher": "Simply Wall St.",
+        "pub_time": "2026-02-09T04:38:19Z"
+      },
+      {
+        "title": "High Growth Tech Stocks To Watch In February 2026",
+        "link": "https://finance.yahoo.com/news/high-growth-tech-stocks-watch-093814017.html",
+        "publisher": "Simply Wall St.",
+        "pub_time": "2026-02-06T09:38:14Z"
+      },
+      {
+        "title": "Exploring Three High Growth Tech Stocks in the Global Market",
+        "link": "https://finance.yahoo.com/news/exploring-three-high-growth-tech-093812632.html",
+        "publisher": "Simply Wall St.",
+        "pub_time": "2026-02-05T09:38:12Z"
+      },
+      {
+        "title": "Exploring T&S CommunicationsLtd And 2 Other High Growth Tech Stocks In Asia",
+        "link": "https://finance.yahoo.com/news/exploring-t-communicationsltd-2-other-043820134.html",
+        "publisher": "Simply Wall St.",
+        "pub_time": "2026-02-05T04:38:20Z"
+      },
+      {
+        "title": "SEMCNS And 2 Other High Growth Tech Stocks In Asia",
+        "link": "https://finance.yahoo.com/news/semcns-2-other-high-growth-223538182.html",
+        "publisher": "Simply Wall St.",
+        "pub_time": "2026-02-01T22:35:38Z"
+      }
+    ],
+    "history": [
+      {
+        "Date": "2025-12-08",
+        "Open": 543.0,
+        "High": 585.0,
+        "Low": 539.0,
+        "Close": 570.0,
+        "Volume": 40822440,
+        "Dividends": 0.0,
+        "Stock Splits": 0.0
+      },
+      {
+        "Date": "2025-12-09",
+        "Open": 570.0900268554688,
+        "High": 613.0,
+        "Low": 568.5399780273438,
+        "Close": 606.0,
+        "Volume": 37129333,
+        "Dividends": 0.0,
+        "Stock Splits": 0.0
+      },
+      {
+        "Date": "2025-12-10",
+        "Open": 609.0599975585938,
+        "High": 620.0,
+        "Low": 589.5,
+        "Close": 616.0,
+        "Volume": 30209433,
+        "Dividends": 0.0,
+        "Stock Splits": 0.0
+      },
+      {
+        "Date": "2025-12-11",
+        "Open": 610.0,
+        "High": 627.1099853515625,
+        "Low": 585.9099731445312,
+        "Close": 586.8099975585938,
+        "Volume": 36353125,
+        "Dividends": 0.0,
+        "Stock Splits": 0.0
+      },
+      {
+        "Date": "2025-12-12",
+        "Open": 587.0,
+        "High": 603.8800048828125,
+        "Low": 570.219970703125,
+        "Close": 582.0,
+        "Volume": 46878924,
+        "Dividends": 0.0,
+        "Stock Splits": 0.0
+      },
+      {
+        "Date": "2025-12-15",
+        "Open": 570.0,
+        "High": 588.0,
+        "Low": 568.0,
+        "Close": 570.8599853515625,
+        "Volume": 30098736,
+        "Dividends": 0.0,
+        "Stock Splits": 0.0
+      },
+      {
+        "Date": "2025-12-16",
+        "Open": 568.7999877929688,
+        "High": 575.0,
+        "Low": 545.010009765625,
+        "Close": 551.7899780273438,
+        "Volume": 27970237,
+        "Dividends": 0.0,
+        "Stock Splits": 0.0
+      },
+      {
+        "Date": "2025-12-17",
+        "Open": 557.0,
+        "High": 592.0700073242188,
+        "Low": 556.6599731445312,
+        "Close": 589.97998046875,
+        "Volume": 32357008,
+        "Dividends": 0.0,
+        "Stock Splits": 0.0
+      },
+      {
+        "Date": "2025-12-18",
+        "Open": 576.989990234375,
+        "High": 579.8699951171875,
+        "Low": 563.4299926757812,
+        "Close": 571.2000122070312,
+        "Volume": 24162887,
+        "Dividends": 0.0,
+        "Stock Splits": 0.0
+      },
+      {
+        "Date": "2025-12-19",
+        "Open": 583.3400268554688,
+        "High": 587.0,
+        "Low": 570.280029296875,
+        "Close": 571.7000122070312,
+        "Volume": 22442914,
+        "Dividends": 0.0,
+        "Stock Splits": 0.0
+      },
+      {
+        "Date": "2025-12-22",
+        "Open": 590.010009765625,
+        "High": 622.0,
+        "Low": 590.010009765625,
+        "Close": 617.5,
+        "Volume": 39441167,
+        "Dividends": 0.0,
+        "Stock Splits": 0.0
+      },
+      {
+        "Date": "2025-12-23",
+        "Open": 625.0,
+        "High": 628.989990234375,
+        "Low": 614.0,
+        "Close": 621.0,
+        "Volume": 23364201,
+        "Dividends": 0.0,
+        "Stock Splits": 0.0
+      },
+      {
+        "Date": "2025-12-24",
+        "Open": 627.6400146484375,
+        "High": 638.0,
+        "Low": 617.5999755859375,
+        "Close": 634.4000244140625,
+        "Volume": 23509126,
+        "Dividends": 0.0,
+        "Stock Splits": 0.0
+      },
+      {
+        "Date": "2025-12-25",
+        "Open": 645.0,
+        "High": 658.7999877929688,
+        "Low": 618.4099731445312,
+        "Close": 639.7999877929688,
+        "Volume": 25938711,
+        "Dividends": 0.0,
+        "Stock Splits": 0.0
+      },
+      {
+        "Date": "2025-12-26",
+        "Open": 628.2999877929688,
+        "High": 636.9500122070312,
+        "Low": 618.0,
+        "Close": 627.0,
+        "Volume": 21376184,
+        "Dividends": 0.0,
+        "Stock Splits": 0.0
+      },
+      {
+        "Date": "2025-12-29",
+        "Open": 627.6400146484375,
+        "High": 633.6900024414062,
+        "Low": 612.72998046875,
+        "Close": 618.0,
+        "Volume": 24112583,
+        "Dividends": 0.0,
+        "Stock Splits": 0.0
+      },
+      {
+        "Date": "2025-12-30",
+        "Open": 618.0999755859375,
+        "High": 644.3400268554688,
+        "Low": 615.0,
+        "Close": 632.0,
+        "Volume": 26114540,
+        "Dividends": 0.0,
+        "Stock Splits": 0.0
+      },
+      {
+        "Date": "2025-12-31",
+        "Open": 629.0,
+        "High": 633.0,
+        "Low": 608.0,
+        "Close": 610.0,
+        "Volume": 22560412,
+        "Dividends": 0.0,
+        "Stock Splits": 0.0
+      },
+      {
+        "Date": "2026-01-05",
+        "Open": 621.0800170898438,
+        "High": 627.2899780273438,
+        "Low": 600.1699829101562,
+        "Close": 623.510009765625,
+        "Volume": 30204157,
+        "Dividends": 0.0,
+        "Stock Splits": 0.0
+      },
+      {
+        "Date": "2026-01-06",
+        "Open": 606.0,
+        "High": 615.7999877929688,
+        "Low": 590.2000122070312,
+        "Close": 605.25,
+        "Volume": 33558327,
+        "Dividends": 0.0,
+        "Stock Splits": 0.0
+      },
+      {
+        "Date": "2026-01-07",
+        "Open": 616.7999877929688,
+        "High": 628.0,
+        "Low": 602.0,
+        "Close": 619.5999755859375,
+        "Volume": 28001455,
+        "Dividends": 0.0,
+        "Stock Splits": 0.0
+      },
+      {
+        "Date": "2026-01-08",
+        "Open": 611.0999755859375,
+        "High": 616.0,
+        "Low": 592.0,
+        "Close": 595.4500122070312,
+        "Volume": 29196168,
+        "Dividends": 0.0,
+        "Stock Splits": 0.0
+      },
+      {
+        "Date": "2026-01-09",
+        "Open": 575.9400024414062,
+        "High": 595.0,
+        "Low": 561.6099853515625,
+        "Close": 583.2000122070312,
+        "Volume": 38572337,
+        "Dividends": 0.0,
+        "Stock Splits": 0.0
+      },
+      {
+        "Date": "2026-01-12",
+        "Open": 570.0,
+        "High": 600.0,
+        "Low": 558.8499755859375,
+        "Close": 591.969970703125,
+        "Volume": 38360752,
+        "Dividends": 0.0,
+        "Stock Splits": 0.0
+      },
+      {
+        "Date": "2026-01-13",
+        "Open": 580.7999877929688,
+        "High": 616.5999755859375,
+        "Low": 580.010009765625,
+        "Close": 585.760009765625,
+        "Volume": 32055944,
+        "Dividends": 0.0,
+        "Stock Splits": 0.0
+      },
+      {
+        "Date": "2026-01-14",
+        "Open": 595.3499755859375,
+        "High": 600.8800048828125,
+        "Low": 567.010009765625,
+        "Close": 593.0,
+        "Volume": 41732994,
+        "Dividends": 0.0,
+        "Stock Splits": 0.0
+      },
+      {
+        "Date": "2026-01-15",
+        "Open": 583.2000122070312,
+        "High": 636.989990234375,
+        "Low": 581.02001953125,
+        "Close": 625.02001953125,
+        "Volume": 45903824,
+        "Dividends": 0.0,
+        "Stock Splits": 0.0
+      },
+      {
+        "Date": "2026-01-16",
+        "Open": 635.969970703125,
+        "High": 645.0,
+        "Low": 615.02001953125,
+        "Close": 617.0,
+        "Volume": 37272376,
+        "Dividends": 0.0,
+        "Stock Splits": 0.0
+      },
+      {
+        "Date": "2026-01-19",
+        "Open": 605.0,
+        "High": 619.0,
+        "Low": 602.5700073242188,
+        "Close": 605.5,
+        "Volume": 22307862,
+        "Dividends": 0.0,
+        "Stock Splits": 0.0
+      },
+      {
+        "Date": "2026-01-20",
+        "Open": 605.52001953125,
+        "High": 608.0,
+        "Low": 580.0,
+        "Close": 585.0,
+        "Volume": 26290035,
+        "Dividends": 0.0,
+        "Stock Splits": 0.0
+      },
+      {
+        "Date": "2026-01-21",
+        "Open": 586.239990234375,
+        "High": 599.6599731445312,
+        "Low": 581.0,
+        "Close": 581.9000244140625,
+        "Volume": 25095900,
+        "Dividends": 0.0,
+        "Stock Splits": 0.0
+      },
+      {
+        "Date": "2026-01-22",
+        "Open": 590.0800170898438,
+        "High": 624.5,
+        "Low": 585.0,
+        "Close": 621.0,
+        "Volume": 40194425,
+        "Dividends": 0.0,
+        "Stock Splits": 0.0
+      },
+      {
+        "Date": "2026-01-23",
+        "Open": 614.0,
+        "High": 615.0,
+        "Low": 580.1599731445312,
+        "Close": 585.0,
+        "Volume": 39656041,
+        "Dividends": 0.0,
+        "Stock Splits": 0.0
+      },
+      {
+        "Date": "2026-01-26",
+        "Open": 580.0,
+        "High": 598.0,
+        "Low": 572.010009765625,
+        "Close": 589.7999877929688,
+        "Volume": 26088115,
+        "Dividends": 0.0,
+        "Stock Splits": 0.0
+      },
+      {
+        "Date": "2026-01-27",
+        "Open": 589.9600219726562,
+        "High": 630.0,
+        "Low": 586.7000122070312,
+        "Close": 615.5999755859375,
+        "Volume": 38728671,
+        "Dividends": 0.0,
+        "Stock Splits": 0.0
+      },
+      {
+        "Date": "2026-01-28",
+        "Open": 632.0,
+        "High": 644.97998046875,
+        "Low": 623.0,
+        "Close": 628.0,
+        "Volume": 32926375,
+        "Dividends": 0.0,
+        "Stock Splits": 0.0
+      },
+      {
+        "Date": "2026-01-29",
+        "Open": 637.0,
+        "High": 637.9500122070312,
+        "Low": 610.1099853515625,
+        "Close": 613.8499755859375,
+        "Volume": 24894040,
+        "Dividends": 0.0,
+        "Stock Splits": 0.0
+      },
+      {
+        "Date": "2026-01-30",
+        "Open": 616.2000122070312,
+        "High": 653.5800170898438,
+        "Low": 605.9299926757812,
+        "Close": 649.0,
+        "Volume": 35759200,
+        "Dividends": 0.0,
+        "Stock Splits": 0.0
+      },
+      {
+        "Date": "2026-02-02",
+        "Open": 635.010009765625,
+        "High": 658.5800170898438,
+        "Low": 591.0,
+        "Close": 591.0,
+        "Volume": 55998048,
+        "Dividends": 0.0,
+        "Stock Splits": 0.0
+      },
+      {
+        "Date": "2026-02-03",
+        "Open": 607.0,
+        "High": 618.7999877929688,
+        "Low": 576.0,
+        "Close": 589.7000122070312,
+        "Volume": 42918019,
+        "Dividends": 0.0,
+        "Stock Splits": 0.0
+      },
+      {
+        "Date": "2026-02-04",
+        "Open": 570.0,
+        "High": 574.5499877929688,
+        "Low": 525.1300048828125,
+        "Close": 560.0,
+        "Volume": 52721001,
+        "Dividends": 0.0,
+        "Stock Splits": 0.0
+      },
+      {
+        "Date": "2026-02-05",
+        "Open": 561.010009765625,
+        "High": 577.75,
+        "Low": 556.010009765625,
+        "Close": 561.989990234375,
+        "Volume": 31867515,
+        "Dividends": 0.0,
+        "Stock Splits": 0.0
+      },
+      {
+        "Date": "2026-02-06",
+        "Open": 548.1099853515625,
+        "High": 561.8800048828125,
+        "Low": 530.2999877929688,
+        "Close": 540.010009765625,
+        "Volume": 32867590,
+        "Dividends": 0.0,
+        "Stock Splits": 0.0
+      },
+      {
+        "Date": "2026-02-09",
+        "Open": 561.0,
+        "High": 573.989990234375,
+        "Low": 550.1199951171875,
+        "Close": 565.989990234375,
+        "Volume": 36663337,
+        "Dividends": 0.0,
+        "Stock Splits": 0.0
+      },
+      {
+        "Date": "2026-02-10",
+        "Open": 561.5499877929688,
+        "High": 573.6799926757812,
+        "Low": 555.5,
+        "Close": 555.7100219726562,
+        "Volume": 21715825,
+        "Dividends": 0.0,
+        "Stock Splits": 0.0
+      },
+      {
+        "Date": "2026-02-11",
+        "Open": 551.010009765625,
+        "High": 554.0,
+        "Low": 522.530029296875,
+        "Close": 531.9099731445312,
+        "Volume": 39713551,
+        "Dividends": 0.0,
+        "Stock Splits": 0.0
+      },
+      {
+        "Date": "2026-02-12",
+        "Open": 535.0,
+        "High": 546.3800048828125,
+        "Low": 523.3800048828125,
+        "Close": 527.4600219726562,
+        "Volume": 30178611,
+        "Dividends": 0.0,
+        "Stock Splits": 0.0
+      },
+      {
+        "Date": "2026-02-13",
+        "Open": 524.0,
+        "High": 543.7999877929688,
+        "Low": 515.0,
+        "Close": 531.0,
+        "Volume": 26043610,
+        "Dividends": 0.0,
+        "Stock Splits": 0.0
+      },
+      {
+        "Date": "2026-02-24",
+        "Open": 542.0,
+        "High": 572.02001953125,
+        "Low": 522.0,
+        "Close": 554.0,
+        "Volume": 35655753,
+        "Dividends": 0.0,
+        "Stock Splits": 0.0
+      },
+      {
+        "Date": "2026-02-25",
+        "Open": 550.0,
+        "High": 569.8599853515625,
+        "Low": 548.0,
+        "Close": 566.0700073242188,
+        "Volume": 21479209,
+        "Dividends": 0.0,
+        "Stock Splits": 0.0
+      },
+      {
+        "Date": "2026-02-26",
+        "Open": 566.0700073242188,
+        "High": 574.0,
+        "Low": 559.0,
+        "Close": 572.219970703125,
+        "Volume": 25279991,
+        "Dividends": 0.0,
+        "Stock Splits": 0.0
+      },
+      {
+        "Date": "2026-02-27",
+        "Open": 555.0,
+        "High": 559.97998046875,
+        "Low": 531.1099853515625,
+        "Close": 534.0,
+        "Volume": 34712470,
+        "Dividends": 0.0,
+        "Stock Splits": 0.0
+      },
+      {
+        "Date": "2026-03-02",
+        "Open": 520.0,
+        "High": 580.0,
+        "Low": 520.0,
+        "Close": 570.5800170898438,
+        "Volume": 49310342,
+        "Dividends": 0.0,
+        "Stock Splits": 0.0
+      },
+      {
+        "Date": "2026-03-03",
+        "Open": 570.7999877929688,
+        "High": 599.0399780273438,
+        "Low": 563.280029296875,
+        "Close": 563.7999877929688,
+        "Volume": 39310100,
+        "Dividends": 0.0,
+        "Stock Splits": 0.0
+      },
+      {
+        "Date": "2026-03-04",
+        "Open": 554.02001953125,
+        "High": 563.5,
+        "Low": 536.5,
+        "Close": 539.0,
+        "Volume": 30742945,
+        "Dividends": 0.0,
+        "Stock Splits": 0.0
+      },
+      {
+        "Date": "2026-03-05",
+        "Open": 556.0,
+        "High": 585.0,
+        "Low": 552.5999755859375,
+        "Close": 557.0,
+        "Volume": 37900360,
+        "Dividends": 0.0,
+        "Stock Splits": 0.0
+      },
+      {
+        "Date": "2026-03-06",
+        "Open": 553.0,
+        "High": 559.97998046875,
+        "Low": 537.0599975585938,
+        "Close": 545.47998046875,
+        "Volume": 21966767,
+        "Dividends": 0.0,
+        "Stock Splits": 0.0
+      }
+    ],
+    "history_truncated": false,
+    "summary": {
+      "period_return_pct": -4.3,
+      "max_drawdown_pct": -18.73,
+      "dd_from_high_pct": -17.2,
+      "first_close": 570.0,
+      "last_close": 545.48,
+      "avg_close": 587.5,
+      "max_high": 658.8,
+      "min_low": 515.0,
+      "avg_volume": 32783964,
+      "volatility_std": 3.7677,
+      "data_points": 57,
+      "ma5": 555.17,
+      "ma10": 553.31,
+      "ma20": 560.3,
+      "bias_ma5_pct": -1.75
+    }
+  }
+]

@@ -34,10 +34,39 @@ uv run {SKILL_DIR}/scripts/yf.py 0700.HK --json --price-only --period 5d --inter
 uv run {SKILL_DIR}/scripts/yf.py MSFT --json --news-only
 ```
 
+### 6. A 股深度查询 (含筹码增强)
+A 股代码会自动触发 efinance/akshare 数据补强（量比、换手率、振幅、筹码分布）。
+```bash
+uv run {SKILL_DIR}/scripts/yf.py 600519.SS --json --lean --period 1y --full-info
+```
+
+### 7. 北交所标的查询
+北交所代码使用 `.BJ` 后缀。
+```bash
+uv run {SKILL_DIR}/scripts/yf.py 430047.BJ --json --lean --period 6mo
+```
+
+### 8. 完整基本面输出 (--full-info)
+获取 yfinance 返回的全量 info 字段，用于特殊研究需求。
+```bash
+uv run {SKILL_DIR}/scripts/yf.py AAPL --json --info-only --full-info
+```
+
 ## Agent 唤醒与智能投研分析
 
 本技能内置了一个专精于个股诊断的 Agent 配置文件 (`agents/stock_analyzer.yaml`)。
-当在支持 Agent 的环境下发起查询时，大模型会执行标准的 **双盲印证工作流**（量化数据 + 定性资讯）。
+当在支持 Agent 的环境下发起查询时，大模型会执行标准的 **双盲印证工作流**（量化数据 + 定性资讯），并根据标的所属市场自动路由分析框架。
 
 **典型唤醒 Prompt**：
+
+### A 股
+> "@yahoo-finance 切换到 stock analyzer，请深度分析中际旭创 (300308.SZ) 的投资价值"
+
+### 美股
 > "@yahoo-finance 切换到 stock analyzer，请深度分析特斯拉 (Tesla) 的投资价值"
+
+### 港股
+> "@yahoo-finance 切换到 stock analyzer，请深度分析腾讯 (0700.HK) 的投资价值"
+
+### 完整落盘流程
+stock_analyzer 分析完成后会自动调用 `save_dashboard.py` 将研报以 `{股票名}_{YYYYMMDD_HHMM}.md` 格式存入 `~/.gemini/MEMORY/stocks/`。

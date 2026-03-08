@@ -65,16 +65,18 @@ CONFIG = load_config()
 def validate_content(content):
     """
     Validate content integrity before writing.
-    Must contain a date header (e.g., # 2026-02-08).
+    Must contain a date header (e.g., # 2026-02-08) or an audit header (e.g., # 2026-03-08 [WEEKLY AUDIT]).
     """
-    if not re.search(r'^#\s\d{4}-\d{2}-\d{2}', content, re.MULTILINE):
-        return False, "Content missing standard date header (# YYYY-MM-DD)."
+    if not re.search(r'^#\s\d{4}-\d{2}-\d{2}(\s\[.*\])?', content, re.MULTILINE):
+        return False, "Content missing standard date/audit header (# YYYY-MM-DD [TAG])."
     return True, ""
 
 def get_quarterly_filename(date_str):
     """Determine the filename based on the quarter of the given date."""
     try:
-        dt = datetime.strptime(date_str, "%Y-%m-%d")
+        # Support extracting date even if there's a tag like [WEEKLY AUDIT]
+        clean_date = re.search(r'(\d{4}-\d{2}-\d{2})', date_str).group(1)
+        dt = datetime.strptime(clean_date, "%Y-%m-%d")
         quarter = (dt.month - 1) // 3 + 1
         return f"{dt.year}-Q{quarter}.md"
     except:

@@ -2,7 +2,7 @@
   "strategic_keywords": [
     {
       "keyword": "ai",
-      "weight": 19
+      "weight": 20
     },
     {
       "keyword": "ace",
@@ -38,7 +38,7 @@
     },
     {
       "keyword": "drg",
-      "weight": 10
+      "weight": 12
     },
     {
       "keyword": "dip",

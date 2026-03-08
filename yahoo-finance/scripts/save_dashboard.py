@@ -29,7 +29,7 @@ def save_dashboard():
         print(f"Error parsing JSON content: {e}")
         sys.exit(1)
         
-    date_str = datetime.now().strftime("%Y%m%d")
+    date_str = datetime.now().strftime("%Y%m%d_%H%M")
     filename = f"{args.stock}_{date_str}.md"
     
     base_dir = os.path.join(os.path.expanduser("~"), ".gemini", "MEMORY", "stocks")

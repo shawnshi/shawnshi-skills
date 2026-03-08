@@ -97,13 +97,18 @@ class StandaloneDataFetcher:
             "turnover_rate": None,
             "profit_ratio": None,
             "avg_cost": None,
-            "concentration": None
+            "concentration": None,
+            "amplitude": None,
+            "chip_90_low": None,
+            "chip_90_high": None,
+            "chip_70_low": None,
+            "chip_70_high": None,
         }
         
         if not (symbol.isdigit() and len(symbol) == 6):
             return metrics
             
-        # 1. Fetch Latest Quote via efinance for Volume Ratio and Turnover Rate
+        # 1. Fetch Latest Quote via efinance for Volume Ratio, Turnover Rate, Amplitude
         try:
             df_quote = self._fetch_quote_ef(symbol)
             if not df_quote.empty:
@@ -112,6 +117,17 @@ class StandaloneDataFetcher:
                     metrics['volume_ratio'] = _safe_float(row['量比'])
                 if '换手率' in row:
                     metrics['turnover_rate'] = _safe_float(row['换手率'])
+                # efinance get_latest_quote 不直接返回"振幅"列，需手动计算
+                high = _safe_float(row.get('最高'))
+                low = _safe_float(row.get('最低'))
+                prev_close = _safe_float(row.get('昨日收盘'))
+                if high is not None and low is not None and prev_close and prev_close > 0:
+                    metrics['amplitude'] = round((high - low) / prev_close * 100, 2)
+                # A股修正市值（yfinance经常因汇率/股本计算出错）
+                if '总市值' in row:
+                    metrics['total_mv_cny'] = _safe_float(row['总市值'])
+                if '流通市值' in row:
+                    metrics['circ_mv_cny'] = _safe_float(row['流通市值'])
         except Exception as e:
             logger.warning(f"Failed to fetch realtime quote for {symbol}: {e}")
 
@@ -126,6 +142,14 @@ class StandaloneDataFetcher:
                     metrics['avg_cost'] = _safe_float(latest['平均成本'])
                 if '90%筹码集中度' in latest:
                     metrics['concentration'] = _safe_float(latest['90%筹码集中度'])
+                if '90%成本区间下限' in latest:
+                    metrics['chip_90_low'] = _safe_float(latest['90%成本区间下限'])
+                if '90%成本区间上限' in latest:
+                    metrics['chip_90_high'] = _safe_float(latest['90%成本区间上限'])
+                if '70%成本区间下限' in latest:
+                    metrics['chip_70_low'] = _safe_float(latest['70%成本区间下限'])
+                if '70%成本区间上限' in latest:
+                    metrics['chip_70_high'] = _safe_float(latest['70%成本区间上限'])
         except Exception as e:
             logger.warning(f"Failed to fetch chip distribution for {symbol}: {e}")
 

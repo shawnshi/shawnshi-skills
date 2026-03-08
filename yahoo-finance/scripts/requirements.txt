@@ -2,3 +2,6 @@ yfinance
 rich
 requests
 dateparser
+efinance
+akshare
+tenacity

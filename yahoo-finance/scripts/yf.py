@@ -17,6 +17,9 @@ __version__ = "2.0.0"
 #   "rich",
 #   "requests",
 #   "dateparser",
+#   "efinance",
+#   "akshare",
+#   "tenacity",
 # ]
 # ///
 
@@ -226,6 +229,22 @@ def compute_summary(history) -> Optional[Dict[str, Any]]:
     ma20 = round(float(closes.rolling(window=20, min_periods=1).mean().iloc[-1]), 2)
     bias_ma5 = round(float((last_close - ma5) / ma5 * 100), 2) if ma5 > 0 else 0.0
 
+    # MACD (12, 26, 9) — standard institutional parameters
+    ema12 = closes.ewm(span=12, adjust=False).mean()
+    ema26 = closes.ewm(span=26, adjust=False).mean()
+    macd_dif = ema12 - ema26
+    macd_dea = macd_dif.ewm(span=9, adjust=False).mean()
+    macd_hist = (macd_dif - macd_dea) * 2  # histogram (bar)
+
+    # RSI-14
+    delta = closes.diff()
+    gain = delta.where(delta > 0, 0.0)
+    loss = (-delta).where(delta < 0, 0.0)
+    avg_gain = gain.rolling(window=14, min_periods=1).mean()
+    avg_loss = loss.rolling(window=14, min_periods=1).mean()
+    rs = avg_gain / avg_loss.replace(0, float('nan'))
+    rsi_14 = 100 - (100 / (1 + rs))
+
     return {
         "period_return_pct": round((last_close - first_close) / first_close * 100, 2),
         "max_drawdown_pct": round(float(max_drawdown), 2),
@@ -242,6 +261,10 @@ def compute_summary(history) -> Optional[Dict[str, Any]]:
         "ma10": ma10,
         "ma20": ma20,
         "bias_ma5_pct": bias_ma5,
+        "macd_dif": round(float(macd_dif.iloc[-1]), 4),
+        "macd_dea": round(float(macd_dea.iloc[-1]), 4),
+        "macd_hist": round(float(macd_hist.iloc[-1]), 4),
+        "rsi_14": round(float(rsi_14.iloc[-1]), 2) if pd.notna(rsi_14.iloc[-1]) else None,
     }
 
 
@@ -449,7 +472,7 @@ def main():
                 curated_info = filter_info(info, full=args.full_info)
                 
                 # Enhanced A-share info 
-                if symbol and (symbol.endswith(".SS") or symbol.endswith(".SZ")):
+                if symbol and (symbol.endswith(".SS") or symbol.endswith(".SZ") or symbol.endswith(".BJ")):
                     # e.g., '600519.SS' -> '600519'
                     a_share_code = symbol.split(".")[0]
                     if a_share_code.isdigit() and len(a_share_code) == 6:
