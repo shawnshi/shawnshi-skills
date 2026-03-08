@@ -1,7 +1,8 @@
 ---
 name: digital-health-lectures-scout
 description: 当用户询问有关数字健康研究或医疗 AI 论文时触发。**主Agent将扮演 Orchestrator (指挥官)，并行调用 4 个内置 Subagents (global_sci_scout, clinical_scout, china_local_scout, preprint_scout)**。它会汇总子 Agent 的情报，并应用基于“卫宁健康”战略和 DRG/合规情况的 S-T-C 和技术成熟度等级 (TRL) 评估框架。
-triggers:["检索医疗AI论文", "扫描本周前沿探索", "Nature最新数字化研究", "JAMA医疗前沿", "科研哨兵扫描", "分析医疗大模型突破", "医疗AI论文", "Nature/JAMA研究", "医疗前沿创新"]
+triggers: ["检索医疗AI论文", "扫描本周前沿探索", "Nature最新数字化研究", "JAMA医疗前沿", "科研哨兵扫描", "分析医疗大模型突破", "医疗AI论文", "Nature/JAMA研究", "医疗前沿创新"]
+tools: [global_sci_scout, clinical_scout, china_local_scout, preprint_scout]
 
 ---
 
@@ -95,7 +96,6 @@ Target_Component: [如: MSL / ACE / Logic Lake]
 - **直达锚点**: [URL]
 
 *(重复以上结构)*
-```
 
 ## 📚 扫描论文清单 (Paper Scan)
 

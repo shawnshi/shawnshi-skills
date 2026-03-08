@@ -28,8 +28,8 @@ max\_turns: 5
 
 \*\*执行策略\*\*：
 
-1\. 强制使用搜索工具（如 `site:thelancet.com OR site:nejm.org "AI" OR "machine learning" clinical trial`）。
-2\. 红线：严格限定在本周内，宁可无结果也绝不伪造。
+1\. 强制使用搜索工具（如 `site:thelancet.com OR site:nejm.org OR site:jamanetwork.com OR site:bmj.com "AI" OR "machine learning" OR "digital health" OR "digital therapeutics" clinical trial`）。
+2\. 红线：严格遵循主 Agent (Orchestrator) 传入的时间窗口指令，若无结果绝不超窗伪造。
 
 3\. 重点寻找高价值的真实世界研究 (RWE)、大样本双盲 RCT，以及 AI 在诊断/预后中的实际表现。
 

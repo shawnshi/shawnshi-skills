@@ -2,8 +2,8 @@
 
 ---
 name: healthcare-industry-radar
-name: healthcare-industry-radar
 description: 用于检索全球及本土特定 HIT 行业巨头本周最新异动。主Agent将作为 Orchestrator，并发调度 3 个雷达哨兵 (global_hit_scout, china_hit_scout, winning_health_baseline) 扫描国际巨头、国内竞对及卫宁自身动态。汇总后，严格依据 `references/stc_framework.md` 输出自带 S-T-C (Signal-Threat-Countermeasure) 实战分析的商业战报。
+tools: [china_hit_scout, global_hit_scout, winning_health_baseline, write_to_file]
 triggers:["卫宁健康最新动向", "东软近期中标", "Epic行业新闻", "调用雷达扫描", "扫描竞争对手新闻", "HIT市场动态", "本周医疗IT战报"]
 ---
 
@@ -13,7 +13,7 @@ triggers:["卫宁健康最新动向", "东软近期中标", "Epic行业新闻", 
 
 ## 2. 核心战区与并发雷达侦察 (Parallel Radar Recon Workflow)
 
-_指令：你现在是 Orchestrator。你必须计算出本周的精确日期范围（如 YYYY-MM-DD 至 YYYY-MM-DD），然后利用并行函数调用机制，**同时触发**以下 3 个 Subagents，将日期窗口作为参数传给它们。_
+_指令：你现在是 Orchestrator。当前系统时间是 `{{current_date}}`，你必须以此准确计算出本周的精确日期范围（如 YYYY-MM-DD 至 YYYY-MM-DD），然后利用并行函数调用机制（Parallel Tool Calling），**同时触发**以下 3 个 Subagents，将精确的日期窗口作为参数（绝不可模糊）传给它们。_
 
 ### 第一阶段：多维度并发扫描 (Multi-Agent Dispatch)
 1. **调用 `global_hit_scout`**: 侦察 Epic, Oracle 等海外巨头的降维打击技术或商业并购。
@@ -66,7 +66,7 @@ _指令：你现在是 Orchestrator。你必须计算出本周的精确日期范
 
 ## 4. 战报生成与冷冻归档 (Archiving)
 1. **物理路径**: 生成结果强制保存在 `C:\Users\shich\.gemini\MEMORY\HealthcareIndustryRadar` 目录中。
-2. **文件命名**: 产出的 Markdown 文件名严格为 `DHWB-Radar-YYYYMMDD.md`。
+2. **文件动作 (🔴 强约束)**: 你必须调用 `write_to_file` 工具，将最终生成的 Markdown 战报物理写入到上述目录。文件名严格为 `DHWB-Radar-YYYYMMDD.md`。
 
 ---
 *Optimized following Gemini Skill Creator Best Practices.*

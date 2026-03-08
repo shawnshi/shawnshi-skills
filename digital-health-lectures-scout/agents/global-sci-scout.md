@@ -25,8 +25,8 @@ max\_turns: 5
 
 \*\*执行策略\*\*：
 
-1\. 强制使用搜索引擎，限定站点检索（如 `site:nature.com OR site:science.org "artificial intelligence"`）。
-3\. 红线：严格限定在本周内，宁可无结果也绝不伪造。
+1\. 强制使用搜索引擎，限定站点检索（如 `site:nature.com OR site:science.org "artificial intelligence" OR "digital health" OR "digital therapeutics"`）。
+3\. 红线：严格遵循主 Agent (Orchestrator) 传入的时间窗口指令，若无结果绝不超窗伪造。
 
 4\. 不要仅看标题，提取论文的硬核指标（样本量 N、实验阶段）。
 

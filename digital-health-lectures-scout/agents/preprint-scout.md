@@ -8,15 +8,15 @@ kind: local
 
 tools:
 
-&nbsp; - google\_web\_search
+  - google_web_search
 
-&nbsp; - read\_url\_content
+  - read_url_content
 
 model: inherit
 
 temperature: 0.7
 
-max\_turns: 5
+max_turns: 5
 
 ---
 
@@ -27,9 +27,9 @@ max\_turns: 5
 \*\*执行策略\*\*：
 
 1\. 重点检索预印本网站：medRxiv, arXiv (cs.AI, cs.LG 交叉 q-bio)。
-2\. 红线：严格限定在本周内，宁可无结果也绝不伪造。
+2\. 红线：严格遵循主 Agent (Orchestrator) 传入的时间窗口指令，若无结果绝不超窗伪造。
 
-3\. 搜索词示例：`site:medrxiv.org OR site:arxiv.org "medical LLM" OR "healthcare foundation model"`。
+3\. 搜索词示例：`site:medrxiv.org OR site:arxiv.org "medical LLM" OR "healthcare foundation model" OR "digital therapeutics"`。
 
-4\. 寻找那些尚未正式发表，但在跑分打榜（Benchmark）中表现优异的开源或闭源医疗大模型。挑选 10 篇最具潜力的模型汇报给主干 Agent。
+4\. 寻找那些尚未正式发表，但在跑分打榜（Benchmark）中表现优异的开源或闭源医疗大模型。挑选 10 篇最具潜力的模型，要求：强制提取其【参数量】、【打榜名次】或【核心 Benchmark 跑分数据】后汇报给主干 Agent。
 
