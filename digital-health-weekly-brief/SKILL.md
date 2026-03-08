@@ -2,8 +2,8 @@
 
 ---
 name: digital-health-weekly-brief
-description: 用于检索全球顶尖机构（分为战略、技术、宏观三大战区）本周发布的最新医疗数字化咨询报告。技能配备了防幻觉机制、S-I-A (Signal-Impact-Action) 战略推演框架，能结合卫宁健康(Winning Health)所在的行业背景进行深度解读和分析。生成的报告会自动保存在 MEMORY 归档目录中。
-triggers: ["生成数字健康周报", "检索医疗行业报告", "本周麦肯锡研报", "Digital Health Weekly Brief", "最新数字医疗白皮书", "扫描本周智库发文"]
+description: 用于汇总全球顶尖机构本周发布的医疗数字化咨询报告。主Agent作为 Orchestrator，将并行调度 3 个子 Agent (strategy_consulting_scout, tech_advisory_scout, macro_policy_scout) 分别深入战略、技术、宏观三大战区进行检索。技能配备防幻觉机制与 S-I-A 战略推演框架，结合卫宁健康(Winning Health)行业背景进行深度解读。
+triggers:["生成数字健康周报", "检索医疗行业报告", "本周麦肯锡研报", "Digital Health Weekly Brief", "最新数字医疗白皮书", "扫描本周智库发文"]
 ---
 
 ## 1. 触发逻辑 (Trigger)
@@ -12,22 +12,21 @@ triggers: ["生成数字健康周报", "检索医疗行业报告", "本周麦肯
 
 ## 2. 核心工作流 (The Workflow)
 
-### 第一阶段：时间锚点校准
-1. **确定日期**: 计算并确立本周一与本周日的具体日期（YYYY-MM-DD）。
-2. **防幻觉检查**: 所有检索提取的内容，必须包含明确的发布时效证据。
+### 第一阶段：时间锚点计算与并发子Agent调度 (Parallel Reconnaissance)
+_指令：你现在是 Orchestrator。必须计算出本周一至本周日的精确日期（YYYY-MM-DD），然后利用 Gemini 并行函数调用机制，**同时触发**以下 3 个 Subagents 工具，将计算好的日期窗口传给它们，让它们各自独立执行侦察。_
 
-### 第二阶段：结构化分层检索 (Tiered Reconnaissance)
-_指令：必须使用大模型联网搜索工具（如 `search_web` 或类似插件），建议使用 `site:[domain] "keyword" 2026` 的布尔逻辑组装搜索词。_
+1. **并行分发 (Dispatch)**:
+   - 调用工具 `strategy_consulting_scout` (目标: McKinsey, BCG, Bain 等，寻找 VBC, RCM 等商业模式突破)。
+   - 调用工具 `tech_advisory_scout` (目标: Gartner, IDC 等，寻找 Agentic AI, EHR 现代化等技术架构研报)。
+   - 调用工具 `macro_policy_scout` (目标: WHO, RAND 等，寻找医疗互联互通、合规隐私宏观政策)。
 
-1. **Tier 1 (战略与商业模式)**:
-   - **目标**: McKinsey, BCG, Bain, Deloitte, PwC.
-   - **标靶词**: `Value-Based Care (VBC)`, `Digital-First Healthcare`, `Healthcare M&A`, `Revenue Cycle Management (RCM)`.
-2. **Tier 2 (技术演进与架构)**:
-   - **目标**: Gartner, IDC, Forrester, Accenture.
-   - **标靶词**: `Agentic AI in Healthcare`, `EHR/HIS Modernization`, `Medical Semantic Layer`, `Healthcare Data Assets`.
-3. **Tier 3 (宏观环境与社会公共卫生)**:
-   - **目标**: WHO, RAND, World Bank, OECD.
-   - **标靶词**: `Health Interoperability`, `Data Privacy`, `Global Health Policy`, `Population Health`.
+2. **🔴 红队约束 (Anti-Hallucination Gate)**: 
+   作为主 Agent，你必须严格审查子 Agent 传回的数据。如果有任何研报缺失真实的 URL，或者发布日期不在“本周”的计算区间内，**必须无情剔除，宁可该板块留白也绝不允许伪造或拿旧报告凑数**。
+
+### 第二阶段：情报降噪与提纯池 (Aggregation)
+等待 3 个子 Agent 全部返回后，将三个战区的情报汇总。
+- 剔除重复引用的同一行业事件。
+- 从汇总池中，甄选出 **3-5 篇最具颠覆性（高风险/高收益）的报告**，进入下一阶段的推演。未入选的真实报告可仅保留标题和链接作为外围参考。
 
 ### 第三阶段：S-I-A 战略推演 (The S-I-A Deduction Framework)
 从上述检索命中库中，甄选 3-5 篇最具颠覆性（高风险/高收益）的报告，代入 **卫宁健康战略咨询总经理** 视角执行推演：

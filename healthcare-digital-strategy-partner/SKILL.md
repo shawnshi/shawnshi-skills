@@ -33,14 +33,16 @@ triggers: ["重构商业模式", "ROI测算", "高规格战略验证", "医疗IT
     *   深度设定 (Memo: 2000字 / 深度行研: 6000字+)
     *   核心受众 (如：三甲医院院长、卫宁C-level、地方医保局长)
     *   切入场景 (如：医疗大模型、专科EMR、IoMT)
-2.  **Evidence Reconnaissance**: 执行 `search_web` (必要时配合 `read_url_content`) 强制检索该细分领域**最近 12 个月内**的最新政策（卫健委/医保局红头文件）、前沿临床验证以及头部 HIT 厂商动作。
+2.  **Evidence Reconnaissance**: 执行 `google_web_search` (必要时配合 `read_url_content`) 强制检索该细分领域**最近 12 个月内**的最新政策（卫健委/医保局红头文件）、前沿临床验证以及头部 HIT 厂商动作。
 3.  **Hypothesis Matrix 2.0**: 定义 3-5 个核心判词及伪证指标（如：预测某AI诊断工具无法落地的指标是它增加了临床医生超过3次的点击操作）。
 
 ### Phase 1: MECE Structural & Clinical Audit (逻辑与临床工作流拆解) [PLANNING Mode]
-1.  **Workflow Friction Audit**: 审核提纲是否符合医疗机构真实运作规律。识别新系统引入带来的“摩擦力”（如：新旧 HIS 系统接口对接成本）。
-2.  **Evidence Matrix**: 记录战略判词与【政策红线】、【临床痛点】、【底层数据标准】的原子化对应关系。
-3.  **Title & Summary**: 预定义具有麦肯锡风格的报告初步提纲框架。更新文件状态至 `🟡 综合起草`。
-4.  **Direction Approval (硬性阻断 - 战略方向审批)**: 汇总 Phase 0 和 Phase 1 的所有前置研判及初步框架，生成整体方案大纲（大纲即为 `implementation_plan.md`），**必须调用 `ask_user` 挂起任务**，请求用户审阅并确认战略方向。未经用户明确确认，严禁进入后续阶段。
+1.  **并发调研分发 (Parallel Dispatch)**: 获得用户确认后，作为 Orchestrator，必须**同时调用**以下两个子 Agent，并将“切入场景”作为参数传给它们：
+    *   调用 `med_policy_researcher` 获取底层的政策红线、DRG规则与临床实证数据。
+    *   调用 `hit_commercial_analyst` 获取竞对（卫宁 vs 东软/创业）的最新商业动作与实施成本。
+2.  **MECE Structural Audit**: 基于两个子 Agent 传回的高纯度情报，识别新系统引入带来的“真实摩擦力”。
+3.  **Evidence Matrix**: 记录战略判词与【政策红线】、【临床痛点】、【底层数据标准】的原子化对应关系。
+4.  **Direction Approval (硬性阻断 - 战略方向审批)**: 汇总 Phase 0 和 Phase 1 的所有前置研判及初步框架，生成具有麦肯锡风格的整体方案大纲（大纲即为 `implementation_plan.md`），**必须调用 `ask_user` 挂起任务**，请求用户审阅并确认战略方向。未经用户明确确认，严禁进入后续阶段。
 
 ### Phase 2: Narrative Drafting & Plan Generation (🟡 综合起草与推演) [EXECUTION Mode]
 1.  **Initialize Workspace & Plan Generation (生成整体方案大纲与任务计划)**: 物理创建项目目录 `{root}\MEMORY\research\{Topic}_{Date}`，生成架构文件。
@@ -53,7 +55,7 @@ triggers: ["重构商业模式", "ROI测算", "高规格战略验证", "医疗IT
     *   **任务状态追溯**：每完成一个章节生成任务，必须立即更新任务计划（`plan.md`）。
     *   **【单步阻塞执行】**：每次对话轮次【仅允许】起草并写入 1 个章节的物理 `.md` 文件。写入后必须立即 `[STOP]` 挂起，等待用户回复“继续”后才允许起草下一章。严禁并发生成多章。
     *   **判词性小标题**：拒绝“市场现状”这种废话，使用诸如“DRG支付改革正在逼迫院方将IT从成本中心转为利润中心”的实效标题。
-    *   **深度控制**：预留需精确数据的“真空地带”，高频使用 `search_web` 填补真实临床与财务实证数据。每个章节的初稿需具备 1000 汉字以上的颗粒度。
+    *   **深度控制**：预留需精确数据的“真空地带”，高频使用 `google_web_search` 填补真实临床与财务实证数据。每个章节的初稿需具备 1000 汉字以上的颗粒度。
     *   **So-What 集成**：所有洞察必须自然导向 Actionable 建议，而非悬浮的学术探讨。
 3.  **Strategic Visualization (结构化渲染)**：必须使用 `mermaid` 语法在报告中插入：
     *   *工作流降维打击图 (Workflow Disruption)*: 对比 As-Is (当前痛点链路) 与 To-Be (数字化引入后链路)。
