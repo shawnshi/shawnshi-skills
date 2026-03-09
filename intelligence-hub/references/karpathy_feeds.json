@@ -386,5 +386,25 @@
   {
     "name": "mobihealthnews.com",
     "url": "https://www.mobihealthnews.com/feed"
+  },
+  {
+    "name": "HealthIT.gov Blog",
+    "url": "https://feeds.feedburner.com/healthit-buzz-blog"
+  },
+  {
+    "name": "HIMSS News",
+    "url": "https://www.himss.org/resources-all/rss.xml"
+  },
+  {
+    "name": "国家卫生健康委 (NHC)",
+    "url": "https://rsshub.app/gov/nhc"
+  },
+  {
+    "name": "国家医保局 (NHSA)",
+    "url": "https://rsshub.app/gov/nhsa/ybdt"
+  },
+  {
+    "name": "HIStalk",
+    "url": "https://histalk2.com/feed/"
   }
 ]

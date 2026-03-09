@@ -58,169 +58,169 @@ Source: seangoedecke.com
 Desc: In 2021, being a good software engineer felt great. The world was full of software, with more companies arriving every year who needed to employ engineers to write their code and run their systems. I 
 
 [TOP 10] Item 3 [Score=61]:
+Title: daringfireball.net: Can Coding Agents Relicense Open Source Through a ‘Clean Room’ Implementation of Code?
+URL: https://simonwillison.net/2026/Mar/5/chardet/
+Source: daringfireball.net
+Desc: Simon Willison:  There are a lot of open questions about this, both ethically and legally. These appear to be coming to a head in the venerable chardet Python library. chardet was created by Mark Pilg
+
+[TOP 10] Item 4 [Score=61]:
+Title: antirez.com: GNU and the AI reimplementations
+URL: http://antirez.com/news/162
+Source: antirez.com
+Desc: Those who cannot remember the past are condemned to repeat it. A sentence that I never really liked, and what is happening with AI, about software projects reimplementations, shows all the limits of s
+
+[TOP 10] Item 5 [Score=61]:
 Title: antirez.com: Implementing a clear room Z80 / ZX Spectrum emulator with Claude Code
 URL: http://antirez.com/news/160
 Source: antirez.com
 Desc: Anthropic recently released a blog post with the description of an experiment in which the last version of Opus, the 4.6, was instructed to write a C compiler in Rust, in a “clean room” setup.  The ex
 
-[TOP 10] Item 4 [Score=61]:
+[TOP 10] Item 6 [Score=61]:
 Title: pluralistic.net: Pluralistic: The web is bearable with RSS (07 Mar 2026)
 URL: https://pluralistic.net/2026/03/07/reader-mode/
 Source: pluralistic.net
 Desc: Today's links The web is bearable with RSS: And don't forget "Reader Mode." Hey look at this: Delights to delectate. Object permanence: Eyemodule x Disneyland; Scott Walker lies; Brother's demon-haunt
 
-[TOP 10] Item 5 [Score=61]:
+[TOP 10] Item 7 [Score=61]:
 Title: pluralistic.net: Pluralistic: Blowtorching the frog (05 Mar 2026) executive-dysfunction
 URL: https://pluralistic.net/2026/03/05/executive-dysfunction/
 Source: pluralistic.net
 Desc: Today's links Blowtorching the frog: If I must have enemies, let them be impatient ones. Hey look at this: Delights to delectate. Object permanence: Bill Cosby v Waxy; Rodney King, 20 years on; Peter 
 
-[TOP 10] Item 6 [Score=61]:
+[TOP 10] Item 8 [Score=61]:
 Title: pluralistic.net: Pluralistic: Supreme Court saves artists from AI (03 Mar 2026)
 URL: https://pluralistic.net/2026/03/03/its-a-trap-2/
 Source: pluralistic.net
 Desc: Today's links Supreme Court saves artists from AI: Just because you're on their side, it doesn't mean they're on your side. Hey look at this: Delights to delectate. Object permanence: KKK x D&D; Marti
 
-[TOP 10] Item 7 [Score=61]:
+[TOP 10] Item 9 [Score=61]:
 Title: lucumr.pocoo.org: AI And The Ship of Theseus
 URL: https://lucumr.pocoo.org/2026/3/5/theseus/
 Source: lucumr.pocoo.org
 Desc: Because code gets cheaper and cheaper to write, this includes re-implementations.  I mentioned recently that I had an AI port one of my libraries to another language and it ended up choosing a differe
 
-[TOP 10] Item 8 [Score=61]:
+[TOP 10] Item 10 [Score=61]:
 Title: lucumr.pocoo.org: A Language For Agents
 URL: https://lucumr.pocoo.org/2026/2/9/a-language-for-agents/
 Source: lucumr.pocoo.org
 Desc: Last year I first started thinking about what the future of programming languages might look like now that agentic engineering is a growing thing. Initially I felt that the enormous corpus of pre-exis
 
-[TOP 10] Item 9 [Score=61]:
+[TRANSLATE] Item 11 [Score=61]:
 Title: gilesthomas.com: Writing an LLM from scratch, part 29 -- using DistributedDataParallel to train a base model from scratch in the cloud
 URL: https://www.gilesthomas.com/2026/01/llm-from-scratch-29-ddp-training-a-base-model-in-the-cloud
 Source: gilesthomas.com
 Desc: I'm carrying on with my "extra credit" projects after finishing the main body of Sebastian Raschka's book "Build a Large Language Model (from Scratch)". Having proven that I could train a GPT-2 small 
 
-[TOP 10] Item 10 [Score=61]:
+[TRANSLATE] Item 12 [Score=61]:
 Title: anildash.com: Why We Speak
 URL: https://anildash.com/2026/01/26/why-we-speak/
 Source: anildash.com
 Desc: I've been working in and around the technology industry for a long time. Depending on how you count, it's 20 or 30 years. (I first started getting paid to put together PCs with a screwdriver when I wa
 
-[TRANSLATE] Item 11 [Score=61]:
+[TRANSLATE] Item 13 [Score=61]:
 Title: anildash.com: A Codeless Ecosystem, or hacking beyond vibe coding
 URL: https://anildash.com/2026/01/27/codeless-ecosystem/
 Source: anildash.com
 Desc: There's been a remarkable leap forward in the ability to orchestrate coding bots, making it possible for ordinary creators to command dozens of AI bots to build software without ever having to directl
 
-[TRANSLATE] Item 12 [Score=61]:
+[TRANSLATE] Item 14 [Score=61]:
 Title: michael.stapelberg.ch: Coding Agent VMs on NixOS with microvm.nix
 URL: https://michael.stapelberg.ch/posts/2026-02-01-coding-agent-microvm-nix/
 Source: michael.stapelberg.ch
 Desc: I have come to appreciate coding agents to be valuable tools for working with computer program code in any capacity, such as learning about any program’s architecture, diagnosing bugs or developing pr
 
-[TRANSLATE] Item 13 [Score=60]:
+[TRANSLATE] Item 15 [Score=60]:
 Title: arXiv Med-AI: Model Medicine: A Clinical Framework for Understanding, Diagnosing, and Treating AI Models
 URL: https://arxiv.org/abs/2603.04722v1
 Source: arXiv Med-AI
 Desc: Model Medicine is the science of understanding, diagnosing, treating, and preventing disorders in AI models, grounded in the principle that AI models -- like biological organisms -- have internal stru
 
-[TRANSLATE] Item 14 [Score=57]:
+[TRANSLATE] Item 16 [Score=57]:
 Title: oldvcr.blogspot.com: Hands-on with two Apple Network Server prototype ROMs
 URL: https://oldvcr.blogspot.com/2026/01/hands-on-with-two-apple-network-server.html
 Source: oldvcr.blogspot.com
 Desc: Grateful acknowledgement made to the several former Apple employees who materially contributed to this entry. This article wouldn't have been possible without you!  Here's why I need to do inventory m
 
-[TRANSLATE] Item 15 [Score=53]:
+[TRANSLATE] Item 17 [Score=53]:
 Title: oldvcr.blogspot.com: The Scriptovision Super Micro Script video titler is almost a home computer
 URL: https://oldvcr.blogspot.com/2026/02/the-scriptovision-super-micro-script.html
 Source: oldvcr.blogspot.com
 Desc: Canadians, rejoice! Not only do you have curling, the Big Turk and Tim Hortons (and, when I was in BC last, Dr Pepper made with real cane sugar), you also have a number of interesting indigenous compu
 
-[TRANSLATE] Item 16 [Score=52]:
+[TRANSLATE] Item 18 [Score=52]:
 Title: mobihealthnews.com: Q&A: Sanford Health bets on AI, virtual care to expand rural healthcare access
 URL: https://www.mobihealthnews.com/news/qa-sanford-health-bets-ai-virtual-care-expand-rural-healthcare-access
 Source: mobihealthnews.com
 Desc: LOS ANGELES – Dr. Dave Newman, chief medical officer of virtual care at Sanford Health, joined MobiHealthNews for an in-person interview to discuss the evolution of virtual care and the growing role o
 
-[TRANSLATE] Item 17 [Score=51]:
+[TRANSLATE] Item 19 [Score=51]:
 Title: idiallo.com: Interruption-Driven Development
 URL: https://idiallo.com/blog/interruption-driven-development?src=feed
 Source: idiallo.com
 Desc: I have a hard time listening to music while working. I know a lot of people do it, but whenever I need to focus on a problem, I have to hunt down the tab playing music and pause it. And yet I still we
 
-[TRANSLATE] Item 18 [Score=51]:
+[TRANSLATE] Item 20 [Score=51]:
 Title: computer.rip: cash issuing terminals
 URL: https://computer.rip/2026-02-27-ibm-atm.html
 Source: computer.rip
 Desc: In the United States, we are losing our fondness for cash. As in many other countries, cards and other types of electronic payments now dominate everyday commerce. To some, this is a loss. Cash repres
 
-[TRANSLATE] Item 19 [Score=46]:
+[TRANSLATE] Item 21 [Score=46]:
 Title: arXiv Med-AI: SycoEval-EM: Sycophancy Evaluation of Large Language Models in Simulated Clinical Encounters for Emergency Care
 URL: https://arxiv.org/abs/2601.16529v2
 Source: arXiv Med-AI
 Desc: Large language models (LLMs) show promise in clinical decision support yet risk acquiescing to patient pressure for inappropriate care. We introduce SycoEval-EM, a multi-agent simulation framework eva
 
-[TRANSLATE] Item 20 [Score=43]:
+[TRANSLATE] Item 22 [Score=43]:
 Title: Product Hunt: Claude Marketplace
 URL: https://www.producthunt.com/products/claude-marketplace
 Source: Product Hunt
 Desc: Helping companies easily get the AI tools they need             Discussion             |             Link
 
-[TRANSLATE] Item 21 [Score=43]:
-Title: antirez.com: Automatic programming
-URL: http://antirez.com/news/159
-Source: antirez.com
-Desc: In my YouTube channel, for some time now I started to refer to the process of writing software using AI assistance (soon to become just "the process of writing software", I believe) with the term "Aut
-
-[TRANSLATE] Item 22 [Score=43]:
+[TRANSLATE] Item 23 [Score=43]:
 Title: idiallo.com: Mo Samuels wrote this blog post
 URL: https://idiallo.com/blog/why-we-hate-llm-articles?src=feed
 Source: idiallo.com
 Desc: Last year, I pushed myself to write and publish every other day for the whole year. I had accumulated a large number of subjects over the years, and I was ready to start blogging again. After writing 
 
-[TRANSLATE] Item 23 [Score=43]:
+[TRANSLATE] Item 24 [Score=43]:
 Title: maurycyz.com: Why does C have the best file API?
 URL: https://maurycyz.com/misc/c_files/
 Source: maurycyz.com
 Desc: Ok, the title is a tongue-in-cheek, but there's very little thought put into files in most languages.  It always feels a bit out of place... except in C. In fact, what you get is usually a worse versi
 
-[TRANSLATE] Item 24 [Score=43]:
+[TRANSLATE] Item 25 [Score=43]:
 Title: righto.com: Instruction decoding in the Intel 8087 floating-point chip
 URL: http://www.righto.com/2026/02/8087-instruction-decoding.html
 Source: righto.com
 Desc: In the 1980s, if you wanted your IBM PC to run faster, you could buy the Intel 8087 floating-point coprocessor chip. With this chip, CAD software, spreadsheets, flight simulators, and other programs w
 
-[TRANSLATE] Item 25 [Score=43]:
+[TRANSLATE] Item 26 [Score=43]:
 Title: righto.com: Notes on the Intel 8086 processor's arithmetic-logic unit
 URL: http://www.righto.com/2026/01/notes-on-intel-8086-processors.html
 Source: righto.com
 Desc: In 1978, Intel introduced the 8086 processor, a revolutionary chip that led to the modern x86 architecture. Unlike modern 64-bit processors, however, the 8086 is a 16-bit chip. Its arithmetic/logic un
 
-[TRANSLATE] Item 26 [Score=43]:
+[TRANSLATE] Item 27 [Score=43]:
 Title: righto.com: Conditions in the Intel 8087 floating-point chip's microcode
 URL: http://www.righto.com/2025/12/8087-microcode-conditions.html
 Source: righto.com
 Desc: In the 1980s, if you wanted your computer to do floating-point calculations faster, you could buy the Intel 8087 floating-point coprocessor chip. Plugging it into your IBM PC would make operations up 
 
-[TRANSLATE] Item 27 [Score=43]:
+[TRANSLATE] Item 28 [Score=43]:
 Title: lucumr.pocoo.org: The Final Bottleneck
 URL: https://lucumr.pocoo.org/2026/2/13/the-final-bottleneck/
 Source: lucumr.pocoo.org
 Desc: Historically, writing code was slower than reviewing code. It might not have felt that way, because code reviews sat in queues until someone got around to picking it up.  But if you compare the actual
 
-[TRANSLATE] Item 28 [Score=43]:
+[TRANSLATE] Item 29 [Score=43]:
 Title: gilesthomas.com: Writing an LLM from scratch, part 28 -- training a base model from scratch on an RTX 3090
 URL: https://www.gilesthomas.com/2025/12/llm-from-scratch-28-training-a-base-model-from-scratch
 Source: gilesthomas.com
 Desc: Having worked through the main body of Sebastian Raschka's book "Build a Large Language Model (from Scratch)", I wanted to try an experiment: is it possible to train a base model of my own, on my own 
 
-[TRANSLATE] Item 29 [Score=43]:
+[TRANSLATE] Item 30 [Score=43]:
 Title: evanhahn.com: The two kinds of error
 URL: https://evanhahn.com/the-two-kinds-of-error/
 Source: evanhahn.com
 Desc: In short: in my mind, errors are divided into two categories. Expected errors (think “user entered invalid data”), which are part of normal operation, aren’t the developer’s fault, and should be handl
-
-[TRANSLATE] Item 30 [Score=43]:
-Title: evanhahn.com: Notes from February 2026
-URL: https://evanhahn.com/notes-from-february-2026/
-Source: evanhahn.com
-Desc: Things I did and saw this February. Things I made   I shipped my first feature at Ghost: Inbox Links. When a member enters their email to log in or sign up, we now show a button that takes them straig

@@ -111,6 +111,14 @@
     {
       "keyword": "数字",
       "weight": 15
+    },
+    {
+      "keyword": "医保",
+      "weight": 18
+    },
+    {
+      "keyword": "卫健委",
+      "weight": 18
     }
   ],
   "categories": {
