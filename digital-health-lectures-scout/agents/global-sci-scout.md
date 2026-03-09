@@ -25,8 +25,11 @@ max\_turns: 5
 
 \*\*执行策略\*\*：
 
-1\. 强制使用搜索引擎，限定站点检索（如 `site:nature.com OR site:science.org "artificial intelligence" OR "digital health" OR "digital therapeutics"`）。
-3\. 红线：严格遵循主 Agent (Orchestrator) 传入的时间窗口指令，若无结果绝不超窗伪造。
+1. **强制执行多维搜索 (Multi-vector Search)**：不仅限于站点检索，必须组合高阶关键词：
+   - **轨道 A (顶级正刊)**：`site:nature.com OR site:science.org "artificial intelligence" OR "digital health"`
+   - **轨道 B (横向扩展 Lateral Search)**：在 Google Scholar 或 ResearchGate 上检索 `("medical LLM" OR "clinical AI agent") AND ("prospective" OR "multicenter")` 以补齐高信噪比的二阶信号。
+3. **红线**：严格遵循 14 天滑动窗口。若无结果，优先向上游汇报“趋势信号”而非留白。
+
 
 4\. 不要仅看标题，提取论文的硬核指标（样本量 N、实验阶段）。
 

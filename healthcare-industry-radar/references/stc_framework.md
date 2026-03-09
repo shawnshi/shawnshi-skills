@@ -4,6 +4,8 @@ This reference document defines the specific target lists, keyword filters, and 
 
 ## 1. 目标分层与定向狙击 (Target Recon & Filtering)
 
+**时间窗口 (Recon Window)**: 滑动 14 天。
+
 **目标阵营 (Target Entities)**:
 1. **The EHR Foundation Defenders (底层电子病历老玩家)**:
    - Epic Systems, Oracle Health, InterSystems.
@@ -11,23 +13,25 @@ This reference document defines the specific target lists, keyword filters, and 
 2. **The AI/Data Disruptors (数据要素与大模型破局者)**:
    - 医渡云(Yidu Cloud), 神州医疗(Digital Health China).
 
-**突破圈层 (The 3 Filters for Search)** - *联网搜索的强制必带关键词*:
-- **资本与布局异动 (Capital & Ecosystem)**: `并购`, `M&A`, `战略合作`, `战投`, `回购`, `控股权变更`.
-- **底层产品线重构 (Product & Tech Refactor)**: `AI大模型`, `Copilot`, `原生Agent发布`, `数字中枢`, `ERP扩张`, `信创重构`.
-- **政企级市场收割 (Market & Monopolization)**: `超千万中标`, `国家级/省级互联互通单`, `医保局合作`, `DRG/DIP结算平台`.
+**突破圈层 (The 3 Filters for Search)**:
+- **资本与二阶异动 (Capital & L2 Signals)**: `并购`, `股权变更`, `高管变动`, `软件著作权`, `专利申请`.
+- **底层产品线重构 (Product & Tech Refactor)**: `AI大模型`, `Copilot`, `原生Agent`, `数据资产入表`, `信创重构`.
+- **政企级市场收割 (Market & Monopolization)**: `中标`, `互联互通评级`, `医保局新规适配`, `DRG/DIP试点`.
 
 ## 2. S-T-C 高阶战略推演标准 (Evaluation Criteria)
 
-舍弃松散的全景描述，代入 **“卫宁健康战略咨询总经理”** 视角，执行标准 **S-T-C 解析**：
+代入 **“卫宁健康战略咨询总经理”** 视角，执行标准 **S-T-C 解析**：
 
-1. **Signal (核心信号去水)**:
-   - **执行标准**: 绝不允许复制粘贴公关通稿。用 200-300 字极其简练地剥离官方包装，只描述在三大圈层中真正落地的客观商业动作。
+1. **Signal (核心信号/存量状态)**:
+   - **有新闻时**: 剥离公关词汇，用 200 字剥离官方包装，描述核心商业动作。
+   - **无新闻时**: 标记为“存量固化”。分析该公司在过去一个季度建立的优势，是否正在当前宏观环境下形成“静默扩张”。
 
-2. **Threat (护城河透视)**:
-   - **执行标准**: 必须进行宏观与微观联动的灵魂拷问。该动作是否踩中了（互联互通评级、数据资产入表、医保控费等）宏观红利？在微观上，是否对现有的 HIS（如卫宁 WiNEX）构成了绕过或降维打击？评估真实的威胁当量。
+2. **Threat (护城河透视 & 防御性想象力)**:
+   - **宏观对齐**: 必须将动作与（医保局 DRG 2.0、数据资产入表、互联互通五乙）等宏观红利挂钩。
+   - **防御性想象力**: 若无新闻，则模拟：若对手在当前政策节点发起非对称突袭，卫宁的 WiNEX 护城河是否存在被绕过的风险？
 
 3. **Countermeasure (卫宁反击指令)**:
-   - **执行标准**: 禁绝正确的废话（如“需要密切关注”、“提升自身竞争力”）。必须给出具体到卫宁资源池的火力部署建议：
+   - **执行标准**: 禁绝正确的废话。给出具体到子产品的阻击策略：
      - 是启动防卫性并购？（标的类型？）
      - 是加速 WiNEX Copilot 某个具体模块的下沉？
-     - 还是必须出让部分主权，联合“超级盟友”（腾讯云/华为/海光）以底层算力对抗？
+     - 是否需要联合底层国产算力大厂进行“降维阻击”？

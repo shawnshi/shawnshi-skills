@@ -32,3 +32,11 @@ This reference document defines the specific logic and high-level evaluation cri
 ### 2.3 商业模式与卫宁映射 (OpEx vs. CapEx / MSL & ACE)
 - *追问*: 当前卫宁推动的是基于 WiNEX 的订阅制（OpEx）、统一数据底座与代理矩阵（ACE）。这项新技术如果是碎片化的（单点跑在科室的一体机上），那么它对于大集成商是威胁还是并购标的？
 - *追问*: 我们是否应该迅速将其概念抽取为“语义层标签 (MSL)”，纳入 `Logic Lake` 作为底层资产，让卫宁的 Copilot 具备类似的能力壁垒？
+
+## 3. 逻辑补位模块 (Logic Backfill Protocol)
+
+若当前扫描窗口内缺乏 **TRL 阶段三 (临床可用)** 的重磅研究，Orchestrator 必须启动以下补位逻辑：
+
+- **趋势推演**: 从 TRL 阶段二 (算法打榜) 的研究中，提炼出未来 6-12 个月的“技术确定性”。
+- **防御性布局**: 既然技术尚未完全落地，卫宁是否应利用 MSL 先行占领该领域的“语义定义权”？例如，在 WiNEX 中预置相关的 Schema，为未来的算法接入预留插槽。
+- **降维打击评估**: 评估这些算法趋势是否能通过 ACE 编排实现对传统 HIS 模块的零点击重构。

@@ -8,39 +8,37 @@ triggers: ["生成数字健康周报", "检索医疗行业报告", "本周麦肯
 
 ## 1. 启动序列与边界 (Boot Sequence & Bounds)
 - **触发指令**: 接收到检索医疗研报或生成数字健康周报的指令时触发。
-- **时间锚点 (Time Anchor)**: 必须精确计算**本周一至周日**的日期区间 (YYYY-MM-DD)。LLM 必须交叉验证报告发布时间。非本周内容，**宁可留白也绝对禁止伪造**。
-- **工作区隔离**: 所有的中间态产物（计划文档、侦察证据、初稿等）必须置于 `C:\Users\shich\.gemini\tmp\` (绿区)。
+- **时间锚点 (Time Anchor)**: 默认计算**过去 7 天 (滑动窗口)** 的日期区间 (YYYY-MM-DD)。若7 天内无核心智库/政务发文，则自动回溯至过去 14天，确保输出高信噪比的情报资产。
+- **宁缺毋滥的平衡**: 优先保证时效性，但若核心资讯不足 5 条，必须启动“战略补位 (Strategic Backfill)”逻辑。
 
 ## 2. 核心工作流 (The V3.0 Deterministic Workflow)
-严格按照以下顺序串行/并行执行，**每完成一步必须更新计划状态**。
 
-### Phase 1: 战役锚定与确权 (Initialization & Planning)
-在 `C:\Users\shich\.gemini\tmp\` 生成 `plan.md` (或 `task.md`)，确立本周三大军区（商业/技术/政策）的侦察命题及后续执行的 Checklist。
+### Phase 2: 分层异步侦察与横向扩展 (Parallel Recon & Lateral Sensing)
+利用 Gemini 并行函数调用机制，同时触发以下 3 个 Subagents。要求其不仅搜索新发布的 PDF/报告，还要搜索正在进行的**政策咨询、智库观点文章及行业研讨会纪要**。
+- `{root}\tmp\recon_strategy.md` (调用 `strategy_consulting_scout`)
+- `{root}\tmp\recon_tech.md` (调用 `tech_advisory_scout`)
+- `{root}\tmp\recon_policy.md` (调用 `macro_policy_scout`)
 
-### Phase 2: 分层异步侦察与证据落盘 (Parallel Recon & Evidence-Mesh)
-利用 Gemini 并行函数调用机制，**同时触发**以下 3 个 Subagents 进行侦察，将本周时间窗传入。
-**强制落盘**: 每个子 Agent 返回后，主 Agent 必须将清洗后的真实 Top 情报（含源 URL 与摘要）写入物理文件，形成 Evidence-Mesh 证据链。
-- `C:\Users\shich\.gemini\tmp\recon_strategy.md` (调用 `strategy_consulting_scout`: McKinsey, BCG 等，聚焦 VBC, RCM 等商业模式)
-- `C:\Users\shich\.gemini\tmp\recon_tech.md` (调用 `tech_advisory_scout`: Gartner, IDC 等，聚焦 Agentic AI, EHR)
-- `C:\Users\shich\.gemini\tmp\recon_policy.md` (调用 `macro_policy_scout`: WHO, 国家卫健委等，聚焦互联互通, 医保)
-
-### Phase 3: S-I-A 推演与初稿锻造 (Generation & Cognitive Friction)
-读取上述 `recon_*.md` 证据链文件，甄选 3-5 篇最具颠覆性的研报，代入 **"卫宁健康战略咨询总经理"** 视角，在 `C:\Users\shich\.gemini\tmp\DHWB_YYYYMMDD_draft.md` 中生成初稿。
+### Phase 3: S-I-A 推演与战略补位 (Generation & Backfill Logic)
+读取上述证据链。若本周真实研报发布数少于 3 篇，Orchestrator 必须启动以下补位逻辑：
+1. **态势感知补位**: 分析当前医疗 IT 市场的存量热点（如：DRG 2.0 落地进度、数据资产入表实务）在过去 7天内的舆论演进或技术细节微调。
+2. **逻辑对齐**: 将上周未充分讨论的重磅资讯进行二阶拆解。
 遵循 S-I-A 战略推演框架：
-1. **Signal (核心信号去水)**: (约300字) 剥离公关修饰，精炼提取底层业务/技术逻辑。
-2. **Impact (护城河冲击)**: 该趋势如何降维打击现有 HIT 厂商？如何重塑医院 IT 预算分配逻辑？
-3. **Action (应对指令) + Red Team (红队推演)**: (Impact+Action约800字)
-   - 针对卫宁 (MSL, ACE, WiNEX)，给出防御、孵化或并购等行动指令。
-   - **[新增] 红队推演 (Red Team)**: 强制指出上述 Action 落地时的 **1 个致命执行风险或 SPOF (单点故障)**，开启认知摩擦。
+...
+   - **[新增] 红队推演 (Red Team)**: 强制指出上述 Action 落地时的 **1 个致命执行风险或 SPOF (单点故障)**。
+
+## 3. 输出排版与格式要求 (Formatting & Integration)
+- **强约束**: 最终报告的“核心资讯清单”部分必须包含至少 **8 条** 经过脱水的研报/趋势信息。
+
 
 ### Phase 4: 非对称审计与逻辑防腐 (The Logic-Adversary Gate)
 - 切换至 `/audit` 模式。必须引入 `logic-adversary` 视角（或自我质询机制），对 `DHWB_YYYYMMDD_draft.md` 进行苛刻审查。
 - 寻找并指出目前推演中的 **3个潜在逻辑漏洞**（例如：URL幻觉、技术影响夸大、与卫健委政策冲突、S-I-A逻辑断层）。
-- 修复这些漏洞后，生成最终制品 `C:\Users\shich\.gemini\tmp\DHWB_YYYYMMDD_final.md`。
+- 修复这些漏洞后，生成最终制品 `{root}\tmp\DHWB_YYYYMMDD_final.md`。
 
 ### Phase 5: 物理归档与宏观记忆同步 (Archiving & State Alignment)
-1. **交付归档**: 将最终成品移动至红区目录 `C:\Users\shich\.gemini\MEMORY\DigitalHealthWeeklyBrief\DHWB-YYYYMMDD.md` (并清理 tmp 下的临时文件)。
-2. **战略捕捉**: 审视本周情报是否触发《GEMINI.md》定义的"战略雷达" (Semantic Assets, Compliance, Tech)。若发现了改变医疗版图的重大拐点信号，触发 `/warroom` 协议，将核心洞察高度压缩并回写至全局 `C:\Users\shich\.gemini\MEMORY.md` 知识库。
+1. **交付归档**: 将最终成品移动至红区目录 `{root}\MEMORY\DigitalHealthWeeklyBrief\DHWB-YYYYMMDD.md` (并清理 tmp 下的临时文件)。
+2. **战略捕捉**: 审视本周情报是否触发《GEMINI.md》定义的"战略雷达" (Semantic Assets, Compliance, Tech)。若发现了改变医疗版图的重大拐点信号，触发 `/warroom` 协议，将核心洞察高度压缩并回写至全局 `{root}\MEMORY.md` 知识库。
 
 ## 3. 输出排版与格式要求 (Formatting & Integration)
 1. **调用专属模板**: 必须读取并严格遵循 `resources/template.md`，保持 GitHub Alerts 块（`> [!IMPORTANT]`, `> [!NOTE]` 等）的视觉穿透力与完好无损。
