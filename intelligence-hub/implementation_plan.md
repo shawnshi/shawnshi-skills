@@ -1,29 +1,20 @@
-# 情报战役实施纲领 (Implementation Plan) - 2026-03-09
+# 情报战役实施纲领 (Intelligence Campaign Plan)
 
-## 1. 战役背景与目标
-- **日期**: 2026年3月9日
-- **目标**: 针对“医疗智能时代立法者”战略位点，执行非对称情报扫描，捕捉医疗 IT、Agentic AI 及合规审计领域的 Alpha 级信号。
-- **核心北极星**: 验证 MSL/ACE/Evidence-Mesh 架构在当前市场与政策环境下的演进趋势。
+## 🎯 扫描焦点 (Strategic Calibration)
+经过动态校准，本次情报摄取的权重矩阵如下：
+- **高敏感信号区**：MSL (医疗语义层)、ACE (智能体协调引擎)、Agentic AI (医疗智能体落地)、语义认知与逻辑确权。
+- **降权过滤区**：常规宏观政策（医保/卫健委常规通报）、低价值公关通稿。
 
-## 2. 扫描矩阵规划 (Matrix)
-| 领域 (Domain) | 权重 | 关键词/源 (Sources) | 预期战果 |
-| :--- | :--- | :--- | :--- |
-| **医疗IT (HIS/EMR)** | 40% | WiNEX, 电子病历五级, 协和/北医动态, 互联互通 | 捕捉巨头医院数字化转型的新范式 |
-| **Agentic AI** | 30% | ACE, Multi-Agent Orchestration, 逻辑审计 | 验证推理机在临床决策链中的介入深度 |
-| **合规与理算** | 20% | DRG 2.0, RCM, 证据网 (Evidence-Mesh) | 识别 DRG 时代下的 AI 理算与合规闭环 |
-| **竞对分析** | 10% | Winning Health 竞对, 订阅制 Skill Store | 监测行业向 OpEx 模式转型的阻力与进度 |
+## 🕸️ 抓取矩阵 (Reconnaissance Matrix)
+1. **全球前沿技术流 (Arxiv / Tech Feeds)**：关于医疗专用模型与 Agent 架构的最新论文或工程突破。
+2. **医疗 IT 资本与产业流**：卫宁健康及同梯队玩家（创业慧康、东软等）在数字资产化领域的实质性动作。
+3. **行业深水区 (Insights)**：针对“代码液态化”背景下的逻辑确权、白皮书或架构标准的非共识探讨。
 
-## 3. 产出物清单 (Deliverables)
-- [ ] `tmp/latest_scan.json`: 原始信号矩阵
-- [ ] `MEMORY/news/intelligence_current_refined.json`: 结构化精炼数据
-- [ ] `plan.md`: 物理节点追踪表
-- [ ] `[YYYYMMDD]_briefing.md`: 终极战略简报
+## ⚙️ 执行管线 (Execution Pipeline)
+- **Phase 1**: 执行全网信息抓取，去重去噪，形成 `latest_scan.json`。
+- **Phase 2**: 利用 LLM 执行二阶推演（"So-What" Audit），分级并生成中文摘要。
+- **Phase 3**: 若发现 L4 (Alpha 级) 战略信号，将强制挂载红蓝对抗引擎进行压力测试。
+- **Phase 4 & 5**: 渲染为《战略简报》，物理落盘并归档至 `MEMORY/news/`。
+- **Phase 6**: 执行认知蒸馏，把最核心的推演资产反写回个人增量记忆区块中。
 
-## 4. 阶段性阻塞点 (Gateways)
-- **Phase 1 结束**: 信号抓取完毕，待用户确认精炼。
-- **Phase 3 结束**: 触发 L4 级情报则启动 `logic-adversary` 对抗审计。
-- **Phase 5 结束**: 物理归档，移交绝对路径。
-
-## 5. 风险与防御
-- **噪音过载**: 采用 `intel_grade` L1-L4 强制过滤。
-- **幻觉风险**: 开启 OODA 推演与对抗性博弈网关。
+> 审阅后，若您确认方向无误，我们将即刻进入 Phase 1 进行信号扫描。

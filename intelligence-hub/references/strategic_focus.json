@@ -2,15 +2,15 @@
   "strategic_keywords": [
     {
       "keyword": "ai",
-      "weight": 20
+      "weight": 29
     },
     {
       "keyword": "ace",
-      "weight": 23
+      "weight": 20
     },
     {
       "keyword": "msl",
-      "weight": 25
+      "weight": 20
     },
     {
       "keyword": "fhir",
@@ -22,7 +22,7 @@
     },
     {
       "keyword": "agent",
-      "weight": 18
+      "weight": 29
     },
     {
       "keyword": "clinic",
@@ -34,7 +34,7 @@
     },
     {
       "keyword": "vbc",
-      "weight": 8
+      "weight": 10
     },
     {
       "keyword": "drg",
@@ -70,7 +70,7 @@
     },
     {
       "keyword": "路径",
-      "weight": 13
+      "weight": 15
     },
     {
       "keyword": "医疗",
@@ -94,31 +94,31 @@
     },
     {
       "keyword": "认知",
-      "weight": 11
-    },
-    {
-      "keyword": "临床",
-      "weight": 11
-    },
-    {
-      "keyword": "语义",
       "weight": 19
     },
     {
+      "keyword": "临床",
+      "weight": 17
+    },
+    {
+      "keyword": "语义",
+      "weight": 20
+    },
+    {
       "keyword": "架构",
-      "weight": 13
+      "weight": 20
     },
     {
       "keyword": "数字",
-      "weight": 15
+      "weight": 17
     },
     {
       "keyword": "医保",
-      "weight": 18
+      "weight": 5
     },
     {
       "keyword": "卫健委",
-      "weight": 18
+      "weight": 5
     }
   ],
   "categories": {
