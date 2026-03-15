@@ -1,8 +1,9 @@
-# 情报战役节点清点表 (Operation Checklist)
+# 情报战役进度卡 (Winning Health Baseline: 2026-03-09 to 2026-03-15)
+> Status: 🟢 扫描收集
 
-- [x] Phase 1: 扫描矩阵展开 (Reconnaissance) - 信号抓取完毕
-- [x] Phase 2: 高阶精炼与推演 (Refinement) - AI 结构化精炼完成
-- [x] Phase 3: 对抗性博弈网关 (Adversarial Audit) - 视阈值拦截情况而定
-- [x] Phase 4: 战略简报铸造 (Briefing Forging) - 洗稿渲染完成
-- [x] Phase 5: 物理归档与索引 (Archiving) - 归档与通知完成
-- [x] Phase 6: 认知蒸馏闭环 (Cognitive Write-Back) - 提取至 MEMORY
+- [x] Phase 1: 扫描矩阵展开 (信号抓取)
+- [x] Phase 2: 高阶精炼与推演 (So-What Audit)
+- [x] Phase 3: 对抗性博弈网关 (Adversarial Audit Gateway)
+- [x] Phase 4: 战略简报铸造 (Briefing Forging)
+- [x] Phase 5: 物理归档与索引 (Archiving)
+- [x] Phase 6: 认知蒸馏与记忆同步 (Cognitive Write-Back)

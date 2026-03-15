@@ -1,84 +1,20 @@
 {
   "strategic_keywords": [
     {
-      "keyword": "ai",
-      "weight": 15
+      "keyword": "msl",
+      "weight": 30
+    },
+    {
+      "keyword": "主权",
+      "weight": 20
     },
     {
       "keyword": "ace",
       "weight": 27
     },
     {
-      "keyword": "msl",
-      "weight": 30
-    },
-    {
-      "keyword": "fhir",
-      "weight": 12
-    },
-    {
-      "keyword": "medical",
-      "weight": 14
-    },
-    {
-      "keyword": "agent",
-      "weight": 22
-    },
-    {
-      "keyword": "clinic",
-      "weight": 8
-    },
-    {
-      "keyword": "hitl",
+      "keyword": "算力",
       "weight": 17
-    },
-    {
-      "keyword": "vbc",
-      "weight": 8
-    },
-    {
-      "keyword": "drg",
-      "weight": 10
-    },
-    {
-      "keyword": "dip",
-      "weight": 10
-    },
-    {
-      "keyword": "信创",
-      "weight": 10
-    },
-    {
-      "keyword": "互联互通",
-      "weight": 10
-    },
-    {
-      "keyword": "hospital",
-      "weight": 8
-    },
-    {
-      "keyword": "ehr",
-      "weight": 8
-    },
-    {
-      "keyword": "战略",
-      "weight": 15
-    },
-    {
-      "keyword": "输出",
-      "weight": 7
-    },
-    {
-      "keyword": "路径",
-      "weight": 15
-    },
-    {
-      "keyword": "医疗",
-      "weight": 20
-    },
-    {
-      "keyword": "个人",
-      "weight": 11
     },
     {
       "keyword": "逻辑",
@@ -89,28 +25,84 @@
       "weight": 20
     },
     {
-      "keyword": "核心",
+      "keyword": "agent",
+      "weight": 27
+    },
+    {
+      "keyword": "ai",
       "weight": 20
     },
     {
-      "keyword": "认知",
+      "keyword": "medical",
+      "weight": 16
+    },
+    {
+      "keyword": "evidence-mesh",
+      "weight": 19
+    },
+    {
+      "keyword": "mcp",
       "weight": 13
     },
     {
+      "keyword": "aci",
+      "weight": 7
+    },
+    {
+      "keyword": "logic-lake",
+      "weight": 5
+    },
+    {
+      "keyword": "core",
+      "weight": 9
+    },
+    {
+      "keyword": "数字",
+      "weight": 19
+    },
+    {
+      "keyword": "架构",
+      "weight": 15
+    },
+    {
+      "keyword": "战略",
+      "weight": 19
+    },
+    {
+      "keyword": "路径",
+      "weight": 15
+    },
+    {
+      "keyword": "认知",
+      "weight": 17
+    },
+    {
       "keyword": "临床",
-      "weight": 13
+      "weight": 20
     },
     {
       "keyword": "语义",
       "weight": 20
     },
     {
-      "keyword": "架构",
-      "weight": 17
+      "keyword": "信创",
+      "weight": 10
     },
     {
-      "keyword": "数字",
-      "weight": 20
+      "keyword": "互联互通",
+      "weight": 10
+    },
+    {
+      "keyword": "fhir",
+      "weight": 12
+    },
+    {
+      "keyword": "drg",
+      "weight": 10
+    },
+    {
+      "keyword": "dip",
+      "weight": 10
     },
     {
       "keyword": "医保",
@@ -121,52 +113,73 @@
       "weight": 5
     },
     {
-      "keyword": "算力",
+      "keyword": "clinic",
+      "weight": 8
+    },
+    {
+      "keyword": "ehr",
+      "weight": 8
+    },
+    {
+      "keyword": "hitl",
       "weight": 17
     },
     {
-      "keyword": "主权",
+      "keyword": "hospital",
+      "weight": 8
+    },
+    {
+      "keyword": "vbc",
+      "weight": 8
+    },
+    {
+      "keyword": "原子化",
+      "weight": 20
+    },
+    {
+      "keyword": "物理",
       "weight": 20
     }
   ],
   "categories": {
-    "AI/ML & Agentic Mesh": [
+    "Agentic Economy & Logic Hub": [
       "agent",
       "ace",
       "ai",
-      "vector",
-      "rag",
-      "llm",
-      "vibe",
+      "mcp",
+      "aci",
+      "logic-lake",
       "reasoning",
-      "mcp"
+      "world-model",
+      "evidence-mesh"
     ],
-    "医疗数字化/MSL": [
-      "medical",
+    "Medical Sovereignty / MSL 2.0": [
       "msl",
+      "medical",
       "fhir",
       "drg",
       "dip",
       "hospital",
       "clinic",
-      "healthit",
-      "himss",
-      "ajmc",
-      "hit180",
       "信创",
       "互联互通",
-      "ehr"
+      "ehr",
+      "clinical-friction",
+      "医疗卫生强基工程",
+      "深化医药卫生体制改革",
+      "高质量发展"
     ],
-    "工程与底层架构": [
-      "github",
+    "Sovereign Infrastructure": [
+      "算力",
+      "主权",
+      "lobster",
+      "openclaw",
+      "local-compute",
       "architecture",
       "rust",
       "go",
-      "performance",
-      "dns",
-      "tailscale",
-      "browser",
-      "wasm"
+      "wasm",
+      "tailscale"
     ]
   }
 }

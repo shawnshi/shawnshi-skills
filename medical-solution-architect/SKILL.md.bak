@@ -41,14 +41,11 @@ triggers: ["编写数字化解决方案", "设计医院转型规划", "智慧医
 2. **MECE Issue Tree**：构建当前医院的“不可能三角”矛盾（如：老旧HIS系统改造成本极高 vs. 临床操作极简诉求 vs. 评级数据的强颗粒度要求，或 DRG 控费压力 vs. 医疗服务质量提升诉求）。
 
 ### Phase 2: Knowledge Anchoring & Capability Mapping (知识挂载与能力映射) [Mode: PLANNING]
-> **System Action**: 保持在 `PLANNING` 模式。执行【知识湖三联侦察】以锚定逻辑资产。
-1. **知识湖深度召回 (Semantic Retrieval)**：
-    - **必须调用** `query_logic_lake` 工具。检索  Phase 1 诊断出的核心痛点、主页目标相关的已有洞察，确保方案与机构既定战略及 Logic Lake 中的“反常识洞察”守恒。
-2. **政策与底线锚定**：
-    - 结合 `search_web` 获取最新的国家政策要求、评级标准（如：互联互通五级乙等、电子病历六级）及**数据要素/资产入表**最新细则。
-3. **能力映射与资产注入**：
-    - 将检索到的【固态资产】（如：历史方案中的 TCO 模型、已验证的临床路径及避坑指南）注入 `implementation_plan.md` 大纲。
-    - 映射 WiNEX “1+X”中台架构、FHIR 数据集成边界及 WiNGPT 临床赋能路径。
+> **System Action**: 保持在 `PLANNING` 模式。
+1. **政策与底线锚定**：使用 `view_file` 工具读取本技能目录下的 `references/医疗卫生政策要点.md`，使用 `search_web` 工具获取最新的国家评级标准、**医疗信创政策**、**网安数据出境/等保规范**以及**医疗数据要素/资产入表**相关政策。
+2. **产品库挂载**：
+    - 使用 `view_file` 工具读取本技能目录下的 `references/卫宁健康典型案例.md` 与 `references/卫宁健康核心产品.md`（或通用主流 HIT 架构）。
+3. **Capability Mapping**：将 Phase 1 发现的痛点映射到底层能力（如：WiNEX“1+X”中台化架构应对定制化需求、HL7 FHIR标准集成构建数据确权底座、云原生架构防宕机、内生式 WiNGPT 赋能临床减负）。
 
 ### Phase 3: "So What" & Value Engineering (受众拆解与价值工程) [Mode: PLANNING]
 > **System Action**: 保持在 `PLANNING` 模式。在此阶段结束前，必须完成整体方案大纲，**必须使用 `write_to_file` 工具**在工作区安全生成具有明确结构的物理方案大纲 `implementation_plan.md`。保存完成后，**强行挂起交互并调用 `notify_user` 核心工具 (包含 PathsToReview 提交该大纲的绝对路径，并设定 BlockedOnUser: true)**，必须等待用户审阅通过，未经明确放行严禁跨入 EXECUTION 阶段。
@@ -65,7 +62,6 @@ triggers: ["编写数字化解决方案", "设计医院转型规划", "智慧医
    - **[强制落盘任务计划]**：**必须调用 `write_to_file` 工具**在工作空间内直接生成清单化的 `plan.md` 物理文件（涵盖该大纲下所有章节的起草任务及 Phase 5-8 的步骤），以及 `MANIFEST.json`（用于索引所有子章节）。**禁止在未更新索引及计划的情况下进行后续操作。**
 2. **Drafting (物理落盘约束)**：
    - **[硬性指标]**：每一章节必须包含至少一张逻辑图（Mermaid）或对比表格，禁止纯文字描述。
- - **[知识挂载]**：根据每一章节的大纲，必要时调用 `search_web` 获取最新信息，调用 `query_logic_lake` 、 `search_vector_lake`获取已有的洞察或者公司产品方案。
    - **【单步硬阻塞执行】 (Single-Step Hard Blocking)**：严格按照 `plan.md` 逐个起草。每一次对话流转【仅允许】使用 `write_to_file` 撰写 1 个章节并落盘为 `.md` 物理文件。紧接着**必须调用文件操作工具 (如 `replace_file_content` 或 `multi_replace_file_content`) 更新 `plan.md` 进度节点**。随后**必须调用 `notify_user` 工具并传入起草文件的 PathsToReview 挂起流程 (BlockedOnUser: true)**，直到获得用户“继续”指令。彻底杜绝并流、跳步生成现象。如果是完整规划方案，每个章节应保证不少于1000字；如果整体方案大纲对章节的字数有具体要求时，按照大纲要求执行。
 
 ### Phase 5：逻辑审计与熔断机制 (MECE Audit) [Mode: EXECUTION]
@@ -88,10 +84,8 @@ triggers: ["编写数字化解决方案", "设计医院转型规划", "智慧医
 5. **Final Review (基于文件的最终交付关卡)**：实证加固后，在终端框只给出一页纸核心摘要与 **1-3 个可能导致项目延期的致命风险提示**。随后**必须调用 `notify_user` 工具，装载生成的 `vFinal.md` 文件绝对路径 (BlockedOnUser: true)**，交由用户进行结案验收。
 
 ### Phase 8: Cognitive Write-Back (智慧蒸馏闭环) [Mode: EXECUTION]
-1. **Knowledge Extraction**: 从方案设计及对抗博弈中，提取最具价值的“反常识洞察”或“实施隐性深坑”。
-2. **Memory Distillation & Lake Sync**: 
-    - **必须**追加写入至系统全局配置库 `C:\Users\shich\.gemini\memory\MEMORY.md`。
-    - **必须手动触发索引同步**：在方案文件存入 `MEMORY/medical-solution` 后，立即调用 `vector-lake` 的 `ingest.py` 进行增量同步，确保本次沉淀的高阶资产能被下一次方案设计即时检索。
+1. **Knowledge Extraction**: 从本次整个方案设计及对抗博弈中，提取最具价值的 1-2 条“反常识洞察 (Counter-intuitive Insights)”或“实施落地中的隐性深坑”。
+2. **Memory Distillation**: **必须使用 `write_to_file` 或相关文件修改工具**，追加写入至系统全局配置库如 `C:\Users\shich\.gemini\memory\MEMORY.md` (或本项目的知识库备份中)，确保存储并沉淀这些重构经验，实现跨项目的认知复利。
 
 ## 4. 绝对禁令 (Anti-Patterns)
 - ❌ **禁售软件视角**：不要把方案写成产品说明书。必须从“医院痛点”推导至“IT能力”，而非罗列模块。

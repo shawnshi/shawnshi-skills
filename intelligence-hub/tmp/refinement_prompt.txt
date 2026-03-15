@@ -1,7 +1,7 @@
 你是一位战略情报分析师。请对提供的新闻条目进行「二阶推演」精炼，并严格按照 JSON Schema 输出。
 
 ## 任务
-1. 请为原始情报清单中标记为 [TOP 10] 的 10 个条目提供深度精炼：包括中文标题、约300字的中文深度摘要（事实 → 联结 → 推演）、以及推荐理由。并基于战略价值为其打分 (L1-L4)。
+1. 请为原始情报清单中标记为 [TOP 10] 的所有核心条目提供深度精炼（处理数量不限，有多少精炼多少）：包括中文标题、约300字的中文深度摘要（事实 → 联结 → 推演）、以及推荐理由。并基于战略价值为其打分 (L1-L4)。
 2. 请为原始情报清单中标记为 [TRANSLATE] 的条目提供简单的中文标题与简介翻译（存入 translations，键为该条目的 URL）。
 3. 基于全部情报，生成高阶视角的 insights, punchline, digest 和 market 总结。
 
@@ -42,185 +42,23 @@
 
 
 ## 当前战略关键词权重
-msl(w=30), ace(w=27), agent(w=22), 医疗(w=20), 逻辑(w=20), 审计(w=20), 核心(w=20), 语义(w=20), 数字(w=20), 主权(w=20), hitl(w=17), 架构(w=17), 算力(w=17), ai(w=15), 战略(w=15)
+msl(w=30), ace(w=27), agent(w=27), 主权(w=20), 逻辑(w=20), 审计(w=20), ai(w=20), 临床(w=20), 语义(w=20), 原子化(w=20), 物理(w=20), evidence-mesh(w=19), 数字(w=19), 战略(w=19), 算力(w=17)
 
 ## 原始情报清单
-[TOP 10] Item 1 [Score=81]:
-Title: seangoedecke.com: Giving LLMs a personality is just good engineering
-URL: https://seangoedecke.com/giving-llms-a-personality/
-Source: seangoedecke.com
-Desc: AI skeptics often argue that current AI systems shouldn’t be so human-like. The idea - most recently expressed in this opinion piece by Nathan Beacom - is that language models should explicitly be too
+[TOP 10] Item 1 [Score=36]:
+Title: WiNEX & WiNGPT: Transition to AI-Native architecture and Launch of WiNBOT distributed AI workstations.
+URL: http://www.hit180.com/
+Source: HIT180
+Desc: WiNEX transitioned to 'AI-Native' architecture. WiNGPT iterated to v3.5-turbo (MoE architecture). Launch of WiNBOT distributed AI workstations. WiNEX Copilot deployed in nearly 150 medical institution
 
-[TOP 10] Item 2 [Score=64]:
-Title: simonwillison.net: AI should help us produce better code
-URL: https://simonwillison.net/guides/agentic-engineering-patterns/better-code/#atom-everything
-Source: simonwillison.net
-Desc: Agentic Engineering Patterns > Many developers worry that outsourcing their code to AI tools will result in a drop in quality, producing bad code that's churned out fast enough that decision makers ar
+[TOP 10] Item 2 [Score=35]:
+Title: Winning Health & CLIC (中国人寿) Deepened collaboration on Commercial Insurance + Medical digital closed-loop.
+URL: https://finance.sina.com.cn/
+Source: Sina Finance
+Desc: Deepened collaboration on 'Commercial Insurance + Medical' digital closed-loop. Joint appearance at HIMSS 2026 (Mar 9-12) in Las Vegas. Focus on real-time insurance settlement, evidence-based auditing
 
-[TOP 10] Item 3 [Score=64]:
-Title: simonwillison.net: Perhaps not Boring Technology after all
-URL: https://simonwillison.net/2026/Mar/9/not-so-boring/#atom-everything
-Source: simonwillison.net
-Desc: A recurring concern I've seen regarding LLMs for programming is that they will push our technology choices towards the tools that are best represented in their training data, making it harder for new,
-
-[TOP 10] Item 4 [Score=64]:
-Title: seangoedecke.com: I don't know if my job will still exist in ten years
-URL: https://seangoedecke.com/will-my-job-still-exist/
-Source: seangoedecke.com
-Desc: In 2021, being a good software engineer felt great. The world was full of software, with more companies arriving every year who needed to employ engineers to write their code and run their systems. I 
-
-[TOP 10] Item 5 [Score=64]:
-Title: antirez.com: GNU and the AI reimplementations
-URL: http://antirez.com/news/162
-Source: antirez.com
-Desc: Those who cannot remember the past are condemned to repeat it. A sentence that I never really liked, and what is happening with AI, about software projects reimplementations, shows all the limits of s
-
-[TOP 10] Item 6 [Score=64]:
-Title: antirez.com: Implementing a clear room Z80 / ZX Spectrum emulator with Claude Code
-URL: http://antirez.com/news/160
-Source: antirez.com
-Desc: Anthropic recently released a blog post with the description of an experiment in which the last version of Opus, the 4.6, was instructed to write a C compiler in Rust, in a “clean room” setup.  The ex
-
-[TOP 10] Item 7 [Score=64]:
-Title: pluralistic.net: Pluralistic: Ad-tech is fascist tech (10 Mar 2026)
-URL: https://pluralistic.net/2026/03/10/ice-tech/
-Source: pluralistic.net
-Desc: Today's links Ad-tech is fascist tech: Surveillance advertising is just surveillance. Hey look at this: Delights to delectate. Object permanence: Washpo v Bernie; Activists v Saif Gadaffi's London man
-
-[TOP 10] Item 8 [Score=64]:
-Title: pluralistic.net: Pluralistic: Billionaires are a danger to themselves and (especially) us (09 Mar 2026)
-URL: https://pluralistic.net/2026/03/09/autocrats-of-trade-2/
-Source: pluralistic.net
-Desc: Today's links Billionaires are a danger to themselves and (especially) us: A billionaire is a machine for producing policy failures at scale. Hey look at this: Delights to delectate. Object permanence
-
-[TOP 10] Item 9 [Score=64]:
-Title: pluralistic.net: Pluralistic: The web is bearable with RSS (07 Mar 2026)
-URL: https://pluralistic.net/2026/03/07/reader-mode/
-Source: pluralistic.net
-Desc: Today's links The web is bearable with RSS: And don't forget "Reader Mode." Hey look at this: Delights to delectate. Object permanence: Eyemodule x Disneyland; Scott Walker lies; Brother's demon-haunt
-
-[TOP 10] Item 10 [Score=64]:
-Title: lucumr.pocoo.org: AI And The Ship of Theseus
-URL: https://lucumr.pocoo.org/2026/3/5/theseus/
-Source: lucumr.pocoo.org
-Desc: Because code gets cheaper and cheaper to write, this includes re-implementations.  I mentioned recently that I had an AI port one of my libraries to another language and it ended up choosing a differe
-
-[TRANSLATE] Item 11 [Score=64]:
-Title: lucumr.pocoo.org: A Language For Agents
-URL: https://lucumr.pocoo.org/2026/2/9/a-language-for-agents/
-Source: lucumr.pocoo.org
-Desc: Last year I first started thinking about what the future of programming languages might look like now that agentic engineering is a growing thing. Initially I felt that the enormous corpus of pre-exis
-
-[TRANSLATE] Item 12 [Score=64]:
-Title: gilesthomas.com: Writing an LLM from scratch, part 29 -- using DistributedDataParallel to train a base model from scratch in the cloud
-URL: https://www.gilesthomas.com/2026/01/llm-from-scratch-29-ddp-training-a-base-model-in-the-cloud
-Source: gilesthomas.com
-Desc: I'm carrying on with my "extra credit" projects after finishing the main body of Sebastian Raschka's book "Build a Large Language Model (from Scratch)". Having proven that I could train a GPT-2 small 
-
-[TRANSLATE] Item 13 [Score=64]:
-Title: anildash.com: Why We Speak
-URL: https://anildash.com/2026/01/26/why-we-speak/
-Source: anildash.com
-Desc: I've been working in and around the technology industry for a long time. Depending on how you count, it's 20 or 30 years. (I first started getting paid to put together PCs with a screwdriver when I wa
-
-[TRANSLATE] Item 14 [Score=64]:
-Title: anildash.com: A Codeless Ecosystem, or hacking beyond vibe coding
-URL: https://anildash.com/2026/01/27/codeless-ecosystem/
-Source: anildash.com
-Desc: There's been a remarkable leap forward in the ability to orchestrate coding bots, making it possible for ordinary creators to command dozens of AI bots to build software without ever having to directl
-
-[TRANSLATE] Item 15 [Score=64]:
-Title: michael.stapelberg.ch: Coding Agent VMs on NixOS with microvm.nix
-URL: https://michael.stapelberg.ch/posts/2026-02-01-coding-agent-microvm-nix/
-Source: michael.stapelberg.ch
-Desc: I have come to appreciate coding agents to be valuable tools for working with computer program code in any capacity, such as learning about any program’s architecture, diagnosing bugs or developing pr
-
-[TRANSLATE] Item 16 [Score=56]:
-Title: oldvcr.blogspot.com: Hands-on with two Apple Network Server prototype ROMs
-URL: https://oldvcr.blogspot.com/2026/01/hands-on-with-two-apple-network-server.html
-Source: oldvcr.blogspot.com
-Desc: Grateful acknowledgement made to the several former Apple employees who materially contributed to this entry. This article wouldn't have been possible without you!  Here's why I need to do inventory m
-
-[TRANSLATE] Item 17 [Score=52]:
-Title: oldvcr.blogspot.com: The Scriptovision Super Micro Script video titler is almost a home computer
-URL: https://oldvcr.blogspot.com/2026/02/the-scriptovision-super-micro-script.html
-Source: oldvcr.blogspot.com
-Desc: Canadians, rejoice! Not only do you have curling, the Big Turk and Tim Hortons (and, when I was in BC last, Dr Pepper made with real cane sugar), you also have a number of interesting indigenous compu
-
-[TRANSLATE] Item 18 [Score=50]:
-Title: arXiv Med-AI: CORE-Acu: Structured Reasoning Traces and Knowledge Graph Safety Verification for Acupuncture Clinical Decision Support
-URL: https://arxiv.org/abs/2603.08321v1
-Source: arXiv Med-AI
-Desc: Large language models (LLMs) show significant potential for clinical decision support (CDS), yet their black-box nature -- characterized by untraceable reasoning and probabilistic hallucinations -- po
-
-[TRANSLATE] Item 19 [Score=50]:
-Title: computer.rip: cash issuing terminals
-URL: https://computer.rip/2026-02-27-ibm-atm.html
-Source: computer.rip
-Desc: In the United States, we are losing our fondness for cash. As in many other countries, cards and other types of electronic payments now dominate everyday commerce. To some, this is a loss. Cash repres
-
-[TRANSLATE] Item 20 [Score=49]:
-Title: alibaba /page-agent
-URL: https://github.com/alibaba/page-agent
-Source: GitHub
-Desc: JavaScript in-page GUI agent. Control web interfaces with natural language.
-
-[TRANSLATE] Item 21 [Score=42]:
-Title: idiallo.com: The Server Older than my Kids!
-URL: https://idiallo.com/byte-size/my-server-is-older-than-my-kids?src=feed
-Source: idiallo.com
-Desc: This blog runs on two servers. One is the main PHP blog engine that handles the logic and the database, while the other serves all static files. Many years ago, an article I wrote reached the top posi
-
-[TRANSLATE] Item 22 [Score=42]:
-Title: maurycyz.com: Why does C have the best file API?
-URL: https://maurycyz.com/misc/c_files/
-Source: maurycyz.com
-Desc: Ok, the title is a tongue-in-cheek, but there's very little thought put into files in most languages.  It always feels a bit out of place... except in C. In fact, what you get is usually a worse versi
-
-[TRANSLATE] Item 23 [Score=42]:
-Title: righto.com: Instruction decoding in the Intel 8087 floating-point chip
-URL: http://www.righto.com/2026/02/8087-instruction-decoding.html
-Source: righto.com
-Desc: In the 1980s, if you wanted your IBM PC to run faster, you could buy the Intel 8087 floating-point coprocessor chip. With this chip, CAD software, spreadsheets, flight simulators, and other programs w
-
-[TRANSLATE] Item 24 [Score=42]:
-Title: righto.com: Notes on the Intel 8086 processor's arithmetic-logic unit
-URL: http://www.righto.com/2026/01/notes-on-intel-8086-processors.html
-Source: righto.com
-Desc: In 1978, Intel introduced the 8086 processor, a revolutionary chip that led to the modern x86 architecture. Unlike modern 64-bit processors, however, the 8086 is a 16-bit chip. Its arithmetic/logic un
-
-[TRANSLATE] Item 25 [Score=42]:
-Title: righto.com: Conditions in the Intel 8087 floating-point chip's microcode
-URL: http://www.righto.com/2025/12/8087-microcode-conditions.html
-Source: righto.com
-Desc: In the 1980s, if you wanted your computer to do floating-point calculations faster, you could buy the Intel 8087 floating-point coprocessor chip. Plugging it into your IBM PC would make operations up 
-
-[TRANSLATE] Item 26 [Score=42]:
-Title: lucumr.pocoo.org: The Final Bottleneck
-URL: https://lucumr.pocoo.org/2026/2/13/the-final-bottleneck/
-Source: lucumr.pocoo.org
-Desc: Historically, writing code was slower than reviewing code. It might not have felt that way, because code reviews sat in queues until someone got around to picking it up.  But if you compare the actual
-
-[TRANSLATE] Item 27 [Score=42]:
-Title: gilesthomas.com: Writing an LLM from scratch, part 28 -- training a base model from scratch on an RTX 3090
-URL: https://www.gilesthomas.com/2025/12/llm-from-scratch-28-training-a-base-model-from-scratch
-Source: gilesthomas.com
-Desc: Having worked through the main body of Sebastian Raschka's book "Build a Large Language Model (from Scratch)", I wanted to try an experiment: is it possible to train a base model of my own, on my own 
-
-[TRANSLATE] Item 28 [Score=42]:
-Title: gilesthomas.com: Writing an LLM from scratch, part 30 -- digging into the LLM-as-a-judge results
-URL: https://www.gilesthomas.com/2026/01/llm-from-scratch-30-digging-into-llm-as-a-judge
-Source: gilesthomas.com
-Desc: I'm still working on my "extra credit" projects after finishing the main body of Sebastian Raschka's book "Build a Large Language Model (from Scratch)". Last time around, I trained four base models, u
-
-[TRANSLATE] Item 29 [Score=42]:
-Title: evanhahn.com: The two kinds of error
-URL: https://evanhahn.com/the-two-kinds-of-error/
-Source: evanhahn.com
-Desc: In short: in my mind, errors are divided into two categories. Expected errors (think “user entered invalid data”), which are part of normal operation, aren’t the developer’s fault, and should be handl
-
-[TRANSLATE] Item 30 [Score=42]:
-Title: evanhahn.com: Notes from February 2026
-URL: https://evanhahn.com/notes-from-february-2026/
-Source: evanhahn.com
-Desc: Things I did and saw this February. Things I made   I shipped my first feature at Ghost: Inbox Links. When a member enters their email to log in or sign up, we now show a button that takes them straig
+[TOP 10] Item 3 [Score=0]:
+Title: Winning Health 2026 Restrictive Stock Incentive Plan: Verification and Self-Audit Report.
+URL: https://www.eastmoney.com/
+Source: EastMoney
+Desc: 2026 Restrictive Stock Incentive Plan: 703 participants (including CEO Wang Tao), 100 million shares at 5.32 RMB/share. Supervisory board verification completed on Mar 10. Self-audit report on insider

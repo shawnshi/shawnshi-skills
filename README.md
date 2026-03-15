@@ -10,7 +10,7 @@
 > **“工具的本质是意志的延伸。在这里，我们不生产简单的功能，我们构建确定性。”**
 
 ## 1. 架构原则 (Architectural Principles)
-本目录是由 33 个专业技能构成的“分形武器库”。所有模块均遵循以下公理：
+本目录是由 32 个专业技能构成的“分形武器库”。所有模块均遵循以下公理：
 - **灵肉合一**：代码逻辑（Scripts）与架构意图（README）实时同步。
 - **双态解构**：区分物理层操作（Action）与语义层推演（Cognition）。
 - **ACE 兼容**：所有技能均可被智能体协调引擎（ACE）原子化调度。
@@ -26,7 +26,7 @@ gemini skills install https://github.com/shawnshi/shawnshi-skills.git --path res
 
 ## 3. 核心分类矩阵 (Core Skill Hierarchy)
 
-> **Total Inventory: 33 Strategic Modules across 7 Domains**
+> **Total Inventory: 32 Strategic Modules across 7 Domains**
 
 ### 🧠 深度认知与研究工作台 (Cognitive Research)
 *底层思考工具箱：第一性原理拆解、红蓝逻辑对抗、脑暴发散与情报分析。*
@@ -43,8 +43,6 @@ gemini skills install https://github.com/shawnshi/shawnshi-skills.git --path res
 
 | 技能标识 (Directory)                                          | 核心本质 (Essence & Mission)                                                                                           |
 |:--------------------------------------------------------------|:-----------------------------------------------------------------------------------------------------------------------|
-| **[article-illustrator](article-illustrator/)**               | 分析文章结构，识别需要视觉辅助的位置，采用“类型×风格”双维矩阵生成插图描述。                                            |
-| **[cover-image](cover-image/)**                               | 为文章生成四维定制化（类型、风格、文字、情绪）封面图。支持 20 种手绘与商业风格。使用场景：文章配图、社交媒体封面等。   |
 | **[humanizer-zh-pro](humanizer-zh-pro/)**                     | 专业的中文文本“去 AI 化”编辑器。消除机械感、翻译腔与虚假的逻辑词。使用场景：改写 AI 稿件、优化汇报、使公文“说人话”。   |
 | **[multi-agent-writer](multi-agent-writer/)**                 | 顶级咨询级协作写作编排专家 (V9.1: 本地全自动化引擎)。融合金字塔原理、Ghost Deck 视觉逻辑、医疗行业注入以及去AI化清洗。增加底层硬阻塞机制。 |
 | **[personal-writing-assistant](personal-writing-assistant/)** | 底层立法者与语义主权捍卫者引擎 (V5.0: The Underlying Legislator)。专为生成高信噪比、高压迫感的逻辑资产设计，特化数字医疗的系统级降维打击与控制论推演。 |
@@ -100,8 +98,9 @@ gemini skills install https://github.com/shawnshi/shawnshi-skills.git --path res
 | **[markdown-converter](markdown-converter/)**   | 将任何文档、图像或媒体文件转换为干净的 Markdown 原质。由 Microsoft MarkItDown 强力驱动。             |
 | **[pdf](pdf/)**                                 | 读取、提取、合并、拆分、旋转、加水印、创建、表单填写、加密以及对 PDF 进行底层 OCR 处理。             |
 | **[pptx](pptx/)**                               | 全面接管演示文稿：创建幻灯片、提取文本、编辑汇报内容、合并/拆分以及模板与母版操控。                  |
+| **[text-to-speech](text-to-speech/)**           | 高保真混合播报系统。采用神经网络云端引擎与本地物理链路双轨制，确保播报的高审美与极高可用性。         |
 | **[tuanbiaodownloader](tuanbiaodownloader/)**   | 从团体标准存容库批量下载影像，并全自动合并装订为高保真 PDF 案卷。                                    |
 | **[url-to-markdown](url-to-markdown/)**         | 抓取任何 URL（包括重度 JS 或登录隔离网页）并转换为干净的 markdown。直控 Chrome CDP 协议。            |
 
 ---
-*Last Global Audit: 2026-03-11 | System State: Optimized*
+*Last Global Audit: 2026-03-15 | System State: Optimized*

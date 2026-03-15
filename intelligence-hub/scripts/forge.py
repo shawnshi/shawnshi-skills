@@ -60,11 +60,12 @@ def forge_briefing():
         data_table_rows.append({"source": src, "status": status, "count": count})
     template_data["data_table_rows"] = data_table_rows
 
-    # Top 10
+    # Top Items (Dynamic length based on ai_data)
     top_10 = []
     ai_top_10 = ai_data.get("top_10", [])
     
-    for i in range(10):
+    top_k = max(len(ai_top_10), 10)
+    for i in range(top_k):
         if i >= len(scored_items): break
         score, item = scored_items[i]
         
@@ -88,7 +89,7 @@ def forge_briefing():
     grouped_list = {cat: [] for cat in categories.keys()}
     grouped_list['其他综合资讯清单'] = []
     
-    for score, item in scored_items[10:]:
+    for score, item in scored_items[top_k:]:
         text = (item['title'] + " " + item.get('raw_desc', '')).lower()
         assigned = False
         for cat_name, cat_keywords in categories.items():
@@ -105,7 +106,7 @@ def forge_briefing():
         if not items: continue
         
         formatted_items = []
-        for item in items[:12]:
+        for item in items: # Removed [:12] truncation to support full manifest
             trans = ai_translations.get(item['url'], {})
             if not isinstance(trans, dict): trans = {}
             title = trans.get('title_zh', item['title'])

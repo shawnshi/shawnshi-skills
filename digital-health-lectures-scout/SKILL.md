@@ -25,7 +25,7 @@ tools: [global_sci_scout, clinical_scout, china_local_scout, preprint_scout]
 2. **全局提纯与逻辑补位 (Aggregation & Trend Sensing)**:
    - 等待所有数据回传。
    - **战略分流**: 筛选 Top 5-7 篇核心文献进行深度 TRL 脱水。
-   - **逻辑补位**: 若顶级正刊论文不足，**必须**从 `preprint_scout` 中提取 3 个正处于“算法打榜”阶段的热点趋势进行补充，确保简报的信息密度。
+   - **逻辑补位**: 若顶级正刊论文不足，**必须**从 `preprint_scout` 中提取 5个正处于“算法打榜”阶段的热点趋势进行补充，确保简报的信息密度。
 
 ### 第三阶段：中国重力场与卫宁战略推演 (Strategic Deduction)
 - **执行**：依据 `references/strategic_deduction.md`，执行 DRG 2.0 压测。
@@ -48,7 +48,7 @@ tools: [global_sci_scout, clinical_scout, china_local_scout, preprint_scout]
 
 ### 1. [Title]
 - **来源**: [Journal/Platform] | **日期**: [YYYY-MM-DD]
-- **一句话战报**: [300字以内的高度浓缩]
+- **一句话战报**: [500字以内的高度浓缩，包括论文的摘要，以及对卫宁的借鉴意义。]
 - **直达锚点**: [URL]
 
 *(重复以上结构，直至满足 10 篇条目)*
