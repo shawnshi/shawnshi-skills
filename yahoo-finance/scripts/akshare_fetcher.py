@@ -78,16 +78,86 @@ class StandaloneDataFetcher:
         return ef.stock.get_latest_quote([symbol])
 
     @retry(
-        stop=stop_after_attempt(3),
-        wait=wait_exponential(multiplier=1, min=2, max=10),
+        stop=stop_after_attempt(2),
+        wait=wait_exponential(multiplier=1, min=1, max=3),
         retry=retry_if_exception_type((ConnectionError, TimeoutError, Exception)),
     )
     def _fetch_chip_distribution_ak(self, symbol: str) -> pd.DataFrame:
         import akshare as ak
+        import threading
         self._enforce_rate_limit()
-        return ak.stock_cyq_em(symbol=symbol)
+        
+        # Soft timeout for chip distribution since it's heavy and often blocked
+        result = []
+        err = []
+        def worker():
+            try:
+                result.append(ak.stock_cyq_em(symbol=symbol))
+            except Exception as e:
+                err.append(e)
+                
+        t = threading.Thread(target=worker)
+        t.start()
+        t.join(timeout=3.0)  # 3 seconds hard timeout
+        
+        if t.is_alive():
+            logger.warning(f"Chip distribution fetch timed out for {symbol}")
+            return pd.DataFrame()
+        if err:
+            logger.warning(f"Chip distribution fetch error: {err[0]}")
+            return pd.DataFrame()
+        return result[0] if result else pd.DataFrame()
 
-    def get_enhanced_metrics(self, symbol: str) -> Dict[str, Any]:
+    @retry(
+        stop=stop_after_attempt(3),
+        wait=wait_exponential(multiplier=1, min=2, max=10),
+        retry=retry_if_exception_type((ConnectionError, TimeoutError, Exception)),
+    )
+    def get_history(self, symbol: str, start_date: str = None, end_date: str = None) -> pd.DataFrame:
+        """
+        Fetch historical daily K-lines for A-shares using akshare.
+        Returns a DataFrame compatible with yfinance output (Index: Date, Columns: Open, High, Low, Close, Volume).
+        """
+        import akshare as ak
+        self._enforce_rate_limit()
+        
+        # akshare expects start_date/end_date in YYYYMMDD format
+        start = start_date.replace("-", "") if start_date else "20000101"
+        end = end_date.replace("-", "") if end_date else time.strftime("%Y%m%d")
+        
+        df = ak.stock_zh_a_hist(symbol=symbol, period="daily", start_date=start, end_date=end, adjust="qfq")
+        if df.empty:
+            return pd.DataFrame()
+            
+        # Map akshare columns to yfinance format
+        # akshare cols: 日期, 开盘, 收盘, 最高, 最低, 成交量, 成交额, 振幅, 涨跌幅, 涨跌额, 换手率
+        df = df.rename(columns={
+            "日期": "Date",
+            "开盘": "Open",
+            "收盘": "Close",
+            "最高": "High",
+            "最低": "Low",
+            "成交量": "Volume"
+        })
+        
+        df["Date"] = pd.to_datetime(df["Date"])
+        df.set_index("Date", inplace=True)
+        
+        # Return only the necessary columns
+        return df[["Open", "High", "Low", "Close", "Volume"]]
+
+    def get_sector_info(self, symbol: str) -> str:
+        """Fetch basic board/sector info for context."""
+        try:
+            self._enforce_rate_limit()
+            # Note: For strict reliability and avoiding long loops, 
+            # we return a placeholder directing the agent to use google_web_search
+            # because akshare's 'stock_board_industry_name_em' requires mapping logic that is prone to break.
+            return "建议通过 google_web_search 补充最新板块与概念轮动数据"
+        except Exception:
+            return "Sector Data Unavailable"
+
+    def get_enhanced_metrics(self, symbol: str, skip_chip_dist: bool = False) -> Dict[str, Any]:
         """
         Fetch enhanced metrics for a given A-share symbol.
         Expects symbol in 6-digit format (e.g. '600519').
@@ -103,10 +173,13 @@ class StandaloneDataFetcher:
             "chip_90_high": None,
             "chip_70_low": None,
             "chip_70_high": None,
+            "belong_boards": None
         }
         
         if not (symbol.isdigit() and len(symbol) == 6):
             return metrics
+            
+        metrics['belong_boards'] = self.get_sector_info(symbol)
             
         # 1. Fetch Latest Quote via efinance for Volume Ratio, Turnover Rate, Amplitude
         try:
@@ -131,26 +204,27 @@ class StandaloneDataFetcher:
         except Exception as e:
             logger.warning(f"Failed to fetch realtime quote for {symbol}: {e}")
 
-        # 2. Fetch Chip Distribution via akshare for Profit Ratio, Avg Cost, Concentration
-        try:
-            df_chips = self._fetch_chip_distribution_ak(symbol=symbol)
-            if not df_chips.empty:
-                latest = df_chips.iloc[-1]
-                if '获利比例' in latest:
-                    metrics['profit_ratio'] = _safe_float(latest['获利比例'])
-                if '平均成本' in latest:
-                    metrics['avg_cost'] = _safe_float(latest['平均成本'])
-                if '90%筹码集中度' in latest:
-                    metrics['concentration'] = _safe_float(latest['90%筹码集中度'])
-                if '90%成本区间下限' in latest:
-                    metrics['chip_90_low'] = _safe_float(latest['90%成本区间下限'])
-                if '90%成本区间上限' in latest:
-                    metrics['chip_90_high'] = _safe_float(latest['90%成本区间上限'])
-                if '70%成本区间下限' in latest:
-                    metrics['chip_70_low'] = _safe_float(latest['70%成本区间下限'])
-                if '70%成本区间上限' in latest:
-                    metrics['chip_70_high'] = _safe_float(latest['70%成本区间上限'])
-        except Exception as e:
-            logger.warning(f"Failed to fetch chip distribution for {symbol}: {e}")
+        # 2. Fetch Chip Distribution via akshare (if not skipped)
+        if not skip_chip_dist:
+            try:
+                df_chips = self._fetch_chip_distribution_ak(symbol=symbol)
+                if not df_chips.empty:
+                    latest = df_chips.iloc[-1]
+                    if '获利比例' in latest:
+                        metrics['profit_ratio'] = _safe_float(latest['获利比例'])
+                    if '平均成本' in latest:
+                        metrics['avg_cost'] = _safe_float(latest['平均成本'])
+                    if '90%筹码集中度' in latest:
+                        metrics['concentration'] = _safe_float(latest['90%筹码集中度'])
+                    if '90%成本区间下限' in latest:
+                        metrics['chip_90_low'] = _safe_float(latest['90%成本区间下限'])
+                    if '90%成本区间上限' in latest:
+                        metrics['chip_90_high'] = _safe_float(latest['90%成本区间上限'])
+                    if '70%成本区间下限' in latest:
+                        metrics['chip_70_low'] = _safe_float(latest['70%成本区间下限'])
+                    if '70%成本区间上限' in latest:
+                        metrics['chip_70_high'] = _safe_float(latest['70%成本区间上限'])
+            except Exception as e:
+                logger.warning(f"Failed to fetch chip distribution for {symbol}: {e}")
 
         return metrics

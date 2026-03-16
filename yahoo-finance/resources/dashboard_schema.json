@@ -88,10 +88,10 @@
         },
         "battle_plan": {
             "sniper_points": {
-                "ideal_buy": "理想买入点",
-                "secondary_buy": "次优买入点",
-                "stop_loss": "止损位",
-                "take_profit": "目标位"
+                "ideal_buy": "理想买入点及条件（如：突破10.5且放量）",
+                "secondary_buy": "次优买入点及条件（如：回踩9.8获支撑）",
+                "stop_loss": "硬性止损位及条件",
+                "take_profit": "分批止盈目标区"
             },
             "position_strategy": {
                 "suggested_position": "建议仓位",

@@ -417,6 +417,30 @@ After packaging, direct the user to the resulting `.skill` file path so they can
 
 ---
 
+## Skill Optimization and Self-Healing (The .amendify() Loop)
+
+Skills are not static; they must evolve as the codebase, models, and user tasks shift. Use this section when a skill is underperforming or failing repeatedly.
+
+### 1. Observe & Inspect
+Before optimizing, you must gather evidence from the **Skill Audit Storage** (`MEMORY/skill_audit/`).
+- Read the audit logs for the specific `Skill_ID`.
+- Identify recurring patterns: Is the trigger too broad? Are steps being skipped? Is the output format drifting? Are there environment-specific failures (e.g., path issues)?
+- Trace the connected history: Look at past runs, user feedback, and tool errors.
+
+### 2. Amend Skill (.amendify)
+Once you have enough evidence, propose a targeted "Patch" (Amendment) rather than a complete rewrite.
+- **Tighten the trigger**: Update the YAML frontmatter `triggers` or `description`.
+- **Add missing conditions**: Explicitly handle edge cases discovered in the audit.
+- **Reorder or clarify steps**: Use imperative form and explain *why* steps are necessary.
+- **Update output format**: Align strictly with the latest user requirements or Schema.
+
+### 3. Evaluate & Update
+- Propose the patch to the user with a clear rationale based on the audit evidence.
+- After approval, apply the change to the `SKILL.md`.
+- **Mandatory**: After an amendment, you MUST run at least 2-3 test cases from the audit logs (the ones that previously failed) to verify the fix.
+
+---
+
 ## Claude.ai-specific instructions
 
 In Claude.ai, the core workflow is the same (draft → test → review → improve → repeat), but because Claude.ai doesn't have subagents, some mechanics change. Here's what to adapt:

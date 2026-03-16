@@ -24,7 +24,7 @@ tools: [global_sci_scout, clinical_scout, china_local_scout, preprint_scout]
 1. **并行分发与横向扩展 (Lateral Expansion)**: 向 4 个 Subagent 传入7天日期窗口，并要求它们不仅盯着顶级站点，还要关注 ResearchGate、Google Scholar 上的高引用二阶信号。
 2. **全局提纯与逻辑补位 (Aggregation & Trend Sensing)**:
    - 等待所有数据回传。
-   - **战略分流**: 筛选 Top 5-7 篇核心文献进行深度 TRL 脱水。
+   - **战略分流**: 筛选 Top 5-10 篇核心文献进行深度 TRL 脱水。
    - **逻辑补位**: 若顶级正刊论文不足，**必须**从 `preprint_scout` 中提取 5个正处于“算法打榜”阶段的热点趋势进行补充，确保简报的信息密度。
 
 ### 第三阶段：中国重力场与卫宁战略推演 (Strategic Deduction)
@@ -34,37 +34,40 @@ tools: [global_sci_scout, clinical_scout, china_local_scout, preprint_scout]
 ## 3. 输出格式铁律 (Formatting Ironballs)
 
 ---
-## 🏆 战略核弹文献 (Top Pick & Strategic Deep Dive)
-### 论文概要
-来源阵地、发布日期、主导机构、数据锚点[URL]、论文摘要（500字）
-#### 1. 技术硬脱水 (Tech Core & TRL)
-#### 2. 中国实战压测 (China Localization Test)
-#### 3. 卫宁架构映射 
-*(重复以上结构)*
-```
+## 🎯 本周核心情报速递 (Executive Signals)
+> *[用一段冷峻、精炼的话，总结本周学术界释放的最强收敛性信号。例如：本周医疗人工智能正全面从“实验室Demo”转向“真实世界工作流”，核心矛盾集中于人机交互的信任赤字。]*
 
-## 📚 视野外围扫描 (Radar Scan)
-*（🔴 强约束：此处必须列出至少 10 篇文献，以确保情报覆盖的广度）*
+| 刊物 | 核心标题 | 战略概述 (1句话) | 链接 |
+|:---|:---|:---|:---|
+| [Nature/JAMA等] | [Title] | [提炼核心洞察，如：揭示了交互透明度对医生信任的核心影响] | [URL] |
+*(列出本周 Top 5-7 的核心论文)*
 
-### 1. [Title]
-- **来源**: [Journal/Platform] | **日期**: [YYYY-MM-DD]
-- **一句话战报**: [500字以内的高度浓缩，包括论文的摘要，以及对卫宁的借鉴意义。]
-- **直达锚点**: [URL]
+---
+## 🔬 深度解剖：[填写本周核心现象/主题，如：AI助理的“交互坍塌”]
+*选中论文：[核心论文标题] ([期刊], [日期])*
 
-*(重复以上结构，直至满足 10 篇条目)*
+### A. 核心逻辑解构 (Core Logic & Attrition)
+- **现象/悖论**：[提炼论文中揭示的反常识现象或物理边界，使用数据对比支撑]
+- **底层归因**：[使用第一性原理或系统动力学解释失败/成功的原因，如：特征工程缺失、意图偏移]
 
-## 📚 扫描论文清单 (Paper Scan)
+### B. 卫宁健康战略支点 (Winning Health Strategic Pivot)
+- **底层底座映射 (MSL/ACE)**：[放弃对Chat的幻想，说明该情报对卫宁医疗语义层(MSL)或Agent编排引擎的启示]
+- **产品护城河 (WiNEX/WinDAN)**：[说明如何通过“由医生监管的AI(Human-in-the-loop)”或隐形感知构建防御]
 
-### 1. [Title]
-- **来源**: [BMJ / CMA / medRxiv 等] | **日期**: [YYYY-MM-DD]
-- **一句话战报**: [100字以内的高度浓缩]
-- **直达锚点**: [URL]
+### C. 阻力测算与二阶效应 (The 2nd Order Effects)
+- **合规/法律黑洞**：[推演新技术可能带来的伪信任或法律责任边界模糊]
+- **算力与架构压测**：[讨论边缘云需求、算力枯竭或联邦学习的必要性]
 
-*(重复以上结构)*
-```
+---
+## 📡 视野外围扫描 (Radar Scan)
+*(高密度罗列本周其他 5-10 篇值得关注的文献，仅保留：刊物、一句话战报、URL)*
+1. **[刊物]**：[Title] - [一句话说明其边际增量]。[URL]
 
-## 🔴 红队对抗 (The Red Team Failsafe)
-
+---
+## ⚔️ 周度指挥官指令 (Commander's Directives)
+*基于本周情报，向卫宁战略或研发体系下达 1-2 条执行调整指令：*
+- **建议动作 1**：[例如：建议WiNEX研发中心评估AI助手的交互模式，从“开放提问”转向“结构化信息过滤”。]
+- **风险规避**：[防范何种技术陷阱]
 
 ## 4. 归档与落盘 (Archiving)
 1. **物理路径**: 生成结果强制保存在 `C:\Users\shich\.gemini\MEMORY\DigitalHealthLecturesScout`。

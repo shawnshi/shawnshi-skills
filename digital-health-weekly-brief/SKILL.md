@@ -19,30 +19,56 @@ triggers: ["生成数字健康周报", "检索医疗行业报告", "本周麦肯
 - `{root}\tmp\recon_tech.md` (调用 `tech_advisory_scout`)
 - `{root}\tmp\recon_policy.md` (调用 `macro_policy_scout`)
 
-### Phase 3: S-I-A 推演与战略补位 (Generation & Backfill Logic)
-读取上述证据链。若本周真实研报发布数少于 3 篇，Orchestrator 必须启动以下补位逻辑：
-1. **态势感知补位**: 分析当前医疗 IT 市场的存量热点（如：DRG 2.0 落地进度、数据资产入表实务）在过去 7天内的舆论演进或技术细节微调。
-2. **逻辑对齐**: 将上周未充分讨论的重磅资讯进行二阶拆解。
-遵循 S-I-A 战略推演框架：
-...
-   - **[新增] 红队推演 (Red Team)**: 强制指出上述 Action 落地时的 **1 个致命执行风险或 SPOF (单点故障)**。
+### Phase 3: 主轴提炼与降维解析 (Thematic Synthesis & 3D Parsing)
+在收集完情报后，必须执行以下认知处理：
+1. **主轴定调**: 用一句话概括本周全球智库释放的最核心共识（如：“代理式AI的实战化”或“基层医疗的资本回归”）。
+2. **三维降维**: 将所有碎片情报强制归类到三个高阶商业维度：[技术演进]、[安全与合规]、[资本与政策/治理]。
 
-## 3. 输出排版与格式要求 (Formatting & Integration)
-- **强约束**: 最终报告的“核心资讯清单”部分必须包含至少 **8 条** 经过脱水的研报/趋势信息。
+## 3. 输出格式铁律 (The Formatting Ironballs)
 
+**必须完全放弃外部模板，严格按照以下 Markdown 结构输出，不准有任何格式偏离：**
 
-### Phase 4: 非对称审计与逻辑防腐 (The Logic-Adversary Gate)
-- 切换至 `/audit` 模式。必须引入 `logic-adversary` 视角（或自我质询机制），对 `DHWB_YYYYMMDD_draft.md` 进行苛刻审查。
-- 寻找并指出目前推演中的 **3个潜在逻辑漏洞**（例如：URL幻觉、技术影响夸大、与卫健委政策冲突、S-I-A逻辑断层）。
-- 修复这些漏洞后，生成最终制品 `{root}\tmp\DHWB_YYYYMMDD_final.md`。
+```markdown
+# 全球数字健康智库周报 - [日期 YYYY-MM-DD 至 YYYY-MM-DD]
+> **本周战略主轴**：[用一段极具统摄力的话，总结本周全球咨询机构与权威组织释放的最强共识。]
 
-### Phase 5: 物理归档与宏观记忆同步 (Archiving & State Alignment)
-1. **交付归档**: 将最终成品移动至红区目录 `{root}\MEMORY\DigitalHealthWeeklyBrief\DHWB-YYYYMMDD.md` (并清理 tmp 下的临时文件)。
-2. **战略捕捉**: 审视本周情报是否触发《GEMINI.md》定义的"战略雷达" (Semantic Assets, Compliance, Tech)。若发现了改变医疗版图的重大拐点信号，触发 `/warroom` 协议，将核心洞察高度压缩并回写至全局 `{root}\MEMORY.md` 知识库。
+## I. 全球核心咨询报告与权威动态一览
+*(必须提取至少 5-7 份顶级报告，以高密度表格呈现)*
 
-## 3. 输出排版与格式要求 (Formatting & Integration)
-1. **调用专属模板**: 必须读取并严格遵循 `resources/template.md`，保持 GitHub Alerts 块（`> [!IMPORTANT]`, `> [!NOTE]` 等）的视觉穿透力与完好无损。
-2. **对齐实战样例**: 开始推演前，**强制读取** `examples/DHWB-Reference.md` 进行 Few-Shot 学习。保持高管口吻：冷峻、直击业务痛点、商业模型拆解清晰，绝对禁止生成虚无缥缈的公关废话。
+| 机构 (Institution) | 报告名称 / 最新资讯 | 核心摘要 (1句话) |
+|:---|:---|:---|
+| [如：McKinsey/WHO] | [报告/资讯标题] | [高度浓缩的商业实质，如：转向代理式AI缩减闭环] |
+
+## II. 行业深度解读：[提取本周核心驱动力，如：HIMSS 26驱动的范式转移]
+*(根据 Phase 3 的降维结果，输出 3 个维度的深度剖析)*
+
+### 1. 技术演进：[提炼技术趋势，如：从生成式AI到代理式AI]
+- **现象 (Fact)**：[数据支撑或权威宣告的客观事实]
+- **解读 (Insight)**：[穿透表象的底层逻辑]
+- **场景映射 (临床/运营)**：[说明技术在具体医疗环节的改变，如接管RCM或临床辅助]
+
+### 2. 安全与架构：[提炼底座趋势，如：零信任的强制化]
+- **现象 (Fact)**：[勒索数据或合规要求]
+- **解读 (Insight)**：[为什么原有的模式崩溃]
+- **动作映射**：[行业标杆的做法，如微隔离]
+
+### 3.资本与政策：[提炼宏观趋势，如：基层回归与去援助依赖]
+- **现象 (Fact)**：[世行/WHO等宏观机构的数据事实]
+- **解读 (Insight)**：[解释资本流向的转变逻辑]
+- **投资逻辑**：[当前的避险资产或高ROI领域]
+
+## III. 战略教练建议与下一步行动 (Strategic Recommendation)
+*作为寻求“手术刀精度”的战略教练，针对本周情报，给出 3 条对卫宁健康高管/销售线的直接话术或产品打法建议：*
+- **产品叙事/销售话术**：[例如：停止谈“大模型赋能”，改谈“自动执行代理（Agents）”]
+- **战略规划/预算争夺**：[针对紧缩周期的项目立项建议]
+- **[其它高阶动作]**：[具体落地的商业建议]
+
+> **🎯 Next Step 深度下钻建议 (Commander's Hook)**
+> *鉴于本周情报，您是否需要我为您梳理一份：《[极具诱惑力的深度战术清单或复刻指南]》？*
+```
+
+### Phase 4: 物理归档 (Archiving)
+1. 将最终成品移动至红区目录 `{root}\MEMORY\DigitalHealthWeeklyBrief\DHWB-YYYYMMDD.md`。
 
 ---
 *SYS_CHECK: Digital Health Weekly Brief Subsystem (V3.0 Assault Architecture) - Ready.*

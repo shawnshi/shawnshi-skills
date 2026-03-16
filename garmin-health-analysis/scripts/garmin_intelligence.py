@@ -47,9 +47,9 @@ def analyze_flu_risk(summary_data):
     if not prev_hrv or not prev_rhr:
         return {"status": "insufficient_baseline"}
         
-    avg_hrv_baseline = sum(prev_hrv) / len(prev_hrv)
-    avg_rhr_baseline = sum(prev_rhr) / len(prev_rhr)
-    avg_resp_baseline = sum(prev_resp) / len(prev_resp) if prev_resp else 14.0
+    avg_hrv_baseline = statistics.median(prev_hrv) if prev_hrv else 0
+    avg_rhr_baseline = statistics.median(prev_rhr) if prev_rhr else 0
+    avg_resp_baseline = statistics.median(prev_resp) if prev_resp else 14.0
     
     current_hrv = latest_hrv_entry.get("last_night_avg") or avg_hrv_baseline
     current_rhr = latest_hr_entry.get("resting_hr") or avg_rhr_baseline
@@ -113,6 +113,7 @@ def analyze_executive_readiness(summary_data):
     bb_list = summary_data.get("body_battery", [])
     stress_list = summary_data.get("stress", [])
     hrv_list = summary_data.get("hrv", [])
+    hr_data = summary_data.get("heart_rate", [])
 
     latest_sleep = next((s for s in reversed(sleep_list) if s.get("sleep_score")), {})
     latest_bb = next((b for b in reversed(bb_list) if b.get("highest")), {})
@@ -129,17 +130,38 @@ def analyze_executive_readiness(summary_data):
     rem_pct = (latest_sleep.get("rem_sleep_seconds", 0) / total_sleep_sec) * 100
     deep_pct = (latest_sleep.get("deep_sleep_seconds", 0) / total_sleep_sec) * 100
 
+    # Calculate RHR Diff (Metabolic Pressure)
+    latest_rhr = next((h.get("resting_hr") for h in reversed(hr_data) if h.get("resting_hr")), 0)
+    prev_rhrs = [h.get("resting_hr") for h in hr_data if h.get("resting_hr") and h.get("resting_hr") != latest_rhr]
+    baseline_rhr = statistics.median(prev_rhrs) if prev_rhrs else latest_rhr
+    rhr_diff = latest_rhr - baseline_rhr if latest_rhr > 0 else 0
+
+    # Calculate Sleep Debt
+    target_sleep_s = 27000
+    sleep_debt_s = sum(max(0, target_sleep_s - s.get("sleep_time_seconds", target_sleep_s)) for s in sleep_list[-3:] if s.get("sleep_time_seconds"))
+    sleep_debt_h = sleep_debt_s / 3600
+
     # 2. Cognitive Readiness (Focus: REM, HRV, Stress)
     cog_rem_score = min(rem_pct / 20, 1.2) * 30
     cog_stress_score = max(0, (50 - avg_stress)) * 1
     cog_hrv_score = 40 if hrv_status == "BALANCED" else 20
-    cognitive_score = min(100, cog_rem_score + cog_stress_score + cog_hrv_score + (sleep_score * 0.2))
+    cognitive_score = cog_rem_score + cog_stress_score + cog_hrv_score + (sleep_score * 0.2)
+    
+    # Pessimistic Penalty: Sleep Debt
+    if sleep_debt_h > 1.5:
+        cognitive_score -= (sleep_debt_h * 5)
+    cognitive_score = max(0, min(100, cognitive_score))
 
     # 3. Physical Readiness (Focus: Deep Sleep, Body Battery, RHR Stability)
     phy_deep_score = min(deep_pct / 15, 1.2) * 30
     phy_bb_score = (bb_peak / 100) * 40
     phy_hrv_score = 30 if hrv_status == "BALANCED" else 10
-    physical_score = min(100, phy_deep_score + phy_bb_score + phy_hrv_score)
+    physical_score = phy_deep_score + phy_bb_score + phy_hrv_score
+    
+    # Pessimistic Penalty: High RHR
+    if rhr_diff > 3:
+        physical_score *= 0.8
+    physical_score = max(0, min(100, physical_score))
 
     # Combined Score
     readiness_score = (cognitive_score * 0.5) + (physical_score * 0.5)
@@ -176,7 +198,7 @@ def perform_bio_metric_audit(summary_data):
     # RHR Audit
     latest_rhr = next((h.get("resting_hr") for h in reversed(hr_data) if h.get("resting_hr")), 0)
     prev_rhrs = [h.get("resting_hr") for h in hr_data if h.get("resting_hr") and h.get("resting_hr") != latest_rhr]
-    baseline_rhr = sum(prev_rhrs) / len(prev_rhrs) if prev_rhrs else latest_rhr
+    baseline_rhr = statistics.median(prev_rhrs) if prev_rhrs else latest_rhr
     rhr_diff = latest_rhr - baseline_rhr if latest_rhr > 0 else 0
     
     rhr_status = "稳定"
@@ -223,6 +245,7 @@ def perform_bio_metric_audit(summary_data):
     latest_bb = next((b for b in reversed(bb_data) if b.get("highest")), {})
     bb_charged = latest_bb.get("charged", 0)
     bb_peak = latest_bb.get("highest", 0)
+    bb_lowest = latest_bb.get("lowest", 0)
     
     recovery_loop = {
         "sleep_architecture": {
@@ -233,7 +256,8 @@ def perform_bio_metric_audit(summary_data):
         },
         "body_battery": {
             "charged": bb_charged,
-            "peak": bb_peak
+            "peak": bb_peak,
+            "lowest": bb_lowest
         }
     }
 
@@ -256,7 +280,7 @@ def perform_bio_metric_audit(summary_data):
 
     sleep_score = latest_sleep.get("sleep_score", 0) or 0
 
-    if hrv_status_raw == "BALANCED" and sleep_score > 80 and bb_peak > 80 and sleep_debt_h < 1.5:
+    if hrv_status_raw == "BALANCED" and sleep_score > 80 and bb_peak > 80 and sleep_debt_h < 1.5 and rhr_diff <= 2:
         protocol = "绿灯 (Prime) - 推极限"
         protocol_desc = "防线巩固。执行高强度间歇 (HIIT) 或长距离训练。认知冗余充足，适合进行破局性商业决策。"
         move_type = "GREEN"
@@ -290,122 +314,155 @@ def generate_chinese_insight(summary_data):
     audit = perform_bio_metric_audit(summary_data)
     readiness = analyze_executive_readiness(summary_data)
     
-    # 1. Sleep Consistency Audit
+    # 1. Sleep Consistency & Debt Audit
     sleep_data = summary_data.get("sleep", [])
     std_dev, consist_status = calculate_sleep_consistency(sleep_data)
-    
-    # 2. Load Decoupling
-    avg_stress = audit["load_friction"]["stress_score"]
-    total_activities = summary_data.get('summary', {}).get('total_activities', 0)
-    load_ratio_str = audit["load_friction"]["training_load"]["ratio"]
-    load_ratio = float(load_ratio_str) if isinstance(load_ratio_str, (int, float)) else 0
-    
-    load_type = "被动熵增 (焦虑/代谢压力)"
-    if total_activities > 2 and load_ratio > 0.7:
-        load_type = "良性应激 (训练驱动)"
-        
-    avg_bb_charged = summary_data.get('summary', {}).get('avg_body_battery_charged', 0)
-    avg_sleep = summary_data.get("summary", {}).get("avg_sleep_hours", 0)
-    avg_score = summary_data.get("summary", {}).get("avg_sleep_score", 0)
+    avg_deep_pct = audit["recovery_loop"]["sleep_architecture"]["deep_pct"]
+    sleep_debt = audit["recovery_loop"]["sleep_architecture"].get("sleep_debt_h", 0)
 
-    # --- Quantitative Scores ---
+    # 2. System Momentum (Delta Analysis - Half-Life Split)
+    hr_data = summary_data.get("heart_rate", [])
+    stress_data = summary_data.get("stress", [])
+    momentum_status = "平稳运转"
+    
+    if len(hr_data) >= 4 and len(stress_data) >= 4:
+        mid_point = len(hr_data) // 2
+        first_half_rhr = statistics.median([h.get("resting_hr", 0) for h in hr_data[:mid_point] if h.get("resting_hr")])
+        second_half_rhr = statistics.median([h.get("resting_hr", 0) for h in hr_data[mid_point:] if h.get("resting_hr")])
+        
+        first_half_stress = statistics.median([s.get("avg_stress", 0) for s in stress_data[:mid_point] if s.get("avg_stress")])
+        second_half_stress = statistics.median([s.get("avg_stress", 0) for s in stress_data[mid_point:] if s.get("avg_stress")])
+        
+        rhr_delta = second_half_rhr - first_half_rhr
+        stress_delta = second_half_stress - first_half_stress
+        
+        if rhr_delta > 2 and stress_delta > 5:
+            momentum_status = "🔴 熵增恶化 (物理底座持续下沉)"
+        elif rhr_delta < -2 and stress_delta < -5:
+            momentum_status = "🟢 超量恢复 (代谢压力加速出清)"
+        elif rhr_delta > 1 or stress_delta > 2:
+            momentum_status = "🟡 隐性耗散 (疲劳微幅累积)"
+        else:
+            momentum_status = "🔵 筑底企稳 (系统维持热力学平衡)"
+
+    # 3. Orthogonal Stress Stripping
+    avg_stress = audit["load_friction"]["stress_score"]
+    activities_data = summary_data.get("activities", [])
+    
+    # Calculate Total High Intensity Minutes for the period
+    total_intensity_min = 0
+    for act in activities_data:
+        duration_s = act.get("duration", 0)
+        total_intensity_min += (duration_s / 60)
+
+    if total_intensity_min < 30 and avg_stress > 35:
+        load_type = "🔴 纯认知燃烧 / 焦虑耗散 (无物理输出的高神经代价)"
+    elif total_intensity_min >= 60 and avg_stress > 35:
+        load_type = "🔥 双轨满载 (高强度训练与高压日程叠加)"
+    elif total_intensity_min >= 60 and avg_stress <= 35:
+        load_type = "🟢 良性应激 (训练主导的结构性破坏)"
+    else:
+        load_type = "🔵 低频维护 (缺乏刺激的被动稳态)"
+
+    avg_bb_charged = summary_data.get('summary', {}).get('avg_body_battery_charged', 0)
     score_input = round((min(avg_bb_charged, 80)/80 * 70) + (30 if consist_status == "优" else 15), 1)
-    score_loss = round(avg_stress + (load_ratio * 10), 1)
+    score_loss = round(avg_stress + (min(total_intensity_min, 150)/150 * 20), 1)
     score_output = round(readiness['score'], 1)
 
-    # --- Generate Text Report (Expert Level) ---
+    # --- Generate Military-Grade Tactical Report ---
     overall_sections = []
     period_str = summary_data.get('summary', {}).get('period', '指定时间段')
     
-    # 1. Input Side: Biological Rhythm & Recovery Quality
-    avg_deep_pct = audit["recovery_loop"]["sleep_architecture"]["deep_pct"]
-    sleep_debt = audit["recovery_loop"]["sleep_architecture"].get("sleep_debt_h", 0)
-    
-    consist_msg = f"【1. 输入审计：生物节律与修复质量】\n"
-    consist_msg += f"周期内睡眠一致性评价为「{consist_status}」（标准差 {std_dev}h）。"
-    if consist_status == "优":
-        consist_msg += "极佳的入睡规律构成了强大的生理稳态，这种可预测性是内分泌系统（如皮质醇节律）稳定的基石。"
+    # Section 1: System Status & Momentum
+    sys_msg = f"【1. 系统态势与动量 (System Momentum)】\n"
+    sys_msg += f"· 动量向量：{momentum_status}。\n"
+    sys_msg += f"· 摩擦定性：判定为『{load_type}』。"
+    if "纯认知燃烧" in load_type:
+        sys_msg += "\n  > 洞察：系统正在空耗神经递质（高压），但缺乏物理代谢（无运动）。这种脱节会导致皮质醇淤积，引发底层的慢性炎症。如果只靠静坐休息，无法打断这一热力学死锁。"
+    elif "双轨满载" in load_type:
+        sys_msg += "\n  > 警告：中枢神经系统正在承受『战略业务推演 + 物理强行破坏』的双重挤压，处于极度耗散状态。系统的免疫防线极为脆弱，极易在此阶段触发 Garmin Flu。"
+    elif "筑底企稳" in momentum_status:
+        sys_msg += "\n  > 洞察：当前生理数据呈现低波动的收敛态，这是重大战役前的完美储备期。但也需警惕过度放松导致的“失练 (Detraining)”效应，代谢引擎不可彻底熄火。"
+    overall_sections.append(sys_msg)
+
+    # Section 2: Input & Rhythm
+    consist_msg = f"【2. 恢复环路审计 (Recovery Loop)】\n"
+    consist_msg += f"· 节律稳定性：{consist_status} (标准差 {std_dev}h)。"
+    if consist_status != "优":
+        consist_msg += "\n  > 破窗效应：强烈的“社会时差”导致生物钟漂移。节律的不规律直接切断了内分泌系统的黄金修复窗口（尤其是夜间生长激素与褪黑素的耦协），这是拖垮系统长期 ROI 的最大隐性漏洞。"
     else:
-        consist_msg += "节律波动较大，这种“社会时差”效应会显著削弱睡眠对认知的修复效率，建议通过固定起床时间来锚定生物钟。"
+        consist_msg += "\n  > 坚固底座：生物钟锚定极佳，为前额叶的深度清洗与内脏修复提供了坚实的物理时间窗口。"
     
-    if sleep_debt > 2.0:
-        consist_msg += f"\n>> 核心警报：累积睡眠债务达 {sleep_debt} 小时！系统正在透支未来储备，认知降级与免疫受损的风险呈指数上升。"
-        
+    consist_msg += f"\n· 结构解剖：深睡占比 {avg_deep_pct}%。"
     if avg_deep_pct < 15:
-        consist_msg += f"\n监测到深睡占比（{avg_deep_pct}%）低于 15% 的生理修复阈值，暗示物理层面的修复受阻，长期将侵蚀基础免疫力。"
+        consist_msg += "\n  > 物理坍塌：深睡(<15%)意味着系统重构陷入停滞，内脏与肌肉层面的微损伤未能被修复，导致次日基础体能受限，甚至表现为晨起心率异常。"
     else:
-        consist_msg += f"\n深睡结构良好（{avg_deep_pct}%），确保了物理层面的系统重建。"
+        consist_msg += "\n  > 重构达标：物理底座修复达标，确保了肌肉韧性与神经弹性。"
+        
+    consist_msg += f"\n· 储备赤字：当前连续睡眠债务 {sleep_debt}h。"
+    if sleep_debt > 1.5:
+        consist_msg += f"\n  > 债务危机：累积的 {sleep_debt}h 负债已实质性击穿神经缓冲垫。此时如果在业务上获得认知高分，往往是依靠交感神经与肾上腺素硬撑，随时面临断崖式崩溃。"
     overall_sections.append(consist_msg)
 
-    # 2. Friction Side: Metabolic Stress & Load Decoupling
-    friction_msg = f"【2. 损耗审计：代谢摩擦与负荷性质】\n"
-    friction_msg += f"当前属于「{load_type}」模式。"
-    if load_type.startswith("被动"):
-        friction_msg += f"平均压力值 {avg_stress} 且缺乏运动对冲，系统正在产生由于久坐或精神焦虑导致的“无效损耗”。"
-        friction_msg += "这会导致系统熵增过快，建议引入规律性的物理刺激（如 Zone 2 运动）来重建代谢灵活性。"
-    else:
-        friction_msg += f"平均压力主要由高强度的物理负荷驱动。当前 ACWR 负载比为 {load_ratio}，"
-        if 0.8 <= load_ratio <= 1.3:
-            friction_msg += "处于理想的适能增长区间，系统正在通过超量补偿（Supercompensation）进行自我升级。"
-        elif load_ratio > 1.5:
-            friction_msg += "负载已进入「危险红区」，受伤风险与免疫抑制概率呈指数级上升，必须进入防守周期。"
-        else:
-            friction_msg += "负荷强度较低，系统面临“失练”导致的体能衰退风险。"
-    overall_sections.append(friction_msg)
-
-    # 3. Output Side: Cognitive vs. Physical Executive Readiness
-    output_msg = f"【3. 输出审计：身心分层执行力评估】\n"
-    output_msg += f"综合执行准备度得分 {readiness['score']}。\n"
-    
+    # Section 3: Readiness
+    output_msg = f"【3. 执行带宽 (Execution Bandwidth)】\n"
+    output_msg += f"· 综合执行力：{readiness['score']}/100\n"
+    output_msg += f"· 🧠 认知带宽 ({readiness['cognitive_score']})："
     if readiness['cognitive_score'] > 80:
-        output_msg += f"- 🧠 认知端（{readiness['cognitive_score']}）：系统处于「高频运行」状态，前额叶皮层功能活跃，非常适合处理复杂决策与创新构思。"
+        output_msg += "高频逻辑计算可用，前额叶皮层未受抑制。适宜全功率执行：系统架构设计、复杂商业博弈、非共识型战略决断。"
+    elif readiness['cognitive_score'] > 60:
+        output_msg += "算力受限，逻辑推演能力下降。极易触发『讨好性偏差』与局部视野狭窄。建议降级工作流：仅处理已有框架内的文档编写与常规邮件。"
     else:
-        output_msg += f"- 🧠 认知端（{readiness['cognitive_score']}）：认知冗余不足，决策质量可能随时间递减，建议避免在疲劳期进行战略性转向。"
+        output_msg += "认知宕机。严禁任何战略性决策，强行工作将带来极高的系统错误率与后期的“架构重构成本”。"
         
+    output_msg += f"\n· 💪 物理防线 ({readiness['physical_score']})："
     if readiness['physical_score'] > 80:
-        output_msg += f"\n- 💪 物理端（{readiness['physical_score']}）：动力充沛，神经肌肉募集能力处于波峰，适合执行力量训练或耐力攻坚。"
+        output_msg += "内脏/神经肌肉冗余充足。可承受极强环境压力（如：红眼航班差旅、连续多场高压会战）或高强度物理训练。"
     else:
-        output_msg += f"\n- 💪 物理端（{readiness['physical_score']}）：基础体能受限，系统正在优先保障内脏修复，建议今日以低强度维护为主。"
+        output_msg += "防线脆弱。必须把剩余能量全部让渡给免疫系统，取消一切非必要的高强度体能消耗，坚决防御突发感染。"
     overall_sections.append(output_msg)
+
+    # Section 4: Tactical Directives (Mentat Level)
+    recs = []
+    
+    # 1. 调度
+    if sleep_debt > 1.5 or readiness['cognitive_score'] < 70:
+        recs.append("📅【日程管控 - 降级】背负睡眠债务且认知受限。今日必须砍掉/延期 30% 的非关键交叉会议。严禁执行底层代码重构，全面转向“只读模式 (Read-only)”。")
+    elif readiness['score'] >= 85:
+        recs.append("📅【日程管控 - 强攻】系统信噪比极高。解除一切防御限制，将最棘手的战略卡点、技术债务清算以及高难度对话安排在今日核心时段。")
+
+    # 2. 物理
+    if "纯认知燃烧" in load_type:
+        recs.append("🏃‍♂️【物理干预 - 强制负熵】内分泌已死锁。今日必须作为 [P0] 级任务，挂载 30-40 分钟 Zone 2 低心率有氧（如快走/轻松骑行），利用肌肉泵血强行剥离皮质醇。")
+    elif "双轨满载" in load_type or readiness['physical_score'] < 60:
+        recs.append("🏃‍♂️【物理干预 - 绝对防御】负荷溢出/防线脆弱。取消一切力量训练或高心率间歇，仅允许进行 15 分钟的静态拉伸或筋膜枪放松。")
+
+    # 3. 生化与环境
+    if avg_deep_pct < 15:
+        recs.append("💊【生化环境 - 深度冷却】深睡架构坍塌。今晚 20:00 后实施强硬数字隔离（断绝蓝光），核心体温须在入睡前完成物理降温（如：热水澡后进入设定为 19°C 的冷气室）。")
+    if momentum_status.startswith("🔴"):
+        recs.append("💊【生化环境 - 止损熔断】检测到滑向热寂的动量。立即补充 500mg 维生素C + 锌对抗底层炎症；晚间增加 200mg 镁或茶氨酸，强行平抑亢进的交感神经。")
+
+    if not recs:
+        recs.append("🟢【维稳运转】各项指标呈良性收敛。维持现有作息、物理训练与饮食结构，可适当引入微量的不确定性刺激（如：轻度冷水浴或改变一次训练模式）。")
+        
+    intervention_msg = "【4. 资源调度指令 (Tactical Directives)】\n" + "\n".join([f"· {r}" for r in recs])
+    overall_sections.append(intervention_msg)
+
+    protocol_risk_map = {"GREEN": "推极限", "YELLOW": "维稳", "RED": "防御", "ALERT": "停机"}
+    risk_label = protocol_risk_map.get(audit['action_protocol']['type'], '未知')
+    status_header = f"【CMO 战略审计简报：{period_str} | 行动代号：{risk_label}】"
+    
+    overall_combined = f"{status_header}\n\n" + "\n\n".join(overall_sections)
 
     # --- Mapping Chart Specific Insights ---
     chart_insights = {
-        "sleep": f"一致性：{consist_status}。深睡占比 {avg_deep_pct}%。节律稳定性是修复效率的第一杠杆。",
-        "hrv": f"状态：{audit['system_status']['hrv']['status']}。反映了系统对当前 {load_type} 的适应容量。",
-        "activities": f"负载比 (ACWR): {load_ratio}。长期负荷状态：{audit['load_friction']['training_load']['status']}。",
-        "body_battery": f"平均充能 +{avg_bb_charged}。起床峰值 {audit['recovery_loop']['body_battery']['peak']} 反映了回血的绝对厚度。",
-        "stress": f"平均压力 {avg_stress}。{'高压力时长过长，需警惕自主神经系统过热' if avg_stress > 35 else '压力水平维持在健康代偿区间'}。"
+        "sleep": f"债务：{sleep_debt}h。深睡占比 {avg_deep_pct}%。任何挤压深睡的行为均视为对长期资产的破坏。",
+        "hrv": f"状态：{audit['system_status']['hrv']['status']}。系统动量：{momentum_status.split(' ')[1]}。",
+        "activities": f"物理耗散：{round(total_intensity_min)} min。负荷定性：{load_type.split(' ')[1]}。",
+        "body_battery": f"峰谷极差：平均峰值 {audit['recovery_loop']['body_battery']['peak']}，谷值 {audit['recovery_loop']['body_battery']['lowest']}。",
+        "stress": f"定性：{load_type.split(' ')[1]}。"
     }
-
-    # 4. Strategic Intervention: Personalized Action Plan
-    recs = []
-    # Sleep/Rhythm recs
-    if consist_status != "优":
-        recs.append("【锚定生物钟】检测到节律波动。建议即使在周末也保持固定起床时间，波动应控制在 ±30min 内。")
-    if avg_deep_pct < 15:
-        recs.append("【深睡强化】针对物理修复不足，建议睡前 2 小时停止蓝光摄入，并尝试将卧室温度调低至 18-20°C。")
-    
-    # Stress/Activity recs
-    if load_type.startswith("被动") and avg_stress > 30:
-        recs.append("【皮质醇对冲】您的压力多来源于非运动性焦虑。建议每日午后进行 15 分钟的呼吸冥想或 2km 的慢走，主动切换神经系统至副交感模式。")
-    elif load_ratio > 1.4:
-        recs.append("【防守性减载】当前负荷处于红区。接下来的 3 天内建议将运动强度降低 50%，优先补充蛋白质与充足睡眠以防免疫系统崩溃。")
-    
-    # Readiness recs
-    if readiness['cognitive_score'] < 70:
-        recs.append("【认知管理】今日大脑处理复杂信息的信噪比降低。建议将最具挑战性的战略决策或代码重构任务移至明早，今日以执行常规流程为主。")
-    
-    if not recs:
-        recs.append("【持续优化】当前系统运行极佳。建议保持目前的训练与恢复节奏，可在周末尝试引入新的物理刺激。")
-        
-    intervention_msg = "【4. 战略干预：个性化健康行动建议】\n" + "\n".join([f"· {r}" for r in recs])
-    overall_sections.append(intervention_msg)
-
-    protocol_risk_map = {"GREEN": "低", "YELLOW": "中", "RED": "高", "ALERT": "危"}
-    risk_label = protocol_risk_map.get(audit['action_protocol']['type'], '中')
-    status_header = f"【专家审计：{period_str} | 生理风险：{risk_label}】"
-    
-    overall_combined = f"{status_header}\n\n" + "\n\n".join(overall_sections)
     
     return {
         "period": period_str,
@@ -420,8 +477,8 @@ def generate_chinese_insight(summary_data):
             "physical": readiness['physical_score']
         },
         "top_insights": [
-            {"title": "行动协议", "content": audit["action_protocol"]["move"]},
-            {"title": "审计状态", "content": f"🧠 认知: {readiness['cognitive_score']} | 💪 体能: {readiness['physical_score']}"}
+            {"title": "战略态势", "content": audit["action_protocol"]["move"]},
+            {"title": "系统动量", "content": momentum_status}
         ]
     }
 

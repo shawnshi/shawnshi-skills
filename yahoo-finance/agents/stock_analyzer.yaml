@@ -110,19 +110,36 @@ default_prompt: |
   - `qualitative_analysis.sector_position`: 对标竞争对手，评估是否存在降维打击风险。
 
   ═══════════════════════════════════════════
-  第五章：输出协议
+  第五章：输出协议 (Anti-Dehydration Enforcement)
   ═══════════════════════════════════════════
-  输出协议：决策仪表盘 JSON 结构
-  执行分析时，必须严格封装为合法的 JSON 数据格式（注意不要包裹在markdown中，不要有其他前言后语）。
-  请严格参考技能目录下 `resources/dashboard_schema.json` 约定的 JSON Schema 结构输出。
+  1. **强制 OODA 推演锁**: 在输出任何 JSON 之前，你必须使用 `<OODA_Computation>` XML 标签包裹你的思维链，显式计算关键点（如支撑位阻力位、均线系统、筹码逻辑），只有计算完成后才能输出最终的 JSON。
+  2. **强制 Schema 对齐**: 输出必须严格为纯 JSON 数据（不要用 markdown 格式包裹，前后不要有废话）。如果缺少任何一个核心字段（特别是 dashboard 内的），保存脚本将直接报错熔断。
+  
+  JSON 输出骨架示例 (严格遵守)：
+  {
+    "stock_name": "", "stock_code": "", "market_type": "", "sentiment_score": 0,
+    "trend_prediction": "", "operation_advice": "", "decision_type": "", "confidence_level": "",
+    "dashboard": {
+      "core_conclusion": { "one_sentence": "", "signal_type": "", "time_sensitivity": "", "position_advice": { "no_position": "", "has_position": "" } },
+      "qualitative_analysis": { "trend_analysis": "", "technical_analysis": "", "ma_analysis": "", "pattern_analysis": "", "fundamental_analysis": "", "sector_position": "", "company_highlights": "", "market_sentiment": "", "hot_topics": "" },
+      "data_perspective": { 
+        "trend_status": { "ma_alignment": "", "is_bullish": true, "trend_score": 0, "macd_signal": "", "rsi_14": 0, "rsi_status": "" },
+        "price_position": { "current_price": 0, "ma5": 0, "ma10": 0, "ma20": 0, "bias_ma5": 0, "bias_status": "", "support_level": 0, "resistance_level": 0 },
+        "volume_analysis": { "volume_ratio": 0, "volume_status": "", "turnover_rate": "", "amplitude": "", "volume_meaning": "" },
+        "chip_structure": { "profit_ratio": "", "avg_cost": 0, "concentration": "", "absolute_support": 0, "absolute_resistance": 0, "main_fund_area": "", "chip_health": "" },
+        "valuation": { "trailing_pe": "", "forward_pe": "", "pb": "", "peg": "", "ev_ebitda": "", "valuation_verdict": "" }
+      },
+      "intelligence": { "latest_news": "", "news_summary": "", "risk_alerts": [], "positive_catalysts": [], "earnings_outlook": "", "sentiment_summary": "" },
+      "battle_plan": { "sniper_points": { "ideal_buy": 0, "secondary_buy": 0, "stop_loss": 0, "take_profit": 0 }, "position_strategy": { "suggested_position": "", "entry_plan": "", "risk_control": "" }, "action_checklist": [] }
+    },
+    "analysis_summary": "Mentat 高密度摘要...", "key_points": "", "risk_warning": "", "buy_reason": "", "short_term_outlook": "", "medium_term_outlook": "", "search_performed": true, "data_sources": ""
+  }
 
   文件保存协议 (强制路由落盘)：
   你必须使用提供的技能根目录下的 Python 工具脚本 `scripts/save_dashboard.py` 将生成的 JSON 数据用md格式写入系统，以确保目录路径拼接与 JSON 规范绝对安全。
-  由于 Windows PowerShell 管道存在中文乱码隐患，请严格执行以下两步：
-  1. 先使用工具（如 `write_file`）将生成的 JSON 保存至临时文件（例如 `C:\Users\shich\.gemini\tmp\gemini\xxx_dashboard.json`）。
+  1. 先使用工具（如 `write_file`）将生成的 JSON 保存至临时文件。
   2. 调用 shell 工具执行脚本，通过 `--file` 参数传入文件路径：
      `uv run {SKILL_DIR}/scripts/save_dashboard.py --stock "股票中文名" --file "临时文件绝对路径"`
-  系统会自动为你将文件转换并保存至：`C:\Users\shich\.gemini\MEMORY\stocks\[股票名]_[YYYYMMDD_HHMM].md`。绝对严禁你直接将文本写入最终路径。
 triggers:
   - "深度分析"
   - "个股深度分析"

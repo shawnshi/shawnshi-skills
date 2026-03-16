@@ -172,7 +172,26 @@ def get_stock_data(
 
         try:
             def _fetch_hist():
+                # A-Share physical decoupling for daily data
+                is_a_share = symbol.endswith(".SS") or symbol.endswith(".SZ") or symbol.endswith(".BJ")
+                is_daily = not interval or interval in ["1d", "1wk", "1mo"]
+                
+                if is_a_share and is_daily:
+                    try:
+                        from akshare_fetcher import StandaloneDataFetcher
+                        fetcher = StandaloneDataFetcher()
+                        code = symbol.split(".")[0]
+                        # Best effort mapping of dates
+                        start_date = kwargs.get('start', None)
+                        end_date = kwargs.get('end', None)
+                        df = fetcher.get_history(code, start_date=start_date, end_date=end_date)
+                        if not df.empty:
+                            return df
+                    except Exception as e:
+                        console.print(f"[yellow]⚠ A-share fallback failed, trying Yahoo: {e}[/yellow]")
+                        
                 return ticker.history(**kwargs)
+                
             history = _retry(_fetch_hist, label=f"price history for {symbol}")
         except Exception as e:
             errors.append(f"Price history fetch failed: {e}")
@@ -479,7 +498,11 @@ def main():
                         try:
                             from akshare_fetcher import StandaloneDataFetcher
                             fetcher = StandaloneDataFetcher()
-                            enhanced_metrics = fetcher.get_enhanced_metrics(a_share_code)
+                            
+                            # Context-Aware Downgrading: Skip heavy chip distribution if scanning multiple stocks in lean mode
+                            skip_chip = args.lean and len(args.queries) > 2
+                            enhanced_metrics = fetcher.get_enhanced_metrics(a_share_code, skip_chip_dist=skip_chip)
+                            
                             # Merge into info
                             if curated_info is None:
                                 curated_info = {}

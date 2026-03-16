@@ -257,39 +257,81 @@ def generate_html(charts_data, title="Garmin 生物计量审计报告"):
 
 def create_sleep_chart(sleep_data, insight=""):
     dates = [s["date"] for s in sleep_data if s.get("sleep_time_seconds")]
+    
+    # Extract phases in hours
+    deep = [s.get("deep_sleep_seconds", 0) / 3600 for s in sleep_data if s.get("sleep_time_seconds")]
+    light = [s.get("light_sleep_seconds", 0) / 3600 for s in sleep_data if s.get("sleep_time_seconds")]
+    rem = [s.get("rem_sleep_seconds", 0) / 3600 for s in sleep_data if s.get("sleep_time_seconds")]
+    awake = [s.get("awake_seconds", 0) / 3600 for s in sleep_data if s.get("sleep_time_seconds")]
+    
     hours = [s["sleep_time_seconds"] / 3600 for s in sleep_data if s.get("sleep_time_seconds")]
     scores = [s.get("sleep_score", 0) for s in sleep_data if s.get("sleep_score")]
+    
     avg_h = sum(hours)/len(hours) if hours else 0
     avg_s = sum(scores)/len(scores) if scores else 0
+    
     return {
         "stats": {"平均睡眠": f"{avg_h:.1f}h", "平均分": f"{avg_s:.0f}"},
         "chart": {
-            "title": "睡眠修复分析", "insight": insight,
+            "title": "睡眠结构与修复分析", "insight": insight,
             "chart": {
                 "type": "bar",
                 "data": {
                     "labels": dates,
                     "datasets": [
-                        {"label": "时长", "data": hours, "backgroundColor": "#0076D6", "yAxisID": "y"},
-                        {"label": "得分", "data": scores, "type": "line", "borderColor": "#F4B942", "yAxisID": "y1"}
+                        {"label": "深睡 (Deep)", "data": deep, "backgroundColor": "#0052cc", "stack": "Stack 0", "yAxisID": "y"},
+                        {"label": "浅睡 (Light)", "data": light, "backgroundColor": "#0076D6", "stack": "Stack 0", "yAxisID": "y"},
+                        {"label": "REM", "data": rem, "backgroundColor": "#8E44AD", "stack": "Stack 0", "yAxisID": "y"},
+                        {"label": "清醒 (Awake)", "data": awake, "backgroundColor": "#F58220", "stack": "Stack 0", "yAxisID": "y"},
+                        {"label": "得分", "data": scores, "type": "line", "borderColor": "#F4B942", "yAxisID": "y1", "borderWidth": 2, "fill": False}
                     ]
                 },
-                "options": { "scales": { "y": { "position": "left" }, "y1": { "position": "right", "max": 100 } } }
+                "options": { 
+                    "scales": { 
+                        "x": { "stacked": True },
+                        "y": { "stacked": True, "position": "left" }, 
+                        "y1": { "position": "right", "max": 100, "min": 0 } 
+                    } 
+                }
             }
         }
     }
 
 def create_body_battery_chart(bb_data, insight=""):
     dates = [b["date"] for b in bb_data if b.get("highest")]
-    highest = [b.get("highest", 0) for b in bb_data if b.get("highest")]
+    
+    # Format data for floating bar chart: [lowest, highest]
+    spans = []
+    highest_list = []
+    lowest_list = []
+    
+    for b in bb_data:
+        if b.get("highest"):
+            h = b.get("highest", 0)
+            l = b.get("lowest", 0)
+            spans.append([l, h])
+            highest_list.append(h)
+            lowest_list.append(l)
+            
+    avg_high = sum(highest_list)/len(highest_list) if highest_list else 0
+    avg_low = sum(lowest_list)/len(lowest_list) if lowest_list else 0
+
     return {
-        "stats": {"最高电量": f"{max(highest) if highest else 0}"},
+        "stats": {"平均峰值": f"{avg_high:.0f}", "平均谷值": f"{avg_low:.0f}"},
         "chart": {
-            "title": "身体电量 (Body Battery)", "insight": insight,
+            "title": "身体电量波幅 (Body Battery Range)", "insight": insight,
             "chart": {
                 "type": "bar",
-                "data": { "labels": dates, "datasets": [{"label": "峰值", "data": highest, "backgroundColor": "#44AF69"}] },
-                "options": { "scales": { "y": { "max": 100 } } }
+                "data": { 
+                    "labels": dates, 
+                    "datasets": [{
+                        "label": "电量区间 (低-高)", 
+                        "data": spans, 
+                        "backgroundColor": "#44AF69",
+                        "borderSkipped": False
+                    }] 
+                },
+                "options": { "scales": { "y": { "max": 100, "min": 0 } } }
             }
         }
     }

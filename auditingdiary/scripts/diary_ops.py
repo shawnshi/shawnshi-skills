@@ -1,5 +1,5 @@
 """
-<!-- Input: Operation (prepend/search/stats/backup/read), File Path, Content/Query -->
+<!-- Input: Operation (prepend/search/stats/backup/read/extract_tactics), File Path, Content/Query -->
 <!-- Output: JSON Result or Success Message -->
 <!-- Pos: scripts/diary_ops.py. Core I/O engine for safe diary management. -->
 
@@ -99,7 +99,11 @@ def read_all_diary_content(base_path):
     if not files:
         return ""
     all_content = []
-    for file in files:
+    # Sort files in reverse order if needed, but normally we just read them.
+    # Prepend usually means newest is at the top of the newest file.
+    # To properly extract, we need chronological or anti-chronological order.
+    # Files are YYYY-Q#.md, so sorting them reverse puts newest quarter first.
+    for file in sorted(files, reverse=True):
         with open(file, 'r', encoding='utf-8') as f:
             all_content.append(f.read())
     return "\n\n".join(all_content)
@@ -211,8 +215,31 @@ def _split_entries(content):
     for i, m in enumerate(matches):
         start = m.start()
         end = matches[i + 1].start() if i + 1 < len(matches) else len(content)
+        # Store raw content block
         entries.append({"date": m.group(1), "content": content[start:end]})
     return entries
+
+def extract_tactics(file_path):
+    """Finds the most recent WEEKLY AUDIT and extracts the Tactics/战术锁定 section."""
+    file_path = resolve_path(file_path)
+    content = read_all_diary_content(file_path)
+    if not content:
+        return {"status": "error", "message": f"Diary files not found at {file_path}"}
+
+    entries = _split_entries(content)
+    # Entries should be parsed top to bottom. Since prepending puts newest at the top,
+    # the first WEEKLY AUDIT found should be the latest.
+    for entry in entries:
+        if "WEEKLY AUDIT" in entry["content"]:
+            # Find the section for tactics
+            match = re.search(r'##\s+.*?(?:战术锁定|Next Day Tactics|战术锁定).*?\n(.*?)(?=^## |\Z)', entry["content"], re.DOTALL | re.MULTILINE)
+            if match:
+                tactics = match.group(1).strip()
+                return {"status": "success", "date": entry["date"], "tactics": tactics}
+            else:
+                return {"status": "error", "message": f"Tactics section not found in the latest weekly audit ({entry['date']})."}
+                
+    return {"status": "error", "message": "No weekly audit found in the diary."}
 
 def generate_stats(file_path):
     file_path = resolve_path(file_path)
@@ -224,9 +251,9 @@ def generate_stats(file_path):
 
     entries = _split_entries(content)
     stats["total_entries"] = len(entries)
-    stats["audits"]["weekly"] = content.count("## 本周审计")
-    stats["audits"]["monthly"] = content.count("## 月度审计")
-    stats["audits"]["annual"] = content.count("## 年度审计")
+    stats["audits"]["weekly"] = content.count("## 本周审计") + content.count("WEEKLY AUDIT")
+    stats["audits"]["monthly"] = content.count("## 月度审计") + content.count("MONTHLY AUDIT")
+    stats["audits"]["annual"] = content.count("## 年度审计") + content.count("ANNUAL AUDIT")
     tags = re.findall(r'(#[\w/\u4e00-\u9fa5]+)', content)
     for tag in tags:
         if tag[1].isdigit(): continue 
@@ -323,6 +350,9 @@ def main():
     p_read.add_argument('--from', dest='date_from', help='Start date (YYYY-MM-DD)')
     p_read.add_argument('--to', dest='date_to', help='End date (YYYY-MM-DD)')
 
+    p_extract = subparsers.add_parser('extract_tactics', help='Extract tactics from the latest weekly audit')
+    p_extract.add_argument('--file', required=True)
+
     p_stats = subparsers.add_parser('stats', help='Generate diary statistics')
     p_stats.add_argument('--file', required=True)
 
@@ -354,6 +384,8 @@ def main():
         result = search_diary(args.file, args.query)
     elif args.command == 'read':
         result = read_diary(args.file, date_from=args.date_from, date_to=args.date_to)
+    elif args.command == 'extract_tactics':
+        result = extract_tactics(args.file)
     elif args.command == 'stats':
         result = generate_stats(args.file)
     elif args.command == 'backup':
