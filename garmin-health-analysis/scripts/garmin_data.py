@@ -13,8 +13,10 @@ Outputs JSON to stdout for parsing by the agent.
 import json
 import sys
 import argparse
+import time
 from datetime import datetime, timedelta
 from pathlib import Path
+import concurrent.futures
 
 # Import auth helper
 sys.path.insert(0, str(Path(__file__).parent))
@@ -37,154 +39,165 @@ def get_date_range(days=None, start=None, end=None):
     
     return start_date.strftime("%Y-%m-%d"), end_date.strftime("%Y-%m-%d")
 
+def fetch_with_retry(func, *args, max_retries=3, base_delay=2, **kwargs):
+    """Execute a Garmin API call with exponential backoff to handle rate limits (HTTP 429)."""
+    retries = 0
+    while retries <= max_retries:
+        try:
+            return func(*args, **kwargs)
+        except Exception as e:
+            error_str = str(e).lower()
+            if "too many requests" in error_str or "429" in error_str:
+                if retries == max_retries:
+                    print(f"⚠️ Rate limit exceeded after {max_retries} retries for {func.__name__}", file=sys.stderr)
+                    return None
+                delay = base_delay * (2 ** retries)
+                print(f"⏳ Rate limited. Backing off for {delay} seconds...", file=sys.stderr)
+                time.sleep(delay)
+                retries += 1
+            else:
+                # Other exceptions
+                return None
+    return None
 
 def fetch_sleep(client, days=7, start=None, end=None):
-    """Fetch sleep data."""
+    """Fetch sleep data concurrently."""
     start_date, end_date = get_date_range(days, start, end)
     
     try:
         sleep_data = []
         current = datetime.strptime(start_date, "%Y-%m-%d")
-        end = datetime.strptime(end_date, "%Y-%m-%d")
+        end_dt = datetime.strptime(end_date, "%Y-%m-%d")
+        dates = [(current + timedelta(days=i)).strftime("%Y-%m-%d") for i in range((end_dt - current).days + 1)]
         
-        while current <= end:
-            date_str = current.strftime("%Y-%m-%d")
-            try:
-                data = client.get_sleep_data(date_str)
-                if data:
-                    # Sleep data is nested inside dailySleepDTO
-                    sleep_dto = data.get("dailySleepDTO", {})
-                    if sleep_dto:
-                        sleep_data.append({
-                            "date": date_str,
-                            "sleep_time_seconds": sleep_dto.get("sleepTimeSeconds"),
-                            "deep_sleep_seconds": sleep_dto.get("deepSleepSeconds"),
-                            "light_sleep_seconds": sleep_dto.get("lightSleepSeconds"),
-                            "rem_sleep_seconds": sleep_dto.get("remSleepSeconds"),
-                            "awake_seconds": sleep_dto.get("awakeSleepSeconds"),
-                            "sleep_score": sleep_dto.get("sleepScores", {}).get("overall", {}).get("value"),
-                            "restless_periods": data.get("restlessMomentsCount"),  # This is on root
-                            "avg_hr": sleep_dto.get("averageHeartRate"),
-                            "avg_hrv": data.get("avgOvernightHrv"),  # This is on root
-                            "avg_respiration": sleep_dto.get("averageRespirationValue")
-                        })
-            except Exception as e:
-                print(f"⚠️  No sleep data for {date_str}: {e}", file=sys.stderr)
+        def _get_single_day(date_str):
+            data = fetch_with_retry(client.get_sleep_data, date_str)
+            if data:
+                sleep_dto = data.get("dailySleepDTO", {})
+                if sleep_dto:
+                    return {
+                        "date": date_str,
+                        "sleep_time_seconds": sleep_dto.get("sleepTimeSeconds"),
+                        "deep_sleep_seconds": sleep_dto.get("deepSleepSeconds"),
+                        "light_sleep_seconds": sleep_dto.get("lightSleepSeconds"),
+                        "rem_sleep_seconds": sleep_dto.get("remSleepSeconds"),
+                        "awake_seconds": sleep_dto.get("awakeSleepSeconds"),
+                        "sleep_score": sleep_dto.get("sleepScores", {}).get("overall", {}).get("value"),
+                        "restless_periods": data.get("restlessMomentsCount"),
+                        "avg_hr": sleep_dto.get("averageHeartRate"),
+                        "avg_hrv": data.get("avgOvernightHrv"),
+                        "avg_respiration": sleep_dto.get("averageRespirationValue")
+                    }
+            return None
+
+        with concurrent.futures.ThreadPoolExecutor(max_workers=5) as executor:
+            results = executor.map(_get_single_day, dates)
+            sleep_data = [r for r in results if r]
             
-            current += timedelta(days=1)
-        
+        sleep_data.sort(key=lambda x: x["date"])
         return {"sleep": sleep_data, "start": start_date, "end": end_date}
-    
     except Exception as e:
         return {"error": str(e)}
 
 
 def fetch_hrv(client, days=7, start=None, end=None):
-    """Fetch HRV data."""
+    """Fetch HRV data concurrently."""
     start_date, end_date = get_date_range(days, start, end)
     
     try:
         hrv_data = []
         current = datetime.strptime(start_date, "%Y-%m-%d")
-        end = datetime.strptime(end_date, "%Y-%m-%d")
+        end_dt = datetime.strptime(end_date, "%Y-%m-%d")
+        dates = [(current + timedelta(days=i)).strftime("%Y-%m-%d") for i in range((end_dt - current).days + 1)]
         
-        while current <= end:
-            date_str = current.strftime("%Y-%m-%d")
-            try:
-                data = client.get_hrv_data(date_str)
-                if data and "hrvSummary" in data:
-                    summary = data["hrvSummary"]
-                    hrv_data.append({
-                        "date": date_str,
-                        "last_night_avg": summary.get("lastNightAvg"),
-                        "last_night_5min_high": summary.get("lastNight5MinHigh"),
-                        "last_night_5min_low": summary.get("lastNight5MinLow"),
-                        "weekly_avg": summary.get("weeklyAvg"),
-                        "baseline_balanced_low": summary.get("baselineBalancedLow"),
-                        "baseline_balanced_high": summary.get("baselineBalancedHigh"),
-                        "status": summary.get("status")
-                    })
-            except Exception:
-                pass
-            
-            current += timedelta(days=1)
-        
+        def _get_single_day(date_str):
+            data = fetch_with_retry(client.get_hrv_data, date_str)
+            if data and "hrvSummary" in data:
+                summary = data["hrvSummary"]
+                return {
+                    "date": date_str,
+                    "last_night_avg": summary.get("lastNightAvg"),
+                    "last_night_5min_high": summary.get("lastNight5MinHigh"),
+                    "last_night_5min_low": summary.get("lastNight5MinLow"),
+                    "weekly_avg": summary.get("weeklyAvg"),
+                    "baseline_balanced_low": summary.get("baselineBalancedLow"),
+                    "baseline_balanced_high": summary.get("baselineBalancedHigh"),
+                    "status": summary.get("status")
+                }
+            return None
+
+        with concurrent.futures.ThreadPoolExecutor(max_workers=5) as executor:
+            results = executor.map(_get_single_day, dates)
+            hrv_data = [r for r in results if r]
+
+        hrv_data.sort(key=lambda x: x["date"])
         return {"hrv": hrv_data, "start": start_date, "end": end_date}
-    
     except Exception as e:
         return {"error": str(e)}
 
 
 def fetch_body_battery(client, days=7, start=None, end=None):
-    """Fetch Body Battery data (Garmin's recovery metric)."""
+    """Fetch Body Battery data concurrently."""
     start_date, end_date = get_date_range(days, start, end)
     
     try:
         bb_data = []
         current = datetime.strptime(start_date, "%Y-%m-%d")
-        end = datetime.strptime(end_date, "%Y-%m-%d")
+        end_dt = datetime.strptime(end_date, "%Y-%m-%d")
+        dates = [(current + timedelta(days=i)).strftime("%Y-%m-%d") for i in range((end_dt - current).days + 1)]
         
-        while current <= end:
-            date_str = current.strftime("%Y-%m-%d")
-            try:
-                data = client.get_body_battery(date_str)
-                if data and len(data) > 0:
-                    day_data = data[0]
-                    charged = day_data.get("charged")
-                    drained = day_data.get("drained")
-                    
-                    # Parse bodyBatteryValuesArray to get highest/lowest
-                    values_array = day_data.get("bodyBatteryValuesArray", [])
-                    values = [v[1] for v in values_array if len(v) > 1]  # Extract values from [timestamp, value] pairs
-                    
-                    highest = max(values) if values else None
-                    lowest = min(values) if values else None
-                    
-                    bb_data.append({
-                        "date": date_str,
-                        "charged": charged,
-                        "drained": drained,
-                        "highest": highest,
-                        "lowest": lowest
-                    })
-            except Exception:
-                pass
-            
-            current += timedelta(days=1)
-        
+        def _get_single_day(date_str):
+            data = fetch_with_retry(client.get_body_battery, date_str)
+            if data and len(data) > 0:
+                day_data = data[0]
+                values_array = day_data.get("bodyBatteryValuesArray", [])
+                values = [v[1] for v in values_array if len(v) > 1]
+                return {
+                    "date": date_str,
+                    "charged": day_data.get("charged"),
+                    "drained": day_data.get("drained"),
+                    "highest": max(values) if values else None,
+                    "lowest": min(values) if values else None
+                }
+            return None
+
+        with concurrent.futures.ThreadPoolExecutor(max_workers=5) as executor:
+            results = executor.map(_get_single_day, dates)
+            bb_data = [r for r in results if r]
+
+        bb_data.sort(key=lambda x: x["date"])
         return {"body_battery": bb_data, "start": start_date, "end": end_date}
-    
     except Exception as e:
         return {"error": str(e)}
 
 
 def fetch_heart_rate(client, days=7, start=None, end=None):
-    """Fetch heart rate data."""
+    """Fetch heart rate data concurrently."""
     start_date, end_date = get_date_range(days, start, end)
     
     try:
         hr_data = []
         current = datetime.strptime(start_date, "%Y-%m-%d")
-        end = datetime.strptime(end_date, "%Y-%m-%d")
+        end_dt = datetime.strptime(end_date, "%Y-%m-%d")
+        dates = [(current + timedelta(days=i)).strftime("%Y-%m-%d") for i in range((end_dt - current).days + 1)]
         
-        while current <= end:
-            date_str = current.strftime("%Y-%m-%d")
-            try:
-                data = client.get_heart_rates(date_str)
-                if data:
-                    hr_data.append({
-                        "date": date_str,
-                        "resting_hr": data.get("restingHeartRate"),
-                        "max_hr": data.get("maxHeartRate"),
-                        "min_hr": data.get("minHeartRate")
-                    })
-            except Exception:
-                pass
-            
-            current += timedelta(days=1)
-        
+        def _get_single_day(date_str):
+            data = fetch_with_retry(client.get_heart_rates, date_str)
+            if data:
+                return {
+                    "date": date_str,
+                    "resting_hr": data.get("restingHeartRate"),
+                    "max_hr": data.get("maxHeartRate"),
+                    "min_hr": data.get("minHeartRate")
+                }
+            return None
+
+        with concurrent.futures.ThreadPoolExecutor(max_workers=5) as executor:
+            results = executor.map(_get_single_day, dates)
+            hr_data = [r for r in results if r]
+
+        hr_data.sort(key=lambda x: x["date"])
         return {"heart_rate": hr_data, "start": start_date, "end": end_date}
-    
     except Exception as e:
         return {"error": str(e)}
 
@@ -194,8 +207,8 @@ def fetch_activities(client, days=7, start=None, end=None):
     start_date, end_date = get_date_range(days, start, end)
     
     try:
-        # Garmin API uses offset-based pagination
-        activities = client.get_activities_by_date(start_date, end_date, activitytype="")
+        activities = fetch_with_retry(client.get_activities_by_date, start_date, end_date, "")
+        if not activities: activities = []
         
         activity_list = []
         for activity in activities:
@@ -213,42 +226,41 @@ def fetch_activities(client, days=7, start=None, end=None):
             })
         
         return {"activities": activity_list, "start": start_date, "end": end_date, "count": len(activity_list)}
-    
     except Exception as e:
         return {"error": str(e)}
 
 
 def fetch_stress(client, days=7, start=None, end=None):
-    """Fetch stress levels."""
+    """Fetch stress levels concurrently."""
     start_date, end_date = get_date_range(days, start, end)
     
     try:
         stress_data = []
         current = datetime.strptime(start_date, "%Y-%m-%d")
-        end = datetime.strptime(end_date, "%Y-%m-%d")
+        end_dt = datetime.strptime(end_date, "%Y-%m-%d")
+        dates = [(current + timedelta(days=i)).strftime("%Y-%m-%d") for i in range((end_dt - current).days + 1)]
         
-        while current <= end:
-            date_str = current.strftime("%Y-%m-%d")
-            try:
-                data = client.get_stress_data(date_str)
-                if data:
-                    stress_data.append({
-                        "date": date_str,
-                        "avg_stress": data.get("avgStressLevel"),
-                        "max_stress": data.get("maxStressLevel"),
-                        "rest_stress": data.get("restStressLevel"),
-                        "activity_stress": data.get("activityStressLevel"),
-                        "low_stress_duration": data.get("lowStressDuration"),
-                        "medium_stress_duration": data.get("mediumStressDuration"),
-                        "high_stress_duration": data.get("highStressDuration")
-                    })
-            except Exception:
-                pass
-            
-            current += timedelta(days=1)
-        
+        def _get_single_day(date_str):
+            data = fetch_with_retry(client.get_stress_data, date_str)
+            if data:
+                return {
+                    "date": date_str,
+                    "avg_stress": data.get("avgStressLevel"),
+                    "max_stress": data.get("maxStressLevel"),
+                    "rest_stress": data.get("restStressLevel"),
+                    "activity_stress": data.get("activityStressLevel"),
+                    "low_stress_duration": data.get("lowStressDuration"),
+                    "medium_stress_duration": data.get("mediumStressDuration"),
+                    "high_stress_duration": data.get("highStressDuration")
+                }
+            return None
+
+        with concurrent.futures.ThreadPoolExecutor(max_workers=5) as executor:
+            results = executor.map(_get_single_day, dates)
+            stress_data = [r for r in results if r]
+
+        stress_data.sort(key=lambda x: x["date"])
         return {"stress": stress_data, "start": start_date, "end": end_date}
-    
     except Exception as e:
         return {"error": str(e)}
 
@@ -259,19 +271,17 @@ def fetch_training_status(client, date_str=None):
         date_str = datetime.now().strftime("%Y-%m-%d")
     
     try:
-        data = client.get_training_status(date_str)
+        data = fetch_with_retry(client.get_training_status, date_str)
         if data:
             recent_status = data.get("mostRecentTrainingStatus", {})
             status_data_map = recent_status.get("latestTrainingStatusData", {})
             
-            # Get the first device's status data
             status_entry = {}
             if status_data_map:
                 status_entry = list(status_data_map.values())[0]
             
             acute_chronic_ratio = status_entry.get("acuteTrainingLoadDTO", {}).get("dailyAcuteChronicWorkloadRatio", "--")
             
-            # Extract VO2 Max from the same response if available
             vo2_max = "--"
             recent_vo2 = data.get("mostRecentVO2Max", {})
             if recent_vo2:
@@ -295,16 +305,56 @@ def fetch_max_metrics(client, date_str=None):
         date_str = datetime.now().strftime("%Y-%m-%d")
         
     try:
-        # Get Fitness Age
-        fa_data = client.get_fitnessage_data(date_str)
-        fitness_age = round(fa_data.get("fitnessAge", 0), 1) if fa_data.get("fitnessAge") else "--"
-        
-        return {
-            "fitness_age": fitness_age
-        }
+        fa_data = fetch_with_retry(client.get_fitnessage_data, date_str)
+        fitness_age = round(fa_data.get("fitnessAge", 0), 1) if fa_data and fa_data.get("fitnessAge") else "--"
+        return {"fitness_age": fitness_age}
     except Exception:
         return {"fitness_age": "--"}
 
+def fetch_hydration(client, date_str=None):
+    """Fetch hydration/water intake data for the specified date."""
+    if not date_str:
+        date_str = datetime.now().strftime("%Y-%m-%d")
+    try:
+        data = fetch_with_retry(client.get_hydration_data, date_str)
+        if data:
+            return {"date": date_str, "valueInML": data.get("valueInML", 0)}
+        return {}
+    except Exception:
+        return {}
+
+def fetch_alarms(client):
+    """Fetch alarms from all connected devices."""
+    alarms = []
+    try:
+        devices = fetch_with_retry(client.get_devices)
+        if devices:
+            for device in devices:
+                device_id = device.get("deviceId")
+                if device_id:
+                    device_alarms = fetch_with_retry(client.get_device_alarms, device_id)
+                    if device_alarms:
+                        alarms.extend(device_alarms)
+    except Exception as e:
+        print(f"⚠️ Could not fetch alarms: {e}", file=sys.stderr)
+    return alarms
+
+def fetch_body_composition(client, date_str=None):
+    """Fetch weight and BMI data."""
+    if not date_str:
+        date_str = datetime.now().strftime("%Y-%m-%d")
+    try:
+        data = fetch_with_retry(client.get_body_composition, date_str)
+        if data and "totalAverage" in data:
+            comp = data["totalAverage"]
+            return {
+                "weight": round(comp.get("weight", 0) / 1000, 1), # g to kg
+                "bmi": round(comp.get("bmi", 0), 1),
+                "fat_pct": round(comp.get("bodyFat", 0), 1)
+            }
+        return {}
+    except Exception:
+        return {}
 
 def fetch_summary(client, days=7, start=None, end=None):
     """Fetch combined summary with key metrics."""
@@ -319,9 +369,11 @@ def fetch_summary(client, days=7, start=None, end=None):
         activities = fetch_activities(client, days, start, end).get("activities", [])
         stress = fetch_stress(client, days, start, end).get("stress", [])
         
-        # New metrics
         training_status = fetch_training_status(client, end_date)
         max_metrics = fetch_max_metrics(client, end_date)
+        hydration = fetch_hydration(client, end_date)
+        body_comp = fetch_body_composition(client, end_date)
+        alarms = fetch_alarms(client)
         
         # Calculate averages (handle None values)
         sleep_times = [s.get("sleep_time_seconds") for s in sleep if s.get("sleep_time_seconds")]
@@ -358,7 +410,10 @@ def fetch_summary(client, days=7, start=None, end=None):
             "activities": activities,
             "stress": stress,
             "training_status": training_status,
-            "max_metrics": max_metrics
+            "max_metrics": max_metrics,
+            "hydration": hydration,
+            "body_composition": body_comp,
+            "alarms": alarms
         }
     
     except Exception as e:
