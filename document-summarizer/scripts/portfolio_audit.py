@@ -94,7 +94,7 @@ def generate_strategic_audit(summaries_file, output_file):
     else:
         strategic_themes = ['人工智能', '数据治理', '评级']
     
-    found_themes = [t for t in strategic_themes if any(t in str(data) for t in strategic_themes)]
+    found_themes = [t for t in strategic_themes if t in str(data)]
     missing_themes = [t for t in strategic_themes if t not in found_themes]
     
     if missing_themes:

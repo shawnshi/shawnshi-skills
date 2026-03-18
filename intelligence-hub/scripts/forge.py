@@ -78,6 +78,7 @@ def forge_briefing():
             "title": title,
             "url": item['url'],
             "source": item['source'],
+            "date": item.get('time', 'Unknown')[:10], # Extract YYYY-MM-DD
             "score": score,
             "summary": summary,
             "reason": reason
@@ -115,6 +116,7 @@ def forge_briefing():
             formatted_items.append({
                 "title": title,
                 "url": item['url'],
+                "date": item.get('time', 'Unknown')[:10], # Extract YYYY-MM-DD
                 "desc": desc
             })
         formatted_grouped_list[cat_name] = formatted_items

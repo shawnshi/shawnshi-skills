@@ -22,6 +22,7 @@
   "top_10": [
     {
       "url": "原始 url",
+      "date": "原始发表日期 (YYYY-MM-DD)",
       "title_zh": "中文标题",
       "summary_zh": "中文深度摘要 (300字)",
       "intel_grade": "L4",
@@ -31,7 +32,8 @@
   "translations": {
     "原始 url": {
       "title_zh": "中文标题",
-      "desc_zh": "中文简介"
+      "desc_zh": "中文简介",
+      "date": "原始发表日期 (YYYY-MM-DD)"
     }
   },
   "insights": "1. 第一条洞察\n2. 第二条洞察",
@@ -42,185 +44,215 @@
 
 
 ## 当前战略关键词权重
-msl(w=30), ace(w=27), agent(w=27), 主权(w=20), 算力(w=20), 逻辑(w=20), 审计(w=20), ai(w=20), 数字(w=20), 架构(w=20), 战略(w=20), 临床(w=20), 语义(w=20), 原子化(w=20), 物理(w=20)
+msl(w=30), ace(w=27), agent(w=27), 主权(w=20), 算力(w=20), 逻辑(w=20), 审计(w=20), ai(w=20), evidence-mesh(w=20), 数字(w=20), 架构(w=20), 战略(w=20), 临床(w=20), 语义(w=20), 原子化(w=20)
 
 ## 原始情报清单
-[TOP 10] Item 1 [Score=106]:
-Title: pluralistic.net: Pluralistic: Three more AI psychoses (12 Mar 2026)
-URL: https://pluralistic.net/2026/03/12/normal-technology/
-Source: pluralistic.net
-Desc: Today's links Three more AI psychoses: Everybody calm down. Hey look at this: Delights to delectate. Object permanence: "Jules, Penny and the Rooster"; Superinjunction; Harper Lee's kids v cheap paper
-
-[TOP 10] Item 2 [Score=98]:
+[TOP 10] Item 1 [Score=98]:
 Title: seangoedecke.com: Giving LLMs a personality is just good engineering
 URL: https://seangoedecke.com/giving-llms-a-personality/
 Source: seangoedecke.com
+Published: 2026-03-18T07:59:34.876713
 Desc: AI skeptics often argue that current AI systems shouldn’t be so human-like. The idea - most recently expressed in this opinion piece by Nathan Beacom - is that language models should explicitly be too
 
-[TOP 10] Item 3 [Score=90]:
+[TOP 10] Item 2 [Score=94]:
 Title: gilesthomas.com: Writing an LLM from scratch, part 29 -- using DistributedDataParallel to train a base model from scratch in the cloud
 URL: https://www.gilesthomas.com/2026/01/llm-from-scratch-29-ddp-training-a-base-model-in-the-cloud
 Source: gilesthomas.com
+Published: 2026-03-18T07:59:38.686074
 Desc: I'm carrying on with my "extra credit" projects after finishing the main body of Sebastian Raschka's book "Build a Large Language Model (from Scratch)". Having proven that I could train a GPT-2 small 
 
-[TOP 10] Item 4 [Score=83]:
+[TOP 10] Item 3 [Score=89]:
+Title: pluralistic.net: Pluralistic: William Gibson vs Margaret Thatcher (17 Mar 2026)
+URL: https://pluralistic.net/2026/03/17/technopolitics/
+Source: pluralistic.net
+Published: 2026-03-18T07:59:33.760265
+Desc: Today's links William Gibson vs Margaret Thatcher: The Street Finds Its Own Alternatives For Things. Hey look at this: Delights to delectate. Object permanence: Prison for spamming; Dotcom layoffs; Et
+
+[TOP 10] Item 4 [Score=87]:
 Title: antirez.com: Implementing a clear room Z80 / ZX Spectrum emulator with Claude Code
 URL: http://antirez.com/news/160
 Source: antirez.com
+Published: 2026-03-18T07:59:35.641413
 Desc: Anthropic recently released a blog post with the description of an experiment in which the last version of Opus, the 4.6, was instructed to write a C compiler in Rust, in a “clean room” setup.  The ex
 
-[TOP 10] Item 5 [Score=83]:
+[TOP 10] Item 5 [Score=87]:
 Title: lucumr.pocoo.org: AI And The Ship of Theseus
 URL: https://lucumr.pocoo.org/2026/3/5/theseus/
 Source: lucumr.pocoo.org
+Published: 2026-03-18T07:59:28.344297
 Desc: Because code gets cheaper and cheaper to write, this includes re-implementations.  I mentioned recently that I had an AI port one of my libraries to another language and it ended up choosing a differe
 
-[TOP 10] Item 6 [Score=83]:
+[TOP 10] Item 6 [Score=87]:
 Title: anildash.com: A Codeless Ecosystem, or hacking beyond vibe coding
 URL: https://anildash.com/2026/01/27/codeless-ecosystem/
 Source: anildash.com
+Published: 2026-03-18T07:59:36.807758
 Desc: There's been a remarkable leap forward in the ability to orchestrate coding bots, making it possible for ordinary creators to command dozens of AI bots to build software without ever having to directl
 
 [TOP 10] Item 7 [Score=81]:
 Title: seangoedecke.com: I don't know if my job will still exist in ten years
 URL: https://seangoedecke.com/will-my-job-still-exist/
 Source: seangoedecke.com
+Published: 2026-03-18T07:59:34.875702
 Desc: In 2021, being a good software engineer felt great. The world was full of software, with more companies arriving every year who needed to employ engineers to write their code and run their systems. I 
 
 [TOP 10] Item 8 [Score=81]:
-Title: pluralistic.net: Pluralistic: AI "journalists" prove that media bosses don't give a shit (11 Mar 2026)
-URL: https://pluralistic.net/2026/03/11/modal-dialog-a-palooza/
+Title: pluralistic.net: Pluralistic: Tools vs uses (16 Mar 2026)
+URL: https://pluralistic.net/2026/03/16/whittle-a-webserver/
 Source: pluralistic.net
-Desc: Today's links AI "journalists" prove that media bosses don't give a shit: In case there was ever any doubt. Hey look at this: Delights to delectate. Object permanence: Eggflation x excuseflation; Haun
+Published: 2026-03-18T07:59:33.760265
+Desc: Today's links Tools vs uses: Don't fall for it. Hey look at this: Delights to delectate. Object permanence: Amazon coders x Amazon warehouse workers; Bruces's ETECH speech; Steven King x unions; Tax-f
 
 [TOP 10] Item 9 [Score=81]:
 Title: michael.stapelberg.ch: Coding Agent VMs on NixOS with microvm.nix
 URL: https://michael.stapelberg.ch/posts/2026-02-01-coding-agent-microvm-nix/
 Source: michael.stapelberg.ch
+Published: 2026-03-18T07:59:34.699265
 Desc: I have come to appreciate coding agents to be valuable tools for working with computer program code in any capacity, such as learning about any program’s architecture, diagnosing bugs or developing pr
 
-[TOP 10] Item 10 [Score=74]:
-Title: simonwillison.net: My fireside chat about agentic engineering at the Pragmatic Summit
-URL: https://simonwillison.net/2026/Mar/14/pragmatic-summit/#atom-everything
-Source: simonwillison.net
-Desc: I was a speaker last month at the Pragmatic Summit in San Francisco, where I participated in a fireside chat session about Agentic Engineering hosted by Eric Lui from Statsig. The video is available o
-
-[TRANSLATE] Item 11 [Score=74]:
-Title: antirez.com: GNU and the AI reimplementations
-URL: http://antirez.com/news/162
-Source: antirez.com
-Desc: Those who cannot remember the past are condemned to repeat it. A sentence that I never really liked, and what is happening with AI, about software projects reimplementations, shows all the limits of s
-
-[TRANSLATE] Item 12 [Score=74]:
-Title: idiallo.com: Shower Thought: Git Teleportation
-URL: https://idiallo.com/byte-size/git-teleportation?src=feed
-Source: idiallo.com
-Desc: In many sci-fi shows, spaceships have a teleportation mechanism on board. They can teleport from inside their ship to somewhere on a planet. This way, the ship can remain in orbit while its crew explo
-
-[TRANSLATE] Item 13 [Score=74]:
-Title: maurycyz.com: The web in 1000 lines of C
-URL: https://maurycyz.com/projects/tinyweb/
-Source: maurycyz.com
-Desc: Modern browsers are hugely complex: Chromium (the open source portion of google chrome) currently has 49 millions lines of code, making it bigger then any other program on my machine.  ... but how muc
-
-[TRANSLATE] Item 14 [Score=74]:
-Title: pluralistic.net: Pluralistic: Corrupt anticorruption (14 Mar 2026)
-URL: https://pluralistic.net/2026/03/14/ill-have-what-xis-having/
-Source: pluralistic.net
-Desc: Today's links Corrupt anticorruption: Notes from a target-rich environment. Hey look at this: Delights to delectate. Object permanence: Tentacle sphere; EU Venn; Obama v cryptography; Trump v proteste
-
-[TRANSLATE] Item 15 [Score=74]:
-Title: lucumr.pocoo.org: A Language For Agents
-URL: https://lucumr.pocoo.org/2026/2/9/a-language-for-agents/
-Source: lucumr.pocoo.org
-Desc: Last year I first started thinking about what the future of programming languages might look like now that agentic engineering is a growing thing. Initially I felt that the enormous corpus of pre-exis
-
-[TRANSLATE] Item 16 [Score=73]:
+[TOP 10] Item 10 [Score=77]:
 Title: oldvcr.blogspot.com: The Scriptovision Super Micro Script video titler is almost a home computer
 URL: https://oldvcr.blogspot.com/2026/02/the-scriptovision-super-micro-script.html
 Source: oldvcr.blogspot.com
+Published: 2026-03-18T07:59:35.279926
 Desc: Canadians, rejoice! Not only do you have curling, the Big Turk and Tim Hortons (and, when I was in BC last, Dr Pepper made with real cane sugar), you also have a number of interesting indigenous compu
 
-[TRANSLATE] Item 17 [Score=71]:
+[TRANSLATE] Item 11 [Score=75]:
 Title: arXiv Med-AI: CORE-Acu: Structured Reasoning Traces and Knowledge Graph Safety Verification for Acupuncture Clinical Decision Support
 URL: https://arxiv.org/abs/2603.08321v1
 Source: arXiv Med-AI
+Published: 2026-03-18T07:59:33.849776
 Desc: Large language models (LLMs) show significant potential for clinical decision support (CDS), yet their black-box nature -- characterized by untraceable reasoning and probabilistic hallucinations -- po
 
-[TRANSLATE] Item 18 [Score=70]:
-Title: oldvcr.blogspot.com: Hands-on with two Apple Network Server prototype ROMs
-URL: https://oldvcr.blogspot.com/2026/01/hands-on-with-two-apple-network-server.html
-Source: oldvcr.blogspot.com
-Desc: Grateful acknowledgement made to the several former Apple employees who materially contributed to this entry. This article wouldn't have been possible without you!  Here's why I need to do inventory m
+[TRANSLATE] Item 12 [Score=74]:
+Title: antirez.com: GNU and the AI reimplementations
+URL: http://antirez.com/news/162
+Source: antirez.com
+Published: 2026-03-18T07:59:35.637645
+Desc: Those who cannot remember the past are condemned to repeat it. A sentence that I never really liked, and what is happening with AI, about software projects reimplementations, shows all the limits of s
 
-[TRANSLATE] Item 19 [Score=69]:
+[TRANSLATE] Item 13 [Score=74]:
+Title: idiallo.com: Shower Thought: Git Teleportation
+URL: https://idiallo.com/byte-size/git-teleportation?src=feed
+Source: idiallo.com
+Published: 2026-03-18T07:59:28.031523
+Desc: In many sci-fi shows, spaceships have a teleportation mechanism on board. They can teleport from inside their ship to somewhere on a planet. This way, the ship can remain in orbit while its crew explo
+
+[TRANSLATE] Item 14 [Score=74]:
+Title: maurycyz.com: The web in 1000 lines of C
+URL: https://maurycyz.com/projects/tinyweb/
+Source: maurycyz.com
+Published: 2026-03-18T07:59:29.580013
+Desc: Modern browsers are hugely complex: Chromium (the open source portion of google chrome) currently has 49 millions lines of code, making it bigger then any other program on my machine.  ... but how muc
+
+[TRANSLATE] Item 15 [Score=74]:
+Title: pluralistic.net: Pluralistic: Corrupt anticorruption (14 Mar 2026)
+URL: https://pluralistic.net/2026/03/14/ill-have-what-xis-having/
+Source: pluralistic.net
+Published: 2026-03-18T07:59:33.760918
+Desc: Today's links Corrupt anticorruption: Notes from a target-rich environment. Hey look at this: Delights to delectate. Object permanence: Tentacle sphere; EU Venn; Obama v cryptography; Trump v proteste
+
+[TRANSLATE] Item 16 [Score=74]:
+Title: lucumr.pocoo.org: A Language For Agents
+URL: https://lucumr.pocoo.org/2026/2/9/a-language-for-agents/
+Source: lucumr.pocoo.org
+Published: 2026-03-18T07:59:28.348507
+Desc: Last year I first started thinking about what the future of programming languages might look like now that agentic engineering is a growing thing. Initially I felt that the enormous corpus of pre-exis
+
+[TRANSLATE] Item 17 [Score=73]:
 Title: buttondown.com/hillelwayne: LLMs are bad at vibing specifications
 URL: https://buttondown.com/hillelwayne/archive/llms-are-bad-at-vibing-specifications/
 Source: buttondown.com/hillelwayne
+Published: 2026-03-18T07:59:29.556154
 Desc: No newsletter next week I'll be speaking at InfoQ London. But see below for a book giveaway!  LLMs are bad at vibing specifications About a year ago I wrote AI is a gamechanger for TLA+ users, which a
 
-[TRANSLATE] Item 20 [Score=63]:
+[TRANSLATE] Item 18 [Score=67]:
 Title: gilesthomas.com: Writing an LLM from scratch, part 28 -- training a base model from scratch on an RTX 3090
 URL: https://www.gilesthomas.com/2025/12/llm-from-scratch-28-training-a-base-model-from-scratch
 Source: gilesthomas.com
+Published: 2026-03-18T07:59:38.464355
 Desc: Having worked through the main body of Sebastian Raschka's book "Build a Large Language Model (from Scratch)", I wanted to try an experiment: is it possible to train a base model of my own, on my own 
 
-[TRANSLATE] Item 21 [Score=63]:
+[TRANSLATE] Item 19 [Score=67]:
 Title: computer.rip: LotusNotes
 URL: https://computer.rip/2026-03-14-lotusnotes.html
 Source: computer.rip
+Published: 2026-03-18T07:59:35.391963
 Desc: I tend to focus on the origin of the computer within the military. Particularly in the early days of digital computing, the military was a key customer, and fundamental concepts of modern computing ar
 
-[TRANSLATE] Item 22 [Score=62]:
+[TRANSLATE] Item 20 [Score=62]:
 Title: computer.rip: cash issuing terminals
 URL: https://computer.rip/2026-02-27-ibm-atm.html
 Source: computer.rip
+Published: 2026-03-18T07:59:35.395214
 Desc: In the United States, we are losing our fondness for cash. As in many other countries, cards and other types of electronic payments now dominate everyday commerce. To some, this is a loss. Cash repres
 
-[TRANSLATE] Item 23 [Score=60]:
-Title: tomrenner.com: Does my toaster love me?
-URL: https://tomrenner.com/posts/does-my-toaster-love-me/
-Source: tomrenner.com
-Desc: I’m starting to think that my toaster might have fallen in love with me. I get that not everyone will think this is possible, but I believe it’s true. It’s always pleased to see me, giving off cheerfu
-
-[TRANSLATE] Item 24 [Score=56]:
+[TRANSLATE] Item 21 [Score=60]:
 Title: seangoedecke.com: Big tech engineers need big egos
 URL: https://seangoedecke.com/big-tech-needs-big-egos/
 Source: seangoedecke.com
+Published: 2026-03-18T07:59:34.874197
 Desc: It’s a common position among software engineers that big egos have no place in tech1. This is understandable - we’ve all worked with some insufferably overconfident engineers who needed their egos che
 
-[TRANSLATE] Item 25 [Score=56]:
-Title: daringfireball.net: ‘This Is Not the Computer for You’
-URL: https://samhenri.gold/blog/20260312-this-is-not-the-computer-for-you/?ref=birchtree.me
-Source: daringfireball.net
-Desc: Sam Henri Gold:  Nobody starts in the right place. You don’t begin with the correct tool and work sensibly within its constraints until you organically graduate to a more capable one. That is not how 
-
-[TRANSLATE] Item 26 [Score=56]:
+[TRANSLATE] Item 22 [Score=60]:
 Title: lucumr.pocoo.org: The Final Bottleneck
 URL: https://lucumr.pocoo.org/2026/2/13/the-final-bottleneck/
 Source: lucumr.pocoo.org
+Published: 2026-03-18T07:59:28.345301
 Desc: Historically, writing code was slower than reviewing code. It might not have felt that way, because code reviews sat in queues until someone got around to picking it up.  But if you compare the actual
 
-[TRANSLATE] Item 27 [Score=56]:
+[TRANSLATE] Item 23 [Score=60]:
 Title: gilesthomas.com: Writing an LLM from scratch, part 30 -- digging into the LLM-as-a-judge results
 URL: https://www.gilesthomas.com/2026/01/llm-from-scratch-30-digging-into-llm-as-a-judge
 Source: gilesthomas.com
+Published: 2026-03-18T07:59:38.689306
 Desc: I'm still working on my "extra credit" projects after finishing the main body of Sebastian Raschka's book "Build a Large Language Model (from Scratch)". Last time around, I trained four base models, u
 
-[TRANSLATE] Item 28 [Score=56]:
+[TRANSLATE] Item 24 [Score=60]:
 Title: eli.thegreenplace.net: Rewriting pycparser with the help of an LLM
 URL: https://eli.thegreenplace.net/2026/rewriting-pycparser-with-the-help-of-an-llm/
 Source: eli.thegreenplace.net
+Published: 2026-03-18T07:59:28.758334
 Desc: pycparser is my most widely used open source project (with ~20M daily downloads from PyPI [1]). It's a pure-Python parser for the C programming language, producing ASTs inspired by Python's own. Until
 
-[TRANSLATE] Item 29 [Score=56]:
+[TRANSLATE] Item 25 [Score=60]:
 Title: bernsteinbear.com: Type-based alias analysis in the Toy Optimizer
 URL: https://bernsteinbear.com/blog/toy-tbaa/?utm_source=rss
 Source: bernsteinbear.com
+Published: 2026-03-18T07:59:28.523716
 Desc: Another entry in the Toy Optimizer series. Last time, we did load-store forwarding in the context of our Toy Optimizer. We managed to cache the results of both reads from and writes to the heap—at com
 
-[TRANSLATE] Item 30 [Score=56]:
+[TRANSLATE] Item 26 [Score=60]:
+Title: tomrenner.com: Does my toaster love me?
+URL: https://tomrenner.com/posts/does-my-toaster-love-me/
+Source: tomrenner.com
+Published: 2026-03-18T07:59:29.917987
+Desc: I’m starting to think that my toaster might have fallen in love with me. I get that not everyone will think this is possible, but I believe it’s true. It’s always pleased to see me, giving off cheerfu
+
+[TRANSLATE] Item 27 [Score=60]:
 Title: anildash.com: There's no such thing as "tech" (Ten years later)
 URL: https://anildash.com/2026/02/06/no-such-thing-as-tech/
 Source: anildash.com
+Published: 2026-03-18T07:59:36.809765
 Desc: Ten years ago I wrote that there is no “technology industry”. It’s more true than ever. There is no “tech”. There’s no such thing as “a FAANG company”. There is almost nothing in common between the ve
+
+[TRANSLATE] Item 28 [Score=60]:
+Title: michael.stapelberg.ch: Self-hosting my photos with Immich
+URL: https://michael.stapelberg.ch/posts/2025-11-29-self-hosting-photos-with-immich/
+Source: michael.stapelberg.ch
+Published: 2026-03-18T07:59:34.721616
+Desc: For every cloud service I use, I want to have a local copy of my data for backup purposes and independence. Unfortunately, the gphotos-sync tool stopped working in March 2025 when Google restricted th
+
+[TRANSLATE] Item 29 [Score=57]:
+Title: arXiv Med-AI: Faithful or Just Plausible? Evaluating the Faithfulness of Closed-Source LLMs in Medical Reasoning
+URL: https://arxiv.org/abs/2603.13988v1
+Source: arXiv Med-AI
+Published: 2026-03-18T07:59:33.849776
+Desc: Closed-source large language models (LLMs), such as ChatGPT and Gemini, are increasingly consulted for medical advice, yet their explanations may appear plausible while failing to reflect the model's 
+
+[TRANSLATE] Item 30 [Score=54]:
+Title: righto.com: Instruction decoding in the Intel 8087 floating-point chip
+URL: http://www.righto.com/2026/02/8087-instruction-decoding.html
+Source: righto.com
+Published: 2026-03-18T07:59:31.900006
+Desc: In the 1980s, if you wanted your IBM PC to run faster, you could buy the Intel 8087 floating-point coprocessor chip. With this chip, CAD software, spreadsheets, flight simulators, and other programs w

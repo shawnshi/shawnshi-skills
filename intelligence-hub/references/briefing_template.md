@@ -27,7 +27,7 @@
 ## 🏆 今日必读 Top 10
 {% for item in top_10 -%}
 ### {{ loop.index }}. [{{ item.title }}]({{ item.url }})
-- **来源**: {{ item.source }} | **战略权重**: {{ item.score }}
+- **来源**: {{ item.source }} | **发表日期**: {{ item.date }} | **战略权重**: {{ item.score }}
 - **中文摘要**: {{ item.summary }}...
 {% if item.reason %}- **推荐理由**: {{ item.reason }}{% endif %}
 
@@ -38,7 +38,7 @@
 {% if items -%}
 ### {{ cat_name }}
 {% for item in items -%}
-- **[{{ item.title }}]({{ item.url }})**
+- **[{{ item.title }}]({{ item.url }})** [{{ item.date }}]
 {% if item.desc %}  > *简介*: {{ item.desc }}...{% endif %}
 {% endfor %}
 

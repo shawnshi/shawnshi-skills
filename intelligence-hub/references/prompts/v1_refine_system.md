@@ -22,6 +22,7 @@
   "top_10": [
     {
       "url": "原始 url",
+      "date": "原始发表日期 (YYYY-MM-DD)",
       "title_zh": "中文标题",
       "summary_zh": "中文深度摘要 (300字)",
       "intel_grade": "L4",
@@ -31,7 +32,8 @@
   "translations": {
     "原始 url": {
       "title_zh": "中文标题",
-      "desc_zh": "中文简介"
+      "desc_zh": "中文简介",
+      "date": "原始发表日期 (YYYY-MM-DD)"
     }
   },
   "insights": "1. 第一条洞察\n2. 第二条洞察",

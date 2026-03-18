@@ -38,7 +38,7 @@
     },
     {
       "keyword": "evidence-mesh",
-      "weight": 19
+      "weight": 20
     },
     {
       "keyword": "mcp",
@@ -54,7 +54,7 @@
     },
     {
       "keyword": "core",
-      "weight": 9
+      "weight": 13
     },
     {
       "keyword": "数字",
@@ -74,7 +74,7 @@
     },
     {
       "keyword": "认知",
-      "weight": 17
+      "weight": 19
     },
     {
       "keyword": "临床",

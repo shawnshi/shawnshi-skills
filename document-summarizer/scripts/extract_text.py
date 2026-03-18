@@ -242,7 +242,10 @@ class DocumentExtractor:
         documents = []
 
         for ext in self.SUPPORTED_EXTENSIONS:
-            documents.extend(directory.rglob(f'*{ext}'))
+            for file_path in directory.rglob(f'*{ext}'):
+                # Ignore hidden and temporary files
+                if not file_path.name.startswith('.') and not file_path.name.startswith('~$'):
+                    documents.append(file_path)
 
         return sorted(documents)
 

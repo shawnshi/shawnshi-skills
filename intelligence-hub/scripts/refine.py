@@ -56,6 +56,7 @@ def build_user_prompt(scored_items: list, focus_data: dict) -> str:
             f"Title: {item['title']}\n"
             f"URL: {item['url']}\n"
             f"Source: {item['source']}\n"
+            f"Published: {item.get('time', 'Unknown')}\n"
             f"Desc: {desc}\n"
         )
 
