@@ -231,7 +231,7 @@ def fetch_activities(client, days=7, start=None, end=None):
 
 
 def fetch_stress(client, days=7, start=None, end=None):
-    """Fetch stress levels concurrently."""
+    """Fetch stress levels concurrently using user summary for accurate durations."""
     start_date, end_date = get_date_range(days, start, end)
     
     try:
@@ -241,14 +241,14 @@ def fetch_stress(client, days=7, start=None, end=None):
         dates = [(current + timedelta(days=i)).strftime("%Y-%m-%d") for i in range((end_dt - current).days + 1)]
         
         def _get_single_day(date_str):
-            data = fetch_with_retry(client.get_stress_data, date_str)
+            # Using get_user_summary as it contains pre-calculated durations
+            data = fetch_with_retry(client.get_user_summary, date_str)
             if data:
                 return {
                     "date": date_str,
-                    "avg_stress": data.get("avgStressLevel"),
+                    "avg_stress": data.get("averageStressLevel"),
                     "max_stress": data.get("maxStressLevel"),
-                    "rest_stress": data.get("restStressLevel"),
-                    "activity_stress": data.get("activityStressLevel"),
+                    "rest_stress_duration": data.get("restStressDuration"),
                     "low_stress_duration": data.get("lowStressDuration"),
                     "medium_stress_duration": data.get("mediumStressDuration"),
                     "high_stress_duration": data.get("highStressDuration")
@@ -300,14 +300,19 @@ def fetch_training_status(client, date_str=None):
 
 
 def fetch_max_metrics(client, date_str=None):
-    """Fetch Fitness Age and VO2 Max."""
+    """Fetch Fitness Age and VO2 Max with a 7-day look-back."""
     if not date_str:
         date_str = datetime.now().strftime("%Y-%m-%d")
         
+    # Try last 7 days to find latest fitness age
     try:
-        fa_data = fetch_with_retry(client.get_fitnessage_data, date_str)
-        fitness_age = round(fa_data.get("fitnessAge", 0), 1) if fa_data and fa_data.get("fitnessAge") else "--"
-        return {"fitness_age": fitness_age}
+        end_dt = datetime.strptime(date_str, "%Y-%m-%d")
+        for i in range(7):
+            target_date = (end_dt - timedelta(days=i)).strftime("%Y-%m-%d")
+            fa_data = fetch_with_retry(client.get_fitnessage_data, target_date)
+            if fa_data and fa_data.get("fitnessAge"):
+                return {"fitness_age": round(fa_data.get("fitnessAge"), 1)}
+        return {"fitness_age": "--"}
     except Exception:
         return {"fitness_age": "--"}
 
@@ -340,17 +345,50 @@ def fetch_alarms(client):
     return alarms
 
 def fetch_body_composition(client, date_str=None):
-    """Fetch weight and BMI data."""
+    """Fetch BMI and weight data with a 30-day look-back and robust height fallback."""
     if not date_str:
         date_str = datetime.now().strftime("%Y-%m-%d")
+    
     try:
-        data = fetch_with_retry(client.get_body_composition, date_str)
-        if data and "totalAverage" in data:
-            comp = data["totalAverage"]
+        # 1. Height Logic: Try Profile -> then Try Config -> then Hard Fallback
+        height_cm = None
+        profile = fetch_with_retry(client.get_user_profile)
+        if profile:
+            height_cm = profile.get("height")
+            
+        # Check for local config override if API height is missing
+        config_path = Path(__file__).parent.parent / "config.json"
+        if (not height_cm or height_cm == 0) and config_path.exists():
+            try:
+                conf = json.loads(config_path.read_text(encoding='utf-8'))
+                height_cm = conf.get("height_cm")
+            except Exception:
+                pass
+        
+        # Hard Fallback (Mentat Estimate) to avoid empty display if all else fails
+        if not height_cm or height_cm == 0:
+            height_cm = 175 # Standard baseline for calculation
+        
+        # 2. Fetch last 30 days to get the most recent weigh-in
+        end_dt = datetime.strptime(date_str, "%Y-%m-%d")
+        start_date = (end_dt - timedelta(days=30)).strftime("%Y-%m-%d")
+        
+        data = fetch_with_retry(client.get_body_composition, start_date, date_str)
+        if data and "dateWeightList" in data and len(data["dateWeightList"]) > 0:
+            latest = data["dateWeightList"][-1]
+            weight_kg = latest.get("weight", 0) / 1000
+            bmi = latest.get("bmi")
+            
+            # 3. Calculation Logic: Force recalculation if API BMI is None or inaccurate
+            if (not bmi or bmi == 0) and height_cm and weight_kg > 0:
+                bmi = weight_kg / ((height_cm / 100) ** 2)
+                
             return {
-                "weight": round(comp.get("weight", 0) / 1000, 1), # g to kg
-                "bmi": round(comp.get("bmi", 0), 1),
-                "fat_pct": round(comp.get("bodyFat", 0), 1)
+                "weight": round(weight_kg, 1),
+                "bmi": round(bmi, 1) if bmi else "--",
+                "fat_pct": round(latest.get("bodyFat", 0), 1) if latest.get("bodyFat") else "--",
+                "date": latest.get("date"),
+                "source_height": height_cm
             }
         return {}
     except Exception:

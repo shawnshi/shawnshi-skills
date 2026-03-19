@@ -19,7 +19,7 @@ from garmin_data import fetch_summary
 from garmin_intelligence import generate_chinese_insight, parse_period
 
 def generate_tactical_html(charts_data, title="GARMIN STRATEGIC AUDIT"):
-    """Generate high-density light-mode HTML dashboard."""
+    """Generate high-density light-mode HTML dashboard with strict f-string escaping."""
     
     colors = {
         "BG": "#F5F7FA",
@@ -41,6 +41,20 @@ def generate_tactical_html(charts_data, title="GARMIN STRATEGIC AUDIT"):
     if move_type == "GREEN": status_color = colors["GREEN"]
     elif move_type == "RED": status_color = colors["RED"]
     elif move_type == "ALERT": status_color = colors["PURPLE"]
+
+    # Correct data path and robust extraction for DISSIPATION KPI
+    ov = charts_data.get("overlay_data", {})
+    wd_list = ov.get("weighted_dissipation", [])
+    
+    # Get the latest non-zero value or just the latest if all are zero
+    weighted_val = "--"
+    if wd_list:
+        # Try to find the latest non-zero value (handle partial sync days)
+        latest_valid = [v for v in wd_list if v > 0]
+        weighted_val = latest_valid[-1] if latest_valid else wd_list[-1]
+        
+    json_data = json.dumps(charts_data, ensure_ascii=False)
+    json_colors = json.dumps(colors)
 
     html = f"""<!DOCTYPE html>
 <html lang="zh-CN">
@@ -123,8 +137,8 @@ def generate_tactical_html(charts_data, title="GARMIN STRATEGIC AUDIT"):
     </div>
 
     <script>
-        const data = {json.dumps(charts_data, ensure_ascii=False)};
-        const colors = {json.dumps(colors)};
+        const data = {json_data};
+        const colors = {json_colors};
         
         Chart.defaults.color = colors.TEXT_MUTED;
         Chart.defaults.font.family = '"JetBrains Mono", monospace';
@@ -135,7 +149,7 @@ def generate_tactical_html(charts_data, title="GARMIN STRATEGIC AUDIT"):
             const a = data.audit_data;
             const q = data.quant_scores;
             
-            // KPI ROW (Extended with BMI & Fitness Age)
+            // KPI ROW
             let html = `<div class="kpi-row">
                 <div class="kpi-box status">
                     <div class="panel-title">SYSTEM STATUS</div>
@@ -159,8 +173,8 @@ def generate_tactical_html(charts_data, title="GARMIN STRATEGIC AUDIT"):
                 </div>
                 <div class="kpi-box">
                     <div class="panel-title">DISSIPATION</div>
-                    <div class="kpi-val">${{a.load_friction.dissipation.high_stress_hours}} <span style="font-size:14px">h</span></div>
-                    <div class="kpi-sub">HIGH STRESS ZONE</div>
+                    <div class="kpi-val">{weighted_val} <span style="font-size:14px">h</span></div>
+                    <div class="kpi-sub">WEIGHTED FRICTION</div>
                 </div>
                 <div class="kpi-box">
                     <div class="panel-title">SLEEP DEBT</div>
@@ -201,7 +215,7 @@ def generate_tactical_html(charts_data, title="GARMIN STRATEGIC AUDIT"):
 
             html += `<div class="panel audit-log">
                 <div class="panel-title">MENTAT STRATEGIC AUDIT LOG</div>
-                <div style="white-space: pre-wrap; font-size: 14px; color: ${colors["TEXT_MAIN"]};">${{data.overall_insight}}</div>
+                <div style="white-space: pre-wrap; font-size: 14px; color: ${{colors.TEXT_MAIN}};">${{data.overall_insight}}</div>
             </div>`;
             
             app.innerHTML = html;
@@ -254,6 +268,17 @@ def generate_tactical_html(charts_data, title="GARMIN STRATEGIC AUDIT"):
                             borderWidth: 2,
                             borderDash: [5, 5],
                             yAxisID: 'y2'
+                        }},
+                        {{
+                            type: 'line',
+                            label: 'READINESS',
+                            data: od.readiness,
+                            borderColor: colors.GREEN,
+                            borderWidth: 3,
+                            pointStyle: 'star',
+                            pointRadius: 5,
+                            tension: 0.3,
+                            yAxisID: 'y1'
                         }}
                     ]
                 }},
@@ -263,7 +288,7 @@ def generate_tactical_html(charts_data, title="GARMIN STRATEGIC AUDIT"):
                     interaction: {{ mode: 'index', intersect: false }},
                     scales: {{
                         y: {{ type: 'linear', position: 'left', min: 0, suggestedMax: 5, title: {{ display: true, text: 'Hours' }} }},
-                        y1: {{ type: 'linear', position: 'right', min: 0, max: 100, title: {{ display: true, text: 'Energy' }}, grid: {{ drawOnChartArea: false }} }},
+                        y1: {{ type: 'linear', position: 'right', min: 0, max: 100, title: {{ display: true, text: 'Energy / Readiness' }}, grid: {{ drawOnChartArea: false }} }},
                         y2: {{ type: 'linear', position: 'right', title: {{ display: true, text: 'bpm' }}, grid: {{ drawOnChartArea: false }} }}
                     }}
                 }}
@@ -333,27 +358,41 @@ def generate_tactical_html(charts_data, title="GARMIN STRATEGIC AUDIT"):
                 }}
             }});
 
-            // 4. HR ENVELOPE
+            // 4. HR ENVELOPE + HRV
             new Chart(document.getElementById('hrChart'), {{
-                type: 'line',
                 data: {{
                     labels: od.dates,
                     datasets: [
                         {{
+                            type: 'line',
                             label: 'Max HR',
                             data: od.max_hr,
                             borderColor: colors.RED,
                             backgroundColor: 'rgba(231, 76, 96, 0.1)',
                             fill: true,
-                            tension: 0.3
+                            tension: 0.3,
+                            yAxisID: 'y'
                         }},
                         {{
+                            type: 'line',
                             label: 'Resting HR',
                             data: od.rhr,
                             borderColor: colors.YELLOW,
                             backgroundColor: 'rgba(241, 196, 15, 0.1)',
                             fill: true,
-                            tension: 0.3
+                            tension: 0.3,
+                            yAxisID: 'y'
+                        }},
+                        {{
+                            type: 'line',
+                            label: 'HRV (ms)',
+                            data: od.hrv,
+                            borderColor: colors.BLUE,
+                            borderWidth: 2,
+                            pointStyle: 'rectRot',
+                            pointRadius: 5,
+                            tension: 0.1,
+                            yAxisID: 'y1'
                         }}
                     ]
                 }},
@@ -361,7 +400,8 @@ def generate_tactical_html(charts_data, title="GARMIN STRATEGIC AUDIT"):
                     responsive: true,
                     maintainAspectRatio: false,
                     scales: {{
-                        y: {{ type: 'linear', title: {{ display: true, text: 'bpm' }} }}
+                        y: {{ type: 'linear', position: 'left', title: {{ display: true, text: 'HR (bpm)' }} }},
+                        y1: {{ type: 'linear', position: 'right', title: {{ display: true, text: 'HRV (ms)' }}, grid: {{ drawOnChartArea: false }} }}
                     }}
                 }}
             }});
@@ -385,6 +425,8 @@ def build_overlay_data(summary_data):
     
     sleep_h_map = {s["date"]: (s.get("sleep_time_seconds") or 0)/3600 for s in summary_data.get("sleep", [])}
     sleep_score_map = {s["date"]: s.get("sleep_score") or 0 for s in summary_data.get("sleep", [])}
+    hrv_map = {h["date"]: h.get("last_night_avg") or 0 for h in summary_data.get("hrv", [])}
+    hrv_status_map = {h["date"]: h.get("status") for h in summary_data.get("hrv", [])}
     
     act_cal_map = {}
     act_dist_map = {}
@@ -393,16 +435,47 @@ def build_overlay_data(summary_data):
         act_cal_map[d] = act_cal_map.get(d, 0) + (act.get("calories") or 0)
         act_dist_map[d] = act_dist_map.get(d, 0) + (act.get("distance_meters") or 0) / 1000
     
+    # Calculate daily Readiness proxy & Precise Dissipation
+    readiness_list = []
+    weighted_dissipation_map = {}
+    
+    for d in dates:
+        # Raw durations in seconds
+        stress_entry = next((s for s in summary_data.get("stress", []) if s["date"] == d), {})
+        high_sec = stress_entry.get("high_stress_duration") or 0
+        med_sec = stress_entry.get("medium_stress_duration") or 0
+        
+        # Weighted Dissipation (Mentat Intelligence Standard)
+        weighted_h = (high_sec + (med_sec * 0.5)) / 3600
+        weighted_dissipation_map[d] = round(weighted_h, 1)
+        
+        ss = sleep_score_map.get(d, 0)
+        bb = bb_map.get(d, 0)
+        hrv_stat = hrv_status_map.get(d, "BALANCED")
+        
+        # Base Score (Weighted Sleep + Battery)
+        score = (ss * 0.4) + (bb * 0.4)
+        # HRV Bonus
+        if hrv_stat == "BALANCED": score += 20
+        elif hrv_stat == "UNBALANCED": score += 5
+        # Weighted Dissipation Penalty
+        score -= (weighted_h * 4)
+        
+        readiness_list.append(round(max(0, min(100, score)), 1))
+
     return {
         "dates": dates,
-        "stress_h": [stress_map.get(d, 0) for d in dates],
+        "stress_h": [stress_map.get(d, 0) for d in dates], # Visual bars (total)
         "bb_peak": [bb_map.get(d, 0) for d in dates],
         "rhr": [rhr_map.get(d, 0) for d in dates],
         "max_hr": [max_hr_map.get(d, 0) for d in dates],
         "sleep_h": [sleep_h_map.get(d, 0) for d in dates],
         "sleep_score": [sleep_score_map.get(d, 0) for d in dates],
+        "hrv": [hrv_map.get(d, 0) for d in dates],
         "calories": [act_cal_map.get(d, 0) for d in dates],
-        "distance": [act_dist_map.get(d, 0) for d in dates]
+        "distance": [act_dist_map.get(d, 0) for d in dates],
+        "readiness": readiness_list,
+        "weighted_dissipation": [weighted_dissipation_map.get(d, 0) for d in dates]
     }
 
 def build_heatmap_data(summary_data):
