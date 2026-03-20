@@ -44,14 +44,20 @@ It's OK to briefly explain terms if you're in doubt, and feel free to clarify te
 
 ## Creating a skill
 
-### Capture Intent
+### Capture Intent & ADK Pattern Diagnosis
 
 Start by understanding the user's intent. The current conversation might already contain a workflow the user wants to capture (e.g., they say "turn this into a skill"). If so, extract answers from the conversation history first — the tools used, the sequence of steps, corrections the user made, input/output formats observed. The user may need to fill the gaps, and should confirm before proceeding to the next step.
 
-1. What should this skill enable Claude to do?
+1. What should this skill enable the AI to do?
 2. When should this skill trigger? (what user phrases/contexts)
-3. What's the expected output format?
-4. Should we set up test cases to verify the skill works? Skills with objectively verifiable outputs (file transforms, data extraction, code generation, fixed workflow steps) benefit from test cases. Skills with subjective outputs (writing style, art) often don't need them. Suggest the appropriate default based on the skill type, but let the user decide.
+3. **[MANDATORY] ADK Pattern Diagnosis**: Ask the user or deduce from context which of the following 5 Google ADK patterns apply. A single skill may use multiple patterns:
+   - **[Tool Wrapper]**: Does it need to load specific API knowledge, external tools, or non-public framework docs on demand? (Compensates for knowledge latency).
+   - **[Generator]**: Does it have a strict, non-negotiable output format or MSL Schema? (Compensates for creative drift/hallucinations).
+   - **[Pipeline]**: Must the steps be executed in a strict, unskippable order with diamond gates? (Compensates for the AI's tendency to skip steps).
+   - **[Inversion]**: Must the AI collect all necessary parameters/context *before* taking any action? (Compensates for acting on incomplete info).
+   - **[Reviewer]**: Is this a high-stakes task requiring the AI to switch to a 'critic' persona and verify its own output before finalizing? (Compensates for confirmation bias).
+4. What's the expected output format?
+5. Should we set up test cases to verify the skill works? Skills with objectively verifiable outputs (file transforms, data extraction, code generation, fixed workflow steps) benefit from test cases. Skills with subjective outputs (writing style, art) often don't need them. Suggest the appropriate default based on the skill type, but let the user decide.
 
 ### Interview and Research
 
@@ -115,6 +121,13 @@ This goes without saying, but skills must not contain malware, exploit code, or 
 #### Writing Patterns
 
 Prefer using the imperative form in instructions.
+
+**ADK Structural Assembly (Google 5-Patterns)**
+If the diagnosis determined specific ADK patterns apply, weave them into the skill's markdown structure explicitly.
+- **Inversion (First)**: If required, put this at the very top. e.g., `Before taking any action or writing code, you MUST ask the user for X, Y, and Z. Wait for their response.`
+- **Pipeline (Middle)**: Use explicit phases. e.g., `Phase 1: Do X. -> Phase 2: Show user and wait for approval. -> Phase 3: Do Y.`
+- **Generator (Output)**: Enforce the structure. e.g., `You must use the exact MSL Schema provided below. Do not add conversational filler.`
+- **Reviewer (Last)**: Add a self-audit step at the end. e.g., `Phase 4 (Review): Before presenting the final result, read your output and verify it against rule X.`
 
 **Defining output formats** - You can do it like this:
 ```markdown
@@ -438,6 +451,32 @@ Once you have enough evidence, propose a targeted "Patch" (Amendment) rather tha
 - Propose the patch to the user with a clear rationale based on the audit evidence.
 - After approval, apply the change to the `SKILL.md`.
 - **Mandatory**: After an amendment, you MUST run at least 2-3 test cases from the audit logs (the ones that previously failed) to verify the fix.
+
+---
+
+## Autoresearch 协议子模块 (Quantitative Iterative Optimization)
+
+当触发“运行技能评测”、“优化既有指令”或系统陷入“同质化微调 (Dead Loop)”时，强制挂载此 Autoresearch 物理硬锁协议。摒弃主观定性评价，执行基于二元评估 (Binary Evals) 的靶向突变引擎。
+
+### 核心准则 (Core Principles)
+- **Binary Evals (二元评估)**：摒弃 1-10 分的模糊打分，强制使用绝对的 Yes/No 物理校验作为评分标尺。
+- **Establish Baseline (确立基线)**：在未测算当前成功率前，**绝对禁止**修改任何代码。
+- **Single Mutation (单点突变)**：每次迭代仅允许修改**一个**变量（如增加一条防呆指令或修改一个例子），并进行多轮测试验证效果。
+
+### 执行 OODA 闭环 (The Execution Loop)
+1. **Observe (提取用例与标准)**:
+   - 提取或要求用户提供 **3 个异构的测试输入**（覆盖不同场景/Edge Cases）。
+   - 定义 **3-5 个二元校验条件 (Eval Criteria)**（如：“是否包含 TCO 测算章节 [Yes/No]”、“是否使用了违禁词 [Yes/No]”）。
+2. **Orient (测算基线)**:
+   - 在不修改当前 Skill 的情况下，运行这 3 个测试输入（每组可运行 1-3 次）。
+   - 统计基准得分。若基准得分满分，**拒绝优化**。
+3. **Decide (提出突变假设)**:
+   - 基于失败用例，提出且仅提出**一个**针对性的改动假设（例如：添加具体的反向模式 Anti-pattern）。
+4. **Act (突变、复测与资产化)**:
+   - 修改 `SKILL.md` 并执行复测。计算新得分。
+   - **Discard (强制回滚)**：若通过率下降或不变，说明该突变增加了系统熵值，**强制撤销修改**。
+   - **Keep (固化与落盘)**：若通过率提升，保留修改。
+   - **资产化同步**：无论成功或失败，必须将本次突变记录（动机、修改内容、得分变化）写入 `MEMORY/skill_audit/mutation_log.md`（或对应的日志文件），并使用 `vector-lake/cli.py sync` 同步至逻辑湖，形成跨技能的认知复利。
 
 ---
 

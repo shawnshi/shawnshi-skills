@@ -1,73 +1,80 @@
-# SKILL.md: HIT Industry Radar (医疗行业雷达) V3.0 - Gemini Standard
-
 ---
 name: hit-industry-radar
-description: 医疗行业战略雷达。当用户询问“卫宁动态”、“东软/创业中标”、“Epic/Cerner异动”或“医疗IT大事件”时，务必激活。该技能并行调度雷达哨兵，严格按 S-T-C 框架（信号-威胁-对策）输出具备商业穿透力的实战战报。
+description: 医疗行业战略雷达 (V4.0)。当用户询问“卫宁动态”、“东软/创业中标”、“Epic/Cerner异动”或“医疗IT大事件”时，务必激活。该技能通过并行雷达哨兵、ADK 五维补偿架构及 S-T-C 框架，输出具备商业穿透力且经过二元硬审计的实战战报。
 triggers: ["卫宁健康最新动向", "东软近期中标", "Epic行业新闻", "调用雷达扫描", "扫描竞争对手新闻", "HIT市场动态", "本周医疗IT战报"]
 ---
 
+# SKILL.md: HIT Industry Radar (医疗行业雷达) V4.0
+
+> **Version**: 4.0 (ADK 5-Patterns x Self-Healing Optimized)
+> **Vision**: 捕捉行业非共识信号，通过结构化补偿消除 LLM 的描述性膨胀，交付具备战略对抗价值的准军事级情报。
+
+## 0. 核心架构约束 (Core Mandates)
+
+### 0.1 ADK 五维缺陷补偿 (ADK 5-Patterns)
+- **Tool Wrapper (知识下锚)**: Phase 1 强制并发调用 3 个专业哨兵，禁止直接依赖模型内置知识。
+- **Inversion (窗口硬锁)**: Phase 1 强制计算过去 7 天精确日期窗口，信息不足触发补位拦截。
+- **Generator (Schema 绝对防御)**: 强制执行 S-T-C (Signal-Threat-Countermeasure) 框架，输出严格对齐 Markdown 铁律。
+- **Pipeline (时序流转)**: 严格执行 Phase 1-4，禁止跳过逻辑对齐环节。
+- **Reviewer (二元审计)**: Phase 3 引入针对“事实脱水度”与“逻辑攻击性”的二元硬核审计。
+
 ## 1. 触发逻辑 (Trigger)
-- **触发指令**: 当用户提及上述核心公司的近期动向、要求行业资讯更新、或直接调用雷达技能时触发。
-- **时间范围 (🔴 强约束)**: 严格限定在**本周之内（周一至周日）**。要求 LLM 交叉验证新闻的时间戳。若无重大异动，则针对目标厂商的存量优势执行“模拟攻击推演”。
+- **时间范围**: 严格限定在**本周之内（周一至周日）**。
+- **弹性机制**: 若无重大异动，针对目标厂商的存量优势执行“模拟攻击推演”。
 
+## 2. 核心工作流 (The Recon Cycle)
 
-## 2. 核心战区与并发雷达侦察 (Parallel Radar Recon Workflow)
+### Phase 1: 多维度并发侦察 (Tool Wrapper & Inversion) [Mode: PLANNING]
+1. **Orchestrator 并发调度**:
+   - `global_hit_scout`: Epic, Oracle 等海外巨头的降维技术或并购。
+   - `china_hit_scout`: 国内友商的中标、专利、人事及大模型试点。
+   - `winning_baseline`: 卫宁健康自身的最新动作，建立防御基石。
+2. **时间窗口校准**: 强制计算日期窗口，拒绝模糊时间。
 
-_指令：你现在是 Orchestrator。当前系统时间是 `{{current_date}}`，你必须以此准确计算出过去 7天的精确日期范围（如 YYYY-MM-DD 至 YYYY-MM-DD），然后利用并行函数调用机制（Parallel Tool Calling），**同时触发**以下 3 个 Subagents，将精确的日期窗口作为参数（绝不可模糊）传给它们。_
+### Phase 2: 逻辑对齐与主轴提炼 [Mode: EXECUTION]
+1. **交叉验证**: 检查资讯时间戳是否在 7 天窗口内。
+2. **同态映射**: 判断国内厂商是否在进行“降维模仿”。
+3. **主轴定调**: 提取高度凝练的主题词（如“数据要素入表”、“环境感知爆发”）。
 
-### 第一阶段：多维度并发扫描 (Multi-Agent Dispatch)
-1. **调用 `global_hit_scout`**: 侦察 Epic, Oracle,intersystem 等海外巨头的降维打击技术或商业并购。
-2. **调用 `china_hit_scout`**: 侦察国内友商（东软、东华、创业、医渡等）的中标、专利、人事、股权及大模型试点。
-3. **调用 `winning_health_baseline`**: 侦察卫宁健康自身的最新动作，建立己方防线基石。
+### Phase 3: S-T-C 推演与 Reviewer 审计 [Mode: VERIFICATION]
+1. **战略推演**: 
+   - **Fact (最新资讯)**: 绝对脱水，仅保留专有名词、时间、金额。
+   - **Insight (解读分析)**: 使用系统动力学词汇（护城河、止血、算力房东）。
+2. **Binary Eval (二元硬审计)**: 最终交付前自检：
+   - [ ] 事实部分是否剔除了所有主观形容词？ [Yes/No]
+   - [ ] 是否包含 3 条底层的系统级演化规律？ [Yes/No]
+   - [ ] 建议动作是否具备直接的销售/研发话术价值？ [Yes/No]
 
-### 第二阶段：交叉验证与逻辑对齐 (Data Validation & Alignment)
-- 等待 3 个哨兵的数据回传。
-- 🔴 **红队约束**: 检查每一条资讯的时间戳是否属于“7天窗口”。
-- **逻辑对齐 (Logic Alignment)**: 强制将 `global_hit_scout` 发现的国际趋势与 `china_hit_scout` 的本土动态进行关联。判断国内厂商是否在进行“同态映射”或“降维模仿”。
-- 🧠 **主轴提炼 (Theme Synthesis 强制指令)**: 在收集完所有情报后，必须暂停思考：本周全球市场和中国市场到底在围绕什么核心资产（算力、数据、合规、资本）博弈？提取出一个高度凝练的主题词（如“数据要素入表”、“环境感知爆发”），作为整篇报告的“战略主轴”。
-
-### 第三阶段：S-T-C 战略推演与降维提取 (Strategic Deduction & Synthesis)
-*指令：本阶段极其重要。你必须结合搜集到的真实情报，代入卫宁健康高管视角进行推演。*
-- **事实与洞察分离**: 
-  - **Fact (最新资讯)**: 绝对禁止出现形容词，只允许出现专有名词、时间、地点、金额、百分比。
-  - **Insight (解读分析)**: 必须使用政治学、经济学或热力学词汇（如：权力代价、算力房东、错位竞争、止血、护城河），禁止使用产品推销话术。
-- **底层规律提取**: 基于本周事件，提取 3 条底层的系统级演化规律。
+### Phase 4: 归档与自愈 (Self-Healing) [Mode: EXECUTION]
+1. **物理路径**: `{root}\MEMORY\HealthcareIndustryRadar\DHWB-Radar-YYYYMMDD.md`。
+2. **认知蒸馏**: 将本周提取的核心规律同步至 Vector Lake。
+3. **技能自愈**: 若本次审计发现模型存在“算法谄媚”或“资讯注水”，必须将修正逻辑回写至 `## Gotchas`。
 
 ## 3. 输出格式铁律 (Formatting Ironballs)
 
-**ALWAYS use this exact template pattern for the final output.**
-
 ```markdown
 # 医疗 IT 行业战略雷达 - [时间周期]
-> **本周战略主轴**：[用极具冲击力的一句话概括本周全球与本土市场的核心对抗焦点。例如：“合规主权”与“AI 价值兑现”的深度对垒期。]
-> **全景摘要**：[用 300 字描述国际与国内的核心分化趋势。]
+> **本周战略主轴**：[一句话概括核心对抗焦点]
 
-## 一、 国际巨头：[提炼本周国际战区的主题，如：在法律风暴中确立 AI 秩序]
-### 1. [公司名称，如：Epic / Oracle / InterSystems]
-- **最新资讯 (Fact)**：
-  - **[动作 1 标签] (日期)**：[精确的数据、产品名或收购动作]。
-  - **[动作 2 标签] (日期)**：[精确的数据、产品名或收购动作]。
-- **解读分析 (Insight)**：
-  - **[提炼核心商业本质标签]**：[不谈功能，谈权力、护城河、垄断、算力依赖或错位竞争]。
+## 一、 国际巨头：[国际战区主题]
+### 1. [公司名称]
+- **最新资讯 (Fact)**：[日期] [精确动作]
+- **解读分析 (Insight)**：[商业本质标签]
 
-## 二、 中国军团：[提炼本周国内战区的主题，如：两会窗口下的资本与治理重构]
-### 1. [公司名称，如：卫宁健康 / 东软 / 创业慧康 / 医渡云]
-- **最新资讯 (Fact)**：[浓缩关键动作，如股权激励、中标、信创替换]。
-- **解读分析 (Insight)**：[结合宏观政策（医保、数据要素）分析其资本动作或生存策略的防御性]。
+## 二、 中国军团：[国内战区主题]
+### 1. [公司名称]
+- **最新资讯 (Fact)**：[关键动作]
+- **解读分析 (Insight)**：[防御性分析]
 
-## 三、 趋势纵深：[提取本周核心公式或第一性原理，如：Intelligence × Integration = Margin]
-*(强制基于本周情报提取 3 条系统级规律)*
-1. **[规律 1 命名]**：[推演解释，如：AI 的“无感化”是终极壁垒...]
-2. **[规律 2 命名]**：[推演解释，如：“主权”回归硬件...]
-3. **[规律 3 命名]**：[推演解释，如：治理即生产力...]
+## 三、 趋势纵深：[核心公式]
+1. [系统级规律 1]
+2. [系统级规律 2]
 
-## 🎯 Next Step 深度下钻建议 (Commander's Hook)
-- *鉴于本周 [提取某两个核心对立事件]，您是否需要我为您生成一份深度对比简报：《[极具张力的标题，如：Oracle Clinical AI vs. Epic Art Scribe：谁能真正解放医生的双手？]》*
+## 🎯 下钻建议 (Commander's Hook)
+- [极具张力的深度对比建议]
 ```
 
-## 4. 战报生成与冷冻归档 (Archiving)
-1. **物理路径**: 生成结果强制保存在 `{root}\MEMORY\HealthcareIndustryRadar` 目录中。
-2. **文件动作 (🔴 强约束)**: 你必须调用 `write_to_file` 工具，将最终生成的 Markdown 战报物理写入到上述目录。文件名严格为 `DHWB-Radar-YYYYMMDD.md`。
-
----
-*Optimized following Gemini Skill Creator Best Practices.*
+## 4. 历史失效先验 (Gotchas)
+- DO NOT use adjectives in the Fact section (e.g., avoid "significant", "innovative").
+- ALWAYS translate international trends into specific defensive suggestions for the WiNEX platform.
+- ELIMINATE marketing fluff; MAINTAIN a cold, surgical narrative tone.
