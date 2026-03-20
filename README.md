@@ -78,7 +78,7 @@ gemini skills install https://github.com/shawnshi/shawnshi-skills.git --path hit
 | **[personal-diary-auditing](personal-diary-auditing/)**     | **认知审计与日志专家**。当复盘日志、提取盲点、评估交互或需年度报告时激活，强制执行物理数据锁。    |
 | **[personal-health-analysis](personal-health-analysis/)**   | **首席医疗官 (CMO) 引擎**。当提到心率、睡眠、压力等生理指标时务必激活，管理决策准备度与健康风险。 |
 | **[personal-monthly-insights](personal-monthly-insights/)** | **战略元分析解码器**。当抱怨效率低、协作摩擦或要求交互报告时激活，提取负熵规律并同步记忆。        |
-| **[musicbee-dj](musicbee-dj/)**                             | **音乐极客控制协议**。当想听音乐、描述某种氛围或流派时激活，通过 JIT 歌单算法精准控制本地进程。   |
+| **[personal-musicbee-dj](personal-musicbee-dj/)**           | **音乐极客控制协议**。当想听音乐、描述某种氛围或流派时激活，通过 JIT 歌单算法精准控制本地进程。   |
 | **[12306-train-query](12306-train-query/)**                 | **12306 火车票专家**。当提到查火车票、余票信息或提供出发目的地时激活，提供秒级精准车次响应。      |
 | **[ctrip-flight-search](ctrip-flight-search/)**             | **携程航班侦察兵**。当想买机票、查航班看价格时调用，通过自动化 SOP 获取实时时刻表与运价。         |
 | **[dianping-info-query](dianping-info-query/)**             | **大众点评深度查询器**。当询问餐厅、评分、商家详情或查找本地服务时激活，提供真实商户画像。        |

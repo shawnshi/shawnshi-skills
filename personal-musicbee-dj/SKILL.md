@@ -41,7 +41,7 @@ triggers: ["播放音乐", "播放 [流派/场景/歌单] 歌单", "我想听点
 3. **底层降维执行**: 组织完备后，使用 `python` 投递至命令行：
 
 ```bash
-python "c:\Users\shich\.gemini\skills\musicbee-dj\src\cli.py" --type <type> --value "<value>" --intensity <intensity>
+python "c:\Users\shich\.gemini\skills\personal-musicbee-dj\src\cli.py" --type <type> --value "<value>" --intensity <intensity>
 ```
 
 **⚠️ 警告 (Failsafe)**: 
