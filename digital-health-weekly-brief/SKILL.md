@@ -2,7 +2,7 @@
 
 ---
 name: digital-health-weekly-brief
-description: 医疗数字化战区周报 Orchestrator。采用 V3.0 Agentic Deterministic Workflow，结合 Evidence-Mesh 证据落盘与 Logic-Adversary 逻辑防腐机制。负责并行调度子侦察兵，执行 S-I-A 战略推演，并输出高管视角的抗幻觉研报。
+description: 医疗行业战区研报中枢。当用户询问“本周麦肯锡研报”、“数字医疗白皮书”或需要“生成周报”时，务必激活。该技能通过 S-I-A 战略推演，将噪音降维为高管视角的抗幻觉决策资产。
 triggers: ["生成数字健康周报", "检索医疗行业报告", "本周麦肯锡研报", "Digital Health Weekly Brief", "最新数字医疗白皮书", "扫描本周智库发文"]
 ---
 

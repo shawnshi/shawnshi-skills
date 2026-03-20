@@ -1,92 +1,63 @@
 {
   "top_10": [
     {
-      "url": "https://seangoedecke.com/giving-llms-a-personality/",
-      "title_zh": "为 LLM 赋予人格：一种优良的工程实践",
-      "summary_zh": "事实：Sean Goedecke 提出，与其追求 AI 的“非人化”或纯中性化，不如有意识地为其设计“人格”作为工程约束。联结：这与 `memory.md` 中 Mentat 系统的“指挥官”人格设计高度契合。人格并非虚饰，而是定义 Agent 行为边界、沟通风格和决策权重的“软指令集”。推演：在医疗场景下，定义明确的人格（如“严谨的临床审计员”）比端水式的通用模型更能有效防御自动化偏见，通过预设的认知摩擦确保医疗安全。",
-      "intel_grade": "L3",
-      "reason": "启发了如何通过“人格化指令”而非复杂的逻辑流来管理 Agent 的行为确定性。"
-    },
-    {
-      "url": "https://simonwillison.net/guides/agentic-engineering-patterns/better-code/#atom-everything",
-      "title_zh": "Agentic 工程模式：通过原子化追求更高代码质量",
-      "summary_zh": "事实：Simon Willison 探讨了智能体工程模式，核心在于“万物原子化”（Atom Everything）。联结：这与您的“MSL 原子化 Skill”战略完全同构。代码是液态的，但原子化的 Skill 是固态的逻辑资产。推演：这意味着未来的 HIS 开发将不再是编写庞大的单体逻辑，而是编排无数细粒度的、可审计的原子动作。这为 Evidence-Mesh 提供了物理上的审计锚点，使逻辑资产化成为可落地的技术路径。",
+      "url": "https://arxiv.org/abs/2603.04722v2",
+      "date": "2026-03-20",
+      "title_zh": "模型医学：理解、诊断与治疗 AI 模型的临床框架",
+      "summary_zh": "事实：arXiv 发布《Model Medicine》框架，将 AI 模型视为具备内部结构、遗传特征（权重）与可观察症状的“生物有机体”，并定义了包括模型解剖学、模型病理学在内的 15 个子学科。联结：该框架与卫宁健康 MSL 战略中的“临床推理审计”高度同构，验证了通过 Evidence-Mesh 对模型执行“物理围栏”式监控的技术可行性。推演：AI 开发将从“工程黑盒调试”向“临床诊断与干预”范式转移。卫宁应建立针对医疗 AI 的“模型重症监护室 (M-ICU)”，将算法偏离视为临床病灶进行闭环治理。",
       "intel_grade": "L4",
-      "reason": "为 MSL 架构下的原子化 Skill 交付提供了行业级的理论支撑和实施模式。"
-    },
-    {
-      "url": "http://antirez.com/news/160",
-      "title_zh": "基于 Claude Code 的“洁净室”Z80 模拟器重构实验",
-      "summary_zh": "事实：Antirez 分享了利用 Claude 4.6 在“洁净室（Clean Room）”环境下重构复杂系统（Z80 模拟器）的成功案例。联结：验证了 `coding.md` 中提出的“同态重写”与“洁净室重构”技术的可行性。推演：这证明了在医疗信息化领域，我们可以利用高性能 Agent 将旧有臃肿的 legacy 逻辑快速萃取并重写为符合 MSL 标准的现代化资产，而无需依赖原有腐烂的代码库，实现非侵入式的“逻辑脱壳”。",
-      "intel_grade": "L4",
-      "reason": "证实了“液态重构”在处理复杂旧系统时的实战价值，降低了 MSL 迁移的技术风险。"
-    },
-    {
-      "url": "https://lucumr.pocoo.org/2026/2/9/a-language-for-agents/",
-      "title_zh": "面向智能体的编程语言初探",
-      "summary_zh": "事实：Armin Ronacher 思考未来编程语言将如何适应“智能体工程（Agentic Engineering）”。联结：这直接指向了 MSL 作为“医疗语义层”的本质——它不仅是 API 集合，更是一种能够被 Agent 语义对齐的“指令语言”。推演：如果通用的编程语言开始向 Agent 进化，那么 WiNEX 必须加快定义自己的 MSL 标准（如基于 GraphQL 的动作描述），以防止在未来的“代理式经济”中失去语义定义权。",
-      "intel_grade": "L3",
-      "reason": "警示了语义层标准的竞争已经从 API 升级到了“语言级”主权。"
-    },
-    {
-      "url": "https://anildash.com/2026/01/27/codeless-ecosystem/",
-      "title_zh": "无代码生态：超越“感性编码”的 Agent 编排",
-      "summary_zh": "事实：Anil Dash 提出了一种“无代码生态（Codeless Ecosystem）”，强调通过编排几十个 AI 机器人来构建软件。联结：这与您的 ACE（智能体协调引擎）愿景高度一致，将业务流定义为推理机的下游动作。推演：未来的 HIS 维护者将从“写代码的人”转变为“逻辑编排者”与“审计员”。系统的竞争力在于对“逻辑湖”中决策修正流的掌控力，而非对特定代码实现的拥有权。",
-      "intel_grade": "L3",
-      "reason": "验证了 ACE 架构作为未来复杂软件交付模式的前瞻性。"
-    },
-    {
-      "url": "https://lucumr.pocoo.org/2026/3/5/theseus/ ",
-      "title_zh": "AI 与塞浦路斯之船：代码实现的液态化风险",
-      "summary_zh": "事实：AI 在重构库时倾向于选择完全不同的实现方式。联结：对应 `memory.md` 中的“代码液态化”公理。推演：随着 AI 不断重写系统，代码将变得完全不可预测。唯一的定标点是“业务语义（MSL）”。如果不能牢牢控制 MSL，系统的业务逻辑将随时间流逝而发生不可察觉的偏移。必须强化 Evidence-Mesh 对语义守恒的持续校验。",
-      "intel_grade": "L4",
-      "reason": "提供了“语义守恒”必要性的哲学与工程双重预警。"
-    },
-    {
-      "url": "https://pluralistic.net/2026/03/10/ice-tech/",
-      "title_zh": "广告技术即监控技术：对数字主权的侵蚀",
-      "summary_zh": "事实：Cory Doctorow 揭示了广告技术（Ad-tech）如何演变为全方位的监控系统。联结：反向衬托了“算力主权（Compute Sovereignty）”的必要性。推演：在医疗隐私高度敏感的领域，任何基于云端黑盒的 AI 逻辑都潜藏着“监控化”的风险。这为推广本地算力底座（如 Mac Mini 物理领地）提供了极强的“信任溢价”说服力，是商业战略中的核心防御策略。",
-      "intel_grade": "L2",
-      "reason": "为“本地算力主权”提供了政治与伦理层面的防御理由。"
-    },
-    {
-      "url": "https://arxiv.org/abs/2603.08321v1",
-      "title_zh": "CORE-Acu：结构化推理追踪与知识图谱安全校验",
-      "summary_zh": "事实：该研究提出利用结构化推理追踪（Reasoning Traces）和知识图谱对针灸临床决策进行安全校验。联结：这是 Evidence-Mesh 在医疗细分领域的具体实践——用“可追踪性”替代“可解释性”。推演：通过将 Agent 的推理过程显式映射到预定义的知识图谱（或 MSL 语义库），可以实现自动化的临床逻辑审计。这验证了“非对称审计网”在规避医疗幻觉方面的技术路径优势。",
-      "intel_grade": "L3",
-      "reason": "提供了 Evidence-Mesh 在临床安全校验领域的最新科研背书。"
-    },
-    {
-      "url": "https://github.com/openclaw/openclaw",
-      "title_zh": "OpenClaw：个人 AI 助理的本地化实现",
-      "summary_zh": "事实：OpenClaw 提出了一个跨平台、完全本地化的 AI 助理框架。联结：与您的“本地逻辑工厂”和“算力主权”项目路径高度重合。推演：OpenClaw 的流行说明市场正在从“云端订阅”向“本地主权”迁徙。WiNEX 应该考虑将 MSL 适配此类开源标准（如 MCP），利用开源生态快速构建本地算力主权下的 Skill 仓库。",
-      "intel_grade": "L2",
-      "reason": "作为本地算力主权的潜在技术选型或生态伙伴值得关注。"
+      "reason": "将模型审计完全医学化，为医疗 AI 的合法性与安全性提供了标准化的临床操作规范，是 Evidence-Mesh 的理论终极态。"
     },
     {
       "url": "https://michael.stapelberg.ch/posts/2026-02-01-coding-agent-microvm-nix/",
-      "title_zh": "在 NixOS 上使用 MicroVM 运行编码智能体",
-      "summary_zh": "事实：研究如何在 NixOS 下利用微型虚拟机（MicroVM）隔离运行 AI 智能体。联结：对应 `memory.md` 中的“物理隔离防御”策略。推演：在医院环境中部署 ACE 时，必须采用这种“Sidecar”式的物理隔离技术。将敏感的推理逻辑封装在独立的 MicroVM 中，既能防御 Agent 的越权行为，也能确保逻辑资产的物理级安全，是 Evidence-Mesh 的物理层保障。",
+      "date": "2026-03-20",
+      "title_zh": "基于 NixOS/MicroVM 的 Coding Agent 隔离执行架构",
+      "summary_zh": "事实：开发者分享了利用 NixOS 的不可变特性与 microvm.nix 构建轻量级虚拟机，为 Coding Agent 提供隔离执行环境的实战方案。联结：直接命中卫宁战略 5.11/5.12 中的“算力主权物理化”与“热池微隔离 (Hot-Pool MicroVM)”概念。推演：这是医疗核心业务区部署 Agent 的唯一安全路径。通过将 Agent 权限锁定在毫秒级拉起的 MicroVM 中，可彻底规避模型“幻觉指令”对物理系统的非预期破坏。",
+      "intel_grade": "L4",
+      "reason": "提供了医疗场景下 Agent 部署的物理级安全底座，将概率性风险隔离在确定性的物理围栏内。"
+    },
+    {
+      "url": "http://antirez.com/news/160",
+      "date": "2026-03-20",
+      "title_zh": "洁净室模拟器：Claude Code 在高约束环境下的同态重写能力实验",
+      "summary_zh": "事实：Redis 作者 antirez 使用 Claude Code 在仅提供 Markdown 规格说明书（洁净室）的前提下，成功重写了 Z80/ZX 模拟器。联结：验证了“代码液态化”与“规格固态化”的演进。只要业务语义（MSL）足够精确，代码实现可以被 Agent 瞬间重构。推演：卫宁的资产核增点不在于 WiNEX 的千万行源码，而在于那份由临床专家签名的、无歧义的 MSL 规格说明书。源码已成为可丢弃的耗材。",
       "intel_grade": "L3",
-      "reason": "为 ACE 在医院物理环境下的安全落地提供了具体的架构方案。"
+      "reason": "揭示了“规格即资产”的残酷现实，迫使传统软件公司从源码崇拜转向语义治理。"
+    },
+    {
+      "url": "https://simonwillison.net/2026/Mar/19/openai-acquiring-astral/#atom-everything",
+      "date": "2026-03-20",
+      "title_zh": "OpenAI 收购 Astral：Python 生态基建的“AI 原生化”收口",
+      "summary_zh": "事实：OpenAI 收购了开发 uv, ruff 等高性能工具的 Astral 团队，意图将其整合进 Codex 体系。联结：Python 工具链正在经历从“松散社区驱动”向“AI 编译优化”的剧变。推演：未来的开发环境将不再是编辑器的辅助，而是具备“语义感知”的闭环工厂。卫宁需警惕闭源模型对开发标准（如 uv/ruff）的物理垄断，应加速建立基于本地算力的私有 Agent 编译器链条。",
+      "intel_grade": "L3",
+      "reason": "标志着 AI 对软件工程最底层工具链的全面接管，暗示了“万物原子化”时代的到来。"
+    },
+    {
+      "url": "https://buttondown.com/hillelwayne/archive/llms-are-bad-at-vibing-specifications/",
+      "date": "2026-03-20",
+      "title_zh": "形式化验证告警：LLM 无法通过“氛围感”处理精确规格",
+      "summary_zh": "事实：形式化方法专家 Hillel Wayne 指出，LLM 在编写 TLA+ 等精确规格时表现极差，往往只抓住了“氛围”而丢失了逻辑约束。联结：为 MSL 2.0 敲响警钟，依赖纯自然语言生成的语义层是极度脆弱的。推演：必须引入“硬核逻辑编译器”对 MSL 进行机器校验。语义主权不能建立在 LLM 的概率性预测之上，必须通过符号化的硬约束（Hard-Lock）进行固化。",
+      "intel_grade": "L3",
+      "reason": "从对抗角度指出了语义层建设的致命盲区：防止 MSL 沦为另一堆“液态幻觉”。"
+    },
+    {
+      "url": "https://lucumr.pocoo.org/2026/3/5/theseus/",
+      "date": "2026-03-20",
+      "title_zh": "AI 与忒修斯之船：代码廉价化引发的重构风暴",
+      "summary_zh": "事实：Armin Ronacher 讨论了 AI 导致的代码重构成本剧降，使得基于测试套件的跨语言同态重写成为常态。联结：支撑了卫宁“Sidecar Audit (侧车审计)”模式的必然性。推演：软件的物理寿命将缩短至“会话级别”。我们不再维护软件，我们只维护测试套件（证据网）与业务语义。任何无法被 Evidence-Mesh 覆盖的旧代码都将被突变重构风暴吞噬。",
+      "intel_grade": "L3",
+      "reason": "重新定义了软件的可持续性：测试套件才是软件真正的“灵魂灵魂”。"
     }
   ],
   "translations": {
-    "https://lucumr.pocoo.org/2026/2/9/a-language-for-agents/": {
-      "title_zh": "面向智能体的编程语言",
-      "desc_zh": "探讨随着智能体工程增长，编程语言应如何演进以更好地与 AI 对齐。"
-    },
-    "https://anildash.com/2026/01/27/codeless-ecosystem/": {
-      "title_zh": "无代码生态系统",
-      "desc_zh": "描述了一种通过编排大量 AI 机器人而非直接编写代码来构建软件的新范式。"
-    },
-    "https://github.com/alibaba/page-agent": {
-      "title_zh": "Page Agent",
-      "desc_zh": "阿里开源的 JavaScript 网页 GUI 智能体，支持通过自然语言控制网页界面。"
+    "https://seangoedecke.com/giving-llms-a-personality/": {
+      "title_zh": "为 LLM 注入人格是良好的工程实践",
+      "desc_zh": "分析了为什么给模型设定人格而非仅仅将其视为工具，是提升模型指令遵循度与可操控性的关键策略。",
+      "date": "2026-03-20"
     }
   },
-  "insights": "1. **代码液态化速度加快**：AI 在重构过程中会打破原有实现习惯（塞浦路斯之船），这使得“语义守恒”成为系统演化的唯一确定性锚点。\n2. **MSL 升级为“智能体语言”**：语义层不再仅仅是 API 定义，正向着一种让 Agent 易于理解并执行的结构化编程语言演进。\n3. **本地算力主权物理化**：从 OpenClaw 到 NixOS MicroVM，行业正通过物理隔离和本地部署防御云端监控与逻辑漂移，这为卫宁的本地化交付战略提供了强力背书。",
-  "punchline": "逻辑主权胜过代码所有权：在 Agent 时代，控制了语义定义权（MSL）就控制了系统的终极演化权。",
-  "digest": "本次情报分析显示，智能体工程正从“玩具级对话”迈向“生产级编排”。Simon Willison 提出的原子化模式与您的 MSL 原子化 Skill 不谋而合，而 Antirez 的洁净室实验则证明了逻辑萃取的可行性。值得警惕的是，代码实现正在不可避免地液态化，唯一的防御手段是建立极其稳固的语义层与非对称审计网（Evidence-Mesh）。同时，本地算力主权的技术栈正在迅速成熟，为 WiNEX 的物理级隐私策略提供了即插即用的组件。",
-  "market": "* **原子化编排**：Skill Store 将成为代理经济的核心分发点。\n* **逻辑审计溢价**：具备 Evidence-Mesh 能力的系统将获得显著的信任溢价。\n* **MCP 协议红利**：遵循统一的智能体交互协议（如 MCP）将成为抢占生态位元的关键。"
+  "insights": "1. 软件资产逻辑发生“相变”：源码已彻底液态化，资产中心由“实现层”向“规格层 (MSL)”与“审计层 (Evidence-Mesh)”发生物理迁移。\n2. Agent 部署进入“物理隔离时代”：基于 NixOS/MicroVM 的热加载沙箱成为医疗高风险区部署智能体的物理底座，标志着“算力主权”的物理落地。\n3. “模型医学 (Model Medicine)”范式确立：对 AI 的管理从代码审计转向临床诊断，为 Evidence-Mesh 提供了完整的学科方法论支持。",
+  "punchline": "代码已死，语义永生；算力物理化与逻辑固态化正在构筑医疗 AI 的双层防御围栏。",
+  "digest": "今日情报矩阵显示，软件工程正在经历“忒修斯之船”式的彻底重构。antirez 的洁净室实验与 OpenAI 对 Astral 的收购共同指向一个现实：代码生成已成为低成本的即时消费品。与此同时，《Model Medicine》框架的提出将 AI 治理推向了临床诊断的高度，为卫宁健康的 Evidence-Mesh 战略提供了坚实的理论支撑。Winning Health (300253.SZ) 虽在二级市场处于 RSI 19.2 的超卖区间，反映了行业转型的阵痛，但技术侧“热池微隔离”架构的成熟，正为下一阶段 Agentic HIS 的安全落地铺平物理路径。",
+  "market": "* 卫宁健康 (300253.SZ)：股价 8.73 (-3.2%), RSI 19.2 (极度超卖)，基本面承压但具备技术反弹信号。\n* 行业动向：OpenAI 物理级收割 Python 基建团队，提示工具链垄断风险，国产医疗 IT 需加速算力主权物理化落地。"
 }

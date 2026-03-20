@@ -1,6 +1,6 @@
 ---
 name: monthly-personal-insights
-description: 提取并生成周期性战略元分析报告，解码过去一段时间的协作摩擦基因，并自动同步洞察至记忆系统。Make sure to use this skill whenever the user explicitly asks for "出具系统交互报告", "分析我的指令依赖度", "本周复盘", "generate monthly insight report", "analyze my AI collaboration patterns", or more implicitly complains about "效率很低", "感觉协作有摩擦", "指令依赖度", or anything related to auditing recent chats and interaction metadata, EVEN IF they don't explicitly say the word report or audit.
+description: 战略元分析与摩擦基因解码器。当用户抱怨“效率低”、“感觉协作有摩擦”、“指令依赖度高”，或明确要求“出具系统交互报告”时，务必激活。该技能通过审计历史对话与元数据，提取人机协作的负熵规律，并同步洞察至记忆系统。
 ---
 
 # monthly-personal-insights (V8.0: The Agentic Workflow Edition)

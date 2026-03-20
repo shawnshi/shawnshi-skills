@@ -1,6 +1,6 @@
 ---
 name: presentation-architect
-description: 顶级战略演示文稿全栈架构师 (V9.1 - Narrative-Driven Edition)。专门针对 CTO 汇报、战略布道、方案咨询、范式转移等高价值场景。遵循 Mentat 语义主权协议，交付 100% 可编辑的原生逻辑资产。支持 Win32 编码自动防御。
+description: 战略级演示文稿架构师。当用户需要“制作战略 PPT”、“CTO 汇报布道”或“构建决策型方案”时，务必强制调用。该技能遵循 Mentat 语义主权协议，执行 Phase 1-4 硬阻塞流转，交付 100% 原生、具备逻辑深度的 PPT 资产。
 triggers: ["制作战略级PPT", "生成演示文稿蓝图", "构建决策型汇报", "设计高级咨询级幻灯片", "CTO技术布道", "架构转型汇报"]
 ---
 

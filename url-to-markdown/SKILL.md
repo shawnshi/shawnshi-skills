@@ -1,6 +1,6 @@
 ---
 name: url-to-markdown
-description: 抓取任何 URL（包括重度 JS 或登录隔离网页）并转换为干净的 markdown。直控 Chrome CDP 协议。
+description: 网页原质提取器。当用户提供 URL 链接并要求“总结网页”、“保存为 MD”或遇到“重度 JS 渲染页面”难以抓取时，务必调用。该技能直控 Chrome CDP 协议，强制清除网页噪音，交付极致干净的 Markdown 结构。
 triggers: ["将链接内容保存为MD格式", "清理该网页的干扰项转为MD"]
 ---
 

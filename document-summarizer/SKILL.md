@@ -1,7 +1,7 @@
 ---
 name: document-summarizer
-description: 批量总结 PDF/DOCX/PPTX/XLSX 文件，附带智能中文摘要和标签体系。
-triggers: ["智能提取文档摘要"]
+description: 医疗文档战略情报引擎。当用户上传或提及 PDF/DOCX/PPTX/XLSX 文件并要求“总结”、“提取要点”或“审计盲区”时，务必激活。该技能具备本体驱动的语义压缩能力，输出带有战略标签的精准摘要。
+triggers: ["智能提取文档摘要", "总结文档", "分析文件内容", "提取PDF核心要点"]
 ---
 
 # Document Summarizer (Medical Intelligence Edition)

@@ -1,7 +1,7 @@
 ---
 name: multi-agent-writer
-description: 顶级咨询级协作写作编排专家 (V9.1: 本地全自动化引擎)。融合金字塔原理、Ghost Deck 视觉逻辑、医疗行业注入以及去AI化清洗。增加底层硬阻塞机制。
-triggers: ["进行多方博弈创作"]
+description: 多代理协作写作编排中心。当需要“进行多方博弈创作”、“深度协作起草复杂文件”或“整合多代理洞察为统一文案”时，务必激活。该技能融合金字塔原理、Ghost Deck 逻辑与医疗行业背景，强制执行单步硬阻塞物理流转。
+triggers: ["进行多方博弈创作", "多代理协作起草", "整合多人观点写作"]
 ---
 
 # Multi-Agent Writer (V9.1: The Automated Strategic Engine)

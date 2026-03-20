@@ -2,9 +2,8 @@
 
 ---
 name: healthcare-industry-radar
-description: 用于检索全球及本土特定 HIT 行业巨头本周最新异动。主Agent将作为 Orchestrator，并发调度 3 个雷达哨兵 (global_hit_scout, china_hit_scout, winning_health_baseline) 扫描国际巨头、国内竞对及卫宁自身动态。汇总后，严格依据 `references/stc_framework.md` 输出自带 S-T-C (Signal-Threat-Countermeasure) 实战分析的商业战报。
-tools: [china_hit_scout, global_hit_scout, winning_health_baseline, write_to_file]
-triggers:["卫宁健康最新动向", "东软近期中标", "Epic行业新闻", "调用雷达扫描", "扫描竞争对手新闻", "HIT市场动态", "本周医疗IT战报"]
+description: 医疗行业战略雷达。当用户询问“卫宁动态”、“东软/创业中标”、“Epic/Cerner异动”或“医疗IT大事件”时，务必激活。该技能并行调度雷达哨兵，严格按 S-T-C 框架（信号-威胁-对策）输出具备商业穿透力的实战战报。
+triggers: ["卫宁健康最新动向", "东软近期中标", "Epic行业新闻", "调用雷达扫描", "扫描竞争对手新闻", "HIT市场动态", "本周医疗IT战报"]
 ---
 
 ## 1. 触发逻辑 (Trigger)

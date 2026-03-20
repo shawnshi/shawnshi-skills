@@ -1,6 +1,6 @@
 ---
 name: brainstorming
-description: "You MUST use this before any creative work - creating features, building components, adding functionality, or modifying behavior. Explores user intent, requirements and design before implementation."
+description: 顶尖创意与架构设计专家。在任何开发特性、构建组件、修改行为或创意写作前，必须强制调用。该技能通过结构化对话将模糊意图转化为具体的设计规范与验证方案，严禁未经头脑风暴直接执行复杂任务。
 ---
 
 # Brainstorming Ideas Into Designs

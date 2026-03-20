@@ -1,7 +1,7 @@
 ---
 name: musicbee-dj
-description: "智能控制 MusicBee 播放：支持按流派(Genre)、场景(Scene)或静态歌单(Playlist)动态组装播放列表并无缝切入"
-triggers: ["播放音乐", "播放 [流派/场景/歌单] 歌单", "我想听点...", "打开MusicBee", "放点歌",]
+description: 音乐极客控制协议。当用户想“听音乐”、“打开 MusicBee”、“放点歌”或描述“某种氛围/流派”时，务必激活。该技能通过 JIT 歌单算法与 XML 物理操纵，精准控制本地 MusicBee 进程，实现秒级氛围切换。
+triggers: ["播放音乐", "播放 [流派/场景/歌单] 歌单", "我想听点...", "打开MusicBee", "放点歌"]
 ---
 # MusicBee DJ (音乐极客控制协议)
 

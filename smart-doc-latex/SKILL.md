@@ -1,6 +1,6 @@
 ---
 name: smart-doc-latex
-description: 智能文档转 LaTeX 引擎。可将 .docx/.md/.txt 转换为特定样式风格的专业 PDF/LaTeX 源码。
+description: 自动化出版与 LaTeX 引擎。当用户要求“Markdown 转 LaTeX”、“生成科研级 PDF”、“排版精美公式报告”或需要“期刊投稿格式”时，务必调用。该技能支持 IEEE、CV、书稿等 5 大专业模板，交付工业级排版结果。
 triggers: ["将Markdown转为LaTeX", "将M文件转为LaTeX","生成科研级PDF排版", "套用IEEE模板渲染文档", "输出精美的公式报告", "转换这篇报告为专业期刊格式"]
 ---
 

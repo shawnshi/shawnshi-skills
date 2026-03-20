@@ -1,6 +1,6 @@
 ---
 name: skill-creator
-description: Create new skills, modify and improve existing skills, and measure skill performance. Use when users want to create a skill from scratch, update or optimize an existing skill, run evals to test a skill, benchmark skill performance with variance analysis, or optimize a skill's description for better triggering accuracy.
+description: 技能工厂与自愈中心。当用户想“创建新技能”、“优化既有指令”、“运行技能评测”或技能出现“重复性失败”需要 .amendify() 时，务必激活。该技能管理系统的进化闭环，确保新技能符合三层架构规范。
 ---
 
 # Skill Creator
