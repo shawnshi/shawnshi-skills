@@ -63,14 +63,14 @@ triggers: ["编写数字化解决方案", "设计医院转型规划", "智慧医
 1. **多角色碰撞**：必须调用 `activate_skill(name='logic-adversary')`。
 2. **显式辩论**：展示“临床主任 vs 信息科长”的对抗过程。产生的冲突点与应对策略写入 `[Audit_Logs]` 并保存为物理文件。
 
-### Phase 7: Delivery & Binary Eval (二元硬校验) [Mode: EXECUTION]
-1. **Binary Eval Self-Check (交付前硬审计)**：在最终拼接前，Agent 必须对照 `implementation_plan.md` 进行 3 个二元校验（Yes/No）：
-   - [ ] 方案是否正面回应了 Phase 1 定义的“不可能三角”？
-   - [ ] 架构设计是否包含 TCO 与 ROI 的具体测算逻辑？
-   - [ ] 是否剔除了所有“赋能/智慧/黑盒”类黑话？
-   只有全部为 Yes，方可继续。
-2. **高管摘要与精修**：生成 Executive Memo，调用 `text-forger` 进行去 AI 化洗稿。
-3. **最终交付**：展示摘要及风险提示，调用 `notify_user` (PathsToReview, BlockedOnUser: true) 进行结案验收。
+### Phase 7: Delivery & M-CARE Audit (模型临床审计) [Mode: EXECUTION]
+1. **M-CARE Diagnostic (模型病灶扫描)**：在最终拼接前，Agent 必须对照以下 3 个核心语义病灶执行“临床自诊”：
+   - **[DRG 结余逻辑]**：自检是否包含了具体的测算公式与权重调节项？ [Yes/No]
+   - **[信创算力损耗]**：自检是否明确标注了国产硬件在高并发下的资源预留系数？ [Yes/No]
+   - **[语义迁移风险]**：自检是否包含了针对异构系统数据对齐的“物理映射表”？ [Yes/No]
+2. **Output M-CARE JSON**: 生成结构化的 `m_care_audit.json` 物理文件，记录上述二元校验的推理 Trace。
+3. **Binary Eval & Forge**: 若自诊存在 "No"，强制返回 Phase 5 重构病灶。若全为 "Yes"，调用 `text-forger` 进行高管摘要精修。
+4. **最终交付**：展示摘要、风险提示及 `m_care_audit.json` 的摘要，调用 `notify_user` 进行结案验收。
 
 ### Phase 8: Cognitive Write-Back & Self-Healing (自愈闭环) [Mode: EXECUTION]
 1. **智慧蒸馏**: 提取“反常识洞察”写入 `C:\Users\shich\.gemini\memory\MEMORY.md`。
@@ -89,3 +89,5 @@ triggers: ["编写数字化解决方案", "设计医院转型规划", "智慧医
 - DO NOT use generic "Efficiency" metrics; ALWAYS quantify into "Reduced Doc Time (min)" or "Single Case Cost (RMB)".
 - ALWAYS include Xinchuang compatibility check for state-owned hospitals.
 - DO NOT start drafting before confirming the target audience's technical literacy level.
+- **[CRITICAL]** NEVER use "Overcommitment (超分)" or "Dynamic Best-effort" logic for HIS core compute infrastructure; ALWAYS mandate a minimum of 30% static resource reservation for Dameng/Dameng-compatible DBs.
+- **[CRITICAL]** ANY TCO reduction claim MUST be accompanied by a specific HEOR (Health Economics and Outcomes Research) formula or data fingerprint.

@@ -1,3 +1,4 @@
+﻿import sys; sys.path.append(r'C:\Users\shich\.gemini\scripts\lib');
 """
 <!-- Intelligence Hub: The Forge V5.0 (Jinja2 Templating) -->
 @Input: tmp/latest_scan.json, MEMORY/news/intelligence_current_refined.json, references/strategic_focus.json
@@ -10,6 +11,7 @@ from pathlib import Path
 from datetime import datetime
 from jinja2 import Environment, FileSystemLoader
 from utils import PROJECT_ROOT, HUB_DIR, NEWS_DIR
+from history_manager import save_history, generate_fingerprint
 
 def forge_briefing():
     # 1. Path Resolution
@@ -19,7 +21,7 @@ def forge_briefing():
     
     # 2. Data Loading
     if not scan_path.exists(): 
-        print(f"❌ Error: {scan_path} not found.")
+        print(f"âŒ Error: {scan_path} not found.")
         return
         
     with open(scan_path, 'r', encoding='utf-8') as f: scan_data = json.load(f)
@@ -45,10 +47,12 @@ def forge_briefing():
     template_data = {
         "date": datetime.now().strftime('%Y-%m-%d'),
         "timestamp": datetime.now().strftime('%Y-%m-%d %H:%M:%S'),
-        "insights": ai_data.get("insights", "> 💡 [WAITING/ERROR]"),
-        "punchline": ai_data.get("punchline", "> 💡 [WAITING/ERROR]"),
-        "digest": ai_data.get("digest", "> 💡 [WAITING/ERROR]"),
-        "market": ai_data.get("market", "* 数据未同步"),
+        "insights": ai_data.get("insights", "> ðŸ’¡ [WAITING/ERROR]"),
+        "punchline": ai_data.get("punchline", "> ðŸ’¡ [WAITING/ERROR]"),
+        "digest": ai_data.get("digest", "> ðŸ’¡ [WAITING/ERROR]"),
+        "market": ai_data.get("market", "* æ•°æ®æœªåŒæ­¥"),
+        "urgent_signals": ai_data.get("urgent_signals", []), # New: Urgent signals
+        "action_levers": ai_data.get("action_levers", []),   # New: Action levers
         "adversarial_audit": ai_data.get("adversarial_audit", None),
         "save_path": str(NEWS_DIR / f"intelligence_{datetime.now().strftime('%Y%m%d')}_briefing.md")
     }
@@ -60,37 +64,51 @@ def forge_briefing():
         data_table_rows.append({"source": src, "status": status, "count": count})
     template_data["data_table_rows"] = data_table_rows
 
-    # Top Items (Dynamic length based on ai_data)
+    # Top Items (Prioritize ai_top_10)
     top_10 = []
     ai_top_10 = ai_data.get("top_10", [])
     
-    top_k = max(len(ai_top_10), 10)
-    for i in range(top_k):
-        if i >= len(scored_items): break
-        score, item = scored_items[i]
-        
-        refined_entry = next((x for x in ai_top_10 if x['url'] == item['url']), None)
-        title = refined_entry['title_zh'] if refined_entry else item['title']
-        summary = refined_entry['summary_zh'] if refined_entry else "[AI 翻译中...] " + item.get('raw_desc', '')[:150]
-        reason = refined_entry.get('reason', '') if refined_entry else ""
-        
+    # 1. First, add all items from the refined AI data
+    for entry in ai_top_10:
+        # Find raw metadata for date/source if possible
+        raw_item = next((x[1] for x in scored_items if x[1]['url'] == entry['url']), None)
         top_10.append({
-            "title": title,
-            "url": item['url'],
-            "source": item['source'],
-            "date": item.get('time', 'Unknown')[:10], # Extract YYYY-MM-DD
-            "score": score,
-            "summary": summary,
-            "reason": reason
+            "title": entry.get('title_zh', "Untitled"),
+            "url": entry['url'],
+            "source": raw_item['source'] if raw_item else "Unknown",
+            "date": (raw_item.get('time', 'Unknown') if raw_item else entry.get('date', 'Unknown'))[:10],
+            "score": entry.get('strategic_score', 90), # Default score for manual entries
+            "summary": entry.get('summary_zh', ""),
+            "reason": entry.get('reason', "")
         })
-    template_data["top_10"] = top_10
+
+    # 2. If we have fewer than 10, fill with high-scoring raw items that aren't already included
+    if len(top_10) < 10:
+        included_urls = {item['url'] for item in top_10}
+        for score, item in scored_items:
+            if item['url'] not in included_urls:
+                top_10.append({
+                    "title": item['title'],
+                    "url": item['url'],
+                    "source": item['source'],
+                    "date": item.get('time', 'Unknown')[:10],
+                    "score": score,
+                    "summary": "[AI ç¿»è¯‘ä¸­...] " + item.get('raw_desc', '')[:150],
+                    "reason": ""
+                })
+            if len(top_10) >= 10: break
+            
+    template_data["top_10"] = top_10[:10] # Ensure exactly 10 if possible
 
     # Categorization & Grouped List
     categories = focus_data.get('categories', {})
     grouped_list = {cat: [] for cat in categories.keys()}
-    grouped_list['其他综合资讯清单'] = []
+    grouped_list['å…¶ä»–ç»¼åˆèµ„è®¯æ¸…å•'] = []
     
-    for score, item in scored_items[top_k:]:
+    included_urls = {item['url'] for item in template_data["top_10"]}
+    for score, item in scored_items:
+        if item['url'] in included_urls: continue
+        
         text = (item['title'] + " " + item.get('raw_desc', '')).lower()
         assigned = False
         for cat_name, cat_keywords in categories.items():
@@ -98,7 +116,7 @@ def forge_briefing():
                 grouped_list[cat_name].append(item)
                 assigned = True
                 break
-        if not assigned: grouped_list['其他综合资讯清单'].append(item)
+        if not assigned: grouped_list['å…¶ä»–ç»¼åˆèµ„è®¯æ¸…å•'].append(item)
 
     ai_translations = ai_data.get("translations", {})
     
@@ -140,7 +158,14 @@ def forge_briefing():
     with open(snapshot_path, 'w', encoding='utf-8') as f:
         json.dump(template_data, f, ensure_ascii=False, indent=2)
         
-    print(f"✅ Briefing forged with Jinja2 at: {save_path}")
+    # Save history to prevent future duplicates (URL + Semantic Fingerprint)
+    pushed_urls = [item['url'] for item in template_data["top_10"]]
+    pushed_fps = [generate_fingerprint(item['title'], item['source']) for item in template_data["top_10"]]
+    save_history(pushed_urls, pushed_fps)
+    
+    print(f"âœ… Briefing forged with Jinja2 at: {save_path}")
+    print(f"ðŸ”„ History updated: {len(pushed_urls)} items blacklisted (URL + Semantic Fingerprint) for 7 days.")
 
 if __name__ == "__main__":
     forge_briefing()
+

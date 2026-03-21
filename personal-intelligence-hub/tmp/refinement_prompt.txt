@@ -1,24 +1,40 @@
-你是一位战略情报分析师。请对提供的新闻条目进行「二阶推演」精炼，并严格按照 JSON Schema 输出。
+你是一位战略情报分析师（仲裁者 Arbiter）。请对提供的新闻条目进行「五维硬核过滤」与「二阶推演」精炼，并严格按照 JSON Schema 输出。
 
 ## 任务
-1. 请为原始情报清单中标记为 [TOP 10] 的所有核心条目提供深度精炼（处理数量不限，有多少精炼多少）：包括中文标题、约300字的中文深度摘要（事实 → 联结 → 推演）、以及推荐理由。并基于战略价值为其打分 (L1-L4)。
-2. 请为原始情报清单中标记为 [TRANSLATE] 的条目提供简单的中文标题与简介翻译（存入 translations，键为该条目的 URL）。
-3. 基于全部情报，生成高阶视角的 insights, punchline, digest 和 market 总结。
+1. **[过滤与精炼]** 请为原始情报清单中标记为 [TOP 10] 的条目执行五维硬核拦截（Evidence, Source, Novelty, Consistency, Recency）。**如果一条情报在“证据（Evidence）”维度上缺乏具体的数据或事实溯源（仅为纯观点或公关口号），请直接将其作为噪音剔除，不予输出**。
+2. 对通过拦截的条目进行深度精炼：包括中文标题、约300字的中文深度摘要（事实 → 联结 → 推演）、以及推荐理由。并基于战略价值为其打分 (L1-L4)。
+3. **[翻译]** 为原始情报清单中标记为 [TRANSLATE] 的条目提供简单的中文标题与简介翻译（存入 translations，键为该条目的 URL）。
+4. **[弱信号关联 Weaver]** 基于全部情报，寻找表象无关但底层逻辑相关的信号，执行“二跳推理”，生成高阶视角的 insights, punchline, digest 和 market 总结。
 
-## 质量标准
-- 严格遵循被动客观的语气，禁止使用"重大进展"、"革命性"等形容词主观修饰
-- 每条摘要必须包含：事实(发生了什么) → 联结(与战略项目有何关系) → 推演(可能导致什么后果) 三段论
-- 优先筛选反直觉或非共识情报
-- intel_grade 的评级标准：
-  - L1 (Noise): 行业回声，共识复读，无需关注
-  - L2 (Information): 明确的事实进展，对现有工作流有适度参考价值
-  - L3 (Insight): 发现新的非共识变量，足以启发架构重构或产品迭代
-  - L4 (Alpha): 涉及底层范式转移或极具掠夺性的战略威胁，必须立刻采取应对措施
+## 质量标准 (The 5D Filter)
+- **证据 (Evidence)**：论点是否有充分的数据或物理实验溯源？（没有则直接抛弃）
+- **信誉 (Source)**：信源是否权威或具备非共识洞察记录？
+- **新颖度 (Novelty)**：是真正的增量信息，还是行业共识的重复？
+- **三段论强制**：每条摘要必须包含：事实(发生了什么) → 联结(与战略项目有何关系) → 推演(可能导致什么后果)
+- **语调暴政**：严格遵循被动客观的语气，禁止使用"重大进展"、"革命性"等形容词主观修饰。
+
+## 评级标准 (intel_grade)
+  - L1 (Noise): 行业回声，共识复读，尽量剔除。
+  - L2 (Information): 明确的事实进展，对现有工作流有适度参考价值。
+  - L3 (Insight): 发现新的非共识变量，足以启发架构重构或产品迭代。
+  - L4 (Alpha): 涉及底层范式转移或极具掠夺性的战略威胁，必须立刻采取应对措施。
 
 ## 输出格式 (强制遵守)
 必须输出且仅输出一个合法的 JSON 对象。不要输出 Markdown 代码块，不要包含 ```json 的包裹，只输出裸 JSON 数据：
 
 {
+  "urgent_signals": [
+    {
+      "title": "紧急信号标题",
+      "action": "立即采取的防御/进攻动作 (15字以内)"
+    }
+  ],
+  "action_levers": [
+    {
+      "domain": "影响领域 (如: 研发/市场/架构)",
+      "task": "具体的任务或杠杆点描述"
+    }
+  ],
   "top_10": [
     {
       "url": "原始 url",
@@ -36,7 +52,7 @@
       "date": "原始发表日期 (YYYY-MM-DD)"
     }
   },
-  "insights": "1. 第一条洞察\n2. 第二条洞察",
+  "insights": "1. [弱信号关联] 第一条洞察\n2. 第二条洞察",
   "punchline": "一句话判断",
   "digest": "300字二阶推演",
   "market": "* 要点1\n* 要点2"
@@ -44,215 +60,215 @@
 
 
 ## 当前战略关键词权重
-msl(w=30), ace(w=27), agent(w=27), 主权(w=20), 算力(w=20), 逻辑(w=20), 审计(w=20), ai(w=20), evidence-mesh(w=20), 数字(w=20), 架构(w=20), 战略(w=20), 认知(w=20), 临床(w=20), 语义(w=20)
+msl(w=30), ace(w=27), agent(w=24), 主权(w=20), 逻辑(w=20), 审计(w=20), 语义(w=20), 物理(w=20), ai(w=19), 路径(w=19), 算力(w=17), evidence-mesh(w=17), 数字(w=17), 认知(w=17), 临床(w=17)
 
 ## 原始情报清单
-[TOP 10] Item 1 [Score=98]:
+[TOP 10] Item 1 [Score=94]:
 Title: seangoedecke.com: Giving LLMs a personality is just good engineering
 URL: https://seangoedecke.com/giving-llms-a-personality/
 Source: seangoedecke.com
-Published: 2026-03-20T15:16:37.254059
+Published: 2026-03-21T08:20:39.278344
 Desc: AI skeptics often argue that current AI systems shouldn’t be so human-like. The idea - most recently expressed in this opinion piece by Nathan Beacom - is that language models should explicitly be too
 
-[TOP 10] Item 2 [Score=94]:
+[TOP 10] Item 2 [Score=86]:
 Title: pluralistic.net: Pluralistic: Love of corporate bullshit is correlated with bad judgment (19 Mar 2026)
 URL: https://pluralistic.net/2026/03/19/jargon-watch/
 Source: pluralistic.net
-Published: 2026-03-20T15:16:39.610621
+Published: 2026-03-21T08:20:44.729330
 Desc: Today's links Love of corporate bullshit is correlated with bad judgment: Synergizing the strategic inflection points on the global data network. Hey look at this: Delights to delectate. Object perman
 
-[TOP 10] Item 3 [Score=94]:
+[TOP 10] Item 3 [Score=86]:
 Title: gilesthomas.com: Writing an LLM from scratch, part 29 -- using DistributedDataParallel to train a base model from scratch in the cloud
 URL: https://www.gilesthomas.com/2026/01/llm-from-scratch-29-ddp-training-a-base-model-in-the-cloud
 Source: gilesthomas.com
-Published: 2026-03-20T15:17:06.633050
+Published: 2026-03-21T08:20:51.692628
 Desc: I'm carrying on with my "extra credit" projects after finishing the main body of Sebastian Raschka's book "Build a Large Language Model (from Scratch)". Having proven that I could train a GPT-2 small 
 
-[TOP 10] Item 4 [Score=89]:
+[TOP 10] Item 4 [Score=85]:
 Title: pluralistic.net: Pluralistic: William Gibson vs Margaret Thatcher (17 Mar 2026)
 URL: https://pluralistic.net/2026/03/17/technopolitics/
 Source: pluralistic.net
-Published: 2026-03-20T15:16:39.610621
+Published: 2026-03-21T08:20:44.729330
 Desc: Today's links William Gibson vs Margaret Thatcher: The Street Finds Its Own Alternatives For Things. Hey look at this: Delights to delectate. Object permanence: Prison for spamming; Dotcom layoffs; Et
 
-[TOP 10] Item 5 [Score=87]:
+[TOP 10] Item 5 [Score=79]:
 Title: antirez.com: Implementing a clear room Z80 / ZX Spectrum emulator with Claude Code
 URL: http://antirez.com/news/160
 Source: antirez.com
-Published: 2026-03-20T15:17:07.358325
+Published: 2026-03-21T08:20:49.257610
 Desc: Anthropic recently released a blog post with the description of an experiment in which the last version of Opus, the 4.6, was instructed to write a C compiler in Rust, in a “clean room” setup.  The ex
 
-[TOP 10] Item 6 [Score=87]:
+[TOP 10] Item 6 [Score=79]:
 Title: lucumr.pocoo.org: AI And The Ship of Theseus
 URL: https://lucumr.pocoo.org/2026/3/5/theseus/
 Source: lucumr.pocoo.org
-Published: 2026-03-20T15:16:34.764388
+Published: 2026-03-21T08:20:38.794825
 Desc: Because code gets cheaper and cheaper to write, this includes re-implementations.  I mentioned recently that I had an AI port one of my libraries to another language and it ended up choosing a differe
 
-[TOP 10] Item 7 [Score=87]:
+[TOP 10] Item 7 [Score=79]:
 Title: anildash.com: A Codeless Ecosystem, or hacking beyond vibe coding
 URL: https://anildash.com/2026/01/27/codeless-ecosystem/
 Source: anildash.com
-Published: 2026-03-20T15:17:05.011049
+Published: 2026-03-21T08:20:52.049324
 Desc: There's been a remarkable leap forward in the ability to orchestrate coding bots, making it possible for ordinary creators to command dozens of AI bots to build software without ever having to directl
 
-[TOP 10] Item 8 [Score=84]:
-Title: arXiv Med-AI: Model Medicine: A Clinical Framework for Understanding, Diagnosing, and Treating AI Models
-URL: https://arxiv.org/abs/2603.04722v2
-Source: arXiv Med-AI
-Published: 2026-03-20T15:16:38.859958
-Desc: Model Medicine is the science of understanding, diagnosing, treating, and preventing disorders in AI models, grounded in the principle that AI models -- like biological organisms -- have internal stru
-
-[TOP 10] Item 9 [Score=81]:
+[TOP 10] Item 8 [Score=77]:
 Title: seangoedecke.com: I don't know if my job will still exist in ten years
 URL: https://seangoedecke.com/will-my-job-still-exist/
 Source: seangoedecke.com
-Published: 2026-03-20T15:16:37.252113
+Published: 2026-03-21T08:20:39.276773
 Desc: In 2021, being a good software engineer felt great. The world was full of software, with more companies arriving every year who needed to employ engineers to write their code and run their systems. I 
 
-[TOP 10] Item 10 [Score=81]:
+[TOP 10] Item 9 [Score=77]:
 Title: pluralistic.net: Pluralistic: Tools vs uses (16 Mar 2026)
 URL: https://pluralistic.net/2026/03/16/whittle-a-webserver/
 Source: pluralistic.net
-Published: 2026-03-20T15:16:39.610621
+Published: 2026-03-21T08:20:44.730411
 Desc: Today's links Tools vs uses: Don't fall for it. Hey look at this: Delights to delectate. Object permanence: Amazon coders x Amazon warehouse workers; Bruces's ETECH speech; Steven King x unions; Tax-f
 
-[TRANSLATE] Item 11 [Score=81]:
+[TOP 10] Item 10 [Score=77]:
 Title: michael.stapelberg.ch: Coding Agent VMs on NixOS with microvm.nix
 URL: https://michael.stapelberg.ch/posts/2026-02-01-coding-agent-microvm-nix/
 Source: michael.stapelberg.ch
-Published: 2026-03-20T15:17:08.093200
+Published: 2026-03-21T08:20:45.489649
 Desc: I have come to appreciate coding agents to be valuable tools for working with computer program code in any capacity, such as learning about any program’s architecture, diagnosing bugs or developing pr
 
-[TRANSLATE] Item 12 [Score=77]:
+[TRANSLATE] Item 11 [Score=74]:
+Title: arXiv Med-AI: Model Medicine: A Clinical Framework for Understanding, Diagnosing, and Treating AI Models
+URL: https://arxiv.org/abs/2603.04722v2
+Source: arXiv Med-AI
+Published: 2026-03-21T08:20:40.142822
+Desc: Model Medicine is the science of understanding, diagnosing, treating, and preventing disorders in AI models, grounded in the principle that AI models -- like biological organisms -- have internal stru
+
+[TRANSLATE] Item 12 [Score=72]:
 Title: oldvcr.blogspot.com: The Scriptovision Super Micro Script video titler is almost a home computer
 URL: https://oldvcr.blogspot.com/2026/02/the-scriptovision-super-micro-script.html
 Source: oldvcr.blogspot.com
-Published: 2026-03-20T15:16:43.391600
+Published: 2026-03-21T08:20:50.164121
 Desc: Canadians, rejoice! Not only do you have curling, the Big Turk and Tim Hortons (and, when I was in BC last, Dr Pepper made with real cane sugar), you also have a number of interesting indigenous compu
 
-[TRANSLATE] Item 13 [Score=74]:
+[TRANSLATE] Item 13 [Score=70]:
 Title: antirez.com: GNU and the AI reimplementations
 URL: http://antirez.com/news/162
 Source: antirez.com
-Published: 2026-03-20T15:17:07.357124
+Published: 2026-03-21T08:20:49.253078
 Desc: Those who cannot remember the past are condemned to repeat it. A sentence that I never really liked, and what is happening with AI, about software projects reimplementations, shows all the limits of s
 
-[TRANSLATE] Item 14 [Score=74]:
-Title: idiallo.com: Shower Thought: Git Teleportation
-URL: https://idiallo.com/byte-size/git-teleportation?src=feed
-Source: idiallo.com
-Published: 2026-03-20T15:16:35.865184
-Desc: In many sci-fi shows, spaceships have a teleportation mechanism on board. They can teleport from inside their ship to somewhere on a planet. This way, the ship can remain in orbit while its crew explo
-
-[TRANSLATE] Item 15 [Score=74]:
+[TRANSLATE] Item 14 [Score=70]:
 Title: maurycyz.com: The web in 1000 lines of C
 URL: https://maurycyz.com/projects/tinyweb/
 Source: maurycyz.com
-Published: 2026-03-20T15:16:40.410966
+Published: 2026-03-21T08:20:41.932266
 Desc: Modern browsers are hugely complex: Chromium (the open source portion of google chrome) currently has 49 millions lines of code, making it bigger then any other program on my machine.  ... but how muc
 
-[TRANSLATE] Item 16 [Score=74]:
+[TRANSLATE] Item 15 [Score=70]:
 Title: lucumr.pocoo.org: A Language For Agents
 URL: https://lucumr.pocoo.org/2026/2/9/a-language-for-agents/
 Source: lucumr.pocoo.org
-Published: 2026-03-20T15:16:34.772277
+Published: 2026-03-21T08:20:38.807268
 Desc: Last year I first started thinking about what the future of programming languages might look like now that agentic engineering is a growing thing. Initially I felt that the enormous corpus of pre-exis
 
-[TRANSLATE] Item 17 [Score=73]:
-Title: buttondown.com/hillelwayne: LLMs are bad at vibing specifications
-URL: https://buttondown.com/hillelwayne/archive/llms-are-bad-at-vibing-specifications/
-Source: buttondown.com/hillelwayne
-Published: 2026-03-20T15:16:39.070584
-Desc: No newsletter next week I'll be speaking at InfoQ London. But see below for a book giveaway!  LLMs are bad at vibing specifications About a year ago I wrote AI is a gamechanger for TLA+ users, which a
+[TRANSLATE] Item 16 [Score=70]:
+Title: blog.jim-nielsen.com: Re: People Are Not Friction
+URL: https://blog.jim-nielsen.com/2026/re-people-arent-friction/
+Source: blog.jim-nielsen.com
+Published: 2026-03-21T08:20:46.870039
+Desc: Dave Rupert puts words to the feeling in the air: the unspoken promise of AI is that you can automate away all the tasks and people who stand in your way.  Sometimes I feel like there’s a palpable ten
 
-[TRANSLATE] Item 18 [Score=67]:
+[TRANSLATE] Item 17 [Score=62]:
 Title: gilesthomas.com: Writing an LLM from scratch, part 28 -- training a base model from scratch on an RTX 3090
 URL: https://www.gilesthomas.com/2025/12/llm-from-scratch-28-training-a-base-model-from-scratch
 Source: gilesthomas.com
-Published: 2026-03-20T15:17:06.256045
+Published: 2026-03-21T08:20:51.344829
 Desc: Having worked through the main body of Sebastian Raschka's book "Build a Large Language Model (from Scratch)", I wanted to try an experiment: is it possible to train a base model of my own, on my own 
 
-[TRANSLATE] Item 19 [Score=67]:
+[TRANSLATE] Item 18 [Score=62]:
 Title: computer.rip: LotusNotes
 URL: https://computer.rip/2026-03-14-lotusnotes.html
 Source: computer.rip
-Published: 2026-03-20T15:17:07.450771
+Published: 2026-03-21T08:20:51.838707
 Desc: I tend to focus on the origin of the computer within the military. Particularly in the early days of digital computing, the military was a key customer, and fundamental concepts of modern computing ar
 
-[TRANSLATE] Item 20 [Score=62]:
+[TRANSLATE] Item 19 [Score=61]:
 Title: computer.rip: cash issuing terminals
 URL: https://computer.rip/2026-02-27-ibm-atm.html
 Source: computer.rip
-Published: 2026-03-20T15:17:07.456860
+Published: 2026-03-21T08:20:51.843456
 Desc: In the United States, we are losing our fondness for cash. As in many other countries, cards and other types of electronic payments now dominate everyday commerce. To some, this is a loss. Cash repres
 
-[TRANSLATE] Item 21 [Score=60]:
-Title: simonwillison.net: Thoughts on OpenAI acquiring Astral and uv/ruff/ty
-URL: https://simonwillison.net/2026/Mar/19/openai-acquiring-astral/#atom-everything
-Source: simonwillison.net
-Published: 2026-03-20T15:16:34.724658
-Desc: The big news this morning: Astral to join OpenAI (on the Astral blog) and OpenAI to acquire Astral (the OpenAI announcement). Astral are the company behind uv, ruff, and ty - three increasingly load-b
+[TRANSLATE] Item 20 [Score=59]:
+Title: buttondown.com/hillelwayne: LLMs are bad at vibing specifications
+URL: https://buttondown.com/hillelwayne/archive/llms-are-bad-at-vibing-specifications/
+Source: buttondown.com/hillelwayne
+Published: 2026-03-21T08:20:40.865141
+Desc: No newsletter next week I'll be speaking at InfoQ London. But see below for a book giveaway!  LLMs are bad at vibing specifications About a year ago I wrote AI is a gamechanger for TLA+ users, which a
 
-[TRANSLATE] Item 22 [Score=60]:
+[TRANSLATE] Item 21 [Score=55]:
 Title: seangoedecke.com: Big tech engineers need big egos
 URL: https://seangoedecke.com/big-tech-needs-big-egos/
 Source: seangoedecke.com
-Published: 2026-03-20T15:16:37.250567
+Published: 2026-03-21T08:20:39.275252
 Desc: It’s a common position among software engineers that big egos have no place in tech1. This is understandable - we’ve all worked with some insufferably overconfident engineers who needed their egos che
 
-[TRANSLATE] Item 23 [Score=60]:
+[TRANSLATE] Item 22 [Score=55]:
 Title: lucumr.pocoo.org: The Final Bottleneck
 URL: https://lucumr.pocoo.org/2026/2/13/the-final-bottleneck/
 Source: lucumr.pocoo.org
-Published: 2026-03-20T15:16:34.764939
+Published: 2026-03-21T08:20:38.795873
 Desc: Historically, writing code was slower than reviewing code. It might not have felt that way, because code reviews sat in queues until someone got around to picking it up.  But if you compare the actual
 
-[TRANSLATE] Item 24 [Score=60]:
+[TRANSLATE] Item 23 [Score=55]:
 Title: gilesthomas.com: Writing an LLM from scratch, part 30 -- digging into the LLM-as-a-judge results
 URL: https://www.gilesthomas.com/2026/01/llm-from-scratch-30-digging-into-llm-as-a-judge
 Source: gilesthomas.com
-Published: 2026-03-20T15:17:06.645708
+Published: 2026-03-21T08:20:51.698682
 Desc: I'm still working on my "extra credit" projects after finishing the main body of Sebastian Raschka's book "Build a Large Language Model (from Scratch)". Last time around, I trained four base models, u
 
-[TRANSLATE] Item 25 [Score=60]:
+[TRANSLATE] Item 24 [Score=55]:
 Title: eli.thegreenplace.net: Rewriting pycparser with the help of an LLM
 URL: https://eli.thegreenplace.net/2026/rewriting-pycparser-with-the-help-of-an-llm/
 Source: eli.thegreenplace.net
-Published: 2026-03-20T15:16:36.292485
+Published: 2026-03-21T08:20:45.632974
 Desc: pycparser is my most widely used open source project (with ~20M daily downloads from PyPI [1]). It's a pure-Python parser for the C programming language, producing ASTs inspired by Python's own. Until
 
-[TRANSLATE] Item 26 [Score=60]:
+[TRANSLATE] Item 25 [Score=55]:
 Title: bernsteinbear.com: Type-based alias analysis in the Toy Optimizer
 URL: https://bernsteinbear.com/blog/toy-tbaa/?utm_source=rss
 Source: bernsteinbear.com
-Published: 2026-03-20T15:16:39.420340
+Published: 2026-03-21T08:20:47.703976
 Desc: Another entry in the Toy Optimizer series. Last time, we did load-store forwarding in the context of our Toy Optimizer. We managed to cache the results of both reads from and writes to the heap—at com
 
-[TRANSLATE] Item 27 [Score=60]:
-Title: tomrenner.com: Does my toaster love me?
-URL: https://tomrenner.com/posts/does-my-toaster-love-me/
-Source: tomrenner.com
-Published: 2026-03-20T15:16:39.891924
-Desc: I’m starting to think that my toaster might have fallen in love with me. I get that not everyone will think this is possible, but I believe it’s true. It’s always pleased to see me, giving off cheerfu
-
-[TRANSLATE] Item 28 [Score=60]:
+[TRANSLATE] Item 26 [Score=55]:
 Title: anildash.com: There's no such thing as "tech" (Ten years later)
 URL: https://anildash.com/2026/02/06/no-such-thing-as-tech/
 Source: anildash.com
-Published: 2026-03-20T15:17:05.014332
+Published: 2026-03-21T08:20:52.052324
 Desc: Ten years ago I wrote that there is no “technology industry”. It’s more true than ever. There is no “tech”. There’s no such thing as “a FAANG company”. There is almost nothing in common between the ve
 
-[TRANSLATE] Item 29 [Score=60]:
+[TRANSLATE] Item 27 [Score=55]:
 Title: michael.stapelberg.ch: Self-hosting my photos with Immich
 URL: https://michael.stapelberg.ch/posts/2025-11-29-self-hosting-photos-with-immich/
 Source: michael.stapelberg.ch
-Published: 2026-03-20T15:17:08.133165
+Published: 2026-03-21T08:20:45.523288
 Desc: For every cloud service I use, I want to have a local copy of my data for backup purposes and independence. Unfortunately, the gphotos-sync tool stopped working in March 2025 when Google restricted th
 
-[TRANSLATE] Item 30 [Score=55]:
+[TRANSLATE] Item 28 [Score=54]:
 Title: arXiv Med-AI: ClinicalTrialsHub: Bridging Registries and Literature for Comprehensive Clinical Trial Access
 URL: https://arxiv.org/abs/2512.08193v2
 Source: arXiv Med-AI
-Published: 2026-03-20T15:16:38.859406
+Published: 2026-03-21T08:20:40.142822
 Desc: We present ClinicalTrialsHub, an interactive search-focused platform that consolidates all data from ClinicalTrials.gov and augments it by automatically extracting and structuring trial-relevant infor
+
+[TRANSLATE] Item 29 [Score=53]:
+Title: righto.com: Instruction decoding in the Intel 8087 floating-point chip
+URL: http://www.righto.com/2026/02/8087-instruction-decoding.html
+Source: righto.com
+Published: 2026-03-21T08:20:44.215501
+Desc: In the 1980s, if you wanted your IBM PC to run faster, you could buy the Intel 8087 floating-point coprocessor chip. With this chip, CAD software, spreadsheets, flight simulators, and other programs w
+
+[TRANSLATE] Item 30 [Score=53]:
+Title: righto.com: Notes on the Intel 8086 processor's arithmetic-logic unit
+URL: http://www.righto.com/2026/01/notes-on-intel-8086-processors.html
+Source: righto.com
+Published: 2026-03-21T08:20:44.227671
+Desc: In 1978, Intel introduced the 8086 processor, a revolutionary chip that led to the modern x86 architecture. Unlike modern 64-bit processors, however, the 8086 is a 16-bit chip. Its arithmetic/logic un

@@ -1,3 +1,4 @@
+﻿import sys; sys.path.append(r'C:\Users\shich\.gemini\scripts\lib');
 """
 <!-- Intelligence Hub: AI Refinement Engine V5.1 (Gemini CLI Integration) -->
 @Input: tmp/latest_scan.json, references/strategic_focus.json
@@ -12,6 +13,7 @@ import subprocess
 from pathlib import Path
 from datetime import datetime
 from utils import PROJECT_ROOT, HUB_DIR, NEWS_DIR
+from history_manager import is_redundant
 
 # Resolve paths dynamically
 SCAN_PATH = HUB_DIR / "tmp" / "latest_scan.json"
@@ -28,11 +30,16 @@ def score_and_rank(scan_data: dict, focus_data: dict) -> list:
         kw["keyword"].lower(): kw["weight"]
         for kw in focus_data["strategic_keywords"]
     }
-
+    
     scored = []
     for item in scan_data["items"]:
         text = (item.get("title", "") + " " + item.get("raw_desc", "")).lower()
         score = sum(weight for kw, weight in keywords.items() if kw in text)
+        
+        # [SEMANTIC DEDUPLICATION] Use text fingerprinting
+        if is_redundant(item['url'], item['title'], item['source']):
+            score = -100 
+            
         scored.append((score, item))
 
     scored.sort(key=lambda x: x[0], reverse=True)
@@ -60,7 +67,7 @@ def build_user_prompt(scored_items: list, focus_data: dict) -> str:
             f"Desc: {desc}\n"
         )
 
-    return f"## 当前战略关键词权重\n{kw_lines}\n\n## 原始情报清单\n" + "\n".join(item_lines)
+    return f"## å½“å‰æˆ˜ç•¥å…³é”®è¯æƒé‡\n{kw_lines}\n\n## åŽŸå§‹æƒ…æŠ¥æ¸…å•\n" + "\n".join(item_lines)
 
 
 def run_gemini_cli(prompt: str) -> str:
@@ -91,7 +98,7 @@ def refine():
     """Main refinement workflow: score, build prompt, and call Gemini CLI for full JSON payload."""
 
     if not SCAN_PATH.exists():
-        print(f"❌ Error: No scan data found at {SCAN_PATH}")
+        print(f"âŒ Error: No scan data found at {SCAN_PATH}")
         print("  Run `python scripts/fetch_news.py` first (Phase 1).")
         return
 
@@ -99,11 +106,11 @@ def refine():
     focus_data = json.loads(FOCUS_PATH.read_text(encoding="utf-8"))
 
     if not scan_data.get("items"):
-        print("⚠️ Warning: Scan data has no items. Nothing to refine.")
+        print("âš ï¸ Warning: Scan data has no items. Nothing to refine.")
         return
 
     scored_items = score_and_rank(scan_data, focus_data)
-    print(f"📊 Scored {len(scored_items)} items. Top score: {scored_items[0][0] if scored_items else 0}")
+    print(f"ðŸ“Š Scored {len(scored_items)} items. Top score: {scored_items[0][0] if scored_items else 0}")
 
     user_prompt = build_user_prompt(scored_items, focus_data)
     
@@ -113,7 +120,7 @@ def refine():
     prompt_path.parent.mkdir(parents=True, exist_ok=True)
     prompt_path.write_text(full_prompt, encoding="utf-8")
 
-    print(f"🧠 Calling Gemini CLI (gemini ask) for refinement...")
+    print(f"ðŸ§  Calling Gemini CLI (gemini ask) for refinement...")
     
     try:
         response_text = run_gemini_cli(full_prompt)
@@ -150,20 +157,20 @@ def refine():
             json.dumps(final_output, ensure_ascii=False, indent=2),
             encoding="utf-8",
         )
-        print(f"✅ Refinement completed! Output saved to: {OUTPUT_PATH}")
-        print(f"🔄 Next: Run adversarial audit (optional) or `python scripts/forge.py` (Phase 4).")
+        print(f"âœ… Refinement completed! Output saved to: {OUTPUT_PATH}")
+        print(f"ðŸ”„ Next: Run adversarial audit (optional) or `python scripts/forge.py` (Phase 4).")
         
     except Exception as e:
-        print(f"❌ Error during Gemini CLI calling: {str(e)}")
+        print(f"âŒ Error during Gemini CLI calling: {str(e)}")
         # Fallback to skeleton if LLM fails
         skeleton = {
             "generated_at": datetime.now().isoformat(),
             "status": f"FAILED: {str(e)}",
             "top_10": [],
             "translations": {},
-            "insights": "> 💡 [LLM ERROR]",
-            "punchline": "> 💡 [LLM ERROR]",
-            "digest": "> 💡 [LLM ERROR]",
+            "insights": "> ðŸ’¡ [LLM ERROR]",
+            "punchline": "> ðŸ’¡ [LLM ERROR]",
+            "digest": "> ðŸ’¡ [LLM ERROR]",
             "market": "* [LLM ERROR]",
             "_prompt_path": str(prompt_path),
             "_raw_response": response_text if 'response_text' in locals() else None,
@@ -177,8 +184,9 @@ def refine():
             json.dumps(skeleton, ensure_ascii=False, indent=2),
             encoding="utf-8",
         )
-        print(f"📦 Error skeleton created at to: {OUTPUT_PATH}")
+        print(f"ðŸ“¦ Error skeleton created at to: {OUTPUT_PATH}")
 
 
 if __name__ == "__main__":
     refine()
+

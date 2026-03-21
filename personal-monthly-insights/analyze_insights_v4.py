@@ -75,6 +75,12 @@ def format_narrative_behavioral_analysis(data):
     html = f'<p>{data.get("intro","")}</p>'
     if overall:
         html += f'<div style="background: var(--surface-2); padding: 16px; border-radius: 8px; margin-bottom: 20px; border-left: 3px solid var(--success);"><strong>🌟 总体认知评估：</strong>{overall}</div>'
+    
+    if pts:
+        for p in pts:
+            title = p.get("title", "")
+            desc = p.get("description", "")
+            html += f'<div style="margin-bottom: 15px; padding-left: 10px; border-left: 2px solid var(--primary);"><strong>🔍 {title}</strong><p style="margin-top: 5px; font-size: 0.95em; color: var(--text-2);">{desc}</p></div>'
     return html
 
 def generate_report(stats, sessions, insights):
@@ -204,24 +210,63 @@ def generate_report(stats, sessions, insights):
     with open(report_path, "w", encoding="utf-8") as f: f.write(html)
     
     # Markdown export
-    md_report = f"""# 战略审计报告 ({period_label})
-> 生成时间: {datetime.datetime.now().strftime('%Y-%m-%d %H:%M:%S')} | v8.0 Agentic Edition
+    md_sections = []
+    md_sections.append(f"# 战略审计报告 ({period_label})")
+    md_sections.append(f"> 生成时间: {datetime.datetime.now().strftime('%Y-%m-%d %H:%M:%S')} | v8.0 Agentic Edition")
+    
+    md_sections.append("\n## 1. At a Glance")
+    md_sections.append(f"- **What's Working**: {glance.get('whats_working', '')}")
+    md_sections.append(f"- **What's Hindering**: {glance.get('whats_hindering', '')}")
+    md_sections.append(f"- **Quick Wins**: {glance.get('quick_wins', '')}")
+    md_sections.append(f"- **Ambitious Workflows**: {glance.get('ambitious_workflows', '')}")
 
-## At a Glance
-- **What's Working**: {glance.get('whats_working', '')}
-- **What's Hindering**: {glance.get('whats_hindering', '')}
-- **Quick Wins**: {glance.get('quick_wins', '')}
-- **Ambitious Workflows**: {glance.get('ambitious_workflows', '')}
+    md_sections.append("\n## 2. 核心指标")
+    md_sections.append("| 指标 | 值 |")
+    md_sections.append("|---|---|")
+    md_sections.append(f"| 协作会话 | {stats.get('total_sessions', 0)} |")
+    md_sections.append(f"| 累计时长 | {stats.get('total_duration_hours', 0):.1f}h |")
+    md_sections.append(f"| Git 提交 | {stats.get('git_commits', 0)} |")
+    md_sections.append(f"| 活跃天数 | {stats.get('active_days', 0)} |")
+    md_sections.append(f"| 最长连续 | {stats.get('max_streak', 0)}d |")
 
-## 核心指标
-| 指标 | 值 |
-|---|---|
-| 协作会话 | {stats.get('total_sessions', 0)} |
-| 累计时长 | {stats.get('total_duration_hours', 0):.1f}h |
-| Git 提交 | {stats.get('git_commits', 0)} |
-| 活跃天数 | {stats.get('active_days', 0)} |
-| 最长连续 | {stats.get('max_streak', 0)}d |
-"""
+    # Add Behavioral Analysis (The Coach's Insights)
+    behav = insights.get("behavioral_analysis", {})
+    if behav:
+        md_sections.append("\n## 3. 🦅 教练解读：行为背后的潜台词")
+        md_sections.append(f"{behav.get('intro', '')}")
+        if behav.get("overall"):
+            md_sections.append(f"\n> **总体认知评估**：{behav.get('overall')}")
+        for p in behav.get("points", []):
+            md_sections.append(f"\n### 🔍 {p.get('title')}")
+            md_sections.append(f"{p.get('description')}")
+
+    # Add Friction Analysis
+    fric = insights.get("friction_analysis", {})
+    if fric:
+        md_sections.append("\n## 4. 摩擦基因审计")
+        md_sections.append(f"{fric.get('intro', '')}")
+        for c in fric.get("categories", []):
+            md_sections.append(f"\n### ⚡ {c.get('category')}")
+            md_sections.append(f"{c.get('description')}")
+            md_sections.append(f"*例: {', '.join(c.get('examples', []))}*")
+
+    # Add Project Areas
+    areas = insights.get("project_areas", {}).get("areas", [])
+    if areas:
+        md_sections.append("\n## 5. 项目领域分布")
+        for a in areas:
+            md_sections.append(f"- **{a.get('name')}** ({a.get('session_count')} sessions): {a.get('description')}")
+
+    # Add Suggestions
+    sugg = insights.get("suggestions", {})
+    if sugg:
+        md_sections.append("\n## 6. 负熵进化建议")
+        for c in sugg.get("config_additions", []):
+            md_sections.append(f"- **配置补丁**: `{c.get('addition')}` ({c.get('why')})")
+        for u in sugg.get("usage_patterns", []):
+            md_sections.append(f"- **交互模式**: **{u.get('title')}**: {u.get('detail')}")
+
+    md_report = "\n".join(md_sections)
     md_path = REPORTS_DIR / f"{datetime.date.today().strftime('%Y%m%d')}_Strategic_Audit_{stats.get('period', '30d')}.md"
     with open(md_path, "w", encoding="utf-8") as f: f.write(md_report)
     print(f"  📄 Markdown 版本: {md_path.name}")

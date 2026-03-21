@@ -14,7 +14,7 @@
     },
     {
       "keyword": "算力",
-      "weight": 20
+      "weight": 17
     },
     {
       "keyword": "逻辑",
@@ -26,23 +26,23 @@
     },
     {
       "keyword": "agent",
-      "weight": 27
+      "weight": 24
     },
     {
       "keyword": "ai",
-      "weight": 20
+      "weight": 19
     },
     {
       "keyword": "medical",
-      "weight": 16
+      "weight": 14
     },
     {
       "keyword": "evidence-mesh",
-      "weight": 20
+      "weight": 17
     },
     {
       "keyword": "mcp",
-      "weight": 13
+      "weight": 7
     },
     {
       "keyword": "aci",
@@ -54,19 +54,19 @@
     },
     {
       "keyword": "core",
-      "weight": 13
+      "weight": 9
     },
     {
       "keyword": "数字",
-      "weight": 20
+      "weight": 17
     },
     {
       "keyword": "架构",
-      "weight": 20
+      "weight": 15
     },
     {
       "keyword": "战略",
-      "weight": 20
+      "weight": 15
     },
     {
       "keyword": "路径",
@@ -74,11 +74,11 @@
     },
     {
       "keyword": "认知",
-      "weight": 20
+      "weight": 17
     },
     {
       "keyword": "临床",
-      "weight": 20
+      "weight": 17
     },
     {
       "keyword": "语义",
@@ -134,7 +134,7 @@
     },
     {
       "keyword": "原子化",
-      "weight": 20
+      "weight": 17
     },
     {
       "keyword": "物理",
