@@ -32,18 +32,33 @@ triggers: ["复盘今天的日常日志", "提取我这段时间的认知盲点"
 
 ### Phase 1: Cognitive Distillation & Reviewer [EXECUTION Mode]
 1.  **Session Analysis**: 提取核心产出，生成 `cognitive_depth_score` (1-5)。
-2.  **Surgical Drafting (单步阻塞)**: 
+2.  **Weekly Audit Enhancement (每周审计特别增强)**:
+    *   【强制同步】：在执行“每周审计”或“本周复盘”时，必须依次激活以下两个子系统：
+        1.  **Usage Insight**: 激活 `personal-monthly-insights` 并调用 `python analyze_insights_v4.py --period 7d --extract-only`，随后执行 Stage 2-4，生成最近 7 天的系统交互战略报告。
+        2.  **Health Audit**: 激活 `personal-health-analysis` 并运行 `python scripts/garmin_intelligence.py insight_cn --days 7` 与 `python scripts/garmin_chart.py dashboard --days 7`，生成最近 7 天的生理准备度审计。
+    *   【合成要求】：在最终周报的“精力与状态”及“交互效率”章节，必须引用上述两项审计的原始数据。
+3.  **Monthly Audit Enhancement (月度审计特别增强)**:
+    *   【强制同步】：在执行“月度审计”或“月度复盘”时，必须依次激活以下两个子系统：
+        1.  **Usage Insight (30d)**: 激活 `personal-monthly-insights` 并调用 `python analyze_insights_v4.py --period 30d --extract-only`，随后执行 Stage 2-4，生成最近 30 天的系统交互战略报告（重点关注摩擦基因的演化）。
+        2.  **Health Audit (30d)**: 激活 `personal-health-analysis` 并运行 `python scripts/garmin_intelligence.py insight_cn --days 30` 与 `python scripts/garmin_chart.py dashboard --period 30d`，生成最近 30 天的生理基线漂移审计。
+    *   【合成要求】：月报必须对比 30 天内的生理趋势（RHR/HRV 趋势）与交互效率的因果关联。
+4.  **Surgical Drafting (单步阻塞)**: 
     *   对于月/年复盘，每次对话【仅允许】起草 1 个维度（如“健康与精力”）。
     *   完成后必须 `[STOP]` 挂起，等待指令后继续。
-3.  **Reviewer 审计**: 在交付前，Agent 执行二元校验：
+5.  **Reviewer 审计**: 在交付前，Agent 执行二元校验：
     - [ ] 标签是否 100% 对齐 `semantic_layer.md`？ [Yes/No]
     - [ ] 报告是否包含 PART 0 中的历史战术问责？ [Yes/No]
+    - [ ] (仅限周/月报) 是否已包含对应周期的交互洞察与生理数据？ [Yes/No]
 
 ### Phase 2: Atomic Operations & Write-Back [EXECUTION Mode]
 1.  **Atomic Logging (Win32 物理适配)**: 
     *   禁止命令行直接传参复杂字符。
     *   必须执行：`write_file` 到 tmp -> 调用 `diary_ops.py prepend --content_file` 注入。
-2.  **Strategic Sync (记忆蒸馏)**: 
+2.  **Mentat Insight Archival (同步调用内观日记)**: 
+    *   【强制要求】：在生成日志的同时，必须同步生成一份符合 `insight-diary` 标准的 OODA 审计报告。
+    *   物理归档路径：`{root_dir}/memory/privacy/Diary/mentat_audit/[YYYY-MM-DD]_Audit.md`。
+    *   内容必须包含：观测 (Observe)、导向 (Orient)、决策 (Decide)、执行 (Act) 及认知结晶。
+3.  **Strategic Sync (记忆蒸馏)**: 
     *   若 `cognitive_depth_score` >= 4，格式化为 JSON 写入 tmp。
     *   调用 `scripts/memory_sync.py` 同步至 `memory.md`。
 
