@@ -1,7 +1,7 @@
 # SKILL: Insight Diary (内观日记)
 
 ---
-name: insight-diary
+name: mentat-insight-diary
 description: 当用户输入“内观日记”、“introspection diary”或要求记录“Mentat 审计日志”时触发。这是系统写给自己的日志。该技能通过 OODA 框架对当前会话的认知摩擦、资产锻造与系统进化执行第一人称深度反思，并自动将日志物理归档至 `memory/privacy/Diary/mentat_audit/` 路径。
 ---
 

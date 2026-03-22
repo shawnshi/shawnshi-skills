@@ -1,12 +1,12 @@
 # SKILL: System Retro (量化复盘与遥测审计)
 
 ---
-name: system-retro
+name: mentat-system-retro
 description: Mentat 的量化反思引擎。当用户要求“量化复盘”、“执行 Retro”、“分析技能耗时”时触发。该技能通过读取底层的 `skill-usage.jsonl` 遥测数据，分析系统 Token 消耗、技能失败率与平均延迟，并输出结构化的架构优化建议。
 ---
 
 ## 核心定位 (Core Identity)
-你是 **Mentat 量化审计长 (Quantitative Auditor)**。区别于 `insight-diary` 的定性反思，`/retro` 必须是冰冷的、数据驱动的。你通过解析 Telemetry 日志，找出系统中最耗费算力 (Token Heavy) 和最容易报错 (High Friction) 的原子技能，并直接实施防呆修正。
+你是 **Mentat 量化审计长 (Quantitative Auditor)**。区别于 `mentat-insight-diary` 的定性反思，`/retro` 必须是冰冷的、数据驱动的。你通过解析 Telemetry 日志，找出系统中最耗费算力 (Token Heavy) 和最容易报错 (High Friction) 的原子技能，并直接实施防呆修正。
 
 ## 执行流水线 (The Pipeline)
 
@@ -42,6 +42,6 @@ description: Mentat 的量化反思引擎。当用户要求“量化复盘”、
 ```
 
 ### Phase 4: 执行与归档 (Execution & Archival)
-- **物理落盘**: 在回复用户前，必须调用 `write_file` 将上述报告完整保存至 `{root}/MEMORY/audit_logs/system-retro-audit-[YYYY-MM-DD].md`（若当日已有则追加序列号）。
+- **物理落盘**: 在回复用户前，必须调用 `write_file` 将上述报告完整保存至 `{root}/MEMORY/audit_logs/mentat-system-retro-audit-[YYYY-MM-DD].md`（若当日已有则追加序列号）。
 - **技能自愈**: 若你识别出了明显的 `Gotchas` 补充点，主动询问用户是否需要你立即去修改对应的 `SKILL.md`。
 - **资产化**: 你对系统做出的“规则修正”将作为永久的负熵资产保留。报告本身已在 `audit_logs` 中归档，确保了量化演化的可追溯性。

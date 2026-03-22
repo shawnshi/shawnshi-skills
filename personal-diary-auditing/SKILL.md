@@ -35,7 +35,7 @@ triggers: ["复盘今天的日常日志", "提取我这段时间的认知盲点"
 2.  **Weekly Audit Enhancement (每周审计特别增强)**:
     *   【强制同步】：在执行“每周审计”或“本周复盘”时，必须依次激活以下三个子系统：
         1.  **Usage Insight**: 激活 `personal-monthly-insights` 并调用 `python analyze_insights_v4.py --period 7d --extract-only`，随后执行 Stage 2-4，生成最近 7 天的系统交互战略报告。
-        2.  **Quantitative Retro**: 激活 `system-retro` 并运行 `python C:\Users\shich\.gemini\scripts\system_retro.py`，获取本周技能调用的量化损耗（Token 黑洞、失败率、延迟分布）。
+        2.  **Quantitative Retro**: 激活 `mentat-system-retro` 并运行 `python C:\Users\shich\.gemini\scripts\system_retro.py`，获取本周技能调用的量化损耗（Token 黑洞、失败率、延迟分布）。
         3.  **Health Audit**: 激活 `personal-health-analysis` 并运行 `python scripts/garmin_intelligence.py insight_cn --days 7` 与 `python scripts/garmin_chart.py dashboard --days 7`，生成最近 7 天的生理准备度审计。
     *   【合成要求】：在最终周报的“精力与状态”及“交互效率”章节，必须引用上述三项审计的原始数据。将“算力蒸发”与“生理疲劳”进行关联分析。
 3.  **Monthly Audit Enhancement (月度审计特别增强)**:
@@ -56,7 +56,7 @@ triggers: ["复盘今天的日常日志", "提取我这段时间的认知盲点"
     *   禁止命令行直接传参复杂字符。
     *   必须执行：`write_file` 到 tmp -> 调用 `diary_ops.py prepend --content_file` 注入。
 2.  **Mentat Insight Archival (同步调用内观日记)**: 
-    *   【强制要求】：在生成日志的同时，必须同步生成一份符合 `insight-diary` 标准的 OODA 审计报告。
+    *   【强制要求】：在生成日志的同时，必须同步生成一份符合 `mentat-insight-diary` 标准的 OODA 审计报告。
     *   物理归档路径：`{root_dir}/memory/privacy/Diary/mentat_audit/[YYYY-MM-DD]_Audit.md`。
     *   内容必须包含：观测 (Observe)、导向 (Orient)、决策 (Decide)、执行 (Act) 及认知结晶。
 3.  **Strategic Sync (记忆蒸馏)**: 
