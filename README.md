@@ -10,10 +10,26 @@
 > **“工具的本质是意志的延伸。在这里，我们不生产简单的功能，我们构建确定性。”**
 
 ## 1. 架构原则 (Architectural Principles)
-本目录是由 44 个专业技能构成的“分形武器库”。所有模块均遵循以下公理：
-- **物理硬锁**：核心指令集通过 Prompt Caching 前缀锁定，确保大规模执行时的经济性与响应速度。
-- **结构主权**：标记为 [Template] 的输出必须 100% 同态映射，严禁执行摘要式逻辑脱水。
-- **Native 优先**：核心审计技能已全面升级为“Native Agent Edition”，移除 Bash 脚本依赖，通过原生工具链（glob, grep, ask_user）实现极致的交互负熵。
+本目录遵循“四层壳模型”支撑下的原生代理范式，实现**代码液态化**与**业务语义固态化**的动态平衡：
+
+### A. 物理层：算力主权与环境隔离 (Physics)
+- **物理硬锁**：所有技能必须在本地物理目录内闭环执行，严禁依赖外部云端黑盒。
+- **路径归一化**：强制统一路径风格，确保 Windows/Unix 环境下的逻辑同态。
+
+### B. 逻辑层：语义主权与 MSL 约束 (Logic)
+- **MSL 原子化**：业务逻辑必须封装为原子化 Skill。代码是液态消费品，语义协议是固态资产。
+- **Schema 绝对防御**：[Template] 标记的输出必须 100% 同态映射，严禁执行摘要式逻辑脱水。
+- **语义守恒**：允许实现路径突变，但核心业务语义必须在重构前后保持恒定。
+
+### C. 执行层：负熵交互与 OODA 闭环 (Execution)
+- **脑暴倾倒 + 查漏补缺**：废除串行审讯，采用高带宽初始输入 + 静默映射 + 聚合追问模式。
+- **聚合批处理**：在评审任务中整合决策节点，最大化保护用户心流，实现极致的交互负熵。
+- **Markdown 原生可视化**：强制使用 Mermaid 进行架构描述，弃用不稳定的 UI 截图。
+
+### D. 进化层：自愈能力与证据网 (Evolution)
+- **失效先验 (Gotchas)**：将重复性失败硬编码为 SKILL.md 顶部的禁令，实现系统的对抗性进化。
+- **证据网 (Evidence-Mesh)**：分析类资产必须强制执行物理归档，严禁仅保留在瞬时对话历史中。
+- **量化反思**：通过 `mentat-system-retro` 审计遥测数据，以数据驱动系统拓扑的持续优化。
 
 ## 2. 安装与部署 (Deployment)
 ```bash
@@ -36,8 +52,8 @@ gemini skills install https://github.com/shawnshi/shawnshi-skills.git --path hit
 | **[office-hours](office-hours/)**                           | **战略架构师与需求脱水 (Native Edition)**。通过“脑暴倾倒+查漏补缺”模式，执行 6 个高压问题进行战略脱水，输出设计文档。 |
 | **[plan-ceo-review](plan-ceo-review/)**                     | **创始人模式战略审计 (Native Edition)**。采用“聚合批处理”模式对开发计划执行核能挑战，支持范围扩张、择优或缩减。       |
 | **[brainstorming](brainstorming/)**                         | **创意与架构设计专家 (Native Edition)**。在任何开发行为前强制调用，将模糊意图转化为具体的设计规范与验证方案。         |
-| **[logic-adversary](logic-adversary/)**                     | **逻辑对抗系统 (V4.0)**。搜索单点故障 (SPOF)，通过饱和逻辑攻击验证方案鲁棒性。                                        |
-| **[personal-intelligence-hub](personal-intelligence-hub/)** | **个人情报作战中枢 (V5.0)**。执行全球多源抓取，将噪音降维为 Alpha 级决策资产。                                        |
+| **[logic-adversary](logic-adversary/)**                     | **逻辑对抗系统 (Native Edition)**。搜索单点故障 (SPOF)，通过饱和逻辑攻击验证方案鲁棒性。                              |
+| **[personal-intelligence-hub](personal-intelligence-hub/)** | **个人情报作战中枢 (Native Edition)**。执行全球多源抓取，将噪音降维为 Alpha 级决策资产。                              |
 
 ### 🏥 大健康与战略研判中枢 (Healthcare Strategy)
 *聚焦垂直主业：医疗信息化 (HIT)、临床决策支持及大客户分析。*
