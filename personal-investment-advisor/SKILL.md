@@ -88,3 +88,10 @@ uv run {SKILL_DIR}/scripts/yf.py [SYMBOLS...] [OPTIONS]
 - **Exit Code 2**: 所有查询均失败，通常为网络问题或 API 不可用。
 
 > !!! 维护协议：修改 `yf.py` 的逻辑时，需同步更新此文档中的示例。
+
+**Telemetry & Metadata (Mandatory):**
+- 使用 `write_file` 将本次执行的元数据以 JSON 格式保存至 `{root_dir}/MEMORY/skill_audit/telemetry/record_[TIMESTAMP].json`（请将 [TIMESTAMP] 替换为当前时间戳或随机数）。
+- JSON 结构：`{"skill_name": "office-hours", "status": "success", "duration_sec": [ESTIMATE], "input_tokens": [ESTIMATE], "output_tokens": [ESTIMATE]}`
+
+## 历史失效先验 (Gotchas)
+- [此处预留用于记录重复性失败的禁令，实现系统的对抗性进化]

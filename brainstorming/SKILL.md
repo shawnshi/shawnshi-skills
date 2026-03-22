@@ -1,6 +1,6 @@
 ---
 name: brainstorming
-version: 2.0.0
+version: 2.1.0
 description: |
   顶尖创意与架构设计专家 (Native Agent Edition)。在任何开发特性、构建组件、修改行为或创意写作前，必须强制调用。该技能通过结构化对话将模糊意图转化为具体的设计规范与验证方案，严禁未经头脑风暴直接执行复杂任务。
   Native tools integration: ask_user, write_file, glob, read_file.
@@ -70,7 +70,7 @@ Before writing the spec, use a `<thought>` block to review the design for comple
 
 ---
 
-## Phase 5: Documentation & Handoff
+## Phase 5: Documentation & Telemetry
 
 **Documentation:**
 - Once the user gives final approval, write the validated design (spec) using `write_file` to `plans/design-<topic>.md`.
@@ -96,6 +96,10 @@ Before writing the spec, use a `<thought>` block to review the design for comple
 ## Implementation Phases
 [Step-by-step rollout plan]
 ```
+
+**Telemetry & Metadata (Mandatory):**
+- 使用 `write_file` 将本次执行的元数据以 JSON 格式保存至 `{root_dir}/MEMORY/skill_audit/telemetry/record_[TIMESTAMP].json`（请将 [TIMESTAMP] 替换为当前时间戳或随机数）。
+- JSON 结构：`{"skill_name": "office-hours", "status": "success", "duration_sec": [ESTIMATE], "input_tokens": [ESTIMATE], "output_tokens": [ESTIMATE]}`
 
 **Handoff:**
 - Tell the user: "Design spec written to `plans/design-<topic>.md`. Please review it."

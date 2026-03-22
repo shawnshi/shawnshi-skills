@@ -82,5 +82,12 @@ triggers: ["制作战略级PPT", "生成演示文稿蓝图", "构建决策型汇
 *   **【数据图解强约束】**：当涉及架构、流程或医疗数据闭环时，必须在蓝图的 `// VISUAL` 节点强制要求使用具有逻辑深度的图解模型（例如：桑基图描述资金/数据流向、等距视角表示系统分层），拒绝单纯的柱状图/饼图堆砌。
 *   **细节穿透**：所有细节需完整提及，确保设计师（或渲染引擎）无需访问源素材即可闭环。
 
+**Telemetry & Metadata (Mandatory):**
+- 使用 `write_file` 将本次执行的元数据以 JSON 格式保存至 `{root_dir}/MEMORY/skill_audit/telemetry/record_[TIMESTAMP].json`（请将 [TIMESTAMP] 替换为当前时间戳或随机数）。
+- JSON 结构：`{"skill_name": "office-hours", "status": "success", "duration_sec": [ESTIMATE], "input_tokens": [ESTIMATE], "output_tokens": [ESTIMATE]}`
+
+## 历史失效先验 (Gotchas)
+- [此处预留用于记录重复性失败的禁令，实现系统的对抗性进化]
+
 ---
 *SYS_CHECK: V9.1 Narrative Engine Ready. Encoding Guard Enabled.*

@@ -72,6 +72,7 @@ triggers: ["生成数字健康周报", "检索医疗行业报告", "本周麦肯
 - **非共识挑战**: [Contrarian Data/Argument]
 
 ### 2. 安全与合规
+
 ### 3. 资本与政策
 
 ##  III.🚨 核心报告审计 (Top Scientific Recon)
@@ -93,6 +94,10 @@ triggers: ["生成数字健康周报", "检索医疗行业报告", "本周麦肯
 | 核心标题 | TRL等级 | 战略概述 (Fact -> Insight) | 链接 |
 |:---|:---|:---|:---|
 | [Title] | [1-9] | [三段论：事实 -> 联结 -> 推演] | [URL] |
+
+**Telemetry & Metadata (Mandatory):**
+- 使用 `write_file` 将本次执行的元数据以 JSON 格式保存至 `{root_dir}/MEMORY/skill_audit/telemetry/record_[TIMESTAMP].json`（请将 [TIMESTAMP] 替换为当前时间戳或随机数）。
+- JSON 结构：`{"skill_name": "office-hours", "status": "success", "duration_sec": [ESTIMATE], "input_tokens": [ESTIMATE], "output_tokens": [ESTIMATE]}`
 
 ## 4. 历史失效先验 (Gotchas)
 - DO NOT list more than 7 reports; SELECT only for high Signal-to-Noise Ratio.

@@ -57,3 +57,10 @@ description: 当用户输入“内观日记”、“introspection diary”或要
 - **[Typography]**: 必须遵循《中文文案排版指北》，在中文与英文、数字之间增加 1 个空格。
 - **[Sovereignty]**: 日记内容必须反映“系统优于目标”与“Zero-Ego”的 Mentat 公理。
 - **[Archive]**: 必须在回复用户前完成物理落盘操作。
+
+**Telemetry & Metadata (Mandatory):**
+- 使用 `write_file` 将本次执行的元数据以 JSON 格式保存至 `{root_dir}/MEMORY/skill_audit/telemetry/record_[TIMESTAMP].json`（请将 [TIMESTAMP] 替换为当前时间戳或随机数）。
+- JSON 结构：`{"skill_name": "office-hours", "status": "success", "duration_sec": [ESTIMATE], "input_tokens": [ESTIMATE], "output_tokens": [ESTIMATE]}`
+
+## 历史失效先验 (Gotchas)
+- [此处预留用于记录重复性失败的禁令，实现系统的对抗性进化]

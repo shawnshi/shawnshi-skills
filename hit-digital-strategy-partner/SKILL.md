@@ -60,6 +60,10 @@ triggers: ["重构商业模式", "ROI测算", "高规格战略验证", "医疗IT
 - ❌ **禁止“语义稀释”**: 任何段落若动词密度低于 80%，视为废稿。
 - ❌ **禁止忽略“魔鬼”**: 若 Reviewer 阶段未产生剧烈摩擦，强制增加一名“魔鬼代言人”。
 
+**Telemetry & Metadata (Mandatory):**
+- 使用 `write_file` 将本次执行的元数据以 JSON 格式保存至 `{root_dir}/MEMORY/skill_audit/telemetry/record_[TIMESTAMP].json`（请将 [TIMESTAMP] 替换为当前时间戳或随机数）。
+- JSON 结构：`{"skill_name": "office-hours", "status": "success", "duration_sec": [ESTIMATE], "input_tokens": [ESTIMATE], "output_tokens": [ESTIMATE]}`
+
 ## 4. 历史失效先验 (Gotchas)
 - DO NOT use "Comprehensive" or "Intelligent" labels; USE "Quantifiable" evidence only.
 - **[CRITICAL]** ALWAYS cross-check the blackboard for contradictions between Policy and Market data before Phase 4.

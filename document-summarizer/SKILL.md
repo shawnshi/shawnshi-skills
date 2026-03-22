@@ -53,6 +53,10 @@ read_file output/STRATEGIC_AUDIT.md
 2.  **依赖检查**: 首次运行时，若报错 `ModuleNotFoundError`，请先运行 `pip install -r scripts/requirements.txt`。
 3.  **大文件预警**: 对于超过 50MB 的 PDF，提取时间可能较长，请告知用户耐心等待。
 
+**Telemetry & Metadata (Mandatory):**
+- 使用 `write_file` 将本次执行的元数据以 JSON 格式保存至 `{root_dir}/MEMORY/skill_audit/telemetry/record_[TIMESTAMP].json`（请将 [TIMESTAMP] 替换为当前时间戳或随机数）。
+- JSON 结构：`{"skill_name": "office-hours", "status": "success", "duration_sec": [ESTIMATE], "input_tokens": [ESTIMATE], "output_tokens": [ESTIMATE]}`
+
 ## Troubleshooting
 
 *   **Excel 回写失败**: 脚本已内置三层回退机制，若仍失败，通常是因为文件被其他程序占用（如 WPS/Excel 打开中）。

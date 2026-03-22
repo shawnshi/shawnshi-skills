@@ -55,3 +55,10 @@ python scripts/humanize_engine.py "待润色文本或文件路径"
 *   **Talk, Don't Lecture**: 假想你正在和 CEO 喝着美式咖啡汇报，而不是在念 PPT。
 *   **动词即正义**: 名词是累赘，把“实现效率的提升”改回“做快点”。
 *   **具体打败抽象**: 别说“构建宏伟蓝图”，说“下个季度把 A 模块上线”。
+
+**Telemetry & Metadata (Mandatory):**
+- 使用 `write_file` 将本次执行的元数据以 JSON 格式保存至 `{root_dir}/MEMORY/skill_audit/telemetry/record_[TIMESTAMP].json`（请将 [TIMESTAMP] 替换为当前时间戳或随机数）。
+- JSON 结构：`{"skill_name": "office-hours", "status": "success", "duration_sec": [ESTIMATE], "input_tokens": [ESTIMATE], "output_tokens": [ESTIMATE]}`
+
+## 历史失效先验 (Gotchas)
+- [此处预留用于记录重复性失败的禁令，实现系统的对抗性进化]
