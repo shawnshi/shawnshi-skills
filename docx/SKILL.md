@@ -821,3 +821,6 @@ with DocxContext("input.docx", "output.docx") as ctx:
 ---
 
 **Complete examples**: See `references/EditingGuide.md` for full working code.
+
+## 5. 历史失效先验 (Gotchas)
+- [此处预留用于记录重复性失败的禁令，实现系统的对抗性进化]

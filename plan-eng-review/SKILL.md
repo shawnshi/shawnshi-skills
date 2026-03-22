@@ -27,12 +27,11 @@ This skill operates in three dense phases. Do NOT interrupt the user with sequen
 
 ### Phase 1: Silent Deep Scan (Zero Interruption)
 
-Execute these tasks silently using your tools and `<thought>` blocks.
+Execute these tasks silently using `<thought>` blocks to analyze the context.
 
 1. **Context Discovery:**
-   - Find the active plan: Use `glob` or `grep_search` to locate the current implementation plan (e.g., `plans/*.md`).
-   - Read related design docs: Use `glob` to find any outputs from `/office-hours` or `/plan-ceo-review`.
-   - **System State:** Run `run_shell_command` with `git status`, `git log -n 5`, and `git diff --stat` to understand the blast radius. Check for `TODOS.md`.
+   - **Find the active plan:** Analyze the provided implementation plan, design docs, or current workspace context.
+   - **System State:** Review the active codebase context, recent changes, or `TODOS.md` provided by the user to understand the blast radius.
 
 2. **Multi-Dimensional Code Audit (in `<thought>`):**
    - **Step 0: Scope & Complexity:** Does this touch >8 files or add >2 new classes? Is there a simpler path? Can existing code be reused?
@@ -44,7 +43,7 @@ Execute these tasks silently using your tools and `<thought>` blocks.
 
 ---
 
-### Phase 2: The Engineering Readout & Aggregated Decision (ask_user)
+### Phase 2: The Engineering Readout & Aggregated Decision
 
 Once your silent analysis is complete, present your findings to the user in a highly structured, hard-hitting readout.
 
@@ -54,8 +53,8 @@ Present the findings organized by severity:
 - **WARNINGS (Architecture/Performance):** Coupling issues, N+1 query risks, over-engineering smells.
 - **TESTING SCOPE:** A brief outline of the testing boundaries required before shipping.
 
-**Step 2B: Aggregated Decision Gate (ask_user)**
-Present a **SINGLE** `ask_user` prompt to lock in the plan's modifications based on your findings. Do NOT ask them one by one.
+**Step 2B: Aggregated Decision Gate**
+Present a **SINGLE** prompt to the user to lock in the plan's modifications based on your findings. Do NOT ask them one by one.
 
 > "I have audited the plan. Here are the required engineering modifications to ensure stability. How should we proceed?"
 > - **A) ACCEPT ALL FIXES:** Apply all recommended edge-case handling, error rescues, and test additions to the plan.
@@ -66,7 +65,7 @@ Present a **SINGLE** `ask_user` prompt to lock in the plan's modifications based
 
 ---
 
-### Phase 3: The Unified Review Report & Test Plan (write_file)
+### Phase 3: The Unified Review Report & Test Plan
 
 After receiving the user's decision, generate the final engineering artifact.
 
@@ -74,8 +73,8 @@ After receiving the user's decision, generate the final engineering artifact.
 Open a `<thought>` block to synthesize the accepted changes. 
 
 **Step 3B: Document Generation**
-Use `write_file` to output the results. 
-*If the user is operating via a specific `plan.md`, append this section to that file. Otherwise, write it to `plans/Eng-Review-<feature>.md`.*
+Output the results as a cleanly formatted Markdown block.
+*If the user is operating via a specific `plan.md`, provide the updated content so they can append or replace it. Otherwise, output it as `Eng-Review-<feature>.md`.*
 
 **Template Structure:**
 ```markdown
@@ -83,7 +82,7 @@ Use `write_file` to output the results.
 **Date:** [YYYY-MM-DD] | **Status:** CLEARED (Ready for Implementation)
 
 ### 1. Architectural Adjustments
-- [List any structural changes, DB index additions, or API changes agreed upon]
+-[List any structural changes, DB index additions, or API changes agreed upon]
 - [Insert Mermaid diagram for complex State Machines or Data Flows if applicable]
 
 ### 2. Error & Rescue Map (Zero Silent Failures)
@@ -92,22 +91,20 @@ Use `write_file` to output the results.
 | ...      | ...          | ...             | ...           | ...       |
 
 ### 3. Edge Cases & Constraints
-- [List specific shadow paths (nil/empty/timeout) to be handled in code]
+-[List specific shadow paths (nil/empty/timeout) to be handled in code]
 
 ### 4. Test Plan (For Implementation & QA)
 - **Affected Routes/Components:** [List]
-- **Unit/Integration Boundaries:** [What must be tested programmatically]
-- **Critical Paths & Chaos Tests:** [What must not fail, e.g., "Network drop during checkout"]
+- **Unit/Integration Boundaries:**[What must be tested programmatically]
+- **Critical Paths & Chaos Tests:**[What must not fail, e.g., "Network drop during checkout"]
 
 ### 5. Deferred Debt (TODOS)
-- [List any warnings that were deferred]
-```
-
----
-
-## Phase 4: Handoff & Next Steps
-
+-[List any warnings that were deferred]
+Phase 4: Handoff & Next Steps
 Provide a clean sign-off in the chat:
-1. "Engineering Review and Test Plan written to `plans/...` (or appended to your active plan)."
-2. "The architecture is locked. We have mapped the shadow paths and test boundaries."
-3. **Next Steps:** "Whenever you are ready, we can begin implementation."
+"Engineering Review and Test Plan has been generated."
+"The architecture is locked. We have mapped the shadow paths and test boundaries."
+Next Steps: "Whenever you are ready, we can begin implementation."
+
+## 5. 历史失效先验 (Gotchas)
+- [此处预留用于记录重复性失败的禁令，实现系统的对抗性进化]

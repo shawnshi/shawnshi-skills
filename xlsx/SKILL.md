@@ -922,3 +922,6 @@ Phase 4: DELIVER
 - 🔗 **External Data Sources**: When using `datasource`, `web_search`, or any external data fetching tool, you MUST include source citations in the final Excel. Add `Source Name` and `Source URL` columns, or create a dedicated "Sources" sheet. ⛔ FORBIDDEN: Delivering Excel with fetched data but missing source references.
 
 </Attention items>
+
+## 历史失效先验 (Gotchas)
+- [此处预留用于记录重复性失败的禁令，实现系统的对抗性进化]

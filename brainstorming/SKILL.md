@@ -100,3 +100,6 @@ Before writing the spec, use a `<thought>` block to review the design for comple
 **Handoff:**
 - Tell the user: "Design spec written to `plans/design-<topic>.md`. Please review it."
 - Advise the user that the next step is to run `/plan-eng-review` or `/plan-ceo-review` (if strategic) before starting execution.
+
+## 6. 历史失效先验 (Gotchas)
+- [此处预留用于记录重复性失败的禁令，实现系统的对抗性进化]
