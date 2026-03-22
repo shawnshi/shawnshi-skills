@@ -29,6 +29,29 @@ Then after the skill is done (but again, the order is flexible), you can also ru
 
 Cool? Cool.
 
+## 核心架构原则 (Architectural Principles)
+
+所有由你创建或优化的技能必须遵循以下公理：
+
+### A. 物理层：算力主权与环境隔离 (Physics)
+- **物理硬锁**：技能必须在本地物理目录内闭环执行，严禁依赖外部云端黑盒。
+- **路径归一化**：在 SKILL.md 中强制使用统一路径风格（`/` 分隔），确保跨平台逻辑同构。
+- **Native 优先**：优先使用 Agent 原生工具链（glob, ask_user, write_file）。
+
+### B. 逻辑层：语义主权与 MSL 约束 (Logic)
+- **MSL 原子化**：业务逻辑必须封装为原子化 Skill。代码是液态消费品，语义协议（SKILL.md）是固态资产。
+- **Schema 绝对防御**：标记为 `[Template]` 或 `Schema` 的输出结构必须 100% 同态映射，严禁执行摘要式逻辑脱水。
+- **语义守恒**：允许实现路径突变，但核心业务语义必须保持恒定。
+
+### C. 执行层：负熵交互与 OODA 闭环 (Execution)
+- **脑暴倾倒 + 查漏补缺**：废除串行审讯，采用高带宽初始输入 + 静默映射 + 聚合追问模式。
+- **聚合批处理**：整合决策节点，最大化保护用户心流。
+- **Markdown 原生可视化**：强制使用 **Mermaid** 进行架构描述，弃用不稳定的 UI 截图。
+
+### D. 进化层：自愈能力与证据网 (Evolution)
+- **失效先验 (Gotchas)**：将重复性失败硬编码为 SKILL.md 顶部的禁令。
+- **证据网 (Evidence-Mesh)**：所有分析类/评估类输出必须通过 `write_file` 物理归档至 `MEMORY/skill_audit/`。
+
 ## Communicating with the user
 
 The skill creator is liable to be used by people across a wide range of familiarity with coding jargon. If you haven't heard (and how could you, it's only very recently that it started), there's a trend now where the power of Claude is inspiring plumbers to open up their terminals, parents and grandparents to google "how to install npm". On the other hand, the bulk of users are probably fairly computer-literate.
@@ -68,11 +91,12 @@ Check available MCPs - if useful for research (searching docs, finding similar s
 ### Write the SKILL.md
 
 Based on the user interview, fill in these components:
-
 - **name**: Skill identifier
 - **description**: When to trigger, what it does. This is the primary triggering mechanism - include both what the skill does AND specific contexts for when to use it. All "when to use" info goes here, not in the body. Note: currently Claude has a tendency to "undertrigger" skills -- to not use them when they'd be useful. To combat this, please make the skill descriptions a little bit "pushy". So for instance, instead of "How to build a simple fast dashboard to display internal Anthropic data.", you might write "How to build a simple fast dashboard to display internal Anthropic data. Make sure to use this skill whenever the user mentions dashboards, data visualization, internal metrics, or wants to display any kind of company data, even if they don't explicitly ask for a 'dashboard.'"
 - **compatibility**: Required tools, dependencies (optional, rarely needed)
 - **the rest of the skill :)**
+- **## 绝对禁令 (Anti-Patterns)**: 明确红线。
+- **## 历史失效先验 (Gotchas)**: 预留空章节。
 
 ### Skill Writing Guide
 
@@ -446,6 +470,7 @@ Once you have enough evidence, propose a targeted "Patch" (Amendment) rather tha
 - **Add missing conditions**: Explicitly handle edge cases discovered in the audit.
 - **Reorder or clarify steps**: Use imperative form and explain *why* steps are necessary.
 - **Update output format**: Align strictly with the latest user requirements or Schema.
+- **Gotchas 强制写入**: 任何被纠正的 Bug 模式必须写入目标技能的 `## Gotchas` 章节。
 
 ### 3. Evaluate & Update
 - Propose the patch to the user with a clear rationale based on the audit evidence.
@@ -478,38 +503,6 @@ Once you have enough evidence, propose a targeted "Patch" (Amendment) rather tha
    - **Keep (固化与落盘)**：若通过率提升，保留修改。
    - **资产化同步**：无论成功或失败，必须将本次突变记录（动机、修改内容、得分变化）写入 `MEMORY/skill_audit/mutation_log.md`（或对应的日志文件），并使用 `vector-lake/cli.py sync` 同步至逻辑湖，形成跨技能的认知复利。
 
----
-
-## Claude.ai-specific instructions
-
-In Claude.ai, the core workflow is the same (draft → test → review → improve → repeat), but because Claude.ai doesn't have subagents, some mechanics change. Here's what to adapt:
-
-**Running test cases**: No subagents means no parallel execution. For each test case, read the skill's SKILL.md, then follow its instructions to accomplish the test prompt yourself. Do them one at a time. This is less rigorous than independent subagents (you wrote the skill and you're also running it, so you have full context), but it's a useful sanity check — and the human review step compensates. Skip the baseline runs — just use the skill to complete the task as requested.
-
-**Reviewing results**: If you can't open a browser (e.g., Claude.ai's VM has no display, or you're on a remote server), skip the browser reviewer entirely. Instead, present results directly in the conversation. For each test case, show the prompt and the output. If the output is a file the user needs to see (like a .docx or .xlsx), save it to the filesystem and tell them where it is so they can download and inspect it. Ask for feedback inline: "How does this look? Anything you'd change?"
-
-**Benchmarking**: Skip the quantitative benchmarking — it relies on baseline comparisons which aren't meaningful without subagents. Focus on qualitative feedback from the user.
-
-**The iteration loop**: Same as before — improve the skill, rerun the test cases, ask for feedback — just without the browser reviewer in the middle. You can still organize results into iteration directories on the filesystem if you have one.
-
-**Description optimization**: This section requires the `claude` CLI tool (specifically `claude -p`) which is only available in Claude Code. Skip it if you're on Claude.ai.
-
-**Blind comparison**: Requires subagents. Skip it.
-
-**Packaging**: The `package_skill.py` script works anywhere with Python and a filesystem. On Claude.ai, you can run it and the user can download the resulting `.skill` file.
-
----
-
-## Cowork-Specific Instructions
-
-If you're in Cowork, the main things to know are:
-
-- You have subagents, so the main workflow (spawn test cases in parallel, run baselines, grade, etc.) all works. (However, if you run into severe problems with timeouts, it's OK to run the test prompts in series rather than parallel.)
-- You don't have a browser or display, so when generating the eval viewer, use `--static <output_path>` to write a standalone HTML file instead of starting a server. Then proffer a link that the user can click to open the HTML in their browser.
-- For whatever reason, the Cowork setup seems to disincline Claude from generating the eval viewer after running the tests, so just to reiterate: whether you're in Cowork or in Claude Code, after running tests, you should always generate the eval viewer for the human to look at examples before revising the skill yourself and trying to make corrections, using `generate_review.py` (not writing your own boutique html code). Sorry in advance but I'm gonna go all caps here: GENERATE THE EVAL VIEWER *BEFORE* evaluating inputs yourself. You want to get them in front of the human ASAP!
-- Feedback works differently: since there's no running server, the viewer's "Submit All Reviews" button will download `feedback.json` as a file. You can then read it from there (you may have to request access first).
-- Packaging works — `package_skill.py` just needs Python and a filesystem.
-- Description optimization (`run_loop.py` / `run_eval.py`) should work in Cowork just fine since it uses `claude -p` via subprocess, not a browser, but please save it until you've fully finished making the skill and the user agrees it's in good shape.
 
 ---
 
