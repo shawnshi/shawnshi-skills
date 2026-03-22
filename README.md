@@ -35,7 +35,7 @@ gemini skills install https://github.com/shawnshi/shawnshi-skills.git --path hit
 |:--------------------------------------------------------|:--------------------------------------------------------------------------------------------------------------------|
 | **[office-hours](office-hours/)**                       | **战略架构师与需求脱水 (Native Edition)**。通过“脑暴倾倒+查漏补缺”模式，执行 6 个高压问题进行战略脱水，输出设计文档。 |
 | **[plan-ceo-review](plan-ceo-review/)**                 | **创始人模式战略审计 (Native Edition)**。采用“聚合批处理”模式对开发计划执行核能挑战，支持范围扩张、择优或缩减。 |
-| **[brainstorming](brainstorming/)**                     | **创意与架构设计专家**。将模糊意图转化为具体的设计规范与验证方案。                            |
+| **[brainstorming](brainstorming/)**                     | **创意与架构设计专家 (Native Edition)**。在任何开发行为前强制调用，将模糊意图转化为具体的设计规范与验证方案。                            |
 | **[logic-adversary](logic-adversary/)**                 | **逻辑对抗系统 (V4.0)**。搜索单点故障 (SPOF)，通过饱和逻辑攻击验证方案鲁棒性。    |
 | **[personal-intelligence-hub](personal-intelligence-hub/)** | **个人情报作战中枢 (V5.0)**。执行全球多源抓取，将噪音降维为 Alpha 级决策资产。 |
 
