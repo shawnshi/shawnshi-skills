@@ -33,10 +33,11 @@ triggers: ["复盘今天的日常日志", "提取我这段时间的认知盲点"
 ### Phase 1: Cognitive Distillation & Reviewer [EXECUTION Mode]
 1.  **Session Analysis**: 提取核心产出，生成 `cognitive_depth_score` (1-5)。
 2.  **Weekly Audit Enhancement (每周审计特别增强)**:
-    *   【强制同步】：在执行“每周审计”或“本周复盘”时，必须依次激活以下两个子系统：
+    *   【强制同步】：在执行“每周审计”或“本周复盘”时，必须依次激活以下三个子系统：
         1.  **Usage Insight**: 激活 `personal-monthly-insights` 并调用 `python analyze_insights_v4.py --period 7d --extract-only`，随后执行 Stage 2-4，生成最近 7 天的系统交互战略报告。
-        2.  **Health Audit**: 激活 `personal-health-analysis` 并运行 `python scripts/garmin_intelligence.py insight_cn --days 7` 与 `python scripts/garmin_chart.py dashboard --days 7`，生成最近 7 天的生理准备度审计。
-    *   【合成要求】：在最终周报的“精力与状态”及“交互效率”章节，必须引用上述两项审计的原始数据。
+        2.  **Quantitative Retro**: 激活 `system-retro` 并运行 `python C:\Users\shich\.gemini\scripts\system_retro.py`，获取本周技能调用的量化损耗（Token 黑洞、失败率、延迟分布）。
+        3.  **Health Audit**: 激活 `personal-health-analysis` 并运行 `python scripts/garmin_intelligence.py insight_cn --days 7` 与 `python scripts/garmin_chart.py dashboard --days 7`，生成最近 7 天的生理准备度审计。
+    *   【合成要求】：在最终周报的“精力与状态”及“交互效率”章节，必须引用上述三项审计的原始数据。将“算力蒸发”与“生理疲劳”进行关联分析。
 3.  **Monthly Audit Enhancement (月度审计特别增强)**:
     *   【强制同步】：在执行“月度审计”或“月度复盘”时，必须依次激活以下两个子系统：
         1.  **Usage Insight (30d)**: 激活 `personal-monthly-insights` 并调用 `python analyze_insights_v4.py --period 30d --extract-only`，随后执行 Stage 2-4，生成最近 30 天的系统交互战略报告（重点关注摩擦基因的演化）。

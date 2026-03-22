@@ -42,8 +42,8 @@ triggers: ["编写数字化解决方案", "设计医院转型规划", "智慧医
     *   未获批准前，严禁进入 Phase 2。
 
 ### Phase 2: Knowledge Anchoring (Tool Wrapper 挂载) [Mode: PLANNING]
-1. **知识湖深度召回**：**必须调用** `query_logic_lake` 或 `search_vector_lake`。检索核心痛点相关的历史反常识洞察、TCO 模型及避坑指南。
-2. **政策锚定**：检索 DRG 3.0、互联互通评级、数据要素入表等最新红线要求。
+1. **知识湖多跳召回**: **必须调用** `vector-lake query --interleave`。检索核心痛点相关的历史反常识洞察、TCO 模型及避坑指南。**[MSA 增强]**：针对复杂的架构关联（如：从业务指标下钻至国产数据库底层的 IOPS 瓶颈），必须利用递归检索回溯 L3 级冷库（如过往性能测试报告、HIS 源码级审计记录），消除语义断层。
+2. **政策锚定**: 检索 DRG 3.0、互联互通评级、数据要素入表等最新红线要求。
 
 ### Phase 3: Value Engineering (价值工程大纲) [Mode: PLANNING]
 1. **任务**：针对院长（TCO/ROI）、CIO（平滑割接/合规）、临床主任（减负/质量）分层设计价值锚点。
@@ -68,9 +68,10 @@ triggers: ["编写数字化解决方案", "设计医院转型规划", "智慧医
    - **[DRG 结余逻辑]**：自检是否包含了具体的测算公式与权重调节项？ [Yes/No]
    - **[信创算力损耗]**：自检是否明确标注了国产硬件在高并发下的资源预留系数？ [Yes/No]
    - **[语义迁移风险]**：自检是否包含了针对异构系统数据对齐的“物理映射表”？ [Yes/No]
-2. **Output M-CARE JSON**: 生成结构化的 `m_care_audit.json` 物理文件，记录上述二元校验的推理 Trace。
-3. **Binary Eval & Forge**: 若自诊存在 "No"，强制返回 Phase 5 重构病灶。若全为 "Yes"，调用 `text-forger` 进行高管摘要精修。
-4. **最终交付**：展示摘要、风险提示及 `m_care_audit.json` 的摘要，调用 `notify_user` 进行结案验收。
+2. **Evidence-Mesh Mapping**: **[MANDATORY]** 在最终方案的“核心判定”与“架构设计”章节，必须通过 `[Ref: Evidence_Node_ID]` 形式显式标注逻辑来源。
+3. **Output M-CARE JSON**: 生成结构化的 `m_care_audit.json` 物理文件，记录上述二元校验的推理 Trace 与引用的证据 ID 集合。
+4. **Binary Eval & Forge**: 若自诊存在 "No"，强制返回 Phase 5 重构病灶。若全为 "Yes"，调用 `text-forger` 进行高管摘要精修。
+5. **最终交付**：展示摘要、风险提示及 `m_care_audit.json` 的摘要，调用 `notify_user` 进行结案验收。
 
 ### Phase 8: Cognitive Write-Back & Self-Healing (自愈闭环) [Mode: EXECUTION]
 1. **智慧蒸馏**: 提取“反常识洞察”写入 `C:\Users\shich\.gemini\memory\MEMORY.md`。

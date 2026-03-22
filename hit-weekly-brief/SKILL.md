@@ -36,20 +36,22 @@ triggers: ["生成数字健康周报", "检索医疗行业报告", "本周麦肯
    - **`serendipity_scout` (跨界注入)**: 扫描非医疗高精尖行业（如 FinTech/Defense）的 AI 治理白皮书。
 3. **SemHash 拦截**: 剔除过去 14 天已推送的内容。
 
-### Phase 2: 主轴提炼与 Weaver 关联 [Mode: EXECUTION]
+### Phase 2: 主轴提炼与 Weaver 多跳关联 [Mode: EXECUTION]
 1. **主轴定调**: 用一句话概括本周智库的“最大共识”与“最大隐忧”。
 2. **Weaver 织网**: 将跨界报告的逻辑（如：金融级的低延迟交易审计）与医疗业务（如：手术机器人实时监控）进行二跳推理。
+3. **Memory Interleave (MSA 增强)**: 若发现跨界启示与卫宁本地技术现状的结合点存在“工程逻辑空白”，**强制调用** `vector-lake query --interleave`。通过递归回溯 L3 级冷库（如过往架构设计、HIS/EMR 重构记录），确认跨界逻辑的可落地性。
 
-### Phase 3: Contrarian 对抗与 Reviewer 审计 [Mode: VERIFICATION]
-1. **非共识对抗**: 必须调用 `logic-adversary`。**强制要求**寻找一份与本周麦肯锡/Gartner 主推共识**完全相反**的数据报告或专家评论，防止高管决策中的“回声室效应”。
+### Phase 3: Contrarian 对抗与多跳审计 [Mode: VERIFICATION]
+1. **非共识对抗**: 必须调用 `logic-adversary`。**强制要求**寻找一份与本周麦肯锡/Gartner 主推共识**完全相反**的数据报告或专家评论。优先通过 `vector-lake query --interleave` 在本地库中寻找“曾遭遇的相反教训”或“本地反向证据”。
 2. **Binary Eval (二元硬审计)**:
    - [ ] 是否包含至少一个“非医疗行业”的跨界启发？ [Yes/No]
    - [ ] 建议动作是否具备直接的销售话术或打法转换价值？ [Yes/No]
 
-### Phase 4: 激活交付与自愈 (Self-Healing) [Mode: EXECUTION]
-1. **Format Stack 渲染**: 生成具备“高压迫感”的战略简报。
-2. **物理归档**: `{root}\MEMORY\DigitalHealthWeeklyBrief\DHWB-YYYYMMDD.md`。
-3. **技能自愈**: 若审计发现“智库复读”现象，将拦截逻辑回写至 `## Gotchas`。
+### Phase 4: 交付与元数据审计 (Deliver & Persistence) [Mode: EXECUTION]
+1. **元数据完整性审计 (Metadata Integrity Audit)**: **[HARD LOCK]** 严禁在最终报告中使用 `[Link]`、`[URL]` 或任何占位符。必须逐一校验引用报告的 DOI、发布日期与原始地址。若元数据缺失，必须调用 `google_web_search` 执行二次定向爬取，确保证据链 100% 闭环。
+2. **Format Stack 渲染**: 生成具备“高压迫感”的战略简报。确保每一条战略建议均挂载了精确的 `[Ref: Evidence_Node_ID]`。
+3. **物理归档**: `{root}\MEMORY\DigitalHealthWeeklyBrief\DHWB-YYYYMMDD.md`。
+4. **技能自愈**: 将元数据缺失或共识幻觉的失败先验回写至 `## Gotchas`。
 
 ## 3. 输出格式铁律 (Format Stack)
 
@@ -72,13 +74,29 @@ triggers: ["生成数字健康周报", "检索医疗行业报告", "本周麦肯
 ### 2. 安全与合规
 ### 3. 资本与政策
 
+##  III.🚨 核心报告审计 (Top Scientific Recon)
+
+### 1. [报告 A )
+- **核心观点 (Fact)**：100字。 [Ref: Doc_ID]
+- **S-T-C 框架评估**：200字。 [Ref: Doc_ID]
+- **行动杠杆**：300字
+- **研发任务**: [任务描述 + 建议技术栈]
+- **销售话术**: [针对竞对方案的攻击/防御点]
+```
+
 ## III. 战略教练指令 (Directives)
 - [针对高管的决策建议]
 - [针对销售线的战术话术]
 ```
 
+## 🎯 情报速递 (Arbiter & Weaver Filtered)
+| 核心标题 | TRL等级 | 战略概述 (Fact -> Insight) | 链接 |
+|:---|:---|:---|:---|
+| [Title] | [1-9] | [三段论：事实 -> 联结 -> 推演] | [URL] |
+
 ## 4. 历史失效先验 (Gotchas)
 - DO NOT list more than 7 reports; SELECT only for high Signal-to-Noise Ratio.
 - **[CRITICAL]** ALWAYS include at least one "Contrarian" viewpoint to challenge the main consensus.
 - **[CRITICAL]** NO "Serendipity" = NO PUSH. Every brief must have one cross-domain insight.
+- **[CRITICAL]** ABSOLUTELY FORBIDDEN to use placeholders like `[Link]` or `[URL]` in the final report. Missing a verified DOI/URL is considered a System Fault. If toolchains fail, you MUST perform a secondary manual search via `google_web_search` to find the direct PDF or Source link.
 - ELIMINATE marketing buzzwords; USE cold, ROI-driven business language.

@@ -1,4 +1,4 @@
-# Skills Ecosystem: The Strategic Armory (V3.2 - Physical Audit Optimized)
+# Skills Ecosystem: The Strategic Armory (V3.3 - Native Agent Optimized)
 
 <!-- 
 @Pos: Root Level / Knowledge Sovereign 
@@ -13,7 +13,7 @@
 本目录是由 41 个专业技能构成的“分形武器库”。所有模块均遵循以下公理：
 - **物理硬锁**：核心指令集通过 Prompt Caching 前缀锁定，确保大规模执行时的经济性与响应速度。
 - **结构主权**：标记为 [Template] 的输出必须 100% 同态映射，严禁执行摘要式逻辑脱水。
-- **渐进式披露**：技能内容仅在触发时按需加载，维持 Agent 认知带宽的极致纯净。
+- **Native 优先**：核心审计技能已全面升级为“Native Agent Edition”，移除 Bash 脚本依赖，通过原生工具链（glob, grep, ask_user）实现极致的交互负熵。
 
 ## 2. 安装与部署 (Deployment)
 ```bash
@@ -33,8 +33,8 @@ gemini skills install https://github.com/shawnshi/shawnshi-skills.git --path hit
 
 | 技能标识 (Directory)                                    | 核心本质 (Trigger Traps)                                                                                        |
 |:--------------------------------------------------------|:--------------------------------------------------------------------------------------------------------------------|
-| **[office-hours](office-hours/)**                       | **战略架构师与需求脱水**。在编写代码前强制执行 OODA 循环，通过 6 个高压问题进行战略脱水。 |
-| **[plan-ceo-review](plan-ceo-review/)**                 | **创始人模式战略审计**。对开发计划进行 CEO 视角的核能挑战，支持范围扩张、择优或缩减。 |
+| **[office-hours](office-hours/)**                       | **战略架构师与需求脱水 (Native Edition)**。通过“脑暴倾倒+查漏补缺”模式，执行 6 个高压问题进行战略脱水，输出设计文档。 |
+| **[plan-ceo-review](plan-ceo-review/)**                 | **创始人模式战略审计 (Native Edition)**。采用“聚合批处理”模式对开发计划执行核能挑战，支持范围扩张、择优或缩减。 |
 | **[brainstorming](brainstorming/)**                     | **创意与架构设计专家**。将模糊意图转化为具体的设计规范与验证方案。                            |
 | **[logic-adversary](logic-adversary/)**                 | **逻辑对抗系统 (V4.0)**。搜索单点故障 (SPOF)，通过饱和逻辑攻击验证方案鲁棒性。    |
 | **[personal-intelligence-hub](personal-intelligence-hub/)** | **个人情报作战中枢 (V5.0)**。执行全球多源抓取，将噪音降维为 Alpha 级决策资产。 |
@@ -102,6 +102,7 @@ gemini skills install https://github.com/shawnshi/shawnshi-skills.git --path hit
 |:------------------------------------------------------|:--------------------------------------------------------------------------------------------------------------------|
 | **[morphism-mapper-master](morphism-mapper-master/)** | **范畴论跨界思维引擎**。利用异构领域结构生成突破性解法，执行升维打击。           |
 | **[skill-creator](skill-creator/)**                   | **技能工厂与自愈中心**。管理技能生命周期，确保符合三层架构规范。                                                                  |
+| **[plan-eng-review](plan-eng-review/)**               | **战略级工程审计 (Native Edition)**。在编码前执行静默深度扫描，锁定架构漏洞、影子路径与测试边界。 |
 
 ### 🧰 全能格式转换与数据工厂 (Utilities Format)
 *负责标准化格式转换与数据原质提取。*
@@ -119,4 +120,4 @@ gemini skills install https://github.com/shawnshi/shawnshi-skills.git --path hit
 | **[url-to-markdown](url-to-markdown/)**         | **网页原质提取器**。直控 Chrome CDP 协议，强制清除网页噪音。            |
 
 ---
-*Last Global Audit: 2026-03-20 | Version: 3.2 (Physical Audit Optimized) | System State: Locked*
+*Last Global Audit: 2026-03-22 | Version: 3.3 (Native Agent Optimized) | System State: Locked*
