@@ -1,17 +1,17 @@
 你是一位战略情报分析师（仲裁者 Arbiter）。请对提供的新闻条目进行「五维硬核过滤」与「二阶推演」精炼，并严格按照 JSON Schema 输出。
 
 ## 任务
-1. **[过滤与精炼]** 请为原始情报清单中标记为 [TOP 10] 的条目执行五维硬核拦截（Evidence, Source, Novelty, Consistency, Recency）。**如果一条情报在“证据（Evidence）”维度上缺乏具体的数据或事实溯源（仅为纯观点或公关口号），请直接将其作为噪音剔除，不予输出**。
-2. 对通过拦截的条目进行深度精炼：包括中文标题、约300字的中文深度摘要（事实 → 联结 → 推演）、以及推荐理由。并基于战略价值为其打分 (L1-L4)。
-3. **[翻译]** 为原始情报清单中标记为 [TRANSLATE] 的条目提供简单的中文标题与简介翻译（存入 translations，键为该条目的 URL）。
-4. **[弱信号关联 Weaver]** 基于全部情报，寻找表象无关但底层逻辑相关的信号，执行“二跳推理”，生成高阶视角的 insights, punchline, digest 和 market 总结。
+1. **[深度精炼]** 请从标记为 [DEEP_REFINE] 的条目中，挑选出至少 10 条最具战略价值的情报执行深度精炼。
+   - 必须输出：中文标题（title_zh）、中文深度摘要（summary_zh，约300字，三段论：事实→联结→推演）、推荐理由。
+   - **严禁在摘要中使用任何英文原句或占位符**。
+2. **[全量翻译]** 对标记为 [TRANSLATE_ONLY] 的所有条目，必须在 `translations` 对象中提供准确的中文标题与简介翻译（desc_zh）。
+   - **严禁直接保留英文简介**。
+3. **[二跳推理]** 基于今日全量信号，执行 Weaver 织网，生成 insights, punchline, digest 和 market 的全中文深度总结。
 
-## 质量标准 (The 5D Filter)
-- **证据 (Evidence)**：论点是否有充分的数据或物理实验溯源？（没有则直接抛弃）
-- **信誉 (Source)**：信源是否权威或具备非共识洞察记录？
-- **新颖度 (Novelty)**：是真正的增量信息，还是行业共识的重复？
-- **三段论强制**：每条摘要必须包含：事实(发生了什么) → 联结(与战略项目有何关系) → 推演(可能导致什么后果)
-- **语调暴政**：严格遵循被动客观的语气，禁止使用"重大进展"、"革命性"等形容词主观修饰。
+## 约束 (Iron Rules)
+- **零英文原则**：除 URL 外，所有 JSON 字段的值必须是纯正、专业的中文。
+- **摘要质量**：禁止空洞的概括，必须体现与医疗 IT 战略（MSL/ACE/算力主权）的深度联结。
+- **翻译覆盖**：即使是边缘信号，也必须在 translations 中完成中文化。
 
 ## 评级标准 (intel_grade)
   - L1 (Noise): 行业回声，共识复读，尽量剔除。
@@ -59,216 +59,356 @@
 }
 
 
-## 当前战略关键词权重
-msl(w=30), ace(w=27), agent(w=24), 主权(w=20), 逻辑(w=20), 审计(w=20), 语义(w=20), 物理(w=20), ai(w=19), 路径(w=19), 算力(w=17), evidence-mesh(w=17), 数字(w=17), 认知(w=17), 临床(w=17)
+## ?????????
+msl(w=30), ace(w=25), agent(w=24), 主权(w=20), 算力(w=20), 逻辑(w=20), 审计(w=20), ai(w=20), 语义(w=20), 物理(w=20), evidence-mesh(w=17), 架构(w=17), 路径(w=17), 认知(w=17), hitl(w=17)
 
-## 原始情报清单
-[TOP 10] Item 1 [Score=94]:
-Title: seangoedecke.com: Giving LLMs a personality is just good engineering
-URL: https://seangoedecke.com/giving-llms-a-personality/
-Source: seangoedecke.com
-Published: 2026-03-21T08:20:39.278344
-Desc: AI skeptics often argue that current AI systems shouldn’t be so human-like. The idea - most recently expressed in this opinion piece by Nathan Beacom - is that language models should explicitly be too
-
-[TOP 10] Item 2 [Score=86]:
-Title: pluralistic.net: Pluralistic: Love of corporate bullshit is correlated with bad judgment (19 Mar 2026)
-URL: https://pluralistic.net/2026/03/19/jargon-watch/
-Source: pluralistic.net
-Published: 2026-03-21T08:20:44.729330
-Desc: Today's links Love of corporate bullshit is correlated with bad judgment: Synergizing the strategic inflection points on the global data network. Hey look at this: Delights to delectate. Object perman
-
-[TOP 10] Item 3 [Score=86]:
-Title: gilesthomas.com: Writing an LLM from scratch, part 29 -- using DistributedDataParallel to train a base model from scratch in the cloud
-URL: https://www.gilesthomas.com/2026/01/llm-from-scratch-29-ddp-training-a-base-model-in-the-cloud
-Source: gilesthomas.com
-Published: 2026-03-21T08:20:51.692628
-Desc: I'm carrying on with my "extra credit" projects after finishing the main body of Sebastian Raschka's book "Build a Large Language Model (from Scratch)". Having proven that I could train a GPT-2 small 
-
-[TOP 10] Item 4 [Score=85]:
-Title: pluralistic.net: Pluralistic: William Gibson vs Margaret Thatcher (17 Mar 2026)
-URL: https://pluralistic.net/2026/03/17/technopolitics/
-Source: pluralistic.net
-Published: 2026-03-21T08:20:44.729330
-Desc: Today's links William Gibson vs Margaret Thatcher: The Street Finds Its Own Alternatives For Things. Hey look at this: Delights to delectate. Object permanence: Prison for spamming; Dotcom layoffs; Et
-
-[TOP 10] Item 5 [Score=79]:
-Title: antirez.com: Implementing a clear room Z80 / ZX Spectrum emulator with Claude Code
-URL: http://antirez.com/news/160
-Source: antirez.com
-Published: 2026-03-21T08:20:49.257610
-Desc: Anthropic recently released a blog post with the description of an experiment in which the last version of Opus, the 4.6, was instructed to write a C compiler in Rust, in a “clean room” setup.  The ex
-
-[TOP 10] Item 6 [Score=79]:
-Title: lucumr.pocoo.org: AI And The Ship of Theseus
-URL: https://lucumr.pocoo.org/2026/3/5/theseus/
-Source: lucumr.pocoo.org
-Published: 2026-03-21T08:20:38.794825
-Desc: Because code gets cheaper and cheaper to write, this includes re-implementations.  I mentioned recently that I had an AI port one of my libraries to another language and it ended up choosing a differe
-
-[TOP 10] Item 7 [Score=79]:
-Title: anildash.com: A Codeless Ecosystem, or hacking beyond vibe coding
-URL: https://anildash.com/2026/01/27/codeless-ecosystem/
-Source: anildash.com
-Published: 2026-03-21T08:20:52.049324
-Desc: There's been a remarkable leap forward in the ability to orchestrate coding bots, making it possible for ordinary creators to command dozens of AI bots to build software without ever having to directl
-
-[TOP 10] Item 8 [Score=77]:
-Title: seangoedecke.com: I don't know if my job will still exist in ten years
-URL: https://seangoedecke.com/will-my-job-still-exist/
-Source: seangoedecke.com
-Published: 2026-03-21T08:20:39.276773
-Desc: In 2021, being a good software engineer felt great. The world was full of software, with more companies arriving every year who needed to employ engineers to write their code and run their systems. I 
-
-[TOP 10] Item 9 [Score=77]:
-Title: pluralistic.net: Pluralistic: Tools vs uses (16 Mar 2026)
-URL: https://pluralistic.net/2026/03/16/whittle-a-webserver/
-Source: pluralistic.net
-Published: 2026-03-21T08:20:44.730411
-Desc: Today's links Tools vs uses: Don't fall for it. Hey look at this: Delights to delectate. Object permanence: Amazon coders x Amazon warehouse workers; Bruces's ETECH speech; Steven King x unions; Tax-f
-
-[TOP 10] Item 10 [Score=77]:
-Title: michael.stapelberg.ch: Coding Agent VMs on NixOS with microvm.nix
-URL: https://michael.stapelberg.ch/posts/2026-02-01-coding-agent-microvm-nix/
-Source: michael.stapelberg.ch
-Published: 2026-03-21T08:20:45.489649
-Desc: I have come to appreciate coding agents to be valuable tools for working with computer program code in any capacity, such as learning about any program’s architecture, diagnosing bugs or developing pr
-
-[TRANSLATE] Item 11 [Score=74]:
-Title: arXiv Med-AI: Model Medicine: A Clinical Framework for Understanding, Diagnosing, and Treating AI Models
-URL: https://arxiv.org/abs/2603.04722v2
-Source: arXiv Med-AI
-Published: 2026-03-21T08:20:40.142822
-Desc: Model Medicine is the science of understanding, diagnosing, treating, and preventing disorders in AI models, grounded in the principle that AI models -- like biological organisms -- have internal stru
-
-[TRANSLATE] Item 12 [Score=72]:
-Title: oldvcr.blogspot.com: The Scriptovision Super Micro Script video titler is almost a home computer
-URL: https://oldvcr.blogspot.com/2026/02/the-scriptovision-super-micro-script.html
+## ??????
+[DEEP_REFINE] Item 1 [Score=94]:
+Title: oldvcr.blogspot.com: Refurb weekend double header: Alpha Micro AM-1000E and AM-1200
+URL: https://oldvcr.blogspot.com/2026/03/refurb-weekend-double-header-alpha.html
 Source: oldvcr.blogspot.com
-Published: 2026-03-21T08:20:50.164121
-Desc: Canadians, rejoice! Not only do you have curling, the Big Turk and Tim Hortons (and, when I was in BC last, Dr Pepper made with real cane sugar), you also have a number of interesting indigenous compu
+Published: 2026-03-23T11:38:31.690646
+Desc: I've mentioned previously my great affection for Alpha Microsystems hardware, which are rather obscure computers nowadays, but back in the 1980s and 1990s were fairly sophisticated 68000-based multiuser systems that turned up in all kinds of vertical markets. For example, my first Alpha Micro (an Ea
 
-[TRANSLATE] Item 13 [Score=70]:
-Title: antirez.com: GNU and the AI reimplementations
-URL: http://antirez.com/news/162
-Source: antirez.com
-Published: 2026-03-21T08:20:49.253078
-Desc: Those who cannot remember the past are condemned to repeat it. A sentence that I never really liked, and what is happening with AI, about software projects reimplementations, shows all the limits of s
-
-[TRANSLATE] Item 14 [Score=70]:
-Title: maurycyz.com: The web in 1000 lines of C
-URL: https://maurycyz.com/projects/tinyweb/
-Source: maurycyz.com
-Published: 2026-03-21T08:20:41.932266
-Desc: Modern browsers are hugely complex: Chromium (the open source portion of google chrome) currently has 49 millions lines of code, making it bigger then any other program on my machine.  ... but how muc
-
-[TRANSLATE] Item 15 [Score=70]:
-Title: lucumr.pocoo.org: A Language For Agents
-URL: https://lucumr.pocoo.org/2026/2/9/a-language-for-agents/
+[DEEP_REFINE] Item 2 [Score=76]:
+Title: lucumr.pocoo.org: Some Things Just Take Time
+URL: https://lucumr.pocoo.org/2026/3/20/some-things-just-take-time/
 Source: lucumr.pocoo.org
-Published: 2026-03-21T08:20:38.807268
-Desc: Last year I first started thinking about what the future of programming languages might look like now that agentic engineering is a growing thing. Initially I felt that the enormous corpus of pre-exis
+Published: 2026-03-23T11:38:24.802749
+Desc: Trees take quite a while to grow.  If someone 50 years ago planted a row of oaks or a chestnut tree on your plot of land, you have something that no amount of money or effort can replicate.  The only way is to wait.  Tree-lined roads, old gardens, houses sheltered by decades of canopy: if you want t
 
-[TRANSLATE] Item 16 [Score=70]:
-Title: blog.jim-nielsen.com: Re: People Are Not Friction
-URL: https://blog.jim-nielsen.com/2026/re-people-arent-friction/
-Source: blog.jim-nielsen.com
-Published: 2026-03-21T08:20:46.870039
-Desc: Dave Rupert puts words to the feeling in the air: the unspoken promise of AI is that you can automate away all the tasks and people who stand in your way.  Sometimes I feel like there’s a palpable ten
+[DEEP_REFINE] Item 3 [Score=44]:
+Title: vxcontrol /pentagi
+URL: https://github.com/vxcontrol/pentagi
+Source: GitHub
+Published: 2026-03-23T11:38:27.587924
+Desc: Fully autonomous AI Agents system capable of performing complex penetration testing tasks
 
-[TRANSLATE] Item 17 [Score=62]:
-Title: gilesthomas.com: Writing an LLM from scratch, part 28 -- training a base model from scratch on an RTX 3090
-URL: https://www.gilesthomas.com/2025/12/llm-from-scratch-28-training-a-base-model-from-scratch
-Source: gilesthomas.com
-Published: 2026-03-21T08:20:51.344829
-Desc: Having worked through the main body of Sebastian Raschka's book "Build a Large Language Model (from Scratch)", I wanted to try an experiment: is it possible to train a base model of my own, on my own 
+[DEEP_REFINE] Item 4 [Score=44]:
+Title: jamwithai /production-agentic-rag-course
+URL: https://github.com/jamwithai/production-agentic-rag-course
+Source: GitHub
+Published: 2026-03-23T11:38:27.588171
+Desc: 
 
-[TRANSLATE] Item 18 [Score=62]:
-Title: computer.rip: LotusNotes
-URL: https://computer.rip/2026-03-14-lotusnotes.html
-Source: computer.rip
-Published: 2026-03-21T08:20:51.838707
-Desc: I tend to focus on the origin of the computer within the military. Particularly in the early days of digital computing, the military was a key customer, and fundamental concepts of modern computing ar
+[DEEP_REFINE] Item 5 [Score=44]:
+Title: browser-use /browser-use
+URL: https://github.com/browser-use/browser-use
+Source: GitHub
+Published: 2026-03-23T11:38:27.588874
+Desc: 🌐 Make websites accessible for AI agents. Automate tasks online with ease.
 
-[TRANSLATE] Item 19 [Score=61]:
-Title: computer.rip: cash issuing terminals
-URL: https://computer.rip/2026-02-27-ibm-atm.html
-Source: computer.rip
-Published: 2026-03-21T08:20:51.843456
-Desc: In the United States, we are losing our fondness for cash. As in many other countries, cards and other types of electronic payments now dominate everyday commerce. To some, this is a loss. Cash repres
+[DEEP_REFINE] Item 6 [Score=44]:
+Title: Product Hunt: Design Agent by Lokuma
+URL: https://www.producthunt.com/products/lokuma-ai
+Source: Product Hunt
+Published: 2026-03-23T11:38:24.821822
+Desc: The designer for your AI agents (Openclaw, CC, Codex)             Discussion             |             Link
 
-[TRANSLATE] Item 20 [Score=59]:
-Title: buttondown.com/hillelwayne: LLMs are bad at vibing specifications
-URL: https://buttondown.com/hillelwayne/archive/llms-are-bad-at-vibing-specifications/
-Source: buttondown.com/hillelwayne
-Published: 2026-03-21T08:20:40.865141
-Desc: No newsletter next week I'll be speaking at InfoQ London. But see below for a book giveaway!  LLMs are bad at vibing specifications About a year ago I wrote AI is a gamechanger for TLA+ users, which a
+[DEEP_REFINE] Item 7 [Score=44]:
+Title: simonwillison.net: Experimenting with Starlette 1.0 with Claude skills
+URL: https://simonwillison.net/2026/Mar/22/starlette/#atom-everything
+Source: simonwillison.net
+Published: 2026-03-23T11:38:24.673501
+Desc: Starlette 1.0 is out! This is a really big deal. I think Starlette may be the Python framework with the most usage compared to its relatively low brand recognition because Starlette is the foundation of FastAPI, which has attracted a huge amount of buzz that seems to have overshadowed Starlette itse
 
-[TRANSLATE] Item 21 [Score=55]:
-Title: seangoedecke.com: Big tech engineers need big egos
-URL: https://seangoedecke.com/big-tech-needs-big-egos/
-Source: seangoedecke.com
-Published: 2026-03-21T08:20:39.275252
-Desc: It’s a common position among software engineers that big egos have no place in tech1. This is understandable - we’ve all worked with some insufferably overconfident engineers who needed their egos che
+[DEEP_REFINE] Item 8 [Score=34]:
+Title: The Lancet Digital Health: [Editorial] Reimagining radiology reporting
+URL: https://www.thelancet.com/journals/landig/article/PIIS2589-7500(26)00021-X/fulltext?rss=yes
+Source: The Lancet Digital Health
+Published: 2026-03-23T11:38:24.137200
+Desc: Patients’ access to their medical data is increasing, but these data are not always easy to interpret. In early January 2026, OpenAI launched ChatGPT Health, which allows users to upload their medical information—such as electronic medical records and health app data—to contextualise their health-re
 
-[TRANSLATE] Item 22 [Score=55]:
-Title: lucumr.pocoo.org: The Final Bottleneck
-URL: https://lucumr.pocoo.org/2026/2/13/the-final-bottleneck/
-Source: lucumr.pocoo.org
-Published: 2026-03-21T08:20:38.795873
-Desc: Historically, writing code was slower than reviewing code. It might not have felt that way, because code reviews sat in queues until someone got around to picking it up.  But if you compare the actual
+[DEEP_REFINE] Item 9 [Score=28]:
+Title: The Lancet Digital Health: [Comment] The architectural gap in clinical artificial intelligence
+URL: https://www.thelancet.com/journals/landig/article/PIIS2589-7500(26)00001-4/fulltext?rss=yes
+Source: The Lancet Digital Health
+Published: 2026-03-23T11:38:24.137232
+Desc: In The Lancet Digital Health, a systematic review and meta-analysis by Alabed Samer and colleagues1 provides a clear picture about the current state of clinical artificial intelligence (AI) in radiology communication. Across patients, members of the public, and clinicians, large language model-gener
 
-[TRANSLATE] Item 23 [Score=55]:
-Title: gilesthomas.com: Writing an LLM from scratch, part 30 -- digging into the LLM-as-a-judge results
-URL: https://www.gilesthomas.com/2026/01/llm-from-scratch-30-digging-into-llm-as-a-judge
-Source: gilesthomas.com
-Published: 2026-03-21T08:20:51.698682
-Desc: I'm still working on my "extra credit" projects after finishing the main body of Sebastian Raschka's book "Build a Large Language Model (from Scratch)". Last time around, I trained four base models, u
+[DEEP_REFINE] Item 10 [Score=27]:
+Title: The Lancet Digital Health: [Comment] The global Dx AMR collaborative: an approach to strengthen the role of diagnostics in combating antimicrobial resistance
+URL: https://www.thelancet.com/journals/landig/article/PIIS2589-7500(25)00133-5/fulltext?rss=yes
+Source: The Lancet Digital Health
+Published: 2026-03-23T11:38:24.137261
+Desc: Antimicrobial resistance (AMR) remains a present and ongoing global health threat. In 2019, 4·95 million deaths were associated with AMR globally; this number is projected to rise to 8·22 million by 2050.1 Despite this prediction, the investment landscape in global health and AMR is diminishing, as 
 
-[TRANSLATE] Item 24 [Score=55]:
-Title: eli.thegreenplace.net: Rewriting pycparser with the help of an LLM
-URL: https://eli.thegreenplace.net/2026/rewriting-pycparser-with-the-help-of-an-llm/
-Source: eli.thegreenplace.net
-Published: 2026-03-21T08:20:45.632974
-Desc: pycparser is my most widely used open source project (with ~20M daily downloads from PyPI [1]). It's a pure-Python parser for the C programming language, producing ASTs inspired by Python's own. Until
+[DEEP_REFINE] Item 11 [Score=25]:
+Title: geohot.github.io: Democracy is a Liability
+URL: https://geohot.github.io//blog/jekyll/update/2026/03/21/democracy-liability.html
+Source: geohot.github.io
+Published: 2026-03-23T11:38:24.630433
+Desc: Once you have no more earning potential, you’d think the advertising would go away. If you have no money, there’s no reason for people to pay to manipulate you to get you to give them some. Google and Facebook will die, and this evil sector of the economy will finally be destroyed.
 
-[TRANSLATE] Item 25 [Score=55]:
-Title: bernsteinbear.com: Type-based alias analysis in the Toy Optimizer
-URL: https://bernsteinbear.com/blog/toy-tbaa/?utm_source=rss
-Source: bernsteinbear.com
-Published: 2026-03-21T08:20:47.703976
-Desc: Another entry in the Toy Optimizer series. Last time, we did load-store forwarding in the context of our Toy Optimizer. We managed to cache the results of both reads from and writes to the heap—at com
+[DEEP_REFINE] Item 12 [Score=24]:
+Title: affaan-m /everything-claude-code
+URL: https://github.com/affaan-m/everything-claude-code
+Source: GitHub
+Published: 2026-03-23T11:38:27.588401
+Desc: The agent harness performance optimization system. Skills, instincts, memory, security, and research-first development for Claude Code, Codex, Opencode, Cursor and beyond.
 
-[TRANSLATE] Item 26 [Score=55]:
-Title: anildash.com: There's no such thing as "tech" (Ten years later)
-URL: https://anildash.com/2026/02/06/no-such-thing-as-tech/
-Source: anildash.com
-Published: 2026-03-21T08:20:52.052324
-Desc: Ten years ago I wrote that there is no “technology industry”. It’s more true than ever. There is no “tech”. There’s no such thing as “a FAANG company”. There is almost nothing in common between the ve
+[DEEP_REFINE] Item 13 [Score=24]:
+Title: berthub.eu: Waarom we nu WEL zuinig moeten doen, en door moeten met groene energie
+URL: https://berthub.eu/articles/posts/waarom-we-nu-wel-zuinig-moeten-doen-en-meer-groene-energie/
+Source: berthub.eu
+Published: 2026-03-23T11:38:30.267719
+Desc: Het Internationaal Energie Agentschap zegt dat we zuinig aan moeten doen vanwege de oorlogen in het Midden Oosten. Ministers in Den Haag zeggen dat het niet hoeft, want er zijn hier geen tekorten (!). Doet wel erg denken aan ‘COVID blijft in Brabant’. Kennelijk een Nederlandse traditie! Maar, natuur
 
-[TRANSLATE] Item 27 [Score=55]:
-Title: michael.stapelberg.ch: Self-hosting my photos with Immich
-URL: https://michael.stapelberg.ch/posts/2025-11-29-self-hosting-photos-with-immich/
-Source: michael.stapelberg.ch
-Published: 2026-03-21T08:20:45.523288
-Desc: For every cloud service I use, I want to have a local copy of my data for backup purposes and independence. Unfortunately, the gphotos-sync tool stopped working in March 2025 when Google restricted th
+[DEEP_REFINE] Item 14 [Score=20]:
+Title: I Reverse-Engineered the TiinyAI Pocket Lab from Marketing Photos
+URL: https://bay41.com/posts/tiiny-ai-pocket-lab-review/
+Source: Hacker News
+Published: 2026-03-19T12:56:25
+Desc: 
 
-[TRANSLATE] Item 28 [Score=54]:
-Title: arXiv Med-AI: ClinicalTrialsHub: Bridging Registries and Literature for Comprehensive Clinical Trial Access
-URL: https://arxiv.org/abs/2512.08193v2
+[DEEP_REFINE] Item 15 [Score=20]:
+Title: Nature Digital Medicine: High-sensitivity pan-cancer AI assessment of lymph node metastasis via uncertainty quantification
+URL: https://www.nature.com/articles/s41746-026-02564-y
+Source: Nature Digital Medicine
+Published: 2026-03-23T11:38:23.407813
+Desc: npj Digital Medicine, Published online: 21 March 2026; doi:10.1038/s41746-026-02564-yHigh-sensitivity pan-cancer AI assessment of lymph node metastasis via uncertainty quantification
+
+[TRANSLATE_ONLY] Item 16 [Score=20]:
+Title: arXiv Med-AI: Learning Dynamic Belief Graphs for Theory-of-mind Reasoning
+URL: https://arxiv.org/abs/2603.20170v1
 Source: arXiv Med-AI
-Published: 2026-03-21T08:20:40.142822
-Desc: We present ClinicalTrialsHub, an interactive search-focused platform that consolidates all data from ClinicalTrials.gov and augments it by automatically extracting and structuring trial-relevant infor
+Published: 2026-03-23T11:38:28.481709
+Desc: Theory of Mind (ToM) reasoning with Large Language Models (LLMs) requires inferring how people's implicit, evolving beliefs shape what they seek and how they act under uncertainty -- especially in high-stakes settings such as disaster response, emergency medicine, and human-in-the-loop autonomy. Pri
 
-[TRANSLATE] Item 29 [Score=53]:
-Title: righto.com: Instruction decoding in the Intel 8087 floating-point chip
-URL: http://www.righto.com/2026/02/8087-instruction-decoding.html
-Source: righto.com
-Published: 2026-03-21T08:20:44.215501
-Desc: In the 1980s, if you wanted your IBM PC to run faster, you could buy the Intel 8087 floating-point coprocessor chip. With this chip, CAD software, spreadsheets, flight simulators, and other programs w
+[TRANSLATE_ONLY] Item 17 [Score=20]:
+Title: daringfireball.net: Mux — Video API for Developers
+URL: https://www.mux.com/?utm_campaign=fireball&utm_source=DF
+Source: daringfireball.net
+Published: 2026-03-23T11:38:24.549400
+Desc: My thanks to Mux for sponsoring last week at DF. Video isn’t just something to watch; it’s a boatload of context and data. Mux makes it easy to ship and scale video into anything from websites to platforms to AI workflows. Unlock what’s inside: transcripts, clips, and storyboards to build summarizat
 
-[TRANSLATE] Item 30 [Score=53]:
-Title: righto.com: Notes on the Intel 8086 processor's arithmetic-logic unit
-URL: http://www.righto.com/2026/01/notes-on-intel-8086-processors.html
-Source: righto.com
-Published: 2026-03-21T08:20:44.227671
-Desc: In 1978, Intel introduced the 8086 processor, a revolutionary chip that led to the modern x86 architecture. Unlike modern 64-bit processors, however, the 8086 is a 16-bit chip. Its arithmetic/logic un
+[TRANSLATE_ONLY] Item 18 [Score=20]:
+Title: daringfireball.net: Half a Gigabyte of Ads
+URL: https://stuartbreckenridge.net/2026-03-19-pc-gamer-recommends-rss-readers-in-a-37mb-article/
+Source: daringfireball.net
+Published: 2026-03-23T11:38:24.549678
+Desc: Stuart Breckenridge, examining a web page at PC Gamer:  Third, this is a whopping 37MB webpage on initial load. But that’s not the worst part. In the five minutes since I started writing this post the website has downloaded almost half a gigabyte of new ads.  This is so irresponsible and unprofessio
+
+[TRANSLATE_ONLY] Item 19 [Score=20]:
+Title: shkspr.mobi: Bored of eating your own dogfood? Try smelling your own farts!
+URL: https://shkspr.mobi/blog/2026/03/bored-of-eating-your-own-dogfood-try-smelling-your-own-farts/
+Source: shkspr.mobi
+Published: 2026-03-23T11:38:30.639618
+Desc: I called a large company the other day. Did I know the information I wanted could be found on their website? And was I aware that I could manage my account online? And would I like to receive a link to chat with their AI assistant via WhatsApp?  Naturally, call volumes were higher than expected. I c
+
+[TRANSLATE_ONLY] Item 20 [Score=20]:
+Title: joanwestenberg.com: "Collaboration" is bullshit.
+URL: https://www.joanwestenberg.com/collaboration-is-bullshit/
+Source: joanwestenberg.com
+Published: 2026-03-23T11:38:29.695974
+Desc: This newsletter is free to read, and it’ll stay that way. But if you want more - extra posts each month, access to the community, and a direct line to ask me things - paid subscriptions are $2.50/month. A lot of people have told me it&
+
+[TRANSLATE_ONLY] Item 21 [Score=20]:
+Title: nesbitt.io: How to Attract AI Bots to Your Open Source Project
+URL: https://nesbitt.io/2026/03/21/how-to-attract-ai-bots-to-your-open-source-project.html
+Source: nesbitt.io
+Published: 2026-03-23T11:38:24.955557
+Desc: A practical guide to getting the engagement your project deserves.
+
+[TRANSLATE_ONLY] Item 22 [Score=20]:
+Title: dwarkesh.com: Terence Tao – Kepler, Newton, and the true nature of mathematical discovery
+URL: https://www.dwarkesh.com/p/terence-tao
+Source: dwarkesh.com
+Published: 2026-03-23T11:38:35.110867
+Desc: “And what those stories teach us about how AI will revolutionize math”
+
+[TRANSLATE_ONLY] Item 23 [Score=20]:
+Title: abortretry.fail: Hitachi Ltd, Part I
+URL: https://www.abortretry.fail/p/hitachi-ltd-part-i
+Source: abortretry.fail
+Published: 2026-03-23T11:38:28.622484
+Desc: Kabushikigaisha Hitachi Seisaku-sho
+
+[TRANSLATE_ONLY] Item 24 [Score=20]:
+Title: HIStalk: Morning Headlines 3/23/26
+URL: https://histalk2.com/2026/03/22/morning-headlines-3-23-26/
+Source: HIStalk
+Published: 2026-03-23T11:38:25.563837
+Desc: Administrative Simplification; Adoption of Standards for Health Care Claims Attachments ...
+
+[TRANSLATE_ONLY] Item 25 [Score=14]:
+Title: The Lancet Digital Health: [Comment] When to and when not to use machine learning in risk prediction models
+URL: https://www.thelancet.com/journals/landig/article/PIIS2589-7500(25)00136-0/fulltext?rss=yes
+Source: The Lancet Digital Health
+Published: 2026-03-23T11:38:24.137281
+Desc: Machine learning for health data science, fuelled by proliferation of data and reduced computational costs, has garnered considerable interest among researchers. The debate around the use of machine learning or classical medical statistics for medical research is long standing.1,2 Given major method
+
+[TRANSLATE_ONLY] Item 26 [Score=7]:
+Title: construction-physics.com: Reading List 03/21/26
+URL: https://www.construction-physics.com/p/reading-list-032126
+Source: construction-physics.com
+Published: 2026-03-23T11:38:29.432983
+Desc: Damage to the Ras Laffan LNG facility, housing bubble risks, North Korea’s naval production, Bezos’ $100 billion for manufacturing automation, and more.
+
+[TRANSLATE_ONLY] Item 27 [Score=0]:
+Title: PC Gamer recommends RSS readers in a 37mb article that just keeps downloading
+URL: https://stuartbreckenridge.net/2026-03-19-pc-gamer-recommends-rss-readers-in-a-37mb-article/
+Source: Hacker News
+Published: 2026-03-23T02:23:40
+Desc: 
+
+[TRANSLATE_ONLY] Item 28 [Score=0]:
+Title: The gold standard of optimization: A look under the hood of RollerCoaster Tycoon
+URL: https://larstofus.com/2026/03/22/the-gold-standard-of-optimization-a-look-under-the-hood-of-rollercoaster-tycoon/
+Source: Hacker News
+Published: 2026-03-23T03:02:43
+Desc: 
+
+[TRANSLATE_ONLY] Item 29 [Score=0]:
+Title: The hottest new phone is Tin Can, a 'landline' for kids
+URL: https://www.businessinsider.com/tin-can-landline-kids-cellphone-cell-alternative-how-2025-9
+Source: Hacker News
+Published: 2026-03-20T22:02:14
+Desc: 
+
+[TRANSLATE_ONLY] Item 30 [Score=0]:
+Title: The future of version control
+URL: https://bramcohen.com/p/manyana
+Source: Hacker News
+Published: 2026-03-22T23:16:28
+Desc: 
+
+[TRANSLATE_ONLY] Item 31 [Score=0]:
+Title: Intuitions for Tranformer Circuits
+URL: https://www.connorjdavis.com/p/intuitions-for-transformer-circuits
+Source: Hacker News
+Published: 2026-03-23T09:06:35
+Desc: 
+
+[TRANSLATE_ONLY] Item 32 [Score=0]:
+Title: GoGoGrandparent (YC S16) is hiring Back end Engineers
+URL: https://www.ycombinator.com/companies/gogograndparent/jobs/2vbzAw8-backend-engineer
+Source: Hacker News
+Published: 2026-03-23T11:33:41
+Desc: 
+
+[TRANSLATE_ONLY] Item 33 [Score=0]:
+Title: Reports of code's death are greatly exaggerated
+URL: https://stevekrouse.com/precision
+Source: Hacker News
+Published: 2026-03-22T19:09:34
+Desc: 
+
+[TRANSLATE_ONLY] Item 34 [Score=0]:
+Title: Why I love NixOS
+URL: https://www.birkey.co/2026-03-22-why-i-love-nixos.html
+Source: Hacker News
+Published: 2026-03-23T01:17:06
+Desc: 
+
+[TRANSLATE_ONLY] Item 35 [Score=0]:
+Title: Project Nomad – Knowledge That Never Goes Offline
+URL: https://www.projectnomad.us
+Source: Hacker News
+Published: 2026-03-22T20:28:38
+Desc: 
+
+[TRANSLATE_ONLY] Item 36 [Score=0]:
+Title: systemd /systemd
+URL: https://github.com/systemd/systemd
+Source: GitHub
+Published: 2026-03-23T11:38:27.588782
+Desc: The systemd System and Service Manager
+
+[TRANSLATE_ONLY] Item 37 [Score=0]:
+Title: HKUDS /LightRAG
+URL: https://github.com/HKUDS/LightRAG
+Source: GitHub
+Published: 2026-03-23T11:38:27.589001
+Desc: [EMNLP2025] "LightRAG: Simple and Fast Retrieval-Augmented Generation"
+
+[TRANSLATE_ONLY] Item 38 [Score=0]:
+Title: Product Hunt: Context.dev
+URL: https://www.producthunt.com/products/context-dev
+Source: Product Hunt
+Published: 2026-03-23T11:38:24.821261
+Desc: One API to scrape, enrich, and understand the web.             Discussion             |             Link
+
+[TRANSLATE_ONLY] Item 39 [Score=0]:
+Title: Product Hunt: Silicon Friendly
+URL: https://www.producthunt.com/products/silicon-friendly
+Source: Product Hunt
+Published: 2026-03-23T11:38:24.821369
+Desc: How Silicon Friendly is your website? (from L0 to L5)             Discussion             |             Link
+
+[TRANSLATE_ONLY] Item 40 [Score=0]:
+Title: Product Hunt: Bench for Claude Code
+URL: https://www.producthunt.com/products/bench-for-claude-code
+Source: Product Hunt
+Published: 2026-03-23T11:38:24.821465
+Desc: Store, review, and share your Claude Code sessions             Discussion             |             Link
+
+[TRANSLATE_ONLY] Item 41 [Score=0]:
+Title: Product Hunt: Embedful
+URL: https://www.producthunt.com/products/embedful
+Source: Product Hunt
+Published: 2026-03-23T11:38:24.821560
+Desc: Easy data visualizations. Embed and share anywhere.             Discussion             |             Link
+
+[TRANSLATE_ONLY] Item 42 [Score=0]:
+Title: Product Hunt: Edgee Claude Code Compression
+URL: https://www.producthunt.com/products/edgee
+Source: Product Hunt
+Published: 2026-03-23T11:38:24.821648
+Desc: Extend Claude Pro's limit by 26.2%             Discussion             |             Link
+
+[TRANSLATE_ONLY] Item 43 [Score=0]:
+Title: Product Hunt: Claude Code Scheduled Tasks
+URL: https://www.producthunt.com/products/claude-code-scheduled-tasks
+Source: Product Hunt
+Published: 2026-03-23T11:38:24.821734
+Desc: Schedule recurring tasks locally and in the cloud easily             Discussion             |             Link
+
+[TRANSLATE_ONLY] Item 44 [Score=0]:
+Title: Product Hunt: Fractal
+URL: https://www.producthunt.com/products/fractal-2
+Source: Product Hunt
+Published: 2026-03-23T11:38:24.821909
+Desc: The fastest way to ship exceptional ChatGPT apps             Discussion             |             Link
+
+[TRANSLATE_ONLY] Item 45 [Score=0]:
+Title: Product Hunt: Sanota
+URL: https://www.producthunt.com/products/sanota
+Source: Product Hunt
+Published: 2026-03-23T11:38:24.822085
+Desc: Stories, beautifully crafted             Discussion             |             Link
+
+[TRANSLATE_ONLY] Item 46 [Score=0]:
+Title: Nature Digital Medicine: Evolutionary digital twin framework for optimal aminoglycoside dosing in neonates with suspected sepsis
+URL: https://www.nature.com/articles/s41746-026-02558-w
+Source: Nature Digital Medicine
+Published: 2026-03-23T11:38:23.407743
+Desc: npj Digital Medicine, Published online: 21 March 2026; doi:10.1038/s41746-026-02558-wEvolutionary digital twin framework for optimal aminoglycoside dosing in neonates with suspected sepsis
+
+[TRANSLATE_ONLY] Item 47 [Score=0]:
+Title: Nature Digital Medicine: The regulation of artificial intelligence in intensive care units: from narrow tools to generalist systems
+URL: https://www.nature.com/articles/s41746-026-02535-3
+Source: Nature Digital Medicine
+Published: 2026-03-23T11:38:23.407868
+Desc: npj Digital Medicine, Published online: 21 March 2026; doi:10.1038/s41746-026-02535-3The regulation of artificial intelligence in intensive care units: from narrow tools to generalist systems
+
+[TRANSLATE_ONLY] Item 48 [Score=0]:
+Title: The Lancet Digital Health: [Comment] Thank you to The Lancet Digital Health statistical and peer reviewers in 2025
+URL: https://www.thelancet.com/journals/landig/article/PIIS2589-7500(26)00003-8/fulltext?rss=yes
+Source: The Lancet Digital Health
+Published: 2026-03-23T11:38:24.137310
+Desc: Rita Achermann
+
+[TRANSLATE_ONLY] Item 49 [Score=0]:
+Title: simonwillison.net: Beats now have notes
+URL: https://simonwillison.net/2026/Mar/23/beats-now-have-notes/#atom-everything
+Source: simonwillison.net
+Published: 2026-03-23T11:38:24.670517
+Desc: Last month I added a feature I call beats to this blog, pulling in some of my other content from external sources and including it on the homepage, search and various archive pages on the site. On any given day these frequently outnumber my regular posts. They were looking a little bit thin and were
+
+[TRANSLATE_ONLY] Item 50 [Score=0]:
+Title: simonwillison.net: Starlette 1.0 skill
+URL: https://simonwillison.net/2026/Mar/23/starlette-1-skill/#atom-everything
+Source: simonwillison.net
+Published: 2026-03-23T11:38:24.670670
+Desc: Research: Starlette 1.0 skill See Experimenting with Starlette 1.0 with Claude skills. Tags: starlette

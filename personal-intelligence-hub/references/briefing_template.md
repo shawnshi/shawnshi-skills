@@ -58,4 +58,5 @@
 ---
 ## 📂 认知资产归档
 - **路径**: {{ save_path }}
+- **过滤**: 已自动拦截 {{ noise_count }} 条低权重/未翻译英文信号，确保简报纯净度。
 - **同步**: Vector Lake (Consolidation PENDING)

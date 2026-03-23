@@ -1,0 +1,17 @@
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+.DS_Store
+.ipynb_checkpoints/
+tmp/
+temp/
+*.log
+*.bak
+.vscode/
+.idea/
+venv/
+env/
+node_modules/
+dist/
+build/

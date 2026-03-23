@@ -42,7 +42,7 @@ gemini skills install https://github.com/shawnshi/shawnshi-skills.git --path hit
 
 ## 3. 核心分类矩阵 (Core Skill Hierarchy)
 
-> **Total Inventory: 44 Strategic Modules across 8 Domains**
+> **Total Inventory: 45 Strategic Modules across 8 Domains**
 
 ### 🧠 深度认知与研究工作台 (Cognitive Research)
 *底层思考工具箱：需求脱水、战略审计、红蓝对抗与情报分析。*
@@ -63,21 +63,22 @@ gemini skills install https://github.com/shawnshi/shawnshi-skills.git --path hit
 | **[hit-solution-architect](hit-solution-architect/)**             | **顶级方案架构师 (V7.0)**。执行多阶段落盘锻造，确保 TCO 最优与技术可演进。          |
 | **[hit-digital-strategy-partner](hit-digital-strategy-partner/)** | **顶级数字化战略专家 (V15.1)**。执行 ROI 测算、MBB 框架分析与动词驱动的叙事。       |
 | **[hit-industry-radar](hit-industry-radar/)**                     | **行业战略雷达**。监控卫宁动态、友商中标及 Epic/Cerner 异动，输出 S-T-C 战报。      |
-| **[hit-weekly-brief](hit-weekly-brief/)**                         | **行业战区研报中枢**。将智库研报与白皮书降维为高管视角的抗幻觉决策资产。            |
-| **[hit-lectures-scout](hit-lectures-scout/)**                     | **数字化前沿侦察兵**。通过 S-T-C 框架对医疗 AI 论文执行 TRL 成熟度评估。            |
+| **[hit-weekly-brief](hit-weekly-brief/)**                         | **行业战区研报中枢 (V5.0)**。将智库研报与白皮书降维为高管视角的抗幻觉决策资产。     |
+| **[hit-lectures-scout](hit-lectures-scout/)**                     | **数字化前沿侦察兵 (V5.0)**。通过 S-T-C 框架对医疗 AI 论文执行 TRL 成熟度评估。     |
 | **[hit-customer-analyst](hit-customer-analyst/)**                 | **大客户拜访分析专家 (V3.1)**。强制执行三阶侦察（人物、机构、足迹），输出实战策略。 |
 | **[clinical-decision-support](clinical-decision-support/)**       | **临床决策支持文档生成**。生成基于生物标志物分层的患者队列分析与 GRADE 级治疗建议。 |
 | **[clinical-reports](clinical-reports/)**                         | **全维度临床报告撰写**。编写病例报告 (CARE)、诊断报告及 ICH-E3 标准临床试验报告。   |
 
 ### 🔬 专业科研与学术评价 (Scientific Research)
-*学术重型武器：论文检索、系统性打分与论文级绘图。*
+*学术重型武器：论文检索、读论文提炼、系统性打分与论文级绘图。*
 
 | 技能标识 (Directory)                                      | 核心本质 (Trigger Traps)                                                                                   |
 |:----------------------------------------------------------|:-----------------------------------------------------------------------------------------------------------|
 | **[arxiv-database](arxiv-database/)**                     | **arXiv 论文检索与获取**。通过 Atom API 精准获取计算机科学、AI 及物理领域的预印本。                        |
+| **[paper-research](paper-research/)**                     | **读论文 (paper-research)**。猎取思想，将别人的发现拆解成自己能用的认知，拒绝学术腔。                           |
 | **[scholar-evaluation](scholar-evaluation/)**             | **学术成果系统性评估**。利用 ScholarEval 框架对论文的方法论严谨度进行打分与反馈。                          |
 | **[scientific-writing](scientific-writing/)**             | **专业科研写作管线**。执行基于 IMRAD 结构的完整论文起草，强制“大纲-正文”两步流转。                         |
-| **[scientific-visualization](scientific-visualization/)** | **论文级科研绘图与可视化**。生成符合 Nature/Science 规格的图表，支持多面板布局、显著性标注及学术架构渲染。 |
+| **[scientific-visualization](scientific-visualization/)** | **论文级科研绘图与可视化**。生成符合 Nature/Science 规格 of 图表，支持多面板布局、显著性标注及学术架构渲染。 |
 
 ### 📝 内容创作与出版引擎 (Content Creation)
 *高密度叙事锻造：专栏写作、风格迁移与出版级排版。*
@@ -88,7 +89,6 @@ gemini skills install https://github.com/shawnshi/shawnshi-skills.git --path hit
 | **[humanizer-zh-pro](humanizer-zh-pro/)**                     | **中文文本“去 AI 化”锻造场**。模拟毒舌高管视角，执行遣词造句的同态重写。   |
 | **[presentation-architect](presentation-architect/)**         | **战略级 PPT 架构师**。交付具备原生逻辑的 PPT 资产，拒绝平庸模板。         |
 | **[smart-doc-latex](smart-doc-latex/)**                       | **自动化出版 LaTeX 引擎**。提供 IEEE、CV 等专业模板，交付工业级排版结果。  |
-| **[xray-article](xray-article/)**                             | **智慧 X 光扫描仪**。万字长文透视，输出带有 ASCII 架构图的硬核审计报告。   |
 
 ### 💼 商业洞察与投资顾问 (Marketing & Finance)
 *二级市场分析与商业价值变现。*
@@ -98,7 +98,7 @@ gemini skills install https://github.com/shawnshi/shawnshi-skills.git --path hit
 | **[personal-investment-advisor](personal-investment-advisor/)** | **顶级金融量化引擎**。提供结构化量化 JSON 分析与 K 线周期解析，严禁通用知识回答。 |
 
 ### 👤 数字原生个体成长中心 (Personal Management)
-*个人生活审计、生理分析与生活方式控制。*
+*个人生活审计、生理分析、旅行研究与生活方式控制。*
 
 | 技能标识 (Directory)                                        | 核心本质 (Trigger Traps)                                                                   |
 |:------------------------------------------------------------|:-------------------------------------------------------------------------------------------|
@@ -106,6 +106,7 @@ gemini skills install https://github.com/shawnshi/shawnshi-skills.git --path hit
 | **[personal-health-analysis](personal-health-analysis/)**   | **首席医疗官 (CMO) 引擎**。对 Garmin 生理数据执行全链路审计，管理决策准备度。              |
 | **[personal-monthly-insights](personal-monthly-insights/)** | **战略元分析解码器**。提取人机协作的负熵规律，识别摩擦基因并同步记忆。                     |
 | **[personal-musicbee-dj](personal-musicbee-dj/)**           | **音乐极客控制协议**。通过 JIT 算法精准控制本地进程，实现秒级心流氛围切换。                |
+| **[travel-research](travel-research/)**                     | **旅行研究 (ljg-travel-flow)**。深度文化旅行案头研究，涵盖博物馆、古建与考古发现。         |
 | **[12306-train-query](12306-train-query/)**                 | **12306 火车票专家**。提供秒级精准车次响应，严禁通过通用搜索引擎。                         |
 | **[ctrip-flight-search](ctrip-flight-search/)**             | **携程航班侦察兵**。通过自动化 SOP 获取实时运价，支持多城市场景验证。                      |
 | **[dianping-info-query](dianping-info-query/)**             | **大众点评深度查询器**。提供真实的商户画像与食材评分，拒绝通用搜索噪音。                   |

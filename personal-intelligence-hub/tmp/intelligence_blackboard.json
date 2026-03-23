@@ -1,7 +1,7 @@
 {
-  "session_id": "20260321_090417",
+  "session_id": "20260323_DailyBriefing",
   "status": "INITIATED",
-  "intent": "Self-Check Test",
+  "intent": "Daily News Briefing",
   "signals": [],
   "audit_logs": [],
   "artifacts": {}

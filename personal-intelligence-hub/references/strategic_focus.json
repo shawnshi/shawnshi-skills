@@ -10,11 +10,11 @@
     },
     {
       "keyword": "ace",
-      "weight": 27
+      "weight": 25
     },
     {
       "keyword": "算力",
-      "weight": 17
+      "weight": 20
     },
     {
       "keyword": "逻辑",
@@ -30,7 +30,7 @@
     },
     {
       "keyword": "ai",
-      "weight": 19
+      "weight": 20
     },
     {
       "keyword": "medical",
@@ -54,15 +54,15 @@
     },
     {
       "keyword": "core",
-      "weight": 9
+      "weight": 11
     },
     {
       "keyword": "数字",
-      "weight": 17
+      "weight": 15
     },
     {
       "keyword": "架构",
-      "weight": 15
+      "weight": 17
     },
     {
       "keyword": "战略",
@@ -70,7 +70,7 @@
     },
     {
       "keyword": "路径",
-      "weight": 19
+      "weight": 17
     },
     {
       "keyword": "认知",
@@ -78,7 +78,7 @@
     },
     {
       "keyword": "临床",
-      "weight": 17
+      "weight": 15
     },
     {
       "keyword": "语义",
@@ -106,7 +106,7 @@
     },
     {
       "keyword": "医保",
-      "weight": 5
+      "weight": 9
     },
     {
       "keyword": "卫健委",

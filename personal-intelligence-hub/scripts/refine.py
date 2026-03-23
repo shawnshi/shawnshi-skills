@@ -1,4 +1,4 @@
-﻿import sys; sys.path.append(r'C:\Users\shich\.gemini\scripts\lib');
+import sys; sys.path.append(r'C:\Users\shich\.gemini\scripts\lib');
 """
 <!-- Intelligence Hub: AI Refinement Engine V5.1 (Gemini CLI Integration) -->
 @Input: tmp/latest_scan.json, references/strategic_focus.json
@@ -12,7 +12,7 @@ import os
 import subprocess
 from pathlib import Path
 from datetime import datetime
-from utils import PROJECT_ROOT, HUB_DIR, NEWS_DIR
+from hub_utils import PROJECT_ROOT, HUB_DIR, NEWS_DIR, clean_json_output
 from history_manager import is_redundant
 
 # Resolve paths dynamically
@@ -32,16 +32,23 @@ def score_and_rank(scan_data: dict, focus_data: dict) -> list:
     }
     
     scored = []
+    skipped_count = 0
     for item in scan_data["items"]:
         text = (item.get("title", "") + " " + item.get("raw_desc", "")).lower()
-        score = sum(weight for kw, weight in keywords.items() if kw in text)
         
         # [SEMANTIC DEDUPLICATION] Use text fingerprinting
-        if is_redundant(item['url'], item['title'], item['source']):
-            score = -100 
+        is_red = is_redundant(item['url'], item['title'], item['source'])
+        if "tripwire" in item['url']:
+            print(f"🔍 DEBUG: checking {item['url']}, redundant={is_red}")
             
+        if is_red:
+            skipped_count += 1
+            continue
+            
+        score = sum(weight for kw, weight in keywords.items() if kw in text)
         scored.append((score, item))
 
+    print(f"🔍 Filtering: {skipped_count} redundant items skipped.")
     scored.sort(key=lambda x: x[0], reverse=True)
     return scored
 
@@ -54,10 +61,11 @@ def build_user_prompt(scored_items: list, focus_data: dict) -> str:
     )
 
     item_lines = []
-    # Send up to top 30 to the LLM
-    for i, (score, item) in enumerate(scored_items[:30]):
-        desc = item.get("raw_desc", "").strip()[:200].replace("\n", " ")
-        tag = "[TOP 10]" if i < 10 else "[TRANSLATE]"
+    # Send up to top 50 non-redundant items to the LLM for wide translation coverage
+    for i, (score, item) in enumerate(scored_items[:50]):
+        desc = item.get("raw_desc", "").strip()[:300].replace("\n", " ")
+        # Tag items: Top 15 get deep summary, others get simple translation
+        tag = "[DEEP_REFINE]" if i < 15 else "[TRANSLATE_ONLY]"
         item_lines.append(
             f"{tag} Item {i+1} [Score={score}]:\n"
             f"Title: {item['title']}\n"
@@ -67,7 +75,7 @@ def build_user_prompt(scored_items: list, focus_data: dict) -> str:
             f"Desc: {desc}\n"
         )
 
-    return f"## å½“å‰æˆ˜ç•¥å…³é”®è¯æƒé‡\n{kw_lines}\n\n## åŽŸå§‹æƒ…æŠ¥æ¸…å•\n" + "\n".join(item_lines)
+    return f"## ?????????\n{kw_lines}\n\n## ??????\n" + "\n".join(item_lines)
 
 
 def run_gemini_cli(prompt: str) -> str:
@@ -98,7 +106,7 @@ def refine():
     """Main refinement workflow: score, build prompt, and call Gemini CLI for full JSON payload."""
 
     if not SCAN_PATH.exists():
-        print(f"âŒ Error: No scan data found at {SCAN_PATH}")
+        print(f"❌ Error: No scan data found at {SCAN_PATH}")
         print("  Run `python scripts/fetch_news.py` first (Phase 1).")
         return
 
@@ -106,11 +114,11 @@ def refine():
     focus_data = json.loads(FOCUS_PATH.read_text(encoding="utf-8"))
 
     if not scan_data.get("items"):
-        print("âš ï¸ Warning: Scan data has no items. Nothing to refine.")
+        print("⚠️ Warning: Scan data has no items. Nothing to refine.")
         return
 
     scored_items = score_and_rank(scan_data, focus_data)
-    print(f"ðŸ“Š Scored {len(scored_items)} items. Top score: {scored_items[0][0] if scored_items else 0}")
+    print(f"📊 Scored {len(scored_items)} items. Top score: {scored_items[0][0] if scored_items else 0}")
 
     user_prompt = build_user_prompt(scored_items, focus_data)
     
@@ -120,32 +128,18 @@ def refine():
     prompt_path.parent.mkdir(parents=True, exist_ok=True)
     prompt_path.write_text(full_prompt, encoding="utf-8")
 
-    print(f"ðŸ§  Calling Gemini CLI (gemini ask) for refinement...")
+    print(f"🧠 Calling Gemini CLI (gemini ask) for refinement...")
     
     try:
         response_text = run_gemini_cli(full_prompt)
-        
-        # Regex parsing armor for JSON extraction
-        match = re.search(r'```(?:json)?\s*([\s\S]+?)\s*```', response_text)
-        if match:
-            json_str = match.group(1)
-        else:
-            # Robust extraction: find first '{' and last '}'
-            start_idx = response_text.find('{')
-            end_idx = response_text.rfind('}')
-            if start_idx != -1 and end_idx != -1:
-                json_str = response_text[start_idx:end_idx+1]
-            else:
-                json_str = response_text
-        
-        result_data = json.loads(json_str)
-        
+        ai_data = clean_json_output(response_text)
+
         # Merge with other metadata
         final_output = {
             "generated_at": datetime.now().isoformat(),
             "status": "COMPLETED",
             "model_used": "gemini-cli",
-            **result_data,
+            **ai_data,
             "_scored_preview": [
                 {"rank": i+1, "score": s, "title": item["title"][:80], "source": item["source"]}
                 for i, (s, item) in enumerate(scored_items[:10])
@@ -157,20 +151,20 @@ def refine():
             json.dumps(final_output, ensure_ascii=False, indent=2),
             encoding="utf-8",
         )
-        print(f"âœ… Refinement completed! Output saved to: {OUTPUT_PATH}")
-        print(f"ðŸ”„ Next: Run adversarial audit (optional) or `python scripts/forge.py` (Phase 4).")
+        print(f"✅ Refinement completed! Output saved to: {OUTPUT_PATH}")
+        print(f"🔄 Next: Run adversarial audit (optional) or `python scripts/forge.py` (Phase 4).")
         
     except Exception as e:
-        print(f"âŒ Error during Gemini CLI calling: {str(e)}")
+        print(f"❌ Error during Gemini CLI calling: {str(e)}")
         # Fallback to skeleton if LLM fails
         skeleton = {
             "generated_at": datetime.now().isoformat(),
             "status": f"FAILED: {str(e)}",
             "top_10": [],
             "translations": {},
-            "insights": "> ðŸ’¡ [LLM ERROR]",
-            "punchline": "> ðŸ’¡ [LLM ERROR]",
-            "digest": "> ðŸ’¡ [LLM ERROR]",
+            "insights": "> 💡 [LLM ERROR]",
+            "punchline": "> 💡 [LLM ERROR]",
+            "digest": "> 💡 [LLM ERROR]",
             "market": "* [LLM ERROR]",
             "_prompt_path": str(prompt_path),
             "_raw_response": response_text if 'response_text' in locals() else None,
@@ -184,7 +178,7 @@ def refine():
             json.dumps(skeleton, ensure_ascii=False, indent=2),
             encoding="utf-8",
         )
-        print(f"ðŸ“¦ Error skeleton created at to: {OUTPUT_PATH}")
+        print(f"📦 Error skeleton created at to: {OUTPUT_PATH}")
 
 
 if __name__ == "__main__":

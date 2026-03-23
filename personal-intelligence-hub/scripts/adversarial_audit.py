@@ -10,7 +10,7 @@ import os
 import subprocess
 from pathlib import Path
 from datetime import datetime
-from utils import PROJECT_ROOT, HUB_DIR, NEWS_DIR
+from hub_utils import PROJECT_ROOT, HUB_DIR, NEWS_DIR
 
 REFINED_PATH = NEWS_DIR / "intelligence_current_refined.json"
 
@@ -67,13 +67,7 @@ def audit():
     
     try:
         response_text = run_gemini_cli(full_prompt)
-        
-        # Regex parsing armor for JSON extraction
-        match = re.search(r'```(?:json)?\s*([\s\S]+?)\s*```', response_text)
-        if match:
-            audit_data = json.loads(match.group(1))
-        else:
-            audit_data = json.loads(response_text)
+        audit_data = clean_json_output(response_text)
         
         # Append to the original json
         data["adversarial_audit"] = audit_data

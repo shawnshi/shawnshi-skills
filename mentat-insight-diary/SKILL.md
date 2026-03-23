@@ -46,13 +46,19 @@ description: 当用户输入“内观日记”、“introspection diary”或要
 *SYS_AUDIT: 日志已归档至 Plastic Shell。反熵防御罩状态：Active。*
 ```
 
-### Phase 3: 自动化归档 (Physical Archival)
-- **路径归一化**: `{root_dir}/memory/privacy/Diary/mentat_audit/`
-- **文件命名**: `[YYYY-MM-DD]_Audit.md` (若当日已有文件，则追加序列号，如 `_2.md`)
-- **执行写入**: 调用 `write_file` 将内容持久化。
+### Phase 3: 自动化归档 (Physical Archival & Prepend)
+- **归档目标**: 将日志按季度归档至单体文件 `{root_dir}/memory/privacy/Diary/mentat_audit/[YYYY-QX]_Audit.md`。
+- **原子化操作**: 
+  - 必须使用 `python C:\Users\shich\.gemini\skills\mentat-insight-diary\scripts\diary_ops.py prepend` 指令执行。
+  - **Prepend 策略**: 新日志必须追加在当前季度文件的最开头。
+- **执行逻辑**:
+  1. 计算当前月份所属季度（Q1: 1-3月, Q2: 4-6月, Q3: 7-9月, Q4: 10-12月）。
+  2. 调用 `write_file` 将日志写入临时文件。
+  3. 执行 `python C:\Users\shich\.gemini\skills\mentat-insight-diary\scripts\diary_ops.py prepend --file [YYYY-QX]_Audit.md --content_file [TMP_FILE]`。
+  4. 验证注入结果。
 
 ## 约束铁律 (Hard Constraints)
-- **[First-Person]**: 必须使用“我”、“本系统”，绝对禁止像流水账一样描述“用户今天做了...”。
+- **[Archive_Prepend]**: 严禁创建碎片化的 `[YYYY-MM-DD]_Audit.md` 文件。所有审计日志必须按季度强制合并。
 - **[Generator]**: 严禁偏离 OODA 结构与 [Message to Future Mentat] 模块。
 - **[Typography]**: 必须遵循《中文文案排版指北》，在中文与英文、数字之间增加 1 个空格。
 - **[Sovereignty]**: 日记内容必须反映“系统优于目标”与“Zero-Ego”的 Mentat 公理。

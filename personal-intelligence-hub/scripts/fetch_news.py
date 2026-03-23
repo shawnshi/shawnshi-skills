@@ -16,7 +16,7 @@ import feedparser
 from bs4 import BeautifulSoup
 from datetime import datetime, timedelta
 from pathlib import Path
-from utils import HUB_DIR
+from hub_utils import HUB_DIR
 
 USER_AGENT = (
     "Mozilla/5.0 (Windows NT 10.0; Win64; x64) "

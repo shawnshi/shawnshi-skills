@@ -52,8 +52,8 @@ Atomic Logging (Win32 物理适配):
 必须执行：write_file 到 tmp -> 调用 diary_ops.py prepend --content_file 注入。
 Mentat Insight Archival (同步调用内观日记):
 【强制要求】：在生成日志的同时，必须同步生成一份符合 insight-diary 标准的 OODA 审计报告。
-物理归档路径：{root_dir}/memory/privacy/Diary/mentat_audit/[YYYY-MM-DD]_Audit.md。
-内容必须包含：观测 (Observe)、导向 (Orient)、决策 (Decide)、执行 (Act) 及认知结晶。
+物理归档路径：{root_dir}/memory/privacy/Diary/mentat_audit/[YYYY-QX]_Audit.md。
+归档策略：强制使用 diary_ops.py 执行季度级 prepend 操作。
 Strategic Sync (记忆蒸馏):
 若 cognitive_depth_score >= 4，格式化为 JSON 写入 tmp。
 调用 scripts/memory_sync.py 同步至 memory.md。
@@ -67,7 +67,9 @@ Strategic Sync (记忆蒸馏):
 - JSON 结构：`{"skill_name": "office-hours", "status": "success", "duration_sec": [ESTIMATE], "input_tokens": [ESTIMATE], "output_tokens": [ESTIMATE]}`
 
 ## 历史失效先验 (Gotchas)
-- [此处预留用于记录重复性失败的禁令，实现系统的对抗性进化]
+- **[ARCHIVE_PREPEND]**: 必须使用 `diary_ops.py` 执行季度级 prepend，严禁创建碎片文件。
+- **[PROMPT_MANDATE]**: 执行“每周审计”或“月度审计”前，**必须强制读取** `prompts/weekly.md` 或 `prompts/MONTHLY.md`。严禁仅依赖 `SKILL.md` 中的简化大纲。
+- **[TABLE_MANDATE]**: 战术问责 (PART 0) 必须使用 Markdown Table 格式，并包含 Root Cause 分析。
 
 ## 4. 历史失效先验 (Gotchas)
 - ALWAYS use `--content_file` for multi-line log prepends.

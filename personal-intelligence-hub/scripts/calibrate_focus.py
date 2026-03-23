@@ -12,7 +12,7 @@ from collections import Counter
 
 import jieba
 import jieba.analyse
-from utils import PROJECT_ROOT, HUB_DIR
+from hub_utils import PROJECT_ROOT, HUB_DIR
 
 # Resolve paths dynamically
 MEMORY_PATH = PROJECT_ROOT / "pai" / "memory.md"
