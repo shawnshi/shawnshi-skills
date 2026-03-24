@@ -232,7 +232,11 @@ def extract_tactics(file_path):
     for entry in entries:
         if "WEEKLY AUDIT" in entry["content"]:
             # Find the section for tactics
-            match = re.search(r'##\s+.*?(?:战术锁定|Next Day Tactics|战术锁定).*?\n(.*?)(?=^## |\Z)', entry["content"], re.DOTALL | re.MULTILINE)
+            match = re.search(r'##\s+.*?(?:战术锁定|Next Day Tactics|战术锁定|前瞻性策略与认知挑战|前瞻性战术锁定).*?\n(.*?)(?=^## |\Z)', entry["content"], re.DOTALL | re.MULTILINE)
+            if not match:
+                # Try Level 3 if Level 2 fails
+                match = re.search(r'###\s+.*?(?:战术锁定|Next Day Tactics|战术锁定|下周重点任务|下周的“北极星问题”).*?\n(.*?)(?=^### |\Z)', entry["content"], re.DOTALL | re.MULTILINE)
+            
             if match:
                 tactics = match.group(1).strip()
                 return {"status": "success", "date": entry["date"], "tactics": tactics}

@@ -1,4 +1,4 @@
-# Skills Ecosystem: The Strategic Armory (V3.3 - Native Agent Optimized)
+# Skills Ecosystem: The Strategic Armory (V3.4 - Native Agent Optimized)
 
 <!-- 
 @Pos: Root Level / Knowledge Sovereign 
@@ -10,7 +10,7 @@
 > **“工具的本质是意志的延伸。在这里，我们不生产简单的功能，我们构建确定性。”**
 
 ## 1. 架构原则 (Architectural Principles)
-本目录遵循“四层壳模型”支撑下的原生代理范式，实现**代码液态化**与**业务语义固态化**的动态平衡：
+本目录遵循“四层壳模型”支撑下的技能范式，实现**代码液态化**与**业务语义固态化**的动态平衡：
 
 ### A. 物理层：算力主权与环境隔离 (Physics)
 - **物理硬锁**：所有技能必须在本地物理目录内闭环执行，严禁依赖外部云端黑盒。
@@ -42,7 +42,7 @@ gemini skills install https://github.com/shawnshi/shawnshi-skills.git --path hit
 
 ## 3. 核心分类矩阵 (Core Skill Hierarchy)
 
-> **Total Inventory: 45 Strategic Modules across 8 Domains**
+> **Total Inventory: 46 Strategic Modules across 8 Domains**
 
 ### 🧠 深度认知与研究工作台 (Cognitive Research)
 *底层思考工具箱：需求脱水、战略审计、红蓝对抗与情报分析。*
@@ -72,13 +72,15 @@ gemini skills install https://github.com/shawnshi/shawnshi-skills.git --path hit
 ### 🔬 专业科研与学术评价 (Scientific Research)
 *学术重型武器：论文检索、读论文提炼、系统性打分与论文级绘图。*
 
-| 技能标识 (Directory)                                      | 核心本质 (Trigger Traps)                                                                                   |
-|:----------------------------------------------------------|:-----------------------------------------------------------------------------------------------------------|
-| **[arxiv-database](arxiv-database/)**                     | **arXiv 论文检索与获取**。通过 Atom API 精准获取计算机科学、AI 及物理领域的预印本。                        |
-| **[paper-research](paper-research/)**                     | **读论文 (paper-research)**。猎取思想，将别人的发现拆解成自己能用的认知，拒绝学术腔。                           |
-| **[scholar-evaluation](scholar-evaluation/)**             | **学术成果系统性评估**。利用 ScholarEval 框架对论文的方法论严谨度进行打分与反馈。                          |
-| **[scientific-writing](scientific-writing/)**             | **专业科研写作管线**。执行基于 IMRAD 结构的完整论文起草，强制“大纲-正文”两步流转。                         |
-| **[scientific-visualization](scientific-visualization/)** | **论文级科研绘图与可视化**。生成符合 Nature/Science 规格 of 图表，支持多面板布局、显著性标注及学术架构渲染。 |
+| 技能标识 (Directory)                                            | 核心本质 (Trigger Traps)                                                                             |
+|:----------------------------------------------------------------|:-----------------------------------------------------------------------------------------------------|
+| **[academic-paper-writer](academic-paper-writer/)**             | **学术论文写作管线 (V2.4)**。12-Agent 管线，支持 IMRaD 与双语摘要，强制 APA 7.0 / LaTeX 出版级排版。 |
+| **[academic-arxiv-search](academic-arxiv-search/)**             | **arXiv 论文检索与获取**。通过 Atom API 精准获取计算机科学、AI 及物理领域的预印本。                  |
+| **[academic-paper-reader](academic-paper-reader/)**             | **读论文 (academic-paper-reader)**。猎取思想，将别人的发现拆解成自己能用的认知，拒绝学术腔。         |
+| **[academic-scholar-evaluation](academic-scholar-evaluation/)** | **学术成果系统性评估**。利用 ScholarEval 框架对论文的方法论严谨度进行打分与反馈。                    |
+
+| **[academic-scientific-visualization](academic-scientific-visualization/)** | **论文级科研绘图与可视化**。生成符合 Nature/Science 规格 of 图表，支持多面板布局、显著性标注及学术架构渲染。 |
+| **[academic-deep-research](academic-deep-research/)**                         | **通用深度研究中枢 (V2.3)**。13-Agent 管线，支援 PRISMA 系統性回顧、苏格拉底式引導與嚴格的證據查核 (RoB)。            |
 
 ### 📝 内容创作与出版引擎 (Content Creation)
 *高密度叙事锻造：专栏写作、风格迁移与出版级排版。*
@@ -119,23 +121,23 @@ gemini skills install https://github.com/shawnshi/shawnshi-skills.git --path hit
 | 技能标识 (Directory)                                  | 核心本质 (Trigger Traps)                                                                          |
 |:------------------------------------------------------|:--------------------------------------------------------------------------------------------------|
 | **[morphism-mapper-master](morphism-mapper-master/)** | **范畴论跨界思维引擎**。利用异构领域结构生成突破性解法，执行升维打击。                            |
-| **[skill-creator](skill-creator/)**                   | **技能工厂与自愈中心 (Native Edition)**。管理技能生命周期，确保符合“四层壳模型”与三层架构规范。                                                                  |
+| **[skill-creator](skill-creator/)**                   | **技能工厂与自愈中心 (Native Edition)**。管理技能生命周期，确保符合“四层壳模型”与三层架构规范。   |
 | **[plan-eng-review](plan-eng-review/)**               | **战略级工程审计 (Native Edition)**。在编码前执行静默深度扫描，锁定架构漏洞、影子路径与测试边界。 |
 
 ### 🧰 全能格式转换与数据工厂 (Utilities Format)
 *负责标准化格式转换与数据原质提取。*
 
-| 技能标识 (Directory)                            | 核心本质 (Trigger Traps)                                                        |
-|:------------------------------------------------|:--------------------------------------------------------------------------------|
-| **[document-summarizer](document-summarizer/)** | **战略情报引擎**。具备本体驱动的语义压缩能力，输出带有战略标签的摘要。          |
-| **[docx](docx/)**                               | **顶级 Word 锻造师**。支持专业排版、目录生成及内容同态重组。                    |
-| **[xlsx](xlsx/)**                               | **重装级数据治理专家**。通过物理层 XML 操纵实现 100% 数据一致性。               |
-| **[markdown-converter](markdown-converter/)**   | **Markdown 原质炼金术**。利用 MarkItDown 将异构文件统一转化为极致干净的语义层。 |
-| **[pdf](pdf/)**                                 | **PDF 全能处理器**。支持底层字节流处理，执行 OCR 扫描、合并与拆分。             |
-| **[pptx](pptx/)**                               | **PPT 全能操作员**。支持模板保留与批量更新，具备物理层 XML 操纵能力。           |
-| **[text-to-speech](text-to-speech/)**           | **军工级播报系统**。支持 Edge 神经网络语音，确保高审美播报。                    |
-| **[tuanbiaodownloader](tuanbiaodownloader/)**   | **团体标准下载器**。全自动 ID 解析与 PDF 合并装订，确保 100% 获取率。           |
-| **[url-to-markdown](url-to-markdown/)**         | **网页原质提取器**。直控 Chrome CDP 协议，强制清除网页噪音。                    |
+| 技能标识 (Directory)                            | 核心本质 (Trigger Traps)                                                                              |
+|:------------------------------------------------|:------------------------------------------------------------------------------------------------------|
+| **[document-summarizer](document-summarizer/)** | **战略情报引擎**。具备本体驱动的语义压缩能力，输出带有战略标签的摘要。                                |
+| **[minimax-docx](minimax-docx/)**               | **顶级 Word 锻造师 (MiniMax Edition)**。基于 OpenXML SDK 执行专业 DOCX 渲染，支持硬核模板校验与排版。 |
+| **[xlsx](xlsx/)**                               | **重装级数据治理专家**。通过物理层 XML 操纵实现 100% 数据一致性。                                     |
+| **[markdown-converter](markdown-converter/)**   | **Markdown 原质炼金术**。利用 MarkItDown 将异构文件统一转化为极致干净的语义层。                       |
+| **[pdf](pdf/)**                                 | **PDF 全能处理器**。支持底层字节流处理，执行 OCR 扫描、合并与拆分。                                   |
+| **[pptx](pptx/)**                               | **PPT 全能操作员**。支持模板保留与批量更新，具备物理层 XML 操纵能力。                                 |
+| **[text-to-speech](text-to-speech/)**           | **军工级播报系统**。支持 Edge 神经网络语音，确保高审美播报。                                          |
+| **[tuanbiaodownloader](tuanbiaodownloader/)**   | **团体标准下载器**。全自动 ID 解析与 PDF 合并装订，确保 100% 获取率。                                 |
+| **[url-to-markdown](url-to-markdown/)**         | **网页原质提取器**。直控 Chrome CDP 协议，强制清除网页噪音。                                          |
 
 ---
-*Last Global Audit: 2026-03-22 | Version: 3.3 (Native Agent Optimized) | System State: Locked*
+*Last Global Audit: 2026-03-24 | Version: 3.4 (Native Agent Optimized) | System State: Locked*

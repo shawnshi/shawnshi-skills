@@ -1,8 +1,8 @@
 ---
 name: personal-diary-auditing
-version: 4.1.0
+version: 4.1.1
 description: |
-  个人认知审计与日志治理专家 (V4.1)。当用户要求“复盘今日日志”、“提取认知盲点”或需要“周/月/年度审计报告”时激活。通过 ADK 五维补偿架构执行深层审计。
+  个人认知审计与日志治理专家 (V4.1.1)。当用户要求“复盘今日日志”、“提取认知盲点”或需要“周/月/年度审计报告”时激活。通过 ADK 五维补偿架构执行深层审计。
 ---
 
 # SKILL: Diary Auditing & Cognitive Governance
@@ -63,13 +63,14 @@ Strategic Sync (记忆蒸馏):
 ❌ 禁止越级生成：未经大纲核准严禁生成全文。
 
 **Telemetry & Metadata (Mandatory):**
-- 使用 `write_file` 将本次执行的元数据以 JSON 格式保存至 `{root_dir}/MEMORY/skill_audit/telemetry/record_[TIMESTAMP].json`（请将 [TIMESTAMP] 替换为当前时间戳或随机数）。
+- 使用 `write_file` 将本次执行的元数据以 JSON 格式保存至 `{root_dir}/MEMORY/skill_audit/telemetry/record_[TIMESTAMP].json`（请将 [TIMESTAMP] 替换为当前时间戳 or 随机数）。
 - JSON 结构：`{"skill_name": "office-hours", "status": "success", "duration_sec": [ESTIMATE], "input_tokens": [ESTIMATE], "output_tokens": [ESTIMATE]}`
 
 ## 历史失效先验 (Gotchas)
 - **[ARCHIVE_PREPEND]**: 必须使用 `diary_ops.py` 执行季度级 prepend，严禁创建碎片文件。
 - **[PROMPT_MANDATE]**: 执行“每周审计”或“月度审计”前，**必须强制读取** `prompts/weekly.md` 或 `prompts/MONTHLY.md`。严禁仅依赖 `SKILL.md` 中的简化大纲。
 - **[TABLE_MANDATE]**: 战术问责 (PART 0) 必须使用 Markdown Table 格式，并包含 Root Cause 分析。
+- **[TACTICS_EXTRACT]**: `extract_tactics` 必须支持 Level 2/3 标题及多种中文同义词（如“下周重点任务”），否则将导致 Phase 0 问责中断。
 
 ## 4. 历史失效先验 (Gotchas)
 - ALWAYS use `--content_file` for multi-line log prepends.

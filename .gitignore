@@ -12,6 +12,5 @@ temp/
 .idea/
 venv/
 env/
-node_modules/
 dist/
 build/

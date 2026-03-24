@@ -8,6 +8,7 @@ overfitting.
 
 import argparse
 import json
+import os
 import random
 import sys
 import tempfile
@@ -21,6 +22,28 @@ from scripts.generate_report import generate_html
 from scripts.improve_description import improve_description
 from scripts.run_eval import find_project_root, run_eval
 from scripts.utils import parse_skill_md
+
+
+def assert_fs_consistency(skill_path: Path) -> Path:
+    """[Mentat Protocol] SPOF 1: 物理环境强一致性断言 (Execution Integrity Lock)
+    防止高并发 Subagent I/O 写锁或跨 Windows/Unix 异步执行时导致的评测基线数据雪崩。
+    """
+    if not skill_path.is_absolute():
+        skill_path = skill_path.resolve()
+        
+    lock_file = skill_path / ".amendify_execution.lock"
+    try:
+        # Atomic lock creation
+        fd = os.open(str(lock_file), os.O_CREAT | os.O_EXCL | os.O_RDWR)
+        with os.fdopen(fd, 'w') as f:
+            f.write(f"LOCKED_BY_PID:{os.getpid()}\nTIMESTAMP:{time.time()}")
+        return lock_file
+    except FileExistsError:
+        print(f"\n[🛡️ 审计阻断 (SPOF-1)] FATAL: 评测协议异构并发冲突验证阶段失败。", file=sys.stderr)
+        print(f"目标资产 {skill_path.name} 正在被锁定 (Lock: {lock_file})。", file=sys.stderr)
+        print("防腐败机制已激活：拒绝对可能发生基线雪崩的脏环境执行并发写操作。", file=sys.stderr)
+        sys.exit(1)
+
 
 
 def split_eval_set(eval_set: list[dict], holdout: float, seed: int = 42) -> tuple[list[dict], list[dict]]:
@@ -269,63 +292,74 @@ def main():
         print(f"Error: No SKILL.md found at {skill_path}", file=sys.stderr)
         sys.exit(1)
 
-    name, _, _ = parse_skill_md(skill_path)
+    # 🚨 强制环境强一致性约束 (Asset Integrity Lock)
+    lock_file = assert_fs_consistency(skill_path)
 
-    # Set up live report path
-    if args.report != "none":
-        if args.report == "auto":
-            timestamp = time.strftime("%Y%m%d_%H%M%S")
-            live_report_path = Path(tempfile.gettempdir()) / f"skill_description_report_{skill_path.name}_{timestamp}.html"
+    try:
+        name, _, _ = parse_skill_md(skill_path)
+
+        # Set up live report path
+        if args.report != "none":
+            if args.report == "auto":
+                timestamp = time.strftime("%Y%m%d_%H%M%S")
+                live_report_path = Path(tempfile.gettempdir()) / f"skill_description_report_{skill_path.name}_{timestamp}.html"
+            else:
+                live_report_path = Path(args.report)
+            # Open the report immediately so the user can watch
+            live_report_path.write_text("<html><body><h1>Starting optimization loop...</h1><meta http-equiv='refresh' content='5'></body></html>")
+            webbrowser.open(str(live_report_path))
         else:
-            live_report_path = Path(args.report)
-        # Open the report immediately so the user can watch
-        live_report_path.write_text("<html><body><h1>Starting optimization loop...</h1><meta http-equiv='refresh' content='5'></body></html>")
-        webbrowser.open(str(live_report_path))
-    else:
-        live_report_path = None
+            live_report_path = None
 
-    # Determine output directory (create before run_loop so logs can be written)
-    if args.results_dir:
-        timestamp = time.strftime("%Y-%m-%d_%H%M%S")
-        results_dir = Path(args.results_dir) / timestamp
-        results_dir.mkdir(parents=True, exist_ok=True)
-    else:
-        results_dir = None
+        # Determine output directory (create before run_loop so logs can be written)
+        if args.results_dir:
+            timestamp = time.strftime("%Y-%m-%d_%H%M%S")
+            results_dir = Path(args.results_dir) / timestamp
+            results_dir.mkdir(parents=True, exist_ok=True)
+        else:
+            results_dir = None
 
-    log_dir = results_dir / "logs" if results_dir else None
+        log_dir = results_dir / "logs" if results_dir else None
 
-    output = run_loop(
-        eval_set=eval_set,
-        skill_path=skill_path,
-        description_override=args.description,
-        num_workers=args.num_workers,
-        timeout=args.timeout,
-        max_iterations=args.max_iterations,
-        runs_per_query=args.runs_per_query,
-        trigger_threshold=args.trigger_threshold,
-        holdout=args.holdout,
-        model=args.model,
-        verbose=args.verbose,
-        live_report_path=live_report_path,
-        log_dir=log_dir,
-    )
+        output = run_loop(
+            eval_set=eval_set,
+            skill_path=skill_path,
+            description_override=args.description,
+            num_workers=args.num_workers,
+            timeout=args.timeout,
+            max_iterations=args.max_iterations,
+            runs_per_query=args.runs_per_query,
+            trigger_threshold=args.trigger_threshold,
+            holdout=args.holdout,
+            model=args.model,
+            verbose=args.verbose,
+            live_report_path=live_report_path,
+            log_dir=log_dir,
+        )
 
-    # Save JSON output
-    json_output = json.dumps(output, indent=2)
-    print(json_output)
-    if results_dir:
-        (results_dir / "results.json").write_text(json_output)
+        # Save JSON output
+        json_output = json.dumps(output, indent=2)
+        print(json_output)
+        if results_dir:
+            (results_dir / "results.json").write_text(json_output)
 
-    # Write final HTML report (without auto-refresh)
-    if live_report_path:
-        live_report_path.write_text(generate_html(output, auto_refresh=False, skill_name=name))
-        print(f"\nReport: {live_report_path}", file=sys.stderr)
+        # Write final HTML report (without auto-refresh)
+        if live_report_path:
+            live_report_path.write_text(generate_html(output, auto_refresh=False, skill_name=name))
+            print(f"\nReport: {live_report_path}", file=sys.stderr)
 
-    if results_dir and live_report_path:
-        (results_dir / "report.html").write_text(generate_html(output, auto_refresh=False, skill_name=name))
+        if results_dir and live_report_path:
+            (results_dir / "report.html").write_text(generate_html(output, auto_refresh=False, skill_name=name))
 
-    if results_dir:
-        print(f"Results saved to: {results_dir}", file=sys.stderr)
+        if results_dir:
+            print(f"Results saved to: {results_dir}", file=sys.stderr)
+
+    finally:
+        # 解除物理环境硬锁
+        try:
+            lock_file.unlink(missing_ok=True)
+        except Exception as e:
+            print(f"WARNING: 并发锁解除失败 (Lock release failed): {e}", file=sys.stderr)
 
 
 if __name__ == "__main__":
