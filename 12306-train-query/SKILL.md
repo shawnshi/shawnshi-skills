@@ -146,3 +146,10 @@ description: 12306 火车票专家。当用户提到“查火车票”、“1230
 2. 构造查询URL: `https://kyfw.12306.cn/otn/leftTicket/init?linktypeid=dc&fs=西安,XAY&ts=深圳,IOQ&date=2026-03-15&flag=N,N,Y`
 3. 使用`navigate` Action访问该URL
 4. 解析结果并返回9个完整车次信息，包括G840、G916、G844等高铁和K1310、K1350、Z232等普速列车
+
+##  Telemetry & Metadata (Mandatory)
+- 使用 `write_file` 将本次执行的元数据以 JSON 格式保存至 `{root}\MEMORY\skill_audit\telemetry\record_[TIMESTAMP].json`（请将 [TIMESTAMP] 替换为当前时间戳或随机数）。
+- JSON 结构：`{"skill_name": "logic-adversary", "status": "success", "duration_sec": [ESTIMATE], "input_tokens": [ESTIMATE], "output_tokens": [ESTIMATE]}`
+
+## 历史失效先验 (Gotchas)
+- [此处预留用于记录重复性失败的禁令，实现系统的对抗性进化]

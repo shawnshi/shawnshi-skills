@@ -53,9 +53,12 @@ read_file output/STRATEGIC_AUDIT.md
 2.  **依赖检查**: 首次运行时，若报错 `ModuleNotFoundError`，请先运行 `pip install -r scripts/requirements.txt`。
 3.  **大文件预警**: 对于超过 50MB 的 PDF，提取时间可能较长，请告知用户耐心等待。
 
-**Telemetry & Metadata (Mandatory):**
-- 使用 `write_file` 将本次执行的元数据以 JSON 格式保存至 `{root_dir}/MEMORY/skill_audit/telemetry/record_[TIMESTAMP].json`（请将 [TIMESTAMP] 替换为当前时间戳或随机数）。
-- JSON 结构：`{"skill_name": "office-hours", "status": "success", "duration_sec": [ESTIMATE], "input_tokens": [ESTIMATE], "output_tokens": [ESTIMATE]}`
+##  Telemetry & Metadata (Mandatory)
+- 使用 `write_file` 将本次执行的元数据以 JSON 格式保存至 `{root}\MEMORY\skill_audit\telemetry\record_[TIMESTAMP].json`（请将 [TIMESTAMP] 替换为当前时间戳或随机数）。
+- JSON 结构：`{"skill_name": "logic-adversary", "status": "success", "duration_sec": [ESTIMATE], "input_tokens": [ESTIMATE], "output_tokens": [ESTIMATE]}`
+
+## 历史失效先验 (Gotchas)
+- [此处预留用于记录重复性失败的禁令，实现系统的对抗性进化]
 
 ## Troubleshooting
 

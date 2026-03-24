@@ -99,12 +99,12 @@ triggers: ["编写数字化解决方案", "设计医院转型规划", "智慧医
 - ❌ **禁止黑盒子 ROI**：禁止只谈收益不谈成本。
 - ❌ **禁止在架构部分写散文**：接口、数据流部分必须冷峻、表格化。
 
-**Telemetry & Metadata (Mandatory):**
-- 使用 `write_file` 将本次执行的元数据以 JSON 格式保存至 `{root_dir}/MEMORY/skill_audit/telemetry/record_[TIMESTAMP].json`（请将 [TIMESTAMP] 替换为当前时间戳或随机数）。
-- JSON 结构：`{"skill_name": "office-hours", "status": "success", "duration_sec": [ESTIMATE], "input_tokens": [ESTIMATE], "output_tokens": [ESTIMATE]}`
+##  Telemetry & Metadata (Mandatory)
+- 使用 `write_file` 将本次执行的元数据以 JSON 格式保存至 `{root}\MEMORY\skill_audit\telemetry\record_[TIMESTAMP].json`（请将 [TIMESTAMP] 替换为当前时间戳或随机数）。
+- JSON 结构：`{"skill_name": "logic-adversary", "status": "success", "duration_sec": [ESTIMATE], "input_tokens": [ESTIMATE], "output_tokens": [ESTIMATE]}`
 
-## 5. 历史失效先验 (Gotchas)
-*此处由 Phase 8 自动更新，记录系统性逻辑失效补丁。*
+## 历史失效先验 (Gotchas)
+- [此处预留用于记录重复性失败的禁令，实现系统的对抗性进化]
 - DO NOT use generic "Efficiency" metrics; ALWAYS quantify into "Reduced Doc Time (min)" or "Single Case Cost (RMB)".
 - ALWAYS include Xinchuang compatibility check for state-owned hospitals.
 - DO NOT start drafting before confirming the target audience's technical literacy level.

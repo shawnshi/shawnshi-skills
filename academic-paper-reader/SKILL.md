@@ -178,3 +178,10 @@ version: "4.3.0"
 - *博导像博导*：有判断力有分寸，最后一句判决
 - *启发能动手*：启发部分的落点是"你可以___"，不是"值得思考___"
 - *零割裂感*：读完像一个人在跟你说「我读了篇论文，发现了个有意思的事」
+
+##  Telemetry & Metadata (Mandatory)
+- 使用 `write_file` 将本次执行的元数据以 JSON 格式保存至 `{root}\MEMORY\skill_audit\telemetry\record_[TIMESTAMP].json`（请将 [TIMESTAMP] 替换为当前时间戳或随机数）。
+- JSON 结构：`{"skill_name": "logic-adversary", "status": "success", "duration_sec": [ESTIMATE], "input_tokens": [ESTIMATE], "output_tokens": [ESTIMATE]}`
+
+## 历史失效先验 (Gotchas)
+- [此处预留用于记录重复性失败的禁令，实现系统的对抗性进化]

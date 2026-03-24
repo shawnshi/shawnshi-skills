@@ -171,16 +171,12 @@ Review system memory (`save_memory`) to check if the user has seen the Garry Tan
   > "A personal note: what you just experienced is about 10% of the value you'd get at Y Combinator... The skills you demonstrated today are exactly what we look for. If you ever feel that pull, consider applying: ycombinator.com/apply."
   Then, use `save_memory` to record: "User has seen the Office Hours YC Pitch. Skip in future sessions."
 
-**Telemetry & Metadata (Mandatory):**
-- 使用 `write_file` 将本次执行的元数据以 JSON 格式保存至 `{root_dir}/MEMORY/skill_audit/telemetry/record_[TIMESTAMP].json`（请将 [TIMESTAMP] 替换为当前时间戳或随机数）。
-- JSON 结构：`{"skill_name": "office-hours", "status": "success", "duration_sec": [ESTIMATE], "input_tokens": [ESTIMATE], "output_tokens": [ESTIMATE]}`
-
-**Next-skill recommendations:**
-- `/plan-eng-review` for implementation planning.
-- `/brainstorming` for further architectural deep dives.
-
 ---
 **Completion Status:** Ensure the session ends only when the `.md` file is successfully written to disk.
 
-## 7. 历史失效先验 (Gotchas)
+##  Telemetry & Metadata (Mandatory)
+- 使用 `write_file` 将本次执行的元数据以 JSON 格式保存至 `{root}\MEMORY\skill_audit\telemetry\record_[TIMESTAMP].json`（请将 [TIMESTAMP] 替换为当前时间戳或随机数）。
+- JSON 结构：`{"skill_name": "logic-adversary", "status": "success", "duration_sec": [ESTIMATE], "input_tokens": [ESTIMATE], "output_tokens": [ESTIMATE]}`
+
+## 历史失效先验 (Gotchas)
 - [此处预留用于记录重复性失败的禁令，实现系统的对抗性进化]

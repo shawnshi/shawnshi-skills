@@ -60,355 +60,355 @@
 
 
 ## ?????????
-msl(w=30), ace(w=25), agent(w=24), 主权(w=20), 算力(w=20), 逻辑(w=20), 审计(w=20), ai(w=20), 语义(w=20), 物理(w=20), evidence-mesh(w=17), 架构(w=17), 路径(w=17), 认知(w=17), hitl(w=17)
+msl(w=30), agent(w=27), ace(w=25), 主权(w=20), 算力(w=20), 逻辑(w=20), 审计(w=20), ai(w=20), 语义(w=20), 物理(w=20), 架构(w=19), 路径(w=19), evidence-mesh(w=17), 认知(w=17), hitl(w=17)
 
 ## ??????
-[DEEP_REFINE] Item 1 [Score=94]:
+[DEEP_REFINE] Item 1 [Score=101]:
+Title: pluralistic.net: Pluralistic: Understaffing as a form of enshittification (23 Mar 2026)
+URL: https://pluralistic.net/2026/03/22/nobodys-home/
+Source: pluralistic.net
+Published: 2026-03-24T10:45:57.108902
+Desc: Today's links Understaffing as a form of enshittification: A way to shift value from workers, patients and shoppers to investors. Hey look at this: Delights to delectate. Object permanence: Marvel v "superhero"; What's a photocopier?; "Up Against It"; "Medusa's Web"; AI can't do your job; Coping wit
+
+[DEEP_REFINE] Item 2 [Score=94]:
 Title: oldvcr.blogspot.com: Refurb weekend double header: Alpha Micro AM-1000E and AM-1200
 URL: https://oldvcr.blogspot.com/2026/03/refurb-weekend-double-header-alpha.html
 Source: oldvcr.blogspot.com
-Published: 2026-03-23T11:38:31.690646
+Published: 2026-03-24T10:45:56.790703
 Desc: I've mentioned previously my great affection for Alpha Microsystems hardware, which are rather obscure computers nowadays, but back in the 1980s and 1990s were fairly sophisticated 68000-based multiuser systems that turned up in all kinds of vertical markets. For example, my first Alpha Micro (an Ea
 
-[DEEP_REFINE] Item 2 [Score=76]:
+[DEEP_REFINE] Item 3 [Score=79]:
 Title: lucumr.pocoo.org: Some Things Just Take Time
 URL: https://lucumr.pocoo.org/2026/3/20/some-things-just-take-time/
 Source: lucumr.pocoo.org
-Published: 2026-03-23T11:38:24.802749
+Published: 2026-03-24T10:45:57.180387
 Desc: Trees take quite a while to grow.  If someone 50 years ago planted a row of oaks or a chestnut tree on your plot of land, you have something that no amount of money or effort can replicate.  The only way is to wait.  Tree-lined roads, old gardens, houses sheltered by decades of canopy: if you want t
 
-[DEEP_REFINE] Item 3 [Score=44]:
+[DEEP_REFINE] Item 4 [Score=61]:
+Title: Science: AI algorithms can become ‘agents of chaos’
+URL: https://www.science.org/content/article/ai-algorithms-can-become-agents-chaos
+Source: Science
+Published: 2026-03-24T10:45:53.932662
+Desc: Given autonomous control of other software, programs shared private medical details and deleted files without permission
+
+[DEEP_REFINE] Item 5 [Score=60]:
+Title: arXiv Med-AI: On Arbitrary Predictions from Equally Valid Models
+URL: https://arxiv.org/abs/2507.19408v2
+Source: arXiv Med-AI
+Published: 2026-03-24T10:45:57.251734
+Desc: Model multiplicity refers to the existence of multiple machine learning models that describe the data equally well but may produce different predictions on individual samples. In medicine, these models can admit conflicting predictions for the same patient -- a risk that is poorly understood and ins
+
+[DEEP_REFINE] Item 6 [Score=59]:
+Title: mobihealthnews.com: China approves world’s first implantable BCI
+URL: https://www.mobihealthnews.com/news/asia/china-approves-worlds-first-implantable-bci
+Source: mobihealthnews.com
+Published: 2026-03-24T10:45:57.895790
+Desc: China's National Medical Products Administration has approved what it describes as the world's first commercially available implantable brain-computer interface (BCI), clearing a solution designed to help restore hand movement in patients with severe paralysis.WHAT IT'S ABOUTThe device, developed by
+
+[DEEP_REFINE] Item 7 [Score=47]:
+Title: Show HN: Cq – Stack Overflow for AI coding agents
+URL: https://blog.mozilla.ai/cq-stack-overflow-for-agents/
+Source: Hacker News
+Published: 2026-03-24T00:11:03
+Desc: 
+
+[DEEP_REFINE] Item 8 [Score=47]:
 Title: vxcontrol /pentagi
 URL: https://github.com/vxcontrol/pentagi
 Source: GitHub
-Published: 2026-03-23T11:38:27.587924
+Published: 2026-03-24T10:45:55.555639
 Desc: Fully autonomous AI Agents system capable of performing complex penetration testing tasks
 
-[DEEP_REFINE] Item 4 [Score=44]:
-Title: jamwithai /production-agentic-rag-course
-URL: https://github.com/jamwithai/production-agentic-rag-course
-Source: GitHub
-Published: 2026-03-23T11:38:27.588171
-Desc: 
-
-[DEEP_REFINE] Item 5 [Score=44]:
+[DEEP_REFINE] Item 9 [Score=47]:
 Title: browser-use /browser-use
 URL: https://github.com/browser-use/browser-use
 Source: GitHub
-Published: 2026-03-23T11:38:27.588874
+Published: 2026-03-24T10:45:55.555776
 Desc: 🌐 Make websites accessible for AI agents. Automate tasks online with ease.
 
-[DEEP_REFINE] Item 6 [Score=44]:
-Title: Product Hunt: Design Agent by Lokuma
-URL: https://www.producthunt.com/products/lokuma-ai
+[DEEP_REFINE] Item 10 [Score=47]:
+Title: Product Hunt: Tobira.ai
+URL: https://www.producthunt.com/products/tobira-ai
 Source: Product Hunt
-Published: 2026-03-23T11:38:24.821822
-Desc: The designer for your AI agents (Openclaw, CC, Codex)             Discussion             |             Link
+Published: 2026-03-24T10:45:59.199971
+Desc: A network where AI agents find deals for their humans             Discussion             |             Link
 
-[DEEP_REFINE] Item 7 [Score=44]:
-Title: simonwillison.net: Experimenting with Starlette 1.0 with Claude skills
-URL: https://simonwillison.net/2026/Mar/22/starlette/#atom-everything
+[DEEP_REFINE] Item 11 [Score=47]:
+Title: daringfireball.net: [Sponsor] npx workos: From Auth Integration to Environment Management, Zero ClickOps
+URL: https://workos.com/docs/authkit/cli-installer?utm_source=daringfireball&utm_medium=newsletter&utm_campaign=q12026
+Source: daringfireball.net
+Published: 2026-03-24T10:45:59.144238
+Desc: npx workos@latest launches an AI agent, powered by Claude, that reads your project, detects your framework, and writes a complete auth integration into your codebase. No signup required. It creates an environment, populates your keys, and you claim your account later when you’re ready. But the CLI g
+
+[DEEP_REFINE] Item 12 [Score=45]:
+Title: simonwillison.net: Quoting David Abram
+URL: https://simonwillison.net/2026/Mar/23/david-abram/#atom-everything
 Source: simonwillison.net
-Published: 2026-03-23T11:38:24.673501
-Desc: Starlette 1.0 is out! This is a really big deal. I think Starlette may be the Python framework with the most usage compared to its relatively low brand recognition because Starlette is the foundation of FastAPI, which has attracted a huge amount of buzz that seems to have overshadowed Starlette itse
+Published: 2026-03-24T10:45:54.539221
+Desc: I have been doing this for years, and the hardest parts of the job were never about typing out code. I have always struggled most with understanding systems, debugging things that made no sense, designing architectures that wouldn't collapse under heavy load, and making decisions that would save mon
 
-[DEEP_REFINE] Item 8 [Score=34]:
+[DEEP_REFINE] Item 13 [Score=45]:
+Title: gilesthomas.com: Writing an LLM from scratch, part 31 -- the models are now on Hugging Face
+URL: https://www.gilesthomas.com/2026/01/llm-from-scratch-31-models-on-hugging-face
+Source: gilesthomas.com
+Published: 2026-03-24T10:46:02.375746
+Desc: As part of my "extra credit" projects after finishing the main body of Sebastian Raschka's book "Build a Large Language Model (from Scratch)", I've trained seven base models completely from scratch based on the book's GPT-2 code -- three locally, and four in the cloud. I plan to train more as I work
+
+[DEEP_REFINE] Item 14 [Score=45]:
+Title: blog.jim-nielsen.com: More Details Than You Probably Wanted to Know About Recent Updates to My Notes Site
+URL: https://blog.jim-nielsen.com/2026/notes-site-updates/
+Source: blog.jim-nielsen.com
+Published: 2026-03-24T10:45:58.924012
+Desc: I shipped some updates to my notes site. Nothing huge. Just small stuff. But what is big stuff except a bunch of small stuff combined? So small stuff is important too. What follows is a bunch of tiny details you probably don’t care about, but they were all decisions I had to make and account for alo
+
+[DEEP_REFINE] Item 15 [Score=37]:
+Title: 恐飞越来越严重了
+URL: https://www.v2ex.com/t/1200397
+Source: V2EX
+Published: 2026-03-24T10:45:53.915725
+Desc: 本来前几天预定好了旅游行程，机酒什么都定好了，也做好了一个人上飞机的心理准备（对象已经提前过去了），结果到了出发前，又开始止不住的心慌出汗，迟迟无法平静，最终还是放弃了。一个人在机场发了好久的呆，感觉自己好没用。 也不是第一次坐，大概加起来也有 6 ，7 次吧，都是一个人，年纪越大却越害怕。内心是知道没什么风险的，但是就是控制不住的紧张。也许是以前坐过跳楼机产生了心理阴影？或者是负面新闻看多了？之前飞也是整段路都处于神经紧张的状态，好几次宁愿选择高铁。 解决办法无非就是呼吸法，转移注意力等等，都没法克服恐惧。AI 提到的认知疗法还没有尝试，似乎得做心理咨询，不知道有没有用。
+
+[TRANSLATE_ONLY] Item 16 [Score=34]:
 Title: The Lancet Digital Health: [Editorial] Reimagining radiology reporting
 URL: https://www.thelancet.com/journals/landig/article/PIIS2589-7500(26)00021-X/fulltext?rss=yes
 Source: The Lancet Digital Health
-Published: 2026-03-23T11:38:24.137200
+Published: 2026-03-24T10:45:53.869847
 Desc: Patients’ access to their medical data is increasing, but these data are not always easy to interpret. In early January 2026, OpenAI launched ChatGPT Health, which allows users to upload their medical information—such as electronic medical records and health app data—to contextualise their health-re
 
-[DEEP_REFINE] Item 9 [Score=28]:
+[TRANSLATE_ONLY] Item 17 [Score=34]:
+Title: arXiv Med-AI: GIP-RAG: An Evidence-Grounded Retrieval-Augmented Framework for Interpretable Gene Interaction and Pathway Impact Analysis
+URL: https://arxiv.org/abs/2603.20321v1
+Source: arXiv Med-AI
+Published: 2026-03-24T10:45:57.251824
+Desc: Understanding mechanistic relationships among genes and their impacts on biological pathways is essential for elucidating disease mechanisms and advancing precision medicine. Despite the availability of extensive molecular interaction and pathway data in public databases, integrating heterogeneous k
+
+[TRANSLATE_ONLY] Item 18 [Score=31]:
+Title: arXiv Med-AI: The Illusion of AI Expertise Under Uncertainty: Navigating Elusive Ground Truth via a Probabilistic Paradigm
+URL: https://arxiv.org/abs/2601.05500v4
+Source: arXiv Med-AI
+Published: 2026-03-24T10:45:57.251669
+Desc: Benchmarking the capabilities of AI systems, including Large Language Models (LLMs) and Vision Models, typically ignores the impact of uncertainty in the underlying ground truth answers from experts. This ambiguity is not just limited to human preferences, but is also consequential even in safety cr
+
+[TRANSLATE_ONLY] Item 19 [Score=28]:
+Title: Nature Digital Medicine: Barriers and opportunities of scaling ambient AI scribes for clinical documentation across diverse healthcare settings
+URL: https://www.nature.com/articles/s41746-026-02554-0
+Source: Nature Digital Medicine
+Published: 2026-03-24T10:45:52.992471
+Desc: npj Digital Medicine, Published online: 23 March 2026; doi:10.1038/s41746-026-02554-0Barriers and opportunities of scaling ambient AI scribes for clinical documentation across diverse healthcare settings
+
+[TRANSLATE_ONLY] Item 20 [Score=28]:
 Title: The Lancet Digital Health: [Comment] The architectural gap in clinical artificial intelligence
 URL: https://www.thelancet.com/journals/landig/article/PIIS2589-7500(26)00001-4/fulltext?rss=yes
 Source: The Lancet Digital Health
-Published: 2026-03-23T11:38:24.137232
+Published: 2026-03-24T10:45:53.869955
 Desc: In The Lancet Digital Health, a systematic review and meta-analysis by Alabed Samer and colleagues1 provides a clear picture about the current state of clinical artificial intelligence (AI) in radiology communication. Across patients, members of the public, and clinicians, large language model-gener
 
-[DEEP_REFINE] Item 10 [Score=27]:
-Title: The Lancet Digital Health: [Comment] The global Dx AMR collaborative: an approach to strengthen the role of diagnostics in combating antimicrobial resistance
-URL: https://www.thelancet.com/journals/landig/article/PIIS2589-7500(25)00133-5/fulltext?rss=yes
-Source: The Lancet Digital Health
-Published: 2026-03-23T11:38:24.137261
-Desc: Antimicrobial resistance (AMR) remains a present and ongoing global health threat. In 2019, 4·95 million deaths were associated with AMR globally; this number is projected to rise to 8·22 million by 2050.1 Despite this prediction, the investment landscape in global health and AMR is diminishing, as 
+[TRANSLATE_ONLY] Item 21 [Score=28]:
+Title: healthcareitnews.com: AI to power Singapore's next-gen cancer profiling test
+URL: https://www.healthcareitnews.com/news/asia/ai-power-singapores-next-gen-cancer-profiling-test
+Source: healthcareitnews.com
+Published: 2026-03-24T10:45:58.782466
+Desc: Singapore's leading national tertiary cancer centre, National Cancer Centre Singapore, has announced a new S$6 million ($4.7 million) collaboration to develop an AI-powered cancer test that uses advanced genomic sequencing to provide clinicians a more complete view of tumours and guide treatment dec
 
-[DEEP_REFINE] Item 11 [Score=25]:
-Title: geohot.github.io: Democracy is a Liability
-URL: https://geohot.github.io//blog/jekyll/update/2026/03/21/democracy-liability.html
-Source: geohot.github.io
-Published: 2026-03-23T11:38:24.630433
-Desc: Once you have no more earning potential, you’d think the advertising would go away. If you have no money, there’s no reason for people to pay to manipulate you to get you to give them some. Google and Facebook will die, and this evil sector of the economy will finally be destroyed.
+[TRANSLATE_ONLY] Item 22 [Score=28]:
+Title: mobihealthnews.com: VR simulation boosts nurses' skills in handling aggressive patients
+URL: https://www.mobihealthnews.com/news/anz/vr-simulation-boosts-nurses-skills-handling-aggressive-patients
+Source: mobihealthnews.com
+Published: 2026-03-24T10:45:57.895565
+Desc: Amid mounting cases of hospital violence, a virtual reality-based programme developed at Edith Cowan University has been shown to help nursing students become more confident and prepared in managing aggressive patients. WHAT'S IT ABOUTThe study, done by an ECU doctoral student, Joshua Johnson, recru
 
-[DEEP_REFINE] Item 12 [Score=24]:
+[TRANSLATE_ONLY] Item 23 [Score=27]:
+Title: bytedance /deer-flow
+URL: https://github.com/bytedance/deer-flow
+Source: GitHub
+Published: 2026-03-24T10:45:55.555348
+Desc: An open-source SuperAgent harness that researches, codes, and creates. With the help of sandboxes, memories, tools, skill, subagents and message gateway, it handles different levels of tasks that could take minutes to hours.
+
+[TRANSLATE_ONLY] Item 24 [Score=27]:
 Title: affaan-m /everything-claude-code
 URL: https://github.com/affaan-m/everything-claude-code
 Source: GitHub
-Published: 2026-03-23T11:38:27.588401
+Published: 2026-03-24T10:45:55.556331
 Desc: The agent harness performance optimization system. Skills, instincts, memory, security, and research-first development for Claude Code, Codex, Opencode, Cursor and beyond.
 
-[DEEP_REFINE] Item 13 [Score=24]:
+[TRANSLATE_ONLY] Item 25 [Score=27]:
+Title: NousResearch /hermes-agent
+URL: https://github.com/NousResearch/hermes-agent
+Source: GitHub
+Published: 2026-03-24T10:45:55.556419
+Desc: The agent that grows with you
+
+[TRANSLATE_ONLY] Item 26 [Score=27]:
+Title: The Lancet Digital Health: [Comment] The global Dx AMR collaborative: an approach to strengthen the role of diagnostics in combating antimicrobial resistance
+URL: https://www.thelancet.com/journals/landig/article/PIIS2589-7500(25)00133-5/fulltext?rss=yes
+Source: The Lancet Digital Health
+Published: 2026-03-24T10:45:53.869991
+Desc: Antimicrobial resistance (AMR) remains a present and ongoing global health threat. In 2019, 4·95 million deaths were associated with AMR globally; this number is projected to rise to 8·22 million by 2050.1 Despite this prediction, the investment landscape in global health and AMR is diminishing, as 
+
+[TRANSLATE_ONLY] Item 27 [Score=27]:
 Title: berthub.eu: Waarom we nu WEL zuinig moeten doen, en door moeten met groene energie
 URL: https://berthub.eu/articles/posts/waarom-we-nu-wel-zuinig-moeten-doen-en-meer-groene-energie/
 Source: berthub.eu
-Published: 2026-03-23T11:38:30.267719
+Published: 2026-03-24T10:45:57.380421
 Desc: Het Internationaal Energie Agentschap zegt dat we zuinig aan moeten doen vanwege de oorlogen in het Midden Oosten. Ministers in Den Haag zeggen dat het niet hoeft, want er zijn hier geen tekorten (!). Doet wel erg denken aan ‘COVID blijft in Brabant’. Kennelijk een Nederlandse traditie! Maar, natuur
 
-[DEEP_REFINE] Item 14 [Score=20]:
-Title: I Reverse-Engineered the TiinyAI Pocket Lab from Marketing Photos
-URL: https://bay41.com/posts/tiiny-ai-pocket-lab-review/
+[TRANSLATE_ONLY] Item 28 [Score=25]:
+Title: daringfireball.net: WWDC 2026: June 8–12
+URL: https://www.apple.com/newsroom/2026/03/apples-worldwide-developers-conference-returns-the-week-of-june-8/
+Source: daringfireball.net
+Published: 2026-03-24T10:45:59.144997
+Desc: Apple Newsroom:  WWDC kicks off with the Keynote and Platforms State of the Union on Monday, June 8. The conference continues online all week with over 100 video sessions and interactive group labs and appointments, where developers can connect directly with Apple engineers and designers to explore 
+
+[TRANSLATE_ONLY] Item 29 [Score=25]:
+Title: geohot.github.io: Democracy is a Liability
+URL: https://geohot.github.io//blog/jekyll/update/2026/03/21/democracy-liability.html
+Source: geohot.github.io
+Published: 2026-03-24T10:45:53.857732
+Desc: Once you have no more earning potential, you’d think the advertising would go away. If you have no money, there’s no reason for people to pay to manipulate you to get you to give them some. Google and Facebook will die, and this evil sector of the economy will finally be destroyed.
+
+[TRANSLATE_ONLY] Item 30 [Score=20]:
+Title: Ju Ci: The Art of Repairing Porcelain
+URL: https://thesublimeblog.org/2025/03/13/ju-ci-the-ancient-art-of-repairing-porcelain/
 Source: Hacker News
-Published: 2026-03-19T12:56:25
+Published: 2026-03-21T23:07:29
 Desc: 
 
-[DEEP_REFINE] Item 15 [Score=20]:
+[TRANSLATE_ONLY] Item 31 [Score=20]:
+Title: I Created My First AI-Assisted Pull Request and I Feel Like a Fraud
+URL: https://nelson.cloud/i-created-my-first-ai-assisted-pull-request-and-i-feel-like-a-fraud/
+Source: Hacker News
+Published: 2026-03-24T09:42:38
+Desc: 
+
+[TRANSLATE_ONLY] Item 32 [Score=20]:
+Title: jingyaogong /minimind
+URL: https://github.com/jingyaogong/minimind
+Source: GitHub
+Published: 2026-03-24T10:45:55.556507
+Desc: 🚀🚀 「大模型」2小时完全从0训练26M的小参数GPT！🌏 Train a 26M-parameter GPT from scratch in just 2h!
+
+[TRANSLATE_ONLY] Item 33 [Score=20]:
+Title: 作为 Leader 也被裁了，挺意外的，随便聊聊
+URL: https://www.v2ex.com/t/1200592
+Source: V2EX
+Published: 2026-03-24T10:45:53.915735
+Desc: ### 去年年底和今年年初，我分别在论坛写了一个 V2EX 成分分析器和新年愿望分析，包括创建了副业和 NSFW 节点，可能有些人对我还有点印象。  ### 没想到，今年轮到我自己被淘汰了。**我被裁了，整个项目组连锅端。**  ### 1. 在公司  这几年，我几乎是魔怔般地在钻研 AI 。开源社区里，我陆陆续续写了十多个 GitHub 项目且有不错的 star(已删)；自己家里的 NAS 上，常年跑着几十个我写的私有化服务和效率工具。  在公司内部，我也算是第一批吃螃蟹并疯狂推动落地的人。从 2023 年开始，我们就把 UI 全部交给了 AI 产出，产品经理的原型也全面接入
+
+[TRANSLATE_ONLY] Item 34 [Score=20]:
+Title: 「教程揭秘向」扒完中转站掺假，再扒低价代充——顺便教你自己订阅 Claude/ChatGPT，一分钱不经手中间商
+URL: https://www.v2ex.com/t/1200385
+Source: V2EX
+Published: 2026-03-24T10:45:53.915739
+Desc: ---  上一篇扒了 AI 中转站掺假的事，评论区炸了——但说实话，被人当傻子宰了，谁能忍？  **所以这篇来还债：教你自己动手订阅，把中间商的饭碗直接掀了。**  但在上教程之前，我先帮你把市面上那些低价代充的底裤扒干净。不是劝退你，是想让你花钱之前，起码搞清楚自己买的到底是什么玩意儿。  ---  ## 一、低价代充的那些烂活儿  我理解为什么有人买代充。$20 一个月合人民币一百四五，不便宜。能省就省，人之常情。  **但省钱和被坑之间，往往就差一个你不知道的细节。**  ### Claude 这边  **① 尼日利亚区苹果账号 → 大约半价 $10/
+
+[TRANSLATE_ONLY] Item 35 [Score=20]:
+Title: 94 年 211 本女找精神契合的男朋友，坐标成都
+URL: https://www.v2ex.com/t/1200542
+Source: V2EX
+Published: 2026-03-24T10:45:53.915745
+Desc: 94 年生，INFP ，射手座，单身，前北漂，现在成都，前互联网产品的……嗯……和父母住。 啊……认识我的人看到能不能装作没看到谢谢了……  1. 概况 - 生活半径：倾向于室内&公园等，也可能会扩大。对高强度户外运动和低心智社交兴趣较低。160 又或许是 159cm, 54kg ，应该没有因为丑陋吓哭过别人或留下阴影。  2. 个人特质 - 高敏感型人群特质（噪音、音乐、文字敏感型），现在似乎因理性训练钝化了很多。 - 平时是发散型，说话做事可做到形散神聚，也可结果导向。 - 性格：偏直接，线上文字交流可能话唠，线下可能比较安静，偶尔会突然很活泼，情况会因面对人群和氛围而产
+
+[TRANSLATE_ONLY] Item 36 [Score=20]:
+Title: Product Hunt: Nomie
+URL: https://www.producthunt.com/products/nomie
+Source: Product Hunt
+Published: 2026-03-24T10:45:59.199604
+Desc: AI wellness app that turns doomscrolling into self‑care             Discussion             |             Link
+
+[TRANSLATE_ONLY] Item 37 [Score=20]:
+Title: Product Hunt: Pause.do
+URL: https://www.producthunt.com/products/pause-do-don-t-outsource-your-thinking
+Source: Product Hunt
+Published: 2026-03-24T10:45:59.199798
+Desc: Interrupt scrolling, tab overload, and AI autopilot             Discussion             |             Link
+
+[TRANSLATE_ONLY] Item 38 [Score=20]:
+Title: Product Hunt: Zoer.ai
+URL: https://www.producthunt.com/products/zoer-ai-2
+Source: Product Hunt
+Published: 2026-03-24T10:45:59.200813
+Desc: Build full-stack webapps from the database up             Discussion             |             Link
+
+[TRANSLATE_ONLY] Item 39 [Score=20]:
 Title: Nature Digital Medicine: High-sensitivity pan-cancer AI assessment of lymph node metastasis via uncertainty quantification
 URL: https://www.nature.com/articles/s41746-026-02564-y
 Source: Nature Digital Medicine
-Published: 2026-03-23T11:38:23.407813
+Published: 2026-03-24T10:45:52.992601
 Desc: npj Digital Medicine, Published online: 21 March 2026; doi:10.1038/s41746-026-02564-yHigh-sensitivity pan-cancer AI assessment of lymph node metastasis via uncertainty quantification
 
-[TRANSLATE_ONLY] Item 16 [Score=20]:
+[TRANSLATE_ONLY] Item 40 [Score=20]:
+Title: Science: Neanderthals survived on a knife’s edge for 350,000 years
+URL: https://www.science.org/content/article/neanderthals-survived-knife-s-edge-350-000-years
+Source: Science
+Published: 2026-03-24T10:45:53.932612
+Desc: A pair of studies illuminates these humans’ long, hardscrabble existence
+
+[TRANSLATE_ONLY] Item 41 [Score=20]:
 Title: arXiv Med-AI: Learning Dynamic Belief Graphs for Theory-of-mind Reasoning
 URL: https://arxiv.org/abs/2603.20170v1
 Source: arXiv Med-AI
-Published: 2026-03-23T11:38:28.481709
+Published: 2026-03-24T10:45:57.251783
 Desc: Theory of Mind (ToM) reasoning with Large Language Models (LLMs) requires inferring how people's implicit, evolving beliefs shape what they seek and how they act under uncertainty -- especially in high-stakes settings such as disaster response, emergency medicine, and human-in-the-loop autonomy. Pri
 
-[TRANSLATE_ONLY] Item 17 [Score=20]:
-Title: daringfireball.net: Mux — Video API for Developers
-URL: https://www.mux.com/?utm_campaign=fireball&utm_source=DF
-Source: daringfireball.net
-Published: 2026-03-23T11:38:24.549400
-Desc: My thanks to Mux for sponsoring last week at DF. Video isn’t just something to watch; it’s a boatload of context and data. Mux makes it easy to ship and scale video into anything from websites to platforms to AI workflows. Unlock what’s inside: transcripts, clips, and storyboards to build summarizat
+[TRANSLATE_ONLY] Item 42 [Score=20]:
+Title: simonwillison.net: Quoting Neurotica
+URL: https://simonwillison.net/2026/Mar/23/neurotica/#atom-everything
+Source: simonwillison.net
+Published: 2026-03-24T10:45:54.538172
+Desc: slop is something that takes more human effort to consume than it took to produce. When my coworker sends me raw Gemini output he’s not expressing his freedom to create, he’s disrespecting the value of my time — Neurotica, @schwarzgerat.bsky.social Tags: ai-ethics, slop, generative-ai, ai, llms
 
-[TRANSLATE_ONLY] Item 18 [Score=20]:
-Title: daringfireball.net: Half a Gigabyte of Ads
-URL: https://stuartbreckenridge.net/2026-03-19-pc-gamer-recommends-rss-readers-in-a-37mb-article/
-Source: daringfireball.net
-Published: 2026-03-23T11:38:24.549678
-Desc: Stuart Breckenridge, examining a web page at PC Gamer:  Third, this is a whopping 37MB webpage on initial load. But that’s not the worst part. In the five minutes since I started writing this post the website has downloaded almost half a gigabyte of new ads.  This is so irresponsible and unprofessio
+[TRANSLATE_ONLY] Item 43 [Score=20]:
+Title: simonwillison.net: datasette-files 0.1a2
+URL: https://simonwillison.net/2026/Mar/23/datasette-files/#atom-everything
+Source: simonwillison.net
+Published: 2026-03-24T10:45:54.538836
+Desc: Release: datasette-files 0.1a2 The most interesting alpha of datasette-files yet, a new plugin which adds the ability to upload files directly into a Datasette instance. Here are the release notes in full:   Columns are now configured using the new column_types system from Datasette 1.0a26. #8 New f
 
-[TRANSLATE_ONLY] Item 19 [Score=20]:
+[TRANSLATE_ONLY] Item 44 [Score=20]:
 Title: shkspr.mobi: Bored of eating your own dogfood? Try smelling your own farts!
 URL: https://shkspr.mobi/blog/2026/03/bored-of-eating-your-own-dogfood-try-smelling-your-own-farts/
 Source: shkspr.mobi
-Published: 2026-03-23T11:38:30.639618
+Published: 2026-03-24T10:45:55.828691
 Desc: I called a large company the other day. Did I know the information I wanted could be found on their website? And was I aware that I could manage my account online? And would I like to receive a link to chat with their AI assistant via WhatsApp?  Naturally, call volumes were higher than expected. I c
 
-[TRANSLATE_ONLY] Item 20 [Score=20]:
+[TRANSLATE_ONLY] Item 45 [Score=20]:
 Title: joanwestenberg.com: "Collaboration" is bullshit.
 URL: https://www.joanwestenberg.com/collaboration-is-bullshit/
 Source: joanwestenberg.com
-Published: 2026-03-23T11:38:29.695974
+Published: 2026-03-24T10:46:01.702437
 Desc: This newsletter is free to read, and it’ll stay that way. But if you want more - extra posts each month, access to the community, and a direct line to ask me things - paid subscriptions are $2.50/month. A lot of people have told me it&
 
-[TRANSLATE_ONLY] Item 21 [Score=20]:
+[TRANSLATE_ONLY] Item 46 [Score=20]:
 Title: nesbitt.io: How to Attract AI Bots to Your Open Source Project
 URL: https://nesbitt.io/2026/03/21/how-to-attract-ai-bots-to-your-open-source-project.html
 Source: nesbitt.io
-Published: 2026-03-23T11:38:24.955557
+Published: 2026-03-24T10:45:58.988436
 Desc: A practical guide to getting the engagement your project deserves.
 
-[TRANSLATE_ONLY] Item 22 [Score=20]:
+[TRANSLATE_ONLY] Item 47 [Score=20]:
 Title: dwarkesh.com: Terence Tao – Kepler, Newton, and the true nature of mathematical discovery
 URL: https://www.dwarkesh.com/p/terence-tao
 Source: dwarkesh.com
-Published: 2026-03-23T11:38:35.110867
+Published: 2026-03-24T10:46:06.662199
 Desc: “And what those stories teach us about how AI will revolutionize math”
 
-[TRANSLATE_ONLY] Item 23 [Score=20]:
+[TRANSLATE_ONLY] Item 48 [Score=20]:
 Title: abortretry.fail: Hitachi Ltd, Part I
 URL: https://www.abortretry.fail/p/hitachi-ltd-part-i
 Source: abortretry.fail
-Published: 2026-03-23T11:38:28.622484
+Published: 2026-03-24T10:45:59.543018
 Desc: Kabushikigaisha Hitachi Seisaku-sho
 
-[TRANSLATE_ONLY] Item 24 [Score=20]:
-Title: HIStalk: Morning Headlines 3/23/26
-URL: https://histalk2.com/2026/03/22/morning-headlines-3-23-26/
-Source: HIStalk
-Published: 2026-03-23T11:38:25.563837
-Desc: Administrative Simplification; Adoption of Standards for Health Care Claims Attachments ...
+[TRANSLATE_ONLY] Item 49 [Score=20]:
+Title: healthcareitnews.com: New Zealand begins genomics testing pilot and more briefs
+URL: https://www.healthcareitnews.com/news/anz/new-zealand-begins-genomics-testing-pilot-and-more-briefs
+Source: healthcareitnews.com
+Published: 2026-03-24T10:45:58.782667
+Desc: Te Whatu Ora starts genomics testing pilotTe Whatu Ora Health New Zealand has launched a two-year pilot to deliver local genomic testing for cancer and rare disease patients in New Zealand, aiming to reduce reliance on overseas laboratories and shorten diagnostic timelines.Based on a media release, 
 
-[TRANSLATE_ONLY] Item 25 [Score=14]:
-Title: The Lancet Digital Health: [Comment] When to and when not to use machine learning in risk prediction models
-URL: https://www.thelancet.com/journals/landig/article/PIIS2589-7500(25)00136-0/fulltext?rss=yes
-Source: The Lancet Digital Health
-Published: 2026-03-23T11:38:24.137281
-Desc: Machine learning for health data science, fuelled by proliferation of data and reduced computational costs, has garnered considerable interest among researchers. The debate around the use of machine learning or classical medical statistics for medical research is long standing.1,2 Given major method
-
-[TRANSLATE_ONLY] Item 26 [Score=7]:
-Title: construction-physics.com: Reading List 03/21/26
-URL: https://www.construction-physics.com/p/reading-list-032126
-Source: construction-physics.com
-Published: 2026-03-23T11:38:29.432983
-Desc: Damage to the Ras Laffan LNG facility, housing bubble risks, North Korea’s naval production, Bezos’ $100 billion for manufacturing automation, and more.
-
-[TRANSLATE_ONLY] Item 27 [Score=0]:
-Title: PC Gamer recommends RSS readers in a 37mb article that just keeps downloading
-URL: https://stuartbreckenridge.net/2026-03-19-pc-gamer-recommends-rss-readers-in-a-37mb-article/
-Source: Hacker News
-Published: 2026-03-23T02:23:40
-Desc: 
-
-[TRANSLATE_ONLY] Item 28 [Score=0]:
-Title: The gold standard of optimization: A look under the hood of RollerCoaster Tycoon
-URL: https://larstofus.com/2026/03/22/the-gold-standard-of-optimization-a-look-under-the-hood-of-rollercoaster-tycoon/
-Source: Hacker News
-Published: 2026-03-23T03:02:43
-Desc: 
-
-[TRANSLATE_ONLY] Item 29 [Score=0]:
-Title: The hottest new phone is Tin Can, a 'landline' for kids
-URL: https://www.businessinsider.com/tin-can-landline-kids-cellphone-cell-alternative-how-2025-9
-Source: Hacker News
-Published: 2026-03-20T22:02:14
-Desc: 
-
-[TRANSLATE_ONLY] Item 30 [Score=0]:
-Title: The future of version control
-URL: https://bramcohen.com/p/manyana
-Source: Hacker News
-Published: 2026-03-22T23:16:28
-Desc: 
-
-[TRANSLATE_ONLY] Item 31 [Score=0]:
-Title: Intuitions for Tranformer Circuits
-URL: https://www.connorjdavis.com/p/intuitions-for-transformer-circuits
-Source: Hacker News
-Published: 2026-03-23T09:06:35
-Desc: 
-
-[TRANSLATE_ONLY] Item 32 [Score=0]:
-Title: GoGoGrandparent (YC S16) is hiring Back end Engineers
-URL: https://www.ycombinator.com/companies/gogograndparent/jobs/2vbzAw8-backend-engineer
-Source: Hacker News
-Published: 2026-03-23T11:33:41
-Desc: 
-
-[TRANSLATE_ONLY] Item 33 [Score=0]:
-Title: Reports of code's death are greatly exaggerated
-URL: https://stevekrouse.com/precision
-Source: Hacker News
-Published: 2026-03-22T19:09:34
-Desc: 
-
-[TRANSLATE_ONLY] Item 34 [Score=0]:
-Title: Why I love NixOS
-URL: https://www.birkey.co/2026-03-22-why-i-love-nixos.html
-Source: Hacker News
-Published: 2026-03-23T01:17:06
-Desc: 
-
-[TRANSLATE_ONLY] Item 35 [Score=0]:
-Title: Project Nomad – Knowledge That Never Goes Offline
-URL: https://www.projectnomad.us
-Source: Hacker News
-Published: 2026-03-22T20:28:38
-Desc: 
-
-[TRANSLATE_ONLY] Item 36 [Score=0]:
-Title: systemd /systemd
-URL: https://github.com/systemd/systemd
-Source: GitHub
-Published: 2026-03-23T11:38:27.588782
-Desc: The systemd System and Service Manager
-
-[TRANSLATE_ONLY] Item 37 [Score=0]:
-Title: HKUDS /LightRAG
-URL: https://github.com/HKUDS/LightRAG
-Source: GitHub
-Published: 2026-03-23T11:38:27.589001
-Desc: [EMNLP2025] "LightRAG: Simple and Fast Retrieval-Augmented Generation"
-
-[TRANSLATE_ONLY] Item 38 [Score=0]:
-Title: Product Hunt: Context.dev
-URL: https://www.producthunt.com/products/context-dev
-Source: Product Hunt
-Published: 2026-03-23T11:38:24.821261
-Desc: One API to scrape, enrich, and understand the web.             Discussion             |             Link
-
-[TRANSLATE_ONLY] Item 39 [Score=0]:
-Title: Product Hunt: Silicon Friendly
-URL: https://www.producthunt.com/products/silicon-friendly
-Source: Product Hunt
-Published: 2026-03-23T11:38:24.821369
-Desc: How Silicon Friendly is your website? (from L0 to L5)             Discussion             |             Link
-
-[TRANSLATE_ONLY] Item 40 [Score=0]:
-Title: Product Hunt: Bench for Claude Code
-URL: https://www.producthunt.com/products/bench-for-claude-code
-Source: Product Hunt
-Published: 2026-03-23T11:38:24.821465
-Desc: Store, review, and share your Claude Code sessions             Discussion             |             Link
-
-[TRANSLATE_ONLY] Item 41 [Score=0]:
-Title: Product Hunt: Embedful
-URL: https://www.producthunt.com/products/embedful
-Source: Product Hunt
-Published: 2026-03-23T11:38:24.821560
-Desc: Easy data visualizations. Embed and share anywhere.             Discussion             |             Link
-
-[TRANSLATE_ONLY] Item 42 [Score=0]:
-Title: Product Hunt: Edgee Claude Code Compression
-URL: https://www.producthunt.com/products/edgee
-Source: Product Hunt
-Published: 2026-03-23T11:38:24.821648
-Desc: Extend Claude Pro's limit by 26.2%             Discussion             |             Link
-
-[TRANSLATE_ONLY] Item 43 [Score=0]:
-Title: Product Hunt: Claude Code Scheduled Tasks
-URL: https://www.producthunt.com/products/claude-code-scheduled-tasks
-Source: Product Hunt
-Published: 2026-03-23T11:38:24.821734
-Desc: Schedule recurring tasks locally and in the cloud easily             Discussion             |             Link
-
-[TRANSLATE_ONLY] Item 44 [Score=0]:
-Title: Product Hunt: Fractal
-URL: https://www.producthunt.com/products/fractal-2
-Source: Product Hunt
-Published: 2026-03-23T11:38:24.821909
-Desc: The fastest way to ship exceptional ChatGPT apps             Discussion             |             Link
-
-[TRANSLATE_ONLY] Item 45 [Score=0]:
-Title: Product Hunt: Sanota
-URL: https://www.producthunt.com/products/sanota
-Source: Product Hunt
-Published: 2026-03-23T11:38:24.822085
-Desc: Stories, beautifully crafted             Discussion             |             Link
-
-[TRANSLATE_ONLY] Item 46 [Score=0]:
-Title: Nature Digital Medicine: Evolutionary digital twin framework for optimal aminoglycoside dosing in neonates with suspected sepsis
-URL: https://www.nature.com/articles/s41746-026-02558-w
-Source: Nature Digital Medicine
-Published: 2026-03-23T11:38:23.407743
-Desc: npj Digital Medicine, Published online: 21 March 2026; doi:10.1038/s41746-026-02558-wEvolutionary digital twin framework for optimal aminoglycoside dosing in neonates with suspected sepsis
-
-[TRANSLATE_ONLY] Item 47 [Score=0]:
-Title: Nature Digital Medicine: The regulation of artificial intelligence in intensive care units: from narrow tools to generalist systems
-URL: https://www.nature.com/articles/s41746-026-02535-3
-Source: Nature Digital Medicine
-Published: 2026-03-23T11:38:23.407868
-Desc: npj Digital Medicine, Published online: 21 March 2026; doi:10.1038/s41746-026-02535-3The regulation of artificial intelligence in intensive care units: from narrow tools to generalist systems
-
-[TRANSLATE_ONLY] Item 48 [Score=0]:
-Title: The Lancet Digital Health: [Comment] Thank you to The Lancet Digital Health statistical and peer reviewers in 2025
-URL: https://www.thelancet.com/journals/landig/article/PIIS2589-7500(26)00003-8/fulltext?rss=yes
-Source: The Lancet Digital Health
-Published: 2026-03-23T11:38:24.137310
-Desc: Rita Achermann
-
-[TRANSLATE_ONLY] Item 49 [Score=0]:
-Title: simonwillison.net: Beats now have notes
-URL: https://simonwillison.net/2026/Mar/23/beats-now-have-notes/#atom-everything
-Source: simonwillison.net
-Published: 2026-03-23T11:38:24.670517
-Desc: Last month I added a feature I call beats to this blog, pulling in some of my other content from external sources and including it on the homepage, search and various archive pages on the site. On any given day these frequently outnumber my regular posts. They were looking a little bit thin and were
-
-[TRANSLATE_ONLY] Item 50 [Score=0]:
-Title: simonwillison.net: Starlette 1.0 skill
-URL: https://simonwillison.net/2026/Mar/23/starlette-1-skill/#atom-everything
-Source: simonwillison.net
-Published: 2026-03-23T11:38:24.670670
-Desc: Research: Starlette 1.0 skill See Experimenting with Starlette 1.0 with Claude skills. Tags: starlette
+[TRANSLATE_ONLY] Item 50 [Score=20]:
+Title: mobihealthnews.com: AI shifts non-communicable disease risk prediction beyond genetics
+URL: https://www.mobihealthnews.com/news/asia/ai-shifts-non-communicable-disease-risk-prediction-beyond-genetics
+Source: mobihealthnews.com
+Published: 2026-03-24T10:45:57.896099
+Desc: Pharmacy researchers in Hong Kong have developed an AI-driven tool that predicts cardiovascular risks beyond genetics, monitoring near-real-time biological changes before diseases become apparent.
