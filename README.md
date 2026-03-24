@@ -42,7 +42,7 @@ gemini skills install https://github.com/shawnshi/shawnshi-skills.git --path hit
 
 ## 3. 核心分类矩阵 (Core Skill Hierarchy)
 
-> **Total Inventory: 46 Strategic Modules across 8 Domains**
+> **Total Inventory: 47 Strategic Modules across 8 Domains**
 
 ### 🧠 深度认知与研究工作台 (Cognitive Research)
 *底层思考工具箱：需求脱水、战略审计、红蓝对抗与情报分析。*
@@ -89,6 +89,7 @@ gemini skills install https://github.com/shawnshi/shawnshi-skills.git --path hit
 |:--------------------------------------------------------------|:---------------------------------------------------------------------------|
 | **[personal-writing-assistant](personal-writing-assistant/)** | **统一内容锻造场**。内置高管降维与多方博弈双轨制生产线，执行语义主权捍卫。 |
 | **[humanizer-zh-pro](humanizer-zh-pro/)**                     | **中文文本“去 AI 化”锻造场**。模拟毒舌高管视角，执行遣词造句的同态重写。   |
+| **[image-nano-gen](image-nano-gen/)**                         | **高质量图像生成引擎**。利用 Imagen 3 引擎执行 4K 级图像锻造，支持高认知 Prompt 增强。 |
 | **[presentation-architect](presentation-architect/)**         | **战略级 PPT 架构师**。交付具备原生逻辑的 PPT 资产，拒绝平庸模板。         |
 | **[smart-doc-latex](smart-doc-latex/)**                       | **自动化出版 LaTeX 引擎**。提供 IEEE、CV 等专业模板，交付工业级排版结果。  |
 
