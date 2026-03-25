@@ -1,4 +1,4 @@
-# Skills Ecosystem: The Strategic Armory (V3.4 - Native Agent Optimized)
+# Skills Ecosystem: The Strategic Armory (V3.5 - Native Agent Optimized)
 
 <!-- 
 @Pos: Root Level / Knowledge Sovereign 
@@ -13,23 +13,23 @@
 本目录遵循“四层壳模型”支撑下的技能范式，实现**代码液态化**与**业务语义固态化**的动态平衡：
 
 ### A. 物理层：算力主权与环境隔离 (Physics)
-- **物理硬锁**：所有技能必须在本地物理目录内闭环执行，严禁依赖外部云端黑盒。
-- **路径归一化**：强制统一路径风格，确保 Windows/Unix 环境下的逻辑同态。
+- **物理硬锁**：所有技能必须在本地物理目录内闭环执行，严禁依赖外部云端黑盒.
+- **路径归一化**：强制统一路径风格，确保 Windows/Unix 环境下的逻辑同态.
 
 ### B. 逻辑层：语义主权与 MSL 约束 (Logic)
-- **MSL 原子化**：业务逻辑必须封装为原子化 Skill。代码是液态消费品，语义协议是固态资产。
-- **Schema 绝对防御**：[Template] 标记的输出必须 100% 同态映射，严禁执行摘要式逻辑脱水。
-- **语义守恒**：允许实现路径突变，但核心业务语义必须在重构前后保持恒定。
+- **MSL 原子化**：业务逻辑必须封装为原子化 Skill。代码是液态消费品，语义协议是固态资产.
+- **Schema 绝对防御**：[Template] 标记的输出必须 100% 同态映射，严禁执行摘要式逻辑脱水.
+- **语义守恒**：允许实现路径突变，但核心业务语义必须在重构前后保持恒定.
 
 ### C. 执行层：负熵交互与 OODA 闭环 (Execution)
-- **脑暴倾倒 + 查漏补缺**：废除串行审讯，采用高带宽初始输入 + 静默映射 + 聚合追问模式。
-- **聚合批处理**：在评审任务中整合决策节点，最大化保护用户心流，实现极致的交互负熵。
-- **Markdown 原生可视化**：强制使用 Mermaid 进行架构描述，弃用不稳定的 UI 截图。
+- **脑暴倾倒 + 查漏补缺**：废除串行审讯，采用高带宽初始输入 + 静默映射 + 聚合追问模式.
+- **聚合批处理**：在评审任务中整合决策节点，最大化保护用户心流，实现极致的交互负熵.
+- **Markdown 原生可视化**：强制使用 Mermaid 进行架构描述，弃用不稳定的 UI 截图.
 
 ### D. 进化层：自愈能力与证据网 (Evolution)
-- **失效先验 (Gotchas)**：将重复性失败硬编码为 SKILL.md 顶部的禁令，实现系统的对抗性进化。
-- **证据网 (Evidence-Mesh)**：分析类资产必须强制执行物理归档，严禁仅保留在瞬时对话历史中。
-- **量化反思**：通过 `mentat-system-retro` 审计遥测数据，以数据驱动系统拓扑的持续优化。
+- **失效先验 (Gotchas)**：将重复性失败硬编码为 SKILL.md 顶部的禁令，实现系统的对抗性进化.
+- **证据网 (Evidence-Mesh)**：分析类资产必须强制执行物理归档，严禁仅保留在瞬时对话历史中.
+- **量化反思**：通过 `mentat-system-retro` 审计遥测数据，以数据驱动系统拓扑的持续优化.
 
 ## 2. 安装与部署 (Deployment)
 ```bash
@@ -42,103 +42,104 @@ gemini skills install https://github.com/shawnshi/shawnshi-skills.git --path hit
 
 ## 3. 核心分类矩阵 (Core Skill Hierarchy)
 
-> **Total Inventory: 47 Strategic Modules across 8 Domains**
+> **Total Inventory: 48 Strategic Modules across 8 Domains**
 
 ### 🧠 深度认知与研究工作台 (Cognitive Research)
 *底层思考工具箱：需求脱水、战略审计、红蓝对抗与情报分析。*
 
 | 技能标识 (Directory)                                        | 核心本质 (Trigger Traps)                                                                                              |
 |:------------------------------------------------------------|:----------------------------------------------------------------------------------------------------------------------|
-| **[office-hours](office-hours/)**                           | **战略架构师与需求脱水 (Native Edition)**。通过“脑暴倾倒+查漏补缺”模式，执行 6 个高压问题进行战略脱水，输出设计文档。 |
-| **[plan-ceo-review](plan-ceo-review/)**                     | **创始人模式战略审计 (Native Edition)**。采用“聚合批处理”模式对开发计划执行核能挑战，支持范围扩张、择优或缩减。       |
-| **[brainstorming](brainstorming/)**                         | **创意与架构设计专家 (Native Edition)**。在任何开发行为前强制调用，将模糊意图转化为具体的设计规范与验证方案。         |
-| **[logic-adversary](logic-adversary/)**                     | **逻辑对抗系统 (Native Edition)**。搜索单点故障 (SPOF)，通过饱和逻辑攻击验证方案鲁棒性。                              |
-| **[personal-intelligence-hub](personal-intelligence-hub/)** | **个人情报作战中枢 (Native Edition)**。执行全球多源抓取，将噪音降维为 Alpha 级决策资产。                              |
+| **[office-hours](office-hours/)**                           | **战略架构师与需求脱水 (Native Edition)**。通过“脑暴倾倒+查漏补缺”模式，执行 6 个高压问题进行战略脱水，输出设计文档. |
+| **[plan-ceo-review](plan-ceo-review/)**                     | **创始人模式战略审计 (Native Edition)**。采用“聚合批处理”模式对开发计划执行核能挑战，支持范围扩张、择优或缩减.       |
+| **[brainstorming](brainstorming/)**                         | **创意与架构设计专家 (Native Edition)**。在任何开发行为前强制调用，将模糊意图转化为具体的设计规范与验证方案.         |
+| **[logic-adversary](logic-adversary/)**                     | **逻辑对抗系统 (Native Edition)**。搜索单点故障 (SPOF)，通过饱和逻辑攻击验证方案鲁棒性.                              |
+| **[personal-intelligence-hub](personal-intelligence-hub/)** | **个人情报作战中枢 (Native Edition)**。执行全球多源抓取，将噪音降维为 Alpha 级决策资产.                              |
+| **[personal-roundtable](personal-roundtable/)** | **高密度动态圆桌 (V3.2)**。基于议题构建张力网络，通过内存拼接与全量覆盖技术实现 100% 稳健的增量持久化，产出全量知识资产. |
 
 ### 🏥 大健康与战略研判中枢 (Healthcare Strategy)
 *聚焦垂直主业：医疗信息化 (HIT)、临床决策支持及大客户分析。*
 
 | 技能标识 (Directory)                                              | 核心本质 (Trigger Traps)                                                            |
 |:------------------------------------------------------------------|:------------------------------------------------------------------------------------|
-| **[hit-solution-architect](hit-solution-architect/)**             | **顶级方案架构师 (V7.0)**。执行多阶段落盘锻造，确保 TCO 最优与技术可演进。          |
-| **[hit-digital-strategy-partner](hit-digital-strategy-partner/)** | **顶级数字化战略专家 (V15.1)**。执行 ROI 测算、MBB 框架分析与动词驱动的叙事。       |
-| **[hit-industry-radar](hit-industry-radar/)**                     | **行业战略雷达**。监控卫宁动态、友商中标及 Epic/Cerner 异动，输出 S-T-C 战报。      |
-| **[hit-weekly-brief](hit-weekly-brief/)**                         | **行业战区研报中枢 (V5.0)**。将智库研报与白皮书降维为高管视角的抗幻觉决策资产。     |
-| **[hit-lectures-scout](hit-lectures-scout/)**                     | **数字化前沿侦察兵 (V5.0)**。通过 S-T-C 框架对医疗 AI 论文执行 TRL 成熟度评估。     |
-| **[hit-customer-analyst](hit-customer-analyst/)**                 | **大客户拜访分析专家 (V3.1)**。强制执行三阶侦察（人物、机构、足迹），输出实战策略。 |
-| **[clinical-decision-support](clinical-decision-support/)**       | **临床决策支持文档生成**。生成基于生物标志物分层的患者队列分析与 GRADE 级治疗建议。 |
-| **[clinical-reports](clinical-reports/)**                         | **全维度临床报告撰写**。编写病例报告 (CARE)、诊断报告及 ICH-E3 标准临床试验报告。   |
+| **[hit-solution-architect](hit-solution-architect/)**             | **顶级方案架构师 (V7.0)**。执行多阶段落盘锻造，确保 TCO 最优与技术可演进.          |
+| **[hit-digital-strategy-partner](hit-digital-strategy-partner/)** | **顶级数字化战略专家 (V15.1)**。执行 ROI 测算、MBB 框架分析与动词驱动的叙事.       |
+| **[hit-industry-radar](hit-industry-radar/)**                     | **行业战略雷达**。监控卫宁动态、友商中标及 Epic/Cerner 异动，输出 S-T-C 战报.      |
+| **[hit-weekly-brief](hit-weekly-brief/)**                         | **行业战区研报中枢 (V5.0)**。将智库研报与白皮书降维为高管视角的抗幻觉决策资产.     |
+| **[hit-lectures-scout](hit-lectures-scout/)**                     | **数字化前沿侦察兵 (V5.0)**。通过 S-T-C 框架对医疗 AI 论文执行 TRL 成熟度评估.     |
+| **[hit-customer-analyst](hit-customer-analyst/)**                 | **大客户拜访分析专家 (V3.1)**。强制执行三阶侦察（人物、机构、足迹），输出实战策略. |
+| **[clinical-decision-support](clinical-decision-support/)**       | **临床决策支持文档生成**。生成基于生物标志物分层的患者队列分析与 GRADE 级治疗建议. |
+| **[clinical-reports](clinical-reports/)**                         | **全维度临床报告撰写**。编写病例报告 (CARE)、诊断报告及 ICH-E3 标准临床试验报告.   |
 
 ### 🔬 专业科研与学术评价 (Scientific Research)
 *学术重型武器：论文检索、读论文提炼、系统性打分与论文级绘图。*
 
 | 技能标识 (Directory)                                            | 核心本质 (Trigger Traps)                                                                             |
 |:----------------------------------------------------------------|:-----------------------------------------------------------------------------------------------------|
-| **[academic-paper-writer](academic-paper-writer/)**             | **学术论文写作管线 (V2.4)**。12-Agent 管线，支持 IMRaD 与双语摘要，强制 APA 7.0 / LaTeX 出版级排版。 |
-| **[academic-arxiv-search](academic-arxiv-search/)**             | **arXiv 论文检索与获取**。通过 Atom API 精准获取计算机科学、AI 及物理领域的预印本。                  |
-| **[academic-paper-reader](academic-paper-reader/)**             | **读论文 (academic-paper-reader)**。猎取思想，将别人的发现拆解成自己能用的认知，拒绝学术腔。         |
-| **[academic-scholar-evaluation](academic-scholar-evaluation/)** | **学术成果系统性评估**。利用 ScholarEval 框架对论文的方法论严谨度进行打分与反馈。                    |
-
-| **[academic-scientific-visualization](academic-scientific-visualization/)** | **论文级科研绘图与可视化**。生成符合 Nature/Science 规格 of 图表，支持多面板布局、显著性标注及学术架构渲染。 |
-| **[academic-deep-research](academic-deep-research/)**                         | **通用深度研究中枢 (V2.3)**。13-Agent 管线，支援 PRISMA 系統性回顧、苏格拉底式引導與嚴格的證據查核 (RoB)。            |
+| **[academic-paper-writer](academic-paper-writer/)**             | **学术论文写作管线 (V2.4)**。12-Agent 管线，支持 IMRaD 与双语摘要，强制 APA 7.0 / LaTeX 出版级排版. |
+| **[academic-arxiv-search](academic-arxiv-search/)**             | **arXiv 论文检索与获取**。通过 Atom API 精准获取计算机科学、AI 及物理领域的预印本.                  |
+| **[academic-paper-reader](academic-paper-reader/)**             | **读论文 (academic-paper-reader)**。猎取思想，将别人的发现拆解成自己能用的认知，拒绝学术腔.         |
+| **[academic-scholar-evaluation](academic-scholar-evaluation/)** | **学术成果系统性评估**。利用 ScholarEval 框架对论文的方法论严谨度进行打分与反馈.                    |
+| **[academic-scientific-visualization](academic-scientific-visualization/)** | **论文级科研绘图与可视化**。生成符合 Nature/Science 规格图表，支持多面板布局、显著性标注. |
+| **[academic-deep-research](academic-deep-research/)**                         | **通用深度研究中枢 (V2.3)**。13-Agent 管线，支援 PRISMA 系統性回顧与嚴格的證據查核 (RoB).            |
 
 ### 📝 内容创作与出版引擎 (Content Creation)
 *高密度叙事锻造：专栏写作、风格迁移与出版级排版。*
 
 | 技能标识 (Directory)                                          | 核心本质 (Trigger Traps)                                                   |
 |:--------------------------------------------------------------|:---------------------------------------------------------------------------|
-| **[personal-writing-assistant](personal-writing-assistant/)** | **统一内容锻造场**。内置高管降维与多方博弈双轨制生产线，执行语义主权捍卫。 |
-| **[humanizer-zh-pro](humanizer-zh-pro/)**                     | **中文文本“去 AI 化”锻造场**。模拟毒舌高管视角，执行遣词造句的同态重写。   |
-| **[image-nano-gen](image-nano-gen/)**                         | **高质量图像生成引擎**。利用 Imagen 3 引擎执行 4K 级图像锻造，支持高认知 Prompt 增强。 |
-| **[presentation-architect](presentation-architect/)**         | **战略级 PPT 架构师**。交付具备原生逻辑的 PPT 资产，拒绝平庸模板。         |
-| **[smart-doc-latex](smart-doc-latex/)**                       | **自动化出版 LaTeX 引擎**。提供 IEEE、CV 等专业模板，交付工业级排版结果。  |
+| **[personal-writing-assistant](personal-writing-assistant/)** | **统一内容锻造场**。内置高管降维与多方博弈双轨制生产线，执行语义主权捍卫. |
+| **[humanizer-zh-pro](humanizer-zh-pro/)**                     | **中文文本“去 AI 化”锻造场**。模拟毒舌高管视角，执行遣词造句的同态重写.   |
+| **[image-nano-gen](image-nano-gen/)**                         | **高质量图像生成引擎 (Imagen 3)**。利用 Gemini 引擎执行 4K 级图像锻造，支持高认知 Prompt 增强. |
+| **[image-promp-gen](image-promp-gen/)**                       | **大师级海报与封面提示词引擎**。基于 33+ 位传奇设计师风格，支持多平台比例适配与逻辑隐喻构建. |
+| **[presentation-architect](presentation-architect/)**         | **战略级 PPT 架构师**。交付具备原生逻辑的 PPT 资产，拒绝平庸模板.         |
+| **[smart-doc-latex](smart-doc-latex/)**                       | **自动化出版 LaTeX 引擎**。提供 IEEE、CV 等专业模板，交付工业级排版结果.  |
 
 ### 💼 商业洞察与投资顾问 (Marketing & Finance)
 *二级市场分析与商业价值变现。*
 
 | 技能标识 (Directory)                                            | 核心本质 (Trigger Traps)                                                          |
 |:----------------------------------------------------------------|:----------------------------------------------------------------------------------|
-| **[personal-investment-advisor](personal-investment-advisor/)** | **顶级金融量化引擎**。提供结构化量化 JSON 分析与 K 线周期解析，严禁通用知识回答。 |
+| **[personal-investment-advisor](personal-investment-advisor/)** | **顶级金融量化引擎**。提供结构化量化 JSON 分析与 K 线周期解析，严禁通用知识回答. |
 
 ### 👤 数字原生个体成长中心 (Personal Management)
 *个人生活审计、生理分析、旅行研究与生活方式控制。*
 
 | 技能标识 (Directory)                                        | 核心本质 (Trigger Traps)                                                                   |
 |:------------------------------------------------------------|:-------------------------------------------------------------------------------------------|
-| **[personal-diary-auditing](personal-diary-auditing/)**     | **认知审计与日志专家**。通过结构化日志维持长期战略对齐，强制执行物理数据锁。               |
-| **[personal-health-analysis](personal-health-analysis/)**   | **首席医疗官 (CMO) 引擎**。对 Garmin 生理数据执行全链路审计，管理决策准备度。              |
-| **[personal-monthly-insights](personal-monthly-insights/)** | **战略元分析解码器**。提取人机协作的负熵规律，识别摩擦基因并同步记忆。                     |
-| **[personal-musicbee-dj](personal-musicbee-dj/)**           | **音乐极客控制协议**。通过 JIT 算法精准控制本地进程，实现秒级心流氛围切换。                |
-| **[travel-research](travel-research/)**                     | **旅行研究 (ljg-travel-flow)**。深度文化旅行案头研究，涵盖博物馆、古建与考古发现。         |
-| **[12306-train-query](12306-train-query/)**                 | **12306 火车票专家**。提供秒级精准车次响应，严禁通过通用搜索引擎。                         |
-| **[ctrip-flight-search](ctrip-flight-search/)**             | **携程航班侦察兵**。通过自动化 SOP 获取实时运价，支持多城市场景验证。                      |
-| **[dianping-info-query](dianping-info-query/)**             | **大众点评深度查询器**。提供真实的商户画像与食材评分，拒绝通用搜索噪音。                   |
-| **[mentat-insight-diary](mentat-insight-diary/)**           | **内观日记与逻辑审计**。通过 OODA 框架执行认知反思，并自动物理归档 Mentat 审计日志。       |
-| **[mentat-system-retro](mentat-system-retro/)**             | **量化反思引擎**。基于 Telemetry 解析 Token 黑洞与摩擦率，执行高认知负载任务后的量化复盘。 |
+| **[personal-diary-auditing](personal-diary-auditing/)**     | **认知审计与日志专家**。通过结构化日志维持长期战略对齐，强制执行物理数据锁.               |
+| **[personal-health-analysis](personal-health-analysis/)**   | **首席医疗官 (CMO) 引擎**。对 Garmin 生理数据执行全链路审计，管理决策准备度.              |
+| **[personal-monthly-insights](personal-monthly-insights/)** | **战略元分析解码器**。提取人机协作的负熵规律，识别摩擦基因并同步记忆.                     |
+| **[personal-musicbee-dj](personal-musicbee-dj/)**           | **音乐极客控制协议**。通过 JIT 算法精准控制本地进程，实现秒级心流氛围切换.                |
+| **[travel-research](travel-research/)**                     | **旅行研究 (ljg-travel-flow)**。深度文化旅行案头研究，涵盖博物馆、古建与考古发现.         |
+| **[12306-train-query](12306-train-query/)**                 | **12306 火车票专家**。提供秒级精准车次响应，严禁通过通用搜索引擎.                         |
+| **[ctrip-flight-search](ctrip-flight-search/)**             | **携程航班侦察兵**。通过自动化 SOP 获取实时运价，支持多城市场景验证.                      |
+| **[dianping-info-query](dianping-info-query/)**             | **大众点评深度查询器**。提供真实的商户画像与食材评分，拒绝通用搜索噪音.                   |
+| **[mentat-insight-diary](mentat-insight-diary/)**           | **内观日记与逻辑审计**。通过 OODA 框架执行认知反思，并自动物理归档 Mentat 审计日志.       |
+| **[mentat-system-retro](mentat-system-retro/)**             | **量化反思引擎**。基于 Telemetry 解析 Token 黑洞与摩擦率，执行高认知负载任务后的量化复盘. |
 
 ### ⚙️ 技术全栈与逆向工程 (Tech Design)
 *工作流编排、技能创建与跨界映射。*
 
 | 技能标识 (Directory)                                  | 核心本质 (Trigger Traps)                                                                          |
 |:------------------------------------------------------|:--------------------------------------------------------------------------------------------------|
-| **[morphism-mapper-master](morphism-mapper-master/)** | **范畴论跨界思维引擎**。利用异构领域结构生成突破性解法，执行升维打击。                            |
-| **[skill-creator](skill-creator/)**                   | **技能工厂与自愈中心 (Native Edition)**。管理技能生命周期，确保符合“四层壳模型”与三层架构规范。   |
-| **[plan-eng-review](plan-eng-review/)**               | **战略级工程审计 (Native Edition)**。在编码前执行静默深度扫描，锁定架构漏洞、影子路径与测试边界。 |
+| **[morphism-mapper-master](morphism-mapper-master/)** | **范畴论跨界思维引擎**。利用异构领域结构生成突破性解法，执行升维打击.                            |
+| **[skill-creator](skill-creator/)**                   | **技能工厂与自愈中心 (Native Edition)**。管理技能生命周期，确保符合“四层壳模型”与三层架构规范.   |
+| **[plan-eng-review](plan-eng-review/)**               | **战略级工程审计 (Native Edition)**。在编码前执行静默深度扫描，锁定架构漏洞、影子路径与测试边界. |
 
 ### 🧰 全能格式转换与数据工厂 (Utilities Format)
 *负责标准化格式转换与数据原质提取。*
 
 | 技能标识 (Directory)                            | 核心本质 (Trigger Traps)                                                                              |
 |:------------------------------------------------|:------------------------------------------------------------------------------------------------------|
-| **[document-summarizer](document-summarizer/)** | **战略情报引擎**。具备本体驱动的语义压缩能力，输出带有战略标签的摘要。                                |
-| **[minimax-docx](minimax-docx/)**               | **顶级 Word 锻造师 (MiniMax Edition)**。基于 OpenXML SDK 执行专业 DOCX 渲染，支持硬核模板校验与排版。 |
-| **[xlsx](xlsx/)**                               | **重装级数据治理专家**。通过物理层 XML 操纵实现 100% 数据一致性。                                     |
-| **[markdown-converter](markdown-converter/)**   | **Markdown 原质炼金术**。利用 MarkItDown 将异构文件统一转化为极致干净的语义层。                       |
-| **[pdf](pdf/)**                                 | **PDF 全能处理器**。支持底层字节流处理，执行 OCR 扫描、合并与拆分。                                   |
-| **[pptx](pptx/)**                               | **PPT 全能操作员**。支持模板保留与批量更新，具备物理层 XML 操纵能力。                                 |
-| **[text-to-speech](text-to-speech/)**           | **军工级播报系统**。支持 Edge 神经网络语音，确保高审美播报。                                          |
-| **[tuanbiaodownloader](tuanbiaodownloader/)**   | **团体标准下载器**。全自动 ID 解析与 PDF 合并装订，确保 100% 获取率。                                 |
-| **[url-to-markdown](url-to-markdown/)**         | **网页原质提取器**。直控 Chrome CDP 协议，强制清除网页噪音。                                          |
+| **[document-summarizer](document-summarizer/)** | **战略情报引擎**。具备本体驱动的语义压缩能力，输出带有战略标签的摘要.                                |
+| **[minimax-docx](minimax-docx/)**               | **顶级 Word 锻造师 (MiniMax Edition)**。基于 OpenXML SDK 执行专业 DOCX 渲染，支持硬核模板校验与排版. |
+| **[xlsx](xlsx/)**                               | **重装级数据治理专家**。通过物理层 XML 操纵实现 100% 数据一致性.                                     |
+| **[markdown-converter](markdown-converter/)**   | **Markdown 原质炼金术**。利用 MarkItDown 将异构文件统一转化为极致干净的语义层.                       |
+| **[pdf](pdf/)**                                 | **PDF 全能处理器**。支持底层字节流处理，执行 OCR 扫描、合并与拆分.                                   |
+| **[pptx](pptx/)**                               | **PPT 全能操作员**。支持模板保留与批量更新，具备物理层 XML 操纵能力.                                 |
+| **[text-to-speech](text-to-speech/)**           | **军工级播报系统**。支持 Edge 神经网络语音，确保高审美播报.                                          |
+| **[tuanbiaodownloader](tuanbiaodownloader/)**   | **团体标准下载器**。全自动 ID 解析与 PDF 合并装订，确保 100% 获取率.                                 |
+| **[url-to-markdown](url-to-markdown/)**         | **网页原质提取器**。直控 Chrome CDP 协议，强制清除网页噪音.                                          |
 
 ---
-*Last Global Audit: 2026-03-24 | Version: 3.4 (Native Agent Optimized) | System State: Locked*
+*Last Global Audit: 2026-03-25 | Version: 3.5 (Native Agent Optimized) | System State: Locked*
