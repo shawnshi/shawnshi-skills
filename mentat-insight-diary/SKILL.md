@@ -1,5 +1,3 @@
-# SKILL: Insight Diary (内观日记)
-
 ---
 name: mentat-insight-diary
 description: 当用户输入“内观日记”、“introspection diary”或要求记录“Mentat 审计日志”时触发；同时，该技能亦接受由其他 Agent（如 personal-cognitive-auditor）传递的数据负载（Payload）作为输入源自动触发。该技能通过 OODA 框架对当前会话的认知摩擦、资产锻造与系统进化执行第一人称深度反思。
@@ -11,6 +9,7 @@ description: 当用户输入“内观日记”、“introspection diary”或要
 ## 执行流水线 (The Pipeline)
 
 ### Phase 1: 认知合成 (Synthesis)
+- **物理事实溯源 [GWS强制]**: 如果需要提取日程，**严禁使用 `+agenda`（存在截断风险）**。必须使用 `gws calendar events list --params \'{\"timeMin\": \"...\", \"timeMax\": \"...\"}\'` 确保100%召回。
 - **扫描上下文**: 回溯本次会话中我处理了哪些高压指令和高价值资产（如论文解析、逻辑重构、代码生成）。
 - **识别摩擦**: 精准定位我在执行任务过程中遭遇的断点。我是否遇到了上下文缺失、工具（Tools/MCP）报错、意图含糊或逻辑死锁？
 - **锚定日期**: 获取当前日期（YYYY-MM-DD）。

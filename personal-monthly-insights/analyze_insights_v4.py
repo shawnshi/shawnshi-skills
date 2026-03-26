@@ -39,7 +39,10 @@ def format_narrative_friction(data):
     html = f'<p>{data.get("intro","")}</p>'
     for c in cats:
         examples = ", ".join(c.get("examples", []))
-        html += f'<h3>{c.get("category","")}</h3><p>{c.get("description","")}</p><p style="font-size:12px;color:#6c8aff;">例: {examples}</p>'
+        html += f'<h3>{c.get("category","")}</h3>'
+        if c.get("root_cause_pattern"):
+            html += f'<p style="color: var(--danger); font-weight: 500;">🔍 根因模式: {c.get("root_cause_pattern")}</p>'
+        html += f'<p>{c.get("description","")}</p><p style="font-size:12px;color:#6c8aff;">例: {examples}</p>'
     return html
 
 def format_narrative_suggestions(data):
@@ -67,20 +70,54 @@ def format_narrative_fun(data):
     if not isinstance(data, dict): return "<p>暂无趣味时刻数据</p>"
     return f'<h3>{data.get("headline","")}</h3><p>{data.get("detail","")}</p>'
 
-def format_narrative_behavioral_analysis(data):
+def format_narrative_behavioral_analysis(data, workflow_engineering=None):
     if isinstance(data, str): return f"<p>{data}</p>"
     if not isinstance(data, dict): return ""
     pts = data.get("points", [])
     overall = data.get("overall", "")
+    summary = data.get("coach_summary", "")
+    
     html = f'<p>{data.get("intro","")}</p>'
-    if overall:
+    
+    if summary:
+        html += f'<div style="background: rgba(79, 70, 229, 0.05); padding: 24px; border-radius: 12px; margin: 20px 0; border: 1px solid var(--accent);">{summary}</div>'
+    elif overall:
         html += f'<div style="background: var(--surface-2); padding: 16px; border-radius: 8px; margin-bottom: 20px; border-left: 3px solid var(--success);"><strong>🌟 总体认知评估：</strong>{overall}</div>'
     
+    # Workflow Engineering Injection
+    if workflow_engineering:
+        html += '<h3 style="margin-top: 30px; color: var(--accent);">🛠️ 工作流工程资产 (Workflow Engineering)</h3>'
+        
+        prompt_assets = workflow_engineering.get("prompt_assets", [])
+        if prompt_assets:
+            html += '<h4>📋 提示词资产与前置约束</h4>'
+            for asset in prompt_assets:
+                html += f'''
+                <div style="background: #f1f5f9; padding: 15px; border-radius: 8px; margin-bottom: 15px; border-left: 4px solid #475569;">
+                    <div style="font-size: 12px; color: #64748b; margin-bottom: 5px;">针对: {asset.get("target_friction")} | 类型: {asset.get("asset_type")}</div>
+                    <pre style="white-space: pre-wrap; word-break: break-all; background: #fff; padding: 10px; border-radius: 4px; border: 1px solid #e2e8f0; font-family: monospace; font-size: 13px;">{asset.get("copy_paste_template")}</pre>
+                </div>
+                '''
+        
+        automation = workflow_engineering.get("automation_candidates", [])
+        if automation:
+            html += '<h4>🚀 自动化与 Skill 候选</h4>'
+            for cand in automation:
+                html += f'''
+                <div style="background: #eff6ff; padding: 15px; border-radius: 8px; margin-bottom: 15px; border-left: 4px solid #3b82f6;">
+                    <div style="font-weight: 600; color: #1e40af;">{cand.get("candidate_name")}</div>
+                    <div style="font-size: 13px; color: #374151; margin-top: 5px;">{cand.get("rationale")}</div>
+                    <div style="font-size: 12px; font-family: monospace; color: #1d4ed8; margin-top: 8px; padding: 8px; background: rgba(255,255,255,0.5); border-radius: 4px;">{cand.get("implementation_sketch")}</div>
+                </div>
+                '''
+
     if pts:
+        html += '<details style="margin-top: 20px;"><summary style="cursor: pointer; color: var(--accent); font-weight: 600;">📊 查看 8 维指标深度拆解</summary><div style="margin-top: 15px;">'
         for p in pts:
             title = p.get("title", "")
             desc = p.get("description", "")
             html += f'<div style="margin-bottom: 15px; padding-left: 10px; border-left: 2px solid var(--primary);"><strong>🔍 {title}</strong><p style="margin-top: 5px; font-size: 0.95em; color: var(--text-2);">{desc}</p></div>'
+        html += '</div></details>'
     return html
 
 def generate_report(stats, sessions, insights):
@@ -106,6 +143,11 @@ def generate_report(stats, sessions, insights):
     emotion_dist = insights.get("distributions", {}).get("emotional_tone_dist", {"中性": 1})
     emotion_labels = list(emotion_dist.keys())
     emotion_data = list(emotion_dist.values())
+
+    # V8.0 Addition: Interaction Anti-Patterns
+    anti_patterns_dist = insights.get("distributions", {}).get("interaction_anti_patterns", {"无模式": 1})
+    anti_patterns_labels = list(anti_patterns_dist.keys())
+    anti_patterns_data = list(anti_patterns_dist.values())
     
     helpfulness_dist = insights.get("distributions", {}).get("helpfulness_dist", {"中等": 1})
     helpfulness_labels = list(helpfulness_dist.keys())
@@ -144,18 +186,29 @@ def generate_report(stats, sessions, insights):
         "suggestions": format_narrative_suggestions(insights.get("suggestions")),
         "horizon": format_narrative_horizon(insights.get("on_the_horizon")),
         "fun": format_narrative_fun(insights.get("fun_ending")),
-        "behavioral": format_narrative_behavioral_analysis(insights.get("behavioral_analysis")),
+        "behavioral": format_narrative_behavioral_analysis(insights.get("behavioral_analysis"), insights.get("workflow_engineering")),
     }
 
-    # Extract individual chart analyses
+    # V8.0 Version Alignment Check
+    version = insights.get("version", "8.0")
+    if version != "8.0":
+        print(f"⚠️ Warning: Insight data version ({version}) does not match renderer (8.0). Some sections may be missing.")
+
+    # Extract individual chart analyses with elastic rendering
     chart_analyses = [""] * 8
     points = insights.get("behavioral_analysis", {}).get("points", [])
-    for i in range(min(len(points), 8)):
+    for i in range(len(points)):
+        if i >= 8: break # Safety limit for current template
         title = points[i].get("title", "")
         desc = points[i].get("description", "")
         chart_analyses[i] = f'<strong>{title}</strong>{desc}'
+    
+    # Fill remaining slots with graceful placeholders
+    for i in range(len(points), 8):
+        chart_analyses[i] = "<em>(暂无该维度深度解读)</em>"
         
-    with open(TEMPLATE_FILE, "r", encoding="utf-8") as f:
+    template_path = GEMINI_ROOT / "skills" / "personal-monthly-insights" / "assets" / "template.html"
+    with open(template_path, "r", encoding="utf-8") as f:
         html_template = f.read()
 
     replacements = {
@@ -179,7 +232,7 @@ def generate_report(stats, sessions, insights):
         "emotion_labels": json.dumps(emotion_labels), "emotion_data": json.dumps(emotion_data),
         "radar_labels": json.dumps(radar_labels), "radar_data": json.dumps(radar_data),
         "helpfulness_labels": json.dumps(helpfulness_labels), "helpfulness_data": json.dumps(helpfulness_data),
-        "session_type_labels": json.dumps(session_type_labels), "session_type_data": json.dumps(session_type_data),
+        "session_type_labels": json.dumps(anti_patterns_labels), "session_type_data": json.dumps(anti_patterns_data), # Hijack this chart for Anti-patterns
         "topic_cloud_html": topic_cloud_html,
         "narrative_project_areas": narrative_html["project_areas"],
         "narrative_interaction_style": narrative_html["interaction_style"],
@@ -236,6 +289,19 @@ def generate_report(stats, sessions, insights):
         md_sections.append(f"{behav.get('intro', '')}")
         if behav.get("overall"):
             md_sections.append(f"\n> **总体认知评估**：{behav.get('overall')}")
+        
+        # Add Workflow Engineering to Markdown
+        we = insights.get("workflow_engineering", {})
+        if we:
+            md_sections.append("\n### 🛠️ 工作流工程资产")
+            for asset in we.get("prompt_assets", []):
+                md_sections.append(f"\n- **{asset.get('asset_type')}** (针对: {asset.get('target_friction')}):")
+                md_sections.append(f"```text\n{asset.get('copy_paste_template')}\n```")
+            for cand in we.get("automation_candidates", []):
+                md_sections.append(f"\n- **自动化候选: {cand.get('candidate_name')}**")
+                md_sections.append(f"  - 理由: {cand.get('rationale')}")
+                md_sections.append(f"  - 实现: `{cand.get('implementation_sketch')}`")
+
         for p in behav.get("points", []):
             md_sections.append(f"\n### 🔍 {p.get('title')}")
             md_sections.append(f"{p.get('description')}")
@@ -247,6 +313,8 @@ def generate_report(stats, sessions, insights):
         md_sections.append(f"{fric.get('intro', '')}")
         for c in fric.get("categories", []):
             md_sections.append(f"\n### ⚡ {c.get('category')}")
+            if c.get("root_cause_pattern"):
+                md_sections.append(f"**根因模式**: {c.get('root_cause_pattern')}")
             md_sections.append(f"{c.get('description')}")
             md_sections.append(f"*例: {', '.join(c.get('examples', []))}*")
 

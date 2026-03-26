@@ -251,7 +251,8 @@ def fetch_stress(client, days=7, start=None, end=None):
                     "rest_stress_duration": data.get("restStressDuration"),
                     "low_stress_duration": data.get("lowStressDuration"),
                     "medium_stress_duration": data.get("mediumStressDuration"),
-                    "high_stress_duration": data.get("highStressDuration")
+                    "high_stress_duration": data.get("highStressDuration"),
+                    "steps": data.get("totalSteps")
                 }
             return None
 
@@ -263,6 +264,40 @@ def fetch_stress(client, days=7, start=None, end=None):
         return {"stress": stress_data, "start": start_date, "end": end_date}
     except Exception as e:
         return {"error": str(e)}
+
+
+def fetch_training_load_series(client, days=7, start=None, end=None):
+    """Fetch acute training load series concurrently."""
+    start_date, end_date = get_date_range(days, start, end)
+    
+    try:
+        load_data = []
+        current = datetime.strptime(start_date, "%Y-%m-%d")
+        end_dt = datetime.strptime(end_date, "%Y-%m-%d")
+        dates = [(current + timedelta(days=i)).strftime("%Y-%m-%d") for i in range((end_dt - current).days + 1)]
+        
+        def _get_single_day(date_str):
+            data = fetch_with_retry(client.get_training_status, date_str)
+            if data:
+                recent = data.get("mostRecentTrainingStatus", {})
+                status_data = recent.get("latestTrainingStatusData", {})
+                if status_data:
+                    entry = list(status_data.values())[0]
+                    return {
+                        "date": date_str,
+                        "acute_load": entry.get("acuteTrainingLoadDTO", {}).get("acuteTrainingLoad"),
+                        "load_ratio": entry.get("acuteTrainingLoadDTO", {}).get("dailyAcuteChronicWorkloadRatio")
+                    }
+            return None
+
+        with concurrent.futures.ThreadPoolExecutor(max_workers=5) as executor:
+            results = executor.map(_get_single_day, dates)
+            load_data = [r for r in results if r]
+
+        load_data.sort(key=lambda x: x["date"])
+        return {"training_load": load_data}
+    except Exception:
+        return {"training_load": []}
 
 
 def fetch_training_status(client, date_str=None):
@@ -406,6 +441,7 @@ def fetch_summary(client, days=7, start=None, end=None):
         hr = fetch_heart_rate(client, days, start, end).get("heart_rate", [])
         activities = fetch_activities(client, days, start, end).get("activities", [])
         stress = fetch_stress(client, days, start, end).get("stress", [])
+        training_load_series = fetch_training_load_series(client, days, start, end).get("training_load", [])
         
         training_status = fetch_training_status(client, end_date)
         max_metrics = fetch_max_metrics(client, end_date)
@@ -447,6 +483,7 @@ def fetch_summary(client, days=7, start=None, end=None):
             "heart_rate": hr,
             "activities": activities,
             "stress": stress,
+            "training_load_series": training_load_series,
             "training_status": training_status,
             "max_metrics": max_metrics,
             "hydration": hydration,

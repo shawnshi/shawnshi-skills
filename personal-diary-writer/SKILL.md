@@ -15,6 +15,37 @@ description: |
 - **语义本体**: 负责严格检查 `#tag` 的本体格式。必须确保所有标签采用 `#tag` 形式。
 
 ## 2. 执行协议 (Execution Protocol)
+### Phase 0: Reconnaissance (侦察门控)
+【硬性约束】：在调用该技能组装日志前，AI 必须先自动执行 `gws calendar events list` 和 `garmin` 生理数据查询。严禁直接以 `ask_user` 开局，必须依据“证据先行”原则重建物理事实。
+
+### Phase 1: Structure Alignment (结构对齐)
+【Schema 绝对防御】：必须严格按照以下模板结构组装内容，绝对禁止合并标题：
+```markdown
+# YYYY-MM-DD 星期X
+
+## 今日工作 (Tactical Context)
+- ...
+
+## 核心产出 (Strategic Professional Assets)
+- ...
+
+## 明日战术锁定 (Next Day Tactics)
+1. ...
+
+## 认知结晶 (Cognitive Distillation)
+...
+
+## 熵增对抗 (Chaos Mitigation)
+...
+
+## 能量管理 (Biological-Cognitive Correlation)
+...
+
+## 标签
+#tag
+```
+
+### Phase 2: Action
 1. 接收用户的输入文本或由其他 Agent 传来的审计报告文本。
 2. 规范化所有 `#tag` 标签。
 3. 将内容写入临时文件 `tmp/log_entry.md`。

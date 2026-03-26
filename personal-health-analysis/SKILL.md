@@ -8,29 +8,26 @@ triggers: ["心率", "睡眠", "压力", "HRV", "感冒迹象", "身体电量", 
 
 通过自然语言查询 Garmin Connect 数据，提取临床级生理指标，生成**军工级交互式审计看板（Bloomberg Terminal 审美）**，并执行高级生理智能分析（认知准备度与代谢摩擦）。
 
-该技能定位为“企业级/高管专属的前置医疗防线与战略决策引擎（对齐 `USER.md` 中的战略咨询总经理身份）”，采用 **GEB-Flow** 架构进行全链路审计：
-- **Auth Layer** (`garmin_auth.py`): 登录认证与 Token 管理。
-- **Data Layer** (`garmin_data.py`, `garmin_data_extended.py`): 原始 JSON 数据提取，覆盖 20+ 指标。
-- **Query Layer** (`garmin_query.py`): 时间点精确查询。
-- **Activity Files** (`garmin_activity_files.py`): FIT/GPX/TCX 文件下载与解析。
-- **Intelligence Layer** (`garmin_intelligence.py`): 二阶战略审计分析（三因子患病风险预警、基于睡眠债务与**高压耗散时长的扣分模型**）。
-- **Presentation Layer** (`garmin_chart.py`): 生成高密度、暗黑模式的 Tactical Command 战略大屏。支持多维同态叠加（HR × Stress × Body Battery）与系统性一致性热力图（Heatmap）。
-- **FHIR Adapter** (`garmin_fhir_adapter.py`): 导出 HL7 FHIR 标准格式。
+该技能定位为“企业级/高管专属的前置医疗防线与战略决策引擎（对齐 `USER.md` 中的战略咨询总经理身份）”，采用 **GEB-Flow V2.0** 架构进行全链路审计：
+- **Data Lake Layer** (`GarminDB`): 本地物理数据湖。通过 SQLite 存储历史基线，实现毫秒级查询。
+- **Adapter Layer** (`garmin_sqlite_adapter.py`): 语义垫片。将本地 SQL 数据转换为标准化分析结构。
+- **Intelligence Layer** (`garmin_intelligence.py`): 二阶战略审计分析。优先调用本地数据源，对抗 API 熔断。
+- **Presentation Layer** (`garmin_chart.py`): 生成高密度、暗黑模式的 Tactical Command 战略大屏。
 
 ## Execution Protocol (智能体混合执行协议)
 
 AI 必须严格按照以下阶段线性推进，并在模式之间流转：
 
-- **[Phase 0: Pre-flight & Auth (PLANNING Mode)]**
-  - **Action**: 在执行任何数据查询前，隐式检查当前是否有 401 Error 风险。
-  - **Failsafe**: 如果遇到 401，引导用户运行 `python scripts/garmin_auth.py login --email YOUR_EMAIL --password YOUR_PASSWORD`。
+- **[Phase 0: Data Sync & Pre-flight (PLANNING Mode)]**
+  - **Action**: 隐式执行 `python C:\Users\shich\AppData\Local\Programs\Python\Python313\Scripts\garmindb_cli.py --latest` 以尝试更新本地数据湖。
+  - **Failsafe**: 如果遇到 429 报错，**不阻塞后续执行**，直接转入本地已有的 SQLite 库进行审计（即读取“历史快照”）。
 
 - **[Phase 1: Precision Data Extraction (EXECUTION Mode)]**
-  - **Action**: 根据用户意图选择最匹配的基础查询脚本拉取数据（优先精确查询）。支持通过 `--period 90d` 提取长程宏观数据。
-  - **Failsafe**: 如果 API 返回空值，**绝对禁止**编造数据。提示：“数据未同步，请打开 Garmin Connect 同步”。
+  - **Action**: 优先调用 `garmin_intelligence.py` 加载本地数据。支持通过 `--period 90d` 提取长程宏观数据。
+  - **Failsafe**: 如果本地库缺失，回退至 `garmin_data.py` 发起 API 请求。
 
 - **[Phase 2: Strategic Synthesis (EXECUTION Mode)]**
-  - **Action**: 若涉及综合诊断，必须调用 `garmin_intelligence.py`。
+  - **Action**: 调用 `garmin_intelligence.py` 执行深度诊断。
   - **Constraint**: 利用“耗散结构”计算每日高压耗散时长（Zone Dissipation），并追踪 30 天基线漂移。
 
 - **[Phase 3: Executive Output (VERIFICATION Mode)]**
@@ -42,10 +39,26 @@ AI 必须严格按照以下阶段线性推进，并在模式之间流转：
 2. **Path Resolution**: 处理活动文件（FIT/GPX）和 HTML 报告时，必须使用绝对路径展示（例如：`[查看生物态势看板](file:///C:/Users/shich/.gemini/memory/garmin/tactical_board_7days_2026xxxx.html)`）。
 3. **Pipelining**: `garmin_intelligence.py` 等分析脚本依赖基础数据正确返回。严格确保前序步骤成功后再执行后续的深度审计。
 
-## Output Schema (战略级输出规范)
-必须采用 **BLUF (结论先行)** 结构输出结果，深度融合“卫宁健康战略咨询总经理”的高管画像：
-- **🟢 系统动量 (System Momentum)**: 1句话概括当前的生理演化方向与摩擦定性（如：双轨满载、隐性耗散）。
-- **📊 执行带宽 (Execution Bandwidth)**: 包含认知带宽与物理防线的双重评分，以及高压耗散时长。
+## Output Schema & Intent Routing (三级输出协议)
+
+系统必须根据用户的提问意图，执行严格的降噪与分级输出：
+
+### Level 1: 微观战术 (Micro-Tactics)
+- **触发条件**：用户询问具体的单个问题，如“我今晚能练深蹲吗？”、“今天睡得好吗？”。
+- **输出约束**：**绝对禁止**输出全量战略简报。仅调用 `readiness` 分析，提取认知/物理防线得分。用 **< 50字** 的军工级指令直接回答行或不行，并给出依据。
+
+### Level 2: 日结复盘 (Daily Audit)
+- **触发条件**：常规触发，如“健康审计”、“今日状态”、“分析生理指标”。
+- **输出约束**：调用 `insight_cn`，输出完整的**四层模块文本简报**（包含 ASCII 系统动量拓扑）。必须采用 **BLUF (结论先行)** 结构。
+
+### Level 3: 长程战略 (Strategic Campaign)
+- **触发条件**：包含“90天”、“趋势”、“全面体检”、“热力图”等宏观宏大词汇。
+- **输出约束**：除了文本解析，**强制**调用 `garmin_chart.py dashboard` 生成 HTML 大屏，并提供本地绝对路径链接。
+
+---
+**核心评价维度**：
+- **🟢 系统动量 (System Momentum)**: 1句话概括当前的生理演化方向与摩擦定性。包含终端可视化的能量拓扑 `[ ▂▃▄▅ ]`。
+- **📊 执行带宽 (Execution Bandwidth)**: 包含认知带宽与物理防线的双重评分，以及高压耗散时长、社会时差(Social Jetlag)的惩罚。
 - **⚠️ 摩擦与风险 (Frictions & Risks)**: 如果探测到“Garmin Flu”（RHR飙升+HRV骤降+呼吸率异常）或严重睡眠剥夺，必须加粗高亮警告。
 - **🎯 战术指令 (Tactical Directives)**: 明确指令：日程降级/强攻、物理干预（强制负熵/绝对防御）、生化环境（深度冷却/熔断）。
 

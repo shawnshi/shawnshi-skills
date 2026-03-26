@@ -16,8 +16,42 @@ from datetime import datetime, timedelta
 
 # Import data fetcher
 sys.path.insert(0, str(Path(__file__).parent))
+try:
+    from garmin_sqlite_adapter import get_summary as sqlite_summary, get_sleep_data as sqlite_sleep, get_hrv_data as sqlite_hrv, DB_DIR
+    HAS_SQLITE = DB_DIR.exists()
+except ImportError:
+    HAS_SQLITE = False
+
 from garmin_auth import get_client
 from garmin_data import fetch_summary
+
+def fetch_local_summary(days):
+    """
+    Adapter to convert SQLite data into the same format expected by the intelligence layer.
+    """
+    print(f"📂 Loading data from local SQLite Data Lake ({days} days)...", file=sys.stderr)
+    summary_df = sqlite_summary(days)
+    sleep_df = sqlite_sleep(days)
+    hrv_df = sqlite_hrv(days)
+    
+    # Convert DataFrames to the dictionary list format expected by existing logic
+    summary_data = {
+        "heart_rate": summary_df.rename(columns={"resting_heart_rate": "resting_hr"}).to_dict('records'),
+        "stress": summary_df.rename(columns={"stress_avg": "avg_stress"}).to_dict('records'),
+        "body_battery": summary_df.rename(columns={"body_battery_highest": "highest"}).to_dict('records'),
+        "sleep": sleep_df.to_dict('records'),
+        "hrv": hrv_df.rename(columns={"hrv_avg": "last_night_avg"}).to_dict('records'),
+        "activities": [], # Minimal for now
+        "training_status": {},
+        "max_metrics": {},
+        "body_composition": {}
+    }
+    
+    # Add status field to HRV to match existing logic
+    for entry in summary_data["hrv"]:
+        entry["status"] = "BALANCED" # Default for local simplified extraction
+        
+    return summary_data
 
 def parse_period(period_str, days_int):
     """Parse period string like '90d' or fallback to days."""
@@ -172,6 +206,11 @@ def analyze_executive_readiness(summary_data):
         cognitive_score -= (sleep_debt_h * 5)
     if dissipation_hours > 2.0:
         cognitive_score -= (dissipation_hours * 4) # Cognitive drain penalty
+    
+    # Social Jetlag Penalty
+    social_jetlag = calculate_social_jetlag(sleep_list)
+    if social_jetlag > 1.5:
+        cognitive_score -= (social_jetlag * 3) # Disrupts circadian rhythm
         
     cognitive_score = max(0, min(100, cognitive_score))
 
@@ -348,6 +387,38 @@ def perform_bio_metric_audit(summary_data):
         }
     }
 
+def generate_sparkline(data_series):
+    """Generate ASCII sparkline for terminal topology."""
+    if not data_series or all(v is None for v in data_series): return "无数据"
+    valid_data = [v for v in data_series if v is not None]
+    if not valid_data: return "无数据"
+    
+    ticks = [' ', '▂', '▃', '▄', '▅', '▆', '▇', '█']
+    min_val, max_val = min(valid_data), max(valid_data)
+    if min_val == max_val:
+        return ticks[3] * len(valid_data)
+    
+    range_val = max_val - min_val
+    sparkline = ""
+    for val in valid_data:
+        idx = int(((val - min_val) / range_val) * (len(ticks) - 1))
+        sparkline += ticks[idx]
+    return sparkline
+
+def calculate_social_jetlag(sleep_data):
+    """Calculate Mid-Sleep Point drift (Social Jetlag)."""
+    if len(sleep_data) < 3: return 0.0
+    mid_points = []
+    for s in sleep_data[-7:]:
+        if s.get("sleep_time_seconds") and s.get("sleep_score"):
+            # Simplified heuristic: assume sleep usually ends around 7 AM.
+            # Real implementation would parse actual start/end times if available.
+            duration = s.get("sleep_time_seconds", 0) / 3600
+            mid_point = 7.0 - (duration / 2.0)
+            mid_points.append(mid_point)
+    if len(mid_points) < 3: return 0.0
+    return round(statistics.stdev(mid_points), 2)
+
 def generate_chinese_insight(summary_data):
     """Generate a consolidated health analysis in Chinese with Mentat Expert Logic."""
     audit = perform_bio_metric_audit(summary_data)
@@ -356,12 +427,14 @@ def generate_chinese_insight(summary_data):
     # 1. Sleep Consistency & Debt Audit
     sleep_data = summary_data.get("sleep", [])
     std_dev, consist_status = calculate_sleep_consistency(sleep_data)
+    social_jetlag = calculate_social_jetlag(sleep_data)
     avg_deep_pct = audit["recovery_loop"]["sleep_architecture"]["deep_pct"]
     sleep_debt = audit["recovery_loop"]["sleep_architecture"].get("sleep_debt_h", 0)
 
     # 2. System Momentum (Delta Analysis & Baseline Drift)
     hr_data = summary_data.get("heart_rate", [])
     stress_data = summary_data.get("stress", [])
+    bb_data = summary_data.get("body_battery", [])
     momentum_status = "平稳运转"
     
     if len(hr_data) >= 4 and len(stress_data) >= 4:
@@ -412,9 +485,12 @@ def generate_chinese_insight(summary_data):
     overall_sections = []
     period_str = summary_data.get('summary', {}).get('period', '指定时间段')
     
+    bb_sparkline = generate_sparkline([b.get("highest") for b in bb_data[-7:]])
+    
     # Section 1: System Status & Momentum
     sys_msg = f"【1. 系统态势与动量 (System Momentum)】\n"
     sys_msg += f"· 动量向量：{momentum_status}。\n"
+    sys_msg += f"· 能量拓扑：[{bb_sparkline}] (近7天电量峰值)\n"
     sys_msg += f"· 耗散分布：昨日处于高压(应激态)时长高达 {dissipation_h} 小时。\n"
     sys_msg += f"· 摩擦定性：判定为『{load_type}』。"
     if "纯认知燃烧" in load_type:
@@ -545,12 +621,22 @@ def main():
     args = parser.parse_args()
     days = parse_period(args.period, args.days)
     
-    client = get_client()
-    if not client:
-        print('{"error": "Not authenticated"}', file=sys.stderr)
-        sys.exit(1)
-        
-    summary_data = fetch_summary(client, days)
+    if HAS_SQLITE:
+        try:
+            summary_data = fetch_local_summary(days)
+        except Exception as e:
+            print(f"⚠️  SQLite load failed: {e}. Falling back to API...", file=sys.stderr)
+            client = get_client()
+            if not client:
+                print('{"error": "Not authenticated and local DB failed"}', file=sys.stderr)
+                sys.exit(1)
+            summary_data = fetch_summary(client, days)
+    else:
+        client = get_client()
+        if not client:
+            print('{"error": "Not authenticated"}', file=sys.stderr)
+            sys.exit(1)
+        summary_data = fetch_summary(client, days)
     
     if args.analysis == "flu_risk":
         result = analyze_flu_risk(summary_data)
