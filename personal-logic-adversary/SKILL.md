@@ -1,5 +1,5 @@
 ---
-name: logic-adversary
+name: personal-logic-adversary
 version: 5.1.0
 description: |
   军工级逻辑对抗系统 (Native Agent Edition)。当用户展示方案、做出决策或要求“寻找漏洞”、“压力测试”时，务必强制激活。该技能通过多维专家博弈与饱和逻辑攻击，搜索单点故障（SPOF），将脆弱的假设锻造成鲁棒的钢人策略。
@@ -7,9 +7,9 @@ description: |
 triggers: ["寻找逻辑漏洞", "审核方案风险", "模拟专家辩论", "发起红队攻击", "执行压力测试", "质疑我的决定", "寻找方案盲点"]
 ---
 
-# Logic Adversary V5.1 (Native Agent Edition)
+# Logic Adversary V5.1 
 
-> Version: 4.0 (Unified Command Edition) | Last Updated: 2026-02-21 Vision: 将脆弱的假设锻造成鲁棒的战略。拒绝平庸的附和，追求极致的智力摩擦。
+> 将脆弱的假设锻造成鲁棒的战略。拒绝平庸的附和，追求极致的智力摩擦。
 
 ## 1. 触发逻辑 (Trigger)
 当用户要求"审核方案"、"评估决策"、"寻找逻辑漏洞"、"模拟专家辩论"、"发起红队攻击"或"压力测试"时激活。

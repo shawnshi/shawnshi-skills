@@ -45,7 +45,7 @@ gemini skills install https://github.com/shawnshi/shawnshi-skills.git --path hit
 
 ## 3. 核心分类矩阵 (Core Skill Hierarchy)
 
-> **Total Inventory: 48 Strategic Modules across 8 Domains**
+> **Total Inventory: 45 Strategic Modules across 8 Domains**
 
 ### 🧠 深度认知与研究工作台 (Cognitive Research)
 *底层思考工具箱：需求脱水、战略审计、红蓝对抗与情报分析。*
@@ -54,8 +54,8 @@ gemini skills install https://github.com/shawnshi/shawnshi-skills.git --path hit
 |:------------------------------------------------------------|:----------------------------------------------------------------------------------------------------------------------|
 | **[office-hours](office-hours/)**                           | **战略架构师与需求脱水 (Native Edition)**。通过“脑暴倾倒+查漏补缺”模式，执行 6 个高压问题进行战略脱水，输出设计文档. |
 | **[plan-ceo-review](plan-ceo-review/)**                     | **创始人模式战略审计 (Native Edition)**。采用“聚合批处理”模式对开发计划执行核能挑战，支持范围扩张、择优或缩减.       |
-| **[brainstorming](brainstorming/)**                         | **创意与架构设计专家 (Native Edition)**。在任何开发行为前强制调用，将模糊意图转化为具体的设计规范与验证方案.         |
-| **[logic-adversary](logic-adversary/)**                     | **逻辑对抗系统 (Native Edition)**。搜索单点故障 (SPOF)，通过饱和逻辑攻击验证方案鲁棒性.                              |
+| **[personal-brainstorming](personal-brainstorming/)**                         | **创意与架构设计专家 (Native Edition)**。在任何开发行为前强制调用，将模糊意图转化为具体的设计规范与验证方案.         |
+| **[personal-logic-adversary](personal-logic-adversary/)**                     | **逻辑对抗系统 (Native Edition)**。搜索单点故障 (SPOF)，通过饱和逻辑攻击验证方案鲁棒性.                              |
 | **[personal-intelligence-hub](personal-intelligence-hub/)** | **个人情报作战中枢 (Native Edition)**。执行全球多源抓取，将噪音降维为 Alpha 级决策资产.                              |
 | **[personal-roundtable](personal-roundtable/)** | **高密度动态圆桌 (V4.0)**。基于议题构建张力网络，采用“碎片化落盘与最终合并”机制，彻底消除大模型长文本截断风险. |
 
@@ -70,8 +70,6 @@ gemini skills install https://github.com/shawnshi/shawnshi-skills.git --path hit
 | **[hit-weekly-brief](hit-weekly-brief/)**                         | **行业战区研报中枢 (V5.0)**。将智库研报与白皮书降维为高管视角的抗幻觉决策资产.     |
 | **[hit-lectures-scout](hit-lectures-scout/)**                     | **数字化前沿侦察兵 (V5.0)**。通过 S-T-C 框架对医疗 AI 论文执行 TRL 成熟度评估.     |
 | **[hit-customer-analyst](hit-customer-analyst/)**                 | **大客户拜访分析专家 (V3.1)**。强制执行三阶侦察（人物、机构、足迹），输出实战策略. |
-| **[clinical-decision-support](clinical-decision-support/)**       | **临床决策支持文档生成**。生成基于生物标志物分层的患者队列分析与 GRADE 级治疗建议. |
-| **[clinical-reports](clinical-reports/)**                         | **全维度临床报告撰写**。编写病例报告 (CARE)、诊断报告及 ICH-E3 标准临床试验报告.   |
 
 ### 🔬 专业科研与学术评价 (Scientific Research)
 *学术重型武器：论文检索、读论文提炼、系统性打分与论文级绘图。*
@@ -91,7 +89,7 @@ gemini skills install https://github.com/shawnshi/shawnshi-skills.git --path hit
 | 技能标识 (Directory)                                          | 核心本质 (Trigger Traps)                                                   |
 |:--------------------------------------------------------------|:---------------------------------------------------------------------------|
 | **[personal-writing-assistant](personal-writing-assistant/)** | **统一内容锻造场**。内置高管降维与多方博弈双轨制生产线，执行语义主权捍卫. |
-| **[humanizer-zh-pro](humanizer-zh-pro/)**                     | **中文文本“去 AI 化”锻造场**。模拟毒舌高管视角，执行遣词造句的同态重写.   |
+| **[personal-write-humanizer](personal-write-humanizer/)**                     | **中文文本“去 AI 化”锻造场**。模拟毒舌高管视角，执行遣词造句的同态重写.   |
 | **[image-nano-gen](image-nano-gen/)**                         | **高质量图像生成引擎 (Imagen 3)**。利用 Gemini 引擎执行 4K 级图像锻造，支持高认知 Prompt 增强. |
 | **[image-promp-gen](image-promp-gen/)**                       | **大师级海报与封面提示词引擎**。基于 33+ 位传奇设计师风格，支持多平台比例适配与逻辑隐喻构建. |
 | **[presentation-architect](presentation-architect/)**         | **战略级 PPT 架构师**。交付具备原生逻辑的 PPT 资产，拒绝平庸模板.         |
@@ -115,9 +113,6 @@ gemini skills install https://github.com/shawnshi/shawnshi-skills.git --path hit
 | **[personal-monthly-insights](personal-monthly-insights/)** | **战略元分析解码器**。提取人机协作的负熵规律，识别摩擦基因并同步记忆.                     |
 | **[personal-musicbee-dj](personal-musicbee-dj/)**           | **音乐极客控制协议**。通过 JIT 算法精准控制本地进程，实现秒级心流氛围切换.                |
 | **[travel-research](travel-research/)**                     | **旅行研究 (ljg-travel-flow)**。深度文化旅行案头研究，涵盖博物馆、古建与考古发现.         |
-| **[12306-train-query](12306-train-query/)**                 | **12306 火车票专家**。提供秒级精准车次响应，严禁通过通用搜索引擎.                         |
-| **[ctrip-flight-search](ctrip-flight-search/)**             | **携程航班侦察兵**。通过自动化 SOP 获取实时运价，支持多城市场景验证.                      |
-| **[dianping-info-query](dianping-info-query/)**             | **大众点评深度查询器**。提供真实的商户画像与食材评分，拒绝通用搜索噪音.                   |
 | **[mentat-insight-diary](mentat-insight-diary/)**           | **内观日记与逻辑审计**。通过 OODA 框架执行认知反思，并自动物理归档 Mentat 审计日志.       |
 | **[mentat-system-retro](mentat-system-retro/)**             | **量化反思引擎**。基于 Telemetry 解析 Token 黑洞与摩擦率，执行高认知负载任务后的量化复盘. |
 

@@ -36,7 +36,7 @@ triggers: ["重构商业模式", "ROI测算", "高规格战略验证", "医疗IT
 3.  **Output**: 生成 `implementation_plan.md`（包含核心论点矩阵），请求用户“逻辑放行”。
 
 ### Phase 3: Adversarial Validation (Reviewer 饱和攻击) [Mode: EXECUTION]
-1.  **激活 Reviewer**: 必须调用 `activate_skill(name='logic-adversary')`。
+1.  **激活 Reviewer**: 必须调用 `activate_skill(name='personal-logic-adversary')`。
 2.  **Contrarian 搜索**: 强制寻找与 Phase 2 结论相反的证据。
 3.  **Binary Eval (二元硬审计)**:
     - [ ] 论点是否经过了“悲观 ROI”压测？ [Yes/No]
@@ -48,7 +48,7 @@ triggers: ["重构商业模式", "ROI测算", "高规格战略验证", "医疗IT
 3.  **Generator 约束**: 严禁 Bullet points 堆砌，必须使用动词驱动的严密叙事。
 
 ### Phase 5: Format Stack & Forger (Activate) [Mode: EXECUTION]
-1.  **去 AI 化精修**: 必须调用 `text-forger` 进行洗稿。
+1.  **去 AI 化精修**: 必须调用 ` personal-write-humanizer` 进行洗稿。
 2.  **分层交付**: 文首强制包含：`🚨 紧急预警`、`🎯 战略教练指令`。
 
 ### Phase 6: Cognitive Write-Back & Self-Healing [Mode: EXECUTION]

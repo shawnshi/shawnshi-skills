@@ -75,14 +75,14 @@ triggers: ["编写数字化解决方案", "设计医院转型规划", "智慧医
 
 ### Phase 6: Adversarial Delivery Audit (多代理红队博弈) [Mode: EXECUTION]
 1. **任务**：模拟极端实施冲突。
-2. **多角色激活**：必须调用系统内置工具 `activate_skill` 激活 `name='logic-adversary'`。在获得其指令后，强制在对话框中展开红队对抗，激活至少两个对立角色（例如：担心绩效的临床主任、追求100%稳定的信息科长）。未获取指令前严禁继续。
+2. **多角色激活**：必须调用系统内置工具 `activate_skill` 激活 `name='personal-logic-adversary'`。在获得其指令后，强制在对话框中展开红队对抗，激活至少两个对立角色（例如：担心绩效的临床主任、追求100%稳定的信息科长）。未获取指令前严禁继续。
 3. **展示辩论流**：你必须在对话框中**显式展示**这两个角色与你的架构方案之间的“火拼”过程，禁止直接输出结果。严禁主 Agent 自行脑补跳过此步骤。
 4. **归档要求**：辩论过程及其产生的原始冲突点，必须使用 `write_to_file` 作为独立的 **[Audit_Logs]** 章节（`.md` 格式保存在工作目录）保留在最终全案的附录中，供管理层审计方案的抗压深度。
 5. **输出物与状态同步**：基于博弈冲突生成的《实施摩擦力与减缓矩阵》，调用文件修改工具对方案物理文件进行“逻辑补丁”注入。**每完成一个归档或修改任务后，必须同步更新 `plan.md` 物理文件节点**。
 
 ### Phase 7: Delivery & Executive Summary (最终集成与高管摘要) [Mode: EXECUTION]
 1. **Executive Summary**：采用“麦肯锡式高管备忘录 (Executive Memo)”结合 `write_to_file` 工具生成 1 页纸的高管决策摘要 `.md` 文件。必须包含一张反映TCO与医疗质量提升的“价值雷达图”或量化表格。
-2. **文字优化**: 【必须】调用 `text-forger` 工具对全案进行文字“去AI化”锻造，达到方案要求。
+2. **文字优化**: 【必须】调用技能 ` personal-write-humanizer` 对全案进行文字“去AI化”锻造，达到方案要求。
 3. **文档集成**：如果方案涉及多个分章节文件，使用 `run_command` 工具，执行 `python scripts/manifest_manager.py manifest.json [ProjectName]_Digital_Blueprint_vFinal.md` (请确保传入绝对路径) 将各章节合并为完整交付物。
 4. **状态同步**：整合生成 `[ProjectName]_Digital_Blueprint_vFinal.md` 后，**及时更新任务计划（`plan.md`）以反映整个项目的闭环。**
 5. **Final Review (基于文件的最终交付关卡)**：实证加固后，在终端框只给出一页纸核心摘要与 **1-3 个可能导致项目延期的致命风险提示**。随后**必须调用 `notify_user` 工具，装载生成的 `vFinal.md` 文件绝对路径 (BlockedOnUser: true)**，交由用户进行结案验收。
