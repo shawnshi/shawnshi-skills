@@ -27,7 +27,6 @@ Version: 6.5 (The High-SNR Defense System) Vision: 消除过滤失败（Filter F
 ## 2. 执行协议 (Execution Protocol)
 ### Phase 0: 战略对齐与黑板初始化 [Mode: PLANNING]
 Initialize: 运行 scripts/blackboard.py 初始化会话状态。
-Inversion 门控: 运行 scripts/calibrate_focus.py 对齐 memory.md。
 强制拦截: 调用 ask_user 复述扫描域，确认是否需要针对特定竞对（如东软/Epic）执行“专项侦察”。
 ### Phase 1: 扫描矩阵与语义去重 [Mode: EXECUTION]
 采集点火 (Sentinel): 执行 scripts/fetch_news.py。

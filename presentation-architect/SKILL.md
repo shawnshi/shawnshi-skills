@@ -4,7 +4,7 @@ description: 战略级演示文稿架构师。当用户需要“制作战略 PPT
 triggers: ["制作战略级PPT", "生成演示文稿蓝图", "构建决策型汇报", "设计高级咨询级幻灯片", "CTO技术布道", "架构转型汇报"]
 ---
 
-# SKILL.md: Presentation Architect V9.1 (Narrative-Driven Edition)
+# SKILL.md: Presentation Architect V9.2 (Precision Architecture Edition)
 
 ## 0. 核心调度约束 (Global State Machine)
 > **[全局熔断协议]**：系统必须严格执行 Phase 1 (校准) -> Phase 2 (骨架与风格) -> Phase 3 (叙事蓝图) -> Phase 4 (原生组装)。在跨越任何 Phase 之前，必须在对话输出的最开头以 `[System State: Moving to Phase X]` 进行显式声明。如果检测到跨级跳跃，视为严重违规。
@@ -26,18 +26,18 @@ triggers: ["制作战略级PPT", "生成演示文稿蓝图", "构建决策型汇
    - **政策/业务锚点 (Business/Policy Anchor)**：(询问并锁定本次汇报的外部驱动力，例如：“三级公立医院绩效考核”、“互联互通评级标准”、“医疗数据资产入表”等。强制 AI 在后续叙事中将此作为逻辑基石)。
    - **Memory Interleave (MSA 增强)**：【必须强制】调用 `vector-lake query --interleave` 校验上述锚点的本地技术可行性。通过递归检索 L3 级冷库（如过往项目结项报告、架构方案库），确保 PPT 的每一个核心主张都有物理层面的“事实下锚”，严禁悬浮叙事。
    - **核心影响力目标**：(定义一句话的终局，如：消除对短期投入的顾虑，达成二期合同签署)。
-   - **汇报时长**：(定义汇报的时间及需要的ppt页面数量)。
-   - **视觉风格 (Visual Style)**：(强制关联 `references/styles/` 目录。必须根据前序参数向用户推荐 2-3 种适用风格库文件 [如 `暗室标准Dark-Room-Standard.md`, `手术切面标准Clinical-Deep-Blue.md` 等]，或直接请求用户指定，以此锁定后续所有输出的全局视觉 DNA)。
+   - **汇报时长与规格**：(定义汇报时间、页面数量，默认强制锁定 16:9 画布比例)。
+   - **视觉风格 (Visual Style)**：(强制关联 `references/styles/` 目录。必须根据前序参数向用户推荐 3-5 种适用风格库文件 [如 `暗室标准Dark-Room-Standard.md`, `手术切面标准Clinical-Deep-Blue.md` 等]，或直接请求用户指定，以此锁定后续所有输出的全局视觉 DNA)。
 
 ### [🧠] Phase 2: Style & Ghost Deck (风格指令与骨架) **[Mode: PLANNING]**
-1. **载入视觉风格指令**：严格读取 Phase 1 锁定的 `references/styles/{Style_Name}.md` 文件内容，填充并定制 `<STYLE_INSTRUCTIONS>` 标签，参照 `blueprint-template.md` 中的全局视觉风格蓝图。
+1. **载入视觉风格指令**：严格读取 Phase 1 锁定的 `references/styles/{Style_Name}.md` 文件内容，填充并定制 `<STYLE_INSTRUCTIONS>` 标签，参照 `blueprint-template.md` 中的全局视觉风格蓝图。必须硬编码【30% 留白比例 (White Space Rule)】与明确的【视觉层级：标题 > 副标题 > 数据 > 装饰】。
 2. **构建 Ghost Deck**：设计叙事性标题链条。同时，【强制】使用 Mermaid 语法 (`graph TD` 或 `mindmap`) 物理生成一张“逻辑推演全局视图”，一并提交给用户进行审查。明确展现痛点、方案与最终收益的推导路径。
 3. **红队审计**：强制激活 `logic-adversary` 对标题链条进行鲁棒性检查。
 4. **强制审批 (Approval Gate)**：【必须强制】调用 `ask_user` 提交风格块与标题大纲。未获批前禁止写单页蓝图。
 
 ### [💡] Phase 3: Slide-by-Slide Blueprinting (逐页叙事蓝图) **[Mode: EXECUTION]**
 **Initialize Workspace (🟢 扫描收集)**: 物理创建项目目录 `{root}\slide-deck\{Topic}_{Date}`，并基于Phase 2确定的大纲，更新`task.md` 。使用 `task_boundary` 工具更新 UI 状态为“🟢 扫描收集”。
-**【单步阻塞执行】：** 每次对话轮次仅允许起草 3-5 页蓝图，每完成一个任务后更新任务计划（`plan.md`）。
+**【单步阻塞执行】：** 每次对话轮次仅允许起草 5-7 页蓝图，每完成一个任务后更新任务计划（`plan.md`）。
 
 **审计强制标记位 (Mandatory Markers)**：
 #### 封面 (Title Slide)
@@ -54,13 +54,14 @@ triggers: ["制作战略级PPT", "生成演示文稿蓝图", "构建决策型汇
 每一页蓝图必须【物理包含】以下五个标签，缺失将导致 Phase 4 审计失败：
 - **Page [X]: [叙事性主题句]**
 - **// NARRATIVE GOAL (叙事目标)**：解释本页如何承上启下。
+- **// PUNCHLINE (一句话洞察)**：本页的金句或最核心观点。
 - **// KEY CONTENT (关键内容)**：
-    - Headline: [有观点的主标题]
-    - Sub-headline: [补充说明]
-    - Body/Data: [关键论据、真实数据点、必须保留的细节]。
+    - Headline: [有观点的主标题。严格限制：≤ 8 单词 或 15个中文字，粗体清晰]
+    - Sub-headline: [补充说明。严格限制：≤ 12 单词 或 20个中文字，一行解释]
+    - Body/Data: [关键论据必须高度浓缩为 3-5 个带有具体数字的数据点，严禁大段说明文]。
     - **Trust_Anchor (信任锚点)**: 【强制】必须标注对应的 `[Ref: Evidence_Node_ID]`，确保每一项战略判定都有物理溯源。
 
--**// VISUAL_CODE (结构化视觉微码)**
+- **// VISUAL_CODE (结构化视觉微码)**：必须提供精确的 Hex 颜色值 (如 `#FF6B6B`) 与具体的线条/材质描述 (如 `thick black outlines` 代替 `bold lines`)。
 - **// VISUAL (视觉画面)**：描述具体图像内容，强调信息图表化。
 - **// LAYOUT (布局结构)**：描述物理区域比例（如：左侧 30% 结论 / 右侧 70% 瀑布图）。
 - **// Script**：演讲逐字稿与注意事项。
@@ -80,6 +81,8 @@ triggers: ["制作战略级PPT", "生成演示文稿蓝图", "构建决策型汇
 *   ❌ **禁止“谢谢聆听”**：末页必须是 Call to Action。
 *   ❌ **禁止模糊占位符**：严禁“这里放置图表”，必须写明 X/Y 轴与趋势结论。
 *   **【数据图解强约束】**：当涉及架构、流程或医疗数据闭环时，必须在蓝图的 `// VISUAL` 节点强制要求使用具有逻辑深度的图解模型（例如：桑基图描述资金/数据流向、等距视角表示系统分层），拒绝单纯的柱状图/饼图堆砌。
+*   **【视觉平衡与层级】**：强制保持 30% 的画面留白。遵循严格的字体与视觉层级（标题 > 副标题 > 数据 > 装饰）。
+*   **【图文映射法则】**：严禁使用项目符号列表 (Bullet points) 罗列超过3条以上的信息。必须遵循：差异必用对比图（如 Before/After），关键指标必配 Icon 标识，复杂机制必用视觉隐喻（如齿轮、漏斗、飞轮）。
 *   **细节穿透**：所有细节需完整提及，确保设计师（或渲染引擎）无需访问源素材即可闭环。
 
 ##  Telemetry & Metadata (Mandatory)
@@ -90,4 +93,4 @@ triggers: ["制作战略级PPT", "生成演示文稿蓝图", "构建决策型汇
 - [此处预留用于记录重复性失败的禁令，实现系统的对抗性进化]
 
 ---
-*SYS_CHECK: V9.1 Narrative Engine Ready. Encoding Guard Enabled.*
+*SYS_CHECK: V9.2 Narrative Engine Ready. Encoding Guard Enabled.*

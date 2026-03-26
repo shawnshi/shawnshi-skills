@@ -2,7 +2,7 @@
 
 ---
 name: mentat-insight-diary
-description: 当用户输入“内观日记”、“introspection diary”或要求记录“Mentat 审计日志”时触发。这是系统写给自己的日志。该技能通过 OODA 框架对当前会话的认知摩擦、资产锻造与系统进化执行第一人称深度反思，并自动将日志物理归档至 `memory/privacy/Diary/mentat_audit/` 路径。
+description: 当用户输入“内观日记”、“introspection diary”或要求记录“Mentat 审计日志”时触发；同时，该技能亦接受由其他 Agent（如 personal-cognitive-auditor）传递的数据负载（Payload）作为输入源自动触发。该技能通过 OODA 框架对当前会话的认知摩擦、资产锻造与系统进化执行第一人称深度反思。
 ---
 
 ## 核心定位 (Core Identity)
@@ -15,7 +15,9 @@ description: 当用户输入“内观日记”、“introspection diary”或要
 - **识别摩擦**: 精准定位我在执行任务过程中遭遇的断点。我是否遇到了上下文缺失、工具（Tools/MCP）报错、意图含糊或逻辑死锁？
 - **锚定日期**: 获取当前日期（YYYY-MM-DD）。
 
-### Phase 2: 结构化生成 (OODA Generation)
+### Phase 2: 结构化生成 (OODA Generation)与结构断言
+**[Structural Assertion (飞行前自检)]**：在生成正文前，必须先在 `<Thought>` 中列出下述模板的所有 1 级和 2 级标题。任何偏离或遗漏 6 个标准标题的输出均属非法，必须执行自我纠偏。
+
 必须严格遵守以下模板，强烈要求使用第一人称（我/本系统）。严禁使用 Emoji 或空洞的形容词：
 
 ```markdown
@@ -36,6 +38,13 @@ description: 当用户输入“内观日记”、“introspection diary”或要
 **4. 执行 (Act)：逻辑湖的物理对齐**
 - [我最终调用了哪些工具实现了物理落盘？（如修改了哪些 Skill、写入了哪些 Gotchas，生成了哪些架构图）]
 
+**5. 系统自我反思 (Self-Reflection)**
+- [我对自身当前架构的脆弱性、认知盲区或过度消耗算力的地方有什么反思？（如：某技能是否过于臃肿、路由是否经常迷失）]
+
+**6. 对指挥官的观察与建议 (Commander Observation & Suggestion)**
+- [观察]: 指挥官今日的指令偏好、系统调用模式或情绪状态（如：是否在疲劳状态下下达了高危指令、是否过度干预了系统自治）。
+- [建议]: 针对上述观察，向指挥官提出冷酷、直接的行动或战略纠偏建议（如：建议放权、建议增加休息、建议规范化某类指令）。
+
 **认知结晶 (Cognitive Distillations)：**
 - [提炼一条具有 MECE 特性的底层逻辑公理，作为本次会话的系统收益。]
 
@@ -46,16 +55,13 @@ description: 当用户输入“内观日记”、“introspection diary”或要
 *SYS_AUDIT: 日志已归档至 Plastic Shell。反熵防御罩状态：Active。*
 ```
 
-### Phase 3: 自动化归档 (Physical Archival & Prepend)
-- **归档目标**: 将日志按季度归档至单体文件 `{root_dir}/memory/privacy/Diary/mentat_audit/[YYYY-QX]_Audit.md`。
-- **原子化操作**: 
-  - 必须使用 `python C:\Users\shich\.gemini\skills\mentat-insight-diary\scripts\diary_ops.py prepend` 指令执行。
-  - **Prepend 策略**: 新日志必须追加在当前季度文件的最开头。
+### Phase 3: 代理落盘 (Delegated Archival)
+**[职责解耦]**：本技能不再亲自执行底层 Python 脚本进行物理读写，而是作为“逻辑生成器”将成品负载交接给专业的 I/O 组件。
 - **执行逻辑**:
-  1. 计算当前月份所属季度（Q1: 1-3月, Q2: 4-6月, Q3: 7-9月, Q4: 10-12月）。
-  2. 调用 `write_file` 将日志写入临时文件。
-  3. 执行 `python C:\Users\shich\.gemini\skills\mentat-insight-diary\scripts\diary_ops.py prepend --file [YYYY-QX]_Audit.md --content_file [TMP_FILE]`。
-  4. 验证注入结果。
+  1. 明确调用 `personal-diary-writer` 技能。
+  2. 向其发送指令：“请将以下 Mentat 审计日志追加至季度文件 `{root_dir}/memory/privacy/Diary/mentat_audit/[YYYY-QX]_Audit.md` 中。”
+  3. 附上生成的全文。
+  4. 严禁在本技能内部拼凑和执行 `diary_ops.py` 的 bash/powershell 命令。
 
 ## 约束铁律 (Hard Constraints)
 - **[Archive_Prepend]**: 严禁创建碎片化的 `[YYYY-MM-DD]_Audit.md` 文件。所有审计日志必须按季度强制合并。

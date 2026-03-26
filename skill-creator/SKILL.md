@@ -34,6 +34,7 @@ description: |
 - **失效先验 (Gotchas)**：将重复性失败硬编码为 SKILL.md 顶部的禁令，实现系统的对抗性进化。
 - **证据网 (Evidence-Mesh)**：分析类资产必须强制执行物理归档至 `MEMORY/skill_audit/`，严禁仅保留在瞬时对话历史中。
 - **量化反思**：通过 `mentat-system-retro` 审计遥测数据，以数据驱动系统拓扑的持续优化。
+- **沙箱测试门控 (Unit-Test Gate)**：任何针对既有 Skill 的修改（包括指令更新或 Gotchas 追加），在物理覆盖落盘前，必须强制在 `tmp/playgrounds/` 沙箱内执行一次合成测试。若测试失败，立即丢弃本次突变（Mutation Rollback）。
 
 ---
 A skill for creating new skills and iteratively improving them.
@@ -378,6 +379,10 @@ After packaging, direct the user to the resulting .skill file path so they can i
 ## Skill Optimization and Self-Healing (The .amendify() Loop)
 Skills are not static; they must evolve as the codebase, models, and user tasks shift. Use this section when a skill is underperforming or failing repeatedly.
 
+0. 效用阈值评估 (Utility-Driven Skill Fission)
+- **硬中断检查**：在开始修补前，检查该 Skill 的历史失败次数与 `Gotchas` 词条数。
+- **细胞分裂触发**：如果该技能的 `Gotchas` > 4 条，或近期（最近 5 次调用中）失败率极高，严禁继续“原地打补丁”。强制放弃 `.amendify` 流程，直接提议执行 **DiscoverSkill (细胞分裂)**，将该臃肿技能拆解为两个界限清晰的原子化子技能。
+
 1. Observe & Inspect
 Before optimizing, you must gather evidence from the Skill Audit Storage (MEMORY/skill_audit/).
 
@@ -391,10 +396,11 @@ Tighten the trigger: Update the YAML frontmatter triggers or description.
 Add missing conditions: Explicitly handle edge cases discovered in the audit.
 Reorder or clarify steps: Use imperative form and explain why steps are necessary.
 Update output format: Align strictly with the latest user requirements or Schema.
-3. Evaluate & Update
+3. Evaluate & Update (Unit-Test Gate)
 Propose the patch to the user with a clear rationale based on the audit evidence.
-After approval, apply the change to the SKILL.md.
-Mandatory: After an amendment, you MUST run at least 2-3 test cases from the audit logs (the ones that previously failed) to verify the fix.
+**强制沙箱门控 (Mutation Rollback)**：在向 `SKILL.md` 执行写入覆盖前，你必须在 `tmp/playgrounds/` 沙箱内运行至少 1 个导致先前失败的 Test Case。
+- 若测试通过 (Pass)：执行物理覆写落盘。
+- 若测试失败 (Fail)：立刻抛弃本次突变 (Discard Mutation)，退回 Step 2 重新分析，确保系统不会因修补操作发生物理退化。
 ## Autoresearch 协议子模块 (Quantitative Iterative Optimization)
 当触发“运行技能评测”、“优化既有指令”或系统陷入“同质化微调 (Dead Loop)”时，强制挂载此 Autoresearch 物理硬锁协议。摒弃主观定性评价，执行基于二元评估 (Binary Evals) 的靶向突变引擎。
 

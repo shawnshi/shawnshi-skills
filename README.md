@@ -1,4 +1,4 @@
-# Skills Ecosystem: The Strategic Armory (V3.5 - Native Agent Optimized)
+# Skills Ecosystem: The Strategic Armory (V4.0 - Anti-Entropy Edition)
 
 <!-- 
 @Pos: Root Level / Knowledge Sovereign 
@@ -28,8 +28,11 @@
 
 ### D. 进化层：自愈能力与证据网 (Evolution)
 - **失效先验 (Gotchas)**：将重复性失败硬编码为 SKILL.md 顶部的禁令，实现系统的对抗性进化.
+- **沙箱门控 (Unit-Test Gate)**：任何技能修改在落盘前，必须在临时沙箱执行测试，失败即回滚防退化.
+- **细胞分裂 (Utility-Driven Fission)**：基于雷达测算，当技能 `Gotchas` 堆积超载时强制执行架构分裂.
+- **负样本打底 (Hard Negatives Logging)**：遥测错选路由数据，为未来的行为对齐路由 (InfoNCE) 奠定物理底座.
 - **证据网 (Evidence-Mesh)**：分析类资产必须强制执行物理归档，严禁仅保留在瞬时对话历史中.
-- **量化反思**：通过 `mentat-system-retro` 审计遥测数据，以数据驱动系统拓扑的持续优化.
+- **量化反思**：通过 `skill_utility_radar.py` 监控系统熵增，以数据驱动系统拓扑的持续优化.
 
 ## 2. 安装与部署 (Deployment)
 ```bash
@@ -54,7 +57,7 @@ gemini skills install https://github.com/shawnshi/shawnshi-skills.git --path hit
 | **[brainstorming](brainstorming/)**                         | **创意与架构设计专家 (Native Edition)**。在任何开发行为前强制调用，将模糊意图转化为具体的设计规范与验证方案.         |
 | **[logic-adversary](logic-adversary/)**                     | **逻辑对抗系统 (Native Edition)**。搜索单点故障 (SPOF)，通过饱和逻辑攻击验证方案鲁棒性.                              |
 | **[personal-intelligence-hub](personal-intelligence-hub/)** | **个人情报作战中枢 (Native Edition)**。执行全球多源抓取，将噪音降维为 Alpha 级决策资产.                              |
-| **[personal-roundtable](personal-roundtable/)** | **高密度动态圆桌 (V3.2)**。基于议题构建张力网络，通过内存拼接与全量覆盖技术实现 100% 稳健的增量持久化，产出全量知识资产. |
+| **[personal-roundtable](personal-roundtable/)** | **高密度动态圆桌 (V4.0)**。基于议题构建张力网络，采用“碎片化落盘与最终合并”机制，彻底消除大模型长文本截断风险. |
 
 ### 🏥 大健康与战略研判中枢 (Healthcare Strategy)
 *聚焦垂直主业：医疗信息化 (HIT)、临床决策支持及大客户分析。*
@@ -106,7 +109,8 @@ gemini skills install https://github.com/shawnshi/shawnshi-skills.git --path hit
 
 | 技能标识 (Directory)                                        | 核心本质 (Trigger Traps)                                                                   |
 |:------------------------------------------------------------|:-------------------------------------------------------------------------------------------|
-| **[personal-diary-auditing](personal-diary-auditing/)**     | **认知审计与日志专家**。通过结构化日志维持长期战略对齐，强制执行物理数据锁.               |
+| **[personal-diary-writer](personal-diary-writer/)**         | **个人日志原子写入器**。负责高频轻量级的日常状态录入与安全落盘，强绑定物理 I/O 组件.        |
+| **[personal-cognitive-auditor](personal-cognitive-auditor/)** | **战略认知联合审计官**。处理日/周/月/年结认知复盘，强制调度多源数据，交接 Writer 落盘.      |
 | **[personal-health-analysis](personal-health-analysis/)**   | **首席医疗官 (CMO) 引擎**。对 Garmin 生理数据执行全链路审计，管理决策准备度.              |
 | **[personal-monthly-insights](personal-monthly-insights/)** | **战略元分析解码器**。提取人机协作的负熵规律，识别摩擦基因并同步记忆.                     |
 | **[personal-musicbee-dj](personal-musicbee-dj/)**           | **音乐极客控制协议**。通过 JIT 算法精准控制本地进程，实现秒级心流氛围切换.                |
@@ -142,4 +146,4 @@ gemini skills install https://github.com/shawnshi/shawnshi-skills.git --path hit
 | **[url-to-markdown](url-to-markdown/)**         | **网页原质提取器**。直控 Chrome CDP 协议，强制清除网页噪音.                                          |
 
 ---
-*Last Global Audit: 2026-03-25 | Version: 3.5 (Native Agent Optimized) | System State: Locked*
+*Last Global Audit: 2026-03-26 | Version: 4.0 (Anti-Entropy Edition) | System State: Locked*
