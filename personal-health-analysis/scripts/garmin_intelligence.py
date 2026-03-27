@@ -17,7 +17,7 @@ from datetime import datetime, timedelta
 # Import data fetcher
 sys.path.insert(0, str(Path(__file__).parent))
 try:
-    from garmin_sqlite_adapter import get_summary as sqlite_summary, get_sleep_data as sqlite_sleep, get_hrv_data as sqlite_hrv, get_activities_data as sqlite_activities, get_biomechanics_data as sqlite_biomechanics, DB_DIR
+    from garmin_sqlite_adapter import get_summary as sqlite_summary, get_sleep_data as sqlite_sleep, get_hrv_data as sqlite_hrv, get_activities_data as sqlite_activities, get_biomechanics_data as sqlite_biomechanics, DB_DIR, get_daily_friction_matrix
     HAS_SQLITE = DB_DIR.exists()
 except ImportError:
     HAS_SQLITE = False
@@ -192,6 +192,43 @@ def calculate_sleep_consistency(sleep_data):
     std_dev = statistics.stdev(durations)
     return round(std_dev, 2), "高" if std_dev > 1.5 else "中" if std_dev > 0.8 else "优"
 
+def synthesize_pmc(days=90):
+    """
+    Calculate PMC (CTL, ATL, TSB) and Ramp Rate using raw friction matrix directly from Adapter.
+    """
+    if not HAS_SQLITE: return None
+    try:
+        from garmin_sqlite_adapter import get_daily_friction_matrix
+        df = get_daily_friction_matrix(days)
+        if df.empty: return None
+        import pandas as pd
+        df['CTL'] = df['daily_friction_load'].ewm(span=42, adjust=False).mean()
+        df['ATL'] = df['daily_friction_load'].ewm(span=7, adjust=False).mean()
+        df['TSB'] = df['CTL'].shift(1) - df['ATL'].shift(1)
+        df['Ramp_Rate'] = df['ATL'] - df['ATL'].shift(7)
+        latest = df.iloc[-1]
+        raw_tsb = latest['TSB']
+        tsb = 0 if pd.isna(raw_tsb) else float(raw_tsb)
+        ctl = 0 if pd.isna(latest['CTL']) else float(latest['CTL'])
+        atl = 0 if pd.isna(latest['ATL']) else float(latest['ATL'])
+        ramp = 0 if pd.isna(latest['Ramp_Rate']) else float(latest['Ramp_Rate'])
+        dload = 0 if pd.isna(latest['daily_friction_load']) else float(latest['daily_friction_load'])
+        
+        if tsb > 10: zone = "超量恢复 (Fresh)"
+        elif tsb >= -10: zone = "战术稳态 (Grey)"
+        elif tsb >= -30: zone = "结构性耗散 (Optimal_Training)"
+        else: zone = "熔断先兆 (High_Risk)"
+        return {
+            'CTL': round(ctl, 1), 'ATL': round(atl, 1), 
+            'TSB': round(tsb, 1), 'TSB_Zone': zone,
+            'Ramp_Rate': round(ramp, 1),
+            'Daily_Load': round(dload, 1)
+        }
+    except Exception as e:
+        import traceback
+        traceback.print_exc()
+        return None
+
 def analyze_executive_readiness(summary_data):
     """
     Calculate Daily Executive Readiness Score (0-100) with Cognitive vs Physical split.
@@ -288,7 +325,17 @@ def analyze_executive_readiness(summary_data):
     if gct_spike > 15:
         physical_score -= 10 # Musculoskeletal wear & tear detected
         
+    # PMC Integration Penetration
+    pmc = synthesize_pmc(days=90)
+    if pmc:
+        if pmc['TSB'] < -30:
+            cognitive_score -= 15
+            physical_score -= 20
+        if pmc['Ramp_Rate'] > 150:
+            cognitive_score -= 10
+            
     physical_score = max(0, min(100, physical_score))
+    cognitive_score = max(0, min(100, cognitive_score))
 
     # Combined Score
     readiness_score = (cognitive_score * 0.5) + (physical_score * 0.5)
@@ -342,7 +389,7 @@ def perform_bio_metric_audit(summary_data):
     
     # VO2 Max & Fitness Age & BMI
     vo2_max = training_status.get("vo2_max", "--")
-    fitness_age = max_metrics.get("fitness_age", "--")
+    fitness_age = max_metrics.get("fitness_age", "N/A") if max_metrics else "N/A"
     bmi = body_comp.get("bmi", "--")
 
     system_status = {
@@ -437,6 +484,25 @@ def perform_bio_metric_audit(summary_data):
         protocol = "数据同步中"
         protocol_desc = "未检测到今日有效的生理指标，请确保设备已同步。"
         move_type = "YELLOW"
+        
+    pmc = synthesize_pmc(days=90)
+    if pmc:
+        if move_type != "ALERT" and pmc['CTL'] > 45 and pmc['TSB'] < -10:
+            protocol = "授权强行军 (Endurance Override)"
+            protocol_desc = f"护城河底座丰厚 (CTL: {pmc['CTL']})，足以消化短期高度耗散。\\n🗓️ 【未来 48-72 小时调度约束】：准许执行跨夜高压攻坚与背靠背商业谈判。无需退缩，系统防线完全可以承受这一波冲击。但在 72 小时后必需执行绝对关机。"
+        elif move_type == "GREEN" and pmc['CTL'] < 20 and pmc['TSB'] > 10:
+            protocol = "虚假稳态预警 (Fragile Peak)"
+            protocol_desc = f"表面净胜池充足 (TSB: +{pmc['TSB']})，但底盘严重空虚 (CTL: {pmc['CTL']})。\\n🗓️ 【未来 48-72 小时调度约束】：严禁因感知状态极佳而连续排满高压日程！这是一种免疫耗竭前的假象。必须将未来两天的日程压低至 60% 负荷，防止脆性断裂。"
+        elif pmc['TSB'] < -30:
+            protocol = "强制破产保护 (System Melt-down)"
+            protocol_desc = f"系统动能已跌破致病红线 (TSB: {pmc['TSB']})，免疫护甲崩塌边缘。\\n🗓️ 【未来 48-72 小时调度约束】：即刻取消/顺延未来三天所有 L3 及以上的高感知耗散会议。必须执行‘绝对物理断网隔离’与 9 小时强制平躺修复，严禁发起任何主动进攻。"
+        else:
+            if move_type == "GREEN":
+                protocol_desc += "\\n🗓️ 【未来 48-72 小时调度约束】：动能充沛，准许在未来 3 天内按计划发起高强度战略推进与深度思考，全功率开火。"
+            elif move_type == "YELLOW":
+                protocol_desc += "\\n🗓️ 【未来 48-72 小时调度约束】：处于灰色消耗期。建议未来两天的核心会议集中在上午火力倾泻，下午转为防御性事务处理，不可安排连续冲刺。"
+            elif move_type == "RED":
+                protocol_desc += "\\n🗓️ 【未来 48-72 小时调度约束】：防线已被撕裂。未来三天请全面转入战略防守状态，授权‘说不’的权力，剥离一切非攸关型事务。"
 
     return {
         "system_status": system_status,
@@ -523,11 +589,17 @@ def generate_chinese_insight(summary_data):
     avg_stress = audit["load_friction"]["stress_score"]
     activities_data = summary_data.get("activities", [])
     dissipation_h = audit["load_friction"]["dissipation"]["high_stress_hours"]
+    med_stress_h = audit["load_friction"]["dissipation"]["medium_stress_hours"]
+    rest_stress_h = audit["load_friction"]["dissipation"]["rest_hours"]
     
     total_intensity_min = 0
+    high_intensity_min = 0
     for act in activities_data:
         duration_s = act.get("duration") or act.get("duration_seconds") or 0
         total_intensity_min += (duration_s / 60)
+        t = act.get("activity_type", "").lower()
+        if "run" in t or "hiit" in t or "elliptical" in t or "training" in t:
+            high_intensity_min += (duration_s / 60)
 
     if total_intensity_min < 30 and (avg_stress > 35 or dissipation_h > 2.0):
         load_type = "🔴 纯认知燃烧 / 焦虑耗散 (无物理输出的高神经代价)"
@@ -550,11 +622,37 @@ def generate_chinese_insight(summary_data):
     bb_sparkline = generate_sparkline([b.get("highest") for b in bb_data[-7:]])
     
     # Section 1: System Status & Momentum
-    sys_msg = f"【1. 系统态势与动量 (System Momentum)】\n"
+    sys_msg = f"【1. 系统态势与防线动量 (System Momentum)】\n"
     sys_msg += f"· 动量向量：{momentum_status}。\n"
     sys_msg += f"· 能量拓扑：[{bb_sparkline}] (近7天电量峰值)\n"
-    sys_msg += f"· 耗散分布：昨日处于高压(应激态)时长高达 {dissipation_h} 小时。\n"
     sys_msg += f"· 摩擦定性：判定为『{load_type}』。"
+    
+    pmc = synthesize_pmc(days=90)
+    if pmc:
+        sys_msg += f"\n· 护城河(CTL): {pmc['CTL']} | 急性期(ATL): {pmc['ATL']} | 势差(TSB): {pmc['TSB']} [{pmc['TSB_Zone']}]"
+        sys_msg += f"\n· 摩擦加速度(Ramp Rate): {pmc['Ramp_Rate']}/周"
+        if pmc['TSB'] < -30:
+            sys_msg += "\n  > 🚨【核心熔断预警】系统净胜率全面崩塌！SPOF (单点故障) 前夜！处于致病极高压区。"
+        if pmc['Ramp_Rate'] > 150:
+            sys_msg += "\n  > 🚨【斜率预警】高压负荷连环爆拉，摩擦斜率失控，防线被迅速穿透！"
+            
+    try:
+        if HAS_SQLITE:
+            from garmin_sqlite_adapter import get_daily_friction_matrix
+            df_friction = get_daily_friction_matrix(7)
+            if not df_friction.empty:
+                total_phys = df_friction['training_load'].sum()
+                total_comp = df_friction['daily_friction_load'].sum()
+                if total_comp > 0:
+                    shadow_pct = round((total_comp - total_phys) / total_comp * 100)
+                    sys_msg += f"\n· 动力学解构：近7天复合负荷中，Shadow Load(纯精神/认知摩擦) 压空比重高达 {shadow_pct}%。"
+                    if shadow_pct > 80:
+                        sys_msg += "\n  > 🧠【热力学脱节】系统遭受着极高的纯认知消耗，但物理输出严重缺位。皮质醇正在淤积，必须在 24 小时内强挂 HIIT 等物理手段打破内分泌死锁。"
+    except Exception as e: pass
+
+    if med_stress_h > (dissipation_h + rest_stress_h) and med_stress_h > 4.0:
+        sys_msg += "\n  > 🚦【垃圾压力区间陷阱】全天处于“低效燃烧态”。既未能触发巅峰应激 (Peak Load)，也没有彻底关机 (Deep Rest)。必须实弹拉升极化防线：要么全功率切入战局，要么绝对物理断网隔离。"
+
     if "纯认知燃烧" in load_type:
         sys_msg += "\n  > 洞察：系统正在空耗神经递质（高压），但缺乏物理代谢（无运动）。这种脱节会导致皮质醇淤积，引发底层的慢性炎症。如果不依靠物理输出打断死锁，认知带宽将被持续挤压。"
     elif "双轨满载" in load_type:
@@ -571,6 +669,9 @@ def generate_chinese_insight(summary_data):
     else:
         consist_msg += "\n  > 坚固底座：生物钟锚定极佳，为前额叶深度清洗提供了坚实的物理时间窗口。"
     
+    if total_intensity_min > 0 and high_intensity_min < 15:
+        consist_msg += "\n  > 🏃【器官怠速风险】近期活动全是低心率的“慢肌纤维”有氧（如徒步/快走），极度缺乏对抗阻和快肌纤维的结构性破坏。建议本周内安排 15 分钟高阈值冲刺，进行器官级的防锈淬炼。"
+
     consist_msg += f"\n· 结构解剖：深睡占比 {avg_deep_pct}%。"
     if avg_deep_pct < 15:
         consist_msg += "\n  > 物理坍塌：深睡(<15%)意味着系统重构停滞，内脏与肌肉层面的微损伤未能修复，直接削弱次日基础体能。"

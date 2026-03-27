@@ -189,6 +189,11 @@
                 </div>
             </div>
 
+            <div class="panel chart-panel full">
+                <div class="panel-title">系统防线资产与摩擦耗散拓扑 (Performance Management Chart) <span>STRATEGIC MOMENTUM (V4.0)</span></div>
+                <div class="chart-wrapper"><canvas id="pmcChart"></canvas></div>
+            </div>
+
             <div class="panel chart-panel">
                 <div class="panel-title">战略叠加态势 (准备度 × 能量 × 压力) <span>ORIENT LEVEL 1</span></div>
                 <div class="chart-wrapper"><canvas id="overlayChart"></canvas></div>
@@ -285,6 +290,28 @@
                 },
                 options: { ...baseOptions, scales: { x: { stacked: true }, y: { stacked: true } } }
             });
+
+            if (od.ctl && od.ctl.length > 0) {
+                const tsbColors = od.tsb.map(v => v < -30 ? 'rgba(239, 68, 68, 0.4)' : (v > 10 ? 'rgba(16, 185, 129, 0.4)' : 'rgba(59, 130, 246, 0.2)'));
+                new Chart(document.getElementById('pmcChart'), {
+                    data: {
+                        labels: od.dates,
+                        datasets: [
+                            { type: 'line', label: 'CTL (护城河资产)', data: od.ctl, borderColor: '#334155', borderWidth: 4, pointRadius: 0, tension: 0.2 },
+                            { type: 'line', label: 'ATL (急性摩擦)', data: od.atl, borderColor: colors.RED, borderWidth: 2, borderDash: [5,5], pointRadius: 0, tension: 0.1 },
+                            { type: 'bar', label: 'TSB (决策势能)', data: od.tsb, backgroundColor: tsbColors, yAxisID: 'y1' },
+                            { type: 'bar', label: '综合负载 (Shadow Load)', data: od.pmc_load, backgroundColor: 'rgba(203, 213, 225, 0.3)', yAxisID: 'y' }
+                        ]
+                    },
+                    options: { 
+                        ...baseOptions, 
+                        scales: { 
+                            y: { position: 'left', grid: { displayOpacity: 0.1 } }, 
+                            y1: { position: 'right', grid: { display: false } } 
+                        } 
+                    }
+                });
+            }
 
             new Chart(document.getElementById('overlayChart'), {
                 data: {

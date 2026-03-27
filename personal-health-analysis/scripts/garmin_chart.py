@@ -11,7 +11,7 @@ import webbrowser
 import os
 import base64
 from pathlib import Path
-from datetime import datetime
+from datetime import datetime, timedelta
 
 sys.path.insert(0, str(Path(__file__).parent))
 from garmin_auth import get_client
@@ -38,11 +38,30 @@ def build_overlay_data(summary_data):
     rhr_map = {h["date"]: h.get("resting_hr") or 0 for h in hr_list}
     max_hr_map = {h["date"]: h.get("max_hr") or 0 for h in hr_list}
     
-    import math
+    import pandas as pd
     def clean_nan(val):
-        if val is None: return None
-        if isinstance(val, float) and math.isnan(val): return None
-        return val
+        if pd.isna(val): return None
+        return float(round(val, 1)) if isinstance(val, (int, float)) else val
+
+    # --- V4.0 PMC Matrix ---
+    try:
+        from garmin_sqlite_adapter import get_daily_friction_matrix
+        df_pmc = get_daily_friction_matrix(90)
+        import pandas as pd
+        df_pmc['CTL'] = df_pmc['daily_friction_load'].ewm(span=42, adjust=False).mean()
+        df_pmc['ATL'] = df_pmc['daily_friction_load'].ewm(span=7, adjust=False).mean()
+        df_pmc['TSB'] = df_pmc['CTL'].shift(1) - df_pmc['ATL'].shift(1)
+        pmc_map_ctl = {r['date']: clean_nan(r['CTL']) for _, r in df_pmc.iterrows()}
+        pmc_map_atl = {r['date']: clean_nan(r['ATL']) for _, r in df_pmc.iterrows()}
+        pmc_map_tsb = {r['date']: clean_nan(r['TSB']) for _, r in df_pmc.iterrows()}
+        pmc_map_load = {r['date']: clean_nan(r['daily_friction_load']) for _, r in df_pmc.iterrows()}
+    except Exception as e:
+        print(f"PMC extraction failed: {e}")
+        pmc_map_ctl = {}
+        pmc_map_atl = {}
+        pmc_map_tsb = {}
+        pmc_map_load = {}
+    # --- END PMC ---
 
     sleep_list = summary_data.get("sleep", [])
     avg_hr_map = {s["date"]: s.get("avg_hr") for s in sleep_list}
@@ -98,13 +117,13 @@ def build_overlay_data(summary_data):
     
     for act in summary_data.get("activities", []):
         d = act["date"]
-        t = act.get("activity_type", "").lower()
+        t = (act.get("activity_type", "") + " " + act.get("activity_name", "")).lower()
         c = act.get("calories", 0) or 0
         
-        if "run" in t: run_map[d] = run_map.get(d, 0) + c
+        if "run" in t or "jog" in t: run_map[d] = run_map.get(d, 0) + c
         elif "cycl" in t or "bik" in t: bike_map[d] = bike_map.get(d, 0) + c
         elif "hik" in t or "mountaineer" in t or "walk" in t: hike_map[d] = hike_map.get(d, 0) + c
-        elif "hiit" in t or "training" in t or "fitness" in t or "strength" in t: hiit_map[d] = hiit_map.get(d, 0) + c
+        elif "hiit" in t or "training" in t or "fitness" in t or "strength" in t or "elliptical" in t: hiit_map[d] = hiit_map.get(d, 0) + c
 
     return {
         "dates": dates,
@@ -126,6 +145,10 @@ def build_overlay_data(summary_data):
         "act_cycling": [bike_map.get(d, 0) for d in dates],
         "act_hiking": [hike_map.get(d, 0) for d in dates],
         "act_hiit": [hiit_map.get(d, 0) for d in dates],
+        "ctl": [pmc_map_ctl.get(d, 0) for d in dates],
+        "atl": [pmc_map_atl.get(d, 0) for d in dates],
+        "tsb": [pmc_map_tsb.get(d, 0) for d in dates],
+        "pmc_load": [pmc_map_load.get(d) for d in dates],
         "readiness": readiness_list,
         "weighted_dissipation": [weighted_dissipation_map.get(d, 0) for d in dates],
         "spo2_history": [avg_spo2_map.get(d) for d in dates],
@@ -152,8 +175,23 @@ def render_report(charts_data):
     wd_list = ov.get("weighted_dissipation", [])
     weighted_val = wd_list[-1] if wd_list else "--"
 
+    def sanitize_obj(obj):
+        import math
+        import pandas as pd
+        if isinstance(obj, dict):
+            return {k: sanitize_obj(v) for k, v in obj.items()}
+        elif isinstance(obj, list) or isinstance(obj, tuple):
+            return [sanitize_obj(v) for v in obj]
+        elif isinstance(obj, float):
+            if pd.isna(obj) or math.isnan(obj) or math.isinf(obj):
+                return None
+            return obj
+        return obj
+
+    clean_charts_data = sanitize_obj(charts_data)
+    
     # Encoding data to Base64 to bypass any OS/PowerShell character set issues
-    json_str = json.dumps(charts_data, ensure_ascii=False)
+    json_str = json.dumps(clean_charts_data, ensure_ascii=False, allow_nan=False)
     b64_data = base64.b64encode(json_str.encode('utf-8')).decode('ascii')
 
     replacements = {
@@ -183,6 +221,11 @@ def main():
     if HAS_SQLITE:
         try:
             summary_data = fetch_local_summary(days)
+            # 生理年龄等极高阶指标属于 Garmin 纯云端侧黑盒运算，本地 DB 缺少该表维度，采用混合云端补偿
+            client = get_client()
+            if client:
+                from garmin_data import fetch_max_metrics
+                summary_data["max_metrics"] = fetch_max_metrics(client, (datetime.now() - timedelta(days=days)).strftime('%Y-%m-%d'))
         except Exception as e:
             print(f"⚠️  SQLite load failed: {e}. Falling back to API...", file=sys.stderr)
             client = get_client()
