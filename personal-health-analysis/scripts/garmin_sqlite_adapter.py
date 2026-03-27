@@ -18,12 +18,33 @@ from datetime import datetime, timedelta
 DB_DIR = Path.home() / ".GarminDb" / "HealthData" / "DBs"
 GARMIN_DB = DB_DIR / "garmin.db"
 SUMMARY_DB = DB_DIR / "garmin_summary.db"
+ACTIVITIES_DB = DB_DIR / "garmin_activities.db"
 
 def get_connection(db_path):
     """Establish a connection to the SQLite database."""
     if not db_path.exists():
         raise FileNotFoundError(f"❌ Database not found at {db_path}. Run garmindb_cli.py first.")
     return sqlite3.connect(db_path)
+
+def get_activities_data(days=30):
+    """Extract activity metrics from the activities table."""
+    conn = get_connection(ACTIVITIES_DB)
+    start_date = (datetime.now() - timedelta(days=days)).strftime('%Y-%m-%d')
+    
+    query = f"""
+        SELECT activity_id, name, type, start_time, elapsed_time, distance, avg_hr, max_hr, calories, avg_speed, ascent, training_load
+        FROM activities
+        WHERE start_time >= '{start_date}'
+        ORDER BY start_time DESC
+    """
+    df = pd.read_sql_query(query, conn)
+    conn.close()
+    
+    # Standardize column names to match the expected format in intelligence layer
+    if not df.empty:
+        df['date'] = df['start_time'].apply(lambda x: x.split(' ')[0] if isinstance(x, str) else x)
+        df = df.rename(columns={'type': 'activity_type', 'name': 'activity_name', 'elapsed_time': 'duration', 'ascent': 'elevation_gain'})
+    return df
 
 def get_summary(days=7):
     """

@@ -17,13 +17,26 @@ from datetime import datetime, timedelta
 # Import data fetcher
 sys.path.insert(0, str(Path(__file__).parent))
 try:
-    from garmin_sqlite_adapter import get_summary as sqlite_summary, get_sleep_data as sqlite_sleep, get_hrv_data as sqlite_hrv, DB_DIR
+    from garmin_sqlite_adapter import get_summary as sqlite_summary, get_sleep_data as sqlite_sleep, get_hrv_data as sqlite_hrv, get_activities_data as sqlite_activities, DB_DIR
     HAS_SQLITE = DB_DIR.exists()
 except ImportError:
     HAS_SQLITE = False
 
 from garmin_auth import get_client
 from garmin_data import fetch_summary
+
+def parse_time_to_seconds(time_str):
+    """Convert HH:MM:SS string to seconds."""
+    if not time_str or not isinstance(time_str, str): return 0
+    try:
+        parts = time_str.split(':')
+        if len(parts) == 3:
+            return int(parts[0]) * 3600 + int(parts[1]) * 60 + int(parts[2])
+        elif len(parts) == 2:
+            return int(parts[0]) * 60 + int(parts[1])
+        return int(time_str)
+    except ValueError:
+        return 0
 
 def fetch_local_summary(days):
     """
@@ -33,7 +46,21 @@ def fetch_local_summary(days):
     summary_df = sqlite_summary(days)
     sleep_df = sqlite_sleep(days)
     hrv_df = sqlite_hrv(days)
+    activities_df = sqlite_activities(days)
     
+    activities_list = activities_df.to_dict('records') if not activities_df.empty else []
+    
+    daily_loads = {}
+    for act in activities_list:
+        if isinstance(act.get('duration'), str):
+            act['duration'] = parse_time_to_seconds(act['duration'])
+        
+        d = act.get('date')
+        if d and act.get('training_load') is not None:
+            daily_loads[d] = daily_loads.get(d, 0) + act['training_load']
+            
+    training_load_series = [{"date": d, "acute_load": val} for d, val in daily_loads.items()]
+
     # Convert DataFrames to the dictionary list format expected by existing logic
     summary_data = {
         "heart_rate": summary_df.rename(columns={"resting_heart_rate": "resting_hr"}).to_dict('records'),
@@ -41,7 +68,8 @@ def fetch_local_summary(days):
         "body_battery": summary_df.rename(columns={"body_battery_highest": "highest"}).to_dict('records'),
         "sleep": sleep_df.to_dict('records'),
         "hrv": hrv_df.rename(columns={"hrv_avg": "last_night_avg"}).to_dict('records'),
-        "activities": [], # Minimal for now
+        "activities": activities_list,
+        "training_load_series": training_load_series,
         "training_status": {},
         "max_metrics": {},
         "body_composition": {}
@@ -464,7 +492,7 @@ def generate_chinese_insight(summary_data):
     
     total_intensity_min = 0
     for act in activities_data:
-        duration_s = act.get("duration", 0)
+        duration_s = act.get("duration") or act.get("duration_seconds") or 0
         total_intensity_min += (duration_s / 60)
 
     if total_intensity_min < 30 and (avg_stress > 35 or dissipation_h > 2.0):

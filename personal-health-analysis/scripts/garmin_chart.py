@@ -30,15 +30,20 @@ def build_overlay_data(summary_data):
     stress_map = {s["date"]:((s.get("high_stress_duration") or 0) + (s.get("medium_stress_duration") or 0))/3600 for s in stress_list}
     steps_map = {s["date"]: s.get("steps") or 0 for s in stress_list}
     
-    bb_map = {b["date"]: b.get("highest") or 0 for b in summary_data.get("body_battery", [])}
+    bb_max_map = {b["date"]: b.get("highest") or 0 for b in summary_data.get("body_battery", [])}
+    bb_min_map = {b["date"]: b.get("lowest") or 0 for b in summary_data.get("body_battery", [])}
     
     # Correct HR mapping
     hr_list = summary_data.get("heart_rate", [])
     rhr_map = {h["date"]: h.get("resting_hr") or 0 for h in hr_list}
     max_hr_map = {h["date"]: h.get("max_hr") or 0 for h in hr_list}
     
-    sleep_h_map = {s["date"]:(s.get("sleep_time_seconds") or 0)/3600 for s in summary_data.get("sleep", [])}
-    sleep_score_map = {s["date"]: s.get("sleep_score") or 0 for s in summary_data.get("sleep", [])}
+    sleep_list = summary_data.get("sleep", [])
+    avg_hr_map = {s["date"]: s.get("avg_hr") for s in sleep_list}
+    
+    sleep_h_map = {s["date"]:(s.get("sleep_time_seconds") or 0)/3600 for s in sleep_list}
+    sleep_deep_h_map = {s["date"]:(s.get("deep_sleep_seconds") or 0)/3600 for s in sleep_list}
+    sleep_score_map = {s["date"]: s.get("sleep_score") or 0 for s in sleep_list}
     
     hrv_list = summary_data.get("hrv", [])
     hrv_map = {h["date"]: h.get("last_night_avg") or 0 for h in hrv_list}
@@ -61,7 +66,7 @@ def build_overlay_data(summary_data):
         weighted_dissipation_map[d] = round(weighted_h, 1)
         
         ss = sleep_score_map.get(d, 0)
-        bb = bb_map.get(d, 0)
+        bb = bb_max_map.get(d, 0)
         hrv_stat = hrv_status_map.get(d, "BALANCED")
         
         score = (ss * 0.4) + (bb * 0.4)
@@ -81,18 +86,22 @@ def build_overlay_data(summary_data):
         t = act.get("activity_type", "").lower()
         c = act.get("calories", 0) or 0
         
-        if "running" in t: run_map[d] = run_map.get(d, 0) + c
-        elif "cycling" in t: bike_map[d] = bike_map.get(d, 0) + c
-        elif "hiking" in t or "mountaineer" in t or "walking" in t: hike_map[d] = hike_map.get(d, 0) + c
-        elif "hiit" in t or "training" in t or "fitness" in t: hiit_map[d] = hiit_map.get(d, 0) + c
+        if "run" in t: run_map[d] = run_map.get(d, 0) + c
+        elif "cycl" in t or "bik" in t: bike_map[d] = bike_map.get(d, 0) + c
+        elif "hik" in t or "mountaineer" in t or "walk" in t: hike_map[d] = hike_map.get(d, 0) + c
+        elif "hiit" in t or "training" in t or "fitness" in t or "strength" in t: hiit_map[d] = hiit_map.get(d, 0) + c
 
     return {
         "dates": dates,
         "stress_h": [stress_map.get(d, 0) for d in dates],
-        "bb_peak": [bb_map.get(d, 0) for d in dates],
+        "bb_max": [bb_max_map.get(d, 0) for d in dates],
+        "bb_min": [bb_min_map.get(d, 0) for d in dates],
         "rhr": [rhr_map.get(d, 0) for d in dates],
         "max_hr": [max_hr_map.get(d, 0) for d in dates],
+        "avg_hr": [avg_hr_map.get(d) for d in dates],
         "sleep_h": [sleep_h_map.get(d, 0) for d in dates],
+        "sleep_deep_h": [sleep_deep_h_map.get(d, 0) for d in dates],
+        "sleep_light_h": [max(0, sleep_h_map.get(d, 0) - sleep_deep_h_map.get(d, 0)) for d in dates],
         "sleep_score": [sleep_score_map.get(d, 0) for d in dates],
         "hrv": [hrv_map.get(d, 0) for d in dates],
         "calories": [act_cal_map.get(d, 0) for d in dates],
