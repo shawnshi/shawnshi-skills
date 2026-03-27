@@ -16,7 +16,7 @@ from datetime import datetime
 sys.path.insert(0, str(Path(__file__).parent))
 from garmin_auth import get_client
 from garmin_data import fetch_summary
-from garmin_intelligence import generate_chinese_insight, parse_period, HAS_SQLITE, fetch_local_summary
+from garmin_intelligence import generate_chinese_insight, parse_period, HAS_SQLITE, fetch_local_summary, stitch_v3_metrics
 
 TEMPLATE_FILE = Path(__file__).parent.parent / "assets" / "dashboard_v2.html"
 
@@ -38,12 +38,19 @@ def build_overlay_data(summary_data):
     rhr_map = {h["date"]: h.get("resting_hr") or 0 for h in hr_list}
     max_hr_map = {h["date"]: h.get("max_hr") or 0 for h in hr_list}
     
+    import math
+    def clean_nan(val):
+        if val is None: return None
+        if isinstance(val, float) and math.isnan(val): return None
+        return val
+
     sleep_list = summary_data.get("sleep", [])
     avg_hr_map = {s["date"]: s.get("avg_hr") for s in sleep_list}
     
     sleep_h_map = {s["date"]:(s.get("sleep_time_seconds") or 0)/3600 for s in sleep_list}
     sleep_deep_h_map = {s["date"]:(s.get("deep_sleep_seconds") or 0)/3600 for s in sleep_list}
     sleep_score_map = {s["date"]: s.get("sleep_score") or 0 for s in sleep_list}
+    avg_spo2_map = {s["date"]: clean_nan(s.get("avg_spo2")) for s in sleep_list}
     
     hrv_list = summary_data.get("hrv", [])
     hrv_map = {h["date"]: h.get("last_night_avg") or 0 for h in hrv_list}
@@ -57,6 +64,14 @@ def build_overlay_data(summary_data):
     # Training Load mapping
     load_list = summary_data.get("training_load_series", [])
     acute_load_map = {l["date"]: l.get("acute_load") or 0 for l in load_list}
+    
+    # Biomechanics & Daily Summary new metrics
+    bio_list = summary_data.get("biomechanics", [])
+    gct_map = {b["date"]: clean_nan(b.get("avg_ground_contact_time")) for b in bio_list if "date" in b}
+    
+    daily_list = summary_data.get("daily_summary", [])
+    sweat_loss_map = {d["date"]: clean_nan(d.get("sweat_loss")) or 0 for d in daily_list if "date" in d}
+    waking_rr_map = {d["date"]: clean_nan(d.get("rr_waking_avg")) for d in daily_list if "date" in d}
     
     readiness_list = []
     weighted_dissipation_map = {}
@@ -112,7 +127,11 @@ def build_overlay_data(summary_data):
         "act_hiking": [hike_map.get(d, 0) for d in dates],
         "act_hiit": [hiit_map.get(d, 0) for d in dates],
         "readiness": readiness_list,
-        "weighted_dissipation": [weighted_dissipation_map.get(d, 0) for d in dates]
+        "weighted_dissipation": [weighted_dissipation_map.get(d, 0) for d in dates],
+        "spo2_history": [avg_spo2_map.get(d) for d in dates],
+        "waking_rr": [waking_rr_map.get(d) for d in dates],
+        "sweat_loss": [sweat_loss_map.get(d, 0) for d in dates],
+        "gct_trend": [gct_map.get(d) for d in dates]
     }
 
 def render_report(charts_data):
@@ -169,10 +188,12 @@ def main():
             client = get_client()
             if not client: return
             summary_data = fetch_summary(client, days)
+            stitch_v3_metrics(summary_data, days)
     else:
         client = get_client()
         if not client: return
         summary_data = fetch_summary(client, days)
+        stitch_v3_metrics(summary_data, days)
     
     charts_data = {}
     if summary_data:

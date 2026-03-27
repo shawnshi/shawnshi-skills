@@ -17,7 +17,7 @@ from datetime import datetime, timedelta
 # Import data fetcher
 sys.path.insert(0, str(Path(__file__).parent))
 try:
-    from garmin_sqlite_adapter import get_summary as sqlite_summary, get_sleep_data as sqlite_sleep, get_hrv_data as sqlite_hrv, get_activities_data as sqlite_activities, DB_DIR
+    from garmin_sqlite_adapter import get_summary as sqlite_summary, get_sleep_data as sqlite_sleep, get_hrv_data as sqlite_hrv, get_activities_data as sqlite_activities, get_biomechanics_data as sqlite_biomechanics, DB_DIR
     HAS_SQLITE = DB_DIR.exists()
 except ImportError:
     HAS_SQLITE = False
@@ -47,8 +47,10 @@ def fetch_local_summary(days):
     sleep_df = sqlite_sleep(days)
     hrv_df = sqlite_hrv(days)
     activities_df = sqlite_activities(days)
+    biomechanics_df = sqlite_biomechanics(days)
     
     activities_list = activities_df.to_dict('records') if not activities_df.empty else []
+    biomechanics_list = biomechanics_df.to_dict('records') if not biomechanics_df.empty else []
     
     daily_loads = {}
     for act in activities_list:
@@ -69,6 +71,8 @@ def fetch_local_summary(days):
         "sleep": sleep_df.to_dict('records'),
         "hrv": hrv_df.rename(columns={"hrv_avg": "last_night_avg"}).to_dict('records'),
         "activities": activities_list,
+        "biomechanics": biomechanics_list,
+        "daily_summary": summary_df.to_dict('records'),
         "training_load_series": training_load_series,
         "training_status": {},
         "max_metrics": {},
@@ -133,6 +137,13 @@ def analyze_flu_risk(summary_data):
     rhr_spike = current_rhr - avg_rhr_baseline
     resp_spike = current_resp - avg_resp_baseline
     
+    daily_summary_data = summary_data.get("daily_summary", [])
+    latest_daily = next((item for item in reversed(daily_summary_data) if item.get("rr_waking_avg")), {})
+    current_waking_resp = latest_daily.get("rr_waking_avg")
+    prev_waking_resp = [d.get("rr_waking_avg") for d in daily_summary_data if d.get("rr_waking_avg") and d != latest_daily]
+    avg_waking_resp_baseline = statistics.median(prev_waking_resp) if prev_waking_resp else (current_waking_resp or 14.0)
+    waking_resp_spike = (current_waking_resp - avg_waking_resp_baseline) if current_waking_resp else 0
+
     risk_level = "low"
     reasons = []
     
@@ -149,6 +160,10 @@ def analyze_flu_risk(summary_data):
         risk_level = "MODERATE"
         reasons.append(f"RHR elevated (+{rhr_spike:.1f} bpm)")
         reasons.append(f"HRV dip (-{hrv_drop_pct:.1f}%)")
+        
+    if waking_resp_spike > 0.5:
+        reasons.append(f"Daytime sympathetic overdrive (+{waking_resp_spike:.1f} brpm waking RR)")
+        if risk_level == "low": risk_level = "MODERATE"
         
     return {
         "analysis_type": "bio_entropy_flu_risk",
@@ -203,6 +218,7 @@ def analyze_executive_readiness(summary_data):
     total_sleep_sec = latest_sleep.get("sleep_time_seconds", 0) or 1
     rem_pct = (latest_sleep.get("rem_sleep_seconds", 0) / total_sleep_sec) * 100
     deep_pct = (latest_sleep.get("deep_sleep_seconds", 0) / total_sleep_sec) * 100
+    avg_spo2 = latest_sleep.get("avg_spo2", 95) or 95
 
     # Calculate RHR Diff (Metabolic Pressure)
     latest_rhr = next((h.get("resting_hr") for h in reversed(hr_data) if h.get("resting_hr")), 0)
@@ -220,8 +236,21 @@ def analyze_executive_readiness(summary_data):
     med_stress_sec = latest_stress.get("medium_stress_duration", 0) or 0
     dissipation_hours = (high_stress_sec + (med_stress_sec * 0.5)) / 3600
 
-    # Hydration
+    # Hydration & Biosustainability
     hydration_ml = summary_data.get("hydration", {}).get("valueInML", 0) or 0
+    daily_summary_list = summary_data.get("daily_summary", [])
+    latest_daily = next((d for d in reversed(daily_summary_list) if "sweat_loss" in d), {})
+    sweat_loss = latest_daily.get("sweat_loss", 0) or 0
+    fluid_delta = hydration_ml - sweat_loss
+
+    # Biomechanics
+    bio_list = summary_data.get("biomechanics", [])
+    recent_bio = [b for b in bio_list if b.get("avg_ground_contact_time") is not None]
+    gct_spike = 0
+    if len(recent_bio) >= 3:
+        gct_values = [b["avg_ground_contact_time"] for b in recent_bio]
+        gct_baseline = statistics.median(gct_values[:-1]) if len(gct_values) > 1 else gct_values[0]
+        gct_spike = gct_values[-1] - gct_baseline
 
     # 2. Cognitive Readiness (Focus: REM, HRV, Stress, Dissipation Penalty)
     cog_rem_score = min(rem_pct / 20, 1.2) * 30
@@ -240,6 +269,9 @@ def analyze_executive_readiness(summary_data):
     if social_jetlag > 1.5:
         cognitive_score -= (social_jetlag * 3) # Disrupts circadian rhythm
         
+    if avg_spo2 < 93:
+        cognitive_score *= 0.7 # Severe hypoxia penalty (limits prefrontal cortex)
+        
     cognitive_score = max(0, min(100, cognitive_score))
 
     # 3. Physical Readiness (Focus: Deep Sleep, Body Battery, RHR Stability)
@@ -248,11 +280,13 @@ def analyze_executive_readiness(summary_data):
     phy_hrv_score = 30 if hrv_status == "BALANCED" else 10
     physical_score = phy_deep_score + phy_bb_score + phy_hrv_score
     
-    # Pessimistic Penalty: High RHR & Hydration Deficit
+    # Pessimistic Penalty: High RHR, Extracellular Fluid Deficit & Biomechanical Wear
     if rhr_diff > 3:
         physical_score *= 0.8
-    if hydration_ml > 0 and hydration_ml < 1500 and dissipation_hours > 1.5:
-        physical_score -= 10 # Deduct 10 points if highly stressed but underhydrated
+    if fluid_delta < -1000 and dissipation_hours > 1.5:
+        physical_score -= 15 # Severe dehydration / extracellular fluid deficit
+    if gct_spike > 15:
+        physical_score -= 10 # Musculoskeletal wear & tear detected
         
     physical_score = max(0, min(100, physical_score))
 
@@ -640,6 +674,37 @@ def generate_chinese_insight(summary_data):
         ]
     }
 
+def stitch_v3_metrics(summary_data, days):
+    """Stitch V3 advanced metrics from SQLite onto API data when fallback occurs."""
+    try:
+        from garmin_sqlite_adapter import get_biomechanics_data, get_connection, GARMIN_DB
+        import pandas as pd
+        
+        # 1. Biomechanics
+        summary_data["biomechanics"] = get_biomechanics_data(days).to_dict('records')
+        
+        # 2. Daily Summary (Waking RR, Sweat Loss)
+        conn = get_connection(GARMIN_DB)
+        d_df = pd.read_sql_query("SELECT day as date, sweat_loss, rr_waking_avg FROM daily_summary ORDER BY day DESC", conn)
+        if not d_df.empty:
+            d_df['date'] = d_df['date'].apply(lambda x: str(x).split(' ')[0])
+            d_df = d_df.where(pd.notnull(d_df), None)
+            summary_data["daily_summary"] = d_df.to_dict('records')
+        
+        # 3. SpO2 mapping to sleep
+        s_df = pd.read_sql_query("SELECT day as date, avg_spo2 FROM sleep ORDER BY day DESC", conn)
+        if not s_df.empty:
+            s_df['date'] = s_df['date'].apply(lambda x: str(x).split(' ')[0])
+            s_df = s_df.where(pd.notnull(s_df), None)
+            spo2_map = {r["date"]: r["avg_spo2"] for r in s_df.to_dict('records') if "date" in r}
+            for s in summary_data.get("sleep", []):
+                if s.get("date") in spo2_map:
+                    s["avg_spo2"] = spo2_map[s["date"]]
+        conn.close()
+    except Exception as e:
+        import sys
+        print(f"⚠️ V3 Metrics Stitch failed: {e}", file=sys.stderr)
+
 def main():
     parser = argparse.ArgumentParser(description="Advanced Health Intelligence")
     parser.add_argument("analysis", choices=["flu_risk", "readiness", "insight_cn", "audit"], help="Analysis type")
@@ -659,12 +724,14 @@ def main():
                 print('{"error": "Not authenticated and local DB failed"}', file=sys.stderr)
                 sys.exit(1)
             summary_data = fetch_summary(client, days)
+            stitch_v3_metrics(summary_data, days)
     else:
         client = get_client()
         if not client:
             print('{"error": "Not authenticated"}', file=sys.stderr)
             sys.exit(1)
         summary_data = fetch_summary(client, days)
+        stitch_v3_metrics(summary_data, days)
     
     if args.analysis == "flu_risk":
         result = analyze_flu_risk(summary_data)
