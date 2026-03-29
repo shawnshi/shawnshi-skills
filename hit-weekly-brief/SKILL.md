@@ -32,7 +32,7 @@ triggers: ["生成数字健康周报", "检索医疗行业报告", "本周麦肯
 0. **Initialize Blackboard**: 创建 `tmp/intelligence_blackboard.json` 共享状态。
  1. **构建物理任务包 (Task Packetization)**: 必须通过 `write_file` 在 `tmp/playgrounds/` 下生成三个独立的结构化指令包：
  - `Task_strategy.md`: 目标锚定麦肯锡、波士顿、兰德、埃森哲、德勤等顶级咨询 PDF/报告。
- - `Task_policy.md`: 目标锚定国家卫健委、国家医保局、国家数据局的官方通知、指南、征求意见等。
+ - `Task_policy.md`: 目标锚定国家卫健委、国家医保局、国家发改委、国家数据局的官方通知、指南、征求意见等。
  - `Task_research.md`: 目标锚定WHO、OECD、世界银行等机构的报告。
  - `Task_serendipity.md`: 目标锚定非医疗高精尖行业（如 FinTech/Defense）的对医疗行业有借鉴参考价值的技术白皮书或标准规范。
  2. **集群并发调度 (Concurrent Dispatch)**: 并发调用 4 次 `generalist` 子代理。将对应的 Task 文件路径作为 Payload 传入。强制子代理在其独立沙盒中完成“检索 -> 过滤 -> 提纯”闭环，并将结果分别写入`tmp/playgrounds/Response_strategy.md`, `Response_policy.md`, `Response_research.md`、`Response_serendipity.md`。
