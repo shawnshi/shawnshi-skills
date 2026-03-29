@@ -19,7 +19,7 @@ triggers: ["心率", "睡眠", "压力", "HRV", "感冒迹象", "身体电量", 
 AI 必须严格按照以下阶段线性推进，并在模式之间流转：
 
 - **[Phase 0: Data Sync & Pre-flight (PLANNING Mode)]**
-  - **Action**: 隐式执行 `python C:\Users\shich\AppData\Local\Programs\Python\Python313\Scripts\garmindb_cli.py --latest` 以尝试更新本地数据湖。
+  - **Action**: 隐式执行 `python {user_root}\AppData\Local\Programs\Python\Python313\Scripts\garmindb_cli.py --latest` 以尝试更新本地数据湖。
   - **Failsafe**: 如果遇到 429 报错，**不阻塞后续执行**，直接转入本地已有的 SQLite 库进行审计（即读取“历史快照”）。
 
 - **[Phase 1: Precision Data Extraction (EXECUTION Mode)]**
@@ -36,7 +36,7 @@ AI 必须严格按照以下阶段线性推进，并在模式之间流转：
 
 ## ⚠️ Agentic Guardrails (智能体硬约束)
 1. **No Hallucination**: 绝对禁止编造生理数据。
-2. **Path Resolution**: 处理活动文件（FIT/GPX）和 HTML 报告时，必须使用绝对路径展示（例如：`[查看生物态势看板](file:///C:/Users/shich/.gemini/memory/garmin/tactical_board_7days_2026xxxx.html)`）。
+2. **Path Resolution**: 处理活动文件（FIT/GPX）和 HTML 报告时，必须使用绝对路径展示（例如：`[查看生物态势看板](file:///{user_root}/.gemini/memory/garmin/tactical_board_7days_2026xxxx.html)`）。
 3. **Pipelining**: `garmin_intelligence.py` 等分析脚本依赖基础数据正确返回。严格确保前序步骤成功后再执行后续的深度审计。
 
 ## Output Schema & Intent Routing (三级输出协议)
@@ -147,7 +147,7 @@ python scripts/garmin_fhir_adapter.py hrv --days 30
 
 ##  Telemetry & Metadata (Mandatory)
 - 使用 `write_file` 将本次执行的元数据以 JSON 格式保存至 `{root}\MEMORY\skill_audit\telemetry\record_[TIMESTAMP].json`（请将 [TIMESTAMP] 替换为当前时间戳或随机数）。
-- JSON 结构：`{"skill_name": "logic-adversary", "status": "success", "duration_sec": [ESTIMATE], "input_tokens": [ESTIMATE], "output_tokens": [ESTIMATE]}`
+- JSON 结构：`{"skill_name": "personal-health-analysis", "status": "success", "duration_sec": [ESTIMATE], "input_tokens": [ESTIMATE], "output_tokens": [ESTIMATE]}`
 
 ## 历史失效先验 (Gotchas)
 - [此处预留用于记录重复性失败的禁令，实现系统的对抗性进化]

@@ -295,16 +295,16 @@ with open("encrypted.pdf", "wb") as output:
 
 ## Quick Reference
 
-| Task | Best Tool | Command/Code |
-|------|-----------|--------------|
-| Merge PDFs | pypdf | `writer.add_page(page)` |
-| Split PDFs | pypdf | One page per file |
-| Extract text | pdfplumber | `page.extract_text()` |
-| Extract tables | pdfplumber | `page.extract_tables()` |
-| Create PDFs | reportlab | Canvas or Platypus |
-| Command line merge | qpdf | `qpdf --empty --pages ...` |
-| OCR scanned PDFs | pytesseract | Convert to image first |
-| Fill PDF forms | pdf-lib or pypdf (see FORMS.md) | See FORMS.md |
+| Task               | Best Tool                       | Command/Code               |
+|--------------------|---------------------------------|----------------------------|
+| Merge PDFs         | pypdf                           | `writer.add_page(page)`    |
+| Split PDFs         | pypdf                           | One page per file          |
+| Extract text       | pdfplumber                      | `page.extract_text()`      |
+| Extract tables     | pdfplumber                      | `page.extract_tables()`    |
+| Create PDFs        | reportlab                       | Canvas or Platypus         |
+| Command line merge | qpdf                            | `qpdf --empty --pages ...` |
+| OCR scanned PDFs   | pytesseract                     | Convert to image first     |
+| Fill PDF forms     | pdf-lib or pypdf (see FORMS.md) | See FORMS.md               |
 
 ## Next Steps
 
@@ -315,7 +315,7 @@ with open("encrypted.pdf", "wb") as output:
 
 ##  Telemetry & Metadata (Mandatory)
 - 使用 `write_file` 将本次执行的元数据以 JSON 格式保存至 `{root}\MEMORY\skill_audit\telemetry\record_[TIMESTAMP].json`（请将 [TIMESTAMP] 替换为当前时间戳或随机数）。
-- JSON 结构：`{"skill_name": "logic-adversary", "status": "success", "duration_sec": [ESTIMATE], "input_tokens": [ESTIMATE], "output_tokens": [ESTIMATE]}`
+- JSON 结构：`{"skill_name": "pdf", "status": "success", "duration_sec": [ESTIMATE], "input_tokens": [ESTIMATE], "output_tokens": [ESTIMATE]}`
 
 ## 历史失效先验 (Gotchas)
 - [此处预留用于记录重复性失败的禁令，实现系统的对抗性进化]

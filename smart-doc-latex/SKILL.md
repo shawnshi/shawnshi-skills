@@ -25,20 +25,20 @@ triggers: ["将Markdown转为LaTeX", "将M文件转为LaTeX","生成科研级PDF
 python {root_dir}\.gemini\skills\smart-doc-latex\scripts\smart_engine.py --input <input_file> [OPTIONS]
 ```
 
-| Flag | Description |
-| :--- | :--- |
-| `--input` | **[Required]** 输入文件路径。 |
-| `--style` | 目标样式：`academic`, `cv`, `tech_report`, `book`, `tech_book`。默认 `auto`。 |
-| `--title` | 覆盖文档标题（默认使用文件名）。 |
-| `--author` | 覆盖作者名称。 |
-| `--output` | 输出目录（默认使用输入文件所在目录）。 |
+| Flag       | Description                                                                   |
+|:-----------|:------------------------------------------------------------------------------|
+| `--input`  | **[Required]** 输入文件路径。                                                 |
+| `--style`  | 目标样式：`academic`, `cv`, `tech_report`, `book`, `tech_book`。默认 `auto`。 |
+| `--title`  | 覆盖文档标题（默认使用文件名）。                                              |
+| `--author` | 覆盖作者名称。                                                                |
+| `--output` | 输出目录（默认使用输入文件所在目录）。                                        |
 
 ### 辅助脚本
 
 以下脚本用于特定场景，**不经 smart_engine.py 调度**，需独立调用：
 
-| Script | Purpose | Usage |
-| :--- | :--- | :--- |
+| Script              | Purpose                                  | Usage                                   |
+|:--------------------|:-----------------------------------------|:----------------------------------------|
 | `process_idioms.py` | **特殊用途**：解析成语字典 .tex 并重排版 | `python process_idioms.py` (硬编码输入) |
 
 ## Best Practices for Agents
@@ -74,7 +74,7 @@ python {root_dir}\.gemini\skills\smart-doc-latex\scripts\smart_engine.py --input
 
 ##  Telemetry & Metadata (Mandatory)
 - 使用 `write_file` 将本次执行的元数据以 JSON 格式保存至 `{root}\MEMORY\skill_audit\telemetry\record_[TIMESTAMP].json`（请将 [TIMESTAMP] 替换为当前时间戳或随机数）。
-- JSON 结构：`{"skill_name": "logic-adversary", "status": "success", "duration_sec": [ESTIMATE], "input_tokens": [ESTIMATE], "output_tokens": [ESTIMATE]}`
+- JSON 结构：`{"skill_name": "smart-doc-latex", "status": "success", "duration_sec": [ESTIMATE], "input_tokens": [ESTIMATE], "output_tokens": [ESTIMATE]}`
 
 ## 历史失效先验 (Gotchas)
 - [此处预留用于记录重复性失败的禁令，实现系统的对抗性进化]

@@ -17,11 +17,11 @@ version: "1.0.0"
 
 ## 参数
 
-| 参数 | 说明 | 示例 |
-|------|------|------|
-| 城市名 | 必填，目标城市 | 西安、洛阳、大同 |
-| `-f` | 聚焦主题（可选） | `-f 唐代` `-f 石窟` `-f 青铜器` |
-| `-q` | 快速模式，跳过内容提炼，只做研究+文档 | |
+| 参数   | 说明                                  | 示例                            |
+|--------|---------------------------------------|---------------------------------|
+| 城市名 | 必填，目标城市                        | 西安、洛阳、大同                |
+| `-f`   | 聚焦主题（可选）                      | `-f 唐代` `-f 石窟` `-f 青铜器` |
+| `-q`   | 快速模式，跳过内容提炼，只做研究+文档 |                                 |
 
 ## 执行
 
@@ -185,7 +185,7 @@ version: "1.0.0"
 
 ##  Telemetry & Metadata (Mandatory)
 - 使用 `write_file` 将本次执行的元数据以 JSON 格式保存至 `{root}\MEMORY\skill_audit\telemetry\record_[TIMESTAMP].json`（请将 [TIMESTAMP] 替换为当前时间戳或随机数）。
-- JSON 结构：`{"skill_name": "logic-adversary", "status": "success", "duration_sec": [ESTIMATE], "input_tokens": [ESTIMATE], "output_tokens": [ESTIMATE]}`
+- JSON 结构：`{"skill_name": "travel-research", "status": "success", "duration_sec": [ESTIMATE], "input_tokens": [ESTIMATE], "output_tokens": [ESTIMATE]}`
 
 ## 历史失效先验 (Gotchas)
 - [此处预留用于记录重复性失败的禁令，实现系统的对抗性进化]

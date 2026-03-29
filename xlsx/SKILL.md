@@ -65,10 +65,10 @@ When creating Excel files with externally fetched data:
 - **⛔ FORBIDDEN**: Delivering Excel with external data but NO source citations
 - Example:
 
-| Data Content | Source Name | Source URL |
-|--------------|-------------|------------|
-| Apple Revenue | Yahoo Finance | https://finance.yahoo.com/... |
-| China GDP | World Bank API | world_bank_open_data |
+| Data Content  | Source Name    | Source URL                    |
+|---------------|----------------|-------------------------------|
+| Apple Revenue | Yahoo Finance  | https://finance.yahoo.com/... |
+| China GDP     | World Bank API | world_bank_open_data          |
 
 - If citation per-row is impractical, create a dedicated "Sources" sheet
 
@@ -433,20 +433,20 @@ If you need to add extra sheets (Cover, Summary, etc.) to a file that will have 
 
 The following functions are **NOT supported** in Excel 2019 and earlier. Files using these functions will **FAIL to open** in older Excel versions. Use traditional alternatives instead.
 
-| ❌ Forbidden Function | ✅ Alternative |
-|----------------------|----------------|
-| `FILTER()` | Use AutoFilter, or SUMIF/COUNTIF/INDEX-MATCH |
-| `UNIQUE()` | Use Remove Duplicates feature, or helper column with COUNTIF |
-| `SORT()`, `SORTBY()` | Use Excel's Sort feature (Data → Sort) |
-| `XLOOKUP()` | Use `INDEX()` + `MATCH()` combination |
-| `XMATCH()` | Use `MATCH()` |
-| `SEQUENCE()` | Use ROW() or manual fill |
-| `LET()` | Define intermediate calculations in helper cells |
-| `LAMBDA()` | Use named ranges or VBA |
-| `RANDARRAY()` | Use `RAND()` with fill-down |
-| `ARRAYFORMULA()` | Google Sheets only - use Ctrl+Shift+Enter array formulas |
-| `QUERY()` | Google Sheets only - use SUMIF/COUNTIF/PivotTable |
-| `IMPORTRANGE()` | Google Sheets only - copy data manually |
+| ❌ Forbidden Function | ✅ Alternative                                                |
+|----------------------|--------------------------------------------------------------|
+| `FILTER()`           | Use AutoFilter, or SUMIF/COUNTIF/INDEX-MATCH                 |
+| `UNIQUE()`           | Use Remove Duplicates feature, or helper column with COUNTIF |
+| `SORT()`, `SORTBY()` | Use Excel's Sort feature (Data → Sort)                       |
+| `XLOOKUP()`          | Use `INDEX()` + `MATCH()` combination                        |
+| `XMATCH()`           | Use `MATCH()`                                                |
+| `SEQUENCE()`         | Use ROW() or manual fill                                     |
+| `LET()`              | Define intermediate calculations in helper cells             |
+| `LAMBDA()`           | Use named ranges or VBA                                      |
+| `RANDARRAY()`        | Use `RAND()` with fill-down                                  |
+| `ARRAYFORMULA()`     | Google Sheets only - use Ctrl+Shift+Enter array formulas     |
+| `QUERY()`            | Google Sheets only - use SUMIF/COUNTIF/PivotTable            |
+| `IMPORTRANGE()`      | Google Sheets only - copy data manually                      |
 
 **Why these are forbidden**:
 - These are Excel 365/2021+ dynamic array functions or Google Sheets functions
@@ -587,10 +587,10 @@ Use this style when the task involves: stock, GDP, salary, revenue, profit, budg
 
 ### 🚨 CRITICAL: Regional Color Convention for Financial Data
 
-| **Region** | **Price Up** | **Price Down** |
-| --- | --- | --- |
-| **China (Mainland)** | **Red** | **Green** |
-| **Outside China (International)** | **Green** | **Red** |
+| **Region**                        | **Price Up** | **Price Down** |
+|-----------------------------------|--------------|----------------|
+| **China (Mainland)**              | **Red**      | **Green**      |
+| **Outside China (International)** | **Green**    | **Red**        |
 
 ### Python Color Palette
 
@@ -626,13 +626,13 @@ for cell in ws['A1:D1'][0]:
 
 **Actively use Conditional Formatting to create professional, visually impactful Excel deliverables.**
 
-| Data Type | Format | Code Example |
-|-----------|--------|--------------|
-| Numeric values | **Data Bars** | `DataBarRule(start_type='min', end_type='max', color='4A90D9', showValue=True)` |
-| Distribution | **Color Scales** | `ColorScaleRule(start_type='min', start_color='FFFFFF', end_type='max', end_color='4A90D9')` |
-| KPIs/Status | **Icon Sets** | `IconSetRule(icon_style='3TrafficLights1', type='percent', values=[0,33,67])` |
-| Thresholds | **Highlight Cells** | `CellIsRule(operator='greaterThan', formula=['100000'], fill=green_fill)` |
-| Rankings | **Top/Bottom** | `FormulaRule(formula=['RANK(A2,$A$2:$A$100)<=10'], fill=gold_fill)` |
+| Data Type      | Format              | Code Example                                                                                 |
+|----------------|---------------------|----------------------------------------------------------------------------------------------|
+| Numeric values | **Data Bars**       | `DataBarRule(start_type='min', end_type='max', color='4A90D9', showValue=True)`              |
+| Distribution   | **Color Scales**    | `ColorScaleRule(start_type='min', start_color='FFFFFF', end_type='max', end_color='4A90D9')` |
+| KPIs/Status    | **Icon Sets**       | `IconSetRule(icon_style='3TrafficLights1', type='percent', values=[0,33,67])`                |
+| Thresholds     | **Highlight Cells** | `CellIsRule(operator='greaterThan', formula=['100000'], fill=green_fill)`                    |
+| Rankings       | **Top/Bottom**      | `FormulaRule(formula=['RANK(A2,$A$2:$A$100)<=10'], fill=gold_fill)`                          |
 
 **Icon Styles**: `3TrafficLights1` (🔴🟡🟢), `3Arrows` (↓→↑), `3Symbols` (✗−✓), `5Rating` (★)
 
@@ -679,13 +679,13 @@ ws.conditional_formatting.add('E2:E100', IconSetRule(icon_style='3TrafficLights1
 
 ## Cover Page Structure
 
-| Row | Content | Style |
-|-----|---------|-------|
-| 2-3 | **Report Title** | Large font (18-20pt), Bold, Centered |
-| 5 | Subtitle/Description | Medium font (12pt), Gray color |
-| 7-15 | **Key Metrics Summary** | Table format with highlights |
-| 17-20 | **Sheet Index** | List of all sheets with descriptions |
-| 22+ | Notes & Instructions | Small font, Gray |
+| Row   | Content                 | Style                                |
+|-------|-------------------------|--------------------------------------|
+| 2-3   | **Report Title**        | Large font (18-20pt), Bold, Centered |
+| 5     | Subtitle/Description    | Medium font (12pt), Gray color       |
+| 7-15  | **Key Metrics Summary** | Table format with highlights         |
+| 17-20 | **Sheet Index**         | List of all sheets with descriptions |
+| 22+   | Notes & Instructions    | Small font, Gray                     |
 
 ## Required Elements
 
@@ -695,11 +695,11 @@ ws.conditional_formatting.add('E2:E100', IconSetRule(icon_style='3TrafficLights1
 
 **3. Sheet Index** - Navigation guide:
 ```
-| Sheet Name | Description |
-|------------|-------------|
-| Raw Data | Original dataset (100 rows) |
-| Analysis | Sales breakdown by region |
-| Pivot Summary | Interactive pivot analysis |
+| Sheet Name    | Description                 |
+|---------------|-----------------------------|
+| Raw Data      | Original dataset (100 rows) |
+| Analysis      | Sales breakdown by region   |
+| Pivot Summary | Interactive pivot analysis  |
 ```
 
 **4. PivotTable Notice** (MANDATORY when workbook contains PivotTables):
@@ -807,12 +807,12 @@ wb.save('output.xlsx')
 ```
 
 ### Chart Types Quick Reference
-| Chart Type | openpyxl Class | Key Config |
-|------------|----------------|------------|
-| Column/Bar | `BarChart()` | `type="col"` (vertical) or `type="bar"` (horizontal) |
-| Line | `LineChart()` | `style=10`, optional markers |
-| Pie | `PieChart()` | No axes needed |
-| Area | `AreaChart()` | `grouping="standard"` |
+| Chart Type | openpyxl Class | Key Config                                           |
+|------------|----------------|------------------------------------------------------|
+| Column/Bar | `BarChart()`   | `type="col"` (vertical) or `type="bar"` (horizontal) |
+| Line       | `LineChart()`  | `style=10`, optional markers                         |
+| Pie        | `PieChart()`   | No axes needed                                       |
+| Area       | `AreaChart()`  | `grouping="standard"`                                |
 
 ### Line Chart Example
 ```python
@@ -855,13 +855,13 @@ ws.add_chart(pie, "E2")
 Exit code 1 = Charts broken → MUST FIX. No excuses - if chart-verify fails, the chart IS broken regardless of data embedding method.
 
 **Chart Type Selection**:
-| Data Type | Chart | Use Case |
-|-----------|-------|----------|
-| Trend | Line | Time series |
-| Compare | Column/Bar | Category comparison |
-| Composition | Pie/Doughnut | Percentages (≤6 items) |
-| Distribution | Histogram | Data spread |
-| Correlation | Scatter | Relationships |
+| Data Type    | Chart        | Use Case               |
+|--------------|--------------|------------------------|
+| Trend        | Line         | Time series            |
+| Compare      | Column/Bar   | Category comparison    |
+| Composition  | Pie/Doughnut | Percentages (≤6 items) |
+| Distribution | Histogram    | Data spread            |
+| Correlation  | Scatter      | Relationships          |
 
 **Chart Color Scheme**:
 - Monochrome: `333333`, `666666`, `0066CC`, `4A90D9`
@@ -925,7 +925,7 @@ Phase 4: DELIVER
 
 ##  Telemetry & Metadata (Mandatory)
 - 使用 `write_file` 将本次执行的元数据以 JSON 格式保存至 `{root}\MEMORY\skill_audit\telemetry\record_[TIMESTAMP].json`（请将 [TIMESTAMP] 替换为当前时间戳或随机数）。
-- JSON 结构：`{"skill_name": "logic-adversary", "status": "success", "duration_sec": [ESTIMATE], "input_tokens": [ESTIMATE], "output_tokens": [ESTIMATE]}`
+- JSON 结构：`{"skill_name": "xlsx", "status": "success", "duration_sec": [ESTIMATE], "input_tokens": [ESTIMATE], "output_tokens": [ESTIMATE]}`
 
 ## 历史失效先验 (Gotchas)
 - [此处预留用于记录重复性失败的禁令，实现系统的对抗性进化]

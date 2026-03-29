@@ -61,7 +61,7 @@ triggers: ["编写数字化解决方案", "设计医院转型规划", "智慧医
    - **【单步硬阻塞执行】 (Single-Step Hard Blocking)**：严格按照 `plan.md` 逐个起草。每一次对话流转【仅允许】使用 `write_file` 撰写 1 个章节并落盘为 `.md` 物理文件。紧接着**必须调用文件操作工具 (如 `replace_file_content` 或 `multi_replace_file_content`) 更新 `plan.md` 进度节点**。随后**必须调用 `ask_user` 工具并传入起草文件的 PathsToReview 挂起流程 (BlockedOnUser: true)**，直到获得用户“继续”指令。彻底杜绝并流、跳步生成现象。如果是完整规划方案，每个章节应保证不少于1000字；如果整体方案大纲对章节的字数有具体要求时，按照大纲要求执行。
 
 ### Phase 5：逻辑审计与熔断机制 (MECE Audit) [Mode: EXECUTION]
-1. **自动化校验**：使用 `run_command` 工具执行 `python C:\Users\shich\.gemini\skills\hit-solution-architect\scripts\logic_checker.py [ProjectName]_v1_Draft.md`。
+1. **自动化校验**：使用 `run_command` 工具执行 `python {root}\.gemini\skills\hit-solution-architect\scripts\logic_checker.py [ProjectName]_v1_Draft.md`。
 2. **熔断处理 (Break on Warning)**：如果脚本返回 `Warning`，**严禁**继续执行后续章节集成。如果脚本不存在或报错，你【必须】立即中止流程调用 `ask_user` 向用户通报“脚本校验失败”，并申请切换至“Agent 强制自我逻辑推演模式”。针对缺失维度（如：信创算力冗余、DRG 结余逻辑）进行重构审计，直到状态为 `Pass`。
 3. **状态同步**：及时使用 `write_file` 将本阶段生成的审计报告或增补内容以 `.md` 格式保存在工作目录中。**所有执行动作结束后，必须调用文件操作工具同步更新 `plan.md` 物理文件节点**，并通过 `task_boundary` 宣告该 Phase 结束。
 
@@ -75,12 +75,12 @@ triggers: ["编写数字化解决方案", "设计医院转型规划", "智慧医
 ### Phase 7: Delivery & Executive Summary (最终集成与高管摘要) [Mode: EXECUTION]
 1. **Executive Summary**：采用“麦肯锡式高管备忘录 (Executive Memo)”结合 `write_file` 工具生成 1 页纸的高管决策摘要 `.md` 文件。必须包含一张反映TCO与医疗质量提升的“价值雷达图”或量化表格。
 2. **文字优化**: 【必须】调用技能 ` personal-write-humanizer` 对全案进行文字“去AI化”锻造，达到方案要求。
-3. **文档集成**：如果方案涉及多个分章节文件，使用 `run_command` 工具，执行 `python C:\Users\shich\.gemini\skills\hit-solution-architect\scripts\manifest_manager.py manifest.json [ProjectName]_Digital_Blueprint_vFinal.md` (请确保传入绝对路径) 将各章节合并为完整交付物。
+3. **文档集成**：如果方案涉及多个分章节文件，使用 `run_command` 工具，执行 `python {root}\.gemini\skills\hit-solution-architect\scripts\manifest_manager.py manifest.json [ProjectName]_Digital_Blueprint_vFinal.md` (请确保传入绝对路径) 将各章节合并为完整交付物。
 4. **状态同步**：整合生成 `[ProjectName]_Digital_Blueprint_vFinal.md` 后，**及时更新任务计划（`plan.md`）以反映整个项目的闭环。**
 5. **Final Review (基于文件的最终交付关卡)**：实证加固后，在终端框只给出一页纸核心摘要与 **1-3 个可能导致项目延期的致命风险提示**。随后**必须调用 `ask_user` 工具，装载生成的 `vFinal.md` 文件绝对路径 (BlockedOnUser: true)**，交由用户进行结案验收。
 
 ### Phase 8: Cognitive Write-Back & Self-Healing (自愈闭环) [Mode: EXECUTION]
-1. **智慧蒸馏**: 提取“反常识洞察”写入 `C:\Users\shich\.gemini\memory\MEMORY.md`。
+1. **智慧蒸馏**: 提取“反常识洞察”写入 `{root}\.gemini\memory\MEMORY.md`。
 2. **技能自愈 (Self-Healing Loop)**: 
     - **逻辑漏洞提取**：若在 Phase 5/6 中发现严重的逻辑缺陷并修正，必须将其提炼为一条 `DO NOT` 或 `ALWAYS` 形式的规则。
     - **自动回写**：调用文件操作工具，将该规则追加至本技能末尾的 `## Gotchas` 区域，实现物理级自愈，防止同类错误再次发生。
@@ -93,7 +93,7 @@ triggers: ["编写数字化解决方案", "设计医院转型规划", "智慧医
 
 ##  Telemetry & Metadata (Mandatory)
 - 使用 `write_file` 将本次执行的元数据以 JSON 格式保存至 `{root}\MEMORY\skill_audit\telemetry\record_[TIMESTAMP].json`（请将 [TIMESTAMP] 替换为当前时间戳或随机数）。
-- JSON 结构：`{"skill_name": "logic-adversary", "status": "success", "duration_sec": [ESTIMATE], "input_tokens": [ESTIMATE], "output_tokens": [ESTIMATE]}`
+- JSON 结构：`{"skill_name": "hit-solution-architect", "status": "success", "duration_sec": [ESTIMATE], "input_tokens": [ESTIMATE], "output_tokens": [ESTIMATE]}`
 
 ## 历史失效先验 (Gotchas)
 - [此处预留用于记录重复性失败的禁令，实现系统的对抗性进化]
