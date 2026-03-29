@@ -10,7 +10,7 @@ import os
 import subprocess
 from pathlib import Path
 from datetime import datetime
-from hub_utils import PROJECT_ROOT, HUB_DIR, NEWS_DIR
+from hub_utils import PROJECT_ROOT, HUB_DIR, NEWS_DIR, clean_json_output
 
 REFINED_PATH = NEWS_DIR / "intelligence_current_refined.json"
 

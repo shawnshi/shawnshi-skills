@@ -18,22 +18,22 @@ triggers: ["重构商业模式", "ROI测算", "高规格战略验证", "医疗IT
     - **Activate**: Format Stack 分层交付（紧急/摘要/全案）。
 
 ## 1. 核心调度约束 (Global State Machine)
-> **[全局熔断协议]**: 系统必须严格依照 Phase 0 至 Phase 6 流转。严禁跨阶段批处理（Batch Processing）。在每一个带有【交互阻塞】标记的节点，必须停止生成并等待用户指令。
+> **[全局熔断协议]**: 系统必须严格依照 Phase 0 至 Phase 6 流转。严禁跨阶段批处理（Batch Processing）。在每一个带有标记的节点，必须停止生成并等待用户指令。
 
 ## 2. 执行协议 (Execution Protocol)
 
 ### Phase 0: Strategic Alignment (Inversion 门控) [Mode: PLANNING]
-1.  **Intake Gate**: 【交互阻塞】调用 `ask_user` 复述边界：受众级别（CEO/CIO/临床）、项目预算背景、核心对抗焦点、目标字数。
-2.  **Initialize Blackboard**: 运行 `scripts/blackboard.py` 初始化本次战略会诊状态。
+1.  **Intake Gate**: 调用 `ask_user` 复述边界：受众级别（CEO/CIO/临床）、项目预算背景、核心对抗焦点、目标字数。
+2.  **Initialize Blackboard**: 运行 `scripts/lib/blackboard.py` 初始化本次战略会诊状态。
 
 ### Phase 1: Multi-Source Recon & SemHash (Sense) [Mode: PLANNING]
-1.  **并行调研 (Sentinel)**: 同时调用 `med_policy_researcher` 与 `hit_commercial_analyst` 搜集原始证据。
-2.  **SemHash 拦截**: 调用 `history_manager.py` 剔除过去 14 天已处理过的重复案例或报告。
+1.  **并行调研 (Sentinel)**: 同时调用 子agent`med-policy-researcher.md` 与 `hit-commercial-analyst.md` 搜集原始证据。
+2.  **SemHash 拦截**: 调用 `scripts/lib/history_manager.py` 剔除过去 14 天已处理过的重复案例或报告。
 
 ### Phase 2: Logic Collision & Weaver (Filter & Connect) [Mode: PLANNING]
 1.  **Arbiter 仲裁**: 将调研数据抛上黑板。Agent 扮演 Arbiter 对每一条数据进行 5D 评分，剔除无事实支撑的“液态辞令”。
 2.  **Weaver 织网**: 寻找黑板上的“弱信号”。执行“二跳推理”。
-3.  **Output**: 生成 `implementation_plan.md`（包含核心论点矩阵与大纲）。【交互阻塞】请求用户“逻辑放行”。
+3.  **Output**: 生成 `implementation_plan.md`（包含核心论点矩阵与大纲）。请求用户“逻辑放行”。
 
 ### Phase 3: Adversarial Validation (Reviewer 饱和攻击) [Mode: EXECUTION]
 1.  **激活 Reviewer**: 必须调用 `activate_skill(name='personal-logic-adversary')`。
@@ -41,7 +41,7 @@ triggers: ["重构商业模式", "ROI测算", "高规格战略验证", "医疗IT
 3.  **Binary Eval (二元硬审计)**:
     - [ ] 论点是否经过了“悲观 ROI”压测？ [Yes/No]
     - [ ] 每一个“判词”标题下是否有至少一个物理 Fact 支撑？ [Yes/No]
-4.  **Gate**: 【交互阻塞】必须在对话中向用户展示 Reviewer 的对抗结果与防御修补建议，用户确认后方可进入 Phase 4。
+4.  **Gate**: 必须在对话中向用户展示 Reviewer 的对抗结果与防御修补建议，用户确认后方可进入 Phase 4。
 
 ### Phase 4: Surgical Drafting (Pipeline 物理锻造) [Mode: EXECUTION]
 1.  **Initialize**: 创建项目目录 `{root}\MEMORY\research\{Topic}_{Date}`。
@@ -72,4 +72,4 @@ triggers: ["重构商业模式", "ROI测算", "高规格战略验证", "医疗IT
 - ELIMINATE any conversational filler; MAINTAIN a cold, surgical narrative tone.
 - **[CRITICAL]** NO ACTION LEVERS = NO FINAL DELIVERY. Every strategy must end with a task for the human user.
 - **[SYSTEM WRITE-BACK: ANTI-SUMMARIZATION BIAS]**: 对于高字数要求（如 >3000 字）的深度资产锻造，LLM 底层机制会触发“语义压缩”。因此，**绝对禁止**跨阶段批处理。必须严格执行 Phase 4 的【绝对单步阻塞起草】。如果试图在一次对话中合并生成多个章节，视为重大状态机违规。
-- **[SYSTEM WRITE-BACK: SUB-AGENT EXECUTION]**: Phase 3 的红队对抗必须通过独立调用子智能体执行真实对抗交互，绝不允许在单步思考（Thought）中简单模拟并略过。
+

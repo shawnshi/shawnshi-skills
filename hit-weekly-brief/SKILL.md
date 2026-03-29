@@ -11,7 +11,7 @@ triggers: ["生成数字健康周报", "检索医疗行业报告", "本周麦肯
 ## 0. 核心架构约束 (The 5-Layer Value Chain)
 
 ### 0.1 ADK 五维缺陷补偿 (ADK 5-Patterns)
-- **Tool Wrapper (异步侦察)**: Phase 1 强制并行触发 3 个 Subagent，隔离实时搜索噪音。
+- **Tool Wrapper (异步侦察)**: Phase 1 强制并行触发 4 个 Subagent，隔离实时搜索噪音。
 - **Inversion (窗口对齐)**: Phase 1 自动计算滑动窗口日期，信息不足触发战略补位。
 - **Generator (三维降维)**: 强制将情报归类为 [技术演进]、[安全与合规]、[资本与政策]。
 - **Pipeline (流程硬锁)**: 严格按 S-I-A (Signal-Insight-Action) 框架执行。
@@ -28,13 +28,17 @@ triggers: ["生成数字健康周报", "检索医疗行业报告", "本周麦肯
 
 ## 2. 核心工作流 (Blackboard Protocol)
 
-### Phase 1: 分层侦察与 Serendipity 注入 [Mode: PLANNING]
-1. **Initialize Blackboard**: 创建 `tmp/intelligence_blackboard.json` 共享状态。
-2. **Orchestrator 并发调度**:
-   - `strategy_scout`: 麦肯锡、波士顿等顶级咨询 PDF/报告。
-   - `policy_scout`: 卫健委、WHO 及数据局红头文件。
-   - **`serendipity_scout` (跨界注入)**: 扫描非医疗高精尖行业（如 FinTech/Defense）的 AI 治理白皮书。
-3. **SemHash 拦截**: 剔除过去 14 天已推送的内容。
+### Phase 1: 物理沙盒切分与子代理并发 (Map-Reduce Delegation) [Mode: PLANNING]
+0. **Initialize Blackboard**: 创建 `tmp/intelligence_blackboard.json` 共享状态。
+ 1. **构建物理任务包 (Task Packetization)**: 必须通过 `write_file` 在 `tmp/playgrounds/` 下生成三个独立的结构化指令包：
+ - `Task_strategy.md`: 目标锚定麦肯锡、波士顿、兰德、埃森哲、德勤等顶级咨询 PDF/报告。
+ - `Task_policy.md`: 目标锚定国家卫健委、国家医保局、国家数据局的官方通知、指南、征求意见等。
+ - `Task_research.md`: 目标锚定WHO、OECD、世界银行等机构的报告。
+ - `Task_serendipity.md`: 目标锚定非医疗高精尖行业（如 FinTech/Defense）的对医疗行业有借鉴参考价值的技术白皮书或标准规范。
+ 2. **集群并发调度 (Concurrent Dispatch)**: 并发调用 4 次 `generalist` 子代理。将对应的 Task 文件路径作为 Payload 传入。强制子代理在其独立沙盒中完成“检索 -> 过滤 -> 提纯”闭环，并将结果分别写入`tmp/playgrounds/Response_strategy.md`, `Response_policy.md`, `Response_research.md`、`Response_serendipity.md`。
+- *指令硬锁*：“禁止输出多余废话，仅交付包含 DOI、核心事实与初步 TRL 评级的硬核数据。”
+3. **逻辑补位**: 若顶级正刊论文不足，必须提取热点趋势补齐信息密度。
+4. **资产回收与 SemHash 拦截 (Harvest & Intercept)**: 主代理读取四个 `Response` 文件。扫描物理目录执行 SemHash 重，确认未与过去 14 天的历史报告重复后，将合并后的高纯度信息推入数字黑板，随后立即清扫 `tmp/` 下的中间产物。
 
 ### Phase 2: 主轴提炼与 Weaver 多跳关联 [Mode: EXECUTION]
 1. **主轴定调**: 用一句话概括本周智库的“最大共识”与“最大隐忧”。
@@ -42,7 +46,7 @@ triggers: ["生成数字健康周报", "检索医疗行业报告", "本周麦肯
 3. **Memory Interleave (MSA 增强)**: 若发现跨界启示与卫宁本地技术现状的结合点存在“工程逻辑空白”，**强制调用** `vector-lake query --interleave`。通过递归回溯 L3 级冷库（如过往架构设计、HIS/EMR 重构记录），确认跨界逻辑的可落地性。
 
 ### Phase 3: Contrarian 对抗与多跳审计 [Mode: VERIFICATION]
-1. **非共识对抗**: 必须调用 `logic-adversary`。**强制要求**寻找一份与本周麦肯锡/Gartner 主推共识**完全相反**的数据报告或专家评论。优先通过 `vector-lake query --interleave` 在本地库中寻找“曾遭遇的相反教训”或“本地反向证据”。
+1. **非共识对抗**: 必须调用 `personal-logic-adversary`。**强制要求**寻找一份与本周麦肯锡/Gartner 主推共识**完全相反**的数据报告或专家评论。优先通过 `vector-lake query --interleave` 在本地库中寻找“曾遭遇的相反教训”或“本地反向证据”。
 2. **Binary Eval (二元硬审计)**:
    - [ ] 是否包含至少一个“非医疗行业”的跨界启发？ [Yes/No]
    - [ ] 建议动作是否具备直接的销售话术或打法转换价值？ [Yes/No]
@@ -97,7 +101,7 @@ triggers: ["生成数字健康周报", "检索医疗行业报告", "本周麦肯
 
 ##  Telemetry & Metadata (Mandatory)
 - 使用 `write_file` 将本次执行的元数据以 JSON 格式保存至 `{root}\MEMORY\skill_audit\telemetry\record_[TIMESTAMP].json`（请将 [TIMESTAMP] 替换为当前时间戳或随机数）。
-- JSON 结构：`{"skill_name": "logic-adversary", "status": "success", "duration_sec": [ESTIMATE], "input_tokens": [ESTIMATE], "output_tokens": [ESTIMATE]}`
+- JSON 结构：`{"skill_name": "personal-logic-adversary", "status": "success", "duration_sec": [ESTIMATE], "input_tokens": [ESTIMATE], "output_tokens": [ESTIMATE]}`
 
 ## 历史失效先验 (Gotchas)
 - [此处预留用于记录重复性失败的禁令，实现系统的对抗性进化]

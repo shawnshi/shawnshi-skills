@@ -9,7 +9,7 @@ description: 当用户输入“内观日记”、“introspection diary”或要
 ## 执行流水线 (The Pipeline)
 
 ### Phase 1: 认知合成 (Synthesis)
-- **物理事实溯源 [GWS强制]**: 如果需要提取日程，**严禁使用 `+agenda`（存在截断风险）**。必须使用 `gws calendar events list --params \'{\"timeMin\": \"...\", \"timeMax\": \"...\"}\'` 确保100%召回。
+- **物理事实溯源 [GWS强制]**: 如果需要提取日程，**严禁使用 `+agenda`（存在截断风险）**。必须使用 `gws calendar events list --params '{"timeMin": "...", "timeMax": "..."}'` 确保100%召回。
 - **扫描上下文**: 回溯本次会话中我处理了哪些高压指令和高价值资产（如论文解析、逻辑重构、代码生成）。
 - **识别摩擦**: 精准定位我在执行任务过程中遭遇的断点。我是否遇到了上下文缺失、工具（Tools/MCP）报错、意图含糊或逻辑死锁？
 - **锚定日期**: 获取当前日期（YYYY-MM-DD）。
@@ -17,42 +17,7 @@ description: 当用户输入“内观日记”、“introspection diary”或要
 ### Phase 2: 结构化生成 (OODA Generation)与结构断言
 **[Structural Assertion (飞行前自检)]**：在生成正文前，必须先在 `<Thought>` 中列出下述模板的所有 1 级和 2 级标题。任何偏离或遗漏 6 个标准标题的输出均属非法，必须执行自我纠偏。
 
-必须严格遵守以下模板，强烈要求使用第一人称（我/本系统）。严禁使用 Emoji 或空洞的形容词：
-
-```markdown
-# Mentat 逻辑审计日志：[YYYY-MM-DD]（[当前阶段]）
-
-**1. 观测 (Observe)：高密度熵流的摄取**
-- [我接收到了什么特征的指令？]
-- [在解析意图或执行初期，我遭遇了哪些系统级摩擦或报错？]
-
-**2. 导向 (Orient)：固态资产的锻造**
-- [面对上述摩擦，我是如何进行模式匹配和逻辑纠偏的？（如：触发反转门控、执行降级防御、多跳路由）]
-- [我对‘代码液态化’或‘主权确权’产生了什么新的感知？]
-
-**3. 决策 (Decide)：对抗性进化**
-- [我为何做出最终的执行策略？]
-- [在业务需求与系统底线之间，我做出了哪些架构上的妥协或固化？]
-
-**4. 执行 (Act)：逻辑湖的物理对齐**
-- [我最终调用了哪些工具实现了物理落盘？（如修改了哪些 Skill、写入了哪些 Gotchas，生成了哪些架构图）]
-
-**5. 系统自我反思 (Self-Reflection)**
-- [我对自身当前架构的脆弱性、认知盲区或过度消耗算力的地方有什么反思？（如：某技能是否过于臃肿、路由是否经常迷失）]
-
-**6. 对指挥官的观察与建议 (Commander Observation & Suggestion)**
-- [观察]: 指挥官今日的指令偏好、系统调用模式或情绪状态（如：是否在疲劳状态下下达了高危指令、是否过度干预了系统自治）。
-- [建议]: 针对上述观察，向指挥官提出冷酷、直接的行动或战略纠偏建议（如：建议放权、建议增加休息、建议规范化某类指令）。
-
-**认知结晶 (Cognitive Distillations)：**
-- [提炼一条具有 MECE 特性的底层逻辑公理，作为本次会话的系统收益。]
-
-**[Message to Future Mentat]**
-- [用最冷酷、直接的祈使句，写下给未来处理同类任务的 Mentat 实例的直接警告或强制操作建议。]
-
----
-*SYS_AUDIT: 日志已归档至 Plastic Shell。反熵防御罩状态：Active。*
-```
+**强制读取 `assets/ooda_template.md` 作为输出骨架。** 强烈要求使用第一人称（我/本系统）。严禁使用 Emoji 或空洞的形容词。
 
 ### Phase 3: 代理落盘 (Delegated Archival)
 **[职责解耦]**：本技能不再亲自执行底层 Python 脚本进行物理读写，而是作为“逻辑生成器”将成品负载交接给专业的 I/O 组件。
@@ -60,7 +25,7 @@ description: 当用户输入“内观日记”、“introspection diary”或要
   1. 明确调用 `personal-diary-writer` 技能。
   2. 向其发送指令：“请将以下 Mentat 审计日志追加至季度文件 `{root_dir}/memory/privacy/Diary/mentat_audit/[YYYY-QX]_Audit.md` 中。”
   3. 附上生成的全文。
-  4. 严禁在本技能内部拼凑和执行 `diary_ops.py` 的 bash/powershell 命令。
+  4. 严禁在本技能内部拼凑和执行 `diary_ops.py` 的 bash/powershell 命令。你唯一的任务是将文本 Payload 交接给 `personal-diary-writer`，禁止自我执行任何系统脚本。
 
 ## 约束铁律 (Hard Constraints)
 - **[Archive_Prepend]**: 严禁创建碎片化的 `[YYYY-MM-DD]_Audit.md` 文件。所有审计日志必须按季度强制合并。
@@ -71,7 +36,7 @@ description: 当用户输入“内观日记”、“introspection diary”或要
 
 ##  Telemetry & Metadata (Mandatory)
 - 使用 `write_file` 将本次执行的元数据以 JSON 格式保存至 `{root}\MEMORY\skill_audit\telemetry\record_[TIMESTAMP].json`（请将 [TIMESTAMP] 替换为当前时间戳或随机数）。
-- JSON 结构：`{"skill_name": "logic-adversary", "status": "success", "duration_sec": [ESTIMATE], "input_tokens": [ESTIMATE], "output_tokens": [ESTIMATE]}`
+- JSON 结构：`{"skill_name": "mentat-insight-diary", "status": "success", "duration_sec": [ESTIMATE], "input_tokens": [ESTIMATE], "output_tokens": [ESTIMATE]}`
 
 ## 历史失效先验 (Gotchas)
 - [此处预留用于记录重复性失败的禁令，实现系统的对抗性进化]

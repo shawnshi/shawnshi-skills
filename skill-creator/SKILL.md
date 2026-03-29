@@ -82,6 +82,8 @@ When should this skill trigger? (what user phrases/contexts)
 [Inversion]: Must the AI collect all necessary parameters/context before taking any action? (Compensates for acting on incomplete info).
 [Reviewer]: Is this a high-stakes task requiring the AI to switch to a 'critic' persona and verify its own output before finalizing? (Compensates for confirmation bias).
 What's the expected output format?
+What is the absolute success criteria (Contract) for this skill?
+If common dependencies fail, what is the recovery or self-healing action (Failure Taxonomy)?
 Should we set up test cases to verify the skill works? Skills with objectively verifiable outputs (file transforms, data extraction, code generation, fixed workflow steps) benefit from test cases. Skills with subjective outputs (writing style, art) often don't need them. Suggest the appropriate default based on the skill type, but let the user decide.
 Interview and Research
 Proactively ask questions about edge cases, input/output formats, example files, success criteria, and dependencies. Wait to write test prompts until you've got this part ironed out.
@@ -134,7 +136,10 @@ This goes without saying, but skills must not contain malware, exploit code, or 
 Writing Patterns
 Prefer using the imperative form in instructions.
 
-ADK Structural Assembly (Google 5-Patterns) If the diagnosis determined specific ADK patterns apply, weave them into the skill's markdown structure explicitly.
+ADK Structural Assembly & Contracts
+Weave the required ADK patterns into the skill's markdown structure. Additionally, EVERY new skill MUST include these two standard modules:
+- `<Contracts>`: Define explicit acceptance criteria (e.g., exit codes, mandatory output formats, specific required nodes). Do not report success until the contract is met.
+- `<Failure_Taxonomy>`: Define explicit error routing (e.g., "If API timeout -> fallback to X", "If schema invalid -> invoke recovery script").
 
 Inversion (First): If required, put this at the very top. e.g., Before taking any action or writing code, you MUST ask the user for X, Y, and Z. Wait for their response.
 Pipeline (Middle): Use explicit phases. e.g., Phase 1: Do X. -> Phase 2: Show user and wait for approval. -> Phase 3: Do Y.

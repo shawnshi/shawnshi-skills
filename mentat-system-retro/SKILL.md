@@ -32,6 +32,11 @@ description: Mentat 的量化反思引擎。当用户要求“量化复盘”、
 - 系统级失败率: X%
 
 **[2. 异常节点狙击 (Anomalous Nodes)]**
+
+**[2.5 Hermes Loop 轨迹提炼雷达]**
+- 扫描近期执行超过 5 次且 0 失败的复杂技能，或者执行耗时极高的单次长程任务。
+- 识别是否具有模式复用价值。如果有，建议系统在此刻触发 skill-creator 去提取一条 Golden Trajectory。
+
 - 🔴 **[Skill Name] (高摩擦)**: 失败率高达 X%。[根因假设]。
 - 🟠 **[Skill Name] (算力黑洞)**: 均均单次调用耗费 X Tokens。[缩容建议]。
 
@@ -42,7 +47,7 @@ description: Mentat 的量化反思引擎。当用户要求“量化复盘”、
 ```
 
 ### Phase 4: 执行与归档 (Execution & Archival)
-- **物理落盘**: 在回复用户前，必须调用 `write_file` 将上述报告完整保存至 `{root}/MEMORY/audit_logs/mentat-system-retro-audit-[YYYY-MM-DD].md`（若当日已有则追加序列号）。
+- **物理落盘**: 在回复用户前，必须调用 `write_file` 将上述报告完整保存至 `{root}/MEMORY/skill_audit/audit_logs/mentat-system-retro-audit-[YYYY-MM-DD].md`（若当日已有则追加序列号）。
 - **技能自愈**: 若你识别出了明显的 `Gotchas` 补充点，主动询问用户是否需要你立即去修改对应的 `SKILL.md`。
 - **资产化**: 你对系统做出的“规则修正”将作为永久的负熵资产保留。报告本身已在 `audit_logs` 中归档，确保了量化演化的可追溯性。
 

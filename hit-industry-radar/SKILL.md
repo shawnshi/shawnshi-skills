@@ -22,13 +22,16 @@ triggers: ["卫宁健康最新动向", "东软近期中标", "Epic行业新闻",
 
 ## 2. 核心工作流 (Blackboard Protocol)
 
-### Phase 1: 多维度并发侦察与 SemHash 去重 (Sense) [Mode: PLANNING]
-1. **Initialize Blackboard**: 将本周的搜索意图写入数字黑板。
-2. **并发调度 (Sentinel)**:
-   - `global_hit_scout`: Epic, Oracle 等海外巨头的降维技术或并购。
-   - `china_hit_scout`: 国内友商的中标、专利、人事及大模型试点。
-   - `winning_baseline`: 卫宁健康自身的最新动作，建立防御基石。
-3. **SemHash 拦截**: 将抓取到的信息与 `personal-intelligence-hub` 的历史指纹库对比。
+### Phase 1: 物理沙盒切分与子代理并发 (Map-Reduce Delegation) [Mode: PLANNING]
+0. **Initialize Blackboard**: 将本周的搜索意图写入数字黑板。
+ 1. **构建物理任务包 (Task Packetization)**: 必须通过 `write_file` 在 `tmp/playgrounds/` 下生成三个独立的结构化指令包：
+ - `Task_global_hit.md`: 目标锚定Epic, Oracle 等海外HIT巨头的降维技术或并购。
+ - `Task_china_hit.md`: 目标锚定国内HIT友商的中标、专利、人事及新产品动态。
+ - `Task_winning_baseline.md`: 目标锚定卫宁健康自身的最新动作，建立防御基石。
+ 2. **集群并发调度 (Concurrent Dispatch)**: 并发调用 3 次 `generalist`子代理。将对应的 Task 文件路径作为 Payload 传入。强制子代理在其独立沙盒中完成“检索 -> 过滤 -> 提纯”闭环，并将结果分别写入`tmp/playgrounds/Response_global_hit.md`, `Response_china_hit.md`, `Response_winning_baseline.md`。
+- *指令硬锁*：“禁止输出多余废话，仅交付包含 DOI、核心事实与初步 TRL 评级的硬核数据。”
+3. **逻辑补位**: 若顶级正刊论文不足，必须提取热点趋势补齐信息密度。
+4. **资产回收与 SemHash 拦截 (Harvest & Intercept)**: 主代理读取三个 `Response` 文件。扫描物理目录执行 SemHash 重，确认未与过去 14 天的历史报告重复后，将合并后的高纯度信息推入数字黑板，随后立即清扫 `tmp/` 下的中间产物。
 
 ### Phase 2: 五维仲裁与织网 (Filter & Connect) [Mode: EXECUTION]
 1. **黑板清洗 (Arbiter)**: 对黑板上的原始 Fact 逐一执行 Evidence-Check。
@@ -76,7 +79,7 @@ triggers: ["卫宁健康最新动向", "东软近期中标", "Epic行业新闻",
 ```
 ##  Telemetry & Metadata (Mandatory)
 - 使用 `write_file` 将本次执行的元数据以 JSON 格式保存至 `{root}\MEMORY\skill_audit\telemetry\record_[TIMESTAMP].json`（请将 [TIMESTAMP] 替换为当前时间戳或随机数）。
-- JSON 结构：`{"skill_name": "logic-adversary", "status": "success", "duration_sec": [ESTIMATE], "input_tokens": [ESTIMATE], "output_tokens": [ESTIMATE]}`
+- JSON 结构：`{"skill_name": "personal-logic-adversary", "status": "success", "duration_sec": [ESTIMATE], "input_tokens": [ESTIMATE], "output_tokens": [ESTIMATE]}`
 
 ## 历史失效先验 (Gotchas)
 - [此处预留用于记录重复性失败的禁令，实现系统的对抗性进化]
