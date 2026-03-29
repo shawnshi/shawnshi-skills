@@ -19,13 +19,13 @@ triggers: ["批量下载这组团体标准", "爬取特定编号的国标生成P
 执行前请确认依赖：
 ```bash
 # 若报错，请安装
-pip install -r C:\Users\shich\.gemini\skills\tuanbiaodownloader\scripts\requirements.txt
+pip install -r {root_dir}\.gemini\skills\tuanbiaodownloader\scripts\requirements.txt
 ```
 
 ### 2. Execution (执行)
 直接提供 **Path ID** 或 **预览 URL**：
 ```bash
-python C:\Users\shich\.gemini\skills\tuanbiaodownloader\scripts\downloader.py <ID_OR_URL>
+python {root_dir}\.gemini\skills\tuanbiaodownloader\scripts\downloader.py <ID_OR_URL>
 ```
 *   **示例 (ID)**: `T_ISC_0095-2025`
 *   **示例 (URL)**: `https://www.ttbz.org.cn/kkfileview/T_ISC_0095-2025/index.html`

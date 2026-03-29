@@ -11,7 +11,7 @@ description: Mentat 的量化反思引擎。当用户要求“量化复盘”、
 ## 执行流水线 (The Pipeline)
 
 ### Phase 1: 数据摄取 (Telemetry Ingestion)
-- **调用脚本**: 强制使用 `run_shell_command` 执行 `python C:\Users\shich\.gemini\scripts\system_retro.py`。
+- **调用脚本**: 强制使用 `run_shell_command` 执行 `python {root_dir}\.gemini\skills\scripts\system_retro.py`。
 - **获取数据**: 读取脚本返回的 `Quantitative Retro Analysis`（包含总执行次数、失败率、Token 消耗及各 Skill 性能）。
 
 ### Phase 2: 冰冷诊断 (Cold Diagnosis)
@@ -35,7 +35,7 @@ description: Mentat 的量化反思引擎。当用户要求“量化复盘”、
 
 **[2.5 Hermes Loop 轨迹提炼雷达]**
 - 扫描近期执行超过 5 次且 0 失败的复杂技能，或者执行耗时极高的单次长程任务。
-- 识别是否具有模式复用价值。如果有，建议系统在此刻触发 skill-creator 去提取一条 Golden Trajectory。
+- 识别是否具有模式复用价值。如果有，建议系统在此刻触发 mentat-skill-creator 去提取一条 Golden Trajectory。
 
 - 🔴 **[Skill Name] (高摩擦)**: 失败率高达 X%。[根因假设]。
 - 🟠 **[Skill Name] (算力黑洞)**: 均均单次调用耗费 X Tokens。[缩容建议]。

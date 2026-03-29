@@ -131,7 +131,7 @@ python scripts/garmin_chart.py dashboard --days 7
 python scripts/garmin_chart.py dashboard --period 90d
 
 # 手动指定保存路径
-python scripts/garmin_chart.py dashboard --days 7 --output C:\Users\shich\.gemini\memory\garmin\tactical_report.html
+python scripts/garmin_chart.py dashboard --days 7 --output {root_dir}\.gemini\memory\garmin\tactical_report.html
 ```
 
 ### 8. 临床互操作 (FHIR Export)

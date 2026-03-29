@@ -6,7 +6,7 @@ from pathlib import Path
 from datetime import datetime
 
 # Add lib to path
-LIB_DIR = Path(r"C:\Users\shich\.gemini\scripts\lib")
+LIB_DIR = Path(__file__).parent.parent.parent / "scripts" / "lib"
 if str(LIB_DIR) not in sys.path:
     sys.path.append(str(LIB_DIR))
 

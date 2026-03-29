@@ -1,4 +1,4 @@
-import sys; sys.path.append(r'C:\Users\shich\.gemini\scripts\lib');
+import sys; from pathlib import Path; sys.path.append(str(Path(__file__).parent.parent.parent / 'scripts' / 'lib'));
 """
 <!-- Intelligence Hub: The Forge V5.0 (Jinja2 Templating) -->
 @Input: tmp/latest_scan.json, MEMORY/news/intelligence_current_refined.json, references/strategic_focus.json

@@ -121,7 +121,7 @@ gemini skills install https://github.com/shawnshi/shawnshi-skills.git --path hit
 | 技能标识 (Directory)                                  | 核心本质 (Trigger Traps)                                                                          |
 |:------------------------------------------------------|:--------------------------------------------------------------------------------------------------|
 | **[morphism-mapper-master](morphism-mapper-master/)** | **范畴论跨界思维引擎**。利用异构领域结构生成突破性解法，执行升维打击.                            |
-| **[skill-creator](skill-creator/)**                   | **技能工厂与自愈中心 (Native Edition)**。管理技能生命周期，确保符合“四层壳模型”与三层架构规范.   |
+| **[mentat-skill-creator](mentat-skill-creator/)**                   | **技能工厂与自愈中心 (Native Edition)**。管理技能生命周期，确保符合“四层壳模型”与三层架构规范.   |
 
 ### 🧰 全能格式转换与数据工厂 (Utilities Format)
 *负责标准化格式转换与数据原质提取。*

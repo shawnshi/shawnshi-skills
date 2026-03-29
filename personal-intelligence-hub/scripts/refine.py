@@ -1,4 +1,4 @@
-import sys; sys.path.append(r'C:\Users\shich\.gemini\scripts\lib');
+import sys; from pathlib import Path; sys.path.append(str(Path(__file__).parent.parent.parent / 'scripts' / 'lib'));
 """
 <!-- Intelligence Hub: AI Refinement Engine V5.1 (Gemini CLI Integration) -->
 @Input: tmp/latest_scan.json, references/strategic_focus.json

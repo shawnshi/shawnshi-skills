@@ -16,9 +16,9 @@ description: |
 ## 2. 执行协议 (Execution Protocol)
 
 ### Phase 0: Context Gathering (强制获取)
-- **日常探针 (今日复盘)**: 强制执行 `python {root_dir}\.gemini\scripts\io_engine\gather_context.py` 获取 Garmin 与 Google Calendar 数据，严禁自行组装参数或调用其他命令。
+- **日常探针 (今日复盘)**: 强制执行 `python {root_dir}\.gemini\skills\scripts\io_engine\gather_context.py` 获取 Garmin 与 Google Calendar 数据，严禁自行组装参数或调用其他命令。
 - **[PROMPT_MANDATE]**: 执行前必须强制读取对应的提示词模板 (`prompts/DAILY.md`, `prompts/WEEKLY.md` 等)。严禁仅依赖系统自身知识。
-- **战术提取**: 必须调用 `python {root_dir}\.gemini\scripts\io_engine\diary_ops.py extract_tactics` 脚本抓取上一个周期的战术。
+- **战术提取**: 必须调用 `python {root_dir}\.gemini\skills\scripts\io_engine\diary_ops.py extract_tactics` 脚本抓取上一个周期的战术。
 - **展示大纲**: 向用户展示大纲，调用 `ask_user` 获取审批。
 
 ### Phase 1: Cognitive Distillation 

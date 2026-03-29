@@ -22,7 +22,7 @@ triggers: ["将Markdown转为LaTeX", "将M文件转为LaTeX","生成科研级PDF
 统一入口，适用于大多数文档转换场景。
 
 ```bash
-python C:\Users\shich\.gemini\skills\smart-doc-latex\scripts\smart_engine.py --input <input_file> [OPTIONS]
+python {root_dir}\.gemini\skills\smart-doc-latex\scripts\smart_engine.py --input <input_file> [OPTIONS]
 ```
 
 | Flag | Description |

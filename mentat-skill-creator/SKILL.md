@@ -1,5 +1,5 @@
 ---
-name: skill-creator
+name: mentat-skill-creator
 version: 3.4.0
 description: |
   技能工厂与自愈中心 (Native Agent Edition)。当用户想“创建新技能”、“优化既有指令”、“运行技能评测”或技能出现“重复性失败”需要 .amendify() 时，务必激活。
@@ -230,7 +230,7 @@ Once all runs are done:
 
 Grade each run — spawn a grader subagent (or grade inline) that reads agents/grader.md and evaluates each assertion against the outputs. Save results to grading.json in each run directory. The grading.json expectations array must use the fields text, passed, and evidence (not name/met/details or other variants) — the viewer depends on these exact field names. For assertions that can be checked programmatically, write and run a script rather than eyeballing it — scripts are faster, more reliable, and can be reused across iterations.
 
-Aggregate into benchmark — run the aggregation script from the skill-creator directory:
+Aggregate into benchmark — run the aggregation script from the mentat-skill-creator directory:
 
 python -m scripts.aggregate_benchmark <workspace>/iteration-N --skill-name <name>
 This produces benchmark.json and benchmark.md with pass_rate, time, and tokens for each configuration, with mean ± stddev and the delta. If generating benchmark.json manually, see references/schemas.md for the exact schema the viewer expects. Put each with_skill version before its baseline counterpart.
@@ -239,7 +239,7 @@ Do an analyst pass — read the benchmark data and surface patterns the aggregat
 
 Launch the viewer with both qualitative outputs and quantitative data:
 
-nohup python <skill-creator-path>/eval-viewer/generate_review.py \
+nohup python <mentat-skill-creator-path>/eval-viewer/generate_review.py \
   <workspace>/iteration-N \
   --skill-name "my-skill" \
   --benchmark <workspace>/iteration-N/benchmark.json \

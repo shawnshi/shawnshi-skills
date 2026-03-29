@@ -15,7 +15,7 @@ sys.path.insert(0, str(Path(__file__).parent))
 from garmin_auth import get_client
 
 # Cross-platform default output directory
-_DEFAULT_OUTPUT_DIR = r"C:\Users\shich\.gemini\memory\garmin"
+import os; _DEFAULT_OUTPUT_DIR = os.path.expanduser(r"~/.gemini/memory/garmin")
 Path(_DEFAULT_OUTPUT_DIR).mkdir(parents=True, exist_ok=True)
 
 # Check for optional dependencies

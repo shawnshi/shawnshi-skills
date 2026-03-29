@@ -45,7 +45,7 @@ Body/Data:
 // LAYOUT 底部高亮 Bumper 布局
 // Script: 这笔投入不是成本，而是对医院未来 10 年逻辑资产的保险费。"""
 
-output_path = r'C:\Users\shich\.gemini\presentation-architect-workspace\iteration-1\eval-3\with_skill\outputs\outline.md'
+output_path = str(Path(__file__).parent.parent.parent.parent / "presentation-architect-workspace" / "iteration-1" / "eval-3" / "with_skill" / "outputs" / "outline.md")
 with open(output_path, 'w', encoding='utf-8') as f:
     f.write(content)
 print(f"Eval-3 outline generated at: {output_path}")
