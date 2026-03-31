@@ -32,7 +32,7 @@ triggers: ["制作战略级PPT", "生成演示文稿蓝图", "构建决策型汇
 ### [🧠] Phase 2: Style & Ghost Deck (风格指令与骨架) **[Mode: PLANNING]**
 1. **载入视觉风格指令**：严格读取 Phase 1 锁定的 `references/styles/{Style_Name}.md` 文件内容，填充并定制 `<STYLE_INSTRUCTIONS>` 标签，参照 `blueprint-template.md` 中的全局视觉风格蓝图。必须硬编码【30% 留白比例 (White Space Rule)】与明确的【视觉层级：标题 > 副标题 > 数据 > 装饰】。
 2. **构建 Ghost Deck**：设计叙事性标题链条。同时，【强制】使用 Mermaid 语法 (`graph TD` 或 `mindmap`) 物理生成一张“逻辑推演全局视图”，一并提交给用户进行审查。明确展现痛点、方案与最终收益的推导路径。
-3. **红队审计**：强制激活 `logic-adversary` 对标题链条进行鲁棒性检查。
+3. **红队审计**：强制激活 `personal-logic-adversary`，从汇报人、核心受众、行业专家的多角度，对标题链条进行讨论分析，并达成共识。
 4. **强制审批 (Approval Gate)**：【必须强制】调用 `ask_user` 提交风格块与标题大纲。未获批前禁止写单页蓝图。
 
 ### [💡] Phase 3: Slide-by-Slide Blueprinting (逐页叙事蓝图) **[Mode: EXECUTION]**

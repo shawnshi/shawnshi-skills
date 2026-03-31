@@ -68,5 +68,6 @@ description: |
 
 ## 5. 历史失效先验 (Gotchas)
 - **[ARCHIVE_PREPEND]**: 必须使用 `diary_ops.py` 执行季度级 prepend，严禁创建碎片文件。
+- **[SYNC_AUDIT_FORCE]**: 若会话过程中涉及 `memory.md` 修改、工具链报错（Error Count >= 2）或降级防御逻辑，必须强制视当前任务为“深度日志”，并立即同步激活 `mentat-insight-diary`。
 - ALWAYS use `--content_file` for multi-line log prepends.
 - ENSURE all tags are wrapped in `#tag` format.

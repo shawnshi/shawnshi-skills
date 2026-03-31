@@ -63,352 +63,352 @@
 数据要素 医疗(w=10), Agentic Workflow 临床(w=9), 医疗AI(w=9), DRG DIP(w=9), Evidence-Mesh(w=8), 医疗知识图谱(w=8), 数智化转型(w=8), 医疗信创(w=8), Medical Copilot(w=8), AI 原生医院(w=8), 多模态电子病历(w=8), 医疗大模型 落地(w=8), Medical Semantic Layer(w=8), Agentic Infrastructure(w=7), 算法审计 医疗(w=7)
 
 ## ??????
-[DEEP_REFINE] Item 1 [Score=5]:
-Title: dfarq.homeip.net: Steve Ballmer, Microsoft executive and NBA owner
-URL: https://dfarq.homeip.net/steve-ballmer-microsoft-executive-and-nba-owner/?utm_source=rss&utm_medium=rss&utm_campaign=steve-ballmer-microsoft-executive-and-nba-owner
-Source: dfarq.homeip.net
-Published: 2026-03-29T09:45:59.597689
-Desc: Steven Anthony Ballmer, born March 24, 1956, served as chief executive officer of Microsoft from 2000 to 2014. Today he is the owner of the Los Angeles Clippers of the National Basketball Association (NBA). Steve Ballmer’s personal wealth is around The post Steve Ballmer, Microsoft executive and NBA
+[DEEP_REFINE] Item 1 [Score=6]:
+Title: mobihealthnews.com: Tom Brady-backed telehealth AI startup eMed raises $200M, tops $2B valuation
+URL: https://www.mobihealthnews.com/news/tom-brady-backed-telehealth-ai-startup-emed-raises-200m-tops-2b-valuation
+Source: mobihealthnews.com
+Published: 2026-03-31T06:13:00.303615
+Desc: Telehealth and digital health company eMed, whose founding chief wellness officer is former NFL quarterback Tom Brady, has closed a $200 million Series A funding round at a more than $2 billion valuation.
 
-[DEEP_REFINE] Item 2 [Score=0]:
-Title: South Korea Mandates Solar Panels for Public Parking Lots
-URL: https://www.reutersconnect.com/item/south-korea-mandates-solar-panels-for-public-parking-lots/dGFnOnJldXRlcnMuY29tLDIwMjY6bmV3c21sX01UMU5VUlBITzAwMFZKRjFZQQ
-Source: Hacker News
-Published: 2026-03-29T07:29:04
-Desc: 
+[DEEP_REFINE] Item 2 [Score=5]:
+Title: simonwillison.net: Quoting Georgi Gerganov
+URL: https://simonwillison.net/2026/Mar/30/georgi-gerganov/#atom-everything
+Source: simonwillison.net
+Published: 2026-03-31T06:12:55.623741
+Desc: Note that the main issues that people currently unknowingly face with local models mostly revolve around the harness and some intricacies around model chat templates and prompt construction. Sometimes there are even pure inference bugs. From typing the task in the client to the actual result, there 
 
-[DEEP_REFINE] Item 3 [Score=0]:
-Title: Founder of GitLab battles cancer by founding companies
-URL: https://sytse.com/cancer/
-Source: Hacker News
-Published: 2026-03-29T01:39:49
-Desc: 
+[DEEP_REFINE] Item 3 [Score=5]:
+Title: simonwillison.net: datasette-llm 0.1a3
+URL: https://simonwillison.net/2026/Mar/30/datasette-llm/#atom-everything
+Source: simonwillison.net
+Published: 2026-03-31T06:12:55.623927
+Desc: Release: datasette-llm 0.1a3 Adds the ability to configure which LLMs are available for which purpose, which means you can restrict the list of models that can be used with a specific plugin. #3 Tags: llm, datasette
 
-[DEEP_REFINE] Item 4 [Score=0]:
-Title: CSS is DOOMed
-URL: https://nielsleenheer.com/articles/2026/css-is-doomed-rendering-doom-in-3d-with-css/
-Source: Hacker News
-Published: 2026-03-29T04:39:01
-Desc: 
+[DEEP_REFINE] Item 4 [Score=5]:
+Title: simonwillison.net: Mr. Chatterbox is a (weak) Victorian-era ethically trained model you can run on your own computer
+URL: https://simonwillison.net/2026/Mar/30/mr-chatterbox/#atom-everything
+Source: simonwillison.net
+Published: 2026-03-31T06:12:55.624746
+Desc: Trip Venturella released Mr. Chatterbox, a language model trained entirely on out-of-copyright text from the British Library. Here's how he describes it:  Mr. Chatterbox is a language model trained entirely from scratch on a corpus of over 28,000 Victorian-era British texts published between 1837 an
 
-[DEEP_REFINE] Item 5 [Score=0]:
-Title: OpenBSD on Motorola 88000 Processors
-URL: http://miod.online.fr/software/openbsd/stories/m88k1.html
-Source: Hacker News
-Published: 2026-03-27T22:39:51
-Desc: 
+[DEEP_REFINE] Item 5 [Score=5]:
+Title: blog.pixelmelt.dev: The Webs Digital Locks have Never had a Stronger Opponent
+URL: https://blog.pixelmelt.dev/the-webs-digital-locks/
+Source: blog.pixelmelt.dev
+Published: 2026-03-31T06:12:57.199182
+Desc: We are in a renaissance era of reverse engineering. Defenders are going to be on the back foot until we figure out some way to cope with LLM's.
 
 [DEEP_REFINE] Item 6 [Score=0]:
-Title: Alzheimer's disease mortality among taxi and ambulance drivers (2024)
-URL: https://www.bmj.com/content/387/bmj-2024-082194
+Title: Fedware: Government apps that spy harder than the apps they ban
+URL: https://www.sambent.com/the-white-house-app-has-huawei-spyware-and-an-ice-tip-line/
 Source: Hacker News
-Published: 2026-03-29T08:53:30
+Published: 2026-03-31T02:16:00
 Desc: 
 
 [DEEP_REFINE] Item 7 [Score=0]:
-Title: I decompiled the White House's new app
-URL: https://thereallo.dev/blog/decompiling-the-white-house-app
+Title: Do your own writing
+URL: https://alexhwoods.com/dont-let-ai-write-for-you/
 Source: Hacker News
-Published: 2026-03-28T23:37:17
+Published: 2026-03-30T20:39:56
 Desc: 
 
 [DEEP_REFINE] Item 8 [Score=0]:
-Title: 豆包输入法 mac 版来了，牛逼 plus
-URL: https://www.v2ex.com/t/1201848
-Source: V2EX
-Published: 2026-03-29T09:45:59.036418
-Desc: https://drive.google.com/file/d/1Q6pHAiQG3Jh506lKdAo2WTdZOdTfdOfZ/view
+Title: Learn Claude Code by doing, not reading
+URL: https://claude.nagdy.me/
+Source: Hacker News
+Published: 2026-03-31T04:19:43
+Desc: 
 
 [DEEP_REFINE] Item 9 [Score=0]:
-Title: GLM 5.1 有实际测试过的吗
-URL: https://www.v2ex.com/t/1201802
-Source: V2EX
-Published: 2026-03-29T09:45:59.036421
-Desc: GLM 5.1 有实际测试过的吗，效果怎么样，能达到 Sonnet 4.6 的水平吗？
+Title: Turning a MacBook into a touchscreen with $1 of hardware (2018)
+URL: https://anishathalye.com/macbook-touchscreen/
+Source: Hacker News
+Published: 2026-03-31T03:22:33
+Desc: 
 
 [DEEP_REFINE] Item 10 [Score=0]:
-Title: [独立开发 / 招募封测] 📻 做了一款极简且高颜值的全球电台 App，求 20 位 Google Play 封测体验官 (即送终身 Pro)
-URL: https://www.v2ex.com/t/1201854
-Source: V2EX
-Published: 2026-03-29T09:45:59.036425
-Desc: 大家好，我是独立开发者。  最近花了点时间做了一款 Android 端全球电台应用 —— RadioPlayer 。 市面上其实有很多电台应用（比如 TuneIn ），但大多充满了臃肿的 UI 、繁杂的推荐逻辑，甚至满屏的各种横幅广告。所以我决定自己造一把轮子，核心理念就三个字：好看、纯粹、极简。  ✨ 核心亮点：  全球频道：依托 RadioBrowser 数据库，按国家 / 流派 (Jazz, Pop, News 等) 随意切换收听。 超高颜值 UI：使用完全原生的 Compose 构建，全局支持顺滑的暗色模式。特别是播放页底部的 MiniPlayer 有纯正的高斯模糊（毛
+Title: How to turn anything into a router
+URL: https://nbailey.ca/post/router/
+Source: Hacker News
+Published: 2026-03-30T21:28:54
+Desc: 
 
 [DEEP_REFINE] Item 11 [Score=0]:
-Title: Product Hunt: Glance
-URL: https://www.producthunt.com/products/glance-give-claude-code-a-real-browser
-Source: Product Hunt
-Published: 2026-03-29T09:46:01.398592
-Desc: Real browser for Claude Code Test, Screenshot, Automate                  Discussion             |             Link
+Title: Agents of Chaos
+URL: https://agentsofchaos.baulab.info/report.html
+Source: Hacker News
+Published: 2026-03-28T04:30:05
+Desc: 
 
 [DEEP_REFINE] Item 12 [Score=0]:
-Title: Product Hunt: RepoLens
-URL: https://www.producthunt.com/products/repolens
-Source: Product Hunt
-Published: 2026-03-29T09:46:01.399019
-Desc: Know what changed and what matters across your codebase             Discussion             |             Link
+Title: Bird brains (2023)
+URL: https://www.dhanishsemar.com/writing/bird-brains
+Source: Hacker News
+Published: 2026-03-30T21:14:27
+Desc: 
 
 [DEEP_REFINE] Item 13 [Score=0]:
-Title: Product Hunt: Crossnode
-URL: https://www.producthunt.com/products/crossnode
-Source: Product Hunt
-Published: 2026-03-29T09:46:01.400166
-Desc: Vibe code AI agents and put them behind a payment wall             Discussion             |             Link
+Title: Cherri – programming language that compiles to an Apple Shortuct
+URL: https://github.com/electrikmilk/cherri
+Source: Hacker News
+Published: 2026-03-28T07:39:44
+Desc: 
 
 [DEEP_REFINE] Item 14 [Score=0]:
-Title: simonwillison.net: datasette-showboat 0.1a2
-URL: https://simonwillison.net/2026/Mar/27/datasette-showboat/#atom-everything
-Source: simonwillison.net
-Published: 2026-03-29T09:45:59.389926
-Desc: Release: datasette-showboat 0.1a2 I added an option to export a Markdown file from my app that lets Showboat incrementally publish updates to a remote server.
+Title: Researchers find 3,500-year-old loom that reveals textile revolution
+URL: https://web.ua.es/en/actualidad-universitaria/2026/marzo2026/23-31/ua-researchers-find-3-500-year-old-loom-that-reveals-key-aspects-of-textile-revolution-in-the-bronze-age.html
+Source: Hacker News
+Published: 2026-03-28T04:57:17
+Desc: 
 
 [DEEP_REFINE] Item 15 [Score=0]:
+Title: Seeing Like a Spreadsheet
+URL: https://davidoks.blog/p/how-the-spreadsheet-reshaped-america
+Source: Hacker News
+Published: 2026-03-29T00:28:32
+Desc: 
+
+[TRANSLATE_ONLY] Item 16 [Score=0]:
+Title: freeCodeCamp /freeCodeCamp
+URL: https://github.com/freeCodeCamp/freeCodeCamp
+Source: GitHub
+Published: 2026-03-31T06:12:55.103272
+Desc: freeCodeCamp.org's open-source codebase and curriculum. Learn math, programming, and computer science for free.
+
+[TRANSLATE_ONLY] Item 17 [Score=0]:
+Title: sherlock-project /sherlock
+URL: https://github.com/sherlock-project/sherlock
+Source: GitHub
+Published: 2026-03-31T06:12:55.103339
+Desc: Hunt down social media accounts by username across social networks
+
+[TRANSLATE_ONLY] Item 18 [Score=0]:
+Title: fastfetch-cli /fastfetch
+URL: https://github.com/fastfetch-cli/fastfetch
+Source: GitHub
+Published: 2026-03-31T06:12:55.103446
+Desc: A maintained, feature-rich and performance oriented, neofetch like system information tool.
+
+[TRANSLATE_ONLY] Item 19 [Score=0]:
+Title: 自家新茶又来啦，龙井茶和径山茶有需要的 V 友欢迎联系[抽奖送龙井茶]
+URL: https://www.v2ex.com/t/1202184
+Source: V2EX
+Published: 2026-03-31T06:12:53.680748
+Desc: 前两年在 V2 发了下，很多 V 友加了，今年再来发一次，继续抽奖送点茶叶。  帮我爸带点货，我们家在杭州余杭径山，有自己的高山茶园 40 亩，最近新茶刚开采，卖径山绿茶和龙井绿茶。  自己或者父母喜欢喝茶的，可以加我 vx：blackboxo ，或者直接加我爸 vx：wu13516817732  龙井茶礼盒装一盒半斤装 350 ，250 ，简装自己喝一斤 600 ，400 。 径山茶礼盒装一盒半斤装 400 ，350 ，300 ，简装一斤 750,700,650,600,550 。  评论抽奖送一罐径山茶~  ![]( https://markdown-pic-blac
+
+[TRANSLATE_ONLY] Item 20 [Score=0]:
+Title: 在香港和澳门之间做选择，去了澳门，但是感觉太不爽了
+URL: https://www.v2ex.com/t/1202136
+Source: V2EX
+Published: 2026-03-31T06:12:53.680758
+Desc: 澳门吃饭篇：</br> 我们先去了澳门，在一家路边小餐厅吃饭，坐下后服务员先说的英语，我们回了一句，可以说普通话吗，他说可以，然后给我们介绍了一下菜，推荐了龙虾/鲍鱼等菜，由于我们来自重庆，确实不太喜欢吃海鲜，并且老婆对海鲜过敏，等他介绍完后，我们道谢后自己翻了下菜单，发现有炒菜，然后我们就点了 3 盘比较符合我们麻辣口味的炒菜，并没有选择任何一道他们推荐的菜，当然炒菜的价格肯定比他们推荐的大菜要便宜，服务员说这几个菜比较辣，没问题吗，我们说没问题，然后就坐等上菜。  这时候第一件恶心的事就出现了，其实在入座后，另一位服务员给我们上了 2 碟免费小菜，是海鲜类的，由于我们不爱吃海鲜，所以
+
+[TRANSLATE_ONLY] Item 21 [Score=0]:
+Title: 朋友一头扎进 AI 漫剧赛道，怎么委婉劝他别上头？
+URL: https://www.v2ex.com/t/1202119
+Source: V2EX
+Published: 2026-03-31T06:12:53.680759
+Desc: 有个朋友最近问我平时爱看什么类型的漫剧，我还以为他只是剧荒，就给他推荐了满级大佬隐藏实力装逼之类的  结果他直接告诉我，打算自己用 AI 做漫剧，用的是即梦，付费做了个 demo 发给我看了下  看完真的一言难尽。现在虽然都说 AI 降低了创作门槛，人人都能当创作者，但漫剧其实特别吃剧本、分镜和画面质感，描述不到位，抽卡不理想，做出来的内容根本没吸引力  再说他本身也不是相关专业出身，完全是一腔热血硬上，还计划做五十多集，这不纯纯烧钱...我怕他投入太多最后没啥人看，要不要劝他再慎重考虑下？  放几个截图，大家如果有兴趣，上线了我滴滴你们。哈哈哈   ![]( https:
+
+[TRANSLATE_ONLY] Item 22 [Score=0]:
+Title: 新买的酷态科 10 号 ultra 坏了
+URL: https://www.v2ex.com/t/1202112
+Source: V2EX
+Published: 2026-03-31T06:12:53.680760
+Desc: 到手 10 天，OTA 一次，昨天同时在充 14 和 16pm ，功率不超过 60w  突然跳空开，有一股焦臭味，正在售后中。。  果然果子还是只能和 anker 配吗？我之前买的 anker 也炸过
+
+[TRANSLATE_ONLY] Item 23 [Score=0]:
+Title: 是否需要拔智齿
+URL: https://www.v2ex.com/t/1202131
+Source: V2EX
+Published: 2026-03-31T06:12:53.680761
+Desc: 目前发现下颚大牙最里面开始长了，都是横着长的，目前左边已经长出来了能看到白白牙齿，现在右边也开始冒头了，现在就是右边会出现阵痛，头皮发麻那种，还有就是左边因为长出来了虽然现在不痛了，但是因为有缝隙总感觉里面藏了东西，抠一下就很臭那种 这种需要去拔掉吗？如果不拔还会继续长吗？
+
+[TRANSLATE_ONLY] Item 24 [Score=0]:
+Title: 2026 年，个人开发首选是直接走原生还是走 RN 或 flutter
+URL: https://www.v2ex.com/t/1202088
+Source: V2EX
+Published: 2026-03-31T06:12:53.680762
+Desc: 基本都是 AI 写代码了，现在 AI 写 swift 这些擅长吗？因为一直以来只用来写过前端。  我想的是，都 AI 写代码，是不是直接上原生的好一些？  另外我现在开发的 app 是用 RN 写的，但是我担心 RN 会容易在不同手机上出现各种兼容性问题。我也没那么多可测试的。只能保证自己手机上没问题。
+
+[TRANSLATE_ONLY] Item 25 [Score=0]:
+Title: 张雪摩托车连续获得两个 WSBK 分站冠军， 是不是意味着国产摩托车已经达到世界先进水平？
+URL: https://www.v2ex.com/t/1202185
+Source: V2EX
+Published: 2026-03-31T06:12:53.680763
+Desc: 赛事级别：WSBK （世界超级摩托车锦标赛）与 MotoGP 并称两轮界两大殿堂，WorldSSP 是核心量产组别，要求赛车基于市售车型改装，是量产车性能的终极试金石。 夺冠细节： 3 月 28 日首回合：德比斯从第 2 位发车，全程领跑，领先杜卡迪 3.685 秒夺冠。 3 月 29 日次回合：中途跌至第 3 ，最后 3 圈直线 + 弯道连续反超，再胜 0.872 秒，实现背靠背两连冠。 对手：杜卡迪 V2 、雅马哈 R9 、凯旋 765 等国际顶级车型。 赛车硬实力（ 820RR-RS ）： 自研双缸 / 三缸发动机，135 马力，整备质量仅 193kg 。 零百加速 2.8
+
+[TRANSLATE_ONLY] Item 26 [Score=0]:
+Title: V2EX 是否在实质上接受了 AI 生成的内容了
+URL: https://www.v2ex.com/t/1202159
+Source: V2EX
+Published: 2026-03-31T06:12:53.680765
+Desc: 最近越来越多人开始使用 AI 润色文案，以前要识别标题党，现在没办法识别标题党了，点开一看超级详细，都以为是好文章，结果读着读着越来越不对劲，说了半天信息量极少而且喜欢绕来绕去，本来几句话能说完的，结果 AI 润色写了一篇文章。  AI 提升了部分人的写作水平，但是制造了更多的让人看起来有条有理但是冗余信息巨多的文章，完全浪费时间。  而 V2EX 也无法幸免，虽然一直都说禁止使用 AI ，但是实时上每天都会看到 AI 生成或 AI 润色的帖子。  所以说现在再说禁止 AI 还有意义吗。
+
+[TRANSLATE_ONLY] Item 27 [Score=0]:
+Title: Product Hunt: Letterbook
+URL: https://www.producthunt.com/products/letterbook
+Source: Product Hunt
+Published: 2026-03-31T06:12:55.441968
+Desc: AI support platform built for founders             Discussion             |             Link
+
+[TRANSLATE_ONLY] Item 28 [Score=0]:
+Title: Product Hunt: Neuralingo Language Learning
+URL: https://www.producthunt.com/products/neuralingo-language-learning
+Source: Product Hunt
+Published: 2026-03-31T06:12:55.442100
+Desc: slowly inch your way to mastery: try, fail, learn, get good             Discussion             |             Link
+
+[TRANSLATE_ONLY] Item 29 [Score=0]:
+Title: Product Hunt: VibeTalent
+URL: https://www.producthunt.com/products/vibetalent
+Source: Product Hunt
+Published: 2026-03-31T06:12:55.442201
+Desc: Find vibe coders who actually ship             Discussion             |             Link
+
+[TRANSLATE_ONLY] Item 30 [Score=0]:
+Title: Product Hunt: PopTask
+URL: https://www.producthunt.com/products/poptask-menu-bar-task-manager
+Source: Product Hunt
+Published: 2026-03-31T06:12:55.442282
+Desc: Light menu bar task manager for quickly capturing tasks             Discussion             |             Link
+
+[TRANSLATE_ONLY] Item 31 [Score=0]:
+Title: Product Hunt: ClawKing
+URL: https://www.producthunt.com/products/clawking
+Source: Product Hunt
+Published: 2026-03-31T06:12:55.442364
+Desc: On-chain AI battle royale where 8 lobsters fight             Discussion             |             Link
+
+[TRANSLATE_ONLY] Item 32 [Score=0]:
+Title: Product Hunt: Goals
+URL: https://www.producthunt.com/products/goals
+Source: Product Hunt
+Published: 2026-03-31T06:12:55.442461
+Desc: AI turns your goal into one daily action.             Discussion             |             Link
+
+[TRANSLATE_ONLY] Item 33 [Score=0]:
+Title: Product Hunt: Git Blog
+URL: https://www.producthunt.com/products/git-blog
+Source: Product Hunt
+Published: 2026-03-31T06:12:55.442555
+Desc: Publish sites using Markdown & GitHub from your phone             Discussion             |             Link
+
+[TRANSLATE_ONLY] Item 34 [Score=0]:
+Title: Product Hunt: Ollang DX
+URL: https://www.producthunt.com/products/ollang-mcp-skills-sdk-api
+Source: Product Hunt
+Published: 2026-03-31T06:12:55.442636
+Desc: The AI Language Execution Layer for Enterprise             Discussion             |             Link
+
+[TRANSLATE_ONLY] Item 35 [Score=0]:
+Title: Product Hunt: dictate.
+URL: https://www.producthunt.com/products/dictate
+Source: Product Hunt
+Published: 2026-03-31T06:12:55.442714
+Desc: Replace your iPhone keyboard with AI voice typing             Discussion             |             Link
+
+[TRANSLATE_ONLY] Item 36 [Score=0]:
+Title: Product Hunt: nCompass AI Assistant
+URL: https://www.producthunt.com/products/ncompass-tech
+Source: Product Hunt
+Published: 2026-03-31T06:12:55.442794
+Desc: Enabling everyone to write GPU kernels             Discussion             |             Link
+
+[TRANSLATE_ONLY] Item 37 [Score=0]:
+Title: Nature Digital Medicine: A unified deep learning framework for cross-platform harmonization of multi-tracer PET quantification in neurodegenerative disease
+URL: https://www.nature.com/articles/s41746-026-02570-0
+Source: Nature Digital Medicine
+Published: 2026-03-31T06:12:54.324593
+Desc: npj Digital Medicine, Published online: 30 March 2026; doi:10.1038/s41746-026-02570-0A unified deep learning framework for cross-platform harmonization of multi-tracer PET quantification in neurodegenerative disease
+
+[TRANSLATE_ONLY] Item 38 [Score=0]:
+Title: Science: Supporters push to revive moribund agency studying patient care
+URL: https://www.science.org/content/article/supporters-push-revive-moribund-agency-studying-patient-care
+Source: Science
+Published: 2026-03-31T06:12:55.419271
+Desc: The Agency for Healthcare Research and Quality has grant money, but nobody to hand it out
+
+[TRANSLATE_ONLY] Item 39 [Score=0]:
+Title: Science: With new environmental law, China expands its ‘war on pollution’
+URL: https://www.science.org/content/article/new-environmental-law-china-expands-its-war-pollution
+Source: Science
+Published: 2026-03-31T06:12:55.419301
+Desc: But observers fear measure will limit public’s ability to challenge potentially harmful projects
+
+[TRANSLATE_ONLY] Item 40 [Score=0]:
+Title: Science: As U.S. blockade bites, Cuba’s health care and science suffer
+URL: https://www.science.org/content/article/u-s-blockade-bites-cuba-s-health-care-and-science-suffer
+Source: Science
+Published: 2026-03-31T06:12:55.419322
+Desc: Hospitals and researchers struggle to cope with lengthy blackouts and supply shortages
+
+[TRANSLATE_ONLY] Item 41 [Score=0]:
 Title: jeffgeerling.com: Bring back MiniDV with this Raspberry Pi FireWire HAT
 URL: https://www.jeffgeerling.com/blog/2026/minidv-with-raspberry-pi-firewire-hat/
 Source: jeffgeerling.com
-Published: 2026-03-29T09:45:58.995962
+Published: 2026-03-31T06:12:55.186036
 Desc: In my last post, I showed you to use FireWire on a Raspberry Pi with a PCI Express IEEE 1394 adapter. Now I'll show you how I'm using a new FireWire HAT and a PiSugar3 Plus battery to make a portable MRU, or 'Memory Recording Unit', to replace tape in older FireWire/i.Link/DV cameras.   The alternat
 
-[TRANSLATE_ONLY] Item 16 [Score=0]:
+[TRANSLATE_ONLY] Item 42 [Score=0]:
 Title: jeffgeerling.com: Using FireWire on a Raspberry Pi
 URL: https://www.jeffgeerling.com/blog/2026/firewire-on-a-raspberry-pi/
 Source: jeffgeerling.com
-Published: 2026-03-29T09:45:58.996339
+Published: 2026-03-31T06:12:55.186168
 Desc: After learning Apple killed off FireWire (IEEE 1394) support in macOS 26 Tahoe, I started looking at alternatives for old FireWire equipment like hard drives, DV cameras, and A/V gear.   I own an old Canon GL1 camera, with a 'DV' port. I could plug that into an old Mac (like the dual G4 MDD above) w
 
-[TRANSLATE_ONLY] Item 17 [Score=0]:
+[TRANSLATE_ONLY] Item 43 [Score=0]:
 Title: seangoedecke.com: Working on products people hate
 URL: https://seangoedecke.com/working-on-products-people-hate/
 Source: seangoedecke.com
-Published: 2026-03-29T09:46:01.014228
+Published: 2026-03-31T06:12:57.938309
 Desc: I’ve worked on a lot of unpopular products. At Zendesk I built large parts of an app marketplace that was too useful to get rid of but never polished enough to be loved. Now I work on GitHub Copilot, which many people think is crap1. In between, I had some brief periods where I worked on products th
 
-[TRANSLATE_ONLY] Item 18 [Score=0]:
+[TRANSLATE_ONLY] Item 44 [Score=0]:
 Title: seangoedecke.com: Engineers do get promoted for writing simple code
 URL: https://seangoedecke.com/simple-work-gets-rewarded/
 Source: seangoedecke.com
-Published: 2026-03-29T09:46:01.015675
+Published: 2026-03-31T06:12:57.938876
 Desc: It’s a popular joke among software engineers that writing overcomplicated, unmaintainable code is a pathway to job security. After all, if you’re the only person who can work on a system, they can’t fire you. There’s a related take that “nobody gets promoted for simplicity”: in other words, engineer
 
-[TRANSLATE_ONLY] Item 19 [Score=0]:
+[TRANSLATE_ONLY] Item 45 [Score=0]:
 Title: krebsonsecurity.com: ‘CanisterWorm’ Springs Wiper Attack Targeting Iran
 URL: https://krebsonsecurity.com/2026/03/canisterworm-springs-wiper-attack-targeting-iran/
 Source: krebsonsecurity.com
-Published: 2026-03-29T09:46:04.229204
+Published: 2026-03-31T06:12:55.817006
 Desc: A financially motivated data theft and extortion group is attempting to inject itself into the Iran war, unleashing a worm that spreads through poorly secured cloud services and wipes data on infected systems that use Iran's time zone or have Farsi set as the default language.
 
-[TRANSLATE_ONLY] Item 20 [Score=0]:
-Title: daringfireball.net: The 2019 Intel Mac Pro’s Unfortunate Timing
-URL: https://512pixels.net/2026/03/how-apple-could-have-saved-the-mac-pro/
+[TRANSLATE_ONLY] Item 46 [Score=0]:
+Title: daringfireball.net: [Sponsor] Material Security
+URL: https://material.security/lp-cloud-office-security?utm_source=third-party&utm_medium=email&utm_campaign=20260330-daringfireball
 Source: daringfireball.net
-Published: 2026-03-29T09:46:00.119745
-Desc: Stephen Hackett, at 512 Pixels:  I’ve thought a lot about the bad timing Jones mentions. Had Apple stuck to the original timeline, and killed off the 2013 Mac Pro in favor of an iMac “specifically targeted at large segments of the pro market,” back in 2017, Apple could have avoided putting out the b
+Published: 2026-03-31T06:12:55.702676
+Desc: Stop scaling headcount. Scale your workspace. Most security teams don’t have a talent problem, they have a noise problem. Manual phishing remediation, chasing risky OAuth permissions, and auditing file shares shouldn’t be a full-time job. Material Security unifies your cloud workspace, bringing dete
 
-[TRANSLATE_ONLY] Item 21 [Score=0]:
-Title: daringfireball.net: Apple Should Set and Enforce Some Basic Standards for Custom Video Players on tvOS
-URL: https://daringfireball.net/2024/03/quickly_toggling_closed_captions_on_apple_tv
+[TRANSLATE_ONLY] Item 47 [Score=0]:
+Title: daringfireball.net: Macs of Unusual Size
+URL: https://scottknaster.substack.com/p/macs-of-unusual-size
 Source: daringfireball.net
-Published: 2026-03-29T09:46:00.120486
-Desc: While I’m bitching about Netflix’s craptacular new video player on Apple TV, let me quote from a piece I wrote two years ago (also complaining about Netflix’s tvOS app):  Turns out there are two better ways:  If you use the Control Center Apple TV remote control on your iPhone, there’s a dedicated “
+Published: 2026-03-31T06:12:55.702990
+Desc: Scott Knaster:  The Big Mac is about 22 times the size of the little Mac.     ★
 
-[TRANSLATE_ONLY] Item 22 [Score=0]:
-Title: daringfireball.net: ‘How Apple Became Apple: The Definitive Oral History of the Company’s Earliest Days’
-URL: https://www.fastcompany.com/91514404/apple-founding-50th-anniversary-apple-1-apple-ii-jobs-wozniak?mvgt=E5Loo3fO74zl
-Source: daringfireball.net
-Published: 2026-03-29T09:46:00.120882
-Desc: This feature from Harry McCracken is just spectacularly good. (And it’s a gift link that’ll get you past Fast Company’s paywall.) 50 years is a long time and there are some key players in Apple’s origin story who are gone — but because everyone was so young at the time, it’s amazing how many of them
+[TRANSLATE_ONLY] Item 48 [Score=0]:
+Title: idiallo.com: How Do We Get Developers to Read the Docs
+URL: https://idiallo.com/blog/how-do-we-get-developers-to-read-the-docs?src=feed
+Source: idiallo.com
+Published: 2026-03-31T06:12:57.320469
+Desc: When I reviewed this PR, I had tears in my eyes. We had done it. We had finally created the perfect API. To top it off, the senior developer who worked on it had written documentation to match. No stones were left unturned. I had the code open on one window and the doc on the other. The moment I fel
 
-[TRANSLATE_ONLY] Item 23 [Score=0]:
+[TRANSLATE_ONLY] Item 49 [Score=0]:
 Title: idiallo.com: Sharing a Name
 URL: https://idiallo.com/blog/sharing-a-name?src=feed
 Source: idiallo.com
-Published: 2026-03-29T09:46:00.699021
+Published: 2026-03-31T06:12:57.320813
 Desc: My bank card never arrived. I called the bank and, after being redirected through several departments, was assured that it had been mailed. Then we argued a bit about what "7 to 10 business days" meant, we were already on day 14. We ended the call by agreeing to disagree. Eventually, I did get my ca
 
-[TRANSLATE_ONLY] Item 24 [Score=0]:
+[TRANSLATE_ONLY] Item 50 [Score=0]:
 Title: idiallo.com: How we get radicalized in America
 URL: https://idiallo.com/byte-size/how-to-get-radicalized-in-america?src=feed
 Source: idiallo.com
-Published: 2026-03-29T09:46:00.699226
+Published: 2026-03-31T06:12:57.320886
 Desc: Be healthy, be young, fall ill. You have a great job of course, you have insurance. It would be ok if the worst thing about health insurance in America was it is hard to navigate. No! The actual problem is that your insurance is incentivized not to cover you at your most vulnerable moment. You pay t
-
-[TRANSLATE_ONLY] Item 25 [Score=0]:
-Title: pluralistic.net: Pluralistic: The cost of doing business (25 Mar 2026)
-URL: https://pluralistic.net/2026/03/25/fact-intensive/
-Source: pluralistic.net
-Published: 2026-03-29T09:46:02.295464
-Desc: Today's links The cost of doing business: "Market definition" is a denial-of-service attack on antitrust law. Hey look at this: Delights to delectate. Object permanence: Union Pacific v model railroads; Warners v Potter fans; NYT's trademark trolling; Why Rebecca Black mashups suck; Jabba the peep; 
-
-[TRANSLATE_ONLY] Item 26 [Score=0]:
-Title: shkspr.mobi: OpenBenches hits 40k
-URL: https://shkspr.mobi/blog/2026/03/openbenches-hits-40k/
-Source: shkspr.mobi
-Published: 2026-03-29T09:46:07.246125
-Desc: Back in November 2023, our crowdsourced website of memorial benches reached 30,000 entries. At the start of March this year, I was delighted when long-time contributor jrbray1 added this gorgeous memorial, taking us up to 40,000 benches catalogued:    You can read more about Dr Judy John and her wor
-
-[TRANSLATE_ONLY] Item 27 [Score=0]:
-Title: shkspr.mobi: Adding human.json to WordPress
-URL: https://shkspr.mobi/blog/2026/03/adding-human-json-to-wordpress/
-Source: shkspr.mobi
-Published: 2026-03-29T09:46:07.246198
-Desc: Every few years, someone reinvents FOAF. The idea behind Friend-Of-A-Friend is that You can say "I, Alice, know and trust Bob". Bob can say "I know and trust Alice. I also know and trust Carl." That social graph can be navigated to help understand trust relationships.  Sometimes this is done with co
-
-[TRANSLATE_ONLY] Item 28 [Score=0]:
-Title: devblogs.microsoft.com/oldnewthing: What if a dialog wants to intercept its own message loop?
-URL: https://devblogs.microsoft.com/oldnewthing/20260327-00/?p=112172
-Source: devblogs.microsoft.com/oldnewthing
-Published: 2026-03-29T09:45:58.649226
-Desc: You can steal them from your owner. The post What if a dialog wants to intercept its own message loop? appeared first on The Old New Thing.
-
-[TRANSLATE_ONLY] Item 29 [Score=0]:
-Title: devblogs.microsoft.com/oldnewthing: Why doesn’t WM_ENTER­IDLE work if the dialog box is a Message­Box?
-URL: https://devblogs.microsoft.com/oldnewthing/20260326-00/?p=112167
-Source: devblogs.microsoft.com/oldnewthing
-Published: 2026-03-29T09:45:58.649653
-Desc: Because it opted out. The post Why doesn’t <CODE>WM_<WBR>ENTER­IDLE</CODE> work if the dialog box is a <CODE>Message­Box</CODE>? appeared first on The Old New Thing.
-
-[TRANSLATE_ONLY] Item 30 [Score=0]:
-Title: devblogs.microsoft.com/oldnewthing: How can I change a dialog box’s message loop to do a Msg­Wait­For­Multiple­Objects instead of Get­Message?
-URL: https://devblogs.microsoft.com/oldnewthing/20260325-00/?p=112165
-Source: devblogs.microsoft.com/oldnewthing
-Published: 2026-03-29T09:45:58.649962
-Desc: The dialog box lets you change how it waits. The post How can I change a dialog box’s message loop to do a <CODE>Msg­Wait­For­Multiple­Objects</CODE> instead of <CODE>Get­Message</CODE>? appeared first on The Old New Thing.
-
-[TRANSLATE_ONLY] Item 31 [Score=0]:
-Title: garymarcus.substack.com: War and AI, the death of Sora, and 3 ways you can catch me live today
-URL: https://garymarcus.substack.com/p/war-and-ai-the-death-of-sora-and
-Source: garymarcus.substack.com
-Published: 2026-03-29T09:46:00.018117
-Desc: With apologies for the short notice, a few quick announcements:
-
-[TRANSLATE_ONLY] Item 32 [Score=0]:
-Title: johndcook.com: An AI Odyssey, Part 3: Lost Needle in the Haystack
-URL: https://www.johndcook.com/blog/2026/03/27/an-ai-odyssey-part-3-lost-needle-in-the-haystack/
-Source: johndcook.com
-Published: 2026-03-29T09:45:59.760845
-Desc: While shopping on a major e-commerce site, I wanted to get an answer to an obscure question about a certain product. Not finding the answer immediately on the product page, I thought I’d try clicking the AI shopping assistant helper tool to ask this question. I waited with anticipation for an answer
-
-[TRANSLATE_ONLY] Item 33 [Score=0]:
-Title: johndcook.com: Computing sine and cosine of complex arguments with only real functions
-URL: https://www.johndcook.com/blog/2026/03/27/complex-argument/
-Source: johndcook.com
-Published: 2026-03-29T09:45:59.761193
-Desc: Suppose you have a calculator or math library that only handles real arguments but you need to evaluate sin(3 + 4i). What do you do? If you’re using Python, for example, and you don’t have NumPy installed, you can use the built-in math library, but it will not accept complex inputs. >>> import math 
-
-[TRANSLATE_ONLY] Item 34 [Score=0]:
-Title: johndcook.com: Lebesgue constants
-URL: https://www.johndcook.com/blog/2026/03/26/lebesgue-constants/
-Source: johndcook.com
-Published: 2026-03-29T09:45:59.761467
-Desc: I alluded to Lebesgue constants in the previous post without giving them a name. There I said that the bound on order n interpolation error has the form where h is the spacing between interpolation points and δ is the error in the tabulated values. The constant c depends on the function f being inte
-
-[TRANSLATE_ONLY] Item 35 [Score=0]:
-Title: evanhahn.com: Little web app to pick a random programming language
-URL: https://evanhahn.com/random-programming-language/
-Source: evanhahn.com
-Published: 2026-03-29T09:46:07.432716
-Desc: I wrote a web app to choose a random programming language. It’s very simple; I hestitate to even call it an “app”! The interesting part was scraping all the languages on Rosetta Code, and even that wasn’t very interesting. But I hope you like it! I learned about a language called Arturo this way, an
-
-[TRANSLATE_ONLY] Item 36 [Score=0]:
-Title: terriblesoftware.org: “Good Taste” Is Just Experience
-URL: https://terriblesoftware.org/2026/03/27/good-taste-is-just-experience/
-Source: terriblesoftware.org
-Published: 2026-03-29T09:45:59.456273
-Desc: What people call "good taste" is really just experience earned through reps. Stop making it sound innate.
-
-[TRANSLATE_ONLY] Item 37 [Score=0]:
-Title: joanwestenberg.com: Members Only: On Cathedral thinking
-URL: https://www.joanwestenberg.com/members-only-on-cathedral-thinking/
-Source: joanwestenberg.com
-Published: 2026-03-29T09:46:12.388967
-Desc: 
-
-[TRANSLATE_ONLY] Item 38 [Score=0]:
-Title: nesbitt.io: The Top 10 Biggest Conspiracies in Open Source
-URL: https://nesbitt.io/2026/03/25/the-top-10-biggest-conspiracies-in-open-source.html
-Source: nesbitt.io
-Published: 2026-03-29T09:46:00.782460
-Desc: I'm not connecting these dots. I'm just pointing out that the dots are there.
-
-[TRANSLATE_ONLY] Item 39 [Score=0]:
-Title: construction-physics.com: Reading List 03/28/26
-URL: https://www.construction-physics.com/p/reading-list-032826
-Source: construction-physics.com
-Published: 2026-03-29T09:46:04.920211
-Desc: Plastic price jumps, crypto-backed mortgages, a proposed AI data center pause, US battery manufacturing, and more.
-
-[TRANSLATE_ONLY] Item 40 [Score=0]:
-Title: construction-physics.com: The Age of the Amplifier
-URL: https://www.construction-physics.com/p/the-age-of-the-amplifier
-Source: construction-physics.com
-Published: 2026-03-29T09:46:04.920318
-Desc: As we’ve noted more than a few times before, for most of the 20th century AT&T’s Bell Labs was the premier industrial research lab in the US.
-
-[TRANSLATE_ONLY] Item 41 [Score=0]:
-Title: construction-physics.com: Reading List 03/21/26
-URL: https://www.construction-physics.com/p/reading-list-032126
-Source: construction-physics.com
-Published: 2026-03-29T09:46:04.920385
-Desc: Damage to the Ras Laffan LNG facility, housing bubble risks, North Korea’s naval production, Bezos’ $100 billion for manufacturing automation, and more.
-
-[TRANSLATE_ONLY] Item 42 [Score=0]:
-Title: tedium.co: Self-Hosting: Still Worth It?
-URL: https://feed.tedium.co/link/15204/17308221/self-hosting-platform-tools-guide
-Source: tedium.co
-Published: 2026-03-29T09:46:07.390850
-Desc: Once upon a time, self-hosting used to be a cost-effective thing. Is it still a good option for fending off SaaS as the prices keep creeping up?
-
-[TRANSLATE_ONLY] Item 43 [Score=0]:
-Title: tedium.co: An Intention Upgrade
-URL: https://feed.tedium.co/link/15204/17307620/apple-mac-pro-discontinued-anniversary
-Source: tedium.co
-Published: 2026-03-29T09:46:07.390932
-Desc: By ditching the Mac Pro so close to its 50th anniversary, Apple is making a statement of intent for its next 50 years.
-
-[TRANSLATE_ONLY] Item 44 [Score=0]:
-Title: tedium.co: The Pancake Discussion
-URL: https://feed.tedium.co/link/15204/17304313/social-media-flat-discussion
-Source: tedium.co
-Published: 2026-03-29T09:46:07.390984
-Desc: When every discussion feels flat, how do you fluff it up? The answer, to me, is to eat fewer pancakes.
-
-[TRANSLATE_ONLY] Item 45 [Score=0]:
-Title: susam.net: Fork Commits via Original Repository
-URL: https://susam.net/fork-commits-via-original-repo.html
-Source: susam.net
-Published: 2026-03-29T09:46:07.302931
-Desc: I ran a small experiment with Git hosting behaviour using two demo   repositories:    cuppa: The original repository.     muppa: Fork of cuppa with questionable changes.        Here is a table with links to these repositories on Codeberg and   GitHub:     Name Codeberg GitHub     cuppa codeberg.org/
-
-[TRANSLATE_ONLY] Item 46 [Score=0]:
-Title: susam.net: Wander 0.3.0
-URL: https://susam.net/code/news/wander/0.3.0.html
-Source: susam.net
-Published: 2026-03-29T09:46:07.303814
-Desc: Wander 0.3.0 is the third release of Wander, a small, decentralised,   self-hosted web console that lets visitors to your website explore   interesting websites and pages recommended by a community of   independent website owners.  To try it, go   to susam.net/wander/.     This release brings small 
-
-[TRANSLATE_ONLY] Item 47 [Score=0]:
-Title: entropicthoughts.com: Lines of code are useful
-URL: https://entropicthoughts.com/lines-of-code
-Source: entropicthoughts.com
-Published: 2026-03-29T09:46:07.736804
-Desc: 
-
-[TRANSLATE_ONLY] Item 48 [Score=0]:
-Title: wheresyoured.at: Premium: How Much Of The AI Bubble Is Real?
-URL: https://www.wheresyoured.at/premium-how-much-of-the-ai-bubble-is-real/
-Source: wheresyoured.at
-Published: 2026-03-29T09:46:08.917115
-Desc: I’m turning 40 in a month or so, and at 40 years young, I’m old enough to remember as far back as December 11 2025, when Disney and OpenAI “reached an agreement” to “bring beloved characters from across Disney’s brands to
-
-[TRANSLATE_ONLY] Item 49 [Score=0]:
-Title: wheresyoured.at: The AI Industry Is Lying To You
-URL: https://www.wheresyoured.at/the-ai-industry-is-lying-to-you/
-Source: wheresyoured.at
-Published: 2026-03-29T09:46:08.917260
-Desc: Hi! If you like this piece and want to support my independent reporting and analysis, why not subscribe to my premium newsletter? It’s $70 a year, or $7 a month, and in return you get a weekly newsletter that’s usually anywhere from 5000 to 18,000
-
-[TRANSLATE_ONLY] Item 50 [Score=0]:
-Title: geohot.github.io: Changing the World
-URL: https://geohot.github.io//blog/jekyll/update/2026/03/23/changing-the-world.html
-Source: geohot.github.io
-Published: 2026-03-29T09:45:59.071638
-Desc: Why do I feel like I’m the only one who took this to mean, like “sending the world on a different trajectory”? It seems like others took it to mean something else. From my 2017 song, “Changing the world is just a euphemism, for how can I, get you, to give more stuff to me.”

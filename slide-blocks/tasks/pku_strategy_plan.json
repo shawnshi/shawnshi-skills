@@ -1,0 +1,118 @@
+{
+  "template_path": "D:/OneDrive/Desktop/slide-blocks/模板/蓝色商务（浅色底）.potx",
+  "output_path": "D:/OneDrive/Desktop/slide-blocks/输出/致北大医疗董事长_AI战略汇报_V3.pptx",
+  "plan": [
+    {
+      "template_page": 1, 
+      "replace_title": "医疗 AI：从‘系统辅助’到‘原生能力’的逻辑重构\n—— 致北大医疗集团董事长的战略汇报"
+    },
+    {
+      "src": "C:/Users/shich/.gemini/slide-deck/素材/从理念到实践：探析医院数字化转型之路.240914.pptx", 
+      "page": 2, 
+      "replace_title": "解构‘不可能三角’：成本、质量与规模的物理极点",
+      "fix_colors": true
+    },
+    {
+      "src": "C:/Users/shich/.gemini/slide-deck/素材/2025年度PPT素材汇总（浅色底）.pptx", 
+      "page": 4, 
+      "replace_title": "信息化红利见顶：流程固化遭遇边际递减"
+    },
+    {
+      "src": "C:/Users/shich/.gemini/slide-deck/素材/天津市儿童医院十五五信息化合作20250820.pptx", 
+      "page": 28, 
+      "replace_title": "跨越拐点：拥抱确定性与智能体协同"
+    },
+    {
+      "src": "C:/Users/shich/.gemini/slide-deck/素材/2025年度PPT素材汇总（浅色底）.pptx", 
+      "page": 5, 
+      "replace_title": "战略锚点：AI 是重塑资产回报率的核心生产力"
+    },
+    {
+      "template_page": 2, 
+      "replace_title": "新基座：AI原生医院架构",
+      "font_size": 40
+    },
+    {
+      "src": "C:/Users/shich/.gemini/slide-deck/素材/北大医疗AI规划交流20260303.pptx", 
+      "page": 5, 
+      "replace_title": "架构演进：摒弃单点烟囱，走向平台化基础设施",
+      "fix_colors": true
+    },
+    {
+      "src": "C:/Users/shich/.gemini/slide-deck/素材/北大医疗AI规划交流20260303.pptx", 
+      "page": 14, 
+      "replace_title": "WiNEX 蓝图：从刚性软件到‘意图驱动’",
+      "fix_colors": true
+    },
+    {
+      "src": "C:/Users/shich/.gemini/slide-deck/素材/北大医疗AI规划交流20260317.pptx", 
+      "page": 17, 
+      "replace_title": "核心壁垒：医疗语义层 (MSL) 消除大模型幻觉",
+      "fix_colors": true
+    },
+    {
+      "src": "C:/Users/shich/.gemini/slide-deck/素材/北大医疗AI规划交流20260317.pptx", 
+      "page": 30, 
+      "replace_title": "算力统筹：面向多院区部署的模型治理策略",
+      "fix_colors": true
+    },
+    {
+      "template_page": 2, 
+      "replace_title": "价值释放：全场景降本增效",
+      "font_size": 40
+    },
+    {
+      "src": "C:/Users/shich/.gemini/slide-deck/素材/CHIMA2024大会-医院高质量数字化转型实践-卫宁.240510.pptx", 
+      "page": 11, 
+      "replace_title": "智慧管理：打通管理与临床的一体化智能闭环"
+    },
+    {
+      "src": "C:/Users/shich/.gemini/slide-deck/素材/2025年度PPT素材汇总（浅色底）.pptx", 
+      "page": 75, 
+      "replace_title": "交互革命：Zero-UI 驱动的病历自动生成"
+    },
+    {
+      "src": "C:/Users/shich/.gemini/slide-deck/素材/2025年度PPT素材汇总（浅色底）.pptx", 
+      "page": 89, 
+      "replace_title": "护理减负：护士智能体自动流转交接班"
+    },
+    {
+      "src": "C:/Users/shich/.gemini/slide-deck/素材/2025年度PPT素材汇总（浅色底）.pptx", 
+      "page": 95, 
+      "replace_title": "临床决策：肿瘤精准分期与鉴别诊断"
+    },
+    {
+      "src": "C:/Users/shich/.gemini/slide-deck/素材/2025年度PPT素材汇总（浅色底）.pptx", 
+      "page": 96, 
+      "replace_title": "医疗安全防线：VTE 智能评估与动态干预"
+    },
+    {
+      "template_page": 2, 
+      "replace_title": "实施路径与风险对冲",
+      "font_size": 40
+    },
+    {
+      "src": "C:/Users/shich/.gemini/slide-deck/素材/从理念到实践：探析医院数字化转型之路.240914.pptx", 
+      "page": 23, 
+      "replace_title": "人机回环：确保临床绝对主权的合规底线"
+    },
+    {
+      "src": "C:/Users/shich/.gemini/slide-deck/素材/The Introduction of Winning Health.241108.pptx", 
+      "page": 19, 
+      "replace_title": "标杆验证：同类大型医疗集团的效能释放实证"
+    },
+    {
+      "src": "C:/Users/shich/.gemini/slide-deck/素材/哈密市医疗健康数智融合发展规划建议20260203.pptx", 
+      "page": 28, 
+      "replace_title": "推进路径：从单点试点到集团化能力复制"
+    },
+    {
+      "src": "C:/Users/shich/.gemini/slide-deck/素材/北大医疗AI规划交流20260317.pptx", 
+      "page": 32, 
+      "replace_title": "组织保障：建立跨部门的 AI 推进与数据治理体系"
+    },
+    {
+      "template_page": 5
+    }
+  ]
+}

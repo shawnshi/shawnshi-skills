@@ -1,0 +1,21 @@
+# SlideBlocks 配置文件
+# 第一次使用：填写下面两个路径，然后运行 setup_paths.py
+
+# 素材文件夹路径
+materials_dir: "C:/Users/shich/.gemini/slide-deck/素材"
+
+# 组装结果输出目录
+output_dir: "C:/Users/shich/.gemini/slide-deck/输出"
+
+# 模型配置
+models:
+  text_tagging: "gemini-3.1-flash-lite-preview"
+  text_tagging_fallback: "gemini-2.0-flash"
+  vision_tagging: "gemini-3.1-flash-lite-preview"
+  embedding: "gemini-embedding-2-preview"
+
+# 以下不需要修改
+db_path: "slide_vault.db"
+exclude_dirs:
+  - "预览图"
+  - "年度素材"
