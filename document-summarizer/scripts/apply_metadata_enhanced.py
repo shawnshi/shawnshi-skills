@@ -226,9 +226,17 @@ def apply_xlsx_metadata_safe(file_path, summary, tags):
 def process_single_file(file_info, file_mapping, skip_existing=True):
     """处理单个文件"""
     file_id = file_info['id']
-    summary = file_info['summary']
-    tags = file_info['tags']
-    filename = file_info['filename']
+    summary = file_info.get('summary', '')
+    tags = file_info.get('tags', [])
+    filename = file_info.get('filename', 'Unknown')
+
+    # 【防污染阻断】如果发现有 LLM 占位符，抛弃当前操作，保护原文档
+    if "PENDING_LLM_GENERATION" in summary or "LLM_PENDING" in tags:
+        return {
+            'filename': filename,
+            'status': 'skip',
+            'reason': '阻断：存在未解析的大模型占位标记'
+        }
 
     # 获取文件路径
     if file_id not in file_mapping:

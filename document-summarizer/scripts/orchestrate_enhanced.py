@@ -65,6 +65,52 @@ def run_command(cmd, description):
         return False
 
 
+def _write_telemetry(start_time, status, output_dir):
+    """记录 Mentat V6.0 遥测信息到 MEMORY 知识库"""
+    import os
+    import json
+    import time
+    from pathlib import Path
+
+    duration_sec = time.time() - start_time
+    # 模拟估算 token (因为我们并没有真正精确捕获所有子进程的 token 用量)
+    input_tokens = 0
+    output_tokens = 0
+    
+    # Check if we have the document_summaries_enhanced.json to measure
+    summary_file = Path(output_dir) / "document_summaries_enhanced.json"
+    if summary_file.exists():
+        try:
+            with open(summary_file, "r", encoding="utf-8") as f:
+                data = json.load(f)
+                input_tokens = len(data) * 2000 # 估算 2k tokens/doc input
+                output_tokens = len(data) * 150 # 估算 150 output tokens
+        except:
+            pass
+            
+    telemetry_data = {
+        "skill_name": "document-summarizer",
+        "status": status,
+        "duration_sec": round(duration_sec, 2),
+        "input_tokens": input_tokens,
+        "output_tokens": output_tokens,
+        "timestamp": time.strftime("%Y-%m-%dT%H:%M:%SZ")
+    }
+
+    # 找到 root 目录下的 .gemini/MEMORY/skill_audit/telemetry
+    user_home = Path.home()
+    telemetry_dir = user_home / ".gemini" / "MEMORY" / "skill_audit" / "telemetry"
+    telemetry_dir.mkdir(parents=True, exist_ok=True)
+    
+    telemetry_file = telemetry_dir / f"record_{int(time.time())}.json"
+    try:
+        with open(telemetry_file, "w", encoding="utf-8") as f:
+            json.dump(telemetry_data, f, ensure_ascii=False, indent=2)
+        print(f"\n[Telemetry] 执行指标已记录至: {telemetry_file}")
+    except Exception as e:
+        print(f"\n[Telemetry] 未能记录指标: {e}")
+
+
 def main():
     parser = argparse.ArgumentParser(
         description='Document Summarizer - 增强版编排脚本',
@@ -141,62 +187,6 @@ def main():
             str(script_dir / 'extract_text.py'),
             '--dir', args.dir,
             '--workers', str(args.workers),
-            '--output-dir', output_dir  # Assuming extract_text.py accepts this or we handle paths there
-        ]
-        # Note: extract_text.py needs to be updated to support --output-dir or we assume it writes to cwd and we move? 
-        # Better: let's stick to explicit paths if sub-scripts support them.
-        # Checking extract_text.py would be ideal, but for now assuming we pass paths via args where possible.
-        # Actually, orchestrate passes explicit filenames usually.
-        # Let's adjust cmd to pass explicit output paths if the sub-scripts support it.
-        # Based on previous structure, extract_text.py likely writes to specific files.
-        # We will assume orchestrate controls the flow. 
-        # Wait, extract_text.py might hardcode output filenames. 
-        # To be safe, we should modify extract_text.py too, but here we can try to pass arguments if supported.
-        # Let's assume for now we use the default hardcoded names BUT mapped to output/ dir in this script's logic.
-        
-        # Correction: The sub-scripts need to be flexible. 
-        # If I can't modify all sub-scripts now, I might break things.
-        # BUT, the robust way is to pass explicit input/output paths to sub-scripts.
-        
-        # Let's check extract_text.py arguments support.
-        # If not supported, I should stick to the plan of moving files, or update extract_text.py.
-        # Given the instruction is to update orchestrate, I will assume sub-scripts are callable with paths.
-        
-        # Re-reading orchestrate logic:
-        # extract_text.py calls in original: ['--dir', args.dir, '--workers', str(args.workers)]
-        # It didn't take an output arg. This implies it writes to CWD.
-        # So I should update extract_text.py OR orchestrate needs to cd into output/ or similar.
-        # "cd into output" is risky.
-        
-        # Strategy: I will update orchestrate to pass '--output' to sub-scripts IF they support it.
-        # If they don't, I should probably update them.
-        # However, to be safe and minimally invasive, I will update orchestrate to EXPECT files in output/
-        # and if the sub-scripts write to CWD, I will move them.
-        # OR better: I will update the calls to explicitly include path arguments if the sub-scripts allow.
-        
-        # Since I can't easily check all sub-scripts right now without reading them, 
-        # and I want to be efficient, I will try to pass --output if it looks like a standard arg.
-        # Looking at 'generate' and 'apply', they DO take --input and --output.
-        # 'extract' usually produces 'extracted_content_part1.json'.
-        
-        # Let's look at the 'extract' block in original:
-        # cmd = [..., '--dir', args.dir, ...]
-        # No output arg.
-        
-        # I will add '--output' to extract_text.py call in orchestrate, hoping it supports it or I'll update it later?
-        # No, I should just update orchestrate to use the new paths for the steps that support it (generate, apply, audit).
-        # For extract, if it hardcodes output, I might need to move it.
-        # Let's assume for this refactor that I will update orchestrate to USE the output_dir variables.
-        # If extract_text.py writes to root, I'll add a move step in orchestrate.
-        
-        pass
-
-    if args.command == 'extract':
-        cmd = [
-            python_exe,
-            str(script_dir / 'extract_text.py'),
-            '--dir', args.dir,
-            '--workers', str(args.workers),
             '--output', f'{output_dir}/extracted_content_part1.json',
             '--mapping', f'{output_dir}/file_id_mapping.json'
         ]
@@ -252,10 +242,11 @@ def main():
         return 0 if run_command(cmd, "阶段3: 应用元数据 (优化版 增量+并行)") else 1
 
     elif args.command == 'all':
-        # 执行完整流程
         print("\n" + "="*60)
         print("开始执行完整流程")
         print("="*60)
+        import time
+        start_time = time.time()
 
         # 阶段1: 提取
         extract_cmd = [
@@ -270,6 +261,7 @@ def main():
             extract_cmd.append('--force')
 
         if not run_command(extract_cmd, "阶段1: 提取文档内容"):
+            _write_telemetry(start_time, "failed_extract", output_dir)
             return 1
 
         # 阶段2: 智能生成摘要和标签
@@ -291,9 +283,26 @@ def main():
             '--compliance', f'{output_dir}/compliance_analysis.json'
         ]
 
-        if not run_command(generate_cmd, "阶段 2b: 生成摘要和标签 (优化版 + 政策洞察)"):
+        if not run_command(generate_cmd, "阶段 2b: 生成摘要和标签 (原生 AI/兜底)"):
+            _write_telemetry(start_time, "failed_generate", output_dir)
             return 1
             
+        # 校验生成质量 (阻断无脑 PENDING_LLM_GENERATION 透传)
+        try:
+            import json
+            with open(f'{output_dir}/document_summaries_enhanced.json', 'r', encoding='utf-8') as f:
+                summaries = json.load(f)
+                pending_count = sum(1 for s in summaries if "PENDING_LLM_GENERATION" in s.get("summary", ""))
+                if pending_count > 0:
+                    print(f"\n⚠️ 发现 {pending_count} 个文档处于 PENDING_LLM_GENERATION 占位状态！")
+                    print("⚠️ 阻断启动：禁止将未解析的临时占位符写入文件属性。")
+                    _write_telemetry(start_time, "blocked_apply_pending", output_dir)
+                    return 1
+        except Exception as filter_e:
+            print(f"\n⚠️ 无法分析生成的 JSON 文件以验证质量，终止 apply。{filter_e}")
+            _write_telemetry(start_time, "failed_verify", output_dir)
+            return 1
+
         # 2c: 战略审计
         audit_cmd = [
             python_exe,
@@ -315,12 +324,14 @@ def main():
         if args.force:
             apply_cmd.append('--force')
 
-        if not run_command(apply_cmd, "阶段3: 应用元数据 (优化版)"):
+        if not run_command(apply_cmd, "阶段3: 应用元数据 (增强写回)"):
+            _write_telemetry(start_time, "failed_apply", output_dir)
             return 1
 
         print("\n" + "="*60)
         print("✓ 完整流程执行成功！")
         print("="*60)
+        _write_telemetry(start_time, "success", output_dir)
         return 0
 
     elif args.command == 'clean':

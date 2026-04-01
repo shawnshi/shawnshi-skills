@@ -58,9 +58,9 @@ read_file output/STRATEGIC_AUDIT.md
 - JSON 结构：`{"skill_name": "document-summarizer", "status": "success", "duration_sec": [ESTIMATE], "input_tokens": [ESTIMATE], "output_tokens": [ESTIMATE]}`
 
 ## 历史失效先验 (Gotchas)
-- [此处预留用于记录重复性失败的禁令，实现系统的对抗性进化]
-
-## Troubleshooting
+- **污染警告**: 绝对禁止未进行 `google.generativeai` 调用的占位符（如 `PENDING_LLM_GENERATION`）进入 `apply` 写回流程。否则将导致目标 Office/PDF 文件的属性被批量永久污染。
+- **环境要求**: 原生摘要引擎需要 `GEMINI_API_KEY` 环境变量。如果未检测到环境，将自动降级为「Rules Rule-Based 兜底引擎」，不会强行崩溃但降低准确率。
+- **并发锁死**: 在处理长尾或几十甚至上百兆大小的 Office 文件时，`apply_metadata_enhanced.py` 的并发行数受到限制（通常建议 < 5），由于 Windows COM 锁控制，设置过高(`--workers=20`)必定向用户抛出“文件占用中无法保存”的严重异常。
 
 *   **Excel 回写失败**: 脚本已内置三层回退机制，若仍失败，通常是因为文件被其他程序占用（如 WPS/Excel 打开中）。
 *   **中文乱码**: 脚本强制使用 UTF-8，若源文件名含特殊字符导致路径错误，脚本会自动跳过并记录在 `failures.json` 中。

@@ -11,7 +11,6 @@ from datetime import datetime
 from pathlib import Path
 
 _ENGINE_DIR = Path(__file__).parent
-sys.path.insert(0, str(_ENGINE_DIR))
 
 from assemble_template import assemble
 
@@ -43,6 +42,7 @@ def write_telemetry(plan_name, slide_count, duration):
 def main():
     parser = argparse.ArgumentParser(description="SlideBlocks JSON Runner")
     parser.add_argument("plan_file", help="Path to the JSON plan file")
+    parser.add_argument("--dry-run", action="store_true", help="Validates file paths without invoking COM assembly")
     args = parser.parse_args()
 
     plan_file_path = Path(args.plan_file).resolve()
@@ -65,9 +65,26 @@ def main():
         print("[!] Invalid JSON structure. Must contain 'template_path', 'output_path', and 'plan'.")
         sys.exit(1)
 
-    print(f"[*] Starting assembly driven by: {plan_file_path.name}")
-    start_time = time.time()
+    print(f"[*] Starting assembly driven by: {plan_file_path.name}{' (DRY_RUN)' if args.dry_run else ''}")
     
+    if args.dry_run:
+        errors = []
+        if not Path(template_path).exists():
+            errors.append(f"Template not found: {template_path}")
+        for i, step in enumerate(plan):
+            if "src" in step:
+                if not Path(step["src"]).exists():
+                    errors.append(f"Step {i} source not found: {step['src']}")
+        if errors:
+            print("[!] Dry-run failed. Missing files:")
+            for e in errors:
+                print("   -", e)
+            sys.exit(1)
+        else:
+            print("[+] Dry-run passed. All files exist.")
+            sys.exit(0)
+
+    start_time = time.time()
     try:
         assemble(plan, output_path, template_path)
         duration = time.time() - start_time

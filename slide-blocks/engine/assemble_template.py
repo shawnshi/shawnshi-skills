@@ -205,16 +205,18 @@ def assemble(plan, output_path: str, template_path: str):
                 print(f"  P{i:02d} [模板 P{tmpl_page}] " + (f"→ 「{replace_title}」" if replace_title else ""))
                 
                 tmpl_pres = pptApp.Presentations.Open(str(template_path_obj), ReadOnly=True, WithWindow=False)
-                tmpl_pres.Slides(tmpl_page).Copy()
-                
-                pasted_range = _safe_paste(pres.Slides)
-                if replace_title:
-                    try:
-                        sz = font_sz if font_sz else (40 if tmpl_page == 2 else None)
-                        set_template_title(pasted_range(1), replace_title, font_size=sz)
-                    except Exception:
-                        pass
-                tmpl_pres.Close()
+                try:
+                    tmpl_pres.Slides(tmpl_page).Copy()
+                    
+                    pasted_range = _safe_paste(pres.Slides)
+                    if replace_title:
+                        try:
+                            sz = font_sz if font_sz else (40 if tmpl_page == 2 else None)
+                            set_template_title(pasted_range(1), replace_title, font_size=sz)
+                        except Exception:
+                            pass
+                finally:
+                    tmpl_pres.Close()
                 continue
 
             # 内容页组装
@@ -235,45 +237,48 @@ def assemble(plan, output_path: str, template_path: str):
             swap_dark_light = do_to_light or do_to_dark
 
             src_pres = pptApp.Presentations.Open(str(src), ReadOnly=True, WithWindow=False)
-            src_slide = src_pres.Slides(page)
+            try:
+                src_slide = src_pres.Slides(page)
 
-            source_title, title_shape_idx = get_source_title(src_slide)
-            source_has_title = source_title is not None
+                source_title, title_shape_idx = get_source_title(src_slide)
+                source_has_title = source_title is not None
 
-            # 复制背景框架
-            tmpl_page = TEMPLATE_CONTENT_PAGE if source_has_title else TEMPLATE_CONTENT_PAGE_NO_TITLE
-            tmpl_pres = pptApp.Presentations.Open(str(template_path_obj), ReadOnly=True, WithWindow=False)
-            tmpl_pres.Slides(tmpl_page).Copy()
-            
-            pasted_slide = _safe_paste(pres.Slides)(1)
-            tmpl_pres.Close()
-
-            if source_has_title:
+                # 复制背景框架
+                tmpl_page = TEMPLATE_CONTENT_PAGE if source_has_title else TEMPLATE_CONTENT_PAGE_NO_TITLE
+                tmpl_pres = pptApp.Presentations.Open(str(template_path_obj), ReadOnly=True, WithWindow=False)
                 try:
-                    set_template_title(pasted_slide, replace_title or source_title, font_size=font_sz)
-                except Exception:
-                    pass
-            
-            # 复制形状
-            content_indices = get_content_indices(src_slide, exclude_idx=title_shape_idx if source_has_title else None)
-            if content_indices:
-                src_slide.Shapes.Range(content_indices).Copy()
-                pasted_shapes = _safe_paste(pasted_slide.Shapes)
+                    tmpl_pres.Slides(tmpl_page).Copy()
+                    pasted_slide = _safe_paste(pres.Slides)(1)
+                finally:
+                    tmpl_pres.Close()
+
+                if source_has_title:
+                    try:
+                        set_template_title(pasted_slide, replace_title or source_title, font_size=font_sz)
+                    except Exception:
+                        pass
                 
-                if swap_dark_light and pasted_shapes:
-                    import time
-                    for j in range(1, pasted_shapes.Count + 1):
-                        for attempt in range(5):
-                            try:
-                                shape_item = pasted_shapes.Item(j)
-                                swap_theme_colors_in_shape(shape_item, to_light=do_to_light, to_dark=do_to_dark)
-                                break
-                            except Exception as e:
-                                if attempt == 4: raise
-                                time.sleep(0.3)
-                
-            print(f"  P{i:02d} [组装] {src.name} 第{page}页" + (" [色系自适应]" if swap_dark_light else ""))
-            src_pres.Close()
+                # 复制形状
+                content_indices = get_content_indices(src_slide, exclude_idx=title_shape_idx if source_has_title else None)
+                if content_indices:
+                    src_slide.Shapes.Range(content_indices).Copy()
+                    pasted_shapes = _safe_paste(pasted_slide.Shapes)
+                    
+                    if swap_dark_light and pasted_shapes:
+                        import time
+                        for j in range(1, pasted_shapes.Count + 1):
+                            for attempt in range(5):
+                                try:
+                                    shape_item = pasted_shapes.Item(j)
+                                    swap_theme_colors_in_shape(shape_item, to_light=do_to_light, to_dark=do_to_dark)
+                                    break
+                                except Exception as e:
+                                    if attempt == 4: raise
+                                    time.sleep(0.3)
+                    
+                print(f"  P{i:02d} [组装] {src.name} 第{page}页" + (" [色系自适应]" if swap_dark_light else ""))
+            finally:
+                src_pres.Close()
 
         pres.SaveAs(str(output_path_obj), 24) # 24 = ppSaveAsOpenXMLPresentation
         print(f"\n[完成] 组装结果已保存至：{output_path_obj}")

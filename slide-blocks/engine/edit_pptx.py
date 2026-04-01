@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 """
-edit_pptx.py — 对已组装的 PPT 文件进行局部编辑
+edit_pptx.py — 对已组装的 PPT 文件进行局部编辑 (V3 Compatible)
 
 规范：以下操作无需重新组装，直接操作输出文件：
   - 删除页面
@@ -8,29 +8,68 @@ edit_pptx.py — 对已组装的 PPT 文件进行局部编辑
   - 插入模板页（过渡页 / 封底等）
   - 将某页替换为另一个源文件的内容
 
-仅当需要大幅重构章节结构时，才需要重新跑 task_current.py 重新组装。
+仅当需要大幅重构章节结构时，才需要重新跑 runner.py 重新组装。
 """
 
 import sys
+import time
 from pathlib import Path
-sys.path.insert(0, str(Path(__file__).parent))  # engine/ 内互相引用
 
-from assemble_template import (
+_ENGINE_DIR = Path(__file__).parent
+
+from engine.assemble_template import (
     get_source_title, get_content_indices, set_template_title,
-    paste_slide_with_source_format, paste_shapes_with_source_format,
-    TEMPLATE_PATH, TEMPLATE_CONTENT_PAGE, TEMPLATE_CONTENT_PAGE_NO_TITLE,
-    PP_VIEW_NORMAL,
+    swap_theme_colors_in_shape,
+    TEMPLATE_CONTENT_PAGE, TEMPLATE_CONTENT_PAGE_NO_TITLE,
 )
+from engine.com_helper import COMManager
 
-OUTPUT_DIR = Path(__file__).parent.parent / "输出"
+_ROOT = _ENGINE_DIR.parent
+_TEMPLATE_DIR = _ROOT / "模板"
 
 
-def edit(output_path, operations):
+# ─── 辅助函数 ─────────────────────────────────────────────────────────────────
+
+def _safe_paste(target_collection):
+    """剪贴板重试粘贴，与 assemble_template.py V3 的 _safe_paste 保持一致。"""
+    for attempt in range(5):
+        try:
+            return target_collection.Paste()
+        except Exception:
+            if attempt == 4:
+                raise
+            time.sleep(0.3)
+    return None
+
+
+def _resolve_template_path(template_path=None):
+    """解析模板路径。优先使用传入值，否则从模板目录自动选取第一个可用模板。"""
+    if template_path:
+        p = Path(template_path).resolve()
+        if p.exists():
+            return p
+        raise FileNotFoundError(f"指定的模板不存在：{p}")
+
+    # 自动从模板目录选取（支持 .pptx 和 .potx）
+    candidates = sorted(
+        [f for f in _TEMPLATE_DIR.iterdir()
+         if f.suffix.lower() in ('.pptx', '.potx') and not f.name.startswith('~')],
+        key=lambda f: f.name
+    )
+    if candidates:
+        return candidates[0].resolve()
+    raise FileNotFoundError(f"模板文件夹中未找到可用模板：{_TEMPLATE_DIR}")
+
+
+# ─── 主入口 ───────────────────────────────────────────────────────────────────
+
+def edit(output_path, operations, template_path=None):
     """
     对已组装的输出文件执行一系列编辑操作（保存并覆盖原文件）。
 
-    output_path : str | Path   输出文件路径
-    operations  : dict | list  单个操作 or 操作列表
+    output_path   : str | Path   输出文件路径
+    operations    : dict | list  单个操作 or 操作列表
+    template_path : str | Path   模板文件路径（insert_template/replace 操作需要）
 
     支持的操作类型：
 
@@ -42,14 +81,14 @@ def edit(output_path, operations):
         {"op": "move", "pages": [7, 8], "after": 15}
 
     3. 插入模板页（after 页之后）
-        {"op": "insert_template", "template_page": 2, "after": 5, "title": "新章节"}
+        {"op": "insert_template", "template_page": 2, "after": 5,
+         "title": "新章节", "font_size": 40}
 
     4. 替换某页（用另一个源文件的内容，保持模板背景）
         {"op": "replace", "page": 12, "src": "路径.pptx", "src_page": 5}
-        {"op": "replace", "page": 12, "src": "路径.pptx", "src_page": 5, "title": "覆盖标题"}
+        {"op": "replace", "page": 12, "src": "路径.pptx", "src_page": 5,
+         "title": "覆盖标题"}
     """
-    import win32com.client
-
     output_path = Path(output_path).resolve()
     if not output_path.exists():
         raise FileNotFoundError(f"找不到文件：{output_path}")
@@ -57,9 +96,17 @@ def edit(output_path, operations):
     if isinstance(operations, dict):
         operations = [operations]
 
-    pptApp = win32com.client.Dispatch("PowerPoint.Application")
-    pptApp.Visible = True
-    pptApp.DisplayAlerts = 0
+    # 仅在需要模板的操作存在时才解析模板路径
+    needs_template = any(op["op"] in ("insert_template", "replace") for op in operations)
+    resolved_template = _resolve_template_path(template_path) if needs_template else None
+
+    # 使用 COMManager 获取 PowerPoint 实例
+    mgr = COMManager()
+    pptApp = mgr.get_app(visible=True)
+    try:
+        pptApp.DisplayAlerts = 0
+    except Exception:
+        pass
 
     pres = None
     try:
@@ -67,7 +114,7 @@ def edit(output_path, operations):
             str(output_path), ReadOnly=False, Untitled=False, WithWindow=True
         )
         pres.Windows(1).Activate()
-        pres.Windows(1).ViewType = PP_VIEW_NORMAL
+        pres.Windows(1).ViewType = 9  # ppViewNormal
 
         for op in operations:
             kind = op["op"]
@@ -119,19 +166,20 @@ def edit(output_path, operations):
                 tmpl_page = op["template_page"]
                 after     = op.get("after", pres.Slides.Count)
                 title     = op.get("title", "")
+                font_sz   = op.get("font_size")
 
                 tmpl_pres = pptApp.Presentations.Open(
-                    str(TEMPLATE_PATH.resolve()), ReadOnly=True, Untitled=True, WithWindow=False
+                    str(resolved_template), ReadOnly=True, Untitled=True, WithWindow=False
                 )
                 tmpl_pres.Slides(tmpl_page).Copy()
                 tmpl_pres.Close()
 
-                count_before = pres.Slides.Count
-                paste_slide_with_source_format(pptApp, pres, count_before)
+                _safe_paste(pres.Slides)
                 new_idx = pres.Slides.Count
 
                 if title:
-                    set_template_title(pres.Slides(new_idx), title)
+                    sz = font_sz if font_sz else (40 if tmpl_page == 2 else None)
+                    set_template_title(pres.Slides(new_idx), title, font_size=sz)
 
                 pres.Slides(new_idx).MoveTo(after + 1)
                 print(f"  [插入模板] P{tmpl_page}「{title}」→ 第 {after + 1} 页")
@@ -144,7 +192,7 @@ def edit(output_path, operations):
                 override_title = op.get("title")
 
                 # Step 1：分析源文件，决定使用 P3 还是 P4 模板
-                src_pres  = pptApp.Presentations.Open(
+                src_pres = pptApp.Presentations.Open(
                     str(src), ReadOnly=True, Untitled=True, WithWindow=False
                 )
                 src_slide = src_pres.Slides(src_page)
@@ -163,13 +211,12 @@ def edit(output_path, operations):
 
                 # Step 2：复制模板页，粘到末尾（建立背景）
                 tmpl_pres = pptApp.Presentations.Open(
-                    str(TEMPLATE_PATH.resolve()), ReadOnly=True, Untitled=True, WithWindow=False
+                    str(resolved_template), ReadOnly=True, Untitled=True, WithWindow=False
                 )
                 tmpl_pres.Slides(tmpl_page).Copy()
                 tmpl_pres.Close()
 
-                count_before = pres.Slides.Count
-                paste_slide_with_source_format(pptApp, pres, count_before)
+                _safe_paste(pres.Slides)
                 new_idx = pres.Slides.Count
 
                 # Step 3：粘贴源内容形状
@@ -179,7 +226,7 @@ def edit(output_path, operations):
                     )
                     src_pres.Slides(src_page).Shapes.Range(content_indices).Copy()
                     src_pres.Close()
-                    paste_shapes_with_source_format(pptApp, pres, new_idx)
+                    _safe_paste(pres.Slides(new_idx).Shapes)
 
                 # Step 4：写标题
                 if source_has_title and title_text:
@@ -206,10 +253,7 @@ def edit(output_path, operations):
                 pres.Close()
         except Exception:
             pass
-        try:
-            pptApp.Quit()
-        except Exception:
-            pass
+        # 保持 App 运行，由用户或下一任务决定何时关闭
 
 
 if __name__ == "__main__":

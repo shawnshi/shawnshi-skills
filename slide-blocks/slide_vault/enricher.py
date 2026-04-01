@@ -15,27 +15,8 @@ from pathlib import Path
 from concurrent.futures import ThreadPoolExecutor, as_completed
 from PIL import Image
 
-# ─── 容错装饰器 ───────────────────────────────────────────────────────────
-
-def with_retry(max_retries=3, base_delay=2):
-    def decorator(func):
-        def wrapper(*args, **kwargs):
-            delay = base_delay
-            for attempt in range(max_retries):
-                try:
-                    return func(*args, **kwargs)
-                except Exception as e:
-                    if attempt == max_retries - 1:
-                        raise e
-                    err_msg = str(e).lower()
-                    if "429" in err_msg or "quota" in err_msg or "ssl" in err_msg or "eof" in err_msg or "failed_precondition" in err_msg:
-                        print(f"    [Retry] 遇到网络/限流错误，{delay}秒后重试... ({attempt+1}/{max_retries})")
-                        time.sleep(delay)
-                        delay *= 2
-                    else:
-                        raise e
-        return wrapper
-    return decorator
+# ─── 容错机制 ───────────────────────────────────────────────────────────
+from slide_vault.utils import with_retry
 
 # 路径引导
 _ROOT = Path(__file__).parent.parent
@@ -128,24 +109,10 @@ def enrich_text(slide):
             res = _generate_text_tags(prompt, FALLBACK_TAG_MODEL)
             
         data = json.loads(res.text)
-
-        conn = sqlite3.connect(DB_PATH)
-        conn.execute("""
-            INSERT OR REPLACE INTO tags 
-            (slide_id, scene, content_type, industries, keywords, quality_score, summary, tagged_at)
-            VALUES (?, ?, ?, ?, ?, ?, ?, datetime('now'))
-        """, (
-            slide['id'], data['scene'], data['content_type'],
-            json.dumps(data['industries'], ensure_ascii=False),
-            json.dumps(data['keywords'], ensure_ascii=False),
-            data['quality_score'], data['summary']
-        ))
-        conn.commit()
-        conn.close()
-        return True
+        return {"id": slide['id'], "data": data}
     except Exception as e:
         print(f"  [!] 文本打标最终失败 (ID {slide['id']}): {e}")
-        return False
+        return None
 
 # ─── 核心逻辑：视觉打标 ─────────────────────────────────────────────────────
 
@@ -170,19 +137,10 @@ def enrich_vision(slide):
         prompt = f"识别此幻灯片的视觉版式。标题参考：{slide['title']}"
         res = _generate_vision_tags(prompt, img)
         data = json.loads(res.text)
-
-        conn = sqlite3.connect(DB_PATH)
-        conn.execute("""
-            UPDATE tags SET layout_type = ?, 
-            summary = summary || ' [视觉构成: ' || ? || ']'
-            WHERE slide_id = ?
-        """, (data['layout_type'], data['visual_description'], slide['id']))
-        conn.commit()
-        conn.close()
-        return True
+        return {"id": slide['id'], "layout_type": data['layout_type'], "visual_description": data['visual_description']}
     except Exception as e:
         print(f"  [!] 视觉分析失败 (ID {slide['id']}): {e}")
-        return False
+        return None
 
 # ─── 核心逻辑：向量化 ───────────────────────────────────────────────────────
 
@@ -193,16 +151,16 @@ def enrich_vector(slide):
     try:
         emb = get_embedding(text)
         if emb:
-            save_vector(DB_PATH, slide['id'], emb)
-            return True
+            return {"id": slide['id'], "vector": emb}
     except Exception:
         pass
-    return False
+    return None
 
 # ─── 执行器 ───────────────────────────────────────────────────────────────
 
 def run_enrichment(mode, max_workers=5):
-    conn = sqlite3.connect(DB_PATH)
+    conn = sqlite3.connect(DB_PATH, timeout=20.0)
+    conn.execute("PRAGMA journal_mode=WAL")
     conn.row_factory = sqlite3.Row
 
     if mode == "text":
@@ -218,10 +176,10 @@ def run_enrichment(mode, max_workers=5):
         return
 
     slides = [dict(r) for r in conn.execute(sql).fetchall()]
-    conn.close()
 
     if not slides:
         print(f"[{mode.upper()}] 无需处理。")
+        conn.close()
         return
 
     print(f"[{mode.upper()}] 正在处理 {len(slides)} 条记录...")
@@ -229,9 +187,36 @@ def run_enrichment(mode, max_workers=5):
     with ThreadPoolExecutor(max_workers=max_workers) as executor:
         futures = {executor.submit(worker, s): s for s in slides}
         for i, f in enumerate(as_completed(futures), 1):
-            if f.result(): ok += 1
+            res = f.result()
+            if res:
+                ok += 1
+                if mode == "text":
+                    data = res["data"]
+                    conn.execute("""
+                        INSERT OR REPLACE INTO tags 
+                        (slide_id, scene, content_type, industries, keywords, quality_score, summary, tagged_at)
+                        VALUES (?, ?, ?, ?, ?, ?, ?, datetime('now'))
+                    """, (
+                        res['id'], data['scene'], data['content_type'],
+                        json.dumps(data['industries'], ensure_ascii=False),
+                        json.dumps(data['keywords'], ensure_ascii=False),
+                        data['quality_score'], data['summary']
+                    ))
+                elif mode == "vision":
+                    conn.execute("""
+                        UPDATE tags SET layout_type = ?, 
+                        summary = summary || ' [视觉构成: ' || ? || ']'
+                        WHERE slide_id = ?
+                    """, (res['layout_type'], res['visual_description'], res['id']))
+                elif mode == "vector":
+                    save_vector(DB_PATH, res['id'], res['vector'])
+                
+                if mode in ["text", "vision"]:
+                    conn.commit()
+
             if i % 20 == 0: print(f"  进度: {i}/{len(slides)} (成功: {ok})")
     
+    conn.close()
     print(f"[{mode.upper()}] 完成！成功: {ok}")
 
 if __name__ == "__main__":

@@ -89,43 +89,28 @@ def extract_slide_content(slide) -> dict:
         # 标题优先取 placeholder 类型为 title 的
         if shape.has_text_frame:
             text = shape.text_frame.text.strip()
-            if not text:
-                continue
-            # 判断是否是标题占位符
-            if shape.shape_type == 13:  # MSO_SHAPE_TYPE.PLACEHOLDER
-                pass
-            try:
-                ph = shape.placeholder_format
-                if ph and ph.idx == 0:  # idx=0 通常是标题
-                    title = text
-                else:
+            if text:
+                try:
+                    ph = shape.placeholder_format
+                    if ph and ph.idx == 0:  # idx=0 通常是标题
+                        title = text
+                    else:
+                        texts.append(text)
+                except Exception:
                     texts.append(text)
-            except Exception:
-                texts.append(text)
+        elif hasattr(shape, "image"):
+            has_image = True
 
         if shape.shape_type == 13:  # PICTURE
             has_image = True
-        try:
-            _ = shape.chart
+        elif shape.shape_type == 19: # TABLE
             has_chart = True
-        except Exception:
-            pass
-        if shape.shape_type == 3:  # LINKED_OLE_OBJECT / table
-            pass
 
-    # 再扫一遍图片和图表
-    for shape in slide.shapes:
-        if shape.shape_type == 13:
-            has_image = True
-        if shape.has_text_frame is False and hasattr(shape, "image"):
-            has_image = True
         try:
-            _ = shape.chart
-            has_chart = True
+            if shape.has_chart:
+                has_chart = True
         except Exception:
             pass
-        if shape.shape_type == 19:  # TABLE
-            has_chart = True
 
     # 如果 title 没有从 placeholder 里找到，退而用第一段文字
     if not title and texts:

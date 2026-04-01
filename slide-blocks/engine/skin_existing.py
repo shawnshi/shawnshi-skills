@@ -22,8 +22,7 @@ from pathlib import Path
 from pptx import Presentation
 
 # 引入核心组装引擎
-sys.path.insert(0, str(Path(__file__).parent))  # engine/ 内互相引用
-from assemble_template import assemble, TEMPLATE_PATH
+from engine.assemble_template import assemble
 
 
 def build_plan(input_path: Path, keep_pages: list[int], template_path: Path) -> list[dict]:
@@ -81,10 +80,13 @@ def main():
             print(f"[错误] 模板不存在: {template_path}")
             sys.exit(1)
     else:
-        templates = sorted(template_dir.glob("*.pptx"))
+        templates = sorted(
+            [f for f in template_dir.iterdir()
+             if f.suffix.lower() in ('.pptx', '.potx') and not f.name.startswith('~')]
+        )
         if not templates:
             print(f"[错误] 模板文件夹为空：{template_dir}")
-            print("请在模板文件夹中放入 .pptx 模板文件（须包含5页：封面、过渡页、带标题内容页、无标题内容页、封底）")
+            print("请在模板文件夹中放入 .pptx/.potx 模板文件（须包含5页：封面、过渡页、带标题内容页、无标题内容页、封底）")
             sys.exit(1)
         print("可用模板：")
         for idx, t in enumerate(templates, 1):
@@ -101,16 +103,13 @@ def main():
                 sys.exit(1)
             print()
 
-    # 临时覆盖引擎的 TEMPLATE_PATH
-    import assemble_template
-    assemble_template.TEMPLATE_PATH = template_path
-
     # 输出文件名
     output_name = args.output or (input_path.stem + "_skinned")
+    output_path = str(input_path.parent / (output_name + ".pptx"))
 
     # 生成 plan 并执行
     plan = build_plan(input_path, keep_pages, template_path)
-    assemble(plan, output_name)
+    assemble(plan, output_path, str(template_path))
 
 
 if __name__ == "__main__":

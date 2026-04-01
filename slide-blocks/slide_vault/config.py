@@ -37,7 +37,7 @@ def load_config() -> dict:
 
 
 def get_db_path() -> Path:
-    return Path(load_config()["db_path"])
+    return CONFIG_PATH.parent / load_config()["db_path"]
 
 
 def get_materials_dir() -> Path:

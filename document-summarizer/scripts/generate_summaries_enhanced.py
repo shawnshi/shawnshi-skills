@@ -74,11 +74,32 @@ class LLMSummaryGenerator:
             
         return summary[:150]
 
+    def _call_gemini(self, prompt, api_key):
+        """调用 Gemini 基座模型，带自动重试机制"""
+        import google.generativeai as genai
+        import time
+        genai.configure(api_key=api_key)
+        # Using a reliable model like gemini-2.5-flash
+        model = genai.GenerativeModel('gemini-2.5-flash')
+        
+        for attempt in range(3):
+            try:
+                response = model.generate_content(prompt)
+                if response.text:
+                    return response.text
+            except Exception as e:
+                print(f"⚠️ API 调用失败 (尝试 {attempt+1}/3): {e}")
+                time.sleep(2 ** attempt)
+        return None
+
     def process_batch(self, input_file, output_file, compliance_file=None):
-        """处理文档批次，生成 Prompt 列表或执行模拟调用"""
+        """处理文档批次，原生调用 LLM 进行压缩"""
+        import os
+        from concurrent.futures import ThreadPoolExecutor, as_completed
+        
         if not Path(input_file).exists():
             print(f"❌ 找不到输入文件: {input_file}")
-            return
+            sys.exit(1)
 
         with open(input_file, "r", encoding="utf-8") as f:
             documents = json.load(f)
@@ -90,37 +111,60 @@ class LLMSummaryGenerator:
 
         print(f"正在处理 {len(documents)} 个文档...")
         
-        # 在自动化流程中，此脚本将输出 Prompt 列表供上层 Agent 消费
-        # 或者在此处集成 subprocess 调用 gemini-cli (如果环境允许)
-        
+        api_key = os.environ.get("GEMINI_API_KEY")
+        if not api_key:
+            print("⚠️ 未检测到 GEMINI_API_KEY 环境变量。将回退到规则引擎！")
+
         results = []
-        for doc in documents:
+        
+        def _process_single(doc):
             doc_id = doc['id']
             filename = doc['filename']
             content = doc['content'][:2000] # 截取前2k字作为上下文
             compliance = compliance_data.get(doc_id, "未执行合规审计")
             
-            # 生成 Prompt (供 Agent 参考)
             prompt = self.get_prompt_template().format(
                 filename=filename,
                 content=content,
                 compliance=json.dumps(compliance, ensure_ascii=False)
             )
             
-            # 这里记录一个“占位”摘要，待 Agent 批量替换
-            results.append({
+            summary = None
+            tags = []
+            if api_key:
+                raw_res = self._call_gemini(prompt, api_key)
+                if raw_res:
+                    summary = raw_res.strip()
+                    tags = ["Mentat_Auto_LLM"]
+                    
+            if not summary:
+                # 规则兜底
+                summary = self.generate_rule_based_fallback(filename, content, compliance)
+                tags = ["RULES_FALLBACK"]
+                
+            return {
                 "id": doc_id,
                 "filename": filename,
-                "summary": "PENDING_LLM_GENERATION",
-                "tags": ["LLM_PENDING"],
-                "prompt": prompt
-            })
+                "summary": summary,
+                "tags": tags
+            }
+
+        # 异步并发执行 API 请求，最大并发限流控制在 4 避免 429 Error
+        max_workers = 4 if api_key else 8
+        with ThreadPoolExecutor(max_workers=max_workers) as executor:
+            futures = [executor.submit(_process_single, doc) for doc in documents]
+            for future in as_completed(futures):
+                try:
+                    res = future.result()
+                    results.append(res)
+                    print(f"✓ 生成完成: {res['filename']} [{res['tags'][0]}]")
+                except Exception as e:
+                    print(f"❌ 严重内部错误: {e}")
 
         with open(output_file, "w", encoding="utf-8") as f:
             json.dump(results, f, ensure_ascii=False, indent=2)
             
-        print(f"✅ Prompt 列表已生成: {output_file}")
-        print("💡 请将此文件交给 Agent 执行批量语义压缩。")
+        print(f"✅ 生成完毕并落盘至: {output_file}")
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description='LLM 摘要生成器适配层')

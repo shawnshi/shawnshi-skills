@@ -20,7 +20,7 @@ from slide_vault.config import CONFIG_PATH
 SKILL_DIR = CONFIG_PATH.parent
 os.chdir(str(SKILL_DIR))
 sys.path.insert(0, str(SKILL_DIR / "engine"))
-import assemble_template  # 复用 _get_ppt_app()，处理 WPS 劫持
+from com_helper import COMManager  # 处理 WPS 劫持
 
 PLAN = [
     {"src": "完整路径/文件名.pptx", "page": 5, "label": "说明"},
@@ -28,7 +28,7 @@ PLAN = [
 ]
 OUTPUT = str(SKILL_DIR / "输出/搜集稿-xxx.pptx")
 
-pptApp = assemble_template._get_ppt_app()
+pptApp = COMManager().get_app(visible=True)
 pptApp.Visible = True
 pptApp.DisplayAlerts = 0
 

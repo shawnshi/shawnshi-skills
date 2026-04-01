@@ -9,32 +9,8 @@ import time
 from pathlib import Path
 import subprocess
 
-def _get_ppt_app():
-    """获取 PowerPoint COM 实例，处理路径硬编码兼容性。"""
-    import win32com.client
-    
-    # 尝试查找 POWERPNT.EXE
-    candidates = [
-        r"C:\Program Files\Microsoft Office\root\Office16\POWERPNT.EXE",
-        r"C:\Program Files (x86)\Microsoft Office\root\Office16\POWERPNT.EXE",
-        r"C:\Program Files\Microsoft Office\Office16\POWERPNT.EXE",
-        r"C:\Program Files (x86)\Microsoft Office\Office16\POWERPNT.EXE",
-    ]
-    exe = next((p for p in candidates if Path(p).exists()), None)
-
-    if exe:
-        subprocess.Popen([exe])
-        for _ in range(30):
-            time.sleep(0.5)
-            try:
-                app = win32com.client.GetActiveObject("PowerPoint.Application")
-                if "kingsoft" not in str(app.Path).lower():
-                    return app
-            except Exception:
-                pass
-    
-    # 退而求其次使用 Dispatch
-    return win32com.client.Dispatch("PowerPoint.Application")
+_ENGINE_DIR = Path(__file__).parent
+from engine.com_helper import COMManager
 
 def export_thumbnails(pptx_path: Path, output_dir: Path, scale_width=1280):
     """
@@ -57,7 +33,7 @@ def export_thumbnails(pptx_path: Path, output_dir: Path, scale_width=1280):
     exported_paths = []
 
     try:
-        app = _get_ppt_app()
+        app = COMManager().get_app(visible=True)
         app.Visible = True  # 导出图片建议可见，否则部分渲染可能失败
         app.DisplayAlerts = 0
         

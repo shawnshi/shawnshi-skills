@@ -19,9 +19,8 @@ import sys
 
 _ENGINE = Path(__file__).parent
 _ROOT   = _ENGINE.parent  # SlideBlocks 根目录
-sys.path.insert(0, str(_ENGINE))  # 找同目录的 assemble_template
 
-import assemble_template as _at
+import engine.assemble_template as _at
 
 TEMPLATE_DIR = _ROOT / "模板"
 
@@ -31,7 +30,10 @@ TEMPLATE_DIR = _ROOT / "模板"
 def _pick_template(to):
     """从 模板/ 文件夹自动选匹配方向的第一个模板。"""
     keyword = "深色底" if to == "dark" else "浅色底"
-    matches = [p for p in TEMPLATE_DIR.glob("*.pptx") if keyword in p.name]
+    matches = [p for p in TEMPLATE_DIR.iterdir()
+               if p.suffix.lower() in ('.pptx', '.potx')
+               and keyword in p.name
+               and not p.name.startswith('~')]
     if not matches:
         raise FileNotFoundError(
             f"模板文件夹中没有找到含 [{keyword}] 的模板：{TEMPLATE_DIR}"
@@ -204,7 +206,7 @@ def convert(src, output_name=None, to='light', template_path=None):
     # 选模板
     if template_path is None:
         template_path = _pick_template(to)
-    _at.TEMPLATE_PATH = Path(template_path)
+    template_path = Path(template_path)
 
     # 输出文件名
     if output_name is None:
@@ -222,5 +224,9 @@ def convert(src, output_name=None, to='light', template_path=None):
     n_transition = sum(1 for p in plan if p.get("template_page") == 2)
     print(f"  页数：共 {len(plan)} 页（内容页 {n_content}，过渡页 {n_transition}，封面1，封底1）\n")
 
+    # 构建完整输出路径（与源文件同目录）
+    output_full_path = str(src.parent / (output_name + ".pptx"))
+
     # 调用组装引擎（颜色修复在引擎内自动触发）
-    return _at.assemble(plan, output_name)
+    _at.assemble(plan, output_full_path, str(template_path))
+    return Path(output_full_path)

@@ -23,8 +23,18 @@ from .vector_store import get_embedding, cosine_similarity
 _SYNONYMS: dict[str, list[str]] = {
     "一体化": ["一体"],
     "一体":   ["一体化"],
-    "AI":     ["人工智能"],
-    "人工智能": ["AI"],
+    "AI":     ["人工智能大模型", "大模型", "人工智能"],
+    "人工智能": ["AI", "大模型", "人工智能大模型"],
+    "大模型": ["AI", "人工智能", "人工智能大模型"],
+    "HIS": ["医院信息系统", "核心业务系统"],
+    "EMR": ["电子病历", "电子病历系统", "电子病历应用水平"],
+    "电子病历": ["EMR"],
+    "CDSS": ["临床决策支持", "临床决策"],
+    "临床决策": ["CDSS", "临床决策支持"],
+    "互联互通": ["互联互通标准化成熟度", "互通"],
+    "DRG": ["疾病诊断相关分组", "诊断组"],
+    "DIP": ["按病种分值付费", "病种分值"],
+    "信创": ["国产化", "自主可控", "信息技术应用创新"],
 }
 
 def _expand_keywords(keywords: list[str]) -> list[str]:
@@ -237,13 +247,45 @@ def print_results(results: list[dict], mode: str = "content"):
             print(f"     版式：{r.get('layout')}  背景：{r.get('background')}")
 
 
-# ─── 快速测试入口 ────────────────────────────────────────────────────
+# ─── 命令行入口 (CLI) ──────────────────────────────────────────────────
 
 if __name__ == "__main__":
-    print("=== 内容检索测试 ===")
-    results = search_content(scene="售前汇报", quality_min=4, limit=5)
-    print_results(results, mode="content")
+    import argparse
+    parser = argparse.ArgumentParser(description="SlideBlocks 检索客户端")
+    parser.add_argument("--mode", choices=["hybrid", "structural"], default="hybrid", help="检索模式")
+    
+    # 混合检索参数
+    parser.add_argument("--scene", help="推荐场景")
+    parser.add_argument("--type", dest="content_type", help="内容分类")
+    parser.add_argument("--layout", help="版式类型 (对structural模式也适用)")
+    parser.add_argument("--keywords", nargs="+", help="关键词列表")
+    parser.add_argument("--quality", type=int, help="最低质量分数 (1-5)")
+    parser.add_argument("--no-vector", action="store_false", dest="use_vector", help="禁用向量检索，仅依赖关键词")
+    parser.add_argument("--source", help="按源文件名过滤")
+    
+    # 结构检索参数
+    parser.add_argument("--bg", dest="background", help="背景颜色过滤 (浅色底/深色底)")
+    
+    # 通用参数
+    parser.add_argument("--limit", type=int, default=10, help="返回数量限制")
+    args = parser.parse_args()
 
-    print("\n=== 结构检索测试 ===")
-    results = search_structural(layout="过渡页", background="浅色底", limit=5)
-    print_results(results, mode="structural")
+    if args.mode == "hybrid":
+        results = search_hybrid(
+            scene=args.scene,
+            content_type=args.content_type,
+            layout_type=args.layout,
+            keywords=args.keywords,
+            quality_min=args.quality,
+            source_file=args.source,
+            use_vector=args.use_vector,
+            limit=args.limit
+        )
+        print_results(results, mode="content")
+    else:
+        results = search_structural(
+            layout=args.layout,
+            background=args.background,
+            limit=args.limit
+        )
+        print_results(results, mode="structural")
