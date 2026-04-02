@@ -1,25 +1,24 @@
 ---
 name: personal-diary-writer
-version: 1.0.0
-description: |
-  个人日志原子写入器。当用户需要日常记录、简单的状态录入，或被其他高级系统（如 cognitive-auditor）调用落盘时激活。提供极度鲁棒的物理写入 I/O 组件。
+description: 个人日志原子写入器。当用户需要日常记录、写日记、状态录入，或被高级系统（如 cognitive-auditor）调用落盘审计报告时激活。该技能通过专用的 diary_ops.py 执行安全写入，确保护理日志的物理完整性。
 ---
 
-# SKILL: Personal Diary Writer (Atomic I/O)
+# Personal Diary Writer (Atomic I/O)
 
-核心职责：高频、轻量级的日常状态录入与原子化文件操作。本系统只负责将内容写入文件，不涉及深度的战术复盘和健康审计。
+This skill handles high-frequency, lightweight daily status recording and atomic file operations for diary/log entries.
 
-## 1. 核心约束 (Core Mandates)
-- **物理操作债防守**: 必须强绑定 `scripts/diary_ops.py` 进行 `prepend`。严禁直接使用 shell 重定向或常规写文件，以防止碎片文件或破坏原文件。
-- **Win32 物理适配**: 永远使用 `--content_file` 传递要追加的复杂日志内容，防止命令行特殊字符转义崩溃。
-- **语义本体**: 负责严格检查 `#tag` 的本体格式。必须确保所有标签采用 `#tag` 形式。
+## 0. 核心约束 (Core Mandates)
+- **物理操作债防守**: 必须强制使用 `run_shell_command` 调用 `python ~/.gemini/skills/scripts/io_engine/diary_ops.py` 进行 `prepend` 操作。严禁使用 Shell 重定向或常规 `write_file` 直接覆盖主日志文件。
+- **Win32 物理适配**: 永远使用 `--content_file` 传递复杂内容，防止 Windows 命令行转义导致解析错误。
+- **语义本体**: 强制检查 `#tag` 格式，确保所有标签符合本体标准。
 
-## 2. 执行协议 (Execution Protocol)
-### Phase 0: Reconnaissance (侦察门控)
-【硬性约束】：在调用该技能组装日志前，AI 必须先自动执行 `gws calendar events list` 和 `garmin` 生理数据查询。严禁直接以 `ask_user` 开局，必须依据“证据先行”原则重建物理事实。
+## 1. 执行协议 (Execution Protocol)
+
+### Phase 0: Reconnaissance (证据先行)
+- **自动化事实重建**: 在组装日志前，必须先自动执行 `gws calendar events list` 获取日程数据，并运行 `garmin` 查询生理数据（如有相关接口）。严禁仅凭用户输入盲目生成日志。
 
 ### Phase 1: Structure Alignment (结构对齐)
-【Schema 绝对防御】：必须严格按照以下模板结构组装内容，绝对禁止合并标题：
+- **Schema 绝对防御**: 严格按照以下模板结构组装内容，绝对禁止合并标题：
 ```markdown
 # YYYY-MM-DD 星期X
 
@@ -46,28 +45,25 @@ description: |
 ```
 
 ### Phase 2: Action
-1. 接收用户的输入文本或由其他 Agent 传来的审计报告文本。
-2. 规范化所有 `#tag` 标签。
-3. 将内容写入临时文件 `tmp/log_entry.md`。
-4. 调用 `scripts/diary_ops.py prepend --content_file tmp/log_entry.md` 执行安全写入。
+1. **规范化标签**: 处理用户或审计官提供的文本，确保标签格式正确。
+2. **中间暂存**: 将组装好的内容写入临时文件 `~/.gemini/tmp/log_entry.md`。
+3. **安全写入**: 使用 `run_shell_command` 执行 `python ~/.gemini/skills/scripts/io_engine/diary_ops.py prepend --content_file ~/.gemini/tmp/log_entry.md`。
 
-## 3. 附属落盘协议 (Secondary Write-Backs)
-### 3.1 Mentat Insight Archival (同步调用内观日记)
-如果当前记录属于 Mentat Insight 的深度日志：
-【强制要求】：必须同步生成一份符合 insight-diary 标准的 OODA 审计报告。
-物理归档路径：`{root_dir}/memory/privacy/Diary/mentat_audit/[YYYY-QX]_Audit.md`。
-归档策略：强制使用 `diary_ops.py` 执行季度级 prepend 操作。
+## 2. 附属落盘协议 (Secondary Write-Backs)
 
-### 3.2 Strategic Sync (记忆蒸馏)
-如果从 `personal-cognitive-auditor` 接收到的数据中包含 `cognitive_depth_score >= 4` 的高价值产出：
-【强制要求】：将核心认知结晶格式化为 JSON 写入 `tmp`，然后调用 `scripts/memory_sync.py` 同步至全局 `memory.md`。
+### 2.1 Mentat Insight Archival (内观日记同步)
+- **触发条件**: 当前记录属于 Mentat Insight 深度日志。
+- **动作**: 物理归档至 `~/.gemini/memory/privacy/Diary/mentat_audit/[YYYY-QX]_Audit.md`。必须使用 `diary_ops.py` 执行季度级 `prepend`。
 
-## 4. Telemetry & Metadata (Mandatory)
-- 使用 `write_file` 将本次执行的元数据以 JSON 格式保存至 `{root}\MEMORY\skill_audit\telemetry\record_[TIMESTAMP].json`。
-- JSON 结构：`{"skill_name": "personal-diary-writer", "status": "success", "duration_sec": [ESTIMATE], "input_tokens": [ESTIMATE], "output_tokens": [ESTIMATE]}`
+### 2.2 Strategic Sync (全局记忆同步)
+- **触发条件**: 接收到来自 `personal-cognitive-auditor` 且 `cognitive_depth_score >= 4` 的产出。
+- **动作**: 将认知结晶格式化为 JSON并调用 `run_shell_command` 执行 `python ~/.gemini/skills/scripts/io_engine/memory_sync.py` 同步至全局 `memory.md`。
 
-## 5. 历史失效先验 (Gotchas)
-- **[ARCHIVE_PREPEND]**: 必须使用 `diary_ops.py` 执行季度级 prepend，严禁创建碎片文件。
-- **[SYNC_AUDIT_FORCE]**: 若会话过程中涉及 `memory.md` 修改、工具链报错（Error Count >= 2）或降级防御逻辑，必须强制视当前任务为“深度日志”，并立即同步激活 `mentat-insight-diary`。
-- ALWAYS use `--content_file` for multi-line log prepends.
-- ENSURE all tags are wrapped in `#tag` format.
+## 3. Telemetry & Metadata (Mandatory)
+- 任务结束时，使用 `write_file` 将元数据以 JSON 格式保存至 `~/.gemini/MEMORY/skill_audit/telemetry/record_[TIMESTAMP].json` (替换为当前时间戳)。
+- JSON 结构：`{"skill_name": "personal-diary-writer", "status": "success", "duration_sec": 0, "input_tokens": 0, "output_tokens": 0}`
+
+## 4. 历史失效先验 (Gotchas)
+- **[ARCHIVE_PREPEND]**: 必须通过 `diary_ops.py` 执行，严禁创建碎片文件。
+- **[SYNC_AUDIT_FORCE]**: 若会话中涉及 `memory.md` 修改或工具链报错（Error Count >= 2），必须强制同步激活 `mentat-insight-diary`。
+- **[CONTENT_FILE_ONLY]**: 任何多行追加必须使用 `--content_file` 参数。

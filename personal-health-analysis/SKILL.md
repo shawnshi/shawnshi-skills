@@ -1,7 +1,6 @@
 ---
 name: personal-health-analysis
-description: 首席医疗官 (CMO) 级生理审计引擎。当用户提到“心率”、“睡眠”、“身体电量”、“压力”或任何生理指标时，务必激活。该技能通过对 Garmin 数据的全链路审计，管理你的高阶决策准备度，识别潜在健康风险，严禁仅做表面数据陈述。
-triggers: ["心率", "睡眠", "压力", "HRV", "感冒迹象", "身体电量", "健康审计", "准备度", "生理状态", "健康洞察", "生理洞察", "运动分析", "热力图", "90天"]
+description: 首席医疗官(CMO)级生理审计引擎。当用户提到“心率/睡眠/压力/HRV/感冒迹象/身体电量/健康审计/准备度/生理状态/健康洞察/运动分析/热力图/90天”等指标时务必激活。通过Garmin数据执行全链路审计与决策准备度管理。
 ---
 
 # Personal Health Analysis (CMO/Strategic Architect Level)
@@ -19,7 +18,7 @@ triggers: ["心率", "睡眠", "压力", "HRV", "感冒迹象", "身体电量", 
 AI 必须严格按照以下阶段线性推进，并在模式之间流转：
 
 - **[Phase 0: Data Sync & Pre-flight (PLANNING Mode)]**
-  - **Action**: 隐式执行 `python {user_root}\AppData\Local\Programs\Python\Python313\Scripts\garmindb_cli.py --latest` 以尝试更新本地数据湖。
+  - **Action**: 隐式执行 `garmindb_cli.py --latest` 以尝试更新本地数据湖（确保命令在环境中可用）。
   - **Failsafe**: 如果遇到 429 报错，**不阻塞后续执行**，直接转入本地已有的 SQLite 库进行审计（即读取“历史快照”）。
 
 - **[Phase 1: Precision Data Extraction (EXECUTION Mode)]**
@@ -36,8 +35,9 @@ AI 必须严格按照以下阶段线性推进，并在模式之间流转：
 
 ## ⚠️ Agentic Guardrails (智能体硬约束)
 1. **No Hallucination**: 绝对禁止编造生理数据。
-2. **Path Resolution**: 处理活动文件（FIT/GPX）和 HTML 报告时，必须使用绝对路径展示（例如：`[查看生物态势看板](file:///{user_root}/.gemini/memory/garmin/tactical_board_7days_2026xxxx.html)`）。
-3. **Pipelining**: `garmin_intelligence.py` 等分析脚本依赖基础数据正确返回。严格确保前序步骤成功后再执行后续的深度审计。
+2. **Execution Context**: 执行脚本前，确保明确使用绝对路径（如 `C:\Users\shich\.gemini\skills\personal-health-analysis\scripts\garmin_data.py`）或在 `run_shell_command` 中使用 `dir_path` 切换到对应目录。
+3. **Path Resolution**: 处理活动文件（FIT/GPX）和 HTML 报告时，必须使用绝对路径展示（例如：`[查看生物态势看板](file:///{user_root}/.gemini/memory/garmin/tactical_board_7days_2026xxxx.html)`）。
+4. **Pipelining**: `garmin_intelligence.py` 等分析脚本依赖基础数据正确返回。严格确保前序步骤成功后再执行后续的深度审计。
 
 ## Output Schema & Intent Routing (三级输出协议)
 
@@ -66,78 +66,29 @@ AI 必须严格按照以下阶段线性推进，并在模式之间流转：
 
 ## Tooling Reference & Workflow
 
-**IMPORTANT**: 所有的 `python scripts/...` 命令必须通过你的 `run_command` 工具执行。
+*注意：执行以下脚本时，请确保工作目录为 `C:\Users\shich\.gemini\skills\personal-health-analysis\` 或使用绝对路径。*
 
-### 1. 基础查询 (Raw Data)
+### 1. 核心指令 (Core Operations)
 ```bash
-# 综合摘要（含所有核心指标）
+# 综合摘要与高阶洞察 (Level 2)
 python scripts/garmin_data.py summary --days 7
+python scripts/garmin_intelligence.py insight_cn --days 7
 
-# 单项指标
-python scripts/garmin_data.py sleep --days 14
-python scripts/garmin_data.py hrv --days 7
-python scripts/garmin_data.py heart_rate --days 7
-python scripts/garmin_data.py body_battery --days 7
-python scripts/garmin_data.py stress --days 7
-python scripts/garmin_data.py activities --days 30
-python scripts/garmin_data.py profile
-```
-
-### 2. 长程纪律与趋势追踪 (Long-term / Heatmaps)
-```bash
-# 支持 --period 语法 (如 30d, 90d, YTD) 用于追踪长程基线漂移
-python scripts/garmin_chart.py dashboard --period 90d
-python scripts/garmin_intelligence.py insight_cn --period 30d
-python scripts/garmin_intelligence.py audit --period YTD
-```
-
-### 3. 扩展指标 (Extended Metrics)
-```bash
-python scripts/garmin_data_extended.py training_readiness --date 2026-02-21
-python scripts/garmin_data_extended.py spo2 --date 2026-02-21
-python scripts/garmin_data_extended.py respiration --date 2026-02-21
-python scripts/garmin_data_extended.py max_metrics --date 2026-02-21
-```
-
-### 4. 时间点精确查询 (Point-in-Time Query)
-```bash
-python scripts/garmin_query.py heart_rate "3:00 PM" --date 2026-02-21
-python scripts/garmin_query.py stress "15:00" --date 2026-02-21
-```
-
-### 5. 活动文件分析 (Activity File Analysis)
-```bash
-python scripts/garmin_activity_files.py download --activity-id 12345678 --format fit
-python scripts/garmin_activity_files.py query --file ... --distance 5000
-python scripts/garmin_activity_files.py analyze --file ...
-```
-
-### 6. 生理智能分析 (Advanced Analysis)
-```bash
-# 探测"Garmin 感冒"模式（RHR 上升 + HRV 下降 + 呼吸率异常）
-python scripts/garmin_intelligence.py flu_risk --days 7
-
-# 高阶决策准备度（包含高压耗散时长扣分）
+# 单项指标查询 (Level 1)
+python scripts/garmin_data.py [sleep|hrv|heart_rate|body_battery|stress] --days 7
 python scripts/garmin_intelligence.py readiness --days 1
 
-# 中文专家级综合洞察报告 (Mentat 级别)
-python scripts/garmin_intelligence.py insight_cn --days 7
-```
-
-### 7. 军工级交互式大屏 (Tactical Dashboard)
-```bash
-# 完整仪表盘（含多维叠加图 overlay 与系统热力图 heatmap）
+# 军工级交互大屏 / 宏观趋势 (Level 3)
 python scripts/garmin_chart.py dashboard --days 7
 python scripts/garmin_chart.py dashboard --period 90d
 
-# 手动指定保存路径
-python scripts/garmin_chart.py dashboard --days 7 --output {root_dir}\.gemini\memory\garmin\tactical_report.html
+# 探测"Garmin 感冒"模式
+python scripts/garmin_intelligence.py flu_risk --days 7
 ```
 
-### 8. 临床互操作 (FHIR Export)
-```bash
-python scripts/garmin_fhir_adapter.py hrv --days 30
-```
+### 2. 进阶分析与特殊命令 (Advanced Tools)
+对于特定的深度需求（如：**时间点精确查询、FHIR 临床导出、FIT/GPX 活动文件分析、扩展指标 SpO2/呼吸率**），请阅读参考文件以获取具体指令：
+👉 **参阅 [references/advanced_tools.md](references/advanced_tools.md)**
 
 ## Key Insights Reference
 
@@ -146,8 +97,8 @@ python scripts/garmin_fhir_adapter.py hrv --days 30
 - **"Garmin Flu" Pattern**: 患病前 24-48h 的生理特征：RHR 飙升 (>3-5 bpm)、HRV 骤降 (>10-15%)、以及 **睡眠呼吸率异常升高 (>0.5 brpm)**。
 
 ##  Telemetry & Metadata (Mandatory)
-- 使用 `write_file` 将本次执行的元数据以 JSON 格式保存至 `{root}\MEMORY\skill_audit\telemetry\record_[TIMESTAMP].json`（请将 [TIMESTAMP] 替换为当前时间戳或随机数）。
+- 使用 `write_file` 将本次执行的元数据以 JSON 格式保存至 `C:\Users\shich\.gemini\MEMORY\skill_audit\telemetry\record_[TIMESTAMP].json`（请将 [TIMESTAMP] 替换为当前时间戳或随机数）。
 - JSON 结构：`{"skill_name": "personal-health-analysis", "status": "success", "duration_sec": [ESTIMATE], "input_tokens": [ESTIMATE], "output_tokens": [ESTIMATE]}`
 
 ## 历史失效先验 (Gotchas)
-- [此处预留用于记录重复性失败的禁令，实现系统的对抗性进化]
+- **[EXPLICIT_SYNC_PATH]**: Win32 环境下 `garmindb_cli.py` 不在全局 PATH 中，且单纯 `--latest` 无效。必须强制执行全量增量指令：`python C:\Users\shich\AppData\Local\Programs\Python\Python313\Scripts\garmindb_cli.py --download --import --analyze --all --latest`。

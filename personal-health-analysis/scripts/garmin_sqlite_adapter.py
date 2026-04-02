@@ -134,10 +134,9 @@ def get_daily_friction_matrix(days=90):
     
     # Fill NAs
     df['training_load'] = df['training_load'].fillna(0)
-    # Forward fill missing physiological values to prevent math collapse, then fallback to safe baseline
-    mean_stress = df['stress_avg'].mean() if pd.notnull(df['stress_avg'].mean()) else 25
-    df['stress_avg'] = df['stress_avg'].ffill().bfill().fillna(mean_stress)
-    df['resting_heart_rate'] = df['resting_heart_rate'].ffill().bfill().fillna(60)
+    # Fill missing physiological values with neutral defaults to prevent PMC math collapse
+    df['stress_avg'] = df['stress_avg'].fillna(25)
+    df['resting_heart_rate'] = df['resting_heart_rate'].fillna(60)
     df['body_battery_highest'] = df['body_battery_highest'].fillna(100)
     df['body_battery_lowest'] = df['body_battery_lowest'].fillna(20)
     

@@ -1,17 +1,19 @@
-# _DIR_META.md
+# _DIR_META.md (HIT Digital Strategy Partner V17.5)
 
 ## Architecture Vision
-万字级深度研究流水线 (Cognitive Assembly Line)。
-通过“分章生产-状态同步-物理拼接”的工业化流程，突破 LLM 上下文限制，产出高密度、可审计的战略报告。
+"The Blackboard Anvil". A rigorous strategy forging environment combining policy sensing, multi-source evidence arbitration, and adversarial logic stress-testing. Designed to produce high-density, non-AI-plastic strategic assets.
 
 ## Member Index
-- `SKILL.md`: [Manifest] 核心流水线定义。
-- `scripts/`: [Engine]
-  - `memory_manager.py`: 语义核心维护（Working Memory）。
-  - `assembler.py`: 物理拼接与密度卫士。
-- `references/`: [Knowledge]
-  - `workflows.md`: 详细SOP。
-  - `editor.md`: 3D 逻辑审计标准。
-- `agents/`: [UI] Gemini 身份。
+- `SKILL.md`: [Instruction] Core SOP V17.5. Blackboard-driven strategy forging with 5-layer value chain.
+- `scripts/`: [Tools]
+    - `blackboard.py`: Manages the `tmp/strategy_blackboard.json` state machine.
+    - `assembler.py`: High-density narrative compiler and forger.
+    - `compliance_check.py`: Validates strategy outputs against 2026 Q1 HIT policy redlines.
+- `agents/`: [Sub-Agents]
+    - `med-policy-researcher.md`: Specialized agent for NMPA/NHC/NHSA policy sensing.
+    - `hit-commercial-analyst.md`: Specialized agent for Winning/Neusoft/Epic market moves.
+- `references/`: [Assets]
+    - `value_chain_models.md`: 5-layer model definitions and prompt triggers.
+    - `mbb_frameworks.md`: McKinsey/BCG/Bain frameworks for HIT contexts (MECE, 7S, 3C).
 
-> ⚠️ **Protocol**: 报告拼接严禁使用 LLM 摘要，必须调用 `assembler.py`。
+> ⚠️ **Protocol**: No final delivery without a "Contrarian Battle" in Phase 3. All outputs must be physically archived to `C:\Users\shich\.gemini\MEMORY\research\`.

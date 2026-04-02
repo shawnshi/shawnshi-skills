@@ -1,74 +1,68 @@
 ---
 name: personal-roundtable
-description: A high-density dynamic analytical framework (V4.0) that orchestrates real-world historical or contemporary figures into a "tension network" to scrutinize any topic. Features fragmented persistence per round (anti-dehydration by design), dynamic speaker selection, action-tagged dialogue with "简言之" compression, and structural ASCII topology maps. All sessions are eventually merged and physically archived to {root}/.gemini/MEMORY/roundtable/圆桌-{议题关键词}_{date}.md.
+description: A high-density dynamic analytical framework (V5.0) that orchestrates real-world historical or contemporary figures into a "tension network" to scrutinize any topic. Features fragmented persistence per round (anti-dehydration by design), dynamic speaker selection, action-tagged dialogue with "简言之" compression, and structural ASCII topology maps. All sessions are eventually merged and physically archived to C:\Users\shich\.gemini\MEMORY\roundtable\圆桌-{议题关键词}_{date}.md.
 ---
 
-# Personal Roundtable (V4.0: Fragmented Persistence Edition)
+# Personal Roundtable (V5.0: Mentat Synthesis Edition)
 
 “所有的执行偏差，本质上都是认知的偷懒。在这里，我们通过真实思想维度的对抗，萃取决策的晶核。”
 
 ---
 
+## 0. 核心调度约束 (Global State Machine)
+> **[全局熔断协议]**：必须严格按照 Phase 0 至 Phase 3 的顺序执行。在跨越任何 Phase 之前，必须在对话输出的最开头以 `[System State: Moving to Phase X]` 进行显式声明。
+
 ## 1. 核心流程与架构 (The Protocol)
 
-### Phase 1: 动态选人与工作区初始化 (Initialization) - [Inversion]
-**主持人 (Mentat)** 根据议题，动态选择 3-5 位真实历史/当代人物，构建**张力网络**。
-- **工作区初始化 (Mandatory)**：
-    - **隔离沙箱**：必须为本次圆桌建立专属临时目录：`{root}\.gemini\MEMORY\roundtable\workspace_{议题关键词}_{date}\`。若不存在请使用 `run_shell_command` 创建。
-    - **写入开场**：使用 `write_file` 写入第一个碎片文件 `00_init.md`。文件头必须包含：标题、日期、主持人角色、参会人物卡片（姓名、MBTI、核心立场、选择理由），以及开场第一个定义性问题。
-- **等待**：此时必须停止输出，等待用户指令。
+### Phase 0: Reconnaissance (语义侦察) [Mode: PLANNING]
+1.  **任务**：在开启讨论前，必须通过 `python C:\Users\shich\.gemini\extensions\vector-lake\cli.py query "你的推演指令" --interleave` 检索 `MEMORY/` 中相关的历史洞察、反常识点或类似议题的结论。
+2.  **情报汇总**：将检索到的核心情报以【负先验】的形式呈现给讨论组，防止讨论陷入已知的平庸结论。
 
-### Phase 2: 对话循环与碎片化落盘 (Dialogue & Fragmented Write) - [Pipeline]
-每一轮讨论必须遵循以下交互逻辑：
+### Phase 1: 动态选人与工作区初始化 (Initialization) [Mode: PLANNING]
+1.  **动态选人 (Tension Grid)**：根据议题，从 `C:\Users\shich\.gemini\skills\personal-roundtable\references\personas.md` 中选择或自定义 3-5 位人物，构建**张力网络**。
+2.  **工作区初始化 (Mandatory)**：
+    - **物理创建**：使用 `run_shell_command` 创建专属目录 `C:\Users\shich\.gemini\MEMORY\roundtable\workspace_{议题关键词}_{date}\`。
+    - **写入开场**：使用 `write_file` 写入第一个碎片文件 `00_init.md`。文件头包含人物卡片（姓名、MBTI、核心立场、选择理由）及开场问题。
+3.  **等待**：此时必须停止输出，调用 `ask_user` 等待用户指令。
 
+### Phase 2: 对话循环与碎片化落盘 (Dialogue & Fragmented Write) [Mode: EXECUTION]
 1.  **动态发言**：
     - 格式：`【人物名】【行动标签】：发言内容`。
     - **行动标签**：[陈述、质疑、补充、反驳、修正、综合]。
     - **硬性约束**：每段发言末尾必须包含 `**简言之**：[一句话逻辑压缩]`。
-
-2.  **主持人综述 (Moderator Recap)**：
-    - **核心争议点**：精准定位讨论中最深的逻辑裂缝。
-    - **ASCII 思考框架图**：根据逻辑结构选择最贴合的形式（2x2矩阵/光谱轴/因果环路/层级树）。
-    - **下潜问题**：提出后续引导问题。
-
-3.  **碎片化落盘 (Fragmented Write - Anti-Dehydration)**：
-    - **彻底抛弃全量重写**：严禁读取历史记录拼接！
-    - **单点写入**：每轮结束后，直接使用 `write_file` 将**仅属于本轮的新增内容**写入工作区的新文件（如：`01_round1.md`, `02_round2.md`...）。
-
+2.  **主持人综述 (Mentat Recap)**：
+    - **核心争议点**：精准定位逻辑裂缝。
+    - **ASCII 思考框架图**：参考 `C:\Users\shich\.gemini\skills\personal-roundtable\templates\ascii_topology.md` 选择最贴合的形式。
+    - **下潜问题**：引导后续讨论。
+3.  **碎片化落盘 (Anti-Dehydration)**：
+    - **单点写入**：每轮结束后，直接使用 `write_file` 将本轮内容写入 `01_round1.md`, `02_round2.md`... 等文件。
 4.  **节点控制菜单 (Node Control)**：
-    - 展示菜单：`【主持】：(可 / 止 / 深入此节 / 引入新人物)`。
+    - 展示菜单：`【主持】：(可 / 止 / 深入此节 / 引入新人物)`。调用 `ask_user` 获取用户选择。
 
-### Phase 3: 全局总结与合并归档 (Final Merge & Synthesis) - [Reviewer]
-当接收到“止”指令时：
+### Phase 3: 全局总结与合并归档 (Final Merge & Synthesis) [Mode: EXECUTION]
 1.  **全局总结写入**：生成总结与 ASCII 知识网络，并使用 `write_file` 写入 `99_summary.md` 到工作区。
 2.  **物理合并 (The Merge)**：
-    - 使用 `run_shell_command` 执行 PowerShell 脚本，将该工作区目录下的所有 `*.md` 文件按文件名升序排序，并合并为一个完整的单体文件。
-    - 命令示例：`powershell.exe -NoProfile -Command "Get-ChildItem -Path '{工作区绝对路径}\*.md' | Sort-Object Name | Get-Content | Out-File -FilePath '{root}\.gemini\MEMORY\roundtable\圆桌-{议题关键词}_{date}.md' -Encoding utf8"`
+    - 使用 `run_shell_command` 执行 `python C:\Users\shich\.gemini\skills\personal-roundtable\scripts\merger.py "工作区绝对路径" "目标文件绝对路径"`。
 3.  **资产终审**：声明“归档合并完成”，并提示最终文件路径。
-4.  **Telemetry (Mandatory)**：记录元数据至 `{root}\.gemini\MEMORY\skill_audit\telemetry\record_[TIMESTAMP].json`。
+4.  **Telemetry (Mandatory)**：记录元数据至 `C:\Users\shich\.gemini\MEMORY\skill_audit\telemetry\record_[TIMESTAMP].json`。
 
 ---
 
 ## 2. 交互协议与审美 (Protocols & Aesthetics)
 
-- **ASCII 设计原则**：不复述内容，只呈现结构。
+- **ASCII 设计原则**：不复述内容，只呈现结构。参考 templates/ 下的标准模型。
 - **负熵原则**：每一阶段的输出必须具备高认知密度。
-- **主持人准则**：理性之锚，挖深不铺广，求真 > 和谐。
+- **主持人准则**：Mentat 角色，理性之锚，挖深不铺广，求真 > 和谐。
 
 ---
 
-## 3. 触发场景 (Trigger Traps)
+## 3. 历史失效先验 (Gotchas)
+- **[PATH CONSISTENCY]**: 确保 `MEMORY\roundtable` 及其子工作区文件夹存在。
+- **[FILE NAMING]**: 碎片文件命名必须带有数字前缀（`00_`, `01_`, `99_`），以保证 `merger.py` 拼接时的物理顺序。
+- **[NO SUMMARY DUPLICATION]**: 严禁在合并前读取整个对话历史，必须严格依赖物理文件作为真实记忆。
 
-- “我有个新想法……”
-- “我想做一个关于 X 的计划。”
-- “我面临一个复杂的决策。”
-
-## 4. Telemetry & Metadata (Mandatory)
-- JSON 结构：`{"skill_name": "personal-roundtable", "status": "success", "duration_sec": [ESTIMATE], "input_tokens": [ESTIMATE], "output_tokens": [ESTIMATE]}`
-
-## 5. 历史失效先验 (Gotchas)
-- **[PATH CONSISTENCY]**: 确保 `MEMORY\roundtable` 及其子工作区文件夹存在（若不存在则先创建）。合并命令中使用的路径必须严格使用绝对路径并处理好空格引号。
-- **[FILE NAMING]**: 碎片文件命名必须带有数字前缀（`00_`, `01_`, `99_`），以保证最终 `Get-ChildItem | Sort-Object` 拼接时的物理顺序正确。
+---
+*Updated to V5.0 | System State: Locked*
 
 ---
 *Updated to V4.0 | System State: Locked*

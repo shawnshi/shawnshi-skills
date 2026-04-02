@@ -117,7 +117,7 @@ def build_overlay_data(summary_data):
     
     for act in summary_data.get("activities", []):
         d = act["date"]
-        t = (act.get("activity_type", "") + " " + act.get("activity_name", "")).lower()
+        t = ((act.get("activity_type") or "") + " " + (act.get("activity_name") or "")).lower()
         c = act.get("calories", 0) or 0
         
         if "run" in t or "jog" in t: run_map[d] = run_map.get(d, 0) + c
@@ -258,6 +258,6 @@ def main():
     
     # Write using binary to ensure UTF-8 bytes are exact
     out_path.write_bytes(html.encode('utf-8'))
-    print(f"Report: {out_path}")
+    print(f"Report: {out_path.resolve().as_uri()}")
 
 if __name__ == "__main__": main()

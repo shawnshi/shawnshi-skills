@@ -38,12 +38,28 @@ def parse_time_to_seconds(time_str):
     except ValueError:
         return 0
 
+class DataStaleError(Exception):
+    pass
+
 def fetch_local_summary(days):
     """
     Adapter to convert SQLite data into the same format expected by the intelligence layer.
     """
     print(f"📂 Loading data from local SQLite Data Lake ({days} days)...", file=sys.stderr)
     summary_df = sqlite_summary(days)
+    
+    # --- Check Data Freshness ---
+    if not summary_df.empty and 'date' in summary_df.columns:
+        valid_dates = summary_df.dropna(subset=['resting_heart_rate'])['date']
+        if not valid_dates.empty:
+            latest_date_str = valid_dates.max()
+            try:
+                latest_date = datetime.strptime(latest_date_str, '%Y-%m-%d')
+                if (datetime.now() - latest_date).days > 2:
+                    raise DataStaleError(f"Local data is stale. Latest valid entry is {latest_date_str}.")
+            except ValueError:
+                pass
+                
     sleep_df = sqlite_sleep(days)
     hrv_df = sqlite_hrv(days)
     activities_df = sqlite_activities(days)
@@ -597,7 +613,7 @@ def generate_chinese_insight(summary_data):
     for act in activities_data:
         duration_s = act.get("duration") or act.get("duration_seconds") or 0
         total_intensity_min += (duration_s / 60)
-        t = act.get("activity_type", "").lower()
+        t = (act.get("activity_type") or "").lower()
         if "run" in t or "hiit" in t or "elliptical" in t or "training" in t:
             high_intensity_min += (duration_s / 60)
 
@@ -749,12 +765,17 @@ def generate_chinese_insight(summary_data):
     
     overall_combined = f"{status_header}\n\n" + "\n\n".join(overall_sections)
 
+    momentum_parts = momentum_status.split(' ')
+    momentum_label = momentum_parts[1] if len(momentum_parts) > 1 else momentum_parts[0]
+    load_parts = load_type.split(' ')
+    load_label = load_parts[1] if len(load_parts) > 1 else load_parts[0]
+
     chart_insights = {
         "sleep": f"债务：{sleep_debt}h。深睡占比 {avg_deep_pct}%。挤压深睡=破坏核心资产。",
-        "hrv": f"状态：{audit['system_status']['hrv']['status']}。系统动量：{momentum_status.split(' ')[1]}。",
-        "activities": f"物理耗散：{round(total_intensity_min)} min。负荷定性：{load_type.split(' ')[1]}。",
+        "hrv": f"状态：{audit['system_status']['hrv']['status']}。系统动量：{momentum_label}。",
+        "activities": f"物理耗散：{round(total_intensity_min)} min。负荷定性：{load_label}。",
         "body_battery": f"峰谷极差：平均峰值 {audit['recovery_loop']['body_battery']['peak']}，谷值 {audit['recovery_loop']['body_battery']['lowest']}。",
-        "stress": f"耗散分布：高压区 {dissipation_h}h。定性：{load_type.split(' ')[1]}。"
+        "stress": f"耗散分布：高压区 {dissipation_h}h。定性：{load_label}。"
     }
     
     return {

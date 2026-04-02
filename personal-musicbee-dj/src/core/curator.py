@@ -185,13 +185,15 @@ class DJCurator:
         os.makedirs(os.path.dirname(self.m3u_path), exist_ok=True)
         tmp_path = self.m3u_path + ".tmp"
         
+        exported_count = 0
         with open(tmp_path, "w", encoding="utf-8-sig") as f:
             f.write("#EXTM3U\n")
             for t in tracks:
                 if t.is_valid:
                     f.write(f"#EXTINF:-1,{t.artist} - {t.name}\n")
                     f.write(f"{t.local_path}\n")
+                    exported_count += 1
                     
         os.replace(tmp_path, self.m3u_path)
-        log.info(f"JIT Playlist successfully curated: {len(tracks)} tracks exported.")
+        log.info(f"JIT Playlist successfully curated: {exported_count} tracks exported.")
         return self.m3u_path

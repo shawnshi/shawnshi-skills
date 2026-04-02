@@ -17,4 +17,5 @@ class Track:
     @property
     def is_valid(self) -> bool:
         """Determines if the track has a valid physical location to play."""
-        return bool(self.local_path)
+        import os
+        return bool(self.local_path) and os.path.exists(self.local_path)

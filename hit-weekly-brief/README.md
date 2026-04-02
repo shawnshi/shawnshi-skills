@@ -1,6 +1,6 @@
 # 🌐 Digital Health Weekly Brief (数字健康战略侦察兵)
 
-> **版本体系**: V2.1 (架构级优化)
+> **版本体系**: V5.0 (Lobster Architecture x Strategic Advantage)
 > 
 > **定位**: 专为“卫宁健康(Winning Health)战略咨询总经理”打造的高级医疗数字化情报雷达。
 
@@ -18,7 +18,7 @@
 本技能完全遵循 Gemini Skills 的最佳解耦实践，物理架构如下：
 
 ```text
-digital-health-weekly-brief/
+hit-weekly-brief/
 │
 ├── SKILL.md                 # 🧠 核心大脑：负责触发逻辑、情报分层与 S-I-A 推演模型指令
 ├── README.md                # 📖 当前说明文档
@@ -27,7 +27,7 @@ digital-health-weekly-brief/
 │   └── template.md          # 输出模版：内含高管级视觉呈现约束（GitHub Alerts 定制排版）
 │
 └── examples/                # 🎓 In-Context Learning (Few-Shot 弹药库)
-    └── DHWB-Reference.md    # 满分实战战报（2026-03-02），用于强制锁定大模型的冷峻高管文风
+    └── DHWB-Reference.md    # 满分实战战报，用于强制锁定大模型的冷峻高管文风
 ```
 
 ### 为什么需要 `resources/` 与 `examples/`？
@@ -61,4 +61,4 @@ digital-health-weekly-brief/
     `C:\Users\shich\.gemini\MEMORY\DigitalHealthWeeklyBrief\DHWB-YYYYMMDD.md`
 
 ---
-*Developed by Gemini Agentic Reasoning | Framework V2.1*
+*Developed by Gemini Agentic Reasoning | Framework V5.0*
