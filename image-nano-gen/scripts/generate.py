@@ -27,8 +27,8 @@ def generate():
 
     client = genai.Client(api_key=api_key)
 
-    # Inject resolution and quality instructions into prompt for models without native thinking_config support
-    enhanced_prompt = f"{args.prompt} (Requirement: 4K resolution, ultra-detailed logical architecture, high thinking level conceptualization, professional industrial precision aesthetic)"
+    # Inject resolution instruction into prompt for models without native thinking_config support
+    enhanced_prompt = f"{args.prompt} (Requirement: 4K resolution)"
 
     # Google Search tool for enhanced factual image generation (minimal config)
     tools = [
@@ -37,10 +37,6 @@ def generate():
                 web_search=types.WebSearch(),
                 image_search=types.ImageSearch(),
             ),
-thinking_config=types.ThinkingConfig(
-            thinking_level="High",
-            include_thoughts=True
-        ),
         )),
     ]
 
@@ -54,6 +50,10 @@ thinking_config=types.ThinkingConfig(
             "IMAGE",
         ],
         tools=tools,
+        thinking_config=types.ThinkingConfig(
+            thinking_level="High",
+            include_thoughts=True
+        ),
     )
 
     # Calculate relative path to .gemini/nanobanana-output
@@ -86,20 +86,23 @@ thinking_config=types.ThinkingConfig(
             if chunk.parts is None:
                 continue
             
-            if chunk.parts[0].inline_data and chunk.parts[0].inline_data.data:
-                inline_data = chunk.parts[0].inline_data
-                data_buffer = inline_data.data
-                file_extension = mimetypes.guess_extension(inline_data.mime_type) or ".jpg"
-                
-                file_name = f"nano_{timestamp}_{file_index}{file_extension}"
-                filepath = os.path.join(output_dir, file_name)
-                
-                save_binary_file(filepath, data_buffer)
-                file_index += 1
-                image_generated = True
-            else:
-                if chunk.text:
-                    print(f"Model Thought: {chunk.text}", end="", flush=True)
+            for part in chunk.parts:
+                if getattr(part, 'thought', False) or (hasattr(part, 'thought') and part.thought):
+                    if part.text:
+                        print(f"Model Thought: {part.text}", end="", flush=True)
+                elif part.inline_data and part.inline_data.data:
+                    inline_data = part.inline_data
+                    data_buffer = inline_data.data
+                    file_extension = mimetypes.guess_extension(inline_data.mime_type) or ".jpg"
+                    
+                    file_name = f"nano_{timestamp}_{file_index}{file_extension}"
+                    filepath = os.path.join(output_dir, file_name)
+                    
+                    save_binary_file(filepath, data_buffer)
+                    file_index += 1
+                    image_generated = True
+                elif part.text:
+                    print(f"Model Text Output: {part.text}", end="", flush=True)
 
         print("\nGeneration process finished.")
         if not image_generated:

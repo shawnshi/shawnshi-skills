@@ -20,13 +20,13 @@ description: 当用户要求“生成图片”、“画图”、“使用 nanoba
 ## 🚀 执行流 (Execution Loop)
 
 **Phase 1 (Preparation & Synthesis):**
-- 提取用户的核心绘画意图与描述细节。
-- [Generator 强制增强]：如果用户的描述过短，务必发挥“高思维深度（HIGH thinking_level）”的设定，主动扩写 Prompt（增加光影、构图、材质、风格、镜头等细节），形成极致的英文或中文绘画 Prompt。
+- 提取用户要求生成的原始提示词 (Raw Prompt)。
+- **[Generator 原样透传]**：严禁对用户的提示词进行任何润色、意图扩展、细节补充或“高思维深度”扩写。必须 100% 保持用户提交的原始语句。注：4K 分辨率要求由底层的 `generate.py` 脚本物理追加，你不应主动干预。
 
 **Phase 2 (Action):**
 - 使用 `run_shell_command` 工具调用以下命令：
   ```bash
-  python {root}\skills\image-nano-gen\scripts\generate.py "你的扩写版Prompt"
+  python {root}\skills\image-nano-gen\scripts\generate.py "用户的原始Prompt"
   ```
   *(注：如果路径中存在空格或特殊字符，或者 Prompt 中有引号，请注意合理转义并使用双引号包裹)*
 
