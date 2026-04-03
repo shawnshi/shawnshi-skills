@@ -20,8 +20,8 @@ description: 当用户要求“生成图片”、“画图”、“使用 nanoba
 ## 🚀 执行流 (Execution Loop)
 
 **Phase 1 (Preparation & Synthesis):**
-- 提取用户要求生成的原始提示词 (Raw Prompt)。
-- **[Generator 原样透传]**：严禁对用户的提示词进行任何润色、意图扩展、细节补充或“高思维深度”扩写。必须 100% 保持用户提交的原始语句。注：4K 分辨率要求由底层的 `generate.py` 脚本物理追加，你不应主动干预。
+- **[Zero-Intervention Policy]**：必须 100% 保持用户提交的原始语句。严禁对用户的提示词进行任何润色、意图扩展、细节补充、提取摘要或“高思维深度”扩写。
+- 即使输入是结构化的 Markdown 或复杂的说明文件，也必须将其作为**一个完整的 Prompt 字符串**直接透传给底层的 `generate.py` 脚本，不得进行人工干预或内容过滤。
 
 **Phase 2 (Action):**
 - 使用 `run_shell_command` 工具调用以下命令：

@@ -13,8 +13,19 @@ def save_binary_file(file_name, data):
 
 def generate():
     parser = argparse.ArgumentParser(description="Generate image using Gemini 3.1 Native 4K Image Pipeline.")
-    parser.add_argument("prompt", type=str, help="The prompt for image generation")
+    parser.add_argument("prompt", type=str, nargs="?", help="The prompt for image generation")
+    parser.add_argument("--file", type=str, help="Path to a text file containing the prompt")
     args = parser.parse_args()
+
+    input_prompt = ""
+    if args.file:
+        with open(args.file, "r", encoding="utf-8") as f:
+            input_prompt = f.read()
+    elif args.prompt:
+        input_prompt = args.prompt
+    else:
+        print("Error: No prompt or file provided.", file=sys.stderr)
+        sys.exit(1)
 
     # Use NANOBANANA_API_KEY as primary, fallback to GEMINI_API_KEY per snippet
     api_key = os.environ.get("NANOBANANA_API_KEY") or os.environ.get("GEMINI_API_KEY")
@@ -27,8 +38,8 @@ def generate():
 
     client = genai.Client(api_key=api_key)
 
-    # Inject resolution instruction into prompt for models without native thinking_config support
-    enhanced_prompt = f"{args.prompt} (Requirement: 4K resolution)"
+    # Original pass-through: Pass the prompt exactly as received from the user.
+    enhanced_prompt = input_prompt
 
     # Google Search tool for enhanced factual image generation (minimal config)
     tools = [
