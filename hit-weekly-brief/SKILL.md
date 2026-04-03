@@ -56,7 +56,7 @@ triggers: ["生成数字健康周报", "检索医疗行业报告", "本周麦肯
 1. **强制加载模板**: 读取 `resources/template.md` 模板文件和 `examples/DHWB-Reference.md` 参考战报，强制对其排版风格和业务深度进行基准对齐。
 2. **元数据完整性审计 (Metadata Integrity Audit)**: **[HARD LOCK]** 严禁在最终报告中使用 `[Link]`、`[URL]` 或任何占位符。必须逐一校验引用报告的 DOI、发布日期与原始地址。若元数据缺失，必须调用 `google_web_search` 执行二次定向爬取，确保证据链 100% 闭环。
 3. **Format Stack 渲染**: 生成具备“高压迫感”的战略简报。确保每一条战略建议均挂载了精确的 `[Ref: Evidence_Node_ID]`。
-4. **物理归档**: 使用 `write_file` 保存至 `C:\Users\shich\.gemini\MEMORY\DigitalHealthWeeklyBrief\DHWB-YYYYMMDD.md`。
+4. **物理归档**: 使用 `write_file` 保存至 `C:\Users\shich\.gemini\MEMORY\\wiki\DigitalHealthWeeklyBrief\DHWB-YYYYMMDD.md`。
 5. **技能自愈**: 将元数据缺失或共识幻觉的失败先验回写至 `## Gotchas`。
 
 ## 3. 输出格式铁律 (Format Stack)

@@ -21,7 +21,7 @@ description: A high-density dynamic analytical framework (V5.0) that orchestrate
 ### Phase 1: 动态选人与工作区初始化 (Initialization) [Mode: PLANNING]
 1.  **动态选人 (Tension Grid)**：根据议题，从 `C:\Users\shich\.gemini\skills\personal-roundtable\references\personas.md` 中选择或自定义 3-5 位人物，构建**张力网络**。
 2.  **工作区初始化 (Mandatory)**：
-    - **物理创建**：使用 `run_shell_command` 创建专属目录 `C:\Users\shich\.gemini\MEMORY\roundtable\workspace_{议题关键词}_{date}\`。
+    - **物理创建**：使用 `run_shell_command` 创建专属目录 `C:\Users\shich\.gemini\MEMORY\wiki\roundtable\workspace_{议题关键词}_{date}\`。
     - **写入开场**：使用 `write_file` 写入第一个碎片文件 `00_init.md`。文件头包含人物卡片（姓名、MBTI、核心立场、选择理由）及开场问题。
 3.  **等待**：此时必须停止输出，调用 `ask_user` 等待用户指令。
 
@@ -44,7 +44,7 @@ description: A high-density dynamic analytical framework (V5.0) that orchestrate
 2.  **物理合并 (The Merge)**：
     - 使用 `run_shell_command` 执行 `python C:\Users\shich\.gemini\skills\personal-roundtable\scripts\merger.py "工作区绝对路径" "目标文件绝对路径"`。
 3.  **资产终审**：声明“归档合并完成”，并提示最终文件路径。
-4.  **Telemetry (Mandatory)**：记录元数据至 `C:\Users\shich\.gemini\MEMORY\skill_audit\telemetry\record_[TIMESTAMP].json`。
+
 
 ---
 
@@ -54,15 +54,14 @@ description: A high-density dynamic analytical framework (V5.0) that orchestrate
 - **负熵原则**：每一阶段的输出必须具备高认知密度。
 - **主持人准则**：Mentat 角色，理性之锚，挖深不铺广，求真 > 和谐。
 
----
+##  3.Telemetry & Metadata (Mandatory)
+- 使用 `write_file` 将本次执行的元数据以 JSON 格式保存至 `{root}\MEMORY\skill_audit\telemetry\record_[TIMESTAMP].json`（请将 [TIMESTAMP] 替换为当前时间戳或随机数）。
+- JSON 结构：`{"skill_name": personal-roundtable", "status": "success", "duration_sec": [ESTIMATE], "input_tokens": [ESTIMATE], "output_tokens": [ESTIMATE]}`
 
-## 3. 历史失效先验 (Gotchas)
+## 4. 历史失效先验 (Gotchas)
 - **[PATH CONSISTENCY]**: 确保 `MEMORY\roundtable` 及其子工作区文件夹存在。
 - **[FILE NAMING]**: 碎片文件命名必须带有数字前缀（`00_`, `01_`, `99_`），以保证 `merger.py` 拼接时的物理顺序。
 - **[NO SUMMARY DUPLICATION]**: 严禁在合并前读取整个对话历史，必须严格依赖物理文件作为真实记忆。
 
 ---
 *Updated to V5.0 | System State: Locked*
-
----
-*Updated to V4.0 | System State: Locked*

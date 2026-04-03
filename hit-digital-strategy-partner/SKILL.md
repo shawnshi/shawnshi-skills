@@ -44,7 +44,7 @@ triggers: ["重构商业模式", "ROI测算", "高规格战略验证", "医疗IT
 3.  **展示火拼**: 在对话中显式展示红队对方案的拆解与修补过程。
 
 ### Phase 4: Surgical Drafting (物理锻造) [Mode: EXECUTION]
-1.  **Initialize**: 创建目录 `C:\Users\shich\.gemini\MEMORY\research\{Topic}_{Date}`。
+1.  **Initialize**: 创建目录 `C:\Users\shich\.gemini\MEMORY\raw\research\{Topic}_{Date}`。
 2.  **【绝对单步阻塞起草】**: 每次对话【仅允许】撰写 1 个章节。严禁批处理。
 3.  **文字密度**: 章节字数必须达标。严禁 Bullet points 堆砌，必须是动词驱动的严密叙事。
 

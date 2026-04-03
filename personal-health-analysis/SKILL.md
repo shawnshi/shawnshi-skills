@@ -36,7 +36,7 @@ AI 必须严格按照以下阶段线性推进，并在模式之间流转：
 ## ⚠️ Agentic Guardrails (智能体硬约束)
 1. **No Hallucination**: 绝对禁止编造生理数据。
 2. **Execution Context**: 执行脚本前，确保明确使用绝对路径（如 `C:\Users\shich\.gemini\skills\personal-health-analysis\scripts\garmin_data.py`）或在 `run_shell_command` 中使用 `dir_path` 切换到对应目录。
-3. **Path Resolution**: 处理活动文件（FIT/GPX）和 HTML 报告时，必须使用绝对路径展示（例如：`[查看生物态势看板](file:///{user_root}/.gemini/memory/garmin/tactical_board_7days_2026xxxx.html)`）。
+3. **Path Resolution**: 处理活动文件（FIT/GPX）和 HTML 报告时，必须使用绝对路径展示（例如：`[查看生物态势看板](file:///{user_root}/.gemini/memory/raw/garmin/tactical_board_7days_2026xxxx.html)`）。
 4. **Pipelining**: `garmin_intelligence.py` 等分析脚本依赖基础数据正确返回。严格确保前序步骤成功后再执行后续的深度审计。
 
 ## Output Schema & Intent Routing (三级输出协议)

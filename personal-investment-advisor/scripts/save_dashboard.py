@@ -149,7 +149,7 @@ def save_dashboard():
     safe_stock_name = args.stock.replace(" ", "_").replace("/", "_")
     filename = f"{safe_stock_name}_{date_str}.md"
     
-    base_dir = os.path.join(os.path.expanduser("~"), ".gemini", "MEMORY", "stocks")
+    base_dir = os.path.join(os.path.expanduser("~"), ".gemini", "MEMORY\raw", "stocks")
     os.makedirs(base_dir, exist_ok=True)
     filepath = os.path.join(base_dir, filename)
     

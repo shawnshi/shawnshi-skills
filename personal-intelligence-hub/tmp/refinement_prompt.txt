@@ -63,352 +63,352 @@
 数据要素 医疗(w=10), Agentic Workflow 临床(w=9), 医疗AI(w=9), DRG DIP(w=9), Evidence-Mesh(w=8), 医疗知识图谱(w=8), 数智化转型(w=8), 医疗信创(w=8), Medical Copilot(w=8), AI 原生医院(w=8), 多模态电子病历(w=8), 医疗大模型 落地(w=8), Medical Semantic Layer(w=8), Agentic Infrastructure(w=7), 算法审计 医疗(w=7)
 
 ## ??????
-[DEEP_REFINE] Item 1 [Score=6]:
-Title: mobihealthnews.com: Skill set expansion can boost your healthcare IT career
-URL: https://www.mobihealthnews.com/video/skill-set-expansion-can-boost-your-healthcare-it-career
-Source: mobihealthnews.com
-Published: 2026-04-02T11:05:32.405512
-Desc: 
+[DEEP_REFINE] Item 1 [Score=7]:
+Title: healthcareitnews.com: Q&A: How to make 'interoperability' more than just a buzzword
+URL: https://www.healthcareitnews.com/news/qa-how-make-interoperability-more-just-buzzword
+Source: healthcareitnews.com
+Published: 2026-04-03T09:46:16.230940
+Desc: Although there have been significant advancements in healthcare interoperability over the past ten years, the actual situation for information sharing  is still far more fragmented than policy milestones may indicate. The adoption of FHIR as a contemporary data exchange standard has accelerated, and
 
-[DEEP_REFINE] Item 2 [Score=5]:
-Title: Nature Digital Medicine: Comparative performance of LLMs and machine learning in predicting complications after percutaneous kyphoplasty for osteoporotic vertebral compression fractures
-URL: https://www.nature.com/articles/s41746-026-02588-4
-Source: Nature Digital Medicine
-Published: 2026-04-02T11:05:24.022795
-Desc: npj Digital Medicine, Published online: 01 April 2026; doi:10.1038/s41746-026-02588-4Comparative performance of LLMs and machine learning in predicting complications after percutaneous kyphoplasty for osteoporotic vertebral compression fractures
+[DEEP_REFINE] Item 2 [Score=6]:
+Title: HIStalk: EPtalk by Dr. Jayne 4/2/26
+URL: https://histalk2.com/2026/04/02/eptalk-by-dr-jayne-4-2-26/
+Source: HIStalk
+Published: 2026-04-03T09:46:26.429336
+Desc: Epic once again understood the April Fools’ Day assignment. ...
 
 [DEEP_REFINE] Item 3 [Score=5]:
-Title: arXiv Med-AI: Optimsyn: Influence-Guided Rubrics Optimization for Synthetic Data Generation
-URL: https://arxiv.org/abs/2604.00536v1
-Source: arXiv Med-AI
-Published: 2026-04-02T11:05:30.195522
-Desc: Large language models (LLMs) achieve strong downstream performance largely due to abundant supervised fine-tuning (SFT) data. However, high-quality SFT data in knowledge-intensive domains such as humanities, social sciences, medicine, law, and finance is scarce because expert curation is expensive, 
+Title: Lemonade by AMD: a fast and open source local LLM server using GPU and NPU
+URL: https://lemonade-server.ai
+Source: Hacker News
+Published: 2026-04-02T19:04:51
+Desc: 
 
 [DEEP_REFINE] Item 4 [Score=5]:
-Title: arXiv Med-AI: Incorporating LLM Embeddings for Variation Across the Human Genome
-URL: https://arxiv.org/abs/2509.20702v2
-Source: arXiv Med-AI
-Published: 2026-04-02T11:05:30.195671
-Desc: Recent advances in large language model (LLM) embeddings have enabled powerful representations for biological data, but most applications to date focus on gene-level information. We present one of the first systematic frameworks to generate genetic variant-level embeddings across the entire human ge
+Title: simonwillison.net: Highlights from my conversation about agentic engineering on Lenny's Podcast
+URL: https://simonwillison.net/2026/Apr/2/lennys-podcast/#atom-everything
+Source: simonwillison.net
+Published: 2026-04-03T09:46:09.897192
+Desc: I was a guest on Lenny Rachitsky's podcast, in a new episode titled An AI state of the union: We've passed the inflection point, dark factories are coming, and automation timelines. It's available on YouTube, Spotify, and Apple Podcasts. Here are my highlights from our conversation, with relevant li
 
 [DEEP_REFINE] Item 5 [Score=5]:
-Title: simonwillison.net: datasette-llm 0.1a6
-URL: https://simonwillison.net/2026/Apr/1/datasette-llm-2/#atom-everything
+Title: simonwillison.net: Gemma 4: Byte for byte, the most capable open models
+URL: https://simonwillison.net/2026/Apr/2/gemma-4/#atom-everything
 Source: simonwillison.net
-Published: 2026-04-02T11:05:25.302469
-Desc: Release: datasette-llm 0.1a6   The same model ID no longer needs to be repeated in both the default model and allowed models lists - setting it as a default model automatically adds it to the allowed models list. #6 Improved documentation for Python API usage.   Tags: llm, datasette
+Published: 2026-04-03T09:46:09.899073
+Desc: Gemma 4: Byte for byte, the most capable open models Four new vision-capable Apache 2.0 licensed reasoning LLMs from Google DeepMind, sized at 2B, 4B, 31B, plus a 26B-A4B Mixture-of-Experts. Google emphasize "unprecedented level of intelligence-per-parameter", providing yet more evidence that creati
 
 [DEEP_REFINE] Item 6 [Score=5]:
-Title: simonwillison.net: datasette-enrichments-llm 0.2a1
-URL: https://simonwillison.net/2026/Apr/1/datasette-enrichments-llm-2/#atom-everything
+Title: simonwillison.net: llm-gemini 0.30
+URL: https://simonwillison.net/2026/Apr/2/llm-gemini/#atom-everything
 Source: simonwillison.net
-Published: 2026-04-02T11:05:25.302807
-Desc: Release: datasette-enrichments-llm 0.2a1   The actor who triggers an enrichment is now passed to the llm.mode(... actor=actor) method. #3   Tags: enrichments, llm, datasette
+Published: 2026-04-03T09:46:09.899443
+Desc: Release: llm-gemini 0.30 New models gemini-3.1-flash-lite-preview, gemma-4-26b-a4b-it and gemma-4-31b-it. See my notes on Gemma 4. Tags: gemini, llm, gemma
 
 [DEEP_REFINE] Item 7 [Score=5]:
-Title: simonwillison.net: datasette-extract 0.3a0
-URL: https://simonwillison.net/2026/Apr/1/datasette-extract/#atom-everything
-Source: simonwillison.net
-Published: 2026-04-02T11:05:25.303100
-Desc: Release: datasette-extract 0.3a0  Now uses datasette-llm to manage model configuration, which means you can control which models are available for extraction tasks using the extract purpose and LLM model configuration. #38  Tags: llm, datasette
-
-[DEEP_REFINE] Item 8 [Score=5]:
 Title: idiallo.com: 13th Year of Blogging
 URL: https://idiallo.com/byte-size/blogging-year-13?src=feed
 Source: idiallo.com
-Published: 2026-04-02T11:05:28.841828
+Published: 2026-04-03T09:46:10.563819
 Desc: Of all the days to start a blog, I chose April Fools' Day. It wasn't intentional, maybe more of a reflection of my mindset. When I decide to do something, I shut off my brain and just do it. This was a commitment I made without thinking about the long-term effects. I knew writing was hard, but I did
 
-[DEEP_REFINE] Item 9 [Score=5]:
-Title: evanhahn.com: Notes from March 2026
-URL: https://evanhahn.com/notes-from-march-2026/
-Source: evanhahn.com
-Published: 2026-04-02T11:05:27.789707
-Desc: March always seems to be my life’s busiest month. Things I wrote and made   “The two kinds of error”: in my mind, software errors are divided into two categories: expected and unexpected errors. I finally wrote up this idea I’ve had for a long time.   “All tests pass” is a short story about a strang
+[DEEP_REFINE] Item 8 [Score=5]:
+Title: gilesthomas.com: Writing an LLM from scratch, part 32a -- Interventions: training a baseline model
+URL: https://www.gilesthomas.com/2026/02/llm-from-scratch-32a-interventions-baseline-model
+Source: gilesthomas.com
+Published: 2026-04-03T09:46:14.887627
+Desc: I'm rounding out my series of posts on Sebastian Raschka's book "Build a Large Language Model (from Scratch)" by seeing how I could train the best base model I can from scratch on my own hardware. I started by training one in two days on my RTX 3090, and found that while it was a decent little model
 
-[DEEP_REFINE] Item 10 [Score=5]:
-Title: martinalderson.com: Telnyx, LiteLLM and Axios: the supply chain crisis
-URL: https://martinalderson.com/posts/telnyx-litellm-axios-supply-chain-crisis/?utm_source=rss&utm_medium=rss&utm_campaign=feed
-Source: martinalderson.com
-Published: 2026-04-02T11:05:29.108666
-Desc: A cascading wave of supply chain attacks has hit npm and PyPI in under two weeks. LLMs are making it worse, and current mitigations aren't enough.
+[DEEP_REFINE] Item 9 [Score=0]:
+Title: Google releases Gemma 4 open models
+URL: https://deepmind.google/models/gemma/gemma-4/
+Source: Hacker News
+Published: 2026-04-03T00:10:54
+Desc: 
 
-[DEEP_REFINE] Item 11 [Score=5]:
-Title: anildash.com: How did we end up threatening our kids’ lives with AI?
-URL: https://anildash.com/2026/02/18/threatening-kids-with-AI/
-Source: anildash.com
-Published: 2026-04-02T11:05:31.403777
-Desc: I have to begin by warning you about the content in this piece; while I won’t be dwelling on any specifics, this will necessarily be a broad discussion about some of the most disturbing topics imaginable. I resent that I have to give you that warning, but I’m forced to because of the choices that th
+[DEEP_REFINE] Item 10 [Score=0]:
+Title: Decisions that eroded trust in Azure – by a former Azure Core engineer
+URL: https://isolveproblems.substack.com/p/how-microsoft-vaporized-a-trillion
+Source: Hacker News
+Published: 2026-04-03T00:00:27
+Desc: 
 
-[DEEP_REFINE] Item 12 [Score=5]:
-Title: healthcareitnews.com: HIMSS26 Changemaker: Health IT careers are not solo acts
-URL: https://www.healthcareitnews.com/video/himss26-changemaker-health-it-careers-are-not-solo-acts
-Source: healthcareitnews.com
-Published: 2026-04-02T11:05:32.396660
+[DEEP_REFINE] Item 11 [Score=0]:
+Title: Tailscale's new macOS home
+URL: https://tailscale.com/blog/macos-notch-escape
+Source: Hacker News
+Published: 2026-04-03T02:22:03
+Desc: 
+
+[DEEP_REFINE] Item 12 [Score=0]:
+Title: Artemis II's toilet is a moon mission milestone
+URL: https://www.scientificamerican.com/article/artemis-iis-toilet-is-a-moon-mission-milestone/
+Source: Hacker News
+Published: 2026-04-02T10:37:12
 Desc: 
 
 [DEEP_REFINE] Item 13 [Score=0]:
-Title: Live: Artemis II Launch Day Updates
-URL: https://www.nasa.gov/blogs/missions/2026/04/01/live-artemis-ii-launch-day-updates/
+Title: Cursor 3
+URL: https://cursor.com/blog/cursor-3
 Source: Hacker News
-Published: 2026-04-02T01:11:31
+Published: 2026-04-03T02:13:41
 Desc: 
 
 [DEEP_REFINE] Item 14 [Score=0]:
-Title: A new C++ back end for ocamlc
-URL: https://github.com/ocaml/ocaml/pull/14701
+Title: Qwen3.6-Plus: Towards real world agents
+URL: https://qwen.ai/blog?id=qwen3.6
 Source: Hacker News
-Published: 2026-04-02T07:35:02
+Published: 2026-04-02T22:28:52
 Desc: 
 
 [DEEP_REFINE] Item 15 [Score=0]:
-Title: Quantum computing bombshells that are not April Fools
-URL: https://scottaaronson.blog/?p=9665
+Title: Good ideas do not need lots of lies in order to gain public acceptance (2008)
+URL: https://blog.danieldavies.com/2004/05/d-squared-digest-one-minute-mba.html
 Source: Hacker News
-Published: 2026-04-02T08:24:43
+Published: 2026-04-03T01:29:03
 Desc: 
 
 [TRANSLATE_ONLY] Item 16 [Score=0]:
-Title: DRAM pricing is killing the hobbyist SBC market
-URL: https://www.jeffgeerling.com/blog/2026/dram-pricing-is-killing-the-hobbyist-sbc-market/
+Title: Post Mortem: axios NPM supply chain compromise
+URL: https://github.com/axios/axios/issues/10636
 Source: Hacker News
-Published: 2026-04-02T05:36:41
+Published: 2026-04-03T08:00:19
 Desc: 
 
 [TRANSLATE_ONLY] Item 17 [Score=0]:
-Title: EmDash – A spiritual successor to WordPress that solves plugin security
-URL: https://blog.cloudflare.com/emdash-wordpress/
+Title: George Goble has died
+URL: https://www.legacy.com/us/obituaries/wlfi/name/george-goble-obituary?id=61144779
 Source: Hacker News
-Published: 2026-04-02T00:14:38
+Published: 2026-04-03T02:21:08
 Desc: 
 
 [TRANSLATE_ONLY] Item 18 [Score=0]:
-Title: Fast and Gorgeous Erosion Filter
-URL: https://blog.runevision.com/2026/03/fast-and-gorgeous-erosion-filter.html
-Source: Hacker News
-Published: 2026-03-31T16:41:24
-Desc: 
+Title: 不到两个月就要离开北京了，聊聊我的故事，以及为什么…
+URL: https://www.v2ex.com/t/1203134
+Source: V2EX
+Published: 2026-04-03T09:46:10.078114
+Desc: 上几个贴子说到去惠州考察，其实就是在看适不适合定居，现在也决定了，和大家聊聊。  先说下本人情况，94 年，宜昌人（三峡大坝），武汉三本通信专业，毕业即失业。  碰巧当时小米出来没多久，自己也买了小米 1S ，特别喜欢它的 UI ，临近毕业后知后觉有 UI 设计这个岗位，花钱培训 UI 设计（说大学白读了一点不为过），喜欢+有点小天赋？（不知道谁先谁后），班里第一个弄了作品集，就跑到深圳找工作。  在深圳工作了三年（也算是重回广东的原因），19 年机缘巧合来到北京，之后结婚生娃，一直待到现在……  在北京生活快七年了（七年之痒？），一句话概括，北京很好，但是我不配留在这里（也没
 
 [TRANSLATE_ONLY] Item 19 [Score=0]:
-Title: Set the Line Before It's Crossed
-URL: https://nomagicpill.substack.com/p/set-the-line-before-its-crossed
-Source: Hacker News
-Published: 2026-03-30T19:59:53
-Desc: 
+Title: 感觉 ai agent 时代， windows 越来越不行了
+URL: https://www.v2ex.com/t/1203016
+Source: V2EX
+Published: 2026-04-03T09:46:10.078127
+Desc: agent 在 cmd 环境下，运行时候，会出现各种兼容性的报错。每次执行，都需要烧掉额外的 token 来修复兼容性问题。大家是怎么跑的？虚拟机里面执行吗？是 vmware 还是 wsl ？
 
 [TRANSLATE_ONLY] Item 20 [Score=0]:
-Title: Show HN: Git bayesect – Bayesian Git bisection for non-deterministic bugs
-URL: https://github.com/hauntsaninja/git_bayesect
-Source: Hacker News
-Published: 2026-03-29T04:32:01
-Desc: 
+Title: 很苦恼,对已婚有娃的同学可能有些喜欢怎么办
+URL: https://www.v2ex.com/t/1203165
+Source: V2EX
+Published: 2026-04-03T09:46:10.078129
+Desc: 以前的同学,现在双方都已婚有娃,但偶尔约出来会一起吃饭/看电影/玩电玩城,频率一月一次吧,因为以前很熟.  我看不懂她什么意思,感觉她段位很高,每当我有些越界举动时她也会躲,比如一起走的时候搭她的肩膀她就会走开,应该是排斥的吧.  我现在很苦恼,知道自己不该有这种奇怪的想法,自己也是有家庭的.  而且她的想法我也完全弄不清楚,或许她觉得这都是正常社交?  我需要忏悔
 
 [TRANSLATE_ONLY] Item 21 [Score=0]:
-Title: AI for American-produced cement and concrete
-URL: https://engineering.fb.com/2026/03/30/data-center-engineering/ai-for-american-produced-cement-and-concrete/
-Source: Hacker News
-Published: 2026-04-02T01:17:24
-Desc: 
+Title: 亲测中转确实坑。。说好的江湖呢？
+URL: https://www.v2ex.com/t/1203033
+Source: V2EX
+Published: 2026-04-03T09:46:10.078131
+Desc: 自己做为互联网老菜鸟，以前做灰产也是盗亦有道啊。。。 最近写代码，想着自己折腾累，干脆买中转吧，别人该赚这个钱。找了两家号称源头卡商，在 V2 天天吹自己是源头的。越用越不对劲。只能自己折腾自己搭一个反代用 做一个对比。同样的项目、同样的环境。我自己建的 new-api https://i.imgur.com/mRivVTc.png  也就是抛开掺假不惨假（我真的很善意的认为 GPT5.4 没必要掺假。）。。扣费先翻倍。然后速度还奇慢，动不动跑个代码 20 分钟过去。。  另外某家说自己买 PLUS ，源头号商，一个 50 块。结果充值链接跟别人卖 15 的是一家。。 兄弟们，
 
 [TRANSLATE_ONLY] Item 22 [Score=0]:
-Title: Signing data structures the wrong way
-URL: https://blog.foks.pub/posts/domain-separation-in-idl/
-Source: Hacker News
-Published: 2026-04-02T03:52:00
-Desc: 
+Title: 怀念那个美好的时代
+URL: https://www.v2ex.com/t/1203053
+Source: V2EX
+Published: 2026-04-03T09:46:10.078132
+Desc: 昨天在 B 站偶然看到一个古法编程的外国小哥直播，在 Vim 里健步如飞。 曾几何时自己也是那样的选手，折腾 Vim ，把 Vim 打造成自己专属的编辑器。编程时可以完全不碰鼠标。  但我怀念不仅仅是这个。以前敲代码是逻辑游戏，还记得之前挑战 MIT6.824 和 CMU15-445.逻辑必须做到严丝合缝，才能通过每一个测试。需要无数次推演代码的逻辑，各种并发、异步、边界的情况。当程序真正通过测试，那种愉悦感真是难以形容。  当然我也只是怀念而已，我知道那个时代再也回不去了。
 
 [TRANSLATE_ONLY] Item 23 [Score=0]:
-Title: anthropics /claude-code
-URL: https://github.com/anthropics/claude-code
-Source: GitHub
-Published: 2026-04-02T11:05:27.639246
-Desc: Claude Code is an agentic coding tool that lives in your terminal, understands your codebase, and helps you code faster by executing routine tasks, explaining complex code, and handling git workflows - all through natural language commands.
+Title: 问一个问题，如何增肥？
+URL: https://www.v2ex.com/t/1203109
+Source: V2EX
+Published: 2026-04-03T09:46:10.078134
+Desc: ## 太瘦了，想知道如何增肥，坛里有增肥成功的大佬吗？分享一下经验吧
 
 [TRANSLATE_ONLY] Item 24 [Score=0]:
-Title: google-research /timesfm
-URL: https://github.com/google-research/timesfm
-Source: GitHub
-Published: 2026-04-02T11:05:27.639499
-Desc: TimesFM (Time Series Foundation Model) is a pretrained time-series foundation model developed by Google Research for time-series forecasting.
+Title: 避雷 小米 Type-C 充电器快充版 20W 白色
+URL: https://www.v2ex.com/t/1203019
+Source: V2EX
+Published: 2026-04-03T09:46:10.078135
+Desc: 官网商品页面： https://www.mi.com/shop/buy/detail?product_id=12896  先叠个甲，如果你只是用来给手机/平板充电那么是没问题的，也不需要避雷，可以关掉帖子了。  下面描述下我遇到的问题，这款充电器我买很久了，29 块确实便宜，一开始我也一直用来充手机，没什么问题。  然后我有一款 GL.iNet 家的路由器放在公司，之前一直用的 Apple 原装充电器，好像是 iPhone 13 pro 送的，18W 的，过年的时候把路由器带回家了，然后回来的时候估计是不小心把插头弄混了，就把小米的给路由器插上了。  然后，好巧不巧，我想折腾一
 
 [TRANSLATE_ONLY] Item 25 [Score=0]:
-Title: axios /axios
-URL: https://github.com/axios/axios
-Source: GitHub
-Published: 2026-04-02T11:05:27.639773
-Desc: Promise based HTTP client for the browser and node.js
+Title: 请问已经有汇丰 one，如何申请卓越或 pulse？
+URL: https://www.v2ex.com/t/1203049
+Source: V2EX
+Published: 2026-04-03T09:46:10.078137
+Desc: 请问已经有汇丰 one ，如何申请卓越或 pulse ？   目前港股有几十 w 的闲置资金，想借此开通一下信用卡，方便后续国内消费。   请教大佬们，该怎么操作？
 
 [TRANSLATE_ONLY] Item 26 [Score=0]:
-Title: openai /codex
-URL: https://github.com/openai/codex
-Source: GitHub
-Published: 2026-04-02T11:05:27.639904
-Desc: Lightweight coding agent that runs in your terminal
+Title: Product Hunt: DealForge
+URL: https://www.producthunt.com/products/dealforge
+Source: Product Hunt
+Published: 2026-04-03T09:46:11.180807
+Desc: Analyze real estate deals in seconds             Discussion             |             Link
 
 [TRANSLATE_ONLY] Item 27 [Score=0]:
-Title: 大模型中转站， Unity2.Ai 内测招募：直达源头，拒绝“掺水”！
-URL: https://www.v2ex.com/t/1202897
-Source: V2EX
-Published: 2026-04-02T11:05:24.743257
-Desc: # 🚀 Unity2.Ai 内测招募：直达源头，拒绝“掺水”！  **为什么选择我们？** 直达源头，从根本上杜绝降智与回复干预。  受够了模型降智和回复“掺水”？**Unity2.Ai** 正式开启周末公测，诚邀硬核玩家入驻！  ---  ### 💰 极具竞争力的计费 * **全站汇率：** 1 人民币 = 1 美元 * **核心定价：**     * **ccmax:** 2.5 元/刀     * **codex:** 0.4 元/刀  ### 🎁 限时内测福利 * **注册即送：** 完成注册，回帖报上 ID ，并加入官方群。 * **到账奖励：** 群
+Title: Product Hunt: Protocol: Survival
+URL: https://www.producthunt.com/products/protocol-survival
+Source: Product Hunt
+Published: 2026-04-03T09:46:11.180965
+Desc: Know your gaps. Close them. Before it matters.             Discussion             |             Link
 
 [TRANSLATE_ONLY] Item 28 [Score=0]:
-Title: 同事想和你打扑克的话，你们会和同事打扑克吗
-URL: https://www.v2ex.com/t/1202793
-Source: V2EX
-Published: 2026-04-02T11:05:24.743270
-Desc: 
+Title: Product Hunt: Gyuni Player
+URL: https://www.producthunt.com/products/gyuni-player
+Source: Product Hunt
+Published: 2026-04-03T09:46:11.181123
+Desc: A more refined video player for Mac             Discussion             |             Link
 
 [TRANSLATE_ONLY] Item 29 [Score=0]:
-Title: 这条不是愚人节新闻：中国全国范围内的“后排乘客不系安全带罚款”政策将推行
-URL: https://www.v2ex.com/t/1202762
-Source: V2EX
-Published: 2026-04-02T11:05:24.743273
-Desc: 后排乘客不系罚乘客本人，不连坐司机；但司机如果没提醒，还是会被罚（一般 50 元记 1 分）
+Title: Product Hunt: Jetson
+URL: https://www.producthunt.com/products/jetson-3
+Source: Product Hunt
+Published: 2026-04-03T09:46:11.181286
+Desc: Automatically turn support messages into product updates             Discussion             |             Link
 
 [TRANSLATE_ONLY] Item 30 [Score=0]:
-Title: 现在这个时间点，花一万块钱报 AI 培训班值得不？
-URL: https://www.v2ex.com/t/1202986
-Source: V2EX
-Published: 2026-04-02T11:05:24.743275
-Desc: V 友们，目前家里有人想花钱报个 AI 培训班，培训内容主要是学习视频剪辑、拍摄等方面，费用大概一万出头，线下教学，培训时间 2 个月，然后说是一对一辅导；他主要想法是后续做自媒体之类的，大家觉得靠谱不？
+Title: Product Hunt: Flowith Canvas
+URL: https://www.producthunt.com/products/flowith
+Source: Product Hunt
+Published: 2026-04-03T09:46:11.181463
+Desc: A new way to interact with AI beyond traditional chats             Discussion             |             Link
 
 [TRANSLATE_ONLY] Item 31 [Score=0]:
-Title: 假如喜欢孩子，但不敢结婚有什么办法呢？
-URL: https://www.v2ex.com/t/1202792
-Source: V2EX
-Published: 2026-04-02T11:05:24.743276
-Desc: 在网上看了很多人发的帖子，婚后一地鸡毛。以前也向往组建幸福美满的家庭，但是看到大多数人不幸，同时自己喜欢小孩子，所以萌生出一个想法。  如果自己有点钱，可以花钱买卵子，然后去境外找人代孕，总花费 50W 左右吧？这样既不用考虑婚后一地鸡毛，随时可能被分 50%还要带走孩子的情况，也可以实现自己想要孩子的结果，而且成本比结婚还要低一些。  问题就是孩子出生在单亲家庭，但这情况似乎越来越多了，也不算很稀奇吧？另一个就是孩子带回来是否合法的问题，要怎么操作？  这只是突发奇想，特别是看到时不时有老哥被爆金币，看的我都害怕了。
+Title: Product Hunt: KanbanTab
+URL: https://www.producthunt.com/products/kanbantab
+Source: Product Hunt
+Published: 2026-04-03T09:46:11.181704
+Desc: Turn your New Tab into a fast & private Kanban board             Discussion             |             Link
 
 [TRANSLATE_ONLY] Item 32 [Score=0]:
-Title: [求助] 公司给了 $90 刀 Claude 额度，但在境内用 cc-switch 和 env 都救不活 Claude Code
-URL: https://www.v2ex.com/t/1202778
-Source: V2EX
-Published: 2026-04-02T11:05:24.743279
-Desc: 账单（里面有钱）  https://i.imgur.com/sdrHueR.png    cc-switch 配置   https://i.imgur.com/NxXqMcX.png   各种改 cc-switch 配置 配置，就是连不上  https://i.imgur.com/XVpwTV7.png     ==============================================================================    背景： 公司提供的 Anthropic 组织账号，里面充了 $90 多刀 Credits （如图）
+Title: Product Hunt: Create Mappins
+URL: https://www.producthunt.com/products/create-mappins
+Source: Product Hunt
+Published: 2026-04-03T09:46:11.181861
+Desc: Create custom map pins and embed anywhere             Discussion             |             Link
 
 [TRANSLATE_ONLY] Item 33 [Score=0]:
-Title: 买特斯拉还是小鹏，听说小鹏 vla2.0 很强
-URL: https://www.v2ex.com/t/1202993
-Source: V2EX
-Published: 2026-04-02T11:05:24.743280
-Desc: model y / 小鹏 p7
+Title: Product Hunt: Cushion
+URL: https://www.producthunt.com/products/cushion-5
+Source: Product Hunt
+Published: 2026-04-03T09:46:11.181986
+Desc: Opensource AI note taking app              Discussion             |             Link
 
 [TRANSLATE_ONLY] Item 34 [Score=0]:
-Title: 该不该现在买房？各位帮忙参谋参谋！由于房贷是刚性的，在 AI 趋势下后期工资能否覆盖房贷
-URL: https://www.v2ex.com/t/1202999
-Source: V2EX
-Published: 2026-04-02T11:05:24.743281
-Desc: 背景： 本人：东莞上班，小公司上班，传统行业 IT ，公司业务竞争大；老婆锂电池公司销售，工作压力大；年综合收入 40 左右，一个一岁半小孩；感觉这两份工作都不稳定；担心 AI 发展浪潮下，后期都找不到工作，无法还款房贷；刚刚又看到甲骨文裁员那么多，东莞也没什么 IT 工作可以找； 房子： 东莞市中心，房龄 20 年，4 楼，总价 230 ，需要贷款 90 ；然后还要后期装修；可以公积金贷款；距离我们上班都是 30min 车程；看房看了半年了；家里人也是想买，现在租房；  各位给给建议，该不该买房，今晚要去中介房主聊价格了；心里还是有点担忧后期失业没有钱还房贷；先谢谢各位了！
+Title: Product Hunt: Raise Your Vibe: Daily Wisdom
+URL: https://www.producthunt.com/products/daily-wisdom-raise-your-vibe
+Source: Product Hunt
+Published: 2026-04-03T09:46:11.182105
+Desc: 5-minute philosophy audio lessons to elevate your spirit             Discussion             |             Link
 
 [TRANSLATE_ONLY] Item 35 [Score=0]:
-Title: codex 站起来蹬吗？
-URL: https://www.v2ex.com/t/1202878
-Source: V2EX
-Published: 2026-04-02T11:05:24.743283
-Desc: 我看大哥们用 codex 站起来蹬都用不完，你们都是怎么站起来蹬的？我注册机注册的账号刚注册就被封了，你们怎么做到的？教教弟弟，各位哥哥们。
+Title: Product Hunt: Cosyra
+URL: https://www.producthunt.com/products/cosyra
+Source: Product Hunt
+Published: 2026-04-03T09:46:11.182239
+Desc: Run AI coding agents from your phone             Discussion             |             Link
 
 [TRANSLATE_ONLY] Item 36 [Score=0]:
-Title: 分享一下各位 Claude Code 愚人节彩蛋 /buddy 抽到的赛博小伙伴呗？
-URL: https://www.v2ex.com/t/1202767
-Source: V2EX
-Published: 2026-04-02T11:05:24.743284
-Desc: 我抽到了一个罕见 概率 25%，有没有老哥抽到 Legendary 和 Shiny 啊？  https://i.v2ex.co/znt043l6.png
+Title: Nature Digital Medicine: Integrating large language models for enhanced predictive analytics in healthcare
+URL: https://www.nature.com/articles/s41746-026-02572-y
+Source: Nature Digital Medicine
+Published: 2026-04-03T09:46:08.052308
+Desc: npj Digital Medicine, Published online: 02 April 2026; doi:10.1038/s41746-026-02572-yIntegrating large language models for enhanced predictive analytics in healthcare
 
 [TRANSLATE_ONLY] Item 37 [Score=0]:
-Title: Product Hunt: Formo
-URL: https://www.producthunt.com/products/formo
-Source: Product Hunt
-Published: 2026-04-02T11:05:25.149226
-Desc: Formo makes analytics simple for DeFi so you can grow.             Discussion             |             Link
-
-[TRANSLATE_ONLY] Item 38 [Score=0]:
-Title: Product Hunt: OpenBox
-URL: https://www.producthunt.com/products/openbox
-Source: Product Hunt
-Published: 2026-04-02T11:05:25.149433
-Desc: See, verify, and govern every agent action.             Discussion             |             Link
-
-[TRANSLATE_ONLY] Item 39 [Score=0]:
-Title: Product Hunt: Claudoscope
-URL: https://www.producthunt.com/products/claudoscope
-Source: Product Hunt
-Published: 2026-04-02T11:05:25.149816
-Desc: Browse, search & track costs across Claude Code sessions             Discussion             |             Link
-
-[TRANSLATE_ONLY] Item 40 [Score=0]:
-Title: Product Hunt: Google Veo 3.1 Lite
-URL: https://www.producthunt.com/products/google-pay-2
-Source: Product Hunt
-Published: 2026-04-02T11:05:25.149953
-Desc: Google's most cost-effective video generation model             Discussion             |             Link
-
-[TRANSLATE_ONLY] Item 41 [Score=0]:
-Title: Product Hunt: Ollama v0.19
-URL: https://www.producthunt.com/products/ollama
-Source: Product Hunt
-Published: 2026-04-02T11:05:25.150295
-Desc: Massive local model speedup on Apple Silicon with MLX             Discussion             |             Link
-
-[TRANSLATE_ONLY] Item 42 [Score=0]:
-Title: Product Hunt: Ray-Ban Meta G2 Blayzer & Scriber Optics
-URL: https://www.producthunt.com/products/ray-ban-meta-g2-blayzer-scriber-optics
-Source: Product Hunt
-Published: 2026-04-02T11:05:25.150479
-Desc: Meta's first AI glasses built for prescriptions             Discussion             |             Link
-
-[TRANSLATE_ONLY] Item 43 [Score=0]:
-Title: Product Hunt: Ditch
-URL: https://www.producthunt.com/products/ditch-2
-Source: Product Hunt
-Published: 2026-04-02T11:05:25.150773
-Desc: App cleaner that lives in your MacBook’s notch             Discussion             |             Link
-
-[TRANSLATE_ONLY] Item 44 [Score=0]:
-Title: Product Hunt: Remodex
-URL: https://www.producthunt.com/products/remodex-codex-remote-control
-Source: Product Hunt
-Published: 2026-04-02T11:05:25.150950
-Desc: Control Codex on your iPhone             Discussion             |             Link
-
-[TRANSLATE_ONLY] Item 45 [Score=0]:
-Title: Product Hunt: Zzzappy
-URL: https://www.producthunt.com/products/zzzappy
-Source: Product Hunt
-Published: 2026-04-02T11:05:25.151096
-Desc: Science-backed breaks to protect your vision & prevent RSI             Discussion             |             Link
-
-[TRANSLATE_ONLY] Item 46 [Score=0]:
 Title: Nature Digital Medicine: Multidimensional evaluation of large language models in radiology report readability
 URL: https://www.nature.com/articles/s41746-026-02589-3
 Source: Nature Digital Medicine
-Published: 2026-04-02T11:05:24.022546
+Published: 2026-04-03T09:46:08.052404
 Desc: npj Digital Medicine, Published online: 01 April 2026; doi:10.1038/s41746-026-02589-3Multidimensional evaluation of large language models in radiology report readability
 
-[TRANSLATE_ONLY] Item 47 [Score=0]:
+[TRANSLATE_ONLY] Item 38 [Score=0]:
 Title: Nature Digital Medicine: Evaluating large language models for simplifying non-English medical consent with clinician involvement
 URL: https://www.nature.com/articles/s41746-026-02591-9
 Source: Nature Digital Medicine
-Published: 2026-04-02T11:05:24.022698
+Published: 2026-04-03T09:46:08.052464
 Desc: npj Digital Medicine, Published online: 01 April 2026; doi:10.1038/s41746-026-02591-9Evaluating large language models for simplifying non-English medical consent with clinician involvement
 
-[TRANSLATE_ONLY] Item 48 [Score=0]:
+[TRANSLATE_ONLY] Item 39 [Score=0]:
 Title: Nature Digital Medicine: Artificial intelligence assisted colorectal lesion detection in private practices a randomized controlled study
 URL: https://www.nature.com/articles/s41746-026-02576-8
 Source: Nature Digital Medicine
-Published: 2026-04-02T11:05:24.022889
+Published: 2026-04-03T09:46:08.052568
 Desc: npj Digital Medicine, Published online: 01 April 2026; doi:10.1038/s41746-026-02576-8Artificial intelligence assisted colorectal lesion detection in private practices a randomized controlled study
 
-[TRANSLATE_ONLY] Item 49 [Score=0]:
-Title: Nature Digital Medicine: Rapid and noninvasive artificial intelligence-assisted diagnostic method for oral squamous cell carcinoma
-URL: https://www.nature.com/articles/s41746-026-02527-3
-Source: Nature Digital Medicine
-Published: 2026-04-02T11:05:24.022978
-Desc: npj Digital Medicine, Published online: 31 March 2026; doi:10.1038/s41746-026-02527-3Rapid and noninvasive artificial intelligence-assisted diagnostic method for oral squamous cell carcinoma
+[TRANSLATE_ONLY] Item 40 [Score=0]:
+Title: Science: Bumble bees show a surprising knack for rhythm
+URL: https://www.science.org/content/article/bumble-bees-show-surprising-knack-rhythm
+Source: Science
+Published: 2026-04-03T09:46:11.580394
+Desc: Flexible rhythm perception, once thought to require a big brain, has been shown in humble bumble bees
 
-[TRANSLATE_ONLY] Item 50 [Score=0]:
+[TRANSLATE_ONLY] Item 41 [Score=0]:
+Title: Science: How fast is the universe expanding? Cosmic ‘illusions’ may hold answer
+URL: https://www.science.org/content/article/how-fast-universe-expanding-cosmic-illusions-may-hold-answer
+Source: Science
+Published: 2026-04-03T09:46:11.580445
+Desc: Repeated supernovae flashes, warped by gravity, could resolve a cosmological dispute
+
+[TRANSLATE_ONLY] Item 42 [Score=0]:
+Title: Science: China now tops the U.S. in R&D spending by one key measure
+URL: https://www.science.org/content/article/china-now-tops-u-s-r-d-spending-one-key-measure
+Source: Science
+Published: 2026-04-03T09:46:11.580477
+Desc: China reached long expected milestone in 2024
+
+[TRANSLATE_ONLY] Item 43 [Score=0]:
 Title: Science: Trippy tobacco? Plants engineered to make five psychedelics at once
 URL: https://www.science.org/content/article/trippy-tobacco-plants-engineered-make-five-psychedelics-once
 Source: Science
-Published: 2026-04-02T11:05:24.952727
+Published: 2026-04-03T09:46:11.580506
 Desc: Approach could enable production of new medications for depression, anxiety, and post-traumatic stress
+
+[TRANSLATE_ONLY] Item 44 [Score=0]:
+Title: Science: Some black holes are ‘forbidden,’ ripples in spacetime reveal
+URL: https://www.science.org/content/article/some-black-holes-are-forbidden-ripples-spacetime-reveal
+Source: Science
+Published: 2026-04-03T09:46:11.580536
+Desc: Analysis of gravitational waves supports theory that some stars explode without leaving behind black holes
+
+[TRANSLATE_ONLY] Item 45 [Score=0]:
+Title: NEJM: CRISPR-Cas12a Gene Editing of HBG1 and HBG2 Promoters to Treat Sickle Cell Disease
+URL: https://www.nejm.org/doi/full/10.1056/NEJMoa2415550?af=R&rss=currentIssue
+Source: NEJM
+Published: 2026-04-03T09:46:10.744345
+Desc: New England Journal of Medicine, Volume 394, Issue 13, Page 1281-1291, April 2, 2026.
+
+[TRANSLATE_ONLY] Item 46 [Score=0]:
+Title: NEJM: CRISPR-Cas12a Gene Editing of HBG1 and HBG2 Promoters to Treat β-Thalassemia
+URL: https://www.nejm.org/doi/full/10.1056/NEJMoa2501277?af=R&rss=currentIssue
+Source: NEJM
+Published: 2026-04-03T09:46:10.744411
+Desc: New England Journal of Medicine, Volume 394, Issue 13, Page 1292-1301, April 2, 2026.
+
+[TRANSLATE_ONLY] Item 47 [Score=0]:
+Title: NEJM: Discontinuation of Beta-Blocker Therapy after Myocardial Infarction
+URL: https://www.nejm.org/doi/full/10.1056/NEJMoa2601005?af=R&rss=currentIssue
+Source: NEJM
+Published: 2026-04-03T09:46:10.744456
+Desc: New England Journal of Medicine, Volume 394, Issue 13, Page 1302-1312, April 2, 2026.
+
+[TRANSLATE_ONLY] Item 48 [Score=0]:
+Title: NEJM: Perioperative Enfortumab Vedotin and Pembrolizumab in Bladder Cancer
+URL: https://www.nejm.org/doi/full/10.1056/NEJMoa2511674?af=R&rss=currentIssue
+Source: NEJM
+Published: 2026-04-03T09:46:10.744495
+Desc: New England Journal of Medicine, Volume 394, Issue 13, Page 1257-1269, April 2, 2026.
+
+[TRANSLATE_ONLY] Item 49 [Score=0]:
+Title: NEJM: Left Atrial Appendage Closure or Medical Therapy in Atrial Fibrillation
+URL: https://www.nejm.org/doi/full/10.1056/NEJMoa2513310?af=R&rss=currentIssue
+Source: NEJM
+Published: 2026-04-03T09:46:10.744534
+Desc: New England Journal of Medicine, Volume 394, Issue 13, Page 1270-1280, April 2, 2026.
+
+[TRANSLATE_ONLY] Item 50 [Score=0]:
+Title: jeffgeerling.com: DRAM pricing is killing the hobbyist SBC market
+URL: https://www.jeffgeerling.com/blog/2026/dram-pricing-is-killing-the-hobbyist-sbc-market/
+Source: jeffgeerling.com
+Published: 2026-04-03T09:46:10.127891
+Desc: Today Raspberry Pi announced more price increases for all Pis with LPDDR4 RAM, alongside a 'right-sized' 3GB RAM Pi 4 for $83.75. The price increases bring the 16GB Pi 5 up to $299.99. Despite today's date, this is not a joke. I published a video going over the state of the hobbyist 'high end SBC' m

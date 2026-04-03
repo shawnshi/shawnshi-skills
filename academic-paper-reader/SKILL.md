@@ -21,7 +21,7 @@ triggers:["读论文", "拆解论文", "溯源分析", "paper river", "分析这
 - 时间戳格式：`YYYYMMDDTHHMMSS` (如 `20260401T103000`)
 - 可读时间格式：`YYYY-MM-DD Day HH:MM` (如 `2026-04-01 Wed 10:30`)
 - 文件名规范：`paper-{简短标题}--{YYYYMMDDTHHMMSS}.md`
-- 输出物理路径：强制使用 `write_file` 写入 `C:\Users\shich\.gemini\MEMORY\Huggingface-Daily-Papers\`
+- 输出物理路径：强制使用 `write_file` 写入 `C:\Users\shich\.gemini\MEMORY\wiki\Huggingface-Daily-Papers\`
 
 ## 2. 红线 (Mandatory Check)
 

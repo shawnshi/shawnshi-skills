@@ -13,7 +13,7 @@ This is an Agent-Native workflow. You MUST execute the [4-Stage Pipeline](refere
 
 1.  **Extract (Physical)**: Run `analyze_insights_v4.py` and `system_retro.py` to gather data.
 2.  **Analyze (Cognitive)**: Read `raw_metrics_<PERIOD>.json` and perform **Commander-mode** reasoning to identify collaboration anti-patterns.
-3.  **Serialize (Structure)**: Save your reasoning to `~/.gemini/MEMORY/personal-insights/agent_audit_result.json` following the [SCHEMA.md](references/SCHEMA.md) strictly.
+3.  **Serialize (Structure)**: Save your reasoning to `~/.gemini/MEMORY/wiki/personal-insights/agent_audit_result.json` following the [SCHEMA.md](references/SCHEMA.md) strictly.
 4.  **Deliver (Render)**: Run the renderer and provide a strategic wrap-up to the user.
 
 ## 🔄 Delivery Standard

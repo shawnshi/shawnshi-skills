@@ -1,8 +1,6 @@
 {
-  "session_id": "20260323_DailyBriefing",
-  "status": "INITIATED",
-  "intent": "Daily News Briefing",
-  "signals": [],
-  "audit_logs": [],
-  "artifacts": {}
+  "phase": 5,
+  "scope": "全局常规扫描",
+  "urgent_signals": [],
+  "top_10": []
 }

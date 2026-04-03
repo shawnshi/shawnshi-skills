@@ -35,7 +35,12 @@ def generate():
         types.Tool(googleSearch=types.GoogleSearch(
             search_types=types.SearchTypes(
                 web_search=types.WebSearch(),
+                image_search=types.ImageSearch(),
             ),
+thinking_config=types.ThinkingConfig(
+            thinking_level="High",
+            include_thoughts=True
+        ),
         )),
     ]
 
