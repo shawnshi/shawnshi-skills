@@ -19,6 +19,13 @@ A general-purpose academic paper writing tool — 12-agent pipeline covering all
 - **Style Calibration** (intake Step 10, optional) — Provide 3+ past papers and the pipeline learns your writing voice (sentence rhythm, vocabulary preferences, citation integration style). Applied as a soft guide during drafting; discipline conventions always take priority. See `shared/style_calibration_protocol.md`.
 - **Writing Quality Check** (`references/writing_quality_check.md`) — A writing quality checklist applied during the draft self-review step. Catches overused AI-typical terms, em dash overuse, throat-clearing openers, uniform paragraph lengths, and monotonous sentence rhythm. These are good writing rules, not detection evasion.
 
+## Sub-agent Delegation Protocol (Mandatory Sandboxing)
+
+**CRITICAL RULE**: To protect the main agent's context window from attention degradation and data bloat, long-running pipelines (e.g., drafting full chapters, scraping multiple URLs, or conducting adversarial reviews) MUST NOT be executed directly in the main memory.
+1. **Packet Creation**: Before starting a heavy task, write the specific parameters, source URLs, or chapter outlines to a physical sandbox file: `C:\Users\shich\.gemini\tmp\playgrounds\Task_Packet_[TIMESTAMP].md`.
+2. **Delegation**: Explicitly invoke a sub-agent (e.g., `generalist` or a specialized reader) to consume the packet, execute the heavy lifting, and write the output/summary back to a designated result file.
+3. **Suspension**: The main agent must suspend execution, wait for the sub-agent to complete the task, and then read ONLY the final synthesized result file to continue the orchestration.
+
 ## Quick Start
 
 **Minimal command:**

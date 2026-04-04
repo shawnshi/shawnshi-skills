@@ -12,6 +12,12 @@ description: A high-density dynamic analytical framework (V5.0) that orchestrate
 ## 0. 核心调度约束 (Global State Machine)
 > **[全局熔断协议]**：必须严格按照 Phase 0 至 Phase 3 的顺序执行。在跨越任何 Phase 之前，必须在对话输出的最开头以 `[System State: Moving to Phase X]` 进行显式声明。
 
+## 0.5 Sub-agent Delegation Protocol (Mandatory Sandboxing)
+**CRITICAL RULE**: To protect the main agent's context window from attention degradation during long-form multi-character discussions, the round phases MUST NOT be held entirely in the main memory.
+1. **Arena Creation**: Before starting the roundtable, define the topic, participants, and rules in a sandbox file: `C:\Users\shich\.gemini\tmp\playgrounds\Roundtable_Packet_[TIMESTAMP].md`.
+2. **Delegation**: Explicitly invoke a sub-agent (e.g., `generalist`) to read the packet, execute the actual conversational turns, and append the dialog fragments to the designated physical output file (`.md`).
+3. **Suspension**: The main agent acts purely as the host, suspending execution during the sub-agent's heavy text generation, and finally reading the condensed topology or summary upon completion.
+
 ## 1. 核心流程与架构 (The Protocol)
 
 ### Phase 0: Reconnaissance (语义侦察) [Mode: PLANNING]

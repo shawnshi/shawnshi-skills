@@ -15,6 +15,12 @@ triggers: ["制作战略级PPT", "生成演示文稿蓝图", "构建决策型汇
 *   **High Visual SNR (极高信噪比)**：字不如表，表不如图。强迫听众在 3 秒内理解核心。
 *   **Semantic Invariance (语义守恒)**：生成的 PPT 原生对象必须与获批的蓝图逻辑 100% 同态。
 
+## 1.5 Sub-agent Delegation Protocol (Mandatory Sandboxing)
+**CRITICAL RULE**: To protect the main agent's context window from attention degradation, the mass generation of speaker notes and slide content MUST NOT be executed directly in the main memory.
+1. **Storyboard Packet**: After Phase 2, write the approved Storyboard (Architecture Diagram) and outline to a physical sandbox file: `C:\Users\shich\.gemini\tmp\playgrounds\Storyboard_Packet_[TIMESTAMP].md`.
+2. **Delegation**: Explicitly invoke a sub-agent (e.g., `generalist`) to consume the packet, generate the detailed script and content for each slide, and write the output back to a physical assembly file.
+3. **Suspension**: The main agent must suspend execution, wait for the sub-agent to complete the heavy lifting, and then read ONLY the final assembled file to perform the final "De-AI" polish (Phase 4).
+
 ## 2. 核心工作流 (The Golden Path)
 
 ### [⏳] Phase 1: Strategic Calibration (战略校准) **[Mode: PLANNING]**

@@ -20,6 +20,12 @@ triggers: ["重构商业模式", "ROI测算", "高规格战略验证", "医疗IT
 ## 1. 核心调度约束 (Global State Machine)
 > **[全局熔断协议]**: 系统必须严格依照 Phase 0 至 Phase 6 流转。在每一个带有标记的节点，必须停止生成并通过 `ask_user` 等待用户指令。
 
+## 1.5 Sub-agent Delegation Protocol (Mandatory Sandboxing)
+**CRITICAL RULE**: To protect the main agent's context window from attention degradation and data bloat, heavy lifting tasks (e.g., mass web scraping, parsing long PDFs, or generating multi-thousand-word drafts) MUST NOT be executed directly in the main memory.
+1. **Packet Creation**: Before starting the heavy task, write the required parameters, URLs, or chapter outlines to a physical sandbox file: `C:\Users\shich\.gemini\tmp\playgrounds\Task_Packet_[TIMESTAMP].md`.
+2. **Delegation**: Explicitly invoke a sub-agent (e.g., `generalist`) to read the packet, execute the heavy generation/scraping, and write the final output back to a designated result file.
+3. **Suspension**: The main agent must suspend its execution, wait for the sub-agent to finish, and then read ONLY the final output file to proceed with orchestration or final review.
+
 ## 2. 执行协议 (Execution Protocol)
 
 ### Phase 0: Strategic Alignment (Inversion 门控) [Mode: PLANNING]

@@ -18,6 +18,13 @@ Universal deep research tool — a domain-agnostic 13-agent team for rigorous ac
 - **Style Profile consumption** (optional) — If a Style Profile is available from academic-paper intake, the report compiler applies it as a soft guide for the Executive Summary and Synthesis sections. Discipline conventions and report objectivity take priority.
 - **Writing Quality Check** — The report compiler runs a writing quality checklist before finalizing: flags AI-typical overused terms, checks sentence/paragraph length variation, removes throat-clearing openers. See `academic-paper/references/writing_quality_check.md`.
 
+## Sub-agent Delegation Protocol (Mandatory)
+
+**CRITICAL RULE**: To prevent context bloat during deep research, the main agent MUST NOT execute the long-running research phases directly in its own memory.
+1. **Packet Creation**: Before starting Phase 1 or any intensive research task, write the research parameters and methodology to `C:\Users\shich\.gemini\tmp\playgrounds\Task_Packet_[TIMESTAMP].md`.
+2. **Delegation**: Explicitly invoke the `generalist` sub-agent (or another specialized sub-agent) to read the packet, execute the research, and write the output back to a designated file.
+3. **Suspension**: The main agent must wait for the sub-agent to complete and then read the final output file, rather than holding intermediate data in context.
+
 ## Quick Start
 
 **Minimal command:**

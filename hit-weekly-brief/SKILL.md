@@ -23,6 +23,12 @@ triggers: ["生成数字健康周报", "检索医疗行业报告", "本周麦肯
 3.  **关联层 (Connect)**: 激活 **Weaver (织者)**。将不同智库的零散预测进行“黑板化”串联，识别“非共识信号”。
 4.  **激活层 (Activate)**: **Format Stack (分层交付)**。顶部强制注入 10s 紧急预警，正文强制包含“战略教练指令”。
 
+## 0.5 Sub-agent Delegation Protocol (Mandatory Sandboxing)
+**CRITICAL RULE**: To protect the main agent's context window from attention degradation and data bloat, long-running pipelines (e.g., scraping multiple URLs, parsing heavy PDFs, or filtering high-noise feeds) MUST NOT be executed directly in the main memory.
+1. **Packet Creation**: Before starting a heavy ingestion task, write the specific parameters, source URLs, or target documents to a physical sandbox file: `C:\Users\shich\.gemini\tmp\playgrounds\Digestion_Packet_[TIMESTAMP].md`.
+2. **Delegation**: Explicitly invoke a sub-agent (e.g., `generalist` or a dedicated reader) to consume the packet, execute the heavy scraping/extraction, and write the purified output back to a designated result file.
+3. **Suspension**: The main agent must suspend execution, wait for the sub-agent to complete the task, and then read ONLY the final synthesized result file to continue formatting the weekly brief.
+
 ## 1. 启动序列与边界 (Boot Sequence)
 - **时间锚点**: 默认计算过去 7 天。若核心资讯不足 5 条，必须回溯至 14 天执行“战略补位”。
 

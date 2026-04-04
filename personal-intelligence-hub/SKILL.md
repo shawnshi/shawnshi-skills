@@ -24,6 +24,12 @@ Version: 6.5 (The High-SNR Defense System) Vision: 消除过滤失败（Filter F
 1. 核心调度约束 (Global Blackboard Mode)
 [黑板协议]：所有执行动作必须读写 tmp/intelligence_blackboard.json 共享状态。每一步必须在输出首行打印 [System State: Moving to Phase X] 探针。
 
+## 1. Sub-agent Delegation Protocol (Mandatory Sandboxing)
+**CRITICAL RULE**: To protect the main agent's context window from attention degradation and data bloat, long-running pipelines (e.g., scraping multiple URLs, filtering high-noise feeds) MUST NOT be executed directly in the main memory.
+1. **Packet Creation**: Before starting a heavy scraping/parsing task, write the specific parameters or target URLs to a physical sandbox file: `C:\Users\shich\.gemini\tmp\playgrounds\Task_Packet_[TIMESTAMP].md`.
+2. **Delegation**: Explicitly invoke a sub-agent (e.g., `generalist`) to consume the packet, execute the heavy scraping, and write the output back to a designated result file.
+3. **Suspension**: The main agent must suspend execution, wait for the sub-agent to complete the task, and then read ONLY the final synthesized result file to continue the orchestration.
+
 ## 2. 执行协议 (Execution Protocol)
 ### Phase 0: 战略对齐与黑板初始化 [Mode: PLANNING]
 Initialize: 运行 scripts/blackboard.py 初始化会话状态。

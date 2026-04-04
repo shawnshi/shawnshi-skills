@@ -42,6 +42,12 @@ triggers:["读论文", "拆解论文", "溯源分析", "paper river", "分析这
 - **推理外显** — 模拟"一个人想明白的过程"，而非呈现"想明白之后的结果"。
 - **落点在能用** — 给出"这意味着你可以___"，而非"这让我们重新思考___"。
 
+## 3.5 Sub-agent Delegation Protocol (Mandatory Sandboxing)
+**CRITICAL RULE**: To protect the main agent's context window from attention degradation and data bloat, heavy lifting tasks (e.g., mass web scraping, parsing long PDFs, or generating multi-thousand-word drafts) MUST NOT be executed directly in the main memory.
+1. **Packet Creation**: Before starting the heavy task, write the required parameters, URLs, or chapter outlines to a physical sandbox file: `C:\Users\shich\.gemini\tmp\playgrounds\Task_Packet_[TIMESTAMP].md`.
+2. **Delegation**: Explicitly invoke a sub-agent (e.g., `generalist`) to read the packet, execute the heavy generation/scraping, and write the final output back to a designated result file.
+3. **Suspension**: The main agent must suspend its execution, wait for the sub-agent to finish, and then read ONLY the final output file to proceed with orchestration or final review.
+
 ## 4. 执行工作流 (OODA Pipeline)
 
 ###[Step 1: 目标锁定与核心批判提取]

@@ -23,6 +23,12 @@ triggers: ["编写数字化解决方案", "设计医院转型规划", "智慧医
 ### 2.3 The Three-Bold Rule (三金句原则)
 - 每一章加粗不得超过 1 处，全篇不超过 3 处。加粗内容必须是直击医患政商博弈底线的“判词”。
 
+## 2.5 Sub-agent Delegation Protocol (Mandatory Sandboxing)
+**CRITICAL RULE**: To protect the main agent's context window from attention degradation and data bloat, heavy lifting tasks (e.g., mass web scraping, parsing long PDFs, or generating multi-thousand-word drafts) MUST NOT be executed directly in the main memory.
+1. **Packet Creation**: Before starting the heavy task, write the required parameters, URLs, or chapter outlines to a physical sandbox file: `C:\Users\shich\.gemini\tmp\playgrounds\Task_Packet_[TIMESTAMP].md`.
+2. **Delegation**: Explicitly invoke a sub-agent (e.g., `generalist`) to read the packet, execute the heavy generation/scraping, and write the final output back to a designated result file.
+3. **Suspension**: The main agent must suspend its execution, wait for the sub-agent to finish, and then read ONLY the final output file to proceed with orchestration or final review.
+
 ## 3. 核心指令 SOP (Execution Protocol)
 
 ### Phase 1: MECE Context & Pain-Point Diagnosis (Inversion 诊断) [Mode: PLANNING]
