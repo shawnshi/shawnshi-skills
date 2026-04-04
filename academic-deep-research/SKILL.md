@@ -2,13 +2,21 @@
 name: academic-deep-research
 description: "Universal deep research agent team. 13-agent pipeline for rigorous academic research on any topic. 7 modes: full research, quick brief, paper review, lit-review, fact-check, Socratic guided research dialogue, and systematic review with optional meta-analysis. Covers research question formulation, Socratic mentoring, methodology design, systematic literature search, source verification, cross-source synthesis, risk of bias assessment, meta-analysis, APA 7.0 report compilation, editorial review, devil's advocate challenges, ethics review, and post-research literature monitoring. Triggers on: research, deep research, literature review, systematic review, meta-analysis, PRISMA, evidence synthesis, fact-check, guide my research, help me think through, 研究, 深度研究, 文獻回顧, 文獻探討, 系統性回顧, 後設分析, 事實查核, 引導我的研究, 幫我釐清, 幫我想想, 我不確定要研究什麼, 研究方向, 研究主題."
 metadata:
-  version: "2.3"
-  last_updated: "2026-03-08"
+  version: "2.4"
+  last_updated: "2026-03-27"
+  status: active
+  related_skills:
+    - academic-paper
+    - academic-pipeline
 ---
 
 # Deep Research — Universal Academic Research Agent Team
 
-Universal deep research tool — a domain-agnostic 13-agent team for rigorous academic research on any topic. v2.3 adds systematic review mode (PRISMA-compliant with optional meta-analysis), Socratic convergence criteria, and post-research literature monitoring.
+Universal deep research tool — a domain-agnostic 13-agent team for rigorous academic research on any topic.
+
+**v2.4** adds writing quality improvements to the report compiler:
+- **Style Profile consumption** (optional) — If a Style Profile is available from academic-paper intake, the report compiler applies it as a soft guide for the Executive Summary and Synthesis sections. Discipline conventions and report objectivity take priority.
+- **Writing Quality Check** — The report compiler runs a writing quality checklist before finalizing: flags AI-typical overused terms, checks sentence/paragraph length variation, removes throat-clearing openers. See `academic-paper/references/writing_quality_check.md`.
 
 ## Quick Start
 
@@ -60,23 +68,23 @@ Activate `socratic` mode when the user's **intent** matches any of the following
 
 ### Does NOT Trigger
 
-| Scenario                              | Use Instead               |
-|---------------------------------------|---------------------------|
-| Writing a paper (not researching)     | `academic-paper-writer`   |
+| Scenario | Use Instead |
+|----------|-------------|
+| Writing a paper (not researching) | `academic-paper` |
 | Reviewing a paper (structured review) | `academic-paper-reviewer` |
-| Full research-to-paper pipeline       | `academic-pipeline`       |
+| Full research-to-paper pipeline | `academic-pipeline` |
 
 ### Quick Mode Selection Guide
 
-| Your Situation 你的狀況                                         | Recommended Mode    |
-|-----------------------------------------------------------------|---------------------|
-| Vague idea, need guidance / 有模糊想法，需要引導                | `socratic`          |
-| Clear RQ, need comprehensive research / 有明確 RQ，需要完整研究 | `full`              |
-| Need a quick brief (30 min) / 需要快速摘要                      | `quick`             |
-| Have a paper to evaluate before citing / 有論文需要評估         | `review`            |
-| Need literature review for a topic / 需要文獻回顧               | `lit-review`        |
-| Need to verify specific claims / 需要查核特定事實               | `fact-check`        |
-| Need systematic review / meta-analysis / 系統性回顧或後設分析   | `systematic-review` |
+| Your Situation 你的狀況 | Recommended Mode |
+|----------------|-----------------|
+| Vague idea, need guidance / 有模糊想法，需要引導 | `socratic` |
+| Clear RQ, need comprehensive research / 有明確 RQ，需要完整研究 | `full` |
+| Need a quick brief (30 min) / 需要快速摘要 | `quick` |
+| Have a paper to evaluate before citing / 有論文需要評估 | `review` |
+| Need literature review for a topic / 需要文獻回顧 | `lit-review` |
+| Need to verify specific claims / 需要查核特定事實 | `fact-check` |
+| Need systematic review / meta-analysis / 系統性回顧或後設分析 | `systematic-review` |
 
 Not sure? Start with `socratic` — it will help you figure out what you need.
 不確定？先用 `socratic` 模式——它會幫你釐清你需要什麼。
@@ -85,21 +93,21 @@ Not sure? Start with `socratic` — it will help you figure out what you need.
 
 ## Agent Team (13 Agents)
 
-| #  | Agent                       | Role                                                                                                           | Phase                              |
-|----|-----------------------------|----------------------------------------------------------------------------------------------------------------|------------------------------------|
-| 1  | `research_question_agent`   | Transforms vague topics into precise, FINER-scored research questions with scope boundaries                    | Phase 1, Socratic Layer 1          |
-| 2  | `research_architect_agent`  | Designs methodology blueprint: paradigm, method, data strategy, analytical framework, validity criteria        | Phase 1                            |
-| 3  | `bibliography_agent`        | Systematic literature search, source screening, annotated bibliography in APA 7.0                              | Phase 2                            |
-| 4  | `source_verification_agent` | Fact-checking, source grading (evidence hierarchy), predatory journal detection, conflict-of-interest flagging | Phase 2                            |
-| 5  | `synthesis_agent`           | Cross-source integration, contradiction resolution, thematic synthesis, gap analysis                           | Phase 3                            |
-| 6  | `report_compiler_agent`     | Drafts complete APA 7.0 report (Title -> Abstract -> Intro -> Method -> Findings -> Discussion -> References)  | Phase 4, 6                         |
-| 7  | `editor_in_chief_agent`     | Q1 journal editorial review: originality, rigor, evidence sufficiency, verdict (Accept/Revise/Reject)          | Phase 5                            |
-| 8  | `devils_advocate_agent`     | Challenges assumptions, tests for logical fallacies, finds alternative explanations, confirmation bias checks  | Phase 1, 3, 5, Socratic Layer 2, 4 |
-| 9  | `ethics_review_agent`       | AI-assisted research ethics, attribution integrity, dual-use screening, fair representation                    | Phase 5                            |
-| 10 | `socratic_mentor_agent`     | Q1 journal editor persona; guides research thinking through Socratic questioning across 5 layers               | Socratic Mode (Layer 1-5)          |
-| 11 | `risk_of_bias_agent`        | Assesses risk of bias using RoB 2 (RCTs) and ROBINS-I (non-randomized); traffic-light visualization            | Systematic Review (Phase 2)        |
-| 12 | `meta_analysis_agent`       | Designs and executes meta-analysis or narrative synthesis; effect sizes, heterogeneity, GRADE                  | Systematic Review (Phase 3)        |
-| 13 | `monitoring_agent`          | Post-research literature monitoring: digests, retraction alerts, contradictory findings detection              | Optional (post-pipeline)           |
+| # | Agent | Role | Phase |
+|---|-------|------|-------|
+| 1 | `research_question_agent` | Transforms vague topics into precise, FINER-scored research questions with scope boundaries | Phase 1, Socratic Layer 1 |
+| 2 | `research_architect_agent` | Designs methodology blueprint: paradigm, method, data strategy, analytical framework, validity criteria | Phase 1 |
+| 3 | `bibliography_agent` | Systematic literature search, source screening, annotated bibliography in APA 7.0 | Phase 2 |
+| 4 | `source_verification_agent` | Fact-checking, source grading (evidence hierarchy), predatory journal detection, conflict-of-interest flagging | Phase 2 |
+| 5 | `synthesis_agent` | Cross-source integration, contradiction resolution, thematic synthesis, gap analysis | Phase 3 |
+| 6 | `report_compiler_agent` | Drafts complete APA 7.0 report (Title -> Abstract -> Intro -> Method -> Findings -> Discussion -> References) | Phase 4, 6 |
+| 7 | `editor_in_chief_agent` | Q1 journal editorial review: originality, rigor, evidence sufficiency, verdict (Accept/Revise/Reject) | Phase 5 |
+| 8 | `devils_advocate_agent` | Challenges assumptions, tests for logical fallacies, finds alternative explanations, confirmation bias checks | Phase 1, 3, 5, Socratic Layer 2, 4 |
+| 9 | `ethics_review_agent` | AI-assisted research ethics, attribution integrity, dual-use screening, fair representation | Phase 5 |
+| 10 | `socratic_mentor_agent` | Q1 journal editor persona; guides research thinking through Socratic questioning across 5 layers | Socratic Mode (Layer 1-5) |
+| 11 | `risk_of_bias_agent` | Assesses risk of bias using RoB 2 (RCTs) and ROBINS-I (non-randomized); traffic-light visualization | Systematic Review (Phase 2) |
+| 12 | `meta_analysis_agent` | Designs and executes meta-analysis or narrative synthesis; effect sizes, heterogeneity, GRADE | Systematic Review (Phase 3) |
+| 13 | `monitoring_agent` | Post-research literature monitoring: digests, retraction alerts, contradictory findings detection | Optional (post-pipeline) |
 
 ---
 
@@ -296,7 +304,7 @@ User: "Guide my research on [topic]"
          At least 1 round of dialogue
      |
      +-> Compile all [INSIGHT]s into Research Plan Summary
-         Can directly hand off to academic-paper-writer (plan mode)
+         Can directly hand off to academic-paper (plan mode)
 ```
 
 ### Socratic Mode Dialogue Management Rules
@@ -408,15 +416,15 @@ User: "Systematic review of [topic]" / "Meta-analysis of [topic]"
 
 ## Operational Modes
 
-| Mode                | Agents Active                                                                                            | Output                                                   | Word Count      |
-|---------------------|----------------------------------------------------------------------------------------------------------|----------------------------------------------------------|-----------------|
-| `full` (default)    | All 9 core (excluding socratic_mentor, RoB, meta-analysis)                                               | Full APA 7.0 report                                      | 3,000-8,000     |
-| `quick`             | RQ + Biblio + Verification + Report                                                                      | Research brief                                           | 500-1,500       |
-| `review`            | Editor + Devil's Advocate + Ethics                                                                       | Reviewer report on provided text                         | N/A             |
-| `lit-review`        | Biblio + Verification + Synthesis                                                                        | Annotated bibliography + synthesis                       | 1,500-4,000     |
-| `fact-check`        | Source Verification only                                                                                 | Verification report                                      | 300-800         |
-| `socratic`          | Socratic Mentor + RQ + Devil's Advocate                                                                  | Research Plan Summary (INSIGHT collection)               | N/A (iterative) |
-| `systematic-review` | RQ + Architect + Biblio + Verification + RoB + Meta-Analysis + Synthesis + Report + Editor + Ethics + DA | Full PRISMA 2020 report + forest plot data + GRADE table | 5,000-15,000    |
+| Mode | Agents Active | Output | Word Count |
+|------|---------------|--------|------------|
+| `full` (default) | All 9 core (excluding socratic_mentor, RoB, meta-analysis) | Full APA 7.0 report | 3,000-8,000 |
+| `quick` | RQ + Biblio + Verification + Report | Research brief | 500-1,500 |
+| `review` | Editor + Devil's Advocate + Ethics | Reviewer report on provided text | N/A |
+| `lit-review` | Biblio + Verification + Synthesis | Annotated bibliography + synthesis | 1,500-4,000 |
+| `fact-check` | Source Verification only | Verification report | 300-800 |
+| `socratic` | Socratic Mentor + RQ + Devil's Advocate | Research Plan Summary (INSIGHT collection) | N/A (iterative) |
+| `systematic-review` | RQ + Architect + Biblio + Verification + RoB + Meta-Analysis + Synthesis + Report + Editor + Ethics + DA | Full PRISMA 2020 report + forest plot data + GRADE table | 5,000-15,000 |
 
 ---
 
@@ -426,16 +434,16 @@ See `references/failure_paths.md` for all failure scenarios, trigger conditions,
 
 Key failure path summary:
 
-| Failure Scenario                 | Trigger Condition                                           | Recovery Strategy                                |
-|----------------------------------|-------------------------------------------------------------|--------------------------------------------------|
-| RQ cannot converge               | Phase 1 / Layer 1 exceeds multiple rounds while still vague | Provide 3 candidate RQs or suggest lit-review    |
-| Insufficient literature          | bibliography_agent finds < 5 sources                        | Expand search strategy, alternative keywords     |
-| Methodology mismatch             | RQ type misaligned with method capability                   | Return to Phase 1, suggest 3 alternative methods |
-| Devil's Advocate CRITICAL        | Fatal logical flaw discovered                               | STOP, explain the issue, require correction      |
-| Ethics BLOCKED                   | Serious ethical issue                                       | STOP, list issues and remediation path           |
-| Socratic non-convergence         | > 10 rounds without convergence                             | Suggest switching to full mode                   |
-| User abandons mid-process        | Explicitly states they don't want to continue               | Save progress, provide re-entry path             |
-| Only Chinese-language literature | English search returns empty                                | Switch to Chinese academic databases             |
+| Failure Scenario | Trigger Condition | Recovery Strategy |
+|---------|---------|---------|
+| RQ cannot converge | Phase 1 / Layer 1 exceeds multiple rounds while still vague | Provide 3 candidate RQs or suggest lit-review |
+| Insufficient literature | bibliography_agent finds < 5 sources | Expand search strategy, alternative keywords |
+| Methodology mismatch | RQ type misaligned with method capability | Return to Phase 1, suggest 3 alternative methods |
+| Devil's Advocate CRITICAL | Fatal logical flaw discovered | STOP, explain the issue, require correction |
+| Ethics BLOCKED | Serious ethical issue | STOP, list issues and remediation path |
+| Socratic non-convergence | > 10 rounds without convergence | Suggest switching to full mode |
+| User abandons mid-process | Explicitly states they don't want to continue | Save progress, provide re-entry path |
+| Only Chinese-language literature | English search returns empty | Switch to Chinese academic databases |
 
 ---
 
@@ -462,9 +470,9 @@ See `references/literature_monitoring_strategies.md` for platform-specific setup
 
 ---
 
-## Handoff Protocol: academic-deep-research → academic-paper-writer
+## Handoff Protocol: deep-research → academic-paper
 
-After research is complete, the following materials can be handed off to `academic-paper-writer`:
+After research is complete, the following materials can be handed off to `academic-paper`:
 
 1. **Research Question Brief** (from research_question_agent)
 2. **Methodology Blueprint** (from research_architect_agent)
@@ -474,7 +482,7 @@ After research is complete, the following materials can be handed off to `academ
 
 **Trigger**: User says "now help me write a paper" or "write a paper based on this"
 
-`academic-paper-writer`'s `intake_agent` will automatically detect available materials and skip redundant steps:
+`academic-paper`'s `intake_agent` will automatically detect available materials and skip redundant steps:
 - Has RQ Brief -> skip topic scoping
 - Has Bibliography -> skip literature search
 - Has Synthesis -> accelerate findings / discussion writing
@@ -491,69 +499,69 @@ See `academic-pipeline/SKILL.md` for the complete workflow.
 
 ## Agent File References
 
-| Agent                     | Definition File                       |
-|---------------------------|---------------------------------------|
-| research_question_agent   | `agents/research_question_agent.md`   |
-| research_architect_agent  | `agents/research_architect_agent.md`  |
-| bibliography_agent        | `agents/bibliography_agent.md`        |
+| Agent | Definition File |
+|-------|----------------|
+| research_question_agent | `agents/research_question_agent.md` |
+| research_architect_agent | `agents/research_architect_agent.md` |
+| bibliography_agent | `agents/bibliography_agent.md` |
 | source_verification_agent | `agents/source_verification_agent.md` |
-| synthesis_agent           | `agents/synthesis_agent.md`           |
-| report_compiler_agent     | `agents/report_compiler_agent.md`     |
-| editor_in_chief_agent     | `agents/editor_in_chief_agent.md`     |
-| devils_advocate_agent     | `agents/devils_advocate_agent.md`     |
-| ethics_review_agent       | `agents/ethics_review_agent.md`       |
-| socratic_mentor_agent     | `agents/socratic_mentor_agent.md`     |
-| risk_of_bias_agent        | `agents/risk_of_bias_agent.md`        |
-| meta_analysis_agent       | `agents/meta_analysis_agent.md`       |
-| monitoring_agent          | `agents/monitoring_agent.md`          |
+| synthesis_agent | `agents/synthesis_agent.md` |
+| report_compiler_agent | `agents/report_compiler_agent.md` |
+| editor_in_chief_agent | `agents/editor_in_chief_agent.md` |
+| devils_advocate_agent | `agents/devils_advocate_agent.md` |
+| ethics_review_agent | `agents/ethics_review_agent.md` |
+| socratic_mentor_agent | `agents/socratic_mentor_agent.md` |
+| risk_of_bias_agent | `agents/risk_of_bias_agent.md` |
+| meta_analysis_agent | `agents/meta_analysis_agent.md` |
+| monitoring_agent | `agents/monitoring_agent.md` |
 
 ---
 
 ## Reference Files
 
-| Reference                                        | Purpose                                                                                                  | Used By                                                    |
-|--------------------------------------------------|----------------------------------------------------------------------------------------------------------|------------------------------------------------------------|
-| `references/apa7_style_guide.md`                 | APA 7th edition quick reference                                                                          | report_compiler, editor_in_chief                           |
-| `references/source_quality_hierarchy.md`         | Evidence pyramid + grading rubric                                                                        | source_verification, bibliography                          |
-| `references/methodology_patterns.md`             | Research design templates                                                                                | research_architect                                         |
-| `references/logical_fallacies.md`                | 30+ fallacies catalog                                                                                    | devils_advocate                                            |
-| `references/ethics_checklist.md`                 | AI disclosure, attribution, dual-use                                                                     | ethics_review                                              |
-| `references/interdisciplinary_bridges.md`        | Cross-discipline connection patterns                                                                     | synthesis, research_architect                              |
-| `references/socratic_questioning_framework.md`   | 6 types of Socratic questions + 30+ prompt patterns                                                      | socratic_mentor                                            |
-| `references/failure_paths.md`                    | 12 failure scenarios with triggers and recovery paths                                                    | all agents                                                 |
-| `references/mode_selection_guide.md`             | Mode selection flowchart and comparison table                                                            | orchestrator                                               |
-| `references/irb_decision_tree.md`                | IRB decision tree + Taiwan process + HE quick reference                                                  | ethics_review, research_architect                          |
-| `references/equator_reporting_guidelines.md`     | EQUATOR reporting guideline mapping                                                                      | research_architect, report_compiler                        |
-| `references/preregistration_guide.md`            | Preregistration decision tree + platforms + checklist                                                    | research_architect                                         |
-| `references/systematic_review_toolkit.md`        | Cochrane v6.4, PRISMA 2020, RoB 2, ROBINS-I, I² guide, GRADE, protocol registration                      | risk_of_bias, meta_analysis, bibliography, report_compiler |
-| `references/literature_monitoring_strategies.md` | Google Scholar alerts, PubMed alerts, RSS feeds, Retraction Watch, citation tracking, monitoring cadence | monitoring_agent                                           |
+| Reference | Purpose | Used By |
+|-----------|---------|---------|
+| `references/apa7_style_guide.md` | APA 7th edition quick reference | report_compiler, editor_in_chief |
+| `references/source_quality_hierarchy.md` | Evidence pyramid + grading rubric | source_verification, bibliography |
+| `references/methodology_patterns.md` | Research design templates | research_architect |
+| `references/logical_fallacies.md` | 30+ fallacies catalog | devils_advocate |
+| `references/ethics_checklist.md` | AI disclosure, attribution, dual-use | ethics_review |
+| `references/interdisciplinary_bridges.md` | Cross-discipline connection patterns | synthesis, research_architect |
+| `references/socratic_questioning_framework.md` | 6 types of Socratic questions + 30+ prompt patterns | socratic_mentor |
+| `references/failure_paths.md` | 12 failure scenarios with triggers and recovery paths | all agents |
+| `references/mode_selection_guide.md` | Mode selection flowchart and comparison table | orchestrator |
+| `references/irb_decision_tree.md` | IRB decision tree + Taiwan process + HE quick reference | ethics_review, research_architect |
+| `references/equator_reporting_guidelines.md` | EQUATOR reporting guideline mapping | research_architect, report_compiler |
+| `references/preregistration_guide.md` | Preregistration decision tree + platforms + checklist | research_architect |
+| `references/systematic_review_toolkit.md` | Cochrane v6.4, PRISMA 2020, RoB 2, ROBINS-I, I² guide, GRADE, protocol registration | risk_of_bias, meta_analysis, bibliography, report_compiler |
+| `references/literature_monitoring_strategies.md` | Google Scholar alerts, PubMed alerts, RSS feeds, Retraction Watch, citation tracking, monitoring cadence | monitoring_agent |
 
 ---
 
 ## Templates
 
-| Template                                    | Purpose                                                  |
-|---------------------------------------------|----------------------------------------------------------|
-| `templates/research_brief_template.md`      | Quick mode output format                                 |
-| `templates/literature_matrix_template.md`   | Source x Theme analysis matrix                           |
-| `templates/evidence_assessment_template.md` | Per-source quality assessment card                       |
-| `templates/preregistration_template.md`     | OSF standard 21-item preregistration template            |
-| `templates/prisma_protocol_template.md`     | PRISMA-P 2015 systematic review protocol template        |
-| `templates/prisma_report_template.md`       | PRISMA 2020 systematic review report template (27 items) |
+| Template | Purpose |
+|----------|---------|
+| `templates/research_brief_template.md` | Quick mode output format |
+| `templates/literature_matrix_template.md` | Source x Theme analysis matrix |
+| `templates/evidence_assessment_template.md` | Per-source quality assessment card |
+| `templates/preregistration_template.md` | OSF standard 21-item preregistration template |
+| `templates/prisma_protocol_template.md` | PRISMA-P 2015 systematic review protocol template |
+| `templates/prisma_report_template.md` | PRISMA 2020 systematic review report template (27 items) |
 
 ---
 
 ## Examples
 
-| Example                                | Demonstrates                                                               |
-|----------------------------------------|----------------------------------------------------------------------------|
-| `examples/exploratory_research.md`     | Full 6-phase pipeline walkthrough                                          |
-| `examples/systematic_review.md`        | PRISMA-style literature review                                             |
-| `examples/policy_analysis.md`          | Applied comparative policy research                                        |
-| `examples/socratic_guided_research.md` | Complete Socratic mode multi-turn dialogue (12 rounds)                     |
-| `examples/handoff_to_paper.md`         | academic-deep-research full mode handoff to academic-paper-writer          |
-| `examples/review_mode.md`              | Review mode: 3-agent review pipeline for policy recommendation text        |
-| `examples/fact_check_mode.md`          | Fact-check mode: source verification of HEI claims with per-claim verdicts |
+| Example | Demonstrates |
+|---------|-------------|
+| `examples/exploratory_research.md` | Full 6-phase pipeline walkthrough |
+| `examples/systematic_review.md` | PRISMA-style literature review |
+| `examples/policy_analysis.md` | Applied comparative policy research |
+| `examples/socratic_guided_research.md` | Complete Socratic mode multi-turn dialogue (12 rounds) |
+| `examples/handoff_to_paper.md` | deep-research full mode handoff to academic-paper |
+| `examples/review_mode.md` | Review mode: 3-agent review pipeline for policy recommendation text |
+| `examples/fact_check_mode.md` | Fact-check mode: source verification of HEI claims with per-claim verdicts |
 
 ---
 
@@ -577,14 +585,14 @@ Follows the user's language. Academic terminology kept in English. Socratic mode
 
 Unified definitions to prevent inconsistency across agents:
 
-| Concept                    | Definition                                                                                                                                                                           | Applies To                                     |
-|----------------------------|--------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|------------------------------------------------|
-| **Peer-reviewed**          | Published in a journal with formal peer review process (editorial review alone does not qualify). Conference proceedings count only if explicitly peer-reviewed                      | bibliography_agent, source_verification_agent  |
-| **Currency Rule**          | Default: published within 5 years. Override by domain: CS/AI = 3 years, History/Philosophy = 20 years, Law = depends on jurisdiction changes. Seminal works exempt regardless of age | bibliography_agent, ethics_review_agent        |
-| **CRITICAL severity**      | Issue that, if unresolved, would invalidate a core conclusion or constitute academic misconduct. Requires immediate resolution before pipeline can proceed                           | All agents                                     |
-| **Source Tier**            | tier_1 = top-quartile peer-reviewed journal; tier_2 = other peer-reviewed; tier_3 = academic but not peer-reviewed; tier_4 = grey literature                                         | bibliography_agent, source_verification_agent  |
-| **Minimum Source Count**   | full = 15+, quick = 5-8, lit-review = 25+, systematic-review = all eligible (no limit), fact-check = 3+ per claim                                                                    | bibliography_agent                             |
-| **Verification Threshold** | 100% DOI check + 50% WebSearch spot-check                                                                                                                                            | source_verification_agent, ethics_review_agent |
+| Concept | Definition | Applies To |
+|---------|-----------|------------|
+| **Peer-reviewed** | Published in a journal with formal peer review process (editorial review alone does not qualify). Conference proceedings count only if explicitly peer-reviewed | bibliography_agent, source_verification_agent |
+| **Currency Rule** | Default: published within 5 years. Override by domain: CS/AI = 3 years, History/Philosophy = 20 years, Law = depends on jurisdiction changes. Seminal works exempt regardless of age | bibliography_agent, ethics_review_agent |
+| **CRITICAL severity** | Issue that, if unresolved, would invalidate a core conclusion or constitute academic misconduct. Requires immediate resolution before pipeline can proceed | All agents |
+| **Source Tier** | tier_1 = top-quartile peer-reviewed journal; tier_2 = other peer-reviewed; tier_3 = academic but not peer-reviewed; tier_4 = grey literature | bibliography_agent, source_verification_agent |
+| **Minimum Source Count** | full = 15+, quick = 5-8, lit-review = 25+, systematic-review = all eligible (no limit), fact-check = 3+ per claim | bibliography_agent |
+| **Verification Threshold** | 100% DOI check + 50% WebSearch spot-check | source_verification_agent, ethics_review_agent |
 
 > **Cross-Skill Reference**: See `shared/handoff_schemas.md` for inter-stage data exchange formats.
 
@@ -595,15 +603,13 @@ Unified definitions to prevent inconsistency across agents:
 This skill is domain-agnostic but can be combined with domain-specific skills:
 
 ```
-academic-deep-research + tw-hei-intelligence     -> Evidence-based HEI policy research
-academic-deep-research + report-to-website       -> Interactive research report
-academic-deep-research + podcast-script-generator -> Research podcast
-academic-deep-research + academic-paper-writer          -> Full research-to-publication pipeline
-academic-deep-research (socratic) + academic-paper-writer (plan) -> Guided research + paper planning
-academic-deep-research (systematic-review) + academic-paper-writer -> PRISMA systematic review paper
+deep-research + tw-hei-intelligence     -> Evidence-based HEI policy research
+deep-research + report-to-website       -> Interactive research report
+deep-research + podcast-script-generator -> Research podcast
+deep-research + academic-paper          -> Full research-to-publication pipeline
+deep-research (socratic) + academic-paper (plan) -> Guided research + paper planning
+deep-research (systematic-review) + academic-paper -> PRISMA systematic review paper
 ```
-
----
 ##  Telemetry & Metadata (Mandatory)
 - 使用 `write_file` 将本次执行的元数据以 JSON 格式保存至 `{root}\MEMORY\skill_audit\telemetry\record_[TIMESTAMP].json`（请将 [TIMESTAMP] 替换为当前时间戳或随机数）。
 - JSON 结构：`{"skill_name": "academic-deep-research", "status": "success", "duration_sec": [ESTIMATE], "input_tokens": [ESTIMATE], "output_tokens": [ESTIMATE]}`
@@ -611,11 +617,15 @@ academic-deep-research (systematic-review) + academic-paper-writer -> PRISMA sys
 ## 历史失效先验 (Gotchas)
 - [此处预留用于记录重复性失败的禁令，实现系统的对抗性进化]
 ## Version History
+---
 
-| Version | Date       | Changes                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                  |
-|---------|------------|----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|
-| 2.3     | 2026-03-08 | Added systematic-review mode (7th mode): PRISMA 2020 compliant pipeline with risk_of_bias_agent (RoB 2 + ROBINS-I), meta_analysis_agent (effect sizes, heterogeneity, GRADE, narrative synthesis), 2 new templates (PRISMA protocol + report), systematic_review_toolkit reference. Added monitoring_agent (post-pipeline literature monitoring with digests, retraction alerts, author tracking) + literature_monitoring_strategies reference. Enhanced socratic_mentor_agent with 4 convergence signals, 4-type question taxonomy, and auto-end triggers. Added Quick Mode Selection Guide to SKILL.md |
-| 2.2     | 2025-03-05 | Added synthesis anti-patterns, Socratic quantified thresholds & auto-end conditions, reference existence verification (DOI + WebSearch), enhanced ethics reference integrity check (50% + Retraction Watch), mode transition matrix, cross-agent quality alignment definitions                                                                                                                                                                                                                                                                                                                           |
-| 2.1     | 2026-03    | Added IRB decision tree, EQUATOR reporting guidelines, preregistration guide + template; enhanced ethics_review_agent with human subjects dimension; enhanced research_architect_agent with ethics/EQUATOR/preregistration integration; enhanced methodology_patterns with EQUATOR cross-references                                                                                                                                                                                                                                                                                                      |
-| 2.0     | 2026-02    | Added socratic mode (10th agent), failure paths, mode selection guide, handoff protocol, 2 new examples, 3 new references                                                                                                                                                                                                                                                                                                                                                                                                                                                                                |
-| 1.0     | 2026-02    | Initial release: 9 agents, 5 modes, 6-phase pipeline                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                     |
+## Version History
+
+| Version | Date | Changes |
+|---------|------|---------|
+| 2.4 | 2026-03-27 | Report compiler now consumes optional Style Profile (from academic-paper intake) and runs Writing Quality Check checklist before finalizing reports. Style Profile applied as soft guide for Executive Summary and Synthesis sections; discipline conventions take priority. Writing Quality Check catches overused AI-typical terms, em dash overuse, throat-clearing openers, and monotonous sentence rhythm. See `academic-paper/references/writing_quality_check.md` and `shared/style_calibration_protocol.md` |
+| 2.3 | 2026-03-08 | Added systematic-review mode (7th mode): PRISMA 2020 compliant pipeline with risk_of_bias_agent (RoB 2 + ROBINS-I), meta_analysis_agent (effect sizes, heterogeneity, GRADE, narrative synthesis), 2 new templates (PRISMA protocol + report), systematic_review_toolkit reference. Added monitoring_agent (post-pipeline literature monitoring with digests, retraction alerts, author tracking) + literature_monitoring_strategies reference. Enhanced socratic_mentor_agent with 4 convergence signals, 4-type question taxonomy, and auto-end triggers. Added Quick Mode Selection Guide to SKILL.md |
+| 2.2 | 2025-03-05 | Added synthesis anti-patterns, Socratic quantified thresholds & auto-end conditions, reference existence verification (DOI + WebSearch), enhanced ethics reference integrity check (50% + Retraction Watch), mode transition matrix, cross-agent quality alignment definitions |
+| 2.1 | 2026-03 | Added IRB decision tree, EQUATOR reporting guidelines, preregistration guide + template; enhanced ethics_review_agent with human subjects dimension; enhanced research_architect_agent with ethics/EQUATOR/preregistration integration; enhanced methodology_patterns with EQUATOR cross-references |
+| 2.0 | 2026-02 | Added socratic mode (10th agent), failure paths, mode selection guide, handoff protocol, 2 new examples, 3 new references |
+| 1.0 | 2026-02 | Initial release: 9 agents, 5 modes, 6-phase pipeline |

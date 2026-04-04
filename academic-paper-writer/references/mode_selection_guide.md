@@ -41,7 +41,7 @@ User Input →
 - Includes all phases: Interview → Literature → Structure → Argumentation → Writing → Citation → Review → Formatting
 
 **Not Applicable When**:
-- User has no idea about research direction (→ use `academic-deep-research` first)
+- User has no idea about research direction (→ use `deep-research` first)
 - Only need a specific section (→ use another specialized mode)
 
 **Expected Output**: Complete paper draft + references + bilingual abstract + review report
@@ -74,7 +74,7 @@ User Input →
 - Wants guided thinking for each chapter's content
 - First-time academic paper writer
 - Wants to think through every section before writing
-- Just received materials from academic-deep-research and needs to transform them into a paper plan
+- Just received materials from deep-research and needs to transform them into a paper plan
 
 **Not Applicable When**:
 - Already knows exactly what to write (→ full mode is faster)
@@ -135,7 +135,7 @@ User Input →
 
 **Not Applicable When**:
 - Need a complete paper (→ full mode)
-- Need an in-depth research investigation (→ academic-deep-research)
+- Need an in-depth research investigation (→ deep-research)
 
 **Expected Output**: Annotated bibliography + literature matrix + synthesis analysis
 **Expected Duration**: Medium
@@ -177,33 +177,33 @@ User Input →
 
 ---
 
-## Paths from academic-deep-research
+## Paths from deep-research
 
 ```
-academic-deep-research completed
+deep-research completed
   │
-  ├── academic-deep-research (full mode) outputs:
+  ├── deep-research (full mode) outputs:
   │   RQ Brief + Methodology Blueprint + Annotated Bibliography + Synthesis Report
   │   │
-  │   ├── Want to write the paper directly ──→ academic-paper-writer (full mode)
+  │   ├── Want to write the paper directly ──→ academic-paper (full mode)
   │   │   intake_agent auto-detects materials, skips redundant questions
   │   │
-  │   └── Want to plan before writing ──→ academic-paper-writer (plan mode)
+  │   └── Want to plan before writing ──→ academic-paper (plan mode)
   │       socratic_mentor leverages existing materials to accelerate guidance
   │
-  └── academic-deep-research (socratic mode) outputs:
+  └── deep-research (socratic mode) outputs:
       INSIGHT Collection + Synthesis Report
       │
-      ├── INSIGHTs are sufficiently clear ──→ academic-paper-writer (full mode)
+      ├── INSIGHTs are sufficiently clear ──→ academic-paper (full mode)
       │
-      └── Need more guidance ──→ academic-paper-writer (plan mode)
+      └── Need more guidance ──→ academic-paper (plan mode)
           socratic_mentor continues deepening from INSIGHTs
 ```
 
 ## Connecting to academic-paper-reviewer
 
 ```
-academic-paper-writer completed
+academic-paper completed
   │
   ├── full mode produces complete paper ──→ academic-paper-reviewer (full / guided)
   │   Complete peer review + revision suggestions
@@ -211,7 +211,7 @@ academic-paper-writer completed
   ├── plan mode produces Chapter Plan ──→ academic-paper-reviewer (guided)
   │   Review the plan's feasibility and completeness
   │
-  └── reviewer feedback ──→ academic-paper-writer (revision mode)
+  └── reviewer feedback ──→ academic-paper (revision mode)
       Revise paper based on review comments
 ```
 
@@ -224,8 +224,8 @@ academic-paper-writer completed
 | "Help me write an outline" / 「幫我寫大綱」 | outline-only | First confirm: Do they want a simple outline or deep planning? | May need plan mode |
 | "I want to write a paper but don't know how to start" / 「想寫論文但不知道怎麼開始」 | full | plan mode | Needs guided thinking |
 | "Help me revise my paper" / 「幫我修改論文」 | revision | First confirm: Are there reviewer comments? | May need full mode rewrite |
-| "Help me search for literature" / 「幫我找文獻」 | lit-review | First confirm: Is it a literature review for a paper or a research investigation? | May need academic-deep-research |
-| "I have academic-deep-research results, help me write a paper" / 「我有研究結果，幫我寫成論文」 | full (skip Phase 0 directly) | full (but intake needs to detect handoff) | Materials need to be properly imported |
+| "Help me search for literature" / 「幫我找文獻」 | lit-review | First confirm: Is it a literature review for a paper or a research investigation? | May need deep-research |
+| "I have deep-research results, help me write a paper" / 「我有研究結果，幫我寫成論文」 | full (skip Phase 0 directly) | full (but intake needs to detect handoff) | Materials need to be properly imported |
 | "I want to plan my paper step by step" / 「我想逐步規劃論文」 | outline-only | plan mode | Needs interactive guidance |
 | "The paper format is wrong" / 「論文格式不對」 | revision | citation-check or format-convert | May only need format correction |
 | 「帶我寫論文」/「引導我寫論文」 | full | plan mode | 使用者需要互動式引導，不是直接產出 |
@@ -241,8 +241,8 @@ academic-paper-writer completed
 | Research question + literature | Complete paper | full mode |
 | Research question + literature | Outline | outline-only mode |
 | Vague idea | Paper plan | plan mode |
-| academic-deep-research results | Complete paper | full mode (auto-handoff) |
-| academic-deep-research results | Guided planning | plan mode |
+| deep-research results | Complete paper | full mode (auto-handoff) |
+| deep-research results | Guided planning | plan mode |
 | Completed paper | Revision | revision mode |
 | Completed paper | Abstract | abstract-only mode |
 | Completed paper | Format conversion | format-convert mode |

@@ -69,6 +69,22 @@ You are the Report Compiler Agent. You transform research findings, synthesis na
 7. References
 ```
 
+## Optional: Style Calibration
+
+If a Style Profile is available from a prior `academic-paper` intake or provided by the user:
+- Apply as a soft guide for the research report's writing voice
+- Discipline conventions and report objectivity take priority over personal style
+- Style Profile is most applicable to the Executive Summary and Synthesis sections
+- See `shared/style_calibration_protocol.md` for the full priority system
+
+## Writing Quality Check
+
+Before finalizing the report, run the Writing Quality Check checklist (see `academic-paper/references/writing_quality_check.md`):
+- Scan for AI high-frequency terms and replace with more precise alternatives
+- Verify sentence and paragraph length variation
+- Remove throat-clearing openers (e.g., "In the realm of...", "It's important to note that...")
+- Check em dash usage (≤3 per report)
+
 ## Writing Style Guidelines
 
 Reference: `references/apa7_style_guide.md`

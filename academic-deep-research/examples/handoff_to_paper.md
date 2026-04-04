@@ -1,16 +1,16 @@
-# Handoff Example: academic-deep-research → academic-paper-writer
+# Handoff Example: deep-research → academic-paper
 
-This example demonstrates how academic-deep-research full mode, after completing research, hands off to academic-paper-writer to begin paper writing.
+This example demonstrates how deep-research full mode, after completing research, hands off to academic-paper to begin paper writing.
 
 ---
 
 ## Scenario Setup
 
-The user has completed academic-deep-research full mode on the topic "AI-Assisted Quality Assurance in Higher Education: A Comparative Analysis of Implementation Strategies in East Asian Universities." Below is a summary of the research outputs.
+The user has completed deep-research full mode on the topic "AI-Assisted Quality Assurance in Higher Education: A Comparative Analysis of Implementation Strategies in East Asian Universities." Below is a summary of the research outputs.
 
 ---
 
-## academic-deep-research Output Summary
+## deep-research Output Summary
 
 ### 1. Research Question Brief (from research_question_agent)
 
@@ -106,7 +106,7 @@ Key themes identified:
 
 ## Handoff Instruction
 
-After completing academic-deep-research, the user inputs:
+After completing deep-research, the user inputs:
 
 ```
 Now help me write a paper based on this research
@@ -114,7 +114,7 @@ Now help me write a paper based on this research
 
 ---
 
-## academic-paper-writer intake_agent Auto-Detection
+## academic-paper intake_agent Auto-Detection
 
 **intake_agent Detection Process**:
 
@@ -122,30 +122,30 @@ Now help me write a paper based on this research
 Scanning available materials...
 
 [DETECTED] Research Question Brief
-  - Source: academic-deep-research / research_question_agent
+  - Source: deep-research / research_question_agent
   - Status: Complete (FINER 4.6/5)
-  - Action: SKIP academic-paper-writer Phase 1 (topic scoping)
+  - Action: SKIP academic-paper Phase 1 (topic scoping)
 
 [DETECTED] Methodology Blueprint
-  - Source: academic-deep-research / research_architect_agent
+  - Source: deep-research / research_architect_agent
   - Status: Complete (pragmatist QCA + document analysis)
-  - Action: SKIP academic-paper-writer Phase 2 (methodology design)
+  - Action: SKIP academic-paper Phase 2 (methodology design)
   - Note: Will integrate into Method section directly
 
 [DETECTED] Annotated Bibliography (18 sources, APA 7.0)
-  - Source: academic-deep-research / bibliography_agent
+  - Source: deep-research / bibliography_agent
   - Status: Complete, quality-screened
-  - Action: SKIP academic-paper-writer literature search
+  - Action: SKIP academic-paper literature search
   - Note: Will use as foundation for Literature Review section
 
 [DETECTED] Synthesis Report
-  - Source: academic-deep-research / synthesis_agent
+  - Source: deep-research / synthesis_agent
   - Status: Complete (3 core findings + 1 contradiction + 2 gaps)
-  - Action: SKIP academic-paper-writer analysis phase
+  - Action: SKIP academic-paper analysis phase
   - Note: Will structure Findings and Discussion sections around synthesis
 
 Materials Assessment: COMPREHENSIVE
-Recommended academic-paper-writer mode: full (with accelerated pipeline)
+Recommended academic-paper mode: full (with accelerated pipeline)
 Estimated sections already covered: 60-70%
 Remaining work: Writing, formatting, argumentation, and polish
 ```
@@ -154,7 +154,7 @@ Remaining work: Writing, formatting, argumentation, and polish
 
 ## Skipped Steps and Reasons
 
-| academic-paper-writer Step | Normal Workflow | After Handoff | Reason |
+| academic-paper Step | Normal Workflow | After Handoff | Reason |
 |---------------------|---------|-----------|------|
 | Phase 1: Topic Scoping | intake_agent clarifies from scratch | SKIPPED | RQ Brief is complete |
 | Phase 2: Structure Planning | outline_agent designs structure | PARTIAL | Has Blueprint but needs conversion to paper structure |
@@ -169,15 +169,15 @@ Remaining work: Writing, formatting, argumentation, and polish
 
 ---
 
-## Post-Handoff academic-paper-writer Actual Workflow
+## Post-Handoff academic-paper Actual Workflow
 
 ```
-=== academic-paper-writer: Accelerated Pipeline ===
+=== academic-paper: Accelerated Pipeline ===
 
 Step 1: STRUCTURAL MAPPING
   [outline_agent]
   - Input: RQ Brief + Methodology Blueprint + Synthesis Report
-  - Output: Complete paper outline, each section tagged with corresponding academic-deep-research materials
+  - Output: Complete paper outline, each section tagged with corresponding deep-research materials
   - Output example:
 
     I. Introduction
@@ -230,7 +230,7 @@ Step 3: DISCUSSION + BOOKENDS
   [discussion_writer_agent] → Discussion
     - Original discourse: dialogue between findings and theory
     - Does not repeat Findings; instead explains "why"
-    - Integrates academic-deep-research Knowledge Gaps as Future Research
+    - Integrates deep-research Knowledge Gaps as Future Research
 
   [bookend_agent] → Introduction + Conclusion
     - Introduction: from macro context to specific RQ
@@ -254,9 +254,9 @@ Step 5: SELF-REVIEW
 
 ## User-Facing Handoff Experience
 
-**academic-paper-writer's Opening Message**:
+**academic-paper's Opening Message**:
 
-> I've read your complete outputs from the academic-deep-research stage, including:
+> I've read your complete outputs from the deep-research stage, including:
 > - Research Question Brief (FINER 4.6/5)
 > - Methodology Blueprint (QCA + document analysis)
 > - Annotated Bibliography (18 quality-screened sources)
@@ -275,7 +275,7 @@ Step 5: SELF-REVIEW
 
 ## Notes
 
-1. **Not copy-paste**: academic-paper-writer does not directly copy academic-deep-research outputs, but transforms them into the tone and format of an academic paper
-2. **May discover new issues**: During the writing process, academic-paper-writer agents may discover points missed by academic-deep-research and will proactively supplement them
+1. **Not copy-paste**: academic-paper does not directly copy deep-research outputs, but transforms them into the tone and format of an academic paper
+2. **May discover new issues**: During the writing process, academic-paper agents may discover points missed by deep-research and will proactively supplement them
 3. **Still requires user confirmation**: Target journal, language preference, specific formatting requirements still require user input
 4. **Review recommendation auto-connects**: After paper completion, the user can continue with `academic-paper-reviewer` for formal review

@@ -13,7 +13,7 @@ output: Revision comparison table + Response to Reviewers letter
 
 ## Scenario
 
-The user has a completed paper titled "The Impact of Micro-Credential Certification on Employability of Vocational Education Students in Taiwan," which has received peer review comments from a journal (3 major + 4 minor). The user employs academic-paper-writer's revision mode for systematic revision. This example demonstrates the complete workflow from comment parsing, citation correction, review verification, to the Response to Reviewers letter.
+The user has a completed paper titled "The Impact of Micro-Credential Certification on Employability of Vocational Education Students in Taiwan," which has received peer review comments from a journal (3 major + 4 minor). The user employs academic-paper's revision mode for systematic revision. This example demonstrates the complete workflow from comment parsing, citation correction, review verification, to the Response to Reviewers letter.
 
 ---
 

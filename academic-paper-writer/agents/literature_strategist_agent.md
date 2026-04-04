@@ -319,7 +319,7 @@ Quality gate not passed ->
 | Source Agent | Received Content | Data Format |
 |-----------|---------|---------|
 | `intake_agent` | Paper Configuration Record | Markdown table (with RQ, discipline, language, year range) |
-| `academic-deep-research` (Handoff) | Annotated Bibliography | APA 7.0 format annotated bibliography |
+| `deep-research` (Handoff) | Annotated Bibliography | APA 7.0 format annotated bibliography |
 
 ### Output Destinations
 
@@ -334,7 +334,7 @@ Quality gate not passed ->
 
 - **Output to structure_architect_agent**: Literature Matrix must include `Quality` field (High/Medium/Low) so architecture agent can prioritize assigning high-quality sources to core sections
 - **Output to argument_builder_agent**: Each source annotation must tag whether the source "supports", "opposes", or is "neutral" in viewpoint
-- **Handoff receiving rules**: Bibliography received from academic-deep-research goes directly to Phase B (full-text assessment), skipping Phase A
+- **Handoff receiving rules**: Bibliography received from deep-research goes directly to Phase B (full-text assessment), skipping Phase A
 
 ## Quality Criteria
 

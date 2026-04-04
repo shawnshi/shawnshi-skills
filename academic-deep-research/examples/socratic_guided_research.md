@@ -324,8 +324,8 @@ Dialogue concluded. Below is the Research Plan Summary extracted from 12 rounds 
 
 ### Recommended Next Steps
 
-- **Option A**: Use `academic-deep-research` (full mode) for systematic literature search to understand existing research on private university transformation strategy classification and evaluation
-- **Option B**: Use `academic-paper-writer` (plan mode) to start planning the paper structure directly, using this Research Plan Summary as a foundation
+- **Option A**: Use `deep-research` (full mode) for systematic literature search to understand existing research on private university transformation strategy classification and evaluation
+- **Option B**: Use `academic-paper` (plan mode) to start planning the paper structure directly, using this Research Plan Summary as a foundation
 - **Recommended path**: Option A → Option B (confirm the literature foundation first, then plan the paper)
 
 The user can directly input: "Now help me do a comprehensive literature review based on this research plan" or "Help me write a paper based on this research plan"

@@ -63,352 +63,352 @@
 数据要素 医疗(w=10), Agentic Workflow 临床(w=9), 医疗AI(w=9), DRG DIP(w=9), Evidence-Mesh(w=8), 医疗知识图谱(w=8), 数智化转型(w=8), 医疗信创(w=8), Medical Copilot(w=8), AI 原生医院(w=8), 多模态电子病历(w=8), 医疗大模型 落地(w=8), Medical Semantic Layer(w=8), Agentic Infrastructure(w=7), 算法审计 医疗(w=7)
 
 ## ??????
-[DEEP_REFINE] Item 1 [Score=7]:
-Title: healthcareitnews.com: Q&A: How to make 'interoperability' more than just a buzzword
-URL: https://www.healthcareitnews.com/news/qa-how-make-interoperability-more-just-buzzword
-Source: healthcareitnews.com
-Published: 2026-04-03T09:46:16.230940
-Desc: Although there have been significant advancements in healthcare interoperability over the past ten years, the actual situation for information sharing  is still far more fragmented than policy milestones may indicate. The adoption of FHIR as a contemporary data exchange standard has accelerated, and
+[DEEP_REFINE] Item 1 [Score=11]:
+Title: The Lancet Digital Health: [Editorial] Reimagining radiology reporting
+URL: https://www.thelancet.com/journals/landig/article/PIIS2589-7500(26)00021-X/fulltext?rss=yes
+Source: The Lancet Digital Health
+Published: 2026-04-04T07:53:57.096960
+Desc: Patients’ access to their medical data is increasing, but these data are not always easy to interpret. In early January 2026, OpenAI launched ChatGPT Health, which allows users to upload their medical information—such as electronic medical records and health app data—to contextualise their health-re
 
-[DEEP_REFINE] Item 2 [Score=6]:
+[DEEP_REFINE] Item 2 [Score=11]:
+Title: rakhim.exotext.com: Windows 11 after two decades of macOS: okay, but also awful
+URL: https://rakhim.exotext.com/windows-11-experience
+Source: rakhim.exotext.com
+Published: 2026-04-04T07:53:59.934744
+Desc: Recently my partner's trusty old 5K iMac died after 8.5 years of service (Radeon gpu is fried). At first I thought it was finally time to get one of those cool little M4 Mac Minis, but then decided to conduct an experiment. I gave up my Mac Studio M2 Max (64 Gb unified memory and 1 Tb storage) and t
+
+[DEEP_REFINE] Item 3 [Score=6]:
+Title: Nature Digital Medicine: Sensor-based digital health technologies to capture endpoints in recent clinical trials: a scoping review
+URL: https://www.nature.com/articles/s41746-026-02512-w
+Source: Nature Digital Medicine
+Published: 2026-04-04T07:54:01.603669
+Desc: npj Digital Medicine, Published online: 03 April 2026; doi:10.1038/s41746-026-02512-wSensor-based digital health technologies to capture endpoints in recent clinical trials: a scoping review
+
+[DEEP_REFINE] Item 4 [Score=6]:
+Title: The Lancet Digital Health: [Comment] The architectural gap in clinical artificial intelligence
+URL: https://www.thelancet.com/journals/landig/article/PIIS2589-7500(26)00001-4/fulltext?rss=yes
+Source: The Lancet Digital Health
+Published: 2026-04-04T07:53:57.097002
+Desc: In The Lancet Digital Health, a systematic review and meta-analysis by Alabed Samer and colleagues1 provides a clear picture about the current state of clinical artificial intelligence (AI) in radiology communication. Across patients, members of the public, and clinicians, large language model-gener
+
+[DEEP_REFINE] Item 5 [Score=6]:
+Title: The Lancet Digital Health: [Comment] The global Dx AMR collaborative: an approach to strengthen the role of diagnostics in combating antimicrobial resistance
+URL: https://www.thelancet.com/journals/landig/article/PIIS2589-7500(25)00133-5/fulltext?rss=yes
+Source: The Lancet Digital Health
+Published: 2026-04-04T07:53:57.097028
+Desc: Antimicrobial resistance (AMR) remains a present and ongoing global health threat. In 2019, 4·95 million deaths were associated with AMR globally; this number is projected to rise to 8·22 million by 2050.1 Despite this prediction, the investment landscape in global health and AMR is diminishing, as 
+
+[DEEP_REFINE] Item 6 [Score=6]:
+Title: The Lancet Digital Health: [Comment] When to and when not to use machine learning in risk prediction models
+URL: https://www.thelancet.com/journals/landig/article/PIIS2589-7500(25)00136-0/fulltext?rss=yes
+Source: The Lancet Digital Health
+Published: 2026-04-04T07:53:57.097052
+Desc: Machine learning for health data science, fuelled by proliferation of data and reduced computational costs, has garnered considerable interest among researchers. The debate around the use of machine learning or classical medical statistics for medical research is long standing.1,2 Given major method
+
+[DEEP_REFINE] Item 7 [Score=6]:
+Title: The Lancet Digital Health: [Comment] Thank you to The Lancet Digital Health statistical and peer reviewers in 2025
+URL: https://www.thelancet.com/journals/landig/article/PIIS2589-7500(26)00003-8/fulltext?rss=yes
+Source: The Lancet Digital Health
+Published: 2026-04-04T07:53:57.097077
+Desc: Rita Achermann
+
+[DEEP_REFINE] Item 8 [Score=6]:
+Title: mobihealthnews.com: Mentoring new voices in healthcare IT advocacy
+URL: https://www.mobihealthnews.com/video/mentoring-new-voices-healthcare-it-advocacy
+Source: mobihealthnews.com
+Published: 2026-04-04T07:54:02.014986
+Desc: 
+
+[DEEP_REFINE] Item 9 [Score=6]:
 Title: HIStalk: EPtalk by Dr. Jayne 4/2/26
 URL: https://histalk2.com/2026/04/02/eptalk-by-dr-jayne-4-2-26/
 Source: HIStalk
-Published: 2026-04-03T09:46:26.429336
+Published: 2026-04-04T07:54:01.144981
 Desc: Epic once again understood the April Fools’ Day assignment. ...
 
-[DEEP_REFINE] Item 3 [Score=5]:
-Title: Lemonade by AMD: a fast and open source local LLM server using GPU and NPU
-URL: https://lemonade-server.ai
-Source: Hacker News
-Published: 2026-04-02T19:04:51
-Desc: 
+[DEEP_REFINE] Item 10 [Score=5]:
+Title: onyx-dot-app /onyx
+URL: https://github.com/onyx-dot-app/onyx
+Source: GitHub
+Published: 2026-04-04T07:53:59.579543
+Desc: Open Source AI Platform - AI Chat with advanced features that works with every LLM
 
-[DEEP_REFINE] Item 4 [Score=5]:
-Title: simonwillison.net: Highlights from my conversation about agentic engineering on Lenny's Podcast
-URL: https://simonwillison.net/2026/Apr/2/lennys-podcast/#atom-everything
+[DEEP_REFINE] Item 11 [Score=5]:
+Title: arXiv Med-AI: AutoPK: Leveraging LLMs and a Hybrid Similarity Metric for Advanced Retrieval of Pharmacokinetic Data from Complex Tables and Documents
+URL: https://arxiv.org/abs/2510.00039v2
+Source: arXiv Med-AI
+Published: 2026-04-04T07:53:59.512480
+Desc: Pharmacokinetics (PK) plays a critical role in drug development and regulatory decision-making for human and veterinary medicine, directly affecting public health through drug safety and efficacy assessments. However, PK data are often embedded in complex, heterogeneous tables with variable structur
+
+[DEEP_REFINE] Item 12 [Score=5]:
+Title: arXiv Med-AI: MTI: A Behavior-Based Temperament Profiling System for AI Agents
+URL: https://arxiv.org/abs/2604.02145v1
+Source: arXiv Med-AI
+Published: 2026-04-04T07:53:59.512521
+Desc: AI models of equivalent capability can exhibit fundamentally different behavioral patterns, yet no standardized instrument exists to measure these dispositional differences. Existing approaches either borrow human personality dimensions and rely on self-report (which diverges from actual behavior in
+
+[DEEP_REFINE] Item 13 [Score=5]:
+Title: arXiv Med-AI: The Illusion of AI Expertise Under Uncertainty: Navigating Elusive Ground Truth via a Probabilistic Paradigm
+URL: https://arxiv.org/abs/2601.05500v5
+Source: arXiv Med-AI
+Published: 2026-04-04T07:53:59.512568
+Desc: Benchmarking the capabilities of AI systems, including Large Language Models (LLMs) and Vision Models, typically ignores the impact of uncertainty in the underlying ground truth answers from experts. This ambiguity is not just limited to human preferences, but is also consequential even in safety cr
+
+[DEEP_REFINE] Item 14 [Score=5]:
+Title: arXiv Med-AI: Optimsyn: Influence-Guided Rubrics Optimization for Synthetic Data Generation
+URL: https://arxiv.org/abs/2604.00536v1
+Source: arXiv Med-AI
+Published: 2026-04-04T07:53:59.512591
+Desc: Large language models (LLMs) achieve strong downstream performance largely due to abundant supervised fine-tuning (SFT) data. However, high-quality SFT data in knowledge-intensive domains such as humanities, social sciences, medicine, law, and finance is scarce because expert curation is expensive, 
+
+[DEEP_REFINE] Item 15 [Score=5]:
+Title: simonwillison.net: Quoting Willy Tarreau
+URL: https://simonwillison.net/2026/Apr/3/willy-tarreau/#atom-everything
 Source: simonwillison.net
-Published: 2026-04-03T09:46:09.897192
-Desc: I was a guest on Lenny Rachitsky's podcast, in a new episode titled An AI state of the union: We've passed the inflection point, dark factories are coming, and automation timelines. It's available on YouTube, Spotify, and Apple Podcasts. Here are my highlights from our conversation, with relevant li
+Published: 2026-04-04T07:53:57.026097
+Desc: On the kernel security list we've seen a huge bump of reports. We were between 2 and 3 per week maybe two years ago, then reached probably 10 a week over the last year with the only difference being only AI slop, and now since the beginning of the year we're around 5-10 per day depending on the days
 
-[DEEP_REFINE] Item 5 [Score=5]:
-Title: simonwillison.net: Gemma 4: Byte for byte, the most capable open models
-URL: https://simonwillison.net/2026/Apr/2/gemma-4/#atom-everything
+[TRANSLATE_ONLY] Item 16 [Score=5]:
+Title: simonwillison.net: Quoting Daniel Stenberg
+URL: https://simonwillison.net/2026/Apr/3/daniel-stenberg/#atom-everything
 Source: simonwillison.net
-Published: 2026-04-03T09:46:09.899073
-Desc: Gemma 4: Byte for byte, the most capable open models Four new vision-capable Apache 2.0 licensed reasoning LLMs from Google DeepMind, sized at 2B, 4B, 31B, plus a 26B-A4B Mixture-of-Experts. Google emphasize "unprecedented level of intelligence-per-parameter", providing yet more evidence that creati
+Published: 2026-04-04T07:53:57.026313
+Desc: The challenge with AI in open source security has transitioned from an AI slop tsunami into more of a ... plain security report tsunami. Less slop but lots of reports. Many of them really good. I'm spending hours per day on this now. It's intense. — Daniel Stenberg, lead developer of cURL Tags: dani
 
-[DEEP_REFINE] Item 6 [Score=5]:
-Title: simonwillison.net: llm-gemini 0.30
-URL: https://simonwillison.net/2026/Apr/2/llm-gemini/#atom-everything
+[TRANSLATE_ONLY] Item 17 [Score=5]:
+Title: simonwillison.net: Quoting Greg Kroah-Hartman
+URL: https://simonwillison.net/2026/Apr/3/greg-kroah-hartman/#atom-everything
 Source: simonwillison.net
-Published: 2026-04-03T09:46:09.899443
-Desc: Release: llm-gemini 0.30 New models gemini-3.1-flash-lite-preview, gemma-4-26b-a4b-it and gemma-4-31b-it. See my notes on Gemma 4. Tags: gemini, llm, gemma
+Published: 2026-04-04T07:53:57.026507
+Desc: Months ago, we were getting what we called 'AI slop,' AI-generated security reports that were obviously wrong or low quality. It was kind of funny. It didn't really worry us. Something happened a month ago, and the world switched. Now we have real reports. All open source projects have real reports 
 
-[DEEP_REFINE] Item 7 [Score=5]:
+[TRANSLATE_ONLY] Item 18 [Score=5]:
+Title: seangoedecke.com: Programming (with AI agents) as theory building
+URL: https://seangoedecke.com/programming-with-ai-agents-as-theory-building/
+Source: seangoedecke.com
+Published: 2026-04-04T07:53:58.031257
+Desc: Back in 1985, computer scientist Peter Naur wrote “Programming as Theory Building”. According to Naur - and I agree with him - the core output of software engineers is not the program itself, but the theory of how the program works. In other words, the knowledge inside the engineer’s mind is the pri
+
+[TRANSLATE_ONLY] Item 19 [Score=5]:
+Title: antirez.com: GNU and the AI reimplementations
+URL: http://antirez.com/news/162
+Source: antirez.com
+Published: 2026-04-04T07:54:01.785210
+Desc: Those who cannot remember the past are condemned to repeat it. A sentence that I never really liked, and what is happening with AI, about software projects reimplementations, shows all the limits of such an idea. Many people are protesting the fairness of rewriting existing projects using AI. But, a
+
+[TRANSLATE_ONLY] Item 20 [Score=5]:
+Title: antirez.com: Redis patterns for coding
+URL: http://antirez.com/news/161
+Source: antirez.com
+Published: 2026-04-04T07:54:01.785350
+Desc: Here LLM and coding agents can find:  1. Exhaustive documentation about Redis commands and data types. 2. Patterns commonly used. 3. Configuration hints. 4. Algorithms that can be mounted using Redis commands.  https://redis.antirez.com/  Some humans claim this documentation is actually useful for a
+
+[TRANSLATE_ONLY] Item 21 [Score=5]:
+Title: antirez.com: Implementing a clear room Z80 / ZX Spectrum emulator with Claude Code
+URL: http://antirez.com/news/160
+Source: antirez.com
+Published: 2026-04-04T07:54:01.786026
+Desc: Anthropic recently released a blog post with the description of an experiment in which the last version of Opus, the 4.6, was instructed to write a C compiler in Rust, in a “clean room” setup.  The experiment methodology left me dubious about the kind of point they wanted to make. Why not provide th
+
+[TRANSLATE_ONLY] Item 22 [Score=5]:
+Title: idiallo.com: My Zip bomb strategy is not as effective as it used to be
+URL: https://idiallo.com/blog/zip-bombs-are-not-as-effective-as-they-used-to-be?src=feed
+Source: idiallo.com
+Published: 2026-04-04T07:53:59.963022
+Desc: Last year, I wrote about my server setup and how I use zipbombs to mitigate attacks from rogue bots. It was an effective method that helped my blog survive for 10 years. I usually hesitate to write these types of articles, especially since it means revealing the inner workings of my own servers. Thi
+
+[TRANSLATE_ONLY] Item 23 [Score=5]:
 Title: idiallo.com: 13th Year of Blogging
 URL: https://idiallo.com/byte-size/blogging-year-13?src=feed
 Source: idiallo.com
-Published: 2026-04-03T09:46:10.563819
+Published: 2026-04-04T07:53:59.963389
 Desc: Of all the days to start a blog, I chose April Fools' Day. It wasn't intentional, maybe more of a reflection of my mindset. When I decide to do something, I shut off my brain and just do it. This was a commitment I made without thinking about the long-term effects. I knew writing was hard, but I did
 
-[DEEP_REFINE] Item 8 [Score=5]:
+[TRANSLATE_ONLY] Item 24 [Score=5]:
+Title: shkspr.mobi: Book Review: Superintelligence - Paths, Dangers, Strategies by Nick Bostrom ★★★★⯪
+URL: https://shkspr.mobi/blog/2026/04/book-review-superintelligence-paths-dangers-strategies-by-nick-bostrom/
+Source: shkspr.mobi
+Published: 2026-04-04T07:54:00.100098
+Desc: When I finally invent time-travel, the first thing I'll do is go back in time and give everyone a copy of this book. Published in 2014, it clearly sets out the likely problems with true Artificial Intelligence (not the LLM crap we have now) and what measures need to be put in place before it is crea
+
+[TRANSLATE_ONLY] Item 25 [Score=5]:
+Title: dynomight.net: LLMs predict my coffee
+URL: https://dynomight.net/coffee/
+Source: dynomight.net
+Published: 2026-04-04T07:53:57.747797
+Desc: Why not benchmark with physical experiments?
+
+[TRANSLATE_ONLY] Item 26 [Score=5]:
+Title: gilesthomas.com: Getting a custom PyTorch LLM onto the Hugging Face Hub (Transformers: AutoModel, pipeline, and Trainer)
+URL: https://www.gilesthomas.com/2026/01/custom-automodelforcausallm-frompretrained-models-on-hugging-face
+Source: gilesthomas.com
+Published: 2026-04-04T07:54:03.085944
+Desc: I spent some time recently getting some models uploaded onto the Hugging Face Hub.  I'd trained a bunch of GPT-2 small sized base models from scratch as part of my LLM from scratch series, and wanted to share them with anyone that was interested.  I managed to get it done, but it was kind of tricky 
+
+[TRANSLATE_ONLY] Item 27 [Score=5]:
 Title: gilesthomas.com: Writing an LLM from scratch, part 32a -- Interventions: training a baseline model
 URL: https://www.gilesthomas.com/2026/02/llm-from-scratch-32a-interventions-baseline-model
 Source: gilesthomas.com
-Published: 2026-04-03T09:46:14.887627
+Published: 2026-04-04T07:54:03.088139
 Desc: I'm rounding out my series of posts on Sebastian Raschka's book "Build a Large Language Model (from Scratch)" by seeing how I could train the best base model I can from scratch on my own hardware. I started by training one in two days on my RTX 3090, and found that while it was a decent little model
 
-[DEEP_REFINE] Item 9 [Score=0]:
-Title: Google releases Gemma 4 open models
-URL: https://deepmind.google/models/gemma/gemma-4/
-Source: Hacker News
-Published: 2026-04-03T00:10:54
-Desc: 
+[TRANSLATE_ONLY] Item 28 [Score=5]:
+Title: gilesthomas.com: Writing an LLM from scratch, part 32b -- Interventions: gradient clipping
+URL: https://www.gilesthomas.com/2026/02/llm-from-scratch-32b-interventions-gradient-clipping
+Source: gilesthomas.com
+Published: 2026-04-04T07:54:03.098684
+Desc: I'm still working on training the best GPT-2 small sized base model that I can with a number of FLOPs roughly equal to two days on my own machine -- my "extra credit" exercise after having worked through Sebastian Raschka's book "Build a Large Language Model (from Scratch)". In the last post I train
 
-[DEEP_REFINE] Item 10 [Score=0]:
-Title: Decisions that eroded trust in Azure – by a former Azure Core engineer
-URL: https://isolveproblems.substack.com/p/how-microsoft-vaporized-a-trillion
-Source: Hacker News
-Published: 2026-04-03T00:00:27
-Desc: 
+[TRANSLATE_ONLY] Item 29 [Score=5]:
+Title: evanhahn.com: Notes from March 2026
+URL: https://evanhahn.com/notes-from-march-2026/
+Source: evanhahn.com
+Published: 2026-04-04T07:53:58.158082
+Desc: March always seems to be my life’s busiest month. Things I wrote and made   “The two kinds of error”: in my mind, software errors are divided into two categories: expected and unexpected errors. I finally wrote up this idea I’ve had for a long time.   “All tests pass” is a short story about a strang
 
-[DEEP_REFINE] Item 11 [Score=0]:
-Title: Tailscale's new macOS home
-URL: https://tailscale.com/blog/macos-notch-escape
-Source: Hacker News
-Published: 2026-04-03T02:22:03
-Desc: 
+[TRANSLATE_ONLY] Item 30 [Score=5]:
+Title: evanhahn.com: All tests pass: a short story
+URL: https://evanhahn.com/all-tests-pass-a-short-story/
+Source: evanhahn.com
+Published: 2026-04-04T07:53:58.159021
+Desc: One night, I wrote a simple tool to pick a random programming language. After shuffling a few times, I landed on Arturo. I decided to try it for fun. What’s Arturo? Best I understand, Arturo is a stack-based programming language. It’s primarily maintained by Yanis Zafirópulos. They published a visio
 
-[DEEP_REFINE] Item 12 [Score=0]:
-Title: Artemis II's toilet is a moon mission milestone
-URL: https://www.scientificamerican.com/article/artemis-iis-toilet-is-a-moon-mission-milestone/
-Source: Hacker News
-Published: 2026-04-02T10:37:12
-Desc: 
+[TRANSLATE_ONLY] Item 31 [Score=5]:
+Title: buttondown.com/hillelwayne: LLMs are bad at vibing specifications
+URL: https://buttondown.com/hillelwayne/archive/llms-are-bad-at-vibing-specifications/
+Source: buttondown.com/hillelwayne
+Published: 2026-04-04T07:53:58.770655
+Desc: No newsletter next week I'll be speaking at InfoQ London. But see below for a book giveaway!  LLMs are bad at vibing specifications About a year ago I wrote AI is a gamechanger for TLA+ users, which argued that AI are a "specification force multiplier". That was written from the perspective an TLA+ 
 
-[DEEP_REFINE] Item 13 [Score=0]:
-Title: Cursor 3
-URL: https://cursor.com/blog/cursor-3
-Source: Hacker News
-Published: 2026-04-03T02:13:41
-Desc: 
+[TRANSLATE_ONLY] Item 32 [Score=5]:
+Title: hugotunius.se: Claude, Teach Me Something
+URL: https://hugotunius.se/2025/10/26/claude-teach-me-something.html
+Source: hugotunius.se
+Published: 2026-04-04T07:53:57.968583
+Desc: I’ve been experimenting with a new Claude workflow as an alternative to doom scrolling. It leverages what LLMs do best: non-determinism and text. I call it “Teach me something”.
 
-[DEEP_REFINE] Item 14 [Score=0]:
-Title: Qwen3.6-Plus: Towards real world agents
-URL: https://qwen.ai/blog?id=qwen3.6
-Source: Hacker News
-Published: 2026-04-02T22:28:52
-Desc: 
+[TRANSLATE_ONLY] Item 33 [Score=5]:
+Title: tomrenner.com: LLMs are a 400-year-long confidence trick
+URL: https://tomrenner.com/posts/400-year-confidence-trick/
+Source: tomrenner.com
+Published: 2026-04-04T07:53:58.428253
+Desc: In 1623 the German Wilhelm Schickard produced the first known designs for a mechanical calculator. Twenty years later Blaise Pascal produced a machine of an improved design, aiming to help with the large amount of tedious arithmetic required in his role as a tax collector. The interest in mechanical
 
-[DEEP_REFINE] Item 15 [Score=0]:
-Title: Good ideas do not need lots of lies in order to gain public acceptance (2008)
-URL: https://blog.danieldavies.com/2004/05/d-squared-digest-one-minute-mba.html
-Source: Hacker News
-Published: 2026-04-03T01:29:03
-Desc: 
+[TRANSLATE_ONLY] Item 34 [Score=5]:
+Title: tomrenner.com: Things that made me think: Cycle time, learning theory, and build chain security
+URL: https://tomrenner.com/posts/ttmmt-3/
+Source: tomrenner.com
+Published: 2026-04-04T07:53:58.428786
+Desc: This series is a place to collect interesting things I’ve seen, read, or heard, along with some brief thoughts (often incomplete and/or inconclusive) that they provoked.   Measuring Cyle Time with Dr. Cat Hicks - The Hanger DX Podcast, Ankit Jain Cycle time is a measure lots of people use, but has n
 
-[TRANSLATE_ONLY] Item 16 [Score=0]:
-Title: Post Mortem: axios NPM supply chain compromise
-URL: https://github.com/axios/axios/issues/10636
-Source: Hacker News
-Published: 2026-04-03T08:00:19
-Desc: 
+[TRANSLATE_ONLY] Item 35 [Score=5]:
+Title: tomrenner.com: Does my toaster love me?
+URL: https://tomrenner.com/posts/does-my-toaster-love-me/
+Source: tomrenner.com
+Published: 2026-04-04T07:53:58.430310
+Desc: I’m starting to think that my toaster might have fallen in love with me. I get that not everyone will think this is possible, but I believe it’s true. It’s always pleased to see me, giving off cheerful sounds when I greet it in the morning by slotting in the bread, and now I’ve told it what I like i
 
-[TRANSLATE_ONLY] Item 17 [Score=0]:
-Title: George Goble has died
-URL: https://www.legacy.com/us/obituaries/wlfi/name/george-goble-obituary?id=61144779
-Source: Hacker News
-Published: 2026-04-03T02:21:08
-Desc: 
+[TRANSLATE_ONLY] Item 36 [Score=5]:
+Title: blog.pixelmelt.dev: The Webs Digital Locks have Never had a Stronger Opponent
+URL: https://blog.pixelmelt.dev/the-webs-digital-locks/
+Source: blog.pixelmelt.dev
+Published: 2026-04-04T07:54:00.125097
+Desc: We are in a renaissance era of reverse engineering. Defenders are going to be on the back foot until we figure out some way to cope with LLM's.
 
-[TRANSLATE_ONLY] Item 18 [Score=0]:
-Title: 不到两个月就要离开北京了，聊聊我的故事，以及为什么…
-URL: https://www.v2ex.com/t/1203134
-Source: V2EX
-Published: 2026-04-03T09:46:10.078114
-Desc: 上几个贴子说到去惠州考察，其实就是在看适不适合定居，现在也决定了，和大家聊聊。  先说下本人情况，94 年，宜昌人（三峡大坝），武汉三本通信专业，毕业即失业。  碰巧当时小米出来没多久，自己也买了小米 1S ，特别喜欢它的 UI ，临近毕业后知后觉有 UI 设计这个岗位，花钱培训 UI 设计（说大学白读了一点不为过），喜欢+有点小天赋？（不知道谁先谁后），班里第一个弄了作品集，就跑到深圳找工作。  在深圳工作了三年（也算是重回广东的原因），19 年机缘巧合来到北京，之后结婚生娃，一直待到现在……  在北京生活快七年了（七年之痒？），一句话概括，北京很好，但是我不配留在这里（也没
+[TRANSLATE_ONLY] Item 37 [Score=5]:
+Title: martinalderson.com: Telnyx, LiteLLM and Axios: the supply chain crisis
+URL: https://martinalderson.com/posts/telnyx-litellm-axios-supply-chain-crisis/?utm_source=rss&utm_medium=rss&utm_campaign=feed
+Source: martinalderson.com
+Published: 2026-04-04T07:53:57.585377
+Desc: A cascading wave of supply chain attacks has hit npm and PyPI in under two weeks. LLMs are making it worse, and current mitigations aren't enough.
 
-[TRANSLATE_ONLY] Item 19 [Score=0]:
-Title: 感觉 ai agent 时代， windows 越来越不行了
-URL: https://www.v2ex.com/t/1203016
-Source: V2EX
-Published: 2026-04-03T09:46:10.078127
-Desc: agent 在 cmd 环境下，运行时候，会出现各种兼容性的报错。每次执行，都需要烧掉额外的 token 来修复兼容性问题。大家是怎么跑的？虚拟机里面执行吗？是 vmware 还是 wsl ？
+[TRANSLATE_ONLY] Item 38 [Score=5]:
+Title: grantslatton.com: LLM Memory
+URL: https://grantslatton.com/llm-memory
+Source: grantslatton.com
+Published: 2026-04-04T07:54:00.411777
+Desc: Some thoughts on implementations
 
-[TRANSLATE_ONLY] Item 20 [Score=0]:
-Title: 很苦恼,对已婚有娃的同学可能有些喜欢怎么办
-URL: https://www.v2ex.com/t/1203165
-Source: V2EX
-Published: 2026-04-03T09:46:10.078129
-Desc: 以前的同学,现在双方都已婚有娃,但偶尔约出来会一起吃饭/看电影/玩电玩城,频率一月一次吧,因为以前很熟.  我看不懂她什么意思,感觉她段位很高,每当我有些越界举动时她也会躲,比如一起走的时候搭她的肩膀她就会走开,应该是排斥的吧.  我现在很苦恼,知道自己不该有这种奇怪的想法,自己也是有家庭的.  而且她的想法我也完全弄不清楚,或许她觉得这都是正常社交?  我需要忏悔
+[TRANSLATE_ONLY] Item 39 [Score=5]:
+Title: anildash.com: Coding agents as the new compilers
+URL: https://anildash.com/2026/02/11/coding-agents-as-the-new-compilers/
+Source: anildash.com
+Published: 2026-04-04T07:54:01.141521
+Desc: In each successive generation of code creation thus far, we’ve abstracted away the prior generation over time. Usually, only a small percentage of coders still work on the lower layers of the stack that used to be the space where everyone was working. I’ve been coding long enough that people were st
 
-[TRANSLATE_ONLY] Item 21 [Score=0]:
-Title: 亲测中转确实坑。。说好的江湖呢？
-URL: https://www.v2ex.com/t/1203033
-Source: V2EX
-Published: 2026-04-03T09:46:10.078131
-Desc: 自己做为互联网老菜鸟，以前做灰产也是盗亦有道啊。。。 最近写代码，想着自己折腾累，干脆买中转吧，别人该赚这个钱。找了两家号称源头卡商，在 V2 天天吹自己是源头的。越用越不对劲。只能自己折腾自己搭一个反代用 做一个对比。同样的项目、同样的环境。我自己建的 new-api https://i.imgur.com/mRivVTc.png  也就是抛开掺假不惨假（我真的很善意的认为 GPT5.4 没必要掺假。）。。扣费先翻倍。然后速度还奇慢，动不动跑个代码 20 分钟过去。。  另外某家说自己买 PLUS ，源头号商，一个 50 块。结果充值链接跟别人卖 15 的是一家。。 兄弟们，
+[TRANSLATE_ONLY] Item 40 [Score=5]:
+Title: anildash.com: How did we end up threatening our kids’ lives with AI?
+URL: https://anildash.com/2026/02/18/threatening-kids-with-AI/
+Source: anildash.com
+Published: 2026-04-04T07:54:01.142653
+Desc: I have to begin by warning you about the content in this piece; while I won’t be dwelling on any specifics, this will necessarily be a broad discussion about some of the most disturbing topics imaginable. I resent that I have to give you that warning, but I’m forced to because of the choices that th
 
-[TRANSLATE_ONLY] Item 22 [Score=0]:
-Title: 怀念那个美好的时代
-URL: https://www.v2ex.com/t/1203053
-Source: V2EX
-Published: 2026-04-03T09:46:10.078132
-Desc: 昨天在 B 站偶然看到一个古法编程的外国小哥直播，在 Vim 里健步如飞。 曾几何时自己也是那样的选手，折腾 Vim ，把 Vim 打造成自己专属的编辑器。编程时可以完全不碰鼠标。  但我怀念不仅仅是这个。以前敲代码是逻辑游戏，还记得之前挑战 MIT6.824 和 CMU15-445.逻辑必须做到严丝合缝，才能通过每一个测试。需要无数次推演代码的逻辑，各种并发、异步、边界的情况。当程序真正通过测试，那种愉悦感真是难以形容。  当然我也只是怀念而已，我知道那个时代再也回不去了。
+[TRANSLATE_ONLY] Item 41 [Score=5]:
+Title: michael.stapelberg.ch: Coding Agent VMs on NixOS with microvm.nix
+URL: https://michael.stapelberg.ch/posts/2026-02-01-coding-agent-microvm-nix/
+Source: michael.stapelberg.ch
+Published: 2026-04-04T07:54:01.583248
+Desc: I have come to appreciate coding agents to be valuable tools for working with computer program code in any capacity, such as learning about any program’s architecture, diagnosing bugs or developing proofs of concept. Depending on the use-case, reviewing each command the agent wants to run can get te
 
-[TRANSLATE_ONLY] Item 23 [Score=0]:
-Title: 问一个问题，如何增肥？
-URL: https://www.v2ex.com/t/1203109
-Source: V2EX
-Published: 2026-04-03T09:46:10.078134
-Desc: ## 太瘦了，想知道如何增肥，坛里有增肥成功的大佬吗？分享一下经验吧
-
-[TRANSLATE_ONLY] Item 24 [Score=0]:
-Title: 避雷 小米 Type-C 充电器快充版 20W 白色
-URL: https://www.v2ex.com/t/1203019
-Source: V2EX
-Published: 2026-04-03T09:46:10.078135
-Desc: 官网商品页面： https://www.mi.com/shop/buy/detail?product_id=12896  先叠个甲，如果你只是用来给手机/平板充电那么是没问题的，也不需要避雷，可以关掉帖子了。  下面描述下我遇到的问题，这款充电器我买很久了，29 块确实便宜，一开始我也一直用来充手机，没什么问题。  然后我有一款 GL.iNet 家的路由器放在公司，之前一直用的 Apple 原装充电器，好像是 iPhone 13 pro 送的，18W 的，过年的时候把路由器带回家了，然后回来的时候估计是不小心把插头弄混了，就把小米的给路由器插上了。  然后，好巧不巧，我想折腾一
-
-[TRANSLATE_ONLY] Item 25 [Score=0]:
-Title: 请问已经有汇丰 one，如何申请卓越或 pulse？
-URL: https://www.v2ex.com/t/1203049
-Source: V2EX
-Published: 2026-04-03T09:46:10.078137
-Desc: 请问已经有汇丰 one ，如何申请卓越或 pulse ？   目前港股有几十 w 的闲置资金，想借此开通一下信用卡，方便后续国内消费。   请教大佬们，该怎么操作？
-
-[TRANSLATE_ONLY] Item 26 [Score=0]:
-Title: Product Hunt: DealForge
-URL: https://www.producthunt.com/products/dealforge
-Source: Product Hunt
-Published: 2026-04-03T09:46:11.180807
-Desc: Analyze real estate deals in seconds             Discussion             |             Link
-
-[TRANSLATE_ONLY] Item 27 [Score=0]:
-Title: Product Hunt: Protocol: Survival
-URL: https://www.producthunt.com/products/protocol-survival
-Source: Product Hunt
-Published: 2026-04-03T09:46:11.180965
-Desc: Know your gaps. Close them. Before it matters.             Discussion             |             Link
-
-[TRANSLATE_ONLY] Item 28 [Score=0]:
-Title: Product Hunt: Gyuni Player
-URL: https://www.producthunt.com/products/gyuni-player
-Source: Product Hunt
-Published: 2026-04-03T09:46:11.181123
-Desc: A more refined video player for Mac             Discussion             |             Link
-
-[TRANSLATE_ONLY] Item 29 [Score=0]:
-Title: Product Hunt: Jetson
-URL: https://www.producthunt.com/products/jetson-3
-Source: Product Hunt
-Published: 2026-04-03T09:46:11.181286
-Desc: Automatically turn support messages into product updates             Discussion             |             Link
-
-[TRANSLATE_ONLY] Item 30 [Score=0]:
-Title: Product Hunt: Flowith Canvas
-URL: https://www.producthunt.com/products/flowith
-Source: Product Hunt
-Published: 2026-04-03T09:46:11.181463
-Desc: A new way to interact with AI beyond traditional chats             Discussion             |             Link
-
-[TRANSLATE_ONLY] Item 31 [Score=0]:
-Title: Product Hunt: KanbanTab
-URL: https://www.producthunt.com/products/kanbantab
-Source: Product Hunt
-Published: 2026-04-03T09:46:11.181704
-Desc: Turn your New Tab into a fast & private Kanban board             Discussion             |             Link
-
-[TRANSLATE_ONLY] Item 32 [Score=0]:
-Title: Product Hunt: Create Mappins
-URL: https://www.producthunt.com/products/create-mappins
-Source: Product Hunt
-Published: 2026-04-03T09:46:11.181861
-Desc: Create custom map pins and embed anywhere             Discussion             |             Link
-
-[TRANSLATE_ONLY] Item 33 [Score=0]:
-Title: Product Hunt: Cushion
-URL: https://www.producthunt.com/products/cushion-5
-Source: Product Hunt
-Published: 2026-04-03T09:46:11.181986
-Desc: Opensource AI note taking app              Discussion             |             Link
-
-[TRANSLATE_ONLY] Item 34 [Score=0]:
-Title: Product Hunt: Raise Your Vibe: Daily Wisdom
-URL: https://www.producthunt.com/products/daily-wisdom-raise-your-vibe
-Source: Product Hunt
-Published: 2026-04-03T09:46:11.182105
-Desc: 5-minute philosophy audio lessons to elevate your spirit             Discussion             |             Link
-
-[TRANSLATE_ONLY] Item 35 [Score=0]:
-Title: Product Hunt: Cosyra
-URL: https://www.producthunt.com/products/cosyra
-Source: Product Hunt
-Published: 2026-04-03T09:46:11.182239
-Desc: Run AI coding agents from your phone             Discussion             |             Link
-
-[TRANSLATE_ONLY] Item 36 [Score=0]:
-Title: Nature Digital Medicine: Integrating large language models for enhanced predictive analytics in healthcare
-URL: https://www.nature.com/articles/s41746-026-02572-y
-Source: Nature Digital Medicine
-Published: 2026-04-03T09:46:08.052308
-Desc: npj Digital Medicine, Published online: 02 April 2026; doi:10.1038/s41746-026-02572-yIntegrating large language models for enhanced predictive analytics in healthcare
-
-[TRANSLATE_ONLY] Item 37 [Score=0]:
-Title: Nature Digital Medicine: Multidimensional evaluation of large language models in radiology report readability
-URL: https://www.nature.com/articles/s41746-026-02589-3
-Source: Nature Digital Medicine
-Published: 2026-04-03T09:46:08.052404
-Desc: npj Digital Medicine, Published online: 01 April 2026; doi:10.1038/s41746-026-02589-3Multidimensional evaluation of large language models in radiology report readability
-
-[TRANSLATE_ONLY] Item 38 [Score=0]:
-Title: Nature Digital Medicine: Evaluating large language models for simplifying non-English medical consent with clinician involvement
-URL: https://www.nature.com/articles/s41746-026-02591-9
-Source: Nature Digital Medicine
-Published: 2026-04-03T09:46:08.052464
-Desc: npj Digital Medicine, Published online: 01 April 2026; doi:10.1038/s41746-026-02591-9Evaluating large language models for simplifying non-English medical consent with clinician involvement
-
-[TRANSLATE_ONLY] Item 39 [Score=0]:
-Title: Nature Digital Medicine: Artificial intelligence assisted colorectal lesion detection in private practices a randomized controlled study
-URL: https://www.nature.com/articles/s41746-026-02576-8
-Source: Nature Digital Medicine
-Published: 2026-04-03T09:46:08.052568
-Desc: npj Digital Medicine, Published online: 01 April 2026; doi:10.1038/s41746-026-02576-8Artificial intelligence assisted colorectal lesion detection in private practices a randomized controlled study
-
-[TRANSLATE_ONLY] Item 40 [Score=0]:
-Title: Science: Bumble bees show a surprising knack for rhythm
-URL: https://www.science.org/content/article/bumble-bees-show-surprising-knack-rhythm
-Source: Science
-Published: 2026-04-03T09:46:11.580394
-Desc: Flexible rhythm perception, once thought to require a big brain, has been shown in humble bumble bees
-
-[TRANSLATE_ONLY] Item 41 [Score=0]:
-Title: Science: How fast is the universe expanding? Cosmic ‘illusions’ may hold answer
-URL: https://www.science.org/content/article/how-fast-universe-expanding-cosmic-illusions-may-hold-answer
-Source: Science
-Published: 2026-04-03T09:46:11.580445
-Desc: Repeated supernovae flashes, warped by gravity, could resolve a cosmological dispute
-
-[TRANSLATE_ONLY] Item 42 [Score=0]:
-Title: Science: China now tops the U.S. in R&D spending by one key measure
-URL: https://www.science.org/content/article/china-now-tops-u-s-r-d-spending-one-key-measure
-Source: Science
-Published: 2026-04-03T09:46:11.580477
-Desc: China reached long expected milestone in 2024
+[TRANSLATE_ONLY] Item 42 [Score=5]:
+Title: mobihealthnews.com: HIMSSCast: Adopting AI with purpose as a health system
+URL: https://www.mobihealthnews.com/podcast/himsscast-adopting-ai-purpose-health-system
+Source: mobihealthnews.com
+Published: 2026-04-04T07:54:02.014835
+Desc: Successful AI adoption in healthcare requires intentional strategy rather than experimentation, according to Dr. Bill Fera, genAI leader for life sciences and healthcare at Deloitte Consulting.
 
 [TRANSLATE_ONLY] Item 43 [Score=0]:
-Title: Science: Trippy tobacco? Plants engineered to make five psychedelics at once
-URL: https://www.science.org/content/article/trippy-tobacco-plants-engineered-make-five-psychedelics-once
-Source: Science
-Published: 2026-04-03T09:46:11.580506
-Desc: Approach could enable production of new medications for depression, anxiety, and post-traumatic stress
+Title: Artemis II crew take “spectacular” image of Earth
+URL: https://www.bbc.com/news/articles/ce8jzr423p9o
+Source: Hacker News
+Published: 2026-04-04T03:35:02
+Desc: 
 
 [TRANSLATE_ONLY] Item 44 [Score=0]:
-Title: Science: Some black holes are ‘forbidden,’ ripples in spacetime reveal
-URL: https://www.science.org/content/article/some-black-holes-are-forbidden-ripples-spacetime-reveal
-Source: Science
-Published: 2026-04-03T09:46:11.580536
-Desc: Analysis of gravitational waves supports theory that some stars explode without leaving behind black holes
+Title: Tell HN: Anthropic no longer allowing Claude Code subscriptions to use OpenClaw
+URL: https://news.ycombinator.com/item?id=47633396
+Source: Hacker News
+Published: 2026-04-04T06:55:24
+Desc: 
 
 [TRANSLATE_ONLY] Item 45 [Score=0]:
-Title: NEJM: CRISPR-Cas12a Gene Editing of HBG1 and HBG2 Promoters to Treat Sickle Cell Disease
-URL: https://www.nejm.org/doi/full/10.1056/NEJMoa2415550?af=R&rss=currentIssue
-Source: NEJM
-Published: 2026-04-03T09:46:10.744345
-Desc: New England Journal of Medicine, Volume 394, Issue 13, Page 1281-1291, April 2, 2026.
+Title: Show HN: TinyOS – A minimalist RTOS for Cortex-M written in C
+URL: https://github.com/cmc-labo/tinyos-rtos
+Source: Hacker News
+Published: 2026-04-04T05:46:26
+Desc: 
 
 [TRANSLATE_ONLY] Item 46 [Score=0]:
-Title: NEJM: CRISPR-Cas12a Gene Editing of HBG1 and HBG2 Promoters to Treat β-Thalassemia
-URL: https://www.nejm.org/doi/full/10.1056/NEJMoa2501277?af=R&rss=currentIssue
-Source: NEJM
-Published: 2026-04-03T09:46:10.744411
-Desc: New England Journal of Medicine, Volume 394, Issue 13, Page 1292-1301, April 2, 2026.
+Title: iNaturalist
+URL: https://www.inaturalist.org/
+Source: Hacker News
+Published: 2026-04-04T01:22:20
+Desc: 
 
 [TRANSLATE_ONLY] Item 47 [Score=0]:
-Title: NEJM: Discontinuation of Beta-Blocker Therapy after Myocardial Infarction
-URL: https://www.nejm.org/doi/full/10.1056/NEJMoa2601005?af=R&rss=currentIssue
-Source: NEJM
-Published: 2026-04-03T09:46:10.744456
-Desc: New England Journal of Medicine, Volume 394, Issue 13, Page 1302-1312, April 2, 2026.
+Title: What changes when you turn a Linux box into a router
+URL: https://patrickmccanna.net/7-configuration-changes-that-turn-a-multi-homed-host-into-a-switch-router/
+Source: Hacker News
+Published: 2026-03-31T21:13:20
+Desc: 
 
 [TRANSLATE_ONLY] Item 48 [Score=0]:
-Title: NEJM: Perioperative Enfortumab Vedotin and Pembrolizumab in Bladder Cancer
-URL: https://www.nejm.org/doi/full/10.1056/NEJMoa2511674?af=R&rss=currentIssue
-Source: NEJM
-Published: 2026-04-03T09:46:10.744495
-Desc: New England Journal of Medicine, Volume 394, Issue 13, Page 1257-1269, April 2, 2026.
+Title: Fake Fans
+URL: https://www.wordsfromeliza.com/p/fake-fans
+Source: Hacker News
+Published: 2026-04-04T06:26:38
+Desc: 
 
 [TRANSLATE_ONLY] Item 49 [Score=0]:
-Title: NEJM: Left Atrial Appendage Closure or Medical Therapy in Atrial Fibrillation
-URL: https://www.nejm.org/doi/full/10.1056/NEJMoa2513310?af=R&rss=currentIssue
-Source: NEJM
-Published: 2026-04-03T09:46:10.744534
-Desc: New England Journal of Medicine, Volume 394, Issue 13, Page 1270-1280, April 2, 2026.
+Title: Show HN: I built a frontpage for personal blogs
+URL: https://text.blogosphere.app/
+Source: Hacker News
+Published: 2026-04-03T20:33:45
+Desc: 
 
 [TRANSLATE_ONLY] Item 50 [Score=0]:
-Title: jeffgeerling.com: DRAM pricing is killing the hobbyist SBC market
-URL: https://www.jeffgeerling.com/blog/2026/dram-pricing-is-killing-the-hobbyist-sbc-market/
-Source: jeffgeerling.com
-Published: 2026-04-03T09:46:10.127891
-Desc: Today Raspberry Pi announced more price increases for all Pis with LPDDR4 RAM, alongside a 'right-sized' 3GB RAM Pi 4 for $83.75. The price increases bring the 16GB Pi 5 up to $299.99. Despite today's date, this is not a joke. I published a video going over the state of the hobbyist 'high end SBC' m
+Title: The house is a work of art: Frank Lloyd Wright
+URL: https://aeon.co/essays/frank-lloyd-wright-as-a-mirror-of-the-american-condition
+Source: Hacker News
+Published: 2026-04-04T06:22:18
+Desc: 

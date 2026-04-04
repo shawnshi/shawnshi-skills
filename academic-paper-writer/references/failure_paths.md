@@ -1,6 +1,6 @@
 # Failure Paths — Academic Paper Writing Failure Path Map
 
-This document records the failure scenarios that the academic-paper-writer skill may encounter at each stage, their trigger conditions, and handling strategies. All agents should refer to this guide when they detect a failure scenario.
+This document records the failure scenarios that the academic-paper skill may encounter at each stage, their trigger conditions, and handling strategies. All agents should refer to this guide when they detect a failure scenario.
 
 ---
 
@@ -8,7 +8,7 @@ This document records the failure scenarios that the academic-paper-writer skill
 
 | # | Failure Scenario | Trigger Condition | Severity | Handling Strategy |
 |---|---------|---------|--------|---------|
-| F1 | Insufficient research foundation | Plan mode Step 0 finds no RQ / no data | High | Recommend running `academic-deep-research` first |
+| F1 | Insufficient research foundation | Plan mode Step 0 finds no RQ / no data | High | Recommend running `deep-research` first |
 | F2 | Wrong paper structure selected | structure_architect finds RQ-structure mismatch | Medium | Return to Phase 2, suggest alternative structures |
 | F3 | Severely over word count | Draft exceeds target word count by 30% or more | Medium | Identify sections to cut, suggest condensing |
 | F4 | Severely under word count | Draft is 30% or more below target word count | Medium | Identify sections to expand, suggest additions |
@@ -16,7 +16,7 @@ This document records the failure scenarios that the academic-paper-writer skill
 | F6 | Poor bilingual abstract quality | Chinese and English abstracts have inconsistent logic | Medium | Re-run abstract_bilingual |
 | F7 | Peer review rejection | peer_reviewer issues a Reject verdict | High | Analyze rejection reasons, recommend major revision or restructuring |
 | F8 | Plan mode does not converge | > 15 rounds of dialogue without completing all chapters | Medium | Suggest switching to outline-only mode |
-| F9 | Incomplete handoff materials | From academic-deep-research but missing key materials | Low | List missing items, suggest supplementing or re-running |
+| F9 | Incomplete handoff materials | From deep-research but missing key materials | Low | List missing items, suggest supplementing or re-running |
 | F10 | User abandons midway | Explicitly states unwillingness to continue | Low | Save completed Chapter Plan |
 | F11 | Desk-reject | Journal editor rejects without sending to reviewers | High | Classify rejection cause, select recovery strategy |
 | F12 | Conference-to-journal conversion failure | Conference paper expansion to journal article rejected | Medium | Ensure 30-50% new content + proper citation |
@@ -39,8 +39,8 @@ This document records the failure scenarios that the academic-paper-writer skill
 ```
 1. Affirm the user's research interest
 2. Specifically explain what is currently missing
-3. Recommend using academic-deep-research (socratic mode)
-4. Explain that they can come back to continue after academic-deep-research is completed
+3. Recommend using deep-research (socratic mode)
+4. Explain that they can come back to continue after deep-research is completed
 5. If the user insists on continuing, switch to outline-only mode (low risk)
 ```
 
@@ -49,7 +49,7 @@ This document records the failure scenarios that the academic-paper-writer skill
 Your research topic is very interesting, but I notice that a clear research question
 and literature foundation are still missing.
 
-I recommend you first use the academic-deep-research tool to:
+I recommend you first use the deep-research tool to:
 1. Systematically search and organize relevant literature
 2. Focus on a researchable question
 3. Gain a preliminary understanding of possible research methods
@@ -214,7 +214,7 @@ more efficiently.
 
 ### F9: Incomplete Handoff Materials
 
-**Trigger Timing**: intake_agent detects academic-deep-research materials but they are incomplete
+**Trigger Timing**: intake_agent detects deep-research materials but they are incomplete
 
 **Detection Indicators**:
 - Has RQ but missing Annotated Bibliography
@@ -229,8 +229,8 @@ more efficiently.
    b. Missing Synthesis → Can continue, Phase 3 handles it additionally
    c. Missing Methodology Blueprint → Need Phase 0 supplementary questions
 3. Recommend:
-   a. Return to academic-deep-research to complete the missing parts
-   b. Or supplement within academic-paper-writer (add Phase 0 interview questions)
+   a. Return to deep-research to complete the missing parts
+   b. Or supplement within academic-paper (add Phase 0 interview questions)
 ```
 
 ---
@@ -268,7 +268,7 @@ more efficiently.
 - [ ] Citation check
 - [ ] Peer review
 
-**How to Resume**: Bring this record and restart academic-paper-writer; can continue from Phase {N}
+**How to Resume**: Bring this record and restart academic-paper; can continue from Phase {N}
 ```
 
 ---
@@ -276,7 +276,7 @@ more efficiently.
 ## Relationships Between Failure Paths
 
 ```
-F1 (Insufficient research foundation) → Recommend academic-deep-research → May encounter F9 (incomplete materials) upon return
+F1 (Insufficient research foundation) → Recommend deep-research → May encounter F9 (incomplete materials) upon return
 F2 (Wrong structure) → Return to Phase 2 → May cascading affect F3/F4 (word count issues)
 F5 (All citations wrong) → May be a downstream effect of F2 (wrong format selected)
 F7 (Rejection) → Analysis may require returning to F2 (structure) or F1 (foundation)

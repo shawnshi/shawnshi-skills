@@ -19,7 +19,7 @@ Please tell me:
 3. Have you conducted a systematic literature search?
 
 **User**:
-I previously ran a round with academic-deep-research. I obtained an Annotated Bibliography (about 30 articles), a Synthesis Report, and a set of INSIGHT Collections. My research question is roughly: "How does blended learning affect the academic performance of university students in Taiwan?" But I think it might be too broad.
+I previously ran a round with deep-research. I obtained an Annotated Bibliography (about 30 articles), a Synthesis Report, and a set of INSIGHT Collections. My research question is roughly: "How does blended learning affect the academic performance of university students in Taiwan?" But I think it might be too broad.
 
 **Socratic Mentor**:
 Good, you already have a solid research foundation. I see you have three important materials:

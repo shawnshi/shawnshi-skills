@@ -92,6 +92,7 @@ gemini skills install https://github.com/shawnshi/shawnshi-skills.git --path hit
 | **[image-nano-gen](image-nano-gen/)**                         | **高质量图像生成引擎 (Imagen 3)**。利用 Gemini 引擎执行 4K 级图像锻造，支持高认知 Prompt 增强. |
 | **[image-promp-gen](image-promp-gen/)**                       | **大师级海报与封面提示词引擎**。基于 33+ 位传奇设计师风格，支持多平台比例适配与逻辑隐喻构建. |
 | **[presentation-architect](presentation-architect/)**         | **战略级 PPT 架构师**。交付具备原生逻辑的 PPT 资产，拒绝平庸模板.         |
+| **[slide-blocks](slide-blocks/)**                             | **PPT 智能组装助手**。从历史素材库中挑选幻灯片并自动拼装为风格统一的完整演示文稿. |
 | **[smart-doc-latex](smart-doc-latex/)**                       | **自动化出版 LaTeX 引擎**。提供 IEEE、CV 等专业模板，交付工业级排版结果.  |
 
 ### 💼 商业洞察与投资顾问 (Marketing & Finance)

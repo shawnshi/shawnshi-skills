@@ -11,7 +11,7 @@ output: Complete reports from three review agents + revision recommendation summ
 
 # Review Mode Example: Policy Recommendation Summary Review
 
-This example demonstrates the complete workflow of `review` mode. The user provides a previously written policy recommendation summary, and academic-deep-research activates three review agents for multi-dimensional review.
+This example demonstrates the complete workflow of `review` mode. The user provides a previously written policy recommendation summary, and deep-research activates three review agents for multi-dimensional review.
 
 ---
 
