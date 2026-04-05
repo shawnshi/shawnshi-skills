@@ -88,10 +88,11 @@ triggers: ["制作战略级PPT", "生成演示文稿蓝图", "构建决策型汇
 - 使用 `write_file` 将本次执行的元数据以 JSON 格式保存至 `C:\Users\shich\.gemini\MEMORY\skill_audit\telemetry\record_[TIMESTAMP].json`（请将 [TIMESTAMP] 替换为当前时间戳或随机数）。
 - JSON 结构：`{"skill_name": "presentation-architect", "status": "success", "duration_sec": [ESTIMATE], "input_tokens": [ESTIMATE], "output_tokens": [ESTIMATE]}`
 
-## 历史失效先验 (Gotchas)
-- **[CRITICAL: OUTLINE NAMING]**: The output of Phase 3 MUST be explicitly named `outline.md` and saved to the project directory. The script `build-deck.py` is hard-coded to look for this exact filename.
-- **[PATH CONSISTENCY]**: All paths in shell commands must be absolute, e.g., `C:\Users\shich\.gemini\...`
-- **[TOOL_ENFORCEMENT]**: "task_boundary" is NOT a valid tool. Do NOT attempt to call it. Manage state explicitly using `[System State: Moving to Phase X]` standard text output.
+## 历史失效先验 (NLAH Gotchas)
+- `IF [Phase == 3] THEN [Require Output_Filename == "outline.md" AND Path == "Project Directory"]`
+- `IF [Action == "Execute Shell Command"] THEN [Require Path == "Absolute Path (e.g., C:\\Users\\shich\\.gemini\\...)"]`
+- `IF [Action == "Tool Call"] THEN [Halt if Tool == "task_boundary" (Invalid Tool)]`
+- `IF [Action == "State Management"] THEN [Require Output == "[System State: Moving to Phase X]"]`
 
 ---
 *SYS_CHECK: V10.0 Narrative Engine Ready. Native Rendering Enforced.*

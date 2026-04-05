@@ -1,8 +1,8 @@
 import sys; from pathlib import Path; sys.path.append(str(Path(__file__).parent.parent.parent / 'scripts' / 'lib'));
 """
 <!-- Intelligence Hub: The Forge V5.0 (Jinja2 Templating) -->
-@Input: tmp/latest_scan.json, MEMORY/news/intelligence_current_refined.json, references/strategic_focus.json
-@Output: MEMORY/news/intelligence_[DATE]_briefing.md
+@Input: tmp/latest_scan.json, MEMORY/raw/news/intelligence_current_refined.json, references/strategic_focus.json
+@Output: MEMORY/raw/news/intelligence_[DATE]_briefing.md
 @Pos: Phase 4 (Briefing Assembly)
 """
 import json

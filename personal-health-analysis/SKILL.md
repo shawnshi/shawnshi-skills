@@ -100,5 +100,6 @@ python scripts/garmin_intelligence.py flu_risk --days 7
 - 使用 `write_file` 将本次执行的元数据以 JSON 格式保存至 `C:\Users\shich\.gemini\MEMORY\skill_audit\telemetry\record_[TIMESTAMP].json`（请将 [TIMESTAMP] 替换为当前时间戳或随机数）。
 - JSON 结构：`{"skill_name": "personal-health-analysis", "status": "success", "duration_sec": [ESTIMATE], "input_tokens": [ESTIMATE], "output_tokens": [ESTIMATE]}`
 
-## 历史失效先验 (Gotchas)
-- **[EXPLICIT_SYNC_PATH]**: Win32 环境下 `garmindb_cli.py` 不在全局 PATH 中，且单纯 `--latest` 无效。必须强制执行全量增量指令：`python C:\Users\shich\AppData\Local\Programs\Python\Python313\Scripts\garmindb_cli.py --download --import --analyze --all --latest`。
+## 历史失效先验 (NLAH Gotchas)
+- `IF [Action == "Sync Garmin Data"] THEN [Require Command == "python C:\\Users\\shich\\AppData\\Local\\Programs\\Python\\Python313\\Scripts\\garmindb_cli.py --download --import --analyze --all --latest"]`
+- `[MANDATORY_PHASE_0]`: 当用户要求健康审计或发现数据不完整时，必须先执行 Phase 0（即上述 Sync Garmin Data 命令），严禁直接跳过数据同步读取过期的本地库进行分析。这是历史失效教训（在 4/5 号数据断层时跳过同步导致误判绿灯）。

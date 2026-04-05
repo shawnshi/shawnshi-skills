@@ -15,7 +15,8 @@ This skill handles high-frequency, lightweight daily status recording and atomic
 ## 1. 执行协议 (Execution Protocol)
 
 ### Phase 0: Reconnaissance (证据先行)
-- **自动化事实重建**: 在组装日志前，必须先自动执行 `gws calendar events list` 获取日程数据，并运行 `garmin` 查询生理数据（如有相关接口）。严禁仅凭用户输入盲目生成日志。
+- **自动化事实重建**: 在组装日志前，必须先自动执行 `gws calendar events list` 获取日程数据。
+- **前置数据硬锁**: 能量数据**绝对禁止**主 Agent 自己编造。你必须调用 `personal-health-analysis` 的专用查询脚本（如：`python ~/.gemini/skills/personal-health-analysis/scripts/garmin_intelligence.py insight_cn --days 3`）提取真实的系统态势与睡眠负债。若脚本执行失败，该字段强制填入 `[DATA_UNAVAILABLE]`，严禁进行语义推理。
 
 ### Phase 1: Structure Alignment (结构对齐)
 - **Schema 绝对防御**: 严格按照以下模板结构组装内容，绝对禁止合并标题：
@@ -38,7 +39,10 @@ This skill handles high-frequency, lightweight daily status recording and atomic
 ...
 
 ## 能量管理 (Biological-Cognitive Correlation)
-...
+- **系统态势**: [必须提取自 Garmin 简报，如 🟡 黄灯 (Fatigue)]
+- **执行带宽**: [提取分数，如 68.9/100]
+- **睡眠负债**: [提取债务小时数，如 1.9h]
+- **摩擦解构**: [基于上述真实数据进行的简短定性分析]
 
 ## 标签
 #tag
@@ -53,7 +57,7 @@ This skill handles high-frequency, lightweight daily status recording and atomic
 
 ### 2.1 Mentat Insight Archival (内观日记同步)
 - **触发条件**: 当前记录属于 Mentat Insight 深度日志。
-- **动作**: 物理归档至 `~/.gemini/memory/privacy/Diary/mentat_audit/[YYYY-QX]_Audit.md`。必须使用 `diary_ops.py` 执行季度级 `prepend`。
+- **动作**: 物理归档至 `~/.gemini/memory/raw/privacy/Diary/mentat_audit/[YYYY-QX]_Audit.md`。必须使用 `diary_ops.py` 执行季度级 `prepend`。
 
 ### 2.2 Strategic Sync (全局记忆同步)
 - **触发条件**: 接收到来自 `personal-cognitive-auditor` 且 `cognitive_depth_score >= 4` 的产出。
@@ -63,7 +67,8 @@ This skill handles high-frequency, lightweight daily status recording and atomic
 - 任务结束时，使用 `write_file` 将元数据以 JSON 格式保存至 `~/.gemini/MEMORY/skill_audit/telemetry/record_[TIMESTAMP].json` (替换为当前时间戳)。
 - JSON 结构：`{"skill_name": "personal-diary-writer", "status": "success", "duration_sec": 0, "input_tokens": 0, "output_tokens": 0}`
 
-## 4. 历史失效先验 (Gotchas)
-- **[ARCHIVE_PREPEND]**: 必须通过 `diary_ops.py` 执行，严禁创建碎片文件。
-- **[SYNC_AUDIT_FORCE]**: 若会话中涉及 `memory.md` 修改或工具链报错（Error Count >= 2），必须强制同步激活 `mentat-insight-diary`。
-- **[CONTENT_FILE_ONLY]**: 任何多行追加必须使用 `--content_file` 参数。
+## 4. 历史失效先验 (NLAH Gotchas)
+- `IF [Action == "Archive"] THEN [Require run(diary_ops.py)] AND [Halt if creating fragment files]`
+- `IF [Condition == "Modified memory.md" OR "Tool_Error_Count >= 2"] THEN [Execute activate_skill("mentat-insight-diary")]`
+- `IF [Action == "Append Multiple Lines"] THEN [Require Parameter == "--content_file"]`
+- `IF [Field == "Energy Management"] THEN [Halt if source != "garmin_intelligence.py"] AND [Require Output == "[DATA_UNAVAILABLE]" if data missing]`

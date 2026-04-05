@@ -1,6 +1,6 @@
 # JSON Schema for personal-monthly-insights (V8.1)
 
-The agent MUST save its reasoning results to `~/.gemini/MEMORY/personal-insights/agent_audit_result.json` using this exact JSON skeleton.
+The agent MUST save its reasoning results to `~/.gemini/MEMORY/raw/personal-insights/agent_audit_result.json` using this exact JSON skeleton.
 
 ```json
 {

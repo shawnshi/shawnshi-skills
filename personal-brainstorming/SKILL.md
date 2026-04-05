@@ -59,10 +59,10 @@ description: "You MUST use this before any creative work - creating features, bu
 
 ---
 
-## 3. 历史失效先验 (Gotchas)
-- **[GATE_ENFORCEMENT]**: 严禁由 brainstorming 直接跳入 coding，必须经过 writing-plans。
-- **[DECOMPOSITION]**: 遇到包含“和/且/以及”的多重任务，优先执行 Phase 2 的分解逻辑。
-- **[ASCII_MANDATE]**: 架构部分严禁纯文本描述。
+## 3. 历史失效先验 (NLAH Gotchas)
+- `IF [Phase == 6] THEN [Halt if Action == "Write Code"] AND [Require transition to "writing-plans" skill]`
+- `IF [Task contains ("和" OR "且" OR "以及")] THEN [Require execute("Phase 2 Decomposition")]`
+- `IF [Topic == "Architecture Design"] THEN [Halt if Format == "Plain Text"] AND [Require Format IN ("ASCII", "Mermaid")]`
 
 ---
 *Updated to V5.0 | System State: Locked*

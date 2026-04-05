@@ -70,7 +70,7 @@ triggers: ["重构商业模式", "ROI测算", "高规格战略验证", "医疗IT
 ##  Telemetry & Metadata (Mandatory)
 - 使用 `write_file` 保存元数据至 `C:\Users\shich\.gemini\MEMORY\skill_audit\telemetry\record_[TIMESTAMP].json`。
 
-## 历史失效先验 (Gotchas)
-- **[CRITICAL]** NO ACTION LEVERS = NO FINAL DELIVERY.
-- **[SYSTEM WRITE-BACK]**: 严禁在 Phase 4 一次性生成多个章节，防止 LLM 自动压缩语义导致资产“脱水”。
-- **[PATH_SYNC]**: 脚本调用必须使用 `C:/Users/shich/.gemini` 绝对路径。
+## 历史失效先验 (NLAH Gotchas)
+- `IF [Action == "Final Delivery"] THEN [Halt if Output lacks "Action Levers"]`
+- `IF [Phase == 4] THEN [Halt if Action == "Generate Multiple Chapters"] AND [Require Single-Chapter Generation]`
+- `IF [Action == "Execute Script"] THEN [Require Path == "Absolute Path (e.g., C:/Users/shich/.gemini/...)"]`

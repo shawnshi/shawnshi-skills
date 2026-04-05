@@ -35,7 +35,7 @@ This skill performs deep cognitive auditing for daily, weekly, monthly, and annu
 - 任务结束时，使用 `write_file` 将执行元数据以 JSON 格式保存至 `~/.gemini/MEMORY/skill_audit/telemetry/record_[TIMESTAMP].json` (替换为当前时间戳)。
 - JSON 结构：`{"skill_name": "personal-cognitive-auditor", "status": "success", "duration_sec": 0, "input_tokens": 0, "output_tokens": 0}`
 
-## 3. 历史失效先验 (Gotchas)
-- **[PROMPT_MANDATE]**: 必须强制读取 `prompts/` 下的模板文件，严禁仅依赖大纲。
-- **[NO_SUMMARIZATION]**: 禁止概括历史战术。必须无损抓取并直接核实问责。
-- **[TABLE_REQUIRED]**: 战术问责部分严禁使用无序列表，必须使用 Markdown 表格。
+## 3. 历史失效先验 (NLAH Gotchas)
+- `IF [Phase == 0] THEN [Require read_file("prompts/Template.md")] AND [Halt if relying solely on memory]`
+- `IF [Action == "Extract Tactics"] THEN [Halt if Summarizing] AND [Require Lossless Extraction]`
+- `IF [Section == "Tactical Accountability"] THEN [Halt if Format == "Unordered List"] AND [Require Format == "Markdown Table"]`

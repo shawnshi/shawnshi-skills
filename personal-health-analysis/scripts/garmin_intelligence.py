@@ -55,7 +55,7 @@ def fetch_local_summary(days):
             latest_date_str = valid_dates.max()
             try:
                 latest_date = datetime.strptime(latest_date_str, '%Y-%m-%d')
-                if (datetime.now() - latest_date).days > 2:
+                if (datetime.now() - latest_date).days >= 1:
                     raise DataStaleError(f"Local data is stale. Latest valid entry is {latest_date_str}.")
             except ValueError:
                 pass
@@ -613,7 +613,7 @@ def generate_chinese_insight(summary_data):
     for act in activities_data:
         duration_s = act.get("duration") or act.get("duration_seconds") or 0
         total_intensity_min += (duration_s / 60)
-        t = (act.get("activity_type") or "").lower()
+        t = str(act.get("activity_type") or "").lower()
         if "run" in t or "hiit" in t or "elliptical" in t or "training" in t:
             high_intensity_min += (duration_s / 60)
 

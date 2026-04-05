@@ -158,7 +158,7 @@ edit("输出真实路径/xxx.pptx", [
 3. **闭环组装 (Hands-on Assembly)**：如果找到了匹配素材，将 `src` / `page` 装入 json。如果**未找到匹配素材（回退降级）**，使用 `{"template_page": 3, "replace_title": "预期标题"}`（占位），并通过 `ask_user` 或者在最终交付清单中明示用户该处缺失原生素材骨架，让用户后期手绘。最后调用 `run_command` 运行 `runner.py`。
 ---
 
-## 历史失效先验 (Gotchas)
-- 🚫 **严禁在 PowerShell 中使用 `&&` 连接符**。
-- 🚫 **严禁在组装时生成 `.py` 脚本并修改全局变量**。必须且只能使用 `write_file` 生成 `JSON` 计划文件，驱动 `engine/runner.py`。
-- 🚫 **严禁在未确认“深色/浅色”模板且未通过 `config.yaml` 明确输出与素材绝对物理路径时盲目组装**，极易导致幻觉失效与色系冲突反工。
+## 历史失效先验 (NLAH Gotchas)
+- `IF [Action == "Execute PowerShell"] THEN [Halt if Command contains "&&"]`
+- `IF [Mode == "Assembly"] THEN [Halt if Generating ".py" script] AND [Require write_file("JSON plan") -> Execute "engine/runner.py"]`
+- `IF [Action == "Assembly"] THEN [Require confirmed("Template Color Theme") AND Require absolute_paths(config.yaml)] ELSE [Halt Execution]`

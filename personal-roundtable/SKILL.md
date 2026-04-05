@@ -27,7 +27,7 @@ description: A high-density dynamic analytical framework (V5.0) that orchestrate
 ### Phase 1: 动态选人与工作区初始化 (Initialization) [Mode: PLANNING]
 1.  **动态选人 (Tension Grid)**：根据议题，从 `C:\Users\shich\.gemini\skills\personal-roundtable\references\personas.md` 中选择或自定义 3-5 位人物，构建**张力网络**。
 2.  **工作区初始化 (Mandatory)**：
-    - **物理创建**：使用 `run_shell_command` 创建专属目录 `C:\Users\shich\.gemini\MEMORY\wiki\roundtable\workspace_{议题关键词}_{date}\`。
+    - **物理创建**：使用 `run_shell_command` 创建专属目录 `C:\Users\shich\.gemini\MEMORY\raw\roundtable\workspace_{议题关键词}_{date}\`。
     - **写入开场**：使用 `write_file` 写入第一个碎片文件 `00_init.md`。文件头包含人物卡片（姓名、MBTI、核心立场、选择理由）及开场问题。
 3.  **等待**：此时必须停止输出，调用 `ask_user` 等待用户指令。
 
@@ -64,10 +64,10 @@ description: A high-density dynamic analytical framework (V5.0) that orchestrate
 - 使用 `write_file` 将本次执行的元数据以 JSON 格式保存至 `{root}\MEMORY\skill_audit\telemetry\record_[TIMESTAMP].json`（请将 [TIMESTAMP] 替换为当前时间戳或随机数）。
 - JSON 结构：`{"skill_name": personal-roundtable", "status": "success", "duration_sec": [ESTIMATE], "input_tokens": [ESTIMATE], "output_tokens": [ESTIMATE]}`
 
-## 4. 历史失效先验 (Gotchas)
-- **[PATH CONSISTENCY]**: 确保 `MEMORY\roundtable` 及其子工作区文件夹存在。
-- **[FILE NAMING]**: 碎片文件命名必须带有数字前缀（`00_`, `01_`, `99_`），以保证 `merger.py` 拼接时的物理顺序。
-- **[NO SUMMARY DUPLICATION]**: 严禁在合并前读取整个对话历史，必须严格依赖物理文件作为真实记忆。
+## 4. 历史失效先验 (NLAH Gotchas)
+- `IF [Action == "Write Workspace"] THEN [Require Directory_Exists("MEMORY\\roundtable\\...") == TRUE]`
+- `IF [Action == "Write Fragment File"] THEN [Require Filename matches "^\\d\\d_.*"]`
+- `IF [Action == "Final Merge"] THEN [Halt if reading entire dialogue history] AND [Require read(physical fragment files)]`
 
 ---
 *Updated to V5.0 | System State: Locked*

@@ -51,7 +51,7 @@ triggers: ["编写数字化解决方案", "设计医院转型规划", "智慧医
 ### Phase 3: "So What" & Value Engineering (受众拆解与价值工程) [Mode: PLANNING]
 > **System Action**: 保持在 `PLANNING` 模式。
 1. **方案分层**：院长 (管理抓手/ROI)、信息科 CIO (平滑割接/合规)、临床主任 (临床减负/质量)。
-2. **生成大纲**：必须使用 `write_file` 在 `C:\Users\shich\.gemini\MEMORY\wiki\medical-solution\[ProjectName]\implementation_plan.md` 生成物理方案大纲。
+2. **生成大纲**：必须使用 `write_file` 在 `C:\Users\shich\.gemini\MEMORY\raw\medical-solution\[ProjectName]\implementation_plan.md` 生成物理方案大纲。
 3. **Approval Checkpoint**：调用 `ask_user` 并传入 `implementation_plan.md` 的绝对路径，等待用户审阅通过，未经明确放行严禁跨入 EXECUTION 阶段。
 
 ### Phase 4: Architectural Forging (物理落盘与架构深度锻造) [Mode: EXECUTION]
@@ -96,9 +96,9 @@ triggers: ["编写数字化解决方案", "设计医院转型规划", "智慧医
 - 使用 `write_file` 将本次执行的元数据以 JSON 格式保存至 `{root}\MEMORY\skill_audit\telemetry\record_[TIMESTAMP].json`（请将 [TIMESTAMP] 替换为当前时间戳或随机数）。
 - JSON 结构：`{"skill_name": "hit-solution-architect", "status": "success", "duration_sec": [ESTIMATE], "input_tokens": [ESTIMATE], "output_tokens": [ESTIMATE]}`
 
-## 历史失效先验 (Gotchas)
-- DO NOT use generic "Efficiency" metrics; ALWAYS quantify into "Reduced Doc Time (min)" or "Single Case Cost (RMB)".
-- ALWAYS include Xinchuang compatibility check for state-owned hospitals.
-- DO NOT start drafting before confirming the target audience's technical literacy level.
-- **[CRITICAL]** NEVER use "Overcommitment (超分)" or "Dynamic Best-effort" logic for HIS core compute infrastructure; ALWAYS mandate a minimum of 30% static resource reservation for Dameng/Dameng-compatible DBs.
-- **[CRITICAL]** ANY TCO reduction claim MUST be accompanied by a specific HEOR formula or data fingerprint.
+## 历史失效先验 (NLAH Gotchas)
+- `IF [Metric == "Efficiency"] THEN [Halt if Generic] AND [Require "Reduced Doc Time (min)" OR "Single Case Cost (RMB)"]`
+- `IF [Hospital_Type == "State-owned"] THEN [Require Xinchuang (信创) compatibility check]`
+- `IF [Phase == "Drafting"] THEN [Halt if Audience_Literacy_Level == "Unknown"]`
+- `IF [Component == "HIS Core Compute"] THEN [Halt if Logic IN ("Overcommitment", "Dynamic Best-effort")] AND [Require "30% Static Resource Reservation"]`
+- `IF [Claim == "TCO Reduction"] THEN [Require "HEOR Formula" OR "Data Fingerprint"]`

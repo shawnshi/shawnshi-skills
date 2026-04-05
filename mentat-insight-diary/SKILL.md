@@ -28,7 +28,7 @@ This skill performs a system-centric, first-person deep reflection on cognitive 
 **[职责解耦]**: 本技能不执行底层的 I/O 写入，而是将成品负载交接给 `personal-diary-writer` 技能。
 1. **执行交接**: 明确调用 `personal-diary-writer` 技能。
 2. **发送指令**: 向其发送以下交接包：
-   - **目标路径**: `~/.gemini/memory/privacy/Diary/mentat_audit/[YYYY-QX]_Audit.md` (按季度 Q1-Q4 自动确定)。
+   - **目标路径**: `~/.gemini/memory/raw/privacy/Diary/mentat_audit/[YYYY-QX]_Audit.md` (按季度 Q1-Q4 自动确定)。
    - **操作指令**: “请使用 `diary_ops.py` 执行季度级 `prepend` 操作，将以下日志追加到文件中。”
    - **Payload**: 本次生成的 OODA 审计报告全文。
 

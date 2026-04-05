@@ -21,7 +21,7 @@ triggers:["读论文", "拆解论文", "溯源分析", "paper river", "分析这
 - 时间戳格式：`YYYYMMDDTHHMMSS` (如 `20260401T103000`)
 - 可读时间格式：`YYYY-MM-DD Day HH:MM` (如 `2026-04-01 Wed 10:30`)
 - 文件名规范：`paper-{简短标题}--{YYYYMMDDTHHMMSS}.md`
-- 输出物理路径：强制使用 `write_file` 写入 `C:\Users\shich\.gemini\MEMORY\wiki\Huggingface-Daily-Papers\`
+- 输出物理路径：强制使用 `write_file` 写入 `C:\Users\shich\.gemini\MEMORY\raw\Huggingface-Daily-Papers\`
 
 ## 2. 红线 (Mandatory Check)
 
@@ -81,8 +81,8 @@ triggers:["读论文", "拆解论文", "溯源分析", "paper river", "分析这
 ## 5. Telemetry & Metadata (Mandatory)
 使用 `write_file` 将本次执行的元数据以 JSON 格式保存至 `C:\Users\shich\.gemini\MEMORY\skill_audit\telemetry\record_[TIMESTAMP].json`。JSON 结构：`{"skill_name": "academic-paper-reader", "status": "success", "duration_sec": [ESTIMATE], "input_tokens": [ESTIMATE], "output_tokens": [ESTIMATE]}`
 
-## 6. 历史失效先验 (Gotchas)
-- [此处预留用于记录重复性失败的禁令，实现系统的对抗性进化]
-- **[CRITICAL]** 严禁无差别全量通读 PDF。必须强制优先执行基于 `start_line`/`end_line` 或抽取器的 Abstract/Conclusion 获取，仅在遇到关键逻辑断层时，实施局部的文本检索拉取。
-- **[CRITICAL]** DO NOT generate invalid Org-mode timestamps. Use EXACTLY `YYYYMMDDTHHMMSS` for `#+identifier:` and `[YYYY-MM-DD Day HH:MM]` for `#+date:`.
-- **[CRITICAL]** DO NOT use overly academic language like "The study aims to...". Use direct, active voice like "They built X to fix Y."
+## 6. 历史失效先验 (NLAH Gotchas)
+- `IF [Condition == "System Detected Repeated Failure"] THEN [Inject NLAH Prohibition Rule Here]`
+- `IF [Action == "Read PDF"] THEN [Halt if Unconditional Full Read] AND [Require Targeted Extraction (start_line/end_line OR Extractors)]`
+- `IF [Action == "Generate Org-mode Timestamp"] THEN [Require Format == "YYYYMMDDTHHMMSS" FOR "#+identifier:" AND "[YYYY-MM-DD Day HH:MM]" FOR "#+date:"]`
+- `IF [Section == "Writing Style"] THEN [Halt if Tone == "Overly Academic/Passive"] AND [Require Direct, Active Voice]`

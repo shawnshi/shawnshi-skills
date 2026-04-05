@@ -9,7 +9,7 @@ from collections import Counter, defaultdict
 # --- Dynamic Configuration ---
 GEMINI_ROOT = Path(os.environ.get('USERPROFILE', 'C:/Users/default')) / ".gemini"
 SKILL_DIR = GEMINI_ROOT / "skills" / "personal-monthly-insights"
-REPORTS_DIR = GEMINI_ROOT / "MEMORY" / "personal-insights"
+REPORTS_DIR = GEMINI_ROOT / "MEMORY" / "raw" / "personal-insights"
 CACHE_FILE = SKILL_DIR / "facets_cache.json"
 ASSETS_DIR = SKILL_DIR / "assets"
 TEMPLATE_FILE = ASSETS_DIR / "template.html"

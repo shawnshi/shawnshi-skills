@@ -13,7 +13,7 @@ This is an Agent-Native workflow. You MUST execute the [4-Stage Pipeline](refere
 
 1.  **Extract (Physical)**: Run `analyze_insights_v4.py` and `system_retro.py` to gather data.
 2.  **Analyze (Cognitive)**: Read `raw_metrics_<PERIOD>.json` and perform **Commander-mode** reasoning to identify collaboration anti-patterns.
-3.  **Serialize (Structure)**: Save your reasoning to `~/.gemini/MEMORY/wiki/personal-insights/agent_audit_result.json` following the [SCHEMA.md](references/SCHEMA.md) strictly.
+3.  **Serialize (Structure)**: Save your reasoning to `~/.gemini/MEMORY/raw/personal-insights/agent_audit_result.json` following the [SCHEMA.md](references/SCHEMA.md) strictly.
 4.  **Deliver (Render)**: Run the renderer and provide a strategic wrap-up to the user.
 
 ## 🔄 Delivery Standard
@@ -31,9 +31,9 @@ Dashboard: [file:///...]
 Task complete: save metadata to `~/.gemini/MEMORY/skill_audit/telemetry/record_[TIMESTAMP].json`.
 JSON structure: `{"skill_name": "personal-monthly-insights", "status": "success", "duration_sec": [ESTIMATE], "input_tokens": [ESTIMATE], "output_tokens": [ESTIMATE]}`
 
-## ⚠️ Gotchas
-- **[SCHEMA_SYNC]**: Updating JSON structure MUST align with `analyze_insights_v4.py` rendering logic.
-- **[NO_DATA_REPETITION]**: `coach_summary` MUST be qualitative expert coaching, not a list of raw numbers.
-- **[ELASTIC_RENDERING]**: Ensure `behavioral_analysis.points` has exactly 8 entries to avoid empty dashboard sections.
-- **[PATH_LOCK]**: Always use standard `~/.gemini/` paths for persistence.
-- **[CONTEXT_EFFICIENCY]**: 强制采用 `grep_search` 或时间戳边界框定策略获取索引，绝不允许跨月度或全量历史 `read_file` 载入。
+## ⚠️ NLAH Gotchas
+- `IF [Action == "Update JSON Structure"] THEN [Require Alignment with "analyze_insights_v4.py" logic]`
+- `IF [Field == "coach_summary"] THEN [Require Content == "Qualitative Expert Coaching"] AND [Halt if Content == "List of Raw Numbers"]`
+- `IF [Field == "behavioral_analysis.points"] THEN [Require length == 8]`
+- `IF [Action == "File Persistence"] THEN [Require Path starts_with "~/.gemini/"]`
+- `IF [Action == "Retrieve History"] THEN [Require Tool IN ("grep_search", "timestamp_bounded_search")] AND [Halt if Action == "Cross-month Full read_file"]`

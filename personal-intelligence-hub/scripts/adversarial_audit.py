@@ -1,7 +1,7 @@
 """
 <!-- Intelligence Hub: Adversarial Audit Engine V5.1 (Gemini CLI) -->
-@Input: MEMORY/news/intelligence_current_refined.json
-@Output: MEMORY/news/intelligence_current_refined.json (appends audit)
+@Input: MEMORY/raw/news/intelligence_current_refined.json
+@Output: MEMORY/raw/news/intelligence_current_refined.json (appends audit)
 @Pos: Phase 3 (Optional Adversarial Audit)
 """
 import json

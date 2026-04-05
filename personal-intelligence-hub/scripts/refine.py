@@ -2,7 +2,7 @@ import sys; from pathlib import Path; sys.path.append(str(Path(__file__).parent.
 """
 <!-- Intelligence Hub: AI Refinement Engine V5.1 (Gemini CLI Integration) -->
 @Input: tmp/latest_scan.json, references/strategic_focus.json
-@Output: MEMORY/news/intelligence_current_refined.json
+@Output: MEMORY/raw/news/intelligence_current_refined.json
 @Pos: Phase 2 (Deep Refinement & Deduction)
 @Maintenance Protocol: Prompt changes must sync quality_standard.md.
 """

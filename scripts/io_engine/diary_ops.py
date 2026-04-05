@@ -12,9 +12,9 @@ import glob
 GEMINI_ROOT = os.path.join(os.path.expanduser("~"), ".gemini")
 
 PATH_MAPPING = {
-    "privacy": os.path.join(GEMINI_ROOT, "MEMORY", "privacy"),
-    "diary": os.path.join(GEMINI_ROOT, "MEMORY", "privacy", "Diary"),
-    "mentat": os.path.join(GEMINI_ROOT, "MEMORY", "privacy", "Diary", "mentat_audit")
+    "privacy": os.path.join(GEMINI_ROOT, "MEMORY", "raw", "privacy"),
+    "diary": os.path.join(GEMINI_ROOT, "MEMORY", "raw", "privacy", "Diary"),
+    "mentat": os.path.join(GEMINI_ROOT, "MEMORY", "raw", "privacy", "Diary", "mentat_audit")
 }
 
 def resolve_path(path_alias):

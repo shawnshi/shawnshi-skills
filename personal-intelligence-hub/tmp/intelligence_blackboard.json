@@ -1,6 +1,4 @@
 {
-  "phase": 5,
-  "scope": "全局常规扫描",
-  "urgent_signals": [],
-  "top_10": []
+  "phase": 4,
+  "scope": "默认全域扫描"
 }

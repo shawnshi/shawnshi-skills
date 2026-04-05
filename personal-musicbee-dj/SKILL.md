@@ -44,8 +44,8 @@ python "C:\Users\shich\.gemini\skills\personal-musicbee-dj\src\cli.py" --type <t
 `C:\Users\shich\.gemini\MEMORY\skill_audit\telemetry\record_[TIMESTAMP].json`
 JSON 结构要求：`{"skill_name": "personal-musicbee-dj", "status": "success", "duration_sec": [ESTIMATE], "input_tokens": [ESTIMATE], "output_tokens": [ESTIMATE]}`
 
-## 4. 历史失效先验 (Gotchas)
-- [此处预留用于记录重复性失败的禁令，实现系统的对抗性进化]
-- **[CRITICAL]** NEVER use placeholder paths like `{root_dir}` in the `run_shell_command`. ALWAYS use the absolute path `C:\Users\shich\.gemini\skills\personal-musicbee-dj\src\cli.py`.
-- **[CRITICAL]** DO NOT halt if the user's requested scene is not in the explicit mapping list. ALWAYS perform a semantic fallback to the closest genre/scene.
-- **[CRITICAL]** If the python script fails (e.g., XML not found, MusicBee closed), DO NOT repeatedly try the same command. Inform the user to check their MusicBee XML sharing settings.
+## 4. 历史失效先验 (NLAH Gotchas)
+- `IF [Condition == "System Detected Repeated Failure"] THEN [Inject NLAH Prohibition Rule Here]`
+- `IF [Action == "Execute run_shell_command"] THEN [Halt if Path contains "{root_dir}"] AND [Require Path == "C:\\Users\\shich\\.gemini\\skills\\personal-musicbee-dj\\src\\cli.py"]`
+- `IF [Scene NOT IN Scene_Mapping_List] THEN [Execute Semantic Fallback] AND [Do NOT Halt]`
+- `IF [Python Script Fails] THEN [Halt Retry] AND [Notify User("Check MusicBee XML sharing settings")]`
