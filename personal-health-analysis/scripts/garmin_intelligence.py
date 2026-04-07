@@ -202,7 +202,7 @@ def calculate_sleep_consistency(sleep_data):
         return 0, "数据不足"
     
     durations = [s.get("sleep_time_seconds", 0) / 3600 for s in sleep_data if s.get("sleep_time_seconds")]
-    if not durations:
+    if len(durations) < 2:
         return 0, "数据不足"
         
     std_dev = statistics.stdev(durations)
