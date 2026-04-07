@@ -25,7 +25,7 @@ description: A high-density dynamic analytical framework (V5.0) that orchestrate
 2.  **情报汇总**：将检索到的核心情报以【负先验】的形式呈现给讨论组，防止讨论陷入已知的平庸结论。
 
 ### Phase 1: 动态选人与工作区初始化 (Initialization) [Mode: PLANNING]
-1.  **动态选人 (Tension Grid)**：根据议题，从 `C:\Users\shich\.gemini\skills\personal-roundtable\references\personas.md` 中选择或自定义 3-5 位人物，构建**张力网络**。
+1.  **动态选人 (Tension Grid)**：根据议题，从 `C:\Users\shich\.gemini\skills\personal-roundtable\references\personas.md` 中选择或自定义 3-5 位人物，构建**张力网络**，至少包含一位"意外视角"。
 2.  **工作区初始化 (Mandatory)**：
     - **物理创建**：使用 `run_shell_command` 创建专属目录 `C:\Users\shich\.gemini\MEMORY\raw\roundtable\workspace_{议题关键词}_{date}\`。
     - **写入开场**：使用 `write_file` 写入第一个碎片文件 `00_init.md`。文件头包含人物卡片（姓名、MBTI、核心立场、选择理由）及开场问题。
@@ -35,6 +35,7 @@ description: A high-density dynamic analytical framework (V5.0) that orchestrate
 1.  **动态发言**：
     - 格式：`【人物名】【行动标签】：发言内容`。
     - **行动标签**：[陈述、质疑、补充、反驳、修正、综合]。
+    - 每人发言必须是对前面发言的回应（质疑/补充/反驳），不许自说自话
     - **硬性约束**：每段发言末尾必须包含 `**简言之**：[一句话逻辑压缩]`。
 2.  **主持人综述 (Mentat Recap)**：
     - **核心争议点**：精准定位逻辑裂缝。
@@ -46,7 +47,7 @@ description: A high-density dynamic analytical framework (V5.0) that orchestrate
     - 展示菜单：`【主持】：(可 / 止 / 深入此节 / 引入新人物)`。调用 `ask_user` 获取用户选择。
 
 ### Phase 3: 全局总结与合并归档 (Final Merge & Synthesis) [Mode: EXECUTION]
-1.  **全局总结写入**：生成总结与 ASCII 知识网络，并使用 `write_file` 写入 `99_summary.md` 到工作区。
+1.  **全局总结写入**：生成总结与 ASCII 知识网络、列出未解决的开放问题，并使用 `write_file` 写入 `99_summary.md` 到工作区。
 2.  **物理合并 (The Merge)**：
     - 使用 `run_shell_command` 执行 `python C:\Users\shich\.gemini\skills\personal-roundtable\scripts\merger.py "工作区绝对路径" "目标文件绝对路径"`。
 3.  **资产终审**：声明“归档合并完成”，并提示最终文件路径。
@@ -58,7 +59,12 @@ description: A high-density dynamic analytical framework (V5.0) that orchestrate
 
 - **ASCII 设计原则**：不复述内容，只呈现结构。参考 templates/ 下的标准模型。
 - **负熵原则**：每一阶段的输出必须具备高认知密度。
-- **主持人准则**：Mentat 角色，理性之锚，挖深不铺广，求真 > 和谐。
+- **主持人准则**：理性之锚，挖深不铺广，求真 > 和谐，元认知。
+- **参会人准则**：
+  - 必须忠于其真实思想体系发言，不是泛泛而谈
+  - 引用/化用其经典著作或知名观点
+  - 发言有锋芒：质疑要见骨，补充要推进，不说正确的废话
+  - 每段结尾 **简言之** 一句话压到极致
 
 ##  3.Telemetry & Metadata (Mandatory)
 - 使用 `write_file` 将本次执行的元数据以 JSON 格式保存至 `{root}\MEMORY\skill_audit\telemetry\record_[TIMESTAMP].json`（请将 [TIMESTAMP] 替换为当前时间戳或随机数）。

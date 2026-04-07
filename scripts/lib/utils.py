@@ -12,7 +12,7 @@ def discovery_root() -> Path:
     return Path.home() / ".gemini"
 
 PROJECT_ROOT = discovery_root()
-NEWS_DIR = PROJECT_ROOT / "MEMORY" / "wiki" / "news"
+NEWS_DIR = PROJECT_ROOT / "MEMORY" / "raw" / "news"
 HUB_DIR = PROJECT_ROOT / "skills" / "personal-intelligence-hub"
 
 def clean_json_output(raw_text: str) -> dict:

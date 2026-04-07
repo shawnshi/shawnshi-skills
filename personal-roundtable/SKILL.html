@@ -1,0 +1,100 @@
+<hr>
+<h2 id="name-personal-roundtabledescription-a-high-density-dynamic-analytical-framework-v50-that-orchestrates-real-world-historical-or-contemporary-figures-into-a-tension-network-to-scrutinize-any-topic-features-fragmented-persistence-per-round-anti-dehydration-by-design-dynamic-speaker-selection-action-tagged-dialogue-with-简言之-compression-and-structural-ascii-topology-maps-all-sessions-are-eventually-merged-and-physically-archived-to-cusersshichgeminimemoryroundtable圆桌-议题关键词_datemd">name: personal-roundtable
+description: A high-density dynamic analytical framework (V5.0) that orchestrates real-world historical or contemporary figures into a &quot;tension network&quot; to scrutinize any topic. Features fragmented persistence per round (anti-dehydration by design), dynamic speaker selection, action-tagged dialogue with &quot;简言之&quot; compression, and structural ASCII topology maps. All sessions are eventually merged and physically archived to C:\Users\shich.gemini\MEMORY\roundtable\圆桌-{议题关键词}_{date}.md.</h2>
+<h1 id="personal-roundtable-v50-mentat-synthesis-edition">Personal Roundtable (V5.0: Mentat Synthesis Edition)</h1>
+<p>“所有的执行偏差，本质上都是认知的偷懒。在这里，我们通过真实思想维度的对抗，萃取决策的晶核。”</p>
+<hr>
+<h2 id="0-核心调度约束-global-state-machine">0. 核心调度约束 (Global State Machine)</h2>
+<blockquote>
+<p><strong>[全局熔断协议]</strong>：必须严格按照 Phase 0 至 Phase 3 的顺序执行。在跨越任何 Phase 之前，必须在对话输出的最开头以 <code>[System State: Moving to Phase X]</code> 进行显式声明。</p>
+</blockquote>
+<h2 id="05-sub-agent-delegation-protocol-mandatory-sandboxing">0.5 Sub-agent Delegation Protocol (Mandatory Sandboxing)</h2>
+<p><strong>CRITICAL RULE</strong>: To protect the main agent's context window from attention degradation during long-form multi-character discussions, the round phases MUST NOT be held entirely in the main memory.</p>
+<ol>
+<li><strong>Arena Creation</strong>: Before starting the roundtable, define the topic, participants, and rules in a sandbox file: <code>C:\Users\shich\.gemini\tmp\playgrounds\Roundtable_Packet_[TIMESTAMP].md</code>.</li>
+<li><strong>Delegation</strong>: Explicitly invoke a sub-agent (e.g., <code>generalist</code>) to read the packet, execute the actual conversational turns, and append the dialog fragments to the designated physical output file (<code>.md</code>).</li>
+<li><strong>Suspension</strong>: The main agent acts purely as the host, suspending execution during the sub-agent's heavy text generation, and finally reading the condensed topology or summary upon completion.</li>
+</ol>
+<h2 id="1-核心流程与架构-the-protocol">1. 核心流程与架构 (The Protocol)</h2>
+<h3 id="phase-0-reconnaissance-语义侦察-mode-planning">Phase 0: Reconnaissance (语义侦察) [Mode: PLANNING]</h3>
+<ol>
+<li><strong>任务</strong>：在开启讨论前，必须通过 <code>python C:\Users\shich\.gemini\extensions\vector-lake\cli.py query &quot;你的推演指令&quot; --interleave</code> 检索 <code>MEMORY/</code> 中相关的历史洞察、反常识点或类似议题的结论。</li>
+<li><strong>情报汇总</strong>：将检索到的核心情报以【负先验】的形式呈现给讨论组，防止讨论陷入已知的平庸结论。</li>
+</ol>
+<h3 id="phase-1-动态选人与工作区初始化-initialization-mode-planning">Phase 1: 动态选人与工作区初始化 (Initialization) [Mode: PLANNING]</h3>
+<ol>
+<li><strong>动态选人 (Tension Grid)</strong>：根据议题，从 <code>C:\Users\shich\.gemini\skills\personal-roundtable\references\personas.md</code> 中选择或自定义 3-5 位人物，构建<strong>张力网络</strong>，至少包含一位&quot;意外视角&quot;。</li>
+<li><strong>工作区初始化 (Mandatory)</strong>：
+<ul>
+<li><strong>物理创建</strong>：使用 <code>run_shell_command</code> 创建专属目录 <code>C:\Users\shich\.gemini\MEMORY\raw\roundtable\workspace_{议题关键词}_{date}\</code>。</li>
+<li><strong>写入开场</strong>：使用 <code>write_file</code> 写入第一个碎片文件 <code>00_init.md</code>。文件头包含人物卡片（姓名、MBTI、核心立场、选择理由）及开场问题。</li>
+</ul>
+</li>
+<li><strong>等待</strong>：此时必须停止输出，调用 <code>ask_user</code> 等待用户指令。</li>
+</ol>
+<h3 id="phase-2-对话循环与碎片化落盘-dialogue--fragmented-write-mode-execution">Phase 2: 对话循环与碎片化落盘 (Dialogue &amp; Fragmented Write) [Mode: EXECUTION]</h3>
+<ol>
+<li><strong>动态发言</strong>：
+<ul>
+<li>格式：<code>【人物名】【行动标签】：发言内容</code>。</li>
+<li><strong>行动标签</strong>：[陈述、质疑、补充、反驳、修正、综合]。</li>
+<li>每人发言必须是对前面发言的回应（质疑/补充/反驳），不许自说自话</li>
+<li><strong>硬性约束</strong>：每段发言末尾必须包含 <code>**简言之**：[一句话逻辑压缩]</code>。</li>
+</ul>
+</li>
+<li><strong>主持人综述 (Mentat Recap)</strong>：
+<ul>
+<li><strong>核心争议点</strong>：精准定位逻辑裂缝。</li>
+<li><strong>ASCII 思考框架图</strong>：参考 <code>C:\Users\shich\.gemini\skills\personal-roundtable\templates\ascii_topology.md</code> 选择最贴合的形式。</li>
+<li><strong>下潜问题</strong>：引导后续讨论。</li>
+</ul>
+</li>
+<li><strong>碎片化落盘 (Anti-Dehydration)</strong>：
+<ul>
+<li><strong>单点写入</strong>：每轮结束后，直接使用 <code>write_file</code> 将本轮内容写入 <code>01_round1.md</code>, <code>02_round2.md</code>... 等文件。</li>
+</ul>
+</li>
+<li><strong>节点控制菜单 (Node Control)</strong>：
+<ul>
+<li>展示菜单：<code>【主持】：(可 / 止 / 深入此节 / 引入新人物)</code>。调用 <code>ask_user</code> 获取用户选择。</li>
+</ul>
+</li>
+</ol>
+<h3 id="phase-3-全局总结与合并归档-final-merge--synthesis-mode-execution">Phase 3: 全局总结与合并归档 (Final Merge &amp; Synthesis) [Mode: EXECUTION]</h3>
+<ol>
+<li><strong>全局总结写入</strong>：生成总结与 ASCII 知识网络、列出未解决的开放问题，并使用 <code>write_file</code> 写入 <code>99_summary.md</code> 到工作区。</li>
+<li><strong>物理合并 (The Merge)</strong>：
+<ul>
+<li>使用 <code>run_shell_command</code> 执行 <code>python C:\Users\shich\.gemini\skills\personal-roundtable\scripts\merger.py &quot;工作区绝对路径&quot; &quot;目标文件绝对路径&quot;</code>。</li>
+</ul>
+</li>
+<li><strong>资产终审</strong>：声明“归档合并完成”，并提示最终文件路径。</li>
+</ol>
+<hr>
+<h2 id="2-交互协议与审美-protocols--aesthetics">2. 交互协议与审美 (Protocols &amp; Aesthetics)</h2>
+<ul>
+<li><strong>ASCII 设计原则</strong>：不复述内容，只呈现结构。参考 templates/ 下的标准模型。</li>
+<li><strong>负熵原则</strong>：每一阶段的输出必须具备高认知密度。</li>
+<li><strong>主持人准则</strong>：理性之锚，挖深不铺广，求真 &gt; 和谐，元认知。</li>
+<li><strong>参会人准则</strong>：
+<ul>
+<li>必须忠于其真实思想体系发言，不是泛泛而谈</li>
+<li>引用/化用其经典著作或知名观点</li>
+<li>发言有锋芒：质疑要见骨，补充要推进，不说正确的废话</li>
+<li>每段结尾 <strong>简言之</strong> 一句话压到极致</li>
+</ul>
+</li>
+</ul>
+<h2 id="3telemetry--metadata-mandatory">3.Telemetry &amp; Metadata (Mandatory)</h2>
+<ul>
+<li>使用 <code>write_file</code> 将本次执行的元数据以 JSON 格式保存至 <code>{root}\MEMORY\skill_audit\telemetry\record_[TIMESTAMP].json</code>（请将 [TIMESTAMP] 替换为当前时间戳或随机数）。</li>
+<li>JSON 结构：<code>{&quot;skill_name&quot;: personal-roundtable&quot;, &quot;status&quot;: &quot;success&quot;, &quot;duration_sec&quot;: [ESTIMATE], &quot;input_tokens&quot;: [ESTIMATE], &quot;output_tokens&quot;: [ESTIMATE]}</code></li>
+</ul>
+<h2 id="4-历史失效先验-nlah-gotchas">4. 历史失效先验 (NLAH Gotchas)</h2>
+<ul>
+<li><code>IF [Action == &quot;Write Workspace&quot;] THEN [Require Directory_Exists(&quot;MEMORY\\roundtable\\...&quot;) == TRUE]</code></li>
+<li><code>IF [Action == &quot;Write Fragment File&quot;] THEN [Require Filename matches &quot;^\\d\\d_.*&quot;]</code></li>
+<li><code>IF [Action == &quot;Final Merge&quot;] THEN [Halt if reading entire dialogue history] AND [Require read(physical fragment files)]</code></li>
+</ul>
+<hr>
+<p><em>Updated to V5.0 | System State: Locked</em></p>

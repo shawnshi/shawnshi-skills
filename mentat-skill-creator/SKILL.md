@@ -1,6 +1,6 @@
 ---
 name: mentat-skill-creator
-version: 3.4.0
+version: 3.5.0
 description: |
   技能工厂与自愈中心 (Native Agent Edition)。当用户想“创建新技能”、“优化既有指令”、“运行技能评测”或技能出现“重复性失败”需要 .amendify() 时，务必激活。
   本技能管理系统的进化闭环，确保新技能遵循“四层壳模型”：物理硬锁、语义主权、负熵交互与持续进化。
@@ -70,25 +70,71 @@ for "JSON" and "assertion" you want to see serious cues from the user that they 
 It's OK to briefly explain terms if you're in doubt, and feel free to clarify terms with a short definition if you're unsure if the user will get it.
 
 ## Creating a skill
-Capture Intent & ADK Pattern Diagnosis
-Start by understanding the user's intent. The current conversation might already contain a workflow the user wants to capture (e.g., they say "turn this into a skill"). If so, extract answers from the conversation history first — the tools used, the sequence of steps, corrections the user made, input/output formats observed. The user may need to fill the gaps, and should confirm before proceeding to the next step.
+
+The intent capture process uses a **three-layer crystallization pipeline**. Each layer addresses a different type of ambiguity — linguistic, logical, and tacit — and has an explicit gate before proceeding. The current conversation might already contain a workflow the user wants to capture (e.g., they say "turn this into a skill"). If so, extract answers from the conversation history first — the tools used, the sequence of steps, corrections the user made, input/output formats observed.
+
+### `[State: L1]` Phase 1 — Semantic Scan (维特根斯坦扫描)
+
+**Purpose**: Before asking any follow-up questions, decompose the user's initial statement to locate ambiguity at the word level. Most people describe what they want using words that feel precise to them but carry multiple meanings. This phase makes the invisible ambiguity visible.
+
+1. **Echo & Decompose**: Repeat the user's words back, but highlight terms that could mean multiple things. Present this as a lightweight "clarity check", not an interrogation. Example: *"You said 'efficiently process documents' — let me check my understanding: 'efficiently' → speed? accuracy? token cost? 'process' → convert format? extract data? summarize? 'documents' → PDF? DOCX? any format?"*
+2. **Strip Decorators**: Identify adjectives that add no operational constraint — words like "smart", "elegant", "robust", "advanced". For each, ask what **physical, observable behavior** it maps to. If the user can't define it, drop it rather than encode vagueness into the skill.
+3. **Ambiguity Map** (P3): After decomposition, present a compact summary showing which terms are now resolved (✅) and which still need definition (❓). This gives the user a visual sense of progress and ensures nothing slips through.
+
+**`[Gate L1→L2]`**: Proceed only when every core noun and verb in the user's request has a concrete, testable meaning agreed upon by both parties. Decorators that couldn't be operationally defined should be explicitly discarded with the user's acknowledgment.
+
+### `[State: L2]` Phase 2 — Structured Interview (苏格拉底追问)
+
+**Purpose**: With clean vocabulary established, now systematically explore the design space through structured questioning. This is where we map the user's intent onto actionable architecture.
 
 What should this skill enable the AI to do?
 When should this skill trigger? (what user phrases/contexts)
 [MANDATORY] ADK Pattern Diagnosis: Ask the user or deduce from context which of the following 5 Google ADK patterns apply. A single skill may use multiple patterns:
-[Tool Wrapper]: Does it need to load specific API knowledge, external tools, or non-public framework docs on demand? (Compensates for knowledge latency).
-[Generator]: Does it have a strict, non-negotiable output format or MSL Schema? (Compensates for creative drift/hallucinations).
-[Pipeline]: Must the steps be executed in a strict, unskippable order with diamond gates? (Compensates for the AI's tendency to skip steps).
-[Inversion]: Must the AI collect all necessary parameters/context before taking any action? (Compensates for acting on incomplete info).
-[Reviewer]: Is this a high-stakes task requiring the AI to switch to a 'critic' persona and verify its own output before finalizing? (Compensates for confirmation bias).
+- [Tool Wrapper]: Does it need to load specific API knowledge, external tools, or non-public framework docs on demand? (Compensates for knowledge latency).
+- [Generator]: Does it have a strict, non-negotiable output format or MSL Schema? (Compensates for creative drift/hallucinations).
+- [Pipeline]: Must the steps be executed in a strict, unskippable order with diamond gates? (Compensates for the AI's tendency to skip steps).
+- [Inversion]: Must the AI collect all necessary parameters/context before taking any action? (Compensates for acting on incomplete info).
+- [Reviewer]: Is this a high-stakes task requiring the AI to switch to a 'critic' persona and verify its own output before finalizing? (Compensates for confirmation bias).
 What's the expected output format?
 What is the absolute success criteria (Contract) for this skill?
 If common dependencies fail, what is the recovery or self-healing action (Failure Taxonomy)?
+
+**Via Negativa (反面定义)** — This is one of the highest-ROI questions you can ask, because people often know what they *don't* want far more clearly than what they *do* want:
+- "What's the **worst** version of this skill? What would make you stop using it immediately?"
+- "Have you tried something similar before that **didn't work**? What went wrong?"
+- Convert each "I don't want X" into a concrete Contract clause or Gotcha. Example: *"I don't want it to sound like AI"* → Contract: output must pass a humanizer audit; Gotcha: `IF output contains >2 instances of 「值得注意的是」 THEN FAIL`.
+
 Should we set up test cases to verify the skill works? Skills with objectively verifiable outputs (file transforms, data extraction, code generation, fixed workflow steps) benefit from test cases. Skills with subjective outputs (writing style, art) often don't need them. Suggest the appropriate default based on the skill type, but let the user decide.
-Interview and Research
+
 Proactively ask questions about edge cases, input/output formats, example files, success criteria, and dependencies. Wait to write test prompts until you've got this part ironed out.
 
 Check available MCPs - if useful for research (searching docs, finding similar skills, looking up best practices), research in parallel via subagents if available, otherwise inline. Come prepared with context to reduce burden on the user.
+
+**`[Gate L2→L3]` Tacit Knowledge Checkpoint**: After the structured interview, pause and explicitly ask: *"I think I've captured the explicit requirements. But there's often a 'feel' that's hard to put into words — a sense of what 'right' looks like beyond the specs. Do you have any of that? If so, let's try a different approach (examples, counter-examples, or looking at your past work)."* If the user says yes or hesitates, proceed to Phase 3. If the user clearly says no, skip directly to writing the SKILL.md.
+
+### `[State: L3]` Phase 3 — Tacit Sensing (波兰尼感应)
+
+**Purpose**: Some knowledge is structurally inexpressible through Q&A — the user "knows it when they see it" but can't articulate rules. This phase uses three non-verbal strategies to surface tacit preferences. This phase is especially valuable for skills involving subjective quality (writing style, design aesthetics, analysis depth, communication tone).
+
+#### 3a. Exemplar Anchoring (正面示范)
+Don't ask the user to *describe* what good looks like — *show* them and let them react:
+- **Mock Output Generation**: Generate 2-3 short mock outputs at deliberately different quality/style levels (e.g., terse vs. verbose, formal vs. casual, structured vs. narrative). Ask: *"Which of these feels closest to what you want? What specifically would you change?"*
+- **Reference Hunting**: Ask *"Can you point me to an existing skill, tool, or output that does something similar — even a partial match is valuable."*
+- The goal is to let the user **feel** the output and react viscerally, not to get a rational checklist approval. Pay attention to which words they use when reacting — those are the real constraints.
+
+#### 3b. Via Negativa Deepening (反面纵深)
+Go beyond the L2 surface-level "what don't you want" by probing the *texture* of failure:
+- Show a deliberately *bad* mock output and ask: *"What specifically makes this feel wrong?"*
+- For each visceral reaction, extract the underlying rule. Example: user says *"Ugh, this feels like a corporate memo"* → implicit rule: avoid hedging language, use direct assertions, first person is OK.
+
+#### 3c. Behavioral Mining (行为提取)
+The user's past behavior encodes preferences they may never have consciously articulated:
+- **Workspace Archaeology**: Scan the user's existing skills directory (`glob` for `SKILL.md` files) for structural patterns — naming conventions, preferred section ordering, use of emoji, tone of voice, whether they use Gotchas, how they structure Contracts.
+- **Memory Search**: If `vector-lake` is available, run `python C:\Users\shich\.gemini\extensions\vector-lake\cli.py query "<skill topic keywords>" --interleave` to check for related past designs, failed attempts, or established conventions.
+- **Habit Surfacing**: Report discovered patterns to the user: *"I notice you consistently [X] in your existing skills. Should this new one follow the same pattern, or deliberately break from it?"*
+- Map each discovered pattern to an explicit constraint in the new skill. What the user does consistently without thinking is often more important than what they say.
+
+**`[Gate L3→Write]`**: Summarize the tacit constraints extracted from all three sub-phases. Present them to the user as a "hidden requirements" checklist and get confirmation before proceeding.
 
 ## Write the SKILL.md
 Based on the user interview, fill in these components:
