@@ -67,348 +67,348 @@
 Title: rakhim.exotext.com: Windows 11 after two decades of macOS: okay, but also awful
 URL: https://rakhim.exotext.com/windows-11-experience
 Source: rakhim.exotext.com
-Published: 2026-04-07T09:24:02.571263
+Published: 2026-04-08T09:26:52.830791
 Desc: Recently my partner's trusty old 5K iMac died after 8.5 years of service (Radeon gpu is fried). At first I thought it was finally time to get one of those cool little M4 Mac Minis, but then decided to conduct an experiment. I gave up my Mac Studio M2 Max (64 Gb unified memory and 1 Tb storage) and t
 
-[DEEP_REFINE] Item 2 [Score=7]:
-Title: healthcareitnews.com: HL7 launches device interoperability implementation community
-URL: https://www.healthcareitnews.com/news/hl7-launches-device-interoperability-implementation-community
-Source: healthcareitnews.com
-Published: 2026-04-07T09:24:02.037068
-Desc: Health Level Seven International has announced the launch of its new Caliper FHIR Accelerator implementation community. The multi-stakeholder initiative aims to improve how data from medical and personal health devices is exchanged, integrated and used across all care settings and users. The goal is
-
-[DEEP_REFINE] Item 3 [Score=6]:
-Title: The Lancet Digital Health: [Comment] The global Dx AMR collaborative: an approach to strengthen the role of diagnostics in combating antimicrobial resistance
-URL: https://www.thelancet.com/journals/landig/article/PIIS2589-7500(25)00133-5/fulltext?rss=yes
-Source: The Lancet Digital Health
-Published: 2026-04-07T09:23:59.203564
-Desc: Antimicrobial resistance (AMR) remains a present and ongoing global health threat. In 2019, 4·95 million deaths were associated with AMR globally; this number is projected to rise to 8·22 million by 2050.1 Despite this prediction, the investment landscape in global health and AMR is diminishing, as 
-
-[DEEP_REFINE] Item 4 [Score=6]:
-Title: The Lancet Digital Health: [Comment] When to and when not to use machine learning in risk prediction models
-URL: https://www.thelancet.com/journals/landig/article/PIIS2589-7500(25)00136-0/fulltext?rss=yes
-Source: The Lancet Digital Health
-Published: 2026-04-07T09:23:59.203584
-Desc: Machine learning for health data science, fuelled by proliferation of data and reduced computational costs, has garnered considerable interest among researchers. The debate around the use of machine learning or classical medical statistics for medical research is long standing.1,2 Given major method
-
-[DEEP_REFINE] Item 5 [Score=6]:
+[DEEP_REFINE] Item 2 [Score=6]:
 Title: The Lancet Digital Health: [Comment] Thank you to The Lancet Digital Health statistical and peer reviewers in 2025
 URL: https://www.thelancet.com/journals/landig/article/PIIS2589-7500(26)00003-8/fulltext?rss=yes
 Source: The Lancet Digital Health
-Published: 2026-04-07T09:23:59.203609
+Published: 2026-04-08T09:26:51.315173
 Desc: Rita Achermann
 
-[DEEP_REFINE] Item 6 [Score=5]:
-Title: arXiv Med-AI: Explainable Token-level Noise Filtering for LLM Fine-tuning Datasets
-URL: https://arxiv.org/abs/2602.14536v3
+[DEEP_REFINE] Item 3 [Score=5]:
+Title: arXiv Med-AI: Measuring Competency, Not Performance: Item-Aware Evaluation Across Medical Benchmarks
+URL: https://arxiv.org/abs/2509.24186v2
 Source: arXiv Med-AI
-Published: 2026-04-07T09:24:02.224771
-Desc: Large Language Models (LLMs) have seen remarkable advancements, achieving state-of-the-art results in diverse applications. Fine-tuning, an important step for adapting LLMs to specific downstream tasks, typically involves further training on corresponding datasets. However, a fundamental discrepancy
+Published: 2026-04-08T09:26:55.087159
+Desc: Accuracy-based evaluation of Large Language Models (LLMs) measures benchmark-specific performance rather than underlying medical competency: it treats all questions as equally informative, conflates model ability with item characteristics, and thereby produces rankings that vary with benchmark choic
 
-[DEEP_REFINE] Item 7 [Score=5]:
-Title: arXiv Med-AI: SoSBench: Benchmarking Safety Alignment on Six Scientific Domains
-URL: https://arxiv.org/abs/2505.21605v3
-Source: arXiv Med-AI
-Published: 2026-04-07T09:24:02.224796
-Desc: Large language models (LLMs) exhibit advancing capabilities in complex tasks, such as reasoning and graduate-level question answering, yet their resilience against misuse, particularly involving scientifically sophisticated risks, remains underexplored. Existing safety benchmarks typically focus eit
-
-[DEEP_REFINE] Item 8 [Score=5]:
-Title: arXiv Med-AI: WiseMind: a knowledge-guided multi-agent framework for accurate and empathetic psychiatric diagnosis
-URL: https://arxiv.org/abs/2502.20689v3
-Source: arXiv Med-AI
-Published: 2026-04-07T09:24:02.224851
-Desc: Large Language Models (LLMs) offer promising opportunities to support mental healthcare workflows, yet they often lack the structured clinical reasoning needed for reliable diagnosis and may struggle to provide the emotionally attuned communication essential for patient trust. Here, we introduce Wis
-
-[DEEP_REFINE] Item 9 [Score=5]:
-Title: simonwillison.net: Google AI Edge Gallery
-URL: https://simonwillison.net/2026/Apr/6/google-ai-edge-gallery/#atom-everything
+[DEEP_REFINE] Item 4 [Score=5]:
+Title: simonwillison.net: GLM-5.1: Towards Long-Horizon Tasks
+URL: https://simonwillison.net/2026/Apr/7/glm-51/#atom-everything
 Source: simonwillison.net
-Published: 2026-04-07T09:23:56.901137
-Desc: Google AI Edge Gallery Terrible name, really great app: this is Google's official app for running their Gemma 4 models (the E2B and E4B sizes, plus some members of the Gemma 3 family) directly on your iPhone. It works really well. The E2B model is a 2.54GB download and is both fast and genuinely use
+Published: 2026-04-08T09:26:51.511017
+Desc: GLM-5.1: Towards Long-Horizon Tasks Chinese AI lab Z.ai's latest model is a giant 754B parameter 1.51TB (on Hugging Face) MIT-licensed monster - the same size as their previous GLM-5 release, and sharing the same paper. It's available via OpenRouter so I asked it to draw me a pelican: llm install ll
 
-[DEEP_REFINE] Item 10 [Score=5]:
-Title: antirez.com: GNU and the AI reimplementations
-URL: http://antirez.com/news/162
-Source: antirez.com
-Published: 2026-04-07T09:24:01.904700
-Desc: Those who cannot remember the past are condemned to repeat it. A sentence that I never really liked, and what is happening with AI, about software projects reimplementations, shows all the limits of such an idea. Many people are protesting the fairness of rewriting existing projects using AI. But, a
+[DEEP_REFINE] Item 5 [Score=5]:
+Title: simonwillison.net: Anthropic's Project Glasswing - restricting Claude Mythos to security researchers - sounds necessary to me
+URL: https://simonwillison.net/2026/Apr/7/project-glasswing/#atom-everything
+Source: simonwillison.net
+Published: 2026-04-08T09:26:51.512212
+Desc: Anthropic didn't release their latest model, Claude Mythos (system card PDF), today. They have instead made it available to a very restricted set of preview partners under their newly announced Project Glasswing. The model is a general purpose model, similar to Claude Opus 4.6, but Anthropic claim t
 
-[DEEP_REFINE] Item 11 [Score=5]:
+[DEEP_REFINE] Item 6 [Score=5]:
 Title: antirez.com: Redis patterns for coding
 URL: http://antirez.com/news/161
 Source: antirez.com
-Published: 2026-04-07T09:24:01.904841
+Published: 2026-04-08T09:26:57.264977
 Desc: Here LLM and coding agents can find:  1. Exhaustive documentation about Redis commands and data types. 2. Patterns commonly used. 3. Configuration hints. 4. Algorithms that can be mounted using Redis commands.  https://redis.antirez.com/  Some humans claim this documentation is actually useful for a
 
-[DEEP_REFINE] Item 12 [Score=5]:
+[DEEP_REFINE] Item 7 [Score=5]:
 Title: antirez.com: Implementing a clear room Z80 / ZX Spectrum emulator with Claude Code
 URL: http://antirez.com/news/160
 Source: antirez.com
-Published: 2026-04-07T09:24:01.905516
+Published: 2026-04-08T09:26:57.265789
 Desc: Anthropic recently released a blog post with the description of an experiment in which the last version of Opus, the 4.6, was instructed to write a C compiler in Rust, in a “clean room” setup.  The experiment methodology left me dubious about the kind of point they wanted to make. Why not provide th
 
-[DEEP_REFINE] Item 13 [Score=5]:
+[DEEP_REFINE] Item 8 [Score=5]:
 Title: idiallo.com: AI Did It in 12 Minutes. It Took Me 10 Hours to Fix It
 URL: https://idiallo.com/blog/it-took-me-10-hours-to-fix-ai-code?src=feed
 Source: idiallo.com
-Published: 2026-04-07T09:23:58.602293
+Published: 2026-04-08T09:26:51.806108
 Desc: I've been working on personal projects since the 2000s. One thing I've always been adamant about is understanding the code I write. Even when Stack Overflow came along, I was that annoying guy who told people not to copy and paste code into their repos. Instead, they should read it and adapt it to t
 
-[DEEP_REFINE] Item 14 [Score=5]:
+[DEEP_REFINE] Item 9 [Score=5]:
 Title: idiallo.com: My Zip bomb strategy is not as effective as it used to be
 URL: https://idiallo.com/blog/zip-bombs-are-not-as-effective-as-they-used-to-be?src=feed
 Source: idiallo.com
-Published: 2026-04-07T09:23:58.603204
+Published: 2026-04-08T09:26:51.807278
 Desc: Last year, I wrote about my server setup and how I use zipbombs to mitigate attacks from rogue bots. It was an effective method that helped my blog survive for 10 years. I usually hesitate to write these types of articles, especially since it means revealing the inner workings of my own servers. Thi
 
-[DEEP_REFINE] Item 15 [Score=5]:
+[DEEP_REFINE] Item 10 [Score=5]:
 Title: dynomight.net: LLMs predict my coffee
 URL: https://dynomight.net/coffee/
 Source: dynomight.net
-Published: 2026-04-07T09:23:58.496181
+Published: 2026-04-08T09:26:52.984178
 Desc: Why not benchmark with physical experiments?
 
-[TRANSLATE_ONLY] Item 16 [Score=5]:
-Title: lucumr.pocoo.org: Absurd In Production
-URL: https://lucumr.pocoo.org/2026/4/4/absurd-in-production/
-Source: lucumr.pocoo.org
-Published: 2026-04-07T09:23:57.626064
-Desc: About five months ago I wrote about Absurd, a durable execution system we built for our own use at Earendil, sitting entirely on top of Postgres and Postgres alone.  The pitch was simple: you don’t need a separate service, a compiler plugin, or an entire runtime to get durable workflows.  You need a
-
-[TRANSLATE_ONLY] Item 17 [Score=5]:
-Title: gilesthomas.com: Getting a custom PyTorch LLM onto the Hugging Face Hub (Transformers: AutoModel, pipeline, and Trainer)
-URL: https://www.gilesthomas.com/2026/01/custom-automodelforcausallm-frompretrained-models-on-hugging-face
-Source: gilesthomas.com
-Published: 2026-04-07T09:24:04.447188
-Desc: I spent some time recently getting some models uploaded onto the Hugging Face Hub.  I'd trained a bunch of GPT-2 small sized base models from scratch as part of my LLM from scratch series, and wanted to share them with anyone that was interested.  I managed to get it done, but it was kind of tricky 
-
-[TRANSLATE_ONLY] Item 18 [Score=5]:
-Title: gilesthomas.com: Writing an LLM from scratch, part 32a -- Interventions: training a baseline model
-URL: https://www.gilesthomas.com/2026/02/llm-from-scratch-32a-interventions-baseline-model
-Source: gilesthomas.com
-Published: 2026-04-07T09:24:04.449727
-Desc: I'm rounding out my series of posts on Sebastian Raschka's book "Build a Large Language Model (from Scratch)" by seeing how I could train the best base model I can from scratch on my own hardware. I started by training one in two days on my RTX 3090, and found that while it was a decent little model
-
-[TRANSLATE_ONLY] Item 19 [Score=5]:
-Title: gilesthomas.com: Writing an LLM from scratch, part 32b -- Interventions: gradient clipping
-URL: https://www.gilesthomas.com/2026/02/llm-from-scratch-32b-interventions-gradient-clipping
-Source: gilesthomas.com
-Published: 2026-04-07T09:24:04.460069
-Desc: I'm still working on training the best GPT-2 small sized base model that I can with a number of FLOPs roughly equal to two days on my own machine -- my "extra credit" exercise after having worked through Sebastian Raschka's book "Build a Large Language Model (from Scratch)". In the last post I train
-
-[TRANSLATE_ONLY] Item 20 [Score=5]:
+[DEEP_REFINE] Item 11 [Score=5]:
 Title: evanhahn.com: Notes from March 2026
 URL: https://evanhahn.com/notes-from-march-2026/
 Source: evanhahn.com
-Published: 2026-04-07T09:23:59.908316
+Published: 2026-04-08T09:26:52.774296
 Desc: March always seems to be my life’s busiest month. Things I wrote and made   “The two kinds of error”: in my mind, software errors are divided into two categories: expected and unexpected errors. I finally wrote up this idea I’ve had for a long time.   “All tests pass” is a short story about a strang
 
-[TRANSLATE_ONLY] Item 21 [Score=5]:
+[DEEP_REFINE] Item 12 [Score=5]:
 Title: evanhahn.com: All tests pass: a short story
 URL: https://evanhahn.com/all-tests-pass-a-short-story/
 Source: evanhahn.com
-Published: 2026-04-07T09:23:59.909609
+Published: 2026-04-08T09:26:52.775371
 Desc: One night, I wrote a simple tool to pick a random programming language. After shuffling a few times, I landed on Arturo. I decided to try it for fun. What’s Arturo? Best I understand, Arturo is a stack-based programming language. It’s primarily maintained by Yanis Zafirópulos. They published a visio
 
-[TRANSLATE_ONLY] Item 22 [Score=5]:
+[DEEP_REFINE] Item 13 [Score=5]:
 Title: buttondown.com/hillelwayne: LLMs are bad at vibing specifications
 URL: https://buttondown.com/hillelwayne/archive/llms-are-bad-at-vibing-specifications/
 Source: buttondown.com/hillelwayne
-Published: 2026-04-07T09:23:59.072257
+Published: 2026-04-08T09:26:53.070247
 Desc: No newsletter next week I'll be speaking at InfoQ London. But see below for a book giveaway!  LLMs are bad at vibing specifications About a year ago I wrote AI is a gamechanger for TLA+ users, which argued that AI are a "specification force multiplier". That was written from the perspective an TLA+ 
 
-[TRANSLATE_ONLY] Item 23 [Score=5]:
+[DEEP_REFINE] Item 14 [Score=5]:
 Title: blog.jim-nielsen.com: Prototyping with LLMs
 URL: https://blog.jim-nielsen.com/2026/prototyping-with-llm/
 Source: blog.jim-nielsen.com
-Published: 2026-04-07T09:23:56.555368
+Published: 2026-04-08T09:26:51.564126
 Desc: Did you know that Jesus gave advice about prototyping with an LLM? Here’s Luke 14:28-30:  Suppose one of you wants to build a tower. Won’t you first sit down and estimate the cost to see if you have enough money to complete it? For if you lay the foundation and are not able to finish it, everyone wh
 
-[TRANSLATE_ONLY] Item 24 [Score=5]:
+[DEEP_REFINE] Item 15 [Score=5]:
 Title: blog.jim-nielsen.com: I Tried Vibing an RSS Reader and My Dreams Did Not Come True
 URL: https://blog.jim-nielsen.com/2026/vibe-dreams-didnt-come-true/
 Source: blog.jim-nielsen.com
-Published: 2026-04-07T09:23:56.557667
+Published: 2026-04-08T09:26:51.565869
 Desc: Simon Willison wrote about how he vibe coded his dream presentation app for macOS. I also took a stab at vibe coding my dream app: an RSS reader. To clarify: Reeder is my dream RSS app and it already exists, so I guess you could say my dreams have already come true? But I’ve kind of always wanted to
 
-[TRANSLATE_ONLY] Item 25 [Score=5]:
+[TRANSLATE_ONLY] Item 16 [Score=5]:
 Title: hugotunius.se: Claude, Teach Me Something
 URL: https://hugotunius.se/2025/10/26/claude-teach-me-something.html
 Source: hugotunius.se
-Published: 2026-04-07T09:23:59.408678
+Published: 2026-04-08T09:26:52.019554
 Desc: I’ve been experimenting with a new Claude workflow as an alternative to doom scrolling. It leverages what LLMs do best: non-determinism and text. I call it “Teach me something”.
 
-[TRANSLATE_ONLY] Item 26 [Score=5]:
+[TRANSLATE_ONLY] Item 17 [Score=5]:
 Title: tomrenner.com: LLMs are a 400-year-long confidence trick
 URL: https://tomrenner.com/posts/400-year-confidence-trick/
 Source: tomrenner.com
-Published: 2026-04-07T09:23:57.532066
+Published: 2026-04-08T09:26:52.679665
 Desc: In 1623 the German Wilhelm Schickard produced the first known designs for a mechanical calculator. Twenty years later Blaise Pascal produced a machine of an improved design, aiming to help with the large amount of tedious arithmetic required in his role as a tax collector. The interest in mechanical
 
-[TRANSLATE_ONLY] Item 27 [Score=5]:
+[TRANSLATE_ONLY] Item 18 [Score=5]:
 Title: tomrenner.com: Things that made me think: Cycle time, learning theory, and build chain security
 URL: https://tomrenner.com/posts/ttmmt-3/
 Source: tomrenner.com
-Published: 2026-04-07T09:23:57.532748
+Published: 2026-04-08T09:26:52.680288
 Desc: This series is a place to collect interesting things I’ve seen, read, or heard, along with some brief thoughts (often incomplete and/or inconclusive) that they provoked.   Measuring Cyle Time with Dr. Cat Hicks - The Hanger DX Podcast, Ankit Jain Cycle time is a measure lots of people use, but has n
 
-[TRANSLATE_ONLY] Item 28 [Score=5]:
+[TRANSLATE_ONLY] Item 19 [Score=5]:
 Title: tomrenner.com: Does my toaster love me?
 URL: https://tomrenner.com/posts/does-my-toaster-love-me/
 Source: tomrenner.com
-Published: 2026-04-07T09:23:57.534186
+Published: 2026-04-08T09:26:52.681748
 Desc: I’m starting to think that my toaster might have fallen in love with me. I get that not everyone will think this is possible, but I believe it’s true. It’s always pleased to see me, giving off cheerful sounds when I greet it in the morning by slotting in the bread, and now I’ve told it what I like i
 
-[TRANSLATE_ONLY] Item 29 [Score=5]:
+[TRANSLATE_ONLY] Item 20 [Score=5]:
 Title: blog.pixelmelt.dev: The Webs Digital Locks have Never had a Stronger Opponent
 URL: https://blog.pixelmelt.dev/the-webs-digital-locks/
 Source: blog.pixelmelt.dev
-Published: 2026-04-07T09:23:59.319230
+Published: 2026-04-08T09:26:52.756133
 Desc: We are in a renaissance era of reverse engineering. Defenders are going to be on the back foot until we figure out some way to cope with LLM's.
 
-[TRANSLATE_ONLY] Item 30 [Score=5]:
+[TRANSLATE_ONLY] Item 21 [Score=5]:
 Title: martinalderson.com: Telnyx, LiteLLM and Axios: the supply chain crisis
 URL: https://martinalderson.com/posts/telnyx-litellm-axios-supply-chain-crisis/?utm_source=rss&utm_medium=rss&utm_campaign=feed
 Source: martinalderson.com
-Published: 2026-04-07T09:24:00.061874
+Published: 2026-04-08T09:26:53.397185
 Desc: A cascading wave of supply chain attacks has hit npm and PyPI in under two weeks. LLMs are making it worse, and current mitigations aren't enough.
 
-[TRANSLATE_ONLY] Item 31 [Score=5]:
+[TRANSLATE_ONLY] Item 22 [Score=5]:
 Title: grantslatton.com: LLM Memory
 URL: https://grantslatton.com/llm-memory
 Source: grantslatton.com
-Published: 2026-04-07T09:23:59.702135
+Published: 2026-04-08T09:26:53.810563
 Desc: Some thoughts on implementations
 
-[TRANSLATE_ONLY] Item 32 [Score=5]:
-Title: anildash.com: Coding agents as the new compilers
-URL: https://anildash.com/2026/02/11/coding-agents-as-the-new-compilers/
-Source: anildash.com
-Published: 2026-04-07T09:24:01.432018
-Desc: In each successive generation of code creation thus far, we’ve abstracted away the prior generation over time. Usually, only a small percentage of coders still work on the lower layers of the stack that used to be the space where everyone was working. I’ve been coding long enough that people were st
-
-[TRANSLATE_ONLY] Item 33 [Score=5]:
+[TRANSLATE_ONLY] Item 23 [Score=5]:
 Title: anildash.com: How did we end up threatening our kids’ lives with AI?
 URL: https://anildash.com/2026/02/18/threatening-kids-with-AI/
 Source: anildash.com
-Published: 2026-04-07T09:24:01.433221
+Published: 2026-04-08T09:26:55.143807
 Desc: I have to begin by warning you about the content in this piece; while I won’t be dwelling on any specifics, this will necessarily be a broad discussion about some of the most disturbing topics imaginable. I resent that I have to give you that warning, but I’m forced to because of the choices that th
 
-[TRANSLATE_ONLY] Item 34 [Score=5]:
+[TRANSLATE_ONLY] Item 24 [Score=5]:
+Title: anildash.com: Taking action against AI harms
+URL: https://anildash.com/2026/02/23/taking-action-ai-harms/
+Source: anildash.com
+Published: 2026-04-08T09:26:55.145535
+Desc: In my last piece, I talked about the harms that AI is visiting on children through the irresponsible choices made by the platforms creating those products. While we dove a bit into the incentives and institutional pressures that cause those companies to make such wildly irresponsible decisions, what
+
+[TRANSLATE_ONLY] Item 25 [Score=5]:
 Title: michael.stapelberg.ch: Stamp It! All Programs Must Report Their Version
 URL: https://michael.stapelberg.ch/posts/2026-04-05-stamp-it-all-programs-must-report-their-version/
 Source: michael.stapelberg.ch
-Published: 2026-04-07T09:24:01.367197
+Published: 2026-04-08T09:26:56.501764
 Desc: Recently, during a production incident response, I guessed the root cause of an outage correctly within less than an hour (cool!) and submitted a fix just to rule it out, only to then spend many hours fumbling in the dark because we lacked visibility into version numbers and rollouts… 😞 This experie
 
-[TRANSLATE_ONLY] Item 35 [Score=5]:
+[TRANSLATE_ONLY] Item 26 [Score=5]:
 Title: michael.stapelberg.ch: Coding Agent VMs on NixOS with microvm.nix
 URL: https://michael.stapelberg.ch/posts/2026-02-01-coding-agent-microvm-nix/
 Source: michael.stapelberg.ch
-Published: 2026-04-07T09:24:01.383407
+Published: 2026-04-08T09:26:56.520495
 Desc: I have come to appreciate coding agents to be valuable tools for working with computer program code in any capacity, such as learning about any program’s architecture, diagnosing bugs or developing proofs of concept. Depending on the use-case, reviewing each command the agent wants to run can get te
 
-[TRANSLATE_ONLY] Item 36 [Score=5]:
-Title: healthcareitnews.com: How HIMSS26 attendees use AI every day
-URL: https://www.healthcareitnews.com/video/how-himss26-attendees-use-ai-every-day
-Source: healthcareitnews.com
-Published: 2026-04-07T09:24:02.036960
-Desc: 
-
-[TRANSLATE_ONLY] Item 37 [Score=5]:
-Title: mobihealthnews.com: Amid tech innovations, connection remains a HIMSS Global Conference priority
-URL: https://www.mobihealthnews.com/video/amid-tech-innovations-connection-remains-himss-global-conference-priority
-Source: mobihealthnews.com
-Published: 2026-04-07T09:24:02.218587
-Desc: 
-
-[TRANSLATE_ONLY] Item 38 [Score=0]:
-Title: After 20 years I turned off Google Adsense for my websites
-URL: https://blog.ericgoldman.org/archives/2025/06/after-20-years-i-turned-off-google-adsense-for-my-websites.htm
+[TRANSLATE_ONLY] Item 27 [Score=0]:
+Title: Project Glasswing: Securing critical software for the AI era
+URL: https://www.anthropic.com/glasswing
 Source: Hacker News
-Published: 2026-04-07T07:23:28
+Published: 2026-04-08T02:09:34
 Desc: 
 
-[TRANSLATE_ONLY] Item 39 [Score=0]:
-Title: Anthropic expands partnership with Google and Broadcom for next-gen compute
-URL: https://www.anthropic.com/news/google-broadcom-partnership-compute
+[TRANSLATE_ONLY] Item 28 [Score=0]:
+Title: Lunar Flyby
+URL: https://www.nasa.gov/gallery/lunar-flyby/
 Source: Hacker News
-Published: 2026-04-07T05:52:08
+Published: 2026-04-07T23:03:18
 Desc: 
 
-[TRANSLATE_ONLY] Item 40 [Score=0]:
-Title: Show HN: Ghost Pepper – Local hold-to-talk speech-to-text for macOS
-URL: https://github.com/matthartman/ghost-pepper
+[TRANSLATE_ONLY] Item 29 [Score=0]:
+Title: US and Iran agree to provisional ceasefire
+URL: https://www.theguardian.com/us-news/2026/apr/07/trump-iran-war-ceasefire
 Source: Hacker News
-Published: 2026-04-07T03:50:16
+Published: 2026-04-08T06:41:02
 Desc: 
 
-[TRANSLATE_ONLY] Item 41 [Score=0]:
-Title: Sam Altman may control our future – can he be trusted?
-URL: https://www.newyorker.com/magazine/2026/04/13/sam-altman-may-control-our-future-can-he-be-trusted
+[TRANSLATE_ONLY] Item 30 [Score=0]:
+Title: System Card: Claude Mythos Preview [pdf]
+URL: https://www-cdn.anthropic.com/53566bf5440a10affd749724787c8913a2ae0841.pdf
 Source: Hacker News
-Published: 2026-04-06T18:36:57
+Published: 2026-04-08T02:18:36
 Desc: 
 
-[TRANSLATE_ONLY] Item 42 [Score=0]:
-Title: Launch HN: Freestyle – Sandboxes for Coding Agents
-URL: https://www.freestyle.sh/
+[TRANSLATE_ONLY] Item 31 [Score=0]:
+Title: GLM-5.1: Towards Long-Horizon Tasks
+URL: https://z.ai/blog/glm-5.1
 Source: Hacker News
-Published: 2026-04-07T00:32:11
+Published: 2026-04-08T00:32:15
 Desc: 
 
-[TRANSLATE_ONLY] Item 43 [Score=0]:
-Title: A cryptography engineer's perspective on quantum computing timelines
-URL: https://words.filippo.io/crqc-timeline/
+[TRANSLATE_ONLY] Item 32 [Score=0]:
+Title: How to get better at guitar
+URL: https://www.jakeworth.com/posts/how-to-get-better-at-guitar/
 Source: Hacker News
-Published: 2026-04-06T23:31:20
+Published: 2026-04-06T00:14:12
 Desc: 
 
-[TRANSLATE_ONLY] Item 44 [Score=0]:
-Title: Show HN: GovAuctions lets you browse government auctions at once
-URL: https://www.govauctions.app/
+[TRANSLATE_ONLY] Item 33 [Score=0]:
+Title: S3 Files
+URL: https://www.allthingsdistributed.com/2026/04/s3-files-and-the-changing-face-of-s3.html
 Source: Hacker News
-Published: 2026-04-07T00:21:46
+Published: 2026-04-08T03:44:01
 Desc: 
 
-[TRANSLATE_ONLY] Item 45 [Score=0]:
-Title: Show HN: Hippo, biologically inspired memory for AI agents
-URL: https://github.com/kitfunso/hippo-memory
+[TRANSLATE_ONLY] Item 34 [Score=0]:
+Title: Cambodia unveils statue to honour famous landmine-sniffing rat
+URL: https://www.bbc.com/news/articles/c0rx7xzd10xo
 Source: Hacker News
-Published: 2026-04-07T05:49:34
+Published: 2026-04-08T01:23:43
 Desc: 
 
-[TRANSLATE_ONLY] Item 46 [Score=0]:
-Title: Porting Go's strings package to C
-URL: https://antonz.org/porting-go-strings/
+[TRANSLATE_ONLY] Item 35 [Score=0]:
+Title: A truck driver spent 20 years making a scale model of every building in NYC
+URL: https://www.smithsonianmag.com/smart-news/a-truck-drive-spent-20-years-making-this-astonishing-scale-model-of-every-single-building-in-new-york-city-180988443/
 Source: Hacker News
-Published: 2026-04-03T23:12:45
+Published: 2026-04-06T13:22:24
 Desc: 
 
-[TRANSLATE_ONLY] Item 47 [Score=0]:
-Title: Issue: Claude Code is unusable for complex engineering tasks with Feb updates
-URL: https://github.com/anthropics/claude-code/issues/42796
+[TRANSLATE_ONLY] Item 36 [Score=0]:
+Title: Show HN: An interactive map of Tolkien's Middle-earth
+URL: https://middle-earth-interactive-map.web.app/
 Source: Hacker News
-Published: 2026-04-06T21:50:35
+Published: 2026-04-08T04:42:37
 Desc: 
 
-[TRANSLATE_ONLY] Item 48 [Score=0]:
-Title: abhigyanpatwari /GitNexus
-URL: https://github.com/abhigyanpatwari/GitNexus
-Source: GitHub
-Published: 2026-04-07T09:23:57.975845
-Desc: GitNexus: The Zero-Server Code Intelligence Engine - GitNexus is a client-side knowledge graph creator that runs entirely in your browser. Drop in a GitHub repo or ZIP file, and get an interactive knowledge graph wit a built in Graph RAG Agent. Perfect for code exploration
-
-[TRANSLATE_ONLY] Item 49 [Score=0]:
+[TRANSLATE_ONLY] Item 37 [Score=0]:
 Title: google-ai-edge /gallery
 URL: https://github.com/google-ai-edge/gallery
 Source: GitHub
-Published: 2026-04-07T09:23:57.976005
+Published: 2026-04-08T09:26:53.472682
 Desc: A gallery that showcases on-device ML/GenAI use cases and allows people to try and use models locally.
 
-[TRANSLATE_ONLY] Item 50 [Score=0]:
+[TRANSLATE_ONLY] Item 38 [Score=0]:
 Title: google-ai-edge /LiteRT-LM
 URL: https://github.com/google-ai-edge/LiteRT-LM
 Source: GitHub
-Published: 2026-04-07T09:23:57.976155
+Published: 2026-04-08T09:26:53.472821
 Desc: 
+
+[TRANSLATE_ONLY] Item 39 [Score=0]:
+Title: NVIDIA /personaplex
+URL: https://github.com/NVIDIA/personaplex
+Source: GitHub
+Published: 2026-04-08T09:26:53.472900
+Desc: PersonaPlex code.
+
+[TRANSLATE_ONLY] Item 40 [Score=0]:
+Title: abhigyanpatwari /GitNexus
+URL: https://github.com/abhigyanpatwari/GitNexus
+Source: GitHub
+Published: 2026-04-08T09:26:53.473012
+Desc: GitNexus: The Zero-Server Code Intelligence Engine - GitNexus is a client-side knowledge graph creator that runs entirely in your browser. Drop in a GitHub repo or ZIP file, and get an interactive knowledge graph wit a built in Graph RAG Agent. Perfect for code exploration
+
+[TRANSLATE_ONLY] Item 41 [Score=0]:
+Title: tobi /qmd
+URL: https://github.com/tobi/qmd
+Source: GitHub
+Published: 2026-04-08T09:26:53.473084
+Desc: mini cli search engine for your docs, knowledge bases, meeting notes, whatever. Tracking current sota approaches while being all local
+
+[TRANSLATE_ONLY] Item 42 [Score=0]:
+Title: forrestchang /andrej-karpathy-skills
+URL: https://github.com/forrestchang/andrej-karpathy-skills
+Source: GitHub
+Published: 2026-04-08T09:26:53.473179
+Desc: 
+
+[TRANSLATE_ONLY] Item 43 [Score=0]:
+Title: elebumm /RedditVideoMakerBot
+URL: https://github.com/elebumm/RedditVideoMakerBot
+Source: GitHub
+Published: 2026-04-08T09:26:53.473248
+Desc: Create Reddit Videos with just✨ one command ✨
+
+[TRANSLATE_ONLY] Item 44 [Score=0]:
+Title: HKUDS /DeepTutor
+URL: https://github.com/HKUDS/DeepTutor
+Source: GitHub
+Published: 2026-04-08T09:26:53.473318
+Desc: "DeepTutor: Agent-Native Personalized Learning Assistant"
+
+[TRANSLATE_ONLY] Item 45 [Score=0]:
+Title: TheCraigHewitt /seomachine
+URL: https://github.com/TheCraigHewitt/seomachine
+Source: GitHub
+Published: 2026-04-08T09:26:53.473388
+Desc: A specialized Claude Code workspace for creating long-form, SEO-optimized blog content for any business. This system helps you research, write, analyze, and optimize content that ranks well and serves your target audience.
+
+[TRANSLATE_ONLY] Item 46 [Score=0]:
+Title: 我把外地姨送给我妈的廉价散装保健品，快递退给姨，你怎么看？
+URL: https://www.v2ex.com/t/1204021
+Source: V2EX
+Published: 2026-04-08T09:26:51.234620
+Desc: 清明节，外地的姨回来探望，带了几样东西给我妈：俄式山羊奶营养粉、红枣核桃黄精黑芝麻丸、伊犁樱桃干、羊奶贝。我让 AI 分析了包装成分和宣传内容，结果不出所料——要么名不副实，要么成分与宣传出入较大。这类东西常见于各种养生讲座的派发品，本身价值有限，却包装得像高档补品。  ---  ## 她不是不懂  我姨今年 77 岁，比我妈大 7 岁，在家族长辈里是出了名懂养生的，不是那种听广告就信的类型，是真正有研究的。所以我认为这份礼物不是无心之失——她自己不会吃这些东西，她清楚这些东西的斤两，带来给我妈，大概是觉得反正比扔掉强，收到的人还会感激她。结果我妈果然觉得姐姐对她很好，送了贵重的东
+
+[TRANSLATE_ONLY] Item 47 [Score=0]:
+Title: 80 后讨论下买房的意义
+URL: https://www.v2ex.com/t/1203924
+Source: V2EX
+Published: 2026-04-08T09:26:51.234653
+Desc: 80 年的,自认是个标准老登，但昨天和 70 后聊了房子、孩子，还是觉得差人家一大截！ 我的观点是：年轻人不买房、不结婚是对自己负责。现在的房子已经是家庭的消费品，买入时各种税费，当前持有成本是：物业费，未来会有房产税、维修、维护费。如果房子的租金收入不能覆盖银行贷款或没有 3%-4%的收益，买房就是在消耗自己，是为国牺牲. 他是坚决鼓励年轻人买房。他反驳我的案例是东北已经有 5%租金收益的房子出现了，而恰恰那些房子是没有持有价值的（因为没人接盘），并以此得出 1-2%租金收益才是合理的。 人生过半，真的觉得房子、孩子都不是我这种非成功人士的必备品，如果有选择，我都会选择不结婚、不生孩子
+
+[TRANSLATE_ONLY] Item 48 [Score=0]:
+Title: 感觉中考五五分流，比高考还残酷
+URL: https://www.v2ex.com/t/1203989
+Source: V2EX
+Published: 2026-04-08T09:26:51.234654
+Desc: 亲戚家女儿还有两个月要中考了，680 分总分，考了 390 分。感觉大概率上不了高中，甚至连复读的机会也没有。  感觉对于一个才十四岁的孩子来说，很残酷。   一是一旦考不上高中，就要面临社会的拷打。   二是即使知道结果，也无力改变什么，只能坐等被分流出去。   三是可预见的未来，也和大厂高薪无缘了。  V 友们，有没有什么好的建议，如果上不了高中，能去找关系复读吗？跨省就读高中？亦或者是出国读书？还是找个靠谱的职业中学，学一门手艺。现在孩子自己也很着急，每天学到很晚，周末也补课，比我们打工人还要辛苦。
+
+[TRANSLATE_ONLY] Item 49 [Score=0]:
+Title: 独居生活的人，如何克服缺失亲密关系的孤独感？
+URL: https://www.v2ex.com/t/1203958
+Source: V2EX
+Published: 2026-04-08T09:26:51.234656
+Desc: 一直以来我都是个性格内向的人，不太擅长日常的社交闲聊。为了避开人际交往的压力，去年我放弃了合租，自己找了个公寓独居。我本以为我会很享受一个人的生活，但实际上独居快一年了，我却感觉越来越痛苦。  这种情绪并不是某一天突然爆发的，而是生活中很多小事累加在一起的结果。  在我心情糟糕到极点时，特别希望哪怕有一个人能拍拍我的背；在我遇到开心的事情时，也极度渴望能有个人分享我的喜悦。但遗憾的是，在无数个想要倾诉或分享的瞬间，我身边只有自己。这种孤独感虽然不至于压垮我，但总觉得生活充满了遗憾——那么多美好的、痛苦的、有趣的经历，我都希望能有人和我一起感受。  因为这种负面情绪的堆积，我开始越来
+
+[TRANSLATE_ONLY] Item 50 [Score=0]:
+Title: 有无 V 哥懂配眼镜的
+URL: https://www.v2ex.com/t/1203921
+Source: V2EX
+Published: 2026-04-08T09:26:51.234657
+Desc: 最近想换眼镜了，去眼镜店搞蔡司 1.67 或者 1.74 的都死贵啊，感觉开了我这一单够他们吃喝半个月了； 有无靠谱的网店或者实体店推荐，算高度近视了呢，所以要薄一点。
