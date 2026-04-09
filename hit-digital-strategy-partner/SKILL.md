@@ -58,10 +58,6 @@ triggers: ["重构商业模式", "ROI测算", "高规格战略验证", "医疗IT
 1.  **去AI化精修**: 调用 `personal-write-humanizer` 进行洗稿。
 2.  **高管备忘录**: 文首包含 `🚨 紧急预警` 与 `🎯 战略教练指令`。
 
-### Phase 6: Cognitive Write-Back [Mode: EXECUTION]
-1.  **智慧蒸馏**: 提取反常识洞察写入 `C:\Users\shich\.gemini\MEMORY\MEMORY.md`。
-2.  **Lake Sync**: 触发向量湖同步。
-
 ## 3. Anti-Patterns (绝对禁令)
 - ❌ **禁止“语义稀释”**: 任何段落若动词密度低于 80%，视为废稿。
 - ❌ **禁止“先写后想”**: 严禁未更新黑板状态即输出正文。

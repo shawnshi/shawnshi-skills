@@ -85,7 +85,6 @@ triggers: ["编写数字化解决方案", "设计医院转型规划", "智慧医
 2. **技能自愈**: 
     - 提取 Phase 5/6 中的严重逻辑缺陷，提炼为规则。
     - 调用 `replace` 将规则追加至本技能末尾的 `## Gotchas` 区域。
-3. **Lake Sync**: 触发 Vector Lake 同步：`python C:\Users\shich\.gemini\extensions\vector-lake\cli.py sync`。
 
 ## 4. 绝对禁令 (Anti-Patterns)
 - ❌ **禁售软件视角**：不要写成产品说明书。必须从“医院痛点”推导。

@@ -63,352 +63,352 @@
 数据要素 医疗(w=10), Agentic Workflow 临床(w=9), 医疗AI(w=9), DRG DIP(w=9), Evidence-Mesh(w=8), 医疗知识图谱(w=8), 数智化转型(w=8), 医疗信创(w=8), Medical Copilot(w=8), AI 原生医院(w=8), 多模态电子病历(w=8), 医疗大模型 落地(w=8), Medical Semantic Layer(w=8), Agentic Infrastructure(w=7), 算法审计 医疗(w=7)
 
 ## ??????
-[DEEP_REFINE] Item 1 [Score=11]:
-Title: rakhim.exotext.com: Windows 11 after two decades of macOS: okay, but also awful
-URL: https://rakhim.exotext.com/windows-11-experience
-Source: rakhim.exotext.com
-Published: 2026-04-08T09:26:52.830791
-Desc: Recently my partner's trusty old 5K iMac died after 8.5 years of service (Radeon gpu is fried). At first I thought it was finally time to get one of those cool little M4 Mac Minis, but then decided to conduct an experiment. I gave up my Mac Studio M2 Max (64 Gb unified memory and 1 Tb storage) and t
+[DEEP_REFINE] Item 1 [Score=6]:
+Title: Nature Digital Medicine: Evaluation of artificial intelligence-generated vignettes depicting patient chatbot use in psychiatric contexts
+URL: https://www.nature.com/articles/s41746-026-02605-6
+Source: Nature Digital Medicine
+Published: 2026-04-09T07:56:32.633868
+Desc: npj Digital Medicine, Published online: 07 April 2026; doi:10.1038/s41746-026-02605-6Evaluation of artificial intelligence-generated vignettes depicting patient chatbot use in psychiatric contexts
 
 [DEEP_REFINE] Item 2 [Score=6]:
 Title: The Lancet Digital Health: [Comment] Thank you to The Lancet Digital Health statistical and peer reviewers in 2025
 URL: https://www.thelancet.com/journals/landig/article/PIIS2589-7500(26)00003-8/fulltext?rss=yes
 Source: The Lancet Digital Health
-Published: 2026-04-08T09:26:51.315173
+Published: 2026-04-09T07:56:30.754854
 Desc: Rita Achermann
 
-[DEEP_REFINE] Item 3 [Score=5]:
-Title: arXiv Med-AI: Measuring Competency, Not Performance: Item-Aware Evaluation Across Medical Benchmarks
-URL: https://arxiv.org/abs/2509.24186v2
-Source: arXiv Med-AI
-Published: 2026-04-08T09:26:55.087159
-Desc: Accuracy-based evaluation of Large Language Models (LLMs) measures benchmark-specific performance rather than underlying medical competency: it treats all questions as equally informative, conflates model ability with item characteristics, and thereby produces rankings that vary with benchmark choic
+[DEEP_REFINE] Item 3 [Score=6]:
+Title: healthcareitnews.com: Some Epic health systems now connect to SSA through TEFCA
+URL: https://www.healthcareitnews.com/news/some-epic-health-systems-now-connect-ssa-through-tefca
+Source: healthcareitnews.com
+Published: 2026-04-09T07:56:27.094079
+Desc: Healthcare organizations using Epic Systems' electronic health records can now share patient medical records with the U.S. Social Security Administration instantly, under the Trusted Exchange Framework and Common Agreement to help accelerate disability benefit determinations, the company said.WHY IT
 
-[DEEP_REFINE] Item 4 [Score=5]:
-Title: simonwillison.net: GLM-5.1: Towards Long-Horizon Tasks
-URL: https://simonwillison.net/2026/Apr/7/glm-51/#atom-everything
-Source: simonwillison.net
-Published: 2026-04-08T09:26:51.511017
-Desc: GLM-5.1: Towards Long-Horizon Tasks Chinese AI lab Z.ai's latest model is a giant 754B parameter 1.51TB (on Hugging Face) MIT-licensed monster - the same size as their previous GLM-5 release, and sharing the same paper. It's available via OpenRouter so I asked it to draw me a pelican: llm install ll
+[DEEP_REFINE] Item 4 [Score=6]:
+Title: HIStalk: Morning Headlines 4/9/26
+URL: https://histalk2.com/2026/04/08/morning-headlines-4-9-26/
+Source: HIStalk
+Published: 2026-04-09T07:56:23.736232
+Desc: Health systems on Epic are first to connect with the ...
 
 [DEEP_REFINE] Item 5 [Score=5]:
-Title: simonwillison.net: Anthropic's Project Glasswing - restricting Claude Mythos to security researchers - sounds necessary to me
-URL: https://simonwillison.net/2026/Apr/7/project-glasswing/#atom-everything
+Title: simonwillison.net: Meta's new model is Muse Spark, and meta.ai chat has some interesting tools
+URL: https://simonwillison.net/2026/Apr/8/muse-spark/#atom-everything
 Source: simonwillison.net
-Published: 2026-04-08T09:26:51.512212
-Desc: Anthropic didn't release their latest model, Claude Mythos (system card PDF), today. They have instead made it available to a very restricted set of preview partners under their newly announced Project Glasswing. The model is a general purpose model, similar to Claude Opus 4.6, but Anthropic claim t
+Published: 2026-04-09T07:56:35.891367
+Desc: Meta announced Muse Spark today, their first model release since Llama 4 almost exactly a year ago. It's hosted, not open weights, and the API is currently "a private API preview to select users", but you can try it out today on meta.ai (Facebook or Instagram login required). Meta's self-reported be
 
 [DEEP_REFINE] Item 6 [Score=5]:
-Title: antirez.com: Redis patterns for coding
-URL: http://antirez.com/news/161
-Source: antirez.com
-Published: 2026-04-08T09:26:57.264977
-Desc: Here LLM and coding agents can find:  1. Exhaustive documentation about Redis commands and data types. 2. Patterns commonly used. 3. Configuration hints. 4. Algorithms that can be mounted using Redis commands.  https://redis.antirez.com/  Some humans claim this documentation is actually useful for a
-
-[DEEP_REFINE] Item 7 [Score=5]:
-Title: antirez.com: Implementing a clear room Z80 / ZX Spectrum emulator with Claude Code
-URL: http://antirez.com/news/160
-Source: antirez.com
-Published: 2026-04-08T09:26:57.265789
-Desc: Anthropic recently released a blog post with the description of an experiment in which the last version of Opus, the 4.6, was instructed to write a C compiler in Rust, in a “clean room” setup.  The experiment methodology left me dubious about the kind of point they wanted to make. Why not provide th
-
-[DEEP_REFINE] Item 8 [Score=5]:
-Title: idiallo.com: AI Did It in 12 Minutes. It Took Me 10 Hours to Fix It
-URL: https://idiallo.com/blog/it-took-me-10-hours-to-fix-ai-code?src=feed
-Source: idiallo.com
-Published: 2026-04-08T09:26:51.806108
-Desc: I've been working on personal projects since the 2000s. One thing I've always been adamant about is understanding the code I write. Even when Stack Overflow came along, I was that annoying guy who told people not to copy and paste code into their repos. Instead, they should read it and adapt it to t
-
-[DEEP_REFINE] Item 9 [Score=5]:
-Title: idiallo.com: My Zip bomb strategy is not as effective as it used to be
-URL: https://idiallo.com/blog/zip-bombs-are-not-as-effective-as-they-used-to-be?src=feed
-Source: idiallo.com
-Published: 2026-04-08T09:26:51.807278
-Desc: Last year, I wrote about my server setup and how I use zipbombs to mitigate attacks from rogue bots. It was an effective method that helped my blog survive for 10 years. I usually hesitate to write these types of articles, especially since it means revealing the inner workings of my own servers. Thi
-
-[DEEP_REFINE] Item 10 [Score=5]:
-Title: dynomight.net: LLMs predict my coffee
-URL: https://dynomight.net/coffee/
-Source: dynomight.net
-Published: 2026-04-08T09:26:52.984178
-Desc: Why not benchmark with physical experiments?
-
-[DEEP_REFINE] Item 11 [Score=5]:
-Title: evanhahn.com: Notes from March 2026
-URL: https://evanhahn.com/notes-from-march-2026/
-Source: evanhahn.com
-Published: 2026-04-08T09:26:52.774296
-Desc: March always seems to be my life’s busiest month. Things I wrote and made   “The two kinds of error”: in my mind, software errors are divided into two categories: expected and unexpected errors. I finally wrote up this idea I’ve had for a long time.   “All tests pass” is a short story about a strang
-
-[DEEP_REFINE] Item 12 [Score=5]:
-Title: evanhahn.com: All tests pass: a short story
-URL: https://evanhahn.com/all-tests-pass-a-short-story/
-Source: evanhahn.com
-Published: 2026-04-08T09:26:52.775371
-Desc: One night, I wrote a simple tool to pick a random programming language. After shuffling a few times, I landed on Arturo. I decided to try it for fun. What’s Arturo? Best I understand, Arturo is a stack-based programming language. It’s primarily maintained by Yanis Zafirópulos. They published a visio
-
-[DEEP_REFINE] Item 13 [Score=5]:
-Title: buttondown.com/hillelwayne: LLMs are bad at vibing specifications
-URL: https://buttondown.com/hillelwayne/archive/llms-are-bad-at-vibing-specifications/
-Source: buttondown.com/hillelwayne
-Published: 2026-04-08T09:26:53.070247
-Desc: No newsletter next week I'll be speaking at InfoQ London. But see below for a book giveaway!  LLMs are bad at vibing specifications About a year ago I wrote AI is a gamechanger for TLA+ users, which argued that AI are a "specification force multiplier". That was written from the perspective an TLA+ 
-
-[DEEP_REFINE] Item 14 [Score=5]:
-Title: blog.jim-nielsen.com: Prototyping with LLMs
-URL: https://blog.jim-nielsen.com/2026/prototyping-with-llm/
-Source: blog.jim-nielsen.com
-Published: 2026-04-08T09:26:51.564126
-Desc: Did you know that Jesus gave advice about prototyping with an LLM? Here’s Luke 14:28-30:  Suppose one of you wants to build a tower. Won’t you first sit down and estimate the cost to see if you have enough money to complete it? For if you lay the foundation and are not able to finish it, everyone wh
-
-[DEEP_REFINE] Item 15 [Score=5]:
 Title: blog.jim-nielsen.com: I Tried Vibing an RSS Reader and My Dreams Did Not Come True
 URL: https://blog.jim-nielsen.com/2026/vibe-dreams-didnt-come-true/
 Source: blog.jim-nielsen.com
-Published: 2026-04-08T09:26:51.565869
+Published: 2026-04-09T07:56:29.495209
 Desc: Simon Willison wrote about how he vibe coded his dream presentation app for macOS. I also took a stab at vibe coding my dream app: an RSS reader. To clarify: Reeder is my dream RSS app and it already exists, so I guess you could say my dreams have already come true? But I’ve kind of always wanted to
 
-[TRANSLATE_ONLY] Item 16 [Score=5]:
-Title: hugotunius.se: Claude, Teach Me Something
-URL: https://hugotunius.se/2025/10/26/claude-teach-me-something.html
-Source: hugotunius.se
-Published: 2026-04-08T09:26:52.019554
-Desc: I’ve been experimenting with a new Claude workflow as an alternative to doom scrolling. It leverages what LLMs do best: non-determinism and text. I call it “Teach me something”.
-
-[TRANSLATE_ONLY] Item 17 [Score=5]:
-Title: tomrenner.com: LLMs are a 400-year-long confidence trick
-URL: https://tomrenner.com/posts/400-year-confidence-trick/
-Source: tomrenner.com
-Published: 2026-04-08T09:26:52.679665
-Desc: In 1623 the German Wilhelm Schickard produced the first known designs for a mechanical calculator. Twenty years later Blaise Pascal produced a machine of an improved design, aiming to help with the large amount of tedious arithmetic required in his role as a tax collector. The interest in mechanical
-
-[TRANSLATE_ONLY] Item 18 [Score=5]:
-Title: tomrenner.com: Things that made me think: Cycle time, learning theory, and build chain security
-URL: https://tomrenner.com/posts/ttmmt-3/
-Source: tomrenner.com
-Published: 2026-04-08T09:26:52.680288
-Desc: This series is a place to collect interesting things I’ve seen, read, or heard, along with some brief thoughts (often incomplete and/or inconclusive) that they provoked.   Measuring Cyle Time with Dr. Cat Hicks - The Hanger DX Podcast, Ankit Jain Cycle time is a measure lots of people use, but has n
-
-[TRANSLATE_ONLY] Item 19 [Score=5]:
-Title: tomrenner.com: Does my toaster love me?
-URL: https://tomrenner.com/posts/does-my-toaster-love-me/
-Source: tomrenner.com
-Published: 2026-04-08T09:26:52.681748
-Desc: I’m starting to think that my toaster might have fallen in love with me. I get that not everyone will think this is possible, but I believe it’s true. It’s always pleased to see me, giving off cheerful sounds when I greet it in the morning by slotting in the bread, and now I’ve told it what I like i
-
-[TRANSLATE_ONLY] Item 20 [Score=5]:
-Title: blog.pixelmelt.dev: The Webs Digital Locks have Never had a Stronger Opponent
-URL: https://blog.pixelmelt.dev/the-webs-digital-locks/
-Source: blog.pixelmelt.dev
-Published: 2026-04-08T09:26:52.756133
-Desc: We are in a renaissance era of reverse engineering. Defenders are going to be on the back foot until we figure out some way to cope with LLM's.
-
-[TRANSLATE_ONLY] Item 21 [Score=5]:
-Title: martinalderson.com: Telnyx, LiteLLM and Axios: the supply chain crisis
-URL: https://martinalderson.com/posts/telnyx-litellm-axios-supply-chain-crisis/?utm_source=rss&utm_medium=rss&utm_campaign=feed
-Source: martinalderson.com
-Published: 2026-04-08T09:26:53.397185
-Desc: A cascading wave of supply chain attacks has hit npm and PyPI in under two weeks. LLMs are making it worse, and current mitigations aren't enough.
-
-[TRANSLATE_ONLY] Item 22 [Score=5]:
-Title: grantslatton.com: LLM Memory
-URL: https://grantslatton.com/llm-memory
-Source: grantslatton.com
-Published: 2026-04-08T09:26:53.810563
-Desc: Some thoughts on implementations
-
-[TRANSLATE_ONLY] Item 23 [Score=5]:
-Title: anildash.com: How did we end up threatening our kids’ lives with AI?
-URL: https://anildash.com/2026/02/18/threatening-kids-with-AI/
+[DEEP_REFINE] Item 7 [Score=5]:
+Title: anildash.com: Talking through the tech reckoning
+URL: https://anildash.com/2026/02/25/talking-through-the-tech-reckoning/
 Source: anildash.com
-Published: 2026-04-08T09:26:55.143807
-Desc: I have to begin by warning you about the content in this piece; while I won’t be dwelling on any specifics, this will necessarily be a broad discussion about some of the most disturbing topics imaginable. I resent that I have to give you that warning, but I’m forced to because of the choices that th
+Published: 2026-04-09T07:56:33.173148
+Desc: Many of the topics that we’ve all been discussing about technology these days seem to matter so much more, and the stakes have never been higher. So, I’ve been trying to engage with more conversations out in the world, in hopes of communicating some of the ideas that might not get shared from more t
 
-[TRANSLATE_ONLY] Item 24 [Score=5]:
-Title: anildash.com: Taking action against AI harms
-URL: https://anildash.com/2026/02/23/taking-action-ai-harms/
-Source: anildash.com
-Published: 2026-04-08T09:26:55.145535
-Desc: In my last piece, I talked about the harms that AI is visiting on children through the irresponsible choices made by the platforms creating those products. While we dove a bit into the incentives and institutional pressures that cause those companies to make such wildly irresponsible decisions, what
+[DEEP_REFINE] Item 8 [Score=5]:
+Title: healthcareitnews.com: Changemaker draws leadership inspiration from HIMSS membership
+URL: https://www.healthcareitnews.com/video/changemaker-draws-leadership-inspiration-himss-membership
+Source: healthcareitnews.com
+Published: 2026-04-09T07:56:27.093984
+Desc: 
 
-[TRANSLATE_ONLY] Item 25 [Score=5]:
-Title: michael.stapelberg.ch: Stamp It! All Programs Must Report Their Version
-URL: https://michael.stapelberg.ch/posts/2026-04-05-stamp-it-all-programs-must-report-their-version/
-Source: michael.stapelberg.ch
-Published: 2026-04-08T09:26:56.501764
-Desc: Recently, during a production incident response, I guessed the root cause of an outage correctly within less than an hour (cool!) and submitted a fix just to rule it out, only to then spend many hours fumbling in the dark because we lacked visibility into version numbers and rollouts… 😞 This experie
+[DEEP_REFINE] Item 9 [Score=5]:
+Title: mobihealthnews.com: Tap into HIMSS resources for healthcare career growth
+URL: https://www.mobihealthnews.com/video/tap-himss-resources-healthcare-career-growth
+Source: mobihealthnews.com
+Published: 2026-04-09T07:56:26.661894
+Desc: 
 
-[TRANSLATE_ONLY] Item 26 [Score=5]:
-Title: michael.stapelberg.ch: Coding Agent VMs on NixOS with microvm.nix
-URL: https://michael.stapelberg.ch/posts/2026-02-01-coding-agent-microvm-nix/
-Source: michael.stapelberg.ch
-Published: 2026-04-08T09:26:56.520495
-Desc: I have come to appreciate coding agents to be valuable tools for working with computer program code in any capacity, such as learning about any program’s architecture, diagnosing bugs or developing proofs of concept. Depending on the use-case, reviewing each command the agent wants to run can get te
+[DEEP_REFINE] Item 10 [Score=0]:
+Title: I ported Mac OS X to the Nintendo Wii
+URL: https://bryankeller.github.io/2026/04/08/porting-mac-os-x-nintendo-wii.html
+Source: Hacker News
+Published: 2026-04-08T23:40:00
+Desc: 
+
+[DEEP_REFINE] Item 11 [Score=0]:
+Title: USB for Software Developers: An introduction to writing userspace USB drivers
+URL: https://werwolv.net/posts/usb_for_sw_devs/
+Source: Hacker News
+Published: 2026-04-09T03:23:34
+Desc: 
+
+[DEEP_REFINE] Item 12 [Score=0]:
+Title: Git commands I run before reading any code
+URL: https://piechowski.io/post/git-commands-before-reading-code/
+Source: Hacker News
+Published: 2026-04-08T16:53:42
+Desc: 
+
+[DEEP_REFINE] Item 13 [Score=0]:
+Title: Understanding the Kalman filter with a simple radar example
+URL: https://kalmanfilter.net
+Source: Hacker News
+Published: 2026-04-09T01:11:46
+Desc: 
+
+[DEEP_REFINE] Item 14 [Score=0]:
+Title: Muse Spark: Scaling towards personal superintelligence
+URL: https://ai.meta.com/blog/introducing-muse-spark-msl/?_fb_noscript=1
+Source: Hacker News
+Published: 2026-04-09T00:01:32
+Desc: 
+
+[DEEP_REFINE] Item 15 [Score=0]:
+Title: They're made out of meat (1991)
+URL: http://www.terrybisson.com/theyre-made-out-of-meat-2/
+Source: Hacker News
+Published: 2026-04-08T19:20:50
+Desc: 
+
+[TRANSLATE_ONLY] Item 16 [Score=0]:
+Title: Expanding Swift's IDE Support
+URL: https://swift.org/blog/expanding-swift-ide-support/
+Source: Hacker News
+Published: 2026-04-09T03:21:41
+Desc: 
+
+[TRANSLATE_ONLY] Item 17 [Score=0]:
+Title: Pgit: I Imported the Linux Kernel into PostgreSQL
+URL: https://oseifert.ch/blog/linux-kernel-pgit
+Source: Hacker News
+Published: 2026-04-05T20:08:55
+Desc: 
+
+[TRANSLATE_ONLY] Item 18 [Score=0]:
+Title: ML promises to be profoundly weird
+URL: https://aphyr.com/posts/411-the-future-of-everything-is-lies-i-guess
+Source: Hacker News
+Published: 2026-04-08T21:06:33
+Desc: 
+
+[TRANSLATE_ONLY] Item 19 [Score=0]:
+Title: Škoda DuoBell: A bicycle bell that penetrates noise-cancelling headphones
+URL: https://www.skoda-storyboard.com/en/skoda-world/skoda-duobell-a-bicycle-bell-that-outsmarts-even-smart-headphones/
+Source: Hacker News
+Published: 2026-04-08T16:50:37
+Desc: 
+
+[TRANSLATE_ONLY] Item 20 [Score=0]:
+Title: virattt /ai-hedge-fund
+URL: https://github.com/virattt/ai-hedge-fund
+Source: GitHub
+Published: 2026-04-09T07:56:22.514997
+Desc: An AI Hedge Fund Team
+
+[TRANSLATE_ONLY] Item 21 [Score=0]:
+Title: 空投谁要？留下你的地址
+URL: https://www.v2ex.com/t/1204218
+Source: V2EX
+Published: 2026-04-09T07:56:21.025178
+Desc: 今晚 10 点 统一发放。发放币名称 Lucky Buyback 。 缩写 LBB  留下你的地址吧
+
+[TRANSLATE_ONLY] Item 22 [Score=0]:
+Title: 亲爹瞒着我给继子买房，现在又要给他攒 30 万，我很难受，是我太贪了吗。
+URL: https://www.v2ex.com/t/1204330
+Source: V2EX
+Published: 2026-04-09T07:56:21.025186
+Desc: ·我从小父母离异，15 岁时我爸娶了现在的继母，她带了一个儿子，但重点是继子判给了她的前夫，并没有带到我们家，也不归我们家抚养。 ·刚重组时我爸手里没钱，但他有个乡镇事业编，收入稳定，继母带了七八万块钱的底子过来，之后在幼儿园做编外帮手并且包揽了家务。 ·这几年家里的资产分配让我觉得非常离谱，19 年我大学毕业，家里非要给我买房，首付 20 万买了一个极其偏僻、现在纯亏且根本没法住的地方，但我后来才知道，继母瞒着我，用家里的钱也给她那个判给前夫的亲生儿子买了一套房，首付 15 万。 ·我爸和继母为了面子，花了整整 50 万把老家房子重建了（很偏僻的小乡镇），这其中我也出资了 3 万块，而
+
+[TRANSLATE_ONLY] Item 23 [Score=0]:
+Title: 近期免费的 opus 渠道
+URL: https://www.v2ex.com/t/1204217
+Source: V2EX
+Published: 2026-04-09T07:56:21.025188
+Desc: 1. **Replit**：量大管饱，有大佬已经放焚决了，可以邮箱注册，1 个号是 5 刀的额度，但是如果你免费绑个卡搞会员，然后再撤掉会员，那么就是 120 刀 x2=240 刀的额度。  2. **Anything**：开个注册机就能批量刷免费号，基本对于邮箱后缀没有要求，然后再叠加 2api 的软件，也是好用的，就是慢一点。  3. **Accio**：有额度，但是注册似乎有点困难了，对于 代理线路、邮箱后缀等都要求好严，基本就是注册机碰运气，而且还经常封号，我本地处于别注册别封号的状态，基本能维持可用，属于保底方案了。   ## 免费白嫖 Claude 模型教程，3 分钟
+
+[TRANSLATE_ONLY] Item 24 [Score=0]:
+Title: 预算 2 千给父母买个手机求推荐
+URL: https://www.v2ex.com/t/1204298
+Source: V2EX
+Published: 2026-04-09T07:56:21.025190
+Desc: 打算给父母买个手机，预算 2 千，大家有没有推荐？
+
+[TRANSLATE_ONLY] Item 25 [Score=0]:
+Title: 3 年前辞职留学澳洲，拿到 PR 婚姻却保不住了
+URL: https://www.v2ex.com/t/1204326
+Source: V2EX
+Published: 2026-04-09T07:56:21.025191
+Desc: 之前有写过一篇背景。目前我一个人在澳洲，已经获得州担保邀请。现在配偶明确说不来澳洲，不利于她病情，可能患有双相或者精神分裂，在成都正常上班。有一个 7 岁小孩。之前吵架我提过离婚，但是她给我一份不平等协议，大意小孩归她管到 18 ，我需要支付房贷 5000 左右，小孩生活费，大病生病，赔偿 200 万分期支付，后暂时和好。现在能拿到 PR ，她明确说小孩不来澳洲，她也不会来，问我什么时候回去，把丈夫父亲角色做好。我的答案应该只能离婚。我想说她的观点可能也没错。主要问题是俩人未来路径不一样。我是澳洲护士，正在找工作。说实话，经过这几年折腾，感情已经淡了。不想这样拖着下去了。其实最亏欠的是小孩，我
+
+[TRANSLATE_ONLY] Item 26 [Score=0]:
+Title: 家里的一些小事真的让人心累
+URL: https://www.v2ex.com/t/1204306
+Source: V2EX
+Published: 2026-04-09T07:56:21.025192
+Desc: 小孩 7 个月大，丈母娘帮忙带。小孩喝奶的时候，排气孔没压好，丈母娘喂奶时发现孩子衣服湿了，就让我去拿一件刚洗晒了没多久的衣服。孩子妈当时在给小孩做辅食。我把衣服拿过来摸了一下，发现袖子还没干，就说拿回去再晾一下。结果孩子妈一下子就急了，冲我一顿输出，说我拿个衣服都拿不明白，整天磨磨唧唧的，小孩马上要冻着了。态度非常不好，急头白脸，一脸嫌弃的样子。      其实中午气温有 24 度多，根本不冷，她手上的辅食放一放自己去拿也行。我不过就是把没干的衣服拿回去继续晾，再去拿一件干的而已。但类似这种小事她也会发火，只要没按她的心意来，就容易爆发。每次我都选择沉默，不吭声，自己消化她带给我的负面情
 
 [TRANSLATE_ONLY] Item 27 [Score=0]:
-Title: Project Glasswing: Securing critical software for the AI era
-URL: https://www.anthropic.com/glasswing
-Source: Hacker News
-Published: 2026-04-08T02:09:34
-Desc: 
+Title: 人的想法都是屁股决定脑袋
+URL: https://www.v2ex.com/t/1204196
+Source: V2EX
+Published: 2026-04-09T07:56:21.025193
+Desc: 自己是小孩的时候说父母禁锢自己思想，到了自己有小孩也会禁锢小孩思想  楼上装修骂别人吵，自己装修就是最重要的（这个不是说 V 友，是我在🍅上一个评论，被人骂了很多，也有很多赞）  楼上有噪声说楼上吵闹，要震楼器报复，自己吵闹说楼下神经衰弱  打工的时候讨厌加班、KPI 、汇报，当 leader 了主动压进度、要结果、要可控性  是租客了嫌房租贵、限制多，是房东了怕损耗、怕违约、各种条款  使用平台反感审核、限制内容，如果自己是平台必须风控，风控，严格风控，任何一句垃圾话都别想发出来
 
 [TRANSLATE_ONLY] Item 28 [Score=0]:
-Title: Lunar Flyby
-URL: https://www.nasa.gov/gallery/lunar-flyby/
-Source: Hacker News
-Published: 2026-04-07T23:03:18
-Desc: 
+Title: 怎样追求一个女生呢？
+URL: https://www.v2ex.com/t/1204183
+Source: V2EX
+Published: 2026-04-09T07:56:21.025194
+Desc: 已经单身很多年了，属于是那种很老实的人，从小到大都是乖乖听话，好好学习，好好工作  平常工作时间比较长，没什么社交活动，一起玩的都是男性  最近通过社交平台认识到了一些女生，但是不知道怎么追求比较好，想请教一下
 
 [TRANSLATE_ONLY] Item 29 [Score=0]:
-Title: US and Iran agree to provisional ceasefire
-URL: https://www.theguardian.com/us-news/2026/apr/07/trump-iran-war-ceasefire
-Source: Hacker News
-Published: 2026-04-08T06:41:02
-Desc: 
+Title: Product Hunt: RoomieU
+URL: https://www.producthunt.com/products/roomieu
+Source: Product Hunt
+Published: 2026-04-09T07:56:34.861504
+Desc: The roommate matching app built for college students             Discussion             |             Link
 
 [TRANSLATE_ONLY] Item 30 [Score=0]:
-Title: System Card: Claude Mythos Preview [pdf]
-URL: https://www-cdn.anthropic.com/53566bf5440a10affd749724787c8913a2ae0841.pdf
-Source: Hacker News
-Published: 2026-04-08T02:18:36
-Desc: 
+Title: Product Hunt: Timeliner.io
+URL: https://www.producthunt.com/products/timeliner-io
+Source: Product Hunt
+Published: 2026-04-09T07:56:34.861656
+Desc: The all-in-one workspace for content agencies & editors             Discussion             |             Link
 
 [TRANSLATE_ONLY] Item 31 [Score=0]:
-Title: GLM-5.1: Towards Long-Horizon Tasks
-URL: https://z.ai/blog/glm-5.1
-Source: Hacker News
-Published: 2026-04-08T00:32:15
-Desc: 
+Title: Product Hunt: Brieflee
+URL: https://www.producthunt.com/products/brieflee
+Source: Product Hunt
+Published: 2026-04-09T07:56:34.861898
+Desc: Spell check for video - catch quality issues before you post             Discussion             |             Link
 
 [TRANSLATE_ONLY] Item 32 [Score=0]:
-Title: How to get better at guitar
-URL: https://www.jakeworth.com/posts/how-to-get-better-at-guitar/
-Source: Hacker News
-Published: 2026-04-06T00:14:12
-Desc: 
+Title: Product Hunt: Browser Arena
+URL: https://www.producthunt.com/products/notte
+Source: Product Hunt
+Published: 2026-04-09T07:56:34.862014
+Desc: Open-source benchmarks for cloud browser infrastructure             Discussion             |             Link
 
 [TRANSLATE_ONLY] Item 33 [Score=0]:
-Title: S3 Files
-URL: https://www.allthingsdistributed.com/2026/04/s3-files-and-the-changing-face-of-s3.html
-Source: Hacker News
-Published: 2026-04-08T03:44:01
-Desc: 
+Title: Product Hunt: Screenslice
+URL: https://www.producthunt.com/products/screenslice
+Source: Product Hunt
+Published: 2026-04-09T07:56:34.862131
+Desc: Share only part of your screen in video calls             Discussion             |             Link
 
 [TRANSLATE_ONLY] Item 34 [Score=0]:
-Title: Cambodia unveils statue to honour famous landmine-sniffing rat
-URL: https://www.bbc.com/news/articles/c0rx7xzd10xo
-Source: Hacker News
-Published: 2026-04-08T01:23:43
-Desc: 
+Title: Product Hunt: LookAway 2
+URL: https://www.producthunt.com/products/lookaway
+Source: Product Hunt
+Published: 2026-04-09T07:56:34.862255
+Desc: The Mac app your body thanks you for             Discussion             |             Link
 
 [TRANSLATE_ONLY] Item 35 [Score=0]:
-Title: A truck driver spent 20 years making a scale model of every building in NYC
-URL: https://www.smithsonianmag.com/smart-news/a-truck-drive-spent-20-years-making-this-astonishing-scale-model-of-every-single-building-in-new-york-city-180988443/
-Source: Hacker News
-Published: 2026-04-06T13:22:24
-Desc: 
+Title: Product Hunt: Mo
+URL: https://www.producthunt.com/products/mo-4
+Source: Product Hunt
+Published: 2026-04-09T07:56:34.862371
+Desc: Checks PRs against decisions your team approved in Slack             Discussion             |             Link
 
 [TRANSLATE_ONLY] Item 36 [Score=0]:
-Title: Show HN: An interactive map of Tolkien's Middle-earth
-URL: https://middle-earth-interactive-map.web.app/
-Source: Hacker News
-Published: 2026-04-08T04:42:37
-Desc: 
+Title: Product Hunt: PassportReader
+URL: https://www.producthunt.com/products/iris-id-by-passportreader
+Source: Product Hunt
+Published: 2026-04-09T07:56:34.862488
+Desc: Verify passports, ID cards, and digital credentials via API             Discussion             |             Link
 
 [TRANSLATE_ONLY] Item 37 [Score=0]:
-Title: google-ai-edge /gallery
-URL: https://github.com/google-ai-edge/gallery
-Source: GitHub
-Published: 2026-04-08T09:26:53.472682
-Desc: A gallery that showcases on-device ML/GenAI use cases and allows people to try and use models locally.
+Title: Product Hunt: Marble 1.1
+URL: https://www.producthunt.com/products/marble-by-world-labs
+Source: Product Hunt
+Published: 2026-04-09T07:56:34.862599
+Desc: Better lighting and larger scales for 3D world generation             Discussion             |             Link
 
 [TRANSLATE_ONLY] Item 38 [Score=0]:
-Title: google-ai-edge /LiteRT-LM
-URL: https://github.com/google-ai-edge/LiteRT-LM
-Source: GitHub
-Published: 2026-04-08T09:26:53.472821
-Desc: 
+Title: Nature Digital Medicine: Lightweight liquid neural networks decipher salivary metabolic fingerprinting for high-risk periodontitis screening in diabetes
+URL: https://www.nature.com/articles/s41746-026-02593-7
+Source: Nature Digital Medicine
+Published: 2026-04-09T07:56:32.633811
+Desc: npj Digital Medicine, Published online: 07 April 2026; doi:10.1038/s41746-026-02593-7Lightweight liquid neural networks decipher salivary metabolic fingerprinting for high-risk periodontitis screening in diabetes
 
 [TRANSLATE_ONLY] Item 39 [Score=0]:
-Title: NVIDIA /personaplex
-URL: https://github.com/NVIDIA/personaplex
-Source: GitHub
-Published: 2026-04-08T09:26:53.472900
-Desc: PersonaPlex code.
+Title: Nature Digital Medicine: The portability paradox of foundation models for clinical decision support
+URL: https://www.nature.com/articles/s41746-026-02615-4
+Source: Nature Digital Medicine
+Published: 2026-04-09T07:56:32.633916
+Desc: npj Digital Medicine, Published online: 07 April 2026; doi:10.1038/s41746-026-02615-4Yakdan et al. demonstrate that foundation models (FMs) trained to predict cervical spondylotic myelopathy from electronic health record data outperform traditional models on internal datasets but lose their advantag
 
 [TRANSLATE_ONLY] Item 40 [Score=0]:
-Title: abhigyanpatwari /GitNexus
-URL: https://github.com/abhigyanpatwari/GitNexus
-Source: GitHub
-Published: 2026-04-08T09:26:53.473012
-Desc: GitNexus: The Zero-Server Code Intelligence Engine - GitNexus is a client-side knowledge graph creator that runs entirely in your browser. Drop in a GitHub repo or ZIP file, and get an interactive knowledge graph wit a built in Graph RAG Agent. Perfect for code exploration
+Title: Nature Digital Medicine: Interpretable machine learning models for stroke risk prediction in patients with newly diagnosed atrial fibrillation
+URL: https://www.nature.com/articles/s41746-026-02470-3
+Source: Nature Digital Medicine
+Published: 2026-04-09T07:56:32.633961
+Desc: npj Digital Medicine, Published online: 07 April 2026; doi:10.1038/s41746-026-02470-3Interpretable machine learning models for stroke risk prediction in patients with newly diagnosed atrial fibrillation
 
 [TRANSLATE_ONLY] Item 41 [Score=0]:
-Title: tobi /qmd
-URL: https://github.com/tobi/qmd
-Source: GitHub
-Published: 2026-04-08T09:26:53.473084
-Desc: mini cli search engine for your docs, knowledge bases, meeting notes, whatever. Tracking current sota approaches while being all local
+Title: Nature Digital Medicine: Towards a physics informed digital twin to predict cerebral blood flow and cerebral vascular regulation
+URL: https://www.nature.com/articles/s41746-026-02600-x
+Source: Nature Digital Medicine
+Published: 2026-04-09T07:56:32.634004
+Desc: npj Digital Medicine, Published online: 06 April 2026; doi:10.1038/s41746-026-02600-xTowards a physics informed digital twin to predict cerebral blood flow and cerebral vascular regulation
 
 [TRANSLATE_ONLY] Item 42 [Score=0]:
-Title: forrestchang /andrej-karpathy-skills
-URL: https://github.com/forrestchang/andrej-karpathy-skills
-Source: GitHub
-Published: 2026-04-08T09:26:53.473179
-Desc: 
+Title: Science: Pesticides may wreak havoc on the gut microbiome
+URL: https://www.science.org/content/article/pesticides-may-wreak-havoc-gut-microbiome
+Source: Science
+Published: 2026-04-09T07:56:27.812848
+Desc: Disruption of intestinal ecosystem could contribute to diabetes and other health issues, scientists say
 
 [TRANSLATE_ONLY] Item 43 [Score=0]:
-Title: elebumm /RedditVideoMakerBot
-URL: https://github.com/elebumm/RedditVideoMakerBot
-Source: GitHub
-Published: 2026-04-08T09:26:53.473248
-Desc: Create Reddit Videos with just✨ one command ✨
+Title: Science: Department of Energy’s AI push squeezes funding for research grants
+URL: https://www.science.org/content/article/department-energy-s-ai-push-squeezes-funding-research-grants
+Source: Science
+Published: 2026-04-09T07:56:27.812876
+Desc: Tapping already strained budgets, Genesis Mission gives scientists just weeks to apply for first awards
 
 [TRANSLATE_ONLY] Item 44 [Score=0]:
-Title: HKUDS /DeepTutor
-URL: https://github.com/HKUDS/DeepTutor
-Source: GitHub
-Published: 2026-04-08T09:26:53.473318
-Desc: "DeepTutor: Agent-Native Personalized Learning Assistant"
+Title: Science: Artemis II captures an ‘Earthset’ and stunning views of the Moon
+URL: https://www.science.org/content/article/artemis-ii-captures-earthset-and-stunning-views-moon
+Source: Science
+Published: 2026-04-09T07:56:27.812896
+Desc: First crewed Moon mission since 1972 caught extraordinary glimpses of lunar terrain
 
 [TRANSLATE_ONLY] Item 45 [Score=0]:
-Title: TheCraigHewitt /seomachine
-URL: https://github.com/TheCraigHewitt/seomachine
-Source: GitHub
-Published: 2026-04-08T09:26:53.473388
-Desc: A specialized Claude Code workspace for creating long-form, SEO-optimized blog content for any business. This system helps you research, write, analyze, and optimize content that ranks well and serves your target audience.
+Title: Science: The hidden math behind satisfying can-crushing videos
+URL: https://www.science.org/content/article/hidden-math-behind-satisfying-can-crushing-videos
+Source: Science
+Published: 2026-04-09T07:56:27.812914
+Desc: Fluid-filled soda cans confirm a long-untested theory of pattern formation
 
 [TRANSLATE_ONLY] Item 46 [Score=0]:
-Title: 我把外地姨送给我妈的廉价散装保健品，快递退给姨，你怎么看？
-URL: https://www.v2ex.com/t/1204021
-Source: V2EX
-Published: 2026-04-08T09:26:51.234620
-Desc: 清明节，外地的姨回来探望，带了几样东西给我妈：俄式山羊奶营养粉、红枣核桃黄精黑芝麻丸、伊犁樱桃干、羊奶贝。我让 AI 分析了包装成分和宣传内容，结果不出所料——要么名不副实，要么成分与宣传出入较大。这类东西常见于各种养生讲座的派发品，本身价值有限，却包装得像高档补品。  ---  ## 她不是不懂  我姨今年 77 岁，比我妈大 7 岁，在家族长辈里是出了名懂养生的，不是那种听广告就信的类型，是真正有研究的。所以我认为这份礼物不是无心之失——她自己不会吃这些东西，她清楚这些东西的斤两，带来给我妈，大概是觉得反正比扔掉强，收到的人还会感激她。结果我妈果然觉得姐姐对她很好，送了贵重的东
+Title: Science: As Japan warms, cherry blossom displays are fading
+URL: https://www.science.org/content/article/japan-warms-cherry-blossom-displays-are-fading
+Source: Science
+Published: 2026-04-09T07:56:27.812932
+Desc: Some trees in southern Japan are already failing to reach peak bloom—a trend researchers predict will move north in the coming decades
 
 [TRANSLATE_ONLY] Item 47 [Score=0]:
-Title: 80 后讨论下买房的意义
-URL: https://www.v2ex.com/t/1203924
-Source: V2EX
-Published: 2026-04-08T09:26:51.234653
-Desc: 80 年的,自认是个标准老登，但昨天和 70 后聊了房子、孩子，还是觉得差人家一大截！ 我的观点是：年轻人不买房、不结婚是对自己负责。现在的房子已经是家庭的消费品，买入时各种税费，当前持有成本是：物业费，未来会有房产税、维修、维护费。如果房子的租金收入不能覆盖银行贷款或没有 3%-4%的收益，买房就是在消耗自己，是为国牺牲. 他是坚决鼓励年轻人买房。他反驳我的案例是东北已经有 5%租金收益的房子出现了，而恰恰那些房子是没有持有价值的（因为没人接盘），并以此得出 1-2%租金收益才是合理的。 人生过半，真的觉得房子、孩子都不是我这种非成功人士的必备品，如果有选择，我都会选择不结婚、不生孩子
+Title: arXiv Med-AI: Extracting and Steering Emotion Representations in Small Language Models: A Methodological Comparison
+URL: https://arxiv.org/abs/2604.04064v1
+Source: arXiv Med-AI
+Published: 2026-04-09T07:56:25.587267
+Desc: Small language models (SLMs) in the 100M-10B parameter range increasingly power production systems, yet whether they possess the internal emotion representations recently discovered in frontier models remains unknown. We present the first comparative analysis of emotion vector extraction methods for
 
 [TRANSLATE_ONLY] Item 48 [Score=0]:
-Title: 感觉中考五五分流，比高考还残酷
-URL: https://www.v2ex.com/t/1203989
-Source: V2EX
-Published: 2026-04-08T09:26:51.234654
-Desc: 亲戚家女儿还有两个月要中考了，680 分总分，考了 390 分。感觉大概率上不了高中，甚至连复读的机会也没有。  感觉对于一个才十四岁的孩子来说，很残酷。   一是一旦考不上高中，就要面临社会的拷打。   二是即使知道结果，也无力改变什么，只能坐等被分流出去。   三是可预见的未来，也和大厂高薪无缘了。  V 友们，有没有什么好的建议，如果上不了高中，能去找关系复读吗？跨省就读高中？亦或者是出国读书？还是找个靠谱的职业中学，学一门手艺。现在孩子自己也很着急，每天学到很晚，周末也补课，比我们打工人还要辛苦。
+Title: arXiv Med-AI: A Multimodal Foundation Model of Spatial Transcriptomics and Histology for Biological Discovery and Clinical Prediction
+URL: https://arxiv.org/abs/2604.03630v1
+Source: arXiv Med-AI
+Published: 2026-04-09T07:56:25.587341
+Desc: Spatial transcriptomics (ST) enables gene expression mapping within anatomical context but remains costly and low-throughput. Hematoxylin and eosin (H\&E) staining offers rich morphology yet lacks molecular resolution. We present \textbf{\ours} (\textbf{S}patial \textbf{T}ranscriptomics and hist\tex
 
 [TRANSLATE_ONLY] Item 49 [Score=0]:
-Title: 独居生活的人，如何克服缺失亲密关系的孤独感？
-URL: https://www.v2ex.com/t/1203958
-Source: V2EX
-Published: 2026-04-08T09:26:51.234656
-Desc: 一直以来我都是个性格内向的人，不太擅长日常的社交闲聊。为了避开人际交往的压力，去年我放弃了合租，自己找了个公寓独居。我本以为我会很享受一个人的生活，但实际上独居快一年了，我却感觉越来越痛苦。  这种情绪并不是某一天突然爆发的，而是生活中很多小事累加在一起的结果。  在我心情糟糕到极点时，特别希望哪怕有一个人能拍拍我的背；在我遇到开心的事情时，也极度渴望能有个人分享我的喜悦。但遗憾的是，在无数个想要倾诉或分享的瞬间，我身边只有自己。这种孤独感虽然不至于压垮我，但总觉得生活充满了遗憾——那么多美好的、痛苦的、有趣的经历，我都希望能有人和我一起感受。  因为这种负面情绪的堆积，我开始越来
+Title: simonwillison.net: Quoting Giles Turnbull
+URL: https://simonwillison.net/2026/Apr/8/giles-turnbull/#atom-everything
+Source: simonwillison.net
+Published: 2026-04-09T07:56:35.891562
+Desc: I have a feeling that everyone likes using AI tools to try doing someone else’s profession. They’re much less keen when someone else uses it for their profession. — Giles Turnbull, AI and the human voice Tags: ai-ethics, writing, ai
 
 [TRANSLATE_ONLY] Item 50 [Score=0]:
-Title: 有无 V 哥懂配眼镜的
-URL: https://www.v2ex.com/t/1203921
-Source: V2EX
-Published: 2026-04-08T09:26:51.234657
-Desc: 最近想换眼镜了，去眼镜店搞蔡司 1.67 或者 1.74 的都死贵啊，感觉开了我这一单够他们吃喝半个月了； 有无靠谱的网店或者实体店推荐，算高度近视了呢，所以要薄一点。
+Title: jeffgeerling.com: Build your own Dial-up ISP with a Raspberry Pi
+URL: https://www.jeffgeerling.com/blog/2026/build-your-own-dial-up-isp-with-a-raspberry-pi/
+Source: jeffgeerling.com
+Published: 2026-04-09T07:56:36.146983
+Desc: Last year my aunt let me add her original Tangerine iBook G3 clamshell to my collection of old Macs1.   It came with an AirPort card—a $99 add-on Apple made that ushered in the Wi-Fi era. The iBook G3 was the first consumer laptop with built-in Wi-Fi antennas, and by far the cheapest way to get a co
