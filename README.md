@@ -45,7 +45,7 @@ gemini skills install https://github.com/shawnshi/shawnshi-skills.git --path hit
 
 ## 3. 核心分类矩阵 (Core Skill Hierarchy)
 
-> **Total Inventory: 42 Strategic Modules across 8 Domains**
+> **Total Inventory: 43 Strategic Modules across 8 Domains**
 
 ### 🧠 深度认知与研究工作台 (Cognitive Research)
 *底层思考工具箱：需求脱水、战略审计、红蓝对抗与情报分析。*
