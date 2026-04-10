@@ -1,6 +1,7 @@
+---
 name: academic-paper-reader
-description: 学术论文透视、溯源与精读 (V4.0: Cognitive Assault & River Lineage Edition)。读论文不是做学术，是猎取思想与观察问题的演化。结合“倒读溯源法”，把别人的发现拆解成问题演化线，剥去复杂的学术外衣，直击第一性原理。强制执行“费曼化”、“毒舌去魅”与“差异驱动叙事”。
-triggers:["读论文", "拆解论文", "溯源分析", "paper river", "分析这篇论文的演化", "学术透视"]
+description: "学术论文透视、溯源与精读 (V4.0: Cognitive Assault & River Lineage Edition)。读论文不是做学术，是猎取思想与观察问题的演化。结合“倒读溯源法”，把别人的发现拆解成问题演化线，剥去复杂的学术外衣，直击第一性原理。强制执行“费曼化”、“毒舌去魅”与“差异驱动叙事”。"
+triggers: ["读论文", "拆解论文", "溯源分析", "paper river", "分析这篇论文的演化", "学术透视"]
 ---
 
 # SKILL.md: 学术论文透视与精读 (V3.0: Cognitive Assault Edition)
@@ -84,5 +85,6 @@ triggers:["读论文", "拆解论文", "溯源分析", "paper river", "分析这
 ## 6. 历史失效先验 (NLAH Gotchas)
 - `IF [Condition == "System Detected Repeated Failure"] THEN [Inject NLAH Prohibition Rule Here]`
 - `IF [Action == "Read PDF"] THEN [Halt if Unconditional Full Read] AND [Require Targeted Extraction (start_line/end_line OR Extractors)]`
+- `IF [Action == "Read PDF"] AND [File Size > 20MB] THEN [Halt standard extraction] AND [Require invoking markitdown to convert the PDF to an MD file prior to analysis]`
 - `IF [Action == "Generate Org-mode Timestamp"] THEN [Require Format == "YYYYMMDDTHHMMSS" FOR "#+identifier:" AND "[YYYY-MM-DD Day HH:MM]" FOR "#+date:"]`
 - `IF [Section == "Writing Style"] THEN [Halt if Tone == "Overly Academic/Passive"] AND [Require Direct, Active Voice]`

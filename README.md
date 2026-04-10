@@ -1,4 +1,4 @@
-# Skills Ecosystem: The Strategic Armory (V4.0 - Anti-Entropy Edition)
+# Skills Ecosystem: The Strategic Armory (V5.1 - Anti-Entropy Edition)
 
 <!-- 
 @Pos: Root Level / Knowledge Sovereign 
@@ -77,7 +77,7 @@ gemini skills install https://github.com/shawnshi/shawnshi-skills.git --path hit
 | 技能标识 (Directory)                                            | 核心本质 (Trigger Traps)                                                                             |
 |:----------------------------------------------------------------|:-----------------------------------------------------------------------------------------------------|
 | **[academic-paper-writer](academic-paper-writer/)**             | **学术论文写作管线 (V2.4)**。12-Agent 管线，支持 IMRaD 与双语摘要，强制 APA 7.0 / LaTeX 出版级排版. |
-| **[academic-arxiv-search](academic-arxiv-search/)**             | **arXiv 论文检索与获取**。通过 Atom API 精准获取计算机科学、AI 及物理领域的预印本.                  |
+
 | **[academic-paper-reader](academic-paper-reader/)**             | **读论文 (academic-paper-reader)**。猎取思想，将别人的发现拆解成自己能用的认知，拒绝学术腔.         |
 | **[academic-scientific-visualization](academic-scientific-visualization/)** | **论文级科研绘图与可视化**。生成符合 Nature/Science 规格图表，支持多面板布局、显著性标注. |
 | **[academic-deep-research](academic-deep-research/)**                         | **通用深度研究中枢 (V2.3)**。13-Agent 管线，支援 PRISMA 系統性回顧与嚴格的證據查核 (RoB).            |
@@ -121,6 +121,7 @@ gemini skills install https://github.com/shawnshi/shawnshi-skills.git --path hit
 
 | 技能标识 (Directory)                                  | 核心本质 (Trigger Traps)                                                                          |
 |:------------------------------------------------------|:--------------------------------------------------------------------------------------------------|
+| **[drawio](drawio/)**                                 | **企业级图表工程引擎**。内置语义化配色系统(7色)、5种图表类型专用规则(架构/流程/时序/ER/甘特)、5大医疗架构模式库与交付质量清单. |
 | **[morphism-mapper-master](morphism-mapper-master/)** | **范畴论跨界思维引擎**。利用异构领域结构生成突破性解法，执行升维打击.                            |
 | **[mentat-skill-creator](mentat-skill-creator/)**                   | **技能工厂与自愈中心 (Native Edition)**。管理技能生命周期，确保符合“四层壳模型”与三层架构规范.   |
 
@@ -139,4 +140,4 @@ gemini skills install https://github.com/shawnshi/shawnshi-skills.git --path hit
 | **[url-to-markdown](url-to-markdown/)**         | **网页原质提取器**。直控 Chrome CDP 协议，强制清除网页噪音.                                          |
 
 ---
-*Last Global Audit: 2026-03-29 | Version: 5.0 (Multi-Agent Edition) | System State: Locked*
+*Last Global Audit: 2026-04-10 | Version: 5.1 (Drawio Hardened Edition) | System State: Locked*
