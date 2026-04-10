@@ -77,7 +77,6 @@ gemini skills install https://github.com/shawnshi/shawnshi-skills.git --path hit
 | 技能标识 (Directory)                                            | 核心本质 (Trigger Traps)                                                                             |
 |:----------------------------------------------------------------|:-----------------------------------------------------------------------------------------------------|
 | **[academic-paper-writer](academic-paper-writer/)**             | **学术论文写作管线 (V2.4)**。12-Agent 管线，支持 IMRaD 与双语摘要，强制 APA 7.0 / LaTeX 出版级排版. |
-
 | **[academic-paper-reader](academic-paper-reader/)**             | **读论文 (academic-paper-reader)**。猎取思想，将别人的发现拆解成自己能用的认知，拒绝学术腔.         |
 | **[academic-scientific-visualization](academic-scientific-visualization/)** | **论文级科研绘图与可视化**。生成符合 Nature/Science 规格图表，支持多面板布局、显著性标注. |
 | **[academic-deep-research](academic-deep-research/)**                         | **通用深度研究中枢 (V2.3)**。13-Agent 管线，支援 PRISMA 系統性回顧与嚴格的證據查核 (RoB).            |
