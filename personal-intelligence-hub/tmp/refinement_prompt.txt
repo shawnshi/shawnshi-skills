@@ -64,351 +64,351 @@
 
 ## ??????
 [DEEP_REFINE] Item 1 [Score=6]:
-Title: The Lancet Digital Health: [Comment] Thank you to The Lancet Digital Health statistical and peer reviewers in 2025
-URL: https://www.thelancet.com/journals/landig/article/PIIS2589-7500(26)00003-8/fulltext?rss=yes
-Source: The Lancet Digital Health
-Published: 2026-04-10T07:06:33.583751
-Desc: Rita Achermann
+Title: daringfireball.net: ★ Let Us Learn to Show Our Friendship for a Man When He Is Alive and Not After He Is Dead
+URL: https://daringfireball.net/2026/04/when_he_is_alive_and_not_after_he_is_dead
+Source: daringfireball.net
+Published: 2026-04-11T07:51:50.335676
+Desc: Regarding Ronan Farrow and Andrew Marantz’s epic profile of Sam Altman in The New Yorker.
 
-[DEEP_REFINE] Item 2 [Score=0]:
-Title: Native Instant Space Switching on macOS
-URL: https://arhan.sh/blog/native-instant-space-switching-on-macos/
-Source: Hacker News
-Published: 2026-04-10T03:48:26
+[DEEP_REFINE] Item 2 [Score=5]:
+Title: simonwillison.net: ChatGPT voice mode is a weaker model
+URL: https://simonwillison.net/2026/Apr/10/voice-mode-is-weaker/#atom-everything
+Source: simonwillison.net
+Published: 2026-04-11T07:51:49.412991
+Desc: I think it's non-obvious to many people that the OpenAI voice mode runs on a much older, much weaker model - it feels like the AI that you can talk to should be the smartest AI but it really isn't. If you ask ChatGPT voice mode for its knowledge cutoff date it tells you April 2024 - it's a GPT-4o er
+
+[DEEP_REFINE] Item 3 [Score=5]:
+Title: anildash.com: A Cookie for Dario? — Anthropic and selling death
+URL: https://anildash.com/2026/02/27/a-cookie-for-dario/
+Source: anildash.com
+Published: 2026-04-11T07:52:00.357258
+Desc: A big tech headline this week is Anthropic (makers of Claude, widely regarded as one of the best LLM platforms) resisting Secretary of Defense Pete Hegseth’s calls to modify their platform in order to enable it to support his commission of war crimes. As has become clear this week, Anthropic CEO Dar
+
+[DEEP_REFINE] Item 4 [Score=5]:
+Title: healthcareitnews.com: HIMSSCast: The AI guiding principles of Elevance Health
+URL: https://www.healthcareitnews.com/podcast/himsscast-ai-guiding-principles-elevance-health
+Source: healthcareitnews.com
+Published: 2026-04-11T07:51:59.810578
 Desc: 
 
-[DEEP_REFINE] Item 3 [Score=0]:
-Title: Many African families spend fortunes burying their dead
-URL: https://davidoks.blog/p/how-funerals-keep-africa-poor
-Source: Hacker News
-Published: 2026-04-10T06:10:10
+[DEEP_REFINE] Item 5 [Score=5]:
+Title: healthcareitnews.com: HIMSS attendance makes for conversation, collaboration, commitment
+URL: https://www.healthcareitnews.com/video/himss-attendance-makes-conversation-collaboration-commitment
+Source: healthcareitnews.com
+Published: 2026-04-11T07:51:59.811028
 Desc: 
 
-[DEEP_REFINE] Item 4 [Score=0]:
-Title: Charcuterie – Visual similarity Unicode explorer
-URL: https://charcuterie.elastiq.ch/
-Source: Hacker News
-Published: 2026-04-10T04:12:07
-Desc: 
+[DEEP_REFINE] Item 6 [Score=5]:
+Title: mobihealthnews.com: HIMSSCast: The AI guiding principles of Elevance Health
+URL: https://www.mobihealthnews.com/podcast/himsscast-ai-guiding-principles-elevance-health
+Source: mobihealthnews.com
+Published: 2026-04-11T07:51:59.798476
+Desc: Ratnakar Lavu, chief digital information officer at Elevance Health, discusses how the company is implementing AI into its workflow and the framework the health insurer uses to validate AI models, which prioritizes accountability, transparency, fairness, privacy and safety.  Lavu said the principles
 
-[DEEP_REFINE] Item 5 [Score=0]:
-Title: Reverse engineering Gemini's SynthID detection
-URL: https://github.com/aloshdenny/reverse-SynthID
-Source: Hacker News
-Published: 2026-04-10T04:10:25
-Desc: 
-
-[DEEP_REFINE] Item 6 [Score=0]:
-Title: PicoZ80 – Drop-In Z80 Replacement
-URL: https://eaw.app/picoz80/
-Source: Hacker News
-Published: 2026-04-10T02:53:20
-Desc: 
-
-[DEEP_REFINE] Item 7 [Score=0]:
-Title: Robots Eat Cars
-URL: https://telemetry.endeff.com/p/robots-eat-cars
-Source: Hacker News
-Published: 2026-04-07T10:50:58
+[DEEP_REFINE] Item 7 [Score=5]:
+Title: mobihealthnews.com: HIMSS' impact goes beyond clicks and downloads
+URL: https://www.mobihealthnews.com/video/himss-impact-goes-beyond-clicks-and-downloads
+Source: mobihealthnews.com
+Published: 2026-04-11T07:51:59.798574
 Desc: 
 
 [DEEP_REFINE] Item 8 [Score=0]:
-Title: Hegel, a universal property-based testing protocol and family of PBT libraries
-URL: https://hegel.dev
+Title: Filing the Corners Off MacBooks
+URL: https://kentwalters.com/posts/corners/
 Source: Hacker News
-Published: 2026-04-10T02:37:45
+Published: 2026-04-11T06:16:40
 Desc: 
 
 [DEEP_REFINE] Item 9 [Score=0]:
-Title: Research-Driven Agents: When an agent reads before it codes
-URL: https://blog.skypilot.co/research-driven-agents/
+Title: Chimpanzees in Uganda locked in eight-year 'civil war', say researchers
+URL: https://www.bbc.com/news/articles/cr71lkzv49po
 Source: Hacker News
-Published: 2026-04-10T00:58:49
+Published: 2026-04-11T03:10:22
 Desc: 
 
 [DEEP_REFINE] Item 10 [Score=0]:
-Title: Unfolder for Mac – A 3D model unfolding tool for creating papercraft
-URL: https://www.unfolder.app/
+Title: 1D Chess
+URL: https://rowan441.github.io/1dchess/chess.html
 Source: Hacker News
-Published: 2026-04-10T00:58:46
+Published: 2026-04-10T23:37:28
 Desc: 
 
 [DEEP_REFINE] Item 11 [Score=0]:
-Title: Instant 1.0, a backend for AI-coded apps
-URL: https://www.instantdb.com/essays/architecture
+Title: WireGuard makes new Windows release following Microsoft signing resolution
+URL: https://lists.zx2c4.com/pipermail/wireguard/2026-April/009561.html
 Source: Hacker News
-Published: 2026-04-10T02:30:59
+Published: 2026-04-10T23:49:52
 Desc: 
 
 [DEEP_REFINE] Item 12 [Score=0]:
-Title: OpenBMB /VoxCPM
-URL: https://github.com/OpenBMB/VoxCPM
-Source: GitHub
-Published: 2026-04-10T07:06:16.089993
-Desc: VoxCPM2: Tokenizer-Free TTS for Multilingual Speech Generation, Creative Voice Design, and True-to-Life Cloning
+Title: Industrial design files for Keychron keyboards and mice
+URL: https://github.com/Keychron/Keychron-Keyboards-Hardware-Design
+Source: Hacker News
+Published: 2026-04-11T00:22:26
+Desc: 
 
 [DEEP_REFINE] Item 13 [Score=0]:
-Title: coleam00 /Archon
-URL: https://github.com/coleam00/Archon
-Source: GitHub
-Published: 2026-04-10T07:06:16.090675
-Desc: The first open-source harness builder for AI coding. Make AI coding deterministic and repeatable.
+Title: Installing Every* Firefox Extension
+URL: https://jack.cab/blog/every-firefox-extension
+Source: Hacker News
+Published: 2026-04-11T05:56:33
+Desc: 
 
 [DEEP_REFINE] Item 14 [Score=0]:
-Title: shiyu-coder /Kronos
-URL: https://github.com/shiyu-coder/Kronos
-Source: GitHub
-Published: 2026-04-10T07:06:16.090816
-Desc: Kronos: A Foundation Model for the Language of Financial Markets
+Title: Has Mythos just broken the deal that kept the internet safe?
+URL: https://martinalderson.com/posts/has-mythos-just-broken-the-deal-that-kept-the-internet-safe/
+Source: Hacker News
+Published: 2026-04-11T07:09:17
+Desc: 
 
 [DEEP_REFINE] Item 15 [Score=0]:
-Title: YishenTu /claudian
-URL: https://github.com/YishenTu/claudian
-Source: GitHub
-Published: 2026-04-10T07:06:16.090958
-Desc: An Obsidian plugin that embeds Claude Code as an AI collaborator in your vault
+Title: JSON Formatter Chrome Plugin Now Closed and Injecting Adware
+URL: https://github.com/callumlocke/json-formatter
+Source: Hacker News
+Published: 2026-04-11T02:34:55
+Desc: 
 
 [TRANSLATE_ONLY] Item 16 [Score=0]:
-Title: 新 codex 站点上线，纯 plus 号池，比买 plus 月卡还划算
-URL: https://www.v2ex.com/t/1204632
-Source: V2EX
-Published: 2026-04-10T07:06:14.627357
-Desc: 新站点开业，当前 Plus 号池活动倍率 **0.05**： - 35 元到账 35 刀，实际可用 **700 刀额度** - 按量计费，余额不过期 站点地址：[hi-code]( https://www.hi-code.cc/)  ### V 友专属福利 注册完成后，在本帖留言并附上**加密后的注册邮箱**，赠送价值 **20 刀**额度。  ### 领取额度 扫码进群，私聊群主发邮箱，可领取价值 **20 刀**额度：  ![群二维码]( https://img-cdn.lusyoe.cn/images/hi-code/2026/04/09/23rzbpbu5l.pn
+Title: Watgo – A WebAssembly Toolkit for Go
+URL: https://eli.thegreenplace.net/2026/watgo-a-webassembly-toolkit-for-go/
+Source: Hacker News
+Published: 2026-04-11T03:03:39
+Desc: 
 
 [TRANSLATE_ONLY] Item 17 [Score=0]:
-Title: 大家来说一个自己独特的癖好吧！
-URL: https://www.v2ex.com/t/1204499
-Source: V2EX
-Published: 2026-04-10T07:06:14.627378
-Desc: 独特癖好，比如喜欢闻**消毒水**味儿。
+Title: Nowhere Is Safe
+URL: https://steveblank.com/2026/04/09/nowhere-is-safe/
+Source: Hacker News
+Published: 2026-04-11T03:27:58
+Desc: 
 
 [TRANSLATE_ONLY] Item 18 [Score=0]:
-Title: 来一起讨论一下，你选择生育的理由是什么？
-URL: https://www.v2ex.com/t/1204483
-Source: V2EX
-Published: 2026-04-10T07:06:14.627382
-Desc: 首先，个人非厌童，非丁克，娃这种生物虽然可爱，但是想到要负责培养一个“人”，对于我来说挑战性还是太高了。所以想知道你们选择生育，成为父母的理由是什么呢？是缘分到了，还是年龄到了，或者想过一种新的体验，又或者是迫于长辈的压力？   本帖只讨论生育，不讨论丁克，不婚，不育。
+Title: rowboatlabs /rowboat
+URL: https://github.com/rowboatlabs/rowboat
+Source: GitHub
+Published: 2026-04-11T07:51:52.402869
+Desc: Open-source AI coworker, with memory
 
 [TRANSLATE_ONLY] Item 19 [Score=0]:
-Title: 通勤路上被和尚纠缠，应该如何应对？
-URL: https://www.v2ex.com/t/1204503
-Source: V2EX
-Published: 2026-04-10T07:06:14.627384
-Desc: 如题，早上上班时，老远有个和尚过来说是化缘，让我给他买米。  可是上班马上迟到，我没有时间，也一直在给他解释。  对方仍然不依不饶，我提出给他转钱他不要，我说加微信等我下班，也不行，跟了我大概 150 米。 即将路过一家超市门口时，他拦住我，说这里就行，直接转钱买点就可以。  但是我确实没有时间了，路边很多人坐着乘凉，让他重新问下他人也不答应，非要揪着我。  最后让我转钱，我没搭理，快步走开，他在我身后人群中吼了几句“你这人真的是，没救了，你这个人怎么这样啊”，感觉很不舒服。想找他理论，刚回头，他就行了一礼说“阿弥陀佛”，无法选中啊。  实在是着急上班（迟到一分钟就是扣半
+Title: multica-ai /multica
+URL: https://github.com/multica-ai/multica
+Source: GitHub
+Published: 2026-04-11T07:51:52.402950
+Desc: The open-source managed agents platform. Turn coding agents into real teammates — assign tasks, track progress, compound skills.
 
 [TRANSLATE_ONLY] Item 20 [Score=0]:
-Title: 今年 28 岁，我应该为婚姻而焦虑吗？
-URL: https://www.v2ex.com/t/1204642
+Title: [V 友专属｜ claude 模型中转站免费送 20 刀 已稳定运行一个月 支持 claude-opus-4-6
+URL: https://www.v2ex.com/t/1204888
 Source: V2EX
-Published: 2026-04-10T07:06:14.627388
-Desc: 题主 98 年，今年 28 岁，家里催婚催得很厉害。 	去年年中跟谈了 5 年多的女朋友分手了，家里就开始催着相亲，起初我是特别反感和抵触的，但冷静下来思考之后发现我接触到女生的渠道好像也只剩下相亲了，心里慢慢接受，于是过年回家就在老家相了几个，有一些是之前先在微信上聊的，然后过年是线下见面，互相觉得不合适，也就没有后文了，有几个是新介绍的，也是礼貌互换了微信之后就没有再聊过了，互相不是对方的菜，因为我的年龄在这里放着，所以给我介绍的 女生大概都是跟我同岁或者比我大一岁的，本来我想着相亲本来就是碰运气加之完成家里的任务。临回市区的时候，媒人（我一个远方亲戚，我喊她喊姐）又介绍了一个女生说让
+Published: 2026-04-11T07:51:51.143587
+Desc: ### 🚀 MEAI 中转站服务  * **🌐 地址：** [https://api.meai.cloud]( https://api.meai.cloud)  * **✨ 主打模型：** `claude-opus-4.6` | `claude-sonnet-4.6`  * **⚡️ 更多模型：** `glm-5.1` · `gemini-3-flash` · `deepseek-v3.2` · `minimax-m2.7` · `qwen3.5` · `qwen3-coder-plus` · `kimi-k2.5`  ---  > **🎁 V 友专属福利** >  >
 
 [TRANSLATE_ONLY] Item 21 [Score=0]:
-Title: 锁单好几天了，没有发朋友圈，发抖音，今天忙里偷闲，来 V 站分享一下喜悦😄， V 友们可以和我说句恭喜吗？
-URL: https://www.v2ex.com/t/1204682
+Title: 你的 SBTI 是什么？
+URL: https://www.v2ex.com/t/1204785
 Source: V2EX
-Published: 2026-04-10T07:06:14.627391
-Desc: https://i.imgur.com/RAsaPvE.jpeg   https://i.imgur.com/izw537i.jpeg  从第一代 SU7 就想买了，快两年了，梦想成真了！
+Published: 2026-04-11T07:51:51.143593
+Desc: 这两天 sbti 很火，在 https://www.sbti.cam/ 测了一下，发现我是尤物 我还以为我是屌丝呢。
 
 [TRANSLATE_ONLY] Item 22 [Score=0]:
-Title: 豆包和 deepseek 最终会向个人收费，你们认为呢
-URL: https://www.v2ex.com/t/1204484
+Title: 看中了蔚来 ET5T 的电车， 75 度租电，大家觉得如何
+URL: https://www.v2ex.com/t/1204799
 Source: V2EX
-Published: 2026-04-10T07:06:14.627395
-Desc: 最后会不会是不开会员就限功能。。
+Published: 2026-04-11T07:51:51.143595
+Desc: 看中了蔚来 ET5T ，大家有没有什么建议？或者有什么其他车型推荐，因为租电 19w 左右嘛，然后其实算下来应该比油车便宜，哪怕租电。。。
 
 [TRANSLATE_ONLY] Item 23 [Score=0]:
-Title: 大家现在订阅哪个模型？
-URL: https://www.v2ex.com/t/1204481
+Title: 昨天得知爷爷去世了，我好像没有想象中难过
+URL: https://www.v2ex.com/t/1204809
 Source: V2EX
-Published: 2026-04-10T07:06:14.627399
-Desc: 主要是写代码，Claude or codex ？  或者其他？
+Published: 2026-04-11T07:51:51.143596
+Desc: 昨天下午堂姐发微信说爷爷走了，我一开始不相信，连问几个“真的假的”，然后还是接受了。老人家今年 91 了，自从摔了一跤做手术后就大不如前，不过也只是一些小毛病，后面一直靠吃药维持身体。 回想起来我和爷爷其实不亲近，特别是上初中后更加生疏。平时也是传统节假日回乡下祭拜才会见面，上大学后老爸让我偶尔打个电话给爷爷，我打了之后除了问候身体也没有其它话题。 昨晚老妈打电话跟我说了，让我下周或者没什么事就早点回去（年前离职到现在还在面试找工作）。我其实确实好像没有很难过，只是第一次这么近距离接触死亡，还有我想我爸会是怎样的难过。
 
 [TRANSLATE_ONLY] Item 24 [Score=0]:
-Title: “万一免五”低佣低两融老倔驴开户，抽山姆 BRUNO 咖啡机～ 免五时代很可能要结束
-URL: https://www.v2ex.com/t/1204477
+Title: 明显感觉最近出来旅游的玩的人比以前多，是我的错觉吗
+URL: https://www.v2ex.com/t/1204774
 Source: V2EX
-Published: 2026-04-10T07:06:14.627404
-Desc: 每周一个工程师值得拥有的精选好物，本周继续抽山姆 BRUNO 咖啡机一台～  恭喜昨日回血不少，希望今天继续  ![]( https://i.v2ex.co/CN6T026m.jpeg)  回复即可参与～～  免五低佣低两融开户，找老倔驴，靠谱！ 开户选择多还靠谱，聚合几十家券商优惠，连接 100+家营业部，已帮助 2000 人+。  开户点这里: https://jue.lv/kh/V2/202604a (10+券商可选，开户有礼！)  ### 不知道怎么选？  - **只玩 ETF 的聪明钱** YH ETF 万 0.5 ，1 毛起收非常合适。适合大多数散户，宽
+Published: 2026-04-11T07:51:51.143597
+Desc: 清明去了趟苏州，可以说老城街上都是高密度的人，更别说山塘古镇这种地方直接爆了 8 年前也是清明也是苏州，人倒是也多，但是绝对没有今年这么夸张  这几年去国内其他城市也是，明显感觉人更多了，大家有什么头绪吗
 
 [TRANSLATE_ONLY] Item 25 [Score=0]:
-Title: Product Hunt: DMARKOFF
-URL: https://www.producthunt.com/products/dmarkoff
-Source: Product Hunt
-Published: 2026-04-10T07:06:15.886359
-Desc: Simplified and total DMARC control             Discussion             |             Link
+Title: 送懒猫微服！送 CodeX 啦！极速内网穿透+AI 编程小主机，出门也能 Vibe Coding
+URL: https://www.v2ex.com/t/1204968
+Source: V2EX
+Published: 2026-04-11T07:51:51.143598
+Desc: # 🐱 懒猫微服送 CodeX 啦！ # 极速内网穿透+AI 编程小主机，出门也能 Vibe Coding  ![]( https://i.v2ex.co/I36T1xCj.jpeg)  丝滑内网穿透：速度快，不受运营商干扰，比 CloudFlare 和 Tailscale 快很多，TCP 、UDP 、WebSocket 混合打洞，从根本上解决运营商限速的问题。  自研 LightOS：相当于一台自由的 VPS ，在家插上鼠标键盘显示器可以当作 Linux 桌面开发机用，在外可以用手机直接操控 Claude Code 和 Codex ，手机移动 AI 编程才是真正的 YYDS 。
 
 [TRANSLATE_ONLY] Item 26 [Score=0]:
-Title: Product Hunt: Rudel
-URL: https://www.producthunt.com/products/rudel
-Source: Product Hunt
-Published: 2026-04-10T07:06:15.886732
-Desc: Claude Code & Codex session analytics for dev teams             Discussion             |             Link
+Title: 最近都在说网络监管显著升级 大家都受到影响了嘛
+URL: https://www.v2ex.com/t/1204919
+Source: V2EX
+Published: 2026-04-11T07:51:51.143599
+Desc: 最近都在讲 4 月开始要全面封禁外网访问 要严厉打击 尤其是专线 目前大家都还好嘛 还有这是真的消息还是假的消息 这段时间我用的确实有些不稳定 一直断断续续  如果是真的 那以后这类的支出不又是水涨船高嘛/(ㄒoㄒ)/~~
 
 [TRANSLATE_ONLY] Item 27 [Score=0]:
-Title: Product Hunt: Convert or Not
-URL: https://www.producthunt.com/products/convert-or-not
-Source: Product Hunt
-Published: 2026-04-10T07:06:15.887133
-Desc: Simulate first-time users. See why they drop off             Discussion             |             Link
+Title: 2026 年了，安卓、鸿蒙项目路径居然还是要求不能有中文
+URL: https://www.v2ex.com/t/1204805
+Source: V2EX
+Published: 2026-04-11T07:51:51.143600
+Desc: 很早之前蜻蜓点水接触过一点安卓，还不知道这一点，最近要下载同事的鸿蒙代码测试，才发现这个问题，作为一个习惯了 iOS 开发的人，表示匪夷所思
 
 [TRANSLATE_ONLY] Item 28 [Score=0]:
-Title: Product Hunt: Cyris
-URL: https://www.producthunt.com/products/cyris
+Title: Product Hunt: Buddi
+URL: https://www.producthunt.com/products/buddi-living-in-the-notch
 Source: Product Hunt
-Published: 2026-04-10T07:06:15.887596
-Desc: Turns every AI decision into audit-ready evidence             Discussion             |             Link
+Published: 2026-04-11T07:51:49.723093
+Desc: Your Claude Code companion, living in the notch.             Discussion             |             Link
 
 [TRANSLATE_ONLY] Item 29 [Score=0]:
-Title: Product Hunt: DreamBooks
-URL: https://www.producthunt.com/products/dreambooks
+Title: Product Hunt: Complexity Indicator
+URL: https://www.producthunt.com/products/complexity-indicator
 Source: Product Hunt
-Published: 2026-04-10T07:06:15.887883
-Desc: Discover children’s books and track reading together.             Discussion             |             Link
+Published: 2026-04-11T07:51:49.723224
+Desc: Know when your code becomes unmaintainable             Discussion             |             Link
 
 [TRANSLATE_ONLY] Item 30 [Score=0]:
-Title: Product Hunt: GAIA
-URL: https://www.producthunt.com/products/heygaia
+Title: Product Hunt: Inbox Autopilot by Dimension
+URL: https://www.producthunt.com/products/dimension-2
 Source: Product Hunt
-Published: 2026-04-10T07:06:15.888162
-Desc: Proactive personal assistant that handles your day             Discussion             |             Link
+Published: 2026-04-11T07:51:49.723331
+Desc: Your inbox, handled             Discussion             |             Link
 
 [TRANSLATE_ONLY] Item 31 [Score=0]:
-Title: Product Hunt: Refaire
-URL: https://www.producthunt.com/products/refaire
+Title: Product Hunt: Orbit Money
+URL: https://www.producthunt.com/products/orbit-money
 Source: Product Hunt
-Published: 2026-04-10T07:06:15.888378
-Desc: AI Technicians for the Physical World             Discussion             |             Link
+Published: 2026-04-11T07:51:49.724158
+Desc: Track every API and tool you pay for in one place             Discussion             |             Link
 
 [TRANSLATE_ONLY] Item 32 [Score=0]:
-Title: Product Hunt: SaveMRR
-URL: https://www.producthunt.com/products/savemrr
+Title: Product Hunt: GhostlyX
+URL: https://www.producthunt.com/products/ghostlyx
 Source: Product Hunt
-Published: 2026-04-10T07:06:15.888578
-Desc: See how much you're losing to failed payments on Stripe             Discussion             |             Link
+Published: 2026-04-11T07:51:49.724276
+Desc: Privacy-first analytics without cookies or clutter             Discussion             |             Link
 
 [TRANSLATE_ONLY] Item 33 [Score=0]:
-Title: Product Hunt: Bouncer
-URL: https://www.producthunt.com/products/imbue-7
+Title: Product Hunt: Drift
+URL: https://www.producthunt.com/products/drift-journal-that-lets-go
 Source: Product Hunt
-Published: 2026-04-10T07:06:15.888838
-Desc: Filter (and heal) your Twitter feed             Discussion             |             Link
+Published: 2026-04-11T07:51:49.724380
+Desc: Minimalist journal app that fades over time             Discussion             |             Link
 
 [TRANSLATE_ONLY] Item 34 [Score=0]:
-Title: Nature Digital Medicine: Towards noninvasive blood count using a deep learning pipeline from bulbar conjunctiva videos
-URL: https://www.nature.com/articles/s41746-026-02598-2
-Source: Nature Digital Medicine
-Published: 2026-04-10T07:06:12.717685
-Desc: npj Digital Medicine, Published online: 08 April 2026; doi:10.1038/s41746-026-02598-2Towards noninvasive blood count using a deep learning pipeline from bulbar conjunctiva videos
+Title: Product Hunt: Waypoint-1.5
+URL: https://www.producthunt.com/products/waypoint-1-5
+Source: Product Hunt
+Published: 2026-04-11T07:51:49.724571
+Desc: Real-time generative worlds on everyday GPUs             Discussion             |             Link
 
 [TRANSLATE_ONLY] Item 35 [Score=0]:
-Title: Nature Digital Medicine: ClinicRealm: Re-evaluating large language models with conventional machine learning for non-generative clinical prediction tasks
-URL: https://www.nature.com/articles/s41746-026-02539-z
-Source: Nature Digital Medicine
-Published: 2026-04-10T07:06:12.717914
-Desc: npj Digital Medicine, Published online: 08 April 2026; doi:10.1038/s41746-026-02539-zClinicRealm: Re-evaluating large language models with conventional machine learning for non-generative clinical prediction tasks
+Title: Product Hunt: Avatar V by HeyGen
+URL: https://www.producthunt.com/products/heygen
+Source: Product Hunt
+Published: 2026-04-11T07:51:49.724673
+Desc: The most advanced AI avatar model in the world             Discussion             |             Link
 
 [TRANSLATE_ONLY] Item 36 [Score=0]:
-Title: Nature Digital Medicine: EcoRxAgent: an AI agent for generating economically substitutable prescriptions
-URL: https://www.nature.com/articles/s41746-026-02612-7
+Title: Nature Digital Medicine: Pursuit of biomarkers of brain diseases: beyond cohort comparisons
+URL: https://www.nature.com/articles/s41746-026-02614-5
 Source: Nature Digital Medicine
-Published: 2026-04-10T07:06:12.718099
-Desc: npj Digital Medicine, Published online: 08 April 2026; doi:10.1038/s41746-026-02612-7EcoRxAgent: an AI agent for generating economically substitutable prescriptions
+Published: 2026-04-11T07:51:49.364923
+Desc: npj Digital Medicine, Published online: 10 April 2026; doi:10.1038/s41746-026-02614-5Pursuit of biomarkers of brain diseases: beyond cohort comparisons
 
 [TRANSLATE_ONLY] Item 37 [Score=0]:
-Title: Nature Digital Medicine: Personalized artificial intelligence based left ventricular ejection fraction and systolic dysfunction assessment
-URL: https://www.nature.com/articles/s41746-026-02462-3
+Title: Nature Digital Medicine: The landscape of artificial intelligence-enabled medical devices in the EU and the US intended for intensive care units
+URL: https://www.nature.com/articles/s41746-026-02609-2
 Source: Nature Digital Medicine
-Published: 2026-04-10T07:06:12.718308
-Desc: npj Digital Medicine, Published online: 08 April 2026; doi:10.1038/s41746-026-02462-3Personalized artificial intelligence based left ventricular ejection fraction and systolic dysfunction assessment
+Published: 2026-04-11T07:51:49.365007
+Desc: npj Digital Medicine, Published online: 10 April 2026; doi:10.1038/s41746-026-02609-2The landscape of artificial intelligence-enabled medical devices in the EU and the US intended for intensive care units
 
 [TRANSLATE_ONLY] Item 38 [Score=0]:
-Title: Nature Digital Medicine: Impact of an AI prognostic tool on clinician performance in colorectal liver metastases
-URL: https://www.nature.com/articles/s41746-026-02606-5
+Title: Nature Digital Medicine: Predicting bilingual aphasia treatment outcomes using digital twins: a double-blind randomized controlled trial
+URL: https://www.nature.com/articles/s41746-026-02583-9
 Source: Nature Digital Medicine
-Published: 2026-04-10T07:06:12.718437
-Desc: npj Digital Medicine, Published online: 08 April 2026; doi:10.1038/s41746-026-02606-5Impact of an AI prognostic tool on clinician performance in colorectal liver metastases
+Published: 2026-04-11T07:51:49.365060
+Desc: npj Digital Medicine, Published online: 10 April 2026; doi:10.1038/s41746-026-02583-9Predicting bilingual aphasia treatment outcomes using digital twins: a double-blind randomized controlled trial
 
 [TRANSLATE_ONLY] Item 39 [Score=0]:
+Title: Nature Digital Medicine: An EEG-based digital biomarker for personalizing transcranial magnetic stimulation in major depressive disorder
+URL: https://www.nature.com/articles/s41746-026-02603-8
+Source: Nature Digital Medicine
+Published: 2026-04-11T07:51:49.365109
+Desc: npj Digital Medicine, Published online: 09 April 2026; doi:10.1038/s41746-026-02603-8An EEG-based digital biomarker for personalizing transcranial magnetic stimulation in major depressive disorder
+
+[TRANSLATE_ONLY] Item 40 [Score=0]:
+Title: Nature Digital Medicine: Multicenter validation and updating of the ELDER-ICU model for severity assessment in elderly critical illness
+URL: https://www.nature.com/articles/s41746-026-02472-1
+Source: Nature Digital Medicine
+Published: 2026-04-11T07:51:49.365155
+Desc: npj Digital Medicine, Published online: 09 April 2026; doi:10.1038/s41746-026-02472-1Multicenter validation and updating of the ELDER-ICU model for severity assessment in elderly critical illness
+
+[TRANSLATE_ONLY] Item 41 [Score=0]:
+Title: Science: Differences in cells’ protein factories may help explain human diversity
+URL: https://www.science.org/content/article/differences-cells-protein-factories-may-help-explain-human-diversity
+Source: Science
+Published: 2026-04-11T07:51:49.418827
+Desc: Study links mutations in ribosome genes to traits such as height and weight
+
+[TRANSLATE_ONLY] Item 42 [Score=0]:
+Title: Science: Why do anglerfish have glowing lures? It might be sex
+URL: https://www.science.org/content/article/why-do-anglerfish-have-glowing-lures-it-might-be-sex
+Source: Science
+Published: 2026-04-11T07:51:49.418878
+Desc: Species proliferated after evolving bioluminescence, possibly because mates could find each other more easily
+
+[TRANSLATE_ONLY] Item 43 [Score=0]:
+Title: Science: A galaxy seems to host two giant black holes, poised to collide in a century
+URL: https://www.science.org/content/article/galaxy-seems-host-two-giant-black-holes-poised-collide-century
+Source: Science
+Published: 2026-04-11T07:51:49.418904
+Desc: Unusual radio signals could be long-sought smoking gun of galactic mergers
+
+[TRANSLATE_ONLY] Item 44 [Score=0]:
 Title: Science: Roaming gangs of tumor cells help spread cancer. Can drugs break them up?
 URL: https://www.science.org/content/article/roaming-gangs-tumor-cells-help-spread-cancer-can-drugs-break-them
 Source: Science
-Published: 2026-04-10T07:06:17.943690
+Published: 2026-04-11T07:51:49.418926
 Desc: To impede metastasis, researchers seek to develop novel treatments that disrupt tumor cell clusters
 
-[TRANSLATE_ONLY] Item 40 [Score=0]:
+[TRANSLATE_ONLY] Item 45 [Score=0]:
 Title: Science: What plunged these chimps into civil war? A new study traces the breakdown
 URL: https://www.science.org/content/article/what-plunged-these-chimps-civil-war-new-study-traces-breakdown
 Source: Science
-Published: 2026-04-10T07:06:17.943760
+Published: 2026-04-11T07:51:49.418947
 Desc: Decades of observations tracked the fraying of once-friendly relations among Ugandan chimpanzees
 
-[TRANSLATE_ONLY] Item 41 [Score=0]:
-Title: Science: Did quantum sensors help find a U.S. pilot shot down in Iran? Experts doubt it
-URL: https://www.science.org/content/article/did-quantum-sensors-help-find-u-s-pilot-shot-down-iran-experts-doubt-it
-Source: Science
-Published: 2026-04-10T07:06:17.943814
-Desc: The heart’s faint magnetic signals can’t be detected at large distances, researchers say
-
-[TRANSLATE_ONLY] Item 42 [Score=0]:
+[TRANSLATE_ONLY] Item 46 [Score=0]:
 Title: NEJM: Multifaceted Strategies for Hypertension Control in Low-Income Patients
 URL: https://www.nejm.org/doi/full/10.1056/NEJMoa2504068?af=R&rss=currentIssue
 Source: NEJM
-Published: 2026-04-10T07:06:34.369042
+Published: 2026-04-11T07:51:50.096036
 Desc: New England Journal of Medicine, Volume 394, Issue 14, Page 1376-1387, April 9, 2026.
 
-[TRANSLATE_ONLY] Item 43 [Score=0]:
+[TRANSLATE_ONLY] Item 47 [Score=0]:
 Title: NEJM: Immunogenicity and Safety of vYF, a Yellow Fever Vaccine — A Phase 2 Trial
 URL: https://www.nejm.org/doi/full/10.1056/NEJMoa2505665?af=R&rss=currentIssue
 Source: NEJM
-Published: 2026-04-10T07:06:34.369916
+Published: 2026-04-11T07:51:50.096087
 Desc: New England Journal of Medicine, Volume 394, Issue 14, Page 1399-1408, April 9, 2026.
 
-[TRANSLATE_ONLY] Item 44 [Score=0]:
+[TRANSLATE_ONLY] Item 48 [Score=0]:
 Title: NEJM: A Phase 2 Randomized Trial of Mezagitamab in Primary Immune Thrombocytopenia
 URL: https://www.nejm.org/doi/full/10.1056/NEJMoa2513120?af=R&rss=currentIssue
 Source: NEJM
-Published: 2026-04-10T07:06:34.370160
+Published: 2026-04-11T07:51:50.096121
 Desc: New England Journal of Medicine, Volume 394, Issue 14, Page 1388-1398, April 9, 2026.
 
-[TRANSLATE_ONLY] Item 45 [Score=0]:
+[TRANSLATE_ONLY] Item 49 [Score=0]:
 Title: NEJM: Setidegrasib in Advanced Non–Small-Cell Lung Cancer and Pancreatic Cancer
 URL: https://www.nejm.org/doi/full/10.1056/NEJMoa2600752?af=R&rss=currentIssue
 Source: NEJM
-Published: 2026-04-10T07:06:34.370770
+Published: 2026-04-11T07:51:50.096152
 Desc: New England Journal of Medicine, Volume 394, Issue 14, Page 1409-1420, April 9, 2026.
 
-[TRANSLATE_ONLY] Item 46 [Score=0]:
+[TRANSLATE_ONLY] Item 50 [Score=0]:
 Title: NEJM: Intensive LDL Cholesterol Targeting in Atherosclerotic Cardiovascular Disease
 URL: https://www.nejm.org/doi/full/10.1056/NEJMoa2600283?af=R&rss=currentIssue
 Source: NEJM
-Published: 2026-04-10T07:06:34.370889
+Published: 2026-04-11T07:51:50.096182
 Desc: New England Journal of Medicine, Volume 394, Issue 14, Page 1365-1375, April 9, 2026.
-
-[TRANSLATE_ONLY] Item 47 [Score=0]:
-Title: arXiv Med-AI: Toward a universal foundation model for graph-structured data
-URL: https://arxiv.org/abs/2604.06391v1
-Source: arXiv Med-AI
-Published: 2026-04-10T07:06:35.621957
-Desc: Graphs are a central representation in biomedical research, capturing molecular interaction networks, gene regulatory circuits, cell--cell communication maps, and knowledge graphs. Despite their importance, currently there is not a broadly reusable foundation model available for graph analysis compa
-
-[TRANSLATE_ONLY] Item 48 [Score=0]:
-Title: arXiv Med-AI: SymptomWise: A Deterministic Reasoning Layer for Reliable and Efficient AI Systems
-URL: https://arxiv.org/abs/2604.06375v1
-Source: arXiv Med-AI
-Published: 2026-04-10T07:06:35.622085
-Desc: AI-driven symptom analysis systems face persistent challenges in reliability, interpretability, and hallucination. End-to-end generative approaches often lack traceability and may produce unsupported or inconsistent diagnostic outputs in safety-critical settings. We present SymptomWise, a framework 
-
-[TRANSLATE_ONLY] Item 49 [Score=0]:
-Title: simonwillison.net: GitHub Repo Size
-URL: https://simonwillison.net/2026/Apr/9/github-repo-size/#atom-everything
-Source: simonwillison.net
-Published: 2026-04-10T07:06:17.871651
-Desc: Tool: GitHub Repo Size GitHub doesn't tell you the repo size in the UI, but it's available in the CORS-friendly API. Paste a repo into this tool to see the size, for example for simonw/datasette (8.1MB). Tags: cors, github
-
-[TRANSLATE_ONLY] Item 50 [Score=0]:
-Title: simonwillison.net: asgi-gzip 0.3
-URL: https://simonwillison.net/2026/Apr/9/asgi-gzip/#atom-everything
-Source: simonwillison.net
-Published: 2026-04-10T07:06:17.872559
-Desc: Release: asgi-gzip 0.3 I ran into trouble deploying a new feature using SSE to a production Datasette instance, and it turned out that instance was using datasette-gzip which uses asgi-gzip which was incorrectly compressing event/text-stream responses. asgi-gzip was extracted from Starlette, and has
