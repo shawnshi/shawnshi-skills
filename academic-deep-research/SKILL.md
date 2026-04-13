@@ -454,12 +454,12 @@ Unified definitions across all agents. ⚠️ IRON RULE: **CRITICAL severity** =
 This skill is domain-agnostic but can be combined with domain-specific skills:
 
 ```
-deep-research + tw-hei-intelligence     -> Evidence-based HEI policy research
-deep-research + report-to-website       -> Interactive research report
-deep-research + podcast-script-generator -> Research podcast
-deep-research + academic-paper          -> Full research-to-publication pipeline
-deep-research (socratic) + academic-paper (plan) -> Guided research + paper planning
-deep-research (systematic-review) + academic-paper -> PRISMA systematic review paper
+academic-deep-research + tw-hei-intelligence     -> Evidence-based HEI policy research
+academic-deep-research + report-to-website       -> Interactive research report
+academic-deep-research + podcast-script-generator -> Research podcast
+academic-deep-research + academic-paper-writer          -> Full research-to-publication pipeline
+academic-deep-research (socratic) + academic-paper-writer (plan) -> Guided research + paper planning
+academic-deep-research (systematic-review) + academic-paper-writer -> PRISMA systematic review paper
 ```
 
 ---

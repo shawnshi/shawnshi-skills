@@ -1,5 +1,6 @@
 {
-  "phase": 1,
-  "scope": "默认全景扫描",
-  "status": "Moving to Phase 2"
+  "phase": 4,
+  "focus": "常规全域扫描",
+  "status": "in_progress",
+  "timestamp": "2026-04-11T10:10:00Z"
 }
