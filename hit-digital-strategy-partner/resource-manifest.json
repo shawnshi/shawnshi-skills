@@ -1,0 +1,51 @@
+﻿{
+    "schema_version":  1,
+    "skill":  "hit-digital-strategy-partner",
+    "generated_at":  "2026-04-19T06:26:09",
+    "skill_md":  "SKILL.md",
+    "top_level_files":  [
+                            "README.md",
+                            "SKILL.md",
+                            "_DIR_META.md"
+                        ],
+    "top_level_directories":  [
+                                  "agents",
+                                  "examples",
+                                  "memory",
+                                  "references",
+                                  "scripts"
+                              ],
+    "resource_directories":  [
+                                 {
+                                     "name":  "scripts",
+                                     "file_count":  5
+                                 },
+                                 {
+                                     "name":  "references",
+                                     "file_count":  7
+                                 },
+                                 {
+                                     "name":  "examples",
+                                     "file_count":  1
+                                 },
+                                 {
+                                     "name":  "agents",
+                                     "file_count":  3
+                                 }
+                             ],
+    "declared_local_dependencies":  [
+                                        {
+                                            "path":  "hit-digital-strategy-partner\\scripts\\blackboard.py",
+                                            "exists":  true,
+                                            "resolved_path":  "C:\\Users\\shich\\.gemini\\skills\\hit-digital-strategy-partner\\scripts\\blackboard.py"
+                                        },
+                                        {
+                                            "path":  "scripts\\blackboard.py",
+                                            "exists":  true,
+                                            "resolved_path":  "C:\\Users\\shich\\.gemini\\skills\\hit-digital-strategy-partner\\scripts\\blackboard.py"
+                                        }
+                                    ],
+    "missing_declared_dependencies":  [
+
+                                      ]
+}

@@ -1,0 +1,55 @@
+﻿{
+    "schema_version":  1,
+    "skill":  "url-to-markdown",
+    "generated_at":  "2026-04-19T06:26:09",
+    "skill_md":  "SKILL.md",
+    "top_level_files":  [
+                            "bun.lock",
+                            "index.ts",
+                            "package.json",
+                            "README.md",
+                            "SKILL.md",
+                            "tsconfig.json",
+                            "_DIR_META.md"
+                        ],
+    "top_level_directories":  [
+                                  "agents",
+                                  "node_modules",
+                                  "references",
+                                  "scripts"
+                              ],
+    "resource_directories":  [
+                                 {
+                                     "name":  "scripts",
+                                     "file_count":  5
+                                 },
+                                 {
+                                     "name":  "references",
+                                     "file_count":  1
+                                 },
+                                 {
+                                     "name":  "agents",
+                                     "file_count":  1
+                                 }
+                             ],
+    "declared_local_dependencies":  [
+                                        {
+                                            "path":  "url-to-markdown\\scripts\\main.ts",
+                                            "exists":  true,
+                                            "resolved_path":  "C:\\Users\\shich\\.gemini\\skills\\url-to-markdown\\scripts\\main.ts"
+                                        },
+                                        {
+                                            "path":  "scripts\\main.ts",
+                                            "exists":  true,
+                                            "resolved_path":  "C:\\Users\\shich\\.gemini\\skills\\url-to-markdown\\scripts\\main.ts"
+                                        },
+                                        {
+                                            "path":  "references\\troubleshooting.md",
+                                            "exists":  true,
+                                            "resolved_path":  "C:\\Users\\shich\\.gemini\\skills\\url-to-markdown\\references\\troubleshooting.md"
+                                        }
+                                    ],
+    "missing_declared_dependencies":  [
+
+                                      ]
+}

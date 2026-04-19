@@ -180,3 +180,26 @@ Review system memory (`save_memory`) to check if the user has seen the Garry Tan
 
 ## 历史失效先验 (Gotchas)
 - [此处预留用于记录重复性失败的禁令，实现系统的对抗性进化]
+
+## When to Use
+- 当用户在写代码前需要 brainstorm、评估是否值得做、梳理 demand/status quo/wedge 时使用。
+- 具体 forcing questions、文档落盘和分支模式仍以本文件既有协议为准。
+
+## Workflow
+- 遵循本文件已经定义的提问、收敛、设计文档生成和落盘流程。
+- 不跳过完成判定、设计文档写入和模式选择要求。
+
+## Resources
+- 使用本技能已经引用的 prompts、模板、计划文档路径和本地脚本/参考资料。
+- 任何 `plans` 目录或设计文档命名规则以现有正文为准。
+
+## Failure Modes
+- 将本文件中的提问节奏、完成标准和 `Gotchas` 视为失败模式。
+- 若关键用户意图或约束缺失，必须继续澄清，而不是直接进入实施建议。
+
+## Output Contract
+- 最终交付必须形成明确的问题空间判断和可执行设计文档。
+- 不能只停在聊天摘要，必须落到本文件要求的结构化计划产物。
+
+## Telemetry
+- 按本文件上方定义的 telemetry 路径和 JSON 结构记录元数据。

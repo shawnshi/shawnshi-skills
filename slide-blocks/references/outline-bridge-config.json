@@ -1,0 +1,37 @@
+{
+  "version": "1.0.0",
+  "confidence": {
+    "min_confidence_default": 0.35,
+    "high_confidence_threshold": 0.5
+  },
+  "search": {
+    "enable_query_cache": true,
+    "max_source_hints": 3,
+    "max_preferred_content_queries": 2,
+    "max_preferred_layout_queries": 2,
+    "max_preferred_proof_queries": 2,
+    "max_search_variants": 18,
+    "candidate_cap": 12
+  },
+  "scoring": {
+    "token_overlap_step": 0.03,
+    "token_overlap_cap": 0.18,
+    "headline_overlap_step": 0.04,
+    "headline_overlap_cap": 0.12,
+    "narrative_overlap_step": 0.03,
+    "narrative_overlap_cap": 0.12,
+    "visual_overlap_step": 0.02,
+    "visual_overlap_cap": 0.08,
+    "trust_anchor_step": 0.05,
+    "trust_anchor_cap": 0.15,
+    "source_proof_preference": 0.05,
+    "source_layout_preference": 0.05,
+    "source_content_preference": 0.05,
+    "proof_match": 0.05,
+    "layout_match": 0.05,
+    "objection_match": 0.03,
+    "negative_content_penalty": 0.12,
+    "negative_term_penalty_step": 0.08,
+    "negative_term_penalty_cap": 0.16
+  }
+}

@@ -1,4 +1,4 @@
-# Skills Ecosystem: The Strategic Armory (V5.1 - Anti-Entropy Edition)
+# Skills Ecosystem: The Strategic Armory (V5.2 - Anti-Entropy Edition)
 
 <!-- 
 @Pos: Root Level / Knowledge Sovereign 
@@ -43,9 +43,66 @@ gemini skills install https://github.com/shawnshi/shawnshi-skills.git
 gemini skills install https://github.com/shawnshi/shawnshi-skills.git --path hit-solution-architect
 ```
 
+## 2.5 静态审计门禁 (Static Audit Gate)
+在修改任何 `SKILL.md`、`scripts/`、`references/`、`assets/` 后，先刷新资源清单，再执行静态门禁。
+
+```powershell
+powershell -ExecutionPolicy Bypass -File .\scripts\generate_resource_manifests.ps1
+powershell -ExecutionPolicy Bypass -File .\scripts\repair_skills.ps1 -Mode Gate
+```
+
+门禁命中以下任一条件即返回非零退出码：
+
+- frontmatter 非法
+- 缺少 `name` 或 `description`
+- 缺少 `resource-manifest.json`
+- manifest 中声明了不存在的本地依赖
+- `SKILL.md` 中存在缺失的本地引用
+- 存在不兼容工具令牌
+- 存在外部运行时硬编码路径
+- `SKILL.md` 超过行数阈值
+
+若只想查看明细，不拦截：
+
+```powershell
+powershell -ExecutionPolicy Bypass -File .\scripts\repair_skills.ps1 -Mode Report
+```
+
+## 2.6 标准结构 (Standard Skill Shape)
+新建或重构技能时，优先对齐 [shared/skill-structure-template.md](shared/skill-structure-template.md)。
+
+推荐章节顺序：
+
+1. `## When to Use`
+2. `## Workflow`
+3. `## Resources`
+4. `## Failure Modes`
+5. `## Output Contract`
+6. `## Telemetry`
+
+`repair_skills.ps1` 会在报告中标出缺失这些标准章节的技能，作为结构漂移指标。
+
+## 2.7 触发主权矩阵 (Trigger Ownership)
+高重叠域的主触发权不再只靠口头约定，统一收敛到 [shared/trigger-ownership-matrix.json](shared/trigger-ownership-matrix.json)。
+
+当前重点治理 4 个高碰撞域：
+
+- `research`
+- `writing`
+- `healthcare_strategy`
+- `personal_analysis`
+
+规则：
+
+- 每个请求类只允许 `1` 个 `primary_skill`
+- `secondary_skills` 只能做补充，不得夺主
+- `request_signals` 在矩阵内不得跨类重复
+
+`repair_skills.ps1` 现在会校验该矩阵是否存在、引用的技能是否真实存在、以及信号是否发生跨类重叠，并在报告中输出冲突计数。
+
 ## 3. 核心分类矩阵 (Core Skill Hierarchy)
 
-> **Total Inventory: 43 Strategic Modules across 8 Domains**
+> **Total Inventory: 44 Strategic Modules across 8 Domains**
 
 ### 🧠 深度认知与研究工作台 (Cognitive Research)
 *底层思考工具箱：需求脱水、战略审计、红蓝对抗与情报分析。*
@@ -58,6 +115,7 @@ gemini skills install https://github.com/shawnshi/shawnshi-skills.git --path hit
 | **[personal-logic-adversary](personal-logic-adversary/)**                     | **逻辑对抗系统 (Native Edition)**。搜索单点故障 (SPOF)，通过饱和逻辑攻击验证方案鲁棒性.                              |
 | **[personal-intelligence-hub](personal-intelligence-hub/)** | **个人情报作战中枢 (Native Edition)**。执行全球多源抓取，将噪音降维为 Alpha 级决策资产.                              |
 | **[personal-roundtable](personal-roundtable/)** | **高密度动态圆桌 (V4.0)**。基于议题构建张力网络，采用“碎片化落盘与最终合并”机制，彻底消除大模型长文本截断风险. |
+| **[hv-analysis](hv-analysis/)** | **横纵分析法深度研究 (Horizontal-Vertical Analysis)**。由数字生命卡兹克提出，通过纵轴追踪时间深度，横轴进行同期对比，最后产出排版精美的深度研究报告. |
 
 ### 🏥 大健康与战略研判中枢 (Healthcare Strategy)
 *聚焦垂直主业：医疗信息化 (HIT)、临床决策支持及大客户分析。*
@@ -139,4 +197,4 @@ gemini skills install https://github.com/shawnshi/shawnshi-skills.git --path hit
 | **[url-to-markdown](url-to-markdown/)**         | **网页原质提取器**。直控 Chrome CDP 协议，强制清除网页噪音.                                          |
 
 ---
-*Last Global Audit: 2026-04-10 | Version: 5.1 (Drawio Hardened Edition) | System State: Locked*
+*Last Global Audit: 2026-04-19 | Version: 5.2 (Horizontal-Vertical Audit Edition) | System State: Locked*

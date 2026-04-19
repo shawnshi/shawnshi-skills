@@ -1,0 +1,32 @@
+﻿{
+    "schema_version":  1,
+    "skill":  "slide-blocks",
+    "generated_at":  "2026-04-19T06:26:09",
+    "skill_md":  "SKILL.md",
+    "top_level_files":  [
+                            "config.yaml",
+                            "README.md",
+                            "setup_paths.py",
+                            "SKILL.md",
+                            "slide_vault.db"
+                        ],
+    "top_level_directories":  [
+                                  "engine",
+                                  "references",
+                                  "slide_vault",
+                                  "tasks",
+                                  "模板"
+                              ],
+    "resource_directories":  [
+                                 {
+                                     "name":  "references",
+                                     "file_count":  2
+                                 }
+                             ],
+    "declared_local_dependencies":  [
+
+                                    ],
+    "missing_declared_dependencies":  [
+
+                                      ]
+}

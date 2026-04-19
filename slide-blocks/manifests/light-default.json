@@ -1,0 +1,51 @@
+{
+  "manifest_version": "1.0.0",
+  "template_id": "light-default",
+  "display_name": "默认浅色模板",
+  "template_path": "{materials_dir}/2025年度PPT素材汇总（浅色底）.pptx",
+  "background_mode": "light",
+  "page_roles": {
+    "cover": {
+      "page": 1,
+      "replace_title": true
+    },
+    "transition": {
+      "page": 2,
+      "replace_title": true,
+      "default_font_size": 40
+    },
+    "content_with_title": {
+      "page": 3,
+      "replace_title": true
+    },
+    "content_without_title": {
+      "page": 4,
+      "replace_title": false
+    },
+    "closing": {
+      "page": 5,
+      "replace_title": false
+    }
+  },
+  "selection_rules": {
+    "title_detection": {
+      "mode": "top_threshold_pt",
+      "threshold_pt": 65
+    },
+    "exclude_shapes": [
+      {
+        "kind": "picture",
+        "top_lt_pt": 65
+      }
+    ]
+  },
+  "rendering_rules": {
+    "paste_retry_count": 5,
+    "paste_retry_delay_ms": 300
+  },
+  "validation_rules": {
+    "require_cover_page_first": true,
+    "require_transition_font_size_40": true,
+    "require_closing_page_last": true
+  }
+}

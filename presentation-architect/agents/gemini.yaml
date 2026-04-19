@@ -1,22 +1,23 @@
 display_name: Presentation Architect
-short_description: 幻灯片架构师 V5.0。将 Markdown 转换为专业 PPTX，支持智能配图与排版。
-default_prompt: 把这份文档转化为一份 10 页的演示文稿，风格要 [风格名称]。
+short_description: 幻灯片蓝图架构师 V11.0。只生产高质量 outline.md 与 blueprint bundle，不渲染 PPTX。
+default_prompt: 把这份材料整理成一份 10 页的战略汇报蓝图，交付 outline.md 和可校验的 blueprint bundle。
 interface:
   icon: slideshow
   brand_color: "#ff5722"
 context_files:
   - SKILL.md
-  - references/content-rules.md
   - references/outline-template.md
+  - references/content-rules.md
+  - references/workflows.md
 capabilities:
   - name: ghost_deck_generation
-    description: 生成 MBB 级别的 Ghost Deck 骨架大纲
-  - name: slide_anatomy
-    description: 每页 Kicker/Lead-in/Body/Evidence/Bumper 五段式结构
-  - name: triple_adversary_audit
-    description: 三角红队审计 (医院信息科/卫健委/竞对)
-  - name: visual_forging
-    description: AI 驱动的幻灯片图像生成与 PPTX/PDF 组装
+    description: 生成咨询级标题链和叙事骨架
+  - name: blueprint_schema
+    description: 生成可校验的 outline.md 结构化蓝图
+  - name: special_slide_contract
+    description: 强制封面、内容页、封底三类 archetype 规则
+  - name: blueprint_packaging
+    description: 将 validated outline 编译为 blueprint_bundle.json
 examples:
-  - prompt: 把这份 DRG 政策分析报告转化成 8 页的汇报 PPT，风格用 corporate
-  - prompt: 帮我做一份关于智慧医院建设方案的 12 页演示，风格用 blueprint
+  - prompt: 把这份 DRG 政策分析报告转成 8 页战略汇报蓝图，只要 outline 和 blueprint bundle
+  - prompt: 帮我做一份 CTO 汇报的 ghost deck，保留 script、visual、layout 字段，不要渲染 PPT

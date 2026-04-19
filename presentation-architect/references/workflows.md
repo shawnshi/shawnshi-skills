@@ -1,23 +1,30 @@
-# Advanced Workflows & Modification
+# Blueprint-Only Workflows
 
-## Slide Modification
+## Standard Flow
 
-### Edit Visuals
-To regenerate specific slides (e.g., slide 3 and 5):
-1. Modify `prompts/NN-slide-slug.md` if needed.
-2. Run:
+1. Draft `outline.md` using `references/outline-template.md`.
+2. Validate it:
    ```bash
-   /slide-deck slide-deck/topic-slug/ --regenerate 3,5
+   python scripts/validator.py path\to\outline.md
    ```
+3. Package it:
+   ```bash
+   python scripts/build-deck.py path\to\deck-dir
+   ```
+4. Review `blueprint_bundle.json` and the validated `outline.md`.
 
-### Switch Model
-Regenerate a specific slide using a different artistic style:
-```bash
-/slide-deck slide-deck/topic-slug/ --regenerate 3 --model dalle3
-```
+## Revision Flow
 
-## Text Overlay Logic
-If `--editable-text` was used:
-- The background image will NOT contain text.
-- `scripts/build-deck.py` will read `outline.md` and insert native PowerPoint text boxes.
-- To edit text: **Open the PPTX file directly**. Do not regenerate.
+When revising a deck:
+1. Edit `outline.md`
+2. Re-run the validator
+3. Re-run `build-deck.py`
+
+## Output
+
+The workflow only emits blueprint assets:
+
+- `outline.md`
+- `blueprint_bundle.json`
+
+No slide image generation or PPTX assembly is part of the default workflow.

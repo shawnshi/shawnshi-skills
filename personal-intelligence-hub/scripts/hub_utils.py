@@ -1,19 +1,94 @@
+from __future__ import annotations
+
+import json
+import os
+import re
+import shutil
+import subprocess
 from pathlib import Path
-import sys
 
-# Reference the SHARED LIB explicitly
-LIB_DIR = Path(__file__).parent.parent.parent / "scripts" / "lib"
-if str(LIB_DIR) not in sys.path:
-    sys.path.insert(0, str(LIB_DIR))
 
-import utils
+HUB_DIR = Path(__file__).resolve().parent.parent
+PROJECT_ROOT = HUB_DIR.parent.parent
+NEWS_DIR = Path(
+    os.environ.get(
+        "PIH_NEWS_DIR",
+        str(Path.home() / ".gemini" / "MEMORY" / "raw" / "news"),
+    )
+)
+RUNTIME_DIR = Path(
+    os.environ.get(
+        "PIH_RUNTIME_DIR",
+        str(NEWS_DIR / "_runtime" / "personal-intelligence-hub"),
+    )
+)
 
-HUB_DIR = utils.HUB_DIR
-PROJECT_ROOT = utils.PROJECT_ROOT
-NEWS_DIR = utils.NEWS_DIR
-clean_json_output = utils.clean_json_output
+BLACKBOARD_PATH = RUNTIME_DIR / "intelligence_blackboard.json"
+LATEST_SCAN_PATH = RUNTIME_DIR / "latest_scan.json"
+CURRENT_SCAN_PATH = RUNTIME_DIR / "current_scan.json"
+FETCH_CACHE_PATH = RUNTIME_DIR / "fetch_cache.json"
+HISTORY_PATH = RUNTIME_DIR / "pushed_history_v3.json"
+REFINED_PATH = NEWS_DIR / "intelligence_current_refined.json"
 
-if __name__ == "__main__":
-    print(f"HUB_DIR: {HUB_DIR}")
-    print(f"PROJECT_ROOT: {PROJECT_ROOT}")
-    print(f"NEWS_DIR: {NEWS_DIR}")
+
+def ensure_runtime_dirs() -> None:
+    NEWS_DIR.mkdir(parents=True, exist_ok=True)
+    RUNTIME_DIR.mkdir(parents=True, exist_ok=True)
+
+
+def load_json(path: Path, default):
+    if not path.exists():
+        return default
+    try:
+        return json.loads(path.read_text(encoding="utf-8"))
+    except (json.JSONDecodeError, OSError):
+        return default
+
+
+def dump_json(path: Path, data) -> None:
+    path.parent.mkdir(parents=True, exist_ok=True)
+    path.write_text(json.dumps(data, ensure_ascii=False, indent=2), encoding="utf-8")
+
+
+def clean_json_output(text: str):
+    cleaned = text.strip()
+    cleaned = re.sub(r"^```(?:json)?", "", cleaned, flags=re.MULTILINE).strip()
+    cleaned = re.sub(r"```$", "", cleaned, flags=re.MULTILINE).strip()
+    match = re.search(r"\{.*\}", cleaned, flags=re.DOTALL)
+    if not match:
+        raise ValueError("No JSON object found in model output.")
+    return json.loads(match.group(0))
+
+
+def resolve_llm_command() -> str | None:
+    custom = os.environ.get("PIH_LLM_COMMAND")
+    if custom:
+        return custom
+    if shutil.which("gemini"):
+        return "gemini ask -"
+    return None
+
+
+def has_llm_runner() -> bool:
+    return resolve_llm_command() is not None
+
+
+def run_llm(prompt: str) -> str:
+    command = resolve_llm_command()
+    if not command:
+        raise RuntimeError("No LLM runner configured for personal-intelligence-hub.")
+
+    process = subprocess.Popen(
+        command,
+        stdin=subprocess.PIPE,
+        stdout=subprocess.PIPE,
+        stderr=subprocess.PIPE,
+        text=True,
+        shell=True,
+        encoding="utf-8",
+        errors="ignore",
+    )
+    stdout, stderr = process.communicate(input=prompt)
+    if process.returncode != 0:
+        raise RuntimeError(stderr.strip() or "LLM runner failed")
+    return stdout.strip()

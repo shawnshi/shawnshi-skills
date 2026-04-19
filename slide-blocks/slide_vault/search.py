@@ -12,10 +12,15 @@ search.py - 素材检索模块
 import sqlite3
 import json
 import numpy as np
+import sys
 from pathlib import Path
 
+from .commercial import DECK_MODE_PRESETS, ensure_tag_columns, json_contains_pattern
 from .config import get_db_path
 from .vector_store import get_embedding, cosine_similarity
+
+if sys.stdout.encoding != "utf-8":
+    sys.stdout.reconfigure(encoding="utf-8", errors="replace")
 
 
 # ─── 同义词扩展表 ────────────────────────────────────────────────────
@@ -55,6 +60,12 @@ def search_hybrid(
     keywords: list[str] = None,
     quality_min: int = None,
     source_file: str = None,
+    buyer_persona: str = None,
+    deal_stage: str = None,
+    objection_tag: str = None,
+    proof_type: str = None,
+    evidence_tier: str = None,
+    deck_mode: str = None,
     use_vector: bool = True,
     limit: int = 10,
 ) -> list[dict]:
@@ -64,6 +75,10 @@ def search_hybrid(
     db = get_db_path()
     conn = sqlite3.connect(db)
     conn.row_factory = sqlite3.Row
+    ensure_tag_columns(conn)
+
+    deck_preset = DECK_MODE_PRESETS.get(deck_mode or "", {})
+    buyer_persona = buyer_persona or deck_preset.get("buyer_persona")
 
     conditions = ["1=1"]
     params = []
@@ -83,6 +98,21 @@ def search_hybrid(
     if source_file:
         conditions.append("s.file_name LIKE ?")
         params.append(f"%{source_file}%")
+    if buyer_persona:
+        conditions.append("t.buyer_personas LIKE ?")
+        params.append(json_contains_pattern(buyer_persona))
+    if deal_stage:
+        conditions.append("t.deal_stage = ?")
+        params.append(deal_stage)
+    if objection_tag:
+        conditions.append("t.objection_tags LIKE ?")
+        params.append(json_contains_pattern(objection_tag))
+    if proof_type:
+        conditions.append("t.proof_type = ?")
+        params.append(proof_type)
+    if evidence_tier:
+        conditions.append("t.evidence_tier = ?")
+        params.append(evidence_tier)
 
     # 1. 执行 SQL 基础检索
     sql = f"""
@@ -90,7 +120,8 @@ def search_hybrid(
             s.id, s.file_path, s.file_name, s.slide_index,
             s.title, s.body_text, s.thumbnail_path,
             t.scene, t.content_type, t.layout_type, t.keywords,
-            t.quality_score, t.summary,
+            t.quality_score, t.summary, t.buyer_personas, t.deal_stage,
+            t.objection_tags, t.proof_type, t.evidence_tier,
             v.embedding as v_blob
         FROM slides s
         JOIN tags t ON s.id = t.slide_id
@@ -121,7 +152,15 @@ def search_hybrid(
             vec_score = cosine_similarity(row['v_blob'], query_vec)
         
         # 混合加权
-        data['hybrid_score'] = kw_score * 0.4 + vec_score * 0.6
+        commercial_boost = 0
+        if deck_preset:
+            if data.get("proof_type") in deck_preset.get("preferred_proof_types", []):
+                commercial_boost += 0.08
+            if data.get("evidence_tier") in deck_preset.get("preferred_evidence_tiers", []):
+                commercial_boost += 0.08
+            if buyer_persona and buyer_persona in data.get("buyer_personas", []):
+                commercial_boost += 0.08
+        data['hybrid_score'] = kw_score * 0.4 + vec_score * 0.6 + commercial_boost
         results.append(data)
 
     # 3. 排序并截断
@@ -179,11 +218,15 @@ def search_structural(
 # ─── 格式化工具 ─────────────────────────────────────────────────────
 
 def _format_content_row(row) -> dict:
-    kw_raw = row["keywords"]
-    try:
-        kw = json.loads(kw_raw) if kw_raw else []
-    except Exception:
-        kw = [kw_raw] if kw_raw else []
+    def _parse_json_array(raw):
+        try:
+            return json.loads(raw) if raw else []
+        except Exception:
+            return [raw] if raw else []
+
+    kw = _parse_json_array(row["keywords"])
+    buyer_personas = _parse_json_array(row["buyer_personas"])
+    objection_tags = _parse_json_array(row["objection_tags"])
 
     return {
         "id": row["id"],
@@ -198,6 +241,11 @@ def _format_content_row(row) -> dict:
         "keywords": kw,
         "quality_score": row["quality_score"],
         "summary": row["summary"],
+        "buyer_personas": buyer_personas,
+        "deal_stage": row["deal_stage"],
+        "objection_tags": objection_tags,
+        "proof_type": row["proof_type"],
+        "evidence_tier": row["evidence_tier"],
     }
 
 
@@ -240,6 +288,15 @@ def print_results(results: list[dict], mode: str = "content"):
         if mode == "content":
             print(f"     场景：{r.get('scene')}  类型：{r.get('content_type')}  版式：{r.get('layout_type')}")
             print(f"     得分：{r.get('hybrid_score', 0):.2f}  质量：{r.get('quality_score')}")
+            print(
+                "     商业语义："
+                f" persona={','.join(r.get('buyer_personas', [])) or '（无）'}"
+                f"  stage={r.get('deal_stage') or '（无）'}"
+                f"  proof={r.get('proof_type') or '（无）'}"
+                f"  tier={r.get('evidence_tier') or '（无）'}"
+            )
+            if r.get("objection_tags"):
+                print(f"     异议：{', '.join(r['objection_tags'])}")
             summary = r.get("summary", "")
             if summary:
                 print(f"     摘要：{summary[:80]}{'...' if len(summary) > 80 else ''}")
@@ -262,6 +319,12 @@ if __name__ == "__main__":
     parser.add_argument("--quality", type=int, help="最低质量分数 (1-5)")
     parser.add_argument("--no-vector", action="store_false", dest="use_vector", help="禁用向量检索，仅依赖关键词")
     parser.add_argument("--source", help="按源文件名过滤")
+    parser.add_argument("--persona", dest="buyer_persona", help="按决策对象过滤")
+    parser.add_argument("--stage", dest="deal_stage", help="按商业推进阶段过滤")
+    parser.add_argument("--objection", dest="objection_tag", help="按异议标签过滤")
+    parser.add_argument("--proof-type", dest="proof_type", help="按证据类型过滤")
+    parser.add_argument("--evidence-tier", dest="evidence_tier", help="按证据强度过滤")
+    parser.add_argument("--deck-mode", dest="deck_mode", choices=sorted(DECK_MODE_PRESETS.keys()), help="按商业汇报模式增强排序")
     
     # 结构检索参数
     parser.add_argument("--bg", dest="background", help="背景颜色过滤 (浅色底/深色底)")
@@ -278,6 +341,12 @@ if __name__ == "__main__":
             keywords=args.keywords,
             quality_min=args.quality,
             source_file=args.source,
+            buyer_persona=args.buyer_persona,
+            deal_stage=args.deal_stage,
+            objection_tag=args.objection_tag,
+            proof_type=args.proof_type,
+            evidence_tier=args.evidence_tier,
+            deck_mode=args.deck_mode,
             use_vector=args.use_vector,
             limit=args.limit
         )

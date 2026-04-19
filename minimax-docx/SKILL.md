@@ -47,8 +47,8 @@ Create, edit, and format DOCX documents via CLI tools or direct C# scripts built
 When the task requires structural document manipulation (custom styles, complex tables, multi-section layouts, headers/footers, TOC, images), write C# directly instead of wrestling with CLI limitations. Use this scaffold:
 
 ```csharp
-// File: scripts/dotnet/task.csx  (or a new .cs in a Console project)
-// dotnet run --project scripts/dotnet/MiniMaxAIDocx.Cli -- run-script task.csx
+// File: scripts/dotnet/MiniMaxAIDocx.Cli/Program.cs  (or a new .cs in a Console project)
+// dotnet run --project scripts/dotnet/MiniMaxAIDocx.Cli
 #r "nuget: DocumentFormat.OpenXml, 3.2.0"
 
 using DocumentFormat.OpenXml;
@@ -279,3 +279,26 @@ Note: `Samples/` path is relative to `scripts/dotnet/MiniMaxAIDocx.Core/`.
 
 ## 历史失效先验 (Gotchas)
 - [此处预留用于记录重复性失败的禁令，实现系统的对抗性进化]
+
+## When to Use
+- 当用户要求创建、编辑、套模板或格式化 `.docx` 文档时使用。
+- 三条主流程、模板校验和 OpenXML 约束仍以本文件既有协议为准。
+
+## Workflow
+- 遵循本文件已定义的新建、填充/编辑、模板对齐与验证流程。
+- 不跳过 XSD 校验、模板匹配、样式继承和产物检查。
+
+## Resources
+- 使用本技能引用的 `scripts/`、`references/`、模板文件和故障排查资料。
+- 具体脚本入口、OOXML 说明和 troubleshooting 文档以当前目录资源为准。
+
+## Failure Modes
+- 将本文件中的验证门槛、模板匹配要求和 `Gotchas` 视为失败模式。
+- 若模板、样式映射或字段绑定信息缺失，必须显式指出阻塞点。
+
+## Output Contract
+- 最终交付必须是符合模板和格式要求的 `.docx`，并满足本文件定义的校验标准。
+- 如果无法完成最终格式化，至少要交付可继续处理的中间文档并说明缺口。
+
+## Telemetry
+- 按本文件上方定义的 telemetry 路径和 JSON 结构记录元数据。

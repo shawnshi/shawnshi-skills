@@ -1,13 +1,13 @@
 ---
 name: academic-deep-research
-description: "Universal deep research agent team. 13-agent pipeline for rigorous academic research on any topic. 7 modes: full research, quick brief, paper review, lit-review, fact-check, Socratic guided research dialogue, and systematic review with optional meta-analysis. Covers research question formulation, Socratic mentoring, methodology design, systematic literature search, source verification, cross-source synthesis, risk of bias assessment, meta-analysis, APA 7.0 report compilation, editorial review, devil's advocate challenges, ethics review, and post-research literature monitoring. Triggers on: research, deep research, literature review, systematic review, meta-analysis, PRISMA, evidence synthesis, fact-check, guide my research, help me think through, 研究, 深度研究, 文獻回顧, 文獻探討, 系統性回顧, 後設分析, 事實查核, 引導我的研究, 幫我釐清, 幫我想想, 我不確定要研究什麼, 研究方向, 研究主題."
+description: "Primary owner for broad academic topic research: deep research, literature review, systematic review, meta-analysis, evidence synthesis, fact-check, and research-question formulation. Use when the user wants a multi-source academic research pipeline on a topic, not just one paper. Prefer academic-paper-reader for single-paper dissection, academic-paper-writer for drafting/revision, and hv-analysis for product/company/person longitudinal research."
 metadata:
   version: "2.8"
   last_updated: "2026-04-09"
   status: active
   related_skills:
     - academic-paper
-    - academic-pipeline
+    - academic-paper-writer
 ---
 
 # Deep Research — Universal Academic Research Agent Team
@@ -16,7 +16,7 @@ Universal deep research tool — a domain-agnostic 13-agent team for rigorous ac
 
 **v2.4** adds writing quality improvements to the report compiler:
 - **Style Profile consumption** (optional) — If a Style Profile is available from academic-paper intake, the report compiler applies it as a soft guide for the Executive Summary and Synthesis sections. Discipline conventions and report objectivity take priority.
-- **Writing Quality Check** — The report compiler runs a writing quality checklist before finalizing: flags AI-typical overused terms, checks sentence/paragraph length variation, removes throat-clearing openers. See `academic-paper/references/writing_quality_check.md`.
+- **Writing Quality Check** — The report compiler runs a writing quality checklist before finalizing: flags AI-typical overused terms, checks sentence/paragraph length variation, removes throat-clearing openers. See `academic-paper-writer/references/writing_quality_check.md`.
 
 ## Quick Start
 
@@ -72,7 +72,7 @@ Activate `socratic` mode when the user's **intent** matches any of the following
 |----------|-------------|
 | Writing a paper (not researching) | `academic-paper` |
 | Reviewing a paper (structured review) | `academic-paper-reviewer` |
-| Full research-to-paper pipeline | `academic-pipeline` |
+| Full research-to-paper pipeline | `academic-paper-writer` |
 
 ### Quick Mode Selection Guide
 
@@ -334,7 +334,7 @@ See `examples/handoff_to_paper.md` for a detailed handoff example.
 
 ## Full Academic Pipeline
 
-See `academic-pipeline/SKILL.md` for the complete workflow.
+See `academic-paper-writer/SKILL.md` for the downstream paper-writing workflow.
 
 ---
 
@@ -485,3 +485,26 @@ academic-deep-research (systematic-review) + academic-paper-writer -> PRISMA sys
 
 ## 历史失效先验 (NLAH Gotchas)
 - `IF [Condition == "System Detected Repeated Failure"] THEN [Inject NLAH Prohibition Rule Here]`
+
+## When to Use
+- 当用户要求深度研究、文献回顾、系统综述、Meta-analysis、事实查核或研究选题引导时使用。
+- 13-agent 管线、模式切换和证据综合规则仍以本文件既有协议为准。
+
+## Workflow
+- 遵循本文件已定义的研究问题澄清、文献检索、验证、综合和审稿流程。
+- 不跳过来源质量评估、偏倚检查和最终报告编排要求。
+
+## Resources
+- 使用本技能目录中既有的脚本、检索模板、报告模板、参考规范和工作流文件。
+- 任何模式选择和阶段性产物要求以当前资源定义为准。
+
+## Failure Modes
+- 将本文件中的研究门槛、方法学约束和 `NLAH Gotchas` 视为失败模式。
+- 若数据源、检索范围或研究问题不充分，必须先明确边界再进入综合。
+
+## Output Contract
+- 最终交付必须符合本文件要求的研究报告结构、证据链完整性和方法透明度。
+- 若任务属于 systematic review 或 meta-analysis，输出必须显式包含相应的方法与筛选结果。
+
+## Telemetry
+- 按本文件上方定义的 telemetry 路径和 JSON 结构记录元数据。

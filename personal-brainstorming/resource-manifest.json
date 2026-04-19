@@ -1,0 +1,27 @@
+﻿{
+    "schema_version":  1,
+    "skill":  "personal-brainstorming",
+    "generated_at":  "2026-04-19T06:26:09",
+    "skill_md":  "SKILL.md",
+    "top_level_files":  [
+                            "SKILL.md",
+                            "spec-document-reviewer-prompt.md",
+                            "visual-companion.md",
+                            "_DIR_META.md"
+                        ],
+    "top_level_directories":  [
+                                  "scripts"
+                              ],
+    "resource_directories":  [
+                                 {
+                                     "name":  "scripts",
+                                     "file_count":  5
+                                 }
+                             ],
+    "declared_local_dependencies":  [
+
+                                    ],
+    "missing_declared_dependencies":  [
+
+                                      ]
+}

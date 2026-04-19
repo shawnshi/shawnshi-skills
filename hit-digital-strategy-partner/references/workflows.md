@@ -1,34 +1,53 @@
-# Research Analyst Workflows (V9.0)
+# Research Analyst Workflows (V18.0)
 
-## Phase 0: Alignment & SCQA (MANDATORY)
-1. **Strategic Radar Scan**: Enforce `Strategic Radar` check for competitor intelligence (e.g., BATH, Neusoft) and policy shifts (DRG/DIP, metadata mandates).
-2. **SCQA Framing**: Define Situation, Complication, Question, and the overarching Answer.
-3. **Hypothesis Matrix**: Generate 3-5 core strategic hypotheses in `hypothesis_matrix.json`.
-4. **MECE Audit**: Use `logic-adversary` to audit the structural completeness of the research plan.
-5. **Approval**: Use `ask_user` to finalize the SCQA and the initial hypothesis matrix. Starts the project tracking at `🟢 扫描收集` stage.
+## Mandatory Assets
+Every project must maintain these files from boot to delivery:
+- `working_memory.json`
+- `hypothesis_matrix.json`
+- `evidence_matrix.csv`
+- `outline.md`
+- `implementation_plan.md`
+- `chapter_*.md` or mode-equivalent section files
+- `final_report.md`
 
-## Mode A: Strategic Brief (标准报告 / 约 4000 字)
-*Target: Rapid synthesis of core action titles and so-what analysis.*
-...
+## Phase 0: Alignment & Boot
+1. Confirm audience, budget, attack focus, target length, and mode.
+2. Run `memory_manager.py init --path <project_path> --topic <topic> --mode <mode>`.
+3. Run `blackboard.py init --topic <topic> --mode <mode>`.
+4. Write the alignment packet into blackboard `alignment`.
 
-## Mode B: The Partner's Deep Dive (深度研究 / 10000+ 字)
-*Target: Strategic defensibility, non-consensus insight, and conclusive action.*
+## Phase 1: Hypotheses & Evidence
+1. Generate 3-5 strategic hypotheses and persist them in `hypothesis_matrix.json`.
+2. Record every sourced finding in `evidence_matrix.csv`.
+3. Update `working_memory.json` with insights, entities, and technical anchors.
+4. Sync evidence summaries to blackboard `evidence.*`.
 
-### Task 1: Intelligence Saturation & Hypothesis Testing
-1. **OSINT Discovery**: Use `retrieval_specialist` to probe data specifically to confirm/refute the hypotheses.
-2. **Evidence-Mesh**: Record every finding in `evidence_matrix.csv`.
+## Phase 2: Logic Collision
+1. Produce one `core_judgment` and at least one `second_hop_inference`.
+2. Write `outline.md` with full-sentence action titles.
+3. Write `implementation_plan.md` with mode, storyline, and approval gates.
+4. Run `blackboard_validate.py --strict` before any drafting.
 
-### Task 2: Narrative Construction (Action-Title Driven)
-1. **Action-Title Blueprint**: Create `outline.md` using COMPLETE logical statements as headers.
-2. **Approval**: **Mandatory** `ask_user` review of headers. Upon approval, update project status to `🟡 综合起草`.
-3. **Recursive Drafting**:
-   - Write chapter-by-chapter, each >= 1200 words.
-   - **Mandatory "So-What" Block**: Every chapter ends with a strategic impact analysis.
-   - Use `logic-adversary` to stress-test the argument between chapters. Update project status to `🟠 优化打磨` during refinement.
+## Mode A: Strategic Brief
+Target: 1500-2500 words.
+1. Draft in one pass after blackboard passes.
+2. Keep 3-5 sections only.
+3. Must contain: center judgment, pessimistic ROI, action levers, residual risk.
 
-### Task 3: Final Synthesis & Pythonic Assembly
-1. **Fidelity Audit**: Verify every action title is supported by the data in `working_memory.json`.
-2. **Gray Framework**: Synthesize the Ideal, Survival, and Exit strategies.
-3. **Physical Assembly**: Execute `assembler.py` for a 1:1 merge. This will output the `final_report.md` with appropriate YAML headers and switch status to `🔴 归档冻结`.
-4. **Hypothesis Closure**: Final status update for the hypothesis matrix.
-5. **Outcome**: A definitive, partner-grade strategic report.
+## Mode B: The Partner's Deep Dive
+Target: 8000+ words.
+1. Draft chapter-by-chapter.
+2. Each chapter should usually exceed 1200 words.
+3. Stress-test between chapters and update `working_memory.json` after every chapter.
+
+## Mode C: Board Memo
+Target: 1000-1800 words.
+1. Draft in one pass.
+2. Open with `紧急预警` and `董事会动作建议`.
+3. Bias toward decision cadence, not narrative breadth.
+
+## Final Synthesis & Gate
+1. Run `assembler.py --path <project_path> --mode <mode> --output final_report.md`.
+2. Run `strategy_gate.py --path <project_path>\final_report.md --mode <mode> --blackboard <blackboard_path> --strict`.
+3. Only ship if strategy gate returns `pass`.
+4. Freeze project state to `🔴 归档冻结` after delivery.

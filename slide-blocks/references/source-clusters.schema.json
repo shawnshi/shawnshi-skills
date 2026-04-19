@@ -1,0 +1,26 @@
+{
+  "version": "1.0.0",
+  "root_required": [
+    "version",
+    "clusters"
+  ],
+  "cluster_required": [
+    "name",
+    "match_terms",
+    "source_patterns",
+    "preferred_proof_types",
+    "preferred_layouts",
+    "preferred_content_types",
+    "negative_content_types",
+    "negative_terms"
+  ],
+  "cluster_array_fields": [
+    "match_terms",
+    "source_patterns",
+    "preferred_proof_types",
+    "preferred_layouts",
+    "preferred_content_types",
+    "negative_content_types",
+    "negative_terms"
+  ]
+}

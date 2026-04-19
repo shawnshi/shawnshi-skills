@@ -1,0 +1,15 @@
+{
+  "version": "1.0",
+  "required_top_level": ["positions"],
+  "required_position_fields": ["symbol", "quantity", "avg_cost"],
+  "optional_position_fields": [
+    "name",
+    "currency",
+    "market_type",
+    "opened_at",
+    "current_weight",
+    "target_weight",
+    "max_weight",
+    "thesis"
+  ]
+}

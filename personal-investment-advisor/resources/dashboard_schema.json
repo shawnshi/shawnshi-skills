@@ -1,115 +1,159 @@
 {
-    "stock_name": "股票中文名称",
-    "stock_code": "标的代码（如 300308.SZ / AAPL / 0700.HK）",
-    "market_type": "A股/美股/港股",
-    "sentiment_score": "0-100整数",
-    "trend_prediction": "强烈看多/看多/震荡/看空/强烈看空",
-    "operation_advice": "买入/加仓/持有/减仓/卖出/观望",
-    "decision_type": "buy/hold/sell",
-    "confidence_level": "高/中/低",
-    "dashboard": {
-        "core_conclusion": {
-            "one_sentence": "一句话核心结论（30字以内，直接告诉用户做什么）",
-            "signal_type": "🟢买入信号/🟡持有观望/🔴卖出信号/⚠️风险警告",
-            "time_sensitivity": "立即行动/今日内/本周内/不急",
-            "position_advice": {
-                "no_position": "空仓者建议：具体操作指引",
-                "has_position": "持仓者建议：具体操作指引"
-            }
-        },
-        "qualitative_analysis": {
-            "trend_analysis": "均线排列、趋势通道、动能斜率的逻辑推演",
-            "technical_analysis": "多指标（MACD/RSI/量价比）的合成判定",
-            "ma_analysis": "各关键均线（MA5/10/20/120/200）的具体表现与压力支撑细节",
-            "pattern_analysis": "K线形态（如：金针探底、黄昏之星、横盘震荡破位等）解读",
-            "fundamental_analysis": "深度基本面逻辑，包含财务异动、业务拐点及WiNEX/AI重构进度",
-            "sector_position": "行业地位分析，竞争格局、BATH降维打击风险等",
-            "company_highlights": "核心亮点与核心风险点对称罗列",
-            "market_sentiment": "极度悲观 / 悲观 / 中性 / 乐观 / 狂热",
-            "hot_topics": "当前市场关注的热点/概念驱动因素"
-        },
-        "data_perspective": {
-            "trend_status": {
-                "ma_alignment": "均线排列状态描述",
-                "is_bullish": true,
-                "trend_score": "0-100",
-                "macd_signal": "金叉/死叉/中性",
-                "rsi_14": "RSI数值",
-                "rsi_status": "正常/超买/超卖"
-            },
-            "price_position": {
-                "current_price": "当前价格数值",
-                "ma5": "MA5数值",
-                "ma10": "MA10数值",
-                "ma20": "MA20数值",
-                "bias_ma5": "乖离率百分比数值",
-                "bias_status": "安全/警戒/危险",
-                "support_level": "支撑位价格",
-                "resistance_level": "压力位价格"
-            },
-            "volume_analysis": {
-                "volume_ratio": "量比数值，如1.5",
-                "volume_status": "放量/缩量/平量",
-                "turnover_rate": "换手率百分比",
-                "amplitude": "振幅百分比",
-                "volume_meaning": "量能含义解读"
-            },
-            "chip_structure": {
-                "profit_ratio": "获利比例数值",
-                "avg_cost": "平均成本数值",
-                "concentration": "筹码集中度数值",
-                "absolute_support": "绝对筹码支撑（引用 chip_90_low）",
-                "absolute_resistance": "绝对筹码重压（引用 chip_90_high）",
-                "main_fund_area": "主力核心成本区状态",
-                "chip_health": "健康/一般/警惕/数据暂不可用"
-            },
-            "valuation": {
-                "trailing_pe": "动态市盈率",
-                "forward_pe": "预期市盈率",
-                "pb": "市净率",
-                "peg": "PEG估值",
-                "ev_ebitda": "EV/EBITDA",
-                "valuation_verdict": "低估/合理/偏高/高估"
-            }
-        },
-        "intelligence": {
-            "latest_news": "近期重要新闻摘要",
-            "news_summary": "新闻影响深度评述（对基本面/情绪的影响路径）",
-            "risk_alerts": [
-                "风险点1",
-                "风险点2"
-            ],
-            "positive_catalysts": [
-                "利好1",
-                "利好2"
-            ],
-            "earnings_outlook": "业绩预期分析（基于年报预告、业绩快报等）",
-            "sentiment_summary": "舆情情绪综合总结"
-        },
-        "battle_plan": {
-            "sniper_points": {
-                "ideal_buy": "理想买入点及条件（如：突破10.5且放量）",
-                "secondary_buy": "次优买入点及条件（如：回踩9.8获支撑）",
-                "stop_loss": "硬性止损位及条件",
-                "take_profit": "分批止盈目标区"
-            },
-            "position_strategy": {
-                "suggested_position": "建议仓位",
-                "entry_plan": "分批建仓策略",
-                "risk_control": "风控策略"
-            },
-            "action_checklist": [
-                "✅/⚠️/❌ 检查项1",
-                "✅/⚠️/❌ 检查项2"
-            ]
-        }
+  "version": "4.0",
+  "required_top_level": [
+    "stock_name",
+    "stock_code",
+    "market_type",
+    "research_mode",
+    "sentiment_score",
+    "trend_prediction",
+    "operation_advice",
+    "decision_type",
+    "confidence_level",
+    "confidence_details",
+    "freshness_flags",
+    "evidence_items",
+    "dashboard",
+    "analysis_summary",
+    "risk_warning",
+    "short_term_outlook",
+    "medium_term_outlook",
+    "search_performed",
+    "data_sources",
+    "data_gaps"
+  ],
+  "optional_top_level": [
+    "portfolio_context",
+    "position_advice",
+    "portfolio_summary",
+    "portfolio_risk",
+    "portfolio_fit",
+    "earnings_snapshot",
+    "catalyst_map",
+    "watchlist_alerts",
+    "feedback_status"
+  ],
+  "required_dashboard_sections": [
+    "core_conclusion",
+    "qualitative_analysis",
+    "data_perspective",
+    "intelligence",
+    "battle_plan"
+  ],
+  "required_core_conclusion_fields": [
+    "one_sentence",
+    "signal_type",
+    "time_sensitivity",
+    "position_advice"
+  ],
+  "required_battle_plan_fields": [
+    "sniper_points",
+    "position_strategy",
+    "action_checklist"
+  ],
+  "required_data_perspective_fields": [
+    "trend_status",
+    "price_position",
+    "volume_analysis",
+    "chip_structure",
+    "valuation"
+  ],
+  "required_confidence_fields": [
+    "score",
+    "data_quality",
+    "technical_alignment",
+    "valuation_support",
+    "actionability"
+  ],
+  "required_freshness_fields": [
+    "price_data_fresh",
+    "info_data_fresh",
+    "news_data_fresh",
+    "portfolio_data_fresh",
+    "stale_inputs"
+  ],
+  "required_evidence_fields": [
+    "fact",
+    "connection",
+    "deduction",
+    "source_type",
+    "freshness",
+    "confidence"
+  ],
+  "required_portfolio_context_fields_when_holding": [
+    "has_position",
+    "quantity",
+    "avg_cost",
+    "current_price",
+    "market_value",
+    "cost_basis",
+    "unrealized_pnl",
+    "unrealized_pnl_pct",
+    "position_status"
+  ],
+  "required_position_advice_fields_when_holding": [
+    "holding_view",
+    "action_for_holder",
+    "cost_basis_view",
+    "risk_to_holder",
+    "next_action_trigger"
+  ],
+  "required_portfolio_summary_fields": [
+    "total_positions",
+    "tracked_weight",
+    "market_exposure",
+    "top_positions_by_weight",
+    "concentration_score",
+    "concentration_bucket"
+  ],
+  "required_portfolio_risk_fields": [
+    "concentration_risk",
+    "market_exposure_risk",
+    "style_drift_risk",
+    "liquidity_risk"
+  ],
+  "required_portfolio_fit_fields": [
+    "action_in_portfolio",
+    "allocation_impact",
+    "rationale"
+  ],
+  "required_earnings_snapshot_fields": [
+    "next_earnings_date",
+    "revenue_growth",
+    "trailing_pe",
+    "forward_pe"
+  ],
+  "required_catalyst_map_fields": [
+    "upcoming",
+    "active",
+    "broken"
+  ],
+  "enums": {
+    "market_type": ["A股", "港股", "美股", "ETF", "其他"],
+    "research_mode": ["trading_mode", "thesis_mode"],
+    "decision_type": ["buy", "hold", "sell", "watch"],
+    "confidence_level": ["高", "中", "低"],
+    "operation_advice": ["买入", "加仓", "持有", "减仓", "卖出", "观望"],
+    "trend_prediction": ["强烈看多", "看多", "震荡", "看空", "强烈看空"],
+    "weight_status": ["within_target", "above_target", "above_max", "unknown"],
+    "feedback_status": ["pending", "executed", "reviewed", "closed"]
+  },
+  "market_rules": {
+    "A股": {
+      "chip_structure_mode": "enhanced_or_gap",
+      "requires_chip_health_note": true
     },
-    "analysis_summary": "500字左右的高密度 Mentat 风格综合分析摘要，包含 OODA 推演与 SPOF 识别",
-    "key_points": "核心看点",
-    "risk_warning": "风险提示",
-    "buy_reason": "操作理由（如：一票否决项触发 / 估值安全边际达成）",
-    "short_term_outlook": "短期1-3日展望",
-    "medium_term_outlook": "中期1-2周展望",
-    "search_performed": true,
-    "data_sources": "数据来源"
+    "港股": {
+      "chip_structure_mode": "not_applicable",
+      "chip_health_value": "不适用(非A股)"
+    },
+    "美股": {
+      "chip_structure_mode": "not_applicable",
+      "chip_health_value": "不适用(非A股)"
+    },
+    "ETF": {
+      "chip_structure_mode": "not_applicable",
+      "chip_health_value": "不适用(非A股)"
+    }
+  }
 }

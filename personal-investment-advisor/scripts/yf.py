@@ -39,6 +39,8 @@ from rich.console import Console
 from rich.table import Table
 from rich.panel import Panel
 
+from portfolio_loader import build_portfolio_package
+
 console = Console(stderr=True)
 
 # --- Constants ---
@@ -63,6 +65,16 @@ REQUEST_TIMEOUT = 10  # seconds for search API
 
 # Regex: all uppercase letters, digits, dots, dashes (e.g. AAPL, BRK-B, 0700.HK)
 TICKER_PATTERN = re.compile(r'^[A-Z0-9][A-Z0-9.\-]{0,11}$')
+
+
+def detect_market_type(symbol: str) -> str:
+    if symbol.endswith((".SS", ".SZ", ".BJ")):
+        return "A股"
+    if symbol.endswith(".HK"):
+        return "港股"
+    if "-" in symbol or symbol.isupper():
+        return "美股"
+    return "其他"
 
 
 def _is_likely_ticker(query: str) -> bool:
@@ -223,6 +235,46 @@ def filter_info(info: Dict[str, Any], full: bool = False) -> Dict[str, Any]:
     if full or not info:
         return info
     return {k: info[k] for k in INFO_KEYS_DEFAULT if k in info}
+
+
+def extract_earnings_snapshot(info: Dict[str, Any]) -> Dict[str, Any]:
+    if not info:
+        return {}
+
+    earnings_date = info.get("earningsTimestamp") or info.get("earningsTimestampStart")
+    if isinstance(earnings_date, (int, float)):
+        earnings_date = datetime.fromtimestamp(earnings_date).strftime("%Y-%m-%d")
+
+    return {
+        "next_earnings_date": earnings_date,
+        "revenue_growth": info.get("revenueGrowth"),
+        "trailing_pe": info.get("trailingPE"),
+        "forward_pe": info.get("forwardPE"),
+        "market_cap": info.get("marketCap"),
+    }
+
+
+def extract_catalyst_map(news_items: List[Dict[str, Any]], earnings_snapshot: Dict[str, Any]) -> Dict[str, Any]:
+    upcoming = []
+    active = []
+    broken = []
+
+    if earnings_snapshot.get("next_earnings_date"):
+        upcoming.append(f"财报窗口: {earnings_snapshot['next_earnings_date']}")
+
+    for item in news_items[:3]:
+        title = item.get("title", "")
+        if title:
+            active.append(title)
+
+    if not active:
+        broken.append("缺少近期催化线索，需要额外验证 thesis 是否仍然成立")
+
+    return {
+        "upcoming": upcoming,
+        "active": active,
+        "broken": broken,
+    }
 
 
 def compute_summary(history) -> Optional[Dict[str, Any]]:
@@ -423,6 +475,8 @@ def main():
     parser.add_argument("--json", action="store_true", help="Output structured JSON to stdout (recommended for agents)")
     parser.add_argument("--lean", action="store_true", help="Agent mode: truncate long price history to save tokens while keeping full summary (Recommended)")
     parser.add_argument("--full-info", action="store_true", help="Include all raw info fields in JSON (default: curated subset)")
+    parser.add_argument("--with-portfolio", action="store_true", help="Attach position context from portfolio_positions.json when available")
+    parser.add_argument("--positions-file", help="Override portfolio positions file path")
 
     parser.add_argument("--version", action="version", version=f"%(prog)s {__version__}")
 
@@ -485,6 +539,14 @@ def main():
             result_entry = {
                 "query": query,
                 "symbol": symbol,
+                "market_type": detect_market_type(symbol),
+                "data_sources": {
+                    "price": "Yahoo Finance",
+                    "info": "Yahoo Finance",
+                    "news": "Yahoo Finance",
+                    "enhanced_metrics": None,
+                },
+                "data_gaps": [],
             }
             if fetch_info:
                 # Basic info
@@ -506,16 +568,27 @@ def main():
                             # Merge into info
                             if curated_info is None:
                                 curated_info = {}
+                            result_entry["data_sources"]["enhanced_metrics"] = "Akshare/Efinance"
                             curated_info.update({
                                 k: v for k, v in enhanced_metrics.items() if v is not None
                             })
+                            if enhanced_metrics.get("enhancement_status") != "ok":
+                                result_entry["data_gaps"].append(
+                                    f"A股增强指标状态={enhanced_metrics.get('enhancement_status', 'unavailable')}"
+                                )
                         except Exception as e:
                             # Silently fail or log for agents
-                            pass
+                            result_entry["data_gaps"].append(f"A股增强指标获取失败: {e}")
+                else:
+                    result_entry["data_gaps"].append("筹码增强字段不适用(非A股)")
                 
                 result_entry["info"] = curated_info
+                result_entry["earnings_snapshot"] = extract_earnings_snapshot(info)
             if fetch_news:
                 result_entry["news"] = [format_news_item(n) for n in (news_raw or [])]
+                if not news_raw:
+                    result_entry["data_gaps"].append("未获取到相关新闻")
+                result_entry["catalyst_map"] = extract_catalyst_map(result_entry["news"], result_entry.get("earnings_snapshot", {}))
             if fetch_price:
                 result_entry["history"] = []
                 if history is not None and not history.empty:
@@ -553,8 +626,31 @@ def main():
                         result_entry["history_truncated"] = False
                         
                 result_entry["summary"] = summary
+                if summary is None:
+                    result_entry["data_gaps"].append("未生成价格摘要统计")
+            if args.with_portfolio:
+                current_price = None
+                if summary and summary.get("last_close") is not None:
+                    current_price = summary.get("last_close")
+                elif info:
+                    current_price = info.get("currentPrice")
+                portfolio_package = build_portfolio_package(
+                    symbol,
+                    current_price=current_price,
+                    positions_file=args.positions_file,
+                )
+                result_entry["portfolio_context"] = portfolio_package.get("portfolio_context")
+                result_entry["portfolio_summary"] = portfolio_package.get("portfolio_summary")
+                result_entry["portfolio_risk"] = portfolio_package.get("portfolio_risk")
+                result_entry["portfolio_fit"] = portfolio_package.get("portfolio_fit")
+                result_entry["data_sources"]["portfolio"] = result_entry["portfolio_context"].get("positions_file")
+                if result_entry["portfolio_context"].get("position_status") == "file_missing":
+                    result_entry["data_gaps"].append("持仓文件不存在，未生成持仓者建议上下文")
+                elif result_entry["portfolio_context"].get("position_status") == "not_found":
+                    result_entry["data_gaps"].append("持仓文件存在，但未找到该标的持仓记录")
             if fetch_errors:
                 result_entry["errors"] = fetch_errors
+                result_entry["data_gaps"].extend(fetch_errors)
 
             results.append(result_entry)
         else:

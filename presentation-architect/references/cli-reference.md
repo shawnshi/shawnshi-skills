@@ -1,25 +1,16 @@
-# CLI Reference
+# CLI Reference (V11 Blueprint-Only)
 
-## Advanced Options
+## Supported Commands
 
-| Option | Description | Status |
-|--------|-------------|--------|
-| `--skip-prompts` | Skip prompt generation step | ✅ Implemented |
-| `--skip-images` | Skip image generation step | ✅ Implemented |
-| `--regenerate 3,5` | Regenerate specific slides (comma-separated indices) | ✅ Implemented |
-| `--model <name>` | Specify image generation model backend (default: `gemini`). Supported: `gemini`, `dalle3`, `sdxl`. | 🚧 Planned |
-| `--editable-text` | **Experimental**: Generates background-only images and adds text as editable PowerPoint shapes. | 🚧 Planned |
-| `--resume` | **Smart Resume**: Checks `status.json` and only generates pending/failed slides. | 🚧 Planned (basic skip-existing logic implemented) |
-| `--layered` | Generate separate background and foreground element layers. | 🚧 Planned |
+| Command | Purpose |
+|---------|---------|
+| `python scripts\validator.py <outline.md>` | Validate the blueprint schema and special-slide rules |
+| `python scripts\build-deck.py <deck-dir>` | Validate and package the blueprint into `blueprint_bundle.json` |
+| `python scripts\build-deck.py <deck-dir> --output custom.json` | Write the package to a custom JSON filename |
 
-## Partial Workflows
+## Notes
 
-| Command | Purpose | Status |
-|---------|---------|--------|
-| `python build-deck.py <dir>` | Full pipeline: Prompts → Images → PPTX/PDF | ✅ Implemented |
-| `python build-deck.py <dir> --skip-prompts` | Skip prompt generation, run from existing prompts | ✅ Implemented |
-| `python build-deck.py <dir> --skip-images` | Skip image generation, only merge existing images | ✅ Implemented |
-| `python build-deck.py <dir> --regenerate 3,5` | Regenerate specific slides only | ✅ Implemented |
-| `python generate-prompts.py <dir>` | Only generate prompt files from outline.md | ✅ Implemented |
-| `python generate-images.py <dir>` | Generate images from existing prompts | ✅ Implemented |
-
+- `build-deck.py` no longer renders PPTX files.
+- `outline.md` is required.
+- Validation failure aborts packaging.
+- The package output is blueprint metadata, style metadata, and structured slide blocks.

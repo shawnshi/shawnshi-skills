@@ -1,18 +1,24 @@
 ---
 name: personal-diary-writer
-description: 个人日志原子写入器。当用户需要日常记录、写日记、状态录入，或被高级系统（如 cognitive-auditor）调用落盘审计报告时激活。该技能通过专用的 diary_ops.py 执行安全写入，确保护理日志的物理完整性。
+description: 个人日志原子写入器。Primary owner for physical diary/log writeback and atomic persistence only. Use when content is already decided and must be safely written to disk. Prefer personal-cognitive-auditor for periodic review analysis, personal-monthly-insights for interaction meta-analysis, and mentat-insight-diary for first-person system introspection content.
 ---
 
 # Personal Diary Writer (Atomic I/O)
 
 This skill handles high-frequency, lightweight daily status recording and atomic file operations for diary/log entries.
 
-## 0. 核心约束 (Core Mandates)
+## When to Use
+- 当用户需要写日记、记录状态，或其他技能需要安全落盘审计/日志内容时使用。
+- 本技能负责原子写入与结构对齐，不负责虚构数据或替代上游审计判断。
+
+## Workflow
+
+### 核心约束 (Core Mandates)
 - **物理操作债防守**: 必须强制使用 `run_shell_command` 调用 `python ~/.gemini/skills/scripts/io_engine/diary_ops.py` 进行 `prepend` 操作。严禁使用 Shell 重定向或常规 `write_file` 直接覆盖主日志文件。
 - **Win32 物理适配**: 永远使用 `--content_file` 传递复杂内容，防止 Windows 命令行转义导致解析错误。
 - **语义本体**: 强制检查 `#tag` 格式，确保所有标签符合本体标准。
 
-## 1. 执行协议 (Execution Protocol)
+### 执行协议 (Execution Protocol)
 
 ### Phase 0: Reconnaissance (证据先行)
 - **自动化事实重建**: 在组装日志前，必须先自动执行 `gws calendar events list` 获取日程数据。
@@ -53,7 +59,7 @@ This skill handles high-frequency, lightweight daily status recording and atomic
 2. **中间暂存**: 将组装好的内容写入临时文件 `~/.gemini/tmp/log_entry.md`。
 3. **安全写入**: 使用 `run_shell_command` 执行 `python ~/.gemini/skills/scripts/io_engine/diary_ops.py prepend --content_file ~/.gemini/tmp/log_entry.md`。
 
-## 2. 附属落盘协议 (Secondary Write-Backs)
+### 附属落盘协议 (Secondary Write-Backs)
 
 ### 2.1 Mentat Insight Archival (内观日记同步)
 - **触发条件**: 当前记录属于 Mentat Insight 深度日志。
@@ -63,11 +69,27 @@ This skill handles high-frequency, lightweight daily status recording and atomic
 - **触发条件**: 接收到来自 `personal-cognitive-auditor` 且 `cognitive_depth_score >= 4` 的产出。
 - **动作**: 将认知结晶格式化为 JSON并调用 `run_shell_command` 执行 `python ~/.gemini/skills/scripts/io_engine/memory_sync.py` 同步至全局 `memory.md`。
 
-## 3. Telemetry & Metadata (Mandatory)
+## Resources
+- `scripts/io_engine/diary_ops.py`
+- `scripts/io_engine/memory_sync.py`
+- 临时文件：`~/.gemini/tmp/log_entry.md`
+- 关联技能：`personal-health-analysis`、`personal-cognitive-auditor`、`mentat-insight-diary`
+
+## Failure Modes
+- `IF [Action == "Archive"] THEN [Require run(diary_ops.py)] AND [Halt if creating fragment files]`
+- `IF [Condition == "Modified memory.md" OR "Tool_Error_Count >= 2"] THEN [Execute activate_skill("mentat-insight-diary")]`
+- `IF [Action == "Append Multiple Lines"] THEN [Require Parameter == "--content_file"]`
+- `IF [Field == "Energy Management"] THEN [Halt if source != "garmin_intelligence.py"] AND [Require Output == "[DATA_UNAVAILABLE]" if data missing]`
+
+## Output Contract
+- 最终日志必须严格遵循预定义 Schema，保留全部标题，不允许合并或漏掉能量管理/标签等关键区块。
+- 所有复杂内容必须经 `--content_file` 进入 `diary_ops.py`，并返回可追踪的最终写入路径或完成状态。
+
+## Telemetry
 - 任务结束时，使用 `write_file` 将元数据以 JSON 格式保存至 `~/.gemini/MEMORY/skill_audit/telemetry/record_[TIMESTAMP].json` (替换为当前时间戳)。
 - JSON 结构：`{"skill_name": "personal-diary-writer", "status": "success", "duration_sec": 0, "input_tokens": 0, "output_tokens": 0}`
 
-## 4. 历史失效先验 (NLAH Gotchas)
+## 历史失效先验 (NLAH Gotchas)
 - `IF [Action == "Archive"] THEN [Require run(diary_ops.py)] AND [Halt if creating fragment files]`
 - `IF [Condition == "Modified memory.md" OR "Tool_Error_Count >= 2"] THEN [Execute activate_skill("mentat-insight-diary")]`
 - `IF [Action == "Append Multiple Lines"] THEN [Require Parameter == "--content_file"]`

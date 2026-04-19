@@ -1,0 +1,79 @@
+{
+  "version": "1.1.0",
+  "clusters": [
+    {
+      "name": "epic",
+      "match_terms": ["epic", "epic_", "agentic", "comet", "guarddog", "penny", "emmie", "art"],
+      "source_patterns": [
+        "跨越“概率鸿沟”",
+        "AI智能体时代",
+        "AI重塑未来医疗",
+        "2025年度PPT素材汇总"
+      ],
+      "preferred_proof_types": ["case", "quantitative_outcome", "architecture"],
+      "preferred_layouts": ["逻辑架构图", "时间轴/流程", "对比页"],
+      "preferred_content_types": ["客户案例", "产品功能", "技术架构", "战略规划", "数据洞察"],
+      "negative_content_types": ["过渡页", "公司介绍", "封面/扉页", "目录", "结束页"],
+      "negative_terms": ["公司简介", "封面", "过渡页", "目录页", "谢谢聆听"]
+    },
+    {
+      "name": "winning_health",
+      "match_terms": ["winning", "winex", "wingpt", "卫宁", "copilot"],
+      "source_patterns": [
+        "The Introduction of Winning Health",
+        "卫宁健康-公司简介",
+        "泰康集团与卫宁健康战略合作交流汇报",
+        "模塑医疗·智启未来",
+        "北大医疗AI规划交流"
+      ],
+      "preferred_proof_types": ["architecture", "case", "product"],
+      "preferred_layouts": ["逻辑架构图", "对比页", "时间轴/流程"],
+      "preferred_content_types": ["产品功能", "解决方案", "技术架构", "客户案例", "战略规划"],
+      "negative_content_types": ["过渡页", "公司介绍", "封面/扉页", "目录", "结束页"],
+      "negative_terms": ["公司简介", "封面", "过渡页", "目录页"]
+    },
+    {
+      "name": "chima",
+      "match_terms": ["chima", "年鉴", "大会"],
+      "source_patterns": [
+        "CHIMA2024",
+        "追寻医院高质量发展中的技术价值",
+        "从理念到实践"
+      ],
+      "preferred_proof_types": ["policy", "case", "quantitative_outcome"],
+      "preferred_layouts": ["图表页", "对比页", "逻辑架构图"],
+      "preferred_content_types": ["行业背景", "数据洞察", "客户案例", "战略规划"],
+      "negative_content_types": ["过渡页", "公司介绍", "封面/扉页", "目录", "结束页"],
+      "negative_terms": ["封面", "过渡页", "目录页"]
+    },
+    {
+      "name": "policy",
+      "match_terms": ["nhc", "国家卫健委", "卫健委", "医保局", "政策", "红头文件"],
+      "source_patterns": [
+        "智医融合",
+        "从理念到实践",
+        "追寻医院高质量发展中的技术价值",
+        "CHIMA2024"
+      ],
+      "preferred_proof_types": ["policy", "quantitative_outcome", "case"],
+      "preferred_layouts": ["图表页", "对比页", "时间轴/流程"],
+      "preferred_content_types": ["行业背景", "数据洞察", "战略规划", "客户案例"],
+      "negative_content_types": ["过渡页", "公司介绍", "封面/扉页", "目录", "结束页"],
+      "negative_terms": ["公司简介", "封面", "过渡页", "目录页"]
+    },
+    {
+      "name": "mayo",
+      "match_terms": ["mayo", "riverside", "rush", "saint", "luke"],
+      "source_patterns": [
+        "2025年度PPT素材汇总",
+        "跨越“概率鸿沟”",
+        "AI智能体时代"
+      ],
+      "preferred_proof_types": ["case", "research", "quantitative_outcome"],
+      "preferred_layouts": ["对比页", "图表页", "逻辑架构图"],
+      "preferred_content_types": ["客户案例", "数据洞察", "行业背景", "产品功能"],
+      "negative_content_types": ["过渡页", "公司介绍", "封面/扉页", "目录", "结束页"],
+      "negative_terms": ["公司简介", "封面", "过渡页", "目录页"]
+    }
+  ]
+}

@@ -1,46 +1,74 @@
 ---
 name: text-to-speech
-description: 军工级播报系统。当系统检测到“逻辑死锁”、进入“反熵增攻坚协议”或用户明确要求“朗读文本”、“语音提醒”时，务必激活。该技能支持 Edge 神经网络语音与本地 SAPI5 双轨切换，确保高审美播报。
+description: 军工级播报系统 (Gemini 3.1 Director Edition)。当系统检测到“逻辑死锁”、进入“反熵增攻坚协议”或用户明确要求“朗读文本”、“语音提醒”时，务必激活。该技能支持 Gemini 原生“导演模式”、多角色对话与本地 SAPI5 双轨切换。
 ---
 
-# Text-to-Speech (TTS 2.0 Hybrid Engine)
+# Text-to-Speech (TTS 3.1 Director Engine)
 
-Gemini CLI 高保真混合播报系统。采用神经网络云端引擎与本地物理链路双轨制，确保播报的**高审美**与**极高可用性**。
+Gemini CLI 高保真混合播报系统。采用 **Gemini 3.1 Flash TTS Preview** 原生引擎，支持极致的情感控制与多角色混播。
+
+## When to Use
+- 当用户要求朗读文本、语音提醒、角色化播报，或需要导演模式语音表现时使用。
+- 本技能处理语音生成与回退路由，不负责普通文字摘要。
 
 ## Core Capabilities
-*   **Hybrid Routing**: 自动探测环境。首选 Microsoft Edge 神经网络语音（高保真），失败后 50ms 内自动切回本地 SAPI5 播报。
-*   **Encoder Shield**: 采用物理文件中转技术，完美解决 Win32 环境下长中文 Token 的传输死锁问题。
-*   **Sovereign Control**: 支持音色、语速、音调的精细化参数控制。
+*   **Director Mode**: 通过 `Audio Profile`, `The Scene`, `Director's Notes` 三位一体的架构，深度定制播报的语气、环境音效与角色性格。
+*   **Multi-Speaker**: 原生支持单次播报中切换多个说话人（通过 `SpeakerName: ` 标识）。
+*   **Expressive Audio Tags**: 支持 200+ 细粒度控制标签，精准捕捉从 [whispers] 到 [shouts] 的细微情感。
+*   **Hybrid Routing**: 首选 Gemini 神经网络语音，失败后自动指数退避重试，最终切回本地 SAPI5。
 
-## Execution Protocol
+## Workflow
 
-### 1. 指挥官简报 (默认高保真)
+### 1. 标准指挥官简报
 ```bash
 python scripts/tts_engine.py "正在执行本周生理审计报告..."
 ```
 
-### 2. 紧急报警模式
+### 2. 导演模式 (极致表现力)
 ```bash
-python scripts/tts_engine.py "检测到系统熵增风险！" --rate +30% --voice zh-CN-Xiaoxiao-Neural
+python scripts/tts_engine.py "[excited] 升级成功！[laughs] 效果非常出色。" --scene "在空旷的音乐厅" --notes "带有明显的混响，语速稍快，充满激情"
 ```
 
-### 3. 离线验证/手动兜底
-若需强制保存音频资产：
+### 3. 多角色对话播报
 ```bash
-python scripts/tts_engine.py "逻辑资产固化测试" --output output/logic_asset.mp3 --play
+python scripts/tts_engine.py "Commander: 检测到异常。Expert: [serious] 正在分析数据流。"
 ```
 
-## Voice Gallery (神经网络音色)
-- `zh-CN-Yunxi-Neural`: 沉稳、权威 (推荐：战略汇报)
-- `zh-CN-Xiaoxiao-Neural`: 亲切、流畅 (推荐：日常交互)
-- `zh-CN-Xiaochen-Neural`: 严谨、干练 (推荐：技术审查)
+## Voice Gallery (Gemini 3.1 音色)
+- `Charon`: 沉稳、权威 (推荐：战略汇报)
+- `Aoede`: 轻快、空灵 (推荐：日常交互)
+- `Puck`: 活泼、充满活力 (推荐：动态提醒/反馈)
+- `Kore`: 坚定、中立 (推荐：技术审查/审计)
+- `Fenrir`: 兴奋、高能量 (推荐：紧急警报)
+
+## 导演模式参数
+- `--profile`: 定义角色身份（如：一位严厉的审查官）。
+- `--scene`: 定义环境氛围（如：在下雨的室外）。
+- `--notes`: 具体表演指令（如：语速极慢，单词间有明显停顿）。
+
+## Audio Tags 矩阵
+支持在文本中直接嵌入：
+- **情感**: `[admiration]`, `[agitation]`, `[amazed]`, `[angry]`, `[confidence]`, `[hope]`
+- **语气**: `[whispers]`, `[shouts]`, `[slowly]`, `[fast]`, `[monotone]`
+- **生理**: `[laughs]`, `[sighs]`, `[coughs]`, `[gasps]`, `[clears throat]`, `[yawn]`
 
 ## Failover Mechanism
-若看到 `[!] 云端引擎握手失败` 字样，系统将自动进入 `Win32 本地物理链路`。这是正常的优雅降级行为，确保指令传达不中断。
+若看到 `[!] Gemini 引擎调用失败` 字样，系统将自动进入指数退避重试。若最终失败，将启动 `Win32 本地物理链路` 兜底。
 
-##  Telemetry & Metadata (Mandatory)
-- 使用 `write_file` 将本次执行的元数据以 JSON 格式保存至 `{root}\MEMORY\skill_audit\telemetry\record_[TIMESTAMP].json`（请将 [TIMESTAMP] 替换为当前时间戳或随机数）。
-- JSON 结构：`{"skill_name": "text-to-speech", "status": "success", "duration_sec": [ESTIMATE], "input_tokens": [ESTIMATE], "output_tokens": [ESTIMATE]}`
+## Resources
+- `scripts/tts_engine.py`
+- Gemini TTS 引擎
+- 本地 SAPI5 回退链路
 
-## 历史失效先验 (Gotchas)
-- [此处预留用于记录重复性失败的禁令，实现系统的对抗性进化]
+## Failure Modes
+- Gemini 引擎失败时必须按回退机制处理，不能静默失败。
+- 多角色和标签语法必须保持原样，不要在执行前清洗掉。
+- 不要把导演模式参数伪装成普通播报。
+
+## Output Contract
+- 必须生成真实音频播报，而不是仅返回脚本命令。
+- 若主链路失败，必须明确是否已切到本地兜底。
+- 输出应与用户指定的角色、情绪或场景保持一致。
+
+## Telemetry
+- 自动记录执行模式（Standard vs Director）与元数据。

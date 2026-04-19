@@ -1,46 +1,61 @@
 {
+  "version": "8.0",
   "strategic_keywords": [
-    {"keyword": "LLM", "weight": 5},
-    {"keyword": "RAG 医疗", "weight": 6},
-    {"keyword": "向量数据库 医疗", "weight": 6},
     {"keyword": "Agentic Infrastructure", "weight": 7},
-    {"keyword": "算法审计 医疗", "weight": 7},
     {"keyword": "Evidence-Mesh", "weight": 8},
-    {"keyword": "医疗知识图谱", "weight": 8},
-    {"keyword": "可解释性AI 医疗", "weight": 7},
-    {"keyword": "联邦学习 医疗", "weight": 7},
-    {"keyword": "数智化转型", "weight": 8},
-    {"keyword": "医疗信创", "weight": 8},
-    {"keyword": "Digital Health", "weight": 6},
-    {"keyword": "Healthcare IT", "weight": 6},
-    {"keyword": "HIMSS", "weight": 5},
     {"keyword": "FHIR", "weight": 7},
+    {"keyword": "AI 原生医院", "weight": 8},
     {"keyword": "Agentic Workflow 临床", "weight": 9},
     {"keyword": "医疗AI", "weight": 9},
     {"keyword": "Medical Copilot", "weight": 8},
-    {"keyword": "AI 原生医院", "weight": 8},
-    {"keyword": "多模态电子病历", "weight": 8},
-    {"keyword": "医疗大模型 落地", "weight": 8},
-    {"keyword": "Medical Semantic Layer", "weight": 8},
     {"keyword": "数据要素 医疗", "weight": 10},
-    {"keyword": "医疗端侧模型", "weight": 7},
     {"keyword": "DRG DIP", "weight": 9},
-    {"keyword": "医保控费", "weight": 7},
     {"keyword": "医保基金监管", "weight": 7},
-    {"keyword": "CDSS", "weight": 7},
-    {"keyword": "WiNGPT", "weight": 7},
-    {"keyword": "东软 医疗", "weight": 6},
-    {"keyword": "创业慧康", "weight": 6},
+    {"keyword": "医疗信创", "weight": 8},
     {"keyword": "Epic", "weight": 6},
     {"keyword": "Cerner", "weight": 6},
     {"keyword": "卫宁健康", "weight": 5},
-    {"keyword": "华为 医疗", "weight": 5},
-    {"keyword": "百度 医疗", "weight": 5},
-    {"keyword": "腾讯 医疗", "weight": 5}
+    {"keyword": "东软 医疗", "weight": 6},
+    {"keyword": "创业慧康", "weight": 6}
   ],
-  "competitors": ["东软", "东华","创业慧康", "嘉和美康", "InterSystem", "Epic", "Oracle Cerner"],
+  "themes": [
+    {
+      "name": "Medical AI Deployment",
+      "keywords": ["医疗AI", "Medical Copilot", "AI 原生医院", "Agentic Workflow 临床"]
+    },
+    {
+      "name": "Data Infrastructure",
+      "keywords": ["FHIR", "Evidence-Mesh", "数据要素 医疗", "医疗知识图谱"]
+    },
+    {
+      "name": "Policy & Payment",
+      "keywords": ["DRG DIP", "医保基金监管", "医保控费"]
+    },
+    {
+      "name": "Competitive Watch",
+      "keywords": ["Epic", "Cerner", "卫宁健康", "东软 医疗", "创业慧康"]
+    }
+  ],
+  "competitors": ["东软", "东华", "创业慧康", "嘉和美康", "InterSystems", "Epic", "Oracle Cerner", "卫宁健康"],
+  "priority_sources": {
+    "HealthIT.gov": 8,
+    "HIMSS": 8,
+    "Nature Digital Medicine": 8,
+    "The Lancet Digital Health": 8,
+    "NEJM": 7,
+    "Hacker News": 5,
+    "GitHub": 5,
+    "Product Hunt": 4
+  },
   "focus_regions": ["China", "US", "Global"],
   "filters": {
-    "exclude_terms": ["卫宁健康中标", "科普", "养生", "股价异常波动"]
+    "exclude_terms": ["卫宁健康中标", "科普", "养生", "股价异常波动"],
+    "min_score_for_top10": 4,
+    "max_top10": 10,
+    "dedupe_days": 7
+  },
+  "runner_policy": {
+    "preferred_cli": "gemini ask -",
+    "fallback_mode": "heuristic"
   }
 }

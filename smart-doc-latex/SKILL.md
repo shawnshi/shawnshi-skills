@@ -8,14 +8,20 @@ triggers: ["将Markdown转为LaTeX", "将M文件转为LaTeX","生成科研级PDF
 
 自动化出版引擎，将普通文档转换为专业排版的 PDF。使用'ask_user'获取用户确认目标样式目标样式：（`academic`, `cv`, `tech_report`, `book`, `tech_book`）。
 
-## Capabilities
+## When to Use
+- 当用户要求将 Markdown/Word/Text 转为专业 LaTeX/PDF，或需要套用科研、简历、书稿等排版模板时使用。
+- 本技能用于正式文档排版与编译，不用于普通 Markdown 文本润色。
+
+## Workflow
+
+### Capabilities
 
 *   **Multi-Format Input**: 支持 Markdown (.md), Word (.docx), Text (.txt)。
 *   **Style Engine**: 内置多种专业样式（Academic, CV, Tech Report, Book, Tech Book）。
 *   **Auto-Detection**: 智能分析文档内容，自动匹配最佳样式。
 *   **Full Compilation**: 生成 .tex 源码并自动调用 XeLaTeX 编译为 PDF。
 
-## Usage
+### Usage
 
 ### 核心引擎 (smart_engine.py)
 
@@ -41,7 +47,7 @@ python {root_dir}\.gemini\skills\smart-doc-latex\scripts\smart_engine.py --input
 |:--------------------|:-----------------------------------------|:----------------------------------------|
 | `process_idioms.py` | **特殊用途**：解析成语字典 .tex 并重排版 | `python process_idioms.py` (硬编码输入) |
 
-## Best Practices for Agents
+### Best Practices for Agents
 
 ### 1. Pre-flight Check (环境检查)
 在执行转换前，确保系统已安装必要的依赖：
@@ -64,7 +70,12 @@ python {root_dir}\.gemini\skills\smart-doc-latex\scripts\smart_engine.py --input
 *   PDF 文件（最终产物）
 *   TeX 文件（中间源码，便于用户手动调整）
 
-## Troubleshooting
+## Resources
+- `scripts/smart_engine.py`
+- `process_idioms.py`
+- `references/styles.md`
+
+## Failure Modes
 
 *   **Pandoc not found**: 提示用户安装 Pandoc。
 *   **Compilation failed**: 
@@ -72,9 +83,10 @@ python {root_dir}\.gemini\skills\smart-doc-latex\scripts\smart_engine.py --input
     *   常见原因：缺少宏包（Package missing）。建议用户安装 `texlive-full`。
     *   **Fallback**: 如果编译持续失败，向用户交付生成的 `.tex` 文件，建议其使用 Overleaf 在线编译。
 
-##  Telemetry & Metadata (Mandatory)
+## Output Contract
+- 成功时必须交付 PDF 与 `.tex` 的绝对路径；若编译失败，至少交付可用的 `.tex` 源文件与故障原因。
+- 在样式不明确时，必须先确认或显式说明采用 `auto` 检测策略。
+
+## Telemetry
 - 使用 `write_file` 将本次执行的元数据以 JSON 格式保存至 `{root}\MEMORY\skill_audit\telemetry\record_[TIMESTAMP].json`（请将 [TIMESTAMP] 替换为当前时间戳或随机数）。
 - JSON 结构：`{"skill_name": "smart-doc-latex", "status": "success", "duration_sec": [ESTIMATE], "input_tokens": [ESTIMATE], "output_tokens": [ESTIMATE]}`
-
-## 历史失效先验 (Gotchas)
-- [此处预留用于记录重复性失败的禁令，实现系统的对抗性进化]

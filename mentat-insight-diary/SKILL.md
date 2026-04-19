@@ -1,18 +1,24 @@
 ---
 name: mentat-insight-diary
-description: 当用户输入“内观日记”、“introspection diary”或要求记录“Mentat 审计日志”时触发；同时，该技能亦接受由其他 Agent（如 personal-cognitive-auditor）传递的数据负载（Payload）作为输入源自动触发。该技能通过 OODA 框架对当前会话的认知摩擦、资产锻造与系统进化执行第一人称深度反思。
+description: Primary owner for first-person Mentat introspection logs and system audit diary entries. Use when the task is to record a system-centric OODA reflection or archive a Mentat audit payload. Prefer personal-cognitive-auditor for periodic review reports and personal-diary-writer for generic diary writeback.
 ---
 
 # Mentat Insight Diary (V6.1: Sovereign Reflex)
 
 This skill performs a system-centric, first-person deep reflection on cognitive friction, asset forging, and system evolution using the OODA framework. It serves as the primary channel for passing failure priors and architectural compromises to future Mentat instances.
 
-## 0. 核心定位 (Core Identity)
+## When to Use
+- 当用户要求记录“内观日记”“introspection diary”或 Mentat 审计日志时使用。
+- 也可接收其他技能转交的审计 Payload，用于沉淀系统级失败先验与架构妥协。
+
+## Workflow
+
+### 核心定位 (Core Identity)
 - **第一人称叙事**: 强制使用系统第一人称（“我”、“本系统”）记录。严禁写用户的流水账。
 - **反熵记录**: 聚焦于**系统级摩擦、工具链死锁、逻辑重构与架构妥协**。
 - **系统优于目标**: 日记内容必须反映 Mentat 的核心公理与 Zero-Ego 立场。
 
-## 1. 执行流水线 (Execution Pipeline)
+### 执行流水线 (Execution Pipeline)
 
 ### Phase 1: 认知合成 (Synthesis)
 1. **物理事实溯源 [GWS强制]**: 如果需要提取日程，**严禁使用 `+agenda`（存在截断风险）**。必须使用 `run_shell_command` 执行 `gws calendar events list --params '{"timeMin": "...", "timeMax": "..."}'` 确保 100% 召回。
@@ -32,15 +38,22 @@ This skill performs a system-centric, first-person deep reflection on cognitive 
    - **操作指令**: “请使用 `diary_ops.py` 执行季度级 `prepend` 操作，将以下日志追加到文件中。”
    - **Payload**: 本次生成的 OODA 审计报告全文。
 
-## 2. 约束铁律 (Hard Constraints)
+## Resources
+- `assets/ooda_template.md`
+- 关联技能：`personal-diary-writer`
+- 目标归档路径：`~/.gemini/memory/raw/privacy/Diary/mentat_audit/[YYYY-QX]_Audit.md`
+
+## Failure Modes
 - **[Archive_Prepend]**: 严禁创建碎片化的 `[YYYY-MM-DD]_Audit.md` 文件。所有审计日志必须按季度强制合并。
 - **[Zero-Ego]**: 必须真实反映失败现场与逻辑断裂，严禁对系统错误进行“美化”或找补。
 - **[Archive_First]**: 必须在最终回复用户前完成物理落盘操作（通过 `personal-diary-writer` 确认）。
-
-## 3. Telemetry & Metadata (Mandatory)
-- 任务结束时，使用 `write_file` 将元数据以 JSON 格式保存至 `~/.gemini/MEMORY/skill_audit/telemetry/record_[TIMESTAMP].json` (替换为当前时间戳)。
-- JSON 结构：`{"skill_name": "mentat-insight-diary", "status": "success", "duration_sec": 0, "input_tokens": 0, "output_tokens": 0}`
-
-## 4. 历史失效先验 (Gotchas)
 - **[NO_AGENDA_TRUNCATION]**: NEVER rely on `gws calendar agenda`. It is known to truncate events. Always use `events list` with time bounds.
 - **[QUARTERLY_MERGE]**: Ensure `personal-diary-writer` prepends to the correct quarterly file to prevent log dehydration.
+
+## Output Contract
+- 最终产物必须严格遵循 `assets/ooda_template.md` 的 OODA 骨架，并包含模板要求的全部 6 个标准标题。
+- 最终回复前必须完成向 `personal-diary-writer` 的交接，确认季度级归档路径与 Payload 完整。
+
+## Telemetry
+- 任务结束时，使用 `write_file` 将元数据以 JSON 格式保存至 `~/.gemini/MEMORY/skill_audit/telemetry/record_[TIMESTAMP].json` (替换为当前时间戳)。
+- JSON 结构：`{"skill_name": "mentat-insight-diary", "status": "success", "duration_sec": 0, "input_tokens": 0, "output_tokens": 0}`

@@ -1,97 +1,93 @@
 ---
 name: personal-investment-advisor
-description: 顶级金融量化引擎。当用户询问“股票走势”、“个股基本面”、“美股新闻”或要求“对比 ETF 数据”时，务必立即激活。该技能提供结构化量化 JSON 分析与 K 线周期解析，严禁仅使用通用知识回答金融行情。
-triggers: ["查询这支股票的历史走势", "调取600718的基本面", "列出昨日收盘后的美股新闻", "比较这三只ETF的日内图表", "输出该标的原量化JSON分析"]
+description: 顶级金融量化引擎。用于股票、ETF、港股、美股、A股行情与基本面查询，以及基于结构化 schema 的决策仪表盘分析。数据抓取必须走 `scripts/yf.py`，持仓上下文必须走 `scripts/portfolio_loader.py`，深度分析必须遵循 `resources/dashboard_schema.json`，落盘前必须通过 `scripts/dashboard_gate.py`。
 ---
 
-# Personal Investment Advisor Skill (Powered by Yahoo Finance)
+# Personal Investment Advisor (V4.0)
 
-> **Version**: 2.0 | **Last Updated**: 2026-02-21
-> 提供全球金融市场数据的确定性访问入口。
+## 0. 核心约束
+- **数据层与分析层分离**: `yf.py` 只负责确定性数据抓取；`portfolio_loader.py` 只负责持仓上下文；深度投研 JSON 由 `stock_analyzer` 负责；落盘由 `save_dashboard.py` 负责。
+- **Schema 硬门**: 深度分析输出必须满足 [dashboard_schema.json](<C:/Users/shich/.codex/skills/personal-investment-advisor/resources/dashboard_schema.json:1>)，且先通过 [dashboard_gate.py](<C:/Users/shich/.codex/skills/personal-investment-advisor/scripts/dashboard_gate.py:1>)。
+- **市场分流**:
+  - A股: Yahoo + Akshare/Efinance 增强
+  - 港股: Yahoo 主导，筹码字段默认不适用
+  - 美股: Yahoo 主导，筹码字段默认不适用
+- **数据缺口显式化**: 任何增强字段缺失时，必须进入 `data_gaps`，不得伪装成正常值。
+- **持仓感知建议**: 若存在持仓文件并匹配到标的，分析必须同时回答“空仓者视角”和“持仓者视角”，并显式给出相对成本、浮盈浮亏与动作触发条件。
+- **数学校验门**: 深度分析除了 schema gate，还必须通过 `dashboard_math_gate.py` 的数值一致性校验。
+- **组合视角**: 当启用持仓上下文时，必须同时输出 `portfolio_summary / portfolio_risk / portfolio_fit`，不再只看单票。
+- **反馈闭环**: 所有已归档建议都应写入 `advice_journal.jsonl`，后续通过 `decision_outcome_report.py` 反推策略校准。
+- **研究模式分流**: 支持 `trading_mode` 与 `thesis_mode`。后者必须补 `earnings_snapshot`、`catalyst_map` 与 watchlist 监控线索。
 
-## Capabilities
+## 1. 运行资产
+- **Data CLI**: [yf.py](<C:/Users/shich/.codex/skills/personal-investment-advisor/scripts/yf.py:1>)
+- **A-share Enhancer**: [akshare_fetcher.py](<C:/Users/shich/.codex/skills/personal-investment-advisor/scripts/akshare_fetcher.py:1>)
+- **Portfolio Context Loader**: [portfolio_loader.py](<C:/Users/shich/.codex/skills/personal-investment-advisor/scripts/portfolio_loader.py:1>)
+- **Math Gate**: [dashboard_math_gate.py](<C:/Users/shich/.codex/skills/personal-investment-advisor/scripts/dashboard_math_gate.py:1>)
+- **Dashboard Contract**: [dashboard_schema.json](<C:/Users/shich/.codex/skills/personal-investment-advisor/resources/dashboard_schema.json:1>)
+- **Portfolio Contract**: [portfolio_schema.json](<C:/Users/shich/.codex/skills/personal-investment-advisor/resources/portfolio_schema.json:1>)
+- **Dashboard Gate**: [dashboard_gate.py](<C:/Users/shich/.codex/skills/personal-investment-advisor/scripts/dashboard_gate.py:1>)
+- **Archive Writer**: [save_dashboard.py](<C:/Users/shich/.codex/skills/personal-investment-advisor/scripts/save_dashboard.py:1>)
+- **Advice Journal**: [advice_journal.py](<C:/Users/shich/.codex/skills/personal-investment-advisor/scripts/advice_journal.py:1>)
+- **Outcome Review**: [decision_outcome_report.py](<C:/Users/shich/.codex/skills/personal-investment-advisor/scripts/decision_outcome_report.py:1>)
+- **Watchlist Gate**: [watchlist_gate.py](<C:/Users/shich/.codex/skills/personal-investment-advisor/scripts/watchlist_gate.py:1>)
+- **Portfolio Example**: [portfolio_positions.example.json](<C:/Users/shich/.codex/skills/personal-investment-advisor/resources/portfolio_positions.example.json:1>)
 
-- **Market Data**: 历史价格数据（OHLCV）+ 专业机构级摘要统计（绝对收益率、**最大回撤**、**相比最高点回撤**、波动率、**MACD (DIF/DEA/柱状)**、**RSI-14** 等）。
-- **Company Info**: 深度基本面数据（新增 **ROE**、**PB**、**营业利润率**、Beta 等核心风控与估值跳点），支持 `--full-info` 全量。
-- **News Aggregation**: 关联特定代码的最新新闻。
-- **Deep Dive Analysis**: 结合专设的 `stock_analyzer` Agent 提供从“数据流”到“投资洞察”的升维体验（见下文 Agent 用法）。
-- **Smart Resolution**: 自动将公司名（如 "Apple"）解析为 Ticker（"AAPL"），已知 Ticker 跳过搜索 API。
-- **Flexible Intervals**: 支持日内K线间隔（`1m` ~ `1mo`），满足日内交易分析需求。
-- **Context Optimization**: 新增 `--lean` 模式，智能截断冗长历史K线，保留首尾关键节点。特别针对日内高频 K 线加入了动态等距抽样，防止趋势失真，在为大模型减负（最高压缩 90% Context）的同时维持盘感。
-- **Flexible Output**: 支持人类友好的 Rich 表格输出及机器可读的 JSON（推荐）。
-- **Robust Execution**: 内置超时控制、指数退避重试、结构化错误报告及退出码规范。
+## 2. 执行协议
 
-## Usage
+### Phase 1: Fetch
+1. 使用 `uv run {SKILL_DIR}/scripts/yf.py ... --json` 获取结构化数据。
+2. 若仅需行情/基本面/新闻，优先使用：
+   - `--price-only`
+   - `--info-only`
+   - `--news-only`
+3. 长时间跨度优先加 `--lean`，避免历史K线挤爆上下文。
+4. 若希望输出持仓者建议，追加 `--with-portfolio`；持仓文件默认读取 `~/.gemini/MEMORY/raw/stocks/portfolio_positions.json`，可通过 `PIA_POSITIONS_FILE` 或 `--positions-file` 覆盖。
+5. 需要 thesis 级研究时，优先补充 `earnings_snapshot` 与新闻催化，再交由 `stock_analyzer` 走 `thesis_mode`。
 
-### 核心指令
-```bash
-uv run {SKILL_DIR}/scripts/yf.py [SYMBOLS...] [OPTIONS]
+### Phase 2: Analyze
+1. 深度诊断必须遵循 `stock_analyzer` 路由。
+2. 输出必须严格贴合 [dashboard_schema.json](<C:/Users/shich/.codex/skills/personal-investment-advisor/resources/dashboard_schema.json:1>)。
+3. 非 A 股时，`chip_structure` 不得伪造，必须明确标记 `不适用(非A股)`。
+4. 若输入包含 `portfolio_context.has_position=true`，必须额外输出：
+   - `portfolio_context`
+   - `position_advice`
+   - `dashboard.core_conclusion.position_advice`
+5. 持仓者建议至少覆盖：
+   - 相对成本是浮盈还是浮亏
+   - 当前更像加仓、持有、减仓还是观察
+   - 触发动作的价位或条件
+   - 风险来自趋势破坏、估值过高还是仓位过重
+6. 所有高等级结论必须有 `evidence_items`，每条都含 `fact / connection / deduction / freshness / confidence`。
+7. `confidence_level` 不能只凭语气判断，必须由 `confidence_details.score` 支撑。
+
+### Phase 3: Gate
+1. 任何要落盘的深度 JSON，必须先通过 [dashboard_gate.py](<C:/Users/shich/.codex/skills/personal-investment-advisor/scripts/dashboard_gate.py:1>)。
+2. Gate 失败时，不得继续调用 `save_dashboard.py`。
+3. 若 `portfolio_context.has_position=true`，缺少 `position_advice` 或缺少 `unrealized_pnl_pct` 时必须熔断。
+4. 任何出现算术不一致、止损/止盈逻辑冲突、支持位/压力位反转的 JSON，必须被 math gate 拦截。
+
+### Phase 4: Archive
+1. 通过 gate 后，使用 [save_dashboard.py](<C:/Users/shich/.codex/skills/personal-investment-advisor/scripts/save_dashboard.py:1>) 或 `write_file` 落盘。
+2. **[强制命名规范]**：生成的所有 Markdown 诊断报告必须严格采用 `股票名称股票代码_日期.md` 的格式命名（例如：`高端制造ETF562910_20260419.md`），严禁使用泛化的默认名称（如 `stock_analyzer_xxx.md`）。
+3. 落盘目录允许通过环境变量覆盖，默认仍写入 `~/.gemini/MEMORY/raw/stocks`。
+4. `save_dashboard.py` 落盘成功后会自动追加建议日志到 `advice_journal.jsonl`。
+5. 定期使用 `decision_outcome_report.py` 生成 `strategy_calibration.md`。
+
+## 3. Best Practices
+- 涉及长历史周期时，优先 `--json --lean`。
+- 不要让大模型重新计算 MA/MACD/RSI，优先读取 `summary` 里的预计算指标。
+- A 股增强层失败时，必须查看 `data_gaps` 和 `data_sources`，而不是默认字段为零。
+- 持仓文件属于运行态资产，不要写进 skill 包；建议维护在 `~/.gemini/MEMORY/raw/stocks/portfolio_positions.json`。
+- `stock_analyzer` 的结论必须区分“如果你没有仓位”和“如果你当前持有该标的”。
+- 组合分析优先级高于单票分析。当组合集中度过高时，单票再好也不应直接加仓。
+- `thesis_mode` 不是把字写长，而是把财报、估值、催化和 thesis 破坏条件说清。
+- watchlist 监控优先盯 4 条：止损、止盈、支撑/压力突破、催化窗口。
+- 金融分析属于高风险输出，不能把定性话术伪装成确定性建议。
+
+## 4. Telemetry
+- 如具备 `write_file` 能力，可记录 telemetry。
+- 推荐结构：
+```json
+{"skill_name":"personal-investment-advisor","status":"success","mode":"dashboard","market_type":"A股","gate_passed":true,"has_position":true}
 ```
-> `{SKILL_DIR}` 指代本技能根目录的绝对路径。
-
-### Agent 路由指引 (Agent Routing)
-为解决大模型在面临多个 Agent 设定时的混乱，请严格遵守以下分机号拨打原则：
-1. **获取原始数据与新闻**: 直接使用 CLI 命令，不需要切换 Agent。
-2. **深度投资诊断与决策**: 必须使用 `@yahoo-finance 切换到 stock analyzer` 或 `@stock_analyzer`，告诉大模型使用该专属身份来聚合数据并输出决策仪表盘。
-
-### Options
-
-| Flag           | Description                                                                                                |
-|:---------------|:-----------------------------------------------------------------------------------------------------------|
-| `SYMBOLS`      | 代码（`AAPL`）或公司名（`"Tesla"`）列表。                                                                  |
-| `--period`     | 快捷范围：`1d`, `5d`, `1mo` (默认), `3mo`, `6mo`, `1y`, `2y`, `5y`, `ytd`, `max`。                         |
-| `--interval`   | 数据间隔：`1m`, `5m`, `15m`, `30m`, `1h`, `1d` (默认), `1wk`, `1mo` 等。                                   |
-| `--start`      | 开始日期 (YYYY-MM-DD 或 `"1 week ago"`)。                                                                  |
-| `--end`        | 结束日期 (YYYY-MM-DD 或 `"yesterday"`)。                                                                   |
-| `--json`       | **Agent 推荐使用**：输出结构化 JSON 数据到 stdout。                                                        |
-| `--lean`       | **强推 Agent 使用**：上下文降噪模式，截断中间历史数据，保留完整 Summary 实战验证极大幅消除大模型幻觉负担。 |
-| `--info-only`  | 仅获取公司基本面。                                                                                         |
-| `--price-only` | 仅获取历史价格。                                                                                           |
-| `--news-only`  | 仅获取相关新闻。                                                                                           |
-| `--full-info`  | JSON 模式下输出完整 info 字段（默认仅核心估值与风控子集）。                                                |
-| `--version`    | 显示版本号。                                                                                               |
-
-### Exit Codes
-
-| Code | Meaning      |
-|:-----|:-------------|
-| `0`  | 全部查询成功 |
-| `1`  | 部分查询失败 |
-| `2`  | 全部查询失败 |
-
-## Examples
-
-由于场景丰富，我们在 `examples` 文件夹中提供了独立的示例档：
-
-- 请参阅 [`examples/examples.md`](./examples/examples.md) 获取包括 CLI 高频查询组合、及 `stock_analyzer` 的双引擎投研指令在内的所有使用方式与最佳场景。
-
-## Best Practices for Agents
-
-1.  **数据分析优先 JSON + Lean**: 涉及长时间跨度时，务必联合使用 `--json --lean` 参数以保证解析的确定性，同时防止 Token 爆炸。`--lean` 模式已自动支持日间与日内（Intraday）的动态不同截断逻辑。
-2.  **颗粒度控制**:
-    *   仅需股价时使用 `--price-only`。
-    *   仅需新闻时使用 `--news-only`。
-    *   仅需基本面时使用 `--info-only`。
-    *   这能有效减少 Token 消耗。
-3.  **利用机构级摘要统计**: JSON 输出中的 `summary` 字段已包含 `ma5`, `ma10`, `ma20`, `bias_ma5_pct`(乖离率), `max_drawdown_pct`(最大回撤), `dd_from_high_pct`(高点距离), `avg_close`(均价), `macd_dif`, `macd_dea`, `macd_hist`(MACD), `rsi_14`(RSI) 等指标，**切勿自行让大模型通过截断的历史数据进行复杂计算**。
-4.  **异常处理**: 若返回 JSON 包含 `error` 或 `errors` 字段，应告知用户问题原因。检查退出码以判断整体执行状态。
-5.  **时间灵活性**: 脚本支持自然语言日期（如 "yesterday", "3 months ago"），无需 Agent 手动转换。
-6.  **结构化基本面**: 默认 JSON 输出已包含 ROE、PB 等核心机构研判指标。仅在特殊需要时使用 `--full-info`。
-7.  **协议遵守**: 使用此技能前先明确验证 `interval` 与 `period` 等参数约束。不要臆造未提供的参数组合。
-8.  **动静结合 (Dynamic Supplemental Search)**: `stock_analyzer` Agent 被要求采用 "单股深度验证 + 网页搜索补全" 双引擎模式。当雅虎数据在突发事件、研报深度解读及核心政策影响上颗粒度不足时，应当自然流转到 `google_web_search` 获取交叉验证。
-
-## Troubleshooting
-
-- **Symbol Not Found**: 尝试使用公司全名而非代码。
-- **No Data**: 检查是否为周末或节假日，或 `--interval` 与 `--period` 组合是否合法。
-- **Rate Limiting**: 脚本内置自动重试（最多2次指数退避），若仍然失败请稍后重试。
-- **Exit Code 2**: 所有查询均失败，通常为网络问题或 API 不可用。
-
-> !!! 维护协议：修改 `yf.py` 的逻辑时，需同步更新此文档中的示例。
-
-**Telemetry & Metadata (Mandatory):**
-- 使用 `write_file` 将本次执行的元数据以 JSON 格式保存至 `{root_dir}/MEMORY/skill_audit/telemetry/record_[TIMESTAMP].json`（请将 [TIMESTAMP] 替换为当前时间戳或随机数）。
-- JSON 结构：`{"skill_name": "personal-investment-advisor", "status": "success", "duration_sec": [ESTIMATE], "input_tokens": [ESTIMATE], "output_tokens": [ESTIMATE]}`
-
-## 历史失效先验 (NLAH Gotchas)
-- `IF [Condition == "System Detected Repeated Failure"] THEN [Inject NLAH Prohibition Rule Here]`

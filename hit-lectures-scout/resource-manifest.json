@@ -1,0 +1,43 @@
+﻿{
+    "schema_version":  1,
+    "skill":  "hit-lectures-scout",
+    "generated_at":  "2026-04-19T06:26:09",
+    "skill_md":  "SKILL.md",
+    "top_level_files":  [
+                            "SKILL.md"
+                        ],
+    "top_level_directories":  [
+                                  "assets"
+                              ],
+    "resource_directories":  [
+                                 {
+                                     "name":  "assets",
+                                     "file_count":  5
+                                 }
+                             ],
+    "declared_local_dependencies":  [
+                                        {
+                                            "path":  "assets\\deepxiv_preprints_scout.py",
+                                            "exists":  true,
+                                            "resolved_path":  "C:\\Users\\shich\\.gemini\\skills\\hit-lectures-scout\\assets\\deepxiv_preprints_scout.py"
+                                        },
+                                        {
+                                            "path":  "assets\\task_journals_en.md",
+                                            "exists":  true,
+                                            "resolved_path":  "C:\\Users\\shich\\.gemini\\skills\\hit-lectures-scout\\assets\\task_journals_en.md"
+                                        },
+                                        {
+                                            "path":  "assets\\task_journals_cn.md",
+                                            "exists":  true,
+                                            "resolved_path":  "C:\\Users\\shich\\.gemini\\skills\\hit-lectures-scout\\assets\\task_journals_cn.md"
+                                        },
+                                        {
+                                            "path":  "assets\\report_template.md",
+                                            "exists":  true,
+                                            "resolved_path":  "C:\\Users\\shich\\.gemini\\skills\\hit-lectures-scout\\assets\\report_template.md"
+                                        }
+                                    ],
+    "missing_declared_dependencies":  [
+
+                                      ]
+}

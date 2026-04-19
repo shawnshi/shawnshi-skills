@@ -1,0 +1,46 @@
+﻿{
+    "schema_version":  1,
+    "skill":  "presentation-architect",
+    "generated_at":  "2026-04-19T06:26:09",
+    "skill_md":  "SKILL.md",
+    "top_level_files":  [
+                            "README.md",
+                            "SKILL.md",
+                            "_DIR_META.md"
+                        ],
+    "top_level_directories":  [
+                                  "agents",
+                                  "evals",
+                                  "references",
+                                  "scripts"
+                              ],
+    "resource_directories":  [
+                                 {
+                                     "name":  "scripts",
+                                     "file_count":  7
+                                 },
+                                 {
+                                     "name":  "references",
+                                     "file_count":  35
+                                 },
+                                 {
+                                     "name":  "agents",
+                                     "file_count":  1
+                                 }
+                             ],
+    "declared_local_dependencies":  [
+                                        {
+                                            "path":  "references\\styles\\",
+                                            "exists":  true,
+                                            "resolved_path":  "C:\\Users\\shich\\.gemini\\skills\\presentation-architect\\references\\styles\\"
+                                        },
+                                        {
+                                            "path":  "presentation-architect\\scripts\\build-deck.py",
+                                            "exists":  true,
+                                            "resolved_path":  "C:\\Users\\shich\\.gemini\\skills\\presentation-architect\\scripts\\build-deck.py"
+                                        }
+                                    ],
+    "missing_declared_dependencies":  [
+
+                                      ]
+}

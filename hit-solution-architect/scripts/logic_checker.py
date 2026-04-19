@@ -1,150 +1,205 @@
-"""
-<!-- Standard Header -->
-@Input: [ProjectName]_Draft.md (Markdown file)
-@Output: MECE Audit Result (Standard Out/JSON)
-@Pos: Phase 5 (Audit Phase)
-@Maintenance Protocol: Logic rules update must sync SKILL.md.
-"""
+import itertools
+import json
 import re
 import sys
-import json
+from pathlib import Path
 
-class MECELogicChecker:
-    """
-    医疗方案战略逻辑检查器 V4.0：验证方案是否符合 MBB 合伙人级标准
-    - ME (Mutually Exclusive): 相互独立，检查章节间是否存在高度语义重叠。
-    - CE (Collectively Exhaustive): 完全穷尽，检查 V4.0 核心架构维度是否缺失。
-    - Action Titles Audit: 启发式审计标题是否具备“判词性”。
-    """
-    
-    def __init__(self, file_path):
-        self.file_path = file_path
+ACTION_PATTERNS = [
+    r"通过", r"实现", r"构建", r"打造", r"优化", r"提升", r"重构", r"驱动", r"解决", r"降低", r"形成", r"建立", r"推进", r"支撑"
+]
+
+BASE_DIMENSIONS = {
+    "医院痛点": ["痛点", "挑战", "现状", "矛盾", "不可能三角", "评级压力", "临床减负"],
+    "迁移路径": ["迁移", "割接", "双活", "并行", "灰度", "切换", "无损"],
+    "TCO/ROI": ["TCO", "ROI", "成本", "预算", "投资回报", "总体拥有成本", "回收期"],
+    "信创合规": ["信创", "国产化", "自主可控", "等保", "合规", "海光", "昇腾", "达梦"],
+    "受众分层": ["院长", "CIO", "临床", "科主任", "信息科", "管理层"],
+}
+
+MODE_EXTRAS = {
+    "brief": {
+        "风险提示": ["风险", "致命风险", "主要风险", "缓释"]
+    },
+    "proposal": {
+        "架构设计": ["架构", "中台", "微服务", "FHIR", "接口", "Mermaid"],
+        "风险提示": ["风险", "致命风险", "主要风险", "缓释"],
+    },
+    "blueprint": {
+        "架构设计": ["架构", "中台", "微服务", "FHIR", "接口", "Mermaid"],
+        "数据治理": ["主数据", "数据治理", "数据流", "主索引", "数据资产"],
+        "风险提示": ["风险", "致命风险", "主要风险", "缓释"],
+    },
+}
+
+EMPTY_METRIC_PATTERNS = [r"提升效率", r"降低成本", r"优化流程", r"增强体验", r"提高质量", r"减少负担"]
+
+
+def cjk_bigrams(text: str):
+    chunks = re.findall(r"[\u4e00-\u9fff]+", text)
+    grams = []
+    for chunk in chunks:
+        if len(chunk) == 1:
+            grams.append(chunk)
+        else:
+            grams.extend(chunk[i:i+2] for i in range(len(chunk) - 1))
+    return grams
+
+
+def tokenize(text: str):
+    ascii_tokens = re.findall(r"\b[a-zA-Z0-9]+\b", text.lower())
+    return set(ascii_tokens + cjk_bigrams(text))
+
+
+class SolutionLogicChecker:
+    def __init__(self, file_path: str, mode: str = "proposal"):
+        self.file_path = Path(file_path)
+        self.mode = mode
         self.content = self._read_file()
         self.headings = self._extract_headings()
         self.sections = self._split_sections()
 
     def _read_file(self):
         try:
-            with open(self.file_path, 'r', encoding='utf-8') as f:
-                return f.read()
-        except Exception as e:
-            print(f"Error reading file: {e}")
+            return self.file_path.read_text(encoding="utf-8")
+        except Exception as exc:
+            print(json.dumps({"status": "Failed", "error": f"Error reading file: {exc}"}, ensure_ascii=False, indent=2))
             sys.exit(1)
 
     def _extract_headings(self):
-        # 提取二级和三级标题
-        return re.findall(r'^(##+)\s+(.*)$', self.content, re.MULTILINE)
+        return re.findall(r"^(##+)\s+(.*)$", self.content, re.MULTILINE)
 
     def _split_sections(self):
         sections = {}
-        parts = re.split(r'^##+\s+.*$', self.content, flags=re.MULTILINE)
-        titles = [h[1] for h in self.headings]
-        for i, title in enumerate(titles):
-            if i + 1 < len(parts):
-                sections[title] = parts[i+1].strip()
+        current = None
+        buffer = []
+        for line in self.content.splitlines():
+            match = re.match(r"^(##+)\s+(.*)$", line)
+            if match:
+                if current is not None:
+                    sections[current] = "\n".join(buffer).strip()
+                current = match.group(2).strip()
+                buffer = []
+            elif current is not None:
+                buffer.append(line)
+        if current is not None:
+            sections[current] = "\n".join(buffer).strip()
         return sections
 
+    def check_me(self):
+        risks = []
+        titles = list(self.sections.keys())
+        for left, right in itertools.combinations(titles, 2):
+            left_tokens = tokenize(self.sections[left])
+            right_tokens = tokenize(self.sections[right])
+            if len(left_tokens) < 25 or len(right_tokens) < 25:
+                continue
+            overlap = len(left_tokens & right_tokens) / max(len(left_tokens | right_tokens), 1)
+            if overlap >= 0.55:
+                risks.append({
+                    "left_section": left,
+                    "right_section": right,
+                    "overlap_ratio": round(overlap, 3),
+                    "reason": "两个章节语义重叠过高，可能违反 MECE 的互斥要求。",
+                    "suggestion": "重新划分章节边界：一个讲管理判断，一个讲架构/实施，不要重复解释同一价值点。"
+                })
+        return risks
+
     def check_action_titles(self):
-        """启发式审计：标题是否具备动作导向（Action-oriented）与判词性"""
         violations = []
-        # 动作导向关键词（判词性特征）
-        action_patterns = [r"通过", r"实现", r"构建", r"打造", r"优化", r"提升", r"重构", r"驱动", r"赋能", r"解决"]
-        
-        for level, title in self.headings:
-            # 去除序号等干扰
-            clean_title = re.sub(r'^\d+(\.\d+)*\s*', '', title)
-            
-            # 规则 1：长度审计（过短通常不是完整判词）
+        if not self.headings:
+            violations.append({
+                "title": "<missing-headings>",
+                "reason": "文档没有二级及以下章节标题，无法形成结构化方案。",
+                "suggestion": "至少使用二级标题组织方案章节。"
+            })
+            return violations
+
+        for _level, title in self.headings:
+            clean_title = re.sub(r"^\d+(\.\d+)*\s*", "", title).strip()
             is_short = len(clean_title) < 8
-            
-            # 规则 2：动作模式审计
-            has_action = any(re.search(p, clean_title) for p in action_patterns)
-            
+            has_action = any(re.search(pattern, clean_title) for pattern in ACTION_PATTERNS)
             if is_short or not has_action:
-                reason = "标题过于简略或缺乏动作导向。" if is_short else "标题缺乏结论性判词特征（缺少动作谓语或逻辑关联词）。"
+                reason = "标题过短。" if is_short else "标题缺乏动作导向与判断性。"
                 violations.append({
                     "title": title,
-                    "reason": f"{reason} V8.5 要求使用 'Action Titles'。",
-                    "suggestion": f"建议重写为包含『动作+目标+价值』的判词。例：『通过 WiNEX 临床路径重构实现医保结余提留』。"
+                    "reason": f"{reason} V9 要求标题体现『动作 + 目标/价值』。",
+                    "suggestion": "改写为完整判断句，例如：『通过统一主数据治理降低互联互通整改成本』。"
                 })
         return violations
 
     def check_empty_metrics(self):
-        """检查是否存在空洞的量化描述（如只说提升效率而不给指标预估）"""
-        empty_metrics_patterns = [r"提升效率", r"降低成本", r"优化流程", r"增强体验", r"提高质量"]
         violations = []
         for title, content in self.sections.items():
-            for pattern in empty_metrics_patterns:
+            for pattern in EMPTY_METRIC_PATTERNS:
                 if pattern in content:
-                    # 检查附近是否有百分比或数字
-                    context = re.findall(rf".{{0,30}}{pattern}.{{0,30}}", content)
-                    for ctx in context:
-                        if not re.search(r"\d+%|\d+倍|\d+分", ctx):
+                    contexts = re.findall(rf".{{0,30}}{pattern}.{{0,30}}", content)
+                    for ctx in contexts:
+                        if not re.search(r"\d+%|\d+倍|\d+分|\d+天|\d+月|\d+年|\d+例|\d+万元|\d+元|\d+分钟|\d+min", ctx):
                             violations.append({
                                 "section": title,
                                 "context": ctx.strip(),
-                                "reason": f"检测到空洞量化词『{pattern}』，缺乏具体的百分比或数字支撑。",
-                                "suggestion": "请补充具体指标预估，如『提升效率 30% 以上』。"
+                                "reason": f"检测到空洞量化词『{pattern}』，没有数字口径。",
+                                "suggestion": "补充基线、目标值和单位，或者明确暂以测算假设表示。"
                             })
         return violations
 
-    def check_ce(self):
-        # V8.5 强制性战略维度（与 SKILL.md V8.5 核心约束对齐）
-        mandatory_dimensions = {
-            "叙事与背景": ["背景", "挑战", "愿景", "痛点", "冲突", "现状"],
-            "信创合规": ["信创", "国产化", "等保", "安全", "合规", "自主可控", "华为", "昇腾", "海光", "达梦"],
-            "旧城改造": ["迁移", "割接", "并行", "双活", "旧系统", "数据清洗", "平滑", "无损"],
-            "TCO与ROI": ["TCO", "ROI", "成本", "总体拥有成本", "投资回报", "预算", "节省", "产出"],
-            "受众分层": ["院长", "CIO", "临床", "科主任", "护士", "管理层"],
-            "DRG与医保": ["DRG", "DIP", "医保", "控费", "结余", "国考", "盈亏"],
-            "架构设计": ["架构", "微服务", "中台", "云原生", "API", "FHIR", "WiNEX"],
-            "AI赋能": ["AI", "GPT", "大模型", "Copilot", "智能助手", "WiNGPT"]
-        }
-        missing = []
+    def check_required_dimensions(self):
+        dimensions = dict(BASE_DIMENSIONS)
+        dimensions.update(MODE_EXTRAS.get(self.mode, {}))
         full_text = self.content.lower()
-        for dim, keywords in mandatory_dimensions.items():
-            found = any(k.lower() in full_text for k in keywords)
-            if not found:
+        missing = []
+        for dimension, keywords in dimensions.items():
+            if not any(keyword.lower() in full_text for keyword in keywords):
                 missing.append({
-                    "dimension": dim,
+                    "dimension": dimension,
                     "missing_keywords": keywords,
-                    "suggestion": f"方案可能缺失【{dim}】维度，这是 V8.5 架构师标准的硬要求。"
+                    "suggestion": f"方案可能缺失【{dimension}】维度。V9 不允许跳过这个结果门。"
                 })
         return missing
 
     def run_audit(self):
         me_risks = self.check_me()
-        ce_risks = self.check_ce()
+        ce_risks = self.check_required_dimensions()
         title_risks = self.check_action_titles()
         metric_risks = self.check_empty_metrics()
-        
+
+        fatal = bool(me_risks or ce_risks or len(title_risks) > 3)
+        warning = bool(metric_risks or title_risks)
+        status = "Failed" if fatal else "Warning" if warning else "Passed"
+
         report = {
-            "file": self.file_path,
-            "status": "Warning" if (me_risks or ce_risks or title_risks or metric_risks) else "Passed",
+            "file": str(self.file_path),
+            "mode": self.mode,
+            "status": status,
             "metrics": {
                 "me_violations": len(me_risks),
-                "ce_violations": len(ce_risks),
+                "required_dimension_violations": len(ce_risks),
                 "title_violations": len(title_risks),
                 "empty_metrics_violations": len(metric_risks)
             },
             "details": {
-                "action_title_risks": title_risks,
-                "empty_metrics_risks": metric_risks,
                 "me_risks": me_risks,
-                "ce_risks": ce_risks
+                "required_dimension_risks": ce_risks,
+                "action_title_risks": title_risks,
+                "empty_metrics_risks": metric_risks
             }
         }
-        
-        print(json.dumps(report, indent=4, ensure_ascii=False))
-        # V8.5 门控：若缺失维度或标题风险过多，强制熔断
-        if len(ce_risks) > 0 or len(title_risks) > 3 or len(metric_risks) > 5:
+
+        print(json.dumps(report, ensure_ascii=False, indent=2))
+        if status != "Passed":
             sys.exit(1)
-        else:
-            sys.exit(0)
+        sys.exit(0)
+
+
+def main():
+    if len(sys.argv) < 2:
+        print("Usage: python logic_checker.py <file_path> [mode]")
+        sys.exit(1)
+    file_path = sys.argv[1]
+    mode = sys.argv[2] if len(sys.argv) > 2 else "proposal"
+    checker = SolutionLogicChecker(file_path, mode)
+    checker.run_audit()
+
 
 if __name__ == "__main__":
-    if len(sys.argv) < 2:
-        print("Usage: python logic_checker.py <file_path>")
-        sys.exit(1)
-    checker = MECELogicChecker(sys.argv[1])
-    checker.run_audit()
+    main()

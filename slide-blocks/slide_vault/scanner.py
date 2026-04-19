@@ -20,6 +20,7 @@ from pptx.util import Inches
 from pptx.enum.shapes import MSO_SHAPE_TYPE
 
 from .config import get_db_path, get_materials_dir, load_config
+from .commercial import ensure_tag_columns
 from .vector_store import init_vector_db
 from engine.thumbnail_exporter import export_thumbnails
 
@@ -60,6 +61,7 @@ def init_db():
             FOREIGN KEY(slide_id) REFERENCES slides(id)
         )
     """)
+    ensure_tag_columns(conn)
     conn.commit()
     conn.close()
     init_vector_db(get_db_path())

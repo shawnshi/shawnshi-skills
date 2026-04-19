@@ -1,14 +1,14 @@
 ---
 name: academic-paper-writer
-description: "12-agent academic paper writing pipeline. 10 modes (full/plan/outline/revision/revision-coach/abstract/lit-review/format-convert/citation-check/disclosure). 6 paper types, 5 citation formats, bilingual abstracts, LaTeX/DOCX/PDF output. Style Calibration + Writing Quality Check + Anti-Patterns with IRON RULE markers. Triggers: write paper, academic paper, guide my paper, parse reviews, AI disclosure, 寫論文, 學術論文, 引導我寫論文, 審查意見."
+description: "Primary owner for academic paper drafting, outlining, revision, review-response parsing, abstract writing, format conversion, and citation checking. Use when the user is writing or revising a paper artifact. Prefer academic-deep-research for broad research discovery and academic-paper-reader for understanding an existing paper."
 metadata:
   version: "3.0"
   last_updated: "2026-04-09"
   status: active
   related_skills:
-    - deep-research
+    - academic-deep-research
     - academic-paper-reviewer
-    - academic-pipeline
+    - academic-paper-reader
 ---
 
 # Academic Paper — Academic Paper Writing Agent Team
@@ -60,13 +60,13 @@ Activate `plan` mode when the user wants guidance, step-by-step planning, or exp
 
 | Scenario | Use Instead |
 |----------|-------------|
-| Deep research / fact-checking (not paper writing) | `deep-research` |
+| Deep research / fact-checking (not paper writing) | `academic-deep-research` |
 | Reviewing a paper (structured review) | `academic-paper-reviewer` |
-| Full research-to-paper pipeline | `academic-pipeline` |
+| Full research-to-paper pipeline | `academic-deep-research` + `academic-paper-writer` |
 
-### Distinction from `deep-research`
+### Distinction from `academic-deep-research`
 
-| Feature | `academic-paper` | `deep-research` |
+| Feature | `academic-paper` | `academic-deep-research` |
 |---------|-------------------|-----------------|
 | Primary output | Publishable paper draft | Research report |
 | Structure | Journal-ready (IMRaD, etc.) | APA 7.0 report |
@@ -186,9 +186,9 @@ Socratic mode that guides users through paper planning one chapter at a time. Bu
 
 ---
 
-## Handoff Protocol: deep-research -> academic-paper
+## Handoff Protocol: academic-deep-research -> academic-paper
 
-`intake_agent` automatically detects deep-research materials (RQ Brief / Bibliography / Synthesis / INSIGHT Collection) and skips redundant steps. See `deep-research/SKILL.md` Handoff Protocol for the complete handoff material format.
+`intake_agent` automatically detects academic-deep-research materials (RQ Brief / Bibliography / Synthesis / INSIGHT Collection) and skips redundant steps. See `academic-deep-research/SKILL.md` Handoff Protocol for the complete handoff material format.
 
 ---
 
@@ -198,7 +198,7 @@ See `references/failure_paths.md` for details. Quick reference:
 
 | Failure Scenario | Handling Strategy |
 |---------|---------|
-| Insufficient research foundation | Recommend running `deep-research` first |
+| Insufficient research foundation | Recommend running `academic-deep-research` first |
 | Wrong paper structure selected | Return to Phase 2, suggest alternative structure |
 | Word count significantly over/under target | Identify problematic chapters, suggest trimming/expansion |
 | Citation format entirely wrong | Re-run the entire citation phase |
@@ -211,7 +211,7 @@ See `references/failure_paths.md` for details. Quick reference:
 
 ## Full Academic Pipeline
 
-See `academic-pipeline/SKILL.md` for the complete workflow.
+See `academic-deep-research/SKILL.md` for upstream discovery and `academic-paper-writer/SKILL.md` for drafting details.
 
 ---
 
@@ -223,7 +223,7 @@ See `agents/intake_agent.md` for the complete field definitions of the Phase 0 c
 
 ## File Structure
 
-**Agent definitions**: `agents/{agent_name}.md` — one file per agent (12 total, matching Agent Team table above).
+**Agent definitions**: individual files under `agents/` — one file per agent (12 total, matching Agent Team table above).
 
 **References** (19 files in `references/`):
 - Citation: `apa7_extended_guide`, `apa7_chinese_citation_guide`, `citation_format_switcher`
@@ -233,7 +233,7 @@ See `agents/intake_agent.md` for the complete field definitions of the Phase 0 c
 - Process: `failure_paths` (12 scenarios), `mode_selection_guide` (10 modes), `plan_mode_protocol`, `workflow_phase_details`
 - Ethics: `credit_authorship_guide` (CRediT 14 roles), `funding_statement_guide`, `statistical_visualization_standards`
 - Disclosure (v3.2): `disclosure_mode_protocol` (venue-specific AI-usage statement generation), `venue_disclosure_policies` (v1 database: ICLR, NeurIPS, Nature, Science, ACL, EMNLP)
-- Also: `deep-research/references/apa7_style_guide.md` (base reference, extended here)
+- Also: `references/apa7_extended_guide.md` (base APA 7 reference for this skill)
 
 **Templates** (11 files in `templates/`): `imrad`, `literature_review`, `case_study`, `theoretical_paper`, `policy_brief`, `conference_paper`, `latex_article_template.tex`, `bilingual_abstract`, `credit_statement`, `funding_statement`, `revision_tracking` (4 status types).
 
@@ -251,7 +251,7 @@ Explicit prohibitions to prevent common failure modes:
 | 2 | **Em dash abuse** | More than 2 em dashes per page signals AI writing | Use parentheses, commas, or restructure the sentence |
 | 3 | **Throat-clearing openers** | "In this section, we will discuss..." adds no information | Start with the claim or finding directly |
 | 4 | **Uniform paragraph lengths** | Every paragraph is 4-5 sentences = monotonous AI rhythm | Vary paragraph length naturally (2-8 sentences) |
-| 5 | **⚠️ IRON RULE: Fabricated citations** | Inventing plausible-sounding references that don't exist | Every citation must be verified via DOI or WebSearch; see `academic-pipeline/agents/integrity_verification_agent.md` |
+| 5 | **⚠️ IRON RULE: Fabricated citations** | Inventing plausible-sounding references that don't exist | Every citation must be verified via DOI or WebSearch; see `agents/citation_compliance_agent.md` |
 | 6 | **Sycophantic revision** | Accepting all reviewer feedback without critical evaluation | Use REVIEWER_DISAGREE status when reviewer is wrong; justify with evidence |
 | 7 | **Scope creep during revision** | Adding unrequested sections/analyses to "improve" the paper | Revision addresses reviewer concerns only; new content requires explicit user approval |
 | 8 | **Ignoring failure paths** | Continuing despite desk-reject signals or fatal methodology flaws | Check `references/failure_paths.md`; invoke F11 Desk-Reject Recovery when triggered |
@@ -302,7 +302,7 @@ Follows the user's language. Academic terminology is kept in English. Bilingual 
 
 ```
 academic-paper + tw-hei-intelligence  -> Evidence-based HEI paper with real MOE data
-academic-paper + deep-research        -> Deep research phase -> paper writing phase (auto-handoff)
+academic-paper + academic-deep-research -> Deep research phase -> paper writing phase (auto-handoff)
 academic-paper + report-to-website    -> Interactive web version of the paper
 academic-paper + notebooklm-slides-generator -> Presentation slides from paper
 academic-paper + academic-paper-reviewer -> Peer review -> revision loop
@@ -317,7 +317,7 @@ academic-paper + academic-paper-reviewer -> Peer review -> revision loop
 | Skill Version | 3.0 |
 | Last Updated | 2026-04-09 |
 | Maintainer | Cheng-I Wu |
-| Dependent Skills | deep-research v1.0+ (upstream), academic-paper-reviewer v1.0+ (downstream) |
+| Dependent Skills | academic-deep-research v1.0+ (upstream), academic-paper-reader v1.0+ (adjacent) |
 
 ---
 
@@ -332,3 +332,25 @@ academic-paper + academic-paper-reviewer -> Peer review -> revision loop
 ## 历史失效先验 (NLAH Gotchas)
 - `IF [Condition == "System Detected Repeated Failure"] THEN [Inject NLAH Prohibition Rule Here]`
 
+## When to Use
+- 当用户要求写学术论文、做论文计划/提纲、修稿、摘要、文献综述或引用核查时使用。
+- 具体多代理流水线、论文类型和引用格式规则仍以本文件既有协议为准。
+
+## Workflow
+- 遵循本文件已有的写作阶段、模式选择、质量检查和格式转换流程。
+- 不跳过引用校验、审稿意见解析和披露/格式规范要求。
+
+## Resources
+- 使用本技能现有的模板、脚本、参考规范、输出样例和格式说明。
+- 所有论文结构、引用样式和导出约束以目录中的既有资源为准。
+
+## Failure Modes
+- 将本文件中的写作门槛、格式规则和 `NLAH Gotchas` 视为失败模式。
+- 若论文类型、目标期刊或引用格式不明确，必须先界定，不得默认套写。
+
+## Output Contract
+- 最终交付必须符合本文件要求的学术结构、引用完整性和格式约束。
+- 若任务包含 revision 或 citation-check，输出必须显式展示修改点或核查结果。
+
+## Telemetry
+- 按本文件上方定义的 telemetry 规则记录元数据。

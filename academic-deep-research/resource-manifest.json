@@ -1,0 +1,239 @@
+﻿{
+    "schema_version":  1,
+    "skill":  "academic-deep-research",
+    "generated_at":  "2026-04-19T06:26:09",
+    "skill_md":  "SKILL.md",
+    "top_level_files":  [
+                            "SKILL.md"
+                        ],
+    "top_level_directories":  [
+                                  "agents",
+                                  "examples",
+                                  "references",
+                                  "templates"
+                              ],
+    "resource_directories":  [
+                                 {
+                                     "name":  "references",
+                                     "file_count":  20
+                                 },
+                                 {
+                                     "name":  "examples",
+                                     "file_count":  7
+                                 },
+                                 {
+                                     "name":  "agents",
+                                     "file_count":  13
+                                 }
+                             ],
+    "declared_local_dependencies":  [
+                                        {
+                                            "path":  "academic-paper-writer\\references\\writing_quality_check.md",
+                                            "exists":  true,
+                                            "resolved_path":  "C:\\Users\\shich\\.gemini\\skills\\academic-paper-writer\\references\\writing_quality_check.md"
+                                        },
+                                        {
+                                            "path":  "references\\mode_selection_guide.md",
+                                            "exists":  true,
+                                            "resolved_path":  "C:\\Users\\shich\\.gemini\\skills\\academic-deep-research\\references\\mode_selection_guide.md"
+                                        },
+                                        {
+                                            "path":  "references\\socratic_mode_protocol.md",
+                                            "exists":  true,
+                                            "resolved_path":  "C:\\Users\\shich\\.gemini\\skills\\academic-deep-research\\references\\socratic_mode_protocol.md"
+                                        },
+                                        {
+                                            "path":  "references\\systematic_review_protocol.md",
+                                            "exists":  true,
+                                            "resolved_path":  "C:\\Users\\shich\\.gemini\\skills\\academic-deep-research\\references\\systematic_review_protocol.md"
+                                        },
+                                        {
+                                            "path":  "references\\failure_paths.md",
+                                            "exists":  true,
+                                            "resolved_path":  "C:\\Users\\shich\\.gemini\\skills\\academic-deep-research\\references\\failure_paths.md"
+                                        },
+                                        {
+                                            "path":  "references\\literature_monitoring_strategies.md",
+                                            "exists":  true,
+                                            "resolved_path":  "C:\\Users\\shich\\.gemini\\skills\\academic-deep-research\\references\\literature_monitoring_strategies.md"
+                                        },
+                                        {
+                                            "path":  "examples\\handoff_to_paper.md",
+                                            "exists":  true,
+                                            "resolved_path":  "C:\\Users\\shich\\.gemini\\skills\\academic-deep-research\\examples\\handoff_to_paper.md"
+                                        },
+                                        {
+                                            "path":  "academic-paper-writer\\SKILL.md",
+                                            "exists":  true,
+                                            "resolved_path":  "C:\\Users\\shich\\.gemini\\skills\\academic-paper-writer\\SKILL.md"
+                                        },
+                                        {
+                                            "path":  "agents\\research_question_agent.md",
+                                            "exists":  true,
+                                            "resolved_path":  "C:\\Users\\shich\\.gemini\\skills\\academic-deep-research\\agents\\research_question_agent.md"
+                                        },
+                                        {
+                                            "path":  "agents\\research_architect_agent.md",
+                                            "exists":  true,
+                                            "resolved_path":  "C:\\Users\\shich\\.gemini\\skills\\academic-deep-research\\agents\\research_architect_agent.md"
+                                        },
+                                        {
+                                            "path":  "agents\\bibliography_agent.md",
+                                            "exists":  true,
+                                            "resolved_path":  "C:\\Users\\shich\\.gemini\\skills\\academic-deep-research\\agents\\bibliography_agent.md"
+                                        },
+                                        {
+                                            "path":  "agents\\source_verification_agent.md",
+                                            "exists":  true,
+                                            "resolved_path":  "C:\\Users\\shich\\.gemini\\skills\\academic-deep-research\\agents\\source_verification_agent.md"
+                                        },
+                                        {
+                                            "path":  "agents\\synthesis_agent.md",
+                                            "exists":  true,
+                                            "resolved_path":  "C:\\Users\\shich\\.gemini\\skills\\academic-deep-research\\agents\\synthesis_agent.md"
+                                        },
+                                        {
+                                            "path":  "agents\\report_compiler_agent.md",
+                                            "exists":  true,
+                                            "resolved_path":  "C:\\Users\\shich\\.gemini\\skills\\academic-deep-research\\agents\\report_compiler_agent.md"
+                                        },
+                                        {
+                                            "path":  "agents\\editor_in_chief_agent.md",
+                                            "exists":  true,
+                                            "resolved_path":  "C:\\Users\\shich\\.gemini\\skills\\academic-deep-research\\agents\\editor_in_chief_agent.md"
+                                        },
+                                        {
+                                            "path":  "agents\\devils_advocate_agent.md",
+                                            "exists":  true,
+                                            "resolved_path":  "C:\\Users\\shich\\.gemini\\skills\\academic-deep-research\\agents\\devils_advocate_agent.md"
+                                        },
+                                        {
+                                            "path":  "agents\\ethics_review_agent.md",
+                                            "exists":  true,
+                                            "resolved_path":  "C:\\Users\\shich\\.gemini\\skills\\academic-deep-research\\agents\\ethics_review_agent.md"
+                                        },
+                                        {
+                                            "path":  "agents\\socratic_mentor_agent.md",
+                                            "exists":  true,
+                                            "resolved_path":  "C:\\Users\\shich\\.gemini\\skills\\academic-deep-research\\agents\\socratic_mentor_agent.md"
+                                        },
+                                        {
+                                            "path":  "agents\\risk_of_bias_agent.md",
+                                            "exists":  true,
+                                            "resolved_path":  "C:\\Users\\shich\\.gemini\\skills\\academic-deep-research\\agents\\risk_of_bias_agent.md"
+                                        },
+                                        {
+                                            "path":  "agents\\meta_analysis_agent.md",
+                                            "exists":  true,
+                                            "resolved_path":  "C:\\Users\\shich\\.gemini\\skills\\academic-deep-research\\agents\\meta_analysis_agent.md"
+                                        },
+                                        {
+                                            "path":  "agents\\monitoring_agent.md",
+                                            "exists":  true,
+                                            "resolved_path":  "C:\\Users\\shich\\.gemini\\skills\\academic-deep-research\\agents\\monitoring_agent.md"
+                                        },
+                                        {
+                                            "path":  "references\\apa7_style_guide.md",
+                                            "exists":  true,
+                                            "resolved_path":  "C:\\Users\\shich\\.gemini\\skills\\academic-deep-research\\references\\apa7_style_guide.md"
+                                        },
+                                        {
+                                            "path":  "references\\source_quality_hierarchy.md",
+                                            "exists":  true,
+                                            "resolved_path":  "C:\\Users\\shich\\.gemini\\skills\\academic-deep-research\\references\\source_quality_hierarchy.md"
+                                        },
+                                        {
+                                            "path":  "references\\methodology_patterns.md",
+                                            "exists":  true,
+                                            "resolved_path":  "C:\\Users\\shich\\.gemini\\skills\\academic-deep-research\\references\\methodology_patterns.md"
+                                        },
+                                        {
+                                            "path":  "references\\logical_fallacies.md",
+                                            "exists":  true,
+                                            "resolved_path":  "C:\\Users\\shich\\.gemini\\skills\\academic-deep-research\\references\\logical_fallacies.md"
+                                        },
+                                        {
+                                            "path":  "references\\ethics_checklist.md",
+                                            "exists":  true,
+                                            "resolved_path":  "C:\\Users\\shich\\.gemini\\skills\\academic-deep-research\\references\\ethics_checklist.md"
+                                        },
+                                        {
+                                            "path":  "references\\interdisciplinary_bridges.md",
+                                            "exists":  true,
+                                            "resolved_path":  "C:\\Users\\shich\\.gemini\\skills\\academic-deep-research\\references\\interdisciplinary_bridges.md"
+                                        },
+                                        {
+                                            "path":  "references\\socratic_questioning_framework.md",
+                                            "exists":  true,
+                                            "resolved_path":  "C:\\Users\\shich\\.gemini\\skills\\academic-deep-research\\references\\socratic_questioning_framework.md"
+                                        },
+                                        {
+                                            "path":  "references\\irb_decision_tree.md",
+                                            "exists":  true,
+                                            "resolved_path":  "C:\\Users\\shich\\.gemini\\skills\\academic-deep-research\\references\\irb_decision_tree.md"
+                                        },
+                                        {
+                                            "path":  "references\\equator_reporting_guidelines.md",
+                                            "exists":  true,
+                                            "resolved_path":  "C:\\Users\\shich\\.gemini\\skills\\academic-deep-research\\references\\equator_reporting_guidelines.md"
+                                        },
+                                        {
+                                            "path":  "references\\preregistration_guide.md",
+                                            "exists":  true,
+                                            "resolved_path":  "C:\\Users\\shich\\.gemini\\skills\\academic-deep-research\\references\\preregistration_guide.md"
+                                        },
+                                        {
+                                            "path":  "references\\systematic_review_toolkit.md",
+                                            "exists":  true,
+                                            "resolved_path":  "C:\\Users\\shich\\.gemini\\skills\\academic-deep-research\\references\\systematic_review_toolkit.md"
+                                        },
+                                        {
+                                            "path":  "references\\argumentation_reasoning_framework.md",
+                                            "exists":  true,
+                                            "resolved_path":  "C:\\Users\\shich\\.gemini\\skills\\academic-deep-research\\references\\argumentation_reasoning_framework.md"
+                                        },
+                                        {
+                                            "path":  "references\\cross_agent_quality_definitions.md",
+                                            "exists":  true,
+                                            "resolved_path":  "C:\\Users\\shich\\.gemini\\skills\\academic-deep-research\\references\\cross_agent_quality_definitions.md"
+                                        },
+                                        {
+                                            "path":  "references\\changelog.md",
+                                            "exists":  true,
+                                            "resolved_path":  "C:\\Users\\shich\\.gemini\\skills\\academic-deep-research\\references\\changelog.md"
+                                        },
+                                        {
+                                            "path":  "examples\\exploratory_research.md",
+                                            "exists":  true,
+                                            "resolved_path":  "C:\\Users\\shich\\.gemini\\skills\\academic-deep-research\\examples\\exploratory_research.md"
+                                        },
+                                        {
+                                            "path":  "examples\\systematic_review.md",
+                                            "exists":  true,
+                                            "resolved_path":  "C:\\Users\\shich\\.gemini\\skills\\academic-deep-research\\examples\\systematic_review.md"
+                                        },
+                                        {
+                                            "path":  "examples\\policy_analysis.md",
+                                            "exists":  true,
+                                            "resolved_path":  "C:\\Users\\shich\\.gemini\\skills\\academic-deep-research\\examples\\policy_analysis.md"
+                                        },
+                                        {
+                                            "path":  "examples\\socratic_guided_research.md",
+                                            "exists":  true,
+                                            "resolved_path":  "C:\\Users\\shich\\.gemini\\skills\\academic-deep-research\\examples\\socratic_guided_research.md"
+                                        },
+                                        {
+                                            "path":  "examples\\review_mode.md",
+                                            "exists":  true,
+                                            "resolved_path":  "C:\\Users\\shich\\.gemini\\skills\\academic-deep-research\\examples\\review_mode.md"
+                                        },
+                                        {
+                                            "path":  "examples\\fact_check_mode.md",
+                                            "exists":  true,
+                                            "resolved_path":  "C:\\Users\\shich\\.gemini\\skills\\academic-deep-research\\examples\\fact_check_mode.md"
+                                        }
+                                    ],
+    "missing_declared_dependencies":  [
+
+                                      ]
+}

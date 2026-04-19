@@ -1,114 +1,138 @@
-"""
-<!-- Standard Header -->
-@Input: outline.md (Narrative Blueprint)
-@Output: deck.pptx
-@Phase: Phase 4 - Narrative Rendering & Assembly
-@Maintenance Protocol: Refactor plan V9.0 - Narrative Engine.
-"""
 import os
 import re
 import sys
+import json
 import argparse
-from pptx import Presentation
-from layout_engine import LayoutEngine
+import subprocess
 
-def parse_narrative_blueprint(content):
-    # 1. Extract Style Instructions
-    style_match = re.search(r'<STYLE_INSTRUCTIONS>([\s\S]*?)</STYLE_INSTRUCTIONS>', content)
-    style_info = style_match.group(1).strip() if style_match else ""
+VERSION = "11.0"
 
-    # 2. Extract Slides
-    slides_data = []
-    slides_raw = re.split(r'Page \d+:', content)
-    if slides_raw and not slides_raw[0].strip():
-        slides_raw = slides_raw[1:]
-        
-    for slide_raw in slides_raw:
-        data = {}
-        # Narrative extraction
-        goal = re.search(r'// NARRATIVE GOAL\s*(.*?)\n', slide_raw)
-        headline = re.search(r'Headline:\s*(.*?)\n', slide_raw)
-        sub_headline = re.search(r'Sub-headline:\s*(.*?)\n', slide_raw)
-        body = re.search(r'Body/Data:([\s\S]*?)// VISUAL', slide_raw)
-        visual = re.search(r'// VISUAL\s*(.*?)\n', slide_raw)
-        layout = re.search(r'// LAYOUT\s*(.*?)\n', slide_raw)
-        script = re.search(r'// Script:([\s\S]*?)$', slide_raw)
-        
-        # Mapping to LayoutEngine compatible dictionary
-        data['kicker'] = headline.group(1).strip() if headline else "Untitled Slide"
-        data['lead_in'] = sub_headline.group(1).strip() if sub_headline else ""
-        data['body'] = body.group(1).strip() if body else ""
-        data['narrative_goal'] = goal.group(1).strip() if goal else ""
-        data['visual_desc'] = visual.group(1).strip() if visual else ""
-        data['layout_desc'] = layout.group(1).strip() if layout else ""
-        data['script'] = script.group(1).strip() if script else ""
-        
-        # Add a placeholder for evidence/trust to keep LayoutEngine compatible
-        data['evidence'] = ""
-        data['trust_anchor'] = ""
-        
-        if data:
-            slides_data.append(data)
-            
-    return style_info, slides_data
+
+def run_validator(outline_file):
+    script_dir = os.path.dirname(os.path.abspath(__file__))
+    validator_path = os.path.join(script_dir, "validator.py")
+    result = subprocess.run([sys.executable, validator_path, outline_file], capture_output=True, text=True)
+    return result
+
+
+def parse_style_block(content):
+    match = re.search(r"<STYLE_INSTRUCTIONS>([\s\S]*?)</STYLE_INSTRUCTIONS>", content)
+    raw = match.group(1).strip() if match else ""
+    sections = {
+        "raw": raw,
+        "design_aesthetic": "",
+        "background": "",
+        "typography": "",
+        "color_palette": "",
+        "visual_elements": "",
+        "density_guidelines": "",
+        "style_rules": "",
+    }
+    if not raw:
+        return sections
+
+    markers = [
+        ("Design Aesthetic:", "design_aesthetic"),
+        ("Background:", "background"),
+        ("Typography:", "typography"),
+        ("Color Palette:", "color_palette"),
+        ("Visual Elements:", "visual_elements"),
+        ("Density Guidelines:", "density_guidelines"),
+        ("Style Rules:", "style_rules"),
+    ]
+
+    for index, (marker, key) in enumerate(markers):
+        start = raw.find(marker)
+        if start == -1:
+            continue
+        start += len(marker)
+        end = len(raw)
+        for next_marker, _ in markers[index + 1:]:
+            candidate = raw.find(next_marker, start)
+            if candidate != -1:
+                end = candidate
+                break
+        sections[key] = raw[start:end].strip()
+    return sections
+
+
+def parse_slides(content):
+    slides = []
+    pattern = re.compile(r"Page\s+(\d+):\s*(.*?)\n([\s\S]*?)(?=\n---\s*(?:\n|$)|\Z)")
+    for match in pattern.finditer(content):
+        page_no = int(match.group(1))
+        title = match.group(2).strip()
+        body = match.group(3).strip()
+
+        def extract(pattern_text):
+            found = re.search(pattern_text, body)
+            return found.group(1).strip() if found else ""
+
+        body_data = extract(r"Body/Data:\s*([\s\S]*?)Trust_Anchor:")
+        script = extract(r"// Script:\s*([\s\S]*)$")
+        slide_type = extract(r"Type:\s*(Cover|Content|Closing)")
+
+        slides.append({
+            "page": page_no,
+            "title": title,
+            "type": slide_type,
+            "narrative_goal": extract(r"// NARRATIVE GOAL\s*([\s\S]*?)// KEY CONTENT"),
+            "headline": extract(r"Headline:\s*(.*)"),
+            "sub_headline": extract(r"Sub-headline:\s*(.*)"),
+            "body_data": body_data,
+            "trust_anchor": extract(r"Trust_Anchor:\s*(.*)"),
+            "visual": extract(r"// VISUAL\s*([\s\S]*?)// LAYOUT"),
+            "layout": extract(r"// LAYOUT\s*([\s\S]*?)// Script:"),
+            "script": script,
+        })
+    return slides
+
+
+def parse_header(content):
+    header = {}
+    for key in ["Topic", "Audience", "Objective", "Language", "Style", "Slide Count", "Generated"]:
+        match = re.search(rf"\*\*{re.escape(key)}\*\*:\s*(.*)", content)
+        header[key.lower().replace(" ", "_")] = match.group(1).strip() if match else ""
+    return header
+
 
 def main():
-    parser = argparse.ArgumentParser(description="Mentat Narrative PPT Forger")
+    parser = argparse.ArgumentParser(description=f"Presentation blueprint packager V{VERSION}")
     parser.add_argument("dir", help="Directory containing outline.md")
-    parser.add_argument("--output", "-o", help="Output filename")
+    parser.add_argument("--output", "-o", default="blueprint_bundle.json", help="Output JSON filename")
     args = parser.parse_args()
-    
+
     deck_dir = args.dir
     outline_file = os.path.join(deck_dir, "outline.md")
-    
-    # 1. Narrative Logic Audit
-    SCRIPT_DIR = os.path.dirname(os.path.abspath(__file__))
-    validator_path = os.path.join(SCRIPT_DIR, "validator.py")
-    
-    print(f"--- Step 1: Mentat Narrative Audit ---")
-    import subprocess
-    audit_cmd = [sys.executable, validator_path, outline_file]
-    result = subprocess.run(audit_cmd, capture_output=True, text=True)
-    
+    if not os.path.exists(outline_file):
+        print("❌ ABORTING: outline.md not found.")
+        sys.exit(1)
+
+    print("--- Step 1: Blueprint Audit ---")
+    result = run_validator(outline_file)
     if result.returncode != 0:
         print(result.stdout)
-        print("\n❌ ABORTING: Narrative audit failed.")
+        print("\n❌ ABORTING: Blueprint audit failed.")
         sys.exit(1)
-    print("✅ Narrative Audit Passed.")
+    print("[OK] Blueprint Audit Passed.")
 
-    # 2. Parse Narrative Blueprint
-    with open(outline_file, 'r', encoding='utf-8') as f:
-        content = f.read()
-    style_info, slides_data = parse_narrative_blueprint(content)
-    
-    # 3. Native Rendering
-    total = len(slides_data)
-    print(f"\n--- Step 2: Native Object Rendering ({total} slides) ---")
-    prs = Presentation()
-    
-    # Set 16:9 ratio (Widescreen)
-    from pptx.util import Inches
-    prs.slide_width = Inches(13.333)
-    prs.slide_height = Inches(7.5)
-    
-    engine = LayoutEngine(prs)
-    
-    for i, slide_data in enumerate(slides_data, 1):
-        # Render and add notes (Narrative Goal + Script)
-        engine.render_slide(slide_data, slide_index=i, total_slides=total)
-        current_slide = prs.slides[-1]
-        notes_slide = current_slide.notes_slide
-        notes_text_frame = notes_slide.notes_text_frame
-        
-        full_notes = f"GOAL: {slide_data['narrative_goal']}\n\nVISUAL: {slide_data['visual_desc']}\n\nLAYOUT: {slide_data['layout_desc']}\n\nSCRIPT:\n{slide_data['script']}"
-        notes_text_frame.text = full_notes
-        
-    # 4. Save
-    output_name = args.output if args.output else f"{os.path.basename(deck_dir)}.pptx"
-    output_path = os.path.join(deck_dir, output_name)
-    prs.save(output_path)
-    
-    print(f"\n✅ NARRATIVE FORGING COMPLETE: {output_path}")
+    with open(outline_file, "r", encoding="utf-8") as handle:
+        content = handle.read()
+
+    bundle = {
+        "version": VERSION,
+        "header": parse_header(content),
+        "style": parse_style_block(content),
+        "slides": parse_slides(content),
+    }
+
+    output_path = os.path.join(deck_dir, args.output)
+    with open(output_path, "w", encoding="utf-8") as handle:
+        json.dump(bundle, handle, ensure_ascii=False, indent=2)
+
+    print(f"\n[OK] BLUEPRINT PACKAGE READY: {output_path}")
+
 
 if __name__ == "__main__":
     main()
+

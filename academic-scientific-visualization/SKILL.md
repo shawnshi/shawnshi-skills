@@ -640,10 +640,8 @@ sns.set_context('paper', font_scale=1.2)  # Increase if needed
 #### Additional Resources
 
 For more detailed seaborn information, see:
-- `scientific-packages/seaborn/SKILL.md` - Comprehensive seaborn documentation
-- `scientific-packages/seaborn/references/examples.md` - Practical use cases
-- `scientific-packages/seaborn/references/function_reference.md` - Complete API reference
-- `scientific-packages/seaborn/references/objects_interface.md` - Modern declarative API
+- seaborn official documentation - Comprehensive seaborn documentation
+- Official seaborn examples and API docs - Practical use cases and modern declarative API guidance
 
 ### Plotly
 - Interactive figures for exploration
@@ -657,6 +655,10 @@ fig.update_layout(
 )
 fig.write_image('figure.png', scale=3)  # scale=3 gives ~300 DPI
 ```
+
+## Workflow
+- Follow the staged guidance above for library selection, figure design, statistical annotation, and publication polish.
+- Treat the preceding quick-start, common-task, and best-practice sections as the authoritative execution flow for this skill.
 
 ## Resources
 
@@ -781,3 +783,14 @@ Use this skill to ensure scientific figures meet the highest publication standar
 
 ## 历史失效先验 (NLAH Gotchas)
 - `IF [Condition == "System Detected Repeated Failure"] THEN [Inject NLAH Prohibition Rule Here]`
+
+## Failure Modes
+- 将本文件中的统计严谨性、图形规范、库选择原则和 `NLAH Gotchas` 视为失败模式。
+- 若显著性标注、误差线、配色安全性或期刊规范无法满足，必须显式阻断并说明原因。
+
+## Output Contract
+- 最终交付必须满足本文件要求的出版级图形标准、可读性和期刊约束。
+- 若任务涉及多面板、统计标注或不同绘图库切换，输出必须保留这些关键结构与说明。
+
+## Telemetry
+- 按本文件上方定义的 telemetry 路径和 JSON 结构记录元数据。

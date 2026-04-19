@@ -1,0 +1,68 @@
+﻿{
+    "schema_version":  1,
+    "skill":  "personal-health-analysis",
+    "generated_at":  "2026-04-19T06:26:09",
+    "skill_md":  "SKILL.md",
+    "top_level_files":  [
+                            "garmindb.log",
+                            "install.ps1",
+                            "install.sh",
+                            "README.md",
+                            "SKILL.md",
+                            "_DIR_META.md"
+                        ],
+    "top_level_directories":  [
+                                  "agents",
+                                  "assets",
+                                  "references",
+                                  "scripts"
+                              ],
+    "resource_directories":  [
+                                 {
+                                     "name":  "scripts",
+                                     "file_count":  10
+                                 },
+                                 {
+                                     "name":  "references",
+                                     "file_count":  6
+                                 },
+                                 {
+                                     "name":  "assets",
+                                     "file_count":  1
+                                 },
+                                 {
+                                     "name":  "agents",
+                                     "file_count":  1
+                                 }
+                             ],
+    "declared_local_dependencies":  [
+                                        {
+                                            "path":  "personal-health-analysis\\scripts\\garmin_data.py",
+                                            "exists":  true,
+                                            "resolved_path":  "C:\\Users\\shich\\.gemini\\skills\\personal-health-analysis\\scripts\\garmin_data.py"
+                                        },
+                                        {
+                                            "path":  "scripts\\garmin_data.py",
+                                            "exists":  true,
+                                            "resolved_path":  "C:\\Users\\shich\\.gemini\\skills\\personal-health-analysis\\scripts\\garmin_data.py"
+                                        },
+                                        {
+                                            "path":  "scripts\\garmin_intelligence.py",
+                                            "exists":  true,
+                                            "resolved_path":  "C:\\Users\\shich\\.gemini\\skills\\personal-health-analysis\\scripts\\garmin_intelligence.py"
+                                        },
+                                        {
+                                            "path":  "scripts\\garmin_chart.py",
+                                            "exists":  true,
+                                            "resolved_path":  "C:\\Users\\shich\\.gemini\\skills\\personal-health-analysis\\scripts\\garmin_chart.py"
+                                        },
+                                        {
+                                            "path":  "references\\advanced_tools.md",
+                                            "exists":  true,
+                                            "resolved_path":  "C:\\Users\\shich\\.gemini\\skills\\personal-health-analysis\\references\\advanced_tools.md"
+                                        }
+                                    ],
+    "missing_declared_dependencies":  [
+
+                                      ]
+}

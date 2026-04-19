@@ -1,4 +1,4 @@
-# Yahoo Finance Skill Examples
+# Personal Investment Advisor Examples (V4.0)
 
 这里汇总了 `yahoo-finance` 技能的常用查询命令与 Agent 唤醒指令，帮助您快速上手各种复杂的场景。
 
@@ -69,4 +69,33 @@ uv run {SKILL_DIR}/scripts/yf.py AAPL --json --info-only --full-info
 > "@yahoo-finance 切换到 stock analyzer，请深度分析腾讯 (0700.HK) 的投资价值"
 
 ### 完整落盘流程
-stock_analyzer 分析完成后会自动调用 `save_dashboard.py` 将研报以 `{股票名}_{YYYYMMDD_HHMM}.md` 格式存入 `~/.gemini/MEMORY/stocks/`。
+1. `stock_analyzer` 必须先生成符合 `dashboard_schema.json` 的纯 JSON。
+2. JSON 必须先通过 `scripts/dashboard_gate.py`。
+3. 通过后再由 `save_dashboard.py` 落盘到 `~/.gemini/MEMORY/raw/stocks/`，也可通过环境变量 `PIA_DASHBOARD_DIR` 覆盖路径。
+
+### 持仓感知分析
+1. 在 `~/.gemini/MEMORY/raw/stocks/portfolio_positions.json` 维护持仓，格式可参考 `resources/portfolio_positions.example.json`。
+2. 取数时追加：
+   `uv run scripts/yf.py 300308.SZ --json --lean --with-portfolio`
+3. 若需要覆盖默认持仓文件路径：
+   `uv run scripts/yf.py 300308.SZ --json --lean --with-portfolio --positions-file D:\\Data\\portfolio_positions.json`
+4. 当 `portfolio_context.has_position=true` 时，`stock_analyzer` 必须额外输出持仓者动作建议和触发条件。
+
+### Thesis Mode
+```bash
+uv run {SKILL_DIR}/scripts/yf.py NVDA --json --lean --with-portfolio
+```
+然后要求 `stock_analyzer` 以 `thesis_mode` 输出，并补齐 `earnings_snapshot`、`catalyst_map`、`evidence_items`。
+
+### 建议日志回写
+归档后，`save_dashboard.py` 会自动把建议写入 `advice_journal.jsonl`。
+
+### 回放与校准
+```bash
+python {SKILL_DIR}/scripts/decision_outcome_report.py
+```
+
+### Watchlist 监控
+```bash
+python {SKILL_DIR}/scripts/watchlist_gate.py path\\to\\dashboard.json
+```

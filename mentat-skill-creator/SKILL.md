@@ -130,7 +130,7 @@ Go beyond the L2 surface-level "what don't you want" by probing the *texture* of
 #### 3c. Behavioral Mining (行为提取)
 The user's past behavior encodes preferences they may never have consciously articulated:
 - **Workspace Archaeology**: Scan the user's existing skills directory (`glob` for `SKILL.md` files) for structural patterns — naming conventions, preferred section ordering, use of emoji, tone of voice, whether they use Gotchas, how they structure Contracts.
-- **Memory Search**: If `vector-lake` is available, run `python C:\Users\shich\.gemini\extensions\vector-lake\cli.py query "<skill topic keywords>" --interleave` to check for related past designs, failed attempts, or established conventions.
+- **Memory Search**: If `vector-lake` is available, run its local `query "<skill topic keywords>" --interleave` flow to check for related past designs, failed attempts, or established conventions.
 - **Habit Surfacing**: Report discovered patterns to the user: *"I notice you consistently [X] in your existing skills. Should this new one follow the same pattern, or deliberately break from it?"*
 - Map each discovered pattern to an explicit constraint in the new skill. What the user does consistently without thinking is often more important than what they say.
 
@@ -508,3 +508,26 @@ Good luck!
 
 ## 历史失效先验 (Gotchas)
 - [此处预留用于记录重复性失败的禁令，实现系统的对抗性进化]
+
+## When to Use
+- 当用户要求创建新技能、优化已有技能、做技能评测或修复技能重复性失败时使用。
+- 技能工厂、自愈闭环和四层壳模型仍以本文件既有协议为准。
+
+## Workflow
+- 遵循本文件已有的技能分析、设计、生成、验证和自愈流程。
+- 不跳过触发词设计、资源边界、评测和失败回写要求。
+
+## Resources
+- 使用本技能正文和目录中现有的脚本、模板、参考规则和评测资产。
+- 所有技能元数据、结构模板和修复流程以本技能既有资源为准。
+
+## Failure Modes
+- 将本文件中的生成约束、自愈要求和 `Gotchas` 视为失败模式。
+- 若技能边界、触发条件或资源依赖不清晰，必须先厘清再生成或重构。
+
+## Output Contract
+- 最终交付必须形成符合本文件规范的技能资产，并保留必要的评测或修复结论。
+- 若任务是修技能，输出必须清楚说明修了什么以及如何降低重复性失败。
+
+## Telemetry
+- 按本文件上方定义的 telemetry 路径和 JSON 结构记录元数据。

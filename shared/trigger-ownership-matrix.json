@@ -1,0 +1,120 @@
+{
+  "domains": [
+    {
+      "domain": "research",
+      "classes": [
+        {
+          "id": "broad_academic_research",
+          "primary_skill": "academic-deep-research",
+          "secondary_skills": ["academic-paper-reader", "academic-paper-writer", "academic-scientific-visualization"],
+          "request_signals": ["deep research topic", "literature review", "systematic review", "meta-analysis", "evidence synthesis", "research question formulation"]
+        },
+        {
+          "id": "single_paper_reading",
+          "primary_skill": "academic-paper-reader",
+          "secondary_skills": ["academic-deep-research"],
+          "request_signals": ["read one paper", "paper dissection", "paper lineage tracing", "feynman paper explanation"]
+        },
+        {
+          "id": "academic_paper_writing",
+          "primary_skill": "academic-paper-writer",
+          "secondary_skills": ["academic-deep-research", "academic-paper-reader"],
+          "request_signals": ["write paper draft", "paper revision", "citation check", "review response", "format convert paper"]
+        },
+        {
+          "id": "longitudinal_entity_study",
+          "primary_skill": "hv-analysis",
+          "secondary_skills": ["academic-deep-research"],
+          "request_signals": ["horizontal vertical analysis", "company life trajectory", "product deep dive with competitors", "concept longitudinal comparison"]
+        }
+      ]
+    },
+    {
+      "domain": "writing",
+      "classes": [
+        {
+          "id": "original_longform_writing",
+          "primary_skill": "personal-writing-assistant",
+          "secondary_skills": ["personal-write-humanizer"],
+          "request_signals": ["write original longform article", "thought leadership essay", "column draft from scratch", "opinion article generation"]
+        },
+        {
+          "id": "humanize_existing_draft",
+          "primary_skill": "personal-write-humanizer",
+          "secondary_skills": ["personal-writing-assistant"],
+          "request_signals": ["humanize chinese draft", "remove ai tone", "rewrite translationese", "say it like a human"]
+        },
+        {
+          "id": "strategy_deck_architecture",
+          "primary_skill": "presentation-architect",
+          "secondary_skills": ["slide-blocks"],
+          "request_signals": ["new strategy deck narrative", "executive ppt architecture", "cto deck storyline", "decision deck from scratch"]
+        },
+        {
+          "id": "slide_asset_assembly",
+          "primary_skill": "slide-blocks",
+          "secondary_skills": ["presentation-architect"],
+          "request_signals": ["assemble from slide library", "reuse historical slides", "find ppt pages", "template swap existing deck"]
+        }
+      ]
+    },
+    {
+      "domain": "healthcare_strategy",
+      "classes": [
+        {
+          "id": "healthcare_strategy_reasoning",
+          "primary_skill": "hit-digital-strategy-partner",
+          "secondary_skills": ["hit-solution-architect"],
+          "request_signals": ["healthcare roi strategy", "mbb style healthcare analysis", "medical business model redesign", "high stakes digital health strategy"]
+        },
+        {
+          "id": "weekly_thinktank_brief",
+          "primary_skill": "hit-weekly-brief",
+          "secondary_skills": ["hit-digital-strategy-partner"],
+          "request_signals": ["weekly consulting brief", "digital health whitepaper brief", "mckinsey healthcare report digest", "weekly strategy brief"]
+        },
+        {
+          "id": "weekly_market_radar",
+          "primary_skill": "hit-industry-radar",
+          "secondary_skills": ["hit-weekly-brief"],
+          "request_signals": ["weekly healthcare it news radar", "competitor bid watch", "vendor move scan", "market event battle report"]
+        },
+        {
+          "id": "academic_medical_ai_scout",
+          "primary_skill": "hit-lectures-scout",
+          "secondary_skills": ["hit-weekly-brief"],
+          "request_signals": ["medical ai paper scout", "clinical ai literature scan", "nature jama frontier watch", "rwe paper filtering"]
+        }
+      ]
+    },
+    {
+      "domain": "personal_analysis",
+      "classes": [
+        {
+          "id": "periodic_self_review",
+          "primary_skill": "personal-cognitive-auditor",
+          "secondary_skills": ["personal-diary-writer", "mentat-insight-diary", "personal-health-analysis"],
+          "request_signals": ["daily weekly monthly annual review", "cognitive accountability audit", "multi source personal review", "tactical review report"]
+        },
+        {
+          "id": "interaction_meta_analysis",
+          "primary_skill": "personal-monthly-insights",
+          "secondary_skills": ["personal-cognitive-auditor"],
+          "request_signals": ["human agent interaction report", "collaboration friction analysis", "workflow anti pattern review", "conversation meta analysis"]
+        },
+        {
+          "id": "system_first_person_diary",
+          "primary_skill": "mentat-insight-diary",
+          "secondary_skills": ["personal-diary-writer"],
+          "request_signals": ["mentat introspection diary", "system ooda log", "mentat audit diary", "first person system reflection"]
+        },
+        {
+          "id": "atomic_diary_writeback",
+          "primary_skill": "personal-diary-writer",
+          "secondary_skills": ["personal-cognitive-auditor", "mentat-insight-diary"],
+          "request_signals": ["atomic diary writeback", "log persistence only", "prepend diary entry", "safe diary file write"]
+        }
+      ]
+    }
+  ]
+}

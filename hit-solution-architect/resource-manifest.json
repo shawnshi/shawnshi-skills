@@ -1,0 +1,51 @@
+﻿{
+    "schema_version":  1,
+    "skill":  "hit-solution-architect",
+    "generated_at":  "2026-04-19T06:26:09",
+    "skill_md":  "SKILL.md",
+    "top_level_files":  [
+                            "README.md",
+                            "SKILL.md",
+                            "_DIR_META.md"
+                        ],
+    "top_level_directories":  [
+                                  "references",
+                                  "scripts",
+                                  "templates"
+                              ],
+    "resource_directories":  [
+                                 {
+                                     "name":  "scripts",
+                                     "file_count":  3
+                                 },
+                                 {
+                                     "name":  "references",
+                                     "file_count":  9
+                                 }
+                             ],
+    "declared_local_dependencies":  [
+                                        {
+                                            "path":  "references\\winning-health-case-studies.md",
+                                            "exists":  true,
+                                            "resolved_path":  "C:\\Users\\shich\\.gemini\\skills\\hit-solution-architect\\references\\winning-health-case-studies.md"
+                                        },
+                                        {
+                                            "path":  "references\\winning-health-core-products.md",
+                                            "exists":  true,
+                                            "resolved_path":  "C:\\Users\\shich\\.gemini\\skills\\hit-solution-architect\\references\\winning-health-core-products.md"
+                                        },
+                                        {
+                                            "path":  "hit-solution-architect\\scripts\\logic_checker.py",
+                                            "exists":  true,
+                                            "resolved_path":  "C:\\Users\\shich\\.gemini\\skills\\hit-solution-architect\\scripts\\logic_checker.py"
+                                        },
+                                        {
+                                            "path":  "hit-solution-architect\\scripts\\manifest_manager.py",
+                                            "exists":  true,
+                                            "resolved_path":  "C:\\Users\\shich\\.gemini\\skills\\hit-solution-architect\\scripts\\manifest_manager.py"
+                                        }
+                                    ],
+    "missing_declared_dependencies":  [
+
+                                      ]
+}

@@ -12,6 +12,10 @@ description: >-
 
 Generate production-quality SVG technical diagrams exported as PNG via `rsvg-convert`.
 
+## When to Use
+- 当用户要求画技术图、流程图、架构图、时序图、数据流图或将系统描述可视化时使用。
+- 具体 SVG 生成、脚本调用和版式规则仍以本文件既有说明为准。
+
 ## Install Source
 
 Install this skill from GitHub:
@@ -84,11 +88,11 @@ python3 ./scripts/generate-from-template.py architecture ./output/arch.svg '{"ti
 
 ## Workflow (Always Follow This Order)
 
-1. **Entity Sniffing & RAG (MANDATORY)**: Extract core entities/systems from the user's prompt. Call the local Vector-Lake via CLI (`python C:\Users\shich\.gemini\extensions\vector-lake\cli.py search "<entity>" --top_k 3`) to retrieve private architecture knowledge, terminologies, and linked nodes. Inject these insights into your diagram planning. Do NOT rely solely on generic LLM knowledge if local context is available.
+1. **Entity Sniffing & RAG (MANDATORY)**: Extract core entities/systems from the user's prompt. If a local Vector-Lake CLI is available, query it to retrieve private architecture knowledge, terminologies, and linked nodes before diagram planning. Do NOT rely solely on generic LLM knowledge if local context is available.
 2. **Classify** the diagram type (see Diagram Types below)
 3. **Extract structure** — identify layers, nodes, edges, flows, and semantic groups from user description + **Vector-Lake retrieved context**
 4. **Plan layout** — apply the layout rules for the diagram type
-5. **Load style reference** — always load `references/style-1-flat-icon.md` unless user specifies another; load the matching `references/style-N.md` for exact color tokens and SVG patterns
+5. **Load style reference** — always load `references/style-1-flat-icon.md` unless user specifies another; if a different style is chosen, load the matching concrete style file from `references/style-2-dark-terminal.md` through `references/style-7-openai.md` for exact color tokens and SVG patterns
 6. **Map nodes to shapes** — use Shape Vocabulary below
 7. **Check icon needs** — load `references/icons.md` for known products
 8. **Write SVG** with adaptive strategy (see SVG Generation Strategy below)
@@ -416,7 +420,7 @@ rsvg-convert file.svg -o /tmp/test.png 2>&1 && echo "✓ Valid" && rm /tmp/test.
 | 6 | **Claude Official** | Warm cream `#f8f6f3` | Anthropic-style diagrams |
 | 7 | **OpenAI Official** | Pure white `#ffffff` | OpenAI-style diagrams |
 
-Load `references/style-N.md` for exact color tokens and SVG patterns.
+Load the concrete chosen style file from `references/style-1-flat-icon.md` through `references/style-7-openai.md` for exact color tokens and SVG patterns.
 
 ## Style Selection
 
@@ -440,3 +444,18 @@ JSON 结构：`{"skill_name": "drawio", "status": "success", "duration_sec": 0, 
 "output_tokens": 0}`
 
 ##  历史失效先验 (NLAH Gotchas)
+
+## Resources
+- 使用本文件已经列出的 `scripts/`、模板 SVG、样例输出和校验脚本。
+- 具体命令入口、图类型和样式约束以上方既有章节为准。
+
+## Failure Modes
+- 将本文件中的布局规则、SVG 技术规则、校验顺序和 `NLAH Gotchas` 视为失败模式。
+- 若 SVG 校验失败、模板缺失或导出链路异常，必须显式报错并阻断输出。
+
+## Output Contract
+- 最终交付必须是可验证的 SVG，并在需要时导出为 PNG。
+- 图形结构、箭头语义、文本布局和样式选择必须符合本文件既有规则。
+
+## Telemetry
+- 按本文件上方定义的 telemetry 路径和 JSON 结构记录元数据。

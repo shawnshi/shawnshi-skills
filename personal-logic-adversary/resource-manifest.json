@@ -1,0 +1,46 @@
+﻿{
+    "schema_version":  1,
+    "skill":  "personal-logic-adversary",
+    "generated_at":  "2026-04-19T06:26:09",
+    "skill_md":  "SKILL.md",
+    "top_level_files":  [
+                            "README.md",
+                            "SKILL.md",
+                            "_DIR_META.md"
+                        ],
+    "top_level_directories":  [
+                                  "references",
+                                  "scripts",
+                                  "Workflows"
+                              ],
+    "resource_directories":  [
+                                 {
+                                     "name":  "scripts",
+                                     "file_count":  2
+                                 },
+                                 {
+                                     "name":  "references",
+                                     "file_count":  4
+                                 }
+                             ],
+    "declared_local_dependencies":  [
+                                        {
+                                            "path":  "references\\philosophy.md",
+                                            "exists":  true,
+                                            "resolved_path":  "C:\\Users\\shich\\.gemini\\skills\\personal-logic-adversary\\references\\philosophy.md"
+                                        },
+                                        {
+                                            "path":  "personal-logic-adversary\\scripts\\session_merger.py",
+                                            "exists":  true,
+                                            "resolved_path":  "C:\\Users\\shich\\.gemini\\skills\\personal-logic-adversary\\scripts\\session_merger.py"
+                                        },
+                                        {
+                                            "path":  "scripts\\session_merger.py",
+                                            "exists":  true,
+                                            "resolved_path":  "C:\\Users\\shich\\.gemini\\skills\\personal-logic-adversary\\scripts\\session_merger.py"
+                                        }
+                                    ],
+    "missing_declared_dependencies":  [
+
+                                      ]
+}

@@ -163,6 +163,7 @@ class StandaloneDataFetcher:
         Expects symbol in 6-digit format (e.g. '600519').
         """
         metrics = {
+            "enhancement_status": "unavailable",
             "volume_ratio": None,
             "turnover_rate": None,
             "profit_ratio": None,
@@ -185,6 +186,7 @@ class StandaloneDataFetcher:
         try:
             df_quote = self._fetch_quote_ef(symbol)
             if not df_quote.empty:
+                metrics["enhancement_status"] = "partial"
                 row = df_quote.iloc[0]
                 if '量比' in row:
                     metrics['volume_ratio'] = _safe_float(row['量比'])
@@ -226,5 +228,9 @@ class StandaloneDataFetcher:
                         metrics['chip_70_high'] = _safe_float(latest['70%成本区间上限'])
             except Exception as e:
                 logger.warning(f"Failed to fetch chip distribution for {symbol}: {e}")
+        if any(metrics.get(key) is not None for key in ["profit_ratio", "avg_cost", "concentration", "chip_90_low", "chip_90_high"]):
+            metrics["enhancement_status"] = "ok"
+        elif metrics["enhancement_status"] == "partial":
+            metrics["enhancement_status"] = "partial"
 
         return metrics

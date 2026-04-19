@@ -8,6 +8,10 @@ triggers: ["批量下载这组团体标准", "爬取特定编号的国标生成P
 
 高效的标准文件采集工具，支持全自动化 ID 解析与 PDF 生成。
 
+## When to Use
+- 当用户需要批量下载团体标准、根据标准编号抓取内容或从预览页生成 PDF 时使用。
+- 本技能聚焦标准文件抓取和合并，不负责标准内容解读。
+
 ## Core Capabilities
 *   **Smart Resolution**: 自动从 URL（如 ttbz.org.cn 预览链接）中提取 Path ID。
 *   **Resume Support**: 自动检测已下载页面，支持断点续传。
@@ -35,14 +39,22 @@ python {root_dir}\.gemini\skills\tuanbiaodownloader\scripts\downloader.py <ID_OR
 *   **内容理解**: 调用 `${document-summarizer}` 为生成的 PDF 生成摘要。
 *   **战略审计**: 调用 `${research-analyst}` 分析该标准在行业中的地位。
 
-## Troubleshooting
-详细调试指南见 `references/troubleshooting.md`。
+## Resources
+- `scripts/downloader.py`
+- `scripts/requirements.txt`
+- `references/troubleshooting.md`
 
-## Anti-Patterns
+## Failure Modes
 *   ❌ **禁止手动复制**: 不要在工作区手动复制代码，直接使用全路径调用脚本。
 *   ❌ **无效 ID**: 若下载立即终止，请检查 URL 是否包含 `kkfileview`。
+*   若依赖缺失，先修复环境再重试，不要改写协议绕过脚本。
 
-##  Telemetry & Metadata (Mandatory)
+## Output Contract
+- 输入必须是标准 ID 或有效预览 URL。
+- 输出必须是实际下载完成并合并后的 PDF 产物。
+- 若失败，必须指出是 ID 无效、依赖缺失还是下载链路中断。
+
+## Telemetry
 - 使用 `write_file` 将本次执行的元数据以 JSON 格式保存至 `{root}\MEMORY\skill_audit\telemetry\record_[TIMESTAMP].json`（请将 [TIMESTAMP] 替换为当前时间戳或随机数）。
 - JSON 结构：`{"skill_name": "tuanbiaodownloader", "status": "success", "duration_sec": [ESTIMATE], "input_tokens": [ESTIMATE], "output_tokens": [ESTIMATE]}`
 

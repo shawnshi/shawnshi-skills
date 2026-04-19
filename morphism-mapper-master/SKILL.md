@@ -8,7 +8,13 @@ triggers: ["跨界思维映射", "套用热力学破局", "用生物演化分析
 
 基于范畴论的跨学科思维引擎。通过寻找异构领域的同构性，突破思维定势。
 
-## Core Workflow
+## When to Use
+- 当用户要求跨界映射、升维打击、寻找非共识解法，或常规分析路径已经失效时使用。
+- 目标是输出可检验的结构映射，而不是只给灵感型比喻。
+
+## Workflow
+
+### Core Workflow
 
 ### 1. Extract (骨架提取)
 Agent 分析用户输入，提取 Objects (实体) 和 Morphisms (关系)。
@@ -24,7 +30,7 @@ Agent 在 `references/` 中寻找结构相似但语义距离远的 Domain B。
 ### 4. Synthesize (合成提案)
 将定理逆映射回 A，并通过 **Commutativity Check** (逻辑验算) 确保方案可行。
 
-## Commands
+### Commands
 
 ### Problem Solving
 *   **Auto**: 直接描述问题，Agent 自动执行 Phase 1-4。
@@ -34,7 +40,7 @@ Agent 在 `references/` 中寻找结构相似但语义距离远的 Domain B。
 *   **List**: `python scripts/domain_manager.py list`
 *   **Add**: `python scripts/domain_manager.py add "[Name]"`
 
-## Advanced Modules
+### Advanced Modules
 当遇到特殊情况时，挂载以下模块（详见 `references/modules.md`）：
 *   **信息模糊** -> `yoneda_probe`
 *   **环境巨变** -> `natural_transformation`
@@ -43,12 +49,17 @@ Agent 在 `references/` 中寻找结构相似但语义距离远的 Domain B。
 ## Resources
 *   **执行协议**: `references/protocols.md`
 *   **高级模块**: `references/modules.md`
+*   **领域管理脚本**: `scripts/domain_manager.py`
 
-!!! Maintenance Protocol: 新增领域必须符合 V2 标准（100基石）。
+## Failure Modes
+- 新增领域必须符合 V2 标准（100 基石）。
+- 在信息不充分时必须显式说明映射假设，不能把隐喻直接当结论。
+- [此处预留用于记录重复性失败的禁令，实现系统的对抗性进化]
 
-##  Telemetry & Metadata (Mandatory)
+## Output Contract
+- 最终输出至少包含：源域问题骨架、目标域映射、关键定理/机制、逆映射后的方案，以及一次 `Commutativity Check`。
+- 若使用高级模块，必须说明触发条件与其对主方案的具体修正。
+
+## Telemetry
 - 使用 `write_file` 将本次执行的元数据以 JSON 格式保存至 `{root}\MEMORY\skill_audit\telemetry\record_[TIMESTAMP].json`（请将 [TIMESTAMP] 替换为当前时间戳或随机数）。
 - JSON 结构：`{"skill_name": "morphism-mapper-master", "status": "success", "duration_sec": [ESTIMATE], "input_tokens": [ESTIMATE], "output_tokens": [ESTIMATE]}`
-
-## 历史失效先验 (Gotchas)
-- [此处预留用于记录重复性失败的禁令，实现系统的对抗性进化]

@@ -24,21 +24,34 @@ import subprocess
 _ENGINE_DIR = Path(__file__).parent
 sys.path.insert(0, str(_ENGINE_DIR))
 from com_helper import COMManager
+try:
+    from template_manifest import load_template_manifest, normalize_template_manifest
+except ImportError:
+    from .template_manifest import load_template_manifest, normalize_template_manifest
 
 # ─── 路径配置 ─────────────────────────────────────────────────────────────────
 
 _BASE_DIR = Path(__file__).parent.parent  # engine/ 的上一层 = SlideBlocks 根目录
 
-TEMPLATE_CONTENT_PAGE          = 3  # 带标题栏内容页（模板P3）
-TEMPLATE_CONTENT_PAGE_NO_TITLE = 4  # 无标题栏内容页（模板P4）
-
-# 标题区域阈值（pt）：top 小于此值的形状视为标题栏，不复制进输出
-TITLE_THRESHOLD_PT = 65
-
 # ─── 辅助函数 ─────────────────────────────────────────────────────────────────
 
-def get_source_title(src_slide):
+def _title_threshold_pt(template_config: dict) -> int:
+    return template_config["selection_rules"]["title_detection"]["threshold_pt"]
+
+
+def _exclude_title_area_picture_top_pt(template_config: dict) -> int:
+    exclude_shapes = template_config["selection_rules"].get("exclude_shapes") or []
+    for rule in exclude_shapes:
+        if rule.get("kind") == "picture":
+            top_lt_pt = rule.get("top_lt_pt")
+            if isinstance(top_lt_pt, int) and top_lt_pt > 0:
+                return top_lt_pt
+    return _title_threshold_pt(template_config)
+
+
+def get_source_title(src_slide, template_config):
     """从源幻灯片提取标题文字，同时返回该形状的索引（用于精准排除）。"""
+    title_threshold_pt = _title_threshold_pt(template_config)
     for j in range(1, src_slide.Shapes.Count + 1):
         shape = src_slide.Shapes(j)
         try:
@@ -51,7 +64,7 @@ def get_source_title(src_slide):
     candidates = []
     for j in range(1, src_slide.Shapes.Count + 1):
         shape = src_slide.Shapes(j)
-        if shape.Top < TITLE_THRESHOLD_PT:
+        if shape.Top < title_threshold_pt:
             try:
                 if shape.HasTextFrame:
                     t = shape.TextFrame.TextRange.Text.strip()
@@ -65,9 +78,11 @@ def get_source_title(src_slide):
         return t, j
     return None, None
 
-def get_content_indices(src_slide, exclude_idx=None):
+
+def get_content_indices(src_slide, template_config, exclude_idx=None):
     """返回要复制的形状索引列表，排除标题及标题区的图片（Logo等）。"""
     MSO_PICTURE = 13  # msoPicture
+    picture_exclude_top_pt = _exclude_title_area_picture_top_pt(template_config)
     indices = []
     for j in range(1, src_slide.Shapes.Count + 1):
         shape = src_slide.Shapes(j)
@@ -79,7 +94,7 @@ def get_content_indices(src_slide, exclude_idx=None):
         if j == exclude_idx:
             continue
         try:
-            if shape.Top < TITLE_THRESHOLD_PT and shape.Type == MSO_PICTURE:
+            if shape.Top < picture_exclude_top_pt and shape.Type == MSO_PICTURE:
                 continue
         except Exception:
             pass
@@ -157,10 +172,21 @@ def swap_theme_colors_in_shape(shape, to_light=False, to_dark=False):
 
 # ─── 主流程 ───────────────────────────────────────────────────────────────────
 
-def assemble(plan, output_path: str, template_path: str):
+def assemble(plan, output_path: str, template_path: str, manifest_path: str | None = None):
     output_path_obj = Path(output_path).resolve()
     output_path_obj.parent.mkdir(parents=True, exist_ok=True)
     template_path_obj = Path(template_path).resolve()
+    manifest, manifest_error = load_template_manifest(manifest_path)
+    if manifest_error:
+        raise ValueError(manifest_error)
+    template_config = normalize_template_manifest(manifest)
+    page_roles = template_config["page_roles"]
+    transition_page = page_roles["transition"]
+    content_with_title_page = page_roles["content_with_title"]
+    content_without_title_page = page_roles["content_without_title"]
+    paste_retry_count = template_config["rendering_rules"]["paste_retry_count"]
+    paste_retry_delay_s = template_config["rendering_rules"]["paste_retry_delay_ms"] / 1000
+    transition_default_font_size = template_config["transition_default_font_size"]
 
     # 使用 COMManager 启动
     mgr = COMManager()
@@ -191,12 +217,13 @@ def assemble(plan, output_path: str, template_path: str):
             # ─── 剪贴板重试粘贴辅助函数 ───
             def _safe_paste(target_collection):
                 import time
-                for attempt in range(5):
+                for attempt in range(paste_retry_count):
                     try:
                         return target_collection.Paste()
                     except Exception:
-                        if attempt == 4: raise
-                        time.sleep(0.3)
+                        if attempt == paste_retry_count - 1:
+                            raise
+                        time.sleep(paste_retry_delay_s)
                 return None
 
             # 纯模板页
@@ -211,7 +238,7 @@ def assemble(plan, output_path: str, template_path: str):
                     pasted_range = _safe_paste(pres.Slides)
                     if replace_title:
                         try:
-                            sz = font_sz if font_sz else (40 if tmpl_page == 2 else None)
+                            sz = font_sz if font_sz else (transition_default_font_size if tmpl_page == transition_page else None)
                             set_template_title(pasted_range(1), replace_title, font_size=sz)
                         except Exception:
                             pass
@@ -240,11 +267,11 @@ def assemble(plan, output_path: str, template_path: str):
             try:
                 src_slide = src_pres.Slides(page)
 
-                source_title, title_shape_idx = get_source_title(src_slide)
+                source_title, title_shape_idx = get_source_title(src_slide, template_config)
                 source_has_title = source_title is not None
 
                 # 复制背景框架
-                tmpl_page = TEMPLATE_CONTENT_PAGE if source_has_title else TEMPLATE_CONTENT_PAGE_NO_TITLE
+                tmpl_page = content_with_title_page if source_has_title else content_without_title_page
                 tmpl_pres = pptApp.Presentations.Open(str(template_path_obj), ReadOnly=True, WithWindow=False)
                 try:
                     tmpl_pres.Slides(tmpl_page).Copy()
@@ -259,7 +286,11 @@ def assemble(plan, output_path: str, template_path: str):
                         pass
                 
                 # 复制形状
-                content_indices = get_content_indices(src_slide, exclude_idx=title_shape_idx if source_has_title else None)
+                content_indices = get_content_indices(
+                    src_slide,
+                    template_config,
+                    exclude_idx=title_shape_idx if source_has_title else None,
+                )
                 if content_indices:
                     src_slide.Shapes.Range(content_indices).Copy()
                     pasted_shapes = _safe_paste(pasted_slide.Shapes)

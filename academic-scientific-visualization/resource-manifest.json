@@ -1,0 +1,73 @@
+﻿{
+    "schema_version":  1,
+    "skill":  "academic-scientific-visualization",
+    "generated_at":  "2026-04-19T06:26:09",
+    "skill_md":  "SKILL.md",
+    "top_level_files":  [
+                            "SKILL.md"
+                        ],
+    "top_level_directories":  [
+                                  "assets",
+                                  "references",
+                                  "scripts"
+                              ],
+    "resource_directories":  [
+                                 {
+                                     "name":  "scripts",
+                                     "file_count":  2
+                                 },
+                                 {
+                                     "name":  "references",
+                                     "file_count":  4
+                                 },
+                                 {
+                                     "name":  "assets",
+                                     "file_count":  4
+                                 }
+                             ],
+    "declared_local_dependencies":  [
+                                        {
+                                            "path":  "scripts\\style_presets.py",
+                                            "exists":  true,
+                                            "resolved_path":  "C:\\Users\\shich\\.gemini\\skills\\academic-scientific-visualization\\scripts\\style_presets.py"
+                                        },
+                                        {
+                                            "path":  "scripts\\figure_export.py",
+                                            "exists":  true,
+                                            "resolved_path":  "C:\\Users\\shich\\.gemini\\skills\\academic-scientific-visualization\\scripts\\figure_export.py"
+                                        },
+                                        {
+                                            "path":  "assets\\nature.mplstyle",
+                                            "exists":  true,
+                                            "resolved_path":  "C:\\Users\\shich\\.gemini\\skills\\academic-scientific-visualization\\assets\\nature.mplstyle"
+                                        },
+                                        {
+                                            "path":  "references\\publication_guidelines.md",
+                                            "exists":  true,
+                                            "resolved_path":  "C:\\Users\\shich\\.gemini\\skills\\academic-scientific-visualization\\references\\publication_guidelines.md"
+                                        },
+                                        {
+                                            "path":  "references\\color_palettes.md",
+                                            "exists":  true,
+                                            "resolved_path":  "C:\\Users\\shich\\.gemini\\skills\\academic-scientific-visualization\\references\\color_palettes.md"
+                                        },
+                                        {
+                                            "path":  "assets\\color_palettes.py",
+                                            "exists":  true,
+                                            "resolved_path":  "C:\\Users\\shich\\.gemini\\skills\\academic-scientific-visualization\\assets\\color_palettes.py"
+                                        },
+                                        {
+                                            "path":  "references\\journal_requirements.md",
+                                            "exists":  true,
+                                            "resolved_path":  "C:\\Users\\shich\\.gemini\\skills\\academic-scientific-visualization\\references\\journal_requirements.md"
+                                        },
+                                        {
+                                            "path":  "references\\matplotlib_examples.md",
+                                            "exists":  true,
+                                            "resolved_path":  "C:\\Users\\shich\\.gemini\\skills\\academic-scientific-visualization\\references\\matplotlib_examples.md"
+                                        }
+                                    ],
+    "missing_declared_dependencies":  [
+
+                                      ]
+}

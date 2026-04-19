@@ -145,3 +145,26 @@ python3 scripts/generate_mondo.py --list-styles
 - **DO NOT** use complex photorealistic terms; stick to screen print aesthetics.
 - **ALWAYS** prefer 9:16 aspect ratio for posters and covers unless specified otherwise.
 - **NEVER** ignore the negative space opportunities in minimal designs.
+
+## When to Use
+- 当用户要求生成海报、封面、配图或设计风格型图像提示词时使用。
+- 具体设计师映射、风格控制和比例策略仍以本文件既有说明为准。
+
+## Workflow
+- 遵循本文件已有的风格选择、提示词组装和平台适配流程。
+- 不跳过长宽比、负空间和媒介风格限制。
+
+## Resources
+- 使用本技能引用的设计师风格库、模板、示例提示词和参考文件。
+- 所有提示词拼装规则以技能目录中的现有资源为准。
+
+## Failure Modes
+- 将本文件中的比例偏好、风格禁令和 `Gotchas` 视为失败模式。
+- 若用户需求与现有风格体系冲突，必须显式说明取舍，而不是混合出模糊风格。
+
+## Output Contract
+- 最终交付必须是可直接用于图像生成的高质量提示词，并满足媒介、比例和风格要求。
+- 如果用户没有给尺寸或平台，输出必须遵循本文件的默认策略并明确说明。
+
+## Telemetry
+- 按本文件上方定义的 telemetry 规则记录元数据。
