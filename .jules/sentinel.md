@@ -1,0 +1,4 @@
+## 2024-04-20 - Command Injection in PIH_LLM_COMMAND
+**Vulnerability:** Command injection vulnerability due to user-configurable environment variables (`PIH_LLM_COMMAND`) passed directly to `subprocess.Popen` with `shell=True`. An attacker could execute arbitrary commands by injecting shell metacharacters in the `PIH_LLM_COMMAND` environment variable.
+**Learning:** `shell=True` combined with an externally-controllable command string (like environment variables) is a frequent vector for command injection. In Python scripts for CLI utilities, it's easy to fall into the trap of using `shell=True` to run commands exactly as typed in bash, which can lead to these vulnerabilities.
+**Prevention:** Avoid `shell=True`. Always parse and structure shell commands correctly using `shlex.split()` and pass the resulting arguments list directly to `subprocess.Popen` or `subprocess.run` with `shell=False`.

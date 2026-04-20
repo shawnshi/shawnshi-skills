@@ -3,6 +3,7 @@ from __future__ import annotations
 import json
 import os
 import re
+import shlex
 import shutil
 import subprocess
 from pathlib import Path
@@ -60,12 +61,12 @@ def clean_json_output(text: str):
     return json.loads(match.group(0))
 
 
-def resolve_llm_command() -> str | None:
+def resolve_llm_command() -> list[str] | None:
     custom = os.environ.get("PIH_LLM_COMMAND")
     if custom:
-        return custom
+        return shlex.split(custom)
     if shutil.which("gemini"):
-        return "gemini ask -"
+        return ["gemini", "ask", "-"]
     return None
 
 
@@ -84,7 +85,7 @@ def run_llm(prompt: str) -> str:
         stdout=subprocess.PIPE,
         stderr=subprocess.PIPE,
         text=True,
-        shell=True,
+        shell=False,
         encoding="utf-8",
         errors="ignore",
     )
