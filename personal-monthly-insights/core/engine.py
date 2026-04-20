@@ -76,6 +76,11 @@ OUTCOME_MAP = {
     'partially_achieved': '🟡 部分达成', 'not_achieved': '❌ 未达成', 'unclear': '❓ 不确定'
 }
 
+ANSI_CLEAN = re.compile(r'\x1B\[[0-?]*[ -/]*[@-~]')
+UUID_PATTERN = re.compile(r'\[([a-f0-9]{8}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{12})\]')
+DAYS_AGO_PATTERN = re.compile(r'(\d+)\s+days ago')
+ISO_DATE_PATTERN = re.compile(r'(\d{4}-\d{2}-\d{2})')
+
 
 def get_raw_metrics_path(period):
     return REPORTS_DIR / f'raw_metrics_{period}.json'
@@ -86,7 +91,7 @@ def get_agent_audit_path():
 
 
 def strip_ansi(text):
-    return re.sub(r'\x1B\[[0-?]*[ -/]*[@-~]', '', text)
+    return ANSI_CLEAN.sub('', text)
 
 
 def get_session_list():
@@ -104,12 +109,12 @@ def get_session_list():
         sessions = []
         for line in output.splitlines():
             line = line.strip()
-            match = re.search(r'\[([a-f0-9]{8}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{12})\]', line)
+            match = UUID_PATTERN.search(line)
             if match:
                 sid = match.group(1)
                 date = datetime.date.today().isoformat()
                 if 'days ago' in line:
-                    m = re.search(r'(\d+)\s+days ago', line)
+                    m = DAYS_AGO_PATTERN.search(line)
                     if m:
                         date = (datetime.date.today() - datetime.timedelta(days=int(m.group(1)))).isoformat()
                 elif 'hours ago' in line or 'minutes ago' in line:
@@ -117,7 +122,7 @@ def get_session_list():
                 elif 'yesterday' in line.lower():
                     date = (datetime.date.today() - datetime.timedelta(days=1)).isoformat()
                 else:
-                    dm = re.search(r'(\d{4}-\d{2}-\d{2})', line)
+                    dm = ISO_DATE_PATTERN.search(line)
                     if dm:
                         date = dm.group(1)
                 sessions.append({'id': sid, 'title': line[:60], 'date': date})
