@@ -218,25 +218,20 @@ def main():
     
     days = parse_period(args.period, args.days)
     
-    if HAS_SQLITE:
-        try:
-            summary_data = fetch_local_summary(days)
-            # 生理年龄等极高阶指标属于 Garmin 纯云端侧黑盒运算，本地 DB 缺少该表维度，采用混合云端补偿
-            client = get_client()
-            if client:
-                from garmin_data import fetch_max_metrics
-                summary_data["max_metrics"] = fetch_max_metrics(client, (datetime.now() - timedelta(days=days)).strftime('%Y-%m-%d'))
-        except Exception as e:
-            print(f"⚠️  SQLite load failed: {e}. Falling back to API...", file=sys.stderr)
-            client = get_client()
-            if not client: return
-            summary_data = fetch_summary(client, days)
-            stitch_v3_metrics(summary_data, days)
-    else:
+    if not HAS_SQLITE:
+        print("Critical Path Error: Local SQLite database missing. API Fallback is explicitly forbidden.", file=sys.stderr)
+        sys.exit(1)
+        
+    try:
+        summary_data = fetch_local_summary(days)
+        # 生理年龄等极高阶指标属于 Garmin 纯云端侧黑盒运算，本地 DB 缺少该表维度，采用混合云端补偿
         client = get_client()
-        if not client: return
-        summary_data = fetch_summary(client, days)
-        stitch_v3_metrics(summary_data, days)
+        if client:
+            from garmin_data import fetch_max_metrics
+            summary_data["max_metrics"] = fetch_max_metrics(client, (datetime.now() - timedelta(days=days)).strftime('%Y-%m-%d'))
+    except Exception as e:
+        print(f"Critical Path Error: SQLite load failed ({e}). API Fallback is explicitly forbidden.", file=sys.stderr)
+        sys.exit(1)
     
     charts_data = {}
     if summary_data:

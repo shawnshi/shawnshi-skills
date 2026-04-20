@@ -1,199 +1,106 @@
 ---
 name: personal-health-analysis
-description: Garmin 数据驱动的个人生理操作系统。用于分析心率、HRV、睡眠、压力、Body Battery、恢复、训练负荷、感冒迹象、执行准备度，以及 30-90 天健康趋势与决策看板；当用户询问“今天能不能练”“状态如何”“做个健康审计”“看趋势/热力图/90天复盘”等场景时启用。
+description: 首席医疗官(CMO)级生理健康审计引擎。当用户提到“心率/睡眠/压力/HRV/感冒迹象/身体电量/健康审计/准备度/生理状态/健康洞察/运动分析/热力图/90天”等指标时务必激活。通过Garmin数据执行全链路审计与决策准备度管理。
 ---
 
-# Personal Health Analysis (VNext Physiological Operating System)
+# Personal Health Analysis (CMO/Strategic Architect Level)
 
-这个技能不是泛健康闲聊器，而是基于 Garmin 数据的生理决策系统。目标不是生成漂亮结论，而是用本地数据湖、同步链路、分析引擎和看板层，给出可执行的恢复、训练、节奏管理与风险预警判断。
+通过自然语言查询 Garmin Connect 数据，提取临床级生理指标，生成**交互式健康审计看板（Bloomberg Terminal 审美）**，并执行高级生理智能分析（认知准备度与代谢摩擦）。
 
-## 1. System Model
+该技能定位为“企业级/高管专属的前置医疗防线与战略决策引擎（对齐 `USER.md` 中的战略咨询总经理身份）”，采用 **GEB-Flow V2.0** 架构进行全链路审计：
+- **Data Lake Layer** (`GarminDB`): 本地物理数据湖。通过 SQLite 存储历史基线，实现毫秒级查询。
+- **Adapter Layer** (`garmin_sqlite_adapter.py`): 语义垫片。将本地 SQL 数据转换为标准化分析结构。
+- **Intelligence Layer** (`garmin_intelligence.py`): 二阶战略审计分析。优先调用本地数据源，对抗 API 熔断。
+- **Presentation Layer** (`garmin_chart.py`): 生成高密度、暗黑模式的 Tactical Command 战略大屏。
 
-四层架构保持不变，但执行契约要更清楚：
+## Execution Protocol (智能体混合执行协议)
 
-- **Data Layer**: `GarminDB` / SQLite 本地历史库。承担基线、趋势和低延迟查询。
-- **Adapter Layer**: [scripts/garmin_sqlite_adapter.py](scripts/garmin_sqlite_adapter.py)。把本地库转成标准化分析结构。
-- **Intelligence Layer**: [scripts/garmin_intelligence.py](scripts/garmin_intelligence.py)。负责 readiness、flu risk、趋势判断、负荷解释等。
-- **Presentation Layer**: [scripts/garmin_chart.py](scripts/garmin_chart.py)。负责把结果转成决策看板，而不是单纯趋势图。
+AI 必须严格按照以下阶段线性推进，并在模式之间流转：
 
-核心原则：
+- **[Phase 0: Data Sync & Pre-flight (PLANNING Mode)]**
+  - **Action**: 隐式执行 `garmindb_cli.py --latest` 以尝试更新本地数据湖（确保命令在环境中可用）。
+  - **Failsafe**: 如果遇到 429 报错，**不阻塞后续执行**，直接转入本地已有的 SQLite 库进行审计（即读取“历史快照”）。
 
-1. **Local-first**: 能用本地 SQLite 就不用在线请求。
-2. **Graceful degradation**: 同步失败不等于整条链失败，只要本地快照仍在可接受时效内，就继续执行。
-3. **Action over prose**: 输出必须落到“今天/本周该做什么”。
-4. **No fake medicine**: 禁止把生理推断表述成医学诊断。
+- **[Phase 1: Precision Data Extraction (EXECUTION Mode)]**
+  - **Action**: 优先调用 `garmin_intelligence.py` 加载本地数据。支持通过 `--period 90d` 提取长程宏观数据。
+  - **Failsafe**: 如果本地库缺失，回退至 `garmin_data.py` 发起 API 请求。
 
-## 2. Capability Contract
+- **[Phase 2: Strategic Synthesis (EXECUTION Mode)]**
+  - **Action**: 调用 `garmin_intelligence.py` 执行深度诊断。
+  - **Constraint**: 利用“耗散结构”计算每日高压耗散时长（Zone Dissipation），并追踪 30 天基线漂移。
 
-执行前先识别当前环境处于哪一层能力：
+- **[Phase 3: Executive Output (VERIFICATION Mode)]**
+  - **Action**: 生成最终的高管简报，并调用 `garmin_chart.py` 生成战术级大屏。
+  - **Constraint**: 输出必须锚定商业决策视角。HTML 大屏必须坚守“密不透风的高信息密度”与纯暗黑高对比度原则，严禁使用柔和的消费级圆角UI。
 
-### Core
-- 需要：本地 SQLite / GarminDB 数据可读。
-- 能力：日度审计、趋势分析、readiness、flu risk、长期回顾。
-- 优先级：最高。
+## ⚠️ Agentic Guardrails (智能体硬约束)
+1. **No Hallucination**: 绝对禁止编造生理数据。
+2. **Execution Context**: 执行脚本前，确保明确使用绝对路径（如 `C:\Users\shich\.gemini\skills\personal-health-analysis\scripts\garmin_data.py`）或在 `run_shell_command` 中使用 `dir_path` 切换到对应目录。
+3. **Path Resolution**: 处理活动文件（FIT/GPX）和 HTML 报告时，必须使用绝对路径展示（例如：`[查看生物态势看板](file:///{user_root}/.gemini/memory/raw/garmin/tactical_board_7days_2026xxxx.html)`）。
+4. **Pipelining**: `garmin_intelligence.py` 等分析脚本依赖基础数据正确返回。严格确保前序步骤成功后再执行后续的深度审计。
 
-### Sync
-- 需要：可用的 Garmin 同步链路，例如 `garmindb_cli.py`。
-- 能力：更新本地库，缩短数据延迟。
-- 备注：这是增强层，不是唯一入口。
+## Output Schema & Intent Routing (三级输出协议)
 
-### Viz
-- 需要：图表脚本依赖完整。
-- 能力：生成 HTML 决策看板。
-- 备注：看板失败不应阻塞文本结论。
+系统必须根据用户的提问意图，执行严格的降噪与分级输出：
 
-如果 `Sync` 不可用但 `Core` 可用，继续执行并明确说明“基于本地快照”。
-如果 `Core` 不可用且 `Sync` 也失败，才真正阻塞，并说明缺的依赖或数据源。
+### Level 1: 微观战术 (Micro-Tactics)
+- **触发条件**：用户询问具体的单个问题，如“我今晚能练深蹲吗？”、“今天睡得好吗？”。
+- **输出约束**：**绝对禁止**输出全量战略简报。仅调用 `readiness` 分析，提取认知/物理防线得分。用 **< 50字** 的军工级指令直接回答行或不行，并给出依据。
 
-## 3. Execution Protocol
+### Level 2: 日结复盘 (Daily Audit)
+- **触发条件**：常规触发，如“健康审计”、“今日状态”、“分析生理指标”。
+- **输出约束**：调用 `insight_cn`，输出完整的**四层模块文本简报**（包含 ASCII 系统动量拓扑）。必须采用 **BLUF (结论先行)** 结构。
 
-### Phase 0: Capability & Freshness Check
-先检查三件事：
+### Level 3: 长程战略 (Strategic Campaign)
+- **触发条件**：包含“90天”、“趋势”、“全面体检”、“热力图”等宏观宏大词汇。
+- **输出约束**：除了文本解析，**强制**调用 `garmin_chart.py dashboard` 生成 HTML 大屏，并提供本地绝对路径链接。
 
-- 本地 SQLite 是否存在并可读。
-- 本地数据是否在合理时效窗口内。
-- 同步链路是否存在且可调用。
+---
+**核心评价维度**：
+- **🟢 系统动量 (System Momentum)**: 1句话概括当前的生理演化方向与摩擦定性。包含终端可视化的能量拓扑 `[ ▂▃▄▅ ]`。
+- **📊 执行带宽 (Execution Bandwidth)**: 包含认知带宽与物理防线的双重评分，以及高压耗散时长、社会时差(Social Jetlag)的惩罚。
+- **⚠️ 摩擦与风险 (Frictions & Risks)**: 如果探测到“Garmin Flu”（RHR飙升+HRV骤降+呼吸率异常）或严重睡眠剥夺，必须加粗高亮警告。
+- **🎯 战术指令 (Tactical Directives)**: 明确指令：日程降级/强攻、物理干预（强制负熵/绝对防御）、生化环境（深度冷却/熔断）。
 
-时效建议：
+---
 
-- `quick`: 当天或最近一次同步可用即可。
-- `audit`: 最近 24 小时内的数据优先。
-- `campaign`: 只要长周期数据完整即可，不要求强实时。
+## Tooling Reference & Workflow
 
-### Phase 1: Sync Gate (Degradable)
-优先尝试同步本地库，但这是一个**可降级同步门**：
+*注意：执行以下脚本时，请确保工作目录为 `C:\Users\shich\.gemini\skills\personal-health-analysis\` 或使用绝对路径。*
 
-- 同步成功：使用最新数据。
-- 同步失败，但本地快照仍在时效窗口内：继续执行，并明确标注“使用本地快照”。
-- 同步失败，且本地库缺失或明显过期：阻塞，并说明不能给出可靠结论。
-
-遇到 429、网络波动或上游熔断时，禁止把“同步失败”误判为“分析失败”。
-
-### Phase 2: Intent Routing
-根据用户问题把任务路由到 3 档输出模式：
-
-#### `quick`
-适用于“今天能不能练”“我昨晚睡得怎样”“今天状态如何”这类问题。
-
-- 只提炼最少必要指标。
-- 直接给结论。
-- 输出要短，不扩展成长报告。
-
-#### `audit`
-适用于“健康审计”“今日/本周状态”“分析我的生理指标”。
-
-- 输出结构化简报。
-- 解释关键指标之间的关系。
-- 给出今天和本周的行动建议。
-
-#### `campaign`
-适用于“90天趋势”“全面体检”“热力图”“长期负荷复盘”。
-
-- 输出长周期趋势解释。
-- 需要时调用看板。
-- 必须标出系统演化方向，而不是只罗列指标。
-
-### Phase 3: Analysis
-优先调用 [scripts/garmin_intelligence.py](scripts/garmin_intelligence.py)。
-
-分析时至少覆盖：
-
-- 恢复状态：睡眠、HRV、RHR、Body Battery。
-- 压力与耗散：压力暴露、恢复缺口、社会时差。
-- 训练负荷：近期负荷、恢复承压、是否应减量或维持。
-- 风险信号：异常疲劳、疑似感冒模式、持续性透支。
-
-如果用户只问一个点，不要把整套框架全部展开。
-
-### Phase 4: Executive Output
-输出遵循以下原则：
-
-- **BLUF first**: 第一行必须给结论。
-- **Metrics second**: 只列出支撑结论的关键指标，不堆数据。
-- **Actions third**: 给出今天/本周的具体动作。
-- **Uncertainty last**: 明确指出数据缺口或可信度限制。
-
-`campaign` 模式下，如果图表能力可用，调用 [scripts/garmin_chart.py](scripts/garmin_chart.py) 生成决策看板。
-看板目标不是“展示所有图”，而是回答三个问题：
-
-1. 当前系统是在恢复、持平还是恶化。
-2. 哪个变量最拖后腿。
-3. 接下来一周该减量、维持还是加量。
-
-## 4. Result Gate
-
-最终输出必须通过结果门，而不是风格门。至少满足以下 5 条：
-
-1. **明确结论**: 回答必须能落到“能/不能”“该/不该”“偏绿/偏黄/偏红”。
-2. **证据锚定**: 至少点明最关键的 2-4 个指标依据。
-3. **动作可执行**: 至少给出一个今天可执行动作和一个本周节奏建议。
-4. **不确定性披露**: 若数据缺失、快照过期、同步失败，必须显式说明。
-5. **边界清晰**: 禁止把健康分析包装成临床诊断或治疗意见。
-
-如果无法通过这 5 条，宁可缩短输出，也不要扩展成空洞长文。
-
-## 5. Runtime Guardrails
-
-- **禁止编造数据**。
-- **禁止把平均值当趋势**，长周期结论必须参考基线变化或阶段对比。
-- **禁止硬编码路径**。技能根目录应从当前 `SKILL.md` 所在位置或当前工作目录解析，不要假设 `.gemini` 或 `.codex` 固定存在。
-- **禁止因图表失败而吞掉文本结论**。
-- **禁止在无数据、无同步、无快照时给出强结论**。
-
-## 6. Core Commands
-
-在技能根目录下执行：
-
+### 1. 核心指令 (Core Operations)
 ```bash
-# 基础摘要
+# 综合摘要与高阶洞察 (Level 2)
 python scripts/garmin_data.py summary --days 7
-
-# 恢复/准备度
-python scripts/garmin_intelligence.py readiness --days 1
 python scripts/garmin_intelligence.py insight_cn --days 7
-python scripts/garmin_intelligence.py flu_risk --days 7
 
-# 长期趋势 / 看板
+# 单项指标查询 (Level 1)
+python scripts/garmin_data.py [sleep|hrv|heart_rate|body_battery|stress] --days 7
+python scripts/garmin_intelligence.py readiness --days 1
+
+# 军工级交互大屏 / 宏观趋势 (Level 3)
 python scripts/garmin_chart.py dashboard --days 7
 python scripts/garmin_chart.py dashboard --period 90d
+
+# 探测"Garmin 感冒"模式
+python scripts/garmin_intelligence.py flu_risk --days 7
 ```
 
-对于更细的时间点查询、FHIR 导出、FIT/GPX 分析、SpO2/呼吸率扩展命令，按需读取：
-[references/advanced_tools.md](references/advanced_tools.md)
+### 2. 进阶分析与特殊命令 (Advanced Tools)
+对于特定的深度需求（如：**时间点精确查询、FHIR 临床导出、FIT/GPX 活动文件分析、扩展指标 SpO2/呼吸率**），请阅读参考文件以获取具体指令：
+👉 **参阅 [references/advanced_tools.md](references/advanced_tools.md)**
 
-## 7. Installer Expectations
+## Key Insights Reference
 
-`install.ps1` 不应再被理解为“装完就全可用”。VNext 的执行预期是：
+- **Executive Readiness (0-100)**: 综合睡眠质量、Body Battery 峰值、压力负荷。结合“睡眠债务”与“高压耗散时长 (Zone Dissipation)”进行宏观衰竭扣分。
+- **System Momentum**: 通过切割周期的前半段与后半段，计算 RHR 与 Stress 的 Delta 差值，判定系统是在“超量恢复”还是“熵增恶化”。
+- **"Garmin Flu" Pattern**: 患病前 24-48h 的生理特征：RHR 飙升 (>3-5 bpm)、HRV 骤降 (>10-15%)、以及 **睡眠呼吸率异常升高 (>0.5 brpm)**。
 
-- 如果 `Sync` 层未准备好，明确说明当前只能基于本地库分析。
-- 如果本地库也不存在，提示缺少 GarminDB / SQLite 数据源，而不是假装可以正常审计。
-- 当用户需要修复安装链时，再进入依赖排查或脚本修订。
+##  Telemetry & Metadata (Mandatory)
+- 使用 `write_file` 将本次执行的元数据以 JSON 格式保存至 `C:\Users\shich\.gemini\MEMORY\skill_audit\telemetry\record_[TIMESTAMP].json`（请将 [TIMESTAMP] 替换为当前时间戳或随机数）。
+- JSON 结构：`{"skill_name": "personal-health-analysis", "status": "success", "duration_sec": [ESTIMATE], "input_tokens": [ESTIMATE], "output_tokens": [ESTIMATE]}`
 
-## 8. Output Templates
-
-### `quick`
-- 结论
-- 依据
-- 动作
-
-### `audit`
-- BLUF
-- 恢复与压力
-- 训练与节奏
-- 风险与缺口
-- 今日/本周动作
-
-### `campaign`
-- 总体趋势判断
-- 关键驱动变量
-- 风险窗口
-- 30-90 天行动建议
-- 看板路径（若生成成功）
-
-## 9. Historical Failure Priors
-
-- `IF [sync_failed AND local_snapshot_fresh] THEN [continue_with_snapshot]`
-- `IF [sync_failed AND local_snapshot_missing] THEN [halt_with_dependency_gap]`
-- `IF [mode == quick] THEN [forbid_long_report]`
-- `IF [mode == campaign AND viz_available] THEN [prefer_dashboard]`
-- `IF [medical_claim_without_data] THEN [halt]`
+## 历史失效先验 (NLAH Gotchas)
+- `[FAIL_FAST_MANDATE]`: 在任何数据层脚本中，对于核心本地 SQLite 库的缺失，严禁执行静默的 Fallback（如降级到在线 API）。必须采用 Fail-Fast 原则，当本地资产路径验证失败时，直接抛出 `Critical Path Error` 并阻断运行，防范视图层崩溃。
+- `IF [Action == "Sync Garmin Data"] THEN [Require Command == "python C:\\Users\\shich\\AppData\\Local\\Programs\\Python\\Python313\\Scripts\\garmindb_cli.py --download --import --analyze --all --latest"]`
+- `[MANDATORY_PHASE_0]`: 当用户要求健康审计或发现数据不完整时，必须先执行 Phase 0（即上述 Sync Garmin Data 命令），严禁直接跳过数据同步读取过期的本地库进行分析。这是历史失效教训（在 4/5 号数据断层时跳过同步导致误判绿灯）。

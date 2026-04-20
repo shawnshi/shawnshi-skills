@@ -26,7 +26,7 @@ def validate_briefing_data(data: dict) -> list[str]:
 
     has_l4 = False
     for item in top_10:
-        if not item.get("summary"):
+        if not item.get("summary") and not item.get("summary_zh"):
             errors.append(f"missing summary for item: {item.get('title', 'unknown')}")
         level = item.get("intelligence_level")
         if level == "L4":

@@ -84,18 +84,24 @@ def get_summary(days=7):
     else:
         df = df_base.copy()
         
-    if 'stress_avg' in df.columns:
-        df['resting_heart_rate'] = df['resting_heart_rate'].ffill().bfill().fillna(60)
-        df['max_hr'] = df['max_hr'].ffill().bfill().fillna(160)
-        df['stress_avg'] = df['stress_avg'].ffill().bfill().fillna(25)
-        df['body_battery_highest'] = df['body_battery_highest'].ffill().bfill().fillna(100)
-        df['body_battery_lowest'] = df['body_battery_lowest'].ffill().bfill().fillna(20)
-        df['body_battery_charged'] = df['body_battery_charged'].fillna(0)
-        df['sweat_loss'] = df['sweat_loss'].fillna(0)
-        df['rr_waking_avg'] = df['rr_waking_avg'].ffill().bfill().fillna(14.0)
-        df['steps'] = df['steps'].fillna(0)
-        df['high_stress_duration'] = df['high_stress_duration'].fillna(0)
-        df['medium_stress_duration'] = df['medium_stress_duration'].fillna(0)
+    expected_cols = ['resting_heart_rate', 'max_hr', 'stress_avg', 'body_battery_highest', 
+                     'body_battery_lowest', 'body_battery_charged', 'sweat_loss', 
+                     'rr_waking_avg', 'steps', 'high_stress_duration', 'medium_stress_duration']
+    for col in expected_cols:
+        if col not in df.columns:
+            df[col] = float('nan')
+            
+    df['resting_heart_rate'] = df['resting_heart_rate'].ffill().bfill().fillna(60)
+    df['max_hr'] = df['max_hr'].ffill().bfill().fillna(160)
+    df['stress_avg'] = df['stress_avg'].ffill().bfill().fillna(25)
+    df['body_battery_highest'] = df['body_battery_highest'].ffill().bfill().fillna(100)
+    df['body_battery_lowest'] = df['body_battery_lowest'].ffill().bfill().fillna(20)
+    df['body_battery_charged'] = df['body_battery_charged'].fillna(0)
+    df['sweat_loss'] = df['sweat_loss'].fillna(0)
+    df['rr_waking_avg'] = df['rr_waking_avg'].ffill().bfill().fillna(14.0)
+    df['steps'] = df['steps'].fillna(0)
+    df['high_stress_duration'] = df['high_stress_duration'].fillna(0)
+    df['medium_stress_duration'] = df['medium_stress_duration'].fillna(0)
         
     return df
 

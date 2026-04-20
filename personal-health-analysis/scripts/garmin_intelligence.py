@@ -49,7 +49,7 @@ def fetch_local_summary(days):
     summary_df = sqlite_summary(days)
     
     # --- Check Data Freshness ---
-    if not summary_df.empty and 'date' in summary_df.columns:
+    if not summary_df.empty and 'date' in summary_df.columns and 'resting_heart_rate' in summary_df.columns:
         valid_dates = summary_df.dropna(subset=['resting_heart_rate'])['date']
         if not valid_dates.empty:
             latest_date_str = valid_dates.max()
@@ -836,24 +836,15 @@ def main():
     args = parser.parse_args()
     days = parse_period(args.period, args.days)
     
-    if HAS_SQLITE:
-        try:
-            summary_data = fetch_local_summary(days)
-        except Exception as e:
-            print(f"⚠️  SQLite load failed: {e}. Falling back to API...", file=sys.stderr)
-            client = get_client()
-            if not client:
-                print('{"error": "Not authenticated and local DB failed"}', file=sys.stderr)
-                sys.exit(1)
-            summary_data = fetch_summary(client, days)
-            stitch_v3_metrics(summary_data, days)
-    else:
-        client = get_client()
-        if not client:
-            print('{"error": "Not authenticated"}', file=sys.stderr)
-            sys.exit(1)
-        summary_data = fetch_summary(client, days)
-        stitch_v3_metrics(summary_data, days)
+    if not HAS_SQLITE:
+        print('{"error": "Critical Path Error: Local SQLite database missing. API Fallback is explicitly forbidden by system constraints."}', file=sys.stderr)
+        sys.exit(1)
+        
+    try:
+        summary_data = fetch_local_summary(days)
+    except Exception as e:
+        print(f'{{"error": "Critical Path Error: SQLite load failed ({e}). API Fallback is explicitly forbidden."}}', file=sys.stderr)
+        sys.exit(1)
     
     if args.analysis == "flu_risk":
         result = analyze_flu_risk(summary_data)

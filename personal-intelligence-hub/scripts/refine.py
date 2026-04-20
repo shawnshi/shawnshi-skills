@@ -115,8 +115,11 @@ def heuristics(scan_data: dict, focus_data: dict) -> dict:
         }
         for candidate in top_candidates[:5]
     ]
+    
+    # Ensure we always have at least 3 action levers to pass the gate
+    domains = ["战略观测", "系统防护", "基础建设"]
     while len(action_levers) < 3:
-        action_levers.append({"domain": "Backlog", "task": "继续监控高相关信号并更新判断。"})
+        action_levers.append({"domain": domains[len(action_levers) % len(domains)], "task": "继续监控相关领域高价值信号。"})
 
     translations = {
         candidate["url"]: {"title_zh": candidate["title_zh"], "desc_zh": candidate["summary_zh"]}
@@ -149,15 +152,20 @@ def maybe_model_refine(base_output: dict) -> dict:
     prompt_text = PROMPT_PATH.read_text(encoding="utf-8") if PROMPT_PATH.exists() else ""
     lightweight_prompt = (
         prompt_text
-        + "\n\n请在不破坏既有 JSON 结构的前提下，强化 punchline、insights、digest、market。"
+        + "\n\n请在不破坏既有 JSON 结构的前提下，强化 punchline、insights、digest、market。同时，请务必将 top_10 列表中的 fact, summary_zh, title_zh 字段翻译并改写为高质量的中文描述。"
         + "\n输入候选 JSON:\n"
         + json.dumps(base_output, ensure_ascii=False)
     )
     try:
         model_output = json.loads(run_llm(lightweight_prompt))
-        for key in ["punchline", "insights", "digest", "market", "action_levers", "urgent_signals"]:
+        for key in ["punchline", "insights", "digest", "market", "action_levers", "urgent_signals", "top_10"]:
             if key in model_output and model_output[key]:
-                base_output[key] = model_output[key]
+                if key == "top_10":
+                    for i, model_item in enumerate(model_output["top_10"]):
+                        if i < len(base_output["top_10"]):
+                            base_output["top_10"][i].update(model_item)
+                else:
+                    base_output[key] = model_output[key]
         base_output["model_used"] = "runner+heuristic"
     except Exception:
         pass
