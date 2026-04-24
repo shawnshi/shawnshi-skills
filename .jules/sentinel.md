@@ -1,0 +1,4 @@
+## 2024-05-18 - Command Injection Risk in LLM Runner Subprocess
+**Vulnerability:** The `hub_utils.py` script was executing external LLM commands (`command = resolve_llm_command()`) using `subprocess.Popen` with `shell=True`. If `resolve_llm_command()` returned an unsanitized string from environment variables (`PIH_LLM_COMMAND`), it could lead to arbitrary command execution.
+**Learning:** Using `shell=True` with dynamic or external input in `subprocess` calls exposes the application to severe command injection risks. The environment variable input acts as a vector for malicious payloads.
+**Prevention:** Always use `shell=False` for executing external commands when using `subprocess`. Pass the command as a structured list using `shlex.split()` to ensure arguments are safely parsed without invoking a system shell.
