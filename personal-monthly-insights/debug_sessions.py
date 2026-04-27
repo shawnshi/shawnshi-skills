@@ -1,9 +1,10 @@
 import subprocess
 import re
 
+ANSI_ESCAPE = re.compile(r'\x1B(?:[@-Z\\-_]|[0-9A-FF]{1,2})')
+
 def strip_ansi(text):
-    ansi_escape = re.compile(r'\x1B(?:[@-Z\\-_]|[0-9A-FF]{1,2})')
-    return ansi_escape.sub('', text)
+    return ANSI_ESCAPE.sub('', text)
 
 print("--- DEBUG: gemini --list-sessions raw output ---")
 try:
