@@ -17,13 +17,80 @@ from datetime import datetime, timedelta
 # Import data fetcher
 sys.path.insert(0, str(Path(__file__).parent))
 try:
-    from garmin_sqlite_adapter import get_summary as sqlite_summary, get_sleep_data as sqlite_sleep, get_hrv_data as sqlite_hrv, get_activities_data as sqlite_activities, get_biomechanics_data as sqlite_biomechanics, DB_DIR, get_daily_friction_matrix
+    from garmin_sqlite_adapter import (
+        get_summary as sqlite_summary, 
+        get_sleep_data as sqlite_sleep, 
+        get_hrv_data as sqlite_hrv, 
+        get_activities_data as sqlite_activities, 
+        get_biomechanics_data as sqlite_biomechanics, 
+        DB_DIR, 
+        get_daily_friction_matrix,
+        get_devices_info,
+        get_body_composition_detailed,
+        get_monitoring_hr
+    )
     HAS_SQLITE = DB_DIR.exists()
 except ImportError:
     HAS_SQLITE = False
 
 from garmin_auth import get_client
 from garmin_data import fetch_summary
+
+def calc_pmc_metrics(friction_matrix):
+    """
+    Calculate PMC (Performance Management Chart) metrics: CTL, ATL, TSB.
+    CTL (Chronic Training Load): 42-day EWMA of daily friction load.
+    ATL (Acute Training Load): 7-day EWMA of daily friction load.
+    TSB (Training Stress Balance): CTL - ATL.
+    """
+    if friction_matrix.empty:
+        return friction_matrix
+    
+    # Sort by date ascending for EWMA
+    df = friction_matrix.sort_values('date')
+    
+    # CTL: 42-day rolling average
+    df['ctl'] = df['daily_friction_load'].ewm(span=42, adjust=False).mean()
+    # ATL: 7-day rolling average
+    df['atl'] = df['daily_friction_load'].ewm(span=7, adjust=False).mean()
+    # TSB: CTL - ATL
+    df['tsb'] = df['ctl'] - df['atl']
+    
+    return df
+
+def analyze_env_stress(summary_data):
+    """Analyze correlation between environment factors (temp/alt) and physiological stress."""
+    activities = summary_data.get("activities", [])
+    if not activities:
+        return {"status": "no_data"}
+    
+    env_insights = []
+    temps = [a.get('temperature') for a in activities if a.get('temperature')]
+    if temps:
+        avg_temp = statistics.mean(temps)
+        if avg_temp > 28:
+            env_insights.append(f"High thermal stress detected (avg {avg_temp:.1f}°C). Increased RHR expected.")
+    
+    return {"analysis_type": "environmental_stress", "insights": env_insights}
+
+def analyze_device_health(summary_data):
+    """Audit device firmware and sensor consistency."""
+    devices = summary_data.get("device_info", [])
+    if hasattr(devices, 'empty') and devices.empty:
+        return {"status": "no_data"}
+    
+    insights = []
+    # Check for multiple devices or firmware versions
+    if hasattr(devices, 'software_version'):
+        unique_firmware = devices['software_version'].unique()
+        if len(unique_firmware) > 1:
+            insights.append(f"Firmware version shift detected ({', '.join(map(str, unique_firmware))}). Physiological baseline may be affected by sensor algorithm changes.")
+    
+    return {
+        "analysis_type": "device_audit", 
+        "devices": devices.to_dict('records') if hasattr(devices, 'to_dict') else [], 
+        "insights": insights
+    }
 
 def parse_time_to_seconds(time_str):
     """Convert HH:MM:SS string to seconds."""
@@ -65,6 +132,10 @@ def fetch_local_summary(days):
     activities_df = sqlite_activities(days)
     biomechanics_df = sqlite_biomechanics(days)
     
+    # New: Devices and Detailed weight
+    devices_df = get_devices_info()
+    weight_detailed_df = get_body_composition_detailed(days)
+    
     activities_list = activities_df.to_dict('records') if not activities_df.empty else []
     biomechanics_list = biomechanics_df.to_dict('records') if not biomechanics_df.empty else []
     
@@ -79,6 +150,10 @@ def fetch_local_summary(days):
             
     training_load_series = [{"date": d, "acute_load": val} for d, val in daily_loads.items()]
 
+    # Long-term PMC calculation
+    pmc_matrix = get_daily_friction_matrix(max(days, 42)) # Need 42 days for stable CTL
+    pmc_result = calc_pmc_metrics(pmc_matrix)
+
     # Convert DataFrames to the dictionary list format expected by existing logic
     summary_data = {
         "heart_rate": summary_df.rename(columns={"resting_heart_rate": "resting_hr"}).to_dict('records'),
@@ -90,6 +165,9 @@ def fetch_local_summary(days):
         "biomechanics": biomechanics_list,
         "daily_summary": summary_df.to_dict('records'),
         "training_load_series": training_load_series,
+        "pmc": pmc_result.to_dict('records') if not pmc_result.empty else [],
+        "device_info": devices_df,
+        "body_composition_detailed": weight_detailed_df.to_dict('records') if not weight_detailed_df.empty else [],
         "training_status": {},
         "max_metrics": {},
         "body_composition": {}
@@ -829,7 +907,7 @@ def stitch_v3_metrics(summary_data, days):
 
 def main():
     parser = argparse.ArgumentParser(description="Advanced Health Intelligence")
-    parser.add_argument("analysis", choices=["flu_risk", "readiness", "insight_cn", "audit"], help="Analysis type")
+    parser.add_argument("analysis", choices=["flu_risk", "readiness", "insight_cn", "audit", "long_term_load", "env_stress", "device_audit"], help="Analysis type")
     parser.add_argument("--days", type=int, default=7, help="Context window in days")
     parser.add_argument("--period", type=str, help="Period (e.g. 90d, YTD). Overrides --days.")
     
@@ -854,6 +932,12 @@ def main():
         result = generate_chinese_insight(summary_data)
     elif args.analysis == "audit":
         result = perform_bio_metric_audit(summary_data)
+    elif args.analysis == "long_term_load":
+        result = {"analysis_type": "pmc_metrics", "data": summary_data.get("pmc", [])}
+    elif args.analysis == "env_stress":
+        result = analyze_env_stress(summary_data)
+    elif args.analysis == "device_audit":
+        result = analyze_device_health(summary_data)
         
     print(json.dumps(result, indent=2, ensure_ascii=False))
 

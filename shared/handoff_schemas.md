@@ -499,6 +499,8 @@ score_trajectory: {
 | `integrity_pass_date` | string | ISO 8601 timestamp of last integrity verification pass (if applicable) |
 | `content_hash` | string | SHA-256 hash of the content (for change detection) |
 | `upstream_dependencies` | list[string] | Version labels of artifacts this one depends on |
+| `repro_lock` | object \| null | configuration lockfile for artifact reproducibility. See [`artifact_reproducibility_pattern.md`](artifact_reproducibility_pattern.md). `null` = honest opt-out. Required from v3.3.5+ — omitted key fails lint. |
+| `compliance_history` | list[object] | Append-only audit trail of `compliance_report` entries (Schema 12). Added v3.4.0+. See [Schema 12](#schema-12--compliance-report-v340) and [`shared/compliance_report.schema.json`](compliance_report.schema.json). |
 
 ### Example
 
@@ -605,6 +607,45 @@ See `shared/style_calibration_protocol.md` for full consumption rules and confli
 
 ---
 
+## Schema 12 — Compliance Report (v3.4.0+)
+
+**Source of truth:** [`shared/compliance_report.schema.json`](compliance_report.schema.json)
+
+Mode-aware output of [`compliance_agent`](agents/compliance_agent.md). Three top-level subtrees: `prisma_trAIce` (null for primary research), `raise` (always present), and decision aggregation fields.
+
+- **Emitted by:** `compliance_agent` at Stage 2.5 / 4.5 (pipeline) or pre-finalize (standalone skills)
+- **Consumed by:** orchestrator (for checkpoint dashboard), `report_compiler_agent` (for AI Self-Reflection Report compliance summary at Stage 6)
+- **Appended to:** `material_passport.compliance_history[]` (append-only)
+
+### Key fields
+
+- `mode`: dispatches payload (see [`shared/agents/compliance_agent.md`](agents/compliance_agent.md) §Dispatch logic)
+- `stage`: `"2.5"` or `"4.5"`
+- `prisma_trAIce`: `null` when `mode != "systematic_review"`; otherwise tier-bucketed item results
+- `raise.mode`: `"full"` (SR + other_evidence_synthesis) or `"principles_only"` (primary_research)
+- `raise.principles`: 4 keys, each with `pass` / `warn` / `fail`
+- `raise.roles`: 8 keys, populated only when `raise.mode == "full"`
+- `overall_decision`: aggregate across compliance + legacy integrity + v3.2 failure mode
+- `user_override`: only present after a user overrides a block; rationale required
+- `upstream_sync_status`: `"current"` or `"stale"` (from freshness check)
+
+Full field spec: [`shared/compliance_report.schema.json`](compliance_report.schema.json).
+
+### Material Passport extension
+
+Schema 9 Material Passport gains one optional field, `compliance_history`:
+
+```yaml
+compliance_history:
+  - <compliance_report entry>
+  - <compliance_report entry>
+  # append-only; never overwrite, never reorder
+```
+
+Ordering: chronological by `generated_at`. A Stage 2.5 FAIL followed by backfill + retry-pass produces two adjacent entries for Stage 2.5 — both preserved.
+
+---
+
 ## Validation Rules
 
 1. **Required field check**: All schema fields marked without "(optional)" or "No" in the Required column are REQUIRED. Consumer agents MUST verify all required fields are present before proceeding
@@ -619,3 +660,32 @@ See `shared/style_calibration_protocol.md` for full consumption rules and confli
 10. **Passport freshness**: A Material Passport's integrity results are considered STALE if `integrity_pass_date` is more than 24 hours old relative to the current timestamp. Stale passports require re-verification before proceeding
 11. **Stage-skip eligibility via passport**: A passport allows skipping Stage 2.5 (pre-review integrity) ONLY when ALL of the following conditions are met: (a) `verification_status` = `"VERIFIED"`, (b) `integrity_pass_date` is within the current session or less than 24 hours old, (c) `version_label` matches the current artifact version (content has not been modified since verification), and (d) the user explicitly confirms the skip. If any condition fails, full Stage 2.5 re-verification is required
 12. **Passport does not grant Stage 4.5 skip**: The final integrity check (Stage 4.5) can NEVER be skipped via Material Passport, regardless of passport status. Stage 4.5 always requires full Mode 2 verification
+
+## `data_access_level` (v3.3.2+)
+
+Every top-level `SKILL.md` declares `metadata.data_access_level` with one of three values:
+
+- `raw` — consumes unverified sources; must assume adversarial/hallucinated input
+- `redacted` — operates on sanitized material; no new raw ingestion
+- `verified_only` — runs only after upstream integrity gates
+
+This is a declarative signal (not a runtime permission system). Enforced by `scripts/check_data_access_level.py` in CI. When adding a new skill, pick the value matching the *dirtiest* input the skill may legitimately consume.
+
+## `task_type` (v3.3.2+)
+
+Every top-level `SKILL.md` declares `metadata.task_type` with one of two values:
+
+- `outcome-gradable` — the task has an objective scalar metric the skill optimizes against; a third party can score the output without deep context
+- `open-ended` — the task's quality depends on domain judgment, interpretive work, or context no metric captures
+
+This is a declarative truth-in-advertising signal. All current ARS skills are `open-ended` because ARS targets humanities/QA/policy work, not benchmark tasks. When adding a new skill, do not invent a third value; if the skill genuinely spans both, split it into two skills.
+
+Enforced by `scripts/check_task_type.py` in CI.
+
+See [`ground_truth_isolation_pattern.md`](ground_truth_isolation_pattern.md) for the rationale and rules behind this annotation.
+
+
+## v3.3.5 additions
+
+- `benchmark_report.schema.json` + [`benchmark_report_pattern.md`](benchmark_report_pattern.md) — schema for publishing ARS benchmark comparisons with required human baseline + independence fields.
+- `repro_lock` sub-block on Material Passport + [`artifact_reproducibility_pattern.md`](artifact_reproducibility_pattern.md) — configuration lockfile (NOT replay guarantee).

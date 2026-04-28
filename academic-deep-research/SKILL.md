@@ -1,14 +1,17 @@
 ---
 name: academic-deep-research
-description: "Primary owner for broad academic topic research: deep research, literature review, systematic review, meta-analysis, evidence synthesis, fact-check, and research-question formulation. Use when the user wants a multi-source academic research pipeline on a topic, not just one paper. Prefer academic-paper-reader for single-paper dissection, academic-paper-writer for drafting/revision, and hv-analysis for product/company/person longitudinal research."
-metadata:
-  version: "2.8"
-  last_updated: "2026-04-09"
-  status: active
-  related_skills:
-    - academic-paper
-    - academic-paper-writer
+description: "Universal deep research agent team. 13-agent pipeline for rigorous academic research on any topic. 7 modes: full research, quick brief, paper review, lit-review, fact-check, Socratic guided research dialogue, and systematic review with optional meta-analysis. Covers research question formulation, Socratic mentoring, methodology design, systematic literature search, source verification, cross-source synthesis, risk of bias assessment, meta-analysis, APA 7.0 report compilation, editorial review, devil's advocate challenges, ethics review, and post-research literature monitoring. Triggers on: research, deep research, literature review, systematic review, meta-analysis, PRISMA, evidence synthesis, fact-check, guide my research, help me think through, 研究, 深度研究, 文獻回顧, 文獻探討, 系統性回顧, 後設分析, 事實查核, 引導我的研究, 幫我釐清, 幫我想想, 我不確定要研究什麼, 研究方向, 研究主題."
 ---
+
+<strategy-gene>
+Keywords: 深度研究, PRISMA, 文献综述, 13-agent, 证据等级
+Summary: 调度 13 代理管线执行学术级研究，从 RQ 澄清到 APA 7.0 报告全流程交付。
+Strategy:
+1. 意图定调：默认 socratic 引导，确保研究问题符合 FINER 标准。
+2. 证据分级：严格执行 Evidence Hierarchy，Tier 1 刊物权重远高于预印本。
+3. 强制审计：Devil's Advocate 必须在 Scoping, Analysis, Review 三个阶段执行 Checkpoint 拦截。
+AVOID: 严禁编造引文 (Vibe citing)；禁止将 L3 灰产文献标记为 Tier 1；禁止跳过伦理审查。
+</strategy-gene>
 
 # Deep Research — Universal Academic Research Agent Team
 
@@ -16,7 +19,7 @@ Universal deep research tool — a domain-agnostic 13-agent team for rigorous ac
 
 **v2.4** adds writing quality improvements to the report compiler:
 - **Style Profile consumption** (optional) — If a Style Profile is available from academic-paper intake, the report compiler applies it as a soft guide for the Executive Summary and Synthesis sections. Discipline conventions and report objectivity take priority.
-- **Writing Quality Check** — The report compiler runs a writing quality checklist before finalizing: flags AI-typical overused terms, checks sentence/paragraph length variation, removes throat-clearing openers. See `academic-paper-writer/references/writing_quality_check.md`.
+- **Writing Quality Check** — The report compiler runs a writing quality checklist before finalizing: flags AI-typical overused terms, checks sentence/paragraph length variation, removes throat-clearing openers. See `academic-paper/references/writing_quality_check.md`.
 
 ## Quick Start
 
@@ -72,7 +75,7 @@ Activate `socratic` mode when the user's **intent** matches any of the following
 |----------|-------------|
 | Writing a paper (not researching) | `academic-paper` |
 | Reviewing a paper (structured review) | `academic-paper-reviewer` |
-| Full research-to-paper pipeline | `academic-paper-writer` |
+| Full research-to-paper pipeline | `academic-pipeline` |
 
 ### Quick Mode Selection Guide
 
@@ -266,6 +269,8 @@ User: "Research [topic]"
 
 PRISMA 2020-compliant systematic review with optional meta-analysis. Follows 5-phase protocol: Protocol Registration -> Systematic Search -> Screening & Selection -> Data Extraction & RoB -> Synthesis & Reporting.
 
+> **v3.4.0 compliance:** `systematic-review` mode triggers `compliance_agent` at Stage 2.5 (Methods items) and Stage 4.5 (remaining items + RAISE 8-role matrix). PRISMA-trAIce Mandatory failures block the pipeline. See `shared/compliance_checkpoint_protocol.md`.
+
 > See `references/systematic_review_protocol.md` for full PRISMA pipeline, checkpoint rules, and meta-analysis procedures.
 
 ---
@@ -334,7 +339,7 @@ See `examples/handoff_to_paper.md` for a detailed handoff example.
 
 ## Full Academic Pipeline
 
-See `academic-paper-writer/SKILL.md` for the downstream paper-writing workflow.
+See `academic-pipeline/SKILL.md` for the complete workflow.
 
 ---
 
@@ -454,12 +459,12 @@ Unified definitions across all agents. ⚠️ IRON RULE: **CRITICAL severity** =
 This skill is domain-agnostic but can be combined with domain-specific skills:
 
 ```
-academic-deep-research + tw-hei-intelligence     -> Evidence-based HEI policy research
-academic-deep-research + report-to-website       -> Interactive research report
-academic-deep-research + podcast-script-generator -> Research podcast
-academic-deep-research + academic-paper-writer          -> Full research-to-publication pipeline
-academic-deep-research (socratic) + academic-paper-writer (plan) -> Guided research + paper planning
-academic-deep-research (systematic-review) + academic-paper-writer -> PRISMA systematic review paper
+deep-research + tw-hei-intelligence     -> Evidence-based HEI policy research
+deep-research + report-to-website       -> Interactive research report
+deep-research + podcast-script-generator -> Research podcast
+deep-research + academic-paper          -> Full research-to-publication pipeline
+deep-research (socratic) + academic-paper (plan) -> Guided research + paper planning
+deep-research (systematic-review) + academic-paper -> PRISMA systematic review paper
 ```
 
 ---
@@ -468,14 +473,16 @@ academic-deep-research (systematic-review) + academic-paper-writer -> PRISMA sys
 
 | Item | Content |
 |------|---------|
-| Skill Version | 2.8 |
-| Last Updated | 2026-04-09 |
+| Skill Version | 2.9.0 |
+| Last Updated | 2026-04-20 |
 | Maintainer | Cheng-I Wu |
 | Dependent Skills | academic-paper v1.0+ (downstream) |
 
 ---
 
 ## Version History
+
+> See `references/changelog.md` for full version history.
 
 > See `references/changelog.md` for full version history.
 

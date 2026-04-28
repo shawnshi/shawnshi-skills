@@ -3,6 +3,16 @@ name: hit-industry-radar
 description: 医疗行业战略雷达。Primary owner for weekly healthcare IT news, competitor moves, bids, vendor dynamics, and market-event battle reports. Use for fast-moving market signals. Prefer hit-weekly-brief for consulting reports and whitepapers, and hit-lectures-scout for academic or clinical paper scouting.
 ---
 
+<strategy-gene>
+Keywords: 医疗 IT 战报, 竞对动态, 行业周报, 价格战预警
+Summary: 基于黑板模式调度并发子代理，将碎片化周级情报组装为系统动力学战报。
+Strategy:
+1. 并发侦察：同时下发国际、国内、卫宁基准指令包至 sandbox。
+2. 织者推理：寻找不同标段间的“隐含供应链共振”与价格战预警。
+3. 事实仲裁：剥离营销废话，仅保留带金额、版本或节点的硬信息。
+AVOID: 严禁重复 14 天内的旧闻；禁止包含无具体数据的公关通稿；禁止使用主观形容词描述事实。
+</strategy-gene>
+
 # HIT Industry Radar (医疗行业雷达) V5.1 
 
 > **Vision**: 消除跨周失忆与孤立事件堆砌，基于 Blackboard 模式的情报组装机。

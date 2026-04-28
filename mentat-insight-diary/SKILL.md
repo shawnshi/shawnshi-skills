@@ -45,6 +45,7 @@ This skill performs a system-centric, first-person deep reflection on cognitive 
 
 ## Failure Modes
 - **[Archive_Prepend]**: 严禁创建碎片化的 `[YYYY-MM-DD]_Audit.md` 文件。所有审计日志必须按季度强制合并。
+- **[Header_Hard_Lock]**: 在将 Payload 交接给 `personal-diary-writer` 前，必须强制在正文顶部插入 `# YYYY-MM-DD` 格式的日期标题，否则将触发 `diary_ops.py` 的校验拦截。
 - **[Zero-Ego]**: 必须真实反映失败现场与逻辑断裂，严禁对系统错误进行“美化”或找补。
 - **[Archive_First]**: 必须在最终回复用户前完成物理落盘操作（通过 `personal-diary-writer` 确认）。
 - **[NO_AGENDA_TRUNCATION]**: NEVER rely on `gws calendar agenda`. It is known to truncate events. Always use `events list` with time bounds.

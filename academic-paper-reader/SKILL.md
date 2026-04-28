@@ -4,6 +4,16 @@ description: "Primary owner for single-paper or small-paper-set reading, dissect
 triggers: ["读论文", "拆解论文", "溯源分析", "paper river", "分析这篇论文的演化", "学术透视"]
 ---
 
+<strategy-gene>
+Keywords: 读论文, 溯源分析, 第一性原理, 演化地图
+Summary: 剥离学术外衣提取思想核心，通过逆推 3-5 层前序论文构建“论文河”演化地图。
+Strategy:
+1. 宿敌锁定：识别 Related Work 中明确批判的前人方法 X，将其定为 Baseline。
+2. 填坑叙事：以“上篇留坑 -> 本篇填坑 -> 本篇新坑”的费曼逻辑正向推进叙事。
+3. 具象隐喻：必须为每篇核心论文找到一个具象中心隐喻（图/动作/场景）进行控制。
+AVOID: 禁止全量加载 PDF（算力黑洞）；禁止保留 [URL] 占位符；禁止写没有推理外显的结果。
+</strategy-gene>
+
 # SKILL.md: 学术论文透视与精读 (V3.0: Cognitive Assault Edition)
 
 > **核心法则**: 读论文不是做学术，是猎取思想。把别人的发现拆解成自己能用的认知，同时剥去其复杂的学术外衣，直击第一性原理。

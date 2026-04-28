@@ -1,10 +1,18 @@
 ---
 name: personal-logic-adversary
-version: 6.0.0
-description: |
-  军工级逻辑对抗系统 (Native Agent Edition)。当用户展示方案、做出决策或要求“寻找漏洞”、“压力测试”时，务必强制激活。该技能通过多维专家博弈与饱和逻辑攻击，搜索单点故障（SPOF），将脆弱的假设锻造成鲁棒的钢人策略。
+description: 军工级逻辑对抗系统 (Native Agent Edition)。当用户展示方案、做出决策 or 要求“寻找漏洞”、“压力测试”时，务必强制激活。该技能通过多维专家博弈与饱和逻辑攻击，搜索单点故障（SPOF），将脆弱的假设锻造成鲁棒的钢人策略。
 triggers: ["寻找逻辑漏洞", "审核方案风险", "模拟专家辩论", "发起红队攻击", "执行压力测试", "质疑我的决定", "寻找方案盲点"]
 ---
+
+<strategy-gene>
+Keywords: 逻辑漏洞, 红队攻击, SPOF 审计, 钢人重构
+Summary: 通过饱和逻辑攻击识别致命单点故障，将脆弱假设重构为具备防御性的钢人方案。
+Strategy:
+1. 沙盒对抗：Phase 3 冲突博弈必须在物理 sandbox 文件中执行，防止 Context 塌陷。
+2. 威胁假设：直接锁定最可能导致失败的 3 个致命单点 (SPOF)。
+3. 钢人重构：必须为最脆弱论点提供一个在逻辑上更强大的防御版本。
+AVOID: 严禁赞美或附和方案；禁止使用形容词描述风险；禁止未经过 Phase 0 侦察开启博弈。
+</strategy-gene>
 
 # Logic Adversary V6.0 (The Steelmen Forge)
 

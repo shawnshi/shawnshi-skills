@@ -4,14 +4,14 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>%%TITLE%%</title>
-    <script src="https://cdn.jsdelivr.net/npm/chart.js@4/dist/chart.umd.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/echarts@5/dist/echarts.min.js"></script>
     <style>
         @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;600;800&family=JetBrains+Mono:wght@500;800&display=swap');
         * { margin: 0; padding: 0; box-sizing: border-box; }
         body {
             font-family: 'Inter', -apple-system, sans-serif;
-            background-color: #F0F2F5;
-            color: #1E293B;
+            background-color: #0F172A;
+            color: #F8FAFC;
             padding: 24px;
             font-size: 13px;
             line-height: 1.6;
@@ -20,29 +20,30 @@
             display: grid;
             grid-template-columns: repeat(12, 1fr);
             gap: 20px;
-            max-width: 1600px;
+            max-width: 1800px;
             margin: 0 auto;
         }
         .panel {
-            background: #FFFFFF;
-            border: 1px solid #E2E8F0;
+            background: #1E293B;
+            border: 1px solid #334155;
             border-radius: 12px;
             padding: 24px;
-            box-shadow: 0 4px 12px rgba(0,0,0,0.03);
+            box-shadow: 0 10px 25px rgba(0,0,0,0.2);
             display: flex;
             flex-direction: column;
         }
         .panel-title {
             font-size: 11px;
             font-weight: 800;
-            color: #64748B;
+            color: #94A3B8;
             text-transform: uppercase;
-            letter-spacing: 0.1em;
+            letter-spacing: 0.15em;
             margin-bottom: 15px;
             display: flex;
             justify-content: space-between;
             align-items: center;
         }
+        .panel-title span { font-family: 'JetBrains Mono'; color: #475569; }
         .status-hero {
             grid-column: span 4;
             background: %%STATUS_COLOR%%;
@@ -57,36 +58,36 @@
             content: '';
             position: absolute;
             top: 0; right: 0; bottom: 0; left: 0;
-            background: linear-gradient(135deg, rgba(255,255,255,0.1) 0%, transparent 100%);
+            background: linear-gradient(135deg, rgba(255,255,255,0.15) 0%, transparent 100%);
         }
-        .hero-val { font-size: 48px; font-weight: 900; margin: 8px 0; position: relative; z-index: 1; }
+        .hero-val { font-size: 56px; font-weight: 900; margin: 8px 0; position: relative; z-index: 1; text-shadow: 0 4px 10px rgba(0,0,0,0.2); }
         .kpi-grid { grid-column: span 8; display: grid; grid-template-columns: repeat(4, 1fr); gap: 15px; }
         .kpi-card {
-            background: white;
-            border: 1px solid #E2E8F0;
+            background: #1E293B;
+            border: 1px solid #334155;
             border-radius: 12px;
             padding: 16px;
             display: flex;
             flex-direction: column;
             justify-content: space-between;
+            transition: border-color 0.3s ease;
         }
-        .kpi-card .val { font-size: 24px; font-weight: 800; font-family: 'JetBrains Mono'; }
+        .kpi-card:hover { border-color: #4F46E5; }
+        .kpi-card .val { font-size: 28px; font-weight: 800; font-family: 'JetBrains Mono'; color: #F8FAFC; }
         
-        .chart-panel { grid-column: span 6; min-height: 350px; }
-        .chart-panel.full { grid-column: span 12; min-height: 400px; }
-        .chart-wrapper { position: relative; width: 100%; flex-grow: 1; height: 280px; }
-        .chart-panel.full .chart-wrapper { height: 320px; }
+        .chart-panel { grid-column: span 6; min-height: 400px; }
+        .chart-panel.full { grid-column: span 12; min-height: 450px; }
+        .chart-wrapper { position: relative; width: 100%; flex-grow: 1; height: 320px; }
 
         .log-panel { 
             grid-column: span 12; 
-            background: #1E293B; 
+            background: #0F172A; 
             color: #F8FAFC; 
-            border-radius: 20px; 
+            border-radius: 16px; 
             margin-top: 15px;
             padding: 32px;
-            border: 1px solid #334155;
-            box-shadow: 0 30px 60px rgba(0,0,0,0.25);
-            position: relative;
+            border: 1px solid #1E293B;
+            box-shadow: 0 20px 50px rgba(0,0,0,0.3);
         }
         .log-header { 
             display: flex; 
@@ -99,20 +100,19 @@
         .summary-box {
             background: rgba(255,255,255,0.03);
             border-radius: 12px;
-            padding: 20px;
-            border-left: 4px solid %%STATUS_COLOR%%;
+            padding: 24px;
+            border-left: 5px solid %%STATUS_COLOR%%;
             font-size: 16px;
-            font-weight: 600;
+            font-weight: 500;
             line-height: 1.8;
             color: #E2E8F0;
         }
         .directive-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 20px; margin-top: 30px; } 
         .directive-card { 
-            background: rgba(255,255,255,0.02); 
+            background: #1E293B; 
             padding: 20px; 
             border-radius: 12px; 
-            border: 1px solid rgba(255,255,255,0.05);
-            transition: all 0.3s ease;
+            border: 1px solid #334155;
         }
         .directive-card h4 { 
             font-size: 10px; 
@@ -122,10 +122,10 @@
             margin-bottom: 12px;
             display: flex;
             align-items: center;
-            gap: 6px;
+            gap: 8px;
         }
         .directive-card h4::before { content: '◈'; color: %%STATUS_COLOR%%; }
-        
+
         .heatmap-section {
             margin-top: 40px;
             padding-top: 25px;
@@ -133,7 +133,7 @@
         }
         .heatmap-container { display: flex; flex-wrap: wrap; gap: 5px; margin-top: 15px; }
         .heat-box { width: 13px; height: 13px; border-radius: 2px; }
-        
+
         @media (max-width: 1200px) {
             .status-hero, .kpi-grid, .chart-panel { grid-column: span 12; }
             .directive-grid { grid-template-columns: repeat(2, 1fr); }
@@ -141,123 +141,13 @@
     </style>
 </head>
 <body>
-    <div class="grid-container" id="app"></div>
+    <div id="app" class="grid-container"></div>
     <script>
         const b64Data = "%%B64_DATA%%";
         const rawJson = decodeURIComponent(escape(window.atob(b64Data)));
         const data = JSON.parse(rawJson);
-        const colors = {"BG":"#F0F2F5","PANEL_BG":"#FFFFFF","ACCENT":"#4F46E5","BORDER":"#E2E8F0","TEXT_MAIN":"#1E293B","TEXT_MUTED":"#64748B","GREEN":"#10B981","RED":"#EF4444","YELLOW":"#F59E0B","BLUE":"#3B82F6","PURPLE":"#8B5CF6"};
-
-        function renderDashboard() {
-            const app = document.getElementById('app');
-            if (!data.audit_data) return;
-            const a = data.audit_data;
-            const q = data.quant_scores;
-
-            const rhr_delta = %%RHR_DELTA%%;
-            const rhr_icon = rhr_delta > 0 ? '\u2191' : '\u2193';
-            const deep_pct = a.recovery_loop.sleep_architecture.deep_pct;
-            const deep_status = deep_pct >= 20 ? '\u8FBE\u6019' : '\u4E0D\u8DB3';
-
-            let html = `
-            <div class="panel status-hero">
-                <div class="panel-title" style="color:rgba(255,255,255,0.7)">态势感知分析 // SITUATIONAL AWARENESS</div>
-                <div class="hero-val">${a.action_protocol.move.split(' ')[0]}</div>
-                <div style="font-weight:600; opacity:0.9">执行准备度: ${q.output}/100 · 指挥官指令: ${a.action_protocol.move.split(' - ')[1] || ''}</div>
-            </div>
-
-            <div class="kpi-grid">
-                <div class="kpi-card">
-                    <div class="panel-title">静息心率</div>
-                    <div class="val">${a.system_status.rhr.current} <small style="font-size:12px">bpm</small></div>
-                    <div style="color:%%RHR_TREND_COLOR%%; font-size:11px; font-weight:700">${rhr_icon} ${Math.abs(rhr_delta).toFixed(1)}% vs 基线</div>
-                </div>
-                <div class="kpi-card">
-                    <div class="panel-title">睡眠赤字</div>
-                    <div class="val">${a.recovery_loop.sleep_architecture.sleep_debt_h} <small style="font-size:12px">h</small></div>
-                    <div style="color:%%DEEP_COLOR%%; font-size:11px; font-weight:700">深睡 ${deep_pct}% (${deep_status})</div>
-                </div>
-                <div class="kpi-card">
-                    <div class="panel-title">压力耗散</div>
-                    <div class="val">%%WEIGHTED_VAL%% <small style="font-size:12px">h</small></div>
-                    <div style="color:#64748B; font-size:11px">加权摩擦探测</div>
-                </div>
-                <div class="kpi-card">
-                    <div class="panel-title">生理年龄</div>
-                    <div class="val">${a.system_status.fitness_age}</div>
-                    <div style="color:#10B981; font-size:11px">BMI: ${a.system_status.bmi}</div>
-                </div>
-            </div>
-
-            <div class="panel chart-panel full">
-                <div class="panel-title">系统防线资产与摩擦耗散拓扑 (Performance Management Chart) <span>STRATEGIC MOMENTUM (V4.0)</span></div>
-                <div class="chart-wrapper"><canvas id="pmcChart"></canvas></div>
-            </div>
-
-            <div class="panel chart-panel">
-                <div class="panel-title">战略叠加态势 (准备度 × 能量 × 压力) <span>ORIENT LEVEL 1</span></div>
-                <div class="chart-wrapper"><canvas id="overlayChart"></canvas></div>
-            </div>
-
-            <div class="panel chart-panel">
-                <div class="panel-title">心率包络分析 (静息 vs 最大 vs HRV) <span>ORIENT LEVEL 2</span></div>
-                <div class="chart-wrapper"><canvas id="hrChart"></canvas></div>
-            </div>
-
-            <div class="panel chart-panel">
-                <div class="panel-title">恢复效能分布 (得分 × 时长) <span>ORIENT LEVEL 3</span></div>
-                <div class="chart-wrapper"><canvas id="sleepChart"></canvas></div>
-            </div>
-
-            <div class="panel chart-panel">
-                <div class="panel-title">物理负荷审计 (卡路里 × 步数 × 负荷) <span>ORIENT LEVEL 4</span></div>
-                <div class="chart-wrapper"><canvas id="activityChart"></canvas></div>
-            </div>
-            
-            <div class="panel chart-panel">
-                <div class="panel-title">呼吸熵与血氧 (SpO2 × 清醒RR) <span>ORIENT LEVEL 5</span></div>
-                <div class="chart-wrapper"><canvas id="respSpO2Chart"></canvas></div>
-            </div>
-
-            <div class="panel chart-panel">
-                <div class="panel-title">生物力学防线与蒸发耗散 <span>ORIENT LEVEL 6</span></div>
-                <div class="chart-wrapper"><canvas id="biomechFluidChart"></canvas></div>
-            </div>
-            
-            <div class="panel chart-panel full">
-                <div class="panel-title">多维物理作战全景 (跑步 × 骑行 × 爬山 × HIIT) <span>ACTIVITY SUMMARY</span></div>
-                <div class="chart-wrapper"><canvas id="activitySummaryChart"></canvas></div>
-            </div>`;
-
-            const logParts = data.overall_insight.split('\n\n');
-            
-            const directives = logParts.slice(1).filter(p => p.includes('\u3010')).map(p => {
-                const title = p.match(/\u3010(.*?)\u3011/)?.[1] || '分析';
-                const content = p.replace(/\u3010.*?\u3011/, '').trim();
-                return `<div class="directive-card"><h4>${title}</h4><p style="font-size:12px; color:#CBD5E1; line-height:1.7; white-space: pre-wrap;">${content}</p></div>`;
-            }).join('');
-
-            html += `
-            <div class="log-panel">
-                <div class="log-header">
-                    <div class="panel-title" style="color:#94A3B8; margin-bottom:0">MENTAT 数字化战略审计中枢 // DECISION HUB</div>
-                    <div style="font-family:'JetBrains Mono'; font-size:10px; color:%%STATUS_COLOR%%; border:1px solid %%STATUS_COLOR%%; padding:2px 8px; border-radius:4px">STATUS: ${a.action_protocol.type}</div>
-                </div>
-                <div class="summary-box">${logParts[0]}</div>
-                <div class="directive-grid">${directives}</div>
-                
-                ${data.heatmap ? `
-                <div class="heatmap-section">
-                    <div class="panel-title" style="color:#94A3B8">系统一致性生理特征热力图 (Consistency Tracking)</div>
-                    <div class="heatmap-container">
-                        ${data.heatmap.map(d => `<div class="heat-box" title="${d.date}: ${d.score}" style="background: ${getHeatColor(d.score)}"></div>`).join('')}
-                    </div>
-                </div>` : ''}
-            </div>`;
-
-            app.innerHTML = html;
-            setTimeout(renderCharts, 50);
-        }
+        const ov = data.overlay_data || {};
+        const colors = {"GREEN":"#10B981","RED":"#EF4444","YELLOW":"#F59E0B","BLUE":"#3B82F6","PURPLE":"#8B5CF6"};
 
         function getHeatColor(score) {
             if (!score) return '#334155';
@@ -267,124 +157,229 @@
             return colors.RED;
         }
 
-        function renderCharts() {
-            const od = data.overlay_data;
-            if (!od) return;
+        function renderDashboard() {
+            const app = document.getElementById('app');
+            if (!data.audit_data) return;
+            const a = data.audit_data;
+            const q = data.quant_scores;
+            const rhr_delta = %%RHR_DELTA%%;
+            const rhr_icon = rhr_delta > 0 ? '↑' : '↓';
 
-            const baseOptions = {
-                responsive: true, maintainAspectRatio: false,
-                plugins: { legend: { display: true, position: 'top', align: 'end', labels: { boxWidth: 8, usePointStyle: true, font: { size: 10, weight: 'bold' } } } },
-                scales: { x: { grid: { display: false } } }
+            let html = '<div class="panel status-hero">' + 
+                '<div class="panel-title" style="color:rgba(255,255,255,0.6)">SITUATIONAL AWARENESS // 实时态势</div>' + 
+                '<div class="hero-val">' + a.action_protocol.move.split(' ')[0] + '</div>' + 
+                '<div style="font-weight:600; opacity:0.8; font-family: \'JetBrains Mono\' ">READY_SCORE: ' + q.output + ' // CMD: ' + (a.action_protocol.move.split(' - ')[1] || '') + '</div>' + 
+            '</div>' + 
+            '<div class="kpi-grid">' + 
+                '<div class="kpi-card">' + 
+                    '<div class="panel-title">静息心率 RHR</div>' + 
+                    '<div class="val">' + a.system_status.rhr.current + ' <small style="font-size:12px; color:#64748B">BPM</small></div>' + 
+                    '<div style="color:%%RHR_TREND_COLOR%%; font-size:11px; font-weight:700">' + rhr_icon + ' ' + Math.abs(rhr_delta).toFixed(1) + '% VS BASELINE</div>' + 
+                '</div>' + 
+                '<div class="kpi-card">' + 
+                    '<div class="panel-title">睡眠赤字 DEBT</div>' + 
+                    '<div class="val">' + a.recovery_loop.sleep_architecture.sleep_debt_h + ' <small style="font-size:12px; color:#64748B">HRS</small></div>' + 
+                    '<div style="color:#94A3B8; font-size:11px">DEEP SLEEP: ' + a.recovery_loop.sleep_architecture.deep_pct + '%</div>' + 
+                '</div>' + 
+                '<div class="kpi-card">' + 
+                    '<div class="panel-title">环境应激 ENV</div>' + 
+                    '<div class="val">' + (ov.temperature_trend ? ov.temperature_trend[ov.temperature_trend.length-1] || '--' : '--') + ' <small style="font-size:12px; color:#64748B">°C</small></div>' + 
+                    '<div style="color:#64748B; font-size:11px">FIRMWARE: ' + (ov.software_version || 'STABLE') + '</div>' + 
+                '</div>' + 
+                '<div class="kpi-card">' + 
+                    '<div class="panel-title">生理年龄</div>' + 
+                    '<div class="val">' + a.system_status.fitness_age + '</div>' + 
+                    '<div style="color:#10B981; font-size:11px">BMI: ' + a.system_status.bmi + '</div>' + 
+                '</div>' + 
+            '</div>' + 
+
+            '<!-- Strategic Layers -->' + 
+            '<div class="panel chart-panel full">' + 
+                '<div class="panel-title">长程生理动量与 PMC 拓扑 (CTL/ATL/TSB) <span>PMC_MOMENTUM_V4.1</span></div>' + 
+                '<div class="chart-wrapper" id="pmcChart"></div>' + 
+            '</div>' + 
+            '<div class="panel chart-panel full">' + 
+                '<div class="panel-title">生理全景叠合分析 (HRV × BB × Stress × Temp) <span>BIO_OVERLAY_ORIENTATION</span></div>' + 
+                '<div class="chart-wrapper" id="overlayChart"></div>' + 
+            '</div>' + 
+
+            '<!-- Restored Design Sections -->' + 
+            '<div class="panel chart-panel">' + 
+                '<div class="panel-title">心率包络分析 (静息 vs 最大 vs HRV) <span>ORIENT LEVEL 2</span></div>' + 
+                '<div class="chart-wrapper" id="hrChart"></div>' + 
+            '</div>' + 
+            '<div class="panel chart-panel">' + 
+                '<div class="panel-title">呼吸熵与血氧 (SpO2 × 清醒RR) <span>ORIENT LEVEL 5</span></div>' + 
+                '<div class="chart-wrapper" id="respSpO2Chart"></div>' + 
+            '</div>' + 
+
+            '<!-- Detailed Metrics -->' + 
+            '<div class="panel chart-panel">' + 
+                '<div class="panel-title">睡眠架构与恢复周期 <span>SLEEP_ARCH</span></div>' + 
+                '<div class="chart-wrapper" id="sleepChart"></div>' + 
+            '</div>' + 
+            '<div class="panel chart-panel">' + 
+                '<div class="panel-title">身体能量负载 (Body Battery) <span>ENERGY_FLOW</span></div>' + 
+                '<div class="chart-wrapper" id="batteryChart"></div>' + 
+            '</div>' + 
+            '<div class="panel chart-panel">' + 
+                '<div class="panel-title">压力耗散与神经摩擦 <span>STRESS_DISSIPATION</span></div>' + 
+                '<div class="chart-wrapper" id="stressChart"></div>' + 
+            '</div>' + 
+            '<div class="panel chart-panel">' + 
+                '<div class="panel-title">活动强度与卡路里输出 <span>METABOLIC_OUTPUT</span></div>' + 
+                '<div class="chart-wrapper" id="activityChart"></div>' + 
+            '</div>' + 
+            '<div class="panel chart-panel full">' + 
+                '<div class="panel-title">生物力学防线与蒸发耗散 <span>ORIENT LEVEL 6</span></div>' + 
+                '<div class="chart-wrapper" id="biomechFluidChart"></div>' + 
+            '</div>' + 
+
+            '<div class="log-panel">' + 
+                '<div class="log-header">' + 
+                    '<div class="panel-title" style="color:#94A3B8; margin-bottom:0">MENTAT 数字化战略审计中枢 // DECISION HUB</div>' + 
+                    '<div style="font-family:\'JetBrains Mono\'; font-size:10px; color:#8B5CF6; border:1px solid #8B5CF6; padding:2px 8px; border-radius:4px">STATUS: ' + a.action_protocol.type + '</div>' + 
+                '</div>' + 
+                '<div class="summary-box">' + data.overall_insight.split('\n\n')[0].replace(/\n/g, '<br>') + '</div>' + 
+                '<div class="directive-grid">' + 
+                    (data.overall_insight.includes('【') ? 
+                      data.overall_insight.split('\n\n').slice(1).filter(function(p) { return p.includes('【'); }).map(function(p) { 
+                          const title = p.match(/【(.*?)】/)?.[1] || '分析'; 
+                          const content = p.replace(/【.*?】/, '').trim(); 
+                          return '<div class="directive-card"><h4>' + title + '</h4><p style="font-size:12px; color:#CBD5E1; line-height:1.7; white-space: pre-wrap;">' + content + '</p></div>'; 
+                      }).join('') : '') + 
+                '</div>' + 
+                (data.heatmap ? 
+                '<div class="heatmap-section">' + 
+                    '<div class="panel-title" style="color:#94A3B8">系统一致性生理特征热力图 (Consistency Tracking)</div>' + 
+                    '<div class="heatmap-container">' + 
+                        data.heatmap.map(function(d) { return '<div class="heat-box" title="' + d.date + ': ' + d.score + '" style="background: ' + getHeatColor(d.score) + '"></div>'; }).join('') + 
+                    '</div>' + 
+                '</div>' : '') + 
+            '</div>'; 
+            app.innerHTML = html;
+            initCharts();
+        }
+
+        function initCharts() {
+            const commonOption = {
+                backgroundColor: 'transparent',
+                tooltip: { trigger: 'axis', backgroundColor: '#1E293B', borderColor: '#334155', textStyle: {color: '#F8FAFC'} },
+                grid: { left: '3%', right: '4%', bottom: '15%', containLabel: true },
+                dataZoom: [{ type: 'inside', start: 70, end: 100 }, { type: 'slider', bottom: 10, height: 20, borderColor: 'transparent', fillerColor: 'rgba(79, 70, 229, 0.1)', handleStyle: {color: '#4F46E5'} }],
+                xAxis: { type: 'category', data: ov.dates, axisLine: {lineStyle: {color: '#334155'}}, axisLabel: {color: '#94A3B8'} }
             };
 
-            new Chart(document.getElementById('activitySummaryChart'), {
-                type: 'bar',
-                data: {
-                    labels: od.dates,
-                    datasets: [
-                        { label: '\u8DD1\u6B65', data: od.act_running, backgroundColor: colors.GREEN },
-                        { label: '\u9A91\u884C', data: od.act_cycling, backgroundColor: colors.BLUE },
-                        { label: '\u722C\u5C71', data: od.act_hiking, backgroundColor: colors.YELLOW },
-                        { label: 'HIIT', data: od.act_hiit, backgroundColor: colors.PURPLE }
-                    ]
-                },
-                options: { ...baseOptions, scales: { x: { stacked: true }, y: { stacked: true } } }
+            const pmc = echarts.init(document.getElementById('pmcChart'));
+            pmc.setOption({
+                ...commonOption,
+                legend: { data: ['CTL (Chronic)', 'ATL (Acute)', 'TSB (Balance)', 'Stress Load'], textStyle: {color: '#94A3B8'}, top: 0 },
+                yAxis: [{ type: 'value', name: 'Load', splitLine: {lineStyle: {color: '#1E293B'}} }, { type: 'value', name: 'TSB', splitLine: {show: false} }],
+                series: [
+                    { name: 'CTL (Chronic)', type: 'line', data: ov.ctl, smooth: true, lineStyle: {width: 3, color: '#3B82F6'} },
+                    { name: 'ATL (Acute)', type: 'line', data: ov.atl, smooth: true, lineStyle: {width: 1, color: '#F59E0B'} },
+                    { name: 'TSB (Balance)', type: 'line', yAxisIndex: 1, data: ov.tsb, areaStyle: {opacity: 0.1, color: '#10B981'}, lineStyle: {color: '#10B981', width: 2} },
+                    { name: 'Stress Load', type: 'bar', data: ov.pmc_load, itemStyle: {color: 'rgba(239, 68, 68, 0.2)'} }
+                ]
             });
 
-            if (od.ctl && od.ctl.length > 0) {
-                const tsbColors = od.tsb.map(v => v < -30 ? 'rgba(239, 68, 68, 0.4)' : (v > 10 ? 'rgba(16, 185, 129, 0.4)' : 'rgba(59, 130, 246, 0.2)'));
-                new Chart(document.getElementById('pmcChart'), {
-                    data: {
-                        labels: od.dates,
-                        datasets: [
-                            { type: 'line', label: 'CTL (护城河资产)', data: od.ctl, borderColor: '#334155', borderWidth: 4, pointRadius: 0, tension: 0.2 },
-                            { type: 'line', label: 'ATL (急性摩擦)', data: od.atl, borderColor: colors.RED, borderWidth: 2, borderDash: [5,5], pointRadius: 0, tension: 0.1 },
-                            { type: 'bar', label: 'TSB (决策势能)', data: od.tsb, backgroundColor: tsbColors, yAxisID: 'y1' },
-                            { type: 'bar', label: '综合负载 (Shadow Load)', data: od.pmc_load, backgroundColor: 'rgba(203, 213, 225, 0.3)', yAxisID: 'y' }
-                        ]
-                    },
-                    options: { 
-                        ...baseOptions, 
-                        scales: { 
-                            y: { position: 'left', grid: { displayOpacity: 0.1 } }, 
-                            y1: { position: 'right', grid: { display: false } } 
-                        } 
-                    }
-                });
-            }
-
-            new Chart(document.getElementById('overlayChart'), {
-                data: {
-                    labels: od.dates,
-                    datasets: [
-                        { type: 'bar', label: '\u538B\u529B\u8017\u6563', data: od.stress_h, backgroundColor: 'rgba(239, 68, 68, 0.1)', yAxisID: 'y' },
-                        { type: 'line', label: '\u6267\u884C\u51C6\u5907\u5EA6', data: od.readiness, borderColor: colors.ACCENT, borderWidth: 3, tension: 0.4, pointRadius: 0, yAxisID: 'y1' },
-                        { type: 'line', label: '\u8EAB\u4F53\u7535\u91CF (Peak)', data: od.bb_max, borderColor: colors.BLUE, borderWidth: 2, borderDash: [5,5], pointRadius: 0, yAxisID: 'y1', fill: 2, backgroundColor: 'rgba(59, 130, 246, 0.05)' },
-                        { type: 'line', label: '\u8EAB\u4F53\u7535\u91CF (Low)', data: od.bb_min, borderColor: 'rgba(59, 130, 246, 0.3)', borderWidth: 1, pointRadius: 0, yAxisID: 'y1' }
-                    ]
-                },
-                options: { ...baseOptions, scales: { y: { display: false }, y1: { position: 'left', min: 0, max: 100 } } }
+            const overlay = echarts.init(document.getElementById('overlayChart'));
+            overlay.setOption({
+                ...commonOption,
+                legend: { data: ['HRV', 'Body Battery', 'Stress', 'Temp'], textStyle: {color: '#94A3B8'}, top: 0 },
+                yAxis: [{ type: 'value', splitLine: {lineStyle: {color: '#1E293B'}} }, { type: 'value', position: 'right', splitLine: {show: false} }],
+                series: [
+                    { name: 'HRV', type: 'line', data: ov.hrv, smooth: true, lineStyle: {color: '#8B5CF6'} },
+                    { name: 'Body Battery', type: 'line', data: ov.bb_max, smooth: true, lineStyle: {color: '#3B82F6'} },
+                    { name: 'Stress', type: 'bar', data: ov.stress_h, itemStyle: {color: 'rgba(245, 158, 11, 0.3)'} },
+                    { name: 'Temp', type: 'line', yAxisIndex: 1, data: ov.temperature_trend, smooth: true, lineStyle: {type: 'dotted', color: '#EF4444'} }
+                ]
             });
 
-            new Chart(document.getElementById('hrChart'), {
-                data: {
-                    labels: od.dates,
-                    datasets: [
-                        { type: 'line', label: '\u6700\u5927\u5FC3\u7387', data: od.max_hr, borderColor: colors.RED, borderWidth: 1, borderDash: [2,2], pointRadius: 0 },
-                        { type: 'line', label: '\u9759\u606F\u5FC3\u7387', data: od.rhr, borderColor: colors.YELLOW, borderWidth: 3, fill: true, backgroundColor: 'rgba(245, 158, 11, 0.05)' },
-                        { type: 'line', label: 'HRV', data: od.hrv, borderColor: colors.BLUE, borderWidth: 2, yAxisID: 'y1' }
-                    ]
-                },
-                options: { ...baseOptions, scales: { y: { position: 'left' }, y1: { position: 'right', grid: { display: false } } } }
+            const hr = echarts.init(document.getElementById('hrChart'));
+            hr.setOption({
+                ...commonOption,
+                legend: { data: ['Max HR', 'Resting HR', 'HRV'], textStyle: {color: '#94A3B8'}, top: 0 },
+                yAxis: [{ type: 'value', name: 'BPM' }, { type: 'value', name: 'HRV', position: 'right', splitLine: {show: false} }],
+                series: [
+                    { name: 'Max HR', type: 'line', data: ov.max_hr, lineStyle: {type: 'dotted', color: '#EF4444'} },
+                    { name: 'Resting HR', type: 'line', data: ov.rhr, areaStyle: {opacity: 0.05, color: '#F59E0B'}, lineStyle: {color: '#F59E0B', width: 3} },
+                    { name: 'HRV', type: 'line', yAxisIndex: 1, data: ov.hrv, smooth: true, lineStyle: {color: '#3B82F6'} }
+                ]
             });
 
-            new Chart(document.getElementById('sleepChart'), {
-                data: { 
-                    labels: od.dates, 
-                    datasets: [
-                        { type: 'bar', label: '\u6DF1\u7761\u65F6\u957F', data: od.sleep_deep_h, backgroundColor: colors.BLUE, yAxisID: 'y' },
-                        { type: 'bar', label: '\u6D45\u7761/REM', data: od.sleep_light_h, backgroundColor: 'rgba(59, 130, 246, 0.2)', yAxisID: 'y' },
-                        { type: 'line', label: '\u6062\u590D\u5F97\u5206', data: od.sleep_score, borderColor: colors.GREEN, borderWidth: 3, tension: 0.4, yAxisID: 'y1' }
-                    ] 
-                },
-                options: { ...baseOptions, scales: { x: { stacked: true }, y: { stacked: true, position: 'left', suggestedMax: 10 }, y1: { position: 'right', min: 0, max: 100 } } }
+            const resp = echarts.init(document.getElementById('respSpO2Chart'));
+            resp.setOption({
+                ...commonOption,
+                legend: { data: ['SpO2', 'Waking RR'], textStyle: {color: '#94A3B8'}, top: 0 },
+                yAxis: [{ type: 'value', name: '%', min: 90, max: 100 }, { type: 'value', name: 'RR', position: 'right', min: 10, max: 20, splitLine: {show: false} }],
+                series: [
+                    { name: 'SpO2', type: 'bar', data: ov.spo2_history, itemStyle: {color: 'rgba(16, 185, 129, 0.2)'} },
+                    { name: 'Waking RR', type: 'line', yAxisIndex: 1, data: ov.waking_rr, smooth: true, lineStyle: {color: '#8B5CF6', width: 3} }
+                ]
             });
 
-            new Chart(document.getElementById('activityChart'), {
-                data: { 
-                    labels: od.dates, 
-                    datasets: [
-                        { type: 'bar', label: '\u5361\u8DEF\u91CC', data: od.calories, backgroundColor: 'rgba(155, 89, 182, 0.3)', yAxisID: 'y' },
-                        { type: 'line', label: '\u6B65\u6570', data: od.steps, borderColor: colors.BLUE, borderWidth: 2, yAxisID: 'y1' },
-                        { type: 'line', label: '\u8D1F\u8377', data: od.acute_load, borderColor: colors.RED, borderWidth: 3, pointStyle: 'rectRot', yAxisID: 'y2' }
-                    ] 
-                }, 
-                options: { ...baseOptions, scales: { y: { display: false }, y1: { position: 'right', grid: { display: false } }, y2: { display: false } } }
+            const sleep = echarts.init(document.getElementById('sleepChart'));
+            sleep.setOption({
+                ...commonOption,
+                legend: { data: ['Total', 'Deep', 'Light', 'Score'], textStyle: {color: '#94A3B8'}, top: 0 },
+                yAxis: [{ type: 'value', name: 'Hours' }, { type: 'value', name: 'Score', max: 100, splitLine: {show:false} }],
+                series: [
+                    { name: 'Total', type: 'bar', stack: 'total', data: ov.sleep_h, itemStyle: {color: '#3B82F6'} },
+                    { name: 'Deep', type: 'bar', stack: 'total', data: ov.sleep_deep_h, itemStyle: {color: '#1E40AF'} },
+                    { name: 'Light', type: 'bar', stack: 'total', data: ov.sleep_light_h, itemStyle: {color: '#60A5FA'} },
+                    { name: 'Score', type: 'line', yAxisIndex: 1, data: ov.sleep_score, lineStyle: {color: '#F59E0B'} }
+                ]
             });
 
-            new Chart(document.getElementById('respSpO2Chart'), {
-                data: {
-                    labels: od.dates,
-                    datasets: [
-                        { type: 'bar', label: '睡眠平均血氧 (SpO2)', data: od.spo2_history, backgroundColor: 'rgba(16, 185, 129, 0.1)', yAxisID: 'y' },
-                        { type: 'line', label: '清醒呼吸率 (Overdrive)', data: od.waking_rr, borderColor: colors.PURPLE, borderWidth: 3, tension: 0.3, pointRadius: 1, yAxisID: 'y1' }
-                    ]
-                },
-                options: { ...baseOptions, scales: { y: { min: 90, max: 100 }, y1: { position: 'right', min: 10, max: 20, grid: { display: false } } } }
+            const battery = echarts.init(document.getElementById('batteryChart'));
+            battery.setOption({
+                ...commonOption,
+                legend: { data: ['Max', 'Min'], textStyle: {color: '#94A3B8'}, top: 0 },
+                yAxis: { type: 'value', max: 100 },
+                series: [
+                    { name: 'Max', type: 'line', data: ov.bb_max, areaStyle: {opacity: 0.1}, lineStyle: {color: '#3B82F6'} },
+                    { name: 'Min', type: 'line', data: ov.bb_min, lineStyle: {color: '#60A5FA'} }
+                ]
             });
 
-            new Chart(document.getElementById('biomechFluidChart'), {
-                data: {
-                    labels: od.dates,
-                    datasets: [
-                        { type: 'bar', label: '预测汗液流失 (ml)', data: od.sweat_loss, backgroundColor: 'rgba(59, 130, 246, 0.2)', yAxisID: 'y' },
-                        { type: 'line', label: '跑态触地时间 (GCT ms)', data: od.gct_trend, borderColor: colors.RED, borderWidth: 2, borderDash: [5,5], tension: 0.2, pointRadius: 1, yAxisID: 'y1' }
-                    ]
-                },
-                options: { ...baseOptions, scales: { y: { position: 'left' }, y1: { position: 'right', grid: { display: false } } } }
+            const stress = echarts.init(document.getElementById('stressChart'));
+            stress.setOption({
+                ...commonOption,
+                legend: { data: ['Stress Level', 'Dissipation'], textStyle: {color: '#94A3B8'}, top: 0 },
+                yAxis: { type: 'value' },
+                series: [
+                    { name: 'Stress Level', type: 'line', data: ov.hrv, smooth: true, lineStyle: {color: '#F59E0B'} },
+                    { name: 'Dissipation', type: 'bar', data: ov.weighted_dissipation, itemStyle: {color: 'rgba(239, 68, 68, 0.4)'} }
+                ]
+            });
+
+            const activity = echarts.init(document.getElementById('activityChart'));
+            activity.setOption({
+                ...commonOption,
+                legend: { data: ['Running', 'Cycling', 'Hiking', 'HIIT'], textStyle: {color: '#94A3B8'}, top: 0 },
+                yAxis: { type: 'value', name: 'Calories' },
+                series: [
+                    { name: 'Running', type: 'bar', stack: 'act', data: ov.act_running },
+                    { name: 'Cycling', type: 'bar', stack: 'act', data: ov.act_cycling },
+                    { name: 'Hiking', type: 'bar', stack: 'act', data: ov.act_hiking },
+                    { name: 'HIIT', type: 'bar', stack: 'act', data: ov.act_hiit }
+                ]
+            });
+
+            const biomech = echarts.init(document.getElementById('biomechFluidChart'));
+            biomech.setOption({
+                ...commonOption,
+                legend: { data: ['Sweat Loss', 'GCT Trend'], textStyle: {color: '#94A3B8'}, top: 0 },
+                yAxis: [{ type: 'value', name: 'ml' }, { type: 'value', name: 'ms', position: 'right', splitLine: {show: false} }],
+                series: [
+                    { name: 'Sweat Loss', type: 'bar', data: ov.sweat_loss, itemStyle: {color: 'rgba(59, 130, 246, 0.3)'} },
+                    { name: 'GCT Trend', type: 'line', yAxisIndex: 1, data: ov.gct_trend, smooth: true, lineStyle: {type: 'dashed', color: '#EF4444'} }
+                ]
             });
         }
-        renderDashboard();
+
+        window.onload = renderDashboard;
     </script>
 </body>
 </html>

@@ -1,0 +1,78 @@
+{
+  "template_path": "{materials_dir}/2025年度PPT素材汇总（浅色底）.pptx",
+  "output_path": "{output_dir}/北大医疗_AI规划方案_2026.pptx",
+  "plan": [
+    {
+      "template_page": 1,
+      "replace_title": "北大医疗集团 AI 规划顶层思考与建设方案",
+      "replace_subtitle": "从信息化迈向智能化转型 | 卫宁健康"
+    },
+    {
+      "template_page": 2,
+      "replace_title": "第一章：行业洞察与战略背景",
+      "font_size": 40
+    },
+    {
+      "src": "{materials_dir}/完整版-行业会议-（交大讲课）AI预见医疗-浅色底.251115.pptx",
+      "page": 7,
+      "replace_title": "战略主动权：掌握 AI 发展制高点"
+    },
+    {
+      "src": "{materials_dir}/完整版-行业会议-（交大讲课）AI预见医疗-浅色底.251115.pptx",
+      "page": 30,
+      "replace_title": "演进趋势：从辅助系统到原生能力"
+    },
+    {
+      "template_page": 2,
+      "replace_title": "第二章：北大医疗 AI 整体架构蓝图",
+      "font_size": 40
+    },
+    {
+      "src": "{materials_dir}/北大医疗AI规划交流20260303.pptx",
+      "page": 5,
+      "fix_colors": true,
+      "replace_title": "整体架构：类生命体五层架构设计"
+    },
+    {
+      "src": "{materials_dir}/北大医疗集团AI医院建设思考20260127-1350.pptx",
+      "page": 9,
+      "fix_colors": true,
+      "replace_title": "认知中枢：符合北大特色的 AI 大脑"
+    },
+    {
+      "template_page": 2,
+      "replace_title": "第三章：核心应用场景与价值体现",
+      "font_size": 40
+    },
+    {
+      "src": "{materials_dir}/2025年度PPT素材汇总（深色底）.pptx",
+      "page": 109,
+      "fix_colors": true,
+      "replace_title": "落地实效：10+ 医疗 AI 场景深度应用"
+    },
+    {
+      "src": "{materials_dir}/卫宁健康-公司简介260311.pptx",
+      "page": 16,
+      "replace_title": "科研与实践：人工智能 + 医疗的深度融合"
+    },
+    {
+      "template_page": 2,
+      "replace_title": "第四章：实施路径与未来演进",
+      "font_size": 40
+    },
+    {
+      "src": "{materials_dir}/北大医疗AI规划交流20260331.pptx",
+      "page": 31,
+      "replace_title": "演进路径：Roadmap to AI-Native"
+    },
+    {
+      "src": "{materials_dir}/北大医疗AI规划交流20260303.pptx",
+      "page": 12,
+      "fix_colors": true,
+      "replace_title": "战略终局：驱动北大医疗迈入 AI 原生时代"
+    },
+    {
+      "template_page": 5
+    }
+  ]
+}

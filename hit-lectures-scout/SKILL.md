@@ -3,6 +3,16 @@ name: hit-lectures-scout
 description: 医疗数字化前沿科研侦察兵。Primary owner for medical AI paper scouting, clinical literature scanning, RWE filtering, and frontier academic breakthrough watch. Use for Nature/JAMA-level paper scouting and research-to-commercial-defense translation. Prefer hit-industry-radar for news/event scans and hit-weekly-brief for think-tank or whitepaper briefs.
 ---
 
+<strategy-gene>
+Keywords: 医疗 AI 论文, 科研侦察, 研发转化, RWE 校验
+Summary: 捕捉医疗数字化非共识信号，将学术突破转化为具体的研发任务与销售防御资产。
+Strategy:
+1. 弹性侦察：默认 7 天视窗，结果不足 5 篇时自动回溯至 14 天。
+2. 提纯脱水：强制执行 RWE (真实世界证据) 校验，过滤无临床对照的噪声。
+3. 杠杆转换：每项高价值信号必须输出 1 个研发任务与 1 条销售防御话术。
+AVOID: 严禁在报告中保留 [URL] 占位符；禁止发布无临床场景适配的 L1 级情报；禁止绕过 DOI 精准校验。
+</strategy-gene>
+
 # SKILL.md: HIT Intel Scout V6.0 (医疗数字化战略侦察兵)
 
 > **Vision**: 捕捉学术界的非共识信号，通过结构化补偿消除"学术灌水"与"幻觉"，将学术突破转化为卫宁研发部的具体任务与销售线的防御武器。

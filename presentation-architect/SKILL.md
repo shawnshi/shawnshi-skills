@@ -3,6 +3,16 @@ name: presentation-architect
 description: Strategic presentation blueprint architect. Use when the user needs a high-rigor PPT narrative blueprint, ghost deck, speaker-script-ready outline, or decision-oriented slide architecture for executives, CTOs, hospital leaders, or consulting-style reviews. This skill now outputs blueprint-only assets such as `outline.md` and validated blueprint bundles, not rendered PPT files.
 ---
 
+<strategy-gene>
+Keywords: 幻灯片蓝图, 叙事链条, Ghost Deck, 决策型 PPT
+Summary: 生产高精度的 PPT 叙事蓝图包，将散乱信息压制为判词驱动的逻辑骨架。
+Strategy:
+1. 判词驱动：所有页面标题必须是完整的叙事判断句，禁止使用名词标签。
+2. 逻辑压测：在生成蓝图前，针对听众可能的异议进行骨架压力测试。
+3. 结构对齐：强制执行 Cover -> Content -> Closing 闭环，结语必须包含 Action Call。
+AVOID: 严禁跳过 outline.md 直接起草；禁止承诺生成 PPT 实体文件；禁止使用“谢谢聆听”等无效结语。
+</strategy-gene>
+
 # Presentation Architect V11.0 (Blueprint-Only Edition)
 
 This skill produces presentation blueprints, not final slide binaries.

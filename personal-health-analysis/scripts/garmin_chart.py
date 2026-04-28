@@ -45,8 +45,8 @@ def build_overlay_data(summary_data):
 
     # --- V4.0 PMC Matrix ---
     try:
-        from garmin_sqlite_adapter import get_daily_friction_matrix
-        df_pmc = get_daily_friction_matrix(90)
+        from garmin_sqlite_adapter import get_daily_friction_matrix, get_devices_info
+        df_pmc = get_daily_friction_matrix(365) # Extended range for dashboard
         import pandas as pd
         df_pmc['CTL'] = df_pmc['daily_friction_load'].ewm(span=42, adjust=False).mean()
         df_pmc['ATL'] = df_pmc['daily_friction_load'].ewm(span=7, adjust=False).mean()
@@ -55,13 +55,19 @@ def build_overlay_data(summary_data):
         pmc_map_atl = {r['date']: clean_nan(r['ATL']) for _, r in df_pmc.iterrows()}
         pmc_map_tsb = {r['date']: clean_nan(r['TSB']) for _, r in df_pmc.iterrows()}
         pmc_map_load = {r['date']: clean_nan(r['daily_friction_load']) for _, r in df_pmc.iterrows()}
+        
+        # New: Environment and Devices
+        df_devices = get_devices_info()
+        firmware_str = ", ".join([str(v) for v in df_devices['software_version'].unique()]) if not df_devices.empty else "STABLE"
+        firmware_map = {dates[-1]: firmware_str} if dates else {}
     except Exception as e:
-        print(f"PMC extraction failed: {e}")
+        print(f"Extended metrics extraction failed: {e}")
         pmc_map_ctl = {}
         pmc_map_atl = {}
         pmc_map_tsb = {}
         pmc_map_load = {}
-    # --- END PMC ---
+        firmware_map = {}
+    # --- END Extended ---
 
     sleep_list = summary_data.get("sleep", [])
     avg_hr_map = {s["date"]: s.get("avg_hr") for s in sleep_list}
@@ -76,9 +82,12 @@ def build_overlay_data(summary_data):
     hrv_status_map = {h["date"]: h.get("status") for h in hrv_list}
     
     act_cal_map = {}
+    temp_map = {}
     for act in summary_data.get("activities", []):
         d = act["date"]
         act_cal_map[d] = act_cal_map.get(d, 0) + (act.get("calories") or 0)
+        if act.get("temperature"):
+            temp_map[d] = clean_nan(act.get("temperature"))
     
     # Training Load mapping
     load_list = summary_data.get("training_load_series", [])
@@ -154,7 +163,9 @@ def build_overlay_data(summary_data):
         "spo2_history": [avg_spo2_map.get(d) for d in dates],
         "waking_rr": [waking_rr_map.get(d) for d in dates],
         "sweat_loss": [sweat_loss_map.get(d, 0) for d in dates],
-        "gct_trend": [gct_map.get(d) for d in dates]
+        "gct_trend": [gct_map.get(d) for d in dates],
+        "temperature_trend": [temp_map.get(d) for d in dates],
+        "software_version": firmware_map.get(dates[-1]) if dates else None
     }
 
 def render_report(charts_data):

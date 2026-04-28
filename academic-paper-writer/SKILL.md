@@ -1,15 +1,17 @@
 ---
 name: academic-paper-writer
-description: "Primary owner for academic paper drafting, outlining, revision, review-response parsing, abstract writing, format conversion, and citation checking. Use when the user is writing or revising a paper artifact. Prefer academic-deep-research for broad research discovery and academic-paper-reader for understanding an existing paper."
-metadata:
-  version: "3.0"
-  last_updated: "2026-04-09"
-  status: active
-  related_skills:
-    - academic-deep-research
-    - academic-paper-reviewer
-    - academic-paper-reader
+description: "12-agent academic paper writing pipeline. 10 modes (full/plan/outline/revision/revision-coach/abstract/lit-review/format-convert/citation-check/disclosure). 6 paper types, 5 citation formats, bilingual abstracts, LaTeX/DOCX-via-Pandoc/PDF output. Style Calibration + Writing Quality Check + Anti-Patterns with IRON RULE markers. Triggers: write paper, academic paper, guide my paper, parse reviews, AI disclosure, 寫論文, 學術論文, 引導我寫論文, 審查意見."
 ---
+
+<strategy-gene>
+Keywords: 论文写作, 引用校验, 格式转换, 12-agent
+Summary: 驱动 12 代理管线生成学术论文，执行 DOI 级引用硬锁与反 AI 痕迹审计。
+Strategy:
+1. 配置优先：必须先执行 Phase 0 面试，确认 paper_type、受众及 word_count。
+2. 引用硬锁：所有 claim 必须有 verified DOI 支撑，严禁孤儿引用进入 Reference。
+3. 斩断 AI 感：强制运行 Writing Quality Check，清理 Throat-clearing 等 AI 典型赘词。
+AVOID: 绝对禁止虚构引文；禁止 paragraph 长度均一化；禁止未经用户确认大纲即开始正文。
+</strategy-gene>
 
 # Academic Paper — Academic Paper Writing Agent Team
 
@@ -38,7 +40,7 @@ Write a paper on the impact of declining birth rates on private university manag
 5. Full-text drafting — section-by-section draft, register adjustment
 6. Citation compliance + bilingual abstract (parallel)
 7. Peer review — five-dimension scoring, revision suggestions
-8. Output formatting — LaTeX/DOCX/PDF/Markdown
+8. Output formatting — LaTeX/DOCX (via Pandoc)/PDF/Markdown
 
 ---
 
@@ -60,20 +62,20 @@ Activate `plan` mode when the user wants guidance, step-by-step planning, or exp
 
 | Scenario | Use Instead |
 |----------|-------------|
-| Deep research / fact-checking (not paper writing) | `academic-deep-research` |
+| Deep research / fact-checking (not paper writing) | `deep-research` |
 | Reviewing a paper (structured review) | `academic-paper-reviewer` |
-| Full research-to-paper pipeline | `academic-deep-research` + `academic-paper-writer` |
+| Full research-to-paper pipeline | `academic-pipeline` |
 
-### Distinction from `academic-deep-research`
+### Distinction from `deep-research`
 
-| Feature | `academic-paper` | `academic-deep-research` |
+| Feature | `academic-paper` | `deep-research` |
 |---------|-------------------|-----------------|
 | Primary output | Publishable paper draft | Research report |
 | Structure | Journal-ready (IMRaD, etc.) | APA 7.0 report |
 | Citation | Multi-format (APA/Chicago/MLA/IEEE/Vancouver) | APA 7.0 only |
 | Abstract | Bilingual (zh-TW + EN) | Single language |
 | Peer review | Simulated 5-dimension review | Editorial review |
-| Output format | LaTeX/DOCX/PDF/Markdown | Markdown only |
+| Output format | LaTeX/DOCX (via Pandoc)/PDF/Markdown | Markdown only |
 | Revision loop | Max 2 rounds with targeted feedback | Max 2 rounds |
 
 ---
@@ -90,7 +92,7 @@ Activate `plan` mode when the user wants guidance, step-by-step planning, or exp
 | 6 | `citation_compliance_agent` | Citation format verification, reference list completeness, DOI checking | Phase 5a |
 | 7 | `abstract_bilingual_agent` | Bilingual abstract (zh-TW + EN), 5-7 keywords each | Phase 5b |
 | 8 | `peer_reviewer_agent` | Simulated double-blind review, five-dimension scoring, revision suggestions (max 2 rounds) | Phase 6 |
-| 9 | `formatter_agent` | Convert to LaTeX/DOCX/PDF/Markdown, journal formatting, cover letter, citation format conversion (APA 7 / Chicago / MLA / IEEE / Vancouver) | Phase 7 |
+| 9 | `formatter_agent` | Convert to LaTeX/DOCX (via Pandoc)/PDF/Markdown, journal formatting, cover letter, citation format conversion (APA 7 / Chicago / MLA / IEEE / Vancouver) | Phase 7 |
 | 10 | `socratic_mentor_agent` | Plan mode Socratic mentor: chapter-by-chapter guidance, convergence criteria (4 signals), question taxonomy (4 types), INSIGHT extraction | Plan Step 0-3 |
 | 11 | `visualization_agent` | Parse paper data and generate publication-quality figure code (Python matplotlib / R ggplot2) with APA 7.0 formatting, colorblind-safe palettes, and LaTeX integration | Phase 4 / Phase 7 |
 | 12 | `revision_coach_agent` | Parse unstructured reviewer comments into structured Revision Roadmap; classify, map, and prioritize comments; works standalone without prior pipeline execution | Revision-Coach mode |
@@ -136,7 +138,9 @@ Phase 7: FORMAT        -> [formatter]                  -> Final Output Package
 
 ---
 
-## Operational Modes (9 Modes)
+> **v3.4.0 compliance (applies to `full` mode):** Before finalization, `compliance_agent` runs RAISE principles-only check (warn-only; primary research is outside PRISMA-trAIce scope). Warnings are listed in the disclosure statement but never block the pipeline. See `shared/raise_framework.md §Scope disclaimer`.
+
+## Operational Modes (10 Modes)
 
 See `references/mode_selection_guide.md` for details.
 
@@ -186,9 +190,9 @@ Socratic mode that guides users through paper planning one chapter at a time. Bu
 
 ---
 
-## Handoff Protocol: academic-deep-research -> academic-paper
+## Handoff Protocol: deep-research -> academic-paper
 
-`intake_agent` automatically detects academic-deep-research materials (RQ Brief / Bibliography / Synthesis / INSIGHT Collection) and skips redundant steps. See `academic-deep-research/SKILL.md` Handoff Protocol for the complete handoff material format.
+`intake_agent` automatically detects deep-research materials (RQ Brief / Bibliography / Synthesis / INSIGHT Collection) and skips redundant steps. See `deep-research/SKILL.md` Handoff Protocol for the complete handoff material format.
 
 ---
 
@@ -198,7 +202,7 @@ See `references/failure_paths.md` for details. Quick reference:
 
 | Failure Scenario | Handling Strategy |
 |---------|---------|
-| Insufficient research foundation | Recommend running `academic-deep-research` first |
+| Insufficient research foundation | Recommend running `deep-research` first |
 | Wrong paper structure selected | Return to Phase 2, suggest alternative structure |
 | Word count significantly over/under target | Identify problematic chapters, suggest trimming/expansion |
 | Citation format entirely wrong | Re-run the entire citation phase |
@@ -211,7 +215,7 @@ See `references/failure_paths.md` for details. Quick reference:
 
 ## Full Academic Pipeline
 
-See `academic-deep-research/SKILL.md` for upstream discovery and `academic-paper-writer/SKILL.md` for drafting details.
+See `academic-pipeline/SKILL.md` for the complete workflow.
 
 ---
 
@@ -223,7 +227,7 @@ See `agents/intake_agent.md` for the complete field definitions of the Phase 0 c
 
 ## File Structure
 
-**Agent definitions**: individual files under `agents/` — one file per agent (12 total, matching Agent Team table above).
+**Agent definitions**: `agents/{agent_name}.md` — one file per agent (12 total, matching Agent Team table above).
 
 **References** (19 files in `references/`):
 - Citation: `apa7_extended_guide`, `apa7_chinese_citation_guide`, `citation_format_switcher`
@@ -233,7 +237,7 @@ See `agents/intake_agent.md` for the complete field definitions of the Phase 0 c
 - Process: `failure_paths` (12 scenarios), `mode_selection_guide` (10 modes), `plan_mode_protocol`, `workflow_phase_details`
 - Ethics: `credit_authorship_guide` (CRediT 14 roles), `funding_statement_guide`, `statistical_visualization_standards`
 - Disclosure (v3.2): `disclosure_mode_protocol` (venue-specific AI-usage statement generation), `venue_disclosure_policies` (v1 database: ICLR, NeurIPS, Nature, Science, ACL, EMNLP)
-- Also: `references/apa7_extended_guide.md` (base APA 7 reference for this skill)
+- Also: `deep-research/references/apa7_style_guide.md` (base reference, extended here)
 
 **Templates** (11 files in `templates/`): `imrad`, `literature_review`, `case_study`, `theoretical_paper`, `policy_brief`, `conference_paper`, `latex_article_template.tex`, `bilingual_abstract`, `credit_statement`, `funding_statement`, `revision_tracking` (4 status types).
 
@@ -251,7 +255,7 @@ Explicit prohibitions to prevent common failure modes:
 | 2 | **Em dash abuse** | More than 2 em dashes per page signals AI writing | Use parentheses, commas, or restructure the sentence |
 | 3 | **Throat-clearing openers** | "In this section, we will discuss..." adds no information | Start with the claim or finding directly |
 | 4 | **Uniform paragraph lengths** | Every paragraph is 4-5 sentences = monotonous AI rhythm | Vary paragraph length naturally (2-8 sentences) |
-| 5 | **⚠️ IRON RULE: Fabricated citations** | Inventing plausible-sounding references that don't exist | Every citation must be verified via DOI or WebSearch; see `agents/citation_compliance_agent.md` |
+| 5 | **⚠️ IRON RULE: Fabricated citations** | Inventing plausible-sounding references that don't exist | Every citation must be verified via DOI or WebSearch; see `academic-pipeline/agents/integrity_verification_agent.md` |
 | 6 | **Sycophantic revision** | Accepting all reviewer feedback without critical evaluation | Use REVIEWER_DISAGREE status when reviewer is wrong; justify with evidence |
 | 7 | **Scope creep during revision** | Adding unrequested sections/analyses to "improve" the paper | Revision addresses reviewer concerns only; new content requires explicit user approval |
 | 8 | **Ignoring failure paths** | Continuing despite desk-reject signals or fatal methodology flaws | Check `references/failure_paths.md`; invoke F11 Desk-Reject Recovery when triggered |
@@ -302,7 +306,7 @@ Follows the user's language. Academic terminology is kept in English. Bilingual 
 
 ```
 academic-paper + tw-hei-intelligence  -> Evidence-based HEI paper with real MOE data
-academic-paper + academic-deep-research -> Deep research phase -> paper writing phase (auto-handoff)
+academic-paper + deep-research        -> Deep research phase -> paper writing phase (auto-handoff)
 academic-paper + report-to-website    -> Interactive web version of the paper
 academic-paper + notebooklm-slides-generator -> Presentation slides from paper
 academic-paper + academic-paper-reviewer -> Peer review -> revision loop
@@ -314,10 +318,10 @@ academic-paper + academic-paper-reviewer -> Peer review -> revision loop
 
 | Item | Content |
 |------|---------|
-| Skill Version | 3.0 |
-| Last Updated | 2026-04-09 |
+| Skill Version | 3.1.0 |
+| Last Updated | 2026-04-20 |
 | Maintainer | Cheng-I Wu |
-| Dependent Skills | academic-deep-research v1.0+ (upstream), academic-paper-reader v1.0+ (adjacent) |
+| Dependent Skills | deep-research v1.0+ (upstream), academic-paper-reviewer v1.0+ (downstream) |
 
 ---
 

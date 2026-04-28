@@ -3,6 +3,16 @@ name: personal-intelligence-hub
 description: 战略情报作战中枢。用于多源技术/医疗/AI 情报扫描、7 日去重、二阶推演、红队审计和分层简报生成。必须读取 `references/strategic_focus.json`、`references/quality_standard.md`、`references/briefing_template.md` 和 `references/karpathy_feeds.json`，并通过 `blackboard`、`history_manager`、`briefing_gate` 保证状态、去重与交付质量。
 ---
 
+<strategy-gene>
+Keywords: 战略情报扫描, 去重精炼, 二阶推演, 红队审计
+Summary: 调度多源情报源执行 7 日闭环扫描，将新闻噪音转化为高价值行动杠杆。
+Strategy:
+1. 配置先行：严格依据 strategic_focus.json 锁定扫描主题与排除词。
+2. 语义去重：执行 7 日 URL 与指纹对齐，确保 100% 信息增量。
+3. 结构化提纯：每条情报必须满足 Fact -> Connection -> Deduction -> Actionability 结构。
+AVOID: 严禁把“摘要”伪装成“洞察”；禁止在缺乏证据时输出 L4 级高等级判断；禁止重复推送同一信号。
+</strategy-gene>
+
 # Personal Intelligence Hub V8.0
 
 ## 0. 核心约束

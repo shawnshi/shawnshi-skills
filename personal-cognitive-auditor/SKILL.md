@@ -3,6 +3,16 @@ name: personal-cognitive-auditor
 description: 战略认知联合审计官。当用户提出“复盘今日日志”“周结/月结/年结”或需要深层认知审计、多源数据整合与战术问责时激活。交付 daily、weekly、monthly、annual 四类认知审计报告，并通过显式 hand-off contract 交由 personal-diary-writer 落盘。
 ---
 
+<strategy-gene>
+Keywords: 认知审计, 战术问责, 能量复盘, Hand-off
+Summary: 整合生理、日程与交互数据执行多维审计，通过战术问责驱动决策演化。
+Strategy:
+1. 证据优先：优先使用 Garmin 与 Calendar 真实数据，数据缺失必须显式标注。
+2. 职责解耦：仅负责生成审计报告与 payload，物理落盘强制交给 diary-writer。
+3. 统一骨架：日/周/月/年审计共享同一审计骨架，确保演化叙事不中断。
+AVOID: 严禁未加载 Prompt 模板即生成；禁止在周审计中漏掉交互模式分析；禁止未生成 hand-off payload 即结束。
+</strategy-gene>
+
 # Personal Cognitive Auditor (V2.0: Unified Audit System)
 
 ## 0. 核心约束

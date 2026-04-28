@@ -3,6 +3,16 @@ name: personal-brainstorming
 description: "You MUST use this before any creative work - creating features, building components, adding functionality, or modifying behavior. Explores user intent, requirements and design before implementation."
 ---
 
+<strategy-gene>
+Keywords: 意图对齐, 方案对决, 架构内审, 1% 杠杆点
+Summary: 在创意实施前执行逻辑压力测试，固化设计边界以对冲技术债，锁定 1% 因果杠杆。
+Strategy:
+1. 负先验扫描：先检索 MEMORY 历史失败案例，防止在已知的陷阱上浪费算力。
+2. 方案对决：提出 2-3 个具备差异性的方案并执行 SPOF 内审。
+3. 物理落盘：在跨入 EXECUTION 阶段前必须产出并确认设计 Spec。
+AVOID: 严禁在技能运行期间编写业务代码；禁止通过信息轰炸干扰决策；禁止在模糊意图上开始设计。
+</strategy-gene>
+
 # Personal Brainstorming (V5.0: Logic Stress-Testing Edition)
 
 “不经审计的设计，是技术债的温床。在这里，我们通过深挖意图与压力测试方案，构建高鲁棒性的系统底座。”

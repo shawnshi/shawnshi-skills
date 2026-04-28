@@ -15,16 +15,74 @@ from pathlib import Path
 from datetime import datetime, timedelta
 
 # Default path for GarminDB SQLite files (Nested within .GarminDb)
-DB_DIR = Path.home() / ".GarminDb" / "HealthData" / "DBs"
+DB_DIR = Path.home() / ".GarminDb"
 GARMIN_DB = DB_DIR / "garmin.db"
-SUMMARY_DB = DB_DIR / "garmin_summary.db"
+MONITORING_DB = DB_DIR / "garmin_monitoring.db"
 ACTIVITIES_DB = DB_DIR / "garmin_activities.db"
 
 def get_connection(db_path):
     """Establish a connection to the SQLite database."""
     if not db_path.exists():
-        raise FileNotFoundError(f"❌ Database not found at {db_path}. Run garmindb_cli.py first.")
+        # Try HealthData fallback
+        health_path = Path.home() / ".GarminDb" / "HealthData" / "DBs" / db_path.name
+        if health_path.exists():
+            return sqlite3.connect(health_path)
+        raise FileNotFoundError(f"❌ Database not found at {db_path} or {health_path}. Run garmindb_cli.py first.")
     return sqlite3.connect(db_path)
+
+def get_devices_info():
+    """Extract device information for auditing."""
+    conn = get_connection(GARMIN_DB)
+    # Correct columns for device_info: timestamp, serial_number, software_version
+    query = "SELECT serial_number, software_version FROM device_info GROUP BY serial_number ORDER BY timestamp DESC"
+    try:
+        df = pd.read_sql_query(query, conn)
+    except Exception as e:
+        df = pd.DataFrame()
+        print(f"Failed to query device_info: {e}")
+    conn.close()
+    return df
+
+def get_body_composition_detailed(days=30):
+    """Extract body composition metrics from the weight table."""
+    conn = get_connection(GARMIN_DB)
+    start_date = (datetime.now() - timedelta(days=days)).strftime('%Y-%m-%d')
+    # Actual schema for weight only has day, weight
+    query = f"""
+        SELECT day as date, weight
+        FROM weight
+        WHERE day >= '{start_date}'
+        ORDER BY day DESC
+    """
+    try:
+        df = pd.read_sql_query(query, conn)
+        # Standardized mock fields if columns are missing from this specific GarminDB version
+        if not df.empty:
+            for col in ['bmi', 'fat_pct', 'muscle_mass', 'bone_mass', 'water_pct']:
+                df[col] = None
+    except Exception as e:
+        df = pd.DataFrame()
+        print(f"Failed to query weight: {e}")
+    conn.close()
+    return df
+
+def get_monitoring_hr(days=1):
+    """Extract high-frequency heart rate sampling (15s intervals)."""
+    conn = get_connection(MONITORING_DB)
+    start_date = (datetime.now() - timedelta(days=days)).strftime('%Y-%m-%d %H:%M:%S')
+    query = f"""
+        SELECT timestamp, heart_rate
+        FROM monitoring_hr
+        WHERE timestamp >= '{start_date}'
+        ORDER BY timestamp ASC
+    """
+    try:
+        df = pd.read_sql_query(query, conn)
+    except Exception as e:
+        df = pd.DataFrame()
+        print(f"Failed to query monitoring_hr: {e}")
+    conn.close()
+    return df
 
 def get_activities_data(days=30):
     """Extract activity metrics from the activities table."""

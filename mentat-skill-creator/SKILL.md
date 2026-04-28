@@ -13,28 +13,26 @@ description: |
 
 ---
 
-## 1. 核心架构原则 (Architectural Principles)
-遵循“四层壳模型”支撑下的技能范式，实现**代码液态化**与**业务语义固态化**的动态平衡：
+## 1. 核心架构原则 (Architectural Principles - GEP V4.0)
+遵循“四层壳模型”支撑下的 GEP 协议范式，实现**代码液态化**与**业务语义基因化**：
 
-### A. 物理层：算力主权与环境隔离 (Physics)
-- **物理硬锁**：所有技能必须在本地物理目录内闭环执行，严禁依赖外部云端黑盒。
-- **路径归一化**：强制统一路径风格，确保 Windows/Unix 环境下的逻辑同态。
+### A. 物理层：资产寻址与环境隔离 (Physics)
+- **物理硬锁**：所有技能必须在本地物理目录内闭环。
+- **内容寻址**：高价值经验资产（Gene/Capsule）推荐使用 SHA-256 标记，确保演化路径的可追溯性。
 
-### B. 逻辑层：语义主权与 MSL 约束 (Logic)
-- **MSL 原子化**：业务逻辑必须封装为原子化 Skill。代码是液态消费品，语义协议是固态资产。
-- **Schema 绝对防御**：[Template] 标记的输出必须 100% 同态映射，严禁执行摘要式逻辑脱水。
-- **语义守恒**：允许实现路径突变，但核心业务语义必须在重构前后保持恒定。
+### B. 逻辑层：策略基因驱动 (Logic - Gene Level)
+- **经验即控制 (Experience is Control)**：拒绝文档化堆砌。技能的核心是**策略基因 (Strategy Genes)**，而非说明书。
+- **AVOID 核心权值**：1 条“绝对禁止”的 AVOID 基因，其控制权重等同于 10 条正面操作指令。
+- **Schema 绝对防御**：[Template] 标记的输出必须 100% 同态映射。
 
-### C. 执行层：负熵交互与 OODA 闭环 (Execution)
-- **脑暴倾倒 + 查漏补缺**：废除串行审讯，采用高带宽初始输入 + 静默映射 + 聚合追问模式。
-- **聚合批处理**：在评审任务中整合决策节点，最大化保护用户心流，实现极致的交互负熵。
-- **Markdown 原生可视化**：强制使用 Mermaid 进行架构描述，弃用不稳定的 UI 截图。
+### C. 执行层：Capsule 验证闭环 (Execution - Capsule Level)
+- **验证即资产**：只有通过物理校验（Unit-Test Gate）的执行路径才能固化为 **Capsule (验证胶囊)**。
+- **负熵交互**：采用高带宽初始输入 + 聚合追问，最大化保护用户心流。
 
-### D. 进化层：自愈能力与证据网 (Evolution)
-- **失效先验 (Gotchas)**：将重复性失败硬编码为 SKILL.md 顶部的禁令，实现系统的对抗性进化。
-- **证据网 (Evidence-Mesh)**：分析类资产必须强制执行物理归档至 `MEMORY/skill_audit/`，严禁仅保留在瞬时对话历史中。
-- **量化反思**：通过 `mentat-system-retro` 审计遥测数据，以数据驱动系统拓扑的持续优化。
-- **沙箱测试门控 (Unit-Test Gate)**：任何针对既有 Skill 的修改（包括指令更新或 Gotchas 追加），在物理覆盖落盘前，必须强制在 `tmp/playgrounds/` 沙箱内执行一次合成测试。若测试失败，立即丢弃本次突变（Mutation Rollback）。
+### D. 进化层：单点基因突变 (Evolution - Event Level)
+- **单点突变法则 (The ONE Change Rule)**：每次自愈仅允许修改或增加一条具体的 `AVOID` 基因，严禁大面积重写。
+- **二元评估 (Binary Evals)**：放弃模糊打分，强制使用 `Pass/Fail` 物理校验作为演化判据。
+- **演化日志 (Event Log)**：所有突变动机必须记录在 `MEMORY/skill_audit/` 下的 Event 资产中。
 
 ---
 A skill for creating new skills and iteratively improving them.
@@ -143,22 +141,43 @@ name: Skill identifier
 description: When to trigger, what it does. This is the primary triggering mechanism - include both what the skill does AND specific contexts for when to use it. All "when to use" info goes here, not in the body. Note: currently Claude has a tendency to "undertrigger" skills -- to not use them when they'd be useful. To combat this, please make the skill descriptions a little bit "pushy". So for instance, instead of "How to build a simple fast dashboard to display internal Anthropic data.", you might write "How to build a simple fast dashboard to display internal Anthropic data. Make sure to use this skill whenever the user mentions dashboards, data visualization, internal metrics, or wants to display any kind of company data, even if they don't explicitly ask for a 'dashboard.'"
 compatibility: Required tools, dependencies (optional, rarely needed)
 the rest of the skill :)
-Skill Writing Guide
+
+## GEP V4.0 Strategy Gene Mandate (CRITICAL)
+EVERY new skill MUST include a compact `<strategy-gene>` block immediately following the frontmatter metadata. This block is designed to provide high-density control signals under constrained inference budget.
+
+**Gene Structure:**
+```markdown
+<strategy-gene>
+Keywords: [Trigger cues]
+Summary: [One-sentence intent]
+Strategy:
+1. [Step 1]
+2. [Step 2]
+...
+AVOID: [Absolute prohibition 1]
+AVOID: [Absolute prohibition 2]
+</strategy-gene>
+```
+
+## Skill Writing Guide
 Anatomy of a Skill
 skill-name/
 ├── SKILL.md (required)
 │   ├── YAML frontmatter (name, description required)
+│   ├── <strategy-gene> block (required)
 │   └── Markdown instructions
 └── Bundled Resources (optional)
     ├── scripts/    - Executable code for deterministic/repetitive tasks
     ├── references/ - Docs loaded into context as needed
     └── assets/     - Files used in output (templates, icons, fonts)
+
 Progressive Disclosure
 Skills use a three-level loading system:
 
-Metadata (name + description) - Always in context (~100 words)
-SKILL.md body - In context whenever skill triggers (<500 lines ideal)
-Bundled resources - As needed (unlimited, scripts can execute without loading)
+1. Metadata (name + description) - Always in context (~100 words)
+2. Strategy Gene - Extracted and injected during high-load tasks (~200 words)
+3. SKILL.md body - In context whenever skill triggers (<500 lines ideal)
+4. Bundled resources - As needed (unlimited, scripts can execute without loading)
 These word counts are approximate and you can feel free to go longer if needed.
 
 Key patterns:
@@ -427,31 +446,29 @@ Check whether you have access to the present_files tool. If you don't, skip this
 python -m scripts.package_skill <path/to/skill-folder>
 After packaging, direct the user to the resulting .skill file path so they can install it.
 
-## Skill Optimization and Self-Healing (The .amendify() Loop)
+## Skill Optimization and Self-Healing (The GEP .amendify() Loop)
 Skills are not static; they must evolve as the codebase, models, and user tasks shift. Use this section when a skill is underperforming or failing repeatedly.
 
 0. 效用阈值评估 (Utility-Driven Skill Fission)
-- **硬中断检查**：在开始修补前，检查该 Skill 的历史失败次数与 `Gotchas` 词条数。
-- **细胞分裂触发**：如果该技能的 `Gotchas` > 4 条，或近期（最近 5 次调用中）失败率极高，严禁继续“原地打补丁”。强制放弃 `.amendify` 流程，直接提议执行 **DiscoverSkill (细胞分裂)**，将该臃肿技能拆解为两个界限清晰的原子化子技能。
+- **硬中断检查**：在开始修补前，检查该 Skill 的历史失败次数与 `AVOID` 基因条数。
+- **细胞分裂触发**：如果该技能的 `AVOID` 基因 > 4 条，或近期失败率极高，强制执行 **DiscoverSkill (细胞分裂)**，将该技能拆解为两个原子化子技能。
 
 1. Observe & Inspect
-Before optimizing, you must gather evidence from the Skill Audit Storage (MEMORY/skill_audit/).
+Identify recurring patterns from `MEMORY/skill_audit/`. Focus on where AVOID signals were missing or bypassed.
 
-Read the audit logs for the specific Skill_ID.
-Identify recurring patterns: Is the trigger too broad? Are steps being skipped? Is the output format drifting? Are there environment-specific failures (e.g., path issues)?
-Trace the connected history: Look at past runs, user feedback, and tool errors.
-2. Amend Skill (.amendify)
-Once you have enough evidence, propose a targeted "Patch" (Amendment) rather than a complete rewrite.
+2. Amend Skill (GEP Mutation)
+**MANDATORY: The "Single Mutation" Rule.**
+- 每次自愈仅允许修改或增加一条具体的 `AVOID` 基因（Prohibition）。
+- 严禁大面积重写指令。基于失败证据，精准定位那 1% 的因果杠杆点。
+- **Action**: Extract the failure cause into a compact AVOID cue inside the `<strategy-gene>` block.
 
-Tighten the trigger: Update the YAML frontmatter triggers or description.
-Add missing conditions: Explicitly handle edge cases discovered in the audit.
-Reorder or clarify steps: Use imperative form and explain why steps are necessary.
-Update output format: Align strictly with the latest user requirements or Schema.
-3. Evaluate & Update (Unit-Test Gate)
-Propose the patch to the user with a clear rationale based on the audit evidence.
-**强制沙箱门控 (Mutation Rollback)**：在向 `SKILL.md` 执行写入覆盖前，你必须在 `tmp/playgrounds/` 沙箱内运行至少 1 个导致先前失败的 Test Case。
-- 若测试通过 (Pass)：执行物理覆写落盘。
-- 若测试失败 (Fail)：立刻抛弃本次突变 (Discard Mutation)，退回 Step 2 重新分析，确保系统不会因修补操作发生物理退化。
+3. Evaluate & Update (Binary Test Gate)
+- **Mutation Rollback**: Before persistent write, you MUST run at least 1 failed test case in the sandbox.
+- **Pass Criterion**: Binary result only (Passed/Failed). If the single AVOID gene fixes the failure, solidify it. Otherwise, discard the mutation.
+
+4. Archival (Capsule & Event)
+- **Capsule**: Save the successful execution path to `MEMORY/capsules/`.
+- **Event**: Log the mutation reasoning and SHA-256 asset hash to `MEMORY/skill_audit/`.
 ## Autoresearch 协议子模块 (Quantitative Iterative Optimization)
 当触发“运行技能评测”、“优化既有指令”或系统陷入“同质化微调 (Dead Loop)”时，强制挂载此 Autoresearch 物理硬锁协议。摒弃主观定性评价，执行基于二元评估 (Binary Evals) 的靶向突变引擎。
 

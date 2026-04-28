@@ -1,10 +1,21 @@
 ---
 name: hit-weekly-brief
-description: 医疗行业战区研报中枢 (V5.0)。Primary owner for weekly think-tank, consulting, and whitepaper briefs in healthcare or digital health. Use for McKinsey/BCG/Gartner-style report digestion and weekly strategic brief generation. Prefer hit-industry-radar for market-news/event scans and hit-lectures-scout for academic or clinical AI paper scouting.
+description: 医疗行业战区研报中枢 (V5.0)。Primary owner for weekly think-tank, consulting, and whitepaper briefs in healthcare or digital health. Use for McKinsey/BCG/Gartner-style report digestion and weekly strategic brief generation. Prefer hit-industry-radar for market-news/event scans and hit-lectures-scout for academic or clinical paper scouting.
 triggers: ["生成数字健康周报", "检索医疗行业报告", "本周麦肯锡研报", "Digital Health Weekly Brief", "最新数字医疗白皮书", "扫描本周智库发文"]
 ---
 
+<strategy-gene>
+Keywords: 数字健康周报, 智库研报, 二跳推理, 跨界注入
+Summary: 聚合顶级智库研报并执行 Contrarian (逆向) 对抗分析，识别被主流忽略的破坏性信号。
+Strategy:
+1. 四维度扫描：并行调度策略、政策、技术、跨界（FinTech/军工）四条管线。
+2. 织者关联：将零散预测串联为系统级规律，执行与卫宁技术的结合点推理。
+3. 非共识对抗：强制寻找与主流研报相反的证据，识别“共识幻觉”。
+AVOID: 严禁重复 14 天内的旧报；禁止包含无 ROI 支撑的营销废话；禁止漏掉跨界启发模块。
+</strategy-gene>
+
 # SKILL.md: HIT Weekly Brief (行业战区周报) V5.0
+
 
 > **Version**: 5.0 (Lobster Architecture x Strategic Advantage)
 > **Vision**: 消除智库研报中的“共识幻觉”与“信息茧房”。系统不仅聚合顶级咨询结论，更通过“二跳推理”与“跨界注入”识别被主流忽略的破坏性信号。

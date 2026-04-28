@@ -4,6 +4,16 @@ description: 医疗文档战略情报引擎。当用户上传或提及 PDF/DOCX/
 triggers: ["智能提取文档摘要", "总结文档", "分析文件内容", "提取PDF核心要点"]
 ---
 
+<strategy-gene>
+Keywords: 医疗文档摘要, 合规审计, 战略标签, 分片处理
+Summary: 针对医疗信息化文档执行本体驱动的语义压缩与战略盲区检测。
+Strategy:
+1. 增量摘要：对超长文档强制执行“提取目录 -> 分章节摘要”的迭代管线。
+2. 战略打标：生成涵盖领域、技术、政策及价值的 5 层级战略标签。
+3. 元数据增强：将摘要与标签回写至文件属性，提升系统级索引效率。
+AVOID: 禁止单次 Prompt 加载超 10,000 字全文；严禁未调用 LLM 即进入 apply 写回流程；禁止在 Win32 下直接挂起超大文件。
+</strategy-gene>
+
 # Document Summarizer (Medical Intelligence Edition)
 
 批量处理医疗信息化文档的战略情报引擎。具备本体驱动的摘要生成、合规性审计及战略盲区检测能力。
@@ -66,6 +76,8 @@ read_file output/STRATEGIC_AUDIT.md
 - `output/metadata_application.log`
 
 ## Failure Modes
+- **[Token_Blackhole_Defense]**: 绝对禁止单次 Prompt 加载超过 10,000 字的全文内容。必须强制执行“提取目录 -> 分章节摘要”的迭代管线，防止单次执行发生毁灭性的算力蒸发（>50万 Token/Call）。
+- **[Win32_Timeout]**: 在处理超大文档（>50MB）时，必须启用子代理分片模式，禁止在主内存中直接挂起处理。
 - **污染警告**: 绝对禁止未进行 `google.generativeai` 调用的占位符（如 `PENDING_LLM_GENERATION`）进入 `apply` 写回流程。否则将导致目标 Office/PDF 文件的属性被批量永久污染。
 - **环境要求**: 原生摘要引擎需要 `GEMINI_API_KEY` 环境变量。如果未检测到环境，将自动降级为「Rules Rule-Based 兜底引擎」，不会强行崩溃但降低准确率。
 - **并发锁死**: 在处理长尾或几十甚至上百兆大小的 Office 文件时，`apply_metadata_enhanced.py` 的并发行数受到限制（通常建议 < 5），由于 Windows COM 锁控制，设置过高(`--workers=20`)必定向用户抛出“文件占用中无法保存”的严重异常。

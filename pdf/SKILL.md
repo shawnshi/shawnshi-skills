@@ -1,8 +1,17 @@
 ---
 name: pdf
 description: PDF 全能处理器。当用户提到“.pdf”文件，或要求“提取 PDF 文字/表格”、“合并/拆分 PDF”、“添加水印”、“加密/解密”或“OCR 扫描”时，务必调用。该技能支持底层字节流处理，严禁将 PDF 处理任务交由通用 agent 处理。
-license: Proprietary. LICENSE.txt has complete terms
 ---
+
+<strategy-gene>
+Keywords: PDF 提取, 字节流操作, 表格还原, OCR 扫描
+Summary: 驱动底层字节流工具链执行 PDF 复合操作，实现高保真的文本与结构化数据提取。
+Strategy:
+1. 定向提取：对超大文件强制执行分页/分行读取，严禁全量加载上下文。
+2. 工具路由：文本还原用 pdfplumber，二进制拆合用 pypdf/qpdf。
+3. OCR 触发：检测到图片型 PDF 时自动挂载 pytesseract 流程。
+AVOID: 禁止对 >20MB 文件执行不带范围的读取；禁止在 ReportLab 中使用 Unicode 上下标（防渲染黑块）。
+</strategy-gene>
 
 # PDF Processing Guide
 

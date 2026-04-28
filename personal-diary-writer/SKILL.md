@@ -90,6 +90,7 @@ This skill handles high-frequency, lightweight daily status recording and atomic
 - JSON 结构：`{"skill_name": "personal-diary-writer", "status": "success", "duration_sec": 0, "input_tokens": 0, "output_tokens": 0}`
 
 ## 历史失效先验 (NLAH Gotchas)
+- **[Win32 GWS Hard-Lock]**: 在 Win32/PowerShell 环境下，调用 `gws` 禁止使用内联 `--fields` 参数（已知会导致参数漂移/解析错误）。必须强制执行全量拉取后通过代码/工具过滤。
 - `IF [Action == "Archive"] THEN [Require run(diary_ops.py)] AND [Halt if creating fragment files]`
 - `IF [Condition == "Modified memory.md" OR "Tool_Error_Count >= 2"] THEN [Execute activate_skill("mentat-insight-diary")]`
 - `IF [Action == "Append Multiple Lines"] THEN [Require Parameter == "--content_file"]`

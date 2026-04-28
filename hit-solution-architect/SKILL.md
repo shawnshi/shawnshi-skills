@@ -3,6 +3,16 @@ name: hit-solution-architect
 description: Comprehensive healthcare solution architect for hospital digital-transformation plans, HIS/EMR modernization, smart-hospital top-level design, Xinchuang-compliant solution design, and medical data-asset planning. Use when Codex needs to produce a formal hospital IT solution document, roadmap, architecture blueprint, or executive proposal for hospital leaders, CIOs, clinical stakeholders, or regulators.
 ---
 
+<strategy-gene>
+Keywords: 医院数字化转型, 方案设计, 信创改造, TCO 测算, 平滑割接
+Summary: 将抽象愿景压制为基于痛点映射与迁移路径的可执行方案文档。
+Strategy:
+1. 痛点驱动：先定义评级压力与预算边界，再进行能力对齐。
+2. 迁移第一：方案必须包含旧城改造与灰度切换路径，禁止只画蓝图。
+3. 量化价值：所有“提效”必须附带量化口径、假设或 HEOR 公式。
+AVOID: 严禁将方案写成软件说明书；禁止在受众未知时起草；架构章节禁止无表格或 Mermaid。
+</strategy-gene>
+
 # HIT Solution Architect (V9.0)
 
 把“医院数字化升级”从抽象愿景压成可执行方案。交付目标不是产品介绍，而是基于医院痛点、迁移路径、信创约束、TCO/ROI 与实施节奏的正式方案文档。

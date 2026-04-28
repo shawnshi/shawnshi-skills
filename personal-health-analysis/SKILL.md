@@ -3,6 +3,16 @@ name: personal-health-analysis
 description: 首席医疗官(CMO)级生理健康审计引擎。当用户提到“心率/睡眠/压力/HRV/感冒迹象/身体电量/健康审计/准备度/生理状态/健康洞察/运动分析/热力图/90天”等指标时务必激活。通过Garmin数据执行全链路审计与决策准备度管理。
 ---
 
+<strategy-gene>
+Keywords: 生理健康审计, 执行带宽, 系统动量, Garmin Flu
+Summary: 提取临床级生理指标并执行耗散结构分析，判定当前系统的认知准备度。
+Strategy:
+1. 同步先行：执行前必须隐式运行 garmindb_cli --latest 确保数据时效。
+2. 动量诊断：计算 RHR 与 Stress 的 Delta 差值，判定系统处于超量恢复还是熵增。
+3. 分级输出：微观问题 < 50 字指令；日结给出四层文本简报；长程战略强制 HTML 大屏。
+AVOID: 绝对禁止编造生理数据；本地库缺失时严禁静默 fallback（Fail-Fast）；禁止跳过 Phase 0 同步。
+</strategy-gene>
+
 # Personal Health Analysis (CMO/Strategic Architect Level)
 
 通过自然语言查询 Garmin Connect 数据，提取临床级生理指标，生成**交互式健康审计看板（Bloomberg Terminal 审美）**，并执行高级生理智能分析（认知准备度与代谢摩擦）。

@@ -1,15 +1,5 @@
 ---
 name: minimax-docx
-license: MIT
-metadata:
-  version: "1.0.0"
-  category: document-processing
-  author: MiniMaxAI
-  sources:
-    - "ECMA-376 Office Open XML File Formats"
-    - "GB/T 9704-2012 Layout Standard for Official Documents"
-    - "IEEE / ACM / APA / MLA / Chicago / Turabian Style Guides"
-    - "Springer LNCS / Nature / HBR Document Templates"
 description: >
   Professional DOCX document creation, editing, and formatting using OpenXML SDK (.NET).
   Three pipelines: (A) create new documents from scratch, (B) fill/edit content in existing
@@ -19,18 +9,17 @@ description: >
   "fill in this form", "reformat to match this template", or any task whose final output
   is a .docx file. Even if the user doesn't mention "docx" explicitly, if the task
   implies a printable/formal document, use this skill.
-triggers:
-  - Word
-  - docx
-  - document
-  - 文档
-  - Word文档
-  - 报告
-  - 合同
-  - 公文
-  - 排版
-  - 套模板
 ---
+
+<strategy-gene>
+Keywords: Word 文档, OpenXML, 套模板, 格式对齐, XSD 校验
+Summary: 基于 OpenXML SDK 执行专业级 DOCX 锻造，实现样式剥离与样式继承的同态映射。
+Strategy:
+1. XSD 门控：所有写入操作必须经过 XSD 结构校验，防止生成无法开启的受损文件。
+2. 样式纯净化：从源文档复制时强制 strip 直接格式，仅保留 pStyle 引用。
+3. 元素序位：严格遵循 properties (pPr/rPr) 必须位于内容 (runs/t) 之前的 OpenXML 铁律。
+AVOID: 严禁在 tc 节点内漏掉必选 p 节点；禁止未通过 env_check 前执行操作。
+</strategy-gene>
 
 # minimax-docx
 
