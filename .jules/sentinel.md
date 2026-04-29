@@ -1,0 +1,4 @@
+## 2025-02-14 - Prevent Command Injection via subprocess shell=True in LLM commands
+**Vulnerability:** In `personal-intelligence-hub/scripts/hub_utils.py`, `subprocess.Popen` was using `shell=True` with a command directly retrieved from an environment variable (`PIH_LLM_COMMAND`). Since the command string wasn't parameterized, it was vulnerable to command injection if the environment variable contained shell metacharacters.
+**Learning:** External variables (even configurations like LLM command paths via environment variables) can be manipulated and should never be interpolated directly into shell strings without validation. `shell=True` creates significant security gaps.
+**Prevention:** Avoid `shell=True` for external command execution. Instead, use `shlex.split()` to parse the command string into an argument list and use `shell=False` in `subprocess.Popen` or `subprocess.run()`.
