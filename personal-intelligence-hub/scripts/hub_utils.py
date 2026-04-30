@@ -5,6 +5,7 @@ import os
 import re
 import shutil
 import subprocess
+import shlex
 from pathlib import Path
 
 
@@ -79,12 +80,12 @@ def run_llm(prompt: str) -> str:
         raise RuntimeError("No LLM runner configured for personal-intelligence-hub.")
 
     process = subprocess.Popen(
-        command,
+        shlex.split(command),
         stdin=subprocess.PIPE,
         stdout=subprocess.PIPE,
         stderr=subprocess.PIPE,
         text=True,
-        shell=True,
+        shell=False,
         encoding="utf-8",
         errors="ignore",
     )
