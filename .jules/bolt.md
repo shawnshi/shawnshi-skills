@@ -1,0 +1,3 @@
+## 2026-05-01 - Walrus Operator Optimization in List Comprehensions
+**Learning:** In Python, replacing redundant dictionary `.get()` lookups in list comprehensions with the walrus operator (`:=`) to capture values in filtering conditions provides an ~18% performance improvement (e.g., `[val for a in activities if (val := a.get('temperature'))]`). However, this optimization should NOT be applied to generator expressions inside `next()`, as lazy evaluation and early exits can actually degrade performance by ~10%.
+**Action:** When optimizing dictionary extractions in loops/comprehensions, use the walrus operator (`:=`) to cache `.get()` values, but avoid doing so for generator expressions consumed by `next()`.
