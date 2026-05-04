@@ -4,6 +4,7 @@ import json
 import os
 import re
 import shutil
+import shlex
 import subprocess
 from pathlib import Path
 
@@ -78,13 +79,15 @@ def run_llm(prompt: str) -> str:
     if not command:
         raise RuntimeError("No LLM runner configured for personal-intelligence-hub.")
 
+    # SECURE: Prevent command injection from externally controlled PIH_LLM_COMMAND by parsing into a list and using shell=False
+    parsed_command = shlex.split(command)
     process = subprocess.Popen(
-        command,
+        parsed_command,
         stdin=subprocess.PIPE,
         stdout=subprocess.PIPE,
         stderr=subprocess.PIPE,
         text=True,
-        shell=True,
+        shell=False,
         encoding="utf-8",
         errors="ignore",
     )
