@@ -3,6 +3,17 @@ name: nanobanana-image-gen
 description: 当用户要求“生成图片”、“画图”、“使用 nanobanana 绘画”或提供需要图像生成的 Prompt 时，强制激活此技能。该技能利用 Gemini Imagen 3 引擎，支持 4K 质量与高认知计算模式，自动落盘至指定目录。
 ---
 
+
+<strategy-gene>
+Keywords: 生成图片, nanobanana, Imagen, 海报, 插图
+Summary: 将用户图像意图转化为可执行的高质量生成提示词和本地图像产物。
+Strategy:
+1. 明确主题、比例、风格、主体、背景、文字和落盘目录。
+2. 优化提示词并调用可用图像生成链路。
+3. 返回生成文件路径和关键提示词参数。
+AVOID: 禁止生成与用户意图不符的风格漂移图；禁止漏报输出路径。
+</strategy-gene>
+
 # Nanobanana Image Generation Skill
 
 该技能基于 Gemini API (Imagen 3) 封装，专为高质量（4K）、高思维深度（thinking_level="HIGH"）的图像生成任务打造。符合本地逻辑闭环与物理硬锁原则。

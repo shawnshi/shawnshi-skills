@@ -13,7 +13,7 @@ Strategy:
 AVOID: 严禁重复 14 天内的旧闻；禁止包含无具体数据的公关通稿；禁止使用主观形容词描述事实。
 </strategy-gene>
 
-# HIT Industry Radar (医疗行业雷达) V5.1 
+# HIT Industry Radar (医疗行业雷达) V5.1
 
 > **Vision**: 消除跨周失忆与孤立事件堆砌，基于 Blackboard 模式的情报组装机。
 
@@ -32,7 +32,7 @@ AVOID: 严禁重复 14 天内的旧闻；禁止包含无具体数据的公关通
 ### Sub-agent Delegation Protocol (Mandatory Sandboxing)
 **CRITICAL RULE**: To protect the main agent's context window from attention degradation and data bloat, heavy lifting tasks (e.g., mass web scraping, parsing long PDFs, or generating multi-thousand-word drafts) MUST NOT be executed directly in the main memory.
 1. **Packet Creation**: Before starting the heavy task, write the required parameters, URLs, or chapter outlines to a physical sandbox file: `C:\Users\shich\.gemini\tmp\playgrounds\Task_Packet_[TIMESTAMP].md`.
-2. **Delegation**: Explicitly invoke a sub-agent (e.g., `generalist`) to read the packet, execute the heavy generation/scraping, and write the final output back to a designated result file.
+2. **Delegation**: Explicitly invoke a sub-agent (e.g., `worker sub-agent`) to read the packet, execute the heavy generation/scraping, and write the final output back to a designated result file.
 3. **Suspension**: The main agent must suspend its execution, wait for the sub-agent to finish, and then read ONLY the final output file to proceed with orchestration or final review.
 
 ### 核心工作流 (Blackboard Execution Pipeline)
@@ -42,7 +42,7 @@ AVOID: 严禁重复 14 天内的旧闻；禁止包含无具体数据的公关通
    - `assets/Task_global_hit.md`
    - `assets/Task_china_hit.md`
    - `assets/Task_winning_baseline.md`
-2. **集群并发调度**: 在 `~/.gemini/tmp/playgrounds/` 建立本次执行的临时空间。同时（并发）调用 3 次 `generalist` 子代理工具，分别下发上述三个指令包进行深度检索，并要求它们将“检索->过滤->提纯”的脱水结果分别写入指定临时文件：
+2. **集群并发调度**: 在 `~/.gemini/tmp/playgrounds/` 建立本次执行的临时空间。同时（并发）调用 3 次 `worker sub-agent` 子代理工具，分别下发上述三个指令包进行深度检索，并要求它们将“检索->过滤->提纯”的脱水结果分别写入指定临时文件：
    - `~/.gemini/tmp/playgrounds/Response_global_hit.md`
    - `~/.gemini/tmp/playgrounds/Response_china_hit.md`
    - `~/.gemini/tmp/playgrounds/Response_winning_baseline.md`
@@ -58,10 +58,14 @@ AVOID: 严禁重复 14 天内的旧闻；禁止包含无具体数据的公关通
 - [ ] 建议 (Insight) 动作是否具备直接的销售/研发话术价值？ [Yes/No]
 若任一为 No，强制重写该节点。
 
-### Phase 4: 激活与分层归档 (Activate & Archive)
-1. **渲染战报**: 严格按照下方的 `[Format Stack]` 生成 Markdown 输出。
-2. **物理落盘**: 使用 `write_file` 工具将战报物理保存至 `~/.gemini/MEMORY/raw/HealthcareIndustryRadar/DHWB-Radar-YYYYMMDD.md` (替换为当天的年月日)。
-3. **遥测记录 (Telemetry)**: 必须使用 `write_file` 将本次执行状态存入 `~/.gemini/MEMORY/skill_audit/telemetry/record_[TIMESTAMP].json`。结构规范：`{"skill_name": "hit-industry-radar", "status": "success", "duration_sec": 0, "input_tokens": 0, "output_tokens": 0}`
+### Phase 4: The Hard Gate (物理层强制审计)
+1. **渲染战报草稿**: 严格按照下方的 `[Format Stack]` 生成 Markdown 输出，并**强制**将其写入临时文件 `~/.gemini/tmp/draft_hit_radar.md`。
+2. **强制过检**: 调用 shell 执行 `python ~/.gemini/skills/scripts/hit_audit_gate.py ~/.gemini/tmp/draft_hit_radar.md --mode radar`。
+3. **处理失败**: 如果审计脚本报错（如包含“数字化转型”等营销禁词，或漏掉“紧急预警”），必须退回上一步修正草稿，最多重试 2 次。
+
+### Phase 5: 激活与分层归档 (Activate & Archive)
+1. **物理落盘**: 只有在 Phase 4 返回 `Audit Passed` (Exit Code 0) 后，才允许使用 `write_file` 工具将草稿内容物理保存至最终目录 `~/.gemini/MEMORY/raw/HealthcareIndustryRadar/DHWB-Radar-YYYYMMDD.md`。
+2. **遥测记录 (Telemetry)**: 必须使用 `write_file` 将本次执行状态存入 `~/.gemini/MEMORY/skill_audit/telemetry/record_[TIMESTAMP].json`。结构规范：`{"skill_name": "hit-industry-radar", "status": "success", "duration_sec": 0, "input_tokens": 0, "output_tokens": 0}`
 
 ## Resources
 - `assets/Task_global_hit.md`

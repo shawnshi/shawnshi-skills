@@ -4,6 +4,17 @@ description: PPT 智能组装助手。Primary owner for slide-library retrieval 
 Native tools integration: shell execution, file read/write, direct user confirmation
 ---
 
+
+<strategy-gene>
+Keywords: PPT 组装, slide library, 模板页, 素材复用
+Summary: 从历史 PPT 素材和模板中检索、规划并组装可交付演示文稿。
+Strategy:
+1. 读取 config.yaml、素材库和用户目标，先 dry-run 再执行。
+2. 优先复用原生幻灯片骨架；缺素材时用模板页降级并标注。
+3. 执行 plan_validator 与 runner，最终交付 PPTX 绝对路径。
+AVOID: 禁止跳过 dry-run；禁止在未说明缺素材的情况下交付占位页。
+</strategy-gene>
+
 # SlideBlocks 组装助手 (V3.0 架构 - Mentat Certified)
 
 ## 核心架构与模式
@@ -62,21 +73,21 @@ SlideBlocks 采用**逻辑与渲染解耦**的架构：
   "output_path": "{output_dir}/客户汇报_2026.pptx",
   "plan": [
     {
-      "template_page": 1, 
-      "replace_title": "主标题"
+      "template_page": 1,
+      "title": "主标题"
     },
     {
-      "src": "{materials_dir}/XXX案例.pptx", 
-      "page": 5, 
+      "src": "{materials_dir}/XXX案例.pptx",
+      "page": 5,
       "fix_colors": true
     },
     {
-      "template_page": 2, 
-      "replace_title": "第二章节名称",
+      "template_page": 2,
+      "title": "第二章节名称",
       "font_size": 40
     },
     {
-      "src": "{materials_dir}/XXX方案.pptx", 
+      "src": "{materials_dir}/XXX方案.pptx",
       "page": 12
     },
     {
@@ -115,7 +126,7 @@ from engine.convert_deck import convert
 
 # 深色底 → 浅色底，自动选模板，自动执行色彩反转与底线防御
 # 须填充真实绝对路径
-convert("C:/真实绝对物理路径/输入文件.pptx", to="light")   
+convert("C:/真实绝对物理路径/输入文件.pptx", to="light")
 ```
 
 ### 局部编辑
@@ -127,9 +138,10 @@ edit("输出真实路径/xxx.pptx", [
     {"op": "delete",          "pages": [7, 8]},
     {"op": "move",            "pages": [7, 8], "after": 15},
     {"op": "insert_template", "template_page": 2, "after": 5, "title": "新章节", "font_size": 40},
-    {"op": "replace",         "page": 12, "src": "真实素材绝对路径/源.pptx", "src_page": 5},
+    {"op": "content_swap",    "page": 12, "src": "真实素材绝对路径/源.pptx", "src_page": 5},
 ])
 ```
+`content_swap` 表示用素材页内容覆盖目标页的计划意图；执行前按 `references/full_slide_blocks_playbook.md` 或 `engine/edit_pptx.py` 映射为引擎接受的精确操作名。
 
 ---
 
@@ -159,7 +171,7 @@ edit("输出真实路径/xxx.pptx", [
      - `[Visual_Intent: 顶层架构]` -> `--layout "逻辑架构图"`
      - `[Visual_Intent: 方案/对标]` -> `--layout "对比页"`
      - `[Visual_Intent: 实施路径]` -> `--layout "时间轴/流程"`
-3. **闭环组装 (Hands-on Assembly)**：如果找到了匹配素材，将 `src` / `page` 装入 json。如果**未找到匹配素材（回退降级）**，使用 `{"template_page": 3, "replace_title": "预期标题"}`（占位），并直接向用户说明该处缺失原生素材骨架，让用户后期手绘。最后先跑 `engine.plan_validator`，再调用 `runner.py`。
+3. **闭环组装 (Hands-on Assembly)**：如果找到了匹配素材，将 `src` / `page` 装入 json。如果**未找到匹配素材（回退降级）**，使用 `{"template_page": 3, "title": "预期标题"}`（占位），并直接向用户说明该处缺失原生素材骨架，让用户后期手绘。最后先跑 `engine.plan_validator`，再调用 `runner.py`。
 ---
 
 ## 历史失效先验 (NLAH Gotchas)

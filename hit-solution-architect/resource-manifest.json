@@ -1,51 +1,79 @@
-﻿{
-    "schema_version":  1,
-    "skill":  "hit-solution-architect",
-    "generated_at":  "2026-04-19T06:26:09",
-    "skill_md":  "SKILL.md",
-    "top_level_files":  [
-                            "README.md",
-                            "SKILL.md",
-                            "_DIR_META.md"
-                        ],
-    "top_level_directories":  [
-                                  "references",
-                                  "scripts",
-                                  "templates"
-                              ],
-    "resource_directories":  [
-                                 {
-                                     "name":  "scripts",
-                                     "file_count":  3
-                                 },
-                                 {
-                                     "name":  "references",
-                                     "file_count":  9
-                                 }
-                             ],
-    "declared_local_dependencies":  [
-                                        {
-                                            "path":  "references\\winning-health-case-studies.md",
-                                            "exists":  true,
-                                            "resolved_path":  "C:\\Users\\shich\\.gemini\\skills\\hit-solution-architect\\references\\winning-health-case-studies.md"
-                                        },
-                                        {
-                                            "path":  "references\\winning-health-core-products.md",
-                                            "exists":  true,
-                                            "resolved_path":  "C:\\Users\\shich\\.gemini\\skills\\hit-solution-architect\\references\\winning-health-core-products.md"
-                                        },
-                                        {
-                                            "path":  "hit-solution-architect\\scripts\\logic_checker.py",
-                                            "exists":  true,
-                                            "resolved_path":  "C:\\Users\\shich\\.gemini\\skills\\hit-solution-architect\\scripts\\logic_checker.py"
-                                        },
-                                        {
-                                            "path":  "hit-solution-architect\\scripts\\manifest_manager.py",
-                                            "exists":  true,
-                                            "resolved_path":  "C:\\Users\\shich\\.gemini\\skills\\hit-solution-architect\\scripts\\manifest_manager.py"
-                                        }
-                                    ],
-    "missing_declared_dependencies":  [
-
-                                      ]
+{
+  "schema_version": 1,
+  "skill": "hit-solution-architect",
+  "generated_at": "2026-04-30T19:16:49",
+  "skill_md": "SKILL.md",
+  "top_level_files": [
+    "_DIR_META.md",
+    "README.md",
+    "SKILL.md"
+  ],
+  "top_level_directories": [
+    "references",
+    "scripts",
+    "templates"
+  ],
+  "resource_directories": [
+    {
+      "name": "scripts",
+      "file_count": 3
+    },
+    {
+      "name": "references",
+      "file_count": 9
+    }
+  ],
+  "declared_local_dependencies": [
+    {
+      "path": "references\\医疗卫生政策要点.md",
+      "exists": true,
+      "resolved_path": "C:\\Users\\shich\\.gemini\\skills\\hit-solution-architect\\references\\医疗卫生政策要点.md"
+    },
+    {
+      "path": "references\\卫宁健康典型案例.md",
+      "exists": true,
+      "resolved_path": "C:\\Users\\shich\\.gemini\\skills\\hit-solution-architect\\references\\卫宁健康典型案例.md"
+    },
+    {
+      "path": "references\\卫宁健康核心产品.md",
+      "exists": true,
+      "resolved_path": "C:\\Users\\shich\\.gemini\\skills\\hit-solution-architect\\references\\卫宁健康核心产品.md"
+    },
+    {
+      "path": "references\\xinchuang_ecosystem.md",
+      "exists": true,
+      "resolved_path": "C:\\Users\\shich\\.gemini\\skills\\hit-solution-architect\\references\\xinchuang_ecosystem.md"
+    },
+    {
+      "path": "references\\evaluation_standards.md",
+      "exists": true,
+      "resolved_path": "C:\\Users\\shich\\.gemini\\skills\\hit-solution-architect\\references\\evaluation_standards.md"
+    },
+    {
+      "path": "templates\\examples\\good_titles_vs_bad_titles.md",
+      "exists": true,
+      "resolved_path": "C:\\Users\\shich\\.gemini\\skills\\hit-solution-architect\\templates\\examples\\good_titles_vs_bad_titles.md"
+    },
+    {
+      "path": "templates\\examples\\narrative_vs_matrix_sample.md",
+      "exists": true,
+      "resolved_path": "C:\\Users\\shich\\.gemini\\skills\\hit-solution-architect\\templates\\examples\\narrative_vs_matrix_sample.md"
+    },
+    {
+      "path": "scripts\\logic_checker.py",
+      "exists": true,
+      "resolved_path": "C:\\Users\\shich\\.gemini\\skills\\hit-solution-architect\\scripts\\logic_checker.py"
+    },
+    {
+      "path": "scripts\\buzzword_auditor.py",
+      "exists": true,
+      "resolved_path": "C:\\Users\\shich\\.gemini\\skills\\hit-solution-architect\\scripts\\buzzword_auditor.py"
+    },
+    {
+      "path": "scripts\\manifest_manager.py",
+      "exists": true,
+      "resolved_path": "C:\\Users\\shich\\.gemini\\skills\\hit-solution-architect\\scripts\\manifest_manager.py"
+    }
+  ],
+  "missing_declared_dependencies": []
 }

@@ -3,6 +3,17 @@ name: image-promp-gen
 description: 一句话生成大师级海报、书籍封面、专辑封面和各类设计作品的提示词。基于33+位传奇设计师风格。支持多平台多比例。包含AI提示词优化。触发词："Mondo风格"、"书籍封面设计"、"专辑封面"、"海报设计"、"读书笔记配图"、"公众号封面"、"小红书配图"、"文章配图"。One-sentence generation of master-level poster and cover prompts.
 ---
 
+
+<strategy-gene>
+Keywords: 海报提示词, 书籍封面, 专辑封面, 小红书配图
+Summary: 生成大师级视觉提示词，覆盖封面、海报和社媒配图。
+Strategy:
+1. 提取主题、媒介、比例、目标平台和情绪张力。
+2. 选择设计师风格、构图、字体、色彩、符号和摄影/插画语言。
+3. 输出可直接用于图像模型的一句话或分层提示词。
+AVOID: 禁止堆砌空泛形容词；禁止忽略平台比例和文字排版约束。
+</strategy-gene>
+
 # Mondo Style Design Prompt Generator (image-promp-gen)
 
 Generate highly detailed and optimized AI image prompts in Mondo's distinctive alternative aesthetic - known for limited-edition screen-printed posters, book covers, and album art with bold colors, minimalist compositions, and symbolic storytelling.

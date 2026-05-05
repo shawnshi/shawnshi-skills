@@ -3,6 +3,17 @@ name: mentat-insight-diary
 description: Primary owner for first-person Mentat introspection logs and system audit diary entries. Use when the task is to record a system-centric OODA reflection or archive a Mentat audit payload. Prefer personal-cognitive-auditor for periodic review reports and personal-diary-writer for generic diary writeback.
 ---
 
+
+<strategy-gene>
+Keywords: 内观日记, OODA, 系统审计, Mentat log
+Summary: 记录第一人称系统内观和审计日志，并保持原子化落盘。
+Strategy:
+1. 提取触发事件、观察、判断、行动和后续策略。
+2. 用 OODA 或审计结构压缩为可检索日志。
+3. 安全写入指定日记/审计资产并报告路径。
+AVOID: 禁止写成流水账；禁止覆盖已有日志。
+</strategy-gene>
+
 # Mentat Insight Diary (V6.1: Sovereign Reflex)
 
 This skill performs a system-centric, first-person deep reflection on cognitive friction, asset forging, and system evolution using the OODA framework. It serves as the primary channel for passing failure priors and architectural compromises to future Mentat instances.

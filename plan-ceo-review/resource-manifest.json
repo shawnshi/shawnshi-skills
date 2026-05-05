@@ -1,21 +1,13 @@
-﻿{
-    "schema_version":  1,
-    "skill":  "plan-ceo-review",
-    "generated_at":  "2026-04-19T06:26:09",
-    "skill_md":  "SKILL.md",
-    "top_level_files":  [
-                            "SKILL.md"
-                        ],
-    "top_level_directories":  [
-
-                              ],
-    "resource_directories":  [
-
-                             ],
-    "declared_local_dependencies":  [
-
-                                    ],
-    "missing_declared_dependencies":  [
-
-                                      ]
+{
+  "schema_version": 1,
+  "skill": "plan-ceo-review",
+  "generated_at": "2026-04-30T19:16:50",
+  "skill_md": "SKILL.md",
+  "top_level_files": [
+    "SKILL.md"
+  ],
+  "top_level_directories": [],
+  "resource_directories": [],
+  "declared_local_dependencies": [],
+  "missing_declared_dependencies": []
 }

@@ -1,29 +1,37 @@
-﻿{
-    "schema_version":  1,
-    "skill":  "xlsx",
-    "generated_at":  "2026-04-19T06:26:09",
-    "skill_md":  "SKILL.md",
-    "top_level_files":  [
-                            "pivot-table.md",
-                            "SKILL.md"
-                        ],
-    "top_level_directories":  [
-                                  "scripts"
-                              ],
-    "resource_directories":  [
-                                 {
-                                     "name":  "scripts",
-                                     "file_count":  1
-                                 }
-                             ],
-    "declared_local_dependencies":  [
-                                        {
-                                            "path":  "scripts\\KimiXlsx",
-                                            "exists":  true,
-                                            "resolved_path":  "C:\\Users\\shich\\.gemini\\skills\\xlsx\\scripts\\KimiXlsx"
-                                        }
-                                    ],
-    "missing_declared_dependencies":  [
-
-                                      ]
+{
+  "schema_version": 1,
+  "skill": "xlsx",
+  "generated_at": "2026-04-30T19:16:50",
+  "skill_md": "SKILL.md",
+  "top_level_files": [
+    "pivot-table.md",
+    "SKILL.md"
+  ],
+  "top_level_directories": [
+    "references",
+    "scripts"
+  ],
+  "resource_directories": [
+    {
+      "name": "scripts",
+      "file_count": 1
+    },
+    {
+      "name": "references",
+      "file_count": 1
+    }
+  ],
+  "declared_local_dependencies": [
+    {
+      "path": "references\\full_xlsx_playbook.md",
+      "exists": true,
+      "resolved_path": "C:\\Users\\shich\\.gemini\\skills\\xlsx\\references\\full_xlsx_playbook.md"
+    },
+    {
+      "path": "scripts\\KimiXlsx",
+      "exists": true,
+      "resolved_path": "C:\\Users\\shich\\.gemini\\skills\\xlsx\\scripts\\KimiXlsx"
+    }
+  ],
+  "missing_declared_dependencies": []
 }

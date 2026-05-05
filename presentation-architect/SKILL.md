@@ -24,7 +24,7 @@ This skill produces presentation blueprints, not final slide binaries.
 - Style must be explicit and reusable.
 - The deliverable is a validated blueprint package, not a rendered PPTX.
 
-## Workflow
+## Blueprint Workflow
 
 ### Phase 1: Strategic Calibration
 - Lock the scenario, audience, objective, timing, and style direction.
@@ -75,10 +75,28 @@ A deck is valid only if:
 - Do not promise rendered PPT output.
 - Do not treat style as prose only; it must exist as structured blueprint metadata.
 
-## Telemetry
+## Runtime Telemetry Notes
 
 After successful completion, write metadata to:
 `C:\Users\shich\.gemini\MEMORY\skill_audit\telemetry\record_[TIMESTAMP].json`
 
 JSON format:
 `{"skill_name": "presentation-architect", "status": "success", "duration_sec": [ESTIMATE], "input_tokens": [ESTIMATE], "output_tokens": [ESTIMATE]}`
+
+## When to Use
+- Use this skill according to the frontmatter trigger description and the domain-specific rules already defined above.
+
+## Workflow
+- Follow the existing phases, scripts, and handoff rules in this skill. Do not skip validation or approval gates already defined above.
+
+## Resources
+- Use this skill directory's bundled scripts, references, assets, examples, prompts, and agents as needed. Load only the specific resource needed for the current request.
+
+## Failure Modes
+- If required inputs, local files, evidence, permissions, or validation steps are missing, stop the risky action, state the blocker, and choose the narrowest recovery path.
+
+## Output Contract
+- Final output must match the user request, preserve the skill's domain contract, and include validation evidence or an explicit reason validation could not run.
+
+## Telemetry
+- When persistent logging is available, record task type, inputs, outputs, validation status, failures, and follow-up risks in the local skill-audit path.

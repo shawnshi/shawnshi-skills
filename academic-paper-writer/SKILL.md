@@ -62,13 +62,13 @@ Activate `plan` mode when the user wants guidance, step-by-step planning, or exp
 
 | Scenario | Use Instead |
 |----------|-------------|
-| Deep research / fact-checking (not paper writing) | `deep-research` |
-| Reviewing a paper (structured review) | `academic-paper-reviewer` |
-| Full research-to-paper pipeline | `academic-pipeline` |
+| Deep research / fact-checking (not paper writing) | `academic-deep-research` |
+| Reviewing a paper (structured review) | `academic-paper-reader` |
+| Full research-to-paper pipeline | run `academic-deep-research` first, then return here |
 
-### Distinction from `deep-research`
+### Distinction from `academic-deep-research`
 
-| Feature | `academic-paper` | `deep-research` |
+| Feature | `academic-paper-writer` | `academic-deep-research` |
 |---------|-------------------|-----------------|
 | Primary output | Publishable paper draft | Research report |
 | Structure | Journal-ready (IMRaD, etc.) | APA 7.0 report |
@@ -190,9 +190,9 @@ Socratic mode that guides users through paper planning one chapter at a time. Bu
 
 ---
 
-## Handoff Protocol: deep-research -> academic-paper
+## Handoff Protocol: academic-deep-research -> academic-paper-writer
 
-`intake_agent` automatically detects deep-research materials (RQ Brief / Bibliography / Synthesis / INSIGHT Collection) and skips redundant steps. See `deep-research/SKILL.md` Handoff Protocol for the complete handoff material format.
+`intake_agent` automatically detects `academic-deep-research` materials (RQ Brief / Bibliography / Synthesis / INSIGHT Collection) and skips redundant steps. See `academic-deep-research/SKILL.md` Handoff Protocol for the complete handoff material format.
 
 ---
 
@@ -202,7 +202,7 @@ See `references/failure_paths.md` for details. Quick reference:
 
 | Failure Scenario | Handling Strategy |
 |---------|---------|
-| Insufficient research foundation | Recommend running `deep-research` first |
+| Insufficient research foundation | Recommend running `academic-deep-research` first |
 | Wrong paper structure selected | Return to Phase 2, suggest alternative structure |
 | Word count significantly over/under target | Identify problematic chapters, suggest trimming/expansion |
 | Citation format entirely wrong | Re-run the entire citation phase |
@@ -215,7 +215,7 @@ See `references/failure_paths.md` for details. Quick reference:
 
 ## Full Academic Pipeline
 
-See `academic-pipeline/SKILL.md` for the complete workflow.
+Use `academic-deep-research` for evidence acquisition, then use this skill for paper planning, drafting, citation compliance, and formatting.
 
 ---
 
@@ -237,7 +237,7 @@ See `agents/intake_agent.md` for the complete field definitions of the Phase 0 c
 - Process: `failure_paths` (12 scenarios), `mode_selection_guide` (10 modes), `plan_mode_protocol`, `workflow_phase_details`
 - Ethics: `credit_authorship_guide` (CRediT 14 roles), `funding_statement_guide`, `statistical_visualization_standards`
 - Disclosure (v3.2): `disclosure_mode_protocol` (venue-specific AI-usage statement generation), `venue_disclosure_policies` (v1 database: ICLR, NeurIPS, Nature, Science, ACL, EMNLP)
-- Also: `deep-research/references/apa7_style_guide.md` (base reference, extended here)
+- Also: `academic-deep-research/references/apa7_style_guide.md` (base reference, extended here)
 
 **Templates** (11 files in `templates/`): `imrad`, `literature_review`, `case_study`, `theoretical_paper`, `policy_brief`, `conference_paper`, `latex_article_template.tex`, `bilingual_abstract`, `credit_statement`, `funding_statement`, `revision_tracking` (4 status types).
 
@@ -255,7 +255,7 @@ Explicit prohibitions to prevent common failure modes:
 | 2 | **Em dash abuse** | More than 2 em dashes per page signals AI writing | Use parentheses, commas, or restructure the sentence |
 | 3 | **Throat-clearing openers** | "In this section, we will discuss..." adds no information | Start with the claim or finding directly |
 | 4 | **Uniform paragraph lengths** | Every paragraph is 4-5 sentences = monotonous AI rhythm | Vary paragraph length naturally (2-8 sentences) |
-| 5 | **⚠️ IRON RULE: Fabricated citations** | Inventing plausible-sounding references that don't exist | Every citation must be verified via DOI or WebSearch; see `academic-pipeline/agents/integrity_verification_agent.md` |
+| 5 | **⚠️ IRON RULE: Fabricated citations** | Inventing plausible-sounding references that don't exist | Every citation must be verified via DOI or venue/source lookup; see `agents/citation_compliance_agent.md` |
 | 6 | **Sycophantic revision** | Accepting all reviewer feedback without critical evaluation | Use REVIEWER_DISAGREE status when reviewer is wrong; justify with evidence |
 | 7 | **Scope creep during revision** | Adding unrequested sections/analyses to "improve" the paper | Revision addresses reviewer concerns only; new content requires explicit user approval |
 | 8 | **Ignoring failure paths** | Continuing despite desk-reject signals or fatal methodology flaws | Check `references/failure_paths.md`; invoke F11 Desk-Reject Recovery when triggered |

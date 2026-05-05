@@ -4,9 +4,20 @@ description: 自动化出版与 LaTeX 引擎。当用户要求“Markdown 转 La
 triggers: ["将Markdown转为LaTeX", "将M文件转为LaTeX","生成科研级PDF排版", "套用IEEE模板渲染文档", "输出精美的公式报告", "转换这篇报告为专业期刊格式"]
 ---
 
+
+<strategy-gene>
+Keywords: Markdown 转 LaTeX, 科研 PDF, 期刊排版, 公式报告
+Summary: 将 Markdown 或结构化内容排版为专业 LaTeX/PDF 文档。
+Strategy:
+1. 确认目标模板、语言、公式密度和输出格式。
+2. 生成或转换 LaTeX 结构，并套用对应出版模板。
+3. 编译检查版式、公式、引用、目录和字体。
+AVOID: 禁止未编译就声称完成；禁止破坏公式或引用结构。
+</strategy-gene>
+
 # Smart Doc LaTeX
 
-自动化出版引擎，将普通文档转换为专业排版的 PDF。使用'ask_user'获取用户确认目标样式目标样式：（`academic`, `cv`, `tech_report`, `book`, `tech_book`）。
+自动化出版引擎，将普通文档转换为专业排版的 PDF。使用'user-input gate'获取用户确认目标样式目标样式：（`academic`, `cv`, `tech_report`, `book`, `tech_book`）。
 
 ## When to Use
 - 当用户要求将 Markdown/Word/Text 转为专业 LaTeX/PDF，或需要套用科研、简历、书稿等排版模板时使用。
@@ -78,7 +89,7 @@ python {root_dir}\.gemini\skills\smart-doc-latex\scripts\smart_engine.py --input
 ## Failure Modes
 
 *   **Pandoc not found**: 提示用户安装 Pandoc。
-*   **Compilation failed**: 
+*   **Compilation failed**:
     *   读取同目录下的 `.log` 文件末尾排查错误。
     *   常见原因：缺少宏包（Package missing）。建议用户安装 `texlive-full`。
     *   **Fallback**: 如果编译持续失败，向用户交付生成的 `.tex` 文件，建议其使用 Overleaf 在线编译。

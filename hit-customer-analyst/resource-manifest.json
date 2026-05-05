@@ -1,0 +1,46 @@
+{
+  "schema_version": 1,
+  "skill": "hit-customer-analyst",
+  "generated_at": "2026-04-30T19:16:49",
+  "skill_md": "SKILL.md",
+  "top_level_files": [
+    "SKILL.md"
+  ],
+  "top_level_directories": [
+    "assets",
+    "references",
+    "scripts"
+  ],
+  "resource_directories": [
+    {
+      "name": "scripts",
+      "file_count": 1
+    },
+    {
+      "name": "references",
+      "file_count": 1
+    },
+    {
+      "name": "assets",
+      "file_count": 1
+    }
+  ],
+  "declared_local_dependencies": [
+    {
+      "path": "hit-customer-analyst\\references\\workflow.md",
+      "exists": true,
+      "resolved_path": "C:\\Users\\shich\\.gemini\\skills\\hit-customer-analyst\\references\\workflow.md"
+    },
+    {
+      "path": "hit-customer-analyst\\assets\\briefing_template.md",
+      "exists": true,
+      "resolved_path": "C:\\Users\\shich\\.gemini\\skills\\hit-customer-analyst\\assets\\briefing_template.md"
+    },
+    {
+      "path": "hit-customer-analyst\\scripts\\brief_gate.py",
+      "exists": true,
+      "resolved_path": "C:\\Users\\shich\\.gemini\\skills\\hit-customer-analyst\\scripts\\brief_gate.py"
+    }
+  ],
+  "missing_declared_dependencies": []
+}

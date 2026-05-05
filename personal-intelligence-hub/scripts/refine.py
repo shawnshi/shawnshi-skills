@@ -152,7 +152,7 @@ def maybe_model_refine(base_output: dict) -> dict:
     prompt_text = PROMPT_PATH.read_text(encoding="utf-8") if PROMPT_PATH.exists() else ""
     lightweight_prompt = (
         prompt_text
-        + "\n\n请在不破坏既有 JSON 结构的前提下，强化 punchline、insights、digest、market。同时，请务必将 top_10 列表中的 fact, summary_zh, title_zh 字段翻译并改写为高质量的中文描述。"
+        + "\n\n请在不破坏既有 JSON 结构的前提下，强化 punchline、insights、digest、market。同时，请务必将 top_10 列表中的 fact, connection, deduction, actionability, summary_zh, title_zh 字段翻译并基于二阶推演改写为高质量的中文描述。"
         + "\n输入候选 JSON:\n"
         + json.dumps(base_output, ensure_ascii=False)
     )
@@ -167,7 +167,8 @@ def maybe_model_refine(base_output: dict) -> dict:
                 else:
                     base_output[key] = model_output[key]
         base_output["model_used"] = "runner+heuristic"
-    except Exception:
+    except Exception as e:
+        print(f"[WARN] LLM refinement failed: {e}")
         pass
     return base_output
 

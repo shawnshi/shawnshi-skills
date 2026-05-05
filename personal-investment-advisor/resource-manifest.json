@@ -1,0 +1,94 @@
+{
+  "schema_version": 1,
+  "skill": "personal-investment-advisor",
+  "generated_at": "2026-04-30T19:16:50",
+  "skill_md": "SKILL.md",
+  "top_level_files": [
+    "_DIR_META.md",
+    "README.md",
+    "SKILL.md"
+  ],
+  "top_level_directories": [
+    "agents",
+    "examples",
+    "resources",
+    "scripts"
+  ],
+  "resource_directories": [
+    {
+      "name": "scripts",
+      "file_count": 10
+    },
+    {
+      "name": "examples",
+      "file_count": 1
+    },
+    {
+      "name": "agents",
+      "file_count": 2
+    }
+  ],
+  "declared_local_dependencies": [
+    {
+      "path": "scripts\\yf.py",
+      "exists": true,
+      "resolved_path": "C:\\Users\\shich\\.gemini\\skills\\personal-investment-advisor\\scripts\\yf.py"
+    },
+    {
+      "path": "scripts\\portfolio_loader.py",
+      "exists": true,
+      "resolved_path": "C:\\Users\\shich\\.gemini\\skills\\personal-investment-advisor\\scripts\\portfolio_loader.py"
+    },
+    {
+      "path": "scripts\\dashboard_gate.py",
+      "exists": true,
+      "resolved_path": "C:\\Users\\shich\\.gemini\\skills\\personal-investment-advisor\\scripts\\dashboard_gate.py"
+    },
+    {
+      "path": "personal-investment-advisor\\scripts\\dashboard_gate.py",
+      "exists": true,
+      "resolved_path": "C:\\Users\\shich\\.gemini\\skills\\personal-investment-advisor\\scripts\\dashboard_gate.py"
+    },
+    {
+      "path": "personal-investment-advisor\\scripts\\yf.py",
+      "exists": true,
+      "resolved_path": "C:\\Users\\shich\\.gemini\\skills\\personal-investment-advisor\\scripts\\yf.py"
+    },
+    {
+      "path": "personal-investment-advisor\\scripts\\akshare_fetcher.py",
+      "exists": true,
+      "resolved_path": "C:\\Users\\shich\\.gemini\\skills\\personal-investment-advisor\\scripts\\akshare_fetcher.py"
+    },
+    {
+      "path": "personal-investment-advisor\\scripts\\portfolio_loader.py",
+      "exists": true,
+      "resolved_path": "C:\\Users\\shich\\.gemini\\skills\\personal-investment-advisor\\scripts\\portfolio_loader.py"
+    },
+    {
+      "path": "personal-investment-advisor\\scripts\\dashboard_math_gate.py",
+      "exists": true,
+      "resolved_path": "C:\\Users\\shich\\.gemini\\skills\\personal-investment-advisor\\scripts\\dashboard_math_gate.py"
+    },
+    {
+      "path": "personal-investment-advisor\\scripts\\save_dashboard.py",
+      "exists": true,
+      "resolved_path": "C:\\Users\\shich\\.gemini\\skills\\personal-investment-advisor\\scripts\\save_dashboard.py"
+    },
+    {
+      "path": "personal-investment-advisor\\scripts\\advice_journal.py",
+      "exists": true,
+      "resolved_path": "C:\\Users\\shich\\.gemini\\skills\\personal-investment-advisor\\scripts\\advice_journal.py"
+    },
+    {
+      "path": "personal-investment-advisor\\scripts\\decision_outcome_report.py",
+      "exists": true,
+      "resolved_path": "C:\\Users\\shich\\.gemini\\skills\\personal-investment-advisor\\scripts\\decision_outcome_report.py"
+    },
+    {
+      "path": "personal-investment-advisor\\scripts\\watchlist_gate.py",
+      "exists": true,
+      "resolved_path": "C:\\Users\\shich\\.gemini\\skills\\personal-investment-advisor\\scripts\\watchlist_gate.py"
+    }
+  ],
+  "missing_declared_dependencies": []
+}

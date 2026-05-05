@@ -3,6 +3,17 @@ name: personal-roundtable
 description: A high-density dynamic analytical framework (V5.0) that orchestrates real-world historical or contemporary figures into a "tension network" to scrutinize any topic. Features fragmented persistence per round (anti-dehydration by design), dynamic speaker selection, action-tagged dialogue with "简言之" compression, and structural ASCII topology maps. All sessions are eventually merged and physically archived to C:\Users\shich\.gemini\MEMORY\roundtable\圆桌-{议题关键词}_{date}.md.
 ---
 
+
+<strategy-gene>
+Keywords: 圆桌, 多人物辩论, tension network, 思想碰撞
+Summary: 组织历史或当代人物张力网络，对议题进行多视角攻防。
+Strategy:
+1. 明确议题、人物、张力轴和回合边界。
+2. 分片写入对话或观点，防止长文本截断。
+3. 最终合并为洞察、分歧、盲点和可行动结论。
+AVOID: 禁止人物只做表态机器；禁止没有张力的同质化观点堆叠。
+</strategy-gene>
+
 # Personal Roundtable (V5.0: Mentat Synthesis Edition)
 
 “所有的执行偏差，本质上都是认知的偷懒。在这里，我们通过真实思想维度的对抗，萃取决策的晶核。”
@@ -19,7 +30,7 @@ description: A high-density dynamic analytical framework (V5.0) that orchestrate
 ### Sub-agent Delegation Protocol (Mandatory Sandboxing)
 **CRITICAL RULE**: To protect the main agent's context window from attention degradation during long-form multi-character discussions, the round phases MUST NOT be held entirely in the main memory.
 1. **Arena Creation**: Before starting the roundtable, define the topic, participants, and rules in a sandbox file: `C:\Users\shich\.gemini\tmp\playgrounds\Roundtable_Packet_[TIMESTAMP].md`.
-2. **Delegation**: Explicitly invoke a sub-agent (e.g., `generalist`) to read the packet, execute the actual conversational turns, and append the dialog fragments to the designated physical output file (`.md`).
+2. **Delegation**: Explicitly invoke a sub-agent (e.g., `worker sub-agent`) to read the packet, execute the actual conversational turns, and append the dialog fragments to the designated physical output file (`.md`).
 3. **Suspension**: The main agent acts purely as the host, suspending execution during the sub-agent's heavy text generation, and finally reading the condensed topology or summary upon completion.
 
 ### 核心流程与架构 (The Protocol)
@@ -33,7 +44,7 @@ description: A high-density dynamic analytical framework (V5.0) that orchestrate
 2.  **工作区初始化 (Mandatory)**：
     - **物理创建**：使用 `run_shell_command` 创建专属目录 `C:\Users\shich\.gemini\MEMORY\raw\roundtable\workspace_{议题关键词}_{date}\`。
     - **写入开场**：使用 `write_file` 写入第一个碎片文件 `00_init.md`。文件头包含人物卡片（姓名、MBTI、核心立场、选择理由）及开场问题。
-3.  **等待**：此时必须停止输出，调用 `ask_user` 等待用户指令。
+3.  **等待**：此时必须停止输出，调用 `user-input gate` 等待用户指令。
 
 ### Phase 2: 对话循环与碎片化落盘 (Dialogue & Fragmented Write) [Mode: EXECUTION]
 1.  **动态发言**：
@@ -48,7 +59,7 @@ description: A high-density dynamic analytical framework (V5.0) that orchestrate
 3.  **碎片化落盘 (Anti-Dehydration)**：
     - **单点写入**：每轮结束后，直接使用 `write_file` 将本轮内容写入 `01_round1.md`, `02_round2.md`... 等文件。
 4.  **节点控制菜单 (Node Control)**：
-    - 展示菜单：`【主持】：(可 / 止 / 深入此节 / 引入新人物)`。调用 `ask_user` 获取用户选择。
+    - 展示菜单：`【主持】：(可 / 止 / 深入此节 / 引入新人物)`。调用 `user-input gate` 获取用户选择。
 
 ### Phase 3: 全局总结与合并归档 (Final Merge & Synthesis) [Mode: EXECUTION]
 1.  **全局总结写入**：生成总结与 ASCII 知识网络、列出未解决的开放问题，并使用 `write_file` 写入 `99_summary.md` 到工作区。

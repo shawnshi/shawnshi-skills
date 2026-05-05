@@ -8,6 +8,17 @@ description: >-
   system/flow description the user wants illustrated.
 ---
 
+
+<strategy-gene>
+Keywords: 架构图, 流程图, draw.io, Mermaid, SVG, PNG
+Summary: 将复杂系统、流程或概念转化为可验证的 draw.io 图表资产。
+Strategy:
+1. 先确定图类型、受众、节点边界和输出格式。
+2. 使用既有脚本和模板生成 draw.io 源文件，并导出 SVG/PNG。
+3. 交付前检查布局、标签、连线、颜色和可读性。
+AVOID: 禁止只给文字说明而不生成图表资产；禁止遗漏源文件。
+</strategy-gene>
+
 # Fireworks Tech Graph
 
 Generate production-quality SVG technical diagrams exported as PNG via `rsvg-convert`.

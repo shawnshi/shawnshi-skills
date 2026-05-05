@@ -1,158 +1,156 @@
-﻿{
-    "schema_version":  1,
-    "skill":  "minimax-docx",
-    "generated_at":  "2026-04-19T06:26:09",
-    "skill_md":  "SKILL.md",
-    "top_level_files":  [
-                            "SKILL.md"
-                        ],
-    "top_level_directories":  [
-                                  "assets",
-                                  "references",
-                                  "scripts"
-                              ],
-    "resource_directories":  [
-                                 {
-                                     "name":  "scripts",
-                                     "file_count":  47
-                                 },
-                                 {
-                                     "name":  "references",
-                                     "file_count":  18
-                                 },
-                                 {
-                                     "name":  "assets",
-                                     "file_count":  7
-                                 }
-                             ],
-    "declared_local_dependencies":  [
-                                        {
-                                            "path":  "scripts\\setup.sh",
-                                            "exists":  true,
-                                            "resolved_path":  "C:\\Users\\shich\\.gemini\\skills\\minimax-docx\\scripts\\setup.sh"
-                                        },
-                                        {
-                                            "path":  "scripts\\setup.ps1",
-                                            "exists":  true,
-                                            "resolved_path":  "C:\\Users\\shich\\.gemini\\skills\\minimax-docx\\scripts\\setup.ps1"
-                                        },
-                                        {
-                                            "path":  "scripts\\env_check.sh",
-                                            "exists":  true,
-                                            "resolved_path":  "C:\\Users\\shich\\.gemini\\skills\\minimax-docx\\scripts\\env_check.sh"
-                                        },
-                                        {
-                                            "path":  "scripts\\dotnet\\MiniMaxAIDocx.Cli\\Program.cs",
-                                            "exists":  true,
-                                            "resolved_path":  "C:\\Users\\shich\\.gemini\\skills\\minimax-docx\\scripts\\dotnet\\MiniMaxAIDocx.Cli\\Program.cs"
-                                        },
-                                        {
-                                            "path":  "scripts\\dotnet\\MiniMaxAIDocx.Cli",
-                                            "exists":  true,
-                                            "resolved_path":  "C:\\Users\\shich\\.gemini\\skills\\minimax-docx\\scripts\\dotnet\\MiniMaxAIDocx.Cli"
-                                        },
-                                        {
-                                            "path":  "references\\scenario_a_create.md",
-                                            "exists":  true,
-                                            "resolved_path":  "C:\\Users\\shich\\.gemini\\skills\\minimax-docx\\references\\scenario_a_create.md"
-                                        },
-                                        {
-                                            "path":  "references\\scenario_b_edit_content.md",
-                                            "exists":  true,
-                                            "resolved_path":  "C:\\Users\\shich\\.gemini\\skills\\minimax-docx\\references\\scenario_b_edit_content.md"
-                                        },
-                                        {
-                                            "path":  "references\\scenario_c_apply_template.md",
-                                            "exists":  true,
-                                            "resolved_path":  "C:\\Users\\shich\\.gemini\\skills\\minimax-docx\\references\\scenario_c_apply_template.md"
-                                        },
-                                        {
-                                            "path":  "scripts\\doc_to_docx.sh",
-                                            "exists":  true,
-                                            "resolved_path":  "C:\\Users\\shich\\.gemini\\skills\\minimax-docx\\scripts\\doc_to_docx.sh"
-                                        },
-                                        {
-                                            "path":  "scripts\\docx_preview.sh",
-                                            "exists":  true,
-                                            "resolved_path":  "C:\\Users\\shich\\.gemini\\skills\\minimax-docx\\scripts\\docx_preview.sh"
-                                        },
-                                        {
-                                            "path":  "references\\typography_guide.md",
-                                            "exists":  true,
-                                            "resolved_path":  "C:\\Users\\shich\\.gemini\\skills\\minimax-docx\\references\\typography_guide.md"
-                                        },
-                                        {
-                                            "path":  "references\\design_principles.md",
-                                            "exists":  true,
-                                            "resolved_path":  "C:\\Users\\shich\\.gemini\\skills\\minimax-docx\\references\\design_principles.md"
-                                        },
-                                        {
-                                            "path":  "references\\cjk_typography.md",
-                                            "exists":  true,
-                                            "resolved_path":  "C:\\Users\\shich\\.gemini\\skills\\minimax-docx\\references\\cjk_typography.md"
-                                        },
-                                        {
-                                            "path":  "references\\openxml_element_order.md",
-                                            "exists":  true,
-                                            "resolved_path":  "C:\\Users\\shich\\.gemini\\skills\\minimax-docx\\references\\openxml_element_order.md"
-                                        },
-                                        {
-                                            "path":  "assets\\xsd\\business-rules.xsd",
-                                            "exists":  true,
-                                            "resolved_path":  "C:\\Users\\shich\\.gemini\\skills\\minimax-docx\\assets\\xsd\\business-rules.xsd"
-                                        },
-                                        {
-                                            "path":  "assets\\xsd\\wml-subset.xsd",
-                                            "exists":  true,
-                                            "resolved_path":  "C:\\Users\\shich\\.gemini\\skills\\minimax-docx\\assets\\xsd\\wml-subset.xsd"
-                                        },
-                                        {
-                                            "path":  "scripts\\dotnet\\MiniMaxAIDocx.Core\\",
-                                            "exists":  true,
-                                            "resolved_path":  "C:\\Users\\shich\\.gemini\\skills\\minimax-docx\\scripts\\dotnet\\MiniMaxAIDocx.Core\\"
-                                        },
-                                        {
-                                            "path":  "references\\openxml_units.md",
-                                            "exists":  true,
-                                            "resolved_path":  "C:\\Users\\shich\\.gemini\\skills\\minimax-docx\\references\\openxml_units.md"
-                                        },
-                                        {
-                                            "path":  "references\\openxml_encyclopedia_part1.md",
-                                            "exists":  true,
-                                            "resolved_path":  "C:\\Users\\shich\\.gemini\\skills\\minimax-docx\\references\\openxml_encyclopedia_part1.md"
-                                        },
-                                        {
-                                            "path":  "references\\openxml_encyclopedia_part2.md",
-                                            "exists":  true,
-                                            "resolved_path":  "C:\\Users\\shich\\.gemini\\skills\\minimax-docx\\references\\openxml_encyclopedia_part2.md"
-                                        },
-                                        {
-                                            "path":  "references\\openxml_encyclopedia_part3.md",
-                                            "exists":  true,
-                                            "resolved_path":  "C:\\Users\\shich\\.gemini\\skills\\minimax-docx\\references\\openxml_encyclopedia_part3.md"
-                                        },
-                                        {
-                                            "path":  "references\\cjk_university_template_guide.md",
-                                            "exists":  true,
-                                            "resolved_path":  "C:\\Users\\shich\\.gemini\\skills\\minimax-docx\\references\\cjk_university_template_guide.md"
-                                        },
-                                        {
-                                            "path":  "references\\design_good_bad_examples.md",
-                                            "exists":  true,
-                                            "resolved_path":  "C:\\Users\\shich\\.gemini\\skills\\minimax-docx\\references\\design_good_bad_examples.md"
-                                        },
-                                        {
-                                            "path":  "references\\track_changes_guide.md",
-                                            "exists":  true,
-                                            "resolved_path":  "C:\\Users\\shich\\.gemini\\skills\\minimax-docx\\references\\track_changes_guide.md"
-                                        },
-                                        {
-                                            "path":  "references\\troubleshooting.md",
-                                            "exists":  true,
-                                            "resolved_path":  "C:\\Users\\shich\\.gemini\\skills\\minimax-docx\\references\\troubleshooting.md"
-                                        }
-                                    ],
-    "missing_declared_dependencies":  [
-
-                                      ]
+{
+  "schema_version": 1,
+  "skill": "minimax-docx",
+  "generated_at": "2026-04-30T19:16:50",
+  "skill_md": "SKILL.md",
+  "top_level_files": [
+    "SKILL.md"
+  ],
+  "top_level_directories": [
+    "assets",
+    "references",
+    "scripts"
+  ],
+  "resource_directories": [
+    {
+      "name": "scripts",
+      "file_count": 47
+    },
+    {
+      "name": "references",
+      "file_count": 19
+    },
+    {
+      "name": "assets",
+      "file_count": 7
+    }
+  ],
+  "declared_local_dependencies": [
+    {
+      "path": "scripts\\setup.sh",
+      "exists": true,
+      "resolved_path": "C:\\Users\\shich\\.gemini\\skills\\minimax-docx\\scripts\\setup.sh"
+    },
+    {
+      "path": "scripts\\setup.ps1",
+      "exists": true,
+      "resolved_path": "C:\\Users\\shich\\.gemini\\skills\\minimax-docx\\scripts\\setup.ps1"
+    },
+    {
+      "path": "scripts\\env_check.sh",
+      "exists": true,
+      "resolved_path": "C:\\Users\\shich\\.gemini\\skills\\minimax-docx\\scripts\\env_check.sh"
+    },
+    {
+      "path": "scripts\\dotnet\\MiniMaxAIDocx.Cli\\Program.cs",
+      "exists": true,
+      "resolved_path": "C:\\Users\\shich\\.gemini\\skills\\minimax-docx\\scripts\\dotnet\\MiniMaxAIDocx.Cli\\Program.cs"
+    },
+    {
+      "path": "scripts\\dotnet\\MiniMaxAIDocx.Cli",
+      "exists": true,
+      "resolved_path": "C:\\Users\\shich\\.gemini\\skills\\minimax-docx\\scripts\\dotnet\\MiniMaxAIDocx.Cli"
+    },
+    {
+      "path": "references\\scenario_a_create.md",
+      "exists": true,
+      "resolved_path": "C:\\Users\\shich\\.gemini\\skills\\minimax-docx\\references\\scenario_a_create.md"
+    },
+    {
+      "path": "references\\scenario_b_edit_content.md",
+      "exists": true,
+      "resolved_path": "C:\\Users\\shich\\.gemini\\skills\\minimax-docx\\references\\scenario_b_edit_content.md"
+    },
+    {
+      "path": "references\\scenario_c_apply_template.md",
+      "exists": true,
+      "resolved_path": "C:\\Users\\shich\\.gemini\\skills\\minimax-docx\\references\\scenario_c_apply_template.md"
+    },
+    {
+      "path": "scripts\\doc_to_docx.sh",
+      "exists": true,
+      "resolved_path": "C:\\Users\\shich\\.gemini\\skills\\minimax-docx\\scripts\\doc_to_docx.sh"
+    },
+    {
+      "path": "scripts\\docx_preview.sh",
+      "exists": true,
+      "resolved_path": "C:\\Users\\shich\\.gemini\\skills\\minimax-docx\\scripts\\docx_preview.sh"
+    },
+    {
+      "path": "references\\typography_guide.md",
+      "exists": true,
+      "resolved_path": "C:\\Users\\shich\\.gemini\\skills\\minimax-docx\\references\\typography_guide.md"
+    },
+    {
+      "path": "references\\design_principles.md",
+      "exists": true,
+      "resolved_path": "C:\\Users\\shich\\.gemini\\skills\\minimax-docx\\references\\design_principles.md"
+    },
+    {
+      "path": "references\\cjk_typography.md",
+      "exists": true,
+      "resolved_path": "C:\\Users\\shich\\.gemini\\skills\\minimax-docx\\references\\cjk_typography.md"
+    },
+    {
+      "path": "references\\openxml_element_order.md",
+      "exists": true,
+      "resolved_path": "C:\\Users\\shich\\.gemini\\skills\\minimax-docx\\references\\openxml_element_order.md"
+    },
+    {
+      "path": "assets\\xsd\\business-rules.xsd",
+      "exists": true,
+      "resolved_path": "C:\\Users\\shich\\.gemini\\skills\\minimax-docx\\assets\\xsd\\business-rules.xsd"
+    },
+    {
+      "path": "assets\\xsd\\wml-subset.xsd",
+      "exists": true,
+      "resolved_path": "C:\\Users\\shich\\.gemini\\skills\\minimax-docx\\assets\\xsd\\wml-subset.xsd"
+    },
+    {
+      "path": "scripts\\dotnet\\MiniMaxAIDocx.Core\\",
+      "exists": true,
+      "resolved_path": "C:\\Users\\shich\\.gemini\\skills\\minimax-docx\\scripts\\dotnet\\MiniMaxAIDocx.Core\\"
+    },
+    {
+      "path": "references\\openxml_units.md",
+      "exists": true,
+      "resolved_path": "C:\\Users\\shich\\.gemini\\skills\\minimax-docx\\references\\openxml_units.md"
+    },
+    {
+      "path": "references\\openxml_encyclopedia_part1.md",
+      "exists": true,
+      "resolved_path": "C:\\Users\\shich\\.gemini\\skills\\minimax-docx\\references\\openxml_encyclopedia_part1.md"
+    },
+    {
+      "path": "references\\openxml_encyclopedia_part2.md",
+      "exists": true,
+      "resolved_path": "C:\\Users\\shich\\.gemini\\skills\\minimax-docx\\references\\openxml_encyclopedia_part2.md"
+    },
+    {
+      "path": "references\\openxml_encyclopedia_part3.md",
+      "exists": true,
+      "resolved_path": "C:\\Users\\shich\\.gemini\\skills\\minimax-docx\\references\\openxml_encyclopedia_part3.md"
+    },
+    {
+      "path": "references\\cjk_university_template_guide.md",
+      "exists": true,
+      "resolved_path": "C:\\Users\\shich\\.gemini\\skills\\minimax-docx\\references\\cjk_university_template_guide.md"
+    },
+    {
+      "path": "references\\design_good_bad_examples.md",
+      "exists": true,
+      "resolved_path": "C:\\Users\\shich\\.gemini\\skills\\minimax-docx\\references\\design_good_bad_examples.md"
+    },
+    {
+      "path": "references\\track_changes_guide.md",
+      "exists": true,
+      "resolved_path": "C:\\Users\\shich\\.gemini\\skills\\minimax-docx\\references\\track_changes_guide.md"
+    },
+    {
+      "path": "references\\troubleshooting.md",
+      "exists": true,
+      "resolved_path": "C:\\Users\\shich\\.gemini\\skills\\minimax-docx\\references\\troubleshooting.md"
+    }
+  ],
+  "missing_declared_dependencies": []
 }

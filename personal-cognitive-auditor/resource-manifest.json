@@ -1,55 +1,73 @@
-﻿{
-    "schema_version":  1,
-    "skill":  "personal-cognitive-auditor",
-    "generated_at":  "2026-04-19T06:26:09",
-    "skill_md":  "SKILL.md",
-    "top_level_files":  [
-                            "README.md",
-                            "SKILL.md",
-                            "_DIR_META.md"
-                        ],
-    "top_level_directories":  [
-                                  "agents",
-                                  "prompts",
-                                  "references"
-                              ],
-    "resource_directories":  [
-                                 {
-                                     "name":  "references",
-                                     "file_count":  4
-                                 },
-                                 {
-                                     "name":  "prompts",
-                                     "file_count":  5
-                                 },
-                                 {
-                                     "name":  "agents",
-                                     "file_count":  1
-                                 }
-                             ],
-    "declared_local_dependencies":  [
-                                        {
-                                            "path":  "scripts\\io_engine\\gather_context.py",
-                                            "exists":  true,
-                                            "resolved_path":  "C:\\Users\\shich\\.gemini\\skills\\scripts\\io_engine\\gather_context.py"
-                                        },
-                                        {
-                                            "path":  "scripts\\io_engine\\diary_ops.py",
-                                            "exists":  true,
-                                            "resolved_path":  "C:\\Users\\shich\\.gemini\\skills\\scripts\\io_engine\\diary_ops.py"
-                                        },
-                                        {
-                                            "path":  "prompts\\DAILY.md",
-                                            "exists":  true,
-                                            "resolved_path":  "C:\\Users\\shich\\.gemini\\skills\\personal-cognitive-auditor\\prompts\\DAILY.md"
-                                        },
-                                        {
-                                            "path":  "prompts\\WEEKLY.md",
-                                            "exists":  true,
-                                            "resolved_path":  "C:\\Users\\shich\\.gemini\\skills\\personal-cognitive-auditor\\prompts\\WEEKLY.md"
-                                        }
-                                    ],
-    "missing_declared_dependencies":  [
-
-                                      ]
+{
+  "schema_version": 1,
+  "skill": "personal-cognitive-auditor",
+  "generated_at": "2026-04-30T19:16:50",
+  "skill_md": "SKILL.md",
+  "top_level_files": [
+    "_DIR_META.md",
+    "README.md",
+    "SKILL.md"
+  ],
+  "top_level_directories": [
+    "agents",
+    "prompts",
+    "references",
+    "scripts"
+  ],
+  "resource_directories": [
+    {
+      "name": "scripts",
+      "file_count": 1
+    },
+    {
+      "name": "references",
+      "file_count": 5
+    },
+    {
+      "name": "prompts",
+      "file_count": 5
+    },
+    {
+      "name": "agents",
+      "file_count": 1
+    }
+  ],
+  "declared_local_dependencies": [
+    {
+      "path": "personal-cognitive-auditor\\references\\config.md",
+      "exists": true,
+      "resolved_path": "C:\\Users\\shich\\.gemini\\skills\\personal-cognitive-auditor\\references\\config.md"
+    },
+    {
+      "path": "personal-cognitive-auditor\\prompts\\DAILY.md",
+      "exists": true,
+      "resolved_path": "C:\\Users\\shich\\.gemini\\skills\\personal-cognitive-auditor\\prompts\\DAILY.md"
+    },
+    {
+      "path": "personal-cognitive-auditor\\prompts\\WEEKLY.md",
+      "exists": true,
+      "resolved_path": "C:\\Users\\shich\\.gemini\\skills\\personal-cognitive-auditor\\prompts\\WEEKLY.md"
+    },
+    {
+      "path": "personal-cognitive-auditor\\prompts\\MONTHLY.md",
+      "exists": true,
+      "resolved_path": "C:\\Users\\shich\\.gemini\\skills\\personal-cognitive-auditor\\prompts\\MONTHLY.md"
+    },
+    {
+      "path": "personal-cognitive-auditor\\prompts\\ANNUAL.md",
+      "exists": true,
+      "resolved_path": "C:\\Users\\shich\\.gemini\\skills\\personal-cognitive-auditor\\prompts\\ANNUAL.md"
+    },
+    {
+      "path": "personal-cognitive-auditor\\scripts\\audit_gate.py",
+      "exists": true,
+      "resolved_path": "C:\\Users\\shich\\.gemini\\skills\\personal-cognitive-auditor\\scripts\\audit_gate.py"
+    },
+    {
+      "path": "personal-cognitive-auditor\\references\\handoff_contract.md",
+      "exists": true,
+      "resolved_path": "C:\\Users\\shich\\.gemini\\skills\\personal-cognitive-auditor\\references\\handoff_contract.md"
+    }
+  ],
+  "missing_declared_dependencies": []
 }

@@ -1,0 +1,58 @@
+{
+  "schema_version": 1,
+  "skill": "guizang-ppt-skill",
+  "generated_at": "2026-04-30T19:16:49",
+  "skill_md": "SKILL.md",
+  "top_level_files": [
+    "README.en.md",
+    "README.md",
+    "SKILL.md"
+  ],
+  "top_level_directories": [
+    "assets",
+    "references"
+  ],
+  "resource_directories": [
+    {
+      "name": "references",
+      "file_count": 4
+    },
+    {
+      "name": "assets",
+      "file_count": 2
+    }
+  ],
+  "declared_local_dependencies": [
+    {
+      "path": "references\\themes.md",
+      "exists": true,
+      "resolved_path": "C:\\Users\\shich\\.gemini\\skills\\guizang-ppt-skill\\references\\themes.md"
+    },
+    {
+      "path": "assets\\template.html",
+      "exists": true,
+      "resolved_path": "C:\\Users\\shich\\.gemini\\skills\\guizang-ppt-skill\\assets\\template.html"
+    },
+    {
+      "path": "references\\layouts.md",
+      "exists": true,
+      "resolved_path": "C:\\Users\\shich\\.gemini\\skills\\guizang-ppt-skill\\references\\layouts.md"
+    },
+    {
+      "path": "references\\components.md",
+      "exists": true,
+      "resolved_path": "C:\\Users\\shich\\.gemini\\skills\\guizang-ppt-skill\\references\\components.md"
+    },
+    {
+      "path": "references\\checklist.md",
+      "exists": true,
+      "resolved_path": "C:\\Users\\shich\\.gemini\\skills\\guizang-ppt-skill\\references\\checklist.md"
+    },
+    {
+      "path": "assets\\motion.min.js",
+      "exists": true,
+      "resolved_path": "C:\\Users\\shich\\.gemini\\skills\\guizang-ppt-skill\\assets\\motion.min.js"
+    }
+  ],
+  "missing_declared_dependencies": []
+}

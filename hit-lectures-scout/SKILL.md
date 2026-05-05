@@ -73,7 +73,12 @@ AVOID: 严禁在报告中保留 [URL] 占位符；禁止发布无临床场景适
 2. **知识入湖**: 若本地 `vector-lake` CLI 可用，则通过 shell command 执行 `sync`；若不可用，则至少完成本地物理归档并记录未同步原因。
 3. **元数据完整性审计**: **[HARD LOCK]** 严禁在最终报告中使用 `[Link]`、`[URL]` 或占位符。必须逐一校验 DOI 和源地址。若缺失则使用搜索/浏览工具二次精准核验。
 4. **逻辑断层审计**: 确保每一项推理均挂载了精确的 `[Ref: Evidence_Node_ID]`。
-5. **物理归档**: **[MANDATORY]** 调用 `write_file` 将最终报告保存在 `.\memory\raw\DigitalHealthLecturesScout`
+
+### Phase 6: The Hard Gate (物理层强制审计)
+1. **写草稿**: 你必须将组装好的战报写入临时文件 `~/.gemini/tmp/draft_hit_scout.md`。
+2. **执行审计**: 调用 shell 执行 `python ~/.gemini/skills/scripts/hit_audit_gate.py ~/.gemini/tmp/draft_hit_scout.md --mode scout`。
+3. **处理失败**: 若审计报错（如未发现 RWE/研发任务/销售话术，或残留占位符），必须退回修正草稿。最多重试 2 次。
+4. **物理归档**: **[MANDATORY]** 只有审计脚本返回 `Audit Passed` 后，才能调用 `write_file` 将最终报告保存在 `~/.gemini/MEMORY/raw/DigitalHealthLecturesScout/`。
 
 ## Resources
 - `assets/deepxiv_preprints_scout.py`

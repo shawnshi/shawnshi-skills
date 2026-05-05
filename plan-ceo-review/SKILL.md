@@ -4,7 +4,7 @@ version: 2.1.0
 description: |
   CEO/founder-mode plan review (Native Agent Edition). Rethink the problem, find the 10-star product, challenge premises, and audit architecture. Four modes: SCOPE EXPANSION (dream big), SELECTIVE EXPANSION (hold scope + cherry-pick), HOLD SCOPE (maximum rigor), SCOPE REDUCTION (strip to essentials).
   Use when asked to "think bigger", "expand scope", "strategy review", "rethink this", or "is this ambitious enough".
-  Native tools integration: run_shell_command (git), grep_search, glob, ask_user, write_file, google_web_search.
+  Native tools integration: run_shell_command (git), grep_search, glob, user-input gate, write_file, approved web research.
 ---
 
 <strategy-gene>
@@ -52,7 +52,7 @@ Do **NOT** ask the user any questions during this phase. Execute these tasks sil
    - **System Audit:** Run `run_shell_command` with `git status`, `git log -n 5`, and `git diff --stat` to understand the current repo state. Use `grep_search` for `TODO|FIXME` in the affected files.
 
 2. **Landscape Check (Optional):**
-   - Use `google_web_search` to understand conventional wisdom. 
+   - Use `approved web research` to understand conventional wisdom.
 
 3. **Multi-Dimensional Analysis:** In your `<thought>` block, run the plan through these filters:
    - **Premise Challenge:** Is this the right problem? What if we do nothing?
@@ -73,11 +73,11 @@ Present a high-density summary:
 - **Critical Gaps**: Top 2-3 dangerous flaws.
 - **The Alternatives**: Briefly present approaches.
 
-**Step 2B: Mode Selection (ask_user)**
+**Step 2B: Mode Selection (user-input gate)**
 Ask the user to select the review mode.
 
-**Step 2C: Aggregated Decision Gate (ask_user)**
-Present a **SINGLE** `ask_user` prompt that aggregates all specific decisions for that mode.
+**Step 2C: Aggregated Decision Gate (user-input gate)**
+Present a **SINGLE** `user-input gate` prompt that aggregates all specific decisions for that mode.
 
 ---
 
@@ -89,7 +89,7 @@ After receiving the user's aggregated decisions, generate the final report.
 Perform a self-correction pass against the Prime Directives.
 
 **Step 3B: Document Generation & Telemetry**
-Use `write_file` to output the results. 
+Use `write_file` to output the results.
 
 
 **Template Structure:**

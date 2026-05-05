@@ -1,35 +1,38 @@
-﻿{
-    "schema_version":  1,
-    "skill":  "mentat-system-retro",
-    "generated_at":  "2026-04-19T06:26:09",
-    "skill_md":  "SKILL.md",
-    "top_level_files":  [
-                            "README.md",
-                            "SKILL.md"
-                        ],
-    "top_level_directories":  [
-                                  "examples",
-                                  "resources"
-                              ],
-    "resource_directories":  [
-                                 {
-                                     "name":  "examples",
-                                     "file_count":  1
-                                 }
-                             ],
-    "declared_local_dependencies":  [
-                                        {
-                                            "path":  "scripts\\system_retro.py",
-                                            "exists":  true,
-                                            "resolved_path":  "C:\\Users\\shich\\.gemini\\skills\\scripts\\system_retro.py"
-                                        },
-                                        {
-                                            "path":  "examples\\MSR-Reference.md",
-                                            "exists":  true,
-                                            "resolved_path":  "C:\\Users\\shich\\.gemini\\skills\\mentat-system-retro\\examples\\MSR-Reference.md"
-                                        }
-                                    ],
-    "missing_declared_dependencies":  [
-
-                                      ]
+{
+  "schema_version": 1,
+  "skill": "mentat-system-retro",
+  "generated_at": "2026-04-30T19:16:50",
+  "skill_md": "SKILL.md",
+  "top_level_files": [
+    "README.md",
+    "SKILL.md"
+  ],
+  "top_level_directories": [
+    "examples",
+    "resources"
+  ],
+  "resource_directories": [
+    {
+      "name": "examples",
+      "file_count": 1
+    }
+  ],
+  "declared_local_dependencies": [
+    {
+      "path": "scripts\\system_retro.py",
+      "exists": true,
+      "resolved_path": "C:\\Users\\shich\\.gemini\\skills\\scripts\\system_retro.py"
+    },
+    {
+      "path": "examples\\MSR-Reference.md",
+      "exists": true,
+      "resolved_path": "C:\\Users\\shich\\.gemini\\skills\\mentat-system-retro\\examples\\MSR-Reference.md"
+    },
+    {
+      "path": "..\\scripts\\system_retro.py",
+      "exists": true,
+      "resolved_path": "C:\\Users\\shich\\.gemini\\skills\\mentat-system-retro\\..\\scripts\\system_retro.py"
+    }
+  ],
+  "missing_declared_dependencies": []
 }

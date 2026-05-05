@@ -1,43 +1,41 @@
-﻿{
-    "schema_version":  1,
-    "skill":  "image-promp-gen",
-    "generated_at":  "2026-04-19T06:26:09",
-    "skill_md":  "SKILL.md",
-    "top_level_files":  [
-                            "SKILL.md"
-                        ],
-    "top_level_directories":  [
-                                  "examples",
-                                  "references",
-                                  "scripts"
-                              ],
-    "resource_directories":  [
-                                 {
-                                     "name":  "scripts",
-                                     "file_count":  1
-                                 },
-                                 {
-                                     "name":  "references",
-                                     "file_count":  4
-                                 },
-                                 {
-                                     "name":  "examples",
-                                     "file_count":  33
-                                 }
-                             ],
-    "declared_local_dependencies":  [
-                                        {
-                                            "path":  "references\\artist-styles.md",
-                                            "exists":  true,
-                                            "resolved_path":  "C:\\Users\\shich\\.gemini\\skills\\image-promp-gen\\references\\artist-styles.md"
-                                        },
-                                        {
-                                            "path":  "scripts\\generate_mondo.py",
-                                            "exists":  true,
-                                            "resolved_path":  "C:\\Users\\shich\\.gemini\\skills\\image-promp-gen\\scripts\\generate_mondo.py"
-                                        }
-                                    ],
-    "missing_declared_dependencies":  [
-
-                                      ]
+{
+  "schema_version": 1,
+  "skill": "image-promp-gen",
+  "generated_at": "2026-04-30T19:16:50",
+  "skill_md": "SKILL.md",
+  "top_level_files": [
+    "SKILL.md"
+  ],
+  "top_level_directories": [
+    "examples",
+    "references",
+    "scripts"
+  ],
+  "resource_directories": [
+    {
+      "name": "scripts",
+      "file_count": 1
+    },
+    {
+      "name": "references",
+      "file_count": 4
+    },
+    {
+      "name": "examples",
+      "file_count": 33
+    }
+  ],
+  "declared_local_dependencies": [
+    {
+      "path": "references\\artist-styles.md",
+      "exists": true,
+      "resolved_path": "C:\\Users\\shich\\.gemini\\skills\\image-promp-gen\\references\\artist-styles.md"
+    },
+    {
+      "path": "scripts\\generate_mondo.py",
+      "exists": true,
+      "resolved_path": "C:\\Users\\shich\\.gemini\\skills\\image-promp-gen\\scripts\\generate_mondo.py"
+    }
+  ],
+  "missing_declared_dependencies": []
 }

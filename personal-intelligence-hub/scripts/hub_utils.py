@@ -73,10 +73,13 @@ def has_llm_runner() -> bool:
     return resolve_llm_command() is not None
 
 
-def run_llm(prompt: str) -> str:
+def run_llm(prompt: str, fallback_used: bool = False) -> str:
     command = resolve_llm_command()
     if not command:
         raise RuntimeError("No LLM runner configured for personal-intelligence-hub.")
+
+    if fallback_used and "gemini ask" in command:
+        command = command.replace("gemini ask", "gemini ask -m gemini-3.1-flash")
 
     process = subprocess.Popen(
         command,
@@ -90,5 +93,9 @@ def run_llm(prompt: str) -> str:
     )
     stdout, stderr = process.communicate(input=prompt)
     if process.returncode != 0:
-        raise RuntimeError(stderr.strip() or "LLM runner failed")
+        error_msg = stderr.strip() or "LLM runner failed"
+        if not fallback_used and ("429" in error_msg or "exhausted" in error_msg.lower() or "quota" in error_msg.lower()):
+            print(f"[WARN] Primary LLM failed ({error_msg}). Falling back to gemini-3.1-flash...")
+            return run_llm(prompt, fallback_used=True)
+        raise RuntimeError(error_msg)
     return stdout.strip()

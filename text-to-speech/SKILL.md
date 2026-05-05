@@ -3,6 +3,17 @@ name: text-to-speech
 description: 军工级播报系统 (Gemini 3.1 Director Edition)。当系统检测到“逻辑死锁”、进入“反熵增攻坚协议”或用户明确要求“朗读文本”、“语音提醒”时，务必激活。该技能支持 Gemini 原生“导演模式”、多角色对话与本地 SAPI5 双轨切换。
 ---
 
+
+<strategy-gene>
+Keywords: 朗读文本, 语音提醒, TTS, 播报
+Summary: 将文本转换为可听播报，并按场景选择语音与语气。
+Strategy:
+1. 明确文本、语言、角色、语速和输出方式。
+2. 使用可用本地或模型语音链路生成音频或播放。
+3. 验证文件存在或播放动作已执行。
+AVOID: 禁止未生成音频却报告成功；禁止擅自修改原文语义。
+</strategy-gene>
+
 # Text-to-Speech (TTS 3.1 Director Engine)
 
 Gemini CLI 高保真混合播报系统。采用 **Gemini 3.1 Flash TTS Preview** 原生引擎，支持极致的情感控制与多角色混播。

@@ -4,6 +4,17 @@ description: |
   Primary owner for longitudinal-plus-cross-sectional deep dives on a product, company, concept, technology, or person. Use when the user wants the object's full life trajectory plus current-state comparison with peers or competitors, ending in a structured PDF report. Prefer academic-deep-research for broad academic literature review, academic-paper-reader for single-paper analysis, and academic-paper-writer for paper drafting or revision.
 ---
 
+
+<strategy-gene>
+Keywords: 横纵分析, 生命周期, 横向对比, 深度研究
+Summary: 对对象执行纵向演化追踪和横向同期比较，形成高密度研究报告。
+Strategy:
+1. 锚定分析对象、时间轴、同类参照物和评价维度。
+2. 纵向追踪关键阶段，横向比较同期替代方案和竞争格局。
+3. 输出结构化判断、证据链、非共识点和风险边界。
+AVOID: 禁止只有时间线无横向对比；禁止把单一观点包装成结论。
+</strategy-gene>
+
 # 横纵分析法深度研究
 
 > **方法论溯源**

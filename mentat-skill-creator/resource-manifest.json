@@ -1,69 +1,72 @@
-﻿{
-    "schema_version":  1,
-    "skill":  "mentat-skill-creator",
-    "generated_at":  "2026-04-19T06:26:09",
-    "skill_md":  "SKILL.md",
-    "top_level_files":  [
-                            "SKILL.md"
-                        ],
-    "top_level_directories":  [
-                                  "agents",
-                                  "assets",
-                                  "eval-viewer",
-                                  "references",
-                                  "scripts"
-                              ],
-    "resource_directories":  [
-                                 {
-                                     "name":  "scripts",
-                                     "file_count":  9
-                                 },
-                                 {
-                                     "name":  "references",
-                                     "file_count":  1
-                                 },
-                                 {
-                                     "name":  "assets",
-                                     "file_count":  1
-                                 },
-                                 {
-                                     "name":  "agents",
-                                     "file_count":  3
-                                 }
-                             ],
-    "declared_local_dependencies":  [
-                                        {
-                                            "path":  "references\\schemas.md",
-                                            "exists":  true,
-                                            "resolved_path":  "C:\\Users\\shich\\.gemini\\skills\\mentat-skill-creator\\references\\schemas.md"
-                                        },
-                                        {
-                                            "path":  "agents\\grader.md",
-                                            "exists":  true,
-                                            "resolved_path":  "C:\\Users\\shich\\.gemini\\skills\\mentat-skill-creator\\agents\\grader.md"
-                                        },
-                                        {
-                                            "path":  "agents\\analyzer.md",
-                                            "exists":  true,
-                                            "resolved_path":  "C:\\Users\\shich\\.gemini\\skills\\mentat-skill-creator\\agents\\analyzer.md"
-                                        },
-                                        {
-                                            "path":  "scripts\\",
-                                            "exists":  true,
-                                            "resolved_path":  "C:\\Users\\shich\\.gemini\\skills\\mentat-skill-creator\\scripts\\"
-                                        },
-                                        {
-                                            "path":  "agents\\comparator.md",
-                                            "exists":  true,
-                                            "resolved_path":  "C:\\Users\\shich\\.gemini\\skills\\mentat-skill-creator\\agents\\comparator.md"
-                                        },
-                                        {
-                                            "path":  "assets\\eval_review.html",
-                                            "exists":  true,
-                                            "resolved_path":  "C:\\Users\\shich\\.gemini\\skills\\mentat-skill-creator\\assets\\eval_review.html"
-                                        }
-                                    ],
-    "missing_declared_dependencies":  [
-
-                                      ]
+{
+  "schema_version": 1,
+  "skill": "mentat-skill-creator",
+  "generated_at": "2026-04-30T19:16:50",
+  "skill_md": "SKILL.md",
+  "top_level_files": [
+    "SKILL.md"
+  ],
+  "top_level_directories": [
+    "agents",
+    "assets",
+    "eval-viewer",
+    "references",
+    "scripts"
+  ],
+  "resource_directories": [
+    {
+      "name": "scripts",
+      "file_count": 9
+    },
+    {
+      "name": "references",
+      "file_count": 2
+    },
+    {
+      "name": "assets",
+      "file_count": 1
+    },
+    {
+      "name": "agents",
+      "file_count": 3
+    }
+  ],
+  "declared_local_dependencies": [
+    {
+      "path": "references\\full_skill_creator_playbook.md",
+      "exists": true,
+      "resolved_path": "C:\\Users\\shich\\.gemini\\skills\\mentat-skill-creator\\references\\full_skill_creator_playbook.md"
+    },
+    {
+      "path": "references\\schemas.md",
+      "exists": true,
+      "resolved_path": "C:\\Users\\shich\\.gemini\\skills\\mentat-skill-creator\\references\\schemas.md"
+    },
+    {
+      "path": "agents\\grader.md",
+      "exists": true,
+      "resolved_path": "C:\\Users\\shich\\.gemini\\skills\\mentat-skill-creator\\agents\\grader.md"
+    },
+    {
+      "path": "agents\\comparator.md",
+      "exists": true,
+      "resolved_path": "C:\\Users\\shich\\.gemini\\skills\\mentat-skill-creator\\agents\\comparator.md"
+    },
+    {
+      "path": "agents\\analyzer.md",
+      "exists": true,
+      "resolved_path": "C:\\Users\\shich\\.gemini\\skills\\mentat-skill-creator\\agents\\analyzer.md"
+    },
+    {
+      "path": "scripts\\repair_skills.ps1",
+      "exists": true,
+      "resolved_path": "C:\\Users\\shich\\.gemini\\skills\\scripts\\repair_skills.ps1"
+    },
+    {
+      "path": "scripts\\generate_resource_manifests.ps1",
+      "exists": true,
+      "resolved_path": "C:\\Users\\shich\\.gemini\\skills\\scripts\\generate_resource_manifests.ps1"
+    }
+  ],
+  "missing_declared_dependencies": []
 }

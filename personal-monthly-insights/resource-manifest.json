@@ -1,47 +1,40 @@
-﻿{
-    "schema_version":  1,
-    "skill":  "personal-monthly-insights",
-    "generated_at":  "2026-04-19T06:26:09",
-    "skill_md":  "SKILL.md",
-    "top_level_files":  [
-                            "analyze_insights_v4.py",
-                            "debug_sessions.py",
-                            "facets_cache (1).json",
-                            "facets_cache.json",
-                            "generate_final_report.py",
-                            "memory.md",
-                            "README.md",
-                            "SKILL.md"
-                        ],
-    "top_level_directories":  [
-                                  "assets",
-                                  "core",
-                                  "evals",
-                                  "references"
-                              ],
-    "resource_directories":  [
-                                 {
-                                     "name":  "references",
-                                     "file_count":  2
-                                 },
-                                 {
-                                     "name":  "assets",
-                                     "file_count":  1
-                                 }
-                             ],
-    "declared_local_dependencies":  [
-                                        {
-                                            "path":  "references\\WORKFLOW.md",
-                                            "exists":  true,
-                                            "resolved_path":  "C:\\Users\\shich\\.gemini\\skills\\personal-monthly-insights\\references\\WORKFLOW.md"
-                                        },
-                                        {
-                                            "path":  "references\\SCHEMA.md",
-                                            "exists":  true,
-                                            "resolved_path":  "C:\\Users\\shich\\.gemini\\skills\\personal-monthly-insights\\references\\SCHEMA.md"
-                                        }
-                                    ],
-    "missing_declared_dependencies":  [
-
-                                      ]
+{
+  "schema_version": 1,
+  "skill": "personal-monthly-insights",
+  "generated_at": "2026-04-30T19:16:50",
+  "skill_md": "SKILL.md",
+  "top_level_files": [
+    "analyze_insights_v4.py",
+    "debug_sessions.py",
+    "facets_cache.json",
+    "generate_final_report.py",
+    "memory.md",
+    "README.md",
+    "SKILL.md",
+    "validate_agent_audit.py"
+  ],
+  "top_level_directories": [
+    "assets",
+    "core",
+    "evals",
+    "references"
+  ],
+  "resource_directories": [
+    {
+      "name": "references",
+      "file_count": 2
+    },
+    {
+      "name": "assets",
+      "file_count": 1
+    }
+  ],
+  "declared_local_dependencies": [
+    {
+      "path": "references\\SCHEMA.md",
+      "exists": true,
+      "resolved_path": "C:\\Users\\shich\\.gemini\\skills\\personal-monthly-insights\\references\\SCHEMA.md"
+    }
+  ],
+  "missing_declared_dependencies": []
 }

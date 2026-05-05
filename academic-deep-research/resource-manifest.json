@@ -1,0 +1,97 @@
+{
+  "schema_version": 1,
+  "skill": "academic-deep-research",
+  "generated_at": "2026-04-30T19:16:49",
+  "skill_md": "SKILL.md",
+  "top_level_files": [
+    "SKILL.md"
+  ],
+  "top_level_directories": [
+    "agents",
+    "examples",
+    "references",
+    "templates"
+  ],
+  "resource_directories": [
+    {
+      "name": "references",
+      "file_count": 21
+    },
+    {
+      "name": "examples",
+      "file_count": 7
+    },
+    {
+      "name": "agents",
+      "file_count": 13
+    }
+  ],
+  "declared_local_dependencies": [
+    {
+      "path": "references\\full_deep_research_playbook.md",
+      "exists": true,
+      "resolved_path": "C:\\Users\\shich\\.gemini\\skills\\academic-deep-research\\references\\full_deep_research_playbook.md"
+    },
+    {
+      "path": "references\\source_quality_hierarchy.md",
+      "exists": true,
+      "resolved_path": "C:\\Users\\shich\\.gemini\\skills\\academic-deep-research\\references\\source_quality_hierarchy.md"
+    },
+    {
+      "path": "references\\cross_agent_quality_definitions.md",
+      "exists": true,
+      "resolved_path": "C:\\Users\\shich\\.gemini\\skills\\academic-deep-research\\references\\cross_agent_quality_definitions.md"
+    },
+    {
+      "path": "references\\methodology_patterns.md",
+      "exists": true,
+      "resolved_path": "C:\\Users\\shich\\.gemini\\skills\\academic-deep-research\\references\\methodology_patterns.md"
+    },
+    {
+      "path": "references\\systematic_review_protocol.md",
+      "exists": true,
+      "resolved_path": "C:\\Users\\shich\\.gemini\\skills\\academic-deep-research\\references\\systematic_review_protocol.md"
+    },
+    {
+      "path": "references\\systematic_review_toolkit.md",
+      "exists": true,
+      "resolved_path": "C:\\Users\\shich\\.gemini\\skills\\academic-deep-research\\references\\systematic_review_toolkit.md"
+    },
+    {
+      "path": "references\\ethics_checklist.md",
+      "exists": true,
+      "resolved_path": "C:\\Users\\shich\\.gemini\\skills\\academic-deep-research\\references\\ethics_checklist.md"
+    },
+    {
+      "path": "references\\equator_reporting_guidelines.md",
+      "exists": true,
+      "resolved_path": "C:\\Users\\shich\\.gemini\\skills\\academic-deep-research\\references\\equator_reporting_guidelines.md"
+    },
+    {
+      "path": "references\\apa7_style_guide.md",
+      "exists": true,
+      "resolved_path": "C:\\Users\\shich\\.gemini\\skills\\academic-deep-research\\references\\apa7_style_guide.md"
+    },
+    {
+      "path": "references\\socratic_mode_protocol.md",
+      "exists": true,
+      "resolved_path": "C:\\Users\\shich\\.gemini\\skills\\academic-deep-research\\references\\socratic_mode_protocol.md"
+    },
+    {
+      "path": "references\\socratic_questioning_framework.md",
+      "exists": true,
+      "resolved_path": "C:\\Users\\shich\\.gemini\\skills\\academic-deep-research\\references\\socratic_questioning_framework.md"
+    },
+    {
+      "path": "academic-paper-writer\\references\\writing_quality_check.md",
+      "exists": true,
+      "resolved_path": "C:\\Users\\shich\\.gemini\\skills\\academic-paper-writer\\references\\writing_quality_check.md"
+    },
+    {
+      "path": "academic-paper-writer\\SKILL.md",
+      "exists": true,
+      "resolved_path": "C:\\Users\\shich\\.gemini\\skills\\academic-paper-writer\\SKILL.md"
+    }
+  ],
+  "missing_declared_dependencies": []
+}

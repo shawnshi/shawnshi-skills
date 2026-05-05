@@ -1,50 +1,48 @@
-﻿{
-    "schema_version":  1,
-    "skill":  "personal-roundtable",
-    "generated_at":  "2026-04-19T06:26:09",
-    "skill_md":  "SKILL.md",
-    "top_level_files":  [
-                            "SKILL.md",
-                            "_DIR_META.md"
-                        ],
-    "top_level_directories":  [
-                                  "references",
-                                  "scripts",
-                                  "templates"
-                              ],
-    "resource_directories":  [
-                                 {
-                                     "name":  "scripts",
-                                     "file_count":  1
-                                 },
-                                 {
-                                     "name":  "references",
-                                     "file_count":  1
-                                 }
-                             ],
-    "declared_local_dependencies":  [
-                                        {
-                                            "path":  "personal-roundtable\\references\\personas.md",
-                                            "exists":  true,
-                                            "resolved_path":  "C:\\Users\\shich\\.gemini\\skills\\personal-roundtable\\references\\personas.md"
-                                        },
-                                        {
-                                            "path":  "personal-roundtable\\scripts\\merger.py",
-                                            "exists":  true,
-                                            "resolved_path":  "C:\\Users\\shich\\.gemini\\skills\\personal-roundtable\\scripts\\merger.py"
-                                        },
-                                        {
-                                            "path":  "references\\personas.md",
-                                            "exists":  true,
-                                            "resolved_path":  "C:\\Users\\shich\\.gemini\\skills\\personal-roundtable\\references\\personas.md"
-                                        },
-                                        {
-                                            "path":  "scripts\\merger.py",
-                                            "exists":  true,
-                                            "resolved_path":  "C:\\Users\\shich\\.gemini\\skills\\personal-roundtable\\scripts\\merger.py"
-                                        }
-                                    ],
-    "missing_declared_dependencies":  [
-
-                                      ]
+{
+  "schema_version": 1,
+  "skill": "personal-roundtable",
+  "generated_at": "2026-04-30T19:16:50",
+  "skill_md": "SKILL.md",
+  "top_level_files": [
+    "_DIR_META.md",
+    "SKILL.md"
+  ],
+  "top_level_directories": [
+    "references",
+    "scripts",
+    "templates"
+  ],
+  "resource_directories": [
+    {
+      "name": "scripts",
+      "file_count": 1
+    },
+    {
+      "name": "references",
+      "file_count": 1
+    }
+  ],
+  "declared_local_dependencies": [
+    {
+      "path": "personal-roundtable\\references\\personas.md",
+      "exists": true,
+      "resolved_path": "C:\\Users\\shich\\.gemini\\skills\\personal-roundtable\\references\\personas.md"
+    },
+    {
+      "path": "personal-roundtable\\scripts\\merger.py",
+      "exists": true,
+      "resolved_path": "C:\\Users\\shich\\.gemini\\skills\\personal-roundtable\\scripts\\merger.py"
+    },
+    {
+      "path": "references\\personas.md",
+      "exists": true,
+      "resolved_path": "C:\\Users\\shich\\.gemini\\skills\\personal-roundtable\\references\\personas.md"
+    },
+    {
+      "path": "scripts\\merger.py",
+      "exists": true,
+      "resolved_path": "C:\\Users\\shich\\.gemini\\skills\\personal-roundtable\\scripts\\merger.py"
+    }
+  ],
+  "missing_declared_dependencies": []
 }

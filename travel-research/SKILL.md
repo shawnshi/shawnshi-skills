@@ -5,6 +5,17 @@ user_invocable: true
 version: "1.0.0"
 ---
 
+
+<strategy-gene>
+Keywords: 旅行研究, 博物馆, 古建筑, 考古, 城市案头研究
+Summary: 为文化旅行生成结构化知识文档和便携参考卡。
+Strategy:
+1. 锚定城市、时间、兴趣主题和行程深度。
+2. 研究博物馆、古建、历史脉络、交通与开放信息。
+3. 输出可携带的知识卡和路线建议。
+AVOID: 禁止只列景点；禁止忽略开放时间、位置和历史背景。
+</strategy-gene>
+
 #  travell-research: 旅行研究
 
 一条命令完成：全维度文化研究 → 内容提炼 → md文档 + 便携卡片。

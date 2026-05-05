@@ -1,0 +1,87 @@
+{
+  "schema_version": 1,
+  "skill": "academic-paper-writer",
+  "generated_at": "2026-04-30T19:16:49",
+  "skill_md": "SKILL.md",
+  "top_level_files": [
+    "SKILL.md"
+  ],
+  "top_level_directories": [
+    "agents",
+    "examples",
+    "references",
+    "templates"
+  ],
+  "resource_directories": [
+    {
+      "name": "references",
+      "file_count": 23
+    },
+    {
+      "name": "examples",
+      "file_count": 6
+    },
+    {
+      "name": "agents",
+      "file_count": 12
+    }
+  ],
+  "declared_local_dependencies": [
+    {
+      "path": "references\\writing_quality_check.md",
+      "exists": true,
+      "resolved_path": "C:\\Users\\shich\\.gemini\\skills\\academic-paper-writer\\references\\writing_quality_check.md"
+    },
+    {
+      "path": "references\\plan_mode_protocol.md",
+      "exists": true,
+      "resolved_path": "C:\\Users\\shich\\.gemini\\skills\\academic-paper-writer\\references\\plan_mode_protocol.md"
+    },
+    {
+      "path": "references\\statistical_visualization_standards.md",
+      "exists": true,
+      "resolved_path": "C:\\Users\\shich\\.gemini\\skills\\academic-paper-writer\\references\\statistical_visualization_standards.md"
+    },
+    {
+      "path": "references\\workflow_phase_details.md",
+      "exists": true,
+      "resolved_path": "C:\\Users\\shich\\.gemini\\skills\\academic-paper-writer\\references\\workflow_phase_details.md"
+    },
+    {
+      "path": "references\\mode_selection_guide.md",
+      "exists": true,
+      "resolved_path": "C:\\Users\\shich\\.gemini\\skills\\academic-paper-writer\\references\\mode_selection_guide.md"
+    },
+    {
+      "path": "academic-deep-research\\SKILL.md",
+      "exists": true,
+      "resolved_path": "C:\\Users\\shich\\.gemini\\skills\\academic-deep-research\\SKILL.md"
+    },
+    {
+      "path": "references\\failure_paths.md",
+      "exists": true,
+      "resolved_path": "C:\\Users\\shich\\.gemini\\skills\\academic-paper-writer\\references\\failure_paths.md"
+    },
+    {
+      "path": "agents\\intake_agent.md",
+      "exists": true,
+      "resolved_path": "C:\\Users\\shich\\.gemini\\skills\\academic-paper-writer\\agents\\intake_agent.md"
+    },
+    {
+      "path": "academic-deep-research\\references\\apa7_style_guide.md",
+      "exists": true,
+      "resolved_path": "C:\\Users\\shich\\.gemini\\skills\\academic-deep-research\\references\\apa7_style_guide.md"
+    },
+    {
+      "path": "agents\\citation_compliance_agent.md",
+      "exists": true,
+      "resolved_path": "C:\\Users\\shich\\.gemini\\skills\\academic-paper-writer\\agents\\citation_compliance_agent.md"
+    },
+    {
+      "path": "references\\changelog.md",
+      "exists": true,
+      "resolved_path": "C:\\Users\\shich\\.gemini\\skills\\academic-paper-writer\\references\\changelog.md"
+    }
+  ],
+  "missing_declared_dependencies": []
+}

@@ -1,36 +1,34 @@
-﻿{
-    "schema_version":  1,
-    "skill":  "text-to-speech",
-    "generated_at":  "2026-04-19T06:26:09",
-    "skill_md":  "SKILL.md",
-    "top_level_files":  [
-                            "install.ps1",
-                            "SKILL.md",
-                            "_DIR_META.md"
-                        ],
-    "top_level_directories":  [
-                                  "output",
-                                  "references",
-                                  "scripts"
-                              ],
-    "resource_directories":  [
-                                 {
-                                     "name":  "scripts",
-                                     "file_count":  1
-                                 },
-                                 {
-                                     "name":  "references",
-                                     "file_count":  0
-                                 }
-                             ],
-    "declared_local_dependencies":  [
-                                        {
-                                            "path":  "scripts\\tts_engine.py",
-                                            "exists":  true,
-                                            "resolved_path":  "C:\\Users\\shich\\.gemini\\skills\\text-to-speech\\scripts\\tts_engine.py"
-                                        }
-                                    ],
-    "missing_declared_dependencies":  [
-
-                                      ]
+{
+  "schema_version": 1,
+  "skill": "text-to-speech",
+  "generated_at": "2026-04-30T19:16:50",
+  "skill_md": "SKILL.md",
+  "top_level_files": [
+    "_DIR_META.md",
+    "install.ps1",
+    "SKILL.md"
+  ],
+  "top_level_directories": [
+    "output",
+    "references",
+    "scripts"
+  ],
+  "resource_directories": [
+    {
+      "name": "scripts",
+      "file_count": 1
+    },
+    {
+      "name": "references",
+      "file_count": 0
+    }
+  ],
+  "declared_local_dependencies": [
+    {
+      "path": "scripts\\tts_engine.py",
+      "exists": true,
+      "resolved_path": "C:\\Users\\shich\\.gemini\\skills\\text-to-speech\\scripts\\tts_engine.py"
+    }
+  ],
+  "missing_declared_dependencies": []
 }

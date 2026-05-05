@@ -73,15 +73,15 @@ User task
 │   → Read references/scenario_a_create.md
 │
 └─ Has input .docx
-    ├─ Replace/fill/modify content → Pipeline B: FILL-EDIT
-    │   signals: "fill in", "replace", "update", "change text", "add section", "edit"
+    ├─ Edit/fill/modify content → Pipeline B: FILL-EDIT
+    │   signals: "fill in", "update", "change text", "add section", "edit"
     │   → Read references/scenario_b_edit_content.md
     │
     └─ Reformat/apply style/template → Pipeline C: FORMAT-APPLY
         signals: "reformat", "apply template", "restyle", "match this format", "套模板", "排版"
         ├─ Template is pure style (no content) → C-1: OVERLAY (apply styles to source)
-        └─ Template has structure (cover/TOC/example sections) → C-2: BASE-REPLACE
-            (use template as base, replace example content with user content)
+        └─ Template has structure (cover/TOC/example sections) → C-2: BASE-SWAP
+            (use template as base, then swap example content for user content)
         → Read references/scenario_c_apply_template.md
 ```
 
@@ -112,17 +112,12 @@ Then run the **validation pipeline** (below).
 Read `references/scenario_b_edit_content.md` first. Preview → analyze → edit → validate.
 
 **Choose your path:**
-- **Simple** (text replacement, placeholder fill): use CLI subcommands.
+- **Simple** (text substitution, placeholder fill): use CLI subcommands.
 - **Structural** (add/reorganize sections, modify styles, manipulate tables, insert images): write C# directly. Read `references/openxml_element_order.md` and the relevant `Samples/*.cs`.
 
-Available CLI edit subcommands:
-- `replace-text --find "X" --replace "Y"`
-- `fill-placeholders --data '{"key":"value"}'`
-- `fill-table --data table.json`
-- `insert-section`, `remove-section`, `update-header-footer`
+Available CLI edit subcommands are documented in `references/scenario_b_edit_content.md`. Use that reference for exact command syntax before running edits.
 
 ```bash
-$CLI edit replace-text --input in.docx --output out.docx --find "OLD" --replace "NEW"
 $CLI edit fill-placeholders --input in.docx --output out.docx --data '{"name":"John"}'
 ```
 
@@ -206,7 +201,7 @@ These prevent file corruption — OpenXML is strict about element ordering.
 - Copy `titlePg` settings from the breaks template for EACH section. Abstract and TOC sections typically need `titlePg=true`.
 
 **Multi-section headers/footers:** Templates with 10+ sections (e.g., Chinese thesis) have DIFFERENT headers/footers per section (Roman vs Arabic page numbers, different header text per zone). Rules:
-- Use C-2 Base-Replace: copy the TEMPLATE as output base, then replace body content. This preserves all sections, headers, footers, and titlePg settings automatically.
+- Use C-2 Base-Swap: copy the TEMPLATE as output base, then swap body content. This preserves all sections, headers, footers, and titlePg settings automatically.
 - NEVER recreate headers/footers from scratch — copy template header/footer XML byte-for-byte.
 - NEVER add formatting (borders, alignment, font size) not present in the template header XML.
 - Non-cover sections MUST have header/footer XML files (at least empty header + page number footer).
@@ -236,7 +231,7 @@ Load as needed — don't load all at once. Pick the most relevant files for the 
 | `Samples/ParagraphFormattingSamples.cs` | ParagraphProperties: justification, indentation, line/paragraph spacing, keep/widow, outline level, borders, tabs, numbering, bidi, frame                                                                                                                                                        |
 | `Samples/TableSamples.cs`               | Tables: borders, grid, cell props, margins, row height, header repeat, merge (H+V), nested, floating, three-line 三线表, zebra striping                                                                                                                                                          |
 | `Samples/HeaderFooterSamples.cs`        | Headers/footers: page numbers, "Page X of Y", first/even/odd, logo image, table layout, 公文 "-X-", per-section                                                                                                                                                                                  |
-| `Samples/ImageSamples.cs`               | Images: inline, floating, text wrapping, border, alt text, in header/table, replace, SVG fallback, dimension calc                                                                                                                                                                                |
+| `Samples/ImageSamples.cs`               | Images: inline, floating, text wrapping, border, alt text, in header/table, image swap, SVG fallback, dimension calc                                                                                                                                                                             |
 | `Samples/ListAndNumberingSamples.cs`    | Numbering: bullets, multi-level decimal, custom symbols, outline→headings, legal, Chinese 一/（一）/1./(1), restart/continue                                                                                                                                                                     |
 | `Samples/FieldAndTocSamples.cs`         | Fields: TOC, SimpleField vs complex field, DATE/PAGE/REF/SEQ/MERGEFIELD/IF/STYLEREF, TOC styles                                                                                                                                                                                                  |
 | `Samples/FootnoteAndCommentSamples.cs`  | Footnotes, endnotes, comments (4-file system), bookmarks, hyperlinks (internal + external)                                                                                                                                                                                                       |

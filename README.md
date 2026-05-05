@@ -102,7 +102,7 @@ powershell -ExecutionPolicy Bypass -File .\scripts\repair_skills.ps1 -Mode Repor
 
 ## 3. 核心分类矩阵 (Core Skill Hierarchy)
 
-> **Total Inventory: 44 Strategic Modules across 8 Domains**
+> **Total Inventory: 45 Strategic Modules across 8 Domains**
 
 ### 🧠 深度认知与研究工作台 (Cognitive Research)
 *底层思考工具箱：需求脱水、战略审计、红蓝对抗与情报分析。*
@@ -149,6 +149,7 @@ powershell -ExecutionPolicy Bypass -File .\scripts\repair_skills.ps1 -Mode Repor
 | **[image-nano-gen](image-nano-gen/)**                         | **高质量图像生成引擎 (Imagen 3)**。利用 Gemini 引擎执行 4K 级图像锻造，支持高认知 Prompt 增强. |
 | **[image-promp-gen](image-promp-gen/)**                       | **大师级海报与封面提示词引擎**。基于 33+ 位传奇设计师风格，支持多平台比例适配与逻辑隐喻构建. |
 | **[presentation-architect](presentation-architect/)**         | **战略级 PPT 架构师**。交付具备原生逻辑的 PPT 资产，拒绝平庸模板.         |
+| **[guizang-ppt-skill](guizang-ppt-skill/)**                   | **电子杂志风网页 PPT 引擎**。生成基于 WebGL 与响应式排版的单文件 HTML 演示资产. |
 | **[slide-blocks](slide-blocks/)**                             | **PPT 智能组装助手**。从历史素材库中挑选幻灯片并自动拼装为风格统一的完整演示文稿. |
 | **[smart-doc-latex](smart-doc-latex/)**                       | **自动化出版 LaTeX 引擎**。提供 IEEE、CV 等专业模板，交付工业级排版结果.  |
 
@@ -197,4 +198,4 @@ powershell -ExecutionPolicy Bypass -File .\scripts\repair_skills.ps1 -Mode Repor
 | **[url-to-markdown](url-to-markdown/)**         | **网页原质提取器**。直控 Chrome CDP 协议，强制清除网页噪音.                                          |
 
 ---
-*Last Global Audit: 2026-04-19 | Version: 5.2 (Horizontal-Vertical Audit Edition) | System State: Locked*
+*Last Global Audit: 2026-04-30 | Version: 5.3 (Inventory Sync Edition) | System State: Locked*

@@ -3,6 +3,17 @@ name: guizang-ppt-skill
 description: 生成"电子杂志 × 电子墨水"风格的横向翻页网页 PPT（单 HTML 文件），含 WebGL 流体背景、衬线标题 + 非衬线正文、章节幕封、数据大字报、图片网格等模板。当用户需要制作分享 / 演讲 / 发布会风格的网页 PPT，或提到"杂志风 PPT"、"horizontal swipe deck"、"editorial magazine"、"e-ink presentation"时使用。
 ---
 
+
+<strategy-gene>
+Keywords: 网页 PPT, 电子杂志, 横向翻页, editorial deck
+Summary: 生成电子杂志风横向网页 PPT，并保持单 HTML 可交付。
+Strategy:
+1. 明确主题、页数、视觉风格、素材和演讲场景。
+2. 用既有参考和资产组织章节幕封、数据大字报、图文网格和结尾页。
+3. 交付前检查横向翻页、移动端、图片路径和首屏视觉完整性。
+AVOID: 禁止输出普通静态文档；禁止缺失可打开的 HTML 成品。
+</strategy-gene>
+
 # Magazine Web Ppt
 
 ## 这个 Skill 做什么
@@ -266,3 +277,21 @@ guizang-ppt-skill/
 - YC 总裁 Garry Tan "Thin Harness, Fat Skills" 那篇博客的 demo
 
 可以把它们当做风格锚点。
+
+## When to Use
+- Use this skill according to the frontmatter trigger description and the domain-specific rules already defined above.
+
+## Workflow
+- Follow the existing phases, scripts, and handoff rules in this skill. Do not skip validation or approval gates already defined above.
+
+## Resources
+- Use this skill directory's bundled scripts, references, assets, examples, prompts, and agents as needed. Load only the specific resource needed for the current request.
+
+## Failure Modes
+- If required inputs, local files, evidence, permissions, or validation steps are missing, stop the risky action, state the blocker, and choose the narrowest recovery path.
+
+## Output Contract
+- Final output must match the user request, preserve the skill's domain contract, and include validation evidence or an explicit reason validation could not run.
+
+## Telemetry
+- When persistent logging is available, record task type, inputs, outputs, validation status, failures, and follow-up risks in the local skill-audit path.

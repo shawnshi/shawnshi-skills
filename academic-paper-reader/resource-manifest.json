@@ -1,30 +1,28 @@
-﻿{
-    "schema_version":  1,
-    "skill":  "academic-paper-reader",
-    "generated_at":  "2026-04-19T06:26:09",
-    "skill_md":  "SKILL.md",
-    "top_level_files":  [
-                            "README.md",
-                            "SKILL.md"
-                        ],
-    "top_level_directories":  [
-                                  "examples",
-                                  "resources"
-                              ],
-    "resource_directories":  [
-                                 {
-                                     "name":  "examples",
-                                     "file_count":  1
-                                 }
-                             ],
-    "declared_local_dependencies":  [
-                                        {
-                                            "path":  "examples\\APR-Reference.md",
-                                            "exists":  true,
-                                            "resolved_path":  "C:\\Users\\shich\\.gemini\\skills\\academic-paper-reader\\examples\\APR-Reference.md"
-                                        }
-                                    ],
-    "missing_declared_dependencies":  [
-
-                                      ]
+{
+  "schema_version": 1,
+  "skill": "academic-paper-reader",
+  "generated_at": "2026-04-30T19:16:49",
+  "skill_md": "SKILL.md",
+  "top_level_files": [
+    "README.md",
+    "SKILL.md"
+  ],
+  "top_level_directories": [
+    "examples",
+    "resources"
+  ],
+  "resource_directories": [
+    {
+      "name": "examples",
+      "file_count": 1
+    }
+  ],
+  "declared_local_dependencies": [
+    {
+      "path": "examples\\APR-Reference.md",
+      "exists": true,
+      "resolved_path": "C:\\Users\\shich\\.gemini\\skills\\academic-paper-reader\\examples\\APR-Reference.md"
+    }
+  ],
+  "missing_declared_dependencies": []
 }

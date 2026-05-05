@@ -3,6 +3,17 @@ name: personal-diary-writer
 description: 个人日志原子写入器。Primary owner for physical diary/log writeback and atomic persistence only. Use when content is already decided and must be safely written to disk. Prefer personal-cognitive-auditor for periodic review analysis, personal-monthly-insights for interaction meta-analysis, and mentat-insight-diary for first-person system introspection content.
 ---
 
+
+<strategy-gene>
+Keywords: 日志写入, diary, 落盘, 原子写入
+Summary: 将已经确定的日志内容安全写入本地日记资产。
+Strategy:
+1. 确认内容已定稿、目标日期和目标文件。
+2. 使用原子写入方式追加或创建日志。
+3. 回读确认写入成功并报告路径。
+AVOID: 禁止替用户扩写未确认内容；禁止覆盖旧日志。
+</strategy-gene>
+
 # Personal Diary Writer (Atomic I/O)
 
 This skill handles high-frequency, lightweight daily status recording and atomic file operations for diary/log entries.

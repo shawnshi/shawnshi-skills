@@ -1,45 +1,43 @@
-﻿{
-    "schema_version":  1,
-    "skill":  "hit-industry-radar",
-    "generated_at":  "2026-04-19T06:26:09",
-    "skill_md":  "SKILL.md",
-    "top_level_files":  [
-                            "README.md",
-                            "SKILL.md"
-                        ],
-    "top_level_directories":  [
-                                  "assets",
-                                  "evals",
-                                  "references"
-                              ],
-    "resource_directories":  [
-                                 {
-                                     "name":  "references",
-                                     "file_count":  1
-                                 },
-                                 {
-                                     "name":  "assets",
-                                     "file_count":  3
-                                 }
-                             ],
-    "declared_local_dependencies":  [
-                                        {
-                                            "path":  "assets\\Task_global_hit.md",
-                                            "exists":  true,
-                                            "resolved_path":  "C:\\Users\\shich\\.gemini\\skills\\hit-industry-radar\\assets\\Task_global_hit.md"
-                                        },
-                                        {
-                                            "path":  "assets\\Task_china_hit.md",
-                                            "exists":  true,
-                                            "resolved_path":  "C:\\Users\\shich\\.gemini\\skills\\hit-industry-radar\\assets\\Task_china_hit.md"
-                                        },
-                                        {
-                                            "path":  "assets\\Task_winning_baseline.md",
-                                            "exists":  true,
-                                            "resolved_path":  "C:\\Users\\shich\\.gemini\\skills\\hit-industry-radar\\assets\\Task_winning_baseline.md"
-                                        }
-                                    ],
-    "missing_declared_dependencies":  [
-
-                                      ]
+{
+  "schema_version": 1,
+  "skill": "hit-industry-radar",
+  "generated_at": "2026-04-30T19:16:49",
+  "skill_md": "SKILL.md",
+  "top_level_files": [
+    "README.md",
+    "SKILL.md"
+  ],
+  "top_level_directories": [
+    "assets",
+    "evals",
+    "references"
+  ],
+  "resource_directories": [
+    {
+      "name": "references",
+      "file_count": 1
+    },
+    {
+      "name": "assets",
+      "file_count": 3
+    }
+  ],
+  "declared_local_dependencies": [
+    {
+      "path": "assets\\Task_global_hit.md",
+      "exists": true,
+      "resolved_path": "C:\\Users\\shich\\.gemini\\skills\\hit-industry-radar\\assets\\Task_global_hit.md"
+    },
+    {
+      "path": "assets\\Task_china_hit.md",
+      "exists": true,
+      "resolved_path": "C:\\Users\\shich\\.gemini\\skills\\hit-industry-radar\\assets\\Task_china_hit.md"
+    },
+    {
+      "path": "assets\\Task_winning_baseline.md",
+      "exists": true,
+      "resolved_path": "C:\\Users\\shich\\.gemini\\skills\\hit-industry-radar\\assets\\Task_winning_baseline.md"
+    }
+  ],
+  "missing_declared_dependencies": []
 }

@@ -114,3 +114,21 @@ python scripts/garmin_intelligence.py flu_risk --days 7
 - `[FAIL_FAST_MANDATE]`: 在任何数据层脚本中，对于核心本地 SQLite 库的缺失，严禁执行静默的 Fallback（如降级到在线 API）。必须采用 Fail-Fast 原则，当本地资产路径验证失败时，直接抛出 `Critical Path Error` 并阻断运行，防范视图层崩溃。
 - `IF [Action == "Sync Garmin Data"] THEN [Require Command == "python C:\\Users\\shich\\AppData\\Local\\Programs\\Python\\Python313\\Scripts\\garmindb_cli.py --download --import --analyze --all --latest"]`
 - `[MANDATORY_PHASE_0]`: 当用户要求健康审计或发现数据不完整时，必须先执行 Phase 0（即上述 Sync Garmin Data 命令），严禁直接跳过数据同步读取过期的本地库进行分析。这是历史失效教训（在 4/5 号数据断层时跳过同步导致误判绿灯）。
+
+## When to Use
+- Use this skill according to the frontmatter trigger description and the domain-specific rules already defined above.
+
+## Workflow
+- Follow the existing phases, scripts, and handoff rules in this skill. Do not skip validation or approval gates already defined above.
+
+## Resources
+- Use this skill directory's bundled scripts, references, assets, examples, prompts, and agents as needed. Load only the specific resource needed for the current request.
+
+## Failure Modes
+- If required inputs, local files, evidence, permissions, or validation steps are missing, stop the risky action, state the blocker, and choose the narrowest recovery path.
+
+## Output Contract
+- Final output must match the user request, preserve the skill's domain contract, and include validation evidence or an explicit reason validation could not run.
+
+## Telemetry
+- When persistent logging is available, record task type, inputs, outputs, validation status, failures, and follow-up risks in the local skill-audit path.

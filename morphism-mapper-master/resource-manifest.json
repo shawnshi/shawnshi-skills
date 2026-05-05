@@ -1,62 +1,60 @@
-﻿{
-    "schema_version":  1,
-    "skill":  "morphism-mapper-master",
-    "generated_at":  "2026-04-19T06:26:09",
-    "skill_md":  "SKILL.md",
-    "top_level_files":  [
-                            "README.md",
-                            "SKILL.md",
-                            "_DIR_META.md"
-                        ],
-    "top_level_directories":  [
-                                  "agents",
-                                  "assets",
-                                  "commands",
-                                  "examples",
-                                  "modules",
-                                  "references",
-                                  "scripts"
-                              ],
-    "resource_directories":  [
-                                 {
-                                     "name":  "scripts",
-                                     "file_count":  1
-                                 },
-                                 {
-                                     "name":  "references",
-                                     "file_count":  58
-                                 },
-                                 {
-                                     "name":  "assets",
-                                     "file_count":  1
-                                 },
-                                 {
-                                     "name":  "examples",
-                                     "file_count":  5
-                                 },
-                                 {
-                                     "name":  "agents",
-                                     "file_count":  1
-                                 }
-                             ],
-    "declared_local_dependencies":  [
-                                        {
-                                            "path":  "scripts\\domain_manager.py",
-                                            "exists":  true,
-                                            "resolved_path":  "C:\\Users\\shich\\.gemini\\skills\\morphism-mapper-master\\scripts\\domain_manager.py"
-                                        },
-                                        {
-                                            "path":  "references\\modules.md",
-                                            "exists":  true,
-                                            "resolved_path":  "C:\\Users\\shich\\.gemini\\skills\\morphism-mapper-master\\references\\modules.md"
-                                        },
-                                        {
-                                            "path":  "references\\protocols.md",
-                                            "exists":  true,
-                                            "resolved_path":  "C:\\Users\\shich\\.gemini\\skills\\morphism-mapper-master\\references\\protocols.md"
-                                        }
-                                    ],
-    "missing_declared_dependencies":  [
-
-                                      ]
+{
+  "schema_version": 1,
+  "skill": "morphism-mapper-master",
+  "generated_at": "2026-04-30T19:16:50",
+  "skill_md": "SKILL.md",
+  "top_level_files": [
+    "_DIR_META.md",
+    "README.md",
+    "SKILL.md"
+  ],
+  "top_level_directories": [
+    "agents",
+    "assets",
+    "commands",
+    "examples",
+    "modules",
+    "references",
+    "scripts"
+  ],
+  "resource_directories": [
+    {
+      "name": "scripts",
+      "file_count": 1
+    },
+    {
+      "name": "references",
+      "file_count": 58
+    },
+    {
+      "name": "assets",
+      "file_count": 1
+    },
+    {
+      "name": "examples",
+      "file_count": 5
+    },
+    {
+      "name": "agents",
+      "file_count": 1
+    }
+  ],
+  "declared_local_dependencies": [
+    {
+      "path": "scripts\\domain_manager.py",
+      "exists": true,
+      "resolved_path": "C:\\Users\\shich\\.gemini\\skills\\morphism-mapper-master\\scripts\\domain_manager.py"
+    },
+    {
+      "path": "references\\modules.md",
+      "exists": true,
+      "resolved_path": "C:\\Users\\shich\\.gemini\\skills\\morphism-mapper-master\\references\\modules.md"
+    },
+    {
+      "path": "references\\protocols.md",
+      "exists": true,
+      "resolved_path": "C:\\Users\\shich\\.gemini\\skills\\morphism-mapper-master\\references\\protocols.md"
+    }
+  ],
+  "missing_declared_dependencies": []
 }
