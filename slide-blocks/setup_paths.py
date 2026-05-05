@@ -35,13 +35,17 @@ new_base = materials_dir.rstrip("/\\").replace("\\", "/")
 conn = sqlite3.connect(str(db_path))
 rows = conn.execute("SELECT id, file_path FROM slides").fetchall()
 
-updated = 0
+# 优化说明：使用 executemany 批量更新替代循环单次执行，减少 SQLite 开销，提升大型数据库的性能
+updates = []
 for row_id, old_path in rows:
     normalized = old_path.replace("\\", "/")
     if normalized.startswith(OLD_PREFIX):
         new_path = new_base + normalized[len(OLD_PREFIX):]
-        conn.execute("UPDATE slides SET file_path=? WHERE id=?", (new_path, row_id))
-        updated += 1
+        updates.append((new_path, row_id))
+
+if updates:
+    conn.executemany("UPDATE slides SET file_path=? WHERE id=?", updates)
+updated = len(updates)
 
 conn.commit()
 conn.close()
