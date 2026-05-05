@@ -70,7 +70,8 @@ def get_calendar_data():
         "orderBy": "startTime"
     }
     try:
-        res = subprocess.run(["gws", "calendar", "events", "list", "--params", json.dumps(calendar_params)], capture_output=True, text=True, shell=True, encoding='utf-8')
+        # SECURITY: Remove shell=True to prevent command injection and ensure correct argument list execution
+        res = subprocess.run(["gws", "calendar", "events", "list", "--params", json.dumps(calendar_params)], capture_output=True, text=True, shell=False, encoding='utf-8')
         if res.returncode == 0:
              return json.loads(res.stdout).get("items", [])
         else:

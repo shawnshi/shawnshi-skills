@@ -7,7 +7,8 @@ def strip_ansi(text):
 
 print("--- DEBUG: gemini --list-sessions raw output ---")
 try:
-    result = subprocess.run(["gemini", "--list-sessions"], capture_output=True, text=True, shell=True, encoding='utf-8', errors='ignore')
+    # SECURITY: Remove shell=True to prevent command injection and ensure correct argument list execution
+    result = subprocess.run(["gemini", "--list-sessions"], capture_output=True, text=True, shell=False, encoding='utf-8', errors='ignore')
     raw_output = result.stdout
     print(f"Return Code: {result.returncode}")
     print(f"Stdout length: {len(raw_output)}")
