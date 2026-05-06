@@ -35,13 +35,17 @@ new_base = materials_dir.rstrip("/\\").replace("\\", "/")
 conn = sqlite3.connect(str(db_path))
 rows = conn.execute("SELECT id, file_path FROM slides").fetchall()
 
-updated = 0
+# ⚡ Bolt Optimization: Use executemany for bulk SQLite updates to reduce overhead
+updates = []
 for row_id, old_path in rows:
     normalized = old_path.replace("\\", "/")
     if normalized.startswith(OLD_PREFIX):
         new_path = new_base + normalized[len(OLD_PREFIX):]
-        conn.execute("UPDATE slides SET file_path=? WHERE id=?", (new_path, row_id))
-        updated += 1
+        updates.append((new_path, row_id))
+
+if updates:
+    conn.executemany("UPDATE slides SET file_path=? WHERE id=?", updates)
+updated = len(updates)
 
 conn.commit()
 conn.close()
