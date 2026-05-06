@@ -1,0 +1,4 @@
+## 2025-05-06 - Command Injection via shell=True
+**Vulnerability:** Widespread use of `shell=True` in `subprocess` calls (e.g., `personal-intelligence-hub`, `personal-monthly-insights`, `scripts/io_engine`) passing commands as strings instead of lists.
+**Learning:** This pattern poses a significant command injection risk, especially when user inputs or external parameters might be involved, and on POSIX systems can cause argument truncation if combined with lists incorrectly.
+**Prevention:** Always use `shell=False` and pass arguments as structured lists. When converting existing string commands, use `shlex.split()` to properly parse them into a list.
