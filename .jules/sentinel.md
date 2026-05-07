@@ -1,0 +1,5 @@
+## 2025-03-09 - Fix Command Injection Vulnerabilities
+
+**Vulnerability:** Several scripts (`hub_utils.py`, `gather_context.py`, `engine.py`, `debug_sessions.py`) were using `subprocess.run` and `subprocess.Popen` with `shell=True` and passing commands as strings or argument lists.
+**Learning:** Using `shell=True` with dynamically constructed strings or externally-controllable input introduces severe command injection risks. Even when passing argument lists to `shell=True` on POSIX systems, it can lead to unexpected execution logic where only the first argument executes.
+**Prevention:** Always use `shell=False` for executing system processes, particularly when dealing with argument lists. If parsing a shell string is absolutely necessary, sanitize it safely using `shlex.split()` and then execute with `shell=False`.
