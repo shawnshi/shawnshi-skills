@@ -15,18 +15,18 @@ def validate_paper_draft(content: str) -> list[str]:
 
     # 1. 检查核心结构标题
     required_sections = [
-        r"\*\s*1\.\s*核心隐喻",
-        r"\*\s*2\.\s*演化地图",
-        r"\*\s*3\.\s*核心解剖",
-        r"\*\s*4\.\s*导师点评与启发"
+        r"1\.\s*学术河流与演化叙事",
+        r"2\.\s*目标论文：核心拆解",
+        r"3\.\s*核心概念拆解",
+        r"4\.\s*启发与博导审稿"
     ]
     for section in required_sections:
         if not re.search(section, content, re.IGNORECASE):
             errors.append(f"Missing required section matching pattern: {section}")
 
-    # 2. 检查 Traceback 深度 (至少有 G0 -> G1 这种两级结构)
-    if not re.search(r"G\d+\s*->\s*G\d+", content) and not re.search(r"Generation\s*0", content, re.IGNORECASE):
-        errors.append("Traceback Map is too shallow or missing explicit generation markers (e.g., G0 -> G1).")
+    # 2. 检查 Traceback 深度
+    if not re.search(r"溯源地图\s*\(Traceback Map\)", content, re.IGNORECASE) and not re.search(r"\[年份:\s*奠基\]", content):
+        errors.append("Traceback Map is missing or doesn't match the new '[年份: 奠基] Paper' anchor format.")
 
     # 3. 防八股文扫描 (Aesthetic Defense)
     banned_phrases = [

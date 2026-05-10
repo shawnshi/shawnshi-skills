@@ -83,24 +83,37 @@ def load_entries(path: str | None = None) -> List[Dict[str, Any]]:
 
 
 def update_outcome(entry_id: str, outcome_price: float, outcome_date: str, executed: bool, journal_path: str | None = None) -> Path:
+    return batch_update_outcomes(
+        {entry_id: {"outcome_price": outcome_price, "outcome_date": outcome_date, "executed": executed}},
+        journal_path=journal_path
+    )
+
+
+def batch_update_outcomes(updates: Dict[str, Dict[str, Any]], journal_path: str | None = None) -> Path:
     path = resolve_journal_path(journal_path)
     entries = load_entries(str(path))
-    updated = False
+    updated_count = 0
     for entry in entries:
-        if entry.get("entry_id") == entry_id:
-            entry["outcome_price"] = outcome_price
-            entry["outcome_date"] = outcome_date
-            entry["executed"] = executed
-            current_price = entry.get("current_price")
-            if current_price not in (None, 0):
-                entry["outcome_return_pct"] = round((outcome_price - current_price) / current_price * 100, 2)
-            entry["feedback_status"] = "reviewed"
-            updated = True
-            break
-    if not updated:
-        raise ValueError(f"entry_id not found: {entry_id}")
+        eid = entry.get("entry_id")
+        if eid in updates:
+            upd = updates[eid]
+            if "outcome_price" in upd:
+                entry["outcome_price"] = upd["outcome_price"]
+            if "outcome_date" in upd:
+                entry["outcome_date"] = upd["outcome_date"]
+            if "executed" in upd:
+                entry["executed"] = upd["executed"]
 
-    path.write_text("\n".join(json.dumps(entry, ensure_ascii=False) for entry in entries) + "\n", encoding="utf-8")
+            current_price = entry.get("current_price")
+            outcome_price = entry.get("outcome_price")
+            if current_price not in (None, 0) and outcome_price is not None:
+                entry["outcome_return_pct"] = round((outcome_price - current_price) / current_price * 100, 2)
+
+            entry["feedback_status"] = "reviewed"
+            updated_count += 1
+
+    if updated_count > 0:
+        path.write_text("\n".join(json.dumps(entry, ensure_ascii=False) for entry in entries) + "\n", encoding="utf-8")
     return path
 
 

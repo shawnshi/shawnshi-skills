@@ -198,9 +198,12 @@ def get_stock_data(
                         end_date = kwargs.get('end', None)
                         df = fetcher.get_history(code, start_date=start_date, end_date=end_date)
                         if not df.empty:
+                            console.print(f"[green]✓ A-share history synchronized for {symbol}[/green]")
                             return df
+                        else:
+                            console.print(f"[yellow]⚠ Akshare returned empty history for {symbol}, falling back to Yahoo[/yellow]")
                     except Exception as e:
-                        console.print(f"[yellow]⚠ A-share fallback failed, trying Yahoo: {e}[/yellow]")
+                        console.print(f"[yellow]⚠ A-share history fallback failed for {symbol}: {e}. Trying Yahoo Finance...[/yellow]")
                         
                 return ticker.history(**kwargs)
                 
@@ -587,7 +590,7 @@ def main():
             if fetch_news:
                 result_entry["news"] = [format_news_item(n) for n in (news_raw or [])]
                 if not news_raw:
-                    result_entry["data_gaps"].append("未获取到相关新闻")
+                    result_entry["data_gaps"].append("未获取到相关新闻: 建议使用 google_web_search 补充 '[stock_name] [stock_code] 财报 异动 新闻'")
                 result_entry["catalyst_map"] = extract_catalyst_map(result_entry["news"], result_entry.get("earnings_snapshot", {}))
             if fetch_price:
                 result_entry["history"] = []

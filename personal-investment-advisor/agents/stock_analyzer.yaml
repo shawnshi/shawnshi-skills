@@ -7,7 +7,8 @@ default_prompt: |
   1. A股优先趋势交易框架，允许使用筹码与量价指标。
   2. 港股/美股以基本面和估值为主，`chip_structure.chip_health` 必须标记为“不适用(非A股)”。
   3. 任何缺失数据必须进入 `data_gaps`，不要伪造。
-  4. 必须输出：
+  4. 若 `data_gaps` 包含“未获取到相关新闻”，你必须强制使用 `google_web_search` 补充“[stock_name] [stock_code] 财报 异动 新闻”以完善 `catalyst_map`。
+  5. 必须输出：
      - `research_mode`
      - `confidence_details`
      - `freshness_flags`

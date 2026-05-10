@@ -76,7 +76,7 @@ read_file output/STRATEGIC_AUDIT.md
 - `output/metadata_application.log`
 
 ## Failure Modes
-- **[Token_Blackhole_Defense]**: 绝对禁止单次 Prompt 加载超过 10,000 字的全文内容。必须强制执行“提取目录 -> 分章节摘要”的迭代管线，防止单次执行发生毁灭性的算力蒸发（>50万 Token/Call）。
+- **[Token_Blackhole_Defense]**: 绝对禁止单次 Prompt 加载超过 10,000 字的全文内容。必须强制执行“提取目录 -> 分章节摘要”的迭代管线，防止单次执行发生毁灭性的算力蒸发（>50万 Token/Call）。必须对文档进行分页/分块读取，严禁一次性全量加载超长文档。当上下文预期超越 50k tokens 时必须立即熔断降级。
 - **[Win32_Timeout]**: 在处理超大文档（>50MB）时，必须启用子代理分片模式，禁止在主内存中直接挂起处理。
 - **污染警告**: 绝对禁止未进行 `google.generativeai` 调用的占位符（如 `PENDING_LLM_GENERATION`）进入 `apply` 写回流程。否则将导致目标 Office/PDF 文件的属性被批量永久污染。
 - **环境要求**: 原生摘要引擎需要 `GEMINI_API_KEY` 环境变量。如果未检测到环境，将自动降级为「Rules Rule-Based 兜底引擎」，不会强行崩溃但降低准确率。

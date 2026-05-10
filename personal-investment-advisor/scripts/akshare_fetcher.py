@@ -73,39 +73,78 @@ class StandaloneDataFetcher:
     )
     def _fetch_quote_ef(self, symbol: str) -> pd.DataFrame:
         import efinance as ef
+        import os
         self._enforce_rate_limit()
-        # ef.stock.get_latest_quote works reliably for single quotes
-        return ef.stock.get_latest_quote([symbol])
+        
+        # Attempt to bypass potentially flaky proxy for domestic endpoints if first attempt fails
+        # This is a heuristic for A-share domestic data providers.
+        try:
+            return ef.stock.get_latest_quote([symbol])
+        except Exception as e:
+            if "ProxyError" in str(e) or "RemoteDisconnected" in str(e):
+                logger.warning(f"Detected potential proxy issue for {symbol}, attempting direct connection...")
+                # Temporarily clear proxy env vars for this request scope
+                old_http = os.environ.get("http_proxy")
+                old_https = os.environ.get("https_proxy")
+                try:
+                    os.environ["http_proxy"] = ""
+                    os.environ["https_proxy"] = ""
+                    return ef.stock.get_latest_quote([symbol])
+                finally:
+                    if old_http: os.environ["http_proxy"] = old_http
+                    if old_https: os.environ["https_proxy"] = old_https
+            raise e
 
     @retry(
         stop=stop_after_attempt(2),
-        wait=wait_exponential(multiplier=1, min=1, max=3),
+        wait=wait_exponential(multiplier=1, min=1, max=5),
         retry=retry_if_exception_type((ConnectionError, TimeoutError, Exception)),
     )
     def _fetch_chip_distribution_ak(self, symbol: str) -> pd.DataFrame:
         import akshare as ak
         import threading
+        import os
         self._enforce_rate_limit()
         
         # Soft timeout for chip distribution since it's heavy and often blocked
         result = []
         err = []
-        def worker():
+        
+        def worker(bypass_proxy=False):
             try:
-                result.append(ak.stock_cyq_em(symbol=symbol))
+                if bypass_proxy:
+                    old_http = os.environ.get("http_proxy")
+                    old_https = os.environ.get("https_proxy")
+                    os.environ["http_proxy"] = ""
+                    os.environ["https_proxy"] = ""
+                    try:
+                        result.append(ak.stock_cyq_em(symbol=symbol))
+                    finally:
+                        if old_http: os.environ["http_proxy"] = old_http
+                        if old_https: os.environ["https_proxy"] = old_https
+                else:
+                    result.append(ak.stock_cyq_em(symbol=symbol))
             except Exception as e:
                 err.append(e)
                 
-        t = threading.Thread(target=worker)
+        t = threading.Thread(target=worker, args=(False,))
         t.start()
-        t.join(timeout=3.0)  # 3 seconds hard timeout
+        t.join(timeout=5.0)  # Increased from 3s to 5s
         
-        if t.is_alive():
-            logger.warning(f"Chip distribution fetch timed out for {symbol}")
-            return pd.DataFrame()
-        if err:
+        if t.is_alive() or (err and ("ProxyError" in str(err[0]) or "RemoteDisconnected" in str(err[0]))):
+            if not result:
+                logger.warning(f"Chip distribution slow or proxy error for {symbol}, retrying with direct connection...")
+                t_bypass = threading.Thread(target=worker, args=(True,))
+                t_bypass.start()
+                t_bypass.join(timeout=8.0)
+                if t_bypass.is_alive():
+                    logger.warning(f"Direct connection also timed out for {symbol}")
+                    return pd.DataFrame()
+        
+        if not result and err:
             logger.warning(f"Chip distribution fetch error: {err[0]}")
             return pd.DataFrame()
+            
         return result[0] if result else pd.DataFrame()
 
     @retry(
@@ -119,13 +158,33 @@ class StandaloneDataFetcher:
         Returns a DataFrame compatible with yfinance output (Index: Date, Columns: Open, High, Low, Close, Volume).
         """
         import akshare as ak
+        import os
         self._enforce_rate_limit()
         
         # akshare expects start_date/end_date in YYYYMMDD format
         start = start_date.replace("-", "") if start_date else "20000101"
         end = end_date.replace("-", "") if end_date else time.strftime("%Y%m%d")
         
-        df = ak.stock_zh_a_hist(symbol=symbol, period="daily", start_date=start, end_date=end, adjust="qfq")
+        def _do_fetch():
+            return ak.stock_zh_a_hist(symbol=symbol, period="daily", start_date=start, end_date=end, adjust="qfq")
+
+        try:
+            df = _do_fetch()
+        except Exception as e:
+            if "ProxyError" in str(e) or "RemoteDisconnected" in str(e):
+                logger.warning(f"Detected potential proxy issue for history of {symbol}, attempting direct connection...")
+                old_http = os.environ.get("http_proxy")
+                old_https = os.environ.get("https_proxy")
+                try:
+                    os.environ["http_proxy"] = ""
+                    os.environ["https_proxy"] = ""
+                    df = _do_fetch()
+                finally:
+                    if old_http: os.environ["http_proxy"] = old_http
+                    if old_https: os.environ["https_proxy"] = old_https
+            else:
+                raise e
+
         if df.empty:
             return pd.DataFrame()
             
