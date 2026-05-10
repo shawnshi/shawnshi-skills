@@ -108,16 +108,15 @@ powershell -ExecutionPolicy Bypass -File .\scripts\repair_skills.ps1 -Mode Repor
 
 ## 3. 核心分类矩阵 (Core Skill Hierarchy)
 
-> **Total Inventory: 50 Strategic Modules across 8 Domains**
+> **Total Inventory: 48 Strategic Modules across 8 Domains**
 
 ### 🧠 深度认知与研究工作台 (Cognitive Research)
 *底层思考工具箱：需求脱水、战略审计、红蓝对抗与情报分析。*
 
 | 技能标识 (Directory)                                        | 核心本质 (Trigger Traps)                                                                                              |
 |:------------------------------------------------------------|:----------------------------------------------------------------------------------------------------------------------|
-| **[office-hours](office-hours/)**                           | **战略架构师与需求脱水 (Native Edition)**。通过“脑暴倾倒+查漏补缺”模式，执行 6 个高压问题进行战略脱水，输出设计文档. |
+| **[ideation-brainstorming](ideation-brainstorming/)**       | **高压想法脱水机 (Native Edition)**。统一收口宏观商业点子拷问与微观架构选型，在创意实施前执行逻辑压力测试以寻找 1% 杠杆点. |
 | **[plan-ceo-review](plan-ceo-review/)**                     | **创始人模式战略审计 (Native Edition)**。采用“聚合批处理”模式对开发计划执行核能挑战，支持范围扩张、择优或缩减.       |
-| **[personal-brainstorming](personal-brainstorming/)**                         | **创意与架构设计专家 (Native Edition)**。在任何开发行为前强制调用，将模糊意图转化为具体的设计规范与验证方案.         |
 | **[personal-logic-adversary](personal-logic-adversary/)**                     | **逻辑对抗系统 (Native Edition)**。搜索单点故障 (SPOF)，通过饱和逻辑攻击验证方案鲁棒性.                              |
 | **[personal-intelligence-hub](personal-intelligence-hub/)** | **个人情报作战中枢 (Native Edition)**。执行全球多源抓取，将噪音降维为 Alpha 级决策资产.                              |
 | **[personal-roundtable](personal-roundtable/)** | **高密度动态圆桌 (V4.0)**。基于议题构建张力网络，采用“碎片化落盘与最终合并”机制，彻底消除大模型长文本截断风险. |
@@ -182,7 +181,7 @@ powershell -ExecutionPolicy Bypass -File .\scripts\repair_skills.ps1 -Mode Repor
 | **[personal-musicbee-dj](personal-musicbee-dj/)**           | **音乐极客控制协议**。通过 JIT 算法精准控制本地进程，实现秒级心流氛围切换.                |
 | **[travel-research](travel-research/)**                     | **旅行研究 (ljg-travel-flow)**。深度文化旅行案头研究，涵盖博物馆、古建与考古发现.         |
 | **[mentat-insight-diary](mentat-insight-diary/)**           | **内观日记与逻辑审计**。通过 OODA 框架执行认知反思，并自动物理归档 Mentat 审计日志.       |
-| **[mentat-system-retro](mentat-system-retro/)**             | **量化反思引擎**。基于 Telemetry 解析 Token 黑洞与摩擦率，执行高认知负载任务后的量化复盘. |
+| **[mentat-collaboration-audit](mentat-collaboration-audit/)** | **系统与协作联合审计管线 (Native Edition)**。统一收口系统底层算力损耗与人机协作摩擦，从数据诊断自动演进至行为指导和资产沉淀. |
 | **[system-dream-cycle](system-dream-cycle/)**               | **系统静默清洗与演化管线**。后台批处理，自动清扫沙盒并执行热缓冲池的提纯、孤岛扫描与图谱同步. |
 
 ### ⚙️ 技术全栈与逆向工程 (Tech Design)
