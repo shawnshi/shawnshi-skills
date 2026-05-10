@@ -23,9 +23,15 @@
         },
         {
           "id": "longitudinal_entity_study",
-          "primary_skill": "hv-analysis",
+          "primary_skill": "cognitive-hv-analysis",
           "secondary_skills": ["academic-deep-research"],
           "request_signals": ["horizontal vertical analysis", "company life trajectory", "product deep dive with competitors", "concept longitudinal comparison"]
+        },
+        {
+          "id": "personalized_book_mirror",
+          "primary_skill": "cognitive-book-mirror",
+          "secondary_skills": ["personal-strategic-reading"],
+          "request_signals": ["personalized version of this book", "mirror this book", "two column book analysis", "apply this book to my life"]
         }
       ]
     },
@@ -46,14 +52,14 @@
         },
         {
           "id": "strategy_deck_architecture",
-          "primary_skill": "presentation-architect",
-          "secondary_skills": ["slide-blocks"],
+          "primary_skill": "tool-slide-architect",
+          "secondary_skills": ["tool-slide-blocks"],
           "request_signals": ["new strategy deck narrative", "executive ppt architecture", "cto deck storyline", "decision deck from scratch"]
         },
         {
           "id": "slide_asset_assembly",
-          "primary_skill": "slide-blocks",
-          "secondary_skills": ["presentation-architect"],
+          "primary_skill": "tool-slide-blocks",
+          "secondary_skills": ["tool-slide-architect"],
           "request_signals": ["assemble from slide library", "reuse historical slides", "find ppt pages", "template swap existing deck"]
         }
       ]
@@ -98,7 +104,7 @@
         },
         {
           "id": "interaction_meta_analysis",
-          "primary_skill": "personal-monthly-insights",
+          "primary_skill": "mentat-collaboration-audit",
           "secondary_skills": ["personal-cognitive-auditor"],
           "request_signals": ["human agent interaction report", "collaboration friction analysis", "workflow anti pattern review", "conversation meta analysis"]
         },

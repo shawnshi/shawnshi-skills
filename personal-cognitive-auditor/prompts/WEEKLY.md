@@ -20,11 +20,12 @@
 # [YYYY-Wxx] Weekly Cognitive Audit
 
 ## Context Snapshot
-- **本周主线:** [主线]
-- **关键事件:** [事件]
+- **本周主线:** [主线] *(注：必须从自动拉取的过去一周 Google Calendar 日程中提炼合成)*
+- **关键事件:** [事件] *(注：必须从自动拉取的过去一周 Google Calendar 日程中提炼合成)*
 - **【数据缺口】:** [若存在]
 
 ## Tactical Accountability
+*(注：必须通过搜索 `~/.gemini/MEMORY/raw/privacy/Diary/` 提取上一周的 `Next Tactics` 并直接将其填入下表进行对标，严禁主观脑补)*
 | 承诺行动 | 执行状态 | 真实阻力/偏离原因 | 问责判定 |
 | :--- | :--- | :--- | :--- |
 | [Tactic] | 🟢/🟡/🔴 | [Root Cause] | [战略漂移/执行偏差/合理调整/生理破产等冷酷判词] |
@@ -52,6 +53,7 @@
 - **Start:** [下周必须开始的一件事]
 
 ## Next Tactics
+*(注：必须结合未来一周从 Google Calendar 自动拉取的日程规划与当前的战略主线生成)*
 1. [高优先级]
 2. [中优先级]
 3. [低优先级]

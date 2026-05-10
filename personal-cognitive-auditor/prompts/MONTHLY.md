@@ -17,11 +17,12 @@
 # [YYYY-MM] Monthly Cognitive Audit
 
 ## Context Snapshot
-- **本月主线:** [主线]
-- **关键事件:** [事件]
+- **本月主线:** [主线] *(注：必须从自动拉取的过去一月 Google Calendar 日程中提炼合成)*
+- **关键事件:** [事件] *(注：必须从自动拉取的过去一月 Google Calendar 日程中提炼合成)*
 - **【数据缺口】:** [若存在]
 
 ## Tactical Accountability
+*(注：必须通过搜索 `~/.gemini/MEMORY/raw/privacy/Diary/` 提取上一月的 `Next Tactics` 并直接将其填入下表进行对标，严禁主观脑补)*
 | 上月承诺 | 执行状态 | 真实阻力/偏离原因 | 问责判定 |
 | :--- | :--- | :--- | :--- |
 | [Tactic] | 🟢/🟡/🔴 | [Root Cause] | [战略漂移/执行偏差/合理调整] |
@@ -46,6 +47,7 @@
 - **必须停止/剥离:** [1-3 件]
 
 ## Next Tactics
+*(注：必须结合未来一月从 Google Calendar 自动拉取的日程规划与当前的战略主线生成)*
 1. [高优先级]
 2. [中优先级]
 3. [低优先级]

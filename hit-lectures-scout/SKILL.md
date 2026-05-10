@@ -62,7 +62,7 @@ AVOID: 严禁在报告中保留 [URL] 占位符；禁止发布无临床场景适
 ### Phase 3: Weaver 关联与多跳路由审计 [Mode: EXECUTION]
 1. **Weaver 织网**: 寻找黑板上论文与卫宁核心产品或本周竞对动态的联结。
 2. **Memory Interleave (MSA 增强)**: 若发现"技术落地可行性"存在证据断层，且本地 `vector-lake` CLI 可用，则通过 shell command 执行查询补齐二跳推理；若不可用，则显式说明缺口并改用本地资料人工补证。
-3. **激活 Reviewer**: 调用 `personal-logic-adversary` 技能；若当前运行时不能直接激活技能，则在本地执行同等强度的红队审计，推演其在 DRG 环境下的成本黑洞。
+3. **激活 Reviewer**: 调用 `cognitive-logic-adversary` 技能；若当前运行时不能直接激活技能，则在本地执行同等强度的红队审计，推演其在 DRG 环境下的成本黑洞。
 
 ### Phase 4: 战略推演与杠杆锻造 (Activate) [Mode: EXECUTION]
 1. **杠杆转换**: 将成果翻译为研发任务与销售话术。
@@ -88,7 +88,7 @@ AVOID: 严禁在报告中保留 [URL] 占位符；禁止发布无临床场景适
 - `tmp/playgrounds/Response_Preprints.md`
 - `tmp/playgrounds/Response_EN.md`
 - `tmp/playgrounds/Response_CN.md`
-- 关联技能：`personal-logic-adversary`
+- 关联技能：`cognitive-logic-adversary`
 
 ## Failure Modes
 - `IF [Condition == "System Detected Repeated Failure"] THEN [Inject NLAH Prohibition Rule Here]`

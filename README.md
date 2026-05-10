@@ -108,23 +108,24 @@ powershell -ExecutionPolicy Bypass -File .\scripts\repair_skills.ps1 -Mode Repor
 
 ## 3. 核心分类矩阵 (Core Skill Hierarchy)
 
-> **Total Inventory: 48 Strategic Modules across 8 Domains**
+> **Total Inventory: 45 Strategic Modules across 8 Domains**
 
 ### 🧠 深度认知与研究工作台 (Cognitive Research)
 *底层思考工具箱：需求脱水、战略审计、红蓝对抗与情报分析。*
 
 | 技能标识 (Directory)                                        | 核心本质 (Trigger Traps)                                                                                              |
 |:------------------------------------------------------------|:----------------------------------------------------------------------------------------------------------------------|
-| **[ideation-brainstorming](ideation-brainstorming/)**       | **高压想法脱水机 (Native Edition)**。统一收口宏观商业点子拷问与微观架构选型，在创意实施前执行逻辑压力测试以寻找 1% 杠杆点. |
-| **[plan-ceo-review](plan-ceo-review/)**                     | **创始人模式战略审计 (Native Edition)**。采用“聚合批处理”模式对开发计划执行核能挑战，支持范围扩张、择优或缩减.       |
-| **[personal-logic-adversary](personal-logic-adversary/)**                     | **逻辑对抗系统 (Native Edition)**。搜索单点故障 (SPOF)，通过饱和逻辑攻击验证方案鲁棒性.                              |
+| **[cognitive-book-mirror](cognitive-book-mirror/)**             | **认知书籍镜像引擎**。提取书籍原旨并强行与你最近 14 天的日记及底层价值观碰撞，生成极端个人化的毒舌双栏伴读. |
+| **[cognitive-ideation-brainstorming](cognitive-ideation-brainstorming/)**       | **高压想法脱水机 (Native Edition)**。统一收口宏观商业点子拷问与微观架构选型，在创意实施前执行逻辑压力测试以寻找 1% 杠杆点. |
+| **[cognitive-ceo-review](cognitive-ceo-review/)**                     | **创始人模式战略审计 (Native Edition)**。采用“聚合批处理”模式对开发计划执行核能挑战，支持范围扩张、择优或缩减.       |
+| **[cognitive-logic-adversary](cognitive-logic-adversary/)**                     | **逻辑对抗系统 (Native Edition)**。搜索单点故障 (SPOF)，通过饱和逻辑攻击验证方案鲁棒性.                              |
 | **[personal-intelligence-hub](personal-intelligence-hub/)** | **个人情报作战中枢 (Native Edition)**。执行全球多源抓取，将噪音降维为 Alpha 级决策资产.                              |
-| **[personal-roundtable](personal-roundtable/)** | **高密度动态圆桌 (V4.0)**。基于议题构建张力网络，采用“碎片化落盘与最终合并”机制，彻底消除大模型长文本截断风险. |
-| **[hv-analysis](hv-analysis/)** | **横纵分析法深度研究 (Horizontal-Vertical Analysis)**。由数字生命卡兹克提出，通过纵轴追踪时间深度，横轴进行同期对比，最后产出排版精美的深度研究报告. |
-| **[strategic-reading](strategic-reading/)** | **战略滤镜阅读器**。抛弃客观中立，带上特定商业目的强行榨取长文或研报，输出包含核心杠杆与致命盲区的极高密度 Playbook. |
-| **[concept-synthesis](concept-synthesis/)** | **宏观缝合与体系全景图**。通过多重意图展开并行检索，将孤立的数十个实体炼金重组，反向输出具备大局观的体系长文. |
-| **[archive-crawler](archive-crawler/)** | **数字废墟矿工**。扫描旧有非结构化库，剥离废话，并按 `[[双链]]` 图谱与 `双轨制` 将其强行翻新锚定进 Tier 2 知识层. |
-| **[meeting-ingestion](meeting-ingestion/)** | **多模态会议提纯引擎**。像情报人员一样清洗语音转录或长会纪要，自动建立实体档案，并榨取核心决策压入 Compiled Truth. |
+| **[cognitive-personal-roundtable](cognitive-personal-roundtable/)** | **高密度动态圆桌 (V4.0)**。基于议题构建张力网络，采用“碎片化落盘与最终合并”机制，彻底消除大模型长文本截断风险. |
+| **[cognitive-hv-analysis](cognitive-hv-analysis/)** | **横纵分析法深度研究 (Horizontal-Vertical Analysis)**。由数字生命卡兹克提出，通过纵轴追踪时间深度，横轴进行同期对比，最后产出排版精美的深度研究报告. |
+| **[personal-strategic-reading](personal-strategic-reading/)** | **战略滤镜阅读器**。抛弃客观中立，带上特定商业目的强行榨取长文或研报，输出包含核心杠杆与致命盲区的极高密度 Playbook. |
+| **[tool-concept-synthesis](tool-concept-synthesis/)** | **宏观缝合与体系全景图**。强制依赖 Vector Lake 底层图谱拓扑寻找孤立实体间的逻辑暗线，再交由大模型反向渲染出具备大局观的战略长文. |
+| **[tool-archive-crawler](tool-archive-crawler/)** | **数字废墟矿工**。扫描旧有非结构化库，剥离废话，并按 `[[双链]]` 图谱与 `双轨制` 将其强行翻新锚定进 Tier 2 知识层. |
+
 
 ### 🏥 大健康与战略研判中枢 (Healthcare Strategy)
 *聚焦垂直主业：医疗信息化 (HIT)、临床决策支持及大客户分析。*
@@ -157,10 +158,10 @@ powershell -ExecutionPolicy Bypass -File .\scripts\repair_skills.ps1 -Mode Repor
 | **[personal-write-humanizer](personal-write-humanizer/)**                     | **中文文本“去 AI 化”锻造场**。模拟毒舌高管视角，执行遣词造句的同态重写.   |
 | **[image-nano-gen](image-nano-gen/)**                         | **高质量图像生成引擎 (Imagen 3)**。利用 Gemini 引擎执行 4K 级图像锻造，支持高认知 Prompt 增强. |
 | **[image-promp-gen](image-promp-gen/)**                       | **大师级海报与封面提示词引擎**。基于 33+ 位传奇设计师风格，支持多平台比例适配与逻辑隐喻构建. |
-| **[presentation-architect](presentation-architect/)**         | **战略级 PPT 架构师**。交付具备原生逻辑的 PPT 资产，拒绝平庸模板.         |
-| **[guizang-ppt-skill](guizang-ppt-skill/)**                   | **电子杂志风网页 PPT 引擎**。生成基于 WebGL 与响应式排版的单文件 HTML 演示资产. |
-| **[slide-blocks](slide-blocks/)**                             | **PPT 智能组装助手**。从历史素材库中挑选幻灯片并自动拼装为风格统一的完整演示文稿. |
-| **[smart-doc-latex](smart-doc-latex/)**                       | **自动化出版 LaTeX 引擎**。提供 IEEE、CV 等专业模板，交付工业级排版结果.  |
+| **[tool-slide-architect](tool-slide-architect/)**         | **战略级 PPT 架构师**。交付具备原生逻辑的 PPT 资产，拒绝平庸模板.         |
+| **[tool-web-slide](tool-web-slide/)**                   | **电子杂志风网页 PPT 引擎**。生成基于 WebGL 与响应式排版的单文件 HTML 演示资产. |
+| **[tool-slide-blocks](tool-slide-blocks/)**                             | **PPT 智能组装助手**。从历史素材库中挑选幻灯片并自动拼装为风格统一的完整演示文稿. |
+| **[tool-smart-latex](tool-smart-latex/)**                       | **自动化出版 LaTeX 引擎**。提供 IEEE、CV 等专业模板，交付工业级排版结果.  |
 
 ### 💼 商业洞察与投资顾问 (Marketing & Finance)
 *二级市场分析与商业价值变现。*
@@ -177,20 +178,19 @@ powershell -ExecutionPolicy Bypass -File .\scripts\repair_skills.ps1 -Mode Repor
 | **[personal-diary-writer](personal-diary-writer/)**         | **个人日志原子写入器**。负责高频轻量级的日常状态录入与安全落盘，强绑定物理 I/O 组件.        |
 | **[personal-cognitive-auditor](personal-cognitive-auditor/)** | **战略认知联合审计官**。处理日/周/月/年结认知复盘，强制调度多源数据，交接 Writer 落盘.      |
 | **[personal-health-analysis](personal-health-analysis/)**   | **首席医疗官 (CMO) 引擎**。对 Garmin 生理数据执行全链路审计，管理决策准备度.              |
-| **[personal-monthly-insights](personal-monthly-insights/)** | **战略元分析解码器**。提取人机协作的负熵规律，识别摩擦基因并同步记忆.                     |
 | **[personal-musicbee-dj](personal-musicbee-dj/)**           | **音乐极客控制协议**。通过 JIT 算法精准控制本地进程，实现秒级心流氛围切换.                |
-| **[travel-research](travel-research/)**                     | **旅行研究 (ljg-travel-flow)**。深度文化旅行案头研究，涵盖博物馆、古建与考古发现.         |
+| **[personal-travel-research](personal-travel-research/)**                     | **旅行研究 (ljg-travel-flow)**。深度文化旅行案头研究，涵盖博物馆、古建与考古发现.         |
 | **[mentat-insight-diary](mentat-insight-diary/)**           | **内观日记与逻辑审计**。通过 OODA 框架执行认知反思，并自动物理归档 Mentat 审计日志.       |
 | **[mentat-collaboration-audit](mentat-collaboration-audit/)** | **系统与协作联合审计管线 (Native Edition)**。统一收口系统底层算力损耗与人机协作摩擦，从数据诊断自动演进至行为指导和资产沉淀. |
-| **[system-dream-cycle](system-dream-cycle/)**               | **系统静默清洗与演化管线**。后台批处理，自动清扫沙盒并执行热缓冲池的提纯、孤岛扫描与图谱同步. |
+| **[mentat-dream-cycle](mentat-dream-cycle/)**               | **系统静默清洗与演化管线**。后台批处理，自动清扫沙盒并执行热缓冲池的提纯、孤岛扫描与图谱同步. |
 
 ### ⚙️ 技术全栈与逆向工程 (Tech Design)
 *工作流编排、技能创建与跨界映射。*
 
 | 技能标识 (Directory)                                  | 核心本质 (Trigger Traps)                                                                          |
 |:------------------------------------------------------|:--------------------------------------------------------------------------------------------------|
-| **[drawio](drawio/)**                                 | **企业级图表工程引擎**。内置语义化配色系统(7色)、5种图表类型专用规则(架构/流程/时序/ER/甘特)、5大医疗架构模式库与交付质量清单. |
-| **[morphism-mapper-master](morphism-mapper-master/)** | **范畴论跨界思维引擎**。利用异构领域结构生成突破性解法，执行升维打击.                            |
+| **[tool-drawio](tool-drawio/)**                                 | **企业级图表工程引擎**。内置语义化配色系统(7色)、5种图表类型专用规则(架构/流程/时序/ER/甘特)、5大医疗架构模式库与交付质量清单. |
+| **[cognitive-morphism-mapper](cognitive-morphism-mapper/)** | **范畴论跨界思维引擎**。利用异构领域结构生成突破性解法，执行升维打击.                            |
 | **[mentat-skill-creator](mentat-skill-creator/)**                   | **技能工厂与自愈中心 (Native Edition)**。管理技能生命周期，确保符合“四层壳模型”与三层架构规范.   |
 
 ### 🧰 全能格式转换与数据工厂 (Utilities Format)
@@ -198,14 +198,11 @@ powershell -ExecutionPolicy Bypass -File .\scripts\repair_skills.ps1 -Mode Repor
 
 | 技能标识 (Directory)                            | 核心本质 (Trigger Traps)                                                                              |
 |:------------------------------------------------|:------------------------------------------------------------------------------------------------------|
-| **[document-summarizer](document-summarizer/)** | **战略情报引擎**。具备本体驱动的语义压缩能力，输出带有战略标签的摘要.                                |
-| **[minimax-docx](minimax-docx/)**               | **顶级 Word 锻造师 (MiniMax Edition)**。基于 OpenXML SDK 执行专业 DOCX 渲染，支持硬核模板校验与排版. |
-| **[xlsx](xlsx/)**                               | **重装级数据治理专家**。通过物理层 XML 操纵实现 100% 数据一致性.                                     |
+| **[tool-document-summarizer](tool-document-summarizer/)** | **战略情报引擎**。具备本体驱动的语义压缩能力，输出带有战略标签的摘要.                                |
 | **[markdown-converter](markdown-converter/)**   | **Markdown 原质炼金术**。利用 MarkItDown 将异构文件统一转化为极致干净的语义层.                       |
-| **[pdf](pdf/)**                                 | **PDF 全能处理器**。支持底层字节流处理，执行 OCR 扫描、合并与拆分.                                   |
-| **[text-to-speech](text-to-speech/)**           | **军工级播报系统**。支持 Edge 神经网络语音，确保高审美播报.                                          |
-| **[tuanbiaodownloader](tuanbiaodownloader/)**   | **团体标准下载器**。全自动 ID 解析与 PDF 合并装订，确保 100% 获取率.                                 |
-| **[url-to-markdown](url-to-markdown/)**         | **网页原质提取器**。直控 Chrome CDP 协议，强制清除网页噪音.                                          |
+| **[tool-tts](tool-tts/)**           | **军工级播报系统**。支持 Edge 神经网络语音，确保高审美播报.                                          |
+| **[tool-tuanbiao-downloader](tool-tuanbiao-downloader/)**   | **团体标准下载器**。全自动 ID 解析与 PDF 合并装订，确保 100% 获取率.                                 |
+| **[tool-url-markdown](tool-url-markdown/)**         | **网页原质提取器**。直控 Chrome CDP 协议，强制清除网页噪音.                                          |
 
 ---
 *Last Global Audit: 2026-05-10 | Version: 6.0 (GBrain Architecture Edition) | System State: Locked*

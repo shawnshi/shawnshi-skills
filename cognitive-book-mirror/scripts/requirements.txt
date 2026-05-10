@@ -1,0 +1,4 @@
+EbookLib==0.18
+beautifulsoup4==4.12.2
+PyMuPDF==1.23.8
+google-generativeai>=0.4.0
