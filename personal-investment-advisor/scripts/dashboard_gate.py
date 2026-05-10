@@ -118,6 +118,11 @@ def validate_dashboard(data: dict) -> list[str]:
         weight_status = portfolio_context.get("weight_status")
         if weight_status and weight_status not in SCHEMA["enums"]["weight_status"]:
             errors.append(f"invalid portfolio_context.weight_status: {weight_status}")
+        
+        # Hard Lock: Discipline over sentiment
+        advice = data.get("operation_advice")
+        if weight_status == "above_max" and advice not in ["减仓", "卖出"]:
+            errors.append(f"portfolio weight ({portfolio_context.get('current_weight')}) exceeds max limit: operation_advice must be '减仓' or '卖出', got '{advice}'")
 
     if portfolio_summary is not None:
         if not isinstance(portfolio_summary, dict):
@@ -160,6 +165,12 @@ def validate_dashboard(data: dict) -> list[str]:
             triggers = position_advice.get("next_action_trigger", [])
             if not isinstance(triggers, list) or len(triggers) == 0:
                 errors.append("position_advice.next_action_trigger must be a non-empty list")
+            
+            # Watch Requirement: Must have breakout conditions
+            if data.get("decision_type") == "watch":
+                has_breakout = any("突破" in str(t) for t in triggers)
+                if not has_breakout:
+                    errors.append("decision is 'watch': next_action_trigger must include specific breakout ('突破') conditions")
 
         holder_summary = _get_nested(data, ["dashboard", "core_conclusion", "position_advice", "has_position"])
         if holder_summary in (None, "", []):

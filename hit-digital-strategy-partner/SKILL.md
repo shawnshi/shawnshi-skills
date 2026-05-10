@@ -10,7 +10,8 @@ Strategy:
 1. 黑板优先：所有核心判断必须先写入 strategy_blackboard.json。
 2. 执行二跳推理：从政策信号推演至具体架构变化与实施后果。
 3. 悲观 ROI 压测：在预算削减 30% 的极端场景下验证方案成立性。
-AVOID: 严禁绕过黑板直接起草；禁止只写趋势不写行动杠杆；禁止未通过结果门校验即交付。
+4. 强制双链图谱与双轨落盘：对核心企业、人物或专有名词必须使用 `[[ ]]` 进行硬链接；若是长效落盘，必须遵守 Compiled Truth | Timeline 上下分割规范。
+AVOID: 严禁绕过黑板直接起草；禁止未通过结果门校验即交付；严禁在报告中遗漏重要实体的双链图谱标记。
 </strategy-gene>
 
 # HIT Digital Strategy Partner (V18.0: The Blackboard Foundry)

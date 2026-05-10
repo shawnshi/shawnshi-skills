@@ -34,6 +34,12 @@
 - **证据网 (Evidence-Mesh)**：分析类资产必须强制执行物理归档，严禁仅保留在瞬时对话历史中.
 - **量化反思**：通过 `skill_utility_radar.py` 监控系统熵增，以数据驱动系统拓扑的持续优化.
 
+### E. 记忆与抽取层：Thin Harness, Fat Skills (Memory & Extraction)
+- **数据降级契约 (Storage Tiering)**：外部原始数据 (Tier 1) 仅做只读处理，图谱沉淀与智囊库 (Tier 2) 才强制应用复杂的知识重构，以此杜绝 Token 爆炸。
+- **双轨架构 (Dual-Schema)**：长效知识写入必须强制切分为 `Compiled Truth`（覆写结论）与 `Timeline`（追加证据），彻底消灭 RAG 历史噪音。
+- **图谱硬链 (Entity Linking)**：放弃 LLM 事后推理，在日常交互与落盘时强制使用 `[[实体名]]`，利用底层正则实现 100% 准确率的 Zero-LLM 图谱抽取。
+- **混合多轨意图 (Multi-Query Expansion)**：废除单次模糊搜索。OODA 的第一步必须将意图拆解重组并执行多路并行检索，确保高维度战略课题下的绝对召回率。
+
 ## 2. 安装与部署 (Deployment)
 ```bash
 # 全库安装
@@ -102,7 +108,7 @@ powershell -ExecutionPolicy Bypass -File .\scripts\repair_skills.ps1 -Mode Repor
 
 ## 3. 核心分类矩阵 (Core Skill Hierarchy)
 
-> **Total Inventory: 45 Strategic Modules across 8 Domains**
+> **Total Inventory: 50 Strategic Modules across 8 Domains**
 
 ### 🧠 深度认知与研究工作台 (Cognitive Research)
 *底层思考工具箱：需求脱水、战略审计、红蓝对抗与情报分析。*
@@ -116,6 +122,10 @@ powershell -ExecutionPolicy Bypass -File .\scripts\repair_skills.ps1 -Mode Repor
 | **[personal-intelligence-hub](personal-intelligence-hub/)** | **个人情报作战中枢 (Native Edition)**。执行全球多源抓取，将噪音降维为 Alpha 级决策资产.                              |
 | **[personal-roundtable](personal-roundtable/)** | **高密度动态圆桌 (V4.0)**。基于议题构建张力网络，采用“碎片化落盘与最终合并”机制，彻底消除大模型长文本截断风险. |
 | **[hv-analysis](hv-analysis/)** | **横纵分析法深度研究 (Horizontal-Vertical Analysis)**。由数字生命卡兹克提出，通过纵轴追踪时间深度，横轴进行同期对比，最后产出排版精美的深度研究报告. |
+| **[strategic-reading](strategic-reading/)** | **战略滤镜阅读器**。抛弃客观中立，带上特定商业目的强行榨取长文或研报，输出包含核心杠杆与致命盲区的极高密度 Playbook. |
+| **[concept-synthesis](concept-synthesis/)** | **宏观缝合与体系全景图**。通过多重意图展开并行检索，将孤立的数十个实体炼金重组，反向输出具备大局观的体系长文. |
+| **[archive-crawler](archive-crawler/)** | **数字废墟矿工**。扫描旧有非结构化库，剥离废话，并按 `[[双链]]` 图谱与 `双轨制` 将其强行翻新锚定进 Tier 2 知识层. |
+| **[meeting-ingestion](meeting-ingestion/)** | **多模态会议提纯引擎**。像情报人员一样清洗语音转录或长会纪要，自动建立实体档案，并榨取核心决策压入 Compiled Truth. |
 
 ### 🏥 大健康与战略研判中枢 (Healthcare Strategy)
 *聚焦垂直主业：医疗信息化 (HIT)、临床决策支持及大客户分析。*
@@ -173,6 +183,7 @@ powershell -ExecutionPolicy Bypass -File .\scripts\repair_skills.ps1 -Mode Repor
 | **[travel-research](travel-research/)**                     | **旅行研究 (ljg-travel-flow)**。深度文化旅行案头研究，涵盖博物馆、古建与考古发现.         |
 | **[mentat-insight-diary](mentat-insight-diary/)**           | **内观日记与逻辑审计**。通过 OODA 框架执行认知反思，并自动物理归档 Mentat 审计日志.       |
 | **[mentat-system-retro](mentat-system-retro/)**             | **量化反思引擎**。基于 Telemetry 解析 Token 黑洞与摩擦率，执行高认知负载任务后的量化复盘. |
+| **[system-dream-cycle](system-dream-cycle/)**               | **系统静默清洗与演化管线**。后台批处理，自动清扫沙盒并执行热缓冲池的提纯、孤岛扫描与图谱同步. |
 
 ### ⚙️ 技术全栈与逆向工程 (Tech Design)
 *工作流编排、技能创建与跨界映射。*
@@ -198,4 +209,4 @@ powershell -ExecutionPolicy Bypass -File .\scripts\repair_skills.ps1 -Mode Repor
 | **[url-to-markdown](url-to-markdown/)**         | **网页原质提取器**。直控 Chrome CDP 协议，强制清除网页噪音.                                          |
 
 ---
-*Last Global Audit: 2026-04-30 | Version: 5.3 (Inventory Sync Edition) | System State: Locked*
+*Last Global Audit: 2026-05-10 | Version: 6.0 (GBrain Architecture Edition) | System State: Locked*

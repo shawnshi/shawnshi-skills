@@ -76,6 +76,8 @@ def validate_math_consistency(data: dict) -> list[str]:
         errors.append("resistance_level cannot be below current_price")
     if stop_loss is not None and support is not None and stop_loss > support:
         errors.append("stop_loss should not be above support_level")
+    if stop_loss is not None and current_price is not None and stop_loss >= current_price:
+        errors.append("stop_loss must be strictly below current_price for buy/hold/watch decisions")
     if take_profit is not None and resistance is not None and take_profit < resistance:
         errors.append("take_profit should not be below resistance_level")
 

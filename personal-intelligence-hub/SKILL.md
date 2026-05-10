@@ -10,7 +10,8 @@ Strategy:
 1. 配置先行：严格依据 strategic_focus.json 锁定扫描主题与排除词。
 2. 语义去重：执行 7 日 URL 与指纹对齐，确保 100% 信息增量。
 3. 结构化提纯：每条情报必须满足 Fact -> Connection -> Deduction -> Actionability 结构。
-AVOID: 严禁把“摘要”伪装成“洞察”；禁止在缺乏证据时输出 L4 级高等级判断；禁止重复推送同一信号。
+4. 强制双链图谱与双轨落盘：对核心企业、人物或专有名词必须使用 `[[ ]]` 进行硬链接；若是长效落盘，必须遵守 Compiled Truth | Timeline 上下分割规范。
+AVOID: 严禁把“摘要”伪装成“洞察”；禁止在缺乏证据时输出 L4 级高等级判断；禁止重复推送同一信号；严禁在报告中遗漏重要实体的双链图谱标记；严禁越界将原始抓取数据写入核心图谱。
 </strategy-gene>
 
 # Personal Intelligence Hub V8.0
