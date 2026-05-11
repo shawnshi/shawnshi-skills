@@ -11,10 +11,13 @@ SECTION_HEADERS = [
 ]
 
 REQUIRED_PHRASES = [
+    "Target_Intent",
     "核心目标判断",
     "机构风险",
     "个人风险",
     "厂商格局判断",
+    "认知重合点",
+    "认知分歧预警",
     "绝对禁忌 1",
     "绝对禁忌 2",
 ]
@@ -29,6 +32,7 @@ PLACEHOLDER_PATTERNS = [
     r"\[厂商\]",
     r"\[金额\]",
     r"\[\.\.\.\]",
+    r"\[本次拜访的核心功利目的\]",
 ]
 
 
@@ -36,8 +40,8 @@ def load_text(path: Path) -> str:
     return path.read_text(encoding="utf-8")
 
 
-def count_action_items(text: str) -> int:
-    return len(re.findall(r"^\d+\.\s+\*\*动作建议", text, flags=re.MULTILINE))
+def count_demo_scripts(text: str) -> int:
+    return len(re.findall(r"^\d+\.\s+\*\*Demo 剧本", text, flags=re.MULTILINE))
 
 
 def find_incomplete_links(text: str) -> list[str]:
@@ -68,9 +72,9 @@ def validate(text: str) -> list[str]:
         if phrase not in text:
             errors.append(f"missing required phrase: {phrase}")
 
-    action_count = count_action_items(text)
-    if action_count < 3:
-        errors.append(f"expected at least 3 action items, found {action_count}")
+    demo_count = count_demo_scripts(text)
+    if demo_count < 2:
+        errors.append(f"expected at least 2 Demo scripts, found {demo_count}")
 
     if "“" not in text and '"' not in text:
         errors.append("missing direct quote in mind map section")

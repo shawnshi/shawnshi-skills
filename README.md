@@ -108,7 +108,7 @@ powershell -ExecutionPolicy Bypass -File .\scripts\repair_skills.ps1 -Mode Repor
 
 ## 3. 核心分类矩阵 (Core Skill Hierarchy)
 
-> **Total Inventory: 45 Strategic Modules across 8 Domains**
+> **Total Inventory: 46 Strategic Modules across 8 Domains**
 
 ### 🧠 深度认知与研究工作台 (Cognitive Research)
 *底层思考工具箱：需求脱水、战略审计、红蓝对抗与情报分析。*
@@ -125,6 +125,7 @@ powershell -ExecutionPolicy Bypass -File .\scripts\repair_skills.ps1 -Mode Repor
 | **[personal-strategic-reading](personal-strategic-reading/)** | **战略滤镜阅读器**。抛弃客观中立，带上特定商业目的强行榨取长文或研报，输出包含核心杠杆与致命盲区的极高密度 Playbook. |
 | **[tool-concept-synthesis](tool-concept-synthesis/)** | **宏观缝合与体系全景图**。强制依赖 Vector Lake 底层图谱拓扑寻找孤立实体间的逻辑暗线，再交由大模型反向渲染出具备大局观的战略长文. |
 | **[tool-archive-crawler](tool-archive-crawler/)** | **数字废墟矿工**。扫描旧有非结构化库，剥离废话，并按 `[[双链]]` 图谱与 `双轨制` 将其强行翻新锚定进 Tier 2 知识层. |
+| **[cognitive-morphism-mapper](cognitive-morphism-mapper/)** | **范畴论跨界思维引擎**。利用异构领域结构生成突破性解法，执行升维打击.                            |
 
 
 ### 🏥 大健康与战略研判中枢 (Healthcare Strategy)
@@ -146,6 +147,7 @@ powershell -ExecutionPolicy Bypass -File .\scripts\repair_skills.ps1 -Mode Repor
 |:----------------------------------------------------------------|:-----------------------------------------------------------------------------------------------------|
 | **[academic-paper-writer](academic-paper-writer/)**             | **学术论文写作管线 (V2.4)**。12-Agent 管线，支持 IMRaD 与双语摘要，强制 APA 7.0 / LaTeX 出版级排版. |
 | **[academic-paper-reader](academic-paper-reader/)**             | **读论文 (academic-paper-reader)**。猎取思想，将别人的发现拆解成自己能用的认知，拒绝学术腔.         |
+| **[academic-paper-reviewer](academic-paper-reviewer/)**         | **学术论文模拟评审 (Simulated Editorial Review)**。模拟五人专家组进行交叉评审，提供发表级质量拦截. |
 | **[academic-scientific-visualization](academic-scientific-visualization/)** | **论文级科研绘图与可视化**。生成符合 Nature/Science 规格图表，支持多面板布局、显著性标注. |
 | **[academic-deep-research](academic-deep-research/)**                         | **通用深度研究中枢 (V2.3)**。13-Agent 管线，支援 PRISMA 系統性回顧与嚴格的證據查核 (RoB).            |
 
@@ -180,18 +182,17 @@ powershell -ExecutionPolicy Bypass -File .\scripts\repair_skills.ps1 -Mode Repor
 | **[personal-health-analysis](personal-health-analysis/)**   | **首席医疗官 (CMO) 引擎**。对 Garmin 生理数据执行全链路审计，管理决策准备度.              |
 | **[personal-musicbee-dj](personal-musicbee-dj/)**           | **音乐极客控制协议**。通过 JIT 算法精准控制本地进程，实现秒级心流氛围切换.                |
 | **[personal-travel-research](personal-travel-research/)**                     | **旅行研究 (ljg-travel-flow)**。深度文化旅行案头研究，涵盖博物馆、古建与考古发现.         |
-| **[mentat-insight-diary](mentat-insight-diary/)**           | **内观日记与逻辑审计**。通过 OODA 框架执行认知反思，并自动物理归档 Mentat 审计日志.       |
-| **[mentat-collaboration-audit](mentat-collaboration-audit/)** | **系统与协作联合审计管线 (Native Edition)**。统一收口系统底层算力损耗与人机协作摩擦，从数据诊断自动演进至行为指导和资产沉淀. |
-| **[mentat-dream-cycle](mentat-dream-cycle/)**               | **系统静默清洗与演化管线**。后台批处理，自动清扫沙盒并执行热缓冲池的提纯、孤岛扫描与图谱同步. |
 
-### ⚙️ 技术全栈与逆向工程 (Tech Design)
-*工作流编排、技能创建与跨界映射。*
+### ⚙️ 技术全栈、逆向工程与系统演化 (Tech & System Evolution)
+*工作流编排、技能创建、算力监控与系统级演化。*
 
 | 技能标识 (Directory)                                  | 核心本质 (Trigger Traps)                                                                          |
 |:------------------------------------------------------|:--------------------------------------------------------------------------------------------------|
 | **[tool-drawio](tool-drawio/)**                                 | **企业级图表工程引擎**。内置语义化配色系统(7色)、5种图表类型专用规则(架构/流程/时序/ER/甘特)、5大医疗架构模式库与交付质量清单. |
-| **[cognitive-morphism-mapper](cognitive-morphism-mapper/)** | **范畴论跨界思维引擎**。利用异构领域结构生成突破性解法，执行升维打击.                            |
 | **[mentat-skill-creator](mentat-skill-creator/)**                   | **技能工厂与自愈中心 (Native Edition)**。管理技能生命周期，确保符合“四层壳模型”与三层架构规范.   |
+| **[mentat-insight-diary](mentat-insight-diary/)**           | **内观日记与逻辑审计**。通过 OODA 框架执行认知反思，并自动物理归档 Mentat 审计日志.       |
+| **[mentat-collaboration-audit](mentat-collaboration-audit/)** | **系统与协作联合审计管线 (Native Edition)**。统一收口系统底层算力损耗与人机协作摩擦，从数据诊断自动演进至行为指导和资产沉淀. |
+| **[mentat-dream-cycle](mentat-dream-cycle/)**               | **系统静默清洗与演化管线**。后台批处理，自动清扫沙盒并执行热缓冲池的提纯、孤岛扫描与图谱同步. |
 
 ### 🧰 全能格式转换与数据工厂 (Utilities Format)
 *负责标准化格式转换与数据原质提取。*

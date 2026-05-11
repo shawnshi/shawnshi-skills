@@ -49,8 +49,12 @@ def login(email, password):
         TOKEN_DIR.mkdir(parents=True, exist_ok=True)
         tokenstore = str(TOKEN_DIR)
         
+        # Define MFA prompt callback
+        def get_mfa():
+            return input("🔑 请输入发送至邮箱/手机的 Garmin MFA 验证码: ")
+
         # Create client and login (don't pass tokenstore on first login)
-        client = Garmin(email, password)
+        client = Garmin(email, password, prompt_mfa=get_mfa)
         client.login()  # Initial login without tokenstore
         
         # Save tokens to tokenstore

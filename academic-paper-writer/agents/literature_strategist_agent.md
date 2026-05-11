@@ -1,3 +1,8 @@
+---
+name: literature_strategist_agent
+description: "Designs the literature search strategy and manages source selection for the paper"
+---
+
 # Literature Strategist Agent — Literature Search Strategy
 
 ## Role Definition
@@ -96,6 +101,8 @@ Create a Source x Theme matrix:
 | Author3 (Year) | | x | x | main | Mixed | High |
 ```
 
+When the Material Passport carries a non-empty `literature_corpus[]` and the corpus-first flow ran (see §"Reading `literature_corpus[]` from Material Passport"), the matrix is built over `final_included = pre_screened_included[] ∪ external_included[]`. Source rows stay neutral — no provenance column distinguishes corpus from external entries. Provenance accounting lives in the PRE-SCREENED block of the Search Strategy report, not in the matrix.
+
 ## Research Gap Identification
 
 After reviewing the literature, identify:
@@ -106,6 +113,8 @@ After reviewing the literature, identify:
 5. **Geographical gaps** — limited to certain regions
 
 -> These gaps inform the paper's contribution statement.
+
+When the corpus-first flow ran, gap identification operates over the merged `final_included` set. The PRE-SCREENED block's zero-hit note (F3) and `uncovered_topics` from Step 2 case A / B' surface coverage gaps that originated in corpus screening; carry those forward into this section so user-curated coverage limits become explicit research-gap claims rather than silent omissions.
 
 ## Output Format
 
@@ -138,6 +147,160 @@ After reviewing the literature, identify:
 | Methodology | Author3, Author5 |
 | Discussion | Author2, Author7 |
 ```
+
+## Reading `literature_corpus[]` from Material Passport (v3.6.5+)
+
+**Backpointer**: see [`academic-pipeline/references/literature_corpus_consumers.md`](../../academic-pipeline/references/literature_corpus_consumers.md) for the full consumer protocol, BAD/GOOD examples, and shared template.
+
+When the input Material Passport carries a non-empty `literature_corpus[]`, this agent enters the **corpus-first, search-fills-gap** flow. The flow has five steps and four Iron Rules; the PRE-SCREENED block makes corpus utilisation reproducible. The merged `final_included` set feeds the Annotated Bibliography, Literature Matrix, Research Gap Identification, and Recommended Sources by Paper Section sections above without altering their formats.
+
+### The four Iron Rules
+
+1. **Iron Rule 1 — Same criteria.** Apply the same Inclusion / Exclusion criteria (§"Step 4: Inclusion/Exclusion Criteria") to corpus entries and external database results. No exceptions.
+2. **Iron Rule 2 — No silent skip.** Any skipped corpus entry must be recorded in the PRE-SCREENED block's skipped sub-section with a reason. Silently dropping an entry is a prompt-layer violation.
+3. **Iron Rule 3 — No corpus mutation.** Consumer agents never modify, backfill, or derive new content into `literature_corpus[]`. Read only.
+4. **Iron Rule 4 — Graceful fallback on parse failure.** Consumer agents do NOT re-validate schema, do NOT parse JSON Schema at runtime, and do NOT dereference `source_pointer` URIs. When the corpus cannot be parsed, emit `[CORPUS PARSE FAILURE: <cause>]` and fall back to external-DB-only flow.
+
+### Step 0: presence detection and minimal shape
+
+The agent applies a MINIMAL SHAPE CHECK on the corpus before reading further. This is not JSON Schema validation. It checks only what the consumer needs to read each entry safely — the v3.6.4 required fields:
+
+- shape OK ≡ `literature_corpus` is a YAML list AND
+- each entry is a YAML mapping AND
+- each entry has `citation_key` (non-empty string), `title` (non-empty string), `authors` (non-empty list), `year` (numeric-coercible), `source_pointer` (non-empty string).
+
+If the passport lacks `literature_corpus` or it is empty, run the original 4-Layer Progressive Strategy (§"Detailed Execution Algorithm") unchanged. If parse or shape check fails, emit `[CORPUS PARSE FAILURE: <one-line cause>]` and fall back. Otherwise, continue to Step 1.
+
+### Step 1: pre-screen corpus against current RQ
+
+For each entry:
+
+1. Read the five required fields and any optional fields present (`venue`, `doi`, `tags`, `abstract`, `user_notes`).
+2. Apply the current Inclusion / Exclusion criteria (peer-review status, date range, language, relevance) to whatever fields are present. `title` is always available; `abstract` and `tags` participate only when populated. Field absence narrows the screening surface but never causes SKIP.
+3. Classify as INCLUDE / EXCLUDE / SKIP. SKIP fires only when criteria cannot be applied at all (see F1 in spec §4.1).
+
+The Phase A title/abstract screening described in §"Source Screening Protocol" applies to corpus entries identically; the difference is only that the input list is the user's curated corpus rather than the Layer 1-4 hit set.
+
+### Step 2: search-fills-gap (external DB)
+
+```
+derive uncovered_topics = RQ subtopics − {topics covered by pre_screened_included[]}
+user_corpus_only = user explicitly asked "use my corpus only"
+
+case A: uncovered_topics non-empty AND NOT user_corpus_only
+    → external DB search scoped to uncovered_topics, run via 4-Layer Progressive Strategy
+case B: uncovered_topics empty AND user_corpus_only
+    → skip external; surface "external search omitted on user request"
+case B': uncovered_topics non-empty AND user_corpus_only
+    → skip external BUT surface uncovered_topics as known coverage gap
+case C: uncovered_topics empty AND NOT user_corpus_only
+    → standard external search (not scope-limited; newer-work + dedup validation)
+```
+
+The external search executes the 4-Layer Progressive Strategy (Boolean → Citation Chaining → Forward Tracking → Semantic). Iron Rule 1 applies — the same Inclusion/Exclusion criteria screen Layer 1-4 hits as screened corpus entries.
+
+### Step 3: merge
+
+`final_included = pre_screened_included[] ∪ external_included[]`. The annotated bibliography stays neutral — no source-attribution tags on entries, no provenance column in the Literature Matrix.
+
+### Step 4: emit Search Strategy Report
+
+The PRE-SCREENED block goes into the Search Strategy section of the Output Format above, immediately before the existing `Databases` line.
+
+### PRE-SCREENED block template
+
+```markdown
+PRE-SCREENED FROM USER CORPUS:
+- Adapter: <obtained_via enum value | "<unspecified>" | "mixed (...)">
+                                          # e.g., zotero-bbt-export, or "<unspecified>" per F4a,
+                                          # or "<value> (N of M entries declared)" per F4b,
+                                          # or "mixed (zotero-bbt-export: K, ..., undeclared: U)" per F4c
+- Snapshot date: <max(obtained_at)>        # ISO 8601, or "<unspecified>" per F4d,
+                                          # or "<date> (M of N entries declared)" per F4e,
+                                          # or append "(spans <N> days; corpus may not be a single snapshot)" per F4f
+- Total entries scanned: <N>
+- Pre-screening result:
+  - Included: <K> entries
+    citation_keys:
+      - <k1>
+      - <k2>
+  - Excluded by inclusion / exclusion criteria: <E> entries
+    citation_keys:
+      - <e1>
+    (omit this sub-block if 0)
+  - Skipped (criteria cannot be applied): <S> entries
+    citation_keys with reasons:
+      - <key>: <reason>
+    (omit this sub-block if 0)
+- Zero-hit note (emit per F3 only when Included: 0):
+  Zero-hit note (corpus non-empty, 0 included after screening): possible
+  causes are (a) corpus is stale relative to current RQ, (b) RQ has
+  shifted away from what the user originally curated, (c) adapter
+  exported entries unrelated to this RQ.
+- Note: presence in corpus does not imply inclusion;
+  same criteria applied to corpus and external sources.
+```
+
+Lists with more than 50 entries truncate to first 20 + last 5 alphabetically, with an appendix file at `pre_screened_citation_keys_<list>_<timestamp>.txt`. Skipped truncation preserves `<key>: <reason>` in both inline and appendix forms. See spec §3.2 for the full truncation rule.
+
+### Zero-hit and provenance reporting (F3 / F4)
+
+Two reproducibility surfaces sit inside the PRE-SCREENED block. The agent emits each one when the corresponding trigger fires; both are non-blocking.
+
+**Zero-hit note (F3).** When `pre_screened_included[]` is empty after Step 1 — corpus is non-empty but no entry survived screening — the agent emits a zero-hit note inside the PRE-SCREENED block listing the three plausible causes:
+
+```
+- Zero-hit note (corpus non-empty, 0 included after screening): possible causes
+  are (a) corpus is stale relative to current RQ, (b) RQ has shifted away from
+  what the user originally curated, (c) adapter exported entries unrelated to
+  this RQ.
+```
+
+The note appears regardless of which Step 2 case fires next. Step 2 dispatch follows F3 in spec §4.1: NOT user_corpus_only routes through case A or C with external DB; user_corpus_only routes through case B' with no external search but explicit gap surfacing.
+
+**Provenance reporting (F4a–F4f).** `obtained_via` and `obtained_at` are optional in v3.6.4. The PRE-SCREENED block's `Adapter:` and `Snapshot date:` lines must reflect actual coverage, not invent enum values:
+
+| Sub-case | Trigger | `Adapter:` line content |
+|---|---|---|
+| F4a | Zero entries declare `obtained_via` | `Adapter: <unspecified>` + trailing note `Adapter origin not declared; user-written adapter should populate obtained_via per v3.6.4 schema recommendation.` |
+| F4b | At least one entry declares; all declared share single value | `Adapter: <enum value> (N of M entries declared)` |
+| F4c | Two or more distinct enum values among declared entries | `Adapter: mixed (zotero-bbt-export: K, obsidian-vault: L, ..., undeclared: U)` |
+
+| Sub-case | Trigger | `Snapshot date:` line content |
+|---|---|---|
+| F4d | Zero entries declare `obtained_at` | `Snapshot date: <unspecified>` + trailing note `Snapshot date not declared; reproducibility is reduced. Adapter should populate obtained_at per v3.6.4 schema recommendation.` |
+| F4e | Partial coverage | `Snapshot date: <max(obtained_at)> (M of N entries declared)` |
+| F4f | Wide spread (>90 days between min and max) | append `(spans <N> days; corpus may not be a single snapshot)`. Composes with F4e. |
+
+F4a/b/c are mutually exclusive by trigger. F4d applies only when zero entries declare `obtained_at`; F4e and F4f compose. Never silently fill in or guess; never demand presence. See spec §4.2 for the full precedence reasoning.
+
+## Trust-Chain Frontmatter Discipline (v3.7.1+)
+
+Schema 9 `literature_corpus[]` entries carry seven trust-chain fields that distinguish three previously-conflated confidence levels: source acquisition, source verification against the original artifact, and human-read attestation. As a downstream consumer of `literature_corpus[]`, you read these fields when filtering or ranking entries; you MUST NOT mutate or fabricate them.
+
+### The seven entry-stored trust fields (read-only from this agent's perspective)
+
+```yaml
+source_acquired:                  true | false       # original PDF/HTML/dataset is on disk
+source_acquisition_date:          <ISO 8601>         # only meaningful when acquired=true
+source_acquisition_path:          <relative path>    # only meaningful when acquired=true
+source_verified_against_original: true | false       # AI cross-checked against original content
+source_verification_method:       codex_audit | manual_grep | vision_check | none
+description_source:               original_pdf | bibliography_v<n> | secondary_summary
+description_last_audit:           <round_id> | "none" | null  # null only when source_acquired=true; rule-#2 case requires literal "none"
+```
+
+### Three firm rules
+
+1. **Verified ⇒ acquired AND real method.** Treat `source_verified_against_original: true` as meaningful only when paired with `source_acquired: true` AND `source_verification_method ∈ {codex_audit, manual_grep, vision_check}`. Entries that violate this combination are spec-broken; surface them to the user rather than silently treating them as verified.
+
+2. **Not acquired ⇒ literal `"none"` audit sentinel.** When `source_acquired: false`, `description_last_audit` MUST be the literal string `"none"` (round-6 codex P2 closure aligns this with spec § 3.1 line 120 + line 111 yaml vocabulary; null is rejected for the rule-#2 case). If you encounter an entry with `source_acquired: false` and `description_last_audit: "round-3-codex"` (or similar — including null), treat the audit claim as untrusted and surface the inconsistency. Such entries fail the trust-chain CI lint, so they are also a signal that the upstream adapter / `bibliography_agent` is producing spec-broken output.
+
+3. **NEVER emit `human_read_source` or `human_read_at` on the entry.** Those keys are USER-OWNED and derived at read-time from the §3.6 peer file `<session>_human_read_log.yaml`. The entry schema is `additionalProperties: false`; emitting these keys would break the v3.6.5 corpus-consumer protocol that this agent depends on. If you need the human-read signal, the orchestrator surfaces it via the §3.6 peer-file join — do not write it to the entry yourself.
+
+### Refusal-on-uncertain rule
+
+When the verification fields are missing or inconsistent (e.g. `source_verified_against_original: true` with `source_acquired: false`), do not paper over the inconsistency. Treat such entries as `verified=false` for downstream filtering and flag the inconsistency in your search-strategy report so the user can correct the upstream adapter or `bibliography_agent` output.
 
 ## Detailed Execution Algorithm
 
