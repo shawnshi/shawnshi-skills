@@ -1,0 +1,4 @@
+## 2024-05-12 - Command Injection in hub_utils.py
+**Vulnerability:** The `run_llm()` function in `personal-intelligence-hub/scripts/hub_utils.py` executed a shell command using `subprocess.Popen` with `shell=True`. The command was derived from `resolve_llm_command()`, which reads the `PIH_LLM_COMMAND` environment variable. This allows an attacker to inject arbitrary commands if they control the environment variable.
+**Learning:** `shell=True` should never be used with externally-controllable input or strings constructed from environment variables, as it exposes the system to command injection vulnerabilities.
+**Prevention:** Always parse command strings into structured lists (e.g., using `shlex.split()`) and use `shell=False` when calling `subprocess.Popen` or `subprocess.run` to prevent shell metacharacters from being interpreted.

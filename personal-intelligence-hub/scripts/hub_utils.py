@@ -3,6 +3,7 @@ from __future__ import annotations
 import json
 import os
 import re
+import shlex
 import shutil
 import subprocess
 from pathlib import Path
@@ -81,13 +82,15 @@ def run_llm(prompt: str, fallback_used: bool = False) -> str:
     if fallback_used and "gemini ask" in command:
         command = command.replace("gemini ask", "gemini ask -m gemini-3.1-flash")
 
+    # SECURITY FIX: Use shlex.split to parse the command string and set shell=False
+    # to prevent command injection from externally-controllable command strings.
     process = subprocess.Popen(
-        command,
+        shlex.split(command),
         stdin=subprocess.PIPE,
         stdout=subprocess.PIPE,
         stderr=subprocess.PIPE,
         text=True,
-        shell=True,
+        shell=False,
         encoding="utf-8",
         errors="ignore",
     )
