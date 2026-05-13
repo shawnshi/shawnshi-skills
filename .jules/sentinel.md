@@ -1,0 +1,4 @@
+## 2024-05-13 - Command Injection via Externally Controllable Command String
+**Vulnerability:** Command injection vulnerability identified in `personal-intelligence-hub/scripts/hub_utils.py` where a subprocess was executing commands derived from an externally controllable environment variable (`PIH_LLM_COMMAND`) using `shell=True`.
+**Learning:** Even if a command string seems internal, if parts of it can be controlled by external sources (like environment variables), passing the entire string to a shell interpreter via `shell=True` can allow an attacker to inject and execute arbitrary shell commands.
+**Prevention:** Always use `shell=False` when executing commands in Python with `subprocess`, and construct the command as a structured list of arguments (using `shlex.split()` if the command is initially a string) to ensure the command and its arguments are processed safely without shell interpretation.
