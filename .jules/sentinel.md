@@ -1,0 +1,4 @@
+## 2026-05-14 - Fix Command Injection Vulnerability in hub_utils.py
+**Vulnerability:** The `hub_utils.py` script was executing external LLM commands via `subprocess.Popen(..., shell=True)` using strings potentially controlled by an environment variable (`PIH_LLM_COMMAND`), which posed a significant command injection risk.
+**Learning:** Using `shell=True` with unvalidated input (even if it comes from an environment variable intended for configuration) exposes the system to command injection vulnerabilities. Since this variable directly specifies the command, a malicious environment configuration could execute arbitrary shell commands.
+**Prevention:** Always use `shell=False` for subprocess execution, especially when incorporating external or configurable inputs. Parse strings meant to be commands into structured lists using tools like `shlex.split()`, which treats the components as a command and its arguments without invoking the shell interpreter.
