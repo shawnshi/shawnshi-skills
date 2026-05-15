@@ -1,20 +1,24 @@
-{
-  "schema_version": 1,
-  "skill": "cognitive-hv-analysis",
-  "generated_at": "2026-04-30T19:16:50",
-  "skill_md": "SKILL.md",
-  "top_level_files": [
-    "SKILL.md"
-  ],
-  "top_level_directories": [
-    "references"
-  ],
-  "resource_directories": [
-    {
-      "name": "references",
-      "file_count": 1
-    }
-  ],
-  "declared_local_dependencies": [],
-  "missing_declared_dependencies": []
+﻿{
+    "schema_version":  1,
+    "skill":  "cognitive-hv-analysis",
+    "generated_at":  "2026-05-11T14:46:01",
+    "skill_md":  "SKILL.md",
+    "top_level_files":  [
+                            "SKILL.md"
+                        ],
+    "top_level_directories":  [
+                                  "references"
+                              ],
+    "resource_directories":  [
+                                 {
+                                     "name":  "references",
+                                     "file_count":  1
+                                 }
+                             ],
+    "declared_local_dependencies":  [
+
+                                    ],
+    "missing_declared_dependencies":  [
+
+                                      ]
 }

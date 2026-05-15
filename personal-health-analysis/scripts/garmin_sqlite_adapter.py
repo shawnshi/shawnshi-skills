@@ -126,9 +126,11 @@ def get_summary(days=7):
         if not df.empty:
             df['high_stress_duration'] = df['stress_avg'].apply(lambda x: max(0, x - 35) * 3600 / 15 if pd.notnull(x) else 0)
             df['medium_stress_duration'] = df['stress_avg'].apply(lambda x: max(0, x - 25) * 3600 / 10 if pd.notnull(x) else 0)
+        else:
+            raise ValueError("No data found in daily_summary table")
     except Exception as e:
-        df = pd.DataFrame()
-        print(f"Failed to query summary: {e}")
+        conn.close()
+        raise e
     conn.close()
     
     end_date = datetime.now().strftime('%Y-%m-%d')
@@ -187,7 +189,12 @@ def get_daily_friction_matrix(days=90):
     # 2. Physiological Friction (Stress & RHR & Body Battery)
     conn_sum = get_connection(GARMIN_DB)
     q_sum = f"SELECT day as date, stress_avg, rhr as resting_heart_rate, bb_max as body_battery_highest, bb_min as body_battery_lowest FROM daily_summary WHERE day >= '{start_date}'"
-    df_sum = pd.read_sql_query(q_sum, conn_sum)
+    try:
+        df_sum = pd.read_sql_query(q_sum, conn_sum)
+    except Exception as e:
+        df_sum = pd.DataFrame(columns=['date', 'stress_avg', 'resting_heart_rate', 'body_battery_highest', 'body_battery_lowest'])
+        print(f"Failed to query daily_summary in friction matrix: {e}")
+        
     conn_sum.close()
     
     # 3. Merge with Complete Time Series (Zero-padding)

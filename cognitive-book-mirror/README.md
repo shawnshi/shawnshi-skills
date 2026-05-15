@@ -22,4 +22,4 @@ pip install -r scripts/requirements.txt
 python scripts/orchestrate_mirror.py --file "C:/path/to/your/book.epub"
 ```
 
-生成结果将存放在本目录的 `output/` 文件夹下。
+生成结果将存放在 `~/.gemini/MEMORY/raw/read/` 文件夹下。

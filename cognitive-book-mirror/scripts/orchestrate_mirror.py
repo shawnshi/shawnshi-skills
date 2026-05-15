@@ -13,7 +13,7 @@ WORKSPACE_ROOT = SKILL_ROOT.parent.parent
 DIARY_DIR = WORKSPACE_ROOT / "MEMORY" / "raw" / "privacy" / "Diary"
 USER_MD = WORKSPACE_ROOT / "USER.md"
 SOUL_MD = WORKSPACE_ROOT / "pai" / "SOUL.md"
-OUTPUT_DIR = SKILL_ROOT / "output"
+OUTPUT_DIR = WORKSPACE_ROOT / "MEMORY" / "raw" / "read"
 TMP_DIR = WORKSPACE_ROOT / "tmp" / "playgrounds" / "book_mirror"
 
 AGENT_PROMPT_PATH = SKILL_ROOT / "agents" / "mirror-agent.md"
@@ -137,7 +137,7 @@ def main():
     
     genai.configure(api_key=api_key)
     # Use Gemini 1.5 Pro or similar suitable model. Flash is good enough usually.
-    model = genai.GenerativeModel('gemini-1.5-flash') 
+    model = genai.GenerativeModel('gemini-flash-latest') 
     
     # 1. Extraction
     chapters = extract_text(target_file)

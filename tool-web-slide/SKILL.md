@@ -14,7 +14,6 @@ Strategy:
 AVOID: 禁止输出普通静态文档；禁止缺失可打开的 HTML 成品。
 </strategy-gene>
 
-# Magazine Web Ppt
 
 ## 这个 Skill 做什么
 
@@ -39,6 +38,7 @@ AVOID: 禁止输出普通静态文档；禁止缺失可打开的 HTML 成品。
 
 **两种风格共享**：横向翻页（键盘 ← →、滚轮、触屏、ESC 索引）、Lucide 图标、Motion One 入场动效（本地 + CDN 双保险）。
 
+
 ## 何时使用
 
 **合适的场景**：
@@ -62,31 +62,32 @@ AVOID: 禁止输出普通静态文档；禁止缺失可打开的 HTML 成品。
 
 #### 运行环境适配
 
-- **运行环境适配**: 当前系统处于 Gemini CLI 环境，且具备 `ask_user` 工具。使用 `ask_user` 工具来进行结构化的询问与拦截。一次最多问 1-3 个最关键问题；如果信息缺口不影响开工，先做合理假设并在回复里说明。
+- **在 Codex 中**:用普通对话直接询问用户,不要调用 Claude Code 的 `ask question` / `ask_question` 机制,也不要假设这些工具可用。一次最多问 1-3 个最关键问题;如果信息缺口不影响开工,先做合理假设并在回复里说明。
+- **在 Claude Code 中**:可以继续使用原有的 `ask question` 交互方式来逐项澄清。
 
 #### 7 问澄清清单
 
-| # | 问题 | 为什么要问 |
-|---|------|-----------|
-| 1 | **风格 A 还是 B?**(电子杂志风 / 瑞士国际主义风) | **必须先问**,决定用哪个 template + layouts + themes 文件 |
-| 2 | **受众是谁?分享场景?**(行业内部 / 商业发布 / demo day / 私享会) | 决定语言风格和深度 |
-| 3 | **分享时长?** | 15 分钟 ≈ 10 页,30 分钟 ≈ 20 页,45 分钟 ≈ 25-30 页 |
-| 4 | **有没有原始素材?**(文档 / 数据 / 旧 PPT / 文章链接) | 有素材就基于素材,没有就帮他搭 |
-| 5 | **有没有图片?放在哪?** | 详见下方"图片约定" |
-| 6 | **想要哪套主题色?** | 杂志风 5 套(`themes.md`) / 瑞士风 4 套(`themes-swiss.md`),挑一 |
-| 7 | **有没有硬约束?**(必须包含 XX 数据 / 不能出现 YY) | 避免返工 |
+| # | 问题                                                            | 为什么要问                                                     |
+|---|-----------------------------------------------------------------|----------------------------------------------------------------|
+| 1 | **风格 A 还是 B?**(电子杂志风 / 瑞士国际主义风)                 | **必须先问**,决定用哪个 template + layouts + themes 文件       |
+| 2 | **受众是谁?分享场景?**(行业内部 / 商业发布 / demo day / 私享会) | 决定语言风格和深度                                             |
+| 3 | **分享时长?**                                                   | 15 分钟 ≈ 10 页,30 分钟 ≈ 20 页,45 分钟 ≈ 25-30 页             |
+| 4 | **有没有原始素材?**(文档 / 数据 / 旧 PPT / 文章链接)            | 有素材就基于素材,没有就帮他搭                                  |
+| 5 | **有没有图片?放在哪?**                                          | 详见下方"图片约定"                                             |
+| 6 | **想要哪套主题色?**                                             | 杂志风 5 套(`themes.md`) / 瑞士风 4 套(`themes-swiss.md`),挑一 |
+| 7 | **有没有硬约束?**(必须包含 XX 数据 / 不能出现 YY)               | 避免返工                                                       |
 
 #### 风格选择参考(问题 1)
 
-| 如果用户说... | 推荐风格 |
-|---|---|
-| "杂志感" / "人文" / "Monocle 风" / 不指定 | **A · 电子杂志风** |
-| "瑞士风" / "Swiss Style" / "Helvetica" / "极简" / "网格" / "信息图" / "数据驱动" | **B · 瑞士国际主义风** |
-| 内容是 AI 产品 / 技术 / 工程 / 数据汇报 | B 更合适 |
-| 内容是行业观察 / 人文 / 故事 / 文化 | A 更合适 |
-| 用户给了大量 KPI 数字 / 路线图 / 流程 | B 更合适(`Data Hero` 布局是瑞士风专长) |
-| 用户给了大量纪实照片 / 人文图片 | A 更合适(图片网格、左文右图是杂志风专长) |
-| 用户需要 GPT-M 2.0 生成截图再设计 / 信息图 / 证据墙 | B 也很合适(P23/P24 是瑞士风图片专用版式) |
+| 如果用户说...                                                                    | 推荐风格                                 |
+|----------------------------------------------------------------------------------|------------------------------------------|
+| "杂志感" / "人文" / "Monocle 风" / 不指定                                        | **A · 电子杂志风**                       |
+| "瑞士风" / "Swiss Style" / "Helvetica" / "极简" / "网格" / "信息图" / "数据驱动" | **B · 瑞士国际主义风**                   |
+| 内容是 AI 产品 / 技术 / 工程 / 数据汇报                                          | B 更合适                                 |
+| 内容是行业观察 / 人文 / 故事 / 文化                                              | A 更合适                                 |
+| 用户给了大量 KPI 数字 / 路线图 / 流程                                            | B 更合适(`Data Hero` 布局是瑞士风专长)   |
+| 用户给了大量纪实照片 / 人文图片                                                  | A 更合适(图片网格、左文右图是杂志风专长) |
+| 用户需要 GPT-M 2.0 生成截图再设计 / 信息图 / 证据墙                              | B 也很合适(P23/P24 是瑞士风图片专用版式) |
 
 #### 大纲协助(如果用户没有大纲)
 
@@ -108,7 +109,7 @@ AVOID: 禁止输出普通静态文档；禁止缺失可打开的 HTML 成品。
 
 在动手前向用户说清:
 
-- **文件夹位置**:`C:\Users\shich\.gemini\slide-deck\XXX\images\` 下(和 `index.html` 同级)
+- **文件夹位置**:`项目/XXX/ppt/images/` 下(和 `index.html` 同级)
 - **命名规范**:`{页号}-{语义}.{ext}`,例如 `01-cover.jpg` / `03-figma.jpg` / `05-dashboard.png`
   - 页号补零便于排序
   - 语义用英文,短、具体、和内容对应
@@ -119,9 +120,9 @@ AVOID: 禁止输出普通静态文档；禁止缺失可打开的 HTML 成品。
 - **如何替换**:保持**同名覆盖**最稳(HTML 里不用改路径);如果文件名变了,记得全局搜 `images/旧名` 改成新名
 - **没图怎么办**:和用户对齐,可以先用占位色块生成结构,等图片后期补;但要告知 layout 4/5/10 等图文混排页没图就没法验证视觉效果
 
-#### 配图生成(可选)
+#### Codex 配图生成(可选)
 
-完成 deck 初稿后,主动问用户是否需要生成配图并插入 PPT。不要默认生成。
+如果当前运行环境是 **Codex**,完成 deck 初稿后,主动问用户是否需要用 GPT-M 2.0 生成配图并插入 PPT。不要默认生成。
 
 推荐询问方式:
 
@@ -140,16 +141,16 @@ AVOID: 禁止输出普通静态文档；禁止缺失可打开的 HTML 成品。
 
 ### Step 2 · 拷贝模板
 
-**根据 Step 1 选定的风格,拷贝对应的模板**到目标位置（通常是 `C:\Users\shich\.gemini\slide-deck\XXX\index.html`），同时在同级建一个 `images/` 文件夹准备接图片。由于当前环境是 Windows，请使用 PowerShell 脚本指令。
+**根据 Step 1 选定的风格,拷贝对应的模板**到目标位置（通常是 `项目/XXX/ppt/index.html`），同时在同级建一个 `images/` 文件夹准备接图片。
 
-```powershell
-New-Item -Path "C:\Users\shich\.gemini\slide-deck\XXX\images" -ItemType Directory -Force
+```bash
+mkdir -p "项目/XXX/ppt/images"
 
 # 风格 A · 电子杂志风
-Copy-Item "C:\Users\shich\.gemini\skills\tool-web-slide\assets\template.html" "C:\Users\shich\.gemini\slide-deck\XXX\index.html" -Force
+cp "<SKILL_ROOT>/assets/template.html" "项目/XXX/ppt/index.html"
 
 # 或 风格 B · 瑞士国际主义风
-Copy-Item "C:\Users\shich\.gemini\skills\tool-web-slide\assets\template-swiss.html" "C:\Users\shich\.gemini\slide-deck\XXX\index.html" -Force
+cp "<SKILL_ROOT>/assets/template-swiss.html" "项目/XXX/ppt/index.html"
 ```
 
 两个 `template*.html` 都是**完整可运行**的文件——CSS、WebGL shader、翻页 JS、字体/图标 CDN 全已预设好,只有 `<!-- SLIDES_HERE -->` 占位符等待你填充 slide 内容。
@@ -160,8 +161,8 @@ Copy-Item "C:\Users\shich\.gemini\skills\tool-web-slide\assets\template-swiss.ht
 
 拷贝后立刻改掉以下占位符，否则浏览器 Tab 会显示"[必填] 替换为 PPT 标题"这种尴尬文字：
 
-| 位置 | 原始 | 需改为 |
-|------|------|--------|
+| 位置      | 原始                                  | 需改为                                                  |
+|-----------|---------------------------------------|---------------------------------------------------------|
 | `<title>` | `[必填] 替换为 PPT 标题 · Deck Title` | 实际 deck 标题(如 `一种新的工作方式 · Luke Wroblewski`) |
 
 每次拷贝完 template.html 第一件事:grep 一下"[必填]" 确认全部替换完。
@@ -170,13 +171,13 @@ Copy-Item "C:\Users\shich\.gemini\skills\tool-web-slide\assets\template-swiss.ht
 
 本 skill **只允许从 5 套精心调配的预设里选一套**,不接受用户自定义 hex 值——颜色搭配错了画面瞬间变丑,保护美学比给自由更重要。
 
-| # | 主题 | 适合 |
-|---|------|------|
+| # | 主题       | 适合                               |
+|---|------------|------------------------------------|
 | 1 | 🖋 墨水经典 | 通用 / 商业发布 / 不知道选啥的默认 |
-| 2 | 🌊 靛蓝瓷 | 科技 / 研究 / 数据 / 技术发布会 |
-| 3 | 🌿 森林墨 | 自然 / 可持续 / 文化 / 非虚构 |
-| 4 | 🍂 牛皮纸 | 怀旧 / 人文 / 文学 / 独立杂志 |
-| 5 | 🌙 沙丘 | 艺术 / 设计 / 创意 / 画廊 |
+| 2 | 🌊 靛蓝瓷   | 科技 / 研究 / 数据 / 技术发布会    |
+| 3 | 🌿 森林墨   | 自然 / 可持续 / 文化 / 非虚构      |
+| 4 | 🍂 牛皮纸   | 怀旧 / 人文 / 文学 / 独立杂志      |
+| 5 | 🌙 沙丘     | 艺术 / 设计 / 创意 / 画廊          |
 
 **操作**:
 1. 基于内容主题推荐一套,或直接问用户选哪一套
@@ -244,18 +245,18 @@ Copy-Item "C:\Users\shich\.gemini\skills\tool-web-slide\assets\template-swiss.ht
 
 **风格 A** → `references/layouts.md`:
 
-| Layout | 用途 |
-|---|---|
-| 1. 开场封面 | 第 1 页 |
-| 2. 章节幕封 | 每幕开场 |
-| 3. 数据大字报 | 抛硬数据 |
-| 4. 左文右图(Quote + Image) | 身份反差 / 故事 |
-| 5. 图片网格 | 多图对比 / 截图实证 |
-| 6. 两列流水线(Pipeline) | 工作流程 |
-| 7. 悬念收束 / 问题页 | 幕末 / 收尾 |
-| 8. 大引用页(Big Quote) | 衬线金句 / takeaway |
-| 9. 并列对比(Before / After) | 旧模式 vs 新模式 |
-| 10. 图文混排(Lead Image + Side Text) | 信息密集的图文页 |
+| Layout                               | 用途                |
+|--------------------------------------|---------------------|
+| 1. 开场封面                          | 第 1 页             |
+| 2. 章节幕封                          | 每幕开场            |
+| 3. 数据大字报                        | 抛硬数据            |
+| 4. 左文右图(Quote + Image)           | 身份反差 / 故事     |
+| 5. 图片网格                          | 多图对比 / 截图实证 |
+| 6. 两列流水线(Pipeline)              | 工作流程            |
+| 7. 悬念收束 / 问题页                 | 幕末 / 收尾         |
+| 8. 大引用页(Big Quote)               | 衬线金句 / takeaway |
+| 9. 并列对比(Before / After)          | 旧模式 vs 新模式    |
+| 10. 图文混排(Lead Image + Side Text) | 信息密集的图文页    |
 
 **风格 B** → 先读 `references/swiss-layout-lock.md`,再读 `references/layouts-swiss.md`。
 
@@ -266,33 +267,36 @@ Copy-Item "C:\Users\shich\.gemini\skills\tool-web-slide\assets\template-swiss.ht
 - 不允许临时发明 `P23/P24`、`Swiss Image Split`、`Evidence Grid` 这类原始 22P 之外的正文结构,除非用户明确要求实验版式。
 - 顶部中文标题默认左对齐、处在左上内容轴。不要把小标题放左列、大标题放右列,造成视觉居中;只有原始 statement/split 版式允许强中心叙事。
 - SVG 只负责几何图形。不要在 SVG 里写文字标签,所有标签改用 HTML 网格/卡片/caption。
+- 地理/历史/城市路线/地点关系页使用 `S08 + Swiss Map Component`:先读 `references/swiss-map-component.md`,仍保留 `data-layout="S08"`。
 
 原始 22 个正文版式如下:
 
-| Layout | 用途 |
-|---|---|
-| S01 Index Cover | 原始索引封面 |
-| S02 Vertical Timeline + KPI | 演化对比 / 年代变迁 |
-| S03 Split Statement | 核心论点 / 左右分屏 |
-| S04 Six Cells | 6 项概念定义 |
-| S05 Three Layers | 三层架构 |
-| S06 KPI Tower | 4 项数据视觉化高度差 |
-| S07 H-Bar Chart | 5-10 项排名比较 |
-| S08 Duo Compare | Before/After 对照 |
-| S09 Dot Matrix Statement | 大引述 / statement |
-| S10 Split Closing | 收束页 |
-| S11 Horizontal Timeline | 4-7 步流程 |
-| S12 Manifesto + Ink Banner | 阶段性结论 |
-| S13 Three Forces | 3 个对等概念深化 |
-| S14 Loop Form | 自学闭环 / 自动化 |
-| S15 Matrix + Hero Stat | 8-12 项矩阵 + 总数据 |
-| S16 Multi-card Brief | 6 项快讯小卡 |
-| S17 System Diagram | 三层架构 / 生态地图 |
-| S18 Why Now | 三论点 + 数据支撑 |
-| S19 Four Cards | 4 项等权特性 |
-| S20 Stacked KPI Ledger | 纵向账单数据 |
-| S21 Tech Spec Sheet | 产品规格 / benchmark |
-| S22 Image Hero | 21:9 顶图 + 标题块 + 三列 KPI |
+| Layout                      | 用途                          |
+|-----------------------------|-------------------------------|
+| S01 Index Cover             | 原始索引封面                  |
+| S02 Vertical Timeline + KPI | 演化对比 / 年代变迁           |
+| S03 Split Statement         | 核心论点 / 左右分屏           |
+| S04 Six Cells               | 6 项概念定义                  |
+| S05 Three Layers            | 三层架构                      |
+| S06 KPI Tower               | 4 项数据视觉化高度差          |
+| S07 H-Bar Chart             | 5-10 项排名比较               |
+| S08 Duo Compare             | Before/After 对照             |
+| S09 Dot Matrix Statement    | 大引述 / statement            |
+| S10 Split Closing           | 收束页                        |
+| S11 Horizontal Timeline     | 4-7 步流程                    |
+| S12 Manifesto + Ink Banner  | 阶段性结论                    |
+| S13 Three Forces            | 3 个对等概念深化              |
+| S14 Loop Form               | 自学闭环 / 自动化             |
+| S15 Matrix + Hero Stat      | 8-12 项矩阵 + 总数据          |
+| S16 Multi-card Brief        | 6 项快讯小卡                  |
+| S17 System Diagram          | 三层架构 / 生态地图           |
+| S18 Why Now                 | 三论点 + 数据支撑             |
+| S19 Four Cards              | 4 项等权特性                  |
+| S20 Stacked KPI Ledger      | 纵向账单数据                  |
+| S21 Tech Spec Sheet         | 产品规格 / benchmark          |
+| S22 Image Hero              | 21:9 顶图 + 标题块 + 三列 KPI |
+
+**登记扩展**:`S08 + Swiss Map Component` 用于地点、人物住所、路线、城市关系。它不是新 layout,而是 S08 右侧插槽的 MapLibre 地图组件;必须按 `references/swiss-map-component.md` 的点位、连线、卡片和右上角缩放/拖动控制实现。
 
 选对应 layout,粘过去,改文案和图片路径即可。**务必先完成 3.0 预检**。
 
@@ -301,21 +305,21 @@ Copy-Item "C:\Users\shich\.gemini\skills\tool-web-slide\assets\template-swiss.ht
 - 如果用户说"测试模板 / 看看效果 / 多一点版式",必须覆盖:一个封面、一个收尾、至少 1 个对比或时间线(S08/S11/S02)、至少 1 个结构图(S14/S17/S15)、至少 1 个图片版式(S22 或 S15/S16 图片格改造)。
 - 不允许连续 3 页使用同一种主体结构,例如连续三页 `head + grid + card`。
 - 图片页不能偷懒发明新结构。2-3 张图时,用 S15/S16 的原始网格骨架改造成图片格;单张大图用 S22。
-- 开写 HTML 前先列一张 `页码 → data-layout → 选用理由 → 图片槽位` 草稿;交付前运行 `node C:\Users\shich\.gemini\skills\tool-web-slide\scripts\validate-swiss-deck.mjs C:\Users\shich\.gemini\slide-deck\XXX\index.html`。
+- 开写 HTML 前先列一张 `页码 → data-layout → 选用理由 → 图片槽位` 草稿;交付前运行 `node <SKILL_ROOT>/scripts/validate-swiss-deck.mjs index.html`。
 
 #### 3.2 · 图片比例规范
 
 永远用**标准比例**,不要用原图奇葩比例(如 `2592/1798`):
 
-| 场景 | 推荐比例 |
-|------|---------|
-| S22 顶部主图 | **21:9**;照片关键主体放中央安全区 |
-| S15/S16 多图格 | 统一 21:9 或统一 16:10,不能混用 |
-| 左文右图 主图(风格 A) | 16:10 或 4:3 + `max-height:56vh` |
-| 图片网格(风格 A) | **固定 `height:26vh`**,不用 aspect-ratio |
-| 左小图 + 右文字 | 1:1 或 3:2 |
-| 全屏主视觉 | 16:9 + `max-height:64vh` |
-| 图文混排小插图 | 3:2 或 3:4 |
+| 场景                  | 推荐比例                                 |
+|-----------------------|------------------------------------------|
+| S22 顶部主图          | **21:9**;照片关键主体放中央安全区        |
+| S15/S16 多图格        | 统一 21:9 或统一 16:10,不能混用          |
+| 左文右图 主图(风格 A) | 16:10 或 4:3 + `max-height:56vh`         |
+| 图片网格(风格 A)      | **固定 `height:26vh`**,不用 aspect-ratio |
+| 左小图 + 右文字       | 1:1 或 3:2                               |
+| 全屏主视觉            | 16:9 + `max-height:64vh`                 |
+| 图文混排小插图        | 3:2 或 3:4                               |
 
 **默认不要让图片 `align-self:end`**——会滑到页面底部,很容易碰到分页组件。用 grid 容器 + `align-items:start`(template 已预设)让图片贴顶即可;只有风格 B 的 P23 可以用 `.swiss-img-split.align-image-bottom`,因为模板已经给它内置了 `--nav-safe-bottom` 安全区。
 
@@ -334,12 +338,12 @@ Copy-Item "C:\Users\shich\.gemini\skills\tool-web-slide\assets\template-swiss.ht
 
 中文方块字视觉面积大,不能直接套英文 hero 的 6.8-7vw。写中文大标题前先分档:
 
-| 标题形态 | 推荐字号 |
-|---|---|
-| 1 行,≤ 8 个中文字符 | `min(6.4vw,11.2vh)` |
-| 2 行,每行≤ 8 个中文字符 | `min(5.8vw,10.2vh)` |
-| 2 行,任一行 9-12 个中文字符 | `min(5.2vw,9.2vh)` |
-| 3 行或更长 | 优先改写标题;不得已用 `min(4.6vw,8.2vh)` |
+| 标题形态                    | 推荐字号                                 |
+|-----------------------------|------------------------------------------|
+| 1 行,≤ 8 个中文字符         | `min(6.4vw,11.2vh)`                      |
+| 2 行,每行≤ 8 个中文字符     | `min(5.8vw,10.2vh)`                      |
+| 2 行,任一行 9-12 个中文字符 | `min(5.2vw,9.2vh)`                       |
+| 3 行或更长                  | 优先改写标题;不得已用 `min(4.6vw,8.2vh)` |
 
 如果标题挤占了图片或正文区域,先压缩标题文案,再降字号;不要靠把下方内容推到底来硬塞。
 
@@ -353,7 +357,7 @@ Copy-Item "C:\Users\shich\.gemini\skills\tool-web-slide\assets\template-swiss.ht
 
 代码只能证明类名和结构存在,不能证明版式舒服。生成后必须打开网页逐页看:
 
-1. 同时打开原始参考 PPT、当前模板或生成页、测试 PPT;原始参考是 `Golden Reference File (Original Layouts)`。
+1. 同时打开原始参考 PPT、当前模板或生成页、测试 PPT;原始参考是 `/Users/guohao/Documents/op7418的仓库/项目/Thin-Harness-Fat-Skills/ppt/index.html`。
 2. 截图前等入场动效稳定(约 1-2 秒),不要把动画中间态当成版式问题。
 3. 先看视觉:大标题字重、标题与内容间距、图片是否与正文对齐、图片/说明是否碰到底部分页组件。
 4. 再看代码:确认该页选用的版式与内容形状匹配,没有把数据专用版式拿来讲概念,也没有把可选组件堆成装饰。
@@ -399,10 +403,10 @@ Copy-Item "C:\Users\shich\.gemini\skills\tool-web-slide\assets\template-swiss.ht
 
 ### Step 5 · 本地预览
 
-直接在浏览器打开 `index.html` 就行。Windows 环境下：
+直接在浏览器打开 `index.html` 就行。macOS 下：
 
-```powershell
-Invoke-Item "C:\Users\shich\.gemini\slide-deck\XXX\index.html"
+```bash
+open "项目/XXX/ppt/index.html"
 ```
 
 不需要本地服务器。图片走相对路径 `images/xxx.png`。
@@ -429,6 +433,7 @@ guizang-ppt-skill/
     ├── layouts.md            ← 风格 A · 10 种页面布局骨架（可直接粘贴,含动效标记）
     ├── swiss-layout-lock.md  ← 风格 B · 原始 22P 版式锁,正文页必须按这里登记
     ├── layouts-swiss.md      ← 风格 B · 原始 22P 骨架说明 + 少量明确标注的实验区
+    ├── swiss-map-component.md ← 风格 B · S08 地图扩展组件(MapLibre 点位/连线/卡片/控制)
     ├── themes.md             ← 风格 A · 5 套主题色预设（只能选不能自定义）
     ├── themes-swiss.md       ← 风格 B · 4 套瑞士风主题色预设（IKB / 柠檬黄 / 柠檬绿 / 安全橙）
     ├── image-prompts.md      ← GPT-M 2.0 配图类型、比例和基础提示词
@@ -446,9 +451,10 @@ guizang-ppt-skill/
 4. 读对应的 layouts 文件挑布局:
    - 风格 A → `layouts.md`(顶部有 Pre-flight 类名清单、主题节奏规划、动效 recipe 决策树)
    - 风格 B → **先读 `swiss-layout-lock.md`**,再读 `layouts-swiss.md`;正文页必须从 S01-S22 选择,每页写 `data-layout`
-5. 读 `image-prompts.md` 挑图片类型、比例和基础提示词
-6. 细节调整时读 `components.md` 查组件(含 Motion 动效系统章节,主要服务风格 A;风格 B 的组件细节在 `layouts-swiss.md` 附录)
-7. 生成后先运行 `node scripts/validate-swiss-deck.mjs path/to/index.html`,再读 `checklist.md` 自检
+5. 如果风格 B 需要地点、路线、人物住所或城市关系地图,读 `swiss-map-component.md`
+6. 如果在 Codex 中生成配图,读 `image-prompts.md` 挑图片类型、比例和基础提示词
+7. 细节调整时读 `components.md` 查组件(含 Motion 动效系统章节,主要服务风格 A;风格 B 的组件细节在 `layouts-swiss.md` 附录)
+8. 生成后先运行 `node scripts/validate-swiss-deck.mjs path/to/index.html`,再读 `checklist.md` 自检
 
 **动效相关**:模板已把 Motion One 的加载和 recipe 逻辑内嵌到底部 module script。你不需要改 JS,只需要按 `layouts.md` / `layouts-swiss.md` 的骨架在 HTML 里加 `data-anim` / `data-animate` 即可。离线演示靠 `assets/motion.min.js`,断网时自动降级为"无动画但内容可读"。风格 B 模板必须保留 `B` 键低功耗模式:切换后停止 WebGL/ASCII canvas RAF,取消正在运行的 Web Animations,并把当前页内容直接 reveal 到静态最终态。
 

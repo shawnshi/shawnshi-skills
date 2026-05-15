@@ -1,13 +1,21 @@
-{
-  "schema_version": 1,
-  "skill": "travel-research",
-  "generated_at": "2026-04-30T19:16:50",
-  "skill_md": "SKILL.md",
-  "top_level_files": [
-    "SKILL.md"
-  ],
-  "top_level_directories": [],
-  "resource_directories": [],
-  "declared_local_dependencies": [],
-  "missing_declared_dependencies": []
+﻿{
+    "schema_version":  1,
+    "skill":  "personal-travel-research",
+    "generated_at":  "2026-05-11T14:46:01",
+    "skill_md":  "SKILL.md",
+    "top_level_files":  [
+                            "SKILL.md"
+                        ],
+    "top_level_directories":  [
+
+                              ],
+    "resource_directories":  [
+
+                             ],
+    "declared_local_dependencies":  [
+
+                                    ],
+    "missing_declared_dependencies":  [
+
+                                      ]
 }

@@ -52,7 +52,7 @@ python scripts/orchestrate_mirror.py --file <PATH_TO_BOOK>
 - 若无法提取 PDF，提示用户必须准备好纯文本或可提取的 EPUB。
 
 ## Output Contract
-- 最终只会交付一个 `output/<BookName>_personalized_mirror.md` 的脑图页面。
+- 最终只会交付一个 `MEMORY/raw/read/<BookName>_personalized_mirror.md` 的脑图页面。
 - 页面核心内容必须被一个庞大的 Markdown Table 统治（双栏结构）。
 
 ## Telemetry

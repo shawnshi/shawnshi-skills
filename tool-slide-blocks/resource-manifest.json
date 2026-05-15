@@ -1,36 +1,38 @@
-{
-  "schema_version": 1,
-  "skill": "tool-slide-blocks",
-  "generated_at": "2026-04-30T19:16:50",
-  "skill_md": "SKILL.md",
-  "top_level_files": [
-    "config.yaml",
-    "plan-validator-design.md",
-    "README.md",
-    "setup_paths.py",
-    "SKILL.md",
-    "slide_vault.db"
-  ],
-  "top_level_directories": [
-    "模板",
-    "engine",
-    "manifests",
-    "references",
-    "slide_vault",
-    "tasks"
-  ],
-  "resource_directories": [
-    {
-      "name": "references",
-      "file_count": 6
-    }
-  ],
-  "declared_local_dependencies": [
-    {
-      "path": "references\\full_slide_blocks_playbook.md",
-      "exists": true,
-      "resolved_path": "C:\\Users\\shich\\.gemini\\skills\\tool-slide-blocks\\references\\full_slide_blocks_playbook.md"
-    }
-  ],
-  "missing_declared_dependencies": []
+﻿{
+    "schema_version":  1,
+    "skill":  "tool-slide-blocks",
+    "generated_at":  "2026-05-11T14:46:02",
+    "skill_md":  "SKILL.md",
+    "top_level_files":  [
+                            "config.yaml",
+                            "plan-validator-design.md",
+                            "README.md",
+                            "setup_paths.py",
+                            "SKILL.md",
+                            "slide_vault.db"
+                        ],
+    "top_level_directories":  [
+                                  "engine",
+                                  "manifests",
+                                  "references",
+                                  "slide_vault",
+                                  "tasks",
+                                  "模板"
+                              ],
+    "resource_directories":  [
+                                 {
+                                     "name":  "references",
+                                     "file_count":  6
+                                 }
+                             ],
+    "declared_local_dependencies":  [
+                                        {
+                                            "path":  "references\\full_slide_blocks_playbook.md",
+                                            "exists":  true,
+                                            "resolved_path":  "C:\\Users\\shich\\.gemini\\skills\\tool-slide-blocks\\references\\full_slide_blocks_playbook.md"
+                                        }
+                                    ],
+    "missing_declared_dependencies":  [
+
+                                      ]
 }

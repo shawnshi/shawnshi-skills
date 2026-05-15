@@ -1,57 +1,59 @@
-{
-  "schema_version": 1,
-  "skill": "tool-tuanbiao-downloader",
-  "generated_at": "2026-04-30T19:16:50",
-  "skill_md": "SKILL.md",
-  "top_level_files": [
-    "README.md",
-    "SKILL.md"
-  ],
-  "top_level_directories": [
-    "agents",
-    "references",
-    "scripts"
-  ],
-  "resource_directories": [
-    {
-      "name": "scripts",
-      "file_count": 2
-    },
-    {
-      "name": "references",
-      "file_count": 1
-    },
-    {
-      "name": "agents",
-      "file_count": 0
-    }
-  ],
-  "declared_local_dependencies": [
-    {
-      "path": "tool-tuanbiao-downloader\\scripts\\requirements.txt",
-      "exists": true,
-      "resolved_path": "C:\\Users\\shich\\.gemini\\skills\\tool-tuanbiao-downloader\\scripts\\requirements.txt"
-    },
-    {
-      "path": "tool-tuanbiao-downloader\\scripts\\downloader.py",
-      "exists": true,
-      "resolved_path": "C:\\Users\\shich\\.gemini\\skills\\tool-tuanbiao-downloader\\scripts\\downloader.py"
-    },
-    {
-      "path": "scripts\\downloader.py",
-      "exists": true,
-      "resolved_path": "C:\\Users\\shich\\.gemini\\skills\\tool-tuanbiao-downloader\\scripts\\downloader.py"
-    },
-    {
-      "path": "scripts\\requirements.txt",
-      "exists": true,
-      "resolved_path": "C:\\Users\\shich\\.gemini\\skills\\tool-tuanbiao-downloader\\scripts\\requirements.txt"
-    },
-    {
-      "path": "references\\troubleshooting.md",
-      "exists": true,
-      "resolved_path": "C:\\Users\\shich\\.gemini\\skills\\tool-tuanbiao-downloader\\references\\troubleshooting.md"
-    }
-  ],
-  "missing_declared_dependencies": []
+﻿{
+    "schema_version":  1,
+    "skill":  "tool-tuanbiao-downloader",
+    "generated_at":  "2026-05-11T14:46:02",
+    "skill_md":  "SKILL.md",
+    "top_level_files":  [
+                            "README.md",
+                            "SKILL.md"
+                        ],
+    "top_level_directories":  [
+                                  "agents",
+                                  "references",
+                                  "scripts"
+                              ],
+    "resource_directories":  [
+                                 {
+                                     "name":  "scripts",
+                                     "file_count":  2
+                                 },
+                                 {
+                                     "name":  "references",
+                                     "file_count":  1
+                                 },
+                                 {
+                                     "name":  "agents",
+                                     "file_count":  0
+                                 }
+                             ],
+    "declared_local_dependencies":  [
+                                        {
+                                            "path":  "tool-tuanbiao-downloader\\scripts\\requirements.txt",
+                                            "exists":  true,
+                                            "resolved_path":  "C:\\Users\\shich\\.gemini\\skills\\tool-tuanbiao-downloader\\scripts\\requirements.txt"
+                                        },
+                                        {
+                                            "path":  "tool-tuanbiao-downloader\\scripts\\downloader.py",
+                                            "exists":  true,
+                                            "resolved_path":  "C:\\Users\\shich\\.gemini\\skills\\tool-tuanbiao-downloader\\scripts\\downloader.py"
+                                        },
+                                        {
+                                            "path":  "scripts\\downloader.py",
+                                            "exists":  true,
+                                            "resolved_path":  "C:\\Users\\shich\\.gemini\\skills\\tool-tuanbiao-downloader\\scripts\\downloader.py"
+                                        },
+                                        {
+                                            "path":  "scripts\\requirements.txt",
+                                            "exists":  true,
+                                            "resolved_path":  "C:\\Users\\shich\\.gemini\\skills\\tool-tuanbiao-downloader\\scripts\\requirements.txt"
+                                        },
+                                        {
+                                            "path":  "references\\troubleshooting.md",
+                                            "exists":  true,
+                                            "resolved_path":  "C:\\Users\\shich\\.gemini\\skills\\tool-tuanbiao-downloader\\references\\troubleshooting.md"
+                                        }
+                                    ],
+    "missing_declared_dependencies":  [
+
+                                      ]
 }

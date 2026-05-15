@@ -55,12 +55,9 @@ def login(email, password):
 
         # Create client and login (don't pass tokenstore on first login)
         client = Garmin(email, password, prompt_mfa=get_mfa)
-        client.login()  # Initial login without tokenstore
-        
-        # Save tokens to tokenstore
-        client.garth.dump(tokenstore)
-        print(f"✅ Tokens saved to {tokenstore}", file=sys.stderr)
-        
+        client.login(tokenstore=tokenstore)  # Initial login with tokenstore for auto-dump
+
+        print(f"✅ Tokens saved to {tokenstore}", file=sys.stderr)        
         # Test the connection
         try:
             profile = client.get_user_summary(datetime.now().strftime("%Y-%m-%d"))

@@ -115,6 +115,9 @@ def fetch_local_summary(days):
     print(f"📂 Loading data from local SQLite Data Lake ({days} days)...", file=sys.stderr)
     summary_df = sqlite_summary(days)
     
+    if summary_df.empty:
+        raise DataStaleError("Local data is completely empty (missing tables or no data in range).")
+        
     # --- Check Data Freshness ---
     if not summary_df.empty and 'date' in summary_df.columns and 'resting_heart_rate' in summary_df.columns:
         valid_dates = summary_df.dropna(subset=['resting_heart_rate'])['date']
@@ -913,16 +916,25 @@ def main():
     
     args = parser.parse_args()
     days = parse_period(args.period, args.days)
-    
-    if not HAS_SQLITE:
-        print('{"error": "Critical Path Error: Local SQLite database missing. API Fallback is explicitly forbidden by system constraints."}', file=sys.stderr)
-        sys.exit(1)
-        
-    try:
-        summary_data = fetch_local_summary(days)
-    except Exception as e:
-        print(f'{{"error": "Critical Path Error: SQLite load failed ({e}). API Fallback is explicitly forbidden."}}', file=sys.stderr)
-        sys.exit(1)
+    summary_data = None
+    if HAS_SQLITE:
+        try:
+            summary_data = fetch_local_summary(days)
+        except Exception as e:
+            print(f"⚠️ Local SQLite load failed or stale ({e}). Falling back to Live API...", file=sys.stderr)
+            summary_data = None
+            
+    if not summary_data:
+        client = get_client()
+        if not client:
+            print('{"error": "Critical Path Error: Live API Auth failed and SQLite is unavailable."}', file=sys.stderr)
+            sys.exit(1)
+            
+        try:
+            summary_data = fetch_summary(client, days)
+        except Exception as e:
+            print(f'{{"error": "Critical Path Error: Live API load failed ({e})."}}', file=sys.stderr)
+            sys.exit(1)
     
     if args.analysis == "flu_risk":
         result = analyze_flu_risk(summary_data)

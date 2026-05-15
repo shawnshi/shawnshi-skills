@@ -1,0 +1,116 @@
+﻿{
+    "schema_version":  1,
+    "skill":  "academic-paper-writer",
+    "generated_at":  "2026-05-11T14:46:01",
+    "skill_md":  "SKILL.md",
+    "top_level_files":  [
+                            "SKILL.md"
+                        ],
+    "top_level_directories":  [
+                                  "agents",
+                                  "examples",
+                                  "references",
+                                  "templates"
+                              ],
+    "resource_directories":  [
+                                 {
+                                     "name":  "references",
+                                     "file_count":  23
+                                 },
+                                 {
+                                     "name":  "examples",
+                                     "file_count":  6
+                                 },
+                                 {
+                                     "name":  "agents",
+                                     "file_count":  12
+                                 }
+                             ],
+    "declared_local_dependencies":  [
+                                        {
+                                            "path":  "references\\writing_quality_check.md",
+                                            "exists":  true,
+                                            "resolved_path":  "C:\\Users\\shich\\.gemini\\skills\\academic-paper-writer\\references\\writing_quality_check.md"
+                                        },
+                                        {
+                                            "path":  "references\\plan_mode_protocol.md",
+                                            "exists":  true,
+                                            "resolved_path":  "C:\\Users\\shich\\.gemini\\skills\\academic-paper-writer\\references\\plan_mode_protocol.md"
+                                        },
+                                        {
+                                            "path":  "references\\workflow_phase_details.md",
+                                            "exists":  true,
+                                            "resolved_path":  "C:\\Users\\shich\\.gemini\\skills\\academic-paper-writer\\references\\workflow_phase_details.md"
+                                        },
+                                        {
+                                            "path":  "academic-paper-reviewer\\references\\sprint_contract_protocol.md",
+                                            "exists":  false,
+                                            "resolved_path":  null
+                                        },
+                                        {
+                                            "path":  "academic-paper\\agents\\draft_writer_agent.md",
+                                            "exists":  false,
+                                            "resolved_path":  null
+                                        },
+                                        {
+                                            "path":  "academic-paper\\agents\\peer_reviewer_agent.md",
+                                            "exists":  false,
+                                            "resolved_path":  null
+                                        },
+                                        {
+                                            "path":  "academic-pipeline\\references\\passport_as_reset_boundary.md",
+                                            "exists":  false,
+                                            "resolved_path":  null
+                                        },
+                                        {
+                                            "path":  "references\\mode_selection_guide.md",
+                                            "exists":  true,
+                                            "resolved_path":  "C:\\Users\\shich\\.gemini\\skills\\academic-paper-writer\\references\\mode_selection_guide.md"
+                                        },
+                                        {
+                                            "path":  "deep-research\\SKILL.md",
+                                            "exists":  false,
+                                            "resolved_path":  null
+                                        },
+                                        {
+                                            "path":  "references\\failure_paths.md",
+                                            "exists":  true,
+                                            "resolved_path":  "C:\\Users\\shich\\.gemini\\skills\\academic-paper-writer\\references\\failure_paths.md"
+                                        },
+                                        {
+                                            "path":  "academic-pipeline\\SKILL.md",
+                                            "exists":  false,
+                                            "resolved_path":  null
+                                        },
+                                        {
+                                            "path":  "agents\\intake_agent.md",
+                                            "exists":  true,
+                                            "resolved_path":  "C:\\Users\\shich\\.gemini\\skills\\academic-paper-writer\\agents\\intake_agent.md"
+                                        },
+                                        {
+                                            "path":  "deep-research\\references\\apa7_style_guide.md",
+                                            "exists":  false,
+                                            "resolved_path":  null
+                                        },
+                                        {
+                                            "path":  "academic-pipeline\\agents\\integrity_verification_agent.md",
+                                            "exists":  false,
+                                            "resolved_path":  null
+                                        },
+                                        {
+                                            "path":  "references\\changelog.md",
+                                            "exists":  true,
+                                            "resolved_path":  "C:\\Users\\shich\\.gemini\\skills\\academic-paper-writer\\references\\changelog.md"
+                                        }
+                                    ],
+    "missing_declared_dependencies":  [
+                                          "academic-paper-reviewer\\references\\sprint_contract_protocol.md",
+                                          "academic-paper\\agents\\draft_writer_agent.md",
+                                          "academic-paper\\agents\\peer_reviewer_agent.md",
+                                          "academic-pipeline\\references\\passport_as_reset_boundary.md",
+                                          "deep-research\\SKILL.md",
+                                          "academic-pipeline\\SKILL.md",
+                                          "deep-research\\references\\apa7_style_guide.md",
+                                          "academic-pipeline\\agents\\integrity_verification_agent.md"
+                                      ]
+}

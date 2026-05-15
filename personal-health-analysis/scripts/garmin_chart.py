@@ -182,7 +182,7 @@ def render_report(charts_data):
     rhr_base = audit.get("system_status", {}).get("rhr", {}).get("baseline", 0)
     rhr_delta = round(((rhr_curr - rhr_base) / rhr_base * 100), 1) if rhr_base else 0
     
-    ov = charts_data.get("overlay_data", {})
+    ov = charts_data.get("overlay_data") or {}
     wd_list = ov.get("weighted_dissipation", [])
     weighted_val = wd_list[-1] if wd_list else "--"
 
@@ -229,20 +229,33 @@ def main():
     
     days = parse_period(args.period, args.days)
     
-    if not HAS_SQLITE:
-        print("Critical Path Error: Local SQLite database missing. API Fallback is explicitly forbidden.", file=sys.stderr)
-        sys.exit(1)
-        
-    try:
-        summary_data = fetch_local_summary(days)
-        # 生理年龄等极高阶指标属于 Garmin 纯云端侧黑盒运算，本地 DB 缺少该表维度，采用混合云端补偿
-        client = get_client()
-        if client:
+    summary_data = None
+    if HAS_SQLITE:
+        try:
+            summary_data = fetch_local_summary(days)
+        except Exception as e:
+            print(f"⚠️ Local SQLite load failed or stale ({e}). Falling back to Live API...", file=sys.stderr)
+            summary_data = None
+            
+    client = get_client()
+    if not summary_data:
+        if not client:
+            print("Critical Path Error: Live API Auth failed and SQLite is unavailable.", file=sys.stderr)
+            sys.exit(1)
+            
+        try:
+            summary_data = fetch_summary(client, days)
+        except Exception as e:
+            print(f"Critical Path Error: API load failed ({e}).", file=sys.stderr)
+            sys.exit(1)
+
+    # 生理年龄等极高阶指标属于 Garmin 纯云端侧黑盒运算，本地 DB 缺少该表维度，采用混合云端补偿
+    if summary_data and client and "max_metrics" not in summary_data:
+        try:
             from garmin_data import fetch_max_metrics
             summary_data["max_metrics"] = fetch_max_metrics(client, (datetime.now() - timedelta(days=days)).strftime('%Y-%m-%d'))
-    except Exception as e:
-        print(f"Critical Path Error: SQLite load failed ({e}). API Fallback is explicitly forbidden.", file=sys.stderr)
-        sys.exit(1)
+        except Exception:
+            pass
     
     charts_data = {}
     if summary_data:

@@ -57,8 +57,10 @@ def build_report(journal_path: str | None = None) -> str:
         lines.append("| 建议日期 | 股票 | 建议 | 建议价 | 最新价 | 收益率 | 状态 |")
         lines.append("|:---|:---|:---|:---|:---|:---|:---|")
 
-        # Sort by return pct descending
-        sorted_perf = sorted(reviewed, key=lambda x: x.get("outcome_return_pct", 0), reverse=True)
+        # Sort by stock name, then by date descending
+        # Python's sort is stable, so we sort by date descending first, then by stock name
+        sorted_perf = sorted(reviewed, key=lambda x: x.get("created_at", ""), reverse=True)
+        sorted_perf.sort(key=lambda x: x.get("stock_name", x.get("stock_code", "")))
         for e in sorted_perf:
             date = e.get("created_at", "")[:10]
             name = e.get("stock_name", e.get("stock_code"))
