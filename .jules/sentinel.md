@@ -1,0 +1,4 @@
+## 2024-05-18 - Command Injection via shell=True
+**Vulnerability:** Command injection vulnerability due to `subprocess.Popen(..., shell=True)` combined with an environment variable (`PIH_LLM_COMMAND`) that is user-controllable.
+**Learning:** Using `shell=True` with unvalidated input or environment variables exposes the application to command injection. Even seemingly internal environment variables can be manipulated in certain deployments.
+**Prevention:** Always use `shell=False` and pass commands as a list of arguments (e.g., using `shlex.split()`) when invoking `subprocess` methods to prevent the shell from interpreting malicious metacharacters.
