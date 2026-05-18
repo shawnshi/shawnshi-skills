@@ -46,7 +46,7 @@ AVOID: 严禁重复 14 天内的旧闻；禁止包含无具体数据的公关通
    - `~/.gemini/tmp/playgrounds/Response_global_hit.md`
    - `~/.gemini/tmp/playgrounds/Response_china_hit.md`
    - `~/.gemini/tmp/playgrounds/Response_winning_baseline.md`
-3. **清洗拦截**: 主代理回收并读取以上 3 个 Response 文件。利用 `grep_search` 等工具比对 `~/.gemini/MEMORY/HealthcareIndustryRadar/` 下的历史文件进行去重。完成后清除 `tmp/playgrounds/` 下的中间产物。
+3. **图谱语义去重 (Semantic Deduplication)**: 主代理回收并读取以上 3 个 Response 文件。若发现重大竞对动作，必须优先利用 `mcp_vector-lake-mcp_search_vector_lake`（Mode: claim/page）检索竞对实体，判断该动作是否在图谱中已存在或已被预判，实现基于实体和声明的语义级防重。完成后清除 `tmp/playgrounds/` 下的中间产物。
 
 ### Phase 2: 仲裁与二跳推理 (Arbiter & Weaver)
 1. **五维清洗**: 对留存的 Fact 执行二次审计，剥离所有营销废话。
@@ -61,11 +61,12 @@ AVOID: 严禁重复 14 天内的旧闻；禁止包含无具体数据的公关通
 ### Phase 4: The Hard Gate (物理层强制审计)
 1. **渲染战报草稿**: 严格按照下方的 `[Format Stack]` 生成 Markdown 输出，并**强制**将其写入临时文件 `~/.gemini/tmp/draft_hit_radar.md`。
 2. **强制过检**: 调用 shell 执行 `python ~/.gemini/skills/scripts/hit_audit_gate.py ~/.gemini/tmp/draft_hit_radar.md --mode radar`。
-3. **处理失败**: 如果审计脚本报错（如包含“数字化转型”等营销禁词，或漏掉“紧急预警”），必须退回上一步修正草稿，最多重试 2 次。
+3. **处理失败**: 如果审计脚本报错（如包含“全栈式”、“智慧大脑”等营销禁词，或 Fact 缺乏数字指标），必须退回上一步修正草稿，最多重试 2 次。
 
 ### Phase 5: 激活与分层归档 (Activate & Archive)
 1. **物理落盘**: 只有在 Phase 4 返回 `Audit Passed` (Exit Code 0) 后，才允许使用 `write_file` 工具将草稿内容物理保存至最终目录 `~/.gemini/MEMORY/raw/HealthcareIndustryRadar/DHWB-Radar-YYYYMMDD.md`。
-2. **遥测记录 (Telemetry)**: 必须使用 `write_file` 将本次执行状态存入 `~/.gemini/MEMORY/skill_audit/telemetry/record_[TIMESTAMP].json`。结构规范：`{"skill_name": "hit-industry-radar", "status": "success", "duration_sec": 0, "input_tokens": 0, "output_tokens": 0}`
+2. **知识入湖 (Graph Ingestion)**：战报落盘后，强制主代理甄别高价值战略突变（如：友商实控权变更、全新架构发布）。若存在，必须利用 `write_file` 或 `replace` 将该结论作为 Timeline 节点追加至 `~/.gemini/MEMORY/wiki/Entity_*.md` 对应的实体卡片中，并调用 `mcp_vector-lake-mcp_sync_vector_lake` 刷新图谱。
+3. **遥测记录 (Telemetry)**: 必须使用 `write_file` 将本次执行状态存入 `~/.gemini/MEMORY/skill_audit/telemetry/record_[TIMESTAMP].json`。结构规范：`{"skill_name": "hit-industry-radar", "status": "success", "duration_sec": 0, "input_tokens": 0, "output_tokens": 0}`
 
 ## Resources
 - `assets/Task_global_hit.md`

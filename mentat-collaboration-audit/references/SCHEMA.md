@@ -1,10 +1,10 @@
-# JSON Schema for personal-monthly-insights (V9.0)
+# JSON Schema for personal-monthly-insights (V11.0)
 
 Save the reasoning result to `~/.gemini/MEMORY/raw/personal-insights/agent_audit_result.json` using this structure.
 
 ```json
 {
-  "version": "9.0",
+  "version": "11.0",
   "project_areas": { "areas": [ { "name": "...", "session_count": 0, "description": "..." } ] },
   "behavioral_analysis": {
     "intro": "...",
@@ -40,6 +40,13 @@ Save the reasoning result to `~/.gemini/MEMORY/raw/personal-insights/agent_audit
         "rationale": "为什么值得自动化",
         "implementation_sketch": "核心逻辑描述"
       }
+    ],
+    "auto_constraint_writeback": [
+      {
+        "target_file": "GEMINI.md 或 pai/coding.md 或 MEMORY/hot_facts.md",
+        "writeback_instruction": "精确到行的物理规则文本，如：【强制】禁止在 Windows 下使用内联 JSON 传参",
+        "trigger_friction": "对应的 Friction_Type，如 Environmental_Lock"
+      }
     ]
   },
   "suggestions": {
@@ -74,6 +81,7 @@ Save the reasoning result to `~/.gemini/MEMORY/raw/personal-insights/agent_audit
 - `coach_summary` must be qualitative and strategic, not a list of raw numbers.
 - `workflow_engineering.prompt_assets` must contain at least one ready-to-copy asset.
 - `workflow_engineering.automation_candidates` must contain at least one automation proposal.
+- `workflow_engineering.auto_constraint_writeback` is strongly encouraged if structural friction is detected, providing precise file paths and rule strings.
 
 ## Result Gate
 

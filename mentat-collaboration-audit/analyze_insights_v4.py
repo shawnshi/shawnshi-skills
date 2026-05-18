@@ -22,7 +22,7 @@ def format_narrative_areas(data):
         return '<p>暂无项目领域数据</p>'
     html = '<ul>'
     for area in areas:
-        html += f'<li><strong>{area.get("name", "")}</strong> ({area.get("session_count", 0)} sessions) — {area.get("description", "")}</li>'
+        html += f'<li><strong>{area.get("name", "无记录")}</strong> ({area.get("session_count", 0)} sessions) — {area.get("description", "无记录")}</li>'
     return html + '</ul>'
 
 
@@ -31,7 +31,7 @@ def format_narrative_style(data):
         return f'<p>{data}</p>'
     if not isinstance(data, dict):
         return '<p>分析数据暂不可用</p>'
-    return f'<p>{data.get("narrative", "")}</p><p><strong>关键模式：</strong>{data.get("key_pattern", "")}</p>'
+    return f'<p>{data.get("narrative", "无记录")}</p><p><strong>关键模式：</strong>{data.get("key_pattern", "无记录")}</p>'
 
 
 def format_narrative_works(data):
@@ -40,9 +40,9 @@ def format_narrative_works(data):
     if not isinstance(data, dict):
         return '<p>分析数据暂不可用</p>'
     workflows = data.get('impressive_workflows', [])
-    html = f'<p>{data.get("intro", "")}</p><ul>'
+    html = f'<p>{data.get("intro", "无记录")}</p><ul>'
     for workflow in workflows:
-        html += f'<li><strong>{workflow.get("title", "")}</strong> — {workflow.get("description", "")}</li>'
+        html += f'<li><strong>{workflow.get("title", "无记录")}</strong> — {workflow.get("description", "无记录")}</li>'
     return html + '</ul>'
 
 
@@ -52,13 +52,13 @@ def format_narrative_friction(data):
     if not isinstance(data, dict):
         return '<p>分析数据暂不可用</p>'
     categories = data.get('categories', [])
-    html = f'<p>{data.get("intro", "")}</p>'
+    html = f'<p>{data.get("intro", "无记录")}</p>'
     for category in categories:
-        examples = ', '.join(category.get('examples', []))
-        html += f'<h3>{category.get("category", "")}</h3>'
+        examples = ', '.join(category.get('examples', ['无记录']))
+        html += f'<h3>{category.get("category", "无记录")}</h3>'
         if category.get('root_cause_pattern'):
-            html += f'<p style="color: var(--danger); font-weight: 500;">🔍 根因模式: {category.get("root_cause_pattern", "")}</p>'
-        html += f'<p>{category.get("description", "")}</p><p style="font-size:12px;color:#6c8aff;">例: {examples}</p>'
+            html += f'<p style="color: var(--danger); font-weight: 500;">🔍 根因模式: {category.get("root_cause_pattern", "无记录")}</p>'
+        html += f'<p>{category.get("description", "无记录")}</p><p style="font-size:12px;color:#6c8aff;">例: {examples}</p>'
     return html
 
 
@@ -67,12 +67,12 @@ def format_narrative_suggestions(data):
         return f'<p>{data}</p>'
     if not isinstance(data, dict):
         return '<p>分析数据暂不可用</p>'
-    html = '<h3>🔧 配置建议</h3><ul>'
+    html = f'<h3>🔧 配置建议</h3><p>{data.get("intro", "")}</p><ul>'
     for addition in data.get('config_additions', []):
-        html += f'<li><code>{addition.get("addition", "")}</code> — {addition.get("why", "")}</li>'
+        html += f'<li><code>{addition.get("addition", "无记录")}</code> — {addition.get("why", "无记录")}</li>'
     html += '</ul><h3>📋 使用模式</h3><ul>'
     for usage in data.get('usage_patterns', []):
-        html += f'<li><strong>{usage.get("title", "")}</strong>: {usage.get("detail", "")}</li>'
+        html += f'<li><strong>{usage.get("title", "无记录")}</strong>: {usage.get("detail", "无记录")}</li>'
     return html + '</ul>'
 
 
@@ -82,9 +82,9 @@ def format_narrative_horizon(data):
     if not isinstance(data, dict):
         return '<p>分析数据暂不可用</p>'
     opportunities = data.get('opportunities', [])
-    html = f'<p>{data.get("intro", "")}</p><ul>'
+    html = f'<p>{data.get("intro", "无记录")}</p><ul>'
     for opportunity in opportunities:
-        html += f'<li><strong>{opportunity.get("title", "")}</strong> — {opportunity.get("whats_possible", "")}<br><em>{opportunity.get("how_to_try", "")}</em></li>'
+        html += f'<li><strong>{opportunity.get("title", "无记录")}</strong> — {opportunity.get("whats_possible", "无记录")}<br><em>{opportunity.get("how_to_try", "无记录")}</em></li>'
     return html + '</ul>'
 
 
@@ -93,7 +93,7 @@ def format_narrative_fun(data):
         return f'<p>{data}</p>'
     if not isinstance(data, dict):
         return '<p>暂无趣味时刻数据</p>'
-    return f'<h3>{data.get("headline", "")}</h3><p>{data.get("detail", "")}</p>'
+    return f'<h3>{data.get("headline", "无记录")}</h3><p>{data.get("detail", "无记录")}</p>'
 
 
 def format_narrative_behavioral_analysis(data, workflow_engineering=None):
@@ -103,7 +103,7 @@ def format_narrative_behavioral_analysis(data, workflow_engineering=None):
         return ''
 
     points = data.get('points', [])
-    overall = data.get('overall', '')
+    overall = data.get('overall', '无记录')
     summary = data.get('coach_summary', '')
     html = f'<p>{data.get("intro", "")}</p>'
 
@@ -120,8 +120,8 @@ def format_narrative_behavioral_analysis(data, workflow_engineering=None):
             html += '<h4>📋 提示词资产与前置约束</h4>'
             for asset in prompt_assets:
                 html += f'''<div style="background: #f1f5f9; padding: 15px; border-radius: 8px; margin-bottom: 15px; border-left: 4px solid #475569;">
-<div style="font-size: 12px; color: #64748b; margin-bottom: 5px;">针对: {asset.get('target_friction')} | 类型: {asset.get('asset_type')}</div>
-<pre style="white-space: pre-wrap; word-break: break-all; background: #fff; padding: 10px; border-radius: 4px; border: 1px solid #e2e8f0; font-family: monospace; font-size: 13px;">{asset.get('copy_paste_template')}</pre>
+<div style="font-size: 12px; color: #64748b; margin-bottom: 5px;">针对: {asset.get('target_friction', '无记录')} | 类型: {asset.get('asset_type', '无记录')}</div>
+<pre style="white-space: pre-wrap; word-break: break-all; background: #fff; padding: 10px; border-radius: 4px; border: 1px solid #e2e8f0; font-family: monospace; font-size: 13px;">{asset.get('copy_paste_template', '无记录')}</pre>
 </div>'''
 
         automation = workflow_engineering.get('automation_candidates', [])
@@ -129,15 +129,25 @@ def format_narrative_behavioral_analysis(data, workflow_engineering=None):
             html += '<h4>🚀 自动化与 Skill 候选</h4>'
             for candidate in automation:
                 html += f'''<div style="background: #eff6ff; padding: 15px; border-radius: 8px; margin-bottom: 15px; border-left: 4px solid #3b82f6;">
-<div style="font-weight: 600; color: #1e40af;">{candidate.get('candidate_name')}</div>
-<div style="font-size: 13px; color: #374151; margin-top: 5px;">{candidate.get('rationale')}</div>
-<div style="font-size: 12px; font-family: monospace; color: #1d4ed8; margin-top: 8px; padding: 8px; background: rgba(255,255,255,0.5); border-radius: 4px;">{candidate.get('implementation_sketch')}</div>
+<div style="font-weight: 600; color: #1e40af;">{candidate.get('candidate_name', '无记录')}</div>
+<div style="font-size: 13px; color: #374151; margin-top: 5px;">{candidate.get('rationale', '无记录')}</div>
+<div style="font-size: 12px; font-family: monospace; color: #1d4ed8; margin-top: 8px; padding: 8px; background: rgba(255,255,255,0.5); border-radius: 4px;">{candidate.get('implementation_sketch', '无记录')}</div>
+</div>'''
+
+        constraints = workflow_engineering.get('auto_constraint_writeback', [])
+        if constraints:
+            html += '<h4>🛡️ 物理防御围栏 (Auto Constraints)</h4>'
+            for constraint in constraints:
+                html += f'''<div style="background: #fef2f2; padding: 15px; border-radius: 8px; margin-bottom: 15px; border-left: 4px solid #ef4444;">
+<div style="font-weight: 600; color: #991b1b;">目标文件: {constraint.get('target_file', '无记录')}</div>
+<div style="font-size: 13px; color: #7f1d1d; margin-top: 5px;">摩擦源: {constraint.get('trigger_friction', '无记录')}</div>
+<div style="font-size: 12px; font-family: monospace; color: #b91c1c; margin-top: 8px; padding: 8px; background: rgba(255,255,255,0.5); border-radius: 4px;">{constraint.get('writeback_instruction', '无记录')}</div>
 </div>'''
 
     if points:
         html += '<details style="margin-top: 20px;"><summary style="cursor: pointer; color: var(--accent); font-weight: 600;">📊 查看 8 维指标深度拆解</summary><div style="margin-top: 15px;">'
         for point in points:
-            html += f'<div style="margin-bottom: 15px; padding-left: 10px; border-left: 2px solid var(--primary);"><strong>🔍 {point.get("title", "")}</strong><p style="margin-top: 5px; font-size: 0.95em; color: var(--text-2);">{point.get("description", "")}</p></div>'
+            html += f'<div style="margin-bottom: 15px; padding-left: 10px; border-left: 2px solid var(--primary);"><strong>🔍 {point.get("title", "无记录")}</strong><p style="margin-top: 5px; font-size: 0.95em; color: var(--text-2);">{point.get("description", "无记录")}</p></div>'
         html += '</div></details>'
     return html
 
@@ -308,6 +318,10 @@ def generate_report(stats, sessions, insights):
                 md_sections.append(f"\n- **自动化候选: {candidate.get('candidate_name')}**")
                 md_sections.append(f"  - 理由: {candidate.get('rationale')}")
                 md_sections.append(f"  - 实现: `{candidate.get('implementation_sketch')}`")
+            for constraint in workflow_engineering.get('auto_constraint_writeback', []):
+                md_sections.append(f"\n- **🛡️ 物理围栏挂载: 目标 {constraint.get('target_file')}**")
+                md_sections.append(f"  - 摩擦源: {constraint.get('trigger_friction')}")
+                md_sections.append(f"  - 规则: `{constraint.get('writeback_instruction')}`")
         for point in behav.get('points', []):
             md_sections.append(f"\n### 🔍 {point.get('title')}")
             md_sections.append(f"{point.get('description')}")
@@ -355,15 +369,16 @@ def generate_report(stats, sessions, insights):
 
 
 def main():
-    parser = argparse.ArgumentParser(description='Strategic Audit Data Pump & Renderer v9.0')
+    parser = argparse.ArgumentParser(description='Strategic Audit Data Pump & Renderer V11.0')
     parser.add_argument('--period', default='30d', choices=list(PERIOD_MAP.keys()), help='Analysis period: 1d, 7d, 30d, 90d, year (default: 30d)')
     parser.add_argument('--extract-only', action='store_true', help='Only extract session raw data and physical metrics')
     parser.add_argument('--render', action='store_true', help='Render final HTML report from agent insights')
     parser.add_argument('--agent-file', type=str, default='', help='Path to the agent generated JSON file with insights')
+    parser.add_argument('--drop-noise', action='store_true', help='Drop low-quality, non-mutating sessions')
     args = parser.parse_args()
 
     if not args.extract_only and not args.render:
-        print('❌ 必须指定 --extract-only 或 --render 模式 (Agentic V9.0)')
+        print('❌ 必须指定 --extract-only 或 --render 模式 (Agentic V11.0)')
         return
 
     period_label = f"过去 {PERIOD_MAP[args.period]} 天" if args.period != 'year' else f"{datetime.date.today().year} 年度"
@@ -372,7 +387,7 @@ def main():
         print(f'🚀 启动物理数据泵 ({period_label})...')
         raw_sessions = get_session_list()
         logs = read_logs()
-        sessions = process_sessions(raw_sessions, logs)
+        sessions = process_sessions(raw_sessions, logs, drop_noise=args.drop_noise)
         stats = aggregate_data(sessions, period=args.period)
 
         REPORTS_DIR.mkdir(parents=True, exist_ok=True)
@@ -403,7 +418,7 @@ def main():
 
     validation_errors = validate_agent_payload(insights)
     if validation_errors:
-        print('❌ 洞察 JSON 未通过 V9 校验门：')
+        print('❌ 洞察 JSON 未通过 V11.0 校验门：')
         for error in validation_errors:
             print(f' - {error}')
         return

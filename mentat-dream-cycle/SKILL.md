@@ -33,28 +33,27 @@ This skill acts as the background evolution loop for the Mentat system. It shift
   读取该 Python 脚本输出的 JSON 日志，记录 `deleted` 与 `scanned` 的值备用，无需进行额外解释。
 
 ### Phase 2: 热缓冲双轨提纯 (Hot Memory Diarization)
-**约束**: 遵守 `memory.md` 中的 "Compiled Truth | Timeline" 双轨契约和实体映射规范。
+**约束**: 遵守 `memory.md` 中的 "Compiled Truth | Timeline" 双轨契约和实体映射规范。防范 O(N) 写入疲劳。
 1. **读取缓冲**:
    调用 `read_file` 提取 `C:/Users/shich/.gemini/MEMORY/hot_facts.md`。若文件不存在或内容为空，跳过此阶段。
-2. **逻辑提纯**:
-   在脑内进行实体化拆解。判断缓冲中记录的事件/实体应当归属到 Tier 2 (如 `MEMORY/wiki/`, `MEMORY/winning/`) 下的哪个文件。
-3. **物理落盘 (Append-only + Rewrite)**:
-   - 调用 `replace` 或 `write_file`，对对应的目标知识文件进行更新。
-   - **严格排版**: 底部 Timeline 区域仅做追加（Append）；顶部的 Compiled Truth（编译事实）必须进行结构化重写。如果提到具体人物、公司、政策，强制包上 `[[ ]]` (例如: `[[OpenAI]]`)。
-4. **重置缓冲**:
-   落盘全部成功后，调用 `write_file`，将 `C:/Users/shich/.gemini/MEMORY/hot_facts.md` 覆写为一个空文件（或提示语句如 `<!-- 缓冲已于近期清空 -->`），完成状态闭环。
+2. **逻辑提纯与阈值分流 (O(N) Protection)**:
+   在脑内进行实体化拆解，并评估要更新的唯一实体数量。
+   - **分支 A (Entities <= 3)**: 调用 `replace` 或 `write_file`，对对应的目标知识文件进行原地更新。严格排版：底部 Timeline 追加（Append），顶部 Compiled Truth 结构化重写。
+   - **分支 B (Entities > 3)**: 为防止系统 Context 耗尽与工具调用崩溃，禁止逐个写盘。将所有编译好的实体卡片 Markdown 统一追加写入 `C:/Users/shich/.gemini/MEMORY/wiki/.meta/Entity_Backlog.md` 待处理队列。
+3. **重置缓冲**:
+   落盘（或写入 Backlog）成功后，调用 `write_file`，将 `C:/Users/shich/.gemini/MEMORY/hot_facts.md` 覆写为 `<!-- 缓冲已于近期清空 -->`，完成状态闭环。
 
 ### Phase 3: 拓扑孤岛扫描 (Topology Orphan Check)
 **约束**: 图谱扫描属于高维遍历，严禁交给 LLM 执行 O(N) 分析。
 - **动作**:
   执行命令:
   `uv run "{SKILL_DIR}/scripts/orphan_scanner.py" --dir "C:/Users/shich/.gemini/MEMORY/wiki"`
-- **处理**:
-  阅读脚本返回的 JSON 报告。如果 `orphan_count > 0`，提取 Top 3 最频繁引用的孤岛标签作为“建议下个周期拓展的实体目标”。不采取写盘动作。
+- **处理与落盘**:
+  阅读脚本返回的 JSON 报告。如果 `orphan_count > 0`，提取 Top 5 最频繁引用的孤岛标签，必须调用 `replace` 或 `write_file` 将这些标签作为建议追加写入到图谱治理清单：`C:/Users/shich/.gemini/MEMORY/wiki/.meta/Orphan_Backlog.md`。
 
 ### Phase 4: 外部系统触发 (Vector Lake Sync)
-*(Optional / Dependent on Extension Availability)*
-如果检测到环境中配置了 Vector Lake，或者在之前的治理中需要全量推送，可在此阶段通过 `run_shell_command` 或对应的 MCP 工具触发图谱硬同步。如不可用，直接跳过。
+*(Dependent on Extension Availability)*
+如果 Phase 2 或 Phase 3 进行了文件修改，且环境中安装了 Vector Lake MCP，**必须显式调用**工具 `mcp_vector-lake-mcp_sync_vector_lake` 触发图谱硬同步。如工具不可用，则跳过。
 
 ---
 

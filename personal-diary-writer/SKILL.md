@@ -55,20 +55,26 @@ This skill handles high-frequency, lightweight daily status recording and atomic
 ## 熵增对抗 (Chaos Mitigation)
 ...
 
+## 今日认知处方 (Cognitive Prescription)
+...
+
 ## 能量管理 (Biological-Cognitive Correlation)
-- **系统态势**: [必须提取自 Garmin 简报，如 🟡 黄灯 (Fatigue)]
-- **执行带宽**: [提取分数，如 68.9/100]
-- **睡眠负债**: [提取债务小时数，如 1.9h]
-- **摩擦解构**: [基于上述真实数据进行的简短定性分析]
+- **系统态势**: [必须提取自 Garmin 简报，如 🟡 隐性耗散]
+- **执行带宽**: 综合 [分数]/100 (认知 [分数] / 物理 [分数])
+- **睡眠负债**: [提取债务小时数]h, 深睡占比 [比例]%
+- **摩擦解构**: [基于上述真实数据进行的纯生理定性分析]
+- **交叉归因**: [强制将上述生理耗散与今日顶部的某项具体高压业务事件挂钩]
+- **干预指令**: [具体的强制动作，如“取消明日非必要会议”或“安排15分钟HIIT”]
 
 ## 标签
 #tag
 ```
 
 ### Phase 2: Action
-1. **规范化标签**: 处理用户或审计官提供的文本，确保标签格式正确。
-2. **中间暂存**: 将组装好的内容写入临时文件 `~/.gemini/tmp/log_entry.md`。
-3. **安全写入**: 使用 `run_shell_command` 执行 `python ~/.gemini/skills/scripts/io_engine/diary_ops.py prepend --content_file ~/.gemini/tmp/log_entry.md`。
+1. **联动干预防御**: 检查能量管理中的 `干预指令`，**必须**将其无条件映射到顶部的 `## 明日战术锁定 (Next Day Tactics)` 中作为最高优先级任务。
+2. **规范化标签**: 处理用户或审计官提供的文本，确保标签格式正确。
+3. **中间暂存**: 将组装好的内容写入临时文件 `~/.gemini/tmp/log_entry.md`。
+4. **安全写入**: 使用 `run_shell_command` 执行 `python ~/.gemini/skills/scripts/io_engine/diary_ops.py prepend --content_file ~/.gemini/tmp/log_entry.md`。
 
 ### 附属落盘协议 (Secondary Write-Backs)
 

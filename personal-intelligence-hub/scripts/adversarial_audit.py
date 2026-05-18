@@ -3,8 +3,7 @@ from __future__ import annotations
 import json
 
 from blackboard import mark_adversarial_audit, update_phase
-from hub_utils import REFINED_PATH, dump_json, has_llm_runner, load_json, run_llm
-
+from hub_utils import REFINED_PATH, clean_json_output, dump_json, has_llm_runner, load_json, run_llm
 
 def fallback_audit(data: dict) -> dict:
     for item in data.get("top_10", []):
@@ -45,7 +44,12 @@ def audit() -> None:
         + str(data.get("top_10", []))
     )
     try:
-        audit_data = json.loads(run_llm(prompt))
+        raw_output = run_llm(prompt)
+        try:
+            audit_data = clean_json_output(raw_output)
+        except Exception as e:
+            print(f"[WARN] LLM JSON parsing failed in audit: {e}. Raw output:\n{raw_output[:500]}...")
+            audit_data = fallback_audit(data)
     except Exception:
         audit_data = fallback_audit(data)
 

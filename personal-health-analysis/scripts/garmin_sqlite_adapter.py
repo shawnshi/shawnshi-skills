@@ -21,14 +21,30 @@ MONITORING_DB = DB_DIR / "garmin_monitoring.db"
 ACTIVITIES_DB = DB_DIR / "garmin_activities.db"
 
 def get_connection(db_path):
-    """Establish a connection to the SQLite database."""
-    if not db_path.exists():
-        # Try HealthData fallback
-        health_path = Path.home() / ".GarminDb" / "HealthData" / "DBs" / db_path.name
-        if health_path.exists():
-            return sqlite3.connect(health_path)
-        raise FileNotFoundError(f"❌ Database not found at {db_path} or {health_path}. Run garmindb_cli.py first.")
-    return sqlite3.connect(db_path)
+    """Establish a connection to the SQLite database intelligently."""
+    db_name = db_path.name
+    search_paths = [
+        db_path,
+        Path.home() / ".GarminDb" / "HealthData" / "DBs" / db_name,
+        Path.home() / "HealthData" / "DBs" / db_name
+    ]
+    
+    for candidate in search_paths:
+        if candidate.exists() and candidate.stat().st_size > 0:
+            try:
+                conn = sqlite3.connect(candidate)
+                # Quick health check
+                cur = conn.cursor()
+                cur.execute("SELECT name FROM sqlite_master WHERE type='table'")
+                tables = [r[0] for r in cur.fetchall()]
+                if tables:
+                    return conn
+                else:
+                    conn.close()
+            except Exception as e:
+                pass
+
+    raise FileNotFoundError(f"❌ Valid database '{db_name}' not found. Searched {len(search_paths)} paths. Run sync_health_data.py first.")
 
 def get_devices_info():
     """Extract device information for auditing."""
@@ -104,20 +120,35 @@ def get_activities_data(days=30):
         df = df.rename(columns={'type': 'activity_type', 'name': 'activity_name', 'elapsed_time': 'duration', 'ascent': 'elevation_gain'})
     return df
 
+def _get_summary_table_name(conn):
+    cur = conn.cursor()
+    cur.execute("SELECT name FROM sqlite_master WHERE type='table'")
+    tables = [row[0] for row in cur.fetchall()]
+    if 'daily_summary' in tables:
+        return 'daily_summary'
+    elif 'days_summary' in tables:
+        return 'days_summary'
+    return None
+
 def get_summary(days=7):
     """
-    Extract macro physiological metrics from the daily_summary table.
+    Extract macro physiological metrics from the summary table.
     Equivalent to the old garmin_data.py summary command.
     """
     conn = get_connection(GARMIN_DB)
     start_date = (datetime.now() - timedelta(days=days)).strftime('%Y-%m-%d')
     
+    table_name = _get_summary_table_name(conn)
+    if not table_name:
+        conn.close()
+        raise ValueError("No summary table found (neither daily_summary nor days_summary)")
+        
     # 修复 schema 强绑: 补齐 steps 以及生成虚拟的高压时间分布(用以驱动仪表盘)
     query = f"""
         SELECT day, rhr as resting_heart_rate, hr_max as max_hr, stress_avg, bb_max as body_battery_highest, 
                bb_charged as body_battery_charged, bb_min as body_battery_lowest,
                sweat_loss, rr_waking_avg, steps
-        FROM daily_summary
+        FROM {table_name}
         WHERE day >= '{start_date}'
         ORDER BY day DESC
     """
@@ -127,7 +158,7 @@ def get_summary(days=7):
             df['high_stress_duration'] = df['stress_avg'].apply(lambda x: max(0, x - 35) * 3600 / 15 if pd.notnull(x) else 0)
             df['medium_stress_duration'] = df['stress_avg'].apply(lambda x: max(0, x - 25) * 3600 / 10 if pd.notnull(x) else 0)
         else:
-            raise ValueError("No data found in daily_summary table")
+            raise ValueError(f"No data found in {table_name} table")
     except Exception as e:
         conn.close()
         raise e
@@ -187,15 +218,23 @@ def get_daily_friction_matrix(days=90):
         df_load = pd.DataFrame(columns=['date', 'training_load'])
         
     # 2. Physiological Friction (Stress & RHR & Body Battery)
-    conn_sum = get_connection(GARMIN_DB)
-    q_sum = f"SELECT day as date, stress_avg, rhr as resting_heart_rate, bb_max as body_battery_highest, bb_min as body_battery_lowest FROM daily_summary WHERE day >= '{start_date}'"
     try:
-        df_sum = pd.read_sql_query(q_sum, conn_sum)
+        conn_sum = get_connection(GARMIN_DB)
+        cur = conn_sum.cursor()
+        cur.execute("SELECT name FROM sqlite_master WHERE type='table'")
+        tables = [r[0] for r in cur.fetchall()]
+        table_name = 'daily_summary' if 'daily_summary' in tables else 'days_summary' if 'days_summary' in tables else None
+        
+        if table_name:
+            q_sum = f"SELECT day as date, stress_avg, rhr as resting_heart_rate, bb_max as body_battery_highest, bb_min as body_battery_lowest FROM {table_name} WHERE day >= '{start_date}'"
+            df_sum = pd.read_sql_query(q_sum, conn_sum)
+        else:
+            raise ValueError("No summary table found")
     except Exception as e:
         df_sum = pd.DataFrame(columns=['date', 'stress_avg', 'resting_heart_rate', 'body_battery_highest', 'body_battery_lowest'])
-        print(f"Failed to query daily_summary in friction matrix: {e}")
-        
-    conn_sum.close()
+        print(f"Failed to query summary in friction matrix: {e}")
+    finally:
+        if 'conn_sum' in locals(): conn_sum.close()
     
     # 3. Merge with Complete Time Series (Zero-padding)
     date_rng = pd.date_range(start=start_date, end=end_date, freq='D')

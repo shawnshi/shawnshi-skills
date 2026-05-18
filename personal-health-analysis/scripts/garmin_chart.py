@@ -228,11 +228,12 @@ def main():
     args = parser.parse_args()
     
     days = parse_period(args.period, args.days)
+    fetch_days = max(days, 30)
     
     summary_data = None
     if HAS_SQLITE:
         try:
-            summary_data = fetch_local_summary(days)
+            summary_data = fetch_local_summary(fetch_days)
         except Exception as e:
             print(f"⚠️ Local SQLite load failed or stale ({e}). Falling back to Live API...", file=sys.stderr)
             summary_data = None
@@ -244,7 +245,7 @@ def main():
             sys.exit(1)
             
         try:
-            summary_data = fetch_summary(client, days)
+            summary_data = fetch_summary(client, fetch_days)
         except Exception as e:
             print(f"Critical Path Error: API load failed ({e}).", file=sys.stderr)
             sys.exit(1)
@@ -253,7 +254,7 @@ def main():
     if summary_data and client and "max_metrics" not in summary_data:
         try:
             from garmin_data import fetch_max_metrics
-            summary_data["max_metrics"] = fetch_max_metrics(client, (datetime.now() - timedelta(days=days)).strftime('%Y-%m-%d'))
+            summary_data["max_metrics"] = fetch_max_metrics(client, (datetime.now() - timedelta(days=fetch_days)).strftime('%Y-%m-%d'))
         except Exception:
             pass
     

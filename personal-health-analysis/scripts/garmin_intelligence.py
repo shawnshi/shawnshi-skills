@@ -36,6 +36,19 @@ except ImportError:
 from garmin_auth import get_client
 from garmin_data import fetch_summary
 
+_CLINICAL_GUIDELINES = None
+
+def load_clinical_guidelines():
+    global _CLINICAL_GUIDELINES
+    if _CLINICAL_GUIDELINES is None:
+        guidelines_path = Path(__file__).parent.parent / "resources" / "clinical_guidelines.json"
+        if guidelines_path.exists():
+            with open(guidelines_path, "r", encoding="utf-8") as f:
+                _CLINICAL_GUIDELINES = json.load(f)
+        else:
+            _CLINICAL_GUIDELINES = {} # Fallback empty dict
+    return _CLINICAL_GUIDELINES
+
 def calc_pmc_metrics(friction_matrix):
     """
     Calculate PMC (Performance Management Chart) metrics: CTL, ATL, TSB.
@@ -112,8 +125,9 @@ def fetch_local_summary(days):
     """
     Adapter to convert SQLite data into the same format expected by the intelligence layer.
     """
-    print(f"📂 Loading data from local SQLite Data Lake ({days} days)...", file=sys.stderr)
-    summary_df = sqlite_summary(days)
+    fetch_days = max(days, 30) # Enforce minimum 30 days for rolling baselines
+    print(f"📂 Loading data from local SQLite Data Lake ({fetch_days} days)...", file=sys.stderr)
+    summary_df = sqlite_summary(fetch_days)
     
     if summary_df.empty:
         raise DataStaleError("Local data is completely empty (missing tables or no data in range).")
@@ -130,14 +144,14 @@ def fetch_local_summary(days):
             except ValueError:
                 pass
                 
-    sleep_df = sqlite_sleep(days)
-    hrv_df = sqlite_hrv(days)
-    activities_df = sqlite_activities(days)
-    biomechanics_df = sqlite_biomechanics(days)
+    sleep_df = sqlite_sleep(fetch_days)
+    hrv_df = sqlite_hrv(fetch_days)
+    activities_df = sqlite_activities(fetch_days)
+    biomechanics_df = sqlite_biomechanics(fetch_days)
     
     # New: Devices and Detailed weight
     devices_df = get_devices_info()
-    weight_detailed_df = get_body_composition_detailed(days)
+    weight_detailed_df = get_body_composition_detailed(fetch_days)
     
     activities_list = activities_df.to_dict('records') if not activities_df.empty else []
     biomechanics_list = biomechanics_df.to_dict('records') if not biomechanics_df.empty else []
@@ -195,11 +209,25 @@ def parse_period(period_str, days_int):
 
 def analyze_flu_risk(summary_data):
     """
-    Detect 'The Garmin Flu' pattern (CMO Level):
-    1. RHR spike (> 3 bpm above baseline)
-    2. HRV drop (> 10% below baseline)
-    3. Respiration Rate spike (> 0.5 brpm above baseline) - Key clinical indicator
+    Detect 'The Garmin Flu' pattern (CMO Level) using Rolling Baseline Calibration
+    loaded from external DE (Domain Expert) Knowledge Base.
     """
+    import math
+    guidelines = load_clinical_guidelines().get("flu_risk", {})
+    
+    # Fallback to hardcoded safe defaults if KB missing
+    crit_rhr = guidelines.get("critical", {}).get("rhr_z_score_min", 2.0)
+    crit_hrv = guidelines.get("critical", {}).get("hrv_z_score_max", -2.0)
+    crit_resp = guidelines.get("critical", {}).get("resp_spike_min", 0.5)
+    
+    high_rhr = guidelines.get("high", {}).get("rhr_z_score_min", 1.5)
+    high_hrv = guidelines.get("high", {}).get("hrv_z_score_max", -1.5)
+    
+    mod_rhr = guidelines.get("moderate", {}).get("rhr_z_score_min", 1.0)
+    mod_hrv = guidelines.get("moderate", {}).get("hrv_z_score_max", -1.0)
+    
+    waking_resp_min = guidelines.get("waking_resp_spike_min", 0.5)
+
     hrv_data = summary_data.get("hrv", [])
     hr_data = summary_data.get("heart_rate", [])
     sleep_data = summary_data.get("sleep", [])
@@ -213,25 +241,30 @@ def analyze_flu_risk(summary_data):
     latest_hr_entry = next((item for item in reversed(hr_data) if item.get("resting_hr")), hr_data[-1] if hr_data else {})
     latest_sleep = next((item for item in reversed(sleep_data) if item.get("avg_respiration")), {})
     
-    # Calculate simple baseline (avg of previous days)
+    # Calculate rolling baseline (avg & stdev of previous days, typically 30)
     prev_hrv = [d.get("last_night_avg") for d in hrv_data if d.get("last_night_avg") and d != latest_hrv_entry]
     prev_rhr = [d.get("resting_hr") for d in hr_data if d.get("resting_hr") and d != latest_hr_entry]
     prev_resp = [d.get("avg_respiration") for d in sleep_data if d.get("avg_respiration") and d != latest_sleep]
     
-    if not prev_hrv or not prev_rhr:
+    if len(prev_hrv) < 2 or len(prev_rhr) < 2:
         return {"status": "insufficient_baseline"}
         
-    avg_hrv_baseline = statistics.median(prev_hrv) if prev_hrv else 0
-    avg_rhr_baseline = statistics.median(prev_rhr) if prev_rhr else 0
+    avg_hrv_baseline = statistics.mean(prev_hrv)
+    std_hrv = statistics.stdev(prev_hrv) if len(prev_hrv) > 1 else 1.0
+    
+    avg_rhr_baseline = statistics.mean(prev_rhr)
+    std_rhr = statistics.stdev(prev_rhr) if len(prev_rhr) > 1 else 1.0
+    
     avg_resp_baseline = statistics.median(prev_resp) if prev_resp else 14.0
     
     current_hrv = latest_hrv_entry.get("last_night_avg") or avg_hrv_baseline
     current_rhr = latest_hr_entry.get("resting_hr") or avg_rhr_baseline
     current_resp = latest_sleep.get("avg_respiration") or avg_resp_baseline
     
-    # Thresholds
-    hrv_drop_pct = (avg_hrv_baseline - current_hrv) / avg_hrv_baseline * 100 if avg_hrv_baseline > 0 else 0
-    rhr_spike = current_rhr - avg_rhr_baseline
+    # Z-Scores
+    z_hrv = (current_hrv - avg_hrv_baseline) / std_hrv if std_hrv > 0 else 0
+    z_rhr = (current_rhr - avg_rhr_baseline) / std_rhr if std_rhr > 0 else 0
+    
     resp_spike = current_resp - avg_resp_baseline
     
     daily_summary_data = summary_data.get("daily_summary", [])
@@ -244,21 +277,22 @@ def analyze_flu_risk(summary_data):
     risk_level = "low"
     reasons = []
     
-    if rhr_spike > 5 and hrv_drop_pct > 15 and resp_spike > 0.5:
+    # Dynamic thresholds loaded from DE Knowledge Base
+    if z_rhr > crit_rhr and z_hrv < crit_hrv and resp_spike > crit_resp:
         risk_level = "CRITICAL"
         reasons.append(f"Respiration spike detected (+{resp_spike:.1f} brpm) - High clinical relevance for infection")
-        reasons.append(f"Significant RHR spike (+{rhr_spike:.1f} bpm)")
-        reasons.append(f"Major HRV drop (-{hrv_drop_pct:.1f}%)")
-    elif rhr_spike > 5 and hrv_drop_pct > 15:
+        reasons.append(f"Critical RHR deviation (+{z_rhr:.1f}σ, baseline: {avg_rhr_baseline:.1f})")
+        reasons.append(f"Critical HRV collapse ({z_hrv:.1f}σ, baseline: {avg_hrv_baseline:.1f})")
+    elif z_rhr > high_rhr and z_hrv < high_hrv:
         risk_level = "HIGH"
-        reasons.append(f"Significant RHR spike (+{rhr_spike:.1f} bpm)")
-        reasons.append(f"Major HRV drop (-{hrv_drop_pct:.1f}%)")
-    elif rhr_spike > 3 and hrv_drop_pct > 10:
+        reasons.append(f"Significant RHR deviation (+{z_rhr:.1f}σ)")
+        reasons.append(f"Significant HRV collapse ({z_hrv:.1f}σ)")
+    elif z_rhr > mod_rhr and z_hrv < mod_hrv:
         risk_level = "MODERATE"
-        reasons.append(f"RHR elevated (+{rhr_spike:.1f} bpm)")
-        reasons.append(f"HRV dip (-{hrv_drop_pct:.1f}%)")
+        reasons.append(f"Elevated RHR (+{z_rhr:.1f}σ)")
+        reasons.append(f"Depressed HRV ({z_hrv:.1f}σ)")
         
-    if waking_resp_spike > 0.5:
+    if waking_resp_spike > waking_resp_min:
         reasons.append(f"Daytime sympathetic overdrive (+{waking_resp_spike:.1f} brpm waking RR)")
         if risk_level == "low": risk_level = "MODERATE"
         
@@ -387,16 +421,23 @@ def analyze_executive_readiness(summary_data):
         gct_spike = gct_values[-1] - gct_baseline
 
     # 2. Cognitive Readiness (Focus: REM, HRV, Stress, Dissipation Penalty)
+    guidelines = load_clinical_guidelines().get("executive_readiness", {})
+    penalties = guidelines.get("penalties", {})
+    
+    sleep_debt_thresh = penalties.get("sleep_debt_threshold", 1.5)
+    sleep_debt_mult = penalties.get("sleep_debt_multiplier", 3.0) # original hardcoded 5, let's use config default or 5
+    dissipation_mult = penalties.get("high_stress_dissipation_multiplier", 4.0)
+
     cog_rem_score = min(rem_pct / 20, 1.2) * 30
     cog_stress_score = max(0, (50 - avg_stress)) * 1
     cog_hrv_score = 40 if hrv_status == "BALANCED" else 20
     cognitive_score = cog_rem_score + cog_stress_score + cog_hrv_score + (sleep_score * 0.2)
     
     # Pessimistic Penalty: Dissipation & Sleep Debt
-    if sleep_debt_h > 1.5:
-        cognitive_score -= (sleep_debt_h * 5)
+    if sleep_debt_h > sleep_debt_thresh:
+        cognitive_score -= (sleep_debt_h * sleep_debt_mult)
     if dissipation_hours > 2.0:
-        cognitive_score -= (dissipation_hours * 4) # Cognitive drain penalty
+        cognitive_score -= (dissipation_hours * dissipation_mult) # Cognitive drain penalty
     
     # Social Jetlag Penalty
     social_jetlag = calculate_social_jetlag(sleep_list)
@@ -644,10 +685,37 @@ def calculate_social_jetlag(sleep_data):
     if len(mid_points) < 3: return 0.0
     return round(statistics.stdev(mid_points), 2)
 
+def query_vector_lake(query="过去3天 身体状态 日记", mode="memory", top_k=3):
+    """
+    Hook to query the Vector Lake for bidirectional longitudinal context.
+    """
+    import subprocess
+    import json
+    try:
+        vl_cli = Path(__file__).parent.parent.parent.parent / "extensions" / "vector-lake" / "cli.py"
+        if not vl_cli.exists():
+            return None
+        # Use python to run the CLI, parsing JSON output if possible, but fallback to stdout string
+        # To avoid complex JSON parsing of CLI output, we just capture stdout directly and trim it.
+        result = subprocess.run(
+            ["python", str(vl_cli), "search", query, "--mode", mode, "--top_k", str(top_k)],
+            capture_output=True, text=True, encoding="utf-8", timeout=5
+        )
+        if result.returncode == 0 and result.stdout.strip():
+            # Return a brief snippet to avoid bloating the terminal report
+            lines = result.stdout.strip().split('\n')
+            return " | ".join(lines[:3]) + ("..." if len(lines) > 3 else "")
+        return None
+    except Exception:
+        return None
+
 def generate_chinese_insight(summary_data):
     """Generate a consolidated health analysis in Chinese with Mentat Expert Logic."""
     audit = perform_bio_metric_audit(summary_data)
     readiness = analyze_executive_readiness(summary_data)
+    
+    # 0. Bidirectional Context from Vector Lake (Diary / Logs)
+    historical_context = query_vector_lake()
     
     # 1. Sleep Consistency & Debt Audit
     sleep_data = summary_data.get("sleep", [])
@@ -716,6 +784,13 @@ def generate_chinese_insight(summary_data):
     overall_sections = []
     period_str = summary_data.get('summary', {}).get('period', '指定时间段')
     
+    # Section 0: Vector Lake Historical Context
+    if historical_context:
+        ctx_msg = f"【0. 纵向归因 (Vector Lake Context)】\n"
+        ctx_msg += f"· 记忆提取：{historical_context}\n"
+        ctx_msg += f"  > 归因：大模型综合诊断需将上述事件轨迹与后续物理指标强制对齐。"
+        overall_sections.append(ctx_msg)
+
     bb_sparkline = generate_sparkline([b.get("highest") for b in bb_data[-7:]])
     
     # Section 1: System Status & Momentum
@@ -887,23 +962,33 @@ def stitch_v3_metrics(summary_data, days):
         summary_data["biomechanics"] = get_biomechanics_data(days).to_dict('records')
         
         # 2. Daily Summary (Waking RR, Sweat Loss)
-        conn = get_connection(GARMIN_DB)
-        d_df = pd.read_sql_query("SELECT day as date, sweat_loss, rr_waking_avg FROM daily_summary ORDER BY day DESC", conn)
-        if not d_df.empty:
-            d_df['date'] = d_df['date'].apply(lambda x: str(x).split(' ')[0])
-            d_df = d_df.where(pd.notnull(d_df), None)
-            summary_data["daily_summary"] = d_df.to_dict('records')
-        
-        # 3. SpO2 mapping to sleep
-        s_df = pd.read_sql_query("SELECT day as date, avg_spo2 FROM sleep ORDER BY day DESC", conn)
-        if not s_df.empty:
-            s_df['date'] = s_df['date'].apply(lambda x: str(x).split(' ')[0])
-            s_df = s_df.where(pd.notnull(s_df), None)
-            spo2_map = {r["date"]: r["avg_spo2"] for r in s_df.to_dict('records') if "date" in r}
-            for s in summary_data.get("sleep", []):
-                if s.get("date") in spo2_map:
-                    s["avg_spo2"] = spo2_map[s["date"]]
-        conn.close()
+        try:
+            conn = get_connection(GARMIN_DB)
+            cur = conn.cursor()
+            cur.execute("SELECT name FROM sqlite_master WHERE type='table'")
+            tables = [r[0] for r in cur.fetchall()]
+            table_name = 'daily_summary' if 'daily_summary' in tables else 'days_summary' if 'days_summary' in tables else None
+            
+            if table_name:
+                d_df = pd.read_sql_query(f"SELECT day as date, sweat_loss, rr_waking_avg FROM {table_name} ORDER BY day DESC", conn)
+                if not d_df.empty:
+                    d_df['date'] = d_df['date'].apply(lambda x: str(x).split(' ')[0])
+                    d_df = d_df.where(pd.notnull(d_df), None)
+                    summary_data["daily_summary"] = d_df.to_dict('records')
+            
+            # 3. SpO2 mapping to sleep
+            s_df = pd.read_sql_query("SELECT day as date, avg_spo2 FROM sleep ORDER BY day DESC", conn)
+            if not s_df.empty:
+                s_df['date'] = s_df['date'].apply(lambda x: str(x).split(' ')[0])
+                s_df = s_df.where(pd.notnull(s_df), None)
+                spo2_map = {r["date"]: r["avg_spo2"] for r in s_df.to_dict('records') if "date" in r}
+                for s in summary_data.get("sleep", []):
+                    if s.get("date") in spo2_map:
+                        s["avg_spo2"] = spo2_map[s["date"]]
+        except Exception as e:
+            print(f"⚠️ Failed to query SQLite for v3 metrics: {e}")
+        finally:
+            if 'conn' in locals(): conn.close()
     except Exception as e:
         import sys
         print(f"⚠️ V3 Metrics Stitch failed: {e}", file=sys.stderr)
@@ -916,10 +1001,12 @@ def main():
     
     args = parser.parse_args()
     days = parse_period(args.period, args.days)
+    fetch_days = max(days, 30) # Always fetch at least 30 days for rolling baselines
+    
     summary_data = None
     if HAS_SQLITE:
         try:
-            summary_data = fetch_local_summary(days)
+            summary_data = fetch_local_summary(fetch_days)
         except Exception as e:
             print(f"⚠️ Local SQLite load failed or stale ({e}). Falling back to Live API...", file=sys.stderr)
             summary_data = None
@@ -931,10 +1018,13 @@ def main():
             sys.exit(1)
             
         try:
-            summary_data = fetch_summary(client, days)
+            summary_data = fetch_summary(client, fetch_days)
         except Exception as e:
             print(f'{{"error": "Critical Path Error: Live API load failed ({e})."}}', file=sys.stderr)
             sys.exit(1)
+            
+    # Filter the final result list length back to requested `days` if needed, 
+    # but the analysis functions handle slicing. The summary_data contains baseline.
     
     if args.analysis == "flu_risk":
         result = analyze_flu_risk(summary_data)
@@ -951,6 +1041,32 @@ def main():
     elif args.analysis == "device_audit":
         result = analyze_device_health(summary_data)
         
+    # [Vector Lake Integration] Output core state slice for operational memory ingestion
+    if args.analysis in ["readiness", "insight_cn"] and isinstance(result, dict):
+        try:
+            from pathlib import Path
+            mem_dir = Path.home() / ".gemini" / "MEMORY" / "raw" / "garmin_state"
+            mem_dir.mkdir(parents=True, exist_ok=True)
+            today = datetime.now().strftime("%Y-%m-%d")
+            out_file = mem_dir / f"health_state_{today}.json"
+            
+            state_slice = {
+                "date": today,
+                "domain": "personal_health",
+                "type": "task_state",
+            }
+            if args.analysis == "readiness":
+                state_slice["readiness_score"] = result.get("executive_readiness_score")
+                state_slice["risk_level"] = result.get("risk_level")
+            elif args.analysis == "insight_cn":
+                state_slice["momentum"] = result.get("momentum_indicator")
+                state_slice["frictions"] = result.get("friction_warnings", [])
+            
+            with open(out_file, "w", encoding="utf-8") as f:
+                json.dump(state_slice, f, ensure_ascii=False, indent=2)
+        except Exception as e:
+            print(f"⚠️ Vector Lake Memory Ingest Failed: {e}", file=sys.stderr)
+
     print(json.dumps(result, indent=2, ensure_ascii=False))
 
 if __name__ == "__main__":

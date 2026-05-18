@@ -171,7 +171,7 @@ def summarize_long_transcript(messages, max_chars=10000):
     return full_text[:max_chars] + '\n...[Transcript Truncated]...'
 
 
-def process_sessions(raw_sessions, logs):
+def process_sessions(raw_sessions, logs, drop_noise=False):
     session_messages = defaultdict(list)
     for message in logs:
         sid = message.get('sessionId')
@@ -193,8 +193,9 @@ def process_sessions(raw_sessions, logs):
 
         user_msgs = [m for m in messages if m.get('type') in ('user', 'human', 'USER')]
         if len(user_msgs) < 2:
-            filtered_count += 1
-            continue
+            if drop_noise:
+                filtered_count += 1
+                continue
 
         try:
             parsed_ts = []
@@ -207,10 +208,28 @@ def process_sessions(raw_sessions, logs):
             duration = 0
 
         if duration > 0 and duration < 60:
-            filtered_count += 1
-            continue
+            if drop_noise:
+                filtered_count += 1
+                continue
 
         transcript = summarize_long_transcript(messages)
+        
+        if drop_noise:
+            # Drop non-mutating sessions
+            if 'replace' not in transcript and 'write_file' not in transcript and 'run_shell_command' not in transcript:
+                filtered_count += 1
+                continue
+
+        # Hardcoded deadlock detection
+        friction_type = 'None'
+        replace_fails = transcript.count('replace failed') + transcript.count('Tool replace failed') + transcript.count('File editing collision')
+        shell_fails = transcript.count('exit code: 1') + transcript.count('exit code 1') + transcript.count('non-zero exit code')
+        
+        if replace_fails >= 3:
+            friction_type = 'Context_Deficit'
+        elif shell_fails >= 3:
+            friction_type = 'Environmental_Lock'
+
         processed.append({
             'id': sid,
             'title': title,
@@ -221,8 +240,9 @@ def process_sessions(raw_sessions, logs):
             'tokens': sum(len(str(m.get('message', ''))) for m in messages) // 4,
             'timestamp': messages[0].get('timestamp'),
             'transcript_snapshot': transcript,
+            'friction_type': friction_type
         })
-    print(f'  🎯 匹配会话: {len(processed)} (过滤了 {filtered_count} 个低质量会话)')
+    print(f'  🎯 匹配会话: {len(processed)} (过滤了 {filtered_count} 个低质量/噪音会话)')
     return processed
 
 

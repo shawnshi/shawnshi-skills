@@ -1,11 +1,12 @@
 from __future__ import annotations
 
 import json
+import re
 from datetime import datetime
 
 from blackboard import append_signal, update_phase
 from history_manager import is_redundant
-from hub_utils import HUB_DIR, LATEST_SCAN_PATH, REFINED_PATH, dump_json, ensure_runtime_dirs, has_llm_runner, load_json, run_llm
+from hub_utils import HUB_DIR, LATEST_SCAN_PATH, REFINED_PATH, clean_json_output, dump_json, ensure_runtime_dirs, has_llm_runner, load_json, run_llm
 
 
 FOCUS_PATH = HUB_DIR / "references" / "strategic_focus.json"
@@ -173,12 +174,38 @@ def maybe_model_refine(base_output: dict) -> dict:
     return base_output
 
 
+def enforce_entity_linking(text: str, entities: list[str]) -> str:
+    if not text:
+        return text
+    for entity in entities:
+        if len(entity) >= 2:
+            pattern = re.compile(rf"(?<!\[\[)({re.escape(entity)})(?!\]\])", flags=re.IGNORECASE)
+            text = pattern.sub(r"[[\1]]", text)
+    return text
+
+
+def post_process_entities(output: dict, focus_data: dict) -> dict:
+    competitors = focus_data.get("competitors", [])
+    keywords = [kw["keyword"] for kw in focus_data.get("strategic_keywords", [])]
+    entities = sorted(list(set(competitors + keywords)), key=len, reverse=True)
+    
+    for candidate in output.get("top_10", []):
+        if "summary_zh" in candidate:
+            candidate["summary_zh"] = enforce_entity_linking(candidate["summary_zh"], entities)
+        if "title_zh" in candidate:
+            candidate["title_zh"] = enforce_entity_linking(candidate["title_zh"], entities)
+        if "deduction" in candidate:
+            candidate["deduction"] = enforce_entity_linking(candidate["deduction"], entities)
+    return output
+
+
 def refine() -> None:
     ensure_runtime_dirs()
     update_phase("refine", "running")
     scan_data, focus_data = load_inputs()
     output = heuristics(scan_data, focus_data)
     output = maybe_model_refine(output)
+    output = post_process_entities(output, focus_data)
     dump_json(REFINED_PATH, output)
     update_phase("refine", "completed")
     print(f"[OK] refined output saved to {REFINED_PATH}")

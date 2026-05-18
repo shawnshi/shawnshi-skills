@@ -189,16 +189,11 @@ async def scan_all():
             ("Hacker News", fetch_hackernews(session, cache)),
             ("GitHub", fetch_github_trending(session, cache)),
             ("V2EX", fetch_v2ex(session, cache)),
-            ("HealthIT.gov", parse_rss(session, "https://www.healthit.gov/news/feed", "HealthIT.gov", cache)),
-            ("HIMSS", parse_rss(session, "https://www.himss.org/news", "HIMSS", cache)),
-            ("Nature Digital Medicine", parse_rss(session, "https://www.nature.com/npjdigitalmed.rss", "Nature Digital Medicine", cache, limit=5)),
-            ("The Lancet Digital Health", parse_rss(session, "https://www.thelancet.com/rssfeed/landig_current.xml", "The Lancet Digital Health", cache, limit=5)),
-            ("NEJM", parse_rss(session, "https://www.nejm.org/action/showFeed?type=etoc&feed=rss&jc=nejm", "NEJM", cache, limit=5)),
-            ("Product Hunt", parse_rss(session, "https://www.producthunt.com/feed", "Product Hunt", cache, limit=5)),
         ]
         for feed in custom_feeds:
+            limit = feed.get("limit", 5)
             tasks_meta.append(
-                (feed["name"], parse_rss(session, feed["url"], feed["name"], cache, limit=3))
+                (feed["name"], parse_rss(session, feed["url"], feed["name"], cache, limit=limit))
             )
 
         results = await asyncio.gather(*[x[1] for x in tasks_meta], return_exceptions=True)

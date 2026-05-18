@@ -406,5 +406,77 @@
   {
     "name": "HIStalk",
     "url": "https://histalk2.com/feed/"
+  },
+  {
+    "name": "Epic News",
+    "url": "https://www.epic.com/epic/feed/"
+  },
+  {
+    "name": "HL7 International",
+    "url": "https://blog.hl7.org/rss.xml"
+  },
+  {
+    "name": "NVIDIA Healthcare",
+    "url": "https://blogs.nvidia.com/blog/category/healthcare/feed/"
+  },
+  {
+    "name": "arXiv (cs.CL)",
+    "url": "http://export.arxiv.org/rss/cs.CL"
+  },
+  {
+    "name": "arXiv (cs.AI)",
+    "url": "http://export.arxiv.org/rss/cs.AI"
+  },
+  {
+    "name": "Hugging Face Daily Papers",
+    "url": "https://rsshub.app/huggingface/daily-papers"
+  },
+  {
+    "name": "动脉网 (VB100)",
+    "url": "https://rsshub.app/vcbeat/top"
+  },
+  {
+    "name": "CHIMA",
+    "url": "https://rsshub.app/chima"
+  },
+  {
+    "name": "John Halamka (Geekdoctor)",
+    "url": "http://geekdoctor.blogspot.com/feeds/posts/default"
+  },
+  {
+    "name": "Eric Topol (Ground Truths)",
+    "url": "https://erictopol.substack.com/feed"
+  },
+  {
+    "name": "OpenAI News",
+    "url": "https://rsshub.app/openai/news"
+  },
+  {
+    "name": "Anthropic News",
+    "url": "https://rsshub.app/anthropic/news"
+  },
+  {
+    "name": "Google DeepMind",
+    "url": "https://blog.google/rss/innovation-ai/google-deepmind/"
+  },
+  {
+    "name": "Google Research",
+    "url": "https://research.google/blog/rss/"
+  },
+  {
+    "name": "Nature Digital Medicine",
+    "url": "https://www.nature.com/npjdigitalmed.rss"
+  },
+  {
+    "name": "The Lancet Digital Health",
+    "url": "https://www.thelancet.com/rssfeed/landig_current.xml"
+  },
+  {
+    "name": "NEJM",
+    "url": "https://www.nejm.org/action/showFeed?type=etoc&feed=rss&jc=nejm"
+  },
+  {
+    "name": "Product Hunt",
+    "url": "https://www.producthunt.com/feed"
   }
 ]

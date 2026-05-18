@@ -13,7 +13,7 @@ Strategy:
 AVOID: 严禁在报告中保留 [URL] 占位符；禁止发布无临床场景适配的 L1 级情报；禁止绕过 DOI 精准校验。
 </strategy-gene>
 
-# SKILL.md: HIT Intel Scout V6.0 (医疗数字化战略侦察兵)
+# SKILL.md: HIT Intel Scout V6.1 (医疗数字化战略侦察兵)
 
 > **Vision**: 捕捉学术界的非共识信号，通过结构化补偿消除"学术灌水"与"幻觉"，将学术突破转化为卫宁研发部的具体任务与销售线的防御武器。
 
@@ -37,21 +37,22 @@ AVOID: 严禁在报告中保留 [URL] 占位符；禁止发布无临床场景适
 
 ### Phase 1: 混合调度 — deepxiv-sdk + 子代理并发 (Map-Reduce Delegation) [Mode: PLANNING]
 
-**Preprints 管线 (deepxiv-sdk 直控)**:
+**Preprints 管线 (deepxiv-sdk 直控 & 降级预案)**:
 1. **deepxiv-sdk 脚本调用**: 通过 shell command 执行 `python skills/hit-lectures-scout/assets/deepxiv_preprints_scout.py`。该脚本通过 `deepxiv_sdk.Reader` API 执行：
    - `Reader.search()` × 7 组关键词，混合检索 (BM25+Vector)，按 `categories` 和 `date_from/date_to` 精确过滤
    - `Reader.trending(days=7)` 补充热门论文
    - `Reader.brief()` 批量提纯 Top 30 论文（获取 TLDR / Keywords / Citations / GitHub URL）
    - 按 `arxiv_id` 先验去重，输出至 `tmp/playgrounds/Response_Preprints.md`
 2. **弹性降维**: 若 7 天内结果 < 5 篇，脚本自动将检索窗口扩大至 14 天（与 §1 触发逻辑一致）。
+3. **API 降级预案 (Resilience Routing)**: 若 `deepxiv_preprints_scout.py` 执行失败（如返回 Token 错误或 0 篇论文），主代理必须立刻激活 `generalist` 子代理，下发 `assets/task_preprints_fallback.md` 指令，命令其使用 `google_web_search` 配合 `site:arxiv.org/list/cs.AI/recent` 手动抓取预印本信息并写入 `Response_Preprints.md`。绝不允许因 API 故障导致无数据流出。
 
 **EN/CN Journals 管线 (委派可选)**:
-3. **处理方式选择**: 将 `assets/task_journals_en.md` 和 `assets/task_journals_cn.md` 作为任务包。若可安全委派，则交给有界 worker；否则主代理顺序完成两条管线。
-4. **结果落盘**: 无论由谁执行，都必须将提纯结果分别写回 `tmp/playgrounds/Response_EN.md` 与 `tmp/playgrounds/Response_CN.md`。
+4. **处理方式选择**: 将 `assets/task_journals_en.md` 和 `assets/task_journals_cn.md` 作为任务包。若可安全委派，则交给有界 worker；否则主代理顺序完成两条管线。
+5. **结果落盘**: 无论由谁执行，都必须将提纯结果分别写回 `tmp/playgrounds/Response_EN.md` 与 `tmp/playgrounds/Response_CN.md`。
 
 **汇合与去重**:
-5. **时序与逻辑补位**: 只有在 deepxiv 脚本和全部 journal 管线都完成后，主代理才能读取三个 `Response` 文件。若顶级正刊论文不足，必须提取热点趋势补齐信息密度。
-6. **资产回收与 SemHash 拦截**: 扫描物理目录执行 SemHash 去重。Preprints 数据已按 `arxiv_id` 先验去重，此处仅需跨管线（preprints vs journals）去重。若某篇论文已在过去 14 天内被扫描过且无重大二阶评论，强制拦截。将合并后的高纯度信息推入数字黑板，随后立即清扫 `tmp/` 下的中间产物。
+6. **时序与逻辑补位**: 只有在 preprints 降级/原管线和全部 journal 管线都完成后，主代理才能读取三个 `Response` 文件。若顶级正刊论文不足，必须提取热点趋势补齐信息密度。
+7. **资产回收与 SemHash 拦截**: 扫描物理目录执行 SemHash 去重。若某篇论文已在过去 14 天内被扫描过且无重大二阶评论，强制拦截。将合并后的高纯度信息推入数字黑板，随后立即清扫 `tmp/` 下的中间产物。
 
 ### Phase 2: Arbiter 提纯与 TRL 脱水 [Mode: EXECUTION]
 1. **战略分流**: 筛选 Top 10-15 篇文献进入数字黑板。
@@ -70,18 +71,18 @@ AVOID: 严禁在报告中保留 [URL] 占位符；禁止发布无临床场景适
 
 ### Phase 5: 结构化生成与元数据审计 (Self-Healing & Persistence) [Mode: EXECUTION]
 1. **强制模板**: 必须读取 `assets/report_template.md` 作为输出骨架。
-2. **知识入湖**: 若本地 `vector-lake` CLI 可用，则通过 shell command 执行 `sync`；若不可用，则至少完成本地物理归档并记录未同步原因。
-3. **元数据完整性审计**: **[HARD LOCK]** 严禁在最终报告中使用 `[Link]`、`[URL]` 或占位符。必须逐一校验 DOI 和源地址。若缺失则使用搜索/浏览工具二次精准核验。
-4. **逻辑断层审计**: 确保每一项推理均挂载了精确的 `[Ref: Evidence_Node_ID]`。
+2. **物理归档与元数据校验**: **[HARD LOCK]** 严禁在最终报告中使用 `[Link]`、`[URL]` 或占位符。必须逐一校验 DOI 和源地址。若缺失则使用搜索/浏览工具二次精准核验。确保每一项推理均挂载了精确的 `[Ref: Evidence_Node_ID]`。
+3. **学术概念入湖 (Graph Ingestion)**：战报生成并写入本地物理归档后，若发现新的高价值前沿架构或临床陷阱（如“早熟收敛”），主代理必须利用 `write_file` 或 `replace` 将其创建/更新至 `~/.gemini/MEMORY/wiki/Concept_[概念名].md`，并确保符合 V8 双架构标准，最后调用 `mcp_vector-lake-mcp_sync_vector_lake` 刷新全局底层认知库。
 
 ### Phase 6: The Hard Gate (物理层强制审计)
 1. **写草稿**: 你必须将组装好的战报写入临时文件 `~/.gemini/tmp/draft_hit_scout.md`。
 2. **执行审计**: 调用 shell 执行 `python ~/.gemini/skills/scripts/hit_audit_gate.py ~/.gemini/tmp/draft_hit_scout.md --mode scout`。
-3. **处理失败**: 若审计报错（如未发现 RWE/研发任务/销售话术，或残留占位符），必须退回修正草稿。最多重试 2 次。
-4. **物理归档**: **[MANDATORY]** 只有审计脚本返回 `Audit Passed` 后，才能调用 `write_file` 将最终报告保存在 `~/.gemini/MEMORY/raw/DigitalHealthLecturesScout/`。
+3. **处理失败**: 若审计报错（如未发现 RWE/研发预研任务/销售防御话术，或残留占位符），必须退回修正草稿。最多重试 2 次。
+4. **最终落盘**: **[MANDATORY]** 只有审计脚本返回 `Audit Passed` 后，才能调用 `write_file` 将最终报告保存在 `~/.gemini/MEMORY/raw/DigitalHealthLecturesScout/`。
 
 ## Resources
 - `assets/deepxiv_preprints_scout.py`
+- `assets/task_preprints_fallback.md`
 - `assets/task_journals_en.md`
 - `assets/task_journals_cn.md`
 - `assets/report_template.md`

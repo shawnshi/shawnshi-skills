@@ -2,7 +2,7 @@ import json
 import sys
 from pathlib import Path
 
-VERSION = '9.0'
+VERSION = '11.0'
 METRIC_KEYWORDS = ['会话', '时长', 'token', '提交', '活跃', '失败', 'telemetry', '指标', '摩擦', '效率']
 REQUIRED_TOP_LEVEL = [
     'version', 'behavioral_analysis', 'friction_analysis', 'workflow_engineering',
@@ -49,14 +49,36 @@ def validate_agent_payload(payload):
     categories = friction.get('categories', []) if isinstance(friction, dict) else []
     if not categories:
         errors.append('friction_analysis.categories must contain at least one anti-pattern category')
+    
+    # Deep Validation: Friction
+    for i, cat in enumerate(categories):
+        if not isinstance(cat, dict) or 'category' not in cat or 'description' not in cat:
+            errors.append(f'friction_analysis.categories[{i}] missing required keys (category, description)')
+        if 'root_cause_pattern' not in cat:
+            errors.append(f'friction_analysis.categories[{i}] missing root_cause_pattern')
 
     workflow_engineering = payload.get('workflow_engineering', {})
     prompt_assets = workflow_engineering.get('prompt_assets', []) if isinstance(workflow_engineering, dict) else []
     automation_candidates = workflow_engineering.get('automation_candidates', []) if isinstance(workflow_engineering, dict) else []
+    auto_constraint_writeback = workflow_engineering.get('auto_constraint_writeback', []) if isinstance(workflow_engineering, dict) else []
+    
     if not prompt_assets or not any(asset.get('copy_paste_template', '').strip() for asset in prompt_assets if isinstance(asset, dict)):
         errors.append('workflow_engineering.prompt_assets must contain at least one copyable asset')
     if not automation_candidates:
         errors.append('workflow_engineering.automation_candidates must contain at least one automation proposal')
+
+    # Deep Validation: Workflow
+    for i, asset in enumerate(prompt_assets):
+        if 'asset_type' not in asset or 'target_friction' not in asset or 'copy_paste_template' not in asset:
+            errors.append(f'workflow_engineering.prompt_assets[{i}] missing keys (asset_type, target_friction, copy_paste_template)')
+            
+    for i, cand in enumerate(automation_candidates):
+        if 'candidate_name' not in cand or 'rationale' not in cand or 'implementation_sketch' not in cand:
+            errors.append(f'workflow_engineering.automation_candidates[{i}] missing keys (candidate_name, rationale, implementation_sketch)')
+
+    for i, constraint in enumerate(auto_constraint_writeback):
+        if 'target_file' not in constraint or 'writeback_instruction' not in constraint or 'trigger_friction' not in constraint:
+            errors.append(f'workflow_engineering.auto_constraint_writeback[{i}] missing keys (target_file, writeback_instruction, trigger_friction)')
 
     merged_text = ' '.join([
         behavioral.get('overall', '') if isinstance(behavioral, dict) else '',
@@ -69,6 +91,11 @@ def validate_agent_payload(payload):
     suggestions = payload.get('suggestions', {})
     usage_patterns = suggestions.get('usage_patterns', []) if isinstance(suggestions, dict) else []
     glance = payload.get('at_a_glance', {})
+    
+    # Deep Validation: Glance
+    if not isinstance(glance, dict) or 'whats_working' not in glance or 'whats_hindering' not in glance or 'quick_wins' not in glance or 'ambitious_workflows' not in glance:
+         errors.append('at_a_glance missing required keys (whats_working, whats_hindering, quick_wins, ambitious_workflows)')
+
     quick_wins = glance.get('quick_wins', '') if isinstance(glance, dict) else ''
     if not quick_wins.strip() and not any(item.get('detail', '').strip() for item in usage_patterns if isinstance(item, dict)):
         errors.append('next-cycle action missing from at_a_glance.quick_wins or suggestions.usage_patterns')

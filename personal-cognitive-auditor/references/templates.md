@@ -32,6 +32,9 @@
 **可执行的改进 (Pragmatic Action):**
 <!-- 灰度解或杠杆点 -->
 
+## 今日认知处方 (Cognitive Prescription)
+必须通过执行 personal-cognitive-prescription 技能获取当天的诊断与靶向书籍，原样贴入此处。如果由于权限或报错未能生成，强制填入：[PRESCRIPTION_UNAVAILABLE]]
+
 ## 熵增对抗 (Chaos Mitigation)
 <!-- 今日解决了哪个混乱点？精简了哪个流程？ -->
 

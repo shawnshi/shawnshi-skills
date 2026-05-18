@@ -21,7 +21,12 @@ def validate_hit_draft(content: str, mode: str) -> list[str]:
         "全面升级",
         "重大突破",
         "生态矩阵",
-        "降本增效" # Often overused without metrics
+        "降本增效", # Often overused without metrics
+        "全栈式",
+        "赋能临床",
+        "打破信息孤岛",
+        "顶层设计",
+        "智慧大脑"
     ]
     for phrase in banned_phrases:
         if phrase in content:
@@ -39,6 +44,12 @@ def validate_hit_draft(content: str, mode: str) -> list[str]:
         for r_sec in required_radar:
             if not re.search(r_sec, content):
                 errors.append(f"Radar Mode Violation: Missing required section/keyword '{r_sec}'.")
+        
+        # Enforce that Fact lines must contain digits (e.g., money, version, date)
+        fact_lines = re.findall(r"- \*\*最新资讯 \(Fact\)\*\*：(.*)", content)
+        for idx, fact_line in enumerate(fact_lines, 1):
+            if not re.search(r"\d+", fact_line):
+                errors.append(f"Radar Fact Violation: Fact line #{idx} lacks concrete metrics (no numbers found): '{fact_line[:30]}...'")
                 
     elif mode == "scout":
         required_scout = [r"真实世界证据", r"研发预研任务", r"销售防御话术"]
@@ -47,10 +58,15 @@ def validate_hit_draft(content: str, mode: str) -> list[str]:
                 errors.append(f"Scout Mode Violation: Missing required section/keyword '{s_sec}'.")
 
     elif mode == "brief":
-        required_brief = [r"非共识", r"Contrarian", r"跨界"]
-        found_brief = any(re.search(b_sec, content, re.IGNORECASE) for b_sec in required_brief)
-        if not found_brief:
-            errors.append("Brief Mode Violation: Missing Contrarian view or Cross-domain (Serendipity) insight.")
+        required_brief = [r"非共识", r"Contrarian", r"跨界", r"Serendipity"]
+        # Split into two mandatory logic gates: Must have a contrarian view AND must have a serendipity view
+        has_contrarian = any(re.search(word, content, re.IGNORECASE) for word in [r"非共识", r"Contrarian"])
+        has_serendipity = any(re.search(word, content, re.IGNORECASE) for word in [r"跨界", r"Serendipity"])
+        
+        if not has_contrarian:
+            errors.append("Brief Mode Violation: Missing Contrarian (非共识) view. You must challenge the consensus.")
+        if not has_serendipity:
+            errors.append("Brief Mode Violation: Missing Cross-domain / Serendipity (跨界) insight. You must include insights from outside healthcare.")
 
     return errors
 

@@ -58,6 +58,19 @@ def login(email, password):
         client.login(tokenstore=tokenstore)  # Initial login with tokenstore for auto-dump
 
         print(f"✅ Tokens saved to {tokenstore}", file=sys.stderr)        
+        
+        # Mirror tokens to GarminDb for compatibility
+        try:
+            import shutil
+            garmin_db_dir = Path.home() / ".GarminDb"
+            garmin_db_dir.mkdir(parents=True, exist_ok=True)
+            source_token = TOKEN_DIR / "garmin_tokens.json"
+            if source_token.exists():
+                shutil.copy2(source_token, garmin_db_dir / "garmin_tokens.json")
+                print(f"✅ Tokens mirrored to {garmin_db_dir}", file=sys.stderr)
+        except Exception as e:
+            print(f"⚠️  Failed to mirror tokens: {e}", file=sys.stderr)
+
         # Test the connection
         try:
             profile = client.get_user_summary(datetime.now().strftime("%Y-%m-%d"))
