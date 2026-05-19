@@ -51,10 +51,10 @@ def build_overlay_data(summary_data):
         df_pmc['CTL'] = df_pmc['daily_friction_load'].ewm(span=42, adjust=False).mean()
         df_pmc['ATL'] = df_pmc['daily_friction_load'].ewm(span=7, adjust=False).mean()
         df_pmc['TSB'] = df_pmc['CTL'].shift(1) - df_pmc['ATL'].shift(1)
-        pmc_map_ctl = {r['date']: clean_nan(r['CTL']) for _, r in df_pmc.iterrows()}
-        pmc_map_atl = {r['date']: clean_nan(r['ATL']) for _, r in df_pmc.iterrows()}
-        pmc_map_tsb = {r['date']: clean_nan(r['TSB']) for _, r in df_pmc.iterrows()}
-        pmc_map_load = {r['date']: clean_nan(r['daily_friction_load']) for _, r in df_pmc.iterrows()}
+        pmc_map_ctl = dict(zip(df_pmc['date'], df_pmc['CTL'].apply(clean_nan)))
+        pmc_map_atl = dict(zip(df_pmc['date'], df_pmc['ATL'].apply(clean_nan)))
+        pmc_map_tsb = dict(zip(df_pmc['date'], df_pmc['TSB'].apply(clean_nan)))
+        pmc_map_load = dict(zip(df_pmc['date'], df_pmc['daily_friction_load'].apply(clean_nan)))
         
         # New: Environment and Devices
         df_devices = get_devices_info()
