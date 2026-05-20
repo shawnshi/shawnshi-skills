@@ -108,7 +108,7 @@ powershell -ExecutionPolicy Bypass -File .\scripts\repair_skills.ps1 -Mode Repor
 
 ## 3. 核心分类矩阵 (Core Skill Hierarchy)
 
-> **Total Inventory: 46 Strategic Modules across 8 Domains**
+> **Total Inventory: 48 Strategic Modules across 8 Domains**
 
 ### 🧠 深度认知与研究工作台 (Cognitive Research)
 *底层思考工具箱：需求脱水、战略审计、红蓝对抗与情报分析。*
@@ -179,6 +179,7 @@ powershell -ExecutionPolicy Bypass -File .\scripts\repair_skills.ps1 -Mode Repor
 |:--------------------------------------------------------------|:---------------------------------------------------------------------------------------|
 | **[personal-diary-writer](personal-diary-writer/)**           | **个人日志原子写入器**。负责高频轻量级的日常状态录入与安全落盘，强绑定物理 I/O 组件.   |
 | **[personal-cognitive-auditor](personal-cognitive-auditor/)** | **战略认知联合审计官**。处理日/周/月/年结认知复盘，强制调度多源数据，交接 Writer 落盘. |
+| **[personal-cognitive-prescription](personal-cognitive-prescription/)** | **认知处方引擎**。无情的认知审计官，嗅探盲区并执行降维打击，强制开出靶向章节的硬核书籍阅读处方. |
 | **[personal-health-analysis](personal-health-analysis/)**     | **首席医疗官 (CMO) 引擎**。对 Garmin 生理数据执行全链路审计，管理决策准备度.           |
 | **[personal-musicbee-dj](personal-musicbee-dj/)**             | **音乐极客控制协议**。通过 JIT 算法精准控制本地进程，实现秒级心流氛围切换.             |
 | **[personal-travel-research](personal-travel-research/)**     | **旅行研究 (ljg-travel-flow)**。深度文化旅行案头研究，涵盖博物馆、古建与考古发现.      |
@@ -198,8 +199,9 @@ powershell -ExecutionPolicy Bypass -File .\scripts\repair_skills.ps1 -Mode Repor
 
 | 技能标识 (Directory)                                      | 核心本质 (Trigger Traps)                                                       |
 |:----------------------------------------------------------|:-------------------------------------------------------------------------------|
+| **[tencent-meeting-mcp](tencent-meeting-mcp/)**           | **腾讯会议 MCP 服务**。提供完整的工具集，支持会议安排、录制下载、转写搜索与智能纪要提取. |
 | **[tool-document-summarizer](tool-document-summarizer/)** | **战略情报引擎**。具备本体驱动的语义压缩能力，输出带有战略标签的摘要.          |
-| **[tool-markdown-converter](markdown-converter/)**        | **Markdown 原质炼金术**。利用 MarkItDown 将异构文件统一转化为极致干净的语义层. |
+| **[tool-markdown-converter](tool-markdown-converter/)**   | **Markdown 原质炼金术**。利用 MarkItDown 将异构文件统一转化为极致干净的语义层. |
 | **[tool-tts](tool-tts/)**                                 | **军工级播报系统**。支持 Edge 神经网络语音，确保高审美播报.                    |
 | **[tool-tuanbiao-downloader](tool-tuanbiao-downloader/)** | **团体标准下载器**。全自动 ID 解析与 PDF 合并装订，确保 100% 获取率.           |
 | **[tool-url-markdown](tool-url-markdown/)**               | **网页原质提取器**。直控 Chrome CDP 协议，强制清除网页噪音.                    |
