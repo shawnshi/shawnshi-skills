@@ -1,0 +1,4 @@
+## 2026-05-21 - Command Injection Risks with shell=True
+**Vulnerability:** Multiple `subprocess` calls were using `shell=True`, exposing the application to command injection, especially when using environment variables like `PIH_LLM_COMMAND` which can be externally controlled. Additionally, passing lists of arguments to `subprocess.run` with `shell=True` causes incorrect execution on POSIX systems.
+**Learning:** Using `shell=True` is inherently risky when dealing with dynamic or externally sourced command strings. For robust and secure execution, `shell=False` is strongly preferred. When command strings need to be parsed into arguments, `shlex.split()` provides a safe mechanism to do so without invoking a shell.
+**Prevention:** Always default to `shell=False` across all `subprocess` invocations. Pass arguments as structured lists. If parsing a full command string is necessary, safely use `shlex.split(command)`.
