@@ -35,19 +35,16 @@ def score_item(item: dict, focus_data: dict) -> tuple[int, list[str]]:
     return score, matched
 
 
-def confidence_from_source(source: str) -> str:
-    high = {"HealthIT.gov", "HIMSS", "Nature Digital Medicine", "The Lancet Digital Health", "NEJM"}
-    medium = {"Hacker News", "GitHub", "V2EX", "Product Hunt"}
-    if source in high:
+def confidence_from_source(source: str, focus_data: dict) -> str:
+    conf = focus_data.get("source_confidence", {})
+    if source in conf.get("high", []):
         return "high"
-    if source in medium:
+    if source in conf.get("medium", []):
         return "medium"
     return "medium"
 
 
 def level_from_score(score: int, runner_available: bool) -> str:
-    if score >= 14 and runner_available:
-        return "L4"
     if score >= 8:
         return "L3"
     if score >= 4:
@@ -55,7 +52,7 @@ def level_from_score(score: int, runner_available: bool) -> str:
     return "L1"
 
 
-def make_candidate(item: dict, score: int, matched: list[str], runner_available: bool) -> dict:
+def make_candidate(item: dict, score: int, matched: list[str], runner_available: bool, focus_data: dict) -> dict:
     summary = item.get("raw_desc", "").strip() or item.get("title", "")
     summary = summary[:220]
     connection = "、".join(matched[:3]) if matched else "与当前战略重心关联较弱，但建议观察"
@@ -73,7 +70,7 @@ def make_candidate(item: dict, score: int, matched: list[str], runner_available:
         "connection": connection,
         "deduction": "需要结合现有布局判断其是否形成结构性变化。",
         "actionability": "加入观察清单，若连续出现则升级跟踪。",
-        "confidence": confidence_from_source(item.get("source", "")),
+        "confidence": confidence_from_source(item.get("source", ""), focus_data),
         "intelligence_level": level,
         "intel_grade": level,
     }
@@ -86,7 +83,7 @@ def heuristics(scan_data: dict, focus_data: dict) -> dict:
         if is_redundant(item.get("url", ""), item.get("title", ""), item.get("source", "")):
             continue
         score, matched = score_item(item, focus_data)
-        scored.append((score, make_candidate(item, score, matched, runner_available)))
+        scored.append((score, make_candidate(item, score, matched, runner_available, focus_data)))
     scored.sort(key=lambda x: x[0], reverse=True)
 
     max_top10 = focus_data.get("filters", {}).get("max_top10", 10)
@@ -111,16 +108,11 @@ def heuristics(scan_data: dict, focus_data: dict) -> dict:
 
     action_levers = [
         {
-            "domain": candidate["connection"].split("、")[0],
+            "domain": candidate["connection"].split("、")[0] if candidate.get("connection") else "通用",
             "task": candidate["actionability"],
         }
         for candidate in top_candidates[:5]
     ]
-    
-    # Ensure we always have at least 3 action levers to pass the gate
-    domains = ["战略观测", "系统防护", "基础建设"]
-    while len(action_levers) < 3:
-        action_levers.append({"domain": domains[len(action_levers) % len(domains)], "task": "继续监控相关领域高价值信号。"})
 
     translations = {
         candidate["url"]: {"title_zh": candidate["title_zh"], "desc_zh": candidate["summary_zh"]}
@@ -154,6 +146,8 @@ def maybe_model_refine(base_output: dict) -> dict:
     lightweight_prompt = (
         prompt_text
         + "\n\n请在不破坏既有 JSON 结构的前提下，强化 punchline、insights、digest、market。同时，请务必将 top_10 列表中的 fact, connection, deduction, actionability, summary_zh, title_zh 字段翻译并基于二阶推演改写为高质量的中文描述。"
+        + "\n对于 top_10 中的情报，请严格依据质量标准，仅当情报属“非共识、可直接触发动作”时，将其 intelligence_level 提升为 'L4'，并在 reason 中说明理由。绝不可滥用 L4。"
+        + "\n请提取并总结真实的 action_levers (包含 domain 和 task)。如果没有实质性的动作杠杆，请宁缺毋滥，不要生成废话。"
         + "\n输入候选 JSON:\n"
         + json.dumps(base_output, ensure_ascii=False)
     )

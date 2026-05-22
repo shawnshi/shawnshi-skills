@@ -137,7 +137,7 @@ def main():
     
     genai.configure(api_key=api_key)
     # Use Gemini 1.5 Pro or similar suitable model. Flash is good enough usually.
-    model = genai.GenerativeModel('gemini-flash-latest') 
+    model = genai.GenerativeModel('gemini-3.5-flash') 
     
     # 1. Extraction
     chapters = extract_text(target_file)

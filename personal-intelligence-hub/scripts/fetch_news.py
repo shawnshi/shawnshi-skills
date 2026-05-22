@@ -3,6 +3,7 @@ from __future__ import annotations
 import asyncio
 import json
 import random
+import re
 from datetime import datetime, timedelta
 
 import aiohttp
@@ -172,7 +173,15 @@ def load_config() -> tuple[dict, list[dict]]:
 
 def should_exclude(title: str, desc: str, exclude_terms: list[str]) -> bool:
     text = f"{title} {desc}".lower()
-    return any(term.lower() in text for term in exclude_terms)
+    for term in exclude_terms:
+        term_lower = term.lower()
+        if re.match(r'^[a-z0-9\s]+$', term_lower):
+            if re.search(rf'\b{re.escape(term_lower)}\b', text):
+                return True
+        else:
+            if term_lower in text:
+                return True
+    return False
 
 
 async def scan_all():

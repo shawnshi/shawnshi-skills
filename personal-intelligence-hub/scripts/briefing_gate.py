@@ -13,8 +13,8 @@ def validate_briefing_data(data: dict) -> list[str]:
         errors.append("missing valid punchline")
 
     action_levers = data.get("action_levers", [])
-    if len(action_levers) < 3:
-        errors.append("expected at least 3 action levers")
+    if len(action_levers) < 1:
+        errors.append("expected at least 1 action levers")
 
     top_10 = data.get("top_10", [])
     if not top_10 or len(top_10) > 10:

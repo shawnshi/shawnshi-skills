@@ -41,7 +41,7 @@ def audit() -> None:
 
     prompt = (
         "请以红队视角审查以下情报 JSON，返回 JSON，字段为 devil_advocate 和 blind_spots。\n"
-        + str(data.get("top_10", []))
+        + json.dumps(data.get("top_10", []), ensure_ascii=False, indent=2)
     )
     try:
         raw_output = run_llm(prompt)

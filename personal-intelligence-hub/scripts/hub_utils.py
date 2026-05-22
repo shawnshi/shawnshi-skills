@@ -60,42 +60,34 @@ def clean_json_output(text: str):
     return json.loads(match.group(0))
 
 
-def resolve_llm_command() -> str | None:
-    custom = os.environ.get("PIH_LLM_COMMAND")
-    if custom:
-        return custom
-    if shutil.which("gemini"):
-        return "gemini ask -"
-    return None
+def get_api_model() -> str:
+    return os.environ.get("PIH_LLM_MODEL", "gemini/gemini-3.1-pro-preview")
 
 
 def has_llm_runner() -> bool:
-    return resolve_llm_command() is not None
+    return bool(os.environ.get("GEMINI_API_KEY") or os.environ.get("OPENAI_API_KEY") or os.environ.get("ANTHROPIC_API_KEY"))
 
 
 def run_llm(prompt: str, fallback_used: bool = False) -> str:
-    command = resolve_llm_command()
-    if not command:
-        raise RuntimeError("No LLM runner configured for personal-intelligence-hub.")
+    from litellm import completion
+    import litellm
+    litellm.drop_params = True
 
-    if fallback_used and "gemini ask" in command:
-        command = command.replace("gemini ask", "gemini ask -m gemini-3.1-flash")
+    if not has_llm_runner():
+        raise RuntimeError("No API key configured for personal-intelligence-hub. Set GEMINI_API_KEY, OPENAI_API_KEY, or ANTHROPIC_API_KEY.")
 
-    process = subprocess.Popen(
-        command,
-        stdin=subprocess.PIPE,
-        stdout=subprocess.PIPE,
-        stderr=subprocess.PIPE,
-        text=True,
-        shell=True,
-        encoding="utf-8",
-        errors="ignore",
-    )
-    stdout, stderr = process.communicate(input=prompt)
-    if process.returncode != 0:
-        error_msg = stderr.strip() or "LLM runner failed"
+    model = get_api_model()
+
+    try:
+        response = completion(
+            model=model,
+            messages=[{"role": "user", "content": prompt}],
+            temperature=0.2,
+        )
+        return response.choices[0].message.content.strip()
+    except Exception as e:
+        error_msg = str(e)
         if not fallback_used and ("429" in error_msg or "exhausted" in error_msg.lower() or "quota" in error_msg.lower()):
-            print(f"[WARN] Primary LLM failed ({error_msg}). Falling back to gemini-3.1-flash...")
+            print(f"[WARN] Primary LLM failed ({error_msg}). Retrying...")
             return run_llm(prompt, fallback_used=True)
-        raise RuntimeError(error_msg)
-    return stdout.strip()
+        raise RuntimeError(f"LLM API request failed: {error_msg}")
