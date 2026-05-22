@@ -1,0 +1,3 @@
+## 2026-05-22 - Pandas iterrows() is a massive performance bottleneck
+**Learning:** In pandas, `iterrows()` has huge overhead because it wraps every row into a Pandas Series object. This is especially problematic in list comprehensions and loops. Using it inside dictionary comprehensions, for example, is extremely slow.
+**Action:** Replace `df.iterrows()` with `zip(df['col1'], df['col2'])` when you only need to iterate over specific columns simultaneously (which uses the underlying numpy arrays and is ~22x faster). If you need to iterate over the entire row for many columns, use `df.itertuples()` instead, which returns lightweight namedtuples and is ~14x faster. Access the index in `itertuples()` via `.Index`.
