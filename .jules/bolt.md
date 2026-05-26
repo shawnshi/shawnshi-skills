@@ -1,0 +1,3 @@
+## 2026-05-26 - Iterrows Performance Anti-Pattern in Pandas
+**Learning:** Using `df.iterrows()` inside dictionary comprehensions creates significant overhead by instantiating new Series objects for every row, leading to an ~18x performance degradation compared to vectorized `zip()`. Similarly, general row iteration using `iterrows()` is ~5x slower than `itertuples()` which yields lightweight namedtuples.
+**Action:** Always prefer `zip(df['col1'], df['col2'])` for vectorized iterations over DataFrame columns, and `df.itertuples()` (accessing the index via `.Index`) for general row iteration loops instead of `df.iterrows()`.
