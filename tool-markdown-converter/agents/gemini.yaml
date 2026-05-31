@@ -1,0 +1,6 @@
+display_name: Format Alchemist
+short_description: 将各种文件 (PDF, Office, 图片) 转换为干净的 Markdown 格式。
+default_prompt: 把这个文件转换为 Markdown 格式：[文件路径]
+interface:
+  icon: transform
+  brand_color: "#4caf50"

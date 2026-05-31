@@ -1,0 +1,81 @@
+{
+  "version": "8.1",
+  "strategic_keywords": [
+    {"keyword": "Agentic Infrastructure", "weight": 7},
+    {"keyword": "Evidence-Mesh", "weight": 8},
+    {"keyword": "FHIR", "weight": 7},
+    {"keyword": "AI 原生医院", "weight": 8},
+    {"keyword": "Agentic Workflow 临床", "weight": 9},
+    {"keyword": "医疗AI", "weight": 9},
+    {"keyword": "Medical Copilot", "weight": 8},
+    {"keyword": "数据要素 医疗", "weight": 10},
+    {"keyword": "DRG DIP", "weight": 9},
+    {"keyword": "医保基金监管", "weight": 7},
+    {"keyword": "医疗信创", "weight": 8},
+    {"keyword": "Epic", "weight": 6},
+    {"keyword": "Cerner", "weight": 6},
+    {"keyword": "卫宁健康", "weight": 10},
+    {"keyword": "WiNEX", "weight": 10},
+    {"keyword": "东软 医疗", "weight": 6},
+    {"keyword": "创业慧康", "weight": 6},
+    {"keyword": "东华医为", "weight": 6},
+    {"keyword": "嘉和美康", "weight": 6},
+    {"keyword": "惠每科技", "weight": 5},
+    {"keyword": "左手医生", "weight": 5},
+    {"keyword": "临床 事故", "weight": 9},
+    {"keyword": "医疗AI 幻觉", "weight": 8},
+    {"keyword": "医院 亏损", "weight": 9},
+    {"keyword": "医疗反腐", "weight": 8},
+    {"keyword": "北京协和", "weight": 8},
+    {"keyword": "北大人民", "weight": 8},
+    {"keyword": "澳门协和", "weight": 8}
+  ],
+  "themes": [
+    {
+      "name": "Medical AI Deployment",
+      "keywords": ["医疗AI", "Medical Copilot", "AI 原生医院", "Agentic Workflow 临床"]
+    },
+    {
+      "name": "Data Infrastructure",
+      "keywords": ["FHIR", "Evidence-Mesh", "数据要素 医疗", "医疗知识图谱"]
+    },
+    {
+      "name": "Policy & Payment",
+      "keywords": ["DRG DIP", "医保基金监管", "医保控费"]
+    },
+    {
+      "name": "Competitive Watch",
+      "keywords": ["Epic", "Cerner", "卫宁健康", "WiNEX", "东软 医疗", "创业慧康", "东华医为", "嘉和美康"]
+    },
+    {
+      "name": "Execution Friction & Risk",
+      "keywords": ["临床 事故", "医疗AI 幻觉", "医院 亏损", "医疗反腐"]
+    }
+  ],
+  "competitors": ["东软", "东华", "东华医为", "创业慧康", "嘉和美康", "InterSystems", "Epic", "Oracle Cerner", "卫宁健康", "惠每科技", "左手医生"],
+  "priority_sources": {
+    "HealthIT.gov": 8,
+    "HIMSS": 8,
+    "Nature Digital Medicine": 8,
+    "The Lancet Digital Health": 8,
+    "NEJM": 7,
+    "Hacker News": 5,
+    "GitHub": 5,
+    "Product Hunt": 4
+  },
+  "focus_regions": ["China", "US", "Global"],
+  "filters": {
+    "exclude_terms": ["卫宁健康中标", "科普", "养生", "股价异常波动", "投资者提问", "互动易", "医保卡套现", "免费义诊", "套取医保"],
+    "min_score_for_top10": 4,
+    "max_top10": 10,
+    "dedupe_days": 7
+  },
+  "source_confidence": {
+    "high": ["HealthIT.gov", "HIMSS", "Nature Digital Medicine", "The Lancet Digital Health", "NEJM"],
+    "medium": ["Hacker News", "GitHub", "V2EX", "Product Hunt"]
+  },
+  "runner_policy": {
+    "preferred_cli": "gemini ask -",
+    "fallback_mode": "heuristic"
+  }
+}

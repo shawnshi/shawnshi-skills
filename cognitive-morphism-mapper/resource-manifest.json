@@ -1,0 +1,62 @@
+﻿{
+    "schema_version":  1,
+    "skill":  "cognitive-morphism-mapper",
+    "generated_at":  "2026-05-11T14:46:01",
+    "skill_md":  "SKILL.md",
+    "top_level_files":  [
+                            "README.md",
+                            "SKILL.md",
+                            "_DIR_META.md"
+                        ],
+    "top_level_directories":  [
+                                  "agents",
+                                  "assets",
+                                  "commands",
+                                  "examples",
+                                  "modules",
+                                  "references",
+                                  "scripts"
+                              ],
+    "resource_directories":  [
+                                 {
+                                     "name":  "scripts",
+                                     "file_count":  1
+                                 },
+                                 {
+                                     "name":  "references",
+                                     "file_count":  58
+                                 },
+                                 {
+                                     "name":  "assets",
+                                     "file_count":  1
+                                 },
+                                 {
+                                     "name":  "examples",
+                                     "file_count":  5
+                                 },
+                                 {
+                                     "name":  "agents",
+                                     "file_count":  1
+                                 }
+                             ],
+    "declared_local_dependencies":  [
+                                        {
+                                            "path":  "scripts\\domain_manager.py",
+                                            "exists":  true,
+                                            "resolved_path":  "C:\\Users\\shich\\.gemini\\skills\\cognitive-morphism-mapper\\scripts\\domain_manager.py"
+                                        },
+                                        {
+                                            "path":  "references\\modules.md",
+                                            "exists":  true,
+                                            "resolved_path":  "C:\\Users\\shich\\.gemini\\skills\\cognitive-morphism-mapper\\references\\modules.md"
+                                        },
+                                        {
+                                            "path":  "references\\protocols.md",
+                                            "exists":  true,
+                                            "resolved_path":  "C:\\Users\\shich\\.gemini\\skills\\cognitive-morphism-mapper\\references\\protocols.md"
+                                        }
+                                    ],
+    "missing_declared_dependencies":  [
+
+                                      ]
+}

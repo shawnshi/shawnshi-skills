@@ -1,0 +1,186 @@
+{
+  "stock_name": "美光科技",
+  "stock_code": "MU",
+  "market_type": "美股",
+  "research_mode": "trading_mode",
+  "sentiment_score": 85,
+  "trend_prediction": "看多",
+  "operation_advice": "持有",
+  "decision_type": "hold",
+  "confidence_level": "高",
+  "confidence_details": {
+    "score": 85,
+    "data_quality": "高",
+    "technical_alignment": "高",
+    "valuation_support": "中",
+    "actionability": "高"
+  },
+  "freshness_flags": {
+    "price_data_fresh": true,
+    "info_data_fresh": true,
+    "news_data_fresh": true,
+    "portfolio_data_fresh": true,
+    "stale_inputs": []
+  },
+  "evidence_items": [
+    {
+      "fact": "股价逼近前高981，MA均线多头排列",
+      "connection": "趋势强劲",
+      "deduction": "短线动能充足，未见见顶信号",
+      "source_type": "price",
+      "freshness": "T0",
+      "confidence": "高"
+    },
+    {
+      "fact": "Forward PE仅为9.22",
+      "connection": "业绩预期极好",
+      "deduction": "远期估值低，具备投资价值",
+      "source_type": "info",
+      "freshness": "T0",
+      "confidence": "高"
+    }
+  ],
+  "dashboard": {
+    "core_conclusion": {
+      "one_sentence": "短期超买但趋势未破，远期估值极低，持筹者可沿MA5防守。",
+      "signal_type": "看多",
+      "time_sensitivity": "中",
+      "position_advice": {
+        "has_position": true,
+        "advice": "已有持仓沿MA5防守，无仓位等待回调"
+      }
+    },
+    "qualitative_analysis": {
+      "bull_case": "AI需求驱动存储周期反转，Forward PE极低",
+      "bear_case": "短期涨幅过大，RSI超买，可能面临技术性回调",
+      "catalysts": [
+        "2026-06-25财报"
+      ]
+    },
+    "data_perspective": {
+      "trend_status": {
+        "status": "多头"
+      },
+      "price_position": {
+        "current_price": 971.0,
+        "support_level": 893.96,
+        "resistance_level": 981.0,
+        "position": "高位"
+      },
+      "volume_analysis": {
+        "status": "温和放量"
+      },
+      "chip_structure": {
+        "chip_health": "不适用(非A股)"
+      },
+      "valuation": {
+        "status": "偏低"
+      }
+    },
+    "intelligence": {
+      "news_sentiment": "偏多",
+      "institutional_moves": "中性",
+      "macro_impact": "中性"
+    },
+    "battle_plan": {
+      "sniper_points": {
+        "support_1": 893.96,
+        "support_2": 806.88,
+        "resistance_1": 981.0,
+        "stop_loss": 800.0,
+        "take_profit": 1100.0
+      },
+      "position_strategy": {
+        "suggested_position": "观望为主"
+      },
+      "action_checklist": [
+        "观察是否跌破MA5",
+        "观察量能变化"
+      ]
+    }
+  },
+  "analysis_summary": "MU目前处于主升浪，但RSI超买，存在技术回调压力。Forward PE极低表明长期空间仍大。",
+  "risk_warning": "技术指标严重超买，注意短期回调风险。",
+  "short_term_outlook": "震荡",
+  "medium_term_outlook": "看多",
+  "search_performed": false,
+  "data_sources": {
+    "price": "Yahoo",
+    "info": "Yahoo",
+    "news": "Yahoo",
+    "portfolio": "Local"
+  },
+  "data_gaps": [
+    "筹码增强字段不适用(非A股)"
+  ],
+  "portfolio_context": {
+    "has_position": true,
+    "quantity": 0.0,
+    "avg_cost": 765.104,
+    "current_price": 971.0,
+    "market_value": 0.0,
+    "cost_basis": 0.0,
+    "unrealized_pnl": 0.0,
+    "unrealized_pnl_pct": 0.2691,
+    "position_status": "matched"
+  },
+  "position_advice": {
+    "holding_view": "大幅浮盈",
+    "action_for_holder": "持有",
+    "cost_basis_view": "成本优势明显",
+    "risk_to_holder": "短期利润回撤风险",
+    "next_action_trigger": [
+      "跌破MA5（893.96）考虑减仓"
+    ]
+  },
+  "portfolio_summary": {
+    "total_positions": 12,
+    "tracked_weight": 1.0001,
+    "market_exposure": {
+      "美股": 0.1526,
+      "A股": 0.1103,
+      "A股ETF": 0.6025,
+      "CASH": 0.1347
+    },
+    "top_positions_by_weight": [
+      {
+        "symbol": "588000.SS",
+        "name": "科创50ETF华夏",
+        "weight": 0.2437
+      },
+      {
+        "symbol": "513390.SS",
+        "name": "纳指100ETF博时",
+        "weight": 0.165
+      },
+      {
+        "symbol": "INTC",
+        "name": "英特尔",
+        "weight": 0.1474
+      },
+      {
+        "symbol": "513500.SS",
+        "name": "标普500ETF博时",
+        "weight": 0.1445
+      },
+      {
+        "symbol": "562910.SS",
+        "name": "高端制造ETF",
+        "weight": 0.1103
+      }
+    ],
+    "concentration_score": 0.1532,
+    "concentration_bucket": "medium"
+  },
+  "portfolio_risk": {
+    "concentration_risk": "高",
+    "market_exposure_risk": "中",
+    "style_drift_risk": "低",
+    "liquidity_risk": "中"
+  },
+  "portfolio_fit": {
+    "action_in_portfolio": "hold",
+    "allocation_impact": "none",
+    "rationale": "目前为0股"
+  }
+}

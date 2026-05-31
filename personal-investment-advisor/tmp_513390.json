@@ -1,0 +1,152 @@
+{
+  "stock_name": "纳指100ETF博时",
+  "stock_code": "513390.SS",
+  "market_type": "ETF",
+  "research_mode": "trading_mode",
+  "sentiment_score": 70,
+  "trend_prediction": "震荡",
+  "operation_advice": "持有",
+  "decision_type": "hold",
+  "confidence_level": "中",
+  "confidence_details": {
+    "score": 75,
+    "data_quality": "Medium",
+    "technical_alignment": "Medium",
+    "valuation_support": "High",
+    "actionability": "Medium"
+  },
+  "freshness_flags": {
+    "price_data_fresh": true,
+    "info_data_fresh": true,
+    "news_data_fresh": false,
+    "portfolio_data_fresh": true,
+    "stale_inputs": []
+  },
+  "evidence_items": [
+    {
+      "fact": "RSI_14 位于 70.63",
+      "connection": "超买区间边缘",
+      "deduction": "纳斯达克科技股经过连涨后动能有所衰竭，面临短期获利盘回吐压力",
+      "source_type": "market_data",
+      "freshness": "recent",
+      "confidence": "high"
+    },
+    {
+      "fact": "当前持仓浮盈 3.56%，权重占比 10.36%",
+      "connection": "利润垫较薄但仓位适中",
+      "deduction": "处于合理的资产配置区间，不构成集中度压力，可作为长线科技股底仓",
+      "source_type": "portfolio_data",
+      "freshness": "recent",
+      "confidence": "high"
+    }
+  ],
+  "dashboard": {
+    "core_conclusion": {
+      "one_sentence": "美股科技核心资产处于高位超买后的震荡期，由于您当前浮盈较薄且仓位处于合理健康水平，建议维持原配置，严设防守线。",
+      "signal_type": "观望信号",
+      "time_sensitivity": "低",
+      "position_advice": {
+        "no_position": "当前RSI超买且乖离率偏高，不建议在此处追高建仓。",
+        "has_position": "继续持有作为海外科技股底仓。浮盈（+3.56%）尚不足以支持大规模获利了结，且10%的权重处于理想区间。"
+      }
+    },
+    "qualitative_analysis": {
+      "business_momentum": "获取美股科技创新收益，主要受大型科技巨头（如AI算力链）的财报预期驱动。",
+      "catalyst_status": "静默期",
+      "risk_factors": "美债收益率上行压制科技股估值"
+    },
+    "data_perspective": {
+      "trend_status": {
+        "ma_alignment": "多头震荡 (MA10 > MA5 > MA20)",
+        "rsi_14": 70.63,
+        "rsi_status": "超买",
+        "macd_signal": "走平",
+        "trend_score": 75
+      },
+      "price_position": {
+        "current_price": 2.33,
+        "support_level": 2.24,
+        "resistance_level": 2.35,
+        "bias_status": "偏高"
+      },
+      "volume_analysis": {
+        "volume_status": "缩量",
+        "turnover_rate": "--",
+        "volume_ratio": "--"
+      },
+      "chip_structure": {
+        "chip_health": "不适用(非A股)",
+        "profit_ratio": "--"
+      },
+      "valuation": "纳斯达克整体估值处于近五年较高分位"
+    },
+    "intelligence": {
+      "sentiment_summary": "偏乐观，但警惕高位分歧",
+      "positive_catalysts": ["AI应用层收入落地预期", "科技巨头回购支撑"],
+      "risk_alerts": ["通胀数据反弹可能引发美联储降息预期落空"]
+    },
+    "battle_plan": {
+      "sniper_points": {
+        "ideal_buy": "2.24",
+        "secondary_buy": "2.28",
+        "stop_loss": "2.10",
+        "take_profit": "2.45"
+      },
+      "position_strategy": {
+        "suggested_position": "持有",
+        "entry_plan": "当前仓位占比近 10%，无需额外动作。",
+        "risk_control": "以 2.24（20日均线）作为短期强弱分水岭，跌破则考虑减仓。"
+      },
+      "action_checklist": [
+        "密切关注美联储政策会议信号",
+        "监控美债十年期收益率是否突破关键阻力位"
+      ]
+    }
+  },
+  "analysis_summary": "纳指100ETF博时目前正处于一波主升浪之后的横盘整理阶段，RSI（70.63）显示短期存在超买回调的压力。您目前持有 3.47 万份，成本在 2.25，处于温和盈利状态（+3.56%）。由于该标的占比在 10% 左右，起到了良好的全球化资产分散配置作用，建议继续持有作为底仓。防守线可上移至 20 日均线（约 2.24），若放量跌破则需做防守性减仓。",
+  "risk_warning": "需要特别防范美股科技股的非线性急跌风险，尤其是在当前高估值和低 VIX 的背景下。",
+  "short_term_outlook": "高位震荡整理",
+  "medium_term_outlook": "长期多头延续",
+  "search_performed": false,
+  "data_sources": ["Yahoo Finance", "Portfolio Context"],
+  "data_gaps": ["未能获取相关新闻", "芯片分布失败"],
+  "portfolio_context": {
+    "has_position": true,
+    "quantity": 34700.0,
+    "avg_cost": 2.25,
+    "current_price": 2.33,
+    "market_value": 80851.0,
+    "cost_basis": 78075.0,
+    "unrealized_pnl": 2776.0,
+    "unrealized_pnl_pct": 0.0356,
+    "position_status": "matched",
+    "symbol": "513390.SS",
+    "positions_file": "C:\\Users\\shich\\.gemini\\MEMORY\\raw\\stocks\\portfolio_positions.json"
+  },
+  "position_advice": {
+    "holding_view": "持有",
+    "action_for_holder": "防守型持有",
+    "cost_basis_view": "温和盈利",
+    "risk_to_holder": "高位回撤洗盘",
+    "next_action_trigger": ["跌破 2.24 支撑位", "突破 2.35 创新高"]
+  },
+  "portfolio_summary": {
+    "total_positions": 10,
+    "tracked_weight": 1.0,
+    "market_exposure": {"A股": 0.3319, "A股ETF": 0.5745, "美股": 0.0936},
+    "top_positions_by_weight": [{"symbol": "588000.SS", "name": "科创50ETF华夏", "weight": 0.3088}],
+    "concentration_score": 0.1819,
+    "concentration_bucket": "high"
+  },
+  "portfolio_risk": {
+    "concentration_risk": "高",
+    "market_exposure_risk": "中",
+    "style_drift_risk": "低",
+    "liquidity_risk": "中"
+  },
+  "portfolio_fit": {
+    "action_in_portfolio": "hold_or_add_small",
+    "allocation_impact": "limited impact on diversification",
+    "rationale": "仓位比例适中，提供美股科技敞口的分散配置价值。"
+  }
+}

@@ -1,0 +1,107 @@
+import argparse
+from datetime import datetime
+from pathlib import Path
+
+from advice_journal import load_entries, resolve_journal_path
+
+
+DEFAULT_REPORT_PATH = Path.home() / ".gemini" / "MEMORY" / "raw" / "stocks" / "strategy_calibration.md"
+
+
+def build_report(journal_path: str | None = None) -> str:
+    entries = load_entries(journal_path)
+    total = len(entries)
+    # Sort entries by creation time to show latest first
+    entries = sorted(entries, key=lambda x: x.get("created_at", ""), reverse=True)
+
+    reviewed = [entry for entry in entries if entry.get("outcome_return_pct") is not None]
+    buys = [entry for entry in reviewed if entry.get("decision_type") == "buy"]
+    holds = [entry for entry in reviewed if entry.get("decision_type") == "hold"]
+
+    avg_reviewed = round(sum(entry["outcome_return_pct"] for entry in reviewed) / len(reviewed), 2) if reviewed else None
+    avg_buy = round(sum(entry["outcome_return_pct"] for entry in buys) / len(buys), 2) if buys else None
+    avg_hold = round(sum(entry["outcome_return_pct"] for entry in holds) / len(holds), 2) if holds else None
+    hit_rate = round(sum(1 for entry in reviewed if entry["outcome_return_pct"] > 0) / len(reviewed) * 100, 2) if reviewed else None
+
+    lines = [
+        "# Strategy Calibration Report",
+        "",
+        f"- 生成时间: {datetime.now().strftime('%Y-%m-%d %H:%M')}",
+        f"- 日志文件: {resolve_journal_path(journal_path)}",
+        f"- 总建议数: {total}",
+        f"- 已回看样本数: {len(reviewed)}",
+        f"- 回看平均收益率: {f'{avg_reviewed:+.2f}%' if avg_reviewed is not None else 'N/A'}",
+        f"- 买入建议平均收益率: {f'{avg_buy:+.2f}%' if avg_buy is not None else 'N/A'}",
+        f"- 持有建议平均收益率: {f'{avg_hold:+.2f}%' if avg_hold is not None else 'N/A'}",
+        f"- 正收益命中率: {hit_rate if hit_rate is not None else 'N/A'}%",
+        "",
+        "## Calibration Notes",
+        ""
+    ]
+
+    if not reviewed:
+        lines.append("- 当前缺少已回看样本，无法形成稳定校准结论。")
+    else:
+        if hit_rate is not None and hit_rate < 45:
+            lines.append("- [警告] 建议命中率偏低，说明当前框架可能过度自信或入场时点滞后。")
+        if avg_buy is not None and avg_buy < 0:
+            lines.append("- [风险] 买入建议的平均后验收益为负，优先检查追高和 thesis 证据质量。")
+        if avg_hold is not None and avg_hold < 0:
+            lines.append("- [风险] 持有建议的后验收益偏弱，优先检查止损和减仓纪律是否过松。")
+        if hit_rate is not None and hit_rate >= 55:
+            lines.append("- [正常] 当前策略校准处于可接受区间，但仍需要更多样本分市场复核。")
+
+        lines.append("")
+        lines.append("## 绩效排行榜 (Top & Bottom Performance)")
+        lines.append("")
+        lines.append("| 建议日期 | 股票 | 建议 | 建议价 | 最新价 | 收益率 | 状态 |")
+        lines.append("|:---|:---|:---|:---|:---|:---|:---|")
+
+        # Sort by stock name, then by date descending
+        # Python's sort is stable, so we sort by date descending first, then by stock name
+        sorted_perf = sorted(reviewed, key=lambda x: x.get("created_at", ""), reverse=True)
+        sorted_perf.sort(key=lambda x: x.get("stock_name", x.get("stock_code", "")))
+        for e in sorted_perf:
+            date = e.get("created_at", "")[:10]
+            name = e.get("stock_name", e.get("stock_code"))
+            dec = e.get("decision_type", "N/A")
+            p_init = e.get("current_price", 0)
+            p_now = e.get("outcome_price", 0)
+            ret = e.get("outcome_return_pct", 0)
+            
+            status_calc = "Win" if ret > 0 else ("Loss" if ret < 0 else "Flat")
+            real_status = e.get("outcome_status")
+            if real_status and real_status != "Open":
+                status = f"{real_status} ({status_calc})"
+            elif real_status == "Open":
+                status = f"Open ({status_calc})"
+            else:
+                status = status_calc
+                
+            lines.append(f"| {date} | {name} | {dec} | {p_init:.2f} | {p_now:.2f} | {ret:+.2f}% | {status} |")
+
+    return "\n".join(lines) + "\n"
+
+
+if __name__ == "__main__":
+    parser = argparse.ArgumentParser(description="Generate a calibration report from advice journal.")
+    parser.add_argument("--journal-path")
+    parser.add_argument("--output-path", default=str(DEFAULT_REPORT_PATH))
+    parser.add_argument("--sync", action="store_true", help="Sync latest prices before generating report.")
+    args = parser.parse_args()
+
+    if args.sync:
+        print("Synchronizing latest prices...")
+        import subprocess
+        import sys
+        sync_script = Path(__file__).parent / "sync_outcomes.py"
+        sync_cmd = [sys.executable, str(sync_script)]
+        if args.journal_path:
+            sync_cmd.extend(["--journal-path", args.journal_path])
+        subprocess.run(sync_cmd, check=False)
+
+    report = build_report(args.journal_path)
+    output_path = Path(args.output_path).expanduser()
+    output_path.parent.mkdir(parents=True, exist_ok=True)
+    output_path.write_text(report, encoding="utf-8")
+    print(f"report written: {output_path}")

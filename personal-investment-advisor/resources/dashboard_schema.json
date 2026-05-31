@@ -1,0 +1,159 @@
+{
+  "version": "4.0",
+  "required_top_level": [
+    "stock_name",
+    "stock_code",
+    "market_type",
+    "research_mode",
+    "sentiment_score",
+    "trend_prediction",
+    "operation_advice",
+    "decision_type",
+    "confidence_level",
+    "confidence_details",
+    "freshness_flags",
+    "evidence_items",
+    "dashboard",
+    "analysis_summary",
+    "risk_warning",
+    "short_term_outlook",
+    "medium_term_outlook",
+    "search_performed",
+    "data_sources",
+    "data_gaps"
+  ],
+  "optional_top_level": [
+    "portfolio_context",
+    "position_advice",
+    "portfolio_summary",
+    "portfolio_risk",
+    "portfolio_fit",
+    "earnings_snapshot",
+    "catalyst_map",
+    "watchlist_alerts",
+    "feedback_status"
+  ],
+  "required_dashboard_sections": [
+    "core_conclusion",
+    "qualitative_analysis",
+    "data_perspective",
+    "intelligence",
+    "battle_plan"
+  ],
+  "required_core_conclusion_fields": [
+    "one_sentence",
+    "signal_type",
+    "time_sensitivity",
+    "position_advice"
+  ],
+  "required_battle_plan_fields": [
+    "sniper_points",
+    "position_strategy",
+    "action_checklist"
+  ],
+  "required_data_perspective_fields": [
+    "trend_status",
+    "price_position",
+    "volume_analysis",
+    "chip_structure",
+    "valuation"
+  ],
+  "required_confidence_fields": [
+    "score",
+    "data_quality",
+    "technical_alignment",
+    "valuation_support",
+    "actionability"
+  ],
+  "required_freshness_fields": [
+    "price_data_fresh",
+    "info_data_fresh",
+    "news_data_fresh",
+    "portfolio_data_fresh",
+    "stale_inputs"
+  ],
+  "required_evidence_fields": [
+    "fact",
+    "connection",
+    "deduction",
+    "source_type",
+    "freshness",
+    "confidence"
+  ],
+  "required_portfolio_context_fields_when_holding": [
+    "has_position",
+    "quantity",
+    "avg_cost",
+    "current_price",
+    "market_value",
+    "cost_basis",
+    "unrealized_pnl",
+    "unrealized_pnl_pct",
+    "position_status"
+  ],
+  "required_position_advice_fields_when_holding": [
+    "holding_view",
+    "action_for_holder",
+    "cost_basis_view",
+    "risk_to_holder",
+    "next_action_trigger"
+  ],
+  "required_portfolio_summary_fields": [
+    "total_positions",
+    "tracked_weight",
+    "market_exposure",
+    "top_positions_by_weight",
+    "concentration_score",
+    "concentration_bucket"
+  ],
+  "required_portfolio_risk_fields": [
+    "concentration_risk",
+    "market_exposure_risk",
+    "style_drift_risk",
+    "liquidity_risk"
+  ],
+  "required_portfolio_fit_fields": [
+    "action_in_portfolio",
+    "allocation_impact",
+    "rationale"
+  ],
+  "required_earnings_snapshot_fields": [
+    "next_earnings_date",
+    "revenue_growth",
+    "trailing_pe",
+    "forward_pe"
+  ],
+  "required_catalyst_map_fields": [
+    "upcoming",
+    "active",
+    "broken"
+  ],
+  "enums": {
+    "market_type": ["A股", "港股", "美股", "ETF", "其他"],
+    "research_mode": ["trading_mode", "thesis_mode"],
+    "decision_type": ["buy", "hold", "sell", "watch"],
+    "confidence_level": ["高", "中", "低"],
+    "operation_advice": ["买入", "加仓", "持有", "减仓", "卖出", "观望"],
+    "trend_prediction": ["强烈看多", "看多", "震荡", "看空", "强烈看空"],
+    "weight_status": ["within_target", "above_target", "above_max", "unknown"],
+    "feedback_status": ["pending", "executed", "reviewed", "closed"]
+  },
+  "market_rules": {
+    "A股": {
+      "chip_structure_mode": "enhanced_or_gap",
+      "requires_chip_health_note": true
+    },
+    "港股": {
+      "chip_structure_mode": "not_applicable",
+      "chip_health_value": "不适用(非A股)"
+    },
+    "美股": {
+      "chip_structure_mode": "not_applicable",
+      "chip_health_value": "不适用(非A股)"
+    },
+    "ETF": {
+      "chip_structure_mode": "not_applicable",
+      "chip_health_value": "不适用(非A股)"
+    }
+  }
+}

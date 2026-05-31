@@ -1,0 +1,21 @@
+﻿{
+    "schema_version":  1,
+    "skill":  "cognitive-ideation-brainstorming",
+    "generated_at":  "2026-05-11T14:46:01",
+    "skill_md":  "SKILL.md",
+    "top_level_files":  [
+                            "SKILL.md"
+                        ],
+    "top_level_directories":  [
+
+                              ],
+    "resource_directories":  [
+
+                             ],
+    "declared_local_dependencies":  [
+
+                                    ],
+    "missing_declared_dependencies":  [
+
+                                      ]
+}

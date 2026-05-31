@@ -1,0 +1,6 @@
+display_name: Strategic Auditor
+short_description: 管理个人日志、执行周期性认知审计与熵值分析。
+default_prompt: 帮我更新今天的日志，重点复盘核心产出与认知洞察。
+interface:
+  icon: history_edu
+  brand_color: "#2c3e50"

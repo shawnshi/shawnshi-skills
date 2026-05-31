@@ -1,0 +1,44 @@
+﻿{
+    "schema_version":  1,
+    "skill":  "cognitive-book-mirror",
+    "generated_at":  "2026-05-11T14:46:01",
+    "skill_md":  "SKILL.md",
+    "top_level_files":  [
+                            "README.md",
+                            "SKILL.md"
+                        ],
+    "top_level_directories":  [
+                                  "agents",
+                                  "scripts"
+                              ],
+    "resource_directories":  [
+                                 {
+                                     "name":  "scripts",
+                                     "file_count":  2
+                                 },
+                                 {
+                                     "name":  "agents",
+                                     "file_count":  1
+                                 }
+                             ],
+    "declared_local_dependencies":  [
+                                        {
+                                            "path":  "scripts\\orchestrate_mirror.py",
+                                            "exists":  true,
+                                            "resolved_path":  "C:\\Users\\shich\\.gemini\\skills\\cognitive-book-mirror\\scripts\\orchestrate_mirror.py"
+                                        },
+                                        {
+                                            "path":  "agents\\mirror-agent.md",
+                                            "exists":  true,
+                                            "resolved_path":  "C:\\Users\\shich\\.gemini\\skills\\cognitive-book-mirror\\agents\\mirror-agent.md"
+                                        },
+                                        {
+                                            "path":  "scripts\\requirements.txt",
+                                            "exists":  true,
+                                            "resolved_path":  "C:\\Users\\shich\\.gemini\\skills\\cognitive-book-mirror\\scripts\\requirements.txt"
+                                        }
+                                    ],
+    "missing_declared_dependencies":  [
+
+                                      ]
+}

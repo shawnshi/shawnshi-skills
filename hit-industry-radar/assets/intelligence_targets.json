@@ -1,0 +1,20 @@
+{
+  "manifest_version": "1.0",
+  "description": "定向高价值信源强制映射表，避免子代理盲目抓取。",
+  "targets": {
+    "global_hit": [
+      "https://www.healthcareitnews.com/",
+      "https://hitconsultant.net/",
+      "https://www.beckershospitalreview.com/healthcare-information-technology.html"
+    ],
+    "china_hit": [
+      "http://www.ccgp.gov.cn/ (中国政府采购网 - 医疗信息化标签)",
+      "http://www.chima.org.cn/ (CHIMA - 医院信息管理专业委员会)",
+      "http://www.nhc.gov.cn/ (国家卫健委 - 规划发展与信息化司)"
+    ],
+    "winning_baseline": [
+      "http://www.cninfo.com.cn/ (巨潮资讯 - 卫宁健康/创业慧康/东华软件公告)",
+      "https://www.winning.com.cn/ (卫宁健康官网动态)"
+    ]
+  }
+}

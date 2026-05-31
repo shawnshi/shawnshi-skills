@@ -1,0 +1,152 @@
+{
+  "stock_name": "云天化",
+  "stock_code": "600096.SS",
+  "market_type": "A股",
+  "research_mode": "trading_mode",
+  "sentiment_score": 30,
+  "trend_prediction": "震荡",
+  "operation_advice": "持有",
+  "decision_type": "hold",
+  "confidence_level": "中",
+  "confidence_details": {
+    "score": 60,
+    "data_quality": "High",
+    "technical_alignment": "Medium",
+    "valuation_support": "High",
+    "actionability": "Medium"
+  },
+  "freshness_flags": {
+    "price_data_fresh": true,
+    "info_data_fresh": true,
+    "news_data_fresh": true,
+    "portfolio_data_fresh": true,
+    "stale_inputs": []
+  },
+  "evidence_items": [
+    {
+      "fact": "RSI_14 跌至 23.86",
+      "connection": "严重超卖区间",
+      "deduction": "技术面极度悲观，但也酝酿着超跌反弹的动能",
+      "source_type": "market_data",
+      "freshness": "recent",
+      "confidence": "high"
+    },
+    {
+      "fact": "当前持仓浮亏达 27.01%，成本高达 44.062",
+      "connection": "深度套牢",
+      "deduction": "目前割肉的盈亏比极差，在严重超卖区不宜再盲目杀跌",
+      "source_type": "portfolio_data",
+      "freshness": "recent",
+      "confidence": "high"
+    }
+  ],
+  "dashboard": {
+    "core_conclusion": {
+      "one_sentence": "股价处于深度下降通道且RSI极度超卖，鉴于持仓处于深度套牢状态（-27%），当前位置不宜杀跌，建议死扛等待技术性反弹再做减亏处理。",
+      "signal_type": "被动持仓信号",
+      "time_sensitivity": "中",
+      "position_advice": {
+        "no_position": "左侧交易者可尝试分批小仓位建仓博反弹，右侧交易者需等待底部形态确立。",
+        "has_position": "深度套牢（-27%），目前在均线下方乖离过大且处于严重超卖区，割肉极不理智，建议装死持仓等待反抽。"
+      }
+    },
+    "qualitative_analysis": {
+      "business_momentum": "磷化工与化肥龙头，享受高股息但受限于周期波动。",
+      "catalyst_status": "受困于整体农业/化工周期下行预期",
+      "risk_factors": "周期性产品价格持续走低"
+    },
+    "data_perspective": {
+      "trend_status": {
+        "ma_alignment": "空头排列 (MA5 < MA10 < MA20)",
+        "rsi_14": 23.86,
+        "rsi_status": "严重超卖",
+        "macd_signal": "空头",
+        "trend_score": 10
+      },
+      "price_position": {
+        "current_price": 32.16,
+        "support_level": 30.80,
+        "resistance_level": 33.26,
+        "bias_status": "严重偏低"
+      },
+      "volume_analysis": {
+        "volume_status": "缩量",
+        "turnover_rate": "1.34%",
+        "volume_ratio": "0.65"
+      },
+      "chip_structure": {
+        "chip_health": "套牢盘沉重",
+        "profit_ratio": "--"
+      },
+      "valuation": "PE 11x，PB 2.2x，股息率达 8.7%，估值极具吸引力"
+    },
+    "intelligence": {
+      "sentiment_summary": "极度悲观",
+      "positive_catalysts": ["高股息率 (8.7%) 提供安全垫", "入选外资高股息观察名单"],
+      "risk_alerts": ["周期下行引发业绩不及预期", "大盘系统性风险导致估值中枢下移"]
+    },
+    "battle_plan": {
+      "sniper_points": {
+        "ideal_buy": "30.50",
+        "secondary_buy": "31.50",
+        "stop_loss": "29.00",
+        "take_profit": "35.00"
+      },
+      "position_strategy": {
+        "suggested_position": "持有/被动卧倒",
+        "entry_plan": "暂不建议加仓摊薄，因为目前尚未企稳。",
+        "risk_control": "放弃主动止损，依托 8.7% 高股息强行越冬。"
+      },
+      "action_checklist": [
+        "监控化肥/磷矿石近期价格走势",
+        "关注财报前瞻数据"
+      ]
+    }
+  },
+  "analysis_summary": "云天化目前技术面极度恶劣，呈现完美的空头排列，短期暴跌导致 RSI 触及 23.86 严重超卖区。您目前持有 3200 股，成本高达 44.062，亏损已达 27%。在如此巨大的亏损与极度超卖的叠加态下，此时止损是盈亏比最差的选择。好在公司基本面尚可，拥有 8.7% 的超高股息率护体，建议将其转化为被动收息资产，等待下一波周期回暖或技术性强反抽（目标 35-36 元）再考虑减仓。",
+  "risk_warning": "深度套牢下心理压力极大，切勿在下跌通道中盲目补仓，以免将现金流全部困死在下降趋势中。",
+  "short_term_outlook": "超卖反弹",
+  "medium_term_outlook": "探底寻支撑",
+  "search_performed": false,
+  "data_sources": ["Yahoo Finance", "Portfolio Context"],
+  "data_gaps": ["未获取部分A股强化数据"],
+  "portfolio_context": {
+    "has_position": true,
+    "quantity": 3200.0,
+    "avg_cost": 44.062,
+    "current_price": 32.16,
+    "market_value": 102912.0,
+    "cost_basis": 140998.4,
+    "unrealized_pnl": -38086.4,
+    "unrealized_pnl_pct": -0.2701,
+    "position_status": "matched",
+    "symbol": "600096.SS",
+    "positions_file": "C:\\Users\\shich\\.gemini\\MEMORY\\raw\\stocks\\portfolio_positions.json"
+  },
+  "position_advice": {
+    "holding_view": "被动持有",
+    "action_for_holder": "装死卧倒",
+    "cost_basis_view": "深度套牢",
+    "risk_to_holder": "长期占用资金成本",
+    "next_action_trigger": ["反弹至 35 元以上"]
+  },
+  "portfolio_summary": {
+    "total_positions": 10,
+    "tracked_weight": 1.0,
+    "market_exposure": {"A股": 0.3319, "A股ETF": 0.5745, "美股": 0.0936},
+    "top_positions_by_weight": [{"symbol": "588000.SS", "name": "科创50ETF华夏", "weight": 0.3088}],
+    "concentration_score": 0.1819,
+    "concentration_bucket": "high"
+  },
+  "portfolio_risk": {
+    "concentration_risk": "高",
+    "market_exposure_risk": "中",
+    "style_drift_risk": "低",
+    "liquidity_risk": "中"
+  },
+  "portfolio_fit": {
+    "action_in_portfolio": "hold_or_add_small",
+    "allocation_impact": "limited",
+    "rationale": "仓位13.23%可控，但处于深度亏损，不宜盲目补仓。"
+  }
+}

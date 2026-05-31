@@ -1,0 +1,145 @@
+# Document Summarizer 配置文件示例
+# 复制此文件为 config.yaml 并根据需要修改
+
+# 摘要生成配置
+summarizer:
+  # 摘要长度控制（中文字符数）
+  max_summary_length: 300
+  min_summary_length: 150
+
+  # 标签数量
+  tags_count: 8
+
+  # 并行处理线程数
+  workers: 5
+
+  # 自动跳过已有元数据的文件
+  skip_existing: true
+
+# 文档类型配置
+document_types:
+  - name: 战略规划蓝图
+    keywords: [顶层设计, 蓝图, 战略, 信息化规划, 十四五]
+  - name: 解决方案方案
+    keywords: [解决方案, 闭环方案, 建设方案, 改造方案]
+  - name: 标准规范与评级
+    keywords: [评级, 评审, 标准, 规范, 指南, 白皮书, 互联互通, 电子病历五级]
+  - name: 产品与技术架构
+    keywords: [架构设计, 技术白皮书, 接口规范, 数据字典, API, HL7, FHIR]
+  - name: 招投标与商务
+    keywords: [招标文件, 投标文件, 报价, 商务合同, 协议]
+  - name: 交付与运维资产
+    keywords: [实施手册, 培训材料, 测试报告, 验收报告, 运维手册]
+  - name: 调研与行业洞察
+    keywords: [调研报告, 行业分析, 考察访谈, 竞品分析]
+
+# 医疗信息化关键词库
+medical_keywords:
+  systems:
+    - 电子病历
+    - EMR
+    - HIS系统
+    - PACS系统
+    - LIS系统
+    - RIS系统
+    - 专科应用
+
+  policy_and_payment:
+    - DRG
+    - DIP
+    - 医保支付
+    - 三级公立医院绩效考核
+    - 国考
+
+  certifications:
+    - 电子病历评级
+    - 五级乙等
+    - 智慧服务
+    - 智慧管理
+    - 互联互通评级
+
+  chinese_medicine:
+    - 中医信息化
+    - 中医
+    - 中西医结合
+    - 数字中医
+
+  frontier_tech:
+    - 医疗大模型
+    - 临床推理引擎
+    - ACI
+    - 生成式AI
+    - 医疗智能体
+    - 联邦学习
+    - 人工智能
+
+  data_governance:
+    - 数据要素
+    - 数据资产入表
+    - 数据治理
+    - 数据安全
+    - 数据标准
+    - 数据防泄漏
+    - CDSS
+    - 知识图谱
+    - HL7
+    - FHIR
+
+  scenarios:
+    - 医联体
+    - 互联网医疗
+    - 智能诊断
+    - 远程医疗
+
+  construction:
+    - 容灾备份 (双活)
+    - 系统平滑升级
+    - 基础环境改造
+    - 软件定义存储
+
+# 文件处理配置
+file_processing:
+  # 支持的文件扩展名
+  supported_extensions:
+    - .pdf
+    - .docx
+    - .pptx
+    - .xlsx
+    - .xlsm
+
+  # 单个文件最大提取字符数
+  max_content_length: 10000
+
+  # PDF 最多提取页数
+  pdf_max_pages: 20
+
+  # Excel 最多提取工作表数
+  excel_max_sheets: 5
+
+  # Excel 每个工作表最多提取行数
+  excel_max_rows: 100
+
+# 日志配置
+logging:
+  # 日志级别: DEBUG, INFO, WARNING, ERROR
+  level: INFO
+
+  # 是否保存详细日志
+  save_detailed_log: true
+
+  # 日志文件目录
+  log_dir: .
+
+# 输出配置
+output:
+  # 提取内容文件名
+  extracted_content_file: extracted_content_part1.json
+
+  # 文件ID映射文件名
+  file_id_mapping_file: file_id_mapping.json
+
+  # 摘要文件名
+  summaries_file: document_summaries_enhanced.json
+
+  # 失败文件列表
+  failures_file: metadata_application_failures.json

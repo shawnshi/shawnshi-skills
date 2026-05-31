@@ -1,0 +1,110 @@
+\documentclass[12pt, a4paper]{ctexart}
+
+% ---------------------------------------------------------
+% 1. Page Layout
+% ---------------------------------------------------------
+\usepackage{geometry}
+\geometry{
+    top=2.5cm, 
+    bottom=2.5cm, 
+    left=2.5cm, 
+    right=2.5cm,
+    headheight=15pt
+}
+
+% ---------------------------------------------------------
+% 2. Packages
+% ---------------------------------------------------------
+\usepackage{amsmath, amssymb}
+\usepackage{graphicx}
+\usepackage{booktabs}
+\usepackage{longtable}
+\usepackage{tabularx}
+\usepackage{array}
+\usepackage{calc}
+\usepackage{xcolor}
+\usepackage{fancyhdr}
+\usepackage[most]{tcolorbox}
+\usepackage{minted} % Requires Python Pygments & -shell-escape
+% If minted fails, use listings as fallback: \usepackage{listings}
+
+% ---------------------------------------------------------
+% Fixes for Pandoc
+% ---------------------------------------------------------
+\providecommand{\tightlist}{%
+  \setlength{\itemsep}{0pt}\setlength{\parskip}{0pt}}
+$if(highlighting-macros)$
+$highlighting-macros$
+$endif$
+
+% ---------------------------------------------------------
+% 3. Styling & Definitions
+% ---------------------------------------------------------
+\definecolor{techBlue}{RGB}{0, 102, 204}
+\definecolor{codeBg}{RGB}{245, 245, 245}
+
+\pagestyle{fancy}
+\fancyhf{}
+$if(title)$
+\lhead{\bfseries $title$}
+$endif$
+\rhead{\thepage}
+\renewcommand{\headrulewidth}{0.4pt}
+
+% Code/Terminal Box
+\newtcolorbox{codeBox}[1][]{
+    colback=codeBg,
+    colframe=gray!20!white,
+    boxrule=0.5pt,
+    arc=3pt,
+    left=5pt, right=5pt, top=5pt, bottom=5pt,
+    fonttitle=\bfseries\small\ttfamily,
+    coltitle=black,
+    title=Terminal/Code Output,
+    #1
+}
+
+% Info/Tip Box
+\newtcolorbox{tipBox}[1][]{
+    colback=techBlue!5!white,
+    colframe=techBlue,
+    borderline west={3pt}{0pt}{techBlue},
+    boxrule=0pt,
+    frame hidden,
+    title={Tip / 提示},
+    fonttitle=\bfseries\color{techBlue},
+    coltitle=techBlue,
+    attach title to upper,
+    #1
+}
+
+% ---------------------------------------------------------
+% 4. Metadata & Hyperref
+% ---------------------------------------------------------
+\usepackage[colorlinks=true, linkcolor=techBlue, urlcolor=techBlue]{hyperref}
+
+$if(title)$
+\title{$title$}
+$endif$
+$if(author)$
+\author{$author$}
+$endif$
+$if(date)$
+\date{$date$}
+$else$
+\date{\today}
+$endif$
+
+\begin{document}
+
+$if(title)$
+\maketitle
+$endif$
+$if(toc)$
+\tableofcontents
+\newpage
+$endif$
+
+$body$
+
+\end{document}

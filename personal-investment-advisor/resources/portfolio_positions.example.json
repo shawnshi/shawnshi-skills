@@ -1,0 +1,17 @@
+{
+  "positions": [
+    {
+      "symbol": "300308.SZ",
+      "name": "中际旭创",
+      "quantity": 1000,
+      "avg_cost": 145.2,
+      "currency": "CNY",
+      "market_type": "A股",
+      "opened_at": "2026-03-10",
+      "current_weight": 0.11,
+      "target_weight": 0.12,
+      "max_weight": 0.15,
+      "thesis": "AI 光模块景气延续"
+    }
+  ]
+}

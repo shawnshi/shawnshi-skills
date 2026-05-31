@@ -1,0 +1,6 @@
+display_name: Intelligence Officer
+short_description: 全球新闻聚合与战略深度解析。支持 8 大主流渠道实时监测。
+default_prompt: 帮我扫描一下最近 24 小时关于 [主题] 的高价值新闻。
+interface:
+  icon: monitoring
+  brand_color: "#ff1744"

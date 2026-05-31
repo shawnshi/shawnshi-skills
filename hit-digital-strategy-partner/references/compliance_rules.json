@@ -1,0 +1,39 @@
+{
+  "healthcare": {
+    "regulations": [
+      "HIPAA (US)",
+      "GDPR (EU) - Health Data Annex",
+      "中国《医疗卫生机构网络安全管理办法》",
+      "中国《个人信息保护法》(PIPL) - 敏感个人信息处理",
+      "中国《生成式人工智能服务管理暂行办法》- 医疗算法备案"
+    ],
+    "chokepoints": [
+      "数据跨境传输限制 (Cross-border Data Flow)",
+      "临床决策支持系统 (CDSS) 的医疗器械二类/三类证资质",
+      "伦理委员会 (IRB) 审查流程"
+    ],
+    "standard_check": "是否符合 HL7 FHIR 或 互联互通测评五级乙等要求？"
+  },
+  "finance": {
+    "regulations": [
+      "Basel III/IV",
+      "中国银保监会《银行业金融机构数据治理指引》",
+      "中国证监会《证券期货业网络安全管理办法》"
+    ],
+    "chokepoints": [
+      "算法黑盒与可解释性要求 (Explainability)",
+      "核心数据本地化存储",
+      "内幕交易防火墙 (Chinese Wall)"
+    ]
+  },
+  "manufacturing": {
+    "regulations": [
+      "ISO 27001",
+      "中国《工业互联网安全标准体系建设指南》"
+    ],
+    "chokepoints": [
+      "工业数据出境限制",
+      "OT 与 IT 网络隔离安全性"
+    ]
+  }
+}

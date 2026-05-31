@@ -1,0 +1,6 @@
+pypdf
+python-docx
+python-pptx
+openpyxl
+tqdm>=4.65.0
+pyyaml>=6.0

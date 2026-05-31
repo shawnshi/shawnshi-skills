@@ -1,0 +1,47 @@
+{
+  "_meta": {
+    "version": "1.0.0",
+    "description": "Domain Expert (DE) Knowledge Base for Personal Health Analysis",
+    "last_updated": "2026-05-16"
+  },
+  "flu_risk": {
+    "critical": {
+      "rhr_z_score_min": 2.0,
+      "hrv_z_score_max": -2.0,
+      "resp_spike_min": 0.5
+    },
+    "high": {
+      "rhr_z_score_min": 1.5,
+      "hrv_z_score_max": -1.5
+    },
+    "moderate": {
+      "rhr_z_score_min": 1.0,
+      "hrv_z_score_max": -1.0
+    },
+    "waking_resp_spike_min": 0.5
+  },
+  "executive_readiness": {
+    "weights": {
+      "sleep_score": 0.35,
+      "body_battery_peak": 0.35,
+      "stress_recovery": 0.30
+    },
+    "penalties": {
+      "hrv_unbalanced": 5.0,
+      "high_stress_dissipation_multiplier": 5.0,
+      "sleep_debt_threshold": 1.5,
+      "sleep_debt_multiplier": 3.0
+    },
+    "thresholds": {
+      "green_min": 75,
+      "yellow_min": 50,
+      "red_min": 30
+    }
+  },
+  "momentum": {
+    "supercompensation_rhr_drop_min": 1.5,
+    "supercompensation_stress_drop_min": 2.0,
+    "entropy_rhr_rise_min": 2.0,
+    "entropy_stress_rise_min": 3.0
+  }
+}

@@ -1,0 +1,32 @@
+{
+  "skill": "hit-industry-radar",
+  "test_cases": [
+    {
+      "id": "test-001",
+      "input": "请分析本周卫宁健康和创业慧康的最新财报及中标动态，提炼核心竞争点。",
+      "expected_output_patterns": [
+        "卫宁",
+        "创业慧康",
+        "中标",
+        "财报"
+      ],
+      "banned_output_patterns": [
+        "抱歉",
+        "我无法联网获取",
+        "作为AI"
+      ]
+    },
+    {
+      "id": "test-002",
+      "input": "汇总上个月公立医院信息平台改造类千万级大单的流向，并按大厂排序。",
+      "expected_output_patterns": [
+        "千万级",
+        "公立医院"
+      ],
+      "banned_output_patterns": [
+        "暂无数据",
+        "请提供具体"
+      ]
+    }
+  ]
+}

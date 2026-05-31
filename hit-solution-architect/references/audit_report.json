@@ -1,0 +1,27 @@
+{
+  "target_file": "references/卫宁健康典型案例.md",
+  "status": "Failed",
+  "metrics": {
+    "bold_count": 0,
+    "bold_limit": 3,
+    "buzzword_violations": 2,
+    "vague_violations": 1
+  },
+  "findings": [
+    {
+      "type": "Semantic Violation",
+      "issue": "Forbidden Buzzword: '沉淀'",
+      "suggestion": "Replace with: 积累, 归档, 结构化存储"
+    },
+    {
+      "type": "Semantic Violation",
+      "issue": "Forbidden Buzzword: '落地'",
+      "suggestion": "Replace with: 实施, 部署, 交付"
+    },
+    {
+      "type": "Quantification Violation",
+      "issue": "Vague quantification detected: '显著降低' (共 3 处)",
+      "suggestion": "必须量化为具体指标：[当前状态] -> [目标状态] (量化数值)"
+    }
+  ]
+}

@@ -1,0 +1,357 @@
+[
+  {
+    "query": "MU",
+    "symbol": "MU",
+    "market_type": "\u7f8e\u80a1",
+    "data_sources": {
+      "price": "Yahoo Finance",
+      "info": "Yahoo Finance",
+      "news": "Yahoo Finance",
+      "enhanced_metrics": null
+    },
+    "data_gaps": [
+      "\u7b79\u7801\u589e\u5f3a\u5b57\u6bb5\u4e0d\u9002\u7528(\u975eA\u80a1)"
+    ],
+    "info": {
+      "longName": "Micron Technology, Inc.",
+      "shortName": "Micron Technology, Inc.",
+      "symbol": "MU",
+      "exchange": "NMS",
+      "currency": "USD",
+      "currentPrice": 971.0,
+      "previousClose": 923.52,
+      "marketCap": 1095029751808,
+      "sector": "Technology",
+      "industry": "Semiconductors",
+      "trailingPE": 45.86679,
+      "forwardPE": 9.222632,
+      "dividendYield": 0.06,
+      "priceToBook": 15.115899,
+      "returnOnEquity": 0.39823002,
+      "operatingMargins": 0.67624,
+      "debtToEquity": 14.902,
+      "beta": 1.919,
+      "enterpriseToEbitda": 29.651,
+      "fiftyTwoWeekHigh": 981.0,
+      "fiftyTwoWeekLow": 94.4,
+      "totalRevenue": 58119000064,
+      "revenueGrowth": 1.963,
+      "country": "United States",
+      "website": "https://www.micron.com"
+    },
+    "earnings_snapshot": {
+      "next_earnings_date": "2026-06-25",
+      "revenue_growth": 1.963,
+      "trailing_pe": 45.86679,
+      "forward_pe": 9.222632,
+      "market_cap": 1095029751808
+    },
+    "news": [
+      {
+        "title": "SK Hynix Just Hit a $1 Trillion Market Cap. Here's How You Can Buy the Stock for Around $60.",
+        "link": "https://finance.yahoo.com/markets/stocks/articles/sk-hynix-just-hit-1-220500290.html",
+        "publisher": "Motley Fool",
+        "pub_time": "2026-05-30T22:05:00Z"
+      },
+      {
+        "title": "The 1 Metric That Tells Me This Tech Stock Is About to Rip Higher -- and It Just Flashed",
+        "link": "https://finance.yahoo.com/markets/stocks/articles/1-metric-tells-tech-stock-214300714.html",
+        "publisher": "Motley Fool",
+        "pub_time": "2026-05-30T21:43:00Z"
+      },
+      {
+        "title": "Micron Technology (MU): Renaissance Technologies Is Selling This Stock",
+        "link": "https://finance.yahoo.com/markets/stocks/articles/micron-technology-mu-renaissance-technologies-191025719.html",
+        "publisher": "Insider Monkey",
+        "pub_time": "2026-05-30T19:10:25Z"
+      },
+      {
+        "title": "Prediction: Here's How Much Micron Stock Will Be Worth in 2 Years",
+        "link": "https://finance.yahoo.com/markets/stocks/articles/prediction-heres-much-micron-stock-184400059.html",
+        "publisher": "Motley Fool",
+        "pub_time": "2026-05-30T18:44:00Z"
+      },
+      {
+        "title": "Can Sandisk Become a $1 Trillion Company in 5 Years?",
+        "link": "https://finance.yahoo.com/markets/stocks/articles/sandisk-become-1-trillion-company-180500363.html",
+        "publisher": "Motley Fool",
+        "pub_time": "2026-05-30T18:05:00Z"
+      },
+      {
+        "title": "Jim Cramer Discusses Micron\u2019s Trillion Dollar Journey",
+        "link": "https://finance.yahoo.com/markets/stocks/articles/jim-cramer-discusses-micron-trillion-172532243.html",
+        "publisher": "Insider Monkey",
+        "pub_time": "2026-05-30T17:25:32Z"
+      },
+      {
+        "title": "Jim Cramer Discusses Missing the Massive Sandisk and Peers Rally",
+        "link": "https://finance.yahoo.com/markets/stocks/articles/jim-cramer-discusses-missing-massive-150824939.html",
+        "publisher": "Insider Monkey",
+        "pub_time": "2026-05-30T15:08:24Z"
+      },
+      {
+        "title": "History Says the S&P 500\u2019s 9-Week Rally Is Rare. It May Be Even Rarer Than You Think",
+        "link": "https://finance.yahoo.com/markets/stocks/articles/history-says-p-500-9-144854257.html",
+        "publisher": "24/7 Wall St.",
+        "pub_time": "2026-05-30T14:48:54Z"
+      },
+      {
+        "title": "Micron Stock Is Trading at 42x Trailing Earnings. Analysts Say That\u2019s Still Cheap.",
+        "link": "https://finance.yahoo.com/markets/stocks/articles/micron-stock-trading-42x-trailing-143002150.html",
+        "publisher": "Barchart",
+        "pub_time": "2026-05-30T14:30:02Z"
+      },
+      {
+        "title": "Prediction: After Micron and AMD, This Will Be the Next Tech Stock to Join the $1 Trillion Club",
+        "link": "https://finance.yahoo.com/sectors/technology/articles/prediction-micron-amd-next-tech-142000017.html",
+        "publisher": "Motley Fool",
+        "pub_time": "2026-05-30T14:20:00Z"
+      }
+    ],
+    "catalyst_map": {
+      "upcoming": [
+        "\u8d22\u62a5\u7a97\u53e3: 2026-06-25"
+      ],
+      "active": [
+        "SK Hynix Just Hit a $1 Trillion Market Cap. Here's How You Can Buy the Stock for Around $60.",
+        "The 1 Metric That Tells Me This Tech Stock Is About to Rip Higher -- and It Just Flashed",
+        "Micron Technology (MU): Renaissance Technologies Is Selling This Stock"
+      ],
+      "broken": []
+    },
+    "history": [
+      {
+        "Date": "2026-04-30",
+        "Open": 529.739990234375,
+        "High": 535.5,
+        "Low": 502.5799865722656,
+        "Close": 517.1599731445312,
+        "Volume": 36554400,
+        "Dividends": 0.0,
+        "Stock Splits": 0.0
+      },
+      {
+        "Date": "2026-05-01",
+        "Open": 511.7799987792969,
+        "High": 545.9099731445312,
+        "Low": 510.2099914550781,
+        "Close": 542.2100219726562,
+        "Volume": 40215300,
+        "Dividends": 0.0,
+        "Stock Splits": 0.0
+      },
+      {
+        "Date": "2026-05-04",
+        "Open": 560.5999755859375,
+        "High": 592.7999877929688,
+        "Low": 557.760009765625,
+        "Close": 576.4500122070312,
+        "Volume": 46043700,
+        "Dividends": 0.0,
+        "Stock Splits": 0.0
+      },
+      {
+        "Date": "2026-05-05",
+        "Open": 609.780029296875,
+        "High": 651.739990234375,
+        "Low": 605.469970703125,
+        "Close": 640.2000122070312,
+        "Volume": 64268500,
+        "Dividends": 0.0,
+        "Stock Splits": 0.0
+      },
+      {
+        "Date": "2026-05-06",
+        "Open": 660.3699951171875,
+        "High": 667.6699829101562,
+        "Low": 627.5800170898438,
+        "Close": 666.5900268554688,
+        "Volume": 55725800,
+        "Dividends": 0.0,
+        "Stock Splits": 0.0
+      },
+      {
+        "Date": "2026-05-07",
+        "Open": 649.8300170898438,
+        "High": 683.0900268554688,
+        "Low": 635.4199829101562,
+        "Close": 646.6300048828125,
+        "Volume": 47527500,
+        "Dividends": 0.0,
+        "Stock Splits": 0.0
+      },
+      {
+        "Date": "2026-05-08",
+        "Open": 676.4500122070312,
+        "High": 747.2100219726562,
+        "Low": 676.2100219726562,
+        "Close": 746.8099975585938,
+        "Volume": 65130900,
+        "Dividends": 0.0,
+        "Stock Splits": 0.0
+      },
+      {
+        "Date": "2026-05-11",
+        "Open": 792.97998046875,
+        "High": 818.6699829101562,
+        "Low": 768.0,
+        "Close": 795.3300170898438,
+        "Volume": 70972900,
+        "Dividends": 0.0,
+        "Stock Splits": 0.0
+      },
+      {
+        "Date": "2026-05-12",
+        "Open": 774.7000122070312,
+        "High": 782.760009765625,
+        "Low": 706.5999755859375,
+        "Close": 766.5800170898438,
+        "Volume": 73743000,
+        "Dividends": 0.0,
+        "Stock Splits": 0.0
+      },
+      {
+        "Date": "2026-05-13",
+        "Open": 813.1599731445312,
+        "High": 814.9500122070312,
+        "Low": 779.469970703125,
+        "Close": 803.6300048828125,
+        "Volume": 54875100,
+        "Dividends": 0.0,
+        "Stock Splits": 0.0
+      },
+      {
+        "Date": "2026-05-14",
+        "Open": 787.6199951171875,
+        "High": 812.0,
+        "Low": 775.6300048828125,
+        "Close": 776.010009765625,
+        "Volume": 42142700,
+        "Dividends": 0.0,
+        "Stock Splits": 0.0
+      },
+      {
+        "Date": "2026-05-15",
+        "Open": 732.5700073242188,
+        "High": 749.5900268554688,
+        "Low": 719.0,
+        "Close": 724.6599731445312,
+        "Volume": 48519000,
+        "Dividends": 0.0,
+        "Stock Splits": 0.0
+      },
+      {
+        "Date": "2026-05-18",
+        "Open": 750.4600219726562,
+        "High": 757.0,
+        "Low": 663.25,
+        "Close": 681.5399780273438,
+        "Volume": 60042500,
+        "Dividends": 0.0,
+        "Stock Splits": 0.0
+      },
+      {
+        "Date": "2026-05-19",
+        "Open": 665.5800170898438,
+        "High": 725.9500122070312,
+        "Low": 652.2100219726562,
+        "Close": 698.739990234375,
+        "Volume": 61792100,
+        "Dividends": 0.0,
+        "Stock Splits": 0.0
+      },
+      {
+        "Date": "2026-05-20",
+        "Open": 734.9600219726562,
+        "High": 735.6799926757812,
+        "Low": 700.6599731445312,
+        "Close": 731.989990234375,
+        "Volume": 48827400,
+        "Dividends": 0.0,
+        "Stock Splits": 0.0
+      },
+      {
+        "Date": "2026-05-21",
+        "Open": 736.3599853515625,
+        "High": 764.9000244140625,
+        "Low": 732.2000122070312,
+        "Close": 762.0999755859375,
+        "Volume": 42461500,
+        "Dividends": 0.0,
+        "Stock Splits": 0.0
+      },
+      {
+        "Date": "2026-05-22",
+        "Open": 756.8200073242188,
+        "High": 780.2000122070312,
+        "Low": 747.2000122070312,
+        "Close": 751.0,
+        "Volume": 36002900,
+        "Dividends": 0.0,
+        "Stock Splits": 0.0
+      },
+      {
+        "Date": "2026-05-26",
+        "Open": 820.5,
+        "High": 916.7999877929688,
+        "Low": 820.2999877929688,
+        "Close": 895.8800048828125,
+        "Volume": 76560800,
+        "Dividends": 0.0,
+        "Stock Splits": 0.0
+      },
+      {
+        "Date": "2026-05-27",
+        "Open": 955.6599731445312,
+        "High": 956.1599731445312,
+        "Low": 888.1500244140625,
+        "Close": 928.4099731445312,
+        "Volume": 72295700,
+        "Dividends": 0.0,
+        "Stock Splits": 0.0
+      },
+      {
+        "Date": "2026-05-28",
+        "Open": 929.8300170898438,
+        "High": 949.489990234375,
+        "Low": 904.780029296875,
+        "Close": 923.52001953125,
+        "Volume": 49694300,
+        "Dividends": 0.0,
+        "Stock Splits": 0.0
+      },
+      {
+        "Date": "2026-05-29",
+        "Open": 957.0,
+        "High": 981.0,
+        "Low": 940.510009765625,
+        "Close": 971.0,
+        "Volume": 60295700,
+        "Dividends": 0.0,
+        "Stock Splits": 0.0
+      }
+    ],
+    "history_truncated": false,
+    "summary": {
+      "period_return_pct": 87.76,
+      "max_drawdown_pct": -15.19,
+      "dd_from_high_pct": -1.02,
+      "first_close": 517.16,
+      "last_close": 971.0,
+      "avg_close": 740.31,
+      "max_high": 981.0,
+      "min_low": 502.58,
+      "avg_volume": 54937700,
+      "volatility_std": 6.6886,
+      "data_points": 21,
+      "ma5": 893.96,
+      "ma10": 806.88,
+      "ma20": 751.46,
+      "bias_ma5_pct": 8.62,
+      "macd_dif": 89.5165,
+      "macd_dea": 69.2522,
+      "macd_hist": 40.5285,
+      "rsi_14": 70.09
+    }
+  }
+]
