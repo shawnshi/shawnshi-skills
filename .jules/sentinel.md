@@ -1,0 +1,4 @@
+## 2026-06-01 - Command Injection Risks with shell=True
+**Vulnerability:** Use of `shell=True` in `subprocess` calls with externally-controllable command strings, presenting command injection risks. Additionally, passing a list of arguments with `shell=True` on POSIX systems causes only the first element to be executed as the command.
+**Learning:** Using `shell=False` and passing arguments as structured lists (e.g., `['cmd', 'arg']`) ensures correct execution and prevents the shell from evaluating untrusted input.
+**Prevention:** Always use `shell=False` with argument lists. If string parsing is needed, use `shlex.split()`.
