@@ -95,7 +95,7 @@ def get_session_list():
             ['gemini', '--list-sessions'],
             capture_output=True,
             text=True,
-            shell=True,
+            shell=False, # Security: Use shell=False to prevent command injection
             cwd=str(CLI_ROOT),
             encoding='utf-8',
             errors='ignore'
@@ -258,7 +258,7 @@ def get_git_stats():
         return 0
     try:
         cmd = ['git', 'rev-list', '--count', 'HEAD', "--since=1 year ago"]
-        return int(subprocess.check_output(cmd, encoding='utf-8', shell=True, cwd=str(git_root)).strip())
+        return int(subprocess.check_output(cmd, encoding='utf-8', shell=False, cwd=str(git_root)).strip()) # Security: Use shell=False to prevent command injection
     except Exception:
         return 0
 
