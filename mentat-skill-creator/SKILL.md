@@ -28,8 +28,8 @@ Use this skill to create, repair, or evolve local skills. The complete historica
 ## Workflow
 1. **Recon**: Inspect existing context, target skill folder, `SKILL.md`, resources, scripts, examples, and prior failure evidence. **CRITICAL**: You MUST check `.skill_state/rejected_edits.jsonl` if it exists, and NEVER propose a patch that was previously rejected.
 2. **Intent Contract**: Define trigger phrases, non-triggers, expected output, side effects, required tools, and what failure looks like.
-3. **Pattern Diagnosis**: Classify the skill as Tool Wrapper, Generator, Pipeline, Inversion, Reviewer, or a combination.
-4. **Draft or Patch**: Keep the skill concise. Add resources instead of bloating `SKILL.md`; keep local references real.
+3. **Pattern Diagnosis (Critic Segregation)**: Classify the skill. **CRITICAL**: For repeated/complex failures, do NOT patch directly. You MUST `invoke_subagent` to spawn an independent Critic to diagnose the Minibatch of error logs and extract a generalized failure pattern.
+4. **Textual Op Contract (Draft or Patch)**: Before applying any file editing tools, you MUST explicitly output a JSON patch plan in your thought block: `{"reasoning": "...", "proposed_op": {"op": "replace", "target": "old", "content": "new"}}`. Keep patches strictly atomic.
 5. **Contracts**: Add explicit success criteria and failure routing. Schema-bearing outputs must be structurally stable.
 6. **Evaluate**: Candidate skills MUST be tested against `evals/benchmark.json` (if available) using `scripts/skill_opt_evaluator.py`. Only if the score strictly increases is the patch merged.
 7. **Iterate**: For repeated failure, apply only one targeted mutation at a time, then retest. Failed patches MUST be logged to `.skill_state/rejected_edits.jsonl`.
@@ -52,6 +52,7 @@ Prefer bundled resources over long inline instructions:
 - `examples/` for validated input-output cases
 
 ## Contracts
+- **Protected Section (Slow Update Zone)**: You are STRICTLY FORBIDDEN to modify the `<strategy-gene>` block or the core `## Output Contract` during routine failure repairs. These are strategic meta-skills that can only be altered during formal architectural audits.
 - **Edit Budget Lock**: You are FORBIDDEN to use full-file overwrite tools when modifying existing skills. All skill repairs MUST be executed using chunk replacement tools. For any single repair session, the maximum allowed changes are 2 chunks, and each chunk must not exceed 5 lines of changes. Exceeding this budget means the proposed repair is too radical.
 - Frontmatter must parse and include a precise trigger-oriented description.
 - Local references must resolve from the skill folder or repository root.

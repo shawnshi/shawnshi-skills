@@ -126,6 +126,7 @@ powershell -ExecutionPolicy Bypass -File .\scripts\repair_skills.ps1 -Mode Repor
 | **[tool-concept-synthesis](tool-concept-synthesis/)**                     | **宏观缝合与体系全景图**。强制依赖 Vector Lake 底层图谱拓扑寻找孤立实体间的逻辑暗线，再交由大模型反向渲染出具备大局观的战略长文.                     |
 | **[tool-archive-crawler](tool-archive-crawler/)**                         | **数字废墟矿工**。扫描旧有非结构化库，剥离废话，并按 `[[双链]]` 图谱与 `双轨制` 将其强行翻新锚定进 Tier 2 知识层.                                    |
 | **[cognitive-morphism-mapper](cognitive-morphism-mapper/)**               | **范畴论跨界思维引擎**。利用异构领域结构生成突破性解法，执行升维打击.                                                                                |
+| **[personal-book-reader](personal-book-reader/)**                         | **战略拆书引擎**。冷硬抽骨架、热重构知识地图。精准提取核心问题、基础假设、分析框架与精神内核，并转化为可走动做预测的认知参考系.                    |
 
 
 ### 🏥 大健康与战略研判中枢 (Healthcare Strategy)
@@ -207,4 +208,4 @@ powershell -ExecutionPolicy Bypass -File .\scripts\repair_skills.ps1 -Mode Repor
 | **[tool-url-markdown](tool-url-markdown/)**               | **网页原质提取器**。直控 Chrome CDP 协议，强制清除网页噪音.                    |
 
 ---
-*Last Global Audit: 2026-05-31 | Version: 6.1 (GBrain Architecture Edition) | System State: Locked*
+*Last Global Audit: 2026-06-04 | Version: 6.2 (GBrain Architecture Edition) | System State: Locked*

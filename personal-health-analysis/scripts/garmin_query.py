@@ -130,12 +130,15 @@ def query_stress_at_time(client, time_str, date_str=None):
         
         stress_values = data.get("stressValuesArray") or []
         
-        closest = find_closest_datapoint(target_time, stress_values)
+        # Convert [timestamp, value] pairs to dicts
+        stress_dicts = [{"startTimeInSeconds": ts//1000, "value": val} for ts, val in stress_values if val is not None]
+        
+        closest = find_closest_datapoint(target_time, stress_dicts)
         
         if closest:
             return {
                 "requested_time": time_str,
-                "stress_level": closest.get("stressLevel") or closest.get("value"),
+                "stress_level": closest.get("value"),
                 "date": date
             }
         else:

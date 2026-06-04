@@ -27,34 +27,34 @@ def call_llm(system_instruction: str, user_input: str) -> str:
     return response.text
 
 def evaluate_skill(skill_content: str, benchmark_data: dict) -> float:
-    """Evaluate a skill content against benchmark cases."""
+    """Evaluate a skill content against benchmark cases using a Soft Gate scoring matrix."""
     cases = benchmark_data.get("test_cases", [])
     if not cases:
         return 0.0
     
-    passed = 0
+    total_score = 0.0
     for case in cases:
         output = call_llm(skill_content, case["input"])
         
-        # Check expected patterns
+        # Soft Gate Logic (Partial Credit)
         expected = case.get("expected_output_patterns", [])
         banned = case.get("banned_output_patterns", [])
         
-        is_pass = True
-        for pattern in expected:
-            if pattern not in output:
-                is_pass = False
-                break
-                
-        for pattern in banned:
-            if pattern in output:
-                is_pass = False
-                break
-                
-        if is_pass:
-            passed += 1
+        if not expected and not banned:
+            total_score += 1.0
+            continue
             
-    return passed / len(cases)
+        expected_hits = sum(1 for p in expected if p in output)
+        banned_hits = sum(1 for p in banned if p in output)
+        
+        exp_score = (expected_hits / len(expected)) if expected else 1.0
+        ban_penalty = (banned_hits / len(banned)) if banned else 0.0
+        
+        # Calculate final case score (bounded 0.0 to 1.0)
+        case_score = max(0.0, min(1.0, exp_score - ban_penalty))
+        total_score += case_score
+            
+    return total_score / len(cases)
 
 def main():
     parser = argparse.ArgumentParser(description="SkillOpt Evaluator for Mentat")
