@@ -58,6 +58,7 @@
   .slide.hero.dark::after{background:linear-gradient(180deg,rgba(var(--ink-rgb),.32) 0%,rgba(var(--ink-rgb),0) 14%,rgba(var(--ink-rgb),0) 86%,rgba(var(--ink-rgb),.32) 100%)}
 
   /* ============ Magazine chrome：顶部 meta + 底部 foot ============ */
+  aside.notes { display: none !important; }
   .chrome{display:flex;justify-content:space-between;align-items:flex-start;font-family:var(--mono);font-size:12px;letter-spacing:.18em;text-transform:uppercase;opacity:.7}
   .chrome .left,.chrome .right{display:flex;gap:2.4em;align-items:center}
   .chrome .sep{width:40px;height:1px;background:currentColor;opacity:.4}
@@ -443,6 +444,27 @@
     .pipeline{grid-template-columns:repeat(2,1fr)}
     .grid-2-7-5,.grid-2-6-6,.grid-2-8-4{grid-template-columns:1fr}
   }
+  /* ============ Screenshot Framing ============ */
+  .mockup-window { background: rgba(var(--ink-rgb), 0.05); border-radius: 12px; overflow: hidden; border: 1px solid rgba(var(--ink-rgb), 0.1); box-shadow: 0 24px 48px -12px rgba(0,0,0,0.15); display: flex; flex-direction: column; }
+  .mockup-window.dark-mode { background: #1c1c1e; border-color: rgba(255,255,255,0.1); }
+  .mockup-header { height: 32px; background: rgba(var(--ink-rgb), 0.04); display: flex; align-items: center; padding: 0 16px; gap: 8px; border-bottom: 1px solid rgba(var(--ink-rgb), 0.06); }
+  .mockup-header .dot { width: 10px; height: 10px; border-radius: 50%; }
+  .mockup-header .dot.r { background: #ff5f56; }
+  .mockup-header .dot.y { background: #ffbd2e; }
+  .mockup-header .dot.g { background: #27c93f; }
+  .mockup-content { flex: 1; position: relative; }
+  .mockup-content img { width: 100%; height: auto; display: block; }
+  .shadow-float { box-shadow: 0 32px 64px -16px rgba(var(--ink-rgb), 0.2); border-radius: 12px; overflow: hidden; }
+
+  @media print {
+    @page { size: 1920px 1080px; margin: 0; }
+    body, html { width: 1920px !important; height: auto !important; overflow: visible !important; background: var(--bg, #fff) !important; }
+    #deck { position: static !important; width: 100% !important; transform: none !important; display: block !important; }
+    .slide { position: relative !important; width: 1920px !important; height: 1080px !important; page-break-after: always !important; page-break-inside: avoid !important; break-inside: avoid !important; flex: none !important; overflow: hidden !important; }
+    #nav, #overview, .chrome { display: none !important; }
+    canvas { display: none !important; }
+    [data-anim] { opacity: 1 !important; transform: none !important; }
+  }
 </style>
 </head>
 <body>
@@ -619,8 +641,47 @@ function stopGL(){
 startGL();
 addEventListener('ppt-low-power-change', e=>{e.detail.on ? stopGL() : startGL();});
 
-/* =============== BroadcastChannel 同步 & 演讲者视图 =============== */
-const bc = new BroadcastChannel('guizang-ppt-sync');
+/* =============== Hybrid MessageBus 同步 & 演讲者视图 =============== */
+class MessageBus {
+  constructor(channelName) {
+    this.handlers = [];
+    try {
+      this.bc = new BroadcastChannel(channelName);
+      this.bc.onmessage = (e) => this.emit(e.data);
+    } catch(e) {
+      console.warn('BroadcastChannel disabled, using postMessage fallback.');
+      this.bc = null;
+    }
+    window.addEventListener('message', (e) => {
+      if (e.data && e.data.__sync) {
+        this.emit(e.data);
+        if (window.opener && window.opener !== e.source && !window.opener.closed) window.opener.postMessage(e.data, '*');
+        if (window.parent && window.parent !== window && window.parent !== e.source) window.parent.postMessage(e.data, '*');
+        for (let i = 0; i < window.frames.length; i++) {
+          if (window.frames[i] !== e.source) window.frames[i].postMessage(e.data, '*');
+        }
+        if (window.__speakerWin && window.__speakerWin !== e.source && !window.__speakerWin.closed) window.__speakerWin.postMessage(e.data, '*');
+      }
+    });
+  }
+  postMessage(data) {
+    data.__sync = true;
+    if (this.bc) this.bc.postMessage(data);
+    if (window.opener && !window.opener.closed) window.opener.postMessage(data, '*');
+    if (window.__speakerWin && !window.__speakerWin.closed) window.__speakerWin.postMessage(data, '*');
+    if (window.parent && window.parent !== window) window.parent.postMessage(data, '*');
+    for (let i = 0; i < window.frames.length; i++) {
+      window.frames[i].postMessage(data, '*');
+    }
+  }
+  emit(data) {
+    this.handlers.forEach(fn => fn({ data }));
+  }
+  set onmessage(fn) {
+    this.handlers.push(fn);
+  }
+}
+const bc = new MessageBus('guizang-ppt-sync');
 const urlParams = new URLSearchParams(location.search);
 const isSpeaker = urlParams.get('speaker') === '1';
 const role = urlParams.get('role'); // 'curr' or 'next'
@@ -667,7 +728,7 @@ if (isSpeaker) {
   bc.onmessage = (e) => {
     if (e.data.type === 'notes') {
       notesEl.textContent = e.data.notes || '无演讲者逐字稿 (No notes for this slide)';
-      infoEl.textContent = \`Slide \${e.data.idx + 1} / \${e.data.total}\`;
+      infoEl.textContent = `Slide ${e.data.idx + 1} / ${e.data.total}`;
     }
   };
   window.addEventListener('keydown', e => {
@@ -770,14 +831,14 @@ function toggleOverview(){
 
 addEventListener('keydown',e=>{
   if(e.key==='Escape'){e.preventDefault();toggleOverview();return;}
-  if(e.key && e.key.toLowerCase()==='b' && !e.metaKey && !e.ctrlKey && !e.altKey){
+  if(e.key==='b'||e.key==='B'){
     e.preventDefault();
     window.__setLowPowerMode(!window.__lowPowerMode);
     return;
   }
-  if(e.key && e.key.toLowerCase()==='s' && !e.metaKey && !e.ctrlKey && !e.altKey){
+  if(e.key==='s'||e.key==='S'){
     e.preventDefault();
-    window.open('?speaker=1', 'SpeakerView', 'width=1000,height=700');
+    window.__speakerWin = window.open('?speaker=1', 'SpeakerView', 'width=1000,height=700');
     return;
   }
   if(overviewOn)return;

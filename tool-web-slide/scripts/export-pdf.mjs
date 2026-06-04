@@ -35,7 +35,12 @@ try {
   // Set viewport to standard 1080p 16:9
   await page.setViewport({ width: 1920, height: 1080, deviceScaleFactor: 2 });
   
-  await page.goto(`file://${htmlPath}`, { waitUntil: 'networkidle0' });
+  try {
+    await page.goto(`file://${htmlPath}`, { waitUntil: 'domcontentloaded', timeout: 5000 });
+  } catch (e) {
+    console.warn('Navigation wait timed out (common for local files), proceeding to export...');
+  }
+  await new Promise(r => setTimeout(r, 2000));
 
   console.log('Restructuring slides for printing...');
   
@@ -44,45 +49,14 @@ try {
     if (window.__setLowPowerMode) window.__setLowPowerMode(true);
   });
   
-  // Inject CSS to unwrap the horizontal deck into vertical print pages
-  await page.addStyleTag({
-    content: `
-      @media print {
-        @page { size: 1920px 1080px; margin: 0; }
-        html, body { 
-          width: 1920px !important; 
-          height: auto !important; 
-          overflow: visible !important; 
-        }
-        #deck { 
-          position: static !important; 
-          width: 100% !important; 
-          height: auto !important; 
-          transform: none !important; 
-          display: block !important; 
-        }
-        .slide { 
-          position: relative !important; 
-          width: 1920px !important; 
-          height: 1080px !important; 
-          page-break-after: always !important; 
-          page-break-inside: avoid !important;
-          break-inside: avoid !important;
-          flex: none !important; 
-          /* Override light-bg inheritance if needed */
-        }
-        #nav, #hint, #overview { display: none !important; }
-      }
-    `
-  });
-
   console.log(`Generating PDF -> ${outFile}`);
   await page.pdf({
     path: outFile,
     printBackground: true,
     width: '1920px',
     height: '1080px',
-    pageRanges: ''
+    pageRanges: '',
+    timeout: 60000
   });
 
   await browser.close();

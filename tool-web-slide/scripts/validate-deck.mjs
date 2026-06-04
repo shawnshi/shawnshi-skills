@@ -27,7 +27,8 @@ for (const match of classMatches) {
 
 // Whitelist of classes injected by JS or external libraries
 const whitelistedClasses = new Set([
-  'active', 'light-bg', 'dark-bg', 'motion-ready', 'low-power', 'is-win', 'canvas-mode'
+  'active', 'light-bg', 'dark-bg', 'motion-ready', 'low-power', 'is-win', 'canvas-mode',
+  'preview', 'bottom', 'sidebar', 'timer', 'controls', 'notes'
 ]);
 
 const bodyMatch = html.match(/<body[^>]*>([\s\S]*?)<\/body>/);
@@ -108,6 +109,28 @@ slides.forEach((slide) => {
       }
     }
   });
+
+  // ==========================================
+  // 3. Animation Dependency Validation
+  // ==========================================
+  const slideAnimate = slide.tag.match(/\bdata-animate="([^"]+)"/)?.[1];
+  if (slideAnimate) {
+    const animTypes = slideAnimate.split(/\s+/);
+    animTypes.forEach(animType => {
+      if (animType === 'pipeline' && !/\bdata-anim="(?:step|arrow)"/.test(slide.html)) {
+        errors.push(`Slide ${slide.idx}: Uses data-animate="pipeline" but is missing child [data-anim="step"] or [data-anim="arrow"] elements.`);
+      }
+      if (animType === 'list' && !/\bdata-anim="item"/.test(slide.html)) {
+        errors.push(`Slide ${slide.idx}: Uses data-animate="list" but is missing child [data-anim="item"] elements.`);
+      }
+      if (animType === 'grid' && !/\bdata-anim="cell"/.test(slide.html)) {
+        errors.push(`Slide ${slide.idx}: Uses data-animate="grid" but is missing child [data-anim="cell"] elements.`);
+      }
+      if (animType === 'hero' && !/\bdata-anim="(?:hero-text|hero-bg)"/.test(slide.html)) {
+        errors.push(`Slide ${slide.idx}: Uses data-animate="hero" but is missing child [data-anim="hero-text"] or [data-anim="hero-bg"].`);
+      }
+    });
+  }
 });
 
 if (warnings.length) {
