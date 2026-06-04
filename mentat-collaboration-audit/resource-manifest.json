@@ -1,7 +1,7 @@
 ﻿{
     "schema_version":  1,
     "skill":  "mentat-collaboration-audit",
-    "generated_at":  "2026-06-04T15:19:42",
+    "generated_at":  "2026-06-04T15:36:51",
     "skill_md":  "SKILL.md",
     "top_level_files":  [
                             "analyze_insights_v4.py",

@@ -603,6 +603,9 @@
   #overview [data-anim]{opacity:1!important;transform:none!important}
   #overview .slide *{animation:none!important;transition:none!important}
 
+  /* 演讲者视图 (aside.notes) 在正常页面中隐藏 */
+  aside.notes { display: none !important; }
+
   /* 统一卡片样式 token: card-fill (默认灰底 · 中性) + card-ink (反转高对比) + card-accent (单一焦点) */
   .card-fill{background:#f5f5f4;border:0;color:var(--text-primary)}
   .card-ink{background:var(--ink);border:0;color:var(--paper)}
@@ -1400,6 +1403,66 @@ void main(){
   gl_FragColor = vec4(col, 1.0);
 }`;
 
+/* =============== BroadcastChannel 同步 & 演讲者视图 =============== */
+const bc = new BroadcastChannel('guizang-ppt-sync');
+const urlParams = new URLSearchParams(location.search);
+const isSpeaker = urlParams.get('speaker') === '1';
+const role = urlParams.get('role'); // 'curr' or 'next'
+
+if (isSpeaker) {
+  document.documentElement.innerHTML = `
+    <head><title>Speaker View</title>
+    <style>
+      body { background: #111; color: #eee; margin: 0; padding: 20px; font-family: sans-serif; display: grid; grid-template-columns: 1fr 1fr; grid-template-rows: auto 1fr; gap: 20px; height: 100vh; box-sizing: border-box; overflow: hidden; }
+      h3 { margin: 0 0 10px 0; font-size: 16px; color: #888; text-transform: uppercase; letter-spacing: 2px; }
+      .preview { border: 1px solid #333; aspect-ratio: 16/9; position: relative; overflow: hidden; background: #000; border-radius: 8px; }
+      .preview iframe { width: 400%; height: 400%; transform: scale(0.25); transform-origin: 0 0; border: none; pointer-events: none; }
+      .bottom { grid-column: 1 / -1; display: grid; grid-template-columns: 3fr 1fr; gap: 20px; overflow: hidden; }
+      .notes { background: #1a1a1a; padding: 30px; font-size: 28px; line-height: 1.6; border-radius: 8px; overflow-y: auto; white-space: pre-wrap; }
+      .sidebar { display: flex; flex-direction: column; gap: 20px; }
+      .timer { background: #1a1a1a; padding: 20px; border-radius: 8px; text-align: center; font-size: 48px; font-family: monospace; font-weight: bold; }
+      .controls { background: #1a1a1a; padding: 20px; border-radius: 8px; flex: 1; display: flex; flex-direction: column; gap: 10px; font-size: 14px; color: #aaa; }
+    </style>
+    </head>
+    <body>
+      <div><h3>Current</h3><div class="preview"><iframe id="f-curr" src="?role=curr"></iframe></div></div>
+      <div><h3>Next</h3><div class="preview"><iframe id="f-next" src="?role=next"></iframe></div></div>
+      <div class="bottom">
+        <div class="notes" id="notes"></div>
+        <div class="sidebar">
+          <div class="timer" id="timer">00:00</div>
+          <div class="controls">
+            <div><strong>[←] [→]</strong> Prev / Next</div>
+            <div><strong>[Space]</strong> Next</div>
+            <hr style="border-color:#333;width:100%">
+            <div id="slide-info">Slide 1</div>
+          </div>
+        </div>
+      </div>
+    </body>
+  `;
+  let start = Date.now();
+  setInterval(() => {
+    let secs = Math.floor((Date.now() - start) / 1000);
+    document.getElementById('timer').textContent = String(Math.floor(secs / 60)).padStart(2, '0') + ':' + String(secs % 60).padStart(2, '0');
+  }, 1000);
+  let notesEl = document.getElementById('notes');
+  let infoEl = document.getElementById('slide-info');
+  bc.onmessage = (e) => {
+    if (e.data.type === 'notes') {
+      notesEl.textContent = e.data.notes || '无演讲者逐字稿 (No notes for this slide)';
+      infoEl.textContent = `Slide ${e.data.idx + 1} / ${e.data.total}`;
+    }
+  };
+  window.addEventListener('keydown', e => {
+    if (['ArrowRight','ArrowLeft','ArrowDown','ArrowUp',' ','PageDown','PageUp'].includes(e.key)) {
+      bc.postMessage({ type: 'key', key: e.key });
+      e.preventDefault();
+    }
+  });
+  throw new Error('Speaker view initialized. Stopping main execution.');
+}
+
 const mouse={x:0.5,y:0.5};
 addEventListener('mousemove',e=>{mouse.x=e.clientX/innerWidth;mouse.y=1-e.clientY/innerHeight});
 
@@ -1554,6 +1617,11 @@ addEventListener('keydown',e=>{
   if(e.key && e.key.toLowerCase()==='b' && !e.metaKey && !e.ctrlKey && !e.altKey){
     e.preventDefault();
     window.__setLowPowerMode(!window.__lowPowerMode);
+    return;
+  }
+  if(e.key && e.key.toLowerCase()==='s' && !e.metaKey && !e.ctrlKey && !e.altKey){
+    e.preventDefault();
+    window.open('?speaker=1', 'SpeakerView', 'width=1000,height=700');
     return;
   }
   if(overviewOn)return;

@@ -1,7 +1,7 @@
 ﻿{
     "schema_version":  1,
     "skill":  "tool-web-slide",
-    "generated_at":  "2026-06-04T15:19:42",
+    "generated_at":  "2026-06-04T15:36:51",
     "skill_md":  "SKILL.md",
     "top_level_files":  [
                             "README.md",
@@ -9,98 +9,34 @@
                         ],
     "top_level_directories":  [
                                   "assets",
-                                  "references",
+                                  "design-vault",
                                   "scripts"
                               ],
     "resource_directories":  [
                                  {
                                      "name":  "scripts",
-                                     "file_count":  1
-                                 },
-                                 {
-                                     "name":  "references",
-                                     "file_count":  10
+                                     "file_count":  3
                                  },
                                  {
                                      "name":  "assets",
-                                     "file_count":  3
+                                     "file_count":  1
                                  }
                              ],
     "declared_local_dependencies":  [
                                         {
-                                            "path":  "assets\\template.html",
+                                            "path":  "scripts\\assemble-context.mjs",
                                             "exists":  true,
-                                            "resolved_path":  "C:\\Users\\shich\\.gemini\\config\\skills\\tool-web-slide\\assets\\template.html"
+                                            "resolved_path":  "C:\\Users\\shich\\.gemini\\config\\skills\\tool-web-slide\\scripts\\assemble-context.mjs"
                                         },
                                         {
-                                            "path":  "references\\themes.md",
+                                            "path":  "scripts\\validate-deck.mjs",
                                             "exists":  true,
-                                            "resolved_path":  "C:\\Users\\shich\\.gemini\\config\\skills\\tool-web-slide\\references\\themes.md"
+                                            "resolved_path":  "C:\\Users\\shich\\.gemini\\config\\skills\\tool-web-slide\\scripts\\validate-deck.mjs"
                                         },
                                         {
-                                            "path":  "references\\layouts.md",
+                                            "path":  "scripts\\export-pdf.mjs",
                                             "exists":  true,
-                                            "resolved_path":  "C:\\Users\\shich\\.gemini\\config\\skills\\tool-web-slide\\references\\layouts.md"
-                                        },
-                                        {
-                                            "path":  "assets\\template-swiss.html",
-                                            "exists":  true,
-                                            "resolved_path":  "C:\\Users\\shich\\.gemini\\config\\skills\\tool-web-slide\\assets\\template-swiss.html"
-                                        },
-                                        {
-                                            "path":  "references\\themes-swiss.md",
-                                            "exists":  true,
-                                            "resolved_path":  "C:\\Users\\shich\\.gemini\\config\\skills\\tool-web-slide\\references\\themes-swiss.md"
-                                        },
-                                        {
-                                            "path":  "references\\layouts-swiss.md",
-                                            "exists":  true,
-                                            "resolved_path":  "C:\\Users\\shich\\.gemini\\config\\skills\\tool-web-slide\\references\\layouts-swiss.md"
-                                        },
-                                        {
-                                            "path":  "references\\screenshot-framing.md",
-                                            "exists":  true,
-                                            "resolved_path":  "C:\\Users\\shich\\.gemini\\config\\skills\\tool-web-slide\\references\\screenshot-framing.md"
-                                        },
-                                        {
-                                            "path":  "assets\\screenshot-backgrounds\\",
-                                            "exists":  true,
-                                            "resolved_path":  "C:\\Users\\shich\\.gemini\\config\\skills\\tool-web-slide\\assets\\screenshot-backgrounds\\"
-                                        },
-                                        {
-                                            "path":  "references\\image-prompts.md",
-                                            "exists":  true,
-                                            "resolved_path":  "C:\\Users\\shich\\.gemini\\config\\skills\\tool-web-slide\\references\\image-prompts.md"
-                                        },
-                                        {
-                                            "path":  "references\\swiss-layout-lock.md",
-                                            "exists":  true,
-                                            "resolved_path":  "C:\\Users\\shich\\.gemini\\config\\skills\\tool-web-slide\\references\\swiss-layout-lock.md"
-                                        },
-                                        {
-                                            "path":  "references\\swiss-map-component.md",
-                                            "exists":  true,
-                                            "resolved_path":  "C:\\Users\\shich\\.gemini\\config\\skills\\tool-web-slide\\references\\swiss-map-component.md"
-                                        },
-                                        {
-                                            "path":  "scripts\\validate-swiss-deck.mjs",
-                                            "exists":  true,
-                                            "resolved_path":  "C:\\Users\\shich\\.gemini\\config\\skills\\tool-web-slide\\scripts\\validate-swiss-deck.mjs"
-                                        },
-                                        {
-                                            "path":  "references\\components.md",
-                                            "exists":  true,
-                                            "resolved_path":  "C:\\Users\\shich\\.gemini\\config\\skills\\tool-web-slide\\references\\components.md"
-                                        },
-                                        {
-                                            "path":  "references\\checklist.md",
-                                            "exists":  true,
-                                            "resolved_path":  "C:\\Users\\shich\\.gemini\\config\\skills\\tool-web-slide\\references\\checklist.md"
-                                        },
-                                        {
-                                            "path":  "assets\\motion.min.js",
-                                            "exists":  true,
-                                            "resolved_path":  "C:\\Users\\shich\\.gemini\\config\\skills\\tool-web-slide\\assets\\motion.min.js"
+                                            "resolved_path":  "C:\\Users\\shich\\.gemini\\config\\skills\\tool-web-slide\\scripts\\export-pdf.mjs"
                                         }
                                     ],
     "missing_declared_dependencies":  [
