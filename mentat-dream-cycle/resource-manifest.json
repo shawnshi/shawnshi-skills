@@ -1,7 +1,7 @@
 ﻿{
     "schema_version":  1,
     "skill":  "mentat-dream-cycle",
-    "generated_at":  "2026-05-11T14:46:01",
+    "generated_at":  "2026-06-04T15:19:42",
     "skill_md":  "SKILL.md",
     "top_level_files":  [
                             "SKILL.md"
@@ -19,12 +19,12 @@
                                         {
                                             "path":  "scripts\\garbage_collector.py",
                                             "exists":  true,
-                                            "resolved_path":  "C:\\Users\\shich\\.gemini\\skills\\mentat-dream-cycle\\scripts\\garbage_collector.py"
+                                            "resolved_path":  "C:\\Users\\shich\\.gemini\\config\\skills\\mentat-dream-cycle\\scripts\\garbage_collector.py"
                                         },
                                         {
                                             "path":  "scripts\\orphan_scanner.py",
                                             "exists":  true,
-                                            "resolved_path":  "C:\\Users\\shich\\.gemini\\skills\\mentat-dream-cycle\\scripts\\orphan_scanner.py"
+                                            "resolved_path":  "C:\\Users\\shich\\.gemini\\config\\skills\\mentat-dream-cycle\\scripts\\orphan_scanner.py"
                                         }
                                     ],
     "missing_declared_dependencies":  [

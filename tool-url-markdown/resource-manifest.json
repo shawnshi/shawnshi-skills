@@ -1,7 +1,7 @@
 ﻿{
     "schema_version":  1,
     "skill":  "tool-url-markdown",
-    "generated_at":  "2026-05-11T14:46:02",
+    "generated_at":  "2026-06-04T15:19:42",
     "skill_md":  "SKILL.md",
     "top_level_files":  [
                             "bun.lock",
@@ -36,17 +36,17 @@
                                         {
                                             "path":  "tool-url-markdown\\scripts\\main.ts",
                                             "exists":  true,
-                                            "resolved_path":  "C:\\Users\\shich\\.gemini\\skills\\tool-url-markdown\\scripts\\main.ts"
+                                            "resolved_path":  "C:\\Users\\shich\\.gemini\\config\\skills\\tool-url-markdown\\scripts\\main.ts"
                                         },
                                         {
                                             "path":  "scripts\\main.ts",
                                             "exists":  true,
-                                            "resolved_path":  "C:\\Users\\shich\\.gemini\\skills\\tool-url-markdown\\scripts\\main.ts"
+                                            "resolved_path":  "C:\\Users\\shich\\.gemini\\config\\skills\\tool-url-markdown\\scripts\\main.ts"
                                         },
                                         {
                                             "path":  "references\\troubleshooting.md",
                                             "exists":  true,
-                                            "resolved_path":  "C:\\Users\\shich\\.gemini\\skills\\tool-url-markdown\\references\\troubleshooting.md"
+                                            "resolved_path":  "C:\\Users\\shich\\.gemini\\config\\skills\\tool-url-markdown\\references\\troubleshooting.md"
                                         }
                                     ],
     "missing_declared_dependencies":  [

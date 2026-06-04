@@ -1,7 +1,7 @@
 ﻿{
     "schema_version":  1,
     "skill":  "academic-scientific-visualization",
-    "generated_at":  "2026-05-11T14:46:01",
+    "generated_at":  "2026-06-04T15:19:42",
     "skill_md":  "SKILL.md",
     "top_level_files":  [
                             "SKILL.md"
@@ -29,57 +29,57 @@
                                         {
                                             "path":  "references\\full_visualization_playbook.md",
                                             "exists":  true,
-                                            "resolved_path":  "C:\\Users\\shich\\.gemini\\skills\\academic-scientific-visualization\\references\\full_visualization_playbook.md"
+                                            "resolved_path":  "C:\\Users\\shich\\.gemini\\config\\skills\\academic-scientific-visualization\\references\\full_visualization_playbook.md"
                                         },
                                         {
                                             "path":  "references\\publication_guidelines.md",
                                             "exists":  true,
-                                            "resolved_path":  "C:\\Users\\shich\\.gemini\\skills\\academic-scientific-visualization\\references\\publication_guidelines.md"
+                                            "resolved_path":  "C:\\Users\\shich\\.gemini\\config\\skills\\academic-scientific-visualization\\references\\publication_guidelines.md"
                                         },
                                         {
                                             "path":  "references\\journal_requirements.md",
                                             "exists":  true,
-                                            "resolved_path":  "C:\\Users\\shich\\.gemini\\skills\\academic-scientific-visualization\\references\\journal_requirements.md"
+                                            "resolved_path":  "C:\\Users\\shich\\.gemini\\config\\skills\\academic-scientific-visualization\\references\\journal_requirements.md"
                                         },
                                         {
                                             "path":  "references\\color_palettes.md",
                                             "exists":  true,
-                                            "resolved_path":  "C:\\Users\\shich\\.gemini\\skills\\academic-scientific-visualization\\references\\color_palettes.md"
+                                            "resolved_path":  "C:\\Users\\shich\\.gemini\\config\\skills\\academic-scientific-visualization\\references\\color_palettes.md"
                                         },
                                         {
                                             "path":  "assets\\color_palettes.py",
                                             "exists":  true,
-                                            "resolved_path":  "C:\\Users\\shich\\.gemini\\skills\\academic-scientific-visualization\\assets\\color_palettes.py"
+                                            "resolved_path":  "C:\\Users\\shich\\.gemini\\config\\skills\\academic-scientific-visualization\\assets\\color_palettes.py"
                                         },
                                         {
                                             "path":  "references\\matplotlib_examples.md",
                                             "exists":  true,
-                                            "resolved_path":  "C:\\Users\\shich\\.gemini\\skills\\academic-scientific-visualization\\references\\matplotlib_examples.md"
+                                            "resolved_path":  "C:\\Users\\shich\\.gemini\\config\\skills\\academic-scientific-visualization\\references\\matplotlib_examples.md"
                                         },
                                         {
                                             "path":  "scripts\\figure_export.py",
                                             "exists":  true,
-                                            "resolved_path":  "C:\\Users\\shich\\.gemini\\skills\\academic-scientific-visualization\\scripts\\figure_export.py"
+                                            "resolved_path":  "C:\\Users\\shich\\.gemini\\config\\skills\\academic-scientific-visualization\\scripts\\figure_export.py"
                                         },
                                         {
                                             "path":  "scripts\\style_presets.py",
                                             "exists":  true,
-                                            "resolved_path":  "C:\\Users\\shich\\.gemini\\skills\\academic-scientific-visualization\\scripts\\style_presets.py"
+                                            "resolved_path":  "C:\\Users\\shich\\.gemini\\config\\skills\\academic-scientific-visualization\\scripts\\style_presets.py"
                                         },
                                         {
                                             "path":  "assets\\publication.mplstyle",
                                             "exists":  true,
-                                            "resolved_path":  "C:\\Users\\shich\\.gemini\\skills\\academic-scientific-visualization\\assets\\publication.mplstyle"
+                                            "resolved_path":  "C:\\Users\\shich\\.gemini\\config\\skills\\academic-scientific-visualization\\assets\\publication.mplstyle"
                                         },
                                         {
                                             "path":  "assets\\nature.mplstyle",
                                             "exists":  true,
-                                            "resolved_path":  "C:\\Users\\shich\\.gemini\\skills\\academic-scientific-visualization\\assets\\nature.mplstyle"
+                                            "resolved_path":  "C:\\Users\\shich\\.gemini\\config\\skills\\academic-scientific-visualization\\assets\\nature.mplstyle"
                                         },
                                         {
                                             "path":  "assets\\presentation.mplstyle",
                                             "exists":  true,
-                                            "resolved_path":  "C:\\Users\\shich\\.gemini\\skills\\academic-scientific-visualization\\assets\\presentation.mplstyle"
+                                            "resolved_path":  "C:\\Users\\shich\\.gemini\\config\\skills\\academic-scientific-visualization\\assets\\presentation.mplstyle"
                                         }
                                     ],
     "missing_declared_dependencies":  [

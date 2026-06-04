@@ -1,3 +1,7 @@
+---
+name: personal-cognitive-prescription
+description: 认知处方引擎。无情的认知审计官，嗅探盲区并执行降维打击，强制开出靶向章节的硬核书籍阅读处方。
+---
 # 认知处方引擎 (Cognitive Prescription Engine)
 
 <activated_skill>
@@ -60,3 +64,27 @@
 </instructions>
 
 </activated_skill>
+
+
+
+
+
+
+
+## When to Use
+TBD.
+
+## Workflow
+TBD.
+
+## Resources
+TBD.
+
+## Failure Modes
+TBD.
+
+## Output Contract
+TBD.
+
+## Telemetry
+TBD.

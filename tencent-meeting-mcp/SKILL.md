@@ -287,3 +287,27 @@ MCP 响应中出现版本相关提示时，**必须查阅 `references/version_ma
 **返回内容**：当前版本、最新版本号、安装地址
 
 **注意**：更新完成后必须重新开始新对话/会话，确保新版本规则生效
+
+
+
+
+
+
+
+## When to Use
+TBD.
+
+## Workflow
+TBD.
+
+## Resources
+TBD.
+
+## Failure Modes
+TBD.
+
+## Output Contract
+TBD.
+
+## Telemetry
+TBD.

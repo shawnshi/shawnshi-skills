@@ -1,7 +1,7 @@
 ﻿{
     "schema_version":  1,
     "skill":  "tool-drawio",
-    "generated_at":  "2026-05-11T14:46:02",
+    "generated_at":  "2026-06-04T15:19:42",
     "skill_md":  "SKILL.md",
     "top_level_files":  [
                             "agentloop-core.svg",
@@ -38,47 +38,47 @@
                                         {
                                             "path":  ".\\scripts\\generate-diagram.sh",
                                             "exists":  true,
-                                            "resolved_path":  "C:\\Users\\shich\\.gemini\\skills\\tool-drawio\\.\\scripts\\generate-diagram.sh"
+                                            "resolved_path":  "C:\\Users\\shich\\.gemini\\config\\skills\\tool-drawio\\.\\scripts\\generate-diagram.sh"
                                         },
                                         {
                                             "path":  ".\\scripts\\generate-from-template.py",
                                             "exists":  true,
-                                            "resolved_path":  "C:\\Users\\shich\\.gemini\\skills\\tool-drawio\\.\\scripts\\generate-from-template.py"
+                                            "resolved_path":  "C:\\Users\\shich\\.gemini\\config\\skills\\tool-drawio\\.\\scripts\\generate-from-template.py"
                                         },
                                         {
                                             "path":  ".\\scripts\\validate-svg.sh",
                                             "exists":  true,
-                                            "resolved_path":  "C:\\Users\\shich\\.gemini\\skills\\tool-drawio\\.\\scripts\\validate-svg.sh"
+                                            "resolved_path":  "C:\\Users\\shich\\.gemini\\config\\skills\\tool-drawio\\.\\scripts\\validate-svg.sh"
                                         },
                                         {
                                             "path":  ".\\scripts\\test-all-styles.sh",
                                             "exists":  true,
-                                            "resolved_path":  "C:\\Users\\shich\\.gemini\\skills\\tool-drawio\\.\\scripts\\test-all-styles.sh"
+                                            "resolved_path":  "C:\\Users\\shich\\.gemini\\config\\skills\\tool-drawio\\.\\scripts\\test-all-styles.sh"
                                         },
                                         {
                                             "path":  "references\\style-1-flat-icon.md",
                                             "exists":  true,
-                                            "resolved_path":  "C:\\Users\\shich\\.gemini\\skills\\tool-drawio\\references\\style-1-flat-icon.md"
+                                            "resolved_path":  "C:\\Users\\shich\\.gemini\\config\\skills\\tool-drawio\\references\\style-1-flat-icon.md"
                                         },
                                         {
                                             "path":  "references\\style-2-dark-terminal.md",
                                             "exists":  true,
-                                            "resolved_path":  "C:\\Users\\shich\\.gemini\\skills\\tool-drawio\\references\\style-2-dark-terminal.md"
+                                            "resolved_path":  "C:\\Users\\shich\\.gemini\\config\\skills\\tool-drawio\\references\\style-2-dark-terminal.md"
                                         },
                                         {
                                             "path":  "references\\style-7-openai.md",
                                             "exists":  true,
-                                            "resolved_path":  "C:\\Users\\shich\\.gemini\\skills\\tool-drawio\\references\\style-7-openai.md"
+                                            "resolved_path":  "C:\\Users\\shich\\.gemini\\config\\skills\\tool-drawio\\references\\style-7-openai.md"
                                         },
                                         {
                                             "path":  "references\\icons.md",
                                             "exists":  true,
-                                            "resolved_path":  "C:\\Users\\shich\\.gemini\\skills\\tool-drawio\\references\\icons.md"
+                                            "resolved_path":  "C:\\Users\\shich\\.gemini\\config\\skills\\tool-drawio\\references\\icons.md"
                                         },
                                         {
                                             "path":  "references\\style-diagram-matrix.md",
                                             "exists":  true,
-                                            "resolved_path":  "C:\\Users\\shich\\.gemini\\skills\\tool-drawio\\references\\style-diagram-matrix.md"
+                                            "resolved_path":  "C:\\Users\\shich\\.gemini\\config\\skills\\tool-drawio\\references\\style-diagram-matrix.md"
                                         }
                                     ],
     "missing_declared_dependencies":  [

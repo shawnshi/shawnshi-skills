@@ -65,7 +65,7 @@ AVOID: 严禁重复 14 天内的旧闻；禁止包含无具体数据的公关通
 
 ### Phase 5: 激活与分层归档 (Activate & Async Ingest)
 1. **物理落盘**: 只有在 Phase 4 返回 `Audit Passed` (Exit Code 0) 后，才允许使用 `write_file` 工具将草稿内容物理保存至最终目录 `C:/Users/shich/.gemini/MEMORY/raw/HealthcareIndustryRadar/DHWB-Radar-YYYYMMDD.md`。
-2. **知识异步入湖 (Graph Ingestion)**：战报落盘后，强制主代理甄别高价值战略突变（如：友商实控权变更、全新架构发布）。若存在，必须利用 `write_file` 或 `replace` 将该结论作为 Timeline 节点追加至 `MEMORY/wiki/Entity_*.md` 对应的实体卡片中。
+2. **知识异步入湖 (Graph Ingestion)**：战报落盘后，强制主代理甄别高价值战略突变（如：友商实控权变更、全新架构发布）。若存在，必须利用 `write_file` 或 `file edit tools` 将该结论作为 Timeline 节点追加至 `MEMORY/wiki/Entity_*.md` 对应的实体卡片中。
    - **异步同步流**: 严禁调用阻塞式 Sync。必须调用 `mcp_vector-lake-mcp_prepare_ingest_batch` 提取待同步清单，随后利用 `invoke_subagent` 拉起 `vector-lake-ingestor` 异步消化。
 3. **遥测记录**: (已废弃手动写入，由系统基建自动追踪 Token 与耗时)。
 

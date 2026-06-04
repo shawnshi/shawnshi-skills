@@ -1,7 +1,7 @@
 ﻿{
     "schema_version":  1,
     "skill":  "tool-smart-latex",
-    "generated_at":  "2026-05-11T14:46:02",
+    "generated_at":  "2026-06-04T15:19:42",
     "skill_md":  "SKILL.md",
     "top_level_files":  [
                             "README.md",
@@ -37,17 +37,17 @@
                                         {
                                             "path":  "tool-smart-latex\\scripts\\smart_engine.py",
                                             "exists":  true,
-                                            "resolved_path":  "C:\\Users\\shich\\.gemini\\skills\\tool-smart-latex\\scripts\\smart_engine.py"
+                                            "resolved_path":  "C:\\Users\\shich\\.gemini\\config\\skills\\tool-smart-latex\\scripts\\smart_engine.py"
                                         },
                                         {
                                             "path":  "references\\styles.md",
                                             "exists":  true,
-                                            "resolved_path":  "C:\\Users\\shich\\.gemini\\skills\\tool-smart-latex\\references\\styles.md"
+                                            "resolved_path":  "C:\\Users\\shich\\.gemini\\config\\skills\\tool-smart-latex\\references\\styles.md"
                                         },
                                         {
                                             "path":  "scripts\\smart_engine.py",
                                             "exists":  true,
-                                            "resolved_path":  "C:\\Users\\shich\\.gemini\\skills\\tool-smart-latex\\scripts\\smart_engine.py"
+                                            "resolved_path":  "C:\\Users\\shich\\.gemini\\config\\skills\\tool-smart-latex\\scripts\\smart_engine.py"
                                         }
                                     ],
     "missing_declared_dependencies":  [

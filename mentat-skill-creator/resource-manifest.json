@@ -1,7 +1,7 @@
 ﻿{
     "schema_version":  1,
     "skill":  "mentat-skill-creator",
-    "generated_at":  "2026-05-11T14:46:01",
+    "generated_at":  "2026-06-04T15:19:42",
     "skill_md":  "SKILL.md",
     "top_level_files":  [
                             "SKILL.md"
@@ -16,7 +16,7 @@
     "resource_directories":  [
                                  {
                                      "name":  "scripts",
-                                     "file_count":  9
+                                     "file_count":  11
                                  },
                                  {
                                      "name":  "references",
@@ -35,37 +35,42 @@
                                         {
                                             "path":  "references\\full_skill_creator_playbook.md",
                                             "exists":  true,
-                                            "resolved_path":  "C:\\Users\\shich\\.gemini\\skills\\mentat-skill-creator\\references\\full_skill_creator_playbook.md"
+                                            "resolved_path":  "C:\\Users\\shich\\.gemini\\config\\skills\\mentat-skill-creator\\references\\full_skill_creator_playbook.md"
+                                        },
+                                        {
+                                            "path":  "scripts\\skill_opt_evaluator.py",
+                                            "exists":  true,
+                                            "resolved_path":  "C:\\Users\\shich\\.gemini\\config\\skills\\mentat-skill-creator\\scripts\\skill_opt_evaluator.py"
                                         },
                                         {
                                             "path":  "references\\schemas.md",
                                             "exists":  true,
-                                            "resolved_path":  "C:\\Users\\shich\\.gemini\\skills\\mentat-skill-creator\\references\\schemas.md"
+                                            "resolved_path":  "C:\\Users\\shich\\.gemini\\config\\skills\\mentat-skill-creator\\references\\schemas.md"
                                         },
                                         {
                                             "path":  "agents\\grader.md",
                                             "exists":  true,
-                                            "resolved_path":  "C:\\Users\\shich\\.gemini\\skills\\mentat-skill-creator\\agents\\grader.md"
+                                            "resolved_path":  "C:\\Users\\shich\\.gemini\\config\\skills\\mentat-skill-creator\\agents\\grader.md"
                                         },
                                         {
                                             "path":  "agents\\comparator.md",
                                             "exists":  true,
-                                            "resolved_path":  "C:\\Users\\shich\\.gemini\\skills\\mentat-skill-creator\\agents\\comparator.md"
+                                            "resolved_path":  "C:\\Users\\shich\\.gemini\\config\\skills\\mentat-skill-creator\\agents\\comparator.md"
                                         },
                                         {
                                             "path":  "agents\\analyzer.md",
                                             "exists":  true,
-                                            "resolved_path":  "C:\\Users\\shich\\.gemini\\skills\\mentat-skill-creator\\agents\\analyzer.md"
+                                            "resolved_path":  "C:\\Users\\shich\\.gemini\\config\\skills\\mentat-skill-creator\\agents\\analyzer.md"
                                         },
                                         {
                                             "path":  "scripts\\repair_skills.ps1",
                                             "exists":  true,
-                                            "resolved_path":  "C:\\Users\\shich\\.gemini\\skills\\scripts\\repair_skills.ps1"
+                                            "resolved_path":  "C:\\Users\\shich\\.gemini\\config\\skills\\scripts\\repair_skills.ps1"
                                         },
                                         {
                                             "path":  "scripts\\generate_resource_manifests.ps1",
                                             "exists":  true,
-                                            "resolved_path":  "C:\\Users\\shich\\.gemini\\skills\\scripts\\generate_resource_manifests.ps1"
+                                            "resolved_path":  "C:\\Users\\shich\\.gemini\\config\\skills\\scripts\\generate_resource_manifests.ps1"
                                         }
                                     ],
     "missing_declared_dependencies":  [

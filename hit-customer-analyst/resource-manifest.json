@@ -1,7 +1,7 @@
 ﻿{
     "schema_version":  1,
     "skill":  "hit-customer-analyst",
-    "generated_at":  "2026-05-11T14:46:01",
+    "generated_at":  "2026-06-04T15:19:42",
     "skill_md":  "SKILL.md",
     "top_level_files":  [
                             "SKILL.md"
@@ -27,19 +27,19 @@
                              ],
     "declared_local_dependencies":  [
                                         {
-                                            "path":  "hit-customer-analyst\\references\\workflow.md",
+                                            "path":  "references\\workflow.md",
                                             "exists":  true,
-                                            "resolved_path":  "C:\\Users\\shich\\.gemini\\skills\\hit-customer-analyst\\references\\workflow.md"
+                                            "resolved_path":  "C:\\Users\\shich\\.gemini\\config\\skills\\hit-customer-analyst\\references\\workflow.md"
                                         },
                                         {
-                                            "path":  "hit-customer-analyst\\assets\\briefing_template.md",
+                                            "path":  "assets\\briefing_template.md",
                                             "exists":  true,
-                                            "resolved_path":  "C:\\Users\\shich\\.gemini\\skills\\hit-customer-analyst\\assets\\briefing_template.md"
+                                            "resolved_path":  "C:\\Users\\shich\\.gemini\\config\\skills\\hit-customer-analyst\\assets\\briefing_template.md"
                                         },
                                         {
-                                            "path":  "hit-customer-analyst\\scripts\\brief_gate.py",
+                                            "path":  "scripts\\brief_gate.py",
                                             "exists":  true,
-                                            "resolved_path":  "C:\\Users\\shich\\.gemini\\skills\\hit-customer-analyst\\scripts\\brief_gate.py"
+                                            "resolved_path":  "C:\\Users\\shich\\.gemini\\config\\skills\\hit-customer-analyst\\scripts\\brief_gate.py"
                                         }
                                     ],
     "missing_declared_dependencies":  [

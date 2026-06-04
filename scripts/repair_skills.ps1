@@ -234,7 +234,7 @@ function Get-ResourceManifestStatus {
     }
 
     try {
-        $manifest = Get-Content -LiteralPath $manifestPath -Raw | ConvertFrom-Json
+        $manifest = Get-Content -LiteralPath $manifestPath -Encoding UTF8 -Raw | ConvertFrom-Json
         $missing = @()
         if ($null -ne $manifest.missing_declared_dependencies) {
             $missing = @($manifest.missing_declared_dependencies)
@@ -302,7 +302,7 @@ function Get-TriggerOwnershipStatus {
     }
 
     try {
-        $matrix = Get-Content -LiteralPath $matrixPath -Raw | ConvertFrom-Json
+        $matrix = Get-Content -LiteralPath $matrixPath -Encoding UTF8 -Raw | ConvertFrom-Json
     } catch {
         return [PSCustomObject]@{
             Exists           = $true
@@ -426,7 +426,7 @@ function New-AuditRecord {
         [System.IO.FileInfo]$File
     )
 
-    $lines = @(Get-Content -LiteralPath $File.FullName)
+    $lines = @(Get-Content -LiteralPath $File.FullName -Encoding UTF8)
     $text = if ($lines.Count -gt 0) { $lines -join "`n" } else { '' }
     $frontmatter = Get-FrontmatterStatus -Lines $lines
     $unsupported = @(Get-UnsupportedTokens -Text $text)
@@ -461,7 +461,7 @@ $skillFiles = @(Get-SkillFiles)
 if ($Mode -eq 'FixFrontmatter') {
     $fixed = 0
     foreach ($file in $skillFiles) {
-        $lines = Get-Content -LiteralPath $file.FullName
+        $lines = Get-Content -LiteralPath $file.FullName -Encoding UTF8
         if (Repair-Frontmatter -File $file -Lines $lines) {
             $fixed++
         }

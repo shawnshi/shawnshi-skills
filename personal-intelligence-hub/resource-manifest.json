@@ -1,7 +1,7 @@
 ﻿{
     "schema_version":  1,
     "skill":  "personal-intelligence-hub",
-    "generated_at":  "2026-05-11T14:46:01",
+    "generated_at":  "2026-06-04T15:19:42",
     "skill_md":  "SKILL.md",
     "top_level_files":  [
                             "package-lock.json",
@@ -19,7 +19,7 @@
     "resource_directories":  [
                                  {
                                      "name":  "scripts",
-                                     "file_count":  10
+                                     "file_count":  13
                                  },
                                  {
                                      "name":  "references",
@@ -31,84 +31,64 @@
                                  },
                                  {
                                      "name":  "tmp",
-                                     "file_count":  9
+                                     "file_count":  0
                                  }
                              ],
     "declared_local_dependencies":  [
                                         {
                                             "path":  "references\\strategic_focus.json",
                                             "exists":  true,
-                                            "resolved_path":  "C:\\Users\\shich\\.gemini\\skills\\personal-intelligence-hub\\references\\strategic_focus.json"
+                                            "resolved_path":  "C:\\Users\\shich\\.gemini\\config\\skills\\personal-intelligence-hub\\references\\strategic_focus.json"
                                         },
                                         {
                                             "path":  "references\\quality_standard.md",
                                             "exists":  true,
-                                            "resolved_path":  "C:\\Users\\shich\\.gemini\\skills\\personal-intelligence-hub\\references\\quality_standard.md"
+                                            "resolved_path":  "C:\\Users\\shich\\.gemini\\config\\skills\\personal-intelligence-hub\\references\\quality_standard.md"
                                         },
                                         {
                                             "path":  "references\\briefing_template.md",
                                             "exists":  true,
-                                            "resolved_path":  "C:\\Users\\shich\\.gemini\\skills\\personal-intelligence-hub\\references\\briefing_template.md"
+                                            "resolved_path":  "C:\\Users\\shich\\.gemini\\config\\skills\\personal-intelligence-hub\\references\\briefing_template.md"
                                         },
                                         {
                                             "path":  "references\\karpathy_feeds.json",
                                             "exists":  true,
-                                            "resolved_path":  "C:\\Users\\shich\\.gemini\\skills\\personal-intelligence-hub\\references\\karpathy_feeds.json"
+                                            "resolved_path":  "C:\\Users\\shich\\.gemini\\config\\skills\\personal-intelligence-hub\\references\\karpathy_feeds.json"
                                         },
                                         {
-                                            "path":  "personal-intelligence-hub\\references\\strategic_focus.json",
+                                            "path":  "scripts\\blackboard.py",
                                             "exists":  true,
-                                            "resolved_path":  "C:\\Users\\shich\\.gemini\\skills\\personal-intelligence-hub\\references\\strategic_focus.json"
+                                            "resolved_path":  "C:\\Users\\shich\\.gemini\\config\\skills\\personal-intelligence-hub\\scripts\\blackboard.py"
                                         },
                                         {
-                                            "path":  "personal-intelligence-hub\\references\\quality_standard.md",
+                                            "path":  "scripts\\history_manager.py",
                                             "exists":  true,
-                                            "resolved_path":  "C:\\Users\\shich\\.gemini\\skills\\personal-intelligence-hub\\references\\quality_standard.md"
+                                            "resolved_path":  "C:\\Users\\shich\\.gemini\\config\\skills\\personal-intelligence-hub\\scripts\\history_manager.py"
                                         },
                                         {
-                                            "path":  "personal-intelligence-hub\\references\\karpathy_feeds.json",
+                                            "path":  "scripts\\briefing_gate.py",
                                             "exists":  true,
-                                            "resolved_path":  "C:\\Users\\shich\\.gemini\\skills\\personal-intelligence-hub\\references\\karpathy_feeds.json"
+                                            "resolved_path":  "C:\\Users\\shich\\.gemini\\config\\skills\\personal-intelligence-hub\\scripts\\briefing_gate.py"
                                         },
                                         {
-                                            "path":  "personal-intelligence-hub\\references\\briefing_template.md",
+                                            "path":  "scripts\\run_phase1_2.py",
                                             "exists":  true,
-                                            "resolved_path":  "C:\\Users\\shich\\.gemini\\skills\\personal-intelligence-hub\\references\\briefing_template.md"
+                                            "resolved_path":  "C:\\Users\\shich\\.gemini\\config\\skills\\personal-intelligence-hub\\scripts\\run_phase1_2.py"
                                         },
                                         {
-                                            "path":  "personal-intelligence-hub\\scripts\\blackboard.py",
+                                            "path":  "scripts\\validate_refined_json.py",
                                             "exists":  true,
-                                            "resolved_path":  "C:\\Users\\shich\\.gemini\\skills\\personal-intelligence-hub\\scripts\\blackboard.py"
+                                            "resolved_path":  "C:\\Users\\shich\\.gemini\\config\\skills\\personal-intelligence-hub\\scripts\\validate_refined_json.py"
                                         },
                                         {
-                                            "path":  "personal-intelligence-hub\\scripts\\history_manager.py",
+                                            "path":  "scripts\\adversarial_audit.py",
                                             "exists":  true,
-                                            "resolved_path":  "C:\\Users\\shich\\.gemini\\skills\\personal-intelligence-hub\\scripts\\history_manager.py"
+                                            "resolved_path":  "C:\\Users\\shich\\.gemini\\config\\skills\\personal-intelligence-hub\\scripts\\adversarial_audit.py"
                                         },
                                         {
-                                            "path":  "personal-intelligence-hub\\scripts\\briefing_gate.py",
+                                            "path":  "scripts\\forge.py",
                                             "exists":  true,
-                                            "resolved_path":  "C:\\Users\\shich\\.gemini\\skills\\personal-intelligence-hub\\scripts\\briefing_gate.py"
-                                        },
-                                        {
-                                            "path":  "personal-intelligence-hub\\scripts\\fetch_news.py",
-                                            "exists":  true,
-                                            "resolved_path":  "C:\\Users\\shich\\.gemini\\skills\\personal-intelligence-hub\\scripts\\fetch_news.py"
-                                        },
-                                        {
-                                            "path":  "personal-intelligence-hub\\scripts\\refine.py",
-                                            "exists":  true,
-                                            "resolved_path":  "C:\\Users\\shich\\.gemini\\skills\\personal-intelligence-hub\\scripts\\refine.py"
-                                        },
-                                        {
-                                            "path":  "personal-intelligence-hub\\scripts\\adversarial_audit.py",
-                                            "exists":  true,
-                                            "resolved_path":  "C:\\Users\\shich\\.gemini\\skills\\personal-intelligence-hub\\scripts\\adversarial_audit.py"
-                                        },
-                                        {
-                                            "path":  "personal-intelligence-hub\\scripts\\forge.py",
-                                            "exists":  true,
-                                            "resolved_path":  "C:\\Users\\shich\\.gemini\\skills\\personal-intelligence-hub\\scripts\\forge.py"
+                                            "resolved_path":  "C:\\Users\\shich\\.gemini\\config\\skills\\personal-intelligence-hub\\scripts\\forge.py"
                                         }
                                     ],
     "missing_declared_dependencies":  [

@@ -49,6 +49,10 @@ python C:/Users/shich/.gemini/config/skills/cognitive-book-mirror/scripts/stitch
 - **模型人设**: `agents/mirror-agent.md`
 - **依赖列表**: `scripts/requirements.txt`
 
+
+## Resources
+TBD.
+
 ## Failure Modes
 - **[Token_Blackhole_Defense]**: 如果一章长度仍然过大（超过 80,000 tokens），脚本会尝试继续强行降级切断。
 - **[Fact_Hallucination]**: 如果右栏（主观映射）虚构了用户没有说过的“朋友”、“家属”或“事件”，属于严重的隔离被击穿。大模型必须保持原教旨主义的毒舌，不知为不知。

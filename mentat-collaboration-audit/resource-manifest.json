@@ -1,7 +1,7 @@
 ﻿{
     "schema_version":  1,
     "skill":  "mentat-collaboration-audit",
-    "generated_at":  "2026-05-11T14:46:01",
+    "generated_at":  "2026-06-04T15:19:42",
     "skill_md":  "SKILL.md",
     "top_level_files":  [
                             "analyze_insights_v4.py",
@@ -37,9 +37,14 @@
                              ],
     "declared_local_dependencies":  [
                                         {
+                                            "path":  "references\\SCHEMA.md",
+                                            "exists":  true,
+                                            "resolved_path":  "C:\\Users\\shich\\.gemini\\config\\skills\\mentat-collaboration-audit\\references\\SCHEMA.md"
+                                        },
+                                        {
                                             "path":  "..\\scripts\\system_retro.py",
                                             "exists":  true,
-                                            "resolved_path":  "C:\\Users\\shich\\.gemini\\skills\\mentat-collaboration-audit\\..\\scripts\\system_retro.py"
+                                            "resolved_path":  "C:\\Users\\shich\\.gemini\\config\\skills\\mentat-collaboration-audit\\..\\scripts\\system_retro.py"
                                         }
                                     ],
     "missing_declared_dependencies":  [

@@ -1,7 +1,7 @@
 ﻿{
     "schema_version":  1,
     "skill":  "cognitive-personal-roundtable",
-    "generated_at":  "2026-05-11T14:46:01",
+    "generated_at":  "2026-06-04T15:19:42",
     "skill_md":  "SKILL.md",
     "top_level_files":  [
                             "SKILL.md",
@@ -26,22 +26,22 @@
                                         {
                                             "path":  "cognitive-personal-roundtable\\references\\personas.md",
                                             "exists":  true,
-                                            "resolved_path":  "C:\\Users\\shich\\.gemini\\skills\\cognitive-personal-roundtable\\references\\personas.md"
+                                            "resolved_path":  "C:\\Users\\shich\\.gemini\\config\\skills\\cognitive-personal-roundtable\\references\\personas.md"
                                         },
                                         {
                                             "path":  "cognitive-personal-roundtable\\scripts\\merger.py",
                                             "exists":  true,
-                                            "resolved_path":  "C:\\Users\\shich\\.gemini\\skills\\cognitive-personal-roundtable\\scripts\\merger.py"
+                                            "resolved_path":  "C:\\Users\\shich\\.gemini\\config\\skills\\cognitive-personal-roundtable\\scripts\\merger.py"
                                         },
                                         {
                                             "path":  "references\\personas.md",
                                             "exists":  true,
-                                            "resolved_path":  "C:\\Users\\shich\\.gemini\\skills\\cognitive-personal-roundtable\\references\\personas.md"
+                                            "resolved_path":  "C:\\Users\\shich\\.gemini\\config\\skills\\cognitive-personal-roundtable\\references\\personas.md"
                                         },
                                         {
                                             "path":  "scripts\\merger.py",
                                             "exists":  true,
-                                            "resolved_path":  "C:\\Users\\shich\\.gemini\\skills\\cognitive-personal-roundtable\\scripts\\merger.py"
+                                            "resolved_path":  "C:\\Users\\shich\\.gemini\\config\\skills\\cognitive-personal-roundtable\\scripts\\merger.py"
                                         }
                                     ],
     "missing_declared_dependencies":  [

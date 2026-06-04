@@ -1,7 +1,7 @@
 ﻿{
     "schema_version":  1,
     "skill":  "tool-markdown-converter",
-    "generated_at":  "2026-05-11T14:46:02",
+    "generated_at":  "2026-06-04T15:19:42",
     "skill_md":  "SKILL.md",
     "top_level_files":  [
                             "README.md",
@@ -26,7 +26,7 @@
                                         {
                                             "path":  "scripts\\converter.py",
                                             "exists":  true,
-                                            "resolved_path":  "C:\\Users\\shich\\.gemini\\skills\\tool-markdown-converter\\scripts\\converter.py"
+                                            "resolved_path":  "C:\\Users\\shich\\.gemini\\config\\skills\\tool-markdown-converter\\scripts\\converter.py"
                                         }
                                     ],
     "missing_declared_dependencies":  [

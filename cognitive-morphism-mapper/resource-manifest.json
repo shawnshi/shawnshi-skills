@@ -1,7 +1,7 @@
 ﻿{
     "schema_version":  1,
     "skill":  "cognitive-morphism-mapper",
-    "generated_at":  "2026-05-11T14:46:01",
+    "generated_at":  "2026-06-04T15:19:42",
     "skill_md":  "SKILL.md",
     "top_level_files":  [
                             "README.md",
@@ -43,17 +43,17 @@
                                         {
                                             "path":  "scripts\\domain_manager.py",
                                             "exists":  true,
-                                            "resolved_path":  "C:\\Users\\shich\\.gemini\\skills\\cognitive-morphism-mapper\\scripts\\domain_manager.py"
+                                            "resolved_path":  "C:\\Users\\shich\\.gemini\\config\\skills\\cognitive-morphism-mapper\\scripts\\domain_manager.py"
                                         },
                                         {
                                             "path":  "references\\modules.md",
                                             "exists":  true,
-                                            "resolved_path":  "C:\\Users\\shich\\.gemini\\skills\\cognitive-morphism-mapper\\references\\modules.md"
+                                            "resolved_path":  "C:\\Users\\shich\\.gemini\\config\\skills\\cognitive-morphism-mapper\\references\\modules.md"
                                         },
                                         {
                                             "path":  "references\\protocols.md",
                                             "exists":  true,
-                                            "resolved_path":  "C:\\Users\\shich\\.gemini\\skills\\cognitive-morphism-mapper\\references\\protocols.md"
+                                            "resolved_path":  "C:\\Users\\shich\\.gemini\\config\\skills\\cognitive-morphism-mapper\\references\\protocols.md"
                                         }
                                     ],
     "missing_declared_dependencies":  [

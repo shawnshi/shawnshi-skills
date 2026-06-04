@@ -85,3 +85,27 @@ AVOID: 禁止全量加载 PDF（算力黑洞）；禁止沦为干瘪的学术编
 - `IF [Condition == "System Detected Repeated Failure"] THEN [Inject NLAH Prohibition Rule Here]`
 - `IF [Action == "Read PDF"] THEN [Force limit read_file or use grep_search. Strictly prohibit unconditionally ingesting all raw text of PDF.]`
 - `IF [Section == "Writing Style"] THEN [Halt if Tone == "Overly Academic/Passive"] AND [Require Direct, Active Voice]`
+
+
+
+
+
+
+
+## When to Use
+TBD.
+
+## Workflow
+TBD.
+
+## Resources
+TBD.
+
+## Failure Modes
+TBD.
+
+## Output Contract
+TBD.
+
+## Telemetry
+TBD.

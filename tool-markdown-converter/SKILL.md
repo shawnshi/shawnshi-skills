@@ -73,3 +73,7 @@ python scripts/converter.py input.pdf -d -e "YOUR_ENDPOINT"
 - [已修复] 早期版本过度依赖 `uvx` 导致环境报错，现已切为全局原生 pip 环境。
 - [已修复] 早期 ZIP 转换容易造成 Token 爆仓，现已在 Python 层物理截断。
 - [已修复] 早期让 Agent 手写日志容易引发幻觉，现已实现底层自动化。
+
+
+## Telemetry
+TBD.

@@ -137,7 +137,7 @@ $generated = 0
 foreach ($file in (Get-SkillFiles)) {
     $skillDirectory = $file.DirectoryName
     $skillName = Split-Path $skillDirectory -Leaf
-    $text = Get-Content -LiteralPath $file.FullName -Raw
+    $text = Get-Content -LiteralPath $file.FullName -Encoding UTF8 -Raw
     $declared = @(Get-DeclaredLocalReferences -Text $text -SkillDirectory $skillDirectory)
     $missing = @($declared | Where-Object { -not $_.exists } | ForEach-Object { $_.path })
     $topLevelFiles = @(

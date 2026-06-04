@@ -1,7 +1,7 @@
 ﻿{
     "schema_version":  1,
     "skill":  "cognitive-book-mirror",
-    "generated_at":  "2026-05-11T14:46:01",
+    "generated_at":  "2026-06-04T15:19:42",
     "skill_md":  "SKILL.md",
     "top_level_files":  [
                             "README.md",
@@ -14,7 +14,7 @@
     "resource_directories":  [
                                  {
                                      "name":  "scripts",
-                                     "file_count":  2
+                                     "file_count":  3
                                  },
                                  {
                                      "name":  "agents",
@@ -23,19 +23,29 @@
                              ],
     "declared_local_dependencies":  [
                                         {
-                                            "path":  "scripts\\orchestrate_mirror.py",
+                                            "path":  "scripts\\extract_and_pack.py",
                                             "exists":  true,
-                                            "resolved_path":  "C:\\Users\\shich\\.gemini\\skills\\cognitive-book-mirror\\scripts\\orchestrate_mirror.py"
+                                            "resolved_path":  "C:\\Users\\shich\\.gemini\\config\\skills\\cognitive-book-mirror\\scripts\\extract_and_pack.py"
+                                        },
+                                        {
+                                            "path":  "cognitive-book-mirror\\scripts\\extract_and_pack.py",
+                                            "exists":  true,
+                                            "resolved_path":  "C:\\Users\\shich\\.gemini\\config\\skills\\cognitive-book-mirror\\scripts\\extract_and_pack.py"
+                                        },
+                                        {
+                                            "path":  "cognitive-book-mirror\\scripts\\stitch_and_format.py",
+                                            "exists":  true,
+                                            "resolved_path":  "C:\\Users\\shich\\.gemini\\config\\skills\\cognitive-book-mirror\\scripts\\stitch_and_format.py"
                                         },
                                         {
                                             "path":  "agents\\mirror-agent.md",
                                             "exists":  true,
-                                            "resolved_path":  "C:\\Users\\shich\\.gemini\\skills\\cognitive-book-mirror\\agents\\mirror-agent.md"
+                                            "resolved_path":  "C:\\Users\\shich\\.gemini\\config\\skills\\cognitive-book-mirror\\agents\\mirror-agent.md"
                                         },
                                         {
                                             "path":  "scripts\\requirements.txt",
                                             "exists":  true,
-                                            "resolved_path":  "C:\\Users\\shich\\.gemini\\skills\\cognitive-book-mirror\\scripts\\requirements.txt"
+                                            "resolved_path":  "C:\\Users\\shich\\.gemini\\config\\skills\\cognitive-book-mirror\\scripts\\requirements.txt"
                                         }
                                     ],
     "missing_declared_dependencies":  [

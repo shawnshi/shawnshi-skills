@@ -1,17 +1,22 @@
 ﻿{
     "schema_version":  1,
     "skill":  "hit-weekly-brief",
-    "generated_at":  "2026-05-11T14:46:01",
+    "generated_at":  "2026-06-04T15:19:42",
     "skill_md":  "SKILL.md",
     "top_level_files":  [
                             "README.md",
                             "SKILL.md"
                         ],
     "top_level_directories":  [
+                                  "assets",
                                   "examples",
                                   "resources"
                               ],
     "resource_directories":  [
+                                 {
+                                     "name":  "assets",
+                                     "file_count":  4
+                                 },
                                  {
                                      "name":  "examples",
                                      "file_count":  1
@@ -19,14 +24,34 @@
                              ],
     "declared_local_dependencies":  [
                                         {
+                                            "path":  "assets\\Task_strategy.md",
+                                            "exists":  true,
+                                            "resolved_path":  "C:\\Users\\shich\\.gemini\\config\\skills\\hit-weekly-brief\\assets\\Task_strategy.md"
+                                        },
+                                        {
+                                            "path":  "assets\\Task_policy.md",
+                                            "exists":  true,
+                                            "resolved_path":  "C:\\Users\\shich\\.gemini\\config\\skills\\hit-weekly-brief\\assets\\Task_policy.md"
+                                        },
+                                        {
+                                            "path":  "assets\\Task_tech.md",
+                                            "exists":  true,
+                                            "resolved_path":  "C:\\Users\\shich\\.gemini\\config\\skills\\hit-weekly-brief\\assets\\Task_tech.md"
+                                        },
+                                        {
+                                            "path":  "assets\\Task_serendipity.md",
+                                            "exists":  true,
+                                            "resolved_path":  "C:\\Users\\shich\\.gemini\\config\\skills\\hit-weekly-brief\\assets\\Task_serendipity.md"
+                                        },
+                                        {
                                             "path":  "examples\\DHWB-Reference.md",
                                             "exists":  true,
-                                            "resolved_path":  "C:\\Users\\shich\\.gemini\\skills\\hit-weekly-brief\\examples\\DHWB-Reference.md"
+                                            "resolved_path":  "C:\\Users\\shich\\.gemini\\config\\skills\\hit-weekly-brief\\examples\\DHWB-Reference.md"
                                         },
                                         {
                                             "path":  "scripts\\hit_audit_gate.py",
                                             "exists":  true,
-                                            "resolved_path":  "C:\\Users\\shich\\.gemini\\skills\\scripts\\hit_audit_gate.py"
+                                            "resolved_path":  "C:\\Users\\shich\\.gemini\\config\\skills\\scripts\\hit_audit_gate.py"
                                         }
                                     ],
     "missing_declared_dependencies":  [

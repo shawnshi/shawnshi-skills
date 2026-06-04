@@ -1,7 +1,7 @@
 ﻿{
     "schema_version":  1,
     "skill":  "tool-document-summarizer",
-    "generated_at":  "2026-05-11T14:46:02",
+    "generated_at":  "2026-06-04T15:19:42",
     "skill_md":  "SKILL.md",
     "top_level_files":  [
                             "config.yaml",
@@ -37,14 +37,19 @@
                              ],
     "declared_local_dependencies":  [
                                         {
+                                            "path":  "scripts\\",
+                                            "exists":  true,
+                                            "resolved_path":  "C:\\Users\\shich\\.gemini\\config\\skills\\tool-document-summarizer\\scripts\\"
+                                        },
+                                        {
                                             "path":  "scripts\\orchestrate_enhanced.py",
                                             "exists":  true,
-                                            "resolved_path":  "C:\\Users\\shich\\.gemini\\skills\\tool-document-summarizer\\scripts\\orchestrate_enhanced.py"
+                                            "resolved_path":  "C:\\Users\\shich\\.gemini\\config\\skills\\tool-document-summarizer\\scripts\\orchestrate_enhanced.py"
                                         },
                                         {
                                             "path":  "scripts\\requirements.txt",
                                             "exists":  true,
-                                            "resolved_path":  "C:\\Users\\shich\\.gemini\\skills\\tool-document-summarizer\\scripts\\requirements.txt"
+                                            "resolved_path":  "C:\\Users\\shich\\.gemini\\config\\skills\\tool-document-summarizer\\scripts\\requirements.txt"
                                         }
                                     ],
     "missing_declared_dependencies":  [

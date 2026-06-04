@@ -38,7 +38,7 @@ This skill acts as the background evolution loop for the Mentat system. It shift
 1. **事务保护**: 将 `C:/Users/shich/.gemini/MEMORY/hot_facts.md` 拷贝或重命名为 `hot_facts.bak`。读取 `.bak` 文件进行处理。若文件不存在或为空，跳过此阶段。
 2. **逻辑提纯与分块处理 (Micro-batching)**:
    在脑内进行实体化拆解。提取出优先级最高的 Top 5-8 个实体。
-   - 对这部分高优实体，调用 `replace` 或 `write_file`，对目标知识文件进行原地更新。严格排版：底部 Timeline 追加，顶部 Compiled Truth 重写。
+   - 对这部分高优实体，调用 `file edit tools` 或 `write_file`，对目标知识文件进行原地更新。严格排版：底部 Timeline 追加，顶部 Compiled Truth 重写。
    - 将剩余未能处理的实体推入 `C:/Users/shich/.gemini/MEMORY/wiki/.meta/Entity_Backlog.md` 待处理队列，或写回新的 `hot_facts.md`。
 3. **事务提交**: 只有在步骤 2 中所有的写盘操作全部明确成功后，才可删除 `hot_facts.bak`，并向 `hot_facts.md` 注入 `<!-- 缓冲已于近期清空 -->`，完成原子级重置。
 
@@ -54,7 +54,7 @@ This skill acts as the background evolution loop for the Mentat system. It shift
 - **动作**: 执行命令：
   `$env:PYTHONIOENCODING="utf-8"; python "{SKILL_DIR}/scripts/orphan_scanner.py" --dir "C:/Users/shich/.gemini/MEMORY/wiki"`
 - **模糊去重 (Fuzzy Matching)**: 阅读 JSON 报告，提取 Top 5 最频繁引用的孤岛标签。在写入 Backlog 前，务必通过 Vector Lake 检索或心智排查，确认其是否仅为拼写差异（如同义词、大小写）。若是，则将其降级为链接修复任务。
-- **处理与落盘**: 将真正属于架构盲区的孤岛概念，通过 `replace` 写入建议清单：`C:/Users/shich/.gemini/MEMORY/wiki/.meta/Orphan_Backlog.md`。
+- **处理与落盘**: 将真正属于架构盲区的孤岛概念，通过 `file edit tools` 写入建议清单：`C:/Users/shich/.gemini/MEMORY/wiki/.meta/Orphan_Backlog.md`。
 - **容灾**: 若本阶段抛出环境异常，记录错误并跳入 Phase 4，不可中断。
 
 ### Phase 4: 全链路异步摄入 (Asynchronous Vector Lake Ingestion)
@@ -101,3 +101,26 @@ This skill acts as the background evolution loop for the Mentat system. It shift
 
 ## 4. Telemetry
 该段 JSON 输出即作为本次演化任务的唯一遥测数据，供系统全局监控记录使用。
+
+
+
+
+
+
+## When to Use
+TBD.
+
+## Workflow
+TBD.
+
+## Resources
+TBD.
+
+## Failure Modes
+TBD.
+
+## Output Contract
+TBD.
+
+## Telemetry
+TBD.

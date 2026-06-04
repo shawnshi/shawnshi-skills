@@ -1,7 +1,7 @@
 ﻿{
     "schema_version":  1,
     "skill":  "tool-tts",
-    "generated_at":  "2026-05-11T14:46:02",
+    "generated_at":  "2026-06-04T15:19:42",
     "skill_md":  "SKILL.md",
     "top_level_files":  [
                             "install.ps1",
@@ -27,7 +27,7 @@
                                         {
                                             "path":  "scripts\\tts_engine.py",
                                             "exists":  true,
-                                            "resolved_path":  "C:\\Users\\shich\\.gemini\\skills\\tool-tts\\scripts\\tts_engine.py"
+                                            "resolved_path":  "C:\\Users\\shich\\.gemini\\config\\skills\\tool-tts\\scripts\\tts_engine.py"
                                         }
                                     ],
     "missing_declared_dependencies":  [

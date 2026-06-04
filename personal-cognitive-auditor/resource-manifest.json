@@ -1,7 +1,7 @@
 ﻿{
     "schema_version":  1,
     "skill":  "personal-cognitive-auditor",
-    "generated_at":  "2026-05-11T14:46:01",
+    "generated_at":  "2026-06-04T15:19:42",
     "skill_md":  "SKILL.md",
     "top_level_files":  [
                             "README.md",
@@ -36,37 +36,37 @@
                                         {
                                             "path":  "personal-cognitive-auditor\\references\\config.md",
                                             "exists":  true,
-                                            "resolved_path":  "C:\\Users\\shich\\.gemini\\skills\\personal-cognitive-auditor\\references\\config.md"
+                                            "resolved_path":  "C:\\Users\\shich\\.gemini\\config\\skills\\personal-cognitive-auditor\\references\\config.md"
                                         },
                                         {
                                             "path":  "personal-cognitive-auditor\\prompts\\DAILY.md",
                                             "exists":  true,
-                                            "resolved_path":  "C:\\Users\\shich\\.gemini\\skills\\personal-cognitive-auditor\\prompts\\DAILY.md"
+                                            "resolved_path":  "C:\\Users\\shich\\.gemini\\config\\skills\\personal-cognitive-auditor\\prompts\\DAILY.md"
                                         },
                                         {
                                             "path":  "personal-cognitive-auditor\\prompts\\WEEKLY.md",
                                             "exists":  true,
-                                            "resolved_path":  "C:\\Users\\shich\\.gemini\\skills\\personal-cognitive-auditor\\prompts\\WEEKLY.md"
+                                            "resolved_path":  "C:\\Users\\shich\\.gemini\\config\\skills\\personal-cognitive-auditor\\prompts\\WEEKLY.md"
                                         },
                                         {
                                             "path":  "personal-cognitive-auditor\\prompts\\MONTHLY.md",
                                             "exists":  true,
-                                            "resolved_path":  "C:\\Users\\shich\\.gemini\\skills\\personal-cognitive-auditor\\prompts\\MONTHLY.md"
+                                            "resolved_path":  "C:\\Users\\shich\\.gemini\\config\\skills\\personal-cognitive-auditor\\prompts\\MONTHLY.md"
                                         },
                                         {
                                             "path":  "personal-cognitive-auditor\\prompts\\ANNUAL.md",
                                             "exists":  true,
-                                            "resolved_path":  "C:\\Users\\shich\\.gemini\\skills\\personal-cognitive-auditor\\prompts\\ANNUAL.md"
+                                            "resolved_path":  "C:\\Users\\shich\\.gemini\\config\\skills\\personal-cognitive-auditor\\prompts\\ANNUAL.md"
                                         },
                                         {
                                             "path":  "personal-cognitive-auditor\\scripts\\audit_gate.py",
                                             "exists":  true,
-                                            "resolved_path":  "C:\\Users\\shich\\.gemini\\skills\\personal-cognitive-auditor\\scripts\\audit_gate.py"
+                                            "resolved_path":  "C:\\Users\\shich\\.gemini\\config\\skills\\personal-cognitive-auditor\\scripts\\audit_gate.py"
                                         },
                                         {
                                             "path":  "personal-cognitive-auditor\\references\\handoff_contract.md",
                                             "exists":  true,
-                                            "resolved_path":  "C:\\Users\\shich\\.gemini\\skills\\personal-cognitive-auditor\\references\\handoff_contract.md"
+                                            "resolved_path":  "C:\\Users\\shich\\.gemini\\config\\skills\\personal-cognitive-auditor\\references\\handoff_contract.md"
                                         }
                                     ],
     "missing_declared_dependencies":  [

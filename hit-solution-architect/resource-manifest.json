@@ -1,7 +1,7 @@
 ﻿{
     "schema_version":  1,
     "skill":  "hit-solution-architect",
-    "generated_at":  "2026-05-11T14:46:01",
+    "generated_at":  "2026-06-04T15:19:42",
     "skill_md":  "SKILL.md",
     "top_level_files":  [
                             "README.md",
@@ -25,59 +25,57 @@
                              ],
     "declared_local_dependencies":  [
                                         {
-                                            "path":  "references\\åŒ»ç–—å«ç”Ÿæ”¿ç­–è¦ç‚¹.md",
-                                            "exists":  false,
-                                            "resolved_path":  null
+                                            "path":  "references\\医疗卫生政策要点.md",
+                                            "exists":  true,
+                                            "resolved_path":  "C:\\Users\\shich\\.gemini\\config\\skills\\hit-solution-architect\\references\\医疗卫生政策要点.md"
                                         },
                                         {
-                                            "path":  "references\\å«å®å¥åº·å…¸åž‹æ¡ˆä¾‹.md",
-                                            "exists":  false,
-                                            "resolved_path":  null
+                                            "path":  "references\\卫宁健康典型案例.md",
+                                            "exists":  true,
+                                            "resolved_path":  "C:\\Users\\shich\\.gemini\\config\\skills\\hit-solution-architect\\references\\卫宁健康典型案例.md"
                                         },
                                         {
-                                            "path":  "references\\å«å®å¥åº·æ",
-                                            "exists":  false,
-                                            "resolved_path":  null
+                                            "path":  "references\\卫宁健康核心产品.md",
+                                            "exists":  true,
+                                            "resolved_path":  "C:\\Users\\shich\\.gemini\\config\\skills\\hit-solution-architect\\references\\卫宁健康核心产品.md"
                                         },
                                         {
                                             "path":  "references\\xinchuang_ecosystem.md",
                                             "exists":  true,
-                                            "resolved_path":  "C:\\Users\\shich\\.gemini\\skills\\hit-solution-architect\\references\\xinchuang_ecosystem.md"
+                                            "resolved_path":  "C:\\Users\\shich\\.gemini\\config\\skills\\hit-solution-architect\\references\\xinchuang_ecosystem.md"
                                         },
                                         {
                                             "path":  "references\\evaluation_standards.md",
                                             "exists":  true,
-                                            "resolved_path":  "C:\\Users\\shich\\.gemini\\skills\\hit-solution-architect\\references\\evaluation_standards.md"
+                                            "resolved_path":  "C:\\Users\\shich\\.gemini\\config\\skills\\hit-solution-architect\\references\\evaluation_standards.md"
                                         },
                                         {
                                             "path":  "templates\\examples\\good_titles_vs_bad_titles.md",
                                             "exists":  true,
-                                            "resolved_path":  "C:\\Users\\shich\\.gemini\\skills\\hit-solution-architect\\templates\\examples\\good_titles_vs_bad_titles.md"
+                                            "resolved_path":  "C:\\Users\\shich\\.gemini\\config\\skills\\hit-solution-architect\\templates\\examples\\good_titles_vs_bad_titles.md"
                                         },
                                         {
                                             "path":  "templates\\examples\\narrative_vs_matrix_sample.md",
                                             "exists":  true,
-                                            "resolved_path":  "C:\\Users\\shich\\.gemini\\skills\\hit-solution-architect\\templates\\examples\\narrative_vs_matrix_sample.md"
+                                            "resolved_path":  "C:\\Users\\shich\\.gemini\\config\\skills\\hit-solution-architect\\templates\\examples\\narrative_vs_matrix_sample.md"
                                         },
                                         {
                                             "path":  "scripts\\logic_checker.py",
                                             "exists":  true,
-                                            "resolved_path":  "C:\\Users\\shich\\.gemini\\skills\\hit-solution-architect\\scripts\\logic_checker.py"
+                                            "resolved_path":  "C:\\Users\\shich\\.gemini\\config\\skills\\hit-solution-architect\\scripts\\logic_checker.py"
                                         },
                                         {
                                             "path":  "scripts\\buzzword_auditor.py",
                                             "exists":  true,
-                                            "resolved_path":  "C:\\Users\\shich\\.gemini\\skills\\hit-solution-architect\\scripts\\buzzword_auditor.py"
+                                            "resolved_path":  "C:\\Users\\shich\\.gemini\\config\\skills\\hit-solution-architect\\scripts\\buzzword_auditor.py"
                                         },
                                         {
                                             "path":  "scripts\\manifest_manager.py",
                                             "exists":  true,
-                                            "resolved_path":  "C:\\Users\\shich\\.gemini\\skills\\hit-solution-architect\\scripts\\manifest_manager.py"
+                                            "resolved_path":  "C:\\Users\\shich\\.gemini\\config\\skills\\hit-solution-architect\\scripts\\manifest_manager.py"
                                         }
                                     ],
     "missing_declared_dependencies":  [
-                                          "references\\åŒ»ç–—å«ç”Ÿæ”¿ç­–è¦ç‚¹.md",
-                                          "references\\å«å®å¥åº·å…¸åž‹æ¡ˆä¾‹.md",
-                                          "references\\å«å®å¥åº·æ"
+
                                       ]
 }

@@ -1,7 +1,7 @@
 ﻿{
     "schema_version":  1,
     "skill":  "personal-diary-writer",
-    "generated_at":  "2026-05-11T14:46:01",
+    "generated_at":  "2026-06-04T15:19:42",
     "skill_md":  "SKILL.md",
     "top_level_files":  [
                             "README.md",
@@ -21,17 +21,17 @@
                                         {
                                             "path":  "scripts\\io_engine\\diary_ops.py",
                                             "exists":  true,
-                                            "resolved_path":  "C:\\Users\\shich\\.gemini\\skills\\scripts\\io_engine\\diary_ops.py"
+                                            "resolved_path":  "C:\\Users\\shich\\.gemini\\config\\skills\\scripts\\io_engine\\diary_ops.py"
                                         },
                                         {
                                             "path":  "personal-health-analysis\\scripts\\garmin_intelligence.py",
                                             "exists":  true,
-                                            "resolved_path":  "C:\\Users\\shich\\.gemini\\skills\\personal-health-analysis\\scripts\\garmin_intelligence.py"
+                                            "resolved_path":  "C:\\Users\\shich\\.gemini\\config\\skills\\personal-health-analysis\\scripts\\garmin_intelligence.py"
                                         },
                                         {
                                             "path":  "scripts\\io_engine\\memory_sync.py",
                                             "exists":  true,
-                                            "resolved_path":  "C:\\Users\\shich\\.gemini\\skills\\scripts\\io_engine\\memory_sync.py"
+                                            "resolved_path":  "C:\\Users\\shich\\.gemini\\config\\skills\\scripts\\io_engine\\memory_sync.py"
                                         }
                                     ],
     "missing_declared_dependencies":  [

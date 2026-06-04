@@ -1,7 +1,7 @@
 ﻿{
     "schema_version":  1,
     "skill":  "mentat-insight-diary",
-    "generated_at":  "2026-05-11T14:46:01",
+    "generated_at":  "2026-06-04T15:19:42",
     "skill_md":  "SKILL.md",
     "top_level_files":  [
                             "SKILL.md"
@@ -19,7 +19,7 @@
                                         {
                                             "path":  "assets\\ooda_template.md",
                                             "exists":  true,
-                                            "resolved_path":  "C:\\Users\\shich\\.gemini\\skills\\mentat-insight-diary\\assets\\ooda_template.md"
+                                            "resolved_path":  "C:\\Users\\shich\\.gemini\\config\\skills\\mentat-insight-diary\\assets\\ooda_template.md"
                                         }
                                     ],
     "missing_declared_dependencies":  [

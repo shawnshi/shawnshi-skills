@@ -1,7 +1,7 @@
 ﻿{
     "schema_version":  1,
     "skill":  "hit-digital-strategy-partner",
-    "generated_at":  "2026-05-11T14:46:01",
+    "generated_at":  "2026-06-04T15:19:42",
     "skill_md":  "SKILL.md",
     "top_level_files":  [
                             "README.md",
@@ -35,29 +35,29 @@
                              ],
     "declared_local_dependencies":  [
                                         {
-                                            "path":  "hit-digital-strategy-partner\\scripts\\blackboard.py",
+                                            "path":  "scripts\\blackboard.py",
                                             "exists":  true,
-                                            "resolved_path":  "C:\\Users\\shich\\.gemini\\skills\\hit-digital-strategy-partner\\scripts\\blackboard.py"
+                                            "resolved_path":  "C:\\Users\\shich\\.gemini\\config\\skills\\hit-digital-strategy-partner\\scripts\\blackboard.py"
                                         },
                                         {
-                                            "path":  "hit-digital-strategy-partner\\scripts\\blackboard_validate.py",
+                                            "path":  "scripts\\blackboard_validate.py",
                                             "exists":  true,
-                                            "resolved_path":  "C:\\Users\\shich\\.gemini\\skills\\hit-digital-strategy-partner\\scripts\\blackboard_validate.py"
+                                            "resolved_path":  "C:\\Users\\shich\\.gemini\\config\\skills\\hit-digital-strategy-partner\\scripts\\blackboard_validate.py"
                                         },
                                         {
-                                            "path":  "hit-digital-strategy-partner\\scripts\\memory_manager.py",
+                                            "path":  "scripts\\memory_manager.py",
                                             "exists":  true,
-                                            "resolved_path":  "C:\\Users\\shich\\.gemini\\skills\\hit-digital-strategy-partner\\scripts\\memory_manager.py"
+                                            "resolved_path":  "C:\\Users\\shich\\.gemini\\config\\skills\\hit-digital-strategy-partner\\scripts\\memory_manager.py"
                                         },
                                         {
-                                            "path":  "hit-digital-strategy-partner\\scripts\\assembler.py",
+                                            "path":  "scripts\\assembler.py",
                                             "exists":  true,
-                                            "resolved_path":  "C:\\Users\\shich\\.gemini\\skills\\hit-digital-strategy-partner\\scripts\\assembler.py"
+                                            "resolved_path":  "C:\\Users\\shich\\.gemini\\config\\skills\\hit-digital-strategy-partner\\scripts\\assembler.py"
                                         },
                                         {
-                                            "path":  "hit-digital-strategy-partner\\scripts\\strategy_gate.py",
+                                            "path":  "scripts\\strategy_gate.py",
                                             "exists":  true,
-                                            "resolved_path":  "C:\\Users\\shich\\.gemini\\skills\\hit-digital-strategy-partner\\scripts\\strategy_gate.py"
+                                            "resolved_path":  "C:\\Users\\shich\\.gemini\\config\\skills\\hit-digital-strategy-partner\\scripts\\strategy_gate.py"
                                         }
                                     ],
     "missing_declared_dependencies":  [

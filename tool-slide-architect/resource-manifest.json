@@ -1,7 +1,7 @@
 ﻿{
     "schema_version":  1,
     "skill":  "tool-slide-architect",
-    "generated_at":  "2026-05-11T14:46:02",
+    "generated_at":  "2026-06-04T15:19:42",
     "skill_md":  "SKILL.md",
     "top_level_files":  [
                             "README.md",
@@ -32,17 +32,17 @@
                                         {
                                             "path":  "references\\outline-template.md",
                                             "exists":  true,
-                                            "resolved_path":  "C:\\Users\\shich\\.gemini\\skills\\tool-slide-architect\\references\\outline-template.md"
+                                            "resolved_path":  "C:\\Users\\shich\\.gemini\\config\\skills\\tool-slide-architect\\references\\outline-template.md"
                                         },
                                         {
                                             "path":  "scripts\\validator.py",
                                             "exists":  true,
-                                            "resolved_path":  "C:\\Users\\shich\\.gemini\\skills\\tool-slide-architect\\scripts\\validator.py"
+                                            "resolved_path":  "C:\\Users\\shich\\.gemini\\config\\skills\\tool-slide-architect\\scripts\\validator.py"
                                         },
                                         {
                                             "path":  "scripts\\build-deck.py",
                                             "exists":  true,
-                                            "resolved_path":  "C:\\Users\\shich\\.gemini\\skills\\tool-slide-architect\\scripts\\build-deck.py"
+                                            "resolved_path":  "C:\\Users\\shich\\.gemini\\config\\skills\\tool-slide-architect\\scripts\\build-deck.py"
                                         }
                                     ],
     "missing_declared_dependencies":  [

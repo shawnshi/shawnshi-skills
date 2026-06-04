@@ -1,7 +1,7 @@
 ﻿{
     "schema_version":  1,
     "skill":  "academic-paper-reader",
-    "generated_at":  "2026-05-11T14:46:01",
+    "generated_at":  "2026-06-04T15:19:42",
     "skill_md":  "SKILL.md",
     "top_level_files":  [
                             "README.md",
@@ -26,12 +26,17 @@
                                         {
                                             "path":  "examples\\APR-Reference.md",
                                             "exists":  true,
-                                            "resolved_path":  "C:\\Users\\shich\\.gemini\\skills\\academic-paper-reader\\examples\\APR-Reference.md"
+                                            "resolved_path":  "C:\\Users\\shich\\.gemini\\config\\skills\\academic-paper-reader\\examples\\APR-Reference.md"
+                                        },
+                                        {
+                                            "path":  "tool-markdown-converter\\scripts\\converter.py",
+                                            "exists":  true,
+                                            "resolved_path":  "C:\\Users\\shich\\.gemini\\config\\skills\\tool-markdown-converter\\scripts\\converter.py"
                                         },
                                         {
                                             "path":  "scripts\\paper_audit_gate.py",
                                             "exists":  true,
-                                            "resolved_path":  "C:\\Users\\shich\\.gemini\\skills\\academic-paper-reader\\scripts\\paper_audit_gate.py"
+                                            "resolved_path":  "C:\\Users\\shich\\.gemini\\config\\skills\\academic-paper-reader\\scripts\\paper_audit_gate.py"
                                         }
                                     ],
     "missing_declared_dependencies":  [
