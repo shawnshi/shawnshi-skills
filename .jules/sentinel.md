@@ -1,0 +1,4 @@
+## 2026-06-04 - Command Injection via subprocess list with shell=True
+**Vulnerability:** The `subprocess.run` call in `scripts/io_engine/gather_context.py` was using `shell=True` while passing arguments as a list. This presents a critical command injection vulnerability and behaves incorrectly on POSIX systems (only executing the first element and passing the rest to the shell).
+**Learning:** Passing a list to a subprocess with `shell=True` is a security risk if the list contains unsanitized inputs, and causes execution failures on UNIX-like environments due to argument misinterpretation by the shell.
+**Prevention:** Always use `shell=False` when passing command arguments as a structured list to avoid execution issues and completely eliminate the risk of command injection through parameter manipulation.
