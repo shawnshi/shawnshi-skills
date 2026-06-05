@@ -15,6 +15,7 @@ class DJCurator:
         playlist_cfg = config.get('playlist', {})
         energy_cfg = config.get('energy_curves', {})
         fallback_cfg = config.get('fallback', {})
+        filters_cfg = config.get('filters', {})
 
         self.m3u_path = playlist_cfg.get('output_m3u', 'C:\\Users\\shich\\.gemini\\tmp\\musicbee_jit_queue.m3u')
         self.max_tracks = playlist_cfg.get('max_tracks_per_session', 100)
@@ -26,6 +27,10 @@ class DJCurator:
 
         self.high_min_bpm = energy_cfg.get('high_intensity_min_bpm', 110)
         self.low_max_bpm = energy_cfg.get('low_intensity_max_bpm', 100)
+
+        self.high_intensity_exclude = [kw.lower() for kw in filters_cfg.get('high_intensity_exclude', ["ambient", "chill", "intro"])]
+        self.low_intensity_exclude = [kw.lower() for kw in filters_cfg.get('low_intensity_exclude', ["metal", "rock", "edm"])]
+        self.intro_keywords = [kw.lower() for kw in filters_cfg.get('intro_keywords', ["intro", "prelude"])]
 
         self.scenes = config.get('scenes', {})
         self.default_scene = str(fallback_cfg.get('default_scene', 'pop')).lower()
@@ -63,7 +68,11 @@ class DJCurator:
             log.warning(f"No tracks remained after applying intensity filter: {intensity}")
             return None
 
-        target_len = min(len(filtered_pool), self.max_tracks)
+        # Request 1.2x tracks to create a buffer pool
+        target_len = min(len(filtered_pool), int(self.max_tracks * 1.2))
+        if target_len < self.max_tracks:
+            target_len = len(filtered_pool)
+            
         curated_tracks = self._select_ratio_tracks(filtered_pool, target_len)
         scene_type = resolved_value.lower() if criteria_type == 'scene' else 'normal'
         final_flow = self._build_energy_curve(curated_tracks, scene=scene_type, intensity=intensity)
@@ -135,12 +144,12 @@ class DJCurator:
             if intensity == 'high':
                 if bpm > 0 and bpm < self.high_min_bpm:
                     continue
-                if any(token in genre_lower for token in ['ambient', 'chill', 'intro']):
+                if any(token in genre_lower for token in self.high_intensity_exclude):
                     continue
             elif intensity == 'low':
                 if bpm > 0 and bpm > self.low_max_bpm:
                     continue
-                if any(token in genre_lower for token in ['metal', 'rock', 'edm']):
+                if any(token in genre_lower for token in self.low_intensity_exclude):
                     continue
 
             filtered.append(track)
@@ -171,8 +180,9 @@ class DJCurator:
                 selected_ids.add(track.id)
 
         if len(selected) < total_needed:
-            random.shuffle(tracks)
-            for track in tracks:
+            tracks_copy = tracks.copy()
+            random.shuffle(tracks_copy)
+            for track in tracks_copy:
                 if len(selected) >= total_needed:
                     break
                 if track.id not in selected_ids:
@@ -194,14 +204,20 @@ class DJCurator:
 
         num = len(bpm_tracks)
         warmup_idx = int(num * 0.15)
+        cooldown_idx = int(num * 0.30)
 
         warmup = bpm_tracks[:warmup_idx]
-        cooldown = bpm_tracks[warmup_idx:warmup_idx + int(num * 0.15)]
-        peak = bpm_tracks[warmup_idx + int(num * 0.15):]
+        cooldown = bpm_tracks[warmup_idx:cooldown_idx]
+        peak = bpm_tracks[cooldown_idx:]
 
         random.shuffle(warmup)
-        random.shuffle(peak)
-        random.shuffle(cooldown)
+        # Sort cooldown in reverse to ensure smooth drop off
+        cooldown.sort(key=lambda t: t.bpm, reverse=True)
+        # We don't shuffle peak entirely to preserve the escalating energy
+        # But we can do a slight jitter (swap adjacent elements)
+        for i in range(len(peak) - 1):
+            if random.random() > 0.7:
+                peak[i], peak[i+1] = peak[i+1], peak[i]
 
         final_flow = warmup + peak + cooldown
 
@@ -210,7 +226,7 @@ class DJCurator:
             final_flow.insert(insert_pos, track)
 
         if scene == 'relax' or intensity == 'low':
-            intro_candidates = [track for track in final_flow if 'intro' in track.name.lower() or 'prelude' in track.name.lower()]
+            intro_candidates = [track for track in final_flow if any(kw in track.name.lower() for kw in self.intro_keywords)]
             if intro_candidates:
                 intro = intro_candidates[0]
                 final_flow.remove(intro)
@@ -226,11 +242,13 @@ class DJCurator:
         with open(tmp_path, "w", encoding="utf-8-sig") as handle:
             handle.write("#EXTM3U\n")
             for track in tracks:
+                if exported_count >= self.max_tracks:
+                    break
                 if track.is_valid:
                     handle.write(f"#EXTINF:-1,{track.artist} - {track.name}\n")
                     handle.write(f"{track.local_path}\n")
                     exported_count += 1
 
         os.replace(tmp_path, self.m3u_path)
-        log.info(f"JIT Playlist successfully curated: {exported_count} tracks exported.")
+        log.info(f"JIT Playlist successfully curated: {exported_count} tracks exported (max {self.max_tracks}).")
         return self.m3u_path, exported_count

@@ -40,62 +40,72 @@ class MusicBeeParser:
         return self._parse_and_cache_xml()
 
     def _parse_and_cache_xml(self) -> List[Track]:
+        import xml.etree.ElementTree as ET
         log.info(f"Generating new cache from XML: {self.xml_path}")
         library: List[Track] = []
 
         try:
-            with open(self.xml_path, 'r', encoding='utf-8') as f:
-                xml_data = f.read()
-
-            tracks_match = re.search(r'<key>Tracks</key>\s*<dict>(.*?)</dict>\s*<key>Playlists</key>', xml_data, re.DOTALL)
-            if not tracks_match:
-                raise MusicBeeParserError("Could not find <Tracks> section in iTunes XML.")
-
-            tracks_chunk = tracks_match.group(1)
-
-            for track_dict_match in re.finditer(r'<key>\d+</key>\s*<dict>(.*?)</dict>', tracks_chunk, re.DOTALL):
-                track_content = track_dict_match.group(1)
-
-                # Skip if no Location
-                location_match = re.search(r'<key>Location</key>\s*<string>(.*?)</string>', track_content)
-                if not location_match:
+            context = ET.iterparse(self.xml_path, events=('end',))
+            in_tracks = False
+            for event, elem in context:
+                if elem.tag == 'key' and elem.text == 'Tracks':
+                    in_tracks = True
+                    elem.clear()
                     continue
+                if elem.tag == 'key' and elem.text == 'Playlists':
+                    in_tracks = False
+                    elem.clear()
+                    break
 
-                location = location_match.group(1)
-                parsed_url = urlparse(location)
-                local_path = unquote(parsed_url.path)
+                if in_tracks and elem.tag == 'dict':
+                    # Parse the track dict
+                    track_data = {}
+                    current_key = None
+                    for child in elem:
+                        if child.tag == 'key':
+                            current_key = child.text
+                        elif current_key:
+                            if child.tag == 'string':
+                                track_data[current_key] = child.text
+                            elif child.tag == 'integer':
+                                try:
+                                    track_data[current_key] = int(child.text)
+                                except (ValueError, TypeError):
+                                    track_data[current_key] = 0
+                            elif child.tag == 'date':
+                                track_data[current_key] = child.text
+                            current_key = None
 
-                if local_path.startswith('/'):
-                    if len(local_path) > 2 and local_path[2] == ':':
-                        local_path = local_path[1:]
-                local_path = local_path.replace('/', '\\')
+                    elem.clear()
 
-                # Regex Builders
-                def get_str(key_en: str, key_zh: str, default: str = 'Unknown') -> str:
-                    m = re.search(fr'<key>({key_en}|{key_zh})</key>\s*<string>(.*?)</string>', track_content)
-                    return m.group(2) if m else default
+                    if not track_data:
+                        continue
 
-                def get_int(key_en: str, key_zh: str, default: int = 0) -> int:
-                    m = re.search(fr'<key>({key_en}|{key_zh})</key>\s*<integer>(\d+).*?</integer>', track_content)
-                    return int(m.group(2)) if m else default
+                    location = track_data.get('Location')
+                    if not location:
+                        continue
 
-                def get_date(key_en: str, key_zh: str, default: str = 'Unknown') -> str:
-                    m = re.search(fr'<key>({key_en}|{key_zh})</key>\s*<date>(.*?)</date>', track_content)
-                    return m.group(2) if m else default
+                    parsed_url = urlparse(location)
+                    local_path = unquote(parsed_url.path)
 
-                track = Track(
-                    id=get_int('Track ID', '轨迹 ID'),
-                    name=get_str('Name', '名称'),
-                    artist=get_str('Artist', '艺术家'),
-                    album=get_str('Album', '专辑'),
-                    genre=get_str('Genre', '流派'),
-                    play_count=get_int('Play Count', '播放次数'),
-                    bpm=get_int('BPM', 'BPM'),
-                    total_time=get_int('Total Time', '总时间'),
-                    date_added=get_date('Date Added', '添加日期'),
-                    local_path=local_path
-                )
-                library.append(track)
+                    if local_path.startswith('/'):
+                        if len(local_path) > 2 and local_path[2] == ':':
+                            local_path = local_path[1:]
+                    local_path = local_path.replace('/', '\\')
+
+                    track = Track(
+                        id=track_data.get('Track ID') or track_data.get('轨迹 ID') or 0,
+                        name=track_data.get('Name') or track_data.get('名称') or 'Unknown',
+                        artist=track_data.get('Artist') or track_data.get('艺术家') or 'Unknown',
+                        album=track_data.get('Album') or track_data.get('专辑') or 'Unknown',
+                        genre=track_data.get('Genre') or track_data.get('流派') or 'Unknown',
+                        play_count=track_data.get('Play Count') or track_data.get('播放次数') or 0,
+                        bpm=track_data.get('BPM') or track_data.get('BPM') or 0,
+                        total_time=track_data.get('Total Time') or track_data.get('总时间') or 0,
+                        date_added=track_data.get('Date Added') or track_data.get('添加日期') or 'Unknown',
+                        local_path=local_path
+                    )
+                    library.append(track)
 
             # Atomic Cache Write
             os.makedirs(os.path.dirname(self.cache_path), exist_ok=True)

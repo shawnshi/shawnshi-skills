@@ -107,8 +107,8 @@ python3 ./scripts/generate-from-template.py architecture ./output/arch.svg '{"ti
 6. **Map nodes to shapes** — use Shape Vocabulary below
 7. **Check icon needs** — load `references/icons.md` for known products
 8. **Write SVG** with adaptive strategy (see SVG Generation Strategy below)
-9. **Validate**: Run `rsvg-convert file.svg -o /dev/null 2>&1` to check syntax
-10. **Export PNG**: `rsvg-convert -w 1920 file.svg -o file.png`
+9. **Validate**: Utilize Python's native `xml.etree.ElementTree` inside your SVG generation script to perform strict 0-dependency XML syntax validation.
+10. **Export PNG**: (Optional) If environment supports it, export to PNG. Do NOT blindly invoke `rsvg-convert` on Windows environments as it is likely unavailable.
 11. **Report** the generated file paths
 
 ## Diagram Types & Layout Rules
@@ -361,23 +361,41 @@ Always include a **legend** when 2+ arrow types are used.
 
 **MANDATORY: Python List Method** (ALWAYS use this):
 ```python
-python3 << 'EOF'
+import os
+import datetime
+import xml.etree.ElementTree as ET
+
+# 1. Load Theme Colors explicitly (Read from references/style-X.md)
+THEME = {
+    "bg": "#ffffff",
+    "primary": "#2563eb",
+    "stroke": "#cbd5e1",
+    "text": "#334155"
+}
+
+# 2. Build SVG Lines
 lines = []
 lines.append('<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 960 700">')
 lines.append('  <defs>')
-# ... each line separately
+# ... each line separately using THEME variables
 lines.append('</svg>')
 
-import os
-import datetime
+svg_content = '\\n'.join(lines)
 
+# 3. Strict 0-dependency XML Validation
+try:
+    ET.fromstring(svg_content)
+except ET.ParseError as e:
+    print(f"SVG Syntax Error: {e}")
+    exit(1)
+
+# 4. Save File
 date_str = datetime.datetime.now().strftime("%Y%m%d")
 output_path = f'C:/Users/shich/.gemini/diagrams/output_{date_str}.svg'
 os.makedirs(os.path.dirname(output_path), exist_ok=True)
 with open(output_path, 'w', encoding='utf-8') as f:
-    f.write('\n'.join(lines))
-print("SVG generated successfully")
-EOF
+    f.write(svg_content)
+print(f"SVG valid and generated successfully at {output_path}")
 ```
 
 **Why mandatory**: Prevents character truncation, typos, and syntax errors. Each line is independent and easy to verify.
@@ -450,9 +468,6 @@ These patterns appear frequently — internalize them:
 ##  Telemetry & Metadata (Mandatory)
 任务结束时，使用 `write_file` 将元数据保存至 `~/.gemini/MEMORY/skill_audit/telemetry/record_[TIMESTAMP].json`。
 JSON 结构：`{"skill_name": "tool-drawio", "status": "success", "duration_sec": 0, "input_tokens": 0, "output_tokens": 0}`
-
-##  历史失效先验 (NLAH Gotchas)
-"output_tokens": 0}`
 
 ##  历史失效先验 (NLAH Gotchas)
 

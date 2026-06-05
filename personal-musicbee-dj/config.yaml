@@ -46,3 +46,8 @@ scenes:
     genres: ["pure music", "Classical", "Jap", "eng"]
   pop:
     genres: ["chs", "eng", "Jap", "Korean"]
+
+filters:
+  high_intensity_exclude: ["ambient", "chill", "intro", "氛围", "纯音乐"]
+  low_intensity_exclude: ["metal", "rock", "edm", "金属", "摇滚", "电音"]
+  intro_keywords: ["intro", "prelude", "序曲", "前奏"]
