@@ -1,0 +1,4 @@
+## 2026-06-08 - Incorrect argument passing with shell=True
+**Vulnerability:** The script `scripts/io_engine/gather_context.py` passed a list of arguments to `subprocess.run` with `shell=True`.
+**Learning:** On POSIX systems, passing a list of arguments with `shell=True` causes only the first element to be executed as the command, with the rest passed to the shell itself. This not only breaks the intended command execution but can also lead to command injection if a string is incorrectly formulated.
+**Prevention:** Always use `shell=False` when passing arguments as structured lists to `subprocess.run` or `subprocess.Popen` to ensure correct execution and prevent command injection vulnerabilities.
