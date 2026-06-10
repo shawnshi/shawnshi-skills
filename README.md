@@ -1,44 +1,32 @@
-# Skills Ecosystem: The Strategic Armory (V5.2 - Anti-Entropy Edition)
+# Skills Ecosystem: The Strategic Armory (V8.0 - Antigravity Post-Surgery Edition)
 
 <!-- 
 @Pos: Root Level / Knowledge Sovereign 
 @Vision: A fractal, battle-hardened ecosystem of specialized intelligence tools.
 @Purpose: Extending the Strategic Architect's reach from raw data ingestion to high-fidelity executive delivery.
-@Maintenance: All modules are optimized via 'trigger-trap' logic and guarded by 'Absolute Schema Defense'.
+@Maintenance: All modules are optimized via V8.0 'BasePipelineOrchestrator' logic and guarded by 'Absolute Schema Defense'.
 -->
 
-> **“工具的本质是意志的延伸。在这里，我们不生产简单的功能，我们构建确定性。”**
+> **“工具的本质是意志的延伸。在这里，硅基注意力被我们锻造为了冷酷的自动化流水线。”**
 
-## 1. 架构原则 (Architectural Principles)
-本目录遵循“四层壳模型”支撑下的技能范式，实现**代码液态化**与**业务语义固态化**的动态平衡：
+## 1. 架构原则 (Architectural Principles V8.0)
+本目录现已全面升级为 **V8.0 Antigravity 纯逻辑引擎标准**，彻底消灭了旧时代大模型并发拉起子代理导致的 I/O 灾难与认知坍缩：
 
-### A. 物理层：算力主权与环境隔离 (Physics)
-- **物理硬锁**：所有技能必须在本地物理目录内闭环执行，严禁依赖外部云端黑盒.
-- **路径归一化**：强制统一路径风格，确保 Windows/Unix 环境下的逻辑同态.
+### A. 物理层：并发防御与算力隔离 (Physics)
+- **封杀手动 Subagent I/O**：彻底废除大模型跨进程拉起子代理并争抢写入 `tmp/` 文件的行为。所有复杂的多步推演，全部下沉至 `scripts/run_*.py` 引擎内执行内存级光速流转。
+- **Mime 免疫与 UTF-8 编码锁**：强制声明 `$env:PYTHONIOENCODING="utf-8"`，所有落盘中间文件严格携带 `.md` 或 `.json` 后缀以穿透底层拦截。
 
-### B. 逻辑层：语义主权与 MSL 约束 (Logic)
-- **MSL 原子化**：业务逻辑必须封装为原子化 Skill。代码是液态消费品，语义协议是固态资产.
-- **Schema 绝对防御**：[Template] 标记的输出必须 100% 同态映射，严禁执行摘要式逻辑脱水.
-- **语义守恒**：允许实现路径突变，但核心业务语义必须在重构前后保持恒定.
+### B. 逻辑层：微角色圆桌与人格剥离 (Micro-Persona Isolation)
+- **粉碎缝合怪 (Monolithic Collapse)**：禁止让单个大模型在同一会话中同时扮演“爬虫+架构师+精算师”。
+- **True Persona Isolation**：重型技能（如战略伙伴、行业雷达、圆桌映射）全部被切片为独立的微角色流水线。每个微角色（如“悲观精算师”、“数据清洗员”）均享有 100% 独立的 LLM 调用算力，保证绝对的认知锋芒。
 
-### C. 执行层：负熵交互与 OODA 闭环 (Execution)
-- **脑暴倾倒 + 查漏补缺**：废除串行审讯，采用高带宽初始输入 + 静默映射 + 聚合追问模式.
-- **聚合批处理**：在评审任务中整合决策节点，最大化保护用户心流，实现极致的交互负熵.
-- **Markdown 原生可视化**：强制使用 Mermaid 进行架构描述，弃用不稳定的 UI 截图.
+### C. 执行层：ReAct 义体感官外挂 (Execution & Sensory)
+- **解开感官剥夺**：底层的 `BasePipelineOrchestrator` 现已内置 ReAct (Reasoning and Acting) 工具循环。
+- **按需赋权**：流水线中的微角色可自主调用 `Search_Web`、`Fetch_URL_Content`、`Query_Vector_Lake` 工具进行实时自证，打破了纯文本推演的闭塞性。
 
-### D. 进化层：自愈能力与证据网 (Evolution)
-- **失效先验 (Gotchas)**：将重复性失败硬编码为 SKILL.md 顶部的禁令，实现系统的对抗性进化.
-- **沙箱门控 (Unit-Test Gate)**：任何技能修改在落盘前，必须在临时沙箱执行测试，失败即回滚防退化.
-- **细胞分裂 (Utility-Driven Fission)**：基于雷达测算，当技能 `Gotchas` 堆积超载时强制执行架构分裂.
-- **负样本打底 (Hard Negatives Logging)**：遥测错选路由数据，为未来的行为对齐路由 (InfoNCE) 奠定物理底座.
-- **证据网 (Evidence-Mesh)**：分析类资产必须强制执行物理归档，严禁仅保留在瞬时对话历史中.
-- **量化反思**：通过 `skill_utility_radar.py` 监控系统熵增，以数据驱动系统拓扑的持续优化.
-
-### E. 记忆与抽取层：Thin Harness, Fat Skills (Memory & Extraction)
-- **数据降级契约 (Storage Tiering)**：外部原始数据 (Tier 1) 仅做只读处理，图谱沉淀与智囊库 (Tier 2) 才强制应用复杂的知识重构，以此杜绝 Token 爆炸。
-- **双轨架构 (Dual-Schema)**：长效知识写入必须强制切分为 `Compiled Truth`（覆写结论）与 `Timeline`（追加证据），彻底消灭 RAG 历史噪音。
-- **图谱硬链 (Entity Linking)**：放弃 LLM 事后推理，在日常交互与落盘时强制使用 `[[实体名]]`，利用底层正则实现 100% 准确率的 Zero-LLM 图谱抽取。
-- **混合多轨意图 (Multi-Query Expansion)**：废除单次模糊搜索。OODA 的第一步必须将意图拆解重组并执行多路并行检索，确保高维度战略课题下的绝对召回率。
+### D. 进化层：全自动睡眠演化 (Autonomous Dream Cycle)
+- **后台驻留 (Cron Automaton)**：彻底告别人工清扫。系统依靠 `schedule` 工具在每天凌晨静默唤醒。
+- **闭环自愈 (Self-Healing)**：在睡梦中自动查重入湖 (Vector Lake Dedup)、扫描失败日志，并在底层直接跨进程触发大模型重写修复自己崩溃的 Python 代码。
 
 ## 2. 安装与部署 (Deployment)
 ```bash
@@ -57,55 +45,6 @@ powershell -ExecutionPolicy Bypass -File .\scripts\generate_resource_manifests.p
 powershell -ExecutionPolicy Bypass -File .\scripts\repair_skills.ps1 -Mode Gate
 ```
 
-门禁命中以下任一条件即返回非零退出码：
-
-- frontmatter 非法
-- 缺少 `name` 或 `description`
-- 缺少 `resource-manifest.json`
-- manifest 中声明了不存在的本地依赖
-- `SKILL.md` 中存在缺失的本地引用
-- 存在不兼容工具令牌
-- 存在外部运行时硬编码路径
-- `SKILL.md` 超过行数阈值
-
-若只想查看明细，不拦截：
-
-```powershell
-powershell -ExecutionPolicy Bypass -File .\scripts\repair_skills.ps1 -Mode Report
-```
-
-## 2.6 标准结构 (Standard Skill Shape)
-新建或重构技能时，优先对齐 [shared/skill-structure-template.md](shared/skill-structure-template.md)。
-
-推荐章节顺序：
-
-1. `## When to Use`
-2. `## Workflow`
-3. `## Resources`
-4. `## Failure Modes`
-5. `## Output Contract`
-6. `## Telemetry`
-
-`repair_skills.ps1` 会在报告中标出缺失这些标准章节的技能，作为结构漂移指标。
-
-## 2.7 触发主权矩阵 (Trigger Ownership)
-高重叠域的主触发权不再只靠口头约定，统一收敛到 [shared/trigger-ownership-matrix.json](shared/trigger-ownership-matrix.json)。
-
-当前重点治理 4 个高碰撞域：
-
-- `research`
-- `writing`
-- `healthcare_strategy`
-- `personal_analysis`
-
-规则：
-
-- 每个请求类只允许 `1` 个 `primary_skill`
-- `secondary_skills` 只能做补充，不得夺主
-- `request_signals` 在矩阵内不得跨类重复
-
-`repair_skills.ps1` 现在会校验该矩阵是否存在、引用的技能是否真实存在、以及信号是否发生跨类重叠，并在报告中输出冲突计数。
-
 ## 3. 核心分类矩阵 (Core Skill Hierarchy)
 
 > **Total Inventory: 48 Strategic Modules across 8 Domains**
@@ -115,34 +54,26 @@ powershell -ExecutionPolicy Bypass -File .\scripts\repair_skills.ps1 -Mode Repor
 
 | 技能标识 (Directory)                                                      | 核心本质 (Trigger Traps)                                                                                                                             |
 |:--------------------------------------------------------------------------|:-----------------------------------------------------------------------------------------------------------------------------------------------------|
-| **[cognitive-book-mirror](cognitive-book-mirror/)**                       | **认知书籍镜像引擎**。提取书籍原旨并强行与你最近 14 天的日记及底层价值观碰撞，生成极端个人化的毒舌双栏伴读.                                          |
-| **[cognitive-ideation-brainstorming](cognitive-ideation-brainstorming/)** | **高压想法脱水机 (Native Edition)**。统一收口宏观商业点子拷问与微观架构选型，在创意实施前执行逻辑压力测试以寻找 1% 杠杆点.                           |
-| **[cognitive-ceo-review](cognitive-ceo-review/)**                         | **创始人模式战略审计 (Native Edition)**。采用“聚合批处理”模式对开发计划执行核能挑战，支持范围扩张、择优或缩减.                                       |
-| **[cognitive-logic-adversary](cognitive-logic-adversary/)**               | **逻辑对抗系统 (Native Edition)**。搜索单点故障 (SPOF)，通过饱和逻辑攻击验证方案鲁棒性.                                                              |
-| **[personal-intelligence-hub](personal-intelligence-hub/)**               | **个人情报作战中枢 (Native Edition)**。执行全球多源抓取，将噪音降维为 Alpha 级决策资产.                                                              |
-| **[cognitive-personal-roundtable](cognitive-personal-roundtable/)**       | **高密度动态圆桌 (V4.0)**。基于议题构建张力网络，采用“碎片化落盘与最终合并”机制，彻底消除大模型长文本截断风险.                                       |
-| **[cognitive-hv-analysis](cognitive-hv-analysis/)**                       | **横纵分析法深度研究 (Horizontal-Vertical Analysis)**。由数字生命卡兹克提出，通过纵轴追踪时间深度，横轴进行同期对比，最后产出排版精美的深度研究报告. |
-| **[personal-strategic-reading](personal-strategic-reading/)**             | **战略滤镜阅读器**。抛弃客观中立，带上特定商业目的强行榨取长文或研报，输出包含核心杠杆与致命盲区的极高密度 Playbook.                                 |
-| **[tool-concept-synthesis](tool-concept-synthesis/)**                     | **宏观缝合与体系全景图**。强制依赖 Vector Lake 底层图谱拓扑寻找孤立实体间的逻辑暗线，再交由大模型反向渲染出具备大局观的战略长文.                     |
-| **[tool-archive-crawler](tool-archive-crawler/)**                         | **数字废墟矿工**。扫描旧有非结构化库，剥离废话，并按 `[[双链]]` 图谱与 `双轨制` 将其强行翻新锚定进 Tier 2 知识层.                                    |
-| **[cognitive-morphism-mapper](cognitive-morphism-mapper/)**               | **范畴论跨界思维引擎**。利用异构领域结构生成突破性解法，执行升维打击.                                                                                |
-| **[personal-book-reader](personal-book-reader/)**                         | **战略拆书引擎**。冷硬抽骨架、热重构知识地图。精准提取核心问题、基础假设、分析框架与精神内核，并转化为可走动做预测的认知参考系.                    |
-
+| **[cognitive-personal-roundtable](cognitive-personal-roundtable/)**       | **高密度动态圆桌 (V8.0 Native)**。基于 Python Orchestrator 实现的真·人格算力隔离引擎，消除大模型精分效应。                                           |
+| **[cognitive-morphism-mapper](cognitive-morphism-mapper/)**               | **范畴论跨界思维引擎 (V8.0 Native)**。利用异构领域结构生成突破性解法，经 5 层理论检验的降维打击管线。                                                |
+| **[personal-intelligence-hub](personal-intelligence-hub/)**               | **个人情报作战中枢 (V8.0 Native)**。执行全球多源抓取，带查重与证据锚点的决策资产。                                                                   |
+| **[cognitive-book-mirror](cognitive-book-mirror/)**                       | **认知书籍镜像引擎**。提取书籍原旨并强行与最近 14 天日记价值观碰撞，生成毒舌双栏伴读。                                                               |
+| **[cognitive-ideation-brainstorming](cognitive-ideation-brainstorming/)** | **高压想法脱水机**。宏观商业点子拷问与微观架构选型，执行逻辑压力测试。                                                                               |
+| **[cognitive-logic-adversary](cognitive-logic-adversary/)**               | **逻辑对抗系统**。搜索单点故障 (SPOF)，通过饱和逻辑攻击验证方案鲁棒性。                                                                              |
 
 ### 🏥 大健康与战略研判中枢 (Healthcare Strategy)
 *聚焦垂直主业：医疗信息化 (HIT)、临床决策支持及大客户分析。*
 
 | 技能标识 (Directory)                                              | 核心本质 (Trigger Traps)                                                                                     |
 |:------------------------------------------------------------------|:-------------------------------------------------------------------------------------------------------------|
-| **[hit-solution-architect](hit-solution-architect/)**             | **顶级方案架构师 (V7.0)**。执行多阶段落盘锻造，确保 TCO 最优与技术可演进.                                    |
-| **[hit-digital-strategy-partner](hit-digital-strategy-partner/)** | **顶级医疗数字化战略专家 (V18.2)**。用于深度咨询、ROI测算、MBB框架分析、带有 Outcome Gates 的战略流水线.                                 |
-| **[hit-industry-radar](hit-industry-radar/)**                     | **行业战略雷达**。监控卫宁动态、友商中标及 Epic/Cerner 异动，输出 S-T-C 战报.                                |
-| **[hit-weekly-brief](hit-weekly-brief/)**                         | **行业战区研报中枢 (V5.0)**。将智库研报与白皮书降维为高管视角的抗幻觉决策资产.                               |
-| **[hit-lectures-scout](hit-lectures-scout/)**                     | **数字化前沿侦察兵 (V5.0)**。基于多智能体并发与龙虾架构重构，执行 SemHash 去重与 RWE 过滤，输出实战科研战报. |
-| **[hit-customer-analyst](hit-customer-analyst/)**                 | **大客户拜访分析专家 (V3.1)**。强制执行三阶侦察（人物、机构、足迹），输出实战策略.                           |
+| **[hit-solution-architect](hit-solution-architect/)**             | **顶级方案架构师 (V8.0 Atomized)**。拆解为 5 级微角色圆桌管线，TCO 最优与红队防线。                          |
+| **[hit-digital-strategy-partner](hit-digital-strategy-partner/)** | **顶级医疗数字化战略专家 (V8.0 Atomized)**。拆解为政策推演、悲观精算、极右风控等独立角色流水线。             |
+| **[hit-industry-radar](hit-industry-radar/)**                     | **行业战略雷达 (V8.0 Atomized)**。包含“数据清洗员”与“供应链侦探”的无情竞对扫描仪。                           |
+| **[hit-weekly-brief](hit-weekly-brief/)**                         | **行业战区研报中枢 (V8.0 Atomized)**。龙虾架构管线，具备“反共识黑天鹅分析师”。                               |
+| **[hit-lectures-scout](hit-lectures-scout/)**                     | **数字化前沿侦察兵 (V8.0 Atomized)**。临床证据网过滤与硬核技术架构萃取。                                     |
 
 ### 🔬 专业科研与学术评价 (Scientific Research)
-*学术重型武器：论文检索、读论文提炼、系统性打分与论文级绘图。*
+*学术重型武器：论文检索、系统性打分与论文级绘图。*
 
 | 技能标识 (Directory)                                                        | 核心本质 (Trigger Traps)                                                                            |
 |:----------------------------------------------------------------------------|:----------------------------------------------------------------------------------------------------|
@@ -156,56 +87,32 @@ powershell -ExecutionPolicy Bypass -File .\scripts\repair_skills.ps1 -Mode Repor
 
 | 技能标识 (Directory)                                          | 核心本质 (Trigger Traps)                                                                                                       |
 |:--------------------------------------------------------------|:-------------------------------------------------------------------------------------------------------------------------------|
-| **[personal-writing-assistant](personal-writing-assistant/)** | **思维淬炼与写作引擎 (V13.2)**。同行对话姿态，强制“找核”审计，带降级与乒乓共创模式的深度原创管线.                                                      |
-| **[personal-write-humanizer](personal-write-humanizer/)**     | **中文文本“去 AI 化”锻造场 (V3.1)**。引入术语硬锁、结构粉碎与影子草稿协议，执行极度物理级去塑料化重塑.                                                        |
-| **[image-nano-gen](image-nano-gen/)**                         | **高质量图像生成引擎 (Imagen 3)**。利用 Gemini 引擎执行 4K 级图像锻造，支持高认知 Prompt 增强.                                 |
-| **[image-promp-gen](image-promp-gen/)**                       | **大师级海报与封面提示词引擎**。基于 33+ 位传奇设计师风格，支持多平台比例适配与逻辑隐喻构建.                                   |
-| **[tool-slide-architect](tool-slide-architect/)**             | **战略级 PPT 架构师**。交付具备原生逻辑的 PPT 资产，拒绝平庸模板.                                                              |
-| **[tool-web-slide](tool-web-slide/)**                         | **电子杂志风网页 PPT 引擎**。生成基于 WebGL 与响应式排版的单文件 HTML 演示资产.                                                |
-| **[tool-slide-blocks](tool-slide-blocks/)**                   | **PPT 智能组装助手**。从历史素材库中挑选幻灯片并自动拼装为风格统一的完整演示文稿.                                              |
-| **[tool-smart-latex](tool-smart-latex/)**                     | **自动化出版 LaTeX 引擎**。提供 IEEE、CV 等专业模板，交付工业级排版结果.                                                       |
-| **[tool-drawio](tool-drawio/)**                               | **企业级图表工程引擎**。内置语义化配色系统(7色)、5种图表类型专用规则(架构/流程/时序/ER/甘特)、5大医疗架构模式库与交付质量清单. |
+| **[personal-writing-assistant](personal-writing-assistant/)** | **思维淬炼与写作引擎**。同行对话姿态，强制“找核”审计，带降级与乒乓共创模式的深度原创管线.                                                      |
+| **[personal-write-humanizer](personal-write-humanizer/)**     | **中文文本“去 AI 化”锻造场**。引入术语硬锁、结构粉碎与影子草稿协议，执行极度物理级去塑料化重塑.                                                        |
+| **[tool-slide-architect](tool-slide-architect/)**             | **战略级 PPT 架构师**。交付具备原生逻辑的 PPT 资产蓝图，拒绝平庸模板.                                                              |
+| **[tool-drawio](tool-drawio/)**                               | **企业级图表工程引擎**。内置语义化配色系统(7色)、5种图表类型专用规则(架构/流程/时序/ER/甘特). |
 
 ### 💼 商业洞察与投资顾问 (Marketing & Finance)
-*二级市场分析与商业价值变现。*
 
 | 技能标识 (Directory)                                            | 核心本质 (Trigger Traps)                                                         |
 |:----------------------------------------------------------------|:---------------------------------------------------------------------------------|
-| **[personal-investment-advisor](personal-investment-advisor/)** | **顶级金融量化引擎**。提供结构化量化 JSON 分析与 K 线周期解析，严禁通用知识回答. |
+| **[personal-investment-advisor](personal-investment-advisor/)** | **顶级金融量化引擎**。提供结构化量化 JSON 分析与 K 线周期解析。 (附带 16:00 定时数据获取器) |
 
 ### 👤 数字原生个体成长中心 (Personal Management)
-*个人生活审计、生理分析、旅行研究与生活方式控制。*
 
 | 技能标识 (Directory)                                          | 核心本质 (Trigger Traps)                                                               |
 |:--------------------------------------------------------------|:---------------------------------------------------------------------------------------|
 | **[personal-diary-writer](personal-diary-writer/)**           | **个人日志原子写入器**。负责高频轻量级的日常状态录入与安全落盘，强绑定物理 I/O 组件.   |
 | **[personal-cognitive-auditor](personal-cognitive-auditor/)** | **战略认知联合审计官**。处理日/周/月/年结认知复盘，强制调度多源数据，交接 Writer 落盘. |
-| **[personal-cognitive-prescription](personal-cognitive-prescription/)** | **认知处方引擎**。无情的认知审计官，嗅探盲区并执行降维打击，强制开出靶向章节的硬核书籍阅读处方. |
-| **[personal-health-analysis](personal-health-analysis/)**     | **首席医疗官 (CMO) 引擎**。对 Garmin 生理数据执行全链路审计，管理决策准备度.           |
-| **[personal-musicbee-dj](personal-musicbee-dj/)**             | **音乐极客控制协议**。通过 JIT 算法精准控制本地进程，实现秒级心流氛围切换.             |
-| **[personal-travel-research](personal-travel-research/)**     | **旅行研究 (ljg-travel-flow)**。深度文化旅行案头研究，涵盖博物馆、古建与考古发现.      |
+| **[personal-health-analysis](personal-health-analysis/)**     | **首席医疗官 (CMO) 引擎 (V8.0 Native)**。对 Garmin 生理数据执行全链路审计，管理决策准备度.           |
 
 ### ⚙️ 技术全栈、逆向工程与系统演化 (Tech & System Evolution)
-*工作流编排、技能创建、算力监控与系统级演化。*
 
 | 技能标识 (Directory)                                          | 核心本质 (Trigger Traps)                                                                                                     |
 |:--------------------------------------------------------------|:-----------------------------------------------------------------------------------------------------------------------------|
-| **[mentat-skill-creator](mentat-skill-creator/)**             | **技能工厂与自愈中心 (Native Edition)**。管理技能生命周期，确保符合“四层壳模型”与三层架构规范.                               |
-| **[mentat-insight-diary](mentat-insight-diary/)**             | **内观日记与逻辑审计**。通过 OODA 框架执行认知反思，并自动物理归档 Mentat 审计日志.                                          |
-| **[mentat-collaboration-audit](mentat-collaboration-audit/)** | **系统与协作联合审计管线 (Native Edition)**。统一收口系统底层算力损耗与人机协作摩擦，从数据诊断自动演进至行为指导和资产沉淀. |
-| **[mentat-dream-cycle](mentat-dream-cycle/)**                 | **系统静默清洗与演化管线**。后台批处理，自动清扫沙盒并执行热缓冲池的提纯、孤岛扫描与图谱同步.                                |
-
-### 🧰 全能格式转换与数据工厂 (Utilities Format)
-*负责标准化格式转换与数据原质提取。*
-
-| 技能标识 (Directory)                                      | 核心本质 (Trigger Traps)                                                       |
-|:----------------------------------------------------------|:-------------------------------------------------------------------------------|
-| **[tencent-meeting-mcp](tencent-meeting-mcp/)**           | **腾讯会议 MCP 服务**。提供完整的工具集，支持会议安排、录制下载、转写搜索与智能纪要提取. |
-| **[tool-document-summarizer](tool-document-summarizer/)** | **战略情报引擎**。具备本体驱动的语义压缩能力，输出带有战略标签的摘要.          |
-| **[tool-markdown-converter](tool-markdown-converter/)**   | **Markdown 原质炼金术**。利用 MarkItDown 将异构文件统一转化为极致干净的语义层. |
-| **[tool-tts](tool-tts/)**                                 | **军工级播报系统**。支持 Edge 神经网络语音，确保高审美播报.                    |
-| **[tool-tuanbiao-downloader](tool-tuanbiao-downloader/)** | **团体标准下载器**。全自动 ID 解析与 PDF 合并装订，确保 100% 获取率.           |
-| **[tool-url-markdown](tool-url-markdown/)**               | **网页原质提取器**。直控 Chrome CDP 协议，强制清除网页噪音.                    |
+| **[mentat-dream-cycle](mentat-dream-cycle/)**                 | **系统静默演化管线 (V8.0 Autonomous)**。凌晨 3 点 Cron 触发，跨进程拉起自愈引擎，自动清理孤岛与查重合并热缓存。|
+| **[mentat-skill-creator](mentat-skill-creator/)**             | **技能工厂与自愈中心 (Native Edition)**。管理技能生命周期，受 Dream Cycle 后台调度以覆盖损坏代码。                               |
+| **[mentat-collaboration-audit](mentat-collaboration-audit/)** | **系统与协作联合审计管线 (Native Edition)**。统一收口系统底层算力损耗与人机协作摩擦。 |
 
 ---
-*Last Global Audit: 2026-06-04 | Version: 6.2 (GBrain Architecture Edition) | System State: Locked*
+*Last Global Audit: 2026-06-11 | Version: 8.0 (Antigravity Post-Surgery Edition) | System State: Locked*

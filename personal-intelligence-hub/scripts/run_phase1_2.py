@@ -19,6 +19,9 @@ def main() -> None:
     print("\n=== Phase 2: Refine & Deduplicate ===")
     refine.refine()
     
+    import semantic_deduplication
+    semantic_deduplication.main()
+    
     print("\n[OK] Phase 1 and 2 completed.")
     print("You may now invoke the Intelligence Refinement Subagent to process Phase 3 (LLM Refinement).")
 

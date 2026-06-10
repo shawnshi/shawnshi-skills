@@ -1,0 +1,168 @@
+{
+  "stock_name": "美光科技",
+  "stock_code": "MU",
+  "market_type": "美股",
+  "research_mode": "trading_mode",
+  "sentiment_score": 20,
+  "trend_prediction": "看空",
+  "operation_advice": "观望",
+  "decision_type": "watch",
+  "confidence_level": "高",
+  "confidence_details": {
+    "score": 85,
+    "data_quality": "High",
+    "technical_alignment": "High",
+    "valuation_support": "Low",
+    "actionability": "High"
+  },
+  "freshness_flags": {
+    "price_data_fresh": true,
+    "info_data_fresh": true,
+    "news_data_fresh": true,
+    "portfolio_data_fresh": true,
+    "stale_inputs": []
+  },
+  "evidence_items": [
+    {
+      "fact": "2026-06-05大跌约13%，收盘864.01",
+      "connection": "跌破多条均线(MA5/10)，技术面破位",
+      "deduction": "短期动能极度虚弱，芯片板块整体被抛售",
+      "source_type": "yf_history",
+      "freshness": "2026-06-05",
+      "confidence": 95
+    }
+  ],
+  "dashboard": {
+    "core_conclusion": {
+      "one_sentence": "受行业恐慌情绪波及，MU跌破技术防线，短期建议规避抄底。",
+      "signal_type": "看空信号",
+      "time_sensitivity": "高",
+      "position_advice": {
+        "empty_position": "继续观望",
+        "has_position": "留意850支撑，跌破止损"
+      }
+    },
+    "qualitative_analysis": {
+      "trend_analysis": "日线级别多头趋势已被破坏，短期进入下行寻底阶段。",
+      "fundamental_analysis": "尽管HBM需求强劲且获英伟达认证，但市场对高估值科技股产生恐慌性抛售。",
+      "pattern_analysis": "跌破高位盘整区，形成断头铡刀形态。",
+      "sector_position": "全球核心存储芯片巨头，绑定AI算力产业链。",
+      "hot_topics": "HBM产能，AI硬件狂热退潮"
+    },
+    "data_perspective": {
+      "trend_status": {
+        "ma_alignment": "空头排列",
+        "rsi_14": 60.12,
+        "rsi_status": "震荡下行",
+        "macd_signal": "死叉蔓延",
+        "trend_score": 20
+      },
+      "price_position": {
+        "current_price": 864.01,
+        "support_level": 850.0,
+        "resistance_level": 1000.0,
+        "analysis": "在MA20附近获得支撑",
+        "bias_status": "极度向下乖离"
+      },
+      "volume_analysis": {
+        "volume_status": "放量下跌",
+        "turnover_rate": "N/A",
+        "volume_ratio": "1.3"
+      },
+      "chip_structure": {
+        "chip_health": "不适用(非A股)",
+        "analysis": "不适用"
+      },
+      "valuation": "P/E等待新财报确认"
+    },
+    "intelligence": {
+      "sentiment_summary": "极度悲观，科技股遭受血洗。",
+      "positive_catalysts": [
+        "HBM3e产能满载",
+        "AI长期需求支撑"
+      ],
+      "risk_alerts": [
+        "宏观流动性收紧",
+        "短期估值杀跌",
+        "芯片板块资金集体出逃"
+      ]
+    },
+    "battle_plan": {
+      "sniper_points": {
+        "stop_loss": 845.0,
+        "take_profit": 1020.0,
+        "analysis": "支撑850，压力1000",
+        "ideal_buy": 850.0,
+        "secondary_buy": 800.0
+      },
+      "position_strategy": {
+        "suggested_position": "0%",
+        "entry_plan": "等待850支撑有效性，或财报超预期确认拐点后再行右侧建仓。",
+        "risk_control": "若强行左侧抄底，跌破840无条件止损。"
+      },
+      "action_checklist": [
+        "观察850美元支撑力度",
+        "等待右侧反弹"
+      ]
+    }
+  },
+  "analysis_summary": "受芯片板块整体血洗影响，建议观望。",
+  "risk_warning": "短期面临市场情绪崩塌和技术破位风险。",
+  "short_term_outlook": "下探寻找新的支撑位。",
+  "medium_term_outlook": "取决于财报(6.25)。",
+  "search_performed": false,
+  "data_sources": [
+    "Yahoo Finance"
+  ],
+  "data_gaps": [],
+  "portfolio_context": {
+    "has_position": true,
+    "quantity": 0.0,
+    "avg_cost": 765.104,
+    "current_price": 864.01,
+    "market_value": 0.0,
+    "cost_basis": 0.0,
+    "unrealized_pnl": 0.0,
+    "unrealized_pnl_pct": 0.1293,
+    "position_status": "matched"
+  },
+  "position_advice": {
+    "holding_view": "当前为空仓观察状态",
+    "action_for_holder": "观望",
+    "cost_basis_view": "历史成本765.1远低于现价",
+    "risk_to_holder": "若有残留仓位，跌破850应清仓。",
+    "next_action_trigger": [
+      "突破并站稳950可考虑建仓"
+    ]
+  },
+  "portfolio_summary": {
+    "total_positions": 12,
+    "tracked_weight": 1.0001,
+    "market_exposure": {
+      "A股": 0.1103,
+      "A股ETF": 0.6025,
+      "美股": 0.1526,
+      "CASH": 0.1347
+    },
+    "top_positions_by_weight": [
+      {
+        "symbol": "588000.SS",
+        "name": "科创50ETF",
+        "weight": 0.2437
+      }
+    ],
+    "concentration_score": 0.1532,
+    "concentration_bucket": "medium"
+  },
+  "portfolio_risk": {
+    "concentration_risk": "高",
+    "market_exposure_risk": "中",
+    "style_drift_risk": "低",
+    "liquidity_risk": "中"
+  },
+  "portfolio_fit": {
+    "action_in_portfolio": "watch",
+    "allocation_impact": "无",
+    "rationale": "Tech sector risk is high, keep powder dry."
+  }
+}

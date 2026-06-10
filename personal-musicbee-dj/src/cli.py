@@ -107,9 +107,8 @@ def main():
 
     log.info(f"Triggering MusicBee with target: {play_target}")
     try:
-        import os
-        os.startfile(play_target)
-        log.info("Playback sequence initiated successfully via os.startfile.")
+        subprocess.Popen(['cmd', '/c', 'start', '""', str(musicbee_exe), str(play_target)])
+        log.info("Playback sequence initiated successfully via cmd start.")
     except Exception as exc:
         log.error(f"Failed to execute MusicBee process: {exc}")
         sys.exit(1)

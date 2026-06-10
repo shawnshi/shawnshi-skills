@@ -28,7 +28,7 @@ LATEST_SCAN_PATH = RUNTIME_DIR / "latest_scan.json"
 CURRENT_SCAN_PATH = RUNTIME_DIR / "current_scan.json"
 FETCH_CACHE_PATH = RUNTIME_DIR / "fetch_cache.json"
 HISTORY_PATH = RUNTIME_DIR / "pushed_history_v3.json"
-REFINED_PATH = NEWS_DIR / "intelligence_current_refined.json"
+REFINED_PATH = RUNTIME_DIR / "intelligence_current_refined.json"
 CANDIDATES_PATH = RUNTIME_DIR / "intelligence_candidates.json"
 
 

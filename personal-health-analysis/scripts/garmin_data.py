@@ -151,7 +151,7 @@ def fetch_body_battery(client, days=7, start=None, end=None):
             if data and len(data) > 0:
                 day_data = data[0]
                 values_array = day_data.get("bodyBatteryValuesArray", [])
-                values = [v[1] for v in values_array if len(v) > 1]
+                values = [v[1] for v in values_array if len(v) > 1 and v[1] is not None]
                 return {
                     "date": date_str,
                     "charged": day_data.get("charged"),

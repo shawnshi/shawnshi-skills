@@ -36,7 +36,7 @@ This skill produces presentation blueprints, not final slide binaries.
 ### Phase 2: Ghost Deck, Subagents & Breakpoint
 - Produce the title chain and deck logic.
 - Define `<STYLE_INSTRUCTIONS>` as structured deck-level style truth.
-- **Subagent Fact-Gathering**: 若蓝图需要深度的市场数据支撑，主代理必须调用 `invoke_subagent` 拉起独立的 `research` 子代理去执行外围资料收集。主代理原地挂起以保持上下文的高纯净度。
+- **单通道事实探针 (No Subagent Spawning)**: 若蓝图需要深度的市场数据支撑，主代理必须自行调用搜索引擎或 Vector Lake。**严禁调用 `invoke_subagent`**，禁止物理文件传阅以防写盘死锁。所有收集工作在主代理内存中脱水完成。
 - Stress-test the chain against audience objections before moving on.
 - **[BREAKPOINT]**: 输出完整的 Title Chain (标题链) 后，主代理**必须**显式挂起，向用户索要“大纲审批”。严禁在未获人类批准前私自进入 Phase 3。
 

@@ -34,8 +34,8 @@ AVOID: 禁止单次 Prompt 加载超 10,000 字全文；严禁携带占位符的
 
 ### Native Sub-agent Delegation Protocol (并发分片处理)
 **CRITICAL RULE**: 绝对禁止主代理在当前对话中直接裸读高达几十 MB、数百页的招投标文件或评级标准，这会导致主节点注意力崩溃并清空短期记忆。
-1. **分发策略 (Shredding)**: 对于超长文档，主代理必须调用原生的 `invoke_subagent` 工具，拉起多个 `research` 或专用的分析子代理集群，将文档按章节或页码切片并并发投喂。
-2. **静默组装 (Assembly)**: 主代理在派发完所有子代理分片任务后，强制原地挂起。在回收全部摘要分片后，才启动统一的宏观战略提纯。旧版的手写工单文件系统（Packet）现已彻底废除。
+1. **单核串行分派 (Sequential Ingestion)**: 绝对禁止主代理调用 `invoke_subagent` 暴力并发！超长文档的分片、分析应全权交由 `orchestrate_enhanced.py` 进行后台串行流式处理，并在 Python 内存态中完成拼装。
+2. **纯内存交付 (Memory-over-Disk)**: 所有子摘要产物通过 Python 脚本执行并打印至当前上下文，主代理原地组装，严禁中间产物乱写 `tmp/` 目录。
 
 ### 脚本指令执行规范 (Execution Protocol)
 
