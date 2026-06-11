@@ -1,0 +1,4 @@
+## 2026-06-11 - Command Injection via subprocess shell=True
+**Vulnerability:** Command injection vulnerability in multiple files (`mentat-collaboration-audit/core/engine.py`, `mentat-collaboration-audit/debug_sessions.py`) caused by using `shell=True` with a list of arguments in `subprocess.run` and `subprocess.check_output`.
+**Learning:** When passing a list of arguments to `subprocess` calls on POSIX systems with `shell=True`, only the first element is executed as the command. The rest are passed as arguments to the shell itself, leading to unexpected behavior and security risks.
+**Prevention:** Always use `shell=False` when passing arguments as a structured list to `subprocess` calls to ensure proper execution and prevent command injection vulnerabilities. If a command string needs to be parsed, use `shlex.split()`.
