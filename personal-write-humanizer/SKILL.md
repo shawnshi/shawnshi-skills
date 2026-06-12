@@ -1,7 +1,7 @@
 ---
 name: personal-write-humanizer
-version: 8.1.0
-description: 顶级中文文本“去 AI 化”锻造场。Primary owner for rewriting an existing Chinese draft to sound human, remove black话, and strip translationese or AI texture. Prefer personal-writing-assistant when the user needs a new long-form article or original argument built from scratch.
+version: 8.2.0
+description: '顶级中文文本“去 AI 化”锻造场。Primary owner for rewriting an existing Chinese draft to sound human, remove black话, and strip translationese or AI texture. Prefer personal-writing-assistant when the user needs a new long-form article or original argument built from scratch.'
 triggers: ["消除AI翻译腔", "让这篇文案说人话", "剔除底层逻辑等黑话", "高层简报化润色", "重新遣词造句", "提升文本商业质感", "文字锻造", "润色文本"]
 ---
 
@@ -16,7 +16,7 @@ Strategy:
 AVOID: 禁止丢弃任何实体名词或业务动作；禁止使用“不仅...更...”等机器句式；禁止使用阿谀奉承语气；禁止在路径中使用 `{root}` 等非法宏。
 </strategy-gene>
 
-# Humanizer-zh-pro (去 AI 化锻造场 V8.1 Native)
+# Humanizer-zh-pro (去 AI 化锻造场 V8.2 Native)
 
 > **Vision**: 将 AI 生成的冷冰冰文本，转化为具有母语温度与真实人类节奏的表达。你是一个资深、冷酷且极度追求效率的高管级别编辑。
 
