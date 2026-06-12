@@ -1,6 +1,6 @@
 ---
 name: personal-intelligence-hub
-version: 11.2.0
+version: 11.2.1
 description: 战略情报作战中枢。用于多源技术/医疗/AI 情报扫描、7 日去重、二阶推演、红队审计和分层简报生成。必须读取 `references/strategic_focus.json`、`references/quality_standard.md`、`references/briefing_template.md` 和 `references/karpathy_feeds.json`，并通过 `blackboard`、`history_manager`、`briefing_gate` 保证状态、去重与交付质量。
 ---
 
@@ -16,7 +16,7 @@ Strategy:
 AVOID: 严禁把“摘要”伪装成“洞察”；禁止在缺乏证据时输出 L4 级高等级判断；禁止重复推送同一信号；严禁在报告中遗漏重要实体的双链图谱标记；严禁越界将原始抓取数据直接写入核心图谱。
 </strategy-gene>
 
-# Personal Intelligence Hub (战略情报作战中枢 V11.2 Native)
+# Personal Intelligence Hub (战略情报作战中枢 V11.2.1 Native)
 
 ## 0. 核心约束
 - **配置优先**: 扫描范围、主题、优先源、排除词都以 `references/strategic_focus.json` 为准。
@@ -52,7 +52,7 @@ $env:PYTHONIOENCODING="utf-8"; python "C:\Users\shich\.gemini\config\skills\pers
    > 3. Perform semantic deduction. **You MUST output all analytical content in Chinese (zh-CN)** and generate `title_zh` and `summary_zh` for all items.
    > 4. Ensure you generate global fields like `punchline`, `insights`, `digest`, `market`, and correctly structure `action_levers` as an array of objects.
    > 5. Use `[[ ]]` around core entities/people/specific nouns for graph linking.
-   > 6. Write the final valid JSON to `C:\Users\shich\.gemini\MEMORY\raw\news\intelligence_current_refined.json`.
+   > 6. Use the `write_to_file` tool to write the final valid JSON to `C:\Users\shich\.gemini\MEMORY\raw\news\intelligence_current_refined.json`.
    > 7. Reply 'DONE' when finished."
 2. 子代理读取粗筛数据，依据严格的 JSON Schema 执行二阶推演与图谱 `[[ ]]` 补齐，并将结果规范地写入目标 JSON。
 3. 写入完成后，子代理将控制权交还主代理，结束其沙盒任务。
@@ -77,7 +77,7 @@ $env:PYTHONIOENCODING="utf-8"; python "C:\Users\shich\.gemini\config\skills\pers
 ```powershell
 $env:PYTHONIOENCODING="utf-8"; python "C:\Users\shich\.gemini\config\skills\personal-intelligence-hub\scripts\extract_entities.py"
 ```
-2. **异步同步**: 主代理调用 `call_mcp_tool` 执行 `vector-lake-mcp` 服务器的 `prepare_ingest_batch` 提取待同步清单，随后利用 `invoke_subagent` 拉起 `vector-lake-ingestor` 专门代理执行后台异步入湖。**绝对禁止直接调用阻塞式的 sync 接口。**
+2. **异步同步**: 主代理调用 `call_mcp_tool` 执行 `vector-lake-mcp` 服务器的 `prepare_ingest_batch` 提取待同步清单，随后利用 `invoke_subagent` 拉起 `TypeName: self` (Role: `vector-lake-ingestor`) 专门代理执行后台异步入湖。**绝对禁止直接调用阻塞式的 sync 接口。**
 
 ## 3. <Contracts> (输出与交付契约)
 
