@@ -1,74 +1,80 @@
 ---
 name: tool-web-slide
-version: 8.4.0
+version: 8.5.0
 description: 工业级、基于 Design Vault 的单网页 PPT 生成器。支持"电子杂志风" (Magazine) 和 "瑞士国际主义风" (Swiss) 两种高级视觉排版系统。内置原生双屏演讲者视图与 PDF 导出管线。
+triggers: ["PPT", "幻灯片", "网页演示", "电子杂志风", "瑞士风", "发布会"]
 ---
 
 <strategy-gene>
 Keywords: 网页 PPT, 电子杂志, 瑞士风, 演讲者视图, Design Vault
-Summary: 通过 Design Vault 强力约束和强类型校验生成高质量 HTML PPT。
+Summary: 通过强类型校验与高级排版认知模型，生成高品质单文件 HTML PPT。
 Strategy:
-1. 需求澄清：确定主题、风格（A 或 B）、大纲。
-2. 知识装配：强制调用 `scripts/assemble-context.mjs` 获取排版规范。
-3. 物理克隆：使用 `run_command` 的 `Copy-Item` 将模板毫秒级复制至 `MEMORY` 沙盒，拒绝低效的 LLM read/write 全量读写。
-4. 锚点注入：使用 `replace_file_content` 工具，精准狙击 `<!-- SLIDES_HERE -->` 注释锚点，仅替换幻灯片片段。
+1. 需求澄清：执行 7 问清单对齐，建立叙事弧 (Hook->Context->Core->Shift->Takeaway)。
+2. 知识装配：调用 `scripts/assemble-context.mjs` 获取当前流派的版式组件。
+3. 物理克隆：使用 `run_command` 的 `Copy-Item` 毫秒级克隆 `template.html` 至 `MEMORY/slide-deck`。
+4. 锚点注入：使用 `replace_file_content` 精准替换 `<!-- SLIDES_HERE -->` 锚点，禁止大模型全量读写 108KB 文件。
 5. 质量门检：必须通过 `scripts/validate-deck.mjs` 物理检查。
-AVOID: 绝对禁止大模型使用 view_file 去完整读取 108KB 的 HTML 模板！绝对禁止将生成物散落在非 MEMORY 目录！
 </strategy-gene>
 
 ## 这个 Skill 做什么
 
 生成一份**高工业标准、强一致性**的单文件 HTML 演示文稿。
-本智能体不依赖随意的 Prompt 进行排版，而是基于 **Design Vault (设计金库)** 架构运行。
-
-支持两套完全隔离的美学风格：
+本智能体不仅是排版工，更是 **Art Director (艺术总监)**。支持两套完全隔离的美学风格：
 *   **风格 A · 电子杂志风 (Magazine)**：WebGL 流体背景、衬线大标题、图片网格、人文感。
 *   **风格 B · 瑞士国际主义 (Swiss)**：极致字号对比、绝对无衬线、12列严格网格、高反差色块。
 
-**交付物特性**：
-*   原生支持**演讲者视图**：按 `S` 键呼出双屏同步控制台（含计时器与 `<aside class="notes">` 逐字稿）。
-*   原生支持**静态导出**：自带无头浏览器 PDF 导出脚本。
-
 ---
 
-## Workflow
+## Workflow (Art Director 模式)
 
-### 1. Clarification (需求对齐)
-强制与用户确认主题风格（A：电子杂志风；B：瑞士风）以及具体的图文内容与大纲。
+### 1. Clarification (7问清单与叙事弧设计) [Mode: PLANNING]
+如果用户只给了一个模糊想法，**动手前先用普通对话对齐以下核心要素**：
+1. 选风格 A (杂志风) 还是 B (瑞士风)？
+2. 受众是谁？分享场景？
+3. 时长与页数规划？
+4. 有无原始语料/数据？
+5. 图片/截图如何处理？
+6. 主题色选哪套？(执行时在 template 开头替换对应的 `:root` 变量)
+7. 有无不可更改的硬约束？
 
-### 2. Context Assembly (上下文装配)
-使用 `run_command` 在终端运行知识装配器：
+**构建叙事弧 (The Narrative Arc)**：
+不要平铺直叙，先写一份骨架草稿：
+- `钩子(Hook)`: 抛反差 / 扔数据 (1页)
+- `定调(Context)`: 为什么讲这个 (1-2页)
+- `主体(Core)`: 核心论点结构展开 (3-5页)
+- `转折(Shift)`: 打破预期 / 提出新视角 (1页)
+- `收束(Takeaway)`: 金句或行动号召 (1-2页)
+
+### 2. Context Assembly (上下文装配) [Mode: EXECUTION]
+使用 `run_command` 运行知识装配器，获取指定风格的 CSS 类名词典与布局版式：
 `node C:\Users\shich\.gemini\config\skills\tool-web-slide\scripts\assemble-context.mjs <A|B>`
-运行后，必须仔细阅读输出的上下文文本，其中包含所有允许使用的 CSS 类名和版式规则。
+*(仔细阅读返回的终端日志，里面包含你可用的所有 Grid 骨架和卡片类名)*
 
-### 3. Template Cloning (毫秒级物理基座克隆)
-因为 `template.html` 高达 108KB，**绝对禁止使用大模型去 view_file 读取它**！
-直接使用 `run_command` 执行以下命令，将其克隆至防爆沙盒 `MEMORY` 目录下：
+### 3. Template Cloning (毫秒级物理克隆)
+`template.html` 高达 108KB，**绝对禁止使用 `view_file` 读取**，会导致 Token 熔断！
+直接使用 `run_command` 将其克隆至防爆沙盒：
 ```powershell
 New-Item -ItemType Directory -Force -Path "C:\Users\shich\.gemini\MEMORY\slide-deck\project_name"; Copy-Item -Path "C:\Users\shich\.gemini\config\skills\tool-web-slide\design-vault\<style>\template.html" -Destination "C:\Users\shich\.gemini\MEMORY\slide-deck\project_name\index.html" -Force
 ```
-*(注意：将 `<style>` 替换为 `magazine` 或 `swiss`，`project_name` 替换为实际项目名)*
 
-### 4. Injection (精准注入编码)
-使用本地原子化修改工具 `replace_file_content`，精准锁定 `C:\Users\shich\.gemini\MEMORY\slide-deck\project_name\index.html` 中的 `<!-- SLIDES_HERE -->` 注释锚点。
-将你构思好的 `<section class="slide">` 代码片段替换进去，**切勿复写整份文件**。
-- 严禁臆造 CSS 类名，所有排版必须组合 Design Vault 提供的基础组件。
-- **品牌契约覆盖 (Brand Identity)**：如果是医疗数字化议题，优先读取系统 `pai/DESIGN.md`，将核心色（如 `#005EB8`）强制内联覆盖到 `:root` 中。
+### 4. Precision Injection (排版与注入)
+使用 `replace_file_content` 工具，瞄准 `C:\Users\shich\.gemini\MEMORY\slide-deck\project_name\index.html` 中的 `<!-- SLIDES_HERE -->` 锚点，将你写的 `<section class="slide">` 代码段注入进去。
+
+**排版铁律 (Design Vault Hard Rules)**：
+1. **类名预检**：所有用到的 class 必须在刚才 `assemble-context` 返回的日志里有定义！禁止凭空发明诸如 `.my-card`, `.text-bold` 等类名。
+2. **主题节奏 (Theme Rhythm)**：连续 3 页同主题会产生视觉疲劳。必须交替使用 `light` / `dark` / `hero light` / `hero dark`。
+3. **字重阶梯 (Swiss Style 核心)**：越大越细，越小越粗。大标题用 ExtraLight (200)，小字正文用 Medium (500)。
+4. **品牌契约**：如果是医疗数字化议题，优先读取系统 `pai/DESIGN.md`，将核心色强行内联覆盖到 `:root` 变量中。
+5. **图片命名法**：所有插图放在同级 `images/` 目录下，命名采用 `{页号}-{语义}.ext`，如 `01-cover.jpg`。
 
 ### 5. Quality Gate (物理门检)
-强制使用 `run_command` 运行校验器：
+强制使用 `run_command` 运行 AST 级校验器：
 `node C:\Users\shich\.gemini\config\skills\tool-web-slide\scripts\validate-deck.mjs C:\Users\shich\.gemini\MEMORY\slide-deck\project_name\index.html`
-报错即返工，仔细核对未定义的 Class 并修改 HTML，直到输出 Exit 0。
+报错即返工，直到输出 Exit 0。
 
-### 6. Delivery (交付与导出)
-输出本地文件路径 `MEMORY\slide-deck\project_name\index.html`，提示用户按 `S` 键唤起双屏模式。
-如果需要导出 PDF，必须先安装环境依赖并执行无头渲染：
+### 6. Delivery (交付与无头导出)
+输出路径提示用户，并告知按 `S` 键唤起原生双屏演讲者视图。
+如需导出 PDF，先安装依赖再执行无头渲染：
 ```powershell
 cd C:\Users\shich\.gemini\config\skills\tool-web-slide; npm install; node scripts\export-pdf.mjs "C:\Users\shich\.gemini\MEMORY\slide-deck\project_name\index.html" "C:\Users\shich\.gemini\MEMORY\slide-deck\project_name\output.pdf"
 ```
-
-## Failure Modes
-*   **Token 熔断崩溃**：你违背了纪律去 `view_file` 整个 HTML 模板，导致上下文爆满。坚决使用 `Copy-Item` 和 `replace_file_content`。
-*   **Validation Failed (`validate-deck.mjs` 报错)**：使用了未定义的 class。仔细对比报错信息并局部修改 HTML。
-*   **演讲者模式失效**：在 `replace_file_content` 注入幻灯片时，误删了 `template.html` 结尾处原生的 MessageBus / 键盘监听脚本块。仅替换 `<!-- SLIDES_HERE -->` 区域。
-*   **PDF 导出失败**：未在执行前运行 `npm install` 安装 puppeteer 依赖。
