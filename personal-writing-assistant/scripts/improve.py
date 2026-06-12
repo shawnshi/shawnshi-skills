@@ -69,7 +69,7 @@ def get_paths(args=None):
         target = Path(args.skill) / "SKILL.md"
     else:
         # 默认硬锁 personal-writing-assistant
-        target = Path("C:/Users/shich/.gemini/skills/personal-writing-assistant/SKILL.md")
+        target = Path("C:/Users/shich/.gemini/config/skills/personal-writing-assistant/SKILL.md")
 
     for d in (log_dir, proposal_dir, backup_dir):
         d.mkdir(parents=True, exist_ok=True)
