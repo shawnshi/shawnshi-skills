@@ -1,6 +1,6 @@
 ---
 name: personal-investment-advisor
-version: 8.2.0
+version: 8.2.1
 description: 顶级金融量化引擎。用于股票、ETF、港股、美股、A股行情与基本面查询，以及基于结构化 schema 的决策仪表盘分析。数据抓取必须走 `scripts/yf.py`，持仓上下文必须走 `scripts/portfolio_loader.py`，深度分析必须遵循 `resources/dashboard_schema.json`，落盘前必须通过 `scripts/save_dashboard.py`。
 triggers: ["股票调研", "量化分析", "持仓审计", "查看行情", "分析美股", "分析A股", "查看港股"]
 ---
@@ -15,7 +15,7 @@ Strategy:
 AVOID: 严禁将定性话术伪装成确定性建议；禁止在非 A 股上编造筹码数据；禁止漏掉止损/止盈硬价格点。
 </strategy-gene>
 
-# Personal Investment Advisor (顶级金融量化引擎 V8.2 Native)
+# Personal Investment Advisor (顶级金融量化引擎 V8.2.1 Native)
 
 ## 1. 核心流程与架构 (The Protocol)
 
