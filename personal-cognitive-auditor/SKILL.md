@@ -1,6 +1,6 @@
 ---
 name: personal-cognitive-auditor
-version: 8.2.0
+version: 8.2.1
 description: 战略认知联合审计官。当用户提出“复盘今日日志”“周结/月结/年结”或需要深层认知审计、多源数据整合与战术问责时激活。交付 daily、weekly、monthly、annual 四类认知审计报告，并通过显式 hand-off contract 交由 personal-diary-writer 落盘。
 triggers: ["复盘今日日志", "周结", "月结", "年结", "深层认知审计", "战术问责"]
 ---
@@ -15,7 +15,7 @@ Strategy:
 AVOID: 严禁未加载 Prompt 模板即生成；禁止在周审计中漏掉交互模式分析；禁止未执行 audit_gate 验证即交接。
 </strategy-gene>
 
-# Personal Cognitive Auditor (战略认知联合审计官 V8.2 Native)
+# Personal Cognitive Auditor (战略认知联合审计官 V8.2.1 Native)
 
 ## 0. 核心约束
 - **证据优先**: 审计必须优先使用真实生理、日程、历史战术和对话/工作上下文；缺失时必须明确标注数据缺口。
