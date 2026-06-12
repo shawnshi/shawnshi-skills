@@ -1,6 +1,6 @@
 ---
 name: hit-lectures-scout
-version: 8.1.0
+version: 8.2.0
 description: 医疗数字化前沿科研侦察兵。Primary owner for medical AI paper scouting, clinical literature scanning, RWE filtering, and frontier academic breakthrough watch. Use for Nature/JAMA-level paper scouting and research-to-commercial-defense translation. Prefer hit-industry-radar for news/event scans and hit-weekly-brief for think-tank or whitepaper briefs.
 triggers: ["医疗AI论文", "学术扫描", "临床文献", "最新数字医疗突破"]
 ---
@@ -16,7 +16,7 @@ Strategy:
 AVOID: 严禁在报告中保留假 [URL] 占位符；禁止发布无临床场景适配的情报；严禁使用干瘪的学术翻译，必须加入商业战略推演。
 </strategy-gene>
 
-# HIT Intel Scout (医疗数字化战略侦察兵 V8.1 Native)
+# HIT Intel Scout (医疗数字化战略侦察兵 V8.2 Native)
 
 > **Vision**: 捕捉学术界的非共识信号，通过结构化补偿消除"学术灌水"，将突破转化为研发部的具体任务与销售线的防御武器。
 
@@ -26,7 +26,7 @@ AVOID: 严禁在报告中保留假 [URL] 占位符；禁止发布无临床场景
 1. **Preprints 管线直控**: 主代理调用 `run_command` 执行原生 Python 爬网，必须挂载 UTF-8 安全锁：
    `$env:PYTHONIOENCODING="utf-8"; python "C:\Users\shich\.gemini\config\skills\hit-lectures-scout\assets\deepxiv_preprints_scout.py"`
    - *降级预案*：若脚本失败，必须立即通过 `invoke_subagent` 拉起 `research` 子代理手动抓取。
-2. **Journals 管线并发**: 必须使用 `invoke_subagent` 工具，并发拉起 2 个子代理，下发 `assets/task_journals_en.md` 和 `assets/task_journals_cn.md` 的目标。主代理挂起等待回调。
+2. **Journals 管线并发**: 必须使用 `invoke_subagent` 工具，并发拉起 2 个子代理，下发 `assets/task_journals_en.md` 和 `assets/task_journals_cn.md` 的目标。并在 Prompt 中明确指示子代理：“使用 `write_to_file` 工具将底层抓取数据写入 `C:\Users\shich\.gemini\tmp\raw_scout_data_[语言].json`”。主代理挂起等待回调。
 3. **弹性视窗**: 若最终抓取结果 < 5 篇，强制将时间窗口扩大至 14 天重新扫描。
 
 ### Phase 2: Arbiter 提纯与 TRL 脱水 [Mode: EXECUTION]
@@ -40,9 +40,9 @@ AVOID: 严禁在报告中保留假 [URL] 占位符；禁止发布无临床场景
    - **外部**：输出行业数字化转型路线规划或系统顶层架构建议。
 
 ### Phase 4: 物理层跨平台代码审计与入湖 (The Hard Gate) [Mode: VERIFICATION]
-1. **写草稿**: 根据 `assets/report_template.md` 渲染草稿，写入临时文件 `C:\Users\shich\.gemini\tmp\draft_hit_scout.md`。
-2. **执行审计**: 调用 shell 强制过检：
-   `$env:PYTHONIOENCODING="utf-8"; python "C:\Users\shich\.gemini\config\skills\hit-lectures-scout\scripts\hit_audit_gate.py" "C:\Users\shich\.gemini\tmp\draft_hit_scout.md" --mode scout`
+1. **写草稿**: 根据 `assets/report_template.md` 渲染草稿，强制使用原生 `write_to_file` 工具写入临时文件 `C:\Users\shich\.gemini\tmp\draft_hit_scout.md`。
+2. **执行审计**: 调用 shell 强制过检（必须使用绝对物理路径）：
+   `$env:PYTHONIOENCODING="utf-8"; python "C:\Users\shich\.gemini\config\skills\scripts\hit_audit_gate.py" "C:\Users\shich\.gemini\tmp\draft_hit_scout.md" --mode scout`
    - *注：若脚本报错（如查出假链接），最多允许重试 2 次。*
 3. **物理落盘**: 脚本返回 Exit Code 0 后，使用 `write_to_file` 归档至：
    `C:\Users\shich\.gemini\MEMORY\raw\DigitalHealthLecturesScout\DHLS-YYYYMMDD.md`
