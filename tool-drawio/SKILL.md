@@ -1,6 +1,6 @@
 ---
 name: tool-drawio
-version: 8.1.0
+version: 8.2.0
 description: >-
   Use when the user wants to create any technical diagram - architecture, data
   flow, flowchart, sequence, agent/memory, or concept map - and export as
@@ -12,87 +12,78 @@ triggers: ["画图", "架构图", "流程图", "可视化一下", "出图"]
 
 <strategy-gene>
 Keywords: 架构图, 流程图, draw.io, Mermaid, SVG, PNG
-Summary: 将复杂系统、流程或概念转化为可验证的高清 SVG 资产。原生跨平台安全。
+Summary: 将复杂系统、流程或概念通过结构化 JSON 降维，交由底层 Python 引擎渲染为高清 SVG 资产。
 Strategy:
-1. 获取意图与图谱：确定图类型，调用图谱检索关键实体。
-2. 架构骨架映射：匹配图形语义与箭头逻辑。
-3. 代码即图表：必须强制通过 Python List 原生注入法（0 依赖）编写 XML/SVG 结构。
-AVOID: 禁止直接输出伪代码让用户自己执行；禁止使用 `.sh` 脚本和 `rsvg-convert` 等导致 Windows 宕机的命令。
+1. 意图解析：确定图表类型，选取 7 大视觉厂牌中的一种。
+2. 数据剥离：大模型仅负责生成包含 `nodes` 和 `arrows` 的结构化语义 JSON。
+3. 原生调用：通过 `run_command` 调用底层的 `generate-from-template.py` 物理引擎执行排版渲染。
+AVOID: 绝对禁止大模型手写复杂的 SVG 字符串；禁止使用过期的 Unix Bash 脚本；禁止使用非绝对路径。
 </strategy-gene>
 
-# Fireworks Tech Graph (SVG 架构渲染仪 V8.1 Native)
+# SVG 架构渲染仪 (JSON-Driven Engine V8.2 Native)
 
-> **Vision**: 摒弃残缺不全的模型直出 XML。我们利用系统底层的 Python 沙盒，以代码注入的方式，生成生产级别的技术架构 SVG 原型图。
+> **Vision**: 语义与渲染的绝对解耦。大模型只负责思考高维度的商业/技术架构拓扑（JSON），绝对精准的视觉排版、正交寻路与图例挂载则交给原生的 Python 计算池兜底，彻底终结 XML 标签残缺与穿模幻觉。
 
 ## 1. 核心流程与架构 (The Protocol)
 
-### Phase 1: Entity Sniffing & RAG [Mode: PLANNING]
-- **MANDATORY**: Extract core entities from prompt. If applicable, query `vector-lake-mcp` to retrieve private architecture knowledge before planning. Do not rely solely on LLM hallucinations.
+### Phase 1: Context & Mode Selection [Mode: PLANNING]
+- **MANDATORY**: 提取核心实体。判断需要何种风格（默认推荐 `1` - Flat Icon，如果用户要暗色推荐 `2` - Dark Terminal，高级感可用 `5` - Glassmorphism）。
 
-### Phase 2: Classification & Structure [Mode: PLANNING]
-- Classify diagram type. Load the required style reference (e.g., `references/style-1-flat-icon.md`) to establish the color tokens.
-- Map nodes to shapes, arrows to relationships.
-
-### Phase 3: The "Python List Method" (MANDATORY) [Mode: EXECUTION]
-- 严禁大模型直接输出带有数万字符的 SVG 原文（极易触发截断错误）。
-- **必须通过 `run_command` 调用 Python 沙盒** 动态拼装 SVG。
-- **强制使用跨平台安全模板 (0 依赖，原生 XML 防爆)**：
-  ```python
-  import os, datetime
-  import xml.etree.ElementTree as ET
-  
-  THEME = {"bg": "#ffffff", "primary": "#2563eb", "stroke": "#cbd5e1", "text": "#334155"}
-  lines = []
-  lines.append('<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 960 700">')
-  lines.append('  <defs>')
-  # ... APPEND ALL YOUR NODES AND ARROWS HERE ...
-  lines.append('</svg>')
-  
-  svg_content = '\n'.join(lines)
-  
-  try:
-      ET.fromstring(svg_content)
-  except ET.ParseError as e:
-      print(f"SVG Syntax Error: {e}")
-      exit(1)
-  
-  date_str = datetime.datetime.now().strftime("%Y%m%d%H%M%S")
-  output_path = f'C:/Users/shich/.gemini/MEMORY/diagrams/output_{date_str}.svg'
-  os.makedirs(os.path.dirname(output_path), exist_ok=True)
-  with open(output_path, 'w', encoding='utf-8') as f:
-      f.write(svg_content)
-  print(f"SVG generated successfully at {output_path}")
+### Phase 2: Structural JSON Generation [Mode: EXECUTION]
+- **大模型只需生成极其简单的拓扑 JSON**，通过 `write_to_file` 工具将其写入防爆隔离区：
+  `C:\Users\shich\.gemini\MEMORY\scratch\diagram_data.json`
+- **JSON 骨架示例**:
+  ```json
+  {
+    "type": "architecture",
+    "nodes": [
+      {"id": "user", "label": "用户", "sublabel": "移动端APP", "x": 100, "y": 100, "width": 160, "height": 60, "kind": "rect"},
+      {"id": "db", "label": "Logic Lake", "sublabel": "知识图谱", "x": 400, "y": 100, "width": 160, "height": 80, "kind": "cylinder"}
+    ],
+    "arrows": [
+      {"source": "user", "target": "db", "flow": "control", "label": "查询请求"}
+    ],
+    "legend_box": true
+  }
   ```
 
-### Phase 4: Delivery & Telemetry [Mode: EXECUTION]
-- Execute the script using `$env:PYTHONIOENCODING="utf-8"; python "C:\Users\shich\.gemini\MEMORY\scratch\diagram_generator.py"`.
-- Verify the script output. If valid, deliver the physical absolute path to the user.
-- Write metadata via `write_to_file` to `C:\Users\shich\.gemini\MEMORY\skill_audit\telemetry\record_[TIMESTAMP].json`.
+### Phase 3: Engine Execution (引擎激活与上锁) [Mode: EXECUTION]
+- 必须使用 `run_command` 调用底层重达 63KB 的渲染引擎进行渲染。
+- **必须挂载 UTF-8 安全锁与全绝对物理路径**：
+```powershell
+$env:PYTHONIOENCODING="utf-8"; python "C:\Users\shich\.gemini\config\skills\tool-drawio\scripts\generate-from-template.py" 1 "C:\Users\shich\.gemini\MEMORY\diagrams\output_[TIMESTAMP].svg" "C:\Users\shich\.gemini\MEMORY\scratch\diagram_data.json"
+```
+*(注：命令中的 `1` 代表 style-1-flat-icon，可替换为 1-7。`[TIMESTAMP]` 请替换为实际时间戳。)*
+
+### Phase 4: Delivery
+- 将成功落盘的 SVG 文件物理路径交付给用户，并渲染到蓝图。
 
 ## 2. <Contracts> (输出与交付契约)
 
-### Diagram Types & Layout Rules
-- **Architecture**: Horizontal layers (Top→Bottom). ViewBox `0 0 960 600`. Use `<rect>` dashed containers.
-- **Data Flow**: Wider arrows `stroke-width: 2.5` for primary paths. Dashed arrows for control flows.
-- **Agent Architecture**: Must feature input layer, agent core (LLM/reasoning), memory layer, tool layer, and cyclic loops.
+### Style Engine 词典 (预置 7 大视觉厂牌)
+- `1`: Flat Icon (默认。现代科技扁平风)
+- `2`: Dark Terminal (深色极客终端风)
+- `3`: Blueprint (工程蓝图线框风)
+- `4`: Notion Clean (极简黑白线条风)
+- `5`: Glassmorphism (高端毛玻璃悬浮风)
+- `6`: Claude Official (古典人文暖色系)
+- `7`: OpenAI (硅谷生机绿极简风)
 
-### Shape Vocabulary
-- **LLM / Model**: Rounded rect + accent color.
-- **Memory / Store**: Cylinder (`<path>` shapes simulating 3D) / persistent.
-- **Tool / Gateway**: Hexagon or gear rect.
+### Shape 语义映射
+- 数据库/图谱：强制使用 `kind: "cylinder"`
+- 网关/路由枢纽：强制使用 `kind: "hexagon"`
+- 智能体/服务单元：强制使用 `kind: "rect"` 或 `kind: "bot"`
+- 角色/用户节点：强制使用 `kind: "user_avatar"`
 
-### Arrow Semantics (Do Not Only Change Color)
-- `Primary data`: Blue `2px solid`
-- `Memory read/write`: Green `1.5px solid` / `dashed 5,3`
-- `Control / Event`: Orange `1.5px solid` / Gray `dashed 4,2`
-- **Labels (CRITICAL)**: MUST have background `<rect fill="canvas_bg" opacity="0.95"/>`. Do NOT let text collide with lines.
+### Flow (箭头颜色逻辑锁定)
+- `control` / `api`: 控制流 / 主 API 调用（主色）
+- `write` / `data`: 数据写入 / 流转（副色/橙红组）
+- `read`: 记忆与检索读取（绿色/辅助色组）
+*(底层引擎会基于选择的 Style 自动把这些 flow 标签映射为对应的颜色，并自动生成 Legend 图例，无需大模型操心)*
 
 ## 3. <Failure_Taxonomy> (失败分类学 / 逻辑硬锁)
 
-- **Unix 幻觉综合征 (OS Deadlock)**：绝对禁止大模型教唆系统去运行 `.sh` 脚本或使用 `rsvg-convert`。当前环境是 Windows，任何试图绕过 Python 原生方法去调用这些 Unix 工具的行为都将导致指令崩溃。
-- **物理寻址塌陷 (Pathing Deadlock)**：执行脚本、落盘图像和写入日志时，必须使用带有驱动器盘符的绝对物理路径（例如 `C:\Users\shich\.gemini\...`）。严禁使用旧版的 `~/.gemini` 或 `{root}`。
-- **穿模与坐标溢出 (Collision & Overflow)**：
-  1. Arrows MUST NOT pass through component interiors (route around with orthogonal paths).
-  2. Text MUST NOT overflow box bounds (`text.length × 7px ≤ shape_width - 16px`).
-- **语法缺漏 (Syntax Forgery)**：不要犯低级错误。例如：缺少结尾 `</svg>`；使用 `yt-anchor` 替代正确的 `y="60" text-anchor="middle"`；丢掉颜色的 `#` 符号（错误：`fill=fff`，正确：`fill="#ffffff"`）。
-- **工具调用越权 (Tool Forgery)**：严禁使用废旧的 `write_file`，日志遥测必须且只能使用合规的 `write_to_file`。
+- **手写 XML 幻觉 (Hardcode Deadlock)**：严禁大模型退化为纯文本大批量拼接 SVG 字符串。如果有数百行 SVG，必须老老实实输出 JSON 并交由 `generate-from-template.py` 去算。
+- **路径与宏塌陷 (Macro Crash)**：严禁使用相对路径和 `{root_dir}` 宏。JSON 数据源必须使用 `MEMORY\scratch\...`，SVG 产出物必须放入 `MEMORY\diagrams\...`，渲染脚本必须指向 `config\skills\tool-drawio\scripts\...`。
+- **穿模灾难 (Collision)**：即便底层自带正交寻路算法，在设定 JSON 的 `x` 和 `y` 时，也要保持各层级节点之间合理的水平与垂直间距（如间距 200px+）。不要将不同层级的 node 的坐标挤压在一起。
+- **Unix 余孽 (Bash Invocation)**：绝对禁止尝试调用诸如 `generate-diagram.sh` 或使用 `rsvg-convert` 工具，这是必炸的 Windows 死锁。只能调用 Python 引擎。
