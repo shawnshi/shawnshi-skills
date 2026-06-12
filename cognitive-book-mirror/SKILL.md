@@ -1,6 +1,6 @@
 ---
 name: cognitive-book-mirror
-version: 8.1.0
+version: 8.2.0
 description: 个人化认知镜像与伴读引擎。提取长文或书籍核心要点，结合过去14天日记及个人价值观体系，生成高密度的双栏伴读分析。左栏保留原旨，右栏进行毒舌映射，执行极度的交叉检验。
 triggers: ["伴读这本书", "认知镜像", "双栏伴读", "结合我的日记分析这本书"]
 ---
@@ -16,7 +16,7 @@ Strategy:
 AVOID: 严禁将整书直接硬塞给大模型导致 OOM；严禁产生关于用户的幻觉；如果右栏对应不上，必须留空或坦白说明，绝不强行关联。
 </strategy-gene>
 
-# Cognitive Book Mirror (Native Edition V8.1)
+# Cognitive Book Mirror (Native Edition V8.2)
 
 个人化认知镜像与伴读引擎。这是一个将外部世界（书籍/长文）与内心世界（日记/价值观）强行碰撞的高密度分析机器。
 
@@ -29,9 +29,9 @@ AVOID: 严禁将整书直接硬塞给大模型导致 OOM；严禁产生关于用
 ### 1. The Context Packing Phase
 主 Agent 首先执行数据脱水与打包脚本 `scripts/extract_and_pack.py`：
 ```powershell
-$env:PYTHONIOENCODING="utf-8"; python C:/Users/shich/.gemini/config/skills/cognitive-book-mirror/scripts/extract_and_pack.py --file <PATH_TO_MARKDOWN_OR_TXT>
+$env:PYTHONIOENCODING="utf-8"; python "C:\Users\shich\.gemini\config\skills\cognitive-book-mirror\scripts\extract_and_pack.py" --file <PATH_TO_MARKDOWN_OR_TXT>
 ```
-该脚本会执行 Semantic Chunking 切片，并抓取 `USER.md`、`SOUL.md` 以及过去 14 天的日记，统一打包输出到临时目录 `tmp/playgrounds/book_mirror/<book_stem>/` 中，并生成 `manifest.json` 索引文件。
+该脚本会执行 Semantic Chunking 切片，并抓取 `USER.md`、`SOUL.md` 以及过去 14 天的日记，统一打包输出到临时目录 `C:\Users\shich\.gemini\tmp\playgrounds\book_mirror\<book_stem>\` 中，并生成 `manifest.json` 索引文件。
 
 ### 2. The Subagent Orchestration Phase
 主 Agent 负责蓝图定义与智能调度：
@@ -40,18 +40,19 @@ $env:PYTHONIOENCODING="utf-8"; python C:/Users/shich/.gemini/config/skills/cogni
 3. **队列式任务派发 (Worker Pool)**: 根据 `manifest.json` 中的 `chunks` 数量，**强烈建议使用单实例或 3-5 个实例的特工池（Worker Pool）并发调用 `invoke_subagent`**。不要一次性并发唤醒几十个特工（避免 Context 冗余与 Token 黑洞）。要求输出严格的双栏结构：
    - **左栏 (Left Column)**: 书籍核心观点、原汁原味的作者语言。
    - **右栏 (Right Column)**: 针对左栏内容，进行冷酷的映射关联与质问。
-4. **特工回收**: 等待所有子代理返回结果，主代理将结果按顺序存入 `tmp/playgrounds/book_mirror/<book_stem>/results/` 目录下，命名为 `result_001.md`, `result_002.md` 等。
+4. **特工回收**: 等待所有子代理返回结果，主代理将结果按顺序使用 `write_to_file` 工具存入 `C:\Users\shich\.gemini\tmp\playgrounds\book_mirror\<book_stem>\results\` 目录下，命名为 `result_001.md`, `result_002.md` 等。
 
 ### 3. The Stitching Phase
 自动合并章节后输出：
 ```powershell
-$env:PYTHONIOENCODING="utf-8"; python C:/Users/shich/.gemini/config/skills/cognitive-book-mirror/scripts/stitch_and_format.py --book_stem <book_stem> --results_dir tmp/playgrounds/book_mirror/<book_stem>/results
+$env:PYTHONIOENCODING="utf-8"; python "C:\Users\shich\.gemini\config\skills\cognitive-book-mirror\scripts\stitch_and_format.py" --book_stem <book_stem> --results_dir "C:\Users\shich\.gemini\tmp\playgrounds\book_mirror\<book_stem>\results"
 ```
 
 ## Failure Modes
 - **[Token_Blackhole_Defense]**: 如果一章长度仍然过大（超过 80,000 tokens），脚本会尝试继续强行降级切断。
 - **[Fact_Hallucination]**: 如果右栏（主观映射）虚构了用户没有说过的“朋友”、“家属”或“事件”，属于严重的隔离被击穿。大模型必须保持原教旨主义的毒舌，不知为不知。
 - **[Architecture_Violation]**: 虽支持自动清洗，但若遇到极度异常或损坏的二进制文件，`markdown-converter` 静默挂载失败后，脚本会抛出底层转换错误并退出。主代理解析错误并上报即可。
+- **[Tool_Hallucination]**: 特工回收存储时，必须调用原生的 `write_to_file`，严禁使用已被淘汰的 `write_file`。
 
 ## Output Contract
 - 最终只会交付一个 `MEMORY/raw/read/<BookName>_personalized_mirror.md` 的脑图页面（由 `stitch_and_format.py` 自动生成落盘）。
