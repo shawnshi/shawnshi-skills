@@ -1,6 +1,6 @@
 ---
 name: personal-intelligence-hub
-version: 11.1.0
+version: 11.2.0
 description: 战略情报作战中枢。用于多源技术/医疗/AI 情报扫描、7 日去重、二阶推演、红队审计和分层简报生成。必须读取 `references/strategic_focus.json`、`references/quality_standard.md`、`references/briefing_template.md` 和 `references/karpathy_feeds.json`，并通过 `blackboard`、`history_manager`、`briefing_gate` 保证状态、去重与交付质量。
 ---
 
@@ -16,7 +16,7 @@ Strategy:
 AVOID: 严禁把“摘要”伪装成“洞察”；禁止在缺乏证据时输出 L4 级高等级判断；禁止重复推送同一信号；严禁在报告中遗漏重要实体的双链图谱标记；严禁越界将原始抓取数据直接写入核心图谱。
 </strategy-gene>
 
-# Personal Intelligence Hub (战略情报作战中枢 V11.1 Native)
+# Personal Intelligence Hub (战略情报作战中枢 V11.2 Native)
 
 ## 0. 核心约束
 - **配置优先**: 扫描范围、主题、优先源、排除词都以 `references/strategic_focus.json` 为准。
@@ -45,16 +45,16 @@ $env:PYTHONIOENCODING="utf-8"; python "C:\Users\shich\.gemini\config\skills\pers
 3. 主代理调用系统底层 `invoke_subagent` 启动独立精炼子代理（`TypeName: research` 或 `self`）进行二阶推演。
 
 ### Phase 3: Semantic Deduction (子代理推演)
-1. 主代理在调用 `invoke_subagent` 时，**必须**使用以下预置的 System Prompt 给子代理下达指令：
+1. 主代理在调用 `invoke_subagent` 时，**必须**使用以下预置的 System Prompt 给子代理下达指令，请注意**必须传递绝对物理路径**防止相对路径幻觉：
    > "You are the Intelligence Refinement Subagent.
-   > 1. Read `references/quality_standard.md` to strictly understand the JSON Schema and Localization Contract.
-   > 2. Read `intelligence_candidates.json` from the runtime directory.
+   > 1. Read `C:\Users\shich\.gemini\config\skills\personal-intelligence-hub\references\quality_standard.md` to strictly understand the JSON Schema and Localization Contract.
+   > 2. Read `C:\Users\shich\.gemini\MEMORY\raw\news\_runtime\personal-intelligence-hub\intelligence_candidates.json`.
    > 3. Perform semantic deduction. **You MUST output all analytical content in Chinese (zh-CN)** and generate `title_zh` and `summary_zh` for all items.
    > 4. Ensure you generate global fields like `punchline`, `insights`, `digest`, `market`, and correctly structure `action_levers` as an array of objects.
    > 5. Use `[[ ]]` around core entities/people/specific nouns for graph linking.
-   > 6. Write the final valid JSON to `intelligence_current_refined.json`.
+   > 6. Write the final valid JSON to `C:\Users\shich\.gemini\MEMORY\raw\news\intelligence_current_refined.json`.
    > 7. Reply 'DONE' when finished."
-2. 子代理读取粗筛数据，依据严格的 JSON Schema 执行二阶推演与图谱 `[[ ]]` 补齐，并将结果规范地写入 `intelligence_current_refined.json`。
+2. 子代理读取粗筛数据，依据严格的 JSON Schema 执行二阶推演与图谱 `[[ ]]` 补齐，并将结果规范地写入目标 JSON。
 3. 写入完成后，子代理将控制权交还主代理，结束其沙盒任务。
 
 ### Phase 4: Pipeline Gate Orchestration (主代理门控与锻造)
@@ -73,8 +73,11 @@ $env:PYTHONIOENCODING="utf-8"; python "C:\Users\shich\.gemini\config\skills\pers
 ```
 
 ### Phase 5: Async Vector Lake Ingestion (异步图谱入湖)
-1. 报告锻造完成后，主代理必须提取报告中包含 `[[ ]]` 双链标记的新生成实体，将其保存为标准图谱文件 `C:\Users\shich\.gemini\MEMORY\wiki\Entity_*.md`。
-2. **异步同步**: 主代理调用 `call_mcp_tool` 执行 `vector-lake-mcp` 服务器的 `prepare_ingest_batch` 提取待同步清单，随后利用 `invoke_subagent` 拉起 `vector-lake-ingestor` 执行后台异步入湖。绝对禁止直接调用阻塞式的 sync 接口。
+1. 报告锻造完成后，主代理运行实体提取器，该脚本会自动扫描 JSON 并在图谱目录中生成带 `[[ ]]` 链接的实体 Markdown。
+```powershell
+$env:PYTHONIOENCODING="utf-8"; python "C:\Users\shich\.gemini\config\skills\personal-intelligence-hub\scripts\extract_entities.py"
+```
+2. **异步同步**: 主代理调用 `call_mcp_tool` 执行 `vector-lake-mcp` 服务器的 `prepare_ingest_batch` 提取待同步清单，随后利用 `invoke_subagent` 拉起 `vector-lake-ingestor` 专门代理执行后台异步入湖。**绝对禁止直接调用阻塞式的 sync 接口。**
 
 ## 3. <Contracts> (输出与交付契约)
 
@@ -88,6 +91,8 @@ $env:PYTHONIOENCODING="utf-8"; python "C:\Users\shich\.gemini\config\skills\pers
 
 ## 4. <Failure_Taxonomy> (失败分类学)
 
+- **路径幻觉 (Pathing Hallucination)**：严禁在 prompt 中使用相对路径指引 Subagent，必须严格提供以 `C:\Users\shich\.gemini\...` 开头的绝对地址。
+- **手动实体劳作**：主代理严禁手动编写带有 `[[ ]]` 的 markdown 节点，必须直接运行提供的 `extract_entities.py`。
 - **内容注水**：禁止把“摘要”伪装成“洞察”。情报必须包含高价值行动杠杆。
 - **信息衰减与重复**：禁止过去 7 天重复推送同一核心信号。
 - **证据不足 (Evidence Gap)**：禁止在缺乏强力 Evidence 支撑时输出高等级 (L4) 战略判断。
