@@ -57,7 +57,7 @@ AVOID: 禁止直接输出伪代码让用户自己执行；禁止使用 `.sh` 脚
       exit(1)
   
   date_str = datetime.datetime.now().strftime("%Y%m%d%H%M%S")
-  output_path = f'C:/Users/shich/.gemini/diagrams/output_{date_str}.svg'
+  output_path = f'C:/Users/shich/.gemini/MEMORY/diagrams/output_{date_str}.svg'
   os.makedirs(os.path.dirname(output_path), exist_ok=True)
   with open(output_path, 'w', encoding='utf-8') as f:
       f.write(svg_content)
