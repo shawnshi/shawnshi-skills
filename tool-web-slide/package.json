@@ -1,0 +1,9 @@
+{
+  "name": "tool-web-slide",
+  "version": "8.4.0",
+  "description": "Web Slide Generator Engine",
+  "type": "module",
+  "dependencies": {
+    "puppeteer": "^22.0.0"
+  }
+}
