@@ -1,487 +1,98 @@
 ---
 name: tool-drawio
+version: 8.1.0
 description: >-
   Use when the user wants to create any technical diagram - architecture, data
   flow, flowchart, sequence, agent/memory, or concept map - and export as
   SVG+PNG. Trigger on: "画图" "帮我画" "生成图" "做个图" "架构图" "流程图"
   "可视化一下" "出图" "generate diagram" "draw diagram" "visualize" or any
   system/flow description the user wants illustrated.
+triggers: ["画图", "架构图", "流程图", "可视化一下", "出图"]
 ---
-
 
 <strategy-gene>
 Keywords: 架构图, 流程图, draw.io, Mermaid, SVG, PNG
-Summary: 将复杂系统、流程或概念转化为可验证的 draw.io 图表资产。
+Summary: 将复杂系统、流程或概念转化为可验证的高清 SVG 资产。原生跨平台安全。
 Strategy:
-1. 先确定图类型、受众、节点边界和输出格式。
-2. 使用既有脚本和模板生成 draw.io 源文件，并导出 SVG/PNG。
-3. 交付前检查布局、标签、连线、颜色和可读性。
-AVOID: 禁止只给文字说明而不生成图表资产；禁止遗漏源文件。
+1. 获取意图与图谱：确定图类型，调用图谱检索关键实体。
+2. 架构骨架映射：匹配图形语义与箭头逻辑。
+3. 代码即图表：必须强制通过 Python List 原生注入法（0 依赖）编写 XML/SVG 结构。
+AVOID: 禁止直接输出伪代码让用户自己执行；禁止使用 `.sh` 脚本和 `rsvg-convert` 等导致 Windows 宕机的命令。
 </strategy-gene>
 
-# Fireworks Tech Graph
-
-Generate production-quality SVG technical diagrams exported as PNG via `rsvg-convert`.
-
-## When to Use
-- 当用户要求画技术图、流程图、架构图、时序图、数据流图或将系统描述可视化时使用。
-- 具体 SVG 生成、脚本调用和版式规则仍以本文件既有说明为准。
-
-## Install Source
-
-Install this skill from GitHub:
-
-```bash
-npx skills add yizhiyanhua-ai/fireworks-tech-graph
-```
-
-Public package page:
-
-```text
-https://www.npmjs.com/package/@yizhiyanhua-ai/fireworks-tech-graph
-```
-
-Do not pass `@yizhiyanhua-ai/fireworks-tech-graph` directly to `skills add`, because the CLI expects a GitHub or local repository source.
-
-Update command:
-
-```bash
-npx skills add yizhiyanhua-ai/fireworks-tech-graph --force -g -y
-```
-
-## Helper Scripts (Recommended)
-
-Four helper scripts in `scripts/` directory provide stable SVG generation and validation:
-
-### 1. `generate-diagram.sh` - Validate SVG + export PNG
-```bash
-./scripts/generate-diagram.sh -t architecture -s 1 -o ./output/arch.svg
-```
-- Validates an existing SVG file
-- Exports PNG after validation
-- Example: `./scripts/generate-diagram.sh -t architecture -s 1 -o ./output/arch.svg`
-
-### 2. `generate-from-template.py` - Create starter SVG from template
-```bash
-python3 ./scripts/generate-from-template.py architecture ./output/arch.svg '{"title":"My Diagram","nodes":[],"arrows":[]}'
-```
-- Loads a built-in SVG template
-- Renders nodes, arrows, and legend entries from JSON input
-- Escapes text content to keep output XML-valid
-
-### 3. `validate-svg.sh` - Validate SVG syntax
-```bash
-./scripts/validate-svg.sh <svg-file>
-```
-- Checks XML syntax
-- Verifies tag balance
-- Validates marker references
-- Checks attribute completeness
-- Validates path data
-
-### 4. `test-all-styles.sh` - Batch test all styles
-```bash
-./scripts/test-all-styles.sh
-```
-- Tests multiple diagram sizes
-- Validates all generated SVGs
-- Generates test report
-
-**When to use scripts:**
-- Use scripts when generating complex SVGs to avoid syntax errors
-- Scripts provide automatic validation and error reporting
-- Recommended for production diagrams
-
-**When to generate SVG directly:**
-- Simple diagrams with few elements
-- Quick prototypes
-- When you need full control over SVG structure
-
-## Workflow (Always Follow This Order)
-
-1. **Entity Sniffing & RAG (MANDATORY)**: Extract core entities/systems from the user's prompt. If a local Vector-Lake CLI is available, query it to retrieve private architecture knowledge, terminologies, and linked nodes before diagram planning. Do NOT rely solely on generic LLM knowledge if local context is available.
-2. **Classify** the diagram type (see Diagram Types below)
-3. **Extract structure** — identify layers, nodes, edges, flows, and semantic groups from user description + **Vector-Lake retrieved context**
-4. **Plan layout** — apply the layout rules for the diagram type
-5. **Load style reference** — always load `references/style-1-flat-icon.md` unless user specifies another; if a different style is chosen, load the matching concrete style file from `references/style-2-dark-terminal.md` through `references/style-7-openai.md` for exact color tokens and SVG patterns
-6. **Map nodes to shapes** — use Shape Vocabulary below
-7. **Check icon needs** — load `references/icons.md` for known products
-8. **Write SVG** with adaptive strategy (see SVG Generation Strategy below)
-9. **Validate**: Utilize Python's native `xml.etree.ElementTree` inside your SVG generation script to perform strict 0-dependency XML syntax validation.
-10. **Export PNG**: (Optional) If environment supports it, export to PNG. Do NOT blindly invoke `rsvg-convert` on Windows environments as it is likely unavailable.
-11. **Report** the generated file paths
-
-## Diagram Types & Layout Rules
-
-### Architecture Diagram
-Nodes = services/components. Group into **horizontal layers** (top→bottom or left→right).
-- Typical layers: Client → Gateway/LB → Services → Data/Storage
-- Use `<rect>` dashed containers to group related services in the same layer
-- Arrow direction follows data/request flow
-- ViewBox: `0 0 960 600` standard, `0 0 960 800` for tall stacks
-
-### Data Flow Diagram
-Emphasizes **what data moves where**. Focus on data transformation.
-- Label every arrow with the data type (e.g., "embeddings", "query", "context")
-- Use wider arrows (`stroke-width: 2.5`) for primary data paths
-- Dashed arrows for control/trigger flows
-- Color arrows by data category (not just Agent/RAG — use semantics)
-
-### Flowchart / Process Flow
-Sequential decision/process steps.
-- Top-to-bottom preferred; left-to-right for wide flows
-- Diamond shapes for decisions, rounded rects for processes, parallelograms for I/O
-- Keep node labels short (≤3 words); put detail in sub-labels
-- Align nodes on a grid: x positions snap to 120px intervals, y to 80px
-
-### Agent Architecture Diagram
-Shows how an AI agent reasons, uses tools, and manages memory.
-Key conceptual layers to always consider:
-- **Input layer**: User, query, trigger
-- **Agent core**: LLM, reasoning loop, planner
-- **Memory layer**: Short-term (context window), Long-term (vector/graph DB), Episodic
-- **Tool layer**: Tool calls, APIs, search, code execution
-- **Output layer**: Response, action, side-effects
-Use cyclic arrows (loop arcs) to show iterative reasoning. Separate memory types visually.
-
-### Memory Architecture Diagram (Mem0, MemGPT-style)
-Specialized agent diagram focused on memory operations.
-- Show memory **write path** and **read path** separately (different arrow colors)
-- Memory tiers: Working Memory → Short-term → Long-term → External Store
-- Label memory operations: `store()`, `retrieve()`, `forget()`, `consolidate()`
-- Use stacked rects or layered cylinders for storage tiers
-
-### Sequence Diagram
-Time-ordered message exchanges between participants.
-- Participants as vertical **lifelines** (top labels + vertical dashed lines)
-- Messages as horizontal arrows between lifelines, top-to-bottom time order
-- Activation boxes (thin filled rects on lifeline) show active processing
-- Group with `<rect>` loop/alt frames with label in top-left corner
-- ViewBox height = 80 + (num_messages × 50)
-
-### Comparison / Feature Matrix
-Side-by-side comparison of approaches, systems, or components.
-- Column headers = systems, row headers = attributes
-- Row height: 40px; column width: min 120px; header row height: 50px
-- Checked cell: tinted background (e.g. `#dcfce7`) + `✓` checkmark; unsupported: `#f9fafb` fill
-- Alternating row fills (`#f9fafb` / `#ffffff`) for readability
-- Max readable columns: 5; beyond that, split into two diagrams
-
-### Timeline / Gantt
-Horizontal time axis showing durations, phases, and milestones.
-- X-axis = time (weeks/months/quarters); Y-axis = items/tasks/phases
-- Bars: rounded rects, colored by category, labeled inside or beside
-- Milestone markers: diamond or filled circle at specific x position with label above
-- ViewBox: `0 0 960 400` typical; wider for many time periods: `0 0 1200 400`
-
-### Mind Map / Concept Map
-Radial layout from central concept.
-- Central node at `cx=480, cy=280`
-- First-level branches: evenly distributed around center (360/N degrees)
-- Second-level branches: branch off first-level at 30-45° offset
-- Use curved `<path>` with cubic bezier for branches, not straight lines
-
-### Class Diagram (UML)
-Static structure showing classes, attributes, methods, and relationships.
-- **Class box**: 3-compartment rect (name / attributes / methods), min width 160px
-  - Top compartment: class name, bold, centered (abstract = *italic*)
-  - Middle: attributes with visibility (`+` public, `-` private, `#` protected)
-  - Bottom: method signatures, same visibility notation
-- **Relationships**:
-  - Inheritance (extends): solid line + hollow triangle arrowhead, child → parent
-  - Implementation (interface): dashed line + hollow triangle, class → interface
-  - Association: solid line + open arrowhead, label with multiplicity (1, 0..*, 1..*)
-  - Aggregation: solid line + hollow diamond on container side
-  - Composition: solid line + filled diamond on container side
-  - Dependency: dashed line + open arrowhead
-- **Interface**: `<<interface>>` stereotype above name, or circle/lollipop notation
-- **Enum**: compartment rect with `<<enumeration>>` stereotype, values in bottom
-- Layout: parent classes top, children below; interfaces to the left/right of implementors
-- ViewBox: `0 0 960 600` standard; `0 0 960 800` for deep hierarchies
-
-### Use Case Diagram (UML)
-System functionality from user perspective.
-- **Actor**: stick figure (circle head + body line) placed outside system boundary
-  - Label below figure, 13-14px
-  - Primary actors on left, secondary/supporting on right
-- **Use case**: ellipse with label centered inside, min 140×60px
-  - Keep names verb phrases: "Create Order", "Process Payment"
-- **System boundary**: large rect with dashed border + system name in top-left
-- **Relationships**:
-  - Include: dashed arrow `<<include>>` from base to included use case
-  - Extend: dashed arrow `<<extend>>` from extension to base use case
-  - Generalization: solid line + hollow triangle (specialized → general)
-- Layout: system boundary centered, actors outside, use cases inside
-- ViewBox: `0 0 960 600` standard
-
-### State Machine Diagram (UML)
-Lifecycle states and transitions of an entity.
-- **State**: rounded rect with state name, min 120×50px
-  - Internal activities: small text `entry/ action`, `exit/ action`, `do/ activity`
-  - **Initial state**: filled black circle (r=8), one outgoing arrow
-  - **Final state**: filled circle (r=8) inside hollow circle (r=12)
-  - **Choice**: small hollow diamond, guard labels on outgoing arrows `[condition]`
-- **Transition**: arrow with optional label `event [guard] / action`
-  - Guard conditions in square brackets
-  - Actions after `/`
-- **Composite/nested state**: larger rect containing sub-states, with name tab
-- **Fork/join**: thick horizontal or vertical black bar (synchronization)
-- Layout: initial state top-left, final state bottom-right, flow top-to-bottom
-- ViewBox: `0 0 960 600` standard
-
-### ER Diagram (Entity-Relationship)
-Database schema and data relationships.
-- **Entity**: rect with entity name in header (bold), attributes below
-  - Primary key attribute: underlined
-  - Foreign key: italic or marked with (FK)
-  - Min width: 160px; attribute font-size: 12px
-- **Relationship**: diamond shape on connecting line
-  - Label inside diamond: "has", "belongs to", "enrolls in"
-  - Cardinality labels near entity: `1`, `N`, `0..1`, `0..*`, `1..*`
-- **Weak entity**: double-bordered rect with double diamond relationship
-- **Associative entity**: diamond + rect hybrid (rect with diamond inside)
-- Line style: solid for identifying relationships, dashed for non-identifying
-- Layout: entities in 2-3 rows, relationships between related entities
-- ViewBox: `0 0 960 600` standard; wider `0 0 1200 600` for many entities
-
-### Network Topology
-Physical or logical network infrastructure.
-- **Devices**: icon-like rects or rounded rects
-  - Router: circle with cross arrows
-  - Switch: rect with arrow grid
-  - Server: stacked rect (rack icon)
-  - Firewall: brick-pattern rect or shield shape
-  - Load Balancer: horizontal split rect with arrows
-  - Cloud: cloud path (overlapping arcs)
-- **Connections**: lines between device centers
-  - Ethernet/wired: solid line, label bandwidth
-  - Wireless: dashed line with WiFi symbol
-  - VPN: dashed line with lock icon
-- **Subnets/Zones**: dashed rect containers with zone label (DMZ, Internal, External)
-- **Labels**: device hostname + IP below, 12-13px
-- Layout: tiered top-to-bottom (Internet → Edge → Core → Access → Endpoints)
-- ViewBox: `0 0 960 600` standard
-
-## UML Coverage Map
-
-Full mapping of UML 14 diagram types to supported diagram types:
-
-| UML Diagram | Supported As | Notes |
-|-------------|-------------|-------|
-| Class | Class Diagram | Full UML notation |
-| Component | Architecture Diagram | Use colored fills per component type |
-| Deployment | Architecture Diagram | Add node/instance labels |
-| Package | Architecture Diagram | Use dashed grouping containers |
-| Composite Structure | Architecture Diagram | Nested rects within components |
-| Object | Class Diagram | Instance boxes with underlined name |
-| Use Case | Use Case Diagram | Full actor/ellipse/relationship |
-| Activity | Flowchart / Process Flow | Add fork/join bars |
-| State Machine | State Machine Diagram | Full UML notation |
-| Sequence | Sequence Diagram | Add alt/opt/loop frames |
-| Communication | — | Approximate with Sequence (swap axes) |
-| Timing | Timeline | Adapt time axis |
-| Interaction Overview | Flowchart | Combine activity + sequence fragments |
-| ER Diagram | ER Diagram | Chen/Crow's foot notation |
-
-## Shape Vocabulary
-
-Map semantic concepts to consistent shapes across all diagram types:
-
-| Concept | Shape | Notes |
-|---------|-------|-------|
-| User / Human | Circle + body path | Stick figure or avatar |
-| LLM / Model | Rounded rect with brain/spark icon or gradient fill | Use accent color |
-| Agent / Orchestrator | Hexagon or rounded rect with double border | Signals "active controller" |
-| Memory (short-term) | Rounded rect, dashed border | Ephemeral = dashed |
-| Memory (long-term) | Cylinder (database shape) | Persistent = solid cylinder |
-| Vector Store | Cylinder with grid lines inside | Add 3 horizontal lines |
-| Graph DB | Circle cluster (3 overlapping circles) | |
-| Tool / Function | Gear-like rect or rect with wrench icon | |
-| API / Gateway | Hexagon (single border) | |
-| Queue / Stream | Horizontal tube (pipe shape) | |
-| File / Document | Folded-corner rect | |
-| Browser / UI | Rect with 3-dot titlebar | |
-| Decision | Diamond | Flowcharts only |
-| Process / Step | Rounded rect | Standard box |
-| External Service | Rect with cloud icon or dashed border | |
-| Data / Artifact | Parallelogram | I/O in flowcharts |
-
-## Arrow Semantics
-
-Always assign arrow meaning, not just color:
-
-| Flow Type | Color | Stroke | Dash | Meaning |
-|-----------|-------|--------|------|---------|
-| Primary data flow | blue `#2563eb` | 2px solid | none | Main request/response path |
-| Control / trigger | orange `#ea580c` | 1.5px solid | none | One system triggering another |
-| Memory read | green `#059669` | 1.5px solid | none | Retrieval from store |
-| Memory write | green `#059669` | 1.5px | `5,3` | Write/store operation |
-| Async / event | gray `#6b7280` | 1.5px | `4,2` | Non-blocking, event-driven |
-| Embedding / transform | purple `#7c3aed` | 1px solid | none | Data transformation |
-| Feedback / loop | purple `#7c3aed` | 1.5px curved | none | Iterative reasoning loop |
-
-Always include a **legend** when 2+ arrow types are used.
-
-## Layout Rules & Validation
-
-**Spacing**:
-- Same-layer nodes: 80px horizontal, 120px vertical between layers
-- Canvas margins: 40px minimum, 60px between node edges
-- Snap to 8px grid: horizontal 120px intervals, vertical 120px intervals
-
-**Arrow Labels** (CRITICAL):
-- MUST have background rect: `<rect fill="canvas_bg" opacity="0.95"/>` with 4px horizontal, 2px vertical padding
-- Place mid-arrow, ≤3 words, stagger by 15-20px when multiple arrows converge
-- Maintain 10px safety distance from nodes
-
-**Arrow Routing**:
-- Prefer orthogonal (L-shaped) paths to minimize crossings
-- Anchor arrows on component edges, not geometric centers
-- Route around dense node clusters, use different y-offsets for parallel arrows
-- Jump-over arcs (5px radius) for unavoidable crossings
-
-**Validation Checklist** (run before finalizing):
-1. **Arrow-Component Collision**: Arrows MUST NOT pass through component interiors (route around with orthogonal paths)
-2. **Text Overflow**: All text MUST fit with 8px padding (estimate: `text.length × 7px ≤ shape_width - 16px`)
-3. **Arrow-Text Alignment**: Arrow endpoints MUST connect to shape edges (not floating); all arrow labels MUST have background rects
-4. **Container Discipline**: Prefer arrows entering and leaving section containers through open gaps between components, not through inner component bodies
-
-## SVG Technical Rules
-
-- ViewBox: `0 0 960 600` default; `0 0 960 800` tall; `0 0 1200 600` wide
-- Fonts: embed via `<style>font-family: ...</style>` — no external `@import` (breaks rsvg-convert)
-- `<defs>`: arrow markers, gradients, filters, clip paths
-- Text: minimum 12px, prefer 13-14px labels, 11px sub-labels, 16-18px titles
-- All arrows: `<marker>` with `markerEnd`, sized `markerWidth="10" markerHeight="7"`
-- Drop shadows: `<feDropShadow>` in `<filter>`, apply sparingly (key nodes only)
-- Curved paths: use `M x1,y1 C cx1,cy1 cx2,cy2 x2,y2` cubic bezier for loops/feedback arrows
-- Clip content: use `<clipPath>` if text might overflow a node box
-
-## SVG Generation & Error Prevention
-
-**MANDATORY: Python List Method** (ALWAYS use this):
-```python
-import os
-import datetime
-import xml.etree.ElementTree as ET
-
-# 1. Load Theme Colors explicitly (Read from references/style-X.md)
-THEME = {
-    "bg": "#ffffff",
-    "primary": "#2563eb",
-    "stroke": "#cbd5e1",
-    "text": "#334155"
-}
-
-# 2. Build SVG Lines
-lines = []
-lines.append('<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 960 700">')
-lines.append('  <defs>')
-# ... each line separately using THEME variables
-lines.append('</svg>')
-
-svg_content = '\\n'.join(lines)
-
-# 3. Strict 0-dependency XML Validation
-try:
-    ET.fromstring(svg_content)
-except ET.ParseError as e:
-    print(f"SVG Syntax Error: {e}")
-    exit(1)
-
-# 4. Save File
-date_str = datetime.datetime.now().strftime("%Y%m%d")
-output_path = f'C:/Users/shich/.gemini/diagrams/output_{date_str}.svg'
-os.makedirs(os.path.dirname(output_path), exist_ok=True)
-with open(output_path, 'w', encoding='utf-8') as f:
-    f.write(svg_content)
-print(f"SVG valid and generated successfully at {output_path}")
-```
-
-**Why mandatory**: Prevents character truncation, typos, and syntax errors. Each line is independent and easy to verify.
-
-**Pre-Tool-Call Checklist** (CRITICAL - use EVERY time):
-1. ✅ Can I write out the COMPLETE command/content right now?
-2. ✅ Do I have ALL required parameters ready?
-3. ✅ Have I checked for syntax errors in my prepared content?
-
-**If ANY answer is NO**: STOP. Do NOT call the tool. Prepare the content first.
-
-**Error Recovery Protocol**:
-- **First error**: Analyze root cause, apply targeted fix
-- **Second error**: Switch method entirely (Python list → chunked generation)
-- **Third error**: STOP and report to user - do NOT loop endlessly
-- **Never**: Retry the same failing command or call tools with empty parameters
-
-**Validation** (run after generation):
-```bash
-rsvg-convert file.svg -o /tmp/test.png 2>&1 && echo "✓ Valid" && rm /tmp/test.png
-```
-
-**If using `generate-from-template.py`**:
-- Prefer `source` / `target` node ids in arrow JSON so the generator can snap to node edges
-- Keep `x1,y1,x2,y2` as hints or fallback coordinates, not the main routing primitive
-- Let the generator choose orthogonal routes; avoid hardcoding center-to-center straight lines unless the path is guaranteed clear
-
-**Common Syntax Errors to Avoid**:
-- ❌ `yt-anchor` → ✅ `y="60" text-anchor="middle"`
-- ❌ `x="390` (missing y) → ✅ `x="390" y="250"`
-- ❌ `fill=#fff` → ✅ `fill="#ffffff"`
-- ❌ `marker-end=` → ✅ `marker-end="url(#arrow)"`
-- ❌ `L 29450` → ✅ `L 290,220`
-- ❌ Missing `</svg>` at end
-
-## Output
-
-- **Default**: `C:\Users\shich\.gemini\diagrams\[derived-name]_[YYYYMMDD].svg` and `C:\Users\shich\.gemini\diagrams\[derived-name]_[YYYYMMDD].png`
-- **Custom**: user specifies path with `--output /path/` or `输出到 /path/`
-- **PNG export**: `rsvg-convert -w 1920 file.svg -o file.png` (1920px = 2x retina)
-
-## Styles
-
-| # | Name | Background | Best For |
-|---|------|-----------|----------|
-| 1 | **Flat Icon** (default) | White | Blogs, docs, presentations |
-| 2 | **Dark Terminal** | `#0f0f1a` | GitHub, dev articles |
-| 3 | **Blueprint** | `#0a1628` | Architecture docs |
-| 4 | **Notion Clean** | White, minimal | Notionnce |
-| 5 | **Glassmorphism** | Dark gradient | Product sites, keynotes |
-| 6 | **Claude Official** | Warm cream `#f8f6f3` | Anthropic-style diagrams |
-| 7 | **OpenAI Official** | Pure white `#ffffff` | OpenAI-style diagrams |
-
-Load the concrete chosen style file from `references/style-1-flat-icon.md` through `references/style-7-openai.md` for exact color tokens and SVG patterns.
-
-## Style Selection
-
-**Default**: Style 1 (Flat Icon) for most diagrams. Load `references/style-diagram-matrix.md` for detailed style-to-diagram-type recommendations.
-
-These patterns appear frequently — internalize them:
-
-**RAG Pipeline**: Query → Embed → VectorSearch → Retrieve → Augment → LLM → Response
-**Agentic RAG**: adds Agent loop with Tool use between Query and LLM
-**Agentic Search**: Query → Planner → [Search Tool / Calculator / Code] → Synthesizer → Response
-**Mem0 / Memory Layer**: Input → Memory Manager → [Write: VectorDB + GraphDB] / [Read: Retrieve+Rank] → Context
-**Agent Memory Types**: Sensory (raw input) → Working (context window) → Episodic (past interactions) → Semantic (facts) → Procedural (skills)
-**Multi-Agent**: Orchestrator → [SubAgent A / SubAgent B / SubAgent C] → Aggregator → Output
-**Tool Call Flow**: LLM → Tool Selector → Tool Execution → Result Parser → LLM (loop)
-
-##  Telemetry & Metadata (Mandatory)
-任务结束时，使用 `write_file` 将元数据保存至 `~/.gemini/MEMORY/skill_audit/telemetry/record_[TIMESTAMP].json`。
-JSON 结构：`{"skill_name": "tool-drawio", "status": "success", "duration_sec": 0, "input_tokens": 0, "output_tokens": 0}`
-
-##  历史失效先验 (NLAH Gotchas)
-
-## Resources
-- 使用本文件已经列出的 `scripts/`、模板 SVG、样例输出和校验脚本。
-- 具体命令入口、图类型和样式约束以上方既有章节为准。
-
-## Failure Modes
-- 将本文件中的布局规则、SVG 技术规则、校验顺序和 `NLAH Gotchas` 视为失败模式。
-- 若 SVG 校验失败、模板缺失或导出链路异常，必须显式报错并阻断输出。
-
-## Output Contract
-- 最终交付必须是可验证的 SVG，并在需要时导出为 PNG。
-- 图形结构、箭头语义、文本布局和样式选择必须符合本文件既有规则。
-
-## Telemetry
-- 按本文件上方定义的 telemetry 路径和 JSON 结构记录元数据。
+# Fireworks Tech Graph (SVG 架构渲染仪 V8.1 Native)
+
+> **Vision**: 摒弃残缺不全的模型直出 XML。我们利用系统底层的 Python 沙盒，以代码注入的方式，生成生产级别的技术架构 SVG 原型图。
+
+## 1. 核心流程与架构 (The Protocol)
+
+### Phase 1: Entity Sniffing & RAG [Mode: PLANNING]
+- **MANDATORY**: Extract core entities from prompt. If applicable, query `vector-lake-mcp` to retrieve private architecture knowledge before planning. Do not rely solely on LLM hallucinations.
+
+### Phase 2: Classification & Structure [Mode: PLANNING]
+- Classify diagram type. Load the required style reference (e.g., `references/style-1-flat-icon.md`) to establish the color tokens.
+- Map nodes to shapes, arrows to relationships.
+
+### Phase 3: The "Python List Method" (MANDATORY) [Mode: EXECUTION]
+- 严禁大模型直接输出带有数万字符的 SVG 原文（极易触发截断错误）。
+- **必须通过 `run_command` 调用 Python 沙盒** 动态拼装 SVG。
+- **强制使用跨平台安全模板 (0 依赖，原生 XML 防爆)**：
+  ```python
+  import os, datetime
+  import xml.etree.ElementTree as ET
+  
+  THEME = {"bg": "#ffffff", "primary": "#2563eb", "stroke": "#cbd5e1", "text": "#334155"}
+  lines = []
+  lines.append('<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 960 700">')
+  lines.append('  <defs>')
+  # ... APPEND ALL YOUR NODES AND ARROWS HERE ...
+  lines.append('</svg>')
+  
+  svg_content = '\n'.join(lines)
+  
+  try:
+      ET.fromstring(svg_content)
+  except ET.ParseError as e:
+      print(f"SVG Syntax Error: {e}")
+      exit(1)
+  
+  date_str = datetime.datetime.now().strftime("%Y%m%d%H%M%S")
+  output_path = f'C:/Users/shich/.gemini/diagrams/output_{date_str}.svg'
+  os.makedirs(os.path.dirname(output_path), exist_ok=True)
+  with open(output_path, 'w', encoding='utf-8') as f:
+      f.write(svg_content)
+  print(f"SVG generated successfully at {output_path}")
+  ```
+
+### Phase 4: Delivery & Telemetry [Mode: EXECUTION]
+- Execute the script using `$env:PYTHONIOENCODING="utf-8"; python "C:\Users\shich\.gemini\MEMORY\scratch\diagram_generator.py"`.
+- Verify the script output. If valid, deliver the physical absolute path to the user.
+- Write metadata via `write_to_file` to `C:\Users\shich\.gemini\MEMORY\skill_audit\telemetry\record_[TIMESTAMP].json`.
+
+## 2. <Contracts> (输出与交付契约)
+
+### Diagram Types & Layout Rules
+- **Architecture**: Horizontal layers (Top→Bottom). ViewBox `0 0 960 600`. Use `<rect>` dashed containers.
+- **Data Flow**: Wider arrows `stroke-width: 2.5` for primary paths. Dashed arrows for control flows.
+- **Agent Architecture**: Must feature input layer, agent core (LLM/reasoning), memory layer, tool layer, and cyclic loops.
+
+### Shape Vocabulary
+- **LLM / Model**: Rounded rect + accent color.
+- **Memory / Store**: Cylinder (`<path>` shapes simulating 3D) / persistent.
+- **Tool / Gateway**: Hexagon or gear rect.
+
+### Arrow Semantics (Do Not Only Change Color)
+- `Primary data`: Blue `2px solid`
+- `Memory read/write`: Green `1.5px solid` / `dashed 5,3`
+- `Control / Event`: Orange `1.5px solid` / Gray `dashed 4,2`
+- **Labels (CRITICAL)**: MUST have background `<rect fill="canvas_bg" opacity="0.95"/>`. Do NOT let text collide with lines.
+
+## 3. <Failure_Taxonomy> (失败分类学 / 逻辑硬锁)
+
+- **Unix 幻觉综合征 (OS Deadlock)**：绝对禁止大模型教唆系统去运行 `.sh` 脚本或使用 `rsvg-convert`。当前环境是 Windows，任何试图绕过 Python 原生方法去调用这些 Unix 工具的行为都将导致指令崩溃。
+- **物理寻址塌陷 (Pathing Deadlock)**：执行脚本、落盘图像和写入日志时，必须使用带有驱动器盘符的绝对物理路径（例如 `C:\Users\shich\.gemini\...`）。严禁使用旧版的 `~/.gemini` 或 `{root}`。
+- **穿模与坐标溢出 (Collision & Overflow)**：
+  1. Arrows MUST NOT pass through component interiors (route around with orthogonal paths).
+  2. Text MUST NOT overflow box bounds (`text.length × 7px ≤ shape_width - 16px`).
+- **语法缺漏 (Syntax Forgery)**：不要犯低级错误。例如：缺少结尾 `</svg>`；使用 `yt-anchor` 替代正确的 `y="60" text-anchor="middle"`；丢掉颜色的 `#` 符号（错误：`fill=fff`，正确：`fill="#ffffff"`）。
+- **工具调用越权 (Tool Forgery)**：严禁使用废旧的 `write_file`，日志遥测必须且只能使用合规的 `write_to_file`。

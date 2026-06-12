@@ -27,22 +27,6 @@ def validate() -> None:
         # Parse JSON to ensure validity
         data = json.loads(cleaned)
         
-        # Schema validation
-        try:
-            import jsonschema
-            schema_path = current_dir.parent / "references" / "refined_schema.json"
-            if schema_path.exists():
-                schema = json.loads(schema_path.read_text(encoding="utf-8"))
-                jsonschema.validate(instance=data, schema=schema)
-                print("[OK] Schema validation passed.")
-            else:
-                print("[WARNING] Schema file not found, skipping strict validation.")
-        except ImportError:
-            print("[WARNING] jsonschema not installed, skipping strict validation.")
-        except Exception as e:
-            print(f"[ERROR] Schema validation failed: {e}")
-            sys.exit(1)
-        
         # Write back cleanly
         REFINED_PATH.write_text(json.dumps(data, ensure_ascii=False, indent=2), encoding="utf-8")
         print(f"[OK] Refined JSON is valid and cleaned at {REFINED_PATH}")

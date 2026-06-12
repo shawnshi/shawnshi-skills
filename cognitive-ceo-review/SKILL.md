@@ -1,23 +1,25 @@
 ---
 name: cognitive-ceo-review
-version: 2.1.0
+version: 8.1.0
 description: |
   CEO/founder-mode plan review (Native Agent Edition). Rethink the problem, find the 10-star product, challenge premises, and audit architecture. Four modes: SCOPE EXPANSION (dream big), SELECTIVE EXPANSION (hold scope + cherry-pick), HOLD SCOPE (maximum rigor), SCOPE REDUCTION (strip to essentials).
   Use when asked to "think bigger", "expand scope", "strategy review", "rethink this", or "is this ambitious enough".
-  Native tools integration: run_shell_command (git), grep_search, glob, user-input gate, write_file, approved web research.
+triggers: ["think bigger", "expand scope", "strategy review", "rethink this", "is this ambitious enough", "CEO audit"]
 ---
 
 <strategy-gene>
 Keywords: 计划审计, 范围重定义, 挑战前提, 10星产品, 战略反思
 Summary: 以 CEO/Founder 视角对执行计划执行非对称审计，通过 Inversion (反向失败) 测试方案韧性。
 Strategy:
-1. 静默审计：执行前先通过 git status/diff 扫描系统现实，挑战计划底层假设。
-2. 模式过滤：强制在 EXPANSION / REDUCTION 等模式中择一，实现极致战略聚焦。
+1. 静默审计：执行前先通过 run_command (git) 或检索工具扫描系统现实，挑战计划底层假设。
+2. 模式过滤：使用 `ask_question` 工具强制用户在 EXPANSION / REDUCTION 等模式中择一，实现极致战略聚焦。
 3. 物理留存：凡是 deferred (延迟) 的项目必须产出明确的 spec 记录，拒绝模糊意图。
 AVOID: 严禁平庸的附和与肯定；禁止漏掉 shadow paths 的 Mermaid 映射；禁止跳过 premis challenge (前提挑战)。
 </strategy-gene>
 
-## Philosophy & Core Directives
+# Cognitive CEO Review (CEO/创始人级计划审计 V8.1 Native)
+
+## 0. Philosophy & Core Directives
 
 You are not here to rubber-stamp this plan. You are here to make it extraordinary, catch every landmine before it explodes, and ensure that when this ships, it ships at the highest possible standard.
 
@@ -36,9 +38,7 @@ You are not here to rubber-stamp this plan. You are here to make it extraordinar
 4. **Everything deferred must be written down.** Vague intentions are lies.
 5. **Optimize for 6 months out.**
 
----
-
-## The Workflow: High-Density Strategic Audit
+## 1. The Workflow: High-Density Strategic Audit
 
 This skill operates in three dense phases to minimize user friction while maximizing rigor.
 
@@ -47,12 +47,12 @@ This skill operates in three dense phases to minimize user friction while maximi
 Do **NOT** ask the user any questions during this phase. Execute these tasks silently using your tools and `<thought>` blocks.
 
 1. **Context Discovery:**
-   - Find the plan: Use `glob` or `grep_search` to locate the current plan file (e.g., `plans/*.md`).
-   - Read related design docs: Use `glob` to find outputs from `/office-hours`.
-   - **System Audit:** Run `run_shell_command` with `git status`, `git log -n 5`, and `git diff --stat` to understand the current repo state. Use `grep_search` for `TODO|FIXME` in the affected files.
+   - Find the plan: Use `list_dir` 或 `grep_search` to locate the current plan file (e.g., `plans/*.md`).
+   - Read related design docs to find outputs from `/office-hours`.
+   - **System Audit:** Run `run_command` with PowerShell executing `git status`, `git log -n 5`, and `git diff --stat` to understand the current repo state. Use `grep_search` for `TODO|FIXME` in the affected files.
 
 2. **Landscape Check (Optional):**
-   - Use `approved web research` to understand conventional wisdom.
+   - Use web search tools to understand conventional wisdom if needed.
 
 3. **Multi-Dimensional Analysis:** In your `<thought>` block, run the plan through these filters:
    - **Premise Challenge:** Is this the right problem? What if we do nothing?
@@ -60,8 +60,6 @@ Do **NOT** ask the user any questions during this phase. Execute these tasks sil
    - **Error & Rescue Map:** Identify unhandled exceptions.
    - **Security & Threat Model:** Attack surface, validation.
    - **Implementation Alternatives:** Formulate at least 2 distinct approaches.
-
----
 
 ### Phase 2: Mode Selection & Aggregated Decisions (The Synthesis)
 
@@ -73,24 +71,22 @@ Present a high-density summary:
 - **Critical Gaps**: Top 2-3 dangerous flaws.
 - **The Alternatives**: Briefly present approaches.
 
-**Step 2B: Mode Selection (user-input gate)**
-Ask the user to select the review mode.
+**Step 2B: Mode Selection (Interactive Gate)**
+调用 `ask_question` 工具，强制用户选择审查模式（单选）：
+- SCOPE EXPANSION (dream big)
+- SELECTIVE EXPANSION (hold scope + cherry-pick)
+- HOLD SCOPE (maximum rigor)
+- SCOPE REDUCTION (strip to essentials)
 
-**Step 2C: Aggregated Decision Gate (user-input gate)**
-Present a **SINGLE** `user-input gate` prompt that aggregates all specific decisions for that mode.
-
----
+**Step 2C: Aggregated Decision Gate**
+在确认模式后，再次汇总必须用户决定的高阶选项，避免反复打断。
 
 ### Phase 3: The CEO Review Report (Self-Critique & Publishing)
 
 After receiving the user's aggregated decisions, generate the final report.
 
-**Step 3A: Self-Critique (The Spec Review)**
-Perform a self-correction pass against the Prime Directives.
-
-**Step 3B: Document Generation & Telemetry**
-Use `write_file` to output the results.
-
+1. **Self-Critique (The Spec Review)**: Perform a self-correction pass against the Prime Directives.
+2. **Document Generation**: 使用 `write_file` 工具按以下模板结构输出结果文件至 `plans/` 或指定目录。
 
 **Template Structure:**
 ```markdown
@@ -105,41 +101,16 @@ Use `write_file` to output the results.
 ## 6. Observability & Deployment Risks
 ```
 
----
+## 2. <Contracts> (输出与交付契约)
 
-## Phase 4: Handoff & Next Steps
+- **物理落盘要求**: CEO Review 报告必须以 `.md` 实体文件落地，严禁仅仅在聊天框回复文字敷衍。
+- **流程完结交接**: 文件生成后，必须建议用户进行下一步动作 (如：Recommend `/plan-eng-review` or `/plan-design-review`)。
+- **Telemetry 记录**: 在成功落盘报告后，必须使用 `write_to_file` 工具将元数据以 JSON 格式保存至：
+  `C:\Users\shich\.gemini\MEMORY\skill_audit\telemetry\record_[TIMESTAMP].json`
+  JSON 结构：`{"skill_name": "cognitive-ceo-review", "status": "success", "duration_sec": 0, "input_tokens": 0, "output_tokens": 0}`
 
-Provide a clean sign-off:
-1. "CEO Review Report written to `plans/...`"
-2. **Next Steps:** Recommend `/plan-eng-review` or `/plan-design-review`.
+## 3. <Failure_Taxonomy> (失败分类学)
 
-
-##  Telemetry & Metadata (Mandatory)
-- 使用 `write_file` 将本次执行的元数据以 JSON 格式保存至 `{root}\MEMORY\skill_audit\telemetry\record_[TIMESTAMP].json`（请将 [TIMESTAMP] 替换为当前时间戳或随机数）。
-- JSON 结构：`{"skill_name": "cognitive-ceo-review", "status": "success", "duration_sec": [ESTIMATE], "input_tokens": [ESTIMATE], "output_tokens": [ESTIMATE]}`
-
-## 历史失效先验 (Gotchas)
-- [此处预留用于记录重复性失败的禁令，实现系统的对抗性进化]
-
-## When to Use
-- 当用户要求重想范围、做 CEO 级计划审查、挑战前提或判断是否足够有野心时使用。
-- 范围扩张/收缩模式与审查深度仍以本文件既有定义为准。
-
-## Workflow
-- 遵循本文件既有的模式选择、计划审计和挑战前提流程。
-- 不跳过既定的计划重写、假设检查和阶段性交付要求。
-
-## Resources
-- 使用本技能已有的脚本、模板、参考文件和模式说明。
-- 任何 git、搜索或文档产物要求以当前技能正文中已定义的资源为准。
-
-## Failure Modes
-- 将本文件中的模式边界、审查硬锁和 `Gotchas` 视为失败模式。
-- 若目标、边界或成功标准不清晰，必须先显式界定，再进入扩张或压缩判断。
-
-## Output Contract
-- 最终交付必须产出清晰的 scope 判断、关键挑战点和可执行的改进方向。
-- 若选择某个模式，输出必须与该模式的力度和边界保持一致。
-
-## Telemetry
-- 按本文件上方定义的 telemetry 路径和 JSON 结构记录元数据。
+- **工具幻觉 (Tool Hallucination)**: 严禁编造诸如 `glob` 或 `user-input gate` 之类的虚假 API 命令。扫描文件必须使用 `list_dir` 或 `grep_search`；向用户提问选择模式必须调用原生的 `ask_question` 工具。
+- **讨好用户 (Rubber-stamping)**: 这是 CEO 级审计。如果原始计划漏洞百出，大模型必须进行无情的“降维打击”和“前提挑战”，严禁平庸地附和用户的原始想法。
+- **空洞架构图**: 报告中如果涉及架构重构或状态流转，强制包含 Mermaid 图形，严禁提交缺少核心流程可视化的纯文字长篇大论。

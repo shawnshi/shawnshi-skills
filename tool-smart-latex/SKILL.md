@@ -17,7 +17,7 @@ AVOID: 禁止未编译就声称完成；禁止破坏公式或引用结构。
 
 # Smart Doc LaTeX
 
-自动化出版引擎，将普通文档转换为专业排版的 PDF。使用'user-input gate'获取用户确认目标样式目标样式：（`academic`, `cv`, `tech_report`, `book`, `tech_book`）。
+自动化出版引擎，将普通文档转换为专业排版的 PDF。如果有需要，强制使用原生的 `ask_question` 工具向用户提供选项框来确认目标样式（`academic`, `cv`, `tech_report`, `book`, `tech_book`）。
 
 ## When to Use
 - 当用户要求将 Markdown/Word/Text 转为专业 LaTeX/PDF，或需要套用科研、简历、书稿等排版模板时使用。
@@ -39,7 +39,7 @@ AVOID: 禁止未编译就声称完成；禁止破坏公式或引用结构。
 统一入口，适用于大多数文档转换场景。
 
 ```bash
-python {root_dir}\.gemini\skills\tool-smart-latex\scripts\smart_engine.py --input <input_file> [OPTIONS]
+$env:PYTHONIOENCODING="utf-8"; python C:\Users\shich\.gemini\config\skills\tool-smart-latex\scripts\smart_engine.py --input <input_file> [OPTIONS]
 ```
 
 | Flag       | Description                                                                   |
@@ -56,7 +56,7 @@ python {root_dir}\.gemini\skills\tool-smart-latex\scripts\smart_engine.py --inpu
 
 | Script              | Purpose                                  | Usage                                   |
 |:--------------------|:-----------------------------------------|:----------------------------------------|
-| `process_idioms.py` | **特殊用途**：解析成语字典 .tex 并重排版 | `python process_idioms.py` (硬编码输入) |
+| `process_idioms.py` | **特殊用途**：解析成语字典 .tex 并重排版 | `$env:PYTHONIOENCODING="utf-8"; python process_idioms.py` (硬编码输入) |
 
 ### Best Practices for Agents
 
@@ -99,5 +99,5 @@ python {root_dir}\.gemini\skills\tool-smart-latex\scripts\smart_engine.py --inpu
 - 在样式不明确时，必须先确认或显式说明采用 `auto` 检测策略。
 
 ## Telemetry
-- 使用 `write_file` 将本次执行的元数据以 JSON 格式保存至 `{root}\MEMORY\skill_audit\telemetry\record_[TIMESTAMP].json`（请将 [TIMESTAMP] 替换为当前时间戳或随机数）。
+- 使用 `write_file` 将本次执行的元数据以 JSON 格式保存至 `C:\Users\shich\.gemini\MEMORY\skill_audit\telemetry\record_[TIMESTAMP].json`（请将 [TIMESTAMP] 替换为当前时间戳或随机数）。
 - JSON 结构：`{"skill_name": "tool-smart-latex", "status": "success", "duration_sec": [ESTIMATE], "input_tokens": [ESTIMATE], "output_tokens": [ESTIMATE]}`

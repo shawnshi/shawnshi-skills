@@ -37,3 +37,38 @@
 - Top 10 不重复
 - 所有 Top 项目有摘要
 - 未审计的 L4 不得交付
+
+## 6. JSON Schema & Localization Contract
+最终输出**必须**是一个严格符合以下结构的 JSON 对象。
+**CRITICAL**: 所有正文分析内容（除原始 URL、专有名词外）**必须输出为中文 (zh-CN)**，并且对所有核心实体使用 `[[ ]]` 进行图谱双链标记。
+
+```json
+{
+  "punchline": "全局一句话核心结论（中文）",
+  "insights": "Weaver Insights 的宏观推演（中文）",
+  "digest": "Strategic Digest 战略摘要（中文）",
+  "market": "Market Watch 市场观察（中文）",
+  "action_levers": [
+    {
+      "domain": "动作所属领域（如：产品研发/商业化）",
+      "task": "具体的行动建议（中文）"
+    }
+  ],
+  "top_10": [
+    {
+      "title": "原始英文标题",
+      "title_zh": "中文翻译标题（必填）",
+      "url": "https://...",
+      "source": "来源（如 NEJM）",
+      "date": "YYYY-MM-DD",
+      "fact": "事实描述（中文）",
+      "connection": "战略关联（中文）",
+      "deduction": "推演结论（中文）",
+      "actionability": "可操作动作（中文）",
+      "intelligence_level": "L2/L3/L4",
+      "confidence": "high/medium/low",
+      "summary_zh": "中文摘要（必填）"
+    }
+  ]
+}
+```

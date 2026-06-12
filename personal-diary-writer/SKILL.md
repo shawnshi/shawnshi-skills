@@ -1,8 +1,9 @@
 ---
 name: personal-diary-writer
+version: 8.1.0
 description: 个人日志原子写入器。Primary owner for physical diary/log writeback and atomic persistence only. Use when content is already decided and must be safely written to disk. Prefer personal-cognitive-auditor for periodic review analysis, personal-monthly-insights for interaction meta-analysis, and mentat-insight-diary for first-person system introspection content.
+triggers: ["写日记", "记录今日状态", "保存审计日志"]
 ---
-
 
 <strategy-gene>
 Keywords: 日志写入, diary, 落盘, 原子写入
@@ -14,29 +15,20 @@ Strategy:
 AVOID: 禁止替用户扩写未确认内容；禁止覆盖旧日志。
 </strategy-gene>
 
-# Personal Diary Writer (Atomic I/O)
+# Personal Diary Writer (Atomic I/O V8.1 Native)
 
-This skill handles high-frequency, lightweight daily status recording and atomic file operations for diary/log entries.
+本技能负责处理高频、轻量级的每日状态记录以及日志条目的原子化落盘操作。不负责虚构数据或替代上游审计判断。
 
-## When to Use
-- 当用户需要写日记、记录状态，或其他技能需要安全落盘审计/日志内容时使用。
-- 本技能负责原子写入与结构对齐，不负责虚构数据或替代上游审计判断。
+## 1. 核心流程与架构 (The Protocol)
 
-## Workflow
+### Phase 0: Reconnaissance (证据先行) [Mode: PLANNING]
+- **自动化事实重建**: 在组装日志前，必须调用原生的 `call_mcp_tool` (指向 `google-workspace` 服务器的 `calendar.listEvents`) 获取真实的日程数据。
+- **能量数据硬锁**: 关于个人的生理能量状态，主代理**绝对禁止**凭空捏造。必须使用原生 `run_command` 调用专用脚本提取：
+  `$env:PYTHONIOENCODING="utf-8"; python "C:\Users\shich\.gemini\config\skills\personal-health-analysis\scripts\garmin_intelligence.py" insight_cn --days 3`
+  若脚本执行失败，对应字段强制填入 `[DATA_UNAVAILABLE]`，严禁大模型自行脑补推演。
 
-### 核心约束 (Core Mandates)
-- **物理操作债防守**: 必须强制使用 `run_shell_command` 调用 `python ~/.gemini/skills/scripts/io_engine/diary_ops.py` 进行 `prepend` 操作。严禁使用 Shell 重定向或常规 `write_file` 直接覆盖主日志文件。
-- **Win32 物理适配**: 永远使用 `--content_file` 传递复杂内容，防止 Windows 命令行转义导致解析错误。
-- **语义本体**: 强制检查 `#tag` 格式，确保所有标签符合本体标准。
-
-### 执行协议 (Execution Protocol)
-
-### Phase 0: Reconnaissance (证据先行)
-- **自动化事实重建**: 在组装日志前，必须先自动执行 `gws calendar events list` 获取日程数据。
-- **前置数据硬锁**: 能量数据**绝对禁止**主 Agent 自己编造。你必须调用 `personal-health-analysis` 的专用查询脚本（如：`python ~/.gemini/skills/personal-health-analysis/scripts/garmin_intelligence.py insight_cn --days 3`）提取真实的系统态势与睡眠负债。若脚本执行失败，该字段强制填入 `[DATA_UNAVAILABLE]`，严禁进行语义推理。
-
-### Phase 1: Structure Alignment (结构对齐)
-- **Schema 绝对防御**: 严格按照以下模板结构组装内容，绝对禁止合并标题：
+### Phase 1: Structure Alignment (结构对齐) [Mode: PLANNING]
+严格按照以下格式组装内容（绝对禁止合并或遗漏标题）：
 ```markdown
 # YYYY-MM-DD 星期X
 
@@ -59,56 +51,36 @@ This skill handles high-frequency, lightweight daily status recording and atomic
 ...
 
 ## 能量管理 (Biological-Cognitive Correlation)
-- **系统态势**: [必须提取自 Garmin 简报，如 🟡 隐性耗散]
+- **系统态势**: [必须提取自 Garmin 简报]
 - **执行带宽**: 综合 [分数]/100 (认知 [分数] / 物理 [分数])
 - **睡眠负债**: [提取债务小时数]h, 深睡占比 [比例]%
-- **摩擦解构**: [基于上述真实数据进行的纯生理定性分析]
-- **交叉归因**: [强制将上述生理耗散与今日顶部的某项具体高压业务事件挂钩]
-- **干预指令**: [具体的强制动作，如“取消明日非必要会议”或“安排15分钟HIIT”]
+- **摩擦解构**: [基于真实数据的纯生理定性分析]
+- **交叉归因**: [将生理耗散与今日某项具体高压业务事件挂钩]
+- **干预指令**: [具体的强制动作，如“取消明日非必要会议”]
 
 ## 标签
 #tag
 ```
+- **联动防御**: 检查能量管理中的 `干预指令`，**必须**将其无条件映射到顶部的 `## 明日战术锁定 (Next Day Tactics)` 中作为最高优先级任务。
 
-### Phase 2: Action
-1. **联动干预防御**: 检查能量管理中的 `干预指令`，**必须**将其无条件映射到顶部的 `## 明日战术锁定 (Next Day Tactics)` 中作为最高优先级任务。
-2. **规范化标签**: 处理用户或审计官提供的文本，确保标签格式正确。
-3. **中间暂存**: 将组装好的内容写入临时文件 `~/.gemini/tmp/log_entry.md`。
-4. **安全写入**: 使用 `run_shell_command` 执行 `python ~/.gemini/skills/scripts/io_engine/diary_ops.py prepend --content_file ~/.gemini/tmp/log_entry.md`。
+### Phase 2: Writeback (安全落盘) [Mode: EXECUTION]
+由于日志的特性（需追加或原子插入），若无合适的原生直接写入方式，需走以下脚本流：
+1. **暂存区**: 使用 `write_to_file` 将组装好的格式化文本写入绝对路径的临时文件 `C:\Users\shich\.gemini\tmp\log_entry.md`。
+2. **安全追加**: 调用原生 `run_command` 执行原子前置操作：
+   `$env:PYTHONIOENCODING="utf-8"; python "C:\Users\shich\.gemini\config\skills\scripts\io_engine\diary_ops.py" prepend --content_file "C:\Users\shich\.gemini\tmp\log_entry.md"`
 
 ### 附属落盘协议 (Secondary Write-Backs)
+- **Mentat Insight Archival**: 若属于 Mentat 深度日志，物理归档至 `C:\Users\shich\.gemini\MEMORY\raw\privacy\Diary\mentat_audit\[YYYY-QX]_Audit.md`。必须使用 `diary_ops.py`。
+- **全局记忆同步**: 接收到认知深度 >= 4 的产出时，格式化为 JSON 并调用：
+  `$env:PYTHONIOENCODING="utf-8"; python "C:\Users\shich\.gemini\config\skills\scripts\io_engine\memory_sync.py"` 同步至全局记忆。
 
-### 2.1 Mentat Insight Archival (内观日记同步)
-- **触发条件**: 当前记录属于 Mentat Insight 深度日志。
-- **动作**: 物理归档至 `~/.gemini/memory/raw/privacy/Diary/mentat_audit/[YYYY-QX]_Audit.md`。必须使用 `diary_ops.py` 执行季度级 `prepend`。
+## 2. <Contracts> (输出与交付契约)
+- **Schema 绝对防御**: 最终落盘的日志必须严格遵循预定义的 Markdown 模板骨架，不可合并任何区块。所有的 `#tag` 必须规范化。
+- **Telemetry 记录**: 任务结束时，使用 `write_to_file` 工具将元数据以 JSON 格式保存至：
+  `C:\Users\shich\.gemini\MEMORY\skill_audit\telemetry\record_[TIMESTAMP].json`
+  JSON 结构示例：`{"skill_name": "personal-diary-writer", "status": "success", "duration_sec": 0, "input_tokens": 0, "output_tokens": 0}`
 
-### 2.2 Strategic Sync (全局记忆同步)
-- **触发条件**: 接收到来自 `personal-cognitive-auditor` 且 `cognitive_depth_score >= 4` 的产出。
-- **动作**: 将认知结晶格式化为 JSON并调用 `run_shell_command` 执行 `python ~/.gemini/skills/scripts/io_engine/memory_sync.py` 同步至全局 `memory.md`。
-
-## Resources
-- `scripts/io_engine/diary_ops.py`
-- `scripts/io_engine/memory_sync.py`
-- 临时文件：`~/.gemini/tmp/log_entry.md`
-- 关联技能：`personal-health-analysis`、`personal-cognitive-auditor`、`mentat-insight-diary`
-
-## Failure Modes
-- `IF [Action == "Archive"] THEN [Require run(diary_ops.py)] AND [Halt if creating fragment files]`
-- `IF [Condition == "Modified memory.md" OR "Tool_Error_Count >= 2"] THEN [Execute activate_skill("mentat-insight-diary")]`
-- `IF [Action == "Append Multiple Lines"] THEN [Require Parameter == "--content_file"]`
-- `IF [Field == "Energy Management"] THEN [Halt if source != "garmin_intelligence.py"] AND [Require Output == "[DATA_UNAVAILABLE]" if data missing]`
-
-## Output Contract
-- 最终日志必须严格遵循预定义 Schema，保留全部标题，不允许合并或漏掉能量管理/标签等关键区块。
-- 所有复杂内容必须经 `--content_file` 进入 `diary_ops.py`，并返回可追踪的最终写入路径或完成状态。
-
-## Telemetry
-- 任务结束时，使用 `write_file` 将元数据以 JSON 格式保存至 `~/.gemini/MEMORY/skill_audit/telemetry/record_[TIMESTAMP].json` (替换为当前时间戳)。
-- JSON 结构：`{"skill_name": "personal-diary-writer", "status": "success", "duration_sec": 0, "input_tokens": 0, "output_tokens": 0}`
-
-## 历史失效先验 (NLAH Gotchas)
-- **[Win32 GWS Hard-Lock]**: 在 Win32/PowerShell 环境下，调用 `gws` 禁止使用内联 `--fields` 参数（已知会导致参数漂移/解析错误）。必须强制执行全量拉取后通过代码/工具过滤。
-- `IF [Action == "Archive"] THEN [Require run(diary_ops.py)] AND [Halt if creating fragment files]`
-- `IF [Condition == "Modified memory.md" OR "Tool_Error_Count >= 2"] THEN [Execute activate_skill("mentat-insight-diary")]`
-- `IF [Action == "Append Multiple Lines"] THEN [Require Parameter == "--content_file"]`
-- `IF [Field == "Energy Management"] THEN [Halt if source != "garmin_intelligence.py"] AND [Require Output == "[DATA_UNAVAILABLE]" if data missing]`
+## 3. <Failure_Taxonomy> (失败分类学 / 逻辑硬锁)
+- **幻觉工具调用 (Tool Hallucination)**：严禁使用废弃的 `gws` 终端命令获取日程，必须走 MCP 路由；严禁使用错误的伪名如 `run_shell_command` 或 `write_file`。
+- **环境死锁与乱码 (Deadlock & Encoding Crash)**：调用任何 Python I/O 脚本时，必须包含 `$env:PYTHONIOENCODING="utf-8"`；所有的路径（脚本调用与临时文件读写）绝对禁止使用 Linux `~` 变量，必须使用 Windows 硬连接绝对地址 `C:\Users\shich\.gemini\...`。
+- **数据编造 (Data Forgery)**：在组装“能量管理”区块时，严禁使用模型自身的权重推测身体状态。必须基于 `garmin_intelligence.py` 的返回。如缺少数据，强行熔断填入 `[DATA_UNAVAILABLE]`。

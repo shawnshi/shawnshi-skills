@@ -1,28 +1,65 @@
 ---
 name: hit-weekly-brief
-description: 医疗行业战区研报中枢 (V8.0)。Primary owner for weekly think-tank, consulting, and whitepaper briefs in healthcare or digital health.
+version: 8.1.0
+description: 医疗行业战区研报中枢 (V5.2)。Primary owner for weekly think-tank, consulting, and whitepaper briefs in healthcare or digital health. Use for McKinsey/BCG/Gartner-style report digestion and weekly strategic brief generation. Prefer hit-industry-radar for market-news/event scans and hit-lectures-scout for academic or clinical paper scouting.
 triggers: ["生成数字健康周报", "检索医疗行业报告", "本周麦肯锡研报", "Digital Health Weekly Brief", "最新数字医疗白皮书", "扫描本周智库发文"]
 ---
 
-# HIT Weekly Brief (行业战区周报) V8.0 Dehydrated Edition
+<strategy-gene>
+Keywords: 数字健康周报, 智库研报, 二跳推理, 跨界注入
+Summary: 聚合顶级智库研报并执行 Contrarian (逆向) 对抗分析，识别被主流忽略的破坏性信号。
+Strategy:
+1. 四维度扫描：并行调度策略、技术、政策、跨界（FinTech/军工）四条管线。
+2. 织者关联：将零散预测串联为系统级规律，执行与卫宁技术的结合点推理。
+3. 非共识对抗：强制寻找与主流研报相反的证据，识别“共识幻觉”。
+4. 强制双链图谱与双轨落盘：对核心企业、人物或专有名词必须使用 `[[ ]]` 进行硬链接；若是长效落盘，必须遵守 Compiled Truth | Timeline 上下分割规范。
+AVOID: 严禁重复 14 天内的旧报；禁止包含无 ROI 支撑的营销废话；禁止漏掉跨界启发模块；严禁越界将原始抓取数据写入核心图谱。
+</strategy-gene>
 
-> **Vision**: 消除智库研报中的“共识幻觉”。本技能的四路并发抓取、跨界映射与硬核审计流均已深度下沉至 `BasePipelineOrchestrator`。大模型仅需专注最后的反向验证与交付。
+# HIT Weekly Brief (行业战区周报 V8.1 Native)
 
-## When to Use
-- 当用户要求生成数字健康周报、扫描本周智库/白皮书、或提炼医疗行业周度战略信号时使用。
+> **Vision**: 消除智库研报中的“共识幻觉”与“信息茧房”。系统不仅聚合顶级咨询结论，更通过“二跳推理”与“跨界注入”识别被主流忽略的破坏性信号。
 
-## Workflow
+## 1. 核心流程与架构 (The Protocol)
 
-1. **一键触发核心管线 (Launch Orchestrator)**: 
-   你不再需要手动拉起 4 个 Subagent 去进行四路并发！请直接调用工具执行管线调度器：
-   ```powershell
-   $env:PYTHONIOENCODING="utf-8"; python "C:/Users/shich/.gemini/config/skills/hit-weekly-brief/scripts/run_weekly_brief.py"
-   ```
+### Phase 1: 四路并发原生沙盒扫描 (Concurrent Map-Reduce) [Mode: PLANNING]
+1. **初始化调度**: 主代理必须调用原生 `invoke_subagent` 工具，并发拉起 4 个 `TypeName: research` 类型的子代理。分别下发本技能 `assets/` 目录下的四份指令包作为 Prompt：
+   - 顶级智库战略 (`Task_strategy.md`)
+   - 公卫与合规政策 (`Task_policy.md`)
+   - 医疗技术与架构 (`Task_tech.md`)
+   - **[硬锁]** 跨界技术架构注入 (`Task_serendipity.md`，从金融/物流/军工等非医疗行业寻找同构启发)。
+   绝对禁止主代理在此阶段直接在主线程执行广域搜索。
+2. **图谱语义去重**: 回收子代理数据后，强制调用 `call_mcp_tool` (ServerName: `vector-lake-mcp`, ToolName: `search_vector_lake`) 扫描过往 14 天的历史报告，剔除旧闻。
 
-2. **纯粹的高维推演与纠错 (Pure Reasoning & Audit Fix)**: 
-   Python 脚本会在后台静默完成：4 条赛道（政策、技术、战略、跨界）的情报抓取、语义翻译与模板组装，并生成草稿存储在 `C:/Users/shich/.gemini/tmp/draft_hit_brief.md`。脚本也会自动调用 `hit_audit_gate.py` 进行质量审计。
-   - **如果审计通过**：读取草稿，进行最后的高管视角润色，使用 `write_file` 落盘至最终归档目录 `MEMORY/raw/DigitalHealthWeeklyBrief/`，并向用户交付。
-   - **如果审计失败（例如缺少 Contrarian 反向观点、有死链接等）**：仔细阅读 Orchestrator 输出的报错日志，针对性修改草稿并重新审计，直到通过。
+### Phase 2: 概念化用与图谱回溯 (Semantic Translation & Weaver) [Mode: EXECUTION]
+1. **概念降维**: 解读非医疗行业的跨界报告时，必须将其核心概念 1:1 翻译为医疗 IT 实景（如将“边缘计算”翻译为“床旁监护终端流式分析”）。
+2. **多跳关联**: 强制调用 `call_mcp_tool` (ServerName: `vector-lake-mcp`, ToolName: `query_logic_lake`) 查询过往 HIS/EMR 重构记录，确认跨界逻辑在现实医疗 IT 产品（如 WiNEX）中的可落地性。
 
-3. **全自动静默入湖 (Silent Ingestion)**: 
-   你不再需要操心知识图谱的同步！若你在润色过程中提取出了核心实体概念（如：`[[Medical Semantic Layer]]`）并写入了 `MEMORY/wiki/` 目录，底层的 Watchdog 守护进程会自动扫描并异步向量化。严禁手动调用入湖 MCP 工具！
+### Phase 3: Contrarian 对抗审计 [Mode: VERIFICATION]
+强制要求寻找一份与本周主推共识（如 McKinsey / Gartner）**完全相反**的数据报告或专家评论，识别出当前的“共识幻觉”。
+
+### Phase 4: 全局缝合与跨平台防爆审计 [Mode: EXECUTION]
+1. 根据 `resources/template.md` 模板渲染极高压迫感的简报草稿，写入临时文件 `C:\Users\shich\.gemini\tmp\draft_hit_brief.md`。
+2. **防爆代码审查**: 强制调用跨平台红队脚本，挂载 UTF-8 数据流安全锁：
+   `$env:PYTHONIOENCODING="utf-8"; python "C:\Users\shich\.gemini\config\skills\hit-weekly-brief\scripts\hit_audit_gate.py" "C:\Users\shich\.gemini\tmp\draft_hit_brief.md" --mode brief`
+3. 审计拦截不过时（如查出假链接、缺失非共识观点），强制退回修正。
+
+### Phase 5: 物理落盘与异步入湖 (Activate & Ingestion) [Mode: EXECUTION]
+1. 审计通过后，使用 `write_to_file` 正式落盘：
+   `C:\Users\shich\.gemini\MEMORY\raw\DigitalHealthWeeklyBrief\DHWB-YYYYMMDD.md`
+2. **高价值实体入湖**:
+   - 提取报告中的“非共识观点”等战略突变实体，使用 `write_to_file` 或 `replace_file_content` 更新至对应的 `C:\Users\shich\.gemini\MEMORY\wiki\Entity_*.md` 节点中。
+   - 调用 `call_mcp_tool` (ServerName: `vector-lake-mcp`, ToolName: `prepare_ingest_batch`) 抛入后台异步队列。
+
+## 2. <Contracts> (输出与交付契约)
+- **S-I-A 框架契约**: 所有的情报推演必须严格按照 Signal(信号) -> Insight(洞察) -> Action(动作/行动杠杆) 的框架闭环输出。
+- **跨界强制契约**: 终稿中必须有至少 1 个“非医疗行业”的跨界启发（Serendipity），否则视为残次品。
+- **真实元数据契约**: 所有引用链接必须经过真实的浏览工具验证，严禁留下 `[URL]` 或 `[Link]` 这种 AI 假链接占位符。
+- **Telemetry 落盘契约**: 任务结束时，使用 `write_to_file` 将包含 `skill_name`, `status`, `input_tokens` 等元数据的 JSON 保存至：
+  `C:\Users\shich\.gemini\MEMORY\skill_audit\telemetry\record_[TIMESTAMP].json`
+
+## 3. <Failure_Taxonomy> (失败分类学 / 逻辑硬锁)
+- **幻觉与链接造假 (Hallucination Lock)**：若终稿包含类似 `[Link]` 或未能真实打开的占位符 URL，将被直接判定为造假死锁并阻断交付。必须执行真实网页连通性校验。
+- **共识狂热 (Consensus Echo-Chamber)**：如果全篇报告都在顺着顶级智库的话说，而没有找到哪怕 1 处相反或对抗性的证据（Contrarian），该战报将被系统直接毙掉。
+- **路径与工具崩塌 (Tool/Path Deadlock)**：严禁写入漏层级的执行路径（如 `{SKILL_DIR}` 宏），强制执行绝对物理寻址。落盘与图谱调用必须且只能使用 `write_to_file` 与合法的 `call_mcp_tool` 组合，严禁编造旧版指令名字。
+- **营销水词泛滥 (PR Water-Army)**：内容中一旦检测到公关废话、主观吹捧且无 ROI 支撑的文字，视为清洗彻底失败，强制阻断交付。

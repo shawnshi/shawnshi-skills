@@ -1,181 +1,48 @@
 ---
 name: image-promp-gen
-description: 一句话生成大师级海报、书籍封面、专辑封面和各类设计作品的提示词。基于33+位传奇设计师风格。支持多平台多比例。包含AI提示词优化。触发词："Mondo风格"、"书籍封面设计"、"专辑封面"、"海报设计"、"读书笔记配图"、"公众号封面"、"小红书配图"、"文章配图"。One-sentence generation of master-level poster and cover prompts.
+version: 8.1.0
+description: 一句话生成大师级海报、书籍封面、专辑封面和各类设计作品的提示词。基于33+位传奇设计师风格。支持多平台多比例。包含AI提示词优化。触发词："Mondo风格"、"书籍封面设计"、"专辑封面"、"海报设计"、"读书笔记配图"、"公众号封面"、"小红书配图"、"文章配图"。
+triggers: ["海报设计", "书籍封面", "专辑配图", "Mondo风格", "生成提示词"]
 ---
-
 
 <strategy-gene>
-Keywords: 海报提示词, 书籍封面, 专辑封面, 小红书配图
-Summary: 生成大师级视觉提示词，覆盖封面、海报和社媒配图。
+Keywords: 海报提示词, 书籍封面, 专辑封面, Mondo, 丝网印刷
+Summary: 提取用户模糊意图，通过脚本生成极具视觉张力的 Mondo 风格（丝网印刷、复古、负空间）AI 绘图提示词。
 Strategy:
-1. 提取主题、媒介、比例、目标平台和情绪张力。
-2. 选择设计师风格、构图、字体、色彩、符号和摄影/插画语言。
-3. 输出可直接用于图像模型的一句话或分层提示词。
-AVOID: 禁止堆砌空泛形容词；禁止忽略平台比例和文字排版约束。
+1. 提取意图：捕获主题、媒介、比例、目标平台和情绪张力。
+2. 风格锻造：调用本地 Python 引擎生成包含艺术家风格、构图、色彩、符号的完整 Prompt。
+3. 协同生成：询问是否联动 `nanobanana-image-gen` 技能完成端到端物理出图。
+AVOID: 禁止使用照相写实主义词汇（photorealistic）；禁止漏掉长宽比与色彩限制。
 </strategy-gene>
 
-# Mondo Style Design Prompt Generator (image-promp-gen)
+# Mondo Style Prompt Generator (视觉提示词炼金炉 V8.1 Native)
 
-Generate highly detailed and optimized AI image prompts in Mondo's distinctive alternative aesthetic - known for limited-edition screen-printed posters, book covers, and album art with bold colors, minimalist compositions, and symbolic storytelling.
+> **Vision**: 摒弃烂俗的 3D 渲染与写实风。我们以 Mondo 的另类美学为准则——丝网印刷、有限色彩、负空间把玩与符号隐喻。
 
-**This skill can:**
-- Generate detailed Mondo-style prompts for any subject
-- Design prompt structures for movie posters, book covers, album art, event posters
-- Provide genre-specific and format-specific templates
+## 1. 核心流程与架构 (The Protocol)
 
-## Core Mondo Aesthetic
+### Phase 1: Context & Strategy (意图提取) [Mode: PLANNING]
+1. 明确用户的设计主体 (Subject) 与类型 (Type: movie/book/album/event)。
+2. 确定艺术家风格。支持的传奇风格涵盖 Saul Bass (剪影/爵士风), Olly Moss (极简/负空间双重意境), Tyler Stout (高密度人物拼贴) 等。
 
-Mondo posters are characterized by:
+### Phase 2: Engine Execution (脚本唤起) [Mode: EXECUTION]
+1. 必须使用 `run_command` 调用底层脚本合成复杂提示词。
+2. 强制挂载中文字符集安全锁与绝对物理路径：
+   `$env:PYTHONIOENCODING="utf-8"; python "C:\Users\shich\.gemini\config\skills\image-promp-gen\scripts\generate_mondo.py" "您的主题" "类型" --style [艺术家风格] --colors "期望色彩" --aspect-ratio "9:16"`
+   *(注：查看所有支持风格可执行：`python "C:\Users\shich\.gemini\config\skills\image-promp-gen\scripts\generate_mondo.py" --list-styles`)*
 
-1. **Artistic Reinterpretation** - Not literal film scenes, but conceptual visual distillations
-2. **Screen Print Aesthetics** - Limited color palettes (2-5 colors), flat color blocks, halftone textures
-3. **Minimalist Symbolism** - Key props, silhouettes, negative space over character faces
-4. **Bold Vintage Typography** - Hand-drawn lettering, condensed sans-serifs, Art Deco influences
-5. **Retro Color Palettes** - High saturation, vintage duotones, bold contrasts (orange/teal, red/cream, etc.)
+### Phase 3: Deliver & Handoff (交付与联动) [Mode: EXECUTION]
+1. 向用户输出生成的 Mondo 风格大师级提示词。
+2. 主动询问用户：“是否需要我立即调用 `image-nano-gen` 技能，使用该提示词为您物理出图？”
+3. 使用 `write_to_file` 记录遥测日志至绝对物理地址：
+   `C:\Users\shich\.gemini\MEMORY\skill_audit\telemetry\record_[TIMESTAMP].json`
 
-## Prompt Structure
+## 2. <Contracts> (输出与交付契约)
+- **丝网美学契约 (Screen Print Aesthetic)**：所有输出的提示词必须强制包含 `Mondo poster style`, `screen print aesthetic` 或 `limited edition poster art` 等核心锚点。强制要求定义 `limited palette` (例如 2-5 色的双色调或复古高饱和色调)。
+- **比例与排版契约 (Ratio & Typography)**：如果没有特殊要求，默认输出适用移动端的 `9:16` 比例。如果是书籍/海报，必须在提示词中囊括对复古字体 (vintage typography / hand-drawn lettering) 的布局要求。
 
-When generating Mondo-style prompts, use this template:
-
-```
-[SUBJECT] in Mondo poster style, [COMPOSITION], [COLOR PALETTE],
-screen print aesthetic, limited edition poster art, [KEY VISUAL ELEMENTS],
-[TEXTURE/FINISH], minimalist design, vintage movie poster, [MOOD/TONE]
-```
-
-### Essential Components
-
-**Style Anchors** (always include):
-- "Mondo poster style" or "alternative movie poster"
-- "screen print aesthetic" or "silkscreen print"
-- "limited edition poster art"
-- "vintage [decade] movie poster" (60s/70s/80s)
-
-**Composition Techniques** (choose 1-2):
-- Centered symmetrical composition
-- Silhouette against [color] background
-- Negative space storytelling
-- Geometric framing (circles, triangles, arches)
-- Layered depth with foreground/midground/background
-
-**Color Strategy** (specify clearly):
-- Limited palette: "3-color screen print: [color 1], [color 2], [color 3]"
-- Duotone: "[warm color] and [cool color] duotone"
-- Vintage scheme: "70s palette: burnt orange, mustard yellow, brown"
-- High contrast: "bold [color] on [color] background"
-
-**Visual Elements** (symbolic, not literal):
-- Key prop or object (weapon, vehicle, iconic item)
-- Silhouettes over detailed faces
-- Geometric shapes hiding imagery
-- Environmental mood (fog, rain, shadows)
-- Symbolic animals or nature elements
-
-**Texture & Finish** (adds authenticity):
-- "halftone dot texture"
-- "risograph printing effect"
-- "paper texture grain"
-- "slight misalignment between color layers"
-- "vintage print imperfections"
-
-## Artist-Specific Variations
-
-For different Mondo artist styles, see [references/artist-styles.md](references/artist-styles.md).
-
-**Quick reference:**
-- **Tyler Stout style**: Dense character collages, intricate details, maximal composition
-- **Olly Moss style**: Ultra-minimal, clever negative space, 1-2 colors
-- **Martin Ansin style**: Art Deco influence, elegant line work, muted vintage tones
-
-## Advanced Negative Space Techniques
-
-Master-level Mondo designs use **figure-ground inversion** - where the negative space (area without ink) forms meaningful shapes.
-
-### Technique 1: Clever Visual Puns (Olly Moss Style)
-**Example structure:**
-```
-[Subject silhouette] in Mondo poster style, vertical 9:16, negative space WITHIN
-silhouette reveals [hidden element], Olly Moss figure-ground inversion, 2-color
-duotone: [color 1] and [color 2], clever dual imagery, what's missing tells the story
-```
-
-## 🚀 Key Features
-
-### 1. 20+ Artist Styles
-Includes legendary artist styles from Art Nouveau to Contemporary Minimalism.
-- `saul-bass`, `olly-moss`, `tyler-stout`, `alphonse-mucha`, `milton-glaser`, and more.
-- View all styles: `python3 scripts/generate_mondo.py --list-styles`
-
----
-
-## Direct Prompt Generation
-
-This skill generates prompt strings using the bundled script:
-
-```bash
-python3 scripts/generate_mondo.py "subject" "type" [options]
-```
-
-**Parameters:**
-- `subject`: What to design (e.g., "Akira cyberpunk anime")
-- `type`: Design type - "movie", "book", "album", "event"
-- `--style`: Artist style (20+ options, see --list-styles)
-- `--colors`: Color preferences (e.g., "orange, teal, black")
-- `--aspect-ratio`: Aspect ratio (default: 9:16 for mobile/social)
-
-**Examples:**
-
-Basic generation:
-```bash
-python3 scripts/generate_mondo.py "Blade Runner" movie
-```
-
-With specific artist style:
-```bash
-python3 scripts/generate_mondo.py "cyberpunk noir" movie --style saul-bass
-```
-
-List all artist styles:
-```bash
-python3 scripts/generate_mondo.py --list-styles
-```
-
-### Manual Usage
-
-1. Use this skill to generate the Mondo-style prompt.
-2. The script will prompt: `Would you like to call 'image-nano-gen' to generate the image with this prompt?`
-3. If confirmed, call the `image-nano-gen` skill with the generated prompt.
-
-
-
-##  Telemetry & Metadata (Mandatory)
-- 使用 `write_file` 将本次执行的元数据以 JSON 格式保存至 `{root}\MEMORY\skill_audit\telemetry\record_[TIMESTAMP].json`。
-- JSON 结构：`{"skill_name": "image-promp-gen", "status": "success", "duration_sec": [ESTIMATE], "input_tokens": [ESTIMATE], "output_tokens": [ESTIMATE]}`
-
-## 历史失效先验 (Gotchas)
-- **DO NOT** use complex photorealistic terms; stick to screen print aesthetics.
-- **ALWAYS** prefer 9:16 aspect ratio for posters and covers unless specified otherwise.
-- **NEVER** ignore the negative space opportunities in minimal designs.
-
-## When to Use
-- 当用户要求生成海报、封面、配图或设计风格型图像提示词时使用。
-- 具体设计师映射、风格控制和比例策略仍以本文件既有说明为准。
-
-## Workflow
-- 遵循本文件已有的风格选择、提示词组装和平台适配流程。
-- 不跳过长宽比、负空间和媒介风格限制。
-
-## Resources
-- 使用本技能引用的设计师风格库、模板、示例提示词和参考文件。
-- 所有提示词拼装规则以技能目录中的现有资源为准。
-
-## Failure Modes
-- 将本文件中的比例偏好、风格禁令和 `Gotchas` 视为失败模式。
-- 若用户需求与现有风格体系冲突，必须显式说明取舍，而不是混合出模糊风格。
-
-## Output Contract
-- 最终交付必须是可直接用于图像生成的高质量提示词，并满足媒介、比例和风格要求。
-- 如果用户没有给尺寸或平台，输出必须遵循本文件的默认策略并明确说明。
-
-## Telemetry
-- 按本文件上方定义的 telemetry 规则记录元数据。
+## 3. <Failure_Taxonomy> (失败分类学 / 逻辑硬锁)
+- **沙盒宏塌陷与引擎幻觉 (Pathing & Env Deadlock)**：严禁使用 `python3` 等 Unix 习惯指令，严禁在路径中使用 `{root}` 或相对路径 (`scripts/...`)。脚本执行必须且只能挂载绝对物理地址和 UTF-8 安全锁，否则将因找不到文件或解码失败导致任务崩溃。
+- **写实主义污染 (Photorealism Pollution)**：如果系统侦测到你在给脚本传参或生成的提示词中使用了 `photorealistic, 8k resolution, Unreal Engine, hyper-detailed photograph` 等 3D/写实类词汇，这将被视为严重破坏 Mondo 丝网美学，直接判定任务失败并打回重构。
+- **符号缺位 (Symbolism Missing)**：Mondo 的灵魂在于负空间与符号（例如：在人物轮廓的剪影中藏着另一个场景）。如果你生成的提示词只停留在直白的“人物站在雨中”，而没有 `clever negative space` 或 `figure-ground inversion` 等符号设计，将被视为残次品。
+- **工具伪造 (Tool Forgery)**：严禁使用旧版本废弃工具 `write_file`，物理落盘必须使用合规的 `write_to_file`。

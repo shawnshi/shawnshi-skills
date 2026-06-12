@@ -91,11 +91,12 @@ def strip_ansi(text):
 
 def get_session_list():
     try:
+        # Security: shell=False prevents command injection when passing argument lists
         result = subprocess.run(
             ['gemini', '--list-sessions'],
             capture_output=True,
             text=True,
-            shell=True,
+            shell=False,
             cwd=str(CLI_ROOT),
             encoding='utf-8',
             errors='ignore'
@@ -275,8 +276,9 @@ def get_git_stats():
     if not git_root:
         return 0
     try:
+        # Security: shell=False prevents command injection when passing argument lists
         cmd = ['git', 'rev-list', '--count', 'HEAD', "--since=1 year ago"]
-        return int(subprocess.check_output(cmd, encoding='utf-8', shell=True, cwd=str(git_root)).strip())
+        return int(subprocess.check_output(cmd, encoding='utf-8', shell=False, cwd=str(git_root)).strip())
     except Exception:
         return 0
 

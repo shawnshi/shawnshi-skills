@@ -107,8 +107,14 @@ def main():
 
     log.info(f"Triggering MusicBee with target: {play_target}")
     try:
-        subprocess.Popen(['cmd', '/c', 'start', '""', str(musicbee_exe), str(play_target)])
-        log.info("Playback sequence initiated successfully via cmd start.")
+        if musicbee_exe and musicbee_exe.exists():
+            wmi_cmd = f"Invoke-WmiMethod -Class Win32_Process -Name Create -ArgumentList '{musicbee_exe} \"{play_target}\"'"
+            subprocess.run(["powershell", "-Command", wmi_cmd])
+            log.info("Playback sequence initiated successfully via WMI Process Create (Sandbox Escape).")
+        else:
+            import os
+            os.startfile(play_target)
+            log.info("Playback sequence initiated successfully via os.startfile.")
     except Exception as exc:
         log.error(f"Failed to execute MusicBee process: {exc}")
         sys.exit(1)

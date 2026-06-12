@@ -34,29 +34,30 @@ AVOID: 禁止单次 Prompt 加载超 10,000 字全文；严禁携带占位符的
 
 ### Native Sub-agent Delegation Protocol (并发分片处理)
 **CRITICAL RULE**: 绝对禁止主代理在当前对话中直接裸读高达几十 MB、数百页的招投标文件或评级标准，这会导致主节点注意力崩溃并清空短期记忆。
-1. **单核串行分派 (Sequential Ingestion)**: 绝对禁止主代理调用 `invoke_subagent` 暴力并发！超长文档的分片、分析应全权交由 `orchestrate_enhanced.py` 进行后台串行流式处理，并在 Python 内存态中完成拼装。
-2. **纯内存交付 (Memory-over-Disk)**: 所有子摘要产物通过 Python 脚本执行并打印至当前上下文，主代理原地组装，严禁中间产物乱写 `tmp/` 目录。
+1. **分发策略 (Shredding)**: 对于超长文档，主代理必须调用原生的 `invoke_subagent` 工具拉起专用的分析子代理。
+   - **Subagent Boilerplate**: 强制使用此精确的 Prompt 模板约束子代理：`"TypeName": "self", "Role": "Document Shredding Task", "Prompt": "You are the Shredding Subagent. Read the following text chunk: [...]. Extract core insights and return EXACTLY this JSON structure: {\"chunk_summary\": \"...\", \"entities\": []}. Reply to me when DONE."`
+2. **静默组装 (Assembly)**: 主代理在派发完所有子代理分片任务后，停止调用工具原地挂起。在从消息收件箱回收全部 JSON 分片后，合并并启动宏观战略提纯。旧版的手写工单系统（Packet）已废除。
 
 ### 脚本指令执行规范 (Execution Protocol)
 
-所有后台的引擎脚本必须使用绝对的物理防御封装：
-**护盾前缀**: `$env:PYTHONIOENCODING="utf-8"; python "{SKILL_DIR}/scripts/...`
+所有后台的引擎脚本必须使用 `run_command` 工具配合绝对物理路径执行，严禁臆想 `{SKILL_DIR}`：
+**护盾前缀**: `$env:PYTHONIOENCODING="utf-8"; python "C:\Users\shich\.gemini\config\skills\tool-document-summarizer\scripts\...`
 
 #### 1. 核心指令 (Auto-Orchestration)
 当需要处理整个目录时，调用编排脚本，它会自动处理提取、分析、审计与产物存储：
 ```bash
-$env:PYTHONIOENCODING="utf-8"; python "{SKILL_DIR}/scripts/orchestrate_enhanced.py" all --dir <DOCUMENT_DIRECTORY>
+$env:PYTHONIOENCODING="utf-8"; python "C:\Users\shich\.gemini\config\skills\tool-document-summarizer\scripts\orchestrate_enhanced.py" all --dir <DOCUMENT_DIRECTORY>
 ```
 
 #### 2. 分步执行 (Advanced Pipeline)
-*   **仅提取文本**: `$env:PYTHONIOENCODING="utf-8"; python "{SKILL_DIR}/scripts/orchestrate_enhanced.py" extract --dir <PATH>`
-*   **仅生成摘要**: `$env:PYTHONIOENCODING="utf-8"; python "{SKILL_DIR}/scripts/orchestrate_enhanced.py" generate`
+*   **仅提取文本**: `$env:PYTHONIOENCODING="utf-8"; python "C:\Users\shich\.gemini\config\skills\tool-document-summarizer\scripts\orchestrate_enhanced.py" extract --dir <PATH>`
+*   **仅生成摘要**: `$env:PYTHONIOENCODING="utf-8"; python "C:\Users\shich\.gemini\config\skills\tool-document-summarizer\scripts\orchestrate_enhanced.py" generate`
 *   **安全阻断 (Pollution Guard)**: 在执行下一步的 apply 回写前，主代理**必须检查** `output/document_summaries_enhanced.json` 中是否仍含有 `PENDING` 或 `[等待LLM]` 字样。如存在，严禁进入回写！
-*   **仅物理回写元数据**: `$env:PYTHONIOENCODING="utf-8"; python "{SKILL_DIR}/scripts/orchestrate_enhanced.py" apply`
-*   **清理垃圾**: `$env:PYTHONIOENCODING="utf-8"; python "{SKILL_DIR}/scripts/orchestrate_enhanced.py" clean`
+*   **仅物理回写元数据**: `$env:PYTHONIOENCODING="utf-8"; python "C:\Users\shich\.gemini\config\skills\tool-document-summarizer\scripts\orchestrate_enhanced.py" apply`
+*   **清理垃圾**: `$env:PYTHONIOENCODING="utf-8"; python "C:\Users\shich\.gemini\config\skills\tool-document-summarizer\scripts\orchestrate_enhanced.py" clean`
 
 #### 3. 图谱入湖与战略落盘 (Async Graph Sync)
-所有处理完成后，主代理必须读取生成的 `output/STRATEGIC_AUDIT.md` (战略审计)，并提取高价值论断，调用 `mcp_vector-lake-mcp_prepare_ingest_batch` 并抛给 `vector-lake-ingestor` 执行后台异步全量入湖。
+所有处理完成后，主代理必须读取生成的 `output/STRATEGIC_AUDIT.md` (战略审计)，并提取高价值论断，调用 `call_mcp_tool` (ServerName="vector-lake-mcp", ToolName="prepare_ingest_batch") 拉起子代理引擎执行后台异步全量入湖。
 
 ### Best Practices for Agents
 1.  **路径感知**: 所有中间产物默认生成在源文件同级的 `output/` 目录下，严禁去根目录寻找。

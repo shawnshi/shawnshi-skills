@@ -1,6 +1,7 @@
 ---
 name: cognitive-morphism-mapper
-description: 范畴论跨界思维引擎 (V8.0 Atomized Edition)。当面对死循环问题、常规方案失效，或用户要求“升维打击”、“寻找非共识解法”、“跨界映射”时，务必强制激活。该技能利用热力学、生物学、拓扑学等异构领域结构，强行映射并生成突破性创新方案。
+version: 8.1.0
+description: 范畴论跨界思维引擎。当面对死循环问题、常规方案失效，或用户要求“升维打击”、“寻找非共识解法”、“跨界映射”时，务必强制激活。该技能利用热力学、生物学、拓扑学等异构领域结构，强行映射并生成突破性创新方案。
 triggers: ["跨界思维映射", "套用热力学破局", "用生物演化分析市场", "寻找非共识解法", "升维打击策略", "拓扑学商业应用"]
 ---
 
@@ -8,40 +9,45 @@ triggers: ["跨界思维映射", "套用热力学破局", "用生物演化分析
 Keywords: 跨界映射, 范畴论, 异构同构, 升维打击
 Summary: 提取问题的范畴论骨架，通过函子映射寻找异构领域的成熟解，突破思维定势。
 Strategy:
-1. 调用原生 Python 编排器 `run_morphism_mapper.py` 进行多步微角色独立推演。
-2. 依次经过骨架提取、科学域挑选、硬核定理演算与逻辑逆映射验证。
-3. 返回降维打击方案，拒绝廉价的鸡汤式隐喻。
-AVOID: 禁止直接使用大模型自身的 Zero-shot 幻想给出比喻。必须使用脚本经过 5 道检验。
+1. 骨架提取：剥离用户问题的业务语义，提取 Object (实体) 与 Morphism (关系) 拓扑。
+2. 映射推演：将问题映射至 Domain B，引用其定理推演方案并执行 Commutativity Check。
+3. 模块对齐：检测环境熵值，必要时挂载 monad_risk 执行多跳风险评估。
+AVOID: 禁止在信息不充分时将隐喻直接当结论；禁止新增不符合 V2 标准（100基石）的领域。
 </strategy-gene>
 
-# Cognitive Morphism Mapper (The Category Theorist V8.0)
+# Cognitive Morphism Mapper (范畴论跨界引擎 V8.1 Native)
 
-基于范畴论的跨学科思维引擎。通过寻找异构领域的同构性，突破思维定势。
+基于范畴论的跨学科思维引擎。通过寻找异构领域的同构性，突破思维定势。目标是输出可检验的结构映射，而不是只给灵感型比喻。
 
-## 🛑 核心架构升级 (V8.0)
-为了防止大模型在一次对话中既做提取又做映射而导致的“隐喻退化”（即生成诸如“公司就像大树”这种毫无用处的廉价废话），本系统已将推演过程下沉为 **5级独立算力流水线**。
+## 1. 核心流程与架构 (The Protocol)
 
-## Workflow
+### Phase 1: Extract (骨架提取) [Mode: PLANNING]
+主代理分析用户输入，剥离表层业务语义，提取底层的 Objects (实体) 和 Morphisms (关系)，建立问题的初始拓扑图。
 
-当用户提出死局问题，或要求使用“升维打击/跨界映射”时：
+### Phase 2: Select (领域选择) [Mode: PLANNING]
+主代理在 `references/` 中寻找结构相似但语义距离极远的 Domain B。
+- **Built-in**: 内置物理、生物、复杂系统等 27+ 领域。
+- **Knowledge Management**: 若需扩展或查询领域库，主代理应使用原生的 `run_command` 工具执行以下命令：
+  - 查询：`$env:PYTHONIOENCODING="utf-8"; python "C:\Users\shich\.gemini\config\skills\cognitive-morphism-mapper\scripts\domain_manager.py" list`
+  - 新增：`$env:PYTHONIOENCODING="utf-8"; python "C:\Users\shich\.gemini\config\skills\cognitive-morphism-mapper\scripts\domain_manager.py" add "[Name]"`
 
-你必须使用 `run_command` 调用底层的 Python 引擎，让它在后台执行绝对理性的硬核推演：
-```bash
-$env:PYTHONIOENCODING="utf-8"; python "C:\Users\shich\.gemini\config\skills\cognitive-morphism-mapper\scripts\run_morphism_mapper.py" --problem "用户的具体问题或商业死局"
-```
-*如果用户指定了某个科学领域（如热力学），可附加 `--domain "热力学"` 参数。*
+### Phase 3: Map (函子映射) [Mode: EXECUTION]
+建立映射关系 $F: A \to B$，引用 Domain B 中的成熟定理与运转机制。当遇到特殊情况时，主代理须自主挂载高级模块（详见 `references/modules.md`）：
+- **信息模糊** -> `yoneda_probe`
+- **环境巨变** -> `natural_transformation`
+- **风险评估** -> `monad_risk`
 
-### 后台执行管线揭秘 (The Engine)
-脚本将会在内存中依次拉起：
-1. **`Skeleton_Extractor` (范畴论学者)**：剥离商业表象，只留 Object 与 Morphism。
-2. **`Domain_Selector` (科学博学家)**：将该拓扑结构扔进硬核物理/生物学中寻找同构域。
-3. **`Theorem_Prover` (理论物理学家)**：直接套用目标域的硬核定理（如热力学第二定律、竞争排斥原理）进行推演。
-4. **`Commutativity_Checker` (逻辑学家)**：验证映射回现实世界后的逻辑闭环（Commutativity Check）。
-5. **`Strategic_Architect` (战略架构师)**：输出最终的升维打击方案。
+### Phase 4: Synthesize (合成提案) [Mode: EXECUTION]
+将 Domain B 的解法定理逆映射回源域 A，并通过 **Commutativity Check** (逻辑验算) 确保映射在物理与商业现实中均可行。
 
-### 读取产物 (Archiving)
-脚本运行完毕后，在临时目录读取输出的 Markdown 产物，将其核心结论（The Structural Trap, The Isomorphic Mapping, The Non-Consensus Solution）呈现给用户。
+## 2. <Contracts> (输出与交付契约)
+- **交付门槛**：最终输出至少包含：源域问题骨架、目标域映射、关键定理/机制、逆映射后的可执行方案，以及一次完整的 `Commutativity Check`。若使用了高级模块，必须说明触发条件与其对主方案的具体修正。
+- **Telemetry 记录**: 任务执行完成后，必须使用原生的 `write_to_file` 工具将本次执行的元数据以 JSON 格式绝对物理落盘至：
+  `C:\Users\shich\.gemini\MEMORY\skill_audit\telemetry\record_[TIMESTAMP].json`
+  JSON 结构示例：`{"skill_name": "cognitive-morphism-mapper", "status": "success", "duration_sec": 0, "input_tokens": 0, "output_tokens": 0}`
 
-## Knowledge Management
-*   **List**: `python scripts/domain_manager.py list`
-*   **Add**: `python scripts/domain_manager.py add "[Name]"`
+## 3. <Failure_Taxonomy> (失败分类学)
+- **隐喻陷阱 (Metaphor Fallacy)**：严禁在信息不充分时，将感性的修辞隐喻直接等同于逻辑结论。映射必须具备结构上的同构性（Isomorphism）。
+- **劣质领域扩张 (Garbage Domain)**：如果执行 `domain_manager.py add` 新增领域，该领域必须符合内置的 V2 标准（拥有至少 100 块可验证的基石定理），严禁添加入伪科学或结构松散的领域。
+- **路径与编码崩溃 (Execution Deadlock)**：调用本地 Python 脚本管理领域时，严禁使用相对路径，必须使用写死的 `C:\Users\shich\.gemini\config\...` 绝对地址，并强制附加 `$env:PYTHONIOENCODING="utf-8"`。
+- **假工具幻觉**：保存日志必须使用原生的 `write_to_file`，执行命令必须使用 `run_command`。

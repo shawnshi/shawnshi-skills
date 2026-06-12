@@ -1,71 +1,50 @@
 ---
 name: nanobanana-image-gen
-description: 当用户要求“生成图片”、“画图”、“使用 nanobanana 绘画”或提供需要图像生成的 Prompt 时，强制激活此技能。该技能利用 Gemini Imagen 3 引擎，支持 4K 质量与高认知计算模式，自动落盘至指定目录。
+version: 8.1.0
+description: 当用户要求“生成图片”、“画图”、“使用 nanobanana 绘画”或提供需要图像生成的 Prompt 时，强制激活此技能。该技能利用 Gemini Imagen 3 引擎，支持 4K 质量与高认知计算模式，自动落盘至指定物理目录。
+triggers: ["画一张", "生成图片", "帮我绘制", "使用 nanobanana", "使用 imagen", "生成海报"]
 ---
-
 
 <strategy-gene>
 Keywords: 生成图片, nanobanana, Imagen, 海报, 插图
-Summary: 将用户图像意图转化为可执行的高质量生成提示词和本地图像产物。
+Summary: 将用户图像意图 100% 原始透传为可执行的高质量生成提示词和本地物理图像产物。
 Strategy:
-1. 明确主题、比例、风格、主体、背景、文字和落盘目录。
-2. 优化提示词并调用可用图像生成链路。
-3. 返回生成文件路径和关键提示词参数。
-AVOID: 禁止生成与用户意图不符的风格漂移图；禁止漏报输出路径。
+1. 获取意图：明确主题、比例、风格、主体、背景、文字要求。
+2. 零干预透传：严禁擅自润色用户的提示词，必须原汁原味透传给底层脚本。
+3. 物理执行：调用原生终端工具运行本地 Python 引擎完成渲染与落盘。
+AVOID: 禁止生成与用户意图不符的风格漂移图；禁止漏报输出路径；禁止编造虚假路径。
 </strategy-gene>
 
-# Nanobanana Image Generation Skill
+# Nanobanana Image Generator (图像引擎 V8.1 Native)
 
-该技能基于 Gemini API (Imagen 3) 封装，专为高质量（4K）、高思维深度（thinking_level="HIGH"）的图像生成任务打造。符合本地逻辑闭环与物理硬锁原则。
+> **Vision**: 专为高质量（4K）、高思维深度（thinking_level="HIGH"）的图像生成任务打造。坚守本地逻辑闭环与 100% 意图透传。
 
-## When to Use
-- 用户明确要求：“画一张...”、“生成一张图片”、“帮我绘制...”
-- 用户提到：“使用 nanobanana”、“使用 imagen”
-- 遇到任何需要将文本转换为视觉图像资产的需求。
+## 1. 核心流程与架构 (The Protocol)
 
-## ⚙️ 核心架构与物理边界
-- **执行引擎**: 封装于本地 Python 脚本中，调用 `google-genai` SDK。
-- **环境要求**: 必须通过 `run_shell_command` 运行脚本。脚本内部自动读取系统环境变量 `NANOBANANA_API_KEY` 和 `NANOBANANA_MODEL`。
-- **强制输出路径**: 图片将被强制物理落盘至 `{root}\.gemini\nanobanana-output`，无需额外干预。
+### Phase 1: Preparation (零干预透传) [Mode: PLANNING]
+1. **[Zero-Intervention Policy]**：必须 100% 保持用户提交的原始语句。严禁大模型对用户的提示词进行任何“画蛇添足”的润色、意图扩展、细节补充或高思维扩写。
+2. 即使输入是结构化的 Markdown，也必须将其作为**一个完整的 Prompt 字符串**直接透传。
 
-## Workflow
+### Phase 2: Action & Rendering (引擎唤醒与渲染) [Mode: EXECUTION]
+1. 必须使用系统的 `run_command` 工具调用底层的 `generate.py` 引擎。
+2. 必须挂载中文字符集安全锁与绝对物理地址：
+   `$env:PYTHONIOENCODING="utf-8"; python "C:\Users\shich\.gemini\config\skills\image-nano-gen\scripts\generate.py" "用户的原始Prompt"`
+   *(注：若 Prompt 中存在引号，请合理转义并使用双引号将参数严格包裹。)*
 
-**Phase 1 (Preparation & Synthesis):**
-- **[Zero-Intervention Policy]**：必须 100% 保持用户提交的原始语句。严禁对用户的提示词进行任何润色、意图扩展、细节补充、提取摘要或“高思维深度”扩写。
-- 即使输入是结构化的 Markdown 或复杂的说明文件，也必须将其作为**一个完整的 Prompt 字符串**直接透传给底层的 `generate.py` 脚本，不得进行人工干预或内容过滤。
+### Phase 3: Delivery & Telemetry (物理落盘交付) [Mode: EXECUTION]
+1. 脚本执行成功后，读取命令行输出，图片将被强制物理落盘至：
+   `C:\Users\shich\.gemini\nanobanana-output`
+2. 向用户交付最终结论并展示完整的绝对物理路径。严禁生成虚假路径。
+3. 记录遥测：使用 `write_to_file` 工具将执行元数据以 JSON 保存至：
+   `C:\Users\shich\.gemini\MEMORY\skill_audit\telemetry\record_[TIMESTAMP].json`
 
-**Phase 2 (Action):**
-- 使用 `run_shell_command` 工具调用以下命令：
-  ```bash
-  python {root}\skills\image-nano-gen\scripts\generate.py "用户的原始Prompt"
-  ```
-  *(注：如果路径中存在空格或特殊字符，或者 Prompt 中有引号，请注意合理转义并使用双引号包裹)*
+## 2. <Contracts> (输出与交付契约)
+- **原始透传契约 (Raw Pass-through)**：传给 Python 的 Prompt 必须是一个 100% 未经大模型过滤或扩写的完整字符串参数。用户的意图不容侵犯。
+- **物理交付契约 (Physical Delivery)**：交付物必须是物理生成的一张或多张真实图片文件（展示绝对路径）。绝不仅是一段“图片应该长这样”的文字描述。
+- **环境韧性契约 (Env Resilience)**：若执行报错提示 `google-genai` 或 `pillow` 未安装，必须首先调用 `run_command` 执行 `pip install google-genai pillow` 修复环境，严禁因环境问题放弃任务。
 
-**Phase 3 (Delivery):**
-- 读取命令行的输出结果（成功会返回物理路径）。
-- 向用户交付最终结论，告知图片已成功落盘至 `{root}\.gemini\nanobanana-output` 目录，并展示完整的文件路径。严禁生成虚假路径。
-
-## Resources
-- `scripts/generate.py`
-- `NANOBANANA_API_KEY`
-- `NANOBANANA_MODEL`
-- `{root}\.gemini\nanobanana-output`
-
-## Failure Modes
-- 不要擅自润色或扩写用户原始 prompt。
-- 不要伪造输出路径。
-- 依赖缺失时优先修复运行环境，不要改写执行协议绕过脚本。
-
-## Output Contract
-- 必须把原始 prompt 原样传给底层脚本。
-- 成功时必须返回真实落盘路径。
-- 交付物是物理生成的图片文件，不是文字描述。
-
-## Telemetry
-- 使用 `write_file` 将本次执行的元数据以 JSON 格式保存至 `{root}\MEMORY\skill_audit\telemetry\record_[TIMESTAMP].json`（请将 [TIMESTAMP] 替换为当前时间戳或随机数）。
-- JSON 结构：`{"skill_name": "nanobanana-image-gen", "status": "success", "duration_sec": [ESTIMATE], "input_tokens": [ESTIMATE], "output_tokens": [ESTIMATE]}`
-
-## ⚠️ Gotchas (失效先验)
-- 绝对禁止使用普通的 HTTP POST 瞎编接口。必须且只能调用配套的 `generate.py` 脚本。
-- 必须确保传给 Python 的 Prompt 是**一个完整的字符串参数**。
-- 若执行报错提示 `google-genai` 未安装，请引导用户或使用命令执行 `pip install google-genai pillow`。
+## 3. <Failure_Taxonomy> (失败分类学 / 逻辑硬锁)
+- **沙盒宏塌陷 (Macro Deadlock)**：严禁在调取脚本或声明输出路径时使用旧版宏（如 `{root}` 或 `{SKILL_DIR}`）。必须且只能使用 `C:\Users\shich\.gemini\...`。若发现路径幻觉，直接阻断任务。
+- **自作聪明综合征 (Smart-Aleck Syndrome)**：如果被侦测到大模型在生成前，“擅自润色”或强行给用户的词条添加了所谓的“光影、质感、大师级”等虚假标签，将被判定为违背零干预协议并直接打回。
+- **虚假接口调取 (Fake API Call)**：绝对禁止大模型使用普通的 HTTP POST 瞎编接口向不存在的服务器发请求，必须且只能调用配套的 `generate.py` 脚本。
+- **工具幻觉 (Tool Forgery)**：严禁调用旧版的 `run_shell_command` 或 `write_file`，必须使用符合 Native 规范的 `run_command` 和 `write_to_file`。

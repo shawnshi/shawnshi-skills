@@ -29,9 +29,17 @@ Use this skill to create, repair, or evolve local skills. The complete historica
 1. **Recon**: Inspect existing context, target skill folder, `SKILL.md`, resources, scripts, examples, and prior failure evidence. **CRITICAL**: You MUST check `.skill_state/rejected_edits.jsonl` if it exists, and NEVER propose a patch that was previously rejected.
 2. **Intent Contract**: Define trigger phrases, non-triggers, expected output, side effects, required tools, and what failure looks like.
 3. **Pattern Diagnosis (Critic Segregation)**: Classify the skill. **CRITICAL**: For repeated/complex failures, do NOT patch directly. You MUST `invoke_subagent` to spawn an independent Critic to diagnose the Minibatch of error logs and extract a generalized failure pattern.
+   - **Subagent Boilerplate**: When invoking the Critic, use exactly this Prompt template:
+     ```json
+     {
+       "TypeName": "self",
+       "Role": "Failure Critic Subagent",
+       "Prompt": "You are the Failure Critic Subagent. Read the recent failed transcripts or error logs. Extract a generalized failure pattern. You MUST output your final diagnosis as a JSON object: {\"failure_mode\": \"...\", \"root_cause\": \"...\", \"suggested_patch_op\": {\"target_line\": \"...\", \"new_content\": \"...\"}}. Reply to me when you are DONE."
+     }
+     ```
 4. **Textual Op Contract (Draft or Patch)**: Before applying any file editing tools, you MUST explicitly output a JSON patch plan in your thought block: `{"reasoning": "...", "proposed_op": {"op": "file edit tools", "target": "old", "content": "new"}}`. Keep patches strictly atomic.
 5. **Contracts**: Add explicit success criteria and failure routing. Schema-bearing outputs must be structurally stable.
-6. **Evaluate**: Candidate skills MUST be tested against `evals/benchmark.json` (if available) using `scripts/skill_opt_evaluator.py`. Only if the score strictly increases is the patch merged.
+6. **Evaluate**: Candidate skills MUST be tested against `evals/benchmark.json` (if available) using `scripts/skill_opt_evaluator.py`. **CRITICAL**: You MUST prefix the execution with the global encoding lock (`$env:PYTHONIOENCODING="utf-8"; python scripts/skill_opt_evaluator.py`). Only if the score strictly increases is the patch merged.
 7. **Iterate**: For repeated failure, apply only one targeted mutation at a time, then retest. Failed patches MUST be logged to `.skill_state/rejected_edits.jsonl`.
 
 ## Skill Shape

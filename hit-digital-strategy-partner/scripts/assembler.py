@@ -86,26 +86,6 @@ Audience: Strategic Decision Makers
         merged_content.append(clean_content(scqa_path.read_text(encoding="utf-8")))
         merged_content.append("\n\n---\n\n")
 
-    blackboard_path = project_path / "strategy_blackboard.json"
-    if blackboard_path.exists():
-        try:
-            bb = json.loads(blackboard_path.read_text(encoding="utf-8"))
-            merged_content.append("## 核心摘要 (Executive Summary)\n\n")
-            core = bb.get("logic_mesh", {}).get("core_judgment", "")
-            hop = bb.get("logic_mesh", {}).get("second_hop_inferences", [])
-            roi = bb.get("decisions", {}).get("pessimistic_roi", {})
-            if core:
-                merged_content.append(f"- **中心判断**: {core}\n")
-            if hop:
-                hop_text = hop[0] if isinstance(hop, list) and len(hop) > 0 else str(hop)
-                merged_content.append(f"- **二跳推理**: {hop_text}\n")
-            if roi:
-                roi_text = roi.get("outcome", str(roi)) if isinstance(roi, dict) else str(roi)
-                merged_content.append(f"- **悲观 ROI**: {roi_text}\n")
-            merged_content.append("\n---\n\n")
-        except Exception:
-            pass
-
     toc = []
     audit_results = []
     chapter_contents = []

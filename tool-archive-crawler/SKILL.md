@@ -1,6 +1,8 @@
 ---
 name: tool-archive-crawler
+version: 8.1.0
 description: 用于非结构化历史文件和旧档案的清洗与翻新。当用户要求“扫描旧档案”、“挖掘历史文件”、“翻新旧笔记”、“矿工扫描”或清洗特定目录时使用，将其提取并强行锚定入 Tier 2 双链图谱。
+triggers: ["扫描旧档案", "挖掘历史文件", "翻新旧笔记", "矿工扫描", "清洗目录"]
 ---
 
 <strategy-gene>
@@ -13,49 +15,37 @@ Strategy:
 AVOID: 严禁无中生有编造时间点；严禁保留无意义的对话废话；严禁全篇照搬。
 </strategy-gene>
 
-# Tool Archive Crawler (数字废墟矿工)
+# Tool Archive Crawler (数字废墟矿工 V8.1 Native)
 
-
-## When to Use
-TBD.
-
-## Workflow
+## 1. 核心流程与架构 (The Protocol)
 
 ### Phase 1: Scanning (扫描与鉴别)
-1. 锁定用户指定的旧文件或目录（通常位于 `raw/` 或外部挂载路径）。
-2. 快速判断该资产的**含金量**：如果全是无价值流水账，直接建议丢弃或留在 Tier 1；如果包含行业洞见、重要人脉、项目复盘，进入下一阶段。
+1. **沙盒挂载**：对于用户指定的旧文件或目录，主代理必须使用原生的 `list_dir` 工具进行目录展开，并使用 `view_file` 工具逐个阅读文件内容。
+2. **价值判定**：快速判断该资产的**含金量**。如果全是无价值流水账，直接建议丢弃或留在 Tier 1 原生状态；如果包含行业洞见、重要人脉、项目复盘，进入下一阶段。
 
 ### Phase 2: Entity & Graph Anchoring (实体捕捉与清洗)
 1. 在文本中提取所有具备持久价值的**实体**（人名、公司、产品、专有医疗/AI术语）。
-2. 剥离废话、客套话与情绪化表达。
+2. 无情地剥离废话、客套话与情绪化表达。
 
 ### Phase 3: Remolding to Tier 2 (架构重塑)
-强制将提取出的内容重构为一个全新的、符合 `pai/memory.md` 规范的 Markdown 资产：
+强制将提取出的内容在内存中重构为一个全新的、符合 `pai/memory.md` 规范的 Markdown 资产：
 1. **[Top] Compiled Truth / 编译事实**：生成高密度的核心结论。
-2. **[Bottom] Timeline / 证据时间线**：将原始文件的事件/观点按照时间或逻辑打平成列表。
+2. **[Bottom] Timeline / 证据时间线**：将原始文件的事件/观点按照时间或逻辑打平成列表。如果在原档案中缺失上下文时间，在 Timeline 中明确标注 `[日期未知]`，按业务逻辑顺序排列。
 3. **图谱挂载 (Entity Linking Contract)**：在上述两部分中，**必须**将找出的重要实体使用双层方括号 `[[ ]]` 包裹（如 `[[卫宁健康]]`，`[[Acme AI]]`），并在其附近补全精确的动作关系谓词。
 
 ### Phase 4: Writeback (物理落盘)
-1. 使用 `write_file` 将新结构写入 `MEMORY/wiki/` 或对应的 Tier 2 子目录中。
+1. 使用原生的 `write_to_file` 工具，将重构后的新格式绝对物理落盘。
+2. 目标路径硬性约束为：`C:\Users\shich\.gemini\MEMORY\wiki\{提取出的核心实体名}.md`，或者相应的具体分类目录中。
 
+## 2. <Contracts> (输出与交付契约)
+执行完毕后，仅向用户输出一份简短的高密度执行清单：
+1. 成功落盘的新节点文件的绝对路径。
+2. 新挖掘出并打上双链的 `[[实体集合]]` 列表。
+3. **Telemetry 记录**: 任务执行完成后，必须使用 `write_to_file` 将本次执行的元数据以 JSON 格式保存至绝对路径：
+   `C:\Users\shich\.gemini\MEMORY\skill_audit\telemetry\record_[TIMESTAMP].json`
+   结构示例：`{"skill_name": "tool-archive-crawler", "status": "success", "duration_sec": 0, "input_tokens": 0, "output_tokens": 0}`
 
-## Resources
-TBD.
-
-## Failure Modes
-- **全篇无高价值实体**：直接中止提纯，保留原样，向用户反馈无需升级架构。
-- **缺失上下文时间**：在 Timeline 中明确标注 `[日期未知]`，按业务逻辑顺序排列。
-
-## Output Contract
-输出一份简短的清单即可：
-1. 落盘路径。
-2. 新挖掘出并打上双链的 `[[实体集合]]`。
-
-##  Telemetry & Metadata (Mandatory)
-- 使用 `write_file` 将本次执行的元数据以 JSON 格式保存至 `{root}\MEMORY\skill_audit\telemetry\record_[TIMESTAMP].json`。
-- JSON 结构：`{"skill_name": "tool-archive-crawler", "status": "success", "duration_sec": [ESTIMATE], "input_tokens": [ESTIMATE], "output_tokens": [ESTIMATE]}`
-
-## 历史失效先验 (Gotchas)
-
-## Telemetry
-TBD.
+## 3. <Failure_Taxonomy> (失败分类学)
+- **幻觉工具 (Tool Hallucination)**：严禁伪造不存在的工具。扫描文件夹必须使用 `list_dir`，阅读文件必须使用 `view_file`，写入文件必须使用 `write_to_file`。
+- **全篇无高价值实体 (Garbage In)**：如果鉴别出全篇皆为废话，必须果断中止提纯并保留原样，向用户反馈“无需升级架构”，严禁大模型自行脑补产生高价值幻觉。
+- **路径游离 (Path Violation)**：严禁使用相对路径 `MEMORY/wiki/` 或伪变量 `{root}`。所有文件的读写和遥测记录必须严格使用 `C:\Users\shich\.gemini\...` 这一绝对物理地址。

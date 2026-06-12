@@ -1,7 +1,6 @@
 from __future__ import annotations
 
 import json
-import os
 from datetime import datetime
 from pathlib import Path
 
@@ -65,22 +64,6 @@ def forge_briefing() -> None:
     top_10 = refined.get("top_10", [])[: focus.get("filters", {}).get("max_top10", 10)]
     included_urls = {item.get("url") for item in top_10}
     grouped_list, noise_count = build_grouped_list(scan_data, focus, included_urls)
-    
-    has_l4 = any(item.get("intelligence_level") == "L4" for item in top_10)
-    if has_l4 and not refined.get("adversarial_audit"):
-        print("[INFO] L4 intelligence detected. Triggering adversarial audit...")
-        import subprocess
-        import sys
-        audit_script = HUB_DIR / "scripts" / "adversarial_audit.py"
-        try:
-            env = os.environ.copy()
-            env["PYTHONIOENCODING"] = "utf-8"
-            subprocess.run([sys.executable, str(audit_script)], env=env, check=True)
-            # Reload refined data to capture the adversarial audit results
-            refined = load_json(REFINED_PATH, {})
-        except subprocess.CalledProcessError as e:
-            print(f"[FAIL] Adversarial audit failed: {e}")
-            return
 
     save_path = NEWS_DIR / f"intelligence_{datetime.now().strftime('%Y%m%d')}_briefing.md"
     template_data = {

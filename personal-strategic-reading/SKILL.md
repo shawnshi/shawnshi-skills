@@ -1,6 +1,8 @@
 ---
 name: personal-strategic-reading
+version: 8.1.0
 description: 带上极度功利的商业目的去榨取一篇长文、研报或分析。当用户要求“战略滤镜阅读”、“带上目的读”、“榨取这篇长文”或“战略拆解”时使用。
+triggers: ["战略滤镜阅读", "带上目的读", "榨取这篇长文", "战略拆解"]
 ---
 
 <strategy-gene>
@@ -13,17 +15,14 @@ Strategy:
 AVOID: 严禁输出四平八稳的客观总结；严禁保留无干货的过度铺垫；如果用户不给目的，严禁盲目开工。
 </strategy-gene>
 
-# Strategic Reading (战略滤镜阅读器)
+# Strategic Reading (战略滤镜阅读器 V8.1 Native)
 
-
-## When to Use
-TBD.
-
-## Workflow
+## 1. 核心流程与架构 (The Protocol)
 
 ### Phase 1: Define the Lens (锁定战略滤镜)
-1. 接收用户输入的长文（或链接/PDF）以及**核心战略目标**（例如：“从这篇 SaaS 发展史中，找出卫宁健康如何应对 AI 冲击的启示”、“透过这篇文章看协和医院下一步的动作倾向”）。
-2. 如果用户没有给出明确的滤镜，必须**反问并逼迫**用户给出一个具体的业务难题或防御目标。
+1. 接收用户输入的长文（或链接/PDF文件路径）以及**核心战略目标**（例如：“从这篇 SaaS 发展史中，找出卫宁健康如何应对 AI 冲击的启示”、“透过这篇文章看协和医院下一步的动作倾向”）。
+2. **强制门禁**：如果用户没有给出明确的滤镜，主代理必须立即调用原生 `ask_question` 工具，反问并逼迫用户给出一个具体的业务难题或防御目标，阻断后续流程直至用户提供。
+3. **内容读取**：对于本地文件使用 `view_file` 工具读取，对于外部链接使用 `read_url_content` 工具抓取。
 
 ### Phase 2: Ruthless Extraction (冷酷榨取)
 1. 全面扫描文本。
@@ -37,29 +36,17 @@ TBD.
    - 敌方/他人的做法 -> 我们对应的业务线该如何效仿或防范。
    - 列出 2-3 个极具落地性的 Action Items。
 3. **致命盲区 (Blind Spots)**：文章中没说、但在我们的战场中一旦忽视就会致命的变量。
-4. **图谱挂载**：在产出的报告中，务必对涉及的友军、敌军、产品使用 `[[ ]]` 进行图谱双链标记，遵守 `Entity Linking Contract`。
+4. **图谱挂载**：在产出的报告中，务必对涉及的友军、敌军、核心产品使用 `[[ ]]` 进行图谱双链标记。
 
+## 2. <Contracts> (输出与交付契约)
+- 最终输出必须是一份包含四个模块的高密度战术投射剧本 (Playbook)：核心杠杆、战术投射 (Action Items)、致命盲区、新抽取的图谱节点 `[[ ]]` 列表。
+- **Telemetry 记录**: 任务执行完成后，必须使用原生 `write_to_file` 工具将元数据以 JSON 格式保存至：
+  `C:\Users\shich\.gemini\MEMORY\skill_audit\telemetry\record_[TIMESTAMP].json`
+  结构示例：`{"skill_name": "personal-strategic-reading", "status": "success", "duration_sec": 0, "input_tokens": 0, "output_tokens": 0}`
 
-## Resources
-TBD.
-
-## Failure Modes
-- **文章质量极低**：如果该文章满篇公关稿、无任何核心杠杆与执行细节，立即停止榨取，并向用户报告“此文无提纯价值（公关废料）”。
-- **目标不匹配**：如果用户给定的战略目标与文章内容存在绝对鸿沟（例如要求从医疗报告中看游戏研发），必须指出“缺乏投影基点”，建议更换文章。
-
-## Output Contract
-输出一份包含四个模块的高密度战术投射剧本 (Playbook)：
-- 核心杠杆
-- 战术投射 (Action Items)
-- 致命盲区
-- 新抽取的图谱节点 `[[ ]]` 列表
-
-
-##  Telemetry & Metadata (Mandatory)
-- 使用 `write_file` 将本次执行的元数据以 JSON 格式保存至 `{root}\MEMORY\skill_audit\telemetry\record_[TIMESTAMP].json`。
-- JSON 结构：`{"skill_name": "personal-strategic-reading", "status": "success", "duration_sec": [ESTIMATE], "input_tokens": [ESTIMATE], "output_tokens": [ESTIMATE]}`
-
-## 历史失效先验 (Gotchas)
-
-## Telemetry
-TBD.
+## 3. <Failure_Taxonomy> (失败分类学)
+- **目标虚无 (Goal Deprivation)**：如果用户不给目的，严禁盲目开工。必须使用 `ask_question` 拦截。
+- **文章质量极低 (Garbage In)**：如果利用 `view_file` 或 `read_url_content` 提取的长文满篇公关稿、无任何核心杠杆与执行细节，立即停止榨取，并向用户报告“此文无提纯价值（公关废料）”。
+- **目标不匹配 (Misalignment)**：如果用户给定的战略目标与文章内容存在绝对鸿沟（例如要求从医疗报告中看游戏研发），必须指出“缺乏投影基点”，建议更换文章。
+- **客观总结综合症 (Summary Trap)**：严禁输出四平八稳的客观总结（如“本文主要讲了...”）。只抽取武器，不复述常识。
+- **路径漂移**：记录遥测数据时严禁使用 `{root}` 等虚假变量，必须使用写死的物理绝对路径。
