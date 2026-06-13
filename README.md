@@ -80,10 +80,8 @@
 
 | 技能标识 (Directory) | 核心本质 (Trigger Traps) |
 | :--- | :--- |
-| **[academic-paper-writer](academic-paper-writer/)** | **学术论文写作管线 (Native Edition)**。多 Agent 协同与学术断点排版。 |
 | **[academic-paper-reader](academic-paper-reader/)** | **学术论文深度研读**。剥离黑话，知识降阶。 |
 | **[academic-scientific-visualization](academic-scientific-visualization/)** | **科研级绘图指引**。支持 Nature 级多面板视觉。 |
-| **[academic-deep-research](academic-deep-research/)** | **深度文献回顾中枢**。(即将重构) |
 
 ### 📝 内容创作与出版引擎 (Content Creation)
 *高密度叙事锻造：专栏写作、风格迁移与出版级排版。*

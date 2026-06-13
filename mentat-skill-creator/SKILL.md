@@ -37,7 +37,7 @@ Use this skill to create, repair, or evolve local skills. The complete historica
        "Prompt": "You are the Failure Critic Subagent. Read the recent failed transcripts or error logs. Extract a generalized failure pattern. You MUST output your final diagnosis as a JSON object: {\"failure_mode\": \"...\", \"root_cause\": \"...\", \"suggested_patch_op\": {\"target_line\": \"...\", \"new_content\": \"...\"}}. Reply to me when you are DONE."
      }
      ```
-4. **Textual Op Contract (Draft or Patch)**: Before applying any file editing tools, you MUST explicitly output a JSON patch plan in your thought block: `{"reasoning": "...", "proposed_op": {"op": "file edit tools", "target": "old", "content": "new"}}`. Keep patches strictly atomic.
+4. **Textual Op Contract (Draft or Patch)**: Before applying `multi_replace_file_content` or `write_to_file`, you MUST explicitly output a JSON patch plan in your thought block: `{"reasoning": "...", "proposed_op": {"op": "multi_replace_file_content", "target": "old", "content": "new"}}`. Keep patches strictly atomic.
 5. **Contracts**: Add explicit success criteria and failure routing. Schema-bearing outputs must be structurally stable.
 6. **Evaluate**: Candidate skills MUST be tested against `evals/benchmark.json` (if available) using `scripts/skill_opt_evaluator.py`. **CRITICAL**: You MUST prefix the execution with the global encoding lock (`$env:PYTHONIOENCODING="utf-8"; python scripts/skill_opt_evaluator.py`). Only if the score strictly increases is the patch merged.
 7. **Iterate**: For repeated failure, apply only one targeted mutation at a time, then retest. Failed patches MUST be logged to `.skill_state/rejected_edits.jsonl`.
@@ -78,7 +78,6 @@ Prefer bundled resources over long inline instructions:
 ## Resources
 - Full archived playbook: `references/full_skill_creator_playbook.md`
 - Schema notes: `references/schemas.md`
-- Agents: `agents/grader.md`, `agents/comparator.md`, `agents/analyzer.md`
 - Shared template: `shared/skill-structure-template.md`
 - Gates: `scripts/repair_skills.ps1`, `scripts/generate_resource_manifests.ps1`
 

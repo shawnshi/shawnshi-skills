@@ -1,7 +1,7 @@
 ---
 name: tool-url-markdown
 version: 8.1.0
-description: 网页原质提取器。当用户提供 URL 链接并要求“总结网页”、“保存为 MD”或遇到“重度 JS 渲染页面”难以抓取时，务必调用。该技能直控 Chrome CDP 协议，强制清除网页噪音，交付极致干净的 Markdown 结构。
+description: '网页原质提取器。当用户提供 URL 链接并要求“总结网页”、“保存为 MD”或遇到“重度 JS 渲染页面”难以抓取时，务必调用。该技能直控 Chrome CDP 协议，强制清除网页噪音，交付极致干净的 Markdown 结构。'
 triggers: ["将链接内容保存为MD格式", "清理网页", "抓取这个网页", "总结这篇报道"]
 ---
 

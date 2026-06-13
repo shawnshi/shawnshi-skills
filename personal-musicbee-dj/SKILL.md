@@ -1,7 +1,7 @@
 ---
 name: personal-musicbee-dj
 version: 8.1.0
-description: MusicBee DJ for local playback control. Use when the user wants to hear music, open MusicBee, switch playlists, or describe a mood, scene, or genre such as focus, relax, coding, pop, jazz, or energy. The skill resolves intent into genre/scene/playlist parameters, generates a just-in-time M3U playlist from the local MusicBee XML library when needed, and launches MusicBee with a validated local play target.
+description: 'MusicBee DJ for local playback control. Use when the user wants to hear music, open MusicBee, switch playlists, or describe a mood, scene, or genre such as focus, relax, coding, pop, jazz, or energy. The skill resolves intent into genre/scene/playlist parameters, generates a just-in-time M3U playlist from the local MusicBee XML library when needed, and launches MusicBee with a validated local play target.'
 triggers: ["播放音乐", "听歌", "放点歌", "切换歌单", "背景音乐", "专注音乐", "放松音乐"]
 ---
 

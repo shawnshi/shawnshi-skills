@@ -20,7 +20,8 @@
     "medium_term_outlook",
     "search_performed",
     "data_sources",
-    "data_gaps"
+    "data_gaps",
+    "position_direction"
   ],
   "optional_top_level": [
     "portfolio_context",
@@ -136,7 +137,8 @@
     "operation_advice": ["买入", "加仓", "持有", "减仓", "卖出", "观望"],
     "trend_prediction": ["强烈看多", "看多", "震荡", "看空", "强烈看空"],
     "weight_status": ["within_target", "above_target", "above_max", "unknown"],
-    "feedback_status": ["pending", "executed", "reviewed", "closed"]
+    "feedback_status": ["pending", "executed", "reviewed", "closed"],
+    "position_direction": ["long", "short"]
   },
   "market_rules": {
     "A股": {

@@ -1,7 +1,7 @@
 ---
 name: hit-weekly-brief
 version: 8.2.0
-description: 医疗行业战区研报中枢 (V5.2)。Primary owner for weekly think-tank, consulting, and whitepaper briefs in healthcare or digital health. Use for McKinsey/BCG/Gartner-style report digestion and weekly strategic brief generation. Prefer hit-industry-radar for market-news/event scans and hit-lectures-scout for academic or clinical paper scouting.
+description: '医疗行业战区研报中枢 (V5.2)。Primary owner for weekly think-tank, consulting, and whitepaper briefs in healthcare or digital health. Use for McKinsey/BCG/Gartner-style report digestion and weekly strategic brief generation. Prefer hit-industry-radar for market-news/event scans and hit-lectures-scout for academic or clinical paper scouting.'
 triggers: ["生成数字健康周报", "检索医疗行业报告", "本周麦肯锡研报", "Digital Health Weekly Brief", "最新数字医疗白皮书", "扫描本周智库发文"]
 ---
 

@@ -1,6 +1,6 @@
 ---
 name: tool-document-summarizer
-description: 医疗文档战略情报引擎 (V2.0 Antigravity Native)。当用户上传或提及 PDF/DOCX/PPTX/XLSX 文件并要求“总结”、“提取要点”或“审计盲区”时，务必激活。该技能具备本体驱动的语义压缩能力，输出带有战略标签的精准摘要，并执行系统级底层属性回写与图谱入湖。
+description: '医疗文档战略情报引擎 (V2.0 Antigravity Native)。当用户上传或提及 PDF/DOCX/PPTX/XLSX 文件并要求“总结”、“提取要点”或“审计盲区”时，务必激活。该技能具备本体驱动的语义压缩能力，输出带有战略标签的精准摘要，并执行系统级底层属性回写与图谱入湖。'
 triggers: ["智能提取文档摘要", "总结文档", "分析文件内容", "提取PDF核心要点"]
 ---
 
@@ -80,5 +80,5 @@ $env:PYTHONIOENCODING="utf-8"; python "C:\Users\shich\.gemini\config\skills\tool
 - 必须明确告知用户，核心情报已物理写入原文件，并已异步同步至中央智库（Vector Lake）。
 
 ## Telemetry
-- 使用 `write_file` 将本次执行的元数据以 JSON 格式保存至 `C:/Users/shich/.gemini/MEMORY/skill_audit/telemetry/record_[TIMESTAMP].json`。
+- 使用 `write_to_file` 将本次执行的元数据以 JSON 格式保存至 `C:/Users/shich/.gemini/MEMORY/skill_audit/telemetry/record_[TIMESTAMP].json`。
 - JSON 结构：`{"skill_name": "tool-document-summarizer", "status": "success", "duration_sec": [ESTIMATE], "input_tokens": [ESTIMATE], "output_tokens": [ESTIMATE]}`

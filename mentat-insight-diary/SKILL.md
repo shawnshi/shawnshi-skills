@@ -1,7 +1,7 @@
 ---
 name: mentat-insight-diary
 version: 8.1.0
-description: Primary owner for first-person Mentat introspection logs and system audit diary entries. Use when the task is to record a system-centric OODA reflection or archive a Mentat audit payload. Prefer personal-cognitive-auditor for periodic review reports and personal-diary-writer for generic diary writeback.
+description: 'Primary owner for first-person Mentat introspection logs and system audit diary entries. Use when the task is to record a system-centric OODA reflection or archive a Mentat audit payload. Prefer personal-cognitive-auditor for periodic review reports and personal-diary-writer for generic diary writeback.'
 ---
 
 <strategy-gene>
@@ -43,7 +43,7 @@ This skill performs a system-centric, first-person deep reflection on cognitive 
 
 #### Phase 3: 代理交接与落盘 (Native Agentic Archival)
 **[职责解耦]**: 本技能为了保持认知纯净度，建议将 I/O 写入交接给专业写入组件。
-1. **唤醒子代理**: 必须使用原生的 `invoke_subagent` 工具拉起一个搭载了 `personal-diary-writer` 技能的子代理（Subagent）。
+1. **唤醒子代理**: 必须使用原生的 `invoke_subagent` 工具拉起一个搭载了 `personal-diary-writer` 技能的子代理（必须指定 `TypeName: "self"` 与 `Role: "personal-diary-writer"`）。
 2. **派发负载**: 使用 `send_message` 工具向该子代理发送以下指令包：
    - **目标路径**: `C:\Users\shich\.gemini\MEMORY\raw\privacy\Diary\mentat_audit\[YYYY-QX]_Audit.md` (按当前季度 Q1-Q4 自动计算)。
    - **操作指令**: “请将以下日志以追加 (prepend/append) 方式合并至指定文件中。切勿覆盖！”

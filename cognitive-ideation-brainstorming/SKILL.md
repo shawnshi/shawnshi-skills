@@ -1,7 +1,7 @@
 ---
 name: cognitive-ideation-brainstorming
 version: 8.1.0
-description: 高压想法脱水机。You MUST use this before any creative work or coding - whether it's evaluating a new startup idea, planning a hackathon project, or designing a specific feature architecture. 统一收口宏观商业想法验证与微观架构选型。
+description: '高压想法脱水机。You MUST use this before any creative work or coding - whether it''s evaluating a new startup idea, planning a hackathon project, or designing a specific feature architecture. 统一收口宏观商业想法验证与微观架构选型。'
 triggers: ["brainstorm this", "I have an idea", "help me think through this", "office hours", "is this worth building", "怎么设计这个功能", "脑暴一下", "评估想法", "架构设计"]
 ---
 
@@ -69,7 +69,7 @@ Map against:
 3. 若涉及 UI 流、架构或状态机，强制使用 **Mermaid diagram** 进行“所见即结构”的展示。
 
 ### Phase 4: Specification & Writeback (定稿与物理落盘) [Mode: EXECUTION]
-1. 使用 `write_file` 或 `write_to_file` 工具，将经过验证的设计严格按模板写入项目根目录下的 `plans/design-<topic>.md` 或同级规划文档中。
+1. 使用 `write_to_file` 工具，将经过验证的设计严格按模板写入项目根目录下的 `plans/design-<topic>.md` 或同级规划文档中。
 
 **Template Structure:**
 ```markdown

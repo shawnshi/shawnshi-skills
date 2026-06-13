@@ -1,7 +1,7 @@
 ---
 name: nanobanana-image-gen
 version: 8.1.0
-description: 当用户要求“生成图片”、“画图”、“使用 nanobanana 绘画”或提供需要图像生成的 Prompt 时，强制激活此技能。该技能利用 Gemini Imagen 3 引擎，支持 4K 质量与高认知计算模式，自动落盘至指定物理目录。
+description: '当用户要求“生成图片”、“画图”、“使用 nanobanana 绘画”或提供需要图像生成的 Prompt 时，强制激活此技能。该技能利用 Gemini Imagen 3 引擎，支持 4K 质量与高认知计算模式，自动落盘至指定物理目录。'
 triggers: ["画一张", "生成图片", "帮我绘制", "使用 nanobanana", "使用 imagen", "生成海报"]
 ---
 

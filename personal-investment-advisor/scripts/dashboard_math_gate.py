@@ -72,20 +72,37 @@ def validate_math_consistency(data: dict) -> list[str]:
     allow_trailing_stop = override_flags.get("allow_trailing_stop") is True
     allow_breakout_buy = override_flags.get("allow_breakout_buy") is True
 
+    position_direction = data.get("position_direction", "long")
+
     if support is not None and resistance is not None and support > resistance:
         errors.append("support_level cannot be above resistance_level")
-    if current_price is not None and support is not None and support > current_price:
-        if not allow_breakout_buy:
-            errors.append("support_level cannot be above current_price")
-    if current_price is not None and resistance is not None and resistance < current_price:
-        errors.append("resistance_level cannot be below current_price")
-    if stop_loss is not None and support is not None and stop_loss > support:
-        errors.append("stop_loss should not be above support_level")
-    if stop_loss is not None and current_price is not None and stop_loss >= current_price:
-        if not allow_trailing_stop:
-            errors.append("stop_loss must be strictly below current_price for buy/hold/watch decisions")
-    if take_profit is not None and resistance is not None and take_profit < resistance:
-        errors.append("take_profit should not be below resistance_level")
+
+    if position_direction == "long":
+        if current_price is not None and support is not None and support > current_price:
+            if not allow_breakout_buy:
+                errors.append("support_level cannot be above current_price")
+        if current_price is not None and resistance is not None and resistance < current_price:
+            errors.append("resistance_level cannot be below current_price")
+        if stop_loss is not None and support is not None and stop_loss > support:
+            errors.append("stop_loss should not be above support_level")
+        if stop_loss is not None and current_price is not None and stop_loss >= current_price:
+            if not allow_trailing_stop:
+                errors.append("stop_loss must be strictly below current_price for long buy/hold/watch decisions")
+        if take_profit is not None and resistance is not None and take_profit < resistance:
+            errors.append("take_profit should not be below resistance_level")
+    else:  # short
+        if current_price is not None and resistance is not None and resistance < current_price:
+            if not allow_breakout_buy:
+                errors.append("resistance_level cannot be below current_price for short")
+        if current_price is not None and support is not None and support > current_price:
+            errors.append("support_level cannot be above current_price for short")
+        if stop_loss is not None and resistance is not None and stop_loss < resistance:
+            errors.append("stop_loss should not be below resistance_level for short")
+        if stop_loss is not None and current_price is not None and stop_loss <= current_price:
+            if not allow_trailing_stop:
+                errors.append("stop_loss must be strictly above current_price for short buy/hold/watch decisions")
+        if take_profit is not None and support is not None and take_profit > support:
+            errors.append("take_profit should not be above support_level for short")
 
     confidence_score = _to_float(data.get("confidence_details", {}).get("score"))
     if confidence_score is not None and not (0 <= confidence_score <= 100):

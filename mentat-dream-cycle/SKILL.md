@@ -1,7 +1,7 @@
 ---
 name: mentat-dream-cycle
 version: 11.1.0
-description: Mentat 系统的后台静默演化管线。通过确定性脚本清理环境熵增，并通过局部大模型提纯将临时态热知识沉淀为长期 Tier 2 图谱结构。
+description: 'Mentat 系统的后台静默演化管线。通过确定性脚本清理环境熵增，并通过局部大模型提纯将临时态热知识沉淀为长期 Tier 2 图谱结构。'
 triggers: ["触发 Dream Cycle", "运行夜间清洗", "清理热记忆", "执行系统清洗", "Run dream cycle"]
 ---
 
@@ -37,13 +37,13 @@ This skill acts as the background evolution loop for the Mentat system. It shift
 1. **事务保护**: 将 `C:\Users\shich\.gemini\MEMORY\hot_facts.md` 重命名为 `hot_facts.bak`。读取 `.bak` 文件进行处理。若文件不存在或为空，跳过此阶段。
 2. **逻辑提纯与分块处理 (Micro-batching)**:
    在脑内进行实体化拆解。提取出优先级最高的 Top 5-8 个实体。
-   - 对这部分高优实体，调用 `file edit tools` 或 `write_file`，对目标知识文件进行原地更新。严格排版：底部 Timeline 追加，顶部 Compiled Truth 重写。
+   - 对这部分高优实体，强制调用 `multi_replace_file_content` 或 `write_to_file`，对目标知识文件进行原地更新。严格排版：底部 Timeline 追加，顶部 Compiled Truth 重写。严禁使用已废弃的 write_file 工具。
    - 将剩余未能处理的实体推入 `C:\Users\shich\.gemini\MEMORY\wiki\.meta\Entity_Backlog.md` 待处理队列。
 3. **事务提交**: 只有在步骤 2 中所有的写盘操作全部明确成功后，才可删除 `hot_facts.bak`，并新建 `hot_facts.md` 注入 `<!-- 缓冲已于近期清空 -->`，完成原子级重置。
 
 ### Phase 2.5: 技能批量优化 (Skill Optimization Backward Pass)
 1. **读取错误缓冲**: 读取 `C:\Users\shich\.gemini\MEMORY\skill_audit\failure_batch.jsonl`，执行 `GroupBy(Skill_Name)`。
-2. **异步投递 Minibatch**: 提取出经过分类过滤的高优结构性故障（排除超时等环境错误），调用 `invoke_subagent` 拉起 `mentat-skill-creator` 子代理，将整个 Minibatch 失败轨迹完整传入，指令其启动 Critic 并合并补丁。
+2. **异步投递 Minibatch**: 提取出经过分类过滤的高优结构性故障（排除超时等环境错误），调用 `invoke_subagent` 拉起子代理 (必须指定 `TypeName: "self"` 与 `Role: "mentat-skill-creator"`)，将整个 Minibatch 失败轨迹完整传入，指令其启动 Critic 并合并补丁。
 3. **事务清空**: 子代理发起后，物理清空已被投递的故障日志记录。
 
 ### Phase 3: 拓扑孤岛扫描 (Topology Orphan Check)
@@ -52,11 +52,11 @@ This skill acts as the background evolution loop for the Mentat system. It shift
   $env:PYTHONIOENCODING="utf-8"; python "C:\Users\shich\.gemini\config\skills\mentat-dream-cycle\scripts\orphan_scanner.py" --dir "C:\Users\shich\.gemini\MEMORY\wiki"
   ```
 - **模糊去重 (Fuzzy Matching)**: 阅读 JSON 报告，在写入 Backlog 前，务必通过检索或排查确认是否仅为拼写差异。
-- **处理与落盘**: 将真正的架构盲区孤岛概念通过 `write_file` 写入：`C:\Users\shich\.gemini\MEMORY\wiki\.meta\Orphan_Backlog.md`。
+- **处理与落盘**: 将真正的架构盲区孤岛概念通过 `write_to_file` 写入：`C:\Users\shich\.gemini\MEMORY\wiki\.meta\Orphan_Backlog.md`。
 
 ### Phase 4: 全链路异步摄入 (Asynchronous Vector Lake Ingestion)
 1. **生成摄入批次**: 如果前序流程修改了图谱，调用 `mcp_vector-lake_prepare_ingest_batch`。
-2. **异步委派**: 严禁阻塞式同步。使用 `invoke_subagent` 拉起 `vector-lake-ingestor` 并行子代理执行摄入，释放主循环。
+2. **异步委派**: 严禁阻塞式同步。使用 `invoke_subagent` 拉起并行子代理 (必须指定 `TypeName: "self"` 与 `Role: "vector-lake-ingestor"`) 执行摄入，释放主循环。
 
 ## 2. <Contracts> (输出与交付契约)
 当整个 Pipeline 完成或降级完成后，只允许返回如下的结构化 JSON。禁止长篇大论：

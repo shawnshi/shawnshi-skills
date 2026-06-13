@@ -1,8 +1,7 @@
 ---
 name: personal-book-reader
-description: 拆一本书。冷静简洁犀利直白，五件事说清：作者在答什么问题，立在什么不证之物上，用什么框架看，得出什么结论，最后萃出一个 takeaway（取景框/模型/洞见/概念/金句五选一）作为这本书的精神内核。最后把作者的取景框（这本书的参考系）画成一张地图——提炼参考系、把观点钉到位置上、走两步做预测，让你不光看懂，还能自己拿它预测书外的新事。Use when user says '拆书', '拆这本', '分析这本书', '这本书在讲什么', '上帝之眼看这本书', '压缩一本书', 'book', or shares a book name wanting structural analysis. NOT FOR 章节摘要（用 Fabric extract_wisdom）、论文（用 ljg-paper）、单一观点深钻（用 ljg-think）、一个领域降秩（用 ljg-rank）.
+description: '拆一本书。冷静简洁犀利直白，五件事说清：作者在答什么问题，立在什么不证之物上，用什么框架看，得出什么结论，最后萃出一个 takeaway（取景框/模型/洞见/概念/金句五选一）作为这本书的精神内核。最后把作者的取景框（这本书的参考系）画成一张地图——提炼参考系、把观点钉到位置上、走两步做预测，让你不光看懂，还能自己拿它预测书外的新事。Use when user says ''拆书'', ''拆这本'', ''分析这本书'', ''这本书在讲什么'', ''上帝之眼看这本书'', ''压缩一本书'', ''book'', or shares a book name wanting structural analysis. NOT FOR 章节摘要（用 Fabric extract_wisdom）、论文（用 ljg-paper）、单一观点深钻（用 ljg-think）、一个领域降秩（用 ljg-rank）.'
 user_invocable: true
-version: 8.1.0
 ---
 
 # personal-book-reader: 拆书 (V8.1 Native)

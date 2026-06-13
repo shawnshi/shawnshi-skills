@@ -86,7 +86,7 @@ Present a high-density summary:
 After receiving the user's aggregated decisions, generate the final report.
 
 1. **Self-Critique (The Spec Review)**: Perform a self-correction pass against the Prime Directives.
-2. **Document Generation**: 使用 `write_file` 工具按以下模板结构输出结果文件至 `plans/` 或指定目录。
+2. **Document Generation**: 使用 `write_to_file` 工具按以下模板结构输出结果文件至 `plans/` 或指定目录。
 
 **Template Structure:**
 ```markdown

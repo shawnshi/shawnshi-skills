@@ -25,7 +25,7 @@ AVOID: 禁止全量加载 PDF（算力黑洞）；禁止沦为干瘪的学术编
 ### Phase 1: Pre-processing & Subagent Delegation (格式洗清与并发沙盒) [Mode: PLANNING]
 1. **前置降维 (Critical)**: 严禁主代理或子代理直接读取海量二进制 PDF。主代理必须先调用 `run_command` 执行 Markdown 格式转换器降维：
    `$env:PYTHONIOENCODING="utf-8"; python "C:\Users\shich\.gemini\config\skills\tool-markdown-converter\scripts\converter.py" <PDF物理绝对路径> -o "C:\Users\shich\.gemini\tmp\playgrounds\cleaned_paper.md"`
-2. **任务封装与委派 (Delegation)**: 将提取出的 `cleaned_paper.md` 路径、核心解析指令及“提取核心架构总览图”的任务，封装发给 `research` 子代理（使用 `invoke_subagent` 工具）。主代理必须原地挂起，只读取最终的结构化解析结果，防止注意力衰退。
+2. **任务封装与委派 (Delegation)**: 将提取出的 `cleaned_paper.md` 路径、核心解析指令及“提取核心架构总览图”的任务，封装发给子代理 (必须指定 `TypeName: "research"`)（使用 `invoke_subagent` 工具）。主代理必须原地挂起，只读取最终的结构化解析结果，防止注意力衰退。
 
 ### Phase 2: Traceback & Narrative Construction (溯源与故事构建) [Mode: EXECUTION]
 1. 要求子代理读取 `C:\Users\shich\.gemini\config\skills\academic-paper-reader\resources\storytelling_manual.md` 获取灵魂句 Few-Shot 范例。

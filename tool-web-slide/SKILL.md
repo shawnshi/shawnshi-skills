@@ -1,18 +1,18 @@
 ---
 name: tool-web-slide
-version: 8.5.0
-description: 工业级、基于 Design Vault 的单网页 PPT 生成器。支持"电子杂志风" (Magazine) 和 "瑞士国际主义风" (Swiss) 两种高级视觉排版系统。内置原生双屏演讲者视图与 PDF 导出管线。
+version: 9.0.0
+description: '工业级、基于 Design Vault 的单网页 PPT 生成器。支持"电子杂志风" (Magazine) 和 "瑞士国际主义风" (Swiss) 两种高级视觉排版系统。内置原生双屏演讲者视图与 PDF 导出管线。'
 triggers: ["PPT", "幻灯片", "网页演示", "电子杂志风", "瑞士风", "发布会"]
 ---
 
 <strategy-gene>
-Keywords: 网页 PPT, 电子杂志, 瑞士风, 演讲者视图, Design Vault
-Summary: 通过强类型校验与高级排版认知模型，生成高品质单文件 HTML PPT。
+Keywords: 网页 PPT, 电子杂志, 瑞士风, 演讲者视图, Design Vault, 物理装配
+Summary: 通过强类型校验与高级排版认知模型，生成高品质单文件 HTML PPT。V9.0 引入物理装配引擎防爆仓。
 Strategy:
 1. 需求澄清：执行 7 问清单对齐，建立叙事弧 (Hook->Context->Core->Shift->Takeaway)。
 2. 知识装配：调用 `scripts/assemble-context.mjs` 获取当前流派的版式组件。
-3. 物理克隆：使用 `run_command` 的 `Copy-Item` 毫秒级克隆 `template.html` 至 `MEMORY/slide-deck`。
-4. 锚点注入：使用 `replace_file_content` 精准替换 `<!-- SLIDES_HERE -->` 锚点，禁止大模型全量读写 108KB 文件。
+3. 物理克隆与解耦：禁止使用 `replace_file_content` 直接操作 template。大模型必须将 PPT 片段写入独立的沙盒中间文件。
+4. AST 级组装：使用内置的 `build_deck.py` 进行 DOM 级安全装配。
 5. 质量门检：必须通过 `scripts/validate-deck.mjs` 物理检查。
 </strategy-gene>
 
@@ -38,7 +38,7 @@ Strategy:
 7. 有无不可更改的硬约束？
 
 **构建叙事弧 (The Narrative Arc)**：
-不要平铺直叙，先写一份骨架草稿：
+不要平铺直叙，先写一份骨架草稿（可由 `tool-slide-architect` 承接）：
 - `钩子(Hook)`: 抛反差 / 扔数据 (1页)
 - `定调(Context)`: 为什么讲这个 (1-2页)
 - `主体(Core)`: 核心论点结构展开 (3-5页)
@@ -47,32 +47,39 @@ Strategy:
 
 ### 2. Context Assembly (上下文装配) [Mode: EXECUTION]
 使用 `run_command` 运行知识装配器，获取指定风格的 CSS 类名词典与布局版式：
-`node C:\Users\shich\.gemini\config\skills\tool-web-slide\scripts\assemble-context.mjs <A|B>`
+`$env:PYTHONIOENCODING="utf-8"; node C:\Users\shich\.gemini\config\skills\tool-web-slide\scripts\assemble-context.mjs <A|B>`
 *(仔细阅读返回的终端日志，里面包含你可用的所有 Grid 骨架和卡片类名)*
 
-### 3. Template Cloning (毫秒级物理克隆)
-`template.html` 高达 108KB，**绝对禁止使用 `view_file` 读取**，会导致 Token 熔断！
-直接使用 `run_command` 将其克隆至防爆沙盒：
-```powershell
-New-Item -ItemType Directory -Force -Path "C:\Users\shich\.gemini\MEMORY\slide-deck\project_name"; Copy-Item -Path "C:\Users\shich\.gemini\config\skills\tool-web-slide\design-vault\<style>\template.html" -Destination "C:\Users\shich\.gemini\MEMORY\slide-deck\project_name\index.html" -Force
-```
+### 3. 解耦式物理沙盒装配 (V9.0 核心)
+为了防止 108KB 模板触发 Token 熔断以及正则注入导致 DOM 结构被毁（如丢失 `<nav>`），**严禁直接使用 replace_file_content 读写目标 HTML**。
 
-### 4. Precision Injection (排版与注入)
-使用 `replace_file_content` 工具，瞄准 `C:\Users\shich\.gemini\MEMORY\slide-deck\project_name\index.html` 中的 `<!-- SLIDES_HERE -->` 锚点，将你写的 `<section class="slide">` 代码段注入进去。
+必须遵循“写中间层 -> 脚本装配”管线：
+
+**第一步：写中间件片段 (Chunking Generation)**
+使用原生的 `write_to_file` 工具，将你要生成的 HTML slide 节点（即纯粹的 `<section class="slide">...` 列表）写入沙盒隔离区 `MEMORY/slide-deck/project_name/slides_part1.html`。
+> ⚠️ **微批次防衰减 (Minibatch Enforcement)**：当幻灯片总数 > 10 页时，严禁在一个块中全量输出。必须分批次写入多个分件（如 `part1.html`, `part2.html`），以确保排版质量与指令遵循（如 Swiss 的 `data-layout` 属性）不被注意力衰减破坏。
 
 **排版铁律 (Design Vault Hard Rules)**：
-1. **类名预检**：所有用到的 class 必须在刚才 `assemble-context` 返回的日志里有定义！禁止凭空发明诸如 `.my-card`, `.text-bold` 等类名。
-2. **主题节奏 (Theme Rhythm)**：连续 3 页同主题会产生视觉疲劳。必须交替使用 `light` / `dark` / `hero light` / `hero dark`。
-3. **字重阶梯 (Swiss Style 核心)**：越大越细，越小越粗。大标题用 ExtraLight (200)，小字正文用 Medium (500)。
-4. **品牌契约**：如果是医疗数字化议题，优先读取系统 `pai/DESIGN.md`，将核心色强行内联覆盖到 `:root` 变量中。
-5. **图片命名法**：所有插图放在同级 `images/` 目录下，命名采用 `{页号}-{语义}.ext`，如 `01-cover.jpg`。
+1. **类名预检**：所有用到的 class 必须在 `assemble-context` 中有定义！禁止凭空发明。
+2. **主题节奏**：连续 3 页同主题会产生疲劳。交替使用 `light` / `dark` / `hero light` / `hero dark`。
+3. **字重阶梯 (Swiss Style)**：大标题用 ExtraLight (200)，正文用 Medium (500)。
+4. **图片命名法**：同级 `images/` 目录下，采用 `{页号}-{语义}.ext`。
 
-### 5. Quality Gate (物理门检)
+**第二步：引擎组装 (Compiler Assembling)**
+大模型写完所有片段后，如果有多份，使用 `run_command` 合并片段，并触发装配器：
+```powershell
+New-Item -ItemType Directory -Force -Path "C:\Users\shich\.gemini\MEMORY\slide-deck\project_name"
+# 假设大模型已写入 slides_merged.html
+$env:PYTHONIOENCODING="utf-8"; python "C:\Users\shich\.gemini\config\skills\tool-web-slide\scripts\build_deck.py" "C:\Users\shich\.gemini\config\skills\tool-web-slide\design-vault\<style>\template.html" "C:\Users\shich\.gemini\MEMORY\slide-deck\project_name\slides_merged.html" "C:\Users\shich\.gemini\MEMORY\slide-deck\project_name\index.html"
+```
+*此脚本会在物理层绝对安全地将片段注入 `<!-- SLIDES_HERE -->` 锚点，保护底层 JS 引擎不断链。*
+
+### 4. Quality Gate (物理门检)
 强制使用 `run_command` 运行 AST 级校验器：
-`node C:\Users\shich\.gemini\config\skills\tool-web-slide\scripts\validate-deck.mjs C:\Users\shich\.gemini\MEMORY\slide-deck\project_name\index.html`
+`$env:PYTHONIOENCODING="utf-8"; node C:\Users\shich\.gemini\config\skills\tool-web-slide\scripts\validate-deck.mjs C:\Users\shich\.gemini\MEMORY\slide-deck\project_name\index.html`
 报错即返工，直到输出 Exit 0。
 
-### 6. Delivery (交付与无头导出)
+### 5. Delivery (交付与无头导出)
 输出路径提示用户，并告知按 `S` 键唤起原生双屏演讲者视图。
 如需导出 PDF，先安装依赖再执行无头渲染：
 ```powershell

@@ -46,7 +46,7 @@ def validate_dashboard(data: dict) -> list[str]:
     if research_mode not in SCHEMA["enums"]["research_mode"]:
         errors.append(f"invalid research_mode: {research_mode}")
 
-    for key in ["decision_type", "confidence_level", "operation_advice", "trend_prediction"]:
+    for key in ["decision_type", "confidence_level", "operation_advice", "trend_prediction", "position_direction"]:
         if data.get(key) not in SCHEMA["enums"][key]:
             errors.append(f"invalid {key}: {data.get(key)}")
 

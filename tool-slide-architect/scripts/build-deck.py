@@ -80,10 +80,6 @@ def parse_slides(content):
             "headline": extract(r"Headline:\s*(.*)"),
             "sub_headline": extract(r"Sub-headline:\s*(.*)"),
             "body_data": body_data,
-            "trust_anchor": extract(r"Trust_Anchor:\s*(.*)"),
-            "visual": extract(r"// VISUAL\s*([\s\S]*?)// LAYOUT"),
-            "layout": extract(r"// LAYOUT\s*([\s\S]*?)// Script:"),
-            "script": script,
         })
     return slides
 
@@ -122,7 +118,6 @@ def main():
     bundle = {
         "version": VERSION,
         "header": parse_header(content),
-        "style": parse_style_block(content),
         "slides": parse_slides(content),
     }
 

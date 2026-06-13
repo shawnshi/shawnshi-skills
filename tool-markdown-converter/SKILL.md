@@ -1,6 +1,6 @@
 ---
 name: markdown-converter
-description: Markdown 原质炼金术。当用户上传杂乱富文本、带图文档、甚至是需要“清洗数据”为纯净格式时，务必调用。该技能利用 MarkItDown 将异构文件统一转化为极致干净的 Markdown 语义层，为下游逻辑分析提供无噪音输入。
+description: 'Markdown 原质炼金术。当用户上传杂乱富文本、带图文档、甚至是需要“清洗数据”为纯净格式时，务必调用。该技能利用 MarkItDown 将异构文件统一转化为极致干净的 Markdown 语义层，为下游逻辑分析提供无噪音输入。'
 triggers: ["把这个文档转换成极其纯净的MD", "用MarkItDown提炼这段带图的内容", "格式化这份杂乱的笔记", "清洗富文本转为原质字符"]
 ---
 

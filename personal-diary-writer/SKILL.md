@@ -1,7 +1,7 @@
 ---
 name: personal-diary-writer
 version: 8.1.0
-description: 个人日志原子写入器。Primary owner for physical diary/log writeback and atomic persistence only. Use when content is already decided and must be safely written to disk. Prefer personal-cognitive-auditor for periodic review analysis, personal-monthly-insights for interaction meta-analysis, and mentat-insight-diary for first-person system introspection content.
+description: '个人日志原子写入器。Primary owner for physical diary/log writeback and atomic persistence only. Use when content is already decided and must be safely written to disk. Prefer personal-cognitive-auditor for periodic review analysis, personal-monthly-insights for interaction meta-analysis, and mentat-insight-diary for first-person system introspection content.'
 triggers: ["写日记", "记录今日状态", "保存审计日志"]
 ---
 

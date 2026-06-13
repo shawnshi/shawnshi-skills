@@ -1,7 +1,7 @@
 ---
 name: hit-lectures-scout
 version: 8.2.0
-description: 医疗数字化前沿科研侦察兵。Primary owner for medical AI paper scouting, clinical literature scanning, RWE filtering, and frontier academic breakthrough watch. Use for Nature/JAMA-level paper scouting and research-to-commercial-defense translation. Prefer hit-industry-radar for news/event scans and hit-weekly-brief for think-tank or whitepaper briefs.
+description: '医疗数字化前沿科研侦察兵。Primary owner for medical AI paper scouting, clinical literature scanning, RWE filtering, and frontier academic breakthrough watch. Use for Nature/JAMA-level paper scouting and research-to-commercial-defense translation. Prefer hit-industry-radar for news/event scans and hit-weekly-brief for think-tank or whitepaper briefs.'
 triggers: ["医疗AI论文", "学术扫描", "临床文献", "最新数字医疗突破"]
 ---
 
@@ -26,7 +26,7 @@ AVOID: 严禁在报告中保留假 [URL] 占位符；禁止发布无临床场景
 1. **Preprints 管线直控**: 主代理调用 `run_command` 执行原生 Python 爬网，必须挂载 UTF-8 安全锁：
    `$env:PYTHONIOENCODING="utf-8"; python "C:\Users\shich\.gemini\config\skills\hit-lectures-scout\assets\deepxiv_preprints_scout.py"`
    - *降级预案*：若脚本失败，必须立即通过 `invoke_subagent` 拉起 `research` 子代理手动抓取。
-2. **Journals 管线并发**: 必须使用 `invoke_subagent` 工具，并发拉起 2 个子代理，下发 `assets/task_journals_en.md` 和 `assets/task_journals_cn.md` 的目标。并在 Prompt 中明确指示子代理：“使用 `write_to_file` 工具将底层抓取数据写入 `C:\Users\shich\.gemini\tmp\raw_scout_data_[语言].json`”。主代理挂起等待回调。
+2. **Journals 管线并发**: 必须使用 `invoke_subagent` 工具，并发拉起 2 个子代理 (必须指定 `TypeName: "research"`)，下发 `assets/task_journals_en.md` 和 `assets/task_journals_cn.md` 的目标。并在 Prompt 中明确指示子代理：“使用 `write_to_file` 工具将底层抓取数据写入 `C:\Users\shich\.gemini\tmp\raw_scout_data_[语言].json`”。主代理挂起等待回调。
 3. **弹性视窗**: 若最终抓取结果 < 5 篇，强制将时间窗口扩大至 14 天重新扫描。
 
 ### Phase 2: Arbiter 提纯与 TRL 脱水 [Mode: EXECUTION]

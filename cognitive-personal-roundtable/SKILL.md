@@ -1,7 +1,7 @@
 ---
 name: cognitive-personal-roundtable
 version: 8.2.0
-description: A high-density dynamic analytical framework (V5.0) that orchestrates real-world historical or contemporary figures into a "tension network" to scrutinize any topic. Features fragmented persistence per round (anti-dehydration by design), dynamic speaker selection, action-tagged dialogue with "简言之" compression, and structural ASCII topology maps. All sessions are eventually merged and physically archived to C:\Users\shich\.gemini\MEMORY\roundtable\圆桌-{议题关键词}_{date}.md.
+description: 'A high-density dynamic analytical framework (V5.0) that orchestrates real-world historical or contemporary figures into a "tension network" to scrutinize any topic. Features fragmented persistence per round (anti-dehydration by design), dynamic speaker selection, action-tagged dialogue with "简言之" compression, and structural ASCII topology maps. All sessions are eventually merged and physically archived to C:\Users\shich\.gemini\MEMORY\roundtable\圆桌-{议题关键词}_{date}.md.'
 triggers: ["开启圆桌会议", "多视角分析", "找几个人来辩论", "搭建张力网络", "圆桌推演"]
 ---
 
@@ -26,7 +26,7 @@ AVOID: 禁止人物只做表态机器；禁止没有张力的同质化观点堆�
 ### Sub-agent Delegation Protocol (Mandatory Sandboxing)
 **CRITICAL RULE**: To protect the main agent's context window from attention degradation during long-form multi-character discussions, the round phases MUST NOT be held entirely in the main memory.
 1. **Arena Creation**: Before starting the roundtable, define the topic, participants, and rules in a sandbox file: `C:\Users\shich\.gemini\tmp\playgrounds\Roundtable_Packet_[TIMESTAMP].md`.
-2. **Delegation**: Explicitly invoke a sub-agent using the `invoke_subagent` tool to read the packet, execute the actual conversational turns, and append the dialog fragments to the designated physical output workspace using the `write_to_file` tool.
+2. **Delegation**: Explicitly invoke a sub-agent using the `invoke_subagent` tool (must specify `TypeName: "self"`) to read the packet, execute the actual conversational turns, and append the dialog fragments to the designated physical output workspace using the `write_to_file` tool.
 3. **Suspension**: The main agent acts purely as the host, suspending execution during the sub-agent's heavy text generation, and finally reading the condensed topology or summary upon completion.
 
 ---
