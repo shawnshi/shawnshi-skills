@@ -1,7 +1,7 @@
 ---
 name: hit-industry-radar
 version: 8.2.0
-description: 医疗行业战略雷达。Primary owner for weekly healthcare IT news, competitor moves, bids, vendor dynamics, and market-event battle reports. Use for fast-moving market signals. Prefer hit-weekly-brief for consulting reports and whitepapers, and hit-lectures-scout for academic or clinical paper scouting.
+description: '医疗行业战略雷达。Primary owner for weekly healthcare IT news, competitor moves, bids, vendor dynamics, and market-event battle reports. Use for fast-moving market signals. Prefer hit-weekly-brief for consulting reports and whitepapers, and hit-lectures-scout for academic or clinical paper scouting.'
 triggers: ["本周战报", "医疗IT战报", "竞对动态", "行业大事件"]
 ---
 
@@ -25,7 +25,7 @@ AVOID: 严禁重复 14 天内的旧闻；禁止包含无具体数据的公关通
 
 ### Phase 1: 并发定向侦察 (Concurrent Directed Reconnaissance) [Mode: PLANNING]
 1. 主代理阅读本技能 `assets/intelligence_targets.json` 里的高价值信源列表。
-2. **集群并发拉起 (Subagent Delegation)**: 必须使用原生的 `invoke_subagent` 并发拉起 3 个 `TypeName: research` 的子代理，将国际、国内、卫宁基准的情报收集目标下发给他们。绝对禁止主代理在当前对话框内自己做低效的广域搜索。在拉起子代理时，必须明确在 Prompt 中指示他们：“使用 `write_to_file` 工具将底层抓取数据写入 `C:\Users\shich\.gemini\tmp\raw_scout_data_[战区].json`”。
+2. **集群并发拉起 (Subagent Delegation)**: 必须使用原生的 `invoke_subagent` 并发拉起 3 个 `TypeName: research` 的子代理，将国际、国内、卫宁基准的情报收集目标下发给他们。绝对禁止主代理在当前对话框内自己做低效的广域搜索。在拉起子代理时，必须明确在 Prompt 中指示他们：“使用 `write_to_file` 工具将底层抓取数据写入 `C:\Users\shich\.gemini\tmp\raw_scout_data_[战区].json`”。**【红线警告】必须在 Prompt 中对子代理强调：“所有的事实必须 100% 来源于 `search_web` 的真实网页结果。如果由于时间限制未检索到符合要求的情报，必须返回空数组 `[]`，严禁基于垂直知识进行任何程度的合理化编造或捏造带有虚假金额、版本的伪造事件。所有事实必须提供来源 URL。”**
 3. **静默挂起与硬锁读取**: 主代理必须结束当前对话轮次，静默等待子代理完成写入。主代理恢复时，必须使用 `view_file` 验证这些数据确实存在。
 
 ### Phase 2: 图谱去重与仲裁推演 (Deduplication & Causal Weaving) [Mode: EXECUTION]
@@ -82,3 +82,4 @@ AVOID: 严禁重复 14 天内的旧闻；禁止包含无具体数据的公关通
 - **路径与工具死锁 (Pathing Deadlock)**：严禁写入漏层级或多层级的脚本路径。必须执行绝对物理寻址 `C:\Users\shich\.gemini\config\skills\scripts\hit_audit_gate.py`。落盘工具必须使用原生的 `write_to_file`，子代理交互也必须明确要求其使用该工具。
 - **跨周失忆症 (Cross-week Amnesia)**：如果情报的时间差 `Event_Date_Delta < 14 days` 并且在历史记录中已经存在过，强行把旧闻当新闻汇报将被直接打回。
 - **公关软文污染 (PR Pollution)**：Fact 节点中如果出现“取得了重大突破”、“全面升级”、“业界领先”等恶性主观形容词，或完全没有版本/金额数据，该节点被判定为污染，系统需立即查杀该 Fact。
+- **来源造假与无溯源幻觉 (Source Fabrication Lock)**：所有抓取的 Fact 必须能够溯源到真实的网页。严禁子代理在搜索失败时“强行推演”。审计时若发现数据为模型凭空捏造（无可靠信源），系统将直接阻断战报交付。
