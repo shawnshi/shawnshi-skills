@@ -1,5 +1,6 @@
 #!/usr/bin/env node
-import { readFileSync } from 'node:fs';
+import { readFileSync, existsSync } from 'node:fs';
+import { dirname, join } from 'node:path';
 
 const file = process.argv[2];
 const allowExperimental = process.argv.includes('--allow-experimental');
@@ -14,11 +15,29 @@ const htmlForSlides = html.replace(/<!--[\s\S]*?-->/g, '');
 const errors = [];
 const warnings = [];
 
+const fileDir = dirname(file);
+if (!existsSync(join(fileDir, 'assets', 'motion.min.js'))) {
+  errors.push(`Missing dependency: assets/motion.min.js not found in ${join(fileDir, 'assets')}. Animations will fail.`);
+}
+
+const isCanvasMode = html.includes('class="canvas-mode"');
+
 // ==========================================
 // 1. CSS Class Validation (Hard Gate)
 // ==========================================
 const styleMatch = html.match(/<style>([\s\S]*?)<\/style>/);
-const styleContent = styleMatch ? styleMatch[1] : '';
+let styleContent = styleMatch ? styleMatch[1] : '';
+
+// Also load from assets/*.css
+import { readdirSync } from 'node:fs';
+const assetsDir = join(fileDir, 'assets');
+if (existsSync(assetsDir)) {
+  const cssFiles = readdirSync(assetsDir).filter(f => f.endsWith('.css'));
+  for (const cssFile of cssFiles) {
+    styleContent += '\n' + readFileSync(join(assetsDir, cssFile), 'utf8');
+  }
+}
+
 const validClasses = new Set();
 const classMatches = styleContent.matchAll(/\.([a-zA-Z0-9_-]+)/g);
 for (const match of classMatches) {
@@ -68,6 +87,12 @@ const allowedSwissLayouts = new Set([
 
 slides.forEach((slide) => {
   const layout = slide.tag.match(/\bdata-layout="([^"]+)"/)?.[1];
+
+  if (isCanvasMode) {
+    if (!/<div\b[^>]*class="[^"]*\bcanvas-card\b[^"]*"[^>]*>/.test(slide.html)) {
+      errors.push(`Slide ${slide.idx}: missing <div class="canvas-card"> wrapper. In canvas-mode, all slide content MUST be wrapped in a canvas-card.`);
+    }
+  }
 
   // Swiss style validation
   if (isSwiss) {

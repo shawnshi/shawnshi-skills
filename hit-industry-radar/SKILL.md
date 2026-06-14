@@ -25,8 +25,8 @@ AVOID: 严禁重复 14 天内的旧闻；禁止包含无具体数据的公关通
 
 ### Phase 1: 并发定向侦察 (Concurrent Directed Reconnaissance) [Mode: PLANNING]
 1. 主代理阅读本技能 `assets/intelligence_targets.json` 里的高价值信源列表。
-2. **集群并发拉起 (Subagent Delegation)**: 必须使用原生的 `invoke_subagent` 并发拉起 3 个 `TypeName: research` 的子代理，将国际、国内、卫宁基准的情报收集目标下发给他们。绝对禁止主代理在当前对话框内自己做低效的广域搜索。在拉起子代理时，必须明确在 Prompt 中指示他们：“使用 `write_to_file` 工具将底层抓取数据写入 `C:\Users\shich\.gemini\tmp\raw_scout_data_[战区].json`”。**【红线警告】必须在 Prompt 中对子代理强调：“所有的事实必须 100% 来源于 `search_web` 的真实网页结果。如果由于时间限制未检索到符合要求的情报，必须返回空数组 `[]`，严禁基于垂直知识进行任何程度的合理化编造或捏造带有虚假金额、版本的伪造事件。所有事实必须提供来源 URL。”**
-3. **静默挂起与硬锁读取**: 主代理必须结束当前对话轮次，静默等待子代理完成写入。主代理恢复时，必须使用 `view_file` 验证这些数据确实存在。
+2. **集群并发拉起 (Subagent Delegation)**: 必须使用原生的 `invoke_subagent` 并发拉起 3 个 `TypeName: research` 的子代理，将国际、国内、卫宁基准的情报收集目标下发给他们。绝对禁止主代理在当前对话框内自己做低效的广域搜索。在拉起子代理时，必须明确在 Prompt 中指示他们：“抓取完成后，必须将你的数据整合为 JSON 对象，使用 `send_message` 工具直接发送回主代理”。**【红线警告】必须在 Prompt 中对子代理强调：“所有的事实必须 100% 来源于 `search_web` 的真实网页结果。如果由于时间限制未检索到符合要求的情报，必须返回空数组 `[]`，严禁基于垂直知识进行任何程度的合理化编造或捏造带有虚假金额、版本的伪造事件。所有事实必须提供来源 URL。”**
+3. **响应式唤醒 (Reactive Wakeup)**: 子代理完成后会自动通过 `send_message` 唤醒主代理。主代理在上下文中直接接收并处理 JSON Payload，无需进行繁杂的磁盘探查。
 
 ### Phase 2: 图谱去重与仲裁推演 (Deduplication & Causal Weaving) [Mode: EXECUTION]
 1. 若发现重大竞对动作，必须优先调用 `call_mcp_tool` (ServerName: `vector-lake-mcp`, ToolName: `search_vector_lake`) 检索该动作是否已在过往 14 天内记录过，执行语义去重。
@@ -34,17 +34,17 @@ AVOID: 严禁重复 14 天内的旧闻；禁止包含无具体数据的公关通
 3. **织者推理**: 跨越不同标段和厂商，提取出“隐含供应链共振”规律。
 
 ### Phase 3: The Hard Gate (草稿校验与跨平台审查) [Mode: VERIFICATION]
-1. 根据 <Contracts> 要求的 `[Format Stack]` 渲染草稿，强制使用 `write_to_file` 写入临时文件 `C:\Users\shich\.gemini\tmp\draft_hit_radar.md`。
+1. 根据 <Contracts> 要求的 `[Format Stack]` 渲染草稿，强制使用 `write_to_file` 写入当前会话的隔离工作区：`<appDataDir>\brain\<conversation-id>\scratch\draft_hit_radar.md`。
 2. **强制过检**: 调用原生的 `run_command` 执行跨平台审计脚本（必须挂载 UTF-8 数据流锁并使用绝对物理路径）：
-   `$env:PYTHONIOENCODING="utf-8"; python "C:\Users\shich\.gemini\config\skills\scripts\hit_audit_gate.py" "C:\Users\shich\.gemini\tmp\draft_hit_radar.md" --mode radar`
+   `$env:PYTHONIOENCODING="utf-8"; python "C:\Users\shich\.gemini\config\skills\scripts\hit_audit_gate.py" "<appDataDir>\brain\<conversation-id>\scratch\draft_hit_radar.md" --mode radar`
 3. 若报错拦截（如查出主观形容词或营销禁词），必须退回修正，最多重试 2 次。
 
 ### Phase 4: 激活与分层归档 (Activate & Async Ingest) [Mode: EXECUTION]
 1. **物理落盘**: Phase 3 脚本审计返回 Exit Code 0 后，使用原生 `write_to_file` 工具将草稿正式写入：
    `C:\Users\shich\.gemini\MEMORY\raw\HealthcareIndustryRadar\DHWB-Radar-YYYYMMDD.md`
 2. **知识异步入湖**: 落盘后，主代理必须提取包含双链 `[[ ]]` 的战略突变（如：友商实控权变更）。
-   - 若图谱已存在该实体，使用 `replace_file_content` 将新情报作为 Timeline 追加至对应的实体卡中。
-   - 然后必须使用 `call_mcp_tool` (ServerName: `vector-lake-mcp`, ToolName: `prepare_ingest_batch`) 将新节点抛入后台引擎异步消化。
+   - 严禁主代理自行修改底层文件。主代理必须仅通过 Vector Lake MCP 引擎进行图谱变更。
+   - 必须使用 `call_mcp_tool` (ServerName: `vector-lake-mcp`, ToolName: `prepare_ingest_batch` 或 `memory_update`) 将战略突变事件安全抛入后台引擎处理，以维护严密的数据结构与底层图谱一致性。
 
 ## 2. <Contracts> (输出与交付契约)
 
@@ -75,6 +75,8 @@ AVOID: 严禁重复 14 天内的旧闻；禁止包含无具体数据的公关通
 ## 🎯 战术下钻与应对建议 (Commander's Hook)
 - **⚔️ 针对友商防御**：[建议]
 - **🏥 针对CIO破冰**：[建议]
+
+> **交付契约**：战报生成完毕后，必须向用户输出包含绝对物理路径的可点击 Markdown 链接（格式：`[战报文件](file:///C:/Users/shich/.gemini/MEMORY/raw/HealthcareIndustryRadar/...)`），严禁隐藏实际落盘位置。
 ```
 
 ## 3. <Failure_Taxonomy> (失败分类学 / 逻辑硬锁)

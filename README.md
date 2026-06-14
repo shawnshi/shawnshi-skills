@@ -1,4 +1,4 @@
-# Skills Ecosystem: The Strategic Armory (V8.1 - Native Antigravity Edition)
+# Skills Ecosystem: The Strategic Armory (V8.2 - Native Antigravity Edition)
 
 <!-- 
 @Pos: Root Level / Knowledge Sovereign 
@@ -50,11 +50,11 @@
 
 | 技能标识 (Directory) | 核心本质 (Trigger Traps) |
 | :--- | :--- |
-| **[cognitive-book-mirror](cognitive-book-mirror/)** | **认知书籍镜像引擎**。提取书籍原旨并与近 14 天日记碰撞，生成毒舌双栏伴读。 |
+| **[cognitive-book-mirror](cognitive-book-mirror/)** | **认知书籍镜像引擎 (Native Edition)**。提取书籍原旨并与近 14 天日记碰撞，生成毒舌双栏伴读。 |
 | **[cognitive-ideation-brainstorming](cognitive-ideation-brainstorming/)** | **高压想法脱水机 (Native Edition)**。统一收口宏观点子拷问，执行逻辑压力测试。 |
 | **[cognitive-ceo-review](cognitive-ceo-review/)** | **创始人模式战略审计**。聚合批处理模式下对开发计划执行核能挑战。 |
 | **[cognitive-logic-adversary](cognitive-logic-adversary/)** | **逻辑对抗系统 (Native Edition)**。通过饱和逻辑攻击搜索单点故障 (SPOF)。 |
-| **[personal-intelligence-hub](personal-intelligence-hub/)** | **个人情报作战中枢**。全球多源抓取，降维噪音。 |
+| **[personal-intelligence-hub](personal-intelligence-hub/)** | **个人情报作战中枢 (Native Edition)**。全球多源抓取，降维噪音。 |
 | **[cognitive-personal-roundtable](cognitive-personal-roundtable/)** | **高密度动态圆桌**。张力网络构建，碎片化落盘防截断。 |
 | **[cognitive-hv-analysis](cognitive-hv-analysis/)** | **横纵分析法深度研究**。纵轴时间深度，横轴同期对比。 |
 | **[personal-strategic-reading](personal-strategic-reading/)** | **战略滤镜阅读器**。带商业目的榨取长文，输出高密度 Playbook。 |
@@ -70,10 +70,10 @@
 | :--- | :--- |
 | **[hit-solution-architect](hit-solution-architect/)** | **顶级方案架构师 (Native Edition)**。执行多阶段落盘锻造，确保 TCO 最优与技术可演进。 |
 | **[hit-digital-strategy-partner](hit-digital-strategy-partner/)** | **顶级医疗数字化战略专家**。ROI 测算与战略验证。 |
-| **[hit-industry-radar](hit-industry-radar/)** | **行业战略雷达**。监控友商动态与 S-T-C 战报。 |
-| **[hit-weekly-brief](hit-weekly-brief/)** | **行业战区研报中枢**。智库研报降维。 |
-| **[hit-lectures-scout](hit-lectures-scout/)** | **数字化前沿侦察兵**。RWE 过滤与科研战报。 |
-| **[hit-customer-analyst](hit-customer-analyst/)** | **大客户拜访分析专家**。机构与足迹的三阶侦察。 |
+| **[hit-industry-radar](hit-industry-radar/)** | **行业战略雷达 (Native Edition)**。监控友商动态与 S-T-C 战报。 |
+| **[hit-weekly-brief](hit-weekly-brief/)** | **行业战区研报中枢 (Native Edition)**。智库研报降维。 |
+| **[hit-lectures-scout](hit-lectures-scout/)** | **数字化前沿侦察兵 (Native Edition)**。RWE 过滤与科研战报。 |
+| **[hit-customer-analyst](hit-customer-analyst/)** | **大客户拜访分析专家 (Native Edition)**。机构与足迹的三阶侦察。 |
 
 ### 🔬 专业科研与学术评价 (Scientific Research)
 *学术重型武器：论文检索、读论文提炼、系统性打分与论文级绘图。*
@@ -93,7 +93,7 @@
 | **[image-nano-gen](image-nano-gen/)** | **Nanobanana 绘图引擎 (Native Edition)**。零干预透传的物理级产出。 |
 | **[image-promp-gen](image-promp-gen/)** | **大师级提示词炼金炉 (Native Edition)**。Mondo 丝网美学与符号隐喻。 |
 | **[tool-slide-architect](tool-slide-architect/)** | **战略级幻灯片蓝图构建师 (Native Edition)**。标题即判词，禁用名词标签。 |
-| **[tool-web-slide](tool-web-slide/)** | **电子杂志风网页 PPT 引擎**。HTML 单文件演示资产。 |
+| **[tool-web-slide](tool-web-slide/)** | **电子杂志风网页 PPT 引擎 (Native Edition)**。HTML 单文件演示资产。 |
 | **[tool-smart-latex](tool-smart-latex/)** | **自动化出版 LaTeX 引擎**。IEEE/CV 工业级排版。 |
 | **[tool-drawio](tool-drawio/)** | **SVG 架构渲染仪 (Native Edition)**。纯 Python List 原生防爆注入与 UML 挂载。 |
 
@@ -112,7 +112,7 @@
 | **[personal-diary-writer](personal-diary-writer/)** | **个人日志原子写入器**。负责高频日常状态录入。 |
 | **[personal-cognitive-auditor](personal-cognitive-auditor/)** | **战略认知联合审计官**。日/周/月认知复盘，强制调度。 |
 | **[personal-cognitive-prescription](personal-cognitive-prescription/)** | **认知处方引擎**。无情的认知盲区开方器。 |
-| **[personal-health-analysis](personal-health-analysis/)** | **首席医疗官 (CMO) 引擎**。Garmin 生理数据审计。 |
+| **[personal-health-analysis](personal-health-analysis/)** | **首席医疗官 (CMO) 引擎 (Native Edition)**。Garmin 生理数据审计。 |
 | **[personal-musicbee-dj](personal-musicbee-dj/)** | **音乐极客控制协议**。JIT 算法精准控制本地 MusicBee 进程。 |
 | **[personal-travel-research](personal-travel-research/)** | **旅行深度研判**。博物馆与文化考古案头准备。 |
 
@@ -139,4 +139,4 @@
 | **[tool-url-markdown](tool-url-markdown/)** | **CDP 网页原质提取器 (Native Edition)**。JS 强对抗与断点防穿模。 |
 
 ---
-*Last Global Audit: 2026-06-12 | Version: 8.1.0 (Native Antigravity Edition) | System State: Locked*
+*Last Global Audit: 2026-06-14 | Version: 8.2.0 (Native Antigravity Edition) | System State: Locked*

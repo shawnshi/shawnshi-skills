@@ -5,56 +5,37 @@ import json
 import argparse
 import subprocess
 
-VERSION = "11.0"
+VERSION = "12.0"
 
-
-def run_validator(outline_file):
+def run_validator(path):
     script_dir = os.path.dirname(os.path.abspath(__file__))
     validator_path = os.path.join(script_dir, "validator.py")
-    result = subprocess.run([sys.executable, validator_path, outline_file], capture_output=True, text=True)
+    result = subprocess.run([sys.executable, validator_path, path], capture_output=True, text=True)
     return result
 
+def get_merged_content(path):
+    if not os.path.exists(path):
+        return None
+    
+    merged_content = ""
+    if os.path.isdir(path):
+        files = sorted([f for f in os.listdir(path) if f.endswith(".md")])
+        if not files:
+            return None
+        for file in files:
+            file_path = os.path.join(path, file)
+            with open(file_path, "r", encoding="utf-8") as handle:
+                merged_content += handle.read() + "\n\n"
+    else:
+        with open(path, "r", encoding="utf-8") as handle:
+            merged_content = handle.read()
+            
+    return merged_content
 
 def parse_style_block(content):
     match = re.search(r"<STYLE_INSTRUCTIONS>([\s\S]*?)</STYLE_INSTRUCTIONS>", content)
     raw = match.group(1).strip() if match else ""
-    sections = {
-        "raw": raw,
-        "design_aesthetic": "",
-        "background": "",
-        "typography": "",
-        "color_palette": "",
-        "visual_elements": "",
-        "density_guidelines": "",
-        "style_rules": "",
-    }
-    if not raw:
-        return sections
-
-    markers = [
-        ("Design Aesthetic:", "design_aesthetic"),
-        ("Background:", "background"),
-        ("Typography:", "typography"),
-        ("Color Palette:", "color_palette"),
-        ("Visual Elements:", "visual_elements"),
-        ("Density Guidelines:", "density_guidelines"),
-        ("Style Rules:", "style_rules"),
-    ]
-
-    for index, (marker, key) in enumerate(markers):
-        start = raw.find(marker)
-        if start == -1:
-            continue
-        start += len(marker)
-        end = len(raw)
-        for next_marker, _ in markers[index + 1:]:
-            candidate = raw.find(next_marker, start)
-            if candidate != -1:
-                end = candidate
-                break
-        sections[key] = raw[start:end].strip()
-    return sections
-
+    return raw
 
 def parse_slides(content):
     slides = []
@@ -69,65 +50,76 @@ def parse_slides(content):
             return found.group(1).strip() if found else ""
 
         body_data = extract(r"Body/Data:\s*([\s\S]*?)Trust_Anchor:")
-        script = extract(r"// Script:\s*([\s\S]*)$")
-        slide_type = extract(r"Type:\s*(Cover|Content|Closing)")
+        slide_type = extract(r"Type:\s*(Cover|Content|SectionBreak|Closing)")
+        arc = extract(r"\[Arc:\s*(.*?)\]")
+        bg_style = extract(r"\[Bg:\s*(.*?)\]")
 
         slides.append({
             "page": page_no,
             "title": title,
             "type": slide_type,
-            "narrative_goal": extract(r"// NARRATIVE GOAL\s*([\s\S]*?)// KEY CONTENT"),
+            "arc": arc,
+            "bg_style": bg_style,
             "headline": extract(r"Headline:\s*(.*)"),
-            "sub_headline": extract(r"Sub-headline:\s*(.*)"),
             "body_data": body_data,
         })
     return slides
-
 
 def parse_header(content):
     header = {}
     for key in ["Topic", "Audience", "Objective", "Language", "Style", "Slide Count", "Generated"]:
         match = re.search(rf"\*\*{re.escape(key)}\*\*:\s*(.*)", content)
-        header[key.lower().replace(" ", "_")] = match.group(1).strip() if match else ""
+        if match:
+            header[key.lower().replace(" ", "_")] = match.group(1).strip()
     return header
-
 
 def main():
     parser = argparse.ArgumentParser(description=f"Presentation blueprint packager V{VERSION}")
-    parser.add_argument("dir", help="Directory containing outline.md")
+    parser.add_argument("path", help="Directory containing chunk_*.md files or path to outline.md")
     parser.add_argument("--output", "-o", default="blueprint_bundle.json", help="Output JSON filename")
     args = parser.parse_args()
 
-    deck_dir = args.dir
-    outline_file = os.path.join(deck_dir, "outline.md")
-    if not os.path.exists(outline_file):
-        print("❌ ABORTING: outline.md not found.")
+    deck_path = args.path
+    if not os.path.exists(deck_path):
+        print(f"❌ ABORTING: path not found: {deck_path}")
         sys.exit(1)
 
     print("--- Step 1: Blueprint Audit ---")
-    result = run_validator(outline_file)
+    result = run_validator(deck_path)
     if result.returncode != 0:
         print(result.stdout)
         print("\n❌ ABORTING: Blueprint audit failed.")
         sys.exit(1)
+    print(result.stdout)
     print("[OK] Blueprint Audit Passed.")
 
-    with open(outline_file, "r", encoding="utf-8") as handle:
-        content = handle.read()
+    content = get_merged_content(deck_path)
+    if not content:
+        print("❌ ABORTING: Could not extract content from markdown files.")
+        sys.exit(1)
+
+    # Save merged outline if directory
+    if os.path.isdir(deck_path):
+        merged_outline_path = os.path.join(deck_path, "outline_merged.md")
+        with open(merged_outline_path, "w", encoding="utf-8") as handle:
+            handle.write(content)
+        print(f"[OK] Merged outline saved to {merged_outline_path}")
+        output_dir = deck_path
+    else:
+        output_dir = os.path.dirname(deck_path)
 
     bundle = {
         "version": VERSION,
+        "style_instructions": parse_style_block(content),
         "header": parse_header(content),
         "slides": parse_slides(content),
     }
 
-    output_path = os.path.join(deck_dir, args.output)
+    output_path = os.path.join(output_dir, args.output)
     with open(output_path, "w", encoding="utf-8") as handle:
         json.dump(bundle, handle, ensure_ascii=False, indent=2)
 
     print(f"\n[OK] BLUEPRINT PACKAGE READY: {output_path}")
 
-
 if __name__ == "__main__":
     main()
-

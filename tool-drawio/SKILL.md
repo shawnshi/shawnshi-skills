@@ -34,8 +34,8 @@ Strategy:
 - **Memory Architecture**: 明确区分 **写入路径 (Write)** 与 **读取路径 (Read)**。存储介质强制使用 `kind: "cylinder"`。
 
 ### Phase 2: Structural JSON Generation [Mode: EXECUTION]
-- **大模型只需生成包含布局坐标和语义流的拓扑 JSON**，将其写入沙盒：
-  `C:\Users\shich\.gemini\MEMORY\scratch\diagram_data.json`
+- **大模型只需生成包含布局坐标和语义流的拓扑 JSON**，将其强制写入当前会话的安全沙盒：
+  `<appDataDir>\brain\<conversation-id>\scratch\diagram_data.json`
 - **坐标规矩**: 节点横向间距保持 80px-120px，纵向间距保持 100px-150px 以留出走线空间。
 - **JSON 骨架示例**:
   ```json
@@ -56,7 +56,7 @@ Strategy:
 - 使用 `run_command` 调用原生 Python 渲染引擎。
 - **强制要求**：挂载 UTF-8 环境变量；使用纯绝对路径。
 ```powershell
-$env:PYTHONIOENCODING="utf-8"; python "C:\Users\shich\.gemini\config\skills\tool-drawio\scripts\generate-from-template.py" 1 "C:\Users\shich\.gemini\MEMORY\diagrams\output_[TIMESTAMP].svg" "C:\Users\shich\.gemini\MEMORY\scratch\diagram_data.json"
+$env:PYTHONIOENCODING="utf-8"; python "C:\Users\shich\.gemini\config\skills\tool-drawio\scripts\generate-from-template.py" 1 "<appDataDir>\brain\<conversation-id>\scratch\diagram_output.svg" "<appDataDir>\brain\<conversation-id>\scratch\diagram_data.json"
 ```
 *(注：`1` 代表 Flat Icon 风格，可选 `1`-`7`)*
 
@@ -91,7 +91,11 @@ $env:PYTHONIOENCODING="utf-8"; python "C:\Users\shich\.gemini\config\skills\tool
 
 > **提示**：为不同的连线分配不同的 `corridor_y`（如 240, 260, 280），可以完美解决多线重叠的灾难！
 
-## 4. <Failure_Taxonomy> (逻辑硬锁)
+## 4. <Contracts> (输出与交付契约)
+
+- **交付链接契约**: 架构图生成成功后，主代理必须通过聊天框向用户输出带有绝对物理路径的 Markdown 预览语法或下载链接（例如：`![系统架构图](file:///<appDataDir>/brain/<conversation-id>/scratch/diagram_output.svg)`），让用户能够一键在界面内查阅。
+
+## 5. <Failure_Taxonomy> (逻辑硬锁)
 
 - **手写大段 XML 的幻觉**：如果有数百行连线需求，老老实实输出 JSON 阵列让引擎去算！绝对禁止直接通过 LLM 拼接 XML。
-- **Unix 余孽与相对路径崩溃**：只允许调用 `generate-from-template.py`，禁止调用任何 `.sh` 脚本。JSON 和输出文件必须锚定至 `C:\Users\shich\.gemini\MEMORY\...` 下的绝对路径。
+- **Unix 余孽与相对路径崩溃**：只允许调用 `generate-from-template.py`，禁止调用任何 `.sh` 脚本。JSON 和输出文件必须严密锚定至当前会话的安全沙盒：`<appDataDir>\brain\<conversation-id>\scratch\`，严禁向全局环境写文件。

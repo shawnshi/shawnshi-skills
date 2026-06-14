@@ -31,25 +31,25 @@ AVOID: 严禁将整书直接硬塞给大模型导致 OOM；严禁产生关于用
 ```powershell
 $env:PYTHONIOENCODING="utf-8"; python "C:\Users\shich\.gemini\config\skills\cognitive-book-mirror\scripts\extract_and_pack.py" --file <PATH_TO_MARKDOWN_OR_TXT>
 ```
-该脚本会执行 Semantic Chunking 切片，并抓取 `USER.md`、`SOUL.md` 以及过去 14 天的日记，统一打包输出到临时目录 `C:\Users\shich\.gemini\tmp\playgrounds\book_mirror\<book_stem>\` 中，并生成 `manifest.json` 索引文件。
+该脚本会执行 Semantic Chunking 切片，并抓取 `USER.md`、`SOUL.md` 以及过去 14 天的日记，统一打包输出到当前会话隔离区 `<appDataDir>\brain\<conversation-id>\scratch\book_mirror\<book_stem>\` 中，并生成 `manifest.json` 索引文件。
 
 ### 2. The Subagent Orchestration Phase
 主 Agent 负责蓝图定义与智能调度：
 1. **人设挂载 (Progressive Disclosure)**: 必须使用 `view_file` 工具加载本目录下的 `agents/mirror-agent.md`。
 2. **定义子代理**: 将加载的人设内容作为核心 `system_prompt`，并结合提取出的 `prompt.md` 与 `context.md` 约束，使用 `define_subagent` 注册一个名为 `CognitiveMirrorWorker` 的特工兵营。
-3. **队列式任务派发 (Worker Pool)**: 根据 `manifest.json` 中的 `chunks` 数量，**强烈建议使用单实例或 3-5 个实例的特工池（Worker Pool）并发调用 `invoke_subagent`**。不要一次性并发唤醒几十个特工（避免 Context 冗余与 Token 黑洞）。要求输出严格的双栏结构：
+3. **队列式任务派发 (Worker Pool)**: 根据 `manifest.json` 中的 `chunks` 数量，**强烈建议使用单实例或 3-5 个实例的特工池（Worker Pool）并发调用 `invoke_subagent`**。在 Prompt 中明确指示子代理：“分析完成后，将结果封装为严格的双栏结构 JSON，使用 `send_message` 回传主代理”。
    - **左栏 (Left Column)**: 书籍核心观点、原汁原味的作者语言。
    - **右栏 (Right Column)**: 针对左栏内容，进行冷酷的映射关联与质问。
-4. **特工回收**: 等待所有子代理返回结果，主代理将结果按顺序使用 `write_to_file` 工具存入 `C:\Users\shich\.gemini\tmp\playgrounds\book_mirror\<book_stem>\results\` 目录下，命名为 `result_001.md`, `result_002.md` 等。
+4. **响应式特工回收 (Reactive Wakeup)**: 子代理完成后会自动唤醒主代理。主代理在上下文中提取双栏数据，按顺序使用 `write_to_file` 工具存入隔离工作区 `<appDataDir>\brain\<conversation-id>\scratch\book_mirror\<book_stem>\results\` 目录下，命名为 `result_001.md`, `result_002.md` 等。
 
 ### 3. The Stitching Phase
 自动合并章节后输出：
 ```powershell
-$env:PYTHONIOENCODING="utf-8"; python "C:\Users\shich\.gemini\config\skills\cognitive-book-mirror\scripts\stitch_and_format.py" --book_stem <book_stem> --results_dir "C:\Users\shich\.gemini\tmp\playgrounds\book_mirror\<book_stem>\results"
+$env:PYTHONIOENCODING="utf-8"; python "C:\Users\shich\.gemini\config\skills\cognitive-book-mirror\scripts\stitch_and_format.py" --book_stem <book_stem> --results_dir "<appDataDir>\brain\<conversation-id>\scratch\book_mirror\<book_stem>\results"
 ```
 
 ## Failure Modes
-- **[Token_Blackhole_Defense]**: 如果一章长度仍然过大（超过 80,000 tokens），脚本会尝试继续强行降级切断。
+- **[Token_Blackhole_Defense]**: 如果一章长度过大（在原生 Gemini 3.1 Pro 框架下放宽至 200,000 tokens），脚本仍会尝试强行切断以保证超高密度的“逐段质问”不丢失细节。
 - **[Fact_Hallucination]**: 如果右栏（主观映射）虚构了用户没有说过的“朋友”、“家属”或“事件”，属于严重的隔离被击穿。大模型必须保持原教旨主义的毒舌，不知为不知。
 - **[Architecture_Violation]**: 虽支持自动清洗，但若遇到极度异常或损坏的二进制文件，`markdown-converter` 静默挂载失败后，脚本会抛出底层转换错误并退出。主代理解析错误并上报即可。
 - **[Tool_Hallucination]**: 特工回收存储时，必须调用原生的 `write_to_file`，严禁使用已被淘汰的 `write_file`。
@@ -57,6 +57,7 @@ $env:PYTHONIOENCODING="utf-8"; python "C:\Users\shich\.gemini\config\skills\cogn
 ## Output Contract
 - 最终只会交付一个 `MEMORY/raw/read/<BookName>_personalized_mirror.md` 的脑图页面（由 `stitch_and_format.py` 自动生成落盘）。
 - 页面核心内容必须被一个庞大的 Markdown Table 统治（双栏结构）。
+- **交付链接契约**: 最终伴读生成完毕后，主代理必须通过聊天向用户输出包含绝对物理路径的可点击 Markdown 链接（例如：`[《<BookName>》私域认知镜像](file:///C:/Users/shich/.gemini/MEMORY/raw/read/...)`）。
 
 ## Telemetry
 主 Agent 在缝合完成后，只需输出一份精简的 JSON 汇报即可，例如：

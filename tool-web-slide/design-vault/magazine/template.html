@@ -465,6 +465,42 @@
     canvas { display: none !important; }
     [data-anim] { opacity: 1 !important; transform: none !important; }
   }
+
+  /* ============ DUAL MODE UX ============ */
+  #ctrl-bar{
+    position:fixed;top:0;left:0;right:0;height:44px;
+    background:rgba(26,35,44,0.97);backdrop-filter:blur(8px);
+    display:flex;align-items:center;justify-content:space-between;
+    padding:0 20px;z-index:9999;
+    border-bottom:1px solid rgba(0,94,184,0.3);
+  }
+  .ctrl-logo{
+    font-family:var(--sans),var(--sans-zh);font-weight:600;font-size:0.85rem;color:var(--paper);letter-spacing:0.02em;
+  }
+  .ctrl-actions{display:flex;align-items:center;gap:12px;}
+  .ctrl-btn{
+    padding:5px 14px;border:1px solid rgba(0,94,184,0.4);background:transparent;color:rgba(255,255,255,0.8);
+    font-family:var(--mono);font-size:0.65rem;letter-spacing:0.12em;text-transform:uppercase;
+    cursor:pointer;border-radius:2px;transition:all 0.2s;
+  }
+  .ctrl-btn:hover{background:rgba(0,94,184,0.15);border-color:#005EB8;color:#fff;}
+  .ctrl-btn.active{background:#005EB8;border-color:#005EB8;color:#fff;}
+  .ctrl-hint{font-family:var(--mono);font-size:0.6rem;color:rgba(255,255,255,0.4);letter-spacing:0.08em;}
+
+  body.doc-mode { padding-top:44px; overflow-y:auto; overflow-x:hidden; background:var(--paper); }
+  body.doc-mode #deck { position:static; display:block; width:100%; height:auto; transform:none !important; transition:none !important; }
+  body.doc-mode .slide {
+    width:100%; height:auto; min-height:80vh; margin:0;
+    padding:80px 8vw; border-bottom:1px solid rgba(0,0,0,0.05);
+    display:flex; flex-direction:column;
+  }
+  body.doc-mode .canvas-card {
+    width:100%; height:auto; min-height:100%; padding:0; box-shadow:none;
+  }
+  body.doc-mode #nav { display:none !important; }
+  body.doc-mode #hint { display:none !important; }
+  body.doc-mode canvas.bg, body.doc-mode canvas.ascii-bg { display:none !important; }
+
 </style>
 </head>
 <body>
@@ -499,6 +535,7 @@
 <div id="hint">← → 翻页 · B 静态 · ESC 索引</div>
 
 <div id="deck">
+<!-- INJECT_DECK_CONTENT_START -->
 
 <!-- ============================================================
      SLIDES 插入区 · 在此处填充所有 <section class="slide ..."> 页面
@@ -508,6 +545,7 @@
 
 <!-- SLIDES_HERE -->
 
+<!-- INJECT_DECK_CONTENT_END -->
 </div>
 
 <div id="nav"></div>
@@ -1000,5 +1038,49 @@ if(motion){
   playSlide(0);
 }
 </script>
+
+<script>
+  // ============ DUAL MODE UX ============
+  function setMode(mode) {
+    const body = document.body;
+    const btnDoc = document.getElementById('btn-doc');
+    const btnPres = document.getElementById('btn-pres');
+    const hint = document.getElementById('mode-hint');
+
+    if (mode === 'doc') {
+      body.classList.add('doc-mode');
+      body.classList.remove('pres-mode');
+      if(btnDoc) btnDoc.classList.add('active');
+      if(btnPres) btnPres.classList.remove('active');
+      if(hint) hint.textContent = '当前：阅读模式';
+    } else {
+      body.classList.add('pres-mode');
+      body.classList.remove('doc-mode');
+      if(btnPres) btnPres.classList.add('active');
+      if(btnDoc) btnDoc.classList.remove('active');
+      if(hint) hint.textContent = '当前：演示模式 · ← → 翻页 · ESC 退出';
+      window.scrollTo(0, 0);
+      if(typeof updateNav === 'function') updateNav();
+    }
+  }
+
+  function toggleFullscreen() {
+    if (!document.fullscreenElement) {
+      document.documentElement.requestFullscreen().catch(()=>{});
+    } else {
+      document.exitFullscreen().catch(()=>{});
+    }
+  }
+
+  // Hook into keydown in capture phase to stop slide navigation in doc mode
+  window.addEventListener('keydown', function(e) {
+    if (document.body.classList.contains('doc-mode')) {
+        if (['ArrowRight','ArrowLeft','ArrowDown','ArrowUp',' ','PageDown','PageUp'].includes(e.key)) {
+            e.stopPropagation();
+        }
+    }
+  }, true);
+</script>
+
 </body>
 </html>

@@ -8,10 +8,11 @@ const vaultDir = join(__dirname, '..', 'design-vault');
 
 const style = process.argv[2]?.toUpperCase();
 
-if (style !== 'A' && style !== 'B') {
-  console.error('Usage: node assemble-context.mjs <A|B>');
+if (style !== 'A' && style !== 'B' && style !== 'C') {
+  console.error('Usage: node assemble-context.mjs <A|B|C>');
   console.error('  A: 电子杂志风 (Magazine)');
   console.error('  B: 瑞士国际主义风 (Swiss)');
+  console.error('  C: 极简医疗风 (Winning Clinical)');
   process.exit(2);
 }
 
@@ -34,7 +35,22 @@ const filesB = [
   'shared/checklist.md'
 ];
 
-const targetFiles = style === 'A' ? filesA : filesB;
+const filesC = [
+  'winning/themes.md',
+  'winning/layout-lock.md',
+  'winning/layouts.md',
+  'winning/components.md',
+  'winning/map-component.md',
+  'shared/screenshot-framing.md',
+  'shared/image-prompts.md',
+  'shared/checklist.md'
+];
+
+let targetFiles;
+if (style === 'A') targetFiles = filesA;
+else if (style === 'B') targetFiles = filesB;
+else if (style === 'C') targetFiles = filesC;
+
 let contextOutput = `# Design Vault Context: Style ${style}\n\n`;
 
 for (const file of targetFiles) {

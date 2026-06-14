@@ -29,8 +29,9 @@ AVOID: 禁止全量加载 PDF（算力黑洞）；禁止沦为干瘪的学术编
 
 ### Phase 2: Traceback & Narrative Construction (溯源与故事构建) [Mode: EXECUTION]
 1. 要求子代理读取 `C:\Users\shich\.gemini\config\skills\academic-paper-reader\resources\storytelling_manual.md` 获取灵魂句 Few-Shot 范例。
-2. 根据提取的 Baseline，向上递归追溯 3-5 层前置研究。
-3. 用“七拍故事弧”将脉络串联：`主角 -> 困境 -> 旧路(前人墙壁) -> 转折 -> 解法 -> 结局 -> 内核`。
+2. **【架构红线】强制读取模板**：要求子代理必须读取并严格遵循 `C:\Users\shich\.gemini\config\skills\academic-paper-reader\resources\template.md` 的全套字段与四段式结构进行输出。
+3. 根据提取的 Baseline，向上递归追溯 3-5 层前置研究。
+4. 将“七拍故事弧”(`主角 -> 困境 -> 旧路(前人墙壁) -> 转折 -> 解法 -> 结局 -> 内核`) 无缝浇筑进 `template.md` 的硬性架构中，不得遗漏任何一拍。
 
 ### Phase 3: The Hard Gate (草稿拼装与物理审计) [Mode: VERIFICATION]
 1. 将解析的故事线写入临时文件草稿：`C:\Users\shich\.gemini\tmp\draft_paper.md`。

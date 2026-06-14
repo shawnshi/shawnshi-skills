@@ -27,9 +27,28 @@ try {
   process.exit(1);
 }
 
+const chromePaths = [
+  'C:\\Program Files\\Google\\Chrome\\Application\\chrome.exe',
+  'C:\\Program Files (x86)\\Google\\Chrome\\Application\\chrome.exe',
+  'C:\\Program Files\\Microsoft\\Edge\\Application\\msedge.exe',
+  'C:\\Program Files (x86)\\Microsoft\\Edge\\Application\\msedge.exe'
+];
+
+let executablePath;
+for (const p of chromePaths) {
+  if (existsSync(p)) {
+    executablePath = p;
+    break;
+  }
+}
+
 (async () => {
   console.log(`Launching Puppeteer to export ${htmlPath}...`);
-  const browser = await puppeteer.launch({ headless: 'new' });
+  const browser = await puppeteer.launch({ 
+    headless: 'new',
+    executablePath, // Use system Chrome if found
+    args: ['--no-sandbox', '--disable-setuid-sandbox', '--disable-web-security'] // Prevent sandbox issues
+  });
   const page = await browser.newPage();
   
   // Set viewport to standard 1080p 16:9

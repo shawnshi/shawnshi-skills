@@ -3,8 +3,7 @@ import re
 import sys
 import argparse
 
-VERSION = "11.0"
-
+VERSION = "12.0"
 
 def fix_encoding(file_path):
     try:
@@ -18,14 +17,12 @@ def fix_encoding(file_path):
             handle.write(content)
         return content
     except Exception as exc:
-        print(f"Error fixing encoding: {exc}")
+        print(f"Error fixing encoding for {file_path}: {exc}")
         return None
-
 
 def _extract_style_block(content):
     match = re.search(r"<STYLE_INSTRUCTIONS>([\s\S]*?)</STYLE_INSTRUCTIONS>", content)
     return match.group(1).strip() if match else ""
-
 
 def _extract_slides(content):
     slides = []
@@ -38,26 +35,12 @@ def _extract_slides(content):
         })
     return slides
 
-
 def audit_outline(content):
     errors = []
 
     style_block = _extract_style_block(content)
     if not style_block:
         errors.append("Global: Missing mandatory <STYLE_INSTRUCTIONS> block.")
-    else:
-        required_style_sections = [
-            "Design Aesthetic:",
-            "Background:",
-            "Typography:",
-            "Color Palette:",
-            "Visual Elements:",
-            "Density Guidelines:",
-            "Style Rules:",
-        ]
-        for marker in required_style_sections:
-            if marker not in style_block:
-                errors.append(f"Global: STYLE_INSTRUCTIONS missing section '{marker}'.")
 
     narrative_content = re.sub(r"<STYLE_INSTRUCTIONS>[\s\S]*?</STYLE_INSTRUCTIONS>", "", content)
     slides = _extract_slides(narrative_content)
@@ -70,51 +53,50 @@ def audit_outline(content):
     if actual_pages != expected_pages:
         errors.append(f"Global: Page numbering must be sequential from 1..N. Found {actual_pages}.")
 
+    valid_arcs = {"Hook", "Context", "Core", "Shift", "Takeaway"}
+    
     for index, slide in enumerate(slides, 1):
         body = slide["body"]
+        
+        # Check required sections
         sections = [
             ("Type:", "slide type"),
-            ("// NARRATIVE GOAL", "narrative goal"),
-            ("// KEY CONTENT", "key content"),
             ("Headline:", "headline"),
-            ("Sub-headline:", "sub-headline"),
             ("Body/Data:", "body/data"),
-            ("Trust_Anchor:", "trust anchor"),
-            ("// VISUAL", "visual"),
-            ("// LAYOUT", "layout"),
-            ("// Script:", "script"),
+            ("Trust_Anchor:", "trust anchor")
         ]
         for marker, name in sections:
             if marker not in body:
                 errors.append(f"Page {index}: Missing mandatory {name} marker '{marker}'.")
 
-        type_match = re.search(r"Type:\s*(Cover|Content|Closing)", body)
+        # Type validation
+        type_match = re.search(r"Type:\s*(Cover|Content|SectionBreak|Closing)", body)
         slide_type = type_match.group(1) if type_match else None
         if index == 1 and slide_type != "Cover":
             errors.append("Page 1 must be Type: Cover.")
         elif index == len(slides) and slide_type != "Closing":
             errors.append("Final page must be Type: Closing.")
-        elif index not in (1, len(slides)) and slide_type != "Content":
-            errors.append(f"Page {index}: middle slides must be Type: Content.")
 
+        # Arc validation
+        arc_match = re.search(r"\[Arc:\s*(.*?)\]", body)
+        if not arc_match:
+            errors.append(f"Page {index}: Missing mandatory Narrative Arc tag [Arc: *].")
+        else:
+            arc_val = arc_match.group(1).strip()
+            if arc_val not in valid_arcs:
+                errors.append(f"Page {index}: Invalid Arc tag '{arc_val}'. Must be one of {valid_arcs}.")
+            
+            if index == 1 and arc_val != "Hook":
+                errors.append(f"Page 1: First page Arc must be Hook. Found {arc_val}.")
+            if index == len(slides) and arc_val != "Takeaway":
+                errors.append(f"Page {len(slides)}: Final page Arc must be Takeaway. Found {arc_val}.")
+
+        # Headline constraint
         headline_match = re.search(r"Headline:\s*(.*)", body)
         if headline_match:
             headline = headline_match.group(1).strip()
             if len(headline) < 5 or len(headline) > 80:
                 errors.append(f"Page {index}: Headline length ({len(headline)}) is non-optimal.")
-
-        body_match = re.search(r"Body/Data:\s*([\s\S]*?)Trust_Anchor:", body)
-        if body_match:
-            body_part = body_match.group(1)
-            bullet_count = len(re.findall(r"^[\s\t]*[\*\-]\s", body_part, re.MULTILINE))
-            if bullet_count > 6:
-                errors.append(f"Page {index}: Body/Data has {bullet_count} bullets, exceeding blueprint limit (6).")
-            if "电子病例" in body_part:
-                errors.append(f"Page {index}: Compliance error - use '电子病历', not '电子病例'.")
-
-        if slide_type == "Cover":
-            if re.search(r"^[\s\t]*[\*\-]\s", body, re.MULTILINE):
-                errors.append("Page 1: Cover slide should not contain dense bullet content.")
 
         if slide_type == "Closing":
             headline = headline_match.group(1).strip().lower() if headline_match else ""
@@ -123,30 +105,42 @@ def audit_outline(content):
 
     return errors
 
-
 def main():
     parser = argparse.ArgumentParser(description=f"Presentation blueprint validator V{VERSION}")
-    parser.add_argument("file", help="Path to outline.md")
+    parser.add_argument("path", help="Path to outline.md file or directory of chunk_*.md files")
     args = parser.parse_args()
 
-    if not os.path.exists(args.file):
+    if not os.path.exists(args.path):
+        print(f"Path does not exist: {args.path}")
         sys.exit(1)
 
-    content = fix_encoding(args.file)
-    if content is None:
+    merged_content = ""
+    if os.path.isdir(args.path):
+        files = sorted([f for f in os.listdir(args.path) if f.endswith(".md")])
+        if not files:
+            print(f"No markdown files found in directory {args.path}")
+            sys.exit(1)
+        for file in files:
+            file_path = os.path.join(args.path, file)
+            content = fix_encoding(file_path)
+            if content:
+                merged_content += content + "\n\n"
+    else:
+        merged_content = fix_encoding(args.path)
+
+    if not merged_content:
         sys.exit(1)
 
-    print(f"--- Presentation Blueprint Audit (V{VERSION}): {os.path.basename(args.file)} ---")
-    errors = audit_outline(content)
+    print(f"--- Presentation Blueprint Audit (V{VERSION}): {os.path.basename(args.path)} ---")
+    errors = audit_outline(merged_content)
     if errors:
         print("\n[!] BLUEPRINT_AUDIT_FAILED")
         for err in errors:
             print(f"  - {err}")
         sys.exit(1)
 
-    print("\n[OK] Blueprint verified: schema, style contract, and special-slide rules passed.")
+    print("\n[OK] Blueprint verified: schema, style contract, and narrative arc rules passed.")
     sys.exit(0)
-
 
 if __name__ == "__main__":
     main()

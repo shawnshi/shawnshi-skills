@@ -45,17 +45,16 @@ $env:PYTHONIOENCODING="utf-8"; python "C:\Users\shich\.gemini\config\skills\pers
 3. 主代理调用系统底层 `invoke_subagent` 启动独立精炼子代理（`TypeName: research` 或 `self`）进行二阶推演。
 
 ### Phase 3: Semantic Deduction (子代理推演)
-1. 主代理在调用 `invoke_subagent` 时，**必须**使用以下预置的 System Prompt 给子代理下达指令，请注意**必须传递绝对物理路径**防止相对路径幻觉：
+1. 主代理在调用 `invoke_subagent` 时，**必须**使用以下预置的 Prompt 给子代理下达指令，请注意**必须传递绝对物理路径**防止相对路径幻觉：
    > "You are the Intelligence Refinement Subagent.
    > 1. Read `C:\Users\shich\.gemini\config\skills\personal-intelligence-hub\references\quality_standard.md` to strictly understand the JSON Schema and Localization Contract.
    > 2. Read `C:\Users\shich\.gemini\MEMORY\raw\news\_runtime\personal-intelligence-hub\intelligence_candidates.json`.
    > 3. Perform semantic deduction. **You MUST output all analytical content in Chinese (zh-CN)** and generate `title_zh` and `summary_zh` for all items.
    > 4. Ensure you generate global fields like `punchline`, `insights`, `digest`, `market`, and correctly structure `action_levers` as an array of objects.
    > 5. Use `[[ ]]` around core entities/people/specific nouns for graph linking.
-   > 6. Use the `write_to_file` tool to write the final valid JSON to `C:\Users\shich\.gemini\MEMORY\raw\news\intelligence_current_refined.json`.
-   > 7. Reply 'DONE' when finished."
-2. 子代理读取粗筛数据，依据严格的 JSON Schema 执行二阶推演与图谱 `[[ ]]` 补齐，并将结果规范地写入目标 JSON。
-3. 写入完成后，子代理将控制权交还主代理，结束其沙盒任务。
+   > 6. Do NOT write to disk manually. You MUST output the final valid JSON directly using the `send_message` tool to reply to me."
+2. 子代理依据严格的 JSON Schema 执行二阶推演与图谱 `[[ ]]` 补齐，并通过 `send_message` 发送数据。主代理处于 Reactive Wakeup 状态。
+3. 主代理被唤醒后，从上下文中提取返回的 JSON Payload，然后自行使用 `write_to_file` 写入 `C:\Users\shich\.gemini\MEMORY\raw\news\intelligence_current_refined.json`，以桥接后续的 Python 验证流。
 
 ### Phase 4: Pipeline Gate Orchestration (主代理门控与锻造)
 **约束**: 严禁要求子代理手动敲击多个脚本。以下验证流程必须由主代理接管：
@@ -86,8 +85,9 @@ $env:PYTHONIOENCODING="utf-8"; python "C:\Users\shich\.gemini\config\skills\pers
 - `top_10` 最多 10 条且 URL 不得重复。
 - 每个 Top item 必须有 `summary`。
 - 若仍存在 L4 级别评估，则必须存在 `adversarial_audit` 记录证明其经过红队压力测试。
-- **遥测记录**: 任务完成后（无论成功还是降级），主代理必须使用 `write_to_file` 将遥测数据写入 `C:\Users\shich\.gemini\MEMORY\skill_audit\telemetry\record_[TIMESTAMP].json`。
+- **遥测记录**: 任务完成后（无论成功还是降级），主代理必须使用 `write_to_file` 将遥测数据写入安全隔离区 `<appDataDir>\brain\<conversation-id>\scratch\telemetry.json`，防止全局系统死锁。
   推荐结构：`{"skill_name":"personal-intelligence-hub","status":"success","mode":"daily_brief","runner":"llm","top10_count":10}`
+- **交付链接契约**: 简报锻造完毕并落盘后，主代理必须通过聊天向用户输出包含绝对物理路径的可点击 Markdown 链接（例如：`[战略情报简报](file:///C:/Users/shich/...)`）。
 
 ## 4. <Failure_Taxonomy> (失败分类学)
 
