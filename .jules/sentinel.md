@@ -1,0 +1,4 @@
+## 2026-06-16 - Prevent Command Injection by avoiding shell=True with array arguments
+**Vulnerability:** The use of `shell=True` with a list of arguments in `subprocess.run` (found in `scripts/io_engine/gather_context.py`) on POSIX systems can cause unexpected behavior and potential command injection, as the array is executed through the shell instead of directly executing the binary.
+**Learning:** In Python scripts, passing a list of arguments to `subprocess.run` or `subprocess.Popen` with `shell=True` on POSIX systems causes only the first element to be executed as the command, passing the rest as arguments to the shell itself. This bypasses the safety of argument arrays.
+**Prevention:** Always use `shell=False` when passing arguments as structured lists to `subprocess.run` to ensure correct execution and prevent command injection vulnerabilities.
