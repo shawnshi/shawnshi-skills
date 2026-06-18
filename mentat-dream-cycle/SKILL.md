@@ -1,7 +1,8 @@
 ---
 name: mentat-dream-cycle
-version: 11.1.0
-description: 'Mentat 系统的后台静默演化管线。通过确定性脚本清理环境熵增，并通过局部大模型提纯将临时态热知识沉淀为长期 Tier 2 图谱结构。'
+version: 12.0.0
+tier: action-allowed
+description: 'Mentat 后台静默演化管线。通过确定脚本清理系统熵增，提取临时热知识并沉淀为长期图谱。严禁大模型手动遍历目录，必须保持热记忆事务一致性防丢失。'
 triggers: ["触发 Dream Cycle", "运行夜间清洗", "清理热记忆", "执行系统清洗", "Run dream cycle"]
 ---
 
@@ -12,15 +13,22 @@ Strategy:
 1. 算力隔离：物理垃圾回收与孤岛扫描必须交由 deterministic 脚本执行，绝对禁止 LLM 手动遍历文件系统。
 2. 双轨提纯：读取 `hot_facts.md`，提取高价值实体并严格遵循 "Compiled Truth | Timeline" Schema 落盘。
 3. 闭环清空：提纯成功后，物理重置热事实缓冲池。
-4. 强制实体锚定：对知识库中未落地的概念孤岛发出告警。
-5. 优雅降级：任何子脚本崩溃必须记录并继续。热事实提纯必须保持 Transactional 事务一致性，防范数据丢失。
-6. 并行调度 (DAG)：物理层扫描与底层 GC 应当尽最大可能异步并行执行，避免管线阻塞。
+4. 孤岛扫描：对知识库中未落地的概念孤岛发出告警。
+5. 优雅降级：脚本崩溃必须记录并继续；热事实提纯必须保持事务一致性，防数据丢失。
+AVOID: 大模型亲自全盘扫描；非事务性的内存覆写；阻塞式串行执行。
 </strategy-gene>
 
-# Mentat Dream Cycle (架构演化与系统清洗 V11.1 Native)
+# Mentat Dream Cycle (架构演化与系统清洗 V12.0 Native)
 
 ## 0. Intent
 This skill acts as the background evolution loop for the Mentat system. It shifts compute from interactive sessions to silent batch processing, ensuring temporal entropy does not decay system performance. It implements garbage collection, structural integrity checks, and high-density memory diarization.
+
+## Tool Trajectory
+**[IN_ORDER]** 执行需遵循以下轨迹流：
+1. `run_command` (并发调用脚本执行物理层清理与孤岛扫描)
+2. `call_mcp_tool` (调用 vector-lake 进行语义 GC)
+3. `invoke_subagent` (异步分发技能故障 Minibatch 和知识图谱摄入)
+4. `write_to_file` (原子级替换与清空热知识缓冲池)
 
 ## 1. Execution Pipeline (DAG Orchestration)
 注：Phase 1 和 Phase 3 可并行调度，与 Phase 2 的文件处理相互独立。
@@ -31,7 +39,7 @@ This skill acts as the background evolution loop for the Mentat system. It shift
    $env:PYTHONIOENCODING="utf-8"; python "C:\Users\shich\.gemini\config\skills\mentat-dream-cycle\scripts\garbage_collector.py" --path "C:\Users\shich\.gemini\tmp" --max-age 24h
    ```
    *(读取输出 JSON 日志记录 `deleted` 和 `scanned`)*
-2. **语义 GC**: 调用 `mcp_vector-lake-mcp_gc_vector_lake` 自动清理图谱内长期无关联的孤儿节点及碎片，实现 Knowledge Decay 清理。
+2. **语义 GC**: 调用 `call_mcp_tool` (ServerName="vector-lake-mcp", ToolName="gc_vector_lake") 自动清理图谱内长期无关联的孤儿节点及碎片，实现 Knowledge Decay 清理。
 
 ### Phase 2: 热缓冲双轨提纯 (Hot Memory Diarization)
 1. **事务保护**: 将 `C:\Users\shich\.gemini\MEMORY\hot_facts.md` 重命名为 `hot_facts.bak`。读取 `.bak` 文件进行处理。若文件不存在或为空，跳过此阶段。

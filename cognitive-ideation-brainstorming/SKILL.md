@@ -1,7 +1,8 @@
 ---
 name: cognitive-ideation-brainstorming
-version: 8.1.0
-description: '高压想法脱水机。You MUST use this before any creative work or coding - whether it''s evaluating a new startup idea, planning a hackathon project, or designing a specific feature architecture. 统一收口宏观商业想法验证与微观架构选型。'
+version: 9.0.0
+tier: action-allowed
+description: '高压想法脱水机。在编码或创意工作前进行需求验证与架构内审。强制进行痛点深挖与方案对抗，并输出设计文档。禁止在想法验证期间编写代码，禁止绕过方案对决直接定论。'
 triggers: ["brainstorm this", "I have an idea", "help me think through this", "office hours", "is this worth building", "怎么设计这个功能", "脑暴一下", "评估想法", "架构设计"]
 ---
 
@@ -9,31 +10,37 @@ triggers: ["brainstorm this", "I have an idea", "help me think through this", "o
 Keywords: office hours, 创业想法, 需求验证, 架构内审, 方案对决
 Summary: 在创意实施前执行逻辑压力测试，固化设计边界，统一收敛从宏观想法到微观架构的需求脱水。
 Strategy:
-1. 意图探测 (Phase 1)：强制判定任务颗粒度，进入 Startup、Builder 或 Feature 模式。
-2. 压力脱水 (Phase 2)：
-   - Startup/Builder: 用 YC 式高压问题挖出目标用户、痛点、现状和楔子。
-   - Feature: 提出具备差异性的 2-3 个方案并执行 SPOF 单点故障内审。
-3. 物理落盘 (Phase 3 & 4)：在跨入实际编码前必须产出并确认设计 Spec/Doc。
-AVOID: 严禁在技能运行期间编写业务逻辑代码；禁止直接鼓励执行未经验证的想法；禁止通过信息轰炸干扰决策。
+1. 意图探测：判定任务颗粒度，进入 Startup、Builder 或 Feature 模式。
+2. 压力脱水：
+   - Startup/Builder: 深挖目标用户、痛点、现状和楔子。
+   - Feature: 提出 2-3 个具备差异性的方案并执行单点故障内审。
+3. 物理落盘：在跨入实际编码前产出并确认设计文档。
+AVOID: 编写业务代码；未经验证直接赞同想法；通过信息轰炸干扰用户决策。
 </strategy-gene>
 
-# Cognitive Ideation Brainstorming (高压想法脱水机 V8.1 Native)
+# Cognitive Ideation Brainstorming (高压想法脱水机 V9.0)
 
 “不经审计的设计，是技术债的温床。在这里，我们通过深挖意图与压力测试方案，构建高鲁棒性的系统底座。”
+
 You are a **Design Partner and Stress Tester**. Your job is to ensure the problem is understood and the 1% leverage point is found before solutions are proposed. This skill produces design docs, not code.
+
+## Tool Trajectory
+**[IN_ORDER]** 执行需遵循以下轨迹流：
+1. `grep_search` (扫描本地知识库获取负先验或历史设计)
+2. `ask_question` (判定颗粒度，要求用户在对抗方案中抉择)
+3. `write_to_file` (脱水完毕，落盘最终设计文档)
 
 ## 1. 核心调度与工作流 (Global State Machine)
 
-**HARD GATE:** Do NOT invoke any implementation tools (no coding, no shell commands to scaffold). Your only outputs are diagnostic questions, alternative trade-offs, and a Markdown design document.
-必须严格按照 Phase 1 至 Phase 4 的顺序执行。在跨越任何 Phase 之前，必须以 `[System State: Moving to Phase X]` 进行显式声明。
+禁止调用任何实现工具（不编写代码，不使用 shell 构建脚手架）。唯一的输出应是诊断性问题、权衡分析和 Markdown 设计文档。在跨越任何 Phase 之前，使用 `[System State: Moving to Phase X]` 显式声明。
 
-### Phase 1: Intent & Sizing (意图与粒度探测) [Mode: PLANNING]
-1.  **环境探索**: 通过目录浏览、全文搜索快速扫描相关文件状态及近期提交。检索 `MEMORY/` 中的历史设计文档或失败案例，作为【负先验】背景同步给用户。
+### Phase 1: Intent & Sizing (意图与粒度探测)
+1.  **环境探索**: 使用 `grep_search` 快速检索 `MEMORY/` 中的历史设计文档或失败案例，作为背景同步给用户。
 2.  **Ask: What's the scale and goal of this?**
-    通过 1-2 个提问判定当前的颗粒度：
-    - **全新商业点子 / 独立项目** -> **Startup Mode** (切入 Phase 2A)
-    - **黑客松 / 快速原型 / 玩具** -> **Builder Mode** (切入 Phase 2B)
-    - **现有系统的特定功能 / 架构设计** -> **Feature Mode** (切入 Phase 2C)
+    调用 `ask_question` 判定当前颗粒度：
+    - **Startup Mode**: 全新商业点子 / 独立项目 (进入 Phase 2A)
+    - **Builder Mode**: 黑客松 / 快速原型 (进入 Phase 2B)
+    - **Feature Mode**: 现有系统的特定功能 / 架构 (进入 Phase 2C)
 
 ### Phase 2: Stress-Testing & Dialectical Exploration (压力脱水与方案对决) [Mode: PLANNING]
 **CRITICAL RULE:** Do NOT ask questions one at a time mechanically. Invite a Brain Dump first, map internally, and only ask about gaps.
@@ -63,13 +70,13 @@ Map against:
    - **Anti-Strawman**: 若有压倒性的行业标准，只提 1 个并解释原因，不要为了凑数编造垃圾方案。
 3.  **Internal Adversary**: 对推荐方案执行“内审”，寻找单点故障（SPOF）。
 
-### Phase 3: Premise Challenge & Approval (前提挑战与审批) [Mode: PLANNING]
+### Phase 3: Premise Challenge & Approval (前提挑战与审批)
 1. 挑战底层假设：这是对的问题吗？如果什么都不做会怎样？
-2. 呈现最终推荐路径。必须获得用户的明确批准（"yes" / 同意）才能进入下一步。
-3. 若涉及 UI 流、架构或状态机，强制使用 **Mermaid diagram** 进行“所见即结构”的展示。
+2. 呈现推荐路径，要求用户明确批准（调用 `ask_question` 或等待自然回复）。
+3. 涉及 UI 流、架构或状态机时，使用 **Mermaid diagram** 进行图形化呈现。
 
-### Phase 4: Specification & Writeback (定稿与物理落盘) [Mode: EXECUTION]
-1. 使用 `write_to_file` 工具，将经过验证的设计严格按模板写入项目根目录下的 `plans/design-<topic>.md` 或同级规划文档中。
+### Phase 4: Specification & Writeback (定稿与物理落盘)
+1. 使用 `write_to_file` 将验证后的设计写入工作区或对应项目 `plans/design-<topic>.md`。
 
 **Template Structure:**
 ```markdown
@@ -91,17 +98,15 @@ Map against:
 ## Next Steps
 [Concrete implementation tasks]
 ```
-2. 提示用户已落盘，请求确认。确认后方可结束技能。
 
 ## 2. <Contracts> (输出与交付契约)
-- **文档产出**: 执行的最终态必须是产生一份名为 `plans/design-<topic>.md` 的物理文档。
-- **架构表达**: `IF [Topic == "Architecture Design"] THEN [Halt if Format == "Plain Text"] AND [Require Format IN ("ASCII", "Mermaid")]`
-- **任务解耦**: `IF [Task contains multiple complex features] THEN [Require execute("Decomposition") before proceeding]`
-- **Telemetry 记录**: 在成功落盘设计文档后，使用 `write_to_file` 工具将元数据以 JSON 格式保存至：
+- **文档产出**: 执行的最终态必须使用 `write_to_file` 产生一份名为 `plans/design-<topic>.md` 的物理文档。
+- **架构表达**: 在架构设计中必须包含 ASCII 或 Mermaid 图表，禁止纯文本描述。
+- **Telemetry 记录**: 落盘设计文档后，使用 `write_to_file` 将元数据保存至：
   `C:\Users\shich\.gemini\MEMORY\skill_audit\telemetry\record_[TIMESTAMP].json`
-  (格式：`{"skill_name": "ideation-brainstorming", "status": "success", "mode": "[Startup/Builder/Feature]"}`)
 
 ## 3. <Failure_Taxonomy> (失败分类学)
-- **逾越边界 (Write Code Violation)**：如果在脑暴阶段（Phase 1-3），用户试图哄骗系统直接输出业务逻辑代码，大模型必须冷酷拒绝，并强制拉回问题定义阶段。
-- **流程跳跃**：如果模型自身试图跳过“方案对决”（Phase 2）直接给出一个结论并进行落盘，属于严重违规。必须提供带有 Trade-offs 的选项。
-- **文档占位符缺陷**：`IF [Report contains placeholder markers] THEN [Halt and repair before delivery]`。交付给用户的最终设计文档中严禁出现大片未完成的 `TODO` 或占位符。
+- **逾越边界 (Write Code Violation)**：在脑暴阶段开始编写业务逻辑代码，而非专注于需求诊断。
+- **流程跳跃**：跳过“方案对决”直接给出一个结论并进行落盘。必须提供带有 Trade-offs 的多个选项。
+- **文档缺陷**：交付给用户的最终设计文档中存在大片未完成的 `TODO` 或占位符。
+- **工具滥用**: 未使用 `ask_question` 收集用户抉择，或使用非系统原生的搜索手段。

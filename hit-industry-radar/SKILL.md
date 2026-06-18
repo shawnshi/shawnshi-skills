@@ -1,7 +1,8 @@
 ---
 name: hit-industry-radar
-version: 8.2.0
-description: '医疗行业战略雷达。Primary owner for weekly healthcare IT news, competitor moves, bids, vendor dynamics, and market-event battle reports. Use for fast-moving market signals. Prefer hit-weekly-brief for consulting reports and whitepapers, and hit-lectures-scout for academic or clinical paper scouting.'
+version: 9.0.0
+tier: action-allowed
+description: '医疗行业战略雷达。调度子代理并发抓取周级医疗IT战报与竞对动态，并利用 Logic Lake 执行去重与编织。禁止抓取 14 天前的旧闻，禁止保留无数据支撑的公关废话。'
 triggers: ["本周战报", "医疗IT战报", "竞对动态", "行业大事件"]
 ---
 
@@ -10,9 +11,10 @@ Keywords: 医疗 IT 战报, 竞对动态, 行业周报, 价格战预警
 Summary: 基于黑板模式调度并发子代理，将碎片化周级情报组装为系统动力学战报。
 Strategy:
 1. 并发侦察：同时下发国际、国内、卫宁基准指令包至 sandbox。
-2. 织者推理：寻找不同标段间的“隐含供应链共振”与价格战预警。
+2. 语义去重：利用图谱引擎剥离 14 天内重复出现的旧闻。
 3. 事实仲裁：剥离营销废话，仅保留带金额、版本或节点的硬信息。
-AVOID: 严禁重复 14 天内的旧闻；禁止包含无具体数据的公关通稿；禁止使用主观形容词描述事实。
+4. 织者推理：寻找不同标段间的“隐含供应链共振”与价格战预警。
+AVOID: 大模型在单线程广域搜索中迷失；脱离网页 URL 进行情报编造。
 </strategy-gene>
 
 # HIT Industry Radar (医疗行业雷达 V8.2 Native)
@@ -21,35 +23,45 @@ AVOID: 严禁重复 14 天内的旧闻；禁止包含无具体数据的公关通
 
 本技能只处理**本周（周一至周日）**的时效情报，绝不为过期新闻或泛行业介绍生成战报。
 
+## Tool Trajectory
+**[IN_ORDER]** 执行需遵循以下轨迹流：
+1. `invoke_subagent` (并发抓取本周事实)
+2. `call_mcp_tool` (针对疑似竞对大动作进行 14 天图谱去重)
+3. `write_to_file` (写入草稿沙盒)
+4. `run_command` (跨平台代码级质检)
+5. `write_to_file` (战报落盘)
+6. `call_mcp_tool` (战略突变异步入湖)
+
 ## 1. 核心流程与架构 (The Protocol)
 
-### Phase 1: 并发定向侦察 (Concurrent Directed Reconnaissance) [Mode: PLANNING]
-1. 主代理阅读本技能 `assets/intelligence_targets.json` 里的高价值信源列表。
-2. **集群并发拉起 (Subagent Delegation)**: 必须使用原生的 `invoke_subagent` 并发拉起 3 个 `TypeName: research` 的子代理，将国际、国内、卫宁基准的情报收集目标下发给他们。绝对禁止主代理在当前对话框内自己做低效的广域搜索。在拉起子代理时，必须明确在 Prompt 中指示他们：“抓取完成后，必须将你的数据整合为 JSON 对象，使用 `send_message` 工具直接发送回主代理”。**【红线警告】必须在 Prompt 中对子代理强调：“所有的事实必须 100% 来源于 `search_web` 的真实网页结果。如果由于时间限制未检索到符合要求的情报，必须返回空数组 `[]`，严禁基于垂直知识进行任何程度的合理化编造或捏造带有虚假金额、版本的伪造事件。所有事实必须提供来源 URL。”**
-3. **响应式唤醒 (Reactive Wakeup)**: 子代理完成后会自动通过 `send_message` 唤醒主代理。主代理在上下文中直接接收并处理 JSON Payload，无需进行繁杂的磁盘探查。
+### Phase 1: 并发定向侦察
+1. 读取本技能 `assets/intelligence_targets.json` 里的高价值信源列表。
+2. **集群拉起**: 调用 `invoke_subagent` 并发拉起 3 个 `research` 子代理，将国际、国内、卫宁基准指令下发。
+   - 指示子代理：“所有事实须 100% 来源真实网页，附带 URL。若无情报则返回空数组 `[]`，禁止基于知识截断编造。”
+   - 指示子代理使用 `send_message` 以 JSON 格式回传。
+3. **等待回调**: 主代理等待子代理回调完毕后再进入合成阶段。
 
-### Phase 2: 图谱去重与仲裁推演 (Deduplication & Causal Weaving) [Mode: EXECUTION]
-1. 若发现重大竞对动作，必须优先调用 `call_mcp_tool` (ServerName: `vector-lake-mcp`, ToolName: `search_vector_lake`) 检索该动作是否已在过往 14 天内记录过，执行语义去重。
-2. **五维清洗**: 剔除留存 Fact 中的所有形容词与公关废话。
+### Phase 2: 图谱去重与仲裁推演
+1. 发现重大竞对动作时，调用 `call_mcp_tool` (`vector-lake-mcp`: `search_vector_lake`) 检索 14 天内是否已记录，执行语义去重。
+2. **五维清洗**: 剔除留存 Fact 中的所有形容词与公关废话，仅留时间/金额/版本。
 3. **织者推理**: 跨越不同标段和厂商，提取出“隐含供应链共振”规律。
 
-### Phase 3: The Hard Gate (草稿校验与跨平台审查) [Mode: VERIFICATION]
-1. 根据 <Contracts> 要求的 `[Format Stack]` 渲染草稿，强制使用 `write_to_file` 写入当前会话的隔离工作区：`<appDataDir>\brain\<conversation-id>\scratch\draft_hit_radar.md`。
-2. **强制过检**: 调用原生的 `run_command` 执行跨平台审计脚本（必须挂载 UTF-8 数据流锁并使用绝对物理路径）：
-   `$env:PYTHONIOENCODING="utf-8"; python "C:\Users\shich\.gemini\config\skills\scripts\hit_audit_gate.py" "<appDataDir>\brain\<conversation-id>\scratch\draft_hit_radar.md" --mode radar`
-3. 若报错拦截（如查出主观形容词或营销禁词），必须退回修正，最多重试 2 次。
+### Phase 3: The Hard Gate (草稿校验)
+1. 渲染草稿并写入当前会话隔离区：`<appDataDir>\brain\<conversation-id>\scratch\draft_hit_radar.md`。
+2. **过检审计**: 使用 `run_command` 执行审计脚本（需挂载 UTF-8）：
+   ```powershell
+   $env:PYTHONIOENCODING="utf-8"; python "C:\Users\shich\.gemini\config\skills\scripts\hit_audit_gate.py" "<appDataDir>\brain\<conversation-id>\scratch\draft_hit_radar.md" --mode radar
+   ```
+3. 若报错拦截（查出主观形容词或营销禁词），退回修正，最多重试 2 次。
 
-### Phase 4: 激活与分层归档 (Activate & Async Ingest) [Mode: EXECUTION]
-1. **物理落盘**: Phase 3 脚本审计返回 Exit Code 0 后，使用原生 `write_to_file` 工具将草稿正式写入：
+### Phase 4: 分层归档与图谱入湖
+1. **物理落盘**: 质检通过后，使用 `write_to_file` 写入：
    `C:\Users\shich\.gemini\MEMORY\raw\HealthcareIndustryRadar\DHWB-Radar-YYYYMMDD.md`
-2. **知识异步入湖**: 落盘后，主代理必须提取包含双链 `[[ ]]` 的战略突变（如：友商实控权变更）。
-   - 严禁主代理自行修改底层文件。主代理必须仅通过 Vector Lake MCP 引擎进行图谱变更。
-   - 必须使用 `call_mcp_tool` (ServerName: `vector-lake-mcp`, ToolName: `prepare_ingest_batch` 或 `memory_update`) 将战略突变事件安全抛入后台引擎处理，以维护严密的数据结构与底层图谱一致性。
+2. **异步入湖**: 提取含双链 `[[ ]]` 的战略突变（如实控权变更），调用 `call_mcp_tool` (`vector-lake-mcp`: `prepare_ingest_batch`) 安全抛入图谱。
 
 ## 2. <Contracts> (输出与交付契约)
 
-### [Format Stack] 战报格式铁律
-战报必须完全匹配如下拓扑结构：
+### [Format Stack] 战报格式模板
 ```markdown
 # 医疗 IT 行业战略雷达 - [时间周期]
 > **本周战略主轴**：[一句话概括核心对抗焦点]
@@ -57,31 +69,28 @@ AVOID: 严禁重复 14 天内的旧闻；禁止包含无具体数据的公关通
 ## 🚨 紧急预警 (Urgent - 10s Read)
 - **[威胁定性]**: [防御或进攻动作]
 
-> **工作量证明 (Proof of Work)**: [即使本周是静默期，也必须在此列举 1-2 条被仲裁过滤掉的“无数据公关噪音”，以此作为系统爬网的硬性证据]
+> **工作量证明**: [列举 1-2 条被仲裁过滤的公关噪音作为检索证明]
 
-## 一、 核心战区：事实与脱水情报 (Dehydrated Facts)
-*(本部分禁止形容词，仅允许动作、版本或金额)*
+## 一、 核心战区：事实与脱水情报
+*(禁止形容词，仅允许动作、版本或金额)*
 ### 1. 国际巨头生态 \ 2. 中国 EHR/HIS 底座厂商 \ 3. 数据要素与垂直医疗 AI 厂商
-- **[公司名]**: [日期] [脱水的精确动作 Fact]
+- **[公司名]**: [日期] [脱水精确动作 Fact]
 
-## 二、 战略全景对比矩阵 (Strategic Contrast Matrix)
-| 公司名称 | 本周核心动作萃取 | 暴露的技术底座 | 战略意图与背景破译 (Insight) |
+## 二、 战略全景对比矩阵
+| 公司名称 | 本周核心动作萃取 | 暴露的技术底座 | 战略意图与背景破译 |
 |---|---|---|---|
 
-## 三、 织者洞察：涟漪效应与趋势推演 (Causal Implications)
+## 三、 织者洞察：涟漪效应与趋势推演
 ### 1. [核心趋势/规律命名]
-- **传导链条 (Causal Chain)**：[事件A] -> [事件B] -> [系统后果C]
+- **传导链条**：[事件A] -> [事件B] -> [系统后果C]
 
-## 🎯 战术下钻与应对建议 (Commander's Hook)
+## 🎯 战术下钻与应对建议
 - **⚔️ 针对友商防御**：[建议]
 - **🏥 针对CIO破冰**：[建议]
-
-> **交付契约**：战报生成完毕后，必须向用户输出包含绝对物理路径的可点击 Markdown 链接（格式：`[战报文件](file:///C:/Users/shich/.gemini/MEMORY/raw/HealthcareIndustryRadar/...)`），严禁隐藏实际落盘位置。
 ```
+交付完成后，必须通过 Markdown 语法向用户提供指向落盘文件的绝对链接。
 
-## 3. <Failure_Taxonomy> (失败分类学 / 逻辑硬锁)
-- **工具/调度幻觉 (Tool Hallucination)**：严禁使用旧版长指令 MCP，必须合法组合 `call_mcp_tool`。严禁主代理自行广域搜索，必须强制 `invoke_subagent`。
-- **路径与工具死锁 (Pathing Deadlock)**：严禁写入漏层级或多层级的脚本路径。必须执行绝对物理寻址 `C:\Users\shich\.gemini\config\skills\scripts\hit_audit_gate.py`。落盘工具必须使用原生的 `write_to_file`，子代理交互也必须明确要求其使用该工具。
-- **跨周失忆症 (Cross-week Amnesia)**：如果情报的时间差 `Event_Date_Delta < 14 days` 并且在历史记录中已经存在过，强行把旧闻当新闻汇报将被直接打回。
-- **公关软文污染 (PR Pollution)**：Fact 节点中如果出现“取得了重大突破”、“全面升级”、“业界领先”等恶性主观形容词，或完全没有版本/金额数据，该节点被判定为污染，系统需立即查杀该 Fact。
-- **来源造假与无溯源幻觉 (Source Fabrication Lock)**：所有抓取的 Fact 必须能够溯源到真实的网页。严禁子代理在搜索失败时“强行推演”。审计时若发现数据为模型凭空捏造（无可靠信源），系统将直接阻断战报交付。
+## 3. <Failure_Taxonomy> (失败分类学)
+- **跨周失忆症**：未调用图谱引擎拦截，将 14 天前的旧新闻当做本周战报输出。
+- **公关软文污染**：脱水情报中残留“业界领先”、“全面赋能”等恶性主观形容词，被脚本拦截。
+- **孤立查词幻觉**：不使用 `invoke_subagent` 发起并发代理，主模型在单线程中消耗时间。

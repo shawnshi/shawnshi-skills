@@ -1,9 +1,10 @@
 ---
 name: tool-smart-latex
+version: 9.0.0
+tier: action-allowed
 description: '自动化出版与 LaTeX 引擎。当用户要求“Markdown 转 LaTeX”、“生成科研级 PDF”、“排版精美公式报告”或需要“期刊投稿格式”时，务必调用。该技能支持 IEEE、CV、书稿等 5 大专业模板，交付工业级排版结果。'
 triggers: ["将Markdown转为LaTeX", "将M文件转为LaTeX","生成科研级PDF排版", "套用IEEE模板渲染文档", "输出精美的公式报告", "转换这篇报告为专业期刊格式"]
 ---
-
 
 <strategy-gene>
 Keywords: Markdown 转 LaTeX, 科研 PDF, 期刊排版, 公式报告
@@ -15,89 +16,45 @@ Strategy:
 AVOID: 禁止未编译就声称完成；禁止破坏公式或引用结构。
 </strategy-gene>
 
-# Smart Doc LaTeX
+# Smart Doc LaTeX (自动化出版引擎 V9.0 Native)
 
-自动化出版引擎，将普通文档转换为专业排版的 PDF。如果有需要，强制使用原生的 `ask_question` 工具向用户提供选项框来确认目标样式（`academic`, `cv`, `tech_report`, `book`, `tech_book`）。
+> **Vision**: 自动化出版引擎，将普通文档转换为专业排版的 PDF。如果有需要，强制向用户提供选项框来确认目标样式。
 
-## When to Use
-- 当用户要求将 Markdown/Word/Text 转为专业 LaTeX/PDF，或需要套用科研、简历、书稿等排版模板时使用。
-- 本技能用于正式文档排版与编译，不用于普通 Markdown 文本润色。
+## Tool Trajectory
+**[IN_ORDER]** 执行需遵循以下轨迹流：
+1. un_command (调用 smart_engine.py 进行转换与编译)
+2. write_to_file (写入执行遥测)
 
-## Workflow
+## 1. 核心流程与架构 (The Protocol)
 
-### Capabilities
+### Phase 1: Style Selection (样式选择)
+*   **Explicit**: 如果用户明确说明用途（如"生成简历"），请显式指定 --style cv。
+*   **Implicit**: 如果用户仅要求"转为 PDF"，使用默认的 uto 让引擎自动探测。
+*   支持样式：cademic, cv, 	ech_report, ook, 	ech_book。
 
-*   **Multi-Format Input**: 支持 Markdown (.md), Word (.docx), Text (.txt)。
-*   **Style Engine**: 内置多种专业样式（Academic, CV, Tech Report, Book, Tech Book）。
-*   **Auto-Detection**: 智能分析文档内容，自动匹配最佳样式。
-*   **Full Compilation**: 生成 .tex 源码并自动调用 XeLaTeX 编译为 PDF。
-
-### Usage
-
-### 核心引擎 (smart_engine.py)
-
-统一入口，适用于大多数文档转换场景。
-
-```bash
-$env:PYTHONIOENCODING="utf-8"; python C:\Users\shich\.gemini\config\skills\tool-smart-latex\scripts\smart_engine.py --input <input_file> [OPTIONS]
-```
-
+### Phase 2: Engine Execution (核心引擎调用)
+统一入口，适用于大多数文档转换场景。使用 un_command 执行：
+`ash
+$env:PYTHONIOENCODING="utf-8"; python "C:\Users\shich\.gemini\config\skills\tool-smart-latex\scripts\smart_engine.py" --input <input_file> [OPTIONS]
+`
 | Flag       | Description                                                                   |
 |:-----------|:------------------------------------------------------------------------------|
-| `--input`  | **[Required]** 输入文件路径。                                                 |
-| `--style`  | 目标样式：`academic`, `cv`, `tech_report`, `book`, `tech_book`。默认 `auto`。 |
-| `--title`  | 覆盖文档标题（默认使用文件名）。                                              |
-| `--author` | 覆盖作者名称。                                                                |
-| `--output` | 输出目录（默认使用输入文件所在目录）。                                        |
+| --input  | **[Required]** 输入文件路径。                                                 |
+| --style  | 目标样式：cademic, cv, 	ech_report, ook, 	ech_book。默认 uto。 |
+| --title  | 覆盖文档标题（默认使用文件名）。                                              |
+| --author | 覆盖作者名称。                                                                |
+| --output | 输出目录（默认使用输入文件所在目录）。                                        |
 
-### 辅助脚本
+### Phase 3: Telemetry (遥测与记录)
+- 任务执行完成后，使用 write_to_file 将本次执行的元数据以 JSON 格式保存至绝对路径：
+   C:\Users\shich\.gemini\MEMORY\skill_audit\telemetry\record_[TIMESTAMP].json
 
-以下脚本用于特定场景，**不经 smart_engine.py 调度**，需独立调用：
+## 2. <Contracts> (输出与交付契约)
+- **产物交付**: 执行成功后，务必向用户提供生成文件的**绝对路径**（PDF 文件及 TeX 文件）。
+- 成功时必须交付 PDF 与 .tex 的绝对路径；若编译失败，至少交付可用的 .tex 源文件与故障原因。
+- 在样式不明确时，必须先确认或显式说明采用 uto 检测策略。
 
-| Script              | Purpose                                  | Usage                                   |
-|:--------------------|:-----------------------------------------|:----------------------------------------|
-| `process_idioms.py` | **特殊用途**：解析成语字典 .tex 并重排版 | `$env:PYTHONIOENCODING="utf-8"; python process_idioms.py` (硬编码输入) |
-
-### Best Practices for Agents
-
-### 1. Pre-flight Check (环境检查)
-在执行转换前，确保系统已安装必要的依赖：
-*   **Pandoc**: 用于文档转换 (`pandoc --version`)。
-*   **TeX Live / MiKTeX**: 用于 PDF 编译 (`xelatex --version`)。
-*   若依赖缺失，应先引导用户安装，或仅生成 `.tex` 源码。
-
-### 2. Style Selection (样式选择)
-*   **Explicit**: 如果用户明确说明用途（如"生成简历"），请显式指定 `--style cv`。
-*   **Implicit**: 如果用户仅要求"转为 PDF"，使用默认的 `auto` 让引擎自动探测。
-*   详细样式定义见 `references/styles.md`。
-
-### 3. Script Selection (脚本选择)
-*   **通用转换**: 优先使用 `smart_engine.py`。
-*   **O'Reilly 风格书籍**: 直接使用 `smart_engine.py --style tech_book`。
-*   **成语字典**: 仅在处理成语 .tex 文件时使用 `process_idioms.py`。
-
-### 4. Artifact Delivery (产物交付)
-执行成功后，务必向用户提供生成文件的**绝对路径**：
-*   PDF 文件（最终产物）
-*   TeX 文件（中间源码，便于用户手动调整）
-
-## Resources
-- `scripts/smart_engine.py`
-- `process_idioms.py`
-- `references/styles.md`
-
-## Failure Modes
-
-*   **Pandoc not found**: 提示用户安装 Pandoc。
-*   **Compilation failed**:
-    *   读取同目录下的 `.log` 文件末尾排查错误。
-    *   常见原因：缺少宏包（Package missing）。建议用户安装 `texlive-full`。
-    *   **Fallback**: 如果编译持续失败，向用户交付生成的 `.tex` 文件，建议其使用 Overleaf 在线编译。
-
-## Output Contract
-- 成功时必须交付 PDF 与 `.tex` 的绝对路径；若编译失败，至少交付可用的 `.tex` 源文件与故障原因。
-- 在样式不明确时，必须先确认或显式说明采用 `auto` 检测策略。
-
-## Telemetry
-- 使用 `write_to_file` 将本次执行的元数据以 JSON 格式保存至 `C:\Users\shich\.gemini\MEMORY\skill_audit\telemetry\record_[TIMESTAMP].json`（请将 [TIMESTAMP] 替换为当前时间戳或随机数）。
-- JSON 结构：`{"skill_name": "tool-smart-latex", "status": "success", "duration_sec": [ESTIMATE], "input_tokens": [ESTIMATE], "output_tokens": [ESTIMATE]}`
+## 3. <Failure_Taxonomy> (失败分类学)
+- **Pandoc not found**: 提示用户安装 Pandoc。
+- **Compilation failed**: 读取同目录下的 .log 文件末尾排查错误；常见原因：缺少宏包（Package missing）。建议用户安装 	exlive-full。
+- **Fallback**: 如果编译持续失败，向用户交付生成的 .tex 文件，建议其使用 Overleaf 在线编译。

@@ -1,21 +1,25 @@
 ---
 name: hit-intelligence-hub
-description: '医疗数字化情报指挥中枢 (Swarm Commander)。最高级 orchestrator，用于并发拉起 hit-industry-radar (市场动态), hit-weekly-brief (智库研报), 和 hit-lectures-scout (学术突破)，并将三路战报缝合为一张终极的“医疗数字化全局战略视野图”。'
+version: 9.0.0
+tier: action-allowed
+description: '医疗数字化情报指挥中枢。通过子代理并发调度市场、智库与学术三路集群，执行跨域共振映射输出总裁级看板。禁止串行执行，禁止主代理自行搜索或堆砌原文。'
+triggers: ["全局战略视野图", "全景情报", "医疗数字化全景", "执行三军集群扫描"]
 ---
 
 <strategy-gene>
 Keywords: 全局视野, 医疗战略情报, HIT Swarm, 综合简报
-Summary: 代理集群指挥官。通过星型网络并发唤醒三个重型战役集群，将不同维度的孤立战报熔炼为高维度的 CEO 级战略面板。
+Summary: 代理集群指挥官。通过并发唤醒三个战役集群，将独立战报熔炼为高维战略面板。
 Strategy:
-1. 绝对并发调度：必须使用 invoke_subagent 一次性并发发射 3 个子代理，分别挂载 雷达、智库、学术 技能。
-2. 降维熔炼：等待三份报告汇集后，不能简单拼接，必须执行“跨域共振映射 (Cross-domain Resonance)”。
-3. 统一分发：生成包含“本周核心定调”、“战区动态摘要”和“行动杠杆”的总裁级看板。
-AVOID: 严禁串行执行；严禁主代理自行执行网页搜索；严禁输出几万字的原文堆砌。
+1. 并发调度：使用 `invoke_subagent` 一次性并发发射 3 个自洽的子代理。
+2. 跨域映射：跨越孤立事实，寻找学术突破、市场动态与政策间的共振点与价值鸿沟。
+3. 高维降噪：生成极端压缩的总裁级看板，强调行动杠杆。
+AVOID: 大模型亲自下场执行搜索；将长文机械拼接而非重新熔炼。
 </strategy-gene>
 
-# HIT Intelligence Hub (情报指挥中枢 V8.3 Swarm Edition)
-
-You are the Fleet Commander of the Healthcare IT Intelligence Swarm. 
+## Tool Trajectory
+**[IN_ORDER]** 执行需遵循以下轨迹流：
+1. `invoke_subagent` (以 self 类型并发唤醒三个技能)
+2. `write_to_file` (最终 Dashboard 落盘)
 
 ## 1. 核心流程与架构 (The Protocol)
 
@@ -35,28 +39,28 @@ Use the `invoke_subagent` tool to spawn 3 subagents SIMULTANEOUSLY.
    - Role: `Academic Scout`
    - Prompt: "Activate the `hit-lectures-scout` skill. Execute a full scan of recent medical AI papers and return your final report to me via `send_message`. You are fully autonomous."
 
-*Note: Since each subagent handles its own complex sub-swarms, this operation is computationally expensive. Wait for all 3 subagents to return their final text via `send_message`.*
+*Note: Since each subagent handles its own complex sub-swarms, this operation is computationally expensive. Wait reactively for all 3 subagents to return their final text.*
 
 ### Phase 2: 跨域共振映射 (Cross-Domain Resonance)
-Once all 3 reports are received, you must analyze the intersections:
-- **The Echo**: Did a new technology mentioned in the *Scout* papers also appear in a *Think-Tank* brief?
-- **The Gap**: Is the *Market* fiercely competing over a concept that the *Academic* world has already proven obsolete?
-- **The Catalyst**: Which policy/event from the *Brief* will directly accelerate a trend found in the *Radar*?
+收到 3 份回调报告后，分析以下跨域交叉点：
+- **The Echo (共鸣)**: 学术侦察中出现的新技术，是否在智库研报中得到了印证？
+- **The Gap (鸿沟)**: 市场是否在激烈争夺某个在学术界已被证明落后的概念？
+- **The Catalyst (催化剂)**: 智库研报中的哪些政策/事件将直接加速市场雷达中的趋势？
 
 ### Phase 3: The CEO Dashboard (Synthesis & Output)
-Draft the ultimate strategic dashboard. It must be highly compressed, discarding the noise and highlighting only systemic trends.
-Output format:
-1. **The Executive Summary (一句话定调)**: 50 words max.
-2. **The Resonance Map (跨域共振点)**: 3 bullets highlighting intersections between the 3 domains.
-3. **Radar Summary**: 3 biggest market moves.
-4. **Think-Tank Summary**: 3 biggest strategic shifts.
-5. **Academic Summary**: 3 most disruptive technologies.
-6. **Actionable Lever (行动杠杆)**: What must we do on Monday?
+起草终极战略大屏。必须高度压缩脱水，滤除噪音，仅突显系统级趋势。
+输出格式：
+1. **The Executive Summary (一句话定调)**: 50字以内。
+2. **The Resonance Map (跨域共振点)**: 3 个要点突出跨域交汇点。
+3. **Radar Summary (市场动态摘要)**: 3 个最大市场动作。
+4. **Think-Tank Summary (智库研报摘要)**: 3 个最大战略转向。
+5. **Academic Summary (学术突破摘要)**: 3 个最具破坏性的技术突破。
+6. **Actionable Lever (行动杠杆)**: 周一早会必须采取的应对动作。
 
-## 2. <Contracts>
-- **Output Artifact**: You must write the final dashboard using the `write_to_file` tool to `<appDataDir>\brain\<conversation-id>\scratch\HIT_Global_Dashboard.md` and present a readable summary to the user.
-- **Strict Concurrency**: The 3 subagents MUST be launched in a single `invoke_subagent` array.
+## 2. <Contracts> (输出与交付契约)
+- **Output Artifact**: 最终面板必须通过 `write_to_file` 工具写入沙盒区 `<appDataDir>\brain\<conversation-id>\scratch\HIT_Global_Dashboard.md`，并在聊天流向用户展示摘要。
+- **Strict Concurrency**: 3 个子代理必须包含在同一个 `invoke_subagent` 数组中被发射，拒绝串行启动。
 
-## 3. <Failure_Taxonomy>
-- **Micro-Management Hallucination**: You must NOT try to tell the subagents *how* to do their jobs. They already possess their respective skills and subagent swarms. Just tell them to execute their skill and report back.
-- **Timeout Panic**: The subagents are launching their own subagents. It will be slow. Do not panic and do not try to run searches yourself while waiting.
+## 3. <Failure_Taxonomy> (失败分类学)
+- **微操幻觉 (Micro-Management)**: 试图告诉子代理具体怎么搜查。子代理自带其原生技能的流程控制，主代理只需下达触发指令。
+- **超时恐慌 (Timeout Panic)**: 子代理在底层会拉起自身的 swarm，耗时较长。主代理若恐慌并尝试自行触发原生网页搜索工具，将被判定为越权。
