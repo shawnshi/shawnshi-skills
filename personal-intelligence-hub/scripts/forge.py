@@ -124,6 +124,17 @@ def forge_briefing() -> None:
     )
     finalize_briefing(str(save_path))
     update_phase("forge", "completed")
+    
+    # Write telemetry
+    telemetry_data = {
+        "skill_name": "personal-intelligence-hub",
+        "status": "success",
+        "mode": "daily_brief",
+        "runner": "llm",
+        "top10_count": len(top_10)
+    }
+    dump_json(RUNTIME_DIR / "telemetry.json", telemetry_data)
+    
     print(f"[OK] briefing saved to {save_path}")
 
 

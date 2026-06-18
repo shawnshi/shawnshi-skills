@@ -36,7 +36,9 @@ Strategy:
 ### Phase 2: Structural JSON Generation [Mode: EXECUTION]
 - **大模型只需生成包含布局坐标和语义流的拓扑 JSON**，将其强制写入当前会话的安全沙盒：
   `<appDataDir>\brain\<conversation-id>\scratch\diagram_data.json`
-- **坐标规矩**: 节点横向间距保持 80px-120px，纵向间距保持 100px-150px 以留出走线空间。
+- **坐标规矩与数学对齐 (FATAL)**: 对于 `architecture` 或 `flowchart` 等排版图表，**绝对禁止只输出文本节点**。你必须强制在 JSON 中为每一个节点提供精确的 `x`, `y`, `width`, `height`, `kind` 坐标。
+  1. **像素级中心对齐**：必须严密推演节点的中心点！水平相连的节点必须共用完全相同的 `cy` ($cy = y + height/2$)，垂直相连的节点必须共用完全相同的 `cx` ($cx = x + width/2$)。如果中心点不对齐，引擎连出的线将变成穿模的斜线！
+  2. **画板边界防溢出**：默认画板宽度为 960px。任何节点的右边缘 ($x + width$) **绝对禁止超过 850px**，否则图表右侧将被硬性截断！
 - **JSON 骨架示例**:
   ```json
   {

@@ -70,6 +70,8 @@ AVOID: 禁止替用户扩写未确认内容；禁止覆盖旧日志。
    `$env:PYTHONIOENCODING="utf-8"; python "C:\Users\shich\.gemini\config\skills\scripts\io_engine\diary_ops.py" prepend --content_file "C:\Users\shich\.gemini\tmp\log_entry.md"`
 
 ### 附属落盘协议 (Secondary Write-Backs)
+- **系统级聚焦同步**: 每次生成日志时，必须无条件调用脚本自动提取“明日战术”并更新 Antigravity CLI 的系统核心聚焦：
+  `$env:PYTHONIOENCODING="utf-8"; python "C:\Users\shich\.gemini\config\skills\scripts\io_engine\focus_sync.py" --log_file "C:\Users\shich\.gemini\tmp\log_entry.md"`
 - **Mentat Insight Archival**: 若属于 Mentat 深度日志，物理归档至 `C:\Users\shich\.gemini\MEMORY\raw\privacy\Diary\mentat_audit\[YYYY-QX]_Audit.md`。必须使用 `diary_ops.py`。
 - **全局记忆同步**: 接收到认知深度 >= 4 的产出时，格式化为 JSON 并调用：
   `$env:PYTHONIOENCODING="utf-8"; python "C:\Users\shich\.gemini\config\skills\scripts\io_engine\memory_sync.py"` 同步至全局记忆。

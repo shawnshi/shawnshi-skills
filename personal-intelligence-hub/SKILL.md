@@ -76,7 +76,7 @@ $env:PYTHONIOENCODING="utf-8"; python "C:\Users\shich\.gemini\config\skills\pers
 ```powershell
 $env:PYTHONIOENCODING="utf-8"; python "C:\Users\shich\.gemini\config\skills\personal-intelligence-hub\scripts\extract_entities.py"
 ```
-2. **异步同步**: 主代理调用 `call_mcp_tool` 执行 `vector-lake-mcp` 服务器的 `prepare_ingest_batch` 提取待同步清单，随后利用 `invoke_subagent` 拉起 `TypeName: self` (Role: `vector-lake-ingestor`) 专门代理执行后台异步入湖。**绝对禁止直接调用阻塞式的 sync 接口。**
+2. **异步同步**: 主代理调用 `call_mcp_tool` 执行 `vector-lake-mcp` 服务器的 `prepare_ingest_batch` 提取待同步清单，随后利用 `invoke_subagent` 拉起异步代理。**注意：MCP返回的配置中可能带有 `TypeName: vector-lake-ingestor`，由于系统底层代理类型约束，主代理务必将 `TypeName` 覆写为 `self`**。绝对禁止直接调用阻塞式的 sync 接口。
 
 ## 3. <Contracts> (输出与交付契约)
 
@@ -85,8 +85,7 @@ $env:PYTHONIOENCODING="utf-8"; python "C:\Users\shich\.gemini\config\skills\pers
 - `top_10` 最多 10 条且 URL 不得重复。
 - 每个 Top item 必须有 `summary`。
 - 若仍存在 L4 级别评估，则必须存在 `adversarial_audit` 记录证明其经过红队压力测试。
-- **遥测记录**: 任务完成后（无论成功还是降级），主代理必须使用 `write_to_file` 将遥测数据写入安全隔离区 `<appDataDir>\brain\<conversation-id>\scratch\telemetry.json`，防止全局系统死锁。
-  推荐结构：`{"skill_name":"personal-intelligence-hub","status":"success","mode":"daily_brief","runner":"llm","top10_count":10}`
+- **遥测记录**: 任务完成后，系统底层脚本会自动将遥测数据写入 `telemetry.json`，主代理无需手动介入。
 - **交付链接契约**: 简报锻造完毕并落盘后，主代理必须通过聊天向用户输出包含绝对物理路径的可点击 Markdown 链接（例如：`[战略情报简报](file:///C:/Users/shich/...)`）。
 
 ## 4. <Failure_Taxonomy> (失败分类学)

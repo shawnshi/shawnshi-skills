@@ -112,7 +112,13 @@ def batch_update_outcomes(updates: Dict[str, Dict[str, Any]], journal_path: str 
             current_price = entry.get("current_price")
             outcome_price = entry.get("outcome_price")
             if current_price not in (None, 0) and outcome_price is not None:
-                entry["outcome_return_pct"] = round((outcome_price - current_price) / current_price * 100, 2)
+                try:
+                    cp = float(current_price)
+                    op = float(outcome_price)
+                    if cp != 0:
+                        entry["outcome_return_pct"] = round((op - cp) / cp * 100, 2)
+                except ValueError:
+                    pass
 
             entry["feedback_status"] = "reviewed"
             updated_count += 1

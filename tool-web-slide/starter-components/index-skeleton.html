@@ -1,0 +1,42 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Presentation Title</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@200;300;400;500;600;700;800;900&family=JetBrains+Mono:wght@300;400;500;600&family=Noto+Sans+SC:wght@200;300;400;500;700;900&display=swap" rel="stylesheet">
+
+  <link rel="stylesheet" href="./assets/core.css">
+  <!-- STYLE_CSS_HERE -->
+  <!-- NOTE: Add the specific style CSS here, e.g., <link rel="stylesheet" href="./assets/winning.css"> -->
+  <!-- You can also inject <style> tags here to define brand colors or override design systems. -->
+</head>
+<body class="canvas-mode">
+
+<!-- ========== CONTROL BAR ========== -->
+<div id="ctrl-bar">
+  <div class="ctrl-logo">Presentation</div>
+  <div class="ctrl-actions">
+    <span class="ctrl-hint" id="mode-hint">当前：演示模式</span>
+    <button class="ctrl-btn" id="btn-doc" onclick="setMode('doc')">📄 阅读模式</button>
+    <button class="ctrl-btn active" id="btn-pres" onclick="setMode('pres')">▶ 演示模式</button>
+    <button class="ctrl-btn" id="btn-fs" onclick="toggleFullscreen()" title="全屏">⛶ 全屏</button>
+  </div>
+</div>
+
+<canvas id="bg-grid" class="bg"></canvas>
+<div id="hint">← → 翻页 · B 静态 · ESC 索引</div>
+
+<div id="deck">
+<!-- SLIDES_HERE -->
+<!-- NOTE: Replace this comment with the actual `<section class="slide">` elements -->
+</div>
+
+<div id="nav"></div>
+
+<script src="https://unpkg.com/lucide@latest/dist/umd/lucide.min.js"></script>
+<script src="./assets/slide-engine.js"></script>
+</body>
+</html>

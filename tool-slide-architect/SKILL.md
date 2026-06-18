@@ -1,73 +1,99 @@
 ---
 name: tool-slide-architect
-version: 9.0.0
-description: 'Strategic presentation blueprint architect (V9.0). Use when the user needs a high-rigor PPT narrative blueprint, ghost deck, speaker-script-ready outline, or decision-oriented slide architecture for executives, CTOs, hospital leaders, or consulting-style reviews. This skill features Narrative Arc structures, Minibatch Chunking for long presentations, and DESIGN.md constraints.'
-triggers: ["写个PPT", "做个幻灯片大纲", "Ghost Deck", "幻灯片蓝图", "生成PPT骨架"]
+version: 11.0.0
+description: 'Strategic presentation blueprint architect (V11.0 Hybrid MBB-Design Edition). Use when the user needs a high-rigor PPT narrative blueprint, ghost deck, speaker-script-ready outline, or decision-oriented slide architecture. Fuses McKinsey SCR/MECE frameworks with strict Design/Layout directives and speaker scripts.'
+triggers: ["写个PPT", "做个幻灯片大纲", "Ghost Deck", "幻灯片蓝图", "生成PPT骨架", "麦肯锡风格PPT"]
 ---
 
 <strategy-gene>
-Keywords: 幻灯片蓝图, 叙事链条, Ghost Deck, 决策型 PPT, Design-System 约束, 叙事弧, 微批次防衰减
-Summary: 生产高精度的 PPT 叙事蓝图包，将散乱信息压制为判词驱动的逻辑骨架。通过 7 问澄清、叙事弧编排与沙盒微批次装配，确保长篇大纲不衰减且符合设计约束。
+Keywords: 幻灯片蓝图, Ghost Deck, SCR框架, MECE金字塔, 视觉克制, 讲稿生成, 结构化布局
+Summary: 生产顶级咨询与发布会级别的复合型 PPT 蓝图。将散乱信息通过 SCR 框架压制为判词驱动的骨架，并强制输出包含 Narrative Goal、Key Content、Visual Directive 与 Script 的全息四维大纲。
 Strategy:
 1. 需求澄清：执行 4-7 问清单，对齐受众、目的与约束。
-2. 设计资产前置读取：动笔前必须强制读取本地 `DESIGN.md`。
-3. 判词与叙事弧：所有页面必须打上 `[Arc: *]` 标签，且标题必须是完整的判断句。
-4. 断点审批：生成 Ghost Deck 后挂起，索要人类审批。
-5. 微批次防衰减 (Minibatch Chunking)：如果大于 8-10 页，强制将内容分成多个 `chunk_*.md` 写入。
-6. 事实探针：动笔前必须利用图谱获取真实数据。
-AVOID: 严禁未经 Clarification 就直接写正文；严禁一次性输出超过 10 页的全量 HTML/MD；禁止使用“谢谢聆听”。
+2. 设计资产读取：动笔前必须强制读取本地 `DESIGN.md`。
+3. 全息架构输出：每一页的输出必须严格遵循 `NARRATIVE GOAL`, `KEY CONTENT`, `VISUAL DIRECTIVE`, `Script` 四大模块结构。
+4. 视觉克制：执行 MBB 色彩防线，强制白/浅灰底色，强调色严格受限。
+5. 微批次防衰减 (Minibatch Chunking)：长篇内容分 `chunk_*.md` 写入。
+AVOID: 严禁满篇 Bullet Points；严禁脱离图表指导的大段文字；禁止使用“谢谢聆听”。
 </strategy-gene>
 
-# Tool Slide Architect (高管幻灯片蓝图引擎 V9.0 Native)
+# Tool Slide Architect (全息高管幻灯片蓝图引擎 V11.0 Hybrid)
 
-> **Vision**: Narrative is the asset. Action-title chains carry the deck. 本技能锻造无可挑剔的逻辑推演蓝图包（Blueprint Package），并严格对接 `DESIGN.md` 系统指令。
+> **Vision**: Narrative is the asset. Action-title chains carry the deck. 本技能锻造无死角的商业决策蓝图包（Blueprint Package），将麦肯锡的极简逻辑与发布会级别的视觉/讲稿指导完美融合。
 
 ## 1. 核心流程与架构 (The Protocol)
 
-### Phase 1: Clarification, Logic Lake & Design Probe [Mode: PLANNING]
-1. **Clarification Gate (前置澄清)**：接到请求后，不要立刻查资料。先向用户抛出问题对齐：
-   - 目标听众是谁？汇报场景是什么？
-   - 核心的商业或技术诉求（Action Call）是什么？
-   - 大致的篇幅（几页）和时长？
-2. **[DESIGN LOCK]**: 强制调用 `view_file` 读取 `C:\Users\shich\.gemini\pai\DESIGN.md`，理解色彩、字体和图表限制。
-3. **[HARD LOCK]**: 动笔前，必须调用 `call_mcp_tool` (ServerName: `vector-lake-mcp`, ToolName: `query_logic_lake`) 查询真实指标数据。
-4. **Subagent Fact-Gathering**: 若需外部数据，调用 `invoke_subagent`。**硬锁要求**：必须指示子代理通过 `send_message` 以 JSON Payload 回传数据，主代理维持 Reactive Wakeup 状态，严禁子代理乱写磁盘。
+### Phase 1: Clarification & Design Probe [Mode: PLANNING]
+1. **Clarification Gate (前置澄清)**：明确听众、核心诉求、篇幅。
+2. **[DESIGN LOCK]**: 强制调用 `view_file` 读取 `C:\Users\shich\.gemini\pai\DESIGN.md`，执行 MBB 色彩防线（大面积留白，克制的高亮色）。
+3. 必须通过检索图谱或本地事实库获取核心数据支撑。
 
-### Phase 2: Ghost Deck, Narrative Arc & Breakpoint [Mode: PLANNING]
-1. 起草逻辑骨架：生成由连续判词组成的 Title Chain（标题链）。
-2. **[NARRATIVE ARC]**: 每页骨架必须挂载叙事弧标签：
-   - `[Arc: Hook]` (钩子)：抛反差 / 扔数据
-   - `[Arc: Context]` (定调)：为什么讲这个
-   - `[Arc: Core]` (主体)：核心论点结构展开
-   - `[Arc: Shift]` (转折)：打破预期 / 新视角
-   - `[Arc: Takeaway]` (收束)：金句或行动号召
-3. **[STYLE INJECTION]**: 每页必须标注视觉节奏（如 `[Bg: Primary #005EB8]`, `[Bg: Surface #FFFFFF]`）。
-4. **[BREAKPOINT]**: 输出完整的 Ghost Deck 后，**必须**挂起并索要“大纲审批”。
+### Phase 2: 全息 Storyboard 结构约束 [Mode: PLANNING/EXECUTION]
+每一页草稿/正文的生成，**绝对强制**按照以下 Markdown 骨架格式输出。不得遗漏任何一个主区块（以 `//` 开头的注释块必须保留作为视觉边界）：
 
-### Phase 3: Blueprint Chunking Generation [Mode: EXECUTION]
-1. 获批后，开始撰写蓝图。物理草稿必须落盘至当前隔离区：`<appDataDir>\brain\<conversation-id>\scratch\slides\{Topic}\`
-2. **[MINIBATCH ENFORCEMENT] (微批次防衰减)**：
-   - 若总页数 ≤ 8 页，可直接写入单文件 `outline.md`。
-   - 若总页数 > 8 页，**必须**将大纲拆分为多个物理片段，例如 `chunk_1_hook.md`, `chunk_2_core.md`, `chunk_3_takeaway.md`。每个 chunk 不超过 5 页。使用原生的 `write_to_file` 分批写入上述隔离沙盒的 `{Topic}\` 目录，杜绝并发污染。
-3. **[STYLE_INSTRUCTIONS 元数据]**: 首页或每个 Chunk 的顶部必须包含受制于 `DESIGN.md` 的 Style 元数据块。
-4. 结构强制：包含 `Type: Cover`, `Type: Content`, `Type: SectionBreak`, `Type: Closing`。
+```markdown
+---
+Type: Content
+Bg: Surface #FFFFFF
+Accent: Primary #005EB8
+---
 
-### Phase 4: Validation Gate (门检与沙盒组装) [Mode: VERIFICATION]
-1. 强制执行防爆验证引擎（会验证 `[Arc: *]` 标签）：
-   `$env:PYTHONIOENCODING="utf-8"; python "C:\Users\shich\.gemini\config\skills\tool-slide-architect\scripts\validator.py" "<appDataDir>\brain\<conversation-id>\scratch\slides\{Topic}"`
-2. 若报错，退回 Phase 3 修正。
-3. 验证通过后，调用打包组装工具将分块缝合并输出最终资产（脚本会自动将其导出至 MEMORY/raw/ 等长期目录）：
-   `$env:PYTHONIOENCODING="utf-8"; python "C:\Users\shich\.gemini\config\skills\tool-slide-architect\scripts\build-deck.py" "<appDataDir>\brain\<conversation-id>\scratch\slides\{Topic}"`
-4. 将遥测数据通过 `write_to_file` 保存至隔离沙盒：`<appDataDir>\brain\<conversation-id>\scratch\telemetry.json`，防止发生写入死锁。
+// NARRATIVE GOAL (叙事目标)
+[一句话定义：本页试图在观众脑海中植入的绝对理念，或想要引发的情绪/决策。]
+
+// KEY CONTENT (关键内容)
+1. **[Lead-in / Action Title]**: (标题即判词，必须包含主语、谓语和定量数据或结论)
+2. **[Arc & SCR Logic]**: (逻辑与叙事弧的双轨定位，如 [SCR: Complication] + [Arc: Hook])
+3. **[Sub-headline]**: (副标题补充说明或关键推演结论)
+4. **[Key Insight]**: (核心洞见 Kicker，用于页脚留信升华)
+5. **[Key Content / Data Matrix]**: (强制二维表格或强结构化阵列，拒绝空洞 Bullet Points)
+
+// VISUAL DIRECTIVE (视觉指令)
+1. **[元数据控制]**: (阐述 YAML Header 中指定的背景颜色和强调色锁定策略)
+2. **[LAYOUT 布局结构]**: (例如：左右分割布局，左侧30%为核心结论（深色底），右侧70%为数据图表（浅色底）)
+3. **[VISUAL 视觉画面]**: (描述具体的图像内容。强调信息图表化，严禁通用素材/握手假图)
+4. **[Chart Suggestion & Visual Restraint]**: (指定具体的图表类型，如瀑布图/散点图。注：若本页 Type 为 Cover 或 ExecSummary，此项可填 N/A 或仅提供文字排版建议，无需硬凑数据图表)
+
+// Script (演讲讲稿)
+* **[演讲逐字稿]**: (符合口语化风格的串词，严禁直接读 PPT 内容)
+* **[演讲注意事项]**: (肢体语言、停顿点、语气加重提示)
+```
+
+### Phase 3: 断点与微批次防衰减 [Mode: EXECUTION]
+1. **[BREAKPOINT]**: 在生成全量正文前，必须先挂起输出“骨架总览”，索要人类审批。
+2. **[GLOBAL STYLE DEFINITION]**: 在最终输出的蓝图文件（无论是单文件还是 `chunk_1.md`）的最顶端，必须强制包含以下全局视觉风格声明：
+
+```markdown
+## 1. 视觉风格指令 (Style Instructions)
+
+<STYLE_INSTRUCTIONS>
+
+Design Aesthetic: [基于主题定制的风格，如：包豪斯工业风、未来主义医疗风等]
+
+Background Color: [十六进制代码]
+
+Primary Font: 用于所有幻灯片标题和主要标题。应使用粗体渲染，以增强冲击力和清晰度。
+
+Secondary Font: 用于所有正文、副标题和注释。其高可读性和经典感与干净的无衬线标题形成专业的对比。
+
+Color Palette: [主色、辅助色、强调色的十六进制代码及用途]
+
+Visual Elements: [具体的图形处理手法，如：磨砂玻璃质感、细线描边等]
+
+</STYLE_INSTRUCTIONS>
+```
+
+3. **[MINIBATCH ENFORCEMENT]**: 获批后物理落盘至 `<appDataDir>\brain\<conversation-id>\scratch\slides\{Topic}\`。若总页数 > 8 页，必须将大纲分拆为 `chunk_*.md` 分批写入。
+
+### Phase 4: Validation Gate (门检与打包) [Mode: VERIFICATION]
+执行 `validator.py` 验证 `// KEY CONTENT` 等核心区块的完整性，随后通过 `build-deck.py` 组装，并生成隔离的 `telemetry.json` 遥测文件。
 
 ## 2. <Contracts> (输出与交付契约)
-- **视觉约束契约**：必须 100% 符合 `DESIGN.md`，严禁发明新颜色或要求渲染卡通。
-- **标题即判词契约**：Headline 必须包含动词、陈述明确结论。
-- **结语行动契约**：必须有一句明确的 Action Call。严禁“谢谢聆听”。
-- **交付链接契约**: 缝合完毕并成功落盘后，主代理必须通过聊天向用户输出最终物理路径的可点击 Markdown 链接（例如：`[幻灯片蓝图最终版](file:///C:/Users/shich/.gemini/MEMORY/raw/slides/...)`）。
+- **四维全息契约**：每一页幻灯片必须且只能通过 Goal, Content, Visual, Script 四个维度联合渲染。
+- **视觉约束契约**：White/Off-white 底色，数据导向的高亮色克制。
+- **讲稿口语化契约**：Script 部分必须是高度自然的“人话”，杜绝机器感。
 
 ## 3. <Failure_Taxonomy> (失败分类学)
-- **沙盒宏塌陷**：严禁调用脚本时使用相对路径。
-- **全量直写熔断**：在长篇大纲中，如果未使用 `chunk_*.md` 策略全量堆砌，导致后半段质量衰减或超时，直接判定任务失败。
-- **黑盒越界综合征**：未征得用户对 Ghost Deck 审批前，私自写正文。
-- **叙事弧缺失**：未按 Hook->...->Takeaway 结构组织。
+- **结构坍塌**：漏掉 `// VISUAL DIRECTIVE` 或 `// Script` 区块。
+- **视觉污染**：违背 MBB 色彩规范，使用大面积重色块背景。
+- **骨架空洞症**：正文使用大量空洞形容词而没有 Data Matrix 支撑。

@@ -3,7 +3,7 @@ import re
 import sys
 import argparse
 
-VERSION = "12.0"
+VERSION = "11.2"
 
 def fix_encoding(file_path):
     try:
@@ -20,89 +20,51 @@ def fix_encoding(file_path):
         print(f"Error fixing encoding for {file_path}: {exc}")
         return None
 
-def _extract_style_block(content):
-    match = re.search(r"<STYLE_INSTRUCTIONS>([\s\S]*?)</STYLE_INSTRUCTIONS>", content)
-    return match.group(1).strip() if match else ""
-
-def _extract_slides(content):
-    slides = []
-    pattern = re.compile(r"Page\s+(\d+):\s*(.*?)\n([\s\S]*?)(?=\n---\s*(?:\n|$)|\Z)")
-    for match in pattern.finditer(content):
-        slides.append({
-            "page": int(match.group(1)),
-            "title": match.group(2).strip(),
-            "body": match.group(3).strip(),
-        })
-    return slides
-
 def audit_outline(content):
     errors = []
-
-    style_block = _extract_style_block(content)
-    if not style_block:
-        errors.append("Global: Missing mandatory <STYLE_INSTRUCTIONS> block.")
-
-    narrative_content = re.sub(r"<STYLE_INSTRUCTIONS>[\s\S]*?</STYLE_INSTRUCTIONS>", "", content)
-    slides = _extract_slides(narrative_content)
-    if not slides:
-        errors.append("Global: No slides detected with 'Page X:' markers.")
-        return errors
-
-    expected_pages = list(range(1, len(slides) + 1))
-    actual_pages = [slide["page"] for slide in slides]
-    if actual_pages != expected_pages:
-        errors.append(f"Global: Page numbering must be sequential from 1..N. Found {actual_pages}.")
-
-    valid_arcs = {"Hook", "Context", "Core", "Shift", "Takeaway"}
     
-    for index, slide in enumerate(slides, 1):
-        body = slide["body"]
+    if "<STYLE_INSTRUCTIONS>" not in content:
+        errors.append("Global: Missing mandatory <STYLE_INSTRUCTIONS> block.")
         
-        # Check required sections
-        sections = [
-            ("Type:", "slide type"),
-            ("Headline:", "headline"),
-            ("Body/Data:", "body/data"),
-            ("Trust_Anchor:", "trust anchor")
+    matches = list(re.finditer(r'^---\n(Type:.*?)\n---\n([\s\S]*?)(?=(^---\nType:|\Z))', content, re.MULTILINE))
+    
+    if not matches:
+        errors.append("Global: No slides detected. Ensure slide YAML headers exist.")
+        return errors
+        
+    for index, match in enumerate(matches, 1):
+        yaml_header = match.group(1)
+        body = match.group(2)
+        
+        if "Type:" not in yaml_header:
+             errors.append(f"Slide {index}: Missing 'Type:' in YAML header.")
+             
+        # 1. Check Primary Blocks
+        required_blocks = [
+            "// NARRATIVE GOAL",
+            "// KEY CONTENT",
+            "// VISUAL DIRECTIVE",
+            "// Script"
         ]
-        for marker, name in sections:
-            if marker not in body:
-                errors.append(f"Page {index}: Missing mandatory {name} marker '{marker}'.")
-
-        # Type validation
-        type_match = re.search(r"Type:\s*(Cover|Content|SectionBreak|Closing)", body)
-        slide_type = type_match.group(1) if type_match else None
-        if index == 1 and slide_type != "Cover":
-            errors.append("Page 1 must be Type: Cover.")
-        elif index == len(slides) and slide_type != "Closing":
-            errors.append("Final page must be Type: Closing.")
-
-        # Arc validation
-        arc_match = re.search(r"\[Arc:\s*(.*?)\]", body)
-        if not arc_match:
-            errors.append(f"Page {index}: Missing mandatory Narrative Arc tag [Arc: *].")
-        else:
-            arc_val = arc_match.group(1).strip()
-            if arc_val not in valid_arcs:
-                errors.append(f"Page {index}: Invalid Arc tag '{arc_val}'. Must be one of {valid_arcs}.")
-            
-            if index == 1 and arc_val != "Hook":
-                errors.append(f"Page 1: First page Arc must be Hook. Found {arc_val}.")
-            if index == len(slides) and arc_val != "Takeaway":
-                errors.append(f"Page {len(slides)}: Final page Arc must be Takeaway. Found {arc_val}.")
-
-        # Headline constraint
-        headline_match = re.search(r"Headline:\s*(.*)", body)
-        if headline_match:
-            headline = headline_match.group(1).strip()
-            if len(headline) < 5 or len(headline) > 80:
-                errors.append(f"Page {index}: Headline length ({len(headline)}) is non-optimal.")
-
-        if slide_type == "Closing":
-            headline = headline_match.group(1).strip().lower() if headline_match else ""
-            if headline in {"thank you", "thanks", "谢谢聆听", "谢谢"}:
-                errors.append("Closing slide headline must be a CTA or thesis, not a generic thank-you.")
-
+        for block in required_blocks:
+            if block not in body:
+                errors.append(f"Slide {index}: Missing mandatory block '{block}'.")
+                
+        # 2. Deep Validator for Subfields inside KEY CONTENT
+        key_content_match = re.search(r"// KEY CONTENT([\s\S]*?)(?=// VISUAL DIRECTIVE|// Script|\Z)", body)
+        if key_content_match:
+            text = key_content_match.group(1)
+            required_subfields = [
+                "[Lead-in / Action Title]",
+                "[Arc & SCR Logic]",
+                "[Sub-headline]",
+                "[Key Insight]",
+                "[Key Content / Data Matrix]"
+            ]
+            for sf in required_subfields:
+                if sf not in text:
+                    errors.append(f"Slide {index}: Missing nested field '{sf}' inside KEY CONTENT.")
+                    
     return errors
 
 def main():
@@ -131,7 +93,6 @@ def main():
     if not merged_content:
         sys.exit(1)
 
-    print(f"--- Presentation Blueprint Audit (V{VERSION}): {os.path.basename(args.path)} ---")
     errors = audit_outline(merged_content)
     if errors:
         print("\n[!] BLUEPRINT_AUDIT_FAILED")
@@ -139,7 +100,7 @@ def main():
             print(f"  - {err}")
         sys.exit(1)
 
-    print("\n[OK] Blueprint verified: schema, style contract, and narrative arc rules passed.")
+    print("\n[OK] Blueprint verified: V11 Hybrid blocks and nested structures passed.")
     sys.exit(0)
 
 if __name__ == "__main__":

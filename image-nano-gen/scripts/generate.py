@@ -78,50 +78,58 @@ def generate():
     file_index = 0
     image_generated = False
 
+    import time
+    
     print(f"Executing Native 4K Pipeline with model: {model_name}...")
     print(f"Image Size: 4K (Thinking Config: Prompt-Injected)")
 
-    try:
-        for chunk in client.models.generate_content_stream(
-            model=model_name,
-            contents=[
-                types.Content(
-                    role="user",
-                    parts=[
-                        types.Part.from_text(text=enhanced_prompt),
-                    ],
-                ),
-            ],
-            config=generate_content_config,
-        ):
-            if chunk.parts is None:
-                continue
-            
-            for part in chunk.parts:
-                if getattr(part, 'thought', False) or (hasattr(part, 'thought') and part.thought):
-                    if part.text:
-                        print(f"Model Thought: {part.text}", end="", flush=True)
-                elif part.inline_data and part.inline_data.data:
-                    inline_data = part.inline_data
-                    data_buffer = inline_data.data
-                    file_extension = mimetypes.guess_extension(inline_data.mime_type) or ".jpg"
-                    
-                    file_name = f"nano_{timestamp}_{file_index}{file_extension}"
-                    filepath = os.path.join(output_dir, file_name)
-                    
-                    save_binary_file(filepath, data_buffer)
-                    file_index += 1
-                    image_generated = True
-                elif part.text:
-                    print(f"Model Text Output: {part.text}", end="", flush=True)
+    max_retries = 3
+    for attempt in range(max_retries):
+        try:
+            image_generated = False
+            for chunk in client.models.generate_content_stream(
+                model=model_name,
+                contents=[
+                    types.Content(
+                        role="user",
+                        parts=[
+                            types.Part.from_text(text=enhanced_prompt),
+                        ],
+                    ),
+                ],
+                config=generate_content_config,
+            ):
+                if chunk.parts is None:
+                    continue
+                
+                for part in chunk.parts:
+                    if getattr(part, 'thought', False) or (hasattr(part, 'thought') and part.thought):
+                        if part.text:
+                            print(f"Model Thought: {part.text}", end="", flush=True)
+                    elif part.inline_data and part.inline_data.data:
+                        inline_data = part.inline_data
+                        data_buffer = inline_data.data
+                        file_extension = mimetypes.guess_extension(inline_data.mime_type) or ".jpg"
+                        
+                        file_name = f"nano_{timestamp}_{file_index}{file_extension}"
+                        filepath = os.path.join(output_dir, file_name)
+                        
+                        save_binary_file(filepath, data_buffer)
+                        file_index += 1
+                        image_generated = True
+                    elif part.text:
+                        print(f"Model Text Output: {part.text}", end="", flush=True)
 
-        print("\nGeneration process finished.")
-        if not image_generated:
-            print("Warning: No image data was returned in the stream.", file=sys.stderr)
-
-    except Exception as e:
-        print(f"\nError during native 4K generation: {e}", file=sys.stderr)
-        sys.exit(1)
+            print("\nGeneration process finished.")
+            if not image_generated:
+                print("Warning: No image data was returned in the stream.", file=sys.stderr)
+            break # Exit retry loop on success
+        except Exception as e:
+            print(f"\nError during native 4K generation (Attempt {attempt+1}/{max_retries}): {e}", file=sys.stderr)
+            if attempt < max_retries - 1:
+                time.sleep(2)
+            else:
+                sys.exit(1)
 
 if __name__ == "__main__":
     generate()

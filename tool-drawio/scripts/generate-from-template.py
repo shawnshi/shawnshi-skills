@@ -1578,7 +1578,12 @@ def main() -> None:
 
     try:
         if len(sys.argv) > 3:
-            data = json.loads(sys.argv[3])
+            raw_arg = sys.argv[3]
+            if raw_arg.endswith('.json') and os.path.exists(raw_arg):
+                with open(raw_arg, "r", encoding="utf-8") as f:
+                    data = json.load(f)
+            else:
+                data = json.loads(raw_arg)
         else:
             data = json.load(sys.stdin)
         svg_content = build_svg(template_type, data)
