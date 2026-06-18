@@ -1,50 +1,56 @@
 ---
-name: nanobanana-image-gen
-version: 8.1.0
-description: '当用户要求“生成图片”、“画图”、“使用 nanobanana 绘画”或提供需要图像生成的 Prompt 时，强制激活此技能。该技能利用 Gemini Imagen 3 引擎，支持 4K 质量与高认知计算模式，自动落盘至指定物理目录。'
-triggers: ["画一张", "生成图片", "帮我绘制", "使用 nanobanana", "使用 imagen", "生成海报"]
+name: image-studio-architect
+description: '端到端视觉资产工厂 (V9.0)。合并了“提示词炼金”与“物理出图”。支持路由：当用户给的是模糊短句时，自动经由 Mondo 脚本升格为丝网大师级提示词并全自动生成图片；当用户给出精细 Prompt 时，执行零干预透传物理生成。'
 ---
 
 <strategy-gene>
-Keywords: 生成图片, nanobanana, Imagen, 海报, 插图
-Summary: 将用户图像意图 100% 原始透传为可执行的高质量生成提示词和本地物理图像产物。
+Keywords: 生成图片, 画图, Mondo风格, 海报设计, nanobanana, 端到端绘图
+Summary: 视觉资产的无缝生成闭环。打通了 image-promp-gen 与 image-nano-gen。
 Strategy:
-1. 获取意图：明确主题、比例、风格、主体、背景、文字要求。
-2. 零干预透传：严禁擅自润色用户的提示词，必须原汁原味透传给底层脚本。
-3. 物理执行：调用原生终端工具运行本地 Python 引擎完成渲染与落盘。
-AVOID: 禁止生成与用户意图不符的风格漂移图；禁止漏报输出路径；禁止编造虚假路径。
+1. 意图路由：根据用户输入长度与复杂度，决定是走 [Alchemy Mode] 还是 [Raw Mode]。
+2. Alchemy Mode（炼金模式）：遇到模糊指令（如“画个赛博朋克海报”），必须先调用 Mondo 脚本生成大师级提示词，然后拿到返回值**无缝直接送入**物理生成引擎，中间严禁停顿询问。
+3. Raw Mode（透传模式）：遇到成熟的 Prompt，严格遵守 100% 零干预底线，不加任何废话，直连生成引擎。
+4. 物理闭环：最终产物必须落盘于本地指定目录，并返回物理绝对路径供用户点击。
+AVOID: 严禁在炼金模式生成提示词后停下来反问用户“您看这样可以吗？”；严禁编造虚假的文件路径。
 </strategy-gene>
 
-# Nanobanana Image Generator (图像引擎 V8.1 Native)
+# Image Studio Architect (端到端视觉资产工厂 V9.0 Native)
 
-> **Vision**: 专为高质量（4K）、高思维深度（thinking_level="HIGH"）的图像生成任务打造。坚守本地逻辑闭环与 100% 意图透传。
+> **Vision**: 告别断裂的“先写提示词再画图”流程。不管用户输入的是一句模糊的梦话，还是一段硬核的咒语，系统都会全自动将其转化为最终的物理图片产物。
 
-## 1. 核心流程与架构 (The Protocol)
+## 0. 模式路由 (Mode Routing)
+When invoked, instantly evaluate the user's prompt:
+- **[Raw Mode (零干预透传)]**: The user provides a highly detailed prompt (>20 words) or explicitly says "按原样生成/严格按我说的画". -> **Skip to Phase 2**.
+- **[Alchemy Mode (Mondo 炼金)]**: The user gives a vague idea (e.g., "画一张关于AI的海报", "设计个书籍封面"). -> **Start at Phase 1**.
 
-### Phase 1: Preparation (零干预透传) [Mode: PLANNING]
-1. **[Zero-Intervention Policy]**：必须 100% 保持用户提交的原始语句。严禁大模型对用户的提示词进行任何“画蛇添足”的润色、意图扩展、细节补充或高思维扩写。
-2. 即使输入是结构化的 Markdown，也必须将其作为**一个完整的 Prompt 字符串**直接透传。
+---
 
-### Phase 2: Action & Rendering (引擎唤醒与渲染) [Mode: EXECUTION]
-1. 必须使用系统的 `run_command` 工具调用底层的 `generate.py` 引擎。
-2. 必须挂载中文字符集安全锁与绝对物理地址：
-   `$env:PYTHONIOENCODING="utf-8"; python "C:\Users\shich\.gemini\config\skills\image-nano-gen\scripts\generate.py" "用户的原始Prompt"`
-   *(注：若 Prompt 中存在引号，请合理转义并使用双引号将参数严格包裹。)*
+## 1. Phase 1: 提示词炼金 (Prompt Alchemy) - *[Alchemy Mode Only]*
+1. Extract the core subject and type (poster, book cover, etc.) from the user's short idea.
+2. 强制调用旧版模块遗留的 Python 炼金引擎，将干瘪的短句升级为具有负空间、极简丝网印刷风格的巨作：
+   使用原生 `run_command` 执行：
+   `$env:PYTHONIOENCODING="utf-8"; python "C:\Users\shich\.gemini\config\skills\image-promp-gen\scripts\generate_mondo.py" "<主体>" "<类型>" --aspect-ratio "9:16"`
+   *(You can append `--style` or `--colors` if the user gave hints).*
+3. **[HARD LOCK]**: 脚本返回大师级 Prompt 后，**严禁停下来询问用户“是否满意/是否继续”**。你必须带着这段 Prompt 直接进入 Phase 2。
 
-### Phase 3: Delivery & Telemetry (物理落盘交付) [Mode: EXECUTION]
-1. 脚本执行成功后，读取命令行输出，图片将被强制物理落盘至：
+---
+
+## 2. Phase 2: 物理渲染引擎 (Nanobanana Rendering)
+1. 拿着最终的 Prompt（无论是来自用户的详细描述，还是 Phase 1 炼金得来的），直接唤起底层生成引擎。
+2. 必须挂载中文字符集安全锁与绝对物理地址，执行 `run_command`：
+   `$env:PYTHONIOENCODING="utf-8"; python "C:\Users\shich\.gemini\config\skills\image-nano-gen\scripts\generate.py" "<最终的Prompt>"`
+   *(若本地脚本确实报错或缺失，允许降级使用系统自带的 Native `generate_image` 工具进行补救，但必须优先尝试 Python 脚本。)*
+
+---
+
+## 3. Phase 3: 交付与图谱登记 (Delivery)
+1. 脚本执行成功后，图片将被强制物理落盘至：
    `C:\Users\shich\.gemini\nanobanana-output`
-2. 向用户交付最终结论并展示完整的绝对物理路径。严禁生成虚假路径。
-3. 记录遥测：使用 `write_to_file` 工具将执行元数据以 JSON 保存至：
+2. **交付契约**：你必须在聊天窗口中，以极简的语言向用户汇报任务完成，并**提供完整的物理绝对路径（或 Markdown 图片链接格式）**供用户查看。
+3. **Telemetry**: 使用 `write_to_file` 工具将执行元数据以 JSON 保存至隔离工作区：
    `C:\Users\shich\.gemini\MEMORY\skill_audit\telemetry\record_[TIMESTAMP].json`
 
-## 2. <Contracts> (输出与交付契约)
-- **原始透传契约 (Raw Pass-through)**：传给 Python 的 Prompt 必须是一个 100% 未经大模型过滤或扩写的完整字符串参数。用户的意图不容侵犯。
-- **物理交付契约 (Physical Delivery)**：交付物必须是物理生成的一张或多张真实图片文件（展示绝对路径）。绝不仅是一段“图片应该长这样”的文字描述。
-- **环境韧性契约 (Env Resilience)**：若执行报错提示 `google-genai` 或 `pillow` 未安装，必须首先调用 `run_command` 执行 `pip install google-genai pillow` 修复环境，严禁因环境问题放弃任务。
-
-## 3. <Failure_Taxonomy> (失败分类学 / 逻辑硬锁)
-- **沙盒宏塌陷 (Macro Deadlock)**：严禁在调取脚本或声明输出路径时使用旧版宏（如 `{root}` 或 `{SKILL_DIR}`）。必须且只能使用 `C:\Users\shich\.gemini\...`。若发现路径幻觉，直接阻断任务。
-- **自作聪明综合征 (Smart-Aleck Syndrome)**：如果被侦测到大模型在生成前，“擅自润色”或强行给用户的词条添加了所谓的“光影、质感、大师级”等虚假标签，将被判定为违背零干预协议并直接打回。
-- **虚假接口调取 (Fake API Call)**：绝对禁止大模型使用普通的 HTTP POST 瞎编接口向不存在的服务器发请求，必须且只能调用配套的 `generate.py` 脚本。
-- **工具幻觉 (Tool Forgery)**：严禁调用旧版的 `run_shell_command` 或 `write_file`，必须使用符合 Native 规范的 `run_command` 和 `write_to_file`。
+## 4. <Failure_Taxonomy> (失败分类学 / 逻辑硬锁)
+- **断流谬误 (Pipeline Breakage)**：在 [Alchemy Mode] 下，如果大模型在执行完 Phase 1 的 python 脚本后，向用户提问“这个提示词可以吗？需要我帮您生成吗？” —— 这将被视为严重的系统违规。端到端必须是一次性贯通的。
+- **自作聪明综合征 (Smart-Aleck Syndrome)**：在 [Raw Mode] 下，如果大模型“擅自润色”了用户的词条（如强加光影、8k分辨率），将被判定为违背零干预协议并直接打回。
+- **沙盒宏塌陷 (Macro Deadlock)**：严禁在调取脚本或声明输出路径时使用旧版宏（如 `{root}` 或 `{SKILL_DIR}`）。必须且只能使用 `C:\Users\shich\.gemini\...` 的绝对路径。

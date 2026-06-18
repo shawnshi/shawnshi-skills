@@ -1,4 +1,4 @@
-# Skills Ecosystem: The Strategic Armory (V8.2 - Native Antigravity Edition)
+# Skills Ecosystem: The Strategic Armory (V9.0 - Swarm & Routing Edition)
 
 <!-- 
 @Pos: Root Level / Knowledge Sovereign 
@@ -57,17 +57,18 @@
 | **[personal-intelligence-hub](personal-intelligence-hub/)** | **个人情报作战中枢 (Native Edition)**。全球多源抓取，降维噪音。 |
 | **[cognitive-personal-roundtable](cognitive-personal-roundtable/)** | **高密度动态圆桌**。张力网络构建，碎片化落盘防截断。 |
 | **[cognitive-hv-analysis](cognitive-hv-analysis/)** | **横纵分析法深度研究**。纵轴时间深度，横轴同期对比。 |
-| **[personal-strategic-reading](personal-strategic-reading/)** | **战略滤镜阅读器**。带商业目的榨取长文，输出高密度 Playbook。 |
+| **[cognitive-deep-reader](cognitive-deep-reader/)** | **认知深潜引擎 (V9.0)**。冷热双轨路由：结构抽骨架 或 滤镜榨取剧本。 |
 | **[tool-concept-synthesis](tool-concept-synthesis/)** | **宏观缝合与体系全景图**。依赖图谱寻找孤立实体逻辑暗线。 |
 | **[tool-archive-crawler](tool-archive-crawler/)** | **数字废墟矿工**。翻新非结构化旧库锚定进 Tier 2 图谱。 |
 | **[cognitive-morphism-mapper](cognitive-morphism-mapper/)** | **范畴论跨界思维引擎**。异构领域生成突破性解法。 |
-| **[personal-book-reader](personal-book-reader/)** | **战略拆书引擎**。冷硬抽骨架，热重构知识地图。 |
+| **[cognitive-storm-research](cognitive-storm-research/)** | **斯坦福 STORM 调研引擎 (Agent Swarm Edition)**。5并发子代消除偏见，高密度映射盲区。 |
 
 ### 🏥 大健康与战略研判中枢 (Healthcare Strategy)
 *聚焦垂直主业：医疗信息化 (HIT)、临床决策支持及大客户分析。*
 
 | 技能标识 (Directory) | 核心本质 (Trigger Traps) |
 | :--- | :--- |
+| **[hit-intelligence-hub](hit-intelligence-hub/)** | **情报指挥中枢 (Swarm Commander)**。最高级 orchestrator，并发拉起并缝合雷达、智库与学术三大战区情报。 |
 | **[hit-solution-architect](hit-solution-architect/)** | **顶级方案架构师 (Native Edition)**。执行多阶段落盘锻造，确保 TCO 最优与技术可演进。 |
 | **[hit-digital-strategy-partner](hit-digital-strategy-partner/)** | **顶级医疗数字化战略专家**。ROI 测算与战略验证。 |
 | **[hit-industry-radar](hit-industry-radar/)** | **行业战略雷达 (Native Edition)**。监控友商动态与 S-T-C 战报。 |
@@ -90,8 +91,7 @@
 | :--- | :--- |
 | **[personal-writing-assistant](personal-writing-assistant/)** | **思维淬炼与写作引擎 (Native Edition)**。同行视角找核，消灭 AI 塑料词。 |
 | **[personal-write-humanizer](personal-write-humanizer/)** | **中文“去 AI 化”锻造场 (Native Edition)**。动词驱动与影子草稿协议。 |
-| **[image-nano-gen](image-nano-gen/)** | **Nanobanana 绘图引擎 (Native Edition)**。零干预透传的物理级产出。 |
-| **[image-promp-gen](image-promp-gen/)** | **大师级提示词炼金炉 (Native Edition)**。Mondo 丝网美学与符号隐喻。 |
+| **[image-studio-architect](image-nano-gen/)** | **端到端视觉资产工厂 (V9.0)**。模糊意图全自动炼金或严守零干预物理直出。 |
 | **[tool-slide-architect](tool-slide-architect/)** | **战略级幻灯片蓝图构建师 (Native Edition)**。标题即判词，禁用名词标签。 |
 | **[tool-web-slide](tool-web-slide/)** | **电子杂志风网页 PPT 引擎 (Native Edition)**。HTML 单文件演示资产。 |
 | **[tool-smart-latex](tool-smart-latex/)** | **自动化出版 LaTeX 引擎**。IEEE/CV 工业级排版。 |
@@ -139,4 +139,4 @@
 | **[tool-url-markdown](tool-url-markdown/)** | **CDP 网页原质提取器 (Native Edition)**。JS 强对抗与断点防穿模。 |
 
 ---
-*Last Global Audit: 2026-06-14 | Version: 8.2.0 (Native Antigravity Edition) | System State: Locked*
+*Last Global Audit: 2026-06-18 | Version: 9.0.0 (Swarm & Routing Edition) | System State: Locked*
