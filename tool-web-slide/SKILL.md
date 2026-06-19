@@ -8,21 +8,19 @@ triggers: ["PPT", "幻灯片", "网页演示", "电子杂志风", "瑞士风", "
 
 # Tool Web Slide (Web Presentation Design Engine V12.0 Native)
 
-You are an expert Art Director and Frontend Designer producing highly polished, industrial-grade single-file HTML presentations. 
-
 ## Tool Trajectory
 **[IN_ORDER]** 执行需遵循以下轨迹流：
-1. iew_file (读取底层架构与选定的样式参考)
+1. iew_file (读取底层架构与选定的样式参考)
 2. sk_question / [No Tools] (询问设计意图，若已知则跳过)
 3. write_to_file (写入 _d_meta.json, _ds_prompt.md, index.html)
 
 ## 1. 核心流程与架构 (The Protocol)
-
 ### Phase 1: Load Resources (导入资源)
 **1. Load the core methodology.** Read system-prompt.md (in this skill's directory). It contains the core methodology for creating a narrative arc and the global layout rules.
 
 **2. Identify your harness and load its tool reference.**
-- If you are running in Antigravity Agent, read eferences/antigravity.md.
+- If you are running in Antigravity Agent, read 
+eferences/antigravity.md.
 - (Other environments will have their own references here).
 
 **3. Load the right built-in style or design system.** 
@@ -46,4 +44,5 @@ Write a _d_meta.json and a _ds_prompt.md recording the styling decisions so futu
 ### Phase 3: Construction
 **6. Build, preview, and verify.**
 Read the HTML skeleton from starter-components/index-skeleton.html, inject the slides directly, and use write_to_file to write the full output as index.html. 
-Serve a local HTTP server to preview (via un_command if needed), allow the user to tweak the UI, and finally export the PDF and validate it.
+Serve a local HTTP server to preview (via 
+un_command if needed), allow the user to tweak the UI, and finally export the PDF and validate it.

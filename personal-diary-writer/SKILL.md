@@ -10,26 +10,23 @@ triggers: ["写日记", "记录今日状态", "保存审计日志"]
 Keywords: 日志写入, diary, 落盘, 原子写入
 Summary: 将已经确定的日志内容安全写入本地日记资产。
 Strategy:
-1. 确认内容已定稿、目标日期和目标文件。
-2. 走 MCP 获取日程，走专属脚本提取生理数据。
-3. 遵循预设 Schema 组装，并依赖 IO 脚本完成原子写入。
+1. 1. 确认内容已定稿、目标日期和目标文件。
+2. 2. 走 MCP 获取日程，走专属脚本提取生理数据。
+3. 3. 遵循预设 Schema 组装，并依赖 IO 脚本完成原子写入。
 AVOID: 替用户扩写未确认内容；覆盖旧日志。
 </strategy-gene>
 
 # Personal Diary Writer (Atomic I/O V9.0 Native)
 
-本技能负责处理高频、轻量级的每日状态记录以及日志条目的原子化落盘操作。不负责虚构数据或替代上游审计判断。
-
 ## Tool Trajectory
-**[IN_ORDER]** 本技能的执行必须依序匹配以下核心调用流：
+**[IN_ORDER]** 执行需遵循以下轨迹流：
 1. `call_mcp_tool` (获取日程数据)
 2. `run_command` (执行 garmin_intelligence.py)
 3. `write_to_file` (写入缓存文件 log_entry.md)
 4. `run_command` (执行 diary_ops.py 原子操作)
-注：偏离此轨迹则视为执行越权或幻觉。
+5. 注：偏离此轨迹则视为执行越权或幻觉。
 
 ## 1. 核心流程与架构 (The Protocol)
-
 ### Phase 0: Reconnaissance (证据先行)
 - **自动化事实重建**: 调用原生 `call_mcp_tool` (`google-workspace: calendar.listEvents`) 获取真实日程数据。
 - **能量数据提取**: 生理状态数据校验已左移至脚本约束。调用原生 `run_command` 提取：

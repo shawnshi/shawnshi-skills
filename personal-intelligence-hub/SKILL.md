@@ -22,30 +22,29 @@ AVOID: 把“摘要”伪装成“洞察”；缺乏证据时输出 L4 级判断
 
 ## Tool Trajectory
 **[IN_ORDER]** 执行需遵循以下轨迹流：
-1. un_command (底层脚本：物理爬取情报源)
+1. run_command (底层脚本：物理爬取情报源)
 2. invoke_subagent (唤醒子代理进行二阶推演)
 3. write_to_file (写入 intelligence_current_refined.json)
-4. un_command (依次执行校验、红队对抗、简报锻造脚本)
-5. un_command / call_mcp_tool (生成实体提取并启动异步入湖)
+4. run_command (依次执行校验、红队对抗、简报锻造脚本)
+5. run_command / call_mcp_tool (生成实体提取并启动异步入湖)
 
 ## 0. 核心约束
-- **配置优先**: 扫描范围、优先源、排除词以 eferences/strategic_focus.json 为准。
-- **质量合同**: 必须满足 eferences/quality_standard.md 的四层结构。
-- **状态显式化**: 状态写入 lackboard，去重走 history_manager，交付前通过 riefing_gate。
+- **配置优先**: 扫描范围、优先源、排除词以 references/strategic_focus.json 为准。
+- **质量合同**: 必须满足 references/quality_standard.md 的四层结构。
+- **状态显式化**: 状态写入 blackboard，去重走 history_manager，交付前通过 briefing_gate。
 - **跨平台与安全寻址**: 所有 Python 脚本调用必须使用绝对物理寻址并挂载 UTF-8 环境锁，严禁依赖相对路径。
 
 ## 1. 运行资产
-- **Feeds**: eferences/karpathy_feeds.json
-- **Strategy Config**: eferences/strategic_focus.json
-- **Quality Contract**: eferences/quality_standard.md
-- **Briefing Template**: eferences/briefing_template.md
+- **Feeds**: references/karpathy_feeds.json
+- **Strategy Config**: references/strategic_focus.json
+- **Quality Contract**: references/quality_standard.md
+- **Briefing Template**: references/briefing_template.md
 - **State Scripts**: scripts/blackboard.py, scripts/history_manager.py, scripts/briefing_gate.py
 
 ## 2. 执行协议 (Execution Pipeline)
-
 ### Phase 1 & 2: Fetch & Refine (物理爬取与去重)
 1. 执行底层抓取脚本（务必挂载编码锁）：
-   $env:PYTHONIOENCODING="utf-8"; python "C:\Users\shich\.gemini\config\skills\personal-intelligence-hub\scripts\run_phase1_2.py"
+   `$env:PYTHONIOENCODING="utf-8"; python "C:\Users\shich\.gemini\config\skills\personal-intelligence-hub\scripts\run_phase1_2.py"`
 2. 脚本将自动采集并生成候选池 intelligence_candidates.json。
 3. 调用 invoke_subagent 启动独立精炼子代理（TypeName: self）进行二阶推演。
 
@@ -54,8 +53,8 @@ AVOID: 把“摘要”伪装成“洞察”；缺乏证据时输出 L4 级判断
    > "You are the Intelligence Refinement Subagent.
    > 1. Read C:\Users\shich\.gemini\config\skills\personal-intelligence-hub\references\quality_standard.md to strictly understand the JSON Schema and Localization Contract.
    > 2. Read C:\Users\shich\.gemini\MEMORY\raw\news\_runtime\personal-intelligence-hub\intelligence_candidates.json.
-   > 3. Perform semantic deduction. **You MUST output all analytical content in Chinese (zh-CN)** and generate 	itle_zh and summary_zh for all items.
-   > 4. Ensure you generate global fields like punchline, insights, digest, market, and correctly structure ction_levers as an array of objects.
+   > 3. Perform semantic deduction. **You MUST output all analytical content in Chinese (zh-CN)** and generate title_zh and summary_zh for all items.
+   > 4. Ensure you generate global fields like punchline, insights, digest, market, and correctly structure action_levers as an array of objects.
    > 5. Use [[ ]] around core entities/people/specific nouns for graph linking.
    > 6. Do NOT write to disk manually. You MUST output the final valid JSON directly using the send_message tool to reply to me."
 2. 子代理依据 Schema 执行推演并通过 send_message 发送数据。
@@ -63,24 +62,24 @@ AVOID: 把“摘要”伪装成“洞察”；缺乏证据时输出 L4 级判断
 
 ### Phase 4: Pipeline Gate Orchestration (门控与锻造)
 严禁要求子代理执行脚本，必须由主代理依次接管验证：
-1. **JSON 校验**: 运行 $env:PYTHONIOENCODING="utf-8"; python "C:\Users\shich\.gemini\config\skills\personal-intelligence-hub\scripts\validate_refined_json.py"。若报错自行修正。
-2. **红队对抗**: 若存在 L4 候选，运行 $env:PYTHONIOENCODING="utf-8"; python "C:\Users\shich\.gemini\config\skills\personal-intelligence-hub\scripts\adversarial_audit.py"。
-3. **最终锻造**: 运行 $env:PYTHONIOENCODING="utf-8"; python "C:\Users\shich\.gemini\config\skills\personal-intelligence-hub\scripts\forge.py" 生成最终简报。
+1. **JSON 校验**: 运行 `$env:PYTHONIOENCODING="utf-8"; python "C:\Users\shich\.gemini\config\skills\personal-intelligence-hub\scripts\validate_refined_json.py"`。若报错自行修正。
+2. **红队对抗**: 若存在 L4 候选，运行 `$env:PYTHONIOENCODING="utf-8"; python "C:\Users\shich\.gemini\config\skills\personal-intelligence-hub\scripts\adversarial_audit.py"`。
+3. **最终锻造**: 运行 `$env:PYTHONIOENCODING="utf-8"; python "C:\Users\shich\.gemini\config\skills\personal-intelligence-hub\scripts\forge.py"` 生成最终简报。
 
 ### Phase 5: Async Vector Lake Ingestion (异步图谱入湖)
 1. 报告锻造完成后，运行实体提取器生成 Markdown：
-   $env:PYTHONIOENCODING="utf-8"; python "C:\Users\shich\.gemini\config\skills\personal-intelligence-hub\scripts\extract_entities.py"
-2. **异步同步**: 调用 call_mcp_tool 执行 ector-lake-mcp 的 prepare_ingest_batch，利用 invoke_subagent 拉起异步代理。**注意：务必将子代理的 TypeName 覆写为 self**。严禁直接调用阻塞式同步。
+   `$env:PYTHONIOENCODING="utf-8"; python "C:\Users\shich\.gemini\config\skills\personal-intelligence-hub\scripts\extract_entities.py"`
+2. **异步同步**: 调用 call_mcp_tool 执行 vector-lake-mcp 的 prepare_ingest_batch，利用 invoke_subagent 拉起异步代理。**注意：务必将子代理的 TypeName 覆写为 self**。严禁直接调用阻塞式同步。
 
 ## 3. <Contracts> (输出与交付契约)
-- punchline 不得为空；ction_levers 至少 3 条；	op_10 最多 10 条且 URL 不重复。
-- 若存在 L4 级别评估，必须有 dversarial_audit 记录证明其经过压力测试。
-- **遥测记录**: 系统脚本自动写入 	elemetry.json，主代理无需干预。
+- punchline 不得为空；action_levers 至少 3 条；top_10 最多 10 条且 URL 不重复。
+- 若存在 L4 级别评估，必须有 adversarial_audit 记录证明其经过压力测试。
+- **遥测记录**: 系统脚本自动写入 telemetry.json，主代理无需干预。
 - **交付链接契约**: 简报落盘后，主代理必须向用户输出包含绝对路径的可点击 Markdown 链接（如：[战略情报简报](file:///C:/Users/shich/...)）。
 
 ## 4. <Failure_Taxonomy> (失败分类学)
 - **路径幻觉 (Pathing Hallucination)**：严禁使用相对路径，必须严格使用绝对路径。
-- **手动实体劳作**：主代理严禁手动编写带 [[ ]] 的实体节点，必须运行 xtract_entities.py。
+- **手动实体劳作**：主代理严禁手动编写带 [[ ]] 的实体节点，必须运行 extract_entities.py。
 - **内容注水**：禁止把摘要伪装成洞察，情报必须包含行动杠杆。
 - **证据不足 (Evidence Gap)**：禁止在缺乏强力支撑时输出 L4 高等级战略判断。
 - **越界写入 (Boundary Violation)**：禁止把 skill 目录当作运行时数据库。临时文件必须存于沙盒。

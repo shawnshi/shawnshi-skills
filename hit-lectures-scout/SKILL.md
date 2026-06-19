@@ -10,16 +10,14 @@ triggers: ["医疗AI论文", "学术扫描", "临床文献", "最新数字医疗
 Keywords: 医疗 AI 论文, 医学信息化, 数字化转型, 科研侦察, RWE 校验
 Summary: 捕捉医疗数字化非共识信号，将学术突破深度映射至核心架构，并转化为研发杠杆与防御资产。
 Strategy:
-1. 弹性侦察：默认 7 天视窗，不足时自动回溯至 14 天。
-2. 提纯脱水：执行 RWE (真实世界证据) 校验，过滤无临床对照的噪声。
-3. 强资产映射：将外部学术信号翻译并挂载至专有架构词典。
-4. 双轨转换：外部输出宏观建议；内部输出研发任务与销售话术。
+1. 1. 弹性侦察：默认 7 天视窗，不足时自动回溯至 14 天。
+2. 2. 提纯脱水：执行 RWE (真实世界证据) 校验，过滤无临床对照的噪声。
+3. 3. 强资产映射：将外部学术信号翻译并挂载至专有架构词典。
+4. 4. 双轨转换：外部输出宏观建议；内部输出研发任务与销售话术。
 AVOID: 保留假 [URL] 占位符；发布无临床场景适配的情报；缺乏商业推演。
 </strategy-gene>
 
 # HIT Intel Scout (医疗数字化战略侦察兵 V8.2 Native)
-
-> **Vision**: 捕捉学术界的非共识信号，通过结构化补偿消除"学术灌水"，将突破转化为研发部的具体任务与销售线的防御武器。
 
 ## Tool Trajectory
 **[IN_ORDER]** 执行需遵循以下轨迹流：
@@ -31,7 +29,6 @@ AVOID: 保留假 [URL] 占位符；发布无临床场景适配的情报；缺乏
 6. `call_mcp_tool` (高价值概念入湖)
 
 ## 1. 核心流程与架构 (The Protocol)
-
 ### Phase 1: 混合调度与弹性视窗 (Map-Reduce Delegation)
 1. **Preprints 管线直控**: 主代理调用 `run_command` 执行爬网（挂载 UTF-8）：
    `$env:PYTHONIOENCODING="utf-8"; python "C:\Users\shich\.gemini\config\skills\hit-lectures-scout\assets\deepxiv_preprints_scout.py"`

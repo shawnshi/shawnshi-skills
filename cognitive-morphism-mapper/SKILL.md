@@ -10,15 +10,13 @@ triggers: ["跨界思维映射", "套用热力学破局", "用生物演化分析
 Keywords: 跨界映射, 范畴论, 异构同构, 升维打击
 Summary: 提取问题的范畴论骨架，通过函子映射寻找异构领域的成熟解，突破思维定势。
 Strategy:
-1. 骨架提取：剥离业务语义，提取 Object (实体) 与 Morphism (关系) 拓扑。
-2. 映射推演：映射至 Domain B，引用定理推演方案并执行 Commutativity Check。
-3. 模块对齐：检测环境熵值，必要时挂载 monad_risk 评估风险。
+1. 1. 骨架提取：剥离业务语义，提取 Object (实体) 与 Morphism (关系) 拓扑。
+2. 2. 映射推演：映射至 Domain B，引用定理推演方案并执行 Commutativity Check。
+3. 3. 模块对齐：检测环境熵值，必要时挂载 monad_risk 评估风险。
 AVOID: 将隐喻直接当结论；新增缺乏基石验证的劣质领域。
 </strategy-gene>
 
 # Cognitive Morphism Mapper (范畴论跨界引擎 V9.0)
-
-基于范畴论的跨学科思维引擎。通过寻找异构领域的同构性，突破思维定势。目标是输出可检验的结构映射，而不是只给灵感型比喻。
 
 ## Tool Trajectory
 **[IN_ORDER]** 执行需遵循以下轨迹流：
@@ -26,7 +24,6 @@ AVOID: 将隐喻直接当结论；新增缺乏基石验证的劣质领域。
 2. `write_to_file` (输出包含 Commutativity Check 的最终跨界方案落地)
 
 ## 1. 核心流程与架构 (The Protocol)
-
 ### Phase 1: Extract (骨架提取)
 主代理分析用户输入，剥离表层业务语义，提取底层的 Objects (实体) 和 Morphisms (关系)，建立问题的初始拓扑图。
 

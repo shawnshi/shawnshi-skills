@@ -1,0 +1,55 @@
+{
+  "frontmatter": {
+    "name": "hit-weekly-brief",
+    "version": "9.0.0",
+    "tier": "action-allowed",
+    "description": "医疗行业战区研报中枢。聚合顶级智库研报并执行逆向对抗分析，识别被主流忽略的破坏性信号。禁止重复 14 天内的旧报，禁止保留无 ROI 支撑的公关废话或幻觉链接。",
+    "triggers": [
+      "生成数字健康周报",
+      "检索医疗行业报告",
+      "本周麦肯锡研报",
+      "扫描本周智库发文"
+    ]
+  },
+  "strategy_gene": {
+    "keywords": [
+      "数字健康周报",
+      "智库研报",
+      "二跳推理",
+      "跨界注入"
+    ],
+    "summary": "聚合顶级智库研报并执行逆向对抗分析，识别破坏性信号与共识幻觉。",
+    "strategy": [
+      "1. 四维扫描：并行调度策略、技术、政策、跨界（如FinTech）四条管线。",
+      "2. 织者关联：将零散预测串联为系统级规律，并与医疗 IT 实景结合。",
+      "3. 非共识对抗：寻找与主流研报相反的证据，识别“共识幻觉”。",
+      "4. 强硬落地：严格遵守 Signal->Insight->Action 框架。"
+    ],
+    "avoid": [
+      "重复提取 14 天前的旧闻；丢失跨界启发模块；未经验证直接写入图谱。"
+    ]
+  },
+  "title": "HIT Weekly Brief (行业战区周报 V8.2 Native)",
+  "trajectory": [
+    "`invoke_subagent` (并发拉起子代理扫描四大管线)",
+    "`call_mcp_tool` (检索图谱执行 14 天去重)",
+    "`write_to_file` (写入草稿沙盒)",
+    "`run_command` (跨平台防爆审计)",
+    "`write_to_file` (战报终稿落盘)",
+    "`call_mcp_tool` (高价值实体异步入湖)"
+  ],
+  "sections": [
+    {
+      "title": "1. 核心流程与架构 (The Protocol)",
+      "content": "### Phase 1: 四路并发原生沙盒扫描 (Concurrent Map-Reduce)\n1. **初始化调度**: 主代理调用 `invoke_subagent` 并发拉起 4 个 `research` 子代理，下发以下指令包：\n   - 顶级智库战略 (`Task_strategy.md`)\n   - 公卫与合规政策 (`Task_policy.md`)\n   - 医疗技术与架构 (`Task_tech.md`)\n   - 跨界技术架构注入 (`Task_serendipity.md`，寻找金融/物流/军工等同构启发)\n   - 指示子代理通过 `send_message` 以 JSON 格式回传结果。\n2. **图谱语义去重**: 回收数据后，调用 `call_mcp_tool` (`vector-lake-mcp`: `search_vector_lake`) 扫描 14 天历史进行去重。\n\n### Phase 2: 概念化用与图谱回溯 (Semantic Translation)\n1. **概念降维**: 解读非医疗报告时，将核心概念 1:1 翻译为医疗 IT 实景（如将“边缘计算”翻译为“床旁监护流式分析”）。\n2. **多跳关联**: 结合过往 HIS/EMR 架构案例，推演跨界逻辑在医疗业务线的可落地性。\n\n### Phase 3: Contrarian 对抗审计\n强制要求寻找一份与本周主推共识（如 McKinsey / Gartner 结论）完全相反的数据报告或专家评论，借此识别“共识幻觉”。\n\n### Phase 4: 全局缝合与跨平台防爆审计\n1. 渲染简报草稿，使用 `write_to_file` 写入隔离工作区 `<appDataDir>\\brain\\<conversation-id>\\scratch\\draft_hit_brief.md`。\n2. **防爆代码审查**: 调用跨平台审计脚本（挂载 UTF-8）：\n   ```powershell\n   $env:PYTHONIOENCODING=\"utf-8\"; python \"C:\\Users\\shich\\.gemini\\config\\skills\\scripts\\hit_audit_gate.py\" \"<appDataDir>\\brain\\<conversation-id>\\scratch\\draft_hit_brief.md\" --mode brief\n   ```\n3. 若审计不通过（如查出假链接、缺失非共识观点），退回修正重试。\n\n### Phase 5: 物理落盘与异步入湖 (Activate & Ingestion)\n1. 审计通过后，使用 `write_to_file` 落盘：\n   `C:\\Users\\shich\\.gemini\\MEMORY\\raw\\DigitalHealthWeeklyBrief\\DHWB-YYYYMMDD.md`\n2. **实体入湖**: 提取非共识观点等战略突变实体，调用 `call_mcp_tool` (`vector-lake-mcp`: `prepare_ingest_batch`) 抛入后台引擎。"
+    },
+    {
+      "title": "2. <Contracts> (输出与交付契约)",
+      "content": "- **S-I-A 框架契约**: 情报推演必须遵循 Signal(信号) -> Insight(洞察) -> Action(行动杠杆) 闭环。\n- **跨界强制契约**: 终稿中必须至少包含 1 个“非医疗行业”的跨界启发 (Serendipity)。\n- **真实元数据契约**: 所有引用链接必须经过真实验证，禁止遗留 `[URL]` 占位符。\n- **交付链接契约**: 战报生成后，必须向用户输出包含绝对物理路径的可点击 Markdown 链接。"
+    },
+    {
+      "title": "3. <Failure_Taxonomy> (失败分类学)",
+      "content": "- **幻觉与链接造假**: 终稿包含占位符 URL，未进行连通性验证。\n- **共识狂热**: 全篇顺应主流报告，未找到任何相反或对抗性的证据 (Contrarian)。\n- **工具越权**: 不使用合法 MCP 组合操作图谱，或写入错误的物理宏路径。\n- **水词泛滥**: 留存公关废话、主观吹捧且无 ROI 支撑的文字。"
+    }
+  ]
+}

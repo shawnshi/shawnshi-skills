@@ -10,16 +10,14 @@ triggers: ["复盘", "效率低", "系统绕弯路", "量化复盘", "执行 Ret
 Keywords: 系统复盘, Token 消耗, 协作摩擦, 联合审计, 自动固化
 Summary: 打通底层硬件算力损耗与顶层人机协作摩擦，基于客观遥测数据生成诊断报告，具备物理规则挂载能力。
 Strategy:
-1. 模式声明：进入 Mode 1 (Telemetry) 或 Mode 2 (Interaction)。
-2. 数据摄取：调用 Python 探针获取遥测数据（前置 UTF-8 编码锁）。
-3. 结构化输出：遵循 `references/SCHEMA.md` 生成包含协作摩擦模式与对齐策略的报告。
-4. 规则固化：若需要，根据推演使用 `multi_replace_file_content` 挂载防御围栏。
+1. 1. 模式声明：进入 Mode 1 (Telemetry) 或 Mode 2 (Interaction)。
+2. 2. 数据摄取：调用 Python 探针获取遥测数据（前置 UTF-8 编码锁）。
+3. 3. 结构化输出：遵循 `references/SCHEMA.md` 生成包含协作摩擦模式与对齐策略的报告。
+4. 4. 规则固化：若需要，根据推演使用 `multi_replace_file_content` 挂载防御围栏。
 AVOID: 凭空编造遥测数据；空泛复盘；死锁强制修改。
 </strategy-gene>
 
 # Mentat Collaboration Audit (联合审计管线 V12.0 Native)
-
-这是系统最高级别的防线。你必须像一台冷酷的心电图监护仪，通过客观遥测数据宣判系统熵增，并有权挂载系统防御围栏。
 
 ## Tool Trajectory
 **[IN_ORDER]** 执行需遵循以下轨迹流：
@@ -34,7 +32,6 @@ AVOID: 凭空编造遥测数据；空泛复盘；死锁强制修改。
 必须在回复的第一步显式声明：`[System State: Mode X]`。
 
 ## 1. 核心流程与架构 (The Protocol)
-
 ### Mode 1: Telemetry
 1. **带锁调用探针**: 使用 `run_command` 调用外部脚本采集数据，必须使用绝对路径：
    ```powershell
@@ -60,14 +57,12 @@ AVOID: 凭空编造遥测数据；空泛复盘；死锁强制修改。
 5. **物理围栏挂载 (Active Constraint Enforcement)**：若 JSON 中包含有效的 `auto_constraint_writeback` 提议，必须主动调用 `multi_replace_file_content` 原子修改目标文件。若遇到死锁，记录至 `rejected_edits.jsonl` 以免反复受阻。
 
 ## Resources
-
 - **核心数据泵引擎**: `scripts/core/engine.py`
 - **顶层数据提取/渲染器**: `scripts/analyze_insights_v4.py`
 - **JSON 校验器**: `scripts/validate_agent_audit.py`
 - **统一 JSON 输出 Schema 契约**: `references/SCHEMA.md`
 
 ## 2. <Contracts> (输出与交付契约)
-
 - **落盘报告**: 无论模式，最终 Markdown 报告必须通过 `write_to_file` 物理落盘至：`C:\Users\shich\.gemini\MEMORY\skill_audit\audit_logs\mentat-collaboration-audit-[YYYY-MM-DD].md`。
 - **交付链接契约**: 报告落盘后，通过聊天框向用户输出可点击的 Markdown 链接（例如：`[系统协作审计报告](file:///C:/Users/shich/.gemini/MEMORY/skill_audit/audit_logs/...)`）。
 - **无幻觉验证**: 必须读取真实的 telemetry data。禁止凭空捏造指标。
@@ -75,7 +70,6 @@ AVOID: 凭空编造遥测数据；空泛复盘；死锁强制修改。
 - **Telemetry 记录**: 报告落盘后必须使用 `write_to_file` 将执行状态写入隔离沙盒：`<appDataDir>\brain\<conversation-id>\scratch\telemetry.json` (格式：`{"skill_name": "mentat-collaboration-audit", "status": "success", "mode": "[Telemetry|Interaction]"}`)
 
 ## 3. <Failure_Taxonomy> (失败分类学)
-
 - **路径死锁 (Pathing Deadlock)**：未采用绝对物理路径调用脚本或进行读写操作。JSON 临时文件写在全局目录而非隔离的 `<appDataDir>\brain\<conversation-id>\scratch\`。
 - **工具滥用 (Tool Hallucination)**：尝试使用不存在的工具，或直接以纯文本输出冗长的遥测数据。
 - **脚本失效处理不当**：如果探针崩溃，未能主动寻找近期缓存进行替代分析，导致流程中断。

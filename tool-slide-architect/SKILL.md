@@ -10,16 +10,14 @@ triggers: ["写个PPT", "做个幻灯片大纲", "Ghost Deck", "幻灯片蓝图"
 Keywords: 幻灯片蓝图, Ghost Deck, SCR框架, MECE金字塔, 视觉克制, 讲稿生成, 结构化布局
 Summary: 生产咨询与发布会级别的复合型 PPT 蓝图。将散乱信息通过 SCR 框架压制为判词驱动的骨架，输出全息四维大纲。
 Strategy:
-1. 需求澄清：对齐受众、目的与约束。
-2. 架构输出：每页必须遵循 NARRATIVE GOAL, KEY CONTENT, VISUAL DIRECTIVE, Script 四大模块。
-3. 视觉克制：强制白/浅灰底色，强调色严格受限。
-4. 微批次防衰减：长篇内容分 `chunk_*.md` 写入。
+1. 1. 需求澄清：对齐受众、目的与约束。
+2. 2. 架构输出：每页必须遵循 NARRATIVE GOAL, KEY CONTENT, VISUAL DIRECTIVE, Script 四大模块。
+3. 3. 视觉克制：强制白/浅灰底色，强调色严格受限。
+4. 4. 微批次防衰减：长篇内容分 `chunk_*.md` 写入。
 AVOID: 满篇 Bullet Points；脱离图表指导的大段文字。
 </strategy-gene>
 
 # Tool Slide Architect (全息高管幻灯片蓝图引擎 V12.0 Native)
-
-> **Vision**: Narrative is the asset. Action-title chains carry the deck. 本技能锻造无死角的商业决策蓝图包（Blueprint Package），将麦肯锡的极简逻辑与发布会级别的视觉/讲稿指导完美融合。
 
 ## Tool Trajectory
 **[IN_ORDER]** 执行需遵循以下轨迹流：
@@ -28,7 +26,6 @@ AVOID: 满篇 Bullet Points；脱离图表指导的大段文字。
 3. `run_command` (执行校验与组装打包)
 
 ## 1. 核心流程与架构 (The Protocol)
-
 ### Phase 1: Clarification & Design Probe
 1. **Clarification Gate**: 明确听众、核心诉求、篇幅。
 2. **[DESIGN LOCK]**: 调用 `view_file` 读取 `C:\Users\shich\.gemini\pai\DESIGN.md`，执行大面积留白与高亮色的色彩约束。
@@ -70,8 +67,8 @@ Accent: Primary #005EB8
 2. **[GLOBAL STYLE DEFINITION]**: 在最终输出的最顶端（或 `chunk_1.md`），包含以下全局视觉风格声明：
 
 ```markdown
-## 1. 视觉风格指令 (Style Instructions)
 
+## 1. 视觉风格指令 (Style Instructions)
 <STYLE_INSTRUCTIONS>
 
 Design Aesthetic: [基于主题定制的风格，如：包豪斯工业风、未来主义医疗风等]

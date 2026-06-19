@@ -10,16 +10,14 @@ triggers: ["医疗战略", "IT深度咨询", "ROI测算", "董事会备忘录", 
 Keywords: 医疗 IT 战略, 深度咨询, ROI 测算, 商业模式重构
 Summary: 利用黑板状态机执行五层价值链分析，交付可验证、抗压测的战略资产。
 Strategy:
-1. 黑板优先：核心判断写入 strategy_blackboard.json。
-2. 二跳推理：从政策信号推演至架构变化与实施后果。
-3. 悲观压测：在预算削减场景下验证方案成立性。
-4. 图谱双链：对核心专有名词使用 `[[ ]]` 硬链接并沉淀入湖。
+1. 1. 黑板优先：核心判断写入 strategy_blackboard.json。
+2. 2. 二跳推理：从政策信号推演至架构变化与实施后果。
+3. 3. 悲观压测：在预算削减场景下验证方案成立性。
+4. 4. 图谱双链：对核心专有名词使用 `[[ ]]` 硬链接并沉淀入湖。
 AVOID: 绕过黑板直接起草；未通过结果门校验即交付；无视 Logic Lake 记忆。
 </strategy-gene>
 
 # HIT Digital Strategy Partner (顶级医疗数字化战略专家 V8.2.2 Native)
-
-工业级医疗数字化战略决策支持系统。目标不是一次性写出漂亮长文，而是把战略判断锻造成有状态、有证据、有结果门的固态资产。
 
 ## Tool Trajectory
 **[IN_ORDER]** 执行需遵循以下轨迹流：
@@ -31,7 +29,6 @@ AVOID: 绕过黑板直接起草；未通过结果门校验即交付；无视 Log
 6. `run_command` (合并报告、合规审计、入湖沉淀)
 
 ## 1. 核心流程与架构 (The Protocol)
-
 ### Phase 0: Alignment & Logic Lake Boot [PLANNING]
 1. 确认项目边界（受众、预算、抗压焦点、目标模式）。
 2. **图谱检索防呆**: 主代理调用 `call_mcp_tool` (`vector-lake-mcp`: `query_logic_lake`) 执行历史判断拉取与语义拦截。

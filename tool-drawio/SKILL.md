@@ -10,17 +10,15 @@ triggers: ["画图", "架构图", "流程图", "可视化一下", "出图"]
 Keywords: 架构图, 流程图, SVG, 渲染引擎
 Summary: 将复杂系统通过结构化 JSON 降维，交由底层 Python 引擎渲染为高清资产。
 Strategy:
-1. 意图解析：确定图表类型，选取 7 大视觉厂牌。
-2. 领域先验：根据架构流派规范规划横纵向布局。
-3. 数据剥离：生成包含 `nodes` 和 `arrows` 的结构化语义 JSON。
-4. 原生调用：利用 `run_command` 调用底层渲染引擎。
-5. 后期微调：利用 `corridor_x/y` 和 `source/target_port` 微调穿模线条。
+1. 1. 意图解析：确定图表类型，选取 7 大视觉厂牌。
+2. 2. 领域先验：根据架构流派规范规划横纵向布局。
+3. 3. 数据剥离：生成包含 `nodes` 和 `arrows` 的结构化语义 JSON。
+4. 4. 原生调用：利用 `run_command` 调用底层渲染引擎。
+5. 5. 后期微调：利用 `corridor_x/y` 和 `source/target_port` 微调穿模线条。
 AVOID: 绕过 JSON 引擎强行手写 XML；中心点不对齐导致的错位渲染。
 </strategy-gene>
 
 # SVG 架构渲染仪 (JSON-Driven Engine V9.0 Native)
-
-> **Vision**: 语义与渲染的绝对解耦。大模型只负责思考高维度的商业/技术架构拓扑（JSON）和箭头排障策略，绝对精准的视觉排版则交给原生的 Python 引擎。
 
 ## Tool Trajectory
 **[IN_ORDER]** 执行需遵循以下轨迹流：
@@ -28,7 +26,6 @@ AVOID: 绕过 JSON 引擎强行手写 XML；中心点不对齐导致的错位渲
 2. `run_command` (执行 generate-from-template.py 渲染 SVG)
 
 ## 1. 核心流程与架构 (The Protocol)
-
 ### Phase 1: 确定架构流派与布局范式
 - **Architecture Diagram**: 服务/组件。推荐自顶向下或从左到右分层。使用 `<rect>` 作为大容器包含子系统。
 - **Data Flow Diagram**: 强调数据流转。主链路 `flow: "data"`，触发链路 `flow: "control"`。
@@ -64,7 +61,6 @@ $env:PYTHONIOENCODING="utf-8"; python "C:\Users\shich\.gemini\config\skills\tool
 *(注：`1` 代表 Flat Icon 风格，可选 `1`-`7`)*
 
 ## 2. <Domain_Knowledge> (高级语义字典)
-
 ### Style Engine 厂牌库
 - `1`: Flat Icon (现代扁平风)
 - `2`: Dark Terminal (暗黑极客风)

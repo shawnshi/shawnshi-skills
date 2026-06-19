@@ -10,25 +10,22 @@ triggers: ["画图", "生成图片", "设计海报", "生成封面"]
 Keywords: 生成图片, 画图, Mondo风格, 海报设计, nanobanana, 端到端绘图
 Summary: 视觉资产的无缝生成闭环。打通了 image-promp-gen 与 image-nano-gen。
 Strategy:
-1. 意图路由：根据用户输入长度与复杂度，决定是走 [Alchemy Mode] 还是 [Raw Mode]。
-2. Alchemy Mode（炼金模式）：遇到模糊指令（如“画个赛博朋克海报”），必须先调用 Mondo 脚本生成大师级提示词，然后拿到返回值**无缝直接送入**物理生成引擎，中间严禁停顿询问。
-3. Raw Mode（透传模式）：遇到成熟的 Prompt，严格遵守 100% 零干预底线，不加任何废话，直连生成引擎。
-4. 物理闭环：最终产物必须落盘于本地指定目录，并返回物理绝对路径供用户点击。
+1. 1. 意图路由：根据用户输入长度与复杂度，决定是走 [Alchemy Mode] 还是 [Raw Mode]。
+2. 2. Alchemy Mode（炼金模式）：遇到模糊指令（如“画个赛博朋克海报”），必须先调用 Mondo 脚本生成大师级提示词，然后拿到返回值**无缝直接送入**物理生成引擎，中间严禁停顿询问。
+3. 3. Raw Mode（透传模式）：遇到成熟的 Prompt，严格遵守 100% 零干预底线，不加任何废话，直连生成引擎。
+4. 4. 物理闭环：最终产物必须落盘于本地指定目录，并返回物理绝对路径供用户点击。
 AVOID: 严禁在炼金模式生成提示词后停下来反问用户“您看这样可以吗？”；严禁编造虚假的文件路径。
 </strategy-gene>
 
 # Image Studio Architect (端到端视觉资产工厂 V9.0 Native)
 
-> **Vision**: 告别断裂的“先写提示词再画图”流程。不管用户输入的是一句模糊的梦话，还是一段硬核的咒语，系统都会全自动将其转化为最终的物理图片产物。
-
 ## Tool Trajectory
-**[IN_ORDER]** 本技能的执行必须依序匹配以下核心调用流：
+**[IN_ORDER]** 执行需遵循以下轨迹流：
 1. `run_command` (可选，Alchemy Mode下执行 `generate_mondo.py`)
 2. `run_command` (调用 `generate.py` 执行最终渲染；如无原生脚本则降级使用原生 `generate_image`)
 3. `write_to_file` (写入 `record_[TIMESTAMP].json` 遥测数据)
 
 ## 1. 核心流程与架构 (The Protocol)
-
 ### 0. 模式路由 (Mode Routing)
 When invoked, instantly evaluate the user's prompt:
 - **[Raw Mode (零干预透传)]**: The user provides a highly detailed prompt (>20 words) or explicitly says "按原样生成/严格按我说的画". -> **Skip to Phase 2**.

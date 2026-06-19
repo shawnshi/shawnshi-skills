@@ -10,34 +10,36 @@ triggers: ["心率", "睡眠", "压力", "HRV", "身体电量", "健康审计", 
 Keywords: 生理健康审计, 执行带宽, 系统动量, Garmin Flu
 Summary: 提取临床级生理指标并执行耗散结构分析，判定当前系统的认知准备度。
 Strategy:
-1. 同步先行：执行前必须隐式运行 sync_health_data.py 确保数据时效与 429 降级安全。
-2. 动量诊断：计算 RHR 与 Stress 的 Delta 差值，判定系统处于超量恢复还是熵增。
-3. 分级输出：微观问题 < 50 字指令；日结给出四层文本简报；长程战略强制 HTML 大屏。
+1. 1. 同步先行：执行前必须隐式运行 sync_health_data.py 确保数据时效与 429 降级安全。
+2. 2. 动量诊断：计算 RHR 与 Stress 的 Delta 差值，判定系统处于超量恢复还是熵增。
+3. 3. 分级输出：微观问题 < 50 字指令；日结给出四层文本简报；长程战略强制 HTML 大屏。
 AVOID: 绝对禁止编造生理数据；本地库缺失时严禁静默 fallback（Fail-Fast）；禁止跳过 Phase 0 同步。
 </strategy-gene>
 
 # Personal Health Analysis (CMO Level V9.0 Native)
 
-本技能定位为“高管专属的前置医疗防线与战略决策引擎”，采用 **GEB-Flow V2.0** 架构进行全链路审计：通过本地物理数据湖 (GarminDB) 实现毫秒级查询，配合高级生理智能分析判定认知准备度与代谢摩擦。
-
 ## Tool Trajectory
 **[IN_ORDER]** 执行需遵循以下轨迹流：
-1. un_command (强制执行 sync_health_data.py)
-2. un_command (提取核心指标或调用智能诊断脚本)
-3. un_command (可选：生成大屏或长程视图)
-4. write_to_file (写入遥测沙盒数据)
+1. 
+2. un_command (强制执行 sync_health_data.py)
+3. 
+4. un_command (提取核心指标或调用智能诊断脚本)
+5. 
+6. un_command (可选：生成大屏或长程视图)
+7. write_to_file (写入遥测沙盒数据)
 
 ## 1. 核心流程与架构 (The Protocol)
-
 主代理必须严格按照以下阶段线性推进：
 
 ### Phase 0: Data Sync & Pre-flight (同步先行)
-- **强制动作**: 在做任何分析前，主代理必须使用原生 un_command 执行同步脚本尝试更新本地数据湖。
+- **强制动作**: 在做任何分析前，主代理必须使用原生 
+un_command 执行同步脚本尝试更新本地数据湖。
   $env:PYTHONIOENCODING="utf-8"; python "C:\Users\shich\.gemini\config\skills\personal-health-analysis\scripts\sync_health_data.py"
 - **降级防线**: 如果遇到 API 429 限流报错，系统会自动转入本地 SQLite 库进行审计（读取历史快照）。
 
 ### Phase 1: Precision Data Extraction (核心数据提取)
-根据用户的提问深度，使用原生 un_command 调用对应的工具箱（带上 UTF-8 编码锁）。
+根据用户的提问深度，使用原生 
+un_command 调用对应的工具箱（带上 UTF-8 编码锁）。
 - **单项指标**: $env:PYTHONIOENCODING="utf-8"; python "C:\Users\shich\.gemini\config\skills\personal-health-analysis\scripts\garmin_data.py" [sleep|hrv|heart_rate|body_battery|stress] --days 7
 - **综合摘要**: $env:PYTHONIOENCODING="utf-8"; python "C:\Users\shich\.gemini\config\skills\personal-health-analysis\scripts\garmin_data.py" summary --days 7
 - **准备度查询**: $env:PYTHONIOENCODING="utf-8"; python "C:\Users\shich\.gemini\config\skills\personal-health-analysis\scripts\garmin_intelligence.py" readiness --days 1

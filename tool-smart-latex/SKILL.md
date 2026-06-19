@@ -3,37 +3,36 @@ name: tool-smart-latex
 version: 9.0.0
 tier: action-allowed
 description: '自动化出版与 LaTeX 引擎。当用户要求“Markdown 转 LaTeX”、“生成科研级 PDF”、“排版精美公式报告”或需要“期刊投稿格式”时，务必调用。该技能支持 IEEE、CV、书稿等 5 大专业模板，交付工业级排版结果。'
-triggers: ["将Markdown转为LaTeX", "将M文件转为LaTeX","生成科研级PDF排版", "套用IEEE模板渲染文档", "输出精美的公式报告", "转换这篇报告为专业期刊格式"]
+triggers: ["将Markdown转为LaTeX", "将M文件转为LaTeX", "生成科研级PDF排版", "套用IEEE模板渲染文档", "输出精美的公式报告", "转换这篇报告为专业期刊格式"]
 ---
 
 <strategy-gene>
 Keywords: Markdown 转 LaTeX, 科研 PDF, 期刊排版, 公式报告
 Summary: 将 Markdown 或结构化内容排版为专业 LaTeX/PDF 文档。
 Strategy:
-1. 确认目标模板、语言、公式密度和输出格式。
-2. 生成或转换 LaTeX 结构，并套用对应出版模板。
-3. 编译检查版式、公式、引用、目录和字体。
+1. 1. 确认目标模板、语言、公式密度和输出格式。
+2. 2. 生成或转换 LaTeX 结构，并套用对应出版模板。
+3. 3. 编译检查版式、公式、引用、目录和字体。
 AVOID: 禁止未编译就声称完成；禁止破坏公式或引用结构。
 </strategy-gene>
 
 # Smart Doc LaTeX (自动化出版引擎 V9.0 Native)
 
-> **Vision**: 自动化出版引擎，将普通文档转换为专业排版的 PDF。如果有需要，强制向用户提供选项框来确认目标样式。
-
 ## Tool Trajectory
 **[IN_ORDER]** 执行需遵循以下轨迹流：
-1. un_command (调用 smart_engine.py 进行转换与编译)
-2. write_to_file (写入执行遥测)
+1. 
+2. un_command (调用 smart_engine.py 进行转换与编译)
+3. write_to_file (写入执行遥测)
 
 ## 1. 核心流程与架构 (The Protocol)
-
 ### Phase 1: Style Selection (样式选择)
 *   **Explicit**: 如果用户明确说明用途（如"生成简历"），请显式指定 --style cv。
 *   **Implicit**: 如果用户仅要求"转为 PDF"，使用默认的 uto 让引擎自动探测。
 *   支持样式：cademic, cv, 	ech_report, ook, 	ech_book。
 
 ### Phase 2: Engine Execution (核心引擎调用)
-统一入口，适用于大多数文档转换场景。使用 un_command 执行：
+统一入口，适用于大多数文档转换场景。使用 
+un_command 执行：
 `ash
 $env:PYTHONIOENCODING="utf-8"; python "C:\Users\shich\.gemini\config\skills\tool-smart-latex\scripts\smart_engine.py" --input <input_file> [OPTIONS]
 `

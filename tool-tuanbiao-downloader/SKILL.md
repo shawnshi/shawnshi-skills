@@ -10,23 +10,21 @@ triggers: ["批量下载这组团体标准", "爬取特定编号的国标生成P
 Keywords: 团体标准, 标准下载, PDF 合并, 标准编号
 Summary: 根据标准编号或批量任务解析并获取团体标准文档。
 Strategy:
-1. 解析标准编号、组织、版本和下载范围。
-2. 使用脚本执行 ID 解析、下载、校验和合并。
-3. 返回文件路径、成功清单和失败编号。
+1. 1. 解析标准编号、组织、版本和下载范围。
+2. 2. 使用脚本执行 ID 解析、下载、校验和合并。
+3. 3. 返回文件路径、成功清单和失败编号。
 AVOID: 禁止把未下载成功的标准标为完成；禁止混淆标准版本。
 </strategy-gene>
 
 # Tool Tuanbiao Downloader (Strategic Edition V9.0 Native)
 
-> **Vision**: 高效的标准文件采集工具，支持全自动化 ID 解析与 PDF 生成。本技能聚焦标准文件抓取和合并，不负责标准内容解读。
-
 ## Tool Trajectory
 **[IN_ORDER]** 执行需遵循以下轨迹流：
-1. un_command (调用 downloader.py 抓取与合并)
-2. write_to_file (落盘遥测数据)
+1. 
+2. un_command (调用 downloader.py 抓取与合并)
+3. write_to_file (落盘遥测数据)
 
 ## 1. 核心流程与架构 (The Protocol)
-
 ### Phase 1: Pre-flight Check (环境检查)
 执行前请确认依赖：
 `ash
@@ -34,7 +32,8 @@ $env:PYTHONIOENCODING="utf-8"; pip install -r "C:\Users\shich\.gemini\config\ski
 `
 
 ### Phase 2: Execution (执行)
-直接提供 **Path ID** 或 **预览 URL**，强制使用 un_command 运行并挂载编码锁：
+直接提供 **Path ID** 或 **预览 URL**，强制使用 
+un_command 运行并挂载编码锁：
 `ash
 $env:PYTHONIOENCODING="utf-8"; python "C:\Users\shich\.gemini\config\skills\tool-tuanbiao-downloader\scripts\downloader.py" <ID_OR_URL>
 `

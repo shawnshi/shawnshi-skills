@@ -10,32 +10,32 @@ triggers: ["播放音乐", "听歌", "放点歌", "切换歌单", "背景音乐"
 Keywords: MusicBee, 播放音乐, playlist, focus music
 Summary: 控制本地 MusicBee 播放和歌单切换，服务即时场景氛围。
 Strategy:
-1. 判断用户想打开、播放、切换歌单还是按情绪选曲。
-2. 使用本地可用控制路径执行播放动作。
-3. 若控制失败，报告进程、路径或权限问题。
+1. 1. 判断用户想打开、播放、切换歌单还是按情绪选曲。
+2. 2. 使用本地可用控制路径执行播放动作。
+3. 3. 若控制失败，报告进程、路径或权限问题。
 AVOID: 禁止假装已经播放；禁止随意改动音乐库文件。
 </strategy-gene>
 
 # Personal MusicBee DJ (音乐点播与场域渲染 V9.0 Native)
 
-本技能将用户模糊的听歌意图、场景氛围（如 focus, coding, relax）转化为精准的本地 MusicBee 播放指令，并拉起物理端的音频进程。
-
 ## Tool Trajectory
 **[IN_ORDER]** 执行需遵循以下轨迹流：
-1. un_command (调用专属的本地 CLI 脚本拉起物理进程)
-2. write_to_file (落盘遥测数据)
+1. 
+2. un_command (调用专属的本地 CLI 脚本拉起物理进程)
+3. write_to_file (落盘遥测数据)
 
 ## 1. 核心流程与架构 (The Protocol)
-
 ### Phase 1: Intent Resolution (意图解析)
 解析用户的需求，提取出必须要传给控制脚本的 3 个参数：
 - 	ype: 必须是 genre | scene | playlist
 - alue: 具体请求的流派、场景名称或歌单名。
-  *(推荐内置场景/Scene包括: ocus, elax, nergy, coding, pop。若用户给出了非标场景，必须走语义回退/Semantic Fallback就近映射。)*
+  *(推荐内置场景/Scene包括: ocus, 
+elax, nergy, coding, pop。若用户给出了非标场景，必须走语义回退/Semantic Fallback就近映射。)*
 - intensity: 必须是 high | normal | low
 
 ### Phase 2: Execution (拉起播放器)
-必须使用原生 un_command 工具调用专属本地 CLI 脚本。执行前必须挂载跨平台数据流保护锁，并**绝对使用物理硬编码路径**：
+必须使用原生 
+un_command 工具调用专属本地 CLI 脚本。执行前必须挂载跨平台数据流保护锁，并**绝对使用物理硬编码路径**：
 `powershell
 $env:PYTHONIOENCODING="utf-8"; python "C:\Users\shich\.gemini\config\skills\personal-musicbee-dj\src\cli.py" --type <type> --value "<value>" --intensity <intensity>
 `

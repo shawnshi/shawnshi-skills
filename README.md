@@ -1,4 +1,4 @@
-# Skills Ecosystem: The Strategic Armory (V9.0 - Swarm & Routing Edition)
+# Skills Ecosystem: The Strategic Armory (V9.1 - IR Native Edition)
 
 <!-- 
 @Pos: Root Level / Knowledge Sovereign 
@@ -17,29 +17,26 @@
 - **Native 工具合规**：废除 un_shell_command 与 write_file。全面切入抗死锁的 un_command 与 write_to_file。
 - **环境安全锁**：所有调用本地 Python 的进程，强制在同一命令栈内前置挂载 $env:PYTHONIOENCODING="utf-8"，彻底杜绝跨平台中文字符集引发的进程截断。
 
-### B. 逻辑层：GEP V4.0 纪律约束 (Logic)
-- **架构压缩**：彻底推平旧时代的松散八段式模板（如 Workflow, Resources, Telemetry 等）。
-- 所有的 SKILL.md 必须严丝合缝地凝练入以下三大装甲防线：
-  1. ## 1. 核心流程与架构 (The Protocol)：执行路径与断点控制。
-  2. ## 2. <Contracts> (输出与交付契约)：不容妥协的质量底线、语义映射与美学原则。
-  3. ## 3. <Failure_Taxonomy> (失败分类学 / 逻辑硬锁)：枚举并阻断所有的沙盒塌陷点、系统幻觉与行为越轨。
+### B. 逻辑层：IR Native 与绝对数据锁 (Logic)
+- **IR 态与编译锁**：所有技能已被重铸为 IR (Intermediate Representation) 态。`SKILL.md` 现为只读编译产物，**绝对禁止大模型直接覆写 `SKILL.md`！** 任何修改必须针对目录下的 `skill.json` 执行，并由 `render_skill.py` 热编译生成。
+- **架构压缩**：彻底推平旧时代的松散八段式模板。所有的 `skill.json` 必须严丝合缝地凝练入三大装甲防线：
+  1. `trajectory`: 核心流程与执行路径。
+  2. `sections`: 输出与交付契约。
+  3. `strategy_gene.avoid`: 失败分类学与行为越轨阻断。
 
 ### C. 执行层：负熵交互与 OODA 闭环 (Execution)
 - **脑暴倾倒 + 断点门控**：采用高带宽初始输入 + 幽灵骨架（Ghost Deck / Shadow Draft）进行断点阻击，未获人类批准前严禁进行不可逆的生成消耗。
 - **降维图谱探针**：所有的核心推演动作，在动笔前必须通过 call_mcp_tool 探查 ector-lake-mcp 以获取商业真相与图谱实体，严禁依靠大模型权重凭空瞎编。
+- **降维图谱探针**：所有的核心推演动作，在动笔前必须通过 call_mcp_tool 探查  ector-lake-mcp 以获取商业真相与图谱实体，严禁依靠大模型权重凭空瞎编。
 
 ### D. 进化层：自愈能力与证据网 (Evolution)
 - **失效先验**：将曾经导致任务溃败的代码报错与死锁幻觉，打入 <Failure_Taxonomy> 作为系统级免疫记忆。
 - **证据网 (Evidence-Mesh)**：分析类资产必须执行物理归档，将其使用 write_to_file 永久写入 MEMORY 或本地知识图谱。
 
 ## 2. 标准结构 (Standard Skill Shape)
-新建或重构技能时，必须完全对齐 **GEP V4.0**。旧版 epair_skills.ps1 中的 6 段式验证将被弃用，新结构强制校验以下三块核心板：
+新建或重构技能时，必须完全对齐 **V9.1 IR 规范**。禁止直接创建 `SKILL.md`，必须通过生成合规的 `skill.json` 触发编译链。
 
-1. ## 1. 核心流程与架构
-2. ## 2. <Contracts>
-3. ## 3. <Failure_Taxonomy>
-
-任何依旧包含 ## Telemetry、## Workflow 游离章节的技能，将被雷达判定为“架构漂移”并标记为待清剿的遗留废料。
+任何依旧包含旧版 `## Telemetry`、`## Workflow` 游离章节的技能，将被雷达判定为“架构漂移”并标记为待清剿的遗留废料。
 
 ## 3. 核心分类矩阵 (Core Skill Hierarchy)
 
@@ -131,7 +128,7 @@
 
 | 技能标识 (Directory) | 核心本质 (Trigger Traps) |
 | :--- | :--- |
-| **[tencent-meeting-mcp](tencent-meeting-mcp/)** | **腾讯会议 MCP 服务**。会议调度、录制转写搜索。 |
+| **[tencent-meeting-mcp](tencent-meeting-mcp/)** | **腾讯会议 CLI/MCP 服务**。底层采用 tmeet 引擎，通过游标分页强制控制会议录制与纪要搜寻。 |
 | **[tool-document-summarizer](tool-document-summarizer/)** | **医疗文档战略情报引擎 (Native Edition)**。本体驱动的精确语义压榨。 |
 | **[tool-markdown-converter](tool-markdown-converter/)** | **Markdown 原质炼金术 (Native Edition)**。异构文件 MarkItDown 标准化转换。 |
 | **[tool-tts](tool-tts/)** | **高保真导演级播报系统 (Native Edition)**。多角色 Audio Tags 控制与双轨降级。 |
@@ -139,5 +136,4 @@
 | **[tool-url-markdown](tool-url-markdown/)** | **CDP 网页原质提取器 (Native Edition)**。JS 强对抗与断点防穿模。 |
 | **[tool-youtube-summary](tool-youtube-summary/)** | **深度知识同构引擎 (Native Edition)**。YouTube 与长文核心提取、降噪落盘。 |
 
----
-*Last Global Audit: 2026-06-18 | Version: 9.0.0 (Swarm & Routing Edition) | System State: Locked*
+*Last Global Audit: 2026-06-19 | Version: 9.1.0 (IR Native Edition) | System State: 100% IR Covered & Locked*
