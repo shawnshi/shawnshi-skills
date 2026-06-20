@@ -40,7 +40,7 @@
 
 ## 3. 核心分类矩阵 (Core Skill Hierarchy)
 
-> **Total Inventory: 48 Strategic Modules across 8 Domains**
+> **Total Inventory: 50 Strategic Modules across 8 Domains**
 
 ### 🧠 深度认知与研究工作台 (Cognitive Research)
 *底层思考工具箱：需求脱水、战略审计、红蓝对抗与情报分析。*
@@ -93,6 +93,8 @@
 | **[tool-web-slide](tool-web-slide/)** | **电子杂志风网页 PPT 引擎 (Native Edition)**。HTML 单文件演示资产。 |
 | **[tool-smart-latex](tool-smart-latex/)** | **自动化出版 LaTeX 引擎 (Native Edition)**。IEEE/CV 工业级排版。 |
 | **[tool-drawio](tool-drawio/)** | **SVG 架构渲染仪 (Native Edition)**。纯 Python List 原生防爆注入与 UML 挂载。 |
+| **[tool-text-forger](tool-text-forger/)** | **文字锻造师 (Native Edition)**。三重淬炼与意图锚定，强制呈现前后对比洞察。 |
+| **[tool-blogger-publisher](tool-blogger-publisher/)** | **工业级 HTML 排版引擎 (V3.0 Edition)**。内联防御性样式，内置思维链与优雅降级。 |
 
 ### 💼 商业洞察与投资顾问 (Marketing & Finance)
 *二级市场分析与商业价值变现。*
@@ -136,4 +138,4 @@
 | **[tool-url-markdown](tool-url-markdown/)** | **CDP 网页原质提取器 (Native Edition)**。JS 强对抗与断点防穿模。 |
 | **[tool-youtube-summary](tool-youtube-summary/)** | **深度知识同构引擎 (Native Edition)**。YouTube 与长文核心提取、降噪落盘。 |
 
-*Last Global Audit: 2026-06-19 | Version: 9.1.0 (IR Native Edition) | System State: 100% IR Covered & Locked*
+*Last Global Audit: 2026-06-20 | Version: 9.2.0 (IR Native Edition) | System State: 100% IR Covered & Locked*
