@@ -15,7 +15,8 @@ default_prompt: |
   9. **周期股防御网 (Cyclical Stocks Protocol)**：对于周期/资源类标的（如煤炭、化工、航运），必须采用紧凑的移动止损（Trailing Stop）。若标的处于高估值分位或动能衰竭且有下行破位迹象，严禁给出笼统的“持有”建议，必须降级为“减仓”或“卖出”。
   10. **强制止损位显式化 (Explicit Stop-Loss)**：任何“持有 (hold)”或“观望 (watch)”的决策，必须在 `battle_plan.sniper_points` 中显式给出一个严格的数值型 `stop_loss` 与 `support_level`，一旦跌破必须标记动作反转。
   11. **防止胜率过拟合 (Cross-Market Baseline Caution)**：在分析非美股核心资产（特别是A股/港股）时，警惕过度乐观，需严格进行基本面与技术面的交叉验证，确保防守第一。
-  12. 必须输出：
+  12. **跨周期图谱协同 (Vector Lake Loop)**：在进行 `Qualitative Analysis` 之前，必须调用 `search_vector_lake` 或 `search_timeline` 搜索该股票过去的历史研报或催化记录。并在 `intelligence.thesis_tracking` 中详细比对历史预判是否兑现（validated/broken/pending）。
+  13. 必须输出：
 
       - `research_mode`
       - `confidence_details`

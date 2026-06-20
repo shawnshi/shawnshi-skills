@@ -319,6 +319,16 @@ def compute_summary(history) -> Optional[Dict[str, Any]]:
     rs = avg_gain / avg_loss.replace(0, float('nan'))
     rsi_14 = 100 - (100 / (1 + rs))
 
+    # ATR-14
+    high = history['High']
+    low = history['Low']
+    prev_close = closes.shift(1)
+    tr1 = high - low
+    tr2 = (high - prev_close).abs()
+    tr3 = (low - prev_close).abs()
+    tr = pd.concat([tr1, tr2, tr3], axis=1).max(axis=1)
+    atr_14 = tr.rolling(window=14, min_periods=1).mean()
+
     return {
         "period_return_pct": round((last_close - first_close) / first_close * 100, 2),
         "max_drawdown_pct": round(float(max_drawdown), 2),
@@ -339,6 +349,7 @@ def compute_summary(history) -> Optional[Dict[str, Any]]:
         "macd_dea": round(float(macd_dea.iloc[-1]), 4),
         "macd_hist": round(float(macd_hist.iloc[-1]), 4),
         "rsi_14": round(float(rsi_14.iloc[-1]), 2) if pd.notna(rsi_14.iloc[-1]) else None,
+        "atr_14": round(float(atr_14.iloc[-1]), 4) if pd.notna(atr_14.iloc[-1]) else None,
     }
 
 

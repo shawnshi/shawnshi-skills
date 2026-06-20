@@ -85,9 +85,16 @@ def validate_math_consistency(data: dict) -> list[str]:
             errors.append("resistance_level cannot be below current_price")
         if stop_loss is not None and support is not None and stop_loss > support:
             errors.append("stop_loss should not be above support_level")
-        if stop_loss is not None and current_price is not None and stop_loss >= current_price:
+        
+        atr = _to_float(_get_nested(data, ["dashboard", "data_perspective", "atr_14"]))
+        if stop_loss is not None and current_price is not None:
             if not allow_trailing_stop:
-                errors.append("stop_loss must be strictly below current_price for long buy/hold/watch decisions")
+                if atr is not None:
+                    # Dynamic ATR based stop loss (e.g. 1.0 ATR buffer)
+                    if stop_loss > current_price - (0.5 * atr):
+                        errors.append(f"stop_loss ({stop_loss}) is too close to current_price ({current_price}) relative to ATR ({atr}). Must be at least 0.5 ATR away.")
+                elif stop_loss >= current_price:
+                    errors.append("stop_loss must be strictly below current_price for long buy/hold/watch decisions")
         if take_profit is not None and resistance is not None and take_profit < resistance:
             errors.append("take_profit should not be below resistance_level")
     else:  # short

@@ -177,6 +177,14 @@ def render_markdown(data, raw_json):
 
     md += "\n## 🔴 情报与风险 (Intelligence)\n\n"
     md += f"**市场情绪**: {intel.get('sentiment_summary', '')}\n\n"
+    
+    thesis_tracking = intel.get("thesis_tracking", {})
+    if thesis_tracking:
+        md += "**图谱协同追踪 (Thesis Tracking)**:\n"
+        md += f"- 历史预判: {thesis_tracking.get('previous_thesis', '无记录')}\n"
+        md += f"- 当前状态: {thesis_tracking.get('status', 'N/A')}\n"
+        md += f"- 逻辑推演: {thesis_tracking.get('reasoning', '')}\n\n"
+        
     if intel.get("positive_catalysts"):
         md += "**催化剂**:\n"
         for item in intel["positive_catalysts"]:
@@ -260,6 +268,14 @@ def save_dashboard():
         append_entry(parsed, archive_path=str(filepath))
     except Exception as exc:
         safe_print(f"Warning: advice journal append failed: {exc}")
+    
+    if args.file and os.path.exists(args.file):
+        try:
+            os.remove(args.file)
+            safe_print(f"Cleaned up temporary JSON draft: {args.file}")
+        except Exception as exc:
+            safe_print(f"Warning: could not delete temporary file: {exc}")
+            
     safe_print(f"Successfully saved and rendered Markdown dashboard to {filepath}")
 
 

@@ -57,7 +57,14 @@
     "price_position",
     "volume_analysis",
     "chip_structure",
-    "valuation"
+    "valuation",
+    "atr_14"
+  ],
+  "required_intelligence_fields": [
+    "sentiment_summary",
+    "positive_catalysts",
+    "risk_alerts",
+    "thesis_tracking"
   ],
   "required_confidence_fields": [
     "score",
