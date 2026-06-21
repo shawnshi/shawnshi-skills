@@ -108,8 +108,10 @@ def main():
     log.info(f"Triggering MusicBee with target: {play_target}")
     try:
         if musicbee_exe and musicbee_exe.exists():
-            wmi_cmd = f"Invoke-WmiMethod -Class Win32_Process -Name Create -ArgumentList '{musicbee_exe} \"{play_target}\"'"
-            subprocess.run(["powershell", "-Command", wmi_cmd])
+            # Security: Sanitize user input for PowerShell command injection
+            safe_target = str(play_target).replace("'", "''").replace('"', '""')
+            wmi_cmd = f"Invoke-WmiMethod -Class Win32_Process -Name Create -ArgumentList '{musicbee_exe} \"{safe_target}\"'"
+            subprocess.run(["powershell", "-Command", wmi_cmd], shell=False)
             log.info("Playback sequence initiated successfully via WMI Process Create (Sandbox Escape).")
         else:
             import os
