@@ -138,4 +138,4 @@
 | **[tool-url-markdown](tool-url-markdown/)** | **CDP 网页原质提取器 (Native Edition)**。JS 强对抗与断点防穿模。 |
 | **[tool-youtube-summary](tool-youtube-summary/)** | **深度知识同构引擎 (Native Edition)**。YouTube 与长文核心提取、降噪落盘。 |
 
-*Last Global Audit: 2026-06-20 | Version: 9.2.0 (IR Native Edition) | System State: 100% IR Covered & Locked*
+*Last Global Audit: 2026-06-21 | Version: 9.2.1 (IR Native Edition) | System State: 100% IR Covered & Locked*
