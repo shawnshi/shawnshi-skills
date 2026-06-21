@@ -38,24 +38,42 @@ def validate_hit_draft(content: str, mode: str) -> list[str]:
         if re.search(p, content, re.IGNORECASE):
             errors.append(f"Metadata Violation: Unresolved placeholder {p} found. Real data required.")
 
+    # 2.5 Global: Language Enforcement (Must contain Chinese characters)
+    if not re.search(r"[\u4e00-\u9fff]", content):
+        errors.append("Language Violation: Content appears to be entirely non-Chinese. You MUST output in Chinese (zh-CN).")
+
+    # 2.6 Global: Anti-AI Fluff (BLUF Contract)
+    ai_fluffs = [
+        r"为您整理完毕",
+        r"希望本期的",
+        r"欢迎随时",
+        r"希望这.*对您有.*帮助",
+        r"如果您.*进一步",
+        r"很高兴为您"
+    ]
+    for fluff in ai_fluffs:
+        if re.search(fluff, content, re.IGNORECASE):
+            errors.append(f"BLUF Violation: Contains AI customer service fluff matching '{fluff}'. Remove all pleasantries.")
+
     # 3. Mode Specific Rules
     if mode == "radar":
-        required_radar = [r"紧急预警", r"织者洞察", r"下钻建议"]
+        # Check for system dynamics and structural separation requirements
+        required_radar = [r"客观事实", r"战略与行业背景解读", r"Causal Implications", r"推论"]
         for r_sec in required_radar:
-            if not re.search(r_sec, content):
-                errors.append(f"Radar Mode Violation: Missing required section/keyword '{r_sec}'.")
+            if not re.search(r_sec, content, re.IGNORECASE):
+                errors.append(f"Radar Mode Violation: Missing required structural section/keyword '{r_sec}'. You must perform System Dynamics Analysis.")
         
         # Enforce that Fact lines must contain digits (e.g., money, version, date)
-        fact_lines = re.findall(r"- \*\*最新资讯 \(Fact\)\*\*：(.*)", content)
-        for idx, fact_line in enumerate(fact_lines, 1):
-            if not re.search(r"\d+", fact_line):
-                errors.append(f"Radar Fact Violation: Fact line #{idx} lacks concrete metrics (no numbers found): '{fact_line[:30]}...'")
+        fact_lines = re.findall(r"客观事实.*?(Fact.*?)[:：](.*)", content, re.IGNORECASE)
+        for idx, (_, fact_content) in enumerate(fact_lines, 1):
+            if not re.search(r"\d+", fact_content):
+                errors.append(f"Radar Fact Violation: Fact line #{idx} lacks concrete metrics (no numbers found): '{fact_content[:30]}...'")
                 
     elif mode == "scout":
-        required_scout = [r"真实世界证据", r"研发预研任务", r"销售防御话术"]
+        required_scout = [r"MECE 归类", r"卫宁战略映射", r"核心变量与评估指标", r"学术发现"]
         for s_sec in required_scout:
-            if not re.search(s_sec, content):
-                errors.append(f"Scout Mode Violation: Missing required section/keyword '{s_sec}'.")
+            if not re.search(s_sec, content, re.IGNORECASE):
+                errors.append(f"Scout Mode Violation: Missing required strategic alignment section/keyword '{s_sec}'.")
 
     elif mode == "brief":
         required_brief = [r"非共识", r"Contrarian", r"跨界", r"Serendipity"]
@@ -67,6 +85,10 @@ def validate_hit_draft(content: str, mode: str) -> list[str]:
             errors.append("Brief Mode Violation: Missing Contrarian (非共识) view. You must challenge the consensus.")
         if not has_serendipity:
             errors.append("Brief Mode Violation: Missing Cross-domain / Serendipity (跨界) insight. You must include insights from outside healthcare.")
+            
+        has_policy = any(re.search(word, content, re.IGNORECASE) for word in [r"政策", r"合规", r"Policy", r"Compliance"])
+        if not has_policy:
+            errors.append("Brief Mode Violation: Missing Policy (公卫与合规政策) pipeline. You must include all 4 pipelines.")
 
     return errors
 
