@@ -252,14 +252,11 @@ def get_daily_friction_matrix(days=90):
     
     # Compute Executive Shadow Load
     # Formula: Physical + max(0, stress_avg - 25)*2 + (bb_drain * 0.5)
-    def compute_total_load(row):
-        phys = row['training_load']
-        stress = row['stress_avg']
-        shadow_stress = max(0, stress - 25) * 2
-        bb_drain = max(0, row['body_battery_highest'] - row['body_battery_lowest']) * 0.5
-        return phys + shadow_stress + bb_drain
-        
-    df['daily_friction_load'] = df.apply(compute_total_load, axis=1)
+    # Performance: Replaced slow row-by-row .apply(axis=1) with vectorized operations for a significant speedup
+    phys = df['training_load']
+    shadow_stress = (df['stress_avg'] - 25).clip(lower=0) * 2
+    bb_drain = (df['body_battery_highest'] - df['body_battery_lowest']).clip(lower=0) * 0.5
+    df['daily_friction_load'] = phys + shadow_stress + bb_drain
     
     return df
 
