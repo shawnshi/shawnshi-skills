@@ -16,3 +16,4 @@ dist/
 build/
 reports/
 _runtime/
+.venv/
