@@ -7,3 +7,7 @@
 **Vulnerability:** Unsanitized user input interpolated into a PowerShell command string in personal-musicbee-dj/src/cli.py.
 **Learning:** Even when passing a string to a PowerShell argument, quotes must be escaped to prevent breakout attacks.
 **Prevention:** Sanitize user input by escaping single and double quotes (e.g. replacing ' with '' and " with "") before interpolating into PowerShell commands.
+## 2026-06-25 - Command Injection in improve.py
+**Vulnerability:** Unsanitized user input via environment variable passed to subprocess.run with split().
+**Learning:** Using .split() on strings that represent shell commands can lead to improper parsing and potential injection or unexpected behavior if arguments contain spaces or special characters.
+**Prevention:** Always use shlex.split() to safely parse command-line strings in Python.
