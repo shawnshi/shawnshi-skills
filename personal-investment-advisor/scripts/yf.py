@@ -53,7 +53,7 @@ INFO_KEYS_DEFAULT = [
     "marketCap", "sector", "industry",
     "trailingPE", "forwardPE", "dividendYield",
     "priceToBook", "returnOnEquity", "operatingMargins",
-    "debtToEquity", "beta", "enterpriseToEbitda",
+    "debtToEquity", "beta", "pegRatio", "enterpriseToEbitda",
     "fiftyTwoWeekHigh", "fiftyTwoWeekLow",
     "totalRevenue", "revenueGrowth",
     "country", "website",
@@ -253,7 +253,13 @@ def extract_earnings_snapshot(info: Dict[str, Any]) -> Dict[str, Any]:
         "revenue_growth": info.get("revenueGrowth"),
         "trailing_pe": info.get("trailingPE"),
         "forward_pe": info.get("forwardPE"),
+        "peg_ratio": info.get("pegRatio"),
+        "price_to_book": info.get("priceToBook"),
+        "dividend_yield": info.get("dividendYield"),
+        "beta": info.get("beta"),
         "market_cap": info.get("marketCap"),
+        "sector": info.get("sector"),
+        "industry": info.get("industry")
     }
 
 
@@ -663,6 +669,27 @@ def main():
                     result_entry["data_gaps"].append("持仓文件不存在，未生成持仓者建议上下文")
                 elif result_entry["portfolio_context"].get("position_status") == "not_found":
                     result_entry["data_gaps"].append("持仓文件存在，但未找到该标的持仓记录")
+            
+            # Load thesis.md
+            import os
+            from pathlib import Path
+            try:
+                base_stocks_dir = Path(os.environ.get("PIA_DASHBOARD_DIR", str(Path.home() / ".gemini" / "MEMORY" / "raw" / "stocks")))
+                safe_sym = symbol.replace(" ", "_").replace("/", "_")
+                thesis_path = base_stocks_dir / safe_sym / f"{safe_sym}_thesis.md"
+                if thesis_path.exists():
+                    result_entry["thesis_context"] = thesis_path.read_text(encoding="utf-8")
+                    result_entry["data_sources"]["thesis"] = str(thesis_path)
+                else:
+                    legacy_path = base_stocks_dir / f"{safe_sym}_thesis.md"
+                    if legacy_path.exists():
+                        result_entry["thesis_context"] = legacy_path.read_text(encoding="utf-8")
+                        result_entry["data_sources"]["thesis"] = str(legacy_path)
+                    else:
+                        result_entry["thesis_context"] = None
+            except Exception as e:
+                result_entry["thesis_context"] = f"Error loading thesis: {e}"
+
             if fetch_errors:
                 result_entry["errors"] = fetch_errors
                 result_entry["data_gaps"].extend(fetch_errors)

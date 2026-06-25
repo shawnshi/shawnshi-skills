@@ -17,3 +17,4 @@ build/
 reports/
 _runtime/
 .venv/
+node_modules/

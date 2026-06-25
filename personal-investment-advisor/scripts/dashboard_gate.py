@@ -37,6 +37,10 @@ def validate_dashboard(data: dict) -> list[str]:
     for key in SCHEMA["required_top_level"]:
         if key not in data:
             errors.append(f"missing top-level field: {key}")
+            
+    blind_spot = data.get("blind_spot_warning")
+    if blind_spot in (None, "", []):
+        errors.append("blind_spot_warning cannot be empty (Adversarial Stress Test failed)")
 
     market_type = data.get("market_type")
     if market_type not in SCHEMA["enums"]["market_type"]:
@@ -123,6 +127,8 @@ def validate_dashboard(data: dict) -> list[str]:
         advice = data.get("operation_advice")
         if weight_status == "above_max" and advice not in ["减仓", "卖出"]:
             errors.append(f"portfolio weight ({portfolio_context.get('current_weight')}) exceeds max limit: operation_advice must be '减仓' or '卖出', got '{advice}'")
+        elif weight_status == "above_target" and advice in ["买入", "加仓"]:
+            errors.append(f"portfolio weight ({portfolio_context.get('current_weight')}) exceeds target limit: cannot add position. operation_advice must be hold/watch/reduce, got '{advice}'")
 
     if portfolio_summary is not None:
         if not isinstance(portfolio_summary, dict):
@@ -168,9 +174,11 @@ def validate_dashboard(data: dict) -> list[str]:
             
             # Watch Requirement: Must have breakout conditions
             if data.get("decision_type") == "watch":
-                has_breakout = any("突破" in str(t) for t in triggers)
-                if not has_breakout:
-                    errors.append("decision is 'watch': next_action_trigger must include specific breakout ('突破') conditions")
+                valid_keywords = ["突破", "跌破", "回踩", "企稳", "发布", "确认", "财报", "支撑", "压力", "均线"]
+                has_valid = any(kw in str(t) for t in triggers for kw in valid_keywords)
+                has_number = any(any(c.isdigit() for c in str(t)) for t in triggers)
+                if not (has_valid or has_number):
+                    errors.append("decision is 'watch': next_action_trigger must include quantifiable conditions (numbers) or valid keywords (e.g., 突破, 跌破, 企稳)")
 
         holder_summary = _get_nested(data, ["dashboard", "core_conclusion", "position_advice", "has_position"])
         if holder_summary in (None, "", []):

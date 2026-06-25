@@ -113,7 +113,7 @@ async function waitForPageReady(cdp: CdpConnection, sessionId: string, targetUrl
         
         // Logic: We are back on the target domain (e.g. draft.blogger.com) AND title doesn't look like a login page
         if (state && state.url && state.url.includes(targetHostname)) {
-           const isLoginPage = state.title.toLowerCase().includes("sign in") || state.url.includes("accounts.google.com");
+           const isLoginPage = state.title.toLowerCase().includes("sign in") || state.url.includes("accounts.google.com") || state.title.toLowerCase().includes("happening now") || state.title.toLowerCase().includes("the everything app") || state.title.toLowerCase().includes("log in");
            
            if (!isLoginPage && state.ready === 'complete') {
              console.log(`\nAuto-detected target page: "${state.title}"`);

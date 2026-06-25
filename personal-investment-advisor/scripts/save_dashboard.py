@@ -146,6 +146,16 @@ def render_markdown(data, raw_json):
             md += f"- **营收增长**: {earnings_snapshot.get('revenue_growth', '--')}\n"
             md += f"- **Trailing PE**: {earnings_snapshot.get('trailing_pe', '--')}\n"
             md += f"- **Forward PE**: {earnings_snapshot.get('forward_pe', '--')}\n"
+            if earnings_snapshot.get("peg_ratio"):
+                md += f"- **PEG Ratio**: {earnings_snapshot.get('peg_ratio')}\n"
+            if earnings_snapshot.get("price_to_book"):
+                md += f"- **Price/Book**: {earnings_snapshot.get('price_to_book')}\n"
+            if earnings_snapshot.get("dividend_yield"):
+                md += f"- **Div Yield**: {earnings_snapshot.get('dividend_yield')}\n"
+            if earnings_snapshot.get("beta"):
+                md += f"- **Beta**: {earnings_snapshot.get('beta')}\n"
+            if earnings_snapshot.get("sector"):
+                md += f"- **Sector/Industry**: {earnings_snapshot.get('sector')} / {earnings_snapshot.get('industry', '--')}\n"
         if catalyst_map:
             if catalyst_map.get("upcoming"):
                 md += "- **即将到来的催化**:\n"
@@ -193,6 +203,10 @@ def render_markdown(data, raw_json):
         md += "\n**核心风险警示 (SPOF)**:\n"
         for item in intel["risk_alerts"]:
             md += f"- ⚠️ {item}\n"
+            
+    blind_spot = data.get("blind_spot_warning", "")
+    if blind_spot:
+        md += f"\n**🎯 对抗性红队审计 (Adversarial Stress Test)**:\n> ⚠️ {blind_spot}\n"
 
     if evidence_items:
         md += "\n## Evidence Mesh\n\n"
@@ -260,7 +274,8 @@ def save_dashboard():
     safe_stock_name = args.stock.replace(" ", "_").replace("/", "_")
     filename = f"{safe_stock_name}_{date_str}.md"
 
-    base_dir = Path(os.environ.get("PIA_DASHBOARD_DIR", str(Path.home() / ".gemini" / "MEMORY" / "raw" / "stocks")))
+    root_dir = Path(os.environ.get("PIA_DASHBOARD_DIR", str(Path.home() / ".gemini" / "MEMORY" / "raw" / "stocks")))
+    base_dir = root_dir / safe_stock_name
     base_dir.mkdir(parents=True, exist_ok=True)
     filepath = base_dir / filename
     filepath.write_text(md_content, encoding="utf-8")

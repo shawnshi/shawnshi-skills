@@ -1,71 +1,62 @@
 ---
 name: personal-investment-advisor
-version: 9.0.0
+version: 10.0.0
 tier: action-allowed
-description: '顶级金融量化引擎。支持多市场股票/ETF行情查询及决策仪表盘分析。强制使用原生抓取脚本、沙盒渲染与落盘网关。禁止直接写入 Markdown，禁止伪造定量指标。'
+description: '顶级金融量化引擎。支持多智能体并发调研、持久化逻辑锚(thesis)与对抗性风控门禁。强制执行沙盒渲染与数学硬锁。禁止伪造定量指标。'
 triggers: ["股票调研", "量化分析", "持仓审计", "查看行情", "分析美股", "分析A股", "查看港股"]
 ---
 
 <strategy-gene>
-Keywords: 股票调研, 量化分析, 持仓审计, 决策仪表盘
-Summary: 采用 Yahoo + Akshare 驱动的量化引擎，将行情与持仓上下文转化为具备数学硬锁的决策资产。
+Keywords: 多智能体调度, 逻辑记忆锚, 对抗性审计, 决策仪表盘
+Summary: 基于多智能体并发与状态机记忆的顶级量化引擎，将行情与持仓转化为具备对抗性防御与数学硬锁的决策资产。
 Strategy:
-1. 1. 数据分离：yf.py 仅抓取原始事实，禁止在 LLM 侧重新计算 MA/RSI 等预计算指标。
-2. 2. 角色分流：结论必须区分“空仓视角”与“持仓视角”，给出显式的成本、浮盈及动作触发条件。
-3. 3. 数学硬门：落盘前必须通过 math_gate 校验，确保止损位、支持位无逻辑冲突。
-AVOID: 严禁将定性话术伪装成确定性建议；禁止在非 A 股上编造筹码数据；禁止漏掉止损/止盈硬价格点。
+1. 1. 持久化锚点：分析前必须读取或初始化 thesis.md，消除分析失忆症。
+2. 2. 角色分流与并发：对于深度调研，必须使用 invoke_subagent 拉起基本面/技术面子代理，主代理降级为 PM 执行冲突裁决。
+3. 3. 对抗性证伪：必须引入 Adversarial Stress Test，主动暴露买入逻辑的致命盲区。
+4. 4. 组合级硬门：落盘前通过全局风控校验（仓位超限、集中度、止损倒错），亮红灯必须拦截。
+AVOID: 严禁无视过往 thesis 凭空出报告；禁止漏掉止损硬价格点；禁止定性话术伪装成定量建议；禁止绕过风控红绿灯直接建议加仓。
 </strategy-gene>
 
-# Personal Investment Advisor (顶级金融量化引擎 V9.0 Native)
+# Personal Investment Advisor (顶级金融多智能体量化引擎 V10.0 Native)
 
 ## Tool Trajectory
 **[IN_ORDER]** 执行需遵循以下轨迹流：
 1. 
-2. un_command (执行 yf.py 获取结构化行据)
-3. write_to_file (基于 schema 将诊断结论写入沙盒 JSON)
-4. 
-5. un_command (执行 save_dashboard.py 进行数学校验与渲染落盘)
-6. write_to_file (写入遥测数据)
+2. view_file (读取标的过往的 thesis.md 与 portfolio_positions.json)
+3. un_command (执行 yf.py 获取结构化行据)
+4. invoke_subagent (深度调研时拉起多个子分析师并发收集情报)
+5. write_to_file (基于 schema 写入 dashboard_draft.json，附带对抗性红队警告)
+6. un_command (执行 save_dashboard.py 进行组合风控、数学校验与落盘)
+7. write_to_file (写入遥测数据)
 
-## 1. 核心流程与架构 (The Protocol)
-### Phase 1: Fetch (数据抓取)
-1. 必须使用原生的 
-un_command 工具调用内部脚本获取结构化数据，且必须挂载编码锁：
-   $env:PYTHONIOENCODING="utf-8"; python "C:\Users\shich\.gemini\config\skills\personal-investment-advisor\scripts\yf.py" ... --json
-2. 若仅需行情/基本面/新闻，优先使用：--price-only / --info-only / --news-only。
-3. 长时间跨度优先加 --lean，避免历史 K 线挤爆上下文。
-4. 若希望输出持仓者建议，追加 --with-portfolio；系统默认从绝对路径读取持仓文件：C:\Users\shich\.gemini\MEMORY\raw\stocks\portfolio_positions.json。
+## 1. 核心流程与多智能体架构 (The Protocol)
+### Phase 1: 原质抓取与多维数据聚合 (Fetch)
+使用原生 `run_command` 调用数据获取脚本，且必须挂载编码锁：
+`$env:PYTHONIOENCODING="utf-8"; python "C:\Users\shich\.gemini\config\skills\personal-investment-advisor\scripts\yf.py" ... --json`
+*注意：追加 `--with-portfolio` 会自动读取全局持仓上下文并将其连同历史演化锚定日志 (`thesis_context`) 一并封装进 JSON 返回给你，免除了手工读取文件的繁琐。*
 
-### Phase 2: Analyze (逻辑诊断)
-1. 非 A 股时，筹码结构（chip_structure）不得由大模型伪造，必须明确标记 不适用(非A股)。
-2. 若输入包含 portfolio_context.has_position=true，主代理必须区分视角回答：必须同时输出针对“空仓者视角”和“持仓者视角”的建议。
-3. 必须显式给出相对成本、当前浮盈浮亏状况以及动作触发条件。所有的结论必须有 Evidence items 支撑。
+### Phase 2: 并发调度与逻辑诊断 (Multi-Agent Debate)
+1. **浅层看盘**：主代理直接基于数据出具短评。
+2. **深度调研**：必须使用 `invoke_subagent` 并发拉起 2-3 个分析师（例如 `Fundamental Analyst`, `Tech Analyst`）。主代理化身 Portfolio Manager (PM)，回收子代理研报，进行**加权聚合与冲突裁决**。
+3. **宏观与估值对齐 (Macro & Valuation Alignment)**：PM 必须将个股数据与 Sector/Industry 动能结合，审视 `peg_ratio`、`beta` 和 `dividend_yield`，判断标的是否在逆宏观大势或面临风格切换风险。
+4. **强制时间周期与逻辑演化审计 (Timeframe & Thesis Audit)**：PM 必须仔细研读 JSON 中的 `thesis_context`。操作建议必须与设定的投资周期 (Time Horizon) 严格对齐（严禁基于短期技术面波动要求清仓长期基本面标的）。同时，必须在 JSON 草稿的 `thesis_tracking` 中对旧逻辑的状态进行判词（强化/弱化/破产/重置）。
 
-### Phase 3: Gate & Archive (数学校验与落盘)
-由于 Markdown 拼接由后端的 Python 脚本全权接管，**主代理绝不可以手工编写 Markdown**。必须遵循以下两步沙盒协议：
-1. 大模型根据 
-esources/dashboard_schema.json 结构化诊断结论，并将完整的 JSON 使用 write_to_file 物理落盘至沙盒：
-   C:\Users\shich\.gemini\MEMORY\scratch\dashboard_draft_{股票代码}.json。**严禁**将 JSON 直接写在技能目录下。
-2. 运行落盘与网关拦截器（务必挂载编码锁）：
-   `powershell
-   utf-8="utf-8"; python "C:\Users\shich\.gemini\config\skills\personal-investment-advisor\scripts\save_dashboard.py" --stock "<股票名称或代码>" --file "C:\Users\shich\.gemini\MEMORY\scratch\dashboard_draft_{股票代码}.json"
-   `
-3. 脚本会自动进行 dashboard_gate 校验并物理落盘至 MEMORY\raw\stocks\，**不需要主代理再手动执行任何 Markdown 落盘动作**。
-4. 若门检失败退出（Exit 1），主代理必须根据控制台报错修改沙盒里的 JSON 并重试。
+### Phase 3: 对抗性风控与落盘 (Adversarial Gate & Archive)
+由于 Markdown 拼接由后端的 Python 脚本全权接管，**主代理绝不可以手工编写 Markdown**。必须遵循沙盒协议：
+1. **红队测试**：在 JSON 草稿中，必须填充 `blind_spot_warning` 字段，执行 Adversarial Thesis Stress Test，找出能推翻该笔交易的最大破绽。
+2. 将诊断结论根据 Schema 物理落盘至沙盒：`C:\Users\shich\.gemini\MEMORY\scratch\dashboard_draft_{股票代码}.json`。
+3. **网关拦截**：运行组合级风控拦截器（务必挂载编码锁）：
+   `$env:PYTHONIOENCODING="utf-8"; python "C:\Users\shich\.gemini\config\skills\personal-investment-advisor\scripts\save_dashboard.py" --stock "<代码>" --file "<沙盒路径>"`
+4. `save_dashboard.py` 将执行多项安全硬控，若门检失败退出（Exit 1），主代理必须修改沙盒 JSON 并重试。
 
 ## 2. <Contracts> (输出与交付契约)
-- **Schema 硬性约束**: 深度分析输出必须绝对贴合内部规定的 JSON Schema。
-- **持仓必答**: 持仓者建议至少覆盖：相对成本浮盈浮亏、当前应进行动作（加/持/减/观望）、确切价位或条件、以及主要风险来源。
-- **Telemetry 记录**: 任务执行完成后，使用 write_to_file 将元数据保存至：
-  C:\Users\shich\.gemini\MEMORY\skill_audit\telemetry\record_[TIMESTAMP].json
-  结构示例：{"skill_name": "personal-investment-advisor", "status": "success", "mode": "dashboard", "market_type": "A股", "gate_passed": true, "has_position": true}
+- **逻辑锚增量契约**: 如果是持仓股票，输出的诊断必须明确说明是对历史 `thesis.md` 逻辑的“强化”、“弱化”还是“证伪”。
+- **组合级风控底线**: 若计算出加仓会导致单只股票仓位超限，必须拒绝加仓建议。
+- **Telemetry 记录**: 任务执行完成后，保存遥测至 `skill_audit/telemetry/`，附加字段示例：`"subagents_used": true`, `"thesis_updated": true`。
 
 ## 3. <Failure_Taxonomy> (失败分类学 / 逻辑硬锁)
-- **手工造车 (Manual Markdown)**：大模型严禁自己使用 write_to_file 书写带格式的 Markdown，必须生成纯 JSON 交给 save_dashboard.py 渲染。
-- **沙盒污染 (Sandbox Pollution)**：严禁把临时文件写在 config/skills/... 目录。必须写在 MEMORY/scratch/。
-- **幻觉工具调用 (Tool Hallucination)**：严禁使用 write_file，必须使用原生 write_to_file。严禁非法伪路径（如 ~/.gemini/...）。
-- **执行栈崩溃 (Execution Deadlock)**：调用 Python 脚本时，必须附加保护锁 $env:PYTHONIOENCODING="utf-8" 并使用绝对物理路径。
-- **无脑重新计算 (Compute Hallucination)**：严禁自行计算 MA/MACD/RSI。优先读取脚本吐出的预计算指标。
-- **观望门 (Watch Lock)**：若建议为“观望”，必须包含明确的“向上突破或向下破位”硬触发条件，否则无效。
-- **止损逻辑倒错 (Stop-Loss Inversion)**：止损位必须严格低于当前市价。若出现止损位高于现价的计算，视为严重幻觉。
-- **定性伪装定量 (Qualitative Camouflage)**：严禁将“未来可能向好”等定性话术伪装成具有操作性的定量建议。
+- **记忆断层 (Memory Amnesia)**：明明是持仓股却不去读 `thesis.md` 凭空瞎编逻辑，视为严重幻觉。
+- **盲目合并 (Uncritical Aggregation)**：主代理在汇聚多智能体报告时，对“基本面极度低估 vs 技术面全面破位”的冲突不作裁决直接缝合，视为失效。
+- **手工造车 (Manual Markdown)**：大模型自己使用 write_to_file 书写带格式的 Markdown，跳过网关，将被封禁。
+- **定性伪装定量 (Qualitative Camouflage)**：用“未来向好”等虚词替代“向上突破某价格”的定量操作阈值。
+- **风控击穿 (Guardrail Bypass)**：止损位高于现价，或触发了组合回撤警告仍建议重仓，均属于致命逻辑倒错。

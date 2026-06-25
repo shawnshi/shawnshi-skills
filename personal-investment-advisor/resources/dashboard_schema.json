@@ -21,7 +21,8 @@
     "search_performed",
     "data_sources",
     "data_gaps",
-    "position_direction"
+    "position_direction",
+    "blind_spot_warning"
   ],
   "optional_top_level": [
     "portfolio_context",
