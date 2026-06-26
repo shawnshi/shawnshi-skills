@@ -1,25 +1,17 @@
 import argparse
 import re
 import sys
+import json
 from pathlib import Path
 
-
 COMMON_SECTIONS = [
-    "## Context Snapshot",
-    "## Tactical Accountability",
-    "## Signals",
-    "## Core Insight",
-    "## Strategic Diagnosis",
-    "## Next Tactics",
-    "## Handoff Payload",
-]
-
-LONG_CYCLE_SECTIONS = [
-    "## Interaction & Work Patterns",
-]
-
-MONTHLY_EXTRA = [
-    "## Long-Cycle Outlook",
+    "肉体与情绪实况 (Physical & Emotional Reality)",
+    "自欺欺人行为剖析 (Self-Deception Analysis)",
+    "战术清算 (Tactical Liquidation)",
+    "今日打脸点 (Slap in the face)",
+    "能量管理 (Biological-Cognitive Correlation)",
+    "物理指令 (Physical Next Steps)",
+    "Handoff Payload",
 ]
 
 PLACEHOLDER_PATTERNS = [
@@ -33,19 +25,18 @@ PLACEHOLDER_PATTERNS = [
     r"\[\.\.\.\]",
 ]
 
+JARGON_BLACKLIST = [
+    "热力学", "二阶效应", "负熵", 
+    "物理坍缩", "降维打击", "熵增", "架构洁癖",
+    "底层逻辑", "认知带宽", "能量防御"
+]
 
 def load_text(path: Path) -> str:
     return path.read_text(encoding="utf-8")
 
-
 def parse_period_type(text: str) -> str:
     match = re.search(r'"period_type"\s*:\s*"([^"]+)"', text)
     return match.group(1) if match else ""
-
-
-def count_tactics(text: str) -> int:
-    return len(re.findall(r"^\d+\.\s", text, flags=re.MULTILINE))
-
 
 def find_placeholders(text: str) -> list[str]:
     hits = []
@@ -54,40 +45,36 @@ def find_placeholders(text: str) -> list[str]:
             hits.append(pattern)
     return hits
 
+def scan_for_jargon(text: str) -> list[str]:
+    violations = []
+    for jargon in JARGON_BLACKLIST:
+        matches = re.findall(jargon, text, re.IGNORECASE)
+        if len(matches) > 0:
+            violations.append(f"'{jargon}' (出现了 {len(matches)} 次)")
+    return violations
 
-def validate(text: str) -> list[str]:
+def validate(text: str, strict_human_mode: bool) -> list[str]:
     errors = []
 
     for section in COMMON_SECTIONS:
         if section not in text:
             errors.append(f"missing section: {section}")
 
-    if "## Tactical Accountability" in text and "|" not in text:
+    if "战术清算 (Tactical Liquidation)" in text and "|" not in text:
         errors.append("tactical accountability is missing markdown table structure")
 
-    if "【数据缺口】" not in text and "Physiology:" not in text:
-        errors.append("missing either data-gap note or signal detail")
-
-    if "核心洞察" not in text:
-        errors.append("missing core insight statement")
-
-    if count_tactics(text) < 1:
-        errors.append("expected at least one tactic item")
-
-    period_type = parse_period_type(text)
-    if period_type in {"weekly", "monthly", "annual"}:
-        for section in LONG_CYCLE_SECTIONS:
-            if section not in text:
-                errors.append(f"missing long-cycle section: {section}")
-
-    if period_type in {"monthly", "annual"}:
-        for section in MONTHLY_EXTRA:
-            if section not in text:
-                errors.append(f"missing extended section: {section}")
+    if "今日打脸点 (Slap in the face)" not in text:
+        errors.append("missing slap in the face statement")
 
     placeholders = find_placeholders(text)
     if placeholders:
         errors.append("found placeholder markers: " + ", ".join(placeholders))
+        
+    if strict_human_mode:
+        jargon_violations = scan_for_jargon(text)
+        if jargon_violations:
+            errors.append("Jargon_Abuse triggered! Found: " + ", ".join(jargon_violations))
+            errors.append("请使用碳基生物的大白话 (如: '很累', '没睡好', '找借口')，剥离所有极客隐喻。")
 
     return errors
 
@@ -97,6 +84,7 @@ def main() -> int:
         description="Validate personal-cognitive-auditor markdown output."
     )
     parser.add_argument("audit_path", help="Path to the generated audit markdown")
+    parser.add_argument("--strict-human-mode", action="store_true", help="Enforce anti-jargon rules")
     args = parser.parse_args()
 
     path = Path(args.audit_path)
@@ -105,7 +93,7 @@ def main() -> int:
         return 1
 
     text = load_text(path)
-    errors = validate(text)
+    errors = validate(text, args.strict_human_mode)
     if errors:
         print("[FAIL] audit gate blocked delivery")
         for error in errors:
