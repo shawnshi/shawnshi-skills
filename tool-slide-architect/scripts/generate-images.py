@@ -69,7 +69,8 @@ def download_image(content, target_path):
     if link.startswith('http'):
         logging.info(f"Downloading image from: {link}")
         try:
-            res = requests.get(link, timeout=60, verify=False)
+            # Security: Enable SSL certificate verification to prevent MitM attacks
+            res = requests.get(link, timeout=60)
             if res.status_code == 200:
                 with open(target_path, 'wb') as f:
                     f.write(res.content)
