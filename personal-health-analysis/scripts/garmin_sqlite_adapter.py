@@ -155,8 +155,9 @@ def get_summary(days=7):
     try:
         df = pd.read_sql_query(query, conn)
         if not df.empty:
-            df['high_stress_duration'] = df['stress_avg'].apply(lambda x: max(0, x - 35) * 3600 / 15 if pd.notnull(x) else 0)
-            df['medium_stress_duration'] = df['stress_avg'].apply(lambda x: max(0, x - 25) * 3600 / 10 if pd.notnull(x) else 0)
+            # Performance: Replaced slow .apply with vectorized operations for significantly faster computation
+            df['high_stress_duration'] = ((df['stress_avg'] - 35).clip(lower=0) * 3600 / 15).fillna(0)
+            df['medium_stress_duration'] = ((df['stress_avg'] - 25).clip(lower=0) * 3600 / 10).fillna(0)
         else:
             raise ValueError(f"No data found in {table_name} table")
     except Exception as e:
