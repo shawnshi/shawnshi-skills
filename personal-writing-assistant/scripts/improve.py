@@ -24,6 +24,7 @@ import os
 import argparse
 import subprocess
 import shutil
+import shlex
 from pathlib import Path
 from datetime import datetime, timedelta
 
@@ -133,7 +134,8 @@ def call_llm(prompt, timeout=180):
     custom_cmd = os.environ.get("IMPROVE_LLM_CMD")
     if custom_cmd:
         try:
-            result = subprocess.run(custom_cmd.split(), input=prompt,
+            # Security: Safely parse custom LLM command to prevent injection issues
+            result = subprocess.run(shlex.split(custom_cmd), input=prompt,
                                     capture_output=True, text=True, timeout=timeout)
             if result.returncode == 0 and result.stdout.strip():
                 return result.stdout.strip()
