@@ -20,25 +20,22 @@ AVOID: 禁止假装已经播放；禁止随意改动音乐库文件。
 
 ## Tool Trajectory
 **[IN_ORDER]** 执行需遵循以下轨迹流：
-1. 
-2. un_command (调用专属的本地 CLI 脚本拉起物理进程)
-3. write_to_file (落盘遥测数据)
+1. `run_command` (调用专属的本地 CLI 脚本拉起物理进程)
+2. `write_to_file` (落盘遥测数据)
 
 ## 1. 核心流程与架构 (The Protocol)
 ### Phase 1: Intent Resolution (意图解析)
 解析用户的需求，提取出必须要传给控制脚本的 3 个参数：
-- 	ype: 必须是 genre | scene | playlist
-- alue: 具体请求的流派、场景名称或歌单名。
-  *(推荐内置场景/Scene包括: ocus, 
-elax, nergy, coding, pop。若用户给出了非标场景，必须走语义回退/Semantic Fallback就近映射。)*
+- type: 必须是 genre | scene | playlist
+- value: 具体请求的流派、场景名称或歌单名。
+  *(推荐内置场景/Scene包括: focus, relax, energy, coding, pop。若用户给出了非标场景，必须走语义回退/Semantic Fallback就近映射。)*
 - intensity: 必须是 high | normal | low
 
 ### Phase 2: Execution (拉起播放器)
-必须使用原生 
-un_command 工具调用专属本地 CLI 脚本。执行前必须挂载跨平台数据流保护锁，并**绝对使用物理硬编码路径**：
-`powershell
+必须使用原生 `run_command` 工具调用专属本地 CLI 脚本。执行前必须挂载跨平台数据流保护锁，并**绝对使用物理硬编码路径**。同时，必须将 `WaitMsBeforeAsync` 参数设定为 2000，以防死锁：
+```powershell
 $env:PYTHONIOENCODING="utf-8"; python "C:\Users\shich\.gemini\config\skills\personal-musicbee-dj\src\cli.py" --type <type> --value "<value>" --intensity <intensity>
-`
+```
 
 ### Phase 3: Verification (确认执行状态)
 执行完毕后，主代理仅向用户返回一段极短的执行状态确认（如：“已为您切至 Focus 场景，正在启动 MusicBee”）。绝对禁止向用户解释背后的 M3U 解析流程。

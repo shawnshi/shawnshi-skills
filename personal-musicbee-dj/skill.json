@@ -33,14 +33,13 @@
   },
   "title": "Personal MusicBee DJ (音乐点播与场域渲染 V9.0 Native)",
   "trajectory": [
-    "",
-    "un_command (调用专属的本地 CLI 脚本拉起物理进程)",
-    "write_to_file (落盘遥测数据)"
+    "`run_command` (调用专属的本地 CLI 脚本拉起物理进程)",
+    "`write_to_file` (落盘遥测数据)"
   ],
   "sections": [
     {
       "title": "1. 核心流程与架构 (The Protocol)",
-      "content": "### Phase 1: Intent Resolution (意图解析)\n解析用户的需求，提取出必须要传给控制脚本的 3 个参数：\n- \type: 必须是 genre | scene | playlist\n- \u000balue: 具体请求的流派、场景名称或歌单名。\n  *(推荐内置场景/Scene包括: \focus, \nelax, \u001bnergy, coding, pop。若用户给出了非标场景，必须走语义回退/Semantic Fallback就近映射。)*\n- intensity: 必须是 high | normal | low\n\n### Phase 2: Execution (拉起播放器)\n必须使用原生 \nun_command 工具调用专属本地 CLI 脚本。执行前必须挂载跨平台数据流保护锁，并**绝对使用物理硬编码路径**：\n`powershell\n$env:PYTHONIOENCODING=\"utf-8\"; python \"C:\\Users\\shich\\.gemini\\config\\skills\\personal-musicbee-dj\\src\\cli.py\" --type <type> --value \"<value>\" --intensity <intensity>\n`\n\n### Phase 3: Verification (确认执行状态)\n执行完毕后，主代理仅向用户返回一段极短的执行状态确认（如：“已为您切至 Focus 场景，正在启动 MusicBee”）。绝对禁止向用户解释背后的 M3U 解析流程。"
+      "content": "### Phase 1: Intent Resolution (意图解析)\n解析用户的需求，提取出必须要传给控制脚本的 3 个参数：\n- type: 必须是 genre | scene | playlist\n- value: 具体请求的流派、场景名称或歌单名。\n  *(推荐内置场景/Scene包括: focus, relax, energy, coding, pop。若用户给出了非标场景，必须走语义回退/Semantic Fallback就近映射。)*\n- intensity: 必须是 high | normal | low\n\n### Phase 2: Execution (拉起播放器)\n必须使用原生 `run_command` 工具调用专属本地 CLI 脚本。执行前必须挂载跨平台数据流保护锁，并**绝对使用物理硬编码路径**。同时，必须将 `WaitMsBeforeAsync` 参数设定为 2000，以防死锁：\n```powershell\n$env:PYTHONIOENCODING=\"utf-8\"; python \"C:\\Users\\shich\\.gemini\\config\\skills\\personal-musicbee-dj\\src\\cli.py\" --type <type> --value \"<value>\" --intensity <intensity>\n```\n\n### Phase 3: Verification (确认执行状态)\n执行完毕后，主代理仅向用户返回一段极短的执行状态确认（如：“已为您切至 Focus 场景，正在启动 MusicBee”）。绝对禁止向用户解释背后的 M3U 解析流程。"
     },
     {
       "title": "2. <Contracts> (输出与交付契约)",
