@@ -36,12 +36,12 @@
     "`write_to_file` (写入草稿沙盒)",
     "`run_command` (跨平台代码级质检)",
     "`write_to_file` (战报落盘)",
-    "`call_mcp_tool` (战略突变异步入湖)"
+    "`invoke_subagent` (战略突变异步委派入湖)"
   ],
   "sections": [
     {
       "title": "1. 核心流程与架构 (The Protocol)",
-      "content": "### Phase 1: 并发定向侦察\n1. 读取本技能 `assets/intelligence_targets.json` 里的高价值信源列表。\n2. **集群拉起**: 调用 `invoke_subagent` 并发拉起 3 个 `research` 子代理，将国际、国内、卫宁基准指令下发。\n   - 指示子代理：“所有事实须 100% 来源真实网页，附带 URL。若无情报则返回空数组 `[]`，禁止基于知识截断编造。”\n   - 指示子代理使用 `send_message` 以 JSON 格式回传。\n3. **等待回调**: 主代理等待子代理回调完毕后再进入合成阶段。\n\n### Phase 2: 图谱去重与仲裁推演\n1. 发现重大竞对动作时，调用 `call_mcp_tool` (`vector-lake-mcp`: `search_vector_lake`) 检索 14 天内是否已记录，执行语义去重。\n2. **五维清洗**: 剔除留存 Fact 中的所有形容词与公关废话，仅留时间/金额/版本。\n3. **织者推理**: 跨越不同标段和厂商，提取出“隐含供应链共振”规律。\n\n### Phase 3: The Hard Gate (草稿校验)\n1. 渲染草稿并写入当前会话隔离区：`<appDataDir>\\brain\\<conversation-id>\\scratch\\draft_hit_radar.md`。\n2. **过检审计**: 使用 `run_command` 执行审计脚本（需挂载 UTF-8）：\n   ```powershell\n   $env:PYTHONIOENCODING=\"utf-8\"; python \"C:\\Users\\shich\\.gemini\\config\\skills\\scripts\\hit_audit_gate.py\" \"<appDataDir>\\brain\\<conversation-id>\\scratch\\draft_hit_radar.md\" --mode radar\n   ```\n3. 若报错拦截（查出主观形容词或营销禁词），退回修正，最多重试 2 次。\n\n### Phase 4: 分层归档与图谱入湖\n1. **物理落盘**: 质检通过后，使用 `write_to_file` 写入：\n   `C:\\Users\\shich\\.gemini\\MEMORY\\raw\\HealthcareIndustryRadar\\DHWB-Radar-YYYYMMDD.md`\n2. **异步入湖**: 提取含双链 `[[ ]]` 的战略突变（如实控权变更），调用 `call_mcp_tool` (`vector-lake-mcp`: `prepare_ingest_batch`) 安全抛入图谱。"
+      "content": "### Phase 1: 并发定向侦察\n1. 读取本技能 `assets/intelligence_targets.json` 里的高价值信源列表。\n2. **集群拉起**: 调用 `invoke_subagent` 并发拉起 3 个 `research` 子代理，将国际、国内、卫宁基准指令下发。\n   - 指示子代理：“所有事实须 100% 来源真实网页，附带 URL。若无情报则返回空数组 `[]`，禁止基于知识截断编造。”\n   - 指示子代理使用 `send_message` 以 JSON 格式回传。\n3. **等待回调**: 主代理等待子代理回调完毕后再进入合成阶段。\n\n### Phase 2: 图谱去重与仲裁推演\n1. 发现重大竞对动作时，调用 `call_mcp_tool` (`vector-lake-mcp`: `search_vector_lake`) 检索 14 天内是否已记录，执行语义去重。\n2. **五维清洗**: 剔除留存 Fact 中的所有形容词与公关废话（严禁“赋能”、“生态”、“智慧体系”等空话），仅留时间/金额/版本/核心临床KPI（如DRG控费、评级过检）。\n3. **织者推理**: 跨越不同标段和厂商，提取出“隐含供应链共振”规律。\n\n### Phase 3: The Hard Gate (草稿校验)\n1. 渲染草稿并写入当前会话隔离区：`<appDataDir>\\brain\\<conversation-id>\\scratch\\draft_hit_radar.md`。\n2. **过检审计**: 使用 `run_command` 执行审计脚本（需挂载 UTF-8，强制 `WaitMsBeforeAsync=3000` 防死锁）：\n   ```powershell\n   $env:PYTHONIOENCODING=\"utf-8\"; python \"C:\\Users\\shich\\.gemini\\config\\skills\\scripts\\hit_audit_gate.py\" \"<appDataDir>\\brain\\<conversation-id>\\scratch\\draft_hit_radar.md\" --mode radar\n   ```\n3. 若报错拦截（查出主观形容词或营销禁词），退回修正，最多重试 2 次。\n\n### Phase 4: 分层归档与图谱入湖\n1. **物理落盘**: 质检通过后，使用 `write_to_file` 写入：\n   `C:\\Users\\shich\\.gemini\\MEMORY\\raw\\HealthcareIndustryRadar\\DHWB-Radar-YYYYMMDD.md`\n2. **异步入湖**: 提取含双链 `[[ ]]` 的战略突变（如实控权变更），强制使用 `invoke_subagent` 委派后台入湖代理安全抛入图谱，绝不阻塞主会话。"
     },
     {
       "title": "2. <Contracts> (输出与交付契约)",

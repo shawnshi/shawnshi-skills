@@ -26,7 +26,7 @@ AVOID: 重复提取 14 天前的旧闻；丢失跨界启发模块；未经验证
 3. `write_to_file` (写入草稿沙盒)
 4. `run_command` (跨平台防爆审计)
 5. `write_to_file` (战报终稿落盘)
-6. `call_mcp_tool` (高价值实体异步入湖)
+6. `invoke_subagent` (高价值实体异步委派入湖)
 
 ## 1. 核心流程与架构 (The Protocol)
 ### Phase 1: 四路并发原生沙盒扫描 (Concurrent Map-Reduce)
@@ -35,36 +35,33 @@ AVOID: 重复提取 14 天前的旧闻；丢失跨界启发模块；未经验证
    - 公卫与合规政策 (`Task_policy.md`)
    - 医疗技术与架构 (`Task_tech.md`)
    - 跨界技术架构注入 (`Task_serendipity.md`，寻找金融/物流/军工等同构启发)
-   - **<Strategic_Anchor>**：在生成 Insight 时，必须硬性映射至“医疗语义层(MSL)”、“多智能体协同引擎(ACE)”或“AI-Native 医院顶层设计”个人语境中。
-   - **<Negative_Prompt>**：绝对排除纯临床医学指南（如WHO疾病管理）、与IT无关的宏观经济报告、及无端的地缘政治分析。
    - 指示子代理通过 `send_message` 以 JSON 格式回传结果。
 2. **图谱语义去重**: 回收数据后，调用 `call_mcp_tool` (`vector-lake-mcp`: `search_vector_lake`) 扫描 14 天历史进行去重。
 
 ### Phase 2: 概念化用与图谱回溯 (Semantic Translation)
-1. **概念降维**: 解读非医疗报告时，将核心概念 1:1 翻译为医疗 IT 实景（如将“边缘计算”翻译为“床旁监护流式分析”）。
+1. **概念降维**: 解读非医疗报告时，将核心概念 1:1 翻译为医疗 IT 实景（如将“边缘计算”翻译为“床旁监护流式分析”）。必须剔除“生态”、“赋能”等空洞幻觉，紧贴控费或质量痛点。
 2. **多跳关联**: 结合过往 HIS/EMR 架构案例，推演跨界逻辑在医疗业务线的可落地性。
 
-### Phase 3: Contrarian 对抗审计 (红队子代理接管)
-强制要求寻找一份与本周主推共识（如 McKinsey / Gartner 结论）完全相反的数据报告。同时启动**活体红队机制 (Red Teaming)**：主代理必须调用 `invoke_subagent` 拉起 `cognitive-logic-adversary` 子代理，将主流共识发给它进行逻辑攻击。子代理必须返回一段关于“执行阻力 / 利益冲突 / 技术毒点”的悲观阻力分析，主代理再将其缝合入最终简报。
+### Phase 3: Contrarian 对抗审计
+强制要求寻找一份与本周主推共识（如 McKinsey / Gartner 结论）完全相反的数据报告或专家评论，借此识别“共识幻觉”。
 
 ### Phase 4: 全局缝合与跨平台防爆审计
 1. 渲染简报草稿，使用 `write_to_file` 写入隔离工作区 `<appDataDir>\brain\<conversation-id>\scratch\draft_hit_brief.md`。
-2. **跨技能防爆代码审查**: 必须复用 `hit-solution-architect` 技能中的工业级审查器。执行命令（需挂载 UTF-8）：
+2. **防爆代码审查**: 调用跨平台审计脚本（挂载 UTF-8，强制 WaitMsBeforeAsync=3000 防死锁）：
    ```powershell
-   $env:PYTHONIOENCODING="utf-8"; python "C:\Users\shich\.gemini\config\skills\hit-solution-architect\scripts\buzzword_auditor.py" "<appDataDir>\brain\<conversation-id>\scratch\draft_hit_brief.md"
+   $env:PYTHONIOENCODING="utf-8"; python "C:\Users\shich\.gemini\config\skills\scripts\hit_audit_gate.py" "<appDataDir>\brain\<conversation-id>\scratch\draft_hit_brief.md" --mode brief
    ```
-3. 若审计不通过（查出假链接、缺失非共识观点、或残留公关废话），最多由主代理退回修正 2 次。
+3. 若审计不通过（如查出假链接、缺失非共识观点），退回修正重试。
 
 ### Phase 5: 物理落盘与异步入湖 (Activate & Ingestion)
 1. 审计通过后，使用 `write_to_file` 落盘：
    `C:\Users\shich\.gemini\MEMORY\raw\DigitalHealthWeeklyBrief\DHWB-YYYYMMDD.md`
-2. **异步实体入湖委托**: 提取非共识观点等战略突变实体，**必须使用 `invoke_subagent` (TypeName: self, Role: Vector-Lake-Ingestor)** 将入湖任务移交。由子代理在后台调用 `call_mcp_tool` (`vector-lake-mcp`: `prepare_ingest_batch`) 执行抛入，主代理禁止阻塞等待。
+2. **实体入湖**: 提取非共识观点等战略突变实体，强制通过 `invoke_subagent` 委派入湖子代理抛入后台引擎，不阻塞主会话。
 
 ## 2. <Contracts> (输出与交付契约)
 - **S-I-A 框架契约**: 情报推演必须遵循 Signal(信号) -> Insight(洞察) -> Action(行动杠杆) 闭环。
 - **跨界强制契约**: 终稿中必须至少包含 1 个“非医疗行业”的跨界启发 (Serendipity)。
 - **真实元数据契约**: 所有引用链接必须经过真实验证，禁止遗留 `[URL]` 占位符。
-- **BLUF 契约**: 彻底去AI化。禁止在开头和结尾生成任何问候、奉承或服务性客套话（如“希望本期报告...”），必须开门见山直接输出核心洞察。
 - **交付链接契约**: 战报生成后，必须向用户输出包含绝对物理路径的可点击 Markdown 链接。
 
 ## 3. <Failure_Taxonomy> (失败分类学)
