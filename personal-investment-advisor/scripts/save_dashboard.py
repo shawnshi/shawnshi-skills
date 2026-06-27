@@ -219,6 +219,11 @@ def render_markdown(data, raw_json):
             md += f"- Freshness: {item.get('freshness', '')}\n"
             md += f"- Confidence: {item.get('confidence', '')}\n"
 
+    md += "\n## ⚖️ 查理·芒格灵魂三问 (The Munger Filter)\n\n"
+    md += f"- **机会成本考量**: 如果今天没有持仓，你还会在当前价格买入吗？(Yes/No)\n"
+    md += f"- **长期护城河**: 如果明天关闭交易所 5 年，你持有舒服吗？(Yes/No)\n"
+    md += f"- **逻辑一致性**: 当初的买入论文 (Thesis) 还完整吗？(Yes/No)\n"
+
     if watchlist_alerts:
         md += "\n## Watchlist Alerts\n"
         for item in watchlist_alerts:
@@ -255,8 +260,15 @@ def save_dashboard():
         print("Error: No content provided.", file=sys.stderr)
         sys.exit(1)
 
+    import re
+    # Extract JSON block if surrounded by markdown or conversational text
+    json_str = content
+    match = re.search(r'\{.*\}', content, re.DOTALL)
+    if match:
+        json_str = match.group(0)
+        
     try:
-        parsed = json.loads(content)
+        parsed = json.loads(json_str)
         formatted_content = json.dumps(parsed, indent=2, ensure_ascii=False)
     except json.JSONDecodeError as e:
         print(f"Error parsing JSON content: {e}. Ensure the agent output is pure JSON.", file=sys.stderr)
