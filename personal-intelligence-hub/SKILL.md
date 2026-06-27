@@ -63,7 +63,11 @@ AVOID: 把“摘要”伪装成“洞察”；缺乏证据时输出 L4 级判断
 ### Phase 4: Pipeline Gate Orchestration (门控与锻造)
 严禁要求子代理执行脚本，必须由主代理依次接管验证：
 1. **JSON 校验**: 运行 `$env:PYTHONIOENCODING="utf-8"; python "C:\Users\shich\.gemini\config\skills\personal-intelligence-hub\scripts\validate_refined_json.py"`。若报错自行修正。
-2. **红队对抗**: 若存在 L4 候选，运行 `$env:PYTHONIOENCODING="utf-8"; python "C:\Users\shich\.gemini\config\skills\personal-intelligence-hub\scripts\adversarial_audit.py"`。
+2. **红队对抗 (L4 门控)**: 
+   - 检查 `intelligence_current_refined.json` 中是否有 `"intelligence_level": "L4"`。
+   - 若存在，必须先使用 `invoke_subagent` (TypeName: self, Role: cognitive-logic-adversary) 将该 L4 内容发给红队子代理进行攻击测试。要求红队子代理返回包含 `"devil_advocate"` 与 `"blind_spots"` 的 JSON，并由主代理将其落盘为 `C:\Users\shich\.gemini\MEMORY\scratch\redteam_report.json`。
+   - 随后执行验证脚本并挂载该审批单：`$env:PYTHONIOENCODING="utf-8"; python "C:\Users\shich\.gemini\config\skills\personal-intelligence-hub\scripts\adversarial_audit.py" "C:\Users\shich\.gemini\MEMORY\scratch\redteam_report.json"`。
+   - ⚠️ 若不存在 L4，或因宕机未能提供人工/活体子代理红队报告，直接**不带参数**运行该审计命令。此时门控系统将触发安全保护机制，把所有未经验证的 L4 强制降级为 L3。
 3. **最终锻造**: 运行 `$env:PYTHONIOENCODING="utf-8"; python "C:\Users\shich\.gemini\config\skills\personal-intelligence-hub\scripts\forge.py"` 生成最终简报。
 
 ### Phase 5: Async Vector Lake Ingestion (异步图谱入湖)

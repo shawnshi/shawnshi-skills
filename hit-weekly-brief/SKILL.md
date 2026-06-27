@@ -44,21 +44,21 @@ AVOID: 重复提取 14 天前的旧闻；丢失跨界启发模块；未经验证
 1. **概念降维**: 解读非医疗报告时，将核心概念 1:1 翻译为医疗 IT 实景（如将“边缘计算”翻译为“床旁监护流式分析”）。
 2. **多跳关联**: 结合过往 HIS/EMR 架构案例，推演跨界逻辑在医疗业务线的可落地性。
 
-### Phase 3: Contrarian 对抗审计
-强制要求寻找一份与本周主推共识（如 McKinsey / Gartner 结论）完全相反的数据报告或专家评论，借此识别“共识幻觉”。同时启动**红队机制 (Red Teaming)**：针对每一条主流共识，必须强制配备一段关于“执行阻力 / 利益冲突 / 技术毒点”的悲观阻力分析。
+### Phase 3: Contrarian 对抗审计 (红队子代理接管)
+强制要求寻找一份与本周主推共识（如 McKinsey / Gartner 结论）完全相反的数据报告。同时启动**活体红队机制 (Red Teaming)**：主代理必须调用 `invoke_subagent` 拉起 `cognitive-logic-adversary` 子代理，将主流共识发给它进行逻辑攻击。子代理必须返回一段关于“执行阻力 / 利益冲突 / 技术毒点”的悲观阻力分析，主代理再将其缝合入最终简报。
 
 ### Phase 4: 全局缝合与跨平台防爆审计
 1. 渲染简报草稿，使用 `write_to_file` 写入隔离工作区 `<appDataDir>\brain\<conversation-id>\scratch\draft_hit_brief.md`。
-2. **防爆代码审查**: 调用跨平台审计脚本（挂载 UTF-8）：
+2. **跨技能防爆代码审查**: 必须复用 `hit-solution-architect` 技能中的工业级审查器。执行命令（需挂载 UTF-8）：
    ```powershell
-   $env:PYTHONIOENCODING="utf-8"; python "C:\Users\shich\.gemini\config\skills\scripts\hit_audit_gate.py" "<appDataDir>\brain\<conversation-id>\scratch\draft_hit_brief.md" --mode brief
+   $env:PYTHONIOENCODING="utf-8"; python "C:\Users\shich\.gemini\config\skills\hit-solution-architect\scripts\buzzword_auditor.py" "<appDataDir>\brain\<conversation-id>\scratch\draft_hit_brief.md"
    ```
-3. 若审计不通过（如查出假链接、缺失非共识观点），退回修正重试。
+3. 若审计不通过（查出假链接、缺失非共识观点、或残留公关废话），最多由主代理退回修正 2 次。
 
 ### Phase 5: 物理落盘与异步入湖 (Activate & Ingestion)
 1. 审计通过后，使用 `write_to_file` 落盘：
    `C:\Users\shich\.gemini\MEMORY\raw\DigitalHealthWeeklyBrief\DHWB-YYYYMMDD.md`
-2. **实体入湖**: 提取非共识观点等战略突变实体，调用 `call_mcp_tool` (`vector-lake-mcp`: `prepare_ingest_batch`) 抛入后台引擎。
+2. **异步实体入湖委托**: 提取非共识观点等战略突变实体，**必须使用 `invoke_subagent` (TypeName: self, Role: Vector-Lake-Ingestor)** 将入湖任务移交。由子代理在后台调用 `call_mcp_tool` (`vector-lake-mcp`: `prepare_ingest_batch`) 执行抛入，主代理禁止阻塞等待。
 
 ## 2. <Contracts> (输出与交付契约)
 - **S-I-A 框架契约**: 情报推演必须遵循 Signal(信号) -> Insight(洞察) -> Action(行动杠杆) 闭环。

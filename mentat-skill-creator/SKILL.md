@@ -24,10 +24,10 @@ Use this skill to create, repair, or evolve local skills. The complete historica
 
 ## Tool Trajectory
 **[IN_ORDER]** 执行需遵循以下轨迹流：
-1. view_file (侦查并读取目标 SKILL.md 与参考文档)
-2. invoke_subagent (可选：若失败复杂，唤醒 Critic 子代理诊断)
-3. multi_replace_file_content / write_to_file (修改结构化的 skill.json 节点数据，严禁直接拼凑 Markdown 文本)
-4. run_command (调用 scripts/render_skill.py 将 JSON 编译为 SKILL.md，并执行其他静态扫描)
+1. `view_file` (侦查并读取目标 SKILL.md 与参考文档)
+2. `invoke_subagent` (可选：若失败复杂，唤醒 Critic 子代理诊断)
+3. `multi_replace_file_content` / `write_to_file` (修改结构化的 skill.json 节点数据，严禁直接拼凑 Markdown 文本)
+4. `run_command` (调用 scripts/render_skill.py 将 JSON 编译为 SKILL.md，并执行其他静态扫描)
 
 ## 1. 核心流程与架构 (The Protocol)
 ### Phase 1: 侦察与意图锁定 (Recon & Intent)
@@ -42,12 +42,12 @@ Use this skill to create, repair, or evolve local skills. The complete historica
 1. **Critic Segregation**: 对于复杂的重复失败，必须通过 invoke_subagent 拉起 Failure Critic 提取一般化失败模式。
    - 子代理参数: TypeName: "self", Role: "Failure Critic Subagent".
    - 提取诊断 JSON: {"failure_mode": "...", "root_cause": "...", "suggested_patch_op": {"target_line": "...", "new_content": "..."}}.
-2. **Skill IR Contract (技能中间态)**: 对于 V9 技能，必须优先对同目录下的 `skill.json` 发起结构化写入或原子替换，随后通过 `run_command` 调用 `python scripts/render_skill.py skill.json` 进行编译。如果目标技能是遗留老技能且没有 JSON，建议先为其提取并创建 `skill.json`。
+2. **Skill IR Contract (技能中间态)**: 对于 V9 技能，必须优先对同目录下的 `skill.json` 发起结构化写入或原子替换，随后通过 `run_command` 调用 `$env:PYTHONIOENCODING="utf-8"; python scripts/render_skill.py skill.json` 进行编译。如果目标技能是遗留老技能且没有 JSON，建议先为其提取并创建 `skill.json`。
 
 ### Phase 4: 评估与固化 (Evaluate & Lock)
 1. **Contracts**: 添加或修复成功标准、Tool Trajectory 轨迹流，并强化 Failure Modes。
    - **Route Confusion (路由防撞校验)**: 在固化新技能的 Trigger 前，必须检视同级目录排查与其他技能的语义重叠。若发现抢答风险，必须打回并收紧边界。
-2. **Evaluate**: 如果存在 evals/benchmark.json，必须使用原生 run_command 附带 UTF-8 编码锁执行 scripts/skill_opt_evaluator.py 验证。
+2. **Evaluate**: 如果存在 evals/benchmark.json，必须调用 `run_command` 附带 UTF-8 编码锁执行 scripts/skill_opt_evaluator.py 验证。
 3. **Iterate**: 若测试失败，每次只打一个单点补丁并再次测试。被拒绝的编辑务必写入 rejected_edits.jsonl 避免死锁。
 
 ## 2. Skill Shape (V9 规范骨架)

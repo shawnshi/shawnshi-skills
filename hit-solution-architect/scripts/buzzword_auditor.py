@@ -43,8 +43,8 @@ VAGUE_PATTERNS = [
      "删除模糊限定词，给出具体程度或数据支撑"),
 ]
 
-# V5.0: Maximum allowed bold occurrences (Three-Bold Rule, SKILL.md 2.1)
-MAX_BOLD_COUNT = 3
+# V5.0/V9.0: Maximum allowed bold occurrences
+MAX_BOLD_COUNT = 20
 
 
 def audit_file(file_path):

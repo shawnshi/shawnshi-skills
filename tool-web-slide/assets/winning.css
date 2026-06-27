@@ -1,15 +1,28 @@
 /* ============ WINNING CLINICAL (STYLE C) OVERRIDES & COMPONENTS ============ */
 
 :root {
-  /* Core brand overrides */
-  --accent: #005EB8;
-  --accent-light: rgba(0,94,184, 0.1);
-  --paper: #FBFBFD;
-  --ink: #111820;
+  /* Core brand overrides from DESIGN.md (Winning Health 2.1.0) */
+  --primary-100: #E3F2FD;
+  --primary-600: #005EB8;
+  --primary-700: #004B93;
+  --secondary: #00B5E2;
+  --accent: #F2A900;
   
-  /* Font fallbacks in case core.css has different ones */
-  --sans: 'Inter', -apple-system, sans-serif;
-  --sans-zh: 'PingFang SC', 'Source Han Sans CN', 'Microsoft YaHei', sans-serif;
+  --gray-100: #F2F6FA;
+  --gray-300: #D1D9E0;
+  --gray-500: #9AA6B2;
+  --gray-600: #5C6B7A;
+  --gray-900: #1A232C;
+  
+  --surface: #FFFFFF;
+  
+  --paper: var(--gray-100);
+  --ink: var(--gray-900);
+  
+  /* Font fallbacks */
+  --sans: '-apple-system', BlinkMacSystemFont, 'Inter', sans-serif;
+  --sans-zh: 'PingFang SC', 'Microsoft YaHei', sans-serif;
+  --mono: 'JetBrains Mono', 'Inter', monospace;
 }
 
 /* Base resets for Winning */
@@ -36,7 +49,7 @@ body.canvas-mode {
   border-radius: 4px;
   border: 1px solid rgba(0,0,0,0.08);
 }
-.s-arch-layer.lyr-app { background-color: rgba(0,94,184, 0.05); border-left: 4px solid var(--accent); }
+.s-arch-layer.lyr-app { background-color: rgba(0,94,184, 0.05); border-left: 4px solid var(--primary-600); }
 .s-arch-layer.lyr-agt { background-color: rgba(0,184,184, 0.05); border-left: 4px solid #00B8B8; }
 .s-arch-layer.lyr-dat { background-color: rgba(94,114,134, 0.05); border-left: 4px solid #5e7286; }
 .s-arch-layer.lyr-sem { background-color: rgba(17,24,32, 0.03); border-left: 4px solid var(--ink); }
@@ -83,14 +96,14 @@ body.canvas-mode {
   transition: all 0.3s ease;
 }
 .s-era.highlight {
-  border-top: 3px solid var(--accent);
+  border-top: 3px solid var(--primary-600);
   box-shadow: 0 10px 30px rgba(0,94,184, 0.08);
   transform: translateY(-4px);
 }
 .s-era-period {
   font-family: var(--mono);
   font-size: 0.75rem;
-  color: var(--accent);
+  color: var(--primary-600);
   letter-spacing: 0.1em;
   text-transform: uppercase;
   margin-bottom: 12px;
@@ -108,8 +121,8 @@ body.canvas-mode {
 .s-era-role {
   display: inline-block;
   padding: 4px 10px;
-  background-color: var(--accent-light);
-  color: var(--accent);
+  background-color: var(--primary-100);
+  color: var(--primary-600);
   font-size: 0.8rem;
   border-radius: 2px;
 }
@@ -142,42 +155,123 @@ body.canvas-mode {
   flex-grow: 1;
 }
 
-/* Add other hallucinated but documented classes here just in case */
-.duo-half { width: 50%; display: flex; flex-direction: column; }
-.three-forces { display: grid; grid-template-columns: repeat(3, 1fr); gap: 2vw; }
-.force-card { border: 1px solid #eee; padding: 20px; }
-.brief-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 16px; }
-.brief-card { padding: 16px; background: #fff; border: 1px solid #eee; }
-.tl-axis { border-left: 2px solid var(--accent); padding-left: 20px; margin-left: 10px; }
-.loop-diagram { display: flex; justify-content: space-around; align-items: center; }
-.why-now-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 24px; }
-.why-col { display: flex; flex-direction: column; }
-.kpi-tower-row { display: flex; gap: 24px; align-items: flex-end; }
-.tower-col { flex: 1; background: var(--accent-light); border-top: 3px solid var(--accent); padding: 16px; }
-.takeaway-list { list-style: none; padding: 0; }
-.takeaway-list li { padding: 12px 0; border-bottom: 1px dashed #ccc; }
+/* =========================================================================
+   MEDICAL IT (HIT) SPECIFIC COMPONENTS
+   ========================================================================= */
 
-/* Additional hallucinated layout classes */
-.h-statement { }
-.stmt-anchor { }
-.hero-ink-col { }
-.force-num { }
-.is-accent { }
-.tl-body { }
-.loop-steps { }
-.loop-svg { }
-.loop-center { }
-.track { }
-.why-num-bottom { }
-.light { }
-.manifesto-top { }
-.ink-banner-full { }
+/* 1. Big Statement / Hero Quote (.c-statement) */
+.c-statement {
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  align-items: center;
+  text-align: center;
+  height: 100%;
+  padding: 0 4vw;
+}
+.c-statement-text {
+  font-size: clamp(32px, 4vw, 56px);
+  font-weight: 700;
+  color: var(--primary-600);
+  line-height: 1.3;
+  letter-spacing: -0.02em;
+}
+.c-statement-sub {
+  font-size: 1.5rem;
+  color: var(--text-secondary);
+  margin-top: 2vh;
+  font-weight: 400;
+}
+
+/* 2. KPI / Metrics Grid (.c-kpi-group) */
+.c-kpi-group {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+  gap: 3vw;
+  margin-top: 4vh;
+}
+.c-kpi {
+  display: flex;
+  flex-direction: column;
+  border-left: 4px solid var(--primary-600);
+  padding-left: 1.5vw;
+}
+.c-kpi-value {
+  font-family: var(--mono);
+  font-size: 4rem;
+  font-weight: 700;
+  color: var(--ink);
+  line-height: 1;
+  margin-bottom: 8px;
+}
+.c-kpi-value span {
+  font-size: 2rem;
+  color: var(--primary-600);
+  margin-left: 4px;
+}
+.c-kpi-label {
+  font-size: 1.1rem;
+  font-weight: 600;
+  color: var(--text-secondary);
+}
+
+/* 3. Transformation Timeline (.c-timeline) */
+.c-timeline {
+  display: flex;
+  justify-content: space-between;
+  position: relative;
+  margin-top: 6vh;
+  padding-top: 2vh;
+}
+.c-timeline::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 2px;
+  background: var(--border-subtle);
+  z-index: 0;
+}
+.c-timeline-step {
+  position: relative;
+  z-index: 1;
+  flex: 1;
+  padding-right: 2vw;
+}
+.c-timeline-marker {
+  width: 16px;
+  height: 16px;
+  background: var(--paper);
+  border: 4px solid var(--primary-600);
+  border-radius: 50%;
+  position: absolute;
+  top: -2vh;
+  transform: translateY(-50%);
+}
+.c-timeline-year {
+  font-family: var(--mono);
+  font-weight: 700;
+  color: var(--primary-600);
+  font-size: 1.2rem;
+  margin-bottom: 8px;
+}
+.c-timeline-title {
+  font-size: 1.2rem;
+  font-weight: 600;
+  margin-bottom: 8px;
+  color: var(--ink);
+}
+.c-timeline-desc {
+  font-size: 0.9rem;
+  color: var(--text-secondary);
+  line-height: 1.5;
+}
 
 /* =========================================================================
    MBB CONSULTING PRIMITIVES (V2 UPGRADE)
    ========================================================================= */
 
-/* 1. Consulting Header (Tracker + Action Title) */
 .c-header {
   display: flex;
   flex-direction: column;
@@ -189,7 +283,7 @@ body.canvas-mode {
   font-size: 0.75rem;
   letter-spacing: 0.15em;
   text-transform: uppercase;
-  color: var(--accent);
+  color: var(--primary-600);
   display: flex;
   align-items: center;
   gap: 8px;
@@ -211,7 +305,7 @@ body.canvas-mode {
   max-width: 48ch;
 }
 .c-action-title strong {
-  color: var(--accent);
+  color: var(--primary-600);
   font-weight: 700;
 }
 
@@ -229,7 +323,7 @@ body.canvas-mode {
   padding-top: 2vh;
 }
 .c-pillar.highlight {
-  border-top-color: var(--accent);
+  border-top-color: var(--primary-600);
 }
 .c-pillar-title {
   font-size: 1.3rem;
@@ -279,7 +373,7 @@ body.canvas-mode {
 .c-matrix-quad:nth-child(3), .c-matrix-quad:nth-child(4) { border-bottom: none; }
 
 .c-matrix-quad.sweet-spot {
-  background-color: var(--accent-light);
+  background-color: var(--primary-100);
 }
 .c-matrix-lbl {
   font-size: 1.4rem;

@@ -382,6 +382,23 @@ def to_float(value: object, default: float = 0.0) -> float:
 def normalize_text(value: object) -> str:
     return escape(str(value)) if value is not None else ""
 
+def render_multiline_text(text: str, x: float, y: float, text_anchor: str, cls: str, dy: float = 14) -> str:
+    raw_str = str(text)
+    if '\\n' in raw_str:
+        lines = raw_str.split('\\n')
+    else:
+        lines = raw_str.split('\n')
+    if len(lines) <= 1:
+        return f'  <text x="{x}" y="{y}" text-anchor="{text_anchor}" class="{cls}">{normalize_text(lines[0])}</text>'
+    
+    y_start = y - (len(lines) - 1) * dy / 2
+    parts = [f'  <text x="{x}" y="{y_start}" text-anchor="{text_anchor}" class="{cls}">']
+    for i, line in enumerate(lines):
+        parts.append(f'    <tspan x="{x}" dy="{dy if i > 0 else 0}">{normalize_text(line)}</tspan>')
+    parts.append('  </text>')
+    return "\n".join(parts)
+
+
 
 # Style 8 is AI-authored: the AI reads references/style-8-dark-luxury.md and hand-crafts
 # the SVG directly. It cannot be driven by this template generator.
@@ -975,13 +992,19 @@ def marker_for_color(style: Dict[str, object], color: str, arrow_data: Dict[str,
 
 
 def render_label_badge(x: float, y: float, text: str, style: Dict[str, object], label_style: str = "offset") -> str:
-    width = max(36, len(text) * 7 + 14)
+    raw_str = str(text)
+    lines = raw_str.split('\\n') if '\\n' in raw_str else raw_str.split('\n')
+    max_line_len = max((len(line) for line in lines), default=0)
+    width = max(36, max_line_len * 7 + 14)
+    height = len(lines) * 16 + 4
+    
     parts: List[str] = []
     if label_style == "badge":
         bg = style_value(style, "arrow_label_bg")
         opacity = style_value(style, "arrow_label_opacity")
-        parts.append(f'  <rect x="{round(x - width / 2, 2)}" y="{round(y - 10, 2)}" width="{width}" height="20" rx="6" fill="{bg}" opacity="{opacity}"/>')
-    parts.append(f'  <text x="{round(x, 2)}" y="{round(y + 4, 2)}" text-anchor="middle" class="arrow-label">{normalize_text(text)}</text>')
+        parts.append(f'  <rect x="{round(x - width / 2, 2)}" y="{round(y - height / 2 + 2, 2)}" width="{width}" height="{height}" rx="6" fill="{bg}" opacity="{opacity}"/>')
+    
+    parts.append(render_multiline_text(text, round(x, 2), round(y + 4, 2), "middle", "arrow-label", 14))
     return "\n".join(parts)
 
 
@@ -1319,7 +1342,7 @@ def render_rect_node(node: Dict[str, object], style: Dict[str, object], kind: st
     if kind == "bot":
         title_x = x + width / 2
         text_anchor = "middle"
-    lines.append(f'  <text x="{title_x}" y="{title_y}" text-anchor="{text_anchor}" class="node-title">{title}</text>')
+    lines.append(render_multiline_text(title, title_x, title_y, text_anchor, "node-title", 18))
 
     if subtitle:
         sub_y = title_y + 22
@@ -1336,7 +1359,7 @@ def render_rect_node(node: Dict[str, object], style: Dict[str, object], kind: st
             sub_y = y + height + 20
         if kind == "user_avatar":
             sub_y = title_y + 22
-        lines.append(f'  <text x="{title_x}" y="{sub_y}" text-anchor="{text_anchor}" class="node-sub">{subtitle}</text>')
+        lines.append(render_multiline_text(subtitle, title_x, sub_y, text_anchor, "node-sub", 14))
 
     tag_lines = []
     if node.get("tags"):
@@ -1370,10 +1393,10 @@ def render_node(node: Dict[str, object], style: Dict[str, object]) -> str:
             f'  <ellipse cx="{x + width / 2}" cy="{y + height - ry}" rx="{rx / 2}" ry="{ry}" fill="{fill}" stroke="{stroke}" stroke-width="{stroke_width}"/>',
             f'  <ellipse cx="{x + width / 2}" cy="{y + height * 0.38}" rx="{rx / 2}" ry="{ry}" fill="none" stroke="{stroke}" stroke-opacity="0.45" stroke-width="1.2"/>',
             f'  <ellipse cx="{x + width / 2}" cy="{y + height * 0.6}" rx="{rx / 2}" ry="{ry}" fill="none" stroke="{stroke}" stroke-opacity="0.25" stroke-width="1.2"/>',
-            f'  <text x="{x + width / 2}" y="{y + height / 2 - 6}" text-anchor="middle" class="node-title">{label}</text>',
+            render_multiline_text(label, x + width / 2, y + height / 2 - 6, "middle", "node-title", 18),
         ]
         if subtitle:
-            lines.append(f'  <text x="{x + width / 2}" y="{y + height / 2 + 18}" text-anchor="middle" class="node-sub">{subtitle}</text>')
+            lines.append(render_multiline_text(subtitle, x + width / 2, y + height / 2 + 18, "middle", "node-sub", 14))
         return "\n".join(lines)
     return render_rect_node(node, style, kind)
 
@@ -1492,6 +1515,18 @@ def build_svg(template_type: str, data: Dict[str, object]) -> str:
     containers = data.get("containers", [])
     nodes_data = data.get("nodes", [])
     arrows_data = data.get("arrows", [])
+    
+    # Auto-scale viewBox based on node bounds to prevent clipping (Loop Engineering CI fix)
+    max_x, max_y = width, height
+    for node_data in nodes_data:
+        _, _, right, bottom = node_bounds(node_data)
+        if right + 60 > max_x:
+            max_x = right + 60
+        if bottom + 60 > max_y:
+            max_y = bottom + 60
+            
+    width = max(width, max_x)
+    height = max(height, max_y)
     legend = data.get("legend", [])
 
     defs = render_defs(style_index, style)

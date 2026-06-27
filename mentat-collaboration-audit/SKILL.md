@@ -33,19 +33,16 @@ AVOID: 凭空编造遥测数据；空泛复盘；死锁强制修改。
 
 ## 1. 核心流程与架构 (The Protocol)
 ### Mode 1: Telemetry
-1. **带锁调用探针**: 使用 `run_command` 调用外部脚本采集数据，必须使用绝对路径：
+1. **调用原生探针**: 必须使用 `run_command` 调用唯一合法的 V4 数据引擎提取遥测数据（严禁虚构 `system_retro.py`）：
    ```powershell
-   $env:PYTHONIOENCODING="utf-8"; python "C:\Users\shich\.gemini\config\skills\scripts\system_retro.py"
+   $env:PYTHONIOENCODING="utf-8"; python "C:\Users\shich\.gemini\config\skills\mentat-collaboration-audit\scripts\analyze_insights_v4.py" --period <PERIOD> --extract-only
    ```
 2. **生成报告**: 输出包含 [全局算力损耗]、[异常节点狙击] 的冰冷数据报告。
 
 ### Mode 2: Interaction
-1. **并发数据摄取**: 使用 `run_command` 在单次回合内并发执行底层与顶层抓取（严禁串行等待）：
+1. **物理指标与会话抓取**: 使用 `run_command` 统一调用 V4 引擎（同时涵盖底层算力资源与顶层会话信息，禁止调用虚构脚本）：
    ```powershell
    $env:PYTHONIOENCODING="utf-8"; python "C:\Users\shich\.gemini\config\skills\mentat-collaboration-audit\scripts\analyze_insights_v4.py" --period <PERIOD> --extract-only --drop-noise
-   ```
-   ```powershell
-   $env:PYTHONIOENCODING="utf-8"; python "C:\Users\shich\.gemini\config\skills\scripts\system_retro.py"
    ```
 2. **Mentat内观日志对齐**: 使用 `run_command` 或 `view_file` 获取 `C:\Users\shich\.gemini\MEMORY\raw\privacy\Diary\mentat_audit\` 目录下对应时间范围内的 `.md` 内观回顾（如 OODA 日志）。
 3. **原生结构化推演**: 利用 Gemini Pro 3.1 的原生 Structured Output 能力，严格依据 `references/SCHEMA.md` 生成包含“核心协作摩擦模式”、“教练解读”和“工作流资产”的 JSON 数据包，并使用 `write_to_file` 严格落盘到当前会话的安全沙盒：`<appDataDir>\brain\<conversation-id>\scratch\mentat_audit_draft.json`。

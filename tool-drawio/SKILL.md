@@ -37,7 +37,8 @@ AVOID: 绕过 JSON 引擎强行手写 XML；中心点不对齐导致的错位渲
   `<appDataDir>\brain\<conversation-id>\scratch\diagram_data.json`
 - **坐标规矩与对齐**: 对于 `architecture` 或 `flowchart`，需提供精确的 `x`, `y`, `width`, `height`, `kind`。
   1. 水平相连的节点共用 `cy` ($cy = y + height/2$)，垂直相连的节点共用 `cx` ($cx = x + width/2$)。
-  2. 画板默认宽度为 960px，节点右边缘 ($x + width$) 不得超过 850px。
+  2. **画布无限延展 (Auto-Scaling)**: 引擎 V9.1 已实现动态扩容。遇到长文本或复杂连线时，**强制拉宽水平和垂直间距（如 X轴跨度 > 300px，Y轴 > 200px）**，绝不妥协挤压。
+- **文本换行 (Multi-line Support)**: 针对较长文案，可以直接在 `label` 或 `sublabel` 字符串中使用 `\n`。底层引擎将自动利用 `<tspan>` 完成专业的垂直居中多行排版，彻底解决文本溢出节点的难题。
 - **JSON 骨架示例**:
   ```json
   {

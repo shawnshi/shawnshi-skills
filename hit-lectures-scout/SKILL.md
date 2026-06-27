@@ -51,14 +51,14 @@ AVOID: 保留假 [URL] 占位符；发布无临床场景适配的情报；缺乏
 
 ### Phase 4: 跨平台代码审计与物理入湖 (The Hard Gate)
 1. 根据模板渲染草稿，使用 `write_to_file` 写入隔离工作区 `<appDataDir>\brain\<conversation-id>\scratch\draft_hit_scout.md`。
-2. **执行过检**: 调用 shell 执行审计：
+2. **执行过检 (跨技能协同)**: 必须复用 `hit-solution-architect` 的工业级黑话审查器。调用 shell 执行审计：
    ```powershell
-   $env:PYTHONIOENCODING="utf-8"; python "C:\Users\shich\.gemini\config\skills\scripts\hit_audit_gate.py" "<appDataDir>\brain\<conversation-id>\scratch\draft_hit_scout.md" --mode scout
+   $env:PYTHONIOENCODING="utf-8"; python "C:\Users\shich\.gemini\config\skills\hit-solution-architect\scripts\buzzword_auditor.py" "<appDataDir>\brain\<conversation-id>\scratch\draft_hit_scout.md"
    ```
-   若报错拦截（如查出假链接），最多重试 2 次。
+   若报错拦截（查出主观形容词或伪学术废话），最多由主代理退回修正 2 次。
 3. **物理落盘**: 脚本返回 Exit Code 0 后，归档至：
    `C:\Users\shich\.gemini\MEMORY\raw\DigitalHealthLecturesScout\DHLS-YYYYMMDD.md`
-4. **异步沉淀**: 提取高价值概念，调用 `call_mcp_tool` (`vector-lake-mcp`: `prepare_ingest_batch`) 抛入后台沉淀。
+4. **异步沉淀委托**: 提取含双链 `[[ ]]` 的战略突变事实，**必须使用 `invoke_subagent` (TypeName: self, Role: Vector-Lake-Ingestor)** 将入湖任务移交。由子代理在后台调用 `call_mcp_tool` (`vector-lake-mcp`: `prepare_ingest_batch`) 执行抛入，主代理禁止阻塞在此阶段。
 
 ## 2. <Contracts> (输出与交付契约)
 ### [Format Stack] 战报格式模板

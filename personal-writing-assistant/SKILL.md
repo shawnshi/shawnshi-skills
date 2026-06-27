@@ -25,8 +25,9 @@ AVOID: 居高临下的上帝视角；未获用户找核审批前直接起草。
 2. `invoke_subagent` (可选：拉起 research 子代理补充事实)
 3. `write_to_file` (写入 Original 快照)
 4. `run_command` (observe.py 记录原版)
-5. `write_to_file` (写入 Final 终稿)
-6. `run_command` (observe.py 记录终版)
+5. `invoke_subagent` (强制：拉起 personal-write-humanizer 代理执行去AI化重铸)
+6. `write_to_file` (写入 Final 终稿)
+7. `run_command` (observe.py 记录终版)
 
 ## 1. 核心流程与架构 (The Protocol)
 ### Phase 1: Inversion 门控与逻辑找核
@@ -49,8 +50,8 @@ AVOID: 居高临下的上帝视角；未获用户找核审批前直接起草。
    ```powershell
    $env:PYTHONIOENCODING="utf-8"; python "C:\Users\shich\.gemini\config\skills\personal-writing-assistant\scripts\observe.py" record-original "C:\Users\shich\.gemini\MEMORY\raw\article\{Topic}_Original.md"
    ```
-3. **自我审计**: 执行去 AI 化自检。
-4. **终稿落盘**: 使用 `write_to_file` 写入 `C:\Users\shich\.gemini\MEMORY\raw\article\{Topic}_Final.md`。
+3. **去AI化重铸 (Delegation)**: 必须调用 `invoke_subagent` 拉起一个 `TypeName: "self", Role: "personal-write-humanizer"` 的子代理，将 `{Topic}_Original.md` 的内容交由其执行专业的去 AI 化润色，并挂起主线程，等待其通过 `send_message` 回传终稿内容。
+4. **终稿落盘**: 接收到子代理的回传后，使用 `write_to_file` 写入 `C:\Users\shich\.gemini\MEMORY\raw\article\{Topic}_Final.md`。
 5. **终稿快照**:
    ```powershell
    $env:PYTHONIOENCODING="utf-8"; python "C:\Users\shich\.gemini\config\skills\personal-writing-assistant\scripts\observe.py" record-final "C:\Users\shich\.gemini\MEMORY\raw\article\{Topic}_Final.md"
