@@ -30,12 +30,12 @@ AVOID: 重复提取 14 天前的旧闻；丢失跨界启发模块；未经验证
 
 ## 1. 核心流程与架构 (The Protocol)
 ### Phase 1: 四路并发原生沙盒扫描 (Concurrent Map-Reduce)
-1. **初始化调度**: 主代理调用 `invoke_subagent` 并发拉起 4 个 `research` 子代理，下发以下指令包：
+3. **初始化调度**: 主代理调用 `invoke_subagent` 并发拉起 4 个 `research` 子代理，下发以下指令包：
    - 顶级智库战略 (`Task_strategy.md`)
    - 公卫与合规政策 (`Task_policy.md`)
    - 医疗技术与架构 (`Task_tech.md`)
    - 跨界技术架构注入 (`Task_serendipity.md`，寻找金融/物流/军工等同构启发)
-   - 指示子代理通过 `send_message` 以 JSON 格式回传结果。
+   - 指示子代理：“你必须返回 JSON 格式结果，且必须包含 `source_url`（必须是真实可访问的 https:// 链接）和 `publish_date`（精确的 YYYY-MM-DD 格式）。严禁使用类似 `[Title](Title)` 的假链接或占位符。”
 2. **图谱语义去重**: 回收数据后，调用 `call_mcp_tool` (`vector-lake-mcp`: `search_vector_lake`) 扫描 14 天历史进行去重。
 
 ### Phase 2: 概念化用与图谱回溯 (Semantic Translation)
@@ -61,10 +61,33 @@ AVOID: 重复提取 14 天前的旧闻；丢失跨界启发模块；未经验证
    - 必须通过 `write_to_file` 生成本地 `.json` 载荷文件，然后调用 `vector-lake-mcp:prepare_ingest_batch` 进行物理入湖，严禁通过命令行直传长文本。
 
 ## 2. <Contracts> (输出与交付契约)
-- **S-I-A 框架契约**: 情报推演必须遵循 Signal(信号) -> Insight(洞察) -> Action(行动杠杆) 闭环。
-- **STQM 张力落地**: 必须在简报中单独开辟 `## 💥 认知张力与冲突 (Controversies)` 章节，记录与主流共识相悖的数据。
-- **跨界强制契约**: 终稿中必须至少包含 1 个“非医疗行业”的跨界启发 (Serendipity)。
-- **真实元数据契约**: 所有引用链接必须经过真实验证，禁止遗留 `[URL]` 占位符。
+
+### [Format Stack] 战报格式模板
+```markdown
+# 医疗行业战略智库周报 - [YYYY-MM-DD]
+> **全局非共识洞察 (BLUF)**: [一句话总结本周最大的认知张力或战略冲突]
+
+## 一、 全球主流智库洞察全景矩阵
+*(所有机构名称必须加上双链 `[[ ]]`，URL 必须是真实的 `https://`，日期必须是 YYYY-MM-DD)*
+| 机构名称 | 报告/研究名称 | 发布日期 | 核心战略信号 (Signal) | 真实来源链接 |
+|---|---|---|---|---|
+
+## 二、 医疗数字化转型深度战略剖析 (S-I-A 框架)
+### 1. [[核心概念]]：[子标题]
+- **趋势背景 (Signal)**: ...
+- **医疗映射 (Insight)**: ...
+- **落地对策 (Action)**: ...
+
+## 💥 三、 认知张力与冲突网 (STQM Tension Edges)
+*(寻找与本周主推共识相反的证据，识别“共识幻觉”)*
+- [必须提取为纯 JSON 代码块，包裹 `tension_edges` 数组，严格遵循 STQM 规范备用入湖]
+
+## 🌌 四、 跨界注入 (Serendipity)
+- **非医疗行业启发**: [FinTech/军工/物流等真实案例]
+- **医疗架构迁移**: [跨界降维打击策略]
+```
+
+- **反客套话契约 (Anti-Fluff)**: 严禁在开头或结尾生成“您好”、“为您整理完毕”、“欢迎随时联系”等大模型客服语气。必须直入正题。
 - **交付链接契约**: 战报生成后，必须向用户输出包含绝对物理路径的可点击 Markdown 链接。
 
 ## 3. <Failure_Taxonomy> (失败分类学)
