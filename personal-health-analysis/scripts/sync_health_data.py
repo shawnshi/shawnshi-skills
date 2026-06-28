@@ -21,8 +21,25 @@ def main():
         
         # Check for 429 or login failure
         if "Failed to login" in output or "429" in output or "Too Many Requests" in output or result.returncode != 0:
-            print("⚠️ [Phase B] GarminDB sync hit an error (likely 429 limit). Intercepting...")
-            trigger_fallback()
+            if "Failed to login" in output:
+                print("🔧 [Phase B] Encountered Login Failure. Attempting auto-healing: upgrading garminconnect...")
+                try:
+                    subprocess.run([sys.executable, "-m", "pip", "install", "--upgrade", "garminconnect"], check=True)
+                    print("✅ [Phase B] Auto-heal upgrade successful. Retrying sync...")
+                    result = subprocess.run(cmd_sync, stdout=subprocess.PIPE, stderr=subprocess.STDOUT, text=True, encoding='utf-8')
+                    output = result.stdout
+                    print(output)
+                    if "Failed to login" in output or "429" in output or "Too Many Requests" in output or result.returncode != 0:
+                        trigger_fallback()
+                    else:
+                        print("✅ [Phase B] GarminDB sync successful on retry.")
+                        return
+                except Exception as e:
+                    print(f"❌ [Phase B] Auto-heal failed: {e}")
+                    trigger_fallback()
+            else:
+                print("⚠️ [Phase B] GarminDB sync hit an error (likely 429 limit). Intercepting...")
+                trigger_fallback()
         else:
             print("✅ [Phase A] GarminDB sync successful.")
     except Exception as e:

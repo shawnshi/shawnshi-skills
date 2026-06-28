@@ -13,6 +13,7 @@ import argparse
 import statistics
 from pathlib import Path
 from datetime import datetime, timedelta
+import pandas as pd
 
 # Import data fetcher
 sys.path.insert(0, str(Path(__file__).parent))
@@ -27,7 +28,8 @@ try:
         get_daily_friction_matrix,
         get_devices_info,
         get_body_composition_detailed,
-        get_monitoring_hr
+        get_monitoring_hr,
+        get_max_metrics
     )
     HAS_SQLITE = DB_DIR.exists()
 except ImportError:
@@ -68,6 +70,15 @@ def calc_pmc_metrics(friction_matrix):
     df['atl'] = df['daily_friction_load'].ewm(span=7, adjust=False).mean()
     # TSB: CTL - ATL
     df['tsb'] = df['ctl'] - df['atl']
+    
+    def get_zone(tsb_val):
+        if pd.isna(tsb_val): return "无数据"
+        if tsb_val > 10: return "超量恢复 (Fresh)"
+        elif tsb_val >= -10: return "战术稳态 (Grey)"
+        elif tsb_val >= -30: return "结构性耗散 (Optimal_Training)"
+        else: return "熔断先兆 (High_Risk)"
+        
+    df['TSB_Zone'] = df['tsb'].apply(get_zone)
     
     return df
 
@@ -133,6 +144,7 @@ def fetch_local_summary(days):
         raise DataStaleError("Local data is completely empty (missing tables or no data in range).")
         
     # --- Check Data Freshness ---
+    is_stale = False
     if not summary_df.empty and 'date' in summary_df.columns and 'resting_heart_rate' in summary_df.columns:
         valid_dates = summary_df.dropna(subset=['resting_heart_rate'])['date']
         if not valid_dates.empty:
@@ -140,7 +152,7 @@ def fetch_local_summary(days):
             try:
                 latest_date = datetime.strptime(latest_date_str, '%Y-%m-%d')
                 if (datetime.now() - latest_date).days >= 1:
-                    raise DataStaleError(f"Local data is stale. Latest valid entry is {latest_date_str}.")
+                    is_stale = True
             except ValueError:
                 pass
                 
@@ -149,9 +161,10 @@ def fetch_local_summary(days):
     activities_df = sqlite_activities(fetch_days)
     biomechanics_df = sqlite_biomechanics(fetch_days)
     
-    # New: Devices and Detailed weight
+    # New: Devices and Detailed weight and max metrics
     devices_df = get_devices_info()
     weight_detailed_df = get_body_composition_detailed(fetch_days)
+    max_metrics = get_max_metrics()
     
     activities_list = activities_df.to_dict('records') if not activities_df.empty else []
     biomechanics_list = biomechanics_df.to_dict('records') if not biomechanics_df.empty else []
@@ -185,14 +198,20 @@ def fetch_local_summary(days):
         "pmc": pmc_result.to_dict('records') if not pmc_result.empty else [],
         "device_info": devices_df,
         "body_composition_detailed": weight_detailed_df.to_dict('records') if not weight_detailed_df.empty else [],
-        "training_status": {},
-        "max_metrics": {},
+        "training_status": {
+            "vo2_max": max_metrics.get("vo2_max"),
+            "load_status": pmc_result.iloc[-1]['TSB_Zone'] if not pmc_result.empty and 'TSB_Zone' in pmc_result.columns else "无数据",
+            "load_ratio": round(pmc_result.iloc[-1]['atl'] / pmc_result.iloc[-1]['ctl'], 2) if not pmc_result.empty and pmc_result.iloc[-1]['ctl'] > 0 else "--"
+        },
+        "max_metrics": max_metrics,
         "body_composition": {}
     }
     
     # Add status field to HRV to match existing logic
     for entry in summary_data["hrv"]:
         entry["status"] = "BALANCED" # Default for local simplified extraction
+        
+    summary_data["is_stale"] = is_stale
         
     return summary_data
 
@@ -535,7 +554,8 @@ def perform_bio_metric_audit(summary_data):
         "hrv": {"value": latest_hrv, "status": hrv_status_raw},
         "vo2_max": vo2_max,
         "fitness_age": fitness_age,
-        "bmi": bmi
+        "bmi": bmi,
+        "is_stale": summary_data.get("is_stale", False)
     }
 
     # 2. Recovery Loop Audit

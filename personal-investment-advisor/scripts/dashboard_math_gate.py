@@ -12,12 +12,18 @@ def _get_nested(data: dict, path: list[str], default: Any = None) -> Any:
     return current
 
 
+import re
+
 def _to_float(value: Any) -> float | None:
+    if value in (None, "", "N/A"):
+        return None
     try:
-        if value in (None, "", "N/A"):
-            return None
         return float(value)
     except (TypeError, ValueError):
+        if isinstance(value, str):
+            match = re.search(r"[-+]?\d*\.\d+|\d+", value)
+            if match:
+                return float(match.group())
         return None
 
 

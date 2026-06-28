@@ -59,6 +59,37 @@ def get_devices_info():
     conn.close()
     return df
 
+def get_max_metrics():
+    """Extract VO2 Max and Fitness Age from attributes table."""
+    conn = get_connection(GARMIN_DB)
+    query = "SELECT key, value FROM attributes WHERE key IN ('vo2max_running', 'vo2max_cycling', 'fitness_age', 'weight') ORDER BY timestamp DESC"
+    try:
+        df = pd.read_sql_query(query, conn)
+        result = {}
+        # Get latest values
+        for _, row in df.iterrows():
+            if row['key'] not in result:
+                result[row['key']] = row['value']
+        
+        vo2_max = result.get('vo2max_running') or result.get('vo2max_cycling') or "--"
+        fitness_age = result.get('fitness_age') or "N/A"
+        
+        try:
+            if vo2_max != "--":
+                vo2_max = round(float(vo2_max), 1)
+        except:
+            pass
+            
+        metrics = {
+            "vo2_max": vo2_max,
+            "fitness_age": fitness_age
+        }
+    except Exception as e:
+        metrics = {"vo2_max": "--", "fitness_age": "N/A"}
+        print(f"Failed to query attributes: {e}")
+    conn.close()
+    return metrics
+
 def get_body_composition_detailed(days=30):
     """Extract body composition metrics from the weight table."""
     conn = get_connection(GARMIN_DB)

@@ -217,6 +217,15 @@ def validate_dashboard(data: dict) -> list[str]:
     if watchlist_alerts is not None and not isinstance(watchlist_alerts, list):
         errors.append("watchlist_alerts must be a list when provided")
 
+    mts = data.get("management_truth_serum")
+    if mts is not None:
+        if not isinstance(mts, dict):
+            errors.append("management_truth_serum must be an object")
+        else:
+            for key in SCHEMA.get("required_truth_serum_fields", []):
+                if mts.get(key) in (None, ""):
+                    errors.append(f"missing management_truth_serum field: {key}")
+
     errors.extend(validate_math_consistency(data))
 
     return errors

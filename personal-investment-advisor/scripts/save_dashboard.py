@@ -200,10 +200,26 @@ def render_markdown(data, raw_json):
         for item in intel["positive_catalysts"]:
             md += f"- {item}\n"
     if intel.get("risk_alerts"):
-        md += "\n**核心风险警示 (SPOF)**:\n"
+        md += "**风险警示**:\n"
         for item in intel["risk_alerts"]:
-            md += f"- ⚠️ {item}\n"
-            
+            md += f"  - ⚠️ {item}\n"
+
+    if "management_truth_serum" in data:
+        mts = data["management_truth_serum"]
+        md += "\n## 🤥 管理层测谎仪 (Truth Serum Audit)\n\n"
+        md += f"- **承诺兑现率**: {mts.get('promise_fulfillment_rate', 'N/A')}\n"
+        md += f"- **管理层诚实度评分**: {mts.get('management_honesty_score', 'N/A')}/100\n"
+        
+        if mts.get("red_flag_warnings"):
+            md += "- **红旗警告 (Tone Alerts)**:\n"
+            for item in mts["red_flag_warnings"]:
+                md += f"  - 🚨 {item}\n"
+                
+        if mts.get("unmentioned_failures"):
+            md += "- **避而不谈的失败 (Ignored Promises)**:\n"
+            for item in mts["unmentioned_failures"]:
+                md += f"  - 🔇 {item}\n"
+
     blind_spot = data.get("blind_spot_warning", "")
     if blind_spot:
         md += f"\n**🎯 对抗性红队审计 (Adversarial Stress Test)**:\n> ⚠️ {blind_spot}\n"

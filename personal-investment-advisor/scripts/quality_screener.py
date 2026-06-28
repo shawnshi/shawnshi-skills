@@ -126,9 +126,6 @@ def evaluate_a_share_ticker(ticker_symbol):
         return {"Company": ticker_symbol, "Status": "❌ Error", "Reason": f"Akshare fetch failed: {e}"}
 
 def evaluate_ticker(ticker_symbol):
-    if ticker_symbol.endswith(".SS") or ticker_symbol.endswith(".SZ"):
-        print(f"Fetching A-Share data for {ticker_symbol} via akshare...")
-        return evaluate_a_share_ticker(ticker_symbol)
 
     print(f"Fetching data for {ticker_symbol} via yfinance...")
     try:
