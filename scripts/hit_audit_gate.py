@@ -92,6 +92,10 @@ def validate_hit_draft(content: str, mode: str) -> list[str]:
             if not re.search(s_sec, content, re.IGNORECASE):
                 errors.append(f"Scout Mode Violation: Missing required structural section/keyword '{s_sec}'.")
 
+        # RWE Hard Metric Validation
+        if not re.search(r"(\d+%|[Nn]\s*=\s*\d+|p\s*[<=]\s*0\.\d+|AUC|ROC)", content, re.IGNORECASE):
+            errors.append("Scout RWE Violation: Missing hard clinical statistical metrics (e.g., N=100, 95%, p<0.05, AUC). RWE must be quantified, not just adjectives.")
+
     elif mode == "brief":
         # Matrix Table Validation
         if not re.search(r"\|\s*机构名称\s*\|\s*报告", content):

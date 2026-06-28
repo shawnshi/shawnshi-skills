@@ -34,7 +34,7 @@ AVOID: 保留假 [URL] 占位符；发布无临床场景适配的情报；缺乏
    `$env:PYTHONIOENCODING="utf-8"; python "C:\Users\shich\.gemini\config\skills\hit-lectures-scout\assets\deepxiv_preprints_scout.py"`
    - 若脚本失败，降级通过 `invoke_subagent` 拉起 `research` 子代理手动抓取。
 2. **Journals 管线并发**: 使用 `invoke_subagent` 并发拉起 2 个 `research` 子代理，下发中英文期刊抓取目标。
-   - 指示子代理：“你必须返回 JSON 格式结果，且必须包含 `source_url`（必须是真实可访问的 https:// 或 DOI 链接）和 `publish_date`（精确的 YYYY-MM-DD 格式）。严禁使用假链接或纯文本占位符。”
+   - 指示子代理：“你必须返回 JSON 格式结果，且必须包含 `source_url`（必须是真实可访问的 https:// 或 DOI 链接）、`publish_date`（精确的 YYYY-MM-DD 格式），以及 **`clinical_rwe`（必须提取具体的临床实验数据，如样本量 N、准确率百分比、AUC等硬核统计指标，不能只写形容词）**。严禁使用假链接或纯文本占位符。”
    - 等待子代理回调唤醒。
 3. **弹性视窗**: 若最终抓取结果 < 5 篇，需将时间窗口扩大至 14 天重新扫描。
 
