@@ -360,3 +360,101 @@ body.canvas-mode {
   font-weight: 600;
   color: var(--text-secondary);
 }
+
+/* 5. V13.1 HIT Native Layouts */
+.multi-campus-topology {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 2rem;
+}
+.multi-campus-topology > .hub {
+  width: 100%;
+  padding: 2rem;
+  background: var(--accent-light);
+  border: 2px solid var(--accent);
+  text-align: center;
+}
+.multi-campus-topology > .spokes {
+  display: flex;
+  justify-content: center;
+  gap: 2rem;
+  width: 100%;
+}
+
+.tri-terminal-view {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 2px;
+  background: var(--border-subtle, #eee);
+  padding: 2px;
+}
+.tri-terminal-view > div {
+  background: #fff;
+  padding: 2rem;
+  min-height: 50vh;
+}
+
+.rag-traceability-flow {
+  display: grid;
+  grid-template-columns: 2fr 1fr 2fr;
+  gap: 1.5rem;
+  align-items: center;
+}
+
+.drg-cost-matrix {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  grid-template-rows: 1fr 1fr;
+  gap: 1rem;
+  height: 60vh;
+}
+
+.hl7-integration-bus {
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  min-height: 40vh;
+  position: relative;
+}
+.hl7-integration-bus::after {
+  content: "HL7/FHIR Enterprise Service Bus";
+  position: absolute;
+  top: 50%;
+  left: 0;
+  right: 0;
+  height: 24px;
+  background: var(--accent);
+  color: #fff;
+  line-height: 24px;
+  text-align: center;
+  font-weight: bold;
+  transform: translateY(-50%);
+  z-index: 0;
+}
+.hl7-integration-bus > div {
+  z-index: 1;
+  background: #fff;
+  border: 1px solid var(--accent);
+  padding: 1rem;
+  align-self: center;
+}
+
+.pdca-quality-loop {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  grid-template-rows: 1fr 1fr;
+  gap: 2rem;
+  padding: 2rem;
+  border-radius: 50%;
+  border: 4px dashed var(--accent-light);
+}
+
+.patient-journey-timeline {
+  display: flex;
+  align-items: center;
+  overflow-x: auto;
+  padding: 2rem 0;
+  gap: 2rem;
+  border-bottom: 4px solid var(--accent);
+}

@@ -9,6 +9,7 @@ This is the dictionary and visual constraint for the "Winning Clinical" style. U
 - **Gray Scale**: `#1A232C` (var(--gray-900)) for main text (ink), `#F2F6FA` (var(--gray-100)) for paper backgrounds.
 - **Aesthetic**: Strictly minimalist, professional, rigid grid-based. Dual-mode rules for high-density medical IT interfaces and high-signal-to-noise ratio architectural presentations.
 - **Prohibitions**: No 3D objects, no cartoonish illustrations, no fluid shapes. Strict right angles and solid colors. Maximum 3 accent colors per slide.
+- **Top-Tier HIT (医疗数字化) Requirements**: Presentations in this domain require extreme structural clarity. You must translate complex hospital workflows (HIS, EMR, PACS) and data lakes into rigorous layered architectures, precise data flow arrows, and clinical pathways.
 
 ## Component Dictionary
 Use ONLY the following CSS classes for layout and content formatting:
@@ -37,6 +38,26 @@ Use ONLY the following CSS classes for layout and content formatting:
 - `.c-timeline-year`: The year/phase label.
 - `.c-timeline-title`: The title of the phase.
 - `.c-timeline-desc`: The description.
+
+### Enterprise / HIT Architecture Components (企业级架构)
+- `.c-architecture-stack`: A vertical stack container for layered system architectures (e.g., IaaS -> PaaS -> SaaS).
+- `.c-layer`: A single layer block inside the stack.
+- `.c-layer.core`: The core/engine layer (highlighted with primary color).
+- `.c-layer-title`: Title of the layer.
+- `.c-layer-items`: A flex container for modular components within a layer.
+- `.c-module-box`: A small rectangular box representing a software module (e.g., "EMR", "CDR").
+- `.c-clinical-pathway`: A horizontal flow container specifically for patient journey or data flow.
+- `.c-pathway-node`: A step in the clinical pathway.
+- `.c-pathway-arrow`: An arrow `->` between nodes, typically using Lucide icons (`<i data-lucide="arrow-right"></i>`).
+- `.c-comparison-matrix`: A grid layout for Before/After or Pain Point/Solution comparisons.
+- `.c-matrix-col-bad`: The "Before/Pain Point" column (styled with muted red/gray).
+- `.c-matrix-col-good`: The "After/Solution" column (styled with Winning Blue/Teal).
+- `.cdss-workflow-matrix`: A specialized 2D grid matrix mapping clinical stages to AI interventions (CDSS alerts).
+- `.emr-level5-radar`: A specialized placeholder container for EMR (Electronic Medical Record) Level 5-7 radar charts or pentagon capability layouts.
+- `.data-lake-funnel`: A layout showing heterogeneous data ingestion (HIS, LIS, PACS) mapping into standardized CDR/ODR assets. Includes `.data-source`, `.data-cleansing`, and `.data-asset`.
+- `.policy-compliance-grid`: A matrix aligning software features directly with national evaluation metrics (互联互通标准化, 智慧医院国考).
+- `.multi-campus-topology`: A hub-and-spoke layout for "一院多区" (Multi-campus) architectures, featuring a `.hub-center` and multiple `.edge-node`s.
+- `.tri-terminal-view`: A rigid 3-column layout contrasting the distinct workflows for Doctors (`.role-doctor`), Nurses (`.role-nurse`), and Patients (`.role-patient`).
 
 ### Era / Timeline Components (Legacy)
 - `.s-era-grid`: A grid container for historical roadmaps or stages.
