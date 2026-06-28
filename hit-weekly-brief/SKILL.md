@@ -31,9 +31,9 @@ AVOID: 重复提取 14 天前的旧闻；丢失跨界启发模块；未经验证
 ## 1. 核心流程与架构 (The Protocol)
 ### Phase 1: 四路并发原生沙盒扫描 (Concurrent Map-Reduce)
 3. **初始化调度**: 主代理调用 `invoke_subagent` 并发拉起 4 个 `research` 子代理，下发以下指令包：
-   - 顶级智库战略 (`Task_strategy.md`)
+   - 顶级智库战略 (`Task_strategy.md`): 必须引入产业资本与刺客型智库（Rock Health、a16z Bio+Health、CB Insights，或寻找华尔街做空报告 Short-seller reports）。
    - 公卫与合规政策 (`Task_policy.md`)
-   - 医疗技术与架构 (`Task_tech.md`)
+   - 医疗技术与架构 (`Task_tech.md`): 采用逆向检索法则，强制搜索 `ROI Deficit`、`Post-mortem` (项目死亡复盘)、`Pilot Purgatory` (试点地狱) 等失败案例。
    - 跨界技术架构注入 (`Task_serendipity.md`，寻找金融/物流/军工等同构启发)
    - 指示子代理：“你必须返回 JSON 格式结果，且必须包含 `source_url`（必须是真实可访问的 https:// 链接）和 `publish_date`（精确的 YYYY-MM-DD 格式）。严禁使用类似 `[Title](Title)` 的假链接或占位符。”
 2. **图谱语义去重**: 回收数据后，调用 `call_mcp_tool` (`vector-lake-mcp`: `search_vector_lake`) 扫描 14 天历史进行去重。
