@@ -76,10 +76,21 @@ def validate_hit_draft(content: str, mode: str) -> list[str]:
             errors.append(f"Radar Fact Violation: Radar report lacks hard financial/version metrics (Money, V-versions, or Percentages).")
                 
     elif mode == "scout":
-        required_scout = [r"RWE", r"战略映射", r"技术栈"]
+        # Matrix Table Validation
+        if not re.search(r"\|\s*期刊名称\s*\|\s*论文标题", content):
+            errors.append("Scout Matrix Violation: Missing or malformed academic matrix table (must contain | 期刊名称 | 论文标题...).")
+
+        # S-I-A Framework Validation
+        sia_keywords = [r"Signal", r"Insight", r"Action"]
+        for kw in sia_keywords:
+            if not re.search(kw, content, re.IGNORECASE):
+                errors.append(f"Scout S-I-A Violation: Missing strict S-I-A framework keyword '{kw}' in the strategic breakdown.")
+
+        # Check for structural separation requirements
+        required_scout = [r"RWE", r"范式跃迁", r"双轨杠杆", r"学术流派冲突与张力网"]
         for s_sec in required_scout:
             if not re.search(s_sec, content, re.IGNORECASE):
-                errors.append(f"Scout Mode Violation: Missing required strategic alignment section/keyword '{s_sec}'.")
+                errors.append(f"Scout Mode Violation: Missing required structural section/keyword '{s_sec}'.")
 
     elif mode == "brief":
         # Matrix Table Validation
