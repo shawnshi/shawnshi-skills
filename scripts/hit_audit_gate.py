@@ -59,6 +59,10 @@ def validate_hit_draft(content: str, mode: str) -> list[str]:
     if not re.search(r"\[\[.*\]\]", content):
         errors.append("Vector Lake Violation: No double bracket links [[ ]] found. Core entities must be linked for Graph generation.")
 
+    # 2.8 Global: URL/Link Validity Enforcement
+    if not re.search(r"https?://[a-zA-Z0-9\-\.]+\.[a-zA-Z]{2,}", content):
+        errors.append("Evidence Violation: No valid HTTP/HTTPS URLs found. All facts must be backed by real source links.")
+
     # 3. Mode Specific Rules
     if mode == "radar":
         # Check for system dynamics and structural separation requirements
@@ -67,9 +71,9 @@ def validate_hit_draft(content: str, mode: str) -> list[str]:
             if not re.search(r_sec, content, re.IGNORECASE):
                 errors.append(f"Radar Mode Violation: Missing required structural section/keyword '{r_sec}'. Check template compliance.")
         
-        # Enforce that Fact lines must contain digits (e.g., money, version, date)
-        if not re.search(r"\d+", content):
-            errors.append(f"Radar Fact Violation: Radar report lacks concrete metrics (no numbers found).")
+        # Enforce that Fact lines must contain hard financial or version metrics
+        if not re.search(r"([¥$€£]|人民币|美元|亿|万|V\d+\.|\d+\.\d+|\d+%)", content):
+            errors.append(f"Radar Fact Violation: Radar report lacks hard financial/version metrics (Money, V-versions, or Percentages).")
                 
     elif mode == "scout":
         required_scout = [r"RWE", r"战略映射", r"技术栈"]
