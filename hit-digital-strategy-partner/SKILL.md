@@ -53,8 +53,8 @@ $env:PYTHONIOENCODING="utf-8"; python "C:\Users\shich\.gemini\config\skills\hit-
 ```
 **高管级停顿**: 校验放行后，主代理挂起，向用户展示中心判断并等待 `[APPROVE]`。
 
-### Phase 3: Adversarial Validation (红队对抗) [EXECUTION]
-**强制活体压测**: 针对核心 ROI 结论与架构路径，主代理必须调用 `invoke_subagent` 拉起 `cognitive-logic-adversary` 子代理执行悲观压测（预算砍半、合规不达标等边界情况）。将红队的攻击报告及主代理的修正方案一并写入黑板防呆。
+### Phase 3: Adversarial Validation (红队对抗 & STQM) [EXECUTION]
+**强制活体压测**: 针对核心 ROI 结论与架构路径，主代理必须调用 `invoke_subagent` 拉起 `cognitive-logic-adversary` 子代理执行悲观压测（预算砍半、合规不达标等边界情况）。将红队的攻击报告及主代理的修正方案一并写入黑板防呆，并要求子代理将这些抗拒与脆弱点结构化为 STQM 张力边 (`tension_edges`) 备用。
 
 ### Phase 4: Top-Tier Assets Generation (顶尖资产锻造) [EXECUTION]
 按模式（`brief`/`deep-dive`/`board-memo`）起草各章节，使用 `write_to_file` 分卷保存至 `C:\Users\shich\.gemini\MEMORY\research\<project_name>\chapters\`。
@@ -62,13 +62,14 @@ $env:PYTHONIOENCODING="utf-8"; python "C:\Users\shich\.gemini\config\skills\hit-
 1. **拓扑绘制**: 严禁交付粗糙的 Mermaid。临床业务流向或跨院区互联互通架构，必须提取为 JSON 数据，随后自动生成/指示 `tool-drawio` 渲染为高清的无限画布 SVG。
 2. **高管蓝图**: 面向 `board-memo` 模式，必须严格按照 `tool-slide-architect` 的 SCR 四维全息标准（目标、内容、视觉指令、讲稿），衍生一份降维的高管幻灯片骨架 `ghost_deck_outline.md`。
 
-### Phase 5: Activate, Compliance & Async Ingestion [EXECUTION]
+### Phase 5: Activate, Compliance & Async Ingestion (STQM & Payload MCP) [EXECUTION]
 1. **合并终稿**与**合规审计**（调用 `assembler.py` 与 `compliance_check.py`）。
 2. **战略结果门拦截**：调用 `strategy_gate.py`。
-3. **资产入湖**：调用 `call_mcp_tool` (`vector-lake-mcp`: `prepare_ingest_batch`) 将核心战略双链实体抛入后台。
+3. **资产入湖**：强制使用 `write_to_file` 将核心战略双链实体及红队生成的 `tension_edges` 写入 `scratch/ingest_payload.json`，随后调用 `vector-lake-mcp:prepare_ingest_batch` 执行入湖，绝对禁止通过命令行参数传递长文本。
 
 ## 2. <Contracts> (输出与交付契约)
 - **结果型质量门**：终稿具备中心判断、压测、二跳推理、具体的行动杠杆及残酷风险。
+- **STQM 张力融合**：在资产入湖时，必须确保对抗生成的脆弱点以 `tension_edges` 的形式被 Vector Lake 捕获。
 - **降级预案**：若脚本拦截，主代理手动接管拼接，人工干预拦截。
 - **交付与遥测**：输出 Markdown 文件超链接，使用 `write_to_file` 将遥测 JSON 写入沙盒。
 

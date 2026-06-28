@@ -41,7 +41,7 @@ def evaluate(text: str, mode: str, blackboard: dict) -> dict:
         "pessimistic_roi": bool(pessimistic_roi) and contains_any(text, ["悲观 ROI", "Pessimistic ROI", "下行情景"]),
         "second_hop_inference": bool(second_hops) and (contains_any(text, ["二跳推理", "second-hop"]) or any(str(item).lower() in text.lower() for item in second_hops)),
         "action_levers": bool(action_levers) and contains_any(text, ["行动杠杆", "Action Levers", "动作建议"]),
-        "residual_risk": bool(residual_risks) and contains_any(text, ["残酷风险", "Residual Risk", "Residual Risks", "主要风险"]),
+        "residual_risk_or_stqm": bool(residual_risks) and contains_any(text, ["残酷风险", "Residual Risk", "Residual Risks", "主要风险", "认知张力", "张力边", "tension_edges", "脆弱点"]),
     }
     missing = [name for name, passed in checks.items() if not passed]
     return {
