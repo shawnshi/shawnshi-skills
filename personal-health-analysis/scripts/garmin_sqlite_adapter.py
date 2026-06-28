@@ -67,9 +67,10 @@ def get_max_metrics():
         df = pd.read_sql_query(query, conn)
         result = {}
         # Get latest values
-        for _, row in df.iterrows():
-            if row['key'] not in result:
-                result[row['key']] = row['value']
+        # Performance: Replaced slow .iterrows() with zip() for significantly faster dictionary construction
+        for k, v in zip(df['key'], df['value']):
+            if k not in result:
+                result[k] = v
         
         vo2_max = result.get('vo2max_running') or result.get('vo2max_cycling') or "--"
         fitness_age = result.get('fitness_age') or "N/A"
