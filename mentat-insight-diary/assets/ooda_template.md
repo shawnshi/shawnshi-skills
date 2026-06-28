@@ -28,5 +28,8 @@
 **[Message to Future Mentat]**
 - [用最冷酷、直接的祈使句，写下给未来处理同类任务的 Mentat 实例的直接警告或强制操作建议。]
 
+**7. STQM 内部张力与实体网 (STQM Tension Payload)**
+- [提取上述反思中的“系统摩擦”、“架构妥协”和“认知盲区”，结构化为符合 STQM 规范的张力边 (`tension_edges`) 载荷，作为后续 Vector Lake 入湖的数据源。必须输出为纯 JSON 代码块格式。]
+
 ---
 *SYS_AUDIT: 日志已归档至 Plastic Shell。反熵防御罩状态：Active。*
