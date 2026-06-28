@@ -38,11 +38,13 @@ def audit(redteam_report_path: str = None) -> None:
         audit_data = {
             "status": "passed",
             "devil_advocate": redteam_data.get("devil_advocate", "Red-team attack passed successfully."),
-            "blind_spots": redteam_data.get("blind_spots", "No critical blind spots found.")
+            "blind_spots": redteam_data.get("blind_spots", "No critical blind spots found."),
+            "tension_edges": redteam_data.get("tension_edges", [])
         }
-        print(f"[OK] L4 preserved. External red-team approval applied from {redteam_report_path}")
+        print(f"[OK] L4 preserved. External red-team approval and tension_edges applied from {redteam_report_path}")
     else:
         audit_data = fallback_audit(data)
+        audit_data["tension_edges"] = []
         print("[WARNING] No external red-team runner provided. Unverified L4 candidates downgraded to L3.")
 
     data["adversarial_audit"] = audit_data

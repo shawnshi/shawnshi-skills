@@ -65,13 +65,14 @@ AVOID: 把“摘要”伪装成“洞察”；缺乏证据时输出 L4 级判断
 1. **JSON 校验**: 运行 `$env:PYTHONIOENCODING="utf-8"; python "C:\Users\shich\.gemini\config\skills\personal-intelligence-hub\scripts\validate_refined_json.py"`。若报错自行修正。
 2. **红队对抗 (L4 门控)**: 
    - 检查 `intelligence_current_refined.json` 中是否有 `"intelligence_level": "L4"`。
-   - 若存在，必须先使用 `invoke_subagent` (TypeName: self, Role: cognitive-logic-adversary) 将该 L4 内容发给红队子代理进行攻击测试。要求红队子代理返回包含 `"devil_advocate"` 与 `"blind_spots"` 的 JSON，并由主代理将其落盘为 `C:\Users\shich\.gemini\MEMORY\scratch\redteam_report.json`。
+   - 若存在，必须先使用 `invoke_subagent` (TypeName: self, Role: cognitive-logic-adversary) 将该 L4 内容发给红队子代理进行攻击测试。要求红队子代理返回包含 `"devil_advocate"`、`"blind_spots"` 以及 STQM 规范的 `"tension_edges"` 的 JSON，并由主代理将其落盘为 `C:\Users\shich\.gemini\MEMORY\scratch\redteam_report.json`。
    - 随后执行验证脚本并挂载该审批单：`$env:PYTHONIOENCODING="utf-8"; python "C:\Users\shich\.gemini\config\skills\personal-intelligence-hub\scripts\adversarial_audit.py" "C:\Users\shich\.gemini\MEMORY\scratch\redteam_report.json"`。
    - ⚠️ 若不存在 L4，或因宕机未能提供人工/活体子代理红队报告，直接**不带参数**运行该审计命令。此时门控系统将触发安全保护机制，把所有未经验证的 L4 强制降级为 L3。
 3. **最终锻造**: 运行 `$env:PYTHONIOENCODING="utf-8"; python "C:\Users\shich\.gemini\config\skills\personal-intelligence-hub\scripts\forge.py"` 生成最终简报。
 
 ### Phase 5: Async Vector Lake Ingestion (异步图谱入湖)
-1. **异步同步**: 报告锻造完成后，直接调用 call_mcp_tool 执行 vector-lake-mcp 的 prepare_ingest_batch，利用 invoke_subagent 拉起异步代理。**注意：务必将子代理的 TypeName 覆写为 self**。严禁直接调用阻塞式同步。实体节点的提取与双链 wiki 的生成全权交由 Vector Lake 底层引擎原生自动完成。
+1. **异步同步 (STQM & Payload MCP)**: 报告锻造完成后，强制使用 `write_to_file` 将清洗后的最终情报和红队压测生成的 `tension_edges` 统一写入 `scratch/ingest_payload.json` 载荷文件。
+2. 然后调用 `invoke_subagent` (TypeName: self) 唤醒入湖代理，指示它读取该 JSON 载荷，并直接调用 `vector-lake-mcp:prepare_ingest_batch` 执行物理入湖。严禁直接把长篇幅内容塞入 CLI 参数或工具调用层。实体节点的提取与双链 wiki 的生成全权交由 Vector Lake 底层引擎自动完成。
 
 ## 3. <Contracts> (输出与交付契约)
 - punchline 不得为空；action_levers 至少 3 条；top_10 最多 10 条且 URL 不重复。
