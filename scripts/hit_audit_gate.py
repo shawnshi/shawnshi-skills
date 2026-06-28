@@ -55,13 +55,17 @@ def validate_hit_draft(content: str, mode: str) -> list[str]:
         if re.search(fluff, content, re.IGNORECASE):
             errors.append(f"BLUF Violation: Contains AI customer service fluff matching '{fluff}'. Remove all pleasantries.")
 
+    # 2.7 Global: Double Bracket Links Enforcement (Graph Readiness)
+    if not re.search(r"\[\[.*\]\]", content):
+        errors.append("Vector Lake Violation: No double bracket links [[ ]] found. Core entities must be linked for Graph generation.")
+
     # 3. Mode Specific Rules
     if mode == "radar":
         # Check for system dynamics and structural separation requirements
-        required_radar = [r"核心战区", r"全景对比矩阵", r"织者洞察", r"战术下钻"]
+        required_radar = [r"紧急预警", r"核心战区", r"全景对比矩阵", r"织者洞察", r"行业张力与冲突网", r"战术下钻"]
         for r_sec in required_radar:
             if not re.search(r_sec, content, re.IGNORECASE):
-                errors.append(f"Radar Mode Violation: Missing required structural section/keyword '{r_sec}'. You must perform System Dynamics Analysis.")
+                errors.append(f"Radar Mode Violation: Missing required structural section/keyword '{r_sec}'. Check template compliance.")
         
         # Enforce that Fact lines must contain digits (e.g., money, version, date)
         if not re.search(r"\d+", content):
