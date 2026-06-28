@@ -82,6 +82,16 @@ def validate_hit_draft(content: str, mode: str) -> list[str]:
                 errors.append(f"Scout Mode Violation: Missing required strategic alignment section/keyword '{s_sec}'.")
 
     elif mode == "brief":
+        # Matrix Table Validation
+        if not re.search(r"\|\s*机构名称\s*\|\s*报告", content):
+            errors.append("Brief Matrix Violation: Missing or malformed insight matrix table (must contain | 机构名称 | 报告...).")
+            
+        # S-I-A Framework Validation
+        sia_keywords = [r"Signal", r"Insight", r"Action"]
+        for kw in sia_keywords:
+            if not re.search(kw, content, re.IGNORECASE):
+                errors.append(f"Brief S-I-A Violation: Missing strict S-I-A framework keyword '{kw}' in the strategic breakdown.")
+
         # Split into mandatory logic gates: Must have a contrarian view, STQM tension, and a serendipity view
         has_contrarian = any(re.search(word, content, re.IGNORECASE) for word in [r"非共识", r"Contrarian", r"认知张力", r"冲突", r"Controversies"])
         has_serendipity = any(re.search(word, content, re.IGNORECASE) for word in [r"跨界", r"Serendipity"])
@@ -94,6 +104,10 @@ def validate_hit_draft(content: str, mode: str) -> list[str]:
         has_policy = any(re.search(word, content, re.IGNORECASE) for word in [r"政策", r"合规", r"Policy", r"Compliance"])
         if not has_policy:
             errors.append("Brief Mode Violation: Missing Policy (公卫与合规政策) pipeline. You must include all 4 pipelines.")
+            
+        # Enforce strict ISO Date format for tracking
+        if not re.search(r"202\d-[0-1]\d-[0-3]\d", content):
+            errors.append("Brief Date Violation: Missing strict YYYY-MM-DD date format. Required for Vector Lake 14-day deduplication.")
 
     return errors
 
