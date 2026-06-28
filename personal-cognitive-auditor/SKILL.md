@@ -47,7 +47,7 @@ AVOID: 提供情绪安抚；使用高深词汇包装懒惰；调用 personal-cog
 - **今日打脸点 (Slap in the face)**: 用一句话总结今天的虚伪与空耗。
 - **能量管理 (Biological-Cognitive Correlation)**: 结合体能数据，输出睡眠负债、深睡占比，以及纯精神认知摩擦（Shadow Load）的影响，给出相应的内分泌死锁打破建议（特许保留生理指标分析）。
 - **物理指令 (Physical Next Steps)**: 明天的强制动作（必须包含至少一项纯体能/休眠动作）。
-- **Handoff Payload**。
+- **Handoff Payload (包含 STQM 张力边)**: 必须在报告末尾提供一个纯 JSON 格式的交接载荷。要求强制将前文提到的“自欺欺人行为剖析”提取并结构化为符合 STQM 规范的 `"tension_edges"` 数组，以便后续系统将其作为内部矛盾节点注入 Vector Lake 进行长期追踪。
 
 ### Phase 3: Gate & Hand-off (交接与黑话熔断校验)
 沙盒验证机制：
@@ -56,7 +56,7 @@ AVOID: 提供情绪安抚；使用高深词汇包装懒惰；调用 personal-cog
    ```powershell
    $env:PYTHONIOENCODING="utf-8"; python "C:\Users\shich\.gemini\config\skills\personal-cognitive-auditor\scripts\audit_gate.py" "C:\Users\shich\.gemini\MEMORY\scratch\audit_payload_draft.json" --strict-human-mode
    ```
-3. 校验通过后，移交给 `personal-diary-writer` 落盘。
+3. 校验通过后，使用 `invoke_subagent` 移交给 `personal-diary-writer` 落盘。注意：必须将包含 `"tension_edges"` 的 Payload 透传，保证图谱能够记录内部行为矛盾。
 
 ## 2. <Contracts> (输出与交付契约)
 - **输入能力层**: 整合数据，缺失标注 `【数据缺口，别找借口】`。

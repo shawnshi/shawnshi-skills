@@ -70,6 +70,9 @@ def validate(text: str, strict_human_mode: bool) -> list[str]:
     if placeholders:
         errors.append("found placeholder markers: " + ", ".join(placeholders))
         
+    if "Handoff Payload" in text and "tension_edges" not in text:
+        errors.append("missing STQM 'tension_edges' in Handoff Payload for internal behavioral contradiction mapping")
+        
     if strict_human_mode:
         jargon_violations = scan_for_jargon(text)
         if jargon_violations:
