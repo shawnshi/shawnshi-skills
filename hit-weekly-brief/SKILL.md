@@ -56,10 +56,13 @@ AVOID: 重复提取 14 天前的旧闻；丢失跨界启发模块；未经验证
 ### Phase 5: 物理落盘与异步入湖 (Activate & Ingestion)
 1. 审计通过后，使用 `write_to_file` 落盘：
    `C:\Users\shich\.gemini\MEMORY\raw\DigitalHealthWeeklyBrief\DHWB-YYYYMMDD.md`
-2. **实体入湖**: 提取非共识观点等战略突变实体，强制通过 `invoke_subagent` 委派入湖子代理抛入后台引擎，不阻塞主会话。
+2. **实体入湖 (STQM & Payload MCP)**: 强制通过 `invoke_subagent` 委派入湖子代理。
+   - 子代理必须将前置提取的 **Contrarian 观点** 严格编码为 STQM 格式的 `tension_edges`。
+   - 必须通过 `write_to_file` 生成本地 `.json` 载荷文件，然后调用 `vector-lake-mcp:prepare_ingest_batch` 进行物理入湖，严禁通过命令行直传长文本。
 
 ## 2. <Contracts> (输出与交付契约)
 - **S-I-A 框架契约**: 情报推演必须遵循 Signal(信号) -> Insight(洞察) -> Action(行动杠杆) 闭环。
+- **STQM 张力落地**: 必须在简报中单独开辟 `## 💥 认知张力与冲突 (Controversies)` 章节，记录与主流共识相悖的数据。
 - **跨界强制契约**: 终稿中必须至少包含 1 个“非医疗行业”的跨界启发 (Serendipity)。
 - **真实元数据契约**: 所有引用链接必须经过真实验证，禁止遗留 `[URL]` 占位符。
 - **交付链接契约**: 战报生成后，必须向用户输出包含绝对物理路径的可点击 Markdown 链接。

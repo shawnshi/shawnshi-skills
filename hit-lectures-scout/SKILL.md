@@ -57,10 +57,12 @@ AVOID: 保留假 [URL] 占位符；发布无临床场景适配的情报；缺乏
    若报错拦截（如查出假链接），最多重试 2 次。
 3. **物理落盘**: 脚本返回 Exit Code 0 后，归档至：
    `C:\Users\shich\.gemini\MEMORY\raw\DigitalHealthLecturesScout\DHLS-YYYYMMDD.md`
-4. **异步沉淀**: 提取高价值概念，强制使用 `invoke_subagent` 委派入湖代理抛入后台沉淀，绝不阻塞主会话。
+4. **异步沉淀 (STQM & Payload MCP)**: 提取高价值概念，强制调用 `invoke_subagent` 委派入湖代理。
+   - 必须指示子代理：“将提取的学术概念映射写成 `.json` 载荷文件（如果有学术流派的争论，必须编码为 `tension_edges`），最后调用 `vector-lake-mcp:prepare_ingest_batch` 进行物理入湖，严禁通过 CLI 参数直传长文本。”
 
 ## 2. <Contracts> (输出与交付契约)
 - **RWE 纪律**: 战报包含 Top 10-15 文献，每篇展示真实世界证据 (RWE) 或技术成熟度 (TRL) 评估。
+- **STQM 张力映射**: 识别论文结论与当前医疗 IT 共识的偏离度，并在报告中标记。
 - **真实链接契约**: 禁止在报告中遗留 `[URL]` 占位符或幻觉链接。必须提供真实的 DOI。
 - **资产转化契约**: 每项高价值信号需转化为预研技术栈和销售防御资产。
 - **交付链接契约**: 最终战报必须通过聊天框输出带绝对物理路径的可点击 Markdown 链接。
