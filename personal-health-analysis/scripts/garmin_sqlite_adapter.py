@@ -148,7 +148,8 @@ def get_activities_data(days=30):
     
     # Standardize column names to match the expected format in intelligence layer
     if not df.empty:
-        df['date'] = df['start_time'].apply(lambda x: str(x).split(' ')[0])
+        # Performance: Replace slow .apply lambda with vectorized string slicing for faster date extraction
+        df['date'] = df['start_time'].astype(str).str[:10]
         df = df.rename(columns={'type': 'activity_type', 'name': 'activity_name', 'elapsed_time': 'duration', 'ascent': 'elevation_gain'})
     return df
 
@@ -203,7 +204,8 @@ def get_summary(days=7):
     
     if not df.empty and 'day' in df.columns:
         df = df.rename(columns={'day': 'date'})
-        df['date'] = df['date'].apply(lambda x: str(x).split(' ')[0])
+        # Performance: Replace slow .apply lambda with vectorized string slicing for faster date extraction
+        df['date'] = df['date'].astype(str).str[:10]
         df = df_base.merge(df, on='date', how='left')
     else:
         df = df_base.copy()
@@ -245,7 +247,8 @@ def get_daily_friction_matrix(days=90):
     conn_act.close()
     
     if not df_act.empty:
-        df_act['date'] = df_act['start_time'].apply(lambda x: str(x).split(' ')[0])
+        # Performance: Replace slow .apply lambda with vectorized string slicing for faster date extraction
+        df_act['date'] = df_act['start_time'].astype(str).str[:10]
         df_load = df_act.groupby('date')['training_load'].sum().reset_index()
     else:
         df_load = pd.DataFrame(columns=['date', 'training_load'])
@@ -320,7 +323,8 @@ def get_sleep_data(days=14):
     
     if not df.empty and 'day' in df.columns:
         df = df.rename(columns={'day': 'date'})
-        df['date'] = df['date'].apply(lambda x: str(x).split(' ')[0])
+        # Performance: Replace slow .apply lambda with vectorized string slicing for faster date extraction
+        df['date'] = df['date'].astype(str).str[:10]
         # Convert HH:MM:SS to seconds for intelligence engine
         def time_to_sec(t):
             if pd.isna(t) or not isinstance(t, str): return 0
@@ -363,7 +367,8 @@ def get_biomechanics_data(days=30):
     conn.close()
     
     if not df.empty:
-        df['date'] = df['start_time'].apply(lambda x: x.split(' ')[0] if isinstance(x, str) else str(x).split(' ')[0])
+        # Performance: Replace slow .apply lambda with vectorized string slicing for faster date extraction
+        df['date'] = df['start_time'].astype(str).str[:10]
         def parse_gct(curr):
             if pd.isna(curr): return 0
             if isinstance(curr, str):
@@ -397,7 +402,8 @@ def get_hrv_data(days=7):
     
     if not df.empty and 'day' in df.columns:
         df = df.rename(columns={'day': 'date'})
-        df['date'] = df['date'].apply(lambda x: str(x).split(' ')[0])
+        # Performance: Replace slow .apply lambda with vectorized string slicing for faster date extraction
+        df['date'] = df['date'].astype(str).str[:10]
         df = df_base.merge(df, on='date', how='left')
     else:
         df = df_base.copy()
