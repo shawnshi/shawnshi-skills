@@ -53,6 +53,9 @@ def audit(redteam_report_path: str = None) -> None:
     update_phase("audit", "completed")
 
 
+import sys
+from pathlib import Path
+
 if __name__ == "__main__":
     report_path = sys.argv[1] if len(sys.argv) > 1 else None
-    audit(report_path)
+    audit(Path(report_path) if report_path else None)
