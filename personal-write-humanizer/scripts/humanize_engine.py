@@ -76,7 +76,9 @@ def main():
             f.write(system_prompt)
             temp_path = f.name
 
-        cmd = f"gemini -p (Get-Content -Raw -Path '{temp_path}')"
+        # Security: Sanitize temp file path for PowerShell command injection
+        safe_temp_path = temp_path.replace("'", "''")
+        cmd = f"gemini -p (Get-Content -Raw -Path '{safe_temp_path}')"
         process = subprocess.Popen(
             ["powershell", "-NoProfile", "-Command", cmd],
             stdout=subprocess.PIPE,
