@@ -1,6 +1,6 @@
 ---
 name: personal-intelligence-hub
-version: 12.0.0
+version: 12.2.0
 tier: action-allowed
 description: '战略情报作战中枢。调度子代理执行多源情报扫描、二阶推演与红队审计。强制读取标准配置并通过沙盒与门控脚本保障交付质量。禁止捏造洞察或越权写入。'
 triggers: ["情报扫描", "战略简报", "信息去重", "红队审计"]
@@ -18,15 +18,15 @@ Strategy:
 AVOID: 把“摘要”伪装成“洞察”；缺乏证据时输出 L4 级判断；重复推送同一信号；遗漏双链图谱标记；将原始抓取数据直接写入核心图谱。
 </strategy-gene>
 
-# Personal Intelligence Hub (战略情报作战中枢 V12.0 Native)
+# Personal Intelligence Hub (战略情报作战中枢 V12.2 Native)
 
-## Tool Trajectory
-**[IN_ORDER]** 执行需遵循以下轨迹流：
-1. run_command (底层脚本：物理爬取情报源)
-2. invoke_subagent (唤醒子代理进行二阶推演)
-3. write_to_file (写入 intelligence_current_refined.json)
-4. run_command (依次执行校验、红队对抗、简报锻造脚本)
-5. call_mcp_tool (启动异步入湖，交由 Vector Lake 原生解析)
+## 核心里程碑 (Milestone Protocol)
+**[MILESTONES]** 抛弃僵化的顺序链，通过以下独立舱室推进，确保局部失败不导致全局宕机：
+- **M1: 猎群游荡 (Swarm Fetch)**：唤醒 3 个兵种的 `research` 子代理并发探索，并将其捕获的情报直接写入当前会话的沙盒候选池。
+- **M2: 二阶推演**：唤醒带系统时间戳的子代理进行语义提纯。
+- **M3: 门控与红队对抗**：在隔离沙盒内完成对抗博弈（允许优雅降级）。
+- **M4: 制品交付**：将最终情报锻造为当前会话的 Artifact。
+- **M5: 异步入湖**：派发纯净载荷由子代理推向 Vector Lake。
 
 ## 0. 核心约束
 - **配置优先**: 扫描范围、优先源、排除词以 references/strategic_focus.json 为准。
@@ -42,36 +42,53 @@ AVOID: 把“摘要”伪装成“洞察”；缺乏证据时输出 L4 级判断
 - **State Scripts**: scripts/blackboard.py, scripts/history_manager.py, scripts/briefing_gate.py
 
 ## 2. 执行协议 (Execution Pipeline)
-### Phase 1 & 2: Fetch & Refine (物理爬取与去重)
-1. 执行底层抓取脚本（务必挂载编码锁）：
-   `$env:PYTHONIOENCODING="utf-8"; python "C:\Users\shich\.gemini\config\skills\personal-intelligence-hub\scripts\run_phase1_2.py"`
-2. 脚本将自动采集并生成候选池 intelligence_candidates.json。
-3. 调用 invoke_subagent 启动独立精炼子代理（TypeName: self）进行二阶推演。
+### Phase 1 & 2: 猎群部署与广域网捕获 (Agentic Swarm Fetch)
+1. **动态沙盒寻址**: 主代理解析当前会话的沙盒路径：`<appDataDir>\brain\<conversation-id>\scratch\`。
+2. **猎群集群拉起**: 废弃脆弱的 Python 爬虫！主代理必须使用 `invoke_subagent` 并发拉起 3 个 `TypeName: research` 的高级搜索子代理，套用以下集装箱 Prompt：
 
-### Phase 3: Semantic Deduction (子代理推演)
-1. 在调用 invoke_subagent 时，**必须**在 Prompt 中包含以下指令（绝对物理路径防止幻觉）：
-   > "You are the Intelligence Refinement Subagent.
+> **[猎群子代理通用 Prompt 注入模板]**
+> "你是一个高级战略情报 `research` 子代理。当前系统日期是 `[动态填入今天绝对日期]`。
+> 你的专属任务是：`[填入以下 A/B/C 三大兵种任务之一]`。
+> 
+> **硬性约束：**
+> 1. **自主深潜**：你拥有网络访问与文件读取能力。遇到反爬或无法访问的链接，必须自主寻找其他来源替代，不可抛出异常中断。
+> 2. **事实纪律**：过滤 7 天前的旧闻。获取新闻后必须交叉验证真实性。
+> 3. **统一汇流协议**：你必须通过 `send_message` 将收集到的有效情报以 JSON 数组格式回传。字段包括：`title`, `url`, `publish_date`, `raw_fact_summary`。
+
+3. **猎群专属指令 (Task Payloads)**：
+   - **[A] 阵地哨兵 (Core Feeds)**：读取 `C:\Users\shich\.gemini\config\skills\personal-intelligence-hub\references\karpathy_feeds.json`，自主调用网页读取工具扫描这些顶级智库和信源的最新文章并提取核心要点。
+   - **[B] 主题雷达 (Strategic Focus)**：读取 `strategic_focus.json` 中的关键词，使用搜索引擎 (`search_web`) 在全网大范围捕获匹配该战略主题的最新动向。
+   - **[C] 盲区游侠 (Serendipity Scout)**：抛弃所有名单限制！去搜寻那些“未进入大众视野，但具备底层破坏力”的极客科技突破或跨界资本动作，打破系统的信息茧房。
+
+4. **汇流与落盘**: 主代理静默等待，收到 3 个子代理的 JSON Payload 后，将其合并去重，并使用 `write_to_file` 统一写入 `scratch/intelligence_candidates.json` 中。
+
+### Phase 3: 附带时间锚点的二阶推演
+1. **跨界核实特权**: 主代理在启动推演代理时，必须将其也升级为 `TypeName: research`，赋予其全网搜索验证的权限。在 Prompt 中注入当前系统日期和动态物理路径：
+
+   > "You are the Strategic Intelligence Refinement Subagent (Research-Empowered).
+   > **当前系统基准日期为: [动态填入今天日期]**
    > 1. Read C:\Users\shich\.gemini\config\skills\personal-intelligence-hub\references\quality_standard.md to strictly understand the JSON Schema and Localization Contract.
-   > 2. Read C:\Users\shich\.gemini\MEMORY\raw\news\_runtime\personal-intelligence-hub\intelligence_candidates.json.
+   > 2. Read [填入刚刚解析出的沙盒候选池绝对路径 intelligence_candidates.json]。
+   > 3. **交叉核实红线 (Cross-Validation)**: 在阅读候选池数据时，如果发现任何逻辑断层、金额模糊或来源可疑的情报，**你必须立刻使用 `search_web` 去广域网搜索核实！** 绝不允许闭门造车式地轻信候选池的原始数据。
    > 3. Perform semantic deduction. **You MUST output all analytical content in Chinese (zh-CN)** and generate title_zh and summary_zh for all items.
    > 4. Ensure you generate global fields like punchline, insights, digest, market, and correctly structure action_levers as an array of objects.
    > 5. Use [[ ]] around core entities/people/specific nouns for graph linking.
    > 6. Do NOT write to disk manually. You MUST output the final valid JSON directly using the send_message tool to reply to me."
 2. 子代理依据 Schema 执行推演并通过 send_message 发送数据。
-3. 主代理被唤醒后，提取 JSON Payload，使用 write_to_file 写入 C:\Users\shich\.gemini\MEMORY\raw\news\intelligence_current_refined.json。
+3. 主代理被唤醒后，提取 JSON Payload，**严禁写出沙盒**，使用 `write_to_file` 将其写入当前会话的 `scratch/intelligence_current_refined.json` 中。
 
 ### Phase 4: Pipeline Gate Orchestration (门控与锻造)
 严禁要求子代理执行脚本，必须由主代理依次接管验证：
-1. **JSON 校验**: 运行 `$env:PYTHONIOENCODING="utf-8"; python "C:\Users\shich\.gemini\config\skills\personal-intelligence-hub\scripts\validate_refined_json.py"`。若报错自行修正。
+1. **JSON 校验**: 运行 `$env:PYTHONIOENCODING="utf-8"; python "C:\Users\shich\.gemini\config\skills\personal-intelligence-hub\scripts\validate_refined_json.py" "[Absolute_Sandbox_Path]\intelligence_current_refined.json"`。若报错自行修正。
 2. **红队对抗 (L4 门控)**: 
    - 检查 `intelligence_current_refined.json` 中是否有 `"intelligence_level": "L4"`。
-   - 若存在，必须先使用 `invoke_subagent` (TypeName: self, Role: cognitive-logic-adversary) 将该 L4 内容发给红队子代理进行攻击测试。要求红队子代理返回包含 `"devil_advocate"`、`"blind_spots"` 以及 STQM 规范的 `"tension_edges"` 的 JSON，并由主代理将其落盘为 `C:\Users\shich\.gemini\MEMORY\scratch\redteam_report.json`。
-   - 随后执行验证脚本并挂载该审批单：`$env:PYTHONIOENCODING="utf-8"; python "C:\Users\shich\.gemini\config\skills\personal-intelligence-hub\scripts\adversarial_audit.py" "C:\Users\shich\.gemini\MEMORY\scratch\redteam_report.json"`。
+   - 若存在，必须先使用 `invoke_subagent` (TypeName: self, Role: cognitive-logic-adversary) 发起对抗，并由主代理将报告落盘至**当前会话沙盒** `scratch/redteam_report.json` 中。
+   - 随后执行验证脚本并挂载沙盒审批单：`$env:PYTHONIOENCODING="utf-8"; python "C:\Users\shich\.gemini\config\skills\personal-intelligence-hub\scripts\adversarial_audit.py" "[Absolute_Sandbox_Path]\redteam_report.json"`。
    - ⚠️ 若不存在 L4，或因宕机未能提供人工/活体子代理红队报告，直接**不带参数**运行该审计命令。此时门控系统将触发安全保护机制，把所有未经验证的 L4 强制降级为 L3。
-3. **最终锻造**: 运行 `$env:PYTHONIOENCODING="utf-8"; python "C:\Users\shich\.gemini\config\skills\personal-intelligence-hub\scripts\forge.py"` 生成最终简报。
+3. **最终 Artifact 锻造**: 运行锻造脚本，必须将最终生成的简报以 **Artifact 制品格式 (UserFacing: true)** 保存在当前 `brain/<conversation-id>/` 会话可见区，绝对禁止写入后台无主目录。
 
 ### Phase 5: Async Vector Lake Ingestion (异步图谱入湖)
-1. **异步同步 (STQM & Payload MCP)**: 报告锻造完成后，强制使用 `write_to_file` 将清洗后的最终情报和红队压测生成的 `tension_edges` 统一写入 `scratch/ingest_payload.json` 载荷文件。
+1. **异步同步 (STQM & Payload MCP)**: 报告锻造完成后，使用 `write_to_file` 将清洗后的最终情报和 `tension_edges` 写入**当前会话的** `scratch/ingest_payload.json` 载荷文件。
 2. 然后调用 `invoke_subagent` (TypeName: self) 唤醒入湖代理，指示它读取该 JSON 载荷，并直接调用 `vector-lake-mcp:prepare_ingest_batch` 执行物理入湖。严禁直接把长篇幅内容塞入 CLI 参数或工具调用层。实体节点的提取与双链 wiki 的生成全权交由 Vector Lake 底层引擎自动完成。
 
 ## 3. <Contracts> (输出与交付契约)

@@ -1,6 +1,6 @@
 ---
 name: hit-industry-radar
-version: 9.0.0
+version: 9.2.0
 tier: action-allowed
 description: '医疗行业战略雷达。调度子代理并发抓取周级医疗IT战报与竞对动态，并利用 Logic Lake 执行去重与编织。禁止抓取 14 天前的旧闻，禁止保留无数据支撑的公关废话。'
 triggers: ["本周战报", "医疗IT战报", "竞对动态", "行业大事件"]
@@ -17,45 +17,68 @@ Strategy:
 AVOID: 大模型在单线程广域搜索中迷失；脱离网页 URL 进行情报编造。
 </strategy-gene>
 
-# HIT Industry Radar (医疗行业雷达 V8.2 Native)
+# HIT Industry Radar (医疗行业战略雷达 V9.2 Native)
 
-## Tool Trajectory
-**[IN_ORDER]** 执行需遵循以下轨迹流：
-1. `invoke_subagent` (并发抓取本周事实)
-2. `call_mcp_tool` (针对疑似竞对大动作进行 14 天图谱去重)
-3. `write_to_file` (写入草稿沙盒)
-4. `run_command` (跨平台代码级质检)
-5. `write_to_file` (战报落盘)
-6. `invoke_subagent` (战略突变异步委派入湖)
+## 核心里程碑 (Milestone Protocol)
+**[MILESTONES]** 放弃僵化的顺序调用，通过状态机推进以下关键节点，遇到异常自主容错：
+- **M1: 四维雷达阵列**：派发 4 个绝对隔离的 `research` 侦察兵，分别监控国际、竞对、降维者，以及我方的市场基准线。
+- **M2: 图谱去重与仲裁**：调用 `vector-lake-mcp` 查询 14 天历史并剥离公关废话。
+- **M3: 防爆代码审计**：生成草稿后通过内部 Python 脚本进行检验（必须动态解析真实物理路径）。
+- **M4: 资产落盘**：战报终稿必须以 Artifact 制品形式留存在当前隔离会话。
+- **M5: 异步入湖**：派发 `TypeName: self` (Role: Ingestor) 执行张力边与事件归档（绝对异步 Fire-and-forget）。
 
 ## 1. 核心流程与架构 (The Protocol)
-### Phase 1: 并发定向侦察
-1. 读取本技能 `assets/intelligence_targets.json` 里的高价值信源列表。
-2. **集群拉起**: 调用 `invoke_subagent` 并发拉起 3 个 `research` 子代理，将国际、国内、卫宁基准指令下发。
-   - **硬性盯盘名单优化**：除了传统 HIS（卫宁/创业/Epic等），必须新增“降维打击者”队列（华为医疗大模型算力池、腾讯健康、百度灵医智大）。
-   - **关键词优化**：将原本的“产品发布”转向“政策买单点”，重点搜索 `信创替代大单`、`DRG/DIP 控费衍生项目`、`医疗数据资产入表 / 质押融资`。
-   - 指示子代理：“所有事实须 100% 来源真实网页。你必须返回包含 `source_url`（必须是规范的 https:// 链接）和 `publish_date`（精确的 YYYY-MM-DD 格式）的 JSON 结构。若无情报则返回空数组 `[]`，禁止基于知识截断编造或使用占位符链接。”
-   - 指示子代理使用 `send_message` 以 JSON 格式回传。
-3. **等待回调**: 主代理等待子代理回调完毕后再进入合成阶段。
+### Phase 1: 四维雷达定向并发侦察 (Map-Reduce Delegation)
+1. **初始化调度**: 抛弃外部文件依赖，主代理调用 `invoke_subagent` 并发拉起 4 个绝对隔离的 `research` 子代理。在分发 Prompt 时，**必须向子代理注入当前的系统日期**，并套用以下标准化的“集装箱” Prompt 模板：
+
+> **[子代理通用 Prompt 注入模板]**
+> "你是一个高级商业 `research` 侦察子代理。当前系统日期是 `[动态填入今天日期]`。
+> 你的专属任务是：`[填入以下 A/B/C/D 四大管线之一的具体指令]`。
+> 
+> **硬性约束：**
+> 1. **隐式沙盘演算**：必须针对性构造 Query 检索最新动态。返回数据前必须在 `<recon_workspace>` 标签内完成网页查阅验证。
+> 2. **事实脱水纪律**：**严禁任何公关形容词**（如“领先、赋能、生态”）。所有事实必须是“动作 + 数字/版本号”。**[防幻觉红线]：如果原文未披露确切的金额或节点数据，必须使用标准占位符 `[未披露]`，绝对禁止根据上下文猜测或捏造数字！**
+> 3. **机器通信协议**：你必须且只能通过 `send_message` 回传数据。严禁输出 Markdown 散文，必须严格匹配以下 JSON Schema（若无动作，返回空数组）：
+> ```json
+> {
+>   "radar_pipeline": "global | direct_competitors | tech_disruptors | winning_benchmark",
+>   "market_actions": [
+>     {
+>       "company": "[公司名称]",
+>       "publish_date": "YYYY-MM-DD",
+>       "hardcore_fact": "[纯动作：如中标XXX万大单。无确切数字必须写未披露]",
+>       "source_url": "https://... 必须是真实绝对路径"
+>     }
+>   ]
+> }
+> ```
+
+2. **四维专属指令 (Task Payloads)**（请替换上述模板中的变量）：
+   - **[A] 国际标杆与生态系统 (Global)**：追踪 Epic, Cerner (Oracle), 微软 Nuance 的最新财报、裁员、架构调整或超大型医院装机事件。
+   - **[B] 国内直接竞对阵营 (Direct Competitors)**：紧盯创业慧康、东软集团、嘉和美康等直接竞争对手。重点搜索 `信创替代大单`、`DRG/DIP 控费衍生项目`。（注：绝不包含卫宁健康）
+   - **[C] 降维打击者队列 (Tech Disruptors)**：侦察华为医疗大模型算力池、腾讯健康、百度灵医智大等科技巨头在医疗 B 端的攻城掠地动作。
+   - **[D] 卫宁健康基准线 (Winning Benchmark)**：专职追踪“卫宁健康/WiNEX”本周在市场上的真实动作与舆情，将其作为其余三大竞对阵营战略比对的基准坐标。
+
+3. **等待回调**: 主代理派发任务后立刻结束回合（挂起），静默等待 JSON 异步回调。
 
 ### Phase 2: 图谱去重与仲裁推演
 1. 发现重大竞对动作时，调用 `call_mcp_tool` (`vector-lake-mcp`: `search_vector_lake`) 检索 14 天内是否已记录，执行语义去重。
 2. **五维清洗**: 剔除留存 Fact 中的所有形容词与公关废话（严禁“赋能”、“生态”、“智慧体系”等空话），仅留时间/金额/版本/核心临床KPI（如DRG控费、评级过检）。强制保留原始的真实 URL，绝不允许在合成期丢弃链接。
 3. **织者推理**: 跨越不同标段和厂商，提取出“隐含供应链共振”规律。
 
-### Phase 3: The Hard Gate (草稿校验)
-1. 渲染草稿并写入当前会话隔离区：`<appDataDir>\brain\<conversation-id>\scratch\draft_hit_radar.md`。
-2. **过检审计**: 使用 `run_command` 执行审计脚本（需挂载 UTF-8，强制 `WaitMsBeforeAsync=3000` 防死锁）：
+### Phase 3: 资产合规代码审计 (The Hard Gate)
+1. 将战报草稿写入当前会话的 `scratch/` 沙盒目录（必须在上下文中**动态解析绝对物理路径**）。
+2. **过检审计**: 调用内部审计脚本（挂载 UTF-8，强制 WaitMsBeforeAsync=3000 防死锁）：
    ```powershell
-   $env:PYTHONIOENCODING="utf-8"; python "C:\Users\shich\.gemini\config\skills\scripts\hit_audit_gate.py" "<appDataDir>\brain\<conversation-id>\scratch\draft_hit_radar.md" --mode radar
+   # 警告：必须将 [Absolute_Draft_Path] 替换为你动态解析出的真实物理路径
+   $env:PYTHONIOENCODING="utf-8"; python "C:\Users\shich\.gemini\config\skills\scripts\hit_audit_gate.py" "[Absolute_Draft_Path]" --mode radar
    ```
-3. 若报错拦截（查出主观形容词或营销禁词），退回修正，最多重试 2 次。
+3. 若审计不通过（查出公关废话形容词），自主修复重试最多 2 次。若脚本缺失，则启动自主内审机制后继续。
 
-### Phase 4: 分层归档与图谱入湖 (STQM & Payload MCP)
-1. **物理落盘**: 质检通过后，使用 `write_to_file` 写入：
-   `C:\Users\shich\.gemini\MEMORY\raw\HealthcareIndustryRadar\DHWB-Radar-YYYYMMDD.md`
-2. **异步入湖**: 提取草稿中第四部分生成的 STQM JSON 数据，强制使用 `write_to_file` 写入 `scratch/ingest_payload.json`，如有战略突变必须提取为 `tension_edges`。
-3. 调用 `invoke_subagent` 唤醒入湖子代理 (TypeName: self)，明确指令：“读取 scratch/ingest_payload.json，调用 `vector-lake-mcp:prepare_ingest_batch` 执行入湖，绝对禁止通过命令行参数或提示词传递长文本。”
+### Phase 4: Artifact 资产生成与异步入湖 (STQM)
+1. 质检通过后，严禁写入不可见的 `MEMORY/` 目录。必须使用 `write_to_file` 在当前会话空间生成 **Artifact 制品**（必须附带 `UserFacing: true` Metadata），交付给用户审查。
+2. **异步沉淀 (STQM & Payload MCP)**: 提取草稿中发现的战略突变节点（如价格战预警），使用 `invoke_subagent` 拉起一个 `TypeName: self`，`Role: Vector Lake Ingestor` 的子代理。
+   - 子代理负责将数据写成本地 `.json` 载荷文件（如果属于背离常识的动向，编码为 `tension_edges`），并调用 `vector-lake-mcp:prepare_ingest_batch` 执行入湖。主代理派发后立刻结束回合，**严禁同步轮询或等待**。
 
 ## 2. <Contracts> (输出与交付契约)
 ### [Format Stack] 战报格式模板

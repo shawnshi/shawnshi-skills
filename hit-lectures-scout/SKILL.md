@@ -1,6 +1,6 @@
 ---
 name: hit-lectures-scout
-version: 9.0.0
+version: 9.2.0
 tier: action-allowed
 description: '医疗数字化前沿科研侦察兵。并发抓取医疗 AI 论文与前沿学术突破，将学术信号映射为研发杠杆与销售防御资产。禁止在报告中保留无效的占位符链接，禁止生成无商业战略推演的干瘪学术翻译。'
 triggers: ["医疗AI论文", "学术扫描", "临床文献", "最新数字医疗突破"]
@@ -17,28 +17,48 @@ Strategy:
 AVOID: 保留假 [URL] 占位符；发布无临床场景适配的情报；缺乏商业推演。
 </strategy-gene>
 
-# HIT Intel Scout (医疗数字化战略侦察兵 V8.2 Native)
+# HIT Intel Scout (医疗数字化战略侦察兵 V9.2 Native)
 
-## Tool Trajectory
-**[IN_ORDER]** 执行需遵循以下轨迹流：
-1. `run_command` (执行预印本爬网)
-2. `invoke_subagent` (并发拉起子代理抓取期刊)
-3. `write_to_file` (写入草稿沙盒)
-4. `run_command` (执行代码级跨平台审计)
-5. `write_to_file` (战报物理落盘)
-6. `invoke_subagent` (高价值概念异步委派入湖)
+## 核心里程碑 (Milestone Protocol)
+**[MILESTONES]** 放弃僵化的顺序调用，通过状态机推进以下关键节点，遇到异常自主容错：
+- **M1: 预印本/顶会并发**：拉起 2 个注入了严苛 JSON Schema 的 `research` 侦察兵抓取学术信号。
+- **M2: RWE 脱水**：主代理执行临床数据交叉核对与范式跃迁映射。
+- **M3: 防爆审计**：生成草稿后通过内部 Python 脚本进行合规检验（必须动态解析真实物理路径）。
+- **M4: 资产落盘**：战报终稿必须以 Artifact 制品形式留存在当前隔离会话。
+- **M5: 异步入湖**：派发 `TypeName: self` (Role: Ingestor) 执行图谱归档（绝对异步 Fire-and-forget）。
 
 ## 1. 核心流程与架构 (The Protocol)
-### Phase 1: 混合调度与弹性视窗 (Map-Reduce Delegation)
-1. **Preprints 管线直控**: 主代理调用 `run_command` 执行爬网（挂载 UTF-8，强制 `WaitMsBeforeAsync=5000`）：
-   `$env:PYTHONIOENCODING="utf-8"; python "C:\Users\shich\.gemini\config\skills\hit-lectures-scout\assets\deepxiv_preprints_scout.py"`
-   - 若脚本失败，降级通过 `invoke_subagent` 拉起 `research` 子代理手动抓取。
-2. **Journals 管线并发**: 使用 `invoke_subagent` 并发拉起 2 个 `research` 子代理，下发中英文期刊抓取目标。
-   - **下沉至前沿预印本与顶会**：优先检索 CHIL、MLHC，以及基于 MIMIC-IV 数据库的最新打榜开源项目。
-   - **实战关键词替换**：抛弃泛泛的“医疗AI”，替换为 `Clinical SLM` (临床小语言模型)、`Agentic Workflow` (医疗智能体工作流)、`Federated Learning` (联邦学习跨院数据)。
-   - 指示子代理：“你必须返回 JSON 格式结果，且必须包含 `source_url`（必须是真实可访问的 https:// 或 DOI 链接）、`publish_date`（精确的 YYYY-MM-DD 格式），以及 **`clinical_rwe`（必须提取具体的临床实验数据，如样本量 N、准确率百分比、AUC等硬核统计指标，不能只写形容词）**。严禁使用假链接或纯文本占位符。”
-   - 等待子代理回调唤醒。
-3. **弹性视窗**: 若最终抓取结果 < 5 篇，需将时间窗口扩大至 14 天重新扫描。
+### Phase 1: 并发前沿文献侦察 (Map-Reduce Delegation)
+1. **初始化调度**: 主代理调用 `invoke_subagent` 并发拉起 2 个绝对隔离的 `research` 子代理（抛弃中文文献库，专攻海外）。在分发 Prompt 时，**必须向子代理注入当前的系统日期**，并套用以下标准化的“集装箱” Prompt 模板：
+
+> **[子代理通用 Prompt 注入模板]**
+> "你是一个高级科研 `research` 侦察子代理。当前系统日期是 `[动态填入今天日期]`。
+> 你的专属任务是：`[填入以下 A 或 B 的具体专属指令]`。
+> 
+> **硬性约束：**
+> 1. **下钻阅读与隐式沙盘**：严禁仅依靠搜索引擎返回的残缺片段进行总结。你必须使用网页读取工具进入具体的论文摘要页（Abstract）全文阅读，过滤 7-14 天前的旧闻。
+> 2. **RWE 纪律**：必须从摘要中强行提取真实的临床对照数据（样本量 N，准确率，AUC，P值等硬核统计指标）。只有形容词、没有临床量化指标的论文直接丢弃！
+> 3. **机器通信协议**：你必须且只能通过 `send_message` 回传数据。严禁输出任何 Markdown 散文，必须严格匹配以下 JSON Schema（若无合规数据，返回空数组）：
+> ```json
+> {
+>   "pipeline_name": "top-tier_journals | preprints",
+>   "papers": [
+>     {
+>       "title": "[原文绝对标题]",
+>       "publish_date": "YYYY-MM-DD",
+>       "clinical_rwe": "[必须包含真实的样本量N、准确率、P值等硬核统计指标]",
+>       "tech_summary": "[中文翻译后的核心技术方案，至少30字]",
+>       "source_url": "https://... 必须是真实绝对路径"
+>     }
+>   ]
+> }
+> ```
+
+2. **双子星专属指令 (Task Payloads)**（请替换上述模板中的变量）：
+   - **[A] 顶刊同行评议线 (Top-tier Journals)**：强制构造英文 Query 检索《Nature Medicine》、《NEJM AI》、《Lancet Digital Health》以及 CHIL/MLHC 顶会。寻找已被验证的医疗大模型或多模态落地成果。
+   - **[B] 预印本与开源黑客线 (Preprints)**：强制构造英文 Query 检索 `medRxiv`、`arXiv (cs.AI)` 或 GitHub Trending。关键词必须围绕 `Clinical SLM` (临床小语言模型)、`Agentic Workflow` 或基于 `MIMIC-IV` 的开源库打榜数据。
+
+3. **弹性视窗**: 若最终合并抓取结果 < 5 篇，需指示子代理将时间窗口扩大至 14 天重新扫描。主代理派发后必须立即结束回合（挂起），静默等待 JSON 异步回调。
 
 ### Phase 2: Arbiter 提纯与 TRL 脱水
 1. **RWE 校验**: 无临床对照实验、无真实场景适配的论文，标记为 L1/Noise 并丢弃。
@@ -50,17 +70,17 @@ AVOID: 保留假 [URL] 占位符；发布无临床场景适配的情报；缺乏
    - **内部**：输出 1 个具体预研任务（含建议技术栈）与 1 条销售防御话术。
    - **外部**：输出行业数字化转型路线规划或系统顶层架构建议。
 
-### Phase 4: 跨平台代码审计与物理入湖 (The Hard Gate)
-1. 根据模板渲染草稿，使用 `write_to_file` 写入隔离工作区 `<appDataDir>\brain\<conversation-id>\scratch\draft_hit_scout.md`。
-2. **执行过检**: 调用 shell 执行审计（强制 `WaitMsBeforeAsync=3000`）：
+### Phase 4: 资产合规与异步入湖 (The Hard Gate)
+1. 简报草稿生成后，将其写入当前会话的 `scratch/` 沙盒目录（必须在上下文中**动态解析绝对物理路径**）。
+2. **代码级审计**: 调用内部审计脚本（挂载 UTF-8，强制 WaitMsBeforeAsync=3000 防死锁）：
    ```powershell
-   $env:PYTHONIOENCODING="utf-8"; python "C:\Users\shich\.gemini\config\skills\scripts\hit_audit_gate.py" "<appDataDir>\brain\<conversation-id>\scratch\draft_hit_scout.md" --mode scout
+   # 警告：必须将 [Absolute_Draft_Path] 替换为你动态解析出的真实物理路径
+   $env:PYTHONIOENCODING="utf-8"; python "C:\Users\shich\.gemini\config\skills\scripts\hit_audit_gate.py" "[Absolute_Draft_Path]" --mode scout
    ```
-   若报错拦截（如查出假链接），最多重试 2 次。
-3. **物理落盘**: 脚本返回 Exit Code 0 后，归档至：
-   `C:\Users\shich\.gemini\MEMORY\raw\DigitalHealthLecturesScout\DHLS-YYYYMMDD.md`
-4. **异步沉淀 (STQM & Payload MCP)**: 提取高价值概念，强制调用 `invoke_subagent` 委派入湖代理。
-   - 必须指示子代理：“将提取的学术概念映射写成 `.json` 载荷文件（如果有学术流派的争论，必须编码为 `tension_edges`），最后调用 `vector-lake-mcp:prepare_ingest_batch` 进行物理入湖，严禁通过 CLI 参数直传长文本。”
+   若审计不通过（查出假链接），自主修复最多重试 2 次。若脚本缺失，则启动自主内审机制后继续。
+3. **Artifact 资产生成**: 质检通过后，严禁写入不可见的 `MEMORY/` 目录。必须使用 `write_to_file` 在当前会话空间生成 **Artifact 制品**（必须附带 `UserFacing: true` Metadata），交付给用户。
+4. **异步沉淀 (STQM & Payload MCP)**: 提取高价值概念与范式跃迁节点，使用 `invoke_subagent` 拉起一个 `TypeName: self`，`Role: Vector Lake Ingestor` 的子代理。
+   - 子代理负责将数据写成本地 `.json` 载荷文件（如果存有路线争议，编码为 `tension_edges`），并调用 `vector-lake-mcp:prepare_ingest_batch` 执行入湖。主代理派发后立刻结束回合，**严禁同步轮询或等待**。
 
 ## 2. <Contracts> (输出与交付契约)
 
