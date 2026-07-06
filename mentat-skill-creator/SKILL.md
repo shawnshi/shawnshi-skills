@@ -1,102 +1,71 @@
 ---
 name: mentat-skill-creator
-version: 9.0.0
+version: 11.0.0
 tier: action-allowed
-description: 'Mentat 技能工厂与自愈中心。用于创建新技能、优化既有指令、运行技能评测及修复失败。强制采用EDD倒置开发与智能左移，通过单点突变与原子工具固化经验资产。禁止直接全盘覆写。'
-triggers: ["创建技能", "优化技能", "修复指令", "自愈", "SKILL.md"]
+description: 'Mentat V11 技能重工管线 (Director Edition)。通过多代理并发编排、沙盒数据注射与原生推理沙盒，将业务逻辑结构化为 7层微服务技能，并自动入湖注册。'
+triggers: ["创建技能", "优化技能", "修复指令", "自愈", "SKILL.md", "V11"]
 ---
 
-<strategy-gene>
-Keywords: 创建技能, 优化技能, 技能评测, amendify, SKILL.md
-Summary: 将模糊工作流锻造成本地可触发、可验证、可维护的 skill。
-Strategy:
-1. 先澄清触发边界、用户期望、失败禁区和验收条件。
-2. EDD倒置开发：在编写 SKILL.md 之前，必须先定义 3 个 JSON 测试用例。
-3. 写入最小但完整的 SKILL.md，包含标准 V9 骨架 (frontmatter, trajectory, output contract等)。
-4. 智能左移 (Shift Left)：禁止用大写 "ALWAYS DO" 堆砌防呆逻辑，转为 scripts/ 校验。
-5. 用二元评测和静态门禁验证；重复失败只做单点突变。
-AVOID: 禁止无评测的大面积重写；禁止长篇大论的路由描述；禁止全文件盲目覆写。
-</strategy-gene>
+# Mentat Skill Creator (V11 Director Architecture)
 
-# Mentat Skill Creator (V9.0 Native)
+**Context**: 
+这是 Antigravity 2.0 系统中用于创建、修复、重构本地图谱技能的最高指挥中心。本协议强制实施 Gemini Pro 3.1 级别的“多子代理并发编排 (Subagent Orchestration)”与“防死锁沙盒隔离”。严禁主代理大包大揽。
 
-Use this skill to create, repair, or evolve local skills. The complete historical playbook is preserved in references/full_skill_creator_playbook.md; load it only when detailed interview scripts, evaluation viewer instructions, or legacy workflow notes are required.
+**Request**: 
+将用户的模糊指令通过“数据注射 (Data Injection) -> 结构化抽象 -> 边界对抗 -> 图谱物理注册”流水线，锻造为符合 7-Layer 标准的 V11 技能。
 
-## Tool Trajectory
-**[IN_ORDER]** 执行需遵循以下轨迹流：
-1. `view_file` (侦查并读取目标 SKILL.md 与参考文档)
-2. `invoke_subagent` (可选：若失败复杂，唤醒 Critic 子代理诊断)
-3. `multi_replace_file_content` / `write_to_file` (修改结构化的 skill.json 节点数据，严禁直接拼凑 Markdown 文本)
-4. `run_command` (调用 scripts/render_skill.py 将 JSON 编译为 SKILL.md，并执行其他静态扫描)
+**Output Format**: 
+严格阻塞的 Checkpoint 拦截网 + 最终的 Vector Lake 注册。
 
-## 1. 核心流程与架构 (The Protocol)
-### Phase 1: 侦察与意图锁定 (Recon & Intent)
-1. **Recon**: Inspect existing context, target skill folder, SKILL.md, resources, scripts, examples, and prior failure evidence. **必须**检查 <appDataDir>\brain\<conversation-id>\scratch\rejected_edits.jsonl，严禁提交已被拒绝的补丁。
-2. **Intent Contract**: Define trigger phrases, non-triggers, expected output, side effects, required tools, and failure taxonomy.
+**Constraints**:
+1. 严禁主代理自行编写长篇大论的 Markdown 文本。
+2. 绝对禁止污染全局系统路径。所有的临时 JSON 缓存、测试用例输出、废弃补丁，必须统一写入 `<appDataDir>\brain\<conversation-id>\scratch\` 目录！
+3. 必须通过调用子代理进行并发执行，严禁直接在主上下文生成测试与逻辑。
 
-### Phase 2: 测试驱动开发 (EDD)
-- **Adversarial Holdout (盲测对抗)**: 除常规用例外，必须强制设计至少 1 个“对抗性边界用例”（极其相似但不应触发该技能，或应被明确拒绝的边缘场景），用于防范大模型的过度泛化与幻觉。
-- Before drafting the SKILL.md, you MUST explicitly write out 3 JSON evaluation cases (containing input, expected_tool_trajectory, and expected_output_format) in your thought block or scratchpad.
+---
 
-### Phase 3: 诊断与单点突变 (Diagnosis & Atomic Patch)
-1. **Critic Segregation**: 对于复杂的重复失败，必须通过 invoke_subagent 拉起 Failure Critic 提取一般化失败模式。
-   - 子代理参数: TypeName: "self", Role: "Failure Critic Subagent".
-   - 提取诊断 JSON: {"failure_mode": "...", "root_cause": "...", "suggested_patch_op": {"target_line": "...", "new_content": "..."}}.
-2. **Skill IR Contract (技能中间态)**: 对于 V9 技能，必须优先对同目录下的 `skill.json` 发起结构化写入或原子替换，随后通过 `run_command` 调用 `$env:PYTHONIOENCODING="utf-8"; python scripts/render_skill.py skill.json` 进行编译。如果目标技能是遗留老技能且没有 JSON，建议先为其提取并创建 `skill.json`。
+## 1. 核心指挥状态机 (Orchestration State Machine)
+*[System Directive: 主代理必须严格遵循以下阻塞式工作流。]*
 
-### Phase 4: 评估与固化 (Evaluate & Lock)
-1. **Contracts**: 添加或修复成功标准、Tool Trajectory 轨迹流，并强化 Failure Modes。
-   - **Route Confusion (路由防撞校验)**: 在固化新技能的 Trigger 前，必须检视同级目录排查与其他技能的语义重叠。若发现抢答风险，必须打回并收紧边界。
-2. **Evaluate**: 如果存在 evals/benchmark.json，必须调用 `run_command` 附带 UTF-8 编码锁执行 scripts/skill_opt_evaluator.py 验证。
-3. **Iterate**: 若测试失败，每次只打一个单点补丁并再次测试。被拒绝的编辑务必写入 rejected_edits.jsonl 避免死锁。
+### Step 1: 侦察与数据提取 (Recon & Data Payload)
+- **动作**: 识别意图，并抓取 1-2 条真实的业务上下文示例（例如真实的客户请求、代码片段）。
+- **落盘**: 将环境配置与示例数据提取为标准的 `context_payload.json`，存入沙盒 `scratch/` 目录。
 
-## 2. Skill Shape (V9 规范骨架)
-Every new or substantially repaired skill should include:
-- YAML frontmatter: 必须包含 name, version: 9.0.0, tier: draft (新建默认), 以及严格控制在 50 词内且包含负向触发指令的 description。
-- <strategy-gene> block (核心公理与流向约束)
-- ## Tool Trajectory (预期工具调用时序如 [IN_ORDER])
-- ## 0/1/2... (通过客观化标题替换命令式的大吼大叫)
-- ## <Contracts> (输出与交付契约)
-- ## <Failure_Taxonomy> (失败分类学)
-- ## Telemetry (埋点规范)
+### Step 2: 并发锻造 (Concurrent Workers)
+- **动作**: 主代理使用 `invoke_subagent` 同时并发唤醒以下两个子代理：
+  1. **[Skill Architect]**: 向其注射需求。职责是设计符合“7层微服务类定义”的 `skill.json` 草图。
+  2. **[Red Team Evaluator]**: 向其注射 `context_payload.json`。职责是基于真实数据，设计 3 个极限测试用例（包含 1 个必然触发拒绝的边界）。
+- **指令要求**: 必须强制要求 Red Team 在生成 JSON 测试用例前，使用 `<thought>` 块进行红蓝对抗自我博弈 (Self-Debate)，排查漏洞。
 
-Prefer bundled resources over long inline instructions:
-- scripts/ for deterministic actions
-- references/ for long domain knowledge
-- assets/ for templates, images, and fixed materials
-- examples/ for validated input-output cases
+### 🛑 CHECKPOINT 1 (沙盒数据校验)
+- **触发**: 在收到所有子代理返回的数据之后，但在物理写入任何全局文件之前。
+- **拦截**: **必须暂停！** 向用户展示 `skill.json` 草图与 `3 个红队测试用例`。等待用户人工确认。
 
-## 3. <Contracts> (设计与修改契约)
-- **Protected Section (Slow Update Zone)**: 严禁在日常修补中修改 <strategy-gene> 块和核心 ## Output Contract。
-- **Skill IR Isolation (编译隔离)**: 对于已迁移为中间态的技能，绝对禁止直接重写 `SKILL.md` 排版。所有底层规则修改必须写入 `skill.json` 中的具体节点，从而彻底消灭“文本覆写导致的 Markdown 格式损坏”。
-- **Context Budget Lock (上下文配额熔断)**: 物理强制配额。修改后的 `SKILL.md` 纯指令部分必须保持绝对精干（硬性上限为 800 Tokens）。一旦预估超标，严禁写盘，必须强行截断并将防御逻辑左移至 `scripts/`，或将长篇示例转移至 `references/`。
-- **The Description Routing Algorithm**: YAML frontmatter 的 description 必须限制在 50 个词以内，开头放置触发关键词 ("提取 X..." 而不是 "这个技能可以帮你...")，并且必须包含 "禁止用于..." 的反向拦截声明。
-- **Shift Intelligence Left**: 绝对禁止使用大写吼叫（例如 "ALWAYS DO X"）去硬性约束行为。复杂业务逻辑必须左移，沉淀为 scripts/ 中的决定性 Python/PS 脚本。
-- **Trajectory Validation**: 必须评估技能是否通过了正确的工具轨迹流抵达结果。错误轨迹带来的“正确输出”依然是失败。
-- Local references must resolve from the skill folder or repository root。
-- Unsupported runtime-specific tool names must not appear in SKILL.md。
-- A new skill must define both positive triggers and meaningful non-triggers。
-- A repair must preserve the skill's semantic purpose unless the user explicitly asks for a redesign。
+### Step 3: 原子落盘与编译 (Atomic Commit)
+- **动作**: 用户同意后，使用原子工具对 `config/skills/...` 下的文件执行写入。
+- **动作**: 执行 `$env:PYTHONIOENCODING="utf-8"; python scripts/render_skill.py skill.json`。
+- **异常处理**: 任何修改失败的碎片必须被截流并写入沙盒中的 `scratch/rejected_edits.jsonl`，严禁死锁重试。
 
-## 4. <Failure_Taxonomy> (失败分类学)
-- **Ambiguous intent**: Ask one narrow clarifying question or produce an assumption block before editing.
-- **Missing resource**: Create the resource, remove the reference, or point to an existing equivalent.
-- **Oversized SKILL.md**: Move cookbook content into references/ and keep the entrypoint under the line threshold.
-- **Trigger collision**: Check shared/trigger-ownership-matrix.json and assign primary/secondary roles.
-- **Repeated behavior failure**: Add or modify exactly one AVOID gene, then rerun the failing test.
+### 🛑 CHECKPOINT 2 (路由重叠拦截)
+- **触发**: 检测到新生技能的触发器与图谱内已有技能发生重叠。
+- **拦截**: **必须暂停！** 停止执行，向用户请求边界优先级裁决。
 
-## Resources
-- Full archived playbook: references/full_skill_creator_playbook.md
-- Schema notes: references/schemas.md
-- Shared template: shared/skill-structure-template.md
-- Gates: ../scripts/repair_skills.ps1, ../scripts/generate_resource_manifests.ps1 (Global Shared Scripts)
+### Step 4: 知识图谱登记 (Vector Lake Registry)
+- **动作**: 编译无误且测试通过后，**必须**调用 `vector-lake-mcp:write_wiki_page` 注册该技能。
+- **内容**: 生成 `Concept_Skill_[Name]`，将技能的职责边界、正反向触发词 (Trigger) 永久入湖，消除知识孤岛。
 
-## Output Contract
-- For analysis tasks: return findings ordered by severity, with validation evidence. All file paths MUST be formatted as clickable Markdown links (e.g., [filename](file:///absolute/path/to/file)).
-- For creation tasks: deliver a complete skill folder or a precise patch plan.
-- For repair tasks: state what changed, why, and which gate or test now passes.
-- Do not report success if static checks, manifest generation, or required evals were skipped without explanation.
+---
 
-## Telemetry
-- When persistent logging is available, record skill name, task type, files changed, validation commands, failures, and next mutation candidate。
-- **Adoption Drift Watch**: 任何触发记录与执行状态码必须追加写入本地埋点日志，用于后续由定时任务分析技能的“沉默退化”，驱动主动翻新 (Adaptive Proposals)。
+## 2. 交付物标准：V11 7-Layer Class Definition
+所有生成的 `skill.json` 最终被渲染成的 `SKILL.md`，必须符合以下七层契约：
+
+1. **Identity (身份)**: 技能核心定义（V11 标识）。
+2. **Mission (目标)**: Frontmatter 中的 `description` 强制 <50 字，且包含明确的反向阻断条件。
+3. **Workflow (工作流)**: 摒弃模糊的过程描述，使用 Milestone 与 JSON RPC 契约定义流水线。
+4. **Deliverables (交付物)**: 限定最终交付物是 UserFacing Artifact 还是特定结构文件。
+5. **Guardrails (护栏)**: 以绝对的 `Constraints` (约束) 替代大写的呼喊。业务逻辑溢出部分必须强制智能左移至 `scripts/` 脚本目录。
+6. **Metrics (指标)**: 客观的静态门禁条件与失败分类学。
+7. **Voice (语气)**: 维持 Winston 式的极致精干、非客服体控制台语言。
+
+## 3. Telemetry & Post-Mortem
+如果在图谱审计中发现技能退化，启动“自愈”模式时，必须携带之前运行失败的 `crash.log` 并在 `<thought>` 中推演根因，进行精确单点基因突变。
