@@ -11,3 +11,8 @@
 **Vulnerability:** Unsanitized user input via environment variable passed to subprocess.run with split().
 **Learning:** Using .split() on strings that represent shell commands can lead to improper parsing and potential injection or unexpected behavior if arguments contain spaces or special characters.
 **Prevention:** Always use shlex.split() to safely parse command-line strings in Python.
+
+## 2026-07-04 - PowerShell Command Injection via String Interpolation in humanize_engine.py
+**Vulnerability:** Unsanitized temporary file path interpolated into a PowerShell command string in personal-write-humanizer/scripts/humanize_engine.py.
+**Learning:** Even when using system-generated paths like temp files, quotes must be escaped when passing paths to a shell argument to prevent potential breakout attacks if the system temporary directory path somehow contains special characters.
+**Prevention:** Sanitize input by escaping single and double quotes (e.g., replacing ' with '') before interpolating into PowerShell commands.
