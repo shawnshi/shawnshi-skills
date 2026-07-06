@@ -39,7 +39,8 @@ AVOID: 提供情绪安抚；使用高深词汇包装懒惰；调用 personal-cog
    - 使用 `grep_search` 定向扫描 `C:\Users\shich\.gemini\MEMORY\raw\privacy\Diary\` 提取前序 `Next Tactics`。
 
 ### Phase 2: Audit (大白话无情审计)
-生成以下极简骨架报告（写入后续 payload）：
+生成以下极简骨架报告（写入后续 payload）。注意：报告顶部必须强制以 `# YYYY-MM-DD 星期X` 时间戳起手，否则将被底层 I/O 引擎拒收！
+- **时间戳**: 报告第一行必须为 `# YYYY-MM-DD 星期X` 格式。
 - **肉体与情绪实况 (Physical & Emotional Reality)**: 睡了几小时？运动没？心情烂不烂？（系统强制：禁止在这一段提皮质醇和热力学）。
 - **自欺欺人行为剖析 (Self-Deception Analysis)**: 今天用什么看似勤奋的“伪工作”（如重构底层代码）逃避了什么真正困难的现实阻力？
 - **战术清算 (Tactical Liquidation)**: 必须为表格形式。字段为：[承诺行动] | [结果 (仅限 True/False)] | [评价]。
