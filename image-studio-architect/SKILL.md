@@ -31,7 +31,7 @@ triggers: ["画图", "生成图片", "设计海报", "生成封面"]
 
 ### Phase 3: 物理渲染引擎 (Physical Rendering)
 1. 接收最终的 Prompt（来自 Raw Mode 或经 Phase 2 批准的 Alchemy Mode）。
-2. 调用系统原生工具 `generate_image` 进行图像生成（或降级挂载底层 python 渲染脚本）。
+2. 调用系统原生工具 `generate_image` 进行图像生成，或直接调用 `python scripts/generate.py` (`C:\Users\shich\.gemini\config\skills\image-studio-architect\scripts\generate.py`) 作为降级备用底层物理渲染脚本。
 
 # 4. Deliverables (交付标准)
 - **沙盒隔离 (Sandbox Isolation)**: 所有临时生成的脚本文件、中间文件或最终图像制品，必须且只能写入 `brain/<conversation-id>/scratch/` 目录，彻底禁止污染 `config/`、受保护层或系统级根目录。

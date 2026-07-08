@@ -21,13 +21,17 @@ triggers: ["科研作图", "绘制期刊图表", "Scientific Figure", "论文插
 
 **Step 1: Specifications Loading (规范导入)**
 - 强制确定目标期刊要求（DPI、画布尺寸（如单栏 89mm/双栏 183mm）、字体系列及字号、子图排版布局）。
+- **强制样式预设加载 (Mandatory Style Presets)**: 必须导入 `scripts/style_presets.py` (`C:\Users\shich\.gemini\config\skills\academic-scientific-visualization\scripts\style_presets.py`) 并调用 `configure_for_journal(journal, figure_width)` 自动配置目标期刊的字体、尺寸与样式。该模块提供：
+  - `apply_publication_style(style_name)`: 6 种期刊预设样式 (nature/science/cell/minimal/presentation/default)
+  - `set_color_palette(palette_name)`: 5 套防色盲调色板 (Okabe-Ito/Wong/Tol Bright/Tol Muted/Tol High Contrast)
+  - `configure_for_journal(journal, figure_width)`: 一键配置 Nature/Science/Cell/PLOS/ACS/IEEE 的完整参数
 - 梳理需要展示的数据结构及其统计不确定性类型。
 
 **Step 2: Subagent Orchestration (子代理编排 - Data Processing)**
 - 对于包含庞大行列、非结构化原始实验数据或需执行高度繁重统计聚合的重型数据处理任务，必须通过 `invoke_subagent` 挂载数据子代理进行异步降维与归一化计算，将清洗后的纯净结构化数据传回，避免阻塞主代理绘制流。
 
 **Step 3: Fable 5 Checkpoints (渲染前门控)**
-在生成或执行任何复杂的绘图脚本前，主代理必须通过自带逻辑检验通过以下 Fable 5 检查点：
+在生成或执行任何复杂的绘图脚本前，主代理必须通过自带逻辑检验通过以下检查点：
 - [ ] 门控 1: 数据路径是否安全锁定在 `scratch/` 空间内？
 - [ ] 门控 2: 目标图表尺寸是否严格遵循了期刊单/双栏排版物理界限？
 - [ ] 门控 3: 图例的色彩映射是否通过了防色盲审视且包含后备形状编码？
@@ -36,10 +40,16 @@ triggers: ["科研作图", "绘制期刊图表", "Scientific Figure", "论文插
 
 **Step 4: Design & Encoding (编码与物理沙盒渲染)**
 - 使用 Matplotlib/Seaborn 编写防爆脚本，渲染输出必须落盘于基于 `<conversation-id>` 物理隔离的原生 `scratch/` 空间。
+- **强制样式库加载**: 脚本头部必须导入 `scripts/style_presets.py` 并调用 `apply_publication_style()` 或 `configure_for_journal()` 进行样式初始化，严禁使用 Matplotlib 裸默认样式。
 - **Sandbox Isolation**: 所有的绘图过程缓存、测试数据文件和草稿脚本，必须**严格写入 `scratch/` 目录**（如 `C:\Users\shich\.gemini\antigravity-cli\brain\<id>\scratch\`）。严禁将未完成的杂乱文件污染根目录或核心配置区。
 - **Encoding Lock**: 使用 `run_command` 执行脚本时，必须挂载跨平台字符集安全锁：`$env:PYTHONIOENCODING="utf-8"; python <script_path>`。
 
 **Step 5: Telemetry & Delivery (物理落盘与检验)**
+- **强制导出工具 (Mandatory Export Utilities)**: 最终图表保存必须调用 `scripts/figure_export.py` (`C:\Users\shich\.gemini\config\skills\academic-scientific-visualization\scripts\figure_export.py`) 中的专用函数，严禁直接使用裸的 `plt.savefig()`。该模块提供：
+  - `save_publication_figure(fig, filename, formats, dpi)`: 多格式导出（PDF/PNG/EPS/SVG/TIFF），自动处理 bbox/pad/透明度
+  - `save_for_journal(fig, filename, journal, figure_type)`: 按期刊规格自动设置格式与 DPI（如 Nature line_art = EPS+PDF@1000DPI）
+  - `check_figure_size(fig, journal)`: 校验图表尺寸是否符合期刊单栏/双栏物理界限，输出合规报告
+  - `verify_font_embedding(pdf_path)`: 检查 PDF 字体嵌入状态
 - 从 `scratch/` 读取渲染结果，人工/脚本校验产出物。
 - 将验证通过的高清成品移动至正式的发布归档目录，同时输出语义说明文本交付给用户。
 

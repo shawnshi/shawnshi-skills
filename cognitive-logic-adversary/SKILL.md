@@ -26,6 +26,9 @@ To prevent catastrophic failures by stress-testing assumptions, simulating exper
 
 - **F5CP-4: The Steelman Reconstruction**
   Consolidate the subagents' findings. Select the top 3 most lethal SPOFs and forge them into a stronger, refactored defensive plan (the "Steelman" version).
+  **Mandatory Scripts**:
+  - Run `scripts/game_resolver.py` (`python C:\Users\shich\.gemini\config\skills\cognitive-logic-adversary\scripts\game_resolver.py <debate_results.json> --pareto --chart`) to mathematically parse the debate results, calculate consensus distance, and find the Pareto frontier.
+  - Run `scripts/session_merger.py` (`python C:\Users\shich\.gemini\config\skills\cognitive-logic-adversary\scripts\session_merger.py <workspace_path> <output_file_path>`) to compile the round-by-round fragments into the final Logic Audit Report (Vulnerability Vault).
 
 - **F5CP-5: Vector Lake Archival**
   Save the validated insights and newly forged structural defensive patterns directly to the **Vector Lake Registry** via `call_mcp_tool` to persist the acquired operational memory.

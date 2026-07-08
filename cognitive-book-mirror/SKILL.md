@@ -18,13 +18,13 @@ Cognitive Book Mirror 个人化认知镜像与伴读引擎。
 
 ## 3. Workflow (执行管线与 Subagent Orchestration)
 强制采用多代理并发编排与沙盒物理隔离管线：
-1. **Sandbox Setup (沙盒准备)**: 所有的工作必须在 `<appDataDir>\brain\<conversation-id>\scratch\book_mirror\` 物理隔离空间中进行，严禁向其他目录执行临时落盘。
-2. **Context Pack (上下文脱水)**: 提取用户最近 14 天的日记及 `USER.md`/`SOUL.md`，预组装为上下文背景。
-3. **Semantic Chunking (语义切片)**: 如果文本过长，强制进行结构化切片，落盘至沙盒目录。
+0. **Environment**: 确保已通过 `run_command` 运行 `pip install -r scripts/requirements.txt` (`C:\Users\shich\.gemini\config\skills\cognitive-book-mirror\scripts\requirements.txt`) 以配置必须的 Python 库。
+1. **Sandbox Setup & Context Pack (沙盒准备与脱水)**: 必须调用 `scripts/extract_and_pack.py` (`C:\Users\shich\.gemini\config\skills\cognitive-book-mirror\scripts\extract_and_pack.py --file <book_file>`)。该脚本将自动在 `scratch/book_mirror/` 创建隔离区，提取用户最近 14 天日记与 `USER.md`/`SOUL.md` 进行预组装。
+2. **Semantic Chunking (语义切片)**: `extract_and_pack.py` 会自动完成长文本的结构化切片，落盘至沙盒的 `chunks/` 目录。
 4. **Subagent Orchestration (子代理并发列阵)**:
    - 调用 `define_subagent` 定义 `CognitiveMirrorWorker` 子代理，明确指示其输出 JSON 结构的双栏表格。
    - 使用 `invoke_subagent` 根据切片数量并发调度任务，并将 Context Pack 作为背景知识传入。
-5. **Stitching (物理缝合)**: 主代理收集所有 `send_message` 返回的双栏片段，合并后落盘为完整的 Markdown 文件。
+5. **Stitching (物理缝合)**: 当所有子代理将生成的双栏片段写回结果目录后，主代理必须调用 `scripts/stitch_and_format.py` (`C:\Users\shich\.gemini\config\skills\cognitive-book-mirror\scripts\stitch_and_format.py --book_stem <name> --results_dir <dir>`)。该脚本会自动合并所有碎片，生成包含表头的最终双栏 Markdown 报告，并将其保存在 `MEMORY/raw/read/`。
 
 ## 4. Deliverables (交付契约)
 - **Artifact 交付**: 缝合完成的双栏 Markdown 制品存入适当位置（或 Artifact `scratch/`），并通过可点击链接交付给用户查看。

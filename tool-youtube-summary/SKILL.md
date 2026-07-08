@@ -29,13 +29,18 @@ To seamlessly transform raw YouTube videos, transcripts, or long-form texts into
     *   Synthesize the core logic: Identify the breakthrough point -> Logical progression -> Top-level framework mapping -> Ultimate endgame questions.
     *   Formulate a highly counter-intuitive main title.
 *   **Checkpoint 4: Synthesis & Rendering**
+    *   **强制渲染约束 (Mandatory Rendering Constraints)**: 开始起草文章之前，必须先读取并严格遵循 `resources/synthesis_prompt.md` (`C:\Users\shich\.gemini\config\skills\tool-youtube-summary\resources\synthesis_prompt.md`) 中的全部约束，包括：
+        - **Stage 2 散文渲染 (Prose Rendering)**: 禁止项目符号，必须包含冲突式主标题、痛点开场、动词推动的层层剖析、高维抽象框架命名、终局户问拷问等完整结构。
+        - **Stage 3 全息观点解析矩阵 (Holographic Viewpoint Matrix)**: 根据内容长度动态调整观点数量 (L1/L2/L3)，每个观点必须包含背景、事实、跨学科映射与思辨四个维度。
+        - **绝对禁区 (Negative Constraints)**: 视点封锁、事实锁定、标题洁癖等红线。
     *   Draft the comprehensive markdown article based on the cognitive scaffolding from Checkpoint 3.
 *   **Checkpoint 5: Vector Lake Registry & Output**
     *   **Vector Lake Registry:** Push the crystallized insights, core variables, and the final synthesis matrix to the Vector Lake using `mcp_vector-lake` tools (e.g., `sync_vector_lake` or `memory_update` via subagents or direct calls).
     *   Write the final Markdown artifact to the conversation's artifact directory.
 
 ## 4. Deliverables
-1.  **System Output:** A complete, beautifully formatted Markdown file containing the synthesized essay and insight matrices, saved to the local workspace artifacts.
+- **强制渲染约束 (Mandatory Rendering Template)**: 文章的写作手法、结构与格式规范必须严格符合 `resources/synthesis_prompt.md` (`C:\Users\shich\.gemini\config\skills\tool-youtube-summary\resources\synthesis_prompt.md`) 的全部要求。
+1.  **System Output:** A complete, beautifully formatted Markdown file containing the synthesized essay (Stage 2) and insight matrices (Stage 3), saved to the local workspace artifacts.
 2.  **Vector Lake Nodes:** Structured operational memory and knowledge nodes registered in the Vector Lake.
 3.  **Interactive Output:** A highly concise confirmation message with a clickable local file link, followed by a sharp, 15-character max "venomous" critique of the video's core premise. Absolutely NO full-text dumping in the chat UI.
 

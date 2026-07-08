@@ -15,14 +15,15 @@ To deliver institutional-grade financial analysis and portfolio management by co
 # 3. Workflow
 
 ### Phase 1: Quality Screener (第一级火箭 - 去劣漏斗)
-When given stocks or a sector, **never** perform deep research immediately.
-- **Action**: Run the funnel script to filter out assets failing ROE and FCF baselines.
+When given stocks or a sector, **never** perform deep research immediately. Verify dependencies in `scripts/requirements.txt`.
+- **Action**: Run the funnel script to filter out assets failing ROE and FCF baselines. Use `scripts/portfolio_loader.py` to load initial portfolios, and `scripts/watchlist_gate.py` to validate tickers.
 - **Command**: `$env:PYTHONIOENCODING="utf-8"; python "C:\Users\shich\.gemini\config\skills\personal-investment-advisor\scripts\quality_screener.py" --tickers ...`
 - **Rule**: Only proceed with `✅ Pass` or `⚠️ Pass (Exempt)` assets.
 
 ### Phase 2: Fetch & Anchor (原质抓取)
 For surviving assets, fetch current data and historical anchors.
 - **Command**: `$env:PYTHONIOENCODING="utf-8"; python "C:\Users\shich\.gemini\config\skills\personal-investment-advisor\scripts\yf.py" ... --json --with-portfolio`
+- **A-Share / Broker Sync**: For Chinese A-shares, use `scripts/akshare_fetcher.py`. To sync local positions based on `resources/portfolio_positions.example.json` and `resources/portfolio_schema.json`, use `scripts/broker_sync.py`.
 - This encapsulates current financials alongside historical `thesis.md` context.
 
 ### Phase 3: The Berkshire Syndicate (第二级火箭 - 四大师并发压测)
@@ -30,7 +31,7 @@ You MUST use `invoke_subagent` to orchestrate four concurrent `research` subagen
 - **Action**: Pass the JSON payload from Phase 2 to each subagent.
 - **Instructions to Subagents**: Demand a strict JSON response containing `analyst_persona`, `core_moat_assessment`, `thesis_reinforcement`, `fatal_attack_points`, and `valuation_anchor`.
 - **Constraint**: Do not hallucinate their responses. You must literally call `invoke_subagent`.
-- **Management Truth Serum**: For earnings reports, instruct subagents to track management's past promises against current delivery, flagging linguistic evasion.
+- **Management Truth Serum**: For earnings reports, use `scripts/earnings_truth_serum.py` to instruct subagents to track management's past promises against current delivery, flagging linguistic evasion.
 
 ### Phase 4: Fable 5 Checkpoint & Synthesis
 - **Fable 5 Checkpoint**: You **MUST PAUSE** execution and present a dedicated Risk Analysis and Conflict Matrix to the user BEFORE formulating any final conclusion or executing trades. Await user confirmation.
@@ -38,8 +39,8 @@ You MUST use `invoke_subagent` to orchestrate four concurrent `research` subagen
 
 ### Phase 5: Sandbox Isolation & Gate (第三级火箭 - 对抗性风控与落盘)
 - **Sandbox Isolation**: All intermediate JSON drafts and calculations MUST be written strictly to the session's isolated scratch space: `<appDataDir>\brain\<conversation-id>\scratch\`.
-- **Action**: Write the synthesized dashboard draft to the sandbox using `write_to_file`.
-- **Gate**: Run the adversarial risk gate:
+- **Action**: Write the synthesized dashboard draft to the sandbox using `write_to_file`. Draft must comply with `resources/dashboard_schema.json`.
+- **Gate**: Run the adversarial risk gate using `scripts/dashboard_gate.py` and `scripts/dashboard_math_gate.py` to enforce numeric and logical alignment.
   `$env:PYTHONIOENCODING="utf-8"; python "C:\Users\shich\.gemini\config\skills\personal-investment-advisor\scripts\save_dashboard.py" --stock "<TICKER>" --file "<appDataDir>\brain\<conversation-id>\scratch\dashboard_draft_{TICKER}.json"`
 - Iteratively fix JSON based on Python exceptions if the gate fails.
 
@@ -50,6 +51,7 @@ You MUST use `invoke_subagent` to orchestrate four concurrent `research` subagen
 - When requested, run stress tests or rebalancing scripts.
 - **Stress Test**: `python ...\rebalance_optimizer.py`
 - **Rebalance**: `python ...\rebalance_weights.py`
+- **Journal**: Log all strategic decisions by running `scripts/advice_journal.py` to persist rationales. Run `scripts/decision_outcome_report.py` and `scripts/sync_outcomes.py` to retroactively audit and synchronize the outcomes of past positions.
 
 # 4. Deliverables
 - A brutally honest, non-consensus financial thesis matrix.

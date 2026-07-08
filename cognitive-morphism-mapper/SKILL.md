@@ -16,6 +16,7 @@ triggers: ["跨界思维映射", "套用热力学破局", "用生物演化分析
 执行跨界思维映射必须通过以下多子代理协同网络：
 - **Phase 1: Skeleton Extraction (拓扑提取)**: 调度子代理(Subagent)分析用户输入的业务场景，过滤一切感性词汇，提取纯粹的图论与范畴论骨架。
 - **Phase 2: Functor Mapping (函子映射)**: 将源域结构同构映射到目标域（如热力学、生物演化）。必须进行严格的 `<thought>` Self-Debate (自我辩论)，验证同构的合理性，而非轻率的隐喻。
+  - **强制环境探测**: 调用 `scripts/domain_manager.py` (`python C:\Users\shich\.gemini\config\skills\cognitive-morphism-mapper\scripts\domain_manager.py list`) 查找现有的成熟结构基石领域（内置及自定义）。如果目标域尚未结构化，调用 `python C:\Users\shich\.gemini\config\skills\cognitive-morphism-mapper\scripts\domain_manager.py add <domain_name>` 依据 V2 标准创建领域知识框架骨架并填充。
 - **Phase 3: Theorem Derivation (定理推演)**: 在目标域内调用物理/生物学等既有基石定理进行推演。如遇信息模糊，挂载 `yoneda_probe`；环境巨变，使用 `natural_transformation`。
 - **Phase 4: Commutativity Check (交换图验证)**: 将推演结果逆映射回源域，验证该映射在现实商业或物理环境中是否可行，闭环交换图。
 - **Phase 5: Subagent Orchestration & Vector Lake Registration**:

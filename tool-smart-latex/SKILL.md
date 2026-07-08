@@ -21,7 +21,7 @@ To automate the production of professional LaTeX/PDF documents using the optimal
   Confirm the target style (`academic`, `cv`, `tech_report`, `book`, `tech_book`, or `auto`), language, math density, and output requirements.
 
 - **Checkpoint 2: Subagent Orchestration & Preprocessing**
-  Delegate heavy lifting tasks (e.g., content cleaning, structural verification) to specialized subagents using `invoke_subagent`.
+  Delegate heavy lifting tasks (e.g., content cleaning, structural verification) to specialized subagents using `invoke_subagent`. For specialized idiom processing, execute `scripts/process_idioms.py`.
 
 - **Checkpoint 3: Sandbox Isolation Engine Execution**
   Convert and compile the LaTeX structure inside the isolated `scratch/` space.
