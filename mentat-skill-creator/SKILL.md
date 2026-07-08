@@ -32,14 +32,18 @@ triggers: ["创建技能", "优化技能", "修复指令", "自愈", "SKILL.md",
 - **落盘**: 将环境配置与示例数据提取为标准的 `context_payload.json`，存入沙盒 `scratch/` 目录。
 
 ### Step 2: 并发锻造 (Concurrent Workers)
-- **动作**: 主代理使用 `invoke_subagent` 同时并发唤醒以下两个子代理：
-  1. **[Skill Architect]**: 向其注射需求。职责是**严格基于第二章的 XML 骨架模板**，输出新技能的定义结构。绝不允许遗漏 `<thought>`、`<anti_patterns>` 和 `<tool_dispatch>` 战术模块。
-  2. **[Red Team Evaluator]**: 向其注射 `context_payload.json`。职责是基于真实数据，设计 3 个极限测试用例（包含 1 个必然触发拒绝的边界）。
-- **指令要求**: 必须强制要求 Red Team 在生成 JSON 测试用例前，使用 `<thought>` 块进行红蓝对抗自我博弈 (Self-Debate)，排查漏洞。
+- **动作**: 主代理使用 `invoke_subagent` 同时并发唤醒以下两个子代理，并强制挂载 `Max_Turns: 3` 的死亡倒计时，拒绝任何无限死锁重试：
+  1. **[Skill Architect]**: 向其注射需求。职责是**严格基于第二章的 XML 骨架模板**，输出新技能的定义结构。在构建 `<validation_gate>` 时，必须明确绑定后续生成的物理测试脚本。
+  2. **[Test Engineer]**: 向其注射 `context_payload.json`。职责是废弃纯文本纸上谈兵，**必须**在 `scratch/` 下生成一个物理可执行的 `.py` 验证脚本（如基于 Pydantic 的 Schema 校验器，或正则探测器），内置 3 个极限测试用例（包含 1 个报错边界）。
+- **指令要求**: 必须强制要求 Architect 在 `<tool_dispatch>` 模块中秉持“计算降维”法则，禁止新技能进行人肉计算。
+
+### Step 2.5: 冷上下文审查 (Cold-Context Audit)
+- **动作**: 主代理**绝对禁止**进行自我裁判。必须再次调用一个全新的子代理 `[Unbiased Reviewer]`，将 Architect 写的 `SKILL.md` 草稿、Engineer 写的验证脚本，连同系统的 `pai/coding.md` 扔给它。
+- **拦截**: 如果审查官发现草稿试图让大模型做数学题，或者验证脚本无法运行，必须打回 `[Skill Architect]` 扣除一回合并要求重写。仅在获得二元判定 `[Approve]` 后，才允许推进。
 
 ### 🛑 CHECKPOINT 1 (沙盒数据校验)
-- **触发**: 在收到所有子代理返回的数据之后，但在物理写入任何全局文件之前。
-- **拦截**: **必须暂停！** 向用户展示生成的 `XML 技能草图` 与 `3 个红队测试用例`。等待用户人工确认。
+- **触发**: 在获得冷上下文审查官的 `[Approve]` 之后，物理写入全局文件之前。
+- **拦截**: **必须暂停！** 向用户展示生成的 `XML 技能草图` 与 `物理验证脚本路径`。等待用户人工确认。
 
 ### Step 3: 原子落盘与编译 (Atomic Commit)
 - **动作**: 用户同意后，使用原子工具对 `config/skills/...` 下的对应 `SKILL.md` 文件执行写入。
@@ -115,6 +119,11 @@ triggers: ["创建技能", "优化技能", "修复指令", "自愈", "SKILL.md",
   <metrics>
     <!-- [Metrics]: 生成最终结果前的内部校验清单 (Self-Correction) -->
   </metrics>
+
+  <validation_gate>
+    <!-- [战术升级 4：物理自我验证 (Physical Self-Verification)] -->
+    <!-- 必须定义一个可通过脚本或底层工具验证的“硬”退出条件。如：运行 test_xxx.py 且 0 errors；或使用 jsonschema 命令校验输出。严禁仅仅依赖大模型的肉眼审查，测试不通过必须进入 3-Strike 熔断循环。 -->
+  </validation_gate>
 </delivery_standards>
 ```
 

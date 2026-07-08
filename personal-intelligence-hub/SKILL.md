@@ -1,12 +1,12 @@
 ---
 name: personal-intelligence-hub
-version: 11.0.0
+version: 11.2.0
 tier: action-allowed
 description: '战略情报作战中枢。调度子代理执行多源情报扫描、二阶推演与红队审计。强制读取标准配置并通过沙盒与门控脚本保障交付质量。禁止捏造洞察或越权写入。'
 triggers: ["情报扫描", "战略简报", "信息去重", "红队审计"]
 ---
 
-# Personal Intelligence Hub (V11 Architecture)
+# Personal Intelligence Hub (V11.2 Architecture)
 
 ## 1. Identity
 战略情报作战中枢。作为核心代理系统，通过调度多并发子代理执行全链路的情报捕获、去重、推演、红队审计以及归档。
@@ -16,22 +16,27 @@ triggers: ["情报扫描", "战略简报", "信息去重", "红队审计"]
 
 ## 3. Workflow
 **[Fable 5 Checkpoints] 严格门控工作流：**
-1. **Checkpoint 1: 需求解析与配置加载**: 确认环境，读取 `references/strategic_focus.json` 和 `references/karpathy_feeds.json`。主代理解析并分配当前会话沙盒路径 `<appDataDir>\brain\<conversation-id>\scratch\`。
-2. **Checkpoint 2: 猎群游荡 (Swarm Fetch)**: 必须使用 `invoke_subagent` 并发拉起 3 个 `research` 子代理（阵地哨兵、主题雷达、盲区游侠）进行广域捕获。主代理合并子代理反馈，写入沙盒 `scratch/intelligence_candidates.json`。
-3. **Checkpoint 3: 二阶推演 (Deduction)**: 唤醒具备核实特权的子代理对候选池进行结构化提炼（Fact -> Connection -> Deduction -> Actionability）。生成中文摘要、提炼核心实体并标记双链 `[[Entity]]`。主代理将 JSON 结果落盘至沙盒 `scratch/intelligence_current_refined.json`。
+1. **Checkpoint 1: 需求解析与配置加载**: 确认环境，读取 `references/strategic_focus.json`、`references/briefing_template.md` 以及 **`references/subagent_prompts.json`**。主代理解析并分配当前会话沙盒路径 `<appDataDir>\brain\<conversation-id>\scratch\`。
+2. **Checkpoint 2: 确定性抓取与游荡 (Deterministic Fetch & Swarm)**: 
+   - 主代理首先通过终端执行 `python scripts/fetch_news.py` 执行多源硬拉取，读取生成的扫描结果。
+   - 随后，根据抓取结果，使用 `invoke_subagent` 并发拉起 3 个 `research` 子代理（阵地哨兵、主题雷达、盲区游侠）。**必须严格使用 `references/subagent_prompts.json` 中定义的 `system_prompt` 和 `output_schema` 作为子代理指令**，针对高潜线索进行深度扩写与网页核查。将扩充结果写入沙盒 `scratch/intelligence_candidates.json`。
+3. **Checkpoint 3: 语义二阶推演 (Semantic Deduction)**: 废弃硬编码脚本打分，唤醒具备核实特权的子代理 (SemanticEvaluator)。主代理将 `strategic_focus.json` 的内容与 **`subagent_prompts.json` 中定义的推演要求**注入 Prompt，由大语言模型执行语义级价值评估（L1-L4）与结构化提炼。子代理需结合语境原生地为战略实体打上 `[[Entity]]` 双链。主代理将最终 JSON 落盘至沙盒 `scratch/intelligence_current_refined.json`。
 4. **Checkpoint 4: 门控与红队审计 (Gate Orchestration)**: 
    - 运行校验: `python scripts\validate_refined_json.py [Absolute_Sandbox_Path]\intelligence_current_refined.json`。
    - 若存在 L4 级别情报，强制拉起 `cognitive-logic-adversary` 子代理发起压力对抗，落盘至 `scratch/redteam_report.json`，然后执行 `python scripts\adversarial_audit.py [Absolute_Sandbox_Path]\redteam_report.json`。未经验证的强制降级为 L3。
-5. **Checkpoint 5: 制品锻造与异步入湖 (Artifact & Vector Lake Registry)**: 主代理生成可见的战略简报 Artifact (UserFacing: true)；同时，将实体与载荷写入沙盒 `scratch/ingest_payload.json`，通过子代理调用 `vector-lake-mcp:prepare_ingest_batch` 将核心逻辑推送至 Vector Lake 图谱系统。
+5. **Checkpoint 5: 规范制品与直达入湖 (Standardized Artifact & Direct Ingest)**: 
+   - 主代理**强制加载 `references/briefing_template.md` 模板**生成最终战略简报 (UserFacing: true)；
+   - **双轨落盘**：将简报物理写入 `<appDataDir>/MEMORY/raw/news/strategic_brief_{date}.md`；
+   - **MCP 唤醒**：在文件落入 `MEMORY/raw/news/` 后，主代理直接或通过子代理调用 `vector-lake-mcp:prepare_ingest_batch`，利用其目录扫描机制自动抓取简报，彻底打通无缝入湖。
 
 ## 4. Deliverables
-- **情报制品 (Artifact)**: 具备强行动价值的战略简报，提供 Punchline 与 Action Levers。
-- **Vector Lake Registry Payload**: 发往底层 Vector Lake 的纯净图谱载荷。
+- **情报制品 (Artifact)**: 严格遵循 `briefing_template.md` 格式的战略简报。
+- **Vector Lake Registry**: 存放于 `MEMORY/raw/news/` 并通过 `prepare_ingest_batch` 触发自动扫描入湖的长期知识快照。
 
 ## 5. Guardrails
 - **Sandbox Isolation (物理沙盒隔离)**: 严禁将任何候选池、中转数据或红队报告写入全局目录。全链路必须使用当前会话沙盒 `<appDataDir>\brain\<conversation-id>\scratch\` 并使用绝对物理寻址。
-- **Subagent Orchestration (子代理编排)**: 严禁主代理自行执行耗时的并发抓取与深度推演，必须调用专属功能子代理。
-- **Vector Lake Registry**: 主代理严禁越权创建空节点或手动篡改图谱。必须统一封装 payload 唤醒代理进行异步 MCP 物理入湖。
+- **Subagent Orchestration (子代理编排)**: 严禁主代理自行执行深度推演，必须将上下文下发给专属功能子代理。
+- **Vector Lake Registry**: 主代理必须通过 `MEMORY/raw/news/` 作为缓冲路径，配合 `prepare_ingest_batch` MCP 完成入湖，避免接口参数不匹配。
 - **无幻觉契约**: 禁止凭空捏造事实、虚构数据；禁止在缺乏证据支撑时强行拔高至 L4；遇到异常中断，支持以优雅降级模式产出粗筛简报，绝不静默。
 
 ## 6. Metrics

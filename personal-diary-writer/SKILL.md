@@ -25,7 +25,7 @@ To reliably reconstruct the day's timeline and biological data, assemble it into
 **Phase 3: Sandbox Compilation & Atomic Flush**
 - **Sandbox Isolation**: Write the approved formatted text to an ephemeral scratch file strictly inside the Sandbox (`brain/<conversation-id>/scratch/log_entry.md`). Absolutely NO usage of `C:\Users\shich\.gemini\tmp\`.
 - **Atomic Prepend**: Run the native IO operation:
-  `$env:PYTHONIOENCODING="utf-8"; python "C:\Users\shich\.gemini\config\skills\scripts\io_engine\diary_ops.py" prepend --content_file "<path-to-scratch-log-entry>"`
+  `$env:PYTHONIOENCODING="utf-8"; python "C:\Users\shich\.gemini\config\skills\scripts\io_engine\diary_ops.py" prepend --file diary --content_file "<path-to-scratch-log-entry>"`
 
 **Phase 4: Vector Lake Registry**
 - Identify cognitive crystallizations (insights of depth >= 4).
