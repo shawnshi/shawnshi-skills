@@ -8,3 +8,6 @@
 ## 2026-06-29 - Optimize SpO2 map dictionary creation
 **Learning:** Using `to_dict('records')` inside a list comprehension for simple two-column mapping is highly inefficient, creating large overhead by allocating many intermediate dictionaries.
 **Action:** Use `dict(zip(df['col1'], df['col2']))` to bypass intermediate list creation and leverage NumPy's underlying contiguous arrays for a ~4.3x speedup.
+## 2026-07-07 - Avoiding next() with generator in loops
+**Learning:** Using `next()` with a generator expression inside a loop creates an O(N²) performance bottleneck, which is particularly slow for large datasets.
+**Action:** Use an O(N) dictionary (hash map) lookup by pre-computing a dictionary before the loop.

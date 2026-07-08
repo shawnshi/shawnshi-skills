@@ -104,8 +104,10 @@ def build_overlay_data(summary_data):
     
     readiness_list = []
     weighted_dissipation_map = {}
+    # Performance: Replaced O(N^2) generator next() scan with O(N) dictionary lookup for readiness calculation
+    stress_dict = {s["date"]: s for s in stress_list if "date" in s}
     for d in dates:
-        stress_entry = next((s for s in stress_list if s["date"] == d), {})
+        stress_entry = stress_dict.get(d, {})
         weighted_h = ((stress_entry.get("high_stress_duration") or 0) + (stress_entry.get("medium_stress_duration") or 0)*0.5) / 3600
         weighted_dissipation_map[d] = round(weighted_h, 1)
         
