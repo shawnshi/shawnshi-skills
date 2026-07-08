@@ -11,3 +11,6 @@
 ## 2026-07-07 - Avoiding next() with generator in loops
 **Learning:** Using `next()` with a generator expression inside a loop creates an O(N²) performance bottleneck, which is particularly slow for large datasets.
 **Action:** Use an O(N) dictionary (hash map) lookup by pre-computing a dictionary before the loop.
+## 2026-07-08 - Optimize RHR Baseline Calculation
+**Learning:** Computing baseline values by backward scanning `next()` and then filtering the array by checking `!= latest_value` creates both an O(N) performance bottleneck and accidentally discards valid historical records that happen to equal the latest value.
+**Action:** Use a single O(N) list comprehension to extract all valid values, then use `[-1]` for the latest and `[:-1]` for the historical baseline to ensure correctness and improve speed.
