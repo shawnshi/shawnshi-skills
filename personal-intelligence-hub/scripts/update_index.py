@@ -10,10 +10,9 @@ LIB_DIR = Path(__file__).parent.parent.parent / "scripts" / "lib"
 if str(LIB_DIR) not in sys.path:
     sys.path.append(str(LIB_DIR))
 
-from hub_utils import NEWS_DIR
-from history_manager import get_history_file
+from hub_utils import NEWS_DIR, HISTORY_PATH
 
-HISTORY_FILE = get_history_file()
+HISTORY_FILE = HISTORY_PATH
 
 def rebuild_history():
     urls = {}
