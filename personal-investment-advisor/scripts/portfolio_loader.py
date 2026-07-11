@@ -22,16 +22,38 @@ def normalize_symbol(symbol: str) -> str:
     return (symbol or "").strip().upper()
 
 
+_positions_cache: Dict[str, Dict[str, Any]] = {}
+
 def load_positions(path: Optional[str] = None) -> Dict[str, Any]:
     positions_path = resolve_positions_file(path)
     if not positions_path.exists():
         return {"positions": [], "_status": "file_missing", "_path": str(positions_path)}
 
+    import copy
+    path_str = str(positions_path)
+    mtime = positions_path.stat().st_mtime
+    if path_str in _positions_cache and _positions_cache[path_str]['mtime'] == mtime:
+        return copy.deepcopy(_positions_cache[path_str]['payload'])
+
     payload = json.loads(positions_path.read_text(encoding="utf-8"))
     positions = payload.get("positions", [])
     if not isinstance(positions, list):
         raise ValueError("positions file must contain a top-level 'positions' list")
-    return {"positions": positions, "_status": "ok", "_path": str(positions_path)}
+
+    import copy
+    # Performance: Pre-compute symbol map to avoid O(N^2) search and cache I/O across iterations
+    # Retain the first matching symbol to match the original next() behavior
+    positions_dict = {}
+    for p in positions:
+        if "symbol" in p:
+            sym = normalize_symbol(p["symbol"])
+            if sym not in positions_dict:
+                positions_dict[sym] = p
+
+    result = {"positions": positions, "_status": "ok", "_path": path_str, "_positions_dict": positions_dict}
+
+    _positions_cache[path_str] = {'mtime': mtime, 'payload': result}
+    return copy.deepcopy(result)
 
 
 def _to_float(value: Any) -> Optional[float]:
@@ -150,8 +172,13 @@ def build_portfolio_risk(summary: Dict[str, Any], payload: Dict[str, Any] = None
 
 def build_position_context(symbol: str, current_price: Any, payload: Dict[str, Any]) -> Dict[str, Any]:
     normalized = normalize_symbol(symbol)
-    positions = payload["positions"]
-    matched = next((item for item in positions if normalize_symbol(item.get("symbol", "")) == normalized), None)
+
+    # Performance: O(1) dictionary lookup replacing O(N^2) generator next() scanning
+    if "_positions_dict" in payload:
+        matched = payload["_positions_dict"].get(normalized)
+    else:
+        positions = payload.get("positions", [])
+        matched = next((item for item in positions if normalize_symbol(item.get("symbol", "")) == normalized), None)
 
     context: Dict[str, Any] = {
         "has_position": False,

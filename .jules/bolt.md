@@ -14,3 +14,6 @@
 ## 2026-07-08 - Optimize RHR Baseline Calculation
 **Learning:** Computing baseline values by backward scanning `next()` and then filtering the array by checking `!= latest_value` creates both an O(N) performance bottleneck and accidentally discards valid historical records that happen to equal the latest value.
 **Action:** Use a single O(N) list comprehension to extract all valid values, then use `[-1]` for the latest and `[:-1]` for the historical baseline to ensure correctness and improve speed.
+## 2026-07-11 - Avoiding redundant JSON I/O and O(N^2) lookups
+**Learning:** Repeatedly parsing a JSON file and linearly scanning a list within a loop across items leads to severe O(N^2) complexity and I/O bottlenecks.
+**Action:** Use an in-memory modification-time-based cache for JSON files loaded in a loop, and pre-compute a dictionary (hash map) to transform O(N) list searches into O(1) lookups.
