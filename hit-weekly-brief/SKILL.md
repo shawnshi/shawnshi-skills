@@ -54,6 +54,7 @@ triggers: ["生成数字健康周报", "检索医疗行业报告", "本周麦肯
     </step>
     <step name="W4: 异步入湖与成品交付 (Vector Lake Registry)">
       战报定稿后，主代理通过 `write_to_file` 生成 Markdown 制品至 `brain/<id>/` 下（必须带 `UserFacing: true`）。
+      生成 Artifact 后，主代理必须将其同步保存至 `C:\Users\shich\.gemini\MEMORY\raw\DigitalHealthWeeklyBrief` 目录进行永久固化。
       最后，必须派发 `TypeName: self` (Role: Ingestor) 将高价值非共识张力转化为 STQM 格式放入 `scratch/`，再由子代理调用 `vector-lake-mcp:prepare_ingest_batch` 触发逻辑湖归档。
     </step>
   </workflow>
@@ -61,7 +62,7 @@ triggers: ["生成数字健康周报", "检索医疗行业报告", "本周麦肯
   <tool_dispatch>
     - `invoke_subagent`: 强制使用该工具进行并发调度，拉起多个子代理扫描四大管线。
     - `vector-lake-mcp`: 强制调用此注册表进行知识检索、比对除重以及数据最终的持久化入湖。
-    - `write_to_file`: 用于将过程数据和结果制品写入本地沙盒隔离区 (`scratch/`) 和制品区。
+    - `write_to_file`: 用于将过程数据写入沙盒隔离区 (`scratch/`)，生成最终战报 Artifact，并将其同步固化至 `C:\Users\shich\.gemini\MEMORY\raw\DigitalHealthWeeklyBrief` 目录。
   </tool_dispatch>
 
   <checkpoint_rules>

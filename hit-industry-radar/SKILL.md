@@ -41,7 +41,7 @@ triggers: ["本周战报", "医疗IT战报", "竞对动态", "行业大事件"]
     </step>
     <step>
       <name>Checkpoint 4: Artifact 资产生成</name>
-      <action>质检通过后，通过 `write_to_file` 生成会话主空间的 Artifact 制品并展示给用户。</action>
+      <action>质检通过后，通过 `write_to_file` 生成会话主空间的 Artifact 制品，并同步将最终报告保存至 `C:\Users\shich\.gemini\MEMORY\raw\HealthcareIndustryRadar` 目录中，然后展示给用户。</action>
     </step>
     <step>
       <name>Checkpoint 5: 异步入湖 (STQM Knowledge Consolidation)</name>
@@ -52,7 +52,7 @@ triggers: ["本周战报", "医疗IT战报", "竞对动态", "行业大事件"]
   <tool_dispatch>
     - `invoke_subagent`: MUST be used to launch parallel research subagents and asynchronous ingestor subagents.
     - `call_mcp_tool`: MUST use `vector-lake-mcp` tools (`search_vector_lake`, `prepare_ingest_batch`) for 14-day deduping and Vector Lake registry.
-    - `write_to_file`: MUST be used to drop artifacts and save intermediate states in `scratch/`.
+    - `write_to_file`: MUST be used to drop artifacts and save intermediate states in `scratch/`, 以及将最终报告同步写入 `C:\Users\shich\.gemini\MEMORY\raw\HealthcareIndustryRadar` 目录。
   </tool_dispatch>
 
   <checkpoint_rules>

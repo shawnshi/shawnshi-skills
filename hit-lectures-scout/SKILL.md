@@ -30,12 +30,13 @@ triggers: ["医疗AI论文", "学术扫描", "临床文献", "最新数字医疗
     <step phase="Fable_5_Checkpoint">在生成终稿前静默自检。验证保留论文是否包含统计证据（N值/P值等），验证物理链接是否真实无占位，验证杠杆是否可落地。</step>
     <step phase="Sandbox_Isolation">所有中间过程草稿与 JSON 文件必须使用原生写入并落盘至当前会话的 `scratch/` 物理沙盒隔离区。</step>
     <step phase="Vector_Lake_Registry">提取核心概念、架构词汇与范式跃迁张力边，调用 `vector-lake-mcp` 将提纯的知识异步入湖。</step>
+    <step phase="Artifact_Sync">在生成会话主空间的 Artifact 之后，必须同步将其保存至 `C:\Users\shich\.gemini\MEMORY\raw\DigitalHealthLecturesScout` 目录进行永久固化。</step>
   </workflow>
 
   <tool_dispatch>
     - `invoke_subagent` (用于拉起并发文献抓取子代理)
     - `vector-lake-mcp` (用于知识入湖和概念同步)
-    - `write_to_file` (用于生成战报 Artifact 和写入 `scratch/` 沙盒区数据)
+    - `write_to_file` (用于生成战报 Artifact，同步最终报告至 `C:\Users\shich\.gemini\MEMORY\raw\DigitalHealthLecturesScout`，以及写入 `scratch/` 沙盒区数据)
   </tool_dispatch>
 
   <checkpoint_rules>

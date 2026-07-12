@@ -57,6 +57,8 @@ def load_recent_history(days: int = 7) -> list[dict]:
     cutoff = datetime.now() - timedelta(days=days)
     entries = []
     for entry in _load_entries():
+        if isinstance(entry, str):
+            continue
         ts = entry.get("timestamp")
         try:
             if ts and datetime.fromisoformat(ts) >= cutoff:
