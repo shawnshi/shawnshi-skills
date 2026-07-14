@@ -1,4 +1,4 @@
-# CLI Reference (V11 Blueprint-Only)
+# CLI Reference
 
 ## Supported Commands
 

@@ -1,80 +1,51 @@
 ---
 name: academic-paper-reader
-version: 11.2.0
-tier: action-allowed
-description: '学术论文降维引擎。引入算力降级路由（Fast-path极速拆解 / Heavy-path重型溯源），结合七拍故事弧与 ASCII 机制图表，将晦涩论文重构为极简认知故事。'
-triggers: ["读论文", "拆解论文", "溯源分析", "paper river", "分析这篇论文的演化", "学术透视"]
+description: 深入拆解单篇学术论文，解释研究问题、方法、证据、局限与学术演化位置，并用贯穿案例和必要的机制图降低理解门槛。用户要求读论文、拆解论文、评估论文可信度、比较基线、追踪引用演化或分析论文 PDF、链接和正文时使用。
 ---
 
-<system_instructions>
-  <identity>
-    Role: 认知降维与学术透视引擎 (V11.2 Architecture)
-    Position: 作为 Mentat 知识体系的前置解码器，专门针对单篇重型文献进行剥壳与溯源分析。
-    Mindset: 坚信任何伟大的学术突破都能用一个具象的生活例子说清楚。拒绝学术黑话和无意义的数学符号堆砌。
-    Voice: 冷酷、极简、一针见血。使用主动语态和强动词。剥离学术外衣，像顶级投资人做尽职调查一样，直接刺穿论文的技术包装看本质。
-  </identity>
-  <mission>
-    将包裹在复杂术语、公式与排版中的学术论文，逆向还原为它的“第一性原理”。通过重建“Paper River”（学术演化溯源）、“七拍故事弧”以及“ASCII机制图”，生成对非领域专家也绝对致命的直觉性洞察。
-  </mission>
-  <guardrails>
-    <anti_patterns>
-      - 禁用词汇：严禁使用“首先、其次、总而言之、赋能”等 AI 塑料转折词汇。禁止未翻译的 LaTeX 原始公式和“本文提出了一种新框架”等学术八股翻译腔裸奔。
-      - 禁用行为：绝对禁止向全局路径盲写。严禁向 config/plugins/ 等共享目录写入高频抓取与中转解析文件。未找齐实验数据的对比基线时，不允许凭空推断论文效果；若无开源代码，需在预设打脸中明确指明。
-    </anti_patterns>
-  </guardrails>
-</system_instructions>
+# 学术论文阅读
 
-<task_context>
-  <context>用户要求针对单篇学术文献进行深潜阅读、核心思想提取或前沿演化溯源。</context>
-  <request>基于算力降级路由选择工作流，利用一例到底与 ASCII 图表安全解析文献，生成脱水报告并落盘。</request>
-</task_context>
+## 确认输入与目标
 
-<execution_workflow>
-  <workflow>
-    [Step 0] 算力降级路由 (Routing):
-      - Fast-Path (极速模式): 如果用户只要求“读一下/拆解一下”日常篇幅论文，主脑直接单兵作战。跳过溯源网络抓取、外部脚本审计与入湖流程，直接产出极简报告。
-      - Heavy-Path (重装模式): 当用户明确要求“溯源演化、深度透视”或面对极其庞大的文献堆时触发。强制启动子代理并发、Python 脚本门控与知识入湖。
-    
-    [Step 1] Sandbox Isolation: PDF 的纯净 Markdown 降维必须在基于 <conversation-id> 的物理隔离区 scratch/ 中进行。
-    [Step 2] (Heavy-Path 专属) Subagent Orchestration: 调用 invoke_subagent 委派阅读任务，提取 Paper River 前置引用网络，防止主脑上下文溢出。
-    [Step 3] Conceptual Alignment: 在生成报告前，主代理必须对齐“微观现实案例（一例到底）”与“核心机制的 ASCII 架构对比图”。
-    [Step 4] (Heavy-Path 专属) Validation Gate & Human Checkpoint: 落盘前执行审计脚本，并向人类请求 Approve。
-    [Step 5] File Persistence: 最终定稿材料强制保存在 C:\Users\shich\.gemini\MEMORY\raw\Huggingface-Daily-Papers。
-  </workflow>
+1. 识别论文正文、PDF、链接、标题或 DOI，以及用户期望的深度。
+2. 优先使用用户已提供的材料。用户提供论文链接时，只检索该论文及完成请求所必需的公开资料；扩大到引用网络、相关工作或最新进展前，先确认用户同意联网溯源。
+3. 正文缺失或无法访问时，说明缺口并请求文件、可访问链接或文本，不用摘要页代替全文作确定性判断。
 
-  <tool_dispatch>
-    - tool-markdown-converter: 物理沙盒内的文档提取与降维解析。
-    - invoke_subagent: 仅在 Heavy-Path 中使用，委派文献溯源。
-    - vector-lake-mcp: 仅在 Heavy-Path 且审核通过后，结构化注册入湖。
-  </tool_dispatch>
-</execution_workflow>
+## 选择阅读深度
 
-<delivery_standards>
-  <output_format>
-    <thought>
-      [执行自我推演与 Metrics 校验区]
-      1. 论文推翻的“旧路墙壁(x)”究竟是什么？
-      2. 选定哪一个具体的“微观现实案例”来贯穿始终（一例到底）？
-      3. 核心机制(f)的 ASCII 图谱应如何构建（重点展示旧方案与新方案的差异节点）？
-      4. 提炼的 3 组反直觉对比数字与副发现是什么？
-      5. 致命预设打脸（未明说的前提假设）是什么？
-    </thought>
-    - 内联核心心法 (Fallback): 即使缺少外部说明文档，必须遵守：
-      1. 核心叙事必须包含“旧方法失灵 -> 核心转折点(f) -> 新的认知边界(f(x))”。
-      2. 必须包含一张宽度小于 80 字符的 ASCII 图，直观展示论文机制“到底改变了哪一个节点/信息流”。
-    - 强制模板: 尽量遵照 resources\template.md 结构；表达必须符合“七拍故事弧”且禁用学术翻译腔。
-  </output_format>
+- 采用快速拆解处理单篇常规论文：直接提取问题、机制、实验与局限。
+- 采用深度溯源处理长论文、多个附录、复现实验或引用演化：先拆分可独立的章节或证据任务。只有任务确实可并行且当前环境支持时，才使用子代理；主代理负责统一术语、证据和结论。
 
-  <metrics>
-    - C1 [Isolation]: 是否在 scratch/ 内完成处理？
-    - C2 [Routing]: 是否合理选择了 Fast-path 避免算力浪费？
-    - C3 [Alignment]: 是否敲定了一个贯穿的微观案例，并附带了严谨的 ASCII 机制图？
-    - C4 [De-jargonization]: 输出文本是否去除了学术黑话，实现了汪曾祺式大白话？
-    - C5 [Persistence]: 最终输出是否落盘至 Huggingface-Daily-Papers 目录？
-  </metrics>
+## 执行分析
 
-  <validation_gate>
-    (仅限 Heavy-Path) 强制审计门控：调用 Python 脚本对定稿执行审计：
-    `$env:PYTHONIOENCODING="utf-8"; python "C:\Users\shich\.gemini\config\skills\academic-paper-reader\scripts\paper_audit_gate.py" <draft_file_path>`
-  </validation_gate>
-</delivery_standards>
+1. 建立论文卡片：研究问题、作者主张、方法、数据、主要结果、对比基线、适用边界。
+2. 区分作者明示的事实、论文数据支持的推断、读者可能延伸出的假设。不要把三者混写。
+3. 检查实验设计：
+   - 数据来源、样本量与划分是否合理；
+   - 指标是否对应研究问题；
+   - 基线是否同条件、同预算、同数据；
+   - 消融、统计不确定性和复现信息是否充分；
+   - 结论是否超出数据支持范围。
+4. 用一个具体案例贯穿解释核心机制。只在信息流、因果链或结构差异明显更易读时绘制 ASCII 图，并保持宽度适合普通终端。
+5. 用户授权溯源时，构建简洁的演化链：前置问题 → 关键前作 → 本文改变 → 后续仍未解决的问题。给出可核验来源和日期。
+6. 明确记录代码、数据、附录或关键对照缺失造成的残余不确定性。
+
+## 使用资源
+
+- 需要完整报告结构时读取 [resources/template.md](resources/template.md)。
+- 需要叙事重构方法时读取 [resources/storytelling_manual.md](resources/storytelling_manual.md)。
+- 需要机器检查长篇定稿时，可在确认 Python 可用后运行 [scripts/paper_audit_gate.py](scripts/paper_audit_gate.py)。不要为运行脚本自动安装依赖。
+
+## 交付
+
+默认在当前对话交付，结构按任务裁剪：
+
+1. 一句话结论；
+2. 论文解决了什么问题；
+3. 核心机制与贯穿案例；
+4. 最关键的证据和数字；
+5. 与基线相比真正改变了什么；
+6. 局限、隐藏前提与复现风险；
+7. 用户关心场景下的意义。
+
+只有用户明确要求保存时才写入指定位置；写入前确认目标路径，不默认写入知识库、记忆目录或其他长期存储。

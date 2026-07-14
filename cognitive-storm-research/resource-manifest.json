@@ -1,0 +1,26 @@
+{
+  "schema_version": 1,
+  "skill": "cognitive-storm-research",
+  "generated_at": "2026-07-14T21:01:43",
+  "skill_md": "SKILL.md",
+  "top_level_files": [
+    "SKILL.md"
+  ],
+  "top_level_directories": [
+    "references"
+  ],
+  "resource_directories": [
+    {
+      "name": "references",
+      "file_count": 1
+    }
+  ],
+  "declared_local_dependencies": [
+    {
+      "path": "references\\storm_report_template.md",
+      "exists": true,
+      "resolved_path": "C:\\Users\\shich\\.codex\\skills\\cognitive-storm-research\\references\\storm_report_template.md"
+    }
+  ],
+  "missing_declared_dependencies": []
+}

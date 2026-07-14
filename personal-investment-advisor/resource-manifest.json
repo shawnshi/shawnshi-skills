@@ -1,0 +1,82 @@
+{
+  "schema_version": 1,
+  "skill": "personal-investment-advisor",
+  "generated_at": "2026-07-14T21:01:44",
+  "skill_md": "SKILL.md",
+  "top_level_files": [
+    "SKILL.md"
+  ],
+  "top_level_directories": [
+    "resources",
+    "scripts"
+  ],
+  "resource_directories": [
+    {
+      "name": "scripts",
+      "file_count": 16
+    }
+  ],
+  "declared_local_dependencies": [
+    {
+      "path": "scripts\\requirements.txt",
+      "exists": true,
+      "resolved_path": "C:\\Users\\shich\\.codex\\skills\\personal-investment-advisor\\scripts\\requirements.txt"
+    },
+    {
+      "path": "scripts\\watchlist_gate.py",
+      "exists": true,
+      "resolved_path": "C:\\Users\\shich\\.codex\\skills\\personal-investment-advisor\\scripts\\watchlist_gate.py"
+    },
+    {
+      "path": "scripts\\quality_screener.py",
+      "exists": true,
+      "resolved_path": "C:\\Users\\shich\\.codex\\skills\\personal-investment-advisor\\scripts\\quality_screener.py"
+    },
+    {
+      "path": "scripts\\yf.py",
+      "exists": true,
+      "resolved_path": "C:\\Users\\shich\\.codex\\skills\\personal-investment-advisor\\scripts\\yf.py"
+    },
+    {
+      "path": "scripts\\akshare_fetcher.py",
+      "exists": true,
+      "resolved_path": "C:\\Users\\shich\\.codex\\skills\\personal-investment-advisor\\scripts\\akshare_fetcher.py"
+    },
+    {
+      "path": "scripts\\earnings_truth_serum.py",
+      "exists": true,
+      "resolved_path": "C:\\Users\\shich\\.codex\\skills\\personal-investment-advisor\\scripts\\earnings_truth_serum.py"
+    },
+    {
+      "path": "scripts\\rebalance_optimizer.py",
+      "exists": true,
+      "resolved_path": "C:\\Users\\shich\\.codex\\skills\\personal-investment-advisor\\scripts\\rebalance_optimizer.py"
+    },
+    {
+      "path": "scripts\\rebalance_weights.py",
+      "exists": true,
+      "resolved_path": "C:\\Users\\shich\\.codex\\skills\\personal-investment-advisor\\scripts\\rebalance_weights.py"
+    },
+    {
+      "path": "scripts\\dashboard_gate.py",
+      "exists": true,
+      "resolved_path": "C:\\Users\\shich\\.codex\\skills\\personal-investment-advisor\\scripts\\dashboard_gate.py"
+    },
+    {
+      "path": "scripts\\dashboard_math_gate.py",
+      "exists": true,
+      "resolved_path": "C:\\Users\\shich\\.codex\\skills\\personal-investment-advisor\\scripts\\dashboard_math_gate.py"
+    },
+    {
+      "path": "scripts\\advice_journal.py",
+      "exists": true,
+      "resolved_path": "C:\\Users\\shich\\.codex\\skills\\personal-investment-advisor\\scripts\\advice_journal.py"
+    },
+    {
+      "path": "scripts\\sync_outcomes.py",
+      "exists": true,
+      "resolved_path": "C:\\Users\\shich\\.codex\\skills\\personal-investment-advisor\\scripts\\sync_outcomes.py"
+    }
+  ],
+  "missing_declared_dependencies": []
+}

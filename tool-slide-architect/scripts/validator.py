@@ -100,7 +100,7 @@ def main():
             print(f"  - {err}")
         sys.exit(1)
 
-    print("\n[OK] Blueprint verified: V11 Hybrid blocks and nested structures passed.")
+    print("\n[OK] Blueprint structure and nested blocks passed validation.")
     sys.exit(0)
 
 if __name__ == "__main__":

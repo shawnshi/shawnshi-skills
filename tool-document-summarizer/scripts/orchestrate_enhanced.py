@@ -5,7 +5,7 @@
 @Output: Pipeline logs, metadata JSONs, updated file properties
 @Pos:    Interface Layer. High-level orchestrator for the Document Summarizer skill.
 
-!!! Maintenance Protocol: If the pipeline stages change, update this and _DIR_META.md.
+!!! Maintenance Protocol: If the pipeline stages change, update this script and SKILL.md.
 
 Document Summarizer - 增强版编排脚本
 整合优化版的提取、生成和应用流程
@@ -13,6 +13,7 @@ Document Summarizer - 增强版编排脚本
 import sys
 import argparse
 import subprocess
+import os
 from pathlib import Path
 
 
@@ -48,7 +49,7 @@ def check_dependencies():
     return True
 
 
-def run_command(cmd, description):
+def execute_stage(cmd, description):
     """运行命令并显示结果"""
     print(f"\n{'='*60}")
     print(f"{description}")
@@ -66,7 +67,7 @@ def run_command(cmd, description):
 
 
 def _write_telemetry(start_time, status, output_dir):
-    """记录 Mentat V6.0 遥测信息到 MEMORY 知识库"""
+    """Write optional telemetry only when an explicit directory is configured."""
     import os
     import json
     import time
@@ -97,9 +98,11 @@ def _write_telemetry(start_time, status, output_dir):
         "timestamp": time.strftime("%Y-%m-%dT%H:%M:%SZ")
     }
 
-    # 找到 root 目录下的 .gemini/MEMORY/skill_audit/telemetry
-    user_home = Path.home()
-    telemetry_dir = user_home / ".gemini" / "MEMORY" / "skill_audit" / "telemetry"
+    telemetry_root = os.environ.get("DOCUMENT_SUMMARIZER_TELEMETRY_DIR")
+    if not telemetry_root:
+        return
+
+    telemetry_dir = Path(telemetry_root).expanduser()
     telemetry_dir.mkdir(parents=True, exist_ok=True)
     
     telemetry_file = telemetry_dir / f"record_{int(time.time())}.json"
@@ -130,15 +133,14 @@ def main():
   python orchestrate_enhanced.py apply
 
   # 清理生成的文件
-  python orchestrate_enhanced.py clean
+  python orchestrate_enhanced.py clean --apply
         """
     )
 
     subparsers = parser.add_subparsers(dest='command', help='子命令')
     
     # Define output directory
-    output_dir = 'output'
-    Path(output_dir).mkdir(exist_ok=True)
+    output_dir = os.environ.get('DOCUMENT_SUMMARIZER_OUTPUT_DIR', 'output')
 
     # all 命令 - 完整流程
     parser_all = subparsers.add_parser('all', help='执行完整流程（提取+生成+应用）')
@@ -165,7 +167,8 @@ def main():
     parser_apply.add_argument('--force', action='store_true', help='强制处理所有文件')
 
     # clean 命令
-    parser_clean = subparsers.add_parser('clean', help='清理生成的临时文件')
+    parser_clean = subparsers.add_parser('clean', help='预览或清理生成的临时文件')
+    parser_clean.add_argument('--apply', action='store_true', help='执行删除；不提供时只预览')
 
     args = parser.parse_args()
 
@@ -173,9 +176,12 @@ def main():
         parser.print_help()
         return 1
 
-    # 检查依赖包
-    if not check_dependencies():
+    # 清理预览不需要文档解析依赖。
+    if args.command != 'clean' and not check_dependencies():
         return 1
+
+    if args.command != 'clean':
+        Path(output_dir).mkdir(parents=True, exist_ok=True)
 
     script_dir = Path(__file__).parent
     python_exe = sys.executable
@@ -193,7 +199,7 @@ def main():
         if args.force:
             cmd.append('--force')
 
-        return 0 if run_command(cmd, "阶段1: 提取文档内容") else 1
+        return 0 if execute_stage(cmd, "阶段1: 提取文档内容") else 1
 
     elif args.command == 'generate':
         # 步骤 2a: 医疗标准对齐分析
@@ -203,7 +209,7 @@ def main():
             '--input', args.input,
             '--output', f'{output_dir}/compliance_analysis.json'
         ]
-        run_command(compliance_cmd, "阶段 2a: 医疗标准对齐分析")
+        execute_stage(compliance_cmd, "阶段 2a: 医疗标准对齐分析")
 
         # 步骤 2b: 生成摘要和标签
         cmd = [
@@ -214,7 +220,7 @@ def main():
             '--compliance', f'{output_dir}/compliance_analysis.json'
         ]
         
-        success = run_command(cmd, "阶段 2b: 生成摘要和标签 (优化版 + 政策洞察)")
+        success = execute_stage(cmd, "阶段 2b: 生成摘要和标签 (优化版 + 政策洞察)")
         
         # 步骤 2c: 战略组合审计
         audit_cmd = [
@@ -223,7 +229,7 @@ def main():
             '--input', args.output,
             '--output', f'{output_dir}/STRATEGIC_AUDIT.md'
         ]
-        run_command(audit_cmd, "阶段 2c: 战略组合审计 (SHA)")
+        execute_stage(audit_cmd, "阶段 2c: 战略组合审计 (SHA)")
         
         return 0 if success else 1
 
@@ -239,7 +245,7 @@ def main():
         if args.force:
             cmd.append('--force')
 
-        return 0 if run_command(cmd, "阶段3: 应用元数据 (优化版 增量+并行)") else 1
+        return 0 if execute_stage(cmd, "阶段3: 应用元数据 (优化版 增量+并行)") else 1
 
     elif args.command == 'all':
         print("\n" + "="*60)
@@ -260,7 +266,7 @@ def main():
         if args.force:
             extract_cmd.append('--force')
 
-        if not run_command(extract_cmd, "阶段1: 提取文档内容"):
+        if not execute_stage(extract_cmd, "阶段1: 提取文档内容"):
             _write_telemetry(start_time, "failed_extract", output_dir)
             return 1
 
@@ -272,7 +278,7 @@ def main():
             '--input', f'{output_dir}/extracted_content_part1.json',
             '--output', f'{output_dir}/compliance_analysis.json'
         ]
-        run_command(compliance_cmd, "阶段 2a: 医疗标准对齐分析")
+        execute_stage(compliance_cmd, "阶段 2a: 医疗标准对齐分析")
 
         # 2b: 生成摘要
         generate_cmd = [
@@ -283,7 +289,7 @@ def main():
             '--compliance', f'{output_dir}/compliance_analysis.json'
         ]
 
-        if not run_command(generate_cmd, "阶段 2b: 生成摘要和标签 (原生 AI/兜底)"):
+        if not execute_stage(generate_cmd, "阶段 2b: 生成摘要和标签 (原生 AI/兜底)"):
             _write_telemetry(start_time, "failed_generate", output_dir)
             return 1
             
@@ -310,7 +316,7 @@ def main():
             '--input', f'{output_dir}/document_summaries_enhanced.json',
             '--output', f'{output_dir}/STRATEGIC_AUDIT.md'
         ]
-        run_command(audit_cmd, "阶段 2c: 战略组合审计 (SHA)")
+        execute_stage(audit_cmd, "阶段 2c: 战略组合审计 (SHA)")
 
         # 阶段3: 应用元数据
         apply_cmd = [
@@ -324,7 +330,7 @@ def main():
         if args.force:
             apply_cmd.append('--force')
 
-        if not run_command(apply_cmd, "阶段3: 应用元数据 (增强写回)"):
+        if not execute_stage(apply_cmd, "阶段3: 应用元数据 (增强写回)"):
             _write_telemetry(start_time, "failed_apply", output_dir)
             return 1
 
@@ -345,15 +351,21 @@ def main():
             f'{output_dir}/compliance_analysis.json'
         ]
 
-        print("\n清理临时文件...")
+        print("\n扫描临时文件...")
         from glob import glob
-        for pattern in files_to_clean:
-            for file in glob(pattern):
-                try:
-                    Path(file).unlink()
-                    print(f"✓ 删除: {file}")
-                except Exception as e:
-                    print(f"✗ 无法删除 {file}: {e}")
+        candidates = sorted({file for pattern in files_to_clean for file in glob(pattern)})
+        for file in candidates:
+            print(f"- {file}")
+        if not args.apply:
+            print(f"\n预览完成：{len(candidates)} 个候选文件，未删除。")
+            return 0
+
+        for file in candidates:
+            try:
+                Path(file).unlink()
+                print(f"✓ 删除: {file}")
+            except Exception as e:
+                print(f"✗ 无法删除 {file}: {e}")
 
         print("\n清理完成！")
         return 0

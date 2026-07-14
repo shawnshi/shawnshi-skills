@@ -369,7 +369,7 @@ def generate_report(stats, sessions, insights):
 
 
 def main():
-    parser = argparse.ArgumentParser(description='Strategic Audit Data Pump & Renderer V11.0')
+    parser = argparse.ArgumentParser(description='Strategic audit data renderer')
     parser.add_argument('--period', default='30d', choices=list(PERIOD_MAP.keys()), help='Analysis period: 1d, 7d, 30d, 90d, year (default: 30d)')
     parser.add_argument('--extract-only', action='store_true', help='Only extract session raw data and physical metrics')
     parser.add_argument('--render', action='store_true', help='Render final HTML report from agent insights')
@@ -378,7 +378,7 @@ def main():
     args = parser.parse_args()
 
     if not args.extract_only and not args.render:
-        print('❌ 必须指定 --extract-only 或 --render 模式 (Agentic V11.0)')
+        print('❌ 必须指定 --extract-only 或 --render 模式')
         return
 
     period_label = f"过去 {PERIOD_MAP[args.period]} 天" if args.period != 'year' else f"{datetime.date.today().year} 年度"
@@ -418,7 +418,7 @@ def main():
 
     validation_errors = validate_agent_payload(insights)
     if validation_errors:
-        print('❌ 洞察 JSON 未通过 V11.0 校验门：')
+        print('❌ 洞察 JSON 未通过结构校验：')
         for error in validation_errors:
             print(f' - {error}')
         return

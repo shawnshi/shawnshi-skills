@@ -1,4 +1,4 @@
 interface:
-  display_name: "Fireworks Tech Graph"
-  short_description: "Generate polished SVG and PNG technical diagrams"
-  default_prompt: "Turn the user's system or workflow description into a polished SVG diagram and export a PNG."
+  display_name: "Technical Diagram Renderer"
+  short_description: "Generate structured, validated SVG technical diagrams"
+  default_prompt: "Use $tool-drawio to turn the user's system or workflow description into a validated SVG diagram and reusable topology JSON."

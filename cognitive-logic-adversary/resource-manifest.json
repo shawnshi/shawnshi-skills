@@ -1,46 +1,42 @@
-﻿{
-    "schema_version":  1,
-    "skill":  "cognitive-logic-adversary",
-    "generated_at":  "2026-06-04T15:36:51",
-    "skill_md":  "SKILL.md",
-    "top_level_files":  [
-                            "README.md",
-                            "SKILL.md",
-                            "_DIR_META.md"
-                        ],
-    "top_level_directories":  [
-                                  "references",
-                                  "scripts",
-                                  "Workflows"
-                              ],
-    "resource_directories":  [
-                                 {
-                                     "name":  "scripts",
-                                     "file_count":  2
-                                 },
-                                 {
-                                     "name":  "references",
-                                     "file_count":  4
-                                 }
-                             ],
-    "declared_local_dependencies":  [
-                                        {
-                                            "path":  "references\\philosophy.md",
-                                            "exists":  true,
-                                            "resolved_path":  "C:\\Users\\shich\\.gemini\\config\\skills\\cognitive-logic-adversary\\references\\philosophy.md"
-                                        },
-                                        {
-                                            "path":  "cognitive-logic-adversary\\scripts\\session_merger.py",
-                                            "exists":  true,
-                                            "resolved_path":  "C:\\Users\\shich\\.gemini\\config\\skills\\cognitive-logic-adversary\\scripts\\session_merger.py"
-                                        },
-                                        {
-                                            "path":  "scripts\\session_merger.py",
-                                            "exists":  true,
-                                            "resolved_path":  "C:\\Users\\shich\\.gemini\\config\\skills\\cognitive-logic-adversary\\scripts\\session_merger.py"
-                                        }
-                                    ],
-    "missing_declared_dependencies":  [
-
-                                      ]
+{
+  "schema_version": 1,
+  "skill": "cognitive-logic-adversary",
+  "generated_at": "2026-07-14T21:01:43",
+  "skill_md": "SKILL.md",
+  "top_level_files": [
+    "SKILL.md"
+  ],
+  "top_level_directories": [
+    "references",
+    "scripts",
+    "Workflows"
+  ],
+  "resource_directories": [
+    {
+      "name": "scripts",
+      "file_count": 2
+    },
+    {
+      "name": "references",
+      "file_count": 4
+    }
+  ],
+  "declared_local_dependencies": [
+    {
+      "path": "references\\output_format.md",
+      "exists": true,
+      "resolved_path": "C:\\Users\\shich\\.codex\\skills\\cognitive-logic-adversary\\references\\output_format.md"
+    },
+    {
+      "path": "scripts\\game_resolver.py",
+      "exists": true,
+      "resolved_path": "C:\\Users\\shich\\.codex\\skills\\cognitive-logic-adversary\\scripts\\game_resolver.py"
+    },
+    {
+      "path": "scripts\\session_merger.py",
+      "exists": true,
+      "resolved_path": "C:\\Users\\shich\\.codex\\skills\\cognitive-logic-adversary\\scripts\\session_merger.py"
+    }
+  ],
+  "missing_declared_dependencies": []
 }

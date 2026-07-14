@@ -74,13 +74,12 @@ class LLMSummaryGenerator:
             
         return summary[:150]
 
-    def _call_gemini(self, prompt, api_key):
-        """调用 Gemini 基座模型，带自动重试机制"""
+    def _call_model(self, prompt, api_key, model_name):
+        """Call the configured Google Generative AI model with retries."""
         import google.generativeai as genai
         import time
         genai.configure(api_key=api_key)
-        # Using a reliable model like gemini-2.5-flash
-        model = genai.GenerativeModel('gemini-2.5-flash')
+        model = genai.GenerativeModel(model_name)
         
         for attempt in range(3):
             try:
@@ -111,9 +110,10 @@ class LLMSummaryGenerator:
 
         print(f"正在处理 {len(documents)} 个文档...")
         
-        api_key = os.environ.get("GEMINI_API_KEY")
-        if not api_key:
-            print("⚠️ 未检测到 GEMINI_API_KEY 环境变量。将回退到规则引擎！")
+        api_key = os.environ.get("DOCUMENT_SUMMARIZER_API_KEY")
+        model_name = os.environ.get("DOCUMENT_SUMMARIZER_MODEL")
+        if not api_key or not model_name:
+            print("⚠️ 未配置 DOCUMENT_SUMMARIZER_API_KEY 和 DOCUMENT_SUMMARIZER_MODEL，将回退到规则引擎。")
 
         results = []
         
@@ -131,8 +131,8 @@ class LLMSummaryGenerator:
             
             summary = None
             tags = []
-            if api_key:
-                raw_res = self._call_gemini(prompt, api_key)
+            if api_key and model_name:
+                raw_res = self._call_model(prompt, api_key, model_name)
                 if raw_res:
                     summary = raw_res.strip()
                     tags = ["Mentat_Auto_LLM"]
@@ -150,7 +150,7 @@ class LLMSummaryGenerator:
             }
 
         # 异步并发执行 API 请求，最大并发限流控制在 4 避免 429 Error
-        max_workers = 4 if api_key else 8
+        max_workers = 4 if api_key and model_name else 8
         with ThreadPoolExecutor(max_workers=max_workers) as executor:
             futures = [executor.submit(_process_single, doc) for doc in documents]
             for future in as_completed(futures):

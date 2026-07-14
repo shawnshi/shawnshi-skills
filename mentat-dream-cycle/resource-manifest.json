@@ -1,33 +1,31 @@
-﻿{
-    "schema_version":  1,
-    "skill":  "mentat-dream-cycle",
-    "generated_at":  "2026-06-04T15:36:51",
-    "skill_md":  "SKILL.md",
-    "top_level_files":  [
-                            "SKILL.md"
-                        ],
-    "top_level_directories":  [
-                                  "scripts"
-                              ],
-    "resource_directories":  [
-                                 {
-                                     "name":  "scripts",
-                                     "file_count":  2
-                                 }
-                             ],
-    "declared_local_dependencies":  [
-                                        {
-                                            "path":  "scripts\\garbage_collector.py",
-                                            "exists":  true,
-                                            "resolved_path":  "C:\\Users\\shich\\.gemini\\config\\skills\\mentat-dream-cycle\\scripts\\garbage_collector.py"
-                                        },
-                                        {
-                                            "path":  "scripts\\orphan_scanner.py",
-                                            "exists":  true,
-                                            "resolved_path":  "C:\\Users\\shich\\.gemini\\config\\skills\\mentat-dream-cycle\\scripts\\orphan_scanner.py"
-                                        }
-                                    ],
-    "missing_declared_dependencies":  [
-
-                                      ]
+{
+  "schema_version": 1,
+  "skill": "mentat-dream-cycle",
+  "generated_at": "2026-07-14T21:01:44",
+  "skill_md": "SKILL.md",
+  "top_level_files": [
+    "SKILL.md"
+  ],
+  "top_level_directories": [
+    "scripts"
+  ],
+  "resource_directories": [
+    {
+      "name": "scripts",
+      "file_count": 2
+    }
+  ],
+  "declared_local_dependencies": [
+    {
+      "path": "scripts\\garbage_collector.py",
+      "exists": true,
+      "resolved_path": "C:\\Users\\shich\\.codex\\skills\\mentat-dream-cycle\\scripts\\garbage_collector.py"
+    },
+    {
+      "path": "scripts\\orphan_scanner.py",
+      "exists": true,
+      "resolved_path": "C:\\Users\\shich\\.codex\\skills\\mentat-dream-cycle\\scripts\\orphan_scanner.py"
+    }
+  ],
+  "missing_declared_dependencies": []
 }

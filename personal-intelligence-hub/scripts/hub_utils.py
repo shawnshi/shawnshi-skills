@@ -13,7 +13,7 @@ PROJECT_ROOT = HUB_DIR.parent.parent
 NEWS_DIR = Path(
     os.environ.get(
         "PIH_NEWS_DIR",
-        str(Path.home() / ".gemini" / "MEMORY" / "raw" / "news"),
+        str(Path.cwd() / "intelligence-output"),
     )
 )
 RUNTIME_DIR = Path(
@@ -59,6 +59,5 @@ def clean_json_output(text: str):
     if not match:
         raise ValueError("No JSON object found in model output.")
     return json.loads(match.group(0))
-
 
 

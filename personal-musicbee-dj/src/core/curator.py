@@ -17,7 +17,7 @@ class DJCurator:
         fallback_cfg = config.get('fallback', {})
         filters_cfg = config.get('filters', {})
 
-        self.m3u_path = playlist_cfg.get('output_m3u', 'C:\\Users\\shich\\.gemini\\tmp\\musicbee_jit_queue.m3u')
+        self.m3u_path = playlist_cfg.get('output_m3u', 'tmp/musicbee_jit_queue.m3u')
         self.max_tracks = playlist_cfg.get('max_tracks_per_session', 100)
 
         curation = playlist_cfg.get('curation', {})

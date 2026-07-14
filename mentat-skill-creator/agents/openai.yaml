@@ -1,0 +1,4 @@
+interface:
+  display_name: "Codex Skill Creator"
+  short_description: "创建、重构并验证符合 Codex 规范的本地技能"
+  default_prompt: "Use $mentat-skill-creator to create or update a focused Codex skill and validate its structure."

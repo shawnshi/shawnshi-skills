@@ -3,7 +3,7 @@
 > **Definition**: 本文件定义了 DiaryAudit 技能在审计时需要扫描的核心产出目录。
 
 ## 1. 深度研究项目 (Research Projects)
-- **Path**: `C:/Users/shich/.gemini/research_projects`
+- **Path**: use the research directory explicitly supplied for the current task
 - **Focus**: 行业深度报告、白皮书、战略建议。
 
 ## 2. 个人文章与输出 (Articles)

@@ -1,54 +1,41 @@
-﻿{
-    "schema_version":  1,
-    "skill":  "cognitive-book-mirror",
-    "generated_at":  "2026-06-04T15:36:51",
-    "skill_md":  "SKILL.md",
-    "top_level_files":  [
-                            "README.md",
-                            "SKILL.md"
-                        ],
-    "top_level_directories":  [
-                                  "agents",
-                                  "scripts"
-                              ],
-    "resource_directories":  [
-                                 {
-                                     "name":  "scripts",
-                                     "file_count":  3
-                                 },
-                                 {
-                                     "name":  "agents",
-                                     "file_count":  1
-                                 }
-                             ],
-    "declared_local_dependencies":  [
-                                        {
-                                            "path":  "scripts\\extract_and_pack.py",
-                                            "exists":  true,
-                                            "resolved_path":  "C:\\Users\\shich\\.gemini\\config\\skills\\cognitive-book-mirror\\scripts\\extract_and_pack.py"
-                                        },
-                                        {
-                                            "path":  "cognitive-book-mirror\\scripts\\extract_and_pack.py",
-                                            "exists":  true,
-                                            "resolved_path":  "C:\\Users\\shich\\.gemini\\config\\skills\\cognitive-book-mirror\\scripts\\extract_and_pack.py"
-                                        },
-                                        {
-                                            "path":  "cognitive-book-mirror\\scripts\\stitch_and_format.py",
-                                            "exists":  true,
-                                            "resolved_path":  "C:\\Users\\shich\\.gemini\\config\\skills\\cognitive-book-mirror\\scripts\\stitch_and_format.py"
-                                        },
-                                        {
-                                            "path":  "agents\\mirror-agent.md",
-                                            "exists":  true,
-                                            "resolved_path":  "C:\\Users\\shich\\.gemini\\config\\skills\\cognitive-book-mirror\\agents\\mirror-agent.md"
-                                        },
-                                        {
-                                            "path":  "scripts\\requirements.txt",
-                                            "exists":  true,
-                                            "resolved_path":  "C:\\Users\\shich\\.gemini\\config\\skills\\cognitive-book-mirror\\scripts\\requirements.txt"
-                                        }
-                                    ],
-    "missing_declared_dependencies":  [
-
-                                      ]
+{
+  "schema_version": 1,
+  "skill": "cognitive-book-mirror",
+  "generated_at": "2026-07-14T21:01:43",
+  "skill_md": "SKILL.md",
+  "top_level_files": [
+    "SKILL.md"
+  ],
+  "top_level_directories": [
+    "agents",
+    "scripts"
+  ],
+  "resource_directories": [
+    {
+      "name": "scripts",
+      "file_count": 3
+    },
+    {
+      "name": "agents",
+      "file_count": 1
+    }
+  ],
+  "declared_local_dependencies": [
+    {
+      "path": "scripts\\extract_and_pack.py",
+      "exists": true,
+      "resolved_path": "C:\\Users\\shich\\.codex\\skills\\cognitive-book-mirror\\scripts\\extract_and_pack.py"
+    },
+    {
+      "path": "scripts\\stitch_and_format.py",
+      "exists": true,
+      "resolved_path": "C:\\Users\\shich\\.codex\\skills\\cognitive-book-mirror\\scripts\\stitch_and_format.py"
+    },
+    {
+      "path": "scripts\\requirements.txt",
+      "exists": true,
+      "resolved_path": "C:\\Users\\shich\\.codex\\skills\\cognitive-book-mirror\\scripts\\requirements.txt"
+    }
+  ],
+  "missing_declared_dependencies": []
 }

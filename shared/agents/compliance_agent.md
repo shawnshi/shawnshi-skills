@@ -114,7 +114,7 @@ Self-check failures are not errors — they are the agent's guardrail. Document 
 
 ## Invocation protocol
 
-The orchestrator (or standalone skill) passes the input contract via the Agent tool with `model: sonnet` or higher (per user CLAUDE.md: never haiku). The agent returns the serialised compliance_report. The orchestrator validates against Schema 12 before appending to passport.
+The orchestrator or standalone skill passes the input contract to an available review agent. The agent returns the serialized compliance report. The orchestrator validates it against Schema 12 before appending to the passport. If no review agent is available, run the same checks in the current task and record that limitation.
 
 ## Related reading
 

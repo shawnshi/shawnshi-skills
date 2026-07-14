@@ -1,53 +1,41 @@
-﻿{
-    "schema_version":  1,
-    "skill":  "hit-lectures-scout",
-    "generated_at":  "2026-06-04T15:36:51",
-    "skill_md":  "SKILL.md",
-    "top_level_files":  [
-                            "SKILL.md"
-                        ],
-    "top_level_directories":  [
-                                  "assets"
-                              ],
-    "resource_directories":  [
-                                 {
-                                     "name":  "assets",
-                                     "file_count":  6
-                                 }
-                             ],
-    "declared_local_dependencies":  [
-                                        {
-                                            "path":  "assets\\deepxiv_preprints_scout.py",
-                                            "exists":  true,
-                                            "resolved_path":  "C:\\Users\\shich\\.gemini\\config\\skills\\hit-lectures-scout\\assets\\deepxiv_preprints_scout.py"
-                                        },
-                                        {
-                                            "path":  "assets\\task_preprints_fallback.md",
-                                            "exists":  true,
-                                            "resolved_path":  "C:\\Users\\shich\\.gemini\\config\\skills\\hit-lectures-scout\\assets\\task_preprints_fallback.md"
-                                        },
-                                        {
-                                            "path":  "assets\\task_journals_en.md",
-                                            "exists":  true,
-                                            "resolved_path":  "C:\\Users\\shich\\.gemini\\config\\skills\\hit-lectures-scout\\assets\\task_journals_en.md"
-                                        },
-                                        {
-                                            "path":  "assets\\task_journals_cn.md",
-                                            "exists":  true,
-                                            "resolved_path":  "C:\\Users\\shich\\.gemini\\config\\skills\\hit-lectures-scout\\assets\\task_journals_cn.md"
-                                        },
-                                        {
-                                            "path":  "assets\\report_template.md",
-                                            "exists":  true,
-                                            "resolved_path":  "C:\\Users\\shich\\.gemini\\config\\skills\\hit-lectures-scout\\assets\\report_template.md"
-                                        },
-                                        {
-                                            "path":  "scripts\\hit_audit_gate.py",
-                                            "exists":  true,
-                                            "resolved_path":  "C:\\Users\\shich\\.gemini\\config\\skills\\scripts\\hit_audit_gate.py"
-                                        }
-                                    ],
-    "missing_declared_dependencies":  [
-
-                                      ]
+{
+  "schema_version": 1,
+  "skill": "hit-lectures-scout",
+  "generated_at": "2026-07-14T21:01:44",
+  "skill_md": "SKILL.md",
+  "top_level_files": [
+    "SKILL.md"
+  ],
+  "top_level_directories": [
+    "assets"
+  ],
+  "resource_directories": [
+    {
+      "name": "assets",
+      "file_count": 6
+    }
+  ],
+  "declared_local_dependencies": [
+    {
+      "path": "assets\\report_template.md",
+      "exists": true,
+      "resolved_path": "C:\\Users\\shich\\.codex\\skills\\hit-lectures-scout\\assets\\report_template.md"
+    },
+    {
+      "path": "assets\\task_journals_cn.md",
+      "exists": true,
+      "resolved_path": "C:\\Users\\shich\\.codex\\skills\\hit-lectures-scout\\assets\\task_journals_cn.md"
+    },
+    {
+      "path": "assets\\task_journals_en.md",
+      "exists": true,
+      "resolved_path": "C:\\Users\\shich\\.codex\\skills\\hit-lectures-scout\\assets\\task_journals_en.md"
+    },
+    {
+      "path": "assets\\deepxiv_preprints_scout.py",
+      "exists": true,
+      "resolved_path": "C:\\Users\\shich\\.codex\\skills\\hit-lectures-scout\\assets\\deepxiv_preprints_scout.py"
+    }
+  ],
+  "missing_declared_dependencies": []
 }

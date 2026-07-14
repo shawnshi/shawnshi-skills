@@ -57,7 +57,7 @@ Your perspective focuses on: [agent's domain]
 - **architect**: System design, patterns, scalability, long-term architectural implications
 - **designer**: User experience, accessibility, user needs, interface implications
 - **engineer**: Implementation reality, tech debt, maintenance burden, practical constraints
-- **researcher** (ClaudeResearcher): Data, precedent, external examples, what others have done
+- **researcher**: Data, precedent, external examples, what others have done
 
 **Output each response as it completes:**
 ```markdown

@@ -4,7 +4,6 @@ from datetime import datetime
 from pathlib import Path
 import sys
 
-DEFAULT_WORKSPACE_ROOT = Path(r"C:/Users/shich/.gemini")
 BLACKBOARD_RELATIVE = Path("tmp") / "strategy_blackboard.json"
 
 
@@ -156,7 +155,7 @@ def cmd_validate(args):
 
 def build_parser():
     parser = argparse.ArgumentParser(description="Strategy Blackboard State Machine")
-    parser.add_argument("--workspace-root", type=Path, default=DEFAULT_WORKSPACE_ROOT)
+    parser.add_argument("--workspace-root", type=Path, required=True)
     sub = parser.add_subparsers(dest="command", required=True)
 
     p_init = sub.add_parser("init")

@@ -11,6 +11,7 @@ import json
 import sys
 import argparse
 import statistics
+import os
 from pathlib import Path
 from datetime import datetime, timedelta
 import pandas as pd
@@ -1083,11 +1084,12 @@ def main():
     elif args.analysis == "device_audit":
         result = analyze_device_health(summary_data)
         
-    # [Vector Lake Integration] Output core state slice for operational memory ingestion
-    if args.analysis in ["readiness", "insight_cn"] and isinstance(result, dict):
+    # Optional state export. No health data is persisted unless the caller opts in.
+    state_dir = os.environ.get("GARMIN_STATE_DIR")
+    if state_dir and args.analysis in ["readiness", "insight_cn"] and isinstance(result, dict):
         try:
             from pathlib import Path
-            mem_dir = Path.home() / ".gemini" / "MEMORY" / "raw" / "garmin_state"
+            mem_dir = Path(state_dir).expanduser()
             mem_dir.mkdir(parents=True, exist_ok=True)
             today = datetime.now().strftime("%Y-%m-%d")
             out_file = mem_dir / f"health_state_{today}.json"
@@ -1107,7 +1109,7 @@ def main():
             with open(out_file, "w", encoding="utf-8") as f:
                 json.dump(state_slice, f, ensure_ascii=False, indent=2)
         except Exception as e:
-            print(f"⚠️ Vector Lake Memory Ingest Failed: {e}", file=sys.stderr)
+            print(f"State export failed: {e}", file=sys.stderr)
 
     print(json.dumps(result, indent=2, ensure_ascii=False))
 

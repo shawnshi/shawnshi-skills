@@ -1,15 +1,18 @@
 import os
 import sys
 import argparse
-import pyttsx3
 import time
 import json
 import asyncio
 import re
 import wave
 from pathlib import Path
-from google import genai
-from google.genai import types
+try:
+    from google import genai
+    from google.genai import types
+except ImportError:
+    genai = None
+    types = None
 
 class FastTTSEngine:
     def __init__(self, output_dir="output"):
@@ -17,13 +20,14 @@ class FastTTSEngine:
         if not self.output_dir.exists():
             self.output_dir.mkdir(parents=True)
         
-        # Initialize Gemini API Client
+        # Initialize the optional Google GenAI provider.
         self.api_key = os.environ.get("GEMINI_API_KEY")
-        if self.api_key:
+        self.model = os.environ.get("GEMINI_TTS_MODEL")
+        if self.api_key and self.model and genai is not None:
             self.client = genai.Client(api_key=self.api_key)
         else:
             self.client = None
-            print("⚠️ WARNING: GEMINI_API_KEY not found in environment.")
+            print("WARNING: cloud TTS requires google-genai, GEMINI_API_KEY, and GEMINI_TTS_MODEL.")
 
     def _save_as_wav(self, filename, pcm_data, channels=1, rate=24000, sample_width=2):
         """将 raw PCM 数据封装为 WAV 格式"""
@@ -79,7 +83,7 @@ class FastTTSEngine:
 
         try:
             response = self.client.models.generate_content(
-                model='gemini-3.1-flash-tts-preview',
+                model=self.model,
                 contents=full_prompt,
                 config=types.GenerateContentConfig(
                     response_modalities=['AUDIO'],
@@ -108,6 +112,38 @@ class FastTTSEngine:
         cmd = ["ffplay", "-nodisp", "-autoexit", "-loglevel", "quiet", str(file_path)]
         proc = await asyncio.create_subprocess_exec(*cmd)
         await proc.wait()
+
+    def _merge_wav(self, files, output_path):
+        """Merge compatible WAV fragments in source order."""
+        if not files:
+            return False
+
+        output_path = Path(output_path)
+        output_path.parent.mkdir(parents=True, exist_ok=True)
+        params = None
+        frames = []
+        try:
+            for file_path in files:
+                with wave.open(str(file_path), "rb") as source:
+                    current = source.getparams()
+                    comparable = current[:4]
+                    if params is None:
+                        params = comparable
+                    elif comparable != params:
+                        raise ValueError("WAV fragments use incompatible audio parameters")
+                    frames.append(source.readframes(source.getnframes()))
+
+            with wave.open(str(output_path), "wb") as target:
+                target.setnchannels(params[0])
+                target.setsampwidth(params[1])
+                target.setframerate(params[2])
+                target.setcomptype(params[3], "not compressed")
+                for frame_data in frames:
+                    target.writeframes(frame_data)
+            return True
+        except Exception as exc:
+            print(f"WAV_MERGE_ERROR: {exc}")
+            return False
 
     def _split_text(self, text):
         """将文本切分为句子，并保留 Speaker 标识"""
@@ -142,30 +178,41 @@ class FastTTSEngine:
         pending_synth = [asyncio.create_task(self._synthesize_sentence(s, args.voice, i, args)) 
                          for i, s in enumerate(sentences)]
         
+        generated_files = []
         play_count = 0
         first_audio_ready = False
         
         for i, task in enumerate(pending_synth):
             audio_path = await task
             if audio_path:
+                generated_files.append(audio_path)
                 if not first_audio_ready:
                     ttfs = time.time() - start_time
                     print(f"[+] 首句准备就绪 (TTFS: {ttfs:.2f}s)，开始播放...")
                     first_audio_ready = True
                 
-                await self._play_audio(audio_path)
-                play_count += 1
-                try: os.remove(audio_path)
-                except: pass
+                if args.play:
+                    await self._play_audio(audio_path)
+                    play_count += 1
+
+        output_written = False
+        if generated_files and args.output:
+            output_written = self._merge_wav(generated_files, args.output)
+
+        for audio_path in generated_files:
+            try:
+                os.remove(audio_path)
+            except OSError:
+                pass
         
-        if play_count > 0:
+        if generated_files:
             total_duration = time.time() - start_time
-            print(f"[+] SUCCESS: 播报完成 (总耗时: {total_duration:.2f}s)")
+            print(f"[+] SUCCESS: generated={len(generated_files)}, played={play_count}, output={output_written}, elapsed={total_duration:.2f}s")
         else:
             print(f"[!] 云端引擎调用失败。正在激活【优雅降级】方案...")
-            self._speak_local(text, 180, 1.0)
+            self._speak_local(text, 180, 1.0, output_path=args.output, play=args.play)
 
-    def _speak_local(self, text, rate, volume):
+    def _speak_local(self, text, rate, volume, output_path=None, play=False):
         try:
             import pyttsx3
             engine = pyttsx3.init()
@@ -176,26 +223,35 @@ class FastTTSEngine:
                     break
             engine.setProperty('rate', rate)
             engine.setProperty('volume', volume)
-            engine.say(text)
+            if output_path:
+                output = Path(output_path)
+                output.parent.mkdir(parents=True, exist_ok=True)
+                engine.save_to_file(text, str(output))
+            if play:
+                engine.say(text)
             engine.runAndWait()
             return True
         except: return False
 
 async def main():
-    parser = argparse.ArgumentParser(description="Gemini TTS Parallel Fast Engine")
+    parser = argparse.ArgumentParser(description="TTS engine with optional cloud synthesis and local fallback")
     parser.add_argument("text", help="播报内容")
     parser.add_argument("--voice", default="Charon", help="默认音色")
-    parser.add_argument("--play", action="store_true", default=True)
+    parser.add_argument("--play", action="store_true", help="生成后立即播放")
+    parser.add_argument("--output-dir", default="output", help="临时音频目录")
     
     # 导演模式参数
     parser.add_argument("--profile", help="Audio Profile")
     parser.add_argument("--scene", help="The Scene")
     parser.add_argument("--notes", help="Director's Notes")
-    parser.add_argument("--output", help=argparse.SUPPRESS)
+    parser.add_argument("--output", help="最终 WAV 文件路径")
 
     args = parser.parse_args()
     
-    engine = FastTTSEngine()
+    if not args.play and not args.output:
+        args.output = str(Path(args.output_dir) / "tts_output.wav")
+
+    engine = FastTTSEngine(output_dir=args.output_dir)
     await engine.process(args.text, args)
 
 if __name__ == "__main__":

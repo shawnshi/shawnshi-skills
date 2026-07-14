@@ -60,16 +60,21 @@ function Should-IgnoreReference {
 }
 
 function Get-SkillFiles {
-    $files = Get-ChildItem -Path $Root -Recurse -Filter 'SKILL.md' -File
-    foreach ($file in $files) {
-        $skill = Split-Path $file.DirectoryName -Leaf
+    $directories = Get-ChildItem -LiteralPath $Root -Directory |
+        Where-Object {
+            $_.Name -notin @('.system', 'scripts', 'shared', 'reports') -and
+            (Test-Path -LiteralPath (Join-Path $_.FullName 'SKILL.md'))
+        }
+
+    foreach ($directory in $directories) {
+        $skill = $directory.Name
         if ($IncludeSkills -and $skill -notin $IncludeSkills) {
             continue
         }
         if ($skill -in $ExcludeSkills) {
             continue
         }
-        $file
+        Get-Item -LiteralPath (Join-Path $directory.FullName 'SKILL.md')
     }
 }
 
@@ -142,7 +147,7 @@ foreach ($file in (Get-SkillFiles)) {
     $missing = @($declared | Where-Object { -not $_.exists } | ForEach-Object { $_.path })
     $topLevelFiles = @(
         Get-ChildItem -Path $skillDirectory -File -ErrorAction SilentlyContinue |
-        Where-Object { $_.Name -notmatch '\.bak$|\.p12\.bak$|\.p22\.bak$|resource-manifest\.json$' } |
+        Where-Object { $_.Name -notmatch '\.bak$|\.p12\.bak$|\.p22\.bak$|resource-manifest\.json$|skill\.json$' } |
         ForEach-Object { $_.Name }
     )
     $topLevelDirs = @(

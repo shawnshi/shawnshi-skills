@@ -1,45 +1,55 @@
-﻿{
-    "schema_version":  1,
-    "skill":  "tool-web-slide",
-    "generated_at":  "2026-06-04T15:36:51",
-    "skill_md":  "SKILL.md",
-    "top_level_files":  [
-                            "README.md",
-                            "SKILL.md"
-                        ],
-    "top_level_directories":  [
-                                  "assets",
-                                  "design-vault",
-                                  "scripts"
-                              ],
-    "resource_directories":  [
-                                 {
-                                     "name":  "scripts",
-                                     "file_count":  3
-                                 },
-                                 {
-                                     "name":  "assets",
-                                     "file_count":  1
-                                 }
-                             ],
-    "declared_local_dependencies":  [
-                                        {
-                                            "path":  "scripts\\assemble-context.mjs",
-                                            "exists":  true,
-                                            "resolved_path":  "C:\\Users\\shich\\.gemini\\config\\skills\\tool-web-slide\\scripts\\assemble-context.mjs"
-                                        },
-                                        {
-                                            "path":  "scripts\\validate-deck.mjs",
-                                            "exists":  true,
-                                            "resolved_path":  "C:\\Users\\shich\\.gemini\\config\\skills\\tool-web-slide\\scripts\\validate-deck.mjs"
-                                        },
-                                        {
-                                            "path":  "scripts\\export-pdf.mjs",
-                                            "exists":  true,
-                                            "resolved_path":  "C:\\Users\\shich\\.gemini\\config\\skills\\tool-web-slide\\scripts\\export-pdf.mjs"
-                                        }
-                                    ],
-    "missing_declared_dependencies":  [
-
-                                      ]
+{
+  "schema_version": 1,
+  "skill": "tool-web-slide",
+  "generated_at": "2026-07-14T21:01:45",
+  "skill_md": "SKILL.md",
+  "top_level_files": [
+    "package-lock.json",
+    "package.json",
+    "SKILL.md"
+  ],
+  "top_level_directories": [
+    "assets",
+    "built-in-skills",
+    "references",
+    "scripts",
+    "starter-components"
+  ],
+  "resource_directories": [
+    {
+      "name": "scripts",
+      "file_count": 3
+    },
+    {
+      "name": "references",
+      "file_count": 1
+    },
+    {
+      "name": "assets",
+      "file_count": 4
+    }
+  ],
+  "declared_local_dependencies": [
+    {
+      "path": "references\\layout-patterns.md",
+      "exists": true,
+      "resolved_path": "C:\\Users\\shich\\.codex\\skills\\tool-web-slide\\references\\layout-patterns.md"
+    },
+    {
+      "path": "scripts\\html_quality_checker.mjs",
+      "exists": true,
+      "resolved_path": "C:\\Users\\shich\\.codex\\skills\\tool-web-slide\\scripts\\html_quality_checker.mjs"
+    },
+    {
+      "path": "scripts\\validate-deck.mjs",
+      "exists": true,
+      "resolved_path": "C:\\Users\\shich\\.codex\\skills\\tool-web-slide\\scripts\\validate-deck.mjs"
+    },
+    {
+      "path": "scripts\\export-pdf.mjs",
+      "exists": true,
+      "resolved_path": "C:\\Users\\shich\\.codex\\skills\\tool-web-slide\\scripts\\export-pdf.mjs"
+    }
+  ],
+  "missing_declared_dependencies": []
 }

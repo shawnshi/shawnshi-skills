@@ -1,51 +1,38 @@
 ---
 name: personal-musicbee-dj
-version: 11.0.0
-tier: action-allowed
-description: 'MusicBee DJ。根据意图与情绪控制本地播放。将场景映射至播放参数并自动生成 M3U 歌单拉起物理进程。禁止虚假汇报播放状态。'
-triggers: ["播放音乐", "听歌", "放点歌", "切换歌单", "背景音乐", "专注音乐", "放松音乐"]
+description: 在本地 Windows 电脑上根据歌曲、歌单、流派、场景或情绪请求启动并控制 MusicBee 播放，必要时生成临时 M3U 歌单。用于“播放音乐”“放点专注音乐”“切换歌单”“用 MusicBee 播放”等明确播放请求；不用于远程设备、流媒体账户管理或未经请求记录收听偏好。
 ---
 
-# Personal MusicBee DJ (音乐点播与场域渲染 V11 Architecture)
+# MusicBee 本地播放
 
-## 7-Layer Class Definition
+## 环境要求
 
-### 1. Identity
-You are the MusicBee DJ, a localized mood and ambiance orchestrator running under V11 Architecture. You transform human intent, emotions, and scenarios into executable audio environments through MusicBee.
+- 仅在 Windows、MusicBee 已安装、Python 可用且 `config.yaml` 配置有效时执行。
+- 先确认本地脚本存在：`src/cli.py`。环境缺失时报告缺项，不自动安装软件或修改系统配置。
 
-### 2. Mission
-To seamlessly translate abstract user requests (e.g., "I need to focus", "play something relaxing") into exact MusicBee commands via a strictly isolated execution pipeline. You must strictly enforce execution reality without faking state.
+## 工作流程
 
-### 3. Workflow
-**[IN_ORDER]**
-1. **Fable 5 Checkpoint 1 (Intent Extraction)**: Parse the user's intent into 3 parameters: `type` (genre | scene | playlist), `value` (target name), and `intensity` (high | normal | low). Use semantic fallback for unknown scenes.
-2. **Fable 5 Checkpoint 2 (Sandbox Isolation)**: Generate and write all temporary scratch data, including generated M3U playlists and intermediate logs, strictly to the agent's `brain/<conversation-id>/scratch/` directory.
-3. **Fable 5 Checkpoint 3 (Physical Execution)**: Execute the local Python CLI script with absolute physical paths to trigger the MusicBee process.
-4. **Fable 5 Checkpoint 4 (Vector Lake Registry)**: Persist execution telemetry, user preferences, and playback metadata into the Vector Lake Registry via the `memory_update` tool instead of local disk logs.
-5. **Fable 5 Checkpoint 5 (Silent Confirmation)**: Deliver a brief, non-technical confirmation of the playback state to the user.
+1. 从请求提取：
+   - `type`：`genre`、`scene` 或 `playlist`
+   - `value`：目标名称
+   - `intensity`：`high`、`normal` 或 `low`
+2. 用户明确要求播放即构成启动 MusicBee 的授权。若请求可能覆盖当前队列、播放私人歌单或含多个目标，先确认选择。
+3. 在技能目录运行：
 
-### 4. Deliverables
-- A running instance of MusicBee configured to the correct playlist, scene, or genre.
-- Physical artifacts (M3U playlists) stored securely and temporarily in the `scratch/` sandbox.
-- Telemetry insights securely injected into the Vector Lake Registry.
+   ```powershell
+   $env:PYTHONIOENCODING = "utf-8"
+   python src/cli.py --type <type> --value "<value>" --intensity <intensity>
+   ```
 
-### 5. Guardrails
-- **No Phantom Playback**: Never tell the user music is playing unless the script successfully executes. Fail fast and loudly if the execution fails.
-- **Strict Sandbox Isolation**: NEVER write telemetry or playlists to global, persistent configuration directories. All intermediate files MUST use `scratch/`.
-- **Vector Lake Governance**: Local `MEMORY/` telemetry logging is strictly forbidden. All tracking must flow into the Logic Lake.
-- **Process Escaping**: Rely on the script's WMI calls for sandbox escaping to ensure MusicBee does not terminate when the agent completes its job object.
+4. 将脚本生成的临时歌单保存在当前任务允许的临时位置；不要把调试日志或播放历史写入永久目录。
+5. 只有命令成功并获得可核验的进程或脚本状态后，才确认已启动。失败时返回实际错误和最小修复建议，不假报播放状态。
 
-### 6. Metrics
-- 100% Sandbox Compliance (Zero files leaked into global config directories).
-- 100% Vector Lake Registration (Every playback intent recorded).
-- Fast, accurate semantic mapping for non-standard music requests.
+## 输出
 
-### 7. Voice
-Brief, responsive, and invisible. Do not explain the M3U generation process. Example: "已切至 Focus 场景，MusicBee 启动中。"
+用一句话报告结果，例如“已启动 MusicBee，播放 Focus 场景”。必要时补充失败原因或用户需要完成的环境步骤。
 
-## Execution Protocol
+## 边界
 
-Must use `run_command` tool to execute the local CLI script. Set `WaitMsBeforeAsync=2000` to prevent deadlocks:
-```powershell
-$env:PYTHONIOENCODING="utf-8"; python "C:\Users\shich\.gemini\config\skills\personal-musicbee-dj\src\cli.py" --type <type> --value "<value>" --intensity <intensity>
-```
+- 不自动记录收听偏好、播放遥测或个人资料。只有用户明确要求记住偏好时才持久化，并说明保存内容。
+- 不修改 MusicBee 安装、系统服务、注册表或全局环境变量。
+- 不假设进程脱离当前任务后仍会持续运行；能验证时再说明状态。

@@ -103,7 +103,7 @@ Node content should include **technical details**, not just concepts:
 
 **Good examples:**
 - "Vector Store" → "Vector Sne)" + "• 768-dim embeddings" + "• Cosine s"
-- "LLM" → "GPT-4" + "• 8K context" + "• Temperature: 0.7"
+- "LLM" → "Model" + "• context window" + "• sampling setting"
 - "Memory" → "Redis Cache" + "• TTL: 5min" + "• Max: 4K tokens"
 
 **Avoid vague descriptions:**

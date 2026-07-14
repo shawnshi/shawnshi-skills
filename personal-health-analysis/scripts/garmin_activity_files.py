@@ -14,8 +14,8 @@ from pathlib import Path
 sys.path.insert(0, str(Path(__file__).parent))
 from garmin_auth import get_client
 
-# Cross-platform default output directory
-import os; _DEFAULT_OUTPUT_DIR = os.path.expanduser(r"~/.gemini/MEMORY/raw/garmin")
+# Cross-platform default output directory. Override with GARMIN_OUTPUT_DIR.
+import os; _DEFAULT_OUTPUT_DIR = os.path.expanduser(os.environ.get("GARMIN_OUTPUT_DIR", str(Path.cwd() / "garmin-output")))
 Path(_DEFAULT_OUTPUT_DIR).mkdir(parents=True, exist_ok=True)
 
 # Check for optional dependencies

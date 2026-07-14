@@ -25,7 +25,7 @@
 - **【数据缺口】:** [若存在]
 
 ## Tactical Accountability
-*(注：必须通过搜索 `C:\Users\shich\.gemini\MEMORY\raw\privacy\Diary\` 提取上一周的 `Next Tactics` 并直接将其填入下表进行对标，严禁主观脑补)*
+*(仅在用户提供或明确授权读取上周日志时提取 `Next Tactics`；没有证据的项目写“未提供”，不要补写。)*
 | 承诺行动 | 执行状态 | 真实阻力/偏离原因 | 问责判定 |
 | :--- | :--- | :--- | :--- |
 | [Tactic] | 🟢/🟡/🔴 | [Root Cause] | [战略漂移/执行偏差/合理调整/生理破产等冷酷判词] |

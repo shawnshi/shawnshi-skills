@@ -26,8 +26,8 @@ def _valid_passport_yaml() -> str:
           stochasticity_declaration: "LLM outputs are not byte-reproducible. This lockfile documents configuration, not a deterministic replay guarantee."
           ars_version: "3.3.5"
           model:
-            family: claude
-            id: claude-opus-4-7
+            family: example-provider
+            id: example-model
             weight_stable: false
           prompts:
             hash_timing: skill-load

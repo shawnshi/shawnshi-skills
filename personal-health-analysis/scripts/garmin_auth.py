@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """
 @Input:  --email, --password (CLI args), or config.json, or Env Vars
-@Output: Auth Tokens (saved to ~/.gemini/garmin/), Boolean Status
+@Output: Auth tokens saved to GARMIN_TOKEN_DIR or the user config directory
 @Pos:    Infrastructure/Auth Layer. Prerequisites for all other scripts.
 
 !!! Maintenance Protocol: If auth method changes (e.g. MFA), update this and _DIR_META.md.
@@ -24,7 +24,7 @@ except ImportError:
     print("Install with: pip3 install garminconnect", file=sys.stderr)
     sys.exit(1)
 
-TOKEN_DIR = Path.home() / ".gemini" / "garmin"
+TOKEN_DIR = Path(os.environ.get("GARMIN_TOKEN_DIR", Path.home() / ".config" / "garmin-connect")).expanduser()
 CONFIG_FILE = Path(__file__).parent.parent / "config.json"
 
 
@@ -59,18 +59,6 @@ def login(email, password):
 
         print(f"✅ Tokens saved to {tokenstore}", file=sys.stderr)        
         
-        # Mirror tokens to GarminDb for compatibility
-        try:
-            import shutil
-            garmin_db_dir = Path.home() / ".GarminDb"
-            garmin_db_dir.mkdir(parents=True, exist_ok=True)
-            source_token = TOKEN_DIR / "garmin_tokens.json"
-            if source_token.exists():
-                shutil.copy2(source_token, garmin_db_dir / "garmin_tokens.json")
-                print(f"✅ Tokens mirrored to {garmin_db_dir}", file=sys.stderr)
-        except Exception as e:
-            print(f"⚠️  Failed to mirror tokens: {e}", file=sys.stderr)
-
         # Test the connection
         try:
             profile = client.get_user_summary(datetime.now().strftime("%Y-%m-%d"))

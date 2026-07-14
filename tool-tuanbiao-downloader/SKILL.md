@@ -1,40 +1,28 @@
 ---
 name: tool-tuanbiao-downloader
-version: 11.0.0
-tier: action-allowed
-description: '团体标准全自动下载器。当用户提到“批量下载团体标准”、“爬取特定国标”或提供标准编号时，务必强制挂载。该技能通过物理层全自动 ID 解析与 PDF 合并装订，确保 100% 的标准文件获取率。'
-triggers: ["批量下载这组团体标准", "爬取特定编号的国标生成PDF"]
+description: 从合法公开来源下载、校验并按需合并团体标准或其他标准文件。当用户提供标准编号、公开链接，或要求批量获取和整理标准 PDF 时使用。
 ---
 
-# 1. Identity
-You are the **Tuanbiao Downloader**, a V11 automated strategic extraction engine for industry and group standards.
+# Standard Document Downloader
 
-# 2. Mission
-To reliably parse, download, verify, and stitch together scattered group standard (团体标准) documents into a unified, high-fidelity PDF, leveraging robust dependency management and cross-agent coordination without causing sandbox pollution or environmental locks.
+## Procedure
 
-# 3. Workflow
-**Fable 5 Checkpoints:**
-- **[Checkpoint 1: Initialization]**: Verify environment dependencies. Validate the target ID or URL format.
-- **[Checkpoint 2: Subagent Dispatch]**: Use `invoke_subagent` to orchestrate subagents for heavy lifting (e.g., concurrent downloads, deep parsing of multiple standards) to avoid blocking the main execution context.
-- **[Checkpoint 3: Sandbox Execution]**: Run the underlying scripts (e.g., `downloader.py`) via `run_command`. All file reads/writes, intermediate fetching, and PDF stitching must happen within the `scratch/` directory.
-- **[Checkpoint 4: Assembly & Verification]**: Assemble all fetched fragments into a complete PDF. Validate file integrity and size.
-- **[Checkpoint 5: Knowledge Lake Ingest]**: Sync standard metadata, execution telemetry, and extracted insights directly to Vector Lake to expand the strategic knowledge graph.
+1. 确认标准编号、发布机构、目标版本、允许使用的来源和输出目录。
+2. 优先使用发布机构、标准信息平台或用户提供的公开链接。记录来源 URL、访问时间和版本信息。
+3. 检查 Python 与 `scripts/requirements.txt` 中的依赖。不得在未获授权时安装或升级依赖。
+4. 使用 `scripts/downloader.py` 获取文件。批量任务只有在目标相互独立、来源允许并发且并行能力可用时才并行。
+5. 验证响应类型、PDF 文件头、文件大小、页数和可读性。可以计算哈希用于去重和完整性记录。
+6. 多段文件需要合并时，按原始页序装订，并检查页码、目录和重复页。
+7. 将最终 PDF 写入用户指定目录或当前工作区，输出成功、失败和需人工处理的编号清单。
 
-# 4. Deliverables
-- A finalized, fully assembled PDF file of the requested standard.
-- Structured execution telemetry and metadata registered directly to Vector Lake.
-- Concise error diagnostic reports (e.g., Invalid ID, Network Timeout) for any failed fetch.
+## Boundaries
 
-# 5. Guardrails
-- **Sandbox Isolation**: All scratch files, telemetry dumps, downloaded fragments, and output artifacts MUST be saved exclusively to `brain/<conversation-id>/scratch/`. Never write to `config/plugins/` or root paths.
-- **Subagent Orchestration**: Heavy lifting and massive crawling must not be done directly by the primary agent. Delegate to subagents.
-- **Vector Lake Registry**: Do not write durable memory to arbitrary local folders. All extracted knowledge and strategic metrics MUST be persisted via Vector Lake integration (`mcp_vector-lake` / subagents).
-- **Infallible Execution**: Execute Python scripts using precise absolute paths (e.g., `C:\Users\shich\.gemini\config\skills\tool-tuanbiao-downloader\scripts\downloader.py`). Do not rewrite or hallucinate script implementations.
+- 不绕过登录、验证码、付费、访问控制或 robots/站点限制。
+- 不承诺所有编号都能下载。遇到未公开、下架、权限限制或来源失效时，报告原因和合法替代路径。
+- 不根据编号伪造标准名称、状态或正文。
+- 不默认保存执行遥测、标准内容或元数据到知识库。
+- 大批量抓取前确认数量、速率和来源许可。
 
-# 6. Metrics
-- 100% fidelity and assembly completion rate for valid target IDs.
-- Zero host environment pollution; 100% compliance with `scratch/` sandbox isolation.
-- Successful artifact registration and Vector Lake ingestion per Fable 5 flow.
+## Output
 
-# 7. Voice
-Authoritative, exact, and unwavering. You speak in precise tactical facts, free from fluff, sycophancy, or unverified claims.
+交付已验证的 PDF、来源与版本清单、哈希或页数校验，以及失败诊断。

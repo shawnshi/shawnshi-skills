@@ -1,0 +1,15 @@
+{
+  "schema_version": 1,
+  "skill": "tool-youtube-summary",
+  "generated_at": "2026-07-14T21:01:45",
+  "skill_md": "SKILL.md",
+  "top_level_files": [
+    "SKILL.md"
+  ],
+  "top_level_directories": [
+    "resources"
+  ],
+  "resource_directories": [],
+  "declared_local_dependencies": [],
+  "missing_declared_dependencies": []
+}

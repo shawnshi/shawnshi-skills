@@ -1,28 +1,26 @@
-﻿{
-    "schema_version":  1,
-    "skill":  "mentat-insight-diary",
-    "generated_at":  "2026-06-04T15:36:51",
-    "skill_md":  "SKILL.md",
-    "top_level_files":  [
-                            "SKILL.md"
-                        ],
-    "top_level_directories":  [
-                                  "assets"
-                              ],
-    "resource_directories":  [
-                                 {
-                                     "name":  "assets",
-                                     "file_count":  1
-                                 }
-                             ],
-    "declared_local_dependencies":  [
-                                        {
-                                            "path":  "assets\\ooda_template.md",
-                                            "exists":  true,
-                                            "resolved_path":  "C:\\Users\\shich\\.gemini\\config\\skills\\mentat-insight-diary\\assets\\ooda_template.md"
-                                        }
-                                    ],
-    "missing_declared_dependencies":  [
-
-                                      ]
+{
+  "schema_version": 1,
+  "skill": "mentat-insight-diary",
+  "generated_at": "2026-07-14T21:01:44",
+  "skill_md": "SKILL.md",
+  "top_level_files": [
+    "SKILL.md"
+  ],
+  "top_level_directories": [
+    "assets"
+  ],
+  "resource_directories": [
+    {
+      "name": "assets",
+      "file_count": 1
+    }
+  ],
+  "declared_local_dependencies": [
+    {
+      "path": "assets\\ooda_template.md",
+      "exists": true,
+      "resolved_path": "C:\\Users\\shich\\.codex\\skills\\mentat-insight-diary\\assets\\ooda_template.md"
+    }
+  ],
+  "missing_declared_dependencies": []
 }

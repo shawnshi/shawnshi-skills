@@ -1,114 +1,79 @@
-"""
-<!-- Input: Raw text (AI-generated or formal) -->
-<!-- Output: Humanized text, Analysis report, Humanizer Score -->
-<!-- Pos: scripts/humanize_engine.py. Linguistic refinement engine. -->
-"""
+"""Local, deterministic checks for common machine-like Chinese prose patterns."""
+
+from __future__ import annotations
 
 import argparse
-import sys
-import subprocess
-import os
+import json
+import re
+from pathlib import Path
 
-def read_file(filepath):
-    try:
-        with open(filepath, 'r', encoding='utf-8') as f:
-            return f.read()
-    except Exception as e:
-        return ""
 
-def main():
-    parser = argparse.ArgumentParser(description="Humanizer-zh-pro Linguistic Engine")
-    parser.add_argument("text_or_file", nargs='?', default="", help="The text to analyze or path to a text file")
-    parser.add_argument("--test", action="store_true", help="Run the built-in test case")
+PATTERNS = {
+    "empty_opening": [r"在.{0,20}背景下", r"随着.{0,20}(发展|推进)"],
+    "formulaic_transition": [r"综上所述", r"总而言之", r"值得注意的是"],
+    "parallel_template": [r"不仅.{0,80}(而且|更)", r"既.{0,80}又"],
+    "vague_subject": [r"相关方面", r"有关部门", r"各方应"],
+    "inflated_wording": [r"全面提升", r"深度赋能", r"形成合力", r"打造新格局"],
+}
+
+
+def read_input(value: str) -> tuple[str, str]:
+    candidate = Path(value).expanduser()
+    if candidate.is_file():
+        return candidate.read_text(encoding="utf-8"), str(candidate.resolve())
+    return value, "inline"
+
+
+def inspect(text: str) -> dict:
+    findings = []
+    for category, patterns in PATTERNS.items():
+        for pattern in patterns:
+            for match in re.finditer(pattern, text):
+                findings.append(
+                    {
+                        "category": category,
+                        "text": match.group(0),
+                        "start": match.start(),
+                        "end": match.end(),
+                    }
+                )
+
+    sentences = [part.strip() for part in re.split(r"[。！？!?]", text) if part.strip()]
+    long_sentences = [sentence for sentence in sentences if len(sentence) > 80]
+    return {
+        "characters": len(text),
+        "sentences": len(sentences),
+        "long_sentence_count": len(long_sentences),
+        "findings": findings,
+        "review_notes": [
+            "Keep facts, numbers, entities, negations, and causal qualifiers unchanged.",
+            "Treat matches as review candidates, not automatic errors.",
+            "Rewrite in context; do not apply blind global replacement.",
+        ],
+    }
+
+
+def main() -> int:
+    parser = argparse.ArgumentParser(description="Inspect Chinese prose for formulaic or vague patterns without calling an external model.")
+    parser.add_argument("text_or_file", help="Inline text or a UTF-8 text file.")
+    parser.add_argument("--output", help="Optional JSON report path. Without it, print only.")
     args = parser.parse_args()
-    
-    # 1. Resolve Input
-    input_text = ""
-    if args.test:
-        input_text = "随着数字医疗的大力推进，我司的 HIS 核心系统重构项目迎来了重要的里程碑。通过对底层架构的深度整合与微服务化改造，我们不仅实现了系统性能的显著优化，还有效降低了运维成本。综上所述，这一阶段性成果展现了我们在医疗信息化领域的深厚积累。"
-    elif os.path.isfile(args.text_or_file):
-        with open(args.text_or_file, 'r', encoding='utf-8') as f:
-            input_text = f.read()
+
+    text, source = read_input(args.text_or_file)
+    if not text.strip():
+        parser.error("input is empty")
+
+    report = {"source": source, **inspect(text)}
+    serialized = json.dumps(report, ensure_ascii=False, indent=2)
+    if args.output:
+        target = Path(args.output).expanduser().resolve()
+        target.parent.mkdir(parents=True, exist_ok=True)
+        target.write_text(serialized + "\n", encoding="utf-8")
+        print(target)
     else:
-        input_text = args.text_or_file
+        print(serialized)
+    return 0
 
-    if not input_text.strip():
-        print("Error: Empty input. Provide text or use --test.")
-        sys.exit(1)
-
-    print(f"[*] Input length: {len(input_text)} chars")
-    print(f"[*] Engine initializing...")
-
-    # 2. Build the Persona & Constraints Prompt
-    base_dir = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
-    skill_md = read_file(os.path.join(base_dir, "SKILL.md"))
-    guidelines_md = read_file(os.path.join(base_dir, "references", "GUIDELINES.md"))
-    checklist_md = read_file(os.path.join(base_dir, "references", "CHECKLIST.md"))
-
-    system_prompt = f"""
-你是卫宁健康的战略咨询总经理，也是顶尖的文字重铸师。你需要将以下文本按照【三阶层润色】的方法进行彻底“去AI化”改写。
-
-【一、核心心法】
-{skill_md}
-
-【二、黑名单与置换词典】
-{guidelines_md}
-
-【三、任务自检清单】
-{checklist_md}
-
-【动作要求】
-1. 首先，简要输出一段极短的修改思路（CoT推演），直接指出原文本中哪些词汇踩了黑名单，哪些句子节奏不对。
-2. 然后，输出【最终高管简报终稿】。
-3. 最后，根据《任务自检清单》执行打分核查（例如：5/5分，满足所有条件）。
-
-【原始输入文本】
-{input_text}
-"""
-
-    print("[*] Dispatching to LLM engine for linguistic processing...")
-    
-    # 3. Call Gemini CLI
-    try:
-        import tempfile
-        # Write prompt to a temporary file to avoid command-line length limits and escaping hell
-        with tempfile.NamedTemporaryFile("w", encoding="utf-8", delete=False) as f:
-            f.write(system_prompt)
-            temp_path = f.name
-
-        # Security: Sanitize user input for PowerShell command injection by escaping quotes
-        safe_temp_path = temp_path.replace("'", "''")
-        cmd = f"gemini -p (Get-Content -Raw -Path '{safe_temp_path}')"
-        process = subprocess.Popen(
-            ["powershell", "-NoProfile", "-Command", cmd],
-            stdout=subprocess.PIPE,
-            stderr=subprocess.PIPE,
-            text=True,
-            encoding='utf-8',
-            errors='replace'
-        )
-        stdout, stderr = process.communicate()
-        
-        # Cleanup temp file
-        try:
-            os.remove(temp_path)
-        except Exception:
-            pass
-        
-        if process.returncode != 0:
-            print("[!] Gemini CLI execution failed:")
-            print(stderr)
-        else:
-            print("\n" + "="*60)
-            print(" 🔪 【Humanizer-zh-pro 文本重铸完毕】 🔪")
-            print("="*60 + "\n")
-            print(stdout)
-            
-    except FileNotFoundError:
-        print("[!] Error: 'gemini' CLI tool not found. Please ensure it is installed and in your PATH.")
-        sys.exit(1)
-    except Exception as e:
-        print(f"[!] Unexpected error: {e}")
 
 if __name__ == "__main__":
-    main()
+    raise SystemExit(main())

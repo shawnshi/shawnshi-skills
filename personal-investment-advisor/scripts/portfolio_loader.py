@@ -6,16 +6,13 @@ from pathlib import Path
 from typing import Any, Dict, Optional
 
 
-DEFAULT_POSITIONS_FILE = Path.home() / ".gemini" / "MEMORY" / "raw" / "stocks" / "portfolio_positions.json"
-
-
-def resolve_positions_file(path: Optional[str] = None) -> Path:
+def resolve_positions_file(path: Optional[str] = None) -> Optional[Path]:
     if path:
         return Path(path).expanduser()
     configured = os.environ.get("PIA_POSITIONS_FILE")
     if configured:
         return Path(configured).expanduser()
-    return DEFAULT_POSITIONS_FILE
+    return None
 
 
 def normalize_symbol(symbol: str) -> str:
@@ -26,6 +23,8 @@ _positions_cache: Dict[str, Dict[str, Any]] = {}
 
 def load_positions(path: Optional[str] = None) -> Dict[str, Any]:
     positions_path = resolve_positions_file(path)
+    if positions_path is None:
+        return {"positions": [], "_status": "not_configured", "_path": None}
     if not positions_path.exists():
         return {"positions": [], "_status": "file_missing", "_path": str(positions_path)}
 
@@ -187,8 +186,12 @@ def build_position_context(symbol: str, current_price: Any, payload: Dict[str, A
         "positions_file": payload["_path"],
     }
 
-    if payload["_status"] == "file_missing":
-        context["position_note"] = "positions file not found"
+    if payload["_status"] != "ok":
+        context["position_note"] = (
+            "positions file not configured"
+            if payload["_status"] == "not_configured"
+            else "positions file not found"
+        )
         return context
 
     if not matched:
@@ -309,7 +312,7 @@ def build_portfolio_package(symbol: str, current_price: Any = None, positions_fi
         "portfolio_fit": None,
     }
 
-    if payload["_status"] == "file_missing":
+    if payload["_status"] != "ok":
         return package
 
     summary = build_portfolio_summary(positions, payload)
@@ -327,7 +330,7 @@ if __name__ == "__main__":
     parser = argparse.ArgumentParser(description="Load portfolio context for a symbol.")
     parser.add_argument("symbol")
     parser.add_argument("--current-price", type=float)
-    parser.add_argument("--positions-file")
+    parser.add_argument("--positions-file", help="Portfolio JSON path; alternatively set PIA_POSITIONS_FILE.")
     args = parser.parse_args()
 
     package = build_portfolio_package(

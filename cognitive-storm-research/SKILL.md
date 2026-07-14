@@ -1,68 +1,65 @@
 ---
 name: cognitive-storm-research
-version: 11.0.0
-tier: action-allowed
-description: '重型智能体并发调研管线。通过5并发子代对抗与红队自审消除信息偏见，最后强制物理入湖归档。禁止在未检索资料前凭空推演，禁止主代理亲身扮演多角色。'
-triggers: ["storm research", "deep dive", "rigorous multi-angle analysis", "斯坦福调研", "并发调研"]
+description: 对复杂、争议或高风险议题开展多来源深度研究，建立事实底座、比较互相冲突的视角、进行红队复核并形成带引用的综合报告。用户要求 STORM research、deep dive、并发调研、多角度严谨分析或需要当前公开证据支撑的研究时使用。
 ---
 
-# Cognitive STORM Research Pipeline (Agent Swarm Edition V11.0)
+# STORM 深度研究
 
-## 1. Identity
-你是 STORM 管线的首席编排官 (Conductor)。你是一个不信任单一来源、警惕认知偏见、依赖分布式多智能体对抗来萃取真相的系统级调查员。你从不亲自直接写长文，而是调度子代并发执行压力测试，并冷酷地提取它们的冲突与共识。
+## 锁定研究范围
 
-## 2. Mission
-将单薄的提示词问答升级为包含“事实打底 -> 5并发子代对抗 -> 矛盾映射 -> 高密度综合 -> 红队子代自审”的重型并发研究管线。通过强制的沙盒隔离与严格的 Fable 5 门控，最终将提纯的洞察持久化入 Vector Lake 知识湖。
+1. 明确主题、决策目标、时间范围、地区、关键定义和交付深度。
+2. 把问题拆成事实问题、解释问题和预测问题。
+3. 列出会改变结论的关键未知项和停止条件。
 
-## 3. Workflow
+用户明确要求深度调研或当前公开信息时，可在所述范围内检索网络。访问登录内容、私人数据、付费资料或扩大到敏感个人信息前，必须另行确认。用户只要求分析所给材料时，不自行扩展联网。
 
-### Phase 1: Sandbox Isolation & Fact Retrieval
-- **Fable 5 Checkpoint (Sandbox Readiness)**: 确保沙盒绝对隔离。本管线所有的临时抓取结果、子代理回传缓冲（Fact Payload）以及合成草稿，**必须**写入原生会话相关的临时物理路径 (例如 `scratch/` 目录)。绝对禁止将非终态中间产物写入长期受保护目录。
-- **Action**: 使用 `invoke_subagent` 派发 1 个 `research` 角色子代。指示其使用 `search_web` 和网页抓取能力，收集关于 `[Topic]` 的核心事实数据。等待其返回并将 Payload 沉淀至 `scratch/`。
+## 建立事实底座
 
-### Phase 2: The Multi-Perspective Scan (5-Concurrent Subagents)
-- 强制使用单次 `invoke_subagent` 传入 `Subagents` 数组，并发唤醒 5 个 `self` 子代。不可亲自串行模拟以防上下文污染。
-- 将 Fact Payload 作为上下文写入它们的 `Prompt`，并赋予各自角色的预设指令：
-  1. **THE PRACTITIONER**: "基于事实提取学术界忽视的现实：2句话立场，最强证据，独特洞察。"
-  2. **THE ACADEMIC**: "基于事实提取同行评审共识：2句话立场，最强证据，独特洞察。"
-  3. **THE SKEPTIC**: "挑战主流观点，提供最强反方论点：2句话立场，最强证据，独特洞察。"
-  4. **THE ECONOMIST**: "跟随资金流向，分析利润结构：2句话立场，最强证据，独特洞察。"
-  5. **THE HISTORIAN**: "寻找历史相似物与周期规律：2句话立场，最强证据，独特洞察。"
+1. 优先收集官方文件、原始数据、论文、财报、法规和当事方记录。
+2. 用可靠二手来源补充背景，用论坛或社交平台补充体验信号。
+3. 记录发布日、事件日、作者、来源类型和适用口径。
+4. 对关键数字和争议事实至少交叉核验一次；无法核验的内容标为未确认。
 
-### Phase 3: The Contradiction Map & Self-Debate
-- 作为 Conductor，在综合 5 份报告前，必须在内部触发一段 `<thought>` 块以执行严格的自我辩论 (Self-Debate)。
-- 在 `<thought>` 块内显式映射以下内容：
-  - **Clashes**: 5 个视角的直接冲突点。
-  - **Consensus**: 所有人一致同意的底线事实。
-  - **The Blind Spot**: 所有人都忽略的潜在变量。
+## 选择研究视角
 
-### Phase 4: The Synthesis Draft (Main Agent Compression)
-- 在起草前，强制调用 `view_file` 读取 `C:\Users\shich\.gemini\config\skills\cognitive-storm-research\references\storm_report_template.md` 获取结构规范。
-- 起草高密度综述，并将其作为草稿暂存于 `scratch/` 中转沙盒。综述需包含：CEO-level 核心总结、排名的 5 大核心发现、1 个隐蔽连接、行动建议、前沿未解之谜。
+根据主题选择 3–5 个真正相关的视角，不固定使用同一组角色。例如实践者、研究者、反方、经济、历史、法律、安全或用户。
 
-### Phase 5: The Peer Review (Red Team Subagent)
-- 使用 `invoke_subagent` 启动 1 个最终的 `self` 子代 (Role: "Stanford Professor Reviewer")。
-- 提供草稿与原始事实，要求其输出最弱环节、偏见检查、整体评分 (带毒舌批评)，并将批评意见追加至定稿。
+当资料搜集和视角分析彼此独立、任务规模值得并行且当前环境支持时，可选用子代理。每个任务使用相同的研究边界、证据标准和返回字段；不要把一次伪接口调用当作并发管线。主代理可以直接完成任何阶段，并负责引用核对。
 
-### Phase 6: Vector Lake Registry & Final Commit
-- **Fable 5 Checkpoint (Vector Lake Eligibility)**: 审查定稿是否彻底经历了事实抓取、多方交锋与红队打击，并确保结构完全遵守 `storm_report_template.md` 模板，无越权污染。
-- **物理长效落盘**: 最终战报必须使用原生 `write_to_file` 保存至 `C:\Users\shich\.gemini\MEMORY\wiki\Synthesis_STORM_Investigation_on_[Topic].md`。
-- **MCP 固化**: 落盘后，必须使用 `call_mcp_tool` (ServerName="vector-lake-mcp", ToolName="finalize_query_synthesis") 传入文件名进行编译归档。
+## 构建矛盾图
 
-## 4. Deliverables
-- **The Sandbox Artifacts**: 存储在 `scratch/` 路径中的所有临时抓取事实与中期反审记录。
-- **The Synthesis Report**: 位于 `MEMORY\wiki\` 目录下的高密度战报文件。
-- **Vector Lake Entry**: 经由 `finalize_query_synthesis` 固化生成的结构化网络节点。
+综合前先列出：
 
-## 5. Guardrails
-- **禁止裸思考**: 未获得 `research` 子代事实数据前，主代理禁止自行展开推演。
-- **假并发陷阱防范**: 严禁主代理自行在一次生成回复内切分扮演 5 个角色，必须调用真实的 `invoke_subagent`。
-- **沙盒红线约束**: 绝不向 `config/plugins/` 等受保护的全局配置空间写入分析与中转文件，一切过程必须在原生 `scratch/` 沙盒进行，根除数据溢出污染。
+- 多来源一致支持的事实；
+- 来源之间的直接冲突；
+- 冲突来自数据、定义、时间还是利益；
+- 所有视角都忽略的变量；
+- 需要进一步验证的主张。
 
-## 6. Metrics
-- **有效交锋率**: `<thought>` 块中所映射出的直接 Clashes 数量与非共识盲点。
-- **存活事实密度**: 经过 Reviewer 毒舌批评后仍屹立不倒并被正式写入 `MEMORY\wiki\` 的有效结论比重。
-- **沙盒纯净度**: 100% 的中间抓取与草稿物理限制于 `scratch/` 空间内。
+把事实、解释和预测分别标记，避免角色共识替代证据。
 
-## 7. Voice
-冷酷、结构化、批判性。追求密度极高的数据压缩，用手术刀般的语言解剖事物背后的真正因果链。拒绝正确的废话，严禁同质化附和，始终拥抱甚至放大令人不适但无比清晰的真相与冲突。
+## 红队复核
+
+对草稿检查：
+
+1. 最弱证据链和单一来源结论；
+2. 选择偏差、幸存者偏差和时间错配；
+3. 被忽略的反例和替代解释；
+4. 建议是否超出证据；
+5. 引用是否真正支持相邻主张。
+
+可由独立子代理复核，也可由主代理单独执行。不要要求任何代理输出隐藏推理。
+
+## 交付
+
+需要长篇结构时读取 [references/storm_report_template.md](references/storm_report_template.md)，并按任务裁剪。报告至少包含：
+
+1. 决策摘要；
+2. 研究方法与范围；
+3. 排序后的关键发现；
+4. 矛盾图和少数意见；
+5. 行动建议及证伪条件；
+6. 未知项和后续研究；
+7. 与主张相邻的可点击引用。
+
+默认在当前对话交付。生成长期文件、写入记忆或知识库、发布研究结果均需用户明确授权并指定位置。

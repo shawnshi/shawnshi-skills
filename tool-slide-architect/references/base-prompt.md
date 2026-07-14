@@ -82,4 +82,4 @@ Include:
 
 ---
 
-Please use nano banana pro (`gemini-3-pro-image-preview`) to generate the slide image based on the content provided above.
+Use the currently configured image generation capability to create the slide image from the content above.

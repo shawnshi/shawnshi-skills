@@ -1,0 +1,29 @@
+{
+  "schema_version": 1,
+  "skill": "automate-github-issues",
+  "generated_at": "2026-07-14T21:01:43",
+  "skill_md": "SKILL.md",
+  "top_level_files": [
+    "package.json",
+    "README.md",
+    "SKILL.md",
+    "tsconfig.json"
+  ],
+  "top_level_directories": [
+    "assets",
+    "resources",
+    "scripts"
+  ],
+  "resource_directories": [
+    {
+      "name": "scripts",
+      "file_count": 12
+    },
+    {
+      "name": "assets",
+      "file_count": 3
+    }
+  ],
+  "declared_local_dependencies": [],
+  "missing_declared_dependencies": []
+}
