@@ -1,14 +1,15 @@
 import json
 import yfinance as yf
 import os
+import argparse
 import pandas as pd
 import numpy as np
 import warnings
 warnings.filterwarnings('ignore')
 
-def recalculate_all_weights(filepath=None):
+def recalculate_all_weights(filepath, write=False):
     if not filepath:
-        filepath = r"C:\Users\shich\.gemini\MEMORY\raw\stocks\portfolio_positions.json"
+        raise ValueError("filepath is required")
         
     with open(filepath, 'r', encoding='utf-8') as f:
         data = json.load(f)
@@ -134,10 +135,18 @@ def recalculate_all_weights(filepath=None):
             pos['target_weight'] = tw
             pos['max_weight'] = mw
 
-    with open(filepath, 'w', encoding='utf-8') as f:
-        json.dump(data, f, indent=2, ensure_ascii=False)
-        
-    print(f"MTM current_weights & Risk Parity target_weights fully recalculated and saved to {filepath}.")
+    if write:
+        with open(filepath, 'w', encoding='utf-8') as f:
+            json.dump(data, f, indent=2, ensure_ascii=False)
+        print(f"Recalculated weights saved to {filepath}.")
+    else:
+        print(json.dumps(data, indent=2, ensure_ascii=False))
+
+    return data
 
 if __name__ == '__main__':
-    recalculate_all_weights()
+    parser = argparse.ArgumentParser(description="Recalculate portfolio weights")
+    parser.add_argument('--filepath', required=True, help="Portfolio JSON file")
+    parser.add_argument('--write', action='store_true', help="Overwrite the input file after review")
+    args = parser.parse_args()
+    recalculate_all_weights(args.filepath, write=args.write)

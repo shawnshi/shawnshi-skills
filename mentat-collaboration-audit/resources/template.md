@@ -1,7 +1,7 @@
 # 📉 Mentat 量化复盘报告 (Quantitative Retro)
 
 > **审计基准日**: [YYYY-MM-DD]
-> **数据源**: `skill-usage.jsonl` & `system_retro.py`
+> **数据源**: 用户明确提供的会话记录、日志或遥测文件
 
 ## [1] 全局算力损耗 (Global Token & Friction Burn)
 - **总调用频次 (Calls)**: [X] 次

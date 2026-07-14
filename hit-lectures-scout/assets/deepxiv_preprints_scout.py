@@ -41,24 +41,14 @@ DEFAULT_WINDOW = 7          # 默认检索窗口 (天)
 FALLBACK_WINDOW = 14        # 弹性降维窗口
 
 DEFAULT_OUTPUT = os.path.join(
-    os.path.expanduser("~"),
-    ".gemini", "tmp", "playgrounds", "Response_Preprints.md",
+    os.getcwd(),
+    "Response_Preprints.md",
 )
 
 
 def build_reader() -> Reader:
     """构建 Reader 实例，优先从环境变量加载 token。"""
     token = os.environ.get("DEEPXIV_TOKEN")
-    if not token:
-        # 尝试从 ~/.env 手动解析
-        env_path = os.path.join(os.path.expanduser("~"), ".env")
-        if os.path.exists(env_path):
-            with open(env_path, "r", encoding="utf-8") as f:
-                for line in f:
-                    line = line.strip()
-                    if line.startswith("DEEPXIV_TOKEN="):
-                        token = line.split("=", 1)[1].strip()
-                        break
     if not token:
         print("⚠️  DEEPXIV_TOKEN 未配置。将尝试免认证模式（功能受限）。", file=sys.stderr)
     return Reader(token=token, timeout=45, max_retries=3)

@@ -1,4 +1,4 @@
-# Gemini TTS Skill Environment Setup
+# Google GenAI TTS Skill Environment Setup
 
 Write-Host "正在校准神经网络语音环境..." -ForegroundColor Cyan
 

@@ -73,9 +73,5 @@
   "source_confidence": {
     "high": ["HealthIT.gov", "HIMSS", "Nature Digital Medicine", "The Lancet Digital Health", "NEJM"],
     "medium": ["Hacker News", "GitHub", "V2EX", "Product Hunt"]
-  },
-  "runner_policy": {
-    "preferred_cli": "gemini ask -",
-    "fallback_mode": "heuristic"
   }
 }

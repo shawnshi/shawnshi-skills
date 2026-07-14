@@ -1,0 +1,26 @@
+{
+  "schema_version": 1,
+  "skill": "mentat-skill-creator",
+  "generated_at": "2026-07-14T21:01:44",
+  "skill_md": "SKILL.md",
+  "top_level_files": [
+    "SKILL.md"
+  ],
+  "top_level_directories": [
+    "agents"
+  ],
+  "resource_directories": [
+    {
+      "name": "agents",
+      "file_count": 1
+    }
+  ],
+  "declared_local_dependencies": [
+    {
+      "path": "agents\\openai.yaml",
+      "exists": true,
+      "resolved_path": "C:\\Users\\shich\\.codex\\skills\\mentat-skill-creator\\agents\\openai.yaml"
+    }
+  ],
+  "missing_declared_dependencies": []
+}

@@ -48,8 +48,8 @@ repro_lock:
   ars_version: "3.3.5"                     # suite version at run time
 
   model:
-    family: claude                          # provider family
-    id: claude-opus-4-7                    # model identifier (not weight hash)
+    family: provider-family                 # provider family
+    id: model-id                            # model identifier (not weight hash)
     weight_stable: false                    # always false until signed attestation exists
 
   prompts:

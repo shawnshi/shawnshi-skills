@@ -2,7 +2,7 @@
 
 此文档包含 `personal-health-analysis` 的进阶命令行工具使用方法。在需要时查阅。
 
-*注意：执行以下脚本时，请确保工作目录为 `C:\Users\shich\.gemini\skills\personal-health-analysis\` 或使用绝对路径。*
+*注意：从技能目录执行以下相对路径脚本，或向脚本传入明确的输入和输出路径。*
 
 ### 1. 长程纪律与趋势追踪 (Long-term / Heatmaps)
 ```bash
@@ -34,7 +34,7 @@ python scripts/garmin_activity_files.py analyze --file ...
 ### 5. 自定义大屏输出路径 (Custom Dashboard Output)
 ```bash
 # 手动指定保存路径
-python scripts/garmin_chart.py dashboard --days 7 --output C:\Users\shich\.gemini\memory\garmin\tactical_report.html
+python scripts/garmin_chart.py dashboard --days 7 --output <output-dir>/tactical_report.html
 ```
 
 ### 6. 临床互操作 (FHIR Export)

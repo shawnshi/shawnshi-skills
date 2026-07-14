@@ -1,136 +1,60 @@
 ---
 name: automate-github-issues
-description: Set up automated GitHub issue triage and resolution using parallel Jules coding agents
-allowed-tools:
-  - "Bash"
-  - "Read"
-  - "Write"
+description: 审计、设计或配置 GitHub Issue 分析、任务拆分、冲突检测、代理分派和受控合并流程。用户要求自动分流 GitHub Issues、搭建 Issue 到 PR 流水线、评估多代理修复方案，或明确要求配置 Jules 版本的 fleet 工作流时使用。
 ---
 
-# Automate GitHub Issues with Jules
+# GitHub Issue 自动化
 
-You are setting up a repository to automatically analyze open GitHub issues, plan implementation tasks, and dispatch parallel Jules coding agents to fix them.
+## 默认边界
 
-## What You're Setting Up
+先以只读方式检查目标仓库、现有工作流、分支保护、CI、包管理器和 Issue 规模，输出变更方案。以下操作分别需要用户明确授权：
 
-A 5-phase automated pipeline that runs via GitHub Actions (or locally):
+- 向仓库复制或修改脚本、工作流和配置；
+- 安装依赖或执行会改变锁文件的命令；
+- 创建定时任务、分派外部代理、创建分支或 PR；
+- 写入 GitHub Secrets；
+- 合并、关闭或修改 Issue 和 PR。
 
-1. **Analyze** — Fetch open issues and format as structured markdown
-2. **Plan** — A Jules session performs deep code-level triage and produces self-contained task prompts
-3. **Validate** — Verify no two tasks modify the same file (prevents merge conflicts)
-4. **Dispatch** — Spawn parallel Jules sessions, one per task
-5. **Merge** — Sequential PR merge with CI validation
+不要索取或写入密钥明文。只说明用户应在 GitHub 的密钥管理界面配置哪些变量。
 
-## Setup Steps
+## 选择执行后端
 
-### Step 1: Copy fleet scripts to the repository
+1. 优先复用仓库现有的 GitHub Actions、机器人或代理后端。
+2. 不把 Jules 当作 Codex 的默认后端。只有用户明确选择 Jules 时，才使用本技能附带的 Jules 实现。
+3. 选择 Jules 前，检查 Bun、SDK、API 权限和当前脚本接口是否兼容；不要根据旧版本示例假定兼容。
+4. 需要理解五阶段设计时读取 [resources/architecture.md](resources/architecture.md)。
 
-Copy the entire `scripts/` directory from this skill into the target repository at `scripts/fleet/`:
+## 设计流水线
 
-```
-Target structure:
-scripts/fleet/
-├── fleet-analyze.ts
-├── fleet-plan.ts
-├── fleet-dispatch.ts
-├── fleet-merge.ts
-├── types.ts
-├── prompts/
-│   ├── analyze-issues.ts
-│   └── bootstrap.ts
-└── github/
-    ├── git.ts
-    ├── issues.ts
-    ├── markdown.ts
-    └── cache-plugin.ts
-```
+按以下职责拆分，并为每个阶段定义输入、输出和失败处理：
 
-> **Important:** Preserve the directory structure exactly. The scripts use relative imports between files.
+1. 分析：获取限定范围内的开放 Issue，保留编号、标签、复现信息和依赖关系。
+2. 规划：生成可独立执行的任务说明，列出预计修改文件、测试和验收条件。
+3. 冲突检查：检测文件所有权、共享配置、数据库迁移和接口契约冲突；冲突任务不得并发。
+4. 分派：只并发执行边界独立、可回滚的任务，并限制最大并发数。
+5. 集成：先验证测试和分支保护，再由用户决定是否合并。
 
-### Step 2: Copy workflow templates
+自动合并默认关闭。即使用户授权搭建合并工作流，也要保留 CI、分支保护、失败停止和人工批准门；不要在一次笼统授权下持续合并未来 PR。
 
-Copy the workflow files from `assets/` to the repository's `.github/workflows/` directory:
+## 配置 Jules 版本
 
-- `assets/fleet-dispatch.yml` → `.github/workflows/fleet-dispatch.yml`
-- `assets/fleet-merge.yml` → `.github/workflows/fleet-merge.yml`
+用户明确授权仓库修改并选择 Jules 后：
 
-### Step 3: Create a package.json for the fleet scripts
+1. 检查 [scripts](scripts) 和 [assets](assets) 中的文件，列出将复制的路径、现有文件冲突和预期差异。
+2. 把脚本复制到仓库约定目录，把工作流模板复制到 .github/workflows；保留相对导入关系。
+3. 根据目标仓库的包管理策略生成或调整依赖配置，不覆盖现有 package.json 或锁文件。
+4. 只有用户授权安装依赖时才执行安装；否则给出待执行命令。
+5. 先进行本地或工作流 dry-run，验证 Issue 过滤、任务 JSON、冲突检测和权限范围。
+6. 把定时触发器保持为禁用或手动触发，直到用户确认频率。
 
-Create `scripts/fleet/package.json` with the required dependencies:
+## 验证与交付
 
-```json
-{
-  "name": "fleet-scripts",
-  "private": true,
-  "type": "module",
-  "dependencies": {
-    "@google/jules-sdk": "^0.1.0",
-    "octokit": "^4.1.0",
-    "find-up": "^7.0.0"
-  },
-  "devDependencies": {
-    "@types/bun": "^1.2.0"
-  }
-}
-```
+验证 YAML、脚本类型检查、最小权限、并发限制、缓存路径、CI 超时和失败恢复。报告：
 
-### Step 4: Create environment template
+- 已检查或修改的文件；
+- 所需密钥名称与最小权限；
+- dry-run 结果；
+- 尚未执行的外部动作；
+- 合并策略和残余风险。
 
-Copy `assets/.env.example` to the repository root.
-
-### Step 5: Install dependencies
-
-```bash
-cd scripts/fleet && bun install
-```
-
-### Step 6: Print next steps for the user
-
-Tell the user they need to:
-1. Add `JULES_API_KEY` as a GitHub repository secret (Settings → Secrets → Actions)
-2. `GITHUB_TOKEN` is provided automatically by GitHub Actions
-3. Customize the cron schedule in `.github/workflows/fleet-dispatch.yml` (default: daily 6am UTC)
-4. Commit all generated files
-
-## Manual Usage
-
-After setup, the user can run the pipeline locally:
-
-```bash
-cd scripts/fleet
-
-# Fetch open issues
-bun fleet-analyze.ts
-
-# Plan tasks (creates a Jules planning session)
-JULES_API_KEY=<key> bun fleet-plan.ts
-
-# Dispatch parallel agents
-JULES_API_KEY=<key> bun fleet-dispatch.ts
-
-# Merge PRs sequentially
-GITHUB_TOKEN=<token> bun fleet-merge.ts
-```
-
-## Customization
-
-### Prompt Tuning
-The analysis prompt in `scripts/fleet/prompts/analyze-issues.ts` controls how deeply issues are investigated. Users can adjust:
-- Root cause analysis depth
-- Solution implementation detail level
-- Merge conflict avoidance rules
-- File ownership constraints
-
-### Issue Filtering
-Edit `scripts/fleet/github/issues.ts` to filter issues by label, milestone, or state.
-
-## Resource References
-
-- [Architecture Overview](resources/architecture.md) — Detailed explanation of the 5-phase pipeline
-
-## Troubleshooting
-
-- **"Unable to parse git remote URL"**: Ensure the repo has a valid GitHub remote (`git remote get-url origin`)
-- **Ownership conflict errors**: Two tasks claim the same file. Adjust the task JSON or merge them manually.
-- **CI timeout during merge**: Increase `maxWaitMs` in `fleet-merge.ts` (default: 10 minutes)
-- **Bun not found**: Install Bun: `curl -fsSL https://bun.sh/install | bash`
+若任务可按互不重叠的 Issue 独立拆分且当前环境支持，可选用子代理辅助分析；主代理负责冲突检测和最终集成判断。

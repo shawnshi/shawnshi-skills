@@ -1,53 +1,41 @@
 ---
 name: tool-document-summarizer
-version: 11.0.0
-tier: action-allowed
-description: '医疗文档战略情报引擎。基于本体驱动执行语义压缩，产出战略打标摘要并回写系统属性与双链图谱。禁止用于非专业领域普通文本的泛读，或尝试一口气加载整个PDF全文。'
-triggers: ["智能提取文档摘要", "总结文档", "分析文件内容", "提取PDF核心要点"]
+description: 提取医疗信息化、商业方案、招标材料和政策文件的结构化摘要与标签。当用户要求总结专业文档、提取 PDF 核心要点、比较多份医疗材料或生成证据可追溯的文档简报时使用。
 ---
 
-# Tool Document Summarizer (Medical Intelligence x Antigravity Edition V11.0 Native)
+# Professional Document Summarizer
 
-## 1. Identity
-医疗文档战略情报引擎，作为高吞吐量的认知压缩网关，执行本体驱动的语义拆解与战略打标，负责将海量未结构化的医疗/商业文档物理降维，并锚定入全息情报网络（Vector Lake）。
+## Procedure
 
-## 2. Mission
-在不触发上下文崩溃与系统级死锁的前提下，对医疗IT、商业计划、招标卷宗等超长复杂文档执行深度榨取。输出涵盖领域、技术、政策及商业价值的多维度标签，最终将高质量情报固化于物理系统与逻辑湖泊中。
+1. 确认输入文件、目标受众、摘要长度、比较范围，以及任务是否只读。默认只读。
+2. 按文件类型使用当前可用的文档或 PDF 能力提取内容。需要确定性批处理时，可使用：
+   - `scripts/extract_text.py`
+   - `scripts/orchestrate_enhanced.py`
+3. 对长文档按章节、页码或逻辑单元分片；记录每条结论对应的文件和位置。只有分片可以独立处理且并行能力可用时，才并行提取。
+4. 按需要读取 `references/healthcare_ontology.json`，生成业务、技术、政策、合规和商业价值标签。不要把标签当作事实。
+5. 汇总核心主张、证据、约束、数字、责任主体和时间条件。对多份文档标出一致、冲突和缺失。
+6. 使用 `scripts/medical_standard_checker.py` 检查医疗术语，必要时使用 `scripts/portfolio_audit.py` 做跨文档核验。
+7. 抽样回看原文，验证数字、否定词、条件和引用位置。
+8. 清理中间产物时先运行 `python scripts/orchestrate_enhanced.py clean` 查看候选；确认后才使用 `clean --apply`。
 
-## 3. Workflow
-**[IN_ORDER]** 执行需遵循以下轨迹流，并在关键节点执行 Fable 5 Checkpoints 校验：
+## Write-back
 
-1. **意图阻断与分派 (Fable 5 Checkpoint: Intent Validation)**:
-   - 验证输入文档是否属于医疗或专业商业领域。参考 `scripts/_DIR_META.md` 了解目录架构并校验 `scripts/requirements.txt` 依赖。
-   - 评估规模，确定处理策略。
-2. **并发分片处理 (Subagent Orchestration & Sandbox Isolation)**:
-   - 针对长文档利用 `invoke_subagent` 委派多代理并发切片提取。调用 `scripts/extract_text.py` 执行基础原质提取。
-   - 或使用底层脚本核心编排：`$env:PYTHONIOENCODING="utf-8"; python "C:\Users\shich\.gemini\config\skills\tool-document-summarizer\scripts\orchestrate_enhanced.py" all --dir <DOCUMENT_DIRECTORY>`
-   - **Sandbox Isolation**: 所有中间态数据及分析草稿强制写入基于 `<conversation-id>` 隔离的原生 `scratch/` 空间。
-3. **内容提炼与战略打标 (Fable 5 Checkpoint: Semantic Quality)**:
-   - 收集切片产出，运行 `scripts/generate_summaries_enhanced.py` 合成生成 5 层级战略标签与百字情报级摘要。调用 `scripts/portfolio_audit.py` 进行跨文档组合审计。
-4. **安全沙盒校验 (Fable 5 Checkpoint: Sandbox Security)**:
-   - 利用 `view_file` 严格校验 `scratch/` 组装区或脚本输出区的 JSON（如 `document_summaries_enhanced.json`），运行 `scripts/medical_standard_checker.py` 阻断残留或违背医疗准则的脏数据。
-5. **物理回写 (Fable 5 Checkpoint: Physical IO)**:
-   - 执行安全的物理回写指令（如调用 `scripts/apply_metadata_enhanced.py` 及 `$env:PYTHONIOENCODING="utf-8"; python "...orchestrate_enhanced.py" apply`）。
-6. **图谱沉淀 (Vector Lake Registry & Fable 5 Checkpoint: Lake Sync)**:
-   - 提取情报中的高价值论断，调用 `call_mcp_tool` (`vector-lake-mcp`: `prepare_ingest_batch`) 强制异步同步至 Vector Lake，完成最终闭环。
+只有用户明确要求修改源文件元数据时，才运行 `scripts/apply_metadata_enhanced.py`。执行前展示目标文件、拟写字段和备份方案。知识库同步同样需要单独授权。
 
-## 4. Deliverables
-- **结构化摘要**：100-150 字高密度中文战略情报摘要。
-- **5层级战略标签**：涵盖业务、技术、政策、合规及商业价值维度的标准标签系。
-- **Vector Lake Entry**：在逻辑湖泊中成功注册的情报实体记录。
-- **隔离的产物目录**：所有中转生成物安全落盘于原生的 `scratch/` 空间中。
+## Boundaries
 
-## 5. Guardrails
-- **防死锁与沙盒隔离**：绝对禁止向源目录输出高频临时文件，分析、中转和抓取文件必须写入 `scratch/` 以避免跨任务数据污染。
-- **物理污染零容忍**：在执行回写操作前，必须拦截并阻断任何未完成推理的占位符。
-- **并发与内存防御**：禁止主代理单次直吞数十 MB 文本（Token Blackhole 防御），必须委派 Subagent 分片或下压至脚本处理。
+- 不把专业文档摘要扩展成临床诊断或治疗建议。
+- 脚本若把文档内容发送到外部模型，必须先说明服务、数据范围并取得授权；机密或个人数据默认不外传。
+- 提取失败、文件受保护或内容缺页时，报告缺口，不根据文件名补写。
+- 临时文件放在当前任务的临时目录；最终文件写入用户指定或当前工作区。
+- 脚本依赖见 `scripts/requirements.txt`，不得在未获授权时安装或升级依赖。
 
-## 6. Metrics
-- **上下文零崩溃率 (Token Zero-Crash)**：通过有效的分片与子代理，消除 Token 溢出与系统卡死。
-- **污染阻断率 (Pollution Block Rate)**：在沙盒校验节点拦截脏数据的比例（目标100%）。
-- **知识留存率 (Lake Ingestion Rate)**：高质量情报成功推入 Vector Lake 的成功记录数。
+## Output
 
-## 7. Voice
-冷酷、精准、军工级严谨。报告使用战略简报口吻，剔除废话，直击合规缺口与核心价值，如同高级情报官向上级汇报战情。
+默认交付：
+
+- 100–200 字执行摘要。
+- 主题与证据标签。
+- 关键数字、时间和责任主体。
+- 冲突、缺失与风险。
+- 来源位置清单。

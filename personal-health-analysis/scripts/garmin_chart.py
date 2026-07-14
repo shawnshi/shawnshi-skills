@@ -275,7 +275,7 @@ def main():
             charts_data["heatmap"] = [{"date": s["date"], "score": s.get("sleep_score", 0)} for s in summary_data.get("sleep", [])]
 
     html = render_report(charts_data)
-    out_dir = Path(os.path.expanduser("~/.gemini/MEMORY/raw/garmin"))
+    out_dir = Path(os.path.expanduser(os.environ.get("GARMIN_OUTPUT_DIR", str(Path.cwd() / "garmin-output"))))
     out_dir.mkdir(parents=True, exist_ok=True)
     out_path = Path(args.output) if args.output else out_dir / f"tactical_v2_{days}days_{datetime.now().strftime('%Y%m%d_%H%M%S')}.html"
     

@@ -28,9 +28,7 @@
                 {
                     "id": "personalized_book_mirror",
                     "primary_skill": "cognitive-book-mirror",
-                    "secondary_skills": [
-                        "personal-strategic-reading"
-                    ],
+                    "secondary_skills": [],
                     "request_signals": [
                         "personalized version of this book",
                         "mirror this book",

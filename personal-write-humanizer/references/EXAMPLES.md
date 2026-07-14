@@ -1,4 +1,4 @@
-# Humanizer-zh-pro Examples & Chain of Thought (CoT)
+# Humanizer-zh-pro Examples and Revision Notes
 
 为了让模型理解究竟什么是“人味”，以下是几个核心场景的“思维推演过程（CoT）”。在实际处理中，模型应当按此逻辑进行三级清洗。
 

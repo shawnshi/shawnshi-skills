@@ -1,0 +1,13 @@
+{
+  "schema_version": 1,
+  "skill": "tool-text-forger",
+  "generated_at": "2026-07-14T21:01:44",
+  "skill_md": "SKILL.md",
+  "top_level_files": [
+    "SKILL.md"
+  ],
+  "top_level_directories": [],
+  "resource_directories": [],
+  "declared_local_dependencies": [],
+  "missing_declared_dependencies": []
+}

@@ -33,9 +33,9 @@
 
 ## 5. Handoff Target
 - Downstream skill: `personal-diary-writer`
-- Handoff must follow [handoff_contract.md](<C:/Users/shich/.codex/skills/personal-cognitive-auditor/references/handoff_contract.md:1>)
+- Handoff must follow [handoff_contract.md](handoff_contract.md).
 
 ## 6. Validation Rules
-- Audit must pass [audit_gate.py](<C:/Users/shich/.codex/skills/personal-cognitive-auditor/scripts/audit_gate.py:1>) before hand-off.
+- Audit must pass [audit_gate.py](../scripts/audit_gate.py) before hand-off.
 - Final output must be Markdown, not JSON-only.
 - Handoff payload must be embedded in the report.

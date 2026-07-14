@@ -10,6 +10,8 @@
 **Input**: “基于上述研究结果，我们可以得出结论，环境因素在植物生长过程中起到了至关重要的作用。不仅如此，值得注意的是，土壤质量的改善对于产量的提升具有显著的意义。”
 **Expected Output**: 应该使用更直接的表达，如“研究发现，环境对植物生长影响很大。而且，土壤越好，产量自然越高。”
 
-## Model Performance Log
-*   **Claude 3.5 Sonnet**: Excellent adherence to guidelines.
-*   **Claude 3 Haiku**: Good for shorter snippets, might miss subtle "soul" injections.
+## Evaluation Criteria
+
+- The rewrite preserves every factual claim, number, entity, negation, and qualification.
+- The rewrite removes formulaic transitions without flattening the author's position.
+- The output reads naturally to a native Chinese reader and does not add new claims.

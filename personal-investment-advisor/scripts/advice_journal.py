@@ -6,16 +6,13 @@ from pathlib import Path
 from typing import Any, Dict, List
 
 
-DEFAULT_JOURNAL_PATH = Path.home() / ".gemini" / "MEMORY" / "raw" / "stocks" / "advice_journal.jsonl"
-
-
 def resolve_journal_path(path: str | None = None) -> Path:
     if path:
         return Path(path).expanduser()
     configured = os.environ.get("PIA_ADVICE_JOURNAL")
     if configured:
         return Path(configured).expanduser()
-    return DEFAULT_JOURNAL_PATH
+    raise ValueError("journal path is required; pass --journal-path or set PIA_ADVICE_JOURNAL")
 
 
 def _safe_get(data: Dict[str, Any], *keys: str, default=None):

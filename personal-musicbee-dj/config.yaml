@@ -1,14 +1,14 @@
 # MusicBee DJ runtime configuration
 
 musicbee:
-  exe_path: "C:\\Program Files (x86)\\MusicBee\\MusicBee.exe"
-  xml_path: "C:\\Users\\shich\\Music\\MusicBee\\iTunes Music Library.xml"
+  exe_path: "${MUSICBEE_EXE_PATH}"
+  xml_path: "${MUSICBEE_XML_PATH}"
 
 cache:
-  db_path: "C:\\Users\\shich\\.gemini\\tmp\\musicbee_library_cache.json"
+  db_path: "tmp/musicbee_library_cache.json"
 
 playlist:
-  output_m3u: "C:\\Users\\shich\\.gemini\\tmp\\musicbee_jit_queue.m3u"
+  output_m3u: "tmp/musicbee_jit_queue.m3u"
   max_tracks_per_session: 50
   curation:
     anchor_ratio: 0.6

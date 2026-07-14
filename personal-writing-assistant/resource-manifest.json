@@ -1,38 +1,26 @@
-﻿{
-    "schema_version":  1,
-    "skill":  "personal-writing-assistant",
-    "generated_at":  "2026-06-04T15:36:51",
-    "skill_md":  "SKILL.md",
-    "top_level_files":  [
-                            "SKILL.md"
-                        ],
-    "top_level_directories":  [
-                                  "references",
-                                  "scripts"
-                              ],
-    "resource_directories":  [
-                                 {
-                                     "name":  "scripts",
-                                     "file_count":  2
-                                 },
-                                 {
-                                     "name":  "references",
-                                     "file_count":  1
-                                 }
-                             ],
-    "declared_local_dependencies":  [
-                                        {
-                                            "path":  "references\\my_voice_samples.md",
-                                            "exists":  true,
-                                            "resolved_path":  "C:\\Users\\shich\\.gemini\\config\\skills\\personal-writing-assistant\\references\\my_voice_samples.md"
-                                        },
-                                        {
-                                            "path":  "scripts\\observe.py",
-                                            "exists":  true,
-                                            "resolved_path":  "C:\\Users\\shich\\.gemini\\config\\skills\\personal-writing-assistant\\scripts\\observe.py"
-                                        }
-                                    ],
-    "missing_declared_dependencies":  [
-
-                                      ]
+{
+  "schema_version": 1,
+  "skill": "personal-writing-assistant",
+  "generated_at": "2026-07-14T21:01:44",
+  "skill_md": "SKILL.md",
+  "top_level_files": [
+    "SKILL.md"
+  ],
+  "top_level_directories": [
+    "references"
+  ],
+  "resource_directories": [
+    {
+      "name": "references",
+      "file_count": 1
+    }
+  ],
+  "declared_local_dependencies": [
+    {
+      "path": "references\\my_voice_samples.md",
+      "exists": true,
+      "resolved_path": "C:\\Users\\shich\\.codex\\skills\\personal-writing-assistant\\references\\my_voice_samples.md"
+    }
+  ],
+  "missing_declared_dependencies": []
 }

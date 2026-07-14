@@ -1,11 +1,9 @@
 import argparse
+import os
 from datetime import datetime
 from pathlib import Path
 
 from advice_journal import load_entries, resolve_journal_path
-
-
-DEFAULT_REPORT_PATH = Path.home() / ".gemini" / "MEMORY" / "raw" / "stocks" / "strategy_calibration.md"
 
 
 def build_report(journal_path: str | None = None) -> str:
@@ -86,7 +84,7 @@ def build_report(journal_path: str | None = None) -> str:
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description="Generate a calibration report from advice journal.")
     parser.add_argument("--journal-path")
-    parser.add_argument("--output-path", default=str(DEFAULT_REPORT_PATH))
+    parser.add_argument("--output-path", default=os.environ.get("PIA_CALIBRATION_REPORT"), help="Required output path; alternatively set PIA_CALIBRATION_REPORT.")
     parser.add_argument("--sync", action="store_true", help="Sync latest prices before generating report.")
     args = parser.parse_args()
 
@@ -100,6 +98,8 @@ if __name__ == "__main__":
             sync_cmd.extend(["--journal-path", args.journal_path])
         subprocess.run(sync_cmd, check=False)
 
+    if not args.output_path:
+        parser.error("output path is required; pass --output-path or set PIA_CALIBRATION_REPORT")
     report = build_report(args.journal_path)
     output_path = Path(args.output_path).expanduser()
     output_path.parent.mkdir(parents=True, exist_ok=True)

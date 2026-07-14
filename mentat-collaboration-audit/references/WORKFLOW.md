@@ -1,30 +1,25 @@
-# Agentic Analysis Pipeline for personal-monthly-insights (V9.0)
+# Collaboration Audit Workflow
 
-This workflow remains Agent-Native. Python handles extraction, aggregation, validation, and rendering. The Agent owns interpretation.
+## 1. Establish scope
 
-## Stage 1: Data Extraction
-1. Run `python analyze_insights_v4.py --period <PERIOD> --extract-only`.
-2. Valid periods: `1d`, `7d`, `30d`, `90d`, `year`.
-3. Run `python ~/.gemini/skills/scripts/system_retro.py` to collect execution telemetry when available.
+Confirm the period, repositories or conversations in scope, available evidence, and whether the request is audit-only. Default to read-only.
 
-## Stage 2: Cognitive Reasoning
-1. Read `~/.gemini/MEMORY/raw/personal-insights/raw_metrics_<PERIOD>.json`.
-2. Identify:
-   - one dominant collaboration anti-pattern
-   - one metric-backed explanation
-   - one workflow asset
-   - one automation candidate
-   - one next-cycle action
+## 2. Collect evidence
 
-## Stage 3: Insight Serialization
-1. Save reasoning to `~/.gemini/MEMORY/raw/personal-insights/agent_audit_result.json`.
-2. Follow [SCHEMA.md](SCHEMA.md) exactly.
-3. Set `version` to `9.0`.
+Use only user-provided data, connected sources the user authorized, and files within the stated workspace. Record the source, time range, missing periods, and collection method. Do not assume a global memory directory exists.
 
-## Stage 4: Validation Gate
-1. Run `python validate_agent_audit.py ~/.gemini/MEMORY/raw/personal-insights/agent_audit_result.json`.
-2. Do not render if validation fails.
+## 3. Normalize
 
-## Stage 5: Render & Deliver
-1. Run `python analyze_insights_v4.py --period <PERIOD> --render --agent-file ~/.gemini/MEMORY/raw/personal-insights/agent_audit_result.json`.
-2. Deliver the report with a concise strategic wrap-up, not just the generated path.
+Map raw events to the fields in [SCHEMA.md](SCHEMA.md). Separate observed facts, calculated metrics, user statements, and analyst inference.
+
+## 4. Analyze
+
+Identify recurring friction, rework, waiting, failed handoffs, tool failures, and preventable context loss. Quantify frequency and impact where the evidence supports it. Preserve counterexamples.
+
+## 5. Validate
+
+Check every finding against its evidence. Remove unsupported causal claims. Mark incomplete data and alternative explanations.
+
+## 6. Deliver
+
+Return the requested report in the conversation. Write JSON, Markdown, dashboards, or long-term records only when the user explicitly requests a file or persistence location. Configuration changes and remediation are separate tasks requiring explicit authorization.

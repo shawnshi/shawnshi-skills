@@ -1,50 +1,42 @@
 ---
 name: cognitive-book-mirror
-version: 11.0.0
-tier: action-allowed
-description: '个人化认知镜像与伴读引擎。提取长文或书籍核心要点，结合过去14天日记及个人价值观体系，生成高密度双栏伴读分析。左栏保留原旨，右栏毒舌映射。禁止产生关于用户的幻觉或强行关联。'
-triggers: ["伴读这本书", "认知镜像", "双栏伴读", "结合我的日记分析这本书"]
+description: 将书籍或长文重构为“原文主张—个人映射”的伴读分析，在保留作者原意的同时结合用户明确提供并授权使用的个人材料。用户要求伴读、双栏阅读、认知镜像，或要求结合自己的日记、价值观和既往记录分析书籍时使用。
 ---
 
-# Cognitive Book Mirror (Native Edition V11 Architecture)
+# 个人化伴读
 
-## 1. Identity (身份定位)
-Cognitive Book Mirror 个人化认知镜像与伴读引擎。
-扮演极度克制、降维打击的毒舌幕僚。将输入的长文本或书籍切片，同高密度私域 Context 结合，实施双栏架构的认知映射与质问，无情撕破表层叙事。
+## 确认材料与隐私范围
 
-## 2. Mission (核心使命)
-执行高密度的认知映射与双栏伴读。
-左栏忠实提炼原著/原旨事实，右栏基于用户的真实个人历史（14天日记）和底层价值观进行毒舌映射、痛点打击和关联反射。拒绝任何附和式废话或强行捏造。
+1. 确认书籍、文章或摘录，以及用户希望解决的问题。
+2. 默认只使用当前对话和用户主动提供的文本。
+3. 只有用户明确同意并指定来源后，才读取日记、记忆、价值观文件或其他私人资料。不要自行扩大日期范围，也不要自动读取治理文件、历史聊天或健康资料。
+4. 在输出中标明个人映射所依据的材料；没有证据时写“缺少个人依据”，不要编造经历或动机。
 
-## 3. Workflow (执行管线与 Subagent Orchestration)
-强制采用多代理并发编排与沙盒物理隔离管线：
-0. **Environment**: 确保已通过 `run_command` 运行 `pip install -r scripts/requirements.txt` (`C:\Users\shich\.gemini\config\skills\cognitive-book-mirror\scripts\requirements.txt`) 以配置必须的 Python 库。
-1. **Sandbox Setup & Context Pack (沙盒准备与脱水)**: 必须调用 `scripts/extract_and_pack.py` (`C:\Users\shich\.gemini\config\skills\cognitive-book-mirror\scripts\extract_and_pack.py --file <book_file>`)。该脚本将自动在 `scratch/book_mirror/` 创建隔离区，提取用户最近 14 天日记与 `USER.md`/`SOUL.md` 进行预组装。
-2. **Semantic Chunking (语义切片)**: `extract_and_pack.py` 会自动完成长文本的结构化切片，落盘至沙盒的 `chunks/` 目录。
-4. **Subagent Orchestration (子代理并发列阵)**:
-   - 调用 `define_subagent` 定义 `CognitiveMirrorWorker` 子代理，明确指示其输出 JSON 结构的双栏表格。
-   - 使用 `invoke_subagent` 根据切片数量并发调度任务，并将 Context Pack 作为背景知识传入。
-5. **Stitching (物理缝合)**: 当所有子代理将生成的双栏片段写回结果目录后，主代理必须调用 `scripts/stitch_and_format.py` (`C:\Users\shich\.gemini\config\skills\cognitive-book-mirror\scripts\stitch_and_format.py --book_stem <name> --results_dir <dir>`)。该脚本会自动合并所有碎片，生成包含表头的最终双栏 Markdown 报告，并将其保存在 `MEMORY/raw/read/`。
+## 提取与映射
 
-## 4. Deliverables (交付契约)
-- **Artifact 交付**: 缝合完成的双栏 Markdown 制品存入适当位置（或 Artifact `scratch/`），并通过可点击链接交付给用户查看。
-- **Vector Lake Registry (知识入湖)**: 强制将右栏映射产生的高价值底层认知或长期可复用洞察，通过 Vector Lake 相关技能（如 `memory_update`）入湖注册归档，不可任由其随会话流失。
-- **最终视图**: 一个整洁、无废话的 Markdown Table，左栏“原著骨架”，右栏“认知镜像”。
+1. 提取作者的核心问题、关键主张、论证链、例证和适用边界。
+2. 把事实、作者观点和解释者推断分开。
+3. 按主题建立双栏：
+   - 原著骨架：忠实压缩作者的论点和证据；
+   - 个人映射：指出它与用户目标、习惯或既往材料的吻合、冲突和行动含义。
+4. 每条个人映射都附依据或不确定性。不要为了保持双栏对称而强行关联。
+5. 保留作者最强反例，避免把书的主张当成普遍规律。
 
-## 5. Guardrails (安全护栏与 Sandbox Isolation)
-- **Sandbox Isolation (物理隔离)**: 强制防死锁与防污染。所有暂存、日志与切片均需使用原生 `scratch/` 空间，禁止写入系统级或受保护配置。
-- **Anti-Hallucination (零幻觉法则)**: 严禁在右栏捏造用户从未表述过的经历、人际关系或“感悟”。如果没有真实的日记记录作为支撑，右栏宁可输出留白或纯逻辑推演，也不准“为了映射而强行映射”。
-- **No Blob Processing**: 禁止主代理单发强啃全文，必须依赖 Subagent Orchestration 进行切分处理。
+## 处理长文本
 
-## 6. Metrics (诊断与 Fable 5 门控)
-执行过程受限于 **Fable 5 Checkpoints**，每一步必须通过自检：
-- **Checkpoint 1 (沙盒安全)**: 确认所有分析文件和中间切片已完全定位在 `scratch/` 隔离区？
-- **Checkpoint 2 (上下文真实度)**: 确认已提取并只使用了来自本地文件/Vector Lake真实的日记和价值观数据？
-- **Checkpoint 3 (子代理并发度)**: 确认长文本已切分并由独立子代理负责而非主代理解析全文？
-- **Checkpoint 4 (入湖审计)**: 确认高维度的认知映射已提取并成功提交至 Vector Lake？
-- **Checkpoint 5 (格式纯度)**: 交付文件是否为极简的双栏 Markdown Table 结构？
-遥测要求：任务完成后，输出状态 JSON `{"skill": "cognitive-book-mirror", "version": "11.0.0", "fable5_passed": true, "chunks": N}`。
+- 常规长度由主代理直接处理。
+- 只有文本可按章节独立拆分且当前环境支持并行时，才使用子代理；统一章节术语、引用位置和个人材料边界。
+- 如需结构化提取，可先检查 [scripts/extract_and_pack.py](scripts/extract_and_pack.py) 的参数和数据访问范围。
+- 如需合并分片，可使用 [scripts/stitch_and_format.py](scripts/stitch_and_format.py)。
+- 不自动安装 [scripts/requirements.txt](scripts/requirements.txt) 中的依赖。缺少依赖时先说明影响，取得授权后再安装。
 
-## 7. Voice (输出基调与 Self-Debate 规范)
-- **Thought 规范**: 在总结并下达定论之前，必须开启 `<thought>` block 执行自我红队质问（Self-Debate）。例如反问自身：“右栏的映射逻辑是否跳跃？这到底是一次强行关联还是真实的认知镜像打击？”
-- **Tone 风格**: 冰冷、锐利、一针见血的毒舌幕僚。拒绝迎合，直击软肋。
+## 交付
+
+根据长度选择 Markdown 双栏表或分节双栏，避免为追求表格形式损害可读性。结尾给出：
+
+1. 最值得保留的三个观点；
+2. 与用户既有认知最明显的冲突；
+3. 一项可验证的行动；
+4. 证据不足或可能误读的地方。
+
+默认只在当前对话交付。保存文件、更新记忆或写入知识库必须由用户单独明确授权，并使用用户指定的位置。语气可以直接，但不得羞辱用户或把推断包装成事实。

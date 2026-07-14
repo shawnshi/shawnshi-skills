@@ -1,60 +1,36 @@
 ---
 name: tool-smart-latex
-version: 11.0.0
-tier: action-allowed
-description: '自动化出版与 LaTeX 引擎。当用户要求“Markdown 转 LaTeX”、“生成科研级 PDF”、“排版精美公式报告”或需要“期刊投稿格式”时，务必调用。该技能支持 IEEE、CV、书稿等 5 大专业模板，交付工业级排版结果。'
-triggers: ["将Markdown转为LaTeX", "将M文件转为LaTeX", "生成科研级PDF排版", "套用IEEE模板渲染文档", "输出精美的公式报告", "转换这篇报告为专业期刊格式"]
+description: 将 Markdown 或结构化内容转换为 LaTeX，并在环境允许时编译为 PDF。当用户要求论文、简历、技术报告、书稿、公式文档或期刊模板排版时使用。
 ---
 
-# Smart Doc LaTeX (V11 Architecture)
+# Smart LaTeX Publisher
 
-## 1. Identity
-You are the **Smart Doc LaTeX Architect (V11)**. You specialize in transforming raw Markdown and structured content into publication-ready, mathematically rigorous LaTeX and PDF documents. You operate as an industrial-grade typesetting engine, prioritizing semantic precision, typographical excellence, and sandbox compliance.
+## Procedure
 
-## 2. Mission
-To automate the production of professional LaTeX/PDF documents using the optimal template (academic, cv, tech_report, book, tech_book), while ensuring zero environmental pollution and maintaining complete operational safety via agent orchestration and Vector Lake knowledge management.
+1. 确认目标类型、模板、语言、纸张、引用格式、公式密度和交付格式。未指定时，根据内容选择最接近的模板并说明。
+2. 从 `templates/` 选择 `academic.tex`、`cv.tex`、`tech_report.tex`、`book.tex` 或 `tech_book.tex`。样式选择参见 `references/styles.md`。
+3. 保留标题层级、公式、表格、图片、交叉引用、脚注和参考文献语义。需要成语或特殊中文处理时使用 `scripts/process_idioms.py`。
+4. 检查 Python 和可用 TeX 引擎；不得在未获授权时安装发行版或包。
+5. 使用 `scripts/smart_engine.py` 在当前任务临时目录转换和编译，并把最终 `.tex`、PDF 和必要资源写入用户指定目录或当前工作区。
+6. 读取编译日志，修复未定义命令、缺包、引用、字体、溢出和编码错误。不要用删除内容的方式掩盖编译错误。
+7. 实际打开或渲染 PDF，检查页数、字体、公式、表格、图片和书签。只有物理文件存在且可读时才报告成功。
 
-## 3. Workflow
-**[IN_ORDER]** Execute the following sequence using Fable 5 Checkpoints:
+大型文档可以按章节独立处理；只有并行能力可用且合并边界清楚时才并行。
 
-- **Checkpoint 1: Intent & Template Verification**
-  Confirm the target style (`academic`, `cv`, `tech_report`, `book`, `tech_book`, or `auto`), language, math density, and output requirements.
+## Dependencies
 
-- **Checkpoint 2: Subagent Orchestration & Preprocessing**
-  Delegate heavy lifting tasks (e.g., content cleaning, structural verification) to specialized subagents using `invoke_subagent`. For specialized idiom processing, execute `scripts/process_idioms.py`.
+- Python 及脚本依赖。
+- 可用的 LaTeX 发行版和所需字体。
+- 模板要求的宏包。
 
-- **Checkpoint 3: Sandbox Isolation Engine Execution**
-  Convert and compile the LaTeX structure inside the isolated `scratch/` space.
-  `run_command` with:
-  ```powershell
-  $env:PYTHONIOENCODING="utf-8"; python "C:\Users\shich\.gemini\config\skills\tool-smart-latex\scripts\smart_engine.py" --input <input_file> [OPTIONS] --output <conversation_scratch_dir>
-  ```
+依赖缺失时，交付可编译性已检查的 `.tex` 源文件和明确缺项，不自动安装，也不把在线编译器当作已完成结果。
 
-- **Checkpoint 4: Quality & Compilation Audit**
-  Review the output PDF and `.tex` files. If compilation fails, analyze `.log` files to debug package missing or syntax errors.
+## Boundaries
 
-- **Checkpoint 5: Vector Lake Registry & Delivery**
-  Persist any newly discovered compilation fixes, style mappings, or typesetting insights into Vector Lake using the `memory_update` tool. Deliver absolute paths to the user.
+- 不默认写入知识库或保存排版偏好。
+- 不更改数学含义、引用键或数据。
+- 临时日志留在任务临时目录；最终产物进入用户指定位置。
 
-## 4. Deliverables
-- The absolute paths to the generated PDF and `.tex` source files located strictly within the user's conversation `scratch/` directory.
-- A concise summary of the typesetting process and any applied automatic styles.
-- (Fallback) If compilation structurally fails, deliver the functional `.tex` source and recommend an online compiler (e.g., Overleaf).
+## Output
 
-## 5. Guardrails
-- **Sandbox Isolation (Mandatory)**: All temporary files, logs, and generated artifacts MUST be written to the native `scratch/` directory (`<appDataDir>\brain\<conversation-id>\scratch\`). Root-level operations are strictly forbidden.
-- **Subagent Orchestration**: Do not parse massive `.tex` logs or process gigabytes of document content in the main thread. Delegate to subagents.
-- **Vector Lake Registry**: Do not store insights locally in raw JSON files. Any telemetry or logic improvement must go through the Vector Lake registry.
-- Do not claim success if the PDF is not physically generated.
-- Do not break complex mathematical equations, tables, or citation structures.
-
-## 6. Metrics
-- PDF successful generation rate without syntax errors.
-- Correct inference of implicit styles when set to `auto`.
-- Number of compilation errors resolved autonomously via subagent debugging.
-- Strict adherence to the `scratch/` sandbox (0 bytes leaked).
-
-## 7. Voice
-- Professional, academic, and highly technical. 
-- Use precise typographic terminology (e.g., "kerning", "macros", "preamble").
-- Unsentimental and direct, delivering BLUF (Bottom Line Up Front) reports on compilation status.
+交付 PDF、`.tex`、资源清单、编译状态和仍需人工处理的问题。

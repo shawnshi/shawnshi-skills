@@ -262,6 +262,10 @@ def save_dashboard():
     parser.add_argument("--stock", required=True, help="Stock name or symbol")
     parser.add_argument("--content", help="JSON content string. If not provided, reads from stdin.")
     parser.add_argument("--file", help="Path to a JSON file containing the dashboard data.")
+    parser.add_argument("--output-dir", help="Required archive directory; alternatively set PIA_DASHBOARD_DIR.")
+    parser.add_argument("--append-journal", action="store_true", help="Append an advice journal entry after saving.")
+    parser.add_argument("--journal-path", help="Journal path; alternatively set PIA_ADVICE_JOURNAL.")
+    parser.add_argument("--delete-input", action="store_true", help="Delete --file only after a successful save.")
     args = parser.parse_args()
 
     content = args.content
@@ -302,17 +306,21 @@ def save_dashboard():
     safe_stock_name = args.stock.replace(" ", "_").replace("/", "_")
     filename = f"{safe_stock_name}_{date_str}.md"
 
-    root_dir = Path(os.environ.get("PIA_DASHBOARD_DIR", str(Path.home() / ".gemini" / "MEMORY" / "raw" / "stocks")))
+    configured_output = args.output_dir or os.environ.get("PIA_DASHBOARD_DIR")
+    if not configured_output:
+        parser.error("output directory is required; pass --output-dir or set PIA_DASHBOARD_DIR")
+    root_dir = Path(configured_output).expanduser()
     base_dir = root_dir / safe_stock_name
     base_dir.mkdir(parents=True, exist_ok=True)
     filepath = base_dir / filename
     filepath.write_text(md_content, encoding="utf-8")
-    try:
-        append_entry(parsed, archive_path=str(filepath))
-    except Exception as exc:
-        safe_print(f"Warning: advice journal append failed: {exc}")
+    if args.append_journal:
+        try:
+            append_entry(parsed, archive_path=str(filepath), journal_path=args.journal_path)
+        except Exception as exc:
+            safe_print(f"Warning: advice journal append failed: {exc}")
     
-    if args.file and os.path.exists(args.file):
+    if args.delete_input and args.file and os.path.exists(args.file):
         try:
             os.remove(args.file)
             safe_print(f"Cleaned up temporary JSON draft: {args.file}")

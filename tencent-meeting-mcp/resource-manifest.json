@@ -1,44 +1,52 @@
-﻿{
-    "schema_version":  1,
-    "skill":  "tencent-meeting-mcp",
-    "generated_at":  "2026-06-04T15:36:51",
-    "skill_md":  "SKILL.md",
-    "top_level_files":  [
-                            "config.json",
-                            "SKILL.md"
-                        ],
-    "top_level_directories":  [
-                                  "references",
-                                  "scripts"
-                              ],
-    "resource_directories":  [
-                                 {
-                                     "name":  "scripts",
-                                     "file_count":  3
-                                 },
-                                 {
-                                     "name":  "references",
-                                     "file_count":  3
-                                 }
-                             ],
-    "declared_local_dependencies":  [
-                                        {
-                                            "path":  "references\\api_references.md",
-                                            "exists":  true,
-                                            "resolved_path":  "C:\\Users\\shich\\.gemini\\config\\skills\\tencent-meeting-mcp\\references\\api_references.md"
-                                        },
-                                        {
-                                            "path":  "references\\error_dictionary.md",
-                                            "exists":  true,
-                                            "resolved_path":  "C:\\Users\\shich\\.gemini\\config\\skills\\tencent-meeting-mcp\\references\\error_dictionary.md"
-                                        },
-                                        {
-                                            "path":  "references\\version_management.md",
-                                            "exists":  true,
-                                            "resolved_path":  "C:\\Users\\shich\\.gemini\\config\\skills\\tencent-meeting-mcp\\references\\version_management.md"
-                                        }
-                                    ],
-    "missing_declared_dependencies":  [
-
-                                      ]
+{
+  "schema_version": 1,
+  "skill": "tencent-meeting-mcp",
+  "generated_at": "2026-07-14T21:01:44",
+  "skill_md": "SKILL.md",
+  "top_level_files": [
+    "config.json",
+    "SKILL.md"
+  ],
+  "top_level_directories": [
+    "references",
+    "scripts"
+  ],
+  "resource_directories": [
+    {
+      "name": "scripts",
+      "file_count": 3
+    },
+    {
+      "name": "references",
+      "file_count": 3
+    }
+  ],
+  "declared_local_dependencies": [
+    {
+      "path": "scripts\\mcp_proxy.py",
+      "exists": true,
+      "resolved_path": "C:\\Users\\shich\\.codex\\skills\\tencent-meeting-mcp\\scripts\\mcp_proxy.py"
+    },
+    {
+      "path": "scripts\\tencent_meeting.py",
+      "exists": true,
+      "resolved_path": "C:\\Users\\shich\\.codex\\skills\\tencent-meeting-mcp\\scripts\\tencent_meeting.py"
+    },
+    {
+      "path": "references\\version_management.md",
+      "exists": true,
+      "resolved_path": "C:\\Users\\shich\\.codex\\skills\\tencent-meeting-mcp\\references\\version_management.md"
+    },
+    {
+      "path": "references\\api_references.md",
+      "exists": true,
+      "resolved_path": "C:\\Users\\shich\\.codex\\skills\\tencent-meeting-mcp\\references\\api_references.md"
+    },
+    {
+      "path": "references\\error_dictionary.md",
+      "exists": true,
+      "resolved_path": "C:\\Users\\shich\\.codex\\skills\\tencent-meeting-mcp\\references\\error_dictionary.md"
+    }
+  ],
+  "missing_declared_dependencies": []
 }

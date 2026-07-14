@@ -1,51 +1,35 @@
 ---
 name: tool-concept-synthesis
-version: 11.0.0
-tier: action-allowed
-description: '跨越孤立实体的战略宏观分析。当用户要求“概念裂变”、“全景缝合”、“跨界联系”或“绘制这张全景图”时使用。'
-triggers: ["概念裂变", "全景缝合", "跨界联系", "绘制全景图"]
+description: 跨来源梳理概念、实体与关系，形成有证据支撑的体系图和战略长文。当用户要求概念裂变、跨界联系、全景缝合或体系化解释多个碎片信息时使用。
 ---
 
-# 1. Identity (身份)
-- **Role**: 战略宏观分析中枢 (Strategic Synthesis Nexus)。
-- **Core Intent**: 跨越孤立实体，执行底层图谱算力驱动的宏观拓扑重组与概念裂变。
+# Concept Synthesis
 
-# 2. Mission (使命)
-将数十个碎片化的实体页面，通过 Vector Lake 图谱算力提取证据链，借助子代理进行逻辑黑板碰撞，提炼出跨界联系与暗线，并最终将提纯的战略知识强制回写至 Vector Lake，输出具备高度执行力与洞察深度的全景体系长文。
+## Procedure
 
-# 3. Workflow (工作流)
-**Fable 5 Checkpoints 贯穿执行流：**
+1. 明确中心问题、时间范围、受众和需要支持的决策。输入不足但不影响主结论时，标注假设并继续。
+2. 从用户提供的材料、当前工作区和可用知识源收集证据。只有任务需要最新事实时才联网；如已连接 Vector Lake，可把它作为来源之一，不把它当作唯一来源。
+3. 建立实体清单，记录每个实体的定义、来源、时间和可信度。
+4. 区分因果、相关、演化、竞争、依赖和类比关系。没有证据支持时，不把时间重合写成因果。
+5. 对关键关系执行反例检查：寻找缺失实体、相反证据、边界条件和替代解释。
+6. 合成最小可用结构，再根据用户要求扩展为全景长文、关系矩阵或图表说明。
+7. 逐项核对结论是否可追溯到来源，并把推断明确标为推断。
 
-*   **[Checkpoint 1: Intention Parse]**
-    *   接收用户的宏观议题（如“医疗大模型的破局点”、“卫宁健康去年的打法规律”）。
-    *   严禁大模型自己盲搜文本，必须明确将检索意图下沉给底层图谱。
-*   **[Checkpoint 2: Topology Extraction & Subagent Delegation]**
-    *   **Subagent Orchestration**: 调用 `invoke_subagent` 启动至少一个 `Graph Researcher` 子代理。
-    *   子代理负责通过 `call_mcp_tool` 调度 Vector Lake 服务器 (如 `query_logic_lake` 或 `search_vector_lake`) 提取底层实体拓扑、权重边及包含来源出处的 Claims。
-*   **[Checkpoint 3: Logic Collision (Sandbox Isolated)]**
-    *   在子代理收集到数据后，主代理将提取的实体 (`[[Entity A]]`, `[[Entity B]]`) 放置于逻辑黑板上进行因果、演化、竞争反应。
-    *   **Sandbox Isolation**: 碰撞过程中的中间分析、草稿、抓取等过渡文件，必须写入基于当前会话 ID 物理隔离的原生 `brain/<conversation-id>/scratch/` 空间，禁止写入受保护目录。
-*   **[Checkpoint 4: Canon Synthesis]**
-    *   根据碰撞结果，结合 `pai/USER.md` 的冷酷高密文风，渲染出全景长文结构。
-*   **[Checkpoint 5: Vector Lake Registry & Final Delivery]**
-    *   **Vector Lake Registry**: 提纯出的宏观规律与新体系概念（Compiled Truth），必须通过 Vector Lake MCP 工具回写注册到底层知识图谱。
-    *   完成长文交付件落盘。
+仅当问题可拆为独立来源、地区或时期，且并行能力可用时，才使用子代理；必须由主线统一证据口径和最终结论。
 
-# 4. Deliverables (交付物)
-1.  **体系全景长文 (The Canon)**: 高度密集的宏观结论长文，大量运用 `[[ ]]` 图谱链接，保存为具体的 Markdown 文件。
-2.  **图谱注册状态**: 确认新的宏观概念和关系已成功回写 Vector Lake。
+## Boundaries
 
-# 5. Guardrails (防线)
-- **[绝对禁令 1] Sandbox Violation**: 彻底根除跨任务污染，严禁向受保护的配置或插件目录执行高频中间写入，所有过渡内容锁死在 `scratch/`。
-- **[绝对禁令 2] Data Starvation**: 若 Vector Lake 召回率极低，拒绝强行缝合，必须报告“知识库厚度不足”，建议转行情报收集，禁止靠幻觉造假。
-- **[绝对禁令 3] Forced Causality**: 实体间若无逻辑因果，只因时间重叠，必须在报告中诚实指出“表面相关实则独立”，禁止强行造词关联。
-- **[绝对禁令 4] Blind Text Search**: 绝对禁止使用纯文本 `grep_search` 盲搜来试图构建宏观拓扑。
+- 不因知识库召回不足而停止普通文件或网页检索。
+- 不制造术语来掩盖证据空白。
+- 不默认写入知识库、MEMORY 或文件。只有用户明确要求保存或同步时才执行。
+- 涉及当前事实、价格、政策或人物时，核验时间并提供来源。
 
-# 6. Metrics (指标)
-- **拓扑密度 (Topology Density)**: 生成的洞察长文中，底层图谱链接 `[[ ]]` 的覆盖度与穿透力。
-- **知识留存 (Knowledge Retention)**: 成功提炼并注册进 Vector Lake 的新型暗线关系与实体的数量。
+## Output
 
-# 7. Voice (声音风格)
-- 极冷酷、极具密度的战略推演。
-- 绝不出现附和性赞美与空洞无物的大话。
-- 每一句结论背后都有强关联底层 Claims 支撑。
+交付以下内容中的用户所需部分：
+
+- 核心命题与适用边界。
+- 实体—关系矩阵。
+- 关键证据与反证。
+- 可行动结论。
+- 未知项与下一步验证建议。

@@ -674,19 +674,20 @@ def main():
             import os
             from pathlib import Path
             try:
-                base_stocks_dir = Path(os.environ.get("PIA_DASHBOARD_DIR", str(Path.home() / ".gemini" / "MEMORY" / "raw" / "stocks")))
-                safe_sym = symbol.replace(" ", "_").replace("/", "_")
-                thesis_path = base_stocks_dir / safe_sym / f"{safe_sym}_thesis.md"
-                if thesis_path.exists():
-                    result_entry["thesis_context"] = thesis_path.read_text(encoding="utf-8")
-                    result_entry["data_sources"]["thesis"] = str(thesis_path)
-                else:
-                    legacy_path = base_stocks_dir / f"{safe_sym}_thesis.md"
-                    if legacy_path.exists():
-                        result_entry["thesis_context"] = legacy_path.read_text(encoding="utf-8")
-                        result_entry["data_sources"]["thesis"] = str(legacy_path)
+                configured_dashboard_dir = os.environ.get("PIA_DASHBOARD_DIR")
+                result_entry["thesis_context"] = None
+                if configured_dashboard_dir:
+                    base_stocks_dir = Path(configured_dashboard_dir).expanduser()
+                    safe_sym = symbol.replace(" ", "_").replace("/", "_")
+                    thesis_path = base_stocks_dir / safe_sym / f"{safe_sym}_thesis.md"
+                    if thesis_path.exists():
+                        result_entry["thesis_context"] = thesis_path.read_text(encoding="utf-8")
+                        result_entry["data_sources"]["thesis"] = str(thesis_path)
                     else:
-                        result_entry["thesis_context"] = None
+                        legacy_path = base_stocks_dir / f"{safe_sym}_thesis.md"
+                        if legacy_path.exists():
+                            result_entry["thesis_context"] = legacy_path.read_text(encoding="utf-8")
+                            result_entry["data_sources"]["thesis"] = str(legacy_path)
             except Exception as e:
                 result_entry["thesis_context"] = f"Error loading thesis: {e}"
 

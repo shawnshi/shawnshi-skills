@@ -32,7 +32,7 @@
 ## 输出约束
 - 禁止输出多余废话。
 - 每篇论文必须包含: arXiv ID (含链接)、Citations、Categories、Published、TLDR、Keywords。
-- 输出路径: `~/.gemini/tmp/playgrounds/Response_Preprints.md`
+- 输出路径: 用户指定目录或当前任务的输出目录。
 
 ## 调用方式
 ```bash

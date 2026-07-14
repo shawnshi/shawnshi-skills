@@ -9,6 +9,7 @@ Exit 1 on validation failure.
 from __future__ import annotations
 
 import argparse
+import datetime as dt
 import json
 import sys
 from pathlib import Path
@@ -16,6 +17,16 @@ from pathlib import Path
 import jsonschema
 
 SCHEMA_PATH = Path(__file__).resolve().parent.parent / "shared" / "compliance_report.schema.json"
+
+FORMAT_CHECKER = jsonschema.FormatChecker()
+
+
+@FORMAT_CHECKER.checks("date-time", raises=(TypeError, ValueError))
+def is_rfc3339_datetime(value: object) -> bool:
+    if not isinstance(value, str) or "T" not in value:
+        return False
+    parsed = dt.datetime.fromisoformat(value.replace("Z", "+00:00"))
+    return parsed.tzinfo is not None
 
 
 def load_schema() -> dict:
@@ -26,7 +37,7 @@ def validate(report: dict) -> list[str]:
     schema = load_schema()
     validator = jsonschema.Draft202012Validator(
         schema,
-        format_checker=jsonschema.Draft202012Validator.FORMAT_CHECKER,
+        format_checker=FORMAT_CHECKER,
     )
     return [f"{list(e.absolute_path)}: {e.message}" for e in validator.iter_errors(report)]
 

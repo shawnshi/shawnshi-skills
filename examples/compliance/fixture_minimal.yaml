@@ -1,0 +1,23 @@
+mode: primary_research
+stage: "4.5"
+generated_at: "2026-07-14T10:00:00+08:00"
+prisma_trAIce: null
+raise:
+  mode: principles_only
+  principles:
+    human_oversight: pass
+    transparency: warn
+    reproducibility: pass
+    fit_for_purpose: pass
+  principle_evidence:
+    human_oversight:
+      - "review checkpoint"
+    transparency: []
+    reproducibility:
+      - "configuration record"
+    fit_for_purpose:
+      - "scope statement"
+  block_decision: warn
+overall_decision: warn
+user_action_required: true
+evidence: []

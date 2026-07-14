@@ -4,7 +4,11 @@ import json
 import os
 from pathlib import Path
 
-DEFAULT_POSITIONS_FILE = Path.home() / ".gemini" / "MEMORY" / "raw" / "stocks" / "portfolio_positions.json"
+def resolve_positions_file(path: str | None) -> Path:
+    configured = path or os.environ.get("PIA_POSITIONS_FILE")
+    if not configured:
+        raise ValueError("positions file is required; pass --positions-file or set PIA_POSITIONS_FILE")
+    return Path(configured).expanduser()
 
 def load_json(path):
     with open(path, 'r', encoding='utf-8') as f:
@@ -18,7 +22,7 @@ def normalize_symbol(symbol: str) -> str:
     return (symbol or "").strip().upper()
 
 def sync_broker_data(csv_path: str, positions_file: str = None, cash_cny: float = None, cash_usd: float = None):
-    pos_file = Path(positions_file).expanduser() if positions_file else DEFAULT_POSITIONS_FILE
+    pos_file = resolve_positions_file(positions_file)
     data = load_json(pos_file)
     positions = data.get("positions", [])
     
@@ -89,7 +93,10 @@ if __name__ == "__main__":
     parser.add_argument("--csv", help="Path to broker statement CSV")
     parser.add_argument("--cash-cny", type=float, help="Update CNY cash balance")
     parser.add_argument("--cash-usd", type=float, help="Update USD cash balance")
-    parser.add_argument("--positions-file", help="Override positions JSON path")
+    parser.add_argument("--positions-file", help="Positions JSON path; alternatively set PIA_POSITIONS_FILE")
     args = parser.parse_args()
     
-    sync_broker_data(args.csv, args.positions_file, args.cash_cny, args.cash_usd)
+    try:
+        sync_broker_data(args.csv, args.positions_file, args.cash_cny, args.cash_usd)
+    except ValueError as exc:
+        parser.error(str(exc))

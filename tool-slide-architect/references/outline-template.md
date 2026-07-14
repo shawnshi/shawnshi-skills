@@ -1,4 +1,4 @@
-# Outline Template (V11 Blueprint Contract)
+# Outline Template
 
 Use this file as the single schema for `outline.md`.
 

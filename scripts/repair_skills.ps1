@@ -1,6 +1,6 @@
-[CmdletBinding(SupportsShouldProcess)]
+[CmdletBinding()]
 param(
-    [ValidateSet('Audit', 'FixFrontmatter', 'Report', 'Gate')]
+    [ValidateSet('Audit', 'Report', 'Gate')]
     [string]$Mode = 'Audit',
 
     [string]$Root = '',
@@ -18,108 +18,108 @@ Set-StrictMode -Version Latest
 $ErrorActionPreference = 'Stop'
 
 if ([string]::IsNullOrWhiteSpace($Root)) {
-    if (-not [string]::IsNullOrWhiteSpace($PSScriptRoot)) {
-        $Root = Split-Path -Parent $PSScriptRoot
-    } elseif (-not [string]::IsNullOrWhiteSpace($PSCommandPath)) {
-        $Root = Split-Path -Parent (Split-Path -Parent $PSCommandPath)
-    } else {
-        throw 'Unable to resolve repo root. Pass -Root explicitly.'
-    }
+    $Root = Split-Path -Parent $PSScriptRoot
 }
+$Root = (Resolve-Path -LiteralPath $Root).Path
 
 if ([string]::IsNullOrWhiteSpace($ReportDir)) {
     $ReportDir = Join-Path $Root 'reports'
 }
 
-$UnsupportedToolTokens = @(
-    'ask_user',
-    'replace',
-    'google_web_search',
-    'web_fetch',
-    'generalist',
-    'ipython',
-    'datasource'
-)
-
-$ForeignRuntimePatterns = @(
-    '/app/.kimi',
-    'C:\Users\shich\.gemini\extensions\vector-lake'
-)
-
-$LocalReferencePattern = '(?<path>(?<![A-Za-z])(?:(?:scripts|references|assets|examples|prompts|agents)[\\/][^\s`"''<>]+|[A-Za-z0-9._-]+[\\/](?:SKILL\.md|(?:scripts|references|assets|examples|prompts|agents)[\\/][^\s`"''<>]+)))'
-
-$StandardSectionPatterns = [ordered]@{
-    WhenToUse      = @("## When to Use")
-    Workflow       = @("## Workflow")
-    Resources      = @("## Resources")
-    FailureModes   = @("## Failure Modes")
-    OutputContract = @("## Output Contract")
-    Telemetry      = @("## Telemetry")
+$DeprecatedPatterns = [ordered]@{
+    invoke_subagent = '(?i)\binvoke_subagent\b'
+    call_mcp_tool = '(?i)\bcall_mcp_tool\b'
+    run_command = '(?i)\brun_command\b'
+    write_to_file = '(?i)\bwrite_to_file\b'
+    view_file = '(?i)\bview_file\b'
+    ask_question = '(?i)\bask_question\b'
+    generate_image = '(?i)\bgenerate_image\b'
+    mcp_vector_lake = '(?i)\bmcp_vector-lake\b'
+    vector_lake_mcp = '(?i)\bvector-lake-mcp\b'
+    request_feedback = '(?i)RequestFeedback\s*='
 }
 
-$TriggerOwnershipMatrixRelativePath = 'shared\trigger-ownership-matrix.json'
-$KnownFileSuffixPattern = '(?<stable>.*?(?:SKILL\.md|\.md|\.json|\.py|\.ps1|\.sh|\.csx|\.cs|\.svg|\.png|\.jpg|\.jpeg|\.gif|\.pptx|\.docx|\.pdf|\.txt|\.yaml|\.yml|\.toml|\.csv|\.tsv|\.html|\.css|\.js|\.ts|\.tsx|\.jsx))'
+$ForeignRuntimePatterns = [ordered]@{
+    gemini_path = '(?i)(?:[A-Z]:\\Users\\[^\s`"''<>]+\\\.gemini|\.gemini[\\/])'
+    kimi_path = '(?i)(?:/app/\.kimi|\.kimi[\\/])'
+    app_data_macro = '(?i)<appDataDir>'
+    conversation_brain = '(?i)brain[\\/]<(?:conversation-)?id>'
+    file_uri = '(?i)file:///'
+    antigravity = '(?i)Antigravity'
+    v11_runtime = '(?i)\bV11(?:\.\d+)?\b'
+    ir_native = '(?i)IR Native'
+    fable_runtime = '(?i)Fable\s*5'
+}
 
-function Normalize-LocalReference {
+$ForbiddenReasoningPatterns = [ordered]@{
+    thought_xml = '(?i)<\/?thought>'
+    thinking_xml = '(?i)<\/?thinking>'
+    reasoning_draft = '(?i)(\u601D\u7EF4\u7A3F|\u63A8\u7406\u8349\u7A3F|\u5185\u90E8\u63A8\u7406|chain[- ]of[- ]thought)'
+}
+
+$HardcodedModelPatterns = [ordered]@{
+    openai_version = '(?i)\bgpt-[0-9][A-Za-z0-9._-]*'
+    gemini_version = '(?i)\bgemini-[0-9][A-Za-z0-9._-]*'
+    claude_version = '(?i)\bclaude-(?:[0-9]|opus|sonnet|haiku)[A-Za-z0-9._-]*'
+}
+
+$MandatorySubagentPattern = '(?im)^\s*(?:[-*]\s*)?(?:\u5FC5\u987B|\u5F3A\u5236|\u52A1\u5FC5|must|required)[^\r\n]{0,80}(?:\u5B50\u4EE3\u7406|subagent)'
+$MandatoryPersistencePattern = '(?im)^\s*(?:[-*]\s*)?(?:\u5FC5\u987B|\u5F3A\u5236|\u52A1\u5FC5|must|required)[^\r\n]{0,100}(?:Vector Lake|\u5165\u6E56|MEMORY|\u77E5\u8BC6\u5E93|\u6301\u4E45\u5316|persist)'
+
+function Get-SkillDirectories {
+    Get-ChildItem -LiteralPath $Root -Directory |
+        Where-Object {
+            $_.Name -notin @('.system', 'scripts', 'shared', 'reports') -and
+            (Test-Path -LiteralPath (Join-Path $_.FullName 'SKILL.md'))
+        } |
+        Where-Object {
+            (-not $IncludeSkills -or $_.Name -in $IncludeSkills) -and
+            $_.Name -notin $ExcludeSkills
+        } |
+        Sort-Object Name
+}
+
+function Get-PatternHits {
     param(
-        [string]$Path
+        [string]$Text,
+        [System.Collections.IDictionary]$Patterns
     )
 
-    $normalized = $Path.Replace('/', '\').Trim()
-    if ($normalized.StartsWith('skills\', [System.StringComparison]::OrdinalIgnoreCase)) {
-        $normalized = $normalized.Substring(7)
+    foreach ($entry in $Patterns.GetEnumerator()) {
+        if ($Text -match $entry.Value) {
+            $entry.Key
+        }
     }
-    $normalized = $normalized -replace '\]\(.*$', ''
-    $normalized = [regex]::Replace($normalized, '[\)\]\.,;:\*]+$', '')
-    if ($normalized -match $KnownFileSuffixPattern) {
-        $normalized = $Matches['stable']
-    }
-    return $normalized
 }
 
-function Should-IgnoreReference {
-    param(
-        [string]$Path
-    )
+function Get-SkillTextCorpus {
+    param([string]$SkillDirectory)
 
-    if ([string]::IsNullOrWhiteSpace($Path)) {
-        return $true
-    }
-
-    $normalized = $Path.Replace('/', '\')
-    if ($normalized.StartsWith('tmp\', [System.StringComparison]::OrdinalIgnoreCase)) {
-        return $true
-    }
-    if ($normalized -match '\[.+?\]' -or $normalized -match '\{.+?\}' -or $normalized -match '<.+?>') {
-        return $true
-    }
-
-    return $false
-}
-
-function Get-SkillFiles {
-    $files = Get-ChildItem -Path $Root -Recurse -Filter 'SKILL.md' -File
-    foreach ($file in $files) {
-        $skill = Split-Path $file.DirectoryName -Leaf
-        if ($IncludeSkills -and $skill -notin $IncludeSkills) {
+    $extensions = @('.md', '.txt', '.py', '.ps1', '.js', '.ts', '.mjs', '.json', '.yaml', '.yml', '.html', '.css', '.toml')
+    $parts = foreach ($file in Get-ChildItem -LiteralPath $SkillDirectory -Recurse -File -ErrorAction SilentlyContinue) {
+        if ($file.Name -eq 'resource-manifest.json' -or $file.Name -match '^(?:package-lock|pnpm-lock|yarn\.lock)') {
             continue
         }
-        if ($skill -in $ExcludeSkills) {
+        if ($file.Extension.ToLowerInvariant() -notin $extensions) {
             continue
         }
-        $file
+        try {
+            [IO.File]::ReadAllText($file.FullName)
+        } catch {
+            continue
+        }
     }
+    $parts -join "`n"
 }
 
 function Get-FrontmatterStatus {
     param(
-        [string[]]$Lines
+        [string[]]$Lines,
+        [string]$DirectoryName
     )
 
-    $startsCorrectly = $Lines.Count -gt 0 -and $Lines[0] -eq '---'
-    $endIndex = $null
-
-    if ($startsCorrectly) {
+    $endIndex = -1
+    if ($Lines.Count -gt 1 -and $Lines[0] -eq '---') {
         for ($i = 1; $i -lt $Lines.Count; $i++) {
             if ($Lines[$i] -eq '---') {
                 $endIndex = $i
@@ -128,473 +128,229 @@ function Get-FrontmatterStatus {
         }
     }
 
-    $frontmatterLines = if ($null -ne $endIndex) { $Lines[0..$endIndex] } else { @() }
-    $frontmatterText = $frontmatterLines -join "`n"
-
-    [PSCustomObject]@{
-        StartsCorrectly = $startsCorrectly
-        EndsCorrectly   = $null -ne $endIndex
-        EndIndex        = $endIndex
-        HasName         = [bool]($frontmatterText -match '(?m)^name:')
-        HasDescription  = [bool]($frontmatterText -match '(?m)^description:')
-    }
-}
-
-function Get-UnsupportedTokens {
-    param(
-        [string]$Text
-    )
-
-    foreach ($token in $UnsupportedToolTokens) {
-        if ($Text -match [regex]::Escape($token)) {
-            $token
-        }
-    }
-}
-
-function Get-ForeignRuntimeHits {
-    param(
-        [string]$Text
-    )
-
-    foreach ($pattern in $ForeignRuntimePatterns) {
-        if ($Text -match [regex]::Escape($pattern)) {
-            $pattern
-        }
-    }
-}
-
-function Get-DeclaredLocalReferences {
-    param(
-        [string]$Text,
-        [string]$SkillDirectory
-    )
-
-    $matches = [regex]::Matches($Text, $LocalReferencePattern)
-    $seen = New-Object 'System.Collections.Generic.HashSet[string]'
-
-    foreach ($match in $matches) {
-        $relative = Normalize-LocalReference -Path $match.Groups['path'].Value
-        if ([string]::IsNullOrWhiteSpace($relative)) {
-            continue
-        }
-        if (Should-IgnoreReference -Path $relative) {
-            continue
-        }
-        if (-not $seen.Add($relative)) {
-            continue
-        }
-
-        $candidatePaths = @(
-            (Join-Path $SkillDirectory $relative),
-            (Join-Path $Root $relative)
-        )
-
-        $resolved = $null
-        foreach ($candidate in $candidatePaths) {
-            if (Test-Path -LiteralPath $candidate) {
-                $resolved = $candidate
-                break
+    $keys = @()
+    $name = ''
+    $description = ''
+    if ($endIndex -gt 0) {
+        foreach ($line in $Lines[1..($endIndex - 1)]) {
+            if ($line -match '^(?<key>[A-Za-z][A-Za-z0-9_-]*):\s*(?<value>.*)$') {
+                $key = $Matches.key
+                $value = $Matches.value.Trim().Trim([char]39).Trim([char]34)
+                $keys += $key
+                if ($key -eq 'name') { $name = $value }
+                if ($key -eq 'description') { $description = $value }
             }
         }
+    }
 
-        [PSCustomObject]@{
-            Path         = $relative
-            Exists       = $null -ne $resolved
-            ResolvedPath = $resolved
-        }
+    $unexpected = @($keys | Where-Object { $_ -notin @('name', 'description') } | Sort-Object -Unique)
+    $duplicate = @($keys | Group-Object | Where-Object Count -gt 1 | ForEach-Object Name)
+    $nameValid = $name -match '^[a-z0-9]+(?:-[a-z0-9]+)*$' -and $name.Length -le 64 -and $name -eq $DirectoryName
+    $descriptionValid = $description.Length -ge 1 -and $description.Length -le 1024
+    $hasTriggerContext = $description -match '(\u5F53|\u7528\u4E8E|\u9002\u5408|\u7528\u6237.{0,12}(?:\u8981\u6C42|\u9700\u8981)|Use when|Use this skill|when Codex)'
+
+    [PSCustomObject]@{
+        Starts = $Lines.Count -gt 0 -and $Lines[0] -eq '---'
+        Ends = $endIndex -gt 0
+        Name = $name
+        Description = $description
+        Keys = $keys
+        UnexpectedKeys = $unexpected
+        DuplicateKeys = $duplicate
+        NameValid = $nameValid
+        DescriptionValid = $descriptionValid
+        HasTriggerContext = $hasTriggerContext
     }
 }
 
-function Get-MissingLocalReferences {
-    param(
-        [string]$Text,
-        [string]$SkillDirectory
-    )
+function Get-ManifestStatus {
+    param([string]$SkillDirectory)
 
-    foreach ($reference in (Get-DeclaredLocalReferences -Text $Text -SkillDirectory $SkillDirectory)) {
-        if (-not $reference.Exists) {
-            $reference.Path
-        }
-    }
-}
-
-function Get-ResourceManifestStatus {
-    param(
-        [string]$SkillDirectory
-    )
-
-    $manifestPath = Join-Path $SkillDirectory 'resource-manifest.json'
-    if (-not (Test-Path -LiteralPath $manifestPath)) {
-        return [PSCustomObject]@{
-            Exists                      = $false
-            Path                        = $manifestPath
-            MissingDeclaredDependencies = @()
-        }
+    $path = Join-Path $SkillDirectory 'resource-manifest.json'
+    if (-not (Test-Path -LiteralPath $path)) {
+        return [PSCustomObject]@{ Exists = $false; ParseError = $false; Missing = @() }
     }
 
     try {
-        $manifest = Get-Content -LiteralPath $manifestPath -Encoding UTF8 -Raw | ConvertFrom-Json
-        $missing = @()
-        if ($null -ne $manifest.missing_declared_dependencies) {
-            $missing = @($manifest.missing_declared_dependencies)
+        $manifest = Get-Content -LiteralPath $path -Raw -Encoding UTF8 | ConvertFrom-Json
+        $missing = if ($null -eq $manifest.missing_declared_dependencies) {
+            @()
+        } else {
+            @($manifest.missing_declared_dependencies)
         }
-        return [PSCustomObject]@{
-            Exists                      = $true
-            Path                        = $manifestPath
-            MissingDeclaredDependencies = $missing
-        }
+        [PSCustomObject]@{ Exists = $true; ParseError = $false; Missing = $missing }
     } catch {
-        return [PSCustomObject]@{
-            Exists                      = $true
-            Path                        = $manifestPath
-            MissingDeclaredDependencies = @('__MANIFEST_PARSE_ERROR__')
-        }
-    }
-}
-
-function Get-StandardStructureStatus {
-    param(
-        [string]$Text
-    )
-
-    $positions = [ordered]@{}
-    foreach ($key in $StandardSectionPatterns.Keys) {
-        $index = -1
-        foreach ($heading in $StandardSectionPatterns[$key]) {
-            $candidateIndex = $Text.IndexOf($heading, [System.StringComparison]::OrdinalIgnoreCase)
-            if ($candidateIndex -ge 0 -and ($index -lt 0 -or $candidateIndex -lt $index)) {
-                $index = $candidateIndex
-            }
-        }
-        $positions[$key] = $index
-    }
-
-    $missing = @($positions.GetEnumerator() | Where-Object { $_.Value -lt 0 } | ForEach-Object { $_.Key })
-    $presentPositions = @($positions.GetEnumerator() | Where-Object { $_.Value -ge 0 } | ForEach-Object { $_.Value })
-    $ordered = $true
-    if ($presentPositions.Count -gt 1) {
-        $ordered = (($presentPositions | Sort-Object) -join ',') -eq ($presentPositions -join ',')
-    }
-
-    [PSCustomObject]@{
-        MissingSections = $missing
-        IsCompliant     = ($missing.Count -eq 0 -and $ordered)
-        Ordered         = $ordered
+        [PSCustomObject]@{ Exists = $true; ParseError = $true; Missing = @('__PARSE_ERROR__') }
     }
 }
 
 function Get-TriggerOwnershipStatus {
-    param(
-        [string]$RootPath,
-        [string[]]$KnownSkills
-    )
+    param([string[]]$KnownSkills)
 
-    $matrixPath = Join-Path $RootPath $TriggerOwnershipMatrixRelativePath
-    if (-not (Test-Path -LiteralPath $matrixPath)) {
-        return [PSCustomObject]@{
-            Exists         = $false
-            Path           = $matrixPath
-            DomainCount    = 0
-            ClassCount     = 0
-            ConflictMessages = @('__MISSING_TRIGGER_OWNERSHIP_MATRIX__')
-        }
+    $path = Join-Path $Root 'shared\trigger-ownership-matrix.json'
+    if (-not (Test-Path -LiteralPath $path)) {
+        return [PSCustomObject]@{ Exists = $false; ClassCount = 0; Conflicts = @('__MISSING_MATRIX__') }
     }
 
     try {
-        $matrix = Get-Content -LiteralPath $matrixPath -Encoding UTF8 -Raw | ConvertFrom-Json
+        $matrix = Get-Content -LiteralPath $path -Raw -Encoding UTF8 | ConvertFrom-Json
     } catch {
-        return [PSCustomObject]@{
-            Exists           = $true
-            Path             = $matrixPath
-            DomainCount      = 0
-            ClassCount       = 0
-            ConflictMessages = @('__TRIGGER_OWNERSHIP_MATRIX_PARSE_ERROR__')
-        }
+        return [PSCustomObject]@{ Exists = $true; ClassCount = 0; Conflicts = @('__PARSE_ERROR__') }
     }
 
     $conflicts = [System.Collections.Generic.List[string]]::new()
-    $signalOwners = @{}
-    $domainCount = 0
+    $owners = @{}
     $classCount = 0
 
     foreach ($domain in @($matrix.domains)) {
-        $domainCount++
-        $domainName = [string]$domain.domain
         foreach ($class in @($domain.classes)) {
             $classCount++
-            $classId = [string]$class.id
+            $location = "$($domain.domain)/$($class.id)"
             $primary = [string]$class.primary_skill
-
-            if ([string]::IsNullOrWhiteSpace($primary)) {
-                $conflicts.Add("$domainName/$classId missing primary_skill")
-            } elseif ($KnownSkills -notcontains $primary) {
-                $conflicts.Add("$domainName/$classId unknown primary_skill: $primary")
+            if ($KnownSkills -notcontains $primary) {
+                $conflicts.Add("$location unknown primary_skill: $primary")
             }
-
             foreach ($secondary in @($class.secondary_skills)) {
-                $secondaryName = [string]$secondary
-                if (-not [string]::IsNullOrWhiteSpace($secondaryName) -and $KnownSkills -notcontains $secondaryName) {
-                    $conflicts.Add("$domainName/$classId unknown secondary_skill: $secondaryName")
+                if ($KnownSkills -notcontains [string]$secondary) {
+                    $conflicts.Add("$location unknown secondary_skill: $secondary")
                 }
             }
-
             foreach ($signal in @($class.request_signals)) {
-                $normalizedSignal = ([string]$signal).Trim().ToLowerInvariant()
-                if ([string]::IsNullOrWhiteSpace($normalizedSignal)) {
-                    $conflicts.Add("$domainName/$classId contains empty request_signal")
-                    continue
-                }
-
-                if ($signalOwners.ContainsKey($normalizedSignal)) {
-                    $conflicts.Add("duplicate request_signal '$signal' in $($signalOwners[$normalizedSignal]) and $domainName/$classId")
+                $normalized = ([string]$signal).Trim().ToLowerInvariant()
+                if ([string]::IsNullOrWhiteSpace($normalized)) {
+                    $conflicts.Add("$location contains empty request_signal")
+                } elseif ($owners.ContainsKey($normalized)) {
+                    $conflicts.Add("duplicate request_signal '$signal' in $($owners[$normalized]) and $location")
                 } else {
-                    $signalOwners[$normalizedSignal] = "$domainName/$classId"
+                    $owners[$normalized] = $location
                 }
             }
         }
     }
 
-    [PSCustomObject]@{
-        Exists           = $true
-        Path             = $matrixPath
-        DomainCount      = $domainCount
-        ClassCount       = $classCount
-        ConflictMessages = @($conflicts)
-    }
+    [PSCustomObject]@{ Exists = $true; ClassCount = $classCount; Conflicts = @($conflicts) }
 }
 
-function Repair-Frontmatter {
-    param(
-        [System.IO.FileInfo]$File,
-        [string[]]$Lines
-    )
-
-    if ($Lines.Count -eq 0) {
-        return $false
-    }
-
-    $mutated = $false
-    $newLines = [System.Collections.Generic.List[string]]::new()
-    foreach ($line in $Lines) {
-        $newLines.Add($line)
-    }
-
-    if ($newLines[0] -ne '---' -and $newLines[0] -match '^(name|description|version|triggers|benefits-from|license|metadata):') {
-        $newLines.Insert(0, '---')
-        $mutated = $true
-    }
-
-    $endIndex = $null
-    for ($i = 1; $i -lt $newLines.Count; $i++) {
-        if ($newLines[$i] -eq '---') {
-            $endIndex = $i
-            break
-        }
-        if ($newLines[$i] -eq '--') {
-            $newLines[$i] = '---'
-            $endIndex = $i
-            $mutated = $true
-            break
-        }
-    }
-
-    if ($null -eq $endIndex) {
-        for ($i = 1; $i -lt $newLines.Count; $i++) {
-            if ($newLines[$i] -notmatch '^\s*$' -and $newLines[$i] -notmatch '^[A-Za-z0-9_-]+:') {
-                $newLines.Insert($i, '---')
-                $endIndex = $i
-                $mutated = $true
-                break
-            }
-        }
-    }
-
-    if (-not $mutated) {
-        return $false
-    }
-
-    if ($PSCmdlet.ShouldProcess($File.FullName, 'Normalize SKILL frontmatter')) {
-        Set-Content -LiteralPath $File.FullName -Value $newLines -Encoding UTF8
-    }
-
-    return $true
-}
-
-function New-AuditRecord {
-    param(
-        [System.IO.FileInfo]$File
-    )
-
-    $lines = @(Get-Content -LiteralPath $File.FullName -Encoding UTF8)
-    $text = if ($lines.Count -gt 0) { $lines -join "`n" } else { '' }
-    $frontmatter = Get-FrontmatterStatus -Lines $lines
-    $unsupported = @(Get-UnsupportedTokens -Text $text)
-    $foreign = @(Get-ForeignRuntimeHits -Text $text)
-    $missingRefs = @(Get-MissingLocalReferences -Text $text -SkillDirectory $File.DirectoryName)
-    $manifestStatus = Get-ResourceManifestStatus -SkillDirectory $File.DirectoryName
-    $structureStatus = Get-StandardStructureStatus -Text $text
+$skillDirectories = @(Get-SkillDirectories)
+$records = foreach ($directory in $skillDirectories) {
+    $skillPath = Join-Path $directory.FullName 'SKILL.md'
+    $lines = @(Get-Content -LiteralPath $skillPath -Encoding UTF8)
+    $text = $lines -join "`n"
+    $corpus = Get-SkillTextCorpus -SkillDirectory $directory.FullName
+    $frontmatter = Get-FrontmatterStatus -Lines $lines -DirectoryName $directory.Name
+    $manifest = Get-ManifestStatus -SkillDirectory $directory.FullName
 
     [PSCustomObject]@{
-        Skill                  = Split-Path $File.DirectoryName -Leaf
-        Path                   = $File.FullName
-        LineCount              = $lines.Count
-        OverLineThreshold      = ($lines.Count -gt $LineThreshold)
-        FrontmatterStarts      = $frontmatter.StartsCorrectly
-        FrontmatterEnds        = $frontmatter.EndsCorrectly
-        HasName                = $frontmatter.HasName
-        HasDescription         = $frontmatter.HasDescription
-        HasResourceManifest    = $manifestStatus.Exists
-        ResourceManifestPath   = $manifestStatus.Path
-        ManifestMissingDependencies = $manifestStatus.MissingDeclaredDependencies
-        StandardStructureCompliant = $structureStatus.IsCompliant
-        MissingStandardSections = $structureStatus.MissingSections
-        StandardSectionsOrdered = $structureStatus.Ordered
-        UnsupportedTools       = $unsupported
-        ForeignRuntimePatterns = $foreign
-        MissingLocalReferences = $missingRefs
+        Skill = $directory.Name
+        Path = $skillPath
+        LineCount = $lines.Count
+        FrontmatterValid = (
+            $frontmatter.Starts -and
+            $frontmatter.Ends -and
+            $frontmatter.NameValid -and
+            $frontmatter.DescriptionValid -and
+            $frontmatter.HasTriggerContext -and
+            $frontmatter.UnexpectedKeys.Count -eq 0 -and
+            $frontmatter.DuplicateKeys.Count -eq 0 -and
+            $frontmatter.Keys.Count -eq 2
+        )
+        FrontmatterKeys = @($frontmatter.Keys)
+        UnexpectedFrontmatterKeys = @($frontmatter.UnexpectedKeys)
+        Name = $frontmatter.Name
+        DescriptionHasTriggerContext = $frontmatter.HasTriggerContext
+        HasResourceManifest = $manifest.Exists
+        ManifestIssues = @($manifest.Missing)
+        DeprecatedTokens = @(Get-PatternHits -Text $corpus -Patterns $DeprecatedPatterns)
+        ForeignRuntime = @(Get-PatternHits -Text $corpus -Patterns $ForeignRuntimePatterns)
+        ReasoningDirectives = @(Get-PatternHits -Text $corpus -Patterns $ForbiddenReasoningPatterns)
+        HardcodedModels = @(Get-PatternHits -Text $corpus -Patterns $HardcodedModelPatterns)
+        MandatorySubagent = [bool]($corpus -match $MandatorySubagentPattern)
+        MandatoryPersistence = [bool]($corpus -match $MandatoryPersistencePattern)
     }
 }
 
-$skillFiles = @(Get-SkillFiles)
-
-if ($Mode -eq 'FixFrontmatter') {
-    $fixed = 0
-    foreach ($file in $skillFiles) {
-        $lines = Get-Content -LiteralPath $file.FullName -Encoding UTF8
-        if (Repair-Frontmatter -File $file -Lines $lines) {
-            $fixed++
-        }
+$readmePath = Join-Path $Root 'README.md'
+$declaredInventory = 0
+if (Test-Path -LiteralPath $readmePath) {
+    $readmeText = Get-Content -LiteralPath $readmePath -Raw -Encoding UTF8
+    if ($readmeText -match '\u5F53\u524D\u5E93\u5B58\u4E3A\s*(?<count>\d+)\s*\u4E2A\u7528\u6237\u6280\u80FD') {
+        $declaredInventory = [int]$Matches.count
     }
-    Write-Host "Frontmatter fixes applied: $fixed"
 }
 
-$records = @(
-    foreach ($file in $skillFiles) {
-        New-AuditRecord -File $file
-    }
+$skillJsonFiles = @(
+    Get-ChildItem -LiteralPath $Root -Recurse -Filter 'skill.json' -File |
+        Where-Object { $_.FullName -notmatch '[\\/]\.system[\\/]' }
 )
-
-$triggerOwnershipStatus = Get-TriggerOwnershipStatus -RootPath $Root -KnownSkills @($records | ForEach-Object { $_.Skill })
+$nodeModules = @(
+    Get-ChildItem -LiteralPath $Root -Recurse -Directory -Filter 'node_modules' -ErrorAction SilentlyContinue |
+        Where-Object { $_.FullName -notmatch '[\\/]\.system[\\/]' }
+)
+$triggerStatus = Get-TriggerOwnershipStatus -KnownSkills @($records.Skill)
 
 $summary = [PSCustomObject]@{
-    Root                       = $Root
-    SkillCount                 = $records.Count
-    FrontmatterFailures        = @($records | Where-Object { -not $_.FrontmatterStarts -or -not $_.FrontmatterEnds -or -not $_.HasName -or -not $_.HasDescription }).Count
-    OversizedSkills            = @($records | Where-Object { $_.OverLineThreshold }).Count
-    SkillsMissingResourceManifest = @($records | Where-Object { -not $_.HasResourceManifest }).Count
-    SkillsWithManifestDependencyIssues = @($records | Where-Object { $_.ManifestMissingDependencies.Count -gt 0 }).Count
-    SkillsMissingStandardSections = @($records | Where-Object { -not $_.StandardStructureCompliant }).Count
-    SkillsWithUnsupportedTools = @($records | Where-Object { $_.UnsupportedTools.Count -gt 0 }).Count
-    SkillsWithForeignRuntime   = @($records | Where-Object { $_.ForeignRuntimePatterns.Count -gt 0 }).Count
-    SkillsWithMissingRefs      = @($records | Where-Object { $_.MissingLocalReferences.Count -gt 0 }).Count
-    TriggerOwnershipClasses    = $triggerOwnershipStatus.ClassCount
-    TriggerOwnershipConflicts  = @($triggerOwnershipStatus.ConflictMessages).Count
+    Root = $Root
+    DeclaredInventory = $declaredInventory
+    SkillCount = $records.Count
+    InventoryMismatch = $declaredInventory -ne $records.Count
+    FrontmatterFailures = @($records | Where-Object { -not $_.FrontmatterValid }).Count
+    OversizedSkills = @($records | Where-Object LineCount -gt $LineThreshold).Count
+    MissingResourceManifests = @($records | Where-Object { -not $_.HasResourceManifest }).Count
+    ManifestDependencyIssues = @($records | Where-Object { $_.ManifestIssues.Count -gt 0 }).Count
+    DeprecatedToolSkills = @($records | Where-Object { $_.DeprecatedTokens.Count -gt 0 }).Count
+    ForeignRuntimeSkills = @($records | Where-Object { $_.ForeignRuntime.Count -gt 0 }).Count
+    ReasoningDirectiveSkills = @($records | Where-Object { $_.ReasoningDirectives.Count -gt 0 }).Count
+    HardcodedModelSkills = @($records | Where-Object { $_.HardcodedModels.Count -gt 0 }).Count
+    MandatorySubagentSkills = @($records | Where-Object MandatorySubagent).Count
+    MandatoryPersistenceSkills = @($records | Where-Object MandatoryPersistence).Count
+    SkillJsonFiles = $skillJsonFiles.Count
+    NodeModulesDirectories = $nodeModules.Count
+    TriggerOwnershipClasses = $triggerStatus.ClassCount
+    TriggerOwnershipConflicts = @($triggerStatus.Conflicts).Count
 }
 
-$gateFailures = [System.Collections.Generic.List[string]]::new()
-if ($summary.FrontmatterFailures -gt 0) {
-    $gateFailures.Add("frontmatter_failures=$($summary.FrontmatterFailures)")
-}
-if ($summary.OversizedSkills -gt 0) {
-    $gateFailures.Add("oversized_skills=$($summary.OversizedSkills)")
-}
-if ($summary.SkillsMissingResourceManifest -gt 0) {
-    $gateFailures.Add("missing_resource_manifests=$($summary.SkillsMissingResourceManifest)")
-}
-if ($summary.SkillsWithManifestDependencyIssues -gt 0) {
-    $gateFailures.Add("manifest_dependency_issues=$($summary.SkillsWithManifestDependencyIssues)")
-}
-if ($summary.SkillsWithUnsupportedTools -gt 0) {
-    $gateFailures.Add("unsupported_tools=$($summary.SkillsWithUnsupportedTools)")
-}
-if ($summary.SkillsWithForeignRuntime -gt 0) {
-    $gateFailures.Add("foreign_runtime_paths=$($summary.SkillsWithForeignRuntime)")
-}
-if ($summary.SkillsWithMissingRefs -gt 0) {
-    $gateFailures.Add("missing_local_references=$($summary.SkillsWithMissingRefs)")
-}
-if ($summary.TriggerOwnershipConflicts -gt 0) {
-    $gateFailures.Add("trigger_ownership_conflicts=$($summary.TriggerOwnershipConflicts)")
+$failures = [System.Collections.Generic.List[string]]::new()
+foreach ($entry in @(
+    @{ Name = 'inventory_mismatch'; Value = [int]$summary.InventoryMismatch },
+    @{ Name = 'frontmatter_failures'; Value = $summary.FrontmatterFailures },
+    @{ Name = 'oversized_skills'; Value = $summary.OversizedSkills },
+    @{ Name = 'missing_resource_manifests'; Value = $summary.MissingResourceManifests },
+    @{ Name = 'manifest_dependency_issues'; Value = $summary.ManifestDependencyIssues },
+    @{ Name = 'deprecated_tool_skills'; Value = $summary.DeprecatedToolSkills },
+    @{ Name = 'foreign_runtime_skills'; Value = $summary.ForeignRuntimeSkills },
+    @{ Name = 'reasoning_directive_skills'; Value = $summary.ReasoningDirectiveSkills },
+    @{ Name = 'hardcoded_model_skills'; Value = $summary.HardcodedModelSkills },
+    @{ Name = 'mandatory_subagent_skills'; Value = $summary.MandatorySubagentSkills },
+    @{ Name = 'mandatory_persistence_skills'; Value = $summary.MandatoryPersistenceSkills },
+    @{ Name = 'skill_json_files'; Value = $summary.SkillJsonFiles },
+    @{ Name = 'node_modules_directories'; Value = $summary.NodeModulesDirectories },
+    @{ Name = 'trigger_ownership_conflicts'; Value = $summary.TriggerOwnershipConflicts }
+)) {
+    if ($entry.Value -gt 0) {
+        $failures.Add("$($entry.Name)=$($entry.Value)")
+    }
 }
 
 $summary | Format-List
 $records |
-    Sort-Object Skill |
-    Select-Object Skill, LineCount, FrontmatterStarts, FrontmatterEnds, HasName, HasDescription, HasResourceManifest, StandardStructureCompliant, OverLineThreshold |
+    Select-Object Skill, LineCount, FrontmatterValid, HasResourceManifest, MandatorySubagent, MandatoryPersistence |
     Format-Table -AutoSize
 
 if ($Mode -eq 'Report') {
     if (-not (Test-Path -LiteralPath $ReportDir)) {
         New-Item -ItemType Directory -Path $ReportDir | Out-Null
     }
-
-    $jsonPath = Join-Path $ReportDir 'skills-audit.json'
-    $mdPath = Join-Path $ReportDir 'skills-audit.md'
-
     [PSCustomObject]@{
         Summary = $summary
         Records = $records
-        TriggerOwnership = $triggerOwnershipStatus
-    } | ConvertTo-Json -Depth 6 | Set-Content -LiteralPath $jsonPath -Encoding UTF8
-
-    $md = [System.Collections.Generic.List[string]]::new()
-    $md.Add('# Skills Audit Report')
-    $md.Add('')
-    $md.Add(('Root: `' + $Root + '`'))
-    $md.Add('')
-    $md.Add('## Summary')
-    $md.Add('')
-    $md.Add("- Skill count: $($summary.SkillCount)")
-    $md.Add("- Frontmatter failures: $($summary.FrontmatterFailures)")
-    $md.Add("- Oversized skills: $($summary.OversizedSkills)")
-    $md.Add("- Skills missing resource manifests: $($summary.SkillsMissingResourceManifest)")
-    $md.Add("- Skills with manifest dependency issues: $($summary.SkillsWithManifestDependencyIssues)")
-    $md.Add("- Skills missing standard sections: $($summary.SkillsMissingStandardSections)")
-    $md.Add("- Skills with unsupported tools: $($summary.SkillsWithUnsupportedTools)")
-    $md.Add("- Skills with foreign runtime paths: $($summary.SkillsWithForeignRuntime)")
-    $md.Add("- Skills with missing local references: $($summary.SkillsWithMissingRefs)")
-    $md.Add("- Trigger ownership classes: $($summary.TriggerOwnershipClasses)")
-    $md.Add("- Trigger ownership conflicts: $($summary.TriggerOwnershipConflicts)")
-    $md.Add('')
-    $md.Add('## Trigger Ownership')
-    $md.Add('')
-    $md.Add(('- Matrix: `' + $triggerOwnershipStatus.Path + '`'))
-    $md.Add(('- Domains: ' + $triggerOwnershipStatus.DomainCount))
-    $md.Add(('- Classes: ' + $triggerOwnershipStatus.ClassCount))
-    $md.Add(('- Conflicts: ' + $(if ($triggerOwnershipStatus.ConflictMessages.Count) { $triggerOwnershipStatus.ConflictMessages -join '; ' } else { 'none' })))
-    $md.Add('')
-    $md.Add('## Records')
-    $md.Add('')
-
-    foreach ($record in ($records | Sort-Object Skill)) {
-        $md.Add("### $($record.Skill)")
-        $md.Add('')
-        $md.Add(('- Path: `' + $record.Path + '`'))
-        $md.Add("- Line count: $($record.LineCount)")
-        $md.Add("- Frontmatter: start=$($record.FrontmatterStarts), end=$($record.FrontmatterEnds), name=$($record.HasName), description=$($record.HasDescription)")
-        $md.Add("- Resource manifest: $(if ($record.HasResourceManifest) { 'present' } else { 'missing' })")
-        $md.Add("- Manifest dependency issues: $(if ($record.ManifestMissingDependencies.Count) { $record.ManifestMissingDependencies -join ', ' } else { 'none' })")
-        $md.Add("- Standard structure: $(if ($record.StandardStructureCompliant) { 'compliant' } else { 'drift' })")
-        $md.Add("- Missing standard sections: $(if ($record.MissingStandardSections.Count) { $record.MissingStandardSections -join ', ' } else { 'none' })")
-        $md.Add("- Unsupported tools: $(if ($record.UnsupportedTools.Count) { $record.UnsupportedTools -join ', ' } else { 'none' })")
-        $md.Add("- Foreign runtime paths: $(if ($record.ForeignRuntimePatterns.Count) { $record.ForeignRuntimePatterns -join ', ' } else { 'none' })")
-        $md.Add("- Missing local references: $(if ($record.MissingLocalReferences.Count) { $record.MissingLocalReferences -join ', ' } else { 'none' })")
-        $md.Add('')
-    }
-
-    Set-Content -LiteralPath $mdPath -Value $md -Encoding UTF8
-    Write-Host "Report written:"
-    Write-Host "  $jsonPath"
-    Write-Host "  $mdPath"
+        TriggerOwnership = $triggerStatus
+    } | ConvertTo-Json -Depth 7 | Set-Content -LiteralPath (Join-Path $ReportDir 'skills-audit.json') -Encoding UTF8
 }
 
 if ($Mode -eq 'Gate') {
-    if ($gateFailures.Count -gt 0) {
-        Write-Error ("Skill audit gate failed: " + ($gateFailures -join '; '))
+    if ($failures.Count -gt 0) {
+        Write-Error ('Skill audit gate failed: ' + ($failures -join '; '))
         exit 1
     }
-
     Write-Host 'Skill audit gate passed.'
-    exit 0
 }

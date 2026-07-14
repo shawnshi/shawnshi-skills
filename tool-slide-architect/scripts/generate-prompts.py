@@ -78,7 +78,7 @@ def main():
             
             # Find the footer instruction (last part of base prompt)
             footer_match = re.search(r'---\s+Please use nano banana pro.*', base_prompt_template, re.DOTALL | re.IGNORECASE)
-            footer = footer_match.group(0) if footer_match else "\n\nPlease use nano banana pro (`gemini-3-pro-image-preview`) to generate the slide image based on the content provided above."
+            footer = footer_match.group(0) if footer_match else "\n\nUse the currently configured image generation capability to create the slide image from the content above."
             
             # Header part
             header_parts = base_prompt_template.split("## STYLE_INSTRUCTIONS")

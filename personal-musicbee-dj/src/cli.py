@@ -1,4 +1,5 @@
 import argparse
+import os
 import subprocess
 import sys
 from pathlib import Path
@@ -18,6 +19,25 @@ def load_config(config_path: Path) -> dict:
         sys.exit(1)
     with open(config_path, "r", encoding="utf-8") as handle:
         return yaml.safe_load(handle)
+
+
+def resolve_config_paths(config: Dict, skill_root: Path) -> Dict:
+    """Expand environment variables and anchor relative paths to the skill root."""
+    for section, key in (
+        ("musicbee", "exe_path"),
+        ("musicbee", "xml_path"),
+        ("cache", "db_path"),
+        ("playlist", "output_m3u"),
+    ):
+        raw = str(config.get(section, {}).get(key, "")).strip()
+        if not raw:
+            continue
+        expanded = os.path.expanduser(os.path.expandvars(raw))
+        path = Path(expanded)
+        if not path.is_absolute():
+            path = skill_root / path
+        config.setdefault(section, {})[key] = str(path.resolve())
+    return config
 
 
 def validate_config(config: Dict, request_type: str) -> List[str]:
@@ -68,7 +88,7 @@ def main():
 
     skill_root = Path(__file__).resolve().parent.parent
     config_path = skill_root / "config.yaml"
-    config = load_config(config_path)
+    config = resolve_config_paths(load_config(config_path), skill_root)
 
     config_errors = validate_config(config, args.type)
     if config_errors:

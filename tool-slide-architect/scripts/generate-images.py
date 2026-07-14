@@ -22,22 +22,8 @@ from openai import OpenAI
 logging.basicConfig(level=logging.INFO, format='%(levelname)s: %(message)s')
 
 def load_env():
-    """加载环境变量"""
-    env_vars = {}
-    search_paths = [
-        os.path.join(os.path.dirname(__file__), '.env'),
-        os.path.join(os.path.dirname(os.path.dirname(__file__)), '.env'),
-        os.path.join(os.path.expanduser("~"), ".gemini", ".env")
-    ]
-    for path in search_paths:
-        if os.path.exists(path):
-            with open(path, 'r', encoding='utf-8') as f:
-                for line in f:
-                    line = line.strip()
-                    if line and not line.startswith('#') and '=' in line:
-                        key, value = line.split('=', 1)
-                        env_vars[key.strip()] = value.strip()
-    return env_vars
+    """Use process environment variables; do not discover credential files."""
+    return dict(os.environ)
 
 def download_image(content, target_path):
     """解析并下载图片 (支持 URL 和 Base64 Data URI)"""
@@ -84,14 +70,14 @@ def download_image(content, target_path):
     logging.error(f"No valid image data found in content: {content[:100]}...")
     return False
 
-def generate_image(prompt_text, output_path, env_vars):
+def render_slide_image(prompt_text, output_path, env_vars):
     """使用 OpenAI 协议生成图片"""
-    api_key = env_vars.get('GEMINI_API_KEY') or env_vars.get('GOOGLE_API_KEY')
-    base_url = env_vars.get('GOOGLE_GEMINI_BASE_URL', 'http://127.0.0.1:8964/v1')
-    model_name = env_vars.get('NANOBANANA_MODEL', 'gemini-3-pro-image')
+    api_key = env_vars.get('IMAGE_API_KEY')
+    base_url = env_vars.get('IMAGE_API_BASE_URL')
+    model_name = env_vars.get('IMAGE_MODEL')
     
-    if not api_key:
-        logging.error("API Key not found.")
+    if not api_key or not base_url or not model_name:
+        logging.error("IMAGE_API_KEY, IMAGE_API_BASE_URL, and IMAGE_MODEL are required.")
         return False
 
     client = OpenAI(base_url=base_url, api_key=api_key)
@@ -194,7 +180,7 @@ def main():
         max_retries = 2
         success = False
         for attempt in range(max_retries):
-            success = generate_image(prompt_content, output_path, env_vars)
+            success = render_slide_image(prompt_content, output_path, env_vars)
             if success:
                 break
             else:

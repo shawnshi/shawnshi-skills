@@ -26,12 +26,10 @@ def write_telemetry(status, duration_sec, input_path, output_len):
     """
     Automated telemetry logging. Agent doesn't need to manually write json files anymore.
     """
+    telemetry_dir = os.environ.get("MARKDOWN_CONVERTER_TELEMETRY_DIR")
+    if not telemetry_dir:
+        return
     try:
-        script_dir = os.path.dirname(os.path.abspath(__file__))
-        # Walk up 4 directories to reach .gemini root
-        # scripts -> tool-markdown-converter -> skills -> config -> .gemini
-        gemini_root = os.path.abspath(os.path.join(script_dir, "..", "..", "..", ".."))
-        telemetry_dir = os.path.join(gemini_root, "MEMORY", "skill_audit", "telemetry")
         os.makedirs(telemetry_dir, exist_ok=True)
         
         timestamp = int(time.time())

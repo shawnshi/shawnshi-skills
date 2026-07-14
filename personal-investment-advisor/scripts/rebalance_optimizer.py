@@ -60,9 +60,9 @@ def run_portfolio_review(filepath: str):
             certainty *= 0.4
             
         score = exp_return * certainty * 100 # scale for display
-        action = "Hold / Accumulate"
+        action = "Review / Maintain"
         if score < 4.0:
-            action = "YANK (Sell/Replace)"
+            action = "Review / Reduce"
             
         ranking_table.append({
             "symbol": sym,
@@ -117,13 +117,14 @@ def run_portfolio_review(filepath: str):
         
     # Output formatting
     report = "# 组合级机会成本与宏观压测审计 (Portfolio Review)\n\n"
+    report += "> 以下回报、确定性和压力参数是启发式情景输入，不是收益预测或交易指令。\n\n"
     
-    report += "## 1. 机会成本全局排序 (Rank & Yank)\n"
-    report += "将所有资产按 `预期回报 × 确定性` 进行同台竞技，综合得分低于现金基准收益率 (4.00) 的标的将被打上 YANK 清理标记。\n\n"
+    report += "## 1. 机会成本情景排序\n"
+    report += "按当前脚本的启发式参数比较资产；低于基准的结果只进入人工复核，不自动产生交易动作。\n\n"
     report += "| 排名 | 标的 | 预期年化回报 | 确定性系数 | 综合得分 | 动作判定 |\n"
     report += "|:---:|:---|:---:|:---:|:---:|:---|\n"
     for idx, item in enumerate(ranking_table, 1):
-        action_mark = f"**{item['action']}**" if "YANK" in item['action'] else item['action']
+        action_mark = f"**{item['action']}**" if "Reduce" in item['action'] else item['action']
         report += f"| {idx} | {item['name']} ({item['symbol']}) | {item['expected_return']*100:.1f}% | {item['certainty']:.2f} | **{item['score']:.2f}** | {action_mark} |\n"
         
     report += "\n## 2. 宏观黑天鹅压力测试 (Macro Scenario Stress Test)\n"
@@ -139,7 +140,7 @@ def run_portfolio_review(filepath: str):
     
 if __name__ == '__main__':
     parser = argparse.ArgumentParser()
-    parser.add_argument('--filepath', default=r"C:\Users\shich\.gemini\MEMORY\raw\stocks\portfolio_positions.json")
+    parser.add_argument('--filepath', required=True, help='Portfolio JSON file')
     args = parser.parse_args()
     
     run_portfolio_review(args.filepath)

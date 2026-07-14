@@ -69,10 +69,10 @@ def get_format_description(aspect_ratio):
 def generate_prompt(subject, design_type, style="auto", color_hint="", aspect_ratio="9:16"):
     """
     Generate Mondo-style prompt from subject.
-    When called by Claude, pass a rich pre-crafted prompt as subject for best results.
+    Pass a rich, pre-crafted prompt as subject for best results.
 
     Args:
-        subject: The subject matter (or a fully-crafted Mondo prompt from Claude)
+        subject: The subject matter or a fully-crafted Mondo prompt
         design_type: Type of design ("movie", "book", "album", "event")
         style: Visual style (artist name or preset)
         color_hint: Optional color preferences from user
