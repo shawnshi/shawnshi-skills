@@ -18,3 +18,4 @@ reports/
 _runtime/
 .venv/
 node_modules/
+.venv_test

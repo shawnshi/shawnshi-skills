@@ -17,3 +17,6 @@
 ## 2026-07-11 - Avoiding redundant JSON I/O and O(N^2) lookups
 **Learning:** Repeatedly parsing a JSON file and linearly scanning a list within a loop across items leads to severe O(N^2) complexity and I/O bottlenecks.
 **Action:** Use an in-memory modification-time-based cache for JSON files loaded in a loop, and pre-compute a dictionary (hash map) to transform O(N) list searches into O(1) lookups.
+## 2026-07-14 - Avoiding pandas apply with list comprehensions for string parsing
+**Learning:** Using `.apply()` in Pandas with a custom function for string parsing (like converting time strings to seconds) incurs significant overhead because it instantiates a Pandas Series for every row.
+**Action:** Replace `.apply()` with Python list comprehensions (`[func(x) for x in df['col']]`) to bypass this overhead and iterate at C-speed in Python, achieving substantial performance gains over `.apply()` and sometimes even over `pd.to_timedelta()`.
