@@ -20,3 +20,6 @@
 ## 2026-07-14 - Avoiding pandas apply with list comprehensions for string parsing
 **Learning:** Using `.apply()` in Pandas with a custom function for string parsing (like converting time strings to seconds) incurs significant overhead because it instantiates a Pandas Series for every row.
 **Action:** Replace `.apply()` with Python list comprehensions (`[func(x) for x in df['col']]`) to bypass this overhead and iterate at C-speed in Python, achieving substantial performance gains over `.apply()` and sometimes even over `pd.to_timedelta()`.
+## 2026-07-18 - Avoiding statistics.mean for faster average calculation
+**Learning:** In Python, computing the average of a list using `sum(lst) / len(lst)` is significantly faster (sometimes up to ~40-50x faster) than using `statistics.mean(lst)` due to the latter's internal type checking and exact precision conversions.
+**Action:** Prefer `sum() / len()` for calculating averages when exact fractional precision or complex type safety is not strictly required, to avoid unnecessary function call and calculation overhead.
