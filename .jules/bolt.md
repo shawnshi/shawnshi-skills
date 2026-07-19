@@ -20,3 +20,6 @@
 ## 2026-07-14 - Avoiding pandas apply with list comprehensions for string parsing
 **Learning:** Using `.apply()` in Pandas with a custom function for string parsing (like converting time strings to seconds) incurs significant overhead because it instantiates a Pandas Series for every row.
 **Action:** Replace `.apply()` with Python list comprehensions (`[func(x) for x in df['col']]`) to bypass this overhead and iterate at C-speed in Python, achieving substantial performance gains over `.apply()` and sometimes even over `pd.to_timedelta()`.
+## 2026-07-28 - Avoiding sequential outer category fetching for API aggregators
+**Learning:** Even if individual network category fetches (like sleep, hrv) use concurrency internally for fetching multiple days, grouping them sequentially at the top level forces sequential blocking on network I/O per category, leading to substantial overhead and poor parallelism.
+**Action:** Use a `ThreadPoolExecutor` to dispatch these top-level category requests concurrently, drastically overlapping latency across independent domain models.

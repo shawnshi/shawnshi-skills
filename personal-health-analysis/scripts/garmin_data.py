@@ -434,20 +434,35 @@ def fetch_summary(client, days=7, start=None, end=None):
     start_date, end_date = get_date_range(days, start, end)
     
     try:
-        # Fetch multiple data types
-        sleep = fetch_sleep(client, days, start, end).get("sleep", [])
-        hrv = fetch_hrv(client, days, start, end).get("hrv", [])
-        bb = fetch_body_battery(client, days, start, end).get("body_battery", [])
-        hr = fetch_heart_rate(client, days, start, end).get("heart_rate", [])
-        activities = fetch_activities(client, days, start, end).get("activities", [])
-        stress = fetch_stress(client, days, start, end).get("stress", [])
-        training_load_series = fetch_training_load_series(client, days, start, end).get("training_load", [])
-        
-        training_status = fetch_training_status(client, end_date)
-        max_metrics = fetch_max_metrics(client, end_date)
-        hydration = fetch_hydration(client, end_date)
-        body_comp = fetch_body_composition(client, end_date)
-        alarms = fetch_alarms(client)
+        # Performance: Execute top-level category fetches concurrently to avoid sequential I/O blocking delays
+        with concurrent.futures.ThreadPoolExecutor(max_workers=10) as executor:
+            f_sleep = executor.submit(fetch_sleep, client, days, start, end)
+            f_hrv = executor.submit(fetch_hrv, client, days, start, end)
+            f_bb = executor.submit(fetch_body_battery, client, days, start, end)
+            f_hr = executor.submit(fetch_heart_rate, client, days, start, end)
+            f_activities = executor.submit(fetch_activities, client, days, start, end)
+            f_stress = executor.submit(fetch_stress, client, days, start, end)
+            f_load = executor.submit(fetch_training_load_series, client, days, start, end)
+
+            f_status = executor.submit(fetch_training_status, client, end_date)
+            f_max = executor.submit(fetch_max_metrics, client, end_date)
+            f_hydration = executor.submit(fetch_hydration, client, end_date)
+            f_body_comp = executor.submit(fetch_body_composition, client, end_date)
+            f_alarms = executor.submit(fetch_alarms, client)
+
+            sleep = f_sleep.result().get("sleep", [])
+            hrv = f_hrv.result().get("hrv", [])
+            bb = f_bb.result().get("body_battery", [])
+            hr = f_hr.result().get("heart_rate", [])
+            activities = f_activities.result().get("activities", [])
+            stress = f_stress.result().get("stress", [])
+            training_load_series = f_load.result().get("training_load", [])
+
+            training_status = f_status.result()
+            max_metrics = f_max.result()
+            hydration = f_hydration.result()
+            body_comp = f_body_comp.result()
+            alarms = f_alarms.result()
         
         # Calculate averages (handle None values)
         sleep_times = [s.get("sleep_time_seconds") for s in sleep if s.get("sleep_time_seconds")]
