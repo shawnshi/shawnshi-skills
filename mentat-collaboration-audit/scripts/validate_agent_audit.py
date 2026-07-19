@@ -8,6 +8,9 @@ REQUIRED_TOP_LEVEL = [
     'version', 'behavioral_analysis', 'friction_analysis', 'workflow_engineering',
     'suggestions', 'at_a_glance', 'distributions'
 ]
+REPORT_METRIC_SECTIONS = [
+    'wait', 'skill_load', 'retry', 'subagent', 'authorization', 'context'
+]
 
 
 class ValidationError(Exception):
@@ -103,9 +106,55 @@ def validate_agent_payload(payload):
     return errors
 
 
+def validate_report_payload(payload):
+    """Validate deterministic schema-version-2 audit output."""
+    errors = []
+    if not isinstance(payload, dict):
+        return ['report must be a JSON object']
+    if payload.get('schema_version') != 2:
+        errors.append('schema_version must be 2')
+
+    coverage = payload.get('coverage')
+    if not isinstance(coverage, dict):
+        errors.append('coverage must be an object')
+    else:
+        status = coverage.get('status')
+        if status not in {'complete', 'partial', 'empty', 'not_provided'}:
+            errors.append('coverage.status is invalid')
+        issues = coverage.get('issues')
+        if not isinstance(issues, list):
+            errors.append('coverage.issues must be a list')
+        if status in {'partial', 'empty'} and issues == []:
+            errors.append(f'coverage.issues must explain {status} coverage')
+
+    record_count = payload.get('record_count')
+    if not isinstance(record_count, int) or isinstance(record_count, bool) or record_count < 0:
+        errors.append('record_count must be a non-negative integer')
+    if not isinstance(payload.get('components'), list):
+        errors.append('components must be a list')
+    if not isinstance(payload.get('failure_types'), dict):
+        errors.append('failure_types must be an object')
+
+    operational = payload.get('operational_metrics')
+    if not isinstance(operational, dict):
+        errors.append('operational_metrics must be an object')
+    else:
+        for section in REPORT_METRIC_SECTIONS:
+            if not isinstance(operational.get(section), dict):
+                errors.append(f'operational_metrics.{section} is missing')
+
+    limitations = payload.get('limitations')
+    if not isinstance(limitations, list) or not limitations:
+        errors.append('limitations must be a non-empty list')
+    return errors
+
+
 def validate_file(path):
     payload = json.loads(Path(path).read_text(encoding='utf-8'))
-    errors = validate_agent_payload(payload)
+    if payload.get('schema_version') == 2:
+        errors = validate_report_payload(payload)
+    else:
+        errors = validate_agent_payload(payload)
     if errors:
         raise ValidationError('\n'.join(errors))
     return payload

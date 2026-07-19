@@ -1,7 +1,7 @@
 {
   "schema_version": 1,
   "skill": "mentat-collaboration-audit",
-  "generated_at": "2026-07-14T21:01:44",
+  "generated_at": "2026-07-19T13:48:37",
   "skill_md": "SKILL.md",
   "top_level_files": [
     "generate_final_report.py",
@@ -17,11 +17,11 @@
   "resource_directories": [
     {
       "name": "scripts",
-      "file_count": 4
+      "file_count": 5
     },
     {
       "name": "references",
-      "file_count": 2
+      "file_count": 3
     },
     {
       "name": "assets",
@@ -40,9 +40,14 @@
       "resolved_path": "C:\\Users\\shich\\.codex\\skills\\mentat-collaboration-audit\\references\\WORKFLOW.md"
     },
     {
-      "path": "scripts\\core\\engine.py",
+      "path": "references\\report-template.md",
       "exists": true,
-      "resolved_path": "C:\\Users\\shich\\.codex\\skills\\mentat-collaboration-audit\\scripts\\core\\engine.py"
+      "resolved_path": "C:\\Users\\shich\\.codex\\skills\\mentat-collaboration-audit\\references\\report-template.md"
+    },
+    {
+      "path": "scripts\\validate_agent_audit.py",
+      "exists": true,
+      "resolved_path": "C:\\Users\\shich\\.codex\\skills\\mentat-collaboration-audit\\scripts\\validate_agent_audit.py"
     },
     {
       "path": "assets\\template.html",

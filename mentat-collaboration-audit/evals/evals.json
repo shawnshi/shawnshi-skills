@@ -1,11 +1,11 @@
 {
-    "skill_name": "monthly-personal-insights",
+    "skill_name": "mentat-collaboration-audit",
     "evals": [
         {
             "id": 1,
             "eval_name": "standard_7d_audit",
-            "prompt": "出具我最近7天的系统交互报告",
-            "expected_output": "The agent should run `analyze_insights_v4.py --period 7d`, provide a brief snapshot of the core metrics, highlight a strategic adjustment, and provide a link to the generated HTML report.",
+            "prompt": "根据我提供的最近7天会话遥测，审计等待、重试和上下文开销。",
+            "expected_output": "The agent should inspect only the supplied evidence, disclose coverage and missing fields, run the explicit-input aggregator in strict mode when the format matches, and return the report in the conversation without automatically writing a file.",
             "assertions": [],
             "files": []
         },
@@ -13,15 +13,15 @@
             "id": 2,
             "eval_name": "implicit_struggle_audit",
             "prompt": "最近这几天感觉效率很低，而且很容易出现改不出bug反复兜圈子的问题，帮我复盘一下寻找原因。",
-            "expected_output": "The agent should recognize this as a trigger for `monthly-personal-insights`, run the 7d or 30d script, and explicitly focus the top strategic adjustment heavily around debugging friction.",
+            "expected_output": "The agent should recognize the collaboration-audit intent, request or locate an authorized evidence source, and avoid fabricating percentages or causes when telemetry is absent.",
             "assertions": [],
             "files": []
         },
         {
             "id": 3,
             "eval_name": "long_term_year_audit",
-            "prompt": "I want to do a deep dive into my coding habits over the entire year. Please generate a yearly interaction report.",
-            "expected_output": "The agent must run the script with `--period year` and summarize long-term trends.",
+            "prompt": "检查这份JSONL审计记录；其中有一行损坏，但其余记录可读。",
+            "expected_output": "The agent should surface partial coverage, identify the skipped record, and treat strict aggregation as failed instead of silently reporting a complete audit.",
             "assertions": [],
             "files": []
         }

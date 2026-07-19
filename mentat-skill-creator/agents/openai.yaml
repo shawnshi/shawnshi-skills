@@ -1,4 +1,4 @@
 interface:
-  display_name: "Codex Skill Creator"
-  short_description: "创建、重构并验证符合 Codex 规范的本地技能"
-  default_prompt: "Use $mentat-skill-creator to create or update a focused Codex skill and validate its structure."
+  display_name: "Mentat Skills Maintainer"
+  short_description: "维护、重构并验证本地 Codex 技能库、资源索引与触发契约"
+  default_prompt: "Use $mentat-skill-creator to audit this local skills-library change against its README, update only the approved files, and run the applicable validators."

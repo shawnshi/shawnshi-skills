@@ -1,25 +1,78 @@
-# Collaboration Audit Workflow
+# 协作审计工作流
 
-## 1. Establish scope
+只在需要事件级指标、等待与重试分析、子代理效率或授权审计时读取本文件。
 
-Confirm the period, repositories or conversations in scope, available evidence, and whether the request is audit-only. Default to read-only.
+## 1. 建立范围
 
-## 2. Collect evidence
+1. 定义根任务、时间范围、会话或仓库、数据来源和目标指标。
+2. 区分只读审计与已授权整改；只读审计不新增批准回合。
+3. 列出缺失时段、不可访问来源和可能改变结论的未知项。
 
-Use only user-provided data, connected sources the user authorized, and files within the stated workspace. Record the source, time range, missing periods, and collection method. Do not assume a global memory directory exists.
+## 2. 收集与标准化
 
-## 3. Normalize
+只读取用户提供、已连接授权或当前工作区内的证据。按 [SCHEMA.md](SCHEMA.md) 标准化事件，保留来源和行号，不回显提示词正文、凭据或私人内容。
 
-Map raw events to the fields in [SCHEMA.md](SCHEMA.md). Separate observed facts, calculated metrics, user statements, and analyst inference.
+对 JSON/JSONL 输入运行：
 
-## 4. Analyze
+```powershell
+python generate_final_report.py --input <evidence-path> --strict
+```
 
-Identify recurring friction, rework, waiting, failed handoffs, tool failures, and preventable context loss. Quantify frequency and impact where the evidence supports it. Preserve counterexamples.
+需要保存 JSON 时必须由用户指定输出位置，再添加 `--output <report.json>`。`--strict` 遇到跳过文件或记录时返回 2；零条有效记录返回 1。部分覆盖不能宣告审计完成。
 
-## 5. Validate
+## 3. 五类控制
 
-Check every finding against its evidence. Remove unsupported causal claims. Mark incomplete data and alternative explanations.
+### 等待
 
-## 6. Deliver
+- 根任务同时最多保留一个等待调用。
+- 有独立本地工作可推进时先工作，不为查看进度而等待。
+- 等待超时不等于子代理失败；以状态变化、最终回包和产物验证判断。
+- 同一 `state_version` 连续两次超时后，只读一次代理状态；若仍无变化，停止轮询并转做本地工作或结束等待。
 
-Return the requested report in the conversation. Write JSON, Markdown, dashboards, or long-term records only when the user explicitly requests a file or persistence location. Configuration changes and remediation are separate tasks requiring explicit authorization.
+### 技能载入
+
+- 继续遵守每回合完整读取已选择技能的要求。
+- 只把同一 `root_task_id + actor_id + context_epoch + skill_sha256` 的再次全文读取算作重复。
+- `SKILL.md` 保留核心工作流和资源路由；详细 Schema、模板、变体与示例按需读取。
+- 上下文压缩是系统健康指标；只有记录了技能载入 Token 占比时才能讨论技能归因。
+
+### 错误与重试
+
+- 每次失败先分类并生成错误签名，再决定重试、降级或停止。
+- 每次重试只验证一个清晰假设，并记录变化；不得通过换组件或改错误标签规避重试预算。
+- 第二次出现相同组件、操作和错误签名后停止盲试。
+- 连接器 EOF 后，读取操作最多降级一次；写操作先确认远端副作用状态，未知时不得重放。
+
+### 子代理
+
+- 仅按相互独立的证据面拆分，不把阻塞主任务的紧急步骤外包。
+- 任务包传文件指针、哈希或行号、授权边界、最大回合、二元停止条件和回包 Schema。
+- 任务包足以自洽时使用最小 fork；不能安全重述用户约束时传递必要的近期回合。
+- 主任务继续处理本地工作；只接收结构化状态和证据指针，不回传完整历史或大段原文。
+
+### 写入授权
+
+- 只读审计不请求写入确认，也不生成持久报告。
+- 用户已明确要求的范围内本地可逆编辑不追加确认。
+- 外部、不可逆或长期记忆写入按动作、目标和载荷生成授权指纹；任何变化都需要重新确认。
+- 连接器返回不确定结果时先查状态，不能把超时当成未写入。
+
+## 4. 指标与防刷绿
+
+- 等待同时看重复等待率、同状态超时簇和“有本地工作时等待”的次数；不能只降低等待调用占比。
+- 重试使用盲重试率和同签名超预算次数；不能通过切换组件降低指标。
+- 子代理使用 `child_tokens / (root_tokens + child_tokens)` 作为占比；另报 `child_tokens / root_tokens`，不要混称放大率。
+- 子代理指标必须与完成率、返工率、质量门禁和相同任务类型的 P95 一起比较。
+- 永久写入以授权指纹匹配率验证；“未发现越权”不等于没有事件证据。
+- P95 样本不足时报告样本数和原始分布，不作稳定趋势判断。
+
+## 5. 形成发现
+
+1. 分开写观察事实、计算结果、解释性推断和用户陈述。
+2. 每条发现绑定可解析的事件或文件位置、置信度和替代解释。
+3. 按安全影响、收益、成本和可逆性排序；连接器未知写入优先于纯效率问题。
+4. 把技能可修、编排可修、运行时可修和政策待决分开，不把散文规则当成运行时实现。
+
+## 6. 交付
+
+在当前答复中先给结论，再给覆盖范围、指标、发现、动作、验证方法和残余风险。只有用户明确要求文件、仪表盘或整改时才产生对应写入；报告模板位于 [report-template.md](report-template.md)。

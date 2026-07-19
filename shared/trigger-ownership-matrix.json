@@ -196,6 +196,22 @@
                     ]
                 }
             ]
+        },
+        {
+            "domain": "skill_governance",
+            "classes": [
+                {
+                    "id": "local_skills_library_maintenance",
+                    "primary_skill": "mentat-skill-creator",
+                    "secondary_skills": [],
+                    "request_signals": [
+                        "audit local codex skills library",
+                        "repair skill trigger conflicts",
+                        "update skills readme and gate",
+                        "validate skills library before publishing"
+                    ]
+                }
+            ]
         }
     ]
 }

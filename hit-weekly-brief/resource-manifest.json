@@ -1,7 +1,7 @@
 {
   "schema_version": 1,
   "skill": "hit-weekly-brief",
-  "generated_at": "2026-07-14T21:01:44",
+  "generated_at": "2026-07-19T09:13:48",
   "skill_md": "SKILL.md",
   "top_level_files": [
     "SKILL.md"
@@ -9,9 +9,18 @@
   "top_level_directories": [
     "assets",
     "examples",
-    "resources"
+    "references",
+    "scripts"
   ],
   "resource_directories": [
+    {
+      "name": "scripts",
+      "file_count": 2
+    },
+    {
+      "name": "references",
+      "file_count": 1
+    },
     {
       "name": "assets",
       "file_count": 4
@@ -23,9 +32,19 @@
   ],
   "declared_local_dependencies": [
     {
+      "path": "references\\template.md",
+      "exists": true,
+      "resolved_path": "C:\\Users\\shich\\.codex\\skills\\hit-weekly-brief\\references\\template.md"
+    },
+    {
       "path": "examples\\DHWB-Reference.md",
       "exists": true,
       "resolved_path": "C:\\Users\\shich\\.codex\\skills\\hit-weekly-brief\\examples\\DHWB-Reference.md"
+    },
+    {
+      "path": "scripts\\validate_weekly_brief.py",
+      "exists": true,
+      "resolved_path": "C:\\Users\\shich\\.codex\\skills\\hit-weekly-brief\\scripts\\validate_weekly_brief.py"
     }
   ],
   "missing_declared_dependencies": []
