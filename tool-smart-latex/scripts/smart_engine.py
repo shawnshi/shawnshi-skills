@@ -110,7 +110,8 @@ def compile_tex(tex_file):
     """
     try:
         # Run twice for references/TOC
-        cmd = ['xelatex', '-interaction=nonstopmode', '-shell-escape', tex_file]
+        # Security: Removed -shell-escape flag to prevent command injection from untrusted LaTeX sources
+        cmd = ['xelatex', '-interaction=nonstopmode', tex_file]
         print(f"Compiling: {' '.join(cmd)}")
         subprocess.run(cmd, check=True, capture_output=True, text=True) # First pass
         subprocess.run(cmd, check=True, capture_output=True, text=True) # Second pass

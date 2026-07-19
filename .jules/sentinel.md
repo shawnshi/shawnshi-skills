@@ -16,3 +16,7 @@
 **Vulnerability:** Unsanitized temporary file path interpolated into a PowerShell command string in personal-write-humanizer/scripts/humanize_engine.py.
 **Learning:** Even when using system-generated paths like temp files, quotes must be escaped when passing paths to a shell argument to prevent potential breakout attacks if the system temporary directory path somehow contains special characters.
 **Prevention:** Sanitize input by escaping single and double quotes (e.g., replacing ' with '') before interpolating into PowerShell commands.
+## 2026-07-19 - Command Injection in Smart LaTeX Engine
+**Vulnerability:** Use of -shell-escape in xelatex compilation within tool-smart-latex/scripts/smart_engine.py allows execution of arbitrary shell commands embedded in LaTeX sources.
+**Learning:** Compiling untrusted documents (Markdown/DOCX converted to LaTeX) with -shell-escape exposes the system to RCE via malicious \write18 or similar commands.
+**Prevention:** Avoid -shell-escape flag when executing xelatex on potentially untrusted input.
