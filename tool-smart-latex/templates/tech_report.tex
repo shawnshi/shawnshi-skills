@@ -25,14 +25,16 @@
 \usepackage{xcolor}
 \usepackage{fancyhdr}
 \usepackage[most]{tcolorbox}
-\usepackage{minted} % Requires Python Pygments & -shell-escape
-% If minted fails, use listings as fallback: \usepackage{listings}
+\usepackage{listings}
 
 % ---------------------------------------------------------
 % Fixes for Pandoc
 % ---------------------------------------------------------
 \providecommand{\tightlist}{%
   \setlength{\itemsep}{0pt}\setlength{\parskip}{0pt}}
+\makeatletter
+\@ifundefined{c@none}{\newcounter{none}}{}
+\makeatother
 $if(highlighting-macros)$
 $highlighting-macros$
 $endif$
@@ -42,6 +44,14 @@ $endif$
 % ---------------------------------------------------------
 \definecolor{techBlue}{RGB}{0, 102, 204}
 \definecolor{codeBg}{RGB}{245, 245, 245}
+\lstset{
+    basicstyle=\ttfamily\small,
+    backgroundcolor=\color{codeBg},
+    breaklines=true,
+    columns=fullflexible,
+    frame=single,
+    rulecolor=\color{gray!20!white}
+}
 
 \pagestyle{fancy}
 \fancyhf{}

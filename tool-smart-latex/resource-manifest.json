@@ -1,7 +1,7 @@
 {
   "schema_version": 1,
   "skill": "tool-smart-latex",
-  "generated_at": "2026-07-14T21:01:44",
+  "generated_at": "2026-07-20T13:27:41",
   "skill_md": "SKILL.md",
   "top_level_files": [
     "SKILL.md"
@@ -14,7 +14,7 @@
   "resource_directories": [
     {
       "name": "scripts",
-      "file_count": 2
+      "file_count": 3
     },
     {
       "name": "references",

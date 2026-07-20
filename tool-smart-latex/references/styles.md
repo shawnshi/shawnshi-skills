@@ -43,7 +43,7 @@ All templates support:
 *   **Hyperlinks**: Clickable TOC and cross-references.
 
 Style-specific features:
-*   **Tech Report**: `minted` syntax highlighting (requires `-shell-escape`).
+*   **Tech Report**: `listings` syntax highlighting; shell escape stays disabled.
 *   **Book / Tech Book**: Custom tcolorbox environments (definition, alert, note boxes).
 *   **Academic**: Two-column layout with single-column abstract, `gbt7714` bibliography.
 *   **CV**: `fontawesome5` icons, `paracol` two-column layout.
