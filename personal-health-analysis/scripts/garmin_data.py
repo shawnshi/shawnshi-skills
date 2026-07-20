@@ -18,6 +18,9 @@ from datetime import datetime, timedelta
 from pathlib import Path
 import concurrent.futures
 
+
+SUMMARY_MAX_WORKERS = 5
+
 # Import auth helper
 sys.path.insert(0, str(Path(__file__).parent))
 from garmin_auth import get_client
@@ -60,7 +63,19 @@ def fetch_with_retry(func, *args, max_retries=3, base_delay=2, **kwargs):
                 return None
     return None
 
-def fetch_sleep(client, days=7, start=None, end=None):
+
+def _map_with_workers(worker, items, max_workers=5):
+    """Map a daily fetch with a bounded pool, or inline when already orchestrated."""
+    items = list(items)
+    if max_workers <= 1 or len(items) <= 1:
+        return [worker(item) for item in items]
+    with concurrent.futures.ThreadPoolExecutor(
+        max_workers=min(max_workers, len(items))
+    ) as executor:
+        return list(executor.map(worker, items))
+
+
+def fetch_sleep(client, days=7, start=None, end=None, max_workers=5):
     """Fetch sleep data concurrently."""
     start_date, end_date = get_date_range(days, start, end)
     
@@ -90,9 +105,8 @@ def fetch_sleep(client, days=7, start=None, end=None):
                     }
             return None
 
-        with concurrent.futures.ThreadPoolExecutor(max_workers=5) as executor:
-            results = executor.map(_get_single_day, dates)
-            sleep_data = [r for r in results if r]
+        results = _map_with_workers(_get_single_day, dates, max_workers)
+        sleep_data = [r for r in results if r]
             
         sleep_data.sort(key=lambda x: x["date"])
         return {"sleep": sleep_data, "start": start_date, "end": end_date}
@@ -100,7 +114,7 @@ def fetch_sleep(client, days=7, start=None, end=None):
         return {"error": str(e)}
 
 
-def fetch_hrv(client, days=7, start=None, end=None):
+def fetch_hrv(client, days=7, start=None, end=None, max_workers=5):
     """Fetch HRV data concurrently."""
     start_date, end_date = get_date_range(days, start, end)
     
@@ -126,9 +140,8 @@ def fetch_hrv(client, days=7, start=None, end=None):
                 }
             return None
 
-        with concurrent.futures.ThreadPoolExecutor(max_workers=5) as executor:
-            results = executor.map(_get_single_day, dates)
-            hrv_data = [r for r in results if r]
+        results = _map_with_workers(_get_single_day, dates, max_workers)
+        hrv_data = [r for r in results if r]
 
         hrv_data.sort(key=lambda x: x["date"])
         return {"hrv": hrv_data, "start": start_date, "end": end_date}
@@ -136,7 +149,7 @@ def fetch_hrv(client, days=7, start=None, end=None):
         return {"error": str(e)}
 
 
-def fetch_body_battery(client, days=7, start=None, end=None):
+def fetch_body_battery(client, days=7, start=None, end=None, max_workers=5):
     """Fetch Body Battery data concurrently."""
     start_date, end_date = get_date_range(days, start, end)
     
@@ -161,9 +174,8 @@ def fetch_body_battery(client, days=7, start=None, end=None):
                 }
             return None
 
-        with concurrent.futures.ThreadPoolExecutor(max_workers=5) as executor:
-            results = executor.map(_get_single_day, dates)
-            bb_data = [r for r in results if r]
+        results = _map_with_workers(_get_single_day, dates, max_workers)
+        bb_data = [r for r in results if r]
 
         bb_data.sort(key=lambda x: x["date"])
         return {"body_battery": bb_data, "start": start_date, "end": end_date}
@@ -171,7 +183,7 @@ def fetch_body_battery(client, days=7, start=None, end=None):
         return {"error": str(e)}
 
 
-def fetch_heart_rate(client, days=7, start=None, end=None):
+def fetch_heart_rate(client, days=7, start=None, end=None, max_workers=5):
     """Fetch heart rate data concurrently."""
     start_date, end_date = get_date_range(days, start, end)
     
@@ -192,9 +204,8 @@ def fetch_heart_rate(client, days=7, start=None, end=None):
                 }
             return None
 
-        with concurrent.futures.ThreadPoolExecutor(max_workers=5) as executor:
-            results = executor.map(_get_single_day, dates)
-            hr_data = [r for r in results if r]
+        results = _map_with_workers(_get_single_day, dates, max_workers)
+        hr_data = [r for r in results if r]
 
         hr_data.sort(key=lambda x: x["date"])
         return {"heart_rate": hr_data, "start": start_date, "end": end_date}
@@ -230,7 +241,7 @@ def fetch_activities(client, days=7, start=None, end=None):
         return {"error": str(e)}
 
 
-def fetch_stress(client, days=7, start=None, end=None):
+def fetch_stress(client, days=7, start=None, end=None, max_workers=5):
     """Fetch stress levels concurrently using user summary for accurate durations."""
     start_date, end_date = get_date_range(days, start, end)
     
@@ -256,9 +267,8 @@ def fetch_stress(client, days=7, start=None, end=None):
                 }
             return None
 
-        with concurrent.futures.ThreadPoolExecutor(max_workers=5) as executor:
-            results = executor.map(_get_single_day, dates)
-            stress_data = [r for r in results if r]
+        results = _map_with_workers(_get_single_day, dates, max_workers)
+        stress_data = [r for r in results if r]
 
         stress_data.sort(key=lambda x: x["date"])
         return {"stress": stress_data, "start": start_date, "end": end_date}
@@ -266,7 +276,7 @@ def fetch_stress(client, days=7, start=None, end=None):
         return {"error": str(e)}
 
 
-def fetch_training_load_series(client, days=7, start=None, end=None):
+def fetch_training_load_series(client, days=7, start=None, end=None, max_workers=5):
     """Fetch acute training load series concurrently."""
     start_date, end_date = get_date_range(days, start, end)
     
@@ -290,9 +300,8 @@ def fetch_training_load_series(client, days=7, start=None, end=None):
                     }
             return None
 
-        with concurrent.futures.ThreadPoolExecutor(max_workers=5) as executor:
-            results = executor.map(_get_single_day, dates)
-            load_data = [r for r in results if r]
+        results = _map_with_workers(_get_single_day, dates, max_workers)
+        load_data = [r for r in results if r]
 
         load_data.sort(key=lambda x: x["date"])
         return {"training_load": load_data}
@@ -434,20 +443,98 @@ def fetch_summary(client, days=7, start=None, end=None):
     start_date, end_date = get_date_range(days, start, end)
     
     try:
-        # Fetch multiple data types
-        sleep = fetch_sleep(client, days, start, end).get("sleep", [])
-        hrv = fetch_hrv(client, days, start, end).get("hrv", [])
-        bb = fetch_body_battery(client, days, start, end).get("body_battery", [])
-        hr = fetch_heart_rate(client, days, start, end).get("heart_rate", [])
-        activities = fetch_activities(client, days, start, end).get("activities", [])
-        stress = fetch_stress(client, days, start, end).get("stress", [])
-        training_load_series = fetch_training_load_series(client, days, start, end).get("training_load", [])
-        
-        training_status = fetch_training_status(client, end_date)
-        max_metrics = fetch_max_metrics(client, end_date)
-        hydration = fetch_hydration(client, end_date)
-        body_comp = fetch_body_composition(client, end_date)
-        alarms = fetch_alarms(client)
+        # Use one bounded top-level pool. Multi-day components run inline inside
+        # these workers so their own pools do not multiply concurrency.
+        task_specs = {
+            "sleep": (
+                lambda: fetch_sleep(client, days, start, end, max_workers=1),
+                "sleep",
+                [],
+            ),
+            "hrv": (
+                lambda: fetch_hrv(client, days, start, end, max_workers=1),
+                "hrv",
+                [],
+            ),
+            "body_battery": (
+                lambda: fetch_body_battery(client, days, start, end, max_workers=1),
+                "body_battery",
+                [],
+            ),
+            "heart_rate": (
+                lambda: fetch_heart_rate(client, days, start, end, max_workers=1),
+                "heart_rate",
+                [],
+            ),
+            "activities": (
+                lambda: fetch_activities(client, days, start, end),
+                "activities",
+                [],
+            ),
+            "stress": (
+                lambda: fetch_stress(client, days, start, end, max_workers=1),
+                "stress",
+                [],
+            ),
+            "training_load_series": (
+                lambda: fetch_training_load_series(
+                    client, days, start, end, max_workers=1
+                ),
+                "training_load",
+                [],
+            ),
+            "training_status": (lambda: fetch_training_status(client, end_date), None, {}),
+            "max_metrics": (lambda: fetch_max_metrics(client, end_date), None, {}),
+            "hydration": (lambda: fetch_hydration(client, end_date), None, {}),
+            "body_composition": (
+                lambda: fetch_body_composition(client, end_date),
+                None,
+                {},
+            ),
+            "alarms": (lambda: fetch_alarms(client), None, []),
+        }
+
+        component_results = {}
+        with concurrent.futures.ThreadPoolExecutor(
+            max_workers=SUMMARY_MAX_WORKERS
+        ) as executor:
+            futures = {
+                name: executor.submit(task)
+                for name, (task, _result_key, _default) in task_specs.items()
+            }
+            for name, future in futures.items():
+                _task, result_key, default = task_specs[name]
+                try:
+                    raw_result = future.result()
+                    if result_key:
+                        component_results[name] = (
+                            raw_result.get(result_key, default)
+                            if isinstance(raw_result, dict)
+                            else default
+                        )
+                    else:
+                        component_results[name] = (
+                            raw_result if raw_result is not None else default
+                        )
+                except Exception as exc:
+                    print(
+                        f"⚠️ Summary component '{name}' failed ({type(exc).__name__}).",
+                        file=sys.stderr,
+                    )
+                    component_results[name] = default
+
+        sleep = component_results["sleep"]
+        hrv = component_results["hrv"]
+        bb = component_results["body_battery"]
+        hr = component_results["heart_rate"]
+        activities = component_results["activities"]
+        stress = component_results["stress"]
+        training_load_series = component_results["training_load_series"]
+        training_status = component_results["training_status"]
+        max_metrics = component_results["max_metrics"]
+        hydration = component_results["hydration"]
+        body_comp = component_results["body_composition"]
+        alarms = component_results["alarms"]
         
         # Calculate averages (handle None values)
         sleep_times = [s.get("sleep_time_seconds") for s in sleep if s.get("sleep_time_seconds")]
@@ -548,6 +635,7 @@ def main():
         result = fetch_profile(client)
     
     # Output JSON
+    # This CLI intentionally returns user-authorized health metrics to its local caller.
     print(json.dumps(result, indent=2))
 
 

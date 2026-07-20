@@ -1,9 +1,11 @@
 {
   "schema_version": 1,
   "skill": "personal-health-analysis",
-  "generated_at": "2026-07-14T21:01:44",
+  "generated_at": "2026-07-20T13:27:41",
   "skill_md": "SKILL.md",
   "top_level_files": [
+    ".gitignore",
+    "garmindb.log",
     "install.ps1",
     "install.sh",
     "SKILL.md"
@@ -17,7 +19,7 @@
   "resource_directories": [
     {
       "name": "scripts",
-      "file_count": 10
+      "file_count": 11
     },
     {
       "name": "references",
