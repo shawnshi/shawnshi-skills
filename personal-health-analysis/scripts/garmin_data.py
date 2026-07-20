@@ -636,7 +636,7 @@ def main():
     
     # Output JSON
     # This CLI intentionally returns user-authorized health metrics to its local caller.
-    print(json.dumps(result, indent=2))  # lgtm[py/clear-text-logging-sensitive-data]
+    print(json.dumps(result, indent=2))
 
 
 if __name__ == "__main__":

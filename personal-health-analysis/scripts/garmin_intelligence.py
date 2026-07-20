@@ -1112,7 +1112,7 @@ def main():
             print(f"State export failed: {e}", file=sys.stderr)
 
     # This CLI intentionally returns user-authorized health metrics to its local caller.
-    print(json.dumps(result, indent=2, ensure_ascii=False))  # lgtm[py/clear-text-logging-sensitive-data]
+    print(json.dumps(result, indent=2, ensure_ascii=False))
 
 if __name__ == "__main__":
     main()
