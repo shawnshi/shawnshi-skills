@@ -99,7 +99,8 @@ def analyze_env_stress(summary_data):
     env_insights = []
     temps = [a.get('temperature') for a in activities if a.get('temperature')]
     if temps:
-        avg_temp = statistics.mean(temps)
+        # Performance optimization: sum/len is faster than statistics.mean
+        avg_temp = sum(temps) / len(temps)
         if avg_temp > 28:
             env_insights.append(f"High thermal stress detected (avg {avg_temp:.1f}°C). Increased RHR expected.")
     
@@ -282,10 +283,11 @@ def analyze_flu_risk(summary_data):
     if len(prev_hrv) < 2 or len(prev_rhr) < 2:
         return {"status": "insufficient_baseline"}
         
-    avg_hrv_baseline = statistics.mean(prev_hrv)
+    # Performance optimization: sum/len is faster than statistics.mean
+    avg_hrv_baseline = sum(prev_hrv) / len(prev_hrv)
     std_hrv = statistics.stdev(prev_hrv) if len(prev_hrv) > 1 else 1.0
     
-    avg_rhr_baseline = statistics.mean(prev_rhr)
+    avg_rhr_baseline = sum(prev_rhr) / len(prev_rhr)
     std_rhr = statistics.stdev(prev_rhr) if len(prev_rhr) > 1 else 1.0
     
     avg_resp_baseline = statistics.median(prev_resp) if prev_resp else 14.0
