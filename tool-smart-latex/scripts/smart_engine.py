@@ -13,6 +13,7 @@ import argparse
 import subprocess
 import re
 import shutil
+from pathlib import Path
 
 # Configuration
 TEMPLATE_DIR = os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), 'templates')
@@ -85,7 +86,7 @@ def convert_and_compile(input_file, template_path, output_tex, style, title, aut
             # Simplified abstract extraction placeholder. 
             cmd.extend(['-V', 'abstract=']) 
             if style == 'tech_report':
-                cmd.extend(['-V', 'toc=true'])
+                cmd.extend(['-V', 'toc=true', '--listings'])
         
         if style == 'book' or style == 'tech_book':
              cmd.extend(['-V', 'toc=true'])
@@ -108,21 +109,37 @@ def compile_tex(tex_file):
     """
     Compile .tex file to PDF using xelatex.
     """
+    tex_path = Path(tex_file).resolve()
     try:
-        # Run twice for references/TOC
-        # Security: Removed -shell-escape flag to prevent command injection from untrusted LaTeX sources
-        cmd = ['xelatex', '-interaction=nonstopmode', tex_file]
+        # Compile from the output directory so Windows path separators are never
+        # interpreted as TeX commands. Shell escape remains explicitly disabled.
+        cmd = [
+            'xelatex',
+            '-interaction=nonstopmode',
+            '-halt-on-error',
+            '-no-shell-escape',
+            tex_path.name,
+        ]
         print(f"Compiling: {' '.join(cmd)}")
-        subprocess.run(cmd, check=True, capture_output=True, text=True) # First pass
-        subprocess.run(cmd, check=True, capture_output=True, text=True) # Second pass
-        print(f"Compilation successful: {tex_file.replace('.tex', '.pdf')}")
+        run_options = {
+            'check': True,
+            'capture_output': True,
+            'text': True,
+            'encoding': 'utf-8',
+            'errors': 'replace',
+            'cwd': str(tex_path.parent),
+        }
+        subprocess.run(cmd, **run_options)  # First pass
+        subprocess.run(cmd, **run_options)  # Second pass
+        print(f"Compilation successful: {tex_path.with_suffix('.pdf')}")
+        return True
     except subprocess.CalledProcessError as e:
         print("Error: Compilation failed. Please check the .log file.")
         
         # Output detailed error context from log instead of just last 20 lines
-        log_file = tex_file.replace('.tex', '.log')
-        if os.path.exists(log_file):
-             with open(log_file, 'r', errors='ignore') as f:
+        log_file = tex_path.with_suffix('.log')
+        if log_file.exists():
+             with open(log_file, 'r', encoding='utf-8', errors='ignore') as f:
                  log_content = f.read()
                  # Search for the first LaTeX Error line to provide actionable feedback
                  error_match = re.search(r'!\s(.*?\n(?:l\.\d+.*?\n)?)', log_content, flags=re.MULTILINE)
@@ -134,7 +151,8 @@ def compile_tex(tex_file):
                      print(''.join(log_content.splitlines()[-20:]))
         else:
              print("\n--- Command Output ---")
-             print(e.stdout[-500:])
+             print((e.stdout or e.stderr or "")[-500:])
+        return False
 
 def main():
     parser = argparse.ArgumentParser(description="Smart Doc-to-LaTeX Native Engine")
@@ -179,7 +197,8 @@ def main():
     print(f"Generated source: {output_tex}")
 
     # 7. Compile to PDF
-    compile_tex(output_tex)
+    if not compile_tex(output_tex):
+        sys.exit(1)
 
 if __name__ == "__main__":
     main()
