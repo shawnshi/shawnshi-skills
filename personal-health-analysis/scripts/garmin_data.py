@@ -636,8 +636,7 @@ def main():
     
     # Output JSON
     # This CLI intentionally returns user-authorized health metrics to its local caller.
-    # codeql[py/clear-text-logging-sensitive-data]
-    print(json.dumps(result, indent=2))
+    print(json.dumps(result, indent=2))  # lgtm[py/clear-text-logging-sensitive-data]
 
 
 if __name__ == "__main__":
