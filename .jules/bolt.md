@@ -23,3 +23,6 @@
 ## 2026-07-19 - Avoiding sequential outer category fetching for API aggregators
 **Learning:** Even if individual network category fetches (like sleep, hrv) use concurrency internally for fetching multiple days, grouping them sequentially at the top level forces sequential blocking on network I/O per category, leading to substantial overhead and poor parallelism.
 **Action:** Use a `ThreadPoolExecutor` to dispatch these top-level category requests concurrently, drastically overlapping latency across independent domain models.
+## 2026-07-21 - Optimize statistics.mean overhead
+**Learning:** Python's built-in `statistics.mean()` is mathematically robust (preventing float precision loss by internally converting to fractions) but has significant overhead for large datasets compared to a simple `sum() / len()` calculation, causing ~80x slower execution in certain contexts.
+**Action:** For simple float/integer averages where extreme precision is not required (e.g., temperatures, health metrics), replace `statistics.mean(lst)` with `sum(lst) / len(lst)` for massive speed improvements.
