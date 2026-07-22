@@ -6,6 +6,7 @@ import tempfile
 import unittest
 from datetime import date, datetime, timezone
 from pathlib import Path
+from urllib.parse import urlparse
 
 
 SCRIPT_DIR = Path(__file__).resolve().parent
@@ -159,7 +160,8 @@ class LiveEvidenceProbeTests(unittest.TestCase):
         quote_epoch = quote_epoch or datetime(2026, 7, 21, 20, 0, tzinfo=timezone.utc).timestamp()
 
         def fetch(url, headers, timeout):
-            if "query1.finance.yahoo.com" in url:
+            hostname = urlparse(url).hostname
+            if hostname == "query1.finance.yahoo.com":
                 payload = {
                     "chart": {
                         "result": [
@@ -175,7 +177,7 @@ class LiveEvidenceProbeTests(unittest.TestCase):
                         ]
                     }
                 }
-            elif "api.nasdaq.com" in url:
+            elif hostname == "api.nasdaq.com":
                 payload = {
                     "data": {
                         "symbol": nasdaq_symbol,
