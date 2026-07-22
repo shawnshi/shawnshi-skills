@@ -1,103 +1,159 @@
 import argparse
 import os
+from collections import Counter, defaultdict
 from datetime import datetime
 from pathlib import Path
+from typing import Any
 
 from advice_journal import load_entries, resolve_journal_path
 
 
+def _mean(values: list[float]) -> float | None:
+    return round(sum(values) / len(values), 2) if values else None
+
+
+def calculate_calibration(entries: list[dict[str, Any]]) -> dict[str, Any]:
+    eligible = [
+        entry
+        for entry in entries
+        if entry.get("executed") is True
+        and entry.get("calibration_eligible") is True
+        and entry.get("net_excess_return_pct") is not None
+    ]
+    observed = [
+        entry
+        for entry in eligible
+        if entry.get("calibration_quality") != "assumption_based_conservative"
+    ]
+    assumption_based = [
+        entry
+        for entry in eligible
+        if entry.get("calibration_quality") == "assumption_based_conservative"
+    ]
+    net_returns = [float(entry["net_excess_return_pct"]) for entry in observed]
+    assumption_returns = [float(entry["net_excess_return_pct"]) for entry in assumption_based]
+    by_horizon: dict[int, list[float]] = defaultdict(list)
+    by_confidence: dict[str, list[float]] = defaultdict(list)
+    for entry in observed:
+        horizon = int(entry["investment_horizon_days"])
+        by_horizon[horizon].append(float(entry["net_excess_return_pct"]))
+        by_confidence[str(entry.get("confidence_level") or "unknown")].append(
+            float(entry["net_excess_return_pct"])
+        )
+    exclusion_reasons = Counter(
+        str(entry.get("calibration_exclusion_reason") or "not eligible")
+        for entry in entries
+        if entry not in eligible
+    )
+    return {
+        "eligible": eligible,
+        "eligible_count": len(eligible),
+        "observed_count": len(observed),
+        "assumption_based_count": len(assumption_based),
+        "excluded_count": len(entries) - len(eligible),
+        "average_net_excess_return_pct": _mean(net_returns),
+        "assumption_based_average_net_excess_return_pct": _mean(assumption_returns),
+        "positive_excess_hit_rate_pct": (
+            round(sum(value > 0 for value in net_returns) / len(net_returns) * 100, 2)
+            if net_returns
+            else None
+        ),
+        "by_horizon": {
+            horizon: {"count": len(values), "average_net_excess_return_pct": _mean(values)}
+            for horizon, values in sorted(by_horizon.items())
+        },
+        "by_confidence": {
+            confidence: {"count": len(values), "average_net_excess_return_pct": _mean(values)}
+            for confidence, values in sorted(by_confidence.items())
+        },
+        "exclusion_reasons": dict(exclusion_reasons),
+    }
+
+
 def build_report(journal_path: str | None = None) -> str:
     entries = load_entries(journal_path)
-    total = len(entries)
-    # Sort entries by creation time to show latest first
-    entries = sorted(entries, key=lambda x: x.get("created_at", ""), reverse=True)
-
-    reviewed = [entry for entry in entries if entry.get("outcome_return_pct") is not None]
-    buys = [entry for entry in reviewed if entry.get("decision_type") == "buy"]
-    holds = [entry for entry in reviewed if entry.get("decision_type") == "hold"]
-
-    avg_reviewed = round(sum(entry["outcome_return_pct"] for entry in reviewed) / len(reviewed), 2) if reviewed else None
-    avg_buy = round(sum(entry["outcome_return_pct"] for entry in buys) / len(buys), 2) if buys else None
-    avg_hold = round(sum(entry["outcome_return_pct"] for entry in holds) / len(holds), 2) if holds else None
-    hit_rate = round(sum(1 for entry in reviewed if entry["outcome_return_pct"] > 0) / len(reviewed) * 100, 2) if reviewed else None
-
+    calibration = calculate_calibration(entries)
+    average = calibration["average_net_excess_return_pct"]
+    hit_rate = calibration["positive_excess_hit_rate_pct"]
     lines = [
         "# Strategy Calibration Report",
         "",
         f"- 生成时间: {datetime.now().strftime('%Y-%m-%d %H:%M')}",
         f"- 日志文件: {resolve_journal_path(journal_path)}",
-        f"- 总建议数: {total}",
-        f"- 已回看样本数: {len(reviewed)}",
-        f"- 回看平均收益率: {f'{avg_reviewed:+.2f}%' if avg_reviewed is not None else 'N/A'}",
-        f"- 买入建议平均收益率: {f'{avg_buy:+.2f}%' if avg_buy is not None else 'N/A'}",
-        f"- 持有建议平均收益率: {f'{avg_hold:+.2f}%' if avg_hold is not None else 'N/A'}",
-        f"- 正收益命中率: {hit_rate if hit_rate is not None else 'N/A'}%",
+        f"- 总样本数: {len(entries)}",
+        f"- 可校准样本数: {calibration['eligible_count']}",
+        f"- 观测型样本数: {calibration['observed_count']}",
+        f"- 保守假设样本数: {calibration['assumption_based_count']}",
+        f"- 排除样本数: {calibration['excluded_count']}",
+        f"- 观测型平均净超额收益率: {f'{average:+.2f}%' if average is not None else 'N/A'}",
+        f"- 正净超额收益命中率: {f'{hit_rate:.2f}%' if hit_rate is not None else 'N/A'}",
         "",
-        "## Calibration Notes",
-        ""
+        "> 主指标只统计观测型样本；日线双触发且缺少可判序盘中数据时，按保守止损优先单独统计，不与主指标混合。",
+        "",
+        "## 分期限校准",
+        "",
+        "| 期限（天） | 样本数 | 平均净超额收益率 |",
+        "|---:|---:|---:|",
     ]
-
-    if not reviewed:
-        lines.append("- 当前缺少已回看样本，无法形成稳定校准结论。")
+    if calibration["by_horizon"]:
+        for horizon, item in calibration["by_horizon"].items():
+            lines.append(
+                f"| {horizon} | {item['count']} | {item['average_net_excess_return_pct']:+.2f}% |"
+            )
     else:
-        if hit_rate is not None and hit_rate < 45:
-            lines.append("- [警告] 建议命中率偏低，说明当前框架可能过度自信或入场时点滞后。")
-        if avg_buy is not None and avg_buy < 0:
-            lines.append("- [风险] 买入建议的平均后验收益为负，优先检查追高和 thesis 证据质量。")
-        if avg_hold is not None and avg_hold < 0:
-            lines.append("- [风险] 持有建议的后验收益偏弱，优先检查止损和减仓纪律是否过松。")
-        if hit_rate is not None and hit_rate >= 55:
-            lines.append("- [正常] 当前策略校准处于可接受区间，但仍需要更多样本分市场复核。")
+        lines.append("| - | 0 | N/A |")
 
-        lines.append("")
-        lines.append("## 绩效排行榜 (Top & Bottom Performance)")
-        lines.append("")
-        lines.append("| 建议日期 | 股票 | 建议 | 建议价 | 最新价 | 收益率 | 状态 |")
-        lines.append("|:---|:---|:---|:---|:---|:---|:---|")
+    lines.extend(["", "## 置信度校准", "", "| 置信度 | 样本数 | 平均净超额收益率 |", "|:---|---:|---:|"])
+    if calibration["by_confidence"]:
+        for confidence, item in calibration["by_confidence"].items():
+            lines.append(
+                f"| {confidence} | {item['count']} | {item['average_net_excess_return_pct']:+.2f}% |"
+            )
+    else:
+        lines.append("| - | 0 | N/A |")
 
-        # Sort by stock name, then by date descending
-        # Python's sort is stable, so we sort by date descending first, then by stock name
-        sorted_perf = sorted(reviewed, key=lambda x: x.get("created_at", ""), reverse=True)
-        sorted_perf.sort(key=lambda x: x.get("stock_name", x.get("stock_code", "")))
-        for e in sorted_perf:
-            date = e.get("created_at", "")[:10]
-            name = e.get("stock_name", e.get("stock_code"))
-            dec = e.get("decision_type", "N/A")
-            p_init = e.get("current_price", 0)
-            p_now = e.get("outcome_price", 0)
-            ret = e.get("outcome_return_pct", 0)
-            
-            status_calc = "Win" if ret > 0 else ("Loss" if ret < 0 else "Flat")
-            real_status = e.get("outcome_status")
-            if real_status and real_status != "Open":
-                status = f"{real_status} ({status_calc})"
-            elif real_status == "Open":
-                status = f"Open ({status_calc})"
-            else:
-                status = status_calc
-                
-            lines.append(f"| {date} | {name} | {dec} | {p_init:.2f} | {p_now:.2f} | {ret:+.2f}% | {status} |")
+    lines.extend(["", "## 样本排除原因", ""])
+    if calibration["exclusion_reasons"]:
+        for reason, count in sorted(calibration["exclusion_reasons"].items()):
+            lines.append(f"- {reason}: {count}")
+    else:
+        lines.append("- 无")
 
+    lines.extend(
+        [
+            "",
+            "## 可校准样本",
+            "",
+            "| 日期 | 标的 | 方向 | 期限 | 质量 | 解析方法 | 标的收益 | 基准收益 | 净超额收益 |",
+            "|:---|:---|:---:|---:|:---|:---|---:|---:|---:|",
+        ]
+    )
+    for entry in sorted(calibration["eligible"], key=lambda item: item.get("created_at", ""), reverse=True):
+        lines.append(
+            "| {date} | {symbol} | {direction} | {horizon} | {quality} | {method} | {asset:+.2f}% | {benchmark:+.2f}% | {excess:+.2f}% |".format(
+                date=str(entry.get("created_at", ""))[:10],
+                symbol=entry.get("stock_name") or entry.get("stock_code"),
+                direction=entry.get("position_direction"),
+                horizon=entry.get("investment_horizon_days"),
+                quality=entry.get("calibration_quality") or "observed",
+                method=entry.get("outcome_resolution_method") or "legacy",
+                asset=float(entry.get("outcome_return_pct", 0)),
+                benchmark=float(entry.get("benchmark_return_pct", 0)),
+                excess=float(entry.get("net_excess_return_pct", 0)),
+            )
+        )
     return "\n".join(lines) + "\n"
 
 
 if __name__ == "__main__":
-    parser = argparse.ArgumentParser(description="Generate a calibration report from advice journal.")
+    parser = argparse.ArgumentParser(description="Generate benchmark-aware calibration from an advice journal.")
     parser.add_argument("--journal-path")
-    parser.add_argument("--output-path", default=os.environ.get("PIA_CALIBRATION_REPORT"), help="Required output path; alternatively set PIA_CALIBRATION_REPORT.")
-    parser.add_argument("--sync", action="store_true", help="Sync latest prices before generating report.")
+    parser.add_argument(
+        "--output-path",
+        default=os.environ.get("PIA_CALIBRATION_REPORT"),
+        help="Required output path; alternatively set PIA_CALIBRATION_REPORT.",
+    )
     args = parser.parse_args()
-
-    if args.sync:
-        print("Synchronizing latest prices...")
-        import subprocess
-        import sys
-        sync_script = Path(__file__).parent / "sync_outcomes.py"
-        sync_cmd = [sys.executable, str(sync_script)]
-        if args.journal_path:
-            sync_cmd.extend(["--journal-path", args.journal_path])
-        subprocess.run(sync_cmd, check=False)
-
     if not args.output_path:
         parser.error("output path is required; pass --output-path or set PIA_CALIBRATION_REPORT")
     report = build_report(args.journal_path)

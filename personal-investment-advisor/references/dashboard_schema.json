@@ -1,5 +1,6 @@
 {
-  "version": "4.0",
+  "resource_kind": "investment_dashboard_contract",
+  "version": "5.0",
   "required_top_level": [
     "stock_name",
     "stock_code",
@@ -34,7 +35,8 @@
     "catalyst_map",
     "watchlist_alerts",
     "feedback_status",
-    "management_truth_serum"
+    "management_claim_tracking",
+    "research_brief"
   ],
   "required_dashboard_sections": [
     "core_conclusion",
@@ -87,8 +89,14 @@
     "connection",
     "deduction",
     "source_type",
+    "source_tier",
+    "source_locator",
+    "published_at",
+    "retrieved_at",
+    "as_of_date",
     "freshness",
-    "confidence"
+    "confidence",
+    "independent_source_count"
   ],
   "required_portfolio_context_fields_when_holding": [
     "has_position",
@@ -120,11 +128,12 @@
     "concentration_risk",
     "market_exposure_risk",
     "style_drift_risk",
-    "liquidity_risk"
+    "liquidity_risk",
+    "risk_data_gaps"
   ],
   "required_portfolio_fit_fields": [
-    "action_in_portfolio",
-    "allocation_impact",
+    "eligibility",
+    "constraint_impact",
     "rationale"
   ],
   "required_earnings_snapshot_fields": [
@@ -136,24 +145,34 @@
   "required_catalyst_map_fields": [
     "upcoming",
     "active",
-    "broken"
+    "broken",
+    "data_gaps"
   ],
-  "required_truth_serum_fields": [
-    "promise_fulfillment_rate",
-    "management_honesty_score",
-    "red_flag_warnings",
-    "unmentioned_failures"
+  "required_management_claim_tracking_fields": [
+    "summary",
+    "claims",
+    "assessment_boundary",
+    "formal_use_allowed"
   ],
   "enums": {
     "market_type": ["A股", "港股", "美股", "ETF", "其他"],
     "research_mode": ["trading_mode", "thesis_mode"],
-    "decision_type": ["buy", "hold", "sell", "watch"],
+    "decision_type": ["buy", "hold", "sell", "watch", "research_only"],
     "confidence_level": ["高", "中", "低"],
-    "operation_advice": ["买入", "加仓", "持有", "减仓", "卖出", "观望"],
+    "operation_advice": ["买入", "加仓", "持有", "减仓", "卖出", "观望", "不适用"],
     "trend_prediction": ["强烈看多", "看多", "震荡", "看空", "强烈看空"],
     "weight_status": ["within_target", "above_target", "above_max", "unknown"],
     "feedback_status": ["pending", "executed", "reviewed", "closed"],
-    "position_direction": ["long", "short"]
+    "position_direction": ["long", "short", "not_applicable"],
+    "source_tier": [
+      "company_primary",
+      "regulator",
+      "exchange",
+      "audited_filing",
+      "market_data",
+      "secondary",
+      "user_authorized"
+    ]
   },
   "market_rules": {
     "A股": {

@@ -1,4 +1,6 @@
 {
+  "_example_only": true,
+  "base_currency": "CNY",
   "positions": [
     {
       "symbol": "300308.SZ",

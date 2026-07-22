@@ -267,6 +267,7 @@ def extract_catalyst_map(news_items: List[Dict[str, Any]], earnings_snapshot: Di
     upcoming = []
     active = []
     broken = []
+    data_gaps = []
 
     if earnings_snapshot.get("next_earnings_date"):
         upcoming.append(f"财报窗口: {earnings_snapshot['next_earnings_date']}")
@@ -277,12 +278,13 @@ def extract_catalyst_map(news_items: List[Dict[str, Any]], earnings_snapshot: Di
             active.append(title)
 
     if not active:
-        broken.append("缺少近期催化线索，需要额外验证 thesis 是否仍然成立")
+        data_gaps.append("当前数据源未返回近期催化线索；这不是 thesis 破坏证据")
 
     return {
         "upcoming": upcoming,
         "active": active,
         "broken": broken,
+        "data_gaps": data_gaps,
     }
 
 

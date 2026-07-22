@@ -1,298 +1,215 @@
-# -*- coding: utf-8 -*-
 import argparse
-import yfinance as yf
-import pandas as pd
-import numpy as np
-from tabulate import tabulate
 import json
-import time
-import random
+import sys
+from pathlib import Path
+from typing import Any
+
+import numpy as np
+import pandas as pd
+import yfinance as yf
+from tabulate import tabulate
 from tenacity import retry, stop_after_attempt, wait_exponential
 
-def get_financials(ticker_obj, freq="yearly"):
-    try:
-        inc = ticker_obj.financials
-        cf = ticker_obj.cashflow
-        bs = ticker_obj.balance_sheet
-        if inc.empty or cf.empty or bs.empty:
-            return None, None, None
-        return inc, cf, bs
-    except Exception as e:
-        return None, None, None
 
-def safe_get(df, index_name, year_index=0):
-    try:
-        if index_name in df.index:
-            val = df.loc[index_name].iloc[year_index]
-            if pd.isna(val):
-                return 0
-            return float(val)
-    except:
-        pass
-    return 0
+DEFAULT_PROFILES_PATH = Path(__file__).resolve().parent.parent / "references" / "method_profiles.json"
 
-def safe_get_series(df, index_names):
-    for name in index_names:
-        if name in df.index:
-            s = df.loc[name]
-            s = pd.to_numeric(s, errors='coerce').fillna(0)
-            if not s.empty:
-                return s
-    # Return empty series
+
+def load_profiles(path: str | None = None) -> dict[str, Any]:
+    profile_path = Path(path) if path else DEFAULT_PROFILES_PATH
+    return json.loads(profile_path.read_text(encoding="utf-8"))
+
+
+def _series(frame: pd.DataFrame, names: list[str]) -> pd.Series:
+    for name in names:
+        if name in frame.index:
+            values = pd.to_numeric(frame.loc[name], errors="coerce").dropna()
+            if not values.empty:
+                return values
     return pd.Series(dtype=float)
 
+
+def _mean_ratio(numerator: pd.Series, denominator: pd.Series) -> float | None:
+    common = numerator.index.intersection(denominator.index)
+    if common.empty:
+        return None
+    ratios = (numerator[common] / denominator[common].replace(0, np.nan)).dropna()
+    return float(ratios.mean()) if not ratios.empty else None
+
+
+def _finite(value: Any) -> float | None:
+    try:
+        parsed = float(value)
+    except (TypeError, ValueError):
+        return None
+    return parsed if np.isfinite(parsed) else None
+
+
+def evaluate_metrics(metrics: dict[str, Any], profile: dict[str, Any]) -> dict[str, Any]:
+    checks = []
+    missing = []
+    failed = []
+    for metric, rule in profile.get("thresholds", {}).items():
+        value = _finite(metrics.get(metric))
+        if value is None:
+            missing.append(metric)
+            checks.append({"metric": metric, "status": "missing", "value": None, "rule": rule})
+            continue
+        passed = True
+        if "min" in rule:
+            passed = passed and value >= float(rule["min"])
+        if "min_exclusive" in rule:
+            passed = passed and value > float(rule["min_exclusive"])
+        if "max" in rule:
+            passed = passed and value <= float(rule["max"])
+        if "max_exclusive" in rule:
+            passed = passed and value < float(rule["max_exclusive"])
+        status = "pass" if passed else "fail"
+        checks.append({"metric": metric, "status": status, "value": value, "rule": rule})
+        if not passed:
+            failed.append(metric)
+
+    if missing:
+        status = "insufficient_data"
+    elif failed:
+        status = "fail"
+    else:
+        status = "pass"
+    return {"status": status, "missing_metrics": missing, "failed_metrics": failed, "checks": checks}
+
+
 @retry(stop=stop_after_attempt(3), wait=wait_exponential(multiplier=1, min=2, max=10))
-def fetch_yf_data(ticker_symbol):
-    t = yf.Ticker(ticker_symbol)
-    inc, cf, bs = get_financials(t)
-    if inc is None:
-        raise ValueError("Data unavailable")
-    return t, inc, cf, bs
+def fetch_yf_data(ticker_symbol: str):
+    ticker = yf.Ticker(ticker_symbol)
+    income = ticker.financials
+    cashflow = ticker.cashflow
+    balance = ticker.balance_sheet
+    if income.empty or cashflow.empty or balance.empty:
+        raise ValueError("financial statements unavailable")
+    return ticker, income, cashflow, balance
 
-def evaluate_a_share_ticker(ticker_symbol):
-    import akshare as ak
-    code = ticker_symbol.split(".")[0]
-    
-    try:
-        # Fetch fundamental indicators
-        df = ak.stock_financial_analysis_indicator(symbol=code)
-        if df.empty:
-            return {"Company": ticker_symbol, "Status": "❌ Error", "Reason": "A-Share data empty"}
-            
-        if '日期' in df.columns:
-            df['日期'] = pd.to_datetime(df['日期'], errors='coerce')
-            df = df.sort_values('日期', ascending=False)
-            
-        def get_col(candidates):
-            for c in candidates:
-                if c in df.columns:
-                    return df[c]
-            return pd.Series(dtype=float)
-            
-        roe_series = get_col(['净资产收益率(%)', '加权净资产收益率(%)'])
-        gm_series = get_col(['销售毛利率(%)', '毛利率(%)'])
-        nm_series = get_col(['销售净利率(%)', '净利率(%)'])
-        
-        roe_avg = (roe_series.head(5).mean() / 100.0) if not roe_series.empty else 0
-        gm_avg = (gm_series.head(5).mean() / 100.0) if not gm_series.empty else 0
-        nm_avg = (nm_series.head(5).mean() / 100.0) if not nm_series.empty else 0
-        
-        ocf_ps = get_col(['每股经营性现金流(元)', '每股经营现金流(元)'])
-        fcf_sum = ocf_ps.head(5).sum() if not ocf_ps.empty else 1
-        
-        int_cov = 999 
-        ocf_ni_avg = 1.0 
-        dilution = 0
-        
-        shares = get_col(['总股本(万股)', '总股本(股)'])
-        if not shares.empty and len(shares) > 1:
-            newest = shares.iloc[0]
-            oldest = shares.iloc[-1]
-            if oldest > 0:
-                dilution = (newest - oldest) / oldest
 
-        pass_1 = roe_avg >= 0.08
-        pass_2 = fcf_sum > 0
-        pass_3 = True
-        pass_4 = gm_avg >= 0.15
-        pass_5 = True
-        pass_6 = nm_avg >= 0.05
-        pass_7 = dilution <= 0.20
-        
-        all_pass = pass_1 and pass_2 and pass_3 and pass_4 and pass_5 and pass_6 and pass_7
-        status = "✅ Pass" if all_pass else "❌ Fail"
-        
-        failed_metrics = []
-        if not pass_1: failed_metrics.append("ROE < 8%")
-        if not pass_2: failed_metrics.append("FCF < 0")
-        if not pass_4: failed_metrics.append("GM < 15%")
-        if not pass_6: failed_metrics.append("NM < 5%")
-        if not pass_7: failed_metrics.append("Dilution > 20%")
-        
-        return {
-            "Company": ticker_symbol,
-            "1.ROE": f"{roe_avg:.1%}",
-            "2.FCF": "Pos" if fcf_sum > 0 else "Neg",
-            "3.IntCov": "N/A(A)",
-            "4.GM": f"{gm_avg:.1%}",
-            "5.OCF/NI": "N/A(A)",
-            "6.NM": f"{nm_avg:.1%}",
-            "7.Dilution": f"{dilution:.1%}",
-            "Status": status,
-            "Reason": ", ".join(failed_metrics) if failed_metrics else ""
-        }
+def extract_yf_metrics(income: pd.DataFrame, cashflow: pd.DataFrame, balance: pd.DataFrame) -> dict[str, Any]:
+    net_income = _series(income, ["Net Income", "Net Income Common Stockholders"])
+    equity = _series(balance, ["Stockholders Equity", "Total Stockholder Equity"])
+    operating_cashflow = _series(cashflow, ["Operating Cash Flow", "Total Cash From Operating Activities"])
+    free_cashflow = _series(cashflow, ["Free Cash Flow"])
+    if free_cashflow.empty:
+        capex = _series(cashflow, ["Capital Expenditure"])
+        common = operating_cashflow.index.intersection(capex.index)
+        if not common.empty:
+            free_cashflow = operating_cashflow[common] + capex[common]
+    ebit = _series(income, ["EBIT", "Operating Income"])
+    interest = _series(income, ["Interest Expense", "Interest Expense Non Operating"])
+    revenue = _series(income, ["Total Revenue", "Operating Revenue"])
+    gross_profit = _series(income, ["Gross Profit"])
+    shares = _series(income, ["Basic Average Shares", "Diluted Average Shares"])
 
-    except Exception as e:
-        return {"Company": ticker_symbol, "Status": "❌ Error", "Reason": f"Akshare fetch failed: {e}"}
-
-def evaluate_ticker(ticker_symbol):
-
-    print(f"Fetching data for {ticker_symbol} via yfinance...")
-    try:
-        t, inc, cf, bs = fetch_yf_data(ticker_symbol)
-    except Exception as e:
-        return {"Company": ticker_symbol, "Status": "❌ Error", "Reason": "Data unavailable or rate limited"}
-        
-    info = t.info
-    industry = info.get("industry", "")
-    
-    # Try to extract required series
-    net_income = safe_get_series(inc, ["Net Income", "Net Income Common Stockholders"])
-    equity = safe_get_series(bs, ["Stockholders Equity", "Total Stockholder Equity"])
-    ocf = safe_get_series(cf, ["Operating Cash Flow", "Total Cash From Operating Activities"])
-    fcf = safe_get_series(cf, ["Free Cash Flow"])
-    if fcf.empty and not ocf.empty:
-        capex = safe_get_series(cf, ["Capital Expenditure"])
-        if not capex.empty:
-            fcf = ocf + capex # capex is usually negative in yfinance
-        
-    ebit = safe_get_series(inc, ["EBIT", "Operating Income"])
-    interest = safe_get_series(inc, ["Interest Expense", "Interest Expense Non Operating"])
-    revenue = safe_get_series(inc, ["Total Revenue", "Operating Revenue"])
-    gross_profit = safe_get_series(inc, ["Gross Profit"])
-    shares = safe_get_series(inc, ["Basic Average Shares", "Diluted Average Shares"])
-    
-    # 1. ROE (10y avg ideally, yf gives ~4 years usually, we use what we have)
-    roe_avg = 0
-    if not net_income.empty and not equity.empty:
-        common_cols = net_income.index.intersection(equity.index)
-        if len(common_cols) > 0:
-            roes = (net_income[common_cols] / equity[common_cols].replace(0, np.nan)).dropna()
-            roe_avg = roes.mean() if len(roes) > 0 else 0
-            
-    # 2. Cumulative FCF (5y)
-    fcf_sum = fcf.sum() if not fcf.empty else 0
-    
-    # 3. Interest Coverage
-    int_cov = 999
+    interest_coverage = None
     if not ebit.empty and not interest.empty and interest.iloc[0] != 0:
-        # interest is often negative in yfinance, use abs
-        val = ebit.iloc[0] / abs(interest.iloc[0])
-        int_cov = val if pd.notna(val) else 999
-        
-    # 4. Gross Margin
-    gm_avg = 0
-    if not gross_profit.empty and not revenue.empty:
-        common_cols = gross_profit.index.intersection(revenue.index)
-        if len(common_cols) > 0:
-            gms = (gross_profit[common_cols] / revenue[common_cols].replace(0, np.nan)).dropna()
-            gm_avg = gms.mean() if len(gms) > 0 else 0
-            
-    # 5. OCF/NI
-    ocf_ni_avg = 0
-    if not ocf.empty and not net_income.empty:
-        common_cols = ocf.index.intersection(net_income.index)
-        if len(common_cols) > 0:
-            ocf_nis = (ocf[common_cols] / net_income[common_cols].replace(0, np.nan)).dropna()
-            # remove extreme outliers
-            ocf_nis = ocf_nis[(ocf_nis > -10) & (ocf_nis < 10)]
-            ocf_ni_avg = ocf_nis.mean() if len(ocf_nis) > 0 else 0
-            
-    # 6. Net Margin
-    nm_avg = 0
-    if not net_income.empty and not revenue.empty:
-        common_cols = net_income.index.intersection(revenue.index)
-        if len(common_cols) > 0:
-            nms = (net_income[common_cols] / revenue[common_cols].replace(0, np.nan)).dropna()
-            nm_avg = nms.mean() if len(nms) > 0 else 0
-            
-    # 7. Dilution
-    dilution = 0
-    if not shares.empty and len(shares) > 1:
-        # yf orders from newest to oldest
-        newest = shares.iloc[0]
-        oldest = shares.iloc[-1]
-        if oldest > 0:
-            dilution = (newest - oldest) / oldest
-            
-    # Evaluations
-    metrics = {
-        "1.ROE": roe_avg,
-        "2.FCF_Sum": fcf_sum,
-        "3.Int_Cov": int_cov,
-        "4.Gross_Margin": gm_avg,
-        "5.OCF/NI": ocf_ni_avg,
-        "6.Net_Margin": nm_avg,
-        "7.Dilution": dilution
-    }
-    
-    pass_1 = roe_avg >= 0.08
-    pass_2 = fcf_sum > 0
-    pass_3 = (int_cov >= 2) or ("Bank" in industry or "Insurance" in industry)
-    pass_4 = gm_avg >= 0.15
-    pass_5 = ocf_ni_avg >= 0.7
-    pass_6 = nm_avg >= 0.05
-    pass_7 = dilution <= 0.20
-    
-    # Exemptions
-    exemption_reason = ""
-    # A. 战略投入期 (Growth phase)
-    recent_ocf_sum = ocf.iloc[:2].sum() if len(ocf) >= 2 else ocf.sum() if not ocf.empty else 0
-    if not pass_1 and gm_avg > 0.30 and recent_ocf_sum > 0:
-        pass_1 = True
-        exemption_reason += "[Exemption A: Growth Phase] "
-        
-    # B. 主动低利润率 (Strategic low margin)
-    recent_nm = 0
-    if not net_income.empty and not revenue.empty and len(net_income) >= 2:
-        recent_nm = net_income.iloc[:2].sum() / revenue.iloc[:2].sum() if revenue.iloc[:2].sum() != 0 else 0
-        
-    if not pass_6 and gm_avg > 0.30 and recent_nm >= 0.05:
-        pass_6 = True
-        exemption_reason += "[Exemption B: Low Margin] "
-        
-    # C. 高周转薄利 (High turnover)
-    if (not pass_4 or not pass_6) and roe_avg > 0.20 and ocf_ni_avg > 1.0:
-        pass_4 = True
-        pass_6 = True
-        exemption_reason += "[Exemption C: High Turnover] "
-        
-    all_pass = pass_1 and pass_2 and pass_3 and pass_4 and pass_5 and pass_6 and pass_7
-    
-    status = "✅ Pass" if all_pass else "❌ Fail"
-    if all_pass and exemption_reason:
-        status = "⚠️ Pass (Exempt)"
-        
-    failed_metrics = []
-    if not pass_1: failed_metrics.append("ROE < 8%")
-    if not pass_2: failed_metrics.append("FCF < 0")
-    if not pass_3: failed_metrics.append("IntCov < 2")
-    if not pass_4: failed_metrics.append("GM < 15%")
-    if not pass_5: failed_metrics.append("OCF/NI < 0.7")
-    if not pass_6: failed_metrics.append("NM < 5%")
-    if not pass_7: failed_metrics.append("Dilution > 20%")
-    
+        interest_coverage = float(ebit.iloc[0] / abs(interest.iloc[0]))
+    dilution = None
+    if len(shares) > 1 and shares.iloc[-1] > 0:
+        dilution = float((shares.iloc[0] - shares.iloc[-1]) / shares.iloc[-1])
     return {
-        "Company": ticker_symbol,
-        "1.ROE": f"{roe_avg:.1%}",
-        "2.FCF": "Pos" if fcf_sum > 0 else "Neg",
-        "3.IntCov": f"{int_cov:.1f}" if int_cov != 999 else "N/A",
-        "4.GM": f"{gm_avg:.1%}",
-        "5.OCF/NI": f"{ocf_ni_avg:.2f}",
-        "6.NM": f"{nm_avg:.1%}",
-        "7.Dilution": f"{dilution:.1%}",
-        "Status": status,
-        "Reason": ", ".join(failed_metrics) if failed_metrics else exemption_reason.strip()
+        "roe_avg": _mean_ratio(net_income, equity),
+        "fcf_sum": float(free_cashflow.sum()) if not free_cashflow.empty else None,
+        "interest_coverage": interest_coverage,
+        "gross_margin_avg": _mean_ratio(gross_profit, revenue),
+        "ocf_to_net_income_avg": _mean_ratio(operating_cashflow, net_income),
+        "net_margin_avg": _mean_ratio(net_income, revenue),
+        "dilution": dilution,
     }
 
-def main():
-    parser = argparse.ArgumentParser(description="AI-Berkshire Quality Screener")
-    parser.add_argument("--tickers", nargs="+", required=True, help="List of tickers to screen")
+
+def extract_a_share_metrics(ticker_symbol: str) -> dict[str, Any]:
+    import akshare as ak
+
+    code = ticker_symbol.split(".")[0]
+    frame = ak.stock_financial_analysis_indicator(symbol=code)
+    if frame.empty:
+        raise ValueError("A-share financial indicators unavailable")
+    if "日期" in frame.columns:
+        frame["日期"] = pd.to_datetime(frame["日期"], errors="coerce")
+        frame = frame.sort_values("日期", ascending=False)
+
+    def column(names: list[str]) -> pd.Series:
+        for name in names:
+            if name in frame.columns:
+                return pd.to_numeric(frame[name], errors="coerce").dropna()
+        return pd.Series(dtype=float)
+
+    roe = column(["净资产收益率(%)", "加权净资产收益率(%)"])
+    gross_margin = column(["销售毛利率(%)", "毛利率(%)"])
+    net_margin = column(["销售净利率(%)", "净利率(%)"])
+    shares = column(["总股本(万股)", "总股本(股)"])
+    dilution = None
+    if len(shares) > 1 and shares.iloc[-1] > 0:
+        dilution = float((shares.iloc[0] - shares.iloc[-1]) / shares.iloc[-1])
+    return {
+        "roe_avg": float(roe.head(5).mean() / 100) if not roe.empty else None,
+        "gross_margin_avg": float(gross_margin.head(5).mean() / 100) if not gross_margin.empty else None,
+        "net_margin_avg": float(net_margin.head(5).mean() / 100) if not net_margin.empty else None,
+        "dilution": dilution,
+    }
+
+
+def evaluate_ticker(ticker_symbol: str, profile_name: str, profile: dict[str, Any]) -> dict[str, Any]:
+    try:
+        if ticker_symbol.endswith((".SS", ".SZ", ".BJ")):
+            metrics = extract_a_share_metrics(ticker_symbol)
+            source = "akshare"
+        else:
+            _, income, cashflow, balance = fetch_yf_data(ticker_symbol)
+            metrics = extract_yf_metrics(income, cashflow, balance)
+            source = "yfinance"
+    except Exception as exc:
+        return {
+            "symbol": ticker_symbol,
+            "profile": profile_name,
+            "status": "data_error",
+            "source": None,
+            "metrics": {},
+            "checks": [],
+            "reason": str(exc),
+        }
+    result = evaluate_metrics(metrics, profile)
+    return {
+        "symbol": ticker_symbol,
+        "profile": profile_name,
+        "source": source,
+        "metrics": metrics,
+        **result,
+    }
+
+
+def main() -> int:
+    parser = argparse.ArgumentParser(description="Profile-driven financial quality pre-screen.")
+    parser.add_argument("--tickers", nargs="+", required=True)
+    parser.add_argument("--profile", required=True)
+    parser.add_argument("--profiles-file")
     parser.add_argument("--format", choices=["markdown", "json"], default="markdown")
     args = parser.parse_args()
-    
-    results = []
-    for ticker in args.tickers:
-        res = evaluate_ticker(ticker)
-        results.append(res)
-        time.sleep(random.uniform(0.5, 2.0))  # Rate limiting jitter
-        
+    profiles_payload = load_profiles(args.profiles_file)
+    profiles = profiles_payload.get("profiles", {})
+    if args.profile not in profiles:
+        parser.error(f"unknown profile {args.profile!r}; choose from {sorted(profiles)}")
+    results = [evaluate_ticker(ticker, args.profile, profiles[args.profile]) for ticker in args.tickers]
     if args.format == "json":
-        print(json.dumps(results, indent=2, ensure_ascii=False))
+        print(json.dumps(results, ensure_ascii=False, indent=2))
     else:
-        df = pd.DataFrame(results)
-        print("## AI-Berkshire 去劣漏斗筛选结果\n")
-        print(tabulate(df, headers="keys", tablefmt="pipe", showindex=False))
+        rows = [
+            {
+                "symbol": item["symbol"],
+                "profile": item["profile"],
+                "status": item["status"],
+                "missing": ", ".join(item.get("missing_metrics", [])),
+                "failed": ", ".join(item.get("failed_metrics", [])),
+            }
+            for item in results
+        ]
+        print(tabulate(rows, headers="keys", tablefmt="pipe", showindex=False))
+    return 1 if any(item["status"] in {"data_error", "insufficient_data"} for item in results) else 0
+
 
 if __name__ == "__main__":
-    main()
+    sys.exit(main())

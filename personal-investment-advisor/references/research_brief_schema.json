@@ -1,0 +1,61 @@
+{
+  "resource_kind": "research_brief_contract",
+  "version": "1.0",
+  "required_top_level": [
+    "research_id",
+    "instrument",
+    "as_of_date",
+    "investment_horizon_days",
+    "benchmark",
+    "method_profile",
+    "research_question",
+    "market_consensus",
+    "core_hypothesis",
+    "falsification_conditions",
+    "key_variables",
+    "source_policy",
+    "output_contract"
+  ],
+  "required_instrument_fields": [
+    "symbol",
+    "market",
+    "asset_type",
+    "currency"
+  ],
+  "required_benchmark_fields": [
+    "symbol",
+    "market",
+    "currency"
+  ],
+  "required_source_policy_fields": [
+    "cutoff_date",
+    "allowed_source_tiers",
+    "primary_source_required"
+  ],
+  "required_output_contract_fields": [
+    "decision_scope",
+    "required_scenarios",
+    "include_counterevidence",
+    "transaction_cost_bps",
+    "dual_trigger_policy"
+  ],
+  "enums": {
+    "market": ["CN", "HK", "US"],
+    "asset_type": ["stock", "etf", "fund", "index", "other"],
+    "decision_scope": ["research_only", "portfolio_context"],
+    "dual_trigger_policy": ["conservative", "exclude"],
+    "source_tier": [
+      "company_primary",
+      "regulator",
+      "exchange",
+      "audited_filing",
+      "market_data",
+      "secondary",
+      "user_authorized"
+    ]
+  },
+  "key_variable_limits": {
+    "minimum": 1,
+    "maximum": 20
+  }
+}
