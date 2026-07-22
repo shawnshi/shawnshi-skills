@@ -1,0 +1,37 @@
+{
+  "resource_kind": "investment_method_profiles",
+  "version": "1.0",
+  "profiles": {
+    "quality_equity": {
+      "description": "Non-financial operating company quality screen; requires cash-flow and margin evidence.",
+      "applicable_asset_types": ["stock"],
+      "thresholds": {
+        "roe_avg": {"min": 0.08},
+        "fcf_sum": {"min_exclusive": 0.0},
+        "interest_coverage": {"min": 2.0},
+        "gross_margin_avg": {"min": 0.15},
+        "ocf_to_net_income_avg": {"min": 0.7},
+        "net_margin_avg": {"min": 0.05},
+        "dilution": {"max": 0.20}
+      }
+    },
+    "a_share_basic": {
+      "description": "Limited A-share primary screen when only common profitability fields are available.",
+      "applicable_asset_types": ["stock"],
+      "thresholds": {
+        "roe_avg": {"min": 0.08},
+        "gross_margin_avg": {"min": 0.15},
+        "net_margin_avg": {"min": 0.05},
+        "dilution": {"max": 0.20}
+      }
+    },
+    "financial_institution": {
+      "description": "Bank and insurer pre-screen; does not apply industrial-company FCF or gross-margin rules.",
+      "applicable_asset_types": ["stock"],
+      "thresholds": {
+        "roe_avg": {"min": 0.08},
+        "dilution": {"max": 0.20}
+      }
+    }
+  }
+}

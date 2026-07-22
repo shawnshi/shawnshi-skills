@@ -1,5 +1,10 @@
 from __future__ import annotations
 
+import argparse
+import json
+import math
+import sys
+from pathlib import Path
 from typing import Any
 
 
@@ -18,12 +23,14 @@ def _to_float(value: Any) -> float | None:
     if value in (None, "", "N/A"):
         return None
     try:
-        return float(value)
+        parsed = float(value)
+        return parsed if math.isfinite(parsed) else None
     except (TypeError, ValueError):
         if isinstance(value, str):
             match = re.search(r"[-+]?\d*\.\d+|\d+", value)
             if match:
-                return float(match.group())
+                parsed = float(match.group())
+                return parsed if math.isfinite(parsed) else None
         return None
 
 
@@ -103,7 +110,7 @@ def validate_math_consistency(data: dict) -> list[str]:
                     errors.append("stop_loss must be strictly below current_price for long buy/hold/watch decisions")
         if take_profit is not None and resistance is not None and take_profit < resistance:
             errors.append("take_profit should not be below resistance_level")
-    else:  # short
+    elif position_direction == "short":
         if current_price is not None and resistance is not None and resistance < current_price:
             if not allow_breakout_buy:
                 errors.append("resistance_level cannot be below current_price for short")
@@ -122,3 +129,30 @@ def validate_math_consistency(data: dict) -> list[str]:
         errors.append("confidence_details.score must be between 0 and 100")
 
     return errors
+
+
+def validate_file(path: str) -> list[str]:
+    payload = json.loads(Path(path).read_text(encoding="utf-8"))
+    return validate_math_consistency(payload)
+
+
+def main() -> int:
+    parser = argparse.ArgumentParser(description="Validate mathematical consistency in a stock dashboard JSON.")
+    parser.add_argument("json_path")
+    args = parser.parse_args()
+    try:
+        errors = validate_file(args.json_path)
+    except (OSError, json.JSONDecodeError) as exc:
+        print(f"[FAIL] dashboard math gate could not read input: {exc}")
+        return 2
+    if errors:
+        print("[FAIL] dashboard math gate blocked output")
+        for error in errors:
+            print(f"- {error}")
+        return 1
+    print("[PASS] dashboard math gate passed")
+    return 0
+
+
+if __name__ == "__main__":
+    sys.exit(main())

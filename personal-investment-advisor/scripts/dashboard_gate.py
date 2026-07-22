@@ -1,10 +1,12 @@
 import json
+from datetime import date
 from pathlib import Path
 
 from dashboard_math_gate import validate_math_consistency
+from research_brief_gate import validate_research_brief
 
 
-SCHEMA_PATH = Path(__file__).resolve().parent.parent / "resources" / "dashboard_schema.json"
+SCHEMA_PATH = Path(__file__).resolve().parent.parent / "references" / "dashboard_schema.json"
 SCHEMA = json.loads(SCHEMA_PATH.read_text(encoding="utf-8"))
 
 
@@ -28,6 +30,30 @@ def _validate_evidence_items(items):
         for key in SCHEMA["required_evidence_fields"]:
             if item.get(key) in (None, "", []):
                 errors.append(f"missing evidence_items[{idx}].{key}")
+        if item.get("source_tier") not in SCHEMA["enums"]["source_tier"]:
+            errors.append(f"invalid evidence_items[{idx}].source_tier")
+        locator = str(item.get("source_locator", "")).lower()
+        if any(token in locator for token in ["example.com", "example.test", ".invalid", "localhost"]):
+            errors.append(f"evidence_items[{idx}].source_locator is a reserved test locator")
+        for field in ["published_at", "retrieved_at", "as_of_date"]:
+            value = item.get(field)
+            try:
+                date.fromisoformat(str(value))
+            except (TypeError, ValueError):
+                errors.append(f"evidence_items[{idx}].{field} must be an ISO date")
+        count = item.get("independent_source_count")
+        if not isinstance(count, int) or isinstance(count, bool) or count < 1:
+            errors.append(f"evidence_items[{idx}].independent_source_count must be an integer >= 1")
+        try:
+            published = date.fromisoformat(str(item.get("published_at")))
+            retrieved = date.fromisoformat(str(item.get("retrieved_at")))
+            as_of = date.fromisoformat(str(item.get("as_of_date")))
+            if published > retrieved:
+                errors.append(f"evidence_items[{idx}] published_at cannot be after retrieved_at")
+            if retrieved > as_of:
+                errors.append(f"evidence_items[{idx}] retrieved_at cannot be after as_of_date")
+        except (TypeError, ValueError):
+            pass
     return errors
 
 
@@ -100,6 +126,15 @@ def validate_dashboard(data: dict) -> list[str]:
     if not isinstance(data_gaps, list):
         errors.append("data_gaps must be a list")
 
+    decision_scope = _get_nested(data, ["research_brief", "output_contract", "decision_scope"])
+    if decision_scope == "research_only":
+        if data.get("decision_type") != "research_only":
+            errors.append("research_only scope requires decision_type='research_only'")
+        if data.get("operation_advice") != "不适用":
+            errors.append("research_only scope requires operation_advice='不适用'")
+        if data.get("position_direction") != "not_applicable":
+            errors.append("research_only scope requires position_direction='not_applicable'")
+
     feedback_status = data.get("feedback_status")
     if feedback_status is not None and feedback_status not in SCHEMA["enums"]["feedback_status"]:
         errors.append(f"invalid feedback_status: {feedback_status}")
@@ -125,9 +160,9 @@ def validate_dashboard(data: dict) -> list[str]:
         
         # Hard Lock: Discipline over sentiment
         advice = data.get("operation_advice")
-        if weight_status == "above_max" and advice not in ["减仓", "卖出"]:
+        if decision_scope != "research_only" and weight_status == "above_max" and advice not in ["减仓", "卖出"]:
             errors.append(f"portfolio weight ({portfolio_context.get('current_weight')}) exceeds max limit: operation_advice must be '减仓' or '卖出', got '{advice}'")
-        elif weight_status == "above_target" and advice in ["买入", "加仓"]:
+        elif decision_scope != "research_only" and weight_status == "above_target" and advice in ["买入", "加仓"]:
             errors.append(f"portfolio weight ({portfolio_context.get('current_weight')}) exceeds target limit: cannot add position. operation_advice must be hold/watch/reduce, got '{advice}'")
 
     if portfolio_summary is not None:
@@ -197,6 +232,11 @@ def validate_dashboard(data: dict) -> list[str]:
     earnings_snapshot = data.get("earnings_snapshot")
     catalyst_map = data.get("catalyst_map")
     if research_mode == "thesis_mode":
+        research_brief = data.get("research_brief")
+        if not isinstance(research_brief, dict):
+            errors.append("research_brief is required in thesis_mode")
+        else:
+            errors.extend(f"research_brief: {error}" for error in validate_research_brief(research_brief))
         if not isinstance(earnings_snapshot, dict):
             errors.append("earnings_snapshot is required in thesis_mode")
         else:
@@ -217,14 +257,18 @@ def validate_dashboard(data: dict) -> list[str]:
     if watchlist_alerts is not None and not isinstance(watchlist_alerts, list):
         errors.append("watchlist_alerts must be a list when provided")
 
-    mts = data.get("management_truth_serum")
-    if mts is not None:
-        if not isinstance(mts, dict):
-            errors.append("management_truth_serum must be an object")
+    claim_tracking = data.get("management_claim_tracking")
+    if claim_tracking is not None:
+        if not isinstance(claim_tracking, dict):
+            errors.append("management_claim_tracking must be an object")
         else:
-            for key in SCHEMA.get("required_truth_serum_fields", []):
-                if mts.get(key) in (None, ""):
-                    errors.append(f"missing management_truth_serum field: {key}")
+            for key in SCHEMA.get("required_management_claim_tracking_fields", []):
+                if claim_tracking.get(key) in (None, ""):
+                    errors.append(f"missing management_claim_tracking field: {key}")
+            if claim_tracking.get("assessment_boundary") != "claim fulfillment only; no honesty or fraud inference":
+                errors.append("management_claim_tracking assessment boundary is invalid")
+            if claim_tracking.get("formal_use_allowed") is not True:
+                errors.append("management_claim_tracking is not allowed for formal use")
 
     errors.extend(validate_math_consistency(data))
 

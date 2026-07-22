@@ -113,9 +113,11 @@ def render_markdown(data, raw_json):
             md += f"- **市场暴露风险**: {portfolio_risk.get('market_exposure_risk', '--')}\n"
             md += f"- **风格漂移风险**: {portfolio_risk.get('style_drift_risk', '--')}\n"
             md += f"- **流动性风险**: {portfolio_risk.get('liquidity_risk', '--')}\n"
+            for gap in portfolio_risk.get("risk_data_gaps", []):
+                md += f"  - 数据缺口: {gap}\n"
         if portfolio_fit:
-            md += f"- **组合动作建议**: {portfolio_fit.get('action_in_portfolio', '--')}\n"
-            md += f"- **配置影响**: {portfolio_fit.get('allocation_impact', '--')}\n"
+            md += f"- **约束资格**: {portfolio_fit.get('eligibility', '--')}\n"
+            md += f"- **约束影响**: {portfolio_fit.get('constraint_impact', '--')}\n"
             md += f"- **适配理由**: {portfolio_fit.get('rationale', '--')}\n"
         md += "\n"
 
@@ -169,6 +171,10 @@ def render_markdown(data, raw_json):
                 md += "- **thesis 破坏信号**:\n"
                 for item in catalyst_map["broken"]:
                     md += f"  - {item}\n"
+            if catalyst_map.get("data_gaps"):
+                md += "- **数据缺口**:\n"
+                for item in catalyst_map["data_gaps"]:
+                    md += f"  - {item}\n"
         md += "\n"
 
     sp = bp.get("sniper_points", {})
@@ -204,21 +210,16 @@ def render_markdown(data, raw_json):
         for item in intel["risk_alerts"]:
             md += f"  - ⚠️ {item}\n"
 
-    if "management_truth_serum" in data:
-        mts = data["management_truth_serum"]
-        md += "\n## 🤥 管理层测谎仪 (Truth Serum Audit)\n\n"
-        md += f"- **承诺兑现率**: {mts.get('promise_fulfillment_rate', 'N/A')}\n"
-        md += f"- **管理层诚实度评分**: {mts.get('management_honesty_score', 'N/A')}/100\n"
-        
-        if mts.get("red_flag_warnings"):
-            md += "- **红旗警告 (Tone Alerts)**:\n"
-            for item in mts["red_flag_warnings"]:
-                md += f"  - 🚨 {item}\n"
-                
-        if mts.get("unmentioned_failures"):
-            md += "- **避而不谈的失败 (Ignored Promises)**:\n"
-            for item in mts["unmentioned_failures"]:
-                md += f"  - 🔇 {item}\n"
+    if "management_claim_tracking" in data:
+        tracking = data["management_claim_tracking"]
+        md += "\n## 管理层承诺兑现核对\n\n"
+        summary = tracking.get("summary", {})
+        md += f"- 已兑现: {summary.get('met', 0)}\n"
+        md += f"- 未兑现: {summary.get('missed', 0)}\n"
+        md += f"- 证据不足: {summary.get('insufficient_evidence', 0)}\n"
+        md += f"- 评估边界: {tracking.get('assessment_boundary', '')}\n"
+        for claim in tracking.get("claims", []):
+            md += f"  - {claim.get('claim_id', '')}: {claim.get('status', '')} — {claim.get('statement', '')}\n"
 
     blind_spot = data.get("blind_spot_warning", "")
     if blind_spot:
@@ -232,6 +233,9 @@ def render_markdown(data, raw_json):
             md += f"- Connection: {item.get('connection', '')}\n"
             md += f"- Deduction: {item.get('deduction', '')}\n"
             md += f"- Source Type: {item.get('source_type', '')}\n"
+            md += f"- Source Tier: {item.get('source_tier', '')}\n"
+            md += f"- Source Locator: {item.get('source_locator', '')}\n"
+            md += f"- Published/Retrieved/As Of: {item.get('published_at', '')} / {item.get('retrieved_at', '')} / {item.get('as_of_date', '')}\n"
             md += f"- Freshness: {item.get('freshness', '')}\n"
             md += f"- Confidence: {item.get('confidence', '')}\n"
 

@@ -1,0 +1,19 @@
+{
+  "resource_kind": "portfolio_contract",
+  "version": "2.0",
+  "optional_top_level": ["exchange_rates", "risk_profile"],
+  "required_top_level": ["positions", "base_currency"],
+  "exchange_rate_convention": "one unit of position currency in base currency",
+  "required_position_fields": ["symbol", "quantity", "avg_cost", "currency"],
+  "optional_position_fields": [
+    "name",
+    "market_type",
+    "opened_at",
+    "current_weight",
+    "target_weight",
+    "max_weight",
+    "thesis",
+    "average_daily_value",
+    "days_to_liquidate"
+  ]
+}
