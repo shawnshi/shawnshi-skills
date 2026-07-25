@@ -47,7 +47,8 @@ for (const p of chromePaths) {
   const browser = await puppeteer.launch({ 
     headless: 'new',
     executablePath, // Use system Chrome if found
-    args: ['--no-sandbox', '--disable-setuid-sandbox', '--disable-web-security'] // Prevent sandbox issues
+    // Security: Removed --disable-web-security to enforce same-origin policy
+    args: ['--no-sandbox', '--disable-setuid-sandbox'] // Prevent sandbox issues
   });
   const page = await browser.newPage();
   

@@ -20,3 +20,7 @@
 **Vulnerability:** Use of -shell-escape in xelatex compilation within tool-smart-latex/scripts/smart_engine.py allows execution of arbitrary shell commands embedded in LaTeX sources.
 **Learning:** Compiling untrusted documents (Markdown/DOCX converted to LaTeX) with -shell-escape exposes the system to RCE via malicious \write18 or similar commands.
 **Prevention:** Avoid -shell-escape flag when executing xelatex on potentially untrusted input.
+## 2026-07-24 - Same-Origin Policy Bypass via Puppeteer Flags
+**Vulnerability:** The `--disable-web-security` flag was passed to Puppeteer in `tool-web-slide/scripts/export-pdf.mjs`, completely disabling the Same-Origin Policy (SOP).
+**Learning:** While `--no-sandbox` is often necessary in CI/CD, adding `--disable-web-security` is a dangerous anti-pattern that exposes the script to cross-origin exploits, especially when rendering locally-provided or untrusted files.
+**Prevention:** Avoid disabling core browser security mechanisms like SOP. Fix CORS issues at the source rather than disabling web security entirely.
