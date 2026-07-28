@@ -10,12 +10,18 @@ SCRIPT_PATH = Path(__file__).with_name("garmin_data.py")
 SPEC = importlib.util.spec_from_file_location("garmin_data", SCRIPT_PATH)
 garmin_auth_stub = types.SimpleNamespace(get_client=lambda: None)
 garminconnect_stub = types.SimpleNamespace(Garmin=object)
-with patch.dict(
-    sys.modules,
-    {"garmin_auth": garmin_auth_stub, "garminconnect": garminconnect_stub},
-):
+_STUBS = {"garmin_auth": garmin_auth_stub, "garminconnect": garminconnect_stub}
+_PREVIOUS_MODULES = {name: sys.modules.get(name) for name in _STUBS}
+sys.modules.update(_STUBS)
+try:
     garmin_data = importlib.util.module_from_spec(SPEC)
     SPEC.loader.exec_module(garmin_data)
+finally:
+    for name, previous in _PREVIOUS_MODULES.items():
+        if previous is None:
+            sys.modules.pop(name, None)
+        else:
+            sys.modules[name] = previous
 
 
 def _component_mocks():
@@ -70,6 +76,18 @@ class GarminSummaryTests(unittest.TestCase):
         result = garmin_data._map_with_workers(lambda value: value * 2, [1, 2], 1)
         self.assertEqual(result, [2, 4])
         executor_mock.assert_not_called()
+
+    def test_body_composition_does_not_invent_height_for_bmi(self):
+        client = types.SimpleNamespace(
+            get_user_profile=lambda: {},
+            get_body_composition=lambda *_args: {
+                "dateWeightList": [{"weight": 70000, "bmi": None, "date": "2026-07-27"}]
+            },
+        )
+        result = garmin_data.fetch_body_composition(client, "2026-07-27")
+        self.assertEqual(result["bmi"], "--")
+        self.assertIsNone(result["source_height"])
+        self.assertTrue(result["data_gaps"])
 
 
 if __name__ == "__main__":

@@ -7,7 +7,8 @@
    ```bash
    python scripts/validator.py path\to\outline.md
    ```
-3. Package it:
+   Use `--allow-placeholders` only when checking the reusable template itself.
+3. Package the validated final outline:
    ```bash
    python scripts/build-deck.py path\to\deck-dir
    ```
@@ -27,4 +28,4 @@ The workflow only emits blueprint assets:
 - `outline.md`
 - `blueprint_bundle.json`
 
-No slide image generation or PPTX assembly is part of the default workflow.
+No slide image generation or PPTX assembly is part of this workflow. Build a physical `.pptx` with an available presentation capability after the blueprint passes validation.

@@ -1,6 +1,6 @@
 # Layout Gallery
 
-Optional layout hints for individual slides. Specify in outline's `// LAYOUT` section.
+Optional layout hints for individual slides. Specify them in the `[Layout]` field inside `// VISUAL DIRECTIVE`.
 
 ## Slide-Specific Layouts
 
@@ -36,7 +36,7 @@ Optional layout hints for individual slides. Specify in outline's `// LAYOUT` se
 | `iceberg` | Visible vs hidden layers | Surface vs depth |
 | `bridge` | Gap with connection | Problem-solution |
 
-**Usage**: Add `Layout: <name>` in slide's `// LAYOUT` section.
+**Usage**: Add `[Layout]: <name>` inside the slide's `// VISUAL DIRECTIVE` block.
 
 ## Layout Selection Tips
 

@@ -65,10 +65,15 @@ def forge_briefing() -> None:
     included_urls = {item.get("url") for item in top_10}
     grouped_list, noise_count = build_grouped_list(scan_data, focus, included_urls)
 
+    NEWS_DIR.mkdir(parents=True, exist_ok=True)
     save_path = NEWS_DIR / f"intelligence_{datetime.now().strftime('%Y%m%d')}_briefing.md"
     template_data = {
         "date": datetime.now().strftime("%Y-%m-%d"),
-        "timestamp": datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
+        "schema_version": refined.get("schema_version"),
+        "generated_at": refined.get("generated_at"),
+        "topic": refined.get("topic"),
+        "region": refined.get("region"),
+        "window": refined.get("window"),
         "punchline": refined.get("punchline", ""),
         "insights": refined.get("insights", ""),
         "digest": refined.get("digest", ""),
@@ -81,9 +86,13 @@ def forge_briefing() -> None:
                 "title": item.get("title_zh", item.get("title", "Untitled")),
                 "url": item.get("url", ""),
                 "source": item.get("source", "Unknown"),
-                "score": item.get("strategic_score", 0),
                 "summary": item.get("summary_zh", item.get("summary", "")),
+                "summary_zh": item.get("summary_zh", item.get("summary", "")),
                 "reason": item.get("reason", ""),
+                "title_zh": item.get("title_zh", item.get("title", "Untitled")),
+                "event_date": item.get("event_date", "unknown"),
+                "published_at": item.get("published_at", "unknown"),
+                "retrieved_at": item.get("retrieved_at"),
                 "fact": item.get("fact", ""),
                 "connection": item.get("connection", ""),
                 "deduction": item.get("deduction", ""),
@@ -95,11 +104,12 @@ def forge_briefing() -> None:
         ],
         "grouped_list": grouped_list,
         "noise_count": noise_count,
-        "save_path": str(save_path),
-        "runtime_path": str(RUNTIME_DIR),
+        "data_gaps": refined.get("data_gaps", []),
     }
 
-    errors = validate_briefing_data(template_data)
+    errors, warnings = validate_briefing_data(template_data)
+    for warning in warnings:
+        print(f"[WARN] {warning}")
     if errors:
         print("[FAIL] briefing gate blocked forge")
         for error in errors:

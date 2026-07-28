@@ -1,5 +1,10 @@
 {
-  "version": "8.1",
+  "version": "9.0",
+  "_meta": {
+    "purpose": "Optional scoring profile; all weights and filters are method parameters, not business facts.",
+    "override": "Pass --focus-config, --min-score, --max-items, --window-days, or --dedupe-days for the current task.",
+    "last_updated": "2026-07-28"
+  },
   "strategic_keywords": [
     {"keyword": "Agentic Infrastructure", "weight": 7},
     {"keyword": "Evidence-Mesh", "weight": 8},

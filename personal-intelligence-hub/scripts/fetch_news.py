@@ -1,10 +1,13 @@
 from __future__ import annotations
 
 import asyncio
+import argparse
 import json
 import random
 import re
 from datetime import datetime, timedelta
+from email.utils import parsedate_to_datetime
+from pathlib import Path
 
 import aiohttp
 import feedparser
@@ -62,12 +65,18 @@ async def parse_rss(session, url: str, name: str, cache: dict, limit: int = 6):
                 continue
             desc_raw = entry.get("summary", "") or entry.get("description", "")
             desc = BeautifulSoup(desc_raw, "html.parser").get_text().strip() if desc_raw else ""
+            published = entry.get("published") or entry.get("updated")
+            try:
+                published_at = parsedate_to_datetime(published).astimezone().isoformat() if published else None
+            except (TypeError, ValueError, OverflowError):
+                published_at = None
             items.append(
                 {
                     "title": entry.get("title", "No Title"),
                     "url": link,
                     "source": name,
-                    "time": datetime.now().isoformat(),
+                    "time": published_at or "unknown",
+                    "retrieved_at": datetime.now().astimezone().isoformat(),
                     "raw_desc": desc,
                 }
             )
@@ -165,8 +174,8 @@ async def fetch_github_trending(session, cache: dict):
         return [], str(exc)
 
 
-def load_config() -> tuple[dict, list[dict]]:
-    focus = load_json(HUB_DIR / "references" / "strategic_focus.json", {})
+def load_config(focus_path: Path | None = None) -> tuple[dict, list[dict]]:
+    focus = load_json(focus_path or HUB_DIR / "references" / "strategic_focus.json", {})
     feeds = load_json(HUB_DIR / "references" / "karpathy_feeds.json", [])
     return focus, feeds
 
@@ -184,12 +193,33 @@ def should_exclude(title: str, desc: str, exclude_terms: list[str]) -> bool:
     return False
 
 
-async def scan_all():
+def _inside_window(item: dict, window_days: int | None) -> bool:
+    if window_days is None:
+        return True
+    raw = item.get("time")
+    if raw in (None, "", "unknown"):
+        return True
+    try:
+        timestamp = datetime.fromisoformat(str(raw).replace("Z", "+00:00"))
+        now = datetime.now(timestamp.tzinfo)
+        return timestamp >= now - timedelta(days=window_days)
+    except ValueError:
+        return True
+
+
+async def scan_all(
+    *,
+    focus_path: Path | None = None,
+    window_days: int | None = None,
+    dedupe_days: int | None = None,
+    topic: str | None = None,
+    region: str | None = None,
+):
     ensure_runtime_dirs()
     init_blackboard()
     update_phase("scan", "running")
 
-    focus, custom_feeds = load_config()
+    focus, custom_feeds = load_config(focus_path)
     exclude_terms = focus.get("filters", {}).get("exclude_terms", [])
     cache = load_cache()
 
@@ -218,20 +248,52 @@ async def scan_all():
         for item in parsed_items:
             if should_exclude(item["title"], item.get("raw_desc", ""), exclude_terms):
                 continue
-            items.append(item)
+            if _inside_window(item, window_days):
+                items.append(item)
 
+    now = datetime.now().astimezone()
     payload = {
-        "generated_at": datetime.now().isoformat(),
+        "generated_at": now.isoformat(),
         "items": items,
-        "metadata": {"sources": source_meta, "item_count": len(items)},
+        "metadata": {
+            "sources": source_meta,
+            "item_count": len(items),
+            "topic": topic,
+            "region": region,
+            "window": {
+                "start": (now - timedelta(days=window_days)).date().isoformat() if window_days else "unknown",
+                "end": now.date().isoformat(),
+                "timezone": str(now.tzinfo),
+            },
+            "window_days": window_days,
+        },
     }
     dump_json(LATEST_SCAN_PATH, payload)
     dump_json(CURRENT_SCAN_PATH, payload)
-    save_cache(cache, days=focus.get("filters", {}).get("dedupe_days", 7))
+    save_cache(cache, days=dedupe_days or focus.get("filters", {}).get("dedupe_days", 7))
     record_scan_stats(len(source_meta), len(items))
     update_phase("scan", "completed")
     print(f"[OK] scan saved to {LATEST_SCAN_PATH}")
 
 
 if __name__ == "__main__":
-    asyncio.run(scan_all())
+    parser = argparse.ArgumentParser(description="Parameterized intelligence source scan.")
+    parser.add_argument("--focus-config", type=Path)
+    parser.add_argument("--window-days", type=int)
+    parser.add_argument("--dedupe-days", type=int)
+    parser.add_argument("--topic")
+    parser.add_argument("--region")
+    args = parser.parse_args()
+    if args.window_days is not None and args.window_days <= 0:
+        parser.error("--window-days must be positive")
+    if args.dedupe_days is not None and args.dedupe_days <= 0:
+        parser.error("--dedupe-days must be positive")
+    asyncio.run(
+        scan_all(
+            focus_path=args.focus_config,
+            window_days=args.window_days,
+            dedupe_days=args.dedupe_days,
+            topic=args.topic,
+            region=args.region,
+        )
+    )

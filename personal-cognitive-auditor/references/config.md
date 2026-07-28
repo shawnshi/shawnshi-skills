@@ -1,41 +1,29 @@
-# personal-cognitive-auditor Configuration (V2.0)
+# personal-cognitive-auditor Configuration
 
-## 1. Runtime Defaults
-- **timezone**: `Asia/Shanghai`
-- **language**: `zh-CN`
-- **default_week_start**: `Monday`
+## Supported Period Types
 
-## 2. Supported Period Types
 - `daily`
 - `weekly`
 - `monthly`
 - `annual`
 
-## 3. Capability Contract
-- `physiology_context`
-  - preferred: Garmin or health baseline summary
-  - fallback: manual sleep / fatigue / recovery notes
-- `calendar_context`
-  - preferred: Google Calendar or structured schedule
-  - fallback: manual event list
-- `prior_tactics`
-  - preferred: extracted tactics from prior audit
-  - fallback: user-provided commitments
-- `interaction_context`
-  - preferred for weekly/monthly/annual
-  - fallback: explicit `【数据缺口】未注入交互上下文`
+日期、时区和周期起点采用用户明确指定的值；未指定时使用当前会话可确认的本地日期与时区，并在输出中说明。
 
-## 4. Downgrade Rules
-- Missing one source does not block delivery.
-- Missing both physiology and calendar must trigger an explicit data-gap note.
-- Missing prior tactics must convert accountability into a `no-prior-tactics` note.
-- Missing interaction context blocks neither `daily` nor `weekly`, but must be disclosed for `weekly/monthly/annual`.
+## Input Contract
 
-## 5. Handoff Target
-- Downstream skill: `personal-diary-writer`
-- Handoff must follow [handoff_contract.md](handoff_contract.md).
+| 输入 | 可接受来源 | 缺失时处理 |
+|---|---|---|
+| 日志与工作产出 | 用户提供的文本、文件或明确授权目录 | 报告缺口，不自动扫描其他目录 |
+| 日程 | 用户提供的清单或明确授权的日历查询 | 报告缺口，不把安排推断为出席 |
+| 健康背景 | 用户提供的数据或明确授权的健康摘要 | 报告缺口，不推断医学结论 |
+| 既往承诺 | 用户提供或明确授权读取的既往复盘 | 状态写“无法判断”或省略问责表 |
+| 历史对话 | 当前请求中提供或明确授权的范围 | 不自动读取全局历史 |
 
-## 6. Validation Rules
-- Audit must pass [audit_gate.py](../scripts/audit_gate.py) before hand-off.
-- Final output must be Markdown, not JSON-only.
-- Handoff payload must be embedded in the report.
+任何单一来源缺失都不阻断复盘。缺失信息影响结论时，降低证据强度并说明不能确定的内容。
+
+## Validation
+
+- 草稿可用 [audit_gate.py](../scripts/audit_gate.py) 检查。
+- 未处理占位符和已经出现但不符合 Schema 的 `Handoff Payload` 是硬错误。
+- 章节、措辞、术语和量化建议只产生软提示。
+- 交接仅在用户明确要求保存时生成，并遵守 [handoff_contract.md](handoff_contract.md)。

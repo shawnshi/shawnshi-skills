@@ -31,7 +31,7 @@ description: 汇总并研判指定周期内的数字健康、医疗政策、医�
 
 ## 输出要求
 
-完整周报按需读取 [references/template.md](references/template.md)。简短请求不必机械填满模板，可使用以下结构：
+完整周报按需读取 [references/template.md](references/template.md)。模板与确定性校验器共用规范化标题、日期字段和事件表；没有符合纳入标准的事件时使用模板给出的明确空结果标记，不为通过门禁而凑数。简短请求不必机械填满模板，可使用以下结构：
 
 1. 本周结论
 2. 关键事件与来源
@@ -43,7 +43,7 @@ description: 汇总并研判指定周期内的数字健康、医疗政策、医�
 
 每条关键事件至少包含事件日期、主体、动作、影响判断和直接来源。对论文、政策和研究报告优先链接原文，不链接搜索结果页。
 
-`assets/` 下的任务文件只能用于扩展检索面；[examples/DHWB-Reference.md](examples/DHWB-Reference.md) 仅作格式示例，不能作为事实来源。
+`assets/` 下的任务文件只能用于扩展检索面，其中的时间变量服从本次报告周期；[examples/DHWB-Reference.md](examples/DHWB-Reference.md) 是明确标注的合成格式示例，不能作为事实来源。
 
 ## 验证门禁
 

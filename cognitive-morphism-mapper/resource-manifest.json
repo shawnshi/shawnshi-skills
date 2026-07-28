@@ -1,7 +1,7 @@
 {
   "schema_version": 1,
   "skill": "cognitive-morphism-mapper",
-  "generated_at": "2026-07-14T21:01:43",
+  "generated_at": "2026-07-28T13:34:07",
   "skill_md": "SKILL.md",
   "top_level_files": [
     "SKILL.md"
@@ -17,11 +17,11 @@
   "resource_directories": [
     {
       "name": "scripts",
-      "file_count": 1
+      "file_count": 2
     },
     {
       "name": "references",
-      "file_count": 58
+      "file_count": 5
     },
     {
       "name": "assets",
@@ -29,14 +29,29 @@
     },
     {
       "name": "examples",
-      "file_count": 5
+      "file_count": 0
     }
   ],
   "declared_local_dependencies": [
     {
+      "path": "references\\protocols.md",
+      "exists": true,
+      "resolved_path": "C:\\Users\\shich\\.codex\\skills\\cognitive-morphism-mapper\\references\\protocols.md"
+    },
+    {
+      "path": "references\\verified_domains.json",
+      "exists": true,
+      "resolved_path": "C:\\Users\\shich\\.codex\\skills\\cognitive-morphism-mapper\\references\\verified_domains.json"
+    },
+    {
       "path": "scripts\\domain_manager.py",
       "exists": true,
       "resolved_path": "C:\\Users\\shich\\.codex\\skills\\cognitive-morphism-mapper\\scripts\\domain_manager.py"
+    },
+    {
+      "path": "references\\verified",
+      "exists": true,
+      "resolved_path": "C:\\Users\\shich\\.codex\\skills\\cognitive-morphism-mapper\\references\\verified"
     }
   ],
   "missing_declared_dependencies": []

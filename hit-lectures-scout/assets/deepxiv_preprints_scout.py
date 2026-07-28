@@ -1,7 +1,7 @@
 """
 deepxiv_preprints_scout.py — ArXiv Preprints Recon via deepxiv-sdk
 =================================================================
-由 hit-lectures-scout SKILL Phase 1 通过 run_shell_command 调用。
+在确认 Python 与 deepxiv-sdk 可用后，可由当前命令环境调用。
 输出结构化 Markdown 至 Response_Preprints.md。
 
 Usage:
@@ -9,7 +9,6 @@ Usage:
 """
 
 import argparse
-import json
 import os
 import sys
 from datetime import datetime, timedelta
@@ -17,7 +16,7 @@ from datetime import datetime, timedelta
 try:
     from deepxiv_sdk import Reader, APIError, RateLimitError
 except ImportError:
-    print("❌ deepxiv-sdk 未安装。请执行: pip install deepxiv-sdk", file=sys.stderr)
+    print("deepxiv-sdk is unavailable; use the documented fallback search path.", file=sys.stderr)
     sys.exit(1)
 
 # ============================================================
@@ -38,8 +37,6 @@ CATEGORIES = ["cs.AI", "cs.LG", "cs.CL", "cs.CV", "q-bio.QM"]
 MAX_PER_QUERY = 15          # 每个 query 拉取上限
 TOP_N_ENRICH = 30           # brief() 提纯数量上限
 DEFAULT_WINDOW = 7          # 默认检索窗口 (天)
-FALLBACK_WINDOW = 14        # 弹性降维窗口
-
 DEFAULT_OUTPUT = os.path.join(
     os.getcwd(),
     "Response_Preprints.md",
@@ -124,8 +121,9 @@ def render_markdown(papers: list, date_from: str, date_to: str) -> str:
         f"# ArXiv Preprints Recon ({date_from} ~ {date_to})",
         "",
         f"> Generated: {datetime.now().isoformat()}",
-        f"> Source: deepxiv-sdk v0.2.4 | Queries: {len(SEARCH_QUERIES)} | Categories: {', '.join(CATEGORIES)}",
+        f"> Source: deepxiv-sdk candidate metadata | Queries: {len(SEARCH_QUERIES)} | Categories: {', '.join(CATEGORIES)}",
         f"> Total unique papers: {len(papers)}",
+        "> Evidence status: all entries are preprint candidates; verify the source page, version, full text, and any later peer-reviewed publication before drawing conclusions.",
         "",
     ]
 
@@ -141,6 +139,7 @@ def render_markdown(papers: list, date_from: str, date_to: str) -> str:
         lines.append(f"- **Categories**: {cats}")
 
         lines.append(f"- **Published**: {p.get('publish_at', 'N/A')}")
+        lines.append("- **Review status**: Preprint / not peer reviewed")
 
         if p.get("tldr"):
             lines.append(f"- **TLDR**: {p['tldr']}")
@@ -171,6 +170,11 @@ def render_markdown(papers: list, date_from: str, date_to: str) -> str:
 def main():
     parser = argparse.ArgumentParser(description="ArXiv Preprints Recon via deepxiv-sdk")
     parser.add_argument("--window", type=int, default=DEFAULT_WINDOW, help="检索窗口天数 (default: 7)")
+    parser.add_argument(
+        "--include-trending",
+        action="store_true",
+        help="补充热门候选；仅在用户接受扩大候选范围时使用",
+    )
     parser.add_argument("--output", type=str, default=DEFAULT_OUTPUT, help="输出路径")
     args = parser.parse_args()
 
@@ -187,16 +191,10 @@ def main():
     pool = search_phase(reader, date_from, date_to)
     print(f"📊 Search phase: {len(pool)} unique papers")
 
-    # 弹性降维: 若不足 5 篇，扩大窗口
-    if len(pool) < 5 and window < FALLBACK_WINDOW:
-        print(f"⚠️  不足 5 篇，自动扩大窗口至 {FALLBACK_WINDOW} 天")
-        date_from = (datetime.now() - timedelta(days=FALLBACK_WINDOW)).strftime("%Y-%m-%d")
-        pool = search_phase(reader, date_from, date_to)
-        print(f"📊 扩展检索后: {len(pool)} unique papers")
-
-    # Phase 2: Trending supplement
-    pool = trending_phase(reader, pool)
-    print(f"📊 After trending: {len(pool)} unique papers")
+    # Phase 2: Optional trending supplement
+    if args.include_trending:
+        pool = trending_phase(reader, pool)
+        print(f"📊 After trending: {len(pool)} unique papers")
 
     # Phase 3: Enrich
     enriched = enrich_phase(reader, pool)

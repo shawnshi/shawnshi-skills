@@ -1,8 +1,11 @@
 import argparse
+import copy
 import csv
 import json
+import math
 import os
 from pathlib import Path
+
 
 def resolve_positions_file(path: str | None) -> Path:
     configured = path or os.environ.get("PIA_POSITIONS_FILE")
@@ -11,68 +14,129 @@ def resolve_positions_file(path: str | None) -> Path:
     return Path(configured).expanduser()
 
 def load_json(path):
-    with open(path, 'r', encoding='utf-8') as f:
+    with open(path, "r", encoding="utf-8") as f:
         return json.load(f)
 
+
 def save_json(path, data):
-    with open(path, 'w', encoding='utf-8') as f:
-        json.dump(data, f, ensure_ascii=False, indent=2)
+    destination = Path(path)
+    temporary = destination.with_name(f".{destination.name}.tmp")
+    try:
+        temporary.write_text(
+            json.dumps(data, ensure_ascii=False, indent=2) + "\n",
+            encoding="utf-8",
+        )
+        temporary.replace(destination)
+    finally:
+        if temporary.exists():
+            temporary.unlink()
+
 
 def normalize_symbol(symbol: str) -> str:
     return (symbol or "").strip().upper()
 
+
+def _required_text(row: dict, field: str, row_number: int) -> str:
+    value = str(row.get(field) or "").strip()
+    if not value:
+        raise ValueError(f"broker row {row_number}: missing required field {field}")
+    return value
+
+
+def _required_number(
+    row: dict, field: str, row_number: int, *, minimum: float = 0.0
+) -> float:
+    raw = row.get(field)
+    if raw in (None, ""):
+        raise ValueError(f"broker row {row_number}: missing required field {field}")
+    try:
+        value = float(raw)
+    except (TypeError, ValueError) as exc:
+        raise ValueError(
+            f"broker row {row_number}: {field} must be numeric"
+        ) from exc
+    if not math.isfinite(value) or value < minimum:
+        raise ValueError(
+            f"broker row {row_number}: {field} must be finite and >= {minimum}"
+        )
+    return value
+
+
+def _stage_broker_rows(csv_path: str, positions: list[dict]) -> None:
+    pos_map = {}
+    for position in positions:
+        symbol = normalize_symbol(position.get("symbol"))
+        if not symbol:
+            raise ValueError("positions file contains a position without symbol")
+        if symbol in pos_map:
+            raise ValueError(f"positions file contains duplicate symbol {symbol}")
+        pos_map[symbol] = position
+
+    seen = set()
+    with open(csv_path, "r", encoding="utf-8-sig", newline="") as f:
+        reader = csv.DictReader(f)
+        if not reader.fieldnames:
+            raise ValueError("broker CSV must contain a header row")
+        for row_number, row in enumerate(reader, start=2):
+            symbol = normalize_symbol(_required_text(row, "symbol", row_number))
+            if symbol in seen:
+                raise ValueError(f"broker row {row_number}: duplicate symbol {symbol}")
+            seen.add(symbol)
+
+            staged = {
+                "symbol": symbol,
+                "quantity": _required_number(row, "quantity", row_number),
+                "avg_cost": _required_number(row, "avg_cost", row_number),
+                "currency": _required_text(row, "currency", row_number).upper(),
+                "market_type": _required_text(row, "market_type", row_number),
+            }
+            for optional_field in ("name", "opened_at", "thesis"):
+                value = str(row.get(optional_field) or "").strip()
+                if value:
+                    staged[optional_field] = value
+
+            if symbol in pos_map:
+                pos_map[symbol].update(staged)
+                pos_map[symbol].pop("current_weight", None)
+            else:
+                positions.append(staged)
+                pos_map[symbol] = staged
+
+
 def sync_broker_data(csv_path: str, positions_file: str = None, cash_cny: float = None, cash_usd: float = None):
     pos_file = resolve_positions_file(positions_file)
-    data = load_json(pos_file)
-    positions = data.get("positions", [])
-    
-    # 1. Map existing positions
-    pos_map = {normalize_symbol(p.get("symbol")): p for p in positions}
-    
-    # 2. Parse CSV and update
-    if csv_path:
-        with open(csv_path, 'r', encoding='utf-8-sig') as f:
-            reader = csv.DictReader(f)
-            for row in reader:
-                sym = normalize_symbol(row.get("symbol"))
-                if not sym:
-                    continue
-                q = float(row.get("quantity", 0))
-                cost = float(row.get("avg_cost", 0))
-                
-                if sym in pos_map:
-                    pos_map[sym]["quantity"] = q
-                    pos_map[sym]["avg_cost"] = cost
-                else:
-                    new_pos = {
-                        "symbol": sym,
-                        "name": row.get("name", sym),
-                        "quantity": q,
-                        "avg_cost": cost,
-                        "currency": row.get("currency", "CNY").upper(),
-                        "market_type": row.get("market_type", "A股"),
-                        "opened_at": row.get("opened_at", ""),
-                        "current_weight": 0.0,
-                        "target_weight": 0.0,
-                        "max_weight": 0.0,
-                        "thesis": "Auto-imported from broker statement"
-                    }
-                    positions.append(new_pos)
-                    pos_map[sym] = new_pos
+    data = copy.deepcopy(load_json(pos_file))
+    positions = data.get("positions")
+    if not isinstance(positions, list):
+        raise ValueError("positions file must contain a positions list")
+    if not csv_path and cash_cny is None and cash_usd is None:
+        raise ValueError("no broker CSV or cash update was supplied")
 
-    # 3. Handle Cash
+    if csv_path:
+        _stage_broker_rows(csv_path, positions)
+
+    pos_map = {normalize_symbol(position.get("symbol")): position for position in positions}
     if cash_cny is not None:
         _update_cash(positions, pos_map, "CASH_CNY", "人民币现金", cash_cny, "CNY")
     if cash_usd is not None:
         _update_cash(positions, pos_map, "CASH_USD", "美元现金", cash_usd, "USD")
-        
+
     data["positions"] = positions
     save_json(pos_file, data)
     print(f"Sync complete. Updated {pos_file}")
+    return data
+
 
 def _update_cash(positions, pos_map, symbol, name, amount, currency):
+    try:
+        amount = float(amount)
+    except (TypeError, ValueError) as exc:
+        raise ValueError(f"{symbol} amount must be numeric") from exc
+    if not math.isfinite(amount) or amount < 0:
+        raise ValueError(f"{symbol} amount must be finite and non-negative")
     if symbol in pos_map:
         pos_map[symbol]["quantity"] = amount
+        pos_map[symbol].pop("current_weight", None)
     else:
         positions.append({
             "symbol": symbol,
@@ -81,11 +145,6 @@ def _update_cash(positions, pos_map, symbol, name, amount, currency):
             "avg_cost": 1.0,
             "currency": currency,
             "market_type": "CASH",
-            "opened_at": "",
-            "current_weight": 0.0,
-            "target_weight": 0.0,
-            "max_weight": 0.0,
-            "thesis": "Portfolio liquidity / dry powder"
         })
 
 if __name__ == "__main__":

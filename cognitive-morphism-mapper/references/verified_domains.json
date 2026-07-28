@@ -1,0 +1,5 @@
+{
+  "schema_version": 1,
+  "description": "Only allowlisted files inside references/verified with an explicit source and matching SHA-256 are active.",
+  "domains": []
+}

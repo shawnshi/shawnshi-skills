@@ -45,34 +45,31 @@ def build_journal_entry(data: Dict[str, Any], archive_path: str | None = None) -
         "stock_name": data.get("stock_name"),
         "market_type": data.get("market_type"),
         "research_mode": data.get("research_mode"),
-        "decision_type": data.get("decision_type"),
-        "operation_advice": data.get("operation_advice"),
+        "research_scope": output_contract.get("decision_scope"),
         "confidence_level": data.get("confidence_level"),
         "confidence_score": confidence_details.get("score"),
         "as_of_date": research_brief.get("as_of_date"),
         "investment_horizon_days": research_brief.get("investment_horizon_days"),
         "benchmark_symbol": benchmark.get("symbol"),
         "benchmark_market": benchmark.get("market"),
-        "position_direction": data.get("position_direction"),
-        "transaction_cost_bps": output_contract.get("transaction_cost_bps"),
-        "dual_trigger_policy": output_contract.get("dual_trigger_policy", "conservative"),
         "method_profile": research_brief.get("method_profile"),
+        "research_question": research_brief.get("research_question"),
         "core_hypothesis": research_brief.get("core_hypothesis"),
         "falsification_conditions": research_brief.get("falsification_conditions", []),
         "source_snapshot_hash": source_snapshot_hash,
-        "dashboard_schema_version": "5.0",
+        "dashboard_schema_version": "6.0",
         "current_price": current_price,
         "has_position": portfolio.get("has_position", False),
         "avg_cost": portfolio.get("avg_cost"),
         "quantity": portfolio.get("quantity"),
         "one_sentence": _safe_get(data, "dashboard", "core_conclusion", "one_sentence"),
-        "holder_view": _safe_get(data, "position_advice", "holding_view"),
-        "holder_action": _safe_get(data, "position_advice", "action_for_holder"),
-        "watchlist_alerts": data.get("watchlist_alerts", []),
+        "holding_context": _safe_get(data, "holding_assessment", "holding_context"),
+        "monitoring_conditions": _safe_get(
+            data, "holding_assessment", "monitoring_conditions", default=[]
+        ),
+        "monitoring_alerts": data.get("monitoring_alerts", []),
         "feedback_status": data.get("feedback_status", "pending"),
         "archive_path": archive_path,
-        "stop_loss": _safe_get(data, "dashboard", "battle_plan", "sniper_points", "stop_loss"),
-        "take_profit": _safe_get(data, "dashboard", "battle_plan", "sniper_points", "take_profit"),
         "outcome_status": None,
         "outcome_price": None,
         "outcome_date": None,
@@ -85,10 +82,6 @@ def build_journal_entry(data: Dict[str, Any], archive_path: str | None = None) -
         "dual_trigger_detected": False,
         "calibration_eligible": False,
         "calibration_exclusion_reason": "outcome not synchronized",
-        "executed": None,
-        "execution_price": None,
-        "execution_date": None,
-        "execution_timing": None
     }
 
 
@@ -193,7 +186,7 @@ def batch_update_outcomes(updates: Dict[str, Dict[str, Any]], journal_path: str 
 
 
 if __name__ == "__main__":
-    parser = argparse.ArgumentParser(description="Advice journal utilities.")
+    parser = argparse.ArgumentParser(description="Research journal utilities.")
     subparsers = parser.add_subparsers(dest="command", required=True)
 
     append_parser = subparsers.add_parser("append")

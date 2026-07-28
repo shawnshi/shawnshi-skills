@@ -153,7 +153,7 @@ See `references/dimensions/typography.md` for full typography dimension specs.
 When generating prompts for non-English languages (e.g., `zh`, `ja`, `ko`), strict font instructions are required to prevent "tofu" boxes (missing glyphs) or poor rendering.
 
 **Prompt Injection Rules**:
-The `generate-prompts.py` script MUST inject the following instructions into the visual prompt based on the target language:
+When a downstream presentation capability generates visual assets, pass the following language guidance explicitly:
 
 **Chinese (zh)**:
 > "Text Rendering: Use 'Noto Sans SC' or 'SimHei' font. Ensure Chinese characters are rendered with correct strokes, bold weight, and high contrast against the background. No missing glyphs."

@@ -76,3 +76,11 @@ python generate_final_report.py --input <evidence-path> --strict
 ## 6. 交付
 
 在当前答复中先给结论，再给覆盖范围、指标、发现、动作、验证方法和残余风险。只有用户明确要求文件、仪表盘或整改时才产生对应写入；报告模板位于 [report-template.md](report-template.md)。
+
+需要持久化MD/HTML时，先运行：
+
+```powershell
+python scripts/report_output.py --period <1d|7d|30d|90d|year>
+```
+
+默认归档目录为当前工作区的 `output/mentat-collaboration-audit`。使用返回的同名主干分别写入Markdown和HTML；写后检查两种文件均存在、非空且HTML不依赖未审核的网络脚本。原始事件、聚合JSON和调试文件仍放在当前会话 `scratch`，除非用户另行指定持久化目标。

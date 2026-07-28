@@ -42,7 +42,7 @@ description: 检索并分析指定周期内的医疗信息化、数字健康、�
 [尚不能确认的事项]
 ```
 
-需要行业框架时，按需读取 [references/stc_framework.md](references/stc_framework.md)。`assets/` 中的任务文件只作为检索提示，不得视为当前事实来源。
+需要行业框架时，按需读取 [references/stc_framework.md](references/stc_framework.md)；其中 S-T-C 表示已核实信号、传导机制和成立条件，不要求把厂商视为威胁或生成反击话术。`assets/` 中的任务文件只作为可选检索提示，时间范围以本次任务为准，不得视为当前事实来源。
 
 ## 完成检查
 

@@ -1,85 +1,94 @@
-#!/usr/bin/env python
-# -*- coding: utf-8 -*-
-"""
-@Input:  Extracted content JSON
-@Output: Compliance Gap Analysis JSON
-@Pos:    Intelligence Layer. Evaluates documents against EMR Grade 5-7 standards.
+"""Locate healthcare terms without making compliance or policy judgments."""
 
-!!! Maintenance Protocol: Update policy_mapping in healthcare_ontology.json as NHC guidelines evolve.
-"""
+from __future__ import annotations
 
+import argparse
 import json
 import sys
 from pathlib import Path
 
-def check_compliance(content, ontology):
-    """检测文档内容与医疗标准的契合度及缺口"""
-    gaps = []
-    alignments = []
-    
-    # 1. 电子病历等级评审检测 (EMR Leveling)
-    emr_std = ontology.get("domains", {}).get("EMR_Leveling", {})
-    indicators = emr_std.get("key_indicators", {})
-    
-    found_any = False
-    for category, keywords in indicators.items():
-        matched = [k for k in keywords if k in content]
-        if matched:
-            alignments.append(f"符合{category}相关要求: {', '.join(matched)}")
-            found_any = True
-        else:
-            # 只有当文档明确提到评级时，才报告缺口
-            if "评级" in content or "评审" in content or "等级" in content:
-                gaps.append(f"缺少{category}核心能力描述（评级关键点）")
 
-    # 2. 战略趋势对齐 (Strategic Trends)
-    future_tech = ontology.get("domains", {}).get("Future_Healthcare", {})
-    themes = future_tech.get("themes", [])
-    
-    matched_themes = [t for t in themes if t in content or t.lower() in content.lower()]
-    for theme in matched_themes:
-        impact = future_tech.get("strategic_impact", {}).get(theme, "战略技术应用")
-        alignments.append(f"前瞻性对齐: {theme} ({impact})")
+def _term_groups(ontology):
+    groups = {}
+    for domain_name, domain in ontology.get("domains", {}).items():
+        if not isinstance(domain, dict):
+            continue
+        for group_name, terms in domain.get("term_groups", domain.get("key_indicators", {})).items():
+            if isinstance(terms, list):
+                groups[f"{domain_name}.{group_name}"] = [str(term) for term in terms]
+        themes = domain.get("themes", [])
+        if isinstance(themes, list):
+            groups[f"{domain_name}.themes"] = [str(term) for term in themes]
+    return groups
 
-    # 3. 政策映射 (Policy Mapping)
-    policy_map = ontology.get("policy_mapping", {})
-    for tech, impact in policy_map.items():
-        if tech in content or tech.lower() in content.lower():
-            alignments.append(f"政策价值: {tech} -> {impact}")
 
+def scan_terms(content, ontology):
+    lower = content.lower()
+    matches = []
+    for group, terms in _term_groups(ontology).items():
+        found = sorted({term for term in terms if term.lower() in lower})
+        if found:
+            matches.append({"group": group, "terms": found})
     return {
-        "alignments": alignments,
-        "gaps": gaps if found_any else [] # 只在有相关语境时显示缺口
+        "matches": matches,
+        "review_note": (
+            "Keyword matches locate possible evidence only. They do not establish "
+            "compliance, certification level, policy value or a missing capability."
+        ),
     }
 
-def main():
-    import argparse
-    parser = argparse.ArgumentParser(description='Medical Standard Aligner')
-    parser.add_argument('--input', default='extracted_content_part1.json')
-    parser.add_argument('--output', default='compliance_analysis.json')
-    args = parser.parse_args()
-    
-    base_dir = Path(__file__).parent.parent
-    ontology_path = base_dir / "references" / "healthcare_ontology.json"
-    
-    if not ontology_path.exists():
-        print(f"❌ 找不到本体文件: {ontology_path}")
-        return
 
-    with open(ontology_path, "r", encoding="utf-8") as f:
-        ontology = json.load(f)
-        
-    with open(args.input, "r", encoding="utf-8") as f:
-        documents = json.load(f)
-        
-    results = {}
-    for doc in documents:
-        results[doc['id']] = check_compliance(doc['content'], ontology)
-        
-    with open(args.output, "w", encoding="utf-8") as f:
-        json.dump(results, f, ensure_ascii=False, indent=2)
-        
-    print(f"✅ 医疗标准对齐分析完成: {args.output}")
+def load_documents(path):
+    data = json.loads(path.read_text(encoding="utf-8"))
+    if not isinstance(data, list):
+        raise ValueError("input must be a JSON array")
+    seen = set()
+    for index, doc in enumerate(data):
+        if not isinstance(doc, dict):
+            raise ValueError(f"document[{index}] must be an object")
+        if not isinstance(doc.get("id"), str) or not doc["id"].strip():
+            raise ValueError(f"document[{index}].id must be a non-empty string")
+        if doc["id"] in seen:
+            raise ValueError(f"duplicate document id: {doc['id']}")
+        seen.add(doc["id"])
+        if not isinstance(doc.get("content"), str):
+            raise ValueError(f"document[{index}].content must be a string")
+    return data
+
+
+def main() -> int:
+    parser = argparse.ArgumentParser(description="Healthcare term locator")
+    parser.add_argument("--input", required=True, type=Path)
+    parser.add_argument("--output", type=Path)
+    parser.add_argument(
+        "--ontology",
+        type=Path,
+        default=Path(__file__).resolve().parent.parent / "references" / "healthcare_ontology.json",
+    )
+    args = parser.parse_args()
+
+    try:
+        documents = load_documents(args.input)
+        ontology = json.loads(args.ontology.read_text(encoding="utf-8"))
+        results = {
+            "schema_version": 1,
+            "analysis_type": "keyword_location_only",
+            "documents": {
+                doc["id"]: scan_terms(doc["content"], ontology) for doc in documents
+            },
+        }
+        output = json.dumps(results, ensure_ascii=False, indent=2) + "\n"
+        if args.output:
+            args.output.parent.mkdir(parents=True, exist_ok=True)
+            args.output.write_text(output, encoding="utf-8")
+            print(str(args.output.resolve()))
+        else:
+            print(output, end="")
+    except (OSError, UnicodeError, json.JSONDecodeError, ValueError) as exc:
+        print(f"ERROR[input]: {exc}", file=sys.stderr)
+        return 1
+    return 0
+
 
 if __name__ == "__main__":
-    main()
+    raise SystemExit(main())

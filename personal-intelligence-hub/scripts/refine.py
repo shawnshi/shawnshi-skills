@@ -1,8 +1,10 @@
 from __future__ import annotations
 
+import argparse
 import json
 import re
-from datetime import datetime
+from datetime import datetime, timedelta
+from pathlib import Path
 
 from blackboard import append_signal, update_phase
 from history_manager import is_redundant
@@ -13,9 +15,9 @@ FOCUS_PATH = HUB_DIR / "references" / "strategic_focus.json"
 PROMPT_PATH = HUB_DIR / "references" / "prompts" / "v1_refine_system.md"
 
 
-def load_inputs() -> tuple[dict, dict]:
+def load_inputs(focus_path: Path | None = None) -> tuple[dict, dict]:
     scan_data = load_json(LATEST_SCAN_PATH, {})
-    focus_data = load_json(FOCUS_PATH, {})
+    focus_data = load_json(focus_path or FOCUS_PATH, {})
     if not scan_data.get("items"):
         raise RuntimeError(f"No scan data found at {LATEST_SCAN_PATH}")
     return scan_data, focus_data
@@ -62,7 +64,9 @@ def make_candidate(item: dict, score: int, matched: list[str], runner_available:
         "title_zh": item.get("title", "Untitled"),
         "url": item.get("url", ""),
         "source": item.get("source", "Unknown"),
-        "date": item.get("time", "Unknown")[:10],
+        "event_date": "unknown",
+        "published_at": item.get("time", "unknown")[:10],
+        "retrieved_at": item.get("retrieved_at") or datetime.now().astimezone().isoformat(),
         "strategic_score": score,
         "summary_zh": summary,
         "reason": f"匹配主题: {connection}",
@@ -76,18 +80,26 @@ def make_candidate(item: dict, score: int, matched: list[str], runner_available:
     }
 
 
-def heuristics(scan_data: dict, focus_data: dict) -> dict:
+def heuristics(
+    scan_data: dict,
+    focus_data: dict,
+    *,
+    min_score_override: int | None = None,
+    max_items_override: int | None = None,
+    dedupe_days_override: int | None = None,
+) -> dict:
     runner_available = False
     scored = []
     for item in scan_data["items"]:
-        if is_redundant(item.get("url", ""), item.get("title", ""), item.get("source", "")):
+        dedupe_days = dedupe_days_override or focus_data.get("filters", {}).get("dedupe_days", 7)
+        if is_redundant(item.get("url", ""), item.get("title", ""), item.get("source", ""), days=dedupe_days):
             continue
         score, matched = score_item(item, focus_data)
         scored.append((score, make_candidate(item, score, matched, runner_available, focus_data)))
     scored.sort(key=lambda x: x[0], reverse=True)
 
-    max_top10 = focus_data.get("filters", {}).get("max_top10", 10)
-    min_score = focus_data.get("filters", {}).get("min_score_for_top10", 4)
+    max_top10 = max_items_override if max_items_override is not None else focus_data.get("filters", {}).get("max_top10", 10)
+    min_score = min_score_override if min_score_override is not None else focus_data.get("filters", {}).get("min_score_for_top10", 4)
     top_candidates = [candidate for score, candidate in scored if score >= min_score][:max_top10]
 
     for candidate in top_candidates:
@@ -110,6 +122,9 @@ def heuristics(scan_data: dict, focus_data: dict) -> dict:
         {
             "domain": candidate["connection"].split("、")[0] if candidate.get("connection") else "通用",
             "task": candidate["actionability"],
+            "owner_type": "待用户指定",
+            "trigger": "相关信号获得第二来源或后续公告确认",
+            "indicator": "原始来源状态与关键事实变化",
         }
         for candidate in top_candidates[:5]
     ]
@@ -120,7 +135,14 @@ def heuristics(scan_data: dict, focus_data: dict) -> dict:
     }
 
     return {
-        "generated_at": datetime.now().isoformat(),
+        "schema_version": "1.0",
+        "generated_at": datetime.now().astimezone().isoformat(),
+        "topic": scan_data.get("metadata", {}).get("topic") or "未指定主题",
+        "region": scan_data.get("metadata", {}).get("region") or "未指定地区",
+        "window": scan_data.get("metadata", {}).get(
+            "window",
+            {"start": "unknown", "end": "unknown", "timezone": "local"},
+        ),
         "status": "COMPLETED",
         "model_used": "heuristic" if not runner_available else "hybrid",
         "punchline": top_candidates[0]["deduction"] if top_candidates else "暂无足够高价值信号。",
@@ -136,6 +158,11 @@ def heuristics(scan_data: dict, focus_data: dict) -> dict:
         "top_10": top_candidates,
         "translations": translations,
         "adversarial_audit_required": any(c["intelligence_level"] == "L4" for c in top_candidates),
+        "data_gaps": [
+            f"抓取源状态: {name}={status}"
+            for name, status in scan_data.get("metadata", {}).get("sources", {}).items()
+            if status != "OK"
+        ],
     }
 
 
@@ -193,17 +220,35 @@ def sanitize_banned_words(data):
     return data
 
 
-def refine() -> None:
+def refine(
+    focus_path: Path | None = None,
+    min_score: int | None = None,
+    max_items: int | None = None,
+    dedupe_days: int | None = None,
+) -> None:
     ensure_runtime_dirs()
     update_phase("refine", "running")
-    scan_data, focus_data = load_inputs()
-    output = heuristics(scan_data, focus_data)
+    scan_data, focus_data = load_inputs(focus_path)
+    output = heuristics(
+        scan_data,
+        focus_data,
+        min_score_override=min_score,
+        max_items_override=max_items,
+        dedupe_days_override=dedupe_days,
+    )
     output = post_process_entities(output, focus_data)
     output = sanitize_banned_words(output)
     dump_json(CANDIDATES_PATH, output)
+    dump_json(REFINED_PATH, output)
     update_phase("refine", "completed_heuristic")
     print(f"[OK] heuristic candidates saved to {CANDIDATES_PATH}")
 
 
 if __name__ == "__main__":
-    refine()
+    parser = argparse.ArgumentParser(description="Build parameterized intelligence candidates.")
+    parser.add_argument("--focus-config", type=Path)
+    parser.add_argument("--min-score", type=int)
+    parser.add_argument("--max-items", type=int)
+    parser.add_argument("--dedupe-days", type=int)
+    args = parser.parse_args()
+    refine(args.focus_config, args.min_score, args.max_items, args.dedupe_days)

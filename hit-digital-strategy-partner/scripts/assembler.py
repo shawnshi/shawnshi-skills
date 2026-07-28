@@ -6,12 +6,6 @@ import re
 from datetime import datetime
 from pathlib import Path
 
-MODE_MIN_WORDS = {
-    "brief": 600,
-    "deep-dive": 1200,
-    "board-memo": 350,
-}
-
 REQUIRED_ASSETS = [
     "working_memory.json",
     "hypothesis_matrix.json",
@@ -52,7 +46,6 @@ def chapter_patterns(project_path: Path) -> list[str]:
 
 
 def assemble_report(project_path: Path, output_filename: str, title: str, mode: str, min_words: int | None):
-    min_words = min_words or MODE_MIN_WORDS[mode]
     files = []
     for pattern in chapter_patterns(project_path):
         files.extend(glob.glob(pattern))
@@ -68,10 +61,10 @@ def assemble_report(project_path: Path, output_filename: str, title: str, mode: 
     yaml_header = f"""---
 Title: {title}
 Date: {current_date}
-Status: 🔴 归档冻结
+Status: Draft
 Author: HIT Digital Strategy Partner
 Mode: {mode}
-Version: V18.0 - Final Draft
+Version: 1.0
 Audience: Strategic Decision Makers
 ---
 
@@ -98,7 +91,8 @@ Audience: Strategic Decision Makers
         audit_results.append({
             "file": os.path.basename(file_path),
             "words": word_count,
-            "passed_depth": word_count >= min_words,
+            "depth_guide_words": min_words,
+            "depth_guide_met": None if min_words is None else word_count >= min_words,
         })
 
     if toc:
@@ -125,16 +119,26 @@ Audience: Strategic Decision Makers
     output_path = project_path / output_filename
     output_path.write_text(final_text, encoding="utf-8")
 
-    failed_chapters = [row["file"] for row in audit_results if not row["passed_depth"]]
+    failed_chapters = [
+        row["file"]
+        for row in audit_results
+        if row["depth_guide_met"] is False
+    ]
     missing_assets = [name for name, exists in asset_audit.items() if not exists]
-    status = "success"
+    warnings = []
     if failed_chapters:
-        status = "warning_depth_insufficient"
+        warnings.append(
+            "user-specified chapter depth guide was not met: "
+            + ", ".join(failed_chapters)
+        )
     if missing_assets:
-        status = "warning_missing_assets"
+        warnings.append(
+            "optional project assets are missing: " + ", ".join(missing_assets)
+        )
 
     return {
-        "status": status,
+        "status": "success_with_warnings" if warnings else "success",
+        "warnings": warnings,
         "path": str(output_path.resolve()),
         "mode": mode,
         "chapters_merged": len(files),
@@ -152,7 +156,11 @@ def main():
     parser.add_argument("--output", default="final_report.md")
     parser.add_argument("--title", default="Strategic Deep Dive Report")
     parser.add_argument("--mode", default="deep-dive", choices=["brief", "deep-dive", "board-memo"])
-    parser.add_argument("--min-words", type=int)
+    parser.add_argument(
+        "--min-words",
+        type=int,
+        help="Optional user-specified depth guide. It produces warnings and never blocks assembly.",
+    )
     args = parser.parse_args()
 
     result = assemble_report(args.path, args.output, args.title, args.mode, args.min_words)

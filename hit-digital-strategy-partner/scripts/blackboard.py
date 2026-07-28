@@ -5,6 +5,15 @@ from pathlib import Path
 import sys
 
 BLACKBOARD_RELATIVE = Path("tmp") / "strategy_blackboard.json"
+ASSUMPTION_FIELDS = {
+    "name",
+    "value",
+    "unit",
+    "source",
+    "as_of",
+    "region",
+    "status",
+}
 
 
 def blackboard_path(workspace_root: Path) -> Path:
@@ -14,36 +23,43 @@ def blackboard_path(workspace_root: Path) -> Path:
 def default_state(topic: str, mode: str) -> dict:
     return {
         "metadata": {
-            "version": "V18.0",
-            "timestamp": datetime.now().isoformat(),
-            "status": "INIT",
+            "schema_version": 1,
+            "updated_at": datetime.now().isoformat(),
+            "status": "draft",
             "topic": topic,
             "mode": mode,
         },
         "alignment": {
+            "decision": "",
             "audience": "",
+            "time_horizon": "",
             "budget": "",
-            "attack_focus": "",
-            "target_words": "",
+            "success_metrics": [],
+            "constraints": [],
             "mode": mode,
         },
         "evidence": {
+            "facts": [],
             "policy": [],
             "market": [],
-            "competitor": [],
+            "vendor": [],
             "clinical": [],
         },
         "logic_mesh": {
+            "alternatives": [],
             "conflicts": [],
-            "connections": [],
             "core_judgment": "",
-            "second_hop_inferences": [],
+            "counter_evidence": [],
         },
         "decisions": {
+            "recommendation": "",
             "action_levers": [],
-            "pessimistic_roi": {},
+            "quantitative_model": {
+                "assumptions": [],
+                "scenarios": [],
+            },
             "residual_risks": [],
-            "approved_outline": [],
+            "roadmap": [],
         },
         "deliverables": {
             "project_path": "",
@@ -64,7 +80,7 @@ def load_state(workspace_root: Path) -> tuple[Path, dict]:
 
 def save_state(path: Path, state: dict) -> None:
     path.parent.mkdir(parents=True, exist_ok=True)
-    state.setdefault("metadata", {})["timestamp"] = datetime.now().isoformat()
+    state.setdefault("metadata", {})["updated_at"] = datetime.now().isoformat()
     with path.open("w", encoding="utf-8") as handle:
         json.dump(state, handle, indent=2, ensure_ascii=False)
 
@@ -77,26 +93,87 @@ def parse_value(raw: str):
 
 
 def validate_state(state: dict) -> dict:
-    checks = {
-        "alignment_complete": all(
-            str(state.get("alignment", {}).get(key, "")).strip()
-            for key in ("audience", "budget", "attack_focus", "target_words", "mode")
-        ),
-        "policy_evidence": bool(state.get("evidence", {}).get("policy")),
-        "market_evidence": bool(state.get("evidence", {}).get("market")),
-        "competitor_evidence": bool(state.get("evidence", {}).get("competitor")),
-        "core_judgment": bool(str(state.get("logic_mesh", {}).get("core_judgment", "")).strip()),
-        "second_hop_inference": bool(state.get("logic_mesh", {}).get("second_hop_inferences")),
-        "action_levers": bool(state.get("decisions", {}).get("action_levers")),
-        "pessimistic_roi": bool(state.get("decisions", {}).get("pessimistic_roi")),
-        "residual_risks": bool(state.get("decisions", {}).get("residual_risks")),
-    }
-    missing = [name for name, passed in checks.items() if not passed]
+    errors: list[str] = []
+    warnings: list[str] = []
+
+    if not isinstance(state, dict):
+        return {
+            "status": "invalid",
+            "ready": False,
+            "errors": ["blackboard root must be a JSON object"],
+            "warnings": [],
+        }
+
+    for section in ("metadata", "alignment", "evidence", "logic_mesh", "decisions"):
+        if not isinstance(state.get(section), dict):
+            errors.append(f"{section} must be a JSON object")
+
+    if errors:
+        return {
+            "status": "invalid",
+            "ready": False,
+            "errors": errors,
+            "warnings": warnings,
+        }
+
+    schema_version = state["metadata"].get("schema_version")
+    if schema_version != 1:
+        errors.append("metadata.schema_version must equal 1")
+
+    assumptions = (
+        state["decisions"].get("quantitative_model", {}).get("assumptions", [])
+        if isinstance(state["decisions"].get("quantitative_model", {}), dict)
+        else None
+    )
+    if not isinstance(assumptions, list):
+        errors.append("decisions.quantitative_model.assumptions must be a list")
+    else:
+        for index, assumption in enumerate(assumptions):
+            if not isinstance(assumption, dict):
+                errors.append(f"assumptions[{index}] must be an object")
+                continue
+            missing_fields = sorted(ASSUMPTION_FIELDS - set(assumption))
+            if missing_fields:
+                errors.append(
+                    f"assumptions[{index}] missing fields: {', '.join(missing_fields)}"
+                )
+                continue
+            if assumption["status"] not in {"sourced", "needs_input"}:
+                errors.append(
+                    f"assumptions[{index}].status must be sourced or needs_input"
+                )
+            if assumption["status"] == "sourced":
+                for field in ("value", "unit", "source", "as_of", "region"):
+                    if assumption.get(field) in (None, ""):
+                        errors.append(
+                            f"assumptions[{index}].{field} is required when status=sourced"
+                        )
+            elif assumption.get("value") not in (None, ""):
+                errors.append(
+                    f"assumptions[{index}].value must be null when status=needs_input"
+                )
+
+    alignment = state["alignment"]
+    for field in ("decision", "audience", "time_horizon", "budget", "mode"):
+        if not str(alignment.get(field, "")).strip():
+            warnings.append(f"alignment.{field} is not filled")
+    if not alignment.get("success_metrics"):
+        warnings.append("alignment.success_metrics is empty")
+    if not any(state["evidence"].get(key) for key in ("facts", "policy", "market", "vendor", "clinical")):
+        warnings.append("evidence contains no reviewed source records")
+    if not str(state["logic_mesh"].get("core_judgment", "")).strip():
+        warnings.append("logic_mesh.core_judgment is empty")
+    if not str(state["decisions"].get("recommendation", "")).strip():
+        warnings.append("decisions.recommendation is empty")
+    if not state["decisions"].get("residual_risks"):
+        warnings.append("decisions.residual_risks is empty")
+
+    ready = not errors and not warnings
     return {
-        "status": "ready" if not missing else "blocked",
-        "ready": not missing,
-        "checks": checks,
-        "missing": missing,
+        "status": "ready" if ready else ("invalid" if errors else "draft"),
+        "ready": ready,
+        "errors": errors,
+        "warnings": warnings,
     }
 
 
@@ -131,7 +208,7 @@ def cmd_init(args):
 def cmd_update(args):
     path, state = load_state(args.workspace_root)
     state = update_section(state, args.section, args.key, parse_value(args.value), args.action)
-    state.setdefault("metadata", {})["status"] = "UPDATED"
+    state.setdefault("metadata", {})["status"] = "draft"
     save_state(path, state)
     print(json.dumps({"status": "updated", "path": str(path), "section": args.section, "key": args.key}, ensure_ascii=False, indent=2))
 
@@ -145,11 +222,8 @@ def cmd_validate(args):
     path, state = load_state(args.workspace_root)
     report = validate_state(state)
     report["path"] = str(path)
-    if report["ready"]:
-        state.setdefault("metadata", {})["status"] = "READY_FOR_DRAFT"
-        save_state(path, state)
     print(json.dumps(report, ensure_ascii=False, indent=2))
-    if args.strict and not report["ready"]:
+    if args.strict and report["errors"]:
         sys.exit(1)
 
 

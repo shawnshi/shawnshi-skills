@@ -9,7 +9,6 @@ Provides high-performance local data extraction for the personal-health-analysis
 """
 
 import sqlite3
-import os
 import pandas as pd
 from pathlib import Path
 from datetime import datetime, timedelta
@@ -19,6 +18,24 @@ DB_DIR = Path.home() / ".GarminDb"
 GARMIN_DB = DB_DIR / "garmin.db"
 MONITORING_DB = DB_DIR / "garmin_monitoring.db"
 ACTIVITIES_DB = DB_DIR / "garmin_activities.db"
+REQUIRED_PROVENANCE_FIELDS = (
+    "source_type",
+    "source",
+    "published_at",
+    "retrieved_at",
+    "region",
+    "population",
+    "intended_use",
+)
+
+
+def _ensure_missing_columns(df, columns):
+    """Add absent observation columns without inventing values."""
+    for column in columns:
+        if column not in df.columns:
+            df[column] = float("nan")
+    return df
+
 
 def get_connection(db_path):
     """Establish a connection to the SQLite database intelligently."""
@@ -72,21 +89,21 @@ def get_max_metrics():
             if k not in result:
                 result[k] = v
         
-        vo2_max = result.get('vo2max_running') or result.get('vo2max_cycling') or "--"
-        fitness_age = result.get('fitness_age') or "N/A"
+        vo2_max = result.get('vo2max_running') or result.get('vo2max_cycling')
+        fitness_age = result.get('fitness_age')
         
         try:
-            if vo2_max != "--":
+            if vo2_max is not None:
                 vo2_max = round(float(vo2_max), 1)
-        except:
-            pass
+        except (TypeError, ValueError):
+            vo2_max = None
             
         metrics = {
             "vo2_max": vo2_max,
             "fitness_age": fitness_age
         }
     except Exception as e:
-        metrics = {"vo2_max": "--", "fitness_age": "N/A"}
+        metrics = {"vo2_max": None, "fitness_age": None}
         print(f"Failed to query attributes: {e}")
     conn.close()
     return metrics
@@ -187,12 +204,8 @@ def get_summary(days=7):
     """
     try:
         df = pd.read_sql_query(query, conn)
-        if not df.empty:
-            # Performance: Replaced slow .apply with vectorized operations for significantly faster computation
-            df['high_stress_duration'] = ((df['stress_avg'] - 35).clip(lower=0) * 3600 / 15).fillna(0)
-            df['medium_stress_duration'] = ((df['stress_avg'] - 25).clip(lower=0) * 3600 / 10).fillna(0)
-        else:
-            raise ValueError(f"No data found in {table_name} table")
+        # The summary table contains an average stress value, not durations.
+        # Do not manufacture time-in-zone observations from an average.
     except Exception as e:
         conn.close()
         raise e
@@ -210,32 +223,25 @@ def get_summary(days=7):
     else:
         df = df_base.copy()
         
-    expected_cols = ['resting_heart_rate', 'max_hr', 'stress_avg', 'body_battery_highest', 
-                     'body_battery_lowest', 'body_battery_charged', 'sweat_loss', 
-                     'rr_waking_avg', 'steps', 'high_stress_duration', 'medium_stress_duration']
-    for col in expected_cols:
-        if col not in df.columns:
-            df[col] = float('nan')
-            
-    df['resting_heart_rate'] = df['resting_heart_rate'].ffill().bfill().fillna(60)
-    df['max_hr'] = df['max_hr'].ffill().bfill().fillna(160)
-    df['stress_avg'] = df['stress_avg'].ffill().bfill().fillna(25)
-    df['body_battery_highest'] = df['body_battery_highest'].ffill().bfill().fillna(100)
-    df['body_battery_lowest'] = df['body_battery_lowest'].ffill().bfill().fillna(20)
-    df['body_battery_charged'] = df['body_battery_charged'].fillna(0)
-    df['sweat_loss'] = df['sweat_loss'].fillna(0)
-    df['rr_waking_avg'] = df['rr_waking_avg'].ffill().bfill().fillna(14.0)
-    df['steps'] = df['steps'].fillna(0)
-    df['high_stress_duration'] = df['high_stress_duration'].fillna(0)
-    df['medium_stress_duration'] = df['medium_stress_duration'].fillna(0)
+    expected_cols = [
+        'resting_heart_rate', 'max_hr', 'stress_avg', 'body_battery_highest',
+        'body_battery_lowest', 'body_battery_charged', 'sweat_loss',
+        'rr_waking_avg', 'steps', 'high_stress_duration',
+        'medium_stress_duration'
+    ]
+    _ensure_missing_columns(df, expected_cols)
         
     return df
 
-def get_daily_friction_matrix(days=90):
+def get_daily_friction_matrix(days=90, derivation_config=None):
     """
-    V4.0 API: Provide raw data matrix for PMC (CTL/ATL/TSB) analysis.
-    Merges daily physical training load + cognitive shadow load + battery drain.
-    Enforces Strict Zero-Padding to prevent mathematical EWMA failures on non-activity days.
+    Return a date-aligned matrix of observed source fields.
+
+    ``daily_friction_load`` remains NaN by default. A derived load is calculated
+    only when the caller supplies an explicit configuration with:
+    ``input_field='training_load'``, a non-negative numeric ``scale``, and
+    non-empty provenance metadata. No stress, resting-heart-rate, or Body
+    Battery values are converted into an inferred composite workload score.
     """
     start_date = (datetime.now() - timedelta(days=days)).strftime('%Y-%m-%d')
     end_date = datetime.now().strftime('%Y-%m-%d')
@@ -253,7 +259,7 @@ def get_daily_friction_matrix(days=90):
     else:
         df_load = pd.DataFrame(columns=['date', 'training_load'])
         
-    # 2. Physiological Friction (Stress & RHR & Body Battery)
+    # 2. Raw daily observations. These remain descriptive inputs only.
     try:
         conn_sum = get_connection(GARMIN_DB)
         cur = conn_sum.cursor()
@@ -272,27 +278,41 @@ def get_daily_friction_matrix(days=90):
     finally:
         if 'conn_sum' in locals(): conn_sum.close()
     
-    # 3. Merge with Complete Time Series (Zero-padding)
+    # 3. Merge with a complete date index while retaining missing observations.
     date_rng = pd.date_range(start=start_date, end=end_date, freq='D')
     df_base = pd.DataFrame({'date': [d.strftime('%Y-%m-%d') for d in date_rng]})
     
     df = df_base.merge(df_sum, on='date', how='left').merge(df_load, on='date', how='left')
     
-    # Fill NAs
-    df['training_load'] = df['training_load'].fillna(0)
-    # Fill missing physiological values with neutral defaults to prevent PMC math collapse
-    df['stress_avg'] = df['stress_avg'].fillna(25)
-    df['resting_heart_rate'] = df['resting_heart_rate'].fillna(60)
-    df['body_battery_highest'] = df['body_battery_highest'].fillna(100)
-    df['body_battery_lowest'] = df['body_battery_lowest'].fillna(20)
-    
-    # Compute Executive Shadow Load
-    # Formula: Physical + max(0, stress_avg - 25)*2 + (bb_drain * 0.5)
-    # Performance: Replaced slow row-by-row .apply(axis=1) with vectorized operations for a significant speedup
-    phys = df['training_load']
-    shadow_stress = (df['stress_avg'] - 25).clip(lower=0) * 2
-    bb_drain = (df['body_battery_highest'] - df['body_battery_lowest']).clip(lower=0) * 0.5
-    df['daily_friction_load'] = phys + shadow_stress + bb_drain
+    _ensure_missing_columns(
+        df,
+        [
+            'training_load', 'stress_avg', 'resting_heart_rate',
+            'body_battery_highest', 'body_battery_lowest'
+        ],
+    )
+    df['daily_friction_load'] = float("nan")
+
+    if derivation_config is not None:
+        if not isinstance(derivation_config, dict):
+            raise ValueError("derivation_config must be a mapping")
+        input_field = derivation_config.get("input_field")
+        scale = derivation_config.get("scale")
+        provenance = derivation_config.get("provenance")
+        if input_field != "training_load":
+            raise ValueError("Only the observed training_load input is supported")
+        if not isinstance(scale, (int, float)) or isinstance(scale, bool) or scale < 0:
+            raise ValueError("derivation_config.scale must be a non-negative number")
+        if not isinstance(provenance, dict):
+            raise ValueError("derivation_config.provenance is required")
+        if any(
+            provenance.get(field) in (None, "")
+            for field in REQUIRED_PROVENANCE_FIELDS
+        ):
+            raise ValueError("derivation_config.provenance must be complete")
+        df['daily_friction_load'] = pd.to_numeric(
+            df[input_field], errors='coerce'
+        ) * float(scale)
     
     return df
 
@@ -327,10 +347,19 @@ def get_sleep_data(days=14):
         df['date'] = df['date'].astype(str).str[:10]
         # Convert HH:MM:SS to seconds for intelligence engine
         def time_to_sec(t):
-            if pd.isna(t) or not isinstance(t, str): return 0
+            if pd.isna(t):
+                return float("nan")
+            if isinstance(t, (int, float)):
+                return float(t)
+            if not isinstance(t, str):
+                return float("nan")
             parts = t.split(':')
-            if len(parts) == 3: return int(parts[0])*3600 + int(parts[1])*60 + int(float(parts[2]))
-            return 0
+            try:
+                if len(parts) == 3:
+                    return int(parts[0])*3600 + int(parts[1])*60 + int(float(parts[2]))
+            except (TypeError, ValueError):
+                return float("nan")
+            return float("nan")
         # Performance: Replace slow row-by-row .apply() with list comprehension for ~1.7x speedup
         df['sleep_time_seconds'] = [time_to_sec(x) for x in df['total_sleep']]
         df['deep_sleep_seconds'] = [time_to_sec(x) for x in df['deep_sleep']]
@@ -340,14 +369,14 @@ def get_sleep_data(days=14):
     else:
         df = df_base.copy()
         
-    if 'sleep_time_seconds' in df.columns:
-        df['sleep_time_seconds'] = df['sleep_time_seconds'].fillna(0)
-        df['deep_sleep_seconds'] = df['deep_sleep_seconds'].fillna(0)
-        df['light_sleep_seconds'] = df['light_sleep_seconds'].fillna(0)
-        df['rem_sleep_seconds'] = df['rem_sleep_seconds'].fillna(0)
-        df['sleep_score'] = df['sleep_score'].ffill().bfill().fillna(0)
-        df['avg_spo2'] = df['avg_spo2'].ffill().bfill().fillna(95.0)
-        df['avg_respiration'] = df['avg_respiration'].ffill().bfill().fillna(14.0)
+    _ensure_missing_columns(
+        df,
+        [
+            'sleep_time_seconds', 'deep_sleep_seconds', 'light_sleep_seconds',
+            'rem_sleep_seconds', 'sleep_score', 'avg_spo2',
+            'avg_respiration', 'avg_stress'
+        ],
+    )
 
     return df
 
@@ -371,12 +400,13 @@ def get_biomechanics_data(days=30):
         # Performance: Replace slow .apply lambda with vectorized string slicing for faster date extraction
         df['date'] = df['start_time'].astype(str).str[:10]
         def parse_gct(curr):
-            if pd.isna(curr): return 0
+            if pd.isna(curr):
+                return float("nan")
             if isinstance(curr, str):
                 try:
                     return round(float("0" + curr.split(':')[-1]) * 1000, 1)
-                except:
-                    return 0
+                except (TypeError, ValueError):
+                    return float("nan")
             return curr
         if 'avg_ground_contact_time' in df.columns:
             # Performance: Replace slow .apply() with list comprehension for ~1.3x speedup
@@ -410,9 +440,7 @@ def get_hrv_data(days=7):
     else:
         df = df_base.copy()
         
-    if 'hrv_avg' in df.columns:
-        df['hrv_avg'] = df['hrv_avg'].ffill().bfill().fillna(40)
-        df['status'] = df['status'].fillna('BALANCED')
+    _ensure_missing_columns(df, ['hrv_avg', 'status'])
         
     return df
 

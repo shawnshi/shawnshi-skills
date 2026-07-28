@@ -1,7 +1,7 @@
 {
   "schema_version": 1,
   "skill": "personal-investment-advisor",
-  "generated_at": "2026-07-22T14:23:59",
+  "generated_at": "2026-07-28T13:33:22",
   "skill_md": "SKILL.md",
   "top_level_files": [
     "SKILL.md"
@@ -46,6 +46,11 @@
       "path": "references\\portfolio_positions.example.json",
       "exists": true,
       "resolved_path": "C:\\Users\\shich\\.codex\\skills\\personal-investment-advisor\\references\\portfolio_positions.example.json"
+    },
+    {
+      "path": "scripts\\broker_sync.py",
+      "exists": true,
+      "resolved_path": "C:\\Users\\shich\\.codex\\skills\\personal-investment-advisor\\scripts\\broker_sync.py"
     },
     {
       "path": "scripts\\instrument_gate.py",
@@ -103,24 +108,9 @@
       "resolved_path": "C:\\Users\\shich\\.codex\\skills\\personal-investment-advisor\\scripts\\dashboard_math_gate.py"
     },
     {
-      "path": "scripts\\watchlist_gate.py",
+      "path": "scripts\\rebalance_weights.py",
       "exists": true,
-      "resolved_path": "C:\\Users\\shich\\.codex\\skills\\personal-investment-advisor\\scripts\\watchlist_gate.py"
-    },
-    {
-      "path": "scripts\\advice_journal.py",
-      "exists": true,
-      "resolved_path": "C:\\Users\\shich\\.codex\\skills\\personal-investment-advisor\\scripts\\advice_journal.py"
-    },
-    {
-      "path": "scripts\\sync_outcomes.py",
-      "exists": true,
-      "resolved_path": "C:\\Users\\shich\\.codex\\skills\\personal-investment-advisor\\scripts\\sync_outcomes.py"
-    },
-    {
-      "path": "scripts\\decision_outcome_report.py",
-      "exists": true,
-      "resolved_path": "C:\\Users\\shich\\.codex\\skills\\personal-investment-advisor\\scripts\\decision_outcome_report.py"
+      "resolved_path": "C:\\Users\\shich\\.codex\\skills\\personal-investment-advisor\\scripts\\rebalance_weights.py"
     }
   ],
   "missing_declared_dependencies": []

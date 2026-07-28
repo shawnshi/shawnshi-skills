@@ -1,15 +1,12 @@
 {
   "resource_kind": "investment_dashboard_contract",
-  "version": "5.0",
+  "version": "6.0",
   "required_top_level": [
     "stock_name",
     "stock_code",
     "market_type",
     "research_mode",
     "sentiment_score",
-    "trend_prediction",
-    "operation_advice",
-    "decision_type",
     "confidence_level",
     "confidence_details",
     "freshness_flags",
@@ -22,39 +19,39 @@
     "search_performed",
     "data_sources",
     "data_gaps",
-    "position_direction",
-    "blind_spot_warning"
+    "blind_spot_warning",
+    "research_brief"
   ],
   "optional_top_level": [
     "portfolio_context",
-    "position_advice",
+    "holding_assessment",
     "portfolio_summary",
     "portfolio_risk",
     "portfolio_fit",
     "earnings_snapshot",
     "catalyst_map",
-    "watchlist_alerts",
+    "monitoring_alerts",
     "feedback_status",
     "management_claim_tracking",
-    "research_brief"
+    "tags"
   ],
   "required_dashboard_sections": [
     "core_conclusion",
     "qualitative_analysis",
     "data_perspective",
     "intelligence",
-    "battle_plan"
+    "research_plan"
   ],
   "required_core_conclusion_fields": [
     "one_sentence",
     "signal_type",
     "time_sensitivity",
-    "position_advice"
+    "research_boundary"
   ],
-  "required_battle_plan_fields": [
-    "sniper_points",
-    "position_strategy",
-    "action_checklist"
+  "required_research_plan_fields": [
+    "evidence_checks",
+    "falsification_checks",
+    "monitoring_indicators"
   ],
   "required_data_perspective_fields": [
     "trend_status",
@@ -109,12 +106,11 @@
     "unrealized_pnl_pct",
     "position_status"
   ],
-  "required_position_advice_fields_when_holding": [
-    "holding_view",
-    "action_for_holder",
-    "cost_basis_view",
-    "risk_to_holder",
-    "next_action_trigger"
+  "required_holding_assessment_fields_when_holding": [
+    "holding_context",
+    "cost_basis_context",
+    "risk_evidence",
+    "monitoring_conditions"
   ],
   "required_portfolio_summary_fields": [
     "total_positions",
@@ -156,14 +152,10 @@
   ],
   "enums": {
     "market_type": ["A股", "港股", "美股", "ETF", "其他"],
-    "research_mode": ["trading_mode", "thesis_mode"],
-    "decision_type": ["buy", "hold", "sell", "watch", "research_only"],
+    "research_mode": ["research_only"],
     "confidence_level": ["高", "中", "低"],
-    "operation_advice": ["买入", "加仓", "持有", "减仓", "卖出", "观望", "不适用"],
-    "trend_prediction": ["强烈看多", "看多", "震荡", "看空", "强烈看空"],
     "weight_status": ["within_target", "above_target", "above_max", "unknown"],
-    "feedback_status": ["pending", "executed", "reviewed", "closed"],
-    "position_direction": ["long", "short", "not_applicable"],
+    "feedback_status": ["pending", "reviewed", "closed"],
     "source_tier": [
       "company_primary",
       "regulator",
@@ -174,6 +166,26 @@
       "user_authorized"
     ]
   },
+  "forbidden_legacy_fields": [
+    "operation_advice",
+    "decision_type",
+    "position_direction",
+    "trend_prediction",
+    "position_advice",
+    "watchlist_alerts",
+    "battle_plan",
+    "sniper_points",
+    "position_strategy",
+    "ideal_buy",
+    "secondary_buy",
+    "stop_loss",
+    "take_profit",
+    "suggested_position",
+    "entry_plan",
+    "override_gate_flags",
+    "action_for_holder",
+    "next_action_trigger"
+  ],
   "market_rules": {
     "A股": {
       "chip_structure_mode": "enhanced_or_gap",

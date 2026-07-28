@@ -24,6 +24,14 @@
             "expected_output": "The agent should surface partial coverage, identify the skipped record, and treat strict aggregation as failed instead of silently reporting a complete audit.",
             "assertions": [],
             "files": []
+        },
+        {
+            "id": 4,
+            "eval_name": "persisted_7d_dashboard",
+            "prompt": "生成最近7天系统交互审计报告和HTML面板并保存。",
+            "expected_output": "The agent should use explicit authorized evidence, persist paired Markdown and HTML files with one shared stem under the current workspace output/mentat-collaboration-audit directory, verify both files, and avoid persisting raw events or performing remediation.",
+            "assertions": [],
+            "files": []
         }
     ]
 }

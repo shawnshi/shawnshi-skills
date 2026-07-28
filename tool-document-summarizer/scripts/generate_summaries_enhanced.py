@@ -1,177 +1,159 @@
-#!/usr/bin/env python
-# -*- coding: utf-8 -*-
-"""
-@Input:  Extracted content JSON (extracted_content_part1.json)
-@Output: Summary/Tags JSON (document_summaries_enhanced.json)
-@Pos:    Logic Layer (LLM-Driven / Mentat V6.0). 
+"""Evidence-bounded document summaries with opt-in external model use."""
 
-!!! Maintenance Protocol: This script generates high-density semantic summaries.
-!!! System Directive: Use structured prompt schema [核心洞察] + [合规风险] + [战略价值].
-"""
-import json
-import sys
-import io
-import re
+from __future__ import annotations
+
 import argparse
-from collections import Counter
+import json
+import os
+import re
+import sys
 from pathlib import Path
-import yaml
-
-# 设置标准输出编码为 UTF-8
-if sys.platform == 'win32':
-    sys.stdout = io.TextIOWrapper(sys.stdout.buffer, encoding='utf-8')
-    sys.stderr = io.TextIOWrapper(sys.stderr.buffer, encoding='utf-8')
 
 
-class LLMSummaryGenerator:
-    """LLM 驱动的医疗战略摘要生成器"""
+def load_documents(path):
+    data = json.loads(path.read_text(encoding="utf-8"))
+    if not isinstance(data, list):
+        raise ValueError("input must be a JSON array")
+    seen = set()
+    for index, doc in enumerate(data):
+        if not isinstance(doc, dict):
+            raise ValueError(f"document[{index}] must be an object")
+        for field in ("id", "filename", "content"):
+            if not isinstance(doc.get(field), str):
+                raise ValueError(f"document[{index}].{field} must be a string")
+        if not doc["id"].strip():
+            raise ValueError(f"document[{index}].id must not be empty")
+        if doc["id"] in seen:
+            raise ValueError(f"duplicate document id: {doc['id']}")
+        seen.add(doc["id"])
+    return data
 
-    def __init__(self):
-        # 加载本体文件
-        base_dir = Path(__file__).parent.parent
-        self.config_path = base_dir / "config.yaml"
-        self.config = {}
-        if self.config_path.exists():
-            with open(self.config_path, "r", encoding="utf-8") as f:
-                self.config = yaml.safe_load(f) or {}
 
-    def get_prompt_template(self):
-        """定义高密度语义压缩的 LLM Prompt (Mentat V6.0 标准)"""
-        return """
-# ROLE: 医疗信息化战略审计专家 (Mentat Edition)
-# TASK: 对医疗文档执行深度语义压缩，生成 [核心洞察] + [合规风险] + [战略价值] 的结构化摘要。
+def extractive_summary(content, max_chars):
+    paragraphs = [re.sub(r"\s+", " ", p).strip() for p in re.split(r"\n\s*\n", content)]
+    paragraphs = [p for p in paragraphs if p]
+    if not paragraphs:
+        return "", []
+    selected = []
+    total = 0
+    for paragraph in paragraphs:
+        if selected and total + len(paragraph) + 1 > max_chars:
+            break
+        selected.append(paragraph[:max_chars] if not selected else paragraph)
+        total += len(selected[-1]) + 1
+        if total >= max_chars:
+            break
+    return "\n".join(selected)[:max_chars], list(range(1, len(selected) + 1))
 
-## CONSTRAINTS:
-1. 语言: 简体中文。
-2. 长度: 120-160 字。
-3. 风格: 极度克制、手术刀式直击。严禁使用“本文档介绍了”、“旨在”等废话。
-4. 核心三元组: 必须包含 [状态_节点] :: [逻辑_变迁] 的表述模式。
 
-## INPUT_DATA:
-- Filename: {filename}
-- Content_Snippet: {content}
-- Compliance_Audit: {compliance}
-
-## OUTPUT_FORMAT (Strict JSON or Plain Text with Headers):
-[核心洞察]：...
-[合规风险]：...
-[战略价值]：...
-"""
-
-    def generate_rule_based_fallback(self, filename, content, compliance_info=None):
-        """规则兜底逻辑 (当 LLM 不可用时使用)"""
-        # 提取医院名称
-        hospital_pattern = r'([\u4e00-\u9fa5]{2,10}(医院|卫生院|中医院|人民医院))'
-        hospitals = re.findall(hospital_pattern, content[:500] + filename)
-        hospital = hospitals[0][0] if hospitals else "医疗机构"
-        
-        name_clean = Path(filename).name[:15]
-        summary = f"{hospital}《{name_clean}...》是核心资产。涉及电子病历、区域平台等。已识别合规性缺口。"
-        
-        # 确保达到最小长度
-        while len(summary) < 100:
-            summary += " 该文档为医疗数字化转型提供了标准化的实施参考。"
-            
-        return summary[:150]
-
-    def _call_model(self, prompt, api_key, model_name):
-        """Call the configured Google Generative AI model with retries."""
+def external_summary(filename, content, model_name, api_key):
+    try:
         import google.generativeai as genai
-        import time
-        genai.configure(api_key=api_key)
-        model = genai.GenerativeModel(model_name)
-        
-        for attempt in range(3):
-            try:
-                response = model.generate_content(prompt)
-                if response.text:
-                    return response.text
-            except Exception as e:
-                print(f"⚠️ API 调用失败 (尝试 {attempt+1}/3): {e}")
-                time.sleep(2 ** attempt)
-        return None
+    except ImportError as exc:
+        raise RuntimeError("google-generativeai is not installed") from exc
+    genai.configure(api_key=api_key)
+    model = genai.GenerativeModel(model_name)
+    prompt = (
+        "Summarize only claims supported by the supplied excerpt. Preserve numbers, "
+        "negation, conditions and uncertainty. Do not infer compliance, clinical "
+        "advice, strategic value or missing capabilities. Return plain text.\n\n"
+        f"Filename: {filename}\nExcerpt:\n{content}"
+    )
+    response = model.generate_content(prompt)
+    text = getattr(response, "text", None)
+    if not isinstance(text, str) or not text.strip():
+        raise RuntimeError("external model returned no text")
+    return text.strip()
 
-    def process_batch(self, input_file, output_file, compliance_file=None):
-        """处理文档批次，原生调用 LLM 进行压缩"""
-        import os
-        from concurrent.futures import ThreadPoolExecutor, as_completed
-        
-        if not Path(input_file).exists():
-            print(f"❌ 找不到输入文件: {input_file}")
-            sys.exit(1)
 
-        with open(input_file, "r", encoding="utf-8") as f:
-            documents = json.load(f)
+def main() -> int:
+    parser = argparse.ArgumentParser(description="Generate evidence-bounded summaries")
+    parser.add_argument("--input", required=True, type=Path)
+    parser.add_argument("--output", required=True, type=Path)
+    parser.add_argument("--max-chars", type=int, required=True)
+    parser.add_argument("--allow-external-model", action="store_true")
+    parser.add_argument(
+        "--external-max-chars",
+        type=int,
+        help="explicit maximum source characters sent to the external model",
+    )
+    args = parser.parse_args()
+    if args.max_chars <= 0:
+        print("ERROR[argument]: --max-chars must be positive", file=sys.stderr)
+        return 2
+    if args.allow_external_model and (
+        args.external_max_chars is None or args.external_max_chars <= 0
+    ):
+        print(
+            "ERROR[authorization]: --allow-external-model requires a positive "
+            "--external-max-chars data boundary",
+            file=sys.stderr,
+        )
+        return 2
+    if args.external_max_chars is not None and not args.allow_external_model:
+        print(
+            "ERROR[argument]: --external-max-chars requires --allow-external-model",
+            file=sys.stderr,
+        )
+        return 2
 
-        compliance_data = {}
-        if compliance_file and Path(compliance_file).exists():
-            with open(compliance_file, "r", encoding="utf-8") as f:
-                compliance_data = json.load(f)
-
-        print(f"正在处理 {len(documents)} 个文档...")
-        
+    try:
+        documents = load_documents(args.input)
         api_key = os.environ.get("DOCUMENT_SUMMARIZER_API_KEY")
         model_name = os.environ.get("DOCUMENT_SUMMARIZER_MODEL")
-        if not api_key or not model_name:
-            print("⚠️ 未配置 DOCUMENT_SUMMARIZER_API_KEY 和 DOCUMENT_SUMMARIZER_MODEL，将回退到规则引擎。")
+        if args.allow_external_model and (not api_key or not model_name):
+            raise ValueError(
+                "--allow-external-model requires DOCUMENT_SUMMARIZER_API_KEY and DOCUMENT_SUMMARIZER_MODEL"
+            )
 
         results = []
-        
-        def _process_single(doc):
-            doc_id = doc['id']
-            filename = doc['filename']
-            content = doc['content'][:2000] # 截取前2k字作为上下文
-            compliance = compliance_data.get(doc_id, "未执行合规审计")
-            
-            prompt = self.get_prompt_template().format(
-                filename=filename,
-                content=content,
-                compliance=json.dumps(compliance, ensure_ascii=False)
-            )
-            
-            summary = None
-            tags = []
-            if api_key and model_name:
-                raw_res = self._call_model(prompt, api_key, model_name)
-                if raw_res:
-                    summary = raw_res.strip()
-                    tags = ["Mentat_Auto_LLM"]
-                    
-            if not summary:
-                # 规则兜底
-                summary = self.generate_rule_based_fallback(filename, content, compliance)
-                tags = ["RULES_FALLBACK"]
-                
-            return {
-                "id": doc_id,
-                "filename": filename,
-                "summary": summary,
-                "tags": tags
-            }
-
-        # 异步并发执行 API 请求，最大并发限流控制在 4 避免 429 Error
-        max_workers = 4 if api_key and model_name else 8
-        with ThreadPoolExecutor(max_workers=max_workers) as executor:
-            futures = [executor.submit(_process_single, doc) for doc in documents]
-            for future in as_completed(futures):
+        for doc in documents:
+            method = "extractive_local"
+            warnings = []
+            if args.allow_external_model:
+                excerpt = doc["content"][: args.external_max_chars]
                 try:
-                    res = future.result()
-                    results.append(res)
-                    print(f"✓ 生成完成: {res['filename']} [{res['tags'][0]}]")
-                except Exception as e:
-                    print(f"❌ 严重内部错误: {e}")
+                    summary = external_summary(doc["filename"], excerpt, model_name, api_key)
+                    method = f"external:{model_name}"
+                    source_units = [
+                        f"excerpt:first_{args.external_max_chars}_chars"
+                    ]
+                except Exception as exc:
+                    # A single classified failure changes the method to local; no blind retry.
+                    summary, paragraphs = extractive_summary(doc["content"], args.max_chars)
+                    source_units = [f"paragraph:{number}" for number in paragraphs]
+                    warnings.append(f"external_model_error; changed_to_local: {type(exc).__name__}: {exc}")
+            else:
+                summary, paragraphs = extractive_summary(doc["content"], args.max_chars)
+                source_units = [f"paragraph:{number}" for number in paragraphs]
 
-        with open(output_file, "w", encoding="utf-8") as f:
-            json.dump(results, f, ensure_ascii=False, indent=2)
-            
-        print(f"✅ 生成完毕并落盘至: {output_file}")
+            results.append(
+                {
+                    "id": doc["id"],
+                    "filename": doc["filename"],
+                    "summary": summary,
+                    "summary_method": method,
+                    "source_units": source_units,
+                    "source_truncated": (
+                        len(doc["content"]) > args.external_max_chars
+                        if method.startswith("external:")
+                        else len(summary) < len(doc["content"])
+                    ),
+                    "tags": [],
+                    "warnings": warnings,
+                }
+            )
+
+        args.output.parent.mkdir(parents=True, exist_ok=True)
+        args.output.write_text(
+            json.dumps(results, ensure_ascii=False, indent=2) + "\n", encoding="utf-8"
+        )
+        print(str(args.output.resolve()))
+    except (OSError, UnicodeError, json.JSONDecodeError, ValueError) as exc:
+        print(f"ERROR[input]: {exc}", file=sys.stderr)
+        return 1
+    return 0
+
 
 if __name__ == "__main__":
-    parser = argparse.ArgumentParser(description='LLM 摘要生成器适配层')
-    parser.add_argument('--input', required=True)
-    parser.add_argument('--output', required=True)
-    parser.add_argument('--compliance', help='合规审计结果')
-    args = parser.parse_args()
-    
-    generator = LLMSummaryGenerator()
-    generator.process_batch(args.input, args.output, args.compliance)
+    raise SystemExit(main())

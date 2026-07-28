@@ -1,85 +1,21 @@
-# Morphism Mapper 高级模块系统
+# Morphism Mapper 高级模块
 
-## 概述
+高级模块是按需分析视角，不是自动路由器或质量门禁。
 
-基于高级范畴论概念（自然变换、米田引理、伴随函子、极限/余极限）的按需挂载分析模块，用于解决基础映射无法覆盖的复杂场景。
+| 模块 | 适用问题 | 使用方式 |
+|---|---|---|
+| `adjoint_balancer.md` | 能力与约束之间的可行性权衡 | 用户需要权衡时建议 |
+| `yoneda_probe.md` | 关键属性只能通过关系观察 | 证据面不足时建议 |
+| `natural_transformation.md` | 比较两套映射在变化中的一致性 | 存在两套明确映射时建议 |
+| `limits_colimits.md` | 比较多个领域的共同结构 | 多域分析时建议 |
+| `kan_extension.md` | 评估局部机制能否迁移 | 已有局部验证数据时建议 |
+| `monad_risk_container.md` | 显式记录副作用 | 风险对决策重要时建议 |
+| `koan_break.md` | 原问题存在范畴错误 | 证据显示问题定义失效时建议 |
 
-## 模块列表
+## 使用合同
 
-| 模块文件 | 版本 | 数学概念 | 核心功能 | 强制执行 |
-|----------|------|----------|----------|----------|
-| `adjoint_balancer.md` | V4 | 伴随函子 | 可行性平衡 | **是** |
-| `yoneda_probe.md` | V3 | 米田引理 | 信息补全 | 否 |
-| `natural_transformation.md` | **V3** | 自然变换 | 视角对齐/颗粒度缩放/策略演化 | 否 |
-| `limits_colimits.md` | V5 | 极限/余极限 | 元逻辑提取 | 否 |
-| `kan_extension.md` | V1 | 坎扩展 (Kan Extension) | 局部成功全局复制 (激进/保守) | 否 (called by Adjoint Balancer) |
-| `koan_break.md` | V1 | 初始对象 | 问题重构 | 否 |
-
-## 触发映射速查
-
-| 用户话术关键词 | 潜在困境 | 挂载模块 |
-|----------------|----------|----------|
-| "环境变了"、"风向调了" | 结构性失效 | Natural Transformation (Mode C) |
-| "技术和业务打架"、"KPI不一致" | 视角冲突 | Natural Transformation (Mode A) |
-| "战略宏大落地零碎"、"动作变形" | 颗粒度断裂 | Natural Transformation (Mode B) |
-| "看不穿"、"查不到"、"黑盒" | 信息不对称 | Yoneda Probe |
-| "太难了"、"没资源"、"怎么落地" | 复杂度超载 | Adjoint Balancer |
-| "复制到XX市场"、"如何规模化"、"下沉市场" | 局部成功到全局复制 | Kan Extension |
-| "这几个领域有什么共同点？" | 缺乏通用底层 | Limits/Colimits |
-| "圆的方"、"万能的石头"、"无解" | 逻辑悖论/范畴错误 | Koan Break |
-| 遍历所有 Domain B 均无法映射 | 结构不匹配 | Koan Break |
-| 连续多次验证失败 | 问题本身需重构 | Koan Break |
-
-## 模块接口标准
-
-每个模块必须包含以下章节：
-
-```markdown
----
-module: [模块标识]
-version: [版本号]
-name: [中文名称]
-description: [一句话描述]
----
-
-## Mathematical Foundation
-[数学原理及商业映射]
-
-## Trigger
-[自动触发条件 + 手动触发命令]
-
-## Logic
-[Step-by-step 执行逻辑]
-
-## Input/Output
-[输入要求 + 输出格式模板]
-
-## Integration
-[挂载点 + 与主流程的整合方式]
-```
-
-## 模块开发指南
-
-1. 复制 `_template.md` 创建新模块
-2. 遵循接口标准填写各章节
-3. 在 README.md 中更新模块列表
-4. 在 SKILL.md 中更新触发映射
-
-## 模块链式调用
-
-默认优先级：
-```
-yoneda_probe → natural_transformation → limits_colimits → adjoint_balancer
-```
-
-特殊情况（逻辑僵局时）：
-```
-koan_break → [用户重构问题后重新进入主流程]
-```
-
-## 扩展计划
-
-- ✅ **Kan Extensions**: 域扩展保持结构 (已完成 v2.6)
-- **Functor Categories**: 反事实推理
-- **Higher Category Theory**: 多层结构处理
-- **Koan Break Variants**: 针对不同类型悖论的专业重构模块（逻辑型、情感型、价值型）
+- 关键词只用于发现候选模块，不得自动调用或链式调用。
+- 每次说明选择理由、所需证据、停止条件和不使用时的影响。
+- 固定权重、比例、分数、时间窗口和收益不是默认事实；缺少来源时用变量和敏感性分析。
+- 不因缺少某模块、固定章节、条目数量或风格化标题而阻断交付。
+- 模块输出是候选解释。严格数学术语只在定义与证明完整时使用。

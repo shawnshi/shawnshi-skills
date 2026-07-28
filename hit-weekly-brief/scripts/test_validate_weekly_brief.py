@@ -75,6 +75,34 @@ class WeeklyBriefValidationTests(unittest.TestCase):
             errors = self.validate(path)
             self.assertTrue(any("has not ended" in error for error in errors))
 
+    def test_accepts_iso_event_date(self) -> None:
+        with tempfile.TemporaryDirectory() as directory:
+            content = VALID_CONTENT.replace("| 7月13日 |", "| 2026-07-13 |").replace(
+                "| 7月15—16日 |", "| 2026-07-15 至 2026-07-16 |"
+            )
+            path = self.write_report(directory, "DHWB-20260719.md", content)
+            self.assertEqual([], self.validate(path))
+
+    def test_accepts_explicit_empty_period(self) -> None:
+        with tempfile.TemporaryDirectory() as directory:
+            content = """# 数字健康周报｜2026年7月13日—19日
+
+生成时点：2026年7月19日08:58（北京时间）
+
+> 截至当前时点，本周尚未结束。
+
+本周期未发现符合纳入标准的事件
+"""
+            path = self.write_report(directory, "DHWB-20260719.md", content)
+            self.assertEqual([], self.validate(path))
+
+    def test_rejects_unresolved_template_placeholder(self) -> None:
+        with tempfile.TemporaryDirectory() as directory:
+            content = VALID_CONTENT + "\n地区：[REGION]\n"
+            path = self.write_report(directory, "DHWB-20260719.md", content)
+            errors = self.validate(path)
+            self.assertTrue(any("placeholder" in error for error in errors))
+
 
 if __name__ == "__main__":
     unittest.main()

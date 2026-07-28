@@ -1,377 +1,199 @@
-#!/usr/bin/env python
-# -*- coding: utf-8 -*-
-"""
-@Input:  Document directory path, worker count, execution flags
-@Output: Pipeline logs, metadata JSONs, updated file properties
-@Pos:    Interface Layer. High-level orchestrator for the Document Summarizer skill.
+"""Read-only-by-default orchestration for the document summarizer."""
 
-!!! Maintenance Protocol: If the pipeline stages change, update this script and SKILL.md.
+from __future__ import annotations
 
-Document Summarizer - 增强版编排脚本
-整合优化版的提取、生成和应用流程
-"""
-import sys
 import argparse
 import subprocess
-import os
+import sys
 from pathlib import Path
 
-
-def check_dependencies():
-    """检查Python包依赖"""
-    required_packages = {
-        'pypdf': 'pypdf',
-        'docx': 'python-docx',
-        'pptx': 'python-pptx',
-        'openpyxl': 'openpyxl',
-        'tqdm': 'tqdm'
-    }
-
-    missing = []
-    for import_name, package_name in required_packages.items():
-        try:
-            __import__(import_name)
-        except ImportError:
-            missing.append(package_name)
-
-    if missing:
-        print("\n" + "="*60)
-        print("❌ 缺少依赖包")
-        print("="*60)
-        print(f"以下包未安装: {', '.join(missing)}")
-        print(f"\n💡 请运行以下命令安装:")
-        print(f"   pip install {' '.join(missing)}")
-        print("\n或者:")
-        print(f"   pip install -r scripts/requirements.txt")
-        print("="*60 + "\n")
-        return False
-
-    return True
+SCRIPT_DIR = Path(__file__).resolve().parent
 
 
-def execute_stage(cmd, description):
-    """运行命令并显示结果"""
-    print(f"\n{'='*60}")
-    print(f"{description}")
-    print(f"{'='*60}")
-    print(f"执行命令: {' '.join(cmd)}\n")
-
-    result = subprocess.run(cmd, capture_output=False, text=True)
-
-    if result.returncode == 0:
-        print(f"\n✓ {description}完成\n")
-        return True
-    else:
-        print(f"\n✗ {description}失败 (退出码: {result.returncode})\n")
-        return False
+def run(script, *arguments):
+    command = [sys.executable, str(SCRIPT_DIR / script), *map(str, arguments)]
+    result = subprocess.run(command, check=False)
+    if result.returncode:
+        print(
+            f"ERROR[stage]: {script} exited with {result.returncode}; "
+            "the pipeline stopped without retrying",
+            file=sys.stderr,
+        )
+    return result.returncode
 
 
-def _write_telemetry(start_time, status, output_dir):
-    """Write optional telemetry only when an explicit directory is configured."""
-    import os
-    import json
-    import time
-    from pathlib import Path
-
-    duration_sec = time.time() - start_time
-    # 模拟估算 token (因为我们并没有真正精确捕获所有子进程的 token 用量)
-    input_tokens = 0
-    output_tokens = 0
-    
-    # Check if we have the document_summaries_enhanced.json to measure
-    summary_file = Path(output_dir) / "document_summaries_enhanced.json"
-    if summary_file.exists():
-        try:
-            with open(summary_file, "r", encoding="utf-8") as f:
-                data = json.load(f)
-                input_tokens = len(data) * 2000 # 估算 2k tokens/doc input
-                output_tokens = len(data) * 150 # 估算 150 output tokens
-        except:
-            pass
-            
-    telemetry_data = {
-        "skill_name": "tool-document-summarizer",
-        "status": status,
-        "duration_sec": round(duration_sec, 2),
-        "input_tokens": input_tokens,
-        "output_tokens": output_tokens,
-        "timestamp": time.strftime("%Y-%m-%dT%H:%M:%SZ")
-    }
-
-    telemetry_root = os.environ.get("DOCUMENT_SUMMARIZER_TELEMETRY_DIR")
-    if not telemetry_root:
-        return
-
-    telemetry_dir = Path(telemetry_root).expanduser()
-    telemetry_dir.mkdir(parents=True, exist_ok=True)
-    
-    telemetry_file = telemetry_dir / f"record_{int(time.time())}.json"
-    try:
-        with open(telemetry_file, "w", encoding="utf-8") as f:
-            json.dump(telemetry_data, f, ensure_ascii=False, indent=2)
-        print(f"\n[Telemetry] 执行指标已记录至: {telemetry_file}")
-    except Exception as e:
-        print(f"\n[Telemetry] 未能记录指标: {e}")
+def add_external_flags(command, allowed, external_max_chars):
+    if not allowed:
+        return command
+    return [
+        *command,
+        "--allow-external-model",
+        "--external-max-chars",
+        external_max_chars,
+    ]
 
 
-def main():
-    parser = argparse.ArgumentParser(
-        description='Document Summarizer - 增强版编排脚本',
-        formatter_class=argparse.RawDescriptionHelpFormatter,
-        epilog="""
-使用示例:
-  # 完整流程（提取 + 生成摘要 + 应用元数据）
-  python orchestrate_enhanced.py all --dir /path/to/documents
+def main() -> int:
+    parser = argparse.ArgumentParser(description="Document summarizer pipeline")
+    commands = parser.add_subparsers(dest="command", required=True)
 
-  # 仅提取文本
-  python orchestrate_enhanced.py extract --dir /path/to/documents
+    extract = commands.add_parser("extract")
+    extract.add_argument("--dir", required=True, type=Path)
+    extract.add_argument("--output-dir", required=True, type=Path)
+    extract.add_argument("--workers", type=int, default=4)
 
-  # 仅生成摘要（使用优化版生成器）
-  python orchestrate_enhanced.py generate
+    generate = commands.add_parser("generate")
+    generate.add_argument("--input", required=True, type=Path)
+    generate.add_argument("--output", required=True, type=Path)
+    generate.add_argument("--max-chars", required=True, type=int)
+    generate.add_argument("--allow-external-model", action="store_true")
+    generate.add_argument("--external-max-chars", type=int)
 
-  # 仅应用元数据（使用优化版应用器）
-  python orchestrate_enhanced.py apply
+    scan = commands.add_parser("scan-terms")
+    scan.add_argument("--input", required=True, type=Path)
+    scan.add_argument("--output", required=True, type=Path)
 
-  # 清理生成的文件
-  python orchestrate_enhanced.py clean --apply
-        """
+    inventory = commands.add_parser("inventory")
+    inventory.add_argument("--input", required=True, type=Path)
+    inventory.add_argument("--output", required=True, type=Path)
+
+    all_cmd = commands.add_parser(
+        "all", help="extract, summarize, locate terms and build an inventory; no source write-back"
     )
+    all_cmd.add_argument("--dir", required=True, type=Path)
+    all_cmd.add_argument("--output-dir", required=True, type=Path)
+    all_cmd.add_argument("--workers", type=int, default=4)
+    all_cmd.add_argument("--max-chars", required=True, type=int)
+    all_cmd.add_argument("--allow-external-model", action="store_true")
+    all_cmd.add_argument("--external-max-chars", type=int)
 
-    subparsers = parser.add_subparsers(dest='command', help='子命令')
-    
-    # Define output directory
-    output_dir = os.environ.get('DOCUMENT_SUMMARIZER_OUTPUT_DIR', 'output')
+    apply_cmd = commands.add_parser("apply", help="preview or explicitly apply metadata")
+    apply_cmd.add_argument("--summaries", required=True, type=Path)
+    apply_cmd.add_argument("--mapping", required=True, type=Path)
+    apply_cmd.add_argument("--backup-dir", type=Path)
+    apply_cmd.add_argument("--apply", action="store_true")
+    apply_cmd.add_argument("--overwrite-existing", action="store_true")
 
-    # all 命令 - 完整流程
-    parser_all = subparsers.add_parser('all', help='执行完整流程（提取+生成+应用）')
-    parser_all.add_argument('--dir', required=True, help='要处理的文档目录')
-    parser_all.add_argument('--workers', type=int, default=5, help='并行工作线程数')
-    parser_all.add_argument('--force', action='store_true', help='强制重新处理')
-
-    # extract 命令
-    parser_extract = subparsers.add_parser('extract', help='提取文档文本内容')
-    parser_extract.add_argument('--dir', required=True, help='要处理的文档目录')
-    parser_extract.add_argument('--workers', type=int, default=5, help='并行工作线程数')
-    parser_extract.add_argument('--force', action='store_true', help='强制重新提取')
-
-    # generate 命令
-    parser_generate = subparsers.add_parser('generate', help='生成摘要和标签（优化版）')
-    parser_generate.add_argument('--input', default=f'{output_dir}/extracted_content_part1.json', help='输入文件')
-    parser_generate.add_argument('--output', default=f'{output_dir}/document_summaries_enhanced.json', help='输出文件')
-
-    # apply 命令
-    parser_apply = subparsers.add_parser('apply', help='应用元数据到文档（优化版）')
-    parser_apply.add_argument('--summaries', default=f'{output_dir}/document_summaries_enhanced.json', help='摘要文件')
-    parser_apply.add_argument('--mapping', default=f'{output_dir}/file_id_mapping.json', help='文件映射')
-    parser_apply.add_argument('--workers', type=int, default=5, help='并行工作线程数')
-    parser_apply.add_argument('--force', action='store_true', help='强制处理所有文件')
-
-    # clean 命令
-    parser_clean = subparsers.add_parser('clean', help='预览或清理生成的临时文件')
-    parser_clean.add_argument('--apply', action='store_true', help='执行删除；不提供时只预览')
+    clean = commands.add_parser("clean")
+    clean.add_argument("--output-dir", required=True, type=Path)
+    clean.add_argument("--apply", action="store_true")
 
     args = parser.parse_args()
+    if args.command in {"generate", "all"}:
+        if args.max_chars <= 0:
+            print("ERROR[argument]: --max-chars must be positive", file=sys.stderr)
+            return 2
+        if args.allow_external_model and (
+            args.external_max_chars is None or args.external_max_chars <= 0
+        ):
+            print(
+                "ERROR[authorization]: --allow-external-model requires a positive "
+                "--external-max-chars data boundary",
+                file=sys.stderr,
+            )
+            return 2
+        if args.external_max_chars is not None and not args.allow_external_model:
+            print(
+                "ERROR[argument]: --external-max-chars requires --allow-external-model",
+                file=sys.stderr,
+            )
+            return 2
 
-    if not args.command:
-        parser.print_help()
-        return 1
-
-    # 清理预览不需要文档解析依赖。
-    if args.command != 'clean' and not check_dependencies():
-        return 1
-
-    if args.command != 'clean':
-        Path(output_dir).mkdir(parents=True, exist_ok=True)
-
-    script_dir = Path(__file__).parent
-    python_exe = sys.executable
-
-    # 执行相应的命令
-    if args.command == 'extract':
-        cmd = [
-            python_exe,
-            str(script_dir / 'extract_text.py'),
-            '--dir', args.dir,
-            '--workers', str(args.workers),
-            '--output', f'{output_dir}/extracted_content_part1.json',
-            '--mapping', f'{output_dir}/file_id_mapping.json'
+    if args.command == "extract":
+        args.output_dir.mkdir(parents=True, exist_ok=True)
+        return run(
+            "extract_text.py",
+            "--dir", args.dir,
+            "--workers", args.workers,
+            "--output", args.output_dir / "extracted_content.json",
+            "--mapping", args.output_dir / "file_id_mapping.json",
+        )
+    if args.command == "generate":
+        return run(
+            "generate_summaries_enhanced.py",
+            *add_external_flags(
+                [
+                    "--input",
+                    args.input,
+                    "--output",
+                    args.output,
+                    "--max-chars",
+                    args.max_chars,
+                ],
+                args.allow_external_model,
+                args.external_max_chars,
+            ),
+        )
+    if args.command == "scan-terms":
+        return run("medical_standard_checker.py", "--input", args.input, "--output", args.output)
+    if args.command == "inventory":
+        return run("portfolio_audit.py", "--input", args.input, "--output", args.output)
+    if args.command == "apply":
+        if args.apply and not args.backup_dir:
+            print("ERROR[authorization]: --apply requires --backup-dir", file=sys.stderr)
+            return 2
+        command = ["--summaries", args.summaries, "--mapping", args.mapping]
+        if args.backup_dir:
+            command += ["--backup-dir", args.backup_dir]
+        if args.apply:
+            command.append("--apply")
+        if args.overwrite_existing:
+            command.append("--overwrite-existing")
+        return run("apply_metadata_enhanced.py", *command)
+    if args.command == "clean":
+        candidates = [
+            path
+            for name in (
+                "extracted_content.json",
+                "file_id_mapping.json",
+                "document_summaries.json",
+                "term_locations.json",
+                "portfolio_inventory.json",
+            )
+            if (path := args.output_dir / name).is_file()
         ]
-        if args.force:
-            cmd.append('--force')
-
-        return 0 if execute_stage(cmd, "阶段1: 提取文档内容") else 1
-
-    elif args.command == 'generate':
-        # 步骤 2a: 医疗标准对齐分析
-        compliance_cmd = [
-            python_exe,
-            str(script_dir / 'medical_standard_checker.py'),
-            '--input', args.input,
-            '--output', f'{output_dir}/compliance_analysis.json'
-        ]
-        execute_stage(compliance_cmd, "阶段 2a: 医疗标准对齐分析")
-
-        # 步骤 2b: 生成摘要和标签
-        cmd = [
-            python_exe,
-            str(script_dir / 'generate_summaries_enhanced.py'),
-            '--input', args.input,
-            '--output', args.output,
-            '--compliance', f'{output_dir}/compliance_analysis.json'
-        ]
-        
-        success = execute_stage(cmd, "阶段 2b: 生成摘要和标签 (优化版 + 政策洞察)")
-        
-        # 步骤 2c: 战略组合审计
-        audit_cmd = [
-            python_exe,
-            str(script_dir / 'portfolio_audit.py'),
-            '--input', args.output,
-            '--output', f'{output_dir}/STRATEGIC_AUDIT.md'
-        ]
-        execute_stage(audit_cmd, "阶段 2c: 战略组合审计 (SHA)")
-        
-        return 0 if success else 1
-
-    elif args.command == 'apply':
-        cmd = [
-            python_exe,
-            str(script_dir / 'apply_metadata_enhanced.py'),
-            '--summaries', args.summaries,
-            '--mapping', args.mapping,
-            '--workers', str(args.workers),
-            '--log-dir', output_dir
-        ]
-        if args.force:
-            cmd.append('--force')
-
-        return 0 if execute_stage(cmd, "阶段3: 应用元数据 (优化版 增量+并行)") else 1
-
-    elif args.command == 'all':
-        print("\n" + "="*60)
-        print("开始执行完整流程")
-        print("="*60)
-        import time
-        start_time = time.time()
-
-        # 阶段1: 提取
-        extract_cmd = [
-            python_exe,
-            str(script_dir / 'extract_text.py'),
-            '--dir', args.dir,
-            '--workers', str(args.workers),
-            '--output', f'{output_dir}/extracted_content_part1.json',
-            '--mapping', f'{output_dir}/file_id_mapping.json'
-        ]
-        if args.force:
-            extract_cmd.append('--force')
-
-        if not execute_stage(extract_cmd, "阶段1: 提取文档内容"):
-            _write_telemetry(start_time, "failed_extract", output_dir)
-            return 1
-
-        # 阶段2: 智能生成摘要和标签
-        # 2a: 合规性分析
-        compliance_cmd = [
-            python_exe,
-            str(script_dir / 'medical_standard_checker.py'),
-            '--input', f'{output_dir}/extracted_content_part1.json',
-            '--output', f'{output_dir}/compliance_analysis.json'
-        ]
-        execute_stage(compliance_cmd, "阶段 2a: 医疗标准对齐分析")
-
-        # 2b: 生成摘要
-        generate_cmd = [
-            python_exe,
-            str(script_dir / 'generate_summaries_enhanced.py'),
-            '--input', f'{output_dir}/extracted_content_part1.json',
-            '--output', f'{output_dir}/document_summaries_enhanced.json',
-            '--compliance', f'{output_dir}/compliance_analysis.json'
-        ]
-
-        if not execute_stage(generate_cmd, "阶段 2b: 生成摘要和标签 (原生 AI/兜底)"):
-            _write_telemetry(start_time, "failed_generate", output_dir)
-            return 1
-            
-        # 校验生成质量 (阻断无脑 PENDING_LLM_GENERATION 透传)
-        try:
-            import json
-            with open(f'{output_dir}/document_summaries_enhanced.json', 'r', encoding='utf-8') as f:
-                summaries = json.load(f)
-                pending_count = sum(1 for s in summaries if "PENDING_LLM_GENERATION" in s.get("summary", ""))
-                if pending_count > 0:
-                    print(f"\n⚠️ 发现 {pending_count} 个文档处于 PENDING_LLM_GENERATION 占位状态！")
-                    print("⚠️ 阻断启动：禁止将未解析的临时占位符写入文件属性。")
-                    _write_telemetry(start_time, "blocked_apply_pending", output_dir)
-                    return 1
-        except Exception as filter_e:
-            print(f"\n⚠️ 无法分析生成的 JSON 文件以验证质量，终止 apply。{filter_e}")
-            _write_telemetry(start_time, "failed_verify", output_dir)
-            return 1
-
-        # 2c: 战略审计
-        audit_cmd = [
-            python_exe,
-            str(script_dir / 'portfolio_audit.py'),
-            '--input', f'{output_dir}/document_summaries_enhanced.json',
-            '--output', f'{output_dir}/STRATEGIC_AUDIT.md'
-        ]
-        execute_stage(audit_cmd, "阶段 2c: 战略组合审计 (SHA)")
-
-        # 阶段3: 应用元数据
-        apply_cmd = [
-            python_exe,
-            str(script_dir / 'apply_metadata_enhanced.py'),
-            '--summaries', f'{output_dir}/document_summaries_enhanced.json',
-            '--mapping', f'{output_dir}/file_id_mapping.json',
-            '--workers', str(args.workers),
-            '--log-dir', output_dir
-        ]
-        if args.force:
-            apply_cmd.append('--force')
-
-        if not execute_stage(apply_cmd, "阶段3: 应用元数据 (增强写回)"):
-            _write_telemetry(start_time, "failed_apply", output_dir)
-            return 1
-
-        print("\n" + "="*60)
-        print("✓ 完整流程执行成功！")
-        print("="*60)
-        _write_telemetry(start_time, "success", output_dir)
+        for path in candidates:
+            print(path.resolve())
+        if args.apply:
+            for path in candidates:
+                path.unlink()
+        else:
+            print("PREVIEW_ONLY: add --apply to delete the listed generated files")
         return 0
 
-    elif args.command == 'clean':
-        # 清理临时文件 (in output dir)
-        files_to_clean = [
-            f'{output_dir}/extracted_content_part*.json',
-            f'{output_dir}/document_summaries*.json',
-            f'{output_dir}/file_id_mapping.json',
-            f'{output_dir}/metadata_application*.log',
-            f'{output_dir}/metadata_application_failures.json',
-            f'{output_dir}/compliance_analysis.json'
-        ]
-
-        print("\n扫描临时文件...")
-        from glob import glob
-        candidates = sorted({file for pattern in files_to_clean for file in glob(pattern)})
-        for file in candidates:
-            print(f"- {file}")
-        if not args.apply:
-            print(f"\n预览完成：{len(candidates)} 个候选文件，未删除。")
-            return 0
-
-        for file in candidates:
-            try:
-                Path(file).unlink()
-                print(f"✓ 删除: {file}")
-            except Exception as e:
-                print(f"✗ 无法删除 {file}: {e}")
-
-        print("\n清理完成！")
-        return 0
-
+    args.output_dir.mkdir(parents=True, exist_ok=True)
+    extracted = args.output_dir / "extracted_content.json"
+    mapping = args.output_dir / "file_id_mapping.json"
+    summaries = args.output_dir / "document_summaries.json"
+    terms = args.output_dir / "term_locations.json"
+    portfolio = args.output_dir / "portfolio_inventory.json"
+    stages = [
+        ("extract_text.py", ["--dir", args.dir, "--workers", args.workers, "--output", extracted, "--mapping", mapping]),
+        (
+            "generate_summaries_enhanced.py",
+            add_external_flags(
+                [
+                    "--input",
+                    extracted,
+                    "--output",
+                    summaries,
+                    "--max-chars",
+                    args.max_chars,
+                ],
+                args.allow_external_model,
+                args.external_max_chars,
+            ),
+        ),
+        ("medical_standard_checker.py", ["--input", extracted, "--output", terms]),
+        ("portfolio_audit.py", ["--input", summaries, "--output", portfolio]),
+    ]
+    for script, arguments in stages:
+        status = run(script, *arguments)
+        if status:
+            return status
+    print("PIPELINE_PASS: source documents were not modified")
     return 0
 
 
 if __name__ == "__main__":
-    sys.exit(main())
+    raise SystemExit(main())

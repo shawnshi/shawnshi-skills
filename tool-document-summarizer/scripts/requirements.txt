@@ -2,5 +2,6 @@ pypdf
 python-docx
 python-pptx
 openpyxl
-tqdm>=4.65.0
-pyyaml>=6.0
+
+# Optional and only for an explicitly authorized --allow-external-model run:
+# google-generativeai

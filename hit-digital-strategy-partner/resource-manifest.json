@@ -1,7 +1,7 @@
 {
   "schema_version": 1,
   "skill": "hit-digital-strategy-partner",
-  "generated_at": "2026-07-14T21:01:44",
+  "generated_at": "2026-07-28T13:33:22",
   "skill_md": "SKILL.md",
   "top_level_files": [
     "SKILL.md"
@@ -56,6 +56,31 @@
       "path": "scripts\\strategy_gate.py",
       "exists": true,
       "resolved_path": "C:\\Users\\shich\\.codex\\skills\\hit-digital-strategy-partner\\scripts\\strategy_gate.py"
+    },
+    {
+      "path": "references\\workflows.md",
+      "exists": true,
+      "resolved_path": "C:\\Users\\shich\\.codex\\skills\\hit-digital-strategy-partner\\references\\workflows.md"
+    },
+    {
+      "path": "references\\retrieval_specialist.md",
+      "exists": true,
+      "resolved_path": "C:\\Users\\shich\\.codex\\skills\\hit-digital-strategy-partner\\references\\retrieval_specialist.md"
+    },
+    {
+      "path": "references\\analyst.md",
+      "exists": true,
+      "resolved_path": "C:\\Users\\shich\\.codex\\skills\\hit-digital-strategy-partner\\references\\analyst.md"
+    },
+    {
+      "path": "references\\editor.md",
+      "exists": true,
+      "resolved_path": "C:\\Users\\shich\\.codex\\skills\\hit-digital-strategy-partner\\references\\editor.md"
+    },
+    {
+      "path": "references\\compliance_expert.md",
+      "exists": true,
+      "resolved_path": "C:\\Users\\shich\\.codex\\skills\\hit-digital-strategy-partner\\references\\compliance_expert.md"
     }
   ],
   "missing_declared_dependencies": []

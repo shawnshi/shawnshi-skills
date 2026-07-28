@@ -1,7 +1,7 @@
 {
   "schema_version": 1,
   "skill": "hit-solution-architect",
-  "generated_at": "2026-07-14T21:01:44",
+  "generated_at": "2026-07-28T13:46:56",
   "skill_md": "SKILL.md",
   "top_level_files": [
     "SKILL.md"
@@ -18,7 +18,7 @@
     },
     {
       "name": "references",
-      "file_count": 9
+      "file_count": 8
     }
   ],
   "declared_local_dependencies": [

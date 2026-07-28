@@ -1,6 +1,11 @@
 {
   "resource_kind": "investment_method_profiles",
   "version": "1.0",
+  "_meta": {
+    "threshold_status": "configurable_method_assumptions",
+    "boundary": "These thresholds are screening parameters, not universal investment facts or trade rules.",
+    "last_reviewed": "2026-07-28"
+  },
   "profiles": {
     "quality_equity": {
       "description": "Non-financial operating company quality screen; requires cash-flow and margin evidence.",

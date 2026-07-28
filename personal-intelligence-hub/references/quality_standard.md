@@ -1,4 +1,4 @@
-# Intelligence Quality Standard (V8.0)
+# Intelligence Quality Standard
 
 ## 1. Intelligence Levels
 - **L1 Signal**: 原始信号，尚未形成上下文。
@@ -33,42 +33,23 @@
 最终简报必须满足：
 
 - 有明确 `punchline`
-- 至少 3 条 `action_levers`
-- Top 10 不重复
+- `action_levers` 可以为空；有动作时必须包含责任人类型、触发条件和观察指标
+- `top_10` 为 0–10 条且 URL 不重复；没有足够证据时允许为空
 - 所有 Top 项目有摘要
 - 未审计的 L4 不得交付
 
-## 6. JSON Schema & Localization Contract
-最终输出**必须**是一个严格符合以下结构的 JSON 对象。
-**CRITICAL**: 所有正文分析内容（除原始 URL、专有名词外）**必须输出为中文 (zh-CN)**，并且对所有核心实体使用 `[[ ]]` 进行图谱双链标记。
+## 6. JSON 合同
 
-```json
-{
-  "punchline": "全局一句话核心结论（中文）",
-  "insights": "Weaver Insights 的宏观推演（中文）",
-  "digest": "Strategic Digest 战略摘要（中文）",
-  "market": "Market Watch 市场观察（中文）",
-  "action_levers": [
-    {
-      "domain": "动作所属领域（如：产品研发/商业化）",
-      "task": "具体的行动建议（中文）"
-    }
-  ],
-  "top_10": [
-    {
-      "title": "原始英文标题",
-      "title_zh": "中文翻译标题（必填）",
-      "url": "https://...",
-      "source": "来源（如 NEJM）",
-      "date": "YYYY-MM-DD",
-      "fact": "事实描述（中文）",
-      "connection": "战略关联（中文）",
-      "deduction": "推演结论（中文）",
-      "actionability": "可操作动作（中文）",
-      "intelligence_level": "L2/L3/L4",
-      "confidence": "high/medium/low",
-      "summary_zh": "中文摘要（必填）"
-    }
-  ]
-}
-```
+最终结构以 `briefing_schema.json` 为唯一机器合同。模板和脚本不得另建字段协议。
+
+- 正文默认使用中文；URL、来源名和专有名词保持原文。
+- 实体双链是可选展示能力，不是 Schema 或发布阻断条件。
+- `event_date`、`published_at`、`retrieved_at` 分开记录；无法确认事件日期时显式写 `unknown`。
+- 每条事实、推断和行动建议分别落入 `fact`、`deduction` 和 `actionability`。
+- L4 只有在存在结构化 `adversarial_audit` 时允许交付。
+
+## 7. 分层校验
+
+- 硬检查：JSON 语法、Schema 字段与类型、日期、枚举、URL 重复、占位符、L4 审计。
+- 软提示：信号数量、关键词权重、语言空泛、可能缺少第二来源。
+- 人工判断：结论是否被证据支持、行动是否适配、反证是否充分。

@@ -10,9 +10,9 @@ Guidelines for slide deck content quality and style consistency.
 - Prioritize clarity over comprehensiveness
 
 ### 2. Data Traceability
-- All statistics must include source attribution
+- Every actual statistic must include source, source date, and applicable scope
 - Cite sources directly on slides with data
-- Use specific numbers over vague claims
+- If evidence is unavailable, keep the item as a clearly marked input gap during drafting; do not invent a number to make the claim look specific
 
 ### 3. Self-Contained Prompts
 - Every detail must be in the image prompt
@@ -26,27 +26,24 @@ Guidelines for slide deck content quality and style consistency.
 
 ## Style Rules
 
-### 1. Narrative Headlines
-Headlines tell the story, not label the content.
+### 1. Accurate Headlines
+Decision slides often benefit from a conclusion headline. Technical specifications, data dictionaries, test reports, and regulatory pages may use precise descriptive headlines.
 
-| Bad | Good |
+The examples below use variables and are not business facts:
+
+| Generic | Evidence-backed alternative |
 |-----|------|
-| "Key Statistics" | "Usage doubled in 6 months" |
-| "Our Solution" | "One platform replaces five tools" |
-| "Benefits" | "Teams save 10 hours weekly" |
+| "Key Statistics" | "Usage changed from `[BASELINE]` to `[CURRENT]` during `[PERIOD]`" |
+| "Our Solution" | "The proposed scope consolidates `[VERIFIED_SYSTEM_COUNT]` systems" |
+| "Benefits" | "Measured weekly time changed by `[VERIFIED_HOURS]` hours" |
 
-### 2. Avoid AI Clichés & Adopt Healthcare Terminology
-Remove these pattern/internet buzzwords:
+### 2. Avoid Abstract Clichés
+Review these terms and replace them when they hide the actual mechanism:
 - "Dive into", "explore", "journey", "赋能", "抓手", "降维打击"
 - "Let's look at", "let me show you"
 - "Exciting", "amazing", "revolutionary"
 
-Adopt these healthcare strategic terms (when appropriate):
-- "闭环" (Closed-loop management)
-- "同质化" (Standardization of care)
-- "惠民善政" (Benefiting the public)
-- "精细化运营" (Fine-tuned operations)
-- "提质增效" (Quality & efficiency enhancement)
+Healthcare terminology should be used only when it is accurate for the source material. A keyword scan is a writing prompt, not a release gate.
 
 ### 3. Meaningful Back Cover
 Not just "Thank you" or "Questions?"
@@ -76,10 +73,10 @@ Throughout the deck:
 
 | Specification | Value |
 |---------------|-------|
-| Aspect Ratio | 16:9 (landscape) |
+| Aspect Ratio | Use the requested format; default to 16:9 only when unspecified |
 | Slide Count | Dynamic based on content |
 | Required Slides | Cover + Back Cover minimum |
-| Footers | None (no slide numbers, logos) |
+| Footers | Project-dependent; data citations must remain visible |
 | Language Priority | `--lang` → source language → ask user |
 | Tone | Direct, confident (avoid AI phrases) |
 

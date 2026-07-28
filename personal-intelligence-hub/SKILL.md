@@ -8,14 +8,14 @@ description: 对指定主题开展多来源情报扫描、去重、证据核验�
 ## 准备
 
 1. 明确主题、地域、时间窗口、受众和要支持的决策。若用户未指定时间窗口，按问题性质选择并在报告中说明。
-2. 按需读取 `references/strategic_focus.json`、`references/quality_standard.md` 和 `references/briefing_template.md`。不要让模板覆盖用户明确要求。
+2. 按需读取 `references/strategic_focus.json`、`references/quality_standard.md`、`references/briefing_schema.json` 和 `references/briefing_template.md`。`briefing_schema.json` 是结构合同；主题权重只是可调方法参数，不是业务事实。不要让模板覆盖用户明确要求。
 3. 若要运行抓取脚本，先检查 `requirements.txt` 和当前环境；不要自动安装依赖或修改全局配置。
 
 ## 扫描与核验
 
 1. 优先使用当前可访问的原始来源：监管公告、公司公告、政府或机构网站、论文、标准和项目主页。新闻与评论只作补充。
 2. 记录事件发生日期、来源发布日期、抓取时间和直接链接。当前信息必须联网核验；不能联网时明确说明截止日期。
-3. 可运行 `python scripts/fetch_news.py` 做初筛，并用 `scripts/history_manager.py` 去重。将脚本结果视为候选线索，而不是已确认事实。
+3. 可运行 `python scripts/fetch_news.py --window-days <N> --focus-config <PATH>` 做初筛，并用 `scripts/history_manager.py` 去重。时间窗口、去重窗口和主题权重必须来自用户要求或显式配置；将脚本结果视为候选线索，而不是已确认事实。
 4. 仅在主题跨度大或各来源可以独立核查时使用子代理并行研究。给每个子任务明确范围和输出字段，最终统一复核来源。
 5. 将重复报道归并到同一事件；区分事实、来源主张、分析推断和未知项。
 6. 对高影响结论执行反证检查：寻找相反证据、替代解释、利益相关方偏差和时间滞后。
@@ -24,12 +24,13 @@ description: 对指定主题开展多来源情报扫描、去重、证据核验�
 
 1. 按“结论—证据—影响—行动—未知项”组织简报。行动项写明负责人类型、触发条件和观察指标，不假装预测确定。
 2. 需要结构化管线时，可依次使用：
-   - `python scripts/refine.py`
+   - `python scripts/refine.py --focus-config <PATH> [--min-score <N>] [--max-items <N>]`
    - `python scripts/validate_refined_json.py <input.json>`
    - `python scripts/forge.py`
    - `python scripts/briefing_gate.py <briefing>`
 3. 脚本参数不确定时先查看其帮助或源文件，不猜测命令。
 4. 每条关键事实附可追溯来源；推断明确标注为分析。
+5. 校验脚本只读输入。Schema、类型、日期、枚举、重复 URL 和未处理占位符属于硬错误；分数、关键词、信号数量和措辞质量只作提示或人工复核，不阻断交付。
 
 ## 输出边界
 

@@ -1,69 +1,38 @@
-# Monthly Audit Prompt (V2.0)
+# Monthly Audit Template
 
-你要生成一份 `monthly-audit`。输出必须是 Markdown，且遵循统一骨架。缺 Garmin、Calendar、交互日志或工作产出时，不得脑补，必须写 `【数据缺口】`。
+本模板用于月度复盘，可按材料和用户目标裁剪。只读取用户提供或明确授权的数据，不把日历安排当作实际出席或完成证据。
 
-## 必须覆盖
-- 上月承诺与执行审查
-- 月度时间/能量/产出概览
-- 交互/工作模式与观点演化
-- 1 个核心系统性问题
-- 3 个下月目标
-- 取舍/剥离建议
-- hand-off payload
-
-## STRICT Output Format
+## 建议内容
 
 ```markdown
-# [YYYY-MM] Monthly Cognitive Audit
+# [月份] Monthly Audit
 
-## Context Snapshot
-- **本月主线:** [主线] *(注：必须从自动拉取的过去一月 Google Calendar 日程中提炼合成)*
-- **关键事件:** [事件] *(注：必须从自动拉取的过去一月 Google Calendar 日程中提炼合成)*
-- **【数据缺口】:** [若存在]
+## 时间范围与证据
+- **周期:** [日期与时区]
+- **材料与覆盖:** [来源、起止日期、缺失天数]
+- **数据缺口:** [说明]
 
-## Tactical Accountability
-*(仅在用户提供或明确授权读取上月日志时提取 `Next Tactics`；没有证据的项目写“未提供”，不要补写。)*
-| 上月承诺 | 执行状态 | 真实阻力/偏离原因 | 问责判定 |
-| :--- | :--- | :--- | :--- |
-| [Tactic] | 🟢/🟡/🔴 | [Root Cause] | [战略漂移/执行偏差/合理调整] |
+## 关键事实与产出
+- [事实、证据及其适用范围]
 
-## Signals
-- **Physiology Trend:** [恢复、疲劳、稳定性]
-- **Calendar Allocation:** [会议/深度工作/救火]
-- **Energy Curve:** [高低点与共因]
+## 承诺对照
+| 承诺 | 状态 | 证据 | 外部约束或未知 |
+|---|---|---|---|
+| [承诺] | [完成/部分完成/未完成/无法判断] | [证据] | [说明] |
 
-## Interaction & Work Patterns
-- **交互模式:** [本月对话与问题意识的变化]
-- **工作洞察:** [产出物、专业沉淀、知识增量]
-- **观点演化:** [被强化或被修正的看法]
+## 重复模式与变化
+- **观察:** [重复出现或发生变化的模式]
+- **证据强度:** [高/中/低及理由]
+- **替代解释:** [不能排除的原因]
 
-## Core Insight
-- **核心洞察:** [一句话]
-- **被证伪的假设/盲点:** [具体说明]
+## 时间与健康背景
+- [按已授权数据描述趋势、覆盖窗口和缺口；不作医学诊断]
 
-## Strategic Diagnosis
-- **核心系统性问题:** [一句话]
-- **下月 3 个关键目标:** [SMART 风格]
-- **必须停止/剥离:** [1-3 件]
+## 风险、取舍与未知
+- [风险或需要用户决定的取舍]
 
-## Next Tactics
-*(注：必须结合未来一月从 Google Calendar 自动拉取的日程规划与当前的战略主线生成)*
-1. [高优先级]
-2. [中优先级]
-3. [低优先级]
-
-## Long-Cycle Outlook
-- **长期风险:** [未来 1-3 个月风险]
-- **长期机会:** [未来 1-3 个月机会]
-
-## Handoff Payload
-```json
-{
-  "period_type": "monthly",
-  "audit_title": "[YYYY-MM] Monthly Cognitive Audit",
-  "next_tactics": ["..."],
-  "followup_flags": ["accountability", "long_cycle"],
-  "requires_mentat_diary": false
-}
+## 下月行动
+1. [触发条件、最小动作、完成标准]
 ```
-```
+
+只有用户明确要求保存或交接时，才根据 `references/handoff_contract.md` 另加 `Handoff Payload`。

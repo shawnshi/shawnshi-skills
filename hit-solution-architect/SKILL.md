@@ -32,6 +32,7 @@ description: 设计医疗机构数字化、信创改造、数据平台和临床�
 - 完整方案可参考 [templates/structure_standard.md](templates/structure_standard.md)。
 - 量化模型可参考 [templates/tco_calculator_model.md](templates/tco_calculator_model.md)。
 - 若当前环境兼容，可用 `scripts/logic_checker.py` 和 `scripts/buzzword_auditor.py` 校验草稿；先查看参数，不自动安装依赖。
+- 校验结果分为 `errors`、`warnings` 和 `review`：只有缺字段、未处理占位符、编号错误、文件不可读等确定性错误可以阻断；措辞空泛、章节重叠、标题风格和量化充分性只作提示或人工复核。
 
 ## 输出结构
 
@@ -50,4 +51,6 @@ description: 设计医疗机构数字化、信创改造、数据平台和临床�
 - 每个模块都对应明确业务能力或风险控制目标。
 - 架构边界、数据流和责任归属清晰。
 - 迁移方案包含回退和验收条件。
-- 量化数字有来源、公式或显式假设。
+- 每个量化数字均记录数值或区间、单位、来源、资料日期、适用地区；假设还要有假设编号和敏感性范围。
+- 没有客户数据时保留待填变量，不用固定比例、成本或临床收益代替项目证据。
+- 厂商比较基于公开能力、版本和项目要求，不设置排他参数，不推断个人偏好或未公开动机。

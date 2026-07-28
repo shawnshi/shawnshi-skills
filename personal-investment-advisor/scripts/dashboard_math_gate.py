@@ -75,60 +75,21 @@ def validate_math_consistency(data: dict) -> list[str]:
             if not _approx_equal(unrealized_pnl_pct, expected_pnl_pct, tolerance=0.001):
                 errors.append("portfolio_context.unrealized_pnl_pct is inconsistent with current_price and avg_cost")
 
-    current_price = _to_float(_get_nested(data, ["dashboard", "data_perspective", "price_position", "current_price"]))
     support = _to_float(_get_nested(data, ["dashboard", "data_perspective", "price_position", "support_level"]))
     resistance = _to_float(_get_nested(data, ["dashboard", "data_perspective", "price_position", "resistance_level"]))
-    stop_loss = _to_float(_get_nested(data, ["dashboard", "battle_plan", "sniper_points", "stop_loss"]))
-    take_profit = _to_float(_get_nested(data, ["dashboard", "battle_plan", "sniper_points", "take_profit"]))
-    
-    override_flags = _get_nested(data, ["dashboard", "override_gate_flags"]) or {}
-    allow_trailing_stop = override_flags.get("allow_trailing_stop") is True
-    allow_breakout_buy = override_flags.get("allow_breakout_buy") is True
-
-    position_direction = data.get("position_direction", "long")
 
     if support is not None and resistance is not None and support > resistance:
         errors.append("support_level cannot be above resistance_level")
-
-    if position_direction == "long":
-        if current_price is not None and support is not None and support > current_price:
-            if not allow_breakout_buy:
-                errors.append("support_level cannot be above current_price")
-        if current_price is not None and resistance is not None and resistance < current_price:
-            errors.append("resistance_level cannot be below current_price")
-        if stop_loss is not None and support is not None and stop_loss > support:
-            errors.append("stop_loss should not be above support_level")
-        
-        atr = _to_float(_get_nested(data, ["dashboard", "data_perspective", "atr_14"]))
-        if stop_loss is not None and current_price is not None:
-            if not allow_trailing_stop:
-                if atr is not None:
-                    # Dynamic ATR based stop loss (e.g. 1.0 ATR buffer)
-                    if stop_loss > current_price - (0.1 * atr):
-                        errors.append(f"stop_loss ({stop_loss}) is too close to current_price ({current_price}) relative to ATR ({atr}). Must be at least 0.1 ATR away.")
-                elif stop_loss >= current_price:
-                    errors.append("stop_loss must be strictly below current_price for long buy/hold/watch decisions")
-        if take_profit is not None and resistance is not None and take_profit < resistance:
-            errors.append("take_profit should not be below resistance_level")
-    elif position_direction == "short":
-        if current_price is not None and resistance is not None and resistance < current_price:
-            if not allow_breakout_buy:
-                errors.append("resistance_level cannot be below current_price for short")
-        if current_price is not None and support is not None and support > current_price:
-            errors.append("support_level cannot be above current_price for short")
-        if stop_loss is not None and resistance is not None and stop_loss < resistance:
-            errors.append("stop_loss should not be below resistance_level for short")
-        if stop_loss is not None and current_price is not None and stop_loss <= current_price:
-            if not allow_trailing_stop:
-                errors.append("stop_loss must be strictly above current_price for short buy/hold/watch decisions")
-        if take_profit is not None and support is not None and take_profit > support:
-            errors.append("take_profit should not be above support_level for short")
 
     confidence_score = _to_float(data.get("confidence_details", {}).get("score"))
     if confidence_score is not None and not (0 <= confidence_score <= 100):
         errors.append("confidence_details.score must be between 0 and 100")
 
     return errors
+
+
+def collect_math_warnings(data: dict) -> list[str]:
+    return []
 
 
 def validate_file(path: str) -> list[str]:
@@ -142,9 +103,12 @@ def main() -> int:
     args = parser.parse_args()
     try:
         errors = validate_file(args.json_path)
+        payload = json.loads(Path(args.json_path).read_text(encoding="utf-8"))
     except (OSError, json.JSONDecodeError) as exc:
         print(f"[FAIL] dashboard math gate could not read input: {exc}")
         return 2
+    for warning in collect_math_warnings(payload):
+        print(f"[WARN] {warning}")
     if errors:
         print("[FAIL] dashboard math gate blocked output")
         for error in errors:

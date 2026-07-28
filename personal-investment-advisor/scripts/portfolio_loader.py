@@ -62,6 +62,29 @@ def validate_portfolio_payload(payload: Dict[str, Any]) -> list[str]:
                 errors.append(
                     f"positions[{index}].current_weight must be a finite number greater than 0 and at most 1"
                 )
+    risk_profile = payload.get("risk_profile")
+    if risk_profile is not None:
+        if not isinstance(risk_profile, dict):
+            errors.append("risk_profile must be an object when provided")
+        else:
+            for field in schema.get("risk_profile_required_fields_when_configured", []):
+                if risk_profile.get(field) in (None, "", []):
+                    errors.append(f"missing risk_profile.{field}")
+            provenance = risk_profile.get("provenance")
+            if not isinstance(provenance, dict):
+                errors.append("risk_profile.provenance must be an object")
+            else:
+                for field in schema.get("risk_profile_required_provenance_fields", []):
+                    if provenance.get(field) in (None, ""):
+                        errors.append(f"missing risk_profile.provenance.{field}")
+    rebalance_policy = payload.get("rebalance_policy")
+    if rebalance_policy is not None:
+        if not isinstance(rebalance_policy, dict):
+            errors.append("rebalance_policy must be an object when provided")
+        else:
+            for field in schema.get("rebalance_policy_required_fields_when_configured", []):
+                if rebalance_policy.get(field) in (None, "", []):
+                    errors.append(f"missing rebalance_policy.{field}")
     return errors
 
 
@@ -128,8 +151,8 @@ def get_exchange_rate(currency: str, payload: Dict[str, Any]) -> float:
 def build_portfolio_summary(positions: list[dict], payload: Dict[str, Any] = None) -> Dict[str, Any]:
     payload = payload or {}
     risk_profile = payload.get("risk_profile", {})
-    conc_high_th = risk_profile.get("high_concentration_threshold", 0.18)
-    conc_med_th = risk_profile.get("medium_concentration_threshold", 0.10)
+    conc_high_th = _to_float(risk_profile.get("high_concentration_threshold"))
+    conc_med_th = _to_float(risk_profile.get("medium_concentration_threshold"))
     
     weights = []
     market_exposure: Dict[str, float] = {}
@@ -164,7 +187,9 @@ def build_portfolio_summary(positions: list[dict], payload: Dict[str, Any] = Non
 
     top_positions.sort(key=lambda x: x.get("weight") or 0.0, reverse=True)
     concentration_score = round(sum(weight * weight for weight in weights), 4)
-    if concentration_score >= conc_high_th:
+    if conc_high_th is None or conc_med_th is None:
+        concentration_bucket = "unknown"
+    elif concentration_score >= conc_high_th:
         concentration_bucket = "high"
     elif concentration_score >= conc_med_th:
         concentration_bucket = "medium"
@@ -189,9 +214,20 @@ def build_portfolio_summary(positions: list[dict], payload: Dict[str, Any] = Non
 def build_portfolio_risk(summary: Dict[str, Any], payload: Dict[str, Any] = None) -> Dict[str, Any]:
     payload = payload or {}
     risk_profile = payload.get("risk_profile", {})
-    exp_high_th = risk_profile.get("max_market_exposure_high", 0.65)
-    exp_med_th = risk_profile.get("max_market_exposure_medium", 0.45)
-    single_weight_th = risk_profile.get("max_single_stock_weight", 0.20)
+    schema = json.loads(PORTFOLIO_SCHEMA_PATH.read_text(encoding="utf-8"))
+    required_profile = schema.get("risk_profile_required_fields_when_configured", [])
+    required_provenance = schema.get("risk_profile_required_provenance_fields", [])
+    profile_missing = [
+        field for field in required_profile if risk_profile.get(field) in (None, "", [])
+    ]
+    provenance = risk_profile.get("provenance", {})
+    provenance_missing = [
+        field for field in required_provenance
+        if not isinstance(provenance, dict) or provenance.get(field) in (None, "")
+    ]
+    exp_high_th = _to_float(risk_profile.get("max_market_exposure_high"))
+    exp_med_th = _to_float(risk_profile.get("max_market_exposure_medium"))
+    single_weight_th = _to_float(risk_profile.get("max_single_stock_weight"))
 
     concentration_bucket = summary.get("concentration_bucket", "unknown")
     top_positions = summary.get("top_positions_by_weight", [])
@@ -200,19 +236,47 @@ def build_portfolio_risk(summary: Dict[str, Any], payload: Dict[str, Any] = None
     thesis_missing_count = summary.get("thesis_missing_count", 0)
     liquidity_missing_count = summary.get("liquidity_missing_count", 0)
     max_days_to_liquidate = summary.get("max_days_to_liquidate")
-    liquidity_high_days = risk_profile.get("liquidity_high_days", 5.0)
-    liquidity_medium_days = risk_profile.get("liquidity_medium_days", 2.0)
+    liquidity_high_days = _to_float(risk_profile.get("liquidity_high_days"))
+    liquidity_medium_days = _to_float(risk_profile.get("liquidity_medium_days"))
+    profile_ready = (
+        bool(risk_profile)
+        and not profile_missing
+        and not provenance_missing
+        and all(
+            value is not None
+            for value in (
+                exp_high_th,
+                exp_med_th,
+                single_weight_th,
+                liquidity_high_days,
+                liquidity_medium_days,
+            )
+        )
+    )
     risk_data_gaps = []
 
+    if not profile_ready:
+        missing = profile_missing + [
+            f"provenance.{field}" for field in provenance_missing
+        ]
+        risk_data_gaps.append(
+            "未配置可追踪 risk_profile，风险等级保持未知"
+            + (f"；缺少: {', '.join(missing)}" if missing else "")
+        )
+
     max_market_exposure = max(market_exposure.values(), default=0.0)
-    if concentration_bucket == "high" or any(item.get("weight", 0) >= single_weight_th for item in top_positions):
+    if not profile_ready:
+        concentration_risk = "未知"
+    elif concentration_bucket == "high" or any(item.get("weight", 0) >= single_weight_th for item in top_positions):
         concentration_risk = "高"
     elif concentration_bucket == "medium":
         concentration_risk = "中"
     else:
         concentration_risk = "低"
 
-    if max_market_exposure >= exp_high_th:
+    if not profile_ready:
+        market_exposure_risk = "未知"
+    elif max_market_exposure >= exp_high_th:
         market_exposure_risk = "高"
     elif max_market_exposure >= exp_med_th:
         market_exposure_risk = "中"
@@ -225,7 +289,9 @@ def build_portfolio_risk(summary: Dict[str, Any], payload: Dict[str, Any] = None
     else:
         risk_data_gaps.append("仅有 thesis 文本，缺少方法标签和历史暴露，无法判断风格漂移")
 
-    if liquidity_missing_count > 0:
+    if not profile_ready:
+        liquidity_risk = "未知"
+    elif liquidity_missing_count > 0:
         liquidity_risk = "未知"
         risk_data_gaps.append("部分持仓缺少 days_to_liquidate，无法判断组合流动性")
     elif max_days_to_liquidate is not None and max_days_to_liquidate > liquidity_high_days:
@@ -243,6 +309,8 @@ def build_portfolio_risk(summary: Dict[str, Any], payload: Dict[str, Any] = None
         "style_drift_risk": style_drift_risk,
         "liquidity_risk": liquidity_risk,
         "risk_data_gaps": risk_data_gaps,
+        "risk_profile_status": "configured_and_traceable" if profile_ready else "not_configured",
+        "risk_profile_provenance": provenance if profile_ready else None,
     }
 
 
@@ -355,11 +423,11 @@ def build_portfolio_fit(position_context: Dict[str, Any], summary: Dict[str, Any
         if concentration_risk == "高":
             eligibility = "requires_concentration_review"
             impact = "a new position may worsen concentration"
-            rationale = "组合集中度已高，新增仓位必须显著提升组合质量。"
+            rationale = "新增仓位可能进一步提高集中度；是否适合仍需结合独立研究和用户风险约束判断。"
         else:
             eligibility = "constraint_review_incomplete"
             impact = "no concentration block detected; other risks remain unassessed"
-            rationale = "集中度没有触发硬门，但仍需预期收益、相关性和流动性证据。"
+            rationale = "现有集中度配置未触发约束，但预期收益、相关性和流动性仍未完成评估。"
 
     return {
         "eligibility": eligibility,

@@ -5,6 +5,7 @@ import os
 import re
 import shutil
 import subprocess
+import tempfile
 from pathlib import Path
 
 
@@ -13,13 +14,13 @@ PROJECT_ROOT = HUB_DIR.parent.parent
 NEWS_DIR = Path(
     os.environ.get(
         "PIH_NEWS_DIR",
-        str(Path.cwd() / "intelligence-output"),
+        str(Path.cwd() / "output" / "personal-intelligence-hub"),
     )
 )
 RUNTIME_DIR = Path(
     os.environ.get(
         "PIH_RUNTIME_DIR",
-        str(NEWS_DIR / "_runtime" / "personal-intelligence-hub"),
+        str(Path(tempfile.gettempdir()) / "codex-personal-intelligence-hub" / "runtime"),
     )
 )
 
@@ -28,12 +29,11 @@ LATEST_SCAN_PATH = RUNTIME_DIR / "latest_scan.json"
 CURRENT_SCAN_PATH = RUNTIME_DIR / "current_scan.json"
 FETCH_CACHE_PATH = RUNTIME_DIR / "fetch_cache.json"
 HISTORY_PATH = RUNTIME_DIR / "pushed_history_v3.json"
-REFINED_PATH = NEWS_DIR / "intelligence_current_refined.json"
+REFINED_PATH = RUNTIME_DIR / "intelligence_current_refined.json"
 CANDIDATES_PATH = RUNTIME_DIR / "intelligence_candidates.json"
 
 
 def ensure_runtime_dirs() -> None:
-    NEWS_DIR.mkdir(parents=True, exist_ok=True)
     RUNTIME_DIR.mkdir(parents=True, exist_ok=True)
 
 

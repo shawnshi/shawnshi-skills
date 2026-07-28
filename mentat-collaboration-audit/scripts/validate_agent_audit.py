@@ -1,187 +1,260 @@
+"""Deterministic validator for collaboration-audit JSON.
+
+Only machine-verifiable contract violations are fatal. Editorial quality,
+keyword coverage, item counts and recommendation quality are warnings.
+"""
+
+from __future__ import annotations
+
 import json
 import sys
 from pathlib import Path
 
-VERSION = '11.0'
-METRIC_KEYWORDS = ['会话', '时长', 'token', '提交', '活跃', '失败', 'telemetry', '指标', '摩擦', '效率']
 REQUIRED_TOP_LEVEL = [
-    'version', 'behavioral_analysis', 'friction_analysis', 'workflow_engineering',
-    'suggestions', 'at_a_glance', 'distributions'
+    "version",
+    "behavioral_analysis",
+    "friction_analysis",
+    "workflow_engineering",
+    "suggestions",
+    "at_a_glance",
+    "distributions",
 ]
 REPORT_METRIC_SECTIONS = [
-    'wait', 'skill_load', 'retry', 'subagent', 'authorization', 'context'
+    "wait",
+    "skill_load",
+    "retry",
+    "subagent",
+    "authorization",
+    "context",
 ]
+UNRESOLVED_SENTINELS = {"TBD", "<TBD>", "[TBD]", "LLM_PENDING"}
 
 
 class ValidationError(Exception):
     pass
 
 
-def _is_overly_numeric(text):
-    if not text:
-        return True
-    stripped = ''.join(ch for ch in text if not ch.isspace())
-    if not stripped:
-        return True
-    digit_count = sum(ch.isdigit() for ch in stripped)
-    return digit_count / max(len(stripped), 1) > 0.35
+def _require_object(payload, key, errors):
+    value = payload.get(key)
+    if not isinstance(value, dict):
+        errors.append(f"{key} must be an object")
+        return {}
+    return value
+
+
+def _require_list(container, key, path, errors):
+    value = container.get(key)
+    if not isinstance(value, list):
+        errors.append(f"{path}.{key} must be a list")
+        return []
+    return value
+
+
+def _optional_list(container, key, path, errors):
+    value = container.get(key, [])
+    if not isinstance(value, list):
+        errors.append(f"{path}.{key} must be a list when supplied")
+        return []
+    return value
+
+
+def _required_item_keys(items, path, keys, errors):
+    for index, item in enumerate(items):
+        if not isinstance(item, dict):
+            errors.append(f"{path}[{index}] must be an object")
+            continue
+        missing = [key for key in keys if key not in item]
+        if missing:
+            errors.append(f"{path}[{index}] missing fields: {', '.join(missing)}")
+            continue
+        for key in keys:
+            value = item[key]
+            if isinstance(value, str):
+                normalized = value.strip()
+                if (
+                    not normalized
+                    or normalized in UNRESOLVED_SENTINELS
+                    or normalized.startswith("PENDING_")
+                ):
+                    errors.append(f"{path}[{index}].{key} is unresolved")
 
 
 def validate_agent_payload(payload):
-    errors = []
+    """Return fatal deterministic errors for the legacy agent schema."""
+    if not isinstance(payload, dict):
+        return ["report must be a JSON object"]
 
+    errors = []
     for key in REQUIRED_TOP_LEVEL:
         if key not in payload:
-            errors.append(f'missing top-level field: {key}')
+            errors.append(f"missing top-level field: {key}")
 
-    if payload.get('version') != VERSION:
-        errors.append(f"version must be '{VERSION}'")
+    if not isinstance(payload.get("version"), str) or not payload.get("version", "").strip():
+        errors.append("version must be a non-empty string")
 
-    behavioral = payload.get('behavioral_analysis', {})
-    points = behavioral.get('points', []) if isinstance(behavioral, dict) else []
-    if len(points) != 8:
-        errors.append('behavioral_analysis.points must contain exactly 8 items')
+    behavioral = _require_object(payload, "behavioral_analysis", errors)
+    points = _require_list(behavioral, "points", "behavioral_analysis", errors)
+    _required_item_keys(points, "behavioral_analysis.points", ("description",), errors)
 
-    coach_summary = behavioral.get('coach_summary', '') if isinstance(behavioral, dict) else ''
-    if len(coach_summary.strip()) < 60:
-        errors.append('coach_summary is too short to qualify as strategic coaching')
-    elif _is_overly_numeric(coach_summary):
-        errors.append('coach_summary appears too numeric; expected qualitative coaching')
+    friction = _require_object(payload, "friction_analysis", errors)
+    categories = _require_list(friction, "categories", "friction_analysis", errors)
+    _required_item_keys(
+        categories,
+        "friction_analysis.categories",
+        ("category", "description", "root_cause_pattern"),
+        errors,
+    )
 
-    friction = payload.get('friction_analysis', {})
-    categories = friction.get('categories', []) if isinstance(friction, dict) else []
-    if not categories:
-        errors.append('friction_analysis.categories must contain at least one anti-pattern category')
-    
-    # Deep Validation: Friction
-    for i, cat in enumerate(categories):
-        if not isinstance(cat, dict) or 'category' not in cat or 'description' not in cat:
-            errors.append(f'friction_analysis.categories[{i}] missing required keys (category, description)')
-        if 'root_cause_pattern' not in cat:
-            errors.append(f'friction_analysis.categories[{i}] missing root_cause_pattern')
+    workflow = _require_object(payload, "workflow_engineering", errors)
+    assets = _optional_list(workflow, "prompt_assets", "workflow_engineering", errors)
+    candidates = _optional_list(
+        workflow, "automation_candidates", "workflow_engineering", errors
+    )
+    constraints = _optional_list(
+        workflow, "auto_constraint_writeback", "workflow_engineering", errors
+    )
+    _required_item_keys(
+        assets,
+        "workflow_engineering.prompt_assets",
+        ("asset_type", "target_friction", "copy_paste_template"),
+        errors,
+    )
+    _required_item_keys(
+        candidates,
+        "workflow_engineering.automation_candidates",
+        ("candidate_name", "rationale", "implementation_sketch"),
+        errors,
+    )
+    _required_item_keys(
+        constraints,
+        "workflow_engineering.auto_constraint_writeback",
+        ("target_file", "writeback_instruction", "trigger_friction"),
+        errors,
+    )
 
-    workflow_engineering = payload.get('workflow_engineering', {})
-    prompt_assets = workflow_engineering.get('prompt_assets', []) if isinstance(workflow_engineering, dict) else []
-    automation_candidates = workflow_engineering.get('automation_candidates', []) if isinstance(workflow_engineering, dict) else []
-    auto_constraint_writeback = workflow_engineering.get('auto_constraint_writeback', []) if isinstance(workflow_engineering, dict) else []
-    
-    if not prompt_assets or not any(asset.get('copy_paste_template', '').strip() for asset in prompt_assets if isinstance(asset, dict)):
-        errors.append('workflow_engineering.prompt_assets must contain at least one copyable asset')
-    if not automation_candidates:
-        errors.append('workflow_engineering.automation_candidates must contain at least one automation proposal')
-
-    # Deep Validation: Workflow
-    for i, asset in enumerate(prompt_assets):
-        if 'asset_type' not in asset or 'target_friction' not in asset or 'copy_paste_template' not in asset:
-            errors.append(f'workflow_engineering.prompt_assets[{i}] missing keys (asset_type, target_friction, copy_paste_template)')
-            
-    for i, cand in enumerate(automation_candidates):
-        if 'candidate_name' not in cand or 'rationale' not in cand or 'implementation_sketch' not in cand:
-            errors.append(f'workflow_engineering.automation_candidates[{i}] missing keys (candidate_name, rationale, implementation_sketch)')
-
-    for i, constraint in enumerate(auto_constraint_writeback):
-        if 'target_file' not in constraint or 'writeback_instruction' not in constraint or 'trigger_friction' not in constraint:
-            errors.append(f'workflow_engineering.auto_constraint_writeback[{i}] missing keys (target_file, writeback_instruction, trigger_friction)')
-
-    merged_text = ' '.join([
-        behavioral.get('overall', '') if isinstance(behavioral, dict) else '',
-        coach_summary,
-        ' '.join(point.get('description', '') for point in points if isinstance(point, dict)),
-    ]).lower()
-    if not any(keyword.lower() in merged_text for keyword in METRIC_KEYWORDS):
-        errors.append('analysis does not appear to align subjective friction with objective metrics or telemetry')
-
-    suggestions = payload.get('suggestions', {})
-    usage_patterns = suggestions.get('usage_patterns', []) if isinstance(suggestions, dict) else []
-    glance = payload.get('at_a_glance', {})
-    
-    # Deep Validation: Glance
-    if not isinstance(glance, dict) or 'whats_working' not in glance or 'whats_hindering' not in glance or 'quick_wins' not in glance or 'ambitious_workflows' not in glance:
-         errors.append('at_a_glance missing required keys (whats_working, whats_hindering, quick_wins, ambitious_workflows)')
-
-    quick_wins = glance.get('quick_wins', '') if isinstance(glance, dict) else ''
-    if not quick_wins.strip() and not any(item.get('detail', '').strip() for item in usage_patterns if isinstance(item, dict)):
-        errors.append('next-cycle action missing from at_a_glance.quick_wins or suggestions.usage_patterns')
+    _require_object(payload, "suggestions", errors)
+    _require_object(payload, "at_a_glance", errors)
+    if not isinstance(payload.get("distributions"), (dict, list)):
+        errors.append("distributions must be an object or list")
 
     return errors
 
 
-def validate_report_payload(payload):
-    """Validate deterministic schema-version-2 audit output."""
-    errors = []
+def collect_agent_warnings(payload):
+    """Return non-blocking editorial and analytical review prompts."""
     if not isinstance(payload, dict):
-        return ['report must be a JSON object']
-    if payload.get('schema_version') != 2:
-        errors.append('schema_version must be 2')
+        return []
+    warnings = []
+    behavioral = payload.get("behavioral_analysis", {})
+    if isinstance(behavioral, dict):
+        points = behavioral.get("points", [])
+        if isinstance(points, list) and len(points) != 8:
+            warnings.append("behavioral_analysis.points does not contain the legacy suggested count of 8")
+        summary = behavioral.get("coach_summary", "")
+        if not isinstance(summary, str) or len(summary.strip()) < 60:
+            warnings.append("coach_summary is short; review whether it explains the evidence")
 
-    coverage = payload.get('coverage')
+    friction = payload.get("friction_analysis", {})
+    if isinstance(friction, dict) and not friction.get("categories"):
+        warnings.append("no friction categories were supplied")
+
+    workflow = payload.get("workflow_engineering", {})
+    if isinstance(workflow, dict):
+        if not workflow.get("prompt_assets"):
+            warnings.append("no prompt assets were proposed")
+        if not workflow.get("automation_candidates"):
+            warnings.append("no automation candidates were proposed")
+
+    glance = payload.get("at_a_glance", {})
+    if isinstance(glance, dict):
+        suggested = {"whats_working", "whats_hindering", "quick_wins", "ambitious_workflows"}
+        missing = sorted(suggested.difference(glance))
+        if missing:
+            warnings.append(f"at_a_glance omits suggested sections: {', '.join(missing)}")
+    return warnings
+
+
+def validate_report_payload(payload):
+    """Return fatal deterministic errors for schema-version-2 audit output."""
+    if not isinstance(payload, dict):
+        return ["report must be a JSON object"]
+    errors = []
+    if payload.get("schema_version") != 2:
+        errors.append("schema_version must be 2")
+
+    coverage = payload.get("coverage")
     if not isinstance(coverage, dict):
-        errors.append('coverage must be an object')
+        errors.append("coverage must be an object")
     else:
-        status = coverage.get('status')
-        if status not in {'complete', 'partial', 'empty', 'not_provided'}:
-            errors.append('coverage.status is invalid')
-        issues = coverage.get('issues')
+        status = coverage.get("status")
+        if status not in {"complete", "partial", "empty", "not_provided"}:
+            errors.append("coverage.status is invalid")
+        issues = coverage.get("issues")
         if not isinstance(issues, list):
-            errors.append('coverage.issues must be a list')
-        if status in {'partial', 'empty'} and issues == []:
-            errors.append(f'coverage.issues must explain {status} coverage')
+            errors.append("coverage.issues must be a list")
+        elif status in {"partial", "empty"} and not issues:
+            errors.append(f"coverage.issues must explain {status} coverage")
 
-    record_count = payload.get('record_count')
-    if not isinstance(record_count, int) or isinstance(record_count, bool) or record_count < 0:
-        errors.append('record_count must be a non-negative integer')
-    if not isinstance(payload.get('components'), list):
-        errors.append('components must be a list')
-    if not isinstance(payload.get('failure_types'), dict):
-        errors.append('failure_types must be an object')
+    count = payload.get("record_count")
+    if not isinstance(count, int) or isinstance(count, bool) or count < 0:
+        errors.append("record_count must be a non-negative integer")
+    if not isinstance(payload.get("components"), list):
+        errors.append("components must be a list")
+    if not isinstance(payload.get("failure_types"), dict):
+        errors.append("failure_types must be an object")
 
-    operational = payload.get('operational_metrics')
+    operational = payload.get("operational_metrics")
     if not isinstance(operational, dict):
-        errors.append('operational_metrics must be an object')
+        errors.append("operational_metrics must be an object")
     else:
         for section in REPORT_METRIC_SECTIONS:
             if not isinstance(operational.get(section), dict):
-                errors.append(f'operational_metrics.{section} is missing')
+                errors.append(f"operational_metrics.{section} is missing")
 
-    limitations = payload.get('limitations')
-    if not isinstance(limitations, list) or not limitations:
-        errors.append('limitations must be a non-empty list')
+    if not isinstance(payload.get("limitations"), list):
+        errors.append("limitations must be a list")
     return errors
 
 
 def validate_file(path):
-    payload = json.loads(Path(path).read_text(encoding='utf-8'))
-    if payload.get('schema_version') == 2:
-        errors = validate_report_payload(payload)
-    else:
-        errors = validate_agent_payload(payload)
+    payload = json.loads(Path(path).read_text(encoding="utf-8"))
+    errors = (
+        validate_report_payload(payload)
+        if payload.get("schema_version") == 2
+        else validate_agent_payload(payload)
+    )
     if errors:
-        raise ValidationError('\n'.join(errors))
+        raise ValidationError("\n".join(errors))
     return payload
 
 
 def main():
     if len(sys.argv) != 2:
-        print('Usage: python validate_agent_audit.py <agent_audit_result.json>')
-        sys.exit(1)
-
+        print("Usage: python validate_agent_audit.py <agent_audit_result.json>")
+        return 2
     target = sys.argv[1]
     try:
-        validate_file(target)
+        payload = validate_file(target)
     except FileNotFoundError:
-        print(f'VALIDATION_FAIL: file not found: {target}')
-        sys.exit(1)
+        print(f"VALIDATION_FAIL: file not found: {target}")
+        return 1
+    except UnicodeDecodeError as exc:
+        print(f"VALIDATION_FAIL: input is not valid UTF-8: {exc}")
+        return 1
     except json.JSONDecodeError as exc:
-        print(f'VALIDATION_FAIL: invalid json: {exc}')
-        sys.exit(1)
+        print(f"VALIDATION_FAIL: invalid json: {exc}")
+        return 1
     except ValidationError as exc:
-        print('VALIDATION_FAIL:')
+        print("VALIDATION_FAIL:")
         for line in str(exc).splitlines():
-            print(f' - {line}')
-        sys.exit(1)
+            print(f" - {line}")
+        return 1
 
-    print('VALIDATION_PASS')
+    print("VALIDATION_PASS")
+    for warning in collect_agent_warnings(payload):
+        print(f"[WARN] {warning}")
+    return 0
 
 
-if __name__ == '__main__':
-    main()
+if __name__ == "__main__":
+    raise SystemExit(main())

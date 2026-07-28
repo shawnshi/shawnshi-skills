@@ -5,34 +5,44 @@ from pathlib import Path
 
 
 SECTION_HEADERS = [
-    "### 第一部分：机构全景志",
-    "### 第二部分：客户穿透画像",
-    "### 第三部分：拜访策略",
+    "### 第一部分：机构与业务画像",
+    "### 第二部分：已核实项目、厂商线索与公开职业角色",
+    "### 第三部分：机会、风险和拜访议题",
+    "### 第四部分：信息缺口与建议核实问题",
+    "### 第五部分：来源清单",
 ]
 
-REQUIRED_PHRASES = [
-    "Target_Intent",
-    "核心目标判断",
-    "机构风险",
+REQUIRED_FIELDS = [
+    "研究时间范围：",
+    "拜访目标：",
+    "报告生成日期：",
+    "证据强度",
+    "信息缺口",
+    "来源清单",
+]
+
+DISALLOWED_TERMS = [
+    "制造刚需焦虑",
+    "权力博弈",
+    "学术门派",
+    "黑皮书",
+    "政治身份",
     "个人风险",
-    "厂商格局判断",
-    "认知重合点",
-    "认知分歧预警",
-    "绝对禁忌 1",
-    "绝对禁忌 2",
+    "个人动机",
+    "私人关系",
+    "致命三问",
+    "靶向打击",
+    "降维打击",
 ]
 
 PLACEHOLDER_PATTERNS = [
-    r"\[来源\]\(URL\)",
-    r"\[来源\]\(https://example\.com/full-url\)",
-    r"\[姓名\]",
-    r"\[职务\]",
-    r"\[所在机构\]",
-    r"\[项目\]",
-    r"\[厂商\]",
-    r"\[金额\]",
-    r"\[\.\.\.\]",
-    r"\[本次拜访的核心功利目的\]",
+    r"\[目标机构\]",
+    r"\[YYYY-MM-DD(?:\s*至\s*YYYY-MM-DD)?\]",
+    r"\[待填写[^\]]*\]",
+    r"\[来源标题\]",
+    r"\[公开 URL 或用户提供材料名称\]",
+    r"\[需要通过本次交流确认或推进的事项\]",
+    r"\[高/中/低(?:[^\]]*)?\]",
 ]
 
 
@@ -41,7 +51,13 @@ def load_text(path: Path) -> str:
 
 
 def count_demo_scripts(text: str) -> int:
-    return len(re.findall(r"^\d+\.\s+\*\*Demo 剧本", text, flags=re.MULTILINE))
+    return len(
+        re.findall(
+            r"^\s*(?:\d+\.|[-*])\s+\*\*Demo 剧本(?:\s*\d+)?",
+            text,
+            flags=re.MULTILINE,
+        )
+    )
 
 
 def find_incomplete_links(text: str) -> list[str]:
@@ -61,23 +77,41 @@ def find_placeholders(text: str) -> list[str]:
     return hits
 
 
-def validate(text: str) -> list[str]:
+def find_disallowed_terms(text: str) -> list[str]:
+    hits = []
+    for line in text.splitlines():
+        if any(
+            marker in line
+            for marker in (
+                "合规边界",
+                "不得推断",
+                "禁止推断",
+                "不推断",
+                "不得收集",
+                "禁止收集",
+            )
+        ):
+            continue
+        for term in DISALLOWED_TERMS:
+            if term in line:
+                hits.append(term)
+    return sorted(set(hits))
+
+
+def audit(text: str) -> dict[str, list[str]]:
     errors = []
+    warnings = []
 
     for header in SECTION_HEADERS:
         if header not in text:
             errors.append(f"missing section header: {header}")
 
-    for phrase in REQUIRED_PHRASES:
-        if phrase not in text:
-            errors.append(f"missing required phrase: {phrase}")
+    for field in REQUIRED_FIELDS:
+        if field not in text:
+            errors.append(f"missing required field: {field}")
 
-    demo_count = count_demo_scripts(text)
-    if demo_count < 2:
-        errors.append(f"expected at least 2 Demo scripts, found {demo_count}")
-
-    if "“" not in text and '"' not in text:
-        errors.append("missing direct quote in mind map section")
+    for term in find_disallowed_terms(text):
+        errors.append(f"disallowed inference or pressure-language term: {term}")
 
     bad_links = find_incomplete_links(text)
     if bad_links:
@@ -87,7 +121,29 @@ def validate(text: str) -> list[str]:
     if placeholders:
         errors.append("found placeholder markers: " + ", ".join(placeholders))
 
-    return errors
+    if not re.search(r"\|\s*S\d+\s*\|", text):
+        errors.append("source list must contain at least one numbered source row")
+
+    demo_count = count_demo_scripts(text)
+    if demo_count == 0:
+        warnings.append(
+            "no Demo script found; add one only when verified needs justify a demonstration"
+        )
+
+    if "“" not in text and '"' not in text:
+        warnings.append("no direct quote found; this is acceptable when no reliable quote exists")
+
+    if not re.search(r"\d", text):
+        warnings.append(
+            "no numeric content found; quantify only when a sourced metric is available"
+        )
+
+    return {"errors": errors, "warnings": warnings}
+
+
+def validate(text: str) -> list[str]:
+    """Return deterministic blocking errors for backward compatibility."""
+    return audit(text)["errors"]
 
 
 def main() -> int:
@@ -103,14 +159,21 @@ def main() -> int:
         return 1
 
     text = load_text(path)
-    errors = validate(text)
+    report = audit(text)
+    errors = report["errors"]
+    warnings = report["warnings"]
     if errors:
         print("[FAIL] brief gate blocked delivery")
         for error in errors:
             print(f"- {error}")
         return 1
 
-    print("[PASS] brief gate passed")
+    if warnings:
+        print("[PASS_WITH_WARNINGS] deterministic checks passed")
+        for warning in warnings:
+            print(f"- WARNING: {warning}")
+    else:
+        print("[PASS] brief gate passed")
     return 0
 
 

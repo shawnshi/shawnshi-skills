@@ -31,11 +31,20 @@ python scripts/garmin_activity_files.py query --file ... --distance 5000
 python scripts/garmin_activity_files.py analyze --file ...
 ```
 
-### 5. 自定义大屏输出路径 (Custom Dashboard Output)
+### 5. 报告与大屏输出路径 (Report and Dashboard Output)
 ```bash
-# 手动指定保存路径
-python scripts/garmin_chart.py dashboard --days 7 --output <output-dir>/tactical_report.html
+# 分配同一批次的 Markdown 与 HTML 路径；默认目录为
+# 当前工作区的 output/personal-health-analysis
+python scripts/report_output.py --days 7
+
+# 将分配结果中的 html 路径传给大屏生成器
+python scripts/garmin_chart.py dashboard --days 7 --output <html-path>
+
+# 仅需 HTML 时可直接运行；仍会写入默认 Garmin 报告目录
+python scripts/garmin_chart.py dashboard --days 7
 ```
+
+使用 `GARMIN_REPORT_DIR` 可覆盖报告目录。不要把临时 JSON、FIT/GPX、数据库副本或认证令牌写入该目录。
 
 ### 6. 临床互操作 (FHIR Export)
 ```bash

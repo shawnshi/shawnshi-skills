@@ -1,7 +1,7 @@
 {
   "schema_version": 1,
   "skill": "personal-health-analysis",
-  "generated_at": "2026-07-20T13:27:41",
+  "generated_at": "2026-07-28T13:54:04",
   "skill_md": "SKILL.md",
   "top_level_files": [
     ".gitignore",
@@ -11,6 +11,7 @@
     "SKILL.md"
   ],
   "top_level_directories": [
+    ".jules",
     "assets",
     "references",
     "resources",
@@ -19,7 +20,7 @@
   "resource_directories": [
     {
       "name": "scripts",
-      "file_count": 11
+      "file_count": 15
     },
     {
       "name": "references",
@@ -60,6 +61,11 @@
       "path": "scripts\\sync_health_data.py",
       "exists": true,
       "resolved_path": "C:\\Users\\shich\\.codex\\skills\\personal-health-analysis\\scripts\\sync_health_data.py"
+    },
+    {
+      "path": "scripts\\report_output.py",
+      "exists": true,
+      "resolved_path": "C:\\Users\\shich\\.codex\\skills\\personal-health-analysis\\scripts\\report_output.py"
     }
   ],
   "missing_declared_dependencies": []

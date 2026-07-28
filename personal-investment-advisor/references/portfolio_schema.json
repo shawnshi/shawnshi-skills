@@ -1,7 +1,7 @@
 {
   "resource_kind": "portfolio_contract",
   "version": "2.0",
-  "optional_top_level": ["exchange_rates", "risk_profile"],
+  "optional_top_level": ["exchange_rates", "risk_profile", "rebalance_policy"],
   "required_top_level": ["positions", "base_currency"],
   "exchange_rate_convention": "one unit of position currency in base currency",
   "required_position_fields": ["symbol", "quantity", "avg_cost", "currency"],
@@ -15,5 +15,30 @@
     "thesis",
     "average_daily_value",
     "days_to_liquidate"
+    ,"allocation_bucket"
+  ]
+  ,
+  "risk_profile_required_fields_when_configured": [
+    "high_concentration_threshold",
+    "medium_concentration_threshold",
+    "max_market_exposure_high",
+    "max_market_exposure_medium",
+    "max_single_stock_weight",
+    "liquidity_high_days",
+    "liquidity_medium_days",
+    "provenance"
+  ],
+  "risk_profile_required_provenance_fields": [
+    "source_type",
+    "source",
+    "as_of_date",
+    "region",
+    "purpose"
+  ],
+  "rebalance_policy_required_fields_when_configured": [
+    "bucket_targets",
+    "max_weight_buffer",
+    "history_period",
+    "min_history_points"
   ]
 }

@@ -1,27 +1,27 @@
 {
-    "skill_name": "healthcare-industry-radar",
+    "skill_name": "hit-industry-radar",
     "evals": [
         {
             "id": 1,
             "prompt": "生成一份本周的最新的医疗行业雷达报告",
-            "expected_output": "The radar report should successfully search all 9 target competitors, build the Key Intelligence List table, and execute S-T-C analysis on major events. Outputs must be saved to the specified MEMORY folder.",
+            "expected_output": "The radar should define the current reporting window, deduplicate events, cite direct sources, and separate facts from analysis. It should not save unless the user requests a file.",
             "files": [],
             "expectations": [
-                "The output file begins with the > [!IMPORTANT] Executive Summary header.",
-                "A Markdown table titled '核心资讯清单 (Key Intelligence List)' with exactly 4 columns is present.",
-                "The S-T-C deduction section includes 'Signal', 'Threat', and 'Countermeasure' for every analyzed company event.",
-                "No news older than the current week is included in the output."
+                "The reporting window and cutoff are explicit.",
+                "Every included event has an event date and a direct source.",
+                "Background items are labeled and are not counted as current events.",
+                "An empty result is reported honestly instead of being filled with old news."
             ]
         },
         {
             "id": 2,
             "prompt": "帮我看看这几天医渡云和Oracle有没有什么AI和资本方面的新动作？用那个S-T-C框架帮我推演一下。",
-            "expected_output": "The skill triggers specifically for Yidu Cloud and Oracle Health, searches for their recent capital or AI tech updates, and formats the output adhering strictly to the SKILL.md template.",
+            "expected_output": "The skill searches specifically for Yidu Cloud and Oracle Health in the requested period, then applies Signal, Transmission, and Conditions only where evidence supports analysis.",
             "files": [],
             "expectations": [
-                "The output file is named according to the DHWB-Radar-YYYYMMDD.md format.",
-                "The S-T-C section specifically analyzes Oracle Health and Yidu Cloud based on recent events.",
-                "The Countermeasure sections specifically provide actionable strategies from the perspective of Winning Health's GM of Strategy Consulting."
+                "Oracle Health and Yidu Cloud are covered or explicitly marked as having no qualifying event.",
+                "Facts, source claims, and inferences are distinguishable.",
+                "Recommendations state conditions and verification points without assuming a vendor viewpoint."
             ]
         }
     ]

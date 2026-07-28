@@ -97,6 +97,11 @@ function Get-SkillTextCorpus {
 
     $extensions = @('.md', '.txt', '.py', '.ps1', '.js', '.ts', '.mjs', '.json', '.yaml', '.yml', '.html', '.css', '.toml')
     $parts = foreach ($file in Get-ChildItem -LiteralPath $SkillDirectory -Recurse -File -ErrorAction SilentlyContinue) {
+        $relativePath = [IO.Path]::GetRelativePath($SkillDirectory, $file.FullName)
+        $pathSegments = $relativePath -split '[\\/]'
+        if ($pathSegments -contains '_runtime') {
+            continue
+        }
         if ($file.Name -eq 'resource-manifest.json' -or $file.Name -match '^(?:package-lock|pnpm-lock|yarn\.lock)') {
             continue
         }

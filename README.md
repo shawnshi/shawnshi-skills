@@ -111,7 +111,7 @@ description: 说明技能做什么，以及用户在什么场景下应使用它�
 |---|---|
 | `image-promp-gen` | 将简短主题转化为适合海报、书籍封面、专辑封面、文章配图和社交媒体视觉的平面设计图像提示词，擅长丝网印刷、负空间、象征构图和有限色板 |
 | `image-studio-architect` | 使用当前图像生成能力创建或编辑海报、封面、插画、概念图、社交媒体图片和其他视觉资产，并根据输入完整度补足构图、色彩、光线、材质与画幅 |
-| `mentat-collaboration-audit` | 基于真实会话记录、日志、工具调用和遥测事件审计系统效率与人机协作摩擦，复算等待、技能载入、错误重试、子代理Token、上下文压缩和写入授权指标 |
+| `mentat-collaboration-audit` | 基于真实会话记录、日志、工具调用和遥测事件审计系统效率与人机协作摩擦，复算等待、技能载入、错误重试、子代理Token、上下文压缩和写入授权指标，并按需生成Markdown报告和HTML审计面板 |
 | `mentat-dream-cycle` | 以审计、预览和事务化方式检查临时文件、热记忆、失败日志及知识图谱待治理项，生成可执行的清理与归档建议，并在获得明确授权后执行限定范围的安全维护 |
 | `mentat-insight-diary` | 将真实发生的系统事件、执行摩擦、失败、权衡和改进动作整理为OODA结构的内观审计日志 |
 | `mentat-skill-creator` | 在本地 Codex skills 库中审计、修订、拆分和验证用户技能，落实根 README、资源索引、触发所有权和发布门禁 |
@@ -123,7 +123,7 @@ description: 说明技能做什么，以及用户在什么场景下应使用它�
 | `personal-cognitive-auditor` | 基于用户提供或明确授权读取的日志、日程与健康数据，生成事实导向的日、周、月或年度复盘，识别承诺偏差、重复模式和可执行改进 |
 | `personal-cognitive-prescription` | 从用户提供的近期问题、决策或复盘材料中识别认知盲区，并给出可核验到具体章节的跨领域阅读处方 |
 | `personal-diary-writer` | 将用户已经确认的日记、工作记录、生理摘要或复盘内容安全写入用户指定的本地文件 |
-| `personal-health-analysis` | 分析用户授权访问的 Garmin 本地数据，生成睡眠、HRV、心率、压力、身体电量、运动负荷和趋势报告 |
+| `personal-health-analysis` | 分析用户授权访问的 Garmin 本地数据，生成睡眠、HRV、心率、压力、身体电量、运动负荷、Markdown报告和HTML趋势面板 |
 | `personal-intelligence-hub` | 对指定主题开展多来源情报扫描、去重、证据核验、情景推演和红队审查，并生成带来源的战略简报 |
 | `personal-investment-advisor` | 基于当前行情、公司原始披露、财务数据和用户明确提供的持仓，执行证券身份核验、研究任务约束、方法化筛选、公司研究、估值情景、组合风险审计和结果校准 |
 | `personal-musicbee-dj` | 在本地 Windows 电脑上根据歌曲、歌单、流派、场景或情绪请求启动并控制 MusicBee 播放，必要时生成临时 M3U 歌单 |
@@ -199,6 +199,7 @@ pwsh -NoProfile -ExecutionPolicy Bypass -File scripts/repair_skills.ps1 -Mode Ga
 - 每个用户技能存在 `resource-manifest.json`，且没有缺失依赖。
 - 不存在 `skill.json`。
 - 对 `SKILL.md`、脚本、参考资料、配置和界面元数据执行一致检查；不存在旧运行时工具令牌、外部运行时路径、思维稿指令、硬编码模型版本、强制子代理或强制持久化。
+- `_runtime` 目录属于用户运行产物，不进入源码一致性扫描，也不得被当作技能资源或业务事实。
 - 触发所有权矩阵不存在未知技能和重复信号。
 
 关键失败必须返回非零退出码；报告模式不得代替门禁。
@@ -215,4 +216,4 @@ pwsh -NoProfile -ExecutionPolicy Bypass -File scripts/repair_skills.ps1 -Mode Ga
 
 禁止在维护流程中重新生成 `skill.json`。旧工具如果仍依赖该文件，应修订或移除该工具，不得恢复双重真相源。
 
-Last updated: 2026-07-22
+Last updated: 2026-07-28

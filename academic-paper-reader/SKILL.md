@@ -32,9 +32,9 @@ description: 深入拆解单篇学术论文，解释研究问题、方法、证�
 
 ## 使用资源
 
-- 需要完整报告结构时读取 [resources/template.md](resources/template.md)。
-- 需要叙事重构方法时读取 [resources/storytelling_manual.md](resources/storytelling_manual.md)。
-- 需要机器检查长篇定稿时，可在确认 Python 可用后运行 [scripts/paper_audit_gate.py](scripts/paper_audit_gate.py)。不要为运行脚本自动安装依赖。
+- 需要完整报告结构时读取 [resources/template.md](resources/template.md)；该模板是可裁剪的内容清单，不是固定章节协议。
+- 需要叙事重构方法时读取 [resources/storytelling_manual.md](resources/storytelling_manual.md)；其中标题、故事弧、类比和公式表达均为可选写作建议。
+- 需要机器检查长篇定稿时，可在确认 Python 可用后运行 [scripts/paper_audit_gate.py](scripts/paper_audit_gate.py)。脚本只对空文件和未处理占位符等确定性问题返回非零；固定标题、Denote 元数据、措辞和公式呈现只产生提示。不要为运行脚本自动安装依赖。
 
 ## 交付
 
@@ -49,3 +49,9 @@ description: 深入拆解单篇学术论文，解释研究问题、方法、证�
 7. 用户关心场景下的意义。
 
 只有用户明确要求保存时才写入指定位置；写入前确认目标路径，不默认写入知识库、记忆目录或其他长期存储。
+
+## 验证边界
+
+- 硬错误：文件不存在、无法读取、正文为空、模板占位符未处理。
+- 软提示：缺少建议章节、未使用 Denote 元数据、出现套话、使用块级公式或没有绘制溯源图。
+- 人工判断：实验是否支持结论、基线是否公平、局限是否充分、解释是否准确。脚本不得替代这些判断。

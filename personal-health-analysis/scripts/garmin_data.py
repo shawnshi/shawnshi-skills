@@ -389,16 +389,21 @@ def fetch_alarms(client):
     return alarms
 
 def fetch_body_composition(client, date_str=None):
-    """Fetch BMI and weight data with a 30-day look-back and robust height fallback."""
+    """Fetch body-composition data without inventing missing anthropometrics."""
     if not date_str:
         date_str = datetime.now().strftime("%Y-%m-%d")
     
     try:
-        # 1. Height Logic: Try Profile -> then Try Config -> then Hard Fallback
+        # Height may come from the authorized Garmin profile or an explicit
+        # user-provided local configuration. Never substitute a population
+        # average: doing so would turn missing data into a fabricated BMI.
         height_cm = None
+        height_source = None
         profile = fetch_with_retry(client.get_user_profile)
         if profile:
             height_cm = profile.get("height")
+            if height_cm:
+                height_source = "garmin_profile"
             
         # Check for local config override if API height is missing
         config_path = Path(__file__).parent.parent / "config.json"
@@ -406,12 +411,10 @@ def fetch_body_composition(client, date_str=None):
             try:
                 conf = json.loads(config_path.read_text(encoding='utf-8'))
                 height_cm = conf.get("height_cm")
+                if height_cm:
+                    height_source = "user_config"
             except Exception:
                 pass
-        
-        # Hard Fallback (Mentat Estimate) to avoid empty display if all else fails
-        if not height_cm or height_cm == 0:
-            height_cm = 175 # Standard baseline for calculation
         
         # 2. Fetch last 30 days to get the most recent weigh-in
         end_dt = datetime.strptime(date_str, "%Y-%m-%d")
@@ -423,7 +426,8 @@ def fetch_body_composition(client, date_str=None):
             weight_kg = latest.get("weight", 0) / 1000
             bmi = latest.get("bmi")
             
-            # 3. Calculation Logic: Force recalculation if API BMI is None or inaccurate
+            # Recalculate only when both measured weight and an authorized
+            # height are available.
             if (not bmi or bmi == 0) and height_cm and weight_kg > 0:
                 bmi = weight_kg / ((height_cm / 100) ** 2)
                 
@@ -432,7 +436,9 @@ def fetch_body_composition(client, date_str=None):
                 "bmi": round(bmi, 1) if bmi else "--",
                 "fat_pct": round(latest.get("bodyFat", 0), 1) if latest.get("bodyFat") else "--",
                 "date": latest.get("date"),
-                "source_height": height_cm
+                "source_height": height_cm,
+                "height_source": height_source,
+                "data_gaps": [] if bmi else ["BMI unavailable because Garmin did not provide BMI and no authorized height was available"]
             }
         return {}
     except Exception:

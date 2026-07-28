@@ -1,7 +1,7 @@
 {
   "schema_version": 1,
   "skill": "tool-slide-architect",
-  "generated_at": "2026-07-14T21:01:44",
+  "generated_at": "2026-07-28T13:46:56",
   "skill_md": "SKILL.md",
   "top_level_files": [
     "SKILL.md"
@@ -14,11 +14,11 @@
   "resource_directories": [
     {
       "name": "scripts",
-      "file_count": 7
+      "file_count": 3
     },
     {
       "name": "references",
-      "file_count": 35
+      "file_count": 34
     }
   ],
   "declared_local_dependencies": [
@@ -26,6 +26,11 @@
       "path": "references\\workflows.md",
       "exists": true,
       "resolved_path": "C:\\Users\\shich\\.codex\\skills\\tool-slide-architect\\references\\workflows.md"
+    },
+    {
+      "path": "references\\outline-template.md",
+      "exists": true,
+      "resolved_path": "C:\\Users\\shich\\.codex\\skills\\tool-slide-architect\\references\\outline-template.md"
     },
     {
       "path": "references\\content-rules.md",
@@ -48,14 +53,14 @@
       "resolved_path": "C:\\Users\\shich\\.codex\\skills\\tool-slide-architect\\references\\blueprint-template.md"
     },
     {
-      "path": "scripts\\build-deck.py",
-      "exists": true,
-      "resolved_path": "C:\\Users\\shich\\.codex\\skills\\tool-slide-architect\\scripts\\build-deck.py"
-    },
-    {
       "path": "scripts\\validator.py",
       "exists": true,
       "resolved_path": "C:\\Users\\shich\\.codex\\skills\\tool-slide-architect\\scripts\\validator.py"
+    },
+    {
+      "path": "scripts\\build-deck.py",
+      "exists": true,
+      "resolved_path": "C:\\Users\\shich\\.codex\\skills\\tool-slide-architect\\scripts\\build-deck.py"
     }
   ],
   "missing_declared_dependencies": []

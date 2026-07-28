@@ -1,0 +1,48 @@
+{
+  "resource_kind": "intelligence_briefing_contract",
+  "version": "1.0",
+  "required_top_level": [
+    "schema_version",
+    "generated_at",
+    "topic",
+    "region",
+    "window",
+    "punchline",
+    "insights",
+    "digest",
+    "market",
+    "action_levers",
+    "top_10",
+    "data_gaps"
+  ],
+  "required_window_fields": ["start", "end", "timezone"],
+  "required_action_lever_fields": [
+    "domain",
+    "task",
+    "owner_type",
+    "trigger",
+    "indicator"
+  ],
+  "required_item_fields": [
+    "title",
+    "title_zh",
+    "url",
+    "source",
+    "event_date",
+    "published_at",
+    "retrieved_at",
+    "fact",
+    "connection",
+    "deduction",
+    "actionability",
+    "intelligence_level",
+    "confidence",
+    "summary_zh"
+  ],
+  "max_top_items": 10,
+  "enums": {
+    "intelligence_level": ["L1", "L2", "L3", "L4"],
+    "confidence": ["low", "medium", "high"]
+  },
+  "l4_required_audit_fields": ["devil_advocate", "blind_spots"]
+}

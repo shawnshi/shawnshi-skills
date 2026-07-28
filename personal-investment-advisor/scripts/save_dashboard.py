@@ -18,8 +18,6 @@ def render_markdown(data, raw_json):
     stock_name = data.get("stock_name", "Unknown")
     stock_code = data.get("stock_code", "Unknown")
     market_type = data.get("market_type", "")
-    trend = data.get("trend_prediction", "")
-    advice = data.get("operation_advice", "")
     confidence = data.get("confidence_level", "")
     tags = data.get("tags", [])
 
@@ -28,47 +26,47 @@ def render_markdown(data, raw_json):
     qa = db.get("qualitative_analysis", {})
     dp = db.get("data_perspective", {})
     intel = db.get("intelligence", {})
-    bp = db.get("battle_plan", {})
+    research_plan = db.get("research_plan", {})
     portfolio = data.get("portfolio_context", {})
     portfolio_summary = data.get("portfolio_summary", {})
     portfolio_risk = data.get("portfolio_risk", {})
     portfolio_fit = data.get("portfolio_fit", {})
-    position_advice = data.get("position_advice", {})
+    holding_assessment = data.get("holding_assessment", {})
     confidence_details = data.get("confidence_details", {})
     freshness_flags = data.get("freshness_flags", {})
     earnings_snapshot = data.get("earnings_snapshot", {})
     catalyst_map = data.get("catalyst_map", {})
     evidence_items = data.get("evidence_items", [])
-    watchlist_alerts = data.get("watchlist_alerts", [])
+    monitoring_alerts = data.get("monitoring_alerts", [])
 
     md = "---\n"
     md += f"title: {stock_name} ({stock_code}) 深度研究报告\n"
     md += f"date: {datetime.now().strftime('%Y-%m-%d')}\n"
     md += "status: archived\n"
-    md += "author: stock_analyzer\n"
+    md += "author: personal-investment-advisor\n"
     if tags:
         md += f"tags: [{', '.join(tags)}]\n"
     md += "---\n\n"
 
-    md += f"# 决策仪表盘: {stock_name} ({stock_code} - {market_type})\n\n"
-    md += f"> 本报告由 `stock_analyzer` 基于结构化行情数据生成。置信度：**{confidence}**\n\n"
+    md += f"# 研究仪表盘: {stock_name} ({stock_code} - {market_type})\n\n"
+    md += (
+        "> 本报告仅用于研究，不包含证券交易方向、仓位、进出场或价格指令。"
+        f"置信度：**{confidence}**\n\n"
+    )
 
     md += "## 🟢 核心判词 (Executive Summary)\n"
     md += f"**{cc.get('one_sentence', '无')}**\n\n"
     md += f"- **信号状态**: {cc.get('signal_type', '无')}\n"
-    md += f"- **操作建议**: {advice} (趋势预期: {trend})\n"
     md += f"- **时间窗口**: {cc.get('time_sensitivity', '无')}\n"
     md += f"- **研究模式**: {data.get('research_mode', '无')}\n"
-    pos_advice = cc.get("position_advice", {})
-    md += f"- **空仓建议**: {pos_advice.get('no_position', '无')}\n"
-    md += f"- **持仓建议**: {pos_advice.get('has_position', '无')}\n\n"
+    md += f"- **研究边界**: {cc.get('research_boundary', '无')}\n\n"
 
     md += "## 🧮 置信度与新鲜度\n"
     md += f"- **综合置信分**: {confidence_details.get('score', '--')}/100\n"
     md += f"- **数据质量**: {confidence_details.get('data_quality', '--')}\n"
     md += f"- **技术一致性**: {confidence_details.get('technical_alignment', '--')}\n"
     md += f"- **估值支撑**: {confidence_details.get('valuation_support', '--')}\n"
-    md += f"- **可执行性**: {confidence_details.get('actionability', '--')}\n"
+    md += f"- **研究可用性**: {confidence_details.get('actionability', '--')}\n"
     md += f"- **价格数据新鲜**: {freshness_flags.get('price_data_fresh', '--')}\n"
     md += f"- **基本面数据新鲜**: {freshness_flags.get('info_data_fresh', '--')}\n"
     md += f"- **新闻数据新鲜**: {freshness_flags.get('news_data_fresh', '--')}\n"
@@ -83,21 +81,20 @@ def render_markdown(data, raw_json):
     if portfolio.get("has_position"):
         pnl_pct = portfolio.get("unrealized_pnl_pct")
         pnl_pct_display = f"{pnl_pct * 100:.2f}%" if isinstance(pnl_pct, (int, float)) else "--"
-        md += "## 🧾 持仓者视角 (Position-Aware Advice)\n"
+        md += "## 🧾 持仓研究上下文\n"
         md += f"- **持仓数量**: {portfolio.get('quantity', '--')}\n"
         md += f"- **持仓成本**: {portfolio.get('avg_cost', '--')}\n"
         md += f"- **当前价格**: {portfolio.get('current_price', '--')}\n"
         md += f"- **持仓市值**: {portfolio.get('market_value', '--')}\n"
         md += f"- **浮盈/浮亏**: {portfolio.get('unrealized_pnl', '--')} ({pnl_pct_display})\n"
         md += f"- **仓位状态**: {portfolio.get('weight_status', '--')}\n"
-        md += f"- **持仓结论**: {position_advice.get('holding_view', '无')}\n"
-        md += f"- **成本视角**: {position_advice.get('cost_basis_view', '无')}\n"
-        md += f"- **对持仓者的动作建议**: {position_advice.get('action_for_holder', '无')}\n"
-        md += f"- **核心风险**: {position_advice.get('risk_to_holder', '无')}\n"
-        triggers = position_advice.get("next_action_trigger", [])
-        if triggers:
-            md += "- **动作触发条件**:\n"
-            for item in triggers:
+        md += f"- **持仓背景**: {holding_assessment.get('holding_context', '无')}\n"
+        md += f"- **成本背景**: {holding_assessment.get('cost_basis_context', '无')}\n"
+        md += f"- **风险证据**: {holding_assessment.get('risk_evidence', '无')}\n"
+        conditions = holding_assessment.get("monitoring_conditions", [])
+        if conditions:
+            md += "- **后续观察条件**:\n"
+            for item in conditions:
                 md += f"  - {item}\n"
         md += "\n"
 
@@ -116,7 +113,7 @@ def render_markdown(data, raw_json):
             for gap in portfolio_risk.get("risk_data_gaps", []):
                 md += f"  - 数据缺口: {gap}\n"
         if portfolio_fit:
-            md += f"- **约束资格**: {portfolio_fit.get('eligibility', '--')}\n"
+            md += f"- **约束状态**: {portfolio_fit.get('eligibility', '--')}\n"
             md += f"- **约束影响**: {portfolio_fit.get('constraint_impact', '--')}\n"
             md += f"- **适配理由**: {portfolio_fit.get('rationale', '--')}\n"
         md += "\n"
@@ -127,7 +124,7 @@ def render_markdown(data, raw_json):
     cs = dp.get("chip_structure", {})
     md += "## 📊 关键财务与技术锚点 (Data Perspective)\n\n"
     md += "| 指标维度 | 数值 | 状态与描述 |\n|:---|:---|:---|\n"
-    md += f"| **当前价格** | {pp.get('current_price', '--')} | 支撑: {pp.get('support_level', '--')} / 压力: {pp.get('resistance_level', '--')} |\n"
+    md += f"| **当前价格** | {pp.get('current_price', '--')} | 价格位置: {pp.get('bias_status', '--')} |\n"
     md += f"| **均线排列** | {ts.get('ma_alignment', '--')} | 乖离率状态: {pp.get('bias_status', '--')} |\n"
     md += f"| **RSI (14)** | {ts.get('rsi_14', '--')} | {ts.get('rsi_status', '--')} |\n"
     md += f"| **MACD** | {ts.get('macd_signal', '--')} | 趋势得分: {ts.get('trend_score', '--')}/100 |\n"
@@ -177,18 +174,15 @@ def render_markdown(data, raw_json):
                     md += f"  - {item}\n"
         md += "\n"
 
-    sp = bp.get("sniper_points", {})
-    ps = bp.get("position_strategy", {})
-    md += "## 🎯 战术调度指令 (Battle Plan)\n\n"
-    md += f"- **理想买点**: {sp.get('ideal_buy', '--')}\n"
-    md += f"- **次优买点**: {sp.get('secondary_buy', '--')}\n"
-    md += f"- **止损位**: {sp.get('stop_loss', '--')}\n"
-    md += f"- **目标位**: {sp.get('take_profit', '--')}\n"
-    md += f"- **建议仓位**: {ps.get('suggested_position', '--')}\n"
-    md += f"- **建仓策略**: {ps.get('entry_plan', '--')}\n"
-    md += f"- **风控熔断**: {ps.get('risk_control', '--')}\n\n"
-    md += "**行动检查单**\n"
-    for item in bp.get("action_checklist", []):
+    md += "## 🔬 后续研究计划\n\n"
+    md += "**证据核验**\n"
+    for item in research_plan.get("evidence_checks", []):
+        md += f"- {item}\n"
+    md += "\n**证伪检查**\n"
+    for item in research_plan.get("falsification_checks", []):
+        md += f"- {item}\n"
+    md += "\n**观察指标**\n"
+    for item in research_plan.get("monitoring_indicators", []):
         md += f"- {item}\n"
 
     md += "\n## 🔴 情报与风险 (Intelligence)\n\n"
@@ -239,14 +233,14 @@ def render_markdown(data, raw_json):
             md += f"- Freshness: {item.get('freshness', '')}\n"
             md += f"- Confidence: {item.get('confidence', '')}\n"
 
-    md += "\n## ⚖️ 查理·芒格灵魂三问 (The Munger Filter)\n\n"
-    md += f"- **机会成本考量**: 如果今天没有持仓，你还会在当前价格买入吗？(Yes/No)\n"
-    md += f"- **长期护城河**: 如果明天关闭交易所 5 年，你持有舒服吗？(Yes/No)\n"
-    md += f"- **逻辑一致性**: 当初的买入论文 (Thesis) 还完整吗？(Yes/No)\n"
+    md += "\n## ⚖️ 研究反证检查\n\n"
+    md += "- **证伪条件**: 哪一项新证据会推翻当前核心假设？\n"
+    md += "- **定价检验**: 当前市场共识是否已反映主要正反因素？\n"
+    md += "- **数据缺口**: 哪个缺失变量最可能改变研究结论？\n"
 
-    if watchlist_alerts:
-        md += "\n## Watchlist Alerts\n"
-        for item in watchlist_alerts:
+    if monitoring_alerts:
+        md += "\n## Monitoring Alerts\n"
+        for item in monitoring_alerts:
             md += f"- {item}\n"
 
     if data.get("data_gaps"):
@@ -262,13 +256,20 @@ def render_markdown(data, raw_json):
 
 
 def save_dashboard():
-    parser = argparse.ArgumentParser(description="Save Stock Analysis Dashboard")
+    parser = argparse.ArgumentParser(description="Save a research-only stock dashboard.")
     parser.add_argument("--stock", required=True, help="Stock name or symbol")
     parser.add_argument("--content", help="JSON content string. If not provided, reads from stdin.")
     parser.add_argument("--file", help="Path to a JSON file containing the dashboard data.")
     parser.add_argument("--output-dir", help="Required archive directory; alternatively set PIA_DASHBOARD_DIR.")
-    parser.add_argument("--append-journal", action="store_true", help="Append an advice journal entry after saving.")
-    parser.add_argument("--journal-path", help="Journal path; alternatively set PIA_ADVICE_JOURNAL.")
+    parser.add_argument(
+        "--append-journal",
+        action="store_true",
+        help="Append a research snapshot after saving.",
+    )
+    parser.add_argument(
+        "--journal-path",
+        help="Research journal path; alternatively set PIA_ADVICE_JOURNAL.",
+    )
     parser.add_argument("--delete-input", action="store_true", help="Delete --file only after a successful save.")
     args = parser.parse_args()
 
@@ -322,7 +323,7 @@ def save_dashboard():
         try:
             append_entry(parsed, archive_path=str(filepath), journal_path=args.journal_path)
         except Exception as exc:
-            safe_print(f"Warning: advice journal append failed: {exc}")
+            safe_print(f"Warning: research journal append failed: {exc}")
     
     if args.delete_input and args.file and os.path.exists(args.file):
         try:

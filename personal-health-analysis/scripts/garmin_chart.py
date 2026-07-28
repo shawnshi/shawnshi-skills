@@ -8,7 +8,6 @@ import json
 import sys
 import argparse
 import webbrowser
-import os
 import base64
 from pathlib import Path
 from datetime import datetime, timedelta
@@ -17,6 +16,7 @@ sys.path.insert(0, str(Path(__file__).parent))
 from garmin_auth import get_client
 from garmin_data import fetch_summary
 from garmin_intelligence import generate_chinese_insight, parse_period, HAS_SQLITE, fetch_local_summary, stitch_v3_metrics
+from report_output import build_report_paths
 
 TEMPLATE_FILE = Path(__file__).parent.parent / "assets" / "dashboard_v2.html"
 
@@ -24,82 +24,113 @@ def build_overlay_data(summary_data):
     """Align all metrics into date-synchronized arrays for Chart.js."""
     dates = [s["date"] for s in summary_data.get("sleep", []) if s.get("date")]
     if not dates: return None
-    
-    # Precise field mapping from garmin_data.py
-    stress_list = summary_data.get("stress", [])
-    stress_map = {s["date"]:((s.get("high_stress_duration") or 0) + (s.get("medium_stress_duration") or 0))/3600 for s in stress_list}
-    steps_map = {s["date"]: s.get("steps") or 0 for s in stress_list}
-    
-    bb_max_map = {b["date"]: b.get("highest") or 0 for b in summary_data.get("body_battery", [])}
-    bb_min_map = {b["date"]: b.get("lowest") or 0 for b in summary_data.get("body_battery", [])}
-    
-    # Correct HR mapping
-    hr_list = summary_data.get("heart_rate", [])
-    rhr_map = {h["date"]: h.get("resting_hr") or 0 for h in hr_list}
-    max_hr_map = {h["date"]: h.get("max_hr") or 0 for h in hr_list}
-    
+
     import pandas as pd
+
     def clean_nan(val):
-        if pd.isna(val): return None
+        if val is None or pd.isna(val):
+            return None
         return float(round(val, 1)) if isinstance(val, (int, float)) else val
 
-    # --- V4.0 PMC Matrix ---
+    def seconds_to_hours(value):
+        value = clean_nan(value)
+        return round(float(value) / 3600, 3) if value is not None else None
+
+    def complete_duration_hours(*values):
+        cleaned = [clean_nan(value) for value in values]
+        if any(value is None for value in cleaned):
+            return None
+        return sum(float(value) for value in cleaned) / 3600
+
+    # Preserve missing observations as nulls for Chart.js rather than plotting
+    # fabricated zeroes.
+    stress_list = summary_data.get("stress", [])
+    stress_map = {
+        s["date"]: complete_duration_hours(
+            s.get("high_stress_duration"), s.get("medium_stress_duration")
+        )
+        for s in stress_list
+    }
+    steps_map = {s["date"]: clean_nan(s.get("steps")) for s in stress_list}
+
+    bb_max_map = {
+        b["date"]: clean_nan(b.get("highest"))
+        for b in summary_data.get("body_battery", [])
+    }
+    bb_min_map = {
+        b["date"]: clean_nan(b.get("lowest"))
+        for b in summary_data.get("body_battery", [])
+    }
+
+    hr_list = summary_data.get("heart_rate", [])
+    rhr_map = {h["date"]: clean_nan(h.get("resting_hr")) for h in hr_list}
+    max_hr_map = {h["date"]: clean_nan(h.get("max_hr")) for h in hr_list}
+
+    # Experimental CTL/ATL/TSB curves are disabled unless a traceable method
+    # is explicitly enabled. The chart never reconstructs them with hidden
+    # time constants.
+    pmc_map_ctl = {}
+    pmc_map_atl = {}
+    pmc_map_tsb = {}
+    pmc_map_load = {}
+    firmware_map = {}
     try:
-        from garmin_sqlite_adapter import get_daily_friction_matrix, get_devices_info
-        df_pmc = get_daily_friction_matrix(365) # Extended range for dashboard
-        import pandas as pd
-        df_pmc['CTL'] = df_pmc['daily_friction_load'].ewm(span=42, adjust=False).mean()
-        df_pmc['ATL'] = df_pmc['daily_friction_load'].ewm(span=7, adjust=False).mean()
-        df_pmc['TSB'] = df_pmc['CTL'].shift(1) - df_pmc['ATL'].shift(1)
-        # Performance: Replaced slow .iterrows() with zip() for significantly faster dictionary construction
-        pmc_map_ctl = {d: clean_nan(v) for d, v in zip(df_pmc['date'], df_pmc['CTL'])}
-        pmc_map_atl = {d: clean_nan(v) for d, v in zip(df_pmc['date'], df_pmc['ATL'])}
-        pmc_map_tsb = {d: clean_nan(v) for d, v in zip(df_pmc['date'], df_pmc['TSB'])}
-        pmc_map_load = {d: clean_nan(v) for d, v in zip(df_pmc['date'], df_pmc['daily_friction_load'])}
-        
-        # New: Environment and Devices
+        from garmin_sqlite_adapter import get_devices_info
         df_devices = get_devices_info()
-        firmware_str = ", ".join([str(v) for v in df_devices['software_version'].unique()]) if not df_devices.empty else "STABLE"
-        firmware_map = {dates[-1]: firmware_str} if dates else {}
-    except Exception as e:
-        print(f"Extended metrics extraction failed: {e}")
-        pmc_map_ctl = {}
-        pmc_map_atl = {}
-        pmc_map_tsb = {}
-        pmc_map_load = {}
-        firmware_map = {}
-    # --- END Extended ---
+        firmware_str = ", ".join(
+            [str(v) for v in df_devices["software_version"].unique()]
+        ) if not df_devices.empty else None
+        firmware_map = {dates[-1]: firmware_str} if dates and firmware_str else {}
+    except Exception:
+        pass
 
     sleep_list = summary_data.get("sleep", [])
     avg_hr_map = {s["date"]: s.get("avg_hr") for s in sleep_list}
     
-    sleep_h_map = {s["date"]:(s.get("sleep_time_seconds") or 0)/3600 for s in sleep_list}
-    sleep_deep_h_map = {s["date"]:(s.get("deep_sleep_seconds") or 0)/3600 for s in sleep_list}
-    sleep_score_map = {s["date"]: s.get("sleep_score") or 0 for s in sleep_list}
+    sleep_h_map = {
+        s["date"]: seconds_to_hours(s.get("sleep_time_seconds")) for s in sleep_list
+    }
+    sleep_deep_h_map = {
+        s["date"]: seconds_to_hours(s.get("deep_sleep_seconds")) for s in sleep_list
+    }
+    sleep_score_map = {
+        s["date"]: clean_nan(s.get("sleep_score")) for s in sleep_list
+    }
     avg_spo2_map = {s["date"]: clean_nan(s.get("avg_spo2")) for s in sleep_list}
     
     hrv_list = summary_data.get("hrv", [])
-    hrv_map = {h["date"]: h.get("last_night_avg") or 0 for h in hrv_list}
+    hrv_map = {
+        h["date"]: clean_nan(h.get("last_night_avg")) for h in hrv_list
+    }
     hrv_status_map = {h["date"]: h.get("status") for h in hrv_list}
     
     act_cal_map = {}
     temp_map = {}
     for act in summary_data.get("activities", []):
         d = act["date"]
-        act_cal_map[d] = act_cal_map.get(d, 0) + (act.get("calories") or 0)
-        if act.get("temperature"):
-            temp_map[d] = clean_nan(act.get("temperature"))
+        calories = clean_nan(act.get("calories"))
+        if calories is not None:
+            act_cal_map[d] = act_cal_map.get(d, 0) + calories
+        temperature = clean_nan(act.get("temperature"))
+        if temperature is not None:
+            temp_map[d] = temperature
     
     # Training Load mapping
     load_list = summary_data.get("training_load_series", [])
-    acute_load_map = {l["date"]: l.get("acute_load") or 0 for l in load_list}
+    acute_load_map = {
+        l["date"]: clean_nan(l.get("acute_load")) for l in load_list
+    }
     
     # Biomechanics & Daily Summary new metrics
     bio_list = summary_data.get("biomechanics", [])
     gct_map = {b["date"]: clean_nan(b.get("avg_ground_contact_time")) for b in bio_list if "date" in b}
     
     daily_list = summary_data.get("daily_summary", [])
-    sweat_loss_map = {d["date"]: clean_nan(d.get("sweat_loss")) or 0 for d in daily_list if "date" in d}
+    sweat_loss_map = {
+        d["date"]: clean_nan(d.get("sweat_loss"))
+        for d in daily_list
+        if "date" in d
+    }
     waking_rr_map = {d["date"]: clean_nan(d.get("rr_waking_avg")) for d in daily_list if "date" in d}
     
     readiness_list = []
@@ -108,18 +139,15 @@ def build_overlay_data(summary_data):
     stress_dict = {s["date"]: s for s in stress_list if "date" in s}
     for d in dates:
         stress_entry = stress_dict.get(d, {})
-        weighted_h = ((stress_entry.get("high_stress_duration") or 0) + (stress_entry.get("medium_stress_duration") or 0)*0.5) / 3600
-        weighted_dissipation_map[d] = round(weighted_h, 1)
+        high_duration = clean_nan(stress_entry.get("high_stress_duration"))
+        medium_duration = clean_nan(stress_entry.get("medium_stress_duration"))
+        weighted_dissipation_map[d] = (
+            round((float(high_duration) + float(medium_duration) * 0.5) / 3600, 1)
+            if high_duration is not None and medium_duration is not None
+            else None
+        )
         
-        ss = sleep_score_map.get(d, 0)
-        bb = bb_max_map.get(d, 0)
-        hrv_stat = hrv_status_map.get(d, "BALANCED")
-        
-        score = (ss * 0.4) + (bb * 0.4)
-        if hrv_stat == "BALANCED": score += 20
-        elif hrv_stat == "UNBALANCED": score += 5
-        score -= (weighted_h * 4)
-        readiness_list.append(round(max(0, min(100, score)), 1))
+        readiness_list.append(None)
 
     # Activity categorization
     run_map = {}
@@ -130,7 +158,9 @@ def build_overlay_data(summary_data):
     for act in summary_data.get("activities", []):
         d = act["date"]
         t = (str(act.get("activity_type") or "") + " " + str(act.get("activity_name") or "")).lower()
-        c = act.get("calories", 0) or 0
+        c = clean_nan(act.get("calories"))
+        if c is None:
+            continue
         
         if "run" in t or "jog" in t: run_map[d] = run_map.get(d, 0) + c
         elif "cycl" in t or "bik" in t: bike_map[d] = bike_map.get(d, 0) + c
@@ -139,33 +169,39 @@ def build_overlay_data(summary_data):
 
     return {
         "dates": dates,
-        "stress_h": [stress_map.get(d, 0) for d in dates],
-        "bb_max": [bb_max_map.get(d, 0) for d in dates],
-        "bb_min": [bb_min_map.get(d, 0) for d in dates],
-        "rhr": [rhr_map.get(d, 0) for d in dates],
-        "max_hr": [max_hr_map.get(d, 0) for d in dates],
+        "stress_h": [stress_map.get(d) for d in dates],
+        "bb_max": [bb_max_map.get(d) for d in dates],
+        "bb_min": [bb_min_map.get(d) for d in dates],
+        "rhr": [rhr_map.get(d) for d in dates],
+        "max_hr": [max_hr_map.get(d) for d in dates],
         "avg_hr": [avg_hr_map.get(d) for d in dates],
-        "sleep_h": [sleep_h_map.get(d, 0) for d in dates],
-        "sleep_deep_h": [sleep_deep_h_map.get(d, 0) for d in dates],
-        "sleep_light_h": [max(0, sleep_h_map.get(d, 0) - sleep_deep_h_map.get(d, 0)) for d in dates],
-        "sleep_score": [sleep_score_map.get(d, 0) for d in dates],
-        "hrv": [hrv_map.get(d, 0) for d in dates],
-        "calories": [act_cal_map.get(d, 0) for d in dates],
-        "steps": [steps_map.get(d, 0) for d in dates],
-        "acute_load": [acute_load_map.get(d, 0) for d in dates],
-        "act_running": [run_map.get(d, 0) for d in dates],
-        "act_cycling": [bike_map.get(d, 0) for d in dates],
-        "act_hiking": [hike_map.get(d, 0) for d in dates],
-        "act_hiit": [hiit_map.get(d, 0) for d in dates],
-        "ctl": [pmc_map_ctl.get(d, 0) for d in dates],
-        "atl": [pmc_map_atl.get(d, 0) for d in dates],
-        "tsb": [pmc_map_tsb.get(d, 0) for d in dates],
+        "sleep_h": [sleep_h_map.get(d) for d in dates],
+        "sleep_deep_h": [sleep_deep_h_map.get(d) for d in dates],
+        "sleep_light_h": [
+            max(0, sleep_h_map[d] - sleep_deep_h_map[d])
+            if sleep_h_map.get(d) is not None
+            and sleep_deep_h_map.get(d) is not None
+            else None
+            for d in dates
+        ],
+        "sleep_score": [sleep_score_map.get(d) for d in dates],
+        "hrv": [hrv_map.get(d) for d in dates],
+        "calories": [act_cal_map.get(d) for d in dates],
+        "steps": [steps_map.get(d) for d in dates],
+        "acute_load": [acute_load_map.get(d) for d in dates],
+        "act_running": [run_map.get(d) for d in dates],
+        "act_cycling": [bike_map.get(d) for d in dates],
+        "act_hiking": [hike_map.get(d) for d in dates],
+        "act_hiit": [hiit_map.get(d) for d in dates],
+        "ctl": [pmc_map_ctl.get(d) for d in dates],
+        "atl": [pmc_map_atl.get(d) for d in dates],
+        "tsb": [pmc_map_tsb.get(d) for d in dates],
         "pmc_load": [pmc_map_load.get(d) for d in dates],
         "readiness": readiness_list,
-        "weighted_dissipation": [weighted_dissipation_map.get(d, 0) for d in dates],
+        "weighted_dissipation": [weighted_dissipation_map.get(d) for d in dates],
         "spo2_history": [avg_spo2_map.get(d) for d in dates],
         "waking_rr": [waking_rr_map.get(d) for d in dates],
-        "sweat_loss": [sweat_loss_map.get(d, 0) for d in dates],
+        "sweat_loss": [sweat_loss_map.get(d) for d in dates],
         "gct_trend": [gct_map.get(d) for d in dates],
         "temperature_trend": [temp_map.get(d) for d in dates],
         "software_version": firmware_map.get(dates[-1]) if dates else None
@@ -176,18 +212,20 @@ def render_report(charts_data):
     template = TEMPLATE_FILE.read_text(encoding='utf-8')
     
     audit = charts_data.get("audit_data", {})
-    move_type = audit.get("action_protocol", {}).get("type", "YELLOW")
-    colors = {"GREEN":"#10B981","RED":"#EF4444","YELLOW":"#F59E0B","PURPLE":"#8B5CF6"}
-    status_color = colors.get(move_type, colors["YELLOW"])
-    if move_type == "ALERT": status_color = colors["PURPLE"]
+    colors = {"NEUTRAL": "#64748B", "UP": "#10B981", "DOWN": "#EF4444"}
+    status_color = colors["NEUTRAL"]
 
-    rhr_curr = audit.get("system_status", {}).get("rhr", {}).get("current", 0)
-    rhr_base = audit.get("system_status", {}).get("rhr", {}).get("baseline", 0)
-    rhr_delta = round(((rhr_curr - rhr_base) / rhr_base * 100), 1) if rhr_base else 0
+    rhr_curr = audit.get("system_status", {}).get("rhr", {}).get("current")
+    rhr_base = audit.get("system_status", {}).get("rhr", {}).get("baseline")
+    rhr_delta = (
+        round(((rhr_curr - rhr_base) / rhr_base * 100), 1)
+        if rhr_curr is not None and rhr_base not in (None, 0)
+        else None
+    )
     
     ov = charts_data.get("overlay_data") or {}
     wd_list = ov.get("weighted_dissipation", [])
-    weighted_val = wd_list[-1] if wd_list else "--"
+    weighted_val = wd_list[-1] if wd_list and wd_list[-1] is not None else "--"
 
     def sanitize_obj(obj):
         import math
@@ -209,12 +247,16 @@ def render_report(charts_data):
     b64_data = base64.b64encode(json_str.encode('utf-8')).decode('ascii')
 
     replacements = {
-        "%%TITLE%%": "GARMIN STRATEGIC AUDIT",
+        "%%TITLE%%": "GARMIN HEALTH TRENDS",
         "%%STATUS_COLOR%%": status_color,
-        "%%RHR_TREND_COLOR%%": colors["RED"] if rhr_delta > 0 else colors["GREEN"],
-        "%%RHR_DELTA%%": str(rhr_delta),
+        "%%RHR_TREND_COLOR%%": (
+            colors["DOWN"] if rhr_delta is not None and rhr_delta > 0
+            else colors["UP"] if rhr_delta is not None
+            else colors["NEUTRAL"]
+        ),
+        "%%RHR_DELTA%%": str(rhr_delta) if rhr_delta is not None else "--",
         "%%WEIGHTED_VAL%%": str(weighted_val),
-        "%%DEEP_COLOR%%": colors["GREEN"] if audit.get("recovery_loop", {}).get("sleep_architecture", {}).get("deep_pct", 0) >= 15 else colors["RED"],
+        "%%DEEP_COLOR%%": colors["NEUTRAL"],
         "%%B64_DATA%%": b64_data
     }
     
@@ -231,7 +273,7 @@ def main():
     args = parser.parse_args()
     
     days = parse_period(args.period, args.days)
-    fetch_days = max(days, 30)
+    fetch_days = days
     
     summary_data = None
     if HAS_SQLITE:
@@ -275,9 +317,11 @@ def main():
             charts_data["heatmap"] = [{"date": s["date"], "score": s.get("sleep_score", 0)} for s in summary_data.get("sleep", [])]
 
     html = render_report(charts_data)
-    out_dir = Path(os.path.expanduser(os.environ.get("GARMIN_OUTPUT_DIR", str(Path.cwd() / "garmin-output"))))
-    out_dir.mkdir(parents=True, exist_ok=True)
-    out_path = Path(args.output) if args.output else out_dir / f"tactical_v2_{days}days_{datetime.now().strftime('%Y%m%d_%H%M%S')}.html"
+    if args.output:
+        out_path = Path(args.output).expanduser()
+        out_path.parent.mkdir(parents=True, exist_ok=True)
+    else:
+        out_path = build_report_paths(days=days, create_dir=True)["html"]
     
     # Write using binary to ensure UTF-8 bytes are exact
     out_path.write_bytes(html.encode('utf-8'))

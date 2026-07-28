@@ -1,6 +1,6 @@
 # personal-cognitive-auditor Handoff Contract
 
-`personal-cognitive-auditor` does not write diary files directly. It hands off a structured payload to `personal-diary-writer`.
+本技能默认只在对话中交付复盘。只有用户明确要求保存或交给 `personal-diary-writer` 时，才生成下列载荷；生成载荷不等于授权写入。
 
 ## Required Fields
 
@@ -16,15 +16,17 @@
 ```
 
 ## Field Semantics
-- `period_type`: audit cycle type
-- `audit_title`: title used by diary writer
-- `audit_body_markdown`: full Markdown body to be persisted
-- `next_tactics`: 1-3 tactical follow-ups for the next cycle
-- `followup_flags`: optional tags such as `accountability`, `long_cycle`, `yearly_reset`
-- `requires_mentat_diary`: set `true` when the audit reveals architecture-level or cognition-level friction worth escalating
+
+- `period_type`：复盘周期。
+- `audit_title`：非空标题。
+- `audit_body_markdown`：要交接的完整 Markdown 正文，不包含 `Handoff Payload` 自身。
+- `next_tactics`：至少一个非空动作；没有可支持动作时不生成交接。
+- `followup_flags`：可为空，只包含用户可见且与本次复盘相关的标签。
+- `requires_mentat_diary`：默认且通常为 `false`。只有用户明确要求另行生成 Mentat 日志时才可设为 `true`；该值不授权写入。
 
 ## Handoff Rules
-- `audit_body_markdown` must be the exact report body, not a summary.
-- `next_tactics` must not be empty.
-- If the audit ran in degraded mode, preserve the `【数据缺口】` lines in `audit_body_markdown`.
-- If the audit surfaces architecture-level cognitive debt, set `requires_mentat_diary: true`.
+
+- 先展示完整复盘、目标写入位置和载荷，等待用户确认后再调用持久化流程。
+- 保留正文中的数据缺口、来源窗口和不确定性。
+- 不在载荷中加入人格标签、医学判断、隐藏推理或超出任务所需的私人数据。
+- `personal-diary-writer` 仍须执行自己的预览和确认门禁；本载荷不能绕过该门禁。

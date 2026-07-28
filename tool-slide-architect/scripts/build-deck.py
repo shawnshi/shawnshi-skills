@@ -1,130 +1,120 @@
-import os
-import re
-import sys
-import json
+"""Validate an outline and package it as JSON; this command does not render PPTX."""
+
+from __future__ import annotations
+
 import argparse
-import subprocess
+import json
+from pathlib import Path
+from typing import Any
 
-VERSION = "11.2"
+from validator import SCHEMA_VERSION, audit_outline, load_source
 
-def run_validator(path):
-    script_dir = os.path.dirname(os.path.abspath(__file__))
-    validator_path = os.path.join(script_dir, "validator.py")
-    result = subprocess.run([sys.executable, validator_path, path], capture_output=True, text=True)
-    return result
 
-def get_merged_content(path):
-    if not os.path.exists(path):
-        return None
-    merged_content = ""
-    if os.path.isdir(path):
-        files = sorted([f for f in os.listdir(path) if f.endswith(".md")])
-        for file in files:
-            with open(os.path.join(path, file), "r", encoding="utf-8") as handle:
-                merged_content += handle.read() + "\n\n"
-    else:
-        with open(path, "r", encoding="utf-8") as handle:
-            merged_content = handle.read()
-    return merged_content
-
-def parse_style_block(content):
-    match = re.search(r"<STYLE_INSTRUCTIONS>([\s\S]*?)</STYLE_INSTRUCTIONS>", content)
-    return match.group(1).strip() if match else ""
-
-def parse_slides(content):
-    slides = []
-    matches = re.finditer(r'^---\n(Type:.*?)\n---\n([\s\S]*?)(?=(^---\nType:|\Z))', content, re.MULTILINE)
-    
-    for index, match in enumerate(matches, 1):
-        yaml_header = match.group(1)
-        body = match.group(2)
-        
-        # 1. Parse YAML Meta
-        meta = {}
-        for line in yaml_header.strip().split('\n'):
-            if ':' in line:
-                k, v = line.split(':', 1)
-                meta[k.strip()] = v.strip()
-                
-        # 2. Extract Top-level Blocks
-        def extract_block(start_marker, next_markers):
-            lookahead = "|".join([rf"\n{re.escape(m)}" for m in next_markers]) + r"|\Z"
-            pattern = rf"{re.escape(start_marker)}[^\n]*\n([\s\S]*?)(?={lookahead})"
-            found = re.search(pattern, body)
-            return found.group(1).strip() if found else ""
-            
-        goal_text = extract_block("// NARRATIVE GOAL", ["// KEY CONTENT", "// VISUAL DIRECTIVE", "// Script"])
-        key_content_text = extract_block("// KEY CONTENT", ["// VISUAL DIRECTIVE", "// Script"])
-        visual_text = extract_block("// VISUAL DIRECTIVE", ["// Script"])
-        script_text = extract_block("// Script", ["---"])
-        
-        # 3. Extract Nested Fields (Robust Regex)
-        def extract_subfield(text, marker_name):
-            # Looks for [Marker Name] and stops at the next item which starts with number/bullet and optionally **[
-            pattern = rf"\[{re.escape(marker_name)}\][^\n]*?:?\s*([\s\S]*?)(?=\n[0-9\-\*]\.?\s*\*?\*?\[|\Z)"
-            found = re.search(pattern, text)
-            return found.group(1).strip() if found else text.strip() if text else ""
-
-        key_content_struct = {
-            "action_title": extract_subfield(key_content_text, "Lead-in / Action Title"),
-            "arc_logic": extract_subfield(key_content_text, "Arc & SCR Logic"),
-            "sub_headline": extract_subfield(key_content_text, "Sub-headline"),
-            "key_insight": extract_subfield(key_content_text, "Key Insight"),
-            "data_matrix": extract_subfield(key_content_text, "Key Content / Data Matrix")
-        }
-        
-        visual_struct = {
-            "metadata_control": extract_subfield(visual_text, "元数据控制"),
-            "layout": extract_subfield(visual_text, "LAYOUT 布局结构"),
-            "visual_content": extract_subfield(visual_text, "VISUAL 视觉画面"),
-            "chart_suggestion": extract_subfield(visual_text, "Chart Suggestion & Visual Restraint")
-        }
-        
-        script_struct = {
-            "transcript": extract_subfield(script_text, "演讲逐字稿"),
-            "notes": extract_subfield(script_text, "演讲注意事项")
-        }
-        
-        slides.append({
-            "page": index,
-            "meta": meta,
-            "narrative_goal": goal_text,
-            "key_content": key_content_struct,
-            "visual_directive": visual_struct,
-            "script": script_struct
-        })
-    return slides
-
-def main():
-    parser = argparse.ArgumentParser()
-    parser.add_argument("path")
-    parser.add_argument("--output", "-o", default="blueprint_bundle.json")
-    args = parser.parse_args()
-
-    if not os.path.exists(args.path):
-        sys.exit(1)
-
-    print("--- Step 1: Blueprint Audit ---")
-    result = run_validator(args.path)
-    if result.returncode != 0:
-        print(result.stdout)
-        sys.exit(1)
-    print(result.stdout)
-    
-    content = get_merged_content(args.path)
-    output_dir = args.path if os.path.isdir(args.path) else os.path.dirname(args.path)
-    
-    bundle = {
-        "version": VERSION,
-        "style_instructions": parse_style_block(content),
-        "slides": parse_slides(content)
+def normalized_slide(slide: dict[str, Any]) -> dict[str, Any]:
+    key_content = slide["key_content"]
+    visual = slide["visual_directive"]
+    script = slide["script"]
+    return {
+        "page": int(slide["page"]),
+        "type": slide["type"],
+        "narrative_goal": slide["narrative_goal"],
+        "key_content": {
+            "title": key_content["Title"],
+            "arc_logic": key_content["Arc Logic"],
+            "sub_headline": key_content["Sub-headline"],
+            "key_insight": key_content["Key Insight"],
+            "content_data": key_content["Content / Data"],
+            "evidence_trust_anchor": key_content["Evidence / Trust Anchor"],
+        },
+        "visual_directive": {
+            "layout": visual["Layout"],
+            "visual_description": visual["Visual Description"],
+            "chart_suggestion": visual["Chart Suggestion"],
+        },
+        "script": {
+            "speaker_notes": script["Speaker Notes"],
+            "delivery_notes": script["Delivery Notes"],
+        },
     }
 
-    output_path = os.path.join(output_dir, args.output)
-    with open(output_path, "w", encoding="utf-8") as handle:
-        json.dump(bundle, handle, ensure_ascii=False, indent=2)
 
-    print(f"\n[OK] BLUEPRINT PACKAGE READY: {output_path}")
+def parse_args() -> argparse.Namespace:
+    parser = argparse.ArgumentParser(description=__doc__)
+    parser.add_argument("path", type=Path, help="outline.md or a directory containing outline.md")
+    parser.add_argument(
+        "--output",
+        "-o",
+        type=Path,
+        default=Path("blueprint_bundle.json"),
+        help="JSON output path. Relative paths are resolved beside the input outline.",
+    )
+    return parser.parse_args()
+
+
+def main() -> int:
+    args = parse_args()
+    try:
+        content, source_files = load_source(args.path)
+        report, document = audit_outline(content, allow_placeholders=False)
+    except (OSError, UnicodeError) as exc:
+        print(
+            json.dumps(
+                {
+                    "schema_version": SCHEMA_VERSION,
+                    "status": "fail",
+                    "errors": [{"code": "E_FILE_READ", "message": str(exc)}],
+                },
+                ensure_ascii=False,
+                indent=2,
+            )
+        )
+        return 1
+
+    if report["errors"]:
+        report["source_files"] = source_files
+        print(json.dumps(report, ensure_ascii=False, indent=2))
+        return 1
+
+    bundle = {
+        "schema_version": SCHEMA_VERSION,
+        "artifact_type": "presentation_blueprint_bundle",
+        "pptx_generated": False,
+        "source_files": source_files,
+        "metadata": document["metadata"],
+        "style_instructions": document["style_instructions"],
+        "slides": [normalized_slide(slide) for slide in document["slides"]],
+        "validation": {
+            "status": report["status"],
+            "warnings": report["warnings"],
+            "review": report["review"],
+        },
+    }
+
+    base_dir = args.path if args.path.is_dir() else args.path.parent
+    output_path = args.output if args.output.is_absolute() else base_dir / args.output
+    output_path.parent.mkdir(parents=True, exist_ok=True)
+    rendered = json.dumps(bundle, ensure_ascii=False, indent=2) + "\n"
+    temporary_path = output_path.with_name(f".{output_path.name}.tmp")
+    temporary_path.write_text(rendered, encoding="utf-8")
+    temporary_path.replace(output_path)
+
+    print(
+        json.dumps(
+            {
+                "schema_version": SCHEMA_VERSION,
+                "status": "packaged",
+                "artifact_type": "presentation_blueprint_bundle",
+                "output": str(output_path),
+                "slide_count": len(bundle["slides"]),
+                "warning_count": len(report["warnings"]),
+                "pptx_generated": False,
+            },
+            ensure_ascii=False,
+            indent=2,
+        )
+    )
+    return 0
+
 
 if __name__ == "__main__":
-    main()
+    raise SystemExit(main())

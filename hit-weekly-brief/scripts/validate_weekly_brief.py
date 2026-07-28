@@ -10,9 +10,23 @@ import re
 import sys
 
 
-EVENT_DATE_RE = re.compile(
+CHINESE_EVENT_DATE_RE = re.compile(
     r"^\|\s*(?P<month>\d{1,2})月(?P<day>\d{1,2})(?:日)?"
     r"(?:[—-](?P<end_day>\d{1,2})日)?(?:发布)?\s*\|"
+)
+ISO_EVENT_DATE_RE = re.compile(
+    r"^\|\s*(?P<start>\d{4}-\d{2}-\d{2})"
+    r"(?:\s*(?:—|至)\s*(?P<end>\d{4}-\d{2}-\d{2}))?\s*\|"
+)
+EMPTY_EVENT_MARKER = "本周期未发现符合纳入标准的事件"
+PLACEHOLDER_RE = re.compile(
+    r"\[(?:"
+    r"PERIOD_START|PERIOD_END|ISSUE_DATE|REGION|AUDIENCE|"
+    r"CUTOFF_TIME[^\]]*|YYYY-MM-DD[^\]]*|"
+    r"按报告周期[^\]]*|待填写[^\]]*|"
+    r"主体与动作|事实/来源主张|推断及适用条件|"
+    r"高/中/低|原始页面 URL"
+    r")\]"
 )
 
 
@@ -52,6 +66,35 @@ def resolve_event_date(month: int, day: int, period_start: date, period_end: dat
     return None
 
 
+def event_dates_from_row(
+    line: str, period_start: date, period_end: date
+) -> list[date | None]:
+    iso_match = ISO_EVENT_DATE_RE.match(line)
+    if iso_match:
+        values = [iso_match.group("start")]
+        if iso_match.group("end"):
+            values.append(iso_match.group("end"))
+        parsed: list[date | None] = []
+        for value in values:
+            try:
+                parsed.append(date.fromisoformat(value))
+            except ValueError:
+                parsed.append(None)
+        return parsed
+
+    chinese_match = CHINESE_EVENT_DATE_RE.match(line)
+    if not chinese_match:
+        return []
+    month = int(chinese_match.group("month"))
+    start_day = int(chinese_match.group("day"))
+    end_day = int(chinese_match.group("end_day") or start_day)
+    days = [start_day] if start_day == end_day else [start_day, end_day]
+    return [
+        resolve_event_date(month, day_value, period_start, period_end)
+        for day_value in days
+    ]
+
+
 def validate_report(
     file_path: Path,
     period_start: date,
@@ -85,6 +128,10 @@ def validate_report(
     if "\ufffd" in content:
         errors.append("report contains Unicode replacement characters")
 
+    placeholders = sorted(set(PLACEHOLDER_RE.findall(content)))
+    if placeholders:
+        errors.append("report contains unresolved template placeholders")
+
     first_heading = next(
         (line.strip() for line in content.splitlines() if line.strip().startswith("# ")),
         "",
@@ -103,22 +150,22 @@ def validate_report(
 
     event_rows = 0
     for line_number, line in enumerate(content.splitlines(), start=1):
-        match = EVENT_DATE_RE.match(line)
-        if not match:
+        event_dates = event_dates_from_row(line, period_start, period_end)
+        if not event_dates:
             continue
         event_rows += 1
-        month = int(match.group("month"))
-        start_day = int(match.group("day"))
-        end_day = int(match.group("end_day") or start_day)
-        for day_value in (start_day, end_day):
-            event_date = resolve_event_date(month, day_value, period_start, period_end)
+        for event_date in event_dates:
             if event_date is None:
+                errors.append(f"line {line_number}: event date is invalid or outside the reporting period")
+            elif not period_start <= event_date <= period_end:
                 errors.append(f"line {line_number}: event date is outside the reporting period")
             elif event_date > cutoff.date():
                 errors.append(f"line {line_number}: event date is later than the cutoff")
 
-    if event_rows == 0:
-        errors.append("no dated event rows found in Markdown tables")
+    if event_rows == 0 and EMPTY_EVENT_MARKER not in content:
+        errors.append(
+            "no dated event rows found; use the explicit empty-period marker when there are no qualifying events"
+        )
 
     return errors
 

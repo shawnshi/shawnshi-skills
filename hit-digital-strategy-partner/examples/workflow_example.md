@@ -1,16 +1,28 @@
-# Deep-Dive Example: The "Digital Airspace" Economy
+# 合成工作流示例（不得作为业务事实来源）
 
-## Task 1: Retrieval Output (Excerpt from task1_retrieval_output.md)
-- **Data Point 1**: CAGR of 22.8% in low-altitude logistics drones (2024-2030). Source: CAAC Internal Forecast.
-- **Data Point 2**: 5G-A (Advanced) infrastructure investment requirement estimated at $4.2B per tier-1 city. Source: Huawei/MIIT.
-- **Conflict**: Local governments promote "Vertiports," but current battery energy density (250Wh/kg) limits range to <30min, making most planned routes economically unviable without 400Wh/kg breakthrough.
+本例只演示证据与假设的结构。所有实体和值均为占位符。
 
-## Task 2: Analysis Expansion (Excerpt from task2_analysis_draft.md)
-### Chapter 3: The Energy Density Chokepoint
-The narrative of "urban air mobility" faces a physics-induced bottleneck. While software for ATC (Air Traffic Control) is ready, the energy density of solid-state vs. liquid batteries dictates a "Survival Path" focused on last-mile delivery rather than human transport.
-**Causal Chain**: 
-Lower Energy Density -> Reduced Payload -> High Cost/Weight Ratio -> Market focus shifts to High-Margin medical/urgent delivery (survival path) -> Wait for 450Wh/kg breakthrough for "Golden Path" (mass transport).
+## 证据记录
 
-## Task 3: Editor's Forging (Excerpt from final_research_report.md)
-- **Refinement**: Upgraded "Battery problem" to "Energy Density Chokepoint".
-- **Logic Check**: Added a paragraph on how regional policy subsidies are temporarily masking the energy cost inefficiency, providing a more realistic "Gray Reality" view.
+```json
+{
+  "claim": "示例市场指标",
+  "value": null,
+  "unit": null,
+  "source": null,
+  "as_of": null,
+  "region": null,
+  "status": "needs_input"
+}
+```
+
+## 方案比较
+
+| 方案 | 已核实事实 | 待验证假设 | 依赖 | 失败模式 |
+|---|---|---|---|---|
+| 维持现状 | 待填 | 待填 | 待填 | 待填 |
+| 小范围验证 | 待填 | 待填 | 待填 | 待填 |
+
+## 量化模型
+
+先定义成本和收益变量，再由用户数据或带日期、地区与来源的公开数据填充。至少呈现下行、基准和上行情景，并指出最敏感的输入；没有数据时不计算 ROI。

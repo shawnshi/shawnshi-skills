@@ -1,67 +1,65 @@
-import os
-import sys
-import glob
-import json
+"""Combine numbered book-mirror result files into an explicit output path."""
+
+from __future__ import annotations
+
 import argparse
+import re
 from pathlib import Path
 
-def main():
-    parser = argparse.ArgumentParser(description="Stitch and Format Cognitive Book Mirror Results")
-    parser.add_argument("--book_stem", type=str, required=True, help="The stem name of the book")
-    parser.add_argument("--results_dir", type=str, required=True, help="Directory containing the result_*.md files")
+RESULT_PATTERN = re.compile(r"^result_(\d+)\.md$")
+
+
+def main() -> int:
+    parser = argparse.ArgumentParser(description="Stitch book-mirror result files")
+    parser.add_argument("--results-dir", required=True, type=Path)
+    parser.add_argument("--output", required=True, type=Path)
+    parser.add_argument("--book-title", default="认知镜像")
     args = parser.parse_args()
 
-    results_dir = Path(args.results_dir)
-    if not results_dir.exists():
-        print(f"[-] Error: Results directory not found: {results_dir}")
-        sys.exit(1)
-        
-    workspace_root = Path(__file__).resolve().parent.parent.parent.parent.parent
-    memory_read_dir = workspace_root / "MEMORY" / "raw" / "read"
-    memory_read_dir.mkdir(parents=True, exist_ok=True)
-    
-    output_file = memory_read_dir / f"{args.book_stem}_personalized_mirror.md"
+    if not args.results_dir.is_dir():
+        print(f"ERROR[input]: results directory not found: {args.results_dir}")
+        return 1
 
-    result_files = sorted(list(results_dir.glob("result_*.md")))
-    if not result_files:
-        print(f"[-] Error: No result files found in {results_dir}")
-        sys.exit(1)
+    numbered = []
+    for path in args.results_dir.glob("result_*.md"):
+        match = RESULT_PATTERN.match(path.name)
+        if not match:
+            print(f"ERROR[numbering]: invalid result filename: {path.name}")
+            return 1
+        numbered.append((int(match.group(1)), path))
+    if not numbered:
+        print("ERROR[input]: no result_<number>.md files found")
+        return 1
 
-    print(f"[*] Stitching {len(result_files)} result files...")
+    numbered.sort()
+    indices = [index for index, _ in numbered]
+    if len(indices) != len(set(indices)):
+        print("ERROR[numbering]: duplicate result number")
+        return 1
+    expected = list(range(1, indices[-1] + 1))
+    if indices != expected:
+        print(f"ERROR[numbering]: expected contiguous sequence {expected}, got {indices}")
+        return 1
 
-    final_lines = []
-    final_lines.append(f"# {args.book_stem} - 认知镜像\n")
-    final_lines.append("| 📖 书籍原旨 (The Book) | 🪞 认知镜像 (The Mirror) |")
-    final_lines.append("| :--- | :--- |")
-
-    for filepath in result_files:
-        try:
-            with open(filepath, "r", encoding="utf-8") as f:
-                lines = f.readlines()
-        except UnicodeDecodeError:
-            print(f"[-] Warning: Failed to read {filepath.name} as UTF-8.")
-            continue
-            
-        for line in lines:
-            line_clean = line.strip()
-            if not line_clean:
-                continue
-            if line_clean.startswith("| 📖") or line_clean.startswith("| :---"):
-                continue
-            if line_clean.startswith("|") and line_clean.endswith("|"):
-                final_lines.append(line_clean)
-
-    # Ensure output is UTF-8 to prevent Windows console encoding issues on printing
+    sections = [f"# {args.book_title}"]
     try:
-        with open(output_file, "w", encoding="utf-8") as f:
-            f.write("\n".join(final_lines) + "\n")
-    except Exception as e:
-        print(f"[-] Error writing final output: {e}")
-        sys.exit(1)
+        for index, path in numbered:
+            text = path.read_text(encoding="utf-8").strip()
+            if not text:
+                raise ValueError(f"{path.name} contains no content")
+            sections.append(f"## 分片 {index}\n\n{text}")
+        args.output.parent.mkdir(parents=True, exist_ok=True)
+        args.output.write_text("\n\n".join(sections) + "\n", encoding="utf-8")
+    except UnicodeDecodeError as exc:
+        print(f"ERROR[input]: result is not valid UTF-8: {exc}")
+        return 1
+    except (OSError, ValueError) as exc:
+        print(f"ERROR[write]: {exc}")
+        return 1
 
-    # Avoid printing raw strings that might contain unicode on stdout in Windows
-    print(f"[+] Successfully stitched {len(result_files)} files.")
-    print(f"[+] Saved to: {output_file.as_posix()}")
+    print(str(args.output.resolve()))
+    return 0
+
 
 if __name__ == "__main__":
-    main()
+    raise SystemExit(main())

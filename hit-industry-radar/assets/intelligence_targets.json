@@ -1,6 +1,6 @@
 {
   "manifest_version": "1.0",
-  "description": "定向高价值信源强制映射表，避免子代理盲目抓取。",
+  "description": "可选检索种子。正式结论仍须回到原始发布页，并按用户的时间、地区和主题范围筛选。",
   "targets": {
     "global_hit": [
       "https://www.healthcareitnews.com/",
@@ -8,13 +8,13 @@
       "https://www.beckershospitalreview.com/healthcare-information-technology.html"
     ],
     "china_hit": [
-      "http://www.ccgp.gov.cn/ (中国政府采购网 - 医疗信息化标签)",
-      "http://www.chima.org.cn/ (CHIMA - 医院信息管理专业委员会)",
-      "http://www.nhc.gov.cn/ (国家卫健委 - 规划发展与信息化司)"
+      "https://www.ccgp.gov.cn/ (中国政府采购网)",
+      "https://www.chima.org.cn/ (中国医院协会信息专业委员会)",
+      "https://www.nhc.gov.cn/ (国家卫生健康委员会)"
     ],
     "winning_baseline": [
-      "http://www.cninfo.com.cn/ (巨潮资讯 - 卫宁健康/创业慧康/东华软件公告)",
-      "https://www.winning.com.cn/ (卫宁健康官网动态)"
+      "https://www.cninfo.com.cn/ (巨潮资讯)",
+      "https://www.winning.com.cn/ (厂商官网示例；不能作为独立验证)"
     ]
   }
 }

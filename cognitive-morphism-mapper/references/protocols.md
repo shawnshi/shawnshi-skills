@@ -1,22 +1,21 @@
-# Execution Protocols
+# 映射执行协议
 
-## Phase 0: Context Anchoring (User Profile)
-- **Identity**: Who is the user?
-- **Resources**: What cards do they hold?
-- **Constraints**: What are the red lines?
+## 1. 源域建模
 
-## Phase 1: Category Extraction
-Identify:
-- **Objects (O)**: Nouns, entities.
-- **Morphisms (M)**: Verbs, relationships.
+只使用用户提供或任务明确授权读取的材料。提取目标、对象、关系、状态、资源、约束、反馈与时间方向；把观察事实、用户陈述和解释性假设分开。不得补写私人关系、个人动机、政治身份或未公开决策权。
 
-## Phase 2: Domain Selection
-Select Domain B where `Distance(A, B) > 0.7`.
+## 2. 候选域选择
 
-## Phase 3: Functorial Mapping
-Map $F: A 	o B$ such that $F(f \circ g) = F(f) \circ F(g)$.
+选择具有可解释机制和可核验来源的目标域。相关领域文件只是研究线索，不是事实数据库。候选域的远近用定性理由或任务数据说明，不使用固定距离阈值筛选。
 
-## Phase 4: Synthesis & Check
-**Commutativity Check**:
-1. Does the solution violate A's axioms?
-2. Is the structure preserved?
+## 3. 结构映射
+
+记录对象、关系、复合规则、保留约束和失真点。只有具备形式定义与证明时才称“函子”“同构”或“交换”；一般业务分析使用“结构相似”“候选对应”或“可检验映射”。
+
+## 4. 逆映射与验证
+
+把目标域机制转回源域，列出必要前提、反例、量纲差异、最小实验、观察指标和停止条件。所有比例、权重、阈值、成本、收益和时间窗口必须来自用户数据或可核验来源；否则写为待测变量并做敏感性分析。
+
+## 5. 证据状态
+
+每条关键机制标记来源和状态：已核验、用户提供、解释性假设或待核验。领域文件中的案例、条目数量、风格化表述和示例数字不得作为发布门禁或业务事实。

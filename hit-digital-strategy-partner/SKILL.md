@@ -27,10 +27,10 @@ description: 为医疗机构、医疗信息化企业和管理团队制定数字�
 
 ## 可选资源
 
-- 需要确定性黑板数据结构时，按需查看 `scripts/blackboard.py` 和 `scripts/blackboard_validate.py` 的参数与输出。
-- 需要装配文件时，按需使用 `scripts/assembler.py`。
-- 需要文本检查时，可运行 `scripts/compliance_check.py` 或 `scripts/strategy_gate.py`，但不得自动安装依赖或改变环境。
-- 详细角色与流程资料位于 `references/`；只读取与当前任务直接相关的文件。
+- 需要结构化黑板时，按需查看 `scripts/blackboard.py` 和 `scripts/blackboard_validate.py` 的参数与输出。黑板中的量化假设使用 `value`、`unit`、`source`、`as_of`、`region` 和 `status` 字段；缺少数据时令 `value=null`、`status=needs_input`。
+- 需要装配用户已授权写入的文件时，按需使用 `scripts/assembler.py`。字数目标只在用户明确给出时作为软提示。
+- 需要文本检查时，可运行 `scripts/compliance_check.py` 或 `scripts/strategy_gate.py`。前者只产生术语与时效性提示；后者仅以无法读取、无效 Schema 和未处理占位符等确定性错误阻断，字数、标题、关键词、量化程度和内容完整度只产生 warning。
+- 通用流程位于 [references/workflows.md](references/workflows.md)；证据检索、分析、编辑和合规复核资料按需读取 `references/retrieval_specialist.md`、`references/analyst.md`、`references/editor.md` 和 `references/compliance_expert.md`。
 
 ## 输出结构
 

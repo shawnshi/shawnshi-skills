@@ -14,7 +14,8 @@ if str(SCRIPT_DIR) not in sys.path:
     sys.path.insert(0, str(SCRIPT_DIR))
 
 from advice_journal import build_journal_entry
-from dashboard_gate import _validate_evidence_items, validate_dashboard
+from broker_sync import sync_broker_data
+from dashboard_gate import _validate_evidence_items, collect_dashboard_warnings, validate_dashboard
 from decision_outcome_report import calculate_calibration
 from instrument_gate import validate_instrument
 from live_evidence_probe import probe_us_stock
@@ -28,7 +29,9 @@ from portfolio_loader import (
 )
 from portfolio_scenario_analyzer import analyze_scenarios
 from quality_screener import evaluate_metrics
+from rebalance_weights import recalculate_all_weights
 from research_brief_gate import validate_research_brief
+from save_dashboard import render_markdown
 from sync_outcomes import build_outcome_update
 from yf import extract_catalyst_map
 
@@ -80,11 +83,8 @@ def valid_dashboard():
         "stock_name": "Apple",
         "stock_code": "AAPL",
         "market_type": "美股",
-        "research_mode": "thesis_mode",
+        "research_mode": "research_only",
         "sentiment_score": 50,
-        "trend_prediction": "震荡",
-        "operation_advice": "不适用",
-        "decision_type": "research_only",
         "confidence_level": "中",
         "confidence_details": {
             "score": 60,
@@ -106,22 +106,43 @@ def valid_dashboard():
                 "one_sentence": "Research watch only",
                 "signal_type": "fundamental",
                 "time_sensitivity": "90d",
-                "position_advice": {"has_position": False},
+                "research_boundary": "Evidence review only; no transaction instruction.",
             },
-            "qualitative_analysis": {},
+            "qualitative_analysis": {
+                "trend_analysis": "Mixed evidence.",
+                "fundamental_analysis": "Margins require confirmation.",
+                "pattern_analysis": "Descriptive only.",
+                "sector_position": "Peer comparison pending.",
+                "hot_topics": "No unsupported theme inference.",
+            },
             "data_perspective": {
-                "trend_status": "neutral",
-                "price_position": {"current_price": 100},
-                "volume_analysis": "neutral",
+                "trend_status": {
+                    "ma_alignment": "mixed",
+                    "rsi_14": 50,
+                    "rsi_status": "neutral",
+                    "macd_signal": "mixed",
+                    "trend_score": 50,
+                },
+                "price_position": {"current_price": 100, "bias_status": "mid-range"},
+                "volume_analysis": {
+                    "volume_status": "neutral",
+                    "turnover_rate": None,
+                    "volume_ratio": None,
+                },
                 "chip_structure": {"chip_health": "不适用(非A股)"},
                 "valuation": "mixed",
                 "atr_14": 2.0,
             },
-            "intelligence": {},
-            "battle_plan": {
-                "sniper_points": {"stop_loss": 90, "take_profit": 120},
-                "position_strategy": "research only",
-                "action_checklist": ["verify filing"],
+            "intelligence": {
+                "sentiment_summary": "Mixed evidence.",
+                "positive_catalysts": [],
+                "risk_alerts": [],
+                "thesis_tracking": {},
+            },
+            "research_plan": {
+                "evidence_checks": ["Verify the next filing."],
+                "falsification_checks": ["Check whether margins contract."],
+                "monitoring_indicators": ["Reported gross margin."],
             },
         },
         "analysis_summary": "summary",
@@ -131,7 +152,6 @@ def valid_dashboard():
         "search_performed": True,
         "data_sources": {"filing": "https://www.sec.gov/Archives/example"},
         "data_gaps": [],
-        "position_direction": "not_applicable",
         "blind_spot_warning": "Consensus may already price the thesis.",
         "research_brief": valid_brief(),
         "earnings_snapshot": {
@@ -351,8 +371,65 @@ class EvidenceAndScreenTests(unittest.TestCase):
         self.assertEqual(valid_result.returncode, 0)
         self.assertEqual(invalid_result.returncode, 1)
         self.assertEqual(malformed_result.returncode, 2)
-    def test_full_thesis_dashboard_passes_both_contracts(self):
+    def test_full_research_only_dashboard_passes_both_contracts(self):
         self.assertEqual(validate_dashboard(valid_dashboard()), [])
+
+    def test_qualitative_monitoring_indicator_does_not_block(self):
+        dashboard = valid_dashboard()
+        dashboard["dashboard"]["research_plan"]["monitoring_indicators"] = [
+            "等待下一份审计财报"
+        ]
+        self.assertEqual(validate_dashboard(dashboard), [])
+        self.assertEqual(collect_dashboard_warnings(dashboard), [])
+
+    def test_trade_payload_without_brief_is_rejected(self):
+        dashboard = valid_dashboard()
+        dashboard.pop("research_brief")
+        dashboard["research_mode"] = "trading_mode"
+        dashboard["decision_type"] = "buy"
+        dashboard["operation_advice"] = "买入"
+        dashboard["position_direction"] = "long"
+        errors = validate_dashboard(dashboard)
+        self.assertTrue(any("research_brief is required" in error for error in errors))
+        self.assertTrue(any("legacy trade field" in error for error in errors))
+        self.assertTrue(any("invalid research_mode" in error for error in errors))
+        temporary_root = os.environ.get("PIA_TEST_TMPDIR")
+        with tempfile.TemporaryDirectory(dir=temporary_root) as tmpdir:
+            path = Path(tmpdir) / "legacy-dashboard.json"
+            path.write_text(json.dumps(dashboard, ensure_ascii=False), encoding="utf-8")
+            result = subprocess.run(
+                [sys.executable, str(SCRIPT_DIR / "dashboard_gate.py"), str(path)],
+                capture_output=True,
+                text=True,
+                check=False,
+            )
+        self.assertEqual(result.returncode, 1)
+
+    def test_nested_trade_contract_is_rejected(self):
+        dashboard = valid_dashboard()
+        dashboard["dashboard"]["battle_plan"] = {
+            "sniper_points": {"stop_loss": 90, "take_profit": 120},
+            "position_strategy": {"suggested_position": "20%"},
+        }
+        errors = validate_dashboard(dashboard)
+        self.assertTrue(any("legacy trade field" in error for error in errors))
+
+    def test_renderer_contains_only_research_plan(self):
+        dashboard = valid_dashboard()
+        rendered = render_markdown(
+            dashboard, json.dumps(dashboard, ensure_ascii=False)
+        )
+        self.assertIn("后续研究计划", rendered)
+        for forbidden in (
+            "战术调度指令",
+            "理想买点",
+            "止损位",
+            "目标位",
+            "建议仓位",
+            "建仓策略",
+            "操作建议",
+        ):
+            self.assertNotIn(forbidden, rendered)
 
     def test_test_fixture_claims_cannot_enter_formal_dashboard(self):
         dashboard = valid_dashboard()
@@ -488,6 +565,108 @@ class PortfolioTests(unittest.TestCase):
         )
         self.assertEqual(fit["eligibility"], "within_weight_constraint")
         self.assertNotIn("action_in_portfolio", fit)
+
+    def test_risk_categories_stay_unknown_without_explicit_profile(self):
+        positions = [
+            {
+                "symbol": "AAPL",
+                "current_weight": 1.0,
+                "thesis": "quality",
+                "days_to_liquidate": 1,
+            }
+        ]
+        summary = build_portfolio_summary(positions)
+        risk = build_portfolio_risk(summary)
+        self.assertEqual(summary["concentration_bucket"], "unknown")
+        self.assertEqual(risk["concentration_risk"], "未知")
+        self.assertEqual(risk["market_exposure_risk"], "未知")
+        self.assertEqual(risk["risk_profile_status"], "not_configured")
+
+    def test_rebalance_without_policy_does_not_create_targets(self):
+        temporary_root = os.environ.get("PIA_TEST_TMPDIR")
+        with tempfile.TemporaryDirectory(dir=temporary_root) as tmpdir:
+            path = Path(tmpdir) / "portfolio.json"
+            path.write_text(
+                json.dumps(
+                    {
+                        "base_currency": "USD",
+                        "positions": [
+                            {
+                                "symbol": "CASH",
+                                "market_type": "CASH",
+                                "quantity": 100,
+                                "avg_cost": 1,
+                                "currency": "USD",
+                            }
+                        ],
+                    }
+                ),
+                encoding="utf-8",
+            )
+            result = recalculate_all_weights(str(path))
+        self.assertFalse(result["_rebalance"]["target_weights_computed"])
+        self.assertNotIn("target_weight", result["positions"][0])
+        self.assertNotIn("max_weight", result["positions"][0])
+
+    def test_broker_import_with_missing_required_field_does_not_write(self):
+        temporary_root = os.environ.get("PIA_TEST_TMPDIR")
+        with tempfile.TemporaryDirectory(dir=temporary_root) as tmpdir:
+            root = Path(tmpdir)
+            positions_path = root / "positions.json"
+            csv_path = root / "broker.csv"
+            original = json.dumps(
+                {
+                    "base_currency": "USD",
+                    "positions": [
+                        {
+                            "symbol": "EXISTING",
+                            "quantity": 1,
+                            "avg_cost": 10,
+                            "currency": "USD",
+                            "market_type": "US",
+                        }
+                    ],
+                },
+                ensure_ascii=False,
+                separators=(",", ":"),
+            )
+            positions_path.write_text(original, encoding="utf-8")
+            csv_path.write_text(
+                "symbol,quantity,avg_cost,currency,market_type\n"
+                "VALID,2,20,USD,US\n"
+                "BROKEN,3,30,,US\n",
+                encoding="utf-8",
+            )
+            with self.assertRaises(ValueError):
+                sync_broker_data(str(csv_path), str(positions_path))
+            self.assertEqual(positions_path.read_text(encoding="utf-8"), original)
+
+    def test_broker_import_does_not_invent_optional_or_allocation_fields(self):
+        temporary_root = os.environ.get("PIA_TEST_TMPDIR")
+        with tempfile.TemporaryDirectory(dir=temporary_root) as tmpdir:
+            root = Path(tmpdir)
+            positions_path = root / "positions.json"
+            csv_path = root / "broker.csv"
+            positions_path.write_text(
+                json.dumps({"base_currency": "USD", "positions": []}),
+                encoding="utf-8",
+            )
+            csv_path.write_text(
+                "symbol,quantity,avg_cost,currency,market_type\n"
+                "TEST,2,10,USD,US\n",
+                encoding="utf-8",
+            )
+            result = sync_broker_data(str(csv_path), str(positions_path))
+            imported = result["positions"][0]
+            for field in (
+                "name",
+                "opened_at",
+                "thesis",
+                "current_weight",
+                "target_weight",
+                "max_weight",
+            ):
+                self.assertNotIn(field, imported)
 
     def test_portfolio_contract_rejects_duplicates(self):
         payload = {
@@ -707,26 +886,21 @@ class CatalystAndCalibrationTests(unittest.TestCase):
         self.assertEqual(result["assumption_based_average_net_excess_return_pct"], -3.0)
 
     def test_journal_captures_reproducibility_fields(self):
-        brief = valid_brief()
-        dashboard = {
-            "stock_code": "AAPL",
-            "stock_name": "Apple",
-            "market_type": "美股",
-            "research_mode": "thesis_mode",
-            "decision_type": "watch",
-            "operation_advice": "观望",
-            "confidence_level": "中",
-            "confidence_details": {"score": 60},
-            "position_direction": "long",
-            "research_brief": brief,
-            "evidence_items": [{"fact": "x"}],
-            "dashboard": {"core_conclusion": {"one_sentence": "watch"}, "data_perspective": {"price_position": {"current_price": 100}}, "battle_plan": {"sniper_points": {}}},
-        }
+        dashboard = valid_dashboard()
         entry = build_journal_entry(dashboard)
         self.assertEqual(entry["benchmark_symbol"], "SPY")
         self.assertEqual(entry["investment_horizon_days"], 90)
         self.assertEqual(len(entry["source_snapshot_hash"]), 64)
-        self.assertEqual(entry["dual_trigger_policy"], "conservative")
+        self.assertEqual(entry["research_scope"], "research_only")
+        self.assertEqual(entry["dashboard_schema_version"], "6.0")
+        for forbidden in (
+            "decision_type",
+            "operation_advice",
+            "position_direction",
+            "stop_loss",
+            "take_profit",
+        ):
+            self.assertNotIn(forbidden, entry)
 
 
 if __name__ == "__main__":

@@ -1,417 +1,164 @@
-#!/usr/bin/env python
-# -*- coding: utf-8 -*-
-"""
-@Input:  document_summaries_enhanced.json, file_id_mapping.json
-@Output: Persistent file properties (Subject/Keywords) updated in original documents
-@Pos:    Adapter Layer. Synchronizes semantic intelligence back to the physical file system.
+"""Preview metadata changes; write only with --apply and a backup directory."""
 
-!!! Maintenance Protocol: Ensure Excel fallback mechanism is tested against locked files.
-!!! Supports Subject (Summaries) and Keywords (Tags).
+from __future__ import annotations
 
-优化版元数据应用器
-- 解决Excel兼容性问题（三层回退机制）
-- 增量处理（跳过已有元数据的文件）
-- 详细日志记录
-- 并行处理提升性能
-"""
-import json
-import sys
-import io
-import logging
 import argparse
+import hashlib
+import json
+import shutil
+import sys
+import tempfile
 from pathlib import Path
-from concurrent.futures import ThreadPoolExecutor, as_completed
-from datetime import datetime
-
-# 设置标准输出编码为 UTF-8
-if sys.platform == 'win32':
-    sys.stdout = io.TextIOWrapper(sys.stdout.buffer, encoding='utf-8')
-    sys.stderr = io.TextIOWrapper(sys.stderr.buffer, encoding='utf-8')
-
-try:
-    from pypdf import PdfReader, PdfWriter
-except ImportError:
-    PdfReader = PdfWriter = None
-
-try:
-    from docx import Document
-except ImportError:
-    Document = None
-
-try:
-    from pptx import Presentation
-except ImportError:
-    Presentation = None
-
-try:
-    import openpyxl
-except ImportError:
-    openpyxl = None
 
 
-# 配置日志
-def setup_logging(log_dir, log_level=logging.INFO):
-    """设置日志系统"""
-    log_file = Path(log_dir) / f"metadata_application_{datetime.now().strftime('%Y%m%d_%H%M%S')}.log"
-    logging.basicConfig(
-        level=log_level,
-        format='%(asctime)s - %(levelname)s - %(message)s',
-        handlers=[
-            logging.FileHandler(log_file, encoding='utf-8'),
-            logging.StreamHandler(sys.stdout)
-        ]
+def load_inputs(summaries_path, mapping_path):
+    summaries = json.loads(summaries_path.read_text(encoding="utf-8"))
+    mapping = json.loads(mapping_path.read_text(encoding="utf-8"))
+    if not isinstance(summaries, list) or not isinstance(mapping, dict):
+        raise ValueError("summaries must be an array and mapping must be an object")
+    seen = set()
+    proposed = []
+    for index, item in enumerate(summaries):
+        if not isinstance(item, dict):
+            raise ValueError(f"summary[{index}] must be an object")
+        doc_id = item.get("id")
+        summary = item.get("summary")
+        tags = item.get("tags", [])
+        if not isinstance(doc_id, str) or not doc_id or doc_id in seen:
+            raise ValueError(f"summary[{index}] has a missing or duplicate id")
+        seen.add(doc_id)
+        if (
+            not isinstance(summary, str)
+            or not isinstance(tags, list)
+            or any(not isinstance(tag, str) for tag in tags)
+        ):
+            raise ValueError(f"summary[{index}] has invalid summary or tags")
+        source = mapping.get(doc_id)
+        if not isinstance(source, str):
+            raise ValueError(f"mapping is missing source id: {doc_id}")
+        path = Path(source)
+        if not path.is_file():
+            raise ValueError(f"source file not found: {path}")
+        proposed.append(
+            {"id": doc_id, "path": path, "summary": summary, "tags": tags}
+        )
+    return proposed
+
+
+def has_metadata(path):
+    suffix = path.suffix.lower()
+    if suffix == ".pdf":
+        from pypdf import PdfReader
+        metadata = PdfReader(str(path)).metadata or {}
+        return bool(metadata.get("/Subject") or metadata.get("/Keywords"))
+    if suffix == ".docx":
+        from docx import Document
+        props = Document(str(path)).core_properties
+        return bool(props.subject or props.keywords)
+    if suffix == ".pptx":
+        from pptx import Presentation
+        props = Presentation(str(path)).core_properties
+        return bool(props.subject or props.keywords)
+    if suffix in {".xlsx", ".xlsm"}:
+        from openpyxl import load_workbook
+        workbook = load_workbook(str(path), read_only=True)
+        value = bool(workbook.properties.subject or workbook.properties.keywords)
+        workbook.close()
+        return value
+    raise ValueError(f"unsupported source type: {suffix}")
+
+
+def write_metadata(source, summary, tags):
+    suffix = source.suffix.lower()
+    temp_handle = tempfile.NamedTemporaryFile(
+        delete=False, suffix=suffix, dir=str(source.parent)
     )
-    return log_file
-
-
-def has_metadata(file_path):
-    """检查文件是否已有元数据"""
-    ext = file_path.suffix.lower()
+    temp_path = Path(temp_handle.name)
+    temp_handle.close()
     try:
-        if ext == '.pdf' and PdfReader:
-            reader = PdfReader(str(file_path))
-            metadata = reader.metadata
-            if metadata:
-                subject = metadata.get('/Subject', '')
-                keywords = metadata.get('/Keywords', '')
-                comments = metadata.get('/Comments', '')
-                return bool(subject and keywords and comments)
-
-        elif ext == '.docx' and Document:
-            doc = Document(str(file_path))
-            props = doc.core_properties
-            return bool(props.subject and props.keywords and props.comments)
-
-        elif ext == '.pptx' and Presentation:
-            prs = Presentation(str(file_path))
-            props = prs.core_properties
-            return bool(props.subject and props.keywords and props.comments)
-
-        elif ext == '.xlsx' and openpyxl:
-            wb = openpyxl.load_workbook(str(file_path), read_only=True)
-            props = wb.properties
-            return bool(props.subject and props.keywords and props.description)
-
-    except Exception as e:
-        logging.warning(f"检查元数据失败 {file_path.name}: {e}")
-
-    return False
-
-
-def apply_pdf_metadata(file_path, summary, tags):
-    """为 PDF 文件应用元数据"""
-    if not PdfReader or not PdfWriter:
-        return False, "PDF 库未安装"
-
-    try:
-        reader = PdfReader(str(file_path))
-        writer = PdfWriter()
-
-        # 复制所有页面
-        for page in reader.pages:
-            writer.add_page(page)
-
-        # 设置元数据
-        writer.add_metadata({
-            '/Subject': summary,
-            '/Keywords': ', '.join(tags),
-            '/Comments': summary
-        })
-
-        # 保存
-        with open(str(file_path), 'wb') as f:
-            writer.write(f)
-
-        return True, "成功"
-    except Exception as e:
-        return False, str(e)
+        if suffix == ".pdf":
+            from pypdf import PdfReader, PdfWriter
+            reader, writer = PdfReader(str(source)), PdfWriter()
+            for page in reader.pages:
+                writer.add_page(page)
+            metadata = dict(reader.metadata or {})
+            metadata.update({"/Subject": summary, "/Keywords": ", ".join(tags)})
+            writer.add_metadata(metadata)
+            with temp_path.open("wb") as handle:
+                writer.write(handle)
+        elif suffix == ".docx":
+            from docx import Document
+            document = Document(str(source))
+            document.core_properties.subject = summary
+            document.core_properties.keywords = ", ".join(tags)
+            document.save(str(temp_path))
+        elif suffix == ".pptx":
+            from pptx import Presentation
+            presentation = Presentation(str(source))
+            presentation.core_properties.subject = summary
+            presentation.core_properties.keywords = ", ".join(tags)
+            presentation.save(str(temp_path))
+        elif suffix in {".xlsx", ".xlsm"}:
+            from openpyxl import load_workbook
+            workbook = load_workbook(str(source), keep_vba=suffix == ".xlsm")
+            workbook.properties.subject = summary
+            workbook.properties.keywords = ", ".join(tags)
+            workbook.save(str(temp_path))
+            workbook.close()
+        else:
+            raise ValueError(f"unsupported source type: {suffix}")
+        temp_path.replace(source)
+    except Exception:
+        temp_path.unlink(missing_ok=True)
+        raise
 
 
-def apply_docx_metadata(file_path, summary, tags):
-    """为 DOCX 文件应用元数据"""
-    if not Document:
-        return False, "DOCX 库未安装"
-
-    try:
-        doc = Document(str(file_path))
-        core_props = doc.core_properties
-
-        core_props.subject = summary
-        core_props.keywords = ', '.join(tags)
-        core_props.comments = summary
-
-        doc.save(str(file_path))
-        return True, "成功"
-    except Exception as e:
-        return False, str(e)
-
-
-def apply_pptx_metadata(file_path, summary, tags):
-    """为 PPTX 文件应用元数据"""
-    if not Presentation:
-        return False, "PPTX 库未安装"
-
-    try:
-        prs = Presentation(str(file_path))
-        core_props = prs.core_properties
-
-        core_props.subject = summary
-        core_props.keywords = ', '.join(tags)
-        core_props.comments = summary
-
-        prs.save(str(file_path))
-        return True, "成功"
-    except Exception as e:
-        return False, str(e)
-
-
-def apply_xlsx_metadata_safe(file_path, summary, tags):
-    """为 XLSX 文件应用元数据（增强兼容性 - 三层回退）"""
-    if not openpyxl:
-        return False, "XLSX 库未安装"
-
-    # 方法1：标准方式
-    try:
-        wb = openpyxl.load_workbook(str(file_path))
-        props = wb.properties
-
-        props.subject = summary
-        props.keywords = ', '.join(tags)
-        props.description = summary  # Excel 属性中 description 通常对应备注
-
-        wb.save(str(file_path))
-        return True, "成功"
-    except Exception as e1:
-        # 方法2：只读模式加载，然后写入
-        try:
-            wb = openpyxl.load_workbook(str(file_path), data_only=True)
-            props = wb.properties
-
-            props.subject = summary
-            props.keywords = ', '.join(tags)
-            props.description = summary
-
-            wb.save(str(file_path))
-            return True, "成功（兼容模式）"
-        except Exception as e2:
-            # 方法3：创建临时文件
-            try:
-                import tempfile
-                import shutil
-
-                # 创建临时文件
-                temp_file = tempfile.NamedTemporaryFile(delete=False, suffix='.xlsx')
-                temp_path = temp_file.name
-                temp_file.close()
-
-                # 复制原文件
-                shutil.copy2(str(file_path), temp_path)
-
-                # 尝试修改临时文件
-                wb = openpyxl.load_workbook(temp_path)
-                props = wb.properties
-                props.subject = summary
-                props.keywords = ', '.join(tags)
-                props.description = summary
-                wb.save(temp_path)
-
-                # 替换原文件
-                shutil.move(temp_path, str(file_path))
-                return True, "成功（临时文件模式）"
-            except Exception as e3:
-                logging.error(f"所有方法均失败: {e1} | {e2} | {e3}")
-                return False, f"兼容性问题: {str(e1)[:50]}"
-
-
-def process_single_file(file_info, file_mapping, skip_existing=True):
-    """处理单个文件"""
-    file_id = file_info['id']
-    summary = file_info.get('summary', '')
-    tags = file_info.get('tags', [])
-    filename = file_info.get('filename', 'Unknown')
-
-    # 【防污染阻断】如果发现有 LLM 占位符，抛弃当前操作，保护原文档
-    if "PENDING_LLM_GENERATION" in summary or "LLM_PENDING" in tags:
-        return {
-            'filename': filename,
-            'status': 'skip',
-            'reason': '阻断：存在未解析的大模型占位标记'
-        }
-
-    # 获取文件路径
-    if file_id not in file_mapping:
-        return {
-            'filename': filename,
-            'status': 'skip',
-            'reason': '文件ID未找到'
-        }
-
-    file_path = Path(file_mapping[file_id])
-
-    if not file_path.exists():
-        return {
-            'filename': filename,
-            'status': 'skip',
-            'reason': '文件不存在'
-        }
-
-    # 检查是否已有元数据（增量处理）
-    if skip_existing and has_metadata(file_path):
-        return {
-            'filename': filename,
-            'status': 'skip',
-            'reason': '已有元数据'
-        }
-
-    # 根据文件类型应用元数据
-    ext = file_path.suffix.lower()
-
-    if ext == '.pdf':
-        success, msg = apply_pdf_metadata(file_path, summary, tags)
-    elif ext == '.docx':
-        success, msg = apply_docx_metadata(file_path, summary, tags)
-    elif ext == '.pptx':
-        success, msg = apply_pptx_metadata(file_path, summary, tags)
-    elif ext == '.xlsx':
-        success, msg = apply_xlsx_metadata_safe(file_path, summary, tags)
-    else:
-        return {
-            'filename': filename,
-            'status': 'skip',
-            'reason': '不支持的文件类型'
-        }
-
-    if success:
-        return {
-            'filename': filename,
-            'status': 'success',
-            'reason': msg
-        }
-    else:
-        return {
-            'filename': filename,
-            'status': 'fail',
-            'reason': msg
-        }
-
-
-def apply_metadata_parallel(summaries, file_mapping, max_workers=5, skip_existing=True):
-    """并行处理文档元数据"""
-    results = {
-        'success': [],
-        'fail': [],
-        'skip': []
-    }
-
-    print(f"\n开始并行处理 (工作线程: {max_workers})...\n")
-
-    with ThreadPoolExecutor(max_workers=max_workers) as executor:
-        # 提交所有任务
-        futures = {
-            executor.submit(process_single_file, file_info, file_mapping, skip_existing): file_info
-            for file_info in summaries
-        }
-
-        # 处理完成的任务
-        completed = 0
-        total = len(summaries)
-
-        for future in as_completed(futures):
-            completed += 1
-            file_info = futures[future]
-
-            try:
-                result = future.result()
-
-                if result['status'] == 'success':
-                    results['success'].append(result)
-                    print(f"[{completed}/{total}] ✓ {result['filename']}")
-                    logging.info(f"成功: {result['filename']} - {result['reason']}")
-                elif result['status'] == 'fail':
-                    results['fail'].append(result)
-                    print(f"[{completed}/{total}] ✗ {result['filename']} ({result['reason'][:30]}...)")
-                    logging.error(f"失败: {result['filename']} - {result['reason']}")
-                else:
-                    results['skip'].append(result)
-                    if completed % 50 == 0:
-                        print(f"[{completed}/{total}] ⊘ {result['filename']} ({result['reason']})")
-                    logging.debug(f"跳过: {result['filename']} - {result['reason']}")
-
-            except Exception as e:
-                results['fail'].append({
-                    'filename': file_info['filename'],
-                    'status': 'fail',
-                    'reason': f'异常: {str(e)}'
-                })
-                print(f"[{completed}/{total}] ✗ {file_info['filename']} (异常: {str(e)[:30]}...)")
-                logging.exception(f"异常: {file_info['filename']}")
-
-            # 每100个显示进度
-            if completed % 100 == 0:
-                print(f"\n--- 进度: {completed}/{total} ({completed*100//total}%) ---")
-                print(f"    成功: {len(results['success'])} | 失败: {len(results['fail'])} | 跳过: {len(results['skip'])}\n")
-
-    return results
-
-
-def main():
-    parser = argparse.ArgumentParser(description='优化版元数据应用器')
-    parser.add_argument('--summaries', required=True, help='摘要JSON文件路径')
-    parser.add_argument('--mapping', required=True, help='文件ID映射JSON路径')
-    parser.add_argument('--workers', type=int, default=5, help='并行工作线程数 (默认: 5)')
-    parser.add_argument('--force', action='store_true', help='强制处理所有文件，包括已有元数据的')
-    parser.add_argument('--log-dir', default='.', help='日志文件保存目录')
+def main() -> int:
+    parser = argparse.ArgumentParser(description="Preview or apply document metadata")
+    parser.add_argument("--summaries", required=True, type=Path)
+    parser.add_argument("--mapping", required=True, type=Path)
+    parser.add_argument("--backup-dir", type=Path)
+    parser.add_argument("--apply", action="store_true")
+    parser.add_argument("--overwrite-existing", action="store_true")
     args = parser.parse_args()
+    if args.apply and not args.backup_dir:
+        print("ERROR[authorization]: --apply requires --backup-dir", file=sys.stderr)
+        return 2
 
-    # 设置日志
-    log_file = setup_logging(args.log_dir)
-    print(f"日志文件: {log_file}\n")
+    try:
+        proposed = load_inputs(args.summaries, args.mapping)
+        preview = [
+            {
+                "id": item["id"],
+                "path": str(item["path"].resolve()),
+                "subject": item["summary"],
+                "keywords": item["tags"],
+            }
+            for item in proposed
+        ]
+        print(json.dumps({"mode": "apply" if args.apply else "preview", "changes": preview}, ensure_ascii=False, indent=2))
+        if not args.apply:
+            print("PREVIEW_ONLY: add --apply --backup-dir <dir> after review")
+            return 0
 
-    # 读取摘要数据
-    print("正在读取摘要数据...")
-    with open(args.summaries, "r", encoding="utf-8") as f:
-        summaries = json.load(f)
-
-    # 读取文件映射
-    with open(args.mapping, "r", encoding="utf-8") as f:
-        file_mapping = json.load(f)
-
-    print(f"共有 {len(summaries)} 个文档需要应用元数据")
-
-    # 增量处理模式
-    skip_existing = not args.force
-    print(f"增量处理模式: {'开启' if skip_existing else '关闭'} {'(将跳过已有元数据的文件)' if skip_existing else '(将处理所有文件)'}\n")
-
-    # 并行应用元数据
-    results = apply_metadata_parallel(
-        summaries,
-        file_mapping,
-        max_workers=args.workers,
-        skip_existing=skip_existing
-    )
-
-    # 显示总结
-    print("\n" + "="*60)
-    print("应用元数据完成！")
-    print("="*60)
-    print(f"✓ 成功: {len(results['success'])} 个文档")
-    print(f"✗ 失败: {len(results['fail'])} 个文档")
-    print(f"⊘ 跳过: {len(results['skip'])} 个文档")
-    print(f"总计: {len(summaries)} 个文档")
-    print("="*60)
-
-    # 保存失败列表
-    if results['fail']:
-        fail_file = Path(args.log_dir) / "metadata_application_failures.json"
-        with open(fail_file, "w", encoding="utf-8") as f:
-            json.dump(results['fail'], f, ensure_ascii=False, indent=2)
-        print(f"\n失败文件列表已保存到: {fail_file}")
-
-    print(f"\n详细日志已保存到: {log_file}")
-
-    # 返回退出码
-    return 0 if len(results['fail']) == 0 else 1
+        args.backup_dir.mkdir(parents=True, exist_ok=True)
+        for item in proposed:
+            if has_metadata(item["path"]) and not args.overwrite_existing:
+                raise ValueError(
+                    f"source already has metadata: {item['path']}; use --overwrite-existing explicitly"
+                )
+            digest = hashlib.sha256(str(item["path"].resolve()).encode("utf-8")).hexdigest()[:12]
+            backup = args.backup_dir / f"{digest}_{item['path'].name}"
+            if backup.exists():
+                raise ValueError(f"backup already exists: {backup}")
+            shutil.copy2(item["path"], backup)
+            write_metadata(item["path"], item["summary"], item["tags"])
+        print(f"APPLY_PASS: {len(proposed)} source files changed; backups: {args.backup_dir.resolve()}")
+    except (OSError, UnicodeError, json.JSONDecodeError, ValueError, ImportError) as exc:
+        print(f"ERROR[metadata]: {exc}", file=sys.stderr)
+        return 1
+    return 0
 
 
 if __name__ == "__main__":
-    sys.exit(main())
+    raise SystemExit(main())
