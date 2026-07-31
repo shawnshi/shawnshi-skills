@@ -1,7 +1,7 @@
 ## 2026-06-22 - Avoiding pandas iterrows in dictionary comprehensions
 **Learning:** Using `df.iterrows()` inside dictionary comprehensions creates significant overhead by instantiating new Series objects for each row, making it extremely slow for large datasets.
 **Action:** Use vectorized iterations like `zip(df['key_col'], df['val_col'])` instead, which iterate over underlying NumPy arrays and are significantly faster.
-## $(date +%Y-%m-%d) - Avoiding pandas apply with axis=1 for performance
+## 2024-07-31 - Avoiding pandas apply with axis=1 for performance
 **Learning:** Using `.apply(..., axis=1)` to perform row-by-row computations in Pandas DataFrames is extremely inefficient and slow, acting as a significant performance bottleneck for large datasets compared to using underlying vectorized C/NumPy operations.
 **Action:** Replace `df.apply(..., axis=1)` with vectorized column arithmetic and built-in Pandas/NumPy methods (such as `.clip(lower=0)` as a vectorized alternative to `max(0, x)`) to achieve massive performance gains.
 
@@ -23,3 +23,6 @@
 ## 2026-07-19 - Avoiding sequential outer category fetching for API aggregators
 **Learning:** Even if individual network category fetches (like sleep, hrv) use concurrency internally for fetching multiple days, grouping them sequentially at the top level forces sequential blocking on network I/O per category, leading to substantial overhead and poor parallelism.
 **Action:** Use a `ThreadPoolExecutor` to dispatch these top-level category requests concurrently, drastically overlapping latency across independent domain models.
+## 2024-07-31 - Avoiding statistics.mean for simple averages
+**Learning:** In Python, computing the average of a list using `statistics.mean(lst)` is significantly slower than using the built-in `sum(lst) / len(lst)` due to the overhead of internal type checking and fraction conversions within the `statistics` module.
+**Action:** For simple averages where numerical stability or high precision is not an issue, prefer `sum(lst) / len(lst)` for substantial performance gains.
