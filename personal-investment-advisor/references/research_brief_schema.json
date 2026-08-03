@@ -1,6 +1,6 @@
 {
   "resource_kind": "research_brief_contract",
-  "version": "1.0",
+  "version": "1.1",
   "required_top_level": [
     "research_id",
     "instrument",
@@ -42,7 +42,8 @@
   "enums": {
     "market": ["CN", "HK", "US"],
     "asset_type": ["stock", "etf", "fund", "index", "other"],
-    "decision_scope": ["research_only", "portfolio_context"],
+    "decision_scope": ["research_only"],
+    "industry_type": ["operating_company", "bank", "insurance", "other", "unknown"],
     "dual_trigger_policy": ["conservative", "exclude"],
     "source_tier": [
       "company_primary",
@@ -53,6 +54,35 @@
       "secondary",
       "user_authorized"
     ]
+  },
+  "market_currency": {
+    "CN": "CNY",
+    "HK": "HKD",
+    "US": "USD"
+  },
+  "strong_types": {
+    "non_empty_string_fields": [
+      "research_id",
+      "method_profile",
+      "research_question",
+      "market_consensus",
+      "core_hypothesis",
+      "instrument.symbol",
+      "instrument.market",
+      "instrument.asset_type",
+      "instrument.currency",
+      "benchmark.symbol",
+      "benchmark.market",
+      "benchmark.currency"
+    ],
+    "string_list_fields": [
+      "falsification_conditions",
+      "key_variables",
+      "source_policy.allowed_source_tiers",
+      "output_contract.required_scenarios"
+    ],
+    "currency_pattern": "^[A-Z]{3}$",
+    "investment_horizon_days": "positive_integer_excluding_boolean"
   },
   "key_variable_limits": {
     "minimum": 1,

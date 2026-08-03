@@ -9,6 +9,8 @@ from typing import Any
 import pandas as pd
 import yfinance as yf
 
+from portfolio_loader import is_cash_position, validate_portfolio_payload
+
 
 REQUIRED_POLICY_FIELDS = (
     "bucket_targets",
@@ -82,15 +84,37 @@ def recalculate_all_weights(
         raise ValueError("filepath is required")
     path = Path(filepath)
     data = json.loads(path.read_text(encoding="utf-8"))
+    validation_errors = validate_portfolio_payload(data)
+    if validation_errors:
+        raise ValueError(
+            "invalid positions file: " + "; ".join(validation_errors)
+        )
     positions = data.get("positions")
     if not isinstance(positions, list) or not positions:
         raise ValueError("positions must be a non-empty list")
 
     warnings: list[str] = []
+    active_positions: list[dict[str, Any]] = []
+    inactive_symbols: list[str] = []
+    for position in positions:
+        quantity = _finite(position.get("quantity"))
+        if quantity == 0:
+            inactive_symbols.append(str(position.get("symbol") or "UNKNOWN"))
+            position["current_weight"] = 0.0
+            position.pop("target_weight", None)
+            position.pop("max_weight", None)
+        else:
+            active_positions.append(position)
+    if inactive_symbols:
+        warnings.append(
+            "inactive zero-quantity records were excluded from weight calculations: "
+            + ", ".join(inactive_symbols)
+        )
+
     symbols = [
         str(position.get("symbol"))
-        for position in positions
-        if position.get("market_type") != "CASH" and position.get("symbol")
+        for position in active_positions
+        if not is_cash_position(position) and position.get("symbol")
     ]
     prices: dict[str, float] = {}
     if symbols:
@@ -104,7 +128,7 @@ def recalculate_all_weights(
                     prices[symbol] = float(series.iloc[-1])
 
     values: list[float | None] = []
-    for position in positions:
+    for position in active_positions:
         quantity = _finite(position.get("quantity"))
         if quantity is None or quantity < 0:
             values.append(None)
@@ -116,7 +140,7 @@ def recalculate_all_weights(
             values.append(None)
             warnings.append(str(exc))
             continue
-        if position.get("market_type") == "CASH":
+        if is_cash_position(position):
             price = 1.0
         else:
             price = prices.get(str(position.get("symbol")))
@@ -130,7 +154,7 @@ def recalculate_all_weights(
 
     if all(value is not None for value in values) and sum(values) > 0:
         total = float(sum(values))
-        for position, value in zip(positions, values):
+        for position, value in zip(active_positions, values):
             position["current_weight"] = round(float(value) / total, 6)
         current_weight_status = "computed"
     else:
@@ -141,6 +165,7 @@ def recalculate_all_weights(
         data["_rebalance"] = {
             "status": "current_weights_only_policy_missing",
             "target_weights_computed": False,
+            "inactive_zero_quantity_symbols": inactive_symbols,
             "warnings": warnings
             + ["No rebalance policy supplied; target_weight and max_weight were not calculated."],
         }
@@ -158,12 +183,12 @@ def recalculate_all_weights(
         for bucket, bucket_target in bucket_targets.items():
             bucket_positions = [
                 position
-                for position in positions
+                for position in active_positions
                 if position.get("allocation_bucket") == bucket
             ]
             if not bucket_positions:
                 raise ValueError(f"policy bucket {bucket!r} has no positions")
-            if all(position.get("market_type") == "CASH" for position in bucket_positions):
+            if all(is_cash_position(position) for position in bucket_positions):
                 equal = bucket_target / len(bucket_positions)
                 for position in bucket_positions:
                     targets[str(position["symbol"])] = equal
@@ -189,7 +214,7 @@ def recalculate_all_weights(
             for symbol, value in inverse_vol.items():
                 targets[symbol] = value / denominator * bucket_target
 
-        for position in positions:
+        for position in active_positions:
             symbol = str(position.get("symbol"))
             if symbol not in targets:
                 raise ValueError(
@@ -203,6 +228,7 @@ def recalculate_all_weights(
             "current_weight_status": current_weight_status,
             "target_weights_computed": True,
             "policy": policy,
+            "inactive_zero_quantity_symbols": inactive_symbols,
             "warnings": warnings,
         }
 

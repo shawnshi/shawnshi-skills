@@ -2,14 +2,14 @@
 Yahoo Finance Data Retrieval Engine
 ====================================
 @Input:  Ticker symbols or company names (List[str]), CLI options
-@Output: Financial data (JSON to stdout, or Rich table to console)
+@Output: Financial data and optional portfolio batch audit (JSON to stdout, or Rich table to console)
 @Pos:    scripts/yf.py
 
 !!! Maintenance Protocol: If API schema or dependency (yfinance) changes,
 !!! update this header AND SKILL.md usage examples.
 """
 
-__version__ = "2.0.0"
+__version__ = "2.2.0"
 
 # /// script
 # dependencies = [
@@ -26,9 +26,10 @@ __version__ = "2.0.0"
 import argparse
 import sys
 import json
+import math
 import re
 import time
-from datetime import datetime
+from datetime import date, datetime
 from typing import List, Optional, Dict, Any, Tuple
 
 import pandas as pd
@@ -39,7 +40,13 @@ from rich.console import Console
 from rich.table import Table
 from rich.panel import Panel
 
-from portfolio_loader import build_portfolio_package
+from portfolio_loader import (
+    build_portfolio_package,
+    is_cash_position,
+    load_positions,
+    normalize_symbol,
+)
+from history_integrity_gate import evaluate_history_integrity
 
 console = Console(stderr=True)
 
@@ -48,8 +55,10 @@ console = Console(stderr=True)
 # Core info fields returned in JSON mode by default.
 # Use --full-info to get the complete raw dict from yfinance.
 INFO_KEYS_DEFAULT = [
-    "longName", "shortName", "symbol", "exchange",
-    "currency", "currentPrice", "previousClose",
+    "longName", "shortName", "symbol", "exchange", "exchangeName",
+    "currency", "currentPrice", "regularMarketPrice", "previousClose",
+    "regularMarketTime", "quoteType", "exchangeTimezoneName",
+    "marketState", "tradeable",
     "marketCap", "sector", "industry",
     "trailingPE", "forwardPE", "dividendYield",
     "priceToBook", "returnOnEquity", "operatingMargins",
@@ -62,6 +71,8 @@ INFO_KEYS_DEFAULT = [
 MAX_RETRIES = 2
 RETRY_BACKOFF_BASE = 1.5  # seconds
 REQUEST_TIMEOUT = 10  # seconds for search API
+MAX_QUOTE_AGE_SECONDS = 7 * 24 * 60 * 60
+MAX_QUOTE_FUTURE_SKEW_SECONDS = 60 * 60
 
 # Regex: all uppercase letters, digits, dots, dashes (e.g. AAPL, BRK-B, 0700.HK)
 TICKER_PATTERN = re.compile(r'^[A-Z0-9][A-Z0-9.\-]{0,11}$')
@@ -153,6 +164,7 @@ def get_stock_data(
     fetch_price: bool = True,
     fetch_info: bool = True,
     fetch_news: bool = True,
+    a_share_history_source: str = "yahoo",
 ) -> Tuple[Any, Dict, List, List[str]]:
     """Fetch stock data with granular control. Returns (history, info, news, errors)."""
     ticker = yf.Ticker(symbol)
@@ -188,7 +200,11 @@ def get_stock_data(
                 is_a_share = symbol.endswith(".SS") or symbol.endswith(".SZ") or symbol.endswith(".BJ")
                 is_daily = not interval or interval in ["1d", "1wk", "1mo"]
                 
-                if is_a_share and is_daily and False:
+                if (
+                    is_a_share
+                    and is_daily
+                    and a_share_history_source in {"akshare", "auto"}
+                ):
                     try:
                         from akshare_fetcher import StandaloneDataFetcher
                         fetcher = StandaloneDataFetcher()
@@ -198,14 +214,26 @@ def get_stock_data(
                         end_date = kwargs.get('end', None)
                         df = fetcher.get_history(code, start_date=start_date, end_date=end_date)
                         if not df.empty:
+                            df.attrs["pia_source"] = "Akshare"
+                            df.attrs["pia_source_locator"] = "akshare:stock_zh_a_hist"
+                            df.attrs["pia_adjustment"] = "qfq"
                             console.print(f"[green]✓ A-share history synchronized for {symbol}[/green]")
                             return df
                         else:
+                            if a_share_history_source == "akshare":
+                                raise ValueError("Akshare returned empty A-share history")
                             console.print(f"[yellow]⚠ Akshare returned empty history for {symbol}, falling back to Yahoo[/yellow]")
                     except Exception as e:
+                        if a_share_history_source == "akshare":
+                            raise
                         console.print(f"[yellow]⚠ A-share history fallback failed for {symbol}: {e}. Trying Yahoo Finance...[/yellow]")
-                        
-                return ticker.history(**kwargs)
+
+                yahoo_history = ticker.history(**kwargs)
+                if yahoo_history is not None:
+                    yahoo_history.attrs["pia_source"] = "Yahoo Finance"
+                    yahoo_history.attrs["pia_source_locator"] = f"yfinance:{symbol}:history"
+                    yahoo_history.attrs["pia_adjustment"] = "provider_default"
+                return yahoo_history
                 
             history = _retry(_fetch_hist, label=f"price history for {symbol}")
         except Exception as e:
@@ -285,6 +313,611 @@ def extract_catalyst_map(news_items: List[Dict[str, Any]], earnings_snapshot: Di
         "active": active,
         "broken": broken,
         "data_gaps": data_gaps,
+    }
+
+
+def _has_quote_result(result: Dict[str, Any]) -> bool:
+    candidates = [
+        (result.get("summary") or {}).get("last_close"),
+        (result.get("info") or {}).get("currentPrice"),
+        (result.get("info") or {}).get("regularMarketPrice"),
+        (result.get("portfolio_context") or {}).get("current_price"),
+    ]
+    for value in candidates:
+        if isinstance(value, bool):
+            continue
+        try:
+            if (
+                value is not None
+                and math.isfinite(float(value))
+                and float(value) > 0
+            ):
+                return True
+        except (TypeError, ValueError):
+            continue
+    return False
+
+
+def _positive_finite_number(value: Any) -> Optional[float]:
+    """Return a positive finite float without changing its market precision."""
+    if isinstance(value, bool):
+        return None
+    try:
+        number = float(value)
+    except (TypeError, ValueError):
+        return None
+    if not math.isfinite(number) or number <= 0:
+        return None
+    return number
+
+
+def select_portfolio_current_price(history: Any, info: Dict[str, Any]) -> Optional[float]:
+    """Select an unrounded market price for portfolio valuation.
+
+    Summary values are intentionally presentation-oriented and rounded. They must
+    never flow back into position market value or unrealized P/L calculations.
+    """
+    for key in ("regularMarketPrice", "currentPrice"):
+        price = _positive_finite_number((info or {}).get(key))
+        if price is not None:
+            return price
+
+    if history is not None and not getattr(history, "empty", True):
+        try:
+            price = _positive_finite_number(history["Close"].iloc[-1])
+        except (KeyError, IndexError, TypeError, AttributeError):
+            price = None
+        if price is not None:
+            return price
+    return None
+
+
+def _expected_position_metadata(
+    portfolio_payload: Optional[Dict[str, Any]],
+) -> Dict[str, Dict[str, Any]]:
+    """Build the active, non-cash identity contract used by a strict batch audit."""
+    if not portfolio_payload or portfolio_payload.get("_status") != "ok":
+        return {}
+    return {
+        normalize_symbol(position.get("symbol") or ""): {
+            "symbol": normalize_symbol(position.get("symbol") or ""),
+            "name": position.get("name"),
+            "currency": str(position.get("currency") or "").strip().upper(),
+            "market_type": position.get("market_type"),
+            "asset_type": position.get("asset_type"),
+        }
+        for position in portfolio_payload.get("positions", [])
+        if not is_cash_position(position)
+        and normalize_symbol(position.get("symbol") or "")
+    }
+
+
+def _expected_market(symbol: str, position: Optional[Dict[str, Any]]) -> Optional[str]:
+    normalized_symbol = normalize_symbol(symbol)
+    if normalized_symbol.endswith(".SS"):
+        return "CN_SH"
+    if normalized_symbol.endswith(".SZ"):
+        return "CN_SZ"
+    if normalized_symbol.endswith(".BJ"):
+        return "CN_BJ"
+    if normalized_symbol.endswith(".HK"):
+        return "HK"
+
+    market_type = re.sub(
+        r"[^A-Z0-9\u4e00-\u9fff]+",
+        "",
+        str((position or {}).get("market_type") or "").upper(),
+    )
+    if any(token in market_type for token in ("ASHARE", "A股", "CN", "CHINA")):
+        return "CN"
+    if any(token in market_type for token in ("HK", "港股", "HONGKONG")):
+        return "HK"
+    if any(token in market_type for token in ("US", "美股")):
+        return "US"
+    # Unsuffixed Yahoo tickers in this portfolio contract are US-listed.
+    if normalized_symbol and "." not in normalized_symbol:
+        return "US"
+    return None
+
+
+def _provider_market(exchange: Any) -> Optional[str]:
+    value = re.sub(r"[^A-Z0-9]+", "", str(exchange or "").upper())
+    if not value:
+        return None
+    if value in {"SHH", "SSE", "XSHG"} or "SHANGHAI" in value:
+        return "CN_SH"
+    if value in {"SHZ", "SZSE", "XSHE"} or "SHENZHEN" in value:
+        return "CN_SZ"
+    if value in {"BJE", "BJI", "BJSE"} or "BEIJING" in value:
+        return "CN_BJ"
+    if value in {"HKG", "HKSE", "XHKG"} or "HONGKONG" in value:
+        return "HK"
+    if (
+        value in {
+            "NMS", "NAS", "NGM", "NCM", "NYQ", "NYSE", "ASE", "AMEX",
+            "PCX", "ARCA", "BTS", "BATS", "IEX", "PNK", "OTC",
+        }
+        or "NASDAQ" in value
+        or value.startswith("NYSE")
+    ):
+        return "US"
+    return None
+
+
+def _markets_compatible(expected: Optional[str], actual: Optional[str]) -> bool:
+    if expected is None or actual is None:
+        return False
+    if expected == "CN":
+        return actual.startswith("CN_")
+    return expected == actual
+
+
+def _expected_asset_kind(position: Optional[Dict[str, Any]]) -> Optional[str]:
+    if not position:
+        return None
+    raw = " ".join(
+        str(position.get(key) or "")
+        for key in ("asset_type", "market_type", "name")
+    ).upper()
+    if "ETF" in raw or "交易型开放式" in raw:
+        return "ETF"
+    if "INDEX" in raw or "指数" in raw:
+        return "INDEX"
+    if "FUND" in raw or "基金" in raw:
+        return "FUND"
+    if any(token in raw for token in ("STOCK", "SHARE", "EQUITY", "A股", "美股", "港股")):
+        return "EQUITY"
+    return None
+
+
+def load_history_integrity_packets(path: Optional[str]) -> Dict[str, Dict[str, Any]]:
+    """Load source-backed ETF history-integrity packets keyed by normalized symbol.
+
+    A file may contain either one packet or ``{"symbols": {symbol: packet}}``.
+    Invalid containers fail closed instead of silently behaving like an empty file.
+    """
+    if not path:
+        return {}
+    from pathlib import Path
+
+    payload = json.loads(Path(path).expanduser().read_text(encoding="utf-8"))
+    if not isinstance(payload, dict):
+        raise ValueError("history integrity file must contain a JSON object")
+    if "symbols" in payload:
+        packets = payload.get("symbols")
+        if not isinstance(packets, dict):
+            raise ValueError("history integrity file symbols must be an object")
+    elif payload.get("symbol"):
+        packets = {payload.get("symbol"): payload}
+    else:
+        raise ValueError(
+            "history integrity file must contain one packet or a symbols object"
+        )
+
+    normalized: Dict[str, Dict[str, Any]] = {}
+    for symbol, packet in packets.items():
+        normalized_symbol = normalize_symbol(symbol or "")
+        if not normalized_symbol or not isinstance(packet, dict):
+            raise ValueError("every history integrity packet must have a symbol and object value")
+        normalized[normalized_symbol] = packet
+    return normalized
+
+
+def history_integrity_decision(
+    symbol: str,
+    info: Optional[Dict[str, Any]],
+    expected_position: Optional[Dict[str, Any]],
+    packets: Optional[Dict[str, Dict[str, Any]]],
+    history: Optional[pd.DataFrame] = None,
+) -> Dict[str, Any]:
+    """Decide whether derived technical metrics may be emitted for one symbol."""
+    normalized_symbol = normalize_symbol(symbol or "")
+    expected_kind = _expected_asset_kind(expected_position)
+    provider_kind = _provider_asset_kind((info or {}).get("quoteType"))
+    provider_identity = " ".join(
+        str((info or {}).get(field) or "")
+        for field in ("longName", "shortName", "category", "fundFamily")
+    ).upper()
+    provider_name_identifies_etf = (
+        "ETF" in provider_identity or "交易型开放式" in provider_identity
+    )
+    if (
+        expected_kind != "ETF"
+        and provider_kind != "ETF"
+        and not provider_name_identifies_etf
+    ):
+        if expected_kind is None and provider_kind is None:
+            return {
+                "status": "insufficient_evidence",
+                "detail_status": "asset_identity_unknown",
+                "technical_metrics_allowed": False,
+                "symbol": normalized_symbol or None,
+                "errors": ["history_integrity_asset_identity_unknown"],
+                "event_mismatches": {},
+            }
+        return {
+            "status": "not_applicable",
+            "detail_status": "verified_non_etf_identity",
+            "technical_metrics_allowed": True,
+            "symbol": normalized_symbol or None,
+            "errors": [],
+            "event_mismatches": {},
+        }
+
+    packet = (packets or {}).get(normalized_symbol)
+    if packet is None:
+        return {
+            "status": "insufficient_data",
+            "detail_status": "history_integrity_packet_missing",
+            "technical_metrics_allowed": False,
+            "symbol": normalized_symbol or None,
+            "errors": ["history_integrity_packet_missing"],
+            "event_mismatches": {},
+        }
+
+    report = evaluate_history_integrity(packet)
+    if normalize_symbol(report.get("symbol") or "") != normalized_symbol:
+        errors = list(report.get("errors") or [])
+        errors.append("history_integrity_symbol_mismatch")
+        return {
+            **report,
+            "status": "invalid",
+            "detail_status": "history_integrity_symbol_mismatch",
+            "technical_metrics_allowed": False,
+            "errors": list(dict.fromkeys(errors)),
+        }
+    if not report.get("packet_verified"):
+        return report
+
+    if history is None or history.empty:
+        return {
+            **report,
+            "status": "insufficient_data",
+            "detail_status": "history_series_missing",
+            "technical_metrics_allowed": False,
+            "errors": ["history_series_missing_for_integrity_binding"],
+        }
+    try:
+        history_end = pd.Timestamp(history.index.max()).date()
+    except (TypeError, ValueError, AttributeError):
+        return {
+            **report,
+            "status": "insufficient_data",
+            "detail_status": "history_series_date_invalid",
+            "technical_metrics_allowed": False,
+            "errors": ["history_series_end_date_invalid"],
+        }
+    try:
+        packet_as_of = date.fromisoformat(str(packet.get("as_of_date") or "").strip())
+    except ValueError:
+        packet_as_of = None
+
+    binding_errors = []
+    if packet_as_of is None or packet_as_of < history_end:
+        binding_errors.append("history_integrity_packet_does_not_cover_series_end")
+    history_attrs = history.attrs if isinstance(history.attrs, dict) else {}
+    binding_fields = (
+        ("provider_source", "pia_source"),
+        ("provider_source_locator", "pia_source_locator"),
+        ("provider_adjustment", "pia_adjustment"),
+    )
+    for packet_field, history_field in binding_fields:
+        expected = packet.get(packet_field)
+        actual = history_attrs.get(history_field)
+        if not isinstance(actual, str) or not actual.strip():
+            binding_errors.append(f"history_series_missing_{history_field}")
+        elif not isinstance(expected, str) or expected.strip().casefold() != actual.strip().casefold():
+            binding_errors.append(f"history_integrity_{packet_field}_mismatch")
+    if binding_errors:
+        return {
+            **report,
+            "status": "invalid",
+            "detail_status": "history_series_binding_mismatch",
+            "technical_metrics_allowed": False,
+            "errors": binding_errors,
+            "history_binding": {
+                "history_end_date": history_end.isoformat(),
+                "packet_as_of_date": packet.get("as_of_date"),
+            },
+        }
+    return {
+        **report,
+        "status": "ok",
+        "detail_status": "series_bound_verified",
+        "technical_metrics_allowed": True,
+        "authorization_scope": "packet_and_runtime_series",
+        "history_binding": {
+            "history_end_date": history_end.isoformat(),
+            "packet_as_of_date": packet.get("as_of_date"),
+            "provider_source": history_attrs.get("pia_source"),
+            "provider_source_locator": history_attrs.get("pia_source_locator"),
+            "provider_adjustment": history_attrs.get("pia_adjustment"),
+        },
+    }
+
+
+def _provider_asset_kind(quote_type: Any) -> Optional[str]:
+    normalized = re.sub(r"[^A-Z]", "", str(quote_type or "").upper())
+    return {
+        "EQUITY": "EQUITY",
+        "ETF": "ETF",
+        "MUTUALFUND": "FUND",
+        "FUND": "FUND",
+        "INDEX": "INDEX",
+    }.get(normalized)
+
+
+def _quote_contract_report(
+    result: Dict[str, Any],
+    expected_position: Optional[Dict[str, Any]],
+    *,
+    now_epoch: float,
+    max_quote_age_seconds: int,
+) -> Dict[str, Any]:
+    """Validate quote identity and freshness against one portfolio position."""
+    errors: List[str] = []
+    warnings: List[str] = []
+    info = result.get("info") if isinstance(result.get("info"), dict) else {}
+    result_symbol = normalize_symbol(result.get("symbol") or "")
+    expected_symbol = normalize_symbol(
+        (expected_position or {}).get("symbol") or result_symbol
+    )
+
+    if result.get("error") or result.get("errors"):
+        errors.append("result_errors_present")
+
+    raw_price_fields = ("regularMarketPrice", "currentPrice")
+    if not any(
+        _positive_finite_number(info.get(field)) is not None
+        for field in raw_price_fields
+    ):
+        if any(field in info for field in raw_price_fields):
+            errors.append("invalid_info.current_market_price")
+        else:
+            errors.append("missing_info.current_market_price")
+
+    provider_symbol = normalize_symbol(info.get("symbol") or "")
+    if not provider_symbol:
+        errors.append("missing_info.symbol")
+    elif provider_symbol != expected_symbol:
+        errors.append("identity_mismatch.symbol")
+
+    exchanges = [
+        value
+        for value in (info.get("exchange"), info.get("exchangeName"))
+        if value not in (None, "")
+    ]
+    if not exchanges:
+        errors.append("missing_info.exchange_or_exchangeName")
+    else:
+        expected_market = _expected_market(expected_symbol, expected_position)
+        if not any(
+            _markets_compatible(expected_market, _provider_market(exchange))
+            for exchange in exchanges
+        ):
+            errors.append("identity_mismatch.exchange")
+
+    currency = str(info.get("currency") or "").strip().upper()
+    if not currency:
+        errors.append("missing_info.currency")
+    else:
+        expected_currency = str(
+            (expected_position or {}).get("currency") or ""
+        ).strip().upper()
+        if not expected_currency:
+            errors.append("missing_position.currency")
+        elif currency != expected_currency:
+            errors.append("identity_mismatch.currency")
+
+    quote_type = info.get("quoteType")
+    provider_kind = _provider_asset_kind(quote_type)
+    expected_kind = _expected_asset_kind(expected_position)
+    if not quote_type:
+        errors.append("missing_info.quoteType")
+    elif expected_kind is None:
+        errors.append("missing_position.asset_type")
+    elif expected_kind == "ETF" and provider_kind == "EQUITY" and (
+        _expected_market(expected_symbol, expected_position) or ""
+    ).startswith("CN"):
+        # Yahoo commonly classifies Shanghai/Shenzhen ETFs as EQUITY. Accept the
+        # known provider alias only when the portfolio explicitly identifies a
+        # Chinese ETF and the exchange/currency/symbol checks also close.
+        warnings.append("provider_quote_type_alias.cn_etf_as_equity")
+    elif provider_kind != expected_kind:
+        errors.append("identity_mismatch.quoteType")
+
+    market_state = info.get("marketState")
+    if not isinstance(market_state, str) or not market_state.strip():
+        errors.append("missing_info.marketState")
+    elif market_state.strip().upper() not in {
+        "PREPRE", "PRE", "REGULAR", "POST", "POSTPOST", "CLOSED"
+    }:
+        errors.append("invalid_info.marketState")
+
+    quote_epoch = info.get("regularMarketTime")
+    quote_age_seconds = None
+    if isinstance(quote_epoch, bool):
+        errors.append("invalid_info.regularMarketTime")
+    else:
+        try:
+            quote_epoch_number = float(quote_epoch)
+            if not math.isfinite(quote_epoch_number) or quote_epoch_number <= 0:
+                raise ValueError
+            quote_age_seconds = now_epoch - quote_epoch_number
+            if quote_age_seconds < -MAX_QUOTE_FUTURE_SKEW_SECONDS:
+                errors.append("future_info.regularMarketTime")
+            elif quote_age_seconds > max_quote_age_seconds:
+                errors.append("stale_info.regularMarketTime")
+        except (TypeError, ValueError):
+            errors.append("invalid_info.regularMarketTime")
+
+    return {
+        "status": "matched" if not errors else "failed",
+        "errors": errors,
+        "warnings": warnings,
+        "quote_age_seconds": (
+            round(float(quote_age_seconds), 3)
+            if quote_age_seconds is not None
+            else None
+        ),
+    }
+
+
+def list_active_non_cash_symbols(portfolio_payload: Dict[str, Any]) -> List[str]:
+    """Return the strict quote-coverage universe from a validated loader payload."""
+    return [
+        normalize_symbol(position.get("symbol") or "")
+        for position in portfolio_payload.get("positions", [])
+        if not is_cash_position(position)
+        and normalize_symbol(position.get("symbol") or "")
+    ]
+
+
+def build_portfolio_batch_audit(
+    results: List[Dict[str, Any]],
+    requested_count: int,
+    expected_symbols: Optional[List[str]] = None,
+    portfolio_load_status: Optional[str] = None,
+    portfolio_load_error: Optional[str] = None,
+    expected_position_metadata: Optional[Dict[str, Dict[str, Any]]] = None,
+    strict_quote_contract: bool = False,
+    now_epoch: Optional[float] = None,
+    max_quote_age_seconds: int = MAX_QUOTE_AGE_SECONDS,
+) -> Dict[str, Any]:
+    """Summarize quote and position matching without changing the JSON list contract.
+
+    ``strict_quote_contract`` is enabled by the portfolio CLI path. The default
+    remains compatible for internal callers that only request coverage counts.
+    """
+    portfolio_status_counts: Dict[str, int] = {}
+    inactive_symbols = set()
+    resolved_symbols: List[str] = []
+    quote_failed_symbols: List[str] = []
+    unmatched_symbols: List[str] = []
+    quote_success_count = 0
+    portfolio_matched_count = 0
+    quote_contract_matched_count = 0
+    quote_contract_failures: Dict[str, List[str]] = {}
+    quote_contract_warnings: Dict[str, List[str]] = {}
+    result_error_symbols: List[str] = []
+    stale_quote_symbols: List[str] = []
+    position_metadata = {
+        normalize_symbol(symbol): metadata
+        for symbol, metadata in (expected_position_metadata or {}).items()
+        if normalize_symbol(symbol)
+    }
+    audit_epoch = time.time() if now_epoch is None else float(now_epoch)
+
+    for result in results:
+        symbol = normalize_symbol(result.get("symbol") or "")
+        display_symbol = symbol or str(result.get("query") or "UNKNOWN")
+        if symbol:
+            resolved_symbols.append(symbol)
+        if _has_quote_result(result):
+            quote_success_count += 1
+        else:
+            quote_failed_symbols.append(display_symbol)
+
+        if result.get("error") or result.get("errors"):
+            result_error_symbols.append(display_symbol)
+
+        if strict_quote_contract:
+            contract = _quote_contract_report(
+                result,
+                position_metadata.get(symbol),
+                now_epoch=audit_epoch,
+                max_quote_age_seconds=max_quote_age_seconds,
+            )
+            if contract["status"] == "matched":
+                quote_contract_matched_count += 1
+            else:
+                quote_contract_failures[display_symbol] = contract["errors"]
+                if "stale_info.regularMarketTime" in contract["errors"]:
+                    stale_quote_symbols.append(display_symbol)
+            if contract["warnings"]:
+                quote_contract_warnings[display_symbol] = contract["warnings"]
+
+        context = result.get("portfolio_context") or {}
+        status = context.get("position_status") or "unavailable"
+        portfolio_status_counts[status] = portfolio_status_counts.get(status, 0) + 1
+        if status == "matched":
+            portfolio_matched_count += 1
+        else:
+            unmatched_symbols.append(display_symbol)
+
+        summary = result.get("portfolio_summary") or {}
+        inactive_symbols.update(
+            summary.get("inactive_zero_quantity_symbols") or []
+        )
+
+    duplicates = sorted(
+        {
+            symbol
+            for symbol in resolved_symbols
+            if resolved_symbols.count(symbol) > 1
+        }
+    )
+    unique_resolved = set(resolved_symbols)
+    normalized_expected = sorted(
+        {
+            normalize_symbol(symbol)
+            for symbol in (expected_symbols or [])
+            if normalize_symbol(symbol)
+        }
+    )
+    expected_set = set(normalized_expected)
+    missing_requested = sorted(expected_set - unique_resolved)
+    unexpected_requested = sorted(unique_resolved - expected_set) if expected_symbols is not None else []
+    coverage_complete = (
+        not missing_requested and not unexpected_requested
+        if expected_symbols is not None
+        else None
+    )
+
+    complete = (
+        requested_count > 0
+        and len(results) == requested_count
+        and len(resolved_symbols) == requested_count
+        and not duplicates
+        and quote_success_count == requested_count
+        and portfolio_matched_count == requested_count
+        and portfolio_load_error is None
+        and portfolio_load_status == "ok"
+        and coverage_complete is not False
+        and not result_error_symbols
+        and (
+            not strict_quote_contract
+            or quote_contract_matched_count == requested_count
+        )
+    )
+    return {
+        "requested_count": requested_count,
+        "result_record_count": len(results),
+        "resolved_symbol_count": len(resolved_symbols),
+        "unique_resolved_symbol_count": len(unique_resolved),
+        "quote_success_count": quote_success_count,
+        "strict_quote_contract": strict_quote_contract,
+        "quote_contract_matched_count": quote_contract_matched_count,
+        "quote_contract_failures": quote_contract_failures,
+        "quote_contract_warnings": quote_contract_warnings,
+        "result_error_symbols": sorted(set(result_error_symbols)),
+        "stale_quote_symbols": sorted(set(stale_quote_symbols)),
+        "max_quote_age_seconds": max_quote_age_seconds,
+        "portfolio_matched_count": portfolio_matched_count,
+        "returned_symbols": resolved_symbols,
+        "quote_failed_symbols": quote_failed_symbols,
+        "unmatched_symbols": unmatched_symbols,
+        "duplicate_requested_symbols": duplicates,
+        "expected_active_symbols": normalized_expected,
+        "missing_requested_symbols": missing_requested,
+        "unexpected_requested_symbols": unexpected_requested,
+        "coverage_complete": coverage_complete,
+        "portfolio_status_counts": portfolio_status_counts,
+        "inactive_zero_quantity_symbols": sorted(inactive_symbols),
+        "portfolio_load_status": portfolio_load_status,
+        "portfolio_load_error": portfolio_load_error,
+        "complete": complete,
+        "status": "complete" if complete else "incomplete",
     }
 
 
@@ -491,40 +1124,127 @@ def main():
 
     # Granularity flags
     parser.add_argument("--info-only", action="store_true", help="Fetch only company info")
-    parser.add_argument("--price-only", action="store_true", help="Fetch only price history")
+    parser.add_argument(
+        "--price-only",
+        action="store_true",
+        help=(
+            "Fetch price history plus the minimum security identity metadata "
+            "required by the ETF history-integrity gate"
+        ),
+    )
     parser.add_argument("--news-only", action="store_true", help="Fetch only news")
 
     # Output format
     parser.add_argument("--json", action="store_true", help="Output structured JSON to stdout (recommended for agents)")
     parser.add_argument("--lean", action="store_true", help="Agent mode: truncate long price history to save tokens while keeping full summary (Recommended)")
     parser.add_argument("--full-info", action="store_true", help="Include all raw info fields in JSON (default: curated subset)")
-    parser.add_argument("--with-portfolio", action="store_true", help="Attach position context from portfolio_positions.json when available")
+    parser.add_argument(
+        "--with-portfolio",
+        action="store_true",
+        help="Attach position context and a strict quote/match batch audit",
+    )
     parser.add_argument("--positions-file", help="Override portfolio positions file path")
+    parser.add_argument(
+        "--a-share-history-source",
+        choices=["yahoo", "akshare", "auto"],
+        default="yahoo",
+        help=(
+            "A-share daily-history provider. 'akshare' fails closed; 'auto' "
+            "falls back to Yahoo; default keeps Yahoo for compatibility."
+        ),
+    )
+    parser.add_argument(
+        "--a-share-enhanced",
+        action="store_true",
+        help="Fetch optional A-share quote/chip metrics with source-labelled gaps.",
+    )
+    parser.add_argument(
+        "--history-integrity-file",
+        help=(
+            "Source-backed ETF corporate-action packet JSON. ETF technical "
+            "metrics are suppressed unless the packet is verified."
+        ),
+    )
+    parser.add_argument(
+        "--daily-sync",
+        action="store_true",
+        help=(
+            "Emit a lean quote-only portfolio package with one batch audit; "
+            "implies --json and --with-portfolio."
+        ),
+    )
 
     parser.add_argument("--version", action="version", version=f"%(prog)s {__version__}")
 
     args = parser.parse_args()
+
+    if args.daily_sync:
+        args.json = True
+        args.with_portfolio = True
+        args.lean = True
+
+    portfolio_payload = None
+    portfolio_load_status = None
+    portfolio_load_error = None
+    expected_portfolio_symbols = None
+    expected_position_metadata: Dict[str, Dict[str, Any]] = {}
+    if args.with_portfolio:
+        try:
+            portfolio_payload = load_positions(args.positions_file)
+            portfolio_load_status = portfolio_payload.get("_status")
+            if portfolio_load_status == "ok":
+                expected_portfolio_symbols = list_active_non_cash_symbols(
+                    portfolio_payload
+                )
+                expected_position_metadata = _expected_position_metadata(
+                    portfolio_payload
+                )
+        except (OSError, ValueError, json.JSONDecodeError) as exc:
+            portfolio_load_status = "invalid_positions_file"
+            portfolio_load_error = str(exc)
+
+    history_integrity_load_error = None
+    try:
+        history_integrity_packets = load_history_integrity_packets(
+            args.history_integrity_file
+        )
+    except (OSError, ValueError, json.JSONDecodeError) as exc:
+        history_integrity_packets = {}
+        history_integrity_load_error = str(exc)
 
     # Determine what to fetch
     fetch_info = True
     fetch_price = True
     fetch_news = True
 
-    if args.info_only or args.price_only or args.news_only:
-        fetch_info = args.info_only
+    if args.daily_sync:
+        fetch_info = True
+        fetch_price = False
+        fetch_news = False
+    elif args.info_only or args.price_only or args.news_only:
+        # Price history cannot be classified safely without security identity.
+        # In particular, an ETF must not bypass the corporate-action gate just
+        # because --price-only previously disabled the metadata request.
+        fetch_info = args.info_only or args.price_only
         fetch_price = args.price_only
         fetch_news = args.news_only
 
     results = []
-    has_failure = False
+    has_failure = bool(history_integrity_load_error)
     all_failed = True
 
     for query in args.queries:
         if not args.json:
             Console().rule(f"[bold]Processing: {query}[/bold]")
 
-        # 1. Resolve Symbol
-        symbol = resolve_symbol(query)
+        # 1. Resolve Symbol. Daily Sync already has a validated portfolio
+        # identity contract, so re-querying the search/metadata endpoints would
+        # duplicate network calls and could remap a trusted code unexpectedly.
+        normalized_query = normalize_symbol(query)
+        if args.daily_sync and normalized_query in expected_position_metadata:
+            symbol = normalized_query
+        else:
+            symbol = resolve_symbol(query)
 
         if not symbol:
             has_failure = True
@@ -550,13 +1270,38 @@ def main():
             fetch_price=fetch_price,
             fetch_info=fetch_info,
             fetch_news=fetch_news,
+            a_share_history_source=args.a_share_history_source,
         )
 
         if fetch_errors:
             has_failure = True
 
-        # 3. Compute summary stats
-        summary = compute_summary(history) if fetch_price else None
+        # 3. Gate derived ETF metrics against a source-backed action ledger.
+        if fetch_price:
+            history_integrity = history_integrity_decision(
+                symbol,
+                info,
+                expected_position_metadata.get(normalize_symbol(symbol)),
+                history_integrity_packets,
+                history,
+            )
+        else:
+            history_integrity = {
+                "status": "not_applicable",
+                "detail_status": "price_history_not_requested",
+                "technical_metrics_allowed": True,
+                "symbol": normalize_symbol(symbol) or None,
+                "errors": [],
+                "event_mismatches": {},
+                "reason": "price_history_not_requested",
+            }
+        summary = (
+            compute_summary(history)
+            if fetch_price and history_integrity["technical_metrics_allowed"]
+            else None
+        )
+        if fetch_price and not history_integrity["technical_metrics_allowed"]:
+            has_failure = True
 
         if args.json:
             result_entry = {
@@ -564,19 +1309,54 @@ def main():
                 "symbol": symbol,
                 "market_type": detect_market_type(symbol),
                 "data_sources": {
-                    "price": "Yahoo Finance",
+                    "price": (
+                        "Yahoo Finance"
+                        if args.daily_sync
+                        else (
+                            history.attrs.get("pia_source", "Yahoo Finance")
+                            if history is not None
+                            else None
+                        )
+                    ),
+                    "price_locator": (
+                        f"yfinance:{symbol}:quote"
+                        if args.daily_sync
+                        else (
+                            history.attrs.get("pia_source_locator")
+                            if history is not None
+                            else None
+                        )
+                    ),
+                    "price_adjustment": (
+                        history.attrs.get("pia_adjustment")
+                        if history is not None
+                        else None
+                    ),
                     "info": "Yahoo Finance",
                     "news": "Yahoo Finance",
                     "enhanced_metrics": None,
                 },
                 "data_gaps": [],
+                "history_integrity": history_integrity,
             }
+            if history_integrity_load_error:
+                result_entry["history_integrity"]["file_error"] = (
+                    history_integrity_load_error
+                )
             if fetch_info:
                 # Basic info
                 curated_info = filter_info(info, full=args.full_info)
                 
                 # Enhanced A-share info 
-                if symbol and (symbol.endswith(".SS") or symbol.endswith(".SZ") or symbol.endswith(".BJ")) and False:
+                is_a_share_symbol = bool(
+                    symbol
+                    and (
+                        symbol.endswith(".SS")
+                        or symbol.endswith(".SZ")
+                        or symbol.endswith(".BJ")
+                    )
+                )
+                if is_a_share_symbol and args.a_share_enhanced:
                     # e.g., '600519.SS' -> '600519'
                     a_share_code = symbol.split(".")[0]
                     if a_share_code.isdigit() and len(a_share_code) == 6:
@@ -602,6 +1382,8 @@ def main():
                         except Exception as e:
                             # Silently fail or log for agents
                             result_entry["data_gaps"].append(f"A股增强指标获取失败: {e}")
+                elif is_a_share_symbol:
+                    result_entry["data_gaps"].append("A股增强指标未请求")
                 else:
                     result_entry["data_gaps"].append("筹码增强字段不适用(非A股)")
                 
@@ -614,7 +1396,11 @@ def main():
                 result_entry["catalyst_map"] = extract_catalyst_map(result_entry["news"], result_entry.get("earnings_snapshot", {}))
             if fetch_price:
                 result_entry["history"] = []
-                if history is not None and not history.empty:
+                if (
+                    history_integrity["technical_metrics_allowed"]
+                    and history is not None
+                    and not history.empty
+                ):
                     hist_data = history.reset_index()
                     if 'Datetime' in hist_data.columns:
                         hist_data['Date'] = hist_data['Datetime'].dt.strftime('%Y-%m-%d %H:%M:%S')
@@ -647,21 +1433,37 @@ def main():
                     else:
                         result_entry["history"] = hist_data.to_dict(orient='records')
                         result_entry["history_truncated"] = False
+                elif not history_integrity["technical_metrics_allowed"]:
+                    result_entry["history_suppressed"] = True
+                    result_entry["data_gaps"].append(
+                        "ETF复权/公司行动一致性未验证，已停止输出历史衍生技术指标"
+                    )
                         
                 result_entry["summary"] = summary
-                if summary is None:
+                if summary is None and history_integrity["technical_metrics_allowed"]:
                     result_entry["data_gaps"].append("未生成价格摘要统计")
             if args.with_portfolio:
-                current_price = None
-                if summary and summary.get("last_close") is not None:
-                    current_price = summary.get("last_close")
-                elif info:
-                    current_price = info.get("currentPrice")
-                portfolio_package = build_portfolio_package(
-                    symbol,
-                    current_price=current_price,
-                    positions_file=args.positions_file,
-                )
+                current_price = select_portfolio_current_price(history, info)
+                if portfolio_load_error is None:
+                    portfolio_package = build_portfolio_package(
+                        symbol,
+                        current_price=current_price,
+                        positions_file=args.positions_file,
+                        payload=portfolio_payload,
+                    )
+                else:
+                    portfolio_package = {
+                        "portfolio_context": {
+                            "has_position": False,
+                            "symbol": symbol,
+                            "position_status": portfolio_load_status,
+                            "positions_file": args.positions_file,
+                            "position_note": portfolio_load_error,
+                        },
+                        "portfolio_summary": None,
+                        "portfolio_risk": None,
+                        "portfolio_fit": None,
+                    }
                 result_entry["portfolio_context"] = portfolio_package.get("portfolio_context")
                 result_entry["portfolio_summary"] = portfolio_package.get("portfolio_summary")
                 result_entry["portfolio_risk"] = portfolio_package.get("portfolio_risk")
@@ -671,14 +1473,23 @@ def main():
                     result_entry["data_gaps"].append("持仓文件不存在，未生成持仓者建议上下文")
                 elif result_entry["portfolio_context"].get("position_status") == "not_found":
                     result_entry["data_gaps"].append("持仓文件存在，但未找到该标的持仓记录")
+                elif result_entry["portfolio_context"].get("position_status") == "inactive_zero_quantity":
+                    result_entry["data_gaps"].append(
+                        "标的在持仓文件中数量为零，已从有效持仓和组合计算中排除"
+                    )
+                elif result_entry["portfolio_context"].get("position_status") == "invalid_positions_file":
+                    result_entry["data_gaps"].append(
+                        "持仓文件无效，持仓匹配与组合风险无法判断"
+                    )
             
-            # Load thesis.md
+            # Load thesis.md for research calls. Daily Sync stays quote-only and
+            # leaves Thesis evidence assessment to the dedicated red-team stage.
             import os
             from pathlib import Path
             try:
                 configured_dashboard_dir = os.environ.get("PIA_DASHBOARD_DIR")
                 result_entry["thesis_context"] = None
-                if configured_dashboard_dir:
+                if configured_dashboard_dir and not args.daily_sync:
                     base_stocks_dir = Path(configured_dashboard_dir).expanduser()
                     safe_sym = symbol.replace(" ", "_").replace("/", "_")
                     thesis_path = base_stocks_dir / safe_sym / f"{safe_sym}_thesis.md"
@@ -703,8 +1514,40 @@ def main():
             Console().print("\n")
 
     if args.json:
-        # Print JSON to stdout (console is stderr, so this is clean)
-        print(json.dumps(results, indent=2, default=str))
+        if args.with_portfolio:
+            batch_audit = build_portfolio_batch_audit(
+                results,
+                requested_count=len(args.queries),
+                expected_symbols=expected_portfolio_symbols,
+                portfolio_load_status=portfolio_load_status,
+                portfolio_load_error=portfolio_load_error,
+                expected_position_metadata=_expected_position_metadata(
+                    portfolio_payload
+                ),
+                strict_quote_contract=True,
+            )
+            if not batch_audit["complete"]:
+                has_failure = True
+            if args.daily_sync:
+                print(
+                    json.dumps(
+                        {
+                            "status": (
+                                "complete" if batch_audit["complete"] else "incomplete"
+                            ),
+                            "records": results,
+                            "portfolio_batch_audit": batch_audit,
+                        },
+                        indent=2,
+                        default=str,
+                    )
+                )
+            else:
+                for result_entry in results:
+                    result_entry["portfolio_batch_audit"] = batch_audit
+                print(json.dumps(results, indent=2, default=str))
+        else:
+            print(json.dumps(results, indent=2, default=str))
 
     # Exit codes: 0=all ok, 1=partial failure, 2=all failed
     if all_failed and len(args.queries) > 0:

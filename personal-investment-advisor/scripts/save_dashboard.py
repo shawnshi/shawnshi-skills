@@ -1,12 +1,26 @@
 import argparse
 import json
 import os
+import re
+import shutil
 import sys
-from datetime import datetime
+import uuid
+from datetime import datetime, timezone
 from pathlib import Path
 
 from advice_journal import append_entry
+from dashboard_catalog import (
+    GENERATIONS_DIRNAME,
+    DashboardCatalogError,
+    canonical_symbol,
+    register_dashboard,
+    safe_archive_component,
+)
 from dashboard_gate import validate_dashboard
+
+
+class DashboardArchiveError(ValueError):
+    pass
 
 
 def safe_print(message: str) -> None:
@@ -113,9 +127,9 @@ def render_markdown(data, raw_json):
             for gap in portfolio_risk.get("risk_data_gaps", []):
                 md += f"  - 数据缺口: {gap}\n"
         if portfolio_fit:
-            md += f"- **约束状态**: {portfolio_fit.get('eligibility', '--')}\n"
-            md += f"- **约束影响**: {portfolio_fit.get('constraint_impact', '--')}\n"
-            md += f"- **适配理由**: {portfolio_fit.get('rationale', '--')}\n"
+            md += f"- **约束状态**: {portfolio_fit.get('constraint_status', '--')}\n"
+            md += f"- **约束观察**: {portfolio_fit.get('constraint_observation', '--')}\n"
+            md += f"- **说明**: {portfolio_fit.get('rationale', '--')}\n"
         md += "\n"
 
     ts = dp.get("trend_status", {})
@@ -255,9 +269,215 @@ def render_markdown(data, raw_json):
     return md
 
 
+def _safe_path_component(value: object) -> str:
+    try:
+        return safe_archive_component(value, "stock_code")
+    except DashboardCatalogError as exc:
+        raise DashboardArchiveError(str(exc)) from exc
+
+
+def _is_linklike(path: Path) -> bool:
+    if path.is_symlink():
+        return True
+    is_junction = getattr(path, "is_junction", None)
+    if is_junction and is_junction():
+        return True
+    if os.name == "nt":
+        try:
+            attributes = getattr(path.lstat(), "st_file_attributes", 0)
+        except FileNotFoundError:
+            return False
+        return bool(attributes & 0x400)
+    return False
+
+
+def _ensure_managed_directory(root: Path, path: Path, label: str) -> Path:
+    if path.exists():
+        if _is_linklike(path):
+            raise DashboardArchiveError(
+                f"{label} must not be a symbolic link or junction"
+            )
+        if not path.is_dir():
+            raise DashboardArchiveError(f"{label} must be a directory")
+    else:
+        try:
+            path.mkdir()
+        except FileExistsError:
+            pass
+
+    if _is_linklike(path):
+        raise DashboardArchiveError(
+            f"{label} must not be a symbolic link or junction"
+        )
+    if not path.is_dir():
+        raise DashboardArchiveError(f"{label} must be a directory")
+    resolved = path.resolve()
+    try:
+        resolved.relative_to(root)
+    except ValueError as exc:
+        raise DashboardArchiveError(
+            f"{label} escapes the archive root"
+        ) from exc
+    return resolved
+
+
+def _write_text_fsync(path: Path, content: str) -> None:
+    with path.open("x", encoding="utf-8", newline="\n") as handle:
+        handle.write(content)
+        handle.flush()
+        os.fsync(handle.fileno())
+
+
+def _fsync_directory(path: Path) -> None:
+    if os.name == "nt":
+        return
+    descriptor = os.open(path, os.O_RDONLY)
+    try:
+        os.fsync(descriptor)
+    finally:
+        os.close(descriptor)
+
+
+def archive_dashboard(
+    dashboard: dict,
+    output_dir: str | Path,
+    stock_alias: str,
+    now: datetime | None = None,
+    generation_id: str | None = None,
+) -> dict:
+    errors = validate_dashboard(dashboard, require_scenarios=True)
+    if errors:
+        details = "\n".join(f"- {error}" for error in errors)
+        raise DashboardArchiveError(
+            f"dashboard gate blocked archive:\n{details}"
+        )
+
+    stock_code = canonical_symbol(dashboard.get("stock_code"))
+    try:
+        requested_alias = canonical_symbol(stock_alias)
+    except DashboardCatalogError as exc:
+        raise DashboardArchiveError(
+            "--stock must be a non-empty stock code"
+        ) from exc
+    if requested_alias != stock_code:
+        raise DashboardArchiveError(
+            "--stock must match dashboard.stock_code"
+        )
+
+    archived_at = now or datetime.now(timezone.utc)
+    if archived_at.tzinfo is None:
+        archived_at = archived_at.replace(tzinfo=timezone.utc)
+    archived_at = archived_at.astimezone(timezone.utc)
+
+    safe_stock_code = _safe_path_component(stock_code)
+    timestamp = archived_at.strftime("%Y%m%dT%H%M%S%fZ")
+    requested_generation_id = (
+        generation_id
+        if generation_id is not None
+        else f"{timestamp}-{uuid.uuid4().hex}"
+    )
+    try:
+        safe_generation_id = safe_archive_component(
+            requested_generation_id,
+            "generation_id",
+        )
+    except DashboardCatalogError as exc:
+        raise DashboardArchiveError(str(exc)) from exc
+
+    try:
+        formatted_json = json.dumps(
+            dashboard,
+            indent=2,
+            ensure_ascii=False,
+        ) + "\n"
+        markdown = render_markdown(dashboard, formatted_json.rstrip())
+    except (TypeError, ValueError) as exc:
+        raise DashboardArchiveError(
+            f"dashboard serialization failed before archive: {exc}"
+        ) from exc
+
+    pending_dir = None
+    generation_dir = None
+    generation_published = False
+    try:
+        root_dir = Path(output_dir).expanduser().resolve()
+        root_dir.mkdir(parents=True, exist_ok=True)
+        symbol_dir = _ensure_managed_directory(
+            root_dir,
+            root_dir / safe_stock_code,
+            "symbol archive directory",
+        )
+        generations_dir = _ensure_managed_directory(
+            root_dir,
+            symbol_dir / GENERATIONS_DIRNAME,
+            "generation archive directory",
+        )
+        generation_dir = generations_dir / safe_generation_id
+        if generation_dir.exists() or _is_linklike(generation_dir):
+            raise DashboardArchiveError(
+                "immutable dashboard generation already exists: "
+                f"{safe_generation_id}"
+            )
+        pending_dir = generations_dir / f".pending-{uuid.uuid4().hex}"
+        pending_dir.mkdir()
+        json_path = generation_dir / "dashboard.json"
+        markdown_path = generation_dir / "dashboard.md"
+
+        _write_text_fsync(pending_dir / "dashboard.json", formatted_json)
+        _write_text_fsync(pending_dir / "dashboard.md", markdown)
+        _fsync_directory(pending_dir)
+        os.rename(pending_dir, generation_dir)
+        generation_published = True
+        _fsync_directory(generations_dir)
+        registration = register_dashboard(
+            root_dir,
+            dashboard,
+            json_path,
+            markdown_path,
+            archived_at,
+            safe_generation_id,
+        )
+    except Exception as exc:
+        if (
+            not generation_published
+            and pending_dir is not None
+            and pending_dir.exists()
+        ):
+            shutil.rmtree(pending_dir)
+        state = (
+            f"; complete generation retained but not indexed: {generation_dir}"
+            if generation_published
+            else ""
+        )
+        raise DashboardArchiveError(
+            f"dashboard archive transaction failed: {exc}{state}"
+        ) from exc
+
+    return {
+        "stock_code": stock_code,
+        "archived_at": archived_at.isoformat(),
+        "generation_id": safe_generation_id,
+        "json_path": str(json_path),
+        "markdown_path": str(markdown_path),
+        "index_path": str(registration["index_path"]),
+        "index_updated": registration["index_updated"],
+        "is_latest": (
+            registration["active_entry"].get("generation_id")
+            == safe_generation_id
+        ),
+        "latest_json_path": str(
+            root_dir / registration["active_entry"]["json_path"]
+        ),
+    }
+
+
 def save_dashboard():
     parser = argparse.ArgumentParser(description="Save a research-only stock dashboard.")
-    parser.add_argument("--stock", required=True, help="Stock name or symbol")
+    parser.add_argument(
+        "--stock",
+        required=True,
+        help="Expected stock code in the dashboard payload.",
+    )
     parser.add_argument("--content", help="JSON content string. If not provided, reads from stdin.")
     parser.add_argument("--file", help="Path to a JSON file containing the dashboard data.")
     parser.add_argument("--output-dir", help="Required archive directory; alternatively set PIA_DASHBOARD_DIR.")
@@ -273,9 +493,37 @@ def save_dashboard():
     parser.add_argument("--delete-input", action="store_true", help="Delete --file only after a successful save.")
     args = parser.parse_args()
 
+    configured_output = args.output_dir or os.environ.get("PIA_DASHBOARD_DIR")
+    if not configured_output:
+        parser.error("output directory is required; pass --output-dir or set PIA_DASHBOARD_DIR")
+    if args.delete_input and args.file:
+        lexical_input = Path(args.file).expanduser().absolute()
+        lexical_archive_root = Path(configured_output).expanduser().absolute()
+        resolved_input = lexical_input.resolve()
+        resolved_archive_root = lexical_archive_root.resolve()
+        if (
+            lexical_input.is_relative_to(lexical_archive_root)
+            or resolved_input.is_relative_to(resolved_archive_root)
+        ):
+            print(
+                "Error: --delete-input refuses files inside the Dashboard "
+                "archive root.",
+                file=sys.stderr,
+            )
+            sys.exit(1)
+
     content = args.content
+    input_identity = None
     if args.file:
-        content = Path(args.file).read_text(encoding="utf-8")
+        input_source = Path(args.file)
+        source_stat = input_source.lstat()
+        input_identity = (
+            source_stat.st_dev,
+            source_stat.st_ino,
+            source_stat.st_size,
+            source_stat.st_mtime_ns,
+        )
+        content = input_source.read_text(encoding="utf-8")
     elif not content:
         if hasattr(sys.stdin, "reconfigure"):
             sys.stdin.reconfigure(encoding="utf-8")
@@ -285,7 +533,6 @@ def save_dashboard():
         print("Error: No content provided.", file=sys.stderr)
         sys.exit(1)
 
-    import re
     # Extract JSON block if surrounded by markdown or conversational text
     json_str = content
     match = re.search(r'\{.*\}', content, re.DOTALL)
@@ -294,45 +541,67 @@ def save_dashboard():
         
     try:
         parsed = json.loads(json_str)
-        formatted_content = json.dumps(parsed, indent=2, ensure_ascii=False)
     except json.JSONDecodeError as e:
         print(f"Error parsing JSON content: {e}. Ensure the agent output is pure JSON.", file=sys.stderr)
         sys.exit(1)
 
-    errors = validate_dashboard(parsed)
-    if errors:
-        print("Error: dashboard gate blocked archive.", file=sys.stderr)
-        for error in errors:
-            print(f"- {error}", file=sys.stderr)
+    try:
+        archive = archive_dashboard(
+            parsed,
+            output_dir=configured_output,
+            stock_alias=args.stock,
+        )
+    except DashboardArchiveError as exc:
+        print(f"Error: {exc}", file=sys.stderr)
+        sys.exit(1)
+    if not archive["index_updated"] or not archive["is_latest"]:
+        print(
+            "Error: dashboard generation was archived but did not become "
+            "the latest indexed generation; input draft was preserved.",
+            file=sys.stderr,
+        )
         sys.exit(1)
 
-    md_content = render_markdown(parsed, formatted_content)
-    date_str = datetime.now().strftime("%Y%m%d_%H%M")
-    safe_stock_name = args.stock.replace(" ", "_").replace("/", "_")
-    filename = f"{safe_stock_name}_{date_str}.md"
-
-    configured_output = args.output_dir or os.environ.get("PIA_DASHBOARD_DIR")
-    if not configured_output:
-        parser.error("output directory is required; pass --output-dir or set PIA_DASHBOARD_DIR")
-    root_dir = Path(configured_output).expanduser()
-    base_dir = root_dir / safe_stock_name
-    base_dir.mkdir(parents=True, exist_ok=True)
-    filepath = base_dir / filename
-    filepath.write_text(md_content, encoding="utf-8")
     if args.append_journal:
         try:
-            append_entry(parsed, archive_path=str(filepath), journal_path=args.journal_path)
+            append_entry(
+                parsed,
+                archive_path=archive["markdown_path"],
+                journal_path=args.journal_path,
+            )
         except Exception as exc:
             safe_print(f"Warning: research journal append failed: {exc}")
     
-    if args.delete_input and args.file and os.path.exists(args.file):
+    if args.delete_input and args.file:
         try:
-            os.remove(args.file)
-            safe_print(f"Cleaned up temporary JSON draft: {args.file}")
+            input_source = Path(args.file)
+            current_stat = input_source.lstat()
+            current_identity = (
+                current_stat.st_dev,
+                current_stat.st_ino,
+                current_stat.st_size,
+                current_stat.st_mtime_ns,
+            )
+            if current_identity != input_identity:
+                safe_print(
+                    "Warning: input draft changed during archive; "
+                    "--delete-input was not applied."
+                )
+            else:
+                input_source.unlink()
+                safe_print(f"Cleaned up temporary JSON draft: {args.file}")
         except Exception as exc:
             safe_print(f"Warning: could not delete temporary file: {exc}")
-            
-    safe_print(f"Successfully saved and rendered Markdown dashboard to {filepath}")
+
+    safe_print(f"Dashboard JSON saved to {archive['json_path']}")
+    safe_print(f"Dashboard Markdown saved to {archive['markdown_path']}")
+    if archive["index_updated"]:
+        safe_print(f"Dashboard latest index updated at {archive['index_path']}")
+    else:
+        safe_print(
+            "Dashboard generation archived; latest index retained at "
+            f"{archive['index_path']}"
+        )
 
 
 if __name__ == "__main__":

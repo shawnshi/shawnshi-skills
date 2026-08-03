@@ -1,12 +1,13 @@
 {
   "schema_version": 1,
   "skill": "personal-investment-advisor",
-  "generated_at": "2026-07-28T13:33:22",
+  "generated_at": "2026-08-02T22:11:29+08:00",
   "skill_md": "SKILL.md",
   "top_level_files": [
     "SKILL.md"
   ],
   "top_level_directories": [
+    "agents",
     "references",
     "resources",
     "scripts"
@@ -14,11 +15,15 @@
   "resource_directories": [
     {
       "name": "scripts",
-      "file_count": 20
+      "file_count": 33
     },
     {
       "name": "references",
       "file_count": 5
+    },
+    {
+      "name": "agents",
+      "file_count": 1
     }
   ],
   "declared_local_dependencies": [
@@ -83,6 +88,11 @@
       "resolved_path": "C:\\Users\\shich\\.codex\\skills\\personal-investment-advisor\\scripts\\akshare_fetcher.py"
     },
     {
+      "path": "scripts\\history_integrity_gate.py",
+      "exists": true,
+      "resolved_path": "C:\\Users\\shich\\.codex\\skills\\personal-investment-advisor\\scripts\\history_integrity_gate.py"
+    },
+    {
       "path": "scripts\\management_claim_tracker.py",
       "exists": true,
       "resolved_path": "C:\\Users\\shich\\.codex\\skills\\personal-investment-advisor\\scripts\\management_claim_tracker.py"
@@ -108,9 +118,29 @@
       "resolved_path": "C:\\Users\\shich\\.codex\\skills\\personal-investment-advisor\\scripts\\dashboard_math_gate.py"
     },
     {
+      "path": "scripts\\save_dashboard.py",
+      "exists": true,
+      "resolved_path": "C:\\Users\\shich\\.codex\\skills\\personal-investment-advisor\\scripts\\save_dashboard.py"
+    },
+    {
       "path": "scripts\\rebalance_weights.py",
       "exists": true,
       "resolved_path": "C:\\Users\\shich\\.codex\\skills\\personal-investment-advisor\\scripts\\rebalance_weights.py"
+    },
+    {
+      "path": "scripts\\daily_sync.py",
+      "exists": true,
+      "resolved_path": "C:\\Users\\shich\\.codex\\skills\\personal-investment-advisor\\scripts\\daily_sync.py"
+    },
+    {
+      "path": "scripts\\dashboard_catalog.py",
+      "exists": true,
+      "resolved_path": "C:\\Users\\shich\\.codex\\skills\\personal-investment-advisor\\scripts\\dashboard_catalog.py"
+    },
+    {
+      "path": "scripts\\watchlist_gate.py",
+      "exists": true,
+      "resolved_path": "C:\\Users\\shich\\.codex\\skills\\personal-investment-advisor\\scripts\\watchlist_gate.py"
     }
   ],
   "missing_declared_dependencies": []

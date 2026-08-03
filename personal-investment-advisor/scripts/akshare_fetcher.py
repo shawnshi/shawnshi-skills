@@ -16,9 +16,16 @@ This module has been refactored to remove external dependencies
 and uses resilient endpoints.
 """
 
+import argparse
+import contextlib
+import io
+import json
 import logging
+import multiprocessing
 import random
+import sys
 import time
+from datetime import date, datetime, timezone
 from typing import Optional, Dict, Any
 
 import pandas as pd
@@ -45,6 +52,101 @@ def _safe_float(val: Any) -> Optional[float]:
         return None
 
 
+def _provider_process_worker(provider: str, symbol: str, send_connection: Any) -> None:
+    """Run one optional provider in a disposable process and return one payload."""
+    captured_output = io.StringIO()
+    try:
+        with (
+            contextlib.redirect_stdout(captured_output),
+            contextlib.redirect_stderr(captured_output),
+        ):
+            if provider == "efinance_quote":
+                import efinance as ef
+
+                frame = ef.stock.get_latest_quote([symbol])
+            elif provider == "akshare_chip_distribution":
+                import akshare as ak
+
+                frame = ak.stock_cyq_em(symbol=symbol)
+            else:
+                raise ValueError(f"unsupported isolated provider: {provider}")
+        send_connection.send({"status": "ok", "data": frame})
+    except Exception as exc:
+        send_connection.send(
+            {
+                "status": "error",
+                "error_type": type(exc).__name__,
+                "error": str(exc),
+            }
+        )
+    finally:
+        send_connection.close()
+
+
+def _run_isolated_provider(
+    provider: str,
+    symbol: str,
+    timeout_seconds: float,
+) -> pd.DataFrame:
+    """Return provider data or an empty frame; always reap the child process."""
+    context = multiprocessing.get_context("spawn")
+    receive_connection, send_connection = context.Pipe(duplex=False)
+    process = context.Process(
+        target=_provider_process_worker,
+        args=(provider, symbol, send_connection),
+    )
+    try:
+        process.start()
+    except Exception as exc:
+        receive_connection.close()
+        send_connection.close()
+        logger.warning(f"Failed to start isolated {provider} provider: {exc}")
+        return pd.DataFrame()
+    send_connection.close()
+
+    payload = None
+    try:
+        if receive_connection.poll(timeout_seconds):
+            payload = receive_connection.recv()
+        else:
+            logger.warning(
+                f"Isolated {provider} provider timed out for {symbol} "
+                f"after {timeout_seconds:.1f}s"
+            )
+    except (EOFError, OSError) as exc:
+        logger.warning(f"Isolated {provider} provider failed for {symbol}: {exc}")
+    finally:
+        receive_connection.close()
+        alive = process.is_alive()
+        if alive:
+            process.terminate()
+        process.join(timeout=1.0)
+        alive = process.is_alive()
+        if alive:
+            process.kill()
+            process.join(timeout=1.0)
+            alive = process.is_alive()
+        if alive:
+            logger.error(
+                f"Isolated {provider} provider process could not be reaped for {symbol}"
+            )
+        else:
+            process.close()
+
+    if not isinstance(payload, dict) or payload.get("status") != "ok":
+        if isinstance(payload, dict) and payload.get("error"):
+            logger.warning(
+                f"Isolated {provider} provider error for {symbol}: "
+                f"{payload.get('error_type', 'Error')}: {payload['error']}"
+            )
+        return pd.DataFrame()
+    frame = payload.get("data")
+    if not isinstance(frame, pd.DataFrame):
+        logger.warning(f"Isolated {provider} provider returned non-tabular data")
+        return pd.DataFrame()
+    return frame
+
+
 class StandaloneDataFetcher:
     """
     Standalone fetcher combining efinance (latest quote) and akshare (chip distribution).
@@ -66,86 +168,13 @@ class StandaloneDataFetcher:
         time.sleep(jitter)
         self._last_request_time = time.time()
 
-    @retry(
-        stop=stop_after_attempt(3),
-        wait=wait_exponential(multiplier=1, min=2, max=10),
-        retry=retry_if_exception_type((ConnectionError, TimeoutError, Exception)),
-    )
     def _fetch_quote_ef(self, symbol: str) -> pd.DataFrame:
-        import efinance as ef
-        import os
         self._enforce_rate_limit()
-        
-        # Attempt to bypass potentially flaky proxy for domestic endpoints if first attempt fails
-        # This is a heuristic for A-share domestic data providers.
-        try:
-            return ef.stock.get_latest_quote([symbol])
-        except Exception as e:
-            if "ProxyError" in str(e) or "RemoteDisconnected" in str(e):
-                logger.warning(f"Detected potential proxy issue for {symbol}, attempting direct connection...")
-                # Temporarily clear proxy env vars for this request scope
-                old_http = os.environ.get("http_proxy")
-                old_https = os.environ.get("https_proxy")
-                try:
-                    os.environ["http_proxy"] = ""
-                    os.environ["https_proxy"] = ""
-                    return ef.stock.get_latest_quote([symbol])
-                finally:
-                    if old_http: os.environ["http_proxy"] = old_http
-                    if old_https: os.environ["https_proxy"] = old_https
-            raise e
+        return _run_isolated_provider("efinance_quote", symbol, 8.0)
 
-    @retry(
-        stop=stop_after_attempt(2),
-        wait=wait_exponential(multiplier=1, min=1, max=5),
-        retry=retry_if_exception_type((ConnectionError, TimeoutError, Exception)),
-    )
     def _fetch_chip_distribution_ak(self, symbol: str) -> pd.DataFrame:
-        import akshare as ak
-        import threading
-        import os
         self._enforce_rate_limit()
-        
-        # Soft timeout for chip distribution since it's heavy and often blocked
-        result = []
-        err = []
-        
-        def worker(bypass_proxy=False):
-            try:
-                if bypass_proxy:
-                    old_http = os.environ.get("http_proxy")
-                    old_https = os.environ.get("https_proxy")
-                    os.environ["http_proxy"] = ""
-                    os.environ["https_proxy"] = ""
-                    try:
-                        result.append(ak.stock_cyq_em(symbol=symbol))
-                    finally:
-                        if old_http: os.environ["http_proxy"] = old_http
-                        if old_https: os.environ["https_proxy"] = old_https
-                else:
-                    result.append(ak.stock_cyq_em(symbol=symbol))
-            except Exception as e:
-                err.append(e)
-                
-        t = threading.Thread(target=worker, args=(False,))
-        t.start()
-        t.join(timeout=5.0)  # Increased from 3s to 5s
-        
-        if t.is_alive() or (err and ("ProxyError" in str(err[0]) or "RemoteDisconnected" in str(err[0]))):
-            if not result:
-                logger.warning(f"Chip distribution slow or proxy error for {symbol}, retrying with direct connection...")
-                t_bypass = threading.Thread(target=worker, args=(True,))
-                t_bypass.start()
-                t_bypass.join(timeout=8.0)
-                if t_bypass.is_alive():
-                    logger.warning(f"Direct connection also timed out for {symbol}")
-                    return pd.DataFrame()
-        
-        if not result and err:
-            logger.warning(f"Chip distribution fetch error: {err[0]}")
-            return pd.DataFrame()
-            
-        return result[0] if result else pd.DataFrame()
+        return _run_isolated_provider("akshare_chip_distribution", symbol, 8.0)
 
     @retry(
         stop=stop_after_attempt(3),
@@ -158,32 +187,21 @@ class StandaloneDataFetcher:
         Returns a DataFrame compatible with yfinance output (Index: Date, Columns: Open, High, Low, Close, Volume).
         """
         import akshare as ak
-        import os
         self._enforce_rate_limit()
         
         # akshare expects start_date/end_date in YYYYMMDD format
         start = start_date.replace("-", "") if start_date else "20000101"
         end = end_date.replace("-", "") if end_date else time.strftime("%Y%m%d")
         
-        def _do_fetch():
-            return ak.stock_zh_a_hist(symbol=symbol, period="daily", start_date=start, end_date=end, adjust="qfq")
-
-        try:
-            df = _do_fetch()
-        except Exception as e:
-            if "ProxyError" in str(e) or "RemoteDisconnected" in str(e):
-                logger.warning(f"Detected potential proxy issue for history of {symbol}, attempting direct connection...")
-                old_http = os.environ.get("http_proxy")
-                old_https = os.environ.get("https_proxy")
-                try:
-                    os.environ["http_proxy"] = ""
-                    os.environ["https_proxy"] = ""
-                    df = _do_fetch()
-                finally:
-                    if old_http: os.environ["http_proxy"] = old_http
-                    if old_https: os.environ["https_proxy"] = old_https
-            else:
-                raise e
+        # Fail closed through tenacity without mutating process-wide proxy
+        # environment variables. Provider routing belongs to the operator.
+        df = ak.stock_zh_a_hist(
+            symbol=symbol,
+            period="daily",
+            start_date=start,
+            end_date=end,
+            adjust="qfq",
+        )
 
         if df.empty:
             return pd.DataFrame()
@@ -205,16 +223,13 @@ class StandaloneDataFetcher:
         # Return only the necessary columns
         return df[["Open", "High", "Low", "Close", "Volume"]]
 
-    def get_sector_info(self, symbol: str) -> str:
-        """Fetch basic board/sector info for context."""
-        try:
-            self._enforce_rate_limit()
-            # Note: For strict reliability and avoiding long loops, 
-            # we return a placeholder directing the agent to use google_web_search
-            # because akshare's 'stock_board_industry_name_em' requires mapping logic that is prone to break.
-            return "建议通过 google_web_search 补充最新板块与概念轮动数据"
-        except Exception:
-            return "Sector Data Unavailable"
+    def get_sector_info(self, symbol: str) -> Optional[str]:
+        """Return no value until a source-backed sector adapter is available.
+
+        A natural-language collection instruction is not market evidence and must
+        never be stored in a metric field.
+        """
+        return None
 
     def get_enhanced_metrics(self, symbol: str, skip_chip_dist: bool = False) -> Dict[str, Any]:
         """
@@ -293,3 +308,146 @@ class StandaloneDataFetcher:
             metrics["enhancement_status"] = "partial"
 
         return metrics
+
+
+def _utc_now() -> datetime:
+    return datetime.now(timezone.utc)
+
+
+def _enhanced_payload(symbol: str, metrics: Dict[str, Any], retrieved_at: datetime) -> Dict[str, Any]:
+    gaps = []
+    if metrics.get("belong_boards") is None:
+        gaps.append("sector_info_unavailable")
+    for field in (
+        "volume_ratio",
+        "turnover_rate",
+        "profit_ratio",
+        "avg_cost",
+        "concentration",
+    ):
+        if metrics.get(field) is None:
+            gaps.append(f"{field}_unavailable")
+    status = "complete" if metrics.get("enhancement_status") == "ok" else "insufficient_data"
+    return {
+        "status": status,
+        "symbol": symbol,
+        "market": "CN",
+        "asset_type_scope": "A-share stock only",
+        "mode": "enhanced",
+        "source": "Akshare/Efinance",
+        "source_locator": "efinance:get_latest_quote; akshare:stock_cyq_em",
+        "published_at": None,
+        "retrieved_at": retrieved_at.isoformat(),
+        "as_of_date": retrieved_at.date().isoformat(),
+        "metrics": metrics,
+        "data_gaps": gaps,
+    }
+
+
+def _history_payload(
+    symbol: str,
+    history: pd.DataFrame,
+    retrieved_at: datetime,
+    *,
+    limit: int,
+) -> Dict[str, Any]:
+    if history is None or history.empty:
+        return {
+            "status": "insufficient_data",
+            "symbol": symbol,
+            "market": "CN",
+            "mode": "history",
+            "source": "Akshare",
+            "source_locator": "akshare:stock_zh_a_hist",
+            "published_at": None,
+            "retrieved_at": retrieved_at.isoformat(),
+            "as_of_date": retrieved_at.date().isoformat(),
+            "adjustment": "qfq",
+            "history": [],
+            "data_gaps": ["history_unavailable"],
+        }
+    frame = history.tail(limit).reset_index()
+    if "Date" in frame.columns:
+        frame["Date"] = pd.to_datetime(frame["Date"]).dt.strftime("%Y-%m-%d")
+    records = frame.to_dict(orient="records")
+    last_date = records[-1].get("Date") if records else None
+    return {
+        "status": "complete",
+        "symbol": symbol,
+        "market": "CN",
+        "mode": "history",
+        "source": "Akshare",
+        "source_locator": "akshare:stock_zh_a_hist",
+        "published_at": last_date,
+        "retrieved_at": retrieved_at.isoformat(),
+        "as_of_date": retrieved_at.date().isoformat(),
+        "adjustment": "qfq",
+        "history": records,
+        "data_gaps": [],
+    }
+
+
+def main() -> int:
+    parser = argparse.ArgumentParser(
+        description="Fetch source-labelled A-share supplemental evidence."
+    )
+    parser.add_argument("--symbol", required=True, help="Six-digit A-share code")
+    parser.add_argument("--mode", choices=["enhanced", "history"], default="enhanced")
+    parser.add_argument("--start", help="History start date (YYYY-MM-DD)")
+    parser.add_argument("--end", help="History end date (YYYY-MM-DD)")
+    parser.add_argument("--skip-chip", action="store_true")
+    parser.add_argument("--limit", type=int, default=20)
+    args = parser.parse_args()
+
+    symbol = args.symbol.strip()
+    retrieved_at = _utc_now()
+    if not (symbol.isdigit() and len(symbol) == 6):
+        payload = {
+            "status": "insufficient_evidence",
+            "symbol": symbol,
+            "market": "CN",
+            "retrieved_at": retrieved_at.isoformat(),
+            "as_of_date": retrieved_at.date().isoformat(),
+            "data_gaps": ["symbol_must_be_six_digits"],
+        }
+        print(json.dumps(payload, ensure_ascii=False, indent=2))
+        return 2
+    if args.limit <= 0:
+        payload = {
+            "status": "insufficient_evidence",
+            "symbol": symbol,
+            "market": "CN",
+            "retrieved_at": retrieved_at.isoformat(),
+            "as_of_date": retrieved_at.date().isoformat(),
+            "data_gaps": ["limit_must_be_positive"],
+        }
+        print(json.dumps(payload, ensure_ascii=False, indent=2))
+        return 2
+
+    fetcher = StandaloneDataFetcher()
+    try:
+        if args.mode == "enhanced":
+            metrics = fetcher.get_enhanced_metrics(symbol, skip_chip_dist=args.skip_chip)
+            payload = _enhanced_payload(symbol, metrics, retrieved_at)
+        else:
+            history = fetcher.get_history(symbol, start_date=args.start, end_date=args.end)
+            payload = _history_payload(symbol, history, retrieved_at, limit=args.limit)
+    except Exception as exc:
+        payload = {
+            "status": "data_error",
+            "symbol": symbol,
+            "market": "CN",
+            "mode": args.mode,
+            "retrieved_at": retrieved_at.isoformat(),
+            "as_of_date": retrieved_at.date().isoformat(),
+            "data_gaps": [str(exc)],
+        }
+        print(json.dumps(payload, ensure_ascii=False, indent=2))
+        return 2
+
+    print(json.dumps(payload, ensure_ascii=False, indent=2))
+    return 0 if payload["status"] == "complete" else 1
+
+
+if __name__ == "__main__":
+    raise SystemExit(main())

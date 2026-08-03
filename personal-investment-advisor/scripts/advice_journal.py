@@ -57,7 +57,7 @@ def build_journal_entry(data: Dict[str, Any], archive_path: str | None = None) -
         "core_hypothesis": research_brief.get("core_hypothesis"),
         "falsification_conditions": research_brief.get("falsification_conditions", []),
         "source_snapshot_hash": source_snapshot_hash,
-        "dashboard_schema_version": "6.0",
+        "dashboard_schema_version": "6.1",
         "current_price": current_price,
         "has_position": portfolio.get("has_position", False),
         "avg_cost": portfolio.get("avg_cost"),

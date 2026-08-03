@@ -1,14 +1,16 @@
 {
   "resource_kind": "investment_method_profiles",
-  "version": "1.0",
+  "version": "2.0",
   "_meta": {
     "threshold_status": "configurable_method_assumptions",
-    "boundary": "These thresholds are screening parameters, not universal investment facts or trade rules.",
-    "last_reviewed": "2026-07-28"
+    "boundary": "Thresholds are screening parameters, not universal investment facts or trade rules. Evidence-only profiles define required checks and must not be interpreted as a financial-screen pass.",
+    "last_reviewed": "2026-07-31"
   },
   "profiles": {
     "quality_equity": {
+      "profile_version": "2.0",
       "description": "Non-financial operating company quality screen; requires cash-flow and margin evidence.",
+      "applicable_markets": ["CN", "HK", "US"],
       "applicable_asset_types": ["stock"],
       "thresholds": {
         "roe_avg": {"min": 0.08},
@@ -21,7 +23,9 @@
       }
     },
     "a_share_basic": {
+      "profile_version": "2.0",
       "description": "Limited A-share primary screen when only common profitability fields are available.",
+      "applicable_markets": ["CN"],
       "applicable_asset_types": ["stock"],
       "thresholds": {
         "roe_avg": {"min": 0.08},
@@ -31,12 +35,34 @@
       }
     },
     "financial_institution": {
+      "profile_version": "2.0",
       "description": "Bank and insurer pre-screen; does not apply industrial-company FCF or gross-margin rules.",
+      "applicable_markets": ["CN", "HK", "US"],
       "applicable_asset_types": ["stock"],
+      "applicable_industry_types": ["bank", "insurance"],
       "thresholds": {
         "roe_avg": {"min": 0.08},
         "dilution": {"max": 0.20}
       }
+    },
+    "etf_research": {
+      "profile_version": "2.0",
+      "description": "Evidence-only ETF research contract; financial-statement quality screening is not applicable.",
+      "applicable_markets": ["CN", "HK", "US"],
+      "applicable_asset_types": ["etf"],
+      "screening_mode": "evidence_only",
+      "required_evidence_checks": [
+        "instrument_identity",
+        "tracking_index_and_methodology",
+        "management_and_custody_fees",
+        "replication_method",
+        "assets_and_liquidity",
+        "nav_premium_discount",
+        "tracking_difference_or_error",
+        "holdings_concentration",
+        "corporate_actions_and_adjustments"
+      ],
+      "thresholds": {}
     }
   }
 }

@@ -1,6 +1,7 @@
 {
   "resource_kind": "investment_dashboard_contract",
-  "version": "6.0",
+  "version": "6.1",
+  "strict_profile": "2026-08-02",
   "required_top_level": [
     "stock_name",
     "stock_code",
@@ -30,9 +31,11 @@
     "portfolio_fit",
     "earnings_snapshot",
     "catalyst_map",
+    "monitoring_boundaries",
     "monitoring_alerts",
     "feedback_status",
     "management_claim_tracking",
+    "scenario_analysis",
     "tags"
   ],
   "required_dashboard_sections": [
@@ -100,6 +103,9 @@
     "quantity",
     "avg_cost",
     "current_price",
+    "currency",
+    "base_currency",
+    "fx_rate_to_base",
     "market_value",
     "cost_basis",
     "unrealized_pnl",
@@ -111,6 +117,30 @@
     "cost_basis_context",
     "risk_evidence",
     "monitoring_conditions"
+  ],
+  "required_monitoring_boundaries_fields": [
+    "decision_scope",
+    "metric",
+    "boundaries"
+  ],
+  "required_monitoring_boundary_fields": [
+    "boundary_id",
+    "role",
+    "operator",
+    "value",
+    "currency",
+    "quote_basis",
+    "authority_status",
+    "source_tier",
+    "source_locator",
+    "as_of_date"
+  ],
+  "required_proximity_policy_fields": [
+    "mode",
+    "value",
+    "source_tier",
+    "source_locator",
+    "as_of_date"
   ],
   "required_portfolio_summary_fields": [
     "total_positions",
@@ -128,8 +158,8 @@
     "risk_data_gaps"
   ],
   "required_portfolio_fit_fields": [
-    "eligibility",
-    "constraint_impact",
+    "constraint_status",
+    "constraint_observation",
     "rationale"
   ],
   "required_earnings_snapshot_fields": [
@@ -150,12 +180,31 @@
     "assessment_boundary",
     "formal_use_allowed"
   ],
+  "required_scenario_analysis_fields": [
+    "valuation_method",
+    "base",
+    "bull",
+    "bear",
+    "sensitivity"
+  ],
+  "required_scenario_case_fields": [
+    "assumptions",
+    "result",
+    "falsification_conditions"
+  ],
   "enums": {
     "market_type": ["A股", "港股", "美股", "ETF", "其他"],
     "research_mode": ["research_only"],
     "confidence_level": ["高", "中", "低"],
     "weight_status": ["within_target", "above_target", "above_max", "unknown"],
     "feedback_status": ["pending", "reviewed", "closed"],
+    "monitoring_boundary_role": ["downside_boundary", "upside_boundary"],
+    "monitoring_boundary_operator": ["lte", "gte"],
+    "monitoring_boundary_authority_status": ["user_confirmed", "unverified_legacy"],
+    "monitoring_boundary_metric": ["regular_market_price"],
+    "monitoring_boundary_quote_basis": ["regular_market_price"],
+    "monitoring_boundary_decision_scope": ["observation_only"],
+    "monitoring_proximity_mode": ["explicit_relative_pct"],
     "source_tier": [
       "company_primary",
       "regulator",

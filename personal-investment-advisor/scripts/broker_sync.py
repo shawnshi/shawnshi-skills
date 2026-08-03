@@ -6,6 +6,8 @@ import math
 import os
 from pathlib import Path
 
+from portfolio_loader import validate_portfolio_payload
+
 
 def resolve_positions_file(path: str | None) -> Path:
     configured = path or os.environ.get("PIA_POSITIONS_FILE")
@@ -62,6 +64,15 @@ def _required_number(
     return value
 
 
+def _apply_quantity_semantics(position: dict, quantity: float) -> None:
+    if quantity == 0:
+        position["current_weight"] = 0.0
+        position.pop("target_weight", None)
+        position.pop("max_weight", None)
+    else:
+        position.pop("current_weight", None)
+
+
 def _stage_broker_rows(csv_path: str, positions: list[dict]) -> None:
     pos_map = {}
     for position in positions:
@@ -88,7 +99,7 @@ def _stage_broker_rows(csv_path: str, positions: list[dict]) -> None:
                 "quantity": _required_number(row, "quantity", row_number),
                 "avg_cost": _required_number(row, "avg_cost", row_number),
                 "currency": _required_text(row, "currency", row_number).upper(),
-                "market_type": _required_text(row, "market_type", row_number),
+                "market_type": _required_text(row, "market_type", row_number).upper(),
             }
             for optional_field in ("name", "opened_at", "thesis"):
                 value = str(row.get(optional_field) or "").strip()
@@ -97,8 +108,9 @@ def _stage_broker_rows(csv_path: str, positions: list[dict]) -> None:
 
             if symbol in pos_map:
                 pos_map[symbol].update(staged)
-                pos_map[symbol].pop("current_weight", None)
+                _apply_quantity_semantics(pos_map[symbol], staged["quantity"])
             else:
+                _apply_quantity_semantics(staged, staged["quantity"])
                 positions.append(staged)
                 pos_map[symbol] = staged
 
@@ -122,6 +134,12 @@ def sync_broker_data(csv_path: str, positions_file: str = None, cash_cny: float 
         _update_cash(positions, pos_map, "CASH_USD", "美元现金", cash_usd, "USD")
 
     data["positions"] = positions
+    validation_errors = validate_portfolio_payload(data)
+    if validation_errors:
+        raise ValueError(
+            "broker update violates portfolio contract: "
+            + "; ".join(validation_errors)
+        )
     save_json(pos_file, data)
     print(f"Sync complete. Updated {pos_file}")
     return data
@@ -136,16 +154,18 @@ def _update_cash(positions, pos_map, symbol, name, amount, currency):
         raise ValueError(f"{symbol} amount must be finite and non-negative")
     if symbol in pos_map:
         pos_map[symbol]["quantity"] = amount
-        pos_map[symbol].pop("current_weight", None)
+        _apply_quantity_semantics(pos_map[symbol], amount)
     else:
-        positions.append({
+        staged = {
             "symbol": symbol,
             "name": name,
             "quantity": amount,
             "avg_cost": 1.0,
             "currency": currency,
             "market_type": "CASH",
-        })
+        }
+        _apply_quantity_semantics(staged, amount)
+        positions.append(staged)
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description="Sync portfolio with broker CSV or cash balances")

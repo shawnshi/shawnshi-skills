@@ -1,0 +1,8 @@
+interface:
+  display_name: "Personal Investment Advisor"
+  short_description: "核验实时行情与原始披露，执行只读持仓审计、证伪和研究门禁"
+  brand_color: "#1F6F5B"
+  default_prompt: "Use $personal-investment-advisor to run a read-only, evidence-backed audit of my current portfolio."
+
+policy:
+  allow_implicit_invocation: true

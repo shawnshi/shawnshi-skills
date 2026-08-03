@@ -1,4 +1,5 @@
 import json
+import math
 from datetime import date
 from pathlib import Path
 
@@ -72,7 +73,250 @@ def _validate_evidence_items(items):
     return errors
 
 
-def validate_dashboard(data: dict) -> list[str]:
+def _validate_evidence_against_brief(items, research_brief):
+    if not isinstance(items, list) or not isinstance(research_brief, dict):
+        return []
+    source_policy = research_brief.get("source_policy")
+    if not isinstance(source_policy, dict):
+        return []
+    allowed_raw = source_policy.get("allowed_source_tiers")
+    allowed = set(allowed_raw) if isinstance(allowed_raw, list) else set()
+    try:
+        cutoff = date.fromisoformat(str(source_policy.get("cutoff_date")))
+    except (TypeError, ValueError):
+        cutoff = None
+
+    errors = []
+    for index, item in enumerate(items):
+        if not isinstance(item, dict):
+            continue
+        source_tier = item.get("source_tier")
+        if allowed and source_tier not in allowed:
+            errors.append(
+                f"evidence_items[{index}].source_tier is not allowed by "
+                "research_brief.source_policy"
+            )
+        if cutoff is None:
+            continue
+        for field in ("published_at", "as_of_date"):
+            try:
+                evidence_date = date.fromisoformat(str(item.get(field)))
+            except (TypeError, ValueError):
+                continue
+            if evidence_date > cutoff:
+                errors.append(
+                    f"evidence_items[{index}].{field} cannot be after "
+                    "research_brief.source_policy.cutoff_date"
+                )
+    return errors
+
+
+def _non_empty_string_list(value):
+    return (
+        isinstance(value, list)
+        and bool(value)
+        and all(isinstance(item, str) and item.strip() for item in value)
+    )
+
+
+def _validate_scenario_analysis(data, *, required):
+    scenarios = data.get("scenario_analysis")
+    if scenarios is None:
+        return (
+            ["scenario_analysis is required by the current strict contract"]
+            if required
+            else []
+        )
+    if not isinstance(scenarios, dict):
+        return ["scenario_analysis must be an object"]
+
+    errors = []
+    for field in SCHEMA.get("required_scenario_analysis_fields", []):
+        if scenarios.get(field) in (None, "", []):
+            errors.append(f"missing scenario_analysis.{field}")
+    if not isinstance(scenarios.get("valuation_method"), str) or not scenarios.get(
+        "valuation_method", ""
+    ).strip():
+        errors.append("scenario_analysis.valuation_method must be a non-empty string")
+    if not _non_empty_string_list(scenarios.get("sensitivity")):
+        errors.append("scenario_analysis.sensitivity must be a non-empty string list")
+
+    for case_name in ("base", "bull", "bear"):
+        case = scenarios.get(case_name)
+        prefix = f"scenario_analysis.{case_name}"
+        if not isinstance(case, dict):
+            errors.append(f"{prefix} must be an object")
+            continue
+        for field in SCHEMA.get("required_scenario_case_fields", []):
+            if case.get(field) in (None, "", []):
+                errors.append(f"missing {prefix}.{field}")
+        if not _non_empty_string_list(case.get("assumptions")):
+            errors.append(f"{prefix}.assumptions must be a non-empty string list")
+        if not isinstance(case.get("result"), str) or not case.get("result", "").strip():
+            errors.append(f"{prefix}.result must be a non-empty string")
+        if not _non_empty_string_list(case.get("falsification_conditions")):
+            errors.append(
+                f"{prefix}.falsification_conditions must be a non-empty string list"
+            )
+    return errors
+
+
+def _is_positive_json_number(value) -> bool:
+    return (
+        isinstance(value, (int, float))
+        and not isinstance(value, bool)
+        and math.isfinite(float(value))
+        and float(value) > 0
+    )
+
+
+def _validate_monitoring_boundaries(data):
+    config = data.get("monitoring_boundaries")
+    if config is None:
+        return []
+    if not isinstance(config, dict):
+        return ["monitoring_boundaries must be an object when provided"]
+
+    errors = []
+    for key in SCHEMA["required_monitoring_boundaries_fields"]:
+        if config.get(key) in (None, "", []):
+            errors.append(f"missing monitoring_boundaries field: {key}")
+
+    if config.get("decision_scope") not in SCHEMA["enums"]["monitoring_boundary_decision_scope"]:
+        errors.append("monitoring_boundaries.decision_scope must be observation_only")
+    if config.get("metric") not in SCHEMA["enums"]["monitoring_boundary_metric"]:
+        errors.append("monitoring_boundaries.metric must be regular_market_price")
+
+    boundaries = config.get("boundaries")
+    if not isinstance(boundaries, list) or not boundaries:
+        return errors + ["monitoring_boundaries.boundaries must be a non-empty list"]
+
+    instrument_currency = str(
+        _get_nested(data, ["research_brief", "instrument", "currency"], "")
+    ).upper()
+    research_as_of_raw = _get_nested(data, ["research_brief", "as_of_date"])
+    try:
+        research_as_of = date.fromisoformat(str(research_as_of_raw))
+    except (TypeError, ValueError):
+        research_as_of = None
+
+    identifiers = set()
+    roles = {}
+    for index, boundary in enumerate(boundaries):
+        prefix = f"monitoring_boundaries.boundaries[{index}]"
+        if not isinstance(boundary, dict):
+            errors.append(f"{prefix} must be an object")
+            continue
+        for key in SCHEMA["required_monitoring_boundary_fields"]:
+            if boundary.get(key) in (None, "", []):
+                errors.append(f"missing {prefix}.{key}")
+
+        boundary_id = str(boundary.get("boundary_id") or "")
+        if boundary_id in identifiers:
+            errors.append(f"duplicate monitoring boundary_id: {boundary_id}")
+        elif boundary_id:
+            identifiers.add(boundary_id)
+
+        role = boundary.get("role")
+        operator = boundary.get("operator")
+        if role not in SCHEMA["enums"]["monitoring_boundary_role"]:
+            errors.append(f"invalid {prefix}.role")
+        elif role in roles:
+            errors.append(f"duplicate monitoring boundary role: {role}")
+        else:
+            roles[role] = boundary
+        if operator not in SCHEMA["enums"]["monitoring_boundary_operator"]:
+            errors.append(f"invalid {prefix}.operator")
+        if role == "downside_boundary" and operator != "lte":
+            errors.append(f"{prefix}.operator must be lte for downside_boundary")
+        if role == "upside_boundary" and operator != "gte":
+            errors.append(f"{prefix}.operator must be gte for upside_boundary")
+
+        if not _is_positive_json_number(boundary.get("value")):
+            errors.append(f"{prefix}.value must be a positive finite JSON number")
+
+        currency = str(boundary.get("currency") or "").upper()
+        if not currency:
+            errors.append(f"{prefix}.currency is required")
+        elif instrument_currency and currency != instrument_currency:
+            errors.append(f"{prefix}.currency must match research_brief.instrument.currency")
+
+        if boundary.get("quote_basis") not in SCHEMA["enums"]["monitoring_boundary_quote_basis"]:
+            errors.append(f"invalid {prefix}.quote_basis")
+        if boundary.get("authority_status") not in SCHEMA["enums"]["monitoring_boundary_authority_status"]:
+            errors.append(f"invalid {prefix}.authority_status")
+        if boundary.get("source_tier") != "user_authorized":
+            errors.append(f"{prefix}.source_tier must be user_authorized")
+
+        try:
+            boundary_as_of = date.fromisoformat(str(boundary.get("as_of_date")))
+            if research_as_of and boundary_as_of > research_as_of:
+                errors.append(f"{prefix}.as_of_date cannot be after research_brief.as_of_date")
+        except (TypeError, ValueError):
+            errors.append(f"{prefix}.as_of_date must be an ISO date")
+
+    downside = roles.get("downside_boundary")
+    upside = roles.get("upside_boundary")
+    if (
+        downside
+        and upside
+        and _is_positive_json_number(downside.get("value"))
+        and _is_positive_json_number(upside.get("value"))
+        and float(downside["value"]) >= float(upside["value"])
+    ):
+        errors.append("downside boundary must be below upside boundary")
+
+    current_price = _get_nested(
+        data, ["dashboard", "data_perspective", "price_position", "current_price"]
+    )
+    if not _is_positive_json_number(current_price):
+        errors.append(
+            "monitoring boundaries require a positive finite "
+            "dashboard.data_perspective.price_position.current_price"
+        )
+
+    proximity = config.get("proximity_policy")
+    if proximity is not None:
+        if not isinstance(proximity, dict):
+            errors.append("monitoring_boundaries.proximity_policy must be an object")
+        else:
+            for key in SCHEMA["required_proximity_policy_fields"]:
+                if proximity.get(key) in (None, "", []):
+                    errors.append(f"missing monitoring_boundaries.proximity_policy.{key}")
+            if proximity.get("mode") not in SCHEMA["enums"]["monitoring_proximity_mode"]:
+                errors.append(
+                    "monitoring_boundaries.proximity_policy.mode must be explicit_relative_pct"
+                )
+            value = proximity.get("value")
+            if (
+                not _is_positive_json_number(value)
+                or float(value) >= 1
+            ):
+                errors.append(
+                    "monitoring_boundaries.proximity_policy.value must be a "
+                    "positive finite JSON number below 1"
+                )
+            if proximity.get("source_tier") != "user_authorized":
+                errors.append(
+                    "monitoring_boundaries.proximity_policy.source_tier "
+                    "must be user_authorized"
+                )
+            try:
+                proximity_as_of = date.fromisoformat(str(proximity.get("as_of_date")))
+                if research_as_of and proximity_as_of > research_as_of:
+                    errors.append(
+                        "monitoring_boundaries.proximity_policy.as_of_date "
+                        "cannot be after research_brief.as_of_date"
+                    )
+            except (TypeError, ValueError):
+                errors.append(
+                    "monitoring_boundaries.proximity_policy.as_of_date must be an ISO date"
+                )
+
+    return errors
+
+
+def validate_dashboard(data: dict, *, require_scenarios: bool = False) -> list[str]:
     errors = []
     if not isinstance(data, dict):
         return ["dashboard root must be an object"]
@@ -188,6 +432,73 @@ def validate_dashboard(data: dict) -> list[str]:
             errors.append(
                 "research_brief.output_contract.decision_scope must be research_only"
             )
+        raw_dashboard_symbol = data.get("stock_code")
+        raw_brief_symbol = _get_nested(
+            research_brief,
+            ["instrument", "symbol"],
+            "",
+        )
+        dashboard_symbol = (
+            raw_dashboard_symbol.strip().upper()
+            if isinstance(raw_dashboard_symbol, str)
+            else ""
+        )
+        brief_symbol = (
+            raw_brief_symbol.strip().upper()
+            if isinstance(raw_brief_symbol, str)
+            else ""
+        )
+        if not isinstance(raw_dashboard_symbol, str) or not dashboard_symbol:
+            errors.append("stock_code must be a non-empty string")
+        if not isinstance(raw_brief_symbol, str) or not brief_symbol:
+            errors.append(
+                "research_brief.instrument.symbol must be a non-empty string"
+            )
+        elif dashboard_symbol and dashboard_symbol != brief_symbol:
+            errors.append(
+                "stock_code must match research_brief.instrument.symbol"
+            )
+        expected_brief_market = {
+            "A股": "CN",
+            "港股": "HK",
+            "美股": "US",
+        }.get(market_type)
+        brief_market = _get_nested(
+            research_brief,
+            ["instrument", "market"],
+        )
+        if (
+            expected_brief_market is not None
+            and brief_market != expected_brief_market
+        ):
+            errors.append(
+                "market_type must match research_brief.instrument.market"
+            )
+        expected_asset_types = {
+            "A股": {"stock"},
+            "港股": {"stock"},
+            "美股": {"stock"},
+            "ETF": {"etf"},
+            "其他": {"fund", "index", "other"},
+        }.get(market_type)
+        brief_asset_type = _get_nested(
+            research_brief,
+            ["instrument", "asset_type"],
+        )
+        if (
+            expected_asset_types is not None
+            and brief_asset_type not in expected_asset_types
+        ):
+            errors.append(
+                "market_type must match research_brief.instrument.asset_type"
+            )
+
+    errors.extend(
+        _validate_evidence_against_brief(data.get("evidence_items"), research_brief)
+    )
+    errors.extend(_validate_scenario_analysis(data, required=require_scenarios))
+
+    errors.extend(_validate_monitoring_boundaries(data))
 
     feedback_status = data.get("feedback_status")
     if feedback_status is not None and feedback_status not in SCHEMA["enums"]["feedback_status"]:
@@ -313,28 +624,79 @@ def collect_dashboard_warnings(data: dict) -> list[str]:
     return collect_math_warnings(data)
 
 
-def validate_file(path: str) -> list[str]:
+def validate_file(path: str, *, require_scenarios: bool = False) -> list[str]:
     payload = json.loads(Path(path).read_text(encoding="utf-8"))
-    return validate_dashboard(payload)
+    return validate_dashboard(payload, require_scenarios=require_scenarios)
 
 
-if __name__ == "__main__":
+def main() -> int:
     import argparse
-    import sys
 
     parser = argparse.ArgumentParser(description="Validate stock dashboard JSON.")
     parser.add_argument("json_path")
+    parser.add_argument(
+        "--strict-current-contract",
+        action="store_true",
+        help="Require scenario_analysis for newly generated dashboards.",
+    )
+    parser.add_argument(
+        "--json",
+        action="store_true",
+        help="Emit the stable JSON contract (JSON is also the default output).",
+    )
     args = parser.parse_args()
 
-    errors = validate_file(args.json_path)
-    payload = json.loads(Path(args.json_path).read_text(encoding="utf-8"))
-    for warning in collect_dashboard_warnings(payload):
-        print(f"[WARN] {warning}")
-    if errors:
-        print("[FAIL] dashboard gate blocked archive")
-        for error in errors:
-            print(f"- {error}")
-        sys.exit(1)
+    try:
+        payload = json.loads(Path(args.json_path).read_text(encoding="utf-8"))
+    except (OSError, json.JSONDecodeError) as exc:
+        report = {
+            "status": "data_error",
+            "detail_status": "dashboard_unreadable",
+            "valid": False,
+            "errors": [str(exc)],
+            "warnings": [],
+        }
+        print(json.dumps(report, ensure_ascii=False, indent=2))
+        return 2
 
-    print("[PASS] dashboard gate passed")
-    sys.exit(0)
+    try:
+        errors = validate_dashboard(
+            payload,
+            require_scenarios=args.strict_current_contract,
+        )
+        warnings = collect_dashboard_warnings(payload)
+    except Exception as exc:
+        report = {
+            "status": "data_error",
+            "detail_status": "dashboard_validation_error",
+            "valid": False,
+            "errors": [str(exc)],
+            "warnings": [],
+        }
+        print(json.dumps(report, ensure_ascii=False, indent=2))
+        return 2
+
+    if errors:
+        report = {
+            "status": "invalid",
+            "detail_status": "dashboard_contract_invalid",
+            "valid": False,
+            "errors": errors,
+            "warnings": warnings,
+        }
+        print(json.dumps(report, ensure_ascii=False, indent=2))
+        return 1
+
+    report = {
+        "status": "ok",
+        "detail_status": "dashboard_contract_valid",
+        "valid": True,
+        "errors": [],
+        "warnings": warnings,
+    }
+    print(json.dumps(report, ensure_ascii=False, indent=2))
+    return 0
+
+
+if __name__ == "__main__":
+    raise SystemExit(main())

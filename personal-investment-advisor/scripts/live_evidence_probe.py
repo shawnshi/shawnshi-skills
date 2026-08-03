@@ -16,11 +16,46 @@ YAHOO_CHART_URL = "https://query1.finance.yahoo.com/v8/finance/chart/{symbol}?ra
 NASDAQ_INFO_URL = "https://api.nasdaq.com/api/quote/{symbol}/info?assetclass=stocks"
 SEC_TICKERS_URL = "https://www.sec.gov/files/company_tickers_exchange.json"
 SEC_SUBMISSIONS_URL = "https://data.sec.gov/submissions/CIK{cik}.json"
-ACCEPTED_DISCLOSURE_FORMS = {"10-K", "10-Q", "8-K", "20-F", "40-F", "6-K"}
+ACCEPTED_DISCLOSURE_FORMS = {"10-K", "10-Q", "8-K"}
+FOREIGN_ISSUER_FORMS = {"20-F", "40-F", "6-K"}
+DISALLOWED_INSTRUMENT_TYPES = {
+    "ADR",
+    "ADS",
+    "ETF",
+    "MUTUALFUND",
+    "MUTUAL FUND",
+    "FUND",
+    "INDEX",
+}
 
 
 class LiveProbeError(RuntimeError):
     pass
+
+
+def _empty_probe_result(
+    *,
+    symbol: str | None,
+    retrieved_at: datetime,
+    status: str,
+    errors: list[str],
+) -> dict[str, Any]:
+    return {
+        "status": status,
+        "identity_valid": False,
+        "valid": False,
+        "formal_use_allowed": False,
+        "formal_blockers": list(errors),
+        "symbol": symbol,
+        "market": "US",
+        "retrieved_at": retrieved_at.isoformat(),
+        "sources": {},
+        "cross_checks": {},
+        "identity_errors": list(errors),
+        "data_errors": [],
+        "evidence_errors": [],
+        "errors": list(errors),
+    }
 
 
 def _default_fetch_json(url: str, headers: dict[str, str], timeout: int) -> tuple[dict[str, Any], int, str]:
@@ -68,6 +103,22 @@ def _formal_sec_contact_allowed(user_agent: str) -> bool:
     )
 
 
+def _has_depositary_marker(value: Any) -> bool:
+    text = str(value or "").upper()
+    return any(
+        marker in text
+        for marker in (
+            " ADR",
+            "ADR ",
+            " ADS",
+            "ADS ",
+            "DEPOSITARY RECEIPT",
+            "DEPOSITARY SHARE",
+            "AMERICAN DEPOSITARY",
+        )
+    )
+
+
 def _recent_filings(submissions: dict[str, Any], limit: int = 5) -> list[dict[str, Any]]:
     recent = submissions.get("filings", {}).get("recent", {})
     forms = recent.get("form", [])
@@ -112,20 +163,18 @@ def probe_us_stock(
     retrieved_at = (now or datetime.now(timezone.utc)).astimezone(timezone.utc)
     gate = validate_instrument(symbol, "US", "stock", "USD")
     normalized = gate.get("normalized_symbol")
-    errors = list(gate.get("errors", []))
+    identity_errors = list(gate.get("errors", []))
+    data_errors: list[str] = []
+    evidence_errors: list[str] = []
     if not sec_user_agent or len(sec_user_agent.strip()) < 8:
-        errors.append("a descriptive SEC user agent is required")
-    if errors or not normalized:
-        return {
-            "valid": False,
-            "formal_use_allowed": False,
-            "symbol": normalized,
-            "market": "US",
-            "retrieved_at": retrieved_at.isoformat(),
-            "sources": {},
-            "cross_checks": {},
-            "errors": errors,
-        }
+        identity_errors.append("a descriptive SEC user agent is required")
+    if identity_errors or not normalized:
+        return _empty_probe_result(
+            symbol=normalized,
+            retrieved_at=retrieved_at,
+            status="configuration_error" if not sec_user_agent else "identity_invalid",
+            errors=identity_errors,
+        )
 
     public_headers = {
         "User-Agent": "Mozilla/5.0 PersonalInvestmentAdvisor/1.0",
@@ -165,19 +214,40 @@ def probe_us_stock(
     except (TypeError, ValueError) as exc:
         raise LiveProbeError("Yahoo quote price is missing or non-numeric") from exc
     if quote_price <= 0:
-        errors.append("market price must be positive")
+        data_errors.append("market price must be positive")
     if not quote_time:
-        errors.append("market price timestamp is missing")
+        data_errors.append("market price timestamp is missing")
     else:
         age_days = (retrieved_at.date() - datetime.fromisoformat(quote_time).date()).days
         if age_days < 0 or age_days > max_price_age_days:
-            errors.append(f"market price age is {age_days} days; allowed range is 0..{max_price_age_days}")
+            data_errors.append(
+                f"market price age is {age_days} days; allowed range is 0..{max_price_age_days}"
+            )
+
+    quote_instrument_type = str(
+        quote_meta.get("instrumentType") or quote_meta.get("quoteType") or ""
+    ).strip().upper()
+    if quote_instrument_type in DISALLOWED_INSTRUMENT_TYPES:
+        identity_errors.append(
+            f"unsupported US instrument type: {quote_instrument_type}; use a market-specific evidence path"
+        )
 
     nasdaq_data = nasdaq_payload.get("data") or {}
     nasdaq_symbol = str(nasdaq_data.get("symbol") or "").upper()
     nasdaq_exchange = nasdaq_data.get("exchange")
     if not nasdaq_symbol:
-        errors.append("Nasdaq identity response is missing symbol")
+        identity_errors.append("Nasdaq identity response is missing symbol")
+    nasdaq_asset_class = str(
+        nasdaq_data.get("assetClass") or nasdaq_data.get("instrumentType") or ""
+    ).strip().upper()
+    if nasdaq_asset_class in DISALLOWED_INSTRUMENT_TYPES:
+        identity_errors.append(
+            f"unsupported Nasdaq instrument type: {nasdaq_asset_class}; use a market-specific evidence path"
+        )
+    if _has_depositary_marker(nasdaq_data.get("companyName")):
+        identity_errors.append(
+            "Nasdaq company identity indicates an ADR or depositary security edge case"
+        )
 
     fields = tickers_payload.get("fields") or []
     data = tickers_payload.get("data") or []
@@ -190,7 +260,7 @@ def probe_us_stock(
         raise LiveProbeError("SEC ticker association fields are incomplete") from exc
     sec_row = next((row for row in data if str(row[ticker_index]).upper() == normalized), None)
     if sec_row is None:
-        errors.append("symbol was not found in SEC ticker/exchange associations")
+        identity_errors.append("symbol was not found in SEC ticker/exchange associations")
         cik = None
         sec_name = None
         sec_exchange = None
@@ -207,8 +277,24 @@ def probe_us_stock(
             submissions_url, sec_submission_headers, timeout
         )
         filings = _recent_filings(submissions_payload)
+        recent_forms = set(
+            submissions_payload.get("filings", {}).get("recent", {}).get("form", [])
+        )
+        foreign_forms = sorted(recent_forms.intersection(FOREIGN_ISSUER_FORMS))
+        if foreign_forms:
+            identity_errors.append(
+                "foreign issuer disclosure forms detected: " + ", ".join(foreign_forms)
+            )
         if not filings:
-            errors.append("SEC submissions response has no accepted company disclosure forms")
+            evidence_errors.append(
+                "SEC submissions response has no accepted domestic company disclosure forms"
+            )
+        if _has_depositary_marker(sec_name) or _has_depositary_marker(
+            submissions_payload.get("name")
+        ):
+            identity_errors.append(
+                "SEC company identity indicates an ADR or depositary security edge case"
+            )
 
     symbol_match = normalized == quote_symbol == nasdaq_symbol
     exchange_match = _exchange_family(nasdaq_exchange) == _exchange_family(sec_exchange)
@@ -225,16 +311,31 @@ def probe_us_stock(
         "submissions_exchange_match": submissions_exchange_match,
     }.items():
         if not passed:
-            errors.append(f"cross-check failed: {name}")
+            identity_errors.append(f"cross-check failed: {name}")
 
     formal_contact_allowed = _formal_sec_contact_allowed(sec_user_agent)
     formal_blockers = [] if formal_contact_allowed else [
         "SEC User-Agent must contain a real non-test contact email for formal research use"
     ]
 
+    errors = list(dict.fromkeys(identity_errors + data_errors + evidence_errors))
+    identity_valid = not identity_errors
+    valid = not errors
+    formal_use_allowed = valid and formal_contact_allowed
+    if formal_use_allowed:
+        status = "complete"
+    elif not identity_valid:
+        status = "identity_invalid"
+    elif data_errors or evidence_errors:
+        status = "insufficient_data"
+    else:
+        status = "formal_use_blocked"
+
     return {
-        "valid": not errors,
-        "formal_use_allowed": not errors and formal_contact_allowed,
+        "status": status,
+        "identity_valid": identity_valid,
+        "valid": valid,
+        "formal_use_allowed": formal_use_allowed,
         "formal_blockers": formal_blockers,
         "symbol": normalized,
         "market": "US",
@@ -252,7 +353,7 @@ def probe_us_stock(
             },
             "exchange_identity": {
                 "provider": "Nasdaq",
-                "source_tier": "exchange_primary",
+                "source_tier": "exchange",
                 "locator": nasdaq_final_url,
                 "http_status": nasdaq_status,
                 "symbol": nasdaq_symbol,
@@ -262,7 +363,7 @@ def probe_us_stock(
             },
             "regulator_identity": {
                 "provider": "SEC",
-                "source_tier": "regulator_primary",
+                "source_tier": "regulator",
                 "locator": tickers_final_url,
                 "http_status": tickers_status,
                 "cik": cik,
@@ -271,7 +372,7 @@ def probe_us_stock(
             },
             "company_disclosures": {
                 "provider": "SEC EDGAR",
-                "source_tier": "regulator_filing",
+                "source_tier": "audited_filing",
                 "locator": submissions_final_url,
                 "http_status": submissions_status,
                 "filings": filings,
@@ -283,8 +384,14 @@ def probe_us_stock(
             "submissions_symbol_match": submissions_symbol_match,
             "submissions_exchange_match": submissions_exchange_match,
         },
+        "identity_errors": list(dict.fromkeys(identity_errors)),
+        "data_errors": list(dict.fromkeys(data_errors)),
+        "evidence_errors": list(dict.fromkeys(evidence_errors)),
         "errors": errors,
-        "scope": "US exchange-listed operating-company stocks; ETFs, funds, ADR edge cases, CN and HK require market-specific official sources",
+        "scope": (
+            "US exchange-listed domestic operating-company stocks; ETFs, funds, ADRs, "
+            "foreign issuers, CN and HK require market-specific official sources"
+        ),
     }
 
 
@@ -300,7 +407,14 @@ def main() -> int:
     parser.add_argument("--max-price-age-days", type=int, default=7)
     args = parser.parse_args()
     if not args.sec_user_agent:
-        parser.error("--sec-user-agent or PIA_SEC_USER_AGENT is required")
+        result = _empty_probe_result(
+            symbol=str(args.symbol).strip().upper() or None,
+            retrieved_at=datetime.now(timezone.utc),
+            status="configuration_error",
+            errors=["--sec-user-agent or PIA_SEC_USER_AGENT is required"],
+        )
+        print(json.dumps(result, ensure_ascii=False, indent=2))
+        return 2
     try:
         result = probe_us_stock(
             args.symbol,
@@ -309,10 +423,18 @@ def main() -> int:
             max_price_age_days=args.max_price_age_days,
         )
     except (LiveProbeError, requests.RequestException) as exc:
-        print(json.dumps({"valid": False, "errors": [str(exc)]}, ensure_ascii=False, indent=2))
+        result = _empty_probe_result(
+            symbol=str(args.symbol).strip().upper() or None,
+            retrieved_at=datetime.now(timezone.utc),
+            status="data_error",
+            errors=[str(exc)],
+        )
+        result["identity_errors"] = []
+        result["data_errors"] = [str(exc)]
+        print(json.dumps(result, ensure_ascii=False, indent=2))
         return 2
     print(json.dumps(result, ensure_ascii=False, indent=2))
-    return 0 if result["valid"] else 1
+    return 0 if result["formal_use_allowed"] else 1
 
 
 if __name__ == "__main__":
