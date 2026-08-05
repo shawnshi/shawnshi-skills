@@ -28,13 +28,12 @@ def normalize_symbol(symbol: str) -> str:
 
 def is_cash_position(position: Dict[str, Any]) -> bool:
     symbol = normalize_symbol(position.get("symbol") or "")
-    market_type = (
-        position.get("market_type").strip().upper()
-        if isinstance(position.get("market_type"), str)
-        else ""
-    )
-    return market_type == "CASH" and (
-        symbol == "CASH" or symbol.startswith("CASH_")
+    market = _normalized_market(position.get("market"))
+    asset_type = _normalized_asset_type(position.get("asset_type"))
+    return (
+        market == "CASH"
+        and asset_type == "cash"
+        and (symbol == "CASH" or symbol.startswith("CASH_"))
     )
 
 
@@ -49,8 +48,12 @@ def _strict_number(value: Any) -> Optional[float]:
     return parsed if math.isfinite(parsed) else None
 
 
-def _normalized_market_type(value: Any) -> str:
+def _normalized_market(value: Any) -> str:
     return value.strip().upper() if isinstance(value, str) else ""
+
+
+def _normalized_asset_type(value: Any) -> str:
+    return value.strip().lower() if isinstance(value, str) else ""
 
 
 def _valid_iso_date_or_datetime(value: Any) -> bool:
@@ -68,6 +71,11 @@ def validate_portfolio_payload(payload: Dict[str, Any]) -> list[str]:
         return ["portfolio root must be an object"]
     schema = json.loads(PORTFOLIO_SCHEMA_PATH.read_text(encoding="utf-8"))
     errors = []
+    for field in schema.get("prohibited_top_level", []):
+        if field in payload:
+            errors.append(
+                f"portfolio field {field} is prohibited; allocation policy must be supplied as a separate research input"
+            )
     for field in schema["required_top_level"]:
         if payload.get(field) in (None, "", []):
             errors.append(f"missing portfolio field: {field}")
@@ -124,7 +132,13 @@ def validate_portfolio_payload(payload: Dict[str, Any]) -> list[str]:
                 if not isinstance(metadata, dict):
                     errors.append(f"{prefix} must be an object")
                     continue
-                for field in ("pair", "as_of", "source", "retrieved_at"):
+                for field in (
+                    "pair",
+                    "as_of",
+                    "source",
+                    "source_locator",
+                    "retrieved_at",
+                ):
                     if metadata.get(field) in (None, ""):
                         errors.append(f"missing {prefix}.{field}")
                 pair = metadata.get("pair")
@@ -134,6 +148,11 @@ def validate_portfolio_payload(payload: Dict[str, Any]) -> list[str]:
                 source = metadata.get("source")
                 if not isinstance(source, str) or not source.strip():
                     errors.append(f"{prefix}.source must be a non-empty string")
+                source_locator = metadata.get("source_locator")
+                if not isinstance(source_locator, str) or not source_locator.strip():
+                    errors.append(
+                        f"{prefix}.source_locator must be a non-empty string"
+                    )
                 for field in ("as_of", "retrieved_at"):
                     if not _valid_iso_date_or_datetime(metadata.get(field)):
                         errors.append(
@@ -150,10 +169,7 @@ def validate_portfolio_payload(payload: Dict[str, Any]) -> list[str]:
             continue
         missing = [
             field
-            for field in schema.get(
-                "strict_positions_file_required_fields",
-                schema["required_position_fields"],
-            )
+            for field in schema["required_position_fields"]
             if position.get(field) in (None, "")
         ]
         if missing:
@@ -174,25 +190,78 @@ def validate_portfolio_payload(payload: Dict[str, Any]) -> list[str]:
             errors.append(
                 f"positions[{index}].currency must be a three-letter string currency code"
             )
-        raw_market_type = position.get("market_type")
-        market_type = _normalized_market_type(raw_market_type)
-        allowed_market_types = {
-            _normalized_market_type(value)
-            for value in schema.get("allowed_market_types", [])
+        raw_market = position.get("market")
+        market = _normalized_market(raw_market)
+        allowed_markets = {
+            _normalized_market(value)
+            for value in schema.get("allowed_markets", [])
         }
-        if not isinstance(raw_market_type, str) or not raw_market_type.strip():
-            errors.append(f"positions[{index}].market_type must be a non-empty string")
-        elif market_type not in allowed_market_types:
+        if not isinstance(raw_market, str) or not raw_market.strip():
+            errors.append(f"positions[{index}].market must be a non-empty string")
+        elif raw_market != market:
+            errors.append(f"positions[{index}].market must use uppercase canonical form")
+        elif market not in allowed_markets:
             errors.append(
-                f"positions[{index}].market_type is not an allowed market type: {raw_market_type}"
+                f"positions[{index}].market is not allowed: {raw_market}"
+            )
+
+        raw_asset_type = position.get("asset_type")
+        asset_type = _normalized_asset_type(raw_asset_type)
+        allowed_asset_types = {
+            _normalized_asset_type(value)
+            for value in schema.get("allowed_asset_types", [])
+        }
+        if not isinstance(raw_asset_type, str) or not raw_asset_type.strip():
+            errors.append(f"positions[{index}].asset_type must be a non-empty string")
+        elif raw_asset_type != asset_type:
+            errors.append(
+                f"positions[{index}].asset_type must use lowercase canonical form"
+            )
+        elif asset_type not in allowed_asset_types:
+            errors.append(
+                f"positions[{index}].asset_type is not allowed: {raw_asset_type}"
             )
 
         symbol_is_cash = symbol == "CASH" or symbol.startswith("CASH_")
-        market_is_cash = market_type == "CASH"
-        if symbol_is_cash != market_is_cash:
+        market_is_cash = market == "CASH"
+        asset_is_cash = asset_type == "cash"
+        if not (symbol_is_cash == market_is_cash == asset_is_cash):
             errors.append(
-                f"positions[{index}] cash identity requires both symbol CASH/CASH_* and market_type CASH"
+                f"positions[{index}] cash identity requires symbol CASH/CASH_*, market CASH, and asset_type cash together"
             )
+        if market == "CN":
+            if not symbol.endswith((".SS", ".SZ")):
+                errors.append(
+                    f"positions[{index}].symbol must use .SS or .SZ for market CN"
+                )
+            if currency != "CNY":
+                errors.append(
+                    f"positions[{index}].currency must be CNY for market CN"
+                )
+        elif market == "HK":
+            if not symbol.endswith(".HK"):
+                errors.append(
+                    f"positions[{index}].symbol must use .HK for market HK"
+                )
+            if currency != "HKD":
+                errors.append(
+                    f"positions[{index}].currency must be HKD for market HK"
+                )
+        elif market == "US":
+            if symbol.endswith((".SS", ".SZ", ".HK")):
+                errors.append(
+                    f"positions[{index}].symbol suffix conflicts with market US"
+                )
+            if currency != "USD":
+                errors.append(
+                    f"positions[{index}].currency must be USD for market US"
+                )
+        elif market == "CASH" and symbol.startswith("CASH_"):
+            symbol_currency = symbol.removeprefix("CASH_")
+            if symbol_currency != currency:
+                errors.append(
+                    f"positions[{index}].currency must match the CASH_ symbol suffix"
+                )
 
         quantity = _strict_number(position.get("quantity"))
         if quantity is None or quantity < 0:
@@ -236,14 +305,6 @@ def validate_portfolio_payload(payload: Dict[str, Any]) -> list[str]:
                 for field in schema.get("risk_profile_required_provenance_fields", []):
                     if provenance.get(field) in (None, ""):
                         errors.append(f"missing risk_profile.provenance.{field}")
-    rebalance_policy = payload.get("rebalance_policy")
-    if rebalance_policy is not None:
-        if not isinstance(rebalance_policy, dict):
-            errors.append("rebalance_policy must be an object when provided")
-        else:
-            for field in schema.get("rebalance_policy_required_fields_when_configured", []):
-                if rebalance_policy.get(field) in (None, "", []):
-                    errors.append(f"missing rebalance_policy.{field}")
     return errors
 
 
@@ -265,6 +326,14 @@ def load_positions(path: Optional[str] = None) -> Dict[str, Any]:
         raise ValueError("invalid positions file: " + "; ".join(validation_errors))
     result = copy.deepcopy(payload)
     all_positions = result["positions"]
+    ignored_current_weights = {
+        normalize_symbol(position.get("symbol") or ""): position.get("current_weight")
+        for position in all_positions
+        if isinstance(position, dict) and "current_weight" in position
+    }
+    for position in all_positions:
+        if isinstance(position, dict):
+            position.pop("current_weight", None)
     active_positions = [
         position
         for position in all_positions
@@ -294,6 +363,8 @@ def load_positions(path: Optional[str] = None) -> Dict[str, Any]:
         for position in inactive_positions
     ]
     result["_position_file_record_count"] = len(all_positions)
+    result["_weight_snapshot_status"] = "requires_validated_quote_refresh"
+    result["_ignored_persisted_current_weights"] = ignored_current_weights
     result["_exchange_rate_data_status"] = {
         str(currency).strip().upper(): get_exchange_rate_details(
             str(currency), result
@@ -369,6 +440,7 @@ def get_exchange_rate_details(currency: str, payload: Dict[str, Any]) -> Dict[st
             "data_status": "dated_snapshot",
             "as_of": metadata.get("as_of"),
             "source": metadata.get("source"),
+            "source_locator": metadata.get("source_locator"),
             "retrieved_at": metadata.get("retrieved_at"),
         }
     return {
@@ -376,6 +448,7 @@ def get_exchange_rate_details(currency: str, payload: Dict[str, Any]) -> Dict[st
         "data_status": "undated_static",
         "as_of": None,
         "source": None,
+        "source_locator": None,
         "retrieved_at": None,
     }
 
@@ -386,6 +459,7 @@ def get_exchange_rate(currency: str, payload: Dict[str, Any]) -> float:
 
 def build_portfolio_summary(positions: list[dict], payload: Dict[str, Any] = None) -> Dict[str, Any]:
     payload = payload or {}
+    weights_verified = payload.get("_weight_snapshot_status") == "verified"
     risk_profile = payload.get("risk_profile", {})
     conc_high_th = _to_float(risk_profile.get("high_concentration_threshold"))
     conc_med_th = _to_float(risk_profile.get("medium_concentration_threshold"))
@@ -399,8 +473,8 @@ def build_portfolio_summary(positions: list[dict], payload: Dict[str, Any] = Non
     days_to_liquidate_values = []
 
     for item in positions:
-        weight = _to_float(item.get("current_weight"))
-        market = item.get("market_type") or "未知"
+        weight = _to_float(item.get("current_weight")) if weights_verified else None
+        market = item.get("market") or "未知"
         thesis = item.get("thesis")
         days_to_liquidate = _to_float(item.get("days_to_liquidate"))
         if not thesis:
@@ -423,7 +497,7 @@ def build_portfolio_summary(positions: list[dict], payload: Dict[str, Any] = Non
 
     top_positions.sort(key=lambda x: x.get("weight") or 0.0, reverse=True)
     concentration_score = round(sum(weight * weight for weight in weights), 4)
-    if conc_high_th is None or conc_med_th is None:
+    if missing_weight_count > 0 or conc_high_th is None or conc_med_th is None:
         concentration_bucket = "unknown"
     elif concentration_score >= conc_high_th:
         concentration_bucket = "high"
@@ -435,6 +509,9 @@ def build_portfolio_summary(positions: list[dict], payload: Dict[str, Any] = Non
     tracked_weight = round(sum(weights), 4)
     inactive_symbols = list(payload.get("_inactive_zero_quantity_symbols", []))
     return {
+        "weight_data_status": (
+            "verified" if weights_verified else "requires_validated_quote_refresh"
+        ),
         "total_positions": len(positions),
         "position_file_record_count": payload.get(
             "_position_file_record_count", len(positions)
@@ -507,7 +584,7 @@ def build_portfolio_risk(summary: Dict[str, Any], payload: Dict[str, Any] = None
         )
 
     max_market_exposure = max(market_exposure.values(), default=0.0)
-    if not profile_ready:
+    if not profile_ready or missing_weight_count > 0:
         concentration_risk = "未知"
     elif concentration_bucket == "high" or any(item.get("weight", 0) >= single_weight_th for item in top_positions):
         concentration_risk = "高"
@@ -516,7 +593,7 @@ def build_portfolio_risk(summary: Dict[str, Any], payload: Dict[str, Any] = None
     else:
         concentration_risk = "低"
 
-    if not profile_ready:
+    if not profile_ready or missing_weight_count > 0:
         market_exposure_risk = "未知"
     elif max_market_exposure >= exp_high_th:
         market_exposure_risk = "高"
@@ -591,7 +668,8 @@ def build_position_context(symbol: str, current_price: Any, payload: Dict[str, A
                     "and is excluded from active holdings"
                 ),
                 "name": inactive.get("name"),
-                "market_type": inactive.get("market_type"),
+                "market": inactive.get("market"),
+                "asset_type": inactive.get("asset_type"),
                 "quantity": 0.0,
                 "currency": inactive.get("currency"),
             }
@@ -607,8 +685,7 @@ def build_position_context(symbol: str, current_price: Any, payload: Dict[str, A
     avg_cost = _to_float(matched.get("avg_cost"))
     price = _to_float(current_price)
     
-    market_type = matched.get("market_type")
-    if _normalized_market_type(market_type) == "CASH" and price is None:
+    if is_cash_position(matched) and price is None:
         price = 1.0
         avg_cost = 1.0
         
@@ -625,7 +702,10 @@ def build_position_context(symbol: str, current_price: Any, payload: Dict[str, A
         unrealized_pnl = round((price - avg_cost) * quantity * fx_rate, 2)
         unrealized_pnl_pct = round((price - avg_cost) / avg_cost, 4)
 
-    current_weight = _to_float(matched.get("current_weight"))
+    weights_verified = payload.get("_weight_snapshot_status") == "verified"
+    current_weight = (
+        _to_float(matched.get("current_weight")) if weights_verified else None
+    )
     target_weight = _to_float(matched.get("target_weight"))
     max_weight = _to_float(matched.get("max_weight"))
     
@@ -641,7 +721,8 @@ def build_position_context(symbol: str, current_price: Any, payload: Dict[str, A
         "has_position": True,
         "position_status": "matched",
         "name": matched.get("name"),
-        "market_type": matched.get("market_type"),
+        "market": matched.get("market"),
+        "asset_type": matched.get("asset_type"),
         "quantity": quantity,
         "avg_cost": avg_cost,
         "currency": currency,
@@ -650,12 +731,16 @@ def build_position_context(symbol: str, current_price: Any, payload: Dict[str, A
         "fx_data_status": fx_details["data_status"],
         "fx_as_of": fx_details["as_of"],
         "fx_source": fx_details["source"],
+        "fx_source_locator": fx_details.get("source_locator"),
         "fx_retrieved_at": fx_details["retrieved_at"],
         "opened_at": matched.get("opened_at"),
         "thesis": matched.get("thesis"),
         "target_weight": target_weight,
         "max_weight": max_weight,
         "current_weight": current_weight,
+        "current_weight_status": (
+            "verified" if weights_verified else "requires_validated_quote_refresh"
+        ),
         "weight_status": weight_status,
         "current_price": price,
         "market_value": market_value,

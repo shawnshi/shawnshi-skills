@@ -1,12 +1,13 @@
 {
   "resource_kind": "portfolio_contract",
-  "version": "2.2",
-  "optional_top_level": ["exchange_rates", "exchange_rate_metadata", "risk_profile", "rebalance_policy"],
+  "version": "3.0",
+  "optional_top_level": ["exchange_rates", "exchange_rate_metadata", "risk_profile"],
+  "prohibited_top_level": ["rebalance_policy"],
   "required_top_level": ["positions", "base_currency"],
   "exchange_rate_convention": "one unit of position currency in base currency",
   "exchange_rate_metadata_contract": {
     "shape": "object keyed by the position currency used in exchange_rates",
-    "required_fields": ["pair", "as_of", "source", "retrieved_at"],
+    "required_fields": ["pair", "as_of", "source", "source_locator", "retrieved_at"],
     "pair_format": "POSITION_CURRENCY/BASE_CURRENCY",
     "status_without_metadata": "undated_static",
     "status_with_valid_metadata": "dated_snapshot",
@@ -25,34 +26,35 @@
     ]
   },
   "current_weight_range": "0 <= current_weight <= 1; quantity == 0 requires current_weight == 0",
-  "required_position_fields": ["symbol", "quantity", "avg_cost", "currency"],
-  "strict_positions_file_required_fields": ["symbol", "quantity", "avg_cost", "currency", "market_type"],
-  "required_position_fields_compatibility_note": "required_position_fields is retained for embedded scenario packets; persisted positions files and portfolio_loader use strict_positions_file_required_fields",
+  "persisted_current_weight_semantics": "accepted only for stale-state audit, stripped on load, and never treated as a current weight without a separately verified quote snapshot",
+  "required_position_fields": ["symbol", "quantity", "avg_cost", "currency", "market", "asset_type"],
   "position_field_types": {
     "symbol": "non-empty string",
     "quantity": "JSON number; bool and numeric string prohibited",
     "avg_cost": "JSON number; bool and numeric string prohibited",
     "currency": "three-letter string currency code",
-    "market_type": "non-empty string from allowed_market_types",
+    "market": "uppercase string from allowed_markets",
+    "asset_type": "lowercase string from allowed_asset_types",
     "current_weight": "JSON number; bool and numeric string prohibited"
   },
-  "allowed_market_types": [
-    "A_SHARE",
-    "A股ETF",
-    "US_STOCK",
-    "ETF",
-    "CASH",
-    "US",
+  "allowed_markets": [
     "CN",
     "HK",
-    "A股",
-    "美股",
-    "港股",
-    "FUND",
-    "INDEX",
-    "OTHER"
+    "US",
+    "CASH"
   ],
-  "cash_identity_rule": "symbol CASH or CASH_* if and only if market_type is CASH",
+  "allowed_asset_types": [
+    "stock",
+    "etf",
+    "fund",
+    "index",
+    "cash",
+    "other"
+  ],
+  "cash_identity_rule": "symbol CASH or CASH_* if and only if market is CASH and asset_type is cash",
+  "legacy_display_fields_ignored_for_identity": [
+    "market_type"
+  ],
   "optional_position_fields": [
     "name",
     "opened_at",
@@ -64,6 +66,9 @@
     "days_to_liquidate",
     "allocation_bucket"
   ],
+  "ignored_derived_position_fields": ["current_weight"],
+  "user_authorized_constraint_fields": ["target_weight", "max_weight"],
+  "constraint_field_semantics": "input-only user constraints; never generated, redistributed, or written by allocation experiments",
   "risk_profile_required_fields_when_configured": [
     "high_concentration_threshold",
     "medium_concentration_threshold",
@@ -80,11 +85,5 @@
     "as_of_date",
     "region",
     "purpose"
-  ],
-  "rebalance_policy_required_fields_when_configured": [
-    "bucket_targets",
-    "max_weight_buffer",
-    "history_period",
-    "min_history_points"
   ]
 }

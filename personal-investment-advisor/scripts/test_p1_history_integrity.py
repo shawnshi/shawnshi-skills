@@ -135,7 +135,7 @@ class HistoryIntegrityContractTests(unittest.TestCase):
         blocked = history_integrity_decision(
             "159516.SZ",
             {"quoteType": "EQUITY"},
-            {"market_type": "A股ETF", "name": "半导体设备ETF国泰"},
+            {"market": "CN", "asset_type": "etf", "name": "半导体设备ETF国泰"},
             {},
         )
         self.assertFalse(blocked["technical_metrics_allowed"])
@@ -145,7 +145,7 @@ class HistoryIntegrityContractTests(unittest.TestCase):
         allowed = history_integrity_decision(
             "159516.SZ",
             {"quoteType": "EQUITY"},
-            {"market_type": "A股ETF", "name": "半导体设备ETF国泰"},
+            {"market": "CN", "asset_type": "etf", "name": "半导体设备ETF国泰"},
             {"159516.SZ": verified_packet},
             history_frame(),
         )
@@ -162,7 +162,7 @@ class HistoryIntegrityContractTests(unittest.TestCase):
         blocked = history_integrity_decision(
             "159516.SZ",
             {"quoteType": "EQUITY"},
-            {"market_type": "A股ETF", "name": "半导体设备ETF国泰"},
+            {"market": "CN", "asset_type": "etf", "name": "半导体设备ETF国泰"},
             {"159516.SZ": verified_packet},
             future_history,
         )
@@ -178,7 +178,7 @@ class HistoryIntegrityContractTests(unittest.TestCase):
         blocked = history_integrity_decision(
             "159516.SZ",
             {"quoteType": "EQUITY"},
-            {"market_type": "A股ETF", "name": "半导体设备ETF国泰"},
+            {"market": "CN", "asset_type": "etf", "name": "半导体设备ETF国泰"},
             {"159516.SZ": verified_packet},
             wrong_source,
         )
@@ -202,11 +202,22 @@ class HistoryIntegrityContractTests(unittest.TestCase):
         self.assertEqual(report["status"], "insufficient_data")
         self.assertFalse(report["technical_metrics_allowed"])
 
+    def test_cn_etf_provider_equity_without_bound_identity_fails_closed(self):
+        report = history_integrity_decision(
+            "159516.SZ",
+            {"quoteType": "EQUITY"},
+            None,
+            {},
+        )
+        self.assertEqual(report["status"], "insufficient_evidence")
+        self.assertEqual(report["detail_status"], "asset_identity_unknown")
+        self.assertFalse(report["technical_metrics_allowed"])
+
     def test_operating_company_history_is_not_subject_to_etf_gate(self):
         report = history_integrity_decision(
             "AAPL",
             {"quoteType": "EQUITY"},
-            {"market_type": "US_STOCK", "name": "Apple Inc."},
+            {"market": "US", "asset_type": "stock", "name": "Apple Inc."},
             {},
         )
         self.assertEqual(report["status"], "not_applicable")
@@ -238,7 +249,7 @@ class HistoryIntegrityContractTests(unittest.TestCase):
             record["history_integrity"]["detail_status"], "asset_identity_unknown"
         )
 
-    def test_price_only_fetches_identity_and_allows_known_operating_company(self):
+    def test_price_only_allows_operating_company_with_bound_identity(self):
         history = history_frame()
         info = {
             "symbol": "AAPL",
@@ -248,7 +259,20 @@ class HistoryIntegrityContractTests(unittest.TestCase):
         }
         stdout = io.StringIO()
         with (
-            patch.object(sys, "argv", ["yf.py", "AAPL", "--json", "--price-only"]),
+            patch.object(
+                sys,
+                "argv",
+                [
+                    "yf.py",
+                    "AAPL",
+                    "--json",
+                    "--price-only",
+                    "--market",
+                    "US",
+                    "--asset-type",
+                    "stock",
+                ],
+            ),
             patch("yf.resolve_symbol", return_value="AAPL"),
             patch(
                 "yf.get_stock_data", return_value=(history, info, [], [])

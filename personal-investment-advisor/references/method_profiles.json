@@ -1,21 +1,29 @@
 {
   "resource_kind": "investment_method_profiles",
-  "version": "2.0",
+  "version": "3.0",
   "_meta": {
     "threshold_status": "configurable_method_assumptions",
     "boundary": "Thresholds are screening parameters, not universal investment facts or trade rules. Evidence-only profiles define required checks and must not be interpreted as a financial-screen pass.",
-    "last_reviewed": "2026-07-31"
+    "last_reviewed": "2026-08-05"
   },
   "profiles": {
     "quality_equity": {
-      "profile_version": "2.0",
+      "profile_version": "3.0",
       "description": "Non-financial operating company quality screen; requires cash-flow and margin evidence.",
       "applicable_markets": ["CN", "HK", "US"],
       "applicable_asset_types": ["stock"],
+      "screening_mode": "descriptive_filter",
+      "alpha_validation_status": "not_validated",
+      "data_requirements": {
+        "minimum_periods": 3,
+        "frequency": "annual",
+        "point_in_time_required_for_historical_replay": true,
+        "universe_as_of_required_for_backtest": true
+      },
       "thresholds": {
         "roe_avg": {"min": 0.08},
-        "fcf_sum": {"min_exclusive": 0.0},
-        "interest_coverage": {"min": 2.0},
+        "fcf_positive_ratio": {"min": 0.75},
+        "interest_coverage_min": {"min": 2.0},
         "gross_margin_avg": {"min": 0.15},
         "ocf_to_net_income_avg": {"min": 0.7},
         "net_margin_avg": {"min": 0.05},
@@ -23,10 +31,18 @@
       }
     },
     "a_share_basic": {
-      "profile_version": "2.0",
+      "profile_version": "3.0",
       "description": "Limited A-share primary screen when only common profitability fields are available.",
       "applicable_markets": ["CN"],
       "applicable_asset_types": ["stock"],
+      "screening_mode": "descriptive_filter",
+      "alpha_validation_status": "not_validated",
+      "data_requirements": {
+        "minimum_periods": 3,
+        "frequency": "annual",
+        "point_in_time_required_for_historical_replay": true,
+        "universe_as_of_required_for_backtest": true
+      },
       "thresholds": {
         "roe_avg": {"min": 0.08},
         "gross_margin_avg": {"min": 0.15},
@@ -35,22 +51,30 @@
       }
     },
     "financial_institution": {
-      "profile_version": "2.0",
-      "description": "Bank and insurer pre-screen; does not apply industrial-company FCF or gross-margin rules.",
+      "profile_version": "3.0",
+      "description": "Evidence-only routing profile for banks and insurers; generic industrial-company ratios cannot establish financial quality.",
       "applicable_markets": ["CN", "HK", "US"],
       "applicable_asset_types": ["stock"],
       "applicable_industry_types": ["bank", "insurance"],
-      "thresholds": {
-        "roe_avg": {"min": 0.08},
-        "dilution": {"max": 0.20}
-      }
+      "screening_mode": "evidence_only",
+      "alpha_validation_status": "not_validated",
+      "required_evidence_checks": [
+        "regulatory_capital_or_solvency",
+        "asset_or_reserve_quality",
+        "provision_or_loss_reserve_adequacy",
+        "industry_specific_profitability",
+        "liquidity_and_funding",
+        "dilution_and_capital_actions"
+      ],
+      "thresholds": {}
     },
     "etf_research": {
-      "profile_version": "2.0",
+      "profile_version": "3.0",
       "description": "Evidence-only ETF research contract; financial-statement quality screening is not applicable.",
       "applicable_markets": ["CN", "HK", "US"],
       "applicable_asset_types": ["etf"],
       "screening_mode": "evidence_only",
+      "alpha_validation_status": "not_validated",
       "required_evidence_checks": [
         "instrument_identity",
         "tracking_index_and_methodology",

@@ -1,7 +1,10 @@
-yfinance
-rich
-requests
-dateparser
-efinance
-akshare
-tenacity
+yfinance>=0.2.65,<2
+rich>=13,<16
+requests>=2.31,<3
+dateparser>=1.2,<2
+efinance>=0.5,<0.6
+akshare>=1.17,<2
+tenacity>=8,<10
+pandas>=2.2,<4
+numpy>=1.26,<3
+tabulate>=0.9,<1

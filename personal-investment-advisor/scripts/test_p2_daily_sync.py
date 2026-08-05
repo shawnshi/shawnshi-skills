@@ -14,6 +14,8 @@ if str(SCRIPT_DIR) not in sys.path:
     sys.path.insert(0, str(SCRIPT_DIR))
 
 import daily_sync
+from portfolio_loader import load_positions
+from quote_evidence_contract import build_portfolio_snapshot_binding
 
 
 NOW_EPOCH = 1_800_000_000.0
@@ -30,7 +32,8 @@ def positions_payload():
                 "quantity": 2,
                 "avg_cost": 100.0,
                 "currency": "USD",
-                "market_type": "US_STOCK",
+                "market": "US",
+                "asset_type": "stock",
             },
             {
                 "symbol": "159516.SZ",
@@ -38,7 +41,8 @@ def positions_payload():
                 "quantity": 100,
                 "avg_cost": 0.737,
                 "currency": "CNY",
-                "market_type": "A股ETF",
+                "market": "CN",
+                "asset_type": "etf",
             },
             {
                 "symbol": "CASH_CNY",
@@ -46,7 +50,8 @@ def positions_payload():
                 "quantity": 1_000,
                 "avg_cost": 1.0,
                 "currency": "CNY",
-                "market_type": "CASH",
+                "market": "CASH",
+                "asset_type": "cash",
             },
             {
                 "symbol": "VOO",
@@ -54,7 +59,8 @@ def positions_payload():
                 "quantity": 0,
                 "avg_cost": 600.0,
                 "currency": "USD",
-                "market_type": "ETF",
+                "market": "US",
+                "asset_type": "etf",
             },
         ],
     }
@@ -121,8 +127,12 @@ def supplied_audit(**overrides):
         "unique_resolved_symbol_count": 2,
         "quote_success_count": 2,
         "portfolio_matched_count": 2,
+        "quote_contract_matched_count": 2,
         "returned_symbols": ["AAPL", "159516.SZ"],
         "quote_failed_symbols": [],
+        "quote_contract_failures": {},
+        "result_error_symbols": [],
+        "stale_quote_symbols": [],
         "unmatched_symbols": [],
         "duplicate_requested_symbols": [],
         "expected_active_symbols": ["159516.SZ", "AAPL"],
@@ -141,21 +151,32 @@ def supplied_audit(**overrides):
 
 class DailySyncTestCase(unittest.TestCase):
     def write_inputs(self, root, *, positions=None, quotes=None):
+        positions_value = positions if positions is not None else positions_payload()
         positions_path = Path(root) / "positions.json"
         quotes_path = Path(root) / "quotes.json"
         positions_path.write_text(
-            json.dumps(positions if positions is not None else positions_payload()),
+            json.dumps(positions_value),
             encoding="utf-8",
         )
+        quotes_value = (
+            copy.deepcopy(quotes)
+            if quotes is not None
+            else {
+                "records": quote_records(),
+                "portfolio_batch_audit": supplied_audit(),
+            }
+        )
+        if (
+            isinstance(quotes_value, dict)
+            and isinstance(quotes_value.get("portfolio_batch_audit"), dict)
+            and "portfolio_snapshot_binding"
+            not in quotes_value["portfolio_batch_audit"]
+        ):
+            quotes_value["portfolio_batch_audit"]["portfolio_snapshot_binding"] = (
+                build_portfolio_snapshot_binding(load_positions(str(positions_path)))
+            )
         quotes_path.write_text(
-            json.dumps(
-                quotes
-                if quotes is not None
-                else {
-                    "records": quote_records(),
-                    "portfolio_batch_audit": supplied_audit(),
-                }
-            ),
+            json.dumps(quotes_value),
             encoding="utf-8",
         )
         return positions_path, quotes_path
@@ -176,7 +197,7 @@ class CompleteOfflineSyncTests(DailySyncTestCase):
             second = self.evaluate(positions_path, quotes_path)
 
         self.assertEqual(first, second)
-        self.assertEqual(first["status"], "complete")
+        self.assertEqual(first["status"], "incomplete")
         self.assertTrue(first["completeness"]["complete"])
         self.assertEqual(first["requested"], 2)
         self.assertEqual(first["succeeded"], 2)
@@ -199,24 +220,59 @@ class CompleteOfflineSyncTests(DailySyncTestCase):
             first["thesis_red_team"]["evidence_status"],
             "insufficient_evidence",
         )
+        self.assertIn("thesis_red_team_incomplete", first["errors"])
+        self.assertEqual(
+            first["input_bindings"]["portfolio_snapshot"]["active_position_count"],
+            3,
+        )
+        self.assertEqual(
+            len(first["input_bindings"]["portfolio_snapshot"]["sha256"]), 64
+        )
+        self.assertEqual(len(first["input_bindings"]["quote_package"]["sha256"]), 64)
+        self.assertEqual(len(first["input_bindings"]["quote_snapshot"]["sha256"]), 64)
 
-    def test_current_yf_list_with_repeated_identical_audit_is_accepted_as_legacy(self):
+    def test_inline_repeated_batch_audit_is_rejected(self):
         records = quote_records()
         audit = supplied_audit()
         for record in records:
             record["portfolio_batch_audit"] = copy.deepcopy(audit)
         with tempfile.TemporaryDirectory() as tmpdir:
-            positions_path, quotes_path = self.write_inputs(tmpdir, quotes=records)
+            positions_path, quotes_path = self.write_inputs(
+                tmpdir,
+                quotes={"records": records, "portfolio_batch_audit": audit},
+            )
             report = self.evaluate(positions_path, quotes_path)
 
-        self.assertEqual(report["status"], "complete")
+        self.assertEqual(report["status"], "incomplete")
         self.assertIn(
-            "legacy_repeated_identical_batch_audit",
-            report["stages"][1]["warnings"],
+            "inline_portfolio_batch_audit_not_allowed",
+            report["stages"][1]["errors"],
         )
 
 
 class FailClosedOfflineSyncTests(DailySyncTestCase):
+    def test_supplied_audit_must_bind_the_same_normalized_portfolio_snapshot(self):
+        wrong = positions_payload()
+        wrong["positions"][0]["quantity"] = 99
+        audit = supplied_audit(
+            portfolio_snapshot_binding=build_portfolio_snapshot_binding(wrong)
+        )
+        with tempfile.TemporaryDirectory() as tmpdir:
+            positions_path, quotes_path = self.write_inputs(
+                tmpdir,
+                quotes={
+                    "records": quote_records(),
+                    "portfolio_batch_audit": audit,
+                },
+            )
+            report = self.evaluate(positions_path, quotes_path)
+
+        self.assertFalse(report["completeness"]["complete"])
+        self.assertIn(
+            "portfolio_batch_audit.portfolio_snapshot_binding_mismatch",
+            report["stages"][2]["supplied_audit_errors"],
+        )
+
     def test_missing_duplicate_extra_and_unmatched_universe_fail(self):
         cases = {}
         missing = quote_records()[:1]

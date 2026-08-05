@@ -2,12 +2,13 @@
 
 The orchestrator consumes an already-captured quote packet. It performs no
 network calls and does not write positions, dashboards, theses, or journals.
+It may close quote completeness, but the top-level workflow remains incomplete
+until a separate primary-source Thesis red-team assessment is complete.
 """
 
 import argparse
 import json
 import math
-import sys
 import time
 from datetime import datetime, timezone
 from pathlib import Path
@@ -19,9 +20,13 @@ from yf import (
     _expected_position_metadata,
     build_portfolio_batch_audit,
 )
+from quote_evidence_contract import (
+    build_portfolio_snapshot_binding,
+    canonical_json_binding,
+)
 
 
-SCHEMA_VERSION = "pia_daily_sync_offline_v1"
+SCHEMA_VERSION = "pia_daily_sync_offline_v3"
 
 
 def _thesis_not_assessed() -> Dict[str, Any]:
@@ -85,6 +90,11 @@ def _base_report(
             "thesis_assessment_complete": False,
         },
         "quote_snapshot": [],
+        "input_bindings": {
+            "portfolio_snapshot": None,
+            "quote_package": None,
+            "quote_snapshot": None,
+        },
         "supplied_portfolio_batch_audit": None,
         "recomputed_portfolio_batch_audit": None,
         "thesis_red_team": _thesis_not_assessed(),
@@ -116,38 +126,15 @@ def _normalize_quote_package(payload: Any) -> Tuple[List[Dict[str, Any]], Option
     if isinstance(payload, dict):
         records = payload.get("records")
         audit = payload.get("portfolio_batch_audit")
-        inline_audits = [
-            record.get("portfolio_batch_audit")
+        has_inline_audit = any(
+            "portfolio_batch_audit" in record
             for record in records or []
             if isinstance(record, dict)
-            and isinstance(record.get("portfolio_batch_audit"), dict)
-        ] if isinstance(records, list) else []
-        if inline_audits:
-            if audit is None:
-                audit = inline_audits[0]
-                warnings.append("inline_batch_audit_used")
-            if any(item != audit for item in inline_audits):
-                errors.append("conflicting_inline_and_top_level_batch_audit")
-    elif isinstance(payload, list):
-        records = payload
-        inline_audits = [
-            record.get("portfolio_batch_audit")
-            for record in records
-            if isinstance(record, dict)
-            and isinstance(record.get("portfolio_batch_audit"), dict)
-        ]
-        if inline_audits:
-            audit = inline_audits[0]
-            if any(item != audit for item in inline_audits[1:]):
-                errors.append("conflicting_inline_batch_audits")
-            elif len(inline_audits) > 1:
-                warnings.append("legacy_repeated_identical_batch_audit")
-            else:
-                warnings.append("legacy_inline_single_batch_audit")
-        else:
-            errors.append("missing_portfolio_batch_audit")
+        ) if isinstance(records, list) else False
+        if has_inline_audit:
+            errors.append("inline_portfolio_batch_audit_not_allowed")
     else:
-        errors.append("quotes_root_must_be_records_object_or_list")
+        errors.append("quotes_root_must_be_an_object")
 
     if not isinstance(records, list):
         errors.append("quotes.records_must_be_a_list")
@@ -202,6 +189,7 @@ def _audit_claim_errors(
     audit: Optional[Dict[str, Any]],
     expected_symbols: List[str],
     records: List[Dict[str, Any]],
+    expected_portfolio_binding: Dict[str, Any],
 ) -> List[str]:
     if not isinstance(audit, dict):
         return ["missing_portfolio_batch_audit"]
@@ -215,6 +203,7 @@ def _audit_claim_errors(
         "unique_resolved_symbol_count": requested,
         "quote_success_count": requested,
         "portfolio_matched_count": requested,
+        "quote_contract_matched_count": requested,
     }
     for field, expected in count_fields.items():
         if audit.get(field) != expected:
@@ -229,6 +218,10 @@ def _audit_claim_errors(
         errors.append("portfolio_batch_audit.portfolio_load_error_present")
     if audit.get("strict_quote_contract") is not True:
         errors.append("portfolio_batch_audit.strict_quote_contract_not_true")
+    if audit.get("quote_contract_failures", {}) not in (None, {}):
+        errors.append("portfolio_batch_audit.quote_contract_failures_not_empty")
+    if audit.get("portfolio_snapshot_binding") != expected_portfolio_binding:
+        errors.append("portfolio_batch_audit.portfolio_snapshot_binding_mismatch")
 
     for field in (
         "quote_failed_symbols",
@@ -309,7 +302,8 @@ def _build_quote_snapshot(
                 "position_currency": position.get("currency"),
                 "exchange": info.get("exchange") or info.get("exchangeName"),
                 "provider_quote_type": info.get("quoteType"),
-                "position_market_type": position.get("market_type"),
+                "position_market": position.get("market"),
+                "position_asset_type": position.get("asset_type"),
                 "market_state": info.get("marketState"),
                 "as_of": _iso_utc(quote_epoch),
                 "quote_age_seconds": round(now_epoch - quote_epoch, 3)
@@ -368,6 +362,8 @@ def evaluate_daily_sync(
         return report
 
     try:
+        raw_portfolio = _read_json(positions_file, "positions_file")
+        raw_portfolio_binding = build_portfolio_snapshot_binding(raw_portfolio)
         portfolio = load_positions(positions_file)
     except (OSError, ValueError, json.JSONDecodeError) as exc:
         error = f"positions_validation_failed: {exc}"
@@ -382,6 +378,15 @@ def evaluate_daily_sync(
         for position in portfolio.get("positions", [])
         if not is_cash_position(position)
     ]
+    portfolio_binding = build_portfolio_snapshot_binding(portfolio)
+    if portfolio_binding != raw_portfolio_binding:
+        error = "positions_snapshot_changed_or_loader_cache_mismatch"
+        report["status"] = "invalid_input"
+        report["errors"] = [error]
+        report["stages"][0]["status"] = "failed"
+        report["stages"][0]["errors"] = [error]
+        return report
+    report["input_bindings"]["portfolio_snapshot"] = portfolio_binding
     expected_symbols = [
         normalize_symbol(position.get("symbol") or "")
         for position in active_positions
@@ -409,6 +414,17 @@ def evaluate_daily_sync(
         quotes_payload = _read_json(quotes_file, "quotes_file")
     except ValueError as exc:
         error = str(exc)
+        report["status"] = "invalid_input"
+        report["errors"] = [error]
+        report["stages"][1]["status"] = "failed"
+        report["stages"][1]["errors"] = [error]
+        return report
+    try:
+        report["input_bindings"]["quote_package"] = canonical_json_binding(
+            quotes_payload
+        )
+    except (TypeError, ValueError) as exc:
+        error = f"quotes_file_canonicalization_error: {exc}"
         report["status"] = "invalid_input"
         report["errors"] = [error]
         report["stages"][1]["status"] = "failed"
@@ -454,13 +470,13 @@ def evaluate_daily_sync(
         portfolio_load_status=portfolio.get("_status"),
         portfolio_load_error=None,
         expected_position_metadata=expected_metadata,
-        strict_quote_contract=True,
         now_epoch=evaluation_epoch,
         max_quote_age_seconds=int(max_quote_age_seconds),
+        portfolio_snapshot_binding=portfolio_binding,
     )
     report["recomputed_portfolio_batch_audit"] = recomputed_audit
     supplied_audit_errors = _audit_claim_errors(
-        supplied_audit, expected_symbols, records
+        supplied_audit, expected_symbols, records, portfolio_binding
     )
     supplied_audit_complete = not supplied_audit_errors
     contract_failures = {
@@ -524,6 +540,9 @@ def evaluate_daily_sync(
         contract_failures,
         evaluation_epoch,
     )
+    report["input_bindings"]["quote_snapshot"] = canonical_json_binding(
+        report["quote_snapshot"]
+    )
     completeness = report["completeness"]
     completeness.update(
         {
@@ -538,7 +557,7 @@ def evaluate_daily_sync(
             "recomputed_audit_complete": recomputed_complete,
         }
     )
-    complete = (
+    quote_refresh_complete = (
         not package_errors
         and coverage_complete
         and identity_complete
@@ -547,9 +566,16 @@ def evaluate_daily_sync(
         and report["succeeded"] == len(expected_symbols)
         and report["matched"] == len(expected_symbols)
     )
-    completeness["complete"] = complete
+    thesis_assessment_complete = (
+        report["thesis_red_team"].get("status") == "complete"
+        and report["thesis_red_team"].get("evidence_status") == "ok"
+    )
+    completeness["complete"] = quote_refresh_complete
+    completeness["thesis_assessment_complete"] = thesis_assessment_complete
     completeness_stage = report["stages"][3]
-    completeness_stage["status"] = "complete" if complete else "incomplete"
+    completeness_stage["status"] = (
+        "complete" if quote_refresh_complete else "incomplete"
+    )
     completeness_stage["errors"] = sorted(
         set(
             package_errors
@@ -559,8 +585,11 @@ def evaluate_daily_sync(
             + ([] if recomputed_complete else ["recomputed_batch_audit_incomplete"])
         )
     )
+    workflow_complete = quote_refresh_complete and thesis_assessment_complete
     report["errors"] = list(completeness_stage["errors"])
-    report["status"] = "complete" if complete else "incomplete"
+    if not thesis_assessment_complete:
+        report["errors"].append("thesis_red_team_incomplete")
+    report["status"] = "complete" if workflow_complete else "incomplete"
     return report
 
 

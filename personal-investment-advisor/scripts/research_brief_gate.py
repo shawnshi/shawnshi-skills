@@ -39,10 +39,30 @@ def _valid_iso_date(value: Any) -> bool:
         return False
 
 
+def _finite_number(value: Any) -> bool:
+    return (
+        isinstance(value, (int, float))
+        and not isinstance(value, bool)
+        and math.isfinite(float(value))
+    )
+
+
+def _valid_source_locator(value: Any) -> bool:
+    if not _non_empty_string(value):
+        return False
+    lowered = value.strip().lower()
+    return not any(
+        token in lowered
+        for token in ("example.com", "example.test", ".invalid", "localhost")
+    )
+
+
 def validate_research_brief(
     payload: dict[str, Any],
     schema: dict[str, Any] | None = None,
     profiles: dict[str, Any] | None = None,
+    *,
+    allow_legacy_archive: bool = False,
 ) -> list[str]:
     schema = schema or json.loads(SCHEMA_PATH.read_text(encoding="utf-8"))
     profiles = profiles or json.loads(PROFILES_PATH.read_text(encoding="utf-8"))
@@ -58,11 +78,126 @@ def validate_research_brief(
         "research_id",
         "method_profile",
         "research_question",
-        "market_consensus",
-        "core_hypothesis",
     ):
         if not _non_empty_string(payload.get(field)):
             errors.append(f"{field} must be a non-empty string")
+
+    market_consensus = payload.get("market_consensus")
+    consensus_metric = None
+    consensus_value = None
+    consensus_unit = None
+    consensus_as_of_date = None
+    if not isinstance(market_consensus, dict):
+        errors.append("market_consensus must be an object")
+    else:
+        for field in schema["required_market_consensus_fields"]:
+            if not _non_empty(market_consensus.get(field)):
+                errors.append(f"missing market_consensus.{field}")
+        if _non_empty_string(market_consensus.get("metric")):
+            consensus_metric = market_consensus["metric"]
+        else:
+            errors.append("market_consensus.metric must be a non-empty string")
+        if _finite_number(market_consensus.get("value")):
+            consensus_value = float(market_consensus["value"])
+        else:
+            errors.append("market_consensus.value must be a finite number")
+        if _non_empty_string(market_consensus.get("unit")):
+            consensus_unit = market_consensus["unit"]
+        else:
+            errors.append("market_consensus.unit must be a non-empty string")
+        if not _valid_iso_date(market_consensus.get("period_end")):
+            errors.append("market_consensus.period_end must be an ISO date")
+        if not _valid_source_locator(market_consensus.get("source_locator")):
+            errors.append("market_consensus.source_locator must identify a real source")
+        if _valid_iso_date(market_consensus.get("as_of_date")):
+            consensus_as_of_date = date.fromisoformat(market_consensus["as_of_date"])
+        else:
+            errors.append("market_consensus.as_of_date must be an ISO date")
+
+    core_hypothesis = payload.get("core_hypothesis")
+    hypothesis_metric = None
+    hypothesis_deadline = None
+    independent_value = None
+    expected_gap_value = None
+    expected_gap_direction = None
+    if not isinstance(core_hypothesis, dict):
+        errors.append("core_hypothesis must be an object")
+    else:
+        for field in schema["required_core_hypothesis_fields"]:
+            if not _non_empty(core_hypothesis.get(field)):
+                errors.append(f"missing core_hypothesis.{field}")
+        if not _non_empty_string(core_hypothesis.get("statement")):
+            errors.append("core_hypothesis.statement must be a non-empty string")
+        if not _non_empty_string(core_hypothesis.get("metric")):
+            errors.append("core_hypothesis.metric must be a non-empty string")
+        else:
+            hypothesis_metric = core_hypothesis["metric"]
+
+        independent_estimate = core_hypothesis.get("independent_estimate")
+        if not isinstance(independent_estimate, dict):
+            errors.append("core_hypothesis.independent_estimate must be an object")
+        else:
+            for field in schema["required_independent_estimate_fields"]:
+                if not _non_empty(independent_estimate.get(field)):
+                    errors.append(f"missing core_hypothesis.independent_estimate.{field}")
+            if _finite_number(independent_estimate.get("value")):
+                independent_value = float(independent_estimate["value"])
+            else:
+                errors.append("core_hypothesis.independent_estimate.value must be a finite number")
+            if not _non_empty_string(independent_estimate.get("unit")):
+                errors.append("core_hypothesis.independent_estimate.unit must be a non-empty string")
+            elif consensus_unit is not None and independent_estimate["unit"] != consensus_unit:
+                errors.append("core_hypothesis.independent_estimate.unit must match market_consensus.unit")
+
+        expected_gap = core_hypothesis.get("expected_gap")
+        if not isinstance(expected_gap, dict):
+            errors.append("core_hypothesis.expected_gap must be an object")
+        else:
+            for field in schema["required_expected_gap_fields"]:
+                if not _non_empty(expected_gap.get(field)):
+                    errors.append(f"missing core_hypothesis.expected_gap.{field}")
+            if _finite_number(expected_gap.get("absolute")):
+                expected_gap_value = float(expected_gap["absolute"])
+            else:
+                errors.append("core_hypothesis.expected_gap.absolute must be a finite number")
+            direction = expected_gap.get("direction")
+            if direction in schema["enums"]["expected_gap_direction"]:
+                expected_gap_direction = direction
+            else:
+                errors.append(
+                    "core_hypothesis.expected_gap.direction must be one of "
+                    f"{schema['enums']['expected_gap_direction']}"
+                )
+
+        falsified_when = core_hypothesis.get("falsified_when")
+        if not isinstance(falsified_when, dict):
+            errors.append("core_hypothesis.falsified_when must be an object")
+        else:
+            for field in schema["required_hypothesis_falsifier_fields"]:
+                if not _non_empty(falsified_when.get(field)):
+                    errors.append(f"missing core_hypothesis.falsified_when.{field}")
+            operator = falsified_when.get("operator")
+            if operator not in schema["enums"]["hypothesis_operator"]:
+                errors.append(
+                    "core_hypothesis.falsified_when.operator must be one of "
+                    f"{schema['enums']['hypothesis_operator']}"
+                )
+            target = falsified_when.get("target")
+            if (
+                not isinstance(target, (int, float))
+                or isinstance(target, bool)
+                or not math.isfinite(float(target))
+            ):
+                errors.append(
+                    "core_hypothesis.falsified_when.target must be a finite number"
+                )
+            deadline = falsified_when.get("deadline")
+            if not _valid_iso_date(deadline):
+                errors.append(
+                    "core_hypothesis.falsified_when.deadline must be an ISO date"
+                )
+            else:
+                hypothesis_deadline = date.fromisoformat(deadline)
 
     instrument = payload.get("instrument")
     if not isinstance(instrument, dict):
@@ -107,13 +242,45 @@ def validate_research_brief(
                 f"benchmark.currency must be {expected_currency} for market {benchmark.get('market')}"
             )
 
+    as_of_date = None
     if not _valid_iso_date(payload.get("as_of_date")):
         errors.append("as_of_date must be an ISO date")
+    else:
+        as_of_date = date.fromisoformat(payload["as_of_date"])
+        if as_of_date > date.today():
+            errors.append("as_of_date cannot be in the future")
     horizon = payload.get("investment_horizon_days")
     if not isinstance(horizon, int) or isinstance(horizon, bool):
         errors.append("investment_horizon_days must be a positive integer")
     elif horizon <= 0:
         errors.append("investment_horizon_days must be a positive integer")
+    if hypothesis_deadline is not None and as_of_date is not None:
+        if hypothesis_deadline < as_of_date:
+            errors.append(
+                "core_hypothesis.falsified_when.deadline cannot be before as_of_date"
+            )
+        elif (
+            isinstance(horizon, int)
+            and not isinstance(horizon, bool)
+            and horizon > 0
+            and (hypothesis_deadline - as_of_date).days > horizon
+        ):
+            errors.append(
+                "core_hypothesis.falsified_when.deadline cannot be after the investment horizon"
+            )
+    if consensus_as_of_date is not None and as_of_date is not None and consensus_as_of_date > as_of_date:
+        errors.append("market_consensus.as_of_date cannot be after as_of_date")
+    if consensus_metric is not None and hypothesis_metric is not None and consensus_metric != hypothesis_metric:
+        errors.append("market_consensus.metric must match core_hypothesis.metric")
+    if consensus_value is not None and independent_value is not None and expected_gap_value is not None:
+        calculated_gap = independent_value - consensus_value
+        if not math.isclose(expected_gap_value, calculated_gap, rel_tol=1e-9, abs_tol=1e-12):
+            errors.append(
+                "core_hypothesis.expected_gap.absolute must equal independent estimate minus consensus"
+            )
+        calculated_direction = "above" if calculated_gap > 0 else "below" if calculated_gap < 0 else "equal"
+        if expected_gap_direction is not None and expected_gap_direction != calculated_direction:
+            errors.append("core_hypothesis.expected_gap.direction is inconsistent with the numeric gap")
 
     method_profile = payload.get("method_profile")
     available_profiles = profiles.get("profiles", {})
@@ -153,6 +320,20 @@ def validate_research_brief(
             errors.append(
                 f"key_variables must contain {limits['minimum']} to {limits['maximum']} items"
             )
+        if (
+            hypothesis_metric is not None
+            and _string_list(key_variables)
+            and hypothesis_metric not in key_variables
+        ):
+            errors.append(
+                "core_hypothesis.metric must reference an item in key_variables"
+            )
+        if (
+            consensus_metric is not None
+            and _string_list(key_variables)
+            and consensus_metric not in key_variables
+        ):
+            errors.append("market_consensus.metric must reference an item in key_variables")
 
     source_policy = payload.get("source_policy")
     if not isinstance(source_policy, dict):
@@ -161,8 +342,11 @@ def validate_research_brief(
         for field in schema["required_source_policy_fields"]:
             if source_policy.get(field) in (None, "", []):
                 errors.append(f"missing source_policy.{field}")
-        if not _valid_iso_date(source_policy.get("cutoff_date")):
+        cutoff_date = source_policy.get("cutoff_date")
+        if not _valid_iso_date(cutoff_date):
             errors.append("source_policy.cutoff_date must be an ISO date")
+        elif date.fromisoformat(cutoff_date) > date.today():
+            errors.append("source_policy.cutoff_date cannot be in the future")
         allowed = source_policy.get("allowed_source_tiers", [])
         if not _string_list(allowed):
             errors.append(
@@ -172,7 +356,16 @@ def validate_research_brief(
             unknown = sorted(set(allowed) - set(schema["enums"]["source_tier"]))
             if unknown:
                 errors.append(f"unknown source tiers: {', '.join(unknown)}")
-            primary_tiers = {"company_primary", "regulator", "exchange", "audited_filing"}
+            legacy_tiers = set(schema.get("legacy_archive_source_tiers", []))
+            legacy_used = sorted(set(allowed).intersection(legacy_tiers))
+            if legacy_used and not allow_legacy_archive:
+                errors.append(
+                    "archive-only source tiers are prohibited for a current research brief: "
+                    + ", ".join(legacy_used)
+                )
+            primary_tiers = set(schema.get("primary_source_tiers", []))
+            if allow_legacy_archive:
+                primary_tiers.update(legacy_tiers)
             if not primary_tiers.intersection(allowed):
                 errors.append("source_policy.allowed_source_tiers must include a primary source tier")
         if source_policy.get("primary_source_required") is not True:

@@ -1,6 +1,6 @@
 {
   "resource_kind": "research_brief_contract",
-  "version": "1.1",
+  "version": "1.4",
   "required_top_level": [
     "research_id",
     "instrument",
@@ -39,22 +39,66 @@
     "transaction_cost_bps",
     "dual_trigger_policy"
   ],
+  "required_core_hypothesis_fields": [
+    "statement",
+    "metric",
+    "independent_estimate",
+    "expected_gap",
+    "falsified_when"
+  ],
+  "required_market_consensus_fields": [
+    "metric",
+    "value",
+    "unit",
+    "period_end",
+    "source_locator",
+    "as_of_date"
+  ],
+  "required_independent_estimate_fields": [
+    "value",
+    "unit"
+  ],
+  "required_expected_gap_fields": [
+    "absolute",
+    "direction"
+  ],
+  "required_hypothesis_falsifier_fields": [
+    "operator",
+    "target",
+    "deadline"
+  ],
   "enums": {
     "market": ["CN", "HK", "US"],
     "asset_type": ["stock", "etf", "fund", "index", "other"],
     "decision_scope": ["research_only"],
     "industry_type": ["operating_company", "bank", "insurance", "other", "unknown"],
-    "dual_trigger_policy": ["conservative", "exclude"],
+    "dual_trigger_policy": ["exclude"],
+    "hypothesis_operator": [">=", ">", "<=", "<", "=="],
+    "expected_gap_direction": ["above", "below", "equal"],
     "source_tier": [
       "company_primary",
       "regulator",
       "exchange",
+      "annual_audited_filing",
+      "quarterly_filing",
+      "current_report",
       "audited_filing",
       "market_data",
       "secondary",
       "user_authorized"
     ]
   },
+  "primary_source_tiers": [
+    "company_primary",
+    "regulator",
+    "exchange",
+    "annual_audited_filing",
+    "quarterly_filing",
+    "current_report"
+  ],
+  "legacy_archive_source_tiers": [
+    "audited_filing"
+  ],
   "market_currency": {
     "CN": "CNY",
     "HK": "HKD",
@@ -65,8 +109,17 @@
       "research_id",
       "method_profile",
       "research_question",
-      "market_consensus",
-      "core_hypothesis",
+      "market_consensus.metric",
+      "market_consensus.unit",
+      "market_consensus.period_end",
+      "market_consensus.source_locator",
+      "market_consensus.as_of_date",
+      "core_hypothesis.statement",
+      "core_hypothesis.metric",
+      "core_hypothesis.independent_estimate.unit",
+      "core_hypothesis.expected_gap.direction",
+      "core_hypothesis.falsified_when.operator",
+      "core_hypothesis.falsified_when.deadline",
       "instrument.symbol",
       "instrument.market",
       "instrument.asset_type",
@@ -80,6 +133,12 @@
       "key_variables",
       "source_policy.allowed_source_tiers",
       "output_contract.required_scenarios"
+    ],
+    "finite_number_fields": [
+      "market_consensus.value",
+      "core_hypothesis.independent_estimate.value",
+      "core_hypothesis.expected_gap.absolute",
+      "core_hypothesis.falsified_when.target"
     ],
     "currency_pattern": "^[A-Z]{3}$",
     "investment_horizon_days": "positive_integer_excluding_boolean"

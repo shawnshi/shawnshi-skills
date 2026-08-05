@@ -8,7 +8,7 @@ import sys
 import unittest
 from datetime import datetime, timezone
 from pathlib import Path
-from unittest.mock import patch
+from unittest.mock import Mock, patch
 from urllib.parse import urlparse
 
 import pandas as pd
@@ -27,6 +27,7 @@ from research_brief_gate import validate_research_brief
 
 
 NOW = datetime(2026, 7, 30, 12, 0, tzinfo=timezone.utc)
+RESERVED_TEST_CONTACT = "PIA Research formal@research.example"
 
 
 def financial_frames():
@@ -67,12 +68,14 @@ def probe_fetcher(
     quote_instrument_type="EQUITY",
     company_name="Apple Inc. Common Stock",
     forms=None,
+    market_state="CLOSED",
+    quote_epoch=None,
 ):
     forms = forms or ["10-Q"]
     filing_dates = ["2026-05-01"] * len(forms)
     accessions = [f"0000320193-26-{index + 1:06d}" for index in range(len(forms))]
     documents = [f"document-{index + 1}.htm" for index in range(len(forms))]
-    quote_epoch = datetime(2026, 7, 21, 20, 0, tzinfo=timezone.utc).timestamp()
+    quote_epoch = quote_epoch or datetime(2026, 7, 21, 20, 0, tzinfo=timezone.utc).timestamp()
 
     def fetch(url, headers, timeout):
         hostname = urlparse(url).hostname
@@ -88,6 +91,7 @@ def probe_fetcher(
                                 "regularMarketPrice": 200.0,
                                 "currency": "USD",
                                 "exchangeName": "NMS",
+                                "marketState": market_state,
                             }
                         }
                     ]
@@ -261,7 +265,7 @@ class QualityMethodContractTests(unittest.TestCase):
             now=NOW,
         )
         self.assertEqual(result["status"], "not_applicable")
-        self.assertEqual(result["profile_version"], "2.0")
+        self.assertEqual(result["profile_version"], "3.0")
         self.assertIsNone(result["source_locator"])
 
     def test_successful_screen_carries_provenance_and_data_period(self):
@@ -277,15 +281,15 @@ class QualityMethodContractTests(unittest.TestCase):
                 self.profiles["quality_equity"],
                 market="US",
                 asset_type="stock",
-                as_of_date="2026-07-22",
+                as_of_date="2026-07-30",
                 profile_version=self.payload["version"],
                 now=NOW,
             )
 
-        self.assertEqual(result["profile_version"], "2.0")
+        self.assertEqual(result["profile_version"], "3.0")
         self.assertEqual(result["data_period"]["end"], "2025-12-31")
         self.assertEqual(result["retrieved_at"], NOW.isoformat())
-        self.assertEqual(result["as_of_date"], "2026-07-22")
+        self.assertEqual(result["as_of_date"], "2026-07-30")
         self.assertTrue(result["source_locator"].startswith("https://finance.yahoo.com/"))
         self.assertIn(result["status"], {"pass", "fail", "insufficient_data"})
 
@@ -319,19 +323,113 @@ class QualityMethodContractTests(unittest.TestCase):
 
 
 class LiveEvidenceContractTests(unittest.TestCase):
-    def test_identity_status_and_source_tiers_are_schema_compatible(self):
+    def test_explicit_cik_skips_blocked_ticker_mapping_and_uses_submissions_identity(self):
+        base_fetch = probe_fetcher()
+        requested_urls = []
+
+        def fetch(url, headers, timeout):
+            requested_urls.append(url)
+            if "company_tickers_exchange" in url:
+                raise AssertionError("explicit CIK must skip the SEC ticker mapping")
+            return base_fetch(url, headers, timeout)
+
+        with patch.object(
+            live_probe_module, "_formal_sec_contact_allowed", return_value=True
+        ):
+            result = probe_us_stock(
+                "AAPL",
+                RESERVED_TEST_CONTACT,
+                cik="320193",
+                fetch_json=fetch,
+                now=datetime(2026, 7, 22, tzinfo=timezone.utc),
+            )
+
+        self.assertTrue(result["formal_use_allowed"])
+        self.assertTrue(all(result["cross_checks"].values()))
+        self.assertEqual(
+            result["sources"]["regulator_identity"]["association_mode"],
+            "explicit_cik",
+        )
+        self.assertEqual(result["sources"]["regulator_identity"]["cik"], "0000320193")
+        self.assertFalse(any("company_tickers_exchange" in url for url in requested_urls))
+
+    def test_explicit_cik_mismatch_fails_closed(self):
+        base_fetch = probe_fetcher()
+
+        def fetch(url, headers, timeout):
+            payload, status, final_url = base_fetch(url, headers, timeout)
+            if "data.sec.gov/submissions" in url:
+                payload = copy.deepcopy(payload)
+                payload["cik"] = "0000789019"
+            return payload, status, final_url
+
         result = probe_us_stock(
             "AAPL",
-            "PIA Research contact@real-domain.com",
+            RESERVED_TEST_CONTACT,
+            cik="320193",
+            fetch_json=fetch,
+            now=datetime(2026, 7, 22, tzinfo=timezone.utc),
+        )
+
+        self.assertFalse(result["identity_valid"])
+        self.assertFalse(result["formal_use_allowed"])
+        self.assertIn(
+            "cross-check failed: submissions_cik_match",
+            result["identity_errors"],
+        )
+
+    def test_invalid_explicit_cik_fails_before_network(self):
+        fetch = Mock()
+
+        result = probe_us_stock(
+            "AAPL",
+            RESERVED_TEST_CONTACT,
+            cik="12345678901",
+            fetch_json=fetch,
+            now=datetime(2026, 7, 22, tzinfo=timezone.utc),
+        )
+
+        self.assertEqual(result["status"], "identity_invalid")
+        self.assertFalse(result["formal_use_allowed"])
+        self.assertTrue(any("1 to 10 digits" in item for item in result["identity_errors"]))
+        fetch.assert_not_called()
+
+    def test_explicit_cik_never_bypasses_real_contact_gate(self):
+        result = probe_us_stock(
+            "AAPL",
+            "PersonalInvestmentAdvisor/1.0 (test)",
+            cik="320193",
             fetch_json=probe_fetcher(),
             now=datetime(2026, 7, 22, tzinfo=timezone.utc),
         )
+
+        self.assertTrue(result["identity_valid"])
+        self.assertTrue(result["valid"])
+        self.assertFalse(result["formal_use_allowed"])
+        self.assertEqual(result["status"], "formal_use_blocked")
+
+    def test_identity_status_and_source_tiers_are_schema_compatible(self):
+        with patch.object(
+            live_probe_module, "_formal_sec_contact_allowed", return_value=True
+        ):
+            result = probe_us_stock(
+                "AAPL",
+                RESERVED_TEST_CONTACT,
+                fetch_json=probe_fetcher(),
+                now=datetime(2026, 7, 22, tzinfo=timezone.utc),
+            )
         self.assertTrue(result["identity_valid"])
         self.assertTrue(result["valid"])
         self.assertTrue(result["formal_use_allowed"])
         self.assertEqual(result["status"], "complete")
         tiers = {source["source_tier"] for source in result["sources"].values()}
-        self.assertEqual(tiers, {"market_data", "exchange", "regulator", "audited_filing"})
+        self.assertEqual(tiers, {"market_data", "exchange", "regulator"})
+        filing_tiers = {
+            filing["source_tier"]
+            for filing in result["sources"]["company_disclosures"]["filings"]
+        }
+        self.assertEqual(filing_tiers, {"quarterly_filing"})
+        self.assertNotIn("audited_filing", filing_tiers)
 
     def test_test_contact_preserves_identity_but_blocks_formal_use(self):
         result = probe_us_stock(
@@ -348,7 +446,7 @@ class LiveEvidenceContractTests(unittest.TestCase):
     def test_adr_and_foreign_issuer_forms_fail_identity(self):
         result = probe_us_stock(
             "AAPL",
-            "PIA Research contact@real-domain.com",
+            RESERVED_TEST_CONTACT,
             fetch_json=probe_fetcher(
                 quote_instrument_type="ADR",
                 company_name="Example PLC American Depositary Shares",
@@ -399,6 +497,40 @@ class LiveEvidenceContractTests(unittest.TestCase):
             return_code = live_probe_module.main()
         self.assertEqual(return_code, 1)
         self.assertFalse(json.loads(stdout.getvalue())["formal_use_allowed"])
+
+    def test_cli_passes_explicit_cik_to_probe(self):
+        blocked = {
+            "status": "formal_use_blocked",
+            "identity_valid": True,
+            "valid": True,
+            "formal_use_allowed": False,
+            "errors": [],
+        }
+        stdout = io.StringIO()
+        with patch.object(
+            live_probe_module, "probe_us_stock", return_value=blocked
+        ) as probe, patch.object(
+            sys,
+            "argv",
+            [
+                "live_evidence_probe.py",
+                "--symbol",
+                "AAPL",
+                "--cik",
+                "320193",
+                "--sec-user-agent",
+                "PersonalInvestmentAdvisor/1.0 (test)",
+            ],
+        ), contextlib.redirect_stdout(stdout):
+            return_code = live_probe_module.main()
+
+        self.assertEqual(return_code, 1)
+        probe.assert_called_once_with(
+            "AAPL",
+            "PersonalInvestmentAdvisor/1.0 (test)",
+            timeout=20,
+            cik="320193",
+        )
 
 
 if __name__ == "__main__":

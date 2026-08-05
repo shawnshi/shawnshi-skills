@@ -125,7 +125,7 @@ description: 说明技能做什么，以及用户在什么场景下应使用它�
 | `personal-diary-writer` | 将用户已经确认的日记、工作记录、生理摘要或复盘内容安全写入用户指定的本地文件 |
 | `personal-health-analysis` | 分析用户授权访问的 Garmin 本地数据，生成睡眠、HRV、心率、压力、身体电量、运动负荷、Markdown报告和HTML趋势面板 |
 | `personal-intelligence-hub` | 对指定主题开展多来源情报扫描、去重、证据核验、情景推演和红队审查，并生成带来源的战略简报 |
-| `personal-investment-advisor` | 基于当前行情、公司原始披露、财务数据和用户明确提供的持仓，执行证券身份核验、研究任务约束、方法化筛选、公司研究、估值情景、组合风险审计和结果校准 |
+| `personal-investment-advisor` | 执行点时财务筛选、结构化预期差与三情景估值、持仓及行情身份审计、实时行情刷新与离线 Daily Sync 评估、组合情景压测、只读逆波动率分配实验和研究校准；固定为 `research_only` |
 | `personal-musicbee-dj` | 在本地 Windows 电脑上根据歌曲、歌单、流派、场景或情绪请求启动并控制 MusicBee 播放，必要时生成临时 M3U 歌单 |
 | `personal-travel-research` | 为城市或地区制作历史、考古、古建筑、博物馆与重点文物的出发前研究资料，并核验当前开放信息 |
 | `personal-write-humanizer` | 在不改变事实、业务含义和作者立场的前提下重写中文文本，减少机器化句式、客服口吻、空泛名词和过度排比，恢复自然母语节奏 |

@@ -56,15 +56,16 @@ def expected_position(
     symbol="AAPL",
     *,
     currency="USD",
-    market_type="US_STOCK",
+    market="US",
+    asset_type="stock",
     name="Apple Inc.",
 ):
     return {
         "symbol": symbol,
         "currency": currency,
-        "market_type": market_type,
+        "market": market,
+        "asset_type": asset_type,
         "name": name,
-        "asset_type": None,
     }
 
 
@@ -76,7 +77,6 @@ def strict_audit(result, position, *, now_epoch=NOW_EPOCH):
         expected_symbols=[symbol],
         portfolio_load_status="ok",
         expected_position_metadata={symbol: position},
-        strict_quote_contract=True,
         now_epoch=now_epoch,
     )
 
@@ -91,7 +91,8 @@ class RawPricePrecisionTests(unittest.TestCase):
             "quantity": 87_300,
             "avg_cost": 3.028,
             "currency": "CNY",
-            "market_type": "A股ETF",
+            "market": "CN",
+            "asset_type": "etf",
         }
         payload = {
             "_status": "ok",
@@ -147,7 +148,8 @@ class StrictBatchQuoteContractTests(unittest.TestCase):
                                 "quantity": 2,
                                 "avg_cost": 100,
                                 "currency": "USD",
-                                "market_type": "US_STOCK",
+                                "market": "US",
+                                "asset_type": "stock",
                             }
                         ],
                     }
@@ -271,7 +273,8 @@ class StrictBatchQuoteContractTests(unittest.TestCase):
             expected_position(
                 symbol=symbol,
                 currency="CNY",
-                market_type="A股ETF",
+                market="CN",
+                asset_type="etf",
                 name="半导体设备ETF国泰",
             ),
         )
@@ -294,7 +297,8 @@ class StrictBatchQuoteContractTests(unittest.TestCase):
             expected_position(
                 symbol=symbol,
                 currency="CNY",
-                market_type="A_SHARE",
+                market="CN",
+                asset_type="stock",
                 name="中国神华",
             ),
         )

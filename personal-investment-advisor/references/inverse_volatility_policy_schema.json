@@ -1,0 +1,43 @@
+{
+  "resource_kind": "inverse_volatility_allocation_research_policy",
+  "schema_version": "pia_inverse_volatility_policy_v1",
+  "decision_scope": "research_only",
+  "required_top_level": [
+    "schema_version",
+    "experiment",
+    "decision_scope",
+    "as_of",
+    "bucket_targets",
+    "bucket_members",
+    "volatility_observations"
+  ],
+  "fixed_values": {
+    "experiment": "inverse_volatility_allocation",
+    "decision_scope": "research_only"
+  },
+  "bucket_contract": {
+    "bucket_targets": "non-negative JSON numbers summing to 1.0",
+    "bucket_members": "keys exactly match bucket_targets and every active symbol appears exactly once",
+    "cash_rule": "a cash bucket must contain exactly one cash position and may not mix cash and non-cash positions"
+  },
+  "volatility_observation_required_fields": [
+    "annualized_volatility",
+    "observation_count",
+    "window_start",
+    "window_end",
+    "as_of",
+    "source",
+    "source_locator"
+  ],
+  "method_boundary": {
+    "name": "inverse_volatility_allocation",
+    "risk_parity_claim_allowed": false,
+    "network_access_allowed": false,
+    "portfolio_mutation_allowed": false,
+    "output_field": "experimental_weight",
+    "prohibited_position_fields": [
+      "target_weight",
+      "max_weight"
+    ]
+  }
+}

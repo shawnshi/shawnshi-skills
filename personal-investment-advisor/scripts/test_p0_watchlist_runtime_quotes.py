@@ -45,7 +45,7 @@ class RuntimeQuoteWatchlistTests(unittest.TestCase):
 
     def test_runtime_quote_replaces_archived_price_and_freshness_flag(self):
         dashboard = dashboard_with_boundaries()
-        dashboard["freshness_flags"]["price_data_fresh"] = False
+        dashboard["freshness_flags"]["price_data_status"] = "stale"
         dashboard["dashboard"]["data_perspective"]["price_position"][
             "current_price"
         ] = 1

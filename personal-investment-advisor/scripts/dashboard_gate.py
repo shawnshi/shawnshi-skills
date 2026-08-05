@@ -1,7 +1,10 @@
 import json
+import ipaddress
 import math
-from datetime import date
+import re
+from datetime import date, datetime, timezone
 from pathlib import Path
+from urllib.parse import unquote, urlparse
 
 from dashboard_math_gate import collect_math_warnings, validate_math_consistency
 from research_brief_gate import validate_research_brief
@@ -9,6 +12,27 @@ from research_brief_gate import validate_research_brief
 
 SCHEMA_PATH = Path(__file__).resolve().parent.parent / "references" / "dashboard_schema.json"
 SCHEMA = json.loads(SCHEMA_PATH.read_text(encoding="utf-8"))
+
+
+def _parse_iso_date(value):
+    """Return the calendar date from an ISO date or ISO-8601 timestamp."""
+    if not isinstance(value, str) or not value.strip():
+        raise ValueError("non-empty ISO date or timestamp required")
+    raw = value.strip()
+    try:
+        return date.fromisoformat(raw)
+    except ValueError:
+        return datetime.fromisoformat(raw.replace("Z", "+00:00")).date()
+
+
+def _parse_aware_datetime(value):
+    """Parse an ISO-8601 timestamp and reject timezone-naive values."""
+    if not isinstance(value, str) or not value.strip():
+        raise ValueError("non-empty ISO timestamp required")
+    parsed = datetime.fromisoformat(value.strip().replace("Z", "+00:00"))
+    if parsed.tzinfo is None or parsed.utcoffset() is None:
+        raise ValueError("timezone-aware ISO timestamp required")
+    return parsed.astimezone(timezone.utc)
 
 
 def _get_nested(data, path, default=None):
@@ -35,7 +59,7 @@ def _find_forbidden_fields(value, path="root"):
     return hits
 
 
-def _validate_evidence_items(items):
+def _validate_evidence_items(items, *, strict_current_contract=False):
     errors = []
     if not isinstance(items, list) or len(items) == 0:
         return ["evidence_items must be a non-empty list"]
@@ -48,22 +72,61 @@ def _validate_evidence_items(items):
                 errors.append(f"missing evidence_items[{idx}].{key}")
         if item.get("source_tier") not in SCHEMA["enums"]["source_tier"]:
             errors.append(f"invalid evidence_items[{idx}].source_tier")
+        if (
+            strict_current_contract
+            and item.get("source_tier") in set(SCHEMA.get("legacy_archive_source_tiers", []))
+        ):
+            errors.append(
+                f"evidence_items[{idx}].source_tier is archive-only and cannot be used "
+                "by the strict current contract"
+            )
         locator = str(item.get("source_locator", "")).lower()
         if any(token in locator for token in ["example.com", "example.test", ".invalid", "localhost"]):
             errors.append(f"evidence_items[{idx}].source_locator is a reserved test locator")
+        if strict_current_contract:
+            normalized_source_type = (
+                str(item.get("source_type") or "")
+                .strip()
+                .lower()
+                .replace("-", "_")
+            )
+            if normalized_source_type not in set(
+                SCHEMA.get("strict_source_types", [])
+            ):
+                errors.append(
+                    f"evidence_items[{idx}].source_type is not registered for the strict current contract"
+                )
+            if not _valid_source_locator(
+                item.get("source_locator"),
+                source_type=item.get("source_type"),
+                source_tier=item.get("source_tier"),
+            ):
+                errors.append(
+                    f"evidence_items[{idx}].source_locator must be a public HTTP(S) URL, "
+                    "registered SEC identifier, or controlled dataset URI allowed for its source type"
+                )
+            errors.extend(
+                _validate_strict_source_provenance(
+                    item,
+                    f"evidence_items[{idx}]",
+                    max_date_value=item.get("as_of_date"),
+                )
+            )
         for field in ["published_at", "retrieved_at", "as_of_date"]:
             value = item.get(field)
             try:
-                date.fromisoformat(str(value))
+                _parse_iso_date(value)
             except (TypeError, ValueError):
-                errors.append(f"evidence_items[{idx}].{field} must be an ISO date")
+                errors.append(
+                    f"evidence_items[{idx}].{field} must be an ISO date or timestamp"
+                )
         count = item.get("independent_source_count")
         if not isinstance(count, int) or isinstance(count, bool) or count < 1:
             errors.append(f"evidence_items[{idx}].independent_source_count must be an integer >= 1")
         try:
-            published = date.fromisoformat(str(item.get("published_at")))
-            retrieved = date.fromisoformat(str(item.get("retrieved_at")))
-            as_of = date.fromisoformat(str(item.get("as_of_date")))
+            published = _parse_iso_date(item.get("published_at"))
+            retrieved = _parse_iso_date(item.get("retrieved_at"))
+            as_of = _parse_iso_date(item.get("as_of_date"))
             if published > retrieved:
                 errors.append(f"evidence_items[{idx}] published_at cannot be after retrieved_at")
             if retrieved > as_of:
@@ -73,7 +136,12 @@ def _validate_evidence_items(items):
     return errors
 
 
-def _validate_evidence_against_brief(items, research_brief):
+def _validate_evidence_against_brief(
+    items,
+    research_brief,
+    *,
+    strict_current_contract=False,
+):
     if not isinstance(items, list) or not isinstance(research_brief, dict):
         return []
     source_policy = research_brief.get("source_policy")
@@ -87,27 +155,82 @@ def _validate_evidence_against_brief(items, research_brief):
         cutoff = None
 
     errors = []
+    primary_tiers = set(SCHEMA.get("primary_source_tiers", []))
+    legacy_tiers = set(SCHEMA.get("legacy_archive_source_tiers", []))
+    effective_primary_tiers = (
+        primary_tiers if strict_current_contract else primary_tiers | legacy_tiers
+    )
+    qualifying_primary_count = 0
     for index, item in enumerate(items):
         if not isinstance(item, dict):
             continue
         source_tier = item.get("source_tier")
+        if strict_current_contract:
+            freshness = item.get("freshness")
+            allowed_freshness = set(SCHEMA.get("strict_evidence_freshness_values", []))
+            if freshness not in allowed_freshness:
+                errors.append(
+                    f"evidence_items[{index}].freshness must be one of "
+                    f"{sorted(allowed_freshness)} for the strict current contract"
+                )
         if allowed and source_tier not in allowed:
             errors.append(
                 f"evidence_items[{index}].source_tier is not allowed by "
                 "research_brief.source_policy"
             )
+        locator = item.get("source_locator")
+        source_is_allowed = not allowed or source_tier in allowed
+        source_is_current = not (
+            strict_current_contract and source_tier in legacy_tiers
+        )
+        source_has_real_locator = _valid_source_locator(locator)
+        source_dates_within_cutoff = True
         if cutoff is None:
-            continue
-        for field in ("published_at", "as_of_date"):
-            try:
-                evidence_date = date.fromisoformat(str(item.get(field)))
-            except (TypeError, ValueError):
-                continue
-            if evidence_date > cutoff:
-                errors.append(
-                    f"evidence_items[{index}].{field} cannot be after "
-                    "research_brief.source_policy.cutoff_date"
-                )
+            source_dates_within_cutoff = False
+        else:
+            for field in ("published_at", "as_of_date"):
+                try:
+                    evidence_date = _parse_iso_date(item.get(field))
+                except (TypeError, ValueError):
+                    source_dates_within_cutoff = False
+                    continue
+                if evidence_date > cutoff:
+                    source_dates_within_cutoff = False
+                    errors.append(
+                        f"evidence_items[{index}].{field} cannot be after "
+                        "research_brief.source_policy.cutoff_date"
+                    )
+            if (
+                strict_current_contract
+                and source_tier
+                in set(SCHEMA.get("strict_historical_disclosure_tiers", []))
+                and item.get("freshness") == "current"
+            ):
+                try:
+                    published_date = _parse_iso_date(item.get("published_at"))
+                except (TypeError, ValueError):
+                    published_date = None
+                if published_date is not None and published_date < cutoff:
+                    errors.append(
+                        f"evidence_items[{index}].freshness cannot be current when "
+                        "the company disclosure was published before the Brief cutoff"
+                    )
+        if (
+            source_tier in effective_primary_tiers
+            and source_is_allowed
+            and source_is_current
+            and source_has_real_locator
+            and source_dates_within_cutoff
+        ):
+            qualifying_primary_count += 1
+    if (
+        source_policy.get("primary_source_required") is True
+        and qualifying_primary_count == 0
+    ):
+        errors.append(
+            "research_brief.source_policy.primary_source_required requires at least "
+            "one matching primary evidence item"
+        )
     return errors
 
 
@@ -119,7 +242,540 @@ def _non_empty_string_list(value):
     )
 
 
-def _validate_scenario_analysis(data, *, required):
+def _finite_json_number(value):
+    return (
+        isinstance(value, (int, float))
+        and not isinstance(value, bool)
+        and math.isfinite(float(value))
+    )
+
+
+def _source_locator_kind(value):
+    if not isinstance(value, str) or not value.strip():
+        return None
+    raw = value.strip()
+    parsed = urlparse(raw)
+    scheme = parsed.scheme.lower()
+    contract = SCHEMA.get("source_locator_contract", {})
+    if scheme in set(contract.get("allowed_http_schemes", ["http", "https"])):
+        hostname = (parsed.hostname or "").lower().rstrip(".")
+        if not hostname or parsed.username is not None or parsed.password is not None:
+            return None
+        blocked = set(contract.get("blocked_hostnames", []))
+        suffixes = tuple(contract.get("blocked_hostname_suffixes", []))
+        if hostname in blocked or hostname.endswith(suffixes):
+            return None
+        try:
+            address = ipaddress.ip_address(hostname)
+        except ValueError:
+            address = None
+        if address is None and "." not in hostname:
+            return None
+        if address is not None and (
+            address.is_private
+            or address.is_loopback
+            or address.is_link_local
+            or address.is_reserved
+            or address.is_unspecified
+        ):
+            return None
+        return "url"
+    if scheme == "sec":
+        identifier_type = parsed.netloc.lower()
+        identifier = parsed.path.lstrip("/")
+        if identifier_type == "accession" and re.fullmatch(
+            r"\d{10}-\d{2}-\d{6}", identifier
+        ):
+            return "sec"
+        if identifier_type == "cik" and re.fullmatch(r"\d{10}", identifier):
+            return "sec"
+        return None
+    if scheme == "dataset":
+        namespace = parsed.netloc.lower()
+        allowed_namespaces = set(
+            contract.get("controlled_dataset_namespaces", [])
+        )
+        if (
+            namespace in allowed_namespaces
+            and bool(parsed.path.strip("/"))
+            and not parsed.query
+            and not parsed.fragment
+            and ".." not in unquote(parsed.path).split("/")
+        ):
+            return "dataset"
+    return None
+
+
+def _valid_source_locator(value, *, source_type=None, source_tier=None):
+    kind = _source_locator_kind(value)
+    if kind is None:
+        return False
+    normalized_type = str(source_type or "").strip().lower().replace("-", "_")
+    normalized_tier = str(source_tier or "").strip().lower()
+    if normalized_type == "user_authorized" or normalized_tier == "user_authorized":
+        return kind == "dataset"
+    disclosure_types = {"filing", "disclosure", "regulator", "sec_filing"}
+    disclosure_tiers = {
+        "regulator",
+        "annual_audited_filing",
+        "quarterly_filing",
+        "current_report",
+        "audited_filing",
+    }
+    if normalized_type in disclosure_types or normalized_tier in disclosure_tiers:
+        return kind in {"url", "sec"}
+    market_or_news_types = {
+        "quote",
+        "market_data",
+        "news",
+        "press_release",
+        "event",
+        "company_primary",
+    }
+    if normalized_type in market_or_news_types or normalized_tier == "market_data":
+        return kind in {"url", "dataset"}
+    return kind in {"url", "sec", "dataset"}
+
+
+def _valid_content_sha256(value):
+    return isinstance(value, str) and re.fullmatch(r"[0-9a-f]{64}", value) is not None
+
+
+def _validate_strict_source_provenance(record, prefix, *, max_date_value=None):
+    errors = []
+    retrieved_at = record.get("retrieved_at")
+    try:
+        retrieved = _parse_aware_datetime(retrieved_at)
+    except (TypeError, ValueError):
+        retrieved = None
+        errors.append(f"{prefix}.retrieved_at must be a timezone-aware ISO timestamp")
+    if not _valid_content_sha256(record.get("content_sha256")):
+        errors.append(f"{prefix}.content_sha256 must be a lowercase SHA-256 digest")
+    if retrieved is not None and max_date_value not in (None, ""):
+        try:
+            maximum_date = _parse_iso_date(max_date_value)
+            if retrieved.date() > maximum_date:
+                errors.append(f"{prefix}.retrieved_at cannot be after {maximum_date.isoformat()}")
+        except (TypeError, ValueError):
+            pass
+    return errors
+
+
+def _evidence_freshness_status(items, category, cutoff):
+    candidates = []
+    for item in items if isinstance(items, list) else []:
+        if not isinstance(item, dict):
+            continue
+        source_type = str(item.get("source_type") or "").strip().lower()
+        source_tier = str(item.get("source_tier") or "").strip().lower()
+        if source_tier == "market_data" or source_type in {"quote", "market_data"}:
+            item_category = "price"
+        elif source_type in {"news", "press_release", "event", "media"}:
+            item_category = "news"
+        else:
+            item_category = "info"
+        if item_category == category:
+            candidates.append(item)
+    if not candidates:
+        return "not_assessed"
+
+    observed_statuses = []
+    for item in candidates:
+        freshness = item.get("freshness")
+        try:
+            item_date = _parse_iso_date(item.get("as_of_date"))
+        except (TypeError, ValueError):
+            observed_statuses.append("not_assessed")
+            continue
+        if freshness == "current":
+            observed_statuses.append("fresh" if item_date == cutoff else "stale")
+        elif freshness == "historical":
+            observed_statuses.append("historical")
+        else:
+            observed_statuses.append("not_assessed")
+    for status in ("fresh", "stale", "historical", "not_assessed"):
+        if status in observed_statuses:
+            return status
+    return "not_assessed"
+
+
+def _portfolio_freshness_status(data, cutoff):
+    portfolio = data.get("portfolio_context")
+    if portfolio is None or (
+        isinstance(portfolio, dict) and portfolio.get("has_position") is False
+    ):
+        return "not_applicable"
+    if not isinstance(portfolio, dict) or portfolio.get("has_position") is not True:
+        return "not_assessed"
+    try:
+        snapshot_date = _parse_iso_date(portfolio.get("snapshot_as_of"))
+        _parse_aware_datetime(portfolio.get("retrieved_at"))
+    except (TypeError, ValueError):
+        return "not_assessed"
+    if snapshot_date == cutoff:
+        return "fresh"
+    if snapshot_date < cutoff:
+        return "historical"
+    return "stale"
+
+
+def _validate_strict_freshness_flags(data):
+    flags = data.get("freshness_flags")
+    if not isinstance(flags, dict):
+        return []
+
+    errors = []
+    allowed = set(SCHEMA.get("strict_freshness_status_values", []))
+    try:
+        cutoff = _parse_iso_date(
+            _get_nested(data, ["research_brief", "source_policy", "cutoff_date"])
+        )
+    except (TypeError, ValueError):
+        return ["freshness status cannot be derived from an invalid research Brief cutoff"]
+    expected = {
+        "price_data_status": _evidence_freshness_status(
+            data.get("evidence_items"), "price", cutoff
+        ),
+        "info_data_status": _evidence_freshness_status(
+            data.get("evidence_items"), "info", cutoff
+        ),
+        "news_data_status": _evidence_freshness_status(
+            data.get("evidence_items"), "news", cutoff
+        ),
+        "portfolio_data_status": _portfolio_freshness_status(data, cutoff),
+    }
+    for field in SCHEMA.get("strict_freshness_status_fields", []):
+        value = flags.get(field)
+        if value not in allowed:
+            errors.append(
+                f"freshness_flags.{field} must be one of {sorted(allowed)}"
+            )
+        if value != expected.get(field):
+            errors.append(
+                f"freshness_flags.{field} must equal derived status {expected.get(field)}"
+            )
+    expected_stale = sorted(
+        field.removesuffix("_status")
+        for field, status in expected.items()
+        if status == "stale"
+    )
+    if flags.get("stale_inputs") != expected_stale:
+        errors.append(
+            "freshness_flags.stale_inputs must equal derived stale inputs "
+            f"{expected_stale}"
+        )
+    return errors
+
+
+def _validate_current_quote_evidence(items, research_brief):
+    """Require one structurally verified quote that closes at the Brief cutoff.
+
+    This validates the supplied evidence contract and timestamp arithmetic. It does
+    not claim to contact or independently re-query the market-data provider.
+    """
+    if not isinstance(items, list) or not isinstance(research_brief, dict):
+        return []
+
+    try:
+        brief_as_of = date.fromisoformat(str(research_brief.get("as_of_date")))
+        cutoff = date.fromisoformat(
+            str(_get_nested(research_brief, ["source_policy", "cutoff_date"]))
+        )
+    except (TypeError, ValueError):
+        return []
+
+    expected_symbol = str(
+        _get_nested(research_brief, ["instrument", "symbol"], "")
+    ).strip().upper()
+    expected_market = str(
+        _get_nested(research_brief, ["instrument", "market"], "")
+    ).strip().upper()
+    expected_currency = str(
+        _get_nested(research_brief, ["instrument", "currency"], "")
+    ).strip().upper()
+    required_fields = SCHEMA.get("required_strict_market_data_evidence_fields", [])
+    max_age_by_state = SCHEMA.get("strict_quote_max_age_seconds_by_market_state", {})
+
+    errors = []
+    qualifying_count = 0
+    market_items = [
+        (index, item)
+        for index, item in enumerate(items)
+        if isinstance(item, dict) and item.get("source_tier") == "market_data"
+    ]
+    for index, item in market_items:
+        prefix = f"evidence_items[{index}]"
+        item_errors = []
+        for field in required_fields:
+            if item.get(field) in (None, "", []):
+                item_errors.append(f"missing {prefix}.{field}")
+
+        symbol = str(item.get("symbol") or "").strip().upper()
+        market = str(item.get("market") or "").strip().upper()
+        currency = str(item.get("currency") or "").strip().upper()
+        if symbol != expected_symbol:
+            item_errors.append(f"{prefix}.symbol must match research_brief.instrument.symbol")
+        if market != expected_market:
+            item_errors.append(f"{prefix}.market must match research_brief.instrument.market")
+        if currency != expected_currency:
+            item_errors.append(f"{prefix}.currency must match research_brief.instrument.currency")
+        if not _is_positive_json_number(item.get("price")):
+            item_errors.append(f"{prefix}.price must be a positive finite JSON number")
+        if item.get("freshness") != "current":
+            item_errors.append(f"{prefix}.freshness must be current for quote evidence")
+        if not _valid_source_locator(
+            item.get("source_locator"),
+            source_type=item.get("source_type"),
+            source_tier=item.get("source_tier"),
+        ):
+            item_errors.append(f"{prefix}.source_locator must identify a real source")
+
+        try:
+            item_as_of = date.fromisoformat(str(item.get("as_of_date")))
+            if item_as_of != brief_as_of or item_as_of != cutoff:
+                item_errors.append(
+                    f"{prefix}.as_of_date must equal research_brief.as_of_date and cutoff_date"
+                )
+        except (TypeError, ValueError):
+            pass  # The general evidence validator reports the malformed date.
+
+        observed_at = None
+        retrieved_at = None
+        try:
+            observed_at = _parse_aware_datetime(item.get("observed_at"))
+        except (TypeError, ValueError):
+            item_errors.append(f"{prefix}.observed_at must be a timezone-aware ISO timestamp")
+        try:
+            retrieved_at = _parse_aware_datetime(item.get("retrieved_at"))
+        except (TypeError, ValueError):
+            item_errors.append(f"{prefix}.retrieved_at must be a timezone-aware ISO timestamp")
+
+        market_state = str(item.get("market_state") or "").strip().upper()
+        max_age_seconds = max_age_by_state.get(market_state)
+        if not isinstance(max_age_seconds, int) or isinstance(max_age_seconds, bool):
+            item_errors.append(f"{prefix}.market_state has no strict quote freshness policy")
+        if observed_at is not None and retrieved_at is not None:
+            if observed_at.date() != brief_as_of:
+                item_errors.append(f"{prefix}.observed_at date must equal research_brief.as_of_date")
+            if retrieved_at.date() != brief_as_of:
+                item_errors.append(f"{prefix}.retrieved_at date must equal research_brief.as_of_date")
+            age_seconds = (retrieved_at - observed_at).total_seconds()
+            if age_seconds < 0:
+                item_errors.append(f"{prefix}.observed_at cannot be after retrieved_at")
+            elif isinstance(max_age_seconds, int) and age_seconds > max_age_seconds:
+                item_errors.append(
+                    f"{prefix} quote age exceeds the strict {market_state} threshold"
+                )
+
+        if item_errors:
+            errors.extend(item_errors)
+        else:
+            qualifying_count += 1
+
+    if qualifying_count == 0:
+        errors.append(
+            "strict current contract requires at least one matching, current, "
+            "timestamp-verified market_data quote evidence item"
+        )
+    return errors
+
+
+def _validate_current_valuation_contract(
+    scenarios,
+    *,
+    research_brief=None,
+    strict_current_contract=False,
+):
+    errors = []
+    expected_version = SCHEMA.get("current_valuation_contract_version", "2.0")
+    if scenarios.get("valuation_contract_version") != expected_version:
+        return [
+            "scenario_analysis.valuation_contract_version must be "
+            f"{expected_version!r} for the current strict contract"
+        ]
+
+    for field in SCHEMA.get("required_current_scenario_analysis_fields", []):
+        if scenarios.get(field) in (None, "", []):
+            errors.append(f"missing scenario_analysis.{field}")
+
+    currency = scenarios.get("currency")
+    if not isinstance(currency, str) or len(currency.strip()) != 3 or not currency.isalpha():
+        errors.append("scenario_analysis.currency must be a three-letter currency code")
+
+    try:
+        valuation_date = date.fromisoformat(str(scenarios.get("as_of_date")))
+        if valuation_date > date.today():
+            errors.append("scenario_analysis.as_of_date cannot be in the future")
+    except (TypeError, ValueError):
+        valuation_date = None
+        errors.append("scenario_analysis.as_of_date must be an ISO date")
+
+    brief_as_of = None
+    source_cutoff = None
+    if strict_current_contract:
+        try:
+            brief_as_of = date.fromisoformat(str(research_brief.get("as_of_date")))
+            source_cutoff = date.fromisoformat(
+                str(_get_nested(research_brief, ["source_policy", "cutoff_date"]))
+            )
+        except (AttributeError, TypeError, ValueError):
+            errors.append(
+                "scenario_analysis dates cannot bind to an invalid research_brief cutoff"
+            )
+        if (
+            valuation_date is not None
+            and brief_as_of is not None
+            and valuation_date != brief_as_of
+        ):
+            errors.append(
+                "scenario_analysis.as_of_date must equal research_brief.as_of_date "
+                "for the strict current contract"
+            )
+        if (
+            valuation_date is not None
+            and source_cutoff is not None
+            and valuation_date > source_cutoff
+        ):
+            errors.append(
+                "scenario_analysis.as_of_date cannot be after "
+                "research_brief.source_policy.cutoff_date"
+            )
+
+    for case_name in ("base", "bull", "bear"):
+        case = scenarios.get(case_name)
+        prefix = f"scenario_analysis.{case_name}"
+        if not isinstance(case, dict):
+            errors.append(f"{prefix} must be an object")
+            continue
+        for field in SCHEMA.get("required_current_scenario_case_fields", []):
+            if case.get(field) in (None, "", []):
+                errors.append(f"missing {prefix}.{field}")
+        for field in (
+            "enterprise_value",
+            "net_debt",
+            "equity_value",
+            "diluted_shares",
+            "per_share_value",
+        ):
+            if not _finite_json_number(case.get(field)):
+                errors.append(f"{prefix}.{field} must be a finite JSON number")
+        if _finite_json_number(case.get("diluted_shares")) and float(case["diluted_shares"]) <= 0:
+            errors.append(f"{prefix}.diluted_shares must be positive")
+
+        assumptions = case.get("assumptions")
+        if not isinstance(assumptions, list) or not assumptions:
+            errors.append(f"{prefix}.assumptions must be a non-empty object list")
+        else:
+            for index, assumption in enumerate(assumptions):
+                assumption_prefix = f"{prefix}.assumptions[{index}]"
+                if not isinstance(assumption, dict):
+                    errors.append(f"{assumption_prefix} must be an object")
+                    continue
+                for field in SCHEMA.get("required_current_assumption_fields", []):
+                    if assumption.get(field) in (None, "", []):
+                        errors.append(f"missing {assumption_prefix}.{field}")
+                if not _finite_json_number(assumption.get("value")):
+                    errors.append(f"{assumption_prefix}.value must be a finite JSON number")
+                if not _valid_source_locator(
+                    assumption.get("source_locator"),
+                    source_type="valuation_input",
+                ):
+                    errors.append(
+                        f"{assumption_prefix}.source_locator must be a public HTTP(S) URL, "
+                        "registered SEC identifier, or controlled dataset URI"
+                    )
+                errors.extend(
+                    _validate_strict_source_provenance(
+                        assumption,
+                        assumption_prefix,
+                        max_date_value=scenarios.get("as_of_date"),
+                    )
+                )
+                try:
+                    assumption_date = date.fromisoformat(str(assumption.get("as_of_date")))
+                    if valuation_date is not None and assumption_date > valuation_date:
+                        errors.append(f"{assumption_prefix}.as_of_date cannot be after scenario_analysis.as_of_date")
+                    if (
+                        strict_current_contract
+                        and brief_as_of is not None
+                        and assumption_date != brief_as_of
+                    ):
+                        errors.append(
+                            f"{assumption_prefix}.as_of_date must equal "
+                            "research_brief.as_of_date for the strict current contract"
+                        )
+                    if (
+                        strict_current_contract
+                        and source_cutoff is not None
+                        and assumption_date > source_cutoff
+                    ):
+                        errors.append(
+                            f"{assumption_prefix}.as_of_date cannot be after "
+                            "research_brief.source_policy.cutoff_date"
+                        )
+                except (TypeError, ValueError):
+                    errors.append(f"{assumption_prefix}.as_of_date must be an ISO date")
+
+        if not _non_empty_string_list(case.get("falsification_conditions")):
+            errors.append(f"{prefix}.falsification_conditions must be a non-empty string list")
+
+    sensitivity = scenarios.get("sensitivity")
+    if not isinstance(sensitivity, list) or not sensitivity:
+        errors.append("scenario_analysis.sensitivity must be a non-empty object list")
+    else:
+        for index, item in enumerate(sensitivity):
+            prefix = f"scenario_analysis.sensitivity[{index}]"
+            if not isinstance(item, dict):
+                errors.append(f"{prefix} must be an object")
+                continue
+            for field in SCHEMA.get("required_current_sensitivity_fields", []):
+                if item.get(field) in (None, "", []):
+                    errors.append(f"missing {prefix}.{field}")
+            for field in ("low", "base", "high"):
+                if not _finite_json_number(item.get(field)):
+                    errors.append(f"{prefix}.{field} must be a finite JSON number")
+            if not _valid_source_locator(
+                item.get("source_locator"), source_type="valuation_input"
+            ):
+                errors.append(
+                    f"{prefix}.source_locator must be a public HTTP(S) URL, "
+                    "registered SEC identifier, or controlled dataset URI"
+                )
+            errors.extend(
+                _validate_strict_source_provenance(
+                    item,
+                    prefix,
+                    max_date_value=scenarios.get("as_of_date"),
+                )
+            )
+            try:
+                item_date = date.fromisoformat(str(item.get("as_of_date")))
+                if valuation_date is not None and item_date > valuation_date:
+                    errors.append(f"{prefix}.as_of_date cannot be after scenario_analysis.as_of_date")
+                if (
+                    strict_current_contract
+                    and brief_as_of is not None
+                    and item_date != brief_as_of
+                ):
+                    errors.append(
+                        f"{prefix}.as_of_date must equal research_brief.as_of_date "
+                        "for the strict current contract"
+                    )
+                if (
+                    strict_current_contract
+                    and source_cutoff is not None
+                    and item_date > source_cutoff
+                ):
+                    errors.append(
+                        f"{prefix}.as_of_date cannot be after "
+                        "research_brief.source_policy.cutoff_date"
+                    )
+            except (TypeError, ValueError):
+                errors.append(f"{prefix}.as_of_date must be an ISO date")
+    return errors
+
+
+def _validate_scenario_analysis(data, *, required, research_brief=None):
     scenarios = data.get("scenario_analysis")
     if scenarios is None:
         return (
@@ -129,6 +785,13 @@ def _validate_scenario_analysis(data, *, required):
         )
     if not isinstance(scenarios, dict):
         return ["scenario_analysis must be an object"]
+
+    if required or scenarios.get("valuation_contract_version") is not None:
+        return _validate_current_valuation_contract(
+            scenarios,
+            research_brief=research_brief,
+            strict_current_contract=required,
+        )
 
     errors = []
     for field in SCHEMA.get("required_scenario_analysis_fields", []):
@@ -170,7 +833,7 @@ def _is_positive_json_number(value) -> bool:
     )
 
 
-def _validate_monitoring_boundaries(data):
+def _validate_monitoring_boundaries(data, *, strict_current_contract=False):
     config = data.get("monitoring_boundaries")
     if config is None:
         return []
@@ -248,6 +911,24 @@ def _validate_monitoring_boundaries(data):
         if boundary.get("source_tier") != "user_authorized":
             errors.append(f"{prefix}.source_tier must be user_authorized")
 
+        if strict_current_contract:
+            for field in SCHEMA.get("required_strict_source_provenance_fields", []):
+                if boundary.get(field) in (None, "", []):
+                    errors.append(f"missing {prefix}.{field}")
+            if not _valid_source_locator(
+                boundary.get("source_locator"), source_tier="user_authorized"
+            ):
+                errors.append(
+                    f"{prefix}.source_locator must be a controlled dataset URI"
+                )
+            errors.extend(
+                _validate_strict_source_provenance(
+                    boundary,
+                    prefix,
+                    max_date_value=research_as_of_raw,
+                )
+            )
+
         try:
             boundary_as_of = date.fromisoformat(str(boundary.get("as_of_date")))
             if research_as_of and boundary_as_of > research_as_of:
@@ -300,6 +981,28 @@ def _validate_monitoring_boundaries(data):
                 errors.append(
                     "monitoring_boundaries.proximity_policy.source_tier "
                     "must be user_authorized"
+                )
+            if strict_current_contract:
+                for field in SCHEMA.get(
+                    "required_strict_source_provenance_fields", []
+                ):
+                    if proximity.get(field) in (None, "", []):
+                        errors.append(
+                            f"missing monitoring_boundaries.proximity_policy.{field}"
+                        )
+                if not _valid_source_locator(
+                    proximity.get("source_locator"), source_tier="user_authorized"
+                ):
+                    errors.append(
+                        "monitoring_boundaries.proximity_policy.source_locator "
+                        "must be a controlled dataset URI"
+                    )
+                errors.extend(
+                    _validate_strict_source_provenance(
+                        proximity,
+                        "monitoring_boundaries.proximity_policy",
+                        max_date_value=research_as_of_raw,
+                    )
                 )
             try:
                 proximity_as_of = date.fromisoformat(str(proximity.get("as_of_date")))
@@ -397,17 +1100,41 @@ def validate_dashboard(data: dict, *, require_scenarios: bool = False) -> list[s
         if _get_nested(data, ["confidence_details", key]) in (None, "", []):
             errors.append(f"missing confidence_details field: {key}")
 
-    if not isinstance(data.get("freshness_flags"), dict):
+    freshness_flags = data.get("freshness_flags")
+    if not isinstance(freshness_flags, dict):
         errors.append("freshness_flags must be an object")
-    for key in SCHEMA["required_freshness_fields"]:
-        if _get_nested(data, ["freshness_flags", key]) in (None, ""):
-            errors.append(f"missing freshness_flags field: {key}")
+        freshness_flags = {}
+    current_freshness_fields = SCHEMA["required_freshness_fields"]
+    legacy_freshness_fields = SCHEMA.get("legacy_archive_freshness_fields", [])
+    uses_current_freshness = any(
+        key in freshness_flags for key in current_freshness_fields[:-1]
+    )
+    uses_legacy_freshness = any(
+        key in freshness_flags for key in legacy_freshness_fields
+    )
+    if require_scenarios or uses_current_freshness:
+        for key in current_freshness_fields:
+            if freshness_flags.get(key) in (None, ""):
+                errors.append(f"missing freshness_flags field: {key}")
+    elif not uses_legacy_freshness:
+        errors.append(
+            "freshness_flags must use the current derived-status contract or an explicit legacy archive shape"
+        )
+    elif "stale_inputs" not in freshness_flags:
+        errors.append("missing freshness_flags field: stale_inputs")
 
     stale_inputs = _get_nested(data, ["freshness_flags", "stale_inputs"], [])
     if not isinstance(stale_inputs, list):
         errors.append("freshness_flags.stale_inputs must be a list")
+    if require_scenarios:
+        errors.extend(_validate_strict_freshness_flags(data))
 
-    errors.extend(_validate_evidence_items(data.get("evidence_items")))
+    errors.extend(
+        _validate_evidence_items(
+            data.get("evidence_items"),
+            strict_current_contract=require_scenarios,
+        )
+    )
 
     data_sources = data.get("data_sources")
     if not isinstance(data_sources, (list, str, dict)):
@@ -423,7 +1150,10 @@ def validate_dashboard(data: dict, *, require_scenarios: bool = False) -> list[s
     else:
         errors.extend(
             f"research_brief: {error}"
-            for error in validate_research_brief(research_brief)
+            for error in validate_research_brief(
+                research_brief,
+                allow_legacy_archive=not require_scenarios,
+            )
         )
         decision_scope = _get_nested(
             research_brief, ["output_contract", "decision_scope"]
@@ -494,11 +1224,32 @@ def validate_dashboard(data: dict, *, require_scenarios: bool = False) -> list[s
             )
 
     errors.extend(
-        _validate_evidence_against_brief(data.get("evidence_items"), research_brief)
+        _validate_evidence_against_brief(
+            data.get("evidence_items"),
+            research_brief,
+            strict_current_contract=require_scenarios,
+        )
     )
-    errors.extend(_validate_scenario_analysis(data, required=require_scenarios))
+    if require_scenarios:
+        errors.extend(
+            _validate_current_quote_evidence(
+                data.get("evidence_items"),
+                research_brief,
+            )
+        )
+    errors.extend(
+        _validate_scenario_analysis(
+            data,
+            required=require_scenarios,
+            research_brief=research_brief,
+        )
+    )
 
-    errors.extend(_validate_monitoring_boundaries(data))
+    errors.extend(
+        _validate_monitoring_boundaries(
+            data, strict_current_contract=require_scenarios
+        )
+    )
 
     feedback_status = data.get("feedback_status")
     if feedback_status is not None and feedback_status not in SCHEMA["enums"]["feedback_status"]:
@@ -522,6 +1273,35 @@ def validate_dashboard(data: dict, *, require_scenarios: bool = False) -> list[s
         weight_status = portfolio_context.get("weight_status")
         if weight_status and weight_status not in SCHEMA["enums"]["weight_status"]:
             errors.append(f"invalid portfolio_context.weight_status: {weight_status}")
+
+    if require_scenarios and has_position and isinstance(portfolio_context, dict):
+        for field in SCHEMA.get("required_strict_portfolio_provenance_fields", []):
+            if portfolio_context.get(field) in (None, "", []):
+                errors.append(f"missing portfolio_context provenance field: {field}")
+        if not _valid_source_locator(
+            portfolio_context.get("source_locator"),
+            source_type="user_authorized",
+        ):
+            errors.append(
+                "portfolio_context.source_locator must be a controlled dataset URI"
+            )
+        research_as_of_raw = _get_nested(data, ["research_brief", "as_of_date"])
+        errors.extend(
+            _validate_strict_source_provenance(
+                portfolio_context,
+                "portfolio_context",
+                max_date_value=research_as_of_raw,
+            )
+        )
+        try:
+            snapshot_as_of = _parse_iso_date(portfolio_context.get("snapshot_as_of"))
+            research_as_of = _parse_iso_date(research_as_of_raw)
+            if snapshot_as_of > research_as_of:
+                errors.append(
+                    "portfolio_context.snapshot_as_of cannot be after research_brief.as_of_date"
+                )
+        except (TypeError, ValueError):
+            errors.append("portfolio_context.snapshot_as_of must be an ISO date or timestamp")
 
     if portfolio_summary is not None:
         if not isinstance(portfolio_summary, dict):

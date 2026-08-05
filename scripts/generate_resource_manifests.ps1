@@ -17,6 +17,7 @@ if ([string]::IsNullOrWhiteSpace($Root)) {
         throw 'Unable to resolve repo root. Pass -Root explicitly.'
     }
 }
+$Root = (Resolve-Path -LiteralPath $Root).Path
 
 $LocalReferencePattern = '(?<path>(?<![A-Za-z])(?:(?:scripts|references|assets|examples|prompts|agents)[\\/][^\s`"''<>]+|[A-Za-z0-9._-]+[\\/](?:SKILL\.md|(?:scripts|references|assets|examples|prompts|agents)[\\/][^\s`"''<>]+)))'
 
@@ -107,15 +108,21 @@ function Get-DeclaredLocalReferences {
         $resolved = $null
         foreach ($candidate in $candidatePaths) {
             if (Test-Path -LiteralPath $candidate) {
-                $resolved = $candidate
+                $resolved = (Resolve-Path -LiteralPath $candidate).Path
                 break
             }
+        }
+
+        $portableResolved = if ($null -eq $resolved) {
+            $null
+        } else {
+            [System.IO.Path]::GetRelativePath($Root, $resolved).Replace('\', '/')
         }
 
         [PSCustomObject]@{
             path          = $relative
             exists        = $null -ne $resolved
-            resolved_path = $resolved
+            resolved_path = $portableResolved
         }
     }
 }
@@ -129,7 +136,12 @@ function Get-TopLevelResourceDirectories {
     foreach ($name in $resourceNames) {
         $full = Join-Path $SkillDirectory $name
         if (Test-Path -LiteralPath $full) {
-            $files = @(Get-ChildItem -Path $full -Recurse -File -ErrorAction SilentlyContinue | Where-Object { $_.FullName -notmatch '\\__pycache__\\' })
+            $files = @(
+                Get-ChildItem -Path $full -Recurse -File -ErrorAction SilentlyContinue |
+                Where-Object {
+                    $_.FullName -notmatch '[\\/](?:__pycache__|\.ruff_cache|\.pytest_cache)[\\/]'
+                }
+            )
             [PSCustomObject]@{
                 name       = $name
                 file_count = $files.Count
@@ -152,7 +164,9 @@ foreach ($file in (Get-SkillFiles)) {
     )
     $topLevelDirs = @(
         Get-ChildItem -Path $skillDirectory -Directory -ErrorAction SilentlyContinue |
-        Where-Object { $_.Name -notmatch '^__pycache__$' } |
+        Where-Object {
+            $_.Name -notin @('__pycache__', '.ruff_cache', '.pytest_cache')
+        } |
         ForEach-Object { $_.Name }
     )
 

@@ -27,7 +27,8 @@ class YfDailySyncContractTests(unittest.TestCase):
                     "quantity": 5,
                     "avg_cost": 710.146,
                     "currency": "USD",
-                    "market_type": "ETF",
+                    "market": "US",
+                    "asset_type": "etf",
                 }
             ],
         }
@@ -71,6 +72,10 @@ class YfDailySyncContractTests(unittest.TestCase):
         self.assertEqual(payload["status"], "complete")
         self.assertEqual(len(payload["records"]), 1)
         self.assertIn("portfolio_batch_audit", payload)
+        binding = payload["portfolio_batch_audit"]["portfolio_snapshot_binding"]
+        self.assertEqual(binding["active_position_count"], 1)
+        self.assertEqual(binding["active_positions"][0]["quantity"], "5")
+        self.assertEqual(len(binding["sha256"]), 64)
         record = payload["records"][0]
         self.assertNotIn("portfolio_batch_audit", record)
         self.assertNotIn("history", record)

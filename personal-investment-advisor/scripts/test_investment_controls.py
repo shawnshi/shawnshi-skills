@@ -18,7 +18,7 @@ SCRIPT_DIR = Path(__file__).resolve().parent
 if str(SCRIPT_DIR) not in sys.path:
     sys.path.insert(0, str(SCRIPT_DIR))
 
-from advice_journal import build_journal_entry
+from advice_journal import DASHBOARD_SCHEMA_VERSION, build_journal_entry
 from broker_sync import sync_broker_data
 from dashboard_catalog import INDEX_FILENAME, resolve_dashboards
 from dashboard_gate import _validate_evidence_items, collect_dashboard_warnings, validate_dashboard
@@ -60,13 +60,34 @@ def valid_brief():
         "benchmark": {"symbol": "SPY", "market": "US", "currency": "USD"},
         "method_profile": "quality_equity",
         "research_question": "Will earnings revisions exceed consensus?",
-        "market_consensus": "Consensus expects stable margins.",
-        "core_hypothesis": "Margin expansion is underestimated.",
+        "market_consensus": {
+            "metric": "gross_margin",
+            "value": 0.405,
+            "unit": "ratio",
+            "period_end": "2026-09-30",
+            "source_locator": "https://www.nasdaq.com/market-activity/stocks/aapl/earnings",
+            "as_of_date": "2026-07-22",
+        },
+        "core_hypothesis": {
+            "statement": "Gross margin resilience is underestimated.",
+            "metric": "gross_margin",
+            "independent_estimate": {"value": 0.43, "unit": "ratio"},
+            "expected_gap": {"absolute": 0.025, "direction": "above"},
+            "falsified_when": {
+                "operator": "<",
+                "target": 0.40,
+                "deadline": "2026-08-01",
+            },
+        },
         "falsification_conditions": ["Gross margin falls below prior-year level"],
         "key_variables": ["gross_margin", "revenue_growth"],
         "source_policy": {
             "cutoff_date": "2026-07-22",
-            "allowed_source_tiers": ["company_primary", "audited_filing", "market_data"],
+            "allowed_source_tiers": [
+                "company_primary",
+                "annual_audited_filing",
+                "market_data",
+            ],
             "primary_source_required": True,
         },
         "output_contract": {
@@ -74,8 +95,57 @@ def valid_brief():
             "required_scenarios": ["base", "bull", "bear"],
             "include_counterevidence": True,
             "transaction_cost_bps": 10,
-            "dual_trigger_policy": "conservative",
+            "dual_trigger_policy": "exclude",
         },
+    }
+
+
+def valid_scenario_analysis():
+    def valuation_case(per_share_value):
+        diluted_shares = 100.0
+        equity_value = per_share_value * diluted_shares
+        net_debt = 20.0
+        return {
+            "assumptions": [
+                {
+                    "name": "normalized_ebitda",
+                    "value": 10.0,
+                    "unit": "USD million",
+                    "source_locator": "https://www.sec.gov/Archives/edgar/data/1/filing.htm",
+                    "retrieved_at": "2026-07-22T20:10:00+00:00",
+                    "content_sha256": "1" * 64,
+                    "as_of_date": "2026-07-22",
+                }
+            ],
+            "enterprise_value": equity_value + net_debt,
+            "net_debt": net_debt,
+            "equity_value": equity_value,
+            "diluted_shares": diluted_shares,
+            "per_share_value": per_share_value,
+            "falsification_conditions": ["Normalized EBITDA falls below 8"],
+        }
+
+    return {
+        "valuation_contract_version": "2.0",
+        "valuation_method": "enterprise_value_bridge",
+        "as_of_date": "2026-07-22",
+        "currency": "USD",
+        "base": valuation_case(10.0),
+        "bull": valuation_case(12.0),
+        "bear": valuation_case(8.0),
+        "sensitivity": [
+            {
+                "parameter": "normalized_ebitda",
+                "low": 8.0,
+                "base": 10.0,
+                "high": 12.0,
+                "unit": "USD million",
+                "source_locator": "https://www.sec.gov/Archives/edgar/data/1/filing.htm",
+                "retrieved_at": "2026-07-22T20:10:00+00:00",
+                "content_sha256": "1" * 64,
+                "as_of_date": "2026-07-22",
+            }
+        ],
     }
 
 
@@ -85,14 +155,36 @@ def valid_dashboard():
         "connection": "Demand improved",
         "deduction": "Estimate may rise",
         "source_type": "filing",
-        "source_tier": "audited_filing",
+        "source_tier": "annual_audited_filing",
         "source_locator": "https://www.sec.gov/Archives/example#p3",
         "published_at": "2026-07-01",
-        "retrieved_at": "2026-07-02",
+        "retrieved_at": "2026-07-02T12:00:00+00:00",
+        "content_sha256": "2" * 64,
+        "as_of_date": "2026-07-22",
+        "freshness": "historical",
+        "confidence": "high",
+        "independent_source_count": 1,
+    }
+    quote_evidence = {
+        "fact": "AAPL regular-market price was 100 USD",
+        "connection": "The quote anchors the dashboard valuation comparison",
+        "deduction": "Price-dependent observations use the dated quote only",
+        "source_type": "quote",
+        "source_tier": "market_data",
+        "source_locator": "https://query1.finance.yahoo.com/v8/finance/chart/AAPL",
+        "published_at": "2026-07-22",
+        "retrieved_at": "2026-07-22T20:05:00+00:00",
+        "content_sha256": "3" * 64,
         "as_of_date": "2026-07-22",
         "freshness": "current",
         "confidence": "high",
         "independent_source_count": 1,
+        "symbol": "AAPL",
+        "market": "US",
+        "currency": "USD",
+        "price": 100.0,
+        "market_state": "CLOSED",
+        "observed_at": "2026-07-22T20:00:00+00:00",
     }
     return {
         "stock_name": "Apple",
@@ -109,13 +201,13 @@ def valid_dashboard():
             "actionability": "low",
         },
         "freshness_flags": {
-            "price_data_fresh": True,
-            "info_data_fresh": True,
-            "news_data_fresh": True,
-            "portfolio_data_fresh": True,
+            "price_data_status": "fresh",
+            "info_data_status": "historical",
+            "news_data_status": "not_assessed",
+            "portfolio_data_status": "not_applicable",
             "stale_inputs": [],
         },
-        "evidence_items": [evidence],
+        "evidence_items": [evidence, quote_evidence],
         "dashboard": {
             "core_conclusion": {
                 "one_sentence": "Research watch only",
@@ -169,25 +261,7 @@ def valid_dashboard():
         "data_gaps": [],
         "blind_spot_warning": "Consensus may already price the thesis.",
         "research_brief": valid_brief(),
-        "scenario_analysis": {
-            "valuation_method": "scenario-based operating evidence review",
-            "base": {
-                "assumptions": ["Current operating evidence remains stable"],
-                "result": "Base operating case remains supported",
-                "falsification_conditions": ["Core operating evidence weakens"],
-            },
-            "bull": {
-                "assumptions": ["Key operating variables improve"],
-                "result": "Upside operating case",
-                "falsification_conditions": ["Expected improvement does not appear"],
-            },
-            "bear": {
-                "assumptions": ["Demand and margins weaken"],
-                "result": "Downside operating case",
-                "falsification_conditions": ["Downside assumptions do not occur"],
-            },
-            "sensitivity": ["Demand", "Margin", "Capital intensity"],
-        },
+        "scenario_analysis": valid_scenario_analysis(),
         "earnings_snapshot": {
             "next_earnings_date": "2026-08-01",
             "revenue_growth": 0.1,
@@ -212,7 +286,9 @@ def valid_monitoring_boundaries():
                 "quote_basis": "regular_market_price",
                 "authority_status": "user_confirmed",
                 "source_tier": "user_authorized",
-                "source_locator": "user portfolio policy dated 2026-07-28",
+                "source_locator": "dataset://pia/user-policy/aapl/2026-07-22",
+                "retrieved_at": "2026-07-22T20:10:00+00:00",
+                "content_sha256": "4" * 64,
                 "as_of_date": "2026-07-22",
             },
             {
@@ -224,7 +300,9 @@ def valid_monitoring_boundaries():
                 "quote_basis": "regular_market_price",
                 "authority_status": "user_confirmed",
                 "source_tier": "user_authorized",
-                "source_locator": "user portfolio policy dated 2026-07-28",
+                "source_locator": "dataset://pia/user-policy/aapl/2026-07-22",
+                "retrieved_at": "2026-07-22T20:10:00+00:00",
+                "content_sha256": "4" * 64,
                 "as_of_date": "2026-07-22",
             },
         ],
@@ -232,7 +310,9 @@ def valid_monitoring_boundaries():
             "mode": "explicit_relative_pct",
             "value": 0.03,
             "source_tier": "user_authorized",
-            "source_locator": "user portfolio policy dated 2026-07-28",
+            "source_locator": "dataset://pia/user-policy/aapl/2026-07-22",
+            "retrieved_at": "2026-07-22T20:10:00+00:00",
+            "content_sha256": "4" * 64,
             "as_of_date": "2026-07-22",
         },
     }
@@ -246,6 +326,18 @@ def valid_runtime_quote(current_price=100, market_state="CLOSED"):
         "as_of": "2026-07-30T20:00:00+00:00",
         "source": "test market-data snapshot",
         "market_state": market_state,
+    }
+
+
+def valid_scenario_weight_snapshot(market_values):
+    return {
+        "as_of": "2026-08-02T09:30:00+08:00",
+        "source": "test quote package",
+        "source_locator": "dataset://pia/scenario-weights/2026-08-02",
+        "retrieved_at": "2026-08-02T09:31:00+08:00",
+        "content_sha256": "5" * 64,
+        "valuation_basis": "base_currency_market_value",
+        "market_values_base_currency": market_values,
     }
 
 
@@ -274,7 +366,7 @@ class DashboardArchiveLifecycleTests(unittest.TestCase):
                 f"```json\n{json_path.read_text(encoding='utf-8').rstrip()}\n```",
                 markdown_path.read_text(encoding="utf-8"),
             )
-            self.assertEqual(index["dashboards"]["AAPL"]["dashboard_contract_version"], "6.1")
+            self.assertEqual(index["dashboards"]["AAPL"]["dashboard_contract_version"], "7.0")
             self.assertRegex(
                 index["dashboards"]["AAPL"]["json_sha256"],
                 r"^[0-9a-f]{64}$",
@@ -526,6 +618,7 @@ class DashboardArchiveLifecycleTests(unittest.TestCase):
             dashboard = valid_dashboard()
             dashboard["stock_code"] = "123"
             dashboard["research_brief"]["instrument"]["symbol"] = "123"
+            dashboard["evidence_items"][1]["symbol"] = "123"
             archive_dashboard(
                 dashboard,
                 output_dir=tmpdir,
@@ -752,6 +845,7 @@ class DashboardArchiveLifecycleTests(unittest.TestCase):
             msft["stock_name"] = "Microsoft"
             msft["stock_code"] = "MSFT"
             msft["research_brief"]["instrument"]["symbol"] = "MSFT"
+            msft["evidence_items"][1]["symbol"] = "MSFT"
             archive_dashboard(
                 msft,
                 output_dir=tmpdir,
@@ -1323,6 +1417,7 @@ class LiveEvidenceProbeTests(unittest.TestCase):
                                     "regularMarketPrice": 327.74,
                                     "currency": "USD",
                                     "exchangeName": "NMS",
+                                    "marketState": "CLOSED",
                                 }
                             }
                         ]
@@ -1450,7 +1545,7 @@ class ManagementClaimTests(unittest.TestCase):
                 },
                 {
                     "document_id": "d2",
-                    "source_tier": "audited_filing",
+                    "source_tier": "annual_audited_filing",
                     "source_locator": "https://example.test/result",
                     "published_at": "2026-07-01",
                     "retrieved_at": "2026-07-22",
@@ -1478,6 +1573,51 @@ class ManagementClaimTests(unittest.TestCase):
         self.assertEqual(result["management_claim_tracking"]["claims"][0]["status"], "met")
         self.assertFalse(result["management_claim_tracking"]["formal_use_allowed"])
         self.assertNotIn("honesty", result["management_claim_tracking"])
+
+    def test_current_filing_tiers_are_supported_and_legacy_tier_is_rejected(self):
+        def payload(source_tier):
+            return {
+                "test_mode": True,
+                "stock_code": "AAPL",
+                "as_of_date": "2026-07-22",
+                "source_documents": [
+                    {
+                        "document_id": "d1",
+                        "source_tier": source_tier,
+                        "source_locator": "https://example.test/filing",
+                        "published_at": "2026-07-01",
+                        "retrieved_at": "2026-07-22",
+                        "text": "Revenue grew twelve percent.",
+                    }
+                ],
+                "claims": [
+                    {
+                        "claim_id": "c1",
+                        "statement": "Revenue growth >= 10%",
+                        "metric": "revenue_growth",
+                        "operator": ">=",
+                        "target": 0.10,
+                        "deadline": "2026-06-30",
+                        "source_document_id": "d1",
+                        "source_locator": "paragraph 3",
+                    }
+                ],
+            }
+
+        for source_tier in (
+            "annual_audited_filing",
+            "quarterly_filing",
+            "current_report",
+        ):
+            with self.subTest(source_tier=source_tier):
+                self.assertTrue(evaluate_claims(payload(source_tier))["valid"])
+
+        legacy = evaluate_claims(payload("audited_filing"))
+        self.assertFalse(legacy["valid"])
+        self.assertIn(
+            "source_documents[0].source_tier is invalid",
+            legacy["errors"],
+        )
 
 
 class EvidenceAndScreenTests(unittest.TestCase):
@@ -1648,7 +1788,7 @@ class EvidenceAndScreenTests(unittest.TestCase):
         dashboard = valid_dashboard()
         dashboard["monitoring_boundaries"] = valid_monitoring_boundaries()
         dashboard["dashboard"]["data_perspective"]["price_position"]["current_price"] = 1
-        dashboard["freshness_flags"]["price_data_fresh"] = False
+        dashboard["freshness_flags"]["price_data_status"] = "stale"
         report = evaluate_watchlist(
             dashboard,
             valid_runtime_quote(118),
@@ -1866,14 +2006,16 @@ class PortfolioTests(unittest.TestCase):
                         "quantity": 2,
                         "avg_cost": 100,
                         "currency": "USD",
-                        "market_type": "US_STOCK",
+                        "market": "US",
+                        "asset_type": "stock",
                     },
                     {
                         "symbol": "VOO",
                         "quantity": 0,
                         "avg_cost": 600,
                         "currency": "USD",
-                        "market_type": "ETF",
+                        "market": "US",
+                        "asset_type": "etf",
                         "current_weight": 0,
                     },
                 ],
@@ -2027,23 +2169,53 @@ class PortfolioTests(unittest.TestCase):
         )
 
     def test_complete_portfolio_batch_audit_requires_exact_active_coverage(self):
+        now_epoch = 1_800_000_000.0
         results = [
             {
                 "symbol": "AAPL",
                 "summary": {"last_close": 110},
+                "info": {
+                    "symbol": "AAPL",
+                    "exchange": "NMS",
+                    "currency": "USD",
+                    "quoteType": "EQUITY",
+                    "regularMarketPrice": 110,
+                    "regularMarketTime": now_epoch - 60,
+                    "marketState": "CLOSED",
+                },
                 "portfolio_context": {"position_status": "matched"},
             },
             {
                 "symbol": "MSFT",
                 "summary": {"last_close": 500},
+                "info": {
+                    "symbol": "MSFT",
+                    "exchange": "NMS",
+                    "currency": "USD",
+                    "quoteType": "EQUITY",
+                    "regularMarketPrice": 500,
+                    "regularMarketTime": now_epoch - 60,
+                    "marketState": "CLOSED",
+                },
                 "portfolio_context": {"position_status": "matched"},
             },
         ]
+        metadata = {
+            symbol: {
+                "symbol": symbol,
+                "currency": "USD",
+                "market": "US",
+                "asset_type": "stock",
+            }
+            for symbol in ("AAPL", "MSFT")
+        }
         audit = build_portfolio_batch_audit(
             results,
             requested_count=2,
             expected_symbols=["AAPL", "MSFT"],
             portfolio_load_status="ok",
+            expected_position_metadata=metadata,
+            now_epoch=now_epoch,
         )
         self.assertTrue(audit["complete"])
         self.assertTrue(audit["coverage_complete"])
@@ -2055,6 +2227,8 @@ class PortfolioTests(unittest.TestCase):
             requested_count=1,
             expected_symbols=["AAPL", "MSFT"],
             portfolio_load_status="ok",
+            expected_position_metadata=metadata,
+            now_epoch=now_epoch,
         )
         self.assertFalse(incomplete["complete"])
         self.assertEqual(incomplete["missing_requested_symbols"], ["MSFT"])
@@ -2062,9 +2236,9 @@ class PortfolioTests(unittest.TestCase):
     def test_portfolio_quote_universe_excludes_cash_and_inactive_records(self):
         payload = {
             "positions": [
-                {"symbol": "AAPL", "quantity": 1, "market_type": "US"},
-                {"symbol": "CASH_USD", "quantity": 100, "market_type": "cash"},
-                {"symbol": "CASH_CNY", "quantity": 100, "market_type": "cash"},
+                {"symbol": "AAPL", "quantity": 1, "market": "US", "asset_type": "stock"},
+                {"symbol": "CASH_USD", "quantity": 100, "market": "CASH", "asset_type": "cash"},
+                {"symbol": "CASH_CNY", "quantity": 100, "market": "CASH", "asset_type": "cash"},
             ],
             "_inactive_zero_quantity_symbols": ["VOO"],
         }
@@ -2197,9 +2371,11 @@ class PortfolioTests(unittest.TestCase):
         self.assertIn("portfolio root must be an object", report["portfolio_load_error"])
 
     def test_complete_three_scenario_packet_passes(self):
-        portfolio = {"base_currency": "USD", "positions": [{"symbol": "AAPL", "quantity": 1, "avg_cost": 100, "currency": "USD", "current_weight": 1.0}]}
+        portfolio = {"base_currency": "USD", "positions": [{"symbol": "AAPL", "quantity": 1, "avg_cost": 100, "currency": "USD", "market": "US", "asset_type": "stock", "current_weight": 1.0}]}
         assumptions = {
+            "scenario_contract_version": "2.0",
             "base_currency": "USD",
+            "weight_snapshot": valid_scenario_weight_snapshot({"AAPL": 1.0}),
             "scenarios": [
                 {"name": "base", "asset_returns": {"AAPL": 0.05}, "assumption_source": "test"},
                 {"name": "bull", "asset_returns": {"AAPL": 0.20}, "assumption_source": "test"},
@@ -2212,12 +2388,14 @@ class PortfolioTests(unittest.TestCase):
         portfolio = {
             "base_currency": "USD",
             "positions": [
-                {"symbol": "AAPL", "quantity": 1, "avg_cost": 100, "currency": "USD", "current_weight": 0.5},
-                {"symbol": "AAPL", "quantity": 2, "avg_cost": 90, "currency": "USD", "current_weight": 0.5},
+                {"symbol": "AAPL", "quantity": 1, "avg_cost": 100, "currency": "USD", "market": "US", "asset_type": "stock", "current_weight": 0.5},
+                {"symbol": "AAPL", "quantity": 2, "avg_cost": 90, "currency": "USD", "market": "US", "asset_type": "stock", "current_weight": 0.5},
             ]
         }
         assumptions = {
+            "scenario_contract_version": "2.0",
             "base_currency": "USD",
+            "weight_snapshot": valid_scenario_weight_snapshot({"AAPL": 1.0}),
             "scenarios": [
                 {"name": name, "asset_returns": {"AAPL": 0.0}, "assumption_source": "test"}
                 for name in ["base", "bull", "bear"]
@@ -2228,9 +2406,11 @@ class PortfolioTests(unittest.TestCase):
         self.assertTrue(any("duplicate position symbol" in item for item in result["errors"]))
 
     def test_scenario_reports_before_and_after_cost(self):
-        portfolio = {"base_currency": "USD", "positions": [{"symbol": "AAPL", "quantity": 1, "avg_cost": 100, "currency": "USD", "current_weight": 1.0}]}
+        portfolio = {"base_currency": "USD", "positions": [{"symbol": "AAPL", "quantity": 1, "avg_cost": 100, "currency": "USD", "market": "US", "asset_type": "stock", "current_weight": 1.0}]}
         assumptions = {
+            "scenario_contract_version": "2.0",
             "base_currency": "USD",
+            "weight_snapshot": valid_scenario_weight_snapshot({"AAPL": 1.0}),
             "transaction_cost_bps": 10,
             "assumed_turnover": 1.0,
             "scenarios": [
@@ -2243,9 +2423,11 @@ class PortfolioTests(unittest.TestCase):
         self.assertEqual(scenario["portfolio_return_after_cost"], 0.099)
 
     def test_scenario_rejects_non_finite_values(self):
-        portfolio = {"base_currency": "USD", "positions": [{"symbol": "AAPL", "quantity": 1, "avg_cost": 100, "currency": "USD", "current_weight": "nan"}]}
+        portfolio = {"base_currency": "USD", "positions": [{"symbol": "AAPL", "quantity": 1, "avg_cost": 100, "currency": "USD", "market": "US", "asset_type": "stock", "current_weight": "nan"}]}
         assumptions = {
+            "scenario_contract_version": "2.0",
             "base_currency": "USD",
+            "weight_snapshot": valid_scenario_weight_snapshot({"AAPL": 1.0}),
             "scenarios": [
                 {"name": name, "asset_returns": {"AAPL": "inf"}, "assumption_source": "test"}
                 for name in ["base", "bull", "bear"]
@@ -2257,7 +2439,9 @@ class PortfolioTests(unittest.TestCase):
 
     def test_scenario_rejects_invalid_active_position_values(self):
         assumptions = {
+            "scenario_contract_version": "2.0",
             "base_currency": "USD",
+            "weight_snapshot": valid_scenario_weight_snapshot({"AAPL": 1.0}),
             "scenarios": [
                 {"name": name, "asset_returns": {"AAPL": 0.0}, "assumption_source": "test"}
                 for name in ["base", "bull", "bear"]
@@ -2265,7 +2449,7 @@ class PortfolioTests(unittest.TestCase):
         }
         for field, value in [("quantity", -1), ("avg_cost", -1), ("current_weight", 0)]:
             with self.subTest(field=field):
-                position = {"symbol": "AAPL", "quantity": 1, "avg_cost": 100, "currency": "USD", "current_weight": 1.0}
+                position = {"symbol": "AAPL", "quantity": 1, "avg_cost": 100, "currency": "USD", "market": "US", "asset_type": "stock", "current_weight": 1.0}
                 position[field] = value
                 result = analyze_scenarios({"base_currency": "USD", "positions": [position]}, assumptions)
                 self.assertFalse(result["valid"])
@@ -2280,6 +2464,8 @@ class PortfolioTests(unittest.TestCase):
                     "quantity": 1,
                     "avg_cost": 100,
                     "currency": "USD",
+                    "market": "US",
+                    "asset_type": "stock",
                     "current_weight": 1.0,
                 },
                 {
@@ -2287,11 +2473,15 @@ class PortfolioTests(unittest.TestCase):
                     "quantity": 0,
                     "avg_cost": 600,
                     "currency": "USD",
+                    "market": "US",
+                    "asset_type": "etf",
                 },
             ],
         }
         assumptions = {
+            "scenario_contract_version": "2.0",
             "base_currency": "USD",
+            "weight_snapshot": valid_scenario_weight_snapshot({"AAPL": 1.0}),
             "scenarios": [
                 {
                     "name": name,
@@ -2318,6 +2508,8 @@ class PortfolioTests(unittest.TestCase):
                     "quantity": 1,
                     "avg_cost": 100,
                     "currency": "USD",
+                    "market": "US",
+                    "asset_type": "stock",
                     "current_weight": 1.0,
                 },
                 {
@@ -2325,12 +2517,16 @@ class PortfolioTests(unittest.TestCase):
                     "quantity": 0,
                     "avg_cost": 600,
                     "currency": "USD",
+                    "market": "US",
+                    "asset_type": "etf",
                     "current_weight": 0.1,
                 },
             ],
         }
         assumptions = {
+            "scenario_contract_version": "2.0",
             "base_currency": "USD",
+            "weight_snapshot": valid_scenario_weight_snapshot({"AAPL": 1.0}),
             "scenarios": [
                 {
                     "name": name,
@@ -2347,8 +2543,8 @@ class PortfolioTests(unittest.TestCase):
         )
 
     def test_scenario_requires_explicit_return_for_every_symbol(self):
-        portfolio = {"base_currency": "USD", "positions": [{"symbol": "AAPL", "quantity": 1, "avg_cost": 100, "currency": "USD", "current_weight": 0.6}, {"symbol": "CASH", "quantity": 1, "avg_cost": 1, "currency": "USD", "current_weight": 0.4}]}
-        assumptions = {"base_currency": "USD", "scenarios": [{"name": "bear", "asset_returns": {"AAPL": -0.2}, "assumption_source": "test"}]}
+        portfolio = {"base_currency": "USD", "positions": [{"symbol": "AAPL", "quantity": 1, "avg_cost": 100, "currency": "USD", "market": "US", "asset_type": "stock", "current_weight": 0.6}, {"symbol": "CASH", "quantity": 1, "avg_cost": 1, "currency": "USD", "market": "CASH", "asset_type": "cash", "current_weight": 0.4}]}
+        assumptions = {"scenario_contract_version": "2.0", "base_currency": "USD", "weight_snapshot": valid_scenario_weight_snapshot({"AAPL": 0.6, "CASH": 0.4}), "scenarios": [{"name": "bear", "asset_returns": {"AAPL": -0.2}, "assumption_source": "test"}]}
         result = analyze_scenarios(portfolio, assumptions)
         self.assertFalse(result["valid"])
 
@@ -2391,7 +2587,8 @@ class PortfolioTests(unittest.TestCase):
                         "positions": [
                             {
                                 "symbol": "CASH",
-                                "market_type": "cash",
+                                "market": "CASH",
+                                "asset_type": "cash",
                                 "quantity": 100,
                                 "avg_cost": 1,
                                 "currency": "USD",
@@ -2401,10 +2598,14 @@ class PortfolioTests(unittest.TestCase):
                 ),
                 encoding="utf-8",
             )
+            original = path.read_bytes()
             result = recalculate_all_weights(str(path))
-        self.assertFalse(result["_rebalance"]["target_weights_computed"])
-        self.assertNotIn("target_weight", result["positions"][0])
-        self.assertNotIn("max_weight", result["positions"][0])
+            self.assertEqual(path.read_bytes(), original)
+        self.assertEqual(result["status"], "complete")
+        self.assertEqual(result["allocation_experiment"]["status"], "not_requested")
+        self.assertEqual(result["current_weights"][0]["symbol"], "CASH")
+        self.assertNotIn("target_weight", json.dumps(result))
+        self.assertNotIn("max_weight", json.dumps(result))
 
     def test_rebalance_excludes_zero_quantity_record_without_fetching_it(self):
         temporary_root = os.environ.get("PIA_TEST_TMPDIR")
@@ -2417,14 +2618,16 @@ class PortfolioTests(unittest.TestCase):
                         "positions": [
                             {
                                 "symbol": "CASH",
-                                "market_type": "CASH",
+                                "market": "CASH",
+                                "asset_type": "cash",
                                 "quantity": 100,
                                 "avg_cost": 1,
                                 "currency": "USD",
                             },
                             {
                                 "symbol": "VOO",
-                                "market_type": "US",
+                                "market": "US",
+                                "asset_type": "etf",
                                 "quantity": 0,
                                 "avg_cost": 600,
                                 "currency": "USD",
@@ -2436,14 +2639,15 @@ class PortfolioTests(unittest.TestCase):
                 ),
                 encoding="utf-8",
             )
+            original = path.read_bytes()
             result = recalculate_all_weights(str(path))
-        inactive = result["positions"][1]
-        self.assertEqual(inactive["current_weight"], 0.0)
-        self.assertNotIn("target_weight", inactive)
-        self.assertNotIn("max_weight", inactive)
-        self.assertTrue(
-            any("VOO" in warning for warning in result["_rebalance"]["warnings"])
-        )
+            self.assertEqual(path.read_bytes(), original)
+        self.assertEqual(result["status"], "complete")
+        self.assertEqual(result["allocation_experiment"]["status"], "not_requested")
+        self.assertEqual(result["current_weights"][0]["symbol"], "CASH")
+        self.assertEqual(result["inactive_zero_quantity_symbols"], ["VOO"])
+        self.assertNotIn("target_weight", json.dumps(result))
+        self.assertNotIn("max_weight", json.dumps(result))
 
     def test_broker_import_with_missing_required_field_does_not_write(self):
         temporary_root = os.environ.get("PIA_TEST_TMPDIR")
@@ -2460,7 +2664,8 @@ class PortfolioTests(unittest.TestCase):
                             "quantity": 1,
                             "avg_cost": 10,
                             "currency": "USD",
-                            "market_type": "US",
+                            "market": "US",
+                            "asset_type": "stock",
                         }
                     ],
                 },
@@ -2469,9 +2674,9 @@ class PortfolioTests(unittest.TestCase):
             )
             positions_path.write_text(original, encoding="utf-8")
             csv_path.write_text(
-                "symbol,quantity,avg_cost,currency,market_type\n"
-                "VALID,2,20,USD,US\n"
-                "BROKEN,3,30,,US\n",
+                "symbol,quantity,avg_cost,currency,market,asset_type\n"
+                "VALID,2,20,USD,US,stock\n"
+                "BROKEN,3,30,,US,stock\n",
                 encoding="utf-8",
             )
             with self.assertRaises(ValueError):
@@ -2489,8 +2694,8 @@ class PortfolioTests(unittest.TestCase):
                 encoding="utf-8",
             )
             csv_path.write_text(
-                "symbol,quantity,avg_cost,currency,market_type\n"
-                "TEST,2,10,USD,US\n",
+                "symbol,quantity,avg_cost,currency,market,asset_type\n"
+                "TEST,2,10,USD,US,stock\n",
                 encoding="utf-8",
             )
             result = sync_broker_data(str(csv_path), str(positions_path))
@@ -2522,7 +2727,8 @@ class PortfolioTests(unittest.TestCase):
                                 "quantity": 2,
                                 "avg_cost": 100,
                                 "currency": "USD",
-                                "market_type": "US",
+                                "market": "US",
+                                "asset_type": "stock",
                                 "current_weight": 0.5,
                                 "target_weight": 0.4,
                                 "max_weight": 0.45,
@@ -2534,8 +2740,8 @@ class PortfolioTests(unittest.TestCase):
                 encoding="utf-8",
             )
             csv_path.write_text(
-                "symbol,quantity,avg_cost,currency,market_type\n"
-                "AAPL,0,100,USD,US\n",
+                "symbol,quantity,avg_cost,currency,market,asset_type\n"
+                "AAPL,0,100,USD,US,stock\n",
                 encoding="utf-8",
             )
             result = sync_broker_data(str(csv_path), str(positions_path))
@@ -2562,7 +2768,8 @@ class PortfolioTests(unittest.TestCase):
                                 "quantity": 100,
                                 "avg_cost": 1,
                                 "currency": "USD",
-                                "market_type": "CASH",
+                                "market": "CASH",
+                                "asset_type": "cash",
                                 "current_weight": 0.2,
                                 "target_weight": 0.1,
                                 "max_weight": 0.15,
@@ -2592,8 +2799,8 @@ class PortfolioTests(unittest.TestCase):
             )
             positions_path.write_text(original, encoding="utf-8")
             csv_path.write_text(
-                "symbol,quantity,avg_cost,currency,market_type\n"
-                "AAPL,1,0,USD,US\n",
+                "symbol,quantity,avg_cost,currency,market,asset_type\n"
+                "AAPL,1,0,USD,US,stock\n",
                 encoding="utf-8",
             )
             with self.assertRaises(ValueError):
@@ -2604,8 +2811,8 @@ class PortfolioTests(unittest.TestCase):
         payload = {
             "base_currency": "USD",
             "positions": [
-                {"symbol": "AAPL", "quantity": 1, "avg_cost": 100, "currency": "USD"},
-                {"symbol": "aapl", "quantity": 2, "avg_cost": 90, "currency": "USD"},
+                {"symbol": "AAPL", "quantity": 1, "avg_cost": 100, "currency": "USD", "market": "US", "asset_type": "stock"},
+                {"symbol": "aapl", "quantity": 2, "avg_cost": 90, "currency": "USD", "market": "US", "asset_type": "stock"},
             ],
         }
         self.assertTrue(any("duplicate position symbol" in item for item in validate_portfolio_payload(payload)))
@@ -2629,6 +2836,8 @@ class PortfolioTests(unittest.TestCase):
                     "quantity": 1,
                     "avg_cost": 100,
                     "currency": "USD",
+                    "market": "US",
+                    "asset_type": "stock",
                 }
             ],
         }
@@ -2648,14 +2857,16 @@ class PortfolioTests(unittest.TestCase):
                     "quantity": 1,
                     "avg_cost": 10,
                     "currency": "CNY",
-                    "market_type": "A_SHARE",
+                    "market": "CN",
+                    "asset_type": "stock",
                 },
                 {
                     "symbol": "VOO",
                     "quantity": 0,
                     "avg_cost": 600,
                     "currency": "USD",
-                    "market_type": "ETF",
+                    "market": "US",
+                    "asset_type": "etf",
                     "current_weight": 0,
                 },
             ],
@@ -2672,6 +2883,8 @@ class PortfolioTests(unittest.TestCase):
                     "quantity": 1,
                     "avg_cost": 100,
                     "currency": "USD",
+                    "market": "US",
+                    "asset_type": "stock",
                 }
             ],
         }
@@ -2681,6 +2894,16 @@ class PortfolioTests(unittest.TestCase):
 
 
 class CatalystAndCalibrationTests(unittest.TestCase):
+    def _verified_outcome(self, *args, **kwargs):
+        return build_outcome_update(
+            *args,
+            source_provider="test market data provider",
+            source_locator="test://daily-history",
+            daily_interval="1d",
+            intraday_interval="5m",
+            **kwargs,
+        )
+
     def test_missing_news_is_a_gap_not_a_broken_thesis(self):
         result = extract_catalyst_map([], {})
         self.assertEqual(result["broken"], [])
@@ -2705,7 +2928,7 @@ class CatalystAndCalibrationTests(unittest.TestCase):
             {"Date": "2026-01-01", "Close": 200},
             {"Date": "2026-01-03", "Close": 204},
         ]
-        result = build_outcome_update(entry, asset, benchmark, today=date(2026, 1, 4))
+        result = self._verified_outcome(entry, asset, benchmark, today=date(2026, 1, 4))
         self.assertTrue(result["calibration_eligible"])
         self.assertAlmostEqual(result["outcome_return_pct"], 10.0)
         self.assertAlmostEqual(result["benchmark_return_pct"], 2.0)
@@ -2730,7 +2953,7 @@ class CatalystAndCalibrationTests(unittest.TestCase):
             {"Date": "2026-01-01", "Close": 200},
             {"Date": "2026-01-03", "Close": 204},
         ]
-        result = build_outcome_update(entry, asset, benchmark, today=date(2026, 1, 4))
+        result = self._verified_outcome(entry, asset, benchmark, today=date(2026, 1, 4))
         self.assertAlmostEqual(result["net_excess_return_pct"], 7.9)
 
     def test_non_finite_benchmark_price_is_ineligible(self):
@@ -2746,7 +2969,7 @@ class CatalystAndCalibrationTests(unittest.TestCase):
         }
         asset = [{"Date": "2026-01-01", "Close": 100}, {"Date": "2026-01-02", "Close": 101}]
         benchmark = [{"Date": "2026-01-01", "Close": 0}, {"Date": "2026-01-02", "Close": 1}]
-        result = build_outcome_update(entry, asset, benchmark, today=date(2026, 1, 3))
+        result = self._verified_outcome(entry, asset, benchmark, today=date(2026, 1, 3))
         self.assertFalse(result["calibration_eligible"])
 
     def test_non_positive_stop_price_is_ineligible(self):
@@ -2763,7 +2986,7 @@ class CatalystAndCalibrationTests(unittest.TestCase):
         }
         asset = [{"Date": "2026-01-01", "High": 101, "Low": -20, "Close": 100}]
         benchmark = [{"Date": "2026-01-01", "Close": 100}]
-        result = build_outcome_update(entry, asset, benchmark, today=date(2026, 1, 3))
+        result = self._verified_outcome(entry, asset, benchmark, today=date(2026, 1, 3))
         self.assertFalse(result["calibration_eligible"])
         self.assertIn("stop_loss must be positive", result["calibration_exclusion_reason"])
 
@@ -2801,7 +3024,7 @@ class CatalystAndCalibrationTests(unittest.TestCase):
             {"Date": "2026-01-02T09:30:00-05:00", "Close": 201},
             {"Date": "2026-01-02T10:00:00-05:00", "Close": 202},
         ]
-        result = build_outcome_update(
+        result = self._verified_outcome(
             entry,
             asset,
             benchmark,
@@ -2814,12 +3037,25 @@ class CatalystAndCalibrationTests(unittest.TestCase):
         self.assertEqual(result["outcome_resolution_method"], "intraday_first_trigger")
         self.assertEqual(result["calibration_quality"], "observed_intraday")
 
-    def test_dual_trigger_without_intraday_uses_conservative_stop_first(self):
+    def test_dual_trigger_without_intraday_conservative_is_sensitivity_only(self):
         entry, asset, benchmark = self._dual_trigger_case()
-        result = build_outcome_update(entry, asset, benchmark, today=date(2026, 1, 3))
-        self.assertTrue(result["calibration_eligible"])
-        self.assertEqual(result["outcome_status"], "Stopped Out")
-        self.assertEqual(result["outcome_resolution_method"], "daily_ohlc_conservative_stop_first")
+        result = self._verified_outcome(
+            entry,
+            asset,
+            benchmark,
+            dual_trigger_policy="conservative",
+            today=date(2026, 1, 3),
+        )
+        self.assertFalse(result["calibration_eligible"])
+        self.assertIsNone(result["net_excess_return_pct"])
+        self.assertEqual(
+            result["sensitivity_analysis"]["outcome_status"],
+            "Stopped Out",
+        )
+        self.assertEqual(
+            result["sensitivity_analysis"]["outcome_resolution_method"],
+            "daily_ohlc_conservative_stop_first",
+        )
         self.assertEqual(result["calibration_quality"], "assumption_based_conservative")
 
     def test_intraday_resolution_requires_time_aligned_benchmark(self):
@@ -2827,7 +3063,7 @@ class CatalystAndCalibrationTests(unittest.TestCase):
         intraday = [
             {"Date": "2026-01-02T09:30:00-05:00", "High": 111, "Low": 100, "Close": 110}
         ]
-        result = build_outcome_update(
+        result = self._verified_outcome(
             entry, asset, benchmark, intraday_history=intraday, today=date(2026, 1, 3)
         )
         self.assertFalse(result["calibration_eligible"])
@@ -2835,7 +3071,7 @@ class CatalystAndCalibrationTests(unittest.TestCase):
 
     def test_dual_trigger_can_still_be_explicitly_excluded(self):
         entry, asset, benchmark = self._dual_trigger_case()
-        result = build_outcome_update(
+        result = self._verified_outcome(
             entry, asset, benchmark, dual_trigger_policy="exclude", today=date(2026, 1, 3)
         )
         self.assertFalse(result["calibration_eligible"])
@@ -2853,8 +3089,9 @@ class CatalystAndCalibrationTests(unittest.TestCase):
             },
         ]
         result = calculate_calibration(entries)
-        self.assertEqual(result["eligible_count"], 1)
-        self.assertEqual(result["average_net_excess_return_pct"], 2.0)
+        self.assertEqual(result["eligible_count"], 0)
+        self.assertEqual(result["legacy_mixed_sample_count"], 2)
+        self.assertIsNone(result["average_net_excess_return_pct"])
 
     def test_calibration_separates_conservative_assumptions_from_observed_headline(self):
         entries = [
@@ -2876,10 +3113,11 @@ class CatalystAndCalibrationTests(unittest.TestCase):
             },
         ]
         result = calculate_calibration(entries)
-        self.assertEqual(result["eligible_count"], 2)
-        self.assertEqual(result["observed_count"], 1)
+        self.assertEqual(result["eligible_count"], 0)
+        self.assertEqual(result["observed_count"], 0)
         self.assertEqual(result["assumption_based_count"], 1)
-        self.assertEqual(result["average_net_excess_return_pct"], 2.0)
+        self.assertEqual(result["excluded_count"], 2)
+        self.assertIsNone(result["average_net_excess_return_pct"])
         self.assertEqual(result["assumption_based_average_net_excess_return_pct"], -3.0)
 
     def test_journal_captures_reproducibility_fields(self):
@@ -2889,7 +3127,7 @@ class CatalystAndCalibrationTests(unittest.TestCase):
         self.assertEqual(entry["investment_horizon_days"], 90)
         self.assertEqual(len(entry["source_snapshot_hash"]), 64)
         self.assertEqual(entry["research_scope"], "research_only")
-        self.assertEqual(entry["dashboard_schema_version"], "6.1")
+        self.assertEqual(entry["dashboard_schema_version"], DASHBOARD_SCHEMA_VERSION)
         for forbidden in (
             "decision_type",
             "operation_advice",

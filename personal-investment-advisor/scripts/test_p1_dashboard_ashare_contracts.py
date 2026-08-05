@@ -22,25 +22,7 @@ from dashboard_math_gate import validate_math_consistency
 
 
 def valid_scenario_analysis():
-    return {
-        "valuation_method": "scenario-based operating evidence review",
-        "base": {
-            "assumptions": ["Current operating evidence remains stable"],
-            "result": "Base operating case remains supported",
-            "falsification_conditions": ["Core operating evidence weakens"],
-        },
-        "bull": {
-            "assumptions": ["Key operating variables improve"],
-            "result": "Upside operating case",
-            "falsification_conditions": ["Expected improvement does not appear"],
-        },
-        "bear": {
-            "assumptions": ["Demand and margins weaken"],
-            "result": "Downside operating case",
-            "falsification_conditions": ["Downside assumptions do not occur"],
-        },
-        "sensitivity": ["Demand", "Margin", "Capital intensity"],
-    }
+    return fixtures.valid_scenario_analysis()
 
 
 class DashboardStrictContractTests(unittest.TestCase):

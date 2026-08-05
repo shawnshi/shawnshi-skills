@@ -198,6 +198,43 @@
             ]
         },
         {
+            "domain": "investment_research",
+            "classes": [
+                {
+                    "id": "company_equity_research",
+                    "primary_skill": "personal-investment-advisor",
+                    "secondary_skills": [],
+                    "request_signals": [
+                        "analyze a listed company stock",
+                        "audit an equity investment thesis",
+                        "screen stocks with financial evidence",
+                        "build a research only valuation"
+                    ]
+                },
+                {
+                    "id": "portfolio_risk_audit",
+                    "primary_skill": "personal-investment-advisor",
+                    "secondary_skills": [],
+                    "request_signals": [
+                        "audit my securities portfolio",
+                        "run a portfolio stress scenario",
+                        "inspect concentration and exposure",
+                        "refresh portfolio quotes read only"
+                    ]
+                },
+                {
+                    "id": "investment_research_calibration",
+                    "primary_skill": "personal-investment-advisor",
+                    "secondary_skills": [],
+                    "request_signals": [
+                        "calibrate past investment research",
+                        "compare thesis outcomes to benchmark",
+                        "review investment research journal"
+                    ]
+                }
+            ]
+        },
+        {
             "domain": "skill_governance",
             "classes": [
                 {

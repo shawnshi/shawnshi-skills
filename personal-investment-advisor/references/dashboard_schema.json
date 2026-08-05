@@ -1,7 +1,7 @@
 {
   "resource_kind": "investment_dashboard_contract",
-  "version": "6.1",
-  "strict_profile": "2026-08-02",
+  "version": "7.0",
+  "strict_profile": "2026-08-05",
   "required_top_level": [
     "stock_name",
     "stock_code",
@@ -78,11 +78,30 @@
     "actionability"
   ],
   "required_freshness_fields": [
+    "price_data_status",
+    "info_data_status",
+    "news_data_status",
+    "portfolio_data_status",
+    "stale_inputs"
+  ],
+  "strict_freshness_status_fields": [
+    "price_data_status",
+    "info_data_status",
+    "news_data_status",
+    "portfolio_data_status"
+  ],
+  "strict_freshness_status_values": [
+    "fresh",
+    "historical",
+    "stale",
+    "not_assessed",
+    "not_applicable"
+  ],
+  "legacy_archive_freshness_fields": [
     "price_data_fresh",
     "info_data_fresh",
     "news_data_fresh",
-    "portfolio_data_fresh",
-    "stale_inputs"
+    "portfolio_data_fresh"
   ],
   "required_evidence_fields": [
     "fact",
@@ -98,6 +117,83 @@
     "confidence",
     "independent_source_count"
   ],
+  "required_strict_market_data_evidence_fields": [
+    "symbol",
+    "market",
+    "currency",
+    "price",
+    "market_state",
+    "observed_at",
+    "retrieved_at",
+    "as_of_date"
+  ],
+  "strict_evidence_freshness_values": [
+    "current",
+    "historical",
+    "unknown"
+  ],
+  "strict_source_types": [
+    "filing",
+    "disclosure",
+    "regulator",
+    "sec_filing",
+    "quote",
+    "market_data",
+    "news",
+    "press_release",
+    "event",
+    "company_primary",
+    "user_authorized",
+    "dataset"
+  ],
+  "required_strict_source_provenance_fields": [
+    "retrieved_at",
+    "content_sha256"
+  ],
+  "required_strict_portfolio_provenance_fields": [
+    "snapshot_as_of",
+    "retrieved_at",
+    "source_locator",
+    "content_sha256"
+  ],
+  "source_locator_contract": {
+    "allowed_http_schemes": ["http", "https"],
+    "blocked_hostnames": [
+      "localhost",
+      "example.com",
+      "example.net",
+      "example.org",
+      "example.test"
+    ],
+    "blocked_hostname_suffixes": [
+      ".localhost",
+      ".test",
+      ".invalid",
+      ".example"
+    ],
+    "controlled_dataset_namespaces": [
+      "pia",
+      "portfolio-research",
+      "validated-market-data"
+    ],
+    "sec_identifier_forms": [
+      "sec://accession/CIK10-YY-SEQUENCE6",
+      "sec://cik/CIK10"
+    ]
+  },
+  "strict_historical_disclosure_tiers": [
+    "annual_audited_filing",
+    "quarterly_filing",
+    "current_report"
+  ],
+  "strict_quote_max_age_seconds_by_market_state": {
+    "REGULAR": 900,
+    "PREPRE": 86400,
+    "PRE": 86400,
+    "POST": 86400,
+    "POSTPOST": 86400,
+    "CLOSED": 259200
+  },
   "required_portfolio_context_fields_when_holding": [
     "has_position",
     "quantity",
@@ -192,6 +288,46 @@
     "result",
     "falsification_conditions"
   ],
+  "current_valuation_contract_version": "2.0",
+  "required_current_scenario_analysis_fields": [
+    "valuation_contract_version",
+    "valuation_method",
+    "as_of_date",
+    "currency",
+    "base",
+    "bull",
+    "bear",
+    "sensitivity"
+  ],
+  "required_current_scenario_case_fields": [
+    "assumptions",
+    "enterprise_value",
+    "net_debt",
+    "equity_value",
+    "diluted_shares",
+    "per_share_value",
+    "falsification_conditions"
+  ],
+  "required_current_assumption_fields": [
+    "name",
+    "value",
+    "unit",
+    "source_locator",
+    "retrieved_at",
+    "content_sha256",
+    "as_of_date"
+  ],
+  "required_current_sensitivity_fields": [
+    "parameter",
+    "low",
+    "base",
+    "high",
+    "unit",
+    "source_locator",
+    "retrieved_at",
+    "content_sha256",
+    "as_of_date"
+  ],
   "enums": {
     "market_type": ["A股", "港股", "美股", "ETF", "其他"],
     "research_mode": ["research_only"],
@@ -209,12 +345,26 @@
       "company_primary",
       "regulator",
       "exchange",
+      "annual_audited_filing",
+      "quarterly_filing",
+      "current_report",
       "audited_filing",
       "market_data",
       "secondary",
       "user_authorized"
     ]
   },
+  "primary_source_tiers": [
+    "company_primary",
+    "regulator",
+    "exchange",
+    "annual_audited_filing",
+    "quarterly_filing",
+    "current_report"
+  ],
+  "legacy_archive_source_tiers": [
+    "audited_filing"
+  ],
   "forbidden_legacy_fields": [
     "operation_advice",
     "decision_type",

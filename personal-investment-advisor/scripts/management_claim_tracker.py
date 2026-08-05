@@ -18,7 +18,9 @@ SOURCE_TIERS = {
     "company_primary",
     "regulator",
     "exchange",
-    "audited_filing",
+    "annual_audited_filing",
+    "quarterly_filing",
+    "current_report",
     "user_authorized",
 }
 RESERVED_LOCATORS = ("example.com", "example.test", ".invalid", "localhost")

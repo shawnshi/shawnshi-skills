@@ -1,3 +1,9 @@
+"""Atomically import broker rows with explicit market and asset identity.
+
+Every CSV row must provide symbol, quantity, avg_cost, currency, market, and
+asset_type. Legacy market_type values are ignored and cannot satisfy identity.
+"""
+
 import argparse
 import copy
 import csv
@@ -99,7 +105,10 @@ def _stage_broker_rows(csv_path: str, positions: list[dict]) -> None:
                 "quantity": _required_number(row, "quantity", row_number),
                 "avg_cost": _required_number(row, "avg_cost", row_number),
                 "currency": _required_text(row, "currency", row_number).upper(),
-                "market_type": _required_text(row, "market_type", row_number).upper(),
+                "market": _required_text(row, "market", row_number).upper(),
+                "asset_type": _required_text(
+                    row, "asset_type", row_number
+                ).lower(),
             }
             for optional_field in ("name", "opened_at", "thesis"):
                 value = str(row.get(optional_field) or "").strip()
@@ -154,6 +163,8 @@ def _update_cash(positions, pos_map, symbol, name, amount, currency):
         raise ValueError(f"{symbol} amount must be finite and non-negative")
     if symbol in pos_map:
         pos_map[symbol]["quantity"] = amount
+        pos_map[symbol]["market"] = "CASH"
+        pos_map[symbol]["asset_type"] = "cash"
         _apply_quantity_semantics(pos_map[symbol], amount)
     else:
         staged = {
@@ -162,7 +173,8 @@ def _update_cash(positions, pos_map, symbol, name, amount, currency):
             "quantity": amount,
             "avg_cost": 1.0,
             "currency": currency,
-            "market_type": "CASH",
+            "market": "CASH",
+            "asset_type": "cash",
         }
         _apply_quantity_semantics(staged, amount)
         positions.append(staged)

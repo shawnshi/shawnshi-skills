@@ -16,8 +16,25 @@ YAHOO_CHART_URL = "https://query1.finance.yahoo.com/v8/finance/chart/{symbol}?ra
 NASDAQ_INFO_URL = "https://api.nasdaq.com/api/quote/{symbol}/info?assetclass=stocks"
 SEC_TICKERS_URL = "https://www.sec.gov/files/company_tickers_exchange.json"
 SEC_SUBMISSIONS_URL = "https://data.sec.gov/submissions/CIK{cik}.json"
-ACCEPTED_DISCLOSURE_FORMS = {"10-K", "10-Q", "8-K"}
+DISCLOSURE_TIER_BY_FORM = {
+    "10-K": "annual_audited_filing",
+    "10-K/A": "annual_audited_filing",
+    "10-Q": "quarterly_filing",
+    "10-Q/A": "quarterly_filing",
+    "8-K": "current_report",
+    "8-K/A": "current_report",
+}
+ACCEPTED_DISCLOSURE_FORMS = set(DISCLOSURE_TIER_BY_FORM)
 FOREIGN_ISSUER_FORMS = {"20-F", "40-F", "6-K"}
+QUOTE_FRESHNESS_POLICY_VERSION = "market-state-v1"
+QUOTE_MAX_AGE_SECONDS_BY_MARKET_STATE = {
+    "REGULAR": 15 * 60,
+    "PREPRE": 24 * 60 * 60,
+    "PRE": 24 * 60 * 60,
+    "POST": 24 * 60 * 60,
+    "POSTPOST": 24 * 60 * 60,
+    "CLOSED": 72 * 60 * 60,
+}
 DISALLOWED_INSTRUMENT_TYPES = {
     "ADR",
     "ADS",
@@ -90,6 +107,52 @@ def _iso_utc(epoch: Any) -> str | None:
     return datetime.fromtimestamp(value, tz=timezone.utc).isoformat()
 
 
+def _quote_freshness_policy(market_state: Any) -> dict[str, Any]:
+    normalized = str(market_state or "").strip().upper()
+    return {
+        "version": QUOTE_FRESHNESS_POLICY_VERSION,
+        "market_state": normalized or None,
+        "max_age_seconds": QUOTE_MAX_AGE_SECONDS_BY_MARKET_STATE.get(normalized),
+        "calendar_aware": False,
+        "long_holiday_behavior": "fail_closed_after_state_threshold",
+    }
+
+
+def _resolve_market_state(
+    quote_meta: dict[str, Any], retrieved_at: datetime
+) -> tuple[str | None, str | None]:
+    explicit = str(quote_meta.get("marketState") or "").strip().upper()
+    if explicit:
+        return explicit, "provider_market_state"
+
+    periods = quote_meta.get("currentTradingPeriod")
+    if not isinstance(periods, dict):
+        return None, None
+    now_epoch = retrieved_at.timestamp()
+    valid_period_count = 0
+    for period_name, state in (
+        ("pre", "PRE"),
+        ("regular", "REGULAR"),
+        ("post", "POST"),
+    ):
+        period = periods.get(period_name)
+        if not isinstance(period, dict):
+            continue
+        try:
+            start = float(period.get("start"))
+            end = float(period.get("end"))
+        except (TypeError, ValueError):
+            continue
+        if start <= 0 or end <= start:
+            continue
+        valid_period_count += 1
+        if start <= now_epoch < end:
+            return state, "derived_from_current_trading_period"
+    if valid_period_count:
+        return "CLOSED", "derived_from_current_trading_period"
+    return None, None
+
+
 def _formal_sec_contact_allowed(user_agent: str) -> bool:
     match = re.search(r"[A-Z0-9._%+-]+@([A-Z0-9.-]+)", user_agent, flags=re.IGNORECASE)
     if not match:
@@ -101,6 +164,17 @@ def _formal_sec_contact_allowed(user_agent: str) -> bool:
         or domain.endswith(".invalid")
         or domain.endswith(".test")
     )
+
+
+def _normalize_cik(value: Any) -> str | None:
+    if value is None:
+        return None
+    if isinstance(value, bool):
+        raise ValueError("CIK must contain 1 to 10 digits")
+    text = str(value).strip()
+    if not re.fullmatch(r"\d{1,10}", text) or int(text) <= 0:
+        raise ValueError("CIK must contain 1 to 10 digits and be greater than zero")
+    return text.zfill(10)
 
 
 def _has_depositary_marker(value: Any) -> bool:
@@ -137,6 +211,7 @@ def _recent_filings(submissions: dict[str, Any], limit: int = 5) -> list[dict[st
         output.append(
             {
                 "form": form,
+                "source_tier": DISCLOSURE_TIER_BY_FORM[form],
                 "filing_date": filing_date,
                 "accession_number": accession,
                 "primary_document": primary_document,
@@ -155,9 +230,9 @@ def probe_us_stock(
     symbol: str,
     sec_user_agent: str,
     timeout: int = 20,
-    max_price_age_days: int = 7,
     fetch_json: Callable[[str, dict[str, str], int], tuple[dict[str, Any], int, str]] | None = None,
     now: datetime | None = None,
+    cik: str | int | None = None,
 ) -> dict[str, Any]:
     fetch = fetch_json or _default_fetch_json
     retrieved_at = (now or datetime.now(timezone.utc)).astimezone(timezone.utc)
@@ -168,6 +243,10 @@ def probe_us_stock(
     evidence_errors: list[str] = []
     if not sec_user_agent or len(sec_user_agent.strip()) < 8:
         identity_errors.append("a descriptive SEC user agent is required")
+    try:
+        explicit_cik = _normalize_cik(cik)
+    except ValueError as exc:
+        identity_errors.append(str(exc))
     if identity_errors or not normalized:
         return _empty_probe_result(
             symbol=normalized,
@@ -197,9 +276,14 @@ def probe_us_stock(
     nasdaq_url = NASDAQ_INFO_URL.format(symbol=quote(normalized))
     yahoo_payload, yahoo_status, yahoo_final_url = fetch(yahoo_url, public_headers, timeout)
     nasdaq_payload, nasdaq_status, nasdaq_final_url = fetch(nasdaq_url, nasdaq_headers, timeout)
-    tickers_payload, tickers_status, tickers_final_url = fetch(
-        SEC_TICKERS_URL, sec_ticker_headers, timeout
-    )
+    tickers_status = None
+    tickers_final_url = None
+    if explicit_cik is None:
+        tickers_payload, tickers_status, tickers_final_url = fetch(
+            SEC_TICKERS_URL, sec_ticker_headers, timeout
+        )
+    else:
+        tickers_payload = {}
 
     chart_results = yahoo_payload.get("chart", {}).get("result") or []
     if not chart_results:
@@ -208,6 +292,10 @@ def probe_us_stock(
     quote_meta = chart.get("meta", {})
     quote_symbol = str(quote_meta.get("symbol") or "").upper()
     quote_time = _iso_utc(quote_meta.get("regularMarketTime"))
+    market_state, market_state_source = _resolve_market_state(
+        quote_meta, retrieved_at
+    )
+    freshness_policy = _quote_freshness_policy(market_state)
     quote_price = quote_meta.get("regularMarketPrice")
     try:
         quote_price = float(quote_price)
@@ -218,10 +306,20 @@ def probe_us_stock(
     if not quote_time:
         data_errors.append("market price timestamp is missing")
     else:
-        age_days = (retrieved_at.date() - datetime.fromisoformat(quote_time).date()).days
-        if age_days < 0 or age_days > max_price_age_days:
+        age_seconds = (
+            retrieved_at - datetime.fromisoformat(quote_time).astimezone(timezone.utc)
+        ).total_seconds()
+        max_age_seconds = freshness_policy["max_age_seconds"]
+        if max_age_seconds is None:
             data_errors.append(
-                f"market price age is {age_days} days; allowed range is 0..{max_price_age_days}"
+                "market state is missing or unsupported; quote freshness cannot be established"
+            )
+        elif age_seconds < -60 * 60:
+            data_errors.append("market price timestamp is more than 3600 seconds in the future")
+        elif age_seconds > max_age_seconds:
+            data_errors.append(
+                f"market price age is {round(age_seconds, 3)} seconds; "
+                f"{freshness_policy['market_state']} allows at most {max_age_seconds} seconds"
             )
 
     quote_instrument_type = str(
@@ -249,19 +347,24 @@ def probe_us_stock(
             "Nasdaq company identity indicates an ADR or depositary security edge case"
         )
 
-    fields = tickers_payload.get("fields") or []
-    data = tickers_payload.get("data") or []
-    try:
-        ticker_index = fields.index("ticker")
-        cik_index = fields.index("cik")
-        name_index = fields.index("name")
-        exchange_index = fields.index("exchange")
-    except ValueError as exc:
-        raise LiveProbeError("SEC ticker association fields are incomplete") from exc
-    sec_row = next((row for row in data if str(row[ticker_index]).upper() == normalized), None)
-    if sec_row is None:
+    if explicit_cik is None:
+        fields = tickers_payload.get("fields") or []
+        data = tickers_payload.get("data") or []
+        try:
+            ticker_index = fields.index("ticker")
+            cik_index = fields.index("cik")
+            name_index = fields.index("name")
+            exchange_index = fields.index("exchange")
+        except ValueError as exc:
+            raise LiveProbeError("SEC ticker association fields are incomplete") from exc
+        sec_row = next((row for row in data if str(row[ticker_index]).upper() == normalized), None)
+    else:
+        sec_row = None
+
+    submissions_cik = None
+    if explicit_cik is None and sec_row is None:
         identity_errors.append("symbol was not found in SEC ticker/exchange associations")
-        cik = None
+        resolved_cik = None
         sec_name = None
         sec_exchange = None
         submissions_payload: dict[str, Any] = {}
@@ -269,13 +372,36 @@ def probe_us_stock(
         submissions_final_url = None
         filings: list[dict[str, Any]] = []
     else:
-        cik = f"{int(sec_row[cik_index]):010d}"
-        sec_name = sec_row[name_index]
-        sec_exchange = sec_row[exchange_index]
-        submissions_url = SEC_SUBMISSIONS_URL.format(cik=cik)
+        resolved_cik = explicit_cik or f"{int(sec_row[cik_index]):010d}"
+        sec_name = sec_row[name_index] if sec_row is not None else None
+        sec_exchange = sec_row[exchange_index] if sec_row is not None else None
+        submissions_url = SEC_SUBMISSIONS_URL.format(cik=resolved_cik)
         submissions_payload, submissions_status, submissions_final_url = fetch(
             submissions_url, sec_submission_headers, timeout
         )
+        submissions_cik_raw = submissions_payload.get("cik")
+        try:
+            submissions_cik = _normalize_cik(submissions_cik_raw)
+        except ValueError:
+            submissions_cik = None
+        if explicit_cik is not None and submissions_cik != resolved_cik:
+            identity_errors.append("cross-check failed: submissions_cik_match")
+        submission_tickers = [
+            str(item).upper() for item in submissions_payload.get("tickers", [])
+        ]
+        submission_exchanges = list(submissions_payload.get("exchanges", []))
+        if explicit_cik is not None:
+            sec_name = submissions_payload.get("name")
+            try:
+                submission_index = submission_tickers.index(normalized)
+            except ValueError:
+                submission_index = None
+            sec_exchange = (
+                submission_exchanges[submission_index]
+                if submission_index is not None
+                and submission_index < len(submission_exchanges)
+                else None
+            )
         filings = _recent_filings(submissions_payload)
         recent_forms = set(
             submissions_payload.get("filings", {}).get("recent", {}).get("form", [])
@@ -297,19 +423,28 @@ def probe_us_stock(
             )
 
     symbol_match = normalized == quote_symbol == nasdaq_symbol
+    yahoo_exchange = quote_meta.get("exchangeName") or quote_meta.get("exchange")
     exchange_match = _exchange_family(nasdaq_exchange) == _exchange_family(sec_exchange)
+    if explicit_cik is not None:
+        exchange_match = exchange_match and (
+            _exchange_family(yahoo_exchange) == _exchange_family(sec_exchange)
+        )
     submissions_symbol_match = normalized in {
         str(item).upper() for item in submissions_payload.get("tickers", [])
     }
     submissions_exchange_match = _exchange_family(sec_exchange) in {
         _exchange_family(item) for item in submissions_payload.get("exchanges", [])
     }
-    for name, passed in {
+    submissions_cik_match = resolved_cik is not None and submissions_cik == resolved_cik
+    cross_checks = {
         "symbol_match": symbol_match,
         "exchange_match": exchange_match,
         "submissions_symbol_match": submissions_symbol_match,
         "submissions_exchange_match": submissions_exchange_match,
-    }.items():
+    }
+    if explicit_cik is not None:
+        cross_checks["submissions_cik_match"] = submissions_cik_match
+    for name, passed in cross_checks.items():
         if not passed:
             identity_errors.append(f"cross-check failed: {name}")
 
@@ -349,7 +484,10 @@ def probe_us_stock(
                 "price": quote_price,
                 "currency": quote_meta.get("currency"),
                 "exchange": quote_meta.get("exchangeName") or quote_meta.get("exchange"),
+                "market_state": freshness_policy["market_state"],
+                "market_state_source": market_state_source,
                 "data_timestamp": quote_time,
+                "freshness_policy": freshness_policy,
             },
             "exchange_identity": {
                 "provider": "Nasdaq",
@@ -364,26 +502,22 @@ def probe_us_stock(
             "regulator_identity": {
                 "provider": "SEC",
                 "source_tier": "regulator",
-                "locator": tickers_final_url,
-                "http_status": tickers_status,
-                "cik": cik,
+                "locator": submissions_final_url if explicit_cik else tickers_final_url,
+                "http_status": submissions_status if explicit_cik else tickers_status,
+                "association_mode": "explicit_cik" if explicit_cik else "ticker_mapping",
+                "cik": resolved_cik,
                 "company_name": sec_name,
                 "exchange": sec_exchange,
             },
             "company_disclosures": {
                 "provider": "SEC EDGAR",
-                "source_tier": "audited_filing",
+                "source_tier": "regulator",
                 "locator": submissions_final_url,
                 "http_status": submissions_status,
                 "filings": filings,
             },
         },
-        "cross_checks": {
-            "symbol_match": symbol_match,
-            "exchange_match": exchange_match,
-            "submissions_symbol_match": submissions_symbol_match,
-            "submissions_exchange_match": submissions_exchange_match,
-        },
+        "cross_checks": cross_checks,
         "identity_errors": list(dict.fromkeys(identity_errors)),
         "data_errors": list(dict.fromkeys(data_errors)),
         "evidence_errors": list(dict.fromkeys(evidence_errors)),
@@ -403,8 +537,8 @@ def main() -> int:
     parser.add_argument("--market", default="US", choices=["US"])
     parser.add_argument("--asset-type", default="stock", choices=["stock"])
     parser.add_argument("--sec-user-agent", default=os.environ.get("PIA_SEC_USER_AGENT"))
+    parser.add_argument("--cik", help="Optional explicit SEC CIK with 1 to 10 digits.")
     parser.add_argument("--timeout", type=int, default=20)
-    parser.add_argument("--max-price-age-days", type=int, default=7)
     args = parser.parse_args()
     if not args.sec_user_agent:
         result = _empty_probe_result(
@@ -420,7 +554,7 @@ def main() -> int:
             args.symbol,
             args.sec_user_agent,
             timeout=args.timeout,
-            max_price_age_days=args.max_price_age_days,
+            cik=args.cik,
         )
     except (LiveProbeError, requests.RequestException) as exc:
         result = _empty_probe_result(

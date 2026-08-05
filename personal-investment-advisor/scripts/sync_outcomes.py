@@ -1,4 +1,5 @@
 import argparse
+import hashlib
 import json
 import math
 import subprocess
@@ -8,6 +9,81 @@ from pathlib import Path
 from typing import Any
 
 from advice_journal import batch_update_outcomes, load_entries
+
+
+OUTCOME_EVIDENCE_VERSION = "1.0"
+
+
+def _canonical_digest(value: Any) -> str:
+    encoded = json.dumps(
+        value, ensure_ascii=False, sort_keys=True, separators=(",", ":")
+    ).encode("utf-8")
+    return hashlib.sha256(encoded).hexdigest()
+
+
+def _history_coverage(history: list[dict[str, Any]]) -> dict[str, Any]:
+    rows = _sorted_history(history)
+    return {
+        "row_count": len(rows),
+        "first_timestamp": str(rows[0]["Date"]) if rows else None,
+        "last_timestamp": str(rows[-1]["Date"]) if rows else None,
+        "content_sha256": _canonical_digest(rows),
+    }
+
+
+def _outcome_evidence(
+    *,
+    source_provider: str | None,
+    source_locator: str | None,
+    daily_interval: str,
+    asset_history: list[dict[str, Any]],
+    benchmark_history: list[dict[str, Any]],
+    result_summary: dict[str, Any],
+    intraday_sequence: dict[str, Any] | None,
+) -> dict[str, Any] | None:
+    if not source_provider or not source_locator or daily_interval != "1d":
+        return None
+    if intraday_sequence is not None:
+        trigger_timestamp = _row_datetime(
+            {"Date": intraday_sequence.get("trigger_timestamp")}
+        )
+        benchmark_timestamp = _row_datetime(
+            {"Date": intraday_sequence.get("benchmark_timestamp")}
+        )
+        summary = intraday_sequence.get("sequence_summary")
+        if (
+            intraday_sequence.get("provider") != source_provider
+            or intraday_sequence.get("locator") != source_locator
+            or intraday_sequence.get("interval") in (None, "", "1d")
+            or intraday_sequence.get("first_trigger")
+            not in {"downside_boundary", "upside_boundary"}
+            or trigger_timestamp is None
+            or trigger_timestamp.tzinfo is None
+            or benchmark_timestamp is None
+            or benchmark_timestamp.tzinfo is None
+            or not isinstance(summary, dict)
+            or summary.get("interval") != intraday_sequence.get("interval")
+            or not isinstance(summary.get("rows_on_trigger_date"), int)
+            or summary["rows_on_trigger_date"] <= 0
+        ):
+            return None
+    evidence = {
+        "contract_version": OUTCOME_EVIDENCE_VERSION,
+        "generator": "sync_outcomes.py",
+        "source": {
+            "provider": source_provider,
+            "locator": source_locator,
+            "daily_interval": daily_interval,
+        },
+        "daily_coverage": {
+            "asset": _history_coverage(asset_history),
+            "benchmark": _history_coverage(benchmark_history),
+        },
+        "result_summary": result_summary,
+        "intraday_sequence": intraday_sequence,
+    }
+    evidence["evidence_sha256"] = _canonical_digest(evidence)
+    return evidence
 
 
 def _row_date(row: dict[str, Any]) -> date:
@@ -56,12 +132,33 @@ def _resolve_dual_trigger(
     stop_loss: float,
     take_profit: float,
     policy: str,
+    research_only: bool = False,
+    intraday_interval: str = "5m",
 ) -> dict[str, Any]:
+    stop_status = "Downside Boundary Reached" if research_only else "Stopped Out"
+    target_status = "Upside Boundary Reached" if research_only else "Target Reached"
+    if policy == "conservative":
+        return {
+            "resolved": True,
+            "exit_price": stop_loss,
+            "outcome_status": stop_status,
+            "resolution_method": "daily_ohlc_conservative_stop_first",
+            "calibration_quality": "assumption_based_conservative",
+            "trigger_timestamp": None,
+            "sensitivity_only": True,
+        }
+
     rows = sorted(
         (row for row in intraday_history if row.get("Date") and _row_date(row) == trigger_date),
         key=lambda row: str(row["Date"]),
     )
-    for row in rows:
+    for row_index, row in enumerate(rows):
+        row_timestamp = _row_datetime(row)
+        if row_timestamp is None or row_timestamp.tzinfo is None:
+            return {
+                "resolved": False,
+                "error": "intraday history timestamps must be timezone-aware",
+            }
         high = _finite_float(row.get("High", row.get("Close")))
         low = _finite_float(row.get("Low", row.get("Close")))
         if high is None or low is None or high <= 0 or low <= 0:
@@ -75,35 +172,54 @@ def _resolve_dual_trigger(
             return {
                 "resolved": True,
                 "exit_price": stop_loss,
-                "outcome_status": "Stopped Out",
+                "outcome_status": stop_status,
                 "resolution_method": "intraday_first_trigger",
                 "calibration_quality": "observed_intraday",
                 "trigger_timestamp": str(row["Date"]),
+                "first_trigger": "downside_boundary",
+                "sequence_summary": {
+                    "interval": intraday_interval,
+                    "trigger_date": trigger_date.isoformat(),
+                    "rows_on_trigger_date": len(rows),
+                    "rows_reviewed_through_trigger": row_index + 1,
+                    "first_timestamp": str(rows[0]["Date"]),
+                    "last_timestamp": str(rows[-1]["Date"]),
+                    "trigger_bar": {"high": high, "low": low},
+                    "content_sha256": _canonical_digest(rows),
+                },
+                "sensitivity_only": False,
             }
         if target_hit and not stop_hit:
             return {
                 "resolved": True,
                 "exit_price": take_profit,
-                "outcome_status": "Target Reached",
+                "outcome_status": target_status,
                 "resolution_method": "intraday_first_trigger",
                 "calibration_quality": "observed_intraday",
                 "trigger_timestamp": str(row["Date"]),
+                "first_trigger": "upside_boundary",
+                "sequence_summary": {
+                    "interval": intraday_interval,
+                    "trigger_date": trigger_date.isoformat(),
+                    "rows_on_trigger_date": len(rows),
+                    "rows_reviewed_through_trigger": row_index + 1,
+                    "first_timestamp": str(rows[0]["Date"]),
+                    "last_timestamp": str(rows[-1]["Date"]),
+                    "trigger_bar": {"high": high, "low": low},
+                    "content_sha256": _canonical_digest(rows),
+                },
+                "sensitivity_only": False,
             }
         if stop_hit and target_hit:
             break
 
-    if policy == "exclude":
-        return {
-            "resolved": False,
-            "error": "daily bar hit stop and target; intraday order is unresolved",
-        }
     return {
-        "resolved": True,
-        "exit_price": stop_loss,
-        "outcome_status": "Stopped Out",
-        "resolution_method": "daily_ohlc_conservative_stop_first",
-        "calibration_quality": "assumption_based_conservative",
-        "trigger_timestamp": None,
+        "resolved": False,
+        "error": (
+            "daily bar hit both observation boundaries; intraday order is unresolved"
+            if research_only
+            else "daily bar hit stop and target; intraday order is unresolved"
+        ),
     }
 
 
@@ -120,6 +236,59 @@ def _missing_calibration_fields(entry: dict[str, Any]) -> list[str]:
     return [field for field in required if entry.get(field) in (None, "")]
 
 
+def _is_research_sample(entry: dict[str, Any]) -> bool:
+    return (
+        entry.get("calibration_sample_type") == "research"
+        or entry.get("research_scope") == "research_only"
+    )
+
+
+def _research_boundary_values(
+    entry: dict[str, Any],
+) -> tuple[float | None, float | None, str | None]:
+    boundaries = entry.get("observation_boundaries")
+    if boundaries in (None, {}):
+        return None, None, None
+    if not isinstance(boundaries, dict):
+        return None, None, "observation_boundaries must be an object"
+
+    values: dict[str, float | None] = {
+        "downside_boundary": None,
+        "upside_boundary": None,
+    }
+    expected_operators = {
+        "downside_boundary": "lte",
+        "upside_boundary": "gte",
+    }
+    currencies = set()
+    for role, operator in expected_operators.items():
+        boundary = boundaries.get(role)
+        if boundary is None:
+            continue
+        if not isinstance(boundary, dict):
+            return None, None, f"{role} must be an object"
+        value = _finite_float(boundary.get("value"))
+        if (
+            boundary.get("role") != role
+            or boundary.get("operator") != operator
+            or boundary.get("authority_status") != "user_confirmed"
+            or value is None
+            or value <= 0
+        ):
+            return None, None, f"{role} is not a valid user-confirmed observation boundary"
+        currency = str(boundary.get("currency") or "").strip().upper()
+        if currency:
+            currencies.add(currency)
+        values[role] = value
+    if len(currencies) > 1:
+        return None, None, "observation boundary currencies do not match"
+    lower = values["downside_boundary"]
+    upper = values["upside_boundary"]
+    if lower is not None and upper is not None and lower >= upper:
+        return None, None, "downside observation boundary must be below upside boundary"
+    return lower, upper, None
+
+
 def build_outcome_update(
     entry: dict[str, Any],
     asset_history: list[dict[str, Any]],
@@ -128,68 +297,137 @@ def build_outcome_update(
     benchmark_intraday_history: list[dict[str, Any]] | None = None,
     dual_trigger_policy: str | None = None,
     today: date | None = None,
+    source_provider: str | None = None,
+    source_locator: str | None = None,
+    daily_interval: str = "1d",
+    intraday_interval: str = "5m",
 ) -> dict[str, Any]:
-    if entry.get("executed") is not True:
-        return {
-            "calibration_eligible": False,
-            "calibration_exclusion_reason": "not executed",
-        }
-    missing = _missing_calibration_fields(entry)
-    if missing:
-        return {
-            "calibration_eligible": False,
-            "calibration_exclusion_reason": f"missing fields: {', '.join(missing)}",
-        }
-
-    try:
-        execution_price = _finite_float(entry["execution_price"])
-        execution_date = date.fromisoformat(str(entry["execution_date"])[:10])
-        horizon_days = int(entry["investment_horizon_days"])
-        transaction_cost_bps = _finite_float(entry["transaction_cost_bps"])
-    except (TypeError, ValueError):
-        return {
-            "calibration_eligible": False,
-            "calibration_exclusion_reason": "invalid execution, horizon, or transaction-cost field",
-        }
-    if execution_price is None or transaction_cost_bps is None:
-        return {
-            "calibration_eligible": False,
-            "calibration_exclusion_reason": "execution price and transaction cost must be finite",
-        }
-    if execution_price <= 0 or horizon_days <= 0 or transaction_cost_bps < 0:
-        return {
-            "calibration_eligible": False,
-            "calibration_exclusion_reason": "execution price and horizon must be positive; cost cannot be negative",
-        }
-    execution_timing = str(entry.get("execution_timing") or "").lower()
-    if execution_timing not in {"open", "close"}:
-        return {
-            "calibration_eligible": False,
-            "calibration_exclusion_reason": "execution_timing must be open or close",
-        }
-
-    direction = entry["position_direction"]
-    if direction not in {"long", "short"}:
-        return {
-            "calibration_eligible": False,
-            "calibration_exclusion_reason": "position_direction must be long or short",
-        }
-    policy = dual_trigger_policy or entry.get("dual_trigger_policy") or "conservative"
+    research_only = _is_research_sample(entry)
+    sample_type = "research" if research_only else "execution"
+    policy = dual_trigger_policy or entry.get("dual_trigger_policy") or "exclude"
     if policy not in {"conservative", "exclude"}:
         return {
+            "calibration_sample_type": sample_type,
             "calibration_eligible": False,
             "calibration_exclusion_reason": "dual_trigger_policy must be conservative or exclude",
         }
-    stop_loss = _finite_float(entry["stop_loss"]) if entry.get("stop_loss") not in (None, "") else None
-    take_profit = _finite_float(entry["take_profit"]) if entry.get("take_profit") not in (None, "") else None
-    if entry.get("stop_loss") not in (None, "") and stop_loss is None:
-        return {"calibration_eligible": False, "calibration_exclusion_reason": "stop_loss must be finite"}
-    if entry.get("take_profit") not in (None, "") and take_profit is None:
-        return {"calibration_eligible": False, "calibration_exclusion_reason": "take_profit must be finite"}
-    if stop_loss is not None and stop_loss <= 0:
-        return {"calibration_eligible": False, "calibration_exclusion_reason": "stop_loss must be positive"}
-    if take_profit is not None and take_profit <= 0:
-        return {"calibration_eligible": False, "calibration_exclusion_reason": "take_profit must be positive"}
+
+    if research_only:
+        anchor_value = entry.get("research_anchor_date") or entry.get("as_of_date")
+        missing = [
+            field
+            for field, value in [
+                ("research_anchor_date", anchor_value),
+                ("investment_horizon_days", entry.get("investment_horizon_days")),
+                ("benchmark_symbol", entry.get("benchmark_symbol")),
+            ]
+            if value in (None, "")
+        ]
+        if missing:
+            return {
+                "calibration_sample_type": sample_type,
+                "calibration_eligible": False,
+                "calibration_exclusion_reason": f"missing research fields: {', '.join(missing)}",
+            }
+        try:
+            requested_anchor_date = date.fromisoformat(str(anchor_value)[:10])
+            horizon_days = int(entry["investment_horizon_days"])
+        except (TypeError, ValueError):
+            return {
+                "calibration_sample_type": sample_type,
+                "calibration_eligible": False,
+                "calibration_exclusion_reason": "invalid research anchor or horizon field",
+            }
+        if horizon_days <= 0:
+            return {
+                "calibration_sample_type": sample_type,
+                "calibration_eligible": False,
+                "calibration_exclusion_reason": "research horizon must be positive",
+            }
+        stop_loss, take_profit, boundary_error = _research_boundary_values(entry)
+        if boundary_error:
+            return {
+                "calibration_sample_type": sample_type,
+                "calibration_eligible": False,
+                "calibration_exclusion_reason": boundary_error,
+            }
+        asset_start = _first_on_or_after(asset_history, requested_anchor_date)
+        if asset_start is None:
+            return {
+                "calibration_sample_type": sample_type,
+                "calibration_eligible": False,
+                "calibration_exclusion_reason": "asset history unavailable on or after research anchor date",
+            }
+        execution_price = _finite_float(asset_start.get("Close"))
+        execution_date = _row_date(asset_start)
+        execution_timing = "close"
+        transaction_cost_bps = 0.0
+        direction = "long"
+        return_definition = "asset_return_minus_benchmark_return_without_execution_assumptions"
+    else:
+        if entry.get("executed") is not True:
+            return {
+                "calibration_sample_type": sample_type,
+                "calibration_eligible": False,
+                "calibration_exclusion_reason": "not executed and not a research_only sample",
+            }
+        missing = _missing_calibration_fields(entry)
+        if missing:
+            return {
+                "calibration_sample_type": sample_type,
+                "calibration_eligible": False,
+                "calibration_exclusion_reason": f"missing fields: {', '.join(missing)}",
+            }
+        try:
+            execution_price = _finite_float(entry["execution_price"])
+            execution_date = date.fromisoformat(str(entry["execution_date"])[:10])
+            horizon_days = int(entry["investment_horizon_days"])
+            transaction_cost_bps = _finite_float(entry["transaction_cost_bps"])
+        except (TypeError, ValueError):
+            return {
+                "calibration_sample_type": sample_type,
+                "calibration_eligible": False,
+                "calibration_exclusion_reason": "invalid execution, horizon, or transaction-cost field",
+            }
+        execution_timing = str(entry.get("execution_timing") or "").lower()
+        if execution_timing not in {"open", "close"}:
+            return {
+                "calibration_sample_type": sample_type,
+                "calibration_eligible": False,
+                "calibration_exclusion_reason": "execution_timing must be open or close",
+            }
+        direction = entry["position_direction"]
+        if direction not in {"long", "short"}:
+            return {
+                "calibration_sample_type": sample_type,
+                "calibration_eligible": False,
+                "calibration_exclusion_reason": "position_direction must be long or short",
+            }
+        stop_loss = _finite_float(entry["stop_loss"]) if entry.get("stop_loss") not in (None, "") else None
+        take_profit = _finite_float(entry["take_profit"]) if entry.get("take_profit") not in (None, "") else None
+        if entry.get("stop_loss") not in (None, "") and stop_loss is None:
+            return {"calibration_sample_type": sample_type, "calibration_eligible": False, "calibration_exclusion_reason": "stop_loss must be finite"}
+        if entry.get("take_profit") not in (None, "") and take_profit is None:
+            return {"calibration_sample_type": sample_type, "calibration_eligible": False, "calibration_exclusion_reason": "take_profit must be finite"}
+        if stop_loss is not None and stop_loss <= 0:
+            return {"calibration_sample_type": sample_type, "calibration_eligible": False, "calibration_exclusion_reason": "stop_loss must be positive"}
+        if take_profit is not None and take_profit <= 0:
+            return {"calibration_sample_type": sample_type, "calibration_eligible": False, "calibration_exclusion_reason": "take_profit must be positive"}
+        return_definition = "direction_adjusted_return_minus_benchmark_return_and_declared_cost"
+
+    if execution_price is None or transaction_cost_bps is None:
+        return {
+            "calibration_sample_type": sample_type,
+            "calibration_eligible": False,
+            "calibration_exclusion_reason": "calibration start price and transaction cost must be finite",
+        }
+    if execution_price <= 0 or horizon_days <= 0 or transaction_cost_bps < 0:
+        return {
+            "calibration_sample_type": sample_type,
+            "calibration_eligible": False,
+            "calibration_exclusion_reason": "calibration start price and horizon must be positive; cost cannot be negative",
+        }
+
     target_date = execution_date + timedelta(days=horizon_days)
     today = today or date.today()
     asset_rows = [
@@ -203,8 +441,11 @@ def build_outcome_update(
     benchmark_rows = [row for row in _sorted_history(benchmark_history) if _row_date(row) >= execution_date]
     if not asset_rows or not benchmark_rows:
         return {
+            "calibration_sample_type": sample_type,
+            "calibration_start_date": execution_date.isoformat(),
+            "calibration_start_price": round(float(execution_price), 6),
             "calibration_eligible": False,
-            "calibration_exclusion_reason": "asset or benchmark history unavailable after execution date",
+            "calibration_exclusion_reason": "asset or benchmark history unavailable after calibration start date",
         }
     exit_price = None
     exit_date = None
@@ -213,6 +454,10 @@ def build_outcome_update(
     calibration_quality = "observed_daily"
     dual_trigger_detected = False
     trigger_timestamp = None
+    sensitivity_only = False
+    intraday_sequence = None
+    stop_status = "Downside Boundary Reached" if research_only else "Stopped Out"
+    target_status = "Upside Boundary Reached" if research_only else "Target Reached"
     for row in asset_rows:
         row_date = _row_date(row)
         if row_date > target_date:
@@ -226,10 +471,46 @@ def build_outcome_update(
         if stop_hit and target_hit:
             dual_trigger_detected = True
             resolution = _resolve_dual_trigger(
-                intraday_history or [], row_date, direction, stop_loss, take_profit, policy
+                intraday_history or [],
+                row_date,
+                direction,
+                stop_loss,
+                take_profit,
+                policy,
+                research_only=research_only,
+                intraday_interval=intraday_interval,
             )
+            if (
+                not resolution["resolved"]
+                and policy == "exclude"
+                and entry.get("dual_trigger_sensitivity_policy") == "conservative"
+            ):
+                resolution = _resolve_dual_trigger(
+                    intraday_history or [],
+                    row_date,
+                    direction,
+                    stop_loss,
+                    take_profit,
+                    "conservative",
+                    research_only=research_only,
+                    intraday_interval=intraday_interval,
+                )
             if not resolution["resolved"]:
                 return {
+                    "outcome_status": None,
+                    "outcome_price": None,
+                    "outcome_date": None,
+                    "outcome_return_pct": None,
+                    "benchmark_return_pct": None,
+                    "net_excess_return_pct": None,
+                    "outcome_resolution_method": None,
+                    "outcome_resolution_timestamp": None,
+                    "calibration_quality": "unresolved_daily_dual_trigger",
+                    "sensitivity_analysis": None,
+                    "calibration_sample_type": sample_type,
+                    "calibration_start_date": execution_date.isoformat(),
+                    "calibration_start_price": round(float(execution_price), 6),
+                    "return_definition": return_definition,
                     "calibration_eligible": False,
                     "calibration_exclusion_reason": resolution["error"],
                     "dual_trigger_detected": True,
@@ -241,13 +522,23 @@ def build_outcome_update(
             resolution_method = resolution["resolution_method"]
             calibration_quality = resolution["calibration_quality"]
             trigger_timestamp = resolution.get("trigger_timestamp")
+            if resolution_method == "intraday_first_trigger":
+                intraday_sequence = {
+                    "provider": source_provider,
+                    "locator": source_locator,
+                    "interval": intraday_interval,
+                    "first_trigger": resolution.get("first_trigger"),
+                    "trigger_timestamp": trigger_timestamp,
+                    "sequence_summary": resolution.get("sequence_summary"),
+                }
+            sensitivity_only = resolution.get("sensitivity_only") is True
             break
         if stop_hit:
-            exit_price, exit_date, outcome_status = stop_loss, row_date, "Stopped Out"
+            exit_price, exit_date, outcome_status = stop_loss, row_date, stop_status
             resolution_method = "daily_single_trigger"
             break
         if target_hit:
-            exit_price, exit_date, outcome_status = take_profit, row_date, "Target Reached"
+            exit_price, exit_date, outcome_status = take_profit, row_date, target_status
             resolution_method = "daily_single_trigger"
             break
 
@@ -255,6 +546,9 @@ def build_outcome_update(
         horizon_row = _first_on_or_after(asset_rows, target_date)
         if horizon_row is None or target_date > today:
             return {
+                "calibration_sample_type": sample_type,
+                "calibration_start_date": execution_date.isoformat(),
+                "calibration_start_price": round(float(execution_price), 6),
                 "calibration_eligible": False,
                 "calibration_exclusion_reason": "fixed evaluation horizon has not completed",
                 "outcome_status": "Open",
@@ -290,6 +584,10 @@ def build_outcome_update(
                 "dual_trigger_policy": policy,
             }
         benchmark_exit_price = _finite_float(benchmark_intraday_row.get("Close"))
+        if intraday_sequence is not None:
+            intraday_sequence["benchmark_timestamp"] = str(
+                benchmark_intraday_row.get("Date") or ""
+            )
     else:
         benchmark_exit_price = _finite_float(benchmark_exit.get("Close"))
     if benchmark_start_price is None or benchmark_exit_price is None or benchmark_start_price <= 0 or benchmark_exit_price <= 0:
@@ -299,8 +597,67 @@ def build_outcome_update(
         }
     asset_return_pct = (float(exit_price) - execution_price) / execution_price * 100
     benchmark_return_pct = (benchmark_exit_price - benchmark_start_price) / benchmark_start_price * 100
-    direction_sign = 1 if direction == "long" else -1
-    net_excess_return_pct = direction_sign * asset_return_pct - benchmark_return_pct - transaction_cost_bps / 100
+    if research_only:
+        net_excess_return_pct = asset_return_pct - benchmark_return_pct
+    else:
+        direction_sign = 1 if direction == "long" else -1
+        net_excess_return_pct = direction_sign * asset_return_pct - benchmark_return_pct - transaction_cost_bps / 100
+    if sensitivity_only:
+        sensitivity_analysis = {
+            "policy": "conservative",
+            "outcome_price": round(float(exit_price), 6),
+            "outcome_date": exit_date.isoformat(),
+            "outcome_status": outcome_status,
+            "outcome_return_pct": round(asset_return_pct, 4),
+            "benchmark_return_pct": round(benchmark_return_pct, 4),
+            "net_excess_return_pct": round(net_excess_return_pct, 4),
+            "outcome_resolution_method": resolution_method,
+            "calibration_quality": calibration_quality,
+            "return_definition": return_definition,
+        }
+        return {
+            "outcome_price": None,
+            "outcome_date": None,
+            "outcome_status": None,
+            "outcome_return_pct": None,
+            "benchmark_return_pct": None,
+            "net_excess_return_pct": None,
+            "outcome_resolution_method": None,
+            "outcome_resolution_timestamp": None,
+            "calibration_quality": calibration_quality,
+            "calibration_sample_type": sample_type,
+            "calibration_start_date": execution_date.isoformat(),
+            "calibration_start_price": round(float(execution_price), 6),
+            "return_definition": return_definition,
+            "dual_trigger_detected": True,
+            "dual_trigger_policy": policy,
+            "sensitivity_analysis": sensitivity_analysis,
+            "calibration_eligible": False,
+            "calibration_exclusion_reason": (
+                "unresolved daily dual trigger is excluded from formal calibration; "
+                "conservative stop-first result is sensitivity only"
+            ),
+        }
+    result_summary = {
+        "calibration_start_date": execution_date.isoformat(),
+        "calibration_start_price": round(float(execution_price), 6),
+        "outcome_date": exit_date.isoformat(),
+        "outcome_price": round(float(exit_price), 6),
+        "outcome_return_pct": round(asset_return_pct, 4),
+        "benchmark_return_pct": round(benchmark_return_pct, 4),
+        "net_excess_return_pct": round(net_excess_return_pct, 4),
+        "outcome_resolution_method": resolution_method,
+        "dual_trigger_detected": dual_trigger_detected,
+    }
+    evidence = _outcome_evidence(
+        source_provider=source_provider,
+        source_locator=source_locator,
+        daily_interval=daily_interval,
+        asset_history=asset_history,
+        benchmark_history=benchmark_history,
+        result_summary=result_summary,
+        intraday_sequence=intraday_sequence,
+    )
     return {
         "outcome_price": round(float(exit_price), 6),
         "outcome_date": exit_date.isoformat(),
@@ -311,10 +668,20 @@ def build_outcome_update(
         "outcome_resolution_method": resolution_method,
         "outcome_resolution_timestamp": trigger_timestamp,
         "calibration_quality": calibration_quality,
+        "calibration_sample_type": sample_type,
+        "calibration_start_date": execution_date.isoformat(),
+        "calibration_start_price": round(float(execution_price), 6),
+        "return_definition": return_definition,
+        "sensitivity_analysis": None,
         "dual_trigger_detected": dual_trigger_detected,
         "dual_trigger_policy": policy,
-        "calibration_eligible": True,
-        "calibration_exclusion_reason": None,
+        "calibration_eligible": evidence is not None,
+        "calibration_exclusion_reason": (
+            None
+            if evidence is not None
+            else "verified sync_outcomes source and coverage evidence is required"
+        ),
+        "outcome_evidence": evidence,
     }
 
 
@@ -374,6 +741,10 @@ def sync_all(journal_path: str | None = None, dual_trigger_policy: str | None = 
             intraday_history=intraday_histories.get(entry.get("stock_code"), []),
             benchmark_intraday_history=intraday_histories.get(entry.get("benchmark_symbol"), []),
             dual_trigger_policy=dual_trigger_policy,
+            source_provider="Yahoo Finance",
+            source_locator="yf.py/yfinance chart history",
+            daily_interval="1d",
+            intraday_interval="5m",
         )
     journal_file = batch_update_outcomes(updates, journal_path=journal_path)
     print(f"updated {len(updates)} entries in {journal_file}")
@@ -385,7 +756,11 @@ if __name__ == "__main__":
     parser.add_argument(
         "--dual-trigger-policy",
         choices=["conservative", "exclude"],
-        help="Resolve unresolved same-day stop/target bars conservatively or exclude them.",
+        default="exclude",
+        help=(
+            "Formal default is exclude. conservative produces sensitivity-only results "
+            "and never makes a dual-trigger sample calibration-eligible."
+        ),
     )
     args = parser.parse_args()
     sync_all(args.journal_path, dual_trigger_policy=args.dual_trigger_policy)

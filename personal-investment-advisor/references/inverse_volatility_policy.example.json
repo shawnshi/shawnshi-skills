@@ -1,0 +1,39 @@
+{
+  "schema_version": "pia_inverse_volatility_policy_v1",
+  "experiment": "inverse_volatility_allocation",
+  "decision_scope": "research_only",
+  "as_of": "2026-08-04",
+  "bucket_targets": {
+    "risk_assets": 0.8,
+    "reserve": 0.2
+  },
+  "bucket_members": {
+    "risk_assets": [
+      "AAPL",
+      "MSFT"
+    ],
+    "reserve": [
+      "CASH"
+    ]
+  },
+  "volatility_observations": {
+    "AAPL": {
+      "annualized_volatility": 0.24,
+      "observation_count": 252,
+      "window_start": "2025-08-04",
+      "window_end": "2026-08-03",
+      "as_of": "2026-08-04",
+      "source": "validated_total_return_dataset",
+      "source_locator": "dataset://portfolio-research/aapl/daily-total-return"
+    },
+    "MSFT": {
+      "annualized_volatility": 0.2,
+      "observation_count": 252,
+      "window_start": "2025-08-04",
+      "window_end": "2026-08-03",
+      "as_of": "2026-08-04",
+      "source": "validated_total_return_dataset",
+      "source_locator": "dataset://portfolio-research/msft/daily-total-return"
+    }
+  }
+}

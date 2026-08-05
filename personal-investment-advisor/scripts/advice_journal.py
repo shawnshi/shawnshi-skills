@@ -1,10 +1,18 @@
 import argparse
 import hashlib
 import json
+import math
 import os
 from datetime import datetime
 from pathlib import Path
 from typing import Any, Dict, List
+
+DASHBOARD_SCHEMA_PATH = (
+    Path(__file__).resolve().parent.parent / "references" / "dashboard_schema.json"
+)
+DASHBOARD_SCHEMA_VERSION = str(
+    json.loads(DASHBOARD_SCHEMA_PATH.read_text(encoding="utf-8"))["version"]
+)
 
 
 def resolve_journal_path(path: str | None = None) -> Path:
@@ -25,6 +33,41 @@ def _safe_get(data: Dict[str, Any], *keys: str, default=None):
     return current
 
 
+def _extract_observation_boundaries(data: Dict[str, Any]) -> Dict[str, Dict[str, Any]]:
+    contract = data.get("monitoring_boundaries")
+    if (
+        not isinstance(contract, dict)
+        or contract.get("decision_scope") != "observation_only"
+        or contract.get("metric") != "regular_market_price"
+    ):
+        return {}
+
+    selected: Dict[str, Dict[str, Any]] = {}
+    expected_operators = {
+        "downside_boundary": "lte",
+        "upside_boundary": "gte",
+    }
+    for role, operator in expected_operators.items():
+        matches = []
+        for boundary in contract.get("boundaries", []):
+            if not isinstance(boundary, dict):
+                continue
+            value = boundary.get("value")
+            if (
+                boundary.get("role") == role
+                and boundary.get("operator") == operator
+                and boundary.get("authority_status") == "user_confirmed"
+                and isinstance(value, (int, float))
+                and not isinstance(value, bool)
+                and math.isfinite(float(value))
+                and float(value) > 0
+            ):
+                matches.append(dict(boundary))
+        if len(matches) == 1:
+            selected[role] = matches[0]
+    return selected
+
+
 def build_journal_entry(data: Dict[str, Any], archive_path: str | None = None) -> Dict[str, Any]:
     stock_code = data.get("stock_code", "UNKNOWN")
     timestamp = datetime.now().isoformat(timespec="seconds")
@@ -34,6 +77,7 @@ def build_journal_entry(data: Dict[str, Any], archive_path: str | None = None) -
     research_brief = data.get("research_brief", {}) if isinstance(data.get("research_brief"), dict) else {}
     benchmark = research_brief.get("benchmark", {}) if isinstance(research_brief.get("benchmark"), dict) else {}
     output_contract = research_brief.get("output_contract", {}) if isinstance(research_brief.get("output_contract"), dict) else {}
+    requested_dual_trigger_policy = output_contract.get("dual_trigger_policy")
     evidence_items = data.get("evidence_items", [])
     evidence_json = json.dumps(evidence_items, ensure_ascii=False, sort_keys=True, separators=(",", ":"))
     source_snapshot_hash = hashlib.sha256(evidence_json.encode("utf-8")).hexdigest()
@@ -46,6 +90,10 @@ def build_journal_entry(data: Dict[str, Any], archive_path: str | None = None) -
         "market_type": data.get("market_type"),
         "research_mode": data.get("research_mode"),
         "research_scope": output_contract.get("decision_scope"),
+        "calibration_sample_type": (
+            "research" if output_contract.get("decision_scope") == "research_only" else None
+        ),
+        "research_anchor_date": research_brief.get("as_of_date"),
         "confidence_level": data.get("confidence_level"),
         "confidence_score": confidence_details.get("score"),
         "as_of_date": research_brief.get("as_of_date"),
@@ -57,8 +105,13 @@ def build_journal_entry(data: Dict[str, Any], archive_path: str | None = None) -
         "core_hypothesis": research_brief.get("core_hypothesis"),
         "falsification_conditions": research_brief.get("falsification_conditions", []),
         "source_snapshot_hash": source_snapshot_hash,
-        "dashboard_schema_version": "6.1",
+        "dashboard_schema_version": DASHBOARD_SCHEMA_VERSION,
         "current_price": current_price,
+        "observation_boundaries": _extract_observation_boundaries(data),
+        "dual_trigger_policy": "exclude",
+        "dual_trigger_sensitivity_policy": (
+            "conservative" if requested_dual_trigger_policy == "conservative" else None
+        ),
         "has_position": portfolio.get("has_position", False),
         "avg_cost": portfolio.get("avg_cost"),
         "quantity": portfolio.get("quantity"),
@@ -79,6 +132,8 @@ def build_journal_entry(data: Dict[str, Any], archive_path: str | None = None) -
         "outcome_resolution_method": None,
         "outcome_resolution_timestamp": None,
         "calibration_quality": None,
+        "outcome_evidence": None,
+        "sensitivity_analysis": None,
         "dual_trigger_detected": False,
         "calibration_eligible": False,
         "calibration_exclusion_reason": "outcome not synchronized",
@@ -157,14 +212,25 @@ def batch_update_outcomes(updates: Dict[str, Dict[str, Any]], journal_path: str 
                 "outcome_resolution_method",
                 "outcome_resolution_timestamp",
                 "calibration_quality",
+                "outcome_evidence",
+                "calibration_sample_type",
+                "calibration_start_date",
+                "calibration_start_price",
+                "return_definition",
                 "dual_trigger_detected",
                 "dual_trigger_policy",
+                "sensitivity_analysis",
                 "execution_price",
                 "execution_date",
                 "execution_timing",
             ]:
                 if field in upd:
                     entry[field] = upd[field]
+            if (
+                upd.get("calibration_eligible") is False
+                and "outcome_evidence" not in upd
+            ):
+                entry["outcome_evidence"] = None
 
             execution_price = entry.get("execution_price")
             outcome_price = entry.get("outcome_price")

@@ -40,6 +40,29 @@ def _mean_ratio(numerator: pd.Series, denominator: pd.Series) -> float | None:
     return float(ratios.mean()) if not ratios.empty else None
 
 
+def _ratio_series(numerator: pd.Series, denominator: pd.Series) -> pd.Series:
+    common = numerator.index.intersection(denominator.index)
+    if common.empty:
+        return pd.Series(dtype=float)
+    return (numerator[common] / denominator[common].replace(0, np.nan)).dropna()
+
+
+def _return_on_average_equity(net_income: pd.Series, equity: pd.Series) -> pd.Series:
+    common = list(net_income.index.intersection(equity.index))
+    try:
+        common = sorted(common, key=lambda value: pd.Timestamp(value))
+    except (TypeError, ValueError):
+        return pd.Series(dtype=float)
+    values: dict[Any, float] = {}
+    for index in range(1, len(common)):
+        current = common[index]
+        previous = common[index - 1]
+        average_equity = (float(equity[current]) + float(equity[previous])) / 2.0
+        if average_equity != 0:
+            values[current] = float(net_income[current]) / average_equity
+    return pd.Series(values, dtype=float)
+
+
 def _finite(value: Any) -> float | None:
     try:
         parsed = float(value)
@@ -88,6 +111,8 @@ def _base_result(
         "as_of_date": as_of_date,
         "retrieved_at": retrieved_at.isoformat(),
         "data_period": None,
+        "point_in_time_status": None,
+        "historical_replay_allowed": False,
         "source": None,
         "source_locator": None,
         "metrics": {},
@@ -179,16 +204,41 @@ def _statement_period(*frames: pd.DataFrame) -> dict[str, Any] | None:
     return {
         "start": min(dates).isoformat(),
         "end": max(dates).isoformat(),
+        "period_count": len(set(dates)),
         "basis": "provider_financial_statement_columns",
     }
 
 
-def evaluate_metrics(metrics: dict[str, Any], profile: dict[str, Any]) -> dict[str, Any]:
+def evaluate_metrics(
+    metrics: dict[str, Any],
+    profile: dict[str, Any],
+    metric_observations: dict[str, int] | None = None,
+) -> dict[str, Any]:
     checks = []
     missing = []
     failed = []
+    insufficient_periods = []
+    minimum_periods = profile.get("data_requirements", {}).get("minimum_periods")
     for metric, rule in profile.get("thresholds", {}).items():
         value = _finite(metrics.get(metric))
+        observation_count = (metric_observations or {}).get(metric)
+        if (
+            isinstance(minimum_periods, int)
+            and not isinstance(minimum_periods, bool)
+            and (not isinstance(observation_count, int) or observation_count < minimum_periods)
+        ):
+            insufficient_periods.append(metric)
+            checks.append(
+                {
+                    "metric": metric,
+                    "status": "insufficient_periods",
+                    "value": value,
+                    "observation_count": observation_count,
+                    "minimum_periods": minimum_periods,
+                    "rule": rule,
+                }
+            )
+            continue
         if value is None:
             missing.append(metric)
             checks.append({"metric": metric, "status": "missing", "value": None, "rule": rule})
@@ -207,13 +257,19 @@ def evaluate_metrics(metrics: dict[str, Any], profile: dict[str, Any]) -> dict[s
         if not passed:
             failed.append(metric)
 
-    if missing:
+    if missing or insufficient_periods:
         status = "insufficient_data"
     elif failed:
         status = "fail"
     else:
         status = "pass"
-    return {"status": status, "missing_metrics": missing, "failed_metrics": failed, "checks": checks}
+    return {
+        "status": status,
+        "missing_metrics": missing,
+        "insufficient_period_metrics": insufficient_periods,
+        "failed_metrics": failed,
+        "checks": checks,
+    }
 
 
 @retry(stop=stop_after_attempt(3), wait=wait_exponential(multiplier=1, min=2, max=10))
@@ -227,7 +283,13 @@ def fetch_yf_data(ticker_symbol: str):
     return ticker, income, cashflow, balance
 
 
-def extract_yf_metrics(income: pd.DataFrame, cashflow: pd.DataFrame, balance: pd.DataFrame) -> dict[str, Any]:
+def extract_yf_metrics(
+    income: pd.DataFrame,
+    cashflow: pd.DataFrame,
+    balance: pd.DataFrame,
+    *,
+    include_observations: bool = False,
+) -> dict[str, Any] | tuple[dict[str, Any], dict[str, int]]:
     net_income = _series(income, ["Net Income", "Net Income Common Stockholders"])
     equity = _series(balance, ["Stockholders Equity", "Total Stockholder Equity"])
     operating_cashflow = _series(cashflow, ["Operating Cash Flow", "Total Cash From Operating Activities"])
@@ -243,21 +305,47 @@ def extract_yf_metrics(income: pd.DataFrame, cashflow: pd.DataFrame, balance: pd
     gross_profit = _series(income, ["Gross Profit"])
     shares = _series(income, ["Basic Average Shares", "Diluted Average Shares"])
 
-    interest_coverage = None
-    if not ebit.empty and not interest.empty and interest.iloc[0] != 0:
-        interest_coverage = float(ebit.iloc[0] / abs(interest.iloc[0]))
+    interest_coverage_series = _ratio_series(ebit, interest.abs())
+    roe_series = _return_on_average_equity(net_income, equity)
+    gross_margin_series = _ratio_series(gross_profit, revenue)
+    ocf_to_net_income_series = _ratio_series(operating_cashflow, net_income)
+    net_margin_series = _ratio_series(net_income, revenue)
     dilution = None
     if len(shares) > 1 and shares.iloc[-1] > 0:
         dilution = float((shares.iloc[0] - shares.iloc[-1]) / shares.iloc[-1])
-    return {
-        "roe_avg": _mean_ratio(net_income, equity),
+    metrics = {
+        "roe_avg": float(roe_series.mean()) if not roe_series.empty else None,
         "fcf_sum": float(free_cashflow.sum()) if not free_cashflow.empty else None,
-        "interest_coverage": interest_coverage,
-        "gross_margin_avg": _mean_ratio(gross_profit, revenue),
-        "ocf_to_net_income_avg": _mean_ratio(operating_cashflow, net_income),
-        "net_margin_avg": _mean_ratio(net_income, revenue),
+        "fcf_positive_ratio": (
+            float((free_cashflow > 0).sum() / len(free_cashflow))
+            if not free_cashflow.empty
+            else None
+        ),
+        "interest_coverage_min": (
+            float(interest_coverage_series.min())
+            if not interest_coverage_series.empty
+            else None
+        ),
+        "gross_margin_avg": float(gross_margin_series.mean()) if not gross_margin_series.empty else None,
+        "ocf_to_net_income_avg": (
+            float(ocf_to_net_income_series.mean())
+            if not ocf_to_net_income_series.empty
+            else None
+        ),
+        "net_margin_avg": float(net_margin_series.mean()) if not net_margin_series.empty else None,
         "dilution": dilution,
     }
+    observations = {
+        "roe_avg": len(roe_series),
+        "fcf_sum": len(free_cashflow),
+        "fcf_positive_ratio": len(free_cashflow),
+        "interest_coverage_min": len(interest_coverage_series),
+        "gross_margin_avg": len(gross_margin_series),
+        "ocf_to_net_income_avg": len(ocf_to_net_income_series),
+        "net_margin_avg": len(net_margin_series),
+        "dilution": len(shares),
+    }
+    return (metrics, observations) if include_observations else metrics
 
 
 def extract_a_share_metrics(
@@ -265,7 +353,10 @@ def extract_a_share_metrics(
     as_of_date: str | None = None,
     *,
     include_period: bool = False,
-) -> dict[str, Any] | tuple[dict[str, Any], dict[str, Any] | None]:
+) -> (
+    dict[str, Any]
+    | tuple[dict[str, Any], dict[str, Any] | None, dict[str, int]]
+):
     import akshare as ak
 
     code = ticker_symbol.split(".")[0]
@@ -277,7 +368,9 @@ def extract_a_share_metrics(
         cutoff = _parse_iso_date(as_of_date)
         if cutoff is not None:
             frame = frame[frame["日期"].dt.date <= cutoff]
-        frame = frame.sort_values("日期", ascending=False)
+        frame = frame[
+            (frame["日期"].dt.month == 12) & (frame["日期"].dt.day == 31)
+        ].sort_values("日期", ascending=False)
     if frame.empty:
         raise ValueError("A-share financial indicators unavailable at or before as_of_date")
 
@@ -307,9 +400,19 @@ def extract_a_share_metrics(
             data_period = {
                 "start": min(dates).isoformat(),
                 "end": max(dates).isoformat(),
-                "basis": "akshare_financial_indicator_dates",
+                "period_count": len(set(dates)),
+                "frequency": "annual",
+                "basis": "akshare_annual_financial_indicator_dates",
             }
-    return (metrics, data_period) if include_period else metrics
+    observations = {
+        "roe_avg": min(len(roe.head(5)), 5),
+        "gross_margin_avg": min(len(gross_margin.head(5)), 5),
+        "net_margin_avg": min(len(net_margin.head(5)), 5),
+        "dilution": len(shares),
+    }
+    if include_period:
+        return metrics, data_period, observations
+    return metrics
 
 
 def evaluate_ticker(
@@ -356,16 +459,30 @@ def evaluate_ticker(
         return {
             **base,
             "status": "not_applicable",
+            "detail_status": "industry_or_asset_specific_evidence_required",
+            "alpha_validation_status": profile.get("alpha_validation_status", "not_validated"),
+            "required_evidence_checks": profile.get("required_evidence_checks", []),
+            "reason": "generic financial ratio screening is not applicable to this profile",
+        }
+
+    cutoff = _parse_iso_date(as_of_date)
+    if cutoff is not None and cutoff < retrieved_at.date():
+        return {
+            **base,
+            "status": "insufficient_evidence",
+            "detail_status": "point_in_time_snapshot_unavailable",
+            "point_in_time_status": "unverified_current_provider_snapshot",
             "reason": (
-                "financial quality screening is not applicable; verify ETF identity, "
-                "tracking, fees, liquidity, NAV/premium-discount, concentration and adjustments"
+                "historical screening requires facts with filed_at or announced_at, "
+                "revision identity, and a source payload hash; current provider snapshots "
+                "cannot be replayed as point-in-time evidence"
             ),
         }
     try:
         normalized_market = market.strip().upper() if isinstance(market, str) else None
-        cutoff = _parse_iso_date(as_of_date) or retrieved_at.date()
+        cutoff = cutoff or retrieved_at.date()
         if normalized_market == "CN" or ticker_symbol.endswith((".SS", ".SZ", ".BJ")):
-            metrics, data_period = extract_a_share_metrics(
+            metrics, data_period, metric_observations = extract_a_share_metrics(
                 ticker_symbol,
                 as_of_date,
                 include_period=True,
@@ -386,7 +503,9 @@ def evaluate_ticker(
                     "status": "insufficient_data",
                     "reason": "financial statements unavailable at or before as_of_date",
                 }
-            metrics = extract_yf_metrics(income, cashflow, balance)
+            metrics, metric_observations = extract_yf_metrics(
+                income, cashflow, balance, include_observations=True
+            )
             data_period = _statement_period(income, cashflow, balance)
             source = "yfinance"
             source_locator = (
@@ -398,13 +517,18 @@ def evaluate_ticker(
             "status": "data_error",
             "reason": str(exc),
         }
-    result = evaluate_metrics(metrics, profile)
+    result = evaluate_metrics(metrics, profile, metric_observations)
     return {
         **base,
         "source": source,
         "source_locator": source_locator,
+        "point_in_time_status": "current_snapshot_only",
+        "historical_replay_allowed": False,
         "data_period": data_period,
         "metrics": metrics,
+        "metric_observations": metric_observations,
+        "screening_mode": profile.get("screening_mode", "descriptive_filter"),
+        "alpha_validation_status": profile.get("alpha_validation_status", "not_validated"),
         **result,
     }
 

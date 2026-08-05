@@ -32,6 +32,75 @@ def _approx_equal(left: float | None, right: float | None, tolerance: float = 0.
     return abs(left - right) <= tolerance + 1e-12
 
 
+def _materially_equal(left: float | None, right: float | None) -> bool:
+    if left is None or right is None:
+        return False
+    tolerance = max(0.01, abs(right) * 1e-9)
+    return abs(left - right) <= tolerance
+
+
+def _validate_valuation_math(data: dict) -> list[str]:
+    scenarios = data.get("scenario_analysis")
+    if not isinstance(scenarios, dict) or scenarios.get("valuation_contract_version") != "2.0":
+        return []
+
+    errors: list[str] = []
+    per_share_values: dict[str, float] = {}
+    for case_name in ("base", "bull", "bear"):
+        case = scenarios.get(case_name)
+        if not isinstance(case, dict):
+            continue
+        prefix = f"scenario_analysis.{case_name}"
+        enterprise_value = _to_float(case.get("enterprise_value"))
+        net_debt = _to_float(case.get("net_debt"))
+        equity_value = _to_float(case.get("equity_value"))
+        diluted_shares = _to_float(case.get("diluted_shares"))
+        per_share_value = _to_float(case.get("per_share_value"))
+
+        if enterprise_value is not None and net_debt is not None and equity_value is not None:
+            expected_equity = enterprise_value - net_debt
+            if not _materially_equal(equity_value, expected_equity):
+                errors.append(
+                    f"{prefix}.equity_value is inconsistent with enterprise_value - net_debt"
+                )
+        if (
+            equity_value is not None
+            and diluted_shares is not None
+            and diluted_shares > 0
+            and per_share_value is not None
+        ):
+            expected_per_share = equity_value / diluted_shares
+            if not _materially_equal(per_share_value, expected_per_share):
+                errors.append(
+                    f"{prefix}.per_share_value is inconsistent with equity_value / diluted_shares"
+                )
+        if per_share_value is not None:
+            per_share_values[case_name] = per_share_value
+
+    if all(name in per_share_values for name in ("bull", "base", "bear")):
+        if not (
+            per_share_values["bull"] >= per_share_values["base"]
+            and per_share_values["base"] >= per_share_values["bear"]
+        ):
+            errors.append(
+                "scenario per_share_value must be monotonic: bull >= base >= bear"
+            )
+
+    sensitivity = scenarios.get("sensitivity")
+    if isinstance(sensitivity, list):
+        for index, item in enumerate(sensitivity):
+            if not isinstance(item, dict):
+                continue
+            low = _to_float(item.get("low"))
+            base = _to_float(item.get("base"))
+            high = _to_float(item.get("high"))
+            if None not in (low, base, high) and not (low <= base <= high):
+                errors.append(
+                    f"scenario_analysis.sensitivity[{index}] must satisfy low <= base <= high"
+                )
+    return errors
+
+
 def validate_math_consistency(data: dict) -> list[str]:
     errors: list[str] = []
     if not isinstance(data, dict):
@@ -144,6 +213,7 @@ def validate_math_consistency(data: dict) -> list[str]:
     if confidence_score is not None and not (0 <= confidence_score <= 100):
         errors.append("confidence_details.score must be between 0 and 100")
 
+    errors.extend(_validate_valuation_math(data))
     return errors
 
 

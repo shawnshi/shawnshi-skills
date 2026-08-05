@@ -1,9 +1,11 @@
 import argparse
 import json
 import math
+import os
 import re
 import sys
-from datetime import datetime
+import tempfile
+from datetime import date, datetime
 from pathlib import Path
 from typing import Any
 
@@ -13,7 +15,6 @@ PORTFOLIO_SCHEMA_PATH = (
 )
 WEIGHT_TOLERANCE = 1e-6
 MATRIX_TOLERANCE = 1e-9
-SUPPORTED_CONTRACT_VERSIONS = {"1.0", "2.0"}
 
 
 class DuplicateJsonKeyError(ValueError):
@@ -65,16 +66,214 @@ def _symbol(value: Any, field: str, errors: list[str]) -> str | None:
     return normalized.upper() if normalized is not None else None
 
 
-def _iso_date_or_datetime(value: Any, field: str, errors: list[str]) -> str | None:
+def _iso_date_or_datetime(
+    value: Any,
+    field: str,
+    errors: list[str],
+    current_date: date,
+) -> str | None:
     normalized = _non_empty_string(value, field, errors)
     if normalized is None:
         return None
     try:
-        datetime.fromisoformat(normalized.replace("Z", "+00:00"))
+        parsed = datetime.fromisoformat(normalized.replace("Z", "+00:00"))
     except ValueError:
         errors.append(f"{field} must be an ISO date or datetime string")
         return None
+    if parsed.date() > current_date:
+        errors.append(
+            f"{field} cannot be after current run date {current_date.isoformat()}"
+        )
+        return None
     return normalized
+
+
+def _aware_retrieved_at(
+    value: Any,
+    field: str,
+    errors: list[str],
+    current_date: date,
+) -> str | None:
+    normalized = _non_empty_string(value, field, errors)
+    if normalized is None:
+        return None
+    try:
+        parsed = datetime.fromisoformat(normalized.replace("Z", "+00:00"))
+    except ValueError:
+        errors.append(f"{field} must be a timezone-aware ISO timestamp")
+        return None
+    if parsed.tzinfo is None or parsed.utcoffset() is None:
+        errors.append(f"{field} must be a timezone-aware ISO timestamp")
+        return None
+    if parsed.date() > current_date:
+        errors.append(
+            f"{field} cannot be after current run date {current_date.isoformat()}"
+        )
+        return None
+    return normalized
+
+
+def _strict_source_locator(
+    value: Any,
+    field: str,
+    errors: list[str],
+) -> str | None:
+    """Accept only public URLs, registered SEC IDs, or controlled datasets."""
+
+    from ipaddress import ip_address
+    from urllib.parse import unquote, urlparse
+
+    normalized = _non_empty_string(value, field, errors)
+    if normalized is None:
+        return None
+    parsed = urlparse(normalized)
+    scheme = parsed.scheme.lower()
+    valid = False
+    if scheme in {"http", "https"}:
+        hostname = (parsed.hostname or "").lower().rstrip(".")
+        blocked = {
+            "localhost",
+            "example.com",
+            "example.net",
+            "example.org",
+            "example.test",
+        }
+        blocked_suffixes = (".localhost", ".test", ".invalid", ".example")
+        if (
+            hostname
+            and hostname not in blocked
+            and not hostname.endswith(blocked_suffixes)
+            and parsed.username is None
+            and parsed.password is None
+        ):
+            try:
+                address = ip_address(hostname)
+            except ValueError:
+                address = None
+            valid = (
+                (address is not None or "." in hostname)
+                and (
+                    address is None
+                    or not (
+                        address.is_private
+                        or address.is_loopback
+                        or address.is_link_local
+                        or address.is_reserved
+                        or address.is_unspecified
+                    )
+                )
+            )
+    elif scheme == "sec":
+        identifier_type = parsed.netloc.lower()
+        identifier = parsed.path.lstrip("/")
+        valid = bool(
+            (
+                identifier_type == "accession"
+                and re.fullmatch(r"\d{10}-\d{2}-\d{6}", identifier)
+            )
+            or (identifier_type == "cik" and re.fullmatch(r"\d{10}", identifier))
+        )
+    elif scheme == "dataset":
+        valid = (
+            parsed.netloc.lower()
+            in {"pia", "portfolio-research", "validated-market-data"}
+            and bool(parsed.path.strip("/"))
+            and not parsed.query
+            and not parsed.fragment
+            and ".." not in unquote(parsed.path).split("/")
+        )
+    if not valid:
+        errors.append(
+            f"{field} must be a public HTTP(S) URL, registered SEC identifier, "
+            "or controlled dataset URI"
+        )
+        return None
+    return normalized
+
+
+def _content_sha256(value: Any, field: str, errors: list[str]) -> str | None:
+    normalized = _non_empty_string(value, field, errors)
+    if normalized is None:
+        return None
+    if re.fullmatch(r"[0-9a-f]{64}", normalized) is None:
+        errors.append(f"{field} must be a lowercase SHA-256 digest")
+        return None
+    return normalized
+
+
+def _validate_position_identity(
+    position: dict[str, Any],
+    index: int,
+    portfolio_schema: dict[str, Any],
+    symbol: str | None,
+    currency: str | None,
+    errors: list[str],
+) -> None:
+    """Apply the portfolio v3 symbol/market/currency/asset identity contract."""
+    prefix = f"positions[{index}]"
+    raw_market = position.get("market")
+    market = raw_market.strip().upper() if isinstance(raw_market, str) else ""
+    allowed_markets = {
+        str(value).strip().upper()
+        for value in portfolio_schema.get("allowed_markets", [])
+    }
+    if not isinstance(raw_market, str) or not raw_market.strip():
+        errors.append(f"{prefix}.market must be a non-empty string")
+    elif raw_market != market:
+        errors.append(f"{prefix}.market must use uppercase canonical form")
+    elif market not in allowed_markets:
+        errors.append(f"{prefix}.market is not allowed: {raw_market}")
+
+    raw_asset_type = position.get("asset_type")
+    asset_type = (
+        raw_asset_type.strip().lower()
+        if isinstance(raw_asset_type, str)
+        else ""
+    )
+    allowed_asset_types = {
+        str(value).strip().lower()
+        for value in portfolio_schema.get("allowed_asset_types", [])
+    }
+    if not isinstance(raw_asset_type, str) or not raw_asset_type.strip():
+        errors.append(f"{prefix}.asset_type must be a non-empty string")
+    elif raw_asset_type != asset_type:
+        errors.append(f"{prefix}.asset_type must use lowercase canonical form")
+    elif asset_type not in allowed_asset_types:
+        errors.append(f"{prefix}.asset_type is not allowed: {raw_asset_type}")
+
+    normalized_symbol = symbol or ""
+    normalized_currency = currency or ""
+    symbol_is_cash = normalized_symbol == "CASH" or normalized_symbol.startswith(
+        "CASH_"
+    )
+    market_is_cash = market == "CASH"
+    asset_is_cash = asset_type == "cash"
+    if not (symbol_is_cash == market_is_cash == asset_is_cash):
+        errors.append(
+            f"{prefix} cash identity requires symbol CASH/CASH_*, market CASH, and asset_type cash together"
+        )
+
+    if market == "CN":
+        if normalized_symbol and not normalized_symbol.endswith((".SS", ".SZ")):
+            errors.append(f"{prefix}.symbol must use .SS or .SZ for market CN")
+        if normalized_currency and normalized_currency != "CNY":
+            errors.append(f"{prefix}.currency must be CNY for market CN")
+    elif market == "HK":
+        if normalized_symbol and not normalized_symbol.endswith(".HK"):
+            errors.append(f"{prefix}.symbol must use .HK for market HK")
+        if normalized_currency and normalized_currency != "HKD":
+            errors.append(f"{prefix}.currency must be HKD for market HK")
+    elif market == "US":
+        if normalized_symbol.endswith((".SS", ".SZ", ".HK")):
+            errors.append(f"{prefix}.symbol suffix conflicts with market US")
+        if normalized_currency and normalized_currency != "USD":
+            errors.append(f"{prefix}.currency must be USD for market US")
+    elif market == "CASH" and normalized_symbol.startswith("CASH_"):
+        symbol_currency = normalized_symbol.removeprefix("CASH_")
+        if normalized_currency and symbol_currency != normalized_currency:
+            errors.append(
+                f"{prefix}.currency must match the CASH_ symbol suffix"
+            )
 
 
 def _unique(items: list[str]) -> list[str]:
@@ -170,6 +369,7 @@ def _weight_snapshot(
     active_positions: dict[str, dict[str, Any]],
     weights: dict[str, float],
     base_currency: str | None,
+    current_date: date,
     errors: list[str],
 ) -> dict[str, Any] | None:
     """Validate that v2 weights are tied to a sourced base-currency snapshot."""
@@ -181,13 +381,31 @@ def _weight_snapshot(
         errors.append("weight_snapshot is required and must be an object for v2")
         return None
 
-    as_of = _iso_date_or_datetime(value.get("as_of"), "weight_snapshot.as_of", errors)
+    as_of = _iso_date_or_datetime(
+        value.get("as_of"), "weight_snapshot.as_of", errors, current_date
+    )
     source = _non_empty_string(
         value.get("source"), "weight_snapshot.source", errors
     )
-    source_locator = _non_empty_string(
+    source_locator = _strict_source_locator(
         value.get("source_locator"), "weight_snapshot.source_locator", errors
     )
+    retrieved_at = _aware_retrieved_at(
+        value.get("retrieved_at"),
+        "weight_snapshot.retrieved_at",
+        errors,
+        current_date,
+    )
+    content_sha256 = _content_sha256(
+        value.get("content_sha256"), "weight_snapshot.content_sha256", errors
+    )
+    if as_of is not None and retrieved_at is not None:
+        as_of_date = datetime.fromisoformat(as_of.replace("Z", "+00:00")).date()
+        retrieved_date = datetime.fromisoformat(
+            retrieved_at.replace("Z", "+00:00")
+        ).date()
+        if retrieved_date < as_of_date:
+            errors.append("weight_snapshot.retrieved_at cannot be before weight_snapshot.as_of")
     valuation_basis = _non_empty_string(
         value.get("valuation_basis"), "weight_snapshot.valuation_basis", errors
     )
@@ -254,12 +472,15 @@ def _weight_snapshot(
     fx_provenance: dict[str, Any] | None = None
     if foreign_currencies:
         fx_as_of = _iso_date_or_datetime(
-            value.get("fx_as_of"), "weight_snapshot.fx_as_of", errors
+            value.get("fx_as_of"),
+            "weight_snapshot.fx_as_of",
+            errors,
+            current_date,
         )
         fx_source = _non_empty_string(
             value.get("fx_source"), "weight_snapshot.fx_source", errors
         )
-        fx_source_locator = _non_empty_string(
+        fx_source_locator = _strict_source_locator(
             value.get("fx_source_locator"),
             "weight_snapshot.fx_source_locator",
             errors,
@@ -323,6 +544,8 @@ def _weight_snapshot(
         "as_of": as_of,
         "source": source,
         "source_locator": source_locator,
+        "retrieved_at": retrieved_at,
+        "content_sha256": content_sha256,
         "valuation_basis": valuation_basis,
         "market_values_base_currency": {
             symbol: parsed_values[symbol] for symbol in sorted(parsed_values)
@@ -397,6 +620,7 @@ def _scenario_costs(
     version: str,
     legacy_cost: float | None,
     legacy_cost_configured: bool,
+    current_date: date,
     errors: list[str],
 ) -> tuple[float | None, dict[str, float], str]:
     cost_model = scenario.get("cost_model")
@@ -426,7 +650,9 @@ def _scenario_costs(
     _non_empty_string(
         cost_model.get("source_locator"), f"{prefix}.source_locator", errors
     )
-    _iso_date_or_datetime(cost_model.get("as_of"), f"{prefix}.as_of", errors)
+    _iso_date_or_datetime(
+        cost_model.get("as_of"), f"{prefix}.as_of", errors, current_date
+    )
     default_entry = None
     if "default" in cost_model:
         default_entry = _cost_entry(cost_model.get("default"), f"{prefix}.default", errors)
@@ -471,6 +697,7 @@ def _parse_fx_returns(
     scenario: dict[str, Any],
     scenario_index: int,
     required_pairs: set[str],
+    current_date: date,
     errors: list[str],
 ) -> dict[str, float]:
     prefix = f"scenarios[{scenario_index}].fx_returns"
@@ -503,7 +730,9 @@ def _parse_fx_returns(
         fx_return = _strict_number(entry.get("return"), f"{entry_prefix}.return", errors)
         if fx_return is not None and fx_return <= -1:
             errors.append(f"{entry_prefix}.return must be greater than -1")
-        _iso_date_or_datetime(entry.get("as_of"), f"{entry_prefix}.as_of", errors)
+        _iso_date_or_datetime(
+            entry.get("as_of"), f"{entry_prefix}.as_of", errors, current_date
+        )
         _non_empty_string(entry.get("source"), f"{entry_prefix}.source", errors)
         _non_empty_string(
             entry.get("source_locator"), f"{entry_prefix}.source_locator", errors
@@ -519,6 +748,7 @@ def _scenario_returns(
     version: str,
     base_currency: str,
     positions: dict[str, dict[str, Any]],
+    current_date: date,
     errors: list[str],
 ) -> dict[str, dict[str, Any]]:
     prefix = f"scenarios[{scenario_index}].asset_returns"
@@ -609,6 +839,7 @@ def _scenario_returns(
         scenario,
         scenario_index,
         required_pairs,
+        current_date,
         errors,
     )
     for symbol, (local_return, pair) in pending_local.items():
@@ -886,6 +1117,7 @@ def _risk_diagnostics(
     risk_model: Any,
     version: str,
     weights: dict[str, float],
+    current_date: date,
     errors: list[str],
 ) -> dict[str, Any]:
     if risk_model is None:
@@ -907,7 +1139,9 @@ def _risk_diagnostics(
         errors.append("risk_model.type must equal explicit_volatility_correlation")
     if risk_model.get("units") != "decimal_annualized":
         errors.append("risk_model.units must equal decimal_annualized")
-    as_of = _iso_date_or_datetime(risk_model.get("as_of"), "risk_model.as_of", errors)
+    as_of = _iso_date_or_datetime(
+        risk_model.get("as_of"), "risk_model.as_of", errors, current_date
+    )
     source = _non_empty_string(risk_model.get("source"), "risk_model.source", errors)
     source_locator = _non_empty_string(
         risk_model.get("source_locator"), "risk_model.source_locator", errors
@@ -1109,7 +1343,12 @@ def _risk_diagnostics(
     }
 
 
-def analyze_scenarios(portfolio: Any, assumptions: Any) -> dict[str, Any]:
+def analyze_scenarios(
+    portfolio: Any,
+    assumptions: Any,
+    *,
+    now: datetime | None = None,
+) -> dict[str, Any]:
     errors: list[str] = []
     warnings: list[str] = []
     data_gaps: list[str] = []
@@ -1126,18 +1365,35 @@ def analyze_scenarios(portfolio: Any, assumptions: Any) -> dict[str, Any]:
             errors=["assumptions root must be an object"],
         )
 
-    portfolio_schema = json.loads(PORTFOLIO_SCHEMA_PATH.read_text(encoding="utf-8"))
-    version_raw = assumptions.get("scenario_contract_version", "1.0")
-    version = _non_empty_string(
-        version_raw, "scenario_contract_version", errors
-    )
-    if version is not None and version not in SUPPORTED_CONTRACT_VERSIONS:
-        errors.append(
-            "scenario_contract_version must be one of: "
-            + ", ".join(sorted(SUPPORTED_CONTRACT_VERSIONS))
+    version_raw = assumptions.get("scenario_contract_version")
+    if version_raw is None:
+        version = None
+        errors.append("scenario_contract_version is required and must equal 2.0")
+    else:
+        version = _non_empty_string(
+            version_raw, "scenario_contract_version", errors
         )
-    if version not in SUPPORTED_CONTRACT_VERSIONS:
-        version = "1.0"
+    if version != "2.0":
+        if version is not None:
+            errors.append("scenario_contract_version must equal 2.0")
+        result = _result_shell(
+            status="invalid",
+            detail_status="contract_validation_failed",
+            errors=errors,
+        )
+        result["scenario_contract_version"] = version
+        return result
+    if not isinstance(assumptions.get("weight_snapshot"), dict):
+        result = _result_shell(
+            status="invalid",
+            detail_status="contract_validation_failed",
+            errors=["weight_snapshot is required and must be an object for v2"],
+        )
+        result["scenario_contract_version"] = version
+        return result
+
+    current_date = (now or datetime.now().astimezone()).date()
+    portfolio_schema = json.loads(PORTFOLIO_SCHEMA_PATH.read_text(encoding="utf-8"))
 
     for field in portfolio_schema["required_top_level"]:
         if portfolio.get(field) in (None, "", []):
@@ -1180,6 +1436,14 @@ def analyze_scenarios(portfolio: Any, assumptions: Any) -> dict[str, Any]:
         symbol = _symbol(position.get("symbol"), f"{prefix}.symbol", errors)
         currency = _currency(
             position.get("currency"), f"{prefix}.currency", errors
+        )
+        _validate_position_identity(
+            position,
+            index,
+            portfolio_schema,
+            symbol,
+            currency,
+            errors,
         )
         quantity = _strict_number(
             position.get("quantity"), f"{prefix}.quantity", errors
@@ -1251,6 +1515,7 @@ def analyze_scenarios(portfolio: Any, assumptions: Any) -> dict[str, Any]:
         active_positions,
         weights,
         base_currency,
+        current_date,
         errors,
     )
 
@@ -1289,6 +1554,7 @@ def analyze_scenarios(portfolio: Any, assumptions: Any) -> dict[str, Any]:
                 version,
                 base_currency or "",
                 active_positions,
+                current_date,
                 errors,
             )
             if base_currency is not None
@@ -1302,6 +1568,7 @@ def analyze_scenarios(portfolio: Any, assumptions: Any) -> dict[str, Any]:
             version,
             legacy_cost,
             legacy_cost_configured,
+            current_date,
             errors,
         )
         if len(errors) != before_errors or name is None or source is None:
@@ -1336,16 +1603,6 @@ def analyze_scenarios(portfolio: Any, assumptions: Any) -> dict[str, Any]:
                 "assumption_source": source,
             }
         )
-    if version == "1.0":
-        missing_names = sorted(
-            {"base", "bull", "bear"} - {name.casefold() for name in scenario_names}
-        )
-        if missing_names:
-            errors.append(
-                "assumptions.scenarios missing required v1 names: "
-                + ", ".join(missing_names)
-            )
-
     constraints = assumptions.get("constraints", {})
     if not isinstance(constraints, dict):
         errors.append("assumptions.constraints must be an object")
@@ -1380,7 +1637,7 @@ def analyze_scenarios(portfolio: Any, assumptions: Any) -> dict[str, Any]:
     constraint_violations.extend(bucket_violations)
 
     risk_diagnostics = _risk_diagnostics(
-        assumptions.get("risk_model"), version, weights, errors
+        assumptions.get("risk_model"), version, weights, current_date, errors
     )
     if risk_diagnostics.get("status") == "not_calculated":
         data_gaps.extend(risk_diagnostics.get("data_gaps", []))
@@ -1502,6 +1759,39 @@ def _render(result: dict[str, Any]) -> str:
     return json.dumps(result, ensure_ascii=False, indent=2)
 
 
+def _resolved_path(path: str) -> Path:
+    return Path(path).expanduser().resolve(strict=False)
+
+
+def _same_file(left: Path, right: Path) -> bool:
+    if left == right:
+        return True
+    try:
+        return left.exists() and right.exists() and left.samefile(right)
+    except OSError:
+        return False
+
+
+def _atomic_write_text(path: Path, content: str) -> None:
+    path.parent.mkdir(parents=True, exist_ok=True)
+    descriptor, temporary_name = tempfile.mkstemp(
+        prefix=f".{path.name}.", suffix=".tmp", dir=str(path.parent), text=True
+    )
+    temporary_path = Path(temporary_name)
+    try:
+        with os.fdopen(descriptor, "w", encoding="utf-8", newline="\n") as handle:
+            handle.write(content)
+            handle.flush()
+            os.fsync(handle.fileno())
+        os.replace(temporary_path, path)
+    except Exception:
+        try:
+            temporary_path.unlink(missing_ok=True)
+        except OSError:
+            pass
+        raise
+
+
 def main(argv: list[str] | None = None) -> int:
     parser = JsonArgumentParser(
         description=(
@@ -1526,9 +1816,27 @@ def main(argv: list[str] | None = None) -> int:
         )
         return 2
 
+    portfolio_path = _resolved_path(args.portfolio_json)
+    assumptions_path = _resolved_path(args.assumptions_json)
+    output_path = _resolved_path(args.output) if args.output else None
+    if output_path is not None and any(
+        _same_file(output_path, input_path)
+        for input_path in (portfolio_path, assumptions_path)
+    ):
+        print(
+            _render(
+                _result_shell(
+                    status="invalid",
+                    detail_status="output_path_conflicts_with_input",
+                    errors=["--output must not resolve to a portfolio or assumptions input"],
+                )
+            )
+        )
+        return 2
+
     try:
-        portfolio = _load_json(args.portfolio_json)
-        assumptions = _load_json(args.assumptions_json)
+        portfolio = _load_json(str(portfolio_path))
+        assumptions = _load_json(str(assumptions_path))
     except (json.JSONDecodeError, DuplicateJsonKeyError) as exc:
         print(
             _render(
@@ -1557,9 +1865,9 @@ def main(argv: list[str] | None = None) -> int:
     if not result["valid"]:
         print(rendered)
         return 1
-    if args.output:
+    if output_path is not None:
         try:
-            Path(args.output).write_text(rendered + "\n", encoding="utf-8")
+            _atomic_write_text(output_path, rendered + "\n")
         except OSError as exc:
             print(
                 _render(
