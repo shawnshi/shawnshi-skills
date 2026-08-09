@@ -80,10 +80,18 @@
     node.textContent = value === null || value === undefined ? '--' : String(value) + (suffix || '');
   }
 
+  function finiteNumber(value) {
+    if (typeof value === 'number') return Number.isFinite(value) ? value : null;
+    if (typeof value !== 'string' || value.trim() === '') return null;
+    const numeric = Number(value);
+    return Number.isFinite(numeric) ? numeric : null;
+  }
+
   function lastObserved(values) {
     if (!Array.isArray(values)) return null;
     for (let index=values.length-1; index>=0; index-=1) {
-      if (Number.isFinite(Number(values[index]))) return Number(values[index]);
+      const numeric = finiteNumber(values[index]);
+      if (numeric !== null) return numeric;
     }
     return null;
   }
@@ -97,7 +105,7 @@
 
   function renderLineChart(targetId, dates, definitions) {
     const container = document.getElementById(targetId);
-    const observed = definitions.flatMap(definition => (definition.values || []).filter(value => Number.isFinite(Number(value))).map(Number));
+    const observed = definitions.flatMap(definition => (definition.values || []).map(finiteNumber).filter(value => value !== null));
     if (!dates.length || !observed.length) { emptyState(container,'无可绘制观测'); return; }
     const width=760, height=260, left=46, right=16, top=18, bottom=34;
     const min=Math.min(...observed), max=Math.max(...observed), span=max-min || 1;
@@ -109,8 +117,8 @@
       let segment=[];
       const flush=()=>{ if(segment.length){svg.append(svgNode('polyline',{points:segment.join(' '),fill:'none',stroke:definition.color || palette[seriesIndex%palette.length],'stroke-width':3}));segment=[];} };
       dates.forEach((date,index) => {
-        const value=definition.values && definition.values[index];
-        if (Number.isFinite(Number(value))) segment.push(`${x(index)},${y(value)}`); else flush();
+        const value=finiteNumber(definition.values && definition.values[index]);
+        if (value !== null) segment.push(`${x(index)},${y(value)}`); else flush();
       });
       flush();
     });
@@ -123,8 +131,8 @@
   function renderSleepChart(overlay) {
     const container=document.getElementById('sleep-chart');
     const dates=overlay.dates || [], deep=overlay.sleep_deep_h || [], rem=overlay.sleep_rem_h || [], light=overlay.sleep_light_h || [], total=overlay.sleep_h || [];
-    const stageSums=dates.map((_date,index)=>[deep[index],rem[index],light[index]].reduce((sum,value)=>sum+(Number.isFinite(Number(value))?Number(value):0),0));
-    const values=stageSums.concat(total.filter(value=>Number.isFinite(Number(value))).map(Number));
+    const stageSums=dates.map((_date,index)=>[deep[index],rem[index],light[index]].reduce((sum,value)=>sum+(finiteNumber(value) ?? 0),0));
+    const values=stageSums.concat(total.map(finiteNumber).filter(value=>value !== null));
     if (!dates.length || !values.some(value=>value>0)) { emptyState(container,'无可绘制睡眠阶段观测'); return; }
     const width=760,height=260,left=46,right=16,top=18,bottom=34,max=Math.max(...values,1);
     const band=(width-left-right)/dates.length, bar=Math.max(3,band*.55), y=value=>top+(max-value)*(height-top-bottom)/max;
@@ -134,16 +142,16 @@
     dates.forEach((_date,index)=>{
       let accumulated=0;
       stages.forEach(stage=>{
-        const value=stage.values[index];
-        if (!Number.isFinite(Number(value))) return;
-        const numeric=Number(value), topY=y(accumulated+numeric), bottomY=y(accumulated);
+        const numeric=finiteNumber(stage.values[index]);
+        if (numeric === null) return;
+        const topY=y(accumulated+numeric), bottomY=y(accumulated);
         svg.append(svgNode('rect',{x:left+index*band+(band-bar)/2,y:topY,width:bar,height:Math.max(0,bottomY-topY),fill:stage.color}));
         accumulated+=numeric;
       });
     });
     let totalSegment=[];
     const flush=()=>{if(totalSegment.length){svg.append(svgNode('polyline',{points:totalSegment.join(' '),fill:'none',stroke:'#e2e8f0','stroke-width':2}));totalSegment=[];}};
-    dates.forEach((_date,index)=>{const value=total[index];if(Number.isFinite(Number(value))){totalSegment.push(`${left+index*band+band/2},${y(value)}`);}else{flush();}}); flush();
+    dates.forEach((_date,index)=>{const value=finiteNumber(total[index]);if(value !== null){totalSegment.push(`${left+index*band+band/2},${y(value)}`);}else{flush();}}); flush();
     container.replaceChildren(svg);
   }
 
@@ -153,7 +161,7 @@
     if (!rows.length) { emptyState(container,'当前周期未生成睡眠评分观测'); return; }
     const cells=rows.map(item=>{
       const cell=document.createElement('div'); cell.className='heat-cell';
-      const score=Number.isFinite(Number(item.score))?Number(item.score):null;
+      const score=finiteNumber(item.score);
       cell.style.backgroundColor=score===null?'#1e293b':`rgba(96,165,250,${0.15+Math.max(0,Math.min(100,score))/160})`;
       const date=document.createElement('span'); date.textContent=String(item.date || '');
       const value=document.createElement('strong'); value.textContent=score===null?'—':String(score);

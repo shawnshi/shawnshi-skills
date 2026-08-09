@@ -1,23 +1,25 @@
 #!/usr/bin/env python3
 """
-@Input:  metric, bounded date options, --source local|live, and explicit live grants
+@Input:  metric, bounded date options, --source local|live, and explicit health-data grants
 @Output: JSON health metrics with coverage and component status
 @Pos:    Local-first data layer; live Garmin access is explicit and fail-closed.
 
 !!! Maintenance Protocol: If API endpoints change, update this. Keep JSON structure stable for consumers.
 
-Read authorized local Garmin data by default. Live Garmin Connect access requires
---source live, --allow-network, --allow-health-data, and an explicit window.
+Read explicitly authorized local Garmin data by default. Every health-data read requires
+--allow-health-data. Live Garmin Connect access also requires --source live,
+--allow-network, and an explicit window.
 """
 
-import json
-import sys
 import argparse
+import concurrent.futures
+import json
 import re
+import sys
 from datetime import datetime, timedelta
 from pathlib import Path
-import concurrent.futures
 
+from garmin_auth import get_client
 from garmin_capabilities import consume_capability, issue_capability
 
 
@@ -59,11 +61,6 @@ LOCAL_OBSERVATION_FIELDS = {
         "training_load",
     ),
 }
-
-# Import auth helper
-sys.path.insert(0, str(Path(__file__).parent))
-from garmin_auth import get_client
-
 
 def get_date_range(days=None, start=None, end=None):
     """Return an inclusive, validated range containing exactly ``days`` dates."""
@@ -271,7 +268,8 @@ def fetch_activities(client, days=7, start=None, end=None):
     
     try:
         activities = fetch_with_retry(client.get_activities_by_date, start_date, end_date, "")
-        if not activities: activities = []
+        if not activities:
+            activities = []
         
         activity_list = []
         for activity in activities:
@@ -944,6 +942,10 @@ def main():
         start_date, end_date = get_date_range(effective_days, args.start, args.end)
     except ValueError as exc:
         print(json.dumps({"error": str(exc)}, ensure_ascii=False))
+        return 2
+
+    if args.source == "local" and not args.allow_health_data:
+        print(json.dumps({"status": "health_data_authorization_required"}))
         return 2
 
     if args.source == "local":

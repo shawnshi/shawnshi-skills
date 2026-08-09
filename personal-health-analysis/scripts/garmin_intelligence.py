@@ -1149,6 +1149,8 @@ def _load_summary(
     analysis: str = "unspecified",
 ) -> dict[str, Any]:
     if source == "local":
+        if not allow_health_data:
+            raise PermissionError("HEALTH_DATA_ACCESS_NOT_AUTHORIZED")
         if not HAS_SQLITE:
             raise RuntimeError("Local Garmin database is unavailable.")
         return fetch_local_summary(days)
@@ -1270,6 +1272,9 @@ def main() -> int:
         days = parse_period(args.period, 7 if args.days is None else args.days)
     except (TypeError, ValueError):
         print(json.dumps({"status": "INVALID_PERIOD_SCOPE"}), file=sys.stderr)
+        return 2
+    if args.source == "local" and not args.allow_health_data:
+        print(json.dumps({"error_code": "HEALTH_DATA_ACCESS_NOT_AUTHORIZED"}), file=sys.stderr)
         return 2
     try:
         summary_data = _load_summary(

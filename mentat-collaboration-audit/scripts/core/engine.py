@@ -252,6 +252,7 @@ def _skill_load_metrics(records: list[dict[str, Any]]) -> dict[str, Any]:
     duplicates = 0
     unverifiable = 0
     loaded_tokens = 0
+    token_observations = 0
 
     for record in loads:
         values = (
@@ -262,9 +263,13 @@ def _skill_load_metrics(records: list[dict[str, Any]]) -> dict[str, Any]:
             text_value(record, "skill_sha256"),
         )
         observed_tokens = number(record, "skill_tokens", "loaded_tokens")
-        loaded_tokens += int(observed_tokens or 0)
-        if not all(values):
+        tokenizer = text_value(record, "tokenizer")
+        if observed_tokens is not None and observed_tokens >= 0 and tokenizer:
+            loaded_tokens += int(observed_tokens)
+            token_observations += 1
+        if not all(values) or observed_tokens is None or not tokenizer:
             unverifiable += 1
+        if not all(values):
             continue
         if values in seen:
             duplicates += 1
@@ -276,6 +281,8 @@ def _skill_load_metrics(records: list[dict[str, Any]]) -> dict[str, Any]:
         "duplicate_load_count": duplicates,
         "duplicate_load_rate": ratio(duplicates, len(loads)),
         "loaded_tokens": loaded_tokens,
+        "token_observation_count": token_observations,
+        "token_coverage": ratio(token_observations, len(loads)),
         "unverifiable_load_count": unverifiable,
     }
 

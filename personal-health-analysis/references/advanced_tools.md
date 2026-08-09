@@ -1,10 +1,10 @@
 # Garmin 扩展工具与授权边界
 
-只在用户请求扩展指标、时间点查询或活动文件时读取本资料。所有实时路径均访问非官方 Garmin Connect 接口，必须同时取得本次联网授权和精确健康数据读取授权；本地分析失败不得自动转为实时访问。
+只在用户请求扩展指标、时间点查询或活动文件时读取本资料。显式调用本技能即授权读取请求窗口内全部受支持健康指标，技能自动附加 `--allow-health-data`；所有实时路径仍访问非官方 Garmin Connect 接口，必须取得本次联网授权。本地只有 `no_data` 可按技能契约转实时，其他失败不得回退。
 
-下列 `<SKILL_PYTHON>` 必须是技能隔离 `.venv` 中的解释器，不得替换为未核验的全局 Python。
+下列 `<SKILL_PYTHON>` 是本次选定解释器的 `sys.executable` 绝对路径，不要求位于虚拟目录。预检和后续命令必须使用同一解释器：普通本地分析先运行 `<SKILL_PYTHON> scripts/runtime_preflight.py --mode local`；实时路径先运行 `--mode live`；活动文件解析先运行 `--mode activity`。预检失败时返回 `RUNTIME_DEPENDENCY_UNAVAILABLE`，不得自动安装或切换解释器。
 
-同步还属于独立写操作：必须先用 `sync_health_data.py sync --start <START> --end <END> --dry-run --config-dir <TRUSTED_CONFIG_DIR> --garmindb-python <TRUSTED_GARMINDB_PYTHON> --plan-output <SESSION_SCRATCH>/sync-plan.json` 生成短期计划，再以相同日期窗口、`--allow-network --allow-sync --config-dir <TRUSTED_CONFIG_DIR> --garmindb-python <TRUSTED_GARMINDB_PYTHON> --plan-file <PLAN>` 执行。计划缺失、过期、被修改，或窗口、配置摘要、解释器、CLI、隔离环境文件树和固定包版本任一不一致时停止；启动前再次复核计划与临时配置，并以 `python -I -B`、清理环境和关闭 stdin 运行。不得从全局 `PATH` 自动发现同步 CLI。文件树证据不是签名，也不能抵御同一用户下的敌对进程；高对抗运行需要 `external_acceptance.md` 所列外部信任根。
+同步还属于独立写操作：必须先用 `sync_health_data.py sync --start <START> --end <END> --dry-run --config-dir <TRUSTED_CONFIG_DIR> --garmindb-python <TRUSTED_GARMINDB_PYTHON> --plan-output <SESSION_SCRATCH>/sync-plan.json` 生成短期计划，再以相同日期窗口、`--allow-network --allow-sync --config-dir <TRUSTED_CONFIG_DIR> --garmindb-python <TRUSTED_GARMINDB_PYTHON> --plan-file <PLAN>` 执行。显式 runner 可为全局 Python 或虚拟环境，不要求独立虚拟目录。计划缺失、过期、被修改，或窗口、配置、同目录令牌、解析后的绝对数据根、`DBs` 目录身份、解释器、相邻 CLI、环境文件树和固定包版本任一不一致时停止；配置与令牌只复制到自动删除的临时目录，临时配置必须指向已绑定的绝对数据根，并把结束日加一天以适配 GarminDB 的开区间。运行分为精确窗口下载和仅处理新增文件的 `--latest` 导入分析两个阶段；禁止给下载阶段添加 `--latest`。启动前再次复核计划与临时副本，并以 `python -I -B`、清理环境和关闭 stdin 运行。不得从全局 `PATH` 自动发现同步 CLI。进程成功后必须核对目标数据库指纹和请求窗口覆盖。文件树证据不是签名，也不能抵御同一用户下的敌对进程；高对抗运行需要 `external_acceptance.md` 所列外部信任根。
 
 ## 1. 扩展实时指标
 
@@ -31,9 +31,10 @@
 
 ## 3. 活动文件
 
-- 下载 FIT、GPX 或 TCX 会访问 Garmin，并可能包含精确位置、时间和活动轨迹；必须同时取得联网、健康数据读取和原始文件下载三项授权。
+- 下载 FIT、GPX 或 TCX 会访问 Garmin，并可能包含精确位置、时间和活动轨迹；默认健康数据读取授权不包含原始轨迹，仍必须分别取得联网和原始文件下载授权，并自动附加健康数据 CLI 标志。
 - 下载时必须显式指定会话隔离输出目录，不得使用报告目录。
 - 已存在的本地文件可离线解析、查询或汇总，不需要联网授权。
+- 下载只要求实时模式通过；解析 FIT、GPX 或 TCX 前还要通过活动模式。下载后立即解析时两项都要通过。
 
 ```bash
 <SKILL_PYTHON> scripts/garmin_activity_files.py download --activity-id 12345678 --format fit --output-dir <SESSION_SCRATCH> --allow-network --allow-health-data --allow-download
@@ -48,7 +49,7 @@
 
 ```bash
 <SKILL_PYTHON> scripts/report_output.py --days 7
-<SKILL_PYTHON> scripts/garmin_chart.py dashboard --days 7 --source local --output <HTML_PATH>
+<SKILL_PYTHON> scripts/garmin_chart.py dashboard --days 7 --source local --allow-health-data --output <HTML_PATH>
 ```
 
 面板固定零外联并设置禁止网络的 CSP。报告和面板默认拒绝覆盖；需要替换时必须得到用户明确要求，再使用 `--allow-overwrite` 或 `--overwrite`。

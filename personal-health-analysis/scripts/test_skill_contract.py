@@ -99,7 +99,7 @@ class SkillContractTests(unittest.TestCase):
             self.assertIn("publish_directory_no_replace.py", installer)
             self.assertIn("already exists", installer)
 
-    def test_documented_script_commands_use_the_isolated_interpreter(self):
+    def test_documented_commands_use_a_verified_current_interpreter(self):
         documents = [
             SKILL_ROOT / "SKILL.md",
             SKILL_ROOT / "references" / "api.md",
@@ -108,11 +108,62 @@ class SkillContractTests(unittest.TestCase):
         ]
         combined = "\n".join(path.read_text(encoding="utf-8") for path in documents)
         self.assertIn("<SKILL_PYTHON> scripts/garmin_data.py", combined)
+        self.assertIn("<SKILL_PYTHON> scripts/runtime_preflight.py --mode local", combined)
+        self.assertNotIn("必须解析为该隔离环境的解释器", combined)
+        self.assertNotIn("必须是技能隔离 `.venv` 中的解释器", combined)
         self.assertNotRegex(combined, r"(?m)(?:^|\s)python3?\s+scripts/")
         self.assertNotRegex(combined, r"(?m)(?:^|\s)python\.exe\s+scripts/")
         self.assertNotIn("from garminconnect import Garmin", combined)
         for flag in ("--allow-health-data", "--allow-token-write", "--allow-download"):
             self.assertIn(flag, combined)
+
+    def test_skill_commands_preserve_cli_permission_and_no_implicit_trigger(self):
+        skill_text = (SKILL_ROOT / "SKILL.md").read_text(encoding="utf-8")
+        metadata = (SKILL_ROOT / "agents" / "openai.yaml").read_text(encoding="utf-8")
+        self.assertIn("RUNTIME_DEPENDENCY_UNAVAILABLE", skill_text)
+        for script_name in ("garmin_data.py", "garmin_intelligence.py", "garmin_chart.py"):
+            self.assertRegex(
+                skill_text,
+                rf"{script_name}[^\n]*--source local[^\n]*--allow-health-data",
+            )
+        self.assertIn("allow_implicit_invocation: false", metadata)
+
+    def test_live_fallback_is_bound_to_no_data_network_and_exact_components(self):
+        skill_text = (SKILL_ROOT / "SKILL.md").read_text(encoding="utf-8")
+        api_text = (SKILL_ROOT / "references" / "api.md").read_text(
+            encoding="utf-8"
+        )
+        combined = skill_text + "\n" + api_text
+        self.assertIn("--fallback-live", combined)
+        self.assertIn("--components", combined)
+        self.assertIn("no_data", combined)
+        self.assertIn("--allow-network", combined)
+        self.assertNotIn("本地读取失败不得自动切换到实时接口", combined)
+
+    def test_explicit_skill_invocation_defaults_health_read_but_not_side_effects(self):
+        skill_text = (SKILL_ROOT / "SKILL.md").read_text(encoding="utf-8")
+        api_text = (SKILL_ROOT / "references" / "api.md").read_text(
+            encoding="utf-8"
+        )
+        advanced_text = (SKILL_ROOT / "references" / "advanced_tools.md").read_text(
+            encoding="utf-8"
+        )
+        combined = "\n".join((skill_text, api_text, advanced_text))
+        self.assertIn("显式调用本技能即授权", combined)
+        self.assertIn("默认最近 7 天", combined)
+        self.assertIn(
+            "sleep,hrv,body_battery,heart_rate,activities,stress,training_load_series",
+            combined,
+        )
+        self.assertIn("自动附加 `--allow-health-data`", combined)
+        for independent_grant in (
+            "--allow-network",
+            "--allow-token-write",
+            "--allow-sync",
+            "--allow-download",
+        ):
+            self.assertIn(independent_grant, combined)
+        self.assertIn("allow_implicit_invocation: false", (SKILL_ROOT / "agents" / "openai.yaml").read_text(encoding="utf-8"))
 
     def test_sync_contract_requires_plan_and_explicit_runner(self):
         skill_text = (SKILL_ROOT / "SKILL.md").read_text(encoding="utf-8")

@@ -1,4 +1,8 @@
+import json
 import os
+import re
+import shutil
+import subprocess
 import tempfile
 import unittest
 from datetime import datetime
@@ -12,6 +16,83 @@ from report_output import build_report_paths, get_report_dir
 
 
 class ReportOutputContractTests(unittest.TestCase):
+    @unittest.skipUnless(shutil.which("node"), "Node.js is required for DOM runtime validation")
+    def test_dashboard_runtime_keeps_missing_values_distinct_from_zero(self):
+        html = garmin_chart.render_report(
+            {
+                "audit_data": {
+                    "system_status": {"rhr": {"current": None, "baseline": None}}
+                },
+                "overlay_data": {
+                    "dates": ["2026-08-09"],
+                    "rhr": [None],
+                    "hrv": [None],
+                    "sleep_h": [0],
+                    "sleep_deep_h": [None],
+                    "sleep_rem_h": [None],
+                    "sleep_light_h": [None],
+                    "bb_max": [None],
+                    "bb_min": [None],
+                },
+                "heatmap": [
+                    {"date": "2026-08-08", "score": None},
+                    {"date": "2026-08-09", "score": 0},
+                ],
+                "overall_insight": "synthetic",
+            }
+        )
+        encoded = re.search(
+            r'<script id="health-data"[^>]*>(.*?)</script>', html, re.DOTALL
+        ).group(1)
+        runtime_source = re.findall(r"<script(?: [^>]*)?>(.*?)</script>", html, re.DOTALL)[-1]
+        harness = f"""
+class Node {{
+  constructor() {{ this.textContent=''; this.children=[]; this.style={{}}; this.className=''; }}
+  setAttribute() {{}}
+  append(...nodes) {{ this.children.push(...nodes); }}
+  replaceChildren(...nodes) {{ this.children = nodes; }}
+}}
+const elements = {{}};
+elements['health-data'] = new Node();
+elements['health-data'].textContent = {json.dumps(encoded)};
+const document = {{
+  getElementById(id) {{ return elements[id] || (elements[id] = new Node()); }},
+  createElement() {{ return new Node(); }},
+  createElementNS() {{ return new Node(); }}
+}};
+const window = {{ addEventListener(event, callback) {{ if (event === 'DOMContentLoaded') callback(); }} }};
+{runtime_source}
+console.log(JSON.stringify({{
+  rhr: elements['kpi-rhr'].textContent,
+  hrv: elements['kpi-hrv'].textContent,
+  sleep: elements['kpi-sleep'].textContent,
+  cardio_empty: elements['cardio-chart'].children[0].textContent,
+  battery_empty: elements['battery-chart'].children[0].textContent,
+  missing_score: elements['heatmap'].children[0].children[1].textContent,
+  observed_zero_score: elements['heatmap'].children[1].children[1].textContent
+}}));
+"""
+        completed = subprocess.run(
+            [shutil.which("node"), "-e", harness],
+            check=True,
+            capture_output=True,
+            text=True,
+            encoding="utf-8",
+        )
+
+        self.assertEqual(
+            json.loads(completed.stdout),
+            {
+                "rhr": "--",
+                "hrv": "--",
+                "sleep": "0 h",
+                "cardio_empty": "无可绘制观测",
+                "battery_empty": "无可绘制观测",
+                "missing_score": "—",
+                "observed_zero_score": "0",
+            },
+        )
+
     def test_default_archive_is_workspace_output(self):
         workspace = Path(r"C:\workspace")
         with patch.dict(os.environ, {}, clear=True):
@@ -135,7 +216,13 @@ class ReportOutputContractTests(unittest.TestCase):
                 patch.object(
                     os.sys,
                     "argv",
-                    ["garmin_chart.py", "dashboard", "--days", "7"],
+                    [
+                        "garmin_chart.py",
+                        "dashboard",
+                        "--days",
+                        "7",
+                        "--allow-health-data",
+                    ],
                 ),
             ):
                 result = garmin_chart.main()
@@ -221,7 +308,9 @@ class ReportOutputContractTests(unittest.TestCase):
             patch.object(garmin_chart, "get_client", client),
             patch.object(garmin_chart, "fetch_summary", live_fetch),
         ):
-            result = garmin_chart.main(["dashboard", "--days", "7"])
+            result = garmin_chart.main(
+                ["dashboard", "--days", "7", "--allow-health-data"]
+            )
 
         self.assertEqual(result, 1)
         client.assert_not_called()
@@ -320,7 +409,12 @@ class ReportOutputContractTests(unittest.TestCase):
                 patch.object(garmin_chart, "render_report", return_value="replacement"),
             ):
                 result = garmin_chart.main(
-                    ["dashboard", "--output", str(output_path)]
+                    [
+                        "dashboard",
+                        "--allow-health-data",
+                        "--output",
+                        str(output_path),
+                    ]
                 )
 
             self.assertEqual(result, 1)

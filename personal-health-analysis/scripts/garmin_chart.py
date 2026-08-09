@@ -48,6 +48,22 @@ DATE_SERIES = (
 )
 
 
+def _normalize_dashboard_components(value: object) -> tuple[str, ...]:
+    if isinstance(value, str):
+        requested = [item.strip() for item in value.split(",") if item.strip()]
+    elif isinstance(value, (list, tuple)):
+        requested = list(value)
+    else:
+        raise ValueError("dashboard_components_required")
+    if not requested or any(not isinstance(item, str) for item in requested):
+        raise ValueError("dashboard_components_required")
+    if len(set(requested)) != len(requested):
+        raise ValueError("dashboard_component_duplicate")
+    if set(requested) - set(LIVE_SUMMARY_COMPONENTS):
+        raise ValueError("dashboard_component_invalid")
+    return tuple(item for item in LIVE_SUMMARY_COMPONENTS if item in requested)
+
+
 def _validate_live_request_scope(
     days: int, request: dict[str, object] | None
 ) -> tuple[str, str]:
@@ -60,8 +76,13 @@ def _validate_live_request_scope(
         or set(request) != required_keys
         or request.get("chart") not in {"dashboard", "overlay"}
         or request.get("source") != "live"
-        or request.get("components") != list(LIVE_SUMMARY_COMPONENTS)
     ):
+        raise RuntimeError("LIVE_SCOPE_INVALID")
+    try:
+        components = _normalize_dashboard_components(request.get("components"))
+    except ValueError as exc:
+        raise RuntimeError("LIVE_SCOPE_INVALID") from exc
+    if request.get("components") != list(components):
         raise RuntimeError("LIVE_SCOPE_INVALID")
     start = request.get("start")
     end = request.get("end")
@@ -434,7 +455,23 @@ def main(argv: list[str] | None = None) -> int:
     parser.add_argument(
         "--allow-health-data",
         action="store_true",
-        help="Explicitly authorize live summary data for this exact chart and period.",
+        help="Explicitly authorize health-data reads for this exact chart and period.",
+    )
+    parser.add_argument(
+        "--fallback-live",
+        action="store_true",
+        help=(
+            "If an authorized local read returns exactly no_data, use the explicitly "
+            "authorized live source for the same window and components."
+        ),
+    )
+    parser.add_argument(
+        "--components",
+        help=(
+            "Comma-separated live component allowlist. Required for --fallback-live; "
+            "allowed values are sleep,hrv,body_battery,heart_rate,activities,stress,"
+            "training_load_series."
+        ),
     )
     parser.add_argument(
         "--overwrite",
@@ -442,10 +479,13 @@ def main(argv: list[str] | None = None) -> int:
         help="Explicitly allow replacement of an existing output file.",
     )
     args = parser.parse_args(argv)
+    if args.fallback_live and args.source != "local":
+        print(json.dumps({"status": "INVALID_FALLBACK_SOURCE"}), file=sys.stderr)
+        return 2
     if args.days is not None and args.period:
         print(json.dumps({"status": "INVALID_PERIOD_SCOPE"}), file=sys.stderr)
         return 2
-    if args.source == "live" and args.days is None and not args.period:
+    if (args.source == "live" or args.fallback_live) and args.days is None and not args.period:
         print(json.dumps({"status": "EXPLICIT_LIVE_PERIOD_REQUIRED"}), file=sys.stderr)
         return 2
     try:
@@ -453,10 +493,27 @@ def main(argv: list[str] | None = None) -> int:
     except (TypeError, ValueError):
         print(json.dumps({"status": "INVALID_PERIOD_SCOPE"}), file=sys.stderr)
         return 2
+    if args.source == "local" and not args.allow_health_data:
+        print(json.dumps({"status": "HEALTH_DATA_ACCESS_NOT_AUTHORIZED"}), file=sys.stderr)
+        return 2
+    try:
+        selected_components = (
+            _normalize_dashboard_components(args.components)
+            if args.components is not None
+            else tuple(LIVE_SUMMARY_COMPONENTS)
+        )
+    except ValueError:
+        print(json.dumps({"status": "INVALID_COMPONENT_SCOPE"}), file=sys.stderr)
+        return 2
+    if args.fallback_live and args.components is None:
+        print(json.dumps({"status": "EXPLICIT_COMPONENT_SCOPE_REQUIRED"}), file=sys.stderr)
+        return 2
     network_capability = None
     health_data_capability = None
     request = None
-    if args.source == "live" and (not args.allow_network or not args.allow_health_data):
+    if (args.source == "live" or args.fallback_live) and (
+        not args.allow_network or not args.allow_health_data
+    ):
         status = (
             "NETWORK_ACCESS_NOT_AUTHORIZED"
             if not args.allow_network
@@ -471,7 +528,7 @@ def main(argv: list[str] | None = None) -> int:
             "source": "live",
             "start": start_date,
             "end": end_date,
-            "components": list(LIVE_SUMMARY_COMPONENTS),
+            "components": list(selected_components),
         }
         network_capability = issue_capability(
             scope="network",
@@ -483,6 +540,8 @@ def main(argv: list[str] | None = None) -> int:
             operation=DASHBOARD_LIVE_OPERATION,
             request=request,
         )
+    effective_source = args.source
+    live_fallback_attempted = False
     try:
         summary_data = _load_summary(
             days,
@@ -491,6 +550,38 @@ def main(argv: list[str] | None = None) -> int:
             health_data_capability=health_data_capability,
             request=request,
         )
+        if (
+            args.source == "local"
+            and args.fallback_live
+            and summary_data.get("status") == "no_data"
+        ):
+            live_fallback_attempted = True
+            effective_source = "live"
+            start_date, end_date = get_date_range(days)
+            request = {
+                "chart": args.chart,
+                "source": "live",
+                "start": start_date,
+                "end": end_date,
+                "components": list(selected_components),
+            }
+            network_capability = issue_capability(
+                scope="network",
+                operation=DASHBOARD_LIVE_OPERATION,
+                request=request,
+            )
+            health_data_capability = issue_capability(
+                scope="health_data",
+                operation=DASHBOARD_LIVE_OPERATION,
+                request=request,
+            )
+            summary_data = _load_summary(
+                days,
+                "live",
+                network_capability=network_capability,
+                health_data_capability=health_data_capability,
+                request=request,
+            )
     except Exception as exc:
         known_codes = {
             "LOCAL_DATA_UNAVAILABLE",
@@ -504,10 +595,10 @@ def main(argv: list[str] | None = None) -> int:
             json.dumps(
                 {
                     "status": "DATA_SOURCE_UNAVAILABLE",
-                    "source": args.source,
+                    "source": effective_source,
                     "error_code": str(exc) if str(exc) in known_codes else "DATA_SOURCE_FAILURE",
                     "error_type": type(exc).__name__,
-                    "live_fallback_attempted": False,
+                    "live_fallback_attempted": live_fallback_attempted,
                 },
                 ensure_ascii=False,
             ),
@@ -522,6 +613,12 @@ def main(argv: list[str] | None = None) -> int:
         "period": insight["period"],
         "quant_scores": insight["quant_scores"],
         "overlay_data": build_overlay_data(summary_data),
+        "data_source": {
+            "requested": args.source,
+            "effective": effective_source,
+            "live_fallback_attempted": live_fallback_attempted,
+            "components": list(selected_components) if effective_source == "live" else [],
+        },
     }
     if days >= 14:
         charts_data["heatmap"] = build_heatmap_data(summary_data)

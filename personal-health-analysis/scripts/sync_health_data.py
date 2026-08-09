@@ -35,6 +35,7 @@ EXIT_TIMEOUT = 7
 
 SKILL_ROOT = Path(__file__).resolve().parent.parent
 CONFIG_NAME = "GarminConnectConfig.json"
+TOKEN_STORE_NAME = "garmin_tokens.json"
 SYNC_STATS = ("monitoring", "sleep", "rhr", "hrv", "weight")
 SYNC_OPERATION = "garmindb_sync"
 SYNC_PLAN_VERSION = 2
@@ -53,7 +54,17 @@ SYNC_PLAN_FIELDS = frozenset(
     }
 )
 SYNC_BINDING_FIELDS = frozenset({"config", "runner"})
-CONFIG_BINDING_FIELDS = frozenset({"filename", "sha256"})
+CONFIG_BINDING_FIELDS = frozenset(
+    {
+        "filename",
+        "sha256",
+        "token_store_filename",
+        "token_store_sha256",
+        "data_root_path_sha256",
+        "data_root_identity_sha256",
+        "db_dir_identity_sha256",
+    }
+)
 RUNNER_BINDING_FIELDS = frozenset({"interpreter", "cli", "environment"})
 RUNNER_FILE_BINDING_FIELDS = frozenset(
     {"filename", "sha256", "size_bytes", "path_sha256", "file_identity_sha256"}
@@ -72,6 +83,7 @@ PACKAGE_EVIDENCE_FIELDS = frozenset({"name", "version", "metadata_sha256"})
 PACKAGE_EVIDENCE_NAMES = ("garmindb", "garminconnect")
 SUPPORTED_PACKAGE_VERSIONS = {"garmindb": "3.8.0", "garminconnect": "0.3.9"}
 MAX_METADATA_BYTES = 1024 * 1024
+MAX_TOKEN_STORE_BYTES = 1024 * 1024
 
 
 class WindowError(ValueError):
@@ -300,14 +312,28 @@ def _runner_file_binding(path: Path) -> dict:
     }
 
 
-def _venv_root_for_interpreter(interpreter: Path) -> Path:
-    root = interpreter.parent.parent
-    pyvenv_config = root / "pyvenv.cfg"
-    if not pyvenv_config.is_file():
-        raise SyncConfigurationError("isolated_runner_venv_required")
-    if _is_link_or_reparse(root) or _is_link_or_reparse(pyvenv_config):
-        raise SyncConfigurationError("isolated_runner_link_forbidden")
-    return root
+def _runner_environment_for_interpreter(
+    interpreter: Path,
+) -> tuple[Path, Path | None, str]:
+    """Resolve an explicit venv or global Python environment without PATH lookup."""
+    venv_root = interpreter.parent.parent
+    pyvenv_config = venv_root / "pyvenv.cfg"
+    if pyvenv_config.is_file():
+        root = venv_root
+        environment_kind = "venv"
+    else:
+        root = interpreter.parent
+        pyvenv_config = None
+        environment_kind = "global"
+    if _is_link_or_reparse(root):
+        raise SyncConfigurationError("runner_environment_link_forbidden")
+    if pyvenv_config is not None and _is_link_or_reparse(pyvenv_config):
+        raise SyncConfigurationError("runner_environment_link_forbidden")
+    if environment_kind == "global" and not (
+        root / "Lib" / "site-packages"
+    ).is_dir():
+        raise SyncConfigurationError("runner_environment_layout_unsupported")
+    return root, pyvenv_config, environment_kind
 
 
 def _locate_site_packages(venv_root: Path) -> Path:
@@ -413,8 +439,10 @@ def _read_package_evidence(site_packages: Path) -> list[dict]:
 
 
 def build_runner_binding(interpreter: Path, cli_path: Path) -> dict:
-    venv_root = _venv_root_for_interpreter(interpreter)
-    site_packages = _locate_site_packages(venv_root)
+    environment_root, pyvenv_config, environment_kind = (
+        _runner_environment_for_interpreter(interpreter)
+    )
+    site_packages = _locate_site_packages(environment_root)
     tree_sha256, file_count = _site_packages_tree_evidence(site_packages)
     packages = _read_package_evidence(site_packages)
     versions = {package["name"]: package["version"] for package in packages}
@@ -426,9 +454,15 @@ def build_runner_binding(interpreter: Path, cli_path: Path) -> dict:
         "interpreter": _runner_file_binding(interpreter),
         "cli": _runner_file_binding(cli_path),
         "environment": {
-            "evidence_method": "isolated_venv_filesystem_read_only",
+            "evidence_method": (
+                "isolated_venv_filesystem_read_only"
+                if environment_kind == "venv"
+                else "explicit_global_python_filesystem_read_only"
+            ),
             "review_status": "filesystem_evidence_bound_external_security_review_required",
-            "pyvenv_cfg_sha256": _file_sha256(venv_root / "pyvenv.cfg"),
+            "pyvenv_cfg_sha256": (
+                _file_sha256(pyvenv_config) if pyvenv_config is not None else None
+            ),
             "site_packages_tree_sha256": tree_sha256,
             "site_packages_file_count": file_count,
             "packages": packages,
@@ -453,9 +487,76 @@ def _read_config_source(source_dir: Path) -> tuple[bytes, dict]:
     return raw, original
 
 
+def _read_token_store_source(source_dir: Path) -> bytes:
+    token_file = Path(source_dir).expanduser() / TOKEN_STORE_NAME
+    if not token_file.is_file():
+        raise SyncConfigurationError("garmin_token_store_not_found")
+    raw = _read_bounded_file(token_file, maximum_bytes=MAX_TOKEN_STORE_BYTES)
+    try:
+        token_store = json.loads(raw.decode("utf-8"))
+    except (UnicodeDecodeError, json.JSONDecodeError) as exc:
+        raise SyncConfigurationError("garmin_token_store_invalid") from exc
+    if not isinstance(token_store, dict) or not token_store:
+        raise SyncConfigurationError("garmin_token_store_invalid")
+    return raw
+
+
+def _directory_identity_sha256(path: Path) -> str:
+    stat_result = path.stat()
+    return _sha256_bytes(
+        f"{stat_result.st_dev}:{stat_result.st_ino}".encode("ascii")
+    )
+
+
+def _resolve_bound_data_root(source_dir: Path, config: dict) -> Path:
+    source_dir = Path(source_dir).expanduser().resolve(strict=True)
+    directories = config.get("directories", {})
+    if not isinstance(directories, dict):
+        raise SyncConfigurationError("garmin_config_directories_invalid")
+    base_dir = directories.get("base_dir", "HealthData")
+    relative_to_home = directories.get("relative_to_home", True)
+    if not isinstance(base_dir, str) or not base_dir.strip():
+        raise SyncConfigurationError("garmin_data_root_invalid")
+    if not isinstance(relative_to_home, bool):
+        raise SyncConfigurationError("garmin_data_root_invalid")
+    base_path = Path(base_dir)
+    if relative_to_home:
+        if source_dir.name.casefold() != ".garmindb" or base_path.is_absolute():
+            raise SyncConfigurationError("relative_home_data_root_unsupported")
+        candidate = source_dir.parent / base_path
+    else:
+        if not base_path.is_absolute():
+            raise SyncConfigurationError("absolute_data_root_required")
+        candidate = base_path
+    try:
+        data_root = candidate.resolve(strict=True)
+    except (OSError, RuntimeError) as exc:
+        raise SyncConfigurationError("garmin_data_root_not_found") from exc
+    db_dir = data_root / "DBs"
+    if (
+        not data_root.is_dir()
+        or not db_dir.is_dir()
+        or _is_link_or_reparse(data_root)
+        or _is_link_or_reparse(db_dir)
+    ):
+        raise SyncConfigurationError("garmin_data_root_invalid")
+    return data_root
+
+
 def build_config_binding(source_dir: Path) -> dict:
-    raw, _ = _read_config_source(source_dir)
-    return {"filename": CONFIG_NAME, "sha256": _sha256_bytes(raw)}
+    raw, original = _read_config_source(source_dir)
+    token_store = _read_token_store_source(source_dir)
+    data_root = _resolve_bound_data_root(source_dir, original)
+    db_dir = data_root / "DBs"
+    return {
+        "filename": CONFIG_NAME,
+        "sha256": _sha256_bytes(raw),
+        "token_store_filename": TOKEN_STORE_NAME,
+        "token_store_sha256": _sha256_bytes(token_store),
+        "data_root_path_sha256": _normalized_path_sha256(data_root),
+        "data_root_identity_sha256": _directory_identity_sha256(data_root),
+        "db_dir_identity_sha256": _directory_identity_sha256(db_dir),
+    }
 
 
 def build_sync_bindings(config_dir: Path, garmindb_python: Path) -> dict:
@@ -472,7 +573,15 @@ def validate_sync_bindings(bindings: object) -> None:
     config = bindings.get("config")
     if not isinstance(config, dict) or set(config) != CONFIG_BINDING_FIELDS:
         raise SyncPlanError("plan_config_binding_invalid")
-    if config.get("filename") != CONFIG_NAME or not _is_sha256(config.get("sha256")):
+    if (
+        config.get("filename") != CONFIG_NAME
+        or config.get("token_store_filename") != TOKEN_STORE_NAME
+        or not _is_sha256(config.get("sha256"))
+        or not _is_sha256(config.get("token_store_sha256"))
+        or not _is_sha256(config.get("data_root_path_sha256"))
+        or not _is_sha256(config.get("data_root_identity_sha256"))
+        or not _is_sha256(config.get("db_dir_identity_sha256"))
+    ):
         raise SyncPlanError("plan_config_binding_invalid")
     runner = bindings.get("runner")
     if not isinstance(runner, dict) or set(runner) != RUNNER_BINDING_FIELDS:
@@ -494,16 +603,24 @@ def validate_sync_bindings(bindings: object) -> None:
     environment = runner.get("environment")
     if not isinstance(environment, dict) or set(environment) != RUNNER_ENVIRONMENT_FIELDS:
         raise SyncPlanError("plan_runner_environment_invalid")
-    if environment.get("evidence_method") != "isolated_venv_filesystem_read_only":
+    evidence_method = environment.get("evidence_method")
+    if evidence_method not in {
+        "isolated_venv_filesystem_read_only",
+        "explicit_global_python_filesystem_read_only",
+    }:
         raise SyncPlanError("plan_runner_environment_invalid")
     if (
         environment.get("review_status")
         != "filesystem_evidence_bound_external_security_review_required"
     ):
         raise SyncPlanError("plan_runner_environment_invalid")
-    if any(
-        not _is_sha256(environment.get(hash_field))
-        for hash_field in ("pyvenv_cfg_sha256", "site_packages_tree_sha256")
+    pyvenv_cfg_sha256 = environment.get("pyvenv_cfg_sha256")
+    if evidence_method == "isolated_venv_filesystem_read_only":
+        pyvenv_valid = _is_sha256(pyvenv_cfg_sha256)
+    else:
+        pyvenv_valid = pyvenv_cfg_sha256 is None
+    if not pyvenv_valid or not _is_sha256(
+        environment.get("site_packages_tree_sha256")
     ):
         raise SyncPlanError("plan_runner_environment_invalid")
     file_count = environment.get("site_packages_file_count")
@@ -659,32 +776,66 @@ def prepare_windowed_config(
     end: date,
     *,
     expected_sha256: str,
+    expected_token_store_sha256: str,
+    expected_data_root_path_sha256: str,
+    expected_data_root_identity_sha256: str,
+    expected_db_dir_identity_sha256: str,
 ) -> Iterator[Path]:
     """Create a private temporary GarminDB config scoped to the requested dates."""
     raw, original = _read_config_source(source_dir)
     if not hmac.compare_digest(_sha256_bytes(raw), expected_sha256):
         raise SyncConfigurationError("bound_config_changed")
+    token_store = _read_token_store_source(source_dir)
+    if not hmac.compare_digest(
+        _sha256_bytes(token_store), expected_token_store_sha256
+    ):
+        raise SyncConfigurationError("bound_token_store_changed")
+    data_root = _resolve_bound_data_root(source_dir, original)
+    if not hmac.compare_digest(
+        _normalized_path_sha256(data_root), expected_data_root_path_sha256
+    ):
+        raise SyncConfigurationError("bound_data_root_changed")
+    if not hmac.compare_digest(
+        _directory_identity_sha256(data_root),
+        expected_data_root_identity_sha256,
+    ):
+        raise SyncConfigurationError("bound_data_root_changed")
+    if not hmac.compare_digest(
+        _directory_identity_sha256(data_root / "DBs"),
+        expected_db_dir_identity_sha256,
+    ):
+        raise SyncConfigurationError("bound_data_root_changed")
 
     windowed = copy.deepcopy(original)
     data = windowed.setdefault("data", {})
     if not isinstance(data, dict):
         raise SyncConfigurationError("garmin_config_data_invalid")
     start_value = start.strftime("%m/%d/%Y")
-    end_value = end.strftime("%m/%d/%Y")
+    # GarminDB treats configured end dates as exclusive. Advance by one day so
+    # the user-facing inclusive window remains inclusive at the upstream CLI.
+    end_value = (end + timedelta(days=1)).strftime("%m/%d/%Y")
     data["start_date"] = start_value
     data["end_date"] = end_value
     for stat in SYNC_STATS:
         data[f"{stat}_start_date"] = start_value
         data[f"{stat}_end_date"] = end_value
+    directories = windowed.setdefault("directories", {})
+    if not isinstance(directories, dict):
+        raise SyncConfigurationError("garmin_config_directories_invalid")
+    directories["relative_to_home"] = False
+    directories["base_dir"] = str(data_root)
 
     with tempfile.TemporaryDirectory(prefix="personal-health-sync-") as temp_name:
         temp_dir = Path(temp_name)
         config_file = temp_dir / CONFIG_NAME
+        token_store_file = temp_dir / TOKEN_STORE_NAME
         config_file.write_text(
             json.dumps(windowed, ensure_ascii=False, indent=2), encoding="utf-8"
         )
+        token_store_file.write_bytes(token_store)
         try:
             config_file.chmod(0o600)
+            token_store_file.chmod(0o600)
             temp_dir.chmod(0o700)
         except OSError as exc:
             raise SyncConfigurationError("temporary_config_security_failed") from exc
@@ -707,12 +858,14 @@ def locate_garmindb_cli(
         raise SyncConfigurationError("trusted_garmindb_python_invalid")
     if _is_link_or_reparse(interpreter):
         raise SyncConfigurationError("trusted_garmindb_python_link_forbidden")
-    _venv_root_for_interpreter(interpreter)
+    environment_root, _, _ = _runner_environment_for_interpreter(interpreter)
 
-    candidates = (
+    candidates = tuple(dict.fromkeys((
         interpreter.parent / "garmindb_cli.py",
         interpreter.parent / "garmindb_cli",
-    )
+        environment_root / "Scripts" / "garmindb_cli.py",
+        environment_root / "Scripts" / "garmindb_cli",
+    )))
     for candidate in candidates:
         if candidate.is_file():
             if _is_link_or_reparse(candidate):
@@ -721,25 +874,27 @@ def locate_garmindb_cli(
     raise SyncConfigurationError("trusted_garmindb_cli_not_found")
 
 
-def build_garmindb_command(
+def build_garmindb_commands(
     python_executable: Path, cli_path: Path, config_dir: Path
-) -> list[str]:
-    return [
+) -> tuple[list[str], list[str]]:
+    base = [
         str(python_executable),
         "-I",
         "-B",
         str(cli_path),
         "--config",
         str(config_dir),
-        "--download",
-        "--import",
-        "--analyze",
+    ]
+    stats = [
         "--monitoring",
         "--sleep",
         "--rhr",
         "--hrv",
         "--weight",
     ]
+    download = [*base, "--download", *stats]
+    import_analyze = [*base, "--import", "--analyze", "--latest", *stats]
+    return download, import_analyze
 
 
 def _sanitized_runner_environment() -> dict[str, str]:
@@ -882,9 +1037,23 @@ def execute_sync(
             start,
             end,
             expected_sha256=plan["bindings"]["config"]["sha256"],
+            expected_token_store_sha256=plan["bindings"]["config"][
+                "token_store_sha256"
+            ],
+            expected_data_root_path_sha256=plan["bindings"]["config"][
+                "data_root_path_sha256"
+            ],
+            expected_data_root_identity_sha256=plan["bindings"]["config"][
+                "data_root_identity_sha256"
+            ],
+            expected_db_dir_identity_sha256=plan["bindings"]["config"][
+                "db_dir_identity_sha256"
+            ],
         ) as temp_config_dir:
             temporary_config = temp_config_dir / CONFIG_NAME
+            temporary_token_store = temp_config_dir / TOKEN_STORE_NAME
             temporary_config_sha256 = _file_sha256(temporary_config)
+            temporary_token_store_sha256 = _file_sha256(temporary_token_store)
             # Re-read the runner bytes and isolated environment immediately before
             # invocation so a post-plan path or file replacement fails closed.
             current_runner = build_runner_binding(python_executable, cli_path)
@@ -902,7 +1071,9 @@ def execute_sync(
             )
             if _file_sha256(temporary_config) != temporary_config_sha256:
                 raise SyncConfigurationError("temporary_config_changed")
-            command = build_garmindb_command(
+            if _file_sha256(temporary_token_store) != temporary_token_store_sha256:
+                raise SyncConfigurationError("temporary_token_store_changed")
+            commands = build_garmindb_commands(
                 python_executable, cli_path, temp_config_dir
             )
             consume_capability(
@@ -917,24 +1088,41 @@ def execute_sync(
                 operation=SYNC_OPERATION,
                 request=capability_request,
             )
-            completed = runner(
-                command,
-                cwd=temp_config_dir,
-                env=_sanitized_runner_environment(),
-                stdin=subprocess.DEVNULL,
-                stdout=subprocess.PIPE,
-                stderr=subprocess.STDOUT,
-                text=True,
-                encoding="utf-8",
-                errors="replace",
-                timeout=timeout_seconds,
-                check=False,
-            )
-        exit_code, payload = classify_process_result(
-            completed.returncode, completed.stdout or ""
-        )
+            for current_stage, command in zip(
+                ("download", "import_analyze"), commands, strict=True
+            ):
+                completed = runner(
+                    command,
+                    cwd=temp_config_dir,
+                    env=_sanitized_runner_environment(),
+                    stdin=subprocess.DEVNULL,
+                    stdout=subprocess.PIPE,
+                    stderr=subprocess.STDOUT,
+                    text=True,
+                    encoding="utf-8",
+                    errors="replace",
+                    timeout=timeout_seconds,
+                    check=False,
+                )
+                exit_code, payload = classify_process_result(
+                    completed.returncode, completed.stdout or ""
+                )
+                if exit_code != EXIT_OK:
+                    payload["stage"] = current_stage
+                    break
+            else:
+                exit_code = EXIT_OK
+                payload = {
+                    "ok": True,
+                    "status": "sync_completed",
+                    "stages": ["download", "import_analyze"],
+                }
     except subprocess.TimeoutExpired:
-        exit_code, payload = EXIT_TIMEOUT, {"ok": False, "status": "sync_timeout"}
+        exit_code, payload = EXIT_TIMEOUT, {
+            "ok": False,
+            "status": "sync_timeout",
+            "stage": current_stage,
+        }
     except (CapabilityError, SyncPlanError) as exc:
         exit_code, payload = EXIT_AUTHORIZATION, {
             "ok": False,

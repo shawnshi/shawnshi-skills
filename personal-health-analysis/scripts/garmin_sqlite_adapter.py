@@ -482,7 +482,8 @@ def get_daily_friction_matrix(days=90, derivation_config=None):
     except Exception as exc:
         raise LocalDatabaseReadError("friction_summary_query_failed") from exc
     finally:
-        if 'conn_sum' in locals(): conn_sum.close()
+        if 'conn_sum' in locals():
+            conn_sum.close()
     
     # 3. Merge with a complete date index while retaining missing observations.
     date_rng = pd.date_range(start=start_date, end=end_date, freq='D')

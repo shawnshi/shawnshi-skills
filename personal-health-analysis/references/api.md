@@ -1,21 +1,23 @@
 # Garmin Connect 实时访问参考（非官方）
 
-本资料只用于用户本次明确授权的实时读取、认证或同步。技能通过固定版本 `garminconnect==0.3.9` 访问 Garmin Connect 的非公开 Web 接口；该接口可能变化、限流或与 Garmin 使用条款存在冲突。生产集成应优先评估 Garmin Health API 的正式合作路径。
+本资料只用于用户本次允许联网后的实时读取、认证或同步。显式调用本技能即授权读取请求窗口内全部受支持健康指标；未给窗口时默认最近 7 天。技能通过固定版本 `garminconnect==0.3.9` 访问 Garmin Connect 的非公开 Web 接口；该接口可能变化、限流或与 Garmin 使用条款存在冲突。生产集成应优先评估 Garmin Health API 的正式合作路径。
 
 ## 授权边界
 
 - `--allow-network` 只允许本次命令联网，不允许读取任意健康数据。
-- `--allow-health-data` 必须绑定具体指标和精确日期窗口；实时命令不得静默使用默认窗口。
+- 技能根据显式调用自动附加 `--allow-health-data`；该 CLI 标志仍绑定本次指标和日期窗口，不要求用户重复确认。未指定日期时由技能显式传入默认最近 7 天，不能省略窗口让实时命令自行推断。
 - `--allow-token-write` 只用于登录时创建或刷新持久令牌。
 - `--allow-download` 只用于指定活动 ID、格式和隔离输出目录。
 - `--allow-sync` 只用于执行已生成、未过期且绑定完全一致的 GarminDB 计划。
-- 本地读取失败不得自动切换到实时接口；任意授权不得跨命令、跨日期或跨用途复用。
+- 只有本地结果明确为 `no_data`，且本次联网已授权、窗口与组件均已绑定时，才可用 `--fallback-live` 自动切换到实时接口。用户未缩小指标时使用 `sleep,hrv,body_battery,heart_rate,activities,stress,training_load_series`；`partial`、数据库变化、Schema 错误或其他读取异常不得回退。联网及副作用授权不得跨命令、跨日期或跨用途复用。
 
 这些能力是进程内防误用控制，不是抵御同一进程恶意代码的安全沙箱。
 
-## 安装
+## 当前解释器与可选隔离部署
 
-只有用户明确要求安装时，才从技能根目录使用已审核的离线纯 Wheel 仓库：
+普通运行不要求技能目录存在虚拟环境。将 `<SKILL_PYTHON>` 解析为本次选定解释器的 `sys.executable` 绝对路径，并用同一解释器运行预检和后续命令。本地路径先运行 `<SKILL_PYTHON> scripts/runtime_preflight.py --mode local`；本页实时路径先运行 `--mode live`。只有返回 `RUNTIME_READY` 才继续，失败时不自动安装或切换解释器。
+
+只有用户明确要求隔离部署时，才从技能根目录使用已审核的离线纯 Wheel 仓库：
 
 ```powershell
 ./install.ps1 -Offline -Wheelhouse <TRUSTED_WHEELHOUSE>
@@ -25,7 +27,7 @@
 ./install.sh --offline --wheelhouse <TRUSTED_WHEELHOUSE>
 ```
 
-一步式在线安装已禁用。安装先在目标同级暂存目录构建，核对锁文件、平台/Python 标签、`wheelhouse-manifest.json`、每个 Wheel SHA-256、实际 pip 消费哈希和最终安装集合，全部通过才发布。pip 使用 `--isolated --no-index --require-hashes --only-binary=:all: --disable-pip-version-check`。清单仍不是发布者签名；需要来源认证时必须使用技能目录之外的签名和可信公钥。
+一步式在线安装已禁用。该工具是可选部署方式，不是普通运行前提。安装先在目标同级暂存目录构建，核对锁文件、平台/Python 标签、`wheelhouse-manifest.json`、每个 Wheel SHA-256、实际 pip 消费哈希和最终安装集合，全部通过才发布。pip 使用 `--isolated --no-index --require-hashes --only-binary=:all: --disable-pip-version-check`。清单仍不是发布者签名；需要来源认证时必须使用技能目录之外的签名和可信公钥。
 
 ## 认证
 
@@ -47,7 +49,15 @@
 <SKILL_PYTHON> scripts/garmin_data.py hrv --source live --days 7 --allow-network --allow-health-data
 ```
 
-扩展指标、时间点和活动文件命令见 `advanced_tools.md`。时间点查询要求无歧义的 IANA 本地时刻，容差限定为 0–3600 秒。`--period` 只接受正整数天数（如 `7d`）或 `YTD`，非法、零值和负值直接失败；`YTD` 包含 1 月 1 日与当前日。实时 `summary` 与面板固定声明并读取 sleep、hrv、body_battery、heart_rate、activities、stress、training_load_series；stress 使用日度压力端点，不读取或返回步数。它们不会读取 Profile、体成分、补水、Fitness Age 或设备闹钟。实时分析按用途缩小为：`baseline_change` 读取 sleep/hrv/heart_rate，`readiness` 读取 sleep/hrv/body_battery/stress，`audit` 与 `insight_cn` 读取 sleep/hrv/body_battery/heart_rate/stress，`env_stress` 只读取 activities；`long_term_load` 和 `device_audit` 不支持实时来源。所有实时报告和分析都需要显式 `--days` 或 `--period`，并同时提供联网与健康数据授权。
+扩展指标、时间点和活动文件命令见 `advanced_tools.md`。时间点查询要求无歧义的 IANA 本地时刻，容差限定为 0–3600 秒。`--period` 只接受正整数天数（如 `7d`）或 `YTD`，非法、零值和负值直接失败；`YTD` 包含 1 月 1 日与当前日。实时面板从 sleep、hrv、body_battery、heart_rate、activities、stress、training_load_series 中读取默认全部组件或用户指定的更窄子集；stress 使用日度压力端点，不读取或返回步数。它不会读取 Profile、体成分、补水、Fitness Age 或设备闹钟。实时分析按用途缩小为：`baseline_change` 读取 sleep/hrv/heart_rate，`readiness` 读取 sleep/hrv/body_battery/stress，`audit` 与 `insight_cn` 读取 sleep/hrv/body_battery/heart_rate/stress，`env_stress` 只读取 activities；`long_term_load` 和 `device_audit` 不支持实时来源。所有实时报告和分析都需要显式窗口及联网授权；健康数据 CLI 标志由技能根据默认授权自动附加。
+
+本地无数据后按相同窗口读取实时六类指标示例：
+
+```bash
+<SKILL_PYTHON> scripts/garmin_chart.py dashboard --days 7 --source local --fallback-live --components sleep,hrv,body_battery,heart_rate,activities,stress --allow-network --allow-health-data --output <HTML_PATH>
+```
+
+命令先完成本地验证读取；只有结果状态为 `no_data` 才申请并消费实时能力。组件重复、未知、为空或未显式提供时，在客户端初始化前失败。
 
 请求参数必须在客户端初始化前验证。能力对象仅保存请求的 SHA-256，不保留账户、指标窗口或输出路径明文；健康数据和下载能力在敏感动作前消费一次。
 
@@ -72,7 +82,7 @@
 <SKILL_PYTHON> scripts/sync_health_data.py sync --start 2026-08-01 --end 2026-08-07 --allow-network --allow-sync --config-dir <TRUSTED_CONFIG_DIR> --garmindb-python <TRUSTED_GARMINDB_PYTHON> --plan-file <SESSION_SCRATCH>/sync-plan.json
 ```
 
-计划绑定窗口、配置、解释器、CLI、`pyvenv.cfg`、site-packages 文件树和固定包元数据。启动前会重新验证计划有效期、配置、临时配置和 runner，并用 `python -I -B`、移除 Python/pip/TLS 信任覆盖后的环境、关闭 stdin 的子进程运行。不得从 `PATH` 自动发现 CLI，不得使用备用 API；私有 CA 需要另建显式绑定路径、摘要与用途的受控流程。
+GarminDB runner 可使用显式指定的全局 Python 或虚拟环境，不要求独立虚拟目录。计划绑定窗口、配置、同目录令牌、解析后的绝对数据根、`DBs` 目录身份、解释器、相邻 CLI、可选 `pyvenv.cfg`、site-packages 文件树和固定包元数据。执行时配置与令牌只复制到自动删除的临时目录，并把临时配置改写为已绑定的绝对数据根，避免依赖继承的主目录变量。由于 GarminDB 把结束日作为开区间，临时配置把用户结束日加一天，以维持首尾包含的窗口。执行拆为精确窗口下载和 `--latest` 导入分析两个阶段；`--latest` 只用于离线导入本次新增文件，不用于下载。启动前会重新验证计划有效期、配置、令牌、数据根、临时副本和 runner，并用 `python -I -B`、移除 Python/pip/TLS 信任覆盖后的环境、关闭 stdin 的子进程运行。不得从 `PATH` 自动发现 CLI，不得使用备用 API；私有 CA 需要另建显式绑定路径、摘要与用途的受控流程。进程返回成功后还要核对目标数据库指纹和请求窗口覆盖。
 
 SHA-256 只能发现与参考字节不一致，不能证明发布者身份，也不能抵御同一 Windows 用户下可同时修改技能和参考摘要的敌对进程。高对抗要求见 `external_acceptance.md`，必须引入独立账号、代码签名/执行策略或不可变运行环境。
 

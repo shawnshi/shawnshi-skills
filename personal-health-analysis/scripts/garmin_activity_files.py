@@ -423,7 +423,7 @@ def query_data_at_time(data, target_time):
     if isinstance(target_time, str):
         try:
             target_dt = datetime.fromisoformat(target_time.replace("Z", "+00:00"))
-        except:
+        except (TypeError, ValueError):
             return {"error": f"Invalid time format: {target_time}"}
     else:
         target_dt = target_time

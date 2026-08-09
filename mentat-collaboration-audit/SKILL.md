@@ -15,7 +15,10 @@ description: 基于真实会话记录、日志、工具调用和遥测事件审�
 ## 执行流程
 
 1. 明确根任务、时间范围、数据来源、缺失数据和目标指标。数据不足时先说明能回答与不能回答的问题。
+   - 完整读取任一选定技能后，运行 `python scripts/skill_load_receipt.py --skill-path <SKILL.md> --root-task-id <ROOT_TASK_ID> --actor-id <ACTOR_ID> --context-epoch <EPOCH> --output <SESSION_SCRATCH>/skill-load.jsonl`，记录内容哈希和基于 `cl100k_base` 的可复算内容 Token。该值用于技能文本比较，不冒充模型账单 Token。
 2. 收集真实证据并建立事件序列，区分观察事实、计算结果、用户陈述和解释性推断。
+   - 活动 JSONL 仍在增长或被占用时，先运行 `python scripts/freeze_jsonl_snapshot.py --source <ACTIVE_JSONL> --output <SESSION_SCRATCH>/activity.snapshot.jsonl --receipt <SESSION_SCRATCH>/activity.snapshot.receipt.json`；后续只读取冻结文件。
+   - 报告必须披露冻结时间、源文件捕获字节数、稳定前缀终点、快照 SHA-256、记录数和是否排除了尾部不完整记录。
 3. 输入为 JSON/JSONL 时，按 [references/SCHEMA.md](references/SCHEMA.md) 核对字段，并使用 `python generate_final_report.py --input <path> --strict` 聚合；不得忽略部分覆盖。
 4. 按 [references/WORKFLOW.md](references/WORKFLOW.md) 检查等待、技能载入、错误重试、子代理和写入授权；没有对应字段时标记不可计算。
 5. 每条发现绑定证据位置、置信度、替代解释、影响和复现条件；不把相关性写成因果关系。
@@ -33,6 +36,8 @@ description: 基于真实会话记录、日志、工具调用和遥测事件审�
 - 保存过的聚合 JSON 可运行 `python scripts/validate_agent_audit.py <report.json>` 验证。Schema、字段类型、来源标识和覆盖状态错误会阻断；篇幅、关键词、固定条目数和语言比例只产生提示。
 - 用户要求交互式仪表盘时，可使用 `assets/template.html`；模板必须保持自包含，不从网络加载脚本。
 - 当前唯一数据入口是 `generate_final_report.py` 的显式 `--input` 聚合流程；不保留会扫描私有会话目录的兼容入口。
+- `scripts/freeze_jsonl_snapshot.py` 只复制调用时已经完整换行的 JSONL 前缀，默认拒绝覆盖；它不读取或修复尾部半条记录。
+- `scripts/skill_load_receipt.py` 只对本次实际全文读取的 `SKILL.md` 生成回执；不得扫描技能目录后批量补造载入事件。
 
 ## 验证分层
 

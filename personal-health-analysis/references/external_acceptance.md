@@ -14,7 +14,7 @@
 
 ## 2. 真实 Garmin 读取
 
-真实读取前，用户本次授权必须同时说明：使用非官方 Garmin Connect 接口、具体指标、精确日期或日期范围，以及允许联网并读取这些健康数据。不得从“分析我的健康”推导登录、刷新令牌或扩大日期范围。
+显式调用本技能即授权读取请求窗口内全部受支持健康指标，未给窗口时默认最近 7 天；用户指定更窄指标时必须缩小。真实读取前仍须说明使用非官方 Garmin Connect 接口并取得本次联网授权，不得由健康数据默认授权推导登录、刷新令牌、同步、下载轨迹或扩大日期范围。当前选定解释器还必须先通过 `<SKILL_PYTHON> scripts/runtime_preflight.py --mode live`；该预检不授予联网或其他副作用，也不要求使用虚拟目录。
 
 登录会使用上游客户端的移动 SSO 流程，并可能读取账户 Profile/Settings。技能不再用当日健康摘要探测会话。持久令牌写入是独立动作：
 
@@ -22,7 +22,7 @@
 <SKILL_PYTHON> scripts/garmin_auth.py login --email <EMAIL> --allow-network --allow-token-write
 ```
 
-恢复已有会话时使用令牌的临时副本，避免刷新过程改写持久令牌目录。实时健康数据读取还要显式提供 `--allow-health-data` 与窗口：
+恢复已有会话时使用令牌的临时副本，避免刷新过程改写持久令牌目录。技能依据显式调用自动提供 `--allow-health-data`，并始终传入请求窗口：
 
 ```bash
 <SKILL_PYTHON> scripts/garmin_data.py sleep --source live --days 1 --allow-network --allow-health-data
@@ -33,7 +33,7 @@
 
 ## 3. 原始活动文件
 
-用户须指定活动 ID、格式和会话隔离目录，并分别允许联网、读取健康数据和下载：
+用户须指定活动 ID、格式和会话隔离目录，并分别允许联网和下载；健康数据 CLI 标志由技能自动附加，但不替代这两项副作用授权：
 
 ```bash
 <SKILL_PYTHON> scripts/garmin_activity_files.py download --activity-id <ID> --format fit --output-dir <SESSION_SCRATCH> --allow-network --allow-health-data --allow-download
@@ -76,7 +76,7 @@ Wheel 清单和 runner SHA-256 是完整性证据，不是发布者签名。基�
 
 ## 6. 仍需外部提供的材料
 
-- 真实 Garmin 会话或凭据及本次精确数据授权；
+- 真实 Garmin 会话或凭据及本次联网授权；
 - 受审核 GarminDB runner 和外部执行信任根；
 - 官方 Validator/R4 包、Profile/IG 及依赖、术语资产的版本和 SHA-256；
 - 接收端沙盒、认证、CapabilityStatement、Bundle 处理语义和接收方证明。

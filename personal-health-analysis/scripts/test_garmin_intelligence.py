@@ -116,13 +116,30 @@ class SafetyBoundaryTests(unittest.TestCase):
             with (
                 patch.dict(os.environ, {"GARMIN_STATE_DIR": str(implicit_dir)}),
                 patch.object(module, "_load_summary", return_value=sample_summary()),
-                patch.object(sys, "argv", ["garmin_intelligence.py", "audit"]),
+                patch.object(
+                    sys,
+                    "argv",
+                    ["garmin_intelligence.py", "audit", "--allow-health-data"],
+                ),
                 patch("sys.stdout", new_callable=io.StringIO),
             ):
                 rc = module.main()
 
             self.assertEqual(rc, 0)
             self.assertFalse(implicit_dir.exists())
+
+    def test_local_summary_requires_explicit_health_data_permission(self):
+        with patch.object(
+            module,
+            "fetch_local_summary",
+            side_effect=AssertionError("permission gate must run before local read"),
+        ) as fetch_local:
+            with self.assertRaisesRegex(
+                PermissionError, "HEALTH_DATA_ACCESS_NOT_AUTHORIZED"
+            ):
+                module._load_summary(7, "local", allow_health_data=False)
+
+        fetch_local.assert_not_called()
 
     def test_direct_state_write_requires_explicit_capability(self):
         with tempfile.TemporaryDirectory() as temp_root:
@@ -233,6 +250,7 @@ class SafetyBoundaryTests(unittest.TestCase):
             base_argv = [
                 "garmin_intelligence.py",
                 "audit",
+                "--allow-health-data",
                 "--state-output",
                 str(output),
             ]

@@ -17,7 +17,7 @@
   "resource_directories": [
     {
       "name": "scripts",
-      "file_count": 7
+      "file_count": 11
     },
     {
       "name": "references",
@@ -58,6 +58,16 @@
       "path": "scripts\\validate_agent_audit.py",
       "exists": true,
       "resolved_path": "C:\\Users\\shich\\.codex\\skills\\mentat-collaboration-audit\\scripts\\validate_agent_audit.py"
+    },
+    {
+      "path": "scripts\\freeze_jsonl_snapshot.py",
+      "exists": true,
+      "resolved_path": "C:\\Users\\shich\\.codex\\skills\\mentat-collaboration-audit\\scripts\\freeze_jsonl_snapshot.py"
+    },
+    {
+      "path": "scripts\\skill_load_receipt.py",
+      "exists": true,
+      "resolved_path": "C:\\Users\\shich\\.codex\\skills\\mentat-collaboration-audit\\scripts\\skill_load_receipt.py"
     }
   ],
   "missing_declared_dependencies": []

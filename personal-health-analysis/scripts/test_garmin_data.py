@@ -159,7 +159,11 @@ class GarminSummaryTests(unittest.TestCase):
         output = io.StringIO()
         with (
             patch.dict(sys.modules, {"garmin_sqlite_adapter": adapter_stub}),
-            patch.object(sys, "argv", ["garmin_data.py", "summary", "--days", "1"]),
+            patch.object(
+                sys,
+                "argv",
+                ["garmin_data.py", "summary", "--days", "1", "--allow-health-data"],
+            ),
             patch("sys.stdout", output),
         ):
             rc = garmin_data.main()
@@ -186,7 +190,11 @@ class GarminSummaryTests(unittest.TestCase):
                 "_fetch_local_metric",
                 side_effect=LocalDatabaseReadError("sleep_query_failed"),
             ),
-            patch.object(sys, "argv", ["garmin_data.py", "sleep", "--days", "1"]),
+            patch.object(
+                sys,
+                "argv",
+                ["garmin_data.py", "sleep", "--days", "1", "--allow-health-data"],
+            ),
             patch("sys.stdout", output),
         ):
             rc = garmin_data.main()
@@ -446,13 +454,37 @@ class GarminSummaryTests(unittest.TestCase):
                 "get_client",
                 side_effect=AssertionError("live client must not be initialized"),
             ) as get_client,
-            patch.object(sys, "argv", ["garmin_data.py", "sleep", "--days", "1"]),
+            patch.object(
+                sys,
+                "argv",
+                ["garmin_data.py", "sleep", "--days", "1", "--allow-health-data"],
+            ),
             patch("sys.stdout", new_callable=io.StringIO),
         ):
             rc = garmin_data.main()
 
         self.assertEqual(rc, 0)
         get_client.assert_not_called()
+
+    def test_local_source_requires_explicit_health_data_permission(self):
+        output = io.StringIO()
+        with (
+            patch.object(
+                garmin_data,
+                "_fetch_local_metric",
+                side_effect=AssertionError("permission gate must run before local read"),
+            ) as fetch_local,
+            patch.object(sys, "argv", ["garmin_data.py", "sleep", "--days", "1"]),
+            patch("sys.stdout", output),
+        ):
+            rc = garmin_data.main()
+
+        self.assertEqual(rc, 2)
+        self.assertEqual(
+            json.loads(output.getvalue()),
+            {"status": "health_data_authorization_required"},
+        )
+        fetch_local.assert_not_called()
 
     def test_live_source_requires_explicit_network_permission(self):
         with (

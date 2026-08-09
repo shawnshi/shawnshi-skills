@@ -137,6 +137,8 @@ class AggregateTests(unittest.TestCase):
                 "context_epoch": "c1",
                 "skill_name": "audit",
                 "skill_sha256": "abc",
+                "skill_tokens": 100,
+                "tokenizer": "cl100k_base",
             },
             {
                 "event_type": "skill_load",
@@ -145,6 +147,8 @@ class AggregateTests(unittest.TestCase):
                 "context_epoch": "c1",
                 "skill_name": "audit",
                 "skill_sha256": "abc",
+                "skill_tokens": 100,
+                "tokenizer": "cl100k_base",
             },
             {
                 "event_type": "skill_load",
@@ -153,6 +157,8 @@ class AggregateTests(unittest.TestCase):
                 "context_epoch": "c2",
                 "skill_name": "audit",
                 "skill_sha256": "abc",
+                "skill_tokens": 100,
+                "tokenizer": "cl100k_base",
             },
             {
                 "event_type": "retry",
@@ -244,6 +250,9 @@ class AggregateTests(unittest.TestCase):
         self.assertEqual(metrics["wait"]["wait_with_local_work_count"], 2)
         self.assertEqual(metrics["skill_load"]["duplicate_load_count"], 1)
         self.assertAlmostEqual(metrics["skill_load"]["duplicate_load_rate"], 1 / 3, places=4)
+        self.assertEqual(metrics["skill_load"]["loaded_tokens"], 300)
+        self.assertEqual(metrics["skill_load"]["token_coverage"], 1.0)
+        self.assertEqual(metrics["skill_load"]["unverifiable_load_count"], 0)
         self.assertEqual(metrics["retry"]["blind_retry_count"], 1)
         self.assertAlmostEqual(metrics["retry"]["blind_retry_rate"], 1 / 3, places=4)
         self.assertEqual(metrics["retry"]["ambiguous_write_retry_count"], 1)

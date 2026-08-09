@@ -10,6 +10,25 @@ from garmin_capabilities import issue_capability
 
 
 class GarminChartFailureContractTests(unittest.TestCase):
+    def test_local_dashboard_requires_health_data_permission_before_read(self):
+        stderr = io.StringIO()
+        with (
+            patch.object(
+                garmin_chart,
+                "fetch_local_summary",
+                side_effect=AssertionError("permission gate must run before local read"),
+            ) as fetch_local,
+            patch("sys.stderr", stderr),
+        ):
+            result = garmin_chart.main(["dashboard", "--days", "7"])
+
+        self.assertEqual(result, 2)
+        self.assertEqual(
+            json.loads(stderr.getvalue())["status"],
+            "HEALTH_DATA_ACCESS_NOT_AUTHORIZED",
+        )
+        fetch_local.assert_not_called()
+
     def test_invalid_period_stops_before_live_client_initialization(self):
         stderr = io.StringIO()
         with (
@@ -41,7 +60,7 @@ class GarminChartFailureContractTests(unittest.TestCase):
         }
         malformed = []
         wrong_components = dict(base)
-        wrong_components["components"] = ["sleep"]
+        wrong_components["components"] = ["sleep", "profile"]
         malformed.append(wrong_components)
         wrong_window = dict(base)
         wrong_window["end"] = "2026-08-03"
@@ -131,6 +150,7 @@ class GarminChartFailureContractTests(unittest.TestCase):
                         "7",
                         "--source",
                         "local",
+                        "--allow-health-data",
                         "--output",
                         str(output),
                     ]
@@ -142,6 +162,137 @@ class GarminChartFailureContractTests(unittest.TestCase):
             self.assertEqual(payload["status"], "DATA_SOURCE_UNAVAILABLE")
             self.assertEqual(payload["source"], "local")
             self.assertFalse(payload["live_fallback_attempted"])
+
+    def test_no_data_fallback_requires_explicit_network_authorization(self):
+        stderr = io.StringIO()
+        with (
+            patch.object(garmin_chart, "fetch_local_summary") as fetch_local,
+            patch.object(garmin_chart, "get_client") as get_client,
+            patch("sys.stderr", stderr),
+        ):
+            rc = garmin_chart.main(
+                [
+                    "dashboard",
+                    "--days",
+                    "7",
+                    "--source",
+                    "local",
+                    "--fallback-live",
+                    "--components",
+                    "sleep,hrv,body_battery,heart_rate,activities,stress",
+                    "--allow-health-data",
+                ]
+            )
+
+        self.assertEqual(rc, 2)
+        self.assertEqual(
+            json.loads(stderr.getvalue())["status"],
+            "NETWORK_ACCESS_NOT_AUTHORIZED",
+        )
+        fetch_local.assert_not_called()
+        get_client.assert_not_called()
+
+    def test_local_no_data_falls_back_to_exact_authorized_components(self):
+        components = [
+            "sleep",
+            "hrv",
+            "body_battery",
+            "heart_rate",
+            "activities",
+            "stress",
+        ]
+        insight = {
+            "overall_insight": "fixture",
+            "audit_data": {},
+            "period": "fixture",
+            "quant_scores": {},
+        }
+        with tempfile.TemporaryDirectory() as temp_root:
+            output = Path(temp_root) / "fallback.html"
+            with (
+                patch.object(
+                    garmin_chart,
+                    "fetch_local_summary",
+                    return_value={"status": "no_data"},
+                ),
+                patch.object(garmin_chart, "get_client", return_value=object()) as get_client,
+                patch.object(
+                    garmin_chart,
+                    "fetch_summary",
+                    return_value={"status": "partial", "sleep": []},
+                ) as fetch_summary,
+                patch.object(
+                    garmin_chart, "generate_chinese_insight", return_value=insight
+                ),
+                patch.object(garmin_chart, "render_report", return_value="<html></html>"),
+            ):
+                rc = garmin_chart.main(
+                    [
+                        "dashboard",
+                        "--days",
+                        "7",
+                        "--source",
+                        "local",
+                        "--fallback-live",
+                        "--components",
+                        ",".join(components),
+                        "--allow-network",
+                        "--allow-health-data",
+                        "--output",
+                        str(output),
+                    ]
+                )
+
+        self.assertEqual(rc, 0)
+        request = get_client.call_args.kwargs["request"]
+        self.assertEqual(request["components"], components)
+        fetch_summary.assert_called_once_with(
+            get_client.return_value,
+            start=request["start"],
+            end=request["end"],
+            components=components,
+        )
+
+    def test_partial_local_data_does_not_fall_back_live(self):
+        insight = {
+            "overall_insight": "fixture",
+            "audit_data": {},
+            "period": "fixture",
+            "quant_scores": {},
+        }
+        with tempfile.TemporaryDirectory() as temp_root:
+            output = Path(temp_root) / "local-partial.html"
+            with (
+                patch.object(
+                    garmin_chart,
+                    "fetch_local_summary",
+                    return_value={"status": "partial", "sleep": []},
+                ),
+                patch.object(garmin_chart, "get_client") as get_client,
+                patch.object(
+                    garmin_chart, "generate_chinese_insight", return_value=insight
+                ),
+                patch.object(garmin_chart, "render_report", return_value="<html></html>"),
+            ):
+                rc = garmin_chart.main(
+                    [
+                        "dashboard",
+                        "--days",
+                        "7",
+                        "--source",
+                        "local",
+                        "--fallback-live",
+                        "--components",
+                        "sleep,hrv,body_battery,heart_rate,activities,stress",
+                        "--allow-network",
+                        "--allow-health-data",
+                        "--output",
+                        str(output),
+                    ]
+                )
+
+        self.assertEqual(rc, 0)
+        get_client.assert_not_called()
 
 
 if __name__ == "__main__":

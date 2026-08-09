@@ -32,6 +32,11 @@ def synthetic_bindings(seed="a"):
         "config": {
             "filename": "GarminConnectConfig.json",
             "sha256": "d" * 64,
+            "token_store_filename": "garmin_tokens.json",
+            "token_store_sha256": "9" * 64,
+            "data_root_path_sha256": "7" * 64,
+            "data_root_identity_sha256": "8" * 64,
+            "db_dir_identity_sha256": "6" * 64,
         },
         "runner": {
             "interpreter": file_identity,
@@ -81,14 +86,27 @@ class SyncHealthDataCliTests(unittest.TestCase):
 
     def make_bound_environment(self, root):
         root = Path(root)
-        config_dir = root / "config"
+        config_dir = root / ".GarminDb"
         config_dir.mkdir()
+        data_root = config_dir / "HealthData"
+        (data_root / "DBs").mkdir(parents=True)
         config_file = config_dir / self.module.CONFIG_NAME
         config_file.write_text(
             json.dumps(
-                {"username": "private@example.test", "data": {}},
+                {
+                    "username": "private@example.test",
+                    "data": {},
+                    "directories": {
+                        "relative_to_home": True,
+                        "base_dir": ".GarminDb/HealthData",
+                    },
+                },
                 sort_keys=True,
             ),
+            encoding="utf-8",
+        )
+        (config_dir / self.module.TOKEN_STORE_NAME).write_text(
+            json.dumps({"oauth1": "synthetic", "oauth2": "synthetic"}),
             encoding="utf-8",
         )
 
@@ -103,6 +121,53 @@ class SyncHealthDataCliTests(unittest.TestCase):
         interpreter = scripts_dir / "python.exe"
         cli = scripts_dir / "garmindb_cli.py"
         interpreter.write_bytes(b"synthetic isolated interpreter")
+        cli.write_text("# synthetic trusted CLI\n", encoding="utf-8")
+        for directory, name, version in (
+            ("GarminDB-3.8.0.dist-info", "garmindb", "3.8.0"),
+            ("garminconnect-0.3.9.dist-info", "garminconnect", "0.3.9"),
+        ):
+            metadata_dir = site_packages / directory
+            metadata_dir.mkdir()
+            (metadata_dir / "METADATA").write_text(
+                f"Metadata-Version: 2.1\nName: {name}\nVersion: {version}\n\n",
+                encoding="utf-8",
+            )
+        return config_dir, config_file, interpreter, cli
+
+    def make_global_environment(self, root):
+        root = Path(root)
+        config_dir = root / ".GarminDb"
+        config_dir.mkdir()
+        data_root = config_dir / "HealthData"
+        (data_root / "DBs").mkdir(parents=True)
+        config_file = config_dir / self.module.CONFIG_NAME
+        config_file.write_text(
+            json.dumps(
+                {
+                    "username": "private@example.test",
+                    "data": {},
+                    "directories": {
+                        "relative_to_home": True,
+                        "base_dir": ".GarminDb/HealthData",
+                    },
+                },
+                sort_keys=True,
+            ),
+            encoding="utf-8",
+        )
+        (config_dir / self.module.TOKEN_STORE_NAME).write_text(
+            json.dumps({"oauth1": "synthetic", "oauth2": "synthetic"}),
+            encoding="utf-8",
+        )
+
+        python_root = root / "Python313"
+        scripts_dir = python_root / "Scripts"
+        site_packages = python_root / "Lib" / "site-packages"
+        scripts_dir.mkdir(parents=True)
+        site_packages.mkdir(parents=True)
+        interpreter = python_root / "python.exe"
+        cli = scripts_dir / "garmindb_cli.py"
+        interpreter.write_bytes(b"synthetic global interpreter")
         cli.write_text("# synthetic trusted CLI\n", encoding="utf-8")
         for directory, name, version in (
             ("GarminDB-3.8.0.dist-info", "garmindb", "3.8.0"),
@@ -224,7 +289,16 @@ class SyncHealthDataCliTests(unittest.TestCase):
             self.assertRegex(plan["nonce"], r"^[0-9a-f]{32}$")
             self.assertIn("expires_at", plan)
             self.assertEqual(
-                set(plan["bindings"]["config"]), {"filename", "sha256"}
+                set(plan["bindings"]["config"]),
+                {
+                    "filename",
+                    "sha256",
+                    "token_store_filename",
+                    "token_store_sha256",
+                    "data_root_path_sha256",
+                    "data_root_identity_sha256",
+                    "db_dir_identity_sha256",
+                },
             )
             serialized = json.dumps(plan, sort_keys=True)
             self.assertNotIn("private@example.test", serialized)
@@ -580,7 +654,7 @@ class SyncHealthDataCliTests(unittest.TestCase):
         self.assertEqual(resolved_cli, cli.resolve())
         self.assertNotIn("shutil.which", SCRIPT_PATH.read_text(encoding="utf-8"))
 
-    def test_runner_discovery_rejects_a_non_venv_interpreter(self):
+    def test_runner_discovery_rejects_an_unsupported_layout(self):
         with tempfile.TemporaryDirectory() as temp_root:
             scripts_dir = Path(temp_root) / "Scripts"
             scripts_dir.mkdir()
@@ -589,9 +663,26 @@ class SyncHealthDataCliTests(unittest.TestCase):
             interpreter.write_bytes(b"not an isolated environment")
             with self.assertRaisesRegex(
                 self.module.SyncConfigurationError,
-                "isolated_runner_venv_required",
+                "runner_environment_layout_unsupported",
             ):
                 self.module.locate_garmindb_cli(interpreter)
+
+    def test_runner_discovery_and_binding_accept_explicit_global_python(self):
+        with tempfile.TemporaryDirectory() as root:
+            config_dir, _, interpreter, cli = self.make_global_environment(root)
+            resolved_interpreter, resolved_cli = self.module.locate_garmindb_cli(
+                interpreter
+            )
+            bindings = self.module.build_sync_bindings(config_dir, interpreter)
+
+        self.assertEqual(resolved_interpreter, interpreter.resolve())
+        self.assertEqual(resolved_cli, cli.resolve())
+        environment = bindings["runner"]["environment"]
+        self.assertEqual(
+            environment["evidence_method"],
+            "explicit_global_python_filesystem_read_only",
+        )
+        self.assertIsNone(environment["pyvenv_cfg_sha256"])
 
     def test_runner_binding_requires_exact_unique_package_evidence(self):
         for mutation, expected_error in (
@@ -717,17 +808,80 @@ class SyncHealthDataCliTests(unittest.TestCase):
 
         self.assertEqual(exit_code, self.module.EXIT_OK)
         self.assertEqual(payload["status"], "sync_completed")
-        runner.assert_called_once()
-        command = runner.call_args.args[0]
-        self.assertEqual(command[0], str(interpreter))
-        self.assertEqual(command[1:3], ["-I", "-B"])
-        self.assertEqual(command[3], str(cli))
-        self.assertEqual(runner.call_args.kwargs["stdin"], self.module.subprocess.DEVNULL)
-        self.assertNotIn("PYTHONPATH", runner.call_args.kwargs["env"])
+        self.assertEqual(runner.call_count, 2)
+        for call in runner.call_args_list:
+            command = call.args[0]
+            self.assertEqual(command[0], str(interpreter))
+            self.assertEqual(command[1:3], ["-I", "-B"])
+            self.assertEqual(command[3], str(cli))
+            self.assertEqual(call.kwargs["stdin"], self.module.subprocess.DEVNULL)
+            self.assertNotIn("PYTHONPATH", call.kwargs["env"])
+        self.assertIn("--download", runner.call_args_list[0].args[0])
+        self.assertNotIn("--latest", runner.call_args_list[0].args[0])
+        self.assertIn("--import", runner.call_args_list[1].args[0])
+        self.assertIn("--analyze", runner.call_args_list[1].args[0])
+        self.assertIn("--latest", runner.call_args_list[1].args[0])
+
+    def test_sync_runner_receives_bound_token_store_only_in_temporary_config(self):
+        start, end = self.module.parse_window("2026-08-01", "2026-08-07")
+        observed = {}
+
+        def inspect_runner(command, **kwargs):
+            config_dir = Path(command[command.index("--config") + 1])
+            observed["config_dir"] = config_dir
+            config_file = config_dir / self.module.CONFIG_NAME
+            observed["config_exists"] = config_file.is_file()
+            observed["config_payload"] = json.loads(config_file.read_text("utf-8"))
+            token_file = config_dir / self.module.TOKEN_STORE_NAME
+            observed["token_exists"] = token_file.is_file()
+            observed["token_payload"] = json.loads(token_file.read_text("utf-8"))
+            return unittest.mock.Mock(returncode=0, stdout="ok")
+
+        with tempfile.TemporaryDirectory() as temp_root:
+            config_dir, _, interpreter, _ = self.make_bound_environment(temp_root)
+            bindings = self.module.build_sync_bindings(config_dir, interpreter)
+            plan_path = Path(temp_root) / "sync-plan.json"
+            self.module.write_sync_plan_atomic(
+                plan_path,
+                self.module.build_sync_plan(start, end, bindings=bindings),
+            )
+            exit_code, payload = self.module.execute_sync(
+                start,
+                end,
+                network_capability=issue_capability(
+                    scope="network", operation="garmindb_sync", request=SYNC_REQUEST
+                ),
+                sync_capability=issue_capability(
+                    scope="sync", operation="garmindb_sync", request=SYNC_REQUEST
+                ),
+                plan_file=plan_path,
+                config_dir=config_dir,
+                garmindb_python=interpreter,
+                runner=inspect_runner,
+            )
+
+        self.assertEqual(exit_code, self.module.EXIT_OK)
+        self.assertEqual(payload["status"], "sync_completed")
+        self.assertTrue(observed["config_exists"])
+        self.assertTrue(observed["token_exists"])
+        self.assertEqual(
+            observed["token_payload"],
+            {"oauth1": "synthetic", "oauth2": "synthetic"},
+        )
+        self.assertFalse(
+            observed["config_payload"]["directories"]["relative_to_home"]
+        )
+        self.assertEqual(observed["config_payload"]["data"]["start_date"], "08/01/2026")
+        self.assertEqual(observed["config_payload"]["data"]["end_date"], "08/08/2026")
+        self.assertEqual(
+            Path(observed["config_payload"]["directories"]["base_dir"]),
+            Path(temp_root) / ".GarminDb" / "HealthData",
+        )
+        self.assertFalse(observed["config_dir"].exists())
 
     def test_changed_config_interpreter_or_cli_invalidates_bound_plan(self):
         start, end = self.module.parse_window("2026-08-01", "2026-08-07")
-        for changed_target in ("config", "interpreter", "cli"):
+        for changed_target in ("config", "token_store", "interpreter", "cli"):
             with self.subTest(changed_target=changed_target), tempfile.TemporaryDirectory() as root:
                 config_dir, config_file, interpreter, cli = self.make_bound_environment(root)
                 bindings = self.module.build_sync_bindings(config_dir, interpreter)
@@ -737,8 +891,15 @@ class SyncHealthDataCliTests(unittest.TestCase):
                     self.module.build_sync_plan(start, end, bindings=bindings),
                 )
                 if changed_target == "config":
+                    changed_config = json.loads(config_file.read_text("utf-8"))
+                    changed_config["username"] = "changed@example.test"
                     config_file.write_text(
-                        json.dumps({"username": "changed@example.test", "data": {}}),
+                        json.dumps(changed_config),
+                        encoding="utf-8",
+                    )
+                elif changed_target == "token_store":
+                    (config_dir / self.module.TOKEN_STORE_NAME).write_text(
+                        json.dumps({"oauth1": "changed", "oauth2": "changed"}),
                         encoding="utf-8",
                     )
                 elif changed_target == "interpreter":
@@ -883,20 +1044,27 @@ class SyncHealthDataCliTests(unittest.TestCase):
         self.assertEqual(status[0], self.module.EXIT_RATE_LIMIT)
         self.assertEqual(status[1]["status"], "rate_limited")
 
-    def test_command_is_bounded_and_never_uses_all_or_latest(self):
-        command = self.module.build_garmindb_command(
+    def test_commands_keep_download_bounded_and_import_only_latest_files(self):
+        download, import_analyze = self.module.build_garmindb_commands(
             Path("C:/Python/python.exe"),
             Path("C:/Python/Scripts/garmindb_cli.py"),
             Path("C:/safe/window-config"),
         )
-        self.assertNotIn("--all", command)
-        self.assertNotIn("--latest", command)
-        self.assertEqual(command[1:3], ["-I", "-B"])
-        self.assertIn("--monitoring", command)
-        self.assertIn("--sleep", command)
-        self.assertIn("--rhr", command)
-        self.assertIn("--hrv", command)
-        self.assertIn("--weight", command)
+        self.assertNotIn("--all", download)
+        self.assertNotIn("--latest", download)
+        self.assertIn("--download", download)
+        self.assertNotIn("--import", download)
+        self.assertIn("--latest", import_analyze)
+        self.assertNotIn("--download", import_analyze)
+        self.assertIn("--import", import_analyze)
+        self.assertIn("--analyze", import_analyze)
+        for command in (download, import_analyze):
+            self.assertEqual(command[1:3], ["-I", "-B"])
+            self.assertIn("--monitoring", command)
+            self.assertIn("--sleep", command)
+            self.assertIn("--rhr", command)
+            self.assertIn("--hrv", command)
+            self.assertIn("--weight", command)
 
 
 if __name__ == "__main__":
