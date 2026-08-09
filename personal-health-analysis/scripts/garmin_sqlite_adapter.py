@@ -8,6 +8,9 @@ GarminDB SQLite Adapter.
 Provides high-performance local data extraction for the personal-health-analysis skill.
 """
 
+import contextvars
+import hashlib
+import json
 import sqlite3
 import pandas as pd
 from pathlib import Path
@@ -18,6 +21,9 @@ DB_DIR = Path.home() / ".GarminDb"
 GARMIN_DB = DB_DIR / "garmin.db"
 MONITORING_DB = DB_DIR / "garmin_monitoring.db"
 ACTIVITIES_DB = DB_DIR / "garmin_activities.db"
+_PINNED_DATABASES = contextvars.ContextVar(
+    "garmin_pinned_databases", default=None
+)
 REQUIRED_PROVENANCE_FIELDS = (
     "source_type",
     "source",
@@ -29,6 +35,179 @@ REQUIRED_PROVENANCE_FIELDS = (
 )
 
 
+class LocalDatabaseChangedError(RuntimeError):
+    """Raised when a local database changes during one logical analysis."""
+
+
+class LocalDatabaseReadError(RuntimeError):
+    """Machine-readable local schema or query failure without raw SQL details."""
+
+
+def _candidate_paths(db_path):
+    requested = Path(db_path)
+    db_name = requested.name
+    pinned = _PINNED_DATABASES.get()
+    if pinned is not None and db_name in pinned:
+        return [pinned[db_name]]
+    return [
+        requested,
+        Path.home() / ".GarminDb" / "HealthData" / "DBs" / db_name,
+        Path.home() / "HealthData" / "DBs" / db_name,
+    ]
+
+
+def resolve_database_path(db_path):
+    """Resolve one GarminDB file without creating or modifying it."""
+    search_paths = _candidate_paths(db_path)
+    for candidate in search_paths:
+        candidate = Path(candidate).expanduser()
+        try:
+            if not candidate.is_file() or candidate.stat().st_size <= 0:
+                continue
+            uri = f"{candidate.resolve().as_uri()}?mode=ro"
+            connection = sqlite3.connect(uri, uri=True)
+            try:
+                tables = connection.execute(
+                    "SELECT name FROM sqlite_master WHERE type='table' LIMIT 1"
+                ).fetchall()
+            finally:
+                connection.close()
+            if tables:
+                return candidate.resolve()
+        except (OSError, sqlite3.Error):
+            continue
+    raise FileNotFoundError(
+        f"Valid database '{Path(db_path).name}' not found. "
+        f"Searched {len(search_paths)} read-only paths."
+    )
+
+
+def _hash_file_stably(path):
+    path = Path(path)
+    before = path.stat()
+    digest = hashlib.sha256()
+    with path.open("rb") as handle:
+        for chunk in iter(lambda: handle.read(1024 * 1024), b""):
+            digest.update(chunk)
+    after = path.stat()
+    if (before.st_size, before.st_mtime_ns) != (after.st_size, after.st_mtime_ns):
+        raise LocalDatabaseChangedError(
+            f"Local database '{path.name}' changed while its fingerprint was read."
+        )
+    return {
+        "sha256": digest.hexdigest(),
+        "size_bytes": after.st_size,
+        "mtime_ns": after.st_mtime_ns,
+    }
+
+
+def fingerprint_database(db_path):
+    """Return a path-free content, metadata, sidecar and schema fingerprint."""
+    path = resolve_database_path(db_path)
+    uri = f"{path.as_uri()}?mode=ro"
+    connection = sqlite3.connect(uri, uri=True)
+    try:
+        schema_rows = connection.execute(
+            """
+            SELECT type, name, tbl_name, COALESCE(sql, '')
+            FROM sqlite_master
+            WHERE type IN ('table', 'index', 'view', 'trigger')
+            ORDER BY type, name, tbl_name, sql
+            """
+        ).fetchall()
+    finally:
+        connection.close()
+    schema_payload = json.dumps(
+        schema_rows, ensure_ascii=False, separators=(",", ":")
+    ).encode("utf-8")
+    main = _hash_file_stably(path)
+    storage_digest = hashlib.sha256()
+    storage_digest.update(path.name.encode("utf-8"))
+    storage_digest.update(main["sha256"].encode("ascii"))
+    sidecars = []
+    for suffix in ("-wal", "-shm"):
+        sidecar = Path(f"{path}{suffix}")
+        if not sidecar.is_file():
+            continue
+        item = _hash_file_stably(sidecar)
+        storage_digest.update(sidecar.name.encode("utf-8"))
+        storage_digest.update(item["sha256"].encode("ascii"))
+        sidecars.append(
+            {
+                "name": sidecar.name,
+                "sha256": item["sha256"],
+                "size_bytes": item["size_bytes"],
+                "mtime_ns": item["mtime_ns"],
+            }
+        )
+    return {
+        "database": path.name,
+        **main,
+        "schema_sha256": hashlib.sha256(schema_payload).hexdigest(),
+        "storage_sha256": storage_digest.hexdigest(),
+        "sidecars": sidecars,
+    }
+
+
+class VerifiedDatabaseReadWindow:
+    """Pin database resolution and verify that every file stayed unchanged."""
+
+    def __init__(self, database_paths):
+        self._requested_paths = [Path(path) for path in database_paths]
+        self._resolved = []
+        self._before = []
+        self._token = None
+        self._verified = False
+
+    def __enter__(self):
+        resolved_by_name = {}
+        for requested in self._requested_paths:
+            resolved = resolve_database_path(requested)
+            if (
+                resolved.name in resolved_by_name
+                and resolved_by_name[resolved.name] != resolved
+            ):
+                raise ValueError(
+                    f"Ambiguous database name in verified read window: {resolved.name}"
+                )
+            resolved_by_name[resolved.name] = resolved
+        self._resolved = [resolved_by_name[name] for name in sorted(resolved_by_name)]
+        self._before = [fingerprint_database(path) for path in self._resolved]
+        self._token = _PINNED_DATABASES.set(resolved_by_name)
+        return self
+
+    def __exit__(self, exc_type, exc, traceback):
+        changed = None
+        try:
+            after = [fingerprint_database(path) for path in self._resolved]
+            for before_item, after_item in zip(self._before, after):
+                if before_item != after_item:
+                    changed = before_item["database"]
+                    break
+            self._verified = changed is None
+        finally:
+            if self._token is not None:
+                _PINNED_DATABASES.reset(self._token)
+                self._token = None
+        if changed is not None:
+            raise LocalDatabaseChangedError(
+                f"Local database '{changed}' changed during the verified read window."
+            )
+        return False
+
+    def public_summary(self):
+        if not self._verified:
+            raise RuntimeError("Database read window has not been verified.")
+        return {
+            "status": "verified_unchanged",
+            "databases": [dict(item) for item in self._before],
+        }
+
+
+def verified_database_read_window(database_paths):
+    return VerifiedDatabaseReadWindow(database_paths)
+
+
 def _ensure_missing_columns(df, columns):
     """Add absent observation columns without inventing values."""
     for column in columns:
@@ -37,44 +216,67 @@ def _ensure_missing_columns(df, columns):
     return df
 
 
-def get_connection(db_path):
-    """Establish a connection to the SQLite database intelligently."""
-    db_name = db_path.name
-    search_paths = [
-        db_path,
-        Path.home() / ".GarminDb" / "HealthData" / "DBs" / db_name,
-        Path.home() / "HealthData" / "DBs" / db_name
-    ]
-    
-    for candidate in search_paths:
-        if candidate.exists() and candidate.stat().st_size > 0:
-            try:
-                conn = sqlite3.connect(candidate)
-                # Quick health check
-                cur = conn.cursor()
-                cur.execute("SELECT name FROM sqlite_master WHERE type='table'")
-                tables = [r[0] for r in cur.fetchall()]
-                if tables:
-                    return conn
-                else:
-                    conn.close()
-            except Exception as e:
-                pass
+def _validated_days(days):
+    if not isinstance(days, int) or isinstance(days, bool) or days < 1:
+        raise ValueError("days must be a positive integer")
+    return days
 
-    raise FileNotFoundError(f"❌ Valid database '{db_name}' not found. Searched {len(search_paths)} paths. Run sync_health_data.py first.")
+
+def _window_start(days, include_time=False):
+    days = _validated_days(days)
+    start = datetime.now().date() - timedelta(days=days - 1)
+    return f"{start.isoformat()} 00:00:00" if include_time else start.isoformat()
+
+
+def get_connection(db_path):
+    """Open the resolved database read-only, honoring an active pinned window."""
+    candidate = resolve_database_path(db_path)
+    uri = f"{candidate.as_uri()}?mode=ro"
+    return sqlite3.connect(uri, uri=True)
 
 def get_devices_info():
     """Extract device information for auditing."""
     conn = get_connection(GARMIN_DB)
-    # Correct columns for device_info: timestamp, serial_number, software_version
-    query = "SELECT serial_number, software_version FROM device_info GROUP BY serial_number ORDER BY timestamp DESC"
+    query = """
+        WITH ranked AS (
+            SELECT timestamp, serial_number, software_version,
+                   ROW_NUMBER() OVER (
+                       PARTITION BY serial_number
+                       ORDER BY timestamp DESC, rowid DESC
+                   ) AS row_rank
+            FROM device_info
+            WHERE serial_number IS NOT NULL
+        )
+        SELECT serial_number, software_version, timestamp
+        FROM ranked
+        WHERE row_rank = 1
+        ORDER BY serial_number ASC
+    """
     try:
-        df = pd.read_sql_query(query, conn)
-    except Exception as e:
-        df = pd.DataFrame()
-        print(f"Failed to query device_info: {e}")
-    conn.close()
-    return df
+        return pd.read_sql_query(query, conn)
+    except Exception as exc:
+        raise LocalDatabaseReadError("device_info_query_failed") from exc
+    finally:
+        conn.close()
+
+
+def get_device_firmware_history():
+    """Return deterministic timestamped firmware evidence for epoch checks."""
+    conn = get_connection(GARMIN_DB)
+    query = """
+        SELECT timestamp, serial_number, software_version
+        FROM device_info
+        WHERE serial_number IS NOT NULL
+          AND software_version IS NOT NULL
+          AND timestamp IS NOT NULL
+        ORDER BY timestamp ASC, serial_number ASC, rowid ASC
+    """
+    try:
+        return pd.read_sql_query(query, conn)
+    except Exception as exc:
+        raise LocalDatabaseReadError("device_firmware_query_failed") from exc
+    finally:
+        conn.close()
 
 def get_max_metrics():
     """Extract VO2 Max and Fitness Age from attributes table."""
@@ -102,16 +304,16 @@ def get_max_metrics():
             "vo2_max": vo2_max,
             "fitness_age": fitness_age
         }
-    except Exception as e:
-        metrics = {"vo2_max": None, "fitness_age": None}
-        print(f"Failed to query attributes: {e}")
-    conn.close()
-    return metrics
+        return metrics
+    except Exception as exc:
+        raise LocalDatabaseReadError("attributes_query_failed") from exc
+    finally:
+        conn.close()
 
 def get_body_composition_detailed(days=30):
     """Extract body composition metrics from the weight table."""
     conn = get_connection(GARMIN_DB)
-    start_date = (datetime.now() - timedelta(days=days)).strftime('%Y-%m-%d')
+    start_date = _window_start(days)
     # Actual schema for weight only has day, weight
     query = f"""
         SELECT day as date, weight
@@ -125,16 +327,16 @@ def get_body_composition_detailed(days=30):
         if not df.empty:
             for col in ['bmi', 'fat_pct', 'muscle_mass', 'bone_mass', 'water_pct']:
                 df[col] = None
-    except Exception as e:
-        df = pd.DataFrame()
-        print(f"Failed to query weight: {e}")
-    conn.close()
-    return df
+        return df
+    except Exception as exc:
+        raise LocalDatabaseReadError("weight_query_failed") from exc
+    finally:
+        conn.close()
 
 def get_monitoring_hr(days=1):
     """Extract high-frequency heart rate sampling (15s intervals)."""
     conn = get_connection(MONITORING_DB)
-    start_date = (datetime.now() - timedelta(days=days)).strftime('%Y-%m-%d %H:%M:%S')
+    start_date = _window_start(days, include_time=True)
     query = f"""
         SELECT timestamp, heart_rate
         FROM monitoring_hr
@@ -143,16 +345,16 @@ def get_monitoring_hr(days=1):
     """
     try:
         df = pd.read_sql_query(query, conn)
-    except Exception as e:
-        df = pd.DataFrame()
-        print(f"Failed to query monitoring_hr: {e}")
-    conn.close()
-    return df
+        return df
+    except Exception as exc:
+        raise LocalDatabaseReadError("monitoring_hr_query_failed") from exc
+    finally:
+        conn.close()
 
 def get_activities_data(days=30):
     """Extract activity metrics from the activities table."""
+    start_date = _window_start(days)
     conn = get_connection(ACTIVITIES_DB)
-    start_date = (datetime.now() - timedelta(days=days)).strftime('%Y-%m-%d')
     
     query = f"""
         SELECT activity_id, name, type, start_time, elapsed_time, distance, avg_hr, max_hr, calories, avg_speed, ascent, training_load
@@ -160,8 +362,12 @@ def get_activities_data(days=30):
         WHERE start_time >= '{start_date}'
         ORDER BY start_time DESC
     """
-    df = pd.read_sql_query(query, conn)
-    conn.close()
+    try:
+        df = pd.read_sql_query(query, conn)
+    except Exception as exc:
+        raise LocalDatabaseReadError("activities_query_failed") from exc
+    finally:
+        conn.close()
     
     # Standardize column names to match the expected format in intelligence layer
     if not df.empty:
@@ -185,31 +391,28 @@ def get_summary(days=7):
     Extract macro physiological metrics from the summary table.
     Equivalent to the old garmin_data.py summary command.
     """
+    start_date = _window_start(days)
     conn = get_connection(GARMIN_DB)
-    start_date = (datetime.now() - timedelta(days=days)).strftime('%Y-%m-%d')
     
-    table_name = _get_summary_table_name(conn)
-    if not table_name:
-        conn.close()
-        raise ValueError("No summary table found (neither daily_summary nor days_summary)")
-        
-    # 修复 schema 强绑: 补齐 steps 以及生成虚拟的高压时间分布(用以驱动仪表盘)
-    query = f"""
-        SELECT day, rhr as resting_heart_rate, hr_max as max_hr, stress_avg, bb_max as body_battery_highest, 
-               bb_charged as body_battery_charged, bb_min as body_battery_lowest,
-               sweat_loss, rr_waking_avg, steps
-        FROM {table_name}
-        WHERE day >= '{start_date}'
-        ORDER BY day DESC
-    """
     try:
+        table_name = _get_summary_table_name(conn)
+        if not table_name:
+            raise ValueError("summary_table_missing")
+        query = f"""
+            SELECT day, rhr as resting_heart_rate, hr_max as max_hr, stress_avg, bb_max as body_battery_highest,
+                   bb_charged as body_battery_charged, bb_min as body_battery_lowest,
+                   sweat_loss, rr_waking_avg, steps
+            FROM {table_name}
+            WHERE day >= '{start_date}'
+            ORDER BY day DESC
+        """
         df = pd.read_sql_query(query, conn)
         # The summary table contains an average stress value, not durations.
         # Do not manufacture time-in-zone observations from an average.
-    except Exception as e:
+    except Exception as exc:
+        raise LocalDatabaseReadError("summary_query_failed") from exc
+    finally:
         conn.close()
-        raise e
-    conn.close()
     
     end_date = datetime.now().strftime('%Y-%m-%d')
     date_rng = pd.date_range(start=start_date, end=end_date, freq='D')
@@ -243,14 +446,18 @@ def get_daily_friction_matrix(days=90, derivation_config=None):
     non-empty provenance metadata. No stress, resting-heart-rate, or Body
     Battery values are converted into an inferred composite workload score.
     """
-    start_date = (datetime.now() - timedelta(days=days)).strftime('%Y-%m-%d')
+    start_date = _window_start(days)
     end_date = datetime.now().strftime('%Y-%m-%d')
     
     # 1. Physical Load from activities
     conn_act = get_connection(ACTIVITIES_DB)
     q_act = f"SELECT start_time, training_load FROM activities WHERE start_time >= '{start_date}' AND training_load IS NOT NULL"
-    df_act = pd.read_sql_query(q_act, conn_act)
-    conn_act.close()
+    try:
+        df_act = pd.read_sql_query(q_act, conn_act)
+    except Exception as exc:
+        raise LocalDatabaseReadError("friction_activity_query_failed") from exc
+    finally:
+        conn_act.close()
     
     if not df_act.empty:
         # Performance: Replace slow .apply lambda with vectorized string slicing for faster date extraction
@@ -272,9 +479,8 @@ def get_daily_friction_matrix(days=90, derivation_config=None):
             df_sum = pd.read_sql_query(q_sum, conn_sum)
         else:
             raise ValueError("No summary table found")
-    except Exception as e:
-        df_sum = pd.DataFrame(columns=['date', 'stress_avg', 'resting_heart_rate', 'body_battery_highest', 'body_battery_lowest'])
-        print(f"Failed to query summary in friction matrix: {e}")
+    except Exception as exc:
+        raise LocalDatabaseReadError("friction_summary_query_failed") from exc
     finally:
         if 'conn_sum' in locals(): conn_sum.close()
     
@@ -319,8 +525,8 @@ def get_daily_friction_matrix(days=90, derivation_config=None):
 
 def get_sleep_data(days=14):
     """Extract detailed sleep metrics."""
+    start_date = _window_start(days)
     conn = get_connection(GARMIN_DB)
-    start_date = (datetime.now() - timedelta(days=days)).strftime('%Y-%m-%d')
     
     query = f"""
         SELECT day, total_sleep, deep_sleep, light_sleep, rem_sleep, 
@@ -332,10 +538,10 @@ def get_sleep_data(days=14):
     """
     try:
         df = pd.read_sql_query(query, conn)
-    except Exception as e:
-        df = pd.DataFrame()
-        print(f"Failed to query sleep: {e}")
-    conn.close()
+    except Exception as exc:
+        raise LocalDatabaseReadError("sleep_query_failed") from exc
+    finally:
+        conn.close()
     
     end_date = datetime.now().strftime('%Y-%m-%d')
     date_rng = pd.date_range(start=start_date, end=end_date, freq='D')
@@ -382,8 +588,8 @@ def get_sleep_data(days=14):
 
 def get_biomechanics_data(days=30):
     """Extract advanced running dynamics and biomechanical wear & tear data."""
+    start_date = _window_start(days)
     conn = get_connection(ACTIVITIES_DB)
-    start_date = (datetime.now() - timedelta(days=days)).strftime('%Y-%m-%d')
     
     query = f"""
         SELECT a.activity_id, a.start_time, a.distance, a.avg_speed, a.anaerobic_training_effect,
@@ -393,8 +599,12 @@ def get_biomechanics_data(days=30):
         WHERE a.start_time >= '{start_date}' AND s.avg_ground_contact_time IS NOT NULL
         ORDER BY a.start_time DESC
     """
-    df = pd.read_sql_query(query, conn)
-    conn.close()
+    try:
+        df = pd.read_sql_query(query, conn)
+    except Exception as exc:
+        raise LocalDatabaseReadError("biomechanics_query_failed") from exc
+    finally:
+        conn.close()
     
     if not df.empty:
         # Performance: Replace slow .apply lambda with vectorized string slicing for faster date extraction
@@ -416,17 +626,16 @@ def get_biomechanics_data(days=30):
 
 def get_hrv_data(days=7):
     """Extract HRV data."""
+    start_date = _window_start(days)
     conn = get_connection(GARMIN_DB)
-    start_date = (datetime.now() - timedelta(days=days)).strftime('%Y-%m-%d')
     
     try:
         query = f"SELECT day, last_night_avg as hrv_avg, status FROM hrv WHERE day >= '{start_date}' ORDER BY day DESC"
         df = pd.read_sql_query(query, conn)
-    except Exception as e:
-        df = pd.DataFrame()
-        print(f"Failed to query hrv: {e}")
-        
-    conn.close()
+    except Exception as exc:
+        raise LocalDatabaseReadError("hrv_query_failed") from exc
+    finally:
+        conn.close()
     
     end_date = datetime.now().strftime('%Y-%m-%d')
     date_rng = pd.date_range(start=start_date, end=end_date, freq='D')
@@ -444,12 +653,19 @@ def get_hrv_data(days=7):
         
     return df
 
+def main():
+    """Reject direct execution so callers cannot bypass the verified entrypoints."""
+    print(
+        json.dumps(
+            {
+                "status": "unsupported_entrypoint",
+                "error_code": "use_verified_health_cli",
+            },
+            ensure_ascii=False,
+        )
+    )
+    return 2
+
+
 if __name__ == "__main__":
-    # Test execution
-    try:
-        print("🔍 Testing Local SQLite Extraction...")
-        summary = get_summary(3)
-        print("✅ Latest Summary Data:")
-        print(summary)
-    except Exception as e:
-        print(f"⚠️  Test failed: {e}")
+    raise SystemExit(main())

@@ -1,6 +1,6 @@
 {
   "resource_kind": "intelligence_briefing_contract",
-  "version": "1.0",
+  "version": "1.1",
   "required_top_level": [
     "schema_version",
     "generated_at",
@@ -12,6 +12,7 @@
     "digest",
     "market",
     "action_levers",
+    "mix",
     "top_10",
     "data_gaps"
   ],
@@ -31,6 +32,10 @@
     "event_date",
     "published_at",
     "retrieved_at",
+    "primary_domain",
+    "secondary_domains",
+    "major_signal",
+    "major_signal_reason",
     "fact",
     "connection",
     "deduction",
@@ -40,9 +45,37 @@
     "summary_zh"
   ],
   "max_top_items": 10,
+  "domain_mix": {
+    "domains": ["technology", "healthcare_digital"],
+    "default_ratio": {
+      "technology": 0.4,
+      "healthcare_digital": 0.6
+    },
+    "max_ratio_shift": 0.2,
+    "required_mix_fields": [
+      "default_ratio",
+      "effective_ratio",
+      "target_counts",
+      "actual_counts",
+      "adjustment",
+      "supply_exception"
+    ],
+    "required_adjustment_fields": [
+      "applied",
+      "favored_domain",
+      "reason",
+      "trigger_urls"
+    ],
+    "required_supply_exception_fields": [
+      "applied",
+      "reason",
+      "missing_domains"
+    ]
+  },
   "enums": {
     "intelligence_level": ["L1", "L2", "L3", "L4"],
-    "confidence": ["low", "medium", "high"]
+    "confidence": ["low", "medium", "high"],
+    "primary_domain": ["technology", "healthcare_digital"]
   },
   "l4_required_audit_fields": ["devil_advocate", "blind_spots"]
 }

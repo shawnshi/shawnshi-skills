@@ -123,7 +123,7 @@ description: 说明技能做什么，以及用户在什么场景下应使用它�
 | `personal-cognitive-auditor` | 基于用户提供或明确授权读取的日志、日程与健康数据，生成事实导向的日、周、月或年度复盘，识别承诺偏差、重复模式和可执行改进 |
 | `personal-cognitive-prescription` | 从用户提供的近期问题、决策或复盘材料中识别认知盲区，并给出可核验到具体章节的跨领域阅读处方 |
 | `personal-diary-writer` | 将用户已经确认的日记、工作记录、生理摘要或复盘内容安全写入用户指定的本地文件 |
-| `personal-health-analysis` | 分析用户授权访问的 Garmin 本地数据，生成睡眠、HRV、心率、压力、身体电量、运动负荷、Markdown报告和HTML趋势面板 |
+| `personal-health-analysis` | 以本地优先、失败关闭方式分析用户授权的 Garmin 数据，验证本地数据库读取窗口与设备/固件时期，披露时间范围、缺失和来源，并生成非诊断性报告、离线面板或研究用途 FHIR R4 包装 |
 | `personal-intelligence-hub` | 对指定主题开展多来源情报扫描、去重、证据核验、情景推演和红队审查，并生成带来源的战略简报 |
 | `personal-investment-advisor` | 执行点时财务筛选、结构化预期差与三情景估值、持仓及行情身份审计、实时行情刷新与离线 Daily Sync 评估、组合情景压测、只读逆波动率分配实验和研究校准；固定为 `research_only` |
 | `personal-musicbee-dj` | 在本地 Windows 电脑上根据歌曲、歌单、流派、场景或情绪请求启动并控制 MusicBee 播放，必要时生成临时 M3U 歌单 |

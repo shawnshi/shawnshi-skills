@@ -1,309 +1,87 @@
-# Garmin Connect API Reference (Unofficial)
+# Garmin Connect 实时访问参考（非官方）
 
-This documents the unofficial Garmin Connect API accessed via the `garminconnect` Python library.
+本资料只用于用户本次明确授权的实时读取、认证或同步。技能通过固定版本 `garminconnect==0.3.9` 访问 Garmin Connect 的非公开 Web 接口；该接口可能变化、限流或与 Garmin 使用条款存在冲突。生产集成应优先评估 Garmin Health API 的正式合作路径。
 
-## Important Notes
+## 授权边界
 
-- **Unofficial API**: Garmin does not provide a public API for personal use. This library reverse-engineers their web interface.
-- **May break**: Garmin can change their API anytime, which may break the library
-- **Rate limits**: Garmin implements rate limiting; excessive requests may temporarily block your account
-- **Official alternative**: Garmin Health API exists for enterprise partnerships only
+- `--allow-network` 只允许本次命令联网，不允许读取任意健康数据。
+- `--allow-health-data` 必须绑定具体指标和精确日期窗口；实时命令不得静默使用默认窗口。
+- `--allow-token-write` 只用于登录时创建或刷新持久令牌。
+- `--allow-download` 只用于指定活动 ID、格式和隔离输出目录。
+- `--allow-sync` 只用于执行已生成、未过期且绑定完全一致的 GarminDB 计划。
+- 本地读取失败不得自动切换到实时接口；任意授权不得跨命令、跨日期或跨用途复用。
 
-## Authentication
+这些能力是进程内防误用控制，不是抵御同一进程恶意代码的安全沙箱。
 
-### Library: `garminconnect`
+## 安装
+
+只有用户明确要求安装时，才从技能根目录使用已审核的离线纯 Wheel 仓库：
+
+```powershell
+./install.ps1 -Offline -Wheelhouse <TRUSTED_WHEELHOUSE>
+```
+
 ```bash
-pip3 install garminconnect
+./install.sh --offline --wheelhouse <TRUSTED_WHEELHOUSE>
 ```
 
-### Authentication Flow
-1. Login with email/password
-2. Library handles OAuth token exchange
-3. Tokens stored for session persistence
-4. Tokens auto-refresh when expired
+一步式在线安装已禁用。安装先在目标同级暂存目录构建，核对锁文件、平台/Python 标签、`wheelhouse-manifest.json`、每个 Wheel SHA-256、实际 pip 消费哈希和最终安装集合，全部通过才发布。pip 使用 `--isolated --no-index --require-hashes --only-binary=:all: --disable-pip-version-check`。清单仍不是发布者签名；需要来源认证时必须使用技能目录之外的签名和可信公钥。
 
-### Session Management
-```python
-from garminconnect import Garmin
+## 认证
 
-# Initial login
-client = Garmin(email, password)
-client.login()
-
-# Save tokens for reuse
-oauth1 = client.garth.oauth1_token
-oauth2 = client.garth.oauth2_token
-
-# Restore session
-client = Garmin()
-client.garth.oauth1_token = oauth1
-client.garth.oauth2_token = oauth2
+```bash
+<SKILL_PYTHON> scripts/garmin_auth.py login --email <EMAIL> --allow-network --allow-token-write
+<SKILL_PYTHON> scripts/garmin_auth.py status --allow-network
 ```
 
-## Core Endpoints
+上游登录流程会使用移动 SSO，并可能读取账户 Profile/Settings。技能不再通过 `get_user_summary()` 读取当日健康数据来探测会话。状态检查从持久令牌的临时副本恢复，使令牌刷新不能改写原目录；这不替代 Windows ACL、磁盘加密或凭据管理器。
 
-### User Profile
-```python
-# Full name
-client.get_full_name()
+禁止在文档或分析代码中直接实例化 `Garmin(...)`、直接调用 `client.login()` 或绕过 CLI 签发能力。密码只允许交互输入或进程环境变量，不得出现在命令行、报告、日志和错误消息中。
 
-# User summary (daily stats)
-client.get_user_summary("2026-01-25")
+## 精确范围实时读取
+
+基础指标：
+
+```bash
+<SKILL_PYTHON> scripts/garmin_data.py sleep --source live --start 2026-08-08 --end 2026-08-08 --allow-network --allow-health-data
+<SKILL_PYTHON> scripts/garmin_data.py hrv --source live --days 7 --allow-network --allow-health-data
 ```
 
-### Sleep Data
-```python
-# Daily sleep details
-client.get_sleep_data("2026-01-25")
+扩展指标、时间点和活动文件命令见 `advanced_tools.md`。时间点查询要求无歧义的 IANA 本地时刻，容差限定为 0–3600 秒。`--period` 只接受正整数天数（如 `7d`）或 `YTD`，非法、零值和负值直接失败；`YTD` 包含 1 月 1 日与当前日。实时 `summary` 与面板固定声明并读取 sleep、hrv、body_battery、heart_rate、activities、stress、training_load_series；stress 使用日度压力端点，不读取或返回步数。它们不会读取 Profile、体成分、补水、Fitness Age 或设备闹钟。实时分析按用途缩小为：`baseline_change` 读取 sleep/hrv/heart_rate，`readiness` 读取 sleep/hrv/body_battery/stress，`audit` 与 `insight_cn` 读取 sleep/hrv/body_battery/heart_rate/stress，`env_stress` 只读取 activities；`long_term_load` 和 `device_audit` 不支持实时来源。所有实时报告和分析都需要显式 `--days` 或 `--period`，并同时提供联网与健康数据授权。
+
+请求参数必须在客户端初始化前验证。能力对象仅保存请求的 SHA-256，不保留账户、指标窗口或输出路径明文；健康数据和下载能力在敏感动作前消费一次。
+
+## 限流与失败
+
+- 首次出现 HTTP 429 或 `Too Many Requests` 即停止；摘要组件按顺序读取，避免已有组件触发 429 后再启动后续组件；不得自动退避重试、并发扩散或切换备用接口。
+- 认证、连接和 API 异常只输出稳定状态和异常类型，不回显邮箱、令牌路径、服务响应正文或原始异常消息。
+- 缺数据应返回 `no_data`、`partial` 或 `no_observation`，不得补零或拿远处样本替代。
+- 用户需要判断数据准确性时，应把同一日期的结果与 Garmin Connect 官方界面或合法导出文件核对，并把差异记为未解释。
+
+## 有界 GarminDB 同步
+
+同步是独立写操作。先生成计划：
+
+```bash
+<SKILL_PYTHON> scripts/sync_health_data.py sync --start 2026-08-01 --end 2026-08-07 --dry-run --config-dir <TRUSTED_CONFIG_DIR> --garmindb-python <TRUSTED_GARMINDB_PYTHON> --plan-output <SESSION_SCRATCH>/sync-plan.json
 ```
 
-**Response structure:**
-```json
-{
-  "sleepTimeSeconds": 28800,      // Total sleep duration
-  "deepSleepSeconds": 7200,       // Deep sleep
-  "lightSleepSeconds": 14400,     // Light sleep
-  "remSleepSeconds": 7200,        // REM sleep
-  "awakeSleepSeconds": 1800,      // Awake time
-  "sleepScores": {
-    "overall": {"value": 85},     // Overall sleep score (0-100)
-    "duration": {...},
-    "quality": {...}
-  },
-  "restlessMoments": 12,          // Number of restless periods
-  "avgSleepHeartRate": 52,        // Average HR during sleep
-  "avgSleepHRV": 45,              // Average HRV during sleep
-  "avgSleepRespiration": 14       // Respiration rate (breaths/min)
-}
+核对后在有效期内执行：
+
+```bash
+<SKILL_PYTHON> scripts/sync_health_data.py sync --start 2026-08-01 --end 2026-08-07 --allow-network --allow-sync --config-dir <TRUSTED_CONFIG_DIR> --garmindb-python <TRUSTED_GARMINDB_PYTHON> --plan-file <SESSION_SCRATCH>/sync-plan.json
 ```
 
-### HRV Data
-```python
-# Daily HRV summary
-client.get_hrv_data("2026-01-25")
-```
+计划绑定窗口、配置、解释器、CLI、`pyvenv.cfg`、site-packages 文件树和固定包元数据。启动前会重新验证计划有效期、配置、临时配置和 runner，并用 `python -I -B`、移除 Python/pip/TLS 信任覆盖后的环境、关闭 stdin 的子进程运行。不得从 `PATH` 自动发现 CLI，不得使用备用 API；私有 CA 需要另建显式绑定路径、摘要与用途的受控流程。
 
-**Response structure:**
-```json
-{
-  "hrvSummary": {
-    "lastNightAvg": 45,             // Last night's average HRV (ms)
-    "lastNight5MinHigh": 68,        // 5-min high
-    "lastNight5MinLow": 28,         // 5-min low
-    "weeklyAvg": 42,                // 7-day rolling average
-    "baselineBalancedLow": 38,      // Personal baseline low
-    "baselineBalancedHigh": 48,     // Personal baseline high
-    "status": "BALANCED"            // Status: BALANCED, UNBALANCED, POOR, LOW
-  }
-}
-```
+SHA-256 只能发现与参考字节不一致，不能证明发布者身份，也不能抵御同一 Windows 用户下可同时修改技能和参考摘要的敌对进程。高对抗要求见 `external_acceptance.md`，必须引入独立账号、代码签名/执行策略或不可变运行环境。
 
-### Body Battery
-```python
-# Daily Body Battery readings (time series)
-client.get_body_battery("2026-01-25")
-```
+## 真实链路验收
 
-**Response structure:**
-```json
-[
-  {
-    "timestamp": 1737849600000,     // Unix timestamp (ms)
-    "value": 85,                    // Body Battery level (0-100)
-    "charged": 45,                  // Amount charged overnight
-    "drained": 15                   // Amount drained from previous
-  },
-  // ... more readings throughout the day
-]
-```
+本地单元测试、Mock、dry-run、令牌文件存在或进程返回零均不代表真实链路通过。真实验收所需授权、最小证据和 FHIR 接收端分层门禁见 `external_acceptance.md`。未提供真实会话、精确日期、外部工具/包或接收端材料时，应明确记为 `not_requested` 或 `unavailable`。
 
-### Heart Rate
-```python
-# Daily heart rate summary
-client.get_heart_rates("2026-01-25")
-```
+## 参考来源
 
-**Response structure:**
-```json
-{
-  "restingHeartRate": 52,           // Resting HR (bpm)
-  "maxHeartRate": 165,              // Max HR of the day
-  "minHeartRate": 48                // Min HR of the day
-}
-```
-
-### Stress Levels
-```python
-# Daily stress data
-client.get_stress_data("2026-01-25")
-```
-
-**Response structure:**
-```json
-{
-  "avgStressLevel": 35,             // Average all-day stress (0-100)
-  "maxStressLevel": 78,             // Peak stress
-  "restStressLevel": 15,            // Stress during rest
-  "activityStressLevel": 65,        // Stress during activity
-  "lowStressDuration": 14400,       // Seconds in low stress (0-25)
-  "mediumStressDuration": 28800,    // Seconds in medium stress (26-50)
-  "highStressDuration": 7200        // Seconds in high stress (51-100)
-}
-```
-
-### Activities
-```python
-# Activities in date range
-client.get_activities_by_date("2026-01-01", "2026-01-31", activitytype="")
-```
-
-**Response structure:**
-```json
-[
-  {
-    "activityId": 123456789,
-    "activityType": {
-      "typeKey": "running",
-      "typeId": 1
-    },
-    "activityName": "Morning Run",
-    "startTimeLocal": "2026-01-25 07:30:00",
-    "duration": 3600,               // Duration in seconds
-    "distance": 10000,              // Distance in meters
-    "calories": 650,                // Calories burned
-    "averageHR": 152,               // Average heart rate
-    "maxHR": 178,                   // Max heart rate
-    "elevationGain": 120,           // Elevation gain (meters)
-    "averageSpeed": 2.78,           // Speed (m/s)
-    "averageRunningCadence": 165    // Cadence (steps/min)
-  }
-]
-```
-
-### Steps & Daily Totals
-```python
-# Daily stats summary
-client.get_user_summary("2026-01-25")
-```
-
-**Response structure:**
-```json
-{
-  "totalSteps": 12543,
-  "totalKilocalories": 2456,
-  "activeKilocalories": 856,
-  "bmrKilocalories": 1600,
-  "intensityMinutesGoal": 150,
-  "vigorousIntensityMinutes": 35,
-  "moderateIntensityMinutes": 85
-}
-```
-
-## Data Availability
-
-### Required Device Features
-
-| Metric | Required Hardware |
-|--------|------------------|
-| **Sleep stages** | Newer Garmin watches (2018+) |
-| **Body Battery** | Firstbeat-enabled devices with HRV |
-| **HRV** | Devices with optical HR sensor |
-| **Stress** | Devices with all-day HR monitoring |
-| **VO2 Max** | GPS + HR-enabled activities |
-| **Respiration** | Newer devices (Fenix 6+, Venu 2+, etc.) |
-
-### Historical Data
-- Most metrics: Available for full account history
-- HRV: May be limited on older devices
-- Body Battery: Requires compatible device
-
-## Rate Limits
-
-Garmin enforces rate limits on their API:
-
-**Observed limits:**
-- ~50-100 requests per 10 minutes (varies)
-- Excessive requests trigger temporary IP/account blocks
-- Blocks typically last 15-60 minutes
-
-**Best practices:**
-- Cache data locally when possible
-- Don't poll excessively (once per hour max for updates)
-- Use date range queries instead of day-by-day loops when possible
-- Add delays between bulk requests (1-2 seconds)
-
-## Error Handling
-
-### Common Errors
-
-**Authentication Failed**
-```
-GarminConnectAuthenticationError
-```
-- Invalid credentials
-- Account locked
-- Two-factor authentication enabled (not supported)
-
-**Connection Error**
-```
-GarminConnectConnectionError
-```
-- Network issues
-- Garmin servers down
-- Rate limit hit
-
-**No Data**
-- Returns `None` or empty list
-- Device not worn
-- Metric not supported on user's device
-- Date has no data
-
-## Library Documentation
-
-**GitHub**: https://github.com/cyberjunky/python-garminconnect
-
-**PyPI**: https://pypi.org/project/garminconnect/
-
-## Alternative: Official Garmin Health API
-
-For enterprise/commercial use:
-- **Garmin Health API**: Requires partnership agreement
-- **Use case**: App integration, health platforms
-- **Not for**: Personal hobby projects
-
-More info: https://www.garmin.com/en-US/health-enterprise/
-
-## Comparison to Whoop API
-
-| Feature | Garmin (unofficial) | Whoop (official) |
-|---------|-------------------|------------------|
-| **Authentication** | Email/password | OAuth 2.0 |
-| **Stability** | May break anytime | Stable, versioned |
-| **Rate limits** | Undocumented (~50/10min) | Documented (200/hr) |
-| **Data access** | Full history | Full history |
-| **Support** | Community library | Official support |
-| **Terms of Service** | Gray area | Officially supported |
-
-## Terms of Service Considerations
-
-**Important**: Using the unofficial API may violate Garmin's Terms of Service. Use at your own risk:
-
-- For **personal use** only
-- Don't build commercial products on this
-- Don't scrape excessively
-- Consider official Garmin Health API for production use
-
-## Tips for Reliability
-
-1. **Cache aggressively**: Store data locally, only fetch new dates
-2. **Error recovery**: Retry with exponential backoff on failures
-3. **Monitor library updates**: Watch GitHub for breaking changes
-4. **Have a fallback**: Manual CSV export from Garmin Connect web if API breaks
-5. **Test before relying**: Verify data accuracy against Garmin Connect web UI
-
-## Useful Resources
-
-- [Garmin Connect Web](https://connect.garmin.com): Official interface
-- [python-garminconnect GitHub](https://github.com/cyberjunky/python-garminconnect): Library source
-- [Garmin Forums](https://forums.garmin.com): Community support
-- [r/Garmin](https://reddit.com/r/Garmin): Reddit community
+- `garminconnect` 上游仓库与发布说明：https://github.com/cyberjunky/python-garminconnect
+- Garmin Connect 官方界面：https://connect.garmin.com
+- Garmin Health API：https://developer.garmin.com/gc-developer-program/health-api/

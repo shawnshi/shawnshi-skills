@@ -30,6 +30,13 @@
 ## Market Watch
 {{ market }}
 
+## 领域配比
+- **默认比例**：技术 {{ (mix.default_ratio.technology * 100) | round | int }}% / 医疗数字化 {{ (mix.default_ratio.healthcare_digital * 100) | round | int }}%
+- **当日比例**：技术 {{ (mix.effective_ratio.technology * 100) | round | int }}% / 医疗数字化 {{ (mix.effective_ratio.healthcare_digital * 100) | round | int }}%
+- **实际条数**：技术 {{ mix.actual_counts.technology }} / 医疗数字化 {{ mix.actual_counts.healthcare_digital }}
+{% if mix.adjustment.applied %}- **调整原因**：{{ mix.adjustment.reason }}{% endif %}
+{% if mix.supply_exception.applied %}- **候选缺口**：{{ mix.supply_exception.reason }}（未用弱资讯补足比例）{% endif %}
+
 {% if adversarial_audit %}
 ## Adversarial Audit
 **Counter-Case**
@@ -39,11 +46,13 @@
 {{ adversarial_audit.blind_spots }}
 {% endif %}
 
-## Top 10 Signals
-{% for item in top_10 -%}
+## 技术资讯
+{% set technology_items = top_10 | selectattr("primary_domain", "equalto", "technology") | list %}
+{% for item in technology_items -%}
 ### {{ loop.index }}. [{{ item.title }}]({{ item.url }})
 - **Source**: {{ item.source }} | **Event**: {{ item.event_date }} | **Published**: {{ item.published_at }} | **Retrieved**: {{ item.retrieved_at }}
 - **Level**: {{ item.intelligence_level }} | **Confidence**: {{ item.confidence }}
+- **领域**：技术{{ (" | **高影响触发依据**：" ~ item.major_signal_reason) if item.major_signal else "" }}
 - **Fact**: {{ item.fact }}
 - **Connection**: {{ item.connection }}
 - **Deduction**: {{ item.deduction }}
@@ -52,9 +61,26 @@
 {% if item.reason %}- **Why it matters**: {{ item.reason }}{% endif %}
 
 {% endfor %}
-{% if not top_10 %}- 当前窗口内没有通过来源核验的高价值信号。{% endif %}
+{% if not technology_items %}- 当前窗口内没有通过来源核验的技术信号。{% endif %}
 
-## Extended Watchlist
+## 医疗数字化资讯
+{% set healthcare_items = top_10 | selectattr("primary_domain", "equalto", "healthcare_digital") | list %}
+{% for item in healthcare_items -%}
+### {{ loop.index }}. [{{ item.title }}]({{ item.url }})
+- **Source**: {{ item.source }} | **Event**: {{ item.event_date }} | **Published**: {{ item.published_at }} | **Retrieved**: {{ item.retrieved_at }}
+- **Level**: {{ item.intelligence_level }} | **Confidence**: {{ item.confidence }}
+- **领域**：医疗数字化{{ (" | **高影响触发依据**：" ~ item.major_signal_reason) if item.major_signal else "" }}
+- **Fact**: {{ item.fact }}
+- **Connection**: {{ item.connection }}
+- **Deduction**: {{ item.deduction }}
+- **Actionability**: {{ item.actionability }}
+- **Summary**: {{ item.summary }}
+{% if item.reason %}- **Why it matters**: {{ item.reason }}{% endif %}
+
+{% endfor %}
+{% if not healthcare_items %}- 当前窗口内没有通过来源核验的医疗数字化信号。{% endif %}
+
+{% if grouped_list %}## Extended Watchlist
 {% for cat_name, items in grouped_list.items() -%}
 {% if items -%}
 ### {{ cat_name }}
@@ -65,6 +91,7 @@
 
 {% endif %}
 {%- endfor %}
+{% endif %}
 
 ## Data Gaps
 {% for gap in data_gaps -%}

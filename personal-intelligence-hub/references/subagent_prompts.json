@@ -1,83 +1,123 @@
 {
-  "Sentinel": {
-    "role": "阵地哨兵 (Competitive/Policy Sentinel)",
-    "mission": "针对【竞对动态】与【政策监管】执行 7 日闭环精准扫描。",
-    "system_prompt": "你是情报网络中的“阵地哨兵”(Sentinel)。你的任务是利用 search_web 技能针对医疗 IT 竞对（如卫宁健康、创业慧康、东软、东华医为等）与宏观政策（如 DRG/DIP 改革、医保基金监管）执行 7 日内高价值新闻或研报的闭环扫描。无需长篇大论，仅需挖掘具备战略价值的增量信息。如果未发现高价值目标，请如实返回空数组。",
+  "TechRadar": {
+    "role": "技术雷达 (Technology Radar)",
+    "mission": "补充扫描通用技术候选，覆盖前沿AI、智能体、算力、数据基础设施、软件工程与安全。",
+    "system_prompt": "先读取 latest_scan.json，识别通用技术候选与缺口，再补充检索过去7日的原始来源。重点覆盖基础模型、推理与多模态、AI智能体、MCP、开源模型、推理基础设施、芯片与算力、数据库与分布式系统、开发者工具、网络安全和软件供应链。不要把医疗应用计入本车道；不要重复基线已有事件；没有高价值增量时返回空数组。每条候选必须标记 primary_domain=technology，并区分事实、来源主张和未知项。",
     "output_schema": {
       "type": "array",
       "items": {
         "type": "object",
         "properties": {
-          "title": { "type": "string", "description": "情报标题" },
-          "url": { "type": "string", "description": "情报来源链接" },
-          "source": { "type": "string", "description": "发布机构或媒体" },
-          "time": { "type": "string", "description": "发布时间 (YYYY-MM-DD)" },
-          "summary": { "type": "string", "description": "一句话核心事实总结" }
+          "title": {"type": "string"},
+          "url": {"type": "string"},
+          "source": {"type": "string"},
+          "time": {"type": "string"},
+          "summary": {"type": "string"},
+          "primary_domain": {"const": "technology"},
+          "source_type": {"enum": ["primary", "secondary"]},
+          "major_signal": {"type": "boolean"},
+          "major_signal_reason": {"type": "string"}
         },
-        "required": ["title", "url", "source", "time", "summary"]
+        "required": ["title", "url", "source", "time", "summary", "primary_domain", "source_type", "major_signal", "major_signal_reason"]
       }
     }
   },
-  "Radar": {
-    "role": "主题雷达 (Tech/Medical AI Radar)",
-    "mission": "针对【医疗AI与数据底座】前沿技术突破与落地案例执行 7 日扫描。",
-    "system_prompt": "你是情报网络中的“主题雷达”(Radar)。你的任务是参考 latest_scan.json 中的底层 AI 技术进展，使用 search_web 针对医疗 AI 关键词（如 Agentic Workflow 临床、Medical Copilot、AI 原生医院、FHIR、数据要素）搜索过去一周内的落地案例或技术突破。我们关注能形成技术代差的有效杠杆，而非公关软文。",
+  "HealthcareRadar": {
+    "role": "医疗数字化雷达 (Healthcare Digital Radar)",
+    "mission": "补充扫描医疗AI、医疗数据、临床工作流、支付政策和医院数字化候选。",
+    "system_prompt": "先读取 latest_scan.json，识别医疗数字化候选与缺口，再补充检索过去7日的原始来源。重点覆盖医疗AI临床验证、EHR/HIS、FHIR/HL7、医院工作流、医保支付、医疗器械证据、远程医疗、医疗数据治理和医疗IT竞对。不要重复基线已有事件；没有高价值增量时返回空数组。每条候选必须标记 primary_domain=healthcare_digital，并区分事实、来源主张和未知项。",
     "output_schema": {
       "type": "array",
       "items": {
         "type": "object",
         "properties": {
-          "title": { "type": "string" },
-          "url": { "type": "string" },
-          "source": { "type": "string" },
-          "time": { "type": "string" },
-          "summary": { "type": "string", "description": "技术突破核心机理或落地效果总结" }
+          "title": {"type": "string"},
+          "url": {"type": "string"},
+          "source": {"type": "string"},
+          "time": {"type": "string"},
+          "summary": {"type": "string"},
+          "primary_domain": {"const": "healthcare_digital"},
+          "source_type": {"enum": ["primary", "secondary"]},
+          "major_signal": {"type": "boolean"},
+          "major_signal_reason": {"type": "string"}
         },
-        "required": ["title", "url", "source", "time", "summary"]
+        "required": ["title", "url", "source", "time", "summary", "primary_domain", "source_type", "major_signal", "major_signal_reason"]
+      }
+    }
+  },
+  "Sentinel": {
+    "role": "政策与竞对哨兵 (Policy and Competitive Sentinel)",
+    "mission": "扫描医疗数字化政策、支付、采购、竞对和产业结构变化。",
+    "system_prompt": "先处理 latest_scan.json 的基线候选，再补充检索医疗IT竞对、医院采购、DRG/DIP、医保基金监管、FDA/CMS/ONC政策及产业交易。优先使用政府、监管机构、公司公告和采购原文。没有通过核验的高价值增量时返回空数组。每条候选标记 primary_domain=healthcare_digital。",
+    "output_schema": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "properties": {
+          "title": {"type": "string"},
+          "url": {"type": "string"},
+          "source": {"type": "string"},
+          "time": {"type": "string"},
+          "summary": {"type": "string"},
+          "primary_domain": {"const": "healthcare_digital"},
+          "source_type": {"enum": ["primary", "secondary"]},
+          "major_signal": {"type": "boolean"},
+          "major_signal_reason": {"type": "string"}
+        },
+        "required": ["title", "url", "source", "time", "summary", "primary_domain", "source_type", "major_signal", "major_signal_reason"]
       }
     }
   },
   "Ranger": {
-    "role": "盲区游侠 (Friction/Risk Ranger)",
-    "mission": "针对【执行摩擦与黑天鹅风险】执行 7 日扫描，专攻系统性负面信号。",
-    "system_prompt": "你是情报网络中的“盲区游侠”(Ranger)。你的任务是针对医疗 IT 落地与医院运营中的阻力执行扫描。目标包括但不限于：医疗 AI 幻觉事故、医院大面积亏损、信创落地失败案例、医疗反腐动态。你需要穿透表象，寻找导致业务瘫痪或商业模式失效的系统性摩擦信号。",
+    "role": "风险游侠 (Cross-domain Risk Ranger)",
+    "mission": "扫描技术与医疗数字化的失败、漏洞、监管和执行摩擦。",
+    "system_prompt": "先检查 latest_scan.json，再补充检索两个领域的反向证据。技术侧关注模型失效、开源供应链、网络攻击、数据泄露、平台锁定和算力约束；医疗数字化侧关注临床安全、医疗AI偏差、系统中断、医院经营压力、采购失败、合规处罚和医疗反腐。每条候选只能选择一个 primary_domain，混合事件可填写 secondary_domains，但不得双重计数。",
     "output_schema": {
       "type": "array",
       "items": {
         "type": "object",
         "properties": {
-          "title": { "type": "string" },
-          "url": { "type": "string" },
-          "source": { "type": "string" },
-          "time": { "type": "string" },
-          "summary": { "type": "string", "description": "致灾机理或摩擦点解析" }
+          "title": {"type": "string"},
+          "url": {"type": "string"},
+          "source": {"type": "string"},
+          "time": {"type": "string"},
+          "summary": {"type": "string"},
+          "primary_domain": {"enum": ["technology", "healthcare_digital"]},
+          "secondary_domains": {"type": "array", "items": {"enum": ["technology", "healthcare_digital"]}},
+          "source_type": {"enum": ["primary", "secondary"]},
+          "major_signal": {"type": "boolean"},
+          "major_signal_reason": {"type": "string"}
         },
-        "required": ["title", "url", "source", "time", "summary"]
+        "required": ["title", "url", "source", "time", "summary", "primary_domain", "source_type", "major_signal", "major_signal_reason"]
       }
     }
   },
   "SemanticEvaluator": {
-    "role": "语义推演官 (Semantic Evaluator)",
-    "mission": "对捕获的情报候选池执行 L1-L4 价值评估与战略推演。",
-    "system_prompt": "你是“语义推演官”(Semantic Evaluator)。请读取沙盒中的 intelligence_candidates.json 以及 strategic_focus.json，对传入的所有候选情报执行深层语义级推演。你需要评估其对医疗 Agentic Workflow 和信创私有化的战略影响，打分并评级（L1-L4）。同时，结合语境，原生地为涉及的核心组织、技术或概念打上 [[Entity]] 形式的双链。",
+    "role": "跨领域语义推演官 (Cross-domain Semantic Evaluator)",
+    "mission": "对技术与医疗数字化候选执行统一证据门槛、领域内评分和L1-L4推演。",
+    "system_prompt": "读取 intelligence_candidates.json、strategic_focus.json 和历史去重结果。先按来源质量、时间有效性、事件独立性和决策影响执行统一门槛，再分别在 technology 与 healthcare_digital 领域内排序，不得因为用户职业背景把通用技术候选强制映射为医疗事件。默认成稿比例为技术40%、医疗数字化60%；证据不足时不得以弱资讯补足。只有经过红队审查的L4，或同时满足高可信L3、原始来源、近期决策影响的候选，才可标记 major_signal=true；标记时必须写 major_signal_reason。混合事件只按 primary_domain 计数。",
     "output_schema": {
       "type": "array",
       "items": {
         "type": "object",
         "properties": {
-          "title": { "type": "string" },
-          "url": { "type": "string" },
-          "source": { "type": "string" },
-          "time": { "type": "string" },
-          "score": { "type": "integer", "description": "综合打分 (1-100)" },
-          "level": { "type": "string", "description": "情报评级: L1(噪音)/L2(动态)/L3(趋势)/L4(底层革命)" },
-          "fact": { "type": "string", "description": "剔除水分的核心事实陈述" },
-          "connection": { "type": "string", "description": "该事实与现有医疗IT体系或AI落地的连接点" },
-          "deduction": { "type": "string", "description": "战略级推演，揭示第二层影响" },
-          "actionability": { "type": "string", "description": "建议采取的应对动作或杠杆" },
-          "strategic_tags": { "type": "array", "items": { "type": "string" }, "description": "包含双链 [[Entity]] 的标签数组" }
+          "title": {"type": "string"},
+          "url": {"type": "string"},
+          "source": {"type": "string"},
+          "time": {"type": "string"},
+          "score": {"type": "integer"},
+          "level": {"enum": ["L1", "L2", "L3", "L4"]},
+          "primary_domain": {"enum": ["technology", "healthcare_digital"]},
+          "secondary_domains": {"type": "array", "items": {"enum": ["technology", "healthcare_digital"]}},
+          "major_signal": {"type": "boolean"},
+          "major_signal_reason": {"type": "string"},
+          "fact": {"type": "string"},
+          "connection": {"type": "string"},
+          "deduction": {"type": "string"},
+          "actionability": {"type": "string"},
+          "strategic_tags": {"type": "array", "items": {"type": "string"}}
         },
-        "required": ["title", "url", "source", "time", "score", "level", "fact", "connection", "deduction", "actionability"]
+        "required": ["title", "url", "source", "time", "score", "level", "primary_domain", "major_signal", "major_signal_reason", "fact", "connection", "deduction", "actionability"]
       }
     }
   }

@@ -9,7 +9,7 @@ from jinja2 import Environment, FileSystemLoader
 from blackboard import finalize_briefing, update_phase
 from briefing_gate import validate_briefing_data
 from history_manager import generate_fingerprint, save_history
-from hub_utils import HUB_DIR, LATEST_SCAN_PATH, NEWS_DIR, REFINED_PATH, RUNTIME_DIR, dump_json, ensure_runtime_dirs, load_json
+from hub_utils import HUB_DIR, LATEST_SCAN_PATH, NEWS_DIR, REFINED_PATH, RUNTIME_DIR, atomic_dump_json, atomic_write_text, dump_json, ensure_runtime_dirs, load_json
 
 
 def build_grouped_list(scan_data: dict, focus_data: dict, included_urls: set[str]) -> tuple[dict, int]:
@@ -81,6 +81,7 @@ def forge_briefing() -> None:
         "urgent_signals": refined.get("urgent_signals", []),
         "action_levers": refined.get("action_levers", []),
         "adversarial_audit": refined.get("adversarial_audit"),
+        "mix": refined.get("mix"),
         "top_10": [
             {
                 "title": item.get("title_zh", item.get("title", "Untitled")),
@@ -93,6 +94,10 @@ def forge_briefing() -> None:
                 "event_date": item.get("event_date", "unknown"),
                 "published_at": item.get("published_at", "unknown"),
                 "retrieved_at": item.get("retrieved_at"),
+                "primary_domain": item.get("primary_domain"),
+                "secondary_domains": item.get("secondary_domains", []),
+                "major_signal": item.get("major_signal", False),
+                "major_signal_reason": item.get("major_signal_reason", "none"),
                 "fact": item.get("fact", ""),
                 "connection": item.get("connection", ""),
                 "deduction": item.get("deduction", ""),
@@ -124,9 +129,9 @@ def forge_briefing() -> None:
     template = env.get_template("briefing_template.md")
     final_md = template.render(**template_data)
 
-    save_path.write_text(final_md, encoding="utf-8")
     snapshot_path = save_path.with_suffix(".json")
-    dump_json(snapshot_path, template_data)
+    atomic_dump_json(snapshot_path, template_data)
+    atomic_write_text(save_path, final_md)
     save_history(
         [item["url"] for item in template_data["top_10"]],
         [generate_fingerprint(item["title"], item["source"]) for item in template_data["top_10"]],

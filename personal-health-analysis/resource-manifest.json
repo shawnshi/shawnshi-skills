@@ -1,17 +1,47 @@
 {
-  "schema_version": 1,
+  "schema_version": 2,
   "skill": "personal-health-analysis",
-  "generated_at": "2026-07-28T13:54:04",
+  "generated_at": "2026-08-09T09:30:57",
+  "hash_algorithm": "SHA-256",
+  "text_hash_normalization": "LF",
   "skill_md": "SKILL.md",
+  "skill_md_sha256": "2ecdc29aa7fd15f58a1c3412fe0712a289daa273a42e1b1fdac074733e707ae2",
   "top_level_files": [
     ".gitignore",
-    "garmindb.log",
     "install.ps1",
     "install.sh",
+    "requirements.lock.txt",
+    "requirements.txt",
     "SKILL.md"
   ],
+  "top_level_file_hashes": [
+    {
+      "path": ".gitignore",
+      "sha256": "b894093683c6824ce987aea0be82ae9b5f4b14ebf1abd62663619fa6f08d5469"
+    },
+    {
+      "path": "install.ps1",
+      "sha256": "599faa02a44073e9a0929057f6dbff41a0ed66ef2ee1d4b89874cfa4deb62d05"
+    },
+    {
+      "path": "install.sh",
+      "sha256": "a39a5d5a0465cf58092a1d3ecf33d42d454812c0836c9bd8885288b3e3aa9ff4"
+    },
+    {
+      "path": "requirements.lock.txt",
+      "sha256": "554a34dcccdd8ce90cf542a2fce2f53c4df29b010f3a39f684ee20c0fdf7cd52"
+    },
+    {
+      "path": "requirements.txt",
+      "sha256": "b5d72fe93eb09d24fd6557be9141910782c41d525304241bd40faff97bbdf775"
+    },
+    {
+      "path": "SKILL.md",
+      "sha256": "2ecdc29aa7fd15f58a1c3412fe0712a289daa273a42e1b1fdac074733e707ae2"
+    }
+  ],
   "top_level_directories": [
-    ".jules",
+    "agents",
     "assets",
     "references",
     "resources",
@@ -20,14 +50,22 @@
   "resource_directories": [
     {
       "name": "scripts",
-      "file_count": 15
+      "file_count": 34
     },
     {
       "name": "references",
       "file_count": 4
     },
     {
+      "name": "resources",
+      "file_count": 1
+    },
+    {
       "name": "assets",
+      "file_count": 1
+    },
+    {
+      "name": "agents",
       "file_count": 1
     }
   ],
@@ -35,37 +73,128 @@
     {
       "path": "references\\health_analysis.md",
       "exists": true,
-      "resolved_path": "C:\\Users\\shich\\.codex\\skills\\personal-health-analysis\\references\\health_analysis.md"
+      "resolved_path": "personal-health-analysis/references/health_analysis.md",
+      "sha256": "8fb0d8b8fb3a59cc7f6487d01589506670a5bf6bb6b17c8aee4f5b6bef47028c"
     },
     {
       "path": "references\\api.md",
       "exists": true,
-      "resolved_path": "C:\\Users\\shich\\.codex\\skills\\personal-health-analysis\\references\\api.md"
+      "resolved_path": "personal-health-analysis/references/api.md",
+      "sha256": "0f2f9c9a1141049089e67d3fce2102d71df06ab0162197b129b7abddb2fb19c3"
     },
     {
-      "path": "scripts\\garmin_data.py",
+      "path": "references\\advanced_tools.md",
       "exists": true,
-      "resolved_path": "C:\\Users\\shich\\.codex\\skills\\personal-health-analysis\\scripts\\garmin_data.py"
+      "resolved_path": "personal-health-analysis/references/advanced_tools.md",
+      "sha256": "e614e4fed78968e2a19ebb8d9c8937fbc055065c1f7605eed214b31ea81f1a29"
     },
     {
-      "path": "scripts\\garmin_intelligence.py",
+      "path": "references\\external_acceptance.md",
       "exists": true,
-      "resolved_path": "C:\\Users\\shich\\.codex\\skills\\personal-health-analysis\\scripts\\garmin_intelligence.py"
+      "resolved_path": "personal-health-analysis/references/external_acceptance.md",
+      "sha256": "a65ce86a26ab28cb64292c055398ef9d991e851354887fea4edf01df21d9804c"
     },
     {
-      "path": "scripts\\garmin_chart.py",
+      "path": "resources\\clinical_guidelines.json",
       "exists": true,
-      "resolved_path": "C:\\Users\\shich\\.codex\\skills\\personal-health-analysis\\scripts\\garmin_chart.py"
+      "resolved_path": "personal-health-analysis/resources/clinical_guidelines.json",
+      "sha256": "ebb2c0aba696b220aaf0587eb54f4e1dd2d586064271a5d6536b51d9679e8daa"
+    },
+    {
+      "path": "scripts\\wheelhouse_integrity.py",
+      "exists": true,
+      "resolved_path": "personal-health-analysis/scripts/wheelhouse_integrity.py",
+      "sha256": "ae04ec8e8b000b1dc74d3eaa0e501997e93cb60faec8a8502444d14bf4894804"
+    },
+    {
+      "path": "scripts\\garmin_capabilities.py",
+      "exists": true,
+      "resolved_path": "personal-health-analysis/scripts/garmin_capabilities.py",
+      "sha256": "24dfbbe5464c396540609992622e73db58239a1a02826a2f5c5aa3d50664bce8"
+    },
+    {
+      "path": "scripts\\garmin_auth.py",
+      "exists": true,
+      "resolved_path": "personal-health-analysis/scripts/garmin_auth.py",
+      "sha256": "a1c78c4c9d6c9baa6ff121df2a8c6ae3ae14faa4771f00ed83dba1da2a406b3c"
+    },
+    {
+      "path": "scripts\\garmin_sqlite_adapter.py",
+      "exists": true,
+      "resolved_path": "personal-health-analysis/scripts/garmin_sqlite_adapter.py",
+      "sha256": "bddfeeed2e75dfb24ee50e1573bb982aa00c7a1998bf5aeb0089a2faf8f1369f"
+    },
+    {
+      "path": "scripts\\garmin_data_extended.py",
+      "exists": true,
+      "resolved_path": "personal-health-analysis/scripts/garmin_data_extended.py",
+      "sha256": "7e338097ad4947cd9eb078016e4a4073585dd44e7c8bfaf94b476323f549e727"
+    },
+    {
+      "path": "scripts\\garmin_query.py",
+      "exists": true,
+      "resolved_path": "personal-health-analysis/scripts/garmin_query.py",
+      "sha256": "44229fc27665b90e8bc73ba355d88f7bb9989129532277b95edaf2f90f31ccdc"
+    },
+    {
+      "path": "scripts\\garmin_activity_files.py",
+      "exists": true,
+      "resolved_path": "personal-health-analysis/scripts/garmin_activity_files.py",
+      "sha256": "45408b2eeb3c269240d9753cbe3f47e866c7e8b25cd7aa4eca136106290becf2"
     },
     {
       "path": "scripts\\sync_health_data.py",
       "exists": true,
-      "resolved_path": "C:\\Users\\shich\\.codex\\skills\\personal-health-analysis\\scripts\\sync_health_data.py"
+      "resolved_path": "personal-health-analysis/scripts/sync_health_data.py",
+      "sha256": "82d99382b85875588332e8f7c46fff0542db8e390692355bf6244659db628fd5"
+    },
+    {
+      "path": "scripts\\garmin_fhir_adapter.py",
+      "exists": true,
+      "resolved_path": "personal-health-analysis/scripts/garmin_fhir_adapter.py",
+      "sha256": "bcc375c52cffbf5594c34719b9cf50eaeb6626aade6a3a206bbbf8713c4d5623"
+    },
+    {
+      "path": "scripts\\fhir_external_acceptance.py",
+      "exists": true,
+      "resolved_path": "personal-health-analysis/scripts/fhir_external_acceptance.py",
+      "sha256": "10b2c66c7d43591fd511839989f9df838b52182175606815bb029d7b925908e1"
+    },
+    {
+      "path": "assets\\dashboard_v2.html",
+      "exists": true,
+      "resolved_path": "personal-health-analysis/assets/dashboard_v2.html",
+      "sha256": "b5e962da25576634652c28508c3371bc0fba3d5b3bba0e7391629c47ceb4ce3f"
+    },
+    {
+      "path": "agents\\openai.yaml",
+      "exists": true,
+      "resolved_path": "personal-health-analysis/agents/openai.yaml",
+      "sha256": "1b038ea1ebb8a82c7b4cc0752774872948f06fe3f07b3dce0ddfcc63cae81fff"
+    },
+    {
+      "path": "scripts\\garmin_data.py",
+      "exists": true,
+      "resolved_path": "personal-health-analysis/scripts/garmin_data.py",
+      "sha256": "beca4449e9ba1229216a425af99b980165a5c31b998b62feb8b2236d8ba22771"
+    },
+    {
+      "path": "scripts\\garmin_intelligence.py",
+      "exists": true,
+      "resolved_path": "personal-health-analysis/scripts/garmin_intelligence.py",
+      "sha256": "d1909ce29cf74fd50afb1c5fac5f2569cc5394c958b1bb9ea40bffd617633e58"
+    },
+    {
+      "path": "scripts\\garmin_chart.py",
+      "exists": true,
+      "resolved_path": "personal-health-analysis/scripts/garmin_chart.py",
+      "sha256": "107c1418bb3690d0f0a7c783e867bf923f561adc015ede6bb984e88f5d88f7e3"
     },
     {
       "path": "scripts\\report_output.py",
       "exists": true,
-      "resolved_path": "C:\\Users\\shich\\.codex\\skills\\personal-health-analysis\\scripts\\report_output.py"
+      "resolved_path": "personal-health-analysis/scripts/report_output.py",
+      "sha256": "9279dad865bf717c90055ba558d652e9efc6f4e4eaa041a7efca859bc376be30"
     }
   ],
   "missing_declared_dependencies": []

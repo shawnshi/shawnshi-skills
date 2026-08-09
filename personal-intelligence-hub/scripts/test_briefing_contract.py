@@ -7,6 +7,7 @@ import unittest
 from pathlib import Path
 
 from briefing_gate import validate_briefing_data
+from mix_policy import select_candidates_with_mix
 
 
 SCRIPT_DIR = Path(__file__).resolve().parent
@@ -14,7 +15,7 @@ SCRIPT_DIR = Path(__file__).resolve().parent
 
 def valid_payload():
     return {
-        "schema_version": "1.0",
+        "schema_version": "1.1",
         "generated_at": "2026-07-28T12:00:00+08:00",
         "topic": "医疗 AI",
         "region": "中国",
@@ -24,6 +25,23 @@ def valid_payload():
         "digest": "保留观察。",
         "market": "数据有限。",
         "action_levers": [],
+        "mix": {
+            "default_ratio": {"technology": 0.4, "healthcare_digital": 0.6},
+            "effective_ratio": {"technology": 0.4, "healthcare_digital": 0.6},
+            "target_counts": {"technology": 0, "healthcare_digital": 1},
+            "actual_counts": {"technology": 0, "healthcare_digital": 1},
+            "adjustment": {
+                "applied": False,
+                "favored_domain": "none",
+                "reason": "none",
+                "trigger_urls": [],
+            },
+            "supply_exception": {
+                "applied": False,
+                "reason": "none",
+                "missing_domains": [],
+            },
+        },
         "top_10": [
             {
                 "title": "Source title",
@@ -33,6 +51,10 @@ def valid_payload():
                 "event_date": "unknown",
                 "published_at": "2026-07-27",
                 "retrieved_at": "2026-07-28T12:00:00+08:00",
+                "primary_domain": "healthcare_digital",
+                "secondary_domains": [],
+                "major_signal": False,
+                "major_signal_reason": "none",
                 "fact": "来源发布了一项公告。",
                 "connection": "与主题相关。",
                 "deduction": "影响仍需后续证据。",
@@ -93,6 +115,88 @@ class BriefingContractTests(unittest.TestCase):
         errors, _ = validate_briefing_data(payload)
 
         self.assertTrue(any("unresolved template value" in item for item in errors))
+
+    def test_mix_actual_counts_must_match_items(self):
+        payload = valid_payload()
+        payload["mix"]["actual_counts"] = {"technology": 1, "healthcare_digital": 0}
+
+        errors, _ = validate_briefing_data(payload)
+
+        self.assertIn("mix.actual_counts does not match retained items", errors)
+
+    def test_mix_deviation_requires_supply_exception(self):
+        payload = valid_payload()
+        payload["top_10"].append(
+            {
+                **copy.deepcopy(payload["top_10"][0]),
+                "title": "Second source",
+                "title_zh": "第二条来源",
+                "url": "https://example.org/second",
+            }
+        )
+        payload["mix"]["target_counts"] = {"technology": 1, "healthcare_digital": 1}
+        payload["mix"]["actual_counts"] = {"technology": 0, "healthcare_digital": 2}
+
+        errors, _ = validate_briefing_data(payload)
+
+        self.assertIn("mix deviation requires supply_exception", errors)
+
+    def test_effective_ratio_change_requires_adjustment(self):
+        payload = valid_payload()
+        payload["mix"]["effective_ratio"] = {
+            "technology": 0.6,
+            "healthcare_digital": 0.4,
+        }
+        payload["mix"]["target_counts"] = {"technology": 1, "healthcare_digital": 0}
+
+        errors, _ = validate_briefing_data(payload)
+
+        self.assertIn(
+            "mix adjustment is required when effective_ratio changes",
+            errors,
+        )
+
+    def test_major_signal_mix_from_selector_passes_gate(self):
+        payload = valid_payload()
+        base = payload["top_10"][0]
+        candidates = []
+        for index, domain in enumerate(
+            [
+                "technology",
+                "technology",
+                "technology",
+                "healthcare_digital",
+                "healthcare_digital",
+                "healthcare_digital",
+            ]
+        ):
+            item = copy.deepcopy(base)
+            item["title"] = f"source-{index}"
+            item["title_zh"] = f"来源-{index}"
+            item["url"] = f"https://example.org/source-{index}"
+            item["primary_domain"] = domain
+            item["strategic_score"] = 100 - index
+            item["major_signal"] = index == 0
+            item["major_signal_reason"] = "高可信L3改变近期决策" if index == 0 else "none"
+            candidates.append(item)
+        selected, mix = select_candidates_with_mix(
+            candidates,
+            5,
+            {
+                "default_ratio": {"technology": 0.4, "healthcare_digital": 0.6},
+                "max_ratio_shift": 0.2,
+            },
+        )
+        payload["top_10"] = selected
+        payload["mix"] = mix
+
+        errors, _ = validate_briefing_data(payload)
+
+        self.assertEqual(errors, [])
+        self.assertEqual(
+            payload["mix"]["actual_counts"],
+            {"technology": 3, "healthcare_digital": 2},
+        )
 
 
 if __name__ == "__main__":

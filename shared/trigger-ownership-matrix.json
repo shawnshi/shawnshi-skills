@@ -141,6 +141,21 @@
             "domain": "personal_analysis",
             "classes": [
                 {
+                    "id": "personal_wearable_health_analysis",
+                    "primary_skill": "personal-health-analysis",
+                    "secondary_skills": [
+                        "personal-cognitive-auditor"
+                    ],
+                    "request_signals": [
+                        "analyze garmin sleep hrv heart rate stress",
+                        "review wearable health trend and missing data",
+                        "generate local garmin health report",
+                        "create offline garmin trend dashboard",
+                        "verify local garmin database snapshot integrity",
+                        "audit garmin device firmware epochs"
+                    ]
+                },
+                {
                     "id": "periodic_self_review",
                     "primary_skill": "personal-cognitive-auditor",
                     "secondary_skills": [

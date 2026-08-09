@@ -19,9 +19,16 @@ if ([string]::IsNullOrWhiteSpace($Root)) {
 }
 $Root = (Resolve-Path -LiteralPath $Root).Path
 
-$LocalReferencePattern = '(?<path>(?<![A-Za-z])(?:(?:scripts|references|assets|examples|prompts|agents)[\\/][^\s`"''<>]+|[A-Za-z0-9._-]+[\\/](?:SKILL\.md|(?:scripts|references|assets|examples|prompts|agents)[\\/][^\s`"''<>]+)))'
+$LocalReferencePattern = '(?<path>(?<![A-Za-z])(?:(?:scripts|references|resources|assets|examples|prompts|agents)[\\/][^\s`"''<>]+|[A-Za-z0-9._-]+[\\/](?:SKILL\.md|(?:scripts|references|resources|assets|examples|prompts|agents)[\\/][^\s`"''<>]+)))'
 
 $KnownFileSuffixPattern = '(?<stable>.*?(?:SKILL\.md|\.md|\.json|\.py|\.ps1|\.sh|\.csx|\.cs|\.svg|\.png|\.jpg|\.jpeg|\.gif|\.pptx|\.docx|\.pdf|\.txt|\.yaml|\.yml|\.toml|\.csv|\.tsv|\.html|\.css|\.js|\.ts|\.tsx|\.jsx))'
+
+$CanonicalTextHashExtensions = @(
+    '.md', '.txt', '.py', '.ps1', '.sh', '.csx', '.cs', '.svg', '.xml',
+    '.json', '.yaml', '.yml', '.toml', '.csv', '.tsv', '.html', '.css',
+    '.js', '.mjs', '.cjs', '.ts', '.tsx', '.jsx'
+)
+$CanonicalTextHashNames = @('.gitignore', '.gitattributes', '.editorconfig')
 
 function Normalize-LocalReference {
     param(
@@ -58,6 +65,33 @@ function Should-IgnoreReference {
     }
 
     return $false
+}
+
+function Get-ContentSha256 {
+    param([string]$Path)
+
+    if ([string]::IsNullOrWhiteSpace($Path) -or
+        -not (Test-Path -LiteralPath $Path -PathType Leaf)) {
+        return $null
+    }
+    $bytes = [IO.File]::ReadAllBytes($Path)
+    $extension = [IO.Path]::GetExtension($Path).ToLowerInvariant()
+    $name = [IO.Path]::GetFileName($Path).ToLowerInvariant()
+    if ($extension -in $CanonicalTextHashExtensions -or
+        $name -in $CanonicalTextHashNames) {
+        $utf8 = [Text.UTF8Encoding]::new($false, $true)
+        $text = $utf8.GetString($bytes)
+        $canonicalText = $text.Replace("`r`n", "`n").Replace("`r", "`n")
+        $bytes = $utf8.GetBytes($canonicalText)
+    }
+
+    $hasher = [Security.Cryptography.SHA256]::Create()
+    try {
+        $hash = $hasher.ComputeHash($bytes)
+    } finally {
+        $hasher.Dispose()
+    }
+    return [BitConverter]::ToString($hash).Replace('-', '').ToLowerInvariant()
 }
 
 function Get-SkillFiles {
@@ -123,6 +157,7 @@ function Get-DeclaredLocalReferences {
             path          = $relative
             exists        = $null -ne $resolved
             resolved_path = $portableResolved
+            sha256        = Get-ContentSha256 -Path $resolved
         }
     }
 }
@@ -132,14 +167,16 @@ function Get-TopLevelResourceDirectories {
         [string]$SkillDirectory
     )
 
-    $resourceNames = @('scripts', 'references', 'assets', 'examples', 'prompts', 'agents', 'tmp')
+    $resourceNames = @('scripts', 'references', 'resources', 'assets', 'examples', 'prompts', 'agents', 'tmp')
     foreach ($name in $resourceNames) {
         $full = Join-Path $SkillDirectory $name
         if (Test-Path -LiteralPath $full) {
             $files = @(
                 Get-ChildItem -Path $full -Recurse -File -ErrorAction SilentlyContinue |
                 Where-Object {
-                    $_.FullName -notmatch '[\\/](?:__pycache__|\.ruff_cache|\.pytest_cache)[\\/]'
+                    $_.FullName -notmatch '[\\/](?:__pycache__|\.ruff_cache|\.pytest_cache|\.venv|\.venv_test)[\\/]' -and
+                    $_.Name -notmatch '\.log$|\.py[co]$' -and
+                    $_.Name -notin @('config.json', 'garmin_tokens.json')
                 }
             )
             [PSCustomObject]@{
@@ -159,23 +196,43 @@ foreach ($file in (Get-SkillFiles)) {
     $missing = @($declared | Where-Object { -not $_.exists } | ForEach-Object { $_.path })
     $topLevelFiles = @(
         Get-ChildItem -Path $skillDirectory -File -ErrorAction SilentlyContinue |
-        Where-Object { $_.Name -notmatch '\.bak$|\.p12\.bak$|\.p22\.bak$|resource-manifest\.json$|skill\.json$' } |
+        Where-Object {
+            $_.Name -notmatch '\.bak$|\.p12\.bak$|\.p22\.bak$|\.log$|resource-manifest\.json$|skill\.json$' -and
+            $_.Name -notin @('config.json', 'garmin_tokens.json')
+        } |
         ForEach-Object { $_.Name }
     )
     $topLevelDirs = @(
         Get-ChildItem -Path $skillDirectory -Directory -ErrorAction SilentlyContinue |
         Where-Object {
-            $_.Name -notin @('__pycache__', '.ruff_cache', '.pytest_cache')
+            $_.Name -notin @(
+                '__pycache__', '.ruff_cache', '.pytest_cache', '.jules',
+                '.venv', '.venv_test',
+                'garmin-output', 'output', 'scratch'
+            )
         } |
         ForEach-Object { $_.Name }
     )
+    $topLevelFileHashes = @(
+        $topLevelFiles | ForEach-Object {
+            $topLevelPath = Join-Path $skillDirectory $_
+            [PSCustomObject]@{
+                path   = $_
+                sha256 = Get-ContentSha256 -Path $topLevelPath
+            }
+        }
+    )
 
     $manifest = [ordered]@{
-        schema_version                = 1
+        schema_version                = 2
         skill                         = $skillName
         generated_at                  = (Get-Date).ToString('s')
+        hash_algorithm                = 'SHA-256'
+        text_hash_normalization       = 'LF'
         skill_md                      = 'SKILL.md'
+        skill_md_sha256               = Get-ContentSha256 -Path $file.FullName
         top_level_files               = $topLevelFiles
+        top_level_file_hashes         = $topLevelFileHashes
         top_level_directories         = $topLevelDirs
         resource_directories          = @(Get-TopLevelResourceDirectories -SkillDirectory $skillDirectory)
         declared_local_dependencies   = $declared

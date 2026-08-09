@@ -1,4 +1,6 @@
 import sqlite3
+import io
+import json
 import tempfile
 import unittest
 from datetime import datetime
@@ -21,6 +23,136 @@ def _create_database(path, statements):
 
 
 class MissingObservationContractTests(unittest.TestCase):
+    def test_direct_adapter_entrypoint_is_rejected_without_reading_databases(self):
+        output = io.StringIO()
+        with (
+            patch.object(
+                adapter,
+                "get_summary",
+                side_effect=AssertionError("direct entrypoint must not read data"),
+            ),
+            patch("sys.stdout", output),
+        ):
+            rc = adapter.main()
+
+        self.assertEqual(rc, 2)
+        self.assertEqual(
+            json.loads(output.getvalue()),
+            {
+                "status": "unsupported_entrypoint",
+                "error_code": "use_verified_health_cli",
+            },
+        )
+
+    def test_schema_errors_fail_closed_with_machine_readable_codes(self):
+        with tempfile.TemporaryDirectory() as temp_root:
+            database = Path(temp_root) / "garmin.db"
+            _create_database(database, [("CREATE TABLE unrelated (value INTEGER)", ())])
+
+            with patch.object(
+                adapter,
+                "get_connection",
+                side_effect=lambda _path: sqlite3.connect(database),
+            ):
+                for reader, expected_code in (
+                    (adapter.get_summary, "summary_query_failed"),
+                    (adapter.get_sleep_data, "sleep_query_failed"),
+                    (adapter.get_hrv_data, "hrv_query_failed"),
+                    (
+                        adapter.get_daily_friction_matrix,
+                        "friction_activity_query_failed",
+                    ),
+                ):
+                    with self.subTest(reader=reader.__name__), self.assertRaisesRegex(
+                        adapter.LocalDatabaseReadError,
+                        expected_code,
+                    ):
+                        reader(days=1)
+
+    def test_device_info_returns_latest_firmware_per_serial_deterministically(self):
+        with tempfile.TemporaryDirectory() as temp_root:
+            database = Path(temp_root) / "garmin.db"
+            _create_database(
+                database,
+                [
+                    (
+                        """
+                        CREATE TABLE device_info (
+                            timestamp TEXT,
+                            serial_number TEXT,
+                            software_version TEXT
+                        )
+                        """,
+                        (),
+                    ),
+                    (
+                        "INSERT INTO device_info VALUES (?, ?, ?)",
+                        ("2026-07-01 08:00:00", "alpha", "1.0"),
+                    ),
+                    (
+                        "INSERT INTO device_info VALUES (?, ?, ?)",
+                        ("2026-07-03 08:00:00", "alpha", "2.0"),
+                    ),
+                    (
+                        "INSERT INTO device_info VALUES (?, ?, ?)",
+                        ("2026-07-03 08:00:00", "alpha", "2.1"),
+                    ),
+                    (
+                        "INSERT INTO device_info VALUES (?, ?, ?)",
+                        ("2026-07-02 08:00:00", "beta", "9.0"),
+                    ),
+                ],
+            )
+
+            with patch.object(
+                adapter,
+                "get_connection",
+                side_effect=lambda _path: sqlite3.connect(database),
+            ):
+                frame = adapter.get_devices_info()
+                history = adapter.get_device_firmware_history()
+
+        self.assertEqual(
+            frame.to_dict("records"),
+            [
+                {
+                    "serial_number": "alpha",
+                    "software_version": "2.1",
+                    "timestamp": "2026-07-03 08:00:00",
+                },
+                {
+                    "serial_number": "beta",
+                    "software_version": "9.0",
+                    "timestamp": "2026-07-02 08:00:00",
+                },
+            ],
+        )
+        self.assertEqual(
+            history[["serial_number", "software_version"]].to_dict("records"),
+            [
+                {"serial_number": "alpha", "software_version": "1.0"},
+                {"serial_number": "beta", "software_version": "9.0"},
+                {"serial_number": "alpha", "software_version": "2.0"},
+                {"serial_number": "alpha", "software_version": "2.1"},
+            ],
+        )
+
+    def test_connection_is_read_only(self):
+        with tempfile.TemporaryDirectory() as temp_root:
+            database = Path(temp_root) / "garmin.db"
+            _create_database(database, [("CREATE TABLE sample (value INTEGER)", ())])
+            connection = adapter.get_connection(database)
+            try:
+                connection.execute("SELECT * FROM sample").fetchall()
+                with self.assertRaises(sqlite3.OperationalError):
+                    connection.execute("INSERT INTO sample VALUES (1)")
+            finally:
+                connection.close()
+
+    def test_days_must_be_positive(self):
+        with self.assertRaises(ValueError):
+            adapter.get_summary(days=0)
+
     def test_missing_daily_summary_values_remain_nan(self):
         with tempfile.TemporaryDirectory() as temp_root:
             database = Path(temp_root) / "garmin.db"
@@ -55,6 +187,7 @@ class MissingObservationContractTests(unittest.TestCase):
             ):
                 frame = adapter.get_summary(days=1)
 
+        self.assertEqual(len(frame), 1)
         row = frame.loc[frame["date"] == today].iloc[0]
         for field in (
             "resting_heart_rate",
@@ -106,6 +239,7 @@ class MissingObservationContractTests(unittest.TestCase):
             ):
                 frame = adapter.get_sleep_data(days=1)
 
+        self.assertEqual(len(frame), 1)
         row = frame.loc[frame["date"] == today].iloc[0]
         for field in (
             "sleep_time_seconds",
@@ -144,6 +278,7 @@ class MissingObservationContractTests(unittest.TestCase):
             ):
                 frame = adapter.get_hrv_data(days=1)
 
+        self.assertEqual(len(frame), 1)
         row = frame.loc[frame["date"] == today].iloc[0]
         self.assertTrue(pd.isna(row["hrv_avg"]))
         self.assertTrue(pd.isna(row["status"]))

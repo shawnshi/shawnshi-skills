@@ -1,0 +1,6 @@
+interface:
+  display_name: "Personal Health Analysis"
+  short_description: "本地校验 Garmin 趋势、缺失、设备时期与数据完整性"
+  default_prompt: "Use $personal-health-analysis to analyze my authorized local Garmin data for a specified period, verify the local read window and device or firmware epochs, disclose missingness and provenance, and keep the result non-diagnostic."
+policy:
+  allow_implicit_invocation: true

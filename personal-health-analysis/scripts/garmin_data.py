@@ -1,67 +1,119 @@
 #!/usr/bin/env python3
 """
-@Input:  --metric (sleep, hrv, etc.), --days, --start, --end
-@Output: JSON Stream (Standardized Health Metrics)
-@Pos:    Domain Data Layer. Fetches raw data from Garmin API.
+@Input:  metric, bounded date options, --source local|live, and explicit live grants
+@Output: JSON health metrics with coverage and component status
+@Pos:    Local-first data layer; live Garmin access is explicit and fail-closed.
 
 !!! Maintenance Protocol: If API endpoints change, update this. Keep JSON structure stable for consumers.
 
-Fetch health data from Garmin Connect.
-Outputs JSON to stdout for parsing by the agent.
+Read authorized local Garmin data by default. Live Garmin Connect access requires
+--source live, --allow-network, --allow-health-data, and an explicit window.
 """
 
 import json
 import sys
 import argparse
-import time
+import re
 from datetime import datetime, timedelta
 from pathlib import Path
 import concurrent.futures
 
+from garmin_capabilities import consume_capability, issue_capability
 
-SUMMARY_MAX_WORKERS = 5
+
+SUMMARY_MAX_WORKERS = 1
+LIVE_DATA_OPERATION = "health_data_live"
+LIVE_SUMMARY_COMPONENTS = (
+    "sleep",
+    "hrv",
+    "body_battery",
+    "heart_rate",
+    "activities",
+    "stress",
+    "training_load_series",
+)
+LIVE_SUMMARY_OMITTED_COMPONENTS = (
+    "training_status",
+    "max_metrics",
+    "hydration",
+    "body_composition",
+    "alarms",
+)
+LOCAL_OBSERVATION_FIELDS = {
+    "sleep": (
+        "sleep_time_seconds",
+        "deep_sleep_seconds",
+        "light_sleep_seconds",
+        "rem_sleep_seconds",
+        "sleep_score",
+    ),
+    "hrv": ("last_night_avg",),
+    "heart_rate": ("resting_hr", "max_hr"),
+    "body_battery": ("highest", "lowest", "charged"),
+    "stress": ("avg_stress",),
+    "activities": (
+        "activity_id",
+        "distance",
+        "duration",
+        "calories",
+        "training_load",
+    ),
+}
 
 # Import auth helper
 sys.path.insert(0, str(Path(__file__).parent))
 from garmin_auth import get_client
 
-try:
-    from garminconnect import Garmin
-except ImportError:
-    print('{"error": "garminconnect not installed. Run: pip3 install garminconnect"}', file=sys.stderr)
-    sys.exit(1)
-
 
 def get_date_range(days=None, start=None, end=None):
-    """Calculate date range for queries."""
+    """Return an inclusive, validated range containing exactly ``days`` dates."""
+    if bool(start) != bool(end):
+        raise ValueError("--start and --end must be supplied together")
     if start and end:
-        return start, end
-    
+        try:
+            start_date = datetime.strptime(start, "%Y-%m-%d")
+            end_date = datetime.strptime(end, "%Y-%m-%d")
+        except ValueError as exc:
+            raise ValueError("Dates must use YYYY-MM-DD") from exc
+        if start_date > end_date:
+            raise ValueError("--start must not be later than --end")
+        return start_date.strftime("%Y-%m-%d"), end_date.strftime("%Y-%m-%d")
+
+    requested_days = 7 if days is None else days
+    if (
+        not isinstance(requested_days, int)
+        or isinstance(requested_days, bool)
+        or requested_days < 1
+    ):
+        raise ValueError("--days must be a positive integer")
     end_date = datetime.now()
-    start_date = end_date - timedelta(days=days or 7)
-    
+    start_date = end_date - timedelta(days=requested_days - 1)
     return start_date.strftime("%Y-%m-%d"), end_date.strftime("%Y-%m-%d")
 
-def fetch_with_retry(func, *args, max_retries=3, base_delay=2, **kwargs):
-    """Execute a Garmin API call with exponential backoff to handle rate limits (HTTP 429)."""
-    retries = 0
-    while retries <= max_retries:
-        try:
-            return func(*args, **kwargs)
-        except Exception as e:
-            error_str = str(e).lower()
-            if "too many requests" in error_str or "429" in error_str:
-                if retries == max_retries:
-                    print(f"⚠️ Rate limit exceeded after {max_retries} retries for {func.__name__}", file=sys.stderr)
-                    return None
-                delay = base_delay * (2 ** retries)
-                print(f"⏳ Rate limited. Backing off for {delay} seconds...", file=sys.stderr)
-                time.sleep(delay)
-                retries += 1
-            else:
-                # Other exceptions
-                return None
-    return None
+class LiveRequestError(RuntimeError):
+    """Stable, non-sensitive live request failure."""
+
+    def __init__(self, code: str):
+        super().__init__(code)
+        self.code = code
+
+
+def _safe_live_failure(exc: BaseException) -> dict[str, str]:
+    return {
+        "error": getattr(exc, "code", "live_request_failed"),
+        "error_type": type(exc).__name__,
+    }
+
+
+def fetch_with_retry(func, *args, max_retries=0, base_delay=0, **kwargs):
+    """Execute once; rate limits are terminal so the caller can stop safely."""
+    del max_retries, base_delay
+    try:
+        return func(*args, **kwargs)
+    except Exception as exc:
+        message = str(exc).casefold()
+        code = "rate_limited" if "too many requests" in message or "429" in message else "live_request_failed"
+        raise LiveRequestError(code) from exc
 
 
 def _map_with_workers(worker, items, max_workers=5):
@@ -111,7 +163,7 @@ def fetch_sleep(client, days=7, start=None, end=None, max_workers=5):
         sleep_data.sort(key=lambda x: x["date"])
         return {"sleep": sleep_data, "start": start_date, "end": end_date}
     except Exception as e:
-        return {"error": str(e)}
+        return _safe_live_failure(e)
 
 
 def fetch_hrv(client, days=7, start=None, end=None, max_workers=5):
@@ -146,7 +198,7 @@ def fetch_hrv(client, days=7, start=None, end=None, max_workers=5):
         hrv_data.sort(key=lambda x: x["date"])
         return {"hrv": hrv_data, "start": start_date, "end": end_date}
     except Exception as e:
-        return {"error": str(e)}
+        return _safe_live_failure(e)
 
 
 def fetch_body_battery(client, days=7, start=None, end=None, max_workers=5):
@@ -180,7 +232,7 @@ def fetch_body_battery(client, days=7, start=None, end=None, max_workers=5):
         bb_data.sort(key=lambda x: x["date"])
         return {"body_battery": bb_data, "start": start_date, "end": end_date}
     except Exception as e:
-        return {"error": str(e)}
+        return _safe_live_failure(e)
 
 
 def fetch_heart_rate(client, days=7, start=None, end=None, max_workers=5):
@@ -210,7 +262,7 @@ def fetch_heart_rate(client, days=7, start=None, end=None, max_workers=5):
         hr_data.sort(key=lambda x: x["date"])
         return {"heart_rate": hr_data, "start": start_date, "end": end_date}
     except Exception as e:
-        return {"error": str(e)}
+        return _safe_live_failure(e)
 
 
 def fetch_activities(client, days=7, start=None, end=None):
@@ -238,11 +290,11 @@ def fetch_activities(client, days=7, start=None, end=None):
         
         return {"activities": activity_list, "start": start_date, "end": end_date, "count": len(activity_list)}
     except Exception as e:
-        return {"error": str(e)}
+        return _safe_live_failure(e)
 
 
 def fetch_stress(client, days=7, start=None, end=None, max_workers=5):
-    """Fetch stress levels concurrently using user summary for accurate durations."""
+    """Fetch only the daily stress endpoint for the requested dates."""
     start_date, end_date = get_date_range(days, start, end)
     
     try:
@@ -252,8 +304,7 @@ def fetch_stress(client, days=7, start=None, end=None, max_workers=5):
         dates = [(current + timedelta(days=i)).strftime("%Y-%m-%d") for i in range((end_dt - current).days + 1)]
         
         def _get_single_day(date_str):
-            # Using get_user_summary as it contains pre-calculated durations
-            data = fetch_with_retry(client.get_user_summary, date_str)
+            data = fetch_with_retry(client.get_stress_data, date_str)
             if data:
                 return {
                     "date": date_str,
@@ -263,7 +314,6 @@ def fetch_stress(client, days=7, start=None, end=None, max_workers=5):
                     "low_stress_duration": data.get("lowStressDuration"),
                     "medium_stress_duration": data.get("mediumStressDuration"),
                     "high_stress_duration": data.get("highStressDuration"),
-                    "steps": data.get("totalSteps")
                 }
             return None
 
@@ -273,7 +323,7 @@ def fetch_stress(client, days=7, start=None, end=None, max_workers=5):
         stress_data.sort(key=lambda x: x["date"])
         return {"stress": stress_data, "start": start_date, "end": end_date}
     except Exception as e:
-        return {"error": str(e)}
+        return _safe_live_failure(e)
 
 
 def fetch_training_load_series(client, days=7, start=None, end=None, max_workers=5):
@@ -305,8 +355,8 @@ def fetch_training_load_series(client, days=7, start=None, end=None, max_workers
 
         load_data.sort(key=lambda x: x["date"])
         return {"training_load": load_data}
-    except Exception:
-        return {"training_load": []}
+    except Exception as exc:
+        return _safe_live_failure(exc)
 
 
 def fetch_training_status(client, date_str=None):
@@ -367,7 +417,7 @@ def fetch_hydration(client, date_str=None):
     try:
         data = fetch_with_retry(client.get_hydration_data, date_str)
         if data:
-            return {"date": date_str, "valueInML": data.get("valueInML", 0)}
+            return {"date": date_str, "valueInML": data.get("valueInML")}
         return {}
     except Exception:
         return {}
@@ -423,111 +473,194 @@ def fetch_body_composition(client, date_str=None):
         data = fetch_with_retry(client.get_body_composition, start_date, date_str)
         if data and "dateWeightList" in data and len(data["dateWeightList"]) > 0:
             latest = data["dateWeightList"][-1]
-            weight_kg = latest.get("weight", 0) / 1000
+            weight_grams = latest.get("weight")
+            weight_kg = (
+                weight_grams / 1000
+                if isinstance(weight_grams, (int, float))
+                and not isinstance(weight_grams, bool)
+                else None
+            )
             bmi = latest.get("bmi")
             
             # Recalculate only when both measured weight and an authorized
             # height are available.
-            if (not bmi or bmi == 0) and height_cm and weight_kg > 0:
+            if (
+                (not bmi or bmi == 0)
+                and height_cm
+                and weight_kg is not None
+                and weight_kg > 0
+            ):
                 bmi = weight_kg / ((height_cm / 100) ** 2)
-                
+
+            data_gaps = []
+            if weight_kg is None:
+                data_gaps.append("Weight unavailable because Garmin did not provide a measured weight")
+            if not bmi:
+                data_gaps.append(
+                    "BMI unavailable because Garmin did not provide BMI and the required measured weight and authorized height were not both available"
+                )
+
             return {
-                "weight": round(weight_kg, 1),
+                "weight": round(weight_kg, 1) if weight_kg is not None else None,
                 "bmi": round(bmi, 1) if bmi else "--",
                 "fat_pct": round(latest.get("bodyFat", 0), 1) if latest.get("bodyFat") else "--",
                 "date": latest.get("date"),
                 "source_height": height_cm,
                 "height_source": height_source,
-                "data_gaps": [] if bmi else ["BMI unavailable because Garmin did not provide BMI and no authorized height was available"]
+                "data_gaps": data_gaps,
             }
         return {}
     except Exception:
         return {}
 
-def fetch_summary(client, days=7, start=None, end=None):
-    """Fetch combined summary with key metrics."""
+def _normalize_live_summary_components(components=None):
+    if components is None:
+        return LIVE_SUMMARY_COMPONENTS
+    if not isinstance(components, (list, tuple)) or not components:
+        raise ValueError("live_summary_components_required")
+    if any(not isinstance(item, str) for item in components):
+        raise ValueError("live_summary_component_invalid")
+    if len(set(components)) != len(components):
+        raise ValueError("live_summary_component_duplicate")
+    unknown = set(components) - set(LIVE_SUMMARY_COMPONENTS)
+    if unknown:
+        raise ValueError("live_summary_component_invalid")
+    return tuple(item for item in LIVE_SUMMARY_COMPONENTS if item in components)
+
+
+def fetch_summary(client, days=7, start=None, end=None, *, components=None):
+    """Fetch the fixed, window-bounded live-summary component set.
+
+    Profile, device, alarm, body-composition and look-back endpoints are
+    intentionally excluded.  Callers bind ``LIVE_SUMMARY_COMPONENTS`` and the
+    exact date range into both live capabilities before invoking this function.
+    """
     start_date, end_date = get_date_range(days, start, end)
+    selected_components = _normalize_live_summary_components(components)
     
     try:
-        # Use one bounded top-level pool. Multi-day components run inline inside
-        # these workers so their own pools do not multiply concurrency.
+        # Execute components serially.  This deliberately trades latency for a
+        # strict stop boundary: after a 429 no later component can begin.
         task_specs = {
             "sleep": (
-                lambda: fetch_sleep(client, days, start, end, max_workers=1),
+                lambda: fetch_sleep(client, None, start_date, end_date, max_workers=1),
                 "sleep",
                 [],
             ),
             "hrv": (
-                lambda: fetch_hrv(client, days, start, end, max_workers=1),
+                lambda: fetch_hrv(client, None, start_date, end_date, max_workers=1),
                 "hrv",
                 [],
             ),
             "body_battery": (
-                lambda: fetch_body_battery(client, days, start, end, max_workers=1),
+                lambda: fetch_body_battery(
+                    client, None, start_date, end_date, max_workers=1
+                ),
                 "body_battery",
                 [],
             ),
             "heart_rate": (
-                lambda: fetch_heart_rate(client, days, start, end, max_workers=1),
+                lambda: fetch_heart_rate(
+                    client, None, start_date, end_date, max_workers=1
+                ),
                 "heart_rate",
                 [],
             ),
             "activities": (
-                lambda: fetch_activities(client, days, start, end),
+                lambda: fetch_activities(client, None, start_date, end_date),
                 "activities",
                 [],
             ),
             "stress": (
-                lambda: fetch_stress(client, days, start, end, max_workers=1),
+                lambda: fetch_stress(client, None, start_date, end_date, max_workers=1),
                 "stress",
                 [],
             ),
             "training_load_series": (
                 lambda: fetch_training_load_series(
-                    client, days, start, end, max_workers=1
+                    client, None, start_date, end_date, max_workers=1
                 ),
                 "training_load",
                 [],
             ),
-            "training_status": (lambda: fetch_training_status(client, end_date), None, {}),
-            "max_metrics": (lambda: fetch_max_metrics(client, end_date), None, {}),
-            "hydration": (lambda: fetch_hydration(client, end_date), None, {}),
-            "body_composition": (
-                lambda: fetch_body_composition(client, end_date),
-                None,
-                {},
-            ),
-            "alarms": (lambda: fetch_alarms(client), None, []),
+        }
+        task_specs = {
+            name: spec
+            for name, spec in task_specs.items()
+            if name in selected_components
         }
 
-        component_results = {}
-        with concurrent.futures.ThreadPoolExecutor(
-            max_workers=SUMMARY_MAX_WORKERS
-        ) as executor:
-            futures = {
-                name: executor.submit(task)
-                for name, (task, _result_key, _default) in task_specs.items()
+        requested_days = (
+            datetime.strptime(end_date, "%Y-%m-%d")
+            - datetime.strptime(start_date, "%Y-%m-%d")
+        ).days + 1
+        component_results = {name: [] for name in LIVE_SUMMARY_COMPONENTS}
+        component_status = {
+            name: {
+                "status": "not_requested",
+                "observed_days": 0,
+                "observed_records": 0,
             }
-            for name, future in futures.items():
-                _task, result_key, default = task_specs[name]
-                try:
-                    raw_result = future.result()
-                    if result_key:
-                        component_results[name] = (
-                            raw_result.get(result_key, default)
-                            if isinstance(raw_result, dict)
-                            else default
-                        )
-                    else:
-                        component_results[name] = (
-                            raw_result if raw_result is not None else default
-                        )
-                except Exception as exc:
-                    print(
-                        f"⚠️ Summary component '{name}' failed ({type(exc).__name__}).",
-                        file=sys.stderr,
-                    )
+            for name in LIVE_SUMMARY_COMPONENTS
+        }
+        for name, (task, result_key, default) in task_specs.items():
+            try:
+                raw_result = task()
+                if isinstance(raw_result, dict) and raw_result.get("error"):
+                    if raw_result["error"] == "rate_limited":
+                        raise LiveRequestError("rate_limited")
                     component_results[name] = default
+                    component_status[name] = {
+                        "status": "error",
+                        "observed_days": 0,
+                        "observed_records": 0,
+                    }
+                    continue
+                component_results[name] = (
+                    raw_result.get(result_key, default)
+                    if result_key and isinstance(raw_result, dict)
+                    else raw_result if raw_result is not None else default
+                )
+                value = component_results[name]
+                if isinstance(value, list):
+                    observed_dates = {
+                        item.get("date")
+                        for item in value
+                        if isinstance(item, dict) and item.get("date")
+                    }
+                    observed_records = len(value)
+                    status = (
+                        "no_data"
+                        if observed_records == 0
+                        else "complete"
+                        if len(observed_dates) >= requested_days
+                        else "partial"
+                    )
+                    component_status[name] = {
+                        "status": status,
+                        "observed_days": len(observed_dates),
+                        "observed_records": observed_records,
+                    }
+                else:
+                    available = value not in (None, {}, [])
+                    component_status[name] = {
+                        "status": "available" if available else "no_data",
+                        "observed_days": 1 if available else 0,
+                        "observed_records": 1 if available else 0,
+                    }
+            except LiveRequestError:
+                raise
+            except Exception as exc:
+                print(
+                    f"⚠️ Summary component '{name}' failed ({type(exc).__name__}).",
+                    file=sys.stderr,
+                )
+                component_results[name] = default
+                component_status[name] = {
+                    "status": "error",
+                    "observed_days": 0,
+                    "observed_records": 0,
+                }
 
         sleep = component_results["sleep"]
         hrv = component_results["hrv"]
@@ -536,39 +669,55 @@ def fetch_summary(client, days=7, start=None, end=None):
         activities = component_results["activities"]
         stress = component_results["stress"]
         training_load_series = component_results["training_load_series"]
-        training_status = component_results["training_status"]
-        max_metrics = component_results["max_metrics"]
-        hydration = component_results["hydration"]
-        body_comp = component_results["body_composition"]
-        alarms = component_results["alarms"]
         
         # Calculate averages (handle None values)
         sleep_times = [s.get("sleep_time_seconds") for s in sleep if s.get("sleep_time_seconds")]
-        avg_sleep_hours = (sum(sleep_times) / len(sleep_times) / 3600) if sleep_times else 0
+        avg_sleep_hours = (sum(sleep_times) / len(sleep_times) / 3600) if sleep_times else None
         
         sleep_scores = [s.get("sleep_score") for s in sleep if s.get("sleep_score") is not None]
-        avg_sleep_score = (sum(sleep_scores) / len(sleep_scores)) if sleep_scores else 0
+        avg_sleep_score = (sum(sleep_scores) / len(sleep_scores)) if sleep_scores else None
         
         hrv_values = [h.get("last_night_avg") for h in hrv if h.get("last_night_avg") is not None]
-        avg_hrv = (sum(hrv_values) / len(hrv_values)) if hrv_values else 0
+        avg_hrv = (sum(hrv_values) / len(hrv_values)) if hrv_values else None
         
         rhr_values = [h.get("resting_hr") for h in hr if h.get("resting_hr") is not None]
-        avg_rhr = (sum(rhr_values) / len(rhr_values)) if rhr_values else 0
+        avg_rhr = (sum(rhr_values) / len(rhr_values)) if rhr_values else None
         
         bb_charged_values = [b.get("charged") for b in bb if b.get("charged") is not None]
-        avg_bb_charged = (sum(bb_charged_values) / len(bb_charged_values)) if bb_charged_values else 0
+        avg_bb_charged = (sum(bb_charged_values) / len(bb_charged_values)) if bb_charged_values else None
+
+        def _rounded(value):
+            return round(value, 1) if value is not None else None
+
+        activities_observed = component_status["activities"]["status"] in {
+            "partial",
+            "complete",
+        }
+        calories_observed = activities_observed and all(
+            isinstance(activity, dict)
+            and activity.get("calories") is not None
+            and isinstance(activity.get("calories"), (int, float))
+            and not isinstance(activity.get("calories"), bool)
+            for activity in activities
+        )
+        total_activities = len(activities) if activities_observed else None
+        total_calories = (
+            sum(activity["calories"] for activity in activities)
+            if calories_observed
+            else None
+        )
         
         return {
             "summary": {
                 "period": f"{start_date} to {end_date}",
-                "days": days,
-                "avg_sleep_hours": round(avg_sleep_hours, 1),
-                "avg_sleep_score": round(avg_sleep_score, 1),
-                "avg_hrv_ms": round(avg_hrv, 1),
-                "avg_resting_hr": round(avg_rhr, 1),
-                "avg_body_battery_charged": round(avg_bb_charged, 1),
-                "total_activities": len(activities),
-                "total_calories": sum(a.get("calories", 0) for a in activities if a.get("calories"))
+                "days": requested_days,
+                "avg_sleep_hours": _rounded(avg_sleep_hours),
+                "avg_sleep_score": _rounded(avg_sleep_score),
+                "avg_hrv_ms": _rounded(avg_hrv),
+                "avg_resting_hr": _rounded(avg_rhr),
+                "avg_body_battery_charged": _rounded(avg_bb_charged),
+                "total_activities": total_activities,
+                "total_calories": total_calories,
             },
             "sleep": sleep,
             "hrv": hrv,
@@ -577,73 +726,324 @@ def fetch_summary(client, days=7, start=None, end=None):
             "activities": activities,
             "stress": stress,
             "training_load_series": training_load_series,
-            "training_status": training_status,
-            "max_metrics": max_metrics,
-            "hydration": hydration,
-            "body_composition": body_comp,
-            "alarms": alarms
+            # Compatibility placeholders are retained for local consumers, but
+            # no live endpoint is called for these omitted components.
+            "training_status": {},
+            "max_metrics": {},
+            "hydration": {},
+            "body_composition": {},
+            "alarms": [],
+            "authorized_scope": {
+                "start": start_date,
+                "end": end_date,
+                "components": list(selected_components),
+                "omitted_components": [
+                    *(
+                        name
+                        for name in LIVE_SUMMARY_COMPONENTS
+                        if name not in selected_components
+                    ),
+                    *LIVE_SUMMARY_OMITTED_COMPONENTS,
+                ],
+            },
+            "coverage": {
+                "start": start_date,
+                "end": end_date,
+                "requested_days": requested_days,
+                "components": component_status,
+            },
+            "component_status": component_status,
         }
     
     except Exception as e:
-        return {"error": str(e)}
+        return _safe_live_failure(e)
 
 
 def fetch_profile(client):
-    """Fetch user profile."""
+    """Fetch only the explicitly declared full-name profile field."""
     try:
-        profile = client.get_full_name()
-        stats = client.get_user_summary(datetime.now().strftime("%Y-%m-%d"))
-        
+        profile = fetch_with_retry(client.get_full_name)
         return {
             "profile": {
                 "name": profile,
-                "display_name": stats.get("displayName"),
-                "email": stats.get("email")
-            }
+            },
+            "authorized_scope": {"fields": ["full_name"]},
         }
     
     except Exception as e:
-        return {"error": str(e)}
+        return _safe_live_failure(e)
+
+
+def _frame_records(frame):
+    """Convert a local pandas frame to JSON-safe records without filling gaps."""
+    if frame is None or frame.empty:
+        return []
+    clean = frame.astype(object).where(frame.notna(), None)
+    return clean.to_dict("records")
+
+
+def _local_component_coverage(name, records, requested_days):
+    fields = LOCAL_OBSERVATION_FIELDS[name]
+    observed_records = [
+        item
+        for item in records
+        if isinstance(item, dict)
+        and any(item.get(field) is not None for field in fields)
+    ]
+    observed_dates = {
+        item.get("date") for item in observed_records if item.get("date")
+    }
+    observed_days = len(observed_dates)
+    if not observed_records:
+        status = "no_data"
+    elif observed_days >= requested_days:
+        status = "complete"
+    else:
+        status = "partial"
+    return {
+        "status": status,
+        "observed_days": observed_days,
+        "observed_records": len(observed_records),
+    }
+
+
+def _local_metric_result(name, records, requested_days):
+    coverage = _local_component_coverage(name, records, requested_days)
+    return {
+        name: records,
+        "source": "local",
+        "status": coverage["status"],
+        "coverage": {"requested_days": requested_days, **coverage},
+    }
+
+
+def _fetch_local_metric(metric, days=7, start=None, end=None, *, _verified=False):
+    """Fetch supported metrics from the local read-only Garmin SQLite adapter."""
+    if start or end:
+        raise ValueError("Explicit --start/--end ranges are not supported by the local adapter")
+    from garmin_sqlite_adapter import (
+        ACTIVITIES_DB,
+        GARMIN_DB,
+        get_activities_data,
+        get_hrv_data,
+        get_sleep_data,
+        get_summary,
+        verified_database_read_window,
+    )
+
+    if not _verified:
+        database_paths = (
+            [GARMIN_DB, ACTIVITIES_DB]
+            if metric == "summary"
+            else [ACTIVITIES_DB]
+            if metric == "activities"
+            else [GARMIN_DB]
+        )
+        window = verified_database_read_window(database_paths)
+        with window:
+            result = _fetch_local_metric(
+                metric,
+                days,
+                start,
+                end,
+                _verified=True,
+            )
+        result["data_integrity"] = window.public_summary()
+        return result
+
+    if metric == "profile":
+        raise ValueError("profile is available only from explicitly authorized live access")
+    if metric == "sleep":
+        return _local_metric_result("sleep", _frame_records(get_sleep_data(days)), days)
+    if metric == "hrv":
+        frame = get_hrv_data(days).rename(columns={"hrv_avg": "last_night_avg"})
+        return _local_metric_result("hrv", _frame_records(frame), days)
+    if metric == "activities":
+        return _local_metric_result(
+            "activities", _frame_records(get_activities_data(days)), days
+        )
+
+    summary_frame = get_summary(days)
+    mappings = {
+        "heart_rate": {
+            "resting_heart_rate": "resting_hr",
+        },
+        "body_battery": {
+            "body_battery_highest": "highest",
+            "body_battery_lowest": "lowest",
+            "body_battery_charged": "charged",
+        },
+        "stress": {"stress_avg": "avg_stress"},
+    }
+    if metric in mappings:
+        records = _frame_records(summary_frame.rename(columns=mappings[metric]))
+        return _local_metric_result(metric, records, days)
+    if metric != "summary":
+        raise ValueError(f"Metric '{metric}' is not supported by the local adapter")
+
+    sleep = _fetch_local_metric("sleep", days, _verified=True)["sleep"]
+    hrv = _fetch_local_metric("hrv", days, _verified=True)["hrv"]
+    heart_rate = _fetch_local_metric("heart_rate", days, _verified=True)["heart_rate"]
+    body_battery = _fetch_local_metric("body_battery", days, _verified=True)["body_battery"]
+    stress = _fetch_local_metric("stress", days, _verified=True)["stress"]
+    activities = _fetch_local_metric("activities", days, _verified=True)["activities"]
+    components = {
+        "sleep": sleep,
+        "hrv": hrv,
+        "heart_rate": heart_rate,
+        "body_battery": body_battery,
+        "stress": stress,
+        "activities": activities,
+    }
+    status = {
+        name: _local_component_coverage(name, records, days)
+        for name, records in components.items()
+    }
+    component_states = {item["status"] for item in status.values()}
+    if component_states == {"complete"}:
+        summary_status = "complete"
+    elif component_states == {"no_data"}:
+        summary_status = "no_data"
+    else:
+        summary_status = "partial"
+    return {
+        **components,
+        "daily_summary": _frame_records(summary_frame),
+        "source": "local",
+        "status": summary_status,
+        "coverage": {"requested_days": days, "components": status},
+        "component_status": status,
+    }
 
 
 def main():
     parser = argparse.ArgumentParser(description="Fetch Garmin health data")
     parser.add_argument("metric", choices=["sleep", "hrv", "body_battery", "heart_rate", "activities", "stress", "summary", "profile"],
                        help="Type of data to fetch")
-    parser.add_argument("--days", type=int, default=7, help="Number of days to fetch (default: 7)")
+    parser.add_argument("--days", type=int, help="Explicit live window; local defaults to 7")
     parser.add_argument("--start", help="Start date (YYYY-MM-DD)")
     parser.add_argument("--end", help="End date (YYYY-MM-DD)")
+    parser.add_argument("--source", choices=["local", "live"], default="local")
+    parser.add_argument(
+        "--allow-network",
+        action="store_true",
+        help="Explicitly authorize live Garmin network access for this invocation",
+    )
+    parser.add_argument(
+        "--allow-health-data",
+        action="store_true",
+        help="Explicitly authorize reading health data for the exact metric and window",
+    )
     
     args = parser.parse_args()
     
-    # Get authenticated client
-    client = get_client()
-    if not client:
-        print('{"error": "Not authenticated. Run: python3 scripts/garmin_auth.py login --email YOUR_EMAIL --password YOUR_PASSWORD"}')
-        sys.exit(1)
+    try:
+        if args.days is not None and (args.start or args.end):
+            raise ValueError("--days cannot be combined with --start/--end")
+        effective_days = 7 if args.source == "local" and args.days is None else args.days
+        start_date, end_date = get_date_range(effective_days, args.start, args.end)
+    except ValueError as exc:
+        print(json.dumps({"error": str(exc)}, ensure_ascii=False))
+        return 2
+
+    if args.source == "local":
+        try:
+            result = _fetch_local_metric(
+                args.metric, effective_days, args.start, args.end
+            )
+        except Exception as exc:
+            error_code = "local_data_unavailable"
+            if type(exc).__name__ == "LocalDatabaseChangedError":
+                error_code = "database_changed_during_read"
+            elif (
+                type(exc).__name__ == "LocalDatabaseReadError"
+                and re.fullmatch(r"[a-z0-9_]+", str(exc) or "")
+            ):
+                error_code = str(exc)
+            print(
+                json.dumps(
+                    {"status": "read_error", "error_code": error_code},
+                    ensure_ascii=False,
+                )
+            )
+            return 1
+    else:
+        if not args.allow_network:
+            print(json.dumps({"status": "network_authorization_required"}))
+            return 2
+        if not args.allow_health_data:
+            print(json.dumps({"status": "health_data_authorization_required"}))
+            return 2
+        if args.days is None and not (args.start and args.end):
+            print(json.dumps({"status": "explicit_live_window_required"}))
+            return 2
+        request = {
+            "metric": args.metric,
+            "source": "live",
+            "start": start_date,
+            "end": end_date,
+        }
+        if args.metric == "summary":
+            request["components"] = list(LIVE_SUMMARY_COMPONENTS)
+        elif args.metric == "profile":
+            request["fields"] = ["full_name"]
+        network_capability = issue_capability(
+            scope="network",
+            operation=LIVE_DATA_OPERATION,
+            request=request,
+        )
+        health_data_capability = issue_capability(
+            scope="health_data",
+            operation=LIVE_DATA_OPERATION,
+            request=request,
+        )
+        client = get_client(
+            network_capability=network_capability,
+            operation=LIVE_DATA_OPERATION,
+            request=request,
+        )
+        if not client:
+            print('{"error": "Live Garmin authentication failed"}')
+            return 1
+        consume_capability(
+            health_data_capability,
+            scope="health_data",
+            operation=LIVE_DATA_OPERATION,
+            request=request,
+        )
+        fetchers = {
+            "sleep": fetch_sleep,
+            "hrv": fetch_hrv,
+            "body_battery": fetch_body_battery,
+            "heart_rate": fetch_heart_rate,
+            "activities": fetch_activities,
+            "stress": fetch_stress,
+            "summary": fetch_summary,
+        }
+        if args.metric == "profile":
+            result = fetch_profile(client)
+        elif args.metric == "summary":
+            result = fetch_summary(
+                client,
+                args.days,
+                args.start,
+                args.end,
+                components=request["components"],
+            )
+        else:
+            result = fetchers[args.metric](
+                client, args.days, args.start, args.end
+            )
     
-    # Fetch requested data
-    if args.metric == "sleep":
-        result = fetch_sleep(client, args.days, args.start, args.end)
-    elif args.metric == "hrv":
-        result = fetch_hrv(client, args.days, args.start, args.end)
-    elif args.metric == "body_battery":
-        result = fetch_body_battery(client, args.days, args.start, args.end)
-    elif args.metric == "heart_rate":
-        result = fetch_heart_rate(client, args.days, args.start, args.end)
-    elif args.metric == "activities":
-        result = fetch_activities(client, args.days, args.start, args.end)
-    elif args.metric == "stress":
-        result = fetch_stress(client, args.days, args.start, args.end)
-    elif args.metric == "summary":
-        result = fetch_summary(client, args.days, args.start, args.end)
-    elif args.metric == "profile":
-        result = fetch_profile(client)
-    
+    if args.source == "live" and isinstance(result, dict) and result.get("error"):
+        print(json.dumps(result, ensure_ascii=False))
+        return 1
+
     # Output JSON
     # This CLI intentionally returns user-authorized health metrics to its local caller.
-    print(json.dumps(result, indent=2))
+    print(json.dumps(result, indent=2, ensure_ascii=False))
+    return 0
 
 
 if __name__ == "__main__":
-    main()
+    raise SystemExit(main())

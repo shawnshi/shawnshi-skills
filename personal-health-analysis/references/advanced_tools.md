@@ -1,52 +1,73 @@
-# Advanced Tooling Reference & Workflow
+# Garmin 扩展工具与授权边界
 
-此文档包含 `personal-health-analysis` 的进阶命令行工具使用方法。在需要时查阅。
+只在用户请求扩展指标、时间点查询或活动文件时读取本资料。所有实时路径均访问非官方 Garmin Connect 接口，必须同时取得本次联网授权和精确健康数据读取授权；本地分析失败不得自动转为实时访问。
 
-*注意：从技能目录执行以下相对路径脚本，或向脚本传入明确的输入和输出路径。*
+下列 `<SKILL_PYTHON>` 必须是技能隔离 `.venv` 中的解释器，不得替换为未核验的全局 Python。
 
-### 1. 长程纪律与趋势追踪 (Long-term / Heatmaps)
+同步还属于独立写操作：必须先用 `sync_health_data.py sync --start <START> --end <END> --dry-run --config-dir <TRUSTED_CONFIG_DIR> --garmindb-python <TRUSTED_GARMINDB_PYTHON> --plan-output <SESSION_SCRATCH>/sync-plan.json` 生成短期计划，再以相同日期窗口、`--allow-network --allow-sync --config-dir <TRUSTED_CONFIG_DIR> --garmindb-python <TRUSTED_GARMINDB_PYTHON> --plan-file <PLAN>` 执行。计划缺失、过期、被修改，或窗口、配置摘要、解释器、CLI、隔离环境文件树和固定包版本任一不一致时停止；启动前再次复核计划与临时配置，并以 `python -I -B`、清理环境和关闭 stdin 运行。不得从全局 `PATH` 自动发现同步 CLI。文件树证据不是签名，也不能抵御同一用户下的敌对进程；高对抗运行需要 `external_acceptance.md` 所列外部信任根。
+
+## 1. 扩展实时指标
+
+先用 `--dry-run` 核对参数，再显式联网：
+
 ```bash
-python scripts/garmin_intelligence.py insight_cn --period 30d
-python scripts/garmin_intelligence.py audit --period YTD
+<SKILL_PYTHON> scripts/garmin_data_extended.py training_readiness --date 2026-08-08 --allow-network --allow-health-data
+<SKILL_PYTHON> scripts/garmin_data_extended.py spo2 --date 2026-08-08 --allow-network --allow-health-data
+<SKILL_PYTHON> scripts/garmin_data_extended.py respiration --date 2026-08-08 --allow-network --allow-health-data
 ```
 
-### 2. 扩展指标 (Extended Metrics)
+这些字段是消费级设备值或厂商派生值，不用于诊断或训练资格判断。
+
+## 2. 时间点查询
+
+时间点查询是实时路径，必须显式提供日期、IANA 时区和 0–3600 秒最大允许偏差；没有默认容差。夏令时下不存在或有歧义的本地时刻必须失败。没有足够接近的观测时返回 `no_observation`，不得用远处样本代替。
+
 ```bash
-python scripts/garmin_data_extended.py training_readiness --date 2026-02-21
-python scripts/garmin_data_extended.py spo2 --date 2026-02-21
-python scripts/garmin_data_extended.py respiration --date 2026-02-21
-python scripts/garmin_data_extended.py max_metrics --date 2026-02-21
+<SKILL_PYTHON> scripts/garmin_query.py heart_rate "15:00" --date 2026-08-08 --timezone Asia/Shanghai --max-tolerance-seconds 300 --allow-network --allow-health-data
+<SKILL_PYTHON> scripts/garmin_query.py stress "15:00" --date 2026-08-08 --timezone Asia/Shanghai --max-tolerance-seconds 300 --allow-network --allow-health-data
 ```
 
-### 3. 时间点精确查询 (Point-in-Time Query)
+输出必须同时展示 `requested_at`、`observed_at`、`delta_seconds` 和时区。
+
+## 3. 活动文件
+
+- 下载 FIT、GPX 或 TCX 会访问 Garmin，并可能包含精确位置、时间和活动轨迹；必须同时取得联网、健康数据读取和原始文件下载三项授权。
+- 下载时必须显式指定会话隔离输出目录，不得使用报告目录。
+- 已存在的本地文件可离线解析、查询或汇总，不需要联网授权。
+
 ```bash
-python scripts/garmin_query.py heart_rate "3:00 PM" --date 2026-02-21
-python scripts/garmin_query.py stress "15:00" --date 2026-02-21
+<SKILL_PYTHON> scripts/garmin_activity_files.py download --activity-id 12345678 --format fit --output-dir <SESSION_SCRATCH> --allow-network --allow-health-data --allow-download
+<SKILL_PYTHON> scripts/garmin_activity_files.py parse --file <SESSION_SCRATCH>/activity.fit
+<SKILL_PYTHON> scripts/garmin_activity_files.py query --file <SESSION_SCRATCH>/activity.fit --distance 5000
+<SKILL_PYTHON> scripts/garmin_activity_files.py analyze --file <SESSION_SCRATCH>/activity.fit
 ```
 
-### 4. 活动文件分析 (Activity File Analysis)
+未经用户许可，不持久保存、外发或交给子代理处理轨迹坐标。
+
+## 4. 报告与面板
+
 ```bash
-python scripts/garmin_activity_files.py download --activity-id 12345678 --format fit
-python scripts/garmin_activity_files.py query --file ... --distance 5000
-python scripts/garmin_activity_files.py analyze --file ...
+<SKILL_PYTHON> scripts/report_output.py --days 7
+<SKILL_PYTHON> scripts/garmin_chart.py dashboard --days 7 --source local --output <HTML_PATH>
 ```
 
-### 5. 报告与大屏输出路径 (Report and Dashboard Output)
+面板固定零外联并设置禁止网络的 CSP。报告和面板默认拒绝覆盖；需要替换时必须得到用户明确要求，再使用 `--allow-overwrite` 或 `--overwrite`。
+
+## 5. 研究用途 FHIR R4 包装
+
+`garmin_fhir_adapter.py` 只把显式本地 JSON 包装为 FHIR R4 `collection` Bundle。它不读取 Garmin、不联网、不上传服务器，也不使用 LOINC。当前只接受 `hrv_ms`、`resting_heart_rate_bpm` 和 `sleep_duration_seconds`；输入中的 `source_sha256` 是调用方声明的上游来源摘要，适配器会另行计算并写入本次输入 JSON 的真实 SHA-256。可选 `device_serial_hash` 必须是 64 位小写十六进制摘要，不能传入原始设备序列号。Bundle 带 Provenance，输出不含临床解释或参考区间。
+
 ```bash
-# 分配同一批次的 Markdown 与 HTML 路径；默认目录为
-# 当前工作区的 output/personal-health-analysis
-python scripts/report_output.py --days 7
-
-# 将分配结果中的 html 路径传给大屏生成器
-python scripts/garmin_chart.py dashboard --days 7 --output <html-path>
-
-# 仅需 HTML 时可直接运行；仍会写入默认 Garmin 报告目录
-python scripts/garmin_chart.py dashboard --days 7
+<SKILL_PYTHON> scripts/garmin_fhir_adapter.py status
+<SKILL_PYTHON> scripts/garmin_fhir_adapter.py export --input <LOCAL_JSON> --output <FHIR_JSON> --acknowledge-research-only
 ```
 
-使用 `GARMIN_REPORT_DIR` 可覆盖报告目录。不要把临时 JSON、FIT/GPX、数据库副本或认证令牌写入该目录。
+默认拒绝覆盖。该输出只适合个人数据可携带或研究准备，不代表任何临床实施指南、机构 Profile、术语等价性或接收系统兼容性。
 
-### 6. 临床互操作 (FHIR Export)
+`status` 与导出回执中的 R4 结构、Profile/IG、术语、接收端四道外部门禁默认均为 `not_performed`。外部 Schema/Validator、Profile/IG、术语或接收端材料不能由本地包装成功推断。用户提供哈希绑定的验证材料后，可离线复核：
+
 ```bash
-python scripts/garmin_fhir_adapter.py hrv --days 30
+<SKILL_PYTHON> scripts/fhir_external_acceptance.py --bundle <FHIR_JSON> --evidence <EVIDENCE_JSON> --output <ACCEPTANCE_JSON>
 ```
+
+该复核不会运行验证器、联网、验证独立签名或发送 Bundle，只盘点“调用方材料与调用方摘要是否一致”。调用方声明的 `passed` 一律降为 `indeterminate`；回执固定保留 `ok=false`、`external_acceptance_established=false` 和 `clinical_interoperability=false`。材料格式和接收端限制见 `references/external_acceptance.md`。

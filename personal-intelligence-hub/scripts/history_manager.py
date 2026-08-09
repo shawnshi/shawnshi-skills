@@ -54,14 +54,17 @@ def _load_entries() -> list[dict]:
 
 
 def load_recent_history(days: int = 7) -> list[dict]:
-    cutoff = datetime.now() - timedelta(days=days)
+    cutoff = datetime.now().astimezone() - timedelta(days=days)
     entries = []
     for entry in _load_entries():
         if isinstance(entry, str):
             continue
         ts = entry.get("timestamp")
         try:
-            if ts and datetime.fromisoformat(ts) >= cutoff:
+            parsed = datetime.fromisoformat(str(ts).replace("Z", "+00:00")) if ts else None
+            if parsed is not None and parsed.tzinfo is None:
+                parsed = parsed.astimezone()
+            if parsed is not None and parsed >= cutoff:
                 entries.append(entry)
         except ValueError:
             continue

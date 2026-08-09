@@ -14,7 +14,7 @@ PROJECT_ROOT = HUB_DIR.parent.parent
 NEWS_DIR = Path(
     os.environ.get(
         "PIH_NEWS_DIR",
-        str(Path.cwd() / "output" / "personal-intelligence-hub"),
+        str(Path.home() / ".gemini" / "MEMORY" / "raw" / "news"),
     )
 )
 RUNTIME_DIR = Path(
@@ -49,6 +49,17 @@ def load_json(path: Path, default):
 def dump_json(path: Path, data) -> None:
     path.parent.mkdir(parents=True, exist_ok=True)
     path.write_text(json.dumps(data, ensure_ascii=False, indent=2), encoding="utf-8")
+
+
+def atomic_write_text(path: Path, text: str) -> None:
+    path.parent.mkdir(parents=True, exist_ok=True)
+    temporary_path = path.with_name(path.name + ".tmp")
+    temporary_path.write_text(text, encoding="utf-8")
+    temporary_path.replace(path)
+
+
+def atomic_dump_json(path: Path, data) -> None:
+    atomic_write_text(path, json.dumps(data, ensure_ascii=False, indent=2))
 
 
 def clean_json_output(text: str):

@@ -1,22 +1,116 @@
 #!/usr/bin/env python3
-"""
-Download and analyze Garmin activity FIT/GPX files.
-Extract GPS, elevation, pace, heart rate, power, cadence, etc.
+"""Analyze local activity files or explicitly download sensitive raw activity data.
+
+Local parse/query/analyze actions are offline. Download requires three explicit
+grants and a non-report output directory because files may contain GPS tracks.
 """
 
 import json
 import sys
 import os
 import tempfile
+import hashlib
+import io
+import stat
+import zipfile
 from datetime import datetime
 from pathlib import Path
+from typing import Sequence
 
-sys.path.insert(0, str(Path(__file__).parent))
-from garmin_auth import get_client
+from garmin_capabilities import (
+    CapabilityError,
+    consume_capability,
+    issue_capability,
+    require_capability,
+)
 
-# Cross-platform default output directory. Override with GARMIN_OUTPUT_DIR.
-import os; _DEFAULT_OUTPUT_DIR = os.path.expanduser(os.environ.get("GARMIN_OUTPUT_DIR", str(Path.cwd() / "garmin-output")))
-Path(_DEFAULT_OUTPUT_DIR).mkdir(parents=True, exist_ok=True)
+
+EXIT_OK = 0
+EXIT_USAGE = 2
+EXIT_AUTHORIZATION = 3
+EXIT_AUTH_FAILURE = 4
+EXIT_OPERATION_FAILURE = 5
+ACTIVITY_OPERATION = "activity_download"
+MAX_ACTIVITY_BYTES = 64 * 1024 * 1024
+FIT_CRC_TABLE = (
+    0x0000,
+    0xCC01,
+    0xD801,
+    0x1400,
+    0xF001,
+    0x3C00,
+    0x2800,
+    0xE401,
+    0xA001,
+    0x6C00,
+    0x7800,
+    0xB401,
+    0x5000,
+    0x9C01,
+    0x8801,
+    0x4400,
+)
+
+
+def _get_client(
+    *,
+    network_capability: object = None,
+    health_data_capability: object = None,
+    download_capability: object = None,
+    request: dict[str, object] | None = None,
+):
+    """Load authentication only for an explicitly authorized download."""
+    try:
+        require_capability(
+            network_capability,
+            scope="network",
+            operation=ACTIVITY_OPERATION,
+            request=request,
+        )
+    except CapabilityError as exc:
+        raise PermissionError("network_authorization_required") from exc
+    try:
+        require_capability(
+            health_data_capability,
+            scope="health_data",
+            operation=ACTIVITY_OPERATION,
+            request=request,
+        )
+    except CapabilityError as exc:
+        raise PermissionError("health_data_authorization_required") from exc
+    try:
+        require_capability(
+            download_capability,
+            scope="download",
+            operation=ACTIVITY_OPERATION,
+            request=request,
+        )
+    except CapabilityError as exc:
+        raise PermissionError("download_authorization_required") from exc
+    sys.path.insert(0, str(Path(__file__).parent))
+    from garmin_auth import get_client
+    return get_client(
+        network_capability=network_capability,
+        operation=ACTIVITY_OPERATION,
+        request=request,
+    )
+
+
+def _report_directories() -> list[Path]:
+    configured = os.environ.get("GARMIN_REPORT_DIR") or os.environ.get("GARMIN_OUTPUT_DIR")
+    default = Path.cwd() / "output" / "personal-health-analysis"
+    return [Path(configured).expanduser().resolve()] if configured else [default.resolve()]
+
+
+def _is_report_directory(path: Path) -> bool:
+    resolved = path.expanduser().resolve()
+    for report_dir in _report_directories():
+        try:
+            resolved.relative_to(report_dir)
+            return True
+        except ValueError:
+            continue
+    return False
 
 # Check for optional dependencies
 try:
@@ -33,28 +127,179 @@ except ImportError:
     HAS_GPXPY = False
 
 
-def download_activity_file(client, activity_id, file_format="fit", output_dir=_DEFAULT_OUTPUT_DIR):
-    """Download activity FIT or GPX file."""
+def _fit_crc(payload: bytes, crc: int = 0) -> int:
+    """Calculate the FIT protocol CRC-16 defined by Garmin's FIT SDK."""
+    for byte in payload:
+        temporary = FIT_CRC_TABLE[crc & 0xF]
+        crc = ((crc >> 4) & 0x0FFF) ^ temporary ^ FIT_CRC_TABLE[byte & 0xF]
+        temporary = FIT_CRC_TABLE[crc & 0xF]
+        crc = (
+            ((crc >> 4) & 0x0FFF)
+            ^ temporary
+            ^ FIT_CRC_TABLE[(byte >> 4) & 0xF]
+        )
+    return crc
+
+
+def _validate_fit_payload(payload: bytes) -> None:
+    """Fail closed unless a single FIT file passes header, size and CRC checks."""
+    if not isinstance(payload, bytes) or len(payload) < 14:
+        raise ValueError("activity_fit_header_invalid")
+    header_size = payload[0]
+    if header_size not in (12, 14) or len(payload) < header_size + 2:
+        raise ValueError("activity_fit_header_invalid")
+    if payload[8:12] != b".FIT":
+        raise ValueError("activity_fit_signature_invalid")
+    data_size = int.from_bytes(payload[4:8], byteorder="little", signed=False)
+    if len(payload) != header_size + data_size + 2:
+        raise ValueError("activity_fit_declared_size_mismatch")
+    if header_size == 14:
+        declared_header_crc = int.from_bytes(payload[12:14], "little")
+        if declared_header_crc not in (0, _fit_crc(payload[:12])):
+            raise ValueError("activity_fit_header_crc_invalid")
+    declared_file_crc = int.from_bytes(payload[-2:], "little")
+    if declared_file_crc != _fit_crc(payload[:-2]):
+        raise ValueError("activity_fit_file_crc_invalid")
+
+
+def _extract_single_fit(original_zip: bytes) -> bytes:
+    """Extract exactly one bounded FIT member from Garmin's ORIGINAL ZIP."""
+    if len(original_zip) > MAX_ACTIVITY_BYTES:
+        raise ValueError("activity_archive_too_large")
+    with zipfile.ZipFile(io.BytesIO(original_zip)) as archive:
+        fit_members = []
+        total_size = 0
+        for member in archive.infolist():
+            mode = member.external_attr >> 16
+            normalized = member.filename.replace("\\", "/")
+            parts = [part for part in normalized.split("/") if part]
+            if normalized.startswith("/") or ".." in parts:
+                raise ValueError("activity_archive_unsafe_path")
+            if stat.S_ISLNK(mode) or member.flag_bits & 0x1:
+                raise ValueError("activity_archive_unsupported_member")
+            if member.is_dir():
+                continue
+            total_size += member.file_size
+            if total_size > MAX_ACTIVITY_BYTES:
+                raise ValueError("activity_archive_expanded_too_large")
+            if normalized.casefold().endswith(".fit"):
+                fit_members.append(member)
+        if len(fit_members) != 1:
+            raise ValueError("activity_archive_requires_single_fit")
+        member = fit_members[0]
+        with archive.open(member, "r") as source:
+            payload = source.read(MAX_ACTIVITY_BYTES + 1)
+        if len(payload) != member.file_size or len(payload) > MAX_ACTIVITY_BYTES:
+            raise ValueError("activity_fit_size_mismatch")
+        _validate_fit_payload(payload)
+        return payload
+
+
+def download_activity_file(
+    client,
+    activity_id,
+    file_format="fit",
+    output_dir=None,
+    *,
+    network_capability: object = None,
+    health_data_capability: object = None,
+    download_capability: object = None,
+    request: dict[str, object] | None = None,
+):
+    """Download an activity file only with explicit network and download grants."""
     try:
-        timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
-        output_path = f"{output_dir}/activity_{activity_id}_{timestamp}.{file_format.lower()}"
+        require_capability(
+            network_capability,
+            scope="network",
+            operation=ACTIVITY_OPERATION,
+            request=request,
+        )
+    except CapabilityError:
+        return {"error": "network_authorization_required", "activity_id": activity_id}
+    try:
+        require_capability(
+            health_data_capability,
+            scope="health_data",
+            operation=ACTIVITY_OPERATION,
+            request=request,
+        )
+    except CapabilityError:
+        return {"error": "health_data_authorization_required", "activity_id": activity_id}
+    try:
+        require_capability(
+            download_capability,
+            scope="download",
+            operation=ACTIVITY_OPERATION,
+            request=request,
+        )
+    except CapabilityError:
+        return {"error": "download_authorization_required", "activity_id": activity_id}
+    if output_dir is None:
+        return {"error": "explicit_output_dir_required", "activity_id": activity_id}
+    if file_format.casefold() not in {"fit", "gpx", "tcx"}:
+        return {"error": "unsupported_format", "activity_id": activity_id}
+    output_dir = Path(output_dir).expanduser().resolve()
+    if _is_report_directory(output_dir):
+        return {"error": "report_directory_forbidden", "activity_id": activity_id}
+    temporary_path = None
+    try:
+        timestamp = datetime.now().strftime("%Y%m%d_%H%M%S_%f")
+        output_path = output_dir / f"activity_{activity_id}_{timestamp}.{file_format.lower()}"
         
+        consume_capability(
+            health_data_capability,
+            scope="health_data",
+            operation=ACTIVITY_OPERATION,
+            request=request,
+        )
+        consume_capability(
+            download_capability,
+            scope="download",
+            operation=ACTIVITY_OPERATION,
+            request=request,
+        )
         if file_format.lower() == "fit":
-            data = client.download_activity(activity_id, dl_fmt=client.ActivityDownloadFormat.ORIGINAL)
+            original_zip = client.download_activity(
+                activity_id,
+                dl_fmt=client.ActivityDownloadFormat.ORIGINAL,
+            )
+            data = _extract_single_fit(original_zip)
         elif file_format.lower() == "gpx":
             data = client.download_activity(activity_id, dl_fmt=client.ActivityDownloadFormat.GPX)
         elif file_format.lower() == "tcx":
             data = client.download_activity(activity_id, dl_fmt=client.ActivityDownloadFormat.TCX)
         else:
-            return {"error": f"Unsupported format: {file_format}"}
+            return {"error": "unsupported_format", "activity_id": activity_id}
+        if not isinstance(data, bytes) or len(data) > MAX_ACTIVITY_BYTES:
+            raise ValueError("activity_payload_invalid_or_too_large")
         
-        with open(output_path, 'wb') as f:
-            f.write(data)
+        output_dir.mkdir(parents=True, exist_ok=True)
+        with tempfile.NamedTemporaryFile(
+            mode="wb", dir=output_dir, prefix=".activity-", suffix=".part", delete=False
+        ) as handle:
+            temporary_path = Path(handle.name)
+            handle.write(data)
+            handle.flush()
+            os.fsync(handle.fileno())
+        os.link(temporary_path, output_path)
+        temporary_path.unlink()
+        temporary_path = None
         
-        return {"file": output_path, "activity_id": activity_id, "format": file_format}
+        return {
+            "file": str(output_path),
+            "activity_id": activity_id,
+            "format": file_format,
+            "size_bytes": len(data),
+            "sha256": hashlib.sha256(data).hexdigest(),
+        }
     
     except Exception as e:
-        return {"error": str(e), "activity_id": activity_id}
+        if temporary_path is not None:
+            try:
+                temporary_path.unlink(missing_ok=True)
+            except OSError:
+                pass
+        return {"error": "download_failed", "error_type": type(e).__name__, "activity_id": activity_id}
 
 
 def parse_fit_file(file_path):
@@ -259,11 +504,11 @@ def analyze_activity(data):
     return analysis
 
 
-def main():
+def build_parser():
     import argparse
-    
+
     parser = argparse.ArgumentParser(description="Analyze Garmin activity files")
-    parser.add_argument("action", choices=["download", "parse", "query", "analyze"],
+    parser.add_argument("action", nargs="?", choices=["download", "parse", "query", "analyze"],
                        help="Action to perform")
     parser.add_argument("--activity-id", type=int, help="Activity ID")
     parser.add_argument("--format", choices=["fit", "gpx", "tcx"], default="fit",
@@ -271,27 +516,103 @@ def main():
     parser.add_argument("--file", help="Path to local FIT/GPX file")
     parser.add_argument("--distance", type=float, help="Query data at distance (meters)")
     parser.add_argument("--time", help="Query data at time (ISO format)")
-    parser.add_argument("--output-dir", default=_DEFAULT_OUTPUT_DIR, help="Output directory")
-    
-    args = parser.parse_args()
+    parser.add_argument("--output-dir", help="Explicit directory for downloaded raw files")
+    parser.add_argument(
+        "--allow-network",
+        action="store_true",
+        help="Explicitly authorize a download to contact Garmin",
+    )
+    parser.add_argument(
+        "--allow-health-data",
+        action="store_true",
+        help="Explicitly authorize reading the selected raw activity",
+    )
+    parser.add_argument(
+        "--allow-download",
+        action="store_true",
+        help="Explicitly authorize saving the selected raw activity file",
+    )
+    return parser
+
+
+def _emit(result):
+    print(json.dumps(result, indent=2, ensure_ascii=False, default=str))
+
+
+def main(argv: Sequence[str] | None = None):
+    args = build_parser().parse_args(argv)
+    if args.action is None:
+        _emit({"ok": False, "status": "usage_error", "error": "action_required"})
+        return EXIT_USAGE
     
     if args.action == "download":
         if not args.activity_id:
-            print('{"error": "activity-id required for download"}')
-            sys.exit(1)
-        
-        client = get_client()
+            _emit({"ok": False, "status": "usage_error", "error": "activity_id_required"})
+            return EXIT_USAGE
+        if not args.allow_network:
+            _emit({"ok": False, "status": "network_authorization_required"})
+            return EXIT_AUTHORIZATION
+        if not args.allow_health_data:
+            _emit({"ok": False, "status": "health_data_authorization_required"})
+            return EXIT_AUTHORIZATION
+        if not args.allow_download:
+            _emit({"ok": False, "status": "download_authorization_required"})
+            return EXIT_AUTHORIZATION
+        if not args.output_dir:
+            _emit({"ok": False, "status": "usage_error", "error": "explicit_output_dir_required"})
+            return EXIT_USAGE
+        output_dir = Path(args.output_dir).expanduser().resolve()
+        if _is_report_directory(output_dir):
+            _emit({"ok": False, "status": "usage_error", "error": "report_directory_forbidden"})
+            return EXIT_USAGE
+
+        request = {
+            "activity_id": args.activity_id,
+            "format": args.format,
+            "output_dir": str(output_dir),
+        }
+        network_capability = issue_capability(
+            scope="network",
+            operation=ACTIVITY_OPERATION,
+            request=request,
+        )
+        health_data_capability = issue_capability(
+            scope="health_data",
+            operation=ACTIVITY_OPERATION,
+            request=request,
+        )
+        download_capability = issue_capability(
+            scope="download",
+            operation=ACTIVITY_OPERATION,
+            request=request,
+        )
+        client = _get_client(
+            network_capability=network_capability,
+            health_data_capability=health_data_capability,
+            download_capability=download_capability,
+            request=request,
+        )
         if not client:
-            print('{"error": "Not authenticated"}')
-            sys.exit(1)
+            _emit({"ok": False, "status": "session_unavailable"})
+            return EXIT_AUTH_FAILURE
         
-        result = download_activity_file(client, args.activity_id, args.format, args.output_dir)
-        print(json.dumps(result, indent=2))
+        result = download_activity_file(
+            client,
+            args.activity_id,
+            args.format,
+            output_dir,
+            network_capability=network_capability,
+            health_data_capability=health_data_capability,
+            download_capability=download_capability,
+            request=request,
+        )
+        _emit(result)
+        return EXIT_OPERATION_FAILURE if "error" in result else EXIT_OK
     
     elif args.action == "parse":
         if not args.file:
-            print('{"error": "file path required for parse"}')
-            sys.exit(1)
+            _emit({"error": "file path required for parse"})
+            return EXIT_USAGE
         
         if args.file.endswith('.fit'):
             result = parse_fit_file(args.file)
@@ -300,12 +621,13 @@ def main():
         else:
             result = {"error": "Unsupported file type. Use .fit or .gpx"}
         
-        print(json.dumps(result, indent=2, default=str))
+        _emit(result)
+        return EXIT_OPERATION_FAILURE if "error" in result else EXIT_OK
     
     elif args.action == "query":
         if not args.file:
-            print('{"error": "file path required for query"}')
-            sys.exit(1)
+            _emit({"error": "file path required for query"})
+            return EXIT_USAGE
         
         # First parse the file
         if args.file.endswith('.fit'):
@@ -313,12 +635,12 @@ def main():
         elif args.file.endswith('.gpx'):
             data = parse_gpx_file(args.file)
         else:
-            print('{"error": "Unsupported file type"}')
-            sys.exit(1)
+            _emit({"error": "Unsupported file type"})
+            return EXIT_USAGE
         
         if "error" in data:
-            print(json.dumps(data, indent=2))
-            sys.exit(1)
+            _emit(data)
+            return EXIT_OPERATION_FAILURE
         
         # Query
         if args.distance is not None:
@@ -328,12 +650,13 @@ def main():
         else:
             result = {"error": "Specify --distance or --time for query"}
         
-        print(json.dumps(result, indent=2, default=str))
+        _emit(result)
+        return EXIT_OPERATION_FAILURE if isinstance(result, dict) and "error" in result else EXIT_OK
     
     elif args.action == "analyze":
         if not args.file:
-            print('{"error": "file path required for analyze"}')
-            sys.exit(1)
+            _emit({"error": "file path required for analyze"})
+            return EXIT_USAGE
         
         # Parse and analyze
         if args.file.endswith('.fit'):
@@ -341,12 +664,13 @@ def main():
         elif args.file.endswith('.gpx'):
             data = parse_gpx_file(args.file)
         else:
-            print('{"error": "Unsupported file type"}')
-            sys.exit(1)
+            _emit({"error": "Unsupported file type"})
+            return EXIT_USAGE
         
         result = analyze_activity(data)
-        print(json.dumps(result, indent=2, default=str))
+        _emit(result)
+        return EXIT_OPERATION_FAILURE if "error" in result else EXIT_OK
 
 
 if __name__ == "__main__":
-    main()
+    raise SystemExit(main())

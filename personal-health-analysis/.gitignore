@@ -1,1 +1,25 @@
-.venv_test
+.venv_test/
+.venv/
+__pycache__/
+*.py[cod]
+
+# Runtime health data and reports
+garmin-output/
+output/
+scratch/
+wheelhouse/
+wheelhouse-manifest.json
+*.whl
+*.fit
+*.gpx
+*.tcx
+*.db
+*.sqlite
+*.sqlite3
+*.log
+
+# Credentials and token material
+config.json
+garmin_tokens*.json
+oauth*.json
+tokenstore/

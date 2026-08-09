@@ -5,12 +5,15 @@ from __future__ import annotations
 
 import argparse
 import json
-import os
+import math
+import re
 import statistics
 import sys
-from datetime import datetime
+import warnings
+from datetime import date, datetime
 from pathlib import Path
 from typing import Any
+from urllib.parse import urlparse
 
 import pandas as pd
 
@@ -18,24 +21,44 @@ sys.path.insert(0, str(Path(__file__).parent))
 
 try:
     from garmin_sqlite_adapter import (
+        ACTIVITIES_DB,
         DB_DIR,
+        GARMIN_DB,
+        LocalDatabaseChangedError,
         get_activities_data as sqlite_activities,
         get_biomechanics_data as sqlite_biomechanics,
         get_body_composition_detailed,
         get_daily_friction_matrix,
+        get_device_firmware_history,
         get_devices_info,
         get_hrv_data as sqlite_hrv,
         get_max_metrics,
         get_sleep_data as sqlite_sleep,
         get_summary as sqlite_summary,
+        verified_database_read_window,
     )
 
     HAS_SQLITE = DB_DIR.exists()
 except ImportError:
     HAS_SQLITE = False
 
+    class LocalDatabaseChangedError(RuntimeError):
+        """Fallback type when the optional local adapter cannot be imported."""
+
 from garmin_auth import get_client
-from garmin_data import fetch_summary
+from garmin_capabilities import consume_capability, issue_capability
+from garmin_data import fetch_summary, get_date_range
+
+LocalDataChangedError = LocalDatabaseChangedError
+
+LIVE_ANALYSIS_COMPONENTS = {
+    "baseline_change": ("sleep", "hrv", "heart_rate"),
+    "readiness": ("sleep", "hrv", "body_battery", "stress"),
+    "insight_cn": ("sleep", "hrv", "body_battery", "heart_rate", "stress"),
+    "audit": ("sleep", "hrv", "body_battery", "heart_rate", "stress"),
+    "env_stress": ("activities",),
+}
+LIVE_UNSUPPORTED_ANALYSES = frozenset({"long_term_load", "device_audit"})
 
 
 _CLINICAL_GUIDELINES: dict[str, Any] | None = None
@@ -48,6 +71,96 @@ REQUIRED_PROVENANCE_FIELDS = (
     "population",
     "intended_use",
 )
+MIN_PAIRED_BASELINE_DAYS = 21
+BASELINE_ALGORITHM_EPOCH = "personal-health-analysis:baseline-change:v2"
+LIVE_SUMMARY_OPERATION = "garmin_intelligence_live"
+ALLOWED_SOURCE_TYPES = {
+    "authoritative_guideline",
+    "peer_reviewed_method",
+    "manufacturer_method",
+    "clinician_supplied",
+    "user_supplied",
+    "method_assumption",
+}
+SECTION_INTENDED_USE = {
+    "screening_signal": "non_diagnostic_screening",
+    "readiness_index": "descriptive_experimental_index",
+    "training_load_model": "descriptive_experimental_index",
+}
+
+
+def _finite_number(value: Any) -> bool:
+    return (
+        isinstance(value, (int, float))
+        and not isinstance(value, bool)
+        and math.isfinite(float(value))
+    )
+
+
+def _valid_provenance(section_name: str, provenance: Any) -> bool:
+    if not isinstance(provenance, dict):
+        return False
+    if any(provenance.get(field) in (None, "") for field in REQUIRED_PROVENANCE_FIELDS):
+        return False
+    if provenance.get("source_type") not in ALLOWED_SOURCE_TYPES:
+        return False
+    source = str(provenance.get("source", ""))
+    parsed = urlparse(source)
+    if not parsed.scheme or not (parsed.netloc or parsed.path):
+        return False
+    try:
+        published = datetime.strptime(provenance["published_at"], "%Y-%m-%d").date()
+        retrieved = datetime.strptime(provenance["retrieved_at"], "%Y-%m-%d").date()
+    except (TypeError, ValueError):
+        return False
+    if published > retrieved or retrieved > date.today():
+        return False
+    if provenance.get("intended_use") != SECTION_INTENDED_USE.get(section_name):
+        return False
+    return all(
+        isinstance(provenance.get(field), str) and provenance[field].strip()
+        for field in ("region", "population")
+    )
+
+
+def _valid_method_parameters(section_name: str, section: dict[str, Any]) -> bool:
+    if section_name == "screening_signal":
+        baseline_days = section.get("baseline_min_days")
+        thresholds = section.get("thresholds", {})
+        return (
+            isinstance(baseline_days, int)
+            and not isinstance(baseline_days, bool)
+            and baseline_days >= MIN_PAIRED_BASELINE_DAYS
+            and _finite_number(thresholds.get("rhr_z_score_min"))
+            and float(thresholds["rhr_z_score_min"]) > 0
+            and _finite_number(thresholds.get("hrv_z_score_max"))
+            and float(thresholds["hrv_z_score_max"]) < 0
+            and _finite_number(thresholds.get("respiration_delta_min"))
+            and float(thresholds["respiration_delta_min"]) > 0
+        )
+    if section_name == "readiness_index":
+        weights = section.get("weights", {})
+        names = ("sleep_score", "body_battery_peak", "stress_recovery")
+        return (
+            all(_finite_number(weights.get(name)) for name in names)
+            and all(0 <= float(weights[name]) <= 1 for name in names)
+            and math.isclose(sum(float(weights[name]) for name in names), 1.0, abs_tol=1e-9)
+        )
+    if section_name == "training_load_model":
+        acute = section.get("acute_span_days")
+        chronic = section.get("chronic_span_days")
+        derivation = section.get("daily_load_derivation", {})
+        return (
+            isinstance(acute, int)
+            and not isinstance(acute, bool)
+            and isinstance(chronic, int)
+            and not isinstance(chronic, bool)
+            and 1 <= acute < chronic
+            and derivation.get("input_field") == "training_load"
+            and _finite_number(derivation.get("scale"))
+            and float(derivation["scale"]) > 0
+        )
+    return False
 
 
 def load_clinical_guidelines() -> dict[str, Any]:
@@ -65,10 +178,9 @@ def usable_method_config(
 ) -> dict[str, Any] | None:
     """Return an enabled, traceable method section or ``None``."""
     section = load_clinical_guidelines().get(section_name, {})
-    provenance = section.get("provenance", {})
     if section.get("enabled") is not True:
         return None
-    if any(provenance.get(field) in (None, "") for field in REQUIRED_PROVENANCE_FIELDS):
+    if not _valid_provenance(section_name, section.get("provenance")):
         return None
     for key_path in required_values:
         current: Any = section
@@ -76,6 +188,8 @@ def usable_method_config(
             if not isinstance(current, dict) or current.get(key) is None:
                 return None
             current = current[key]
+    if not _valid_method_parameters(section_name, section):
+        return None
     return section
 
 
@@ -164,7 +278,7 @@ def calc_pmc_metrics(friction_matrix: pd.DataFrame) -> pd.DataFrame:
     return result
 
 
-def fetch_local_summary(days: int) -> dict[str, Any]:
+def _fetch_local_summary_unverified(days: int) -> dict[str, Any]:
     if not HAS_SQLITE:
         raise DataStaleError("Local Garmin database is unavailable.")
     fetch_days = max(int(days), 1)
@@ -258,6 +372,7 @@ def fetch_local_summary(days: int) -> dict[str, Any]:
     if not any(_is_observed(item.get("last_night_avg")) for item in hrv_records):
         data_gaps.append("No observed HRV in the requested range.")
 
+    firmware_history = _records_without_missing(get_device_firmware_history())
     return {
         "heart_rate": _records_without_missing(summary_df.rename(
             columns={"resting_heart_rate": "resting_hr"}
@@ -285,6 +400,12 @@ def fetch_local_summary(days: int) -> dict[str, Any]:
         ],
         "pmc": _records_without_missing(pmc),
         "device_info": _records_without_missing(get_devices_info()),
+        "measurement_epoch_evidence": {
+            "analysis_algorithm_epoch": BASELINE_ALGORITHM_EPOCH,
+            "manufacturer_algorithm_epoch": "not_available_in_local_schema",
+            "firmware_epoch_proxy": "serial_number_and_software_version",
+            "firmware_history": firmware_history,
+        },
         "body_composition_detailed": _records_without_missing(
             get_body_composition_detailed(fetch_days)
         ),
@@ -308,53 +429,197 @@ def fetch_local_summary(days: int) -> dict[str, Any]:
     }
 
 
+def _verified_local_read_window(database_paths=None):
+    paths = (
+        list(database_paths)
+        if database_paths is not None
+        else [GARMIN_DB, ACTIVITIES_DB]
+    )
+    return verified_database_read_window(paths)
+
+
+def fetch_local_summary(
+    days: int, database_paths: list[str | Path] | None = None
+) -> dict[str, Any]:
+    """Read local data only if all used databases remain byte-for-byte stable."""
+    if not HAS_SQLITE:
+        raise DataStaleError("Local Garmin database is unavailable.")
+    window = _verified_local_read_window(database_paths)
+    with window:
+        summary = _fetch_local_summary_unverified(days)
+    summary["data_integrity"] = window.public_summary()
+    return summary
+
+
 def parse_period(period_str: str | None, days_int: int) -> int:
-    if period_str and period_str.endswith("d"):
-        try:
-            return max(1, int(period_str[:-1]))
-        except ValueError:
-            pass
-    if period_str == "YTD":
-        return max(1, (datetime.now() - datetime(datetime.now().year, 1, 1)).days)
-    return max(1, int(days_int))
+    if period_str is not None:
+        if period_str == "YTD":
+            today = date.today()
+            return (today - date(today.year, 1, 1)).days + 1
+        match = re.fullmatch(r"([1-9][0-9]*)d", period_str)
+        if not match:
+            raise ValueError("INVALID_PERIOD_SCOPE")
+        return int(match.group(1))
+    if (
+        not isinstance(days_int, int)
+        or isinstance(days_int, bool)
+        or days_int < 1
+    ):
+        raise ValueError("INVALID_PERIOD_SCOPE")
+    return days_int
 
 
 def _records_with_value(records: list[dict[str, Any]], key: str) -> list[dict[str, Any]]:
     return [record for record in records if _is_observed(record.get(key))]
 
 
+def _epoch_comparability(
+    summary_data: dict[str, Any], observation_dates: list[str]
+) -> dict[str, Any]:
+    """Conservatively test whether one baseline crosses known firmware epochs."""
+    evidence = summary_data.get("measurement_epoch_evidence") or {}
+    algorithm_epoch = evidence.get("analysis_algorithm_epoch")
+    history = evidence.get("firmware_history") or []
+    events_by_serial: dict[str, list[tuple[datetime, str]]] = {}
+    for item in history:
+        serial = item.get("serial_number")
+        firmware = item.get("software_version")
+        timestamp = item.get("timestamp")
+        if not serial or not firmware or not timestamp:
+            continue
+        try:
+            observed_at = datetime.fromisoformat(str(timestamp).replace("Z", "+00:00"))
+            if observed_at.tzinfo is not None:
+                observed_at = observed_at.replace(tzinfo=None)
+        except (TypeError, ValueError):
+            continue
+        events_by_serial.setdefault(str(serial), []).append(
+            (observed_at, str(firmware))
+        )
+    for events in events_by_serial.values():
+        events.sort(key=lambda item: (item[0], item[1]))
+
+    observed_epochs = set()
+    unknown_dates = []
+    for day in observation_dates:
+        try:
+            day_end = datetime.fromisoformat(f"{day}T23:59:59.999999")
+        except ValueError:
+            unknown_dates.append(day)
+            continue
+        matched = False
+        for serial, events in events_by_serial.items():
+            effective = [item for item in events if item[0] <= day_end]
+            if effective:
+                observed_epochs.add(f"{serial}|{effective[-1][1]}")
+                matched = True
+        if not matched:
+            unknown_dates.append(day)
+
+    cross_epoch = len(observed_epochs) > 1
+    comparable = (
+        False
+        if cross_epoch
+        else True
+        if len(observed_epochs) == 1 and not unknown_dates
+        else None
+    )
+    return {
+        "comparable": comparable,
+        "status": (
+            "cross_epoch"
+            if cross_epoch
+            else "single_known_epoch"
+            if comparable is True
+            else "epoch_unknown"
+        ),
+        "observed_epochs": sorted(observed_epochs),
+        "analysis_algorithm_epoch": algorithm_epoch,
+        "manufacturer_algorithm_epoch": evidence.get(
+            "manufacturer_algorithm_epoch", "not_available"
+        ),
+        "unknown_observation_dates": unknown_dates,
+    }
+
+
 def analyze_baseline_change(summary_data: dict[str, Any]) -> dict[str, Any]:
     """Describe personal-baseline changes without assigning disease risk."""
-    valid_hrv = _records_with_value(summary_data.get("hrv", []), "last_night_avg")
-    valid_rhr = _records_with_value(summary_data.get("heart_rate", []), "resting_hr")
-    valid_resp = _records_with_value(summary_data.get("sleep", []), "avg_respiration")
-    if len(valid_hrv) < 3 or len(valid_rhr) < 3:
+    def dated_values(records, key):
+        values = {}
+        for record in records:
+            day = record.get("date")
+            value = record.get(key)
+            if not day or not _is_observed(value):
+                continue
+            try:
+                datetime.strptime(str(day), "%Y-%m-%d")
+                numeric = float(value)
+            except (TypeError, ValueError):
+                continue
+            if math.isfinite(numeric):
+                values[str(day)] = numeric
+        return values
+
+    hrv_by_date = dated_values(summary_data.get("hrv", []), "last_night_avg")
+    rhr_by_date = dated_values(summary_data.get("heart_rate", []), "resting_hr")
+    resp_by_date = dated_values(summary_data.get("sleep", []), "avg_respiration")
+    paired_dates = sorted(set(hrv_by_date) & set(rhr_by_date))
+    current_date = paired_dates[-1] if paired_dates else None
+    prior_dates = paired_dates[:-1]
+    epoch_comparability = _epoch_comparability(summary_data, paired_dates)
+    if len(prior_dates) < MIN_PAIRED_BASELINE_DAYS:
         return {
             "analysis_type": "personal_baseline_change_signal",
             "status": "insufficient_baseline",
+            "date": current_date,
+            "paired_observation_date": current_date,
             "classification": "not_classified",
             "medical_interpretation": False,
+            "epoch_comparability": epoch_comparability,
+            "metrics": {
+                "paired_baseline_days": len(prior_dates),
+                "required_paired_baseline_days": MIN_PAIRED_BASELINE_DAYS,
+            },
             "limitations": [
-                "At least two prior non-missing HRV and resting-heart-rate observations are required.",
+                f"At least {MIN_PAIRED_BASELINE_DAYS} prior same-date HRV and resting-heart-rate observations are required.",
                 "Wearable data alone cannot diagnose infection or another condition.",
             ],
         }
 
-    prev_hrv = [float(item["last_night_avg"]) for item in valid_hrv[:-1]]
-    prev_rhr = [float(item["resting_hr"]) for item in valid_rhr[:-1]]
-    prev_resp = [float(item["avg_respiration"]) for item in valid_resp[:-1]]
-    current_hrv = float(valid_hrv[-1]["last_night_avg"])
-    current_rhr = float(valid_rhr[-1]["resting_hr"])
-    current_resp = (
-        float(valid_resp[-1]["avg_respiration"]) if valid_resp else None
-    )
+    if epoch_comparability["comparable"] is False:
+        return {
+            "analysis_type": "personal_baseline_change_signal",
+            "status": "not_comparable",
+            "date": current_date,
+            "paired_observation_date": current_date,
+            "classification": "not_comparable_cross_epoch",
+            "medical_interpretation": False,
+            "epoch_comparability": epoch_comparability,
+            "metrics": {
+                "paired_baseline_days": len(prior_dates),
+                "required_paired_baseline_days": MIN_PAIRED_BASELINE_DAYS,
+            },
+            "observations": [],
+            "limitations": [
+                "The paired baseline crosses known device or firmware epochs and is not treated as comparable.",
+                "Firmware is only a proxy because the manufacturer algorithm epoch is unavailable in the local schema.",
+                "Wearable data alone cannot diagnose infection or another condition.",
+            ],
+        }
+
+    prev_hrv = [hrv_by_date[day] for day in prior_dates]
+    prev_rhr = [rhr_by_date[day] for day in prior_dates]
+    prev_resp = [resp_by_date[day] for day in prior_dates if day in resp_by_date]
+    current_hrv = hrv_by_date[current_date]
+    current_rhr = rhr_by_date[current_date]
+    current_resp = resp_by_date.get(current_date)
     baseline_hrv = statistics.mean(prev_hrv)
     baseline_rhr = statistics.mean(prev_rhr)
     baseline_resp = statistics.median(prev_resp) if prev_resp else None
     std_hrv = statistics.stdev(prev_hrv)
     std_rhr = statistics.stdev(prev_rhr)
-    z_hrv = (current_hrv - baseline_hrv) / std_hrv if std_hrv > 0 else 0.0
-    z_rhr = (current_rhr - baseline_rhr) / std_rhr if std_rhr > 0 else 0.0
+    z_hrv = (current_hrv - baseline_hrv) / std_hrv if std_hrv > 0 else None
+    z_rhr = (current_rhr - baseline_rhr) / std_rhr if std_rhr > 0 else None
     resp_delta = (
         current_resp - baseline_resp
         if current_resp is not None and baseline_resp is not None
@@ -370,8 +635,13 @@ def analyze_baseline_change(summary_data: dict[str, Any]) -> dict[str, Any]:
             "thresholds.respiration_delta_min",
         ],
     )
-    classification = "not_classified"
-    if config and min(len(prev_hrv), len(prev_rhr)) >= int(config["baseline_min_days"]):
+    zero_variance = z_hrv is None or z_rhr is None
+    classification = "unclassifiable_zero_variance" if zero_variance else "not_classified"
+    if (
+        config
+        and not zero_variance
+        and len(prior_dates) >= int(config["baseline_min_days"])
+    ):
         thresholds = config["thresholds"]
         detected = (
             z_rhr >= float(thresholds["rhr_z_score_min"])
@@ -385,20 +655,33 @@ def analyze_baseline_change(summary_data: dict[str, Any]) -> dict[str, Any]:
             else "no_configured_change_signal"
         )
 
-    observations = [
-        f"静息心率相对可用个人基线为 {z_rhr:+.1f} 个标准差。",
-        f"HRV 相对可用个人基线为 {z_hrv:+.1f} 个标准差。",
-    ]
+    observations = []
+    if zero_variance:
+        observations.extend(
+            [
+                "个人基线方差为零，无法计算可靠的静息心率或 HRV 标准分数。",
+                f"静息心率相对基线绝对变化 {current_rhr - baseline_rhr:+.1f} 次/分钟；HRV 绝对变化 {current_hrv - baseline_hrv:+.1f} 毫秒。",
+            ]
+        )
+    else:
+        observations.extend(
+            [
+                f"静息心率相对可用个人基线为 {z_rhr:+.1f} 个标准差。",
+                f"HRV 相对可用个人基线为 {z_hrv:+.1f} 个标准差。",
+            ]
+        )
     if resp_delta is not None:
         observations.append(
             f"睡眠呼吸率相对可用个人中位数变化 {resp_delta:+.1f} 次/分钟。"
         )
     return {
         "analysis_type": "personal_baseline_change_signal",
-        "status": "ok",
-        "date": valid_hrv[-1].get("date", "Unknown"),
+        "status": "unclassifiable" if zero_variance else "ok",
+        "date": current_date,
+        "paired_observation_date": current_date,
         "classification": classification,
         "medical_interpretation": False,
+        "epoch_comparability": epoch_comparability,
         "configuration_status": (
             "enabled_and_traceable" if config else "not_enabled_or_incomplete"
         ),
@@ -411,6 +694,9 @@ def analyze_baseline_change(summary_data: dict[str, Any]) -> dict[str, Any]:
             "baseline_resp": (
                 round(baseline_resp, 1) if baseline_resp is not None else None
             ),
+            "rhr_z_score": round(z_rhr, 3) if z_rhr is not None else None,
+            "hrv_z_score": round(z_hrv, 3) if z_hrv is not None else None,
+            "paired_baseline_days": len(prior_dates),
         },
         "observations": observations,
         "limitations": [
@@ -472,38 +758,23 @@ def synthesize_pmc(days: int = 90) -> dict[str, Any] | None:
 
 def analyze_executive_readiness(summary_data: dict[str, Any]) -> dict[str, Any]:
     """Score only when explicit, traceable experimental weights are enabled."""
-    latest_sleep = next(
-        (
-            item
-            for item in reversed(summary_data.get("sleep", []))
-            if _is_observed(item.get("sleep_score"))
-        ),
-        {},
-    )
-    latest_bb = next(
-        (
-            item
-            for item in reversed(summary_data.get("body_battery", []))
-            if _is_observed(item.get("highest"))
-        ),
-        {},
-    )
-    latest_stress = next(
-        (
-            item
-            for item in reversed(summary_data.get("stress", []))
-            if _is_observed(item.get("avg_stress"))
-        ),
-        {},
-    )
-    latest_hrv = next(
-        (
-            item
-            for item in reversed(summary_data.get("hrv", []))
-            if _is_observed(item.get("status"))
-        ),
-        {},
-    )
+    def dated_records(records, key):
+        return {
+            str(item["date"]): item
+            for item in records
+            if item.get("date") and _is_observed(item.get(key))
+        }
+
+    sleep_by_date = dated_records(summary_data.get("sleep", []), "sleep_score")
+    bb_by_date = dated_records(summary_data.get("body_battery", []), "highest")
+    stress_by_date = dated_records(summary_data.get("stress", []), "avg_stress")
+    hrv_by_date = dated_records(summary_data.get("hrv", []), "status")
+    common_dates = sorted(set(sleep_by_date) & set(bb_by_date) & set(stress_by_date))
+    observation_date = common_dates[-1] if common_dates else None
+    latest_sleep = sleep_by_date.get(observation_date, {})
+    latest_bb = bb_by_date.get(observation_date, {})
+    latest_stress = stress_by_date.get(observation_date, {})
+    latest_hrv = hrv_by_date.get(observation_date, {})
     inputs = {
         "sleep_score": latest_sleep.get("sleep_score"),
         "body_battery_peak": latest_bb.get("highest"),
@@ -519,8 +790,11 @@ def analyze_executive_readiness(summary_data: dict[str, Any]) -> dict[str, Any]:
         ],
     )
     score = None
-    if config and all(
+    if config and observation_date and all(
         _is_observed(inputs[key])
+        for key in ("sleep_score", "body_battery_peak", "garmin_stress")
+    ) and all(
+        0 <= float(inputs[key]) <= 100
         for key in ("sleep_score", "body_battery_peak", "garmin_stress")
     ):
         weights = {key: float(value) for key, value in config["weights"].items()}
@@ -540,6 +814,8 @@ def analyze_executive_readiness(summary_data: dict[str, Any]) -> dict[str, Any]:
         "analysis_type": "executive_readiness",
         "status": "experimental_score" if score is not None else "not_scored",
         "score": score,
+        "date": observation_date,
+        "alignment_status": "same_date" if observation_date else "not_aligned",
         "physical_score": None,
         "cognitive_score": None,
         "inputs": inputs,
@@ -618,6 +894,7 @@ def perform_bio_metric_audit(summary_data: dict[str, Any]) -> dict[str, Any]:
         {},
     )
     return {
+        "analysis_type": "bio_metric_audit",
         "system_status": {
             "rhr": {
                 "current": latest_rhr,
@@ -719,6 +996,14 @@ def analyze_device_health(summary_data: dict[str, Any]) -> dict[str, Any]:
     return {
         "analysis_type": "device_audit",
         "devices": records or [],
+        "measurement_epoch_evidence": summary_data.get(
+            "measurement_epoch_evidence",
+            {
+                "analysis_algorithm_epoch": BASELINE_ALGORITHM_EPOCH,
+                "manufacturer_algorithm_epoch": "not_available_in_local_schema",
+                "firmware_history": [],
+            },
+        ),
         "observations": (
             [f"Multiple recorded firmware versions: {', '.join(versions)}"]
             if len(versions) > 1
@@ -741,11 +1026,11 @@ def generate_sparkline(data_series: list[Any]) -> str:
     )
 
 
-def calculate_social_jetlag(
+def sleep_midpoint_variability_hours(
     sleep_data: list[dict[str, Any]],
 ) -> float | None:
-    """Describe mid-sleep variability only when actual timestamps exist."""
-    midpoints = []
+    """Return the sample standard deviation of observed sleep midpoints in hours."""
+    midpoint_hours = []
     for item in sleep_data[-7:]:
         start_raw = item.get("sleep_start") or item.get("sleep_start_time")
         end_raw = item.get("sleep_end") or item.get("sleep_end_time")
@@ -756,8 +1041,41 @@ def calculate_social_jetlag(
             end = datetime.fromisoformat(str(end_raw).replace("Z", "+00:00"))
         except ValueError:
             continue
-        midpoints.append(start.timestamp() + (end.timestamp() - start.timestamp()) / 2)
-    return round(statistics.stdev(midpoints) / 3600, 2) if len(midpoints) >= 3 else None
+        if end <= start:
+            continue
+        midpoint = start + (end - start) / 2
+        midpoint_hours.append(
+            midpoint.hour
+            + midpoint.minute / 60
+            + midpoint.second / 3600
+            + midpoint.microsecond / 3_600_000_000
+        )
+    if len(midpoint_hours) < 3:
+        return None
+    angles = [hour / 24 * 2 * math.pi for hour in midpoint_hours]
+    center_angle = math.atan2(
+        statistics.mean(math.sin(angle) for angle in angles),
+        statistics.mean(math.cos(angle) for angle in angles),
+    )
+    center_hour = (center_angle % (2 * math.pi)) / (2 * math.pi) * 24
+    signed_offsets = [
+        (hour - center_hour + 12) % 24 - 12 for hour in midpoint_hours
+    ]
+    return round(statistics.stdev(signed_offsets), 2)
+
+
+def calculate_social_jetlag(
+    sleep_data: list[dict[str, Any]],
+) -> float | None:
+    """Deprecated alias; this calculates sleep-midpoint variability, not social jetlag."""
+    warnings.warn(
+        "calculate_social_jetlag is deprecated; use "
+        "sleep_midpoint_variability_hours. The value is sleep-midpoint "
+        "variability and is not a medical social-jetlag measure.",
+        DeprecationWarning,
+        stacklevel=2,
+    )
+    return sleep_midpoint_variability_hours(sleep_data)
 
 
 def query_vector_lake(*_args, **_kwargs) -> None:
@@ -823,19 +1141,92 @@ def stitch_v3_metrics(summary_data: dict[str, Any], _days: int) -> dict[str, Any
     return summary_data
 
 
-def _load_summary(days: int) -> dict[str, Any]:
-    if HAS_SQLITE:
-        try:
-            return fetch_local_summary(days)
-        except Exception as exc:
-            print(
-                f"Local Garmin data unavailable ({type(exc).__name__}); trying authorized live access.",
-                file=sys.stderr,
-            )
-    client = get_client()
+def _load_summary(
+    days: int,
+    source: str = "local",
+    allow_network: bool = False,
+    allow_health_data: bool = False,
+    analysis: str = "unspecified",
+) -> dict[str, Any]:
+    if source == "local":
+        if not HAS_SQLITE:
+            raise RuntimeError("Local Garmin database is unavailable.")
+        return fetch_local_summary(days)
+    if source != "live":
+        raise ValueError("source must be 'local' or 'live'")
+    if not allow_network:
+        raise PermissionError("NETWORK_ACCESS_NOT_AUTHORIZED")
+    if not allow_health_data:
+        raise PermissionError("HEALTH_DATA_ACCESS_NOT_AUTHORIZED")
+    if analysis in LIVE_UNSUPPORTED_ANALYSES:
+        raise RuntimeError("LIVE_ANALYSIS_NOT_SUPPORTED")
+    components = LIVE_ANALYSIS_COMPONENTS.get(analysis)
+    if components is None:
+        raise RuntimeError("LIVE_ANALYSIS_SCOPE_INVALID")
+    start_date, end_date = get_date_range(days)
+    request = {
+        "analysis": analysis,
+        "source": "live",
+        "start": start_date,
+        "end": end_date,
+        "components": list(components),
+    }
+    network_capability = issue_capability(
+        scope="network",
+        operation=LIVE_SUMMARY_OPERATION,
+        request=request,
+    )
+    health_data_capability = issue_capability(
+        scope="health_data",
+        operation=LIVE_SUMMARY_OPERATION,
+        request=request,
+    )
+    client = get_client(
+        network_capability=network_capability,
+        operation=LIVE_SUMMARY_OPERATION,
+        request=request,
+    )
     if not client:
-        raise RuntimeError("Live API authentication failed and local data is unavailable.")
-    return fetch_summary(client, days)
+        raise RuntimeError("LIVE_AUTH_UNAVAILABLE")
+    consume_capability(
+        health_data_capability,
+        scope="health_data",
+        operation=LIVE_SUMMARY_OPERATION,
+        request=request,
+    )
+    result = fetch_summary(
+        client,
+        start=start_date,
+        end=end_date,
+        components=components,
+    )
+    if not isinstance(result, dict) or result.get("error"):
+        raise RuntimeError("HEALTH_DATA_LOAD_FAILED")
+    return result
+
+
+def _write_state_output(
+    result: dict[str, Any],
+    output_path: str | Path,
+    overwrite: bool = False,
+    *,
+    allow_state_write: bool = False,
+) -> Path:
+    """Persist a minimal state record only to an explicitly authorized file."""
+    if allow_state_write is not True:
+        raise PermissionError("State persistence requires explicit allow_state_write=True")
+    output = Path(output_path).expanduser().resolve()
+    output.parent.mkdir(parents=True, exist_ok=True)
+    payload = {
+        "date": datetime.now().strftime("%Y-%m-%d"),
+        "analysis_type": result.get("analysis_type"),
+        "status": result.get("status"),
+        "medical_interpretation": False,
+    }
+    with output.open("w" if overwrite else "x", encoding="utf-8") as handle:
+        json.dump(payload, handle, ensure_ascii=False, indent=2)
+        handle.write("\n")
+    return output
 
 
 def main() -> int:
@@ -854,14 +1245,59 @@ def main() -> int:
             "device_audit",
         ],
     )
-    parser.add_argument("--days", type=int, default=7)
+    parser.add_argument("--days", type=int)
     parser.add_argument("--period")
+    parser.add_argument("--source", choices=["local", "live"], default="local")
+    parser.add_argument("--allow-network", action="store_true")
+    parser.add_argument("--allow-health-data", action="store_true")
+    parser.add_argument(
+        "--state-output",
+        help="Explicit file path for persisting the minimal analysis state",
+    )
+    parser.add_argument(
+        "--overwrite-state",
+        action="store_true",
+        help="Allow replacement of an existing --state-output file",
+    )
     args = parser.parse_args()
-    days = parse_period(args.period, args.days)
+    if args.days is not None and args.period:
+        print(json.dumps({"status": "INVALID_PERIOD_SCOPE"}), file=sys.stderr)
+        return 2
+    if args.source == "live" and args.days is None and not args.period:
+        print(json.dumps({"status": "EXPLICIT_LIVE_PERIOD_REQUIRED"}), file=sys.stderr)
+        return 2
     try:
-        summary_data = _load_summary(days)
+        days = parse_period(args.period, 7 if args.days is None else args.days)
+    except (TypeError, ValueError):
+        print(json.dumps({"status": "INVALID_PERIOD_SCOPE"}), file=sys.stderr)
+        return 2
+    try:
+        summary_data = _load_summary(
+            days,
+            args.source,
+            args.allow_network,
+            args.allow_health_data,
+            args.analysis,
+        )
     except Exception as exc:
-        print(json.dumps({"error": str(exc)}, ensure_ascii=False), file=sys.stderr)
+        known_codes = {
+            "NETWORK_ACCESS_NOT_AUTHORIZED",
+            "HEALTH_DATA_ACCESS_NOT_AUTHORIZED",
+            "LIVE_AUTH_UNAVAILABLE",
+            "HEALTH_DATA_LOAD_FAILED",
+            "LIVE_ANALYSIS_NOT_SUPPORTED",
+            "LIVE_ANALYSIS_SCOPE_INVALID",
+        }
+        print(
+            json.dumps(
+                {
+                    "error_code": str(exc) if str(exc) in known_codes else "DATA_SOURCE_FAILURE",
+                    "error_type": type(exc).__name__,
+                },
+                ensure_ascii=False,
+            ),
+            file=sys.stderr,
+        )
         return 1
 
     if args.analysis == "baseline_change":
@@ -887,24 +1323,41 @@ def main() -> int:
     else:
         result = analyze_device_health(summary_data)
 
-    state_dir = os.environ.get("GARMIN_STATE_DIR")
-    if state_dir and isinstance(result, dict):
-        output_dir = Path(state_dir).expanduser()
-        output_dir.mkdir(parents=True, exist_ok=True)
-        output = output_dir / f"health_state_{datetime.now().strftime('%Y-%m-%d')}.json"
-        output.write_text(
+    if args.overwrite_state and not args.state_output:
+        print(
             json.dumps(
-                {
-                    "date": datetime.now().strftime("%Y-%m-%d"),
-                    "analysis_type": result.get("analysis_type"),
-                    "status": result.get("status"),
-                    "medical_interpretation": False,
-                },
+                {"status": "INVALID_ARGUMENT", "error": "--overwrite-state requires --state-output"},
                 ensure_ascii=False,
-                indent=2,
             ),
-            encoding="utf-8",
+            file=sys.stderr,
         )
+        return 2
+    if args.state_output:
+        try:
+            _write_state_output(
+                result,
+                args.state_output,
+                args.overwrite_state,
+                allow_state_write=True,
+            )
+        except FileExistsError:
+            print(
+                json.dumps(
+                    {"status": "STATE_OUTPUT_EXISTS", "overwrite_attempted": False},
+                    ensure_ascii=False,
+                ),
+                file=sys.stderr,
+            )
+            return 3
+        except OSError as exc:
+            print(
+                json.dumps(
+                    {"status": "STATE_WRITE_FAILED", "error_type": type(exc).__name__},
+                    ensure_ascii=False,
+                ),
+                file=sys.stderr,
+            )
+            return 1
     print(json.dumps(result, ensure_ascii=False, indent=2, default=str))
     return 0
 

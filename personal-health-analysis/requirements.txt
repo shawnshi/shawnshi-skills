@@ -1,0 +1,7 @@
+# GarminDB 3.8.0 pins vulnerable garminconnect 0.3.3, so it is not installed
+# into the default analysis environment. Synchronization requires an explicit,
+# separately verified runner environment.
+garminconnect==0.3.9
+pandas==3.0.3
+fitparse==1.2.0
+gpxpy==1.6.2

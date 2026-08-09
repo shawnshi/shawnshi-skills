@@ -9,10 +9,19 @@ from pathlib import Path
 from blackboard import append_signal, update_phase
 from history_manager import is_redundant
 from hub_utils import HUB_DIR, LATEST_SCAN_PATH, REFINED_PATH, CANDIDATES_PATH, dump_json, ensure_runtime_dirs, load_json
+from mix_policy import DOMAINS, select_candidates_with_mix
 
 
 FOCUS_PATH = HUB_DIR / "references" / "strategic_focus.json"
 PROMPT_PATH = HUB_DIR / "references" / "prompts" / "v1_refine_system.md"
+
+
+def keyword_matches(text: str, keyword: str) -> bool:
+    normalized_keyword = keyword.lower()
+    if re.fullmatch(r"[a-z0-9][a-z0-9 .+\-/]*", normalized_keyword):
+        pattern = rf"(?<![a-z0-9]){re.escape(normalized_keyword)}(?![a-z0-9])"
+        return re.search(pattern, text) is not None
+    return normalized_keyword in text
 
 
 def load_inputs(focus_path: Path | None = None) -> tuple[dict, dict]:
@@ -23,18 +32,34 @@ def load_inputs(focus_path: Path | None = None) -> tuple[dict, dict]:
     return scan_data, focus_data
 
 
-def score_item(item: dict, focus_data: dict) -> tuple[int, list[str]]:
+def score_item(item: dict, focus_data: dict) -> tuple[int, list[str], str, dict[str, int]]:
     text = (item.get("title", "") + " " + item.get("raw_desc", "")).lower()
-    score = 0
-    matched = []
-    for entry in focus_data.get("strategic_keywords", []):
-        kw = entry["keyword"].lower()
-        if kw in text:
-            score += entry["weight"]
-            matched.append(entry["keyword"])
-    source_weight = focus_data.get("priority_sources", {}).get(item.get("source", ""), 0)
-    score += source_weight
-    return score, matched
+    domain_scores: dict[str, int] = {}
+    matched_by_domain: dict[str, list[str]] = {}
+    for domain in DOMAINS:
+        domain_config = focus_data.get("domains", {}).get(domain, {})
+        score = 0
+        matched: list[str] = []
+        for entry in domain_config.get("keywords", []):
+            keyword = str(entry["keyword"])
+            if keyword_matches(text, keyword):
+                score += int(entry["weight"])
+                matched.append(keyword)
+        score += int(domain_config.get("priority_sources", {}).get(item.get("source", ""), 0))
+        domain_scores[domain] = score
+        matched_by_domain[domain] = matched
+
+    explicit_domain = item.get("primary_domain")
+    if explicit_domain in DOMAINS:
+        primary_domain = explicit_domain
+    else:
+        primary_domain = max(DOMAINS, key=lambda domain: domain_scores[domain])
+    return (
+        domain_scores[primary_domain],
+        matched_by_domain[primary_domain],
+        primary_domain,
+        domain_scores,
+    )
 
 
 def confidence_from_source(source: str, focus_data: dict) -> str:
@@ -54,7 +79,15 @@ def level_from_score(score: int, runner_available: bool) -> str:
     return "L1"
 
 
-def make_candidate(item: dict, score: int, matched: list[str], runner_available: bool, focus_data: dict) -> dict:
+def make_candidate(
+    item: dict,
+    score: int,
+    matched: list[str],
+    primary_domain: str,
+    domain_scores: dict[str, int],
+    runner_available: bool,
+    focus_data: dict,
+) -> dict:
     summary = item.get("raw_desc", "").strip() or item.get("title", "")
     summary = summary[:220]
     connection = "、".join(matched[:3]) if matched else "与当前战略重心关联较弱，但建议观察"
@@ -67,6 +100,13 @@ def make_candidate(item: dict, score: int, matched: list[str], runner_available:
         "event_date": "unknown",
         "published_at": item.get("time", "unknown")[:10],
         "retrieved_at": item.get("retrieved_at") or datetime.now().astimezone().isoformat(),
+        "primary_domain": primary_domain,
+        "secondary_domains": [
+            domain
+            for domain in DOMAINS
+            if domain != primary_domain and domain_scores.get(domain, 0) > 0
+        ],
+        "domain_scores": domain_scores,
         "strategic_score": score,
         "summary_zh": summary,
         "reason": f"匹配主题: {connection}",
@@ -77,6 +117,12 @@ def make_candidate(item: dict, score: int, matched: list[str], runner_available:
         "confidence": confidence_from_source(item.get("source", ""), focus_data),
         "intelligence_level": level,
         "intel_grade": level,
+        "major_signal": item.get("major_signal") is True,
+        "major_signal_reason": (
+            str(item.get("major_signal_reason") or "已通过高影响资讯门槛")
+            if item.get("major_signal") is True
+            else "none"
+        ),
     }
 
 
@@ -94,13 +140,29 @@ def heuristics(
         dedupe_days = dedupe_days_override or focus_data.get("filters", {}).get("dedupe_days", 7)
         if is_redundant(item.get("url", ""), item.get("title", ""), item.get("source", ""), days=dedupe_days):
             continue
-        score, matched = score_item(item, focus_data)
-        scored.append((score, make_candidate(item, score, matched, runner_available, focus_data)))
-    scored.sort(key=lambda x: x[0], reverse=True)
+        score, matched, primary_domain, domain_scores = score_item(item, focus_data)
+        scored.append(
+            make_candidate(
+                item,
+                score,
+                matched,
+                primary_domain,
+                domain_scores,
+                runner_available,
+                focus_data,
+            )
+        )
 
     max_top10 = max_items_override if max_items_override is not None else focus_data.get("filters", {}).get("max_top10", 10)
     min_score = min_score_override if min_score_override is not None else focus_data.get("filters", {}).get("min_score_for_top10", 4)
-    top_candidates = [candidate for score, candidate in scored if score >= min_score][:max_top10]
+    qualified_candidates = [
+        candidate for candidate in scored if candidate["strategic_score"] >= min_score
+    ]
+    top_candidates, mix = select_candidates_with_mix(
+        qualified_candidates,
+        max_top10,
+        focus_data.get("mix_policy", {}),
+    )
 
     for candidate in top_candidates:
         append_signal(
@@ -120,7 +182,7 @@ def heuristics(
 
     action_levers = [
         {
-            "domain": candidate["connection"].split("、")[0] if candidate.get("connection") else "通用",
+            "domain": candidate["primary_domain"],
             "task": candidate["actionability"],
             "owner_type": "待用户指定",
             "trigger": "相关信号获得第二来源或后续公告确认",
@@ -135,7 +197,7 @@ def heuristics(
     }
 
     return {
-        "schema_version": "1.0",
+        "schema_version": "1.1",
         "generated_at": datetime.now().astimezone().isoformat(),
         "topic": scan_data.get("metadata", {}).get("topic") or "未指定主题",
         "region": scan_data.get("metadata", {}).get("region") or "未指定地区",
@@ -155,6 +217,7 @@ def heuristics(
         "market": "\n".join(f"- {c['title']}" for c in top_candidates[:8]) or "- 数据不足",
         "urgent_signals": urgent_signals,
         "action_levers": action_levers[:5],
+        "mix": mix,
         "top_10": top_candidates,
         "translations": translations,
         "adversarial_audit_required": any(c["intelligence_level"] == "L4" for c in top_candidates),
@@ -181,14 +244,16 @@ def enforce_entity_linking(text: str, entities: list[str]) -> str:
 
 def post_process_entities(output: dict, focus_data: dict) -> dict:
     competitors = focus_data.get("competitors", [])
-    keywords = [kw["keyword"] for kw in focus_data.get("strategic_keywords", [])]
+    keywords = [
+        entry["keyword"]
+        for domain in DOMAINS
+        for entry in focus_data.get("domains", {}).get(domain, {}).get("keywords", [])
+    ]
     entities = sorted(list(set(competitors + keywords)), key=len, reverse=True)
     
     for candidate in output.get("top_10", []):
         if "summary_zh" in candidate:
             candidate["summary_zh"] = enforce_entity_linking(candidate["summary_zh"], entities)
-        if "title_zh" in candidate:
-            candidate["title_zh"] = enforce_entity_linking(candidate["title_zh"], entities)
         if "deduction" in candidate:
             candidate["deduction"] = enforce_entity_linking(candidate["deduction"], entities)
     return output
