@@ -1,61 +1,50 @@
 from __future__ import annotations
 
+import argparse
 import json
-
-from blackboard import mark_adversarial_audit, update_phase
-from hub_utils import REFINED_PATH, clean_json_output, dump_json, load_json
-
-def fallback_audit(data: dict) -> dict:
-    for item in data.get("top_10", []):
-        if item.get("intelligence_level") == "L4":
-            item["intelligence_level"] = "L3"
-            item["intel_grade"] = "L3"
-            item["reason"] = (item.get("reason", "") + " [downgraded: no external red-team runner]").strip()
-    return {
-        "status": "fallback",
-        "devil_advocate": "No external red-team runner was available. All unverified L4 candidates were conservatively downgraded to L3.",
-        "blind_spots": "Manual adversarial review is still recommended for any signal that may trigger irreversible action.",
-    }
-
-
-import sys
-
-def audit(redteam_report_path: str = None) -> None:
-    data = load_json(REFINED_PATH, {})
-    if not data:
-        print(f"[FAIL] refined data not found at {REFINED_PATH}")
-        return
-
-    has_l4 = any(item.get("intelligence_level") == "L4" for item in data.get("top_10", []))
-    if not has_l4:
-        print("[OK] no L4 items detected; adversarial audit skipped")
-        return
-
-    update_phase("audit", "running")
-    
-    if redteam_report_path:
-        redteam_data = load_json(redteam_report_path, {})
-        audit_data = {
-            "status": "passed",
-            "devil_advocate": redteam_data.get("devil_advocate", "Red-team attack passed successfully."),
-            "blind_spots": redteam_data.get("blind_spots", "No critical blind spots found."),
-            "tension_edges": redteam_data.get("tension_edges", [])
-        }
-        print(f"[OK] L4 preserved. External red-team approval and tension_edges applied from {redteam_report_path}")
-    else:
-        audit_data = fallback_audit(data)
-        audit_data["tension_edges"] = []
-        print("[WARNING] No external red-team runner provided. Unverified L4 candidates downgraded to L3.")
-
-    data["adversarial_audit"] = audit_data
-    dump_json(REFINED_PATH, data)
-    mark_adversarial_audit(audit_data)
-    update_phase("audit", "completed")
-
-
-import sys
 from pathlib import Path
 
+from run_contract import RunContractError, validate_review_receipt
+
+
+def validate_red_team_receipt(
+    manifest_path: str | Path,
+    refined_path: str | Path,
+    receipt_path: str | Path,
+) -> dict:
+    path = Path(receipt_path)
+    try:
+        receipt = json.loads(path.read_text(encoding="utf-8"))
+    except (OSError, UnicodeError, json.JSONDecodeError) as exc:
+        raise RunContractError(f"cannot read red-team receipt: {exc}") from exc
+    if not isinstance(receipt, dict):
+        raise RunContractError("red-team receipt must be a JSON object")
+    validate_review_receipt(
+        receipt,
+        manifest_path,
+        refined_path,
+        expected_kind="red_team",
+    )
+    return receipt
+
+
+def main() -> int:
+    parser = argparse.ArgumentParser(
+        description="Read-only validation of a bound red-team receipt."
+    )
+    parser.add_argument("--manifest", type=Path, required=True)
+    parser.add_argument("--refined", type=Path, required=True)
+    parser.add_argument("--receipt", type=Path, required=True)
+    args = parser.parse_args()
+    try:
+        receipt = validate_red_team_receipt(args.manifest, args.refined, args.receipt)
+    except RunContractError as exc:
+        print(f"[FAIL] {exc}")
+        return 1
+    print(f"[PASS] red-team receipt is valid and unchanged: {args.receipt}")
+    print(f"[INFO] status={receipt['status']}")
+    return 0
+
+
 if __name__ == "__main__":
-    report_path = sys.argv[1] if len(sys.argv) > 1 else None
-    audit(Path(report_path) if report_path else None)
+    raise SystemExit(main())

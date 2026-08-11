@@ -1,11 +1,11 @@
 import unittest
 
-from mix_policy import allocate_target_counts, select_candidates_with_mix
+from mix_policy import allocate_target_counts, major_signal_eligible, select_candidates_with_mix
 from refine import post_process_entities, score_item
 
 
 DEFAULT_POLICY = {
-    "default_ratio": {"technology": 0.4, "healthcare_digital": 0.6},
+    "default_ratio": {"technology": 0.6, "healthcare_digital": 0.4},
     "max_ratio_shift": 0.2,
 }
 
@@ -18,6 +18,11 @@ def candidate(domain: str, score: int, suffix: str, *, major: bool = False) -> d
         "strategic_score": score,
         "major_signal": major,
         "major_signal_reason": "通过高影响门槛" if major else "none",
+        "intelligence_level": "L3" if major else "L2",
+        "confidence": "high" if major else "medium",
+        "source_type": "primary",
+        "access_check": {"status": "verified"},
+        "near_term_decision_impact": major,
     }
 
 
@@ -73,22 +78,22 @@ class MixPolicyTests(unittest.TestCase):
         ratio = DEFAULT_POLICY["default_ratio"]
         self.assertEqual(
             allocate_target_counts(10, ratio),
-            {"technology": 4, "healthcare_digital": 6},
+            {"technology": 6, "healthcare_digital": 4},
         )
         self.assertEqual(
             allocate_target_counts(7, ratio),
-            {"technology": 3, "healthcare_digital": 4},
+            {"technology": 4, "healthcare_digital": 3},
         )
         self.assertEqual(
             allocate_target_counts(5, ratio),
-            {"technology": 2, "healthcare_digital": 3},
+            {"technology": 3, "healthcare_digital": 2},
         )
         self.assertEqual(
             allocate_target_counts(3, ratio),
-            {"technology": 1, "healthcare_digital": 2},
+            {"technology": 2, "healthcare_digital": 1},
         )
 
-    def test_default_mix_selects_two_technology_and_three_healthcare(self):
+    def test_default_mix_selects_three_technology_and_two_healthcare(self):
         candidates = [
             candidate("technology", 90 - index, f"t{index}") for index in range(5)
         ] + [
@@ -101,7 +106,7 @@ class MixPolicyTests(unittest.TestCase):
         self.assertEqual(len(selected), 5)
         self.assertEqual(
             mix["actual_counts"],
-            {"technology": 2, "healthcare_digital": 3},
+            {"technology": 3, "healthcare_digital": 2},
         )
         self.assertFalse(mix["adjustment"]["applied"])
         self.assertFalse(mix["supply_exception"]["applied"])
@@ -127,8 +132,9 @@ class MixPolicyTests(unittest.TestCase):
             candidate("technology", 99, "major", major=True),
             candidate("technology", 90, "t1"),
             candidate("technology", 89, "t2"),
+            candidate("technology", 88, "t3"),
         ] + [
-            candidate("healthcare_digital", 88 - index, f"h{index}")
+            candidate("healthcare_digital", 87 - index, f"h{index}")
             for index in range(5)
         ]
 
@@ -137,13 +143,15 @@ class MixPolicyTests(unittest.TestCase):
         self.assertEqual(len(selected), 5)
         self.assertEqual(
             mix["actual_counts"],
-            {"technology": 3, "healthcare_digital": 2},
+            {"technology": 4, "healthcare_digital": 1},
         )
+        self.assertAlmostEqual(mix["effective_ratio"]["technology"], 0.8)
+        self.assertAlmostEqual(mix["effective_ratio"]["healthcare_digital"], 0.2)
         self.assertTrue(mix["adjustment"]["applied"])
         self.assertEqual(mix["adjustment"]["favored_domain"], "technology")
         self.assertEqual(len(mix["adjustment"]["trigger_urls"]), 1)
 
-    def test_major_healthcare_signal_can_shift_mix_to_one_and_four(self):
+    def test_major_healthcare_signal_can_shift_mix_to_two_and_three(self):
         candidates = [
             candidate("technology", 90 - index, f"t{index}") for index in range(4)
         ] + [
@@ -157,17 +165,16 @@ class MixPolicyTests(unittest.TestCase):
 
         self.assertEqual(
             mix["actual_counts"],
-            {"technology": 1, "healthcare_digital": 4},
+            {"technology": 2, "healthcare_digital": 3},
         )
-        self.assertEqual(
-            mix["effective_ratio"],
-            {"technology": 0.2, "healthcare_digital": 0.8},
-        )
+        self.assertAlmostEqual(mix["effective_ratio"]["technology"], 0.4)
+        self.assertAlmostEqual(mix["effective_ratio"]["healthcare_digital"], 0.6)
 
     def test_major_signals_in_both_domains_keep_default_mix(self):
         candidates = [
             candidate("technology", 99, "major-tech", major=True),
             candidate("technology", 90, "t1"),
+            candidate("technology", 89, "t2"),
             candidate("healthcare_digital", 98, "major-health", major=True),
             candidate("healthcare_digital", 89, "h1"),
             candidate("healthcare_digital", 88, "h2"),
@@ -177,7 +184,7 @@ class MixPolicyTests(unittest.TestCase):
 
         self.assertEqual(
             mix["actual_counts"],
-            {"technology": 2, "healthcare_digital": 3},
+            {"technology": 3, "healthcare_digital": 2},
         )
         self.assertFalse(mix["adjustment"]["applied"])
 
@@ -193,6 +200,91 @@ class MixPolicyTests(unittest.TestCase):
             {"technology": 0, "healthcare_digital": 0},
         )
         self.assertFalse(mix["adjustment"]["applied"])
+
+    def test_claimed_major_without_eligibility_cannot_shift_mix(self):
+        weak = candidate("technology", 99, "weak", major=True)
+        weak["intelligence_level"] = "L2"
+        weak["confidence"] = "low"
+        weak["source_type"] = "secondary"
+        weak["near_term_decision_impact"] = False
+        candidates = [weak, candidate("technology", 90, "t1")] + [
+            candidate("healthcare_digital", 89 - index, f"h{index}")
+            for index in range(3)
+        ]
+
+        _, mix = select_candidates_with_mix(candidates, 4, DEFAULT_POLICY)
+
+        self.assertFalse(major_signal_eligible(weak))
+        self.assertFalse(mix["adjustment"]["applied"])
+        self.assertEqual(mix["effective_ratio"], mix["requested_ratio"])
+
+    def test_user_requested_ratio_is_the_adjustment_baseline(self):
+        policy = {
+            **DEFAULT_POLICY,
+            "requested_ratio": {"technology": 0.5, "healthcare_digital": 0.5},
+            "ratio_source": "user",
+            "ratio_reason": "用户明确指定",
+        }
+        candidates = [
+            candidate("technology", 90 - index, f"t{index}") for index in range(3)
+        ] + [
+            candidate("healthcare_digital", 89 - index, f"h{index}")
+            for index in range(3)
+        ]
+
+        _, mix = select_candidates_with_mix(candidates, 4, policy)
+
+        self.assertEqual(mix["default_ratio"], DEFAULT_POLICY["default_ratio"])
+        self.assertEqual(
+            mix["requested_ratio"],
+            {"technology": 0.5, "healthcare_digital": 0.5},
+        )
+        self.assertEqual(mix["effective_ratio"], mix["requested_ratio"])
+        self.assertEqual(mix["ratio_source"], "user")
+
+    def test_user_can_still_request_the_previous_four_to_six_ratio(self):
+        policy = {
+            **DEFAULT_POLICY,
+            "requested_ratio": {"technology": 0.4, "healthcare_digital": 0.6},
+            "ratio_source": "user",
+            "ratio_reason": "用户明确指定",
+        }
+        candidates = [
+            candidate("technology", 90 - index, f"t{index}") for index in range(3)
+        ] + [
+            candidate("healthcare_digital", 89 - index, f"h{index}")
+            for index in range(4)
+        ]
+
+        _, mix = select_candidates_with_mix(candidates, 5, policy)
+
+        self.assertEqual(
+            mix["actual_counts"],
+            {"technology": 2, "healthcare_digital": 3},
+        )
+        self.assertEqual(mix["requested_ratio"], policy["requested_ratio"])
+        self.assertEqual(mix["ratio_source"], "user")
+
+    def test_qualified_major_shift_is_measured_from_requested_ratio(self):
+        policy = {
+            **DEFAULT_POLICY,
+            "requested_ratio": {"technology": 0.5, "healthcare_digital": 0.5},
+            "ratio_source": "user",
+            "ratio_reason": "用户明确指定",
+        }
+        candidates = [candidate("technology", 99, "major", major=True)] + [
+            candidate("technology", 90, "t1"),
+            candidate("technology", 89, "t2"),
+            candidate("healthcare_digital", 88, "h1"),
+            candidate("healthcare_digital", 87, "h2"),
+        ]
+
+        _, mix = select_candidates_with_mix(candidates, 5, policy)
+
+        self.assertEqual(
+            mix["effective_ratio"],
+            {"technology": 0.7, "healthcare_digital": 0.3},
+        )
 
 
 if __name__ == "__main__":

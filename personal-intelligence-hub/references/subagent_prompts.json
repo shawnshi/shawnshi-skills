@@ -1,124 +1,228 @@
 {
-  "TechRadar": {
-    "role": "技术雷达 (Technology Radar)",
-    "mission": "补充扫描通用技术候选，覆盖前沿AI、智能体、算力、数据基础设施、软件工程与安全。",
-    "system_prompt": "先读取 latest_scan.json，识别通用技术候选与缺口，再补充检索过去7日的原始来源。重点覆盖基础模型、推理与多模态、AI智能体、MCP、开源模型、推理基础设施、芯片与算力、数据库与分布式系统、开发者工具、网络安全和软件供应链。不要把医疗应用计入本车道；不要重复基线已有事件；没有高价值增量时返回空数组。每条候选必须标记 primary_domain=technology，并区分事实、来源主张和未知项。",
-    "output_schema": {
-      "type": "array",
-      "items": {
+  "contract_version": "subagent-prompts/1.4",
+  "invocation_order": [
+    "baseline_candidates",
+    "gap_assessment",
+    "supplement_agents",
+    "semantic_review",
+    "red_team",
+    "archive"
+  ],
+  "common_contract": {
+    "input_binding": "每个任务必须读取已登记的 supplement_request.json，并原样返回 run_id、request_sha256、baseline_sha256、candidate_pool_sha256、gap_id 和 lane。",
+    "evidence_rule": "先处理绑定的基线候选，再只针对缺口补充检索；原始来源优先，事实、来源主张、推断与未知项分开。",
+    "date_rule": "published_at 必须来自来源明确日期或可靠元数据；观察时间不得冒充发布日期；未知日期不得进入正式候选。",
+    "stop_rule": "达到请求中的 halt_condition、用完 max_turns，或连续检索无增量时停止并返回结构化结果。",
+    "empty_rule": "无增量时返回 status=no_increment、空 candidates、非空 executed_queries、至少一条 access_log 和真实 coverage，不得用弱信号补数。",
+    "coverage_rule": "coverage 必须逐项等于 access_log 中 verified 与 blocked 的实际计数；每条访问记录必须同时记录 requested_url 与跳转后的 final_url；候选 access_check.requested_url 必须匹配候选 url，并逐字段对应 access_log 中的 verified 记录。"
+  },
+  "review_common_contract": {
+    "request_rule": "评估者必须先读取已登记的对应 review_request.json，原样返回 request_sha256、challenge、reviewer_kind、reviewer_id、invocation_id，并遵守 max_turns 与 halt_condition。",
+    "turn_rule": "回执必须给出 1..max_turns 的 turns_used；只有达到请求中的可判定停止条件才可令 halt_condition_met=true。",
+    "attestation_limit": "本合同提供运行内挑战绑定与防重放，不等同于外部运行时的加密身份签名；调用者仍须实际使用独立代理。"
+  },
+  "execution_policy": {
+    "context_transfer": {
+      "mode": "minimal_task_packet",
+      "inherit_conversation_history": false,
+      "payload_mode": "path_references_not_embedded_file_bytes",
+      "required_fields": [
+        "skill_path",
+        "prompt_config_path",
+        "run_manifest_path",
+        "registered_request_path",
+        "bound_input_paths",
+        "assigned_gap_ids",
+        "assigned_lanes",
+        "output_paths",
+        "output_path_by_gap",
+        "write_authorization",
+        "per_gap_max_turns",
+        "per_gap_halt_condition"
+      ]
+    },
+    "parallelism": {
+      "max_supplement_workers": 3,
+      "overflow_strategy": "launch_fresh_worker_when_first_slot_frees",
+      "one_gap_per_worker": true,
+      "root_must_not_duplicate_assigned_searches": true
+    },
+    "publication": {
+      "mode": "sibling_temporary_file_then_atomic_replace",
+      "published_artifact_is_immutable": true,
+      "routine_progress": "blocker_or_final_only"
+    },
+    "readiness": {
+      "primary_signal": "artifact_ready_control_message_with_path_and_sha256",
+      "watch_command": "python -X utf8 scripts/await_artifacts.py --path <artifact.json>",
+      "watch_mode": "single_fallback_only",
+      "watch_timeout_seconds": 10,
+      "on_exhaustion": "inspect_once_then_send_one_targeted_nudge_or_relaunch_bounded_task",
+      "artifact_first": true
+    },
+    "review_sequence": [
+      "register_semantic_request",
+      "publish_semantic_outputs",
+      "validate_semantic_and_register_red_team_request",
+      "publish_red_team_receipt",
+      "register_review_bundle"
+    ]
+  },
+  "result_envelope": {
+    "type": "object",
+    "required": [
+      "contract_version",
+      "run_id",
+      "request_sha256",
+      "baseline_sha256",
+      "candidate_pool_sha256",
+      "gap_id",
+      "lane",
+      "status",
+      "executed_queries",
+      "access_log",
+      "candidates",
+      "coverage",
+      "confidence",
+      "data_provenance",
+      "turns_used",
+      "halt_condition_met",
+      "completed_at"
+    ],
+    "properties": {
+      "contract_version": {"const": "supplement-result/1.0"},
+      "run_id": {"type": "string"},
+      "request_sha256": {"type": "string", "pattern": "^[0-9a-f]{64}$"},
+      "baseline_sha256": {"type": "string", "pattern": "^[0-9a-f]{64}$"},
+      "candidate_pool_sha256": {"type": "string", "pattern": "^[0-9a-f]{64}$"},
+      "gap_id": {"type": "string"},
+      "lane": {"type": "string"},
+      "status": {"enum": ["completed", "no_increment", "degraded", "failed"]},
+      "executed_queries": {"type": "array", "minItems": 1, "items": {"type": "string", "minLength": 1}},
+      "access_log": {
+        "type": "array",
+        "minItems": 1,
+        "items": {
+          "type": "object",
+          "required": ["status", "checked_at", "method", "requested_url", "final_url", "http_status"],
+          "properties": {
+            "status": {"enum": ["verified", "blocked"]},
+            "checked_at": {"type": "string"},
+            "method": {"enum": ["http_get", "browser", "api", "document"]},
+            "requested_url": {"type": "string"},
+            "final_url": {"type": "string"},
+            "http_status": {"type": ["integer", "null"]}
+          }
+        }
+      },
+      "candidates": {
+        "type": "array",
+        "items": {
+          "type": "object",
+          "required": [
+            "title",
+            "url",
+            "source",
+            "published_at",
+            "published_at_source",
+            "retrieved_at",
+            "primary_domain",
+            "source_type",
+            "access_check",
+            "summary"
+          ],
+          "properties": {
+            "title": {"type": "string"},
+            "url": {"type": "string"},
+            "source": {"type": "string"},
+            "published_at": {"type": "string"},
+            "published_at_source": {"type": "string"},
+            "retrieved_at": {"type": "string"},
+            "primary_domain": {"enum": ["technology", "healthcare_digital"]},
+            "secondary_domains": {"type": "array"},
+            "source_type": {"enum": ["primary", "secondary"]},
+            "access_check": {
+              "type": "object",
+              "required": ["status", "checked_at", "method", "requested_url", "final_url", "http_status"],
+              "properties": {
+                "status": {"const": "verified"},
+                "checked_at": {"type": "string"},
+                "method": {"enum": ["http_get", "browser", "api", "document"]},
+                "requested_url": {"type": "string"},
+                "final_url": {"type": "string"},
+                "http_status": {"type": ["integer", "null"]}
+              }
+            },
+            "summary": {"type": "string"}
+          }
+        }
+      },
+      "coverage": {
         "type": "object",
+        "required": ["attempted", "succeeded", "failed"],
         "properties": {
-          "title": {"type": "string"},
-          "url": {"type": "string"},
-          "source": {"type": "string"},
-          "time": {"type": "string"},
-          "summary": {"type": "string"},
-          "primary_domain": {"const": "technology"},
-          "source_type": {"enum": ["primary", "secondary"]},
-          "major_signal": {"type": "boolean"},
-          "major_signal_reason": {"type": "string"}
-        },
-        "required": ["title", "url", "source", "time", "summary", "primary_domain", "source_type", "major_signal", "major_signal_reason"]
-      }
+          "attempted": {"type": "integer", "minimum": 0},
+          "succeeded": {"type": "integer", "minimum": 0},
+          "failed": {"type": "integer", "minimum": 0}
+        }
+      },
+      "confidence": {"enum": ["high", "medium", "low"]},
+      "data_provenance": {
+        "type": "object",
+        "required": ["request_sha256", "candidate_pool_sha256", "access_log_sha256"],
+        "properties": {
+          "request_sha256": {"type": "string", "pattern": "^[0-9a-f]{64}$"},
+          "candidate_pool_sha256": {"type": "string", "pattern": "^[0-9a-f]{64}$"},
+          "access_log_sha256": {"type": "string", "pattern": "^[0-9a-f]{64}$"}
+        }
+      },
+      "turns_used": {"type": "integer", "minimum": 1},
+      "halt_condition_met": {"type": "boolean"},
+      "completed_at": {"type": "string"}
     }
   },
-  "HealthcareRadar": {
-    "role": "医疗数字化雷达 (Healthcare Digital Radar)",
-    "mission": "补充扫描医疗AI、医疗数据、临床工作流、支付政策和医院数字化候选。",
-    "system_prompt": "先读取 latest_scan.json，识别医疗数字化候选与缺口，再补充检索过去7日的原始来源。重点覆盖医疗AI临床验证、EHR/HIS、FHIR/HL7、医院工作流、医保支付、医疗器械证据、远程医疗、医疗数据治理和医疗IT竞对。不要重复基线已有事件；没有高价值增量时返回空数组。每条候选必须标记 primary_domain=healthcare_digital，并区分事实、来源主张和未知项。",
-    "output_schema": {
-      "type": "array",
-      "items": {
-        "type": "object",
-        "properties": {
-          "title": {"type": "string"},
-          "url": {"type": "string"},
-          "source": {"type": "string"},
-          "time": {"type": "string"},
-          "summary": {"type": "string"},
-          "primary_domain": {"const": "healthcare_digital"},
-          "source_type": {"enum": ["primary", "secondary"]},
-          "major_signal": {"type": "boolean"},
-          "major_signal_reason": {"type": "string"}
-        },
-        "required": ["title", "url", "source", "time", "summary", "primary_domain", "source_type", "major_signal", "major_signal_reason"]
-      }
+  "supplement_agents": {
+    "TechRadar": {
+      "role": "技术雷达",
+      "mission": "补齐通用技术缺口，覆盖模型、智能体、算力、数据基础设施、软件工程与安全。",
+      "primary_domain": "technology",
+      "system_prompt": "先处理绑定的基线候选，只检索 request 中的技术缺口。不得把医疗应用重复计入本车道；按事件去重并核验原始来源。无增量时返回 no_increment 和空数组。"
+    },
+    "HealthcareRadar": {
+      "role": "医疗数字化雷达",
+      "mission": "补齐医疗 AI、临床信息系统、互操作、支付政策与医院数字化缺口。",
+      "primary_domain": "healthcare_digital",
+      "system_prompt": "先处理绑定的基线候选，只检索 request 中的医疗数字化缺口。区分研究发布、监管决定、采购事件与产品宣传。无增量时返回 no_increment 和空数组。"
+    },
+    "Sentinel": {
+      "role": "政策与竞对哨兵",
+      "mission": "补齐政策、支付、采购、竞对和产业结构变化。",
+      "primary_domain": "healthcare_digital",
+      "system_prompt": "先处理绑定的基线候选，只检索 request 中的政策或竞对缺口。优先政府、监管、采购和公司公告原文；发布时间未知时隔离。无增量时返回 no_increment 和空数组。"
+    },
+    "Ranger": {
+      "role": "跨领域风险检索",
+      "mission": "补齐失败、漏洞、监管处罚与执行摩擦等反向证据。",
+      "primary_domain": "mixed",
+      "system_prompt": "先处理绑定的基线候选，只检索 request 中的风险缺口。每条事件只能选择一个 primary_domain；混合事件放入 secondary_domains。无增量时返回 no_increment 和空数组。"
     }
   },
-  "Sentinel": {
-    "role": "政策与竞对哨兵 (Policy and Competitive Sentinel)",
-    "mission": "扫描医疗数字化政策、支付、采购、竞对和产业结构变化。",
-    "system_prompt": "先处理 latest_scan.json 的基线候选，再补充检索医疗IT竞对、医院采购、DRG/DIP、医保基金监管、FDA/CMS/ONC政策及产业交易。优先使用政府、监管机构、公司公告和采购原文。没有通过核验的高价值增量时返回空数组。每条候选标记 primary_domain=healthcare_digital。",
-    "output_schema": {
-      "type": "array",
-      "items": {
-        "type": "object",
-        "properties": {
-          "title": {"type": "string"},
-          "url": {"type": "string"},
-          "source": {"type": "string"},
-          "time": {"type": "string"},
-          "summary": {"type": "string"},
-          "primary_domain": {"const": "healthcare_digital"},
-          "source_type": {"enum": ["primary", "secondary"]},
-          "major_signal": {"type": "boolean"},
-          "major_signal_reason": {"type": "string"}
-        },
-        "required": ["title", "url", "source", "time", "summary", "primary_domain", "source_type", "major_signal", "major_signal_reason"]
-      }
-    }
-  },
-  "Ranger": {
-    "role": "风险游侠 (Cross-domain Risk Ranger)",
-    "mission": "扫描技术与医疗数字化的失败、漏洞、监管和执行摩擦。",
-    "system_prompt": "先检查 latest_scan.json，再补充检索两个领域的反向证据。技术侧关注模型失效、开源供应链、网络攻击、数据泄露、平台锁定和算力约束；医疗数字化侧关注临床安全、医疗AI偏差、系统中断、医院经营压力、采购失败、合规处罚和医疗反腐。每条候选只能选择一个 primary_domain，混合事件可填写 secondary_domains，但不得双重计数。",
-    "output_schema": {
-      "type": "array",
-      "items": {
-        "type": "object",
-        "properties": {
-          "title": {"type": "string"},
-          "url": {"type": "string"},
-          "source": {"type": "string"},
-          "time": {"type": "string"},
-          "summary": {"type": "string"},
-          "primary_domain": {"enum": ["technology", "healthcare_digital"]},
-          "secondary_domains": {"type": "array", "items": {"enum": ["technology", "healthcare_digital"]}},
-          "source_type": {"enum": ["primary", "secondary"]},
-          "major_signal": {"type": "boolean"},
-          "major_signal_reason": {"type": "string"}
-        },
-        "required": ["title", "url", "source", "time", "summary", "primary_domain", "source_type", "major_signal", "major_signal_reason"]
-      }
-    }
-  },
-  "SemanticEvaluator": {
-    "role": "跨领域语义推演官 (Cross-domain Semantic Evaluator)",
-    "mission": "对技术与医疗数字化候选执行统一证据门槛、领域内评分和L1-L4推演。",
-    "system_prompt": "读取 intelligence_candidates.json、strategic_focus.json 和历史去重结果。先按来源质量、时间有效性、事件独立性和决策影响执行统一门槛，再分别在 technology 与 healthcare_digital 领域内排序，不得因为用户职业背景把通用技术候选强制映射为医疗事件。默认成稿比例为技术40%、医疗数字化60%；证据不足时不得以弱资讯补足。只有经过红队审查的L4，或同时满足高可信L3、原始来源、近期决策影响的候选，才可标记 major_signal=true；标记时必须写 major_signal_reason。混合事件只按 primary_domain 计数。",
-    "output_schema": {
-      "type": "array",
-      "items": {
-        "type": "object",
-        "properties": {
-          "title": {"type": "string"},
-          "url": {"type": "string"},
-          "source": {"type": "string"},
-          "time": {"type": "string"},
-          "score": {"type": "integer"},
-          "level": {"enum": ["L1", "L2", "L3", "L4"]},
-          "primary_domain": {"enum": ["technology", "healthcare_digital"]},
-          "secondary_domains": {"type": "array", "items": {"enum": ["technology", "healthcare_digital"]}},
-          "major_signal": {"type": "boolean"},
-          "major_signal_reason": {"type": "string"},
-          "fact": {"type": "string"},
-          "connection": {"type": "string"},
-          "deduction": {"type": "string"},
-          "actionability": {"type": "string"},
-          "strategic_tags": {"type": "array", "items": {"type": "string"}}
-        },
-        "required": ["title", "url", "source", "time", "score", "level", "primary_domain", "major_signal", "major_signal_reason", "fact", "connection", "deduction", "actionability"]
-      }
+  "review_agents": {
+    "SemanticEvaluator": {
+      "role": "语义评估",
+      "mission": "对基线与补检候选执行统一门槛、事件去重、领域内排序和 L1-L4 推演。",
+      "max_turns": 3,
+      "halt_condition": "所有最终条目完成语义评估、访问核验与候选对象哈希到输出条目哈希的映射，或发现阻断问题。",
+      "output_contract": "读取 semantic_review_request.json，生成 briefing core 1.3 和 review-receipt/1.0。回执的 reviewer_kind 固定为 semantic_model，reviewer_id 固定为 SemanticEvaluator；原样返回 request_sha256、challenge、invocation_id，包含 turns_used、halt_condition_met、baseline_sha256、input_bundle_sha256、output_sha256、reviewed_item_hashes、lineage_bindings、逐条 access_log，以及绑定 input_bundle_sha256 和 access_log_sha256 的 data_provenance。",
+      "system_prompt": "先读取已登记的 semantic review request。启发式候选只可作为输入，不可直接授权成稿。每个最终条目必须保留 candidate_refs；lineage_bindings 必须把对应 candidate_object_sha256 映射到完整输出条目哈希。最终 access_check.requested_url 必须匹配条目 url，final_url 只记录跳转结果，且 access_check 必须逐字段存在于回执 access_log；每个入选条目使用唯一映射，补充佐证不计入 retained-item access 数。按 requested_ratio 选择，不足时保留供给例外；不得强制把通用技术改写为医疗事件。"
+    },
+    "RedTeam": {
+      "role": "逻辑红队",
+      "mission": "检查重大资讯资格、反证、日期、来源独立性、行动时序和 L4 条目。",
+      "max_turns": 3,
+      "halt_condition": "全部 L4、重大资讯资格、日期、来源独立性与行动时序完成反证检查，或发现阻断问题。",
+      "output_contract": "读取 red_team_review_request.json 并生成 review-receipt/1.0；reviewer_kind 固定为 logic_adversary，reviewer_id 固定为 RedTeam；原样返回 request_sha256、challenge、invocation_id，包含 turns_used、halt_condition_met、baseline_sha256、output_sha256。L4 必须 status=passed 且 reviewed_item_hashes 覆盖全部 L4；无 L4 时可明确 not_required 并返回空覆盖。",
+      "system_prompt": "先读取已登记的 red-team review request，只审查其中 refined_sha256 绑定的 core；发现阻断问题时不得返回 passed。不得修改 refined core 后继续沿用旧哈希。"
     }
   }
 }

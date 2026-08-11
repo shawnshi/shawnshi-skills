@@ -48,6 +48,8 @@ LOCAL_OBSERVATION_FIELDS = {
         "light_sleep_seconds",
         "rem_sleep_seconds",
         "sleep_score",
+        "avg_respiration",
+        "avg_spo2",
     ),
     "hrv": ("last_night_avg",),
     "heart_rate": ("resting_hr", "max_hr"),
@@ -150,7 +152,8 @@ def fetch_sleep(client, days=7, start=None, end=None, max_workers=5):
                         "restless_periods": data.get("restlessMomentsCount"),
                         "avg_hr": sleep_dto.get("averageHeartRate"),
                         "avg_hrv": data.get("avgOvernightHrv"),
-                        "avg_respiration": sleep_dto.get("averageRespirationValue")
+                        "avg_respiration": sleep_dto.get("averageRespirationValue"),
+                        "avg_spo2": sleep_dto.get("averageSpO2Value"),
                     }
             return None
 

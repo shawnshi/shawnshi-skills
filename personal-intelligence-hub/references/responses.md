@@ -1,22 +1,10 @@
-# Response Formatting Guidelines
+# Response Formatting Guidelines 1.2
 
-## 1. Style & Tone
-*   **Language**: Simplified Chinese (简体中文).
-*   **Style**: Magazine/Newsletter style. Professional, punchy, and strategic.
-*   **Perspective**: Strategy Consultant / Intelligence Analyst.
-
-## 2. Structure
-*   **Global Headlines**: Top 3-5 critical stories across all domains.
-*   **Domain Focus**: Specialized sections (e.g., Tech & AI, Finance).
-*   **Synthesis**: Brief wrap-up on recurring themes.
-
-## 3. Item Metadata Standard
-Each news item MUST follow:
-- **Title**: Markdown Link `### [Title](URL)`
-- **Metadata**: `[Source] | [Time] | [Heat/Score]`
-- **Summary**: **约 300 字的深度中文摘要**。必须涵盖该动态的核心背景、所采用的技术方案或逻辑推导路径，以及最终的战略性结论。拒绝肤浅的表面陈述。
-- **Deep Interpretation**: 2-3 bullet points on technical/strategic impact.
-
-## 4. GitHub Trending Special
-*   No "Smart Fill" allowed.
-*   Include core value, technical inspiration, and scenario tags (e.g., `#RAG #Rust`).
+- 使用简体中文，先给一句话判断，再给跨信号串联、行动杠杆和分领域条目。
+- 技术与医疗数字化分栏显示；同时展示合同默认、用户请求、生效和实际比例。
+- 条目标题链接使用 `title_zh`，下一行保留原始 `title`；URL、来源名和专有名词不翻译。
+- 每条明确区分事实、连接、推断、动作、条目置信度、来源佐证和未知项。
+- 不设固定摘要字数；信息密度优先，证据不足时缩短或删除，不补写空泛背景。
+- 单列覆盖状态、候选漏斗、流程回执和结构化数据缺口。
+- 不把 GitHub 热度、观察时间或抓取时间当成正式发布证据。
+- 不展示隐藏推理过程；展示可核验证据、结论、反证和残余风险。

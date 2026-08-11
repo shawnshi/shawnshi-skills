@@ -75,7 +75,7 @@ description: 说明技能做什么，以及用户在什么场景下应使用它�
 
 ## 5. Skill inventory
 
-当前库存为 49 个用户技能，不包含 `.system`、`scripts`、`shared`、`examples` 和 `reports`。功能说明取自各技能 `SKILL.md` 的当前 `description`。
+当前库存为 50 个用户技能，不包含 `.system`、`scripts`、`shared`、`examples` 和 `reports`。功能说明取自各技能 `SKILL.md` 的当前 `description`。
 
 ### Academic and cognitive research
 
@@ -135,6 +135,7 @@ description: 说明技能做什么，以及用户在什么场景下应使用它�
 
 | Skill | 功能说明 |
 |---|---|
+| `officecli` | 使用 officecli CLI 创建、分析、校对和修改 DOCX、XLSX 与 PPTX 文档，并检查格式、定位问题、添加图表或执行结构化编辑 |
 | `tencent-meeting-mcp` | 通过已安装并授权的腾讯会议 CLI 或本地代理查询会议、成员、录制、转写和智能纪要，并在明确确认后创建、更新或取消会议 |
 | `tool-archive-crawler` | 对用户明确指定的历史文件、旧笔记或档案目录进行只读盘点、文本提取、去重、主题归类和可追溯摘要 |
 | `tool-blogger-publisher` | 将 Markdown 转换为适合 Google Blogger、微信公众号和邮件订阅系统粘贴或导入的内联样式 HTML 片段，并校验结构、链接、图片和基础安全 |

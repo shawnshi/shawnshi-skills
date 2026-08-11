@@ -178,6 +178,15 @@ class BriefingContractTests(unittest.TestCase):
             item["strategic_score"] = 100 - index
             item["major_signal"] = index == 0
             item["major_signal_reason"] = "高可信L3改变近期决策" if index == 0 else "none"
+            item["intelligence_level"] = "L3" if index == 0 else "L2"
+            item["confidence"] = "high" if index == 0 else "medium"
+            item["source_type"] = "primary"
+            item["access_check"] = {
+                "status": "verified",
+                "checked_at": "2026-07-28T12:00:00+08:00",
+                "method": "direct",
+            }
+            item["near_term_decision_impact"] = index == 0
             candidates.append(item)
         selected, mix = select_candidates_with_mix(
             candidates,
@@ -197,6 +206,37 @@ class BriefingContractTests(unittest.TestCase):
             payload["mix"]["actual_counts"],
             {"technology": 3, "healthcare_digital": 2},
         )
+
+    def test_out_of_window_item_dates_are_rejected(self):
+        payload = valid_payload()
+        payload["top_10"][0]["event_date"] = "2025-01-01"
+        payload["top_10"][0]["published_at"] = "2025-01-02"
+
+        errors, _ = validate_briefing_data(payload)
+
+        self.assertTrue(any("outside window" in error for error in errors))
+
+    def test_heuristic_output_cannot_be_archived(self):
+        payload = valid_payload()
+        payload["model_used"] = "heuristic"
+
+        errors, _ = validate_briefing_data(payload)
+
+        self.assertTrue(any("heuristic" in error for error in errors))
+
+    def test_unqualified_major_signal_is_rejected(self):
+        payload = valid_payload()
+        item = payload["top_10"][0]
+        item["major_signal"] = True
+        item["major_signal_reason"] = "标题看起来重要"
+        item["intelligence_level"] = "L1"
+        item["confidence"] = "low"
+        item["source_type"] = "secondary"
+        item["near_term_decision_impact"] = False
+
+        errors, _ = validate_briefing_data(payload)
+
+        self.assertTrue(any("major_signal eligibility" in error for error in errors))
 
 
 if __name__ == "__main__":

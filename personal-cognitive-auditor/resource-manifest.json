@@ -1,10 +1,19 @@
 {
-  "schema_version": 1,
+  "schema_version": 2,
   "skill": "personal-cognitive-auditor",
-  "generated_at": "2026-07-28T13:41:39",
+  "generated_at": "2026-08-09T19:46:17",
+  "hash_algorithm": "SHA-256",
+  "text_hash_normalization": "LF",
   "skill_md": "SKILL.md",
+  "skill_md_sha256": "6ef3aded9f29ebaadfea74214d9b02a1ffcb2d7c59739d5e50878d1a56741e8f",
   "top_level_files": [
     "SKILL.md"
+  ],
+  "top_level_file_hashes": [
+    {
+      "path": "SKILL.md",
+      "sha256": "6ef3aded9f29ebaadfea74214d9b02a1ffcb2d7c59739d5e50878d1a56741e8f"
+    }
   ],
   "top_level_directories": [
     "prompts",
@@ -29,22 +38,26 @@
     {
       "path": "references\\templates.md",
       "exists": true,
-      "resolved_path": "C:\\Users\\shich\\.codex\\skills\\personal-cognitive-auditor\\references\\templates.md"
+      "resolved_path": "personal-cognitive-auditor/references/templates.md",
+      "sha256": "a7272a7200428bc41b27e9986a027aac3662fcc1b2082da98c48a41db2a99b0b"
     },
     {
       "path": "references\\semantic_layer.md",
       "exists": true,
-      "resolved_path": "C:\\Users\\shich\\.codex\\skills\\personal-cognitive-auditor\\references\\semantic_layer.md"
+      "resolved_path": "personal-cognitive-auditor/references/semantic_layer.md",
+      "sha256": "58e2da8dd1c24ffe216dbdc8ce701cccc63135d1112f004ee1a08bec9f370263"
     },
     {
       "path": "references\\handoff_contract.md",
       "exists": true,
-      "resolved_path": "C:\\Users\\shich\\.codex\\skills\\personal-cognitive-auditor\\references\\handoff_contract.md"
+      "resolved_path": "personal-cognitive-auditor/references/handoff_contract.md",
+      "sha256": "88f42d71e576a21454c89566456639614fefe98c5f4e935767d64737dafc1abc"
     },
     {
       "path": "scripts\\audit_gate.py",
       "exists": true,
-      "resolved_path": "C:\\Users\\shich\\.codex\\skills\\personal-cognitive-auditor\\scripts\\audit_gate.py"
+      "resolved_path": "personal-cognitive-auditor/scripts/audit_gate.py",
+      "sha256": "21c193333223ef54b292e3f1df9e69c70848433cca0830852e0c08f587254c89"
     }
   ],
   "missing_declared_dependencies": []

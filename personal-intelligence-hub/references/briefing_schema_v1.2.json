@@ -1,0 +1,136 @@
+{
+  "resource_kind": "intelligence_briefing_contract",
+  "version": "1.2",
+  "required_top_level": [
+    "schema_version",
+    "run_id",
+    "report_date",
+    "generated_at",
+    "model_used",
+    "topic",
+    "region",
+    "window",
+    "punchline",
+    "insights",
+    "digest",
+    "market",
+    "action_levers",
+    "pipeline",
+    "coverage",
+    "candidate_funnel",
+    "mix",
+    "top_10",
+    "data_gaps"
+  ],
+  "required_window_fields": ["mode", "days", "start", "end", "timezone"],
+  "required_action_lever_fields": [
+    "domain",
+    "task",
+    "owner_type",
+    "trigger",
+    "indicator"
+  ],
+  "required_item_fields": [
+    "event_id",
+    "event_identity",
+    "identity_quality",
+    "candidate_refs",
+    "title",
+    "title_zh",
+    "url",
+    "source",
+    "source_type",
+    "access_check",
+    "event_date",
+    "event_date_source",
+    "published_at",
+    "published_at_source",
+    "observed_at",
+    "retrieved_at",
+    "primary_domain",
+    "secondary_domains",
+    "major_signal",
+    "major_signal_reason",
+    "near_term_decision_impact",
+    "decision_impact_reason",
+    "fact",
+    "connection",
+    "deduction",
+    "actionability",
+    "intelligence_level",
+    "confidence",
+    "corroboration_status",
+    "summary_zh"
+  ],
+  "max_top_items": 10,
+  "domain_mix": {
+    "domains": ["technology", "healthcare_digital"],
+    "default_ratio": {
+      "technology": 0.4,
+      "healthcare_digital": 0.6
+    },
+    "max_ratio_shift": 0.2,
+    "required_mix_fields": [
+      "default_ratio",
+      "requested_ratio",
+      "ratio_source",
+      "ratio_reason",
+      "effective_ratio",
+      "target_counts",
+      "actual_counts",
+      "adjustment",
+      "supply_exception"
+    ],
+    "required_adjustment_fields": [
+      "applied",
+      "favored_domain",
+      "reason",
+      "trigger_urls"
+    ],
+    "required_supply_exception_fields": [
+      "applied",
+      "reason",
+      "missing_domains"
+    ]
+  },
+  "enums": {
+    "intelligence_level": ["L1", "L2", "L3", "L4"],
+    "confidence": ["low", "medium", "high"],
+    "primary_domain": ["technology", "healthcare_digital"],
+    "source_type": ["primary", "secondary"],
+    "corroboration_status": ["single_primary", "multi_independent", "contradicted", "unverified"],
+    "identity_quality": ["semantic", "provisional"],
+    "run_status": ["complete", "degraded", "failed"],
+    "coverage_confidence": ["low", "medium", "high"]
+  },
+  "required_access_check_fields": ["status", "checked_at", "method", "requested_url", "final_url", "http_status"],
+  "pipeline_contract": {
+    "required_semantic_fields": [
+      "status",
+      "reviewer_kind",
+      "reviewer_id",
+      "invocation_id",
+      "request_sha256",
+      "input_bundle_sha256",
+      "access_log_sha256",
+      "verified_access_count",
+      "output_sha256",
+      "reviewed_item_hashes",
+      "lineage_bindings",
+      "turns_used",
+      "halt_condition_met"
+    ],
+    "required_red_team_fields": [
+      "status",
+      "reviewer_kind",
+      "reviewer_id",
+      "invocation_id",
+      "request_sha256",
+      "covered_item_hashes",
+      "turns_used",
+      "halt_condition_met"
+    ]
+  },
+  "required_gap_fields": ["gap_id", "lane", "status", "description", "impact"],
+  "l4_required_audit_fields": ["devil_advocate", "blind_spots"]
+}

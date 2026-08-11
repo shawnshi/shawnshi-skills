@@ -1,3 +1,4 @@
+import base64
 import json
 import os
 import re
@@ -5,7 +6,7 @@ import shutil
 import subprocess
 import tempfile
 import unittest
-from datetime import datetime
+from datetime import date, datetime, timedelta
 from pathlib import Path
 from unittest.mock import Mock, patch
 
@@ -13,6 +14,65 @@ from garmin_capabilities import require_capability
 
 import garmin_chart
 from report_output import build_report_paths, get_report_dir
+
+
+def decode_dashboard_payload(html):
+    encoded = re.search(
+        r'<script id="health-data"[^>]*>(.*?)</script>', html, re.DOTALL
+    ).group(1)
+    return json.loads(base64.b64decode(encoded).decode("utf-8"))
+
+
+def comparable_summary(start_day, prior_days):
+    hrv = []
+    heart_rate = []
+    sleep = []
+    for offset in range(prior_days + 1):
+        day = (start_day + timedelta(days=offset)).isoformat()
+        hrv.append({"date": day, "last_night_avg": 45 + (offset % 5)})
+        heart_rate.append({"date": day, "resting_hr": 54 + (offset % 4)})
+        sleep.append({"date": day, "sleep_time_seconds": 25200 + offset * 60})
+    return {
+        "summary": {
+            "period": f"{start_day.isoformat()} to {heart_rate[-1]['date']}",
+            "days": prior_days + 1,
+        },
+        "heart_rate": heart_rate,
+        "hrv": hrv,
+        "sleep": sleep,
+        "body_battery": [],
+        "stress": [],
+        "device_info": [
+            {
+                "serial_number": "must-not-be-embedded",
+                "software_version": "19.00",
+            }
+        ],
+        "measurement_epoch_evidence": {
+            "analysis_algorithm_epoch": "personal-health-analysis:baseline-change:v2",
+            "manufacturer_algorithm_epoch": "synthetic-manufacturer-v1",
+            "firmware_history": [
+                {
+                    "timestamp": f"{start_day.isoformat()}T00:00:00",
+                    "serial_number": "must-not-be-embedded",
+                    "software_version": "19.00",
+                }
+            ],
+        },
+        "activities": [{"date": start_day.isoformat(), "steps": 999999}],
+        "is_stale": False,
+        "data_gaps": [],
+        "data_integrity": {
+            "status": "verified_unchanged",
+            "databases": [
+                {
+                    "database": "garmin.db",
+                    "sha256": "a" * 64,
+                    "storage_sha256": "b" * 64,
+                }
+            ],
+        },
+    }
 
 
 class ReportOutputContractTests(unittest.TestCase):
@@ -47,18 +107,22 @@ class ReportOutputContractTests(unittest.TestCase):
         runtime_source = re.findall(r"<script(?: [^>]*)?>(.*?)</script>", html, re.DOTALL)[-1]
         harness = f"""
 class Node {{
-  constructor() {{ this.textContent=''; this.children=[]; this.style={{}}; this.className=''; }}
-  setAttribute() {{}}
+  constructor(name='node') {{
+    this.nodeName=name; this.textContent=''; this.children=[]; this.style={{}};
+    this.className=''; this.attributes={{}};
+  }}
+  setAttribute(key,value) {{ this.attributes[key]=String(value); }}
+  removeAttribute(key) {{ delete this.attributes[key]; }}
   append(...nodes) {{ this.children.push(...nodes); }}
   replaceChildren(...nodes) {{ this.children = nodes; }}
 }}
 const elements = {{}};
-elements['health-data'] = new Node();
+elements['health-data'] = new Node('script');
 elements['health-data'].textContent = {json.dumps(encoded)};
 const document = {{
   getElementById(id) {{ return elements[id] || (elements[id] = new Node()); }},
-  createElement() {{ return new Node(); }},
-  createElementNS() {{ return new Node(); }}
+  createElement(name) {{ return new Node(name); }},
+  createElementNS(_namespace,name) {{ return new Node(name); }}
 }};
 const window = {{ addEventListener(event, callback) {{ if (event === 'DOMContentLoaded') callback(); }} }};
 {runtime_source}
@@ -66,14 +130,18 @@ console.log(JSON.stringify({{
   rhr: elements['kpi-rhr'].textContent,
   hrv: elements['kpi-hrv'].textContent,
   sleep: elements['kpi-sleep'].textContent,
-  cardio_empty: elements['cardio-chart'].children[0].textContent,
+  rhr_empty: elements['rhr-chart'].children[0].textContent,
+  hrv_empty: elements['hrv-chart'].children[0].textContent,
   battery_empty: elements['battery-chart'].children[0].textContent,
-  missing_score: elements['heatmap'].children[0].children[1].textContent,
-  observed_zero_score: elements['heatmap'].children[1].children[1].textContent
+  missing_score: elements['sleep-score-heatmap'].children[0].children[1].textContent,
+  observed_zero_score: elements['sleep-score-heatmap'].children[1].children[1].textContent,
+  baseline: elements['baseline-value'].textContent,
+  requested_range: elements['trust-requested-range'].textContent
 }}));
 """
         completed = subprocess.run(
-            [shutil.which("node"), "-e", harness],
+            [shutil.which("node"), "-"],
+            input=harness,
             check=True,
             capture_output=True,
             text=True,
@@ -83,14 +151,329 @@ console.log(JSON.stringify({{
         self.assertEqual(
             json.loads(completed.stdout),
             {
-                "rhr": "--",
-                "hrv": "--",
+                "rhr": "—",
+                "hrv": "—",
                 "sleep": "0 h",
-                "cardio_empty": "无可绘制观测",
+                "rhr_empty": "无可绘制观测",
+                "hrv_empty": "无可绘制观测",
                 "battery_empty": "无可绘制观测",
-                "missing_score": "—",
+                "missing_score": "缺失",
                 "observed_zero_score": "0",
+                "baseline": "未计算",
+                "requested_range": "2026-08-09 至 2026-08-09（1 天）",
             },
+        )
+
+    def test_dashboard_payload_is_minimal_and_baseline_is_gated(self):
+        start = date(2026, 7, 1)
+        summary = comparable_summary(start, 6)
+        summary["overlay_only_secret"] = "must-not-be-embedded"
+        summary["data_integrity"]["databases"] = [
+            {"database": r"C:\private\health\garmin.db", "sha256": "a" * 64},
+            {"database": r"\\private-host\health\activities.db", "sha256": "b" * 64},
+        ]
+
+        payload = garmin_chart.build_dashboard_payload(
+            summary,
+            days=7,
+            requested_source="local",
+            effective_source="local",
+            selected_components=tuple(garmin_chart.LIVE_SUMMARY_COMPONENTS),
+            live_fallback_attempted=False,
+            requested_start=start.isoformat(),
+            requested_end=(start + timedelta(days=6)).isoformat(),
+            generated_at="2026-08-09T12:00:00+08:00",
+        )
+        html = garmin_chart.render_report(payload)
+        embedded = decode_dashboard_payload(html)
+        serialized = json.dumps(embedded, ensure_ascii=False)
+
+        self.assertEqual(
+            set(embedded),
+            {
+                "schema_version",
+                "meta",
+                "coverage",
+                "baseline",
+                "kpis",
+                "series",
+                "heatmap",
+                "patterns",
+                "narrative",
+            },
+        )
+        self.assertEqual(embedded["schema_version"], "dashboard.v3")
+        self.assertEqual(embedded["baseline"]["status"], "insufficient_baseline")
+        self.assertIsNone(embedded["baseline"]["rhr"]["delta_pct"])
+        self.assertNotIn("serial_number", serialized)
+        self.assertNotIn("must-not-be-embedded", serialized)
+        self.assertNotIn("weighted_dissipation", serialized)
+        self.assertNotIn("quant_scores", serialized)
+        self.assertNotIn('"steps"', serialized)
+        self.assertNotIn("999999", serialized)
+        self.assertNotIn('"sha256"', serialized)
+        self.assertNotIn(r"C:\private\health", serialized)
+        self.assertNotIn("private-host", serialized)
+        self.assertEqual(embedded["meta"]["integrity"]["database_count"], 2)
+        self.assertNotIn("databases", embedded["meta"]["integrity"])
+
+    def test_dashboard_builder_discards_unrequested_source_metrics(self):
+        start = date(2026, 7, 27)
+        end = start + timedelta(days=13)
+        summary = {
+            "summary": {"period": f"{start} to {end}", "days": 14},
+            "sleep": [
+                {
+                    "date": end.isoformat(),
+                    "sleep_time_seconds": 0,
+                    "sleep_score": 0,
+                }
+            ],
+            "heart_rate": [{"date": end.isoformat(), "resting_hr": 199}],
+            "hrv": [{"date": end.isoformat(), "last_night_avg": 199}],
+            "stress": [{"date": end.isoformat(), "avg_stress": 199}],
+            "body_battery": [
+                {"date": end.isoformat(), "highest": 199, "lowest": 199}
+            ],
+            "activities": [{"date": end.isoformat(), "steps": 199199}],
+            "data_gaps": ["untrusted-source-gap-secret"],
+        }
+
+        payload = garmin_chart.build_dashboard_payload(
+            summary,
+            days=14,
+            requested_source="local",
+            effective_source="local",
+            selected_components=("sleep",),
+            live_fallback_attempted=False,
+            requested_start=start.isoformat(),
+            requested_end=end.isoformat(),
+            generated_at="2026-08-09T12:00:00+08:00",
+        )
+        serialized = json.dumps(payload, ensure_ascii=False)
+
+        self.assertTrue(all(value is None for value in payload["series"]["rhr_bpm"]))
+        self.assertTrue(all(value is None for value in payload["series"]["hrv_ms"]))
+        self.assertIsNone(payload["kpis"]["rhr"]["value"])
+        self.assertIsNone(payload["kpis"]["hrv"]["value"])
+        self.assertIsNone(payload["kpis"]["stress"]["value"])
+        self.assertEqual(payload["coverage"]["rhr"]["status"], "not_requested")
+        self.assertEqual(payload["coverage"]["stress"]["status"], "not_requested")
+        self.assertEqual(payload["baseline"]["status"], "not_requested")
+        self.assertEqual(payload["heatmap"]["status"], "available")
+        self.assertEqual(payload["heatmap"]["items"][-1]["score"], 0)
+        self.assertIn("睡眠总时长 0 h", payload["narrative"]["overall"])
+        self.assertNotIn("静息心率 None", payload["narrative"]["overall"])
+        self.assertNotIn("199", serialized)
+        self.assertNotIn("untrusted-source-gap-secret", serialized)
+
+    def test_dashboard_rhr_delta_requires_qualified_comparable_baseline(self):
+        start = date(2026, 7, 1)
+        summary = comparable_summary(start, garmin_chart.MIN_PAIRED_BASELINE_DAYS)
+        end = start + timedelta(days=garmin_chart.MIN_PAIRED_BASELINE_DAYS)
+
+        payload = garmin_chart.build_dashboard_payload(
+            summary,
+            days=garmin_chart.MIN_PAIRED_BASELINE_DAYS + 1,
+            requested_source="local",
+            effective_source="local",
+            selected_components=("sleep", "hrv", "heart_rate"),
+            live_fallback_attempted=False,
+            requested_start=start.isoformat(),
+            requested_end=end.isoformat(),
+            generated_at="2026-08-09T12:00:00+08:00",
+        )
+
+        self.assertEqual(payload["baseline"]["status"], "qualified")
+        self.assertTrue(payload["baseline"]["qualified"])
+        self.assertEqual(
+            payload["baseline"]["paired_baseline_days"],
+            garmin_chart.MIN_PAIRED_BASELINE_DAYS,
+        )
+        self.assertEqual(payload["baseline"]["baseline_start"], start.isoformat())
+        self.assertEqual(
+            payload["baseline"]["baseline_end"],
+            (end - timedelta(days=1)).isoformat(),
+        )
+        self.assertIsNotNone(payload["baseline"]["rhr"]["delta_pct"])
+
+        summary["measurement_epoch_evidence"]["firmware_history"] = []
+        unknown_epoch = garmin_chart.build_dashboard_payload(
+            summary,
+            days=garmin_chart.MIN_PAIRED_BASELINE_DAYS + 1,
+            requested_source="local",
+            effective_source="local",
+            selected_components=("sleep", "hrv", "heart_rate"),
+            live_fallback_attempted=False,
+            requested_start=start.isoformat(),
+            requested_end=end.isoformat(),
+            generated_at="2026-08-09T12:00:00+08:00",
+        )
+        self.assertEqual(unknown_epoch["baseline"]["status"], "epoch_unknown")
+        self.assertFalse(unknown_epoch["baseline"]["qualified"])
+        self.assertIsNone(unknown_epoch["baseline"]["rhr"]["delta_pct"])
+
+    def test_render_report_strips_forged_unqualified_baseline_values(self):
+        start = date(2026, 7, 1)
+        summary = comparable_summary(start, garmin_chart.MIN_PAIRED_BASELINE_DAYS)
+        end = start + timedelta(days=garmin_chart.MIN_PAIRED_BASELINE_DAYS)
+        payload = garmin_chart.build_dashboard_payload(
+            summary,
+            days=garmin_chart.MIN_PAIRED_BASELINE_DAYS + 1,
+            requested_source="local",
+            effective_source="local",
+            selected_components=("sleep", "hrv", "heart_rate"),
+            live_fallback_attempted=False,
+            requested_start=start.isoformat(),
+            requested_end=end.isoformat(),
+            generated_at="2026-08-09T12:00:00+08:00",
+        )
+        payload["baseline"]["qualified"] = False
+        payload["baseline"]["status"] = "epoch_unknown"
+        payload["baseline"]["rhr"]["baseline"] = 999
+        payload["baseline"]["rhr"]["delta_pct"] = 999
+        payload["baseline"]["hrv"]["baseline"] = 999
+
+        embedded = decode_dashboard_payload(garmin_chart.render_report(payload))
+
+        self.assertFalse(embedded["baseline"]["qualified"])
+        self.assertIsNone(embedded["baseline"]["rhr"]["baseline"])
+        self.assertIsNone(embedded["baseline"]["rhr"]["delta_pct"])
+        self.assertIsNone(embedded["baseline"]["hrv"]["baseline"])
+
+    def test_dashboard_kpis_bind_dates_and_use_raw_stress_fields(self):
+        start = date(2026, 8, 1)
+        end = start + timedelta(days=6)
+        summary = {
+            "summary": {"period": f"{start} to {end}", "days": 7},
+            "heart_rate": [{"date": end.isoformat(), "resting_hr": 59}],
+            "hrv": [
+                {
+                    "date": (end - timedelta(days=1)).isoformat(),
+                    "last_night_avg": 43,
+                }
+            ],
+            "sleep": [
+                {
+                    "date": (end - timedelta(days=2)).isoformat(),
+                    "sleep_time_seconds": 0,
+                    "deep_sleep_seconds": None,
+                    "rem_sleep_seconds": None,
+                    "light_sleep_seconds": None,
+                    "sleep_score": 0,
+                }
+            ],
+            "stress": [
+                {
+                    "date": (end - timedelta(days=3)).isoformat(),
+                    "avg_stress": 32,
+                    "high_stress_duration": 3600,
+                    "medium_stress_duration": 7200,
+                    "rest_stress_duration": 10800,
+                }
+            ],
+            "body_battery": [],
+            "device_info": [],
+            "measurement_epoch_evidence": {},
+            "is_stale": False,
+            "data_gaps": [],
+        }
+
+        payload = garmin_chart.build_dashboard_payload(
+            summary,
+            days=7,
+            requested_source="local",
+            effective_source="local",
+            selected_components=("sleep", "hrv", "heart_rate", "stress"),
+            live_fallback_attempted=False,
+            requested_start=start.isoformat(),
+            requested_end=end.isoformat(),
+            generated_at="2026-08-09T12:00:00+08:00",
+        )
+
+        self.assertEqual(payload["series"]["dates"][0], start.isoformat())
+        self.assertEqual(payload["series"]["dates"][-1], end.isoformat())
+        self.assertEqual(len(payload["series"]["dates"]), 7)
+        self.assertEqual(payload["kpis"]["rhr"]["observed_date"], end.isoformat())
+        self.assertEqual(
+            payload["kpis"]["hrv"]["observed_date"],
+            (end - timedelta(days=1)).isoformat(),
+        )
+        self.assertEqual(payload["kpis"]["sleep"]["value"], 0)
+        self.assertEqual(
+            payload["kpis"]["stress"]["observed_date"],
+            (end - timedelta(days=3)).isoformat(),
+        )
+        self.assertEqual(payload["kpis"]["stress"]["value"], 32)
+        self.assertEqual(
+            payload["kpis"]["stress"]["details"],
+            {"high_h": 1.0, "medium_h": 2.0, "rest_h": 3.0},
+        )
+        self.assertEqual(payload["coverage"]["rhr"]["observed_days"], 1)
+        self.assertEqual(payload["coverage"]["sleep_total"]["observed_days"], 1)
+
+    def test_dashboard_projects_sleep_respiration_spo2_and_missing_streaks(self):
+        start = date(2026, 8, 1)
+        end = start + timedelta(days=6)
+        summary = {
+            "summary": {"days": 7},
+            "sleep": [
+                {
+                    "date": start.isoformat(),
+                    "sleep_time_seconds": 28800,
+                    "avg_respiration": 14.5,
+                    "avg_spo2": 96,
+                },
+                {
+                    "date": end.isoformat(),
+                    "sleep_time_seconds": 0,
+                    "avg_respiration": 0,
+                    "avg_spo2": 0,
+                },
+            ],
+            "component_status": {"sleep": {"status": "partial"}},
+            "measurement_epoch_evidence": {},
+        }
+
+        payload = garmin_chart.build_dashboard_payload(
+            summary,
+            days=7,
+            requested_source="local",
+            effective_source="local",
+            selected_components=("sleep",),
+            live_fallback_attempted=False,
+            requested_start=start.isoformat(),
+            requested_end=end.isoformat(),
+            generated_at="2026-08-09T12:00:00+08:00",
+        )
+
+        self.assertEqual(payload["series"]["sleep_respiration_brpm"], [14.5, None, None, None, None, None, 0])
+        self.assertEqual(payload["series"]["sleep_spo2_pct"], [96, None, None, None, None, None, 0])
+        self.assertEqual(payload["coverage"]["sleep_respiration"]["observed_days"], 2)
+        self.assertEqual(payload["coverage"]["sleep_respiration"]["observed_zero_days"], 1)
+        self.assertEqual(
+            payload["coverage"]["sleep_respiration"]["longest_missing_streak_days"],
+            5,
+        )
+        self.assertEqual(
+            payload["coverage"]["sleep_respiration"]["current_missing_streak_days"],
+            0,
+        )
+
+    def test_conflicting_same_day_values_are_not_silently_last_write_wins(self):
+        records = [
+            {"date": "2026-08-09", "last_night_avg": 40},
+            {"date": "2026-08-09", "last_night_avg": 55},
+        ]
+        identical = [
+            {"date": "2026-08-09", "last_night_avg": 40},
+            {"date": "2026-08-09", "last_night_avg": 40},
+        ]
+
+        self.assertIsNone(garmin_chart._dated_map(records, "last_night_avg")["2026-08-09"])
+        self.assertEqual(
+            garmin_chart._dated_map(identical, "last_night_avg")["2026-08-09"],
+            40,
         )
 
     def test_default_archive_is_workspace_output(self):
@@ -486,6 +869,20 @@ console.log(JSON.stringify({{
         self.assertIn("default-src 'none'", lowered)
         self.assertNotIn("#10b981", lowered)
         self.assertNotIn("#ef4444", lowered)
+        self.assertNotIn("fetch(", lowered)
+        self.assertNotIn("xmlhttprequest", lowered)
+        self.assertNotIn("websocket", lowered)
+        self.assertIn('id="trust-bar"', lowered)
+        self.assertIn('id="rhr-chart"', lowered)
+        self.assertIn('id="hrv-chart"', lowered)
+        self.assertNotIn('id="cardio-chart"', lowered)
+        self.assertIn('@media print', lowered)
+        self.assertIn('@media(max-width:520px)', lowered.replace(" ", ""))
+        self.assertIn("flex-wrap:wrap", lowered.replace(" ", ""))
+        self.assertNotRegex(lowered, r"<details\s+open")
+        self.assertNotIn("%%RHR_DELTA%%", template)
+        self.assertNotIn("%%WEIGHTED_VAL%%", template)
+        self.assertNotIn("记录压力时长", template)
 
         html = garmin_chart.render_report(
             {
@@ -495,7 +892,7 @@ console.log(JSON.stringify({{
             }
         )
         self.assertNotIn("%%", html)
-        self.assertIn('<strong class="delta">--%</strong>', html)
+        self.assertIn('id="baseline-value"', html)
 
 
 if __name__ == "__main__":

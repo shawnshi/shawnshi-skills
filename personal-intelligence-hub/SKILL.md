@@ -1,66 +1,181 @@
 ---
 name: personal-intelligence-hub
-description: 对技术与医疗数字化开展多来源情报扫描、历史去重、原始来源核验、动态领域配比、情景推演和红队审查，并生成带来源的战略简报。用于“今日资讯简报”“昨日资讯简报”“情报扫描”“战略简报”“过去一周动态”“竞争信号”等需要当前外部信息和行动判断的请求；正式日简报按归档合同自动保存。
+description: 对技术与医疗数字化开展基线优先的多来源扫描、缺口补检、事件级历史去重、证据核验、动态领域配比、语义评估和逻辑红队，并事务化生成带来源的日简报。用于“今日资讯简报”“昨日资讯简报”“情报扫描”“战略简报”“过去一周动态”“竞争信号”等需要当前外部信息和行动判断的请求；正式日简报按合同自动保存。
 ---
 
-# 战略情报扫描
+# 技术与医疗数字化资讯简报
 
-## 准备
+## 适用合同
 
-1. 明确主题、地域、时间窗口、受众和决策用途。用户只说“今日资讯简报”时，默认扫描过去 7 日的中国、美国与全球技术及医疗数字化资讯。
-2. 读取 `references/strategic_focus.json`、`references/quality_standard.md`、`references/briefing_schema.json` 和 `references/subagent_prompts.json`。生成 Markdown 时再读取 `references/briefing_template.md`。
-3. `briefing_schema.json` 是机器合同；权重和比例只是方法参数。用户指定主题或比例时，以用户要求覆盖默认配置。
-4. 运行脚本前检查 `requirements.txt` 和当前环境；不要自动安装依赖或修改全局配置。临时文件写入当前任务隔离的 scratch 目录。
+1. 当前正式产物使用 `references/briefing_schema.json` 1.3；历史 v1.0/v1.1 及 `references/briefing_schema_v1.2.json` 由冻结 validator 只读回放，不改写旧档。
+2. 用户只说“今日资讯简报”时：报告日为 Asia/Shanghai 当日，窗口为报告日及之前 6 日，共 7 个日历日；地域为中国、美国与全球。
+3. 默认领域请求比例为技术 60%、医疗数字化 40%。用户指定主题或比例时覆盖默认值并记录来源与理由。
+4. 正式日简报默认自动保存。用户明确要求不保存时，在两份回执登记后运行 `python -X utf8 scripts/run_daily.py preview --manifest <run_manifest.json> --refined <refined_core.json>`；只返回通过门禁的确定性 Markdown，不调用归档步骤。
+5. 临时探针和测试只写当前任务隔离 scratch；正式新闻产物只写授权新闻目录。
 
-## 扫描顺序
+## 开始前读取
 
-1. **先处理基线**：使用 `references/karpathy_feeds.json` 运行 `scripts/fetch_news.py`，读取和筛选基线候选。基线完成前不得启动补充检索。
-2. 检查用户授权新闻目录中的历史简报，按 URL、标题指纹和事件语义去重。
-3. **再补充检索**：读取 `references/subagent_prompts.json`，根据基线缺口调用：
-   - `TechRadar`：通用技术；
-   - `HealthcareRadar`：医疗AI与医疗数字化；
-   - `Sentinel`：医疗政策、支付、竞对和采购；
-   - `Ranger`：两个领域的失败、漏洞、监管和执行摩擦。
-4. 补充检索只能填补基线缺口，不得重复已有事件。优先使用监管公告、公司公告、政府或机构网站、论文、标准和项目主页；新闻与评论只作线索或补充。
-5. 记录事件日期、发布日期、抓取时间和直接链接。当前信息必须联网核验；不能访问的来源写入覆盖缺口，不得视为已核验。
-6. 合并重复报道，区分事实、来源主张、分析推断、行动建议和未知项。对高影响结论执行反证检查。
+按需读取以下直接合同，不要凭记忆猜字段：
 
-## 领域分类与配比
+- `references/strategic_focus.json`
+- `references/quality_standard.md`
+- `references/briefing_schema.json`
+- `references/subagent_prompts.json`
+- 生成 Markdown 前读取 `references/briefing_template.md`
 
-1. 每条候选只能有一个 `primary_domain`：
-   - `technology`：基础模型、推理、多模态、智能体、开源、算力、芯片、数据基础设施、软件工程、开发者工具、网络安全和软件供应链；
-   - `healthcare_digital`：医疗AI、EHR/HIS、FHIR/HL7、临床工作流、医保支付、医疗器械证据、医院运营、采购、合规和医疗IT竞对。
-2. 混合事件可填写 `secondary_domains`，但只按 `primary_domain` 计数。
-3. 先执行证据质量门槛，再按领域配额选择；不得用弱资讯补足比例。
-4. 默认比例为技术 40%、医疗数字化 60%。条目数不足 10 时使用最大余数法，例如 7 条为 3:4、5 条为 2:3、3 条为 1:2。
-5. 只有经过红队审查的 L4，或同时具备高可信 L3、原始来源和近期决策影响的资讯，才允许触发当日比例调整。单日最多调整 20 个百分点；两个领域同时出现高影响资讯时维持默认比例。
-6. 某领域合格候选不足时允许另一领域补位，但必须填写 `mix.supply_exception`，披露目标比例、实际比例和缺口原因。
+运行脚本前检查 `requirements.txt` 与当前环境。不要自动安装依赖或修改全局配置。
 
-## 生成与校验
+## 唯一生产流程
 
-1. 按“结论—证据—影响—行动—未知项”组织简报。行动项写明负责人类型、触发条件和观察指标。
-2. 结构化管线依次使用：
-   - `python scripts/fetch_news.py --window-days <N> --focus-config <PATH>`
-   - `python scripts/refine.py --focus-config <PATH> [--min-score <N>] [--max-items <N>]`
-   - `python scripts/validate_refined_json.py <input.json>`
-   - 独立语义评估和逻辑红队；
-   - `python scripts/forge.py`
-   - `python scripts/briefing_gate.py <briefing.json>`
-3. 脚本参数不确定时查看帮助或源文件，不猜测命令。
-4. 最终报告分成“技术”和“医疗数字化”两栏，显示默认比例、有效比例、实际条数、调整理由和候选缺口。
-5. Schema、类型、日期、枚举、重复 URL、领域计数、比例计算、未说明的偏离、占位符和未审计 L4 属于硬错误。硬错误未清零不得归档或宣称完成。
-6. 不凑 Top 10；没有足够证据时允许少于 10 条或为空。
+### 1. 建立运行并先完成基线
 
-## 自动归档合同
+使用统一入口：
 
-1. “今日资讯简报”“昨日资讯简报”等正式日简报默认自动保存，不再询问是否归档。用户明确要求不保存时除外。
-2. 保存目录优先级：用户本次指定目录 > `PIH_NEWS_DIR` > 由 `hub_utils.NEWS_DIR` 解析的默认新闻归档目录。
-3. 文件名为 `intelligence_YYYYMMDD_briefing.md`，并保存同名 JSON 快照。同日重跑采用原子替换。
-4. 只有质量门通过后才能写入正式文件。保存后重新读取 JSON，核对 UTF-8、Schema、历史重复、领域计数、比例和文件路径。
-5. 返回 Markdown/JSON 绝对路径、保留条数、实际比例、链接核验结果和覆盖缺口。写入失败时不得宣称已归档。
+```powershell
+python -X utf8 scripts/run_daily.py prepare --report-date YYYY-MM-DD --timezone Asia/Shanghai
+```
 
-## 输出边界
+该命令必须依次完成：
 
-- 自动归档只授权正式新闻简报，不授权写入长期记忆、知识图谱、索引或外部系统。
-- 不自动发布、发邮件或修改外部数据。
-- 不输出隐藏推理过程，只交付证据、判断、反证、验证结果和未知项。
+1. 创建不可变 `run_manifest.json`，锁定 `run_id`、报告日、时区、窗口、主题、地域、请求比例、SKILL/资源清单 SHA-256 及技能全树摘要；
+2. 从正式新闻 JSON 确定性重建并登记 history v2 快照；目标报告日的旧档只进入替换哈希前置条件，不进入本次去重池；
+3. 先使用 `references/karpathy_feeds.json` 执行基线扫描；
+4. 将未知或无效发布日期放入 quarantine，记录来源覆盖和守恒候选漏斗；
+5. 将基线制成带 `candidate_id` 与 `candidate_object_sha256` 的 `candidates_only` 启发式候选池；
+6. 根据领域供给、来源成功率、日期有效率、政策竞对和风险反证缺口生成 `supplement_request.json`。
+
+基线阶段未达到 `completed` 或 `degraded` 前，不得启动补充检索。启发式候选只用于排序和发现缺口，不得直接成为最终事实、等级、推断、置信度或归档内容。
+
+基线抓取对网络异常、408、425、429 与 5xx 保留退避重试；对 4xx 永久响应不做同参数重复请求，立即计入失败覆盖并交由缺口补检处理。不得通过删源或缩小扫描面换取耗时下降。
+
+“昨日资讯简报”显式传入昨日日期。不得用运行时滚动窗口或当前日期命名昨日文件。
+
+### 2. 只针对缺口调用补检代理
+
+若 prepare 返回 `supplement_request_path`：读取 `references/subagent_prompts.json`，按 request 中每个 gap 的 `lane` 调用对应代理：
+
+- `TechRadar`：通用技术；
+- `HealthcareRadar`：医疗 AI 与医疗数字化；
+- `Sentinel`：政策、支付、采购与竞对；
+- `Ranger`：失败、漏洞、处罚与执行摩擦。
+
+按 `execution_policy` 使用最小任务包启动代理：只传技能与提示词配置路径、run manifest、已登记请求、绑定输入的绝对路径、明确分派的 `gap_id`/`lane` 白名单、逐 gap 唯一输出路径、写入授权、最大轮次和停止条件；不得把候选池、历史快照或完整会话正文复制进任务消息。运行时支持上下文继承控制时必须关闭完整会话历史继承。根任务连同最多 3 个补检工作者并行；出现第 4 个 gap 时，等首个槽位释放后用全新最小上下文启动第四个工作者，不得把两个 lane 混入同一代理。已经分派的检索不得由根任务重复执行。
+
+代理只在发现阻断时发送中间状态；其余情况在原子发布后立即发送一次 `artifact_ready` 控制消息，包含绝对路径与 SHA-256，然后结束。结果必须先写到目标文件的同目录临时文件，完成 JSON 与合同自检后再原子替换为唯一输出路径，发布后不得修改。
+
+每个代理必须先处理绑定的基线候选，再补充检索；不得绕过基线直接做开放式搜索。当前资讯必须联网核验，优先监管、政府、公司公告、采购原文、论文、标准和项目主页。新闻与评论只作线索或独立佐证。
+
+每个结果必须符合 `supplement-result/1.0`，原样返回：
+
+- `run_id`、request SHA-256、baseline SHA-256、candidate pool SHA-256、`gap_id`、`lane`；
+- 非空实际查询、逐次 `access_log`、候选及来源/日期/访问核验；访问记录同时保留 `requested_url` 与跳转后的 `final_url`，候选的请求 URL 必须匹配候选 URL 并对应 `verified` 日志；
+- 从 `access_log` 派生且守恒的 attempted/succeeded/failed 覆盖计数；
+- `confidence`、绑定 request/candidate pool/access log 哈希的 `data_provenance`；
+- 1..max_turns 的已用轮次、停止条件是否满足、完成时间和状态。
+
+没有增量时返回 `no_increment` 与空候选，不得补写弱资讯。全部 gap 结果齐备后登记：
+
+```powershell
+python -X utf8 scripts/run_daily.py register-supplement --manifest <run_manifest.json> --request <supplement_request.json> --result <lane-1.json> --result <lane-2.json>
+```
+
+等待代理时先完成本地可并行的确定性检查，以原子发布后的 `artifact_ready` 控制消息为主信号。仅在通知通道延迟或不可用时，允许执行一次文件观察降级：
+
+```powershell
+python -X utf8 scripts/await_artifacts.py --path <lane-1.json> --path <lane-2.json>
+```
+
+降级观察最长 10 秒且不得重复轮询；仍未就绪时只检查一次代理状态，并发送一次定向提醒或重新启动一个有界任务。文件稳定、可解析后立即运行登记命令；只要合同验证通过，就不再等待额外聊天状态。文件存在或控制消息本身都不等于通过，仍须执行正式登记校验。
+
+若 prepare 没有返回 request，说明基线已满足配置要求，脚本已登记结构化 `no_increment`，不要伪造补检结果。
+
+### 3. 事件合并与语义评估
+
+先登记语义评估请求：
+
+```powershell
+python -X utf8 scripts/run_daily.py prepare-review --manifest <run_manifest.json> --kind semantic --max-turns 3
+```
+
+把返回的 `semantic_review_request.json` 连同候选池、补检聚合和绑定历史快照，以最小任务包交给独立 `SemanticEvaluator`。评估者必须读取请求并原样返回其中的 challenge、reviewer/invocation 标识与 request SHA-256。
+
+将基线候选与已登记补检候选合并，按以下顺序处理：
+
+1. 验证发布日期、访问回执和直接来源；
+2. 先按结构化 `event_id` 合并同一事件，再按规范化 URL 与标题指纹兜底；
+3. 同一事件的多个来源作为佐证，不重复计数；
+4. 区分事实、来源主张、分析推断、行动和未知项；
+5. 分别在 `technology` 与 `healthcare_digital` 领域内评分，通用技术不得被强制改写为医疗事件；
+6. 依据 manifest 的请求比例选择，不足 10 条时不补数；
+7. 生成 1.3 refined core 与 `review-receipt/1.0` 语义回执。
+
+语义回执必须绑定输入 bundle 与 refined 文件 SHA-256，覆盖所有最终条目的完整对象哈希，逐项映射 `candidate_object_sha256 → output_item_sha256`，并提供与最终 `access_check` 对应的访问日志及其哈希。每个最终条目的 `requested_url` 必须匹配条目 URL，`final_url` 仅记录跳转落点，入选条目按唯一映射计数。`model_used=heuristic`、请求挑战不一致、血缘或访问日志不一致时停止。
+
+语义产物原子发布并由就绪信号确认后，不得并行预启动红队，也不得因为评估代理尚未发送额外聊天消息而继续等待。下一步的红队请求命令必须接收语义回执，并在创建请求前于同一进程完成验证；验证失败时不得留下 `red_team_review_request.json`。
+
+### 4. 逻辑红队
+
+对 refined core 检查反证、日期、来源独立性、重大资讯资格、行动时序和 L4。存在 L4 时，红队状态必须为 `passed` 且条目哈希覆盖所有 L4；没有 L4 时可返回明确的 `not_required` 空覆盖回执。
+
+refined core 与语义回执通过上述校验后先登记红队请求，再把该请求与其 `refined_sha256` 绑定文件以最小任务包交给独立 `RedTeam`：
+
+```powershell
+python -X utf8 scripts/run_daily.py prepare-review --manifest <run_manifest.json> --kind red_team --refined <refined_core.json> --semantic-receipt <semantic_receipt.json> --max-turns 3
+```
+
+红队回执必须原样返回 request SHA-256、challenge、reviewer/invocation 标识、轮次与停止状态。不得修改 refined 后继续使用旧请求或回执。产物稳定后直接登记两份回执；登记命令会在写入阶段状态前重新验证两者：
+
+```powershell
+python -X utf8 scripts/run_daily.py register-review --manifest <run_manifest.json> --refined <refined_core.json> --semantic-receipt <semantic_receipt.json> --red-team-receipt <red_team_receipt.json>
+```
+
+### 5. 验证并事务化归档
+
+```powershell
+python -X utf8 scripts/run_daily.py forge --manifest <run_manifest.json> --refined <refined_core.json>
+```
+
+归档器必须：
+
+1. 重新验证技能全树、资源清单内部哈希、历史快照、运行身份、refined 字节、语义回执和红队回执；
+2. 从已登记证据重算 coverage、候选漏斗、重大资讯调比、供给例外和历史重复，再生成最终 `pipeline` 并运行 `briefing_gate.py`；
+3. 从同一 JSON payload 确定性渲染 Markdown；
+4. 在同一 staging 中准备 JSON、Markdown 和 commit sidecar；
+5. 先取得按新闻目录派生的操作系统级排他守卫；Windows 必须使用跨登录会话的 `Global\` mutex 且创建失败时封闭拒绝，不得降级到会话级守卫；目录元数据锁必须带随机 owner token，回收与释放前复核所有权；守卫覆盖旧锁判断、恢复、接管、历史重检和整个提交区，阻断并发接管及跨报告日历史检查竞争；活动进程或无法验证的异地主机锁不得接管，只回收同机已确认死亡且元数据未变化的锁；
+6. 最终重读并核对 SHA-256；
+7. 在同一守卫内、staging 前从正式档案重建并比对历史快照，逐条重跑事件去重；正式三件套验证成功后仍在该守卫内更新派生的 history v2，随后才释放守卫并登记 archive 阶段；可捕获的中途失败立即回滚，进程中断留下的未完成事务由下次归档先恢复。
+
+不得单独手写正式 Markdown、直接运行旧 `forge.py` 无参入口，或在回执未通过时写入新闻目录。
+
+## 日期、覆盖与事件规则
+
+- 7 日窗口为 `report_date-(days-1)` 至 `report_date`，两端包含。
+- `published_at` 必须为窗口内已知日期；`event_date` 可未知，但不得晚于发布日期。
+- GitHub/V2EX 观察时间不得冒充发布日期；Hacker News 时间使用带时区 UTC；所有候选记录 `retrieved_at`。
+- 每条正式资讯只能有一个 `primary_domain`；混合事件可填 `secondary_domains`，但只按主领域计数。
+- 条目 `confidence`、`corroboration_status` 与运行 `coverage_confidence` 含义不同，不得互相替代。
+- `candidate_funnel.observed` 必须等于终态处置之和，retained 必须等于正式条目数。
+- 基线全灭、必要车道失败、日期有效率不足或来源访问失败必须降级并披露，不能写成“未发现”。
+- 来源均返回成功但零候选时仍为 degraded，不得声明 high coverage。
+
+## 配比与重大资讯
+
+1. 先执行证据门，再执行配比；不使用弱资讯补足比例。
+2. 条目数不足 10 时使用最大余数法，例如 7 条为 4:3、5 条为 3:2、3 条为 2:1。
+3. 只有“高可信 L3 + 原始来源 + 访问已核验 + 近期决策影响”，或经红队覆盖的 L4，才可标记 `major_signal=true`。
+4. 有效比例必须由门禁按合格重大资讯的所属领域与请求比例重算，最多偏移 20 个百分点；两个领域同时有合格重大资讯时维持请求比例。
+5. 某领域合格候选不足可跨领域补位，但必须写 `mix.supply_exception`。
+
+## 自动保存与交付
+
+保存目录优先级：用户本次指定目录 > `PIH_NEWS_DIR` > `hub_utils.NEWS_DIR`。不要在技能文档或脚本调用中硬编码用户目录。
+
+文件为：
+
+- `intelligence_YYYYMMDD_briefing.json`
+- `intelligence_YYYYMMDD_briefing.md`
+- `intelligence_YYYYMMDD_briefing.manifest.json`
+
+同日重跑采用带旧文件哈希前置条件的事务替换。历史日期已有档案时，只有用户明确授权替换后才可在 prepare 增加 `--allow-existing-archive-replacement`。最终回复必须报告三份绝对路径、保留条数、实际比例、来源成功数、日期有效率、补检/红队状态和仍未闭合的数据缺口。证据不足时允许少于 10 条或为空。
+
+自动保存只授权正式新闻文件及新闻目录内的 `.pih_history_v2.json` 去重索引，不授权写入个人长期记忆、知识图谱、邮件、外部发布或其他系统。review challenge 只提供运行内绑定与防重放，不是外部运行时的加密身份签名；执行者仍必须真实调用两个独立评估代理。

@@ -1,14 +1,14 @@
 {
-  "version": "10.0",
+  "version": "12.1",
   "_meta": {
     "purpose": "Daily technology and healthcare-digital intelligence profile. Weights and mix are method parameters, not business facts.",
-    "override": "User instructions override the default mix. Pass --focus-config, --min-score, --max-items, --window-days, or --dedupe-days for the current task.",
-    "last_updated": "2026-08-08"
+    "override": "User instructions override the default mix via --technology-ratio plus --ratio-reason. --focus-config changes scan weights, lanes, thresholds and dedupe settings; it does not override the run mix.",
+    "last_updated": "2026-08-11"
   },
   "mix_policy": {
     "default_ratio": {
-      "technology": 0.4,
-      "healthcare_digital": 0.6
+      "technology": 0.6,
+      "healthcare_digital": 0.4
     },
     "rounding": "largest_remainder",
     "max_ratio_shift": 0.2,
@@ -179,10 +179,30 @@
     "左手医生"
   ],
   "focus_regions": ["China", "US", "Global"],
+  "coverage_policy": {
+    "minimum_source_success_rate": 0.7,
+    "minimum_dated_candidate_rate": 0.7,
+    "source_concentration_warning": 0.5,
+    "lanes": {
+      "Sentinel": {
+        "min_candidates": 1,
+        "max_turns": 3,
+        "query_scope": "医疗政策、支付、采购与竞对原始来源",
+        "keywords": ["policy", "regulation", "procurement", "payment", "政策", "监管", "采购", "支付", "竞对"]
+      },
+      "Ranger": {
+        "min_candidates": 1,
+        "max_turns": 3,
+        "query_scope": "技术与医疗数字化失败、漏洞、处罚与执行摩擦",
+        "keywords": ["risk", "failure", "vulnerability", "breach", "处罚", "漏洞", "失败", "中断", "风险"]
+      }
+    }
+  },
   "filters": {
     "exclude_terms": ["卫宁健康中标", "科普", "养生", "股价异常波动", "投资者提问", "互动易", "医保卡套现", "免费义诊", "套取医保"],
     "min_score_for_top10": 4,
     "max_top10": 10,
+    "max_candidates": 50,
     "dedupe_days": 7
   },
   "source_confidence": {

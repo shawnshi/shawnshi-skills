@@ -617,6 +617,28 @@ class GarminSummaryTests(unittest.TestCase):
         self.assertIsNone(result["source_height"])
         self.assertTrue(result["data_gaps"])
 
+    def test_live_sleep_preserves_respiration_and_spo2_as_separate_estimates(self):
+        client = types.SimpleNamespace(
+            get_sleep_data=lambda _date: {
+                "dailySleepDTO": {
+                    "sleepTimeSeconds": 28800,
+                    "averageRespirationValue": 14.5,
+                    "averageSpO2Value": 96,
+                    "sleepScores": {"overall": {"value": 80}},
+                }
+            }
+        )
+
+        result = garmin_data.fetch_sleep(
+            client,
+            start="2026-07-27",
+            end="2026-07-27",
+            max_workers=1,
+        )
+
+        self.assertEqual(result["sleep"][0]["avg_respiration"], 14.5)
+        self.assertEqual(result["sleep"][0]["avg_spo2"], 96)
+
     def test_hydration_missing_value_is_null_not_zero(self):
         client = types.SimpleNamespace(get_hydration_data=lambda _date: {"goalInML": 2000})
 

@@ -1,0 +1,36 @@
+{
+  "resource_kind": "personal_intelligence_hub_run_contract",
+  "version": "1.0",
+  "immutable_fields": [
+    "run_id",
+    "skill_sha256",
+    "skill_bundle_sha256",
+    "skill_path",
+    "resource_manifest_sha256",
+    "resource_manifest_path",
+    "report_date",
+    "timezone",
+    "window",
+    "mix_request"
+  ],
+  "hash_bound_artifacts": [
+    "history_snapshot",
+    "candidate_pool",
+    "supplement_request",
+    "semantic_review_request",
+    "red_team_request"
+  ],
+  "stage_order": [
+    "baseline",
+    "supplemental",
+    "semantic_review",
+    "red_team",
+    "archive"
+  ],
+  "terminal_statuses": [
+    "completed",
+    "degraded",
+    "skipped",
+    "not_required"
+  ]
+}

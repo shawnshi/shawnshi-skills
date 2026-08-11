@@ -25,6 +25,8 @@
   },
   "readiness_index": {
     "enabled": false,
+    "hard_disabled": true,
+    "disabled_reason": "shared_upstream_inputs_must_not_be_composited",
     "weights": {
       "sleep_score": null,
       "body_battery_peak": null,

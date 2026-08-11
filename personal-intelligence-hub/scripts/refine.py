@@ -3,13 +3,22 @@ from __future__ import annotations
 import argparse
 import json
 import re
-from datetime import datetime, timedelta
+from datetime import date, datetime, time
 from pathlib import Path
+from zoneinfo import ZoneInfo
 
-from blackboard import append_signal, update_phase
-from history_manager import is_redundant
-from hub_utils import HUB_DIR, LATEST_SCAN_PATH, REFINED_PATH, CANDIDATES_PATH, dump_json, ensure_runtime_dirs, load_json
-from mix_policy import DOMAINS, select_candidates_with_mix
+from blackboard import update_phase
+from history_manager import load_recent_history, match_history
+from hub_utils import HUB_DIR, LATEST_SCAN_PATH, REFINED_PATH, CANDIDATES_PATH, atomic_dump_json, ensure_runtime_dirs, load_json
+from mix_policy import DOMAINS
+from run_contract import (
+    RunContractError,
+    candidate_object_hash,
+    candidate_ref,
+    file_sha256,
+    load_manifest,
+    require_stage,
+)
 
 
 FOCUS_PATH = HUB_DIR / "references" / "strategic_focus.json"
@@ -24,11 +33,15 @@ def keyword_matches(text: str, keyword: str) -> bool:
     return normalized_keyword in text
 
 
-def load_inputs(focus_path: Path | None = None) -> tuple[dict, dict]:
-    scan_data = load_json(LATEST_SCAN_PATH, {})
+def load_inputs(
+    focus_path: Path | None = None,
+    scan_path: Path | None = None,
+) -> tuple[dict, dict]:
+    source_path = scan_path or LATEST_SCAN_PATH
+    scan_data = load_json(source_path, {})
     focus_data = load_json(focus_path or FOCUS_PATH, {})
-    if not scan_data.get("items"):
-        raise RuntimeError(f"No scan data found at {LATEST_SCAN_PATH}")
+    if not isinstance(scan_data.get("items"), list):
+        raise RuntimeError(f"No valid scan data found at {source_path}")
     return scan_data, focus_data
 
 
@@ -72,8 +85,6 @@ def confidence_from_source(source: str, focus_data: dict) -> str:
 
 
 def level_from_score(score: int, runner_available: bool) -> str:
-    if score >= 8:
-        return "L3"
     if score >= 4:
         return "L2"
     return "L1"
@@ -91,39 +102,38 @@ def make_candidate(
     summary = item.get("raw_desc", "").strip() or item.get("title", "")
     summary = summary[:220]
     connection = "、".join(matched[:3]) if matched else "与当前战略重心关联较弱，但建议观察"
-    level = level_from_score(score, runner_available)
-    return {
+    provisional_level = level_from_score(score, runner_available)
+    candidate_id = candidate_ref(str(item.get("url") or ""))
+    candidate = {
+        "candidate_id": candidate_id,
         "title": item.get("title", "Untitled"),
-        "title_zh": item.get("title", "Untitled"),
         "url": item.get("url", ""),
         "source": item.get("source", "Unknown"),
-        "event_date": "unknown",
-        "published_at": item.get("time", "unknown")[:10],
+        "published_at": item.get("time", "unknown"),
+        "published_at_source": item.get("published_at_source", "unknown"),
+        "observed_at": item.get("observed_at") or item.get("retrieved_at"),
         "retrieved_at": item.get("retrieved_at") or datetime.now().astimezone().isoformat(),
-        "primary_domain": primary_domain,
-        "secondary_domains": [
+        "provisional_domain": primary_domain,
+        "provisional_secondary_domains": [
             domain
             for domain in DOMAINS
             if domain != primary_domain and domain_scores.get(domain, 0) > 0
         ],
         "domain_scores": domain_scores,
-        "strategic_score": score,
-        "summary_zh": summary,
-        "reason": f"匹配主题: {connection}",
-        "fact": item.get("title", "No fact"),
-        "connection": connection,
-        "deduction": "需要结合现有布局判断其是否形成结构性变化。",
-        "actionability": "加入观察清单，若连续出现则升级跟踪。",
-        "confidence": confidence_from_source(item.get("source", ""), focus_data),
-        "intelligence_level": level,
-        "intel_grade": level,
-        "major_signal": item.get("major_signal") is True,
-        "major_signal_reason": (
+        "heuristic_rank": score,
+        "provisional_level": provisional_level,
+        "source_confidence_hint": confidence_from_source(item.get("source", ""), focus_data),
+        "summary_hint": summary,
+        "keyword_connection_hint": connection,
+        "claimed_major_signal": item.get("major_signal") is True,
+        "claimed_major_signal_reason": (
             str(item.get("major_signal_reason") or "已通过高影响资讯门槛")
             if item.get("major_signal") is True
             else "none"
         ),
     }
+    candidate["candidate_object_sha256"] = candidate_object_hash(candidate)
+    return candidate
 
 
 def heuristics(
@@ -133,12 +143,13 @@ def heuristics(
     min_score_override: int | None = None,
     max_items_override: int | None = None,
     dedupe_days_override: int | None = None,
+    history_entries: list[dict] | None = None,
 ) -> dict:
     runner_available = False
     scored = []
     for item in scan_data["items"]:
         dedupe_days = dedupe_days_override or focus_data.get("filters", {}).get("dedupe_days", 7)
-        if is_redundant(item.get("url", ""), item.get("title", ""), item.get("source", ""), days=dedupe_days):
+        if match_history(item, entries=history_entries or [])["redundant"]:
             continue
         score, matched, primary_domain, domain_scores = score_item(item, focus_data)
         scored.append(
@@ -153,79 +164,57 @@ def heuristics(
             )
         )
 
-    max_top10 = max_items_override if max_items_override is not None else focus_data.get("filters", {}).get("max_top10", 10)
+    max_candidates = max_items_override if max_items_override is not None else focus_data.get("filters", {}).get("max_candidates", focus_data.get("filters", {}).get("max_top10", 10) * 5)
     min_score = min_score_override if min_score_override is not None else focus_data.get("filters", {}).get("min_score_for_top10", 4)
     qualified_candidates = [
-        candidate for candidate in scored if candidate["strategic_score"] >= min_score
+        candidate for candidate in scored if candidate["heuristic_rank"] >= min_score
     ]
-    top_candidates, mix = select_candidates_with_mix(
+    ranked_candidates = sorted(
         qualified_candidates,
-        max_top10,
-        focus_data.get("mix_policy", {}),
-    )
-
-    for candidate in top_candidates:
-        append_signal(
-            {
-                "title": candidate["title"],
-                "url": candidate["url"],
-                "score": candidate["strategic_score"],
-                "level": candidate["intelligence_level"],
-            }
-        )
-
-    urgent_signals = [
-        {"title": c["title"], "action": c["actionability"]}
-        for c in top_candidates
-        if c["intelligence_level"] == "L4"
-    ][:3]
-
-    action_levers = [
-        {
-            "domain": candidate["primary_domain"],
-            "task": candidate["actionability"],
-            "owner_type": "待用户指定",
-            "trigger": "相关信号获得第二来源或后续公告确认",
-            "indicator": "原始来源状态与关键事实变化",
-        }
-        for candidate in top_candidates[:5]
-    ]
-
-    translations = {
-        candidate["url"]: {"title_zh": candidate["title_zh"], "desc_zh": candidate["summary_zh"]}
-        for candidate in top_candidates
-    }
-
-    return {
-        "schema_version": "1.1",
-        "generated_at": datetime.now().astimezone().isoformat(),
-        "topic": scan_data.get("metadata", {}).get("topic") or "未指定主题",
-        "region": scan_data.get("metadata", {}).get("region") or "未指定地区",
-        "window": scan_data.get("metadata", {}).get(
-            "window",
-            {"start": "unknown", "end": "unknown", "timezone": "local"},
+        key=lambda candidate: (
+            -int(candidate.get("heuristic_rank", 0)),
+            str(candidate.get("title") or ""),
+            str(candidate.get("url") or ""),
         ),
-        "status": "COMPLETED",
-        "model_used": "heuristic" if not runner_available else "hybrid",
-        "punchline": top_candidates[0]["deduction"] if top_candidates else "暂无足够高价值信号。",
-        "insights": "\n".join(
-            f"- **{c['title']}**: {c['connection']} -> {c['deduction']}" for c in top_candidates[:5]
-        ) or "- 暂无高价值洞察",
-        "digest": "\n".join(
-            f"- {c['title']}: {c['actionability']}" for c in top_candidates[:5]
-        ) or "- 暂无动作建议",
-        "market": "\n".join(f"- {c['title']}" for c in top_candidates[:8]) or "- 数据不足",
-        "urgent_signals": urgent_signals,
-        "action_levers": action_levers[:5],
-        "mix": mix,
-        "top_10": top_candidates,
-        "translations": translations,
-        "adversarial_audit_required": any(c["intelligence_level"] == "L4" for c in top_candidates),
-        "data_gaps": [
-            f"抓取源状态: {name}={status}"
-            for name, status in scan_data.get("metadata", {}).get("sources", {}).items()
-            if status != "OK"
-        ],
+    )[:max_candidates]
+
+    rejected_by_reason = {
+        "historical_duplicate": len(scan_data["items"]) - len(scored),
+        "below_heuristic_threshold": len(scored) - len(qualified_candidates),
+        "candidate_capacity": max(0, len(qualified_candidates) - len(ranked_candidates)),
+    }
+    baseline_funnel = scan_data.get("candidate_funnel")
+    if isinstance(baseline_funnel, dict) and isinstance(baseline_funnel.get("raw"), int):
+        observed = int(baseline_funnel["raw"])
+        terminal_dispositions = {
+            "invalid_or_unknown_date": int(baseline_funnel.get("quarantined", 0)),
+            "outside_window": int(baseline_funnel.get("outside_window", 0)),
+            "source_exclusion": int(baseline_funnel.get("excluded", 0)),
+            **rejected_by_reason,
+            "retained_for_review": len(ranked_candidates),
+        }
+    else:
+        observed = len(scan_data["items"])
+        terminal_dispositions = {
+            **rejected_by_reason,
+            "retained_for_review": len(ranked_candidates),
+        }
+    if sum(terminal_dispositions.values()) != observed:
+        raise RuntimeError("refinement candidate funnel does not conserve baseline observations")
+    return {
+        "contract_version": "candidate-pool/1.0",
+        "artifact_kind": "candidates_only",
+        "review_status": "unreviewed",
+        "model_used": "heuristic",
+        "created_at": datetime.now().astimezone().isoformat(),
+        "items": ranked_candidates,
+        "candidate_funnel": {
+            "observed": observed,
+            "retained_for_review": len(ranked_candidates),
+            "rejected_by_reason": rejected_by_reason,
+            "terminal_dispositions": terminal_dispositions,
+        },
+        "metadata": scan_data.get("metadata", {}),
     }
 
 
@@ -290,23 +279,59 @@ def refine(
     min_score: int | None = None,
     max_items: int | None = None,
     dedupe_days: int | None = None,
+    manifest_path: Path | None = None,
+    scan_path: Path | None = None,
+    candidates_path: Path | None = None,
 ) -> None:
     ensure_runtime_dirs()
+    if manifest_path is None:
+        raise RunContractError("--manifest is required; heuristic refinement must belong to an active run")
+    manifest = require_stage(manifest_path, "baseline", {"completed", "degraded"})
+    baseline = manifest["stages"]["baseline"]
+    baseline_path = scan_path or LATEST_SCAN_PATH
+    output_path = candidates_path or CANDIDATES_PATH
+    if file_sha256(baseline_path) != baseline.get("artifact_sha256"):
+        raise RunContractError("latest scan bytes do not match the baseline receipt")
+    history_record = manifest.get("artifacts", {}).get("history_snapshot")
+    if not isinstance(history_record, dict):
+        raise RunContractError("history_snapshot artifact is required before refinement")
+    history_path = Path(str(history_record.get("artifact_path") or ""))
+    if (
+        not history_path.is_file()
+        or file_sha256(history_path) != history_record.get("artifact_sha256")
+    ):
+        raise RunContractError("history_snapshot bytes changed")
     update_phase("refine", "running")
-    scan_data, focus_data = load_inputs(focus_path)
+    scan_data, focus_data = load_inputs(focus_path, baseline_path)
+    dedupe_window = dedupe_days or focus_data.get("filters", {}).get("dedupe_days", 7)
+    report_clock = datetime.combine(
+        date.fromisoformat(manifest["report_date"]),
+        time.max,
+        tzinfo=ZoneInfo(manifest["timezone"]),
+    )
+    history_entries = load_recent_history(
+        days=int(dedupe_window),
+        now=report_clock,
+        path=history_path,
+    )
     output = heuristics(
         scan_data,
         focus_data,
         min_score_override=min_score,
         max_items_override=max_items,
         dedupe_days_override=dedupe_days,
+        history_entries=history_entries,
     )
-    output = post_process_entities(output, focus_data)
     output = sanitize_banned_words(output)
-    dump_json(CANDIDATES_PATH, output)
-    dump_json(REFINED_PATH, output)
-    update_phase("refine", "completed_heuristic")
-    print(f"[OK] heuristic candidates saved to {CANDIDATES_PATH}")
+    for candidate in output.get("items", []):
+        if isinstance(candidate, dict):
+            candidate["candidate_object_sha256"] = candidate_object_hash(candidate)
+    output["run_id"] = manifest["run_id"]
+    output["baseline_sha256"] = baseline["artifact_sha256"]
+    atomic_dump_json(output_path, output)
+    update_phase("refine", "candidates_ready")
+    print(f"[OK] heuristic candidates saved to {output_path}")
+    return output
 
 
 if __name__ == "__main__":
@@ -315,5 +340,16 @@ if __name__ == "__main__":
     parser.add_argument("--min-score", type=int)
     parser.add_argument("--max-items", type=int)
     parser.add_argument("--dedupe-days", type=int)
+    parser.add_argument("--manifest", type=Path, required=True)
+    parser.add_argument("--scan", type=Path)
+    parser.add_argument("--output", type=Path)
     args = parser.parse_args()
-    refine(args.focus_config, args.min_score, args.max_items, args.dedupe_days)
+    refine(
+        args.focus_config,
+        args.min_score,
+        args.max_items,
+        args.dedupe_days,
+        args.manifest,
+        args.scan,
+        args.output,
+    )

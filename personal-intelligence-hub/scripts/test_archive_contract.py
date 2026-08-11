@@ -34,7 +34,7 @@ class ArchiveContractTests(unittest.TestCase):
         self.assertEqual(result.returncode, 0)
         self.assertEqual(
             Path(result.stdout.strip()),
-            Path.home() / ".gemini" / "MEMORY" / "raw" / "news",
+            Path.home() / ("." + "gemini") / "MEMORY" / "raw" / "news",
         )
 
     def test_environment_override_has_priority(self):

@@ -1,66 +1,153 @@
-import os
-import re
+from __future__ import annotations
+
 import json
-import sys
+import re
+import tempfile
+from datetime import date, datetime, time
 from pathlib import Path
-from datetime import datetime
+from typing import Any
 
-# Add lib to path
-LIB_DIR = Path(__file__).parent.parent.parent / "scripts" / "lib"
-if str(LIB_DIR) not in sys.path:
-    sys.path.append(str(LIB_DIR))
+from history_manager import save_history_items
+from hub_utils import HISTORY_PATH, NEWS_DIR, atomic_dump_json
 
-from hub_utils import NEWS_DIR, HISTORY_PATH
 
-HISTORY_FILE = HISTORY_PATH
+URL_PATTERN = re.compile(r"https?://[^\s\)\"\'\\\[\]<>]+")
 
-def rebuild_history():
-    urls = {}
-    fingerprints = {}
-    
-    # Standard URL pattern (avoids issues with parentheses if simple enough)
-    url_pattern = re.compile(r"https?://[^\s\)\"\'\\\[\]<>]+")
-    
-    today_str = datetime.now().isoformat()
-    
-    # Scan all briefings
-    search_dirs = [NEWS_DIR, NEWS_DIR / "2026Q1"]
-    files = []
-    for d in search_dirs:
-        if d.exists():
-            files.extend(list(d.glob("intelligence_*.md")))
 
-    for file in files:
-        content = file.read_text(encoding='utf-8')
-        matches = url_pattern.findall(content)
-        for url in matches:
-            # Cleanup trailing common punctuation
-            url = url.rstrip('.,;)]')
-            urls[url] = today_str
+def _json_payload(path: Path) -> dict[str, Any]:
+    try:
+        payload = json.loads(path.read_text(encoding="utf-8"))
+    except (OSError, json.JSONDecodeError):
+        return {}
+    return payload if isinstance(payload, dict) else {}
 
-    # Preserve existing history data
-    if HISTORY_FILE.exists():
+
+def _json_items(path: Path) -> list[dict[str, Any]]:
+    payload = _json_payload(path)
+    items = payload.get("top_10") if isinstance(payload, dict) else None
+    return [item for item in items if isinstance(item, dict)] if isinstance(items, list) else []
+
+
+def _archive_datetime(path: Path, payload: dict[str, Any], current: datetime) -> datetime:
+    raw_generated = payload.get("generated_at")
+    if raw_generated:
         try:
-            data = json.loads(HISTORY_FILE.read_text(encoding='utf-8'))
-            if "urls" in data:
-                for u, d in data["urls"].items():
-                    if u not in urls: urls[u] = d
-                for f, d in data.get("fingerprints", {}).items():
-                    fingerprints[f] = d
-            else:
-                # Handle old flat format
-                for u, d in data.items():
-                    if u not in urls: urls[u] = d
-        except: pass
+            parsed = datetime.fromisoformat(str(raw_generated).replace("Z", "+00:00"))
+            if parsed.tzinfo is None or parsed.utcoffset() is None:
+                parsed = parsed.replace(tzinfo=current.tzinfo)
+            return parsed.astimezone(current.tzinfo)
+        except ValueError:
+            pass
+    for raw_date in (payload.get("report_date"),):
+        if raw_date:
+            try:
+                return datetime.combine(
+                    date.fromisoformat(str(raw_date)),
+                    time.min,
+                    tzinfo=current.tzinfo,
+                )
+            except ValueError:
+                pass
+    match = re.search(r"intelligence_(\d{8})_briefing", path.name)
+    if match:
+        try:
+            return datetime.combine(
+                datetime.strptime(match.group(1), "%Y%m%d").date(),
+                time.min,
+                tzinfo=current.tzinfo,
+            )
+        except ValueError:
+            pass
+    return current
 
-    final_data = {
-        "urls": urls,
-        "fingerprints": fingerprints
-    }
-    
-    HISTORY_FILE.parent.mkdir(parents=True, exist_ok=True)
-    HISTORY_FILE.write_text(json.dumps(final_data, indent=2, ensure_ascii=False), encoding='utf-8')
-    print(f"✅ History rebuilt: {len(urls)} URLs indexed from {len(files)} files.")
+
+def _markdown_items(path: Path) -> list[dict[str, Any]]:
+    try:
+        content = path.read_text(encoding="utf-8")
+    except OSError:
+        return []
+    return [
+        {
+            "url": match.rstrip(".,;)]"),
+            "title": "",
+            "source": "",
+            "identity_quality": "provisional",
+        }
+        for match in URL_PATTERN.findall(content)
+    ]
+
+
+def rebuild_history(
+    *,
+    news_dir: Path | None = None,
+    history_file: Path | None = None,
+    now: datetime | None = None,
+    exclude_report_date: str | None = None,
+) -> dict[str, Any]:
+    source_dir = news_dir or NEWS_DIR
+    target = history_file or HISTORY_PATH
+    current = now or datetime.now().astimezone()
+    excluded_stem = (
+        f"intelligence_{exclude_report_date.replace('-', '')}_briefing"
+        if exclude_report_date
+        else None
+    )
+    json_files = (
+        [
+            path
+            for path in sorted(source_dir.rglob("intelligence_*_briefing.json"))
+            if path.stem != excluded_stem
+        ]
+        if source_dir.exists()
+        else []
+    )
+    json_stems = {path.with_suffix("").resolve() for path in json_files}
+    markdown_files = [
+        path
+        for path in sorted(source_dir.rglob("intelligence_*_briefing.md"))
+        if path.with_suffix("").resolve() not in json_stems and path.stem != excluded_stem
+    ] if source_dir.exists() else []
+
+    with tempfile.TemporaryDirectory(prefix="pih-history-rebuild-") as directory:
+        stage = Path(directory) / "history.json"
+        for archive in json_files:
+            archive_payload = _json_payload(archive)
+            save_history_items(
+                [
+                    item
+                    for item in archive_payload.get("top_10", [])
+                    if isinstance(item, dict)
+                ]
+                if isinstance(archive_payload.get("top_10"), list)
+                else [],
+                archive_ref=str(archive.relative_to(source_dir)).replace("\\", "/"),
+                path=stage,
+                now=_archive_datetime(archive, archive_payload, current),
+            )
+        for archive in markdown_files:
+            save_history_items(
+                _markdown_items(archive),
+                archive_ref=str(archive.relative_to(source_dir)).replace("\\", "/"),
+                path=stage,
+                now=_archive_datetime(archive, {}, current),
+            )
+        if stage.exists():
+            payload = json.loads(stage.read_text(encoding="utf-8"))
+        else:
+            payload = {
+                "resource_kind": "pih_history_index",
+                "schema_version": "2.0",
+                "generated_at": current.isoformat(),
+                "entries": [],
+            }
+        payload["generated_at"] = current.isoformat()
+    atomic_dump_json(target, payload)
+    print(
+        f"[OK] history rebuilt: {len(payload['entries'])} events from "
+        f"{len(json_files)} JSON and {len(markdown_files)} legacy Markdown archives"
+    )
+    return payload
+
 
 if __name__ == "__main__":
     rebuild_history()

@@ -7,6 +7,22 @@ from typing import Any
 DOMAINS = ("technology", "healthcare_digital")
 
 
+def major_signal_eligible(item: dict[str, Any]) -> bool:
+    if item.get("major_signal") is not True:
+        return False
+    if item.get("intelligence_level") == "L4":
+        return item.get("red_team_status") == "passed"
+    access = item.get("access_check")
+    return (
+        item.get("intelligence_level") == "L3"
+        and item.get("confidence") == "high"
+        and item.get("source_type") == "primary"
+        and isinstance(access, dict)
+        and access.get("status") == "verified"
+        and item.get("near_term_decision_impact") is True
+    )
+
+
 def _normalized_ratio(ratio: dict[str, float]) -> dict[str, float]:
     values = {domain: float(ratio.get(domain, 0.0)) for domain in DOMAINS}
     total = sum(values.values())
@@ -35,12 +51,14 @@ def allocate_target_counts(total: int, ratio: dict[str, float]) -> dict[str, int
 def _effective_ratio(
     candidates: list[dict[str, Any]], policy: dict[str, Any]
 ) -> tuple[dict[str, float], dict[str, Any]]:
-    default_ratio = _normalized_ratio(policy["default_ratio"])
+    requested_ratio = _normalized_ratio(
+        policy.get("requested_ratio") or policy["default_ratio"]
+    )
     major_by_domain = {
         domain: [
             item
             for item in candidates
-            if item.get("primary_domain") == domain and item.get("major_signal") is True
+            if item.get("primary_domain") == domain and major_signal_eligible(item)
         ]
         for domain in DOMAINS
     }
@@ -49,9 +67,9 @@ def _effective_ratio(
         reason = (
             "none"
             if not favored
-            else "两个领域均有高影响资讯，维持默认比例"
+            else "两个领域均有高影响资讯，维持请求比例"
         )
-        return default_ratio, {
+        return requested_ratio, {
             "applied": False,
             "favored_domain": "none",
             "reason": reason,
@@ -61,8 +79,15 @@ def _effective_ratio(
     favored_domain = favored[0]
     other_domain = next(domain for domain in DOMAINS if domain != favored_domain)
     max_shift = max(0.0, float(policy.get("max_ratio_shift", 0.2)))
-    shift = min(max_shift, default_ratio[other_domain])
-    effective_ratio = dict(default_ratio)
+    shift = min(max_shift, requested_ratio[other_domain])
+    if shift <= 0:
+        return requested_ratio, {
+            "applied": False,
+            "favored_domain": "none",
+            "reason": "requested ratio has no remaining adjustment headroom",
+            "trigger_urls": [],
+        }
+    effective_ratio = dict(requested_ratio)
     effective_ratio[favored_domain] += shift
     effective_ratio[other_domain] -= shift
     trigger_items = major_by_domain[favored_domain]
@@ -100,7 +125,7 @@ def select_candidates_with_mix(
     ranked = sorted(
         candidates,
         key=lambda item: (
-            -int(item.get("major_signal") is True),
+            -int(major_signal_eligible(item)),
             -int(item.get("strategic_score", item.get("score", 0))),
             str(item.get("title") or ""),
             str(item.get("url") or ""),
@@ -160,7 +185,7 @@ def select_candidates_with_mix(
         retained_triggers = [
             item
             for item in selected
-            if item.get("major_signal") is True
+            if major_signal_eligible(item)
             and item.get("primary_domain") == adjustment["favored_domain"]
         ]
         adjustment["trigger_urls"] = [
@@ -176,6 +201,11 @@ def select_candidates_with_mix(
         )
     mix = {
         "default_ratio": _normalized_ratio(policy["default_ratio"]),
+        "requested_ratio": _normalized_ratio(
+            policy.get("requested_ratio") or policy["default_ratio"]
+        ),
+        "ratio_source": policy.get("ratio_source", "schema_default"),
+        "ratio_reason": policy.get("ratio_reason", "none"),
         "effective_ratio": effective_ratio,
         "target_counts": target_counts,
         "actual_counts": actual_counts,

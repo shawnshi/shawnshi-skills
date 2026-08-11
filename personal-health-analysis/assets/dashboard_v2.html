@@ -6,182 +6,540 @@
   <meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'unsafe-inline'; style-src 'unsafe-inline'; img-src data:; connect-src 'none'; font-src 'none'; object-src 'none'; base-uri 'none'; form-action 'none'; frame-src 'none'">
   <title>%%TITLE%%</title>
   <style>
-    :root { color-scheme: dark; --bg:#0f172a; --panel:#1e293b; --line:#475569; --text:#f8fafc; --muted:#94a3b8; --accent:%%STATUS_COLOR%%; }
+    :root {
+      color-scheme: dark;
+      --bg:#0f172a;
+      --panel:#1e293b;
+      --panel-soft:#172033;
+      --line:#475569;
+      --line-soft:#334155;
+      --text:#f8fafc;
+      --muted:#a8b5c7;
+      --blue:#60a5fa;
+      --purple:#c4b5fd;
+      --slate:#cbd5e1;
+    }
     * { box-sizing:border-box; }
-    body { margin:0; padding:24px; background:var(--bg); color:var(--text); font:14px/1.5 system-ui,-apple-system,"Segoe UI",sans-serif; }
-    main { max-width:1280px; margin:auto; display:grid; grid-template-columns:repeat(12,1fr); gap:16px; }
-    .panel { grid-column:span 6; min-width:0; padding:20px; border:1px solid #334155; border-radius:12px; background:var(--panel); }
-    .hero,.summary { grid-column:span 12; }
-    .hero { display:flex; align-items:end; justify-content:space-between; border-left:6px solid var(--accent); }
-    h1,h2,p { margin:0; }
-    h1 { font-size:24px; }
-    h2 { margin-bottom:12px; color:#cbd5e1; font-size:14px; font-weight:650; }
-    .eyebrow { color:var(--muted); font-size:12px; letter-spacing:.08em; text-transform:uppercase; }
-    .delta { color:#e2e8f0; font-size:36px; font-variant-numeric:tabular-nums; }
-    .kpis { grid-column:span 12; display:grid; grid-template-columns:repeat(4,1fr); gap:12px; }
-    .kpi { padding:14px; border:1px solid #334155; border-radius:10px; background:#172033; }
-    .kpi strong { display:block; margin-top:5px; font-size:22px; font-variant-numeric:tabular-nums; }
-    .chart { min-height:280px; }
-    svg { width:100%; height:auto; min-height:240px; overflow:visible; }
+    [hidden] { display:none !important; }
+    body {
+      margin:0;
+      padding:24px;
+      background:var(--bg);
+      color:var(--text);
+      font:14px/1.55 system-ui,-apple-system,"Segoe UI",sans-serif;
+    }
+    main {
+      max-width:1280px;
+      margin:auto;
+      display:grid;
+      grid-template-columns:repeat(12,minmax(0,1fr));
+      gap:16px;
+    }
+    h1,h2,h3,p,dl,dd { margin:0; }
+    h1 { font-size:26px; line-height:1.2; }
+    h2 { font-size:16px; }
+    h3 { font-size:14px; }
+    .panel {
+      grid-column:span 6;
+      min-width:0;
+      padding:20px;
+      border:1px solid var(--line-soft);
+      border-radius:12px;
+      background:var(--panel);
+    }
+    .wide,.hero,.trust,.kpis,.quality,.interpretation,.footer { grid-column:span 12; }
+    .hero {
+      display:flex;
+      flex-wrap:wrap;
+      align-items:flex-end;
+      justify-content:space-between;
+      gap:20px;
+      border-left:6px solid var(--line);
+    }
+    .eyebrow {
+      margin-bottom:4px;
+      color:var(--muted);
+      font-size:12px;
+      letter-spacing:.06em;
+    }
+    .subtitle { margin-top:8px; color:var(--muted); }
+    .baseline-box { min-width:250px; max-width:520px; text-align:right; }
+    .baseline-value {
+      display:block;
+      margin:2px 0;
+      font-size:32px;
+      line-height:1.2;
+      font-variant-numeric:tabular-nums;
+      overflow-wrap:anywhere;
+    }
+    .meta { color:var(--muted); font-size:12px; overflow-wrap:anywhere; }
+    .trust { padding:16px 20px; }
+    .trust-grid {
+      display:grid;
+      grid-template-columns:repeat(4,minmax(0,1fr));
+      gap:14px;
+    }
+    .trust-grid div { min-width:0; }
+    dt { color:var(--muted); font-size:12px; }
+    dd { margin-top:3px; font-weight:650; overflow-wrap:anywhere; }
+    .kpis {
+      display:grid;
+      grid-template-columns:repeat(4,minmax(0,1fr));
+      gap:12px;
+    }
+    .kpi {
+      min-width:0;
+      padding:16px;
+      border:1px solid var(--line-soft);
+      border-radius:10px;
+      background:var(--panel-soft);
+    }
+    .kpi-head,.panel-head {
+      display:flex;
+      align-items:flex-start;
+      justify-content:space-between;
+      gap:12px;
+    }
+    .badge {
+      display:inline-block;
+      flex:0 0 auto;
+      padding:2px 7px;
+      border:1px solid var(--line);
+      border-radius:999px;
+      color:var(--slate);
+      font-size:12px;
+      font-weight:500;
+    }
+    .kpi strong {
+      display:block;
+      margin:10px 0 5px;
+      font-size:24px;
+      font-variant-numeric:tabular-nums;
+      overflow-wrap:anywhere;
+    }
+    .stress-details {
+      display:grid;
+      grid-template-columns:repeat(3,1fr);
+      gap:6px;
+      margin-top:10px;
+      color:var(--muted);
+      font-size:12px;
+    }
+    .stress-details span { display:block; }
+    figure { margin:14px 0 0; }
+    .chart { min-height:270px; }
+    svg { width:100%; height:auto; min-height:245px; overflow:visible; }
     .axis { stroke:#64748b; stroke-width:1; }
-    .grid { stroke:#334155; stroke-width:1; }
-    .label { fill:#94a3b8; font-size:10px; }
+    .grid-line { stroke:#334155; stroke-width:1; }
+    .axis-label { fill:#b6c2d2; font-size:12px; }
     .empty { color:var(--muted); padding:80px 0; text-align:center; }
-    .summary { white-space:pre-wrap; color:#cbd5e1; }
-    .summary p + p { margin-top:12px; }
-    .heatmap { display:grid; grid-template-columns:repeat(auto-fit,minmax(82px,1fr)); gap:8px; }
-    .heat-cell { min-height:58px; padding:8px; border:1px solid #475569; border-radius:8px; text-align:center; }
-    .heat-cell span { display:block; color:#cbd5e1; font-size:11px; }
-    @media (max-width:800px) { body{padding:12px}.panel{grid-column:span 12}.kpis{grid-template-columns:repeat(2,1fr)} }
+    .legend {
+      display:flex;
+      flex-wrap:wrap;
+      gap:12px;
+      margin-top:8px;
+      color:var(--muted);
+      font-size:12px;
+    }
+    .legend-item { display:inline-flex; align-items:center; gap:6px; }
+    .legend-line { width:22px; border-top:3px solid currentColor; }
+    .legend-line.dashed { border-top-style:dashed; }
+    .legend-box { width:12px; height:12px; border:1px solid currentColor; background:currentColor; }
+    details { margin-top:12px; }
+    summary { cursor:pointer; color:var(--slate); font-weight:650; }
+    .table-scroll { overflow-x:auto; margin-top:8px; }
+    table { width:100%; border-collapse:collapse; font-size:12px; }
+    caption { padding:6px 0; color:var(--muted); text-align:left; }
+    th,td { padding:7px 8px; border-bottom:1px solid var(--line-soft); text-align:left; white-space:nowrap; }
+    th { color:var(--slate); }
+    td { color:var(--muted); font-variant-numeric:tabular-nums; }
+    .heatmap {
+      display:grid;
+      grid-template-columns:repeat(auto-fit,minmax(94px,1fr));
+      gap:8px;
+      margin-top:14px;
+    }
+    .heat-cell {
+      min-height:64px;
+      padding:8px;
+      border:1px solid var(--line);
+      border-radius:8px;
+      text-align:center;
+    }
+    .heat-cell span { display:block; font-size:12px; }
+    .heat-cell.missing { background:repeating-linear-gradient(135deg,#1e293b,#1e293b 7px,#273449 7px,#273449 14px); }
+    .quality table { margin-top:10px; }
+    .interpret-grid {
+      display:grid;
+      grid-template-columns:repeat(3,minmax(0,1fr));
+      gap:12px;
+      margin-top:14px;
+    }
+    .interpret-card {
+      padding:14px;
+      border:1px solid var(--line-soft);
+      border-radius:10px;
+      background:var(--panel-soft);
+    }
+    .interpret-card ul { margin:8px 0 0; padding-left:20px; color:var(--muted); }
+    .interpret-card li + li { margin-top:6px; }
+    .summary-text { margin-top:12px; color:var(--slate); white-space:pre-wrap; }
+    .summary-text p + p { margin-top:10px; }
+    .load-error { border-color:#7c6f64; color:#f1e6d8; }
+    .footer { padding:12px 4px 0; color:var(--muted); font-size:12px; }
+    .footer p + p { margin-top:4px; }
+    @media (max-width:900px) {
+      .trust-grid { grid-template-columns:repeat(2,minmax(0,1fr)); }
+      .kpis { grid-template-columns:repeat(2,minmax(0,1fr)); }
+      .panel { grid-column:span 12; }
+      .interpret-grid { grid-template-columns:1fr; }
+    }
+    @media (max-width:520px) {
+      body { padding:10px; }
+      main { gap:12px; }
+      .panel { padding:16px; }
+      .hero { display:block; }
+      .baseline-box { min-width:0; max-width:none; margin-top:18px; text-align:left; }
+      .baseline-value { font-size:27px; }
+      .trust-grid,.kpis { grid-template-columns:1fr; }
+      .kpi-head,.panel-head { flex-wrap:wrap; }
+      .badge { max-width:100%; white-space:normal; }
+      .stress-details { grid-template-columns:1fr; }
+      .chart { min-height:230px; }
+      svg { min-height:210px; }
+    }
+    @media print {
+      :root { color-scheme:light; --bg:#fff; --panel:#fff; --panel-soft:#fff; --line:#555; --line-soft:#bbb; --text:#111; --muted:#444; --slate:#222; }
+      body { padding:0; background:#fff; color:#111; font-size:11pt; }
+      main { max-width:none; gap:10px; }
+      .panel,.kpi { break-inside:avoid; box-shadow:none; }
+      details { display:block; }
+      details > * { display:block; }
+      summary { display:none; }
+      table { font-size:9pt; }
+      .footer { break-before:auto; }
+    }
+    @media (forced-colors:active) {
+      .panel,.kpi,.interpret-card,.heat-cell { border:1px solid CanvasText; }
+      .legend-line { forced-color-adjust:none; }
+    }
   </style>
 </head>
 <body>
-  <main>
-    <section class="panel hero">
-      <div><p class="eyebrow">Non-diagnostic wearable trends</p><h1>Garmin 健康趋势</h1></div>
-      <div><p class="eyebrow">静息心率相对个人基线差异</p><strong class="delta">%%RHR_DELTA%%%</strong></div>
+  <main id="dashboard-root">
+    <section id="load-error" class="panel wide load-error" hidden>
+      <h2>面板载荷无法验证</h2>
+      <p>未展示任何健康指标。请重新生成报告并核对文件完整性。</p>
     </section>
-    <section class="kpis" aria-label="最近可用观测">
-      <div class="kpi"><span>静息心率</span><strong id="kpi-rhr">--</strong></div>
-      <div class="kpi"><span>HRV</span><strong id="kpi-hrv">--</strong></div>
-      <div class="kpi"><span>睡眠总时长</span><strong id="kpi-sleep">--</strong></div>
-      <div class="kpi"><span>记录压力时长</span><strong id="kpi-stress">%%WEIGHTED_VAL%% h</strong></div>
+
+    <header id="dashboard-header" class="panel hero">
+      <div>
+        <p class="eyebrow">消费级可穿戴设备趋势 · 非诊断性信息</p>
+        <h1 id="dashboard-title">Garmin 健康审计面板</h1>
+        <p class="subtitle">先核对数据可信度，再查看个人趋势。</p>
+      </div>
+      <div id="baseline-panel" class="baseline-box">
+        <p class="eyebrow">静息心率相对可比个人基线</p>
+        <strong id="baseline-value" class="baseline-value">未计算</strong>
+        <p id="baseline-meta" class="meta">等待载荷验证</p>
+      </div>
+    </header>
+
+    <section id="trust-bar" class="panel trust" aria-labelledby="trust-title">
+      <h2 id="trust-title">数据可信度</h2>
+      <dl class="trust-grid">
+        <div><dt>请求范围</dt><dd id="trust-requested-range">未知</dd></div>
+        <div><dt>实际观测范围</dt><dd id="trust-observation-range">未知</dd></div>
+        <div><dt>来源与组件</dt><dd id="trust-source">未知</dd></div>
+        <div><dt>数据截至与新鲜度</dt><dd id="trust-freshness">未知</dd></div>
+        <div><dt>指标覆盖</dt><dd id="trust-coverage">未知</dd></div>
+        <div><dt>设备与时期</dt><dd id="trust-device-epoch">未知</dd></div>
+        <div><dt>读取完整性</dt><dd id="trust-integrity">未知</dd></div>
+        <div><dt>日期语义</dt><dd id="trust-timezone">源数据未提供时区</dd></div>
+      </dl>
     </section>
-    <section class="panel"><h2>静息心率与 HRV</h2><div id="cardio-chart" class="chart"></div></section>
-    <section class="panel"><h2>睡眠阶段与总时长</h2><div id="sleep-chart" class="chart"></div></section>
-    <section class="panel"><h2>Body Battery</h2><div id="battery-chart" class="chart"></div></section>
-    <section class="panel"><h2>睡眠评分观测</h2><div id="heatmap" class="heatmap"></div></section>
-    <section class="panel summary"><h2>趋势说明</h2><div id="summary-text"></div></section>
+
+    <section class="kpis" aria-label="最近可用观测；各卡片日期可能不同">
+      <article class="kpi">
+        <div class="kpi-head"><h2>静息心率</h2><span class="badge">设备指标</span></div>
+        <strong id="kpi-rhr">—</strong>
+        <p id="kpi-rhr-date" class="meta">观测日期：无</p>
+        <p id="kpi-rhr-coverage" class="meta">覆盖：无</p>
+      </article>
+      <article class="kpi">
+        <div class="kpi-head"><h2>HRV</h2><span class="badge">设备指标</span></div>
+        <strong id="kpi-hrv">—</strong>
+        <p id="kpi-hrv-date" class="meta">观测日期：无</p>
+        <p id="kpi-hrv-coverage" class="meta">覆盖：无</p>
+      </article>
+      <article class="kpi">
+        <div class="kpi-head"><h2>睡眠总时长</h2><span class="badge">算法估计</span></div>
+        <strong id="kpi-sleep">—</strong>
+        <p id="kpi-sleep-date" class="meta">观测日期：无</p>
+        <p id="kpi-sleep-coverage" class="meta">覆盖：无</p>
+      </article>
+      <article class="kpi">
+        <div class="kpi-head"><h2>Garmin 日均压力</h2><span class="badge">厂商派生</span></div>
+        <strong id="kpi-stress">—</strong>
+        <p id="kpi-stress-date" class="meta">观测日期：无</p>
+        <p id="kpi-stress-coverage" class="meta">覆盖：无</p>
+        <div class="stress-details" aria-label="同一压力观测日的原始时长字段">
+          <span id="kpi-stress-high">高压力：—</span>
+          <span id="kpi-stress-medium">中压力：—</span>
+          <span id="kpi-stress-rest">休息：—</span>
+        </div>
+      </article>
+    </section>
+
+    <section class="panel">
+      <div class="panel-head"><h2>静息心率趋势</h2><span class="badge">bpm</span></div>
+      <figure>
+        <div id="rhr-chart" class="chart"></div>
+        <figcaption>仅与同一用户的可比个人基线描述性比较。</figcaption>
+      </figure>
+      <details><summary>查看静息心率数据表</summary><div id="rhr-table" class="table-scroll"></div></details>
+    </section>
+
+    <section class="panel">
+      <div class="panel-head"><h2>HRV 趋势</h2><span class="badge">ms</span></div>
+      <figure>
+        <div id="hrv-chart" class="chart"></div>
+        <figcaption>HRV 与静息心率使用独立纵轴，不比较绝对位置。</figcaption>
+      </figure>
+      <details><summary>查看 HRV 数据表</summary><div id="hrv-table" class="table-scroll"></div></details>
+    </section>
+
+    <section class="panel">
+      <div class="panel-head"><h2>睡眠阶段与总时长</h2><span class="badge">设备算法估计</span></div>
+      <div id="sleep-legend" class="legend" aria-label="睡眠图例"></div>
+      <figure><div id="sleep-chart" class="chart"></div><figcaption>阶段不完整时不绘制完整堆叠柱，缺失不按零处理。</figcaption></figure>
+      <details><summary>查看睡眠数据表</summary><div id="sleep-table" class="table-scroll"></div></details>
+    </section>
+
+    <section class="panel">
+      <div class="panel-head"><h2>Body Battery</h2><span class="badge">Garmin 厂商派生 · 0–100</span></div>
+      <div id="battery-legend" class="legend" aria-label="Body Battery 图例"></div>
+      <figure><div id="battery-chart" class="chart"></div><figcaption>固定 0–100 纵轴，避免小幅变化被视觉放大。</figcaption></figure>
+      <details><summary>查看 Body Battery 数据表</summary><div id="battery-table" class="table-scroll"></div></details>
+    </section>
+
+    <section id="sleep-score-section" class="panel wide">
+      <div class="panel-head"><h2>睡眠评分观测</h2><span class="badge">设备评分</span></div>
+      <p id="sleep-score-status" class="meta">等待载荷验证</p>
+      <div id="sleep-score-heatmap" class="heatmap"></div>
+    </section>
+
+    <section class="panel">
+      <div class="panel-head"><h2>夜间呼吸率趋势</h2><span class="badge">设备估计 · brpm</span></div>
+      <figure><div id="respiration-chart" class="chart"></div><figcaption>仅展示睡眠期个人趋势；运动、佩戴和光学信号质量可能造成缺口，不使用统一阈值分类。</figcaption></figure>
+      <details><summary>查看夜间呼吸率数据表</summary><div id="respiration-table" class="table-scroll"></div></details>
+    </section>
+
+    <section class="panel">
+      <div class="panel-head"><h2>夜间 Pulse Ox 趋势</h2><span class="badge">消费级估计 · %</span></div>
+      <figure><div id="spo2-chart" class="chart"></div><figcaption>固定 0–100 纵轴；该数据不用于判断缺氧或睡眠呼吸疾病。</figcaption></figure>
+      <details><summary>查看夜间 Pulse Ox 数据表</summary><div id="spo2-table" class="table-scroll"></div></details>
+    </section>
+
+    <section class="panel wide quality" aria-labelledby="analysis-readiness-title">
+      <h2 id="analysis-readiness-title">深入分析资格</h2>
+      <p class="meta">资格只回答“数据是否足以计算”，不评价健康好坏。未通过门禁时不显示标准化变化或相关系数。</p>
+      <div class="table-scroll">
+        <table>
+          <caption>各分析模块的样本、可比性与方法状态</caption>
+          <thead><tr><th scope="col">分析</th><th scope="col">状态</th><th scope="col">样本</th><th scope="col">可比时期</th><th scope="col">说明</th></tr></thead>
+          <tbody id="analysis-readiness-body"></tbody>
+        </table>
+      </div>
+      <p id="metric-lineage-note" class="meta">等待载荷验证</p>
+    </section>
+
+    <section class="panel quality" aria-labelledby="quality-title">
+      <h2 id="quality-title">数据质量矩阵</h2>
+      <p class="meta">覆盖状态只说明是否有可用观测，不是健康风险等级。</p>
+      <div class="table-scroll">
+        <table>
+          <caption>按指标统计的有效观测、零值与连续缺失</caption>
+          <thead><tr><th scope="col">指标</th><th scope="col">状态</th><th scope="col">有效／请求</th><th scope="col">缺失</th><th scope="col">零值日</th><th scope="col">最长连续缺失</th><th scope="col">当前连续缺失</th><th scope="col">最近日期</th></tr></thead>
+          <tbody id="coverage-table-body"></tbody>
+        </table>
+      </div>
+    </section>
+
+    <section class="panel interpretation">
+      <h2>解释边界与下一步</h2>
+      <div id="summary-text" class="summary-text"></div>
+      <div class="interpret-grid">
+        <article class="interpret-card"><h3>尚不知道什么</h3><ul id="summary-unknowns"></ul></article>
+        <article class="interpret-card"><h3>可选核实事项</h3><ul id="summary-considerations"></ul></article>
+        <article class="interpret-card"><h3>何时升级处理</h3><ul id="summary-escalation"></ul></article>
+      </div>
+    </section>
+
+    <footer class="footer">
+      <p id="report-generated">生成时间：未知</p>
+      <p>该 HTML 包含最小化的个人健康趋势字段，仍属于敏感文件。复制、云盘同步或分享前请确认接收方与保存位置。</p>
+    </footer>
   </main>
+
   <script id="health-data" type="application/octet-stream">%%B64_DATA%%</script>
   <script>
   'use strict';
-  const SVG_NS = 'http://www.w3.org/2000/svg';
-  const palette = ['#60a5fa','#a78bfa','#c4b5fd','#94a3b8'];
+  const SVG_NS='http://www.w3.org/2000/svg';
 
-  function decodePayload() {
-    const encoded = document.getElementById('health-data').textContent.trim();
-    try {
-      const bytes = Uint8Array.from(atob(encoded), character => character.charCodeAt(0));
-      return JSON.parse(new TextDecoder('utf-8').decode(bytes));
-    } catch (_error) {
-      return {overlay_data:{dates:[]}, heatmap:[], overall_insight:'面板数据无法解析。'};
-    }
+  function byId(id){return document.getElementById(id);}
+  function finiteNumber(value){
+    if(typeof value==='number') return Number.isFinite(value)?value:null;
+    if(typeof value!=='string'||value.trim()==='') return null;
+    const parsed=Number(value); return Number.isFinite(parsed)?parsed:null;
   }
-
-  function svgNode(name, attributes) {
-    const node = document.createElementNS(SVG_NS, name);
-    Object.entries(attributes || {}).forEach(([key,value]) => node.setAttribute(key, String(value)));
+  function text(id,value,fallback='未知'){const node=byId(id);if(node)node.textContent=value===null||value===undefined||value===''?fallback:String(value);}
+  function decodePayload(){
+    try{
+      const encoded=byId('health-data').textContent.trim();
+      const bytes=Uint8Array.from(atob(encoded),character=>character.charCodeAt(0));
+      const data=JSON.parse(new TextDecoder('utf-8').decode(bytes));
+      if(!data||data.schema_version!=='dashboard.v3'||!data.meta||!data.series||!data.coverage)throw new Error('schema');
+      return data;
+    }catch(_error){return null;}
+  }
+  function svgNode(name,attributes){
+    const node=document.createElementNS(SVG_NS,name);
+    Object.entries(attributes||{}).forEach(([key,value])=>node.setAttribute(key,String(value)));
     return node;
   }
-
-  function setText(id, value, suffix) {
-    const node = document.getElementById(id);
-    node.textContent = value === null || value === undefined ? '--' : String(value) + (suffix || '');
+  function emptyState(container,message){const note=document.createElement('p');note.className='empty';note.textContent=message;container.replaceChildren(note);}
+  function formatNumber(value,digits=1){const number=finiteNumber(value);return number===null?'—':Number.isInteger(number)?String(number):number.toFixed(digits);}
+  function formatValue(value,unit){const formatted=formatNumber(value);return formatted==='—'?formatted:`${formatted} ${unit||''}`.trim();}
+  function coverageLabel(entry){
+    if(!entry)return '无';
+    const labels={complete:'完整',partial:'部分',no_data:'无数据',error:'组件错误',not_requested:'未请求'};
+    return `${labels[entry.status]||'未知'} · ${entry.observed_days??0}/${entry.requested_days??0} 天`;
   }
+  function sourceLabel(value){return({local:'本地只读',live:'实时接口'})[value]||String(value||'未知');}
 
-  function finiteNumber(value) {
-    if (typeof value === 'number') return Number.isFinite(value) ? value : null;
-    if (typeof value !== 'string' || value.trim() === '') return null;
-    const numeric = Number(value);
-    return Number.isFinite(numeric) ? numeric : null;
-  }
-
-  function lastObserved(values) {
-    if (!Array.isArray(values)) return null;
-    for (let index=values.length-1; index>=0; index-=1) {
-      const numeric = finiteNumber(values[index]);
-      if (numeric !== null) return numeric;
+  function renderBaseline(data){
+    const baseline=data.baseline||{},rhr=baseline.rhr||{};
+    if(baseline.qualified&&finiteNumber(rhr.delta_pct)!==null){
+      const delta=finiteNumber(rhr.delta_pct); text('baseline-value',`${delta>0?'+':''}${formatNumber(delta)}%`);
+      text('baseline-meta',`${baseline.paired_baseline_days} 个基线日 · ${baseline.baseline_start||'未知'} 至 ${baseline.baseline_end||'未知'} · ${baseline.epoch_status||'时期未知'}`);
+      return;
     }
-    return null;
+    const reasons={not_requested:'本次未同时请求静息心率与 HRV',insufficient_baseline:'可比同日样本不足',cross_epoch:'跨设备或固件时期',epoch_unknown:'设备时期证据不足',unclassifiable:'基线方差不足',not_comparable:'数据不可比'};
+    text('baseline-value','未计算');
+    text('baseline-meta',`${reasons[baseline.status]||'基线门禁未通过'} · ${baseline.paired_baseline_days??0}/${baseline.required_days??21} 个基线日`);
   }
 
-  function emptyState(container, message) {
-    const note = document.createElement('p');
-    note.className = 'empty';
-    note.textContent = message;
-    container.replaceChildren(note);
+  function renderTrust(data){
+    const meta=data.meta||{},requested=meta.requested_range||{},observed=meta.observation_range||{},source=meta.source||{},fresh=meta.freshness||{},epoch=meta.device_epoch||{},integrity=meta.integrity||{};
+    text('trust-requested-range',requested.start&&requested.end?`${requested.start} 至 ${requested.end}（${requested.days} 天）`:'未知');
+    text('trust-observation-range',observed.start&&observed.end?`${observed.start} 至 ${observed.end}`:'无有效观测');
+    text('trust-source',`${sourceLabel(source.effective)} · ${(source.components||[]).length} 个绑定组件${source.fallback_attempted?' · 已尝试回退':''}`);
+    text('trust-freshness',fresh.latest_observation_date?`${fresh.latest_observation_date} · 距请求结束 ${fresh.lag_days??'未知'} 天${fresh.source_marked_stale===true?' · 源标记陈旧':''}`:'无有效观测');
+    const entries=Object.values(data.coverage||{}),observedCount=entries.filter(item=>(item.observed_days||0)>0).length;
+    text('trust-coverage',`${observedCount}/${entries.length} 项指标有观测`);
+    text('trust-device-epoch',`${epoch.device_count??0} 台设备 · 固件 ${(epoch.firmware_versions||[]).join('、')||'未知'} · ${epoch.status||'时期未知'}`);
+    text('trust-integrity',`${integrity.status||'未提供'} · ${integrity.database_count??0} 个数据库`);
+    text('trust-timezone',requested.timezone||'源日期未提供时区；按源日历日展示');
+    text('report-generated',`生成时间：${meta.generated_at||'未知'} · 载荷范围：${meta.payload_scope||'未知'}`);
   }
 
-  function renderLineChart(targetId, dates, definitions) {
-    const container = document.getElementById(targetId);
-    const observed = definitions.flatMap(definition => (definition.values || []).map(finiteNumber).filter(value => value !== null));
-    if (!dates.length || !observed.length) { emptyState(container,'无可绘制观测'); return; }
-    const width=760, height=260, left=46, right=16, top=18, bottom=34;
-    const min=Math.min(...observed), max=Math.max(...observed), span=max-min || 1;
-    const x=index => left + index * (width-left-right) / Math.max(1,dates.length-1);
-    const y=value => top + (max-Number(value)) * (height-top-bottom) / span;
-    const svg=svgNode('svg',{viewBox:`0 0 ${width} ${height}`,role:'img','aria-label':'按日期排列的可穿戴设备趋势'});
-    svg.append(svgNode('line',{x1:left,y1:height-bottom,x2:width-right,y2:height-bottom,class:'axis'}));
-    definitions.forEach((definition,seriesIndex) => {
-      let segment=[];
-      const flush=()=>{ if(segment.length){svg.append(svgNode('polyline',{points:segment.join(' '),fill:'none',stroke:definition.color || palette[seriesIndex%palette.length],'stroke-width':3}));segment=[];} };
-      dates.forEach((date,index) => {
-        const value=finiteNumber(definition.values && definition.values[index]);
-        if (value !== null) segment.push(`${x(index)},${y(value)}`); else flush();
-      });
-      flush();
-    });
-    [0,Math.floor((dates.length-1)/2),dates.length-1].filter((value,index,array)=>array.indexOf(value)===index).forEach(index=>{
-      const label=svgNode('text',{x:x(index),y:height-10,class:'label','text-anchor':'middle'}); label.textContent=dates[index]; svg.append(label);
-    });
+  function renderKpi(data,key,coverageKey){
+    const item=(data.kpis||{})[key]||{},entry=(data.coverage||{})[coverageKey];
+    text(`kpi-${key}`,formatValue(item.value,item.unit),'—');
+    text(`kpi-${key}-date`,item.observed_date?`观测日期：${item.observed_date}`:'观测日期：无');
+    text(`kpi-${key}-coverage`,`覆盖：${coverageLabel(entry)}`);
+  }
+  function renderStressDetails(data){
+    const details=((data.kpis||{}).stress||{}).details||{};
+    text('kpi-stress-high',`高压力：${formatValue(details.high_h,'h')}`);
+    text('kpi-stress-medium',`中压力：${formatValue(details.medium_h,'h')}`);
+    text('kpi-stress-rest',`休息：${formatValue(details.rest_h,'h')}`);
+  }
+
+  function appendSvgText(svg,value,attributes){const node=svgNode('text',attributes);node.textContent=value;svg.append(node);}
+  function renderLegend(targetId,items){
+    const container=byId(targetId);
+    const nodes=items.map(item=>{const wrapper=document.createElement('span');wrapper.className='legend-item';const mark=document.createElement('span');mark.className=item.box?'legend-box':`legend-line${item.dashed?' dashed':''}`;mark.style.color=item.color;const label=document.createElement('span');label.textContent=item.label;wrapper.append(mark,label);return wrapper;});
+    container.replaceChildren(...nodes);
+  }
+  function renderLineChart(targetId,dates,definitions,options){
+    const container=byId(targetId),observed=definitions.flatMap(item=>(item.values||[]).map(finiteNumber).filter(value=>value!==null));
+    if(!dates.length||!observed.length){emptyState(container,'无可绘制观测');return;}
+    const width=760,height=270,left=62,right=20,top=24,bottom=40;
+    let min=options.fixedDomain?options.fixedDomain[0]:Math.min(...observed),max=options.fixedDomain?options.fixedDomain[1]:Math.max(...observed);
+    if(!options.fixedDomain){const padding=Math.max((max-min)*.12,1);min-=padding;max+=padding;}
+    const span=max-min||1,x=index=>left+index*(width-left-right)/Math.max(1,dates.length-1),y=value=>top+(max-value)*(height-top-bottom)/span;
+    const titleId=`${targetId}-title`,descId=`${targetId}-desc`,svg=svgNode('svg',{viewBox:`0 0 ${width} ${height}`,role:'img','aria-labelledby':`${titleId} ${descId}`});
+    const title=svgNode('title',{id:titleId});title.textContent=options.title;const desc=svgNode('desc',{id:descId});desc.textContent=options.description;svg.append(title,desc);
+    [min,(min+max)/2,max].forEach(value=>{const yPos=y(value);svg.append(svgNode('line',{x1:left,y1:yPos,x2:width-right,y2:yPos,class:'grid-line'}));appendSvgText(svg,formatNumber(value),{x:left-8,y:yPos+4,class:'axis-label','text-anchor':'end'});});
+    appendSvgText(svg,options.unit,{x:8,y:16,class:'axis-label'});
+    if(finiteNumber(options.referenceValue)!==null){const ref=y(finiteNumber(options.referenceValue));svg.append(svgNode('line',{x1:left,y1:ref,x2:width-right,y2:ref,stroke:'#cbd5e1','stroke-width':1.5,'stroke-dasharray':'7 5'}));}
+    definitions.forEach(definition=>{let segment=[];const flush=()=>{if(segment.length){svg.append(svgNode('polyline',{points:segment.join(' '),fill:'none',stroke:definition.color,'stroke-width':3,'stroke-dasharray':definition.dashed?'8 5':''}));segment=[];}};dates.forEach((_day,index)=>{const value=finiteNumber(definition.values[index]);if(value===null){flush();return;}segment.push(`${x(index)},${y(value)}`);svg.append(svgNode('circle',{cx:x(index),cy:y(value),r:3,fill:definition.color,stroke:'#0f172a','stroke-width':1}));});flush();});
+    [0,Math.floor((dates.length-1)/2),dates.length-1].filter((value,index,array)=>array.indexOf(value)===index).forEach(index=>appendSvgText(svg,dates[index],{x:x(index),y:height-12,class:'axis-label','text-anchor':'middle'}));
     container.replaceChildren(svg);
   }
 
-  function renderSleepChart(overlay) {
-    const container=document.getElementById('sleep-chart');
-    const dates=overlay.dates || [], deep=overlay.sleep_deep_h || [], rem=overlay.sleep_rem_h || [], light=overlay.sleep_light_h || [], total=overlay.sleep_h || [];
-    const stageSums=dates.map((_date,index)=>[deep[index],rem[index],light[index]].reduce((sum,value)=>sum+(finiteNumber(value) ?? 0),0));
-    const values=stageSums.concat(total.map(finiteNumber).filter(value=>value !== null));
-    if (!dates.length || !values.some(value=>value>0)) { emptyState(container,'无可绘制睡眠阶段观测'); return; }
-    const width=760,height=260,left=46,right=16,top=18,bottom=34,max=Math.max(...values,1);
-    const band=(width-left-right)/dates.length, bar=Math.max(3,band*.55), y=value=>top+(max-value)*(height-top-bottom)/max;
-    const svg=svgNode('svg',{viewBox:`0 0 ${width} ${height}`,role:'img','aria-label':'睡眠阶段堆叠与独立总时长'});
-    svg.append(svgNode('line',{x1:left,y1:height-bottom,x2:width-right,y2:height-bottom,class:'axis'}));
-    const stages=[{values:deep,color:'#4f46e5'},{values:rem,color:'#8b5cf6'},{values:light,color:'#94a3b8'}];
-    dates.forEach((_date,index)=>{
-      let accumulated=0;
-      stages.forEach(stage=>{
-        const numeric=finiteNumber(stage.values[index]);
-        if (numeric === null) return;
-        const topY=y(accumulated+numeric), bottomY=y(accumulated);
-        svg.append(svgNode('rect',{x:left+index*band+(band-bar)/2,y:topY,width:bar,height:Math.max(0,bottomY-topY),fill:stage.color}));
-        accumulated+=numeric;
-      });
-    });
-    let totalSegment=[];
-    const flush=()=>{if(totalSegment.length){svg.append(svgNode('polyline',{points:totalSegment.join(' '),fill:'none',stroke:'#e2e8f0','stroke-width':2}));totalSegment=[];}};
-    dates.forEach((_date,index)=>{const value=finiteNumber(total[index]);if(value !== null){totalSegment.push(`${left+index*band+band/2},${y(value)}`);}else{flush();}}); flush();
-    container.replaceChildren(svg);
+  function renderSleepChart(series){
+    const container=byId('sleep-chart'),dates=series.dates||[],deep=series.sleep_deep_h||[],rem=series.sleep_rem_h||[],light=series.sleep_light_h||[],total=series.sleep_total_h||[];
+    const completeSums=dates.map((_day,index)=>[deep[index],rem[index],light[index]].every(value=>finiteNumber(value)!==null)?finiteNumber(deep[index])+finiteNumber(rem[index])+finiteNumber(light[index]):null);
+    const observed=[...completeSums,...total].map(finiteNumber).filter(value=>value!==null);
+    if(!dates.length||!observed.length){emptyState(container,'无可绘制睡眠观测');return;}
+    const width=760,height=270,left=62,right=20,top=24,bottom=40,max=Math.max(...observed,1),band=(width-left-right)/dates.length,bar=Math.max(3,band*.55),y=value=>top+(max-value)*(height-top-bottom)/max;
+    const titleId='sleep-chart-title',descId='sleep-chart-desc',svg=svgNode('svg',{viewBox:`0 0 ${width} ${height}`,role:'img','aria-labelledby':`${titleId} ${descId}`});
+    const title=svgNode('title',{id:titleId});title.textContent='睡眠阶段与总时长';const desc=svgNode('desc',{id:descId});desc.textContent='完整的深睡、REM 和浅睡阶段按日堆叠，总时长使用折线；缺失阶段不按零绘制。';svg.append(title,desc);
+    [0,max/2,max].forEach(value=>{const yPos=y(value);svg.append(svgNode('line',{x1:left,y1:yPos,x2:width-right,y2:yPos,class:'grid-line'}));appendSvgText(svg,formatNumber(value),{x:left-8,y:yPos+4,class:'axis-label','text-anchor':'end'});});appendSvgText(svg,'h',{x:8,y:16,class:'axis-label'});
+    const stages=[{values:deep,color:'#818cf8'},{values:rem,color:'#c4b5fd'},{values:light,color:'#94a3b8'}];
+    dates.forEach((_day,index)=>{if(completeSums[index]===null)return;let accumulated=0;stages.forEach(stage=>{const numeric=finiteNumber(stage.values[index]);const topY=y(accumulated+numeric),bottomY=y(accumulated);svg.append(svgNode('rect',{x:left+index*band+(band-bar)/2,y:topY,width:bar,height:Math.max(0,bottomY-topY),fill:stage.color}));accumulated+=numeric;});});
+    let segment=[];const flush=()=>{if(segment.length){svg.append(svgNode('polyline',{points:segment.join(' '),fill:'none',stroke:'#f8fafc','stroke-width':2.5}));segment=[];}};dates.forEach((_day,index)=>{const value=finiteNumber(total[index]);if(value===null){flush();return;}segment.push(`${left+index*band+band/2},${y(value)}`);});flush();
+    [0,Math.floor((dates.length-1)/2),dates.length-1].filter((value,index,array)=>array.indexOf(value)===index).forEach(index=>appendSvgText(svg,dates[index],{x:left+index*band+band/2,y:height-12,class:'axis-label','text-anchor':'middle'}));container.replaceChildren(svg);
   }
 
-  function renderHeatmap(items) {
-    const container=document.getElementById('heatmap');
-    const rows=Array.isArray(items)?items:[];
-    if (!rows.length) { emptyState(container,'当前周期未生成睡眠评分观测'); return; }
-    const cells=rows.map(item=>{
-      const cell=document.createElement('div'); cell.className='heat-cell';
-      const score=finiteNumber(item.score);
-      cell.style.backgroundColor=score===null?'#1e293b':`rgba(96,165,250,${0.15+Math.max(0,Math.min(100,score))/160})`;
-      const date=document.createElement('span'); date.textContent=String(item.date || '');
-      const value=document.createElement('strong'); value.textContent=score===null?'—':String(score);
-      cell.append(date,value); return cell;
-    });
-    container.replaceChildren(...cells);
+  function renderDataTable(targetId,captionText,dates,columns){
+    const table=document.createElement('table'),caption=document.createElement('caption');caption.textContent=captionText;table.append(caption);
+    const thead=document.createElement('thead'),headRow=document.createElement('tr'),dateHead=document.createElement('th');dateHead.setAttribute('scope','col');dateHead.textContent='日期';headRow.append(dateHead);columns.forEach(column=>{const th=document.createElement('th');th.setAttribute('scope','col');th.textContent=`${column.label}${column.unit?`（${column.unit}）`:''}`;headRow.append(th);});thead.append(headRow);table.append(thead);
+    const tbody=document.createElement('tbody');dates.forEach((day,index)=>{const row=document.createElement('tr'),dateCell=document.createElement('th');dateCell.setAttribute('scope','row');dateCell.textContent=day;row.append(dateCell);columns.forEach(column=>{const cell=document.createElement('td'),value=finiteNumber(column.values[index]);cell.textContent=value===null?'—':formatNumber(value);if(value===null)cell.setAttribute('aria-label','缺失');row.append(cell);});tbody.append(row);});table.append(tbody);byId(targetId).replaceChildren(table);
   }
 
-  function renderDashboard() {
-    const data=decodePayload(), overlay=data.overlay_data || {dates:[]}, dates=Array.isArray(overlay.dates)?overlay.dates:[];
-    setText('kpi-rhr',lastObserved(overlay.rhr),' bpm');
-    setText('kpi-hrv',lastObserved(overlay.hrv),' ms');
-    setText('kpi-sleep',lastObserved(overlay.sleep_h),' h');
-    renderLineChart('cardio-chart',dates,[{values:overlay.rhr,color:'#60a5fa'},{values:overlay.hrv,color:'#a78bfa'}]);
-    renderSleepChart(overlay);
-    renderLineChart('battery-chart',dates,[{values:overlay.bb_max,color:'#60a5fa'},{values:overlay.bb_min,color:'#94a3b8'}]);
-    renderHeatmap(data.heatmap);
-    const summary=document.getElementById('summary-text');
-    const paragraphs=String(data.overall_insight || '暂无趋势说明。').split(/\n\s*\n/).map(text=>{const node=document.createElement('p');node.textContent=text;return node;});
-    summary.replaceChildren(...paragraphs);
+  function renderHeatmap(data){
+    const heatmap=data.heatmap||{},container=byId('sleep-score-heatmap');container.replaceChildren();
+    if(heatmap.status==='not_requested'){text('sleep-score-status','本次未请求睡眠评分。');return;}
+    if(heatmap.status==='insufficient_window'){text('sleep-score-status',`观察窗口不足 ${heatmap.minimum_window_days||14} 天，未生成热图；这不是数据缺失。`);return;}
+    if(heatmap.status==='no_data'){text('sleep-score-status','观察窗口符合要求，但没有睡眠评分观测。');return;}
+    text('sleep-score-status','评分为设备算法生成；缺失格使用纹理标识。');
+    const cells=(heatmap.items||[]).map(item=>{const cell=document.createElement('div'),score=finiteNumber(item.score);cell.className=`heat-cell${score===null?' missing':''}`;if(score!==null)cell.style.backgroundColor=`rgba(96,165,250,${0.18+Math.max(0,Math.min(100,score))/170})`;const day=document.createElement('span'),value=document.createElement('strong');day.textContent=String(item.date||'');value.textContent=score===null?'缺失':formatNumber(score);cell.append(day,value);return cell;});container.replaceChildren(...cells);
+  }
+
+  function renderCoverage(data){
+    const names={rhr:'静息心率',hrv:'HRV',sleep_total:'睡眠总时长',sleep_stages:'睡眠阶段',sleep_respiration:'夜间呼吸率',sleep_spo2:'夜间 Pulse Ox',body_battery:'Body Battery',stress:'Garmin 压力',sleep_score:'睡眠评分'},body=byId('coverage-table-body');
+    const rows=Object.entries(names).map(([key,label])=>{const entry=(data.coverage||{})[key]||{},row=document.createElement('tr');[label,coverageLabel(entry),`${entry.observed_days??0}/${entry.requested_days??0}`,String(entry.missing_days??0),String(entry.observed_zero_days??0),entry.longest_missing_streak_days??'—',entry.current_missing_streak_days??'—',entry.last_date||'—'].forEach((value,index)=>{const cell=document.createElement(index===0?'th':'td');if(index===0)cell.setAttribute('scope','row');cell.textContent=value;row.append(cell);});return row;});body.replaceChildren(...rows);
+  }
+  function renderAnalysisReadiness(data){
+    const patterns=data.patterns||{},items=Array.isArray(patterns.eligibility)?patterns.eligibility:[],body=byId('analysis-readiness-body');
+    const statusLabels={eligible:'可计算',partial_available:'部分可计算',insufficient_data:'样本不足',insufficient_window:'窗口不足',historical_baseline_insufficient:'历史样本不足',recent_window_incomplete:'近期窗口不完整',insufficient_valid_nights:'有效夜晚不足',insufficient_pairs:'配对不足',duplicate_conflict:'同日冲突',epoch_unknown:'时期未知',cross_epoch:'跨时期',source_not_supported:'来源不支持',timezone_unknown:'时区未知',mixed_utc_offset:'UTC 偏移不一致',not_requested:'未请求',load_coverage_unknown:'负荷覆盖语义未知',zero_baseline_mad:'历史变异为零',zero_variance:'基线无变异',constant_series:'序列无变异',no_requested_dates:'无请求日期'};
+    if(!items.length){const row=document.createElement('tr'),cell=document.createElement('td');cell.colSpan=5;cell.textContent='未提供深入分析资格载荷。';row.append(cell);body.replaceChildren(row);text('metric-lineage-note','未提供指标依赖说明。');return;}
+    const rows=items.map(item=>{const row=document.createElement('tr'),sample=item.observed_days??item.paired_days??0,required=item.required_days??item.required_pairs??'—';[item.label||item.id||'未命名分析',statusLabels[item.status]||item.status||'未知',`${sample}/${required}`,item.epoch_status||'不适用',item.reason||'—'].forEach((value,index)=>{const cell=document.createElement(index===0?'th':'td');if(index===0)cell.setAttribute('scope','row');cell.textContent=String(value);row.append(cell);});return row;});body.replaceChildren(...rows);
+    text('metric-lineage-note',patterns.lineage_warning||'厂商派生指标可能共享上游输入，不合成为综合健康分。');
+  }
+  function renderList(targetId,items,fallback){const values=(items||[]).length?items:[fallback],nodes=values.map(item=>{const li=document.createElement('li');li.textContent=String(item);return li;});byId(targetId).replaceChildren(...nodes);}
+  function renderNarrative(data){
+    const narrative=data.narrative||{},summary=byId('summary-text'),paragraphs=String(narrative.overall||'暂无趋势说明。').split(/\n\s*\n/).map(value=>{const p=document.createElement('p');p.textContent=value;return p;});summary.replaceChildren(...paragraphs);
+    renderList('summary-unknowns',narrative.unknowns,'没有提供可核验的未知项说明。');renderList('summary-considerations',narrative.optional_considerations,'暂无一般性核实事项。');renderList('summary-escalation',narrative.escalation,'急迫性应依据症状和专业评估，不依据设备分数。');
+  }
+
+  function renderDashboard(){
+    const data=decodePayload();if(!data){byId('load-error').removeAttribute('hidden');return;}
+    const series=data.series||{},dates=series.dates||[],baseline=data.baseline||{};
+    renderBaseline(data);renderTrust(data);renderKpi(data,'rhr','rhr');renderKpi(data,'hrv','hrv');renderKpi(data,'sleep','sleep_total');renderKpi(data,'stress','stress');renderStressDetails(data);
+    renderLineChart('rhr-chart',dates,[{values:series.rhr_bpm||[],color:'#60a5fa'}],{title:'静息心率趋势',description:'按源日期排列的静息心率，单位为每分钟心跳次数。',unit:'bpm',referenceValue:baseline.qualified?(baseline.rhr||{}).baseline:null});
+    renderLineChart('hrv-chart',dates,[{values:series.hrv_ms||[],color:'#c4b5fd'}],{title:'HRV 趋势',description:'按源日期排列的夜间 HRV，单位为毫秒。',unit:'ms',referenceValue:baseline.qualified?(baseline.hrv||{}).baseline:null});
+    renderSleepChart(series);
+    renderLineChart('battery-chart',dates,[{values:series.body_battery_high||[],color:'#60a5fa'},{values:series.body_battery_low||[],color:'#cbd5e1',dashed:true}],{title:'Body Battery 最高与最低值',description:'按源日期排列的 Garmin Body Battery 最高与最低值，固定纵轴为零到一百。',unit:'0–100',fixedDomain:[0,100]});
+    renderLineChart('respiration-chart',dates,[{values:series.sleep_respiration_brpm||[],color:'#34d399'}],{title:'夜间呼吸率趋势',description:'按源日期排列的睡眠期平均呼吸率设备估计。',unit:'brpm'});
+    renderLineChart('spo2-chart',dates,[{values:series.sleep_spo2_pct||[],color:'#fbbf24'}],{title:'夜间 Pulse Ox 趋势',description:'按源日期排列的睡眠期平均 Pulse Ox 消费级估计。',unit:'%',fixedDomain:[0,100]});
+    renderLegend('sleep-legend',[{label:'深睡',color:'#818cf8',box:true},{label:'REM',color:'#c4b5fd',box:true},{label:'浅睡',color:'#94a3b8',box:true},{label:'总时长',color:'#f8fafc'}]);renderLegend('battery-legend',[{label:'最高值',color:'#60a5fa'},{label:'最低值',color:'#cbd5e1',dashed:true}]);
+    renderDataTable('rhr-table','静息心率逐日观测',dates,[{label:'静息心率',unit:'bpm',values:series.rhr_bpm||[]}]);renderDataTable('hrv-table','HRV 逐日观测',dates,[{label:'HRV',unit:'ms',values:series.hrv_ms||[]}]);renderDataTable('sleep-table','睡眠逐日观测',dates,[{label:'总时长',unit:'h',values:series.sleep_total_h||[]},{label:'深睡',unit:'h',values:series.sleep_deep_h||[]},{label:'REM',unit:'h',values:series.sleep_rem_h||[]},{label:'浅睡',unit:'h',values:series.sleep_light_h||[]}]);renderDataTable('battery-table','Body Battery 逐日观测',dates,[{label:'最高值',values:series.body_battery_high||[]},{label:'最低值',values:series.body_battery_low||[]}]);renderDataTable('respiration-table','夜间呼吸率逐日观测',dates,[{label:'呼吸率',unit:'brpm',values:series.sleep_respiration_brpm||[]}]);renderDataTable('spo2-table','夜间 Pulse Ox 逐日观测',dates,[{label:'Pulse Ox',unit:'%',values:series.sleep_spo2_pct||[]}]);
+    renderHeatmap(data);renderAnalysisReadiness(data);renderCoverage(data);renderNarrative(data);
   }
   window.addEventListener('DOMContentLoaded',renderDashboard);
   </script>

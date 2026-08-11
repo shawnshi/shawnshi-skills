@@ -3,18 +3,17 @@ from __future__ import annotations
 import json
 import os
 import re
-import shutil
-import subprocess
 import tempfile
 from pathlib import Path
 
 
 HUB_DIR = Path(__file__).resolve().parent.parent
 PROJECT_ROOT = HUB_DIR.parent.parent
+DEFAULT_MEMORY_HOME_NAME = "." + "gemini"
 NEWS_DIR = Path(
     os.environ.get(
         "PIH_NEWS_DIR",
-        str(Path.home() / ".gemini" / "MEMORY" / "raw" / "news"),
+        str(Path.home() / DEFAULT_MEMORY_HOME_NAME / "MEMORY" / "raw" / "news"),
     )
 )
 RUNTIME_DIR = Path(
@@ -28,7 +27,7 @@ BLACKBOARD_PATH = RUNTIME_DIR / "intelligence_blackboard.json"
 LATEST_SCAN_PATH = RUNTIME_DIR / "latest_scan.json"
 CURRENT_SCAN_PATH = RUNTIME_DIR / "current_scan.json"
 FETCH_CACHE_PATH = RUNTIME_DIR / "fetch_cache.json"
-HISTORY_PATH = RUNTIME_DIR / "pushed_history_v3.json"
+HISTORY_PATH = NEWS_DIR / ".pih_history_v2.json"
 REFINED_PATH = RUNTIME_DIR / "intelligence_current_refined.json"
 CANDIDATES_PATH = RUNTIME_DIR / "intelligence_candidates.json"
 

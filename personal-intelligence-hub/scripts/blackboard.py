@@ -26,7 +26,9 @@ def init_blackboard() -> dict:
 
 
 def load_blackboard() -> dict:
-    return load_json(BLACKBOARD_PATH, init_blackboard())
+    if not BLACKBOARD_PATH.exists():
+        return init_blackboard()
+    return load_json(BLACKBOARD_PATH, {})
 
 
 def save_blackboard(state: dict) -> None:

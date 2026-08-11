@@ -1,75 +1,81 @@
 {
   "schema_version": 2,
   "skill": "personal-intelligence-hub",
-  "generated_at": "2026-08-09T09:30:57",
+  "generated_at": "2026-08-11T16:51:09",
   "hash_algorithm": "SHA-256",
   "text_hash_normalization": "LF",
   "skill_md": "SKILL.md",
-  "skill_md_sha256": "dfbfdfc8cbe8d2eae8e6f1ebb663a033a4aad44e50af63abfeab6dc271fbaa00",
+  "skill_md_sha256": "23bff93788865cce4001d9089419a4a0f05f66830d6c09593c8ee29a16aaa064",
   "top_level_files": [
-    "package-lock.json",
     "requirements.txt",
     "SKILL.md"
   ],
   "top_level_file_hashes": [
     {
-      "path": "package-lock.json",
-      "sha256": "a581f2ceec04b07ab2fa67b70974018beb3fe77829839e54f16209f57d161f29"
-    },
-    {
       "path": "requirements.txt",
-      "sha256": "9e2c9d5b2ddd08718ef4695f25237893be5c572eae7e1a3003f8bbfaa0f51019"
+      "sha256": "620faa6a5c8b65b989bc3000f672142c54ef4890ed22a65720632af8e706d68c"
     },
     {
       "path": "SKILL.md",
-      "sha256": "dfbfdfc8cbe8d2eae8e6f1ebb663a033a4aad44e50af63abfeab6dc271fbaa00"
+      "sha256": "23bff93788865cce4001d9089419a4a0f05f66830d6c09593c8ee29a16aaa064"
     }
   ],
   "top_level_directories": [
-    "intelligence-output",
     "references",
     "scripts"
   ],
   "resource_directories": [
     {
       "name": "scripts",
-      "file_count": 16
+      "file_count": 32
     },
     {
       "name": "references",
-      "file_count": 9
+      "file_count": 12
     }
   ],
   "declared_local_dependencies": [
     {
+      "path": "references\\briefing_schema.json",
+      "exists": true,
+      "resolved_path": "personal-intelligence-hub/references/briefing_schema.json",
+      "sha256": "e87a78cc04ea106b8de9078a3d34ab89a42f193e30f8e0938cd8fdb11703da02"
+    },
+    {
+      "path": "references\\briefing_schema_v1.2.json",
+      "exists": true,
+      "resolved_path": "personal-intelligence-hub/references/briefing_schema_v1.2.json",
+      "sha256": "c22a6e2bb66fb4938dd6f18588a5bf0c14fffc689c076fd64f5d0f14ebf746b7"
+    },
+    {
+      "path": "scripts\\run_daily.py",
+      "exists": true,
+      "resolved_path": "personal-intelligence-hub/scripts/run_daily.py",
+      "sha256": "ea8fd106a5c24cbf8abfaa0ce993e26460a9225647e6a0211843c4f130d0cf79"
+    },
+    {
       "path": "references\\strategic_focus.json",
       "exists": true,
       "resolved_path": "personal-intelligence-hub/references/strategic_focus.json",
-      "sha256": "af600e7abcb83b827203eb81c6c02386539d50b325bec8154758028be1861d10"
+      "sha256": "f4bdd61958332a72ac5a86df6fb04313bcfff5f61c42f9b0c3fe7626f4b325df"
     },
     {
       "path": "references\\quality_standard.md",
       "exists": true,
       "resolved_path": "personal-intelligence-hub/references/quality_standard.md",
-      "sha256": "c5d15b96527a4c8db393ab306a1e4c90d8d2c9da94a21758e516a2235ca808b6"
-    },
-    {
-      "path": "references\\briefing_schema.json",
-      "exists": true,
-      "resolved_path": "personal-intelligence-hub/references/briefing_schema.json",
-      "sha256": "8a8d04f7e182216b5d2f013267475be37ab38ec499d0be93fde894ecd02a482f"
+      "sha256": "2bcf99cda0cfbfd9de7f58047b49256534ae5f43f152ba0bd419241528e01aed"
     },
     {
       "path": "references\\subagent_prompts.json",
       "exists": true,
       "resolved_path": "personal-intelligence-hub/references/subagent_prompts.json",
-      "sha256": "fbae9e855df975d9fd9e2922a89badacc8c6d3febedf4ad423b3b3872a20b86c"
+      "sha256": "4e153e18813041ee94e11454de9845f0c6722323f6bae63b905580059211bfaf"
     },
     {
       "path": "references\\briefing_template.md",
       "exists": true,
       "resolved_path": "personal-intelligence-hub/references/briefing_template.md",
-      "sha256": "bdaf9908ed217cf0beb6168520c68f2cfb9e75f2924273b40c9edebad073890e"
+      "sha256": "21a2b7cc0d8228c60013bfbbf50f50acfdd22e96ee243aea91a7441d6a09badf"
     },
     {
       "path": "references\\karpathy_feeds.json",
@@ -78,34 +84,10 @@
       "sha256": "e28341b51c2e1f36dded08b5b9ffc26d4e3c5e8a42f902742a5859e194ca46a9"
     },
     {
-      "path": "scripts\\fetch_news.py",
+      "path": "scripts\\await_artifacts.py",
       "exists": true,
-      "resolved_path": "personal-intelligence-hub/scripts/fetch_news.py",
-      "sha256": "cc8d48440875ec827a334805a733585bf277ab7967d4bb859c29ed3e7eccee2a"
-    },
-    {
-      "path": "scripts\\refine.py",
-      "exists": true,
-      "resolved_path": "personal-intelligence-hub/scripts/refine.py",
-      "sha256": "4c246f1d1e983be494dedf6acaed229d444853f74e4c86d3b5acecdae6677fd1"
-    },
-    {
-      "path": "scripts\\validate_refined_json.py",
-      "exists": true,
-      "resolved_path": "personal-intelligence-hub/scripts/validate_refined_json.py",
-      "sha256": "61b4aecc4cb68d5cf232a9224d0c924170fc34eb87ce54a6dbafdb10b3337078"
-    },
-    {
-      "path": "scripts\\forge.py",
-      "exists": true,
-      "resolved_path": "personal-intelligence-hub/scripts/forge.py",
-      "sha256": "b683ca84de81fe0e3bb670ba3f5f48405ff2a41aeb733c0f0537183bea5fc3ba"
-    },
-    {
-      "path": "scripts\\briefing_gate.py",
-      "exists": true,
-      "resolved_path": "personal-intelligence-hub/scripts/briefing_gate.py",
-      "sha256": "c8af724ec73f9cfe20cf88d46e3a8177cbd545a2a0f7bcfe7ee107647f3b7494"
+      "resolved_path": "personal-intelligence-hub/scripts/await_artifacts.py",
+      "sha256": "bf0a09280f2125301096a9b4c6bc96887c8ad57cd27866f772f0708f3126c779"
     }
   ],
   "missing_declared_dependencies": []

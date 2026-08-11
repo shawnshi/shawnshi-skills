@@ -2,14 +2,62 @@ import io
 import json
 import tempfile
 import unittest
+from contextlib import ExitStack
+from datetime import date
 from pathlib import Path
 from unittest.mock import patch
 
 import garmin_chart
+import garmin_intelligence
 from garmin_capabilities import issue_capability
 
 
+class _VerifiedWindowStub:
+    def __enter__(self):
+        return self
+
+    def __exit__(self, exc_type, exc, traceback):
+        return False
+
+    def public_summary(self):
+        return {"status": "verified_unchanged", "databases": []}
+
+
 class GarminChartFailureContractTests(unittest.TestCase):
+    def test_default_dashboard_reads_only_rendered_components(self):
+        with tempfile.TemporaryDirectory() as temp_root:
+            output = Path(temp_root) / "default-scope.html"
+            with (
+                patch.object(
+                    garmin_chart,
+                    "fetch_local_summary",
+                    return_value={"status": "no_data"},
+                ) as fetch_local,
+                patch.object(
+                    garmin_chart,
+                    "build_dashboard_payload",
+                    return_value={"schema_version": "dashboard.v3"},
+                ),
+                patch.object(garmin_chart, "render_report", return_value="<html></html>"),
+            ):
+                rc = garmin_chart.main(
+                    [
+                        "dashboard",
+                        "--days",
+                        "7",
+                        "--allow-health-data",
+                        "--output",
+                        str(output),
+                    ]
+                )
+
+        self.assertEqual(rc, 0)
+        fetch_local.assert_called_once_with(
+            7, components=garmin_chart.DASHBOARD_DEFAULT_COMPONENTS
+        )
+        self.assertNotIn("activities", garmin_chart.DASHBOARD_DEFAULT_COMPONENTS)
+        self.assertNotIn("training_load_series", garmin_chart.DASHBOARD_DEFAULT_COMPONENTS)
+
     def test_local_dashboard_requires_health_data_permission_before_read(self):
         stderr = io.StringIO()
         with (
@@ -246,6 +294,109 @@ class GarminChartFailureContractTests(unittest.TestCase):
         self.assertEqual(rc, 0)
         request = get_client.call_args.kwargs["request"]
         self.assertEqual(request["components"], components)
+        fetch_summary.assert_called_once_with(
+            get_client.return_value,
+            start=request["start"],
+            end=request["end"],
+            components=components,
+        )
+
+    def test_real_local_no_data_contract_triggers_authorized_live_fallback(self):
+        components = list(garmin_chart.LIVE_SUMMARY_COMPONENTS)
+        null_summary = garmin_intelligence.pd.DataFrame(
+            [
+                {
+                    "date": date.today().isoformat(),
+                    "resting_heart_rate": None,
+                    "stress_avg": None,
+                    "body_battery_highest": None,
+                }
+            ]
+        )
+        empty = garmin_intelligence.pd.DataFrame()
+        observed_local = []
+        real_fetch_local = garmin_intelligence.fetch_local_summary
+
+        def fetch_real_no_data(days, *, components=None):
+            result = real_fetch_local(days, components=components)
+            observed_local.append(result)
+            return result
+
+        with tempfile.TemporaryDirectory() as temp_root, ExitStack() as stack:
+            output = Path(temp_root) / "real-no-data-fallback.html"
+            stack.enter_context(patch.object(garmin_intelligence, "HAS_SQLITE", True))
+            stack.enter_context(
+                patch.object(
+                    garmin_intelligence,
+                    "_verified_local_read_window",
+                    return_value=_VerifiedWindowStub(),
+                )
+            )
+            stack.enter_context(
+                patch.object(
+                    garmin_intelligence, "sqlite_summary", return_value=null_summary
+                )
+            )
+            for name in (
+                "sqlite_sleep",
+                "sqlite_hrv",
+                "sqlite_activities",
+                "sqlite_biomechanics",
+                "get_body_composition_detailed",
+                "get_devices_info",
+                "get_device_firmware_history",
+            ):
+                stack.enter_context(
+                    patch.object(garmin_intelligence, name, return_value=empty)
+                )
+            stack.enter_context(
+                patch.object(garmin_intelligence, "usable_method_config", return_value=None)
+            )
+            stack.enter_context(
+                patch.object(garmin_chart, "fetch_local_summary", side_effect=fetch_real_no_data)
+            )
+            get_client = stack.enter_context(
+                patch.object(garmin_chart, "get_client", return_value=object())
+            )
+            fetch_summary = stack.enter_context(
+                patch.object(
+                    garmin_chart,
+                    "fetch_summary",
+                    return_value={"status": "partial", "sleep": []},
+                )
+            )
+            stack.enter_context(
+                patch.object(
+                    garmin_chart, "render_report", return_value="<html></html>"
+                )
+            )
+
+            rc = garmin_chart.main(
+                [
+                    "dashboard",
+                    "--days",
+                    "7",
+                    "--source",
+                    "local",
+                    "--fallback-live",
+                    "--components",
+                    ",".join(components),
+                    "--allow-network",
+                    "--allow-health-data",
+                    "--output",
+                    str(output),
+                ]
+            )
+
+        self.assertEqual(rc, 0)
+        self.assertEqual(observed_local[0]["status"], "no_data")
+        self.assertTrue(
+            all(
+                observed_local[0]["component_status"][name]["status"] == "no_data"
+                for name in components
+            )
+        )
+        request = get_client.call_args.kwargs["request"]
         fetch_summary.assert_called_once_with(
             get_client.return_value,
             start=request["start"],
