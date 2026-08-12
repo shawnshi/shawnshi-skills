@@ -1672,22 +1672,16 @@ def perform_bio_metric_audit(summary_data: dict[str, Any]) -> dict[str, Any]:
         and strict_baseline.get("status") in {"ok", "unclassifiable"}
         else None
     )
-    latest_hrv = next(
+    latest_hrv_record = next(
         (
-            item.get("last_night_avg")
+            item
             for item in reversed(summary_data.get("hrv", []))
             if _is_observed(item.get("last_night_avg"))
         ),
-        None,
+        {},
     )
-    hrv_status = next(
-        (
-            item.get("status")
-            for item in reversed(summary_data.get("hrv", []))
-            if _is_observed(item.get("status"))
-        ),
-        None,
-    )
+    latest_hrv = latest_hrv_record.get("last_night_avg")
+    hrv_status = latest_hrv_record.get("status")
     latest_sleep = next(
         (
             item
@@ -1726,11 +1720,19 @@ def perform_bio_metric_audit(summary_data: dict[str, Any]) -> dict[str, Any]:
         ),
         {},
     )
+    component_coverage = summary_data.get("component_status") or (
+        summary_data.get("coverage", {}).get("components", {})
+    )
     return {
         "analysis_type": "bio_metric_audit",
+        "component_coverage": {
+            component: component_coverage.get(component, {"status": "unknown"})
+            for component in LIVE_ANALYSIS_COMPONENTS["insight_cn"]
+        },
         "system_status": {
             "rhr": {
                 "current": latest_rhr,
+                "observation_date": ordered_rhr_dates[-1] if ordered_rhr_dates else None,
                 "baseline": (
                     round(baseline_rhr, 1) if baseline_rhr is not None else None
                 ),
@@ -1747,7 +1749,11 @@ def perform_bio_metric_audit(summary_data: dict[str, Any]) -> dict[str, Any]:
                 ),
                 "status": "descriptive_only" if latest_rhr is not None else "no_data",
             },
-            "hrv": {"value": latest_hrv, "status": hrv_status},
+            "hrv": {
+                "value": latest_hrv,
+                "status": hrv_status,
+                "observation_date": latest_hrv_record.get("date"),
+            },
             "vo2_max": summary_data.get("training_status", {}).get("vo2_max"),
             "fitness_age": summary_data.get("max_metrics", {}).get("fitness_age"),
             "bmi": summary_data.get("body_composition", {}).get("bmi"),
@@ -1755,13 +1761,20 @@ def perform_bio_metric_audit(summary_data: dict[str, Any]) -> dict[str, Any]:
         },
         "recovery_loop": {
             "sleep_architecture": {
+                "observation_date": latest_sleep.get("date"),
+                "duration_hours": _hours_or_none(total_sleep),
+                "duration_status": (
+                    "observed" if total_sleep is not None else "no_observation"
+                ),
                 "deep_pct": round(deep_pct, 1) if deep_pct is not None else None,
                 "rem_pct": round(rem_pct, 1) if rem_pct is not None else None,
                 "restlessness": latest_sleep.get("restless_periods"),
                 "sleep_debt_h": None,
+                "sleep_debt_status": "not_provided_by_source",
                 "interpretation": "consumer_device_estimate",
             },
             "body_battery": {
+                "observation_date": latest_bb.get("date"),
                 "charged": latest_bb.get("charged"),
                 "peak": latest_bb.get("highest"),
                 "lowest": latest_bb.get("lowest"),
@@ -1770,6 +1783,12 @@ def perform_bio_metric_audit(summary_data: dict[str, Any]) -> dict[str, Any]:
         },
         "load_friction": {
             "stress_score": latest_stress.get("avg_stress"),
+            "stress_observation_date": latest_stress.get("date"),
+            "stress_status": (
+                "observed"
+                if _is_observed(latest_stress.get("avg_stress"))
+                else "no_observation"
+            ),
             "dissipation": {
                 "high_stress_hours": _hours_or_none(
                     latest_stress.get("high_stress_duration")
@@ -1930,14 +1949,24 @@ def generate_chinese_insight(summary_data: dict[str, Any]) -> dict[str, Any]:
     )
     period = summary_data.get("summary", {}).get("period", "指定时间段")
     stale_note = "数据可能陈旧。" if audit["system_status"]["is_stale"] else "未标记为陈旧。"
+    sleep = audit["recovery_loop"]["sleep_architecture"]
+
+    def display(value: Any, unit: str = "") -> str:
+        return f"{value}{unit}" if _is_observed(value) else "无有效观测"
+
     lines = [
         f"【数据范围】{period}；{stale_note}",
         "【可观察指标】"
-        f"静息心率 {audit['system_status']['rhr']['current']}；"
-        f"HRV {audit['system_status']['hrv']['value']}；"
-        f"Body Battery 峰值 {audit['recovery_loop']['body_battery']['peak']}；"
-        f"Garmin 压力 {audit['load_friction']['stress_score']}。",
+        f"静息心率 {display(audit['system_status']['rhr']['current'])}；"
+        f"HRV {display(audit['system_status']['hrv']['value'])}；"
+        "Body Battery 峰值 "
+        f"{display(audit['recovery_loop']['body_battery']['peak'])}；"
+        f"Garmin 压力 {display(audit['load_friction']['stress_score'])}。",
         "【睡眠描述】"
+        f"最近睡眠时长 {display(sleep['duration_hours'], ' 小时')}"
+        f"（观测日期 {sleep['observation_date'] or '未提供'}）；"
+        f"深睡占比 {display(sleep['deep_pct'], '%')}；"
+        f"REM 占比 {display(sleep['rem_pct'], '%')}；"
         f"睡眠时长标准差 {variability if variability is not None else '数据不足'} 小时"
         f"（{variability_status}）。睡眠阶段为消费级设备估计，不作诊断。",
         "【方法边界】"

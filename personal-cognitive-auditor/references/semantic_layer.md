@@ -29,6 +29,9 @@
 ### 健康域
 *   `#Health/Run`: 跑步数据。
 *   `#Health/Sleep`: 睡眠质量分析。
+*   `#Health/HRV`: HRV 描述性观察。
+*   `#Health/Recovery`: Body Battery 与一般恢复背景，不表示准备度评分。
+*   `#Health/Stress`: Garmin 压力数据的描述性观察。
 
 ## 3. Formatting Rules
 *   **Space Independent**: 标签前后应保留空格（如 `今日完成 #Strategy/MedicalAI 调研`）。

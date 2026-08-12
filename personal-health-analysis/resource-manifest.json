@@ -1,11 +1,11 @@
 {
   "schema_version": 2,
   "skill": "personal-health-analysis",
-  "generated_at": "2026-08-09T23:16:15",
+  "generated_at": "2026-08-11T20:36:27",
   "hash_algorithm": "SHA-256",
   "text_hash_normalization": "LF",
   "skill_md": "SKILL.md",
-  "skill_md_sha256": "44aa444753ff9bce648a4910fedec61ae340c7bf532c080b3fab3abc2169e647",
+  "skill_md_sha256": "e3e2933c2faf1374a7c5312b6702536eb26a078e26fc2e48b62ff1a400915200",
   "top_level_files": [
     ".gitignore",
     "install.ps1",
@@ -37,7 +37,7 @@
     },
     {
       "path": "SKILL.md",
-      "sha256": "44aa444753ff9bce648a4910fedec61ae340c7bf532c080b3fab3abc2169e647"
+      "sha256": "e3e2933c2faf1374a7c5312b6702536eb26a078e26fc2e48b62ff1a400915200"
     }
   ],
   "top_level_directories": [
@@ -134,7 +134,7 @@
       "path": "scripts\\garmin_intelligence.py",
       "exists": true,
       "resolved_path": "personal-health-analysis/scripts/garmin_intelligence.py",
-      "sha256": "767a167ffac6ebb895c6f2bf670b4f883198ca33729fc950d63319d2c10fed39"
+      "sha256": "5f089f136e6a4f9647e49db018d5839811fd5419d6755d3507bdc9c183c2ee42"
     },
     {
       "path": "scripts\\garmin_patterns.py",

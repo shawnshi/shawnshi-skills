@@ -5,8 +5,8 @@
     "base": "user_home",
     "segments": [".gemini", "config", "skills", "personal-diary-writer", "SKILL.md"]
   },
-  "authority_version": "11.2.0",
-  "authority_sha256": "aa971cf210b624e86fb1cf24fb30fa12d1da5bf4ba15b430c7e063e4e341f140",
+  "authority_version": "11.3.0",
+  "authority_sha256": "f2fdfd09787854b75bc41e3b50ed351536c2b25f9def1aaef9b3bfc3caabf868",
   "candidate_locators": [
     {
       "base": "user_home",

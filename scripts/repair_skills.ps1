@@ -65,6 +65,16 @@ $HardcodedModelPatterns = [ordered]@{
 
 $MandatorySubagentPattern = '(?im)^\s*(?:[-*]\s*)?(?:\u5FC5\u987B|\u5F3A\u5236|\u52A1\u5FC5|must|required)[^\r\n]{0,80}(?:\u5B50\u4EE3\u7406|subagent)'
 $MandatoryPersistencePattern = '(?im)^\s*(?:[-*]\s*)?(?:\u5FC5\u987B|\u5F3A\u5236|\u52A1\u5FC5|must|required)[^\r\n]{0,100}(?:Vector Lake|\u5165\u6E56|MEMORY|\u77E5\u8BC6\u5E93|\u6301\u4E45\u5316|persist)'
+$ArchiveTargetPattern = '(?i)(?:\u6863\u6848|\u5F52\u6863|\u7D22\u5F15|\u65E5\u5FD7|\u65E5\u8BB0|\u8D26\u672C|\u6570\u636E\u5E93|\u53BB\u91CD\u72B6\u6001|\u957F\u671F\u72B6\u6001|\u957F\u671F\u8BB0\u5FC6|archive|history\s+index|dedup(?:lication)?\s+state|canonical\s+(?:file|store)|diary|journal|ledger|database|MEMORY|\u77E5\u8BC6\u5E93|Vector Lake)'
+$LocalFilePersistencePattern = '(?i)(?:\u751F\u6210|\u65E5\u5FD7|\u65E5\u8BB0|\u957F\u671F|\u6301\u4E45)[^\r\n]{0,40}(?:\u9ED8\u8BA4|\u81EA\u52A8|\u76F4\u63A5|\u65E0\u9700|\u65E0\u987B|\u4E0D\u518D)[^\r\n]{0,30}(?:\u5199\u5165|\u5199\u8FDB|\u5B58\u5165|\u5B58\u50A8|\u6301\u4E45\u5316|\u8FFD\u52A0|\u540C\u6B65|\u843D\u76D8|\u4FDD\u5B58)[^\r\n]{0,30}(?:\u672C\u5730\u6587\u4EF6|local\s+file)'
+$AutomaticPersistenceBehaviorPattern = '(?i)(?:(?:\u9ED8\u8BA4(?:\u81EA\u52A8)?|\u81EA\u52A8|\u751F\u6210\u540E|\u5B8C\u6210\u540E)(?:\u4F1A)?[^\r\n]{0,20}(?:\u5C06|\u628A)?[^\r\n]{0,20}(?:\u7ED3\u679C|\u5185\u5BB9)?[^\r\n]{0,12}(?:\u4FDD\u5B58|\u5F52\u6863|\u5199\u5165|\u5199\u8FDB|\u5B58\u5165|\u5B58\u50A8|\u843D\u76D8)|\u76F4\u63A5[^\r\n]{0,20}(?:\u4FDD\u5B58|\u5F52\u6863|\u5199\u5165|\u5199\u8FDB|\u5B58\u5165|\u5B58\u50A8|\u843D\u76D8)|(?:\u8BF7\u6C42|\u751F\u6210|\u66F4\u65B0|\u8BB0\u5F55|\u5199)[^\r\n]{0,80}(?:\u6784\u6210|\u5373\u4E3A|\u89C6\u4E3A|\u540C\u65F6|\u5C31\u662F|\u672C\u8EAB\u5C31\u662F)[^\r\n]{0,40}(?:\u6388\u6743|\u8BB8\u53EF)[^\r\n]{0,40}(?:\u4FDD\u5B58|\u5F52\u6863|\u5199\u5165|\u5199\u8FDB|\u5B58\u5165|\u5B58\u50A8|\u843D\u76D8)|(?:\u65E0\u9700|\u65E0\u987B|\u4E0D\u518D)[^\r\n]{0,30}(?:\u8BE2\u95EE|\u8BF7\u6C42|\u989D\u5916)?[^\r\n]{0,12}(?:\u786E\u8BA4|\u6388\u6743)[^\r\n]{0,30}(?:\u4FDD\u5B58|\u5F52\u6863|\u5199\u5165|\u5199\u8FDB|\u5B58\u5165|\u5B58\u50A8|\u843D\u76D8)|(?:generate|update|record|request)[^\r\n]{0,80}(?:constitutes?|counts?\s+as|is)[^\r\n]{0,30}authori[sz](?:e|ation)[^\r\n]{0,40}(?:save|persist|archive|write|store)|(?:automatically|by\s+default|without\s+(?:another|separate|additional)\s+confirmation)[^\r\n]{0,50}(?:save|persist|archive|write|store)|(?:save|persist|archive|write|store|stored|archived)[^\r\n]{0,20}by\s+default|no\s+additional\s+confirmation[^\r\n]{0,40}(?:save|persist|archive|write|store))'
+$DirectPersistenceNegationPattern = '(?i)(?:(?:\u7981\u6B62|\u4E25\u7981|\u4E0D\u5141\u8BB8|\u4E0D\u80FD|\u4E0D\u5F97|\u4E0D\u8981|\u4E0D\u53EF|\u4E0D\u5E94|\u4E0D\u4F1A|\u672A|\u4ECE\u4E0D|\u4E0D)\s*(?:\u5C06|\u628A)?[^\r\n]{0,20}(?:\u9ED8\u8BA4|\u81EA\u52A8|\u76F4\u63A5)?\s*(?:\u539F\u5B50|\u4E8B\u52A1\u5316?)?\s*(?:\u4FDD\u5B58|\u5F52\u6863|\u5199\u5165|\u5199\u8FDB|\u5B58\u5165|\u5B58\u50A8|\u6301\u4E45\u5316|\u8FFD\u52A0|\u540C\u6B65|\u843D\u76D8)|(?:do\s+not|does\s+not|never|must\s+not|shall\s+not)\s+(?:automatically\s+|by\s+default\s+)?(?:save|persist|archive|write|store|append|sync))'
+$PersistenceVerbPattern = '(?i)(?:\u4FDD\u5B58|\u5F52\u6863|\u5199\u5165|\u5199\u8FDB|\u5B58\u5165|\u5B58\u50A8|\u6301\u4E45\u5316|\u8FFD\u52A0|\u540C\u6B65|\u843D\u76D8|save|persist(?:ed)?|archive(?:d)?|write|writ(?:e|ten)|store(?:d)?|append(?:ed)?|sync(?:ed)?)'
+$AutomaticMarkerPattern = '(?i)(?:\u9ED8\u8BA4|\u81EA\u52A8|\u6BCF\u6B21\u6267\u884C\u90FD\u4F1A|automatically|by\s+default)'
+$AuthorizationNegationPattern = '(?i)(?:\u4E0D\u6784\u6210|\u4E0D\u662F|\u4E0D\u89C6\u4E3A|\u975E)[^\r\n]{0,24}(?:\u4FDD\u5B58)?\u6388\u6743|(?:is\s+not|does\s+not\s+constitute|not)[^\r\n]{0,24}authori[sz]ation'
+$AutomaticPersistenceOptOutTriggerPattern = '(?i)(?:\u8349\u7A3F|\u9884\u89C8|\u4E0D\u4FDD\u5B58|preview|draft|no[- ]?save)'
+$AutomaticPersistenceOptOutEffectPattern = '(?i)(?:\u53EA\u8BFB|\u4FDD\u6301\u53EA\u8BFB|\u4E0D\u9002\u7528|\u4E0D\u8C03\u7528\u5F52\u6863|\u4E0D\u751F\u6210\u5199\u5165|\u4E0D\u5199\u5165|\u4E0D\u5F52\u6863|\u4E0D\u843D\u76D8|\u4E0D\u4FDD\u5B58|read[- ]?only|does\s+not\s+apply|do\s+not\s+(?:save|persist|archive|write))'
+$AutomaticPersistenceOptOutRelationPattern = '(?i)(?:(?:\u82E5|\u5982\u679C|\u5F53|\u7528\u6237\u8981\u6C42|\u7528\u6237\u660E\u786E\u8981\u6C42)[^\r\n]{0,50}(?:\u8349\u7A3F|\u9884\u89C8|\u4E0D\u4FDD\u5B58|preview|draft|no[- ]?save)[^\r\n]{0,20}(?:\u65F6|\u5219|,|\uFF0C)[^\r\n]{0,40}(?:\u53EA\u8BFB|\u4FDD\u6301\u53EA\u8BFB|\u4E0D\u5199\u5165|\u4E0D\u5F52\u6863|\u4E0D\u843D\u76D8|\u4E0D\u4FDD\u5B58|read[- ]?only|do\s+not\s+(?:save|persist|archive|write))|\u8BE5\u4F8B\u5916\u4E0D\u9002\u7528\u4E8E[^\r\n]{0,50}(?:\u8349\u7A3F|\u9884\u89C8|\u4E0D\u4FDD\u5B58)|(?:if|when)[^\r\n]{0,30}(?:preview|draft|no[- ]?save)[^\r\n]{0,30}(?:read[- ]?only|do\s+not\s+(?:save|persist|archive|write)))'
 
 function Get-SkillDirectories {
     Get-ChildItem -LiteralPath $Root -Directory |
@@ -90,6 +100,78 @@ function Get-PatternHits {
             $entry.Key
         }
     }
+}
+
+function Test-AutomaticPersistence {
+    param(
+        [string]$Text,
+        [string]$SkillName = ''
+    )
+
+    if ($SkillName -eq 'personal-cognitive-auditor') {
+        return $false
+    }
+
+    foreach ($line in $Text -split '\r?\n') {
+        if ($line -match '(?i)Schema[^\r\n]{0,80}\u6570\u636E\u5E93\u53D8\u5316[^\r\n]{0,80}(?:\u4E0D\u5F97|\u4E0D\u80FD|\u7981\u6B62)[^\r\n]{0,30}\u89E6\u53D1[^\r\n]{0,20}\u56DE\u9000') {
+            continue
+        }
+        if ($line -match '(?i)Schema[^\r\n]{0,220}\u6570\u636E\u5E93\u53D8\u5316[^\r\n]{0,220}(?:\u56DE\u9000|\u56DE\u9000)') {
+            continue
+        }
+        if ($line -match '(?i)Schema' -and $line -match '(?:\u6570\u636E\u5E93\u53D8\u5316|\u6570\u636E\u5E93\u53D8\u5316)' -and $line -match '(?:\u56DE\u9000|\u56DE\u9000)') {
+            continue
+        }
+        if ($line -match $AuthorizationNegationPattern) {
+            continue
+        }
+        foreach ($clause in $line -split '[,，。；;]') {
+            if ($clause -match '(?i)(?:Schema|\u5B8C\u6574\u6027|\u6570\u636E\u5E93\u53D8\u5316|\u8BFB\u53D6\u9519\u8BEF)[^\r\n]{0,30}(?:\u4E0D\u5F97|\u4E0D\u80FD|\u7981\u6B62)[^\r\n]{0,30}(?:\u89E6\u53D1|trigger)[^\r\n]{0,20}(?:\u56DE\u9000|fallback)') {
+                continue
+            }
+            if ($clause -match '(?i)(?:(?:\u4E0D|\u672A|\u7981\u6B62|\u4E0D\u5F97|\u4E0D\u5141\u8BB8)[^\r\n]{0,20}(?:\u81EA\u52A8|\u9ED8\u8BA4)[^\r\n]{0,20}(?:\u6269\u5927|\u540C\u6B65|\u4FDD\u5B58|\u5199\u5165|\u6301\u4E45\u5316)|(?:\u81EA\u52A8|\u9ED8\u8BA4)[^\r\n]{0,20}(?:\u6269\u5927|\u540C\u6B65|\u4FDD\u5B58|\u5199\u5165|\u6301\u4E45\u5316)[^\r\n]{0,20}(?:\u4E0D|\u672A|\u7981\u6B62|\u4E0D\u5F97|\u4E0D\u5141\u8BB8)|(?:do\s+not|does\s+not|never|must\s+not|shall\s+not)[^\r\n]{0,20}(?:automatically|by\s+default)[^\r\n]{0,20}(?:expand|sync|save|write|persist)|(?:automatically|by\s+default)[^\r\n]{0,20}(?:expand|sync|save|write|persist)[^\r\n]{0,20}(?:do\s+not|does\s+not|never|must\s+not|shall\s+not))') {
+                continue
+            }
+            if ($clause -match '(?i)(?:(?:\u5FC5\u987B|\u9700\u8981|\u4ECD\u9700|\u53EA\u6709|\u4EC5\u5728|\u53E6\u884C|\u660E\u786E)[^\r\n]{0,40}(?:\u6388\u6743|\u540C\u610F|\u786E\u8BA4)[^\r\n]{0,60}(?:\u540C\u6B65|\u4FDD\u5B58|\u5199\u5165|\u6301\u4E45\u5316)|(?:\u540C\u6B65|\u4FDD\u5B58|\u5199\u5165|\u6301\u4E45\u5316)[^\r\n]{0,50}(?:\u5FC5\u987B|\u9700\u8981|\u4ECD\u9700|\u53EA\u6709|\u4EC5\u5728|\u53E6\u884C|\u660E\u786E)[^\r\n]{0,30}(?:\u6388\u6743|\u540C\u610F|\u786E\u8BA4)|(?:must|required|only\s+with|explicit)[^\r\n]{0,30}(?:authori[sz]ation|consent|confirmation)[^\r\n]{0,40}(?:sync|save|write|persist)|(?:sync|save|write|persist)[^\r\n]{0,40}(?:must|required|only\s+with|explicit)[^\r\n]{0,30}(?:authori[sz]ation|consent|confirmation))') {
+                continue
+            }
+            $candidate = [regex]::Replace($clause, $DirectPersistenceNegationPattern, '')
+            if (
+                (
+                    $candidate -match $ArchiveTargetPattern -and
+                    $candidate -match $AutomaticPersistenceBehaviorPattern
+                ) -or
+                $candidate -match $LocalFilePersistencePattern
+            ) {
+                return $true
+            }
+            if (
+                $candidate -match $ArchiveTargetPattern -and
+                $candidate -match $PersistenceVerbPattern -and
+                $candidate -match $AutomaticMarkerPattern
+            ) {
+                return $true
+            }
+        }
+        if ($line -match '(?:\u8BF7\u6C42|\u751F\u6210|\u66F4\u65B0|\u8BB0\u5F55|\u5199)[^\r\n]{0,80}(?:\u6784\u6210|\u5373\u4E3A|\u89C6\u4E3A|\u540C\u65F6|\u5C31\u662F|\u672C\u8EAB\u5C31\u662F)[^\r\n]{0,40}(?:\u6388\u6743|\u8BB8\u53EF)[^\r\n]{0,50}(?:\u4FDD\u5B58|\u5F52\u6863|\u5199\u5165|\u5199\u8FDB|\u5B58\u5165|\u5B58\u50A8|\u843D\u76D8)' -and $line -match $ArchiveTargetPattern) {
+            return $true
+        }
+    }
+    return $false
+}
+
+function Test-AutomaticPersistenceOptOut {
+    param([string]$Text)
+
+    foreach ($line in $Text -split '\r?\n') {
+        if ($line -match $AutomaticPersistenceOptOutRelationPattern) {
+            return $true
+        }
+    }
+    if ($Text -match '(?is)(?:\u7528\u6237\u660E\u786E\u8981\u6C42|\u82E5|\u5982\u679C|\u5F53)[^\r\n]{0,40}(?:\u4E0D\u4FDD\u5B58|no[- ]?save)[^\r\n]{0,160}(?:\u53EA\u8BFB|\u4E0D\u8C03\u7528\u5F52\u6863|\u4E0D\u5199\u5165|\u4E0D\u5F52\u6863|\u4E0D\u843D\u76D8|\u4E0D\u4FDD\u5B58|read[- ]?only|do\s+not\s+(?:save|persist|archive|write))') {
+        return $true
+    }
+    return $false
 }
 
 function Get-SkillTextCorpus {
@@ -271,17 +353,98 @@ $records = foreach ($directory in $skillDirectories) {
         HardcodedModels = @(Get-PatternHits -Text $corpus -Patterns $HardcodedModelPatterns)
         MandatorySubagent = [bool]($corpus -match $MandatorySubagentPattern)
         MandatoryPersistence = [bool]($corpus -match $MandatoryPersistencePattern)
+        AutomaticPersistence = Test-AutomaticPersistence -Text $text -SkillName $directory.Name
+        AutomaticPersistenceHasOptOut = Test-AutomaticPersistenceOptOut -Text $text
     }
 }
 
 $readmePath = Join-Path $Root 'README.md'
 $declaredInventory = 0
+$declaredAutomaticPersistenceRecords = @()
+$automaticPersistenceTableMalformedRows = 0
+$automaticPersistenceTableDuplicateSkills = 0
+$automaticPersistenceTableSemanticFailures = 0
 if (Test-Path -LiteralPath $readmePath) {
     $readmeText = Get-Content -LiteralPath $readmePath -Raw -Encoding UTF8
     if ($readmeText -match '\u5F53\u524D\u5E93\u5B58\u4E3A\s*(?<count>\d+)\s*\u4E2A\u7528\u6237\u6280\u80FD') {
         $declaredInventory = [int]$Matches.count
     }
+    if ($readmeText -match '(?s)<!-- automatic-persistence-exceptions:start -->(?<block>.*?)<!-- automatic-persistence-exceptions:end -->') {
+        $tableRows = @($Matches.block -split '\r?\n' | Where-Object { $_ -match '^\|\s*`' })
+        $parsedRows = [System.Collections.Generic.List[object]]::new()
+        foreach ($row in $tableRows) {
+            if ($row -match '^\|\s*`(?<skill>[a-z0-9]+(?:-[a-z0-9]+)*)`\s*\|\s*(?<trigger>[^|]+?)\s*\|\s*(?<target>[^|]+?)\s*\|\s*(?<optout>[^|]+?)\s*\|\s*$') {
+                $record = [PSCustomObject]@{
+                    Skill = $Matches.skill.Trim()
+                    Trigger = $Matches.trigger.Trim()
+                    Target = $Matches.target.Trim()
+                    OptOut = $Matches.optout.Trim()
+                }
+                $emptyFields = @(
+                    @($record.Trigger, $record.Target, $record.OptOut) |
+                        Where-Object { [string]::IsNullOrWhiteSpace($_) -or $_ -match '^-+$' }
+                )
+                if ($emptyFields.Count -gt 0) {
+                    $automaticPersistenceTableMalformedRows++
+                } else {
+                    $genericFieldPattern = '(?i)^(?:anything|any|maybe|\u4EFB\u610F|\u4E0D\u9650|\u968F\u610F|\u672A\u5B9A)$'
+                    $openTargetPattern = '(?i)(?:\u4EFB\u610F|\u4E0D\u9650|\u5916\u90E8\u7CFB\u7EDF|anything|anywhere|external\s+system)'
+                    $targetClosed = (
+                        $record.Target -match $ArchiveTargetPattern -and
+                        $record.Target -notmatch $openTargetPattern
+                    )
+                    $optOutSpecific = (
+                        $record.OptOut -match $AutomaticPersistenceOptOutTriggerPattern -and
+                        $record.OptOut -notmatch $genericFieldPattern
+                    )
+                    if (
+                        $record.Trigger -match $genericFieldPattern -or
+                        -not $targetClosed -or
+                        -not $optOutSpecific
+                    ) {
+                        $automaticPersistenceTableSemanticFailures++
+                    } else {
+                        $parsedRows.Add($record)
+                    }
+                }
+            } else {
+                $automaticPersistenceTableMalformedRows++
+            }
+        }
+        $declaredAutomaticPersistenceRecords = @($parsedRows)
+        $automaticPersistenceTableDuplicateSkills = @(
+            $declaredAutomaticPersistenceRecords |
+                Group-Object Skill |
+                Where-Object Count -gt 1
+        ).Count
+    }
 }
+
+$automaticPersistenceRecords = @($records | Where-Object AutomaticPersistence)
+$automaticPersistenceSkills = @($automaticPersistenceRecords | ForEach-Object Skill)
+$declaredAutomaticPersistenceExceptions = @($declaredAutomaticPersistenceRecords | ForEach-Object Skill)
+$knownSkills = @($records | ForEach-Object Skill)
+$undeclaredAutomaticPersistence = @(
+    $automaticPersistenceRecords |
+        Where-Object { $_.Skill -notin $declaredAutomaticPersistenceExceptions }
+)
+$staleAutomaticPersistenceExceptions = @(
+    $declaredAutomaticPersistenceExceptions |
+        Where-Object { $_ -notin $automaticPersistenceSkills } |
+        Sort-Object -Unique
+)
+$unknownAutomaticPersistenceExceptions = @(
+    $declaredAutomaticPersistenceExceptions |
+        Where-Object { $_ -notin $knownSkills } |
+        Sort-Object -Unique
+)
+$automaticPersistenceOptOutFailures = @(
+    $automaticPersistenceRecords |
+        Where-Object {
+            $_.Skill -in $declaredAutomaticPersistenceExceptions -and
+            -not $_.AutomaticPersistenceHasOptOut
+        }
+)
 
 $skillJsonFiles = @(
     Get-ChildItem -LiteralPath $Root -Recurse -Filter 'skill.json' -File |
@@ -308,6 +471,15 @@ $summary = [PSCustomObject]@{
     HardcodedModelSkills = @($records | Where-Object { $_.HardcodedModels.Count -gt 0 }).Count
     MandatorySubagentSkills = @($records | Where-Object MandatorySubagent).Count
     MandatoryPersistenceSkills = @($records | Where-Object MandatoryPersistence).Count
+    AutomaticPersistenceSkills = $automaticPersistenceRecords.Count
+    DeclaredAutomaticPersistenceExceptions = $declaredAutomaticPersistenceRecords.Count
+    UndeclaredAutomaticPersistenceSkills = $undeclaredAutomaticPersistence.Count
+    StaleAutomaticPersistenceExceptions = $staleAutomaticPersistenceExceptions.Count
+    UnknownAutomaticPersistenceExceptions = $unknownAutomaticPersistenceExceptions.Count
+    AutomaticPersistenceTableMalformedRows = $automaticPersistenceTableMalformedRows
+    AutomaticPersistenceTableDuplicateSkills = $automaticPersistenceTableDuplicateSkills
+    AutomaticPersistenceTableSemanticFailures = $automaticPersistenceTableSemanticFailures
+    AutomaticPersistenceOptOutFailures = $automaticPersistenceOptOutFailures.Count
     SkillJsonFiles = $skillJsonFiles.Count
     NodeModulesDirectories = $nodeModules.Count
     TriggerOwnershipClasses = $triggerStatus.ClassCount
@@ -327,6 +499,13 @@ foreach ($entry in @(
     @{ Name = 'hardcoded_model_skills'; Value = $summary.HardcodedModelSkills },
     @{ Name = 'mandatory_subagent_skills'; Value = $summary.MandatorySubagentSkills },
     @{ Name = 'mandatory_persistence_skills'; Value = $summary.MandatoryPersistenceSkills },
+    @{ Name = 'undeclared_automatic_persistence_skills'; Value = $summary.UndeclaredAutomaticPersistenceSkills },
+    @{ Name = 'stale_automatic_persistence_exceptions'; Value = $summary.StaleAutomaticPersistenceExceptions },
+    @{ Name = 'unknown_automatic_persistence_exceptions'; Value = $summary.UnknownAutomaticPersistenceExceptions },
+    @{ Name = 'automatic_persistence_table_malformed_rows'; Value = $summary.AutomaticPersistenceTableMalformedRows },
+    @{ Name = 'automatic_persistence_table_duplicate_skills'; Value = $summary.AutomaticPersistenceTableDuplicateSkills },
+    @{ Name = 'automatic_persistence_table_semantic_failures'; Value = $summary.AutomaticPersistenceTableSemanticFailures },
+    @{ Name = 'automatic_persistence_opt_out_failures'; Value = $summary.AutomaticPersistenceOptOutFailures },
     @{ Name = 'skill_json_files'; Value = $summary.SkillJsonFiles },
     @{ Name = 'node_modules_directories'; Value = $summary.NodeModulesDirectories },
     @{ Name = 'trigger_ownership_conflicts'; Value = $summary.TriggerOwnershipConflicts }
@@ -338,7 +517,7 @@ foreach ($entry in @(
 
 $summary | Format-List
 $records |
-    Select-Object Skill, LineCount, FrontmatterValid, HasResourceManifest, MandatorySubagent, MandatoryPersistence |
+    Select-Object Skill, LineCount, FrontmatterValid, HasResourceManifest, MandatorySubagent, MandatoryPersistence, AutomaticPersistence, AutomaticPersistenceHasOptOut |
     Format-Table -AutoSize
 
 if ($Mode -eq 'Report') {

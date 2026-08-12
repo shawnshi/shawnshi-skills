@@ -1,0 +1,341 @@
+import json
+import shutil
+import subprocess
+import tempfile
+import unittest
+from pathlib import Path
+
+
+SCRIPT_PATH = Path(__file__).with_name("repair_skills.ps1")
+
+
+class RepairSkillsPersistenceTests(unittest.TestCase):
+    def build_fixture(
+        self,
+        *,
+        declared: bool,
+        has_opt_out: bool = True,
+        contract_line: str = "正式结果自动保存到权威档案。",
+        table_row: str | None = None,
+        duplicate_row: bool = False,
+        script_fixture: str | None = None,
+    ) -> Path:
+        temp_root = Path(tempfile.mkdtemp())
+        self.addCleanup(shutil.rmtree, temp_root, ignore_errors=True)
+
+        scripts_dir = temp_root / "scripts"
+        scripts_dir.mkdir()
+        shutil.copy2(SCRIPT_PATH, scripts_dir / SCRIPT_PATH.name)
+
+        exception_block = ""
+        if declared:
+            row = table_row or "| `example-skill` | generate | archive | preview |"
+            duplicate = f"\n{row}" if duplicate_row else ""
+            exception_block = """
+<!-- automatic-persistence-exceptions:start -->
+| Skill | Request | Target | Opt-out |
+|---|---|---|---|
+{row}{duplicate}
+<!-- automatic-persistence-exceptions:end -->
+""".format(row=row, duplicate=duplicate)
+        (temp_root / "README.md").write_text(
+            "当前库存为 1 个用户技能。\n" + exception_block,
+            encoding="utf-8",
+        )
+
+        shared_dir = temp_root / "shared"
+        shared_dir.mkdir()
+        (shared_dir / "trigger-ownership-matrix.json").write_text(
+            json.dumps({"domains": []}),
+            encoding="utf-8",
+        )
+
+        skill_dir = temp_root / "example-skill"
+        skill_dir.mkdir()
+        opt_out = "\n用户要求预览或不保存时保持只读。" if has_opt_out else ""
+        (skill_dir / "SKILL.md").write_text(
+            """---
+name: example-skill
+description: 用于测试根门禁的示例技能。
+---
+
+"""
+            + contract_line
+            + opt_out,
+            encoding="utf-8",
+        )
+        if script_fixture is not None:
+            fixture_dir = skill_dir / "scripts"
+            fixture_dir.mkdir()
+            (fixture_dir / "test_contract.py").write_text(
+                script_fixture,
+                encoding="utf-8",
+            )
+        (skill_dir / "resource-manifest.json").write_text(
+            json.dumps({"missing_declared_dependencies": []}),
+            encoding="utf-8",
+        )
+        return temp_root
+
+    def run_gate(self, root: Path) -> subprocess.CompletedProcess[str]:
+        return subprocess.run(
+            [
+                "pwsh",
+                "-NoProfile",
+                "-ExecutionPolicy",
+                "Bypass",
+                "-File",
+                str(root / "scripts" / SCRIPT_PATH.name),
+                "-Mode",
+                "Gate",
+                "-Root",
+                str(root),
+            ],
+            check=False,
+            capture_output=True,
+            text=True,
+            encoding="utf-8",
+        )
+
+    def test_gate_rejects_undeclared_automatic_persistence(self):
+        result = self.run_gate(self.build_fixture(declared=False))
+
+        self.assertNotEqual(result.returncode, 0)
+        self.assertIn("undeclared_automatic_persistence_skills=1", result.stderr)
+
+    def test_gate_accepts_declared_automatic_persistence_with_opt_out(self):
+        result = self.run_gate(self.build_fixture(declared=True))
+
+        self.assertEqual(result.returncode, 0, result.stdout + result.stderr)
+        self.assertIn("Skill audit gate passed.", result.stdout)
+
+    def test_gate_rejects_declared_contract_without_opt_out(self):
+        result = self.run_gate(
+            self.build_fixture(declared=True, has_opt_out=False)
+        )
+
+        self.assertNotEqual(result.returncode, 0)
+        self.assertIn("automatic_persistence_opt_out_failures=1", result.stderr)
+
+    def test_gate_rejects_default_atomic_archive_when_undeclared(self):
+        result = self.run_gate(
+            self.build_fixture(
+                declared=False,
+                contract_line="正式结果默认原子保存到权威档案。",
+            )
+        )
+
+        self.assertNotEqual(result.returncode, 0)
+        self.assertIn("undeclared_automatic_persistence_skills=1", result.stderr)
+
+    def test_gate_rejects_direct_archive_without_separate_confirmation(self):
+        result = self.run_gate(
+            self.build_fixture(
+                declared=False,
+                contract_line="正式结果无需再次确认，直接写入 canonical archive。",
+            )
+        )
+
+        self.assertNotEqual(result.returncode, 0)
+        self.assertIn("undeclared_automatic_persistence_skills=1", result.stderr)
+
+    def test_gate_does_not_treat_direct_save_negation_as_persistence(self):
+        result = self.run_gate(
+            self.build_fixture(
+                declared=False,
+                has_opt_out=False,
+                contract_line="正式结果不自动保存到档案；明确保存后才写入。",
+            )
+        )
+
+        self.assertEqual(result.returncode, 0, result.stdout + result.stderr)
+
+    def test_gate_rejects_preview_word_without_read_only_exit(self):
+        result = self.run_gate(
+            self.build_fixture(
+                declared=True,
+                has_opt_out=False,
+                contract_line="正式结果自动保存到权威档案，预览图也自动保存。",
+            )
+        )
+
+        self.assertNotEqual(result.returncode, 0)
+        self.assertIn("automatic_persistence_opt_out_failures=1", result.stderr)
+
+    def test_gate_rejects_malformed_contract_table_row(self):
+        result = self.run_gate(
+            self.build_fixture(
+                declared=True,
+                table_row="| `example-skill` | generate |  | preview |",
+            )
+        )
+
+        self.assertNotEqual(result.returncode, 0)
+        self.assertIn("automatic_persistence_table_malformed_rows=1", result.stderr)
+
+    def test_gate_rejects_duplicate_contract_table_row(self):
+        result = self.run_gate(
+            self.build_fixture(declared=True, duplicate_row=True)
+        )
+
+        self.assertNotEqual(result.returncode, 0)
+        self.assertIn("automatic_persistence_table_duplicate_skills=1", result.stderr)
+
+    def test_test_fixture_cannot_keep_a_stale_declaration_green(self):
+        result = self.run_gate(
+            self.build_fixture(
+                declared=True,
+                has_opt_out=False,
+                contract_line="只生成草稿；明确要求保存后才写入。",
+                script_fixture='CONTRACT = "正式结果自动保存到权威档案。"',
+            )
+        )
+
+        self.assertNotEqual(result.returncode, 0)
+        self.assertIn("stale_automatic_persistence_exceptions=1", result.stderr)
+
+    def test_gate_rejects_undeclared_default_personal_log_write(self):
+        result = self.run_gate(
+            self.build_fixture(
+                declared=False,
+                contract_line="正式日志默认写入个人日志文件。",
+            )
+        )
+
+        self.assertNotEqual(result.returncode, 0)
+        self.assertIn("undeclared_automatic_persistence_skills=1", result.stderr)
+
+    def test_gate_rejects_undeclared_direct_local_log_file_write(self):
+        result = self.run_gate(
+            self.build_fixture(
+                declared=False,
+                contract_line="生成日志后直接落盘到本地文件。",
+            )
+        )
+
+        self.assertNotEqual(result.returncode, 0)
+        self.assertIn("undeclared_automatic_persistence_skills=1", result.stderr)
+
+    def test_gate_rejects_additional_affirmative_archive_phrasings(self):
+        contracts = (
+            "默认将内容保存到权威档案。",
+            "生成请求本身就是保存许可，结果写入权威档案。",
+            "完成后会将结果存入长期状态数据库。",
+            "默认把结果写进知识库。",
+            "Results are automatically stored in canonical store.",
+            "Results are archived by default.",
+            "No additional confirmation is required before writing to archive.",
+        )
+        for contract in contracts:
+            with self.subTest(contract=contract):
+                result = self.run_gate(
+                    self.build_fixture(declared=False, contract_line=contract)
+                )
+                self.assertNotEqual(result.returncode, 0)
+                self.assertIn(
+                    "undeclared_automatic_persistence_skills=1",
+                    result.stderr,
+                )
+
+    def test_gate_allows_explicit_archive_prohibitions(self):
+        contracts = (
+            "禁止把正式结果自动保存到权威档案。",
+            "Results must not automatically save to archive.",
+        )
+        for contract in contracts:
+            with self.subTest(contract=contract):
+                result = self.run_gate(
+                    self.build_fixture(
+                        declared=False,
+                        has_opt_out=False,
+                        contract_line=contract,
+                    )
+                )
+                self.assertEqual(
+                    result.returncode,
+                    0,
+                    result.stdout + result.stderr,
+                )
+
+    def test_gate_rejects_unrelated_preview_read_only_phrase_as_opt_out(self):
+        result = self.run_gate(
+            self.build_fixture(
+                declared=True,
+                has_opt_out=False,
+                contract_line=(
+                    "预览图保持只读；正式结果自动保存到权威档案。"
+                ),
+            )
+        )
+
+        self.assertNotEqual(result.returncode, 0)
+        self.assertIn("automatic_persistence_opt_out_failures=1", result.stderr)
+
+    def test_gate_rejects_semantically_open_contract_table(self):
+        result = self.run_gate(
+            self.build_fixture(
+                declared=True,
+                table_row=(
+                    "| `example-skill` | anything | 任意位置，包括外部系统 | maybe |"
+                ),
+            )
+        )
+
+        self.assertNotEqual(result.returncode, 0)
+        self.assertIn(
+            "automatic_persistence_table_semantic_failures=1",
+            result.stderr,
+        )
+
+    def test_gate_rejects_unknown_contract_skill(self):
+        result = self.run_gate(
+            self.build_fixture(
+                declared=True,
+                table_row="| `unknown-skill` | generate | archive | preview |",
+            )
+        )
+
+        self.assertNotEqual(result.returncode, 0)
+        self.assertIn("unknown_automatic_persistence_exceptions=1", result.stderr)
+
+    def test_gate_rejects_common_automatic_persistence_verbs(self):
+        contracts = (
+            "结果会自动持久化到数据库。",
+            "生成日志后会自动追加到日记中。",
+            "每次执行都会自动同步到历史数据库。",
+            "The result is persisted to the database automatically.",
+        )
+        for contract in contracts:
+            with self.subTest(contract=contract):
+                result = self.run_gate(
+                    self.build_fixture(declared=False, contract_line=contract)
+                )
+                self.assertNotEqual(result.returncode, 0)
+                self.assertIn(
+                    "undeclared_automatic_persistence_skills=1",
+                    result.stderr,
+                )
+
+    def test_gate_allows_explicit_authorization_negation(self):
+        contracts = (
+            "生成请求不构成保存授权，不写入权威档案。",
+            "The request is not authorization to write to the archive.",
+        )
+        for contract in contracts:
+            with self.subTest(contract=contract):
+                result = self.run_gate(
+                    self.build_fixture(
+                        declared=False,
+                        has_opt_out=False,
+                        contract_line=contract,
+                    )
+                )
+                self.assertEqual(
+                    result.returncode,
+                    0,
+                    result.stdout + result.stderr,
+                )
+
+
+if __name__ == "__main__":
+    unittest.main()

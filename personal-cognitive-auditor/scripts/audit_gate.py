@@ -34,6 +34,92 @@ STYLE_TERMS = [
     "生理破产",
 ]
 
+ENERGY_HEADING = re.compile(
+    r"(?im)^#{1,6}\s+能量管理（描述性生理背景）\s*$"
+)
+NEXT_HEADING = re.compile(r"(?m)^#{1,6}\s+")
+ENERGY_REQUIRED_FIELDS = (
+    "数据范围与来源",
+    "组件覆盖与新鲜度",
+    "睡眠观察",
+    "HRV 与静息心率观察",
+    "Body Battery 与压力观察",
+    "同期关系",
+    "执行带宽",
+    "数据缺口与不可判断事项",
+)
+
+COMPOSITE_SCORE_PATTERNS = [
+    re.compile(
+        r"(?im)^\s*(?:[-*]\s*)?(?:\*\*)?"
+        r"(?:能量总分|能量分|准备度总分|准备度分|恢复力总分|恢复力分|执行带宽分)"
+        r"(?:\*\*)?\s*[:：=]\s*(?:\d+(?:\.\d+)?|[红黄绿])"
+    ),
+    re.compile(r"(?im)^\s*(?:[-*]\s*)?readiness(?:_index)?(?:\.score| score)?\s*[:=]\s*\d"),
+]
+MISSING_AS_ZERO = re.compile(
+    r"(?im)^(?=[^\n]*(?:无数据|无有效观测|缺失|未提供))"
+    r"[^\n]*(?:睡眠|HRV|心率|压力|Body Battery|身体电量)[^\n]*"
+    r"[:：=]\s*0(?:\D|$)"
+)
+PYTHON_NONE = re.compile(r"\bNone\b")
+HEALTH_CONTEXT = re.compile(
+    r"(?i)(?:Garmin|睡眠|HRV|心率|压力|Body Battery|身体电量|恢复|健康|生理)"
+)
+HEALTH_FIELD_PREFIX = re.compile(
+    r"(?i)^\s*(?:[-*]\s*)?(?:sleep|睡眠|HRV|心率|压力|stress|Body Battery|身体电量|恢复|健康|生理)"
+    r"(?:[^:：\n]{0,24})?[:：]"
+)
+GENERIC_DATA_FIELD_NONE = re.compile(
+    r"(?i)^\s*(?:[-*]\s*)?(?:value|status|duration|score|amount|metric|reading)\s*[:：=]\s*None\b"
+)
+HEALTH_CAUSAL_CONNECTOR = re.compile(
+    r"(?i)(?:因此|因而|所以|据此|由此|基于(?:上述|该|这些)?(?:健康|生理|睡眠|HRV|心率|压力|Body Battery|身体电量)?(?:观测|数据|指标)?|because|therefore|based\s+on)"
+)
+UNRELATED_DOMAIN = re.compile(
+    r"(?i)(?:项目|负责人|行情|股票|交易|代码|脚本|调试|Python|API|接口|市场|会议组织者)"
+)
+ALLOWED_NO_DATA_FALLBACK = re.compile(
+    r"(?i)(?:只有|仅在|仅当|if|when)[^，,。；;\n]{0,16}(?:no_data|无数据)"
+    r"[^，,。；;\n]{0,20}(?:允许|可|才|may|allow)[^，,。；;\n]{0,12}"
+    r"(?:(?:云端|实时|cloud|live)[^，,。；;\n]{0,12}(?:回退|查询|fallback)"
+    r"|(?:回退|查询|fallback)[^，,。；;\n]{0,12}(?:云端|实时|cloud|live))"
+)
+CLAUSE_SPLIT = re.compile(r"(?:\r?\n|[，,。；;]|但(?:是)?|然而|不过|随后)")
+PARTIAL_STATUS = re.compile(r"(?i)\bpartial\b")
+CLOUD_FALLBACK_ACTION = re.compile(
+    r"(?i)(?:(?:云端|实时|cloud|live)[^，,。；;\n]{0,12}(?:回退|查询|fallback)"
+    r"|(?:回退|查询|fallback)[^，,。；;\n]{0,12}(?:云端|实时|cloud|live))"
+)
+FALLBACK_NEGATION = re.compile(
+    r"(?i)(?:(?:未|没有|并未|不会|不再|不予|禁止|不得|无需|无须|不需要)"
+    r"[^，,。；;\n]{0,20}(?:(?:云端|实时|cloud|live)"
+    r"[^，,。；;\n]{0,12}(?:回退|查询|fallback)"
+    r"|(?:回退|查询|fallback)[^，,。；;\n]{0,12}(?:云端|实时|cloud|live))"
+    r"|(?:云端|实时|cloud|live)[^，,。；;\n]{0,8}"
+    r"(?:未|没有|并未|不会|不再|不予|禁止|不得|无需|无须|不需要)"
+    r"[^，,。；;\n]{0,12}(?:回退|查询|fallback)"
+    r"|(?:not|never|without)[^，,。；;\n]{0,16}"
+    r"(?:(?:cloud|live)[^，,。；;\n]{0,12}(?:fallback|query)"
+    r"|(?:fallback|query)[^，,。；;\n]{0,12}(?:cloud|live)))"
+)
+FORCED_HEALTH_DECISION = re.compile(
+    r"(?i)(?:必须|应当|需要)[^，,。；;\n]{0,16}"
+    r"(?:取消会议|停止工作|停止训练|修改闹钟|禁止决策|推迟重要决策)"
+)
+NON_FORCING_DECISION = re.compile(
+    r"(?:不需要|无需|无须|不必|没有必要)[^，,。；;\n]{0,16}"
+    r"(?:取消会议|停止工作|停止训练|修改闹钟|禁止决策|推迟重要决策)"
+)
+HEALTH_CAUSALITY = re.compile(
+    r"(?im)^[^\n]*(?:HRV|睡眠|压力|Body Battery|身体电量|心率)[^\n]{0,40}"
+    r"(?:证明|说明|导致|造成|表明)[^\n]{0,40}"
+    r"(?:疾病|感染|炎症|免疫|认知能力|工作表现|职业表现)"
+)
+SHARED_UPSTREAM_OVERCLAIM = re.compile(
+    r"(?is)(?=.*Body Battery)(?=.*睡眠评分)(?=.*(?:独立证据|双重证据|相互印证|叠加))"
+)
+
 HANDOFF_HEADING = re.compile(r"(?im)^#{1,6}\s+Handoff Payload\s*$")
 HANDOFF_JSON_BLOCK = re.compile(
     r"\A[ \t]*(?:\r?\n)+[ \t]*```json[ \t]*\r?\n"
@@ -51,6 +137,188 @@ def find_placeholders(text: str) -> list[str]:
     for pattern in PLACEHOLDER_PATTERNS:
         hits.extend(str(match) for match in re.findall(pattern, text))
     return hits
+
+
+def extract_energy_section(text: str) -> tuple[str | None, list[str]]:
+    headings = list(ENERGY_HEADING.finditer(text))
+    if not headings:
+        return None, []
+    if len(headings) > 1:
+        return None, ["multiple energy-management sections found"]
+
+    start = headings[0].end()
+    next_heading = NEXT_HEADING.search(text, start)
+    end = next_heading.start() if next_heading else len(text)
+    return text[start:end], []
+
+
+def semantic_clauses(text: str) -> list[str]:
+    """Split prose into local assertion units for negation-aware checks."""
+    return [clause.strip() for clause in CLAUSE_SPLIT.split(text) if clause.strip()]
+
+
+def has_partial_cloud_fallback(text: str) -> bool:
+    clauses = semantic_clauses(text)
+    partial_indexes = [
+        index for index, clause in enumerate(clauses) if PARTIAL_STATUS.search(clause)
+    ]
+    if not partial_indexes:
+        return False
+
+    for index, clause in enumerate(clauses):
+        candidate = FALLBACK_NEGATION.sub("", clause)
+        if ALLOWED_NO_DATA_FALLBACK.search(candidate) or UNRELATED_DOMAIN.search(candidate):
+            continue
+        if not CLOUD_FALLBACK_ACTION.search(candidate):
+            continue
+        if any(abs(index - partial_index) <= 2 for partial_index in partial_indexes):
+            return True
+    return False
+
+
+def has_forced_health_decision(text: str, energy_section: str | None) -> bool:
+    """Limit schedule blockers to health-scoped, affirmative action claims."""
+    if energy_section:
+        for clause in semantic_clauses(energy_section):
+            candidate = NON_FORCING_DECISION.sub("", clause)
+            if FORCED_HEALTH_DECISION.search(candidate):
+                return True
+
+    clauses = semantic_clauses(text)
+    for clause in clauses:
+        candidate = NON_FORCING_DECISION.sub("", clause)
+        unrelated_subject = re.search(
+            r"(?i)(?:项目负责人|会议组织者|行情|股票|交易|代码|脚本|调试|Python|API|接口|市场)",
+            candidate,
+        )
+        if (
+            FORCED_HEALTH_DECISION.search(candidate)
+            and HEALTH_CONTEXT.search(candidate)
+            and not unrelated_subject
+        ):
+            return True
+
+    for index, clause in enumerate(clauses):
+        candidate = NON_FORCING_DECISION.sub("", clause)
+        if not FORCED_HEALTH_DECISION.search(candidate):
+            continue
+        if re.search(
+            r"(?i)(?:项目负责人|会议组织者|行情|股票|交易|代码|脚本|调试|Python|API|接口|市场)",
+            candidate,
+        ):
+            continue
+        prior_window = " ".join(clauses[max(0, index - 2) : index])
+        if HEALTH_CONTEXT.search(prior_window) and (
+            HEALTH_CAUSAL_CONNECTOR.search(candidate) or index > 0
+        ):
+            return True
+
+    lines = [line.strip() for line in text.splitlines() if line.strip()]
+    for index, line in enumerate(lines):
+        candidate = NON_FORCING_DECISION.sub("", line)
+        if not FORCED_HEALTH_DECISION.search(candidate):
+            continue
+        if UNRELATED_DOMAIN.search(candidate):
+            continue
+        prior = lines[index - 1] if index > 0 else ""
+        if HEALTH_CONTEXT.search(prior) and HEALTH_CAUSAL_CONNECTOR.search(candidate):
+            return True
+    return False
+
+
+def has_health_scoped_none(text: str, energy_section: str | None) -> bool:
+    if energy_section is not None and PYTHON_NONE.search(energy_section):
+        return True
+
+    lines = [line.strip() for line in text.splitlines() if line.strip()]
+    for index, line in enumerate(lines):
+        if PYTHON_NONE.search(line) and (
+            HEALTH_CONTEXT.search(line) or HEALTH_FIELD_PREFIX.search(line)
+        ) and not UNRELATED_DOMAIN.search(line):
+            return True
+        prior = lines[index - 1] if index > 0 else ""
+        if (
+            GENERIC_DATA_FIELD_NONE.search(line)
+            and HEALTH_CONTEXT.search(prior)
+            and not UNRELATED_DOMAIN.search(line)
+            and not UNRELATED_DOMAIN.search(prior)
+        ):
+            return True
+    return False
+
+
+def validate_energy_contract(
+    text: str,
+    enforce_template_fields: bool,
+) -> tuple[list[str], list[str]]:
+    errors: list[str] = []
+    warnings: list[str] = []
+
+    section, section_errors = extract_energy_section(text)
+    errors.extend(section_errors)
+    if section is not None:
+        missing_fields = [
+            field for field in ENERGY_REQUIRED_FIELDS if field not in section
+        ]
+        if missing_fields:
+            message = "energy-management section missing fields: " + ", ".join(
+                missing_fields
+            )
+            if enforce_template_fields:
+                errors.append(message)
+            else:
+                warnings.append(message)
+        if "观测日期" not in section and "无有效观测" not in section:
+            warnings.append(
+                "energy-management section does not expose per-KPI observation dates or an explicit no-observation state"
+            )
+
+    for pattern in COMPOSITE_SCORE_PATTERNS:
+        if pattern.search(text):
+            errors.append(
+                "self-generated composite energy/readiness/recovery/execution score is prohibited"
+            )
+            break
+
+    if has_health_scoped_none(text, section):
+        errors.append("Python None must not appear in user-facing audit text")
+    if MISSING_AS_ZERO.search(text):
+        errors.append("missing health observations must remain null, not physiological value 0")
+    if has_partial_cloud_fallback(text):
+        errors.append("partial local Garmin data must not trigger cloud fallback")
+    if has_forced_health_decision(text, section):
+        errors.append("health observations must not force training, schedule, or decision changes")
+
+    sleep_debt_not_provided = re.search(
+        r"(?i)sleep_debt_status\s*[:=]\s*not_provided_by_source",
+        text,
+    )
+    sleep_debt_value = re.search(
+        r"(?i)sleep_debt_h\s*[:=]\s*(?P<value>null|-?\d+(?:\.\d+)?)",
+        text,
+    )
+    if (
+        sleep_debt_not_provided
+        and sleep_debt_value
+        and sleep_debt_value.group("value").lower() != "null"
+    ) or re.search(
+        r"(?im)^[^\n]*(?:来源未提供|not_provided_by_source)[^\n]*睡眠负债[^\n]*\d",
+        text,
+    ):
+        errors.append(
+            "sleep debt value must stay null when the source status is not_provided_by_source"
+        )
+
+    if HEALTH_CAUSALITY.search(text):
+        warnings.append(
+            "review health causality or medical/cognitive/occupational overreach"
+        )
+    if SHARED_UPSTREAM_OVERCLAIM.search(text):
+        warnings.append(
+            "Body Battery and sleep score share upstream signals and must not be treated as independent evidence"
+        )
+
+    return errors, warnings
 
 
 def extract_handoff_payload(text: str) -> tuple[dict[str, Any] | None, list[str]]:
@@ -150,6 +418,13 @@ def validate(
                 "requires_mentat_diary=true still requires separate explicit user authorization"
             )
 
+    energy_errors, energy_warnings = validate_energy_contract(
+        text,
+        enforce_template_fields,
+    )
+    errors.extend(energy_errors)
+    warnings.extend(energy_warnings)
+
     for term in STYLE_TERMS:
         if term in text:
             warnings.append(f"review potentially shaming or diagnostic language: '{term}'")
@@ -168,8 +443,8 @@ def validate(
 def main() -> int:
     parser = argparse.ArgumentParser(
         description=(
-            "Validate personal-cognitive-auditor output. Only deterministic "
-            "template-mode placeholder and handoff-schema failures block delivery."
+            "Validate personal-cognitive-auditor output. Deterministic template, "
+            "handoff-schema, and health-safety contract failures block delivery."
         )
     )
     parser.add_argument("audit_path", help="Path to the generated audit Markdown")

@@ -454,6 +454,63 @@ class SafetyBoundaryTests(unittest.TestCase):
         for forbidden in ("mg", "茶氨酸", "维生素", "取消会议", "严禁决策"):
             self.assertNotIn(forbidden, rendered)
 
+    def test_audit_exposes_latest_sleep_duration_dates_and_source_status(self):
+        summary = sample_summary()
+        summary["sleep"][-1].update(
+            {
+                "deep_sleep_seconds": 3600,
+                "rem_sleep_seconds": 5400,
+                "restless_periods": 12,
+            }
+        )
+        summary["body_battery"][0].update(
+            {"date": "2026-07-27", "charged": 20, "lowest": 25}
+        )
+        summary["stress"][0]["date"] = "2026-07-27"
+        summary["component_status"] = {
+            "sleep": {"status": "partial", "observed_days": 3},
+            "hrv": {"status": "partial", "observed_days": 3},
+            "body_battery": {"status": "partial", "observed_days": 1},
+            "heart_rate": {"status": "partial", "observed_days": 3},
+            "stress": {"status": "partial", "observed_days": 1},
+        }
+
+        audit = module.perform_bio_metric_audit(summary)
+        sleep = audit["recovery_loop"]["sleep_architecture"]
+
+        self.assertEqual(sleep["observation_date"], "2026-07-27")
+        self.assertEqual(sleep["duration_hours"], 6.5)
+        self.assertEqual(sleep["duration_status"], "observed")
+        self.assertEqual(sleep["deep_pct"], 15.4)
+        self.assertEqual(sleep["rem_pct"], 23.1)
+        self.assertIsNone(sleep["sleep_debt_h"])
+        self.assertEqual(sleep["sleep_debt_status"], "not_provided_by_source")
+        self.assertEqual(
+            audit["system_status"]["rhr"]["observation_date"], "2026-07-27"
+        )
+        self.assertEqual(
+            audit["system_status"]["hrv"]["observation_date"], "2026-07-27"
+        )
+        self.assertEqual(
+            audit["recovery_loop"]["body_battery"]["observation_date"],
+            "2026-07-27",
+        )
+        self.assertEqual(audit["load_friction"]["stress_status"], "observed")
+        self.assertEqual(
+            audit["component_coverage"]["sleep"]["status"], "partial"
+        )
+
+    def test_insight_renders_missing_values_without_python_none(self):
+        summary = sample_summary()
+        for component in ("sleep", "hrv", "body_battery", "heart_rate", "stress"):
+            summary[component] = []
+
+        rendered = module.generate_chinese_insight(summary)["overall_insight"]
+
+        self.assertNotIn("None", rendered)
+        self.assertIn("无有效观测", rendered)
+        self.assertIn("最近睡眠时长", rendered)
+
     def test_insight_has_no_training_or_schedule_advice(self):
         rendered = __import__("json").dumps(
             module.generate_chinese_insight(sample_summary()), ensure_ascii=False

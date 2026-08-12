@@ -1,11 +1,11 @@
 {
   "schema_version": 2,
   "skill": "personal-diary-writer",
-  "generated_at": "2026-08-10T20:17:27",
+  "generated_at": "2026-08-12T20:32:30",
   "hash_algorithm": "SHA-256",
   "text_hash_normalization": "LF",
   "skill_md": "SKILL.md",
-  "skill_md_sha256": "d517dc231b92bbd520f1e01b0a4fa4162d789b7f989771924ab45be14d866a18",
+  "skill_md_sha256": "34f1a9e5c90ca886ddfd77388f646049d3d44931eab57491292a968e27f458a7",
   "top_level_files": [
     "authority.json",
     "SKILL.md"
@@ -13,11 +13,11 @@
   "top_level_file_hashes": [
     {
       "path": "authority.json",
-      "sha256": "07c6667c07aea12242a868997c2ac55e9aec606e56264cb151b0fc5fd9ef6cc8"
+      "sha256": "b73b1cdcf8036e3da73b4b562d0c7825087411ab0e506c75e4f30163f385c3be"
     },
     {
       "path": "SKILL.md",
-      "sha256": "d517dc231b92bbd520f1e01b0a4fa4162d789b7f989771924ab45be14d866a18"
+      "sha256": "34f1a9e5c90ca886ddfd77388f646049d3d44931eab57491292a968e27f458a7"
     }
   ],
   "top_level_directories": [

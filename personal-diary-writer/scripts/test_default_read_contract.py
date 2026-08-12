@@ -63,6 +63,23 @@ class DefaultReadContractTests(unittest.TestCase):
             self.authority_text,
         )
 
+    def test_canonical_mentat_generation_is_auto_authorized(self):
+        self.assertIn("Canonical Mentat auto-save exception", self.authority_text)
+        self.assertIn("originating request is the approval", self.authority_text)
+        self.assertIn("不再重复询问确认", self.proxy_text)
+
+    def test_personal_diary_and_noncanonical_targets_still_require_confirmation(self):
+        self.assertIn("Personal diary checkpoint", self.authority_text)
+        for marker in (
+            "drafts/previews",
+            "personal diaries",
+            "custom paths",
+            "knowledge bases",
+            "Vector Lake",
+        ):
+            with self.subTest(marker=marker):
+                self.assertIn(marker, self.authority_text)
+
 
 if __name__ == "__main__":
     unittest.main()
