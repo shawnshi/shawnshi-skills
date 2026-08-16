@@ -1,10 +1,19 @@
 {
-  "schema_version": 1,
+  "schema_version": 3,
   "skill": "hit-digital-strategy-partner",
-  "generated_at": "2026-07-28T13:33:22",
+  "generated_at": "2026-08-16T22:02:19",
+  "hash_algorithm": "SHA-256",
+  "text_hash_normalization": "LF",
   "skill_md": "SKILL.md",
+  "skill_md_sha256": "a8937fb96a471ac7109643d42dbe3d089deb6985539f7f2116c3aeb4d62010e9",
   "top_level_files": [
     "SKILL.md"
+  ],
+  "top_level_file_hashes": [
+    {
+      "path": "SKILL.md",
+      "sha256": "a8937fb96a471ac7109643d42dbe3d089deb6985539f7f2116c3aeb4d62010e9"
+    }
   ],
   "top_level_directories": [
     "agents",
@@ -31,56 +40,132 @@
       "file_count": 2
     }
   ],
+  "resource_file_hashes": [
+    {
+      "path": "agents/hit-commercial-analyst.md",
+      "sha256": "7105989516064ee6f2f76bda2d3eb8f95bae531f8a34fbd646840559cd910daf"
+    },
+    {
+      "path": "agents/med-policy-researcher.md",
+      "sha256": "68f20df8af0af29ad7023e17766a2987efd10826d0a451164e7e7cc4c315da4f"
+    },
+    {
+      "path": "examples/workflow_example.md",
+      "sha256": "b46ffc2cab657c7d9909621494491273375d43b99239175a660b42521987744d"
+    },
+    {
+      "path": "references/analyst.md",
+      "sha256": "6b407edcc192ad4739d152d6865d945697564f17a9429dc91d7e77eb462db261"
+    },
+    {
+      "path": "references/compliance_expert.md",
+      "sha256": "0bbaf082879bbf92694106eba4aab92d2467884442648ed9f45e49e836aa2948"
+    },
+    {
+      "path": "references/compliance_rules.json",
+      "sha256": "95e6024d71de85d2dffdbdd31da1d53b8eb1c79862e5094124760f64e16dbf4a"
+    },
+    {
+      "path": "references/editor.md",
+      "sha256": "e512fd83a128d32370180c8361d2b62e911b9cfc228e9eb9a4da1f6a29b21a7c"
+    },
+    {
+      "path": "references/medical_terms.json",
+      "sha256": "b1dadcd0c723447d2be2e32b7734360325f1edbcf2cca81ab26d74eb5ed9310a"
+    },
+    {
+      "path": "references/retrieval_specialist.md",
+      "sha256": "857710cf6a5e0c0ab5bb3be8e321793645693627690310c493123c92598fc2e7"
+    },
+    {
+      "path": "references/workflows.md",
+      "sha256": "72d378dfddc587e09747980b5fb053819ba99e6225a21aac30e6ed6065e0c549"
+    },
+    {
+      "path": "scripts/assembler.py",
+      "sha256": "9c28bb0ae6fb8529f1959c15ab2933dba0f70ecb665287c4a6dc1b8c07e54a8b"
+    },
+    {
+      "path": "scripts/blackboard.py",
+      "sha256": "e32b2f134b043dc1999da1e510074faadcc038ce59060a58a1db2f5a17131e20"
+    },
+    {
+      "path": "scripts/blackboard_validate.py",
+      "sha256": "3256a0e460dc9b4ef43bee9cfe06c45d53c10af6a873b24357974a749af8f358"
+    },
+    {
+      "path": "scripts/compliance_check.py",
+      "sha256": "64c5262b9f535c43e5e0a91ffaae6965c8e1c17b20477bf934bcbaa4468eb78a"
+    },
+    {
+      "path": "scripts/memory_manager.py",
+      "sha256": "91d07d9120332a013135769e5b39f6f9c5e1c538c6548524b759ab5ca2e39830"
+    },
+    {
+      "path": "scripts/strategy_gate.py",
+      "sha256": "0a6dc5ad48491c5441675e26a6a2d6581f98024a4d42cf06d3b3f3e48b6bb1b8"
+    }
+  ],
   "declared_local_dependencies": [
     {
-      "path": "scripts\\blackboard.py",
+      "path": "references/analyst.md",
       "exists": true,
-      "resolved_path": "C:\\Users\\shich\\.codex\\skills\\hit-digital-strategy-partner\\scripts\\blackboard.py"
+      "resolved_path": "hit-digital-strategy-partner/references/analyst.md",
+      "sha256": "6b407edcc192ad4739d152d6865d945697564f17a9429dc91d7e77eb462db261"
     },
     {
-      "path": "scripts\\blackboard_validate.py",
+      "path": "references/compliance_expert.md",
       "exists": true,
-      "resolved_path": "C:\\Users\\shich\\.codex\\skills\\hit-digital-strategy-partner\\scripts\\blackboard_validate.py"
+      "resolved_path": "hit-digital-strategy-partner/references/compliance_expert.md",
+      "sha256": "0bbaf082879bbf92694106eba4aab92d2467884442648ed9f45e49e836aa2948"
     },
     {
-      "path": "scripts\\assembler.py",
+      "path": "references/editor.md",
       "exists": true,
-      "resolved_path": "C:\\Users\\shich\\.codex\\skills\\hit-digital-strategy-partner\\scripts\\assembler.py"
+      "resolved_path": "hit-digital-strategy-partner/references/editor.md",
+      "sha256": "e512fd83a128d32370180c8361d2b62e911b9cfc228e9eb9a4da1f6a29b21a7c"
     },
     {
-      "path": "scripts\\compliance_check.py",
+      "path": "references/retrieval_specialist.md",
       "exists": true,
-      "resolved_path": "C:\\Users\\shich\\.codex\\skills\\hit-digital-strategy-partner\\scripts\\compliance_check.py"
+      "resolved_path": "hit-digital-strategy-partner/references/retrieval_specialist.md",
+      "sha256": "857710cf6a5e0c0ab5bb3be8e321793645693627690310c493123c92598fc2e7"
     },
     {
-      "path": "scripts\\strategy_gate.py",
+      "path": "references/workflows.md",
       "exists": true,
-      "resolved_path": "C:\\Users\\shich\\.codex\\skills\\hit-digital-strategy-partner\\scripts\\strategy_gate.py"
+      "resolved_path": "hit-digital-strategy-partner/references/workflows.md",
+      "sha256": "72d378dfddc587e09747980b5fb053819ba99e6225a21aac30e6ed6065e0c549"
     },
     {
-      "path": "references\\workflows.md",
+      "path": "scripts/assembler.py",
       "exists": true,
-      "resolved_path": "C:\\Users\\shich\\.codex\\skills\\hit-digital-strategy-partner\\references\\workflows.md"
+      "resolved_path": "hit-digital-strategy-partner/scripts/assembler.py",
+      "sha256": "9c28bb0ae6fb8529f1959c15ab2933dba0f70ecb665287c4a6dc1b8c07e54a8b"
     },
     {
-      "path": "references\\retrieval_specialist.md",
+      "path": "scripts/blackboard.py",
       "exists": true,
-      "resolved_path": "C:\\Users\\shich\\.codex\\skills\\hit-digital-strategy-partner\\references\\retrieval_specialist.md"
+      "resolved_path": "hit-digital-strategy-partner/scripts/blackboard.py",
+      "sha256": "e32b2f134b043dc1999da1e510074faadcc038ce59060a58a1db2f5a17131e20"
     },
     {
-      "path": "references\\analyst.md",
+      "path": "scripts/blackboard_validate.py",
       "exists": true,
-      "resolved_path": "C:\\Users\\shich\\.codex\\skills\\hit-digital-strategy-partner\\references\\analyst.md"
+      "resolved_path": "hit-digital-strategy-partner/scripts/blackboard_validate.py",
+      "sha256": "3256a0e460dc9b4ef43bee9cfe06c45d53c10af6a873b24357974a749af8f358"
     },
     {
-      "path": "references\\editor.md",
+      "path": "scripts/compliance_check.py",
       "exists": true,
-      "resolved_path": "C:\\Users\\shich\\.codex\\skills\\hit-digital-strategy-partner\\references\\editor.md"
+      "resolved_path": "hit-digital-strategy-partner/scripts/compliance_check.py",
+      "sha256": "64c5262b9f535c43e5e0a91ffaae6965c8e1c17b20477bf934bcbaa4468eb78a"
     },
     {
-      "path": "references\\compliance_expert.md",
+      "path": "scripts/strategy_gate.py",
       "exists": true,
-      "resolved_path": "C:\\Users\\shich\\.codex\\skills\\hit-digital-strategy-partner\\references\\compliance_expert.md"
+      "resolved_path": "hit-digital-strategy-partner/scripts/strategy_gate.py",
+      "sha256": "0a6dc5ad48491c5441675e26a6a2d6581f98024a4d42cf06d3b3f3e48b6bb1b8"
     }
   ],
   "missing_declared_dependencies": []

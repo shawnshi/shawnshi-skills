@@ -1,7 +1,7 @@
 {
-  "schema_version": 2,
+  "schema_version": 3,
   "skill": "officecli",
-  "generated_at": "2026-08-11T16:47:56",
+  "generated_at": "2026-08-16T22:02:19",
   "hash_algorithm": "SHA-256",
   "text_hash_normalization": "LF",
   "skill_md": "SKILL.md",
@@ -32,6 +32,7 @@
   ],
   "top_level_directories": [],
   "resource_directories": [],
+  "resource_file_hashes": [],
   "declared_local_dependencies": [],
   "missing_declared_dependencies": []
 }

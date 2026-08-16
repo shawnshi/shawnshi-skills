@@ -1,11 +1,24 @@
 {
-  "schema_version": 1,
+  "schema_version": 3,
   "skill": "mentat-collaboration-audit",
-  "generated_at": "2026-07-28T13:33:22",
+  "generated_at": "2026-08-17T06:45:35+08:00",
+  "hash_algorithm": "SHA-256",
+  "text_hash_normalization": "LF",
   "skill_md": "SKILL.md",
+  "skill_md_sha256": "e8acf0fb2bdef2757bd1fd0eaa8076dcb624464a9d502eea6796a37aef7c72d9",
   "top_level_files": [
-    "generate_final_report.py",
-    "SKILL.md"
+    "SKILL.md",
+    "generate_final_report.py"
+  ],
+  "top_level_file_hashes": [
+    {
+      "path": "SKILL.md",
+      "sha256": "e8acf0fb2bdef2757bd1fd0eaa8076dcb624464a9d502eea6796a37aef7c72d9"
+    },
+    {
+      "path": "generate_final_report.py",
+      "sha256": "96dca4c30e33412c3fb2064e597d18c3c6ce5b5317298c6bc80d5807ee39eaf6"
+    }
   ],
   "top_level_directories": [
     "assets",
@@ -17,57 +30,191 @@
   "resource_directories": [
     {
       "name": "scripts",
-      "file_count": 11
+      "file_count": 19
     },
     {
       "name": "references",
       "file_count": 3
     },
     {
+      "name": "resources",
+      "file_count": 0
+    },
+    {
       "name": "assets",
       "file_count": 1
     }
   ],
+  "resource_file_hashes": [
+    {
+      "path": "assets/template.html",
+      "sha256": "132bd561c80219eec6ef5e940de230b0126bac815816842767987e3ca10078e1"
+    },
+    {
+      "path": "evals/evals.json",
+      "sha256": "669ef15c738f5fde6deeb7b50b983e1a06b68c9e3580da1341951fca4ee9daf6"
+    },
+    {
+      "path": "references/report-template.md",
+      "sha256": "169cb3b4848adaede7b8f12906db665d7f874ddff3a129d59ba5b49b46715e1d"
+    },
+    {
+      "path": "references/SCHEMA.md",
+      "sha256": "afc22345a2e38c907ba936fd483846c4eae6daf04a9c002785b2c5ff67cfffbf"
+    },
+    {
+      "path": "references/WORKFLOW.md",
+      "sha256": "5dcbec235c888ebb59fc7de2527892ee394ee0d83df9db696670dce4efd6f7a8"
+    },
+    {
+      "path": "scripts/assets/template.html",
+      "sha256": "935549e7a79ffd76d53436ee1092c2ca86cab3e2c2a5c922cec3215f5e43ec43"
+    },
+    {
+      "path": "scripts/context_recovery_receipt.py",
+      "sha256": "9bd9be46565ce66826ab9db5046e530c72c80a78573a9e2b6f2a64ca6abe5404"
+    },
+    {
+      "path": "scripts/core/engine.py",
+      "sha256": "17f0848a65750bd5f9a03e1dcc26f3f7abd7d145ab2ab4afd916753a531a77a3"
+    },
+    {
+      "path": "scripts/core/test_engine.py",
+      "sha256": "cd08e1fd62f2950235171ed3efc76a2fa6db3c8853ecb4555d2695ef2deaeaef"
+    },
+    {
+      "path": "scripts/freeze_jsonl_snapshot.py",
+      "sha256": "7b4c386b2cd6921667ea0f2be9efee317626aecfe8870d5a895e2d8e895c8dca"
+    },
+    {
+      "path": "scripts/hooks/codex_hook.py",
+      "sha256": "7795f15ff8a6a70cd08757054d0580feea74bd4abe471f1e4965ab6d4f5f0043"
+    },
+    {
+      "path": "scripts/hooks/test_codex_hook.py",
+      "sha256": "8c07934ccb4e3658a4d073a13784c8b7c43ce0d1ee037c37dbbf6f96a251a036"
+    },
+    {
+      "path": "scripts/report_output.py",
+      "sha256": "c8d4f2f7070c03b95da2e4599646be0630ea3bb76ff38bfc27248a8016a98aac"
+    },
+    {
+      "path": "scripts/report_pair.py",
+      "sha256": "9a880139bd7968fbb150e5d3a7c1a165ecc243b3cd7011d989d5bad71cc6ea50"
+    },
+    {
+      "path": "scripts/skill_load_receipt.py",
+      "sha256": "58caf66b42c4930d89f84987cbef3a5f621ffd720272f46a48cf4c90e3d010a4"
+    },
+    {
+      "path": "scripts/standardize_codex_rollout.py",
+      "sha256": "2a60542826d89ddc8b64959ae64c324b89b947e43ee49968b877c71d4bc375de"
+    },
+    {
+      "path": "scripts/test_context_recovery_receipt.py",
+      "sha256": "17fd5d5e1e9c7af94e9b306371ce1a2a660e6d7095a0ee6ffbd825db672de197"
+    },
+    {
+      "path": "scripts/test_freeze_jsonl_snapshot.py",
+      "sha256": "2aa8c01339dce48f1e0fbb20d328179693bb38d7df9d92817753be7bebda3c5c"
+    },
+    {
+      "path": "scripts/test_report_output.py",
+      "sha256": "8a47878a170171b92f21ab27a547c4704478d27ddaaaa1077fa8d387bb267632"
+    },
+    {
+      "path": "scripts/test_report_pair.py",
+      "sha256": "38f54f7b0492147a4062ce93f887a5a9e08bf2aaff7bfcf6e4cc6dc79217afca"
+    },
+    {
+      "path": "scripts/test_skill_load_receipt.py",
+      "sha256": "42b71f88a999fa2e5d83f0dce4adc0ebed42f193098a8bae35b9dd438495c78f"
+    },
+    {
+      "path": "scripts/test_standardize_codex_rollout.py",
+      "sha256": "c1738df4c9903673ec0ec95c1316217253c874fdd6e562c1cd7121a4a560b392"
+    },
+    {
+      "path": "scripts/test_validate_agent_audit.py",
+      "sha256": "20c13a411c591ded00ca52137a27a92037f9b0c48337bd37e6d7a0348c43f7bb"
+    },
+    {
+      "path": "scripts/validate_agent_audit.py",
+      "sha256": "75a326dc3331bde9efa32f326d1f0cd8d3ed8c970c10af3c37312708471c0506"
+    }
+  ],
   "declared_local_dependencies": [
     {
-      "path": "references\\SCHEMA.md",
+      "path": "assets/template.html",
       "exists": true,
-      "resolved_path": "C:\\Users\\shich\\.codex\\skills\\mentat-collaboration-audit\\references\\SCHEMA.md"
+      "resolved_path": "mentat-collaboration-audit/assets/template.html",
+      "sha256": "132bd561c80219eec6ef5e940de230b0126bac815816842767987e3ca10078e1"
     },
     {
-      "path": "references\\WORKFLOW.md",
+      "path": "references/report-template.md",
       "exists": true,
-      "resolved_path": "C:\\Users\\shich\\.codex\\skills\\mentat-collaboration-audit\\references\\WORKFLOW.md"
+      "resolved_path": "mentat-collaboration-audit/references/report-template.md",
+      "sha256": "169cb3b4848adaede7b8f12906db665d7f874ddff3a129d59ba5b49b46715e1d"
     },
     {
-      "path": "scripts\\report_output.py",
+      "path": "references/SCHEMA.md",
       "exists": true,
-      "resolved_path": "C:\\Users\\shich\\.codex\\skills\\mentat-collaboration-audit\\scripts\\report_output.py"
+      "resolved_path": "mentat-collaboration-audit/references/SCHEMA.md",
+      "sha256": "afc22345a2e38c907ba936fd483846c4eae6daf04a9c002785b2c5ff67cfffbf"
     },
     {
-      "path": "assets\\template.html",
+      "path": "references/WORKFLOW.md",
       "exists": true,
-      "resolved_path": "C:\\Users\\shich\\.codex\\skills\\mentat-collaboration-audit\\assets\\template.html"
+      "resolved_path": "mentat-collaboration-audit/references/WORKFLOW.md",
+      "sha256": "5dcbec235c888ebb59fc7de2527892ee394ee0d83df9db696670dce4efd6f7a8"
     },
     {
-      "path": "references\\report-template.md",
+      "path": "scripts/context_recovery_receipt.py",
       "exists": true,
-      "resolved_path": "C:\\Users\\shich\\.codex\\skills\\mentat-collaboration-audit\\references\\report-template.md"
+      "resolved_path": "mentat-collaboration-audit/scripts/context_recovery_receipt.py",
+      "sha256": "9bd9be46565ce66826ab9db5046e530c72c80a78573a9e2b6f2a64ca6abe5404"
     },
     {
-      "path": "scripts\\validate_agent_audit.py",
+      "path": "scripts/freeze_jsonl_snapshot.py",
       "exists": true,
-      "resolved_path": "C:\\Users\\shich\\.codex\\skills\\mentat-collaboration-audit\\scripts\\validate_agent_audit.py"
+      "resolved_path": "mentat-collaboration-audit/scripts/freeze_jsonl_snapshot.py",
+      "sha256": "7b4c386b2cd6921667ea0f2be9efee317626aecfe8870d5a895e2d8e895c8dca"
     },
     {
-      "path": "scripts\\freeze_jsonl_snapshot.py",
+      "path": "scripts/hooks/codex_hook.py",
       "exists": true,
-      "resolved_path": "C:\\Users\\shich\\.codex\\skills\\mentat-collaboration-audit\\scripts\\freeze_jsonl_snapshot.py"
+      "resolved_path": "mentat-collaboration-audit/scripts/hooks/codex_hook.py",
+      "sha256": "7795f15ff8a6a70cd08757054d0580feea74bd4abe471f1e4965ab6d4f5f0043"
     },
     {
-      "path": "scripts\\skill_load_receipt.py",
+      "path": "scripts/report_output.py",
       "exists": true,
-      "resolved_path": "C:\\Users\\shich\\.codex\\skills\\mentat-collaboration-audit\\scripts\\skill_load_receipt.py"
+      "resolved_path": "mentat-collaboration-audit/scripts/report_output.py",
+      "sha256": "c8d4f2f7070c03b95da2e4599646be0630ea3bb76ff38bfc27248a8016a98aac"
+    },
+    {
+      "path": "scripts/report_pair.py",
+      "exists": true,
+      "resolved_path": "mentat-collaboration-audit/scripts/report_pair.py",
+      "sha256": "9a880139bd7968fbb150e5d3a7c1a165ecc243b3cd7011d989d5bad71cc6ea50"
+    },
+    {
+      "path": "scripts/skill_load_receipt.py",
+      "exists": true,
+      "resolved_path": "mentat-collaboration-audit/scripts/skill_load_receipt.py",
+      "sha256": "58caf66b42c4930d89f84987cbef3a5f621ffd720272f46a48cf4c90e3d010a4"
+    },
+    {
+      "path": "scripts/standardize_codex_rollout.py",
+      "exists": true,
+      "resolved_path": "mentat-collaboration-audit/scripts/standardize_codex_rollout.py",
+      "sha256": "2a60542826d89ddc8b64959ae64c324b89b947e43ee49968b877c71d4bc375de"
+    },
+    {
+      "path": "scripts/validate_agent_audit.py",
+      "exists": true,
+      "resolved_path": "mentat-collaboration-audit/scripts/validate_agent_audit.py",
+      "sha256": "75a326dc3331bde9efa32f326d1f0cd8d3ed8c970c10af3c37312708471c0506"
     }
   ],
   "missing_declared_dependencies": []

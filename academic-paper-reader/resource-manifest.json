@@ -1,12 +1,22 @@
 {
-  "schema_version": 1,
+  "schema_version": 3,
   "skill": "academic-paper-reader",
-  "generated_at": "2026-07-28T13:41:38",
+  "generated_at": "2026-08-16T22:02:19",
+  "hash_algorithm": "SHA-256",
+  "text_hash_normalization": "LF",
   "skill_md": "SKILL.md",
+  "skill_md_sha256": "1b1938ca394695c9677418b9300bad94666de7ce8efc22bc551d88ed2bf57054",
   "top_level_files": [
     "SKILL.md"
   ],
+  "top_level_file_hashes": [
+    {
+      "path": "SKILL.md",
+      "sha256": "1b1938ca394695c9677418b9300bad94666de7ce8efc22bc551d88ed2bf57054"
+    }
+  ],
   "top_level_directories": [
+    "agents",
     "examples",
     "resources",
     "scripts"
@@ -17,15 +27,62 @@
       "file_count": 2
     },
     {
+      "name": "resources",
+      "file_count": 2
+    },
+    {
       "name": "examples",
       "file_count": 1
+    },
+    {
+      "name": "agents",
+      "file_count": 1
+    }
+  ],
+  "resource_file_hashes": [
+    {
+      "path": "agents/openai.yaml",
+      "sha256": "7be137001fbf6ad12b83640d2f863e128801da8961fa660e8f059ae2270bec0d"
+    },
+    {
+      "path": "examples/APR-Reference.md",
+      "sha256": "a9cf4a416d285a58ba39871fd3d295ca81b4ffb2d0549b9b61a66a354b5aea54"
+    },
+    {
+      "path": "resources/storytelling_manual.md",
+      "sha256": "23f31b28b23eedc3d1dc2c9aacd1954ea00032be562c085958a6dce141d9121d"
+    },
+    {
+      "path": "resources/template.md",
+      "sha256": "3a91dfe6831e3dfd060a58d7bde0b234445da46d61a578fff75e05f894c3f96f"
+    },
+    {
+      "path": "scripts/paper_audit_gate.py",
+      "sha256": "f53dcf8647b29d81bea7e477b6b588a9af241336699bc3bac137c284c9d6027d"
+    },
+    {
+      "path": "scripts/test_paper_audit_gate.py",
+      "sha256": "e29e055858b3a618bf1c800f430fe79d9f20c6c64f4f859ef7369700507300be"
     }
   ],
   "declared_local_dependencies": [
     {
-      "path": "scripts\\paper_audit_gate.py",
+      "path": "resources/storytelling_manual.md",
       "exists": true,
-      "resolved_path": "C:\\Users\\shich\\.codex\\skills\\academic-paper-reader\\scripts\\paper_audit_gate.py"
+      "resolved_path": "academic-paper-reader/resources/storytelling_manual.md",
+      "sha256": "23f31b28b23eedc3d1dc2c9aacd1954ea00032be562c085958a6dce141d9121d"
+    },
+    {
+      "path": "resources/template.md",
+      "exists": true,
+      "resolved_path": "academic-paper-reader/resources/template.md",
+      "sha256": "3a91dfe6831e3dfd060a58d7bde0b234445da46d61a578fff75e05f894c3f96f"
+    },
+    {
+      "path": "scripts/paper_audit_gate.py",
+      "exists": true,
+      "resolved_path": "academic-paper-reader/scripts/paper_audit_gate.py",
+      "sha256": "f53dcf8647b29d81bea7e477b6b588a9af241336699bc3bac137c284c9d6027d"
     }
   ],
   "missing_declared_dependencies": []

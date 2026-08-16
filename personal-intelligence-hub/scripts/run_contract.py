@@ -148,22 +148,10 @@ def skill_bundle_sha256(skill_path: str | Path) -> str:
 def _canonical_content_sha256(path: Path) -> str:
     data = path.read_bytes()
     if path.suffix.lower() in {
-        ".md",
-        ".txt",
-        ".py",
-        ".ps1",
-        ".sh",
-        ".json",
-        ".yaml",
-        ".yml",
-        ".toml",
-        ".csv",
-        ".tsv",
-        ".html",
-        ".css",
-        ".js",
-        ".ts",
-    }:
+        ".md", ".txt", ".py", ".ps1", ".sh", ".csx", ".cs", ".svg",
+        ".xml", ".json", ".yaml", ".yml", ".toml", ".csv", ".tsv",
+        ".html", ".css", ".js", ".mjs", ".cjs", ".ts", ".tsx", ".jsx",
+    } or path.name.lower() in {".gitignore", ".gitattributes", ".editorconfig"}:
         text = data.decode("utf-8")
         data = text.replace("\r\n", "\n").replace("\r", "\n").encode("utf-8")
     return hashlib.sha256(data).hexdigest()
@@ -173,29 +161,60 @@ def validate_resource_manifest(manifest_path: str | Path, skill_path: str | Path
     path = Path(manifest_path)
     root = Path(skill_path).resolve().parent
     payload = load_json(path, {})
+    schema_version = payload.get("schema_version") if isinstance(payload, dict) else None
     if (
         not isinstance(payload, dict)
-        or payload.get("schema_version") != 2
+        or schema_version not in {2, 3}
         or payload.get("skill") != root.name
     ):
         raise RunContractError("skill resource manifest identity is invalid")
+    if schema_version == 3 and (
+        payload.get("hash_algorithm") != "SHA-256"
+        or payload.get("text_hash_normalization") != "LF"
+    ):
+        raise RunContractError("skill resource manifest hash contract is invalid")
     if payload.get("missing_declared_dependencies"):
         raise RunContractError("skill resource manifest has missing dependencies")
     declared: list[tuple[str, str]] = []
     skill_name = str(payload.get("skill_md") or "SKILL.md")
     declared.append((skill_name, str(payload.get("skill_md_sha256") or "")))
-    for record in payload.get("top_level_file_hashes", []):
-        if isinstance(record, dict):
-            declared.append((str(record.get("path") or ""), str(record.get("sha256") or "")))
+
+    def append_hash_records(field: str, *, required: bool = False) -> None:
+        records = payload.get(field)
+        if not isinstance(records, list) or (required and not records):
+            raise RunContractError(f"skill resource manifest {field} is invalid")
+        for record in records:
+            if not isinstance(record, dict):
+                raise RunContractError(f"skill resource manifest {field} is invalid")
+            relative = str(record.get("path") or "")
+            expected = str(record.get("sha256") or "").lower()
+            if (
+                not relative
+                or len(expected) != 64
+                or any(character not in "0123456789abcdef" for character in expected)
+            ):
+                raise RunContractError(f"skill resource manifest {field} is invalid")
+            declared.append((relative, expected))
+
+    append_hash_records("top_level_file_hashes")
+    if schema_version == 3:
+        append_hash_records("resource_file_hashes", required=True)
     for record in payload.get("declared_local_dependencies", []):
         if isinstance(record, dict) and record.get("exists") is True:
             declared.append((str(record.get("path") or ""), str(record.get("sha256") or "")))
-    seen: set[str] = set()
+    seen: dict[str, str] = {}
     for relative, expected in declared:
         normalized = relative.replace("\\", "/")
-        if not normalized or normalized in seen:
+        if not normalized:
             continue
-        seen.add(normalized)
+        prior = seen.get(normalized)
+        if prior is not None:
+            if prior != expected:
+                raise RunContractError(
+                    f"skill resource manifest has conflicting hashes: {normalized}"
+                )
+            continue
+        seen[normalized] = expected
         dependency = (root / Path(normalized)).resolve()
         try:
             dependency.relative_to(root)

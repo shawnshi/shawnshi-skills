@@ -261,6 +261,18 @@
                         "repair skill trigger conflicts",
                         "update skills readme and gate",
                         "validate skills library before publishing"
+                    ],
+                    "handoff_skills": [
+                        "system:skill-creator",
+                        "system:plugin-creator",
+                        "system:skill-installer",
+                        "plugin:github:yeet"
+                    ],
+                    "should_not_trigger_signals": [
+                        "create a generic new skill",
+                        "edit one skill without repository governance",
+                        "package skills as an installable plugin",
+                        "install a skill from another repository"
                     ]
                 }
             ]

@@ -11,7 +11,8 @@
     body { margin:0; background:var(--bg); color:var(--ink); font:16px/1.65 system-ui,-apple-system,"Segoe UI",sans-serif; }
     main { max-width:1100px; margin:auto; padding:40px 24px 64px; }
     header,.card { background:var(--card); border:1px solid var(--line); border-radius:16px; padding:24px; margin-bottom:18px; }
-    h1,h2 { margin-top:0; } .meta { color:var(--muted); } table { width:100%; border-collapse:collapse; }
+    h1,h2 { margin-top:0; } .meta { color:var(--muted); } .table-wrap { overflow-x:auto; }
+    table { width:100%; border-collapse:collapse; }
     th,td { padding:10px; border-bottom:1px solid var(--line); text-align:left; vertical-align:top; }
     code { overflow-wrap:anywhere; }
   </style>
@@ -25,7 +26,7 @@
   <section class="card"><h2>关键结论</h2>{{KEY_FINDINGS}}</section>
   <section class="card"><h2>发现与证据</h2>{{FINDINGS_TABLE}}</section>
   <section class="card"><h2>指标与口径</h2>{{METRICS}}</section>
-  <section class="card"><h2>整改建议</h2>{{RECOMMENDATIONS}}</section>
+  <section class="card" data-report-pair-section="recommendations"><h2>整改建议</h2><div class="table-wrap">{{RECOMMENDATIONS}}</div></section>
   <section class="card"><h2>未知项与残余风险</h2>{{LIMITATIONS}}</section>
 </main>
 </body>

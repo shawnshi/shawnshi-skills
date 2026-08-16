@@ -1,10 +1,19 @@
 {
-  "schema_version": 1,
+  "schema_version": 3,
   "skill": "tool-document-summarizer",
-  "generated_at": "2026-07-28T13:46:56",
+  "generated_at": "2026-08-16T22:02:19",
+  "hash_algorithm": "SHA-256",
+  "text_hash_normalization": "LF",
   "skill_md": "SKILL.md",
+  "skill_md_sha256": "58b0d5f022e0c351d4a825ff9e9a47da65074bb8bcac6a74b2de1e322628aa22",
   "top_level_files": [
     "SKILL.md"
+  ],
+  "top_level_file_hashes": [
+    {
+      "path": "SKILL.md",
+      "sha256": "58b0d5f022e0c351d4a825ff9e9a47da65074bb8bcac6a74b2de1e322628aa22"
+    }
   ],
   "top_level_directories": [
     "references",
@@ -20,41 +29,98 @@
       "file_count": 4
     }
   ],
+  "resource_file_hashes": [
+    {
+      "path": "references/examples/README.md",
+      "sha256": "ee4bbd6ae8b2f02027fb35c74f79b9b0064484d235e0bdfaf851d335c28420a2"
+    },
+    {
+      "path": "references/examples/sample_input.json",
+      "sha256": "3e5370a747fda932c9269544a8311070fe988c43d2d6df2574f0190ca771c25d"
+    },
+    {
+      "path": "references/examples/sample_output.json",
+      "sha256": "7ec8a4c828e4155f73f0292f6ee89fd81b7245fb910b9d7ae54db1e315345193"
+    },
+    {
+      "path": "references/healthcare_ontology.json",
+      "sha256": "59cdcc5521ba49ea185ea3bad50dd18925b605b3d9df7fc3f4c7f4a9fb872364"
+    },
+    {
+      "path": "scripts/apply_metadata_enhanced.py",
+      "sha256": "f58ca04f6a07afa08a9cfa80c9dd763174ef278e090f2302e627e880e90e777d"
+    },
+    {
+      "path": "scripts/extract_text.py",
+      "sha256": "f81e96c4d7f462a5892b068dd904b4e24edd859068d04750a578fae04cf43227"
+    },
+    {
+      "path": "scripts/generate_summaries_enhanced.py",
+      "sha256": "56e6c2abd0ef386024e63ef4351793fd3be6eccffe9acf4f2675af54a12249a0"
+    },
+    {
+      "path": "scripts/medical_standard_checker.py",
+      "sha256": "2be1138432c8a73f76be459460be0ff0f59fc2c3d4696000bf30e61b2c61ec92"
+    },
+    {
+      "path": "scripts/orchestrate_enhanced.py",
+      "sha256": "62f924a283cada6418d79e23f89eee1a654714015390ffb9adb394b1da48a64d"
+    },
+    {
+      "path": "scripts/portfolio_audit.py",
+      "sha256": "816a7c49a817de55140e81b9f25beead2998f74c903ce14c903007c19ebb6a79"
+    },
+    {
+      "path": "scripts/requirements.txt",
+      "sha256": "8faa1a2f945ea694bbe6f790aac4ff7f31b195a5744dba51d3a79752fcc849bf"
+    },
+    {
+      "path": "scripts/test_summary_controls.py",
+      "sha256": "5552e1c451e04fe04885bc3b542a907bb08ae42f294b8c9209eee4cd69707189"
+    }
+  ],
   "declared_local_dependencies": [
     {
-      "path": "scripts\\extract_text.py",
+      "path": "references/healthcare_ontology.json",
       "exists": true,
-      "resolved_path": "C:\\Users\\shich\\.codex\\skills\\tool-document-summarizer\\scripts\\extract_text.py"
+      "resolved_path": "tool-document-summarizer/references/healthcare_ontology.json",
+      "sha256": "59cdcc5521ba49ea185ea3bad50dd18925b605b3d9df7fc3f4c7f4a9fb872364"
     },
     {
-      "path": "scripts\\orchestrate_enhanced.py",
+      "path": "scripts/apply_metadata_enhanced.py",
       "exists": true,
-      "resolved_path": "C:\\Users\\shich\\.codex\\skills\\tool-document-summarizer\\scripts\\orchestrate_enhanced.py"
+      "resolved_path": "tool-document-summarizer/scripts/apply_metadata_enhanced.py",
+      "sha256": "f58ca04f6a07afa08a9cfa80c9dd763174ef278e090f2302e627e880e90e777d"
     },
     {
-      "path": "references\\healthcare_ontology.json",
+      "path": "scripts/extract_text.py",
       "exists": true,
-      "resolved_path": "C:\\Users\\shich\\.codex\\skills\\tool-document-summarizer\\references\\healthcare_ontology.json"
+      "resolved_path": "tool-document-summarizer/scripts/extract_text.py",
+      "sha256": "f81e96c4d7f462a5892b068dd904b4e24edd859068d04750a578fae04cf43227"
     },
     {
-      "path": "scripts\\medical_standard_checker.py",
+      "path": "scripts/medical_standard_checker.py",
       "exists": true,
-      "resolved_path": "C:\\Users\\shich\\.codex\\skills\\tool-document-summarizer\\scripts\\medical_standard_checker.py"
+      "resolved_path": "tool-document-summarizer/scripts/medical_standard_checker.py",
+      "sha256": "2be1138432c8a73f76be459460be0ff0f59fc2c3d4696000bf30e61b2c61ec92"
     },
     {
-      "path": "scripts\\portfolio_audit.py",
+      "path": "scripts/orchestrate_enhanced.py",
       "exists": true,
-      "resolved_path": "C:\\Users\\shich\\.codex\\skills\\tool-document-summarizer\\scripts\\portfolio_audit.py"
+      "resolved_path": "tool-document-summarizer/scripts/orchestrate_enhanced.py",
+      "sha256": "62f924a283cada6418d79e23f89eee1a654714015390ffb9adb394b1da48a64d"
     },
     {
-      "path": "scripts\\apply_metadata_enhanced.py",
+      "path": "scripts/portfolio_audit.py",
       "exists": true,
-      "resolved_path": "C:\\Users\\shich\\.codex\\skills\\tool-document-summarizer\\scripts\\apply_metadata_enhanced.py"
+      "resolved_path": "tool-document-summarizer/scripts/portfolio_audit.py",
+      "sha256": "816a7c49a817de55140e81b9f25beead2998f74c903ce14c903007c19ebb6a79"
     },
     {
-      "path": "scripts\\requirements.txt",
+      "path": "scripts/requirements.txt",
       "exists": true,
-      "resolved_path": "C:\\Users\\shich\\.codex\\skills\\tool-document-summarizer\\scripts\\requirements.txt"
+      "resolved_path": "tool-document-summarizer/scripts/requirements.txt",
+      "sha256": "8faa1a2f945ea694bbe6f790aac4ff7f31b195a5744dba51d3a79752fcc849bf"
     }
   ],
   "missing_declared_dependencies": []

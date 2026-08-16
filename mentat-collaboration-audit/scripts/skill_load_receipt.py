@@ -10,6 +10,13 @@ import tiktoken
 
 
 FRONTMATTER_RE = re.compile(r"\A---\s*\n(.*?)\n---\s*\n", re.DOTALL)
+RECEIPT_KEY_FIELDS = (
+    "root_task_id",
+    "actor_id",
+    "context_epoch",
+    "skill_name",
+    "skill_sha256",
+)
 
 
 def _metadata(text):
@@ -38,6 +45,7 @@ def build_receipt(skill_path, root_task_id, actor_id, context_epoch):
     text = raw.decode("utf-8")
     meta = _metadata(text)
     digest = hashlib.sha256(raw).hexdigest()
+    normalized_path = os.path.normcase(str(path)).replace("\\", "/")
     tokenizer_name = "cl100k_base"
     tokenizer = tiktoken.get_encoding(tokenizer_name)
     return {
@@ -53,7 +61,7 @@ def build_receipt(skill_path, root_task_id, actor_id, context_epoch):
         "status": "ok",
         "context_epoch": context_epoch,
         "skill_name": meta["name"],
-        "skill_path": os.path.normcase(str(path)).replace("\\", "/"),
+        "skill_path_sha256": hashlib.sha256(normalized_path.encode("utf-8")).hexdigest(),
         "skill_version": meta.get("version"),
         "skill_sha256": digest,
         "skill_tokens": len(tokenizer.encode(text)),
@@ -61,14 +69,47 @@ def build_receipt(skill_path, root_task_id, actor_id, context_epoch):
     }
 
 
+def receipt_key(receipt):
+    values = tuple(receipt.get(field) for field in RECEIPT_KEY_FIELDS)
+    if any(not isinstance(value, str) or not value for value in values):
+        raise ValueError("receipt is missing an idempotency field")
+    return values
+
+
 def append_receipt(output_path, receipt):
     output = Path(output_path).resolve()
     output.parent.mkdir(parents=True, exist_ok=True)
-    line = json.dumps(receipt, ensure_ascii=False, sort_keys=True) + "\n"
-    with open(output, "a", encoding="utf-8", newline="\n") as handle:
-        handle.write(line)
-        handle.flush()
-        os.fsync(handle.fileno())
+    lock_path = output.with_name(output.name + ".lock")
+    try:
+        lock_fd = os.open(lock_path, os.O_CREAT | os.O_EXCL | os.O_WRONLY)
+    except FileExistsError as exc:
+        raise RuntimeError(f"receipt output is locked: {output}") from exc
+
+    try:
+        os.close(lock_fd)
+        key = receipt_key(receipt)
+        if output.exists():
+            with output.open("r", encoding="utf-8") as handle:
+                for line_number, line in enumerate(handle, start=1):
+                    if not line.strip():
+                        continue
+                    try:
+                        existing = json.loads(line)
+                    except json.JSONDecodeError as exc:
+                        raise ValueError(
+                            f"invalid receipt JSON at {output}:{line_number}"
+                        ) from exc
+                    if receipt_key(existing) == key:
+                        return False
+
+        line = json.dumps(receipt, ensure_ascii=False, sort_keys=True) + "\n"
+        with output.open("a", encoding="utf-8", newline="\n") as handle:
+            handle.write(line)
+            handle.flush()
+            os.fsync(handle.fileno())
+        return True
+    finally:
+        lock_path.unlink(missing_ok=True)
 
 
 def main():

@@ -1,10 +1,19 @@
 {
-  "schema_version": 1,
+  "schema_version": 3,
   "skill": "tool-smart-latex",
-  "generated_at": "2026-07-20T13:27:41",
+  "generated_at": "2026-08-16T22:27:50+08:00",
+  "hash_algorithm": "SHA-256",
+  "text_hash_normalization": "LF",
   "skill_md": "SKILL.md",
+  "skill_md_sha256": "e17ff870ebf3f516814707e06478a99532ff5e626d02d2753e415fed52539e86",
   "top_level_files": [
     "SKILL.md"
+  ],
+  "top_level_file_hashes": [
+    {
+      "path": "SKILL.md",
+      "sha256": "e17ff870ebf3f516814707e06478a99532ff5e626d02d2753e415fed52539e86"
+    }
   ],
   "top_level_directories": [
     "references",
@@ -21,21 +30,62 @@
       "file_count": 1
     }
   ],
+  "resource_file_hashes": [
+    {
+      "path": "references/styles.md",
+      "sha256": "7dccf3f977f8961baad1f91dad42b5dd8bfcf4eb6ff87e25db57d2fd0a271961"
+    },
+    {
+      "path": "scripts/process_idioms.py",
+      "sha256": "81cd34db9410ef71d8acc43c609c13969a6f69d0c9cb3a3e381ca692b24f0929"
+    },
+    {
+      "path": "scripts/smart_engine.py",
+      "sha256": "d990343e05b1511df743e70f45fc4d9217f9a175d0bd4edc5e89d3de2f7dcd99"
+    },
+    {
+      "path": "scripts/test_smart_engine.py",
+      "sha256": "2a288b6a78a77e48e40d5bc684fecb170d37acc9635674c4c413c5c0758f46d9"
+    },
+    {
+      "path": "templates/academic.tex",
+      "sha256": "a994a4791f349f0d815a523ff6d9a73da208d7ece5bf6763787f74a372760b1b"
+    },
+    {
+      "path": "templates/book.tex",
+      "sha256": "b1a028e04099fd332f2626df75b6df66510739de30c39148a6be67b283d71b49"
+    },
+    {
+      "path": "templates/cv.tex",
+      "sha256": "8965cacee2b5578ec7af60d1de6c50cf86d78f08bab79453093b22640397508f"
+    },
+    {
+      "path": "templates/tech_book.tex",
+      "sha256": "4e4d1c21d0774340658634833c2280b167fb16fc80ce160c68dd8a5d81b8c960"
+    },
+    {
+      "path": "templates/tech_report.tex",
+      "sha256": "aad59b808eb1921be7e5e9c05f2682c7741e58a605f8f437376e6ab03874826e"
+    }
+  ],
   "declared_local_dependencies": [
     {
-      "path": "references\\styles.md",
+      "path": "references/styles.md",
       "exists": true,
-      "resolved_path": "C:\\Users\\shich\\.codex\\skills\\tool-smart-latex\\references\\styles.md"
+      "resolved_path": "tool-smart-latex/references/styles.md",
+      "sha256": "7dccf3f977f8961baad1f91dad42b5dd8bfcf4eb6ff87e25db57d2fd0a271961"
     },
     {
-      "path": "scripts\\process_idioms.py",
+      "path": "scripts/process_idioms.py",
       "exists": true,
-      "resolved_path": "C:\\Users\\shich\\.codex\\skills\\tool-smart-latex\\scripts\\process_idioms.py"
+      "resolved_path": "tool-smart-latex/scripts/process_idioms.py",
+      "sha256": "81cd34db9410ef71d8acc43c609c13969a6f69d0c9cb3a3e381ca692b24f0929"
     },
     {
-      "path": "scripts\\smart_engine.py",
+      "path": "scripts/smart_engine.py",
       "exists": true,
-      "resolved_path": "C:\\Users\\shich\\.codex\\skills\\tool-smart-latex\\scripts\\smart_engine.py"
+      "resolved_path": "tool-smart-latex/scripts/smart_engine.py",
+      "sha256": "d990343e05b1511df743e70f45fc4d9217f9a175d0bd4edc5e89d3de2f7dcd99"
     }
   ],
   "missing_declared_dependencies": []

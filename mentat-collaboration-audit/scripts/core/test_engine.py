@@ -272,6 +272,79 @@ class AggregateTests(unittest.TestCase):
         errors = validator.validate_report_payload(report)
         self.assertIn("operational_metrics.retry is missing", errors)
 
+    def test_fail_closed_batch_a_metrics(self) -> None:
+        records = [
+            {
+                "event_type": "wait",
+                "root_task_id": "r1",
+                "actor_id": "root",
+                "status": "timeout",
+                "state_version": "same",
+            },
+            {
+                "event_type": "wait",
+                "root_task_id": "r1",
+                "actor_id": "root",
+                "status": "timeout",
+                "state_version": "same",
+            },
+            {
+                "event_type": "wait",
+                "root_task_id": "r1",
+                "actor_id": "root",
+                "status": "timeout",
+                "state_version": "same",
+            },
+            {
+                "event_type": "skill_load_candidate",
+                "root_task_id": "r1",
+                "actor_id": "root",
+                "context_epoch": "1",
+                "skill_name": "audit",
+            },
+            {
+                "event_type": "skill_load",
+                "root_task_id": "r1",
+                "actor_id": "root",
+                "context_epoch": "1",
+                "skill_name": "audit",
+                "skill_sha256": "abc",
+                "skill_tokens": 10,
+                "tokenizer": "cl100k_base",
+            },
+            {
+                "event_type": "context_compacted",
+                "root_task_id": "r1",
+                "context_epoch": "1",
+            },
+            {
+                "event_type": "context_recovered",
+                "root_task_id": "r1",
+                "context_epoch": "1",
+                "required_fields_verified": False,
+            },
+            {
+                "event_type": "write_attempt",
+                "root_task_id": "r1",
+                "write_scope_sha256": "scope-a",
+            },
+            {
+                "event_type": "write_commit",
+                "root_task_id": "r1",
+                "write_scope_sha256": "scope-a",
+            },
+        ]
+
+        metrics = engine.aggregate(records)["operational_metrics"]
+        self.assertEqual(metrics["wait"]["wait_gate_breach_count"], 1)
+        self.assertEqual(metrics["wait"]["wait_gate_breach_sequence_count"], 1)
+        self.assertEqual(metrics["skill_load"]["receipt_coverage"], 1.0)
+        self.assertEqual(metrics["authorization"]["write_attempt_count"], 1)
+        self.assertEqual(metrics["authorization"]["write_commit_count"], 1)
+        self.assertEqual(metrics["authorization"]["authorization_evidence_status"], "partial")
+        self.assertEqual(metrics["context"]["context_recovery_coverage"], 1.0)
+        self.assertEqual(metrics["context"]["semantic_recovery_coverage"], 0.0)
+
 
 if __name__ == "__main__":
     unittest.main()

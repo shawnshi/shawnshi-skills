@@ -1,11 +1,24 @@
 {
-  "schema_version": 1,
+  "schema_version": 3,
   "skill": "tool-tts",
-  "generated_at": "2026-07-14T21:01:44",
+  "generated_at": "2026-08-16T22:02:19",
+  "hash_algorithm": "SHA-256",
+  "text_hash_normalization": "LF",
   "skill_md": "SKILL.md",
+  "skill_md_sha256": "cff80738d966027652a5cb880f74457b435a0886bccb676e7f4ab90e4d5ca6cd",
   "top_level_files": [
-    "install.ps1",
-    "SKILL.md"
+    "SKILL.md",
+    "install.ps1"
+  ],
+  "top_level_file_hashes": [
+    {
+      "path": "SKILL.md",
+      "sha256": "cff80738d966027652a5cb880f74457b435a0886bccb676e7f4ab90e4d5ca6cd"
+    },
+    {
+      "path": "install.ps1",
+      "sha256": "f0f2b1bcb3d4b3656d29954e7cd4239b0ad333e9293913570bbe6c7dfedebfd7"
+    }
   ],
   "top_level_directories": [
     "scripts"
@@ -16,11 +29,18 @@
       "file_count": 1
     }
   ],
+  "resource_file_hashes": [
+    {
+      "path": "scripts/tts_engine.py",
+      "sha256": "747c1a9cedce6cdc214695c14e7236d8b12e6115fdcf9a7087e862f413a59eac"
+    }
+  ],
   "declared_local_dependencies": [
     {
-      "path": "scripts\\tts_engine.py",
+      "path": "scripts/tts_engine.py",
       "exists": true,
-      "resolved_path": "C:\\Users\\shich\\.codex\\skills\\tool-tts\\scripts\\tts_engine.py"
+      "resolved_path": "tool-tts/scripts/tts_engine.py",
+      "sha256": "747c1a9cedce6cdc214695c14e7236d8b12e6115fdcf9a7087e862f413a59eac"
     }
   ],
   "missing_declared_dependencies": []

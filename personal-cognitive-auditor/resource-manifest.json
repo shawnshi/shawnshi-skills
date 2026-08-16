@@ -1,7 +1,7 @@
 {
-  "schema_version": 2,
+  "schema_version": 3,
   "skill": "personal-cognitive-auditor",
-  "generated_at": "2026-08-12T21:51:24",
+  "generated_at": "2026-08-16T22:02:19",
   "hash_algorithm": "SHA-256",
   "text_hash_normalization": "LF",
   "skill_md": "SKILL.md",
@@ -34,33 +34,83 @@
       "file_count": 4
     }
   ],
+  "resource_file_hashes": [
+    {
+      "path": "prompts/ANNUAL.md",
+      "sha256": "666037660c22400bbe7eddaa622130f2e797c93bb6f923a56497735e1e674a74"
+    },
+    {
+      "path": "prompts/DAILY.md",
+      "sha256": "1ca152033140bdc05a58a718a6bc6f2e25a0c08d35bb6a39b605dc8df6b8de46"
+    },
+    {
+      "path": "prompts/MONTHLY.md",
+      "sha256": "9bd69583a530fa8a084c8d3ffe0d0dca166da358446e944707e895640a827ade"
+    },
+    {
+      "path": "prompts/WEEKLY.md",
+      "sha256": "3cc593af5ab449784ba6b8f145da21be852e947ddb28a19f9ff119680d53c188"
+    },
+    {
+      "path": "references/config.md",
+      "sha256": "2fe99a9231cc7571e70d4ab58d042f7823082554f99f0aa2cd669a8948527d55"
+    },
+    {
+      "path": "references/energy_management.md",
+      "sha256": "bfa6e6bfd934d615bb494cb3a410f7179bd72054cb26a7c2da25146c02d43461"
+    },
+    {
+      "path": "references/handoff_contract.md",
+      "sha256": "88f42d71e576a21454c89566456639614fefe98c5f4e935767d64737dafc1abc"
+    },
+    {
+      "path": "references/semantic_layer.md",
+      "sha256": "65825974bd1fd722e4a869bc07e22d0a7ef46f926c207cff8f69e711c8374c43"
+    },
+    {
+      "path": "references/templates.md",
+      "sha256": "26769fe5ca601c3990226909d80840426de28f35df173db9fd1c84dd16628f8c"
+    },
+    {
+      "path": "references/work_nodes.md",
+      "sha256": "16d0bf3785f6eedc894a16fd8993e4511f0304eaa4042b04917441fd500be85b"
+    },
+    {
+      "path": "scripts/audit_gate.py",
+      "sha256": "9462ab5ade1b6a1027399b0a332164976250fd1cfc37a10a769386a9549a2da9"
+    },
+    {
+      "path": "scripts/test_audit_gate.py",
+      "sha256": "b1948c6e737e21181fd568bc94bf534041d789bcc5fd6f97f39f29ef4d3ed775"
+    }
+  ],
   "declared_local_dependencies": [
     {
-      "path": "references\\energy_management.md",
+      "path": "references/energy_management.md",
       "exists": true,
       "resolved_path": "personal-cognitive-auditor/references/energy_management.md",
       "sha256": "bfa6e6bfd934d615bb494cb3a410f7179bd72054cb26a7c2da25146c02d43461"
     },
     {
-      "path": "references\\templates.md",
-      "exists": true,
-      "resolved_path": "personal-cognitive-auditor/references/templates.md",
-      "sha256": "26769fe5ca601c3990226909d80840426de28f35df173db9fd1c84dd16628f8c"
-    },
-    {
-      "path": "references\\semantic_layer.md",
-      "exists": true,
-      "resolved_path": "personal-cognitive-auditor/references/semantic_layer.md",
-      "sha256": "65825974bd1fd722e4a869bc07e22d0a7ef46f926c207cff8f69e711c8374c43"
-    },
-    {
-      "path": "references\\handoff_contract.md",
+      "path": "references/handoff_contract.md",
       "exists": true,
       "resolved_path": "personal-cognitive-auditor/references/handoff_contract.md",
       "sha256": "88f42d71e576a21454c89566456639614fefe98c5f4e935767d64737dafc1abc"
     },
     {
-      "path": "scripts\\audit_gate.py",
+      "path": "references/semantic_layer.md",
+      "exists": true,
+      "resolved_path": "personal-cognitive-auditor/references/semantic_layer.md",
+      "sha256": "65825974bd1fd722e4a869bc07e22d0a7ef46f926c207cff8f69e711c8374c43"
+    },
+    {
+      "path": "references/templates.md",
+      "exists": true,
+      "resolved_path": "personal-cognitive-auditor/references/templates.md",
+      "sha256": "26769fe5ca601c3990226909d80840426de28f35df173db9fd1c84dd16628f8c"
+    },
+    {
+      "path": "scripts/audit_gate.py",
       "exists": true,
       "resolved_path": "personal-cognitive-auditor/scripts/audit_gate.py",
       "sha256": "9462ab5ade1b6a1027399b0a332164976250fd1cfc37a10a769386a9549a2da9"

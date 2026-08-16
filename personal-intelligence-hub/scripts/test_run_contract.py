@@ -23,6 +23,7 @@ from run_contract import (
     review_input_bundle_sha256,
     register_review_bundle,
     register_supplement_results,
+    validate_resource_manifest,
     validate_review_receipt,
 )
 
@@ -128,6 +129,53 @@ class RunContractTests(unittest.TestCase):
         self.assertEqual(focus["mix_policy"]["default_ratio"], expected)
         self.assertIn("默认领域请求比例为技术 60%、医疗数字化 40%", skill)
         self.assertIn("7 条为 4:3、5 条为 3:2、3 条为 2:1", skill)
+
+    def test_resource_manifest_v3_validates_all_resource_hashes(self):
+        references = self.runtime_dir / "references"
+        references.mkdir()
+        contract = references / "contract.json"
+        contract.write_text('{"version": 1}\n', encoding="utf-8")
+        payload = json.loads(
+            (self.runtime_dir / "resource-manifest.json").read_text(encoding="utf-8")
+        )
+        payload.update(
+            {
+                "schema_version": 3,
+                "hash_algorithm": "SHA-256",
+                "text_hash_normalization": "LF",
+                "resource_file_hashes": [
+                    {
+                        "path": "references/contract.json",
+                        "sha256": hashlib.sha256(b'{"version": 1}\n').hexdigest(),
+                    }
+                ],
+            }
+        )
+        manifest = self.runtime_dir / "resource-manifest.json"
+        manifest.write_text(json.dumps(payload), encoding="utf-8")
+
+        validate_resource_manifest(manifest, self.skill_file)
+
+        contract.write_text('{"version": 2}\n', encoding="utf-8")
+        with self.assertRaisesRegex(RunContractError, "hash mismatch"):
+            validate_resource_manifest(manifest, self.skill_file)
+
+    def test_resource_manifest_v3_requires_resource_hash_inventory(self):
+        payload = json.loads(
+            (self.runtime_dir / "resource-manifest.json").read_text(encoding="utf-8")
+        )
+        payload.update(
+            {
+                "schema_version": 3,
+                "hash_algorithm": "SHA-256",
+                "text_hash_normalization": "LF",
+            }
+        )
+        manifest = self.runtime_dir / "resource-manifest.json"
+        manifest.write_text(json.dumps(payload), encoding="utf-8")
+
+        with self.assertRaisesRegex(RunContractError, "resource_file_hashes"):
+            validate_resource_manifest(manifest, self.skill_file)
 
     def test_user_can_override_default_with_previous_four_to_six_ratio(self):
         _, manifest = create_run(

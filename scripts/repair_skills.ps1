@@ -76,17 +76,65 @@ $AutomaticPersistenceOptOutTriggerPattern = '(?i)(?:\u8349\u7A3F|\u9884\u89C8|\u
 $AutomaticPersistenceOptOutEffectPattern = '(?i)(?:\u53EA\u8BFB|\u4FDD\u6301\u53EA\u8BFB|\u4E0D\u9002\u7528|\u4E0D\u8C03\u7528\u5F52\u6863|\u4E0D\u751F\u6210\u5199\u5165|\u4E0D\u5199\u5165|\u4E0D\u5F52\u6863|\u4E0D\u843D\u76D8|\u4E0D\u4FDD\u5B58|read[- ]?only|does\s+not\s+apply|do\s+not\s+(?:save|persist|archive|write))'
 $AutomaticPersistenceOptOutRelationPattern = '(?i)(?:(?:\u82E5|\u5982\u679C|\u5F53|\u7528\u6237\u8981\u6C42|\u7528\u6237\u660E\u786E\u8981\u6C42)[^\r\n]{0,50}(?:\u8349\u7A3F|\u9884\u89C8|\u4E0D\u4FDD\u5B58|preview|draft|no[- ]?save)[^\r\n]{0,20}(?:\u65F6|\u5219|,|\uFF0C)[^\r\n]{0,40}(?:\u53EA\u8BFB|\u4FDD\u6301\u53EA\u8BFB|\u4E0D\u5199\u5165|\u4E0D\u5F52\u6863|\u4E0D\u843D\u76D8|\u4E0D\u4FDD\u5B58|read[- ]?only|do\s+not\s+(?:save|persist|archive|write))|\u8BE5\u4F8B\u5916\u4E0D\u9002\u7528\u4E8E[^\r\n]{0,50}(?:\u8349\u7A3F|\u9884\u89C8|\u4E0D\u4FDD\u5B58)|(?:if|when)[^\r\n]{0,30}(?:preview|draft|no[- ]?save)[^\r\n]{0,30}(?:read[- ]?only|do\s+not\s+(?:save|persist|archive|write)))'
 
-function Get-SkillDirectories {
+function Get-AllSkillDirectories {
     Get-ChildItem -LiteralPath $Root -Directory |
         Where-Object {
-            $_.Name -notin @('.system', 'scripts', 'shared', 'reports') -and
+            $_.Name -notin @('.system', 'scripts', 'shared', 'reports', 'examples') -and
             (Test-Path -LiteralPath (Join-Path $_.FullName 'SKILL.md'))
         } |
-        Where-Object {
-            (-not $IncludeSkills -or $_.Name -in $IncludeSkills) -and
-            $_.Name -notin $ExcludeSkills
-        } |
         Sort-Object Name
+}
+
+function Invoke-PythonJsonValidator {
+    param(
+        [string]$ScriptPath,
+        [string[]]$Arguments
+    )
+
+    $python = Get-Command python -ErrorAction SilentlyContinue
+    if ($null -eq $python -or -not (Test-Path -LiteralPath $ScriptPath)) {
+        return [PSCustomObject]@{
+            Parsed = $false
+            ExitCode = 1
+            Payload = $null
+            Error = 'python validator unavailable'
+        }
+    }
+
+    $output = @(& $python.Source '-B' '-X' 'utf8' $ScriptPath @Arguments 2>&1)
+    $exitCode = $LASTEXITCODE
+    try {
+        $payload = ($output -join "`n") | ConvertFrom-Json
+        return [PSCustomObject]@{
+            Parsed = $true
+            ExitCode = $exitCode
+            Payload = $payload
+            Error = ''
+        }
+    } catch {
+        return [PSCustomObject]@{
+            Parsed = $false
+            ExitCode = $exitCode
+            Payload = $null
+            Error = 'validator returned invalid JSON'
+        }
+    }
+}
+
+function Get-NonNegativeIntegerProperty {
+    param(
+        [object]$Object,
+        [string]$Name
+    )
+
+    if ($null -eq $Object -or $Object.PSObject.Properties.Name -notcontains $Name) {
+        return $null
+    }
+    $parsed = 0
+    if ([int]::TryParse([string]$Object.$Name, [ref]$parsed) -and $parsed -ge 0) {
+        return $parsed
+    }
+    return $null
 }
 
 function Get-PatternHits {
@@ -107,10 +155,6 @@ function Test-AutomaticPersistence {
         [string]$Text,
         [string]$SkillName = ''
     )
-
-    if ($SkillName -eq 'personal-cognitive-auditor') {
-        return $false
-    }
 
     foreach ($line in $Text -split '\r?\n') {
         if ($line -match '(?i)Schema[^\r\n]{0,80}\u6570\u636E\u5E93\u53D8\u5316[^\r\n]{0,80}(?:\u4E0D\u5F97|\u4E0D\u80FD|\u7981\u6B62)[^\r\n]{0,30}\u89E6\u53D1[^\r\n]{0,20}\u56DE\u9000') {
@@ -133,6 +177,9 @@ function Test-AutomaticPersistence {
                 continue
             }
             if ($clause -match '(?i)(?:(?:\u5FC5\u987B|\u9700\u8981|\u4ECD\u9700|\u53EA\u6709|\u4EC5\u5728|\u53E6\u884C|\u660E\u786E)[^\r\n]{0,40}(?:\u6388\u6743|\u540C\u610F|\u786E\u8BA4)[^\r\n]{0,60}(?:\u540C\u6B65|\u4FDD\u5B58|\u5199\u5165|\u6301\u4E45\u5316)|(?:\u540C\u6B65|\u4FDD\u5B58|\u5199\u5165|\u6301\u4E45\u5316)[^\r\n]{0,50}(?:\u5FC5\u987B|\u9700\u8981|\u4ECD\u9700|\u53EA\u6709|\u4EC5\u5728|\u53E6\u884C|\u660E\u786E)[^\r\n]{0,30}(?:\u6388\u6743|\u540C\u610F|\u786E\u8BA4)|(?:must|required|only\s+with|explicit)[^\r\n]{0,30}(?:authori[sz]ation|consent|confirmation)[^\r\n]{0,40}(?:sync|save|write|persist)|(?:sync|save|write|persist)[^\r\n]{0,40}(?:must|required|only\s+with|explicit)[^\r\n]{0,30}(?:authori[sz]ation|consent|confirmation))') {
+                continue
+            }
+            if ($clause -match '(?i)(?:\u9ED8\u8BA4\u6388\u6743[^\r\n]{0,30}\u4E0D\u5305\u542B|default\s+authori[sz]ation[^\r\n]{0,30}does\s+not\s+include)[^\r\n]{0,120}(?:\u540C\u6B65|\u4FDD\u5B58|\u5199\u5165|\u6301\u4E45\u5316|sync|save|write|persist)') {
                 continue
             }
             $candidate = [regex]::Replace($clause, $DirectPersistenceNegationPattern, '')
@@ -272,7 +319,11 @@ function Get-ManifestStatus {
 }
 
 function Get-TriggerOwnershipStatus {
-    param([string[]]$KnownSkills)
+    param(
+        [string[]]$KnownSkills,
+        [string[]]$SelectedSkills = @(),
+        [bool]$Scoped = $false
+    )
 
     $path = Join-Path $Root 'shared\trigger-ownership-matrix.json'
     if (-not (Test-Path -LiteralPath $path)) {
@@ -294,22 +345,65 @@ function Get-TriggerOwnershipStatus {
             $classCount++
             $location = "$($domain.domain)/$($class.id)"
             $primary = [string]$class.primary_skill
-            if ($KnownSkills -notcontains $primary) {
+            $secondarySkills = @($class.secondary_skills | ForEach-Object { [string]$_ })
+            $classSkills = @($primary) + $secondarySkills
+            $isRelevant = -not $Scoped -or @($classSkills | Where-Object { $_ -in $SelectedSkills }).Count -gt 0
+            if ($isRelevant -and $KnownSkills -notcontains $primary) {
                 $conflicts.Add("$location unknown primary_skill: $primary")
             }
-            foreach ($secondary in @($class.secondary_skills)) {
-                if ($KnownSkills -notcontains [string]$secondary) {
+            foreach ($secondary in $secondarySkills) {
+                if ($isRelevant -and $KnownSkills -notcontains $secondary) {
                     $conflicts.Add("$location unknown secondary_skill: $secondary")
                 }
             }
+            $handoffSkills = if ($class.PSObject.Properties.Name -contains 'handoff_skills') {
+                @($class.handoff_skills | ForEach-Object { [string]$_ })
+            } else {
+                @()
+            }
+            foreach ($handoff in $handoffSkills) {
+                if (-not $isRelevant) {
+                    continue
+                }
+                if ([string]::IsNullOrWhiteSpace($handoff)) {
+                    $conflicts.Add("$location contains empty handoff_skill")
+                } elseif ($handoff -notmatch '^(?:system|plugin):' -and $KnownSkills -notcontains $handoff) {
+                    $conflicts.Add("$location unknown handoff_skill: $handoff")
+                }
+            }
+            $positiveSignals = [System.Collections.Generic.HashSet[string]]::new([StringComparer]::OrdinalIgnoreCase)
             foreach ($signal in @($class.request_signals)) {
                 $normalized = ([string]$signal).Trim().ToLowerInvariant()
                 if ([string]::IsNullOrWhiteSpace($normalized)) {
-                    $conflicts.Add("$location contains empty request_signal")
+                    if ($isRelevant) {
+                        $conflicts.Add("$location contains empty request_signal")
+                    }
                 } elseif ($owners.ContainsKey($normalized)) {
-                    $conflicts.Add("duplicate request_signal '$signal' in $($owners[$normalized]) and $location")
+                    $previous = $owners[$normalized]
+                    if ($isRelevant -or $previous.Relevant) {
+                        $conflicts.Add("duplicate request_signal '$signal' in $($previous.Location) and $location")
+                    }
                 } else {
-                    $owners[$normalized] = $location
+                    $owners[$normalized] = [PSCustomObject]@{ Location = $location; Relevant = $isRelevant }
+                }
+                if (-not [string]::IsNullOrWhiteSpace($normalized)) {
+                    [void]$positiveSignals.Add($normalized)
+                }
+            }
+            $negativeSignals = if ($class.PSObject.Properties.Name -contains 'should_not_trigger_signals') {
+                @($class.should_not_trigger_signals)
+            } else {
+                @()
+            }
+            foreach ($signal in $negativeSignals) {
+                $normalized = ([string]$signal).Trim().ToLowerInvariant()
+                if (-not $isRelevant) {
+                    continue
+                }
+                if ([string]::IsNullOrWhiteSpace($normalized)) {
+                    $conflicts.Add("$location contains empty should_not_trigger_signal")
+                } elseif ($positiveSignals.Contains($normalized)) {
+                    $conflicts.Add("$location repeats a signal in both positive and negative sets: $signal")
                 }
             }
         }
@@ -318,8 +412,22 @@ function Get-TriggerOwnershipStatus {
     [PSCustomObject]@{ Exists = $true; ClassCount = $classCount; Conflicts = @($conflicts) }
 }
 
-$skillDirectories = @(Get-SkillDirectories)
-$records = foreach ($directory in $skillDirectories) {
+$allSkillDirectories = @(Get-AllSkillDirectories)
+$allSkillNames = @($allSkillDirectories | ForEach-Object Name)
+$requestedIncludeSkills = @($IncludeSkills | Where-Object { -not [string]::IsNullOrWhiteSpace($_) } | Sort-Object -Unique)
+$requestedExcludeSkills = @($ExcludeSkills | Where-Object { -not [string]::IsNullOrWhiteSpace($_) } | Sort-Object -Unique)
+$unknownIncludeSkills = @($requestedIncludeSkills | Where-Object { $_ -notin $allSkillNames })
+$unknownExcludeSkills = @($requestedExcludeSkills | Where-Object { $_ -notin $allSkillNames })
+$scopeOverlapSkills = @($requestedIncludeSkills | Where-Object { $_ -in $requestedExcludeSkills })
+$isScoped = $requestedIncludeSkills.Count -gt 0 -or $requestedExcludeSkills.Count -gt 0
+$skillDirectories = @(
+    $allSkillDirectories |
+        Where-Object {
+            ($requestedIncludeSkills.Count -eq 0 -or $_.Name -in $requestedIncludeSkills) -and
+            $_.Name -notin $requestedExcludeSkills
+        }
+)
+$records = @(foreach ($directory in $skillDirectories) {
     $skillPath = Join-Path $directory.FullName 'SKILL.md'
     $lines = @(Get-Content -LiteralPath $skillPath -Encoding UTF8)
     $text = $lines -join "`n"
@@ -356,7 +464,7 @@ $records = foreach ($directory in $skillDirectories) {
         AutomaticPersistence = Test-AutomaticPersistence -Text $text -SkillName $directory.Name
         AutomaticPersistenceHasOptOut = Test-AutomaticPersistenceOptOut -Text $text
     }
-}
+})
 
 $readmePath = Join-Path $Root 'README.md'
 $declaredInventory = 0
@@ -364,15 +472,28 @@ $declaredAutomaticPersistenceRecords = @()
 $automaticPersistenceTableMalformedRows = 0
 $automaticPersistenceTableDuplicateSkills = 0
 $automaticPersistenceTableSemanticFailures = 0
+$automaticPersistenceTableIssues = [System.Collections.Generic.List[object]]::new()
 if (Test-Path -LiteralPath $readmePath) {
     $readmeText = Get-Content -LiteralPath $readmePath -Raw -Encoding UTF8
     if ($readmeText -match '\u5F53\u524D\u5E93\u5B58\u4E3A\s*(?<count>\d+)\s*\u4E2A\u7528\u6237\u6280\u80FD') {
         $declaredInventory = [int]$Matches.count
     }
     if ($readmeText -match '(?s)<!-- automatic-persistence-exceptions:start -->(?<block>.*?)<!-- automatic-persistence-exceptions:end -->') {
-        $tableRows = @($Matches.block -split '\r?\n' | Where-Object { $_ -match '^\|\s*`' })
+        $tableRows = @(
+            $Matches.block -split '\r?\n' |
+                Where-Object {
+                    $_ -match '^\s*\|' -and
+                    $_ -notmatch '(?i)^\s*\|\s*Skill\s*\|' -and
+                    $_ -notmatch '^\s*\|\s*:?-{3,}:?\s*\|'
+                }
+        )
         $parsedRows = [System.Collections.Generic.List[object]]::new()
         foreach ($row in $tableRows) {
+            $rowSkill = if ($row -match '^\|\s*`?(?<skill>[a-z0-9]+(?:-[a-z0-9]+)*)`?\s*\|') {
+                $Matches.skill.Trim()
+            } else {
+                ''
+            }
             if ($row -match '^\|\s*`(?<skill>[a-z0-9]+(?:-[a-z0-9]+)*)`\s*\|\s*(?<trigger>[^|]+?)\s*\|\s*(?<target>[^|]+?)\s*\|\s*(?<optout>[^|]+?)\s*\|\s*$') {
                 $record = [PSCustomObject]@{
                     Skill = $Matches.skill.Trim()
@@ -385,7 +506,7 @@ if (Test-Path -LiteralPath $readmePath) {
                         Where-Object { [string]::IsNullOrWhiteSpace($_) -or $_ -match '^-+$' }
                 )
                 if ($emptyFields.Count -gt 0) {
-                    $automaticPersistenceTableMalformedRows++
+                    $automaticPersistenceTableIssues.Add([PSCustomObject]@{ Type = 'Malformed'; Skill = $rowSkill })
                 } else {
                     $genericFieldPattern = '(?i)^(?:anything|any|maybe|\u4EFB\u610F|\u4E0D\u9650|\u968F\u610F|\u672A\u5B9A)$'
                     $openTargetPattern = '(?i)(?:\u4EFB\u610F|\u4E0D\u9650|\u5916\u90E8\u7CFB\u7EDF|anything|anywhere|external\s+system)'
@@ -402,28 +523,48 @@ if (Test-Path -LiteralPath $readmePath) {
                         -not $targetClosed -or
                         -not $optOutSpecific
                     ) {
-                        $automaticPersistenceTableSemanticFailures++
+                        $automaticPersistenceTableIssues.Add([PSCustomObject]@{ Type = 'Semantic'; Skill = $rowSkill })
                     } else {
                         $parsedRows.Add($record)
                     }
                 }
             } else {
-                $automaticPersistenceTableMalformedRows++
+                $automaticPersistenceTableIssues.Add([PSCustomObject]@{ Type = 'Malformed'; Skill = $rowSkill })
             }
         }
         $declaredAutomaticPersistenceRecords = @($parsedRows)
-        $automaticPersistenceTableDuplicateSkills = @(
+        $duplicatePersistenceGroups = @(
             $declaredAutomaticPersistenceRecords |
                 Group-Object Skill |
                 Where-Object Count -gt 1
-        ).Count
+        )
+        foreach ($group in $duplicatePersistenceGroups) {
+            $automaticPersistenceTableIssues.Add([PSCustomObject]@{ Type = 'Duplicate'; Skill = $group.Name })
+        }
     }
 }
 
+$selectedSkillNames = @($records | ForEach-Object Skill)
+$automaticPersistenceTableIssuesForScope = @(
+    if ($isScoped) {
+        $automaticPersistenceTableIssues | Where-Object { $_.Skill -in $selectedSkillNames }
+    } else {
+        $automaticPersistenceTableIssues
+    }
+)
+$automaticPersistenceTableMalformedRows = @($automaticPersistenceTableIssuesForScope | Where-Object Type -eq 'Malformed').Count
+$automaticPersistenceTableDuplicateSkills = @($automaticPersistenceTableIssuesForScope | Where-Object Type -eq 'Duplicate').Count
+$automaticPersistenceTableSemanticFailures = @($automaticPersistenceTableIssuesForScope | Where-Object Type -eq 'Semantic').Count
+$declaredAutomaticPersistenceRecordsForScope = @(
+    if ($isScoped) {
+        $declaredAutomaticPersistenceRecords | Where-Object { $_.Skill -in $selectedSkillNames }
+    } else {
+        $declaredAutomaticPersistenceRecords
+    }
+)
 $automaticPersistenceRecords = @($records | Where-Object AutomaticPersistence)
 $automaticPersistenceSkills = @($automaticPersistenceRecords | ForEach-Object Skill)
-$declaredAutomaticPersistenceExceptions = @($declaredAutomaticPersistenceRecords | ForEach-Object Skill)
-$knownSkills = @($records | ForEach-Object Skill)
+$declaredAutomaticPersistenceExceptions = @($declaredAutomaticPersistenceRecordsForScope | ForEach-Object Skill)
 $undeclaredAutomaticPersistence = @(
     $automaticPersistenceRecords |
         Where-Object { $_.Skill -notin $declaredAutomaticPersistenceExceptions }
@@ -435,7 +576,7 @@ $staleAutomaticPersistenceExceptions = @(
 )
 $unknownAutomaticPersistenceExceptions = @(
     $declaredAutomaticPersistenceExceptions |
-        Where-Object { $_ -notin $knownSkills } |
+        Where-Object { $_ -notin $allSkillNames } |
         Sort-Object -Unique
 )
 $automaticPersistenceOptOutFailures = @(
@@ -446,25 +587,98 @@ $automaticPersistenceOptOutFailures = @(
         }
 )
 
+$hygieneRoots = if ($isScoped) { @($skillDirectories | ForEach-Object FullName) } else { @($Root) }
 $skillJsonFiles = @(
-    Get-ChildItem -LiteralPath $Root -Recurse -Filter 'skill.json' -File |
-        Where-Object { $_.FullName -notmatch '[\\/]\.system[\\/]' }
+    foreach ($scanRoot in $hygieneRoots) {
+        Get-ChildItem -LiteralPath $scanRoot -Recurse -Filter 'skill.json' -File |
+            Where-Object { $_.FullName -notmatch '[\\/]\.system[\\/]' }
+    }
 )
 $nodeModules = @(
-    Get-ChildItem -LiteralPath $Root -Recurse -Directory -Filter 'node_modules' -ErrorAction SilentlyContinue |
-        Where-Object { $_.FullName -notmatch '[\\/]\.system[\\/]' }
+    foreach ($scanRoot in $hygieneRoots) {
+        Get-ChildItem -LiteralPath $scanRoot -Recurse -Directory -Filter 'node_modules' -ErrorAction SilentlyContinue |
+            Where-Object { $_.FullName -notmatch '[\\/]\.system[\\/]' }
+    }
 )
-$triggerStatus = Get-TriggerOwnershipStatus -KnownSkills @($records.Skill)
+$triggerStatus = Get-TriggerOwnershipStatus `
+    -KnownSkills $allSkillNames `
+    -SelectedSkills $selectedSkillNames `
+    -Scoped $isScoped
+
+$validatorScopeArguments = [System.Collections.Generic.List[string]]::new()
+$validatorScopeArguments.Add('--root')
+$validatorScopeArguments.Add($Root)
+$validatorScopeArguments.Add('--json')
+foreach ($skillName in $requestedIncludeSkills) {
+    $validatorScopeArguments.Add('--include-skill')
+    $validatorScopeArguments.Add($skillName)
+}
+foreach ($skillName in $requestedExcludeSkills) {
+    $validatorScopeArguments.Add('--exclude-skill')
+    $validatorScopeArguments.Add($skillName)
+}
+
+$resourceManifestValidation = Invoke-PythonJsonValidator `
+    -ScriptPath (Join-Path $PSScriptRoot 'resource_manifest.py') `
+    -Arguments (@('check') + @($validatorScopeArguments))
+$resourceChecked = Get-NonNegativeIntegerProperty -Object $resourceManifestValidation.Payload -Name 'checked'
+$resourceStale = Get-NonNegativeIntegerProperty -Object $resourceManifestValidation.Payload -Name 'stale'
+$resourceExitConsistent = (
+    ($resourceManifestValidation.ExitCode -eq 0 -and $resourceStale -eq 0) -or
+    ($resourceManifestValidation.ExitCode -eq 1 -and $null -ne $resourceStale -and $resourceStale -gt 0)
+)
+$resourceValidatorIntegrationFailure = -not (
+    $resourceManifestValidation.Parsed -and
+    $null -ne $resourceChecked -and
+    $resourceChecked -eq $records.Count -and
+    $null -ne $resourceStale -and
+    $resourceExitConsistent
+)
+$invalidResourceManifests = if ($null -ne $resourceStale) { $resourceStale } else { 0 }
+
+$openAiMetadataValidation = Invoke-PythonJsonValidator `
+    -ScriptPath (Join-Path $PSScriptRoot 'validate_openai_yaml.py') `
+    -Arguments @($validatorScopeArguments)
+$expectedMetadataChecks = @(
+    $skillDirectories | Where-Object {
+        Test-Path -LiteralPath (Join-Path $_.FullName 'agents\openai.yaml')
+    }
+).Count
+$metadataChecked = Get-NonNegativeIntegerProperty -Object $openAiMetadataValidation.Payload -Name 'checked'
+$metadataFailures = Get-NonNegativeIntegerProperty -Object $openAiMetadataValidation.Payload -Name 'failures'
+$metadataExitConsistent = (
+    ($openAiMetadataValidation.ExitCode -eq 0 -and $metadataFailures -eq 0) -or
+    ($openAiMetadataValidation.ExitCode -eq 1 -and $null -ne $metadataFailures -and $metadataFailures -gt 0)
+)
+$metadataValidatorIntegrationFailure = -not (
+    $openAiMetadataValidation.Parsed -and
+    $null -ne $metadataChecked -and
+    $metadataChecked -eq $expectedMetadataChecks -and
+    $null -ne $metadataFailures -and
+    $metadataExitConsistent
+)
+$openAiMetadataFailures = if ($null -ne $metadataFailures) { $metadataFailures } else { 0 }
+$validatorIntegrationFailures = [int]$resourceValidatorIntegrationFailure + [int]$metadataValidatorIntegrationFailure
 
 $summary = [PSCustomObject]@{
     Root = $Root
+    Scope = if ($isScoped) { 'Selection' } else { 'Repository' }
     DeclaredInventory = $declaredInventory
+    AllSkillCount = $allSkillDirectories.Count
     SkillCount = $records.Count
-    InventoryMismatch = $declaredInventory -ne $records.Count
+    UnknownIncludeSkills = $unknownIncludeSkills.Count
+    UnknownExcludeSkills = $unknownExcludeSkills.Count
+    ScopeOverlapSkills = $scopeOverlapSkills.Count
+    EmptySelection = [bool]($isScoped -and $records.Count -eq 0)
+    RepositoryChecksSkipped = if ($isScoped) { 'inventory; unrelated skill hygiene; unrelated persistence rows; unrelated trigger classes' } else { '' }
+    InventoryMismatch = -not $isScoped -and $declaredInventory -ne $allSkillDirectories.Count
     FrontmatterFailures = @($records | Where-Object { -not $_.FrontmatterValid }).Count
     OversizedSkills = @($records | Where-Object LineCount -gt $LineThreshold).Count
     MissingResourceManifests = @($records | Where-Object { -not $_.HasResourceManifest }).Count
     ManifestDependencyIssues = @($records | Where-Object { $_.ManifestIssues.Count -gt 0 }).Count
+    InvalidResourceManifests = $invalidResourceManifests
+    OpenAiMetadataFailures = $openAiMetadataFailures
+    ValidatorIntegrationFailures = $validatorIntegrationFailures
     DeprecatedToolSkills = @($records | Where-Object { $_.DeprecatedTokens.Count -gt 0 }).Count
     ForeignRuntimeSkills = @($records | Where-Object { $_.ForeignRuntime.Count -gt 0 }).Count
     ReasoningDirectiveSkills = @($records | Where-Object { $_.ReasoningDirectives.Count -gt 0 }).Count
@@ -472,7 +686,7 @@ $summary = [PSCustomObject]@{
     MandatorySubagentSkills = @($records | Where-Object MandatorySubagent).Count
     MandatoryPersistenceSkills = @($records | Where-Object MandatoryPersistence).Count
     AutomaticPersistenceSkills = $automaticPersistenceRecords.Count
-    DeclaredAutomaticPersistenceExceptions = $declaredAutomaticPersistenceRecords.Count
+    DeclaredAutomaticPersistenceExceptions = $declaredAutomaticPersistenceRecordsForScope.Count
     UndeclaredAutomaticPersistenceSkills = $undeclaredAutomaticPersistence.Count
     StaleAutomaticPersistenceExceptions = $staleAutomaticPersistenceExceptions.Count
     UnknownAutomaticPersistenceExceptions = $unknownAutomaticPersistenceExceptions.Count
@@ -489,10 +703,17 @@ $summary = [PSCustomObject]@{
 $failures = [System.Collections.Generic.List[string]]::new()
 foreach ($entry in @(
     @{ Name = 'inventory_mismatch'; Value = [int]$summary.InventoryMismatch },
+    @{ Name = 'unknown_include_skills'; Value = $summary.UnknownIncludeSkills },
+    @{ Name = 'unknown_exclude_skills'; Value = $summary.UnknownExcludeSkills },
+    @{ Name = 'scope_overlap_skills'; Value = $summary.ScopeOverlapSkills },
+    @{ Name = 'empty_selection'; Value = [int]$summary.EmptySelection },
     @{ Name = 'frontmatter_failures'; Value = $summary.FrontmatterFailures },
     @{ Name = 'oversized_skills'; Value = $summary.OversizedSkills },
     @{ Name = 'missing_resource_manifests'; Value = $summary.MissingResourceManifests },
     @{ Name = 'manifest_dependency_issues'; Value = $summary.ManifestDependencyIssues },
+    @{ Name = 'invalid_resource_manifests'; Value = $summary.InvalidResourceManifests },
+    @{ Name = 'openai_metadata_failures'; Value = $summary.OpenAiMetadataFailures },
+    @{ Name = 'validator_integration_failures'; Value = $summary.ValidatorIntegrationFailures },
     @{ Name = 'deprecated_tool_skills'; Value = $summary.DeprecatedToolSkills },
     @{ Name = 'foreign_runtime_skills'; Value = $summary.ForeignRuntimeSkills },
     @{ Name = 'reasoning_directive_skills'; Value = $summary.ReasoningDirectiveSkills },
@@ -528,6 +749,8 @@ if ($Mode -eq 'Report') {
         Summary = $summary
         Records = $records
         TriggerOwnership = $triggerStatus
+        ResourceManifestValidation = $resourceManifestValidation.Payload
+        OpenAiMetadataValidation = $openAiMetadataValidation.Payload
     } | ConvertTo-Json -Depth 7 | Set-Content -LiteralPath (Join-Path $ReportDir 'skills-audit.json') -Encoding UTF8
 }
 

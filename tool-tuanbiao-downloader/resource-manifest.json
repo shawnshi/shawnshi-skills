@@ -1,10 +1,19 @@
 {
-  "schema_version": 1,
+  "schema_version": 3,
   "skill": "tool-tuanbiao-downloader",
-  "generated_at": "2026-07-14T21:01:44",
+  "generated_at": "2026-08-16T22:02:19",
+  "hash_algorithm": "SHA-256",
+  "text_hash_normalization": "LF",
   "skill_md": "SKILL.md",
+  "skill_md_sha256": "d606f1c581d40e661096db9ee2192ea8aa92c3501f56466ea59e515bb5ec8ea7",
   "top_level_files": [
     "SKILL.md"
+  ],
+  "top_level_file_hashes": [
+    {
+      "path": "SKILL.md",
+      "sha256": "d606f1c581d40e661096db9ee2192ea8aa92c3501f56466ea59e515bb5ec8ea7"
+    }
   ],
   "top_level_directories": [
     "references",
@@ -20,16 +29,32 @@
       "file_count": 1
     }
   ],
-  "declared_local_dependencies": [
+  "resource_file_hashes": [
     {
-      "path": "scripts\\requirements.txt",
-      "exists": true,
-      "resolved_path": "C:\\Users\\shich\\.codex\\skills\\tool-tuanbiao-downloader\\scripts\\requirements.txt"
+      "path": "references/troubleshooting.md",
+      "sha256": "3c93579e9a5deaa679d65e24ed45457b5f984bd2dd2e9c90a42b21bcbd93b5a2"
     },
     {
-      "path": "scripts\\downloader.py",
+      "path": "scripts/downloader.py",
+      "sha256": "69607c89b5862db237bc5fbc920ec935907836b60e18ad5c858fadb62ab23604"
+    },
+    {
+      "path": "scripts/requirements.txt",
+      "sha256": "290fa54aa63b20920f0fe7dd6a7472421fb70efd585534737f176d126112f40a"
+    }
+  ],
+  "declared_local_dependencies": [
+    {
+      "path": "scripts/downloader.py",
       "exists": true,
-      "resolved_path": "C:\\Users\\shich\\.codex\\skills\\tool-tuanbiao-downloader\\scripts\\downloader.py"
+      "resolved_path": "tool-tuanbiao-downloader/scripts/downloader.py",
+      "sha256": "69607c89b5862db237bc5fbc920ec935907836b60e18ad5c858fadb62ab23604"
+    },
+    {
+      "path": "scripts/requirements.txt",
+      "exists": true,
+      "resolved_path": "tool-tuanbiao-downloader/scripts/requirements.txt",
+      "sha256": "290fa54aa63b20920f0fe7dd6a7472421fb70efd585534737f176d126112f40a"
     }
   ],
   "missing_declared_dependencies": []

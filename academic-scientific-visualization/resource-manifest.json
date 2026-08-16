@@ -1,10 +1,19 @@
 {
-  "schema_version": 1,
+  "schema_version": 3,
   "skill": "academic-scientific-visualization",
-  "generated_at": "2026-07-14T21:01:43",
+  "generated_at": "2026-08-16T22:02:19",
+  "hash_algorithm": "SHA-256",
+  "text_hash_normalization": "LF",
   "skill_md": "SKILL.md",
+  "skill_md_sha256": "8ac98d3eeadd8a5b972ee279a573c949f85efdeb606425bbd8c48d76584f8c03",
   "top_level_files": [
     "SKILL.md"
+  ],
+  "top_level_file_hashes": [
+    {
+      "path": "SKILL.md",
+      "sha256": "8ac98d3eeadd8a5b972ee279a573c949f85efdeb606425bbd8c48d76584f8c03"
+    }
   ],
   "top_level_directories": [
     "assets",
@@ -25,36 +34,88 @@
       "file_count": 4
     }
   ],
+  "resource_file_hashes": [
+    {
+      "path": "assets/color_palettes.py",
+      "sha256": "ffea28da930406ecb11bbeaebfc530dfac40b772827a7653f449cb3b0bb35309"
+    },
+    {
+      "path": "assets/nature.mplstyle",
+      "sha256": "05b5cab4b5286cd812ff3ceba31845c08baa083d77382df05ec100383e4ff040"
+    },
+    {
+      "path": "assets/presentation.mplstyle",
+      "sha256": "a47167d633cd0695bc428a42ed4e790a69f90d0204ed560bae6902785ba2b823"
+    },
+    {
+      "path": "assets/publication.mplstyle",
+      "sha256": "38244036fb563bdf50b6b15ac927ae62afa3a8f6acf03ec5c9b317adad9c5a14"
+    },
+    {
+      "path": "references/color_palettes.md",
+      "sha256": "4d9ec64478dee9fc8de43fbde9983a413520c436099b0c560b21eadec572270b"
+    },
+    {
+      "path": "references/full_visualization_playbook.md",
+      "sha256": "efb607a7fb15d2e6a1bd4ed211e179f78c4affdb06d47241ba599c9a87cfc541"
+    },
+    {
+      "path": "references/journal_requirements.md",
+      "sha256": "69157b820c78e9bca299ea6f7dcb49624ea778ec3ed619a98e82c3b60e6dc782"
+    },
+    {
+      "path": "references/matplotlib_examples.md",
+      "sha256": "d9195bb8c1b80f235495ac8a63e86fef0462e99cc2cc7d5d244818bfe5ee08cf"
+    },
+    {
+      "path": "references/publication_guidelines.md",
+      "sha256": "c8430dfe7d374edc771c55a0d9c6e1f07ab803f16321d21941835e93944da2d1"
+    },
+    {
+      "path": "scripts/figure_export.py",
+      "sha256": "542f604c2a4dc642c055b24ef26b9e9e808616a33fde0cd2154c975dc83318d0"
+    },
+    {
+      "path": "scripts/style_presets.py",
+      "sha256": "3a4163c6aaaf6792665cf890ab497a2b5070c0ed0adfa524fcaee5262a3f1792"
+    }
+  ],
   "declared_local_dependencies": [
     {
-      "path": "references\\journal_requirements.md",
+      "path": "references/color_palettes.md",
       "exists": true,
-      "resolved_path": "C:\\Users\\shich\\.codex\\skills\\academic-scientific-visualization\\references\\journal_requirements.md"
+      "resolved_path": "academic-scientific-visualization/references/color_palettes.md",
+      "sha256": "4d9ec64478dee9fc8de43fbde9983a413520c436099b0c560b21eadec572270b"
     },
     {
-      "path": "references\\publication_guidelines.md",
+      "path": "references/journal_requirements.md",
       "exists": true,
-      "resolved_path": "C:\\Users\\shich\\.codex\\skills\\academic-scientific-visualization\\references\\publication_guidelines.md"
+      "resolved_path": "academic-scientific-visualization/references/journal_requirements.md",
+      "sha256": "69157b820c78e9bca299ea6f7dcb49624ea778ec3ed619a98e82c3b60e6dc782"
     },
     {
-      "path": "references\\color_palettes.md",
+      "path": "references/matplotlib_examples.md",
       "exists": true,
-      "resolved_path": "C:\\Users\\shich\\.codex\\skills\\academic-scientific-visualization\\references\\color_palettes.md"
+      "resolved_path": "academic-scientific-visualization/references/matplotlib_examples.md",
+      "sha256": "d9195bb8c1b80f235495ac8a63e86fef0462e99cc2cc7d5d244818bfe5ee08cf"
     },
     {
-      "path": "references\\matplotlib_examples.md",
+      "path": "references/publication_guidelines.md",
       "exists": true,
-      "resolved_path": "C:\\Users\\shich\\.codex\\skills\\academic-scientific-visualization\\references\\matplotlib_examples.md"
+      "resolved_path": "academic-scientific-visualization/references/publication_guidelines.md",
+      "sha256": "c8430dfe7d374edc771c55a0d9c6e1f07ab803f16321d21941835e93944da2d1"
     },
     {
-      "path": "scripts\\style_presets.py",
+      "path": "scripts/figure_export.py",
       "exists": true,
-      "resolved_path": "C:\\Users\\shich\\.codex\\skills\\academic-scientific-visualization\\scripts\\style_presets.py"
+      "resolved_path": "academic-scientific-visualization/scripts/figure_export.py",
+      "sha256": "542f604c2a4dc642c055b24ef26b9e9e808616a33fde0cd2154c975dc83318d0"
     },
     {
-      "path": "scripts\\figure_export.py",
+      "path": "scripts/style_presets.py",
       "exists": true,
-      "resolved_path": "C:\\Users\\shich\\.codex\\skills\\academic-scientific-visualization\\scripts\\figure_export.py"
+      "resolved_path": "academic-scientific-visualization/scripts/style_presets.py",
+      "sha256": "3a4163c6aaaf6792665cf890ab497a2b5070c0ed0adfa524fcaee5262a3f1792"
     }
   ],
   "missing_declared_dependencies": []

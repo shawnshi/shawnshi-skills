@@ -1,10 +1,19 @@
 {
-  "schema_version": 1,
+  "schema_version": 3,
   "skill": "hit-industry-radar",
-  "generated_at": "2026-07-28T13:54:04",
+  "generated_at": "2026-08-16T22:27:49+08:00",
+  "hash_algorithm": "SHA-256",
+  "text_hash_normalization": "LF",
   "skill_md": "SKILL.md",
+  "skill_md_sha256": "0ee2ec760d560fe0a8e1c2d26f5e5f93201aef62b432e28ec9c88c66067b79c1",
   "top_level_files": [
     "SKILL.md"
+  ],
+  "top_level_file_hashes": [
+    {
+      "path": "SKILL.md",
+      "sha256": "0ee2ec760d560fe0a8e1c2d26f5e5f93201aef62b432e28ec9c88c66067b79c1"
+    }
   ],
   "top_level_directories": [
     ".skill_state",
@@ -22,11 +31,46 @@
       "file_count": 4
     }
   ],
+  "resource_file_hashes": [
+    {
+      "path": ".skill_state/rejected_edits.jsonl",
+      "sha256": "727719a2e3af1795c42b0a6de97ee8256b55c1617a52f514f7d44ddde993420e"
+    },
+    {
+      "path": "assets/intelligence_targets.json",
+      "sha256": "f86c1803d242e49a02f21f951bb34f9e7a9f70ab9bccd388257d9d5630ae0c53"
+    },
+    {
+      "path": "assets/Task_china_hit.md",
+      "sha256": "0364432377eb45058a932cdcde7255373c8a1ddd5e24755cdef5fe303e489898"
+    },
+    {
+      "path": "assets/Task_global_hit.md",
+      "sha256": "3b282c84ff215a8d5ca0466b81421cd809e8373fdd92fa851752d078a468e13a"
+    },
+    {
+      "path": "assets/Task_winning_baseline.md",
+      "sha256": "dfa969a4332f396502c3227d8206cb18121df133658ab68f14a00a2b2d1f86e9"
+    },
+    {
+      "path": "evals/benchmark.json",
+      "sha256": "56694ece3a6d108c0c27da465a11fac6c5683d500cc7ff465122b4846eaba88c"
+    },
+    {
+      "path": "evals/evals.json",
+      "sha256": "edff9a06fe67049f9c24788312388914431965d2a099a04578dc8ea838606736"
+    },
+    {
+      "path": "references/stc_framework.md",
+      "sha256": "d0708c1ce92c84e1fc3d94158ec1f10df0cdf315f494f1ca804bc3e1c84e9669"
+    }
+  ],
   "declared_local_dependencies": [
     {
-      "path": "references\\stc_framework.md",
+      "path": "references/stc_framework.md",
       "exists": true,
-      "resolved_path": "C:\\Users\\shich\\.codex\\skills\\hit-industry-radar\\references\\stc_framework.md"
+      "resolved_path": "hit-industry-radar/references/stc_framework.md",
+      "sha256": "d0708c1ce92c84e1fc3d94158ec1f10df0cdf315f494f1ca804bc3e1c84e9669"
     }
   ],
   "missing_declared_dependencies": []

@@ -1,15 +1,44 @@
 {
-  "schema_version": 1,
+  "schema_version": 3,
   "skill": "tool-url-markdown",
-  "generated_at": "2026-07-14T21:01:45",
+  "generated_at": "2026-08-16T22:02:19",
+  "hash_algorithm": "SHA-256",
+  "text_hash_normalization": "LF",
   "skill_md": "SKILL.md",
+  "skill_md_sha256": "f0f68d8b9324c2dadf448ab1e673db97a099367136c5cb78483f3bc71dd7c268",
   "top_level_files": [
+    "SKILL.md",
     "bun.lock",
     "index.ts",
     "package-lock.json",
     "package.json",
-    "SKILL.md",
     "tsconfig.json"
+  ],
+  "top_level_file_hashes": [
+    {
+      "path": "SKILL.md",
+      "sha256": "f0f68d8b9324c2dadf448ab1e673db97a099367136c5cb78483f3bc71dd7c268"
+    },
+    {
+      "path": "bun.lock",
+      "sha256": "5d9a7ad0b238a7db97670ac22c8fa14920236b3784410b7fdc45237cc11feea3"
+    },
+    {
+      "path": "index.ts",
+      "sha256": "39e1ff1373d5a21bb3cbb5b9b4be13afbaafc73a33293f293d40656449b70de7"
+    },
+    {
+      "path": "package-lock.json",
+      "sha256": "5b7fdb10a4ec625ab351cef113f7e74d21bd407bfd6704c981bbba6c0e96d4bd"
+    },
+    {
+      "path": "package.json",
+      "sha256": "36001cb3f1012489914c3a682f9485e5ac577f8e180462864570cc801613e049"
+    },
+    {
+      "path": "tsconfig.json",
+      "sha256": "11a68339a9c6a0c04a67b95dff9eefd9a92c42fa35161411048405272ab192c8"
+    }
   ],
   "top_level_directories": [
     "references",
@@ -25,11 +54,38 @@
       "file_count": 1
     }
   ],
+  "resource_file_hashes": [
+    {
+      "path": "references/troubleshooting.md",
+      "sha256": "eb47fbfa506948a2541a3f58f8fe57f7dfddb798a0450519b8fc3c09bdd1fdf9"
+    },
+    {
+      "path": "scripts/cdp.ts",
+      "sha256": "bb4eb6a3e28b317816a717dcdf8e1bcf71f32e4e889bb8587382f959bc8fd979"
+    },
+    {
+      "path": "scripts/constants.ts",
+      "sha256": "7746d7dc54ec94f658f9fd1c553eae57d304ede4e0d505707432c8340022d334"
+    },
+    {
+      "path": "scripts/html-to-markdown.ts",
+      "sha256": "33d584de1d2f7793443fed494d5032b4a2df547d6dff1d85a68b96055a19d667"
+    },
+    {
+      "path": "scripts/main.ts",
+      "sha256": "c350dcae5fcc695fd2f2307e90d3ddb6f3e126d3d884fea22d64130cb6b95a1c"
+    },
+    {
+      "path": "scripts/paths.ts",
+      "sha256": "65b4b472b576b6c8519915ff3eb21e9ba21b1d64e6a787e72ff30b0f765a8b16"
+    }
+  ],
   "declared_local_dependencies": [
     {
-      "path": "scripts\\main.ts",
+      "path": "scripts/main.ts",
       "exists": true,
-      "resolved_path": "C:\\Users\\shich\\.codex\\skills\\tool-url-markdown\\scripts\\main.ts"
+      "resolved_path": "tool-url-markdown/scripts/main.ts",
+      "sha256": "c350dcae5fcc695fd2f2307e90d3ddb6f3e126d3d884fea22d64130cb6b95a1c"
     }
   ],
   "missing_declared_dependencies": []

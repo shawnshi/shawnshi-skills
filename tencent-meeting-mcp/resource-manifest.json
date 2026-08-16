@@ -1,11 +1,24 @@
 {
-  "schema_version": 1,
+  "schema_version": 3,
   "skill": "tencent-meeting-mcp",
-  "generated_at": "2026-07-14T21:01:44",
+  "generated_at": "2026-08-17T06:43:41+08:00",
+  "hash_algorithm": "SHA-256",
+  "text_hash_normalization": "LF",
   "skill_md": "SKILL.md",
+  "skill_md_sha256": "115978d831689446df2662da093c8451c110231cc3af71184a55f72cd4d9a3a9",
   "top_level_files": [
-    "config.json",
-    "SKILL.md"
+    "SKILL.md",
+    "config.json"
+  ],
+  "top_level_file_hashes": [
+    {
+      "path": "SKILL.md",
+      "sha256": "115978d831689446df2662da093c8451c110231cc3af71184a55f72cd4d9a3a9"
+    },
+    {
+      "path": "config.json",
+      "sha256": "1b9cf97e89da969752b679e65bf0babd40fc2cc284115538ac1c62854d5df95f"
+    }
   ],
   "top_level_directories": [
     "references",
@@ -21,31 +34,62 @@
       "file_count": 3
     }
   ],
+  "resource_file_hashes": [
+    {
+      "path": "references/api_references.md",
+      "sha256": "7a88290750ac685c02062cdc4e80e073f1e95f392c4f3acc9de375ed773984f5"
+    },
+    {
+      "path": "references/error_dictionary.md",
+      "sha256": "3a258e4ad4c1b3d1f3d95f98be6f49a152af1f4715e05d949a6708384e7e43a4"
+    },
+    {
+      "path": "references/version_management.md",
+      "sha256": "2ebbc945cfca214b0d5de19f6a4da714f7825e9fcb40e1dda2b588ff9b2cdf97"
+    },
+    {
+      "path": "scripts/mcp_proxy.py",
+      "sha256": "f7513dbac547a63346b4c7515057da8deff7ebafd09813424aec6a5a45dc8134"
+    },
+    {
+      "path": "scripts/tencent_meeting.py",
+      "sha256": "8599b735d35999fefae0ebf95d3b9b9ebf97d074d10de9451136ae4e16f1078f"
+    },
+    {
+      "path": "scripts/utils.py",
+      "sha256": "d23fa6098f9e1046ab9f514d6f67b498f37f5f194ebd8fb099f7bfb1375580ad"
+    }
+  ],
   "declared_local_dependencies": [
     {
-      "path": "scripts\\mcp_proxy.py",
+      "path": "references/api_references.md",
       "exists": true,
-      "resolved_path": "C:\\Users\\shich\\.codex\\skills\\tencent-meeting-mcp\\scripts\\mcp_proxy.py"
+      "resolved_path": "tencent-meeting-mcp/references/api_references.md",
+      "sha256": "7a88290750ac685c02062cdc4e80e073f1e95f392c4f3acc9de375ed773984f5"
     },
     {
-      "path": "scripts\\tencent_meeting.py",
+      "path": "references/error_dictionary.md",
       "exists": true,
-      "resolved_path": "C:\\Users\\shich\\.codex\\skills\\tencent-meeting-mcp\\scripts\\tencent_meeting.py"
+      "resolved_path": "tencent-meeting-mcp/references/error_dictionary.md",
+      "sha256": "3a258e4ad4c1b3d1f3d95f98be6f49a152af1f4715e05d949a6708384e7e43a4"
     },
     {
-      "path": "references\\version_management.md",
+      "path": "references/version_management.md",
       "exists": true,
-      "resolved_path": "C:\\Users\\shich\\.codex\\skills\\tencent-meeting-mcp\\references\\version_management.md"
+      "resolved_path": "tencent-meeting-mcp/references/version_management.md",
+      "sha256": "2ebbc945cfca214b0d5de19f6a4da714f7825e9fcb40e1dda2b588ff9b2cdf97"
     },
     {
-      "path": "references\\api_references.md",
+      "path": "scripts/mcp_proxy.py",
       "exists": true,
-      "resolved_path": "C:\\Users\\shich\\.codex\\skills\\tencent-meeting-mcp\\references\\api_references.md"
+      "resolved_path": "tencent-meeting-mcp/scripts/mcp_proxy.py",
+      "sha256": "f7513dbac547a63346b4c7515057da8deff7ebafd09813424aec6a5a45dc8134"
     },
     {
-      "path": "references\\error_dictionary.md",
+      "path": "scripts/tencent_meeting.py",
       "exists": true,
-      "resolved_path": "C:\\Users\\shich\\.codex\\skills\\tencent-meeting-mcp\\references\\error_dictionary.md"
+      "resolved_path": "tencent-meeting-mcp/scripts/tencent_meeting.py",
+      "sha256": "8599b735d35999fefae0ebf95d3b9b9ebf97d074d10de9451136ae4e16f1078f"
     }
   ],
   "missing_declared_dependencies": []

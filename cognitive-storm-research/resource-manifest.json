@@ -1,10 +1,19 @@
 {
-  "schema_version": 1,
+  "schema_version": 3,
   "skill": "cognitive-storm-research",
-  "generated_at": "2026-07-14T21:01:43",
+  "generated_at": "2026-08-16T22:02:19",
+  "hash_algorithm": "SHA-256",
+  "text_hash_normalization": "LF",
   "skill_md": "SKILL.md",
+  "skill_md_sha256": "50b9c02030bf50d8d030142155c58e8583e5c73c30c21e4dc0a8e1b142ad60d6",
   "top_level_files": [
     "SKILL.md"
+  ],
+  "top_level_file_hashes": [
+    {
+      "path": "SKILL.md",
+      "sha256": "50b9c02030bf50d8d030142155c58e8583e5c73c30c21e4dc0a8e1b142ad60d6"
+    }
   ],
   "top_level_directories": [
     "references"
@@ -15,11 +24,18 @@
       "file_count": 1
     }
   ],
+  "resource_file_hashes": [
+    {
+      "path": "references/storm_report_template.md",
+      "sha256": "5121ff74e59a67bfe1b54f79a62eb4ddf8e60e41ba7521aec4a82b1aa894694a"
+    }
+  ],
   "declared_local_dependencies": [
     {
-      "path": "references\\storm_report_template.md",
+      "path": "references/storm_report_template.md",
       "exists": true,
-      "resolved_path": "C:\\Users\\shich\\.codex\\skills\\cognitive-storm-research\\references\\storm_report_template.md"
+      "resolved_path": "cognitive-storm-research/references/storm_report_template.md",
+      "sha256": "5121ff74e59a67bfe1b54f79a62eb4ddf8e60e41ba7521aec4a82b1aa894694a"
     }
   ],
   "missing_declared_dependencies": []

@@ -1,10 +1,19 @@
 {
-  "schema_version": 1,
+  "schema_version": 3,
   "skill": "personal-write-humanizer",
-  "generated_at": "2026-07-14T21:01:44",
+  "generated_at": "2026-08-16T22:02:19",
+  "hash_algorithm": "SHA-256",
+  "text_hash_normalization": "LF",
   "skill_md": "SKILL.md",
+  "skill_md_sha256": "8ff21c29726dfe5f3a2eb76e28ccdbf1be18cb09308f71480e6f4e027be3381a",
   "top_level_files": [
     "SKILL.md"
+  ],
+  "top_level_file_hashes": [
+    {
+      "path": "SKILL.md",
+      "sha256": "8ff21c29726dfe5f3a2eb76e28ccdbf1be18cb09308f71480e6f4e027be3381a"
+    }
   ],
   "top_level_directories": [
     "references",
@@ -20,31 +29,58 @@
       "file_count": 4
     }
   ],
+  "resource_file_hashes": [
+    {
+      "path": "references/CHECKLIST.md",
+      "sha256": "19e5f99a6688033ae468f095d96cb045cd7aaaea0c10f25d6157b64fc64e5b02"
+    },
+    {
+      "path": "references/EVALUATIONS.md",
+      "sha256": "95f1d0d28fb6b3e56aae9ceeb226850bf46e50cdefd19c5ce045119ad9ec2472"
+    },
+    {
+      "path": "references/EXAMPLES.md",
+      "sha256": "01aa9582a58c6350db2805a80a48875262dd0d6a74cc46b796fa9bdce2212405"
+    },
+    {
+      "path": "references/GUIDELINES.md",
+      "sha256": "579c029db16f7dee0690ba2924e659f7e2693bb9f22fef5b25a13c50d46034da"
+    },
+    {
+      "path": "scripts/humanize_engine.py",
+      "sha256": "785d78933d80bf8761d4077c746bc21757a3aeb1d3e25405472e461116b11eac"
+    }
+  ],
   "declared_local_dependencies": [
     {
-      "path": "scripts\\humanize_engine.py",
+      "path": "references/CHECKLIST.md",
       "exists": true,
-      "resolved_path": "C:\\Users\\shich\\.codex\\skills\\personal-write-humanizer\\scripts\\humanize_engine.py"
+      "resolved_path": "personal-write-humanizer/references/CHECKLIST.md",
+      "sha256": "19e5f99a6688033ae468f095d96cb045cd7aaaea0c10f25d6157b64fc64e5b02"
     },
     {
-      "path": "references\\GUIDELINES.md",
+      "path": "references/EVALUATIONS.md",
       "exists": true,
-      "resolved_path": "C:\\Users\\shich\\.codex\\skills\\personal-write-humanizer\\references\\GUIDELINES.md"
+      "resolved_path": "personal-write-humanizer/references/EVALUATIONS.md",
+      "sha256": "95f1d0d28fb6b3e56aae9ceeb226850bf46e50cdefd19c5ce045119ad9ec2472"
     },
     {
-      "path": "references\\EXAMPLES.md",
+      "path": "references/EXAMPLES.md",
       "exists": true,
-      "resolved_path": "C:\\Users\\shich\\.codex\\skills\\personal-write-humanizer\\references\\EXAMPLES.md"
+      "resolved_path": "personal-write-humanizer/references/EXAMPLES.md",
+      "sha256": "01aa9582a58c6350db2805a80a48875262dd0d6a74cc46b796fa9bdce2212405"
     },
     {
-      "path": "references\\CHECKLIST.md",
+      "path": "references/GUIDELINES.md",
       "exists": true,
-      "resolved_path": "C:\\Users\\shich\\.codex\\skills\\personal-write-humanizer\\references\\CHECKLIST.md"
+      "resolved_path": "personal-write-humanizer/references/GUIDELINES.md",
+      "sha256": "579c029db16f7dee0690ba2924e659f7e2693bb9f22fef5b25a13c50d46034da"
     },
     {
-      "path": "references\\EVALUATIONS.md",
+      "path": "scripts/humanize_engine.py",
       "exists": true,
-      "resolved_path": "C:\\Users\\shich\\.codex\\skills\\personal-write-humanizer\\references\\EVALUATIONS.md"
+      "resolved_path": "personal-write-humanizer/scripts/humanize_engine.py",
+      "sha256": "785d78933d80bf8761d4077c746bc21757a3aeb1d3e25405472e461116b11eac"
     }
   ],
   "missing_declared_dependencies": []

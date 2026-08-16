@@ -1,4 +1,6 @@
 interface:
-  display_name: "Mentat Skills Maintainer"
-  short_description: "维护、重构并验证本地 Codex 技能库、资源索引与触发契约"
-  default_prompt: "Use $mentat-skill-creator to audit this local skills-library change against its README, update only the approved files, and run the applicable validators."
+  display_name: "Mentat Skills Governance"
+  short_description: "维护并验证本地 Codex 技能库的治理合同与发布门禁"
+  default_prompt: "Use $mentat-skill-creator to perform a read-only audit of this local Codex skills library and report findings without modifying files."
+policy:
+  allow_implicit_invocation: false

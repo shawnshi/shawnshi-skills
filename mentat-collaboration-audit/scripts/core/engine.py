@@ -200,6 +200,8 @@ def _wait_metrics(records: list[dict[str, Any]]) -> dict[str, Any]:
     redundant = 0
     state_observations = 0
     max_timeout_streak = 0
+    wait_gate_breaches = 0
+    wait_gate_breach_sequences = 0
     wait_with_local_work = 0
     wait_with_local_work_duration = 0.0
 
@@ -222,6 +224,10 @@ def _wait_metrics(records: list[dict[str, Any]]) -> dict[str, Any]:
             streak = previous_count + 1 if previous_state == state else 1
             timeout_streaks[key] = (state, streak)
             max_timeout_streak = max(max_timeout_streak, streak)
+            if streak > 2:
+                wait_gate_breaches += 1
+                if streak == 3:
+                    wait_gate_breach_sequences += 1
         else:
             timeout_streaks[key] = (state, 0)
 
@@ -240,6 +246,8 @@ def _wait_metrics(records: list[dict[str, Any]]) -> dict[str, Any]:
         "redundant_wait_count": redundant,
         "redundant_wait_rate": ratio(redundant, state_observations),
         "max_same_state_timeout_streak": max_timeout_streak,
+        "wait_gate_breach_count": wait_gate_breaches,
+        "wait_gate_breach_sequence_count": wait_gate_breach_sequences,
         "wait_with_local_work_count": wait_with_local_work,
         "wait_with_local_work_duration_sec": round(wait_with_local_work_duration, 3),
         "unverifiable_wait_count": len(waits) - state_observations,
@@ -248,6 +256,7 @@ def _wait_metrics(records: list[dict[str, Any]]) -> dict[str, Any]:
 
 def _skill_load_metrics(records: list[dict[str, Any]]) -> dict[str, Any]:
     loads = [record for record in records if event_type(record) == "skill_load"]
+    candidates = [record for record in records if event_type(record) == "skill_load_candidate"]
     seen: set[tuple[str, str, str, str, str]] = set()
     duplicates = 0
     unverifiable = 0
@@ -276,8 +285,32 @@ def _skill_load_metrics(records: list[dict[str, Any]]) -> dict[str, Any]:
         else:
             seen.add(values)
 
+    receipt_keys = Counter(
+        (
+            text_value(record, "root_task_id"),
+            text_value(record, "actor_id"),
+            text_value(record, "context_epoch"),
+            text_value(record, "skill_name", "skill"),
+        )
+        for record in loads
+    )
+    verified_candidates = 0
+    for record in candidates:
+        key = (
+            text_value(record, "root_task_id"),
+            text_value(record, "actor_id"),
+            text_value(record, "context_epoch"),
+            text_value(record, "skill_name", "skill"),
+        )
+        if all(key) and receipt_keys[key] > 0:
+            verified_candidates += 1
+            receipt_keys[key] -= 1
+
     return {
         "skill_load_count": len(loads),
+        "skill_load_candidate_count": len(candidates),
+        "verified_candidate_count": verified_candidates,
+        "receipt_coverage": ratio(verified_candidates, len(candidates)),
         "duplicate_load_count": duplicates,
         "duplicate_load_rate": ratio(duplicates, len(loads)),
         "loaded_tokens": loaded_tokens,
@@ -372,8 +405,10 @@ def _subagent_metrics(records: list[dict[str, Any]]) -> dict[str, Any]:
 
 def _authorization_metrics(records: list[dict[str, Any]]) -> dict[str, Any]:
     writes = [record for record in records if event_type(record) in WRITE_EVENTS]
+    attempts = [record for record in writes if event_type(record) == "write_attempt"]
+    commits = [record for record in writes if event_type(record) == "write_commit"]
     unmatched = 0
-    for record in writes:
+    for record in commits:
         authorization_id = text_value(record, "authorization_id")
         write_scope = text_value(record, "write_scope_sha256")
         authorization_scope = text_value(record, "authorization_scope_sha256")
@@ -388,15 +423,41 @@ def _authorization_metrics(records: list[dict[str, Any]]) -> dict[str, Any]:
     )
     return {
         "write_event_count": len(writes),
+        "write_attempt_count": len(attempts),
+        "write_commit_count": len(commits),
         "unmatched_write_count": unmatched,
-        "unmatched_write_rate": ratio(unmatched, len(writes)),
+        "unmatched_write_rate": ratio(unmatched, len(commits)),
+        "authorization_evidence_status": (
+            "no_writes" if not commits else "complete" if unmatched == 0 else "partial"
+        ),
         "readonly_approval_rounds": readonly_approvals,
     }
 
 
 def _context_metrics(records: list[dict[str, Any]]) -> dict[str, Any]:
     root_tasks = {text_value(record, "root_task_id") for record in records if text_value(record, "root_task_id")}
-    compactions = sum(1 for record in records if event_type(record) == "context_compacted")
+    compaction_events = [record for record in records if event_type(record) == "context_compacted"]
+    recovery_events = [record for record in records if event_type(record) == "context_recovered"]
+    compactions = len(compaction_events)
+    recovery_keys = {
+        (text_value(record, "root_task_id"), text_value(record, "context_epoch"))
+        for record in recovery_events
+    }
+    semantic_recovery_keys = {
+        (text_value(record, "root_task_id"), text_value(record, "context_epoch"))
+        for record in recovery_events
+        if record.get("required_fields_verified") is True
+    }
+    matched_recoveries = sum(
+        1
+        for record in compaction_events
+        if (text_value(record, "root_task_id"), text_value(record, "context_epoch")) in recovery_keys
+    )
+    semantic_recoveries = sum(
+        1
+        for record in compaction_events
+        if (text_value(record, "root_task_id"), text_value(record, "context_epoch")) in semantic_recovery_keys
+    )
     total_input_tokens = sum(int(number(record, "input_tokens", "prompt_tokens") or 0) for record in records)
     skill_tokens = sum(
         int(number(record, "skill_tokens", "loaded_tokens") or 0)
@@ -407,6 +468,11 @@ def _context_metrics(records: list[dict[str, Any]]) -> dict[str, Any]:
         "root_task_count": len(root_tasks),
         "context_compaction_count": compactions,
         "compactions_per_10_root_tasks": round(compactions * 10 / len(root_tasks), 4) if root_tasks else None,
+        "context_recovery_count": len(recovery_events),
+        "matched_context_recovery_count": matched_recoveries,
+        "context_recovery_coverage": ratio(matched_recoveries, compactions),
+        "semantic_recovery_verified_count": semantic_recoveries,
+        "semantic_recovery_coverage": ratio(semantic_recoveries, compactions),
         "skill_input_token_share": ratio(skill_tokens, total_input_tokens),
     }
 
@@ -503,6 +569,8 @@ def aggregate(
         "limitations": [
             "Only explicit fields in the supplied records were aggregated.",
             "Missing durations, token counts, state versions, and fingerprints are not inferred.",
+            "Write authorization is complete only when commit events carry matching scope receipts.",
+            "A context recovery event proves presence; semantic recovery requires required_fields_verified=true.",
             "Event-order metrics assume records are already in chronological order.",
             "Correlation in telemetry does not establish causation.",
         ],

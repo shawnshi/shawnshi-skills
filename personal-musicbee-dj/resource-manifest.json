@@ -1,16 +1,59 @@
 {
-  "schema_version": 1,
+  "schema_version": 3,
   "skill": "personal-musicbee-dj",
-  "generated_at": "2026-07-14T21:01:44",
+  "generated_at": "2026-08-16T22:27:49+08:00",
+  "hash_algorithm": "SHA-256",
+  "text_hash_normalization": "LF",
   "skill_md": "SKILL.md",
+  "skill_md_sha256": "b3de5bb2b4423d37ab5b3139b3e493690102935ecaafce83cc73712a6abc12d8",
   "top_level_files": [
-    "config.yaml",
-    "SKILL.md"
+    "SKILL.md",
+    "config.yaml"
+  ],
+  "top_level_file_hashes": [
+    {
+      "path": "SKILL.md",
+      "sha256": "b3de5bb2b4423d37ab5b3139b3e493690102935ecaafce83cc73712a6abc12d8"
+    },
+    {
+      "path": "config.yaml",
+      "sha256": "76d00ea17e1b0de282140afad199aefedd8f67405a5f5738388fc0f3cb85e661"
+    }
   ],
   "top_level_directories": [
     "src"
   ],
   "resource_directories": [],
+  "resource_file_hashes": [
+    {
+      "path": "src/__init__.py",
+      "sha256": "e073a4e25a9db358f3b9a7472f07baf60340aa9fe4b35bf014570b9aa5e1cd65"
+    },
+    {
+      "path": "src/cli.py",
+      "sha256": "cc8ed9a1f06cfa3898e0167f95f4894f3886382b62b842ca626e9877acb65fb1"
+    },
+    {
+      "path": "src/core/__init__.py",
+      "sha256": "48b68a4feba0bc40435e92a2cae7670f9fe8847cf76392040d234fba08169723"
+    },
+    {
+      "path": "src/core/curator.py",
+      "sha256": "9a4e6c74ed5eda803bd5b8e15e3b1f1efcc370f2952f042e02b2bfedd14b242a"
+    },
+    {
+      "path": "src/core/models.py",
+      "sha256": "3a2dd03a70c36f648155593b2eb1a08d2284c008ea47e8a6571c25823209d028"
+    },
+    {
+      "path": "src/core/parser.py",
+      "sha256": "29878e784f80686fa3c4b81e7d705b3e1296a77499dcdf56093fc19c17ac071d"
+    },
+    {
+      "path": "src/utils/logger.py",
+      "sha256": "7eea26e90c8701777c47e342dbf529f44dada7e4551b8b1745541bf276438d37"
+    }
+  ],
   "declared_local_dependencies": [],
   "missing_declared_dependencies": []
 }

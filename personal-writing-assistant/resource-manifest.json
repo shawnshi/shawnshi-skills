@@ -1,10 +1,19 @@
 {
-  "schema_version": 1,
+  "schema_version": 3,
   "skill": "personal-writing-assistant",
-  "generated_at": "2026-07-14T21:01:44",
+  "generated_at": "2026-08-16T22:02:19",
+  "hash_algorithm": "SHA-256",
+  "text_hash_normalization": "LF",
   "skill_md": "SKILL.md",
+  "skill_md_sha256": "58ae8af4a5fe3861d5caad1d1d2dc6d48cef0d89a1a1e57728adcc21d1d6927d",
   "top_level_files": [
     "SKILL.md"
+  ],
+  "top_level_file_hashes": [
+    {
+      "path": "SKILL.md",
+      "sha256": "58ae8af4a5fe3861d5caad1d1d2dc6d48cef0d89a1a1e57728adcc21d1d6927d"
+    }
   ],
   "top_level_directories": [
     "references"
@@ -15,11 +24,18 @@
       "file_count": 1
     }
   ],
+  "resource_file_hashes": [
+    {
+      "path": "references/my_voice_samples.md",
+      "sha256": "93abc306b00bcd6a54291496708bc21cd26003a14a33408c98d2ee985c2a7b79"
+    }
+  ],
   "declared_local_dependencies": [
     {
-      "path": "references\\my_voice_samples.md",
+      "path": "references/my_voice_samples.md",
       "exists": true,
-      "resolved_path": "C:\\Users\\shich\\.codex\\skills\\personal-writing-assistant\\references\\my_voice_samples.md"
+      "resolved_path": "personal-writing-assistant/references/my_voice_samples.md",
+      "sha256": "93abc306b00bcd6a54291496708bc21cd26003a14a33408c98d2ee985c2a7b79"
     }
   ],
   "missing_declared_dependencies": []

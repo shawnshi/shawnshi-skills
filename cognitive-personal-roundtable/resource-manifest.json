@@ -1,10 +1,19 @@
 {
-  "schema_version": 1,
+  "schema_version": 3,
   "skill": "cognitive-personal-roundtable",
-  "generated_at": "2026-07-14T21:01:43",
+  "generated_at": "2026-08-16T22:27:49+08:00",
+  "hash_algorithm": "SHA-256",
+  "text_hash_normalization": "LF",
   "skill_md": "SKILL.md",
+  "skill_md_sha256": "464cef1ad491239d492b956bff6ecbedb2b2f758c0a5cec38a484faf79ea4b8a",
   "top_level_files": [
     "SKILL.md"
+  ],
+  "top_level_file_hashes": [
+    {
+      "path": "SKILL.md",
+      "sha256": "464cef1ad491239d492b956bff6ecbedb2b2f758c0a5cec38a484faf79ea4b8a"
+    }
   ],
   "top_level_directories": [
     "references",
@@ -21,16 +30,32 @@
       "file_count": 1
     }
   ],
-  "declared_local_dependencies": [
+  "resource_file_hashes": [
     {
-      "path": "references\\personas.md",
-      "exists": true,
-      "resolved_path": "C:\\Users\\shich\\.codex\\skills\\cognitive-personal-roundtable\\references\\personas.md"
+      "path": "references/personas.md",
+      "sha256": "ee0c74a6c62e87c9d57985d940c54fde667302c8a14a71c139b8913b3630a1ba"
     },
     {
-      "path": "scripts\\merger.py",
+      "path": "scripts/merger.py",
+      "sha256": "6d89130e924103b83007568f269dfd9575741290b417bf56fee7d60616d141d2"
+    },
+    {
+      "path": "templates/ascii_topology.md",
+      "sha256": "9f5a91a486b29441a527ac8848fea0eca1ea91da8926da0d2ca13f92ac6501c6"
+    }
+  ],
+  "declared_local_dependencies": [
+    {
+      "path": "references/personas.md",
       "exists": true,
-      "resolved_path": "C:\\Users\\shich\\.codex\\skills\\cognitive-personal-roundtable\\scripts\\merger.py"
+      "resolved_path": "cognitive-personal-roundtable/references/personas.md",
+      "sha256": "ee0c74a6c62e87c9d57985d940c54fde667302c8a14a71c139b8913b3630a1ba"
+    },
+    {
+      "path": "scripts/merger.py",
+      "exists": true,
+      "resolved_path": "cognitive-personal-roundtable/scripts/merger.py",
+      "sha256": "6d89130e924103b83007568f269dfd9575741290b417bf56fee7d60616d141d2"
     }
   ],
   "missing_declared_dependencies": []

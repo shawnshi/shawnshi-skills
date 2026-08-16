@@ -1,10 +1,19 @@
 {
-  "schema_version": 1,
+  "schema_version": 3,
   "skill": "cognitive-book-mirror",
-  "generated_at": "2026-07-28T13:33:22",
+  "generated_at": "2026-08-16T22:02:19",
+  "hash_algorithm": "SHA-256",
+  "text_hash_normalization": "LF",
   "skill_md": "SKILL.md",
+  "skill_md_sha256": "9eacd7359853033fac729d011e47126fd83868ec2300a1a62aa4709977a1b7ff",
   "top_level_files": [
     "SKILL.md"
+  ],
+  "top_level_file_hashes": [
+    {
+      "path": "SKILL.md",
+      "sha256": "9eacd7359853033fac729d011e47126fd83868ec2300a1a62aa4709977a1b7ff"
+    }
   ],
   "top_level_directories": [
     "agents",
@@ -20,16 +29,40 @@
       "file_count": 1
     }
   ],
-  "declared_local_dependencies": [
+  "resource_file_hashes": [
     {
-      "path": "scripts\\extract_and_pack.py",
-      "exists": true,
-      "resolved_path": "C:\\Users\\shich\\.codex\\skills\\cognitive-book-mirror\\scripts\\extract_and_pack.py"
+      "path": "agents/mirror-agent.md",
+      "sha256": "a780b0dd758d30646554cde21876048c2dc4059d1fe50f6974f8cc8055fabc37"
     },
     {
-      "path": "scripts\\stitch_and_format.py",
+      "path": "scripts/extract_and_pack.py",
+      "sha256": "cea1d162294a653007f0ae71842d1ee1a0e591eac0309466ed06fb1ed26d08c2"
+    },
+    {
+      "path": "scripts/requirements.txt",
+      "sha256": "683192deb55260f32aed553930935344634b55b94b256efa302f83c7fb5e72be"
+    },
+    {
+      "path": "scripts/stitch_and_format.py",
+      "sha256": "61f7f321da905fd1ec2d7ad3c6eb33e081545815fe257dbebb5aef0cc889fd8e"
+    },
+    {
+      "path": "scripts/test_stitch_and_format.py",
+      "sha256": "666f33a9af34a3cf7d89b2959f64d1762e9946954508c00651dd644594ca26ff"
+    }
+  ],
+  "declared_local_dependencies": [
+    {
+      "path": "scripts/extract_and_pack.py",
       "exists": true,
-      "resolved_path": "C:\\Users\\shich\\.codex\\skills\\cognitive-book-mirror\\scripts\\stitch_and_format.py"
+      "resolved_path": "cognitive-book-mirror/scripts/extract_and_pack.py",
+      "sha256": "cea1d162294a653007f0ae71842d1ee1a0e591eac0309466ed06fb1ed26d08c2"
+    },
+    {
+      "path": "scripts/stitch_and_format.py",
+      "exists": true,
+      "resolved_path": "cognitive-book-mirror/scripts/stitch_and_format.py",
+      "sha256": "61f7f321da905fd1ec2d7ad3c6eb33e081545815fe257dbebb5aef0cc889fd8e"
     }
   ],
   "missing_declared_dependencies": []

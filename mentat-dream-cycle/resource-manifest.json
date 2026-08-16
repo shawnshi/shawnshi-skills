@@ -1,10 +1,19 @@
 {
-  "schema_version": 1,
+  "schema_version": 3,
   "skill": "mentat-dream-cycle",
-  "generated_at": "2026-07-14T21:01:44",
+  "generated_at": "2026-08-16T22:02:19",
+  "hash_algorithm": "SHA-256",
+  "text_hash_normalization": "LF",
   "skill_md": "SKILL.md",
+  "skill_md_sha256": "1e9dc92097191925f3d5429c8fd74461b2349e4bf3fa6aa66f21ff1cea45ca44",
   "top_level_files": [
     "SKILL.md"
+  ],
+  "top_level_file_hashes": [
+    {
+      "path": "SKILL.md",
+      "sha256": "1e9dc92097191925f3d5429c8fd74461b2349e4bf3fa6aa66f21ff1cea45ca44"
+    }
   ],
   "top_level_directories": [
     "scripts"
@@ -15,16 +24,28 @@
       "file_count": 2
     }
   ],
-  "declared_local_dependencies": [
+  "resource_file_hashes": [
     {
-      "path": "scripts\\garbage_collector.py",
-      "exists": true,
-      "resolved_path": "C:\\Users\\shich\\.codex\\skills\\mentat-dream-cycle\\scripts\\garbage_collector.py"
+      "path": "scripts/garbage_collector.py",
+      "sha256": "74a18cb776baaee57c98de654859ae61617292dcd30604860c9159190c594884"
     },
     {
-      "path": "scripts\\orphan_scanner.py",
+      "path": "scripts/orphan_scanner.py",
+      "sha256": "8f0236010d767e7cd7028673410a5fb3148c87468f45fb7d58fa0c964b8f5e14"
+    }
+  ],
+  "declared_local_dependencies": [
+    {
+      "path": "scripts/garbage_collector.py",
       "exists": true,
-      "resolved_path": "C:\\Users\\shich\\.codex\\skills\\mentat-dream-cycle\\scripts\\orphan_scanner.py"
+      "resolved_path": "mentat-dream-cycle/scripts/garbage_collector.py",
+      "sha256": "74a18cb776baaee57c98de654859ae61617292dcd30604860c9159190c594884"
+    },
+    {
+      "path": "scripts/orphan_scanner.py",
+      "exists": true,
+      "resolved_path": "mentat-dream-cycle/scripts/orphan_scanner.py",
+      "sha256": "8f0236010d767e7cd7028673410a5fb3148c87468f45fb7d58fa0c964b8f5e14"
     }
   ],
   "missing_declared_dependencies": []

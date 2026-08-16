@@ -1,10 +1,19 @@
 {
-  "schema_version": 1,
+  "schema_version": 3,
   "skill": "hit-weekly-brief",
-  "generated_at": "2026-07-28T13:54:04",
+  "generated_at": "2026-08-16T22:02:19",
+  "hash_algorithm": "SHA-256",
+  "text_hash_normalization": "LF",
   "skill_md": "SKILL.md",
+  "skill_md_sha256": "b8a18897ee950a2dd5361db05a3db930b1b17f365dd15a413d0338004c0061a7",
   "top_level_files": [
     "SKILL.md"
+  ],
+  "top_level_file_hashes": [
+    {
+      "path": "SKILL.md",
+      "sha256": "b8a18897ee950a2dd5361db05a3db930b1b17f365dd15a413d0338004c0061a7"
+    }
   ],
   "top_level_directories": [
     "assets",
@@ -30,21 +39,58 @@
       "file_count": 1
     }
   ],
+  "resource_file_hashes": [
+    {
+      "path": "assets/Task_policy.md",
+      "sha256": "39f08b2b602bc43259be9d2e89035b3b7b3ec714e6c909b7e9af5a5526f361fb"
+    },
+    {
+      "path": "assets/Task_serendipity.md",
+      "sha256": "d559836699f475780d100a6f6721be8e19c48a0c1c474f2389b22f51823fce2c"
+    },
+    {
+      "path": "assets/Task_strategy.md",
+      "sha256": "dc5bcf00ff0b345d0679b77cb87ae5b96834fb0ea5c6eb58cdef1f9b8e0743c6"
+    },
+    {
+      "path": "assets/Task_tech.md",
+      "sha256": "90add761d2b573c4934c78d0f8a14ba2b38d59e81349e9bc03d72c71748ba00a"
+    },
+    {
+      "path": "examples/DHWB-Reference.md",
+      "sha256": "6fd2f5a23c5ebfa62ea7457e8233db2c82b255180d397648f5271d41646160a9"
+    },
+    {
+      "path": "references/template.md",
+      "sha256": "59c4bb06370472b621a33f748352e1b45d7e09aa0455b1486b0f4d07754d77b4"
+    },
+    {
+      "path": "scripts/test_validate_weekly_brief.py",
+      "sha256": "d71b77b6fdf19e810cb6586cd93426b39582e5df6190dbd1870154f468f90d1d"
+    },
+    {
+      "path": "scripts/validate_weekly_brief.py",
+      "sha256": "0f3665a8b87ffdccd7423519af4e01ce83193561f8f5fd87a3aa28072e53866f"
+    }
+  ],
   "declared_local_dependencies": [
     {
-      "path": "references\\template.md",
+      "path": "examples/DHWB-Reference.md",
       "exists": true,
-      "resolved_path": "C:\\Users\\shich\\.codex\\skills\\hit-weekly-brief\\references\\template.md"
+      "resolved_path": "hit-weekly-brief/examples/DHWB-Reference.md",
+      "sha256": "6fd2f5a23c5ebfa62ea7457e8233db2c82b255180d397648f5271d41646160a9"
     },
     {
-      "path": "examples\\DHWB-Reference.md",
+      "path": "references/template.md",
       "exists": true,
-      "resolved_path": "C:\\Users\\shich\\.codex\\skills\\hit-weekly-brief\\examples\\DHWB-Reference.md"
+      "resolved_path": "hit-weekly-brief/references/template.md",
+      "sha256": "59c4bb06370472b621a33f748352e1b45d7e09aa0455b1486b0f4d07754d77b4"
     },
     {
-      "path": "scripts\\validate_weekly_brief.py",
+      "path": "scripts/validate_weekly_brief.py",
       "exists": true,
-      "resolved_path": "C:\\Users\\shich\\.codex\\skills\\hit-weekly-brief\\scripts\\validate_weekly_brief.py"
+      "resolved_path": "hit-weekly-brief/scripts/validate_weekly_brief.py",
+      "sha256": "0f3665a8b87ffdccd7423519af4e01ce83193561f8f5fd87a3aa28072e53866f"
     }
   ],
   "missing_declared_dependencies": []

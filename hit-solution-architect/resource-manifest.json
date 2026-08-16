@@ -1,10 +1,19 @@
 {
-  "schema_version": 1,
+  "schema_version": 3,
   "skill": "hit-solution-architect",
-  "generated_at": "2026-07-28T13:46:56",
+  "generated_at": "2026-08-16T22:27:49+08:00",
+  "hash_algorithm": "SHA-256",
+  "text_hash_normalization": "LF",
   "skill_md": "SKILL.md",
+  "skill_md_sha256": "5a79af88473f7766a770c42a535301bc7d3f60b74d0d9c3df6f6247a5244d919",
   "top_level_files": [
     "SKILL.md"
+  ],
+  "top_level_file_hashes": [
+    {
+      "path": "SKILL.md",
+      "sha256": "5a79af88473f7766a770c42a535301bc7d3f60b74d0d9c3df6f6247a5244d919"
+    }
   ],
   "top_level_directories": [
     "references",
@@ -21,16 +30,80 @@
       "file_count": 8
     }
   ],
-  "declared_local_dependencies": [
+  "resource_file_hashes": [
     {
-      "path": "scripts\\logic_checker.py",
-      "exists": true,
-      "resolved_path": "C:\\Users\\shich\\.codex\\skills\\hit-solution-architect\\scripts\\logic_checker.py"
+      "path": "references/evaluation_standards.md",
+      "sha256": "a269ac159e809b6ff5c400cb41483d88b4bdf0b24f26b2fad19a56a9d2a3e2a8"
     },
     {
-      "path": "scripts\\buzzword_auditor.py",
+      "path": "references/maturity_model.md",
+      "sha256": "2c0ed3234f70bc3b597105e1550408ee888db1c4c1531f5c596412791466129f"
+    },
+    {
+      "path": "references/winning-health-case-studies.md",
+      "sha256": "a23555a79f5cb6f8cadb0d2335b0b1ba25fc26d9c8d6e58e89319ebd95dc1d89"
+    },
+    {
+      "path": "references/winning-health-core-products.md",
+      "sha256": "f225025d260eb8c38a5661c3cfdc2bb43f9b02d05b25800a8fd2af9562a9ea20"
+    },
+    {
+      "path": "references/xinchuang_ecosystem.md",
+      "sha256": "ac9e00d8a7a93e526f6ba70af5aa27254449908f7d1d9433194d381c9412e1ee"
+    },
+    {
+      "path": "references/医疗卫生政策要点.md",
+      "sha256": "93abc306b00bcd6a54291496708bc21cd26003a14a33408c98d2ee985c2a7b79"
+    },
+    {
+      "path": "references/卫宁健康典型案例.md",
+      "sha256": "93abc306b00bcd6a54291496708bc21cd26003a14a33408c98d2ee985c2a7b79"
+    },
+    {
+      "path": "references/卫宁健康核心产品.md",
+      "sha256": "93abc306b00bcd6a54291496708bc21cd26003a14a33408c98d2ee985c2a7b79"
+    },
+    {
+      "path": "scripts/buzzword_auditor.py",
+      "sha256": "bc5cd0d65ae2b0badecaf769feaf77ca25dda081dcc67e64b9d8e9a61ce9ca4a"
+    },
+    {
+      "path": "scripts/logic_checker.py",
+      "sha256": "8732fe536ee2b1d356a637adc7e92f86b8dfeec49a1df6b0976e0898574ce5ca"
+    },
+    {
+      "path": "scripts/manifest_manager.py",
+      "sha256": "89ed65932346bc9317d3557b3b7b81263c9410c0df743d3f218c636befd4fda2"
+    },
+    {
+      "path": "templates/examples/good_titles_vs_bad_titles.md",
+      "sha256": "6339ffacc1db1cd4fc390b0f302794baa9d8d950dfa84ebefa975afe73d3f9bc"
+    },
+    {
+      "path": "templates/examples/narrative_vs_matrix_sample.md",
+      "sha256": "9730e73310389fadf06f297ef919644f465379858cef115968c2e2142616d445"
+    },
+    {
+      "path": "templates/structure_standard.md",
+      "sha256": "bbb5f687c695235f1a91aeec31bedd972a2607a1e1afc57da06e71c3cbc348bd"
+    },
+    {
+      "path": "templates/tco_calculator_model.md",
+      "sha256": "59811b0122008debd428bc1b61024fea2d9ec4f04103cfb7563621ae187bd326"
+    }
+  ],
+  "declared_local_dependencies": [
+    {
+      "path": "scripts/buzzword_auditor.py",
       "exists": true,
-      "resolved_path": "C:\\Users\\shich\\.codex\\skills\\hit-solution-architect\\scripts\\buzzword_auditor.py"
+      "resolved_path": "hit-solution-architect/scripts/buzzword_auditor.py",
+      "sha256": "bc5cd0d65ae2b0badecaf769feaf77ca25dda081dcc67e64b9d8e9a61ce9ca4a"
+    },
+    {
+      "path": "scripts/logic_checker.py",
+      "exists": true,
+      "resolved_path": "hit-solution-architect/scripts/logic_checker.py",
+      "sha256": "8732fe536ee2b1d356a637adc7e92f86b8dfeec49a1df6b0976e0898574ce5ca"
     }
   ],
   "missing_declared_dependencies": []

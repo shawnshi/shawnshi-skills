@@ -1,7 +1,7 @@
 {
-  "schema_version": 2,
+  "schema_version": 3,
   "skill": "mentat-insight-diary",
-  "generated_at": "2026-08-12T20:46:39",
+  "generated_at": "2026-08-16T22:02:19",
   "hash_algorithm": "SHA-256",
   "text_hash_normalization": "LF",
   "skill_md": "SKILL.md",
@@ -29,9 +29,19 @@
       "file_count": 1
     }
   ],
+  "resource_file_hashes": [
+    {
+      "path": "assets/ooda_template.md",
+      "sha256": "18a2f05cc63946081e2eb63277bff6e79a91baf99625361a3913bfa946a1d939"
+    },
+    {
+      "path": "scripts/test_skill_contract.py",
+      "sha256": "60e4c4fd667a3ecf27c2965c0298114f04382e4cacf9c45e340d3f8a17bc57b2"
+    }
+  ],
   "declared_local_dependencies": [
     {
-      "path": "assets\\ooda_template.md",
+      "path": "assets/ooda_template.md",
       "exists": true,
       "resolved_path": "mentat-insight-diary/assets/ooda_template.md",
       "sha256": "18a2f05cc63946081e2eb63277bff6e79a91baf99625361a3913bfa946a1d939"

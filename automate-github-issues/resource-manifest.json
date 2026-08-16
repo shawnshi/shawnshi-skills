@@ -1,13 +1,34 @@
 {
-  "schema_version": 1,
+  "schema_version": 3,
   "skill": "automate-github-issues",
-  "generated_at": "2026-07-14T21:01:43",
+  "generated_at": "2026-08-16T22:02:19",
+  "hash_algorithm": "SHA-256",
+  "text_hash_normalization": "LF",
   "skill_md": "SKILL.md",
+  "skill_md_sha256": "2e7e6e52f7d4b8c422e77380c5701f39402af0bd613214e7c6b2042c9f55c52a",
   "top_level_files": [
-    "package.json",
     "README.md",
     "SKILL.md",
+    "package.json",
     "tsconfig.json"
+  ],
+  "top_level_file_hashes": [
+    {
+      "path": "README.md",
+      "sha256": "6e1eaf8b28a5e84b0ac50d997bb21a240e5665892a3affb448ae2a7b8a058be2"
+    },
+    {
+      "path": "SKILL.md",
+      "sha256": "2e7e6e52f7d4b8c422e77380c5701f39402af0bd613214e7c6b2042c9f55c52a"
+    },
+    {
+      "path": "package.json",
+      "sha256": "6998dec9517b863ab7fb0d9b70ad98b40966dda5554f08f7c76b6458de064f13"
+    },
+    {
+      "path": "tsconfig.json",
+      "sha256": "5a8bcde571cc16949cddaa17a6a9d0704faa62f1b52dd9fd02a5f8c10a940ab0"
+    }
   ],
   "top_level_directories": [
     "assets",
@@ -20,10 +41,87 @@
       "file_count": 12
     },
     {
+      "name": "resources",
+      "file_count": 1
+    },
+    {
       "name": "assets",
       "file_count": 3
     }
   ],
-  "declared_local_dependencies": [],
+  "resource_file_hashes": [
+    {
+      "path": "assets/.env.example",
+      "sha256": "71cd8226548c90bd3e16f19fae187ab8d10a0f43c30d64af2328e0612faf3036"
+    },
+    {
+      "path": "assets/fleet-dispatch.yml",
+      "sha256": "7890e0f80ca0490eb1de6288b21b51a7206f2e69a118b2b5e6b809ee2e5972fb"
+    },
+    {
+      "path": "assets/fleet-merge.yml",
+      "sha256": "594c8f10e44666aa0eb51bd201981cad5a0cbf829a6595e592e2743770d709ea"
+    },
+    {
+      "path": "resources/architecture.md",
+      "sha256": "e85e1ee24c9b5ce246d3563b80e8df4cb12a9dcc4406a6e194e0c39d41e17495"
+    },
+    {
+      "path": "scripts/fleet-analyze.ts",
+      "sha256": "702bfecd718b75a88898e0aee441f546c9cdb213fea47c7f717729286ab2c009"
+    },
+    {
+      "path": "scripts/fleet-dispatch.ts",
+      "sha256": "705f47669f41e64ad534dc7e99235dafbff598d33508685a9109a386b8f119d2"
+    },
+    {
+      "path": "scripts/fleet-merge.ts",
+      "sha256": "eebcb21b4f48f7b5b007d2e9d35d6f75a42a8a5fc3f5c08b1667550608d55a43"
+    },
+    {
+      "path": "scripts/fleet-plan.ts",
+      "sha256": "22f5fa26ed2b75aa0de70f8715297b0bfc71b73266155be1a7f3f578aca101a5"
+    },
+    {
+      "path": "scripts/github/cache-plugin.ts",
+      "sha256": "b0c50ce610b16429fef5ec2501c2e0ef9b27a86810da8011cf718539c17ed7fa"
+    },
+    {
+      "path": "scripts/github/git.ts",
+      "sha256": "8b90c44eeea4c841ce87a9b98d5ddc9e325eb92da34d9b9f5f5f3fb826429dbb"
+    },
+    {
+      "path": "scripts/github/issues.ts",
+      "sha256": "f5ace4966c48934bdfbb7d1bd0d069d037c0ba07952923b5699de6bef3710dc1"
+    },
+    {
+      "path": "scripts/github/markdown.ts",
+      "sha256": "99d8ebef6f755455ac8eee6a345d90789f30553731ec9e66ef3d9bea709e794d"
+    },
+    {
+      "path": "scripts/prompts/analyze-issues.ts",
+      "sha256": "60e0c0f59032d14f86c2ebd36428e5dc0006f62e5615cb84bcd98b1cb1e6968b"
+    },
+    {
+      "path": "scripts/prompts/bootstrap.ts",
+      "sha256": "8de292b31d9a3c44388c9a882a649a138bdfc3df37392b2389f2ec1b81ed8483"
+    },
+    {
+      "path": "scripts/setup.sh",
+      "sha256": "1cc39af6ed1828ebeecdeee0fa0a11c2fa9c00b224fa16d19f9d1018f8ba1f7d"
+    },
+    {
+      "path": "scripts/types.ts",
+      "sha256": "ea38d7defa3e01ad9a68154b6b90e6f2603cc62b356b7439fe4aee4241a04208"
+    }
+  ],
+  "declared_local_dependencies": [
+    {
+      "path": "resources/architecture.md",
+      "exists": true,
+      "resolved_path": "automate-github-issues/resources/architecture.md",
+      "sha256": "e85e1ee24c9b5ce246d3563b80e8df4cb12a9dcc4406a6e194e0c39d41e17495"
+    }
+  ],
   "missing_declared_dependencies": []
 }

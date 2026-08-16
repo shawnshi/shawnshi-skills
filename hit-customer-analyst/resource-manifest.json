@@ -1,10 +1,19 @@
 {
-  "schema_version": 1,
+  "schema_version": 3,
   "skill": "hit-customer-analyst",
-  "generated_at": "2026-07-28T13:54:03",
+  "generated_at": "2026-08-16T22:02:19",
+  "hash_algorithm": "SHA-256",
+  "text_hash_normalization": "LF",
   "skill_md": "SKILL.md",
+  "skill_md_sha256": "a23915801727b0a5c824850761ceb00888b2a2151692f418c82880281db0af31",
   "top_level_files": [
     "SKILL.md"
+  ],
+  "top_level_file_hashes": [
+    {
+      "path": "SKILL.md",
+      "sha256": "a23915801727b0a5c824850761ceb00888b2a2151692f418c82880281db0af31"
+    }
   ],
   "top_level_directories": [
     "assets",
@@ -25,21 +34,38 @@
       "file_count": 1
     }
   ],
+  "resource_file_hashes": [
+    {
+      "path": "assets/briefing_template.md",
+      "sha256": "9b8c094946a6e36133d6b51849179827eb6759cb9a04105d510eb4bd9372e67a"
+    },
+    {
+      "path": "references/workflow.md",
+      "sha256": "6525d2f333b1b13ee0e7dadf408a32bf67255feef8c0bb532f1ed6a5a79f58a8"
+    },
+    {
+      "path": "scripts/brief_gate.py",
+      "sha256": "203334e6557306a9c5a552b805a1f9a42c1cac4d1939259196f9868b2256b5f4"
+    }
+  ],
   "declared_local_dependencies": [
     {
-      "path": "references\\workflow.md",
+      "path": "assets/briefing_template.md",
       "exists": true,
-      "resolved_path": "C:\\Users\\shich\\.codex\\skills\\hit-customer-analyst\\references\\workflow.md"
+      "resolved_path": "hit-customer-analyst/assets/briefing_template.md",
+      "sha256": "9b8c094946a6e36133d6b51849179827eb6759cb9a04105d510eb4bd9372e67a"
     },
     {
-      "path": "assets\\briefing_template.md",
+      "path": "references/workflow.md",
       "exists": true,
-      "resolved_path": "C:\\Users\\shich\\.codex\\skills\\hit-customer-analyst\\assets\\briefing_template.md"
+      "resolved_path": "hit-customer-analyst/references/workflow.md",
+      "sha256": "6525d2f333b1b13ee0e7dadf408a32bf67255feef8c0bb532f1ed6a5a79f58a8"
     },
     {
-      "path": "scripts\\brief_gate.py",
+      "path": "scripts/brief_gate.py",
       "exists": true,
-      "resolved_path": "C:\\Users\\shich\\.codex\\skills\\hit-customer-analyst\\scripts\\brief_gate.py"
+      "resolved_path": "hit-customer-analyst/scripts/brief_gate.py",
+      "sha256": "203334e6557306a9c5a552b805a1f9a42c1cac4d1939259196f9868b2256b5f4"
     }
   ],
   "missing_declared_dependencies": []

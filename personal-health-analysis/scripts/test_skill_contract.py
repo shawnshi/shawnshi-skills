@@ -189,7 +189,7 @@ class SkillContractTests(unittest.TestCase):
         manifest = json.loads(
             (SKILL_ROOT / "resource-manifest.json").read_text(encoding="utf-8")
         )
-        self.assertEqual(manifest["schema_version"], 2)
+        self.assertEqual(manifest["schema_version"], 3)
         self.assertEqual(manifest["hash_algorithm"], "SHA-256")
         self.assertEqual(manifest["text_hash_normalization"], "LF")
         self.assertEqual(manifest["skill_md_sha256"], sha256(SKILL_ROOT / "SKILL.md"))

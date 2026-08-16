@@ -41,12 +41,14 @@ JSON 或 JSONL 中每条记录使用一个对象：
 | `event_type` | 必需或关键字段 | 用途 |
 |---|---|---|
 | `wait`、`wait_agent` | `state_version`、`status`、`duration_ms`、`local_work_available` | 识别同状态重复等待和有本地工作时的阻塞 |
-| `skill_load` | `actor_id`、`context_epoch`、`skill_name`、`skill_sha256`、`skill_tokens` | 识别同一执行上下文中的重复全文载入 |
+| `skill_load_candidate` | `actor_id`、`context_epoch`、`skill_name`、`skill_path_sha256` | 记录原始命令中出现的保守读取候选，不证明已完成全文载入 |
+| `skill_load` | `actor_id`、`context_epoch`、`skill_name`、`skill_path_sha256`、`skill_sha256`、`skill_tokens`、`tokenizer` | 识别带正式回执的全文载入 |
 | `retry` | 错误信封字段 | 识别盲重试、同签名超预算和 EOF 降级缺失 |
 | `subagent_spawn` | `fork_turns`、`evidence_pointers`、`max_turns`、`halt_condition`、`output_schema` | 验证最小上下文和停止条件 |
 | `approval_request` | `task_mode`、`action`、`target` | 统计只读任务的额外批准回合 |
 | `write_attempt`、`write_commit` | `authorization_id`、`write_scope_sha256`、`authorization_scope_sha256` | 验证写入是否绑定有效授权 |
 | `context_compacted` | `root_task_id`、`context_epoch` | 计算每个根任务的压缩次数 |
+| `context_recovered` | `root_task_id`、`context_epoch`、`recovery_artifact_present`、`required_fields_verified` | 区分恢复制品存在与最小语义状态已经核验 |
 
 技能重复载入的唯一键为：
 
@@ -56,7 +58,11 @@ root_task_id + actor_id + context_epoch + skill_name + skill_sha256
 
 跨回合、跨执行者或上下文压缩后的必要重读不计为重复。指纹回执只能证明相同内容已载入当前上下文，不能绕过每回合读取技能的要求。
 
+正式回执由 `scripts/skill_load_receipt.py` 以 UTF-8 JSONL 追加。相同唯一键重复提交时返回成功但不追加；写入使用同目录排他锁、刷新和 `fsync`，锁竞争或已有文件非法时失败关闭。`skill_path_sha256` 对解析后的规范化绝对路径计算，事件中不保存原始路径。
+
 `skill_tokens` 必须同时记录 `tokenizer`。本地回执统一使用 `cl100k_base`，用于同一口径下比较技能文本体积；它不是模型输入账单 Token。若计数器不可用则字段保持缺失，不得使用字符数估算。
+
+候选载入与正式回执必须分开计数。`receipt_coverage` 的分母是 `skill_load_candidate`，分子是同一根任务、执行者、上下文 epoch 和技能名称下可配对的正式 `skill_load`；没有正式回执时不能使用当前文件 Token 反填历史事件。
 
 ## 4. 统一错误信封
 
@@ -83,6 +89,10 @@ root_task_id + actor_id + context_epoch + skill_name + skill_sha256
 `error_category` 使用有限集合：`syntax`、`path`、`permission`、`dependency`、`policy`、`data`、`validation`、`transport`、`timeout`、`rate_limit`、`remote_unavailable`、`business_logic`、`unknown`。
 
 `side_effect_state` 使用：`none`、`not_started`、`committed`、`rolled_back`、`unknown`。
+
+包装执行同时保留 `outer_status` 与 `nested_status`。外层显示 `Script completed`，但输出载荷以 `ParserError:`、Python traceback、明确非零退出码或嵌套工具错误开头时，标准事件的顶层 `status` 必须为 `error`，并保留有限 `error_category/error_signature`；不得保存原始错误正文。
+
+当前稳定 `error_signature/outcome` 至少包括：`powershell_parser`、`patch_context`、`not_git_repo`、`search_path`、`tool_interface`、`unicode_decode`、`python_exception`、`nested_tool_error`、`script_failed`、`no_match` 和 `validation_guard`。其中 `no_match` 与预期 `validation_guard` 的 `executor_failure=false`、顶层 `status=ok`；它们仍进入 outcome 计数，但不得增加 `tool_failures`。分类只读取包装层最后一个实际 `Output:` 载荷并先移除 ANSI CSI，不扫描被打印的源码或历史日志。
 
 重试规则：
 
@@ -131,6 +141,10 @@ root_task_id + actor_id + context_epoch + skill_name + skill_sha256
 
 `write_scope_sha256` 对规范化后的动作、目标、载荷摘要和授权范围计算 SHA-256。`authorization_scope_sha256` 必须与之完全一致；目标或载荷变化会使原确认失效。
 
+Codex rollout 标准化先在调用处生成 `write_attempt`，只在对应输出被判定为成功时生成 `write_commit`。目标集合和载荷仅以 SHA-256 进入事件。授权回执通过 `call_id` 绑定，并至少包含 `authorization_id` 与 `authorization_scope_sha256`；缺失或摘要不一致时，提交保持未匹配。自然语言批准不得由标准化器自行解释成授权指纹。
+
+日记回执只允许从实际 `diary_ops.py scope/replace-date` 调用的执行载荷中读取，并接受两种受限身份：`schema: diary-write-scope-v1`，或历史兼容的 `schema_version: 2` 且 `component: diary_ops`。批准必须是 `approval_request + ready_for_confirmation`；提交必须是 `write_commit + success`；`VALIDATION_FAILED` 仅生成写入尝试和 `validation_guard`，不得生成提交。原始 `target`、`message`、正文和命令不进入事件；目标最多转为哈希。嵌入回执与外部回执冲突时设置 `authorization_conflict=true`，保留两侧有限指纹并移除主绑定字段。
+
 授权类别：
 
 | 类别 | 处理 |
@@ -148,6 +162,48 @@ root_task_id + actor_id + context_epoch + skill_name + skill_sha256
 - `coverage`：输入文件、解析文件、跳过文件、跳过记录和问题明细。
 - `components`：调用、失败、实际耗时观察数、平均值、最近秩 P95 和 Token。
 - `operational_metrics`：`wait`、`skill_load`、`retry`、`subagent`、`authorization`、`context`。
+- `wait` 另报第三次及以后同状态超时的 `wait_gate_breach_count`。
+- `skill_load` 分开报告候选数、正式回执数和候选回执覆盖率。
+- `authorization` 分开报告尝试数、提交数、未匹配提交率和证据状态。
+- `context` 分开报告恢复制品存在覆盖率与 `required_fields_verified=true` 的语义恢复覆盖率。
 - `limitations`：缺失字段、顺序和因果限制。
 
 分析层的发现仍需包含 `id`、证据指针、事实、推断、置信度、替代解释、影响、动作、所有者、验证方法和授权类型。不要把聚合器输出直接当作因果结论。
+
+## 8. 修改建议 canonical manifest
+
+`scripts/report_pair.py` 消费的 manifest 至少包含：
+
+```json
+{
+  "report_id": "collaboration-audit-7d-20260816-remediation-v1",
+  "previous_report_id": null,
+  "title": "协作审计整改复核",
+  "recommendations": [
+    {
+      "id": "R-01",
+      "finding_ids": ["F-01"],
+      "action": "解析结构化授权和写入回执",
+      "implementation_layer": "telemetry",
+      "owner": "mentat-collaboration-audit",
+      "status": "validated",
+      "authorization": "approved",
+      "validation": {
+        "criterion": "冻结快照中的目标提交保留一致授权哈希",
+        "result": "pass",
+        "evidence": ["aggregate.fixed.json"]
+      },
+      "closure_reason": "",
+      "closure_evidence": []
+    }
+  ]
+}
+```
+
+`id` 使用稳定 `R-xx`，`finding_ids` 使用 `F-xx`。状态限定为 `not_started/in_progress/implemented/validated/blocked/superseded/rejected`；验证结果限定为 `not_run/pass/fail/blocked`。`validated` 必须对应 `pass` 且证据非空；`superseded/rejected` 必须给出关闭原因与证据。提供上一批 manifest 时，旧编号不能消失，同一编号的发现、动作、层级和所有者不能静默漂移。
+
+成对回执记录 manifest、上一批 manifest、Markdown、HTML 和验证器 SHA-256，以及建议编号集合与 pair projection 哈希。两种格式必须同目录、同主干、从同一 manifest 生成；建议表可见字段不一致或 HTML 外链资源存在时阻断写入。
+
+## 9. 生命周期钩子状态
+
+等待钩子运行态只保存哈希后的会话／回合键、可比较状态指纹、相同超时计数和一次状态探针标记。压缩前状态包必须恰好包含 `objective`、`authorization_scope`、`completed_steps`、`output_paths`；`PreCompact` 运行态只保存状态 SHA-256、完成步骤数、输出路径数和 `required_fields_verified`。`SessionStart(source=compact)` 只有在同一会话状态包未变化时才返回正文并声明核验成功。运行态不得保存原始会话 ID、工具输入输出、提示词、凭据、状态包路径或业务正文。

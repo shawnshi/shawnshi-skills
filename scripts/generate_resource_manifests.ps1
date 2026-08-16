@@ -2,248 +2,62 @@
 param(
     [string]$Root = '',
     [string[]]$IncludeSkills,
-    [string[]]$ExcludeSkills = @()
+    [string[]]$ExcludeSkills = @(),
+    [switch]$Check
 )
 
 Set-StrictMode -Version Latest
 $ErrorActionPreference = 'Stop'
 
 if ([string]::IsNullOrWhiteSpace($Root)) {
-    if (-not [string]::IsNullOrWhiteSpace($PSScriptRoot)) {
-        $Root = Split-Path -Parent $PSScriptRoot
-    } elseif (-not [string]::IsNullOrWhiteSpace($PSCommandPath)) {
-        $Root = Split-Path -Parent (Split-Path -Parent $PSCommandPath)
-    } else {
-        throw 'Unable to resolve repo root. Pass -Root explicitly.'
-    }
+    $Root = Split-Path -Parent $PSScriptRoot
 }
 $Root = (Resolve-Path -LiteralPath $Root).Path
 
-$LocalReferencePattern = '(?<path>(?<![A-Za-z])(?:(?:scripts|references|resources|assets|examples|prompts|agents)[\\/][^\s`"''<>]+|[A-Za-z0-9._-]+[\\/](?:SKILL\.md|(?:scripts|references|resources|assets|examples|prompts|agents)[\\/][^\s`"''<>]+)))'
+$python = Get-Command python -ErrorAction SilentlyContinue
+if ($null -eq $python) {
+    Write-Error 'Python is required to generate or validate resource manifests.'
+    exit 1
+}
 
-$KnownFileSuffixPattern = '(?<stable>.*?(?:SKILL\.md|\.md|\.json|\.py|\.ps1|\.sh|\.csx|\.cs|\.svg|\.png|\.jpg|\.jpeg|\.gif|\.pptx|\.docx|\.pdf|\.txt|\.yaml|\.yml|\.toml|\.csv|\.tsv|\.html|\.css|\.js|\.ts|\.tsx|\.jsx))'
+$mode = if ($Check) { 'check' } else { 'generate' }
+if (-not $Check -and -not $PSCmdlet.ShouldProcess($Root, 'Generate scoped resource manifests')) {
+    $mode = 'check'
+}
 
-$CanonicalTextHashExtensions = @(
-    '.md', '.txt', '.py', '.ps1', '.sh', '.csx', '.cs', '.svg', '.xml',
-    '.json', '.yaml', '.yml', '.toml', '.csv', '.tsv', '.html', '.css',
-    '.js', '.mjs', '.cjs', '.ts', '.tsx', '.jsx'
+$arguments = @(
+    '-B', '-X', 'utf8',
+    (Join-Path $PSScriptRoot 'resource_manifest.py'),
+    $mode,
+    '--root', $Root,
+    '--json'
 )
-$CanonicalTextHashNames = @('.gitignore', '.gitattributes', '.editorconfig')
-
-function Normalize-LocalReference {
-    param(
-        [string]$Path
-    )
-
-    $normalized = $Path.Replace('/', '\').Trim()
-    if ($normalized.StartsWith('skills\', [System.StringComparison]::OrdinalIgnoreCase)) {
-        $normalized = $normalized.Substring(7)
+foreach ($skill in @($IncludeSkills)) {
+    if (-not [string]::IsNullOrWhiteSpace($skill)) {
+        $arguments += @('--include-skill', $skill)
     }
-    $normalized = $normalized -replace '\]\(.*$', ''
-    $normalized = [regex]::Replace($normalized, '[\)\]\.,;:\*]+$', '')
-    if ($normalized -match $KnownFileSuffixPattern) {
-        $normalized = $Matches['stable']
-    }
-    return $normalized
 }
-
-function Should-IgnoreReference {
-    param(
-        [string]$Path
-    )
-
-    if ([string]::IsNullOrWhiteSpace($Path)) {
-        return $true
-    }
-
-    $normalized = $Path.Replace('/', '\')
-    if ($normalized.StartsWith('tmp\', [System.StringComparison]::OrdinalIgnoreCase)) {
-        return $true
-    }
-    if ($normalized -match '\[.+?\]' -or $normalized -match '\{.+?\}' -or $normalized -match '<.+?>') {
-        return $true
-    }
-
-    return $false
-}
-
-function Get-ContentSha256 {
-    param([string]$Path)
-
-    if ([string]::IsNullOrWhiteSpace($Path) -or
-        -not (Test-Path -LiteralPath $Path -PathType Leaf)) {
-        return $null
-    }
-    $bytes = [IO.File]::ReadAllBytes($Path)
-    $extension = [IO.Path]::GetExtension($Path).ToLowerInvariant()
-    $name = [IO.Path]::GetFileName($Path).ToLowerInvariant()
-    if ($extension -in $CanonicalTextHashExtensions -or
-        $name -in $CanonicalTextHashNames) {
-        $utf8 = [Text.UTF8Encoding]::new($false, $true)
-        $text = $utf8.GetString($bytes)
-        $canonicalText = $text.Replace("`r`n", "`n").Replace("`r", "`n")
-        $bytes = $utf8.GetBytes($canonicalText)
-    }
-
-    $hasher = [Security.Cryptography.SHA256]::Create()
-    try {
-        $hash = $hasher.ComputeHash($bytes)
-    } finally {
-        $hasher.Dispose()
-    }
-    return [BitConverter]::ToString($hash).Replace('-', '').ToLowerInvariant()
-}
-
-function Get-SkillFiles {
-    $directories = Get-ChildItem -LiteralPath $Root -Directory |
-        Where-Object {
-            $_.Name -notin @('.system', 'scripts', 'shared', 'reports') -and
-            (Test-Path -LiteralPath (Join-Path $_.FullName 'SKILL.md'))
-        }
-
-    foreach ($directory in $directories) {
-        $skill = $directory.Name
-        if ($IncludeSkills -and $skill -notin $IncludeSkills) {
-            continue
-        }
-        if ($skill -in $ExcludeSkills) {
-            continue
-        }
-        Get-Item -LiteralPath (Join-Path $directory.FullName 'SKILL.md')
+foreach ($skill in @($ExcludeSkills)) {
+    if (-not [string]::IsNullOrWhiteSpace($skill)) {
+        $arguments += @('--exclude-skill', $skill)
     }
 }
 
-function Get-DeclaredLocalReferences {
-    param(
-        [string]$Text,
-        [string]$SkillDirectory
-    )
-
-    $matches = [regex]::Matches($Text, $LocalReferencePattern)
-    $seen = New-Object 'System.Collections.Generic.HashSet[string]'
-
-    foreach ($match in $matches) {
-        $relative = Normalize-LocalReference -Path $match.Groups['path'].Value
-        if ([string]::IsNullOrWhiteSpace($relative)) {
-            continue
-        }
-        if (Should-IgnoreReference -Path $relative) {
-            continue
-        }
-        if (-not $seen.Add($relative)) {
-            continue
-        }
-
-        $candidatePaths = @(
-            (Join-Path $SkillDirectory $relative),
-            (Join-Path $Root $relative)
-        )
-
-        $resolved = $null
-        foreach ($candidate in $candidatePaths) {
-            if (Test-Path -LiteralPath $candidate) {
-                $resolved = (Resolve-Path -LiteralPath $candidate).Path
-                break
-            }
-        }
-
-        $portableResolved = if ($null -eq $resolved) {
-            $null
-        } else {
-            [System.IO.Path]::GetRelativePath($Root, $resolved).Replace('\', '/')
-        }
-
-        [PSCustomObject]@{
-            path          = $relative
-            exists        = $null -ne $resolved
-            resolved_path = $portableResolved
-            sha256        = Get-ContentSha256 -Path $resolved
-        }
-    }
+$output = & $python.Source @arguments
+$exitCode = $LASTEXITCODE
+if ([string]::IsNullOrWhiteSpace(($output -join "`n"))) {
+    Write-Error 'Resource manifest worker returned no result.'
+    exit 1
 }
-
-function Get-TopLevelResourceDirectories {
-    param(
-        [string]$SkillDirectory
-    )
-
-    $resourceNames = @('scripts', 'references', 'resources', 'assets', 'examples', 'prompts', 'agents', 'tmp')
-    foreach ($name in $resourceNames) {
-        $full = Join-Path $SkillDirectory $name
-        if (Test-Path -LiteralPath $full) {
-            $files = @(
-                Get-ChildItem -Path $full -Recurse -File -ErrorAction SilentlyContinue |
-                Where-Object {
-                    $_.FullName -notmatch '[\\/](?:__pycache__|\.ruff_cache|\.pytest_cache|\.venv|\.venv_test)[\\/]' -and
-                    $_.Name -notmatch '\.log$|\.py[co]$' -and
-                    $_.Name -notin @('config.json', 'garmin_tokens.json')
-                }
-            )
-            [PSCustomObject]@{
-                name       = $name
-                file_count = $files.Count
-            }
-        }
-    }
+$result = ($output -join "`n") | ConvertFrom-Json
+if ($mode -eq 'check') {
+    Write-Host "Resource manifests checked: $($result.checked); stale: $($result.stale)"
+} else {
+    Write-Host "Resource manifests checked: $($result.checked); written: $($result.written); unchanged: $($result.unchanged); failed: $($result.failed)"
 }
-
-$generated = 0
-foreach ($file in (Get-SkillFiles)) {
-    $skillDirectory = $file.DirectoryName
-    $skillName = Split-Path $skillDirectory -Leaf
-    $text = Get-Content -LiteralPath $file.FullName -Encoding UTF8 -Raw
-    $declared = @(Get-DeclaredLocalReferences -Text $text -SkillDirectory $skillDirectory)
-    $missing = @($declared | Where-Object { -not $_.exists } | ForEach-Object { $_.path })
-    $topLevelFiles = @(
-        Get-ChildItem -Path $skillDirectory -File -ErrorAction SilentlyContinue |
-        Where-Object {
-            $_.Name -notmatch '\.bak$|\.p12\.bak$|\.p22\.bak$|\.log$|resource-manifest\.json$|skill\.json$' -and
-            $_.Name -notin @('config.json', 'garmin_tokens.json')
-        } |
-        ForEach-Object { $_.Name }
-    )
-    $topLevelDirs = @(
-        Get-ChildItem -Path $skillDirectory -Directory -ErrorAction SilentlyContinue |
-        Where-Object {
-            $_.Name -notin @(
-                '__pycache__', '.ruff_cache', '.pytest_cache', '.jules',
-                '.venv', '.venv_test',
-                'garmin-output', 'output', 'scratch'
-            )
-        } |
-        ForEach-Object { $_.Name }
-    )
-    $topLevelFileHashes = @(
-        $topLevelFiles | ForEach-Object {
-            $topLevelPath = Join-Path $skillDirectory $_
-            [PSCustomObject]@{
-                path   = $_
-                sha256 = Get-ContentSha256 -Path $topLevelPath
-            }
-        }
-    )
-
-    $manifest = [ordered]@{
-        schema_version                = 2
-        skill                         = $skillName
-        generated_at                  = (Get-Date).ToString('s')
-        hash_algorithm                = 'SHA-256'
-        text_hash_normalization       = 'LF'
-        skill_md                      = 'SKILL.md'
-        skill_md_sha256               = Get-ContentSha256 -Path $file.FullName
-        top_level_files               = $topLevelFiles
-        top_level_file_hashes         = $topLevelFileHashes
-        top_level_directories         = $topLevelDirs
-        resource_directories          = @(Get-TopLevelResourceDirectories -SkillDirectory $skillDirectory)
-        declared_local_dependencies   = $declared
-        missing_declared_dependencies = $missing
-    }
-
-    $manifestPath = Join-Path $skillDirectory 'resource-manifest.json'
-    if ($PSCmdlet.ShouldProcess($manifestPath, 'Write resource manifest')) {
-        $manifest | ConvertTo-Json -Depth 6 | Set-Content -LiteralPath $manifestPath -Encoding UTF8
-        $generated++
-    }
+foreach ($issue in @($result.issues)) {
+    Write-Warning "$($issue.skill): $($issue.detail)"
 }
-
-Write-Host "Resource manifests written: $generated"
+if ($exitCode -ne 0) {
+    exit $exitCode
+}

@@ -1,10 +1,19 @@
 {
-  "schema_version": 1,
+  "schema_version": 3,
   "skill": "tool-slide-architect",
-  "generated_at": "2026-07-28T13:46:56",
+  "generated_at": "2026-08-16T22:27:50+08:00",
+  "hash_algorithm": "SHA-256",
+  "text_hash_normalization": "LF",
   "skill_md": "SKILL.md",
+  "skill_md_sha256": "4432b4368517fae465a1c39b1d1ebb2298135308bd0e853d3c7b26b63fe38404",
   "top_level_files": [
     "SKILL.md"
+  ],
+  "top_level_file_hashes": [
+    {
+      "path": "SKILL.md",
+      "sha256": "4432b4368517fae465a1c39b1d1ebb2298135308bd0e853d3c7b26b63fe38404"
+    }
   ],
   "top_level_directories": [
     "evals",
@@ -21,46 +30,212 @@
       "file_count": 34
     }
   ],
+  "resource_file_hashes": [
+    {
+      "path": "evals/evals.json",
+      "sha256": "68012e54a3f9902da4326f776aaaac509e2f61c9fa0ddea37b9828a0214db375"
+    },
+    {
+      "path": "evals/valid-outline.md",
+      "sha256": "10c3b0a1dd0a967f46729c1bf1a1674168cdbb73a353acc70ce4f40b300c1cb6"
+    },
+    {
+      "path": "references/analysis-framework.md",
+      "sha256": "bd9f0a60826ad7e039c8894777b3a9dcc6e8d6b5e0f03374faeaa07ab68b8bcd"
+    },
+    {
+      "path": "references/blueprint-template.md",
+      "sha256": "9aba69fdf6da2b09a245c3c43caeed6bff02d6d7c4b92c00cc7862c4d60ed665"
+    },
+    {
+      "path": "references/cli-reference.md",
+      "sha256": "94172fdca84e92144ee7acf92f532d027e6d7d72c082d6ec102f7fde45fa7334"
+    },
+    {
+      "path": "references/config/preferences-schema.md",
+      "sha256": "3823622e614a4642125807c1d7a53b5e77ca6a5a533c0e7c8b3d1e88e98d1672"
+    },
+    {
+      "path": "references/content-rules.md",
+      "sha256": "0614e3d91a9cf11843cf79bd92f7f86cc5ebadca267cca73316971f8d929ae6f"
+    },
+    {
+      "path": "references/design-guidelines.md",
+      "sha256": "b417820e2ccf5d7d245970dcd867fb573edf1284b75c8134476da795f4b19595"
+    },
+    {
+      "path": "references/dimensions/density.md",
+      "sha256": "25c535b2bed552c1774c73a132e0cb46c1a40b7f4e6727aeb4d11568f7a9ced4"
+    },
+    {
+      "path": "references/dimensions/mood.md",
+      "sha256": "45e93847b3787b391e0d0a95af736fa5cde32f8a68b65bc5c3c3c3b47144468a"
+    },
+    {
+      "path": "references/dimensions/presets.md",
+      "sha256": "3ac55682bff41aa490db07736d303a8b31854b23f49841ba4f089c51a58a6f6b"
+    },
+    {
+      "path": "references/dimensions/texture.md",
+      "sha256": "14f2ab91dc28f17aca462070803d8fc62aabcfdf9a8a96637cff14c8031575d3"
+    },
+    {
+      "path": "references/dimensions/typography.md",
+      "sha256": "4c5e51d63c39825b7c9d1277e9ecc2e7fdae8dbc212bb099f175969a5c3d4a15"
+    },
+    {
+      "path": "references/layouts.md",
+      "sha256": "ddba1252475112aaff95008b6d1b5e9086662f6c8c6a3b1fb364e0f4a24d1319"
+    },
+    {
+      "path": "references/modification-guide.md",
+      "sha256": "653ada0a396500c3ee0a6732919f3f80acae4e456374637d0d5b56acd26e2e3c"
+    },
+    {
+      "path": "references/outline-template.md",
+      "sha256": "390cc05f82988f586570a7fc24408b35db34e2b7ea00a18ce05eff0d63cf6d52"
+    },
+    {
+      "path": "references/styles/Anti-Gravity  Living Artifact Presentation.md",
+      "sha256": "52827b125b9ed32ecca49f73c7bf0f63a70c72095ef867ecf26bcf317ff068a3"
+    },
+    {
+      "path": "references/styles/Refined Minimal Portfolio.md",
+      "sha256": "da7cf120f30f41883d64cabdb30cd11a1409f0269ba8e5c5f4c9d0332b201172"
+    },
+    {
+      "path": "references/styles/像素纪元Pixel-Art.md",
+      "sha256": "6c3cec76c4957c202c3944a5327b51e050b0ef3351c0dbe6b1c5a00541436b54"
+    },
+    {
+      "path": "references/styles/历史做旧Vintage.md",
+      "sha256": "973b177f28b30634f20585ec56a89ef518e4aa0813916600bfeac3faad584644"
+    },
+    {
+      "path": "references/styles/商务结构化Corporate.md",
+      "sha256": "c8e806afe9c513517b03bead1bd6baa23522606699a6bd13fc55358b2f41ecc8"
+    },
+    {
+      "path": "references/styles/奇幻绘本Fantasy-Animation.md",
+      "sha256": "348cdf9c926b8c5641cbb78d8fb085920f5f4d381499111baac06dd591e4f910"
+    },
+    {
+      "path": "references/styles/学术插图Scientific.md",
+      "sha256": "97b90c4edc54c5bceaa7be3e668ed5eef9122dea0b1e8084989157133c8790b5"
+    },
+    {
+      "path": "references/styles/工程蓝图标准Blueprint.md",
+      "sha256": "c29ebd7a994cc1f77fc36698979e03f60510b6c05944b7061bb6431e4dcf441a"
+    },
+    {
+      "path": "references/styles/情绪暗场Dark-Atmospheric.md",
+      "sha256": "56f9d7f5a0d0b58c87ba9a30b351e6a6610fe790243a5a687f3c8968ca31dece"
+    },
+    {
+      "path": "references/styles/手术切面标准Clinical-Deep-Blue.md",
+      "sha256": "fcad77efcee42f0d576c9c1856c6d1a7283788be1fbfb546ccf4a81f71c39d90"
+    },
+    {
+      "path": "references/styles/技术文献Intuition-Machine.md",
+      "sha256": "aa89d5c701493d80fac6cd51799a3881d9e8ed3cdec5040db5bfc10d240e095e"
+    },
+    {
+      "path": "references/styles/教学粉笔Chalkboard.md",
+      "sha256": "f15f63f8713358a0ea29e0cd00525605edcad1451d8f7b938decf58a7a212db6"
+    },
+    {
+      "path": "references/styles/暗室标准Dark-Room-Standard.md",
+      "sha256": "1dcb94f304728490fbf5c71cfdbe2b4bfdbcafcd44923a9097b214d555238734"
+    },
+    {
+      "path": "references/styles/杂志级拆解Editorial-Infographic.md",
+      "sha256": "04ee0f2ff86e5ab952ccd2b3c7c97cf8686f30adff84239f90eaa57a73f61e52"
+    },
+    {
+      "path": "references/styles/极简看板Notion.md",
+      "sha256": "260feac5ca1871de7ce64ce20f48b85f5089ffbebed8afaeba53b2c62cf805bc"
+    },
+    {
+      "path": "references/styles/治愈水彩Watercolor.md",
+      "sha256": "13985e1f87f0e5efc472ddebcc761987ca8659dcaac55855bd798b4c74a9d908"
+    },
+    {
+      "path": "references/styles/矢量插画Vector-Illustration.md",
+      "sha256": "9811ce8938e45be6fd1dd6c00ed8670b66e79bf0da4aec94b32530fac8fa2c4f"
+    },
+    {
+      "path": "references/styles/等距拓扑标准Logical Light Blue.md",
+      "sha256": "8e330ea475bc4957caf34288d2c908b8e81b17ef155d1d41d4b70b98c6b52296"
+    },
+    {
+      "path": "references/styles/高视效封面Bold-Editorial.md",
+      "sha256": "e32911cfa650ddbd0df349e7bfd2a77707430df57769c89e4d85a178af833e3f"
+    },
+    {
+      "path": "references/workflows.md",
+      "sha256": "4d677dc11c7d22c37e33000161d53a14fb61ca1b2242c7f3a4440068527c1c37"
+    },
+    {
+      "path": "scripts/build-deck.py",
+      "sha256": "aaf012c91624739008fa01d75b8e464cbf3e7578dc2a1b75cc414207aec3171c"
+    },
+    {
+      "path": "scripts/test_validator.py",
+      "sha256": "27ca2e5e4532f7d68efc040fea29becea5c2ec1fffd5e79c0216b5fb5f687a83"
+    },
+    {
+      "path": "scripts/validator.py",
+      "sha256": "758403be0649689d3a8f70a285befc11e36604e0273ee60521029a32b420682c"
+    }
+  ],
   "declared_local_dependencies": [
     {
-      "path": "references\\workflows.md",
+      "path": "references/blueprint-template.md",
       "exists": true,
-      "resolved_path": "C:\\Users\\shich\\.codex\\skills\\tool-slide-architect\\references\\workflows.md"
+      "resolved_path": "tool-slide-architect/references/blueprint-template.md",
+      "sha256": "9aba69fdf6da2b09a245c3c43caeed6bff02d6d7c4b92c00cc7862c4d60ed665"
     },
     {
-      "path": "references\\outline-template.md",
+      "path": "references/content-rules.md",
       "exists": true,
-      "resolved_path": "C:\\Users\\shich\\.codex\\skills\\tool-slide-architect\\references\\outline-template.md"
+      "resolved_path": "tool-slide-architect/references/content-rules.md",
+      "sha256": "0614e3d91a9cf11843cf79bd92f7f86cc5ebadca267cca73316971f8d929ae6f"
     },
     {
-      "path": "references\\content-rules.md",
+      "path": "references/design-guidelines.md",
       "exists": true,
-      "resolved_path": "C:\\Users\\shich\\.codex\\skills\\tool-slide-architect\\references\\content-rules.md"
+      "resolved_path": "tool-slide-architect/references/design-guidelines.md",
+      "sha256": "b417820e2ccf5d7d245970dcd867fb573edf1284b75c8134476da795f4b19595"
     },
     {
-      "path": "references\\design-guidelines.md",
+      "path": "references/layouts.md",
       "exists": true,
-      "resolved_path": "C:\\Users\\shich\\.codex\\skills\\tool-slide-architect\\references\\design-guidelines.md"
+      "resolved_path": "tool-slide-architect/references/layouts.md",
+      "sha256": "ddba1252475112aaff95008b6d1b5e9086662f6c8c6a3b1fb364e0f4a24d1319"
     },
     {
-      "path": "references\\layouts.md",
+      "path": "references/outline-template.md",
       "exists": true,
-      "resolved_path": "C:\\Users\\shich\\.codex\\skills\\tool-slide-architect\\references\\layouts.md"
+      "resolved_path": "tool-slide-architect/references/outline-template.md",
+      "sha256": "390cc05f82988f586570a7fc24408b35db34e2b7ea00a18ce05eff0d63cf6d52"
     },
     {
-      "path": "references\\blueprint-template.md",
+      "path": "references/workflows.md",
       "exists": true,
-      "resolved_path": "C:\\Users\\shich\\.codex\\skills\\tool-slide-architect\\references\\blueprint-template.md"
+      "resolved_path": "tool-slide-architect/references/workflows.md",
+      "sha256": "4d677dc11c7d22c37e33000161d53a14fb61ca1b2242c7f3a4440068527c1c37"
     },
     {
-      "path": "scripts\\validator.py",
+      "path": "scripts/build-deck.py",
       "exists": true,
-      "resolved_path": "C:\\Users\\shich\\.codex\\skills\\tool-slide-architect\\scripts\\validator.py"
+      "resolved_path": "tool-slide-architect/scripts/build-deck.py",
+      "sha256": "aaf012c91624739008fa01d75b8e464cbf3e7578dc2a1b75cc414207aec3171c"
     },
     {
-      "path": "scripts\\build-deck.py",
+      "path": "scripts/validator.py",
       "exists": true,
-      "resolved_path": "C:\\Users\\shich\\.codex\\skills\\tool-slide-architect\\scripts\\build-deck.py"
+      "resolved_path": "tool-slide-architect/scripts/validator.py",
+      "sha256": "758403be0649689d3a8f70a285befc11e36604e0273ee60521029a32b420682c"
     }
   ],
   "missing_declared_dependencies": []

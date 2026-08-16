@@ -1,25 +1,80 @@
 {
-  "schema_version": 1,
+  "schema_version": 3,
   "skill": "mentat-skill-creator",
-  "generated_at": "2026-07-16T09:33:58",
+  "generated_at": "2026-08-16T22:27:49+08:00",
+  "hash_algorithm": "SHA-256",
+  "text_hash_normalization": "LF",
   "skill_md": "SKILL.md",
+  "skill_md_sha256": "fe04f2182a748bac0266f533302cdf9335eccd32efd526f8421d7baf5ca3bde8",
   "top_level_files": [
     "SKILL.md"
   ],
+  "top_level_file_hashes": [
+    {
+      "path": "SKILL.md",
+      "sha256": "fe04f2182a748bac0266f533302cdf9335eccd32efd526f8421d7baf5ca3bde8"
+    }
+  ],
   "top_level_directories": [
-    "agents"
+    "agents",
+    "references"
   ],
   "resource_directories": [
+    {
+      "name": "references",
+      "file_count": 1
+    },
     {
       "name": "agents",
       "file_count": 1
     }
   ],
+  "resource_file_hashes": [
+    {
+      "path": "agents/openai.yaml",
+      "sha256": "1c04029636420fed06e83d4366f8c3aa4b0951f0e30cbf3a500da2344ef44e78"
+    },
+    {
+      "path": "references/trigger-evals.json",
+      "sha256": "383ade4b60ff56ff2841cc09fac492d3da0f0b2b5025240436580d2292295920"
+    }
+  ],
   "declared_local_dependencies": [
     {
-      "path": "agents\\openai.yaml",
+      "path": "agents/openai.yaml",
       "exists": true,
-      "resolved_path": "C:\\Users\\shich\\.codex\\skills\\mentat-skill-creator\\agents\\openai.yaml"
+      "resolved_path": "mentat-skill-creator/agents/openai.yaml",
+      "sha256": "1c04029636420fed06e83d4366f8c3aa4b0951f0e30cbf3a500da2344ef44e78"
+    },
+    {
+      "path": "references/trigger-evals.json",
+      "exists": true,
+      "resolved_path": "mentat-skill-creator/references/trigger-evals.json",
+      "sha256": "383ade4b60ff56ff2841cc09fac492d3da0f0b2b5025240436580d2292295920"
+    },
+    {
+      "path": "scripts/generate_resource_manifests.ps1",
+      "exists": true,
+      "resolved_path": "scripts/generate_resource_manifests.ps1",
+      "sha256": "c3dec38a672ea6f358a1fa6689a1a8cc1021994cf21767feef9ed99ce81b11e4"
+    },
+    {
+      "path": "scripts/repair_skills.ps1",
+      "exists": true,
+      "resolved_path": "scripts/repair_skills.ps1",
+      "sha256": "044a24446393cb6406f150f5679e7d33ddde036e4d23adbb64f7bdff519b8bca"
+    },
+    {
+      "path": "scripts/test_mentat_skill_creator.py",
+      "exists": true,
+      "resolved_path": "scripts/test_mentat_skill_creator.py",
+      "sha256": "3bf038f1f7b4c63119af6bcd38855c5a2d2059413260ff0d542a97c00adb06f4"
+    },
+    {
+      "path": "scripts/validate_openai_yaml.py",
+      "exists": true,
+      "resolved_path": "scripts/validate_openai_yaml.py",
+      "sha256": "2fb10e067f5781d53f36669845ce1af0fac89b4c668f15a00387bc838299ce84"
     }
   ],
   "missing_declared_dependencies": []

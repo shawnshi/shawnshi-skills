@@ -5,7 +5,7 @@
 
 - Codex 只以每个技能目录中的 `SKILL.md` 作为运行真相源。
 - 每个技能聚焦一个可描述、可触发、可验证的工作。
-- 仓库级规则写在 `AGENTS.md`；技能只保留可复用的专业流程。
+- 仓库级执行指令写在并由 Codex 自动加载的 `AGENTS.md`；本 README 只记录库级 Schema、库存和维护说明，不得扩张权限或凌驾上位指令。
 - 外部系统能力由真实工具、插件或 MCP 提供。技能不得用散文虚构工具接口。
 
 ## 2. Required shape
@@ -75,6 +75,9 @@ description: 说明技能做什么，以及用户在什么场景下应使用它�
 | `mentat-insight-diary` | 生成、更新、记录或写 Mentat 日志 | 权威入口返回的 canonical 季度档案 | 草稿、预览、分析、审计技能或不保存 |
 | `personal-diary-writer` | 仅承接 `mentat-insight-diary` 已确认的上述请求 | 同一 canonical 季度档案 | 个人日记、草稿、预览、自定义路径或外部系统 |
 | `personal-intelligence-hub` | 生成正式日简报 | 正式新闻文件及新闻目录内的去重索引 | 预览或明确不保存 |
+| `hit-weekly-brief` | 生成正式数字健康周报 | DigitalHealthWeeklyBrief 本地归档 | 草稿、预览或明确不保存 |
+| `hit-industry-radar` | 生成正式医疗行业雷达 | HealthcareIndustryRadar 本地归档 | 草稿、预览或明确不保存 |
+| `hit-lectures-scout` | 生成正式医疗数字化文献侦察报告 | DigitalHealthLecturesScout 本地归档 | 草稿、预览或明确不保存 |
 <!-- automatic-persistence-exceptions:end -->
 
 ## 4. Resource and dependency rules
@@ -83,7 +86,7 @@ description: 说明技能做什么，以及用户在什么场景下应使用它�
 - 外部命令、操作系统、浏览器、桌面应用、Python/Node 包和凭据要求必须在正文的依赖或边界部分写明。
 - 不提交 `node_modules`、缓存、日志、临时下载、测试输出或生成音频。
 - 不把同一说明同时复制到 `SKILL.md` 和 `references/`。
-- `resource-manifest.json` 只记录资源与引用状态，不定义技能语义。
+- `resource-manifest.json` 只记录资源与引用状态，不定义技能语义。当前 schema v3 使用 LF 规范化 SHA-256 校验 `SKILL.md`、顶层文件、全部受管资源文件和明确引用，并拒绝绝对路径、根外路径与磁盘不一致。
 
 ## 5. Skill inventory
 
@@ -126,7 +129,7 @@ description: 说明技能做什么，以及用户在什么场景下应使用它�
 | `mentat-collaboration-audit` | 基于真实会话记录、日志、工具调用和遥测事件审计系统效率与人机协作摩擦，复算等待、技能载入、错误重试、子代理Token、上下文压缩和写入授权指标，并按需生成Markdown报告和HTML审计面板 |
 | `mentat-dream-cycle` | 以审计、预览和事务化方式检查临时文件、热记忆、失败日志及知识图谱待治理项，生成可执行的清理与归档建议，并在获得明确授权后执行限定范围的安全维护 |
 | `mentat-insight-diary` | 将真实发生的系统事件、执行摩擦、失败、权衡和改进动作整理为OODA结构的内观审计日志，并在生成或更新日志时默认原子保存到权威季度档案 |
-| `mentat-skill-creator` | 在本地 Codex skills 库中审计、修订、拆分和验证用户技能，落实根 README、资源索引、触发所有权和发布门禁 |
+| `mentat-skill-creator` | 显式维护本地 Codex skills 库的根治理合同、资源清单、触发所有权、批量迁移和发布门禁；通用新技能与可安装插件分别转交系统 creator |
 
 ### Personal workflows
 
@@ -192,6 +195,10 @@ description: 说明技能做什么，以及用户在什么场景下应使用它�
 pwsh -NoProfile -ExecutionPolicy Bypass -File scripts/generate_resource_manifests.ps1 -Root .
 ```
 
+只检查不写入时增加 `-Check`；局部维护时增加 `-IncludeSkills <skill-name>`，先检查、获授权后再刷新，并用同一范围复检。
+
+严格资源与界面元数据检查需要 Python 3 与 PyYAML；依赖缺失时 Gate 失败关闭，不得静默跳过，安装依赖仍须用户明确授权。
+
 运行阻断门禁：
 
 ```powershell
@@ -209,7 +216,8 @@ pwsh -NoProfile -ExecutionPolicy Bypass -File scripts/repair_skills.ps1 -Mode Ga
 - 一级用户技能数与 README 库存一致。
 - frontmatter 仅含 `name` 和 `description`。
 - 名称、描述、行数和本地引用有效。
-- 每个用户技能存在 `resource-manifest.json`，且没有缺失依赖。
+- 每个用户技能存在 schema v3 `resource-manifest.json`；清单字段、规范化哈希、全部受管资源、声明依赖和可移植路径与磁盘一致。
+- 可选 `agents/openai.yaml` 必须能安全解析，界面字段、精确 `$skill-name` 默认提示、图标路径、颜色、调用策略和 MCP 依赖类型有效。
 - 不存在 `skill.json`。
 - 对 `SKILL.md`、脚本、参考资料、配置和界面元数据执行一致检查；不存在旧运行时工具令牌、外部运行时路径、思维稿指令、硬编码模型版本、强制子代理或强制持久化。
 - `_runtime` 目录属于用户运行产物，不进入源码一致性扫描，也不得被当作技能资源或业务事实。
@@ -222,11 +230,11 @@ pwsh -NoProfile -ExecutionPolicy Bypass -File scripts/repair_skills.ps1 -Mode Ga
 1. 读取目标技能及其直接引用资源。
 2. 以小批次修改 `SKILL.md` 和必要资源。
 3. 运行代表性脚本或静态验证。
-4. 运行 `scripts/generate_resource_manifests.ps1` 刷新资源索引。
-5. 运行 Gate。
+4. 先用 `scripts/generate_resource_manifests.ps1 -Check` 检查资源索引；在授权范围内仅刷新真实过期的技能，再复检无时间戳漂移。
+5. 先运行选中技能 Gate；涉及根治理、共享资源或批量迁移时再运行全库 Gate。
 6. 对修改过的脚本运行语法检查、代表性正向测试和相关单元测试。
 7. 只有验证结果真实变化时，才同步本 README 的库存和基线数字。
 
 禁止在维护流程中重新生成 `skill.json`。旧工具如果仍依赖该文件，应修订或移除该工具，不得恢复双重真相源。
 
-Last updated: 2026-07-28
+Last updated: 2026-08-16

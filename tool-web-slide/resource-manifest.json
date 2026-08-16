@@ -1,12 +1,29 @@
 {
-  "schema_version": 1,
+  "schema_version": 3,
   "skill": "tool-web-slide",
-  "generated_at": "2026-07-14T21:01:45",
+  "generated_at": "2026-08-16T22:27:50+08:00",
+  "hash_algorithm": "SHA-256",
+  "text_hash_normalization": "LF",
   "skill_md": "SKILL.md",
+  "skill_md_sha256": "8771f17e89ef6c97dccadd34d52e97ac3718b8594a5a1ce7822bda2b9e6e0aef",
   "top_level_files": [
+    "SKILL.md",
     "package-lock.json",
-    "package.json",
-    "SKILL.md"
+    "package.json"
+  ],
+  "top_level_file_hashes": [
+    {
+      "path": "SKILL.md",
+      "sha256": "8771f17e89ef6c97dccadd34d52e97ac3718b8594a5a1ce7822bda2b9e6e0aef"
+    },
+    {
+      "path": "package-lock.json",
+      "sha256": "db305db5cf8361b53e0bdc682e414fac1452eba5ff7b02d224843c30bcb42f1f"
+    },
+    {
+      "path": "package.json",
+      "sha256": "776a2354b1cc707c6547f221a2672bd2ad5bb9cbbdbd49527a72e6595eaa4158"
+    }
   ],
   "top_level_directories": [
     "assets",
@@ -29,26 +46,82 @@
       "file_count": 4
     }
   ],
+  "resource_file_hashes": [
+    {
+      "path": "assets/core.css",
+      "sha256": "af0ac4adf89c3f7841570d5ae9b3a774148e5621f1339091237a08aa4f1b2972"
+    },
+    {
+      "path": "assets/motion.min.js",
+      "sha256": "45615c1e7639fb9828942d0689c897e745690b0f6df13022223c9409fc01557c"
+    },
+    {
+      "path": "assets/slide-engine.js",
+      "sha256": "031b35483523f2da7d64ea6542e414884152d167e46b08c114b6d057e887fcd3"
+    },
+    {
+      "path": "assets/winning.css",
+      "sha256": "ff5292178fb18b42f010b7333623d46338e47de212ec2bb9e7be02001b5b23d2"
+    },
+    {
+      "path": "built-in-skills/style-magazine.md",
+      "sha256": "91e7810865324af8f6c38a1e904424c4c91df5180007b103b03466404198554a"
+    },
+    {
+      "path": "built-in-skills/style-swiss.md",
+      "sha256": "5e9e4015c28e4d84a047ebc8b8c97b199a6049149b8adf378b8f7b2c9fb1beda"
+    },
+    {
+      "path": "built-in-skills/style-winning-clinical.md",
+      "sha256": "1bc1d4ca991ba7c6a19942c201e979f0ba3dcb103032e126d86e758f35784f6d"
+    },
+    {
+      "path": "built-in-skills/use-design-system.md",
+      "sha256": "ef2ce3f18b1f07d702073ca15115d9db0826b219a986df663a099078bbf28e73"
+    },
+    {
+      "path": "references/layout-patterns.md",
+      "sha256": "03029e23fdb2ffd398f4bf6e890c389c1c3b7ce82cb3c7797ddaea9154f4d455"
+    },
+    {
+      "path": "scripts/export-pdf.mjs",
+      "sha256": "6c39534c5bb4ed8fdb44580cf743b000f512105b0b85f5647df4ec12a858b575"
+    },
+    {
+      "path": "scripts/html_quality_checker.mjs",
+      "sha256": "bf75cae5ef0e8bd183fdb72a44cfc2bc217dcaf1479d0223a09f0574298108be"
+    },
+    {
+      "path": "scripts/validate-deck.mjs",
+      "sha256": "2e01b2065d9bafaab59f5ef74b8a4cce4fa9729d63498ee1d57a7e859fe8b55f"
+    },
+    {
+      "path": "starter-components/assets/core.css",
+      "sha256": "af0ac4adf89c3f7841570d5ae9b3a774148e5621f1339091237a08aa4f1b2972"
+    },
+    {
+      "path": "starter-components/assets/motion.min.js",
+      "sha256": "45615c1e7639fb9828942d0689c897e745690b0f6df13022223c9409fc01557c"
+    },
+    {
+      "path": "starter-components/assets/slide-engine.js",
+      "sha256": "031b35483523f2da7d64ea6542e414884152d167e46b08c114b6d057e887fcd3"
+    },
+    {
+      "path": "starter-components/assets/winning.css",
+      "sha256": "d17ba6c7e4cb2288ed0958cacc7526a7c85c6c931feb527bc2d65184fea74f79"
+    },
+    {
+      "path": "starter-components/index-skeleton.html",
+      "sha256": "7acb727c090f65d9a2f81c1e3b19cfc58880f3468dcfe842d09418059554d056"
+    }
+  ],
   "declared_local_dependencies": [
     {
-      "path": "references\\layout-patterns.md",
+      "path": "references/layout-patterns.md",
       "exists": true,
-      "resolved_path": "C:\\Users\\shich\\.codex\\skills\\tool-web-slide\\references\\layout-patterns.md"
-    },
-    {
-      "path": "scripts\\html_quality_checker.mjs",
-      "exists": true,
-      "resolved_path": "C:\\Users\\shich\\.codex\\skills\\tool-web-slide\\scripts\\html_quality_checker.mjs"
-    },
-    {
-      "path": "scripts\\validate-deck.mjs",
-      "exists": true,
-      "resolved_path": "C:\\Users\\shich\\.codex\\skills\\tool-web-slide\\scripts\\validate-deck.mjs"
-    },
-    {
-      "path": "scripts\\export-pdf.mjs",
-      "exists": true,
-      "resolved_path": "C:\\Users\\shich\\.codex\\skills\\tool-web-slide\\scripts\\export-pdf.mjs"
+      "resolved_path": "tool-web-slide/references/layout-patterns.md",
+      "sha256": "03029e23fdb2ffd398f4bf6e890c389c1c3b7ce82cb3c7797ddaea9154f4d455"
     }
   ],
   "missing_declared_dependencies": []
