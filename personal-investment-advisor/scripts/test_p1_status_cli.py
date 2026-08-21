@@ -216,8 +216,16 @@ class StableRouterTests(unittest.TestCase):
             "positions.json",
             "--quotes-file",
             "quotes.json",
+            "--thesis-evidence-file",
+            "evidence.json",
         )
         envelope, code = pia._dispatch(args)
+        invocation = run.call_args.args[0]
+        self.assertIn("--thesis-evidence-file", invocation)
+        self.assertEqual(
+            invocation[invocation.index("--thesis-evidence-file") + 1],
+            "evidence.json",
+        )
         self.assertEqual(envelope["status"], STATUS_INCOMPLETE)
         self.assertEqual(code, 1)
 

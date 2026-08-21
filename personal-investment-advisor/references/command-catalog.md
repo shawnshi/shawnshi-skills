@@ -22,7 +22,7 @@
 - 组合情景：`portfolio_scenario_analyzer.py`
 - 分配实验：`rebalance_weights.py`
 - 券商 CSV 导入：`broker_sync.py`，仅在用户明确授权时运行
-- Daily Sync：`yf.py --daily-sync` 后接 `daily_sync.py`
+- Daily Sync：`yf.py --daily-sync --cache-dir <task-cache> [--daily-sync-workers 1..4]` 后接 `daily_sync.py`；完成事件红队时传入 `--thesis-evidence-file`
 - 研究日记与结果同步：`advice_journal.py`、`sync_outcomes.py`、`decision_outcome_report.py`
 - Dashboard 归档：`save_dashboard.py`，仅在用户另行批准持久化时运行
 

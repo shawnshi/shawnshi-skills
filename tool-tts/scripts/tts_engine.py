@@ -7,12 +7,24 @@ import asyncio
 import re
 import wave
 from pathlib import Path
-try:
-    from google import genai
-    from google.genai import types
-except ImportError:
-    genai = None
-    types = None
+
+genai = None
+types = None
+
+
+def _load_google_genai():
+    """Load the optional cloud provider only when cloud synthesis is configured."""
+    global genai, types
+    if genai is not None and types is not None:
+        return True
+    try:
+        from google import genai as google_genai
+        from google.genai import types as google_types
+    except ImportError:
+        return False
+    genai = google_genai
+    types = google_types
+    return True
 
 class FastTTSEngine:
     def __init__(self, output_dir="output"):
@@ -23,7 +35,7 @@ class FastTTSEngine:
         # Initialize the optional Google GenAI provider.
         self.api_key = os.environ.get("GEMINI_API_KEY")
         self.model = os.environ.get("GEMINI_TTS_MODEL")
-        if self.api_key and self.model and genai is not None:
+        if self.api_key and self.model and _load_google_genai():
             self.client = genai.Client(api_key=self.api_key)
         else:
             self.client = None

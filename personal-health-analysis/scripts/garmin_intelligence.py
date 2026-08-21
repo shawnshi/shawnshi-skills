@@ -2106,7 +2106,15 @@ def _write_state_output(
     return output
 
 
-def main() -> int:
+def main(argv=None) -> int:
+    cli_args = list(sys.argv[1:] if argv is None else argv)
+    if cli_args and cli_args[0] == "insight_cn" and "--source" in cli_args:
+        # The primary insight path uses the newer bounded reader: exact window,
+        # explicit source, in-memory live tokens, and no implicit persistence.
+        from garmin_bounded import main as bounded_main
+
+        return bounded_main(cli_args)
+
     parser = argparse.ArgumentParser(
         description="Non-diagnostic Garmin wearable-data analysis."
     )
@@ -2137,7 +2145,7 @@ def main() -> int:
         action="store_true",
         help="Allow replacement of an existing --state-output file",
     )
-    args = parser.parse_args()
+    args = parser.parse_args(cli_args)
     if args.days is not None and args.period:
         print(json.dumps({"status": "INVALID_PERIOD_SCOPE"}), file=sys.stderr)
         return 2

@@ -335,6 +335,7 @@ def _build_parser() -> JsonArgumentParser:
     )
     daily.add_argument("--positions-file", required=True)
     daily.add_argument("--quotes-file", required=True)
+    daily.add_argument("--thesis-evidence-file")
     daily.add_argument("--now-epoch", type=float)
     daily.add_argument("--max-quote-age-seconds", type=int)
 
@@ -413,12 +414,15 @@ def _dispatch(args: argparse.Namespace) -> tuple[dict[str, Any], int]:
         ]
         _append_option(child, "--now-epoch", args.now_epoch)
         _append_option(child, "--max-quote-age-seconds", args.max_quote_age_seconds)
+        _append_option(child, "--thesis-evidence-file", args.thesis_evidence_file)
         return _run_child(
             public_command=args.command,
             script_name="daily_sync.py",
             child_arguments=child,
             completion_scope="offline_daily_sync_contract_audit",
-            limitations=["news and thesis red-team review require a separate evidence workflow"],
+            limitations=[
+                "thesis completion requires a supplied evidence package that passes the primary-source gate"
+            ],
         )
 
     if args.command == "scenario":

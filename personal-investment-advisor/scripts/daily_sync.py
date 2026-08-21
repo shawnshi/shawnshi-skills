@@ -24,6 +24,7 @@ from quote_evidence_contract import (
     build_portfolio_snapshot_binding,
     canonical_json_binding,
 )
+from thesis_evidence_gate import evaluate_thesis_evidence
 
 
 SCHEMA_VERSION = "pia_daily_sync_offline_v3"
@@ -45,6 +46,7 @@ def _thesis_not_assessed() -> Dict[str, Any]:
 def _base_report(
     positions_file: Optional[str],
     quotes_file: Optional[str],
+    thesis_evidence_file: Optional[str],
     now_epoch: Optional[float],
 ) -> Dict[str, Any]:
     return {
@@ -59,6 +61,11 @@ def _base_report(
             else None,
             "quotes_file": str(Path(quotes_file).expanduser().resolve())
             if quotes_file
+            else None,
+            "thesis_evidence_file": str(
+                Path(thesis_evidence_file).expanduser().resolve()
+            )
+            if thesis_evidence_file
             else None,
         },
         "stages": [
@@ -94,6 +101,7 @@ def _base_report(
             "portfolio_snapshot": None,
             "quote_package": None,
             "quote_snapshot": None,
+            "thesis_evidence": None,
         },
         "supplied_portfolio_batch_audit": None,
         "recomputed_portfolio_batch_audit": None,
@@ -330,11 +338,17 @@ def evaluate_daily_sync(
     *,
     positions_file: str,
     quotes_file: str,
+    thesis_evidence_file: Optional[str] = None,
     now_epoch: Optional[float] = None,
     max_quote_age_seconds: int = MAX_QUOTE_AGE_SECONDS,
 ) -> Dict[str, Any]:
     evaluation_epoch = time.time() if now_epoch is None else now_epoch
-    report = _base_report(positions_file, quotes_file, evaluation_epoch)
+    report = _base_report(
+        positions_file,
+        quotes_file,
+        thesis_evidence_file,
+        evaluation_epoch,
+    )
 
     if (
         isinstance(evaluation_epoch, bool)
@@ -409,6 +423,38 @@ def evaluate_daily_sync(
             ),
         }
     )
+
+    thesis_stage = report["stages"][4]
+    if thesis_evidence_file:
+        try:
+            thesis_payload = _read_json(thesis_evidence_file, "thesis_evidence_file")
+            report["input_bindings"]["thesis_evidence"] = canonical_json_binding(
+                thesis_payload
+            )
+            report["thesis_red_team"] = evaluate_thesis_evidence(
+                thesis_payload,
+                expected_symbols=expected_symbols,
+                portfolio_snapshot_binding=portfolio_binding,
+                evaluation_epoch=evaluation_epoch,
+            )
+            thesis_stage["status"] = report["thesis_red_team"]["status"]
+            thesis_stage["errors"] = list(
+                report["thesis_red_team"].get("errors", [])
+            )
+            thesis_stage["warnings"] = list(
+                report["thesis_red_team"].get("warnings", [])
+            )
+        except (TypeError, ValueError) as exc:
+            error = str(exc)
+            report["thesis_red_team"] = {
+                "status": "incomplete",
+                "evidence_status": "insufficient_evidence",
+                "fatal_event_status": "not_assessed",
+                "errors": [error],
+                "warnings": [],
+            }
+            thesis_stage["status"] = "incomplete"
+            thesis_stage["errors"] = [error]
 
     try:
         quotes_payload = _read_json(quotes_file, "quotes_file")
@@ -587,6 +633,7 @@ def evaluate_daily_sync(
     )
     workflow_complete = quote_refresh_complete and thesis_assessment_complete
     report["errors"] = list(completeness_stage["errors"])
+    report["errors"].extend(thesis_stage.get("errors", []))
     if not thesis_assessment_complete:
         report["errors"].append("thesis_red_team_incomplete")
     report["status"] = "complete" if workflow_complete else "incomplete"
@@ -595,7 +642,7 @@ def evaluate_daily_sync(
 
 class JsonArgumentParser(argparse.ArgumentParser):
     def error(self, message: str) -> None:
-        report = _base_report(None, None, None)
+        report = _base_report(None, None, None, None)
         report["status"] = "invalid_input"
         report["errors"] = [f"argument_error: {message}"]
         report["stages"][0]["status"] = "failed"
@@ -610,6 +657,14 @@ def main() -> None:
     )
     parser.add_argument("--positions-file", required=True)
     parser.add_argument("--quotes-file", required=True)
+    parser.add_argument(
+        "--thesis-evidence-file",
+        help=(
+            "Optional primary-source Thesis evidence package. The workflow remains "
+            "incomplete unless this package closes every holding plus macro, sector, "
+            "and regulatory coverage."
+        ),
+    )
     parser.add_argument("--now-epoch", type=float)
     parser.add_argument(
         "--max-quote-age-seconds",
@@ -620,6 +675,7 @@ def main() -> None:
     report = evaluate_daily_sync(
         positions_file=args.positions_file,
         quotes_file=args.quotes_file,
+        thesis_evidence_file=args.thesis_evidence_file,
         now_epoch=args.now_epoch,
         max_quote_age_seconds=args.max_quote_age_seconds,
     )

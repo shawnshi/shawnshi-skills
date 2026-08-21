@@ -13,11 +13,24 @@ import os
 import sys
 from datetime import datetime, timedelta
 
-try:
-    from deepxiv_sdk import Reader, APIError, RateLimitError
-except ImportError:
-    print("deepxiv-sdk is unavailable; use the documented fallback search path.", file=sys.stderr)
-    sys.exit(1)
+Reader = None
+APIError = None
+RateLimitError = None
+
+
+def _load_deepxiv_sdk():
+    """Defer the optional SDK import until a real retrieval starts."""
+    global Reader, APIError, RateLimitError
+    if Reader is not None:
+        return
+    from deepxiv_sdk import (
+        Reader as DeepXivReader,
+        APIError as DeepXivAPIError,
+        RateLimitError as DeepXivRateLimitError,
+    )
+    Reader = DeepXivReader
+    APIError = DeepXivAPIError
+    RateLimitError = DeepXivRateLimitError
 
 # ============================================================
 # 检索配置 — 可通过 task_preprints_config.md 同步维护
@@ -45,6 +58,7 @@ DEFAULT_OUTPUT = os.path.join(
 
 def build_reader() -> Reader:
     """构建 Reader 实例，优先从环境变量加载 token。"""
+    _load_deepxiv_sdk()
     token = os.environ.get("DEEPXIV_TOKEN")
     if not token:
         print("⚠️  DEEPXIV_TOKEN 未配置。将尝试免认证模式（功能受限）。", file=sys.stderr)
@@ -167,7 +181,7 @@ def render_markdown(papers: list, date_from: str, date_to: str) -> str:
     return "\n".join(lines)
 
 
-def main():
+def main(argv=None):
     parser = argparse.ArgumentParser(description="ArXiv Preprints Recon via deepxiv-sdk")
     parser.add_argument("--window", type=int, default=DEFAULT_WINDOW, help="检索窗口天数 (default: 7)")
     parser.add_argument(
@@ -176,9 +190,16 @@ def main():
         help="补充热门候选；仅在用户接受扩大候选范围时使用",
     )
     parser.add_argument("--output", type=str, default=DEFAULT_OUTPUT, help="输出路径")
-    args = parser.parse_args()
+    args = parser.parse_args(argv)
 
-    reader = build_reader()
+    try:
+        reader = build_reader()
+    except ImportError:
+        print(
+            "deepxiv-sdk is unavailable; use the documented fallback search path.",
+            file=sys.stderr,
+        )
+        return 4
     window = args.window
 
     date_to = datetime.now().strftime("%Y-%m-%d")
@@ -209,7 +230,8 @@ def main():
         f.write(report)
 
     print(f"✅ Report written to {args.output}")
+    return 0
 
 
 if __name__ == "__main__":
-    main()
+    raise SystemExit(main())

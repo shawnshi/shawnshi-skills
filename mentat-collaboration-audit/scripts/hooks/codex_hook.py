@@ -12,7 +12,8 @@ For context recovery, append ``--state-packet <path>`` (or set
 ``MENTAT_HOOK_STATE_PACKET``), or configure ``--state-packet-root <brain>``.
 The root form resolves the current UUID session to
 ``<brain>/<session_id>/scratch/mentat-collaboration-audit/context-state.json``;
-the packet therefore remains in session scratch rather than hook runtime state.
+the packet and bounded hook receipts therefore remain in session scratch rather
+than the installed skill directory.
 Tests may redirect runtime state with ``MENTAT_HOOK_STATE_DIR``.
 """
 
@@ -795,7 +796,17 @@ def handle_hook(
     """Handle one official hook envelope and return a hook response object."""
 
     event = _mode_name(mode)
-    root = (state_root or Path(os.environ.get("MENTAT_HOOK_STATE_DIR", DEFAULT_STATE_ROOT))).resolve()
+    configured_packet_root = packet_root or _configured_packet_root()
+    configured_state_root = os.environ.get("MENTAT_HOOK_STATE_DIR")
+    if state_root is not None:
+        root = state_root.resolve()
+    elif configured_state_root:
+        root = Path(configured_state_root).resolve()
+    else:
+        root = (
+            _session_runtime_root(envelope, configured_packet_root)
+            or DEFAULT_STATE_ROOT
+        ).resolve()
     if event is None:
         _record_unknown(root, envelope, "Unknown", "other", "unknown_mode")
         return {}
@@ -817,10 +828,18 @@ def handle_hook(
             return _handle_wait_post(tool, envelope, root)
         return {}
     if event == "PreCompact":
-        selected_packet = _selected_packet_path(envelope, packet_path, packet_root)
+        selected_packet = _selected_packet_path(
+            envelope,
+            packet_path,
+            configured_packet_root,
+        )
         return _handle_precompact(envelope, root, selected_packet)
     if event == "SessionStart":
-        selected_packet = _selected_packet_path(envelope, packet_path, packet_root)
+        selected_packet = _selected_packet_path(
+            envelope,
+            packet_path,
+            configured_packet_root,
+        )
         return _handle_session_start(envelope, root, selected_packet)
     return {}
 
@@ -846,6 +865,38 @@ def _session_packet_path(envelope: dict[str, Any], packet_root: Path | None) -> 
         return None
     root = packet_root.resolve()
     candidate = (root / session_id / PACKET_RELATIVE_PATH).resolve()
+    try:
+        candidate.relative_to(root)
+    except ValueError:
+        return None
+    return candidate
+
+
+def _session_runtime_root(
+    envelope: dict[str, Any],
+    packet_root: Path | None,
+) -> Path | None:
+    """Return a contained, per-session runtime directory under the brain root."""
+
+    if packet_root is None:
+        return None
+    raw_session = envelope.get("session_id")
+    if not isinstance(raw_session, str) or not raw_session.strip():
+        return None
+    normalized = raw_session.strip()
+    try:
+        safe_session = str(uuid.UUID(normalized))
+    except ValueError:
+        safe_session = "session-" + hashlib.sha256(
+            normalized.encode("utf-8")
+        ).hexdigest()[:32]
+    root = packet_root.resolve()
+    candidate = (
+        root
+        / safe_session
+        / PACKET_RELATIVE_PATH.parent
+        / "_runtime"
+    ).resolve()
     try:
         candidate.relative_to(root)
     except ValueError:

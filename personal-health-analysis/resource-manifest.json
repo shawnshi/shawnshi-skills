@@ -1,11 +1,11 @@
 {
   "schema_version": 3,
   "skill": "personal-health-analysis",
-  "generated_at": "2026-08-17T06:45:51+08:00",
+  "generated_at": "2026-08-21T06:56:22+08:00",
   "hash_algorithm": "SHA-256",
   "text_hash_normalization": "LF",
   "skill_md": "SKILL.md",
-  "skill_md_sha256": "e3e2933c2faf1374a7c5312b6702536eb26a078e26fc2e48b62ff1a400915200",
+  "skill_md_sha256": "afe254254c6bced0a4f503b82f3c616b7ed8b31f53faa55873c73f02cd2f45d8",
   "top_level_files": [
     ".gitignore",
     "SKILL.md",
@@ -21,7 +21,7 @@
     },
     {
       "path": "SKILL.md",
-      "sha256": "e3e2933c2faf1374a7c5312b6702536eb26a078e26fc2e48b62ff1a400915200"
+      "sha256": "afe254254c6bced0a4f503b82f3c616b7ed8b31f53faa55873c73f02cd2f45d8"
     },
     {
       "path": "install.ps1",
@@ -50,7 +50,7 @@
   "resource_directories": [
     {
       "name": "scripts",
-      "file_count": 39
+      "file_count": 42
     },
     {
       "name": "references",
@@ -99,6 +99,10 @@
       "sha256": "8a3751c5593bd79a447377efb8ea22775d15b14125b2efaf1d33c8afeda5ce81"
     },
     {
+      "path": "scripts/_DIR_META.md",
+      "sha256": "2b9c14d487f4f86ea92b6a14b8ce01b0d96ed3ac1e3ab6677021e3ed12cca726"
+    },
+    {
       "path": "scripts/fhir_external_acceptance.py",
       "sha256": "10b2c66c7d43591fd511839989f9df838b52182175606815bb029d7b925908e1"
     },
@@ -109,6 +113,10 @@
     {
       "path": "scripts/garmin_auth.py",
       "sha256": "a1c78c4c9d6c9baa6ff121df2a8c6ae3ae14faa4771f00ed83dba1da2a406b3c"
+    },
+    {
+      "path": "scripts/garmin_bounded.py",
+      "sha256": "6b5f76928a299922be4531abbdfc6a6729e2b03255008db5b3c6d93f3b2fed8f"
     },
     {
       "path": "scripts/garmin_capabilities.py",
@@ -132,7 +140,7 @@
     },
     {
       "path": "scripts/garmin_intelligence.py",
-      "sha256": "5f089f136e6a4f9647e49db018d5839811fd5419d6755d3507bdc9c183c2ee42"
+      "sha256": "683fc8f3ca2d70e912e27ef377e09be5371947cf121cbf269d9ab0b8f96b06d5"
     },
     {
       "path": "scripts/garmin_patterns.py",
@@ -144,7 +152,7 @@
     },
     {
       "path": "scripts/garmin_sqlite_adapter.py",
-      "sha256": "0f79f230bde5d0e63a4a56746cea5bb81f1adc273cff96b16977cc2d5e31c9fe"
+      "sha256": "55abfaf09a9a21abdb698cd3f7c44b2fb3a14eafff8a61aaadd854acd9f8f6da"
     },
     {
       "path": "scripts/installed_environment_gate.py",
@@ -177,6 +185,10 @@
     {
       "path": "scripts/test_garmin_auth_cli.py",
       "sha256": "493ab8f73470660c92e0e5c47bfd3a9c2a54ec88356f1fcb0ff66aeae659e753"
+    },
+    {
+      "path": "scripts/test_garmin_bounded_contract.py",
+      "sha256": "96bdc4015fd228d8db09227c1b6b2db1ce37a6ec91ad77b4e8c0047a107e490b"
     },
     {
       "path": "scripts/test_garmin_capabilities.py",
@@ -317,6 +329,12 @@
       "sha256": "a1c78c4c9d6c9baa6ff121df2a8c6ae3ae14faa4771f00ed83dba1da2a406b3c"
     },
     {
+      "path": "scripts/garmin_bounded.py",
+      "exists": true,
+      "resolved_path": "personal-health-analysis/scripts/garmin_bounded.py",
+      "sha256": "6b5f76928a299922be4531abbdfc6a6729e2b03255008db5b3c6d93f3b2fed8f"
+    },
+    {
       "path": "scripts/garmin_capabilities.py",
       "exists": true,
       "resolved_path": "personal-health-analysis/scripts/garmin_capabilities.py",
@@ -350,7 +368,7 @@
       "path": "scripts/garmin_intelligence.py",
       "exists": true,
       "resolved_path": "personal-health-analysis/scripts/garmin_intelligence.py",
-      "sha256": "5f089f136e6a4f9647e49db018d5839811fd5419d6755d3507bdc9c183c2ee42"
+      "sha256": "683fc8f3ca2d70e912e27ef377e09be5371947cf121cbf269d9ab0b8f96b06d5"
     },
     {
       "path": "scripts/garmin_patterns.py",
@@ -368,7 +386,7 @@
       "path": "scripts/garmin_sqlite_adapter.py",
       "exists": true,
       "resolved_path": "personal-health-analysis/scripts/garmin_sqlite_adapter.py",
-      "sha256": "0f79f230bde5d0e63a4a56746cea5bb81f1adc273cff96b16977cc2d5e31c9fe"
+      "sha256": "55abfaf09a9a21abdb698cd3f7c44b2fb3a14eafff8a61aaadd854acd9f8f6da"
     },
     {
       "path": "scripts/report_output.py",

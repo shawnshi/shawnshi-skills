@@ -69,6 +69,10 @@ def _error(code, message, **details):
     return {"ok": False, "error_code": code, "message": message, **details}
 
 
+def _actor_type(actor_id):
+    return "root" if actor_id.casefold() in {"root", "codex-root"} else "subagent"
+
+
 def verify(config, root_task_id, actor_id, context_epoch):
     schema_version = config.get("schema_version")
     if schema_version not in {1, 2}:
@@ -152,7 +156,7 @@ def verify(config, root_task_id, actor_id, context_epoch):
         "timestamp": datetime.now(timezone.utc).isoformat().replace("+00:00", "Z"),
         "root_task_id": root_task_id,
         "actor_id": actor_id,
-        "actor_type": "root" if actor_id == "root" else "subagent",
+        "actor_type": _actor_type(actor_id),
         "event_type": "skill_load",
         "component": "skill_authority_gate",
         "operation": "read_full_skill",

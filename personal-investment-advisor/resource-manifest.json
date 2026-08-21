@@ -1,18 +1,18 @@
 {
   "schema_version": 3,
   "skill": "personal-investment-advisor",
-  "generated_at": "2026-08-16T22:02:19",
+  "generated_at": "2026-08-21T08:54:56+08:00",
   "hash_algorithm": "SHA-256",
   "text_hash_normalization": "LF",
   "skill_md": "SKILL.md",
-  "skill_md_sha256": "9ba6ee7486f3f089577361d4547d92f63318c1bb8c1c6e0db68f459a6840ad9f",
+  "skill_md_sha256": "a9f7e82305cf5395cc2077e40db0bc45059819e2717c15e83b30d63268736e5d",
   "top_level_files": [
     "SKILL.md"
   ],
   "top_level_file_hashes": [
     {
       "path": "SKILL.md",
-      "sha256": "9ba6ee7486f3f089577361d4547d92f63318c1bb8c1c6e0db68f459a6840ad9f"
+      "sha256": "a9f7e82305cf5395cc2077e40db0bc45059819e2717c15e83b30d63268736e5d"
     }
   ],
   "top_level_directories": [
@@ -24,15 +24,15 @@
   "resource_directories": [
     {
       "name": "scripts",
-      "file_count": 48
+      "file_count": 49
     },
     {
       "name": "references",
-      "file_count": 13
+      "file_count": 14
     },
     {
       "name": "resources",
-      "file_count": 0
+      "file_count": 1
     },
     {
       "name": "agents",
@@ -50,7 +50,7 @@
     },
     {
       "path": "references/command-catalog.md",
-      "sha256": "058a6e0046a6086e782e1c17b603c34f754e7266ea5032ed985373e7cd0bc322"
+      "sha256": "bf9f72dac817740a9d81bda1665bd3eb7f82794a5120910f1f27d902951218b8"
     },
     {
       "path": "references/company-research.md",
@@ -58,7 +58,7 @@
     },
     {
       "path": "references/daily-sync.md",
-      "sha256": "e7e1ee5396b711174527bd58f2dee8982ee367e5667c790f3d4735113bb7ca8a"
+      "sha256": "191b596bc215398fb116983420e2a780f3c023914f72480d1bc0d917f864f979"
     },
     {
       "path": "references/dashboard_schema.json",
@@ -97,6 +97,14 @@
       "sha256": "bb0dffcfcaa277abd6187bf2f07925ba5a72022d71965b1d32210c5374a6c114"
     },
     {
+      "path": "references/thesis_red_team_schema.json",
+      "sha256": "70c11dc1e4eed1f4a3dc2d6ed64ac11cfdda8f75cd980f40340e2f0dc714fc0d"
+    },
+    {
+      "path": "resources/.gitkeep",
+      "sha256": "56f0d6ac8fbc29ea59e8eb8ce626949efcce2b16cd4ac9242e5630a6f35afdc3"
+    },
+    {
       "path": "scripts/advice_journal.py",
       "sha256": "82d7ff1bbc58e2ad13de0085b0ad8e771c48508743e92d549f82227a6f2c9532"
     },
@@ -110,7 +118,7 @@
     },
     {
       "path": "scripts/daily_sync.py",
-      "sha256": "95652994a48b3ad20e6a6c7f840dd9de0ad3a7a14c35e9f376f7bdb9342d124b"
+      "sha256": "d7d9cf481d5bb06287ca187548769388086e123fb60f8b485e61f75c3a02d043"
     },
     {
       "path": "scripts/dashboard_catalog.py",
@@ -146,7 +154,7 @@
     },
     {
       "path": "scripts/pia.py",
-      "sha256": "7ae40d91233fcbb344fa05576e15c0e7ee0042fb69dc050a2d1b6e2639897cfc"
+      "sha256": "6a56fad8a1342e435d3ebdc303bb6d01fe8d8b49f9e03f1d27df85686ba88613"
     },
     {
       "path": "scripts/portfolio_loader.py",
@@ -266,7 +274,7 @@
     },
     {
       "path": "scripts/test_p1_status_cli.py",
-      "sha256": "334ff297ac346aaf6c0b51d8ac9759490c5ef748f6165a128923d13f3dbfe281"
+      "sha256": "bbb01d06c39f3ad63f4627059aedfab9ae616fd04193bd446233e4b893901dcc"
     },
     {
       "path": "scripts/test_p2_cli_status_contracts.py",
@@ -274,11 +282,15 @@
     },
     {
       "path": "scripts/test_p2_daily_sync.py",
-      "sha256": "87b35349e252f85a529ed49ae9db1862d2d45cae120d16d3d457d0e65c717133"
+      "sha256": "8080e97790b5688a687f9602985b2e92c143e637d0afc30fda77137fcb0c4082"
     },
     {
       "path": "scripts/test_p2_yf_daily_sync.py",
-      "sha256": "73ea8c260dc155855cb572855658f972b12b16776924d4d665094bbce6782af3"
+      "sha256": "bbf9b48fa401e383391366b57894b158f9b00742a88efa0aa82e3c1ab02bfe69"
+    },
+    {
+      "path": "scripts/thesis_evidence_gate.py",
+      "sha256": "f63b9e91818771571c0ed97e3c980176e8278058937816de8dd06851cc461226"
     },
     {
       "path": "scripts/watchlist_gate.py",
@@ -286,7 +298,7 @@
     },
     {
       "path": "scripts/yf.py",
-      "sha256": "62def4dc0337cdef417a997a2eb9afbf43544e164ff632856ba705c51ee0911f"
+      "sha256": "bcda464d72323e77688b5ee38a0629dc1f7ebbb66fd792c3e151f3f810a99dd3"
     }
   ],
   "declared_local_dependencies": [
@@ -306,7 +318,7 @@
       "path": "references/command-catalog.md",
       "exists": true,
       "resolved_path": "personal-investment-advisor/references/command-catalog.md",
-      "sha256": "058a6e0046a6086e782e1c17b603c34f754e7266ea5032ed985373e7cd0bc322"
+      "sha256": "bf9f72dac817740a9d81bda1665bd3eb7f82794a5120910f1f27d902951218b8"
     },
     {
       "path": "references/company-research.md",
@@ -318,7 +330,7 @@
       "path": "references/daily-sync.md",
       "exists": true,
       "resolved_path": "personal-investment-advisor/references/daily-sync.md",
-      "sha256": "e7e1ee5396b711174527bd58f2dee8982ee367e5667c790f3d4735113bb7ca8a"
+      "sha256": "191b596bc215398fb116983420e2a780f3c023914f72480d1bc0d917f864f979"
     },
     {
       "path": "references/dashboard_schema.json",
@@ -363,10 +375,16 @@
       "sha256": "bb0dffcfcaa277abd6187bf2f07925ba5a72022d71965b1d32210c5374a6c114"
     },
     {
+      "path": "references/thesis_red_team_schema.json",
+      "exists": true,
+      "resolved_path": "personal-investment-advisor/references/thesis_red_team_schema.json",
+      "sha256": "70c11dc1e4eed1f4a3dc2d6ed64ac11cfdda8f75cd980f40340e2f0dc714fc0d"
+    },
+    {
       "path": "scripts/pia.py",
       "exists": true,
       "resolved_path": "personal-investment-advisor/scripts/pia.py",
-      "sha256": "7ae40d91233fcbb344fa05576e15c0e7ee0042fb69dc050a2d1b6e2639897cfc"
+      "sha256": "6a56fad8a1342e435d3ebdc303bb6d01fe8d8b49f9e03f1d27df85686ba88613"
     },
     {
       "path": "scripts/requirements.txt",

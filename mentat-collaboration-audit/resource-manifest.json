@@ -1,7 +1,7 @@
 {
   "schema_version": 3,
   "skill": "mentat-collaboration-audit",
-  "generated_at": "2026-08-17T06:45:35+08:00",
+  "generated_at": "2026-08-21T08:54:56+08:00",
   "hash_algorithm": "SHA-256",
   "text_hash_normalization": "LF",
   "skill_md": "SKILL.md",
@@ -38,7 +38,7 @@
     },
     {
       "name": "resources",
-      "file_count": 0
+      "file_count": 1
     },
     {
       "name": "assets",
@@ -67,6 +67,10 @@
       "sha256": "5dcbec235c888ebb59fc7de2527892ee394ee0d83df9db696670dce4efd6f7a8"
     },
     {
+      "path": "resources/.gitkeep",
+      "sha256": "56f0d6ac8fbc29ea59e8eb8ce626949efcce2b16cd4ac9242e5630a6f35afdc3"
+    },
+    {
       "path": "scripts/assets/template.html",
       "sha256": "935549e7a79ffd76d53436ee1092c2ca86cab3e2c2a5c922cec3215f5e43ec43"
     },
@@ -88,11 +92,11 @@
     },
     {
       "path": "scripts/hooks/codex_hook.py",
-      "sha256": "7795f15ff8a6a70cd08757054d0580feea74bd4abe471f1e4965ab6d4f5f0043"
+      "sha256": "7819d3d9b90c97b163bcfffd206bf6d765e4ddee7615d3d36e447542715b0c8f"
     },
     {
       "path": "scripts/hooks/test_codex_hook.py",
-      "sha256": "8c07934ccb4e3658a4d073a13784c8b7c43ce0d1ee037c37dbbf6f96a251a036"
+      "sha256": "bceb433df499ca2d0c1347a89e8f89f69b9864bb98cd078f5d0e9578be58ccf8"
     },
     {
       "path": "scripts/report_output.py",
@@ -184,7 +188,7 @@
       "path": "scripts/hooks/codex_hook.py",
       "exists": true,
       "resolved_path": "mentat-collaboration-audit/scripts/hooks/codex_hook.py",
-      "sha256": "7795f15ff8a6a70cd08757054d0580feea74bd4abe471f1e4965ab6d4f5f0043"
+      "sha256": "7819d3d9b90c97b163bcfffd206bf6d765e4ddee7615d3d36e447542715b0c8f"
     },
     {
       "path": "scripts/report_output.py",

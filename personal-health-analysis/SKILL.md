@@ -16,6 +16,7 @@ description: 以本地优先方式分析 Garmin 睡眠、HRV、心率、压力�
 - 从请求提取时间范围；未指定时使用默认最近 7 天。自动向本地或实时健康读取命令传入 `--allow-health-data`；用户明确指定指标时缩小范围，不能扩大到活动轨迹、账户资料或请求窗口之外。
 - 需要指标解释时按需读取 `references/health_analysis.md`；只有用户授权实时访问时才读取 `references/api.md`，使用扩展指标、时间点查询或活动文件时读取 `references/advanced_tools.md`；准备真实链路或外部 FHIR 验收时读取 `references/external_acceptance.md`。`resources/clinical_guidelines.json` 只是可选方法配置，不是临床事实库；配置未启用、参数越界或来源元数据不可验证时，只做未分类观察。`readiness_index` 因输入血缘重叠而硬停用，即使配置被改为启用也不得生成总分。
 - 安全关键入口包括 `scripts/runtime_preflight.py`、`scripts/wheelhouse_integrity.py`、`scripts/garmin_capabilities.py`、`scripts/garmin_auth.py`、`scripts/garmin_sqlite_adapter.py`、`scripts/garmin_intelligence.py`、`scripts/garmin_patterns.py`、`scripts/garmin_chart.py`、`scripts/garmin_data_extended.py`、`scripts/garmin_query.py`、`scripts/garmin_activity_files.py`、`scripts/sync_health_data.py`、`scripts/garmin_fhir_adapter.py` 和 `scripts/fhir_external_acceptance.py`；离线面板模板为 `assets/dashboard_v2.html`，技能发现元数据为 `agents/openai.yaml`。资源清单只说明文件已声明，不能替代授权门禁、内容哈希核验和离线测试。
+- `garmin_intelligence.py insight_cn --source <local|live>` 透明路由到 `scripts/garmin_bounded.py`；该路径强制精确窗口、显式来源、live 令牌仅内存加载和 `persisted=false`。其他分析仍由完整非诊断入口处理，不得绕过各自能力门。
 
 ## 工作流程
 

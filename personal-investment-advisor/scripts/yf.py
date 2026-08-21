@@ -28,9 +28,12 @@ import argparse
 import sys
 import json
 import math
+import os
 import re
 import time
+from concurrent.futures import ThreadPoolExecutor, as_completed
 from datetime import date, datetime
+from pathlib import Path
 from typing import List, Optional, Dict, Any, Tuple
 
 import pandas as pd
@@ -82,6 +85,26 @@ RETRY_BACKOFF_BASE = 1.5  # seconds
 REQUEST_TIMEOUT = 10  # seconds for search API
 # Regex: all uppercase letters, digits, dots, dashes (e.g. AAPL, BRK-B, 0700.HK)
 TICKER_PATTERN = re.compile(r'^[A-Z0-9][A-Z0-9.\-]{0,11}$')
+
+
+def configure_yfinance_cache(
+    cache_dir: Optional[str],
+    *,
+    task_local_default: bool = False,
+) -> Optional[str]:
+    """Configure all yfinance SQLite caches before the first ticker request."""
+    selected = cache_dir or os.environ.get("PIA_YFINANCE_CACHE_DIR")
+    if not selected and task_local_default:
+        selected = str(Path.cwd() / "tmp" / "pia-yfinance-cache")
+    if not selected:
+        return None
+    resolved = Path(selected).expanduser().resolve()
+    try:
+        resolved.mkdir(parents=True, exist_ok=True)
+    except OSError as exc:
+        raise RuntimeError(f"yfinance_cache_unwritable: {resolved}: {exc}") from exc
+    yf.set_tz_cache_location(str(resolved))
+    return str(resolved)
 
 
 def detect_market_type(symbol: str) -> str:
@@ -265,6 +288,44 @@ def get_stock_data(
             console.print(f"[red]✗ News for {symbol}: {e}[/red]")
 
     return history, info, news, errors
+
+
+def fetch_daily_sync_batch(
+    symbols: List[str],
+    *,
+    max_workers: int = 2,
+) -> Dict[str, Tuple[Any, Dict, List, List[str]]]:
+    """Fetch independent quote-only metadata concurrently, preserving fail-closed results."""
+    unique_symbols = list(dict.fromkeys(symbols))
+    if not unique_symbols:
+        return {}
+    workers = max(1, min(int(max_workers), len(unique_symbols), 4))
+    results: Dict[str, Tuple[Any, Dict, List, List[str]]] = {}
+
+    def fetch(symbol: str) -> Tuple[Any, Dict, List, List[str]]:
+        return get_stock_data(
+            symbol,
+            fetch_price=False,
+            fetch_info=True,
+            fetch_news=False,
+        )
+
+    with ThreadPoolExecutor(max_workers=workers) as executor:
+        future_to_symbol = {
+            executor.submit(fetch, symbol): symbol for symbol in unique_symbols
+        }
+        for future in as_completed(future_to_symbol):
+            symbol = future_to_symbol[future]
+            try:
+                results[symbol] = future.result()
+            except Exception as exc:
+                results[symbol] = (
+                    None,
+                    {},
+                    [],
+                    [f"Daily Sync batch fetch failed: {exc}"],
+                )
+    return results
 
 
 def filter_info(info: Dict[str, Any], full: bool = False) -> Dict[str, Any]:
@@ -1169,6 +1230,13 @@ def main():
     )
     parser.add_argument("--positions-file", help="Override portfolio positions file path")
     parser.add_argument(
+        "--cache-dir",
+        help=(
+            "Writable yfinance cache directory. PIA_YFINANCE_CACHE_DIR is used when "
+            "set; Daily Sync otherwise defaults to ./tmp/pia-yfinance-cache."
+        ),
+    )
+    parser.add_argument(
         "--market",
         choices=["CN", "HK", "US"],
         help="Explicit instrument identity for history gating; use with --asset-type.",
@@ -1207,6 +1275,12 @@ def main():
             "implies --json and --with-portfolio."
         ),
     )
+    parser.add_argument(
+        "--daily-sync-workers",
+        type=int,
+        default=2,
+        help="Concurrent quote-only workers for Daily Sync (default 2, maximum 4).",
+    )
 
     parser.add_argument("--version", action="version", version=f"%(prog)s {__version__}")
 
@@ -1219,6 +1293,29 @@ def main():
         args.json = True
         args.with_portfolio = True
         args.lean = True
+        if not 1 <= args.daily_sync_workers <= 4:
+            parser.error("--daily-sync-workers must be between 1 and 4")
+
+    try:
+        configure_yfinance_cache(
+            args.cache_dir,
+            task_local_default=args.daily_sync,
+        )
+    except RuntimeError as exc:
+        if args.daily_sync:
+            print(
+                json.dumps(
+                    {
+                        "status": "failed",
+                        "records": [],
+                        "portfolio_batch_audit": None,
+                        "errors": [str(exc)],
+                    },
+                    indent=2,
+                )
+            )
+            raise SystemExit(2)
+        parser.error(str(exc))
 
     portfolio_payload = None
     portfolio_load_status = None
@@ -1269,6 +1366,17 @@ def main():
     results = []
     has_failure = bool(history_integrity_load_error)
     all_failed = True
+    daily_sync_prefetch: Dict[str, Tuple[Any, Dict, List, List[str]]] = {}
+    if args.daily_sync and expected_position_metadata:
+        batch_symbols = [
+            normalized
+            for query in args.queries
+            if (normalized := normalize_symbol(query)) in expected_position_metadata
+        ]
+        daily_sync_prefetch = fetch_daily_sync_batch(
+            batch_symbols,
+            max_workers=args.daily_sync_workers,
+        )
 
     for query in args.queries:
         if not args.json:
@@ -1298,17 +1406,20 @@ def main():
             Console().print(f"[dim]Resolved '{query}' → '{symbol}'[/dim]")
 
         # 2. Fetch Data
-        history, info, news_raw, fetch_errors = get_stock_data(
-            symbol,
-            period=args.period,
-            interval=args.interval,
-            start=args.start,
-            end=args.end,
-            fetch_price=fetch_price,
-            fetch_info=fetch_info,
-            fetch_news=fetch_news,
-            a_share_history_source=args.a_share_history_source,
-        )
+        if args.daily_sync and symbol in daily_sync_prefetch:
+            history, info, news_raw, fetch_errors = daily_sync_prefetch[symbol]
+        else:
+            history, info, news_raw, fetch_errors = get_stock_data(
+                symbol,
+                period=args.period,
+                interval=args.interval,
+                start=args.start,
+                end=args.end,
+                fetch_price=fetch_price,
+                fetch_info=fetch_info,
+                fetch_news=fetch_news,
+                a_share_history_source=args.a_share_history_source,
+            )
 
         if fetch_errors:
             has_failure = True
@@ -1530,8 +1641,6 @@ def main():
             
             # Load thesis.md for research calls. Daily Sync stays quote-only and
             # leaves Thesis evidence assessment to the dedicated red-team stage.
-            import os
-            from pathlib import Path
             try:
                 configured_dashboard_dir = os.environ.get("PIA_DASHBOARD_DIR")
                 result_entry["thesis_context"] = None

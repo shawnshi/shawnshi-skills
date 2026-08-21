@@ -354,12 +354,14 @@ def get_monitoring_hr(days=1):
 def get_activities_data(days=30):
     """Extract activity metrics from the activities table."""
     start_date = _window_start(days)
+    end_exclusive = (datetime.now() + timedelta(days=1)).strftime('%Y-%m-%d')
     conn = get_connection(ACTIVITIES_DB)
     
     query = f"""
         SELECT activity_id, name, type, start_time, elapsed_time, distance, avg_hr, max_hr, calories, avg_speed, ascent, training_load
         FROM activities
         WHERE start_time >= '{start_date}'
+          AND start_time < '{end_exclusive}'
         ORDER BY start_time DESC
     """
     try:
@@ -392,6 +394,7 @@ def get_summary(days=7):
     Equivalent to the old garmin_data.py summary command.
     """
     start_date = _window_start(days)
+    end_date = datetime.now().strftime('%Y-%m-%d')
     conn = get_connection(GARMIN_DB)
     
     try:
@@ -404,6 +407,7 @@ def get_summary(days=7):
                    sweat_loss, rr_waking_avg, steps
             FROM {table_name}
             WHERE day >= '{start_date}'
+              AND day <= '{end_date}'
             ORDER BY day DESC
         """
         df = pd.read_sql_query(query, conn)
@@ -414,7 +418,6 @@ def get_summary(days=7):
     finally:
         conn.close()
     
-    end_date = datetime.now().strftime('%Y-%m-%d')
     date_rng = pd.date_range(start=start_date, end=end_date, freq='D')
     df_base = pd.DataFrame({'date': [d.strftime('%Y-%m-%d') for d in date_rng]})
     
@@ -527,6 +530,7 @@ def get_daily_friction_matrix(days=90, derivation_config=None):
 def get_sleep_data(days=14):
     """Extract detailed sleep metrics."""
     start_date = _window_start(days)
+    end_date = datetime.now().strftime('%Y-%m-%d')
     conn = get_connection(GARMIN_DB)
     
     query = f"""
@@ -535,6 +539,7 @@ def get_sleep_data(days=14):
                avg_spo2, avg_stress
         FROM sleep
         WHERE day >= '{start_date}'
+          AND day <= '{end_date}'
         ORDER BY day DESC
     """
     try:
@@ -544,7 +549,6 @@ def get_sleep_data(days=14):
     finally:
         conn.close()
     
-    end_date = datetime.now().strftime('%Y-%m-%d')
     date_rng = pd.date_range(start=start_date, end=end_date, freq='D')
     df_base = pd.DataFrame({'date': [d.strftime('%Y-%m-%d') for d in date_rng]})
     
@@ -628,17 +632,23 @@ def get_biomechanics_data(days=30):
 def get_hrv_data(days=7):
     """Extract HRV data."""
     start_date = _window_start(days)
+    end_date = datetime.now().strftime('%Y-%m-%d')
     conn = get_connection(GARMIN_DB)
     
     try:
-        query = f"SELECT day, last_night_avg as hrv_avg, status FROM hrv WHERE day >= '{start_date}' ORDER BY day DESC"
+        query = f"""
+            SELECT day, last_night_avg as hrv_avg, status
+            FROM hrv
+            WHERE day >= '{start_date}'
+              AND day <= '{end_date}'
+            ORDER BY day DESC
+        """
         df = pd.read_sql_query(query, conn)
     except Exception as exc:
         raise LocalDatabaseReadError("hrv_query_failed") from exc
     finally:
         conn.close()
     
-    end_date = datetime.now().strftime('%Y-%m-%d')
     date_rng = pd.date_range(start=start_date, end=end_date, freq='D')
     df_base = pd.DataFrame({'date': [d.strftime('%Y-%m-%d') for d in date_rng]})
     

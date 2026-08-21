@@ -1,7 +1,7 @@
 {
   "schema_version": 3,
   "skill": "hit-lectures-scout",
-  "generated_at": "2026-08-16T22:02:19",
+  "generated_at": "2026-08-20T23:36:03+08:00",
   "hash_algorithm": "SHA-256",
   "text_hash_normalization": "LF",
   "skill_md": "SKILL.md",
@@ -27,7 +27,7 @@
   "resource_file_hashes": [
     {
       "path": "assets/deepxiv_preprints_scout.py",
-      "sha256": "a73bbb191133a77d2ce4c89543e7e039ff48c71fc0907b4d4d06dad8551dd34e"
+      "sha256": "5d17120008a4ccdd88c196f7fe9f1cbefc81e5b05c44d4184b8207f6fd48c6d4"
     },
     {
       "path": "assets/report_template.md",
@@ -55,7 +55,7 @@
       "path": "assets/deepxiv_preprints_scout.py",
       "exists": true,
       "resolved_path": "hit-lectures-scout/assets/deepxiv_preprints_scout.py",
-      "sha256": "a73bbb191133a77d2ce4c89543e7e039ff48c71fc0907b4d4d06dad8551dd34e"
+      "sha256": "5d17120008a4ccdd88c196f7fe9f1cbefc81e5b05c44d4184b8207f6fd48c6d4"
     },
     {
       "path": "assets/report_template.md",

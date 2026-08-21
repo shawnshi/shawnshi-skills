@@ -58,9 +58,14 @@ class AuthorityGateTests(unittest.TestCase):
             self.assertTrue(result["ok"])
             event = result["skill_load"]
             self.assertEqual(event["context_epoch"], "epoch-1")
+            self.assertEqual(event["actor_type"], "root")
             self.assertEqual(event["skill_sha256"], digest)
             self.assertGreater(event["skill_tokens"], 0)
             self.assertEqual(event["tokenizer"], "cl100k_base")
+
+    def test_codex_root_actor_is_not_misclassified_as_subagent(self):
+        self.assertEqual(authority_gate._actor_type("codex-root"), "root")
+        self.assertEqual(authority_gate._actor_type("worker-1"), "subagent")
 
     def test_unbound_same_name_fork_fails_closed(self):
         with tempfile.TemporaryDirectory() as tmp:

@@ -5,6 +5,7 @@ import json
 import sys
 import tempfile
 import unittest
+from datetime import datetime, timezone
 from pathlib import Path
 from unittest.mock import patch
 
@@ -181,10 +182,76 @@ class DailySyncTestCase(unittest.TestCase):
         )
         return positions_path, quotes_path
 
-    def evaluate(self, positions_path, quotes_path):
+    def write_thesis_evidence(
+        self,
+        root,
+        positions_path,
+        *,
+        conclusions=None,
+        omit_symbol=None,
+        wrong_binding=False,
+    ):
+        def stamp(epoch):
+            return datetime.fromtimestamp(epoch, tz=timezone.utc).isoformat()
+
+        binding = build_portfolio_snapshot_binding(load_positions(str(positions_path)))
+        if wrong_binding:
+            binding = copy.deepcopy(binding)
+            binding["sha256"] = "0" * 64
+        evidence_items = []
+        for index, evidence_id in enumerate(
+            ["macro", "sector", "regulatory", "aapl", "159516"]
+        ):
+            evidence_items.append(
+                {
+                    "evidence_id": evidence_id,
+                    "source_tier": "regulator" if index < 3 else "exchange",
+                    "source_locator": f"https://example.com/{evidence_id}",
+                    "published_at": stamp(NOW_EPOCH - 120),
+                    "retrieved_at": stamp(NOW_EPOCH - 30),
+                    "content_sha256": format(index + 1, "064x"),
+                    "claim": f"Primary-source coverage for {evidence_id}",
+                }
+            )
+        conclusions = conclusions or {}
+        assessments = []
+        for symbol, evidence_id in (("AAPL", "aapl"), ("159516.SZ", "159516")):
+            if symbol == omit_symbol:
+                continue
+            assessments.append(
+                {
+                    "symbol": symbol,
+                    "conclusion": conclusions.get(
+                        symbol, "no_fatal_breach_verified"
+                    ),
+                    "rationale": f"Assessment for {symbol}",
+                    "evidence_ids": [evidence_id],
+                }
+            )
+        payload = {
+            "schema_version": "pia_thesis_red_team_v1",
+            "generated_at": stamp(NOW_EPOCH - 10),
+            "window_start": stamp(NOW_EPOCH - 86_400),
+            "window_end": stamp(NOW_EPOCH - 60),
+            "portfolio_snapshot_binding": binding,
+            "scope_coverage": {
+                scope: {"status": "complete", "evidence_ids": [scope]}
+                for scope in ("macro", "sector", "regulatory")
+            },
+            "assessments": assessments,
+            "evidence_items": evidence_items,
+        }
+        path = Path(root) / "thesis-evidence.json"
+        path.write_text(json.dumps(payload), encoding="utf-8")
+        return path
+
+    def evaluate(self, positions_path, quotes_path, thesis_evidence_path=None):
         return daily_sync.evaluate_daily_sync(
             positions_file=str(positions_path),
             quotes_file=str(quotes_path),
+            thesis_evidence_file=(
+                str(thesis_evidence_path) if thesis_evidence_path else None
+            ),
             now_epoch=NOW_EPOCH,
         )
 
@@ -231,6 +298,41 @@ class CompleteOfflineSyncTests(DailySyncTestCase):
         self.assertEqual(len(first["input_bindings"]["quote_package"]["sha256"]), 64)
         self.assertEqual(len(first["input_bindings"]["quote_snapshot"]["sha256"]), 64)
 
+    def test_primary_evidence_package_can_complete_the_workflow(self):
+        with tempfile.TemporaryDirectory() as tmpdir:
+            positions_path, quotes_path = self.write_inputs(tmpdir)
+            evidence_path = self.write_thesis_evidence(tmpdir, positions_path)
+            report = self.evaluate(positions_path, quotes_path, evidence_path)
+
+        self.assertEqual(report["status"], "complete")
+        self.assertTrue(report["completeness"]["complete"])
+        self.assertTrue(report["completeness"]["thesis_assessment_complete"])
+        self.assertEqual(report["thesis_red_team"]["status"], "complete")
+        self.assertEqual(
+            report["thesis_red_team"]["fatal_event_status"],
+            "no_fatal_breach_verified",
+        )
+        self.assertEqual(
+            len(report["input_bindings"]["thesis_evidence"]["sha256"]), 64
+        )
+
+    def test_fatal_breach_is_complete_and_preserves_the_alert(self):
+        with tempfile.TemporaryDirectory() as tmpdir:
+            positions_path, quotes_path = self.write_inputs(tmpdir)
+            evidence_path = self.write_thesis_evidence(
+                tmpdir,
+                positions_path,
+                conclusions={"AAPL": "fatal_breach"},
+            )
+            report = self.evaluate(positions_path, quotes_path, evidence_path)
+
+        self.assertEqual(report["status"], "complete")
+        self.assertEqual(
+            report["thesis_red_team"]["fatal_event_status"],
+            "fatal_breach_detected",
+        )
+        self.assertEqual(report["thesis_red_team"]["fatal_symbols"], ["AAPL"])
+
     def test_inline_repeated_batch_audit_is_rejected(self):
         records = quote_records()
         audit = supplied_audit()
@@ -251,6 +353,59 @@ class CompleteOfflineSyncTests(DailySyncTestCase):
 
 
 class FailClosedOfflineSyncTests(DailySyncTestCase):
+    def test_thesis_evidence_rejects_non_primary_stale_or_unbound_references(self):
+        def mutate_non_primary(payload):
+            payload["evidence_items"][0]["source_tier"] = "secondary"
+
+        def mutate_stale(payload):
+            stale = datetime.fromtimestamp(
+                NOW_EPOCH - 7_200, tz=timezone.utc
+            ).isoformat()
+            payload["window_end"] = stale
+
+        def mutate_unknown_reference(payload):
+            payload["assessments"][0]["evidence_ids"] = ["missing"]
+
+        for mutate in (
+            mutate_non_primary,
+            mutate_stale,
+            mutate_unknown_reference,
+        ):
+            with self.subTest(mutate=mutate.__name__), tempfile.TemporaryDirectory() as tmpdir:
+                positions_path, quotes_path = self.write_inputs(tmpdir)
+                evidence_path = self.write_thesis_evidence(tmpdir, positions_path)
+                payload = json.loads(evidence_path.read_text(encoding="utf-8"))
+                mutate(payload)
+                evidence_path.write_text(json.dumps(payload), encoding="utf-8")
+                report = self.evaluate(positions_path, quotes_path, evidence_path)
+
+            self.assertEqual(report["status"], "incomplete")
+            self.assertFalse(
+                report["completeness"]["thesis_assessment_complete"]
+            )
+            self.assertTrue(report["thesis_red_team"]["errors"])
+
+    def test_thesis_evidence_requires_exact_symbol_coverage_and_binding(self):
+        cases = (
+            {"omit_symbol": "AAPL"},
+            {"wrong_binding": True},
+        )
+        for options in cases:
+            with self.subTest(options=options), tempfile.TemporaryDirectory() as tmpdir:
+                positions_path, quotes_path = self.write_inputs(tmpdir)
+                evidence_path = self.write_thesis_evidence(
+                    tmpdir,
+                    positions_path,
+                    **options,
+                )
+                report = self.evaluate(positions_path, quotes_path, evidence_path)
+
+            self.assertEqual(report["status"], "incomplete")
+            self.assertFalse(
+                report["completeness"]["thesis_assessment_complete"]
+            )
+            self.assertTrue(report["thesis_red_team"]["errors"])
+
     def test_supplied_audit_must_bind_the_same_normalized_portfolio_snapshot(self):
         wrong = positions_payload()
         wrong["positions"][0]["quantity"] = 99

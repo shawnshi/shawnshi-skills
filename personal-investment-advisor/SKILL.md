@@ -28,6 +28,7 @@ description: 基于当前行情、公司原始披露、财务数据和用户明�
 
 - 研究：`references/research_brief_schema.json`、`references/method_profiles.json`、`references/dashboard_schema.json`
 - 组合：`references/portfolio_schema.json`、`references/inverse_volatility_policy_schema.json`
+- 日常红队：`references/thesis_red_team_schema.json`
 - 稳定入口与依赖：`scripts/pia.py`、`scripts/status_contract.py`、`scripts/requirements.txt`
 - 运行界面：`agents/openai.yaml`
 

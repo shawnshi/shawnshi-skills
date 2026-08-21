@@ -1,7 +1,7 @@
 {
   "schema_version": 3,
   "skill": "cognitive-morphism-mapper",
-  "generated_at": "2026-08-16T22:27:49+08:00",
+  "generated_at": "2026-08-21T08:54:56+08:00",
   "hash_algorithm": "SHA-256",
   "text_hash_normalization": "LF",
   "skill_md": "SKILL.md",
@@ -38,7 +38,7 @@
     },
     {
       "name": "examples",
-      "file_count": 0
+      "file_count": 1
     }
   ],
   "resource_file_hashes": [
@@ -65,6 +65,10 @@
     {
       "path": "commands/synthesize.md",
       "sha256": "7d9e439270d591e571af0d6f6039375257348dc339e5b7fa2f217f22f716fed2"
+    },
+    {
+      "path": "examples/.gitkeep",
+      "sha256": "56f0d6ac8fbc29ea59e8eb8ce626949efcce2b16cd4ac9242e5630a6f35afdc3"
     },
     {
       "path": "modules/adjoint_balancer.md",

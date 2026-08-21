@@ -2,6 +2,7 @@ import io
 import json
 import sys
 import tempfile
+import threading
 import time
 import unittest
 from contextlib import redirect_stdout
@@ -62,6 +63,10 @@ class YfDailySyncContractTests(unittest.TestCase):
                     ),
                 ),
                 patch("yf.get_stock_data", return_value=(None, info, [], [])) as fetch,
+                patch(
+                    "yf.configure_yfinance_cache",
+                    return_value=str(Path(tmpdir) / "cache"),
+                ) as cache,
                 redirect_stdout(stdout),
                 self.assertRaises(SystemExit) as raised,
             ):
@@ -89,6 +94,65 @@ class YfDailySyncContractTests(unittest.TestCase):
         self.assertFalse(kwargs["fetch_price"])
         self.assertFalse(kwargs["fetch_news"])
         self.assertTrue(kwargs["fetch_info"])
+        cache.assert_called_once_with(None, task_local_default=True)
+
+    def test_daily_sync_batch_fetches_independent_symbols_concurrently(self):
+        lock = threading.Lock()
+        active = 0
+        max_active = 0
+
+        def fetch(symbol, **kwargs):
+            nonlocal active, max_active
+            with lock:
+                active += 1
+                max_active = max(max_active, active)
+            time.sleep(0.03)
+            with lock:
+                active -= 1
+            return None, {"symbol": symbol}, [], []
+
+        with patch("yf.get_stock_data", side_effect=fetch) as get_data:
+            results = yf.fetch_daily_sync_batch(
+                ["AAPL", "MSFT", "QQQ", "GOOG"],
+                max_workers=4,
+            )
+
+        self.assertEqual(set(results), {"AAPL", "MSFT", "QQQ", "GOOG"})
+        self.assertGreaterEqual(max_active, 2)
+        self.assertEqual(get_data.call_count, 4)
+        for call in get_data.call_args_list:
+            self.assertFalse(call.kwargs["fetch_price"])
+            self.assertTrue(call.kwargs["fetch_info"])
+            self.assertFalse(call.kwargs["fetch_news"])
+
+    def test_explicit_cache_directory_is_created_and_bound_before_fetch(self):
+        with tempfile.TemporaryDirectory() as tmpdir:
+            cache_dir = Path(tmpdir) / "nested" / "yfinance"
+            with patch("yf.yf.set_tz_cache_location") as set_location:
+                resolved = yf.configure_yfinance_cache(str(cache_dir))
+
+            self.assertTrue(cache_dir.is_dir())
+            self.assertEqual(resolved, str(cache_dir.resolve()))
+            set_location.assert_called_once_with(str(cache_dir.resolve()))
+
+    def test_unwritable_cache_fails_before_any_quote_retry(self):
+        stdout = io.StringIO()
+        argv = ["yf.py", "QQQ", "--daily-sync", "--positions-file", "p.json"]
+        with (
+            patch.object(sys, "argv", argv),
+            patch(
+                "yf.configure_yfinance_cache",
+                side_effect=RuntimeError("yfinance_cache_unwritable: blocked"),
+            ),
+            patch("yf.get_stock_data") as fetch,
+            redirect_stdout(stdout),
+            self.assertRaises(SystemExit) as raised,
+        ):
+            yf.main()
+
+        self.assertEqual(raised.exception.code, 2)
+        self.assertEqual(json.loads(stdout.getvalue())["status"], "failed")
+        fetch.assert_not_called()
 
 
 if __name__ == "__main__":

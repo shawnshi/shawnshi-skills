@@ -31,6 +31,7 @@ class DefaultReadContractTests(unittest.TestCase):
             "`partial`",
             "--source live --allow-network --allow-health-data",
             "RUNTIME_CONTRACT_MISMATCH",
+            "`authentication_required`",
         )
         for marker in required:
             with self.subTest(marker=marker):

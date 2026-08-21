@@ -1,7 +1,7 @@
 {
   "schema_version": 3,
   "skill": "tool-tts",
-  "generated_at": "2026-08-16T22:02:19",
+  "generated_at": "2026-08-20T23:36:03+08:00",
   "hash_algorithm": "SHA-256",
   "text_hash_normalization": "LF",
   "skill_md": "SKILL.md",
@@ -32,7 +32,7 @@
   "resource_file_hashes": [
     {
       "path": "scripts/tts_engine.py",
-      "sha256": "747c1a9cedce6cdc214695c14e7236d8b12e6115fdcf9a7087e862f413a59eac"
+      "sha256": "66b0dc7f1fc6a260fa30aa17658ef7d3ba43268d8458fa91f9f7ca539a069f53"
     }
   ],
   "declared_local_dependencies": [
@@ -40,7 +40,7 @@
       "path": "scripts/tts_engine.py",
       "exists": true,
       "resolved_path": "tool-tts/scripts/tts_engine.py",
-      "sha256": "747c1a9cedce6cdc214695c14e7236d8b12e6115fdcf9a7087e862f413a59eac"
+      "sha256": "66b0dc7f1fc6a260fa30aa17658ef7d3ba43268d8458fa91f9f7ca539a069f53"
     }
   ],
   "missing_declared_dependencies": []

@@ -329,6 +329,43 @@ class PreflightTests(HookTestCase):
         self.assert_denied(self.bash("Get-Content *.txt"))
 
 
+class SessionRuntimeRootTests(HookTestCase):
+    def test_uuid_session_receipt_is_written_under_session_scratch(self) -> None:
+        self.session_id = "01a00a76-c3b7-79c3-bff6-2d97ace4fdf2"
+        packet_root = self.root / "brain"
+        envelope = self.envelope("PostToolUse", tool_name="Bash")
+        self.assertEqual(
+            {},
+            hook.handle_hook("PreToolUse", envelope, packet_root=packet_root),
+        )
+        runtime_root = (
+            packet_root
+            / self.session_id
+            / hook.PACKET_RELATIVE_PATH.parent
+            / "_runtime"
+        )
+        receipts = list((runtime_root / "coverage").glob("*.json"))
+        self.assertEqual(1, len(receipts))
+        self.assertFalse((HOOK_DIR / "_runtime").exists())
+
+    def test_non_uuid_session_is_hashed_and_contained(self) -> None:
+        packet_root = self.root / "brain"
+        envelope = self.envelope("PreToolUse")
+        envelope["session_id"] = "../escape\\with/separators"
+        runtime_root = hook._session_runtime_root(envelope, packet_root)
+        self.assertIsNotNone(runtime_root)
+        assert runtime_root is not None
+        runtime_root.relative_to(packet_root.resolve())
+        self.assertTrue(runtime_root.parts[-4].startswith("session-"))
+        self.assertNotIn("escape", str(runtime_root))
+
+    def test_missing_session_or_packet_root_has_no_session_runtime(self) -> None:
+        envelope = self.envelope("PreToolUse")
+        envelope.pop("session_id")
+        self.assertIsNone(hook._session_runtime_root(envelope, self.root / "brain"))
+        self.assertIsNone(hook._session_runtime_root(self.envelope("PreToolUse"), None))
+
+
 class CompactionTests(HookTestCase):
     def test_uuid_session_resolves_packet_from_session_scratch_root(self) -> None:
         self.session_id = "01a00a76-c3b7-79c3-bff6-2d97ace4fdf2"
