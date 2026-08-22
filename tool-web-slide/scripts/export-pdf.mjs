@@ -17,13 +17,13 @@ if (!existsSync(htmlPath)) {
   process.exit(1);
 }
 
-// Dynamically import puppeteer. User must have it installed in the project or globally.
-let puppeteer;
+// Dynamically import Playwright from the declared project dependency.
+let chromium;
 try {
-  puppeteer = await import('puppeteer');
+  ({ chromium } = await import('playwright'));
 } catch (e) {
-  console.error('Puppeteer is required to export PDF. Please run:');
-  console.error('  npm install -D puppeteer');
+  console.error('Playwright is required to export PDF. Please run:');
+  console.error('  npm install playwright');
   process.exit(1);
 }
 
@@ -43,17 +43,17 @@ for (const p of chromePaths) {
 }
 
 (async () => {
-  console.log(`Launching Puppeteer to export ${htmlPath}...`);
-  const browser = await puppeteer.launch({ 
-    headless: 'new',
+  console.log(`Launching Playwright to export ${htmlPath}...`);
+  const browser = await chromium.launch({
+    headless: true,
     executablePath, // Use system Chrome if found
     // Security: Removed --disable-web-security to enforce same-origin policy
     args: ['--no-sandbox', '--disable-setuid-sandbox'] // Prevent sandbox issues
   });
-  const page = await browser.newPage();
-  
-  // Set viewport to standard 1080p 16:9
-  await page.setViewport({ width: 1920, height: 1080, deviceScaleFactor: 2 });
+  const page = await browser.newPage({
+    viewport: { width: 1920, height: 1080 },
+    deviceScaleFactor: 2
+  });
   
   try {
     await page.goto(`file://${htmlPath}`, { waitUntil: 'domcontentloaded', timeout: 5000 });

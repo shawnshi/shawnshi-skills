@@ -1,7 +1,7 @@
 {
   "schema_version": 3,
   "skill": "tool-web-slide",
-  "generated_at": "2026-08-16T22:27:50+08:00",
+  "generated_at": "2026-08-22T11:08:01+08:00",
   "hash_algorithm": "SHA-256",
   "text_hash_normalization": "LF",
   "skill_md": "SKILL.md",
@@ -18,11 +18,11 @@
     },
     {
       "path": "package-lock.json",
-      "sha256": "db305db5cf8361b53e0bdc682e414fac1452eba5ff7b02d224843c30bcb42f1f"
+      "sha256": "0baa15b0f0642514d6b12973271a10b7229880305199279d63386f5a046b5d7d"
     },
     {
       "path": "package.json",
-      "sha256": "776a2354b1cc707c6547f221a2672bd2ad5bb9cbbdbd49527a72e6595eaa4158"
+      "sha256": "8fa5a8daf54815bd13ab10b232e20d41ea94976e59804b096f892facafbd9d9c"
     }
   ],
   "top_level_directories": [
@@ -85,7 +85,7 @@
     },
     {
       "path": "scripts/export-pdf.mjs",
-      "sha256": "6c39534c5bb4ed8fdb44580cf743b000f512105b0b85f5647df4ec12a858b575"
+      "sha256": "b03d6d4ade2944bcc1ec7ad056b8b4e1f39c2be74b418e3f817960b5f160f257"
     },
     {
       "path": "scripts/html_quality_checker.mjs",

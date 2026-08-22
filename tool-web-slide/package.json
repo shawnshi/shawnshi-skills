@@ -4,8 +4,6 @@
   "description": "Web Slide Generator Engine",
   "type": "module",
   "dependencies": {
-    "playwright": "^1.60.0",
-    "pptxgenjs": "^4.0.1",
-    "puppeteer": "^22.0.0"
+    "playwright": "^1.60.0"
   }
 }
