@@ -1,7 +1,6 @@
 from __future__ import annotations
 
 import argparse
-import json
 import re
 from datetime import date, datetime, time
 from pathlib import Path
@@ -9,20 +8,29 @@ from zoneinfo import ZoneInfo
 
 from blackboard import update_phase
 from history_manager import load_recent_history, match_history
-from hub_utils import HUB_DIR, LATEST_SCAN_PATH, REFINED_PATH, CANDIDATES_PATH, atomic_dump_json, ensure_runtime_dirs, load_json
+from hub_utils import (
+    CANDIDATES_PATH,
+    HUB_DIR,
+    LATEST_SCAN_PATH,
+    REFINED_PATH as _REFINED_PATH,
+    atomic_dump_json,
+    ensure_runtime_dirs,
+    load_json,
+)
 from mix_policy import DOMAINS
 from run_contract import (
     RunContractError,
     candidate_object_hash,
     candidate_ref,
     file_sha256,
-    load_manifest,
     require_stage,
 )
 
 
 FOCUS_PATH = HUB_DIR / "references" / "strategic_focus.json"
 PROMPT_PATH = HUB_DIR / "references" / "prompts" / "v1_refine_system.md"
+# Retained as a compatibility injection point for existing callers and tests.
+REFINED_PATH = _REFINED_PATH
 
 
 def keyword_matches(text: str, keyword: str) -> bool:
@@ -142,13 +150,11 @@ def heuristics(
     *,
     min_score_override: int | None = None,
     max_items_override: int | None = None,
-    dedupe_days_override: int | None = None,
     history_entries: list[dict] | None = None,
 ) -> dict:
     runner_available = False
     scored = []
     for item in scan_data["items"]:
-        dedupe_days = dedupe_days_override or focus_data.get("filters", {}).get("dedupe_days", 7)
         if match_history(item, entries=history_entries or [])["redundant"]:
             continue
         score, matched, primary_domain, domain_scores = score_item(item, focus_data)
@@ -319,7 +325,6 @@ def refine(
         focus_data,
         min_score_override=min_score,
         max_items_override=max_items,
-        dedupe_days_override=dedupe_days,
         history_entries=history_entries,
     )
     output = sanitize_banned_words(output)

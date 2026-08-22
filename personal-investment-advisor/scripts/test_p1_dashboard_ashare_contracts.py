@@ -87,6 +87,27 @@ class DashboardStrictContractTests(unittest.TestCase):
 
 
 class AShareFetcherContractTests(unittest.TestCase):
+    def test_rate_limiter_uses_one_monotonic_target_interval(self):
+        fetcher = akshare_fetcher.StandaloneDataFetcher(sleep_min=1, sleep_max=3)
+
+        with (
+            patch.object(akshare_fetcher.random, "uniform", return_value=2.0),
+            patch.object(
+                akshare_fetcher.time,
+                "monotonic",
+                side_effect=[0.0, 0.5, 2.0],
+            ),
+            patch.object(akshare_fetcher.time, "sleep") as sleep,
+        ):
+            fetcher._enforce_rate_limit()
+            fetcher._enforce_rate_limit()
+
+        self.assertEqual([call.args[0] for call in sleep.call_args_list], [1.5])
+
+    def test_rate_limiter_rejects_invalid_bounds(self):
+        with self.assertRaisesRegex(ValueError, "sleep bounds"):
+            akshare_fetcher.StandaloneDataFetcher(sleep_min=2, sleep_max=1)
+
     def test_sector_placeholder_never_enters_metrics(self):
         fetcher = akshare_fetcher.StandaloneDataFetcher(sleep_min=0, sleep_max=0)
         self.assertIsNone(fetcher.get_sector_info("600519"))

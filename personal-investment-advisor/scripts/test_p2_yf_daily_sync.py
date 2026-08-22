@@ -18,6 +18,37 @@ import yf
 
 
 class YfDailySyncContractTests(unittest.TestCase):
+    def test_retry_stops_after_one_permanent_transport_failure(self):
+        calls = 0
+
+        def fail():
+            nonlocal calls
+            calls += 1
+            raise RuntimeError("curl: (35) OPENSSL_internal: invalid library (0)")
+
+        with patch("yf.time.sleep") as sleep:
+            with self.assertRaisesRegex(RuntimeError, "invalid library"):
+                yf._retry(fail, retries=3, label="quote")
+
+        self.assertEqual(calls, 1)
+        sleep.assert_not_called()
+
+    def test_retry_keeps_transient_failure_behavior(self):
+        calls = 0
+
+        def eventually_succeeds():
+            nonlocal calls
+            calls += 1
+            if calls == 1:
+                raise TimeoutError("temporary timeout")
+            return "ok"
+
+        with patch("yf.time.sleep"):
+            result = yf._retry(eventually_succeeds, retries=2, label="quote")
+
+        self.assertEqual(result, "ok")
+        self.assertEqual(calls, 2)
+
     def test_daily_sync_emits_one_batch_audit_and_no_derived_etf_history(self):
         positions = {
             "base_currency": "USD",
@@ -124,6 +155,29 @@ class YfDailySyncContractTests(unittest.TestCase):
             self.assertFalse(call.kwargs["fetch_price"])
             self.assertTrue(call.kwargs["fetch_info"])
             self.assertFalse(call.kwargs["fetch_news"])
+
+    def test_daily_sync_batch_opens_circuit_on_repeated_systemic_tls_failure(self):
+        symbols = ["AAPL", "MSFT", "QQQ", "GOOG", "AMZN", "META"]
+
+        def fail(symbol, **kwargs):
+            return (
+                None,
+                {},
+                [],
+                [f"Info fetch failed for {symbol}: curl: (35) invalid library"],
+            )
+
+        with patch("yf.get_stock_data", side_effect=fail) as get_data:
+            results = yf.fetch_daily_sync_batch(symbols, max_workers=2)
+
+        self.assertEqual(set(results), set(symbols))
+        self.assertEqual(get_data.call_count, 2)
+        skipped = [
+            symbol
+            for symbol, result in results.items()
+            if any("circuit breaker" in error for error in result[3])
+        ]
+        self.assertEqual(len(skipped), 4)
 
     def test_explicit_cache_directory_is_created_and_bound_before_fetch(self):
         with tempfile.TemporaryDirectory() as tmpdir:

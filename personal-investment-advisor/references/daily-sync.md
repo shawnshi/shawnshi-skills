@@ -7,7 +7,7 @@ Daily Sync 核验持仓身份、行情覆盖、时效和已确认观察边界。
 ## 运行步骤
 
 1. 用 `portfolio_loader.py` 的契约验证组合，列出所有 `quantity > 0` 的非现金标的。
-2. 运行 `yf.py <代码...> --daily-sync --positions-file <portfolio.json> --cache-dir <task-dir>/yfinance-cache`，把标准输出保存到本任务隔离目录中的 `quotes.json`。该模式只取当前报价与身份字段，不计算历史技术指标或新闻，并默认以 2 个工作线程并发拉取独立标的；可用 `--daily-sync-workers 1..4` 调整。批次审计必须携带活动持仓规范化摘要，字段固定为 `symbol`、`quantity`、`currency`、`market`、`asset_type`，并以 SHA-256 绑定。未显式提供缓存目录时，Daily Sync 使用当前工作目录下的 `tmp/pia-yfinance-cache`，避免不可写的用户级 SQLite 缓存导致整批重试。
+2. 运行 `yf.py <代码...> --daily-sync --positions-file <portfolio.json> --cache-dir <task-dir>/yfinance-cache`，把标准输出保存到本任务隔离目录中的 `quotes.json`。该模式只取当前报价与身份字段，不计算历史技术指标或新闻，并默认以 2 个工作线程并发拉取独立标的；可用 `--daily-sync-workers 1..4` 调整。确定性的 TLS、证书或协议配置错误不做同参数重试；在尚无成功结果时，同批次连续出现相同系统性传输错误会熔断尚未提交的标的，并为每个标的保留显式失败记录，熔断不得计作行情成功。批次审计必须携带活动持仓规范化摘要，字段固定为 `symbol`、`quantity`、`currency`、`market`、`asset_type`，并以 SHA-256 绑定。未显式提供缓存目录时，Daily Sync 使用当前工作目录下的 `tmp/pia-yfinance-cache`，避免不可写的用户级 SQLite 缓存导致整批重试。
 3. 行情包必须是一个对象，顶层只含本批次的 `records` 与单一 `portfolio_batch_audit`。列表根、每条记录内嵌审计、部分结果、重复代码、遗漏、额外代码、行情错误或身份冲突均失败关闭。
 4. 运行 `daily_sync.py --positions-file <portfolio.json> --quotes-file <quotes.json> [--thesis-evidence-file <evidence.json>]` 做独立离线重放。当前输出契约为 `pia_daily_sync_offline_v3`，同时绑定持仓快照、输入行情包、派生 `quote_snapshot` 以及可选事件证据包；缺少行情绑定的旧报告只能作为档案查看，不能供当前权重或历史重放计算使用。
 

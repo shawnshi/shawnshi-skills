@@ -8,27 +8,13 @@ from datetime import datetime
 from pathlib import Path
 from typing import Any
 
-import fetch_news
-import refine
-from forge import forge_briefing, preview_briefing
 from hub_utils import HUB_DIR, NEWS_DIR, RUNTIME_DIR, atomic_dump_json, load_json
 from mix_policy import allocate_target_counts
-from update_index import rebuild_history
-from run_contract import (
-    RunContractError,
-    build_review_request,
-    build_supplement_request,
-    create_run,
-    file_sha256,
-    load_manifest,
-    record_stage,
-    record_run_artifact,
-    register_review_bundle,
-    register_supplement_results,
-)
 
 
 DEFAULT_FOCUS_PATH = HUB_DIR / "references" / "strategic_focus.json"
+DEFAULT_MAX_CONCURRENCY = 8
+MAX_CONCURRENCY = 32
 
 
 @dataclass(frozen=True)
@@ -51,6 +37,8 @@ def assess_supplement_gaps(
     manifest: dict[str, Any],
     focus: dict[str, Any],
 ) -> list[dict[str, Any]]:
+    from run_contract import RunContractError
+
     items = candidates.get("items")
     if not isinstance(items, list):
         raise RunContractError("candidate pool items must be a list")
@@ -168,9 +156,30 @@ async def prepare_run(
     allow_existing_archive_replacement: bool = False,
     skill_path: Path = HUB_DIR / "SKILL.md",
     run_id: str | None = None,
-    max_concurrency: int = fetch_news.DEFAULT_MAX_CONCURRENCY,
+    max_concurrency: int = DEFAULT_MAX_CONCURRENCY,
     now: datetime | None = None,
 ) -> PrepareResult:
+    from run_contract import RunContractError
+
+    if max_concurrency <= 0:
+        raise RunContractError("max_concurrency must be positive")
+    if max_concurrency > MAX_CONCURRENCY:
+        raise RunContractError(
+            f"max_concurrency must be between 1 and {MAX_CONCURRENCY}"
+        )
+
+    import fetch_news
+    import refine
+    from run_contract import (
+        build_supplement_request,
+        create_run,
+        file_sha256,
+        load_manifest,
+        record_run_artifact,
+        record_stage,
+    )
+    from update_index import rebuild_history
+
     manifest_path, manifest = create_run(
         report_date=report_date,
         timezone_name=timezone_name,
@@ -219,25 +228,42 @@ async def prepare_run(
     current_path = run_dir / "current_scan.json"
     cache_path = run_dir / "fetch_cache.json"
     candidates_path = run_dir / "intelligence_candidates.json"
-    scan = await fetch_news.scan_all(
-        focus_path=focus_path,
-        window_days=window_days,
-        topic=topic,
-        region=region,
-        report_date=manifest["report_date"],
-        timezone_name=timezone_name,
-        max_concurrency=max_concurrency,
-        output_path=baseline_path,
-        current_output_path=current_path,
-        cache_path=cache_path,
-    )
-    if scan.get("metadata", {}).get("window") != manifest["window"]:
-        raise RunContractError("baseline window does not match run manifest")
-    coverage = scan.get("coverage") or {}
-    run_status = coverage.get("run_status")
-    baseline_status = {"complete": "completed", "degraded": "degraded", "failed": "failed"}.get(run_status)
-    if baseline_status is None:
-        raise RunContractError("baseline coverage status is missing or invalid")
+    try:
+        scan = await fetch_news.scan_all(
+            focus_path=focus_path,
+            window_days=window_days,
+            topic=topic,
+            region=region,
+            report_date=manifest["report_date"],
+            timezone_name=timezone_name,
+            max_concurrency=max_concurrency,
+            output_path=baseline_path,
+            current_output_path=current_path,
+            cache_path=cache_path,
+        )
+        if scan.get("metadata", {}).get("window") != manifest["window"]:
+            raise RunContractError("baseline window does not match run manifest")
+        coverage = scan.get("coverage") or {}
+        run_status = coverage.get("run_status")
+        baseline_status = {
+            "complete": "completed",
+            "degraded": "degraded",
+            "failed": "failed",
+        }.get(run_status)
+        if baseline_status is None:
+            raise RunContractError("baseline coverage status is missing or invalid")
+    except Exception as exc:
+        try:
+            record_stage(
+                manifest_path,
+                "baseline",
+                "failed",
+                metadata={"error_type": type(exc).__name__},
+                now=now,
+            )
+        except Exception as record_exc:
+            exc.add_note(f"failed to record baseline failure: {record_exc}")
+        raise
     record_stage(
         manifest_path,
         "baseline",
@@ -292,6 +318,8 @@ async def prepare_run(
 
 
 def _ratio_from_args(args: argparse.Namespace) -> tuple[dict[str, float] | None, str, str]:
+    from run_contract import RunContractError
+
     if args.technology_ratio is None:
         return None, "schema_default", "none"
     technology = float(args.technology_ratio)
@@ -320,7 +348,12 @@ def main() -> None:
     prepare.add_argument("--technology-ratio", type=float)
     prepare.add_argument("--ratio-reason")
     prepare.add_argument("--run-id")
-    prepare.add_argument("--max-concurrency", type=int, default=fetch_news.DEFAULT_MAX_CONCURRENCY)
+    prepare.add_argument(
+        "--max-concurrency",
+        type=int,
+        default=DEFAULT_MAX_CONCURRENCY,
+        help=f"Global concurrent requests (1..{MAX_CONCURRENCY}; per-host maximum 4).",
+    )
     prepare.add_argument("--news-dir", type=Path, default=NEWS_DIR)
     prepare.add_argument(
         "--allow-existing-archive-replacement",
@@ -338,7 +371,7 @@ def main() -> None:
     prepare_review.add_argument(
         "--kind", choices=("semantic", "red_team"), required=True
     )
-    prepare_review.add_argument("--max-turns", type=int, default=3)
+    prepare_review.add_argument("--max-turns", type=int, default=2)
 
     supplement = subparsers.add_parser("register-supplement", help="Validate and register all gap results.")
     supplement.add_argument("--manifest", type=Path, required=True)
@@ -370,6 +403,14 @@ def main() -> None:
 
     args = parser.parse_args()
     if args.command == "prepare":
+        if args.window_days <= 0:
+            parser.error("--window-days must be positive")
+        if args.max_concurrency <= 0:
+            parser.error("--max-concurrency must be positive")
+        if args.max_concurrency > MAX_CONCURRENCY:
+            parser.error(
+                f"--max-concurrency must be between 1 and {MAX_CONCURRENCY}"
+            )
         ratio, source, reason = _ratio_from_args(args)
         result = asyncio.run(
             prepare_run(
@@ -395,6 +436,8 @@ def main() -> None:
             "supplement_request_path": str(result.supplement_request_path.resolve()) if result.supplement_request_path else None,
         }, ensure_ascii=False, indent=2))
     elif args.command == "prepare-review":
+        from run_contract import build_review_request
+
         path, request = build_review_request(
             args.manifest,
             args.refined,
@@ -409,17 +452,23 @@ def main() -> None:
                     "review_kind": request["review_kind"],
                     "reviewer_id": request["reviewer_id"],
                     "invocation_id": request["invocation_id"],
+                    "review_mode": request["review_mode"],
+                    "max_turns": request["max_turns"],
                 },
                 ensure_ascii=False,
                 indent=2,
             )
         )
     elif args.command == "register-supplement":
+        from run_contract import register_supplement_results
+
         path, aggregate = register_supplement_results(
             args.manifest, args.request, args.result
         )
         print(json.dumps({"artifact_path": str(path.resolve()), "status": aggregate["status"]}, ensure_ascii=False))
     elif args.command == "register-review":
+        from run_contract import register_review_bundle
+
         register_review_bundle(
             args.manifest,
             args.refined,
@@ -428,6 +477,8 @@ def main() -> None:
         )
         print(json.dumps({"status": "registered"}, ensure_ascii=False))
     elif args.command == "preview":
+        from forge import preview_briefing
+
         payload, markdown = preview_briefing(args.manifest, args.refined)
         print(
             json.dumps(payload, ensure_ascii=False, indent=2)
@@ -436,6 +487,8 @@ def main() -> None:
             end="" if args.format == "markdown" else "\n",
         )
     elif args.command == "forge":
+        from forge import forge_briefing
+
         kwargs: dict[str, Any] = {}
         if args.news_dir is not None:
             kwargs["news_dir"] = args.news_dir
@@ -448,6 +501,8 @@ def main() -> None:
             "commit_receipt": str(result.manifest_path.resolve()),
         }, ensure_ascii=False, indent=2))
     else:
+        from run_contract import load_manifest
+
         print(json.dumps(load_manifest(args.manifest), ensure_ascii=False, indent=2))
 
 

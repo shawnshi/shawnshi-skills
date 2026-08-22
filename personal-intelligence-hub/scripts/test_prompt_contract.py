@@ -12,7 +12,7 @@ class PromptContractTests(unittest.TestCase):
             (ROOT / "references" / "subagent_prompts.json").read_text(encoding="utf-8")
         )
 
-        self.assertEqual(config["contract_version"], "subagent-prompts/1.4")
+        self.assertEqual(config["contract_version"], "subagent-prompts/1.5")
         self.assertEqual(config["invocation_order"][0], "baseline_candidates")
         required = set(config["result_envelope"]["required"])
         self.assertTrue(
@@ -69,6 +69,21 @@ class PromptContractTests(unittest.TestCase):
         )
         self.assertEqual(policy["readiness"]["watch_mode"], "single_fallback_only")
         self.assertLessEqual(policy["readiness"]["watch_timeout_seconds"], 10)
+        self.assertEqual(policy["readiness"]["max_unchanged_wait_timeouts"], 2)
+        self.assertEqual(policy["readiness"]["wait_timeout_seconds"], 60)
+        self.assertEqual(
+            policy["readiness"]["after_wait_gate"],
+            "stop_waiting_until_artifact_or_state_fingerprint_changes",
+        )
+        self.assertFalse(
+            policy["source_efficiency"]["retry_same_url_on_permanent_failure"]
+        )
+        self.assertEqual(
+            policy["source_efficiency"][
+                "max_consecutive_permanent_failures_per_host"
+            ],
+            2,
+        )
         self.assertEqual(
             policy["review_sequence"],
             [
@@ -104,6 +119,16 @@ class PromptContractTests(unittest.TestCase):
             self.assertTrue(contract["halt_condition"])
             self.assertIn("challenge", contract["output_contract"])
             self.assertIn("turns_used", contract["output_contract"])
+        self.assertEqual(config["review_agents"]["SemanticEvaluator"]["max_turns"], 2)
+        self.assertIn(
+            "不得重新联网访问已经 verified 的 URL",
+            config["review_agents"]["SemanticEvaluator"]["system_prompt"],
+        )
+        self.assertIn(
+            "no_l4_fast_path",
+            config["review_agents"]["RedTeam"]["system_prompt"],
+        )
+        self.assertIn("永久失败", config["common_contract"]["failure_rule"])
 
 
 if __name__ == "__main__":

@@ -13,7 +13,7 @@ SCRIPT_DIR = Path(__file__).resolve().parent
 
 
 class ArchiveContractTests(unittest.TestCase):
-    def test_default_news_directory_is_gemini_memory_news(self):
+    def test_default_news_directory_is_memory_news(self):
         environment = dict(os.environ)
         environment.pop("PIH_NEWS_DIR", None)
         result = subprocess.run(
@@ -34,7 +34,7 @@ class ArchiveContractTests(unittest.TestCase):
         self.assertEqual(result.returncode, 0)
         self.assertEqual(
             Path(result.stdout.strip()),
-            Path.home() / ("." + "gemini") / "MEMORY" / "raw" / "news",
+            Path.home() / "MEMORY" / "raw" / "news",
         )
 
     def test_environment_override_has_priority(self):

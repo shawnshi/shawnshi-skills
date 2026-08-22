@@ -23,9 +23,8 @@ import json
 import logging
 import multiprocessing
 import random
-import sys
 import time
-from datetime import date, datetime, timezone
+from datetime import datetime, timezone
 from typing import Optional, Dict, Any
 
 import pandas as pd
@@ -153,20 +152,24 @@ class StandaloneDataFetcher:
     """
     
     def __init__(self, sleep_min: float = 1.0, sleep_max: float = 3.0):
+        if sleep_min < 0 or sleep_max < sleep_min:
+            raise ValueError("sleep bounds must satisfy 0 <= sleep_min <= sleep_max")
         self.sleep_min = sleep_min
         self.sleep_max = sleep_max
         self._last_request_time: Optional[float] = None
             
     def _enforce_rate_limit(self) -> None:
-        """Enforce rate limits with random jitter."""
-        if self._last_request_time is not None:
-            elapsed = time.time() - self._last_request_time
-            if elapsed < self.sleep_min:
-                time.sleep(self.sleep_min - elapsed)
-        
-        jitter = random.uniform(self.sleep_min, self.sleep_max)
-        time.sleep(jitter)
-        self._last_request_time = time.time()
+        """Wait once for a randomized request-start interval using a monotonic clock."""
+        target_interval = random.uniform(self.sleep_min, self.sleep_max)
+        now = time.monotonic()
+        if self._last_request_time is None:
+            self._last_request_time = now
+            return
+        elapsed = max(0.0, now - self._last_request_time)
+        delay = max(0.0, target_interval - elapsed)
+        if delay:
+            time.sleep(delay)
+        self._last_request_time = time.monotonic()
 
     def _fetch_quote_ef(self, symbol: str) -> pd.DataFrame:
         self._enforce_rate_limit()

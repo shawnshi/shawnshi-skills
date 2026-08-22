@@ -1,7 +1,7 @@
 {
   "schema_version": 3,
   "skill": "automate-github-issues",
-  "generated_at": "2026-08-16T22:02:19",
+  "generated_at": "2026-08-22T10:39:21+08:00",
   "hash_algorithm": "SHA-256",
   "text_hash_normalization": "LF",
   "skill_md": "SKILL.md",
@@ -52,7 +52,7 @@
   "resource_file_hashes": [
     {
       "path": "assets/.env.example",
-      "sha256": "71cd8226548c90bd3e16f19fae187ab8d10a0f43c30d64af2328e0612faf3036"
+      "sha256": "aaf92b20660e2549a1a7daaa8e8e7bfc0a226c50e58541eca912bcdaca63f2eb"
     },
     {
       "path": "assets/fleet-dispatch.yml",

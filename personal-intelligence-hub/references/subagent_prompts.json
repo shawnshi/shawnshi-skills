@@ -1,5 +1,5 @@
 {
-  "contract_version": "subagent-prompts/1.4",
+  "contract_version": "subagent-prompts/1.5",
   "invocation_order": [
     "baseline_candidates",
     "gap_assessment",
@@ -14,7 +14,8 @@
     "date_rule": "published_at 必须来自来源明确日期或可靠元数据；观察时间不得冒充发布日期；未知日期不得进入正式候选。",
     "stop_rule": "达到请求中的 halt_condition、用完 max_turns，或连续检索无增量时停止并返回结构化结果。",
     "empty_rule": "无增量时返回 status=no_increment、空 candidates、非空 executed_queries、至少一条 access_log 和真实 coverage，不得用弱信号补数。",
-    "coverage_rule": "coverage 必须逐项等于 access_log 中 verified 与 blocked 的实际计数；每条访问记录必须同时记录 requested_url 与跳转后的 final_url；候选 access_check.requested_url 必须匹配候选 url，并逐字段对应 access_log 中的 verified 记录。"
+    "coverage_rule": "coverage 必须逐项等于 access_log 中 verified 与 blocked 的实际计数；每条访问记录必须同时记录 requested_url 与跳转后的 final_url；候选 access_check.requested_url 必须匹配候选 url，并逐字段对应 access_log 中的 verified 记录。",
+    "failure_rule": "同一 URL 的永久失败不得同参数重试；同一主机连续两次永久失败后切换另一类优先来源并保留失败日志。只有瞬时超时、限流或可重试 HTTP 状态可在轮次预算内重试。"
   },
   "review_common_contract": {
     "request_rule": "评估者必须先读取已登记的对应 review_request.json，原样返回 request_sha256、challenge、reviewer_kind、reviewer_id、invocation_id，并遵守 max_turns 与 halt_condition。",
@@ -57,8 +58,16 @@
       "watch_command": "python -X utf8 scripts/await_artifacts.py --path <artifact.json>",
       "watch_mode": "single_fallback_only",
       "watch_timeout_seconds": 10,
+      "wait_timeout_seconds": 60,
+      "max_unchanged_wait_timeouts": 2,
+      "after_wait_gate": "stop_waiting_until_artifact_or_state_fingerprint_changes",
       "on_exhaustion": "inspect_once_then_send_one_targeted_nudge_or_relaunch_bounded_task",
       "artifact_first": true
+    },
+    "source_efficiency": {
+      "retry_same_url_on_permanent_failure": false,
+      "max_consecutive_permanent_failures_per_host": 2,
+      "on_host_limit": "switch_priority_source_class_and_preserve_failure_log"
     },
     "review_sequence": [
       "register_semantic_request",
@@ -211,18 +220,18 @@
     "SemanticEvaluator": {
       "role": "语义评估",
       "mission": "对基线与补检候选执行统一门槛、事件去重、领域内排序和 L1-L4 推演。",
-      "max_turns": 3,
-      "halt_condition": "所有最终条目完成语义评估、访问核验与候选对象哈希到输出条目哈希的映射，或发现阻断问题。",
+      "max_turns": 2,
+      "halt_condition": "所有最终条目批量完成语义评估、登记证据核验与候选对象哈希到输出条目哈希的映射，或发现阻断问题。",
       "output_contract": "读取 semantic_review_request.json，生成 briefing core 1.3 和 review-receipt/1.0。回执的 reviewer_kind 固定为 semantic_model，reviewer_id 固定为 SemanticEvaluator；原样返回 request_sha256、challenge、invocation_id，包含 turns_used、halt_condition_met、baseline_sha256、input_bundle_sha256、output_sha256、reviewed_item_hashes、lineage_bindings、逐条 access_log，以及绑定 input_bundle_sha256 和 access_log_sha256 的 data_provenance。",
-      "system_prompt": "先读取已登记的 semantic review request。启发式候选只可作为输入，不可直接授权成稿。每个最终条目必须保留 candidate_refs；lineage_bindings 必须把对应 candidate_object_sha256 映射到完整输出条目哈希。最终 access_check.requested_url 必须匹配条目 url，final_url 只记录跳转结果，且 access_check 必须逐字段存在于回执 access_log；每个入选条目使用唯一映射，补充佐证不计入 retained-item access 数。按 requested_ratio 选择，不足时保留供给例外；不得强制把通用技术改写为医疗事件。"
+      "system_prompt": "先读取已登记的 semantic review request。一次读取各绑定文件，在本地批量完成门禁、去重、排序、血缘和回执构造；日期、URL、access_check 与对象哈希一致时复用登记证据，不得重新联网访问已经 verified 的 URL，只有缺失或冲突时才补充核验。启发式候选只可作为输入，不可直接授权成稿。每个最终条目必须保留 candidate_refs；lineage_bindings 必须把对应 candidate_object_sha256 映射到完整输出条目哈希。最终 access_check.requested_url 必须匹配条目 url，final_url 只记录跳转结果，且 access_check 必须逐字段存在于回执 access_log；每个入选条目使用唯一映射，补充佐证不计入 retained-item access 数。按 requested_ratio 选择，不足时保留供给例外；不得强制把通用技术改写为医疗事件。不要在聊天或工具输出中回显完整输入或产物；自检后原子发布一次。"
     },
     "RedTeam": {
       "role": "逻辑红队",
       "mission": "检查重大资讯资格、反证、日期、来源独立性、行动时序和 L4 条目。",
-      "max_turns": 3,
+      "max_turns": 2,
       "halt_condition": "全部 L4、重大资讯资格、日期、来源独立性与行动时序完成反证检查，或发现阻断问题。",
-      "output_contract": "读取 red_team_review_request.json 并生成 review-receipt/1.0；reviewer_kind 固定为 logic_adversary，reviewer_id 固定为 RedTeam；原样返回 request_sha256、challenge、invocation_id，包含 turns_used、halt_condition_met、baseline_sha256、output_sha256。L4 必须 status=passed 且 reviewed_item_hashes 覆盖全部 L4；无 L4 时可明确 not_required 并返回空覆盖。",
-      "system_prompt": "先读取已登记的 red-team review request，只审查其中 refined_sha256 绑定的 core；发现阻断问题时不得返回 passed。不得修改 refined core 后继续沿用旧哈希。"
+      "output_contract": "读取 red_team_review_request.json 并生成 review-receipt/1.0；reviewer_kind 固定为 logic_adversary，reviewer_id 固定为 RedTeam；原样返回 request_sha256、challenge、invocation_id，包含 turns_used、halt_condition_met、baseline_sha256、output_sha256。L4 必须 status=passed 且 reviewed_item_hashes 覆盖请求中的全部 l4_item_hashes；review_mode=no_l4_fast_path 时必须一轮完成、明确 not_required 并返回空覆盖。",
+      "system_prompt": "先读取已登记的 red-team review request，只审查其中 refined_sha256 绑定的 core。review_mode=no_l4_fast_path 时不得联网或扩展事件：一轮内复核绑定哈希、无 L4 事实、major_signal_item_hashes 对应条目的重大资讯资格、日期/来源独立性与行动时序，然后生成 not_required 空覆盖回执。review_mode=l4_full_review 时覆盖全部 l4_item_hashes，优先复用登记证据，仅在证据冲突时补充核验。发现阻断问题时不得返回 passed；不得修改 refined core 后继续沿用旧哈希。"
     }
   }
 }

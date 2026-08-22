@@ -21,7 +21,7 @@ TEXT_HASH_EXTENSIONS = frozenset(
         ".html", ".css", ".js", ".mjs", ".cjs", ".ts", ".tsx", ".jsx",
     }
 )
-TEXT_HASH_NAMES = frozenset({".gitignore", ".gitattributes", ".editorconfig"})
+TEXT_HASH_NAMES = frozenset({".gitignore", ".gitattributes", ".editorconfig", ".env"})
 RESOURCE_DIRECTORIES = (
     "scripts", "references", "resources", "assets", "examples", "prompts", "agents",
 )
@@ -57,7 +57,12 @@ def _unique_json_object(pairs: list[tuple[str, object]]) -> dict[str, object]:
 
 def canonical_sha256(path: Path) -> str:
     data = path.read_bytes()
-    if path.suffix.lower() in TEXT_HASH_EXTENSIONS or path.name.lower() in TEXT_HASH_NAMES:
+    name = path.name.lower()
+    if (
+        path.suffix.lower() in TEXT_HASH_EXTENSIONS
+        or name in TEXT_HASH_NAMES
+        or name.startswith(".env.")
+    ):
         text = data.decode("utf-8")
         data = text.replace("\r\n", "\n").replace("\r", "\n").encode("utf-8")
     return hashlib.sha256(data).hexdigest()

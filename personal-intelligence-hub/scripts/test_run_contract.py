@@ -20,6 +20,7 @@ from run_contract import (
     load_manifest,
     record_stage,
     record_run_artifact,
+    review_scope,
     review_input_bundle_sha256,
     register_review_bundle,
     register_supplement_results,
@@ -53,6 +54,19 @@ class RunContractTests(unittest.TestCase):
 
     def tearDown(self):
         self.directory.cleanup()
+
+    def test_review_scope_selects_fast_and_full_paths(self):
+        l3 = {"title": "l3", "intelligence_level": "L3", "major_signal": True}
+        l4 = {"title": "l4", "intelligence_level": "L4", "major_signal": False}
+
+        fast = review_scope({"top_10": [l3]})
+        full = review_scope({"top_10": [l3, l4]})
+
+        self.assertEqual(fast["review_mode"], "no_l4_fast_path")
+        self.assertEqual(fast["l4_item_hashes"], [])
+        self.assertEqual(fast["major_signal_item_hashes"], [item_hash(l3)])
+        self.assertEqual(full["review_mode"], "l4_full_review")
+        self.assertEqual(full["l4_item_hashes"], [item_hash(l4)])
 
     def new_run(self):
         return create_run(
@@ -358,6 +372,8 @@ class RunContractTests(unittest.TestCase):
         _, semantic_request = build_review_request(
             manifest_path, None, "semantic", now=self.now
         )
+        self.assertEqual(semantic_request["review_mode"], "registered_evidence_batch")
+        self.assertEqual(semantic_request["max_turns"], 2)
         base_receipt = {
             "contract_version": "1.0",
             "run_id": manifest["run_id"],
@@ -623,6 +639,21 @@ class RunContractTests(unittest.TestCase):
             ),
             encoding="utf-8",
         )
+        bad_lineage = self.runtime_dir / "semantic-bad-lineage.json"
+        bad_lineage_payload = json.loads(semantic.read_text(encoding="utf-8"))
+        bad_lineage_payload["lineage_bindings"][0]["inputs"][0][
+            "candidate_object_sha256"
+        ] = "0" * 64
+        bad_lineage.write_text(json.dumps(bad_lineage_payload), encoding="utf-8")
+        with self.assertRaisesRegex(
+            RunContractError, "candidate hash does not match registered candidate"
+        ):
+            validate_review_receipt(
+                json.loads(bad_lineage.read_text(encoding="utf-8")),
+                manifest_path,
+                refined,
+                expected_kind="semantic",
+            )
         with self.assertRaisesRegex(
             RunContractError, "validated semantic receipt is required"
         ):
@@ -656,6 +687,10 @@ class RunContractTests(unittest.TestCase):
             semantic_receipt_path=semantic,
             now=self.now,
         )
+        self.assertEqual(red_request["review_mode"], "no_l4_fast_path")
+        self.assertEqual(red_request["max_turns"], 1)
+        self.assertEqual(red_request["l4_item_hashes"], [])
+        self.assertEqual(red_request["major_signal_item_hashes"], [])
         red_team = self.runtime_dir / "red-team.json"
         receipt = json.loads(semantic.read_text(encoding="utf-8"))
         receipt.update(
@@ -700,6 +735,17 @@ class RunContractTests(unittest.TestCase):
         stages = load_manifest(manifest_path)["stages"]
         self.assertEqual(stages["semantic_review"]["status"], "completed")
         self.assertEqual(stages["red_team"]["status"], "not_required")
+        self.assertEqual(
+            stages["semantic_review"]["metadata"]["review_mode"],
+            "registered_evidence_batch",
+        )
+        self.assertEqual(
+            stages["red_team"]["metadata"]["review_mode"],
+            "no_l4_fast_path",
+        )
+        self.assertEqual(stages["red_team"]["metadata"]["max_turns"], 1)
+        self.assertEqual(stages["red_team"]["metadata"]["turns_used"], 1)
+        self.assertEqual(stages["red_team"]["metadata"]["elapsed_seconds"], 0.0)
 
 
 if __name__ == "__main__":

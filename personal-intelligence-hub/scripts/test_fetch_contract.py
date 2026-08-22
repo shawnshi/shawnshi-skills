@@ -163,7 +163,7 @@ class BoundedConcurrencyTests(unittest.IsolatedAsyncioTestCase):
         )()
         with (
             patch("fetch_news.fetch_with_retry", AsyncMock(return_value="feed")),
-            patch("fetch_news.feedparser.parse", return_value=feed),
+            patch("feedparser.parse", return_value=feed),
         ):
             items, status = await fetch_news.parse_rss(
                 object(),
@@ -286,6 +286,84 @@ class BoundedConcurrencyTests(unittest.IsolatedAsyncioTestCase):
         self.assertEqual(result, "ok")
         self.assertEqual(tracker["attempts"], 2)
 
+    async def test_fetch_does_not_retry_permanent_transport_error(self):
+        tracker = {"attempts": 0}
+
+        class Response:
+            async def __aenter__(self):
+                tracker["attempts"] += 1
+                raise RuntimeError("curl: (35) OPENSSL_internal: invalid library (0)")
+
+            async def __aexit__(self, exc_type, exc, tb):
+                return None
+
+        class Session:
+            def get(self, *args, **kwargs):
+                return Response()
+
+        with patch.object(fetch_news.asyncio, "sleep", new=AsyncMock()) as sleep:
+            with self.assertRaisesRegex(RuntimeError, "invalid library"):
+                await fetch_news.fetch_with_retry(
+                    Session(), "https://example.org/permanent"
+                )
+
+        self.assertEqual(tracker["attempts"], 1)
+        sleep.assert_not_called()
+
+    async def test_scan_rejects_excessive_concurrency_before_runtime_writes(self):
+        with patch("fetch_news.ensure_runtime_dirs") as ensure_runtime_dirs:
+            with self.assertRaisesRegex(ValueError, "between 1 and"):
+                await fetch_news.scan_all(max_concurrency=fetch_news.MAX_CONCURRENCY + 1)
+
+        ensure_runtime_dirs.assert_not_called()
+
+    async def test_hackernews_fetches_details_concurrently_and_keeps_partial_success(self):
+        tracker = {"active": 0, "maximum": 0}
+
+        async def fake_fetch(session, url, **kwargs):
+            if url.endswith("topstories.json"):
+                return [1, 2, 3]
+            tracker["active"] += 1
+            tracker["maximum"] = max(tracker["maximum"], tracker["active"])
+            try:
+                await asyncio.sleep(0.01)
+                if url.endswith("/2.json"):
+                    raise RuntimeError("detail unavailable")
+                story_id = int(url.rsplit("/", 1)[-1].split(".", 1)[0])
+                return {"title": f"story {story_id}", "time": 1786320000}
+            finally:
+                tracker["active"] -= 1
+
+        cache = {}
+        with patch.object(fetch_news, "fetch_with_retry", side_effect=fake_fetch):
+            items, status = await fetch_news.fetch_hackernews(object(), cache)
+
+        self.assertGreater(tracker["maximum"], 1)
+        self.assertEqual([item["title"] for item in items], ["story 1", "story 3"])
+        self.assertEqual(status, "partial: 1/3 item requests failed")
+        self.assertEqual(
+            set(cache),
+            {
+                "https://news.ycombinator.com/item?id=1",
+                "https://news.ycombinator.com/item?id=3",
+            },
+        )
+
+    async def test_scan_failure_updates_blackboard_state(self):
+        with (
+            patch("fetch_news.ensure_runtime_dirs"),
+            patch("fetch_news.init_blackboard"),
+            patch("fetch_news.update_phase") as update_phase,
+            patch("fetch_news._scan_all_impl", side_effect=RuntimeError("boom")),
+        ):
+            with self.assertRaisesRegex(RuntimeError, "boom"):
+                await fetch_news.scan_all(max_concurrency=2)
+
+        self.assertEqual(
+            [call.args for call in update_phase.call_args_list],
+            [("scan", "running"), ("scan", "failed")],
+        )
+
     async def test_scan_output_exposes_coverage_quarantine_and_conserved_funnel(self):
         valid = {
             "title": "valid",
@@ -325,8 +403,8 @@ class BoundedConcurrencyTests(unittest.IsolatedAsyncioTestCase):
             patch("fetch_news.load_cache", return_value={}),
             patch("fetch_news.save_cache"),
             patch("fetch_news.load_config", return_value=({"filters": {}}, [])),
-            patch("fetch_news.aiohttp.TCPConnector", return_value=object()),
-            patch("fetch_news.aiohttp.ClientSession", Session),
+            patch("aiohttp.TCPConnector", return_value=object()) as connector,
+            patch("aiohttp.ClientSession", Session),
             patch("fetch_news.fetch_hackernews", AsyncMock(return_value=([valid, undated], "OK"))),
             patch("fetch_news.fetch_github_trending", AsyncMock(return_value=([], "OK"))),
             patch("fetch_news.fetch_v2ex", AsyncMock(return_value=([], "OK"))),
@@ -346,6 +424,12 @@ class BoundedConcurrencyTests(unittest.IsolatedAsyncioTestCase):
         self.assertEqual(len(payload["quarantine"]), 1)
         self.assertEqual(payload["coverage"]["run_status"], "degraded")
         self.assertEqual(payload["metadata"]["window"]["start"], "2026-08-04")
+        self.assertGreaterEqual(payload["metadata"]["elapsed_seconds"], 0)
+        connector.assert_called_once_with(
+            limit=2,
+            limit_per_host=2,
+            ttl_dns_cache=300,
+        )
 
 
 if __name__ == "__main__":

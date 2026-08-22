@@ -9,7 +9,7 @@ Yahoo Finance Data Retrieval Engine
 !!! update this header AND SKILL.md usage examples.
 """
 
-__version__ = "2.2.0"
+__version__ = "2.2.1"
 
 # /// script
 # dependencies = [
@@ -31,7 +31,8 @@ import math
 import os
 import re
 import time
-from concurrent.futures import ThreadPoolExecutor, as_completed
+from collections import deque
+from concurrent.futures import FIRST_COMPLETED, ThreadPoolExecutor, wait
 from datetime import date, datetime
 from pathlib import Path
 from typing import List, Optional, Dict, Any, Tuple
@@ -85,6 +86,18 @@ RETRY_BACKOFF_BASE = 1.5  # seconds
 REQUEST_TIMEOUT = 10  # seconds for search API
 # Regex: all uppercase letters, digits, dots, dashes (e.g. AAPL, BRK-B, 0700.HK)
 TICKER_PATTERN = re.compile(r'^[A-Z0-9][A-Z0-9.\-]{0,11}$')
+PERMANENT_TRANSPORT_ERROR_MARKERS = (
+    "invalid library",
+    "certificate verify failed",
+    "unsupported protocol",
+    "invalid url",
+    "no host supplied",
+)
+SYSTEMIC_BATCH_ERROR_MARKERS = (
+    "invalid library",
+    "openssl_internal:invalid library",
+    "curl: (35)",
+)
 
 
 def configure_yfinance_cache(
@@ -122,6 +135,31 @@ def _is_likely_ticker(query: str) -> bool:
     return bool(TICKER_PATTERN.match(query))
 
 
+def _http_status_from_exception(exc: Exception) -> Optional[int]:
+    status = getattr(exc, "status", None) or getattr(exc, "status_code", None)
+    response = getattr(exc, "response", None)
+    if status is None and response is not None:
+        status = getattr(response, "status_code", None)
+    return status if isinstance(status, int) else None
+
+
+def _is_retryable_error(exc: Exception) -> bool:
+    """Return False when repeating the same request cannot repair the failure."""
+    status = _http_status_from_exception(exc)
+    if status is not None:
+        return status in {408, 425, 429} or 500 <= status <= 599
+    message = str(exc).lower()
+    return not any(marker in message for marker in PERMANENT_TRANSPORT_ERROR_MARKERS)
+
+
+def _systemic_transport_signature(errors: List[str]) -> Optional[str]:
+    message = " ".join(str(error) for error in errors).lower()
+    for marker in SYSTEMIC_BATCH_ERROR_MARKERS:
+        if marker in message:
+            return marker
+    return None
+
+
 def _retry(fn, retries=MAX_RETRIES, label="operation"):
     """Execute fn with exponential backoff retries. Returns result or raises."""
     last_err = None
@@ -130,13 +168,15 @@ def _retry(fn, retries=MAX_RETRIES, label="operation"):
             return fn()
         except Exception as e:
             last_err = e
-            if attempt < retries:
+            if attempt < retries and _is_retryable_error(e):
                 wait = RETRY_BACKOFF_BASE ** (attempt + 1)
                 console.print(
                     f"[yellow]⚠ {label} failed (attempt {attempt + 1}/{retries + 1}): {e}. "
                     f"Retrying in {wait:.1f}s...[/yellow]"
                 )
                 time.sleep(wait)
+            else:
+                break
     raise last_err
 
 
@@ -310,21 +350,76 @@ def fetch_daily_sync_batch(
             fetch_news=False,
         )
 
+    queued = deque(unique_symbols)
+    systemic_failures: Dict[str, int] = {}
+    successful_results = 0
+    circuit_breaker: Optional[str] = None
+    circuit_threshold = min(2, workers, len(unique_symbols))
+
     with ThreadPoolExecutor(max_workers=workers) as executor:
-        future_to_symbol = {
-            executor.submit(fetch, symbol): symbol for symbol in unique_symbols
-        }
-        for future in as_completed(future_to_symbol):
-            symbol = future_to_symbol[future]
-            try:
-                results[symbol] = future.result()
-            except Exception as exc:
-                results[symbol] = (
+        in_flight = {}
+
+        def submit_one() -> None:
+            if queued:
+                symbol = queued.popleft()
+                in_flight[executor.submit(fetch, symbol)] = symbol
+
+        for _ in range(workers):
+            submit_one()
+
+        while in_flight:
+            completed, _ = wait(tuple(in_flight), return_when=FIRST_COMPLETED)
+            for future in completed:
+                symbol = in_flight.pop(future)
+                try:
+                    result = future.result()
+                except Exception as exc:
+                    result = (
+                        None,
+                        {},
+                        [],
+                        [f"Daily Sync batch fetch failed: {exc}"],
+                    )
+                results[symbol] = result
+                signature = _systemic_transport_signature(result[3])
+                if signature is not None:
+                    systemic_failures[signature] = systemic_failures.get(signature, 0) + 1
+                elif result[1]:
+                    successful_results += 1
+
+            if circuit_breaker is None and successful_results == 0:
+                circuit_breaker = next(
+                    (
+                        signature
+                        for signature, count in systemic_failures.items()
+                        if count >= circuit_threshold
+                    ),
                     None,
-                    {},
-                    [],
-                    [f"Daily Sync batch fetch failed: {exc}"],
                 )
+
+            # Hold the queue after the first systemic failure until another
+            # in-flight result confirms or disproves a batch-wide outage.
+            hold_for_confirmation = (
+                bool(systemic_failures)
+                and successful_results == 0
+                and bool(in_flight)
+            )
+            if circuit_breaker is None and not hold_for_confirmation:
+                while queued and len(in_flight) < workers:
+                    submit_one()
+
+    if circuit_breaker is not None:
+        while queued:
+            symbol = queued.popleft()
+            results[symbol] = (
+                None,
+                {},
+                [],
+                [
+                    "Daily Sync batch circuit breaker opened after repeated "
+                    f"systemic transport failure: {circuit_breaker}"
+                ],
+            )
     return results
 
 

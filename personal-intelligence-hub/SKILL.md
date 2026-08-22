@@ -46,7 +46,7 @@ python -X utf8 scripts/run_daily.py prepare --report-date YYYY-MM-DD --timezone 
 
 基线阶段未达到 `completed` 或 `degraded` 前，不得启动补充检索。启发式候选只用于排序和发现缺口，不得直接成为最终事实、等级、推断、置信度或归档内容。
 
-基线抓取对网络异常、408、425、429 与 5xx 保留退避重试；对 4xx 永久响应不做同参数重复请求，立即计入失败覆盖并交由缺口补检处理。不得通过删源或缩小扫描面换取耗时下降。
+基线抓取对网络异常、408、425、429 与 5xx 保留退避重试；对 4xx 永久响应及确定性的本地 TLS、证书或协议配置错误不做同参数重复请求，立即计入失败覆盖并交由缺口补检处理。全局并发限制为 1..32，同一主机最多占用 4 个连接，避免单一来源挤占全部扫描槽位；基线元数据保留实际 `elapsed_seconds` 供性能回归。不得通过删源或缩小扫描面换取耗时下降。
 
 “昨日资讯简报”显式传入昨日日期。不得用运行时滚动窗口或当前日期命名昨日文件。
 
@@ -65,6 +65,8 @@ python -X utf8 scripts/run_daily.py prepare --report-date YYYY-MM-DD --timezone 
 
 每个代理必须先处理绑定的基线候选，再补充检索；不得绕过基线直接做开放式搜索。当前资讯必须联网核验，优先监管、政府、公司公告、采购原文、论文、标准和项目主页。新闻与评论只作线索或独立佐证。
 
+补检不得对同一 URL 的永久失败做同参数重试；同一主机连续两次永久失败后必须切换到另一类优先来源，并把失败保留在 `access_log`，不得通过删除失败记录美化覆盖率。只有瞬时超时、限流或可重试 HTTP 状态可在轮次预算内重试；达到 gap 的合格增量或连续检索无增量时立即停止。
+
 每个结果必须符合 `supplement-result/1.0`，原样返回：
 
 - `run_id`、request SHA-256、baseline SHA-256、candidate pool SHA-256、`gap_id`、`lane`；
@@ -79,13 +81,15 @@ python -X utf8 scripts/run_daily.py prepare --report-date YYYY-MM-DD --timezone 
 python -X utf8 scripts/run_daily.py register-supplement --manifest <run_manifest.json> --request <supplement_request.json> --result <lane-1.json> --result <lane-2.json>
 ```
 
-等待代理时先完成本地可并行的确定性检查，以原子发布后的 `artifact_ready` 控制消息为主信号。仅在通知通道延迟或不可用时，允许执行一次文件观察降级：
+等待代理时先完成本地可并行的确定性检查，以原子发布后的 `artifact_ready` 控制消息为主信号。每个阶段最多允许两次、每次不超过 60 秒的 `wait_agent`；若两次都没有新的 `artifact_ready`、阻断消息或可比较的代理状态变化，只允许一次 `list_agents` 和一次下述文件观察，随后停止调用 `wait_agent`，直至收到新控制消息或状态指纹确实变化。不得用缩短单次等待来绕过此门禁。
+
+仅在通知通道延迟或不可用时，允许执行一次文件观察降级：
 
 ```powershell
 python -X utf8 scripts/await_artifacts.py --path <lane-1.json> --path <lane-2.json>
 ```
 
-降级观察最长 10 秒且不得重复轮询；仍未就绪时只检查一次代理状态，并发送一次定向提醒或重新启动一个有界任务。文件稳定、可解析后立即运行登记命令；只要合同验证通过，就不再等待额外聊天状态。文件存在或控制消息本身都不等于通过，仍须执行正式登记校验。
+降级观察最长 10 秒且不得重复轮询；仍未就绪时发送一次定向提醒，或在代理明确失败/失联后重新启动一个有界任务，然后把当前阶段视为等待外部状态，不得继续轮询。文件稳定、可解析后立即运行登记命令；只要合同验证通过，就不再等待额外聊天状态。文件存在或控制消息本身都不等于通过，仍须执行正式登记校验。
 
 若 prepare 没有返回 request，说明基线已满足配置要求，脚本已登记结构化 `no_increment`，不要伪造补检结果。
 
@@ -94,10 +98,12 @@ python -X utf8 scripts/await_artifacts.py --path <lane-1.json> --path <lane-2.js
 先登记语义评估请求：
 
 ```powershell
-python -X utf8 scripts/run_daily.py prepare-review --manifest <run_manifest.json> --kind semantic --max-turns 3
+python -X utf8 scripts/run_daily.py prepare-review --manifest <run_manifest.json> --kind semantic --max-turns 2
 ```
 
 把返回的 `semantic_review_request.json` 连同候选池、补检聚合和绑定历史快照，以最小任务包交给独立 `SemanticEvaluator`。评估者必须读取请求并原样返回其中的 challenge、reviewer/invocation 标识与 request SHA-256。
+
+语义代理必须优先复用已登记候选中的日期、URL、访问日志和对象哈希，在本地批量完成门禁、去重、排序、血缘和回执构造；除非登记证据缺失或相互矛盾，不得重新联网访问已经 `verified` 的 URL。一次读取各绑定文件，不在聊天或工具输出中回显完整候选池、历史快照、core 或回执；两份产物在代理内部自检后各原子发布一次。发现证据矛盾时封闭失败，不用额外轮次补写未经登记的外部事实。
 
 将基线候选与已登记补检候选合并，按以下顺序处理：
 
@@ -120,8 +126,10 @@ python -X utf8 scripts/run_daily.py prepare-review --manifest <run_manifest.json
 refined core 与语义回执通过上述校验后先登记红队请求，再把该请求与其 `refined_sha256` 绑定文件以最小任务包交给独立 `RedTeam`：
 
 ```powershell
-python -X utf8 scripts/run_daily.py prepare-review --manifest <run_manifest.json> --kind red_team --refined <refined_core.json> --semantic-receipt <semantic_receipt.json> --max-turns 3
+python -X utf8 scripts/run_daily.py prepare-review --manifest <run_manifest.json> --kind red_team --refined <refined_core.json> --semantic-receipt <semantic_receipt.json> --max-turns 2
 ```
+
+请求会确定性写入 `review_mode`、L4 条目哈希和重大资讯哈希。没有 L4 时，`review_mode=no_l4_fast_path` 且 `max_turns=1`：独立 RedTeam 只复核绑定哈希、无 L4 事实、重大资讯资格、日期/来源独立性与行动时序，复用登记证据且不得联网扩展事件，随后生成 `not_required` 空覆盖回执。存在 L4 时使用完整红队路径，但仍优先复用登记证据，仅在冲突时补充核验。
 
 红队回执必须原样返回 request SHA-256、challenge、reviewer/invocation 标识、轮次与停止状态。不得修改 refined 后继续使用旧请求或回执。产物稳定后直接登记两份回执；登记命令会在写入阶段状态前重新验证两者：
 

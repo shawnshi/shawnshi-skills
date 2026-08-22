@@ -2,17 +2,12 @@ from __future__ import annotations
 
 import asyncio
 import argparse
-import json
 import random
 import re
 from datetime import date, datetime, timedelta, timezone, tzinfo
 from email.utils import parsedate_to_datetime
 from pathlib import Path
 from zoneinfo import ZoneInfo, ZoneInfoNotFoundError
-
-import aiohttp
-import feedparser
-from bs4 import BeautifulSoup
 
 from blackboard import init_blackboard, record_scan_stats, update_phase
 from hub_utils import CURRENT_SCAN_PATH, FETCH_CACHE_PATH, HUB_DIR, LATEST_SCAN_PATH, atomic_dump_json, ensure_runtime_dirs, load_json
@@ -25,6 +20,14 @@ USER_AGENT = (
 DEFAULT_TIMEZONE = "Asia/Shanghai"
 DEFAULT_WINDOW_DAYS = 7
 DEFAULT_MAX_CONCURRENCY = 8
+MAX_CONCURRENCY = 32
+PERMANENT_TRANSPORT_ERROR_MARKERS = (
+    "invalid library",
+    "certificate verify failed",
+    "unsupported protocol",
+    "invalid url",
+    "no host supplied",
+)
 
 
 def _utc_now() -> datetime:
@@ -248,11 +251,13 @@ async def fetch_with_retry(
         except Exception as exc:
             last_error = exc
             status = getattr(exc, "status", None)
-            retryable = (
-                not isinstance(status, int)
-                or status in {408, 425, 429}
-                or 500 <= status <= 599
-            )
+            if isinstance(status, int):
+                retryable = status in {408, 425, 429} or 500 <= status <= 599
+            else:
+                message = str(exc).lower()
+                retryable = not any(
+                    marker in message for marker in PERMANENT_TRANSPORT_ERROR_MARKERS
+                )
             if attempt < 2 and retryable:
                 await asyncio.sleep((2 ** attempt) + random.uniform(0, 1))
             else:
@@ -325,6 +330,9 @@ async def parse_rss(
     semaphore: asyncio.Semaphore | None = None,
 ):
     try:
+        import feedparser
+        from bs4 import BeautifulSoup
+
         text = await fetch_with_retry(session, url, semaphore=semaphore)
         feed = feedparser.parse(text)
         if not str(getattr(feed, "version", "") or "").strip():
@@ -374,18 +382,32 @@ async def fetch_hackernews(
             is_json=True,
             semaphore=semaphore,
         )
-        items = []
+        pending_ids = []
         for story_id in ids[:10]:
             hn_url = f"https://news.ycombinator.com/item?id={story_id}"
             if hn_url in cache:
                 continue
-            data = await fetch_with_retry(
+            pending_ids.append(story_id)
+
+        async def fetch_story(story_id):
+            return await fetch_with_retry(
                 session,
                 f"https://hacker-news.firebaseio.com/v0/item/{story_id}.json",
                 timeout=8,
                 is_json=True,
                 semaphore=semaphore,
             )
+
+        results = await asyncio.gather(
+            *(fetch_story(story_id) for story_id in pending_ids),
+            return_exceptions=True,
+        )
+        items = []
+        failed = 0
+        for story_id, data in zip(pending_ids, results):
+            if isinstance(data, Exception):
+                failed += 1
+                continue
             items.append(
                 _build_hackernews_item(
                     data,
@@ -393,8 +415,14 @@ async def fetch_hackernews(
                     retrieved_at=_utc_now().isoformat(),
                 )
             )
+            hn_url = f"https://news.ycombinator.com/item?id={story_id}"
             cache[hn_url] = _utc_now().timestamp()
-        return items, "OK"
+        status = (
+            "OK"
+            if failed == 0
+            else f"partial: {failed}/{len(pending_ids)} item requests failed"
+        )
+        return items, status
     except Exception as exc:
         return [], str(exc)
 
@@ -428,6 +456,8 @@ async def fetch_github_trending(
     session, cache: dict, *, semaphore: asyncio.Semaphore | None = None
 ):
     try:
+        from bs4 import BeautifulSoup
+
         html = await fetch_with_retry(
             session,
             "https://github.com/trending",
@@ -501,7 +531,7 @@ def _inside_window(
     )
 
 
-async def scan_all(
+async def _scan_all_impl(
     *,
     focus_path: Path | None = None,
     window_days: int | None = None,
@@ -515,12 +545,10 @@ async def scan_all(
     current_output_path: Path | None = None,
     cache_path: Path | None = None,
 ):
-    if max_concurrency <= 0:
-        raise ValueError("max_concurrency must be positive")
-    ensure_runtime_dirs()
-    init_blackboard()
-    update_phase("scan", "running")
+    import aiohttp
 
+    loop = asyncio.get_running_loop()
+    started_at = loop.time()
     focus, custom_feeds = load_config(focus_path)
     exclude_terms = focus.get("filters", {}).get("exclude_terms", [])
     cache = load_cache(cache_path)
@@ -532,7 +560,11 @@ async def scan_all(
     )
     semaphore = asyncio.Semaphore(max_concurrency)
 
-    connector = aiohttp.TCPConnector(limit=max_concurrency)
+    connector = aiohttp.TCPConnector(
+        limit=max_concurrency,
+        limit_per_host=max(1, min(4, max_concurrency)),
+        ttl_dns_cache=300,
+    )
     async with aiohttp.ClientSession(connector=connector) as session:
         tasks_meta = [
             ("Hacker News", fetch_hackernews(session, cache, semaphore=semaphore)),
@@ -590,6 +622,7 @@ async def scan_all(
             "window_days": effective_window_days,
             "report_date": window["end"],
             "max_concurrency": max_concurrency,
+            "elapsed_seconds": round(loop.time() - started_at, 3),
         },
     }
     latest_target = output_path or LATEST_SCAN_PATH
@@ -607,6 +640,47 @@ async def scan_all(
     return payload
 
 
+async def scan_all(
+    *,
+    focus_path: Path | None = None,
+    window_days: int | None = None,
+    dedupe_days: int | None = None,
+    topic: str | None = None,
+    region: str | None = None,
+    report_date: date | datetime | str | None = None,
+    timezone_name: str = DEFAULT_TIMEZONE,
+    max_concurrency: int = DEFAULT_MAX_CONCURRENCY,
+    output_path: Path | None = None,
+    current_output_path: Path | None = None,
+    cache_path: Path | None = None,
+):
+    if max_concurrency <= 0 or max_concurrency > MAX_CONCURRENCY:
+        raise ValueError(f"max_concurrency must be between 1 and {MAX_CONCURRENCY}")
+    ensure_runtime_dirs()
+    init_blackboard()
+    update_phase("scan", "running")
+    try:
+        return await _scan_all_impl(
+            focus_path=focus_path,
+            window_days=window_days,
+            dedupe_days=dedupe_days,
+            topic=topic,
+            region=region,
+            report_date=report_date,
+            timezone_name=timezone_name,
+            max_concurrency=max_concurrency,
+            output_path=output_path,
+            current_output_path=current_output_path,
+            cache_path=cache_path,
+        )
+    except Exception as exc:
+        try:
+            update_phase("scan", "failed")
+        except Exception as status_exc:
+            exc.add_note(f"failed to update scan phase: {status_exc}")
+        raise
+
+
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description="Parameterized intelligence source scan.")
     parser.add_argument("--focus-config", type=Path)
@@ -616,14 +690,19 @@ if __name__ == "__main__":
     parser.add_argument("--region")
     parser.add_argument("--report-date", help="Report date in YYYY-MM-DD format")
     parser.add_argument("--timezone", default=DEFAULT_TIMEZONE)
-    parser.add_argument("--max-concurrency", type=int, default=DEFAULT_MAX_CONCURRENCY)
+    parser.add_argument(
+        "--max-concurrency",
+        type=int,
+        default=DEFAULT_MAX_CONCURRENCY,
+        help=f"Global concurrent requests (1..{MAX_CONCURRENCY}; per-host maximum 4).",
+    )
     args = parser.parse_args()
     if args.window_days is not None and args.window_days <= 0:
         parser.error("--window-days must be positive")
     if args.dedupe_days is not None and args.dedupe_days <= 0:
         parser.error("--dedupe-days must be positive")
-    if args.max_concurrency <= 0:
-        parser.error("--max-concurrency must be positive")
+    if args.max_concurrency <= 0 or args.max_concurrency > MAX_CONCURRENCY:
+        parser.error(f"--max-concurrency must be between 1 and {MAX_CONCURRENCY}")
     try:
         parsed_report_date = date.fromisoformat(args.report_date) if args.report_date else None
         resolve_timezone(args.timezone)

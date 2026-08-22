@@ -105,6 +105,23 @@ def item_hash(item: dict[str, Any]) -> str:
     return hashlib.sha256(canonical_json_bytes(item)).hexdigest()
 
 
+def review_scope(refined: dict[str, Any]) -> dict[str, Any]:
+    items = refined.get("top_10", [])
+    if not isinstance(items, list) or any(not isinstance(item, dict) for item in items):
+        raise RunContractError("refined core top_10 must be a list of objects")
+    l4_hashes = sorted(
+        item_hash(item) for item in items if item.get("intelligence_level") == "L4"
+    )
+    major_signal_hashes = sorted(
+        item_hash(item) for item in items if item.get("major_signal") is True
+    )
+    return {
+        "review_mode": "l4_full_review" if l4_hashes else "no_l4_fast_path",
+        "l4_item_hashes": l4_hashes,
+        "major_signal_item_hashes": major_signal_hashes,
+    }
+
+
 def candidate_ref(url: str) -> str:
     normalized = normalize_url(str(url))
     if not normalized:
@@ -116,6 +133,56 @@ def candidate_object_hash(candidate: dict[str, Any]) -> str:
     bound = deepcopy(candidate)
     bound.pop("candidate_object_sha256", None)
     return hashlib.sha256(canonical_json_bytes(bound)).hexdigest()
+
+
+def registered_candidate_hashes(manifest: dict[str, Any]) -> dict[str, set[str]]:
+    records = (
+        (
+            "candidate pool",
+            manifest.get("artifacts", {}).get("candidate_pool", {}),
+            "items",
+        ),
+        (
+            "supplement aggregate",
+            manifest.get("stages", {}).get("supplemental", {}),
+            "results",
+        ),
+    )
+    registered: dict[str, set[str]] = {}
+    for label, record, collection in records:
+        if not isinstance(record, dict):
+            raise RunContractError(f"registered {label} record is missing")
+        artifact_path = Path(str(record.get("artifact_path") or ""))
+        if (
+            not artifact_path.is_file()
+            or record.get("artifact_sha256") != file_sha256(artifact_path)
+        ):
+            raise RunContractError(f"registered {label} bytes changed")
+        payload = load_json(artifact_path, {})
+        if collection == "items":
+            candidates = payload.get("items", [])
+        else:
+            results = payload.get("results", [])
+            if not isinstance(results, list):
+                raise RunContractError("supplement aggregate results are invalid")
+            candidates = [
+                candidate
+                for result in results
+                if isinstance(result, dict)
+                for candidate in result.get("candidates", [])
+            ]
+        if not isinstance(candidates, list) or any(
+            not isinstance(candidate, dict) for candidate in candidates
+        ):
+            raise RunContractError(f"registered {label} candidates are invalid")
+        for candidate in candidates:
+            reference = str(candidate.get("candidate_id") or "")
+            claimed_hash = str(candidate.get("candidate_object_sha256") or "")
+            actual_hash = candidate_object_hash(candidate)
+            if not reference or claimed_hash != actual_hash:
+                raise RunContractError(f"registered {label} candidate hash is invalid")
+            registered.setdefault(reference, set()).add(claimed_hash)
+    return registered
 
 
 def skill_bundle_sha256(skill_path: str | Path) -> str:
@@ -893,7 +960,7 @@ def build_review_request(
     review_kind: str,
     *,
     semantic_receipt_path: str | Path | None = None,
-    max_turns: int = 3,
+    max_turns: int = 2,
     halt_condition: str | None = None,
     now: datetime | None = None,
 ) -> tuple[Path, dict[str, Any]]:
@@ -909,6 +976,8 @@ def build_review_request(
     if configuration is None:
         raise RunContractError("review request kind must be semantic or red_team")
     artifact_name, reviewer_kind, reviewer_id = configuration
+    if not isinstance(max_turns, int) or not 1 <= max_turns <= 10:
+        raise RunContractError("review request max_turns must be between 1 and 10")
     if manifest.get("artifacts", {}).get(artifact_name) is not None:
         raise RunContractError(f"{review_kind} review request is immutable once registered")
     refined_file = Path(refined_path) if refined_path is not None else None
@@ -916,6 +985,7 @@ def build_review_request(
         refined_file is None or not refined_file.is_file()
     ):
         raise RunContractError("refined core is required before red-team invocation")
+    scope: dict[str, Any] | None = None
     if review_kind == "red_team":
         if semantic_receipt_path is None:
             raise RunContractError(
@@ -928,13 +998,15 @@ def build_review_request(
             refined_file,
             expected_kind="semantic",
         )
-    if not isinstance(max_turns, int) or not 1 <= max_turns <= 10:
-        raise RunContractError("review request max_turns must be between 1 and 10")
-    default_halt = (
-        "所有最终条目完成语义评估并生成完整血缘映射，或发现阻断问题"
-        if review_kind == "semantic"
-        else "全部 L4 与重大资讯资格完成反证检查，或发现阻断问题"
-    )
+        scope = review_scope(load_json(refined_file, {}))
+        if scope["review_mode"] == "no_l4_fast_path":
+            max_turns = 1
+    if review_kind == "semantic":
+        default_halt = "所有最终条目批量完成语义评估并生成完整血缘映射，或发现阻断问题"
+    elif scope and scope["review_mode"] == "no_l4_fast_path":
+        default_halt = "确认绑定 core 无 L4 并完成重大资讯资格、日期、来源独立性与行动时序检查，或发现阻断问题"
+    else:
+        default_halt = "全部 L4 与重大资讯资格完成反证检查，或发现阻断问题"
     halt = str(halt_condition or default_halt).strip()
     if not halt:
         raise RunContractError("review request halt_condition is required")
@@ -954,8 +1026,11 @@ def build_review_request(
     }
     if review_kind == "semantic":
         request["input_bundle_sha256"] = review_input_bundle_sha256(manifest)
+        request["review_mode"] = "registered_evidence_batch"
+        request["network_policy"] = "registered_evidence_first"
     else:
         request["refined_sha256"] = file_sha256(refined_file)
+        request.update(scope or {})
     request_path = Path(manifest["run_dir"]) / f"{review_kind}_review_request.json"
     atomic_dump_json(request_path, request)
     record_run_artifact(
@@ -967,6 +1042,9 @@ def build_review_request(
             "review_kind": review_kind,
             "reviewer_kind": reviewer_kind,
             "reviewer_id": reviewer_id,
+            "review_mode": request["review_mode"],
+            "max_turns": request["max_turns"],
+            "l4_item_count": len(request.get("l4_item_hashes", [])),
         },
         now=now,
     )
@@ -1027,6 +1105,19 @@ def validate_review_receipt(
     if allowed_reviewer is None or receipt.get("reviewer_kind") != allowed_reviewer:
         raise RunContractError("review receipt reviewer_kind is not authorized")
     request, request_sha = _registered_review_request(manifest, str(review_kind))
+    if review_kind == "semantic":
+        if request.get("review_mode") != "registered_evidence_batch":
+            raise RunContractError("semantic review request mode is invalid")
+    else:
+        expected_scope = review_scope(refined)
+        for field, expected in expected_scope.items():
+            if request.get(field) != expected:
+                raise RunContractError(f"red-team review request {field} mismatch")
+        if (
+            expected_scope["review_mode"] == "no_l4_fast_path"
+            and request.get("max_turns") != 1
+        ):
+            raise RunContractError("no-L4 red-team request must use one turn")
     if receipt.get("request_sha256") != request_sha:
         raise RunContractError("review receipt request_sha256 mismatch")
     for field in ("reviewer_id", "invocation_id", "challenge"):
@@ -1054,6 +1145,7 @@ def validate_review_receipt(
     if receipt.get("output_sha256") != file_sha256(refined_file):
         raise RunContractError("review receipt output_sha256 mismatch")
     if review_kind == "semantic":
+        candidate_hashes = registered_candidate_hashes(manifest)
         access_log = receipt.get("access_log")
         if not isinstance(access_log, list) or (refined.get("top_10") and not access_log):
             raise RunContractError("semantic receipt access_log is required for retained items")
@@ -1122,12 +1214,19 @@ def validate_review_receipt(
             if not isinstance(inputs, list) or not inputs:
                 raise RunContractError("semantic receipt lineage binding inputs are required")
             for value in inputs:
+                if not isinstance(value, dict):
+                    raise RunContractError("semantic receipt lineage input is invalid")
+                reference = str(value.get("candidate_ref") or "")
+                object_hash = str(value.get("candidate_object_sha256") or "")
                 if (
-                    not isinstance(value, dict)
-                    or not str(value.get("candidate_ref") or "").startswith("cand-")
-                    or len(str(value.get("candidate_object_sha256") or "")) != 64
+                    not reference.startswith("cand-")
+                    or len(object_hash) != 64
                 ):
                     raise RunContractError("semantic receipt lineage input is invalid")
+                if object_hash not in candidate_hashes.get(reference, set()):
+                    raise RunContractError(
+                        "semantic receipt lineage candidate hash does not match registered candidate"
+                    )
             by_output[output_hash] = binding
         if set(by_output) != set(expected_hashes):
             raise RunContractError("semantic receipt lineage outputs do not match final items")
@@ -1179,6 +1278,15 @@ def register_review_receipt(
         expected_kind=expected_kind,
     )
     stage_status = "completed" if receipt["status"] == "passed" else "not_required"
+    manifest = load_manifest(manifest_path)
+    request, _ = _registered_review_request(manifest, expected_kind)
+    started_at = _parse_aware_datetime(
+        request.get("created_at"), "review request created_at"
+    )
+    completed_at = _parse_aware_datetime(
+        receipt.get("completed_at"), "review receipt completed_at"
+    )
+    elapsed_seconds = max(0.0, (completed_at - started_at).total_seconds())
     return record_stage(
         manifest_path,
         stage,
@@ -1190,6 +1298,10 @@ def register_review_receipt(
             "reviewer_kind": receipt.get("reviewer_kind"),
             "reviewed_item_hashes": receipt.get("reviewed_item_hashes", []),
             "output_sha256": receipt.get("output_sha256"),
+            "review_mode": request.get("review_mode"),
+            "max_turns": request.get("max_turns"),
+            "turns_used": receipt.get("turns_used"),
+            "elapsed_seconds": round(elapsed_seconds, 3),
         },
         now=now,
     )

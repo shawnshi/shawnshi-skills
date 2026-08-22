@@ -178,6 +178,17 @@ class ResourceManifestTests(unittest.TestCase):
             manifest.canonical_sha256(crlf_path),
         )
 
+    def test_env_example_crlf_and_lf_have_the_same_text_hash(self):
+        lf_path = self.root / ".env.example"
+        crlf_path = self.root / ".env.local"
+        lf_path.write_bytes(b"TOKEN=placeholder\n")
+        crlf_path.write_bytes(b"TOKEN=placeholder\r\n")
+
+        self.assertEqual(
+            manifest.canonical_sha256(lf_path),
+            manifest.canonical_sha256(crlf_path),
+        )
+
     def test_unreferenced_resource_content_drift_is_detected(self):
         skill_dir = self.create_skill("example-skill")
         references = skill_dir / "references"

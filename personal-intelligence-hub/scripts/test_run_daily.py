@@ -1,6 +1,7 @@
 import json
 import hashlib
 import io
+import subprocess
 import sys
 import tempfile
 import unittest
@@ -11,10 +12,16 @@ from contextlib import redirect_stdout
 from zoneinfo import ZoneInfo
 
 import run_daily
-from run_contract import load_manifest
+from run_contract import RunContractError, load_manifest
 
 
 class RunDailyTests(unittest.IsolatedAsyncioTestCase):
+    async def test_prepare_rejects_excessive_concurrency_before_runtime_writes(self):
+        with self.assertRaisesRegex(RunContractError, "between 1 and"):
+            await run_daily.prepare_run(
+                max_concurrency=run_daily.MAX_CONCURRENCY + 1,
+            )
+
     def test_red_team_prepare_command_forwards_semantic_receipt_gate(self):
         with tempfile.TemporaryDirectory() as directory:
             root = Path(directory)
@@ -26,6 +33,8 @@ class RunDailyTests(unittest.IsolatedAsyncioTestCase):
                 "review_kind": "red_team",
                 "reviewer_id": "RedTeam",
                 "invocation_id": "invocation",
+                "review_mode": "no_l4_fast_path",
+                "max_turns": 1,
             }
             output = io.StringIO()
 
@@ -46,9 +55,8 @@ class RunDailyTests(unittest.IsolatedAsyncioTestCase):
                         "red_team",
                     ],
                 ),
-                patch.object(
-                    run_daily,
-                    "build_review_request",
+                patch(
+                    "run_contract.build_review_request",
                     return_value=(request_path, request),
                 ) as builder,
                 redirect_stdout(output),
@@ -60,9 +68,12 @@ class RunDailyTests(unittest.IsolatedAsyncioTestCase):
                 refined,
                 "red_team",
                 semantic_receipt_path=semantic,
-                max_turns=3,
+                max_turns=2,
             )
-            self.assertEqual(json.loads(output.getvalue())["review_kind"], "red_team")
+            parsed = json.loads(output.getvalue())
+            self.assertEqual(parsed["review_kind"], "red_team")
+            self.assertEqual(parsed["review_mode"], request["review_mode"])
+            self.assertEqual(parsed["max_turns"], request["max_turns"])
 
     def test_degraded_coverage_forces_domain_remediation_when_ratio_is_met(self):
         items = []
@@ -220,8 +231,8 @@ class RunDailyTests(unittest.IsolatedAsyncioTestCase):
                 return payload
 
             with (
-                patch.object(run_daily.fetch_news, "scan_all", side_effect=fake_scan_all),
-                patch.object(run_daily.refine, "refine", side_effect=fake_refine),
+                patch("fetch_news.scan_all", side_effect=fake_scan_all),
+                patch("refine.refine", side_effect=fake_refine),
             ):
                 result = await run_daily.prepare_run(
                     report_date="2026-08-10",
@@ -252,6 +263,114 @@ class RunDailyTests(unittest.IsolatedAsyncioTestCase):
             self.assertEqual(manifest["stages"]["baseline"]["status"], "degraded")
             self.assertIn("history_snapshot", manifest["artifacts"])
             self.assertEqual(manifest["stages"]["supplemental"]["status"], "pending")
+
+    async def test_invalid_concurrency_is_rejected_before_run_creation(self):
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            runtime = root / "runtime"
+            skill = root / "SKILL.md"
+            skill.write_text("skill", encoding="utf-8")
+            (root / "resource-manifest.json").write_text(
+                json.dumps(
+                    {
+                        "schema_version": 2,
+                        "skill": root.name,
+                        "skill_md": "SKILL.md",
+                        "skill_md_sha256": hashlib.sha256(b"skill").hexdigest(),
+                        "top_level_file_hashes": [],
+                        "declared_local_dependencies": [],
+                        "missing_declared_dependencies": [],
+                    }
+                ),
+                encoding="utf-8",
+            )
+
+            with self.assertRaisesRegex(RunContractError, "must be positive"):
+                await run_daily.prepare_run(
+                    runtime_dir=runtime,
+                    skill_path=skill,
+                    focus_path=root / "unused.json",
+                    max_concurrency=0,
+                )
+
+            self.assertFalse(runtime.exists())
+
+    async def test_baseline_exception_is_recorded_as_failed(self):
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            runtime = root / "runtime"
+            skill = root / "SKILL.md"
+            skill.write_text("skill", encoding="utf-8")
+            (root / "resource-manifest.json").write_text(
+                json.dumps(
+                    {
+                        "schema_version": 2,
+                        "skill": root.name,
+                        "skill_md": "SKILL.md",
+                        "skill_md_sha256": hashlib.sha256(b"skill").hexdigest(),
+                        "top_level_file_hashes": [],
+                        "declared_local_dependencies": [],
+                        "missing_declared_dependencies": [],
+                    }
+                ),
+                encoding="utf-8",
+            )
+
+            def fake_rebuild_history(*, history_file, **kwargs):
+                history_file.parent.mkdir(parents=True, exist_ok=True)
+                history_file.write_text("{}", encoding="utf-8")
+
+            with (
+                patch("update_index.rebuild_history", side_effect=fake_rebuild_history),
+                patch("fetch_news.scan_all", side_effect=RuntimeError("network stack failed")),
+            ):
+                with self.assertRaisesRegex(RuntimeError, "network stack failed"):
+                    await run_daily.prepare_run(
+                        report_date="2026-08-10",
+                        runtime_dir=runtime,
+                        news_dir=root / "news",
+                        skill_path=skill,
+                        focus_path=root / "unused.json",
+                        run_id="failed-run",
+                        now=datetime(2026, 8, 10, 9, 0, tzinfo=ZoneInfo("Asia/Shanghai")),
+                    )
+
+            manifest = load_manifest(runtime / "runs" / "failed-run" / "run_manifest.json")
+            self.assertEqual(manifest["stages"]["baseline"]["status"], "failed")
+            self.assertEqual(
+                manifest["stages"]["baseline"]["metadata"]["error_type"],
+                "RuntimeError",
+            )
+
+
+class ImportPerformanceContractTests(unittest.TestCase):
+    def _fresh_imports(self, module_name):
+        names = ["fetch_news", "refine", "forge", "run_contract", "aiohttp", "feedparser", "bs4"]
+        code = (
+            "import importlib,json,sys; "
+            f"importlib.import_module({module_name!r}); "
+            f"print(json.dumps({{name: name in sys.modules for name in {names!r}}}))"
+        )
+        completed = subprocess.run(
+            [sys.executable, "-B", "-X", "utf8", "-c", code],
+            cwd=Path(__file__).resolve().parent,
+            check=True,
+            capture_output=True,
+            text=True,
+        )
+        return json.loads(completed.stdout)
+
+    def test_run_daily_does_not_eagerly_import_command_specific_modules(self):
+        loaded = self._fresh_imports("run_daily")
+
+        self.assertEqual(loaded, {name: False for name in loaded})
+
+    def test_fetch_news_does_not_eagerly_import_network_parsers(self):
+        loaded = self._fresh_imports("fetch_news")
+
+        self.assertFalse(loaded["aiohttp"])
+        self.assertFalse(loaded["feedparser"])
+        self.assertFalse(loaded["bs4"])
 
 
 if __name__ == "__main__":

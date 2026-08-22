@@ -9,11 +9,10 @@ from pathlib import Path
 
 HUB_DIR = Path(__file__).resolve().parent.parent
 PROJECT_ROOT = HUB_DIR.parent.parent
-DEFAULT_MEMORY_HOME_NAME = "." + "gemini"
 NEWS_DIR = Path(
     os.environ.get(
         "PIH_NEWS_DIR",
-        str(Path.home() / DEFAULT_MEMORY_HOME_NAME / "MEMORY" / "raw" / "news"),
+        str(Path.home() / "MEMORY" / "raw" / "news"),
     )
 )
 RUNTIME_DIR = Path(

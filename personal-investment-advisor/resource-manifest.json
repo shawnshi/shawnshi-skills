@@ -1,7 +1,7 @@
 {
   "schema_version": 3,
   "skill": "personal-investment-advisor",
-  "generated_at": "2026-08-21T08:54:56+08:00",
+  "generated_at": "2026-08-21T21:36:26+08:00",
   "hash_algorithm": "SHA-256",
   "text_hash_normalization": "LF",
   "skill_md": "SKILL.md",
@@ -58,7 +58,7 @@
     },
     {
       "path": "references/daily-sync.md",
-      "sha256": "191b596bc215398fb116983420e2a780f3c023914f72480d1bc0d917f864f979"
+      "sha256": "c2b6b7d8ae2d6a828e089ec8e070ae3e0827230465ba20dc0f7687e770c5575d"
     },
     {
       "path": "references/dashboard_schema.json",
@@ -110,7 +110,7 @@
     },
     {
       "path": "scripts/akshare_fetcher.py",
-      "sha256": "5f176c23c5dcd4a240eb101814799864c09013ad410ac74177413b27c6503397"
+      "sha256": "9c4a8be9aa7791e7152d43ea0ca033aea2b2a08c4ce51c0a437c3771c69c9e75"
     },
     {
       "path": "scripts/broker_sync.py",
@@ -138,7 +138,7 @@
     },
     {
       "path": "scripts/history_integrity_gate.py",
-      "sha256": "bb40e809aa8986c0a9aa9d28eeb2f023b64e1d3fabb3eb8a4236f8caf4093268"
+      "sha256": "c308cc8217b449c7a0917c3d615650cc65b0e6d9b505dd7da94530f8c32cb193"
     },
     {
       "path": "scripts/instrument_gate.py",
@@ -242,7 +242,7 @@
     },
     {
       "path": "scripts/test_p1_dashboard_ashare_contracts.py",
-      "sha256": "f54ead49fe41172cfdd65c890a4c2bdd64f4d3ab06c00cd94b97bf5a594f95d3"
+      "sha256": "dda4bd856fc435dad4f4107f13f6f299647a508104869e14019249e91059129e"
     },
     {
       "path": "scripts/test_p1_dashboard_source_freshness.py",
@@ -286,7 +286,7 @@
     },
     {
       "path": "scripts/test_p2_yf_daily_sync.py",
-      "sha256": "bbf9b48fa401e383391366b57894b158f9b00742a88efa0aa82e3c1ab02bfe69"
+      "sha256": "3479670869c87dbed2b0fa52cc752ac274dfc54645b11eb9fe34e3c7a6b4e64a"
     },
     {
       "path": "scripts/thesis_evidence_gate.py",
@@ -298,7 +298,7 @@
     },
     {
       "path": "scripts/yf.py",
-      "sha256": "bcda464d72323e77688b5ee38a0629dc1f7ebbb66fd792c3e151f3f810a99dd3"
+      "sha256": "5f851224108089cd8f6cece299c06c09d5a37a41fca37a6d064eec145e95c139"
     }
   ],
   "declared_local_dependencies": [
@@ -330,7 +330,7 @@
       "path": "references/daily-sync.md",
       "exists": true,
       "resolved_path": "personal-investment-advisor/references/daily-sync.md",
-      "sha256": "191b596bc215398fb116983420e2a780f3c023914f72480d1bc0d917f864f979"
+      "sha256": "c2b6b7d8ae2d6a828e089ec8e070ae3e0827230465ba20dc0f7687e770c5575d"
     },
     {
       "path": "references/dashboard_schema.json",
