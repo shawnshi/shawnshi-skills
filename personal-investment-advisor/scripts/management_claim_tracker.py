@@ -1,7 +1,9 @@
 import argparse
 import json
 import math
+import os
 import sys
+import tempfile
 from datetime import date
 from pathlib import Path
 from typing import Any
@@ -23,6 +25,25 @@ SOURCE_TIERS = {
     "current_report",
     "user_authorized",
 }
+
+
+def _atomic_write_text(path: Path, content: str) -> None:
+    path.parent.mkdir(parents=True, exist_ok=True)
+    descriptor, temporary_name = tempfile.mkstemp(
+        prefix=f".{path.name}.", suffix=".tmp", dir=str(path.parent), text=True
+    )
+    temporary_path = Path(temporary_name)
+    try:
+        with os.fdopen(descriptor, "w", encoding="utf-8", newline="\n") as handle:
+            handle.write(content)
+            handle.flush()
+            os.fsync(handle.fileno())
+        os.replace(temporary_path, path)
+    finally:
+        try:
+            temporary_path.unlink(missing_ok=True)
+        except OSError:
+            pass
 RESERVED_LOCATORS = ("example.com", "example.test", ".invalid", "localhost")
 
 
@@ -199,7 +220,7 @@ def main() -> int:
     result = evaluate_claims(payload)
     rendered = json.dumps(result, ensure_ascii=False, indent=2)
     if args.output:
-        Path(args.output).write_text(rendered + "\n", encoding="utf-8")
+        _atomic_write_text(Path(args.output), rendered + "\n")
     else:
         print(rendered)
     return 0 if result["valid"] else 1

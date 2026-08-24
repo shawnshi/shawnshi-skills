@@ -46,9 +46,7 @@ def build_receipt(skill_path, root_task_id, actor_id, context_epoch):
     meta = _metadata(text)
     digest = hashlib.sha256(raw).hexdigest()
     normalized_path = os.path.normcase(str(path)).replace("\\", "/")
-    tokenizer_name = "cl100k_base"
-    tokenizer = tiktoken.get_encoding(tokenizer_name)
-    return {
+    receipt = {
         "schema_version": 2,
         "event_id": f"skill-load-{digest[:12]}-{context_epoch}",
         "timestamp": datetime.now(timezone.utc).isoformat().replace("+00:00", "Z"),
@@ -64,9 +62,18 @@ def build_receipt(skill_path, root_task_id, actor_id, context_epoch):
         "skill_path_sha256": hashlib.sha256(normalized_path.encode("utf-8")).hexdigest(),
         "skill_version": meta.get("version"),
         "skill_sha256": digest,
-        "skill_tokens": len(tokenizer.encode(text)),
-        "tokenizer": tokenizer_name,
     }
+    tokenizer_name = "cl100k_base"
+    try:
+        tokenizer = tiktoken.get_encoding(tokenizer_name)
+        receipt["skill_tokens"] = len(tokenizer.encode(text))
+        receipt["tokenizer"] = tokenizer_name
+    except Exception:
+        # A receipt remains useful for identity and deduplication when the
+        # optional tokenizer cache is unavailable. Missing fields are explicit
+        # coverage debt; character counts must not impersonate model tokens.
+        pass
+    return receipt
 
 
 def receipt_key(receipt):

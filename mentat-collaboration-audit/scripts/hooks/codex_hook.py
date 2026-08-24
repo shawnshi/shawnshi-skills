@@ -5,6 +5,9 @@ SessionStart. It reads exactly one JSON object from stdin and emits exactly one
 JSON object on stdout. Runtime state is deliberately redacted: identifiers and
 observed results are represented only by SHA-256 digests.
 
+PreToolUse fails open for compound commands and search commands whose pattern
+and path operands cannot be distinguished without executing the shell.
+
 Example configuration command:
     python -B scripts/hooks/codex_hook.py --mode PreToolUse
 
@@ -97,12 +100,10 @@ PATH_ORIENTED_COMMANDS = {
     "del",
     "dir",
     "erase",
-    "findstr",
     "gc",
     "get-childitem",
     "get-content",
     "get-item",
-    "grep",
     "ls",
     "move",
     "move-item",
@@ -110,7 +111,6 @@ PATH_ORIENTED_COMMANDS = {
     "remove-item",
     "ren",
     "rename-item",
-    "rg",
     "rm",
     "test-path",
     "type",
@@ -122,7 +122,6 @@ GIT_PATH_COMMANDS = {
     "checkout",
     "clean",
     "diff",
-    "grep",
     "mv",
     "restore",
     "rm",
@@ -467,6 +466,28 @@ def _split_command(command: str) -> list[str] | None:
         return None
 
 
+def _has_unquoted_shell_control(command: str) -> bool:
+    quote: str | None = None
+    escaped = False
+    for index, character in enumerate(command):
+        if escaped:
+            escaped = False
+            continue
+        if character == "\\" and quote != "'":
+            escaped = True
+            continue
+        if quote:
+            if character == quote:
+                quote = None
+            continue
+        if character in {'"', "'"}:
+            quote = character
+            continue
+        if character in ";|&<>\r\n" or command[index:index + 2] == "$(":
+            return True
+    return False
+
+
 def _git_invocation(tokens: list[str], cwd: Path) -> tuple[str | None, Path | None, str | None]:
     """Return (subcommand, effective cwd, error-code) for a simple git call."""
 
@@ -566,6 +587,9 @@ def _preflight_bash(
         return {}
     else:
         command = tool_input["command"]
+    if _has_unquoted_shell_control(command):
+        _record_unknown(state_root, envelope, "PreToolUse", "bash", "compound_command_uncovered")
+        return {}
     tokens = _split_command(command)
     if not tokens:
         _record_unknown(state_root, envelope, "PreToolUse", "bash", "command_parse_uncovered")

@@ -10,6 +10,7 @@ import csv
 import json
 import math
 import os
+import tempfile
 from pathlib import Path
 
 from portfolio_loader import validate_portfolio_payload
@@ -28,16 +29,24 @@ def load_json(path):
 
 def save_json(path, data):
     destination = Path(path)
-    temporary = destination.with_name(f".{destination.name}.tmp")
+    descriptor, temporary_name = tempfile.mkstemp(
+        prefix=f".{destination.name}.",
+        suffix=".tmp",
+        dir=str(destination.parent),
+        text=True,
+    )
+    temporary = Path(temporary_name)
     try:
-        temporary.write_text(
-            json.dumps(data, ensure_ascii=False, indent=2) + "\n",
-            encoding="utf-8",
-        )
-        temporary.replace(destination)
+        with os.fdopen(descriptor, "w", encoding="utf-8", newline="\n") as handle:
+            handle.write(json.dumps(data, ensure_ascii=False, indent=2) + "\n")
+            handle.flush()
+            os.fsync(handle.fileno())
+        os.replace(temporary, destination)
     finally:
-        if temporary.exists():
-            temporary.unlink()
+        try:
+            temporary.unlink(missing_ok=True)
+        except OSError:
+            pass
 
 
 def normalize_symbol(symbol: str) -> str:

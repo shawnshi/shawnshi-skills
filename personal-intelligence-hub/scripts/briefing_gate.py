@@ -22,6 +22,7 @@ V10_SCHEMA_PATH = ROOT / "references" / "briefing_schema_v1.0.json"
 TEMPLATE_PATH = ROOT / "references" / "briefing_template.md"
 TEMPLATE_TOKEN_PATTERN = re.compile(r"\{\{.*?\}\}|\{%.*?%\}")
 UNRESOLVED_SENTINELS = {"TBD", "TODO", "LLM_PENDING"}
+STRICT_ISO_DATE_PATTERN = re.compile(r"\d{4}-\d{2}-\d{2}\Z")
 
 
 def _known_template_tokens() -> set[str]:
@@ -42,8 +43,11 @@ def _non_empty(value: Any) -> bool:
 def _valid_date_or_unknown(value: Any) -> bool:
     if value == "unknown":
         return True
+    raw = str(value)
+    if not STRICT_ISO_DATE_PATTERN.fullmatch(raw):
+        return False
     try:
-        date.fromisoformat(str(value))
+        date.fromisoformat(raw)
         return True
     except (TypeError, ValueError):
         return False
@@ -60,8 +64,11 @@ def _valid_datetime(value: Any) -> bool:
 def _parsed_date(value: Any) -> date | None:
     if value in (None, "", "unknown"):
         return None
+    raw = str(value)
+    if not STRICT_ISO_DATE_PATTERN.fullmatch(raw):
+        return None
     try:
-        return date.fromisoformat(str(value))
+        return date.fromisoformat(raw)
     except (TypeError, ValueError):
         return None
 

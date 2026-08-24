@@ -31,6 +31,7 @@
 
 ## 3. 活动文件
 
+- 默认多维健康画像会从本地 `garmin_activities.db` 读取不含位置、活动 ID、名称或描述的会话汇总字段；这不等于授权读取逐活动明细或原始活动文件。精确字段、稀疏事件流语义和解释边界见 `references/health_profile.md`。
 - 下载 FIT、GPX 或 TCX 会访问 Garmin，并可能包含精确位置、时间和活动轨迹；默认健康数据读取授权不包含原始轨迹，仍必须分别取得联网和原始文件下载授权，并自动附加健康数据 CLI 标志。
 - 下载时必须显式指定会话隔离输出目录，不得使用报告目录。
 - 已存在的本地文件可离线解析、查询或汇总，不需要联网授权。
@@ -50,9 +51,12 @@
 ```bash
 <SKILL_PYTHON> scripts/report_output.py --days 7
 <SKILL_PYTHON> scripts/garmin_chart.py dashboard --days 7 --source local --allow-health-data --output <HTML_PATH>
+<SKILL_PYTHON> scripts/garmin_health_profile.py --days 7 --source local --timezone Asia/Shanghai --allow-health-data
 ```
 
 面板固定零外联并设置禁止网络的 CSP。报告和面板默认拒绝覆盖；需要替换时必须得到用户明确要求，再使用 `--allow-overwrite` 或 `--overwrite`。
+
+多维画像的 IANA 时区必须来自用户或明确的运行环境并在结果中披露；不得根据睡眠日期反推时区。只有用户确认属于 18–64 岁成年人且要求公共卫生参考比较时，才附加 `--adult-18-64-guideline`。完整指标与解释边界见 `references/health_profile.md`。
 
 ## 5. 研究用途 FHIR R4 包装
 

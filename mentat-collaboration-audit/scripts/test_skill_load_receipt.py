@@ -4,6 +4,7 @@ import json
 import tempfile
 import unittest
 from pathlib import Path
+from unittest import mock
 
 
 MODULE_PATH = Path(__file__).with_name("skill_load_receipt.py")
@@ -45,6 +46,22 @@ class SkillLoadReceiptTests(unittest.TestCase):
             skill.write_text("---\nname: sample\n---\nbody\n", encoding="utf-8")
             with self.assertRaises(ValueError):
                 receipt_module.build_receipt(skill, "", "root", "epoch-1")
+
+    def test_tokenizer_unavailable_emits_hash_only_receipt(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            skill = Path(tmp) / "SKILL.md"
+            skill.write_text("---\nname: sample\n---\nbody\n", encoding="utf-8")
+            with mock.patch.object(
+                receipt_module.tiktoken,
+                "get_encoding",
+                side_effect=RuntimeError("offline cache miss"),
+            ):
+                receipt = receipt_module.build_receipt(skill, "task-1", "root", "epoch-1")
+
+            self.assertEqual(receipt["event_type"], "skill_load")
+            self.assertRegex(receipt["skill_sha256"], r"^[0-9a-f]{64}$")
+            self.assertNotIn("skill_tokens", receipt)
+            self.assertNotIn("tokenizer", receipt)
 
     def test_append_is_idempotent_for_formal_duplicate_key(self):
         with tempfile.TemporaryDirectory() as tmp:

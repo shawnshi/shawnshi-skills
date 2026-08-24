@@ -1,0 +1,56 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "pia-alpha-evidence-v1",
+  "title": "PIA point-in-time alpha evidence package",
+  "type": "object",
+  "required": ["schema_version", "decision_scope", "as_of", "annualization_factor", "universe", "model", "cost_model", "observations", "trial_net_excess_returns", "signals"],
+  "properties": {
+    "schema_version": {"const": "pia_alpha_evidence_v1"},
+    "decision_scope": {"const": "research_only"},
+    "as_of": {"type": "string", "format": "date-time"},
+    "annualization_factor": {"type": "integer", "minimum": 2},
+    "universe": {
+      "type": "object",
+      "required": ["symbols", "benchmark", "base_currency", "survivorship_bias_control", "corporate_action_adjusted", "point_in_time_evidence"],
+      "properties": {
+        "symbols": {"type": "array", "minItems": 1, "uniqueItems": true, "items": {"type": "string", "minLength": 1}},
+        "benchmark": {"type": "string", "minLength": 1},
+        "base_currency": {"type": "string", "minLength": 3},
+        "survivorship_bias_control": {"const": true},
+        "corporate_action_adjusted": {"const": true},
+        "point_in_time_evidence": {"$ref": "#/$defs/evidence"}
+      },
+      "additionalProperties": false
+    },
+    "model": {
+      "type": "object",
+      "required": ["model_id", "version", "economic_rationale", "selected_trial_id", "trial_ledger"],
+      "properties": {
+        "model_id": {"type": "string", "minLength": 1},
+        "version": {"type": "string", "minLength": 1},
+        "economic_rationale": {"type": "string", "minLength": 1},
+        "selected_trial_id": {"type": "string", "minLength": 1},
+        "trial_ledger": {"type": "array", "minItems": 1, "maxItems": 1000, "items": {"type": "object", "required": ["trial_id", "parameter_fingerprint"], "properties": {"trial_id": {"type": "string", "minLength": 1}, "parameter_fingerprint": {"type": "string", "pattern": "^[0-9a-f]{64}$"}}, "additionalProperties": false}}
+      },
+      "additionalProperties": false
+    },
+    "cost_model": {
+      "type": "object",
+      "required": ["commission_bps", "spread_bps", "market_impact_bps", "tax_bps", "evidence"],
+      "properties": {"commission_bps": {"type": "number", "minimum": 0}, "spread_bps": {"type": "number", "minimum": 0}, "market_impact_bps": {"type": "number", "minimum": 0}, "tax_bps": {"type": "number", "minimum": 0}, "evidence": {"$ref": "#/$defs/evidence"}},
+      "additionalProperties": false
+    },
+    "observations": {
+      "type": "array", "minItems": 1,
+      "items": {"type": "object", "required": ["date", "segment", "gross_return", "benchmark_return", "turnover"], "properties": {"date": {"type": "string", "format": "date-time"}, "segment": {"enum": ["in_sample", "out_of_sample"]}, "gross_return": {"type": "number", "exclusiveMinimum": -1}, "benchmark_return": {"type": "number", "exclusiveMinimum": -1}, "turnover": {"type": "number", "minimum": 0, "maximum": 1}}, "additionalProperties": false}
+    },
+    "trial_net_excess_returns": {"type": "object", "minProperties": 1, "additionalProperties": {"type": "array", "items": {"type": "number"}}},
+    "signals": {
+      "type": "array", "minItems": 1,
+      "items": {"type": "object", "required": ["symbol", "expected_excess_return_annualized", "expected_return_standard_error", "economic_rationale", "invalidation_condition", "components"], "properties": {"symbol": {"type": "string", "minLength": 1}, "expected_excess_return_annualized": {"type": "number"}, "expected_return_standard_error": {"type": "number", "minimum": 0}, "economic_rationale": {"type": "string", "minLength": 1}, "invalidation_condition": {"type": "string", "minLength": 1}, "components": {"type": "array", "minItems": 1, "items": {"type": "object", "required": ["name", "score", "confidence", "decay_half_life_days", "evidence"], "properties": {"name": {"type": "string", "minLength": 1}, "score": {"type": "number", "minimum": -5, "maximum": 5}, "confidence": {"type": "number", "minimum": 0, "maximum": 1}, "decay_half_life_days": {"type": "number", "exclusiveMinimum": 0}, "evidence": {"$ref": "#/$defs/evidence"}}, "additionalProperties": false}}},
+      "additionalProperties": false
+    }
+  },
+  "$defs": {"evidence": {"type": "object", "required": ["observed_at", "available_at", "retrieved_at", "source_locator", "content_sha256"], "properties": {"observed_at": {"type": "string", "format": "date-time"}, "available_at": {"type": "string", "format": "date-time"}, "retrieved_at": {"type": "string", "format": "date-time"}, "source_locator": {"type": "string", "minLength": 1}, "content_sha256": {"type": "string", "pattern": "^[0-9a-f]{64}$"}}, "additionalProperties": false}},
+  "additionalProperties": false
+}

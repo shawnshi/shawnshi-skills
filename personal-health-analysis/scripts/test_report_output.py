@@ -77,6 +77,59 @@ def comparable_summary(start_day, prior_days):
 
 class ReportOutputContractTests(unittest.TestCase):
     @unittest.skipUnless(shutil.which("node"), "Node.js is required for DOM runtime validation")
+    def test_dashboard_keeps_history_and_marks_unsynced_terminal_day(self):
+        start = date(2026, 8, 23)
+        end = start + timedelta(days=1)
+        summary = {
+            "summary": {"period": f"{start} to {end}", "days": 2},
+            "heart_rate": [{"date": start.isoformat(), "resting_hr": 52}],
+            "hrv": [{"date": start.isoformat(), "last_night_avg": 44}],
+            "sleep": [{"date": start.isoformat(), "sleep_time_seconds": 28200, "deep_sleep_seconds": 5400, "rem_sleep_seconds": 7200, "light_sleep_seconds": 15600, "avg_respiration": 15, "avg_spo2": 96}],
+            "body_battery": [{"date": start.isoformat(), "highest": 100, "lowest": 41}],
+            "stress": [{"date": start.isoformat(), "avg_stress": 19, "steps": 3385}],
+            "measurement_epoch_evidence": {},
+        }
+        payload = garmin_chart.build_dashboard_payload(
+            summary,
+            days=2,
+            requested_source="local",
+            effective_source="local",
+            selected_components=("sleep", "hrv", "body_battery", "heart_rate", "stress"),
+            live_fallback_attempted=False,
+            requested_start=start.isoformat(),
+            requested_end=end.isoformat(),
+            generated_at="2026-08-24T12:00:00+08:00",
+        )
+        html = garmin_chart.render_report(payload)
+        encoded = re.search(r'<script id="health-data"[^>]*>(.*?)</script>', html, re.DOTALL).group(1)
+        runtime_source = re.findall(r"<script(?: [^>]*)?>(.*?)</script>", html, re.DOTALL)[-1]
+        harness = f"""
+class Node {{
+  constructor(name='node') {{ this.nodeName=name; this.textContent=''; this.children=[]; this.style={{}}; this.className=''; this.attributes={{}}; }}
+  setAttribute(key,value) {{ this.attributes[key]=String(value); }}
+  removeAttribute(key) {{ delete this.attributes[key]; }}
+  append(...nodes) {{ this.children.push(...nodes); }}
+  replaceChildren(...nodes) {{ this.children = nodes; }}
+}}
+const elements = {{}};
+elements['health-data'] = new Node('script');
+elements['health-data'].textContent = {json.dumps(encoded)};
+const document = {{ getElementById(id) {{ return elements[id] || (elements[id] = new Node()); }}, createElement(name) {{ return new Node(name); }}, createElementNS(_namespace,name) {{ return new Node(name); }} }};
+const window = {{ addEventListener(event, callback) {{ if (event === 'DOMContentLoaded') callback(); }} }};
+{runtime_source}
+const ids=['rhr-chart','hrv-chart','sleep-chart','battery-chart','steps-chart','stress-chart','respiration-chart','spo2-chart'];
+console.log(JSON.stringify(Object.fromEntries(ids.map(id=>[id,{{children:elements[id].children.length,note:elements[id].children[1]?.textContent||'',svg:elements[id].children[0]?.nodeName||''}}]))));
+"""
+        completed = subprocess.run([shutil.which("node"), "-"], input=harness, check=True, capture_output=True, text=True, encoding="utf-8")
+        rendered = json.loads(completed.stdout)
+        for item in rendered.values():
+            self.assertEqual(item["children"], 2)
+            self.assertEqual(item["svg"], "svg")
+            self.assertEqual(item["note"], "2026-08-24 当日未同步；图表保留此前已同步观测。")
+        self.assertIn("整体评价与后续建议", html)
+        self.assertIn("后续建议（非处方）", html)
+
+    @unittest.skipUnless(shutil.which("node"), "Node.js is required for DOM runtime validation")
     def test_dashboard_runtime_keeps_missing_values_distinct_from_zero(self):
         html = garmin_chart.render_report(
             {
@@ -209,7 +262,7 @@ console.log(JSON.stringify({{
         self.assertNotIn("must-not-be-embedded", serialized)
         self.assertNotIn("weighted_dissipation", serialized)
         self.assertNotIn("quant_scores", serialized)
-        self.assertNotIn('"steps"', serialized)
+        self.assertIn('"steps"', serialized)
         self.assertNotIn("999999", serialized)
         self.assertNotIn('"sha256"', serialized)
         self.assertNotIn(r"C:\private\health", serialized)
@@ -367,6 +420,7 @@ console.log(JSON.stringify({{
                 {
                     "date": (end - timedelta(days=3)).isoformat(),
                     "avg_stress": 32,
+                    "steps": 6789,
                     "high_stress_duration": 3600,
                     "medium_stress_duration": 7200,
                     "rest_stress_duration": 10800,
@@ -405,6 +459,10 @@ console.log(JSON.stringify({{
             (end - timedelta(days=3)).isoformat(),
         )
         self.assertEqual(payload["kpis"]["stress"]["value"], 32)
+        self.assertEqual(payload["series"]["stress_avg"][3], 32)
+        self.assertEqual(payload["series"]["steps"][3], 6789)
+        self.assertEqual(payload["coverage"]["stress"]["observed_days"], 1)
+        self.assertEqual(payload["coverage"]["steps"]["observed_days"], 1)
         self.assertEqual(
             payload["kpis"]["stress"]["details"],
             {"high_h": 1.0, "medium_h": 2.0, "rest_h": 3.0},
@@ -476,14 +534,14 @@ console.log(JSON.stringify({{
             40,
         )
 
-    def test_default_archive_is_workspace_output(self):
+    def test_default_archive_is_canonical_garmin_raw_directory(self):
         workspace = Path(r"C:\workspace")
         with patch.dict(os.environ, {}, clear=True):
             output_dir = get_report_dir(workspace=workspace)
 
         self.assertEqual(
             output_dir,
-            (workspace / "output" / "personal-health-analysis").resolve(),
+            Path(r"C:\Users\shich\MEMORY\raw\garmin").resolve(),
         )
 
     def test_report_dir_override_has_priority(self):

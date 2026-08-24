@@ -1,0 +1,19 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "pia-alpha-promotion-policy-v1",
+  "type": "object",
+  "required": ["schema_version", "min_oos_observations", "min_net_information_ratio", "min_deflated_sharpe_probability", "max_probability_backtest_overfitting", "max_drawdown_fraction", "max_annual_turnover", "cost_stress_multiplier", "min_cost_stress_information_ratio", "pbo_block_count"],
+  "properties": {
+    "schema_version": {"const": "pia_alpha_promotion_policy_v1"},
+    "min_oos_observations": {"type": "integer", "minimum": 3},
+    "min_net_information_ratio": {"type": "number"},
+    "min_deflated_sharpe_probability": {"type": "number", "minimum": 0, "maximum": 1},
+    "max_probability_backtest_overfitting": {"type": "number", "minimum": 0, "maximum": 1},
+    "max_drawdown_fraction": {"type": "number", "minimum": 0, "maximum": 1},
+    "max_annual_turnover": {"type": "number", "minimum": 0},
+    "cost_stress_multiplier": {"type": "number", "minimum": 1},
+    "min_cost_stress_information_ratio": {"type": "number"},
+    "pbo_block_count": {"type": "integer", "minimum": 4, "maximum": 12, "multipleOf": 2}
+  },
+  "additionalProperties": false
+}

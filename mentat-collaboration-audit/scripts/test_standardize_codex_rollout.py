@@ -354,6 +354,13 @@ class ExtractorRemediationTests(unittest.TestCase):
         interface = "Script failed\nOutput:\nScript error:\nTypeError: tools.shell_command is not a function"
         unicode_failure = "Script failed\nOutput:\nScript error:\nExit code: 1\nOutput:\nTraceback (most recent call last):\nUnicodeDecodeError: invalid byte"
         path_failure = "Script failed\nOutput:\nScript error:\nExit code: 2\nOutput:\nrg: C:/fixture/missing: The system cannot find the path specified."
+        python_path = "Script failed\nOutput:\nScript error:\nExit code: 1\nOutput:\nTraceback (most recent call last):\n  File 'task.py', line 1\nFileNotFoundError: missing"
+        python_permission = "Script failed\nOutput:\nScript error:\nExit code: 1\nOutput:\nTraceback (most recent call last):\nPermissionError: denied"
+        python_dependency = "Script failed\nOutput:\nScript error:\nExit code: 1\nOutput:\nTraceback (most recent call last):\nModuleNotFoundError: unavailable"
+        python_validation = "Script failed\nOutput:\nScript error:\nExit code: 1\nOutput:\nTraceback (most recent call last):\nValueError: invalid fixture"
+        passive_parser = "Script completed\nOutput:\nParserError: invalid passive read"
+        resource_permission = "Script completed\nOutput:\nResourceUnavailable: Program failed to run: Access to the path is denied"
+        clean_after_history = "Script completed\nOutput:\nprinted history: Exit code: 1\nOutput:\nclean payload"
         fallback = "Script failed\nOutput:\nScript error:\nunclassified failure"
         cases = [
             (parser, shell_source("pwsh -File C:/fixture/probe.ps1"), ("syntax", "powershell_parser", True)),
@@ -362,6 +369,12 @@ class ExtractorRemediationTests(unittest.TestCase):
             (interface, shell_source("Get-Content C:/fixture/source.py"), ("dependency", "tool_interface", True)),
             (unicode_failure, shell_source("python C:/fixture/validator.py"), ("data", "unicode_decode", True)),
             (path_failure, shell_source("rg -n needle C:/fixture/missing"), ("path", "search_path", True)),
+            (python_path, shell_source("python C:/fixture/task.py"), ("path", "python_path", True)),
+            (python_permission, shell_source("python C:/fixture/task.py"), ("permission", "python_permission", True)),
+            (python_dependency, shell_source("python C:/fixture/task.py"), ("dependency", "python_dependency", True)),
+            (python_validation, shell_source("python C:/fixture/task.py"), ("validation", "python_validation", True)),
+            (passive_parser, shell_source("Get-Content C:/fixture/source.py"), ("syntax", "powershell_parser", True)),
+            (resource_permission, shell_source("Get-Content C:/fixture/source.py"), ("permission", "process_permission", True)),
             (fallback, shell_source("python C:/fixture/task.py"), ("unknown", "script_failed", True)),
         ]
         for output, source, expected in cases:
@@ -369,10 +382,55 @@ class ExtractorRemediationTests(unittest.TestCase):
                 result = MODULE.classify_tool_output(output, source)
                 self.assertEqual((result["error_category"], result["error_signature"], result["executor_failure"]), expected)
 
+        self.assertIsNone(MODULE.classify_tool_output(clean_after_history, shell_source("python C:/fixture/task.py")))
+
         source_read = "Script completed\nOutput:\nconst ERROR_LITERAL = 'VALIDATION_FAILED';"
         self.assertIsNone(MODULE.classify_tool_output(source_read, shell_source("Get-Content C:/fixture/source.py")))
         search_read = "Script completed\nOutput:\nC:/fixture/source.py:9:VALIDATION_FAILED"
         self.assertIsNone(MODULE.classify_tool_output(search_read, shell_source("rg -n VALIDATION_FAILED C:/fixture/source.py")))
+
+    def test_failed_generic_write_never_generates_commit(self):
+        records = [
+            rollout_record("2026-08-16T12:00:00Z", "event_msg", {"type": "task_started", "turn_id": "r-write-fail"}),
+            rollout_record("2026-08-16T12:00:01Z", "response_item", {"type": "custom_tool_call", "call_id": "write-fail", "name": "exec", "input": shell_source("Set-Content C:/fixture/output.txt value")}),
+            rollout_record("2026-08-16T12:00:02Z", "response_item", {"type": "custom_tool_call_output", "call_id": "write-fail", "output": "Script completed\nOutput:\nResourceUnavailable: Program failed to run: Access to the path is denied"}),
+        ]
+
+        events, summary = run_standardizer(records)
+        tools = [event for event in events if event["event_type"] == "tool_call"]
+        self.assertEqual(len(tools), 1)
+        self.assertEqual(tools[0]["status"], "error")
+        self.assertEqual(len([event for event in events if event["event_type"] == "write_attempt"]), 1)
+        self.assertEqual(len([event for event in events if event["event_type"] == "write_commit"]), 0)
+        self.assertEqual(summary["tool_failures"], 1)
+
+    def test_session_meta_preserves_redacted_subagent_provenance(self):
+        records = [
+            rollout_record("2026-08-16T12:00:00Z", "session_meta", {"id": "sensitive-thread-id", "thread_source": "subagent"}),
+            rollout_record("2026-08-16T12:00:01Z", "event_msg", {"type": "task_started", "turn_id": "r-child"}),
+            rollout_record("2026-08-16T12:00:02Z", "event_msg", {"type": "token_count", "info": {"total_token_usage": {"input_tokens": 90, "output_tokens": 10}, "last_token_usage": {"input_tokens": 90, "output_tokens": 10}}}),
+        ]
+
+        events, _ = run_standardizer(records)
+        self.assertTrue(events)
+        self.assertTrue(all(event["actor_type"] == "subagent" for event in events))
+        self.assertTrue(all(event["actor_id"].startswith("subagent-") for event in events))
+        self.assertNotIn("sensitive-thread-id", json.dumps(events))
+
+    def test_embedded_parent_session_meta_cannot_rebind_rollout_actor(self):
+        records = [
+            rollout_record("2026-08-16T12:00:00Z", "session_meta", {"id": "child-thread", "thread_source": "subagent"}),
+            rollout_record("2026-08-16T12:00:01Z", "event_msg", {"type": "task_started", "turn_id": "r-child"}),
+            rollout_record("2026-08-16T12:00:02Z", "event_msg", {"type": "token_count", "info": {"total_token_usage": {"input_tokens": 90, "output_tokens": 10}, "last_token_usage": {"input_tokens": 90, "output_tokens": 10}}}),
+            rollout_record("2026-08-16T12:00:03Z", "session_meta", {"id": "embedded-parent", "thread_source": "user"}),
+            rollout_record("2026-08-16T12:00:04Z", "event_msg", {"type": "token_count", "info": {"total_token_usage": {"input_tokens": 100, "output_tokens": 11}, "last_token_usage": {"input_tokens": 10, "output_tokens": 1}}}),
+        ]
+
+        events, _ = run_standardizer(records)
+
+        self.assertTrue(events)
+        self.assertTrue(all(event["actor_type"] == "subagent" for event in events))
+        self.assertTrue(all(event["actor_id"].startswith("subagent-") for event in events))
 
     def test_compound_expected_outcomes_do_not_count_as_failures(self):
         records = [

@@ -4,7 +4,7 @@ from pathlib import Path
 
 
 sys.path.insert(0, str(Path(__file__).parent))
-from audit_gate import validate
+from audit_gate import ENERGY_REQUIRED_FIELDS, validate
 
 
 class AuditGateTests(unittest.TestCase):
@@ -37,10 +37,12 @@ class AuditGateTests(unittest.TestCase):
 - **睡眠观察:** 观测日期 2026-08-01，7.2 小时。
 - **HRV 与静息心率观察:** 各自观测日期均已披露。
 - **Body Battery 与压力观察:** 各自观测日期均已披露。
-- **同期关系:** 只记录时间共现。
-- **执行带宽:** not_scored
+- **执行带宽:** `not_scored`；不从 Garmin 指标生成认知或工作表现评分。
+- **睡眠负债:** 来源未提供；sleep_debt_h=null，sleep_debt_status=not_provided_by_source。
+- **摩擦解构:** 已记录日程负荷；主观感受未提供；生理观测仅作描述。
+- **交叉归因:** 只记录时间共现，并保留日期错位和其他替代解释。
+- **干预指令:** 若本人主观困倦，可选择休息十分钟；完成标准为记录主观状态。
 - **数据缺口与不可判断事项:** 无。
-- **一般性恢复建议:** 保持观察。
 """
         errors, _ = validate(text, enforce_template_fields=True)
 
@@ -56,6 +58,122 @@ class AuditGateTests(unittest.TestCase):
         errors, _ = validate(text, enforce_template_fields=True)
 
         self.assertTrue(any("energy-management section missing fields" in item for item in errors))
+
+    def test_previous_template_shape_is_blocked_when_four_projection_fields_are_missing(self):
+        text = """# 周复盘
+
+## 能量管理（描述性生理背景）
+- **数据范围与来源:** 本地 Garmin。
+- **组件覆盖与新鲜度:** sleep=partial；观测日期 2026-08-15。
+- **睡眠观察:** 观测日期 2026-08-15，7.3 小时。
+- **HRV 与静息心率观察:** 各自观测日期已披露。
+- **Body Battery 与压力观察:** 各自观测日期已披露。
+- **同期关系:** 只记录时间共现。
+- **执行带宽:** not_scored
+- **数据缺口与不可判断事项:** 无。
+- **一般性恢复建议:** 保持观察。
+"""
+        errors, _ = validate(text, enforce_template_fields=True)
+
+        self.assertTrue(any("睡眠负债" in item for item in errors))
+        self.assertTrue(any("摩擦解构" in item for item in errors))
+        self.assertTrue(any("交叉归因" in item for item in errors))
+        self.assertTrue(any("干预指令" in item for item in errors))
+        self.assertTrue(any("require explanatory content" in item for item in errors))
+
+    def test_template_mode_blocks_contentless_energy_projection_fields(self):
+        text = """# 复盘
+
+## 能量管理（描述性生理背景）
+- **数据范围与来源:** 本地 Garmin。
+- **组件覆盖与新鲜度:** 无有效观测。
+- **睡眠观察:** 无有效观测。
+- **HRV 与静息心率观察:** 无有效观测。
+- **Body Battery 与压力观察:** 无有效观测。
+- **执行带宽:** `not_scored`；不从健康指标生成认知或工作表现评分。
+- **睡眠负债:** 来源未提供；sleep_debt_h=null，sleep_debt_status=not_provided_by_source。
+- **摩擦解构:** 已记录负荷为空；未知项已披露。
+- **交叉归因:** 没有同日证据，不建立因果关系。
+- **干预指令:** 没有健康依据时不生成强制安排。
+- **数据缺口与不可判断事项:** 本地无数据。
+"""
+        safe_values = {
+            "执行带宽": "`not_scored`；不从健康指标生成认知或工作表现评分。",
+            "睡眠负债": "来源未提供；sleep_debt_h=null，sleep_debt_status=not_provided_by_source。",
+            "摩擦解构": "已记录负荷为空；未知项已披露。",
+            "交叉归因": "没有同日证据，不建立因果关系。",
+            "干预指令": "没有健康依据时不生成强制安排。",
+        }
+
+        for field, safe_value in safe_values.items():
+            with self.subTest(field=field):
+                candidate = text.replace(
+                    f"- **{field}:** {safe_value}",
+                    f"- **{field}:** [DATA_UNAVAILABLE]",
+                )
+                errors, _ = validate(candidate, enforce_template_fields=True)
+                explanatory = next(
+                    item for item in errors if "require explanatory content" in item
+                )
+                self.assertIn(field, explanatory)
+
+    def test_template_mode_accepts_source_provided_sleep_debt_with_status(self):
+        text = """# 复盘
+
+## 能量管理（描述性生理背景）
+- **数据范围与来源:** 本地 Garmin。
+- **组件覆盖与新鲜度:** sleep=complete；观测日期 2026-08-22。
+- **睡眠观察:** 观测日期 2026-08-22，7.0 小时。
+- **HRV 与静息心率观察:** 无有效观测。
+- **Body Battery 与压力观察:** 无有效观测。
+- **执行带宽:** `not_scored`；不从健康指标生成认知或工作表现评分。
+- **睡眠负债:** sleep_debt_h=1.0；sleep_debt_status=provided_by_source；适用窗口为最近三晚。
+- **摩擦解构:** 已记录睡眠观测；工作负荷、主观感受和外部约束未知。
+- **交叉归因:** 没有同日工作证据，不建立因果关系。
+- **干预指令:** 若本人主观困倦，可选择休息十分钟；完成标准为记录主观状态。
+- **数据缺口与不可判断事项:** 只有睡眠组件完整，不作趋势判断。
+"""
+        errors, _ = validate(text, enforce_template_fields=True)
+
+        self.assertEqual(errors, [])
+
+    def test_template_mode_requires_not_scored_execution_boundary(self):
+        text = """# 复盘
+
+## 能量管理（描述性生理背景）
+- **数据范围与来源:** 本地 Garmin。
+- **组件覆盖与新鲜度:** 无有效观测。
+- **睡眠观察:** 无有效观测。
+- **HRV 与静息心率观察:** 无有效观测。
+- **Body Battery 与压力观察:** 无有效观测。
+- **执行带宽:** 依据当前观察保持稳定。
+- **睡眠负债:** 来源未提供；sleep_debt_h=null，sleep_debt_status=not_provided_by_source。
+- **摩擦解构:** 已记录负荷为空；未知项已披露。
+- **交叉归因:** 没有同日证据，不建立因果关系。
+- **干预指令:** 没有健康依据时不生成强制安排。
+- **数据缺口与不可判断事项:** 本地无数据。
+"""
+        errors, _ = validate(text, enforce_template_fields=True)
+
+        self.assertTrue(any("must retain not_scored" in item for item in errors))
+
+    def test_all_bundled_templates_declare_every_energy_projection_field(self):
+        skill_root = Path(__file__).parent.parent
+        template_paths = [
+            skill_root / "references" / "templates.md",
+            *(skill_root / "prompts" / name for name in (
+                "DAILY.md",
+                "WEEKLY.md",
+                "MONTHLY.md",
+                "ANNUAL.md",
+            )),
+        ]
+
+        for path in template_paths:
+            with self.subTest(path=path.name):
+                text = path.read_text(encoding="utf-8")
+                for field in ENERGY_REQUIRED_FIELDS:
+                    self.assertIn(f"**{field}:**", text)
 
     def test_blocks_numeric_composite_energy_score(self):
         errors, _ = validate("证据：Garmin。\n- 能量总分：78")

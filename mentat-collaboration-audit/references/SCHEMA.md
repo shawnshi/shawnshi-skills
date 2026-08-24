@@ -31,7 +31,7 @@ JSON 或 JSONL 中每条记录使用一个对象：
 最低要求：
 
 - 所有事件包含 `event_type` 和 `root_task_id`。
-- 顺序指标要求事件已按时间排列；有跨文件事件时提供 ISO 8601 `timestamp`。
+- 顺序指标要求事件已按时间排列；有跨文件事件时提供 ISO 8601 `timestamp`。等待事件在同一 `root_task_id + actor_id` 内缺失时间或发生回退时，重复等待与连续超时指标失败关闭为不可用。
 - `actor_type` 使用 `root`、`subagent` 或 `runtime`。
 - 缺失值保持缺失，不填 `0`、`unknown` 或虚构哈希。
 - 不在事件中记录提示词正文、凭据、私人内容或完整业务载荷。
@@ -62,7 +62,7 @@ root_task_id + actor_id + context_epoch + skill_name + skill_sha256
 
 `skill_tokens` 必须同时记录 `tokenizer`。本地回执统一使用 `cl100k_base`，用于同一口径下比较技能文本体积；它不是模型输入账单 Token。若计数器不可用则字段保持缺失，不得使用字符数估算。
 
-候选载入与正式回执必须分开计数。`receipt_coverage` 的分母是 `skill_load_candidate`，分子是同一根任务、执行者、上下文 epoch 和技能名称下可配对的正式 `skill_load`；没有正式回执时不能使用当前文件 Token 反填历史事件。
+候选载入与正式回执必须分开计数。`receipt_coverage` 的分母是 `skill_load_candidate`，分子是同一根任务、执行者、上下文 epoch、技能名称和 `skill_path_sha256` 下可配对的正式 `skill_load`；没有正式回执时不能使用当前文件 Token 反填历史事件。缺少路径哈希、内容哈希、Token 或 tokenizer 的记录进入 `unverifiable_load_count`，不得贡献正式载入数或 Token。
 
 ## 4. 统一错误信封
 
@@ -92,7 +92,7 @@ root_task_id + actor_id + context_epoch + skill_name + skill_sha256
 
 包装执行同时保留 `outer_status` 与 `nested_status`。外层显示 `Script completed`，但输出载荷以 `ParserError:`、Python traceback、明确非零退出码或嵌套工具错误开头时，标准事件的顶层 `status` 必须为 `error`，并保留有限 `error_category/error_signature`；不得保存原始错误正文。
 
-当前稳定 `error_signature/outcome` 至少包括：`powershell_parser`、`patch_context`、`not_git_repo`、`search_path`、`tool_interface`、`unicode_decode`、`python_exception`、`nested_tool_error`、`script_failed`、`no_match` 和 `validation_guard`。其中 `no_match` 与预期 `validation_guard` 的 `executor_failure=false`、顶层 `status=ok`；它们仍进入 outcome 计数，但不得增加 `tool_failures`。分类只读取包装层最后一个实际 `Output:` 载荷并先移除 ANSI CSI，不扫描被打印的源码或历史日志。
+当前稳定 `error_signature/outcome` 至少包括：`powershell_parser`、`process_permission`、`process_unavailable`、`patch_context`、`not_git_repo`、`search_path`、`tool_interface`、`unicode_decode`、`python_path`、`python_permission`、`python_dependency`、`python_data`、`python_validation`、`python_exception`、`nested_tool_error`、`script_failed`、`no_match` 和 `validation_guard`。其中 `no_match` 与预期 `validation_guard` 的 `executor_failure=false`、顶层 `status=ok`；它们仍进入 outcome 计数，但不得增加 `tool_failures`。分类只读取包装层最后一个实际 `Output:` 载荷并先移除 ANSI CSI，不扫描被打印的源码或历史日志。
 
 重试规则：
 
@@ -162,11 +162,13 @@ Codex rollout 标准化先在调用处生成 `write_attempt`，只在对应输�
 - `coverage`：输入文件、解析文件、跳过文件、跳过记录和问题明细。
 - `components`：调用、失败、实际耗时观察数、平均值、最近秩 P95 和 Token。
 - `operational_metrics`：`wait`、`skill_load`、`retry`、`subagent`、`authorization`、`context`。
-- `wait` 另报第三次及以后同状态超时的 `wait_gate_breach_count`。
+- `wait` 另报第三次及以后同状态超时的 `wait_gate_breach_count`，以及 `sequence_order_status`、同键时间回退数和缺失时间数；顺序未核验时相关指标为 `null`。
 - `skill_load` 分开报告候选数、正式回执数和候选回执覆盖率。
 - `authorization` 分开报告尝试数、提交数、未匹配提交率和证据状态。
 - `context` 分开报告恢复制品存在覆盖率与 `required_fields_verified=true` 的语义恢复覆盖率。
 - `limitations`：缺失字段、顺序和因果限制。
+
+目录输入按行流式解析 JSONL 并执行最小事件信封门禁；缺少非空 `event_type/root_task_id` 的报告、回执或摘要 JSON 进入 coverage 问题，不能作为 `unknown` 组件自摄入。CLI 使用单遍流式聚合状态，只保留顺序键、计数器、指纹集合和计算精确 P95 所需的时延数组。
 
 分析层的发现仍需包含 `id`、证据指针、事实、推断、置信度、替代解释、影响、动作、所有者、验证方法和授权类型。不要把聚合器输出直接当作因果结论。
 

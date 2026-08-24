@@ -11,6 +11,7 @@ from typing import Mapping
 
 REPORT_DIR_ENV = "GARMIN_REPORT_DIR"
 LEGACY_OUTPUT_DIR_ENV = "GARMIN_OUTPUT_DIR"
+DEFAULT_REPORT_DIR = Path(r"C:\Users\shich\MEMORY\raw\garmin")
 
 
 def get_report_dir(
@@ -26,8 +27,7 @@ def get_report_dir(
     if configured:
         return Path(configured).expanduser().resolve()
 
-    workspace_root = Path.cwd() if workspace is None else Path(workspace)
-    return (workspace_root / "output" / "personal-health-analysis").resolve()
+    return DEFAULT_REPORT_DIR.resolve()
 
 
 def build_report_paths(

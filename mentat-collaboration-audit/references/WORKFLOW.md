@@ -10,7 +10,7 @@
 
 ## 2. 收集与标准化
 
-只读取用户提供、已连接授权或当前工作区内的证据。按 [SCHEMA.md](SCHEMA.md) 标准化事件，保留来源和行号，不回显提示词正文、凭据或私人内容。活动 JSONL 可能被运行时持续追加，必须先通过 `scripts/freeze_jsonl_snapshot.py` 冻结完整换行前缀；聚合、引证和行号全部绑定快照 SHA-256，不直接绑定活动文件。
+只读取用户提供、已连接授权或当前工作区内的证据。按 [SCHEMA.md](SCHEMA.md) 标准化事件，保留来源和行号，不回显提示词正文、凭据或私人内容。活动 JSONL 可能被运行时持续追加，必须先通过 `scripts/freeze_jsonl_snapshot.py` 冻结完整换行前缀；冻结器不重复解析 JSON 语义。提供回执时，快照先发布、回执最后发布并作为提交标记；聚合、引证和行号全部绑定已验证回执中的快照 SHA-256，不直接绑定活动文件。
 
 Codex rollout 快照先执行：
 
@@ -26,7 +26,7 @@ python scripts/standardize_codex_rollout.py --input <snapshot.jsonl> --output <e
 python generate_final_report.py --input <evidence-path> --strict
 ```
 
-需要保存 JSON 时必须由用户指定输出位置，再添加 `--output <report.json>`。`--strict` 遇到跳过文件或记录时返回 2；零条有效记录返回 1。部分覆盖不能宣告审计完成。
+需要保存 JSON 时必须由用户指定输出位置，再添加 `--output <report.json>`。`--strict` 遇到跳过文件或记录、非事件信封、等待同键时间回退或缺失时间时返回 2；零条有效记录返回 1。部分覆盖不能宣告审计完成。CLI 对 JSONL 使用流式聚合，不把全部事件字典保留到内存。
 
 ## 3. 五类控制
 
@@ -37,6 +37,7 @@ python generate_final_report.py --input <evidence-path> --strict
 - 等待超时不等于子代理失败；以状态变化、最终回包和产物验证判断。
 - 同一 `state_version` 连续两次超时后，只读一次代理状态；若仍无变化，停止轮询并转做本地工作或结束等待。
 - 第三次及以后同状态超时必须记入 `wait_gate_breach_count`；降低平均等待时长不能抵消门禁违例。
+- 同一根任务和执行者内的等待时间必须单调；缺失或回退时，重复等待、连续超时和门禁违例指标不得继续给出数值。
 - 本机 `PreToolUse/PostToolUse` 钩子以哈希后的会话回合键执行同一门禁：两次相同超时后拒绝再次 `wait_agent`，只允许一次 `list_agents` 探针，且只有可比较的状态指纹确实变化才复位。工具路径不经过通用 Hooks、响应不可分类或运行态写入失败时必须失败开放并留下有界 coverage 回执。
 
 ### 技能载入
@@ -45,7 +46,7 @@ python generate_final_report.py --input <evidence-path> --strict
 - 只把同一 `root_task_id + actor_id + context_epoch + skill_sha256` 的再次全文读取算作重复。
 - `SKILL.md` 保留核心工作流和资源路由；详细 Schema、模板、变体与示例按需读取。
 - 上下文压缩是系统健康指标；只有记录了技能载入 Token 占比时才能讨论技能归因。
-- 原始命令推断的 `skill_load_candidate` 与正式 `skill_load` 回执分开；只对正式回执计算重复率与 Token，不用当前文件哈希反填历史候选。
+- 原始命令推断的 `skill_load_candidate` 与正式 `skill_load` 回执分开；候选只与同一根任务、执行者、epoch、技能名称和路径哈希的正式回执配对。只对字段完整的正式回执计算重复率与 Token，不用当前文件哈希反填历史候选。
 - 正式回执同时保存规范化路径哈希、内容哈希、Token 和 tokenizer。相同唯一键的重复调用由排他锁下的幂等检查抑制；“脚本运行了两次”不能生成两次正式载入证据。
 
 ### 错误与重试
@@ -62,6 +63,7 @@ python generate_final_report.py --input <evidence-path> --strict
 - 任务包传文件指针、哈希或行号、授权边界、最大回合、二元停止条件和回包 Schema。
 - 任务包足以自洽时使用最小 fork；不能安全重述用户约束时传递必要的近期回合。
 - 主任务继续处理本地工作；只接收结构化状态和证据指针，不回传完整历史或大段原文。
+- rollout 的首条 `session_meta` 定义该文件 actor；全历史 fork 中内嵌的父线程 `session_meta` 只能作为历史证据，不能重新绑定当前 rollout 的执行者。
 
 ### 写入授权
 
@@ -111,6 +113,6 @@ python scripts/report_output.py --period <1d|7d|30d|90d|year>
 python scripts/report_pair.py --manifest <manifest.json> --markdown <allocated.md> --html <allocated.html> [--previous-manifest <previous.json>] [--markdown-template <filled.md>] [--html-template <filled.html>]
 ```
 
-默认归档目录为当前工作区的 `output/mentat-collaboration-audit`。建议编号、状态、验证结果、标准和证据只能在 manifest 中维护；脚本先验证 MD/HTML 可见内容一致，再排他写入两种文件和 receipt。上一批编号不得消失或静默换义。写后复算三份文件哈希、确认 HTML 自包含，并对大屏做一次视觉检查。原始事件、聚合 JSON、manifest、模板和调试文件仍放在当前会话 `scratch`，除非用户另行指定持久化目标。
+默认归档目录为当前工作区的 `output/mentat-collaboration-audit`。建议编号、状态、验证结果、标准和证据只能在 manifest 中维护；脚本先验证 MD/HTML 可见内容一致，再写入并刷新隐藏暂存文件，排他发布 MD/HTML，最后发布 receipt 作为提交标记。上一批编号不得消失或静默换义。写后复算三份文件哈希、确认 HTML 自包含，并对大屏做一次视觉检查。原始事件、聚合 JSON、manifest、模板和调试文件仍放在当前会话 `scratch`，除非用户另行指定持久化目标。
 
 非托管 Hooks 的配置解析成功不等于正常会话已启用。使用一次性 `--dangerously-bypass-hook-trust` 仅可做已审核脚本的接线探针；正式使用仍需在 `/hooks` 审核当前定义。若网络、模型或专用工具路径阻止真实调用，报告“已安装／待激活”并保留残余风险。

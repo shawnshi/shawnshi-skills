@@ -73,7 +73,9 @@ description: 说明技能做什么，以及用户在什么场景下应使用它�
 | Skill | 构成写入授权的请求 | 封闭目标集合 | 只读退出条件 |
 |---|---|---|---|
 | `mentat-insight-diary` | 生成、更新、记录或写 Mentat 日志 | 权威入口返回的 canonical 季度档案 | 草稿、预览、分析、审计技能或不保存 |
-| `personal-diary-writer` | 仅承接 `mentat-insight-diary` 已确认的上述请求 | 同一 canonical 季度档案 | 个人日记、草稿、预览、自定义路径或外部系统 |
+| `personal-cognitive-auditor` | 生成当前自然周的个人日志审计 | `personal-diary-writer` 权威入口返回的 canonical 季度个人日志内同周审计区块 | 草稿、预览、不保存、其他周期、自定义路径或第二处存储 |
+| `personal-diary-writer` | 承接 `mentat-insight-diary` 的 canonical Mentat 请求，或 `personal-cognitive-auditor` 的当前自然周个人日志审计请求 | 对应权威入口返回的 canonical 季度档案或 canonical 季度个人日志 | 普通个人日记、草稿、预览、不保存、自定义路径或第二处存储 |
+| `personal-health-analysis` | 明确启用 Garmin 自动同步 | 绑定的 GarminDB 本地数据库、一个当前用户计划任务及单一脱敏运行状态文件 | 仅诊断、预览、试运行、不同步、禁用、移除自动同步或自定义第二处存储 |
 | `personal-intelligence-hub` | 生成正式日简报 | 正式新闻文件及新闻目录内的去重索引 | 预览或明确不保存 |
 | `hit-weekly-brief` | 生成正式数字健康周报 | DigitalHealthWeeklyBrief 本地归档 | 草稿、预览或明确不保存 |
 | `hit-industry-radar` | 生成正式医疗行业雷达 | HealthcareIndustryRadar 本地归档 | 草稿、预览或明确不保存 |

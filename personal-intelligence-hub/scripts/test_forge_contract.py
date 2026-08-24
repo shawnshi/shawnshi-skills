@@ -349,16 +349,8 @@ class ForgeContractTests(unittest.TestCase):
             {"run_status": "degraded", "coverage_confidence": "medium", "baseline_status": "degraded"}
         )
         refined.write_text(json.dumps(payload), encoding="utf-8")
-        self._register_reviews(manifest_path, refined)
-
-        with self.assertRaisesRegex(ForgeContractError, "report_date"):
-            forge_briefing(
-                manifest_path,
-                refined,
-                news_dir=self.news,
-                history_path=self.history,
-                update_runtime_state=False,
-            )
+        with self.assertRaisesRegex(RunContractError, "report_date"):
+            self._register_reviews(manifest_path, refined)
 
     def test_forge_rejects_requested_ratio_drift_from_manifest(self):
         manifest_path = self._run_with_baseline()
@@ -619,17 +611,8 @@ class ForgeContractTests(unittest.TestCase):
             {"run_status": "degraded", "coverage_confidence": "medium", "baseline_status": "degraded"}
         )
         refined.write_text(json.dumps(payload), encoding="utf-8")
-        self._register_reviews(manifest_path, refined)
-
-        with self.assertRaisesRegex(ForgeContractError, "cannot precede run creation"):
-            forge_briefing(
-                manifest_path,
-                refined,
-                news_dir=self.news,
-                history_path=self.history,
-                update_runtime_state=False,
-                now=self.now,
-            )
+        with self.assertRaisesRegex(RunContractError, "cannot precede run creation"):
+            self._register_reviews(manifest_path, refined)
 
 
 if __name__ == "__main__":

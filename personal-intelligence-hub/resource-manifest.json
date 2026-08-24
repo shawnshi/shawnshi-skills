@@ -1,11 +1,11 @@
 {
   "schema_version": 3,
   "skill": "personal-intelligence-hub",
-  "generated_at": "2026-08-22T10:19:40+08:00",
+  "generated_at": "2026-08-24T13:03:29+08:00",
   "hash_algorithm": "SHA-256",
   "text_hash_normalization": "LF",
   "skill_md": "SKILL.md",
-  "skill_md_sha256": "26a4bf64025507e3601d292e3c49cb15c26f5288c1e8f897b57bdd5da0ee88b0",
+  "skill_md_sha256": "674b5829b101ab3d9fc72f321959e782e0c812fed5e3104230b9c5b6ea2f3faa",
   "top_level_files": [
     "SKILL.md",
     "requirements.txt"
@@ -13,7 +13,7 @@
   "top_level_file_hashes": [
     {
       "path": "SKILL.md",
-      "sha256": "26a4bf64025507e3601d292e3c49cb15c26f5288c1e8f897b57bdd5da0ee88b0"
+      "sha256": "674b5829b101ab3d9fc72f321959e782e0c812fed5e3104230b9c5b6ea2f3faa"
     },
     {
       "path": "requirements.txt",
@@ -27,7 +27,7 @@
   "resource_directories": [
     {
       "name": "scripts",
-      "file_count": 32
+      "file_count": 34
     },
     {
       "name": "references",
@@ -61,7 +61,7 @@
     },
     {
       "path": "references/prompts/v1_refine_system.md",
-      "sha256": "9a584acd24691c0eae6d9a4b838ee4f5bb063795f986cd074d79ab3caae0feeb"
+      "sha256": "9305f21f3985ca220e9796e72ae9c5f12d1c603633924c869dd897d440b22da4"
     },
     {
       "path": "references/quality_standard.md",
@@ -81,7 +81,7 @@
     },
     {
       "path": "references/subagent_prompts.json",
-      "sha256": "64c3ec35460304b099f12a9423bd6b6509e0899ec043c95d6862a35b9f766cc1"
+      "sha256": "93fea0cc50bf307d0618f4cb4d391b50e33bb1c77262a8e7587bf13762837dde"
     },
     {
       "path": "scripts/adversarial_audit.py",
@@ -101,11 +101,11 @@
     },
     {
       "path": "scripts/briefing_gate.py",
-      "sha256": "e555509a833284c47e0b12a6a756e80afc32d5eae02f41e00b0b936d98f10b94"
+      "sha256": "9791528596835ac20b438572c024c16836d803e88c2e0947da61403e5e5c8557"
     },
     {
       "path": "scripts/fetch_news.py",
-      "sha256": "55d68835fb8396b095372aaa197bd1adb6ae90c3e86291e1b3c03a56115376c9"
+      "sha256": "f7119c12aecc82a3cb47342ccb896aec8c92649986443c4afffc9f252a33179b"
     },
     {
       "path": "scripts/forge.py",
@@ -117,7 +117,7 @@
     },
     {
       "path": "scripts/hub_utils.py",
-      "sha256": "fad15bd768d62a0d406ef59df42f4ec5e463fb5dd25a237503421b769c2369a8"
+      "sha256": "d0e46a32fa334d45e84bfc256acc4cd839963b263560c58b1999952f83210a4d"
     },
     {
       "path": "scripts/mix_policy.py",
@@ -128,16 +128,20 @@
       "sha256": "b91b60922278af6ebc25f9c5706f9432ca2d7313195b9c312be659706b389915"
     },
     {
+      "path": "scripts/review_progress_gate.py",
+      "sha256": "22d46e2cc212b14b45063d07c83502b7d627a8583781e994996ba6641735d8a9"
+    },
+    {
       "path": "scripts/run_contract.py",
-      "sha256": "5e9d8c25af7a81cb9dd78dbf5eedfa01b3804d64d77b362f975849528f1e5549"
+      "sha256": "85a74e32d25a0c537d57e0327f3f697251b1895955ea6ecd5ca65d8a39e88efa"
     },
     {
       "path": "scripts/run_daily.py",
-      "sha256": "d3b0ab69e90cbe86d2d1410e5c617c9725f7276f2e71049743745384c3245a38"
+      "sha256": "fc240b6b72968bdeafec1a160d78f3fcbebf59beb1ff9c3e73ee79d89fafb191"
     },
     {
       "path": "scripts/test_archive_contract.py",
-      "sha256": "5e8f328257ffb76748b7bf176ff3499d0983e1105b6570e647c80322fb6f3648"
+      "sha256": "3b855c95c52561f6c34b7144c6191acea3819647b224b25bab3b641741815c14"
     },
     {
       "path": "scripts/test_archive_transaction.py",
@@ -161,7 +165,7 @@
     },
     {
       "path": "scripts/test_briefing_v13_contract.py",
-      "sha256": "6e036961bc07f8abc7c63988725bec229ce62152aeab50092303ca8fab65713f"
+      "sha256": "9dbad237a3a9f11529ef5ec60af5859215dc1d66b9b63746f983726b819e2051"
     },
     {
       "path": "scripts/test_contract_fixtures.py",
@@ -169,11 +173,11 @@
     },
     {
       "path": "scripts/test_fetch_contract.py",
-      "sha256": "513e1f89eb975bb6b747b38e272cbba06632b3cecb921a25b29291605999f7f1"
+      "sha256": "5acaad7131ab2d717ebda48ffe8e55a0539d4d8c59516cae83185e2ff3394bc7"
     },
     {
       "path": "scripts/test_forge_contract.py",
-      "sha256": "830c8e18c6ca95f96d9e0066989c2bd11a5430eff082bf21fa33e3e9096d61ca"
+      "sha256": "e837594d6beb860f007b9219969686ed223990dd90ae001b4a90365c0b6087e8"
     },
     {
       "path": "scripts/test_history_manager.py",
@@ -189,23 +193,27 @@
     },
     {
       "path": "scripts/test_prompt_contract.py",
-      "sha256": "d8a2db4ed1ef565acb722ed7693dbecf9c00ef93a0df894aa8b92e7c1607fd6d"
+      "sha256": "264948ac64f2de0971b69ffe9a69d6d588e5b894df4e503b3917ad4dd59625b7"
+    },
+    {
+      "path": "scripts/test_review_progress_gate.py",
+      "sha256": "e41eb8af8165a2a1f9dcbd2765f63a32fb916b29dcdba189ae383404d12447c1"
     },
     {
       "path": "scripts/test_run_contract.py",
-      "sha256": "774ee7607e86d19025cb6637ace3aca928f37495363ae7f979e651b652e51b1e"
+      "sha256": "71b262ec1f88b81aedb6f761a315ab07bec03099bfb772eeefd365263ece840c"
     },
     {
       "path": "scripts/test_run_daily.py",
-      "sha256": "237c502be6fe62e1a4c797c870b4bcaa3fec5645ee31f73f4a9e528d85254d52"
+      "sha256": "bb8981daecdd1f912f95f9bfcea8008bc69d8cd02c77e19ad32234561f0997b6"
     },
     {
       "path": "scripts/test_update_index.py",
-      "sha256": "37dc7bfda7d89e42df03f17e93007dfbb9c43206e591e99309b4336f8ba5bd18"
+      "sha256": "35d31961278fce740f80edd3f07432a471c159e348e964c05d9ac5c93464b721"
     },
     {
       "path": "scripts/update_index.py",
-      "sha256": "b403e5bbb76beec85e7b51d44bcb7fe61b2c4ed4e02083b8337bc9420bc85fbb"
+      "sha256": "4a283f7817e294b55306b8f3382a08b39457ab74dbac82f0790d2c1e590b4c32"
     },
     {
       "path": "scripts/validate_refined_json.py",
@@ -253,7 +261,7 @@
       "path": "references/subagent_prompts.json",
       "exists": true,
       "resolved_path": "personal-intelligence-hub/references/subagent_prompts.json",
-      "sha256": "64c3ec35460304b099f12a9423bd6b6509e0899ec043c95d6862a35b9f766cc1"
+      "sha256": "93fea0cc50bf307d0618f4cb4d391b50e33bb1c77262a8e7587bf13762837dde"
     },
     {
       "path": "scripts/await_artifacts.py",
@@ -262,10 +270,16 @@
       "sha256": "bf0a09280f2125301096a9b4c6bc96887c8ad57cd27866f772f0708f3126c779"
     },
     {
+      "path": "scripts/review_progress_gate.py",
+      "exists": true,
+      "resolved_path": "personal-intelligence-hub/scripts/review_progress_gate.py",
+      "sha256": "22d46e2cc212b14b45063d07c83502b7d627a8583781e994996ba6641735d8a9"
+    },
+    {
       "path": "scripts/run_daily.py",
       "exists": true,
       "resolved_path": "personal-intelligence-hub/scripts/run_daily.py",
-      "sha256": "d3b0ab69e90cbe86d2d1410e5c617c9725f7276f2e71049743745384c3245a38"
+      "sha256": "fc240b6b72968bdeafec1a160d78f3fcbebf59beb1ff9c3e73ee79d89fafb191"
     }
   ],
   "missing_declared_dependencies": []

@@ -1,5 +1,5 @@
 {
-  "contract_version": "subagent-prompts/1.5",
+  "contract_version": "subagent-prompts/1.6",
   "invocation_order": [
     "baseline_candidates",
     "gap_assessment",
@@ -11,7 +11,7 @@
   "common_contract": {
     "input_binding": "每个任务必须读取已登记的 supplement_request.json，并原样返回 run_id、request_sha256、baseline_sha256、candidate_pool_sha256、gap_id 和 lane。",
     "evidence_rule": "先处理绑定的基线候选，再只针对缺口补充检索；原始来源优先，事实、来源主张、推断与未知项分开。",
-    "date_rule": "published_at 必须来自来源明确日期或可靠元数据；观察时间不得冒充发布日期；未知日期不得进入正式候选。",
+    "date_rule": "published_at 必须来自来源明确日期或可靠元数据；进入 core 时固定为严格 YYYY-MM-DD，候选为合法 ISO datetime 时调用 run_daily.py normalize-published-at，按其自带时区取日期后规范化；观察时间不得冒充发布日期；未知日期不得进入正式候选。",
     "stop_rule": "达到请求中的 halt_condition、用完 max_turns，或连续检索无增量时停止并返回结构化结果。",
     "empty_rule": "无增量时返回 status=no_increment、空 candidates、非空 executed_queries、至少一条 access_log 和真实 coverage，不得用弱信号补数。",
     "coverage_rule": "coverage 必须逐项等于 access_log 中 verified 与 blocked 的实际计数；每条访问记录必须同时记录 requested_url 与跳转后的 final_url；候选 access_check.requested_url 必须匹配候选 url，并逐字段对应 access_log 中的 verified 记录。",
@@ -42,6 +42,20 @@
         "per_gap_halt_condition"
       ]
     },
+    "review_context_transfer": {
+      "mode": "self_contained_registered_request",
+      "inherit_conversation_history": false,
+      "task_message_fields": [
+        "registered_request_path",
+        "execute_execution_packet"
+      ],
+      "forbidden_redundant_reads": [
+        "full_skill_contract",
+        "full_prompt_config",
+        "full_parent_conversation"
+      ],
+      "authoritative_packet_field": "execution_packet"
+    },
     "parallelism": {
       "max_supplement_workers": 3,
       "overflow_strategy": "launch_fresh_worker_when_first_slot_frees",
@@ -51,7 +65,7 @@
     "publication": {
       "mode": "sibling_temporary_file_then_atomic_replace",
       "published_artifact_is_immutable": true,
-      "routine_progress": "blocker_or_final_only"
+      "routine_progress": "supplement_blocker_or_final; review_milestones_or_blocker_or_final"
     },
     "readiness": {
       "primary_signal": "artifact_ready_control_message_with_path_and_sha256",
@@ -60,7 +74,19 @@
       "watch_timeout_seconds": 10,
       "wait_timeout_seconds": 60,
       "max_unchanged_wait_timeouts": 2,
-      "after_wait_gate": "stop_waiting_until_artifact_or_state_fingerprint_changes",
+      "review_progress_messages": [
+        "review_progress seq=1 phase=input_validated",
+        "review_progress seq=2 phase=lineage_ready"
+      ],
+      "progress_fingerprint": [
+        "latest_event_ordinal",
+        "latest_event_timestamp",
+        "tool_call_count",
+        "review_milestone_seq"
+      ],
+      "progress_gate_command": "python -X utf8 scripts/review_progress_gate.py --state <run_dir>/<review_kind>_progress_state.json --agent-status <status> --event-ordinal <n> --last-event-at <iso_datetime> --tool-call-count <n> --milestone-seq <0|1|2>",
+      "lost_agent_rule": "单凭超时、无正式文件或 running 状态不得判失联。把进度指纹交给 review_progress_gate.py：明确失败/退出、提醒后连续三次静止，或同一里程碑内 15 次增长后提醒且再连续三次没有新里程碑，才可中止或重启。",
+      "after_wait_gate": "stop_waiting_until_artifact_control_message_or_progress_fingerprint_changes",
       "on_exhaustion": "inspect_once_then_send_one_targeted_nudge_or_relaunch_bounded_task",
       "artifact_first": true
     },
@@ -71,6 +97,7 @@
     },
     "review_sequence": [
       "register_semantic_request",
+      "validate_semantic_drafts",
       "publish_semantic_outputs",
       "validate_semantic_and_register_red_team_request",
       "publish_red_team_receipt",
@@ -222,8 +249,9 @@
       "mission": "对基线与补检候选执行统一门槛、事件去重、领域内排序和 L1-L4 推演。",
       "max_turns": 2,
       "halt_condition": "所有最终条目批量完成语义评估、登记证据核验与候选对象哈希到输出条目哈希的映射，或发现阻断问题。",
-      "output_contract": "读取 semantic_review_request.json，生成 briefing core 1.3 和 review-receipt/1.0。回执的 reviewer_kind 固定为 semantic_model，reviewer_id 固定为 SemanticEvaluator；原样返回 request_sha256、challenge、invocation_id，包含 turns_used、halt_condition_met、baseline_sha256、input_bundle_sha256、output_sha256、reviewed_item_hashes、lineage_bindings、逐条 access_log，以及绑定 input_bundle_sha256 和 access_log_sha256 的 data_provenance。",
-      "system_prompt": "先读取已登记的 semantic review request。一次读取各绑定文件，在本地批量完成门禁、去重、排序、血缘和回执构造；日期、URL、access_check 与对象哈希一致时复用登记证据，不得重新联网访问已经 verified 的 URL，只有缺失或冲突时才补充核验。启发式候选只可作为输入，不可直接授权成稿。每个最终条目必须保留 candidate_refs；lineage_bindings 必须把对应 candidate_object_sha256 映射到完整输出条目哈希。最终 access_check.requested_url 必须匹配条目 url，final_url 只记录跳转结果，且 access_check 必须逐字段存在于回执 access_log；每个入选条目使用唯一映射，补充佐证不计入 retained-item access 数。按 requested_ratio 选择，不足时保留供给例外；不得强制把通用技术改写为医疗事件。不要在聊天或工具输出中回显完整输入或产物；自检后原子发布一次。"
+      "output_contract": "读取 semantic_review_request.json，生成 briefing core 1.3 和 review-receipt/1.0。回执的 reviewer_kind 固定为 semantic_model，reviewer_id 固定为 SemanticEvaluator；原样返回 request_sha256、challenge、invocation_id，包含 turns_used、halt_condition_met、baseline_sha256、input_bundle_sha256、output_sha256、reviewed_item_hashes、lineage_bindings、逐条 access_log，以及绑定 input_bundle_sha256 和 access_log_sha256 的 data_provenance。两份 draft 必须先通过 run_daily.py validate-semantic-draft，才可原子提升为最终输出。",
+      "system_prompt": "先读取已登记的 semantic review request，并按 bound_artifacts 校验各输入 SHA-256；完成后发送不含业务内容的 review_progress seq=1 phase=input_validated。历史去重只读取 history_review_slice；history_snapshot 仅作完整归档溯源绑定，不重复载入，旧运行没有切片时才回退。一次读取各所需绑定文件，在本地批量完成门禁、去重、排序、血缘和回执构造；日期、URL、access_check 与对象哈希一致时复用登记证据，不得重新联网访问已经 verified 的 URL，只有缺失或冲突时才补充核验。进入 core 的 published_at 固定为严格 YYYY-MM-DD；候选为合法 ISO datetime 时调用 python -X utf8 scripts/run_daily.py normalize-published-at --value <iso_datetime>，按其自带时区取日期后规范化，不得原样写入 datetime。启发式候选只可作为输入，不可直接授权成稿。每个最终条目必须保留 candidate_refs；lineage_bindings 必须把对应 candidate_object_sha256 映射到完整输出条目哈希。最终 access_check.requested_url 必须匹配条目 url，final_url 只记录跳转结果，且 access_check 必须逐字段存在于回执 access_log；每个入选条目使用唯一映射，补充佐证不计入 retained-item access 数。按 requested_ratio 选择，不足时保留供给例外；不得强制把通用技术改写为医疗事件。完成候选选择、血缘与回执映射后发送 review_progress seq=2 phase=lineage_ready。不要在聊天或工具输出中回显完整输入或产物；先把两份产物写到目标旁唯一 draft，运行 python -X utf8 scripts/run_daily.py validate-semantic-draft --manifest <manifest> --refined <core-draft> --semantic-receipt <receipt-draft>；只有 status=valid 才可分别原子提升并发送 artifact_ready。",
+      "progress_contract": "只发送 input_validated 与 lineage_ready 两个里程碑；消息不得包含候选、结论或回执正文。"
     },
     "RedTeam": {
       "role": "逻辑红队",
@@ -231,7 +259,8 @@
       "max_turns": 2,
       "halt_condition": "全部 L4、重大资讯资格、日期、来源独立性与行动时序完成反证检查，或发现阻断问题。",
       "output_contract": "读取 red_team_review_request.json 并生成 review-receipt/1.0；reviewer_kind 固定为 logic_adversary，reviewer_id 固定为 RedTeam；原样返回 request_sha256、challenge、invocation_id，包含 turns_used、halt_condition_met、baseline_sha256、output_sha256。L4 必须 status=passed 且 reviewed_item_hashes 覆盖请求中的全部 l4_item_hashes；review_mode=no_l4_fast_path 时必须一轮完成、明确 not_required 并返回空覆盖。",
-      "system_prompt": "先读取已登记的 red-team review request，只审查其中 refined_sha256 绑定的 core。review_mode=no_l4_fast_path 时不得联网或扩展事件：一轮内复核绑定哈希、无 L4 事实、major_signal_item_hashes 对应条目的重大资讯资格、日期/来源独立性与行动时序，然后生成 not_required 空覆盖回执。review_mode=l4_full_review 时覆盖全部 l4_item_hashes，优先复用登记证据，仅在证据冲突时补充核验。发现阻断问题时不得返回 passed；不得修改 refined core 后继续沿用旧哈希。"
+      "system_prompt": "先读取已登记的 red-team review request，只审查其中 refined_sha256 绑定的 core；完成输入哈希校验后发送不含业务内容的 review_progress seq=1 phase=input_validated。review_mode=no_l4_fast_path 时不得联网或扩展事件：一轮内复核绑定哈希、无 L4 事实、major_signal_item_hashes 对应条目的重大资讯资格、日期/来源独立性与行动时序，然后生成 not_required 空覆盖回执。review_mode=l4_full_review 时覆盖全部 l4_item_hashes，优先复用登记证据，仅在证据冲突时补充核验。发现阻断问题时不得返回 passed；不得修改 refined core 后继续沿用旧哈希。",
+      "progress_contract": "只发送 input_validated 里程碑；消息不得包含候选、结论或回执正文。"
     }
   }
 }

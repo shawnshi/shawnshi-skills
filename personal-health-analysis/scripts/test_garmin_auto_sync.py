@@ -1,0 +1,140 @@
+import argparse
+import importlib.util
+import json
+import subprocess
+import tempfile
+import unittest
+from datetime import date
+from pathlib import Path
+
+
+MODULE_PATH = Path(__file__).with_name("garmin_auto_sync.py")
+SPEC = importlib.util.spec_from_file_location("garmin_auto_sync", MODULE_PATH)
+auto_sync = importlib.util.module_from_spec(SPEC)
+assert SPEC.loader is not None
+SPEC.loader.exec_module(auto_sync)
+
+
+class GarminAutoSyncTests(unittest.TestCase):
+    def test_window_is_inclusive_and_bounded(self):
+        self.assertEqual(auto_sync.compute_window(date(2026, 8, 23), 7), ("2026-08-17", "2026-08-23"))
+        for invalid in (0, 32):
+            with self.subTest(invalid=invalid):
+                with self.assertRaises(ValueError):
+                    auto_sync.compute_window(date(2026, 8, 23), invalid)
+
+    def test_all_three_capabilities_are_required(self):
+        args = argparse.Namespace(
+            allow_network=True,
+            allow_sync=False,
+            allow_health_data=True,
+            days=7,
+            garmindb_python=__file__,
+            config_dir=str(Path(__file__).parent),
+            scratch_dir=str(Path(__file__).parent),
+            state_output=str(Path(__file__).with_suffix(".state.json")),
+            timeout_seconds=600,
+        )
+        code, state = auto_sync.run_scheduled_sync(args, today=date(2026, 8, 23))
+        self.assertEqual(code, 2)
+        self.assertEqual(state["status"], "capability_denied")
+
+    def test_success_state_contains_coverage_but_no_health_values(self):
+        with tempfile.TemporaryDirectory() as temporary:
+            root = Path(temporary)
+            config = root / "config"
+            config.mkdir()
+            state_path = root / "state" / "status.json"
+            scratch = root / "scratch"
+            calls = []
+
+            def fake_runner(command, timeout):
+                calls.append((command, timeout))
+                if "--plan-output" in command:
+                    Path(command[command.index("--plan-output") + 1]).write_text("{}", encoding="utf-8")
+                    return {"status": "dry_run"}
+                if "sync_health_data.py" in " ".join(command):
+                    return {"status": "sync_completed"}
+                if command[-1] == "live" or command[-1] == "local":
+                    return {"ok": True, "status": "RUNTIME_READY"}
+                return {
+                    "status": "partial",
+                    "data_status": "partial",
+                    "observations": {
+                        "sleep": {"latest_duration_hours": 8.25, "observation_count": 5, "date": "2026-08-22"},
+                        "hrv": {"latest": 48, "observation_count": 5, "date": "2026-08-22"},
+                        "body_battery": {"highest": {"latest": 100, "observation_count": 5, "date": "2026-08-22"}},
+                        "resting_heart_rate": {"latest": 52, "observation_count": 5, "date": "2026-08-22"},
+                        "stress_average": {"latest": 22, "observation_count": 5, "date": "2026-08-22"},
+                    },
+                }
+
+            args = argparse.Namespace(
+                allow_network=True,
+                allow_sync=True,
+                allow_health_data=True,
+                days=7,
+                garmindb_python=__file__,
+                config_dir=str(config),
+                scratch_dir=str(scratch),
+                state_output=str(state_path),
+                timeout_seconds=600,
+            )
+            code, state = auto_sync.run_scheduled_sync(args, runner=fake_runner, today=date(2026, 8, 23))
+            self.assertEqual(code, 0)
+            self.assertEqual(state["status"], "success")
+            self.assertEqual(state["latest_observation_date"], "2026-08-22")
+            persisted = json.loads(state_path.read_text(encoding="utf-8"))
+            serialized = json.dumps(persisted)
+            for sensitive_value in ("8.25", '"latest": 48', '"latest": 52', '"latest": 100'):
+                self.assertNotIn(sensitive_value, serialized)
+            self.assertFalse(persisted["health_values_persisted"])
+            plan_timeout = next(timeout for command, timeout in calls if "--plan-output" in command)
+            self.assertEqual(plan_timeout, auto_sync.PLAN_TIMEOUT_SECONDS)
+
+    def test_plan_timeout_is_sanitized_in_state(self):
+        with tempfile.TemporaryDirectory() as temporary:
+            root = Path(temporary)
+            config = root / "config"
+            config.mkdir()
+            state_path = root / "state" / "status.json"
+            scratch = root / "scratch"
+
+            def fake_runner(command, timeout):
+                if command[-1] == "live":
+                    return {"ok": True, "status": "RUNTIME_READY"}
+                if "--plan-output" in command:
+                    raise subprocess.TimeoutExpired(command, timeout)
+                raise AssertionError("unexpected command")
+
+            args = argparse.Namespace(
+                allow_network=True,
+                allow_sync=True,
+                allow_health_data=True,
+                days=7,
+                garmindb_python=__file__,
+                config_dir=str(config),
+                scratch_dir=str(scratch),
+                state_output=str(state_path),
+                timeout_seconds=600,
+            )
+            code, state = auto_sync.run_scheduled_sync(args, runner=fake_runner, today=date(2026, 8, 23))
+            self.assertEqual(code, 1)
+            self.assertEqual(state["error_code"], "plan_timeout")
+            self.assertNotIn("sync_health_data.py", json.dumps(state))
+
+    def test_installer_uses_limited_interactive_singleton_task(self):
+        installer = Path(__file__).with_name("install_auto_sync_task.ps1").read_text(encoding="utf-8")
+        for marker in (
+            "-LogonType Interactive",
+            "-RunLevel Limited",
+            "-StartWhenAvailable",
+            "-MultipleInstances IgnoreNew",
+            "--allow-network', '--allow-sync', '--allow-health-data",
+        ):
+            with self.subTest(marker=marker):
+                self.assertIn(marker, installer)
+
+
+if __name__ == "__main__":
+    unittest.main()

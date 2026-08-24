@@ -49,6 +49,21 @@ class YfDailySyncContractTests(unittest.TestCase):
         self.assertEqual(result, "ok")
         self.assertEqual(calls, 2)
 
+    def test_retry_stops_after_one_local_cache_permission_failure(self):
+        calls = 0
+
+        def fail():
+            nonlocal calls
+            calls += 1
+            raise PermissionError("unable to open database file")
+
+        with patch("yf.time.sleep") as sleep:
+            with self.assertRaisesRegex(PermissionError, "database"):
+                yf._retry(fail, retries=3, label="quote")
+
+        self.assertEqual(calls, 1)
+        sleep.assert_not_called()
+
     def test_daily_sync_emits_one_batch_audit_and_no_derived_etf_history(self):
         positions = {
             "base_currency": "USD",
@@ -189,6 +204,96 @@ class YfDailySyncContractTests(unittest.TestCase):
             self.assertEqual(resolved, str(cache_dir.resolve()))
             set_location.assert_called_once_with(str(cache_dir.resolve()))
 
+    def test_cache_preflight_rejects_existing_but_unwritable_directory(self):
+        with tempfile.TemporaryDirectory() as tmpdir:
+            cache_dir = Path(tmpdir) / "yfinance"
+            cache_dir.mkdir()
+            with (
+                patch("yf.os.open", side_effect=PermissionError("blocked")),
+                patch("yf.yf.set_tz_cache_location") as set_location,
+                self.assertRaisesRegex(RuntimeError, "yfinance_cache_unwritable"),
+            ):
+                yf.configure_yfinance_cache(str(cache_dir))
+
+        set_location.assert_not_called()
+
+    def test_regular_cli_uses_task_local_cache_default(self):
+        stdout = io.StringIO()
+        argv = ["yf.py", "AAPL", "--info-only", "--json"]
+        with (
+            patch.object(sys, "argv", argv),
+            patch("yf.configure_yfinance_cache", return_value="cache") as cache,
+            patch("yf.resolve_symbol", return_value=None),
+            redirect_stdout(stdout),
+            self.assertRaises(SystemExit),
+        ):
+            yf.main()
+
+        cache.assert_called_once_with(None, task_local_default=True)
+
+    def test_direct_ticker_metadata_is_reused_by_data_fetch(self):
+        info_reads = 0
+        info = {
+            "symbol": "AAPL",
+            "longName": "Apple Inc.",
+            "quoteType": "EQUITY",
+        }
+
+        class FakeTicker:
+            @property
+            def info(self):
+                nonlocal info_reads
+                info_reads += 1
+                return info
+
+        with patch("yf.yf.Ticker", return_value=FakeTicker()):
+            symbol, prefetched = yf.resolve_symbol("AAPL", return_info=True)
+            _, fetched_info, _, errors = yf.get_stock_data(
+                symbol,
+                fetch_price=False,
+                fetch_info=True,
+                fetch_news=False,
+                prefetched_info=prefetched,
+            )
+
+        self.assertEqual(symbol, "AAPL")
+        self.assertIs(fetched_info, info)
+        self.assertEqual(errors, [])
+        self.assertEqual(info_reads, 1)
+
+    def test_search_resolution_does_not_forge_an_empty_metadata_cache(self):
+        info = {
+            "symbol": "AAPL",
+            "longName": "Apple Inc.",
+            "quoteType": "EQUITY",
+        }
+
+        class FakeTicker:
+            @property
+            def info(self):
+                return info
+
+        with (
+            patch("yf.search_symbol", return_value="AAPL"),
+            patch("yf.yf.Ticker", return_value=FakeTicker()) as ticker,
+        ):
+            symbol, prefetched = yf.resolve_symbol(
+                "Apple Incorporated", return_info=True
+            )
+            _, fetched_info, _, errors = yf.get_stock_data(
+                symbol,
+                fetch_price=False,
+                fetch_info=True,
+                fetch_news=False,
+                prefetched_info=prefetched,
+            )
+
+        self.assertEqual(symbol, "AAPL")
+        self.assertIsNone(prefetched)
+        self.assertEqual(fetched_info, info)
+        self.assertEqual(errors, [])
+        ticker.assert_called_once_with("AAPL")
+
     def test_unwritable_cache_fails_before_any_quote_retry(self):
         stdout = io.StringIO()
         argv = ["yf.py", "QQQ", "--daily-sync", "--positions-file", "p.json"]
@@ -207,6 +312,50 @@ class YfDailySyncContractTests(unittest.TestCase):
         self.assertEqual(raised.exception.code, 2)
         self.assertEqual(json.loads(stdout.getvalue())["status"], "failed")
         fetch.assert_not_called()
+
+    def test_unwritable_cache_regular_json_is_parseable_and_skips_fetch(self):
+        stdout = io.StringIO()
+        argv = ["yf.py", "AAPL", "--info-only", "--json"]
+        with (
+            patch.object(sys, "argv", argv),
+            patch(
+                "yf.configure_yfinance_cache",
+                side_effect=RuntimeError("yfinance_cache_unwritable: blocked"),
+            ),
+            patch("yf.resolve_symbol") as resolve,
+            patch("yf.get_stock_data") as fetch,
+            redirect_stdout(stdout),
+            self.assertRaises(SystemExit) as raised,
+        ):
+            yf.main()
+
+        self.assertEqual(raised.exception.code, 2)
+        payload = json.loads(stdout.getvalue())
+        self.assertEqual(payload[0]["status"], "failed")
+        self.assertIn("yfinance_cache_unwritable", payload[0]["error"])
+        resolve.assert_not_called()
+        fetch.assert_not_called()
+
+    def test_empty_info_only_metadata_is_not_reported_as_success(self):
+        stdout = io.StringIO()
+        argv = ["yf.py", "AAPL", "--info-only", "--json"]
+        with (
+            patch.object(sys, "argv", argv),
+            patch("yf.configure_yfinance_cache", return_value="cache"),
+            patch("yf.resolve_symbol", return_value="AAPL"),
+            patch("yf.get_stock_data", return_value=(None, {}, [], [])),
+            redirect_stdout(stdout),
+            self.assertRaises(SystemExit) as raised,
+        ):
+            yf.main()
+
+        self.assertEqual(raised.exception.code, 1)
+        payload = json.loads(stdout.getvalue())
+        self.assertIsNone(payload[0]["data_sources"]["info"])
+        self.assertIn(
+            "Info fetch failed: provider returned empty metadata",
+            payload[0]["errors"],
+        )
 
 
 if __name__ == "__main__":

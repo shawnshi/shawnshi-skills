@@ -79,6 +79,84 @@ class LoadRecordsTests(unittest.TestCase):
         self.assertEqual(result.returncode, 0, result.stderr)
         self.assertEqual(json.loads(result.stdout)["schema_version"], 2)
 
+    def test_non_event_json_is_rejected_with_item_level_coverage(self) -> None:
+        with tempfile.TemporaryDirectory() as temp_dir:
+            root = Path(temp_dir)
+            (root / "events.jsonl").write_text(
+                '{"event_type":"tool_call","root_task_id":"r1"}\n', encoding="utf-8"
+            )
+            (root / "aggregate.json").write_text(
+                json.dumps({"schema_version": 2, "record_count": 1}), encoding="utf-8"
+            )
+
+            records, coverage = engine.load_records(root)
+
+        self.assertEqual(len(records), 1)
+        self.assertEqual(coverage["status"], "partial")
+        self.assertEqual(coverage["skipped_record_count"], 1)
+        self.assertEqual(coverage["issues"][0]["category"], "invalid_event_envelope")
+
+    def test_streaming_aggregate_matches_materialized_aggregate(self) -> None:
+        events = [
+            {
+                "event_type": "wait",
+                "timestamp": "2026-08-23T00:00:00Z",
+                "root_task_id": "r1",
+                "actor_id": "root",
+                "component": "executor",
+                "status": "timeout",
+                "state_version": "same",
+                "duration_ms": 1000,
+            },
+            {
+                "event_type": "skill_load_candidate",
+                "root_task_id": "r1",
+                "actor_id": "root",
+                "context_epoch": "1",
+                "skill_name": "audit",
+                "skill_path_sha256": "a" * 64,
+            },
+            {
+                "event_type": "skill_load",
+                "root_task_id": "r1",
+                "actor_id": "root",
+                "context_epoch": "1",
+                "skill_name": "audit",
+                "skill_path_sha256": "a" * 64,
+                "skill_sha256": "b" * 64,
+                "skill_tokens": 100,
+                "tokenizer": "cl100k_base",
+                "input_tokens": 200,
+            },
+            {
+                "event_type": "write_commit",
+                "root_task_id": "r1",
+                "component": "writer",
+                "status": "ok",
+                "authorization_id": "auth-1",
+                "write_scope_sha256": "scope",
+                "authorization_scope_sha256": "scope",
+            },
+            {"event_type": "context_compacted", "root_task_id": "r1", "context_epoch": "1"},
+            {
+                "event_type": "context_recovered",
+                "root_task_id": "r1",
+                "context_epoch": "1",
+                "required_fields_verified": True,
+            },
+        ]
+        with tempfile.TemporaryDirectory() as temp_dir:
+            source = Path(temp_dir) / "events.jsonl"
+            source.write_text(
+                "".join(json.dumps(event) + "\n" for event in events), encoding="utf-8"
+            )
+            records, coverage = engine.load_records(source)
+
+            expected = engine.aggregate(records, coverage)
+            actual = engine.aggregate_path(source)
+
+        self.assertEqual(actual, expected)
+
 
 class AggregateTests(unittest.TestCase):
     def test_missing_duration_is_excluded_and_p95_uses_nearest_rank(self) -> None:
@@ -136,7 +214,8 @@ class AggregateTests(unittest.TestCase):
                 "actor_id": "root",
                 "context_epoch": "c1",
                 "skill_name": "audit",
-                "skill_sha256": "abc",
+                "skill_path_sha256": "a" * 64,
+                "skill_sha256": "b" * 64,
                 "skill_tokens": 100,
                 "tokenizer": "cl100k_base",
             },
@@ -146,7 +225,8 @@ class AggregateTests(unittest.TestCase):
                 "actor_id": "root",
                 "context_epoch": "c1",
                 "skill_name": "audit",
-                "skill_sha256": "abc",
+                "skill_path_sha256": "a" * 64,
+                "skill_sha256": "b" * 64,
                 "skill_tokens": 100,
                 "tokenizer": "cl100k_base",
             },
@@ -156,7 +236,8 @@ class AggregateTests(unittest.TestCase):
                 "actor_id": "root",
                 "context_epoch": "c2",
                 "skill_name": "audit",
-                "skill_sha256": "abc",
+                "skill_path_sha256": "a" * 64,
+                "skill_sha256": "b" * 64,
                 "skill_tokens": 100,
                 "tokenizer": "cl100k_base",
             },
@@ -272,10 +353,40 @@ class AggregateTests(unittest.TestCase):
         errors = validator.validate_report_payload(report)
         self.assertIn("operational_metrics.retry is missing", errors)
 
+    def test_malformed_skill_receipt_cannot_contribute_tokens_or_match_candidate(self) -> None:
+        records = [
+            {
+                "event_type": "skill_load_candidate",
+                "root_task_id": "r1",
+                "actor_id": "root",
+                "context_epoch": "1",
+                "skill_name": "audit",
+                "skill_path_sha256": "a" * 64,
+            },
+            {
+                "event_type": "skill_load",
+                "root_task_id": "r1",
+                "actor_id": "root",
+                "context_epoch": "1",
+                "skill_name": "audit",
+                "skill_path_sha256": "c" * 64,
+                "skill_tokens": 50,
+                "tokenizer": "cl100k_base",
+            },
+        ]
+
+        metrics = engine.aggregate(records)["operational_metrics"]["skill_load"]
+        self.assertEqual(metrics["loaded_tokens"], 0)
+        self.assertEqual(metrics["token_observation_count"], 0)
+        self.assertEqual(metrics["verified_candidate_count"], 0)
+        self.assertEqual(metrics["receipt_coverage"], 0.0)
+        self.assertEqual(metrics["unverifiable_load_count"], 1)
+
     def test_fail_closed_batch_a_metrics(self) -> None:
         records = [
             {
                 "event_type": "wait",
+                "timestamp": "2026-08-23T00:00:01Z",
                 "root_task_id": "r1",
                 "actor_id": "root",
                 "status": "timeout",
@@ -283,6 +394,7 @@ class AggregateTests(unittest.TestCase):
             },
             {
                 "event_type": "wait",
+                "timestamp": "2026-08-23T00:00:02Z",
                 "root_task_id": "r1",
                 "actor_id": "root",
                 "status": "timeout",
@@ -290,6 +402,7 @@ class AggregateTests(unittest.TestCase):
             },
             {
                 "event_type": "wait",
+                "timestamp": "2026-08-23T00:00:03Z",
                 "root_task_id": "r1",
                 "actor_id": "root",
                 "status": "timeout",
@@ -301,6 +414,7 @@ class AggregateTests(unittest.TestCase):
                 "actor_id": "root",
                 "context_epoch": "1",
                 "skill_name": "audit",
+                "skill_path_sha256": "a" * 64,
             },
             {
                 "event_type": "skill_load",
@@ -308,7 +422,8 @@ class AggregateTests(unittest.TestCase):
                 "actor_id": "root",
                 "context_epoch": "1",
                 "skill_name": "audit",
-                "skill_sha256": "abc",
+                "skill_path_sha256": "a" * 64,
+                "skill_sha256": "b" * 64,
                 "skill_tokens": 10,
                 "tokenizer": "cl100k_base",
             },
@@ -344,6 +459,33 @@ class AggregateTests(unittest.TestCase):
         self.assertEqual(metrics["authorization"]["authorization_evidence_status"], "partial")
         self.assertEqual(metrics["context"]["context_recovery_coverage"], 1.0)
         self.assertEqual(metrics["context"]["semantic_recovery_coverage"], 0.0)
+
+    def test_wait_sequence_metrics_fail_closed_when_same_key_is_out_of_order(self) -> None:
+        records = [
+            {
+                "event_type": "wait",
+                "timestamp": "2026-08-23T00:00:02Z",
+                "root_task_id": "r1",
+                "actor_id": "root",
+                "status": "timeout",
+                "state_version": "same",
+            },
+            {
+                "event_type": "wait",
+                "timestamp": "2026-08-23T00:00:01Z",
+                "root_task_id": "r1",
+                "actor_id": "root",
+                "status": "timeout",
+                "state_version": "same",
+            },
+        ]
+
+        wait = engine.aggregate(records)["operational_metrics"]["wait"]
+
+        self.assertEqual(wait["sequence_order_status"], "invalid")
+        self.assertEqual(wait["out_of_order_sequence_count"], 1)
+        self.assertIsNone(wait["redundant_wait_count"])
+        self.assertIsNone(wait["max_same_state_timeout_streak"])
 
 
 if __name__ == "__main__":

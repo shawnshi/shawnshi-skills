@@ -1,0 +1,14 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "pia-rebalance-proposal-policy-v1",
+  "type": "object",
+  "required": ["schema_version", "decision_scope", "no_trade_band", "minimum_net_expected_benefit", "review_horizon_days"],
+  "properties": {
+    "schema_version": {"const": "pia_rebalance_proposal_policy_v1"},
+    "decision_scope": {"const": "research_only"},
+    "no_trade_band": {"type": "number", "minimum": 0, "maximum": 1},
+    "minimum_net_expected_benefit": {"type": "number", "minimum": 0},
+    "review_horizon_days": {"type": "integer", "minimum": 1}
+  },
+  "additionalProperties": false
+}

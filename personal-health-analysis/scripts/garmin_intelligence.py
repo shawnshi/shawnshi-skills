@@ -342,6 +342,7 @@ def _fetch_local_summary_unverified(
         "heart_rate": ("resting_heart_rate", "max_hr"),
         "stress": (
             "stress_avg",
+            "steps",
             "high_stress_duration",
             "medium_stress_duration",
             "rest_stress_duration",
@@ -502,6 +503,7 @@ def _fetch_local_summary_unverified(
             stress_records,
             (
                 "avg_stress",
+                "steps",
                 "high_stress_duration",
                 "medium_stress_duration",
                 "rest_stress_duration",

@@ -3,7 +3,6 @@ from __future__ import annotations
 import json
 import os
 import re
-import tempfile
 from pathlib import Path
 
 
@@ -18,7 +17,7 @@ NEWS_DIR = Path(
 RUNTIME_DIR = Path(
     os.environ.get(
         "PIH_RUNTIME_DIR",
-        str(Path(tempfile.gettempdir()) / "codex-personal-intelligence-hub" / "runtime"),
+        str(Path.home() / "MEMORY" / "brain" / "personal-intelligence-hub" / "runtime"),
     )
 )
 

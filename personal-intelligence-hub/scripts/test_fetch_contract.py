@@ -19,6 +19,28 @@ class FetchContractTests(unittest.IsolatedAsyncioTestCase):
         self.assertEqual(window["days"], 7)
         self.assertEqual(window["mode"], "calendar_days")
 
+    def test_window_uses_publication_datetime_own_timezone_date(self):
+        window = fetch_news.build_calendar_window(
+            report_date=date(2026, 8, 20),
+            window_days=1,
+            timezone_name="Asia/Shanghai",
+        )
+
+        kept, quarantine, funnel = fetch_news.apply_window_contract(
+            [
+                {
+                    "title": "source-local boundary",
+                    "published_at": "2026-08-20T23:30:00-07:00",
+                }
+            ],
+            window=window,
+            exclude_terms=[],
+        )
+
+        self.assertEqual([item["title"] for item in kept], ["source-local boundary"])
+        self.assertEqual(quarantine, [])
+        self.assertEqual(funnel["within_window"], 1)
+
     def test_unknown_and_invalid_dates_are_quarantined_and_counts_conserve(self):
         window = fetch_news.build_calendar_window(
             report_date=date(2026, 8, 10),
@@ -363,6 +385,122 @@ class BoundedConcurrencyTests(unittest.IsolatedAsyncioTestCase):
             [call.args for call in update_phase.call_args_list],
             [("scan", "running"), ("scan", "failed")],
         )
+
+    async def test_scan_deadline_preserves_completed_sources_and_marks_pending(self):
+        fast_item = {
+            "title": "fast source item",
+            "url": "https://example.org/fast",
+            "published_at": "2026-08-10T00:00:00+00:00",
+            "published_at_source": "feed_entry",
+            "time": "2026-08-10T00:00:00+00:00",
+            "retrieved_at": "2026-08-10T02:00:00+00:00",
+            "raw_desc": "",
+        }
+
+        class Session:
+            def __init__(self, *args, **kwargs):
+                pass
+
+            async def __aenter__(self):
+                return self
+
+            async def __aexit__(self, exc_type, exc, tb):
+                return None
+
+        async def never_finishes(*args, **kwargs):
+            await asyncio.Event().wait()
+
+        saved = []
+        with (
+            patch("fetch_news.ensure_runtime_dirs"),
+            patch("fetch_news.init_blackboard"),
+            patch("fetch_news.update_phase"),
+            patch("fetch_news.record_scan_stats"),
+            patch("fetch_news.load_cache", return_value={}),
+            patch("fetch_news.save_cache"),
+            patch("fetch_news.load_config", return_value=({"filters": {}}, [])),
+            patch("aiohttp.TCPConnector", return_value=object()),
+            patch("aiohttp.ClientSession", Session),
+            patch("fetch_news.fetch_hackernews", side_effect=never_finishes),
+            patch(
+                "fetch_news.fetch_github_trending",
+                AsyncMock(return_value=([fast_item], "OK")),
+            ),
+            patch("fetch_news.fetch_v2ex", AsyncMock(return_value=([], "OK"))),
+            patch("fetch_news.atomic_dump_json", side_effect=lambda path, data: saved.append(data)),
+        ):
+            await fetch_news.scan_all(
+                report_date=date(2026, 8, 10),
+                max_concurrency=2,
+                scan_deadline_seconds=0.02,
+            )
+
+        payload = saved[0]
+        self.assertEqual(payload["coverage"]["source_attempted"], 3)
+        self.assertEqual(payload["coverage"]["source_succeeded"], 2)
+        self.assertEqual(payload["coverage"]["source_failed"], 1)
+        self.assertEqual(
+            [item["title"] for item in payload["items"]],
+            ["fast source item"],
+        )
+        self.assertEqual(payload["metadata"]["timed_out_sources"], 1)
+        self.assertEqual(payload["metadata"]["cancellation_pending_sources"], 0)
+        self.assertEqual(
+            payload["metadata"]["sources"]["Hacker News"]["reason"],
+            "scan_deadline_exceeded",
+        )
+
+    async def test_scan_rejects_invalid_deadline_before_runtime_writes(self):
+        with patch("fetch_news.ensure_runtime_dirs") as ensure_runtime_dirs:
+            with self.assertRaisesRegex(ValueError, "scan_deadline_seconds"):
+                await fetch_news.scan_all(scan_deadline_seconds=0)
+
+        ensure_runtime_dirs.assert_not_called()
+
+    async def test_scan_cancellation_cleanup_has_a_bounded_grace_period(self):
+        class Session:
+            def __init__(self, *args, **kwargs):
+                pass
+
+            async def __aenter__(self):
+                return self
+
+            async def __aexit__(self, exc_type, exc, tb):
+                return None
+
+        async def delays_first_cancellation(*args, **kwargs):
+            try:
+                await asyncio.Event().wait()
+            except asyncio.CancelledError:
+                await asyncio.sleep(1)
+
+        saved = []
+        loop = asyncio.get_running_loop()
+        with (
+            patch("fetch_news.ensure_runtime_dirs"),
+            patch("fetch_news.init_blackboard"),
+            patch("fetch_news.update_phase"),
+            patch("fetch_news.record_scan_stats"),
+            patch("fetch_news.load_cache", return_value={}),
+            patch("fetch_news.save_cache"),
+            patch("fetch_news.load_config", return_value=({"filters": {}}, [])),
+            patch("aiohttp.TCPConnector", return_value=object()),
+            patch("aiohttp.ClientSession", Session),
+            patch("fetch_news.fetch_hackernews", side_effect=delays_first_cancellation),
+            patch("fetch_news.fetch_github_trending", AsyncMock(return_value=([], "OK"))),
+            patch("fetch_news.fetch_v2ex", AsyncMock(return_value=([], "OK"))),
+            patch("fetch_news.atomic_dump_json", side_effect=lambda path, data: saved.append(data)),
+        ):
+            started = loop.time()
+            await fetch_news.scan_all(
+                report_date=date(2026, 8, 10),
+                max_concurrency=2,
+                scan_deadline_seconds=0.02,
+                cancellation_grace_seconds=0.02,
+            )
+
+        self.assertLess(loop.time() - started, 0.5)
+        self.assertEqual(saved[0]["metadata"]["cancellation_pending_sources"], 1)
 
     async def test_scan_output_exposes_coverage_quarantine_and_conserved_funnel(self):
         valid = {

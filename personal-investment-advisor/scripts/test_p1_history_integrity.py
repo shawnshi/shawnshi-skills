@@ -15,7 +15,7 @@ if str(SCRIPT_DIR) not in sys.path:
     sys.path.insert(0, str(SCRIPT_DIR))
 
 from history_integrity_gate import evaluate_history_integrity, main as history_gate_main
-from yf import history_integrity_decision, main as yf_main
+from yf import detect_market_type, history_integrity_decision, main as yf_main
 
 
 def event(factor="2:1"):
@@ -223,6 +223,22 @@ class HistoryIntegrityContractTests(unittest.TestCase):
         self.assertEqual(report["status"], "not_applicable")
         self.assertEqual(report["detail_status"], "verified_non_etf_identity")
         self.assertTrue(report["technical_metrics_allowed"])
+
+    def test_currency_history_uses_unambiguous_provider_identity(self):
+        report = history_integrity_decision(
+            "CNY=X",
+            {},
+            None,
+            {},
+            history_frame(),
+        )
+        self.assertEqual(report["status"], "not_applicable")
+        self.assertEqual(
+            report["detail_status"],
+            "verified_non_etf_provider_identity",
+        )
+        self.assertTrue(report["technical_metrics_allowed"])
+        self.assertEqual(detect_market_type("CNY=X"), "外汇")
 
     def test_price_only_empty_identity_fails_closed(self):
         history = history_frame()

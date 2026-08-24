@@ -9,7 +9,7 @@ Yahoo Finance Data Retrieval Engine
 !!! update this header AND SKILL.md usage examples.
 """
 
-__version__ = "2.2.1"
+__version__ = "2.2.2"
 
 # /// script
 # dependencies = [
@@ -92,6 +92,11 @@ PERMANENT_TRANSPORT_ERROR_MARKERS = (
     "unsupported protocol",
     "invalid url",
     "no host supplied",
+    "unable to open database file",
+    "permission denied",
+    "access is denied",
+    "read-only file system",
+    "yfinance_cache_unwritable",
 )
 SYSTEMIC_BATCH_ERROR_MARKERS = (
     "invalid library",
@@ -112,15 +117,36 @@ def configure_yfinance_cache(
     if not selected:
         return None
     resolved = Path(selected).expanduser().resolve()
+    probe_path = resolved / f".pia-cache-write-probe-{os.getpid()}-{time.time_ns()}"
+    descriptor = None
     try:
         resolved.mkdir(parents=True, exist_ok=True)
-    except OSError as exc:
+        descriptor = os.open(
+            str(probe_path),
+            os.O_CREAT | os.O_EXCL | os.O_WRONLY,
+        )
+        os.close(descriptor)
+        descriptor = None
+        probe_path.unlink()
+        yf.set_tz_cache_location(str(resolved))
+    except Exception as exc:
         raise RuntimeError(f"yfinance_cache_unwritable: {resolved}: {exc}") from exc
-    yf.set_tz_cache_location(str(resolved))
+    finally:
+        if descriptor is not None:
+            try:
+                os.close(descriptor)
+            except OSError:
+                pass
+        try:
+            probe_path.unlink(missing_ok=True)
+        except OSError:
+            pass
     return str(resolved)
 
 
 def detect_market_type(symbol: str) -> str:
+    if symbol.endswith("=X"):
+        return "外汇"
     if symbol.endswith((".SS", ".SZ", ".BJ")):
         return "A股"
     if symbol.endswith(".HK"):
@@ -145,6 +171,16 @@ def _http_status_from_exception(exc: Exception) -> Optional[int]:
 
 def _is_retryable_error(exc: Exception) -> bool:
     """Return False when repeating the same request cannot repair the failure."""
+    if isinstance(
+        exc,
+        (
+            PermissionError,
+            FileNotFoundError,
+            IsADirectoryError,
+            NotADirectoryError,
+        ),
+    ):
+        return False
     status = _http_status_from_exception(exc)
     if status is not None:
         return status in {408, 425, 429} or 500 <= status <= 599
@@ -203,12 +239,18 @@ def search_symbol(query: str) -> Optional[str]:
     return None
 
 
-def resolve_symbol(query: str) -> Optional[str]:
+def resolve_symbol(
+    query: str,
+    *,
+    return_info: bool = False,
+) -> Optional[str] | Tuple[Optional[str], Optional[Dict[str, Any]]]:
     """Resolve a query to a ticker symbol.
 
     If the query looks like a ticker (e.g. AAPL), validate it directly first
-    to avoid an unnecessary search API call. Falls back to search API.
+    to avoid an unnecessary search API call. Callers may reuse the returned
+    metadata so the validation request is not repeated by the data fetch.
     """
+    resolved_info: Optional[Dict[str, Any]] = None
     if _is_likely_ticker(query):
         # Fast path: try direct validation
         try:
@@ -216,12 +258,14 @@ def resolve_symbol(query: str) -> Optional[str]:
             info = ticker.info
             # If we get a valid longName or shortName, it's a real ticker
             if info and (info.get("longName") or info.get("shortName")):
-                return query
+                resolved_info = info
+                return (query, resolved_info) if return_info else query
         except Exception:
             pass  # Fall through to search
 
     # Slow path: use search API
-    return search_symbol(query)
+    symbol = search_symbol(query)
+    return (symbol, resolved_info) if return_info else symbol
 
 
 def get_stock_data(
@@ -234,6 +278,7 @@ def get_stock_data(
     fetch_info: bool = True,
     fetch_news: bool = True,
     a_share_history_source: str = "yahoo",
+    prefetched_info: Optional[Dict[str, Any]] = None,
 ) -> Tuple[Any, Dict, List, List[str]]:
     """Fetch stock data with granular control. Returns (history, info, news, errors)."""
     ticker = yf.Ticker(symbol)
@@ -310,13 +355,16 @@ def get_stock_data(
             console.print(f"[red]✗ Price history for {symbol}: {e}[/red]")
 
     if fetch_info:
-        try:
-            def _fetch_info():
-                return ticker.info
-            info = _retry(_fetch_info, label=f"info for {symbol}")
-        except Exception as e:
-            errors.append(f"Info fetch failed: {e}")
-            console.print(f"[red]✗ Info for {symbol}: {e}[/red]")
+        if prefetched_info is not None:
+            info = prefetched_info
+        else:
+            try:
+                def _fetch_info():
+                    return ticker.info
+                info = _retry(_fetch_info, label=f"info for {symbol}")
+            except Exception as e:
+                errors.append(f"Info fetch failed: {e}")
+                console.print(f"[red]✗ Info for {symbol}: {e}[/red]")
 
     if fetch_news:
         try:
@@ -667,6 +715,19 @@ def history_integrity_decision(
         "ETF" in provider_identity or "交易型开放式" in provider_identity
     )
     provider_identifies_etf = provider_kind == "ETF" or provider_name_identifies_etf
+    if (
+        expected_kind is None
+        and normalized_symbol.endswith("=X")
+        and provider_kind in {None, "CURRENCY"}
+    ):
+        return {
+            "status": "not_applicable",
+            "detail_status": "verified_non_etf_provider_identity",
+            "technical_metrics_allowed": True,
+            "symbol": normalized_symbol or None,
+            "errors": [],
+            "event_mismatches": {},
+        }
     if expected_kind is None and not provider_identifies_etf:
         return {
             "status": "insufficient_evidence",
@@ -804,7 +865,29 @@ def _provider_asset_kind(quote_type: Any) -> Optional[str]:
         "MUTUALFUND": "FUND",
         "FUND": "FUND",
         "INDEX": "INDEX",
+        "CURRENCY": "CURRENCY",
     }.get(normalized)
+
+
+def _history_suppression_gap(report: Dict[str, Any]) -> str:
+    detail = str(report.get("detail_status") or "")
+    if detail in {
+        "asset_identity_unknown",
+        "provider_asset_identity_unknown",
+        "asset_identity_conflict",
+    }:
+        return "证券资产身份未闭合，已停止输出历史衍生技术指标"
+    if detail in {
+        "history_integrity_packet_missing",
+        "corporate_action_conflict",
+        "history_series_missing",
+        "history_series_date_invalid",
+        "history_series_binding_mismatch",
+        "history_integrity_symbol_mismatch",
+        "coverage_incomplete",
+    }:
+        return "ETF复权/公司行动一致性未验证，已停止输出历史衍生技术指标"
+    return "历史完整性门未通过，已停止输出历史衍生技术指标"
 
 
 def _quote_contract_report(
@@ -1328,7 +1411,8 @@ def main():
         "--cache-dir",
         help=(
             "Writable yfinance cache directory. PIA_YFINANCE_CACHE_DIR is used when "
-            "set; Daily Sync otherwise defaults to ./tmp/pia-yfinance-cache."
+            "set; otherwise all network modes default to "
+            "./tmp/pia-yfinance-cache."
         ),
     )
     parser.add_argument(
@@ -1394,7 +1478,7 @@ def main():
     try:
         configure_yfinance_cache(
             args.cache_dir,
-            task_local_default=args.daily_sync,
+            task_local_default=True,
         )
     except RuntimeError as exc:
         if args.daily_sync:
@@ -1406,6 +1490,21 @@ def main():
                         "portfolio_batch_audit": None,
                         "errors": [str(exc)],
                     },
+                    indent=2,
+                )
+            )
+            raise SystemExit(2)
+        if args.json:
+            print(
+                json.dumps(
+                    [
+                        {
+                            "query": query,
+                            "status": "failed",
+                            "error": str(exc),
+                        }
+                        for query in args.queries
+                    ],
                     indent=2,
                 )
             )
@@ -1481,10 +1580,17 @@ def main():
         # identity contract, so re-querying the search/metadata endpoints would
         # duplicate network calls and could remap a trusted code unexpectedly.
         normalized_query = normalize_symbol(query)
+        prefetched_info = None
         if args.daily_sync and normalized_query in expected_position_metadata:
             symbol = normalized_query
         else:
-            symbol = resolve_symbol(query)
+            resolution = resolve_symbol(query, return_info=True)
+            if isinstance(resolution, tuple):
+                symbol, prefetched_info = resolution
+            else:
+                # Preserve compatibility with callers and test doubles that
+                # implement the legacy string-only resolver contract.
+                symbol = resolution
 
         if not symbol:
             has_failure = True
@@ -1514,7 +1620,20 @@ def main():
                 fetch_info=fetch_info,
                 fetch_news=fetch_news,
                 a_share_history_source=args.a_share_history_source,
+                prefetched_info=prefetched_info,
             )
+
+        if fetch_info and not info:
+            currency_history_is_usable = bool(
+                fetch_price
+                and symbol.endswith("=X")
+                and history is not None
+                and not history.empty
+            )
+            if not currency_history_is_usable:
+                fetch_errors.append(
+                    "Info fetch failed: provider returned empty metadata"
+                )
 
         if fetch_errors:
             has_failure = True
@@ -1584,7 +1703,7 @@ def main():
                         if history is not None
                         else None
                     ),
-                    "info": "Yahoo Finance",
+                    "info": "Yahoo Finance" if info else None,
                     "news": "Yahoo Finance",
                     "enhanced_metrics": None,
                 },
@@ -1688,7 +1807,7 @@ def main():
                 elif not history_integrity["technical_metrics_allowed"]:
                     result_entry["history_suppressed"] = True
                     result_entry["data_gaps"].append(
-                        "ETF复权/公司行动一致性未验证，已停止输出历史衍生技术指标"
+                        _history_suppression_gap(history_integrity)
                     )
                         
                 result_entry["summary"] = summary

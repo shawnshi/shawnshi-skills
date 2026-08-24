@@ -185,6 +185,8 @@
     .interpret-card li + li { margin-top:6px; }
     .summary-text { margin-top:12px; color:var(--slate); white-space:pre-wrap; }
     .summary-text p + p { margin-top:10px; }
+    .chart-note { margin:8px 0 0; color:var(--muted); font-size:13px; }
+    .missing-note { color:#fbbf24; }
     .load-error { border-color:#7c6f64; color:#f1e6d8; }
     .footer { padding:12px 4px 0; color:var(--muted); font-size:12px; }
     .footer p + p { margin-top:4px; }
@@ -323,6 +325,18 @@
       <details><summary>查看 Body Battery 数据表</summary><div id="battery-table" class="table-scroll"></div></details>
     </section>
 
+    <section class="panel">
+      <div class="panel-head"><h2>每日步数趋势</h2><span class="badge">设备记录 · 步</span></div>
+      <figure><div id="steps-chart" class="chart"></div><figcaption>仅展示设备记录，不使用统一步数阈值；空白日不按零处理。</figcaption></figure>
+      <details><summary>查看每日步数数据表</summary><div id="steps-table" class="table-scroll"></div></details>
+    </section>
+
+    <section class="panel">
+      <div class="panel-head"><h2>Garmin 日均压力趋势</h2><span class="badge">厂商派生 · 分数</span></div>
+      <figure><div id="stress-chart" class="chart"></div><figcaption>仅展示 Garmin 厂商派生日均压力，不自行合成压力或准备度分数。</figcaption></figure>
+      <details><summary>查看日均压力数据表</summary><div id="stress-table" class="table-scroll"></div></details>
+    </section>
+
     <section id="sleep-score-section" class="panel wide">
       <div class="panel-head"><h2>睡眠评分观测</h2><span class="badge">设备评分</span></div>
       <p id="sleep-score-status" class="meta">等待载荷验证</p>
@@ -367,11 +381,12 @@
     </section>
 
     <section class="panel interpretation">
-      <h2>解释边界与下一步</h2>
+      <h2>整体评价与后续建议</h2>
+      <h3>整体评价</h3>
       <div id="summary-text" class="summary-text"></div>
       <div class="interpret-grid">
         <article class="interpret-card"><h3>尚不知道什么</h3><ul id="summary-unknowns"></ul></article>
-        <article class="interpret-card"><h3>可选核实事项</h3><ul id="summary-considerations"></ul></article>
+        <article class="interpret-card"><h3>后续建议（非处方）</h3><ul id="summary-considerations"></ul></article>
         <article class="interpret-card"><h3>何时升级处理</h3><ul id="summary-escalation"></ul></article>
       </div>
     </section>
@@ -463,6 +478,14 @@
     const nodes=items.map(item=>{const wrapper=document.createElement('span');wrapper.className='legend-item';const mark=document.createElement('span');mark.className=item.box?'legend-box':`legend-line${item.dashed?' dashed':''}`;mark.style.color=item.color;const label=document.createElement('span');label.textContent=item.label;wrapper.append(mark,label);return wrapper;});
     container.replaceChildren(...nodes);
   }
+  function trailingMissingNotice(dates,definitions){
+    if(!dates.length)return null;
+    const index=dates.length-1;
+    const missing=definitions.every(item=>finiteNumber((item.values||[])[index])===null);
+    const priorObserved=definitions.some(item=>(item.values||[]).slice(0,index).some(value=>finiteNumber(value)!==null));
+    if(!missing||!priorObserved)return null;
+    const note=document.createElement('p');note.className='chart-note missing-note';note.textContent=`${dates[index]} 当日未同步；图表保留此前已同步观测。`;return note;
+  }
   function renderLineChart(targetId,dates,definitions,options){
     const container=byId(targetId),observed=definitions.flatMap(item=>(item.values||[]).map(finiteNumber).filter(value=>value!==null));
     if(!dates.length||!observed.length){emptyState(container,'无可绘制观测');return;}
@@ -477,7 +500,7 @@
     if(finiteNumber(options.referenceValue)!==null){const ref=y(finiteNumber(options.referenceValue));svg.append(svgNode('line',{x1:left,y1:ref,x2:width-right,y2:ref,stroke:'#cbd5e1','stroke-width':1.5,'stroke-dasharray':'7 5'}));}
     definitions.forEach(definition=>{let segment=[];const flush=()=>{if(segment.length){svg.append(svgNode('polyline',{points:segment.join(' '),fill:'none',stroke:definition.color,'stroke-width':3,'stroke-dasharray':definition.dashed?'8 5':''}));segment=[];}};dates.forEach((_day,index)=>{const value=finiteNumber(definition.values[index]);if(value===null){flush();return;}segment.push(`${x(index)},${y(value)}`);svg.append(svgNode('circle',{cx:x(index),cy:y(value),r:3,fill:definition.color,stroke:'#0f172a','stroke-width':1}));});flush();});
     [0,Math.floor((dates.length-1)/2),dates.length-1].filter((value,index,array)=>array.indexOf(value)===index).forEach(index=>appendSvgText(svg,dates[index],{x:x(index),y:height-12,class:'axis-label','text-anchor':'middle'}));
-    container.replaceChildren(svg);
+    const notice=trailingMissingNotice(dates,definitions);container.replaceChildren(...(notice?[svg,notice]:[svg]));
   }
 
   function renderSleepChart(series){
@@ -492,7 +515,7 @@
     const stages=[{values:deep,color:'#818cf8'},{values:rem,color:'#c4b5fd'},{values:light,color:'#94a3b8'}];
     dates.forEach((_day,index)=>{if(completeSums[index]===null)return;let accumulated=0;stages.forEach(stage=>{const numeric=finiteNumber(stage.values[index]);const topY=y(accumulated+numeric),bottomY=y(accumulated);svg.append(svgNode('rect',{x:left+index*band+(band-bar)/2,y:topY,width:bar,height:Math.max(0,bottomY-topY),fill:stage.color}));accumulated+=numeric;});});
     let segment=[];const flush=()=>{if(segment.length){svg.append(svgNode('polyline',{points:segment.join(' '),fill:'none',stroke:'#f8fafc','stroke-width':2.5}));segment=[];}};dates.forEach((_day,index)=>{const value=finiteNumber(total[index]);if(value===null){flush();return;}segment.push(`${left+index*band+band/2},${y(value)}`);});flush();
-    [0,Math.floor((dates.length-1)/2),dates.length-1].filter((value,index,array)=>array.indexOf(value)===index).forEach(index=>appendSvgText(svg,dates[index],{x:left+index*band+band/2,y:height-12,class:'axis-label','text-anchor':'middle'}));container.replaceChildren(svg);
+    [0,Math.floor((dates.length-1)/2),dates.length-1].filter((value,index,array)=>array.indexOf(value)===index).forEach(index=>appendSvgText(svg,dates[index],{x:left+index*band+band/2,y:height-12,class:'axis-label','text-anchor':'middle'}));const notice=trailingMissingNotice(dates,[{values:total}]);container.replaceChildren(...(notice?[svg,notice]:[svg]));
   }
 
   function renderDataTable(targetId,captionText,dates,columns){
@@ -511,7 +534,7 @@
   }
 
   function renderCoverage(data){
-    const names={rhr:'静息心率',hrv:'HRV',sleep_total:'睡眠总时长',sleep_stages:'睡眠阶段',sleep_respiration:'夜间呼吸率',sleep_spo2:'夜间 Pulse Ox',body_battery:'Body Battery',stress:'Garmin 压力',sleep_score:'睡眠评分'},body=byId('coverage-table-body');
+    const names={rhr:'静息心率',hrv:'HRV',sleep_total:'睡眠总时长',sleep_stages:'睡眠阶段',sleep_respiration:'夜间呼吸率',sleep_spo2:'夜间 Pulse Ox',body_battery:'Body Battery',steps:'每日步数',stress:'Garmin 压力',sleep_score:'睡眠评分'},body=byId('coverage-table-body');
     const rows=Object.entries(names).map(([key,label])=>{const entry=(data.coverage||{})[key]||{},row=document.createElement('tr');[label,coverageLabel(entry),`${entry.observed_days??0}/${entry.requested_days??0}`,String(entry.missing_days??0),String(entry.observed_zero_days??0),entry.longest_missing_streak_days??'—',entry.current_missing_streak_days??'—',entry.last_date||'—'].forEach((value,index)=>{const cell=document.createElement(index===0?'th':'td');if(index===0)cell.setAttribute('scope','row');cell.textContent=value;row.append(cell);});return row;});body.replaceChildren(...rows);
   }
   function renderAnalysisReadiness(data){
@@ -535,10 +558,12 @@
     renderLineChart('hrv-chart',dates,[{values:series.hrv_ms||[],color:'#c4b5fd'}],{title:'HRV 趋势',description:'按源日期排列的夜间 HRV，单位为毫秒。',unit:'ms',referenceValue:baseline.qualified?(baseline.hrv||{}).baseline:null});
     renderSleepChart(series);
     renderLineChart('battery-chart',dates,[{values:series.body_battery_high||[],color:'#60a5fa'},{values:series.body_battery_low||[],color:'#cbd5e1',dashed:true}],{title:'Body Battery 最高与最低值',description:'按源日期排列的 Garmin Body Battery 最高与最低值，固定纵轴为零到一百。',unit:'0–100',fixedDomain:[0,100]});
+    renderLineChart('steps-chart',dates,[{values:series.steps||[],color:'#fb923c'}],{title:'每日步数趋势',description:'按源日期排列的设备步数记录；缺失日不按零绘制。',unit:'步'});
+    renderLineChart('stress-chart',dates,[{values:series.stress_avg||[],color:'#f472b6'}],{title:'Garmin 日均压力趋势',description:'按源日期排列的 Garmin 厂商派生日均压力。',unit:'分数',fixedDomain:[0,100]});
     renderLineChart('respiration-chart',dates,[{values:series.sleep_respiration_brpm||[],color:'#34d399'}],{title:'夜间呼吸率趋势',description:'按源日期排列的睡眠期平均呼吸率设备估计。',unit:'brpm'});
     renderLineChart('spo2-chart',dates,[{values:series.sleep_spo2_pct||[],color:'#fbbf24'}],{title:'夜间 Pulse Ox 趋势',description:'按源日期排列的睡眠期平均 Pulse Ox 消费级估计。',unit:'%',fixedDomain:[0,100]});
     renderLegend('sleep-legend',[{label:'深睡',color:'#818cf8',box:true},{label:'REM',color:'#c4b5fd',box:true},{label:'浅睡',color:'#94a3b8',box:true},{label:'总时长',color:'#f8fafc'}]);renderLegend('battery-legend',[{label:'最高值',color:'#60a5fa'},{label:'最低值',color:'#cbd5e1',dashed:true}]);
-    renderDataTable('rhr-table','静息心率逐日观测',dates,[{label:'静息心率',unit:'bpm',values:series.rhr_bpm||[]}]);renderDataTable('hrv-table','HRV 逐日观测',dates,[{label:'HRV',unit:'ms',values:series.hrv_ms||[]}]);renderDataTable('sleep-table','睡眠逐日观测',dates,[{label:'总时长',unit:'h',values:series.sleep_total_h||[]},{label:'深睡',unit:'h',values:series.sleep_deep_h||[]},{label:'REM',unit:'h',values:series.sleep_rem_h||[]},{label:'浅睡',unit:'h',values:series.sleep_light_h||[]}]);renderDataTable('battery-table','Body Battery 逐日观测',dates,[{label:'最高值',values:series.body_battery_high||[]},{label:'最低值',values:series.body_battery_low||[]}]);renderDataTable('respiration-table','夜间呼吸率逐日观测',dates,[{label:'呼吸率',unit:'brpm',values:series.sleep_respiration_brpm||[]}]);renderDataTable('spo2-table','夜间 Pulse Ox 逐日观测',dates,[{label:'Pulse Ox',unit:'%',values:series.sleep_spo2_pct||[]}]);
+    renderDataTable('rhr-table','静息心率逐日观测',dates,[{label:'静息心率',unit:'bpm',values:series.rhr_bpm||[]}]);renderDataTable('hrv-table','HRV 逐日观测',dates,[{label:'HRV',unit:'ms',values:series.hrv_ms||[]}]);renderDataTable('sleep-table','睡眠逐日观测',dates,[{label:'总时长',unit:'h',values:series.sleep_total_h||[]},{label:'深睡',unit:'h',values:series.sleep_deep_h||[]},{label:'REM',unit:'h',values:series.sleep_rem_h||[]},{label:'浅睡',unit:'h',values:series.sleep_light_h||[]}]);renderDataTable('battery-table','Body Battery 逐日观测',dates,[{label:'最高值',values:series.body_battery_high||[]},{label:'最低值',values:series.body_battery_low||[]}]);renderDataTable('steps-table','每日步数逐日观测',dates,[{label:'步数',unit:'步',values:series.steps||[]}]);renderDataTable('stress-table','Garmin 日均压力逐日观测',dates,[{label:'日均压力',unit:'分数',values:series.stress_avg||[]}]);renderDataTable('respiration-table','夜间呼吸率逐日观测',dates,[{label:'呼吸率',unit:'brpm',values:series.sleep_respiration_brpm||[]}]);renderDataTable('spo2-table','夜间 Pulse Ox 逐日观测',dates,[{label:'Pulse Ox',unit:'%',values:series.sleep_spo2_pct||[]}]);
     renderHeatmap(data);renderAnalysisReadiness(data);renderCoverage(data);renderNarrative(data);
   }
   window.addEventListener('DOMContentLoaded',renderDashboard);

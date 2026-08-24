@@ -138,6 +138,8 @@ class SkillContractTests(unittest.TestCase):
         self.assertIn("--components", combined)
         self.assertIn("no_data", combined)
         self.assertIn("--allow-network", combined)
+        self.assertIn("一次实时只读回退", combined)
+        self.assertIn("同一窗口和组件", combined)
         self.assertNotIn("本地读取失败不得自动切换到实时接口", combined)
 
     def test_explicit_skill_invocation_defaults_health_read_but_not_side_effects(self):
@@ -152,18 +154,25 @@ class SkillContractTests(unittest.TestCase):
         self.assertIn("显式调用本技能即授权", combined)
         self.assertIn("默认最近 7 天", combined)
         self.assertIn(
-            "sleep,hrv,body_battery,heart_rate,activities,stress,training_load_series",
+            "sleep,hrv,body_battery,heart_rate,stress",
             combined,
         )
+        self.assertIn("`activities` 与 `training_load_series`", combined)
+        self.assertIn("明确请求", combined)
         self.assertIn("自动附加 `--allow-health-data`", combined)
+        self.assertIn("自动附加 `--allow-network`", combined)
+        self.assertIn("本地 `no_data` 后、同窗口、同组件", skill_text)
         for independent_grant in (
-            "--allow-network",
             "--allow-token-write",
             "--allow-sync",
             "--allow-download",
         ):
             self.assertIn(independent_grant, combined)
-        self.assertIn("allow_implicit_invocation: false", (SKILL_ROOT / "agents" / "openai.yaml").read_text(encoding="utf-8"))
+        metadata = (SKILL_ROOT / "agents" / "openai.yaml").read_text(encoding="utf-8")
+        self.assertIn("after explicit local no_data automatically use one bounded live read-only fallback", metadata)
+        self.assertIn("Ask separately before login, token writes, sync, downloads", metadata)
+        self.assertNotIn("ask separately before network", metadata)
+        self.assertIn("allow_implicit_invocation: false", metadata)
 
     def test_sync_contract_requires_plan_and_explicit_runner(self):
         skill_text = (SKILL_ROOT / "SKILL.md").read_text(encoding="utf-8")

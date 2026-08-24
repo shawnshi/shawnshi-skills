@@ -3,6 +3,9 @@ import hashlib
 import json
 import math
 import os
+import tempfile
+import time
+from contextlib import contextmanager
 from datetime import datetime
 from pathlib import Path
 from typing import Any, Dict, List
@@ -22,6 +25,77 @@ def resolve_journal_path(path: str | None = None) -> Path:
     if configured:
         return Path(configured).expanduser()
     raise ValueError("journal path is required; pass --journal-path or set PIA_ADVICE_JOURNAL")
+
+
+def _atomic_write_text(path: Path, content: str) -> None:
+    descriptor, temporary_name = tempfile.mkstemp(
+        prefix=f".{path.name}.", suffix=".tmp", dir=str(path.parent), text=True
+    )
+    temporary_path = Path(temporary_name)
+    try:
+        with os.fdopen(descriptor, "w", encoding="utf-8", newline="\n") as handle:
+            handle.write(content)
+            handle.flush()
+            os.fsync(handle.fileno())
+        os.replace(temporary_path, path)
+    finally:
+        try:
+            temporary_path.unlink(missing_ok=True)
+        except OSError:
+            pass
+
+
+@contextmanager
+def _journal_lock(path: Path, timeout_seconds: float = 5.0):
+    lock_path = path.with_name(f".{path.name}.lock")
+    handle = lock_path.open("a+b")
+    deadline = time.monotonic() + timeout_seconds
+    acquired = False
+    try:
+        if os.name == "nt":
+            import msvcrt
+
+            handle.seek(0, os.SEEK_END)
+            if handle.tell() == 0:
+                handle.write(b"\0")
+                handle.flush()
+            while not acquired:
+                try:
+                    handle.seek(0)
+                    msvcrt.locking(handle.fileno(), msvcrt.LK_NBLCK, 1)
+                    acquired = True
+                except OSError as exc:
+                    if time.monotonic() >= deadline:
+                        raise TimeoutError(
+                            f"advice journal is locked by another writer: {path}"
+                        ) from exc
+                    time.sleep(0.05)
+        else:
+            import fcntl
+
+            while not acquired:
+                try:
+                    fcntl.flock(handle.fileno(), fcntl.LOCK_EX | fcntl.LOCK_NB)
+                    acquired = True
+                except OSError as exc:
+                    if time.monotonic() >= deadline:
+                        raise TimeoutError(
+                            f"advice journal is locked by another writer: {path}"
+                        ) from exc
+                    time.sleep(0.05)
+        yield
+    finally:
+        if acquired:
+            if os.name == "nt":
+                import msvcrt
+
+                handle.seek(0)
+                msvcrt.locking(handle.fileno(), msvcrt.LK_UNLCK, 1)
+            else:
+                import fcntl
+
+                fcntl.flock(handle.fileno(), fcntl.LOCK_UN)
+        handle.close()
 
 
 def _safe_get(data: Dict[str, Any], *keys: str, default=None):
@@ -144,8 +218,11 @@ def append_entry(data: Dict[str, Any], archive_path: str | None = None, journal_
     path = resolve_journal_path(journal_path)
     path.parent.mkdir(parents=True, exist_ok=True)
     entry = build_journal_entry(data, archive_path=archive_path)
-    with path.open("a", encoding="utf-8") as f:
-        f.write(json.dumps(entry, ensure_ascii=False) + "\n")
+    with _journal_lock(path):
+        with path.open("a", encoding="utf-8", newline="\n") as f:
+            f.write(json.dumps(entry, ensure_ascii=False) + "\n")
+            f.flush()
+            os.fsync(f.fileno())
     return path
 
 
@@ -189,11 +266,14 @@ def update_outcome(
 
 def batch_update_outcomes(updates: Dict[str, Dict[str, Any]], journal_path: str | None = None) -> Path:
     path = resolve_journal_path(journal_path)
-    entries = load_entries(str(path))
-    updated_count = 0
-    for entry in entries:
-        eid = entry.get("entry_id")
-        if eid in updates:
+    path.parent.mkdir(parents=True, exist_ok=True)
+    with _journal_lock(path):
+        entries = load_entries(str(path))
+        updated_count = 0
+        for entry in entries:
+            eid = entry.get("entry_id")
+            if eid not in updates:
+                continue
             upd = updates[eid]
             if "outcome_price" in upd:
                 entry["outcome_price"] = upd["outcome_price"]
@@ -246,8 +326,12 @@ def batch_update_outcomes(updates: Dict[str, Dict[str, Any]], journal_path: str 
             entry["feedback_status"] = "reviewed"
             updated_count += 1
 
-    if updated_count > 0:
-        path.write_text("\n".join(json.dumps(entry, ensure_ascii=False) for entry in entries) + "\n", encoding="utf-8")
+        if updated_count > 0:
+            _atomic_write_text(
+                path,
+                "\n".join(json.dumps(entry, ensure_ascii=False) for entry in entries)
+                + "\n",
+            )
     return path
 
 

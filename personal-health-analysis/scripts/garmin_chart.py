@@ -58,6 +58,8 @@ DASHBOARD_SERIES_FIELDS = (
     "sleep_spo2_pct",
     "body_battery_high",
     "body_battery_low",
+    "steps",
+    "stress_avg",
 )
 DASHBOARD_COMPONENT_DATA_KEYS = {
     "sleep": ("sleep",),
@@ -337,6 +339,7 @@ def build_overlay_data(summary_data: dict[str, Any]) -> dict[str, Any] | None:
         "sweat_loss": _dated_map(daily, "sweat_loss"),
         "gct_trend": _dated_map(biomechanics, "avg_ground_contact_time"),
         "temperature_trend": temperature_map,
+        "stress_avg": _dated_map(stress, "avg_stress"),
     }
     aligned = {key: [values.get(date) for date in dates] for key, values in maps.items()}
     aligned.update(
@@ -379,6 +382,8 @@ def build_dashboard_series(
         "sleep_spo2_pct": "spo2_history",
         "body_battery_high": "bb_max",
         "body_battery_low": "bb_min",
+        "steps": "steps",
+        "stress_avg": "stress_avg",
     }
     series: dict[str, list[Any]] = {"dates": dates}
     for target, source in mapping.items():
@@ -834,6 +839,18 @@ def _dashboard_overall_narrative(
                 break
         observations.append(battery_observation or "Body Battery 无有效观测")
 
+    steps_coverage = coverage["steps"]
+    if steps_coverage["status"] != "not_requested":
+        steps_observation = next(
+            (
+                f"每日步数 {display_number(value)} 步（{day}）"
+                for day, value in reversed(list(zip(series["dates"], series["steps"])))
+                if display_number(value) is not None
+            ),
+            None,
+        )
+        observations.append(steps_observation or "每日步数无有效观测")
+
     gaps = []
     for label, key in (
         ("静息心率", "rhr"),
@@ -841,6 +858,7 @@ def _dashboard_overall_narrative(
         ("睡眠总时长", "sleep_total"),
         ("睡眠阶段", "sleep_stages"),
         ("Body Battery", "body_battery"),
+        ("每日步数", "steps"),
         ("Garmin 压力", "stress"),
         ("睡眠评分", "sleep_score"),
     ):
@@ -949,16 +967,23 @@ def build_dashboard_payload(
                 summary_data, "body_battery", components
             ),
         ),
+        "steps": _coverage_entry(
+            dates,
+            [series["steps"]],
+            source_status=_source_component_status(summary_data, "stress", components),
+        ),
     }
-    stress_kpi, stress_coverage = _stress_snapshot(
+    stress_kpi, _stress_record_coverage = _stress_snapshot(
         summary_data,
         requested_start=requested_start,
         requested_end=requested_end,
     )
     stress_source_status = _source_component_status(summary_data, "stress", components)
-    if stress_source_status in {"error", "not_requested"}:
-        stress_coverage["status"] = stress_source_status
-    coverage["stress"] = stress_coverage
+    coverage["stress"] = _coverage_entry(
+        dates,
+        [series["stress_avg"]],
+        source_status=stress_source_status,
+    )
 
     sleep_score_map = {
         item["date"]: item["score"] for item in build_heatmap_data(summary_data)
@@ -1040,6 +1065,7 @@ def build_dashboard_payload(
         "sleep_respiration": "夜间呼吸率",
         "sleep_spo2": "夜间 Pulse Ox",
         "body_battery": "Body Battery",
+        "steps": "每日步数",
         "stress": "Garmin 压力",
         "sleep_score": "睡眠评分",
     }
@@ -1483,6 +1509,7 @@ def _project_dashboard_payload(payload: dict[str, Any]) -> dict[str, Any]:
                 "sleep_respiration",
                 "sleep_spo2",
                 "body_battery",
+                "steps",
                 "stress",
                 "sleep_score",
             )
@@ -1570,6 +1597,8 @@ def _legacy_dashboard_payload(charts_data: dict[str, Any]) -> dict[str, Any]:
         "sleep_spo2_pct": list(overlay.get("spo2_history") or []),
         "body_battery_high": list(overlay.get("bb_max") or []),
         "body_battery_low": list(overlay.get("bb_min") or []),
+        "steps": list(overlay.get("steps") or []),
+        "stress_avg": list(overlay.get("stress_avg") or []),
     }
     requested_days = len(dates)
     coverage = {
@@ -1594,7 +1623,8 @@ def _legacy_dashboard_payload(charts_data: dict[str, Any]) -> dict[str, Any]:
             [series["body_battery_high"], series["body_battery_low"]],
             require_all=True,
         ),
-        "stress": _coverage_entry(dates, [[]]),
+        "steps": _coverage_entry(dates, [series["steps"]]),
+        "stress": _coverage_entry(dates, [series["stress_avg"]]),
         "sleep_score": _coverage_entry(
             [str(item.get("date")) for item in charts_data.get("heatmap") or []],
             [[item.get("score") for item in charts_data.get("heatmap") or []]],

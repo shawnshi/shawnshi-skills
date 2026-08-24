@@ -113,6 +113,31 @@ class GarminRuntimeContractTests(unittest.TestCase):
         self.assertIn("AND day <= '{end_date}'", hrv_source)
         self.assertIn("AND start_time < '{end_exclusive}'", activities_source)
 
+    def test_bounded_adapter_supports_non_filling_reads(self):
+        for loader in (
+            sqlite_adapter.get_summary,
+            sqlite_adapter.get_sleep_data,
+            sqlite_adapter.get_hrv_data,
+        ):
+            parameter = inspect.signature(loader).parameters["fill_missing"]
+            self.assertIs(parameter.default, True)
+
+    def test_summary_non_filling_read_returns_only_observed_rows(self):
+        observed_date = pd.Timestamp.today().strftime("%Y-%m-%d")
+        observed = pd.DataFrame([{"day": observed_date, "rhr": 58}])
+        connection = mock.MagicMock()
+        with (
+            mock.patch.object(sqlite_adapter, "get_connection", return_value=connection),
+            mock.patch.object(
+                sqlite_adapter, "_get_summary_table_name", return_value="daily_summary"
+            ),
+            mock.patch.object(sqlite_adapter.pd, "read_sql_query", return_value=observed),
+        ):
+            result = sqlite_adapter.get_summary(2, fill_missing=False)
+
+        self.assertEqual(result["date"].tolist(), [observed_date])
+        connection.close.assert_called_once_with()
+
     def test_source_is_required_before_provider_load(self):
         with mock.patch.object(garmin, "_load_local_adapter") as loader:
             with self.assertRaises(SystemExit) as caught:
@@ -247,6 +272,10 @@ class GarminRuntimeContractTests(unittest.TestCase):
         self.assertEqual(result["stress"][0]["avg_stress"], 31)
         self.assertNotIn("sleep_observations", result["_data_gaps"])
         self.assertFalse(any(call[0] in {"profile", "settings", "login"} for call in calls))
+        self.assertEqual(
+            [call[0] for call in calls],
+            ["body_battery", "hrv", "sleep", "stress", "stress", "stress"],
+        )
 
     def test_live_fetch_stops_after_first_authentication_failure(self):
         calls = []
@@ -261,6 +290,58 @@ class GarminRuntimeContractTests(unittest.TestCase):
                 garmin.fetch_live_summary(3)
 
         self.assertEqual(calls, ["body_battery"])
+
+    def test_live_fetch_stops_after_first_rate_limit(self):
+        calls = []
+
+        class FakeClient:
+            def get_body_battery(self, start, end):
+                calls.append("body_battery")
+                return []
+
+            def get_hrv_data_range(self, start, end):
+                calls.append("hrv")
+                raise RuntimeError("429 Too Many Requests")
+
+            def get_sleep_daily(self, start, end):
+                calls.append("sleep")
+                return []
+
+            def get_stress_data(self, day):
+                calls.append("stress")
+                return {}
+
+        with mock.patch.object(garmin, "_load_live_client", return_value=FakeClient()):
+            with self.assertRaises(garmin.LiveRateLimitError):
+                garmin.fetch_live_summary(3)
+
+        self.assertEqual(calls, ["body_battery", "hrv"])
+
+    def test_live_rate_limit_has_stable_cli_error(self):
+        with mock.patch.object(
+            garmin,
+            "fetch_live_summary",
+            side_effect=garmin.LiveRateLimitError("fixture 429"),
+        ):
+            code, stdout, stderr = run_main(
+                [
+                    "insight_cn",
+                    "--days",
+                    "3",
+                    "--source",
+                    "live",
+                    "--allow-health-data",
+                    "--allow-network",
+                ]
+            )
+
+        self.assertEqual(code, 7, stderr)
+        payload = json.loads(stdout)
+        self.assertEqual(payload["status"], "rate_limited")
+        self.assertEqual(payload["error_code"], "LIVE_RATE_LIMITED")
+        self.assertEqual(payload["data_gaps"], ["live_rate_limited"])
+        self.assertTrue(payload["provenance"]["network_accessed"])
+        self.assertFalse(payload["provenance"]["persisted"])
 
     def test_unmigrated_analysis_modes_fail_closed_before_provider_read(self):
         with mock.patch.object(garmin, "_load_local_adapter") as loader:
@@ -442,25 +523,20 @@ class GarminRuntimeContractTests(unittest.TestCase):
                     ]
                 )
 
-            @staticmethod
-            def get_activities_data(days):
-                calls.append(("activities", days))
-                return pd.DataFrame()
-
         with mock.patch.object(garmin, "_load_local_adapter", return_value=FakeAdapter):
             result = garmin.fetch_local_summary(3)
 
         self.assertEqual(
             calls,
             [
-                ("summary", 2, False),
-                ("sleep", 2, False),
-                ("hrv", 2, False),
-                ("activities", 2),
+                ("summary", 3, False),
+                ("sleep", 3, False),
+                ("hrv", 3, False),
             ],
         )
         self.assertEqual(result["_accessed_days"], 3)
         self.assertEqual(len(result["heart_rate"]), 3)
+        self.assertIn("activities_not_requested", result["_data_gaps"])
 
     def test_bounded_fetch_preserves_missing_values_and_records_gaps(self):
         class MissingAdapter:
@@ -488,10 +564,6 @@ class GarminRuntimeContractTests(unittest.TestCase):
             @staticmethod
             def get_hrv_data(days, fill_missing=True):
                 self.assertFalse(fill_missing)
-                return pd.DataFrame()
-
-            @staticmethod
-            def get_activities_data(days):
                 return pd.DataFrame()
 
         with mock.patch.object(garmin, "_load_local_adapter", return_value=MissingAdapter):

@@ -388,7 +388,7 @@ def _get_summary_table_name(conn):
         return 'days_summary'
     return None
 
-def get_summary(days=7):
+def get_summary(days=7, fill_missing=True):
     """
     Extract macro physiological metrics from the summary table.
     Equivalent to the old garmin_data.py summary command.
@@ -418,16 +418,20 @@ def get_summary(days=7):
     finally:
         conn.close()
     
-    date_rng = pd.date_range(start=start_date, end=end_date, freq='D')
-    df_base = pd.DataFrame({'date': [d.strftime('%Y-%m-%d') for d in date_rng]})
-    
     if not df.empty and 'day' in df.columns:
         df = df.rename(columns={'day': 'date'})
         # Performance: Replace slow .apply lambda with vectorized string slicing for faster date extraction
         df['date'] = df['date'].astype(str).str[:10]
-        df = df_base.merge(df, on='date', how='left')
+        if fill_missing:
+            date_rng = pd.date_range(start=start_date, end=end_date, freq='D')
+            df_base = pd.DataFrame({'date': [d.strftime('%Y-%m-%d') for d in date_rng]})
+            df = df_base.merge(df, on='date', how='left')
     else:
-        df = df_base.copy()
+        if fill_missing:
+            date_rng = pd.date_range(start=start_date, end=end_date, freq='D')
+            df = pd.DataFrame({'date': [d.strftime('%Y-%m-%d') for d in date_rng]})
+        else:
+            df = pd.DataFrame(columns=['date'])
         
     expected_cols = [
         'resting_heart_rate', 'max_hr', 'stress_avg', 'body_battery_highest',
@@ -527,7 +531,7 @@ def get_daily_friction_matrix(days=90, derivation_config=None):
     return df
 
 
-def get_sleep_data(days=14):
+def get_sleep_data(days=14, fill_missing=True):
     """Extract detailed sleep metrics."""
     start_date = _window_start(days)
     end_date = datetime.now().strftime('%Y-%m-%d')
@@ -548,9 +552,6 @@ def get_sleep_data(days=14):
         raise LocalDatabaseReadError("sleep_query_failed") from exc
     finally:
         conn.close()
-    
-    date_rng = pd.date_range(start=start_date, end=end_date, freq='D')
-    df_base = pd.DataFrame({'date': [d.strftime('%Y-%m-%d') for d in date_rng]})
     
     if not df.empty and 'day' in df.columns:
         df = df.rename(columns={'day': 'date'})
@@ -576,9 +577,16 @@ def get_sleep_data(days=14):
         df['deep_sleep_seconds'] = [time_to_sec(x) for x in df['deep_sleep']]
         df['light_sleep_seconds'] = [time_to_sec(x) for x in df['light_sleep']]
         df['rem_sleep_seconds'] = [time_to_sec(x) for x in df['rem_sleep']]
-        df = df_base.merge(df, on='date', how='left')
+        if fill_missing:
+            date_rng = pd.date_range(start=start_date, end=end_date, freq='D')
+            df_base = pd.DataFrame({'date': [d.strftime('%Y-%m-%d') for d in date_rng]})
+            df = df_base.merge(df, on='date', how='left')
     else:
-        df = df_base.copy()
+        if fill_missing:
+            date_rng = pd.date_range(start=start_date, end=end_date, freq='D')
+            df = pd.DataFrame({'date': [d.strftime('%Y-%m-%d') for d in date_rng]})
+        else:
+            df = pd.DataFrame(columns=['date'])
         
     _ensure_missing_columns(
         df,
@@ -629,7 +637,7 @@ def get_biomechanics_data(days=30):
         df = df.where(pd.notnull(df), None)
     return df
 
-def get_hrv_data(days=7):
+def get_hrv_data(days=7, fill_missing=True):
     """Extract HRV data."""
     start_date = _window_start(days)
     end_date = datetime.now().strftime('%Y-%m-%d')
@@ -649,16 +657,20 @@ def get_hrv_data(days=7):
     finally:
         conn.close()
     
-    date_rng = pd.date_range(start=start_date, end=end_date, freq='D')
-    df_base = pd.DataFrame({'date': [d.strftime('%Y-%m-%d') for d in date_rng]})
-    
     if not df.empty and 'day' in df.columns:
         df = df.rename(columns={'day': 'date'})
         # Performance: Replace slow .apply lambda with vectorized string slicing for faster date extraction
         df['date'] = df['date'].astype(str).str[:10]
-        df = df_base.merge(df, on='date', how='left')
+        if fill_missing:
+            date_rng = pd.date_range(start=start_date, end=end_date, freq='D')
+            df_base = pd.DataFrame({'date': [d.strftime('%Y-%m-%d') for d in date_rng]})
+            df = df_base.merge(df, on='date', how='left')
     else:
-        df = df_base.copy()
+        if fill_missing:
+            date_rng = pd.date_range(start=start_date, end=end_date, freq='D')
+            df = pd.DataFrame({'date': [d.strftime('%Y-%m-%d') for d in date_rng]})
+        else:
+            df = pd.DataFrame(columns=['date'])
         
     _ensure_missing_columns(df, ['hrv_avg', 'status'])
         

@@ -1,15 +1,16 @@
 # Garmin Connect 实时访问参考（非官方）
 
-本资料只用于用户本次允许联网后的实时读取、认证或同步。显式调用本技能即授权读取请求窗口内全部受支持健康指标；未给窗口时默认最近 7 天。技能通过固定版本 `garminconnect==0.3.9` 访问 Garmin Connect 的非公开 Web 接口；该接口可能变化、限流或与 Garmin 使用条款存在冲突。生产集成应优先评估 Garmin Health API 的正式合作路径。
+本资料用于显式调用技能后的受控实时读取，以及另行授权的认证或同步。显式调用本技能即授权读取请求窗口内相关健康指标，并在本地明确 `no_data` 时对同一窗口和组件执行一次实时只读回退；未给窗口时默认最近 7 天。技能通过固定版本 `garminconnect==0.3.9` 访问 Garmin Connect 的非公开 Web 接口；该接口可能变化、限流或与 Garmin 使用条款存在冲突。生产集成应优先评估 Garmin Health API 的正式合作路径。
 
 ## 授权边界
 
-- `--allow-network` 只允许本次命令联网，不允许读取任意健康数据。
-- 技能根据显式调用自动附加 `--allow-health-data`；该 CLI 标志仍绑定本次指标和日期窗口，不要求用户重复确认。未指定日期时由技能显式传入默认最近 7 天，不能省略窗口让实时命令自行推断。
+- `--allow-network` 只允许本次命令联网，不允许读取任意健康数据；CLI 门禁必须保留。
+- 技能根据显式调用自动附加 `--allow-health-data`；仅在本地明确 `no_data` 且窗口与组件不变时，再依据同一次技能调用自动附加 `--allow-network`，消费一次实时只读回退能力。两个标志不得跨命令、跨日期或跨用途复用。
+- 未指定日期时由技能显式传入默认最近 7 天，不能省略窗口让实时命令自行推断。技能的默认联网授权不包含直接跳过本地读取、认证状态探测、登录、令牌写入、同步、下载或持久化。
 - `--allow-token-write` 只用于登录时创建或刷新持久令牌。
 - `--allow-download` 只用于指定活动 ID、格式和隔离输出目录。
 - `--allow-sync` 只用于执行已生成、未过期且绑定完全一致的 GarminDB 计划。
-- 只有本地结果明确为 `no_data`，且本次联网已授权、窗口与组件均已绑定时，才可用 `--fallback-live` 自动切换到实时接口。用户未缩小指标时使用 `sleep,hrv,body_battery,heart_rate,activities,stress,training_load_series`；`partial`、数据库变化、Schema 错误或其他读取异常不得回退。联网及副作用授权不得跨命令、跨日期或跨用途复用。
+- 只有本地结果明确为 `no_data`、窗口与组件均已绑定且实时预检通过时，才可消费显式技能调用授予的一次实时只读能力，用 `--fallback-live` 自动切换。用户未缩小指标时，普通面板使用 `sleep,hrv,body_battery,heart_rate,stress`；`activities` 与 `training_load_series` 仍须用户明确请求。`partial`、数据库变化、Schema 错误或其他读取异常不得回退。
 
 这些能力是进程内防误用控制，不是抵御同一进程恶意代码的安全沙箱。
 
@@ -49,7 +50,7 @@
 <SKILL_PYTHON> scripts/garmin_data.py hrv --source live --days 7 --allow-network --allow-health-data
 ```
 
-扩展指标、时间点和活动文件命令见 `advanced_tools.md`。时间点查询要求无歧义的 IANA 本地时刻，容差限定为 0–3600 秒。`--period` 只接受正整数天数（如 `7d`）或 `YTD`，非法、零值和负值直接失败；`YTD` 包含 1 月 1 日与当前日。实时面板从 sleep、hrv、body_battery、heart_rate、activities、stress、training_load_series 中读取默认全部组件或用户指定的更窄子集；stress 使用日度压力端点，不读取或返回步数。它不会读取 Profile、体成分、补水、Fitness Age 或设备闹钟。实时分析按用途缩小为：`baseline_change` 读取 sleep/hrv/heart_rate，`readiness` 读取 sleep/hrv/body_battery/stress，`audit` 与 `insight_cn` 读取 sleep/hrv/body_battery/heart_rate/stress，`env_stress` 只读取 activities；`long_term_load` 和 `device_audit` 不支持实时来源。所有实时报告和分析都需要显式窗口及联网授权；健康数据 CLI 标志由技能根据默认授权自动附加。
+扩展指标、时间点和活动文件命令见 `advanced_tools.md`。时间点查询要求无歧义的 IANA 本地时刻，容差限定为 0–3600 秒。`--period` 只接受正整数天数（如 `7d`）或 `YTD`，非法、零值和负值直接失败；`YTD` 包含 1 月 1 日与当前日。普通实时面板默认只读取 sleep、hrv、body_battery、heart_rate、stress，或用户指定的更窄子集；activities 与 training_load_series 需明确请求。stress 使用日度压力端点，不读取或返回步数。面板不读取 Profile、体成分、补水、Fitness Age 或设备闹钟。实时分析按用途缩小为：`baseline_change` 读取 sleep/hrv/heart_rate，`readiness` 读取 sleep/hrv/body_battery/stress，`audit` 与 `insight_cn` 读取 sleep/hrv/body_battery/heart_rate/stress，`env_stress` 只读取 activities；`long_term_load` 和 `device_audit` 不支持实时来源。所有实时报告和分析都必须使用显式窗口；本地 `no_data` 后的一次只读联网能力由显式技能调用默认授予，CLI 仍必须传入 `--allow-network` 与 `--allow-health-data`。
 
 本地无数据后按相同窗口读取实时六类指标示例：
 

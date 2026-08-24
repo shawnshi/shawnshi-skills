@@ -265,6 +265,14 @@ class PreflightTests(HookTestCase):
         self.assertEqual({}, self.bash("echo hello"))
         self.assertEqual({}, self.bash("git --version"))
 
+    def test_search_regex_is_not_treated_as_a_literal_path_glob(self) -> None:
+        self.assertEqual({}, self.bash('rg -n "error.*timeout" codex_hook.py'))
+
+    def test_compound_commands_fail_open_before_repository_or_glob_checks(self) -> None:
+        self.assertEqual({}, self.bash("git status; echo inspected"))
+        self.assertEqual({}, self.bash('git -C "missing-repo" status ;git --version'))
+        self.assertEqual({}, self.bash("Get-Content missing*.txt | Select-Object -First 1"))
+
     def test_repository_required_git_command_denied_outside_repo(self) -> None:
         self.assert_denied(self.bash("git status"))
 

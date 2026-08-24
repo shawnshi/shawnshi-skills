@@ -13,6 +13,7 @@
 - 研究 Brief：`research_brief_gate.py`
 - 财务筛选：`quality_screener.py`
 - 通用行情与财务：`yf.py`
+- 即期外汇：`yf.py CNY=X --price-only --period 5d --lean --json --cache-dir <task-cache>`；使用带日期的外汇序列，并从最后一个有效观测构造 USD/CNY 快照
 - A 股补充数据：`akshare_fetcher.py`
 - ETF 历史完整性：`history_integrity_gate.py`
 - 管理层承诺：`management_claim_tracker.py`
@@ -21,6 +22,10 @@
 - 观察边界：`watchlist_gate.py`
 - 组合情景：`portfolio_scenario_analyzer.py`
 - 分配实验：`rebalance_weights.py`
+- Alpha 推广门禁：`pia.py alpha-validate <alpha-package> --policy-file <promotion-policy>`
+- 主动机会扫描：`pia.py alpha-scan <alpha-package> --validation-report <validation-report> --policy-file <scan-policy>`
+- 风险平价与稳健主动候选：`pia.py portfolio-construct <scan-report> --policy-file <construction-policy>`
+- 非执行再平衡研究提案：`pia.py rebalance-proposal <construction-report> --policy-file <proposal-policy>`
 - 券商 CSV 导入：`broker_sync.py`，仅在用户明确授权时运行
 - Daily Sync：`yf.py --daily-sync --cache-dir <task-cache> [--daily-sync-workers 1..4]` 后接 `daily_sync.py`；完成事件红队时传入 `--thesis-evidence-file`
 - 研究日记与结果同步：`advice_journal.py`、`sync_outcomes.py`、`decision_outcome_report.py`
@@ -28,4 +33,6 @@
 
 需要精确参数时以对应 `--help` 为准；文档中的示例不得覆盖脚本当前契约。
 
-`scenario --output` 不得解析为组合或假设输入文件；`calibrate --output-path` 不得解析为研究日记。两个写出命令均使用同目录临时文件完成后再原子替换，冲突或写出失败时保留输入文件。
+`yf.py` 的所有联网模式都必须先绑定可写 SQLite 缓存。显式 `--cache-dir` 优先，其次使用 `PIA_YFINANCE_CACHE_DIR`，否则落到当前工作目录的 `tmp/pia-yfinance-cache`。缓存目录即使已经存在也要通过实际写入探针；权限、只读文件系统或 SQLite 打开失败属于永久本地错误，同参数不得退避重试。
+
+`scenario --output` 不得解析为组合或假设输入文件；`calibrate --output-path` 不得解析为研究日记。所有整文件写出路径（情景结果、校准报告、券商快照、管理层承诺跟踪和研究日记结果更新）均使用唯一的同目录临时文件、`fsync` 与原子替换，冲突或写出失败时保留原文件。研究日记的追加和读改写还使用跨进程独占锁；锁等待超过 5 秒时失败关闭，不覆盖其他写入者的结果。

@@ -4,13 +4,14 @@
 
 - 每个绑定文件只读取一次，在本地批量完成证据门、事件去重、领域内排序、对象哈希、血缘映射和回执构造。
 - 已登记候选的 `access_check.status=verified` 且日期、URL、访问日志与对象哈希一致时，直接复用该证据；只有缺失或冲突时才允许联网复核，不重复打开已核验 URL。
-- 不在聊天或工具输出中回显完整候选池、历史快照、core 或回执；两份最终 JSON 在内部完成合同自检后各原子发布一次。
+- 输入哈希校验完成后发送一次不含业务内容的 `review_progress seq=1 phase=input_validated`；候选选择、血缘与回执映射完成后发送一次 `review_progress seq=2 phase=lineage_ready`。不得发送其他常规进度或在心跳中包含候选、结论与回执正文。
+- 不在聊天或工具输出中回显完整候选池、历史快照、core 或回执；两份 JSON 先写到目标旁的唯一 draft，经过统一 draft gate 后再各原子发布一次。
 - 最多使用 review request 指定的两轮；第一轮完成批量评估与产物构造，第二轮只修复自检发现的合同错误，不扩展到运行外事件。
 
 ## 硬门槛
 
 1. 启发式输出仅是候选池，不得作为最终事实、推断、等级或置信度。
-2. `published_at` 必须是窗口内已知日期；观察时间、检索时间和网页更新时间不得冒充发布日期。
+2. `published_at` 必须是窗口内严格 `YYYY-MM-DD` 已知日期；候选为合法 ISO datetime 时调用 `python -X utf8 scripts/run_daily.py normalize-published-at --value <iso_datetime>`，按其自带时区取日期后规范化，不得把 datetime 原样写入 core。观察时间、检索时间和网页更新时间不得冒充发布日期。
 3. 正式条目必须有可访问性核验、来源类型、事件身份、日期来源和证据缺口。
 4. 先按 `event_id` 去重，再按规范化 URL 去重；同一事件的多个来源应合并为佐证，不得重复计数。
 5. 每个最终条目的 `candidate_refs` 必须引用已登记基线或补检候选的 `candidate_id`；最终 URL 必须来自这些候选之一。回执的 `lineage_bindings` 必须将引用候选的 `candidate_object_sha256` 映射到完整输出条目哈希，不得引入运行外事件。
@@ -31,6 +32,16 @@
 - 保留原始 `title`；中文显示名写入 `title_zh`。
 - `data_gaps` 使用结构化对象：`gap_id`、`lane`、`status`、`description`、`impact`。
 - 只输出裸 JSON，不使用 Markdown 代码块。
+
+## 发布前 draft gate
+
+先在目标目录生成唯一 core draft 与 receipt draft，并确保回执 `output_sha256` 绑定 core draft 字节。随后运行：
+
+```powershell
+python -X utf8 scripts/run_daily.py validate-semantic-draft --manifest <run_manifest.json> --refined <refined_core.draft.json> --semantic-receipt <semantic_receipt.draft.json>
+```
+
+只有返回 `status=valid` 才能原子提升到最终 `refined_core.json` 与 `semantic_receipt.json`。门禁失败时最多使用 review request 允许的第二轮修复已报告字段；不得扩展事件或修改已登记证据。
 
 ## 语义回执
 

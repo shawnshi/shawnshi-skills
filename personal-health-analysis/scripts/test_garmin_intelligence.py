@@ -780,6 +780,7 @@ class SafetyBoundaryTests(unittest.TestCase):
         self.assertIsNone(result["heart_rate"][0]["resting_hr"])
         self.assertIsNone(result["heart_rate"][0]["max_hr"])
         self.assertIsNone(result["stress"][0]["avg_stress"])
+        self.assertIsNone(result["stress"][0]["steps"])
         self.assertIsNone(result["body_battery"][0]["highest"])
         self.assertIsNone(result["sleep"][0]["sleep_time_seconds"])
         self.assertIsNone(result["sleep"][0]["avg_spo2"])

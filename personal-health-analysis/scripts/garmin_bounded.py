@@ -7,18 +7,17 @@
 !!! Maintenance Protocol: Tune thresholds based on user feedback.
 """
 
-import sys
-sys.dont_write_bytecode = True
-
-import json
 import argparse
-import statistics
 import contextlib
+import json
 import math
 import os
-from concurrent.futures import ThreadPoolExecutor
-from pathlib import Path
+import statistics
+import sys
 from datetime import datetime, timedelta
+from pathlib import Path
+
+sys.dont_write_bytecode = True
 
 pd = None
 
@@ -132,7 +131,8 @@ def analyze_device_health(summary_data):
 
 def parse_time_to_seconds(time_str):
     """Convert HH:MM:SS string to seconds."""
-    if not time_str or not isinstance(time_str, str): return 0
+    if not time_str or not isinstance(time_str, str):
+        return 0
     try:
         parts = time_str.split(':')
         if len(parts) == 3:
@@ -151,24 +151,32 @@ class LiveAuthenticationError(Exception):
     pass
 
 
+class LiveRateLimitError(Exception):
+    pass
+
+
 def _is_auth_error(exc):
     return type(exc).__name__ == "GarminConnectAuthenticationError" or "401" in str(exc)
+
+
+def _is_rate_limit_error(exc):
+    message = str(exc).casefold()
+    return "429" in message or "too many requests" in message
 
 def fetch_local_summary(days):
     """
     Load only the requested local calendar-day window.
 
-    The SQLite adapter uses an inclusive start date, so it receives ``days - 1``
-    to keep the physical access window equal to the caller's request. Advanced
-    all-time/device/baseline reads are deliberately excluded from this bounded
-    summary.
+    The SQLite adapter interprets ``days`` as an inclusive count ending today,
+    so the exact caller value is forwarded unchanged. Advanced all-time/device/
+    baseline reads are deliberately excluded from this bounded summary.
     """
     if not isinstance(days, int) or days < 1:
         raise ValueError("days must be a positive integer")
 
     _load_pandas()
     adapter = _load_local_adapter()
-    provider_days = days - 1
+    provider_days = days
     print(f"📂 Loading bounded local SQLite data ({days} calendar days)...", file=sys.stderr)
     try:
         with contextlib.redirect_stdout(sys.stderr):
@@ -214,20 +222,11 @@ def fetch_local_summary(days):
         "sleep", adapter.get_sleep_data, fill_missing=False
     )
     hrv_df = load_optional("hrv", adapter.get_hrv_data, fill_missing=False)
-    activities_df = load_optional("activities", adapter.get_activities_data)
-
-    activities_list = activities_df.to_dict('records') if not activities_df.empty else []
-
-    daily_loads = {}
-    for act in activities_list:
-        if isinstance(act.get('duration'), str):
-            act['duration'] = parse_time_to_seconds(act['duration'])
-
-        d = act.get('date')
-        if d and act.get('training_load') is not None:
-            daily_loads[d] = daily_loads.get(d, 0) + act['training_load']
-
-    training_load_series = [{"date": d, "acute_load": val} for d, val in daily_loads.items()]
+    # The bounded insight contract excludes activities and training load. Do not
+    # touch the activities database for data that the result must omit anyway.
+    activities_list = []
+    training_load_series = []
+    data_gaps.append("activities_not_requested")
 
     heart_rate_records = summary_df.rename(
         columns={"resting_heart_rate": "resting_hr"}
@@ -500,35 +499,46 @@ def fetch_live_summary(days):
     except Exception as exc:
         if _is_auth_error(exc):
             raise LiveAuthenticationError("Garmin live session is invalid.") from exc
+        if _is_rate_limit_error(exc):
+            raise LiveRateLimitError("Garmin live provider rate limited the request.") from exc
         raise
 
     date_strings = [(start + timedelta(days=offset)).isoformat() for offset in range(days)]
     lane_gaps = []
 
-    def optional_result(future, gap, empty):
+    def optional_call(call, gap, empty):
         try:
-            return future.result()
+            return call()
         except Exception as exc:
             if _is_auth_error(exc):
                 raise LiveAuthenticationError("Garmin live session is invalid.") from exc
+            if _is_rate_limit_error(exc):
+                raise LiveRateLimitError(
+                    "Garmin live provider rate limited the request."
+                ) from exc
             lane_gaps.append(gap)
             return empty
 
-    with ThreadPoolExecutor(max_workers=min(4, days + 2)) as pool:
-        hrv_future = pool.submit(client.get_hrv_data_range, start_string, end_string)
-        sleep_future = pool.submit(client.get_sleep_daily, start_string, end_string)
-        stress_futures = {
-            date_string: pool.submit(client.get_stress_data, date_string)
-            for date_string in date_strings
-        }
-        hrv_payload = optional_result(hrv_future, "hrv_provider_unavailable", {})
-        sleep_payload = optional_result(sleep_future, "sleep_provider_unavailable", [])
-        stress_payloads = {
-            date_string: optional_result(
-                future, f"stress_provider_unavailable:{date_string}", {}
-            )
-            for date_string, future in stress_futures.items()
-        }
+    # Provider calls are intentionally serial: after a 429, no later lane may
+    # begin. This preserves the API contract and avoids a burst multiplying the
+    # rate-limit failure.
+    hrv_payload = optional_call(
+        lambda: client.get_hrv_data_range(start_string, end_string),
+        "hrv_provider_unavailable",
+        {},
+    )
+    sleep_payload = optional_call(
+        lambda: client.get_sleep_daily(start_string, end_string),
+        "sleep_provider_unavailable",
+        [],
+    )
+    stress_payloads = {}
+    for date_string in date_strings:
+        stress_payloads[date_string] = optional_call(
+            lambda day=date_string: client.get_stress_data(day),
+            f"stress_provider_unavailable:{date_string}",
+            {},
+        )
 
     sleep = _sleep_records(sleep_payload)
     hrv = _hrv_records(hrv_payload)
@@ -609,7 +619,6 @@ def analyze_flu_risk(summary_data):
     Detect 'The Garmin Flu' pattern (CMO Level) using Rolling Baseline Calibration
     loaded from external DE (Domain Expert) Knowledge Base.
     """
-    import math
     guidelines = load_clinical_guidelines().get("flu_risk", {})
 
     # Fallback to hardcoded safe defaults if KB missing
@@ -699,7 +708,8 @@ def analyze_flu_risk(summary_data):
 
     if waking_resp_spike > waking_resp_min:
         reasons.append(f"Daytime sympathetic overdrive (+{waking_resp_spike:.1f} brpm waking RR)")
-        if risk_level == "low": risk_level = "MODERATE"
+        if risk_level == "low":
+            risk_level = "MODERATE"
 
     return {
         "analysis_type": "bio_entropy_flu_risk",
@@ -932,9 +942,12 @@ def perform_bio_metric_audit(summary_data):
     rhr_diff = latest_rhr - baseline_rhr if latest_rhr > 0 else 0
 
     rhr_status = "稳定"
-    if latest_rhr == 0: rhr_status = "无数据"
-    elif rhr_diff < -2: rhr_status = "优异 (心肺耐力提升)"
-    elif rhr_diff > 3: rhr_status = "警告 (代谢压力高)"
+    if latest_rhr == 0:
+        rhr_status = "无数据"
+    elif rhr_diff < -2:
+        rhr_status = "优异 (心肺耐力提升)"
+    elif rhr_diff > 3:
+        rhr_status = "警告 (代谢压力高)"
 
     # HRV Audit
     latest_hrv = next((h.get("last_night_avg") for h in reversed(hrv_data) if h.get("last_night_avg")), 0)
@@ -970,7 +983,8 @@ def perform_bio_metric_audit(summary_data):
     for s in sleep_data[-3:]:
         if s.get("sleep_time_seconds"):
             debt = target_sleep_s - s["sleep_time_seconds"]
-            if debt > 0: sleep_debt_s += debt
+            if debt > 0:
+                sleep_debt_s += debt
     sleep_debt_h = sleep_debt_s / 3600
 
     bb_data = summary_data.get("body_battery", [])
@@ -1071,9 +1085,11 @@ def perform_bio_metric_audit(summary_data):
 
 def generate_sparkline(data_series):
     """Generate ASCII sparkline for terminal topology."""
-    if not data_series or all(v is None for v in data_series): return "无数据"
+    if not data_series or all(v is None for v in data_series):
+        return "无数据"
     valid_data = [v for v in data_series if v is not None]
-    if not valid_data: return "无数据"
+    if not valid_data:
+        return "无数据"
 
     ticks = [' ', '▂', '▃', '▄', '▅', '▆', '▇', '█']
     min_val, max_val = min(valid_data), max(valid_data)
@@ -1089,7 +1105,8 @@ def generate_sparkline(data_series):
 
 def calculate_social_jetlag(sleep_data):
     """Calculate Mid-Sleep Point drift (Social Jetlag)."""
-    if len(sleep_data) < 3: return 0.0
+    if len(sleep_data) < 3:
+        return 0.0
     mid_points = []
     for s in sleep_data[-7:]:
         if s.get("sleep_time_seconds") and s.get("sleep_score"):
@@ -1098,7 +1115,8 @@ def calculate_social_jetlag(sleep_data):
             duration = s.get("sleep_time_seconds", 0) / 3600
             mid_point = 7.0 - (duration / 2.0)
             mid_points.append(mid_point)
-    if len(mid_points) < 3: return 0.0
+    if len(mid_points) < 3:
+        return 0.0
     return round(statistics.stdev(mid_points), 2)
 
 def query_vector_lake(query="过去3天 身体状态 日记", mode="memory", top_k=3):
@@ -1106,7 +1124,6 @@ def query_vector_lake(query="过去3天 身体状态 日记", mode="memory", top
     Hook to query the Vector Lake for bidirectional longitudinal context.
     """
     import subprocess
-    import json
     try:
         vl_cli = Path(__file__).parent.parent.parent.parent / "extensions" / "vector-lake" / "cli.py"
         if not vl_cli.exists():
@@ -1295,7 +1312,6 @@ def generate_chinese_insight(summary_data, historical_context=None):
     # 1. Sleep Consistency & Debt Audit
     sleep_data = summary_data.get("sleep", [])
     std_dev, consist_status = calculate_sleep_consistency(sleep_data)
-    social_jetlag = calculate_social_jetlag(sleep_data)
     avg_deep_pct = audit["recovery_loop"]["sleep_architecture"]["deep_pct"]
     sleep_debt = audit["recovery_loop"]["sleep_architecture"].get("sleep_debt_h", 0)
 
@@ -1361,15 +1377,15 @@ def generate_chinese_insight(summary_data, historical_context=None):
 
     # Section 0: Vector Lake Historical Context
     if historical_context:
-        ctx_msg = f"【0. 纵向归因 (Vector Lake Context)】\n"
+        ctx_msg = "【0. 纵向归因 (Vector Lake Context)】\n"
         ctx_msg += f"· 记忆提取：{historical_context}\n"
-        ctx_msg += f"  > 归因：大模型综合诊断需将上述事件轨迹与后续物理指标强制对齐。"
+        ctx_msg += "  > 归因：大模型综合诊断需将上述事件轨迹与后续物理指标强制对齐。"
         overall_sections.append(ctx_msg)
 
     bb_sparkline = generate_sparkline([b.get("highest") for b in bb_data[-7:]])
 
     # Section 1: System Status & Momentum
-    sys_msg = f"【1. 系统态势与防线动量 (System Momentum)】\n"
+    sys_msg = "【1. 系统态势与防线动量 (System Momentum)】\n"
     sys_msg += f"· 动量向量：{momentum_status}。\n"
     sys_msg += f"· 能量拓扑：[{bb_sparkline}] (授权窗口内电量峰值)\n"
     sys_msg += f"· 摩擦定性：判定为『{load_type}』。"
@@ -1403,7 +1419,7 @@ def generate_chinese_insight(summary_data, historical_context=None):
     overall_sections.append(sys_msg)
 
     # Section 2: Input & Rhythm
-    consist_msg = f"【2. 恢复环路审计 (Recovery Loop)】\n"
+    consist_msg = "【2. 恢复环路审计 (Recovery Loop)】\n"
     consist_msg += f"· 节律稳定性：{consist_status} (标准差 {std_dev}h)。"
     if consist_status != "优":
         consist_msg += "\n  > 破窗效应：强烈的“社会时差”切断了内分泌系统的黄金修复窗口（尤其是夜间生长激素与褪黑素耦协），这是拖垮系统长期 ROI 的最大漏洞。"
@@ -1425,7 +1441,7 @@ def generate_chinese_insight(summary_data, historical_context=None):
     overall_sections.append(consist_msg)
 
     # Section 3: Readiness
-    output_msg = f"【3. 执行带宽 (Execution Bandwidth)】\n"
+    output_msg = "【3. 执行带宽 (Execution Bandwidth)】\n"
     output_msg += f"· 综合执行力：{readiness['score']}/100\n"
     output_msg += f"· 🧠 认知带宽 ({readiness['cognitive_score']})："
     if readiness['cognitive_score'] > 80:
@@ -1560,7 +1576,8 @@ def stitch_v3_metrics(summary_data, days):
         except Exception as e:
             print(f"⚠️ Failed to query SQLite for v3 metrics: {e}")
         finally:
-            if 'conn' in locals(): conn.close()
+            if 'conn' in locals():
+                conn.close()
     except Exception as e:
         import sys
         print(f"⚠️ V3 Metrics Stitch failed: {e}", file=sys.stderr)
@@ -1700,6 +1717,27 @@ def main(argv=None):
             }
         )
         return 6
+    except LiveRateLimitError as exc:
+        _print_json(
+            {
+                "status": "rate_limited",
+                "data_status": "no_data",
+                "error_code": "LIVE_RATE_LIMITED",
+                "source": "live",
+                "requested_days": days,
+                "error_type": type(exc).__name__,
+                "data_gaps": ["live_rate_limited"],
+                "provenance": {
+                    "source": "live",
+                    "requested_days": days,
+                    "accessed_days": 0,
+                    "network_accessed": True,
+                    "memory_context_accessed": False,
+                    "persisted": False,
+                },
+            }
+        )
+        return 7
     except FileNotFoundError as exc:
         if args.source == "live":
             _print_json(

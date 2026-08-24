@@ -255,6 +255,24 @@ def _classification(category: str, signature: str, executor_failure: bool) -> di
     }
 
 
+def classify_python_traceback(probe: str) -> dict[str, Any] | None:
+    if not re.search(r"(?m)^Traceback \(most recent call last\):", probe):
+        return None
+    mappings = (
+        ("path", "python_path", r"(?m)^(?:FileNotFoundError|NotADirectoryError|IsADirectoryError):"),
+        ("permission", "python_permission", r"(?m)^PermissionError:"),
+        ("dependency", "python_dependency", r"(?m)^(?:ModuleNotFoundError|ImportError):"),
+        ("data", "python_data", r"(?m)^(?:json\.decoder\.)?JSONDecodeError:"),
+        ("validation", "python_validation", r"(?m)^(?:AssertionError|TypeError|ValueError):"),
+        ("timeout", "python_timeout", r"(?m)^(?:TimeoutError|asyncio\.exceptions\.TimeoutError):"),
+        ("transport", "python_transport", r"(?m)^(?:ConnectionError|ConnectionResetError|ConnectionAbortedError|requests\.exceptions\.\w+):"),
+    )
+    for category, signature, pattern in mappings:
+        if re.search(pattern, probe):
+            return _classification(category, signature, True)
+    return _classification("unknown", "python_exception", True)
+
+
 def classify_tool_output(value: Any, source: str, structured_receipt: dict[str, Any] | None = None) -> dict[str, Any] | None:
     """Classify the actual execution payload without scanning printed source text."""
 
@@ -262,15 +280,13 @@ def classify_tool_output(value: Any, source: str, structured_receipt: dict[str, 
     flattened = strip_ansi(flatten_output(value))
     payloads = execution_payload_segments(value)
     body = payloads[-1] if payloads else ""
-    probe = body[:16384]
+    probe = body if len(body) <= 16384 else body[:8192] + "\n" + body[-8192:]
     command = extract_shell_command(source)
     passive_read = bool(re.search(r"(?i)(?:^|[;&\r\n]\s*)(?:Get-Content|gc|type)\b", command))
     families = command_families(source)
-    nonzero = bool(re.search(r"(?i)\b(?:Process )?Exit code:\s*[1-9]\d*", flattened))
+    nonzero = bool(re.search(r"(?i)\b(?:Process )?Exit code:\s*[1-9]\d*", body))
     if structured_receipt and structured_receipt.get("receipt_type") == "write_rejected":
         return _classification("validation", "validation_guard", False)
-    if not outer_error and passive_read:
-        return None
     if re.search(r"TypeError:\s*tools\.(?:shell_command|exec_command)\s+is not a function", probe, re.I):
         return _classification("dependency", "tool_interface", True)
     if re.search(r"(?m)^\s*ParserError\s*:", probe, re.I):
@@ -287,10 +303,17 @@ def classify_tool_output(value: Any, source: str, structured_receipt: dict[str, 
         return _classification("validation", "validation_guard", False)
     if re.search(r"UnicodeDecodeError", probe):
         return _classification("data", "unicode_decode", True)
-    if re.search(r"(?m)^Traceback \(most recent call last\):", probe):
-        return _classification("unknown", "python_exception", True)
+    python_traceback = classify_python_traceback(probe)
+    if python_traceback:
+        return python_traceback
+    if re.search(r"(?im)^\s*(?:ResourceUnavailable|PermissionError|UnauthorizedAccessException)\s*:", probe):
+        if re.search(r"(?i)access .*denied|permission denied|unauthorized", probe):
+            return _classification("permission", "process_permission", True)
+        return _classification("dependency", "process_unavailable", True)
     if re.search(r"tool call error:", probe, re.I):
         return _classification("transport", "nested_tool_error", True)
+    if not outer_error and passive_read:
+        return None
 
     trailing_header = bool(re.search(r"(?m)^---[^\r\n]+---\s*\Z", probe))
     if families and families[-1] == "rg" and (outer_error or nonzero) and (not probe.strip() or trailing_header):
@@ -546,6 +569,7 @@ def main() -> int:
     context_epoch = 0
     calls: dict[str, dict[str, Any]] = {}
     wait_calls: dict[str, dict[str, Any]] = {}
+    skill_identity_cache: dict[str, tuple[str, str | None]] = {}
     events: list[dict[str, Any]] = []
     task_durations: list[float] = []
     tool_durations: list[float] = []
@@ -559,6 +583,9 @@ def main() -> int:
     last_observed: datetime | None = None
     write_attempts = write_commits = nested_failures = 0
     pending_recovery: tuple[str | None, str, int] | None = None
+    actor_id = "root"
+    actor_type = "root"
+    actor_bound = False
 
     def in_window(ts: datetime) -> bool:
         return ts >= start and (end is None or ts <= end)
@@ -577,8 +604,8 @@ def main() -> int:
             "event_id": event_id,
             "timestamp": ts.isoformat().replace("+00:00", "Z"),
             "root_task_id": root or "unbound-root",
-            "actor_id": "root",
-            "actor_type": "root",
+            "actor_id": actor_id,
+            "actor_type": actor_type,
             "event_type": event_type,
             "component": component,
             "operation": operation,
@@ -595,6 +622,15 @@ def main() -> int:
             payload = record.get("payload") or {}
             record_type = record.get("type")
             payload_type = payload.get("type") if isinstance(payload, dict) else None
+
+            if record_type == "session_meta" and not actor_bound:
+                if payload.get("thread_source") == "subagent":
+                    actor_type = "subagent"
+                    actor_id = "subagent-" + sha256_text(str(payload.get("id") or "unbound"))[:16]
+                else:
+                    actor_type = "root"
+                    actor_id = "root"
+                actor_bound = True
 
             if record_type == "event_msg" and payload_type == "task_started":
                 current_root = payload.get("turn_id") or current_root
@@ -855,7 +891,10 @@ def main() -> int:
                     write_commits += 1
 
                 for path_text in skill_paths(call["input"]):
-                    skill_name, digest = skill_identity(path_text)
+                    cache_key = path_text.lower().replace("\\", "/")
+                    if cache_key not in skill_identity_cache:
+                        skill_identity_cache[cache_key] = skill_identity(path_text)
+                    skill_name, digest = skill_identity_cache[cache_key]
                     candidate = base_event(
                         f"skill-candidate-{call_id}-{sha256_text(path_text)[:8]}",
                         call["timestamp"],
@@ -873,6 +912,7 @@ def main() -> int:
                     if digest:
                         candidate["skill_sha256"] = digest
                     events.append(candidate)
+                calls.pop(call_id, None)
                 continue
 
             if record_type == "response_item" and payload_type == "function_call" and payload.get("name") == "wait":
@@ -882,7 +922,7 @@ def main() -> int:
 
             if record_type == "response_item" and payload_type == "function_call_output":
                 call_id = payload.get("call_id")
-                call = wait_calls.get(call_id)
+                call = wait_calls.pop(call_id, None)
                 if not call:
                     continue
                 text = flatten_output(payload.get("output"))

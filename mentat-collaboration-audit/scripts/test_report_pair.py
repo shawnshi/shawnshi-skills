@@ -4,9 +4,11 @@ import sys
 import tempfile
 import unittest
 from pathlib import Path
+from unittest import mock
 
 
 sys.path.insert(0, str(Path(__file__).parent))
+import report_pair
 from report_pair import (
     ReportPairError,
     parse_html_recommendations,
@@ -195,6 +197,39 @@ class ReportPairTests(unittest.TestCase):
                     markdown_path=markdown_path,
                     html_path=html_path,
                 )
+
+    def test_publish_failure_leaves_no_visible_partial_batch(self):
+        manifest = make_manifest()
+        with tempfile.TemporaryDirectory() as temp_root:
+            root = Path(temp_root)
+            manifest_path = root / "manifest.json"
+            markdown_path = root / "report.md"
+            html_path = root / "report.html"
+            receipt_path = root / "report.receipt.json"
+            manifest_path.write_text(json.dumps(manifest), encoding="utf-8")
+            real_link = report_pair.os.link
+            call_count = 0
+
+            def fail_receipt_publish(source, target):
+                nonlocal call_count
+                call_count += 1
+                if call_count == 3:
+                    raise OSError("injected receipt publish failure")
+                return real_link(source, target)
+
+            with mock.patch.object(report_pair.os, "link", side_effect=fail_receipt_publish):
+                with self.assertRaises(OSError):
+                    write_report_pair(
+                        manifest_path=manifest_path,
+                        markdown_path=markdown_path,
+                        html_path=html_path,
+                        receipt_path=receipt_path,
+                    )
+
+            self.assertFalse(markdown_path.exists())
+            self.assertFalse(html_path.exists())
+            self.assertFalse(receipt_path.exists())
+            self.assertEqual(list(root.glob(".*.tmp")), [])
 
 
 if __name__ == "__main__":

@@ -59,6 +59,52 @@ class ArchiveContractTests(unittest.TestCase):
             self.assertEqual(result.returncode, 0)
             self.assertEqual(Path(result.stdout.strip()), Path(directory))
 
+    def test_default_runtime_directory_is_workspace_backed(self):
+        environment = dict(os.environ)
+        environment.pop("PIH_RUNTIME_DIR", None)
+        result = subprocess.run(
+            [
+                sys.executable,
+                "-c",
+                (
+                    "import sys; "
+                    f"sys.path.insert(0, {str(SCRIPT_DIR)!r}); "
+                    "import hub_utils; print(hub_utils.RUNTIME_DIR)"
+                ),
+            ],
+            capture_output=True,
+            text=True,
+            check=False,
+            env=environment,
+        )
+        self.assertEqual(result.returncode, 0)
+        self.assertEqual(
+            Path(result.stdout.strip()),
+            Path.home() / "MEMORY" / "brain" / "personal-intelligence-hub" / "runtime",
+        )
+
+    def test_runtime_environment_override_has_priority(self):
+        with tempfile.TemporaryDirectory() as directory:
+            environment = dict(os.environ)
+            environment["PIH_RUNTIME_DIR"] = directory
+            result = subprocess.run(
+                [
+                    sys.executable,
+                    "-c",
+                    (
+                        "import sys; "
+                        f"sys.path.insert(0, {str(SCRIPT_DIR)!r}); "
+                        "import hub_utils; print(hub_utils.RUNTIME_DIR)"
+                    ),
+                ],
+                capture_output=True,
+                text=True,
+                check=False,
+                env=environment,
+            )
+            self.assertEqual(result.returncode, 0)
+            self.assertEqual(Path(result.stdout.strip()), Path(directory))
+
     def test_atomic_writes_replace_target_and_remove_temporary_file(self):
         with tempfile.TemporaryDirectory() as directory:
             root = Path(directory)

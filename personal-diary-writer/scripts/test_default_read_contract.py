@@ -64,12 +64,38 @@ class DefaultReadContractTests(unittest.TestCase):
             self.authority_text,
         )
 
+    def test_energy_projection_is_contentful_when_metrics_are_unavailable(self):
+        for marker in (
+            "runtime_preflight.py --mode live",
+            "`not_scored`",
+            "`sleep_debt_h=null`",
+            "`sleep_debt_status=not_provided_by_source`",
+            "触发条件、最小动作和完成标准",
+        ):
+            with self.subTest(marker=marker):
+                self.assertIn(marker, self.authority_text)
+        self.assertNotIn("- **执行带宽**: [DATA_UNAVAILABLE]", self.authority_text)
+        self.assertNotIn("- **睡眠负债**: [DATA_UNAVAILABLE]", self.authority_text)
+        self.assertIn("不得只写空值或 `[DATA_UNAVAILABLE]`", self.proxy_text)
+
     def test_canonical_mentat_generation_is_auto_authorized(self):
         self.assertIn("Canonical Mentat auto-save exception", self.authority_text)
         self.assertIn("originating request is the approval", self.authority_text)
         self.assertIn("不再重复询问确认", self.proxy_text)
 
-    def test_personal_diary_and_noncanonical_targets_still_require_confirmation(self):
+    def test_canonical_weekly_audit_is_auto_authorized_and_bounded(self):
+        self.assertIn("Canonical weekly personal-audit auto-save exception", self.authority_text)
+        self.assertIn("current natural week's personal-log audit", self.authority_text)
+        for marker in (
+            "草稿、预览或不保存",
+            "保留周期结束日既有日记内容",
+            "同周标题数量等于 1",
+            "第二处持久化",
+        ):
+            with self.subTest(marker=marker):
+                self.assertIn(marker, self.proxy_text)
+
+    def test_other_personal_diary_and_noncanonical_targets_still_require_confirmation(self):
         self.assertIn("Personal diary checkpoint", self.authority_text)
         for marker in (
             "drafts/previews",

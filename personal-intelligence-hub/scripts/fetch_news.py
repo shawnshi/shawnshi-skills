@@ -21,6 +21,10 @@ DEFAULT_TIMEZONE = "Asia/Shanghai"
 DEFAULT_WINDOW_DAYS = 7
 DEFAULT_MAX_CONCURRENCY = 8
 MAX_CONCURRENCY = 32
+DEFAULT_SCAN_DEADLINE_SECONDS = 300.0
+MAX_SCAN_DEADLINE_SECONDS = 3600.0
+DEFAULT_CANCELLATION_GRACE_SECONDS = 2.0
+MAX_CANCELLATION_GRACE_SECONDS = 30.0
 PERMANENT_TRANSPORT_ERROR_MARKERS = (
     "invalid library",
     "certificate verify failed",
@@ -32,6 +36,13 @@ PERMANENT_TRANSPORT_ERROR_MARKERS = (
 
 def _utc_now() -> datetime:
     return datetime.now(timezone.utc)
+
+
+def _consume_task_result(task: asyncio.Task) -> None:
+    try:
+        task.exception()
+    except BaseException:
+        pass
 
 
 def resolve_timezone(timezone_name: str = DEFAULT_TIMEZONE) -> tzinfo:
@@ -90,17 +101,16 @@ def _parse_published_date(value, zone: tzinfo) -> date:
     if isinstance(value, datetime):
         if value.tzinfo is None:
             raise ValueError("published datetime must be timezone-aware")
-        return value.astimezone(zone).date()
+        return value.date()
     if isinstance(value, date):
         return value
     raw = str(value).strip()
-    try:
+    if re.fullmatch(r"\d{4}-\d{2}-\d{2}", raw):
         return date.fromisoformat(raw)
-    except ValueError:
-        parsed = datetime.fromisoformat(raw.replace("Z", "+00:00"))
-        if parsed.tzinfo is None:
-            raise ValueError("published datetime must be timezone-aware")
-        return parsed.astimezone(zone).date()
+    parsed = datetime.fromisoformat(raw.replace("Z", "+00:00"))
+    if parsed.tzinfo is None:
+        raise ValueError("published datetime must be timezone-aware")
+    return parsed.date()
 
 
 def _published_date_state(item: dict, zone: tzinfo) -> tuple[date | None, str | None]:
@@ -541,6 +551,8 @@ async def _scan_all_impl(
     report_date: date | datetime | str | None = None,
     timezone_name: str = DEFAULT_TIMEZONE,
     max_concurrency: int = DEFAULT_MAX_CONCURRENCY,
+    scan_deadline_seconds: float = DEFAULT_SCAN_DEADLINE_SECONDS,
+    cancellation_grace_seconds: float = DEFAULT_CANCELLATION_GRACE_SECONDS,
     output_path: Path | None = None,
     current_output_path: Path | None = None,
     cache_path: Path | None = None,
@@ -587,13 +599,50 @@ async def _scan_all_impl(
                 )
             )
 
-        results = await asyncio.gather(*[x[1] for x in tasks_meta], return_exceptions=True)
+        task_entries = [
+            (name, asyncio.create_task(coroutine)) for name, coroutine in tasks_meta
+        ]
+        tasks = [task for _, task in task_entries]
+        done, pending = await asyncio.wait(tasks, timeout=scan_deadline_seconds)
+        cancellation_pending: set[asyncio.Task] = set()
+        if pending:
+            for task in pending:
+                task.cancel()
+            cancelled, cancellation_pending = await asyncio.wait(
+                pending, timeout=cancellation_grace_seconds
+            )
+            for task in cancelled:
+                _consume_task_result(task)
+            for task in cancellation_pending:
+                task.add_done_callback(_consume_task_result)
+
+        results = []
+        for _, task in task_entries:
+            if task in pending:
+                results.append(
+                    {
+                        "status": "TIMEOUT",
+                        "reason": "scan_deadline_exceeded",
+                        "deadline_seconds": scan_deadline_seconds,
+                        "cancellation_pending": task in cancellation_pending,
+                    }
+                )
+            elif task.cancelled():
+                results.append(RuntimeError("source task was cancelled"))
+            else:
+                try:
+                    results.append(task.result())
+                except Exception as exc:
+                    results.append(exc)
 
     raw_items = []
     source_meta = {}
     for (name, _), result in zip(tasks_meta, results):
         if isinstance(result, Exception):
             source_meta[name] = str(result)
+            continue
+        if isinstance(result, dict) and result.get("status") == "TIMEOUT":
+            source_meta[name] = result
             continue
         parsed_items, status = result
         source_meta[name] = status
@@ -622,6 +671,19 @@ async def _scan_all_impl(
             "window_days": effective_window_days,
             "report_date": window["end"],
             "max_concurrency": max_concurrency,
+            "scan_deadline_seconds": scan_deadline_seconds,
+            "timed_out_sources": sum(
+                1
+                for status in source_meta.values()
+                if isinstance(status, dict) and status.get("status") == "TIMEOUT"
+            ),
+            "cancellation_grace_seconds": cancellation_grace_seconds,
+            "cancellation_pending_sources": sum(
+                1
+                for status in source_meta.values()
+                if isinstance(status, dict)
+                and status.get("cancellation_pending") is True
+            ),
             "elapsed_seconds": round(loop.time() - started_at, 3),
         },
     }
@@ -650,12 +712,30 @@ async def scan_all(
     report_date: date | datetime | str | None = None,
     timezone_name: str = DEFAULT_TIMEZONE,
     max_concurrency: int = DEFAULT_MAX_CONCURRENCY,
+    scan_deadline_seconds: float = DEFAULT_SCAN_DEADLINE_SECONDS,
+    cancellation_grace_seconds: float = DEFAULT_CANCELLATION_GRACE_SECONDS,
     output_path: Path | None = None,
     current_output_path: Path | None = None,
     cache_path: Path | None = None,
 ):
     if max_concurrency <= 0 or max_concurrency > MAX_CONCURRENCY:
         raise ValueError(f"max_concurrency must be between 1 and {MAX_CONCURRENCY}")
+    if (
+        scan_deadline_seconds <= 0
+        or scan_deadline_seconds > MAX_SCAN_DEADLINE_SECONDS
+    ):
+        raise ValueError(
+            "scan_deadline_seconds must be between 0 and "
+            f"{MAX_SCAN_DEADLINE_SECONDS}"
+        )
+    if (
+        cancellation_grace_seconds <= 0
+        or cancellation_grace_seconds > MAX_CANCELLATION_GRACE_SECONDS
+    ):
+        raise ValueError(
+            "cancellation_grace_seconds must be between 0 and "
+            f"{MAX_CANCELLATION_GRACE_SECONDS}"
+        )
     ensure_runtime_dirs()
     init_blackboard()
     update_phase("scan", "running")
@@ -669,6 +749,8 @@ async def scan_all(
             report_date=report_date,
             timezone_name=timezone_name,
             max_concurrency=max_concurrency,
+            scan_deadline_seconds=scan_deadline_seconds,
+            cancellation_grace_seconds=cancellation_grace_seconds,
             output_path=output_path,
             current_output_path=current_output_path,
             cache_path=cache_path,
@@ -696,6 +778,15 @@ if __name__ == "__main__":
         default=DEFAULT_MAX_CONCURRENCY,
         help=f"Global concurrent requests (1..{MAX_CONCURRENCY}; per-host maximum 4).",
     )
+    parser.add_argument(
+        "--scan-deadline-seconds",
+        type=float,
+        default=DEFAULT_SCAN_DEADLINE_SECONDS,
+        help=(
+            "Overall source-scan deadline; unfinished sources are cancelled and "
+            "recorded as failed coverage."
+        ),
+    )
     args = parser.parse_args()
     if args.window_days is not None and args.window_days <= 0:
         parser.error("--window-days must be positive")
@@ -703,6 +794,14 @@ if __name__ == "__main__":
         parser.error("--dedupe-days must be positive")
     if args.max_concurrency <= 0 or args.max_concurrency > MAX_CONCURRENCY:
         parser.error(f"--max-concurrency must be between 1 and {MAX_CONCURRENCY}")
+    if (
+        args.scan_deadline_seconds <= 0
+        or args.scan_deadline_seconds > MAX_SCAN_DEADLINE_SECONDS
+    ):
+        parser.error(
+            "--scan-deadline-seconds must be between 0 and "
+            f"{MAX_SCAN_DEADLINE_SECONDS}"
+        )
     try:
         parsed_report_date = date.fromisoformat(args.report_date) if args.report_date else None
         resolve_timezone(args.timezone)
@@ -718,5 +817,6 @@ if __name__ == "__main__":
             report_date=parsed_report_date,
             timezone_name=args.timezone,
             max_concurrency=args.max_concurrency,
+            scan_deadline_seconds=args.scan_deadline_seconds,
         )
     )

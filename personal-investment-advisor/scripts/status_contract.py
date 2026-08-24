@@ -10,7 +10,7 @@ from __future__ import annotations
 from typing import Any, Iterable
 
 
-CONTRACT_VERSION = "1.0"
+CONTRACT_VERSION = "1.1"
 
 STATUS_COMPLETE = "complete"
 STATUS_INCOMPLETE = "incomplete"

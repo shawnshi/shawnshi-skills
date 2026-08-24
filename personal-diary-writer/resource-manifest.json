@@ -1,11 +1,11 @@
 {
   "schema_version": 3,
   "skill": "personal-diary-writer",
-  "generated_at": "2026-08-20T21:17:53+08:00",
+  "generated_at": "2026-08-23T21:58:05+08:00",
   "hash_algorithm": "SHA-256",
   "text_hash_normalization": "LF",
   "skill_md": "SKILL.md",
-  "skill_md_sha256": "3a4d795c6b89911bd4a2984e9ed1e68c522352606016c148af516dc83364680a",
+  "skill_md_sha256": "47e7583348fc7bb20724fbaa8e5a321ebee571331f94274af44f208d6ff400c3",
   "top_level_files": [
     "SKILL.md",
     "authority.json"
@@ -13,11 +13,11 @@
   "top_level_file_hashes": [
     {
       "path": "SKILL.md",
-      "sha256": "3a4d795c6b89911bd4a2984e9ed1e68c522352606016c148af516dc83364680a"
+      "sha256": "47e7583348fc7bb20724fbaa8e5a321ebee571331f94274af44f208d6ff400c3"
     },
     {
       "path": "authority.json",
-      "sha256": "90a815396e17013b5e4acd4e68ade0dcf2517a3ab6bfc7425e5edf5cd3000865"
+      "sha256": "160213cc427d0f4e8afc2b72e883b0218b5c9ce323a3c94a9144b25b45815495"
     }
   ],
   "top_level_directories": [
@@ -40,7 +40,7 @@
     },
     {
       "path": "scripts/test_default_read_contract.py",
-      "sha256": "69dbeaa3138ef2abcac5f550a59057710bbbd058f167241b95ad4d40aa7a8a72"
+      "sha256": "026bc805cbe144ed2001a31cdef3d4e87e0877c86eae7b902abdefb6fb372915"
     }
   ],
   "declared_local_dependencies": [

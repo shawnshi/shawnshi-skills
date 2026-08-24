@@ -2,7 +2,8 @@ import json
 import hashlib
 import tempfile
 import unittest
-from datetime import datetime
+from copy import deepcopy
+from datetime import datetime, timedelta
 from pathlib import Path
 from zoneinfo import ZoneInfo
 
@@ -18,6 +19,7 @@ from run_contract import (
     file_sha256,
     item_hash,
     load_manifest,
+    normalize_published_at,
     record_stage,
     record_run_artifact,
     review_scope,
@@ -26,7 +28,9 @@ from run_contract import (
     register_supplement_results,
     validate_resource_manifest,
     validate_review_receipt,
+    validate_semantic_draft,
 )
+from test_contract_fixtures import cloned_v13_payload
 
 
 class RunContractTests(unittest.TestCase):
@@ -51,6 +55,15 @@ class RunContractTests(unittest.TestCase):
             encoding="utf-8",
         )
         self.now = datetime(2026, 8, 10, 9, 0, tzinfo=ZoneInfo("Asia/Shanghai"))
+
+    def test_publication_datetime_normalizes_in_its_own_timezone(self):
+        self.assertEqual(
+            normalize_published_at("2026-08-20T23:30:00-07:00"),
+            "2026-08-20",
+        )
+        self.assertEqual(normalize_published_at("2026-08-20"), "2026-08-20")
+        with self.assertRaisesRegex(RunContractError, "timezone-aware"):
+            normalize_published_at("2026-08-20T23:30:00")
 
     def tearDown(self):
         self.directory.cleanup()
@@ -285,6 +298,91 @@ class RunContractTests(unittest.TestCase):
         with self.assertRaisesRegex(RunContractError, "immutable"):
             record_run_artifact(manifest_path, "candidate_pool", candidate_pool, now=self.now)
 
+    def test_semantic_request_binds_compact_history_slice(self):
+        manifest_path, _ = self.new_run()
+        baseline = self.runtime_dir / "baseline.json"
+        baseline.write_text('{"items": []}', encoding="utf-8")
+        record_stage(
+            manifest_path,
+            "baseline",
+            "completed",
+            artifact_path=baseline,
+            now=self.now,
+        )
+        self.bind_history(manifest_path)
+        review_slice = self.runtime_dir / "history-review-slice.json"
+        review_slice.write_text(
+            json.dumps(
+                {
+                    "resource_kind": "pih_history_review_slice",
+                    "schema_version": "1.0",
+                    "generated_at": self.now.isoformat(),
+                    "dedupe_days": 7,
+                    "entries": [],
+                }
+            ),
+            encoding="utf-8",
+        )
+        record_run_artifact(
+            manifest_path,
+            "history_review_slice",
+            review_slice,
+            input_sha256=load_manifest(manifest_path)["artifacts"]["history_snapshot"]["artifact_sha256"],
+            now=self.now,
+        )
+        self.bind_candidates(manifest_path)
+        supplement = self.runtime_dir / "supplement.json"
+        supplement.write_text('{"results": []}', encoding="utf-8")
+        record_stage(
+            manifest_path,
+            "supplemental",
+            "completed",
+            artifact_path=supplement,
+            now=self.now,
+        )
+        tampered_manifest = load_manifest(manifest_path)
+        tampered_manifest["artifacts"]["history_review_slice"]["input_sha256"] = "0" * 64
+        with self.assertRaisesRegex(RunContractError, "history slice lineage"):
+            review_input_bundle_sha256(tampered_manifest)
+
+        _, request = build_review_request(
+            manifest_path,
+            None,
+            "semantic",
+            now=self.now,
+        )
+
+        bound = request["bound_artifacts"]
+        self.assertEqual(bound["history_review_slice"]["path"], str(review_slice.resolve()))
+        self.assertEqual(
+            bound["history_review_slice"]["sha256"],
+            file_sha256(review_slice),
+        )
+        self.assertEqual(
+            bound["history_snapshot"]["sha256"],
+            file_sha256(self.runtime_dir / "history-snapshot.json"),
+        )
+        packet = request["execution_packet"]
+        self.assertTrue(packet["self_contained"])
+        self.assertEqual(
+            packet["agent_contract"]["role"],
+            "语义评估",
+        )
+        self.assertEqual(
+            packet["output_paths"]["refined_core"],
+            str(
+                (
+                    Path(load_manifest(manifest_path)["run_dir"])
+                    / "refined_core.json"
+                ).resolve()
+            ),
+        )
+        self.assertIn(
+            "validate-semantic-draft",
+            packet["validation_command"],
+        )
+        self.assertEqual(request["contract_version"], "review-request/1.1")
+
     def test_supplement_packet_binds_run_baseline_gap_and_stop_contract(self):
         manifest_path, _ = self.new_run()
         artifact = self.runtime_dir / "baseline.json"
@@ -471,13 +569,21 @@ class RunContractTests(unittest.TestCase):
             manifest_path,
             request_path,
             [result_path],
-            now=self.now,
+            now=self.now + timedelta(seconds=60),
         )
 
         self.assertTrue(artifact_path.exists())
         self.assertEqual(aggregate["run_id"], "run-test-001")
         self.assertEqual(aggregate["status"], "no_increment")
         self.assertEqual(aggregate["results"][0]["gap_id"], "tech")
+        self.assertEqual(
+            aggregate["timing"],
+            {
+                "request_to_registration_seconds": 60.0,
+                "latest_result_to_registration_seconds": 60.0,
+                "result_completion_skew_seconds": 0.0,
+            },
+        )
         self.assertEqual(load_manifest(manifest_path)["stages"]["supplemental"]["status"], "completed")
         self.assertEqual(
             load_manifest(manifest_path)["stages"]["supplemental"]["metadata"]["result_status"],
@@ -562,35 +668,58 @@ class RunContractTests(unittest.TestCase):
         manifest_path, _ = self.new_run()
         baseline = self.runtime_dir / "baseline.json"
         baseline.write_text('{"items": []}', encoding="utf-8")
-        record_stage(manifest_path, "baseline", "completed", artifact_path=baseline, now=self.now)
+        record_stage(
+            manifest_path,
+            "baseline",
+            "degraded",
+            artifact_path=baseline,
+            metadata={
+                "coverage": {
+                    "source_attempted": 10,
+                    "source_succeeded": 8,
+                    "source_failed": 2,
+                    "raw_candidates": 10,
+                    "dated_candidates": 9,
+                    "reasons": [],
+                }
+            },
+            now=self.now,
+        )
         self.bind_history(manifest_path)
+        manifest = load_manifest(manifest_path)
+        refined_payload = cloned_v13_payload()
+        refined_payload.update(
+            {
+                "run_id": manifest["run_id"],
+                "report_date": manifest["report_date"],
+                "generated_at": self.now.isoformat(),
+                "topic": manifest["topic"],
+                "region": manifest["region"],
+                "window": manifest["window"],
+            }
+        )
+        item = refined_payload["top_10"][0]
         candidate = {
-            "candidate_id": candidate_ref("https://example.org/1"),
-            "url": "https://example.org/1",
-            "title": "fact source",
+            "candidate_id": item["candidate_refs"][0],
+            "url": item["url"],
+            "title": item["title"],
         }
         candidate["candidate_object_sha256"] = candidate_object_hash(candidate)
-        self.bind_candidates(manifest_path, [candidate])
+        extra_candidates = []
+        for index in (2, 3):
+            extra = {
+                "candidate_id": candidate_ref(f"https://example.org/{index}"),
+                "url": f"https://example.org/{index}",
+                "title": f"candidate {index}",
+            }
+            extra["candidate_object_sha256"] = candidate_object_hash(extra)
+            extra_candidates.append(extra)
+        self.bind_candidates(manifest_path, [candidate, *extra_candidates])
         skipped = self.runtime_dir / "supplement-skipped.json"
         skipped.write_text('{"coverage":{"attempted":0,"succeeded":0,"failed":0},"results":[]}', encoding="utf-8")
         record_stage(manifest_path, "supplemental", "completed", artifact_path=skipped, now=self.now)
         refined = self.runtime_dir / "refined.json"
-        item = {
-            "event_id": "evt-1",
-            "url": "https://example.org/1",
-            "fact": "fact",
-            "intelligence_level": "L3",
-            "candidate_refs": [candidate["candidate_id"]],
-            "access_check": {
-                "status": "verified",
-                "checked_at": self.now.isoformat(),
-                "method": "http_get",
-                "requested_url": "https://example.org/1",
-                "final_url": "https://example.org/1",
-                "http_status": 200,
-            },
-        }
-        refined.write_text(json.dumps({"top_10": [item]}), encoding="utf-8")
+        refined.write_text(json.dumps(refined_payload), encoding="utf-8")
         manifest = load_manifest(manifest_path)
         semantic_access_log = [item["access_check"]]
         _, semantic_request = build_review_request(
@@ -639,6 +768,57 @@ class RunContractTests(unittest.TestCase):
             ),
             encoding="utf-8",
         )
+        self.assertIsInstance(
+            validate_semantic_draft(manifest_path, refined, semantic),
+            list,
+        )
+
+        bad_coverage_refined = self.runtime_dir / "refined-bad-coverage.json"
+        bad_coverage_payload = deepcopy(refined_payload)
+        bad_coverage_payload["coverage"]["source_attempted"] = 9
+        bad_coverage_refined.write_text(
+            json.dumps(bad_coverage_payload), encoding="utf-8"
+        )
+        bad_coverage_receipt = self.runtime_dir / "semantic-bad-coverage.json"
+        bad_coverage_receipt_payload = json.loads(semantic.read_text(encoding="utf-8"))
+        bad_coverage_receipt_payload["output_sha256"] = file_sha256(
+            bad_coverage_refined
+        )
+        bad_coverage_receipt.write_text(
+            json.dumps(bad_coverage_receipt_payload), encoding="utf-8"
+        )
+        with self.assertRaisesRegex(RunContractError, "coverage.source_attempted"):
+            validate_semantic_draft(
+                manifest_path,
+                bad_coverage_refined,
+                bad_coverage_receipt,
+            )
+
+        bad_date_refined = self.runtime_dir / "refined-bad-date.json"
+        bad_date_payload = deepcopy(refined_payload)
+        bad_date_payload["top_10"][0]["published_at"] = (
+            "2026-08-09T09:00:00+08:00"
+        )
+        bad_date_refined.write_text(json.dumps(bad_date_payload), encoding="utf-8")
+        bad_date_receipt = self.runtime_dir / "semantic-bad-date.json"
+        bad_date_receipt_payload = json.loads(semantic.read_text(encoding="utf-8"))
+        bad_date_item_hash = item_hash(bad_date_payload["top_10"][0])
+        bad_date_receipt_payload["output_sha256"] = file_sha256(bad_date_refined)
+        bad_date_receipt_payload["reviewed_item_hashes"] = [bad_date_item_hash]
+        bad_date_receipt_payload["lineage_bindings"][0][
+            "output_item_sha256"
+        ] = bad_date_item_hash
+        bad_date_receipt.write_text(
+            json.dumps(bad_date_receipt_payload),
+            encoding="utf-8",
+        )
+        with self.assertRaisesRegex(RunContractError, "published_at"):
+            validate_semantic_draft(
+                manifest_path,
+                bad_date_refined,
+                bad_date_receipt,
+            )
+
         bad_lineage = self.runtime_dir / "semantic-bad-lineage.json"
         bad_lineage_payload = json.loads(semantic.read_text(encoding="utf-8"))
         bad_lineage_payload["lineage_bindings"][0]["inputs"][0][
@@ -729,7 +909,7 @@ class RunContractTests(unittest.TestCase):
             refined,
             semantic,
             red_team,
-            now=self.now,
+            now=self.now + timedelta(seconds=90),
         )
 
         stages = load_manifest(manifest_path)["stages"]
@@ -746,6 +926,18 @@ class RunContractTests(unittest.TestCase):
         self.assertEqual(stages["red_team"]["metadata"]["max_turns"], 1)
         self.assertEqual(stages["red_team"]["metadata"]["turns_used"], 1)
         self.assertEqual(stages["red_team"]["metadata"]["elapsed_seconds"], 0.0)
+        self.assertEqual(
+            stages["red_team"]["metadata"]["request_to_receipt_seconds"],
+            0.0,
+        )
+        self.assertEqual(
+            stages["red_team"]["metadata"]["receipt_to_registration_seconds"],
+            90.0,
+        )
+        self.assertEqual(
+            stages["red_team"]["metadata"]["request_to_registration_seconds"],
+            90.0,
+        )
 
 
 if __name__ == "__main__":

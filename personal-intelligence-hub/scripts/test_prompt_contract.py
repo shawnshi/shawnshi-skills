@@ -12,7 +12,17 @@ class PromptContractTests(unittest.TestCase):
             (ROOT / "references" / "subagent_prompts.json").read_text(encoding="utf-8")
         )
 
-        self.assertEqual(config["contract_version"], "subagent-prompts/1.5")
+        self.assertEqual(config["contract_version"], "subagent-prompts/1.6")
+        review_transfer = config["execution_policy"]["review_context_transfer"]
+        self.assertEqual(
+            review_transfer["mode"],
+            "self_contained_registered_request",
+        )
+        self.assertFalse(review_transfer["inherit_conversation_history"])
+        self.assertEqual(
+            review_transfer["authoritative_packet_field"],
+            "execution_packet",
+        )
         self.assertEqual(config["invocation_order"][0], "baseline_candidates")
         required = set(config["result_envelope"]["required"])
         self.assertTrue(
@@ -73,7 +83,15 @@ class PromptContractTests(unittest.TestCase):
         self.assertEqual(policy["readiness"]["wait_timeout_seconds"], 60)
         self.assertEqual(
             policy["readiness"]["after_wait_gate"],
-            "stop_waiting_until_artifact_or_state_fingerprint_changes",
+            "stop_waiting_until_artifact_control_message_or_progress_fingerprint_changes",
+        )
+        self.assertIn(
+            "review_progress_gate.py",
+            policy["readiness"]["progress_gate_command"],
+        )
+        self.assertIn(
+            "--milestone-seq",
+            policy["readiness"]["progress_gate_command"],
         )
         self.assertFalse(
             policy["source_efficiency"]["retry_same_url_on_permanent_failure"]
@@ -88,6 +106,7 @@ class PromptContractTests(unittest.TestCase):
             policy["review_sequence"],
             [
                 "register_semantic_request",
+                "validate_semantic_drafts",
                 "publish_semantic_outputs",
                 "validate_semantic_and_register_red_team_request",
                 "publish_red_team_receipt",
@@ -123,6 +142,22 @@ class PromptContractTests(unittest.TestCase):
         self.assertIn(
             "不得重新联网访问已经 verified 的 URL",
             config["review_agents"]["SemanticEvaluator"]["system_prompt"],
+        )
+        self.assertIn(
+            "validate-semantic-draft",
+            config["review_agents"]["SemanticEvaluator"]["system_prompt"],
+        )
+        self.assertIn(
+            "YYYY-MM-DD",
+            config["review_agents"]["SemanticEvaluator"]["system_prompt"],
+        )
+        self.assertIn(
+            "input_validated",
+            config["review_agents"]["SemanticEvaluator"]["progress_contract"],
+        )
+        self.assertIn(
+            "进度指纹",
+            config["execution_policy"]["readiness"]["lost_agent_rule"],
         )
         self.assertIn(
             "no_l4_fast_path",

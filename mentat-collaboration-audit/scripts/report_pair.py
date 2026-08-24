@@ -9,6 +9,7 @@ import html as html_lib
 import json
 import os
 import re
+import tempfile
 from html.parser import HTMLParser
 from pathlib import Path
 from typing import Any, Mapping, Sequence
@@ -731,6 +732,7 @@ def _normalized_path_key(path: Path) -> str:
 
 
 def _write_exclusive_batch(files: Sequence[tuple[Path, bytes]]) -> None:
+    """Stage sibling files and publish them exclusively, with the final file as commit marker."""
     keys = [_normalized_path_key(path) for path, _ in files]
     if len(keys) != len(set(keys)):
         raise ReportPairError("output paths must be distinct")
@@ -741,10 +743,21 @@ def _write_exclusive_batch(files: Sequence[tuple[Path, bytes]]) -> None:
             raise ReportPairError(f"refusing to overwrite existing output: {path}")
 
     created: list[Path] = []
+    staged: list[tuple[Path, Path]] = []
     try:
         for path, content in files:
-            with path.open("xb") as handle:
+            descriptor, temporary = tempfile.mkstemp(
+                prefix=f".{path.name}.", suffix=".tmp", dir=path.parent
+            )
+            temporary_path = Path(temporary)
+            with os.fdopen(descriptor, "wb") as handle:
                 handle.write(content)
+                handle.flush()
+                os.fsync(handle.fileno())
+            staged.append((temporary_path, path))
+
+        for temporary_path, path in staged:
+            os.link(temporary_path, path)
             created.append(path)
     except Exception:
         for path in reversed(created):
@@ -753,6 +766,12 @@ def _write_exclusive_batch(files: Sequence[tuple[Path, bytes]]) -> None:
             except OSError:
                 pass
         raise
+    finally:
+        for temporary_path, _ in staged:
+            try:
+                temporary_path.unlink()
+            except OSError:
+                pass
 
 
 def write_report_pair(

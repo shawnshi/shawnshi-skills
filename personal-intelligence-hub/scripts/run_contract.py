@@ -2,6 +2,8 @@ from __future__ import annotations
 
 import hashlib
 import json
+import math
+import re
 import uuid
 from copy import deepcopy
 from datetime import date, datetime, timedelta
@@ -14,7 +16,9 @@ from hub_utils import HUB_DIR, RUNTIME_DIR, atomic_dump_json, load_json
 
 
 CONTRACT_VERSION = "1.0"
+STRICT_ISO_DATE_PATTERN = re.compile(r"\d{4}-\d{2}-\d{2}\Z")
 CURRENT_SCHEMA_PATH = HUB_DIR / "references" / "briefing_schema.json"
+SUBAGENT_PROMPTS_PATH = HUB_DIR / "references" / "subagent_prompts.json"
 STAGE_ORDER = ("baseline", "supplemental", "semantic_review", "red_team", "archive")
 STAGE_TERMINAL = {
     "completed",
@@ -185,6 +189,133 @@ def registered_candidate_hashes(manifest: dict[str, Any]) -> dict[str, set[str]]
     return registered
 
 
+def validate_registered_pipeline_summary(
+    refined: dict[str, Any], manifest: dict[str, Any]
+) -> None:
+    """Fail closed when a semantic draft omits registered coverage inputs."""
+    baseline_stage = manifest.get("stages", {}).get("baseline", {})
+    baseline_coverage = baseline_stage.get("metadata", {}).get("coverage")
+    if not isinstance(baseline_coverage, dict):
+        raise RunContractError("baseline coverage receipt is missing")
+
+    supplement_record = manifest.get("stages", {}).get("supplemental", {})
+    supplement_path = Path(str(supplement_record.get("artifact_path") or ""))
+    if (
+        not supplement_path.is_file()
+        or supplement_record.get("artifact_sha256") != file_sha256(supplement_path)
+    ):
+        raise RunContractError("registered supplement aggregate bytes changed")
+    supplement = load_json(supplement_path, {})
+    supplement_coverage = supplement.get("coverage") or {}
+    try:
+        expected_counts = {
+            "source_attempted": int(baseline_coverage["source_attempted"])
+            + int(supplement_coverage.get("attempted", 0)),
+            "source_succeeded": int(baseline_coverage["source_succeeded"])
+            + int(supplement_coverage.get("succeeded", 0)),
+            "source_failed": int(baseline_coverage["source_failed"])
+            + int(supplement_coverage.get("failed", 0)),
+        }
+        baseline_raw = int(baseline_coverage["raw_candidates"])
+        baseline_dated = int(baseline_coverage["dated_candidates"])
+    except (KeyError, TypeError, ValueError) as exc:
+        raise RunContractError("baseline coverage receipt counts are invalid") from exc
+
+    coverage = refined.get("coverage")
+    if not isinstance(coverage, dict):
+        raise RunContractError("semantic draft coverage is missing")
+    for field, expected in expected_counts.items():
+        if coverage.get(field) != expected:
+            raise RunContractError(
+                f"semantic draft coverage.{field} does not match registered artifacts"
+            )
+    attempted = expected_counts["source_attempted"]
+    expected_rate = expected_counts["source_succeeded"] / attempted if attempted else 0.0
+    if not isinstance(coverage.get("source_success_rate"), (int, float)) or not math.isclose(
+        float(coverage["source_success_rate"]), expected_rate, abs_tol=1e-6
+    ):
+        raise RunContractError(
+            "semantic draft coverage.source_success_rate does not match registered artifacts"
+        )
+    expected_baseline_status = (
+        "completed" if baseline_stage.get("status") == "completed" else baseline_stage.get("status")
+    )
+    if coverage.get("baseline_status") != expected_baseline_status:
+        raise RunContractError(
+            "semantic draft coverage.baseline_status does not match run manifest"
+        )
+
+    results = supplement.get("results") if isinstance(supplement.get("results"), list) else []
+    lane_failures = sorted(
+        {
+            str(result.get("lane"))
+            for result in results
+            if isinstance(result, dict) and result.get("status") in {"degraded", "failed"}
+        }
+    )
+    if sorted(str(value) for value in coverage.get("required_lane_failures", [])) != lane_failures:
+        raise RunContractError(
+            "semantic draft coverage.required_lane_failures does not match supplement results"
+        )
+    expected_run_status = (
+        "degraded"
+        if baseline_stage.get("status") == "degraded"
+        or supplement_record.get("status") == "degraded"
+        else "complete"
+    )
+    if coverage.get("run_status") != expected_run_status:
+        raise RunContractError(
+            "semantic draft coverage.run_status does not match registered stage status"
+        )
+    expected_confidence = "high" if expected_run_status == "complete" else "medium"
+    if coverage.get("coverage_confidence") != expected_confidence:
+        raise RunContractError(
+            "semantic draft coverage.coverage_confidence does not match registered stage status"
+        )
+    expected_reasons = sorted(
+        str(value) for value in baseline_coverage.get("reasons", []) if str(value)
+    ) + [f"supplement lane degraded: {lane}" for lane in lane_failures]
+    if sorted(str(value) for value in coverage.get("reasons", [])) != sorted(expected_reasons):
+        raise RunContractError(
+            "semantic draft coverage.reasons do not match registered artifacts"
+        )
+
+    supplemental_candidates = sum(
+        len(result.get("candidates", []))
+        for result in results
+        if isinstance(result, dict) and isinstance(result.get("candidates"), list)
+    )
+    dated_denominator = baseline_raw + supplemental_candidates
+    expected_dated_rate = (
+        (baseline_dated + supplemental_candidates) / dated_denominator
+        if dated_denominator
+        else 0.0
+    )
+    if not isinstance(coverage.get("dated_candidate_rate"), (int, float)) or not math.isclose(
+        float(coverage["dated_candidate_rate"]), expected_dated_rate, abs_tol=1e-6
+    ):
+        raise RunContractError(
+            "semantic draft coverage.dated_candidate_rate does not match registered artifacts"
+        )
+
+    candidate_record = manifest.get("artifacts", {}).get("candidate_pool", {})
+    candidate_path = Path(str(candidate_record.get("artifact_path") or ""))
+    if (
+        not candidate_path.is_file()
+        or candidate_record.get("artifact_sha256") != file_sha256(candidate_path)
+    ):
+        raise RunContractError("registered candidate pool bytes changed")
+    candidate_pool = load_json(candidate_path, {})
+    baseline_observed = candidate_pool.get("candidate_funnel", {}).get("observed")
+    if not isinstance(baseline_observed, int):
+        raise RunContractError("candidate pool observed count is missing")
+    expected_observed = baseline_observed + supplemental_candidates
+    if refined.get("candidate_funnel", {}).get("observed") != expected_observed:
+        raise RunContractError(
+            "semantic draft candidate_funnel.observed does not match registered artifacts"
+        )
+
+
 def skill_bundle_sha256(skill_path: str | Path) -> str:
     root = Path(skill_path).resolve().parent
     files: list[Path] = []
@@ -297,6 +428,7 @@ def review_input_bundle_sha256(manifest: dict[str, Any]) -> str:
     artifacts = manifest.get("artifacts", {})
     candidate = artifacts.get("candidate_pool", {})
     history = artifacts.get("history_snapshot", {})
+    history_review = artifacts.get("history_review_slice", {})
     supplement = manifest.get("stages", {}).get("supplemental", {})
     values = {
         "run_id": manifest.get("run_id"),
@@ -307,6 +439,8 @@ def review_input_bundle_sha256(manifest: dict[str, Any]) -> str:
         "window": manifest.get("window"),
         "mix_request": manifest.get("mix_request"),
     }
+    if history_review:
+        values["history_review_slice_sha256"] = history_review.get("artifact_sha256")
     if any(values[field] in {None, ""} for field in (
         "run_id",
         "baseline_sha256",
@@ -315,6 +449,13 @@ def review_input_bundle_sha256(manifest: dict[str, Any]) -> str:
         "supplement_sha256",
     )):
         raise RunContractError("review input bundle is incomplete")
+    if history_review and values["history_review_slice_sha256"] in {None, ""}:
+        raise RunContractError("review input bundle history slice is incomplete")
+    if (
+        history_review
+        and history_review.get("input_sha256") != history.get("artifact_sha256")
+    ):
+        raise RunContractError("review input bundle history slice lineage mismatch")
     return hashlib.sha256(canonical_json_bytes(values)).hexdigest()
 
 
@@ -450,6 +591,7 @@ def record_run_artifact(
 ) -> dict[str, Any]:
     if name not in {
         "history_snapshot",
+        "history_review_slice",
         "candidate_pool",
         "supplement_request",
         "semantic_review_request",
@@ -617,7 +759,7 @@ def build_supplement_request(
         request_path,
         input_sha256=candidate_record["artifact_sha256"],
         metadata={"gap_count": len(normalized_gaps)},
-        now=now,
+        now=current,
     )
     return request_path, request
 
@@ -630,6 +772,18 @@ def _parse_aware_datetime(value: Any, field: str) -> datetime:
     if parsed.tzinfo is None or parsed.utcoffset() is None:
         raise RunContractError(f"{field} must be timezone-aware")
     return parsed
+
+
+def normalize_published_at(value: Any, field: str = "published_at") -> str:
+    """Return a canonical source-local YYYY-MM-DD publication date."""
+    raw = str(value or "").strip()
+    if STRICT_ISO_DATE_PATTERN.fullmatch(raw):
+        try:
+            return date.fromisoformat(raw).isoformat()
+        except ValueError as exc:
+            raise RunContractError(f"{field} must be a valid ISO date") from exc
+    published_at = _parse_aware_datetime(raw, field)
+    return published_at.date().isoformat()
 
 
 def _validate_supplement_candidate(
@@ -658,15 +812,13 @@ def _validate_supplement_candidate(
         raise RunContractError(f"supplement candidate {index} has invalid source_type")
     if candidate["primary_domain"] not in {"technology", "healthcare_digital"}:
         raise RunContractError(f"supplement candidate {index} has invalid primary_domain")
-    published_raw = str(candidate["published_at"]).strip()
     try:
-        if len(published_raw) == 10:
-            published_day = date.fromisoformat(published_raw)
-        else:
-            published_dt = _parse_aware_datetime(
-                published_raw, f"supplement candidate {index}.published_at"
+        published_day = date.fromisoformat(
+            normalize_published_at(
+                candidate["published_at"],
+                f"supplement candidate {index}.published_at",
             )
-            published_day = published_dt.astimezone(ZoneInfo(str(window["timezone"]))).date()
+        )
         start = date.fromisoformat(str(window["start"]))
         end = date.fromisoformat(str(window["end"]))
     except (ValueError, ZoneInfoNotFoundError) as exc:
@@ -788,6 +940,7 @@ def register_supplement_results(
         raise RunContractError("supplement request has no gaps")
 
     results: list[dict[str, Any]] = []
+    result_completed_at: list[datetime] = []
     seen: set[str] = set()
     degraded = False
     for raw_path in result_paths:
@@ -895,7 +1048,11 @@ def register_supplement_results(
             raise RunContractError("completed supplement result requires candidates")
         if status in {"no_increment", "failed"} and candidates:
             raise RunContractError(f"{status} supplement result cannot contain candidates")
-        _parse_aware_datetime(result.get("completed_at"), "supplement result completed_at")
+        result_completed_at.append(
+            _parse_aware_datetime(
+                result.get("completed_at"), "supplement result completed_at"
+            )
+        )
         degraded = degraded or status in {"degraded", "failed"} or failed > 0
         results.append(deepcopy(result))
 
@@ -915,6 +1072,22 @@ def register_supplement_results(
             return existing_path, existing
         raise RunContractError("supplemental stage is terminal with different results")
     current = _aware_now(manifest["timezone"], now)
+    request_started_at = _parse_aware_datetime(
+        request.get("created_at"), "supplement request created_at"
+    )
+    latest_result_at = max(result_completed_at)
+    earliest_result_at = min(result_completed_at)
+    timing = {
+        "request_to_registration_seconds": round(
+            max(0.0, (current - request_started_at).total_seconds()), 3
+        ),
+        "latest_result_to_registration_seconds": round(
+            max(0.0, (current - latest_result_at).total_seconds()), 3
+        ),
+        "result_completion_skew_seconds": round(
+            max(0.0, (latest_result_at - earliest_result_at).total_seconds()), 3
+        ),
+    }
     coverage_total = {
         key: sum(int(result["coverage"][key]) for result in results)
         for key in ("attempted", "succeeded", "failed")
@@ -934,6 +1107,7 @@ def register_supplement_results(
         "status": aggregate_status,
         "completed_at": current.isoformat(),
         "coverage": coverage_total,
+        "timing": timing,
         "results": sorted(results, key=lambda result: str(result["gap_id"])),
     }
     aggregate_path = Path(manifest["run_dir"]) / "supplement_results.json"
@@ -948,8 +1122,9 @@ def register_supplement_results(
             "gap_count": len(results),
             "coverage": coverage_total,
             "result_status": aggregate_status,
+            **timing,
         },
-        now=now,
+        now=current,
     )
     return aggregate_path, aggregate
 
@@ -991,12 +1166,10 @@ def build_review_request(
             raise RunContractError(
                 "validated semantic receipt is required before red-team invocation"
             )
-        semantic_receipt = load_json(Path(semantic_receipt_path), {})
-        validate_review_receipt(
-            semantic_receipt,
+        validate_semantic_draft(
             manifest_path,
             refined_file,
-            expected_kind="semantic",
+            semantic_receipt_path,
         )
         scope = review_scope(load_json(refined_file, {}))
         if scope["review_mode"] == "no_l4_fast_path":
@@ -1011,25 +1184,118 @@ def build_review_request(
     if not halt:
         raise RunContractError("review request halt_condition is required")
     current = _aware_now(manifest["timezone"], now)
+    prompt_config = load_json(SUBAGENT_PROMPTS_PATH, {})
+    agent_contract = (
+        prompt_config.get("review_agents", {}).get(reviewer_id)
+        if isinstance(prompt_config, dict)
+        else None
+    )
+    if not isinstance(agent_contract, dict):
+        raise RunContractError(f"review prompt contract is missing for {reviewer_id}")
+    prompt_sha256 = file_sha256(SUBAGENT_PROMPTS_PATH)
+    if prompt_sha256 is None:
+        raise RunContractError("review prompt configuration is missing")
+    run_dir = Path(manifest["run_dir"]).resolve()
+    invocation_id = uuid.uuid4().hex
+    if review_kind == "semantic":
+        output_paths = {
+            "refined_core": str(run_dir / "refined_core.json"),
+            "review_receipt": str(run_dir / "semantic_receipt.json"),
+        }
+        draft_paths = {
+            "refined_core": str(run_dir / f"refined_core.{invocation_id}.draft.json"),
+            "review_receipt": str(
+                run_dir / f"semantic_receipt.{invocation_id}.draft.json"
+            ),
+        }
+        progress_messages = [
+            "review_progress seq=1 phase=input_validated",
+            "review_progress seq=2 phase=lineage_ready",
+        ]
+    else:
+        output_paths = {"review_receipt": str(run_dir / "red_team_receipt.json")}
+        draft_paths = {
+            "review_receipt": str(
+                run_dir / f"red_team_receipt.{invocation_id}.draft.json"
+            )
+        }
+        progress_messages = ["review_progress seq=1 phase=input_validated"]
     request: dict[str, Any] = {
-        "contract_version": "review-request/1.0",
+        "contract_version": "review-request/1.1",
         "run_id": manifest["run_id"],
         "review_kind": review_kind,
         "reviewer_kind": reviewer_kind,
         "reviewer_id": reviewer_id,
-        "invocation_id": uuid.uuid4().hex,
+        "invocation_id": invocation_id,
         "challenge": uuid.uuid4().hex + uuid.uuid4().hex,
         "baseline_sha256": manifest["stages"]["baseline"]["artifact_sha256"],
         "max_turns": max_turns,
         "halt_condition": halt,
         "created_at": current.isoformat(),
+        "execution_packet": {
+            "contract_version": "review-execution-packet/1.0",
+            "self_contained": True,
+            "run_manifest_path": str(Path(manifest_path).resolve()),
+            "skill_root": str(HUB_DIR.resolve()),
+            "prompt_config": {
+                "path": str(SUBAGENT_PROMPTS_PATH.resolve()),
+                "sha256": prompt_sha256,
+            },
+            "agent_contract": deepcopy(agent_contract),
+            "output_paths": output_paths,
+            "draft_paths": draft_paths,
+            "write_scope": sorted([*output_paths.values(), *draft_paths.values()]),
+            "progress_messages": progress_messages,
+            "artifact_ready_message": (
+                "artifact_ready refined_core_path=<path> refined_core_sha256=<sha256> "
+                "semantic_receipt_path=<path> semantic_receipt_sha256=<sha256>"
+                if review_kind == "semantic"
+                else "artifact_ready path=<path> sha256=<sha256>"
+            ),
+        },
     }
     if review_kind == "semantic":
         request["input_bundle_sha256"] = review_input_bundle_sha256(manifest)
         request["review_mode"] = "registered_evidence_batch"
         request["network_policy"] = "registered_evidence_first"
+        artifacts = manifest.get("artifacts", {})
+        baseline = manifest.get("stages", {}).get("baseline", {})
+        supplement = manifest.get("stages", {}).get("supplemental", {})
+
+        def bound_artifact(record: dict[str, Any]) -> dict[str, str]:
+            return {
+                "path": str(Path(record["artifact_path"]).resolve()),
+                "sha256": str(record["artifact_sha256"]),
+            }
+
+        request["bound_artifacts"] = {
+            "baseline": bound_artifact(baseline),
+            "candidate_pool": bound_artifact(artifacts["candidate_pool"]),
+            "history_snapshot": bound_artifact(artifacts["history_snapshot"]),
+            "supplement": bound_artifact(supplement),
+        }
+        if artifacts.get("history_review_slice"):
+            request["bound_artifacts"]["history_review_slice"] = bound_artifact(
+                artifacts["history_review_slice"]
+            )
+        request["execution_packet"]["validation_command"] = [
+            "python",
+            "-X",
+            "utf8",
+            str((HUB_DIR / "scripts" / "run_daily.py").resolve()),
+            "validate-semantic-draft",
+            "--manifest",
+            str(Path(manifest_path).resolve()),
+            "--refined",
+            draft_paths["refined_core"],
+            "--semantic-receipt",
+            draft_paths["review_receipt"],
+        ]
     else:
         request["refined_sha256"] = file_sha256(refined_file)
+        request["execution_packet"]["bound_refined_path"] = str(
+            refined_file.resolve()
+        )
         request.update(scope or {})
     request_path = Path(manifest["run_dir"]) / f"{review_kind}_review_request.json"
     atomic_dump_json(request_path, request)
@@ -1068,7 +1334,7 @@ def _registered_review_request(
         raise RunContractError(f"registered {review_kind} review request bytes changed")
     request = load_json(path, {})
     if (
-        request.get("contract_version") != "review-request/1.0"
+        request.get("contract_version") != "review-request/1.1"
         or request.get("run_id") != manifest.get("run_id")
         or request.get("review_kind") != review_kind
     ):
@@ -1258,6 +1524,114 @@ def validate_review_receipt(
             raise RunContractError("red-team receipt does not cover every L4 item")
 
 
+def validate_semantic_draft(
+    manifest_path: str | Path,
+    refined_path: str | Path,
+    semantic_receipt_path: str | Path,
+) -> list[str]:
+    """Validate a semantic draft before red-team registration.
+
+    The synthetic red-team block only exercises the complete briefing schema.
+    It is never registered in the run manifest or written to an archive.
+    """
+    manifest = load_manifest(manifest_path)
+    refined_file = Path(refined_path)
+    receipt = load_json(Path(semantic_receipt_path), {})
+    validate_review_receipt(
+        receipt,
+        manifest_path,
+        refined_file,
+        expected_kind="semantic",
+    )
+    refined = load_json(refined_file, {})
+    expected_identity = {
+        "run_id": manifest.get("run_id"),
+        "report_date": manifest.get("report_date"),
+        "window": manifest.get("window"),
+        "topic": manifest.get("topic"),
+        "region": manifest.get("region"),
+    }
+    for field, expected in expected_identity.items():
+        if refined.get(field) != expected:
+            raise RunContractError(f"semantic draft {field} mismatch")
+
+    validate_registered_pipeline_summary(refined, manifest)
+
+    created_at = _parse_aware_datetime(
+        manifest.get("created_at"), "run manifest created_at"
+    )
+    generated_at = _parse_aware_datetime(
+        refined.get("generated_at"), "semantic draft generated_at"
+    )
+    if generated_at < created_at:
+        raise RunContractError(
+            "semantic draft generated_at cannot precede run creation"
+        )
+
+    items = refined.get("top_10")
+    if not isinstance(items, list):
+        raise RunContractError("semantic draft top_10 must be a list")
+    item_hashes = [item_hash(item) for item in items]
+    l4_hashes = [
+        item_hash(item)
+        for item in items
+        if isinstance(item, dict) and item.get("intelligence_level") == "L4"
+    ]
+    supplement_stage = manifest.get("stages", {}).get("supplemental", {})
+    supplement_status = (
+        "degraded" if supplement_stage.get("status") == "degraded" else "completed"
+    )
+    if supplement_stage.get("metadata", {}).get("result_status") == "no_increment":
+        supplement_status = "no_increment"
+
+    payload = deepcopy(refined)
+    payload["pipeline"] = {
+        "baseline_sha256": manifest["stages"]["baseline"]["artifact_sha256"],
+        "supplement_status": supplement_status,
+        "semantic_review": {
+            "status": receipt["status"],
+            "reviewer_kind": receipt["reviewer_kind"],
+            "reviewer_id": receipt["reviewer_id"],
+            "invocation_id": receipt["invocation_id"],
+            "request_sha256": receipt["request_sha256"],
+            "turns_used": receipt["turns_used"],
+            "halt_condition_met": receipt["halt_condition_met"],
+            "input_bundle_sha256": receipt["input_bundle_sha256"],
+            "access_log_sha256": receipt["data_provenance"]["access_log_sha256"],
+            "verified_access_count": len(
+                {
+                    normalize_url(
+                        str((item.get("access_check") or {}).get("requested_url") or "")
+                    )
+                    for item in items
+                    if isinstance(item, dict)
+                }
+            ),
+            "output_sha256": receipt["output_sha256"],
+            "reviewed_item_hashes": deepcopy(receipt["reviewed_item_hashes"]),
+            "lineage_bindings": deepcopy(receipt["lineage_bindings"]),
+        },
+        "red_team": {
+            "status": "passed" if l4_hashes else "not_required",
+            "reviewer_kind": "logic_adversary",
+            "reviewer_id": "SemanticDraftGate",
+            "invocation_id": "semantic-draft-gate",
+            "request_sha256": "0" * 64,
+            "turns_used": 1,
+            "halt_condition_met": True,
+            "covered_item_hashes": l4_hashes,
+        },
+    }
+    from briefing_gate import validate_briefing_data
+
+    errors, warnings = validate_briefing_data(payload)
+    if errors:
+        raise RunContractError("semantic draft gate failed: " + "; ".join(errors))
+    if sorted(item_hashes) != sorted(receipt.get("reviewed_item_hashes", [])):
+        raise RunContractError("semantic draft reviewed item hashes mismatch")
+    return warnings
+
+
 def register_review_receipt(
     manifest_path: str | Path,
     refined_path: str | Path,
@@ -1286,7 +1660,16 @@ def register_review_receipt(
     completed_at = _parse_aware_datetime(
         receipt.get("completed_at"), "review receipt completed_at"
     )
-    elapsed_seconds = max(0.0, (completed_at - started_at).total_seconds())
+    registered_at = _aware_now(manifest["timezone"], now)
+    request_to_receipt_seconds = max(
+        0.0, (completed_at - started_at).total_seconds()
+    )
+    receipt_to_registration_seconds = max(
+        0.0, (registered_at - completed_at).total_seconds()
+    )
+    request_to_registration_seconds = max(
+        0.0, (registered_at - started_at).total_seconds()
+    )
     return record_stage(
         manifest_path,
         stage,
@@ -1301,9 +1684,16 @@ def register_review_receipt(
             "review_mode": request.get("review_mode"),
             "max_turns": request.get("max_turns"),
             "turns_used": receipt.get("turns_used"),
-            "elapsed_seconds": round(elapsed_seconds, 3),
+            "elapsed_seconds": round(request_to_receipt_seconds, 3),
+            "request_to_receipt_seconds": round(request_to_receipt_seconds, 3),
+            "receipt_to_registration_seconds": round(
+                receipt_to_registration_seconds, 3
+            ),
+            "request_to_registration_seconds": round(
+                request_to_registration_seconds, 3
+            ),
         },
-        now=now,
+        now=registered_at,
     )
 
 

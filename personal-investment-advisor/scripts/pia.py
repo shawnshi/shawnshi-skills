@@ -352,6 +352,35 @@ def _build_parser() -> JsonArgumentParser:
     calibrate.add_argument("--journal-path")
     calibrate.add_argument("--output-path", required=True)
 
+    alpha_validate = subparsers.add_parser(
+        "alpha-validate",
+        help="Validate a point-in-time alpha package against promotion gates.",
+    )
+    alpha_validate.add_argument("alpha_package")
+    alpha_validate.add_argument("--policy-file", required=True)
+
+    alpha_scan = subparsers.add_parser(
+        "alpha-scan",
+        help="Rank signals from an alpha package that passed validation.",
+    )
+    alpha_scan.add_argument("alpha_package")
+    alpha_scan.add_argument("--validation-report", required=True)
+    alpha_scan.add_argument("--policy-file", required=True)
+
+    construct = subparsers.add_parser(
+        "portfolio-construct",
+        help="Construct ERC and robust active research candidates offline.",
+    )
+    construct.add_argument("scan_report")
+    construct.add_argument("--policy-file", required=True)
+
+    proposal = subparsers.add_parser(
+        "rebalance-proposal",
+        help="Compare current and candidate allocations without execution.",
+    )
+    proposal.add_argument("construction_report")
+    proposal.add_argument("--policy-file", required=True)
+
     validate = subparsers.add_parser(
         "validate", help="Run a selected current contract gate."
     )
@@ -468,6 +497,50 @@ def _dispatch(args: argparse.Namespace) -> tuple[dict[str, Any], int]:
             output_mode="text",
             required_output=output_path,
             limitations=["report completion does not establish calibration quality"],
+        )
+
+    if args.command == "alpha-validate":
+        return _run_child(
+            public_command=args.command,
+            script_name="alpha_validation.py",
+            child_arguments=[args.alpha_package, "--policy-file", args.policy_file],
+            completion_scope="point_in_time_alpha_validation",
+            limitations=[
+                "eligibility permits active research only; it does not authorize capital deployment"
+            ],
+        )
+
+    if args.command == "alpha-scan":
+        return _run_child(
+            public_command=args.command,
+            script_name="active_alpha_scan.py",
+            child_arguments=[
+                args.alpha_package,
+                "--validation-report",
+                args.validation_report,
+                "--policy-file",
+                args.policy_file,
+            ],
+            completion_scope="validated_alpha_rank_yank_scan",
+            limitations=["Rank/Yank pools are research attention lists, not trade lists"],
+        )
+
+    if args.command == "portfolio-construct":
+        return _run_child(
+            public_command=args.command,
+            script_name="active_portfolio_constructor.py",
+            child_arguments=[args.scan_report, "--policy-file", args.policy_file],
+            completion_scope="read_only_active_portfolio_construction",
+            limitations=["candidate weights are non-executable and are not target weights"],
+        )
+
+    if args.command == "rebalance-proposal":
+        return _run_child(
+            public_command=args.command,
+            script_name="rebalance_proposal.py",
+            child_arguments=[args.construction_report, "--policy-file", args.policy_file],
+            completion_scope="non_executable_rebalance_research_proposal",
+            limitations=["allocation gaps cannot authorize or route an order"],
         )
 
     if args.command == "validate":

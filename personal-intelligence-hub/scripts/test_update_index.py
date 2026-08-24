@@ -2,6 +2,7 @@ import hashlib
 import json
 import tempfile
 import unittest
+from unittest.mock import patch
 from datetime import datetime
 from pathlib import Path
 from zoneinfo import ZoneInfo
@@ -11,6 +12,21 @@ from update_index import rebuild_history
 
 
 class UpdateIndexTests(unittest.TestCase):
+    def test_history_rebuild_avoids_temporary_directories(self):
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            news = root / "news"
+            news.mkdir()
+            history = root / "state" / "history.json"
+            with patch(
+                "tempfile.TemporaryDirectory",
+                side_effect=AssertionError("temporary directories are sandbox-hostile"),
+            ):
+                rebuild_history(news_dir=news, history_file=history)
+
+            self.assertTrue(history.is_file())
+            self.assertEqual(list(history.parent.glob(".*.rebuild")), [])
+
     def test_json_archives_rebuild_v2_history_idempotently_without_rewrite(self):
         now = datetime(2026, 8, 12, 10, 0, tzinfo=ZoneInfo("Asia/Shanghai"))
         identity = {

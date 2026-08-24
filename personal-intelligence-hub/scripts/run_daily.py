@@ -15,6 +15,8 @@ from mix_policy import allocate_target_counts
 DEFAULT_FOCUS_PATH = HUB_DIR / "references" / "strategic_focus.json"
 DEFAULT_MAX_CONCURRENCY = 8
 MAX_CONCURRENCY = 32
+DEFAULT_SCAN_DEADLINE_SECONDS = 300.0
+MAX_SCAN_DEADLINE_SECONDS = 3600.0
 
 
 @dataclass(frozen=True)
@@ -157,6 +159,7 @@ async def prepare_run(
     skill_path: Path = HUB_DIR / "SKILL.md",
     run_id: str | None = None,
     max_concurrency: int = DEFAULT_MAX_CONCURRENCY,
+    scan_deadline_seconds: float = DEFAULT_SCAN_DEADLINE_SECONDS,
     now: datetime | None = None,
 ) -> PrepareResult:
     from run_contract import RunContractError
@@ -166,6 +169,14 @@ async def prepare_run(
     if max_concurrency > MAX_CONCURRENCY:
         raise RunContractError(
             f"max_concurrency must be between 1 and {MAX_CONCURRENCY}"
+        )
+    if (
+        scan_deadline_seconds <= 0
+        or scan_deadline_seconds > MAX_SCAN_DEADLINE_SECONDS
+    ):
+        raise RunContractError(
+            "scan_deadline_seconds must be between 0 and "
+            f"{MAX_SCAN_DEADLINE_SECONDS}"
         )
 
     import fetch_news
@@ -178,6 +189,7 @@ async def prepare_run(
         record_run_artifact,
         record_stage,
     )
+    from history_manager import load_recent_history
     from update_index import rebuild_history
 
     manifest_path, manifest = create_run(
@@ -197,12 +209,14 @@ async def prepare_run(
     run_dir = Path(manifest["run_dir"])
     focus = load_json(focus_path, {})
     history_snapshot_path = run_dir / "history_snapshot.json"
+    history_now = now or datetime.fromisoformat(manifest["created_at"])
     rebuild_history(
         news_dir=news_dir,
         history_file=history_snapshot_path,
-        now=now or datetime.fromisoformat(manifest["created_at"]),
+        now=history_now,
         exclude_report_date=manifest["report_date"],
     )
+    dedupe_days = int(focus.get("filters", {}).get("dedupe_days", 7))
     compact_date = manifest["report_date"].replace("-", "")
     target_state = {}
     for suffix in ("json", "md", "manifest.json"):
@@ -215,12 +229,40 @@ async def prepare_run(
         metadata={
             "news_dir": str(news_dir.resolve()),
             "archive_target_state": target_state,
-            "dedupe_days": int(focus.get("filters", {}).get("dedupe_days", 7)),
+            "dedupe_days": dedupe_days,
             "allow_existing_archive_replacement": bool(
                 allow_existing_archive_replacement
                 or manifest["report_date"]
                 == datetime.fromisoformat(manifest["created_at"]).date().isoformat()
             ),
+        },
+        now=now,
+    )
+    history_review_slice_path = run_dir / "history_review_slice.json"
+    recent_history = load_recent_history(
+        days=dedupe_days,
+        now=history_now,
+        path=history_snapshot_path,
+    )
+    atomic_dump_json(
+        history_review_slice_path,
+        {
+            "resource_kind": "pih_history_review_slice",
+            "schema_version": "1.0",
+            "generated_at": history_now.isoformat(),
+            "source_snapshot_sha256": file_sha256(history_snapshot_path),
+            "dedupe_days": dedupe_days,
+            "entries": recent_history,
+        },
+    )
+    record_run_artifact(
+        manifest_path,
+        "history_review_slice",
+        history_review_slice_path,
+        input_sha256=file_sha256(history_snapshot_path),
+        metadata={
+            "dedupe_days": dedupe_days,
+            "entry_count": len(recent_history),
         },
         now=now,
     )
@@ -237,6 +279,7 @@ async def prepare_run(
             report_date=manifest["report_date"],
             timezone_name=timezone_name,
             max_concurrency=max_concurrency,
+            scan_deadline_seconds=scan_deadline_seconds,
             output_path=baseline_path,
             current_output_path=current_path,
             cache_path=cache_path,
@@ -354,6 +397,15 @@ def main() -> None:
         default=DEFAULT_MAX_CONCURRENCY,
         help=f"Global concurrent requests (1..{MAX_CONCURRENCY}; per-host maximum 4).",
     )
+    prepare.add_argument(
+        "--scan-deadline-seconds",
+        type=float,
+        default=DEFAULT_SCAN_DEADLINE_SECONDS,
+        help=(
+            "Overall source-scan deadline; unfinished sources become explicit "
+            "coverage failures."
+        ),
+    )
     prepare.add_argument("--news-dir", type=Path, default=NEWS_DIR)
     prepare.add_argument(
         "--allow-existing-archive-replacement",
@@ -372,6 +424,20 @@ def main() -> None:
         "--kind", choices=("semantic", "red_team"), required=True
     )
     prepare_review.add_argument("--max-turns", type=int, default=2)
+
+    validate_semantic = subparsers.add_parser(
+        "validate-semantic-draft",
+        help="Validate semantic core and receipt before immutable publication or red-team registration.",
+    )
+    validate_semantic.add_argument("--manifest", type=Path, required=True)
+    validate_semantic.add_argument("--refined", type=Path, required=True)
+    validate_semantic.add_argument("--semantic-receipt", type=Path, required=True)
+
+    normalize_date = subparsers.add_parser(
+        "normalize-published-at",
+        help="Normalize a date or timezone-aware ISO datetime to its source-local YYYY-MM-DD date.",
+    )
+    normalize_date.add_argument("--value", required=True)
 
     supplement = subparsers.add_parser("register-supplement", help="Validate and register all gap results.")
     supplement.add_argument("--manifest", type=Path, required=True)
@@ -411,6 +477,14 @@ def main() -> None:
             parser.error(
                 f"--max-concurrency must be between 1 and {MAX_CONCURRENCY}"
             )
+        if (
+            args.scan_deadline_seconds <= 0
+            or args.scan_deadline_seconds > MAX_SCAN_DEADLINE_SECONDS
+        ):
+            parser.error(
+                "--scan-deadline-seconds must be between 0 and "
+                f"{MAX_SCAN_DEADLINE_SECONDS}"
+            )
         ratio, source, reason = _ratio_from_args(args)
         result = asyncio.run(
             prepare_run(
@@ -427,6 +501,7 @@ def main() -> None:
                 allow_existing_archive_replacement=args.allow_existing_archive_replacement,
                 run_id=args.run_id,
                 max_concurrency=args.max_concurrency,
+                scan_deadline_seconds=args.scan_deadline_seconds,
             )
         )
         print(json.dumps({
@@ -457,6 +532,29 @@ def main() -> None:
                 },
                 ensure_ascii=False,
                 indent=2,
+            )
+        )
+    elif args.command == "normalize-published-at":
+        from run_contract import normalize_published_at
+
+        print(
+            json.dumps(
+                {"published_at": normalize_published_at(args.value)},
+                ensure_ascii=False,
+            )
+        )
+    elif args.command == "validate-semantic-draft":
+        from run_contract import validate_semantic_draft
+
+        warnings = validate_semantic_draft(
+            args.manifest,
+            args.refined,
+            args.semantic_receipt,
+        )
+        print(
+            json.dumps(
+                {"status": "valid", "warnings": warnings},
+                ensure_ascii=False,
             )
         )
     elif args.command == "register-supplement":

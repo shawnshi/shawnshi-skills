@@ -44,8 +44,11 @@ ENERGY_REQUIRED_FIELDS = (
     "睡眠观察",
     "HRV 与静息心率观察",
     "Body Battery 与压力观察",
-    "同期关系",
     "执行带宽",
+    "睡眠负债",
+    "摩擦解构",
+    "交叉归因",
+    "干预指令",
     "数据缺口与不可判断事项",
 )
 
@@ -150,6 +153,26 @@ def extract_energy_section(text: str) -> tuple[str | None, list[str]]:
     next_heading = NEXT_HEADING.search(text, start)
     end = next_heading.start() if next_heading else len(text)
     return text[start:end], []
+
+
+def extract_energy_field_values(section: str) -> dict[str, list[str]]:
+    """Extract bundled-template energy fields without accepting prose mentions."""
+    values: dict[str, list[str]] = {}
+    for field in ENERGY_REQUIRED_FIELDS:
+        pattern = re.compile(
+            rf"(?im)^\s*[-*]\s*(?:\*\*)?{re.escape(field)}\s*"
+            rf"(?:[:：](?:\*\*)?|(?:\*\*)?\s*[:：])\s*(?P<value>[^\n]*)$"
+        )
+        matches = [match.group("value").strip() for match in pattern.finditer(section)]
+        if matches:
+            values[field] = matches
+    return values
+
+
+def is_contentless_energy_value(value: str) -> bool:
+    normalized = value.strip().strip("` ")
+    normalized = normalized.rstrip("。.;；").strip().casefold()
+    return normalized in {"", "[data_unavailable]", "data_unavailable", "not_scored"}
 
 
 def semantic_clauses(text: str) -> list[str]:
@@ -257,8 +280,9 @@ def validate_energy_contract(
     section, section_errors = extract_energy_section(text)
     errors.extend(section_errors)
     if section is not None:
+        field_values = extract_energy_field_values(section)
         missing_fields = [
-            field for field in ENERGY_REQUIRED_FIELDS if field not in section
+            field for field in ENERGY_REQUIRED_FIELDS if field not in field_values
         ]
         if missing_fields:
             message = "energy-management section missing fields: " + ", ".join(
@@ -268,6 +292,40 @@ def validate_energy_contract(
                 errors.append(message)
             else:
                 warnings.append(message)
+
+        duplicate_fields = [
+            field for field, values in field_values.items() if len(values) > 1
+        ]
+        if duplicate_fields:
+            message = "energy-management section has duplicate fields: " + ", ".join(
+                duplicate_fields
+            )
+            if enforce_template_fields:
+                errors.append(message)
+            else:
+                warnings.append(message)
+
+        contentless_fields = [
+            field
+            for field, values in field_values.items()
+            if any(is_contentless_energy_value(value) for value in values)
+        ]
+        if contentless_fields:
+            message = "energy-management fields require explanatory content: " + ", ".join(
+                contentless_fields
+            )
+            if enforce_template_fields:
+                errors.append(message)
+            else:
+                warnings.append(message)
+
+        execution_values = field_values.get("执行带宽", [])
+        if enforce_template_fields and execution_values and any(
+            "not_scored" not in value.casefold() for value in execution_values
+        ):
+            errors.append(
+                "execution bandwidth must retain not_scored and explain the inference boundary"
+            )
         if "观测日期" not in section and "无有效观测" not in section:
             warnings.append(
                 "energy-management section does not expose per-KPI observation dates or an explicit no-observation state"

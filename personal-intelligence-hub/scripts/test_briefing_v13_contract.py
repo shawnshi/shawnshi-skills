@@ -14,6 +14,16 @@ class BriefingV13ContractTests(unittest.TestCase):
 
         self.assertEqual(errors, [])
 
+    def test_publication_date_requires_canonical_calendar_form(self):
+        for invalid in ("20260809", "2026-W32-7", "2026-08-09T09:00:00+08:00"):
+            with self.subTest(invalid=invalid):
+                payload = cloned_v13_payload()
+                payload["top_10"][0]["published_at"] = invalid
+
+                errors, _ = validate_briefing_data(payload)
+
+                self.assertTrue(any("published_at" in error for error in errors))
+
     def test_frozen_v12_payload_still_passes(self):
         errors, _ = validate_briefing_data(cloned_v12_payload())
 

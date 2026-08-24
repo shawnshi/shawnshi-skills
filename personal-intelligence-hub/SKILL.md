@@ -11,7 +11,7 @@ description: 对技术与医疗数字化开展基线优先的多来源扫描、�
 2. 用户只说“今日资讯简报”时：报告日为 Asia/Shanghai 当日，窗口为报告日及之前 6 日，共 7 个日历日；地域为中国、美国与全球。
 3. 默认领域请求比例为技术 60%、医疗数字化 40%。用户指定主题或比例时覆盖默认值并记录来源与理由。
 4. 正式日简报默认自动保存。用户明确要求不保存时，在两份回执登记后运行 `python -X utf8 scripts/run_daily.py preview --manifest <run_manifest.json> --refined <refined_core.json>`；只返回通过门禁的确定性 Markdown，不调用归档步骤。
-5. 临时探针和测试只写当前任务隔离 scratch；正式新闻产物只写授权新闻目录。
+5. 临时探针和测试只写当前任务隔离 scratch；正式新闻产物只写授权新闻目录。运行中间态默认写入 `~/MEMORY/brain/personal-intelligence-hub/runtime`，只有显式设置 `PIH_RUNTIME_DIR` 才可覆盖，不得回退到系统临时目录。
 
 ## 开始前读取
 
@@ -38,7 +38,7 @@ python -X utf8 scripts/run_daily.py prepare --report-date YYYY-MM-DD --timezone 
 该命令必须依次完成：
 
 1. 创建不可变 `run_manifest.json`，锁定 `run_id`、报告日、时区、窗口、主题、地域、请求比例、SKILL/资源清单 SHA-256 及技能全树摘要；
-2. 从正式新闻 JSON 确定性重建并登记 history v2 快照；目标报告日的旧档只进入替换哈希前置条件，不进入本次去重池；
+2. 从正式新闻 JSON 确定性重建并登记完整 history v2 快照，同时按 `dedupe_days` 生成并登记紧凑评审切片；完整快照用于归档一致性，语义代理只读取切片；目标报告日的旧档只进入替换哈希前置条件，不进入本次去重池；
 3. 先使用 `references/karpathy_feeds.json` 执行基线扫描；
 4. 将未知或无效发布日期放入 quarantine，记录来源覆盖和守恒候选漏斗；
 5. 将基线制成带 `candidate_id` 与 `candidate_object_sha256` 的 `candidates_only` 启发式候选池；
@@ -46,7 +46,7 @@ python -X utf8 scripts/run_daily.py prepare --report-date YYYY-MM-DD --timezone 
 
 基线阶段未达到 `completed` 或 `degraded` 前，不得启动补充检索。启发式候选只用于排序和发现缺口，不得直接成为最终事实、等级、推断、置信度或归档内容。
 
-基线抓取对网络异常、408、425、429 与 5xx 保留退避重试；对 4xx 永久响应及确定性的本地 TLS、证书或协议配置错误不做同参数重复请求，立即计入失败覆盖并交由缺口补检处理。全局并发限制为 1..32，同一主机最多占用 4 个连接，避免单一来源挤占全部扫描槽位；基线元数据保留实际 `elapsed_seconds` 供性能回归。不得通过删源或缩小扫描面换取耗时下降。
+基线抓取对网络异常、408、425、429 与 5xx 保留退避重试；对 4xx 永久响应及确定性的本地 TLS、证书或协议配置错误不做同参数重复请求，立即计入失败覆盖并交由缺口补检处理。全局并发限制为 1..32，同一主机最多占用 4 个连接，避免单一来源挤占全部扫描槽位。全扫描默认以 300 秒为总时限，可用 `--scan-deadline-seconds` 在 `0 < 秒数 ≤ 3600` 范围内调整；到期只取消未完成来源，并把每个来源记为结构化 `TIMEOUT` 覆盖失败，已完成来源与候选必须保留。取消清理默认只等待 2 秒，仍未退出的异常任务计入 `cancellation_pending_sources`，不得阻塞本阶段产物。基线元数据记录实际 `elapsed_seconds`、配置时限和超时来源数。不得通过删源、缩小扫描面或隐去超时换取耗时下降。
 
 “昨日资讯简报”显式传入昨日日期。不得用运行时滚动窗口或当前日期命名昨日文件。
 
@@ -61,7 +61,7 @@ python -X utf8 scripts/run_daily.py prepare --report-date YYYY-MM-DD --timezone 
 
 按 `execution_policy` 使用最小任务包启动代理：只传技能与提示词配置路径、run manifest、已登记请求、绑定输入的绝对路径、明确分派的 `gap_id`/`lane` 白名单、逐 gap 唯一输出路径、写入授权、最大轮次和停止条件；不得把候选池、历史快照或完整会话正文复制进任务消息。运行时支持上下文继承控制时必须关闭完整会话历史继承。根任务连同最多 3 个补检工作者并行；出现第 4 个 gap 时，等首个槽位释放后用全新最小上下文启动第四个工作者，不得把两个 lane 混入同一代理。已经分派的检索不得由根任务重复执行。
 
-代理只在发现阻断时发送中间状态；其余情况在原子发布后立即发送一次 `artifact_ready` 控制消息，包含绝对路径与 SHA-256，然后结束。结果必须先写到目标文件的同目录临时文件，完成 JSON 与合同自检后再原子替换为唯一输出路径，发布后不得修改。
+补检代理只在发现阻断时发送中间状态；其余情况在原子发布后立即发送一次 `artifact_ready` 控制消息，包含绝对路径与 SHA-256，然后结束。结果必须先写到目标文件的同目录临时文件，完成 JSON 与合同自检后再原子替换为唯一输出路径，发布后不得修改。语义与红队代理另按对应阶段发送不含业务内容的有限里程碑心跳。
 
 每个代理必须先处理绑定的基线候选，再补充检索；不得绕过基线直接做开放式搜索。当前资讯必须联网核验，优先监管、政府、公司公告、采购原文、论文、标准和项目主页。新闻与评论只作线索或独立佐证。
 
@@ -81,7 +81,13 @@ python -X utf8 scripts/run_daily.py prepare --report-date YYYY-MM-DD --timezone 
 python -X utf8 scripts/run_daily.py register-supplement --manifest <run_manifest.json> --request <supplement_request.json> --result <lane-1.json> --result <lane-2.json>
 ```
 
-等待代理时先完成本地可并行的确定性检查，以原子发布后的 `artifact_ready` 控制消息为主信号。每个阶段最多允许两次、每次不超过 60 秒的 `wait_agent`；若两次都没有新的 `artifact_ready`、阻断消息或可比较的代理状态变化，只允许一次 `list_agents` 和一次下述文件观察，随后停止调用 `wait_agent`，直至收到新控制消息或状态指纹确实变化。不得用缩短单次等待来绕过此门禁。
+等待代理时先完成本地可并行的确定性检查，以原子发布后的 `artifact_ready` 控制消息为主信号。语义代理在输入哈希验证后发送 `review_progress seq=1 phase=input_validated`，在候选选择、血缘与回执映射完成后发送 `review_progress seq=2 phase=lineage_ready`；红队在输入哈希验证后发送 `review_progress seq=1 phase=input_validated`。心跳不得包含候选、结论或回执正文。
+
+每个阶段最多允许两次、每次不超过 60 秒的 `wait_agent`；若两次都没有新的 `artifact_ready`、阻断消息或可比较的代理状态变化，只允许一次 `list_agents`、一次下述文件观察，并在运行日志可读时读取一次仅含最新事件 ordinal、时间戳、工具调用计数和已收到里程碑序号的进度指纹。把该指纹交给 `scripts/review_progress_gate.py` 的阶段专属状态文件；它以原子状态机返回 `continue_wait`、`send_reminder`、`verify_artifact` 或 `declare_lost`。`running` 且进度指纹增长表示进展，必须继续等待；单凭超时、没有正式文件或仍为 `running` 不得判定失联或中止代理。为防无效工具循环无限续期，同一里程碑内最多允许 15 次增长检查；达到上限后发送定向提醒，提醒后连续三次仍无新里程碑则执行 `declare_lost`。代理明确失败/退出或提醒后连续三次静止也由状态机判为 `declare_lost`。穿插本地工作、发送说明或缩短单次等待不会重置预算；只有新控制里程碑才清零无里程碑增长计数。
+
+```powershell
+python -X utf8 scripts/review_progress_gate.py --state <run_dir>/semantic_progress_state.json --agent-status running --event-ordinal <n> --last-event-at <iso_datetime> --tool-call-count <n> --milestone-seq <0|1|2>
+```
 
 仅在通知通道延迟或不可用时，允许执行一次文件观察降级：
 
@@ -89,7 +95,7 @@ python -X utf8 scripts/run_daily.py register-supplement --manifest <run_manifest
 python -X utf8 scripts/await_artifacts.py --path <lane-1.json> --path <lane-2.json>
 ```
 
-降级观察最长 10 秒且不得重复轮询；仍未就绪时发送一次定向提醒，或在代理明确失败/失联后重新启动一个有界任务，然后把当前阶段视为等待外部状态，不得继续轮询。文件稳定、可解析后立即运行登记命令；只要合同验证通过，就不再等待额外聊天状态。文件存在或控制消息本身都不等于通过，仍须执行正式登记校验。
+降级观察最长 10 秒且不得重复轮询；仍未就绪时发送一次定向提醒，或在按上述进度指纹规则确认代理失败/失联后重新启动一个有界任务，然后把当前阶段视为等待外部状态，不得继续轮询。文件稳定、可解析后立即运行登记命令；只要合同验证通过，就不再等待额外聊天状态。文件存在或控制消息本身都不等于通过，仍须执行正式登记校验。
 
 若 prepare 没有返回 request，说明基线已满足配置要求，脚本已登记结构化 `no_increment`，不要伪造补检结果。
 
@@ -101,9 +107,17 @@ python -X utf8 scripts/await_artifacts.py --path <lane-1.json> --path <lane-2.js
 python -X utf8 scripts/run_daily.py prepare-review --manifest <run_manifest.json> --kind semantic --max-turns 2
 ```
 
-把返回的 `semantic_review_request.json` 连同候选池、补检聚合和绑定历史快照，以最小任务包交给独立 `SemanticEvaluator`。评估者必须读取请求并原样返回其中的 challenge、reviewer/invocation 标识与 request SHA-256。
+把返回的 `semantic_review_request.json` 交给独立 `SemanticEvaluator`。`review-request/1.1` 内的 `execution_packet` 是自包含任务包，已固化角色合同、进度消息、精确 draft/最终输出路径、写入白名单和验证命令；启动消息只需给出已登记请求的绝对路径与“严格按 execution_packet 执行”，不得再次要求代理读取整份 `SKILL.md`、完整提示词配置或继承主会话历史。请求内 `bound_artifacts` 已绑定基线、候选池、补检聚合、完整历史快照与紧凑评审切片的绝对路径和 SHA-256。评估者只读取 `history_review_slice` 做历史去重；完整 `history_snapshot` 只保留为归档溯源绑定，不重复载入。旧运行没有切片时才允许回退读取完整快照。评估者必须原样返回请求中的 challenge、reviewer/invocation 标识与 request SHA-256。
 
-语义代理必须优先复用已登记候选中的日期、URL、访问日志和对象哈希，在本地批量完成门禁、去重、排序、血缘和回执构造；除非登记证据缺失或相互矛盾，不得重新联网访问已经 `verified` 的 URL。一次读取各绑定文件，不在聊天或工具输出中回显完整候选池、历史快照、core 或回执；两份产物在代理内部自检后各原子发布一次。发现证据矛盾时封闭失败，不用额外轮次补写未经登记的外部事实。
+语义代理必须优先复用已登记候选中的日期、URL、访问日志和对象哈希，在本地批量完成门禁、去重、排序、血缘和回执构造；除非登记证据缺失或相互矛盾，不得重新联网访问已经 `verified` 的 URL。一次读取各所需绑定文件，不在聊天或工具输出中回显完整候选池、历史切片、core 或回执。候选的 `published_at` 若为合法 ISO datetime，必须调用 `python -X utf8 scripts/run_daily.py normalize-published-at --value <iso_datetime>`，按其自带时区取日期并规范为严格 `YYYY-MM-DD`；不得把 datetime 原样写入 core。
+
+评估者先把 core 与回执写入各自目标旁的唯一 draft 文件，再运行：
+
+```powershell
+python -X utf8 scripts/run_daily.py validate-semantic-draft --manifest <run_manifest.json> --refined <refined_core.draft.json> --semantic-receipt <semantic_receipt.draft.json>
+```
+
+只有 draft gate 返回 `status=valid` 才可分别原子提升到最终输出并发送 `artifact_ready`；失败时最多使用第二轮修复已报告的合同错误，不扩展事件。发现证据矛盾时封闭失败，不补写未经登记的外部事实。
 
 将基线候选与已登记补检候选合并，按以下顺序处理：
 
@@ -117,13 +131,13 @@ python -X utf8 scripts/run_daily.py prepare-review --manifest <run_manifest.json
 
 语义回执必须绑定输入 bundle 与 refined 文件 SHA-256，覆盖所有最终条目的完整对象哈希，逐项映射 `candidate_object_sha256 → output_item_sha256`，并提供与最终 `access_check` 对应的访问日志及其哈希。每个最终条目的 `requested_url` 必须匹配条目 URL，`final_url` 仅记录跳转落点，入选条目按唯一映射计数。`model_used=heuristic`、请求挑战不一致、血缘或访问日志不一致时停止。
 
-语义产物原子发布并由就绪信号确认后，不得并行预启动红队，也不得因为评估代理尚未发送额外聊天消息而继续等待。下一步的红队请求命令必须接收语义回执，并在创建请求前于同一进程完成验证；验证失败时不得留下 `red_team_review_request.json`。
+语义产物原子发布并由就绪信号确认后，不得并行预启动红队，也不得因为评估代理尚未发送额外聊天消息而继续等待。下一步的红队请求命令必须接收语义回执，并在创建请求前于同一进程重新执行同一 semantic draft gate；验证失败时不得留下 `red_team_review_request.json`。
 
 ### 4. 逻辑红队
 
 对 refined core 检查反证、日期、来源独立性、重大资讯资格、行动时序和 L4。存在 L4 时，红队状态必须为 `passed` 且条目哈希覆盖所有 L4；没有 L4 时可返回明确的 `not_required` 空覆盖回执。
 
-refined core 与语义回执通过上述校验后先登记红队请求，再把该请求与其 `refined_sha256` 绑定文件以最小任务包交给独立 `RedTeam`：
+refined core 与语义回执通过上述校验后先登记红队请求，再把该请求交给独立 `RedTeam`。红队同样只接收已登记请求路径并严格按其中自包含 `execution_packet` 执行，不重复载入整份技能、提示词配置或主会话历史：
 
 ```powershell
 python -X utf8 scripts/run_daily.py prepare-review --manifest <run_manifest.json> --kind red_team --refined <refined_core.json> --semantic-receipt <semantic_receipt.json> --max-turns 2
@@ -158,7 +172,7 @@ python -X utf8 scripts/run_daily.py forge --manifest <run_manifest.json> --refin
 ## 日期、覆盖与事件规则
 
 - 7 日窗口为 `report_date-(days-1)` 至 `report_date`，两端包含。
-- `published_at` 必须为窗口内已知日期；`event_date` 可未知，但不得晚于发布日期。
+- `published_at` 必须为窗口内 `YYYY-MM-DD` 已知日期；候选为 ISO datetime 时按其自带时区取日期后规范化。`event_date` 可未知，但不得晚于发布日期。
 - GitHub/V2EX 观察时间不得冒充发布日期；Hacker News 时间使用带时区 UTC；所有候选记录 `retrieved_at`。
 - 每条正式资讯只能有一个 `primary_domain`；混合事件可填 `secondary_domains`，但只按主领域计数。
 - 条目 `confidence`、`corroboration_status` 与运行 `coverage_confidence` 含义不同，不得互相替代。

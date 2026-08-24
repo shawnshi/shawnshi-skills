@@ -2,7 +2,7 @@ from __future__ import annotations
 
 import json
 import re
-import tempfile
+import uuid
 from datetime import date, datetime, time
 from pathlib import Path
 from typing import Any
@@ -108,8 +108,9 @@ def rebuild_history(
         if path.with_suffix("").resolve() not in json_stems and path.stem != excluded_stem
     ] if source_dir.exists() else []
 
-    with tempfile.TemporaryDirectory(prefix="pih-history-rebuild-") as directory:
-        stage = Path(directory) / "history.json"
+    target.parent.mkdir(parents=True, exist_ok=True)
+    stage = target.with_name(f".{target.name}.{uuid.uuid4().hex}.rebuild")
+    try:
         for archive in json_files:
             archive_payload = _json_payload(archive)
             save_history_items(
@@ -141,6 +142,8 @@ def rebuild_history(
                 "entries": [],
             }
         payload["generated_at"] = current.isoformat()
+    finally:
+        stage.unlink(missing_ok=True)
     atomic_dump_json(target, payload)
     print(
         f"[OK] history rebuilt: {len(payload['entries'])} events from "

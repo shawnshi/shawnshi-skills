@@ -1,6 +1,6 @@
 interface:
   display_name: "Personal Health Analysis"
-  short_description: "显式调用默认读取全部 Garmin 健康指标，本地优先"
-  default_prompt: "Use $personal-health-analysis to analyze all supported Garmin health metrics for my requested period, default to the latest seven days, prefer verified local data, and ask separately before network or other side effects."
+  short_description: "本地优先分析 Garmin 健康数据，无数据时自动实时只读回退"
+  default_prompt: "Use $personal-health-analysis to analyze the relevant Garmin health metrics for my requested period, default to the latest seven days, prefer verified local data, and after explicit local no_data automatically use one bounded live read-only fallback for the same window and components. Ask separately before login, token writes, sync, downloads, or other persistence."
 policy:
   allow_implicit_invocation: false

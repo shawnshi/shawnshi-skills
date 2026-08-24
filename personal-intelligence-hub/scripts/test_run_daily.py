@@ -75,6 +75,68 @@ class RunDailyTests(unittest.IsolatedAsyncioTestCase):
             self.assertEqual(parsed["review_mode"], request["review_mode"])
             self.assertEqual(parsed["max_turns"], request["max_turns"])
 
+    def test_validate_semantic_draft_command_is_read_only(self):
+        manifest = Path("manifest.json")
+        refined = Path("refined.json")
+        semantic = Path("semantic.json")
+        output = io.StringIO()
+
+        with (
+            patch.object(
+                sys,
+                "argv",
+                [
+                    "run_daily.py",
+                    "validate-semantic-draft",
+                    "--manifest",
+                    str(manifest),
+                    "--refined",
+                    str(refined),
+                    "--semantic-receipt",
+                    str(semantic),
+                ],
+            ),
+            patch(
+                "run_contract.validate_semantic_draft",
+                return_value=["bounded warning"],
+            ) as validator,
+            redirect_stdout(output),
+        ):
+            run_daily.main()
+
+        validator.assert_called_once_with(manifest, refined, semantic)
+        self.assertEqual(
+            json.loads(output.getvalue()),
+            {"status": "valid", "warnings": ["bounded warning"]},
+        )
+
+    def test_normalize_published_at_command_uses_public_normalizer(self):
+        output = io.StringIO()
+        with (
+            patch.object(
+                sys,
+                "argv",
+                [
+                    "run_daily.py",
+                    "normalize-published-at",
+                    "--value",
+                    "2026-08-20T23:30:00-07:00",
+                ],
+            ),
+            patch(
+                "run_contract.normalize_published_at",
+                return_value="2026-08-20",
+            ) as normalizer,
+            redirect_stdout(output),
+        ):
+            run_daily.main()
+
+        normalizer.assert_called_once_with("2026-08-20T23:30:00-07:00")
+        self.assertEqual(
+            json.loads(output.getvalue()),
+            {"published_at": "2026-08-20"},
+        )
+
     def test_degraded_coverage_forces_domain_remediation_when_ratio_is_met(self):
         items = []
         for index in range(6):
@@ -262,6 +324,14 @@ class RunDailyTests(unittest.IsolatedAsyncioTestCase):
             )
             self.assertEqual(manifest["stages"]["baseline"]["status"], "degraded")
             self.assertIn("history_snapshot", manifest["artifacts"])
+            self.assertIn("history_review_slice", manifest["artifacts"])
+            review_slice = json.loads(
+                Path(
+                    manifest["artifacts"]["history_review_slice"]["artifact_path"]
+                ).read_text(encoding="utf-8")
+            )
+            self.assertEqual(review_slice["dedupe_days"], 7)
+            self.assertEqual(review_slice["entries"], [])
             self.assertEqual(manifest["stages"]["supplemental"]["status"], "pending")
 
     async def test_invalid_concurrency_is_rejected_before_run_creation(self):
