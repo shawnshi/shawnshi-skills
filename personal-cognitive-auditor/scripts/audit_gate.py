@@ -35,7 +35,8 @@ STYLE_TERMS = [
 ]
 
 ENERGY_HEADING = re.compile(
-    r"(?im)^#{1,6}\s+能量管理（描述性生理背景）\s*$"
+    r"(?im)^#{1,6}\s+(?:能量管理（描述性生理背景）|"
+    r"能量管理\s*\(Biological-Cognitive Correlation\))\s*$"
 )
 NEXT_HEADING = re.compile(r"(?m)^#{1,6}\s+")
 ENERGY_REQUIRED_FIELDS = (
@@ -60,6 +61,15 @@ COMPOSITE_SCORE_PATTERNS = [
     ),
     re.compile(r"(?im)^\s*(?:[-*]\s*)?readiness(?:_index)?(?:\.score| score)?\s*[:=]\s*\d"),
 ]
+DATA_UNAVAILABLE_SENTINEL = re.compile(r"(?i)\[DATA_UNAVAILABLE\]")
+EXECUTION_SCORING_VALUE = re.compile(
+    r"(?i)(?:\b(?:score|value|level|color)\b\s*[:=：]\s*(?!none\b|null\b|not_scored\b)\S+|"
+    r"(?:评分|分数|等级|颜色)\s*[:=：]\s*(?:\d|红|黄|绿)|\d+(?:\.\d+)?\s*/\s*100)"
+)
+SLEEP_DEBT_NULL = re.compile(r"(?i)\bsleep_debt_h\s*=\s*`?null`?\b")
+SLEEP_DEBT_NUMERIC = re.compile(
+    r"(?i)\bsleep_debt_h\s*=\s*`?(-?\d+(?:\.\d+)?)`?\b"
+)
 MISSING_AS_ZERO = re.compile(
     r"(?im)^(?=[^\n]*(?:无数据|无有效观测|缺失|未提供))"
     r"[^\n]*(?:睡眠|HRV|心率|压力|Body Battery|身体电量)[^\n]*"
@@ -279,6 +289,8 @@ def validate_energy_contract(
 
     section, section_errors = extract_energy_section(text)
     errors.extend(section_errors)
+    if section is None and enforce_template_fields and not section_errors:
+        errors.append("energy-management section missing")
     if section is not None:
         field_values = extract_energy_field_values(section)
         missing_fields = [
@@ -320,12 +332,68 @@ def validate_energy_contract(
                 warnings.append(message)
 
         execution_values = field_values.get("执行带宽", [])
+        sleep_debt_values = field_values.get("睡眠负债", [])
+        sentinel_fields = [
+            field
+            for field, values in (
+                ("执行带宽", execution_values),
+                ("睡眠负债", sleep_debt_values),
+            )
+            if any(DATA_UNAVAILABLE_SENTINEL.search(value) for value in values)
+        ]
+        if sentinel_fields:
+            errors.append(
+                "energy-management fields must not expose DATA_UNAVAILABLE: "
+                + ", ".join(sentinel_fields)
+            )
         if enforce_template_fields and execution_values and any(
             "not_scored" not in value.casefold() for value in execution_values
         ):
             errors.append(
                 "execution bandwidth must retain not_scored and explain the inference boundary"
             )
+        if any(EXECUTION_SCORING_VALUE.search(value) for value in execution_values):
+            errors.append(
+                "execution bandwidth must not contain score, value, level, or color outputs"
+            )
+
+        for value in sleep_debt_values:
+            if SLEEP_DEBT_NULL.search(value):
+                required_null_tokens = (
+                    "sleep_debt_status=not_provided_by_source",
+                    "method=none",
+                    "baseline_h=null",
+                    "window_days=null",
+                )
+                normalized = re.sub(r"[`\s]", "", value.casefold())
+                missing = [
+                    token for token in required_null_tokens if token not in normalized
+                ]
+                if missing:
+                    errors.append(
+                        "null sleep debt requires complete unavailable-state fields: "
+                        + ", ".join(missing)
+                    )
+
+            numeric_match = SLEEP_DEBT_NUMERIC.search(value)
+            if numeric_match:
+                normalized = re.sub(r"[`\s]", "", value.casefold())
+                missing = []
+                if "sleep_debt_status=provided_by_source" not in normalized:
+                    missing.append("sleep_debt_status=provided_by_source")
+                if not re.search(r"(?i)\bmethod\s*=\s*(?!none\b|null\b)\S+", value):
+                    missing.append("method=<source method>")
+                if not re.search(r"(?i)\bbaseline_h\s*=\s*(?!none\b|null\b)-?\d", value):
+                    missing.append("baseline_h=<number>")
+                if not re.search(r"(?i)\bwindow_days\s*=\s*[1-9]\d*", value):
+                    missing.append("window_days=<positive integer>")
+                if float(numeric_match.group(1)) < 0:
+                    missing.append("sleep_debt_h>=0")
+                if missing:
+                    errors.append(
+                        "numeric sleep debt requires source method, baseline, and window: "
+                        + ", ".join(missing)
+                    )
         if "观测日期" not in section and "无有效观测" not in section:
             warnings.append(
                 "energy-management section does not expose per-KPI observation dates or an explicit no-observation state"
@@ -360,7 +428,8 @@ def validate_energy_contract(
         and sleep_debt_value
         and sleep_debt_value.group("value").lower() != "null"
     ) or re.search(
-        r"(?im)^[^\n]*(?:来源未提供|not_provided_by_source)[^\n]*睡眠负债[^\n]*\d",
+        r"(?im)^[^\n]*(?:来源未提供|not_provided_by_source)[^\n]*"
+        r"(?:睡眠负债|sleep debt)[^，,。；;\n]{0,12}\d",
         text,
     ):
         errors.append(

@@ -71,13 +71,13 @@ class PipelineContractTests(unittest.TestCase):
                         "generated_at": "2026-08-10T09:00:00+08:00",
                         "items": [
                             {
-                                "title": "AI agent runtime released",
+                                "title": "智慧 AI agent runtime released",
                                 "url": "https://example.org/release",
-                                "source": "Example",
+                                "source": "卓越研究院",
                                 "time": "2026-08-09T08:00:00+00:00",
-                                "published_at_source": "rss_published",
+                                "published_at_source": "智慧_feed",
                                 "retrieved_at": "2026-08-10T09:00:00+08:00",
-                                "raw_desc": "agent infrastructure",
+                                "raw_desc": "agent infrastructure 赋能开发者",
                             }
                         ],
                         "metadata": {
@@ -154,6 +154,10 @@ class PipelineContractTests(unittest.TestCase):
         self.assertEqual(output["model_used"], "heuristic")
         self.assertEqual(output["run_id"], "run-refine")
         self.assertNotIn("intelligence_level", output["items"][0])
+        self.assertEqual(output["items"][0]["title"], "智慧 AI agent runtime released")
+        self.assertEqual(output["items"][0]["source"], "卓越研究院")
+        self.assertEqual(output["items"][0]["published_at_source"], "智慧_feed")
+        self.assertEqual(output["items"][0]["summary_hint"], "agent infrastructure 赋能开发者")
         self.assertFalse(refined.exists())
 
 

@@ -34,7 +34,7 @@ IGNORED_DIRECTORIES = frozenset(
 )
 IGNORED_FILE_NAMES = frozenset({"garmin_tokens.json"})
 LOCAL_REFERENCE_RE = re.compile(
-    r"""(?P<path>(?<![A-Za-z])(?:(?:scripts|references|resources|assets|examples|prompts|agents)[\\/][^\s`"'<>]+|[A-Za-z0-9._-]+[\\/](?:SKILL\.md|(?:scripts|references|resources|assets|examples|prompts|agents)[\\/][^\s`"'<>]+)))"""
+    r"""(?P<path>(?<![A-Za-z])(?:(?:scripts|references|resources|assets|examples|prompts|agents)[\\/][^\s`"'<>]+|[A-Za-z0-9._-]+[\\/](?:SKILL\.md|skill\.json|(?:scripts|references|resources|assets|examples|prompts|agents)[\\/][^\s`"'<>]+)))"""
 )
 KNOWN_SUFFIX_RE = re.compile(
     r"(?P<stable>.*?(?:SKILL\.md|\.md|\.json|\.py|\.ps1|\.sh|\.csx|\.cs|\.svg|\.png|\.jpg|\.jpeg|\.gif|\.pptx|\.docx|\.pdf|\.txt|\.yaml|\.yml|\.toml|\.csv|\.tsv|\.html|\.css|\.js|\.ts|\.tsx|\.jsx))",

@@ -204,3 +204,13 @@ def valid_v13_payload():
 
 def cloned_v13_payload():
     return deepcopy(valid_v13_payload())
+
+
+def valid_v14_payload():
+    payload = valid_v13_payload()
+    payload["schema_version"] = "1.4"
+    return payload
+
+
+def cloned_v14_payload():
+    return deepcopy(valid_v14_payload())

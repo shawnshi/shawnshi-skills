@@ -78,6 +78,29 @@ class DefaultReadContractTests(unittest.TestCase):
         self.assertNotIn("- **睡眠负债**: [DATA_UNAVAILABLE]", self.authority_text)
         self.assertIn("不得只写空值或 `[DATA_UNAVAILABLE]`", self.proxy_text)
 
+    def test_personal_diary_energy_template_matches_strict_audit_contract(self):
+        self.assertIn("## 能量管理（描述性生理背景）", self.authority_text)
+        self.assertIn("--enforce-template-fields", self.authority_text)
+        for field in (
+            "数据范围与来源",
+            "组件覆盖与新鲜度",
+            "睡眠观察",
+            "HRV 与静息心率观察",
+            "Body Battery 与压力观察",
+            "执行带宽",
+            "睡眠负债",
+            "摩擦解构",
+            "交叉归因",
+            "干预指令",
+            "数据缺口与不可判断事项",
+        ):
+            with self.subTest(field=field):
+                self.assertIn(f"**{field}**", self.authority_text)
+        self.assertNotIn(
+            "## 能量管理 (Biological-Cognitive Correlation)",
+            self.authority_text,
+        )
+
     def test_canonical_mentat_generation_is_auto_authorized(self):
         self.assertIn("Canonical Mentat auto-save exception", self.authority_text)
         self.assertIn("originating request is the approval", self.authority_text)

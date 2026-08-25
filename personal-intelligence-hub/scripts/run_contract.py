@@ -3,15 +3,19 @@ from __future__ import annotations
 import hashlib
 import json
 import math
+import os
 import re
+import time as monotonic_time
 import uuid
+from contextlib import contextmanager
 from copy import deepcopy
-from datetime import date, datetime, timedelta
+from datetime import date, datetime, time, timedelta, timezone
 from pathlib import Path
-from typing import Any
+from typing import Any, Callable, Iterator
+from urllib.parse import urlparse
 from zoneinfo import ZoneInfo, ZoneInfoNotFoundError
 
-from history_manager import normalize_url
+from history_manager import generate_event_id, load_recent_history, match_history, normalize_url
 from hub_utils import HUB_DIR, RUNTIME_DIR, atomic_dump_json, load_json
 
 
@@ -26,6 +30,7 @@ STAGE_TERMINAL = {
     "skipped",
     "not_required",
 }
+STAGE_FINAL = STAGE_TERMINAL | {"failed"}
 IMMUTABLE_FIELDS = (
     "run_id",
     "skill_sha256",
@@ -42,6 +47,70 @@ IMMUTABLE_FIELDS = (
 
 class RunContractError(ValueError):
     pass
+
+
+@contextmanager
+def locked_manifest(
+    manifest_path: str | Path,
+    *,
+    timeout_seconds: float = 10.0,
+) -> Iterator[tuple[dict[str, Any], str]]:
+    """Lock and load the authoritative manifest for one cross-process RMW."""
+    path = Path(manifest_path)
+    lock_path = path.with_name(f"{path.name}.lock")
+    lock_path.parent.mkdir(parents=True, exist_ok=True)
+    handle = lock_path.open("a+b")
+    if handle.seek(0, os.SEEK_END) == 0:
+        handle.write(b"\0")
+        handle.flush()
+        os.fsync(handle.fileno())
+    acquired = False
+    deadline = monotonic_time.monotonic() + timeout_seconds
+    try:
+        while not acquired:
+            handle.seek(0)
+            try:
+                if os.name == "nt":
+                    import msvcrt
+
+                    msvcrt.locking(handle.fileno(), msvcrt.LK_NBLCK, 1)
+                else:
+                    import fcntl
+
+                    fcntl.flock(handle.fileno(), fcntl.LOCK_EX | fcntl.LOCK_NB)
+                acquired = True
+            except OSError as exc:
+                if monotonic_time.monotonic() >= deadline:
+                    raise RunContractError(
+                        f"timed out acquiring run manifest lock: {path}"
+                    ) from exc
+                monotonic_time.sleep(0.01)
+        manifest = load_manifest(path)
+        yield manifest, file_sha256(path)
+    finally:
+        if acquired:
+            handle.seek(0)
+            if os.name == "nt":
+                import msvcrt
+
+                msvcrt.locking(handle.fileno(), msvcrt.LK_UNLCK, 1)
+            else:
+                import fcntl
+
+                fcntl.flock(handle.fileno(), fcntl.LOCK_UN)
+        handle.close()
+
+
+def commit_manifest(
+    manifest_path: str | Path,
+    manifest: dict[str, Any],
+    expected_sha256: str,
+) -> None:
+    """CAS guard for a manifest already protected by ``locked_manifest``."""
+    path = Path(manifest_path)
+    if file_sha256(path) != expected_sha256:
+        raise RunContractError("stale manifest writer rejected")
+    atomic_dump_json(path, manifest)
 
 
 def _aware_now(timezone_name: str, supplied: datetime | None = None) -> datetime:
@@ -105,6 +174,14 @@ def canonical_json_bytes(value: Any) -> bytes:
     ).encode("utf-8")
 
 
+def _integer(value: Any, field: str, *, minimum: int | None = None) -> int:
+    if not isinstance(value, int) or isinstance(value, bool):
+        raise RunContractError(f"{field} must be an integer")
+    if minimum is not None and value < minimum:
+        raise RunContractError(f"{field} must be at least {minimum}")
+    return value
+
+
 def item_hash(item: dict[str, Any]) -> str:
     return hashlib.sha256(canonical_json_bytes(item)).hexdigest()
 
@@ -139,7 +216,9 @@ def candidate_object_hash(candidate: dict[str, Any]) -> str:
     return hashlib.sha256(canonical_json_bytes(bound)).hexdigest()
 
 
-def registered_candidate_hashes(manifest: dict[str, Any]) -> dict[str, set[str]]:
+def registered_candidate_lineage(
+    manifest: dict[str, Any],
+) -> dict[str, dict[str, Any]]:
     records = (
         (
             "candidate pool",
@@ -152,7 +231,7 @@ def registered_candidate_hashes(manifest: dict[str, Any]) -> dict[str, set[str]]
             "results",
         ),
     )
-    registered: dict[str, set[str]] = {}
+    registered: dict[str, dict[str, set[str]]] = {}
     for label, record, collection in records:
         if not isinstance(record, dict):
             raise RunContractError(f"registered {label} record is missing")
@@ -185,8 +264,56 @@ def registered_candidate_hashes(manifest: dict[str, Any]) -> dict[str, set[str]]
             actual_hash = candidate_object_hash(candidate)
             if not reference or claimed_hash != actual_hash:
                 raise RunContractError(f"registered {label} candidate hash is invalid")
-            registered.setdefault(reference, set()).add(claimed_hash)
+            entry = registered.setdefault(
+                reference,
+                {"object_hashes": set(), "urls": set(), "objects": {}},
+            )
+            entry["object_hashes"].add(claimed_hash)
+            entry["objects"][claimed_hash] = deepcopy(candidate)
+            for raw_url in (
+                candidate.get("url"),
+                (candidate.get("access_check") or {}).get("final_url"),
+            ):
+                normalized = normalize_url(str(raw_url or ""))
+                if normalized:
+                    entry["urls"].add(normalized)
     return registered
+
+
+def registered_candidate_hashes(manifest: dict[str, Any]) -> dict[str, set[str]]:
+    return {
+        reference: set(entry["object_hashes"])
+        for reference, entry in registered_candidate_lineage(manifest).items()
+    }
+
+
+def validate_semantic_history(refined: dict[str, Any], manifest: dict[str, Any]) -> None:
+    """Apply forge-equivalent history dedupe before semantic publication."""
+    history_record = manifest.get("artifacts", {}).get("history_snapshot", {})
+    history_path = Path(str(history_record.get("artifact_path") or ""))
+    if (
+        not history_path.is_file()
+        or history_record.get("artifact_sha256") != file_sha256(history_path)
+    ):
+        raise RunContractError("registered history snapshot bytes changed")
+    report_clock = datetime.combine(
+        date.fromisoformat(str(manifest["report_date"])),
+        time.max,
+        tzinfo=ZoneInfo(str(manifest["timezone"])),
+    )
+    recent_history = load_recent_history(
+        days=int(history_record.get("metadata", {}).get("dedupe_days", 7)),
+        now=report_clock,
+        path=history_path,
+    )
+    for index, item in enumerate(refined.get("top_10", [])):
+        if not isinstance(item, dict):
+            raise RunContractError(f"semantic draft top_10[{index}] must be an object")
+        match = match_history(item, entries=recent_history, now=report_clock)
+        if match.get("redundant"):
+            raise RunContractError(
+                f"semantic draft top_10[{index}] duplicates the bound history snapshot"
+            )
 
 
 def validate_registered_pipeline_summary(
@@ -209,15 +336,47 @@ def validate_registered_pipeline_summary(
     supplement_coverage = supplement.get("coverage") or {}
     try:
         expected_counts = {
-            "source_attempted": int(baseline_coverage["source_attempted"])
-            + int(supplement_coverage.get("attempted", 0)),
-            "source_succeeded": int(baseline_coverage["source_succeeded"])
-            + int(supplement_coverage.get("succeeded", 0)),
-            "source_failed": int(baseline_coverage["source_failed"])
-            + int(supplement_coverage.get("failed", 0)),
+            "source_attempted": _integer(
+                baseline_coverage["source_attempted"],
+                "baseline coverage.source_attempted",
+                minimum=0,
+            )
+            + _integer(
+                supplement_coverage.get("attempted", 0),
+                "supplement coverage.attempted",
+                minimum=0,
+            ),
+            "source_succeeded": _integer(
+                baseline_coverage["source_succeeded"],
+                "baseline coverage.source_succeeded",
+                minimum=0,
+            )
+            + _integer(
+                supplement_coverage.get("succeeded", 0),
+                "supplement coverage.succeeded",
+                minimum=0,
+            ),
+            "source_failed": _integer(
+                baseline_coverage["source_failed"],
+                "baseline coverage.source_failed",
+                minimum=0,
+            )
+            + _integer(
+                supplement_coverage.get("failed", 0),
+                "supplement coverage.failed",
+                minimum=0,
+            ),
         }
-        baseline_raw = int(baseline_coverage["raw_candidates"])
-        baseline_dated = int(baseline_coverage["dated_candidates"])
+        baseline_raw = _integer(
+            baseline_coverage["raw_candidates"],
+            "baseline coverage.raw_candidates",
+            minimum=0,
+        )
+        baseline_dated = _integer(
+            baseline_coverage["dated_candidates"],
+            "baseline coverage.dated_candidates",
+            minimum=0,
+        )
     except (KeyError, TypeError, ValueError) as exc:
         raise RunContractError("baseline coverage receipt counts are invalid") from exc
 
@@ -250,7 +409,11 @@ def validate_registered_pipeline_summary(
         {
             str(result.get("lane"))
             for result in results
-            if isinstance(result, dict) and result.get("status") in {"degraded", "failed"}
+            if isinstance(result, dict)
+            and (
+                result.get("status") in {"degraded", "failed"}
+                or int((result.get("coverage") or {}).get("failed", 0)) > 0
+            )
         }
     )
     if sorted(str(value) for value in coverage.get("required_lane_failures", [])) != lane_failures:
@@ -314,6 +477,87 @@ def validate_registered_pipeline_summary(
         raise RunContractError(
             "semantic draft candidate_funnel.observed does not match registered artifacts"
         )
+    validate_registered_candidate_funnel(
+        refined,
+        candidate_pool,
+        supplemental_candidates=supplemental_candidates,
+    )
+
+
+def validate_registered_candidate_funnel(
+    refined: dict[str, Any],
+    candidate_pool: dict[str, Any],
+    *,
+    supplemental_candidates: int,
+) -> None:
+    """Bind every final funnel disposition to the registered candidate supply."""
+    baseline_funnel = candidate_pool.get("candidate_funnel")
+    final_funnel = refined.get("candidate_funnel")
+    if not isinstance(baseline_funnel, dict) or not isinstance(final_funnel, dict):
+        raise RunContractError("candidate funnel receipts are missing")
+    baseline_terminal = baseline_funnel.get("terminal_dispositions")
+    final_terminal = final_funnel.get("terminal_dispositions")
+    if not isinstance(baseline_terminal, dict) or not isinstance(final_terminal, dict):
+        raise RunContractError("candidate funnel terminal dispositions are missing")
+
+    def validated_counts(values: dict[str, Any], label: str) -> dict[str, int]:
+        counts: dict[str, int] = {}
+        for key, value in values.items():
+            if not isinstance(key, str) or not key:
+                raise RunContractError(f"{label} has an invalid disposition name")
+            if not isinstance(value, int) or isinstance(value, bool) or value < 0:
+                raise RunContractError(f"{label}.{key} must be a non-negative integer")
+            counts[key] = value
+        return counts
+
+    baseline_counts = validated_counts(
+        baseline_terminal, "candidate pool terminal_dispositions"
+    )
+    final_counts = validated_counts(
+        final_terminal, "semantic draft terminal_dispositions"
+    )
+    observed = baseline_funnel.get("observed")
+    retained_for_review = baseline_funnel.get("retained_for_review")
+    if (
+        not isinstance(observed, int)
+        or isinstance(observed, bool)
+        or observed < 0
+        or not isinstance(retained_for_review, int)
+        or isinstance(retained_for_review, bool)
+        or retained_for_review < 0
+    ):
+        raise RunContractError("candidate pool funnel counts are invalid")
+    if sum(baseline_counts.values()) != observed:
+        raise RunContractError("candidate pool terminal dispositions do not conserve observed")
+    if baseline_counts.get("retained_for_review") != retained_for_review:
+        raise RunContractError("candidate pool retained_for_review is inconsistent")
+    items = candidate_pool.get("items")
+    if not isinstance(items, list) or len(items) != retained_for_review:
+        raise RunContractError("candidate pool retained_for_review does not match items")
+
+    fixed_dispositions = {
+        key: value
+        for key, value in baseline_counts.items()
+        if key != "retained_for_review"
+    }
+    for key, expected in fixed_dispositions.items():
+        if final_counts.get(key, 0) != expected:
+            raise RunContractError(
+                f"semantic draft terminal_dispositions.{key} does not match candidate pool"
+            )
+    downstream_keys = {
+        "semantic_duplicate",
+        "below_quality_gate",
+        "semantic_capacity",
+        "red_team_rejected",
+        "retained",
+    }
+    downstream_total = sum(final_counts.get(key, 0) for key in downstream_keys)
+    expected_downstream = retained_for_review + supplemental_candidates
+    if downstream_total != expected_downstream:
+        raise RunContractError(
+            "semantic draft downstream terminal dispositions do not conserve review candidates"
+        )
 
 
 def skill_bundle_sha256(skill_path: str | Path) -> str:
@@ -331,6 +575,9 @@ def skill_bundle_sha256(skill_path: str | Path) -> str:
                 for path in directory.rglob("*")
                 if path.is_file()
                 and "__pycache__" not in path.parts
+                and not {".ruff_cache", ".pytest_cache", ".mypy_cache"}.intersection(
+                    path.parts
+                )
                 and path.suffix.lower() not in {".pyc", ".pyo"}
             )
     records = [
@@ -429,7 +676,27 @@ def review_input_bundle_sha256(manifest: dict[str, Any]) -> str:
     candidate = artifacts.get("candidate_pool", {})
     history = artifacts.get("history_snapshot", {})
     history_review = artifacts.get("history_review_slice", {})
+    focus = artifacts.get("focus_config", {})
     supplement = manifest.get("stages", {}).get("supplemental", {})
+    bound_records = {
+        "baseline": manifest.get("stages", {}).get("baseline", {}),
+        "candidate_pool": candidate,
+        "history_snapshot": history,
+        "history_review_slice": history_review,
+        "focus_config": focus,
+        "supplemental": supplement,
+    }
+    for label, record in bound_records.items():
+        if not record:
+            continue
+        artifact_path = Path(str(record.get("artifact_path") or ""))
+        expected_sha = str(record.get("artifact_sha256") or "")
+        if (
+            not artifact_path.is_file()
+            or len(expected_sha) != 64
+            or file_sha256(artifact_path) != expected_sha
+        ):
+            raise RunContractError(f"review input bundle {label} bytes changed")
     values = {
         "run_id": manifest.get("run_id"),
         "baseline_sha256": manifest.get("stages", {}).get("baseline", {}).get("artifact_sha256"),
@@ -441,6 +708,8 @@ def review_input_bundle_sha256(manifest: dict[str, Any]) -> str:
     }
     if history_review:
         values["history_review_slice_sha256"] = history_review.get("artifact_sha256")
+    if focus:
+        values["focus_config_sha256"] = focus.get("artifact_sha256")
     if any(values[field] in {None, ""} for field in (
         "run_id",
         "baseline_sha256",
@@ -449,8 +718,10 @@ def review_input_bundle_sha256(manifest: dict[str, Any]) -> str:
         "supplement_sha256",
     )):
         raise RunContractError("review input bundle is incomplete")
-    if history_review and values["history_review_slice_sha256"] in {None, ""}:
+    if not history_review or values["history_review_slice_sha256"] in {None, ""}:
         raise RunContractError("review input bundle history slice is incomplete")
+    if focus and values["focus_config_sha256"] in {None, ""}:
+        raise RunContractError("review input bundle focus config is incomplete")
     if (
         history_review
         and history_review.get("input_sha256") != history.get("artifact_sha256")
@@ -580,6 +851,46 @@ def _validate_predecessors(manifest: dict[str, Any], stage: str) -> None:
             )
 
 
+def _record_artifact_in_manifest(
+    manifest: dict[str, Any],
+    name: str,
+    artifact: Path,
+    *,
+    input_sha256: str | None,
+    metadata: dict[str, Any] | None,
+    current: datetime,
+) -> bool:
+    digest = file_sha256(artifact)
+    existing = manifest.setdefault("artifacts", {}).get(name)
+    if existing:
+        same_path = (
+            Path(str(existing.get("artifact_path") or "")).resolve()
+            == artifact.resolve()
+        )
+        if (
+            existing.get("artifact_sha256") != digest
+            or not same_path
+            or existing.get("input_sha256") != input_sha256
+        ):
+            raise RunContractError(f"run artifact {name} is immutable once recorded")
+        return False
+    manifest["artifacts"][name] = {
+        "artifact_path": str(artifact.resolve()),
+        "artifact_sha256": digest,
+        "input_sha256": input_sha256,
+        "recorded_at": current.isoformat(),
+        "metadata": deepcopy(metadata or {}),
+    }
+    manifest["events"].append(
+        {
+            "stage": f"artifact:{name}",
+            "status": "completed",
+            "recorded_at": current.isoformat(),
+        }
+    )
+    return True
+
+
 def record_run_artifact(
     manifest_path: str | Path,
     name: str,
@@ -590,6 +901,7 @@ def record_run_artifact(
     now: datetime | None = None,
 ) -> dict[str, Any]:
     if name not in {
+        "focus_config",
         "history_snapshot",
         "history_review_slice",
         "candidate_pool",
@@ -599,61 +911,45 @@ def record_run_artifact(
     }:
         raise RunContractError(f"unsupported run artifact: {name}")
     path = Path(manifest_path)
-    manifest = load_manifest(path)
-    before = {field: deepcopy(manifest[field]) for field in IMMUTABLE_FIELDS}
     artifact = Path(artifact_path)
     if not artifact.is_file():
         raise RunContractError(f"run artifact not found: {artifact}")
-    digest = file_sha256(artifact)
-    existing = manifest.setdefault("artifacts", {}).get(name)
-    if existing:
-        same_path = Path(str(existing.get("artifact_path") or "")).resolve() == artifact.resolve()
-        if (
-            existing.get("artifact_sha256") != digest
-            or not same_path
-            or existing.get("input_sha256") != input_sha256
-        ):
-            raise RunContractError(f"run artifact {name} is immutable once recorded")
+    with locked_manifest(path) as (manifest, expected_sha256):
+        before = {field: deepcopy(manifest[field]) for field in IMMUTABLE_FIELDS}
+        current = _aware_now(manifest["timezone"], now)
+        changed = _record_artifact_in_manifest(
+            manifest,
+            name,
+            artifact,
+            input_sha256=input_sha256,
+            metadata=metadata,
+            current=current,
+        )
+        for field, expected in before.items():
+            if manifest[field] != expected:
+                raise RunContractError(f"immutable run field changed: {field}")
+        if changed:
+            commit_manifest(path, manifest, expected_sha256)
         return manifest
-    current = _aware_now(manifest["timezone"], now)
-    manifest["artifacts"][name] = {
-        "artifact_path": str(artifact.resolve()),
-        "artifact_sha256": digest,
-        "input_sha256": input_sha256,
-        "recorded_at": current.isoformat(),
-        "metadata": deepcopy(metadata or {}),
-    }
-    manifest["events"].append(
-        {"stage": f"artifact:{name}", "status": "completed", "recorded_at": current.isoformat()}
-    )
-    for field, expected in before.items():
-        if manifest[field] != expected:
-            raise RunContractError(f"immutable run field changed: {field}")
-    atomic_dump_json(path, manifest)
-    return manifest
 
 
-def record_stage(
-    manifest_path: str | Path,
+def _record_stage_in_manifest(
+    manifest: dict[str, Any],
     stage: str,
     status: str,
     *,
-    artifact_path: str | Path | None = None,
-    input_sha256: str | None = None,
-    metadata: dict[str, Any] | None = None,
-    now: datetime | None = None,
-) -> dict[str, Any]:
-    path = Path(manifest_path)
-    manifest = load_manifest(path)
-    before = {field: deepcopy(manifest[field]) for field in IMMUTABLE_FIELDS}
+    artifact_path: str | Path | None,
+    input_sha256: str | None,
+    metadata: dict[str, Any] | None,
+    current: datetime,
+) -> None:
     existing_stage = manifest.get("stages", {}).get(stage, {})
-    if existing_stage.get("status") in STAGE_TERMINAL:
-        raise RunContractError(f"stage {stage} is immutable once terminal")
+    if existing_stage.get("status") in STAGE_FINAL:
+        raise RunContractError(f"stage {stage} is immutable once terminal/final")
     _validate_predecessors(manifest, stage)
-    allowed_statuses = STAGE_TERMINAL | {"running", "failed"}
+    allowed_statuses = STAGE_FINAL | {"running"}
     if status not in allowed_statuses:
         raise RunContractError(f"invalid stage status: {status}")
-    current = _aware_now(manifest["timezone"], now)
     stage_data: dict[str, Any] = {
         "status": status,
         "recorded_at": current.isoformat(),
@@ -671,14 +967,40 @@ def record_stage(
     if metadata:
         stage_data["metadata"] = deepcopy(metadata)
     manifest["stages"][stage] = stage_data
-    manifest["events"].append(
-        {"stage": stage, "status": status, "recorded_at": current.isoformat()}
-    )
-    for field, expected in before.items():
-        if manifest[field] != expected:
-            raise RunContractError(f"immutable run field changed: {field}")
-    atomic_dump_json(path, manifest)
-    return manifest
+    event = {"stage": stage, "status": status, "recorded_at": current.isoformat()}
+    if metadata:
+        event["metadata"] = deepcopy(metadata)
+    manifest["events"].append(event)
+
+
+def record_stage(
+    manifest_path: str | Path,
+    stage: str,
+    status: str,
+    *,
+    artifact_path: str | Path | None = None,
+    input_sha256: str | None = None,
+    metadata: dict[str, Any] | None = None,
+    now: datetime | None = None,
+) -> dict[str, Any]:
+    path = Path(manifest_path)
+    with locked_manifest(path) as (manifest, expected_sha256):
+        before = {field: deepcopy(manifest[field]) for field in IMMUTABLE_FIELDS}
+        current = _aware_now(manifest["timezone"], now)
+        _record_stage_in_manifest(
+            manifest,
+            stage,
+            status,
+            artifact_path=artifact_path,
+            input_sha256=input_sha256,
+            metadata=metadata,
+            current=current,
+        )
+        for field, expected in before.items():
+            if manifest[field] != expected:
+                raise RunContractError(f"immutable run field changed: {field}")
+        commit_manifest(path, manifest, expected_sha256)
+        return manifest
 
 
 def require_stage(
@@ -724,7 +1046,11 @@ def build_supplement_request(
         if not gap_id or not lane or not query_scope or gap_id in seen:
             raise RunContractError("each supplement gap requires a unique gap_id, lane and query_scope")
         seen.add(gap_id)
-        max_turns = int(gap.get("max_turns", 3))
+        max_turns = _integer(
+            gap.get("max_turns", 3),
+            "supplement gap max_turns",
+            minimum=1,
+        )
         halt_condition = str(
             gap.get("halt_condition") or "直接来源核验完成或无增量"
         ).strip()
@@ -742,6 +1068,76 @@ def build_supplement_request(
     if not normalized_gaps:
         raise RunContractError("supplement request requires at least one gap")
     current = _aware_now(manifest["timezone"], now)
+    run_dir = Path(manifest["run_dir"]).resolve()
+    request_path = run_dir / "supplement_request.json"
+    prompt_config = load_json(SUBAGENT_PROMPTS_PATH, {})
+    required_packet_fields = (
+        prompt_config.get("execution_policy", {})
+        .get("context_transfer", {})
+        .get("required_fields")
+        if isinstance(prompt_config, dict)
+        else None
+    )
+    if not isinstance(required_packet_fields, list) or not required_packet_fields:
+        raise RunContractError("supplement execution packet contract is missing")
+    bound_input_paths = {
+        "baseline": {
+            "path": str(Path(manifest["stages"]["baseline"]["artifact_path"]).resolve()),
+            "sha256": str(baseline_sha),
+        },
+        "candidate_pool": {
+            "path": str(candidate_path.resolve()),
+            "sha256": str(candidate_record["artifact_sha256"]),
+        },
+    }
+    history_record = manifest.get("artifacts", {}).get("history_snapshot")
+    if isinstance(history_record, dict) and history_record.get("artifact_path"):
+        bound_input_paths["history_snapshot"] = {
+            "path": str(Path(history_record["artifact_path"]).resolve()),
+            "sha256": str(history_record.get("artifact_sha256") or ""),
+        }
+    execution_packets = []
+    for gap in normalized_gaps:
+        safe_gap_id = re.fullmatch(r"[A-Za-z0-9][A-Za-z0-9._-]{0,63}", gap["gap_id"])
+        if safe_gap_id is None:
+            raise RunContractError("supplement gap_id is not safe for an output path")
+        final_path = run_dir / f"supplement_{gap['gap_id']}.json"
+        draft_path = run_dir / f"supplement_{gap['gap_id']}.draft.json"
+        packet = {
+            "contract_version": "supplement-execution-packet/1.0",
+            "self_contained": True,
+            "skill_path": str(Path(manifest["skill_path"]).resolve()),
+            "prompt_config_path": str(SUBAGENT_PROMPTS_PATH.resolve()),
+            "prompt_config_sha256": file_sha256(SUBAGENT_PROMPTS_PATH),
+            "run_manifest_path": str(Path(manifest_path).resolve()),
+            "registered_request_path": str(request_path.resolve()),
+            "bound_input_paths": deepcopy(bound_input_paths),
+            "assigned_gap_ids": [gap["gap_id"]],
+            "assigned_lanes": [gap["lane"]],
+            "output_paths": {
+                "result": str(final_path.resolve()),
+                "draft": str(draft_path.resolve()),
+            },
+            "output_path_by_gap": {gap["gap_id"]: str(final_path.resolve())},
+            "write_authorization": {
+                "mode": "exact_final_and_sibling_temporary_file",
+                "final_paths": [str(final_path.resolve())],
+                "draft_paths": [str(draft_path.resolve())],
+                "forbid_other_writes": True,
+            },
+            "per_gap_max_turns": {gap["gap_id"]: gap["max_turns"]},
+            "per_gap_halt_condition": {gap["gap_id"]: gap["halt_condition"]},
+            "publication": {
+                "mode": "sibling_temporary_file_then_atomic_replace",
+                "artifact_ready_message": "artifact_ready path=<path> sha256=<sha256>",
+            },
+        }
+        missing_fields = sorted(set(required_packet_fields) - set(packet))
+        if missing_fields:
+            raise RunContractError(
+                f"supplement execution packet missing declared fields: {missing_fields}"
+            )
+        execution_packets.append(packet)
     request = {
         "contract_version": "supplement-request/1.0",
         "run_id": manifest["run_id"],
@@ -750,8 +1146,8 @@ def build_supplement_request(
         "gap_ledger_sha256": hashlib.sha256(canonical_json_bytes(normalized_gaps)).hexdigest(),
         "created_at": current.isoformat(),
         "gaps": normalized_gaps,
+        "execution_packets": execution_packets,
     }
-    request_path = Path(manifest["run_dir"]) / "supplement_request.json"
     atomic_dump_json(request_path, request)
     record_run_artifact(
         manifest_path,
@@ -786,11 +1182,146 @@ def normalize_published_at(value: Any, field: str = "published_at") -> str:
     return published_at.date().isoformat()
 
 
+def _validate_bound_candidate_source_type(
+    item: dict[str, Any], matching_candidates: list[dict[str, Any]]
+) -> None:
+    """Validate source classification retained from exact-match evidence."""
+    registered_types = {
+        str(candidate.get("source_type"))
+        for candidate in matching_candidates
+        if candidate.get("source_type") in {"primary", "secondary"}
+    }
+    if registered_types and item.get("source_type") not in registered_types:
+        raise RunContractError(
+            "semantic receipt output source_type does not match an exact bound candidate"
+        )
+
+
+def _validated_semantic_candidate_event_id(
+    candidate: dict[str, Any],
+    index: int,
+    *,
+    path_prefix: str,
+) -> str:
+    required_identity_fields = {
+        "key_version",
+        "primary_domain",
+        "actor",
+        "action",
+        "object",
+        "event_date",
+    }
+    identity = candidate.get("event_identity")
+    if (
+        candidate.get("identity_quality") != "semantic"
+        or not isinstance(identity, dict)
+    ):
+        raise RunContractError(
+            f"{path_prefix} {index} requires semantic event identity"
+        )
+    if set(identity) != required_identity_fields or any(
+        not str(identity.get(field) or "").strip()
+        for field in required_identity_fields
+    ):
+        raise RunContractError(
+            f"{path_prefix} {index} event_identity must contain exactly the semantic identity fields"
+        )
+    if str(candidate.get("primary_domain") or "") != str(
+        identity["primary_domain"]
+    ):
+        raise RunContractError(
+            f"{path_prefix} {index} primary_domain does not match event_identity"
+        )
+    try:
+        derived_event_id = generate_event_id(identity)
+    except ValueError as exc:
+        raise RunContractError(
+            f"{path_prefix} {index} event_identity is invalid"
+        ) from exc
+    if str(candidate.get("event_id") or "") != derived_event_id:
+        raise RunContractError(
+            f"{path_prefix} {index} event_id does not match event_identity"
+        )
+    return derived_event_id
+
+
+def _validate_multi_independent_lineage(
+    item: dict[str, Any],
+    resolved_candidates: list[dict[str, Any]],
+    validated_access: list[tuple[str, str, str, str, str, int | None]],
+) -> None:
+    """Validate evidence independence for a multi-source final item."""
+    final_event_id = str(item.get("event_id") or "")
+    source_names: set[str] = set()
+    candidate_urls: set[str] = set()
+    candidate_hosts: set[str] = set()
+    for index, candidate in enumerate(resolved_candidates):
+        derived_event_id = _validated_semantic_candidate_event_id(
+            candidate,
+            index,
+            path_prefix="multi_independent candidate",
+        )
+        if derived_event_id != final_event_id:
+            raise RunContractError(
+                f"multi_independent candidate {index} event_id does not match final item.event_id"
+            )
+
+        source_name = re.sub(
+            r"\s+", " ", str(candidate.get("source") or "").strip().casefold()
+        )
+        if source_name:
+            source_names.add(source_name)
+        normalized_url = normalize_url(str(candidate.get("url") or ""))
+        host = (urlparse(normalized_url).hostname or "").casefold()
+        if normalized_url:
+            candidate_urls.add(normalized_url)
+        if host:
+            candidate_hosts.add(host)
+
+    if len(source_names) < 2:
+        raise RunContractError(
+            "multi_independent corroboration requires two distinct normalized sources"
+        )
+    if len(candidate_urls) < 2 or len(candidate_hosts) < 2:
+        raise RunContractError(
+            "multi_independent corroboration requires two distinct hosts and URLs"
+        )
+    verified_urls = {
+        evidence[3]
+        for evidence in validated_access
+        if evidence[0] == "verified"
+    }
+    if not candidate_urls.issubset(verified_urls):
+        raise RunContractError(
+            "multi_independent corroboration requires verified receipt access for every candidate URL"
+        )
+
+
+def _utc_iso_datetime(value: Any, field: str) -> str:
+    return _parse_aware_datetime(value, field).astimezone(timezone.utc).isoformat()
+
+
+def _validate_request_evidence_time(
+    value: Any,
+    field: str,
+    request_started_at: datetime,
+    result_completed_at: datetime,
+) -> str:
+    instant = _parse_aware_datetime(value, field).astimezone(timezone.utc)
+    started = request_started_at.astimezone(timezone.utc)
+    completed = result_completed_at.astimezone(timezone.utc)
+    if not started <= instant <= completed:
+        raise RunContractError(f"{field} is outside the request-to-result window")
+    return instant.isoformat()
+
+
 def _validate_supplement_candidate(
     candidate: Any,
     index: int,
     window: dict[str, Any],
-) -> None:
+    request_started_at: datetime,
+    result_completed_at: datetime,
+) -> tuple[str, str, str, str, str, int | None]:
     if not isinstance(candidate, dict):
         raise RunContractError(f"supplement candidate {index} must be an object")
     for field in (
@@ -837,8 +1368,11 @@ def _validate_supplement_candidate(
             raise RunContractError(
                 f"supplement candidate {index}.access_check missing {field}"
             )
-    _parse_aware_datetime(
-        access.get("checked_at"), f"supplement candidate {index}.access_check.checked_at"
+    checked_at = _validate_request_evidence_time(
+        access.get("checked_at"),
+        f"supplement candidate {index}.access_check.checked_at",
+        request_started_at,
+        result_completed_at,
     )
     if access.get("method") not in {"http_get", "browser", "api", "document"}:
         raise RunContractError(f"supplement candidate {index} has invalid access method")
@@ -857,7 +1391,25 @@ def _validate_supplement_candidate(
             raise RunContractError(
                 f"supplement candidate {index} access status is not successful"
             )
-    _parse_aware_datetime(candidate["retrieved_at"], f"supplement candidate {index}.retrieved_at")
+    _validated_semantic_candidate_event_id(
+        candidate,
+        index,
+        path_prefix="supplement candidate",
+    )
+    _validate_request_evidence_time(
+        candidate["retrieved_at"],
+        f"supplement candidate {index}.retrieved_at",
+        request_started_at,
+        result_completed_at,
+    )
+    return (
+        "verified",
+        checked_at,
+        str(access["method"]),
+        normalize_url(str(access["requested_url"])),
+        normalize_url(str(access["final_url"])),
+        access.get("http_status"),
+    )
 
 
 def _validate_access_log_entry(
@@ -865,6 +1417,7 @@ def _validate_access_log_entry(
     index: int,
     *,
     path_prefix: str = "supplement result access_log",
+    require_machine_classification: bool = False,
 ) -> tuple[str, str, str, str, str, int | None]:
     path = f"{path_prefix}[{index}]"
     if not isinstance(access, dict):
@@ -872,8 +1425,7 @@ def _validate_access_log_entry(
     status = access.get("status")
     if status not in {"verified", "blocked"}:
         raise RunContractError(f"{path}.status is invalid")
-    checked_at = str(access.get("checked_at") or "")
-    _parse_aware_datetime(checked_at, f"{path}.checked_at")
+    checked_at = _utc_iso_datetime(access.get("checked_at"), f"{path}.checked_at")
     method = str(access.get("method") or "")
     if method not in {"http_get", "browser", "api", "document"}:
         raise RunContractError(f"{path}.method is invalid")
@@ -884,12 +1436,50 @@ def _validate_access_log_entry(
     if not final_url.startswith(("http://", "https://")):
         raise RunContractError(f"{path}.final_url is invalid")
     http_status = access.get("http_status")
-    if http_status is not None and not isinstance(http_status, int):
+    if http_status is not None and (
+        not isinstance(http_status, int) or isinstance(http_status, bool)
+    ):
         raise RunContractError(f"{path}.http_status is invalid")
     if status == "verified" and method in {"http_get", "api"} and (
         not isinstance(http_status, int) or not 200 <= http_status < 400
     ):
         raise RunContractError(f"{path}.http_status does not prove successful access")
+    failure_class = access.get("failure_class")
+    if failure_class is not None and failure_class not in {
+        "none",
+        "transient",
+        "permanent",
+    }:
+        raise RunContractError(f"{path}.failure_class is invalid")
+    error_code = access.get("error_code")
+    if status == "verified" and failure_class not in {None, "none"}:
+        raise RunContractError(f"{path}.failure_class conflicts with verified access")
+    if status == "verified" and str(error_code or "").strip():
+        raise RunContractError(f"{path}.error_code conflicts with verified access")
+    if require_machine_classification and status == "verified" and failure_class != "none":
+        raise RunContractError(f"{path}.failure_class must be none for verified access")
+    if status == "blocked" and (
+        failure_class not in {"transient", "permanent"}
+        or not str(error_code or "").strip()
+    ):
+        raise RunContractError(
+            f"{path} blocked access requires failure_class and error_code"
+        )
+    known_permanent_http = (
+        isinstance(http_status, int)
+        and not isinstance(http_status, bool)
+        and 400 <= http_status < 500
+        and http_status not in {408, 425, 429}
+    )
+    known_transient_http = (
+        isinstance(http_status, int)
+        and not isinstance(http_status, bool)
+        and (http_status in {408, 425, 429} or 500 <= http_status < 600)
+    )
+    if status == "blocked" and known_permanent_http and failure_class != "permanent":
+        raise RunContractError(f"{path}.failure_class must be permanent for HTTP {http_status}")
+    if status == "blocked" and known_transient_http and failure_class != "transient":
+        raise RunContractError(f"{path}.failure_class must be transient for HTTP {http_status}")
     return (
         status,
         checked_at,
@@ -898,6 +1488,49 @@ def _validate_access_log_entry(
         normalize_url(final_url),
         http_status,
     )
+
+
+def _validate_access_retry_policy(
+    access_log: list[dict[str, Any]],
+    *,
+    seen_permanent_requests: set[str] | None = None,
+) -> None:
+    permanent_requests = (
+        seen_permanent_requests if seen_permanent_requests is not None else set()
+    )
+    consecutive_host = ""
+    consecutive_count = 0
+    for index, access in enumerate(access_log):
+        requested_url = normalize_url(str(access.get("requested_url") or ""))
+        if requested_url in permanent_requests:
+            raise RunContractError(
+                f"supplement result access_log[{index}] retries a permanent failure"
+            )
+        http_status = access.get("http_status")
+        declared_class = access.get("failure_class")
+        is_permanent = access.get("status") == "blocked" and (
+            declared_class == "permanent"
+            or (
+                isinstance(http_status, int)
+                and 400 <= http_status < 500
+                and http_status not in {408, 425, 429}
+            )
+        )
+        if not is_permanent:
+            consecutive_host = ""
+            consecutive_count = 0
+            continue
+        permanent_requests.add(requested_url)
+        host = urlparse(requested_url).hostname or ""
+        if host == consecutive_host:
+            consecutive_count += 1
+        else:
+            consecutive_host = host
+            consecutive_count = 1
+        if consecutive_count > 2:
+            raise RunContractError(
+                f"supplement result access_log[{index}] exceeds permanent failure host limit"
+            )
 
 
 def register_supplement_results(
@@ -938,13 +1571,55 @@ def register_supplement_results(
     gaps = {str(gap["gap_id"]): gap for gap in request.get("gaps", [])}
     if not gaps:
         raise RunContractError("supplement request has no gaps")
+    current = _aware_now(manifest["timezone"], now)
+    request_started_at = _parse_aware_datetime(
+        request.get("created_at"), "supplement request created_at"
+    )
+    if current < request_started_at:
+        raise RunContractError("supplement registration cannot precede request creation")
+    packet_paths: dict[str, Path] = {}
+    execution_packets = request.get("execution_packets")
+    if not isinstance(execution_packets, list):
+        raise RunContractError("supplement request execution packets are missing")
+    for packet in execution_packets:
+        if not isinstance(packet, dict) or not isinstance(
+            packet.get("assigned_gap_ids"), list
+        ):
+            raise RunContractError("supplement execution packet is invalid")
+        assigned_gap_ids = packet["assigned_gap_ids"]
+        if len(assigned_gap_ids) != 1 or str(assigned_gap_ids[0]) not in gaps:
+            raise RunContractError("supplement execution packet gap assignment is invalid")
+        gap_id = str(assigned_gap_ids[0])
+        output_paths = packet.get("output_paths")
+        output_by_gap = packet.get("output_path_by_gap")
+        if (
+            gap_id in packet_paths
+            or not isinstance(output_paths, dict)
+            or not isinstance(output_by_gap, dict)
+            or not str(output_paths.get("result") or "")
+        ):
+            raise RunContractError("supplement execution packet output path is invalid")
+        expected_path = Path(str(output_paths["result"])).resolve()
+        authorized_paths = (packet.get("write_authorization") or {}).get("final_paths")
+        if (
+            Path(str(output_by_gap.get(gap_id) or "")).resolve() != expected_path
+            or not isinstance(authorized_paths, list)
+            or [Path(str(value)).resolve() for value in authorized_paths]
+            != [expected_path]
+        ):
+            raise RunContractError("supplement execution packet output path mismatch")
+        packet_paths[gap_id] = expected_path
+    if set(packet_paths) != set(gaps):
+        raise RunContractError("supplement execution packets do not cover every gap")
 
     results: list[dict[str, Any]] = []
     result_completed_at: list[datetime] = []
     seen: set[str] = set()
+    global_access_evidence: list[tuple[str, str, int, dict[str, Any]]] = []
     degraded = False
     for raw_path in result_paths:
-        result = load_json(Path(raw_path), {})
+        result_file = Path(raw_path)
+        result = load_json(result_file, {})
         if result.get("contract_version") != "supplement-result/1.0":
             raise RunContractError("invalid supplement result contract_version")
         if result.get("run_id") != manifest["run_id"]:
@@ -958,6 +1633,10 @@ def register_supplement_results(
         gap_id = str(result.get("gap_id") or "")
         if gap_id not in gaps or gap_id in seen:
             raise RunContractError("supplement result has unknown or duplicate gap_id")
+        if result_file.resolve() != packet_paths[gap_id]:
+            raise RunContractError(
+                "supplement result path does not match execution packet output path"
+            )
         seen.add(gap_id)
         gap = gaps[gap_id]
         if result.get("lane") != gap.get("lane"):
@@ -965,22 +1644,56 @@ def register_supplement_results(
         status = result.get("status")
         if status not in {"completed", "no_increment", "degraded", "failed"}:
             raise RunContractError("supplement result has invalid status")
+        infrastructure_failure = (
+            status == "failed" and result.get("failure_kind") == "infrastructure"
+        )
+        if infrastructure_failure and not str(result.get("failure_reason") or "").strip():
+            raise RunContractError(
+                "infrastructure supplement failure requires failure_reason"
+            )
+        completed_at = _parse_aware_datetime(
+            result.get("completed_at"), "supplement result completed_at"
+        )
+        if completed_at < request_started_at:
+            raise RunContractError(
+                "supplement result completed_at cannot precede request creation"
+            )
+        if completed_at > current:
+            raise RunContractError(
+                "supplement result completed_at cannot follow registration"
+            )
         queries = result.get("executed_queries")
         if (
             not isinstance(queries, list)
-            or not queries
+            or (not queries and not infrastructure_failure)
             or any(not str(query).strip() for query in queries)
         ):
             raise RunContractError(
                 "supplement result executed_queries must be a non-empty string list"
             )
         access_log = result.get("access_log")
-        if not isinstance(access_log, list) or not access_log:
+        if not isinstance(access_log, list) or (
+            not access_log and not infrastructure_failure
+        ):
             raise RunContractError("supplement result access_log must be a non-empty list")
         validated_access = [
-            _validate_access_log_entry(access, index)
+            _validate_access_log_entry(
+                access,
+                index,
+                require_machine_classification=True,
+            )
             for index, access in enumerate(access_log)
         ]
+        for index, evidence in enumerate(validated_access):
+            _validate_request_evidence_time(
+                evidence[1],
+                f"supplement result access_log[{index}].checked_at",
+                request_started_at,
+                completed_at,
+            )
+            global_access_evidence.append(
+                (evidence[1], gap_id, index, deepcopy(access_log[index]))
+            )
         if result.get("confidence") not in {"high", "medium", "low"}:
             raise RunContractError("supplement result confidence is invalid")
         provenance = result.get("data_provenance")
@@ -999,18 +1712,15 @@ def register_supplement_results(
         if not isinstance(candidates, list):
             raise RunContractError("supplement result candidates must be a list")
         for index, candidate in enumerate(candidates):
-            _validate_supplement_candidate(candidate, index, manifest["window"])
+            candidate_evidence = _validate_supplement_candidate(
+                candidate,
+                index,
+                manifest["window"],
+                request_started_at,
+                completed_at,
+            )
             candidate["candidate_id"] = candidate_ref(str(candidate["url"]))
             candidate["candidate_object_sha256"] = candidate_object_hash(candidate)
-            candidate_access = candidate["access_check"]
-            candidate_evidence = (
-                "verified",
-                str(candidate_access["checked_at"]),
-                str(candidate_access["method"]),
-                normalize_url(str(candidate_access["requested_url"])),
-                normalize_url(str(candidate_access["final_url"])),
-                candidate_access.get("http_status"),
-            )
             if candidate_evidence not in validated_access:
                 raise RunContractError(
                     f"supplement candidate {index} access_check is absent from access_log"
@@ -1019,9 +1729,15 @@ def register_supplement_results(
         if not isinstance(coverage, dict):
             raise RunContractError("supplement result coverage is required")
         try:
-            attempted = int(coverage["attempted"])
-            succeeded = int(coverage["succeeded"])
-            failed = int(coverage["failed"])
+            attempted = _integer(
+                coverage["attempted"], "supplement coverage.attempted", minimum=0
+            )
+            succeeded = _integer(
+                coverage["succeeded"], "supplement coverage.succeeded", minimum=0
+            )
+            failed = _integer(
+                coverage["failed"], "supplement coverage.failed", minimum=0
+            )
         except (KeyError, TypeError, ValueError) as exc:
             raise RunContractError("supplement result coverage counts are invalid") from exc
         if min(attempted, succeeded, failed) < 0 or attempted != succeeded + failed:
@@ -1037,30 +1753,83 @@ def register_supplement_results(
                 "supplement result coverage does not match access_log"
             )
         turns_used = result.get("turns_used")
-        if not isinstance(turns_used, int) or not 1 <= turns_used <= int(gap["max_turns"]):
+        if infrastructure_failure:
+            if turns_used != 0 or attempted != 0 or candidates or access_log or queries:
+                raise RunContractError(
+                    "infrastructure supplement failure must record zero attempts and turns"
+                )
+        elif (
+            not isinstance(turns_used, int)
+            or isinstance(turns_used, bool)
+            or not 1 <= turns_used <= gap["max_turns"]
+        ):
             raise RunContractError("supplement result exceeds max_turns")
         halt_met = result.get("halt_condition_met")
         if not isinstance(halt_met, bool):
             raise RunContractError("supplement result halt_condition_met must be boolean")
+        if infrastructure_failure and halt_met:
+            raise RunContractError(
+                "infrastructure supplement failure cannot meet the halt condition"
+            )
         if status in {"completed", "no_increment"} and not halt_met:
             raise RunContractError("terminal supplement result did not meet halt condition")
         if status == "completed" and not candidates:
             raise RunContractError("completed supplement result requires candidates")
         if status in {"no_increment", "failed"} and candidates:
             raise RunContractError(f"{status} supplement result cannot contain candidates")
-        result_completed_at.append(
-            _parse_aware_datetime(
-                result.get("completed_at"), "supplement result completed_at"
-            )
-        )
+        result_completed_at.append(completed_at)
         degraded = degraded or status in {"degraded", "failed"} or failed > 0
         results.append(deepcopy(result))
+
+    ordered_access = sorted(
+        global_access_evidence,
+        key=lambda entry: (entry[0], entry[1], entry[2]),
+    )
+    equal_time_urls: dict[tuple[str, str], list[dict[str, Any]]] = {}
+    for checked_at, _gap_id, _index, access in ordered_access:
+        key = (
+            checked_at,
+            normalize_url(str(access.get("requested_url") or "")),
+        )
+        equal_time_urls.setdefault(key, []).append(access)
+    for attempts in equal_time_urls.values():
+        if len(attempts) < 2:
+            continue
+        if any(
+            access.get("status") == "blocked"
+            and (
+                access.get("failure_class") == "permanent"
+                or (
+                    isinstance(access.get("http_status"), int)
+                    and not isinstance(access.get("http_status"), bool)
+                    and 400 <= access["http_status"] < 500
+                    and access["http_status"] not in {408, 425, 429}
+                )
+            )
+            for access in attempts
+        ):
+            raise RunContractError(
+                "supplement access chronology is ambiguous at an equal timestamp"
+            )
+    _validate_access_retry_policy([entry[3] for entry in ordered_access])
 
     if seen != set(gaps):
         missing = sorted(set(gaps) - seen)
         raise RunContractError(f"supplement results missing gaps: {missing}")
+    latest_result_at = max(result_completed_at)
+    earliest_result_at = min(result_completed_at)
+    if earliest_result_at < request_started_at:
+        raise RunContractError(
+            "supplement result completed_at cannot precede request creation"
+        )
+    if latest_result_at > current:
+        raise RunContractError(
+            "supplement result completed_at cannot follow registration"
+        )
     existing_stage = manifest.get("stages", {}).get("supplemental", {})
-    if existing_stage.get("status") in STAGE_TERMINAL:
+    if existing_stage.get("status") in STAGE_FINAL:
+        if existing_stage.get("status") == "failed":
+            raise RunContractError("supplemental stage is failed and cannot be resumed")
         existing_path = Path(str(existing_stage.get("artifact_path") or ""))
         if (
             not existing_path.is_file()
@@ -1071,21 +1840,15 @@ def register_supplement_results(
         if existing.get("results") == sorted(results, key=lambda result: str(result["gap_id"])):
             return existing_path, existing
         raise RunContractError("supplemental stage is terminal with different results")
-    current = _aware_now(manifest["timezone"], now)
-    request_started_at = _parse_aware_datetime(
-        request.get("created_at"), "supplement request created_at"
-    )
-    latest_result_at = max(result_completed_at)
-    earliest_result_at = min(result_completed_at)
     timing = {
         "request_to_registration_seconds": round(
-            max(0.0, (current - request_started_at).total_seconds()), 3
+            (current - request_started_at).total_seconds(), 3
         ),
         "latest_result_to_registration_seconds": round(
-            max(0.0, (current - latest_result_at).total_seconds()), 3
+            (current - latest_result_at).total_seconds(), 3
         ),
         "result_completion_skew_seconds": round(
-            max(0.0, (latest_result_at - earliest_result_at).total_seconds()), 3
+            (latest_result_at - earliest_result_at).total_seconds(), 3
         ),
     }
     coverage_total = {
@@ -1129,6 +1892,82 @@ def register_supplement_results(
     return aggregate_path, aggregate
 
 
+def _review_request_retry_matches(
+    existing: dict[str, Any],
+    expected: dict[str, Any],
+    run_dir: Path,
+) -> bool:
+    """Accept only the exact orphan request left by a failed manifest commit."""
+    invocation_id = str(existing.get("invocation_id") or "")
+    challenge = str(existing.get("challenge") or "")
+    if not re.fullmatch(r"[0-9a-f]{32}", invocation_id) or not re.fullmatch(
+        r"[0-9a-f]{64}", challenge
+    ):
+        return False
+    try:
+        _parse_aware_datetime(existing.get("created_at"), "review request created_at")
+    except RunContractError:
+        return False
+
+    expected_copy = deepcopy(expected)
+    existing_copy = deepcopy(existing)
+    for value in (expected_copy, existing_copy):
+        value.pop("invocation_id", None)
+        value.pop("challenge", None)
+        value.pop("created_at", None)
+        packet = value.get("execution_packet")
+        if isinstance(packet, dict):
+            packet.pop("draft_paths", None)
+            packet.pop("write_scope", None)
+            packet.pop("validation_command", None)
+    if existing_copy != expected_copy:
+        return False
+
+    packet = existing.get("execution_packet")
+    if not isinstance(packet, dict):
+        return False
+    output_paths = packet.get("output_paths")
+    draft_paths = packet.get("draft_paths")
+    if not isinstance(output_paths, dict) or not isinstance(draft_paths, dict):
+        return False
+    if existing.get("review_kind") == "semantic":
+        expected_drafts = {
+            "refined_core": str(
+                (run_dir / f"refined_core.{invocation_id}.draft.json").resolve()
+            ),
+            "review_receipt": str(
+                (run_dir / f"semantic_receipt.{invocation_id}.draft.json").resolve()
+            ),
+        }
+    else:
+        expected_drafts = {
+            "review_receipt": str(
+                (run_dir / f"red_team_receipt.{invocation_id}.draft.json").resolve()
+            )
+        }
+    if draft_paths != expected_drafts:
+        return False
+    if existing.get("review_kind") == "semantic":
+        expected_validation = [
+            "python",
+            "-X",
+            "utf8",
+            str((HUB_DIR / "scripts" / "run_daily.py").resolve()),
+            "validate-semantic-draft",
+            "--manifest",
+            str(Path(packet.get("run_manifest_path") or "").resolve()),
+            "--refined",
+            expected_drafts["refined_core"],
+            "--semantic-receipt",
+            expected_drafts["review_receipt"],
+        ]
+        if packet.get("validation_command") != expected_validation:
+            return False
+    return sorted(packet.get("write_scope") or []) == sorted(
+        [*output_paths.values(), *expected_drafts.values()]
+    )
+
+
 def build_review_request(
     manifest_path: str | Path,
     refined_path: str | Path | None,
@@ -1151,8 +1990,12 @@ def build_review_request(
     if configuration is None:
         raise RunContractError("review request kind must be semantic or red_team")
     artifact_name, reviewer_kind, reviewer_id = configuration
-    if not isinstance(max_turns, int) or not 1 <= max_turns <= 10:
-        raise RunContractError("review request max_turns must be between 1 and 10")
+    if (
+        not isinstance(max_turns, int)
+        or isinstance(max_turns, bool)
+        or not 1 <= max_turns <= 2
+    ):
+        raise RunContractError("review request max_turns must be between 1 and 2")
     if manifest.get("artifacts", {}).get(artifact_name) is not None:
         raise RunContractError(f"{review_kind} review request is immutable once registered")
     refined_file = Path(refined_path) if refined_path is not None else None
@@ -1171,6 +2014,18 @@ def build_review_request(
             refined_file,
             semantic_receipt_path,
         )
+        semantic_stage = load_manifest(manifest_path).get("stages", {}).get(
+            "semantic_review", {}
+        )
+        if semantic_stage.get("status") not in STAGE_TERMINAL:
+            register_review_receipt(
+                manifest_path,
+                refined_file,
+                semantic_receipt_path,
+                "semantic_review",
+                now=now,
+            )
+        manifest = load_manifest(manifest_path)
         scope = review_scope(load_json(refined_file, {}))
         if scope["review_mode"] == "no_l4_fast_path":
             max_turns = 1
@@ -1241,6 +2096,17 @@ def build_review_request(
                 "path": str(SUBAGENT_PROMPTS_PATH.resolve()),
                 "sha256": prompt_sha256,
             },
+            "contract_bundle": {
+                "common_contract": deepcopy(
+                    prompt_config.get("common_contract", {})
+                ),
+                "review_common_contract": deepcopy(
+                    prompt_config.get("review_common_contract", {})
+                ),
+                "execution_policy": deepcopy(
+                    prompt_config.get("execution_policy", {})
+                ),
+            },
             "agent_contract": deepcopy(agent_contract),
             "output_paths": output_paths,
             "draft_paths": draft_paths,
@@ -1278,6 +2144,10 @@ def build_review_request(
             request["bound_artifacts"]["history_review_slice"] = bound_artifact(
                 artifacts["history_review_slice"]
             )
+        if artifacts.get("focus_config"):
+            request["bound_artifacts"]["focus_config"] = bound_artifact(
+                artifacts["focus_config"]
+            )
         request["execution_packet"]["validation_command"] = [
             "python",
             "-X",
@@ -1298,22 +2168,70 @@ def build_review_request(
         )
         request.update(scope or {})
     request_path = Path(manifest["run_dir"]) / f"{review_kind}_review_request.json"
-    atomic_dump_json(request_path, request)
-    record_run_artifact(
-        manifest_path,
-        artifact_name,
-        request_path,
-        input_sha256=request.get("input_bundle_sha256") or request.get("refined_sha256"),
-        metadata={
-            "review_kind": review_kind,
-            "reviewer_kind": reviewer_kind,
-            "reviewer_id": reviewer_id,
-            "review_mode": request["review_mode"],
-            "max_turns": request["max_turns"],
-            "l4_item_count": len(request.get("l4_item_hashes", [])),
-        },
-        now=now,
-    )
+    stage_name = "semantic_review" if review_kind == "semantic" else "red_team"
+    manifest_file = Path(manifest_path)
+    with locked_manifest(manifest_file) as (locked, expected_manifest_sha256):
+        if locked.get("stages", {}).get("supplemental", {}).get("status") not in {
+            "completed",
+            "degraded",
+            "skipped",
+            "not_required",
+        }:
+            raise RunContractError("review request requires successful supplemental stage")
+        if locked.get("artifacts", {}).get(artifact_name) is not None:
+            raise RunContractError(
+                f"{review_kind} review request is immutable once registered"
+            )
+        if locked.get("stages", {}).get(stage_name, {}).get("status") in STAGE_FINAL:
+            raise RunContractError(f"stage {stage_name} is immutable once terminal/final")
+        if request_path.exists():
+            orphan = load_json(request_path, {})
+            if not _review_request_retry_matches(orphan, request, run_dir):
+                raise RunContractError(
+                    f"unregistered {review_kind} review request conflicts with this invocation"
+                )
+            request = orphan
+            invocation_id = str(request["invocation_id"])
+        else:
+            atomic_dump_json(request_path, request)
+        request_sha256 = file_sha256(request_path)
+        before = {field: deepcopy(locked[field]) for field in IMMUTABLE_FIELDS}
+        _record_artifact_in_manifest(
+            locked,
+            artifact_name,
+            request_path,
+            input_sha256=request.get("input_bundle_sha256")
+            or request.get("refined_sha256"),
+            metadata={
+                "review_kind": review_kind,
+                "reviewer_kind": reviewer_kind,
+                "reviewer_id": reviewer_id,
+                "review_mode": request["review_mode"],
+                "max_turns": request["max_turns"],
+                "l4_item_count": len(request.get("l4_item_hashes", [])),
+            },
+            current=current,
+        )
+        _record_stage_in_manifest(
+            locked,
+            stage_name,
+            "running",
+            artifact_path=None,
+            input_sha256=None,
+            metadata={
+                "review_kind": review_kind,
+                "reviewer_kind": reviewer_kind,
+                "reviewer_id": reviewer_id,
+                "invocation_id": invocation_id,
+                "request_sha256": request_sha256,
+                "max_turns": request["max_turns"],
+            },
+            current=current,
+        )
+        for field, expected in before.items():
+            if locked[field] != expected:
+                raise RunContractError(f"immutable run field changed: {field}")
+        commit_manifest(manifest_file, locked, expected_manifest_sha256)
     return request_path, request
 
 
@@ -1340,6 +2258,146 @@ def _registered_review_request(
     ):
         raise RunContractError(f"registered {review_kind} review request is invalid")
     return request, str(record["artifact_sha256"])
+
+
+def _validate_review_execution_paths(
+    manifest: dict[str, Any],
+    review_kind: str,
+    refined_path: str | Path,
+    receipt_path: str | Path,
+    *,
+    allow_draft_paths: bool,
+) -> None:
+    request, _ = _registered_review_request(manifest, review_kind)
+    packet = request.get("execution_packet")
+    if not isinstance(packet, dict):
+        raise RunContractError("review request execution_packet is missing")
+    refined = Path(refined_path).resolve()
+    receipt = Path(receipt_path).resolve()
+    output_paths = packet.get("output_paths")
+    if not isinstance(output_paths, dict):
+        raise RunContractError("review request output_paths are missing")
+    accepted: list[tuple[Path, Path]] = []
+    if review_kind == "semantic":
+        accepted.append(
+            (
+                Path(str(output_paths.get("refined_core") or "")).resolve(),
+                Path(str(output_paths.get("review_receipt") or "")).resolve(),
+            )
+        )
+        if allow_draft_paths:
+            draft_paths = packet.get("draft_paths")
+            if not isinstance(draft_paths, dict):
+                raise RunContractError("review request draft_paths are missing")
+            accepted.append(
+                (
+                    Path(str(draft_paths.get("refined_core") or "")).resolve(),
+                    Path(str(draft_paths.get("review_receipt") or "")).resolve(),
+                )
+            )
+    else:
+        bound_refined = Path(str(packet.get("bound_refined_path") or "")).resolve()
+        accepted.append(
+            (
+                bound_refined,
+                Path(str(output_paths.get("review_receipt") or "")).resolve(),
+            )
+        )
+    if (refined, receipt) not in accepted:
+        mode = "draft/output" if allow_draft_paths else "final output"
+        raise RunContractError(
+            f"{review_kind} review paths do not match execution_packet {mode} paths"
+        )
+
+
+def load_review_progress_state(
+    manifest_path: str | Path,
+    review_kind: str,
+    invocation_id: str,
+    request_sha256: str,
+) -> dict[str, Any] | None:
+    manifest = load_manifest(manifest_path)
+    stage = "semantic_review" if review_kind == "semantic" else "red_team"
+    if review_kind not in {"semantic", "red_team"}:
+        raise RunContractError("review progress kind must be semantic or red_team")
+    request, registered_sha256 = _registered_review_request(manifest, review_kind)
+    stage_data = manifest.get("stages", {}).get(stage, {})
+    metadata = stage_data.get("metadata") or {}
+    if stage_data.get("status") in STAGE_FINAL:
+        raise RunContractError(f"stage {stage} is final; progress writer rejected")
+    if (
+        invocation_id != request.get("invocation_id")
+        or invocation_id != metadata.get("invocation_id")
+        or request_sha256 != registered_sha256
+        or request_sha256 != metadata.get("request_sha256")
+    ):
+        raise RunContractError("stale progress writer rejected")
+    state = metadata.get("progress_state")
+    return deepcopy(state) if isinstance(state, dict) else None
+
+
+def update_review_progress(
+    manifest_path: str | Path,
+    review_kind: str,
+    invocation_id: str,
+    request_sha256: str,
+    state_path: str | Path,
+    fingerprint: dict[str, Any],
+    agent_status: str,
+    evaluator: Callable[..., tuple[dict[str, Any], str]],
+    *,
+    now: datetime | None = None,
+) -> tuple[dict[str, Any], str]:
+    """Evaluate and commit progress from the authoritative manifest under one lock."""
+    if review_kind not in {"semantic", "red_team"}:
+        raise RunContractError("review progress kind must be semantic or red_team")
+    stage = "semantic_review" if review_kind == "semantic" else "red_team"
+    path = Path(manifest_path)
+    with locked_manifest(path) as (manifest, expected_manifest_sha256):
+        request, registered_sha256 = _registered_review_request(manifest, review_kind)
+        existing = manifest.get("stages", {}).get(stage, {})
+        if existing.get("status") in STAGE_FINAL:
+            raise RunContractError(f"stage {stage} is final; progress writer rejected")
+        if existing.get("status") != "running":
+            raise RunContractError(f"stage {stage} is not running")
+        metadata = dict(existing.get("metadata") or {})
+        if (
+            invocation_id != request.get("invocation_id")
+            or invocation_id != metadata.get("invocation_id")
+            or request_sha256 != registered_sha256
+            or request_sha256 != metadata.get("request_sha256")
+        ):
+            raise RunContractError("stale progress writer rejected")
+        previous_state = metadata.get("progress_state")
+        next_state, decision = evaluator(
+            previous_state if isinstance(previous_state, dict) else None,
+            fingerprint,
+            agent_status,
+            review_kind=review_kind,
+        )
+        metadata.update(
+            {
+                "progress_decision": decision,
+                "progress_state_path": str(Path(state_path).resolve()),
+                "progress_state": deepcopy(next_state),
+                "progress_fingerprint": deepcopy(
+                    next_state.get("previous_fingerprint")
+                ),
+                "reminder_sent": bool(next_state.get("reminder_sent", False)),
+            }
+        )
+        current = _aware_now(manifest["timezone"], now)
+        _record_stage_in_manifest(
+            manifest,
+            stage,
+            "failed" if decision == "declare_lost" else "running",
+            artifact_path=None,
+            input_sha256=None,
+            metadata=metadata,
+            current=current,
+        )
+        commit_manifest(path, manifest, expected_manifest_sha256)
+    return deepcopy(next_state), decision
 
 
 def validate_review_receipt(
@@ -1381,6 +2439,18 @@ def validate_review_receipt(
                 raise RunContractError(f"red-team review request {field} mismatch")
         if (
             expected_scope["review_mode"] == "no_l4_fast_path"
+            and receipt.get("status") != "not_required"
+        ):
+            raise RunContractError(
+                "no-L4 red-team receipt status must be not_required"
+            )
+        if (
+            expected_scope["review_mode"] == "l4_full_review"
+            and receipt.get("status") != "passed"
+        ):
+            raise RunContractError("L4 red-team receipt status must be passed")
+        if (
+            expected_scope["review_mode"] == "no_l4_fast_path"
             and request.get("max_turns") != 1
         ):
             raise RunContractError("no-L4 red-team request must use one turn")
@@ -1396,6 +2466,7 @@ def validate_review_receipt(
     turns_used = receipt.get("turns_used")
     if (
         not isinstance(turns_used, int)
+        or isinstance(turns_used, bool)
         or not 1 <= turns_used <= int(request.get("max_turns", 0))
     ):
         raise RunContractError("review receipt turns_used exceeds request")
@@ -1411,7 +2482,11 @@ def validate_review_receipt(
     if receipt.get("output_sha256") != file_sha256(refined_file):
         raise RunContractError("review receipt output_sha256 mismatch")
     if review_kind == "semantic":
-        candidate_hashes = registered_candidate_hashes(manifest)
+        candidate_lineage = registered_candidate_lineage(manifest)
+        candidate_hashes = {
+            reference: set(entry["object_hashes"])
+            for reference, entry in candidate_lineage.items()
+        }
         access_log = receipt.get("access_log")
         if not isinstance(access_log, list) or (refined.get("top_10") and not access_log):
             raise RunContractError("semantic receipt access_log is required for retained items")
@@ -1470,6 +2545,7 @@ def validate_review_receipt(
         if not isinstance(bindings, list):
             raise RunContractError("semantic receipt lineage_bindings is required")
         by_output: dict[str, dict[str, Any]] = {}
+        bound_candidates_by_output: dict[str, list[dict[str, Any]]] = {}
         for binding in bindings:
             if not isinstance(binding, dict):
                 raise RunContractError("semantic receipt lineage binding must be an object")
@@ -1479,6 +2555,7 @@ def validate_review_receipt(
             inputs = binding.get("inputs")
             if not isinstance(inputs, list) or not inputs:
                 raise RunContractError("semantic receipt lineage binding inputs are required")
+            resolved_candidates: list[dict[str, Any]] = []
             for value in inputs:
                 if not isinstance(value, dict):
                     raise RunContractError("semantic receipt lineage input is invalid")
@@ -1493,11 +2570,16 @@ def validate_review_receipt(
                     raise RunContractError(
                         "semantic receipt lineage candidate hash does not match registered candidate"
                     )
+                resolved_candidates.append(
+                    candidate_lineage[reference]["objects"][object_hash]
+                )
             by_output[output_hash] = binding
+            bound_candidates_by_output[output_hash] = resolved_candidates
         if set(by_output) != set(expected_hashes):
             raise RunContractError("semantic receipt lineage outputs do not match final items")
         for item in refined.get("top_10", []):
-            binding = by_output[item_hash(item)]
+            output_hash = item_hash(item)
+            binding = by_output[output_hash]
             bound_refs = sorted(
                 str(value.get("candidate_ref")) for value in binding["inputs"]
             )
@@ -1505,6 +2587,70 @@ def validate_review_receipt(
             if not item_refs or bound_refs != item_refs:
                 raise RunContractError(
                     "semantic receipt lineage inputs do not match item candidate_refs"
+                )
+            try:
+                item_evidence = (
+                    normalize_url(str(item.get("url") or "")),
+                    str(item.get("title") or ""),
+                    str(item.get("source") or ""),
+                    normalize_published_at(str(item.get("published_at") or "")),
+                    str(item.get("published_at_source") or ""),
+                )
+            except RunContractError as exc:
+                raise RunContractError(
+                    "semantic receipt output evidence is invalid"
+                ) from exc
+            resolved_candidates = bound_candidates_by_output[output_hash]
+            matching_candidates: list[dict[str, Any]] = []
+            for candidate in resolved_candidates:
+                try:
+                    candidate_evidence = (
+                        normalize_url(str(candidate.get("url") or "")),
+                        str(candidate.get("title") or ""),
+                        str(candidate.get("source") or ""),
+                        normalize_published_at(
+                            str(candidate.get("published_at") or "")
+                        ),
+                        str(candidate.get("published_at_source") or ""),
+                    )
+                except RunContractError:
+                    continue
+                if candidate_evidence == item_evidence:
+                    matching_candidates.append(candidate)
+            if not matching_candidates:
+                raise RunContractError(
+                    "semantic receipt output evidence does not match a bound candidate"
+                )
+            _validate_bound_candidate_source_type(item, matching_candidates)
+            registered_access_evidence = []
+            for candidate_index, candidate in enumerate(matching_candidates):
+                if not isinstance(candidate.get("access_check"), dict):
+                    continue
+                try:
+                    registered_access_evidence.append(
+                        _validate_access_log_entry(
+                            candidate["access_check"],
+                            candidate_index,
+                            path_prefix="bound candidate access_check",
+                        )
+                    )
+                except RunContractError:
+                    continue
+            if registered_access_evidence:
+                item_access_evidence = _validate_access_log_entry(
+                    item.get("access_check"),
+                    0,
+                    path_prefix="refined item bound access_check",
+                )
+                if item_access_evidence not in registered_access_evidence:
+                    raise RunContractError(
+                        "semantic receipt output access_check does not match exact bound candidate evidence"
+                    )
+            if item.get("corroboration_status") == "multi_independent":
+                _validate_multi_independent_lineage(
+                    item,
+                    resolved_candidates,
+                    validated_access,
                 )
     if review_kind == "red_team" and not set(actual_hashes).issubset(set(expected_hashes)):
         raise RunContractError("red-team receipt contains an unknown item hash")
@@ -1556,6 +2702,7 @@ def validate_semantic_draft(
             raise RunContractError(f"semantic draft {field} mismatch")
 
     validate_registered_pipeline_summary(refined, manifest)
+    validate_semantic_history(refined, manifest)
 
     created_at = _parse_aware_datetime(
         manifest.get("created_at"), "run manifest created_at"
@@ -1566,6 +2713,11 @@ def validate_semantic_draft(
     if generated_at < created_at:
         raise RunContractError(
             "semantic draft generated_at cannot precede run creation"
+        )
+    current = _aware_now(str(manifest["timezone"]))
+    if generated_at > current.astimezone(generated_at.tzinfo) + timedelta(minutes=5):
+        raise RunContractError(
+            "semantic draft generated_at is unreasonably in the future"
         )
 
     items = refined.get("top_10")
@@ -1643,8 +2795,18 @@ def register_review_receipt(
     if stage not in {"semantic_review", "red_team"}:
         raise RunContractError("review receipt stage must be semantic_review or red_team")
     expected_kind = "semantic" if stage == "semantic_review" else "red_team"
+    manifest = load_manifest(manifest_path)
+    if manifest.get("stages", {}).get(stage, {}).get("status") in STAGE_FINAL:
+        raise RunContractError(f"stage {stage} is final; review receipt rejected")
     receipt_file = Path(receipt_path)
     receipt = load_json(receipt_file, {})
+    _validate_review_execution_paths(
+        manifest,
+        expected_kind,
+        refined_path,
+        receipt_file,
+        allow_draft_paths=False,
+    )
     validate_review_receipt(
         receipt,
         manifest_path,
@@ -1661,15 +2823,13 @@ def register_review_receipt(
         receipt.get("completed_at"), "review receipt completed_at"
     )
     registered_at = _aware_now(manifest["timezone"], now)
-    request_to_receipt_seconds = max(
-        0.0, (completed_at - started_at).total_seconds()
-    )
-    receipt_to_registration_seconds = max(
-        0.0, (registered_at - completed_at).total_seconds()
-    )
-    request_to_registration_seconds = max(
-        0.0, (registered_at - started_at).total_seconds()
-    )
+    if completed_at < started_at:
+        raise RunContractError("review receipt completed_at cannot precede request creation")
+    if completed_at > registered_at:
+        raise RunContractError("review receipt completed_at cannot follow registration")
+    request_to_receipt_seconds = (completed_at - started_at).total_seconds()
+    receipt_to_registration_seconds = (registered_at - completed_at).total_seconds()
+    request_to_registration_seconds = (registered_at - started_at).total_seconds()
     return record_stage(
         manifest_path,
         stage,
@@ -1709,6 +2869,21 @@ def register_review_bundle(
     red_team_path = Path(red_team_receipt_path)
     semantic = load_json(semantic_path, {})
     red_team = load_json(red_team_path, {})
+    manifest = load_manifest(manifest_path)
+    _validate_review_execution_paths(
+        manifest,
+        "semantic",
+        refined_path,
+        semantic_path,
+        allow_draft_paths=False,
+    )
+    _validate_review_execution_paths(
+        manifest,
+        "red_team",
+        refined_path,
+        red_team_path,
+        allow_draft_paths=False,
+    )
     validate_review_receipt(
         semantic,
         manifest_path,
@@ -1729,7 +2904,9 @@ def register_review_bundle(
     for stage, path in supplied.items():
         manifest = load_manifest(manifest_path)
         existing = manifest.get("stages", {}).get(stage, {})
-        if existing.get("status") in STAGE_TERMINAL:
+        if existing.get("status") in STAGE_FINAL:
+            if existing.get("status") == "failed":
+                raise RunContractError(f"stage {stage} is failed and cannot be resumed")
             if existing.get("artifact_sha256") != file_sha256(path):
                 raise RunContractError(
                     f"stage {stage} is terminal with a different receipt"

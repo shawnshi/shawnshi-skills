@@ -1,6 +1,13 @@
+import tempfile
 import unittest
+from datetime import datetime, timedelta
+from pathlib import Path
+from zoneinfo import ZoneInfo
 
-from review_progress_gate import evaluate_progress
+from review_progress_gate import (
+    derive_watch_fingerprint,
+    evaluate_progress,
+)
 
 
 class ReviewProgressGateTests(unittest.TestCase):
@@ -42,6 +49,101 @@ class ReviewProgressGateTests(unittest.TestCase):
         self.assertEqual(lost, "declare_lost")
         self.assertEqual(ready, "verify_artifact")
 
+    def test_completed_with_all_valid_watch_json_verifies_artifact(self):
+        with tempfile.TemporaryDirectory() as directory:
+            core = Path(directory) / "refined_core.json"
+            receipt = Path(directory) / "semantic_receipt.json"
+            core.write_text("{}", encoding="utf-8")
+            receipt.write_text("[]", encoding="utf-8")
+            fingerprint = derive_watch_fingerprint(
+                None,
+                [core, receipt],
+                2,
+                observed_at=datetime(
+                    2026, 8, 25, 9, 0, tzinfo=ZoneInfo("Asia/Shanghai")
+                ),
+                review_kind="semantic",
+            )
+
+            _, decision = evaluate_progress(
+                None,
+                fingerprint,
+                "completed",
+                review_kind="semantic",
+            )
+
+            self.assertEqual(decision, "verify_artifact")
+
+    def test_completed_without_all_valid_watch_json_declares_lost(self):
+        invalid_contents = {
+            "missing": None,
+            "empty": "",
+            "invalid": "not-json",
+        }
+        for label, content in invalid_contents.items():
+            with self.subTest(label=label), tempfile.TemporaryDirectory() as directory:
+                core = Path(directory) / "refined_core.json"
+                receipt = Path(directory) / "semantic_receipt.json"
+                core.write_text("{}", encoding="utf-8")
+                if content is not None:
+                    receipt.write_text(content, encoding="utf-8")
+                fingerprint = derive_watch_fingerprint(
+                    None,
+                    [core, receipt],
+                    2,
+                    observed_at=datetime(
+                        2026, 8, 25, 9, 0, tzinfo=ZoneInfo("Asia/Shanghai")
+                    ),
+                    review_kind="semantic",
+                )
+
+                _, decision = evaluate_progress(
+                    None,
+                    fingerprint,
+                    "completed",
+                    review_kind="semantic",
+                )
+
+                self.assertEqual(decision, "declare_lost")
+
+    def test_completed_without_watch_paths_remains_lost(self):
+        _, decision = evaluate_progress(None, self.first, "completed")
+
+        self.assertEqual(decision, "declare_lost")
+
+    def test_milestone_above_global_limit_is_rejected(self):
+        fingerprint = dict(self.first, milestone_seq=3)
+
+        with self.assertRaisesRegex(ValueError, "milestone_seq.*at most 2"):
+            evaluate_progress(None, fingerprint, "running")
+
+    def test_review_kind_applies_phase_specific_milestone_limit(self):
+        semantic = dict(self.first, milestone_seq=2)
+        red_team = dict(self.first, milestone_seq=1)
+
+        _, semantic_decision = evaluate_progress(
+            None,
+            semantic,
+            "running",
+            review_kind="semantic",
+        )
+        _, red_team_decision = evaluate_progress(
+            None,
+            red_team,
+            "running",
+            review_kind="red_team",
+        )
+
+        self.assertEqual(semantic_decision, "continue_wait")
+        self.assertEqual(red_team_decision, "continue_wait")
+        with self.assertRaisesRegex(ValueError, "red_team.*at most 1"):
+            evaluate_progress(
+                None,
+                dict(self.first, milestone_seq=2),
+                "running",
+                review_kind="red_team",
+            )
+
     def test_regressing_fingerprint_is_rejected(self):
         state, _ = evaluate_progress(None, self.first, "running")
         regressed = dict(self.first, event_ordinal=99)
@@ -78,6 +180,68 @@ class ReviewProgressGateTests(unittest.TestCase):
         self.assertEqual(decision, "continue_wait")
         self.assertEqual(state["growth_checks_without_milestone"], 0)
 
+    def test_watch_paths_supply_progress_when_session_telemetry_is_unavailable(self):
+        with tempfile.TemporaryDirectory() as directory:
+            draft = Path(directory) / "refined.draft.json"
+            observed = datetime(2026, 8, 25, 9, 0, tzinfo=ZoneInfo("Asia/Shanghai"))
+            first = derive_watch_fingerprint(None, [draft], 1, observed_at=observed)
+            state, decision = evaluate_progress(None, first, "running")
+            self.assertEqual(decision, "continue_wait")
+
+            draft.write_text("{}", encoding="utf-8")
+            second = derive_watch_fingerprint(
+                state,
+                [draft],
+                1,
+                observed_at=observed.replace(minute=1),
+            )
+            state, decision = evaluate_progress(state, second, "running")
+
+            self.assertEqual(decision, "continue_wait")
+            self.assertGreater(second["event_ordinal"], first["event_ordinal"])
+
+    def test_watch_paths_declare_lost_after_reminder_and_three_static_checks(self):
+        with tempfile.TemporaryDirectory() as directory:
+            draft = Path(directory) / "refined.draft.json"
+            observed = datetime(2026, 8, 25, 9, 0, tzinfo=ZoneInfo("Asia/Shanghai"))
+            fingerprint = derive_watch_fingerprint(None, [draft], 1, observed_at=observed)
+            state, _ = evaluate_progress(None, fingerprint, "running")
+            fingerprint = derive_watch_fingerprint(state, [draft], 1, observed_at=observed)
+            state, decision = evaluate_progress(state, fingerprint, "running")
+            self.assertEqual(decision, "send_reminder")
+            for expected in ("continue_wait", "continue_wait", "declare_lost"):
+                fingerprint = derive_watch_fingerprint(
+                    state,
+                    [draft],
+                    1,
+                    observed_at=observed,
+                )
+                state, decision = evaluate_progress(state, fingerprint, "running")
+                self.assertEqual(decision, expected)
+
+    def test_watch_path_progress_after_stalled_reminder_resets_static_counter(self):
+        with tempfile.TemporaryDirectory() as directory:
+            draft = Path(directory) / "refined.draft.json"
+            observed = datetime(2026, 8, 25, 9, 0, tzinfo=ZoneInfo("Asia/Shanghai"))
+            fingerprint = derive_watch_fingerprint(None, [draft], 1, observed_at=observed)
+            state, _ = evaluate_progress(None, fingerprint, "running")
+            fingerprint = derive_watch_fingerprint(state, [draft], 1, observed_at=observed)
+            state, decision = evaluate_progress(state, fingerprint, "running")
+            self.assertEqual(decision, "send_reminder")
+
+            draft.write_text("{}", encoding="utf-8")
+            fingerprint = derive_watch_fingerprint(
+                state,
+                [draft],
+                1,
+                observed_at=observed + timedelta(minutes=1),
+            )
+            state, decision = evaluate_progress(state, fingerprint, "running")
+
+            self.assertEqual(decision, "continue_wait")
+            self.assertFalse(state["reminder_sent"])
+            self.assertEqual(state["unchanged_after_reminder"], 0)
+            self.assertEqual(state["growth_checks_without_milestone"], 1)
 
 if __name__ == "__main__":
     unittest.main()

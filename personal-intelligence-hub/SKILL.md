@@ -7,7 +7,7 @@ description: 对技术与医疗数字化开展基线优先的多来源扫描、�
 
 ## 适用合同
 
-1. 当前正式产物使用 `references/briefing_schema.json` 1.3；历史 v1.0/v1.1 及 `references/briefing_schema_v1.2.json` 由冻结 validator 只读回放，不改写旧档。
+1. 当前正式产物使用 `references/briefing_schema.json` 1.4；历史 v1.0/v1.1、`references/briefing_schema_v1.2.json` 及 `references/briefing_schema_v1.3.json` 由冻结 validator 只读回放，不改写旧档。
 2. 用户只说“今日资讯简报”时：报告日为 Asia/Shanghai 当日，窗口为报告日及之前 6 日，共 7 个日历日；地域为中国、美国与全球。
 3. 默认领域请求比例为技术 60%、医疗数字化 40%。用户指定主题或比例时覆盖默认值并记录来源与理由。
 4. 正式日简报默认自动保存。用户明确要求不保存时，在两份回执登记后运行 `python -X utf8 scripts/run_daily.py preview --manifest <run_manifest.json> --refined <refined_core.json>`；只返回通过门禁的确定性 Markdown，不调用归档步骤。
@@ -75,6 +75,8 @@ python -X utf8 scripts/run_daily.py prepare --report-date YYYY-MM-DD --timezone 
 - `confidence`、绑定 request/candidate pool/access log 哈希的 `data_provenance`；
 - 1..max_turns 的已用轮次、停止条件是否满足、完成时间和状态。
 
+只有代理在任何查询或访问前初始化失败时，才可登记零尝试基础设施失败：`status=failed`、`failure_kind=infrastructure`、非空 `failure_reason`、`turns_used=0`、`halt_condition_met=false`，且 queries、access log、candidates 为空、coverage 全零。其他失败仍必须保留真实查询与访问证据。
+
 没有增量时返回 `no_increment` 与空候选，不得补写弱资讯。全部 gap 结果齐备后登记：
 
 ```powershell
@@ -86,8 +88,16 @@ python -X utf8 scripts/run_daily.py register-supplement --manifest <run_manifest
 每个阶段最多允许两次、每次不超过 60 秒的 `wait_agent`；若两次都没有新的 `artifact_ready`、阻断消息或可比较的代理状态变化，只允许一次 `list_agents`、一次下述文件观察，并在运行日志可读时读取一次仅含最新事件 ordinal、时间戳、工具调用计数和已收到里程碑序号的进度指纹。把该指纹交给 `scripts/review_progress_gate.py` 的阶段专属状态文件；它以原子状态机返回 `continue_wait`、`send_reminder`、`verify_artifact` 或 `declare_lost`。`running` 且进度指纹增长表示进展，必须继续等待；单凭超时、没有正式文件或仍为 `running` 不得判定失联或中止代理。为防无效工具循环无限续期，同一里程碑内最多允许 15 次增长检查；达到上限后发送定向提醒，提醒后连续三次仍无新里程碑则执行 `declare_lost`。代理明确失败/退出或提醒后连续三次静止也由状态机判为 `declare_lost`。穿插本地工作、发送说明或缩短单次等待不会重置预算；只有新控制里程碑才清零无里程碑增长计数。
 
 ```powershell
-python -X utf8 scripts/review_progress_gate.py --state <run_dir>/semantic_progress_state.json --agent-status running --event-ordinal <n> --last-event-at <iso_datetime> --tool-call-count <n> --milestone-seq <0|1|2>
+python -X utf8 scripts/review_progress_gate.py --state <run_dir>/semantic_progress_state.json --manifest <run_manifest.json> --review-kind semantic --agent-status running --event-ordinal <n> --last-event-at <iso_datetime> --tool-call-count <n> --milestone-seq <0|1|2>
 ```
+
+若调用层无法读取代理内部的事件 ordinal、时间戳或工具调用计数，不得猜测这些值，也不得跳过状态机。改用已登记请求中的 draft 路径生成本地可复算的文件观察指纹；同一命令同时观察 core 与回执 draft，`milestone-seq` 只取已收到的正式里程碑：
+
+```powershell
+python -X utf8 scripts/review_progress_gate.py --state <run_dir>/semantic_progress_state.json --manifest <run_manifest.json> --review-kind semantic --agent-status running --milestone-seq <0|1|2> --watch-path <refined-core-draft> --watch-path <semantic-receipt-draft>
+```
+
+文件不存在、出现、大小或修改时间变化都会形成新观察指纹；单纯等待时间流逝不会伪造进展。状态机返回 `send_reminder`、`verify_artifact` 或 `declare_lost` 时仍按原合同处理。
 
 仅在通知通道延迟或不可用时，允许执行一次文件观察降级：
 
@@ -95,7 +105,7 @@ python -X utf8 scripts/review_progress_gate.py --state <run_dir>/semantic_progre
 python -X utf8 scripts/await_artifacts.py --path <lane-1.json> --path <lane-2.json>
 ```
 
-降级观察最长 10 秒且不得重复轮询；仍未就绪时发送一次定向提醒，或在按上述进度指纹规则确认代理失败/失联后重新启动一个有界任务，然后把当前阶段视为等待外部状态，不得继续轮询。文件稳定、可解析后立即运行登记命令；只要合同验证通过，就不再等待额外聊天状态。文件存在或控制消息本身都不等于通过，仍须执行正式登记校验。
+降级观察最长 10 秒且不得重复轮询；仍未就绪时只发送一次定向提醒。若上述进度指纹规则确认代理失败/失联，当前登记请求必须封闭失败，不得用相同 request、invocation 或输出路径重新启动代理；需要重试时创建全新 run。文件稳定、可解析后立即运行登记命令；只要合同验证通过，就不再等待额外聊天状态。文件存在或控制消息本身都不等于通过，仍须执行正式登记校验。
 
 若 prepare 没有返回 request，说明基线已满足配置要求，脚本已登记结构化 `no_increment`，不要伪造补检结果。
 
@@ -107,7 +117,7 @@ python -X utf8 scripts/await_artifacts.py --path <lane-1.json> --path <lane-2.js
 python -X utf8 scripts/run_daily.py prepare-review --manifest <run_manifest.json> --kind semantic --max-turns 2
 ```
 
-把返回的 `semantic_review_request.json` 交给独立 `SemanticEvaluator`。`review-request/1.1` 内的 `execution_packet` 是自包含任务包，已固化角色合同、进度消息、精确 draft/最终输出路径、写入白名单和验证命令；启动消息只需给出已登记请求的绝对路径与“严格按 execution_packet 执行”，不得再次要求代理读取整份 `SKILL.md`、完整提示词配置或继承主会话历史。请求内 `bound_artifacts` 已绑定基线、候选池、补检聚合、完整历史快照与紧凑评审切片的绝对路径和 SHA-256。评估者只读取 `history_review_slice` 做历史去重；完整 `history_snapshot` 只保留为归档溯源绑定，不重复载入。旧运行没有切片时才允许回退读取完整快照。评估者必须原样返回请求中的 challenge、reviewer/invocation 标识与 request SHA-256。
+把返回的 `semantic_review_request.json` 交给独立 `SemanticEvaluator`。`review-request/1.1` 内的 `execution_packet` 是自包含任务包，已固化公共合同、角色合同、进度消息、精确 draft/最终输出路径、写入白名单和验证命令；启动消息只需给出已登记请求的绝对路径与“严格按 execution_packet 执行”，不得再次要求代理读取整份 `SKILL.md`、完整提示词配置或继承主会话历史。请求内 `bound_artifacts` 已绑定基线、候选池、补检聚合、完整历史快照、focus config 与紧凑评审切片的绝对路径和 SHA-256。评估者只读取 `history_review_slice` 做历史去重；完整 `history_snapshot` 只保留为归档溯源绑定，不重复载入。缺失切片的旧运行必须封闭失败并重新 prepare，不得回退加载完整历史。评估者必须原样返回请求中的 challenge、reviewer/invocation 标识与 request SHA-256。
 
 语义代理必须优先复用已登记候选中的日期、URL、访问日志和对象哈希，在本地批量完成门禁、去重、排序、血缘和回执构造；除非登记证据缺失或相互矛盾，不得重新联网访问已经 `verified` 的 URL。一次读取各所需绑定文件，不在聊天或工具输出中回显完整候选池、历史切片、core 或回执。候选的 `published_at` 若为合法 ISO datetime，必须调用 `python -X utf8 scripts/run_daily.py normalize-published-at --value <iso_datetime>`，按其自带时区取日期并规范为严格 `YYYY-MM-DD`；不得把 datetime 原样写入 core。
 
@@ -119,15 +129,17 @@ python -X utf8 scripts/run_daily.py validate-semantic-draft --manifest <run_mani
 
 只有 draft gate 返回 `status=valid` 才可分别原子提升到最终输出并发送 `artifact_ready`；失败时最多使用第二轮修复已报告的合同错误，不扩展事件。发现证据矛盾时封闭失败，不补写未经登记的外部事实。
 
+draft gate 必须在允许发布前使用绑定的完整 history snapshot 重跑与 forge 相同的事件去重，并按“候选引用对应的全部已登记对象哈希集合”验证血缘；同一 URL 在基线与补检中出现不同合法对象形态时，不得因后写覆盖前写而产生伪血缘失败。
+
 将基线候选与已登记补检候选合并，按以下顺序处理：
 
 1. 验证发布日期、访问回执和直接来源；
-2. 先按结构化 `event_id` 合并同一事件，再按规范化 URL 与标题指纹兜底；
+2. 先按结构化 `event_id` 合并同一事件；只有任一侧缺少完整语义身份时，才按规范化 URL 与标题指纹兜底，不得把共享稳定 URL 的不同完整事件身份合并；
 3. 同一事件的多个来源作为佐证，不重复计数；
 4. 区分事实、来源主张、分析推断、行动和未知项；
 5. 分别在 `technology` 与 `healthcare_digital` 领域内评分，通用技术不得被强制改写为医疗事件；
 6. 依据 manifest 的请求比例选择，不足 10 条时不补数；
-7. 生成 1.3 refined core 与 `review-receipt/1.0` 语义回执。
+7. 生成 1.4 refined core 与 `review-receipt/1.0` 语义回执。
 
 语义回执必须绑定输入 bundle 与 refined 文件 SHA-256，覆盖所有最终条目的完整对象哈希，逐项映射 `candidate_object_sha256 → output_item_sha256`，并提供与最终 `access_check` 对应的访问日志及其哈希。每个最终条目的 `requested_url` 必须匹配条目 URL，`final_url` 仅记录跳转落点，入选条目按唯一映射计数。`model_used=heuristic`、请求挑战不一致、血缘或访问日志不一致时停止。
 

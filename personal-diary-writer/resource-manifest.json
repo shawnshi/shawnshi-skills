@@ -1,7 +1,7 @@
 {
   "schema_version": 3,
   "skill": "personal-diary-writer",
-  "generated_at": "2026-08-23T21:58:05+08:00",
+  "generated_at": "2026-08-25T20:41:48+08:00",
   "hash_algorithm": "SHA-256",
   "text_hash_normalization": "LF",
   "skill_md": "SKILL.md",
@@ -17,7 +17,7 @@
     },
     {
       "path": "authority.json",
-      "sha256": "160213cc427d0f4e8afc2b72e883b0218b5c9ce323a3c94a9144b25b45815495"
+      "sha256": "41217feb8d867a1773304b6f20546efdb9ac5b39e34b963fa5d6edae512e9fc2"
     }
   ],
   "top_level_directories": [
@@ -40,7 +40,7 @@
     },
     {
       "path": "scripts/test_default_read_contract.py",
-      "sha256": "026bc805cbe144ed2001a31cdef3d4e87e0877c86eae7b902abdefb6fb372915"
+      "sha256": "1bd9d27dd4e2282a0ac1474b05ccd99c1921196a413aa346d70386a0b9d5eb17"
     }
   ],
   "declared_local_dependencies": [

@@ -12,7 +12,7 @@ class PromptContractTests(unittest.TestCase):
             (ROOT / "references" / "subagent_prompts.json").read_text(encoding="utf-8")
         )
 
-        self.assertEqual(config["contract_version"], "subagent-prompts/1.6")
+        self.assertEqual(config["contract_version"], "subagent-prompts/1.7")
         review_transfer = config["execution_policy"]["review_context_transfer"]
         self.assertEqual(
             review_transfer["mode"],
@@ -43,10 +43,39 @@ class PromptContractTests(unittest.TestCase):
                 "halt_condition_met",
             }.issubset(required)
         )
+        candidate_contract = config["result_envelope"]["properties"]["candidates"][
+            "items"
+        ]
+        self.assertTrue(
+            {"identity_quality", "event_id", "event_identity"}.issubset(
+                set(candidate_contract["required"])
+            )
+        )
+        self.assertEqual(
+            set(candidate_contract["properties"]["event_identity"]["required"]),
+            {
+                "key_version",
+                "primary_domain",
+                "actor",
+                "action",
+                "object",
+                "event_date",
+            },
+        )
+        self.assertFalse(
+            candidate_contract["properties"]["event_identity"][
+                "additionalProperties"
+            ]
+        )
         for name in ("TechRadar", "HealthcareRadar", "Sentinel", "Ranger"):
             prompt = config["supplement_agents"][name]["system_prompt"]
             self.assertIn("先处理绑定的基线候选", prompt)
+            self.assertIn("common_contract.identity_rule", prompt)
             self.assertIn("无增量", prompt)
+        self.assertIn(
+            "generate_event_id(event_identity)",
+            config["common_contract"]["identity_rule"],
+        )
 
         policy = config["execution_policy"]
         self.assertEqual(policy["context_transfer"]["mode"], "minimal_task_packet")
@@ -82,6 +111,10 @@ class PromptContractTests(unittest.TestCase):
         self.assertEqual(policy["readiness"]["max_unchanged_wait_timeouts"], 2)
         self.assertEqual(policy["readiness"]["wait_timeout_seconds"], 60)
         self.assertEqual(
+            policy["readiness"]["relaunch_policy"],
+            "forbidden_for_same_registered_request; create_a_new_run_for_a_new_attempt",
+        )
+        self.assertEqual(
             policy["readiness"]["after_wait_gate"],
             "stop_waiting_until_artifact_control_message_or_progress_fingerprint_changes",
         )
@@ -93,6 +126,14 @@ class PromptContractTests(unittest.TestCase):
             "--milestone-seq",
             policy["readiness"]["progress_gate_command"],
         )
+        for command_name in ("progress_gate_command", "progress_gate_watch_command"):
+            for flag in (
+                "--manifest",
+                "--review-kind",
+                "--invocation-id",
+                "--request-sha256",
+            ):
+                self.assertIn(flag, policy["readiness"][command_name])
         self.assertFalse(
             policy["source_efficiency"]["retry_same_url_on_permanent_failure"]
         )
@@ -114,12 +155,12 @@ class PromptContractTests(unittest.TestCase):
             ],
         )
 
-    def test_semantic_prompt_targets_v13_and_emits_receipt(self):
+    def test_semantic_prompt_targets_v14_and_emits_receipt(self):
         text = (ROOT / "references" / "prompts" / "v1_refine_system.md").read_text(
             encoding="utf-8"
         )
 
-        self.assertIn("briefing_schema.json` 1.3", text)
+        self.assertIn("briefing_schema.json` 1.4", text)
         self.assertIn("review-receipt/1.0", text)
         self.assertIn("run_id", text)
         self.assertIn("baseline_sha256", text)
@@ -128,9 +169,29 @@ class PromptContractTests(unittest.TestCase):
         self.assertIn("challenge", text)
         self.assertIn("lineage_bindings", text)
         self.assertIn("access_log_sha256", text)
+        self.assertIn("history_review_slice.json", text)
+        self.assertIn("原样复制已登记 review request.input_bundle_sha256", text)
+        self.assertIn("强制 `history_review_slice`", text)
+        self.assertIn("可选 `focus_config`", text)
+        self.assertNotIn("由 baseline、history_snapshot、candidate_pool、supplement、window 与 mix_request 计算", text)
+        self.assertIn("不得读取完整历史索引", text)
+        self.assertIn("generate_event_id(event_identity)", text)
+        self.assertIn("旧 baseline 无 identity 只能作为单一主证据", text)
+        self.assertIn("每个 candidate URL 都必须在本次回执中有 verified access", text)
+        self.assertNotIn("绑定的历史快照", text)
 
         config = json.loads(
             (ROOT / "references" / "subagent_prompts.json").read_text(encoding="utf-8")
+        )
+        access_contract = config["result_envelope"]["properties"]["access_log"]["items"]
+        self.assertEqual(
+            access_contract["properties"]["failure_class"]["enum"],
+            ["none", "transient", "permanent"],
+        )
+        blocked_contract = access_contract["allOf"][0]["then"]
+        self.assertEqual(
+            set(blocked_contract["required"]),
+            {"failure_class", "error_code"},
         )
         for name in ("SemanticEvaluator", "RedTeam"):
             contract = config["review_agents"][name]
@@ -145,6 +206,14 @@ class PromptContractTests(unittest.TestCase):
         )
         self.assertIn(
             "validate-semantic-draft",
+            config["review_agents"]["SemanticEvaluator"]["system_prompt"],
+        )
+        self.assertIn(
+            "multi_independent",
+            config["review_agents"]["SemanticEvaluator"]["system_prompt"],
+        )
+        self.assertIn(
+            "每个 candidate.url 都须出现在本回执 verified access_log",
             config["review_agents"]["SemanticEvaluator"]["system_prompt"],
         )
         self.assertIn(
@@ -164,6 +233,10 @@ class PromptContractTests(unittest.TestCase):
             config["review_agents"]["RedTeam"]["system_prompt"],
         )
         self.assertIn("永久失败", config["common_contract"]["failure_rule"])
+        self.assertIn(
+            "failure_kind=infrastructure",
+            config["common_contract"]["infrastructure_failure_rule"],
+        )
 
 
 if __name__ == "__main__":

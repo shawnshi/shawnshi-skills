@@ -1,0 +1,4 @@
+interface:
+  display_name: "Personal Intelligence Hub"
+  short_description: "Source-verified technology and healthcare intelligence"
+  default_prompt: "Use $personal-intelligence-hub to prepare a source-verified daily technology and healthcare digital intelligence briefing."

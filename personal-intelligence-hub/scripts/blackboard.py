@@ -2,16 +2,21 @@ from __future__ import annotations
 
 import argparse
 from datetime import datetime
+from pathlib import Path
 
-from hub_utils import BLACKBOARD_PATH, dump_json, ensure_runtime_dirs, load_json
+from hub_utils import BLACKBOARD_PATH, atomic_dump_json, load_json
 
 
 def now() -> str:
     return datetime.now().isoformat()
 
 
-def init_blackboard() -> dict:
-    ensure_runtime_dirs()
+def _resolve_blackboard_path(blackboard_path: str | Path | None) -> Path:
+    return Path(blackboard_path) if blackboard_path is not None else BLACKBOARD_PATH
+
+
+def init_blackboard(blackboard_path: str | Path | None = None) -> dict:
+    target = _resolve_blackboard_path(blackboard_path)
     state = {
         "initialized_at": now(),
         "phase": "idle",
@@ -21,60 +26,82 @@ def init_blackboard() -> dict:
         "adversarial_audit": None,
         "final_briefing": None,
     }
-    dump_json(BLACKBOARD_PATH, state)
+    atomic_dump_json(target, state)
     return state
 
 
-def load_blackboard() -> dict:
-    if not BLACKBOARD_PATH.exists():
-        return init_blackboard()
-    return load_json(BLACKBOARD_PATH, {})
+def load_blackboard(blackboard_path: str | Path | None = None) -> dict:
+    target = _resolve_blackboard_path(blackboard_path)
+    if not target.exists():
+        return init_blackboard(blackboard_path=target)
+    return load_json(target, {})
 
 
-def save_blackboard(state: dict) -> None:
+def save_blackboard(
+    state: dict,
+    blackboard_path: str | Path | None = None,
+) -> None:
+    target = _resolve_blackboard_path(blackboard_path)
     state["updated_at"] = now()
-    dump_json(BLACKBOARD_PATH, state)
+    atomic_dump_json(target, state)
 
 
-def update_phase(phase: str, status: str) -> dict:
-    state = load_blackboard()
+def update_phase(
+    phase: str,
+    status: str,
+    blackboard_path: str | Path | None = None,
+) -> dict:
+    state = load_blackboard(blackboard_path=blackboard_path)
     state["phase"] = phase
     state["status"] = status
-    save_blackboard(state)
+    save_blackboard(state, blackboard_path=blackboard_path)
     return state
 
 
-def record_scan_stats(source_count: int, item_count: int) -> dict:
-    state = load_blackboard()
+def record_scan_stats(
+    source_count: int,
+    item_count: int,
+    blackboard_path: str | Path | None = None,
+) -> dict:
+    state = load_blackboard(blackboard_path=blackboard_path)
     state["scan_stats"] = {
         "source_count": source_count,
         "item_count": item_count,
         "recorded_at": now(),
     }
-    save_blackboard(state)
+    save_blackboard(state, blackboard_path=blackboard_path)
     return state
 
 
-def append_signal(signal: dict) -> dict:
-    state = load_blackboard()
+def append_signal(
+    signal: dict,
+    blackboard_path: str | Path | None = None,
+) -> dict:
+    state = load_blackboard(blackboard_path=blackboard_path)
     state.setdefault("signals", []).append(signal)
-    save_blackboard(state)
+    save_blackboard(state, blackboard_path=blackboard_path)
     return state
 
 
-def mark_adversarial_audit(audit: dict) -> dict:
-    state = load_blackboard()
+def mark_adversarial_audit(
+    audit: dict,
+    blackboard_path: str | Path | None = None,
+) -> dict:
+    state = load_blackboard(blackboard_path=blackboard_path)
     state["adversarial_audit"] = audit
-    save_blackboard(state)
+    save_blackboard(state, blackboard_path=blackboard_path)
     return state
 
 
-def finalize_briefing(path: str) -> dict:
-    state = load_blackboard()
+def finalize_briefing(
+    path: str,
+    blackboard_path: str | Path | None = None,
+) -> dict:
+    state = load_blackboard(blackboard_path=blackboard_path)
     state["final_briefing"] = {"path": path, "finished_at": now()}
     state["phase"] = "done"
     state["status"] = "completed"
-    save_blackboard(state)
+    save_blackboard(state, blackboard_path=blackboard_path)
     return state
 
 

@@ -3,8 +3,11 @@ import os
 import subprocess
 import sys
 import tempfile
+import threading
 import unittest
+from concurrent.futures import ThreadPoolExecutor
 from pathlib import Path
+from unittest.mock import patch
 
 from hub_utils import atomic_dump_json, atomic_write_text
 
@@ -121,6 +124,49 @@ class ArchiveContractTests(unittest.TestCase):
             )
             self.assertFalse((root / "briefing.md.tmp").exists())
             self.assertFalse((root / "briefing.json.tmp").exists())
+
+    def test_concurrent_atomic_writers_do_not_share_a_temporary_path(self):
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            target = root / "briefing.md"
+            barrier = threading.Barrier(2)
+            original_replace = os.replace
+            source_paths = []
+            source_paths_lock = threading.Lock()
+
+            def synchronized_replace(source, destination):
+                with source_paths_lock:
+                    source_paths.append(Path(source))
+                barrier.wait(timeout=5)
+                return original_replace(source, destination)
+
+            payloads = ("A" * 32768, "B" * 32768)
+            replace_errors = []
+            with patch("hub_utils.os.replace", side_effect=synchronized_replace):
+                with ThreadPoolExecutor(max_workers=2) as pool:
+                    futures = [pool.submit(atomic_write_text, target, payload) for payload in payloads]
+                    for future in futures:
+                        try:
+                            future.result(timeout=10)
+                        except OSError as exc:
+                            replace_errors.append(exc)
+
+            self.assertEqual(len(set(source_paths)), 2)
+            self.assertLessEqual(len(replace_errors), 1)
+            self.assertIn(target.read_text(encoding="utf-8"), payloads)
+            self.assertEqual(list(root.glob("*.tmp")), [])
+
+    def test_atomic_write_cleans_only_its_temporary_file_after_replace_failure(self):
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            target = root / "briefing.md"
+
+            with patch("hub_utils.os.replace", side_effect=OSError("replace failed")):
+                with self.assertRaisesRegex(OSError, "replace failed"):
+                    atomic_write_text(target, "new")
+
+            self.assertFalse(target.exists())
+            self.assertEqual(list(root.iterdir()), [])
 
 
 if __name__ == "__main__":

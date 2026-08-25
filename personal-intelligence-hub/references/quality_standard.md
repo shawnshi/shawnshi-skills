@@ -1,4 +1,4 @@
-# Intelligence Quality Standard 1.3
+# Intelligence Quality Standard 1.4
 
 ## 1. 证据与推演等级
 
@@ -56,7 +56,7 @@
 3. 语义与红队先登记 challenge-bound review request；回执必须原样返回 request、reviewer、invocation 和 challenge，轮次不得超过请求。
 4. 语义回执必须绑定输入 bundle 与 refined core SHA-256，覆盖每个最终条目的完整对象哈希，并验证候选对象到输出条目的血缘及正式访问记录。
 5. L4 必须有逻辑红队 `passed` 回执及对应条目哈希；没有 L4 时允许明确 `not_required`。
-6. `briefing_gate.py` 按 `schema_version` 路由冻结的历史 validator；新产物固定使用 1.3。
+6. `briefing_gate.py` 按 `schema_version` 路由冻结的历史 validator；新产物固定使用 1.4。
 7. JSON 通过 gate 后，Markdown 必须从同一 payload 确定性渲染。JSON、Markdown 和 commit sidecar 使用目标哈希前置条件与可恢复提升；按新闻目录派生的操作系统级排他守卫必须覆盖旧锁判断、恢复、接管、历史重检和整个提交区。Windows 使用跨登录会话的 `Global\` mutex，创建或取得失败时封闭拒绝；不得回退为 `Local\`。目录元数据锁携带随机 owner token，回收前复核观测字节、释放前复核 token；活动进程和无法验证的异地主机锁不得被回收，只有同机已确认死亡且元数据未变化的锁可触发恢复；可捕获失败时回滚。
 8. history v2 快照按档案时间重建并纳入输入哈希；正式成稿不得重复该快照中的近期事件。归档器必须在排他守卫内、创建 staging 前从正式 JSON 档案重建并比对快照，再对最终条目逐项去重；三件套验证完成后仍在同一守卫内更新派生 history v2。正式 JSON 始终是事实源；若派生索引更新失败，正式集合保留并明确报错，后续运行仍以正式档案重建结果封闭拒绝重复事件。
 

@@ -1,7 +1,7 @@
 {
   "schema_version": 3,
   "skill": "hit-digital-strategy-partner",
-  "generated_at": "2026-08-21T08:54:56+08:00",
+  "generated_at": "2026-08-25T21:44:12+08:00",
   "hash_algorithm": "SHA-256",
   "text_hash_normalization": "LF",
   "skill_md": "SKILL.md",
@@ -55,7 +55,7 @@
     },
     {
       "path": "memory/.gitkeep",
-      "sha256": "56f0d6ac8fbc29ea59e8eb8ce626949efcce2b16cd4ac9242e5630a6f35afdc3"
+      "sha256": "e0b9e19b2208bb5d83ec8e46da2c0b2f75f963136fefc38ead9cf8a4d7e40932"
     },
     {
       "path": "references/analyst.md",

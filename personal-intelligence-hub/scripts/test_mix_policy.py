@@ -201,6 +201,83 @@ class MixPolicyTests(unittest.TestCase):
         )
         self.assertFalse(mix["adjustment"]["applied"])
 
+    def test_max_items_one_recomputes_mix_from_retained_major_signals(self):
+        policy = {
+            **DEFAULT_POLICY,
+            "requested_ratio": {"technology": 0.9, "healthcare_digital": 0.1},
+            "ratio_source": "user",
+            "ratio_reason": "极端比例回归",
+        }
+        retained = candidate("technology", 90, "retained")
+        dropped_major = candidate(
+            "healthcare_digital", 99, "dropped-major", major=True
+        )
+
+        selected, mix = select_candidates_with_mix(
+            [retained, dropped_major], 1, policy
+        )
+
+        self.assertEqual([item["url"] for item in selected], [retained["url"]])
+        self.assertEqual(mix["effective_ratio"], policy["requested_ratio"])
+        self.assertEqual(
+            mix["target_counts"],
+            {"technology": 1, "healthcare_digital": 0},
+        )
+        self.assertFalse(mix["adjustment"]["applied"])
+        self.assertEqual(mix["adjustment"]["favored_domain"], "none")
+        self.assertEqual(mix["adjustment"]["reason"], "none")
+        self.assertEqual(mix["adjustment"]["trigger_urls"], [])
+
+    def test_max_items_two_recomputes_mix_from_retained_major_signals(self):
+        policy = {
+            **DEFAULT_POLICY,
+            "requested_ratio": {"technology": 0.95, "healthcare_digital": 0.05},
+            "ratio_source": "user",
+            "ratio_reason": "极端比例回归",
+        }
+        retained = [
+            candidate("technology", 90 - index, f"retained-{index}")
+            for index in range(2)
+        ]
+        dropped_major = candidate(
+            "healthcare_digital", 99, "dropped-major", major=True
+        )
+
+        selected, mix = select_candidates_with_mix(
+            retained + [dropped_major], 2, policy
+        )
+
+        self.assertEqual(
+            {item["url"] for item in selected},
+            {item["url"] for item in retained},
+        )
+        self.assertEqual(mix["effective_ratio"], policy["requested_ratio"])
+        self.assertEqual(
+            mix["target_counts"],
+            {"technology": 2, "healthcare_digital": 0},
+        )
+        self.assertFalse(mix["adjustment"]["applied"])
+        self.assertEqual(mix["adjustment"]["trigger_urls"], [])
+
+    def test_l4_major_uses_schema_level_before_registered_red_team_review(self):
+        l4_major = candidate("healthcare_digital", 99, "l4-major", major=True)
+        l4_major["intelligence_level"] = "L4"
+        retained_technology = candidate("technology", 90, "technology")
+
+        self.assertNotIn("red_team_status", l4_major)
+        self.assertTrue(major_signal_eligible(l4_major))
+
+        selected, mix = select_candidates_with_mix(
+            [retained_technology, l4_major], 2, DEFAULT_POLICY
+        )
+
+        self.assertEqual(len(selected), 2)
+        self.assertTrue(mix["adjustment"]["applied"])
+        self.assertEqual(
+            mix["adjustment"]["favored_domain"], "healthcare_digital"
+        )
+        self.assertEqual(mix["adjustment"]["trigger_urls"], [l4_major["url"]])
+
     def test_claimed_major_without_eligibility_cannot_shift_mix(self):
         weak = candidate("technology", 99, "weak", major=True)
         weak["intelligence_level"] = "L2"

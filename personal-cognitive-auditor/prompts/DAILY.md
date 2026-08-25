@@ -35,7 +35,7 @@
 - **HRV 与静息心率观察:** [各自值、原始状态和观测日期]
 - **Body Battery 与压力观察:** [各自值和观测日期]
 - **执行带宽:** `not_scored`；[说明不从健康指标生成认知、职业表现或日程承载评分；主观状态如有则另列来源]
-- **睡眠负债:** [来源提供时写 sleep_debt_h、sleep_debt_status、口径和窗口；未提供时写 null、not_provided_by_source 及原因]
+- **睡眠负债:** [来源提供时写 sleep_debt_h、sleep_debt_status=provided_by_source、method、baseline_h 和 window_days；未提供时写 sleep_debt_h=null、sleep_debt_status=not_provided_by_source、method=none、baseline_h=null、window_days=null 及原因]
 - **摩擦解构:** [分列今日已记录负荷、主观感受、生理观测、外部约束和未知项]
 - **交叉归因:** [只描述时间共现、日期错位和替代解释，不写因果或能力推断]
 - **干预指令:** [可选；写触发条件、最小动作和完成标准，由用户结合主观状态决定]

@@ -4,6 +4,7 @@ import asyncio
 import argparse
 import random
 import re
+import threading
 from datetime import date, datetime, timedelta, timezone, tzinfo
 from email.utils import parsedate_to_datetime
 from pathlib import Path
@@ -25,6 +26,7 @@ DEFAULT_SCAN_DEADLINE_SECONDS = 300.0
 MAX_SCAN_DEADLINE_SECONDS = 3600.0
 DEFAULT_CANCELLATION_GRACE_SECONDS = 2.0
 MAX_CANCELLATION_GRACE_SECONDS = 30.0
+OWNER_DEADLINE_EPSILON_SECONDS = 0.25
 PERMANENT_TRANSPORT_ERROR_MARKERS = (
     "invalid library",
     "certificate verify failed",
@@ -43,6 +45,139 @@ def _consume_task_result(task: asyncio.Task) -> None:
         task.exception()
     except BaseException:
         pass
+
+
+class ScanOwnerDeadlineExceeded(TimeoutError):
+    """Raised when the isolated worker cannot report before the owner deadline."""
+
+
+class _ScanCommitAborted(RuntimeError):
+    """Raised inside an abandoned worker when its final writes have been fenced."""
+
+
+class _ScanCommitFence:
+    """Serialize terminal scan writes against owner cancellation or timeout."""
+
+    def __init__(self) -> None:
+        self._lock = threading.Lock()
+        self._closed = False
+
+    def commit(self, callback) -> bool:
+        with self._lock:
+            if self._closed:
+                return False
+            callback()
+            return True
+
+    def close(self) -> None:
+        # Waiting for this lock is intentional: if a synchronous atomic commit
+        # already started, the owner does not return until that boundary ends.
+        with self._lock:
+            self._closed = True
+
+
+async def _run_in_isolated_daemon_loop(
+    coroutine_factory,
+    *,
+    owner_deadline_seconds: float,
+    commit_fence: _ScanCommitFence,
+):
+    """Run a scan in an event loop whose shutdown cannot hold the caller open.
+
+    ``asyncio.run`` waits for every pending task during shutdown. A source that
+    catches ``CancelledError`` can therefore keep the whole CLI process alive
+    after the scan deadline and cancellation grace have both elapsed. Running
+    the bounded scan implementation on a daemon thread gives its loop an
+    explicit discard boundary while preserving normal exception propagation.
+    """
+    owner_loop = asyncio.get_running_loop()
+    completion = owner_loop.create_future()
+    cancel_requested = threading.Event()
+    state_lock = threading.Lock()
+    state: dict[str, object] = {}
+
+    def finish(result=None, error: BaseException | None = None) -> None:
+        if completion.done():
+            return
+        if error is None:
+            completion.set_result(result)
+        else:
+            completion.set_exception(error)
+
+    def worker() -> None:
+        isolated_loop = asyncio.new_event_loop()
+        asyncio.set_event_loop(isolated_loop)
+        scan_task = isolated_loop.create_task(coroutine_factory())
+        with state_lock:
+            state["loop"] = isolated_loop
+            state["task"] = scan_task
+        if cancel_requested.is_set():
+            scan_task.cancel()
+        try:
+            result = isolated_loop.run_until_complete(scan_task)
+        except BaseException as exc:
+            try:
+                owner_loop.call_soon_threadsafe(finish, None, exc)
+            except RuntimeError:
+                pass
+        else:
+            try:
+                owner_loop.call_soon_threadsafe(finish, result, None)
+            except RuntimeError:
+                pass
+        finally:
+            with state_lock:
+                state.clear()
+            for pending_task in asyncio.all_tasks(isolated_loop):
+                pending_task.cancel()
+                # There is no public hard-stop operation for an asyncio Task.
+                # These tasks have already exceeded the configured grace and
+                # their isolated loop is intentionally discarded now.
+                pending_task._log_destroy_pending = False
+            isolated_loop.close()
+            asyncio.set_event_loop(None)
+
+    thread = threading.Thread(
+        target=worker,
+        name="pih-source-scan",
+        daemon=True,
+    )
+    thread.start()
+    deadline_task = owner_loop.create_task(asyncio.sleep(owner_deadline_seconds))
+
+    def stop_worker() -> None:
+        cancel_requested.set()
+        with state_lock:
+            isolated_loop = state.get("loop")
+            scan_task = state.get("task")
+        if isinstance(isolated_loop, asyncio.AbstractEventLoop) and isinstance(
+            scan_task, asyncio.Task
+        ):
+            try:
+                isolated_loop.call_soon_threadsafe(scan_task.cancel)
+            except RuntimeError:
+                pass
+
+    try:
+        done, _pending = await asyncio.wait(
+            (completion, deadline_task),
+            return_when=asyncio.FIRST_COMPLETED,
+        )
+        if completion in done:
+            return completion.result()
+        stop_worker()
+        commit_fence.close()
+        completion.cancel()
+        raise ScanOwnerDeadlineExceeded(
+            f"scan owner deadline exceeded after {owner_deadline_seconds:.3f}s"
+        )
+    except asyncio.CancelledError:
+        stop_worker()
+        commit_fence.close()
+        completion.cancel()
+        raise
+    finally:
+        deadline_task.cancel()
 
 
 def resolve_timezone(timezone_name: str = DEFAULT_TIMEZONE) -> tzinfo:
@@ -556,6 +691,8 @@ async def _scan_all_impl(
     output_path: Path | None = None,
     current_output_path: Path | None = None,
     cache_path: Path | None = None,
+    blackboard_path: Path | None = None,
+    commit_fence: _ScanCommitFence | None = None,
 ):
     import aiohttp
 
@@ -689,15 +826,25 @@ async def _scan_all_impl(
     }
     latest_target = output_path or LATEST_SCAN_PATH
     current_target = current_output_path or CURRENT_SCAN_PATH
-    atomic_dump_json(latest_target, payload)
-    atomic_dump_json(current_target, payload)
-    save_cache(
-        cache,
-        days=dedupe_days or focus.get("filters", {}).get("dedupe_days", 7),
-        path=cache_path,
-    )
-    record_scan_stats(len(source_meta), len(items))
-    update_phase("scan", "completed")
+
+    def commit_outputs() -> None:
+        atomic_dump_json(latest_target, payload)
+        atomic_dump_json(current_target, payload)
+        save_cache(
+            cache,
+            days=dedupe_days or focus.get("filters", {}).get("dedupe_days", 7),
+            path=cache_path,
+        )
+        record_scan_stats(
+            len(source_meta),
+            len(items),
+            blackboard_path=blackboard_path,
+        )
+        update_phase("scan", "completed", blackboard_path=blackboard_path)
+
+    active_fence = commit_fence or _ScanCommitFence()
+    if not active_fence.commit(commit_outputs):
+        raise _ScanCommitAborted("scan terminal writes were fenced by the owner")
     print(f"[OK] scan saved to {latest_target}")
     return payload
 
@@ -717,6 +864,7 @@ async def scan_all(
     output_path: Path | None = None,
     current_output_path: Path | None = None,
     cache_path: Path | None = None,
+    blackboard_path: Path | None = None,
 ):
     if max_concurrency <= 0 or max_concurrency > MAX_CONCURRENCY:
         raise ValueError(f"max_concurrency must be between 1 and {MAX_CONCURRENCY}")
@@ -736,28 +884,47 @@ async def scan_all(
             "cancellation_grace_seconds must be between 0 and "
             f"{MAX_CANCELLATION_GRACE_SECONDS}"
         )
-    ensure_runtime_dirs()
-    init_blackboard()
-    update_phase("scan", "running")
+    if blackboard_path is None:
+        ensure_runtime_dirs()
+    init_blackboard(blackboard_path=blackboard_path)
+    update_phase("scan", "running", blackboard_path=blackboard_path)
+    commit_fence = _ScanCommitFence()
+    owner_deadline_seconds = (
+        scan_deadline_seconds
+        + cancellation_grace_seconds
+        + OWNER_DEADLINE_EPSILON_SECONDS
+    )
     try:
-        return await _scan_all_impl(
-            focus_path=focus_path,
-            window_days=window_days,
-            dedupe_days=dedupe_days,
-            topic=topic,
-            region=region,
-            report_date=report_date,
-            timezone_name=timezone_name,
-            max_concurrency=max_concurrency,
-            scan_deadline_seconds=scan_deadline_seconds,
-            cancellation_grace_seconds=cancellation_grace_seconds,
-            output_path=output_path,
-            current_output_path=current_output_path,
-            cache_path=cache_path,
+        return await _run_in_isolated_daemon_loop(
+            lambda: _scan_all_impl(
+                focus_path=focus_path,
+                window_days=window_days,
+                dedupe_days=dedupe_days,
+                topic=topic,
+                region=region,
+                report_date=report_date,
+                timezone_name=timezone_name,
+                max_concurrency=max_concurrency,
+                scan_deadline_seconds=scan_deadline_seconds,
+                cancellation_grace_seconds=cancellation_grace_seconds,
+                output_path=output_path,
+                current_output_path=current_output_path,
+                cache_path=cache_path,
+                blackboard_path=blackboard_path,
+                commit_fence=commit_fence,
+            ),
+            owner_deadline_seconds=owner_deadline_seconds,
+            commit_fence=commit_fence,
         )
+    except asyncio.CancelledError as exc:
+        try:
+            update_phase("scan", "cancelled", blackboard_path=blackboard_path)
+        except Exception as status_exc:
+            exc.add_note(f"failed to record scan cancellation: {status_exc}")
+        raise
     except Exception as exc:
         try:
-            update_phase("scan", "failed")
+            update_phase("scan", "failed", blackboard_path=blackboard_path)
         except Exception as status_exc:
             exc.add_note(f"failed to update scan phase: {status_exc}")
         raise

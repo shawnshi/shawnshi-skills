@@ -38,7 +38,7 @@ class AuditGateTests(unittest.TestCase):
 - **HRV 与静息心率观察:** 各自观测日期均已披露。
 - **Body Battery 与压力观察:** 各自观测日期均已披露。
 - **执行带宽:** `not_scored`；不从 Garmin 指标生成认知或工作表现评分。
-- **睡眠负债:** 来源未提供；sleep_debt_h=null，sleep_debt_status=not_provided_by_source。
+- **睡眠负债:** 来源未提供；sleep_debt_h=null，sleep_debt_status=not_provided_by_source，method=none，baseline_h=null，window_days=null。
 - **摩擦解构:** 已记录日程负荷；主观感受未提供；生理观测仅作描述。
 - **交叉归因:** 只记录时间共现，并保留日期错位和其他替代解释。
 - **干预指令:** 若本人主观困倦，可选择休息十分钟；完成标准为记录主观状态。
@@ -47,6 +47,51 @@ class AuditGateTests(unittest.TestCase):
         errors, _ = validate(text, enforce_template_fields=True)
 
         self.assertEqual(errors, [])
+
+    def test_template_mode_blocks_missing_energy_section(self):
+        errors, _ = validate(
+            "# 2026-08-25 Daily Audit\n\n## 关键事实\n- 已提供事实。",
+            enforce_template_fields=True,
+        )
+
+        self.assertIn("energy-management section missing", errors)
+
+    def test_personal_diary_energy_heading_uses_same_strict_contract(self):
+        text = """# 2026-08-25 星期二
+
+## 能量管理 (Biological-Cognitive Correlation)
+- **数据范围与来源:** 2026-08-23 至 2026-08-25，本地 Garmin，只读。
+- **组件覆盖与新鲜度:** sleep/hrv/body_battery/heart_rate/stress 均有观测；最近观测日期 2026-08-24。
+- **睡眠观察:** 观测日期 2026-08-24，6.3 小时。
+- **HRV 与静息心率观察:** HRV 46 ms、静息心率 55 bpm，观测日期均为 2026-08-24。
+- **Body Battery 与压力观察:** 峰值 100、低值 26、充入 55、平均压力 30，观测日期均为 2026-08-24。
+- **执行带宽:** `not_scored`；行为证据为项目周会、方案编写和 PPT 讨论；不从健康指标推断工作能力。
+- **睡眠负债:** sleep_debt_h=null；sleep_debt_status=not_provided_by_source；method=none；baseline_h=null；window_days=null；另列实际睡眠 6.3 小时。
+- **摩擦解构:** 已记录工作负荷；主观状态未知；生理观测仅到 2026-08-24。
+- **交叉归因:** 工作事实与生理观测日期错位，不建立因果或能力判断。
+- **干预指令:** 若沟通尚未开始，可准备一页清单；完成标准为列出目标和待决问题。
+- **数据缺口与不可判断事项:** 2026-08-25 无终端观测，不能判断当天生理背景。
+"""
+        errors, warnings = validate(text, enforce_template_fields=True)
+
+        self.assertEqual(errors, [])
+        self.assertEqual(warnings, [])
+
+    def test_personal_diary_old_six_field_shape_is_blocked(self):
+        text = """# 2026-08-25 星期二
+
+## 能量管理 (Biological-Cognitive Correlation)
+- **系统态势:** 本地 Garmin partial。
+- **执行带宽:** `not_scored`；不从 Garmin 推断工作能力。
+- **睡眠负债:** sleep_debt_h=null；sleep_debt_status=not_provided_by_source。
+- **摩擦解构:** 工作负荷已记录。
+- **交叉归因:** 不建立因果。
+- **干预指令:** 由用户决定。
+"""
+        errors, _ = validate(text, enforce_template_fields=True)
+
+        self.assertTrue(any("energy-management section missing fields" in item for item in errors))
+        self.assertTrue(any("数据范围与来源" in item for item in errors))
 
     def test_template_mode_blocks_missing_energy_fields(self):
         text = """# 复盘
@@ -91,7 +136,7 @@ class AuditGateTests(unittest.TestCase):
 - **HRV 与静息心率观察:** 无有效观测。
 - **Body Battery 与压力观察:** 无有效观测。
 - **执行带宽:** `not_scored`；不从健康指标生成认知或工作表现评分。
-- **睡眠负债:** 来源未提供；sleep_debt_h=null，sleep_debt_status=not_provided_by_source。
+- **睡眠负债:** 来源未提供；sleep_debt_h=null，sleep_debt_status=not_provided_by_source，method=none，baseline_h=null，window_days=null。
 - **摩擦解构:** 已记录负荷为空；未知项已披露。
 - **交叉归因:** 没有同日证据，不建立因果关系。
 - **干预指令:** 没有健康依据时不生成强制安排。
@@ -99,7 +144,7 @@ class AuditGateTests(unittest.TestCase):
 """
         safe_values = {
             "执行带宽": "`not_scored`；不从健康指标生成认知或工作表现评分。",
-            "睡眠负债": "来源未提供；sleep_debt_h=null，sleep_debt_status=not_provided_by_source。",
+            "睡眠负债": "来源未提供；sleep_debt_h=null，sleep_debt_status=not_provided_by_source，method=none，baseline_h=null，window_days=null。",
             "摩擦解构": "已记录负荷为空；未知项已披露。",
             "交叉归因": "没有同日证据，不建立因果关系。",
             "干预指令": "没有健康依据时不生成强制安排。",
@@ -117,6 +162,30 @@ class AuditGateTests(unittest.TestCase):
                 )
                 self.assertIn(field, explanatory)
 
+    def test_template_mode_blocks_sentinel_even_with_explanation(self):
+        text = """# 复盘
+
+## 能量管理（描述性生理背景）
+- **数据范围与来源:** 本地 Garmin。
+- **组件覆盖与新鲜度:** 无有效观测。
+- **睡眠观察:** 无有效观测。
+- **HRV 与静息心率观察:** 无有效观测。
+- **Body Battery 与压力观察:** 无有效观测。
+- **执行带宽:** `not_scored`；[DATA_UNAVAILABLE]，不从健康指标评分。
+- **睡眠负债:** [DATA_UNAVAILABLE]；sleep_debt_h=null，sleep_debt_status=not_provided_by_source，method=none，baseline_h=null，window_days=null。
+- **摩擦解构:** 已记录负荷为空；未知项已披露。
+- **交叉归因:** 没有同日证据，不建立因果关系。
+- **干预指令:** 没有健康依据时不生成强制安排。
+- **数据缺口与不可判断事项:** 本地无数据。
+"""
+        errors, _ = validate(text, enforce_template_fields=True)
+
+        sentinel_error = next(
+            item for item in errors if "must not expose DATA_UNAVAILABLE" in item
+        )
+        self.assertIn("执行带宽", sentinel_error)
+        self.assertIn("睡眠负债", sentinel_error)
+
     def test_template_mode_accepts_source_provided_sleep_debt_with_status(self):
         text = """# 复盘
 
@@ -127,7 +196,7 @@ class AuditGateTests(unittest.TestCase):
 - **HRV 与静息心率观察:** 无有效观测。
 - **Body Battery 与压力观察:** 无有效观测。
 - **执行带宽:** `not_scored`；不从健康指标生成认知或工作表现评分。
-- **睡眠负债:** sleep_debt_h=1.0；sleep_debt_status=provided_by_source；适用窗口为最近三晚。
+- **睡眠负债:** sleep_debt_h=1.0；sleep_debt_status=provided_by_source；method=source_calculated；baseline_h=7.5；window_days=3。
 - **摩擦解构:** 已记录睡眠观测；工作负荷、主观感受和外部约束未知。
 - **交叉归因:** 没有同日工作证据，不建立因果关系。
 - **干预指令:** 若本人主观困倦，可选择休息十分钟；完成标准为记录主观状态。
@@ -136,6 +205,48 @@ class AuditGateTests(unittest.TestCase):
         errors, _ = validate(text, enforce_template_fields=True)
 
         self.assertEqual(errors, [])
+
+    def test_template_mode_requires_complete_null_sleep_debt_contract(self):
+        text = """# 复盘
+
+## 能量管理（描述性生理背景）
+- **数据范围与来源:** 本地 Garmin。
+- **组件覆盖与新鲜度:** 无有效观测。
+- **睡眠观察:** 无有效观测。
+- **HRV 与静息心率观察:** 无有效观测。
+- **Body Battery 与压力观察:** 无有效观测。
+- **执行带宽:** `not_scored`；不从健康指标生成认知或工作表现评分。
+- **睡眠负债:** sleep_debt_h=null；sleep_debt_status=not_provided_by_source。
+- **摩擦解构:** 已记录负荷为空；未知项已披露。
+- **交叉归因:** 没有同日证据，不建立因果关系。
+- **干预指令:** 没有健康依据时不生成强制安排。
+- **数据缺口与不可判断事项:** 本地无数据。
+"""
+        errors, _ = validate(text, enforce_template_fields=True)
+
+        self.assertTrue(
+            any("complete unavailable-state fields" in item for item in errors)
+        )
+
+    def test_template_mode_blocks_execution_score_fields(self):
+        text = """# 复盘
+
+## 能量管理（描述性生理背景）
+- **数据范围与来源:** 本地 Garmin。
+- **组件覆盖与新鲜度:** 无有效观测。
+- **睡眠观察:** 无有效观测。
+- **HRV 与静息心率观察:** 无有效观测。
+- **Body Battery 与压力观察:** 无有效观测。
+- **执行带宽:** `not_scored`；score=80；不从健康指标推断工作能力。
+- **睡眠负债:** sleep_debt_h=null；sleep_debt_status=not_provided_by_source；method=none；baseline_h=null；window_days=null。
+- **摩擦解构:** 已记录负荷为空；未知项已披露。
+- **交叉归因:** 没有同日证据，不建立因果关系。
+- **干预指令:** 没有健康依据时不生成强制安排。
+- **数据缺口与不可判断事项:** 本地无数据。
+"""
+        errors, _ = validate(text, enforce_template_fields=True)
+
+        self.assertTrue(any("must not contain score" in item for item in errors))
 
     def test_template_mode_requires_not_scored_execution_boundary(self):
         text = """# 复盘
@@ -147,7 +258,7 @@ class AuditGateTests(unittest.TestCase):
 - **HRV 与静息心率观察:** 无有效观测。
 - **Body Battery 与压力观察:** 无有效观测。
 - **执行带宽:** 依据当前观察保持稳定。
-- **睡眠负债:** 来源未提供；sleep_debt_h=null，sleep_debt_status=not_provided_by_source。
+- **睡眠负债:** 来源未提供；sleep_debt_h=null，sleep_debt_status=not_provided_by_source，method=none，baseline_h=null，window_days=null。
 - **摩擦解构:** 已记录负荷为空；未知项已披露。
 - **交叉归因:** 没有同日证据，不建立因果关系。
 - **干预指令:** 没有健康依据时不生成强制安排。
@@ -228,6 +339,21 @@ class AuditGateTests(unittest.TestCase):
 
     def test_blocks_sleep_debt_when_source_does_not_provide_it(self):
         text = "证据：Garmin。sleep_debt_h=2.5；sleep_debt_status=not_provided_by_source"
+        errors, _ = validate(text)
+
+        self.assertTrue(any("sleep debt value" in item for item in errors))
+
+    def test_allows_actual_sleep_observation_when_sleep_debt_is_unavailable(self):
+        text = (
+            "sleep_debt_h=null；sleep_debt_status=not_provided_by_source；"
+            "来源未提供睡眠负债。实际睡眠为 6.3 小时。"
+        )
+        errors, _ = validate(text)
+
+        self.assertFalse(any("sleep debt value" in item for item in errors))
+
+    def test_blocks_unattributed_numeric_sleep_debt_when_source_is_unavailable(self):
+        text = "来源未提供睡眠负债 2.5 小时。"
         errors, _ = validate(text)
 
         self.assertTrue(any("sleep debt value" in item for item in errors))

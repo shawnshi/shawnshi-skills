@@ -37,6 +37,7 @@ class ArchivePostcommitError(ArchiveTransactionError):
 
 
 JOURNAL_NAME = "transaction.json"
+WINDOWS_STAGING_CREATE_ATTEMPTS = 32
 
 
 @dataclass(frozen=True)
@@ -57,6 +58,13 @@ class _TargetPaths:
 
     def ordered(self) -> tuple[Path, Path, Path]:
         return self.json, self.markdown, self.manifest
+
+
+@dataclass(frozen=True)
+class _RollbackRecord:
+    backup: Path | None
+    before_sha256: str | None
+    promoted_sha256: str
 
 
 def _sha256_bytes(content: bytes) -> str:
@@ -152,10 +160,89 @@ def _current_target_state(targets: _TargetPaths) -> dict[str, str | None]:
     }
 
 
+def _fsync_directory(path: Path) -> bool:
+    """Best-effort directory metadata flush.
+
+    POSIX exposes directory descriptors that can be fsynced after create,
+    replace, and unlink operations. Python does not expose an equivalent
+    portable Windows primitive, so file contents are flushed there while the
+    final directory-entry durability remains an operating-system boundary.
+    """
+
+    if os.name == "nt":
+        return False
+    flags = os.O_RDONLY | getattr(os, "O_DIRECTORY", 0)
+    try:
+        descriptor = os.open(path, flags)
+    except OSError:
+        return False
+    try:
+        os.fsync(descriptor)
+    except OSError:
+        return False
+    finally:
+        os.close(descriptor)
+    return True
+
+
+def _write_bytes_fsync(path: Path, content: bytes) -> None:
+    with path.open("wb") as handle:
+        handle.write(content)
+        handle.flush()
+        os.fsync(handle.fileno())
+    _fsync_directory(path.parent)
+
+
+def _fsync_file(path: Path) -> None:
+    with path.open("r+b") as handle:
+        handle.flush()
+        os.fsync(handle.fileno())
+
+
+def _copy2_fsync(source: Path, destination: Path) -> None:
+    shutil.copy2(source, destination)
+    _fsync_file(destination)
+    _fsync_directory(destination.parent)
+
+
+def _create_windows_staging_root(root: Path) -> Path:
+    """Create a same-directory staging root that inherits the parent DACL.
+
+    Python 3.13 gives ``tempfile.mkdtemp`` a private Windows DACL via mode
+    ``0o700``. A same-volume rename preserves that descriptor, so files created
+    below such a directory can retain staging-only permissions after promotion.
+    Windows ignores modes other than ``0o700`` and applies the parent's normal
+    inheritance rules, while exclusive directory creation keeps allocation
+    race-free.
+    """
+
+    for _ in range(WINDOWS_STAGING_CREATE_ATTEMPTS):
+        candidate = root / f".pih-stage-{uuid.uuid4().hex}"
+        try:
+            candidate.mkdir(mode=0o777, parents=False, exist_ok=False)
+        except FileExistsError:
+            continue
+        except OSError as exc:
+            raise ArchiveTransactionError(
+                f"could not create Windows archive staging under {root}: {exc}"
+            ) from exc
+        return candidate
+    raise ArchiveTransactionError(
+        "could not allocate a unique Windows archive staging directory"
+    )
+
+
+def _create_staging_root(root: Path) -> Path:
+    if os.name == "nt":
+        return _create_windows_staging_root(root)
+    return Path(tempfile.mkdtemp(prefix=".pih-stage-", dir=root))
+
+
 def _write_journal(path: Path, payload: dict[str, Any]) -> None:
     temporary = path.with_suffix(".tmp")
-    temporary.write_bytes(_json_bytes(payload))
+    _write_bytes_fsync(temporary, _json_bytes(payload))
     os.replace(temporary, path)
+    _fsync_directory(path.parent)
 
 
 def _pid_is_running(pid: int) -> bool:
@@ -276,11 +363,117 @@ def _archive_process_guard(news_dir: Path) -> Iterator[None]:
         os.close(descriptor)
 
 
+def _verify_committed_recovery(
+    targets: _TargetPaths,
+    *,
+    run_id: str,
+    report_date: str,
+    gate: JsonGate = validate_briefing_data,
+) -> None:
+    try:
+        json_bytes = targets.json.read_bytes()
+        markdown_bytes = targets.markdown.read_bytes()
+        manifest_bytes = targets.manifest.read_bytes()
+        payload = json.loads(json_bytes.decode("utf-8"))
+        markdown = markdown_bytes.decode("utf-8")
+        sidecar = json.loads(manifest_bytes.decode("utf-8"))
+    except (OSError, UnicodeError, json.JSONDecodeError) as exc:
+        raise ArchiveTransactionError(
+            f"committed target set is missing or unreadable: {exc}"
+        ) from exc
+    if not isinstance(payload, dict):
+        raise ArchiveTransactionError("committed JSON must be an object")
+    if not isinstance(sidecar, dict):
+        raise ArchiveTransactionError("committed sidecar must be an object")
+    if not markdown.strip() or "\x00" in markdown:
+        raise ArchiveTransactionError("committed Markdown is empty or contains NUL")
+
+    _validate_identity(payload, report_date, run_id)
+    expected_identity = {
+        "contract_version": "1.0",
+        "run_id": run_id,
+        "report_date": report_date,
+        "json_file": targets.json.name,
+        "markdown_file": targets.markdown.name,
+    }
+    for name, expected in expected_identity.items():
+        if sidecar.get(name) != expected:
+            raise ArchiveTransactionError(
+                f"committed sidecar {name} does not match the recovery journal"
+            )
+    if sidecar.get("schema_version") != payload.get("schema_version"):
+        raise ArchiveTransactionError(
+            "committed sidecar schema_version does not match the JSON"
+        )
+    item_count = sidecar.get("item_count")
+    items = payload.get("top_10")
+    if (
+        isinstance(item_count, bool)
+        or not isinstance(item_count, int)
+        or not isinstance(items, list)
+        or item_count != len(items)
+    ):
+        raise ArchiveTransactionError(
+            "committed sidecar item_count does not match the JSON"
+        )
+
+    json_hash = _sha256_bytes(json_bytes)
+    markdown_hash = _sha256_bytes(markdown_bytes)
+    if sidecar.get("json_sha256") != json_hash:
+        raise ArchiveTransactionError(
+            "committed JSON hash does not match the sidecar"
+        )
+    if sidecar.get("markdown_sha256") != markdown_hash:
+        raise ArchiveTransactionError(
+            "committed Markdown hash does not match the sidecar"
+        )
+    warnings = _validate_with_gate(payload, gate)
+    if sidecar.get("gate_warnings") != list(warnings):
+        raise ArchiveTransactionError(
+            "committed sidecar gate_warnings do not match the briefing gate"
+        )
+
+
+def _remove_recovered_staging(staging_root: Path) -> None:
+    try:
+        shutil.rmtree(staging_root)
+    except OSError as exc:
+        raise ArchiveTransactionError(
+            f"could not remove verified recovery staging {staging_root}: {exc}"
+        ) from exc
+    _fsync_directory(staging_root.parent)
+
+
+def _rollback_state_failures(
+    snapshots: dict[Path, _RollbackRecord],
+) -> list[str]:
+    failures: list[str] = []
+    for target, snapshot in snapshots.items():
+        try:
+            current_sha256 = (
+                _sha256_bytes(target.read_bytes()) if target.is_file() else None
+            )
+            if current_sha256 != snapshot.before_sha256:
+                failures.append(
+                    f"{target}: restored hash does not match before_sha256"
+                )
+        except OSError as exc:
+            failures.append(f"{target}: could not verify restored state: {exc}")
+    return failures
+
+
 def _recover_staging(news_dir: Path) -> None:
     root = news_dir.resolve()
     for staging_root in sorted(news_dir.glob(".pih-stage-*")):
         if not staging_root.is_dir():
             continue
+        try:
+            staging_resolved = staging_root.resolve()
+            staging_resolved.relative_to(root)
+        except (OSError, ValueError) as exc:
+            raise ArchiveTransactionError(
+                f"invalid recovery journal staging root: {staging_root}"
+            ) from exc
         journal_path = staging_root / JOURNAL_NAME
         if not journal_path.is_file():
             shutil.rmtree(staging_root, ignore_errors=True)
@@ -291,30 +484,249 @@ def _recover_staging(news_dir: Path) -> None:
             raise ArchiveTransactionError(
                 f"cannot recover unreadable transaction journal: {journal_path}"
             ) from exc
-        if journal.get("phase") == "committed":
-            shutil.rmtree(staging_root, ignore_errors=True)
-            continue
-        failures: list[str] = []
-        for record in reversed(journal.get("snapshots", [])):
+
+        def invalid(reason: str) -> ArchiveTransactionError:
+            return ArchiveTransactionError(
+                f"invalid recovery journal {journal_path}: {reason}"
+            )
+
+        if not isinstance(journal, dict):
+            raise invalid("root must be a JSON object")
+        if journal.get("contract_version") != "1.0":
+            raise invalid("contract_version must be 1.0")
+        run_id = journal.get("run_id")
+        if not isinstance(run_id, str) or not run_id.strip():
+            raise invalid("run_id must be a non-empty string")
+        report_date = journal.get("report_date")
+        if not isinstance(report_date, str):
+            raise invalid("report_date must be present")
+        try:
+            _validate_report_date(report_date)
+        except ArchiveTransactionError as exc:
+            raise invalid(str(exc)) from exc
+        phase = journal.get("phase")
+        if phase not in {"promoting", "committed"}:
+            raise invalid("phase must be promoting or committed")
+        promoted_count = journal.get("promoted_count")
+        if (
+            isinstance(promoted_count, bool)
+            or not isinstance(promoted_count, int)
+            or promoted_count < 0
+            or promoted_count > 3
+        ):
+            raise invalid("promoted_count must be an integer from 0 to 3")
+        if phase == "committed" and promoted_count != 3:
+            raise invalid("a committed journal must record all three promotions")
+
+        records = journal.get("snapshots")
+        if not isinstance(records, list) or len(records) != 3:
+            raise invalid("snapshots must contain the exact three-file set")
+        targets = _target_paths(root, report_date)
+        expected_targets = tuple(target.resolve() for target in targets.ordered())
+        backup_root = (staging_resolved / "backup").resolve()
+        validated_records: list[tuple[Path, _RollbackRecord]] = []
+        for index, (record, expected_target) in enumerate(
+            zip(records, expected_targets)
+        ):
+            if not isinstance(record, dict):
+                raise invalid(f"snapshot {index} must be an object")
+            target_value = record.get("target")
+            if not isinstance(target_value, str) or not target_value:
+                raise invalid(f"snapshot {index} target must be a path")
             try:
-                target = Path(str(record["target"])).resolve()
+                target = Path(target_value).resolve()
                 target.relative_to(root)
-                backup_value = record.get("backup")
-                if backup_value:
-                    backup = Path(str(backup_value)).resolve()
-                    backup.relative_to(staging_root.resolve())
-                    if not backup.is_file():
-                        raise FileNotFoundError(backup)
-                    shutil.copy2(backup, target)
+            except (OSError, ValueError) as exc:
+                raise invalid(f"snapshot {index} target is outside the news root") from exc
+            if target != expected_target:
+                raise invalid(
+                    f"snapshot {index} target does not match {expected_target.name}"
+                )
+
+            backup_value = record.get("backup")
+            backup_hash = record.get("backup_sha256")
+            if backup_hash is not None and (
+                not isinstance(backup_hash, str)
+                or re.fullmatch(r"[0-9a-f]{64}", backup_hash) is None
+            ):
+                raise invalid(f"snapshot {index} backup_sha256 is invalid")
+            backup: Path | None = None
+            if backup_value is not None:
+                if not isinstance(backup_value, str) or not backup_value:
+                    raise invalid(f"snapshot {index} backup must be a path or null")
+                try:
+                    backup = Path(backup_value).resolve()
+                    backup.relative_to(backup_root)
+                except (OSError, ValueError) as exc:
+                    raise invalid(
+                        f"snapshot {index} backup is outside the transaction backup root"
+                    ) from exc
+                expected_backup = (
+                    backup_root / f"{index}-{expected_target.name}.previous"
+                ).resolve()
+                if backup != expected_backup:
+                    raise invalid(
+                        f"snapshot {index} backup does not match the expected file"
+                    )
+            elif backup_hash is not None:
+                raise invalid(f"snapshot {index} has a hash without a backup")
+
+            before_hash = record.get("before_sha256")
+            promoted_hash = record.get("promoted_sha256")
+            if before_hash is not None and (
+                not isinstance(before_hash, str)
+                or re.fullmatch(r"[0-9a-f]{64}", before_hash) is None
+            ):
+                raise invalid(f"snapshot {index} before_sha256 is invalid")
+            if (
+                not isinstance(promoted_hash, str)
+                or re.fullmatch(r"[0-9a-f]{64}", promoted_hash) is None
+            ):
+                raise invalid(f"snapshot {index} promoted_sha256 is required")
+            if backup is None and before_hash is not None:
+                raise invalid(
+                    f"snapshot {index} has before_sha256 without a backup"
+                )
+            if backup is not None and (
+                before_hash is None or backup_hash != before_hash
+            ):
+                raise invalid(
+                    f"snapshot {index} backup/before hashes do not match"
+                )
+            validated_records.append(
+                (
+                    target,
+                    _RollbackRecord(
+                        backup=backup,
+                        before_sha256=before_hash,
+                        promoted_sha256=promoted_hash,
+                    ),
+                )
+            )
+
+        def prevalidated_snapshots() -> dict[Path, _RollbackRecord]:
+            snapshots: dict[Path, _RollbackRecord] = {}
+            for index, (target, snapshot) in enumerate(validated_records):
+                if snapshot.backup is not None:
+                    if not snapshot.backup.is_file():
+                        raise invalid(f"snapshot {index} backup is missing")
+                    try:
+                        backup_bytes = snapshot.backup.read_bytes()
+                    except OSError as exc:
+                        raise invalid(
+                            f"snapshot {index} backup is unreadable: {exc}"
+                        ) from exc
+                    if (
+                        _sha256_bytes(backup_bytes) != snapshot.before_sha256
+                    ):
+                        raise invalid(
+                            f"snapshot {index} backup does not match before_sha256"
+                        )
+                snapshots[target] = snapshot
+            return snapshots
+
+        recovery = journal.get("recovery")
+        if recovery is not None:
+            if not isinstance(recovery, dict) or recovery.get("status") not in {
+                "rolled_back_after_invalid_commit",
+                "rollback_incomplete",
+            }:
+                raise invalid("recovery diagnostic is invalid")
+            snapshots = prevalidated_snapshots()
+            failures = _rollback_state_failures(snapshots)
+            if failures:
+                failures = _rollback(snapshots) + _rollback_state_failures(snapshots)
+            if failures:
+                raise ArchiveTransactionError(
+                    "previous committed recovery rollback is still incomplete; "
+                    f"staging and backups remain at {staging_root}: "
+                    + "; ".join(failures)
+                )
+            raise ArchiveTransactionError(
+                "previous committed recovery remains quarantined after rollback; "
+                f"staging and backups remain at {staging_root}: "
+                + str(recovery.get("validation_error") or "unknown validation error")
+            )
+
+        if phase == "committed":
+            try:
+                _verify_committed_recovery(
+                    targets,
+                    run_id=run_id,
+                    report_date=report_date,
+                )
+            except ArchiveTransactionError as validation_exc:
+                try:
+                    snapshots = prevalidated_snapshots()
+                except ArchiveTransactionError as backup_exc:
+                    raise ArchiveTransactionError(
+                        "committed archive recovery validation failed and rollback is "
+                        f"impossible; staging remains at {staging_root}: "
+                        f"{validation_exc}; {backup_exc}"
+                    ) from backup_exc
+                failures = _rollback(snapshots) + _rollback_state_failures(snapshots)
+                journal["recovery"] = {
+                    "status": (
+                        "rollback_incomplete"
+                        if failures
+                        else "rolled_back_after_invalid_commit"
+                    ),
+                    "validation_error": str(validation_exc),
+                    "recovered_at": datetime.now().astimezone().isoformat(),
+                    "rollback_failures": failures,
+                }
+                diagnostic_failure: str | None = None
+                try:
+                    _write_journal(journal_path, journal)
+                except OSError as exc:
+                    diagnostic_failure = str(exc)
+                if failures:
+                    message = (
+                        "committed archive recovery validation failed and rollback was "
+                        f"incomplete; staging and backups remain at {staging_root}: "
+                        + "; ".join(failures)
+                    )
                 else:
-                    target.unlink(missing_ok=True)
-            except (KeyError, OSError, ValueError) as exc:
-                failures.append(str(exc))
+                    message = (
+                        "committed archive recovery validation failed; prior targets were "
+                        f"restored and staging/backups remain quarantined at {staging_root}: "
+                        f"{validation_exc}"
+                    )
+                if diagnostic_failure is not None:
+                    message += f"; could not persist recovery diagnostic: {diagnostic_failure}"
+                raise ArchiveTransactionError(message) from validation_exc
+            _remove_recovered_staging(staging_root)
+            continue
+
+        staged_sidecar = staging_resolved / expected_targets[2].name
+        identity_sidecar = (
+            staged_sidecar if staged_sidecar.is_file() else expected_targets[2]
+        )
+        try:
+            sidecar = json.loads(identity_sidecar.read_text(encoding="utf-8"))
+        except (OSError, UnicodeError, json.JSONDecodeError) as exc:
+            raise invalid("transaction sidecar is missing or unreadable") from exc
+        if not isinstance(sidecar, dict):
+            raise invalid("transaction sidecar must be a JSON object")
+        expected_sidecar_identity = {
+            "run_id": run_id,
+            "report_date": report_date,
+            "json_file": expected_targets[0].name,
+            "markdown_file": expected_targets[1].name,
+        }
+        for name, expected_value in expected_sidecar_identity.items():
+            if sidecar.get(name) != expected_value:
+                raise invalid(
+                    f"transaction sidecar {name} does not match the journal"
+                )
+
+        snapshots = prevalidated_snapshots()
+        failures = _rollback(snapshots) + _rollback_state_failures(snapshots)
         if failures:
             raise ArchiveTransactionError(
                 "stale transaction recovery was incomplete: " + "; ".join(failures)
             )
-        shutil.rmtree(staging_root, ignore_errors=True)
+        _remove_recovered_staging(staging_root)
 
 
 def _reclaim_stale_lock(lock_path: Path, news_dir: Path) -> bool:
@@ -422,9 +834,9 @@ def _write_staged_files(
         markdown=staging_root / targets.markdown.name,
         manifest=staging_root / targets.manifest.name,
     )
-    staged.json.write_bytes(_json_bytes(payload))
-    staged.markdown.write_text(markdown, encoding="utf-8", newline="\n")
-    staged.manifest.write_bytes(_json_bytes(sidecar))
+    _write_bytes_fsync(staged.json, _json_bytes(payload))
+    _write_bytes_fsync(staged.markdown, markdown.encode("utf-8"))
+    _write_bytes_fsync(staged.manifest, _json_bytes(sidecar))
     return staged
 
 
@@ -464,30 +876,75 @@ def _verify_staged_files(
 
 
 def _snapshot_existing(
-    targets: _TargetPaths, backup_root: Path
-) -> dict[Path, Path | None]:
+    targets: _TargetPaths, staged: _TargetPaths, backup_root: Path
+) -> dict[Path, _RollbackRecord]:
     backup_root.mkdir(parents=True, exist_ok=False)
-    snapshots: dict[Path, Path | None] = {}
-    for index, target in enumerate(targets.ordered()):
+    _fsync_directory(backup_root.parent)
+    snapshots: dict[Path, _RollbackRecord] = {}
+    for index, (target, promoted) in enumerate(
+        zip(targets.ordered(), staged.ordered())
+    ):
+        promoted_sha256 = _sha256_bytes(promoted.read_bytes())
         if not target.exists():
-            snapshots[target] = None
+            snapshots[target] = _RollbackRecord(
+                backup=None,
+                before_sha256=None,
+                promoted_sha256=promoted_sha256,
+            )
             continue
         backup = backup_root / f"{index}-{target.name}.previous"
-        shutil.copy2(target, backup)
-        snapshots[target] = backup
+        _copy2_fsync(target, backup)
+        before_sha256 = _sha256_bytes(backup.read_bytes())
+        snapshots[target] = _RollbackRecord(
+            backup=backup,
+            before_sha256=before_sha256,
+            promoted_sha256=promoted_sha256,
+        )
+    _fsync_directory(backup_root)
     return snapshots
 
 
-def _rollback(snapshots: dict[Path, Path | None]) -> list[str]:
+def _rollback(snapshots: dict[Path, _RollbackRecord]) -> list[str]:
     failures: list[str] = []
-    for target, backup in reversed(tuple(snapshots.items())):
+    for target, snapshot in snapshots.items():
         try:
-            if backup is None:
+            current_sha256 = (
+                _sha256_bytes(target.read_bytes()) if target.is_file() else None
+            )
+        except OSError as exc:
+            failures.append(f"{target}: could not read rollback target: {exc}")
+            continue
+        if current_sha256 not in {
+            snapshot.before_sha256,
+            snapshot.promoted_sha256,
+        }:
+            failures.append(
+                f"{target}: rollback CAS mismatch; current hash is neither "
+                "before_sha256 nor promoted_sha256"
+            )
+    if failures:
+        return failures
+
+    for target, snapshot in reversed(tuple(snapshots.items())):
+        try:
+            current_sha256 = (
+                _sha256_bytes(target.read_bytes()) if target.is_file() else None
+            )
+            if current_sha256 == snapshot.before_sha256:
+                continue
+            if current_sha256 != snapshot.promoted_sha256:
+                failures.append(
+                    f"{target}: rollback CAS changed during recovery"
+                )
+                break
+            if snapshot.backup is None:
                 target.unlink(missing_ok=True)
+                _fsync_directory(target.parent)
             else:
-                os.replace(backup, target)
+                _copy2_fsync(snapshot.backup, target)
         except OSError as exc:
             failures.append(f"{target}: {exc}")
+            break
     return failures
 
 
@@ -588,7 +1045,7 @@ def commit_briefing_pair(
             raise ArchiveTransactionError(
                 "archive targets changed after the run snapshot; restart the run"
             )
-        staging_root = Path(tempfile.mkdtemp(prefix=".pih-stage-", dir=root))
+        staging_root = _create_staging_root(root)
         preserve_staging = False
         try:
             preliminary_sidecar = {
@@ -624,7 +1081,7 @@ def commit_briefing_pair(
                 "markdown_sha256": markdown_hash,
                 "gate_warnings": list(staged_warnings),
             }
-            staged.manifest.write_bytes(_json_bytes(sidecar))
+            _write_bytes_fsync(staged.manifest, _json_bytes(sidecar))
             try:
                 if json.loads(staged.manifest.read_text(encoding="utf-8")) != sidecar:
                     raise ArchiveTransactionError(
@@ -635,19 +1092,29 @@ def commit_briefing_pair(
                     f"could not reread staged sidecar: {exc}"
                 ) from exc
 
-            snapshots = _snapshot_existing(targets, staging_root / "backup")
+            snapshots = _snapshot_existing(
+                targets, staged, staging_root / "backup"
+            )
             journal_path = staging_root / JOURNAL_NAME
             journal = {
                 "contract_version": "1.0",
                 "run_id": run_id,
+                "report_date": report_date,
                 "phase": "promoting",
                 "promoted_count": 0,
                 "snapshots": [
                     {
                         "target": str(target.resolve()),
-                        "backup": str(backup.resolve()) if backup is not None else None,
+                        "backup": (
+                            str(snapshot.backup.resolve())
+                            if snapshot.backup is not None
+                            else None
+                        ),
+                        "backup_sha256": snapshot.before_sha256,
+                        "before_sha256": snapshot.before_sha256,
+                        "promoted_sha256": snapshot.promoted_sha256,
                     }
-                    for target, backup in snapshots.items()
+                    for target, snapshot in snapshots.items()
                 ],
             }
             _write_journal(journal_path, journal)
@@ -656,6 +1123,8 @@ def commit_briefing_pair(
                     zip(staged.ordered(), targets.ordered()), start=1
                 ):
                     promote(source, destination)
+                    _fsync_file(destination)
+                    _fsync_directory(destination.parent)
                     journal["promoted_count"] = index
                     _write_journal(journal_path, journal)
             except Exception as exc:

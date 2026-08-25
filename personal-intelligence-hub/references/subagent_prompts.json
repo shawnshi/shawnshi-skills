@@ -1,5 +1,5 @@
 {
-  "contract_version": "subagent-prompts/1.6",
+  "contract_version": "subagent-prompts/1.7",
   "invocation_order": [
     "baseline_candidates",
     "gap_assessment",
@@ -11,11 +11,13 @@
   "common_contract": {
     "input_binding": "每个任务必须读取已登记的 supplement_request.json，并原样返回 run_id、request_sha256、baseline_sha256、candidate_pool_sha256、gap_id 和 lane。",
     "evidence_rule": "先处理绑定的基线候选，再只针对缺口补充检索；原始来源优先，事实、来源主张、推断与未知项分开。",
+    "identity_rule": "每个新增候选必须记录 identity_quality=semantic、event_id，以及仅含 key_version、primary_domain、actor、action、object、event_date 的完整 event_identity；event_id 必须按系统 generate_event_id(event_identity) 的同一算法重算一致。不能确定完整语义身份时不得把候选用于 multi_independent。",
     "date_rule": "published_at 必须来自来源明确日期或可靠元数据；进入 core 时固定为严格 YYYY-MM-DD，候选为合法 ISO datetime 时调用 run_daily.py normalize-published-at，按其自带时区取日期后规范化；观察时间不得冒充发布日期；未知日期不得进入正式候选。",
     "stop_rule": "达到请求中的 halt_condition、用完 max_turns，或连续检索无增量时停止并返回结构化结果。",
     "empty_rule": "无增量时返回 status=no_increment、空 candidates、非空 executed_queries、至少一条 access_log 和真实 coverage，不得用弱信号补数。",
     "coverage_rule": "coverage 必须逐项等于 access_log 中 verified 与 blocked 的实际计数；每条访问记录必须同时记录 requested_url 与跳转后的 final_url；候选 access_check.requested_url 必须匹配候选 url，并逐字段对应 access_log 中的 verified 记录。",
-    "failure_rule": "同一 URL 的永久失败不得同参数重试；同一主机连续两次永久失败后切换另一类优先来源并保留失败日志。只有瞬时超时、限流或可重试 HTTP 状态可在轮次预算内重试。"
+    "failure_rule": "同一规范化 URL 的永久失败不得再次尝试，不因 method 或 gap 分割；同一主机连续两次永久失败后切换另一类优先来源并保留失败日志。所有 blocked 访问必须给出 transient|permanent 的 failure_class 和非空 error_code；永久 HTTP 状态必须标 permanent，可重试 HTTP 状态必须标 transient；verified 必须标 failure_class=none 且不得带 error_code。只有瞬时超时、限流或可重试 HTTP 状态可在轮次预算内重试。",
+    "infrastructure_failure_rule": "只有代理在执行任何查询或访问前初始化失败时，才可返回 status=failed、failure_kind=infrastructure、非空 failure_reason、turns_used=0、halt_condition_met=false，以及空 executed_queries/access_log/candidates 和全零 coverage。"
   },
   "review_common_contract": {
     "request_rule": "评估者必须先读取已登记的对应 review_request.json，原样返回 request_sha256、challenge、reviewer_kind、reviewer_id、invocation_id，并遵守 max_turns 与 halt_condition。",
@@ -84,10 +86,12 @@
         "tool_call_count",
         "review_milestone_seq"
       ],
-      "progress_gate_command": "python -X utf8 scripts/review_progress_gate.py --state <run_dir>/<review_kind>_progress_state.json --agent-status <status> --event-ordinal <n> --last-event-at <iso_datetime> --tool-call-count <n> --milestone-seq <0|1|2>",
+      "progress_gate_command": "python -X utf8 scripts/review_progress_gate.py --state <run_dir>/<review_kind>_progress_state.json --manifest <manifest> --review-kind <review_kind> --invocation-id <invocation_id> --request-sha256 <request_sha256> --agent-status <status> --event-ordinal <n> --last-event-at <iso_datetime> --tool-call-count <n> --milestone-seq <0|1|2>",
+      "progress_gate_watch_command": "当调用层没有代理内部事件遥测时，使用 python -X utf8 scripts/review_progress_gate.py --state <run_dir>/<review_kind>_progress_state.json --manifest <manifest> --review-kind <review_kind> --invocation-id <invocation_id> --request-sha256 <request_sha256> --agent-status <status> --milestone-seq <0|1|2> --watch-path <draft-1> [--watch-path <draft-2>]；不得猜测事件计数，时间流逝本身不算进展。",
       "lost_agent_rule": "单凭超时、无正式文件或 running 状态不得判失联。把进度指纹交给 review_progress_gate.py：明确失败/退出、提醒后连续三次静止，或同一里程碑内 15 次增长后提醒且再连续三次没有新里程碑，才可中止或重启。",
       "after_wait_gate": "stop_waiting_until_artifact_control_message_or_progress_fingerprint_changes",
-      "on_exhaustion": "inspect_once_then_send_one_targeted_nudge_or_relaunch_bounded_task",
+      "on_exhaustion": "inspect_once_then_send_one_targeted_nudge_or_fail_closed",
+      "relaunch_policy": "forbidden_for_same_registered_request; create_a_new_run_for_a_new_attempt",
       "artifact_first": true
     },
     "source_efficiency": {
@@ -134,10 +138,10 @@
       "gap_id": {"type": "string"},
       "lane": {"type": "string"},
       "status": {"enum": ["completed", "no_increment", "degraded", "failed"]},
-      "executed_queries": {"type": "array", "minItems": 1, "items": {"type": "string", "minLength": 1}},
+      "executed_queries": {"type": "array", "minItems": 0, "items": {"type": "string", "minLength": 1}},
       "access_log": {
         "type": "array",
-        "minItems": 1,
+        "minItems": 0,
         "items": {
           "type": "object",
           "required": ["status", "checked_at", "method", "requested_url", "final_url", "http_status"],
@@ -147,8 +151,32 @@
             "method": {"enum": ["http_get", "browser", "api", "document"]},
             "requested_url": {"type": "string"},
             "final_url": {"type": "string"},
-            "http_status": {"type": ["integer", "null"]}
-          }
+            "http_status": {"type": ["integer", "null"]},
+            "failure_class": {"enum": ["none", "transient", "permanent"]},
+            "error_code": {"type": ["string", "null"]}
+          },
+          "allOf": [
+            {
+              "if": {"properties": {"status": {"const": "blocked"}}},
+              "then": {
+                "required": ["failure_class", "error_code"],
+                "properties": {
+                  "failure_class": {"enum": ["transient", "permanent"]},
+                  "error_code": {"type": "string", "minLength": 1}
+                }
+              }
+            },
+            {
+              "if": {"properties": {"status": {"const": "verified"}}},
+              "then": {
+                "required": ["failure_class"],
+                "properties": {
+                  "failure_class": {"const": "none"},
+                  "error_code": {"enum": [null, ""]}
+                }
+              }
+            }
+          ]
         }
       },
       "candidates": {
@@ -164,6 +192,9 @@
             "retrieved_at",
             "primary_domain",
             "source_type",
+            "identity_quality",
+            "event_id",
+            "event_identity",
             "access_check",
             "summary"
           ],
@@ -177,6 +208,21 @@
             "primary_domain": {"enum": ["technology", "healthcare_digital"]},
             "secondary_domains": {"type": "array"},
             "source_type": {"enum": ["primary", "secondary"]},
+            "identity_quality": {"const": "semantic"},
+            "event_id": {"type": "string", "pattern": "^evt1_[0-9a-f]{64}$"},
+            "event_identity": {
+              "type": "object",
+              "required": ["key_version", "primary_domain", "actor", "action", "object", "event_date"],
+              "additionalProperties": false,
+              "properties": {
+                "key_version": {"type": "string", "minLength": 1},
+                "primary_domain": {"enum": ["technology", "healthcare_digital"]},
+                "actor": {"type": "string", "minLength": 1},
+                "action": {"type": "string", "minLength": 1},
+                "object": {"type": "string", "minLength": 1},
+                "event_date": {"type": "string", "minLength": 1}
+              }
+            },
             "access_check": {
               "type": "object",
               "required": ["status", "checked_at", "method", "requested_url", "final_url", "http_status"],
@@ -203,6 +249,8 @@
         }
       },
       "confidence": {"enum": ["high", "medium", "low"]},
+      "failure_kind": {"enum": ["infrastructure"]},
+      "failure_reason": {"type": "string", "minLength": 1},
       "data_provenance": {
         "type": "object",
         "required": ["request_sha256", "candidate_pool_sha256", "access_log_sha256"],
@@ -212,7 +260,7 @@
           "access_log_sha256": {"type": "string", "pattern": "^[0-9a-f]{64}$"}
         }
       },
-      "turns_used": {"type": "integer", "minimum": 1},
+      "turns_used": {"type": "integer", "minimum": 0},
       "halt_condition_met": {"type": "boolean"},
       "completed_at": {"type": "string"}
     }
@@ -222,25 +270,25 @@
       "role": "技术雷达",
       "mission": "补齐通用技术缺口，覆盖模型、智能体、算力、数据基础设施、软件工程与安全。",
       "primary_domain": "technology",
-      "system_prompt": "先处理绑定的基线候选，只检索 request 中的技术缺口。不得把医疗应用重复计入本车道；按事件去重并核验原始来源。无增量时返回 no_increment 和空数组。"
+      "system_prompt": "先处理绑定的基线候选，只检索 request 中的技术缺口。不得把医疗应用重复计入本车道；按事件去重并核验原始来源。每个新增候选必须按 common_contract.identity_rule 提供可重算的 semantic event_identity 与 event_id。无增量时返回 no_increment 和空数组。"
     },
     "HealthcareRadar": {
       "role": "医疗数字化雷达",
       "mission": "补齐医疗 AI、临床信息系统、互操作、支付政策与医院数字化缺口。",
       "primary_domain": "healthcare_digital",
-      "system_prompt": "先处理绑定的基线候选，只检索 request 中的医疗数字化缺口。区分研究发布、监管决定、采购事件与产品宣传。无增量时返回 no_increment 和空数组。"
+      "system_prompt": "先处理绑定的基线候选，只检索 request 中的医疗数字化缺口。区分研究发布、监管决定、采购事件与产品宣传。每个新增候选必须按 common_contract.identity_rule 提供可重算的 semantic event_identity 与 event_id。无增量时返回 no_increment 和空数组。"
     },
     "Sentinel": {
       "role": "政策与竞对哨兵",
       "mission": "补齐政策、支付、采购、竞对和产业结构变化。",
       "primary_domain": "healthcare_digital",
-      "system_prompt": "先处理绑定的基线候选，只检索 request 中的政策或竞对缺口。优先政府、监管、采购和公司公告原文；发布时间未知时隔离。无增量时返回 no_increment 和空数组。"
+      "system_prompt": "先处理绑定的基线候选，只检索 request 中的政策或竞对缺口。优先政府、监管、采购和公司公告原文；发布时间未知时隔离。每个新增候选必须按 common_contract.identity_rule 提供可重算的 semantic event_identity 与 event_id。无增量时返回 no_increment 和空数组。"
     },
     "Ranger": {
       "role": "跨领域风险检索",
       "mission": "补齐失败、漏洞、监管处罚与执行摩擦等反向证据。",
       "primary_domain": "mixed",
-      "system_prompt": "先处理绑定的基线候选，只检索 request 中的风险缺口。每条事件只能选择一个 primary_domain；混合事件放入 secondary_domains。无增量时返回 no_increment 和空数组。"
+      "system_prompt": "先处理绑定的基线候选，只检索 request 中的风险缺口。每条事件只能选择一个 primary_domain；混合事件放入 secondary_domains。每个新增候选必须按 common_contract.identity_rule 提供可重算的 semantic event_identity 与 event_id。无增量时返回 no_increment 和空数组。"
     }
   },
   "review_agents": {
@@ -249,8 +297,8 @@
       "mission": "对基线与补检候选执行统一门槛、事件去重、领域内排序和 L1-L4 推演。",
       "max_turns": 2,
       "halt_condition": "所有最终条目批量完成语义评估、登记证据核验与候选对象哈希到输出条目哈希的映射，或发现阻断问题。",
-      "output_contract": "读取 semantic_review_request.json，生成 briefing core 1.3 和 review-receipt/1.0。回执的 reviewer_kind 固定为 semantic_model，reviewer_id 固定为 SemanticEvaluator；原样返回 request_sha256、challenge、invocation_id，包含 turns_used、halt_condition_met、baseline_sha256、input_bundle_sha256、output_sha256、reviewed_item_hashes、lineage_bindings、逐条 access_log，以及绑定 input_bundle_sha256 和 access_log_sha256 的 data_provenance。两份 draft 必须先通过 run_daily.py validate-semantic-draft，才可原子提升为最终输出。",
-      "system_prompt": "先读取已登记的 semantic review request，并按 bound_artifacts 校验各输入 SHA-256；完成后发送不含业务内容的 review_progress seq=1 phase=input_validated。历史去重只读取 history_review_slice；history_snapshot 仅作完整归档溯源绑定，不重复载入，旧运行没有切片时才回退。一次读取各所需绑定文件，在本地批量完成门禁、去重、排序、血缘和回执构造；日期、URL、access_check 与对象哈希一致时复用登记证据，不得重新联网访问已经 verified 的 URL，只有缺失或冲突时才补充核验。进入 core 的 published_at 固定为严格 YYYY-MM-DD；候选为合法 ISO datetime 时调用 python -X utf8 scripts/run_daily.py normalize-published-at --value <iso_datetime>，按其自带时区取日期后规范化，不得原样写入 datetime。启发式候选只可作为输入，不可直接授权成稿。每个最终条目必须保留 candidate_refs；lineage_bindings 必须把对应 candidate_object_sha256 映射到完整输出条目哈希。最终 access_check.requested_url 必须匹配条目 url，final_url 只记录跳转结果，且 access_check 必须逐字段存在于回执 access_log；每个入选条目使用唯一映射，补充佐证不计入 retained-item access 数。按 requested_ratio 选择，不足时保留供给例外；不得强制把通用技术改写为医疗事件。完成候选选择、血缘与回执映射后发送 review_progress seq=2 phase=lineage_ready。不要在聊天或工具输出中回显完整输入或产物；先把两份产物写到目标旁唯一 draft，运行 python -X utf8 scripts/run_daily.py validate-semantic-draft --manifest <manifest> --refined <core-draft> --semantic-receipt <receipt-draft>；只有 status=valid 才可分别原子提升并发送 artifact_ready。",
+      "output_contract": "读取 semantic_review_request.json，生成 briefing core 1.4 和 review-receipt/1.0。回执的 reviewer_kind 固定为 semantic_model，reviewer_id 固定为 SemanticEvaluator；原样返回 request_sha256、challenge、invocation_id，包含 turns_used、halt_condition_met、baseline_sha256、input_bundle_sha256、output_sha256、reviewed_item_hashes、lineage_bindings、逐条 access_log，以及绑定 input_bundle_sha256 和 access_log_sha256 的 data_provenance。multi_independent 的全部 lineage inputs 必须具有可重算且与 final event_id 相同的 semantic event_identity；至少两个规范化不同来源、两个不同 host 与 URL，且每个 candidate.url 都有本回执 verified access。两份 draft 必须先通过 run_daily.py validate-semantic-draft，才可原子提升为最终输出。",
+      "system_prompt": "先读取已登记的 semantic review request，并按 bound_artifacts 校验各输入 SHA-256；完成后发送不含业务内容的 review_progress seq=1 phase=input_validated。历史去重只读取 history_review_slice；history_snapshot 仅作完整归档溯源绑定，不重复载入，旧运行没有切片时才回退。一次读取各所需绑定文件，在本地批量完成门禁、去重、排序、血缘和回执构造；日期、URL、access_check 与对象哈希一致时复用登记证据，不得重新联网访问已经 verified 的 URL，只有缺失或冲突时才补充核验。进入 core 的 published_at 固定为严格 YYYY-MM-DD；候选为合法 ISO datetime 时调用 python -X utf8 scripts/run_daily.py normalize-published-at --value <iso_datetime>，按其自带时区取日期后规范化，不得原样写入 datetime。启发式候选只可作为输入，不可直接授权成稿。每个最终条目必须保留 candidate_refs；lineage_bindings 必须把对应 candidate_object_sha256 映射到完整输出条目哈希。multi_independent 必须逐个核验全部 lineage inputs：每个候选都须为 semantic identity，event_id 按完整 event_identity 重算后与 final item.event_id 相同；任一 provisional、缺失身份或异事件候选都会令整条失败。来源名称按大小写与空白规范化，且须有至少两个不同 host/URL；每个 candidate.url 都须出现在本回执 verified access_log。不得用主观关系标签替代事件身份。最终 access_check.requested_url 必须匹配条目 url，final_url 只记录跳转结果，且 access_check 必须逐字段存在于回执 access_log；每个入选条目使用唯一映射，补充佐证不计入 retained-item access 数。按 requested_ratio 选择，不足时保留供给例外；不得强制把通用技术改写为医疗事件。完成候选选择、血缘与回执映射后发送 review_progress seq=2 phase=lineage_ready。不要在聊天或工具输出中回显完整输入或产物；先把两份产物写到目标旁唯一 draft，运行 python -X utf8 scripts/run_daily.py validate-semantic-draft --manifest <manifest> --refined <core-draft> --semantic-receipt <receipt-draft>；只有 status=valid 才可分别原子提升并发送 artifact_ready。",
       "progress_contract": "只发送 input_validated 与 lineage_ready 两个里程碑；消息不得包含候选、结论或回执正文。"
     },
     "RedTeam": {

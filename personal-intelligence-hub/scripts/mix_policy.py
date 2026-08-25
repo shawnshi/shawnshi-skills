@@ -11,7 +11,10 @@ def major_signal_eligible(item: dict[str, Any]) -> bool:
     if item.get("major_signal") is not True:
         return False
     if item.get("intelligence_level") == "L4":
-        return item.get("red_team_status") == "passed"
+        # Mix selection precedes the registered red-team review. The current
+        # schema carries no item-level red_team_status; downstream gates bind
+        # every retained L4 item to the red-team receipt by item hash.
+        return True
     access = item.get("access_check")
     return (
         item.get("intelligence_level") == "L3"
@@ -132,10 +135,10 @@ def select_candidates_with_mix(
         ),
     )
     total = min(max_items, len(ranked))
-    effective_ratio, adjustment = _effective_ratio(
+    selection_ratio, _ = _effective_ratio(
         ranked if total > 0 else [], policy
     )
-    target_counts = allocate_target_counts(total, effective_ratio)
+    selection_target_counts = allocate_target_counts(total, selection_ratio)
     buckets = {
         domain: [item for item in ranked if item["primary_domain"] == domain]
         for domain in DOMAINS
@@ -144,7 +147,7 @@ def select_candidates_with_mix(
     selected: list[dict[str, Any]] = []
     selected_ids: set[int] = set()
     for domain in DOMAINS:
-        for item in buckets[domain][: target_counts[domain]]:
+        for item in buckets[domain][: selection_target_counts[domain]]:
             selected.append(item)
             selected_ids.add(id(item))
 
@@ -169,6 +172,8 @@ def select_candidates_with_mix(
         domain: sum(1 for item in selected if item["primary_domain"] == domain)
         for domain in DOMAINS
     }
+    effective_ratio, adjustment = _effective_ratio(selected, policy)
+    target_counts = allocate_target_counts(total, effective_ratio)
     missing_domains = [
         domain for domain in DOMAINS if actual_counts[domain] < target_counts[domain]
     ]
@@ -181,24 +186,6 @@ def select_candidates_with_mix(
         ),
         "missing_domains": missing_domains,
     }
-    if adjustment["applied"]:
-        retained_triggers = [
-            item
-            for item in selected
-            if major_signal_eligible(item)
-            and item.get("primary_domain") == adjustment["favored_domain"]
-        ]
-        adjustment["trigger_urls"] = [
-            str(item.get("url") or "") for item in retained_triggers
-        ]
-        adjustment["reason"] = "；".join(
-            sorted(
-                {
-                    str(item.get("major_signal_reason") or "已通过高影响资讯门槛")
-                    for item in retained_triggers
-                }
-            )
-        )
     mix = {
         "default_ratio": _normalized_ratio(policy["default_ratio"]),
         "requested_ratio": _normalized_ratio(

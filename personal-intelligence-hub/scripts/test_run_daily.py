@@ -171,6 +171,10 @@ class RunDailyTests(unittest.IsolatedAsyncioTestCase):
             "mix_request": {
                 "requested_ratio": {"technology": 0.6, "healthcare_digital": 0.4}
             },
+            "window": {
+                "start": "2026-08-04",
+                "end": "2026-08-10",
+            },
             "stages": {},
         }
         focus = {
@@ -192,8 +196,75 @@ class RunDailyTests(unittest.IsolatedAsyncioTestCase):
             {
                 ("technology-coverage-integrity", "TechRadar"),
                 ("healthcare-coverage-integrity", "HealthcareRadar"),
+                ("policy-competition", "Sentinel"),
+                ("risk-counterevidence", "Ranger"),
             },
         )
+
+    def test_verified_primary_evidence_can_satisfy_policy_and_risk_lanes(self):
+        def candidate(title, url):
+            return {
+                "provisional_domain": "technology",
+                "title": title,
+                "summary_hint": title,
+                "keyword_connection_hint": title,
+                "url": url,
+                "published_at": "2026-08-09T08:00:00+00:00",
+                "source_type": "primary",
+                "access_check": {
+                    "status": "verified",
+                    "requested_url": url,
+                },
+            }
+
+        candidates = {
+            "items": [
+                *[
+                    candidate(f"technology {index}", f"https://example.org/t{index}")
+                    for index in range(6)
+                ],
+                *[
+                    {
+                        **candidate(f"healthcare {index}", f"https://example.org/h{index}"),
+                        "provisional_domain": "healthcare_digital",
+                    }
+                    for index in range(4)
+                ],
+            ],
+            "metadata": {
+                "coverage": {
+                    "source_failed": 0,
+                    "source_success_rate": 1.0,
+                    "dated_candidate_rate": 1.0,
+                }
+            },
+        }
+        candidates["items"][0]["title"] = "policy update"
+        candidates["items"][0]["summary_hint"] = "policy update"
+        candidates["items"][1]["title"] = "risk disclosure"
+        candidates["items"][1]["summary_hint"] = "risk disclosure"
+        manifest = {
+            "mix_request": {
+                "requested_ratio": {"technology": 0.6, "healthcare_digital": 0.4}
+            },
+            "window": {"start": "2026-08-04", "end": "2026-08-10"},
+            "stages": {},
+        }
+        focus = {
+            "filters": {"max_top10": 10},
+            "coverage_policy": {
+                "minimum_source_success_rate": 0.7,
+                "minimum_dated_candidate_rate": 0.7,
+                "lanes": {
+                    "Sentinel": {"min_candidates": 1, "keywords": ["policy"]},
+                    "Ranger": {"min_candidates": 1, "keywords": ["risk"]},
+                },
+            },
+        }
+
+        gaps = run_daily.assess_supplement_gaps(candidates, manifest, focus)
+
+        self.assertEqual(gaps, [])
 
     async def test_prepare_runs_baseline_before_candidates_and_builds_bound_gaps(self):
         with tempfile.TemporaryDirectory() as directory:
@@ -231,9 +302,11 @@ class RunDailyTests(unittest.IsolatedAsyncioTestCase):
                 encoding="utf-8",
             )
             calls = []
+            blackboard_paths = []
 
             async def fake_scan_all(**kwargs):
                 calls.append("baseline")
+                blackboard_paths.append(kwargs["blackboard_path"])
                 payload = {
                     "generated_at": "2026-08-10T09:00:00+08:00",
                     "items": [],
@@ -280,6 +353,7 @@ class RunDailyTests(unittest.IsolatedAsyncioTestCase):
 
             def fake_refine(*args, **kwargs):
                 calls.append("candidates")
+                blackboard_paths.append(kwargs["blackboard_path"])
                 payload = {
                     "contract_version": "candidate-pool/1.0",
                     "artifact_kind": "candidates_only",
@@ -307,6 +381,13 @@ class RunDailyTests(unittest.IsolatedAsyncioTestCase):
                 )
 
             self.assertEqual(calls, ["baseline", "candidates"])
+            self.assertEqual(
+                blackboard_paths,
+                [
+                    runtime / "runs" / "daily-test" / "intelligence_blackboard.json",
+                    runtime / "runs" / "daily-test" / "intelligence_blackboard.json",
+                ],
+            )
             self.assertTrue(result.supplement_request_path.exists())
             request = json.loads(result.supplement_request_path.read_text(encoding="utf-8"))
             self.assertEqual(request["run_id"], "daily-test")
@@ -323,6 +404,10 @@ class RunDailyTests(unittest.IsolatedAsyncioTestCase):
                 manifest["mix_request"]["requested_ratio"], expected_default
             )
             self.assertEqual(manifest["stages"]["baseline"]["status"], "degraded")
+            self.assertEqual(
+                manifest["artifacts"]["focus_config"]["artifact_sha256"],
+                hashlib.sha256(focus.read_bytes()).hexdigest(),
+            )
             self.assertIn("history_snapshot", manifest["artifacts"])
             self.assertIn("history_review_slice", manifest["artifacts"])
             review_slice = json.loads(
@@ -331,8 +416,12 @@ class RunDailyTests(unittest.IsolatedAsyncioTestCase):
                 ).read_text(encoding="utf-8")
             )
             self.assertEqual(review_slice["dedupe_days"], 7)
+            self.assertEqual(
+                review_slice["generated_at"],
+                "2026-08-10T23:59:59.999999+08:00",
+            )
             self.assertEqual(review_slice["entries"], [])
-            self.assertEqual(manifest["stages"]["supplemental"]["status"], "pending")
+            self.assertEqual(manifest["stages"]["supplemental"]["status"], "running")
 
     async def test_invalid_concurrency_is_rejected_before_run_creation(self):
         with tempfile.TemporaryDirectory() as directory:
@@ -354,7 +443,6 @@ class RunDailyTests(unittest.IsolatedAsyncioTestCase):
                 ),
                 encoding="utf-8",
             )
-
             with self.assertRaisesRegex(RunContractError, "must be positive"):
                 await run_daily.prepare_run(
                     runtime_dir=runtime,
@@ -364,6 +452,25 @@ class RunDailyTests(unittest.IsolatedAsyncioTestCase):
                 )
 
             self.assertFalse(runtime.exists())
+
+    async def test_missing_or_malformed_focus_is_rejected_before_run_creation(self):
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            skill = root / "SKILL.md"
+            skill.write_text("skill", encoding="utf-8")
+            for label, content in (("missing", None), ("malformed", "[")):
+                with self.subTest(label=label):
+                    runtime = root / f"runtime-{label}"
+                    focus = root / f"focus-{label}.json"
+                    if content is not None:
+                        focus.write_text(content, encoding="utf-8")
+                    with self.assertRaisesRegex(RunContractError, "focus config"):
+                        await run_daily.prepare_run(
+                            runtime_dir=runtime,
+                            skill_path=skill,
+                            focus_path=focus,
+                        )
+                    self.assertFalse(runtime.exists())
 
     async def test_baseline_exception_is_recorded_as_failed(self):
         with tempfile.TemporaryDirectory() as directory:
@@ -385,6 +492,8 @@ class RunDailyTests(unittest.IsolatedAsyncioTestCase):
                 ),
                 encoding="utf-8",
             )
+            focus = root / "focus.json"
+            focus.write_text("{}", encoding="utf-8")
 
             def fake_rebuild_history(*, history_file, **kwargs):
                 history_file.parent.mkdir(parents=True, exist_ok=True)
@@ -400,7 +509,7 @@ class RunDailyTests(unittest.IsolatedAsyncioTestCase):
                         runtime_dir=runtime,
                         news_dir=root / "news",
                         skill_path=skill,
-                        focus_path=root / "unused.json",
+                        focus_path=focus,
                         run_id="failed-run",
                         now=datetime(2026, 8, 10, 9, 0, tzinfo=ZoneInfo("Asia/Shanghai")),
                     )

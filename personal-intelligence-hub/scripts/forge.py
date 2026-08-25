@@ -18,21 +18,21 @@ from archive_transaction import (
 )
 from blackboard import finalize_briefing, update_phase
 from briefing_gate import validate_briefing_data
-from history_manager import load_recent_history, match_history, normalize_url, save_history_items
-from hub_utils import HISTORY_PATH, HUB_DIR, NEWS_DIR, RUNTIME_DIR, atomic_dump_json
+from history_manager import load_recent_history, match_history, normalize_url
+from hub_utils import HUB_DIR, NEWS_DIR, atomic_dump_json
 from run_contract import (
     RunContractError,
-    candidate_object_hash,
-    candidate_ref,
     file_sha256,
     item_hash,
     load_manifest,
     record_stage,
+    registered_candidate_lineage,
     require_stage,
     skill_bundle_sha256,
+    validate_registered_candidate_funnel,
     validate_review_receipt,
 )
-from update_index import rebuild_history
+from update_index import HistoryArchiveError, rebuild_history
 
 
 TEMPLATE_PATH = HUB_DIR / "references" / "briefing_template.md"
@@ -79,8 +79,8 @@ def _assert_core_identity(
     for field, value in expected.items():
         if core.get(field) != value:
             raise ForgeContractError(f"refined core {field} does not match run manifest")
-    if core.get("schema_version") != "1.3":
-        raise ForgeContractError("refined core schema_version must be 1.3")
+    if core.get("schema_version") != "1.4":
+        raise ForgeContractError("refined core schema_version must be 1.4")
     if str(core.get("model_used") or "").strip().lower() in {"", "heuristic"}:
         raise ForgeContractError("refined core must identify a non-heuristic semantic model")
     try:
@@ -150,13 +150,44 @@ def _load_hash_bound_artifact(record: dict[str, Any], label: str) -> dict[str, A
     return _read_json_strict(path, label)
 
 
+def _bound_archive_paths(
+    manifest: dict[str, Any],
+    news_dir: str | Path,
+    history_path: str | Path | None,
+) -> tuple[Path, Path]:
+    record = manifest.get("artifacts", {}).get("history_snapshot")
+    if not isinstance(record, dict):
+        raise ForgeContractError("history_snapshot artifact receipt is missing")
+    metadata = record.get("metadata")
+    if not isinstance(metadata, dict) or not metadata.get("news_dir"):
+        raise ForgeContractError("history snapshot news_dir binding is missing")
+    bound_news = Path(str(metadata["news_dir"])).resolve()
+    requested_news = Path(news_dir).resolve()
+    if requested_news != bound_news:
+        raise ForgeContractError("archive news_dir does not match the history snapshot")
+    canonical_history = bound_news / ".pih_history_v2.json"
+    if history_path is not None and Path(history_path).resolve() != canonical_history:
+        raise ForgeContractError(
+            "history_path must be canonical news_dir/.pih_history_v2.json"
+        )
+    return bound_news, canonical_history
+
+
 def _assert_history_precondition(
     manifest: dict[str, Any], news_dir: Path, items: list[dict[str, Any]]
 ) -> dict[str, str | None]:
     record = manifest.get("artifacts", {}).get("history_snapshot")
     if not isinstance(record, dict):
         raise ForgeContractError("history_snapshot artifact receipt is missing")
-    _load_hash_bound_artifact(record, "history_snapshot")
+    snapshot = _load_hash_bound_artifact(record, "history_snapshot")
+    try:
+        snapshot_clock = datetime.fromisoformat(
+            str(snapshot.get("generated_at") or "").replace("Z", "+00:00")
+        )
+    except ValueError as exc:
+        raise ForgeContractError("history snapshot generated_at is invalid") from exc
+    if snapshot_clock.tzinfo is None or snapshot_clock.utcoffset() is None:
+        raise ForgeContractError("history snapshot generated_at must be timezone-aware")
     metadata = record.get("metadata") or {}
     if Path(str(metadata.get("news_dir") or "")).resolve() != news_dir.resolve():
         raise ForgeContractError("archive news_dir does not match the history snapshot")
@@ -170,12 +201,15 @@ def _assert_history_precondition(
         )
     recheck_path = Path(manifest["run_dir"]) / "history_snapshot_recheck.json"
     try:
-        rebuild_history(
-            news_dir=news_dir,
-            history_file=recheck_path,
-            now=datetime.fromisoformat(str(manifest["created_at"])),
-            exclude_report_date=manifest["report_date"],
-        )
+        try:
+            rebuild_history(
+                news_dir=news_dir,
+                history_file=recheck_path,
+                now=snapshot_clock,
+                exclude_report_date=manifest["report_date"],
+            )
+        except HistoryArchiveError as exc:
+            raise ForgeContractError(str(exc)) from exc
         if file_sha256(recheck_path) != record.get("artifact_sha256"):
             raise ForgeContractError(
                 "formal archive history changed after prepare; restart the run"
@@ -249,6 +283,7 @@ def _assert_pipeline_provenance(payload: dict[str, Any], manifest: dict[str, Any
             str(result.get("lane"))
             for result in results
             if result.get("status") in {"degraded", "failed"}
+            or int((result.get("coverage") or {}).get("failed", 0)) > 0
         }
     )
     if sorted(str(value) for value in coverage.get("required_lane_failures", [])) != lane_failures:
@@ -311,24 +346,16 @@ def _assert_pipeline_provenance(payload: dict[str, Any], manifest: dict[str, Any
     expected_observed = baseline_observed + supplemental_candidates
     if payload.get("candidate_funnel", {}).get("observed") != expected_observed:
         raise ForgeContractError("candidate_funnel.observed does not match registered artifacts")
+    try:
+        validate_registered_candidate_funnel(
+            payload,
+            candidate_pool,
+            supplemental_candidates=supplemental_candidates,
+        )
+    except RunContractError as exc:
+        raise ForgeContractError(str(exc)) from exc
 
-    observed_candidates = list(candidate_pool.get("items", []))
-    for result in results:
-        if isinstance(result, dict) and isinstance(result.get("candidates"), list):
-            observed_candidates.extend(result["candidates"])
-    lineage: dict[str, dict[str, Any]] = {}
-    for candidate in observed_candidates:
-        if not isinstance(candidate, dict):
-            continue
-        reference = str(candidate.get("candidate_id") or candidate_ref(str(candidate.get("url") or "")))
-        urls = {
-            normalize_url(str(candidate.get("url") or "")),
-            normalize_url(str((candidate.get("access_check") or {}).get("final_url") or "")),
-        }
-        lineage[reference] = {
-            "urls": {url for url in urls if url},
-            "candidate_object_sha256": candidate_object_hash(candidate),
-        }
+    lineage = registered_candidate_lineage(manifest)
     semantic_bindings = {
         str(binding.get("output_item_sha256") or ""): binding
         for binding in payload.get("pipeline", {})
@@ -359,11 +386,10 @@ def _assert_pipeline_provenance(payload: dict[str, Any], manifest: dict[str, Any
             for value in binding.get("inputs", [])
             if isinstance(value, dict)
         }
-        expected_inputs = {
-            reference: str(lineage[reference]["candidate_object_sha256"])
+        if set(bound_inputs) != set(references) or any(
+            bound_inputs[reference] not in lineage[reference]["object_hashes"]
             for reference in references
-        }
-        if bound_inputs != expected_inputs:
+        ):
             raise ForgeContractError(
                 f"top_10[{index}] semantic lineage hashes do not match registered candidates"
             )
@@ -513,20 +539,26 @@ def forge_briefing(
     refined_path: str | Path,
     *,
     news_dir: str | Path = NEWS_DIR,
-    history_path: str | Path = HISTORY_PATH,
+    history_path: str | Path | None = None,
     template_path: str | Path = TEMPLATE_PATH,
     update_runtime_state: bool = True,
     now: datetime | None = None,
 ) -> ArchiveCommitResult:
     manifest_file = Path(manifest_path)
     refined_file = Path(refined_path)
+    try:
+        manifest = load_manifest(manifest_file)
+    except RunContractError as exc:
+        raise ForgeContractError(str(exc)) from exc
+    archive_root, history_file = _bound_archive_paths(manifest, news_dir, history_path)
+    run_dir = Path(manifest["run_dir"]).resolve()
+    blackboard_path = run_dir / "intelligence_blackboard.json"
+    telemetry_path = run_dir / "telemetry.json"
     payload = assemble_final_payload(manifest_file, refined_file, now=now)
-    manifest = load_manifest(manifest_file)
-    archive_root = Path(news_dir)
     markdown = render_briefing(payload, template_path=template_path)
     if update_runtime_state:
         try:
-            update_phase("forge", "running")
+            update_phase("forge", "running", blackboard_path=blackboard_path)
         except Exception as exc:
             print(f"[WARN] runtime phase telemetry unavailable: {exc}")
 
@@ -538,11 +570,10 @@ def forge_briefing(
         )
 
     def locked_history_update(result: ArchiveCommitResult) -> None:
-        save_history_items(
-            payload["top_10"],
-            archive_ref=str(result.json_path.resolve()),
-            path=Path(history_path),
-            now=now,
+        rebuild_history(
+            news_dir=archive_root,
+            history_file=history_file,
+            now=now or datetime.now(ZoneInfo(manifest["timezone"])),
         )
 
     try:
@@ -585,7 +616,7 @@ def forge_briefing(
                 "markdown_path": str(result.markdown_path.resolve()),
                 "json_sha256": result.json_sha256,
                 "markdown_sha256": result.markdown_sha256,
-                "history_path": str(Path(history_path).resolve()),
+                "history_path": str(history_file),
             },
             now=now,
         )
@@ -611,10 +642,12 @@ def forge_briefing(
 
     if update_runtime_state:
         try:
-            finalize_briefing(str(result.markdown_path))
-            update_phase("forge", "completed")
+            finalize_briefing(
+                str(result.markdown_path), blackboard_path=blackboard_path
+            )
+            update_phase("forge", "completed", blackboard_path=blackboard_path)
             atomic_dump_json(
-                RUNTIME_DIR / "telemetry.json",
+                telemetry_path,
                 {
                     "skill_name": "personal-intelligence-hub",
                     "status": "success",
@@ -635,7 +668,7 @@ def main() -> None:
     parser.add_argument("--manifest", type=Path, required=True)
     parser.add_argument("--refined", type=Path, required=True)
     parser.add_argument("--news-dir", type=Path, default=NEWS_DIR)
-    parser.add_argument("--history-path", type=Path, default=HISTORY_PATH)
+    parser.add_argument("--history-path", type=Path)
     args = parser.parse_args()
     result = forge_briefing(
         args.manifest,

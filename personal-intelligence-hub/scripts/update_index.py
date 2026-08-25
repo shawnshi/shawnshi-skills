@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import hashlib
 import json
 import re
 import uuid
@@ -7,25 +8,133 @@ from datetime import date, datetime, time
 from pathlib import Path
 from typing import Any
 
+from briefing_gate import validate_briefing_data
 from history_manager import save_history_items
 from hub_utils import HISTORY_PATH, NEWS_DIR, atomic_dump_json
 
 
 URL_PATTERN = re.compile(r"https?://[^\s\)\"\'\\\[\]<>]+")
+TRANSACTION_STAGE_PREFIX = ".pih-stage-"
 
 
-def _json_payload(path: Path) -> dict[str, Any]:
+class HistoryArchiveError(RuntimeError):
+    """Raised when a formal archive cannot be trusted as history input."""
+
+
+def _is_transaction_residue(path: Path, source_dir: Path) -> bool:
+    try:
+        relative = path.relative_to(source_dir)
+    except ValueError:
+        return True
+    return any(part.startswith(TRANSACTION_STAGE_PREFIX) for part in relative.parts[:-1])
+
+
+def _read_json_object(path: Path, label: str) -> dict[str, Any]:
     try:
         payload = json.loads(path.read_text(encoding="utf-8"))
-    except (OSError, json.JSONDecodeError):
-        return {}
-    return payload if isinstance(payload, dict) else {}
+    except (OSError, UnicodeError, json.JSONDecodeError) as exc:
+        raise HistoryArchiveError(f"cannot read {label}: {path}: {exc}") from exc
+    if not isinstance(payload, dict):
+        raise HistoryArchiveError(f"{label} must be a JSON object: {path}")
+    return payload
 
 
-def _json_items(path: Path) -> list[dict[str, Any]]:
-    payload = _json_payload(path)
-    items = payload.get("top_10") if isinstance(payload, dict) else None
-    return [item for item in items if isinstance(item, dict)] if isinstance(items, list) else []
+def _sha256(path: Path) -> str:
+    try:
+        return hashlib.sha256(path.read_bytes()).hexdigest()
+    except OSError as exc:
+        raise HistoryArchiveError(f"cannot hash formal archive file: {path}: {exc}") from exc
+
+
+def _validate_commit_sidecar(path: Path, payload: dict[str, Any]) -> None:
+    markdown_path = path.with_suffix(".md")
+    manifest_path = path.parent / f"{path.stem}.manifest.json"
+    has_markdown = markdown_path.is_file()
+    has_manifest = manifest_path.is_file()
+    schema_version = str(payload.get("schema_version") or "")
+    requires_triplet = schema_version in {"1.3", "1.4"}
+    if requires_triplet and not (has_markdown and has_manifest):
+        raise HistoryArchiveError(
+            f"formal triplet is incomplete for schema {schema_version} archive: {path}"
+        )
+    if has_manifest and not has_markdown:
+        raise HistoryArchiveError(f"formal triplet is incomplete: {path}")
+    if not has_manifest:
+        return
+
+    sidecar = _read_json_object(manifest_path, "formal archive sidecar")
+    try:
+        markdown_path.read_text(encoding="utf-8")
+    except (OSError, UnicodeError) as exc:
+        raise HistoryArchiveError(
+            f"cannot read formal archive Markdown: {markdown_path}: {exc}"
+        ) from exc
+    expected = {
+        "contract_version": "1.0",
+        "run_id": payload.get("run_id"),
+        "report_date": payload.get("report_date"),
+        "schema_version": payload.get("schema_version"),
+        "json_file": path.name,
+        "markdown_file": markdown_path.name,
+        "item_count": len(payload.get("top_10", [])),
+    }
+    for field, value in expected.items():
+        if sidecar.get(field) != value:
+            raise HistoryArchiveError(
+                f"formal archive sidecar {field} does not match JSON: {manifest_path}"
+            )
+    if sidecar.get("json_sha256") != _sha256(path):
+        raise HistoryArchiveError(
+            f"formal archive JSON hash does not match sidecar: {path}"
+        )
+    if sidecar.get("markdown_sha256") != _sha256(markdown_path):
+        raise HistoryArchiveError(
+            f"formal archive Markdown hash does not match sidecar: {markdown_path}"
+        )
+
+
+def _verified_archive_payload(path: Path) -> dict[str, Any]:
+    payload = _read_json_object(path, "formal archive")
+    errors, _warnings = validate_briefing_data(payload)
+    if errors:
+        raise HistoryArchiveError(
+            f"briefing gate failed for formal archive {path}: "
+            + "; ".join(str(error) for error in errors)
+        )
+    report_date = str(payload.get("report_date") or "")
+    if report_date:
+        expected_stem = f"intelligence_{report_date.replace('-', '')}_briefing"
+        if path.stem != expected_stem:
+            raise HistoryArchiveError(
+                f"formal archive filename does not match report_date: {path}"
+            )
+    else:
+        legacy_match = re.fullmatch(r"intelligence_(\d{8})_briefing", path.stem)
+        try:
+            legacy_date = (
+                datetime.strptime(legacy_match.group(1), "%Y%m%d").date()
+                if legacy_match is not None
+                else None
+            )
+        except ValueError:
+            legacy_date = None
+        if legacy_date is None:
+            raise HistoryArchiveError(
+                f"legacy formal archive requires a canonical filename date: {path}"
+            )
+    _validate_commit_sidecar(path, payload)
+    return payload
+
+
+def _assert_no_orphan_sidecars(source_dir: Path) -> None:
+    for sidecar in sorted(source_dir.rglob("intelligence_*_briefing.manifest.json")):
+        if _is_transaction_residue(sidecar, source_dir):
+            continue
+        stem = sidecar.name.removesuffix(".manifest.json")
+        json_path = sidecar.with_name(f"{stem}.json")
+        markdown_path = sidecar.with_name(f"{stem}.md")
+        if not json_path.is_file() or not markdown_path.is_file():
+            raise HistoryArchiveError(f"formal triplet is incomplete: {sidecar}")
 
 
 def _archive_datetime(path: Path, payload: dict[str, Any], current: datetime) -> datetime:
@@ -97,6 +206,7 @@ def rebuild_history(
             path
             for path in sorted(source_dir.rglob("intelligence_*_briefing.json"))
             if path.stem != excluded_stem
+            and not _is_transaction_residue(path, source_dir)
         ]
         if source_dir.exists()
         else []
@@ -105,14 +215,21 @@ def rebuild_history(
     markdown_files = [
         path
         for path in sorted(source_dir.rglob("intelligence_*_briefing.md"))
-        if path.with_suffix("").resolve() not in json_stems and path.stem != excluded_stem
+        if path.with_suffix("").resolve() not in json_stems
+        and path.stem != excluded_stem
+        and not _is_transaction_residue(path, source_dir)
     ] if source_dir.exists() else []
+
+    if source_dir.exists():
+        _assert_no_orphan_sidecars(source_dir)
+    verified_json_archives = [
+        (archive, _verified_archive_payload(archive)) for archive in json_files
+    ]
 
     target.parent.mkdir(parents=True, exist_ok=True)
     stage = target.with_name(f".{target.name}.{uuid.uuid4().hex}.rebuild")
     try:
-        for archive in json_files:
-            archive_payload = _json_payload(archive)
+        for archive, archive_payload in verified_json_archives:
             save_history_items(
                 [
                     item
@@ -147,7 +264,7 @@ def rebuild_history(
     atomic_dump_json(target, payload)
     print(
         f"[OK] history rebuilt: {len(payload['entries'])} events from "
-        f"{len(json_files)} JSON and {len(markdown_files)} legacy Markdown archives"
+        f"{len(verified_json_archives)} JSON and {len(markdown_files)} legacy Markdown archives"
     )
     return payload
 

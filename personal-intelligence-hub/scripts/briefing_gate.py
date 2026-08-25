@@ -9,13 +9,19 @@ from pathlib import Path
 from typing import Any
 from zoneinfo import ZoneInfo, ZoneInfoNotFoundError
 
-from history_manager import generate_content_id, generate_event_id, normalize_url
+from history_manager import (
+    generate_content_id,
+    generate_event_id,
+    normalize_text,
+    normalize_url,
+)
 from mix_policy import allocate_target_counts
 from run_contract import item_hash
 
 
 ROOT = Path(__file__).resolve().parent.parent
 SCHEMA_PATH = ROOT / "references" / "briefing_schema.json"
+V13_SCHEMA_PATH = ROOT / "references" / "briefing_schema_v1.3.json"
 V12_SCHEMA_PATH = ROOT / "references" / "briefing_schema_v1.2.json"
 V11_SCHEMA_PATH = ROOT / "references" / "briefing_schema_v1.1.json"
 V10_SCHEMA_PATH = ROOT / "references" / "briefing_schema_v1.0.json"
@@ -23,6 +29,19 @@ TEMPLATE_PATH = ROOT / "references" / "briefing_template.md"
 TEMPLATE_TOKEN_PATTERN = re.compile(r"\{\{.*?\}\}|\{%.*?%\}")
 UNRESOLVED_SENTINELS = {"TBD", "TODO", "LLM_PENDING"}
 STRICT_ISO_DATE_PATTERN = re.compile(r"\d{4}-\d{2}-\d{2}\Z")
+V14_TERMINAL_DISPOSITIONS = {
+    "invalid_or_unknown_date",
+    "outside_window",
+    "source_exclusion",
+    "historical_duplicate",
+    "below_heuristic_threshold",
+    "candidate_capacity",
+    "semantic_duplicate",
+    "below_quality_gate",
+    "semantic_capacity",
+    "red_team_rejected",
+    "retained",
+}
 
 
 def _known_template_tokens() -> set[str]:
@@ -473,6 +492,11 @@ def _validate_v12_data(
     data: dict[str, Any], schema: dict[str, Any] | None = None
 ) -> tuple[list[str], list[str]]:
     schema = schema or json.loads(SCHEMA_PATH.read_text(encoding="utf-8"))
+    is_v14 = str(schema.get("version") or "") == "1.4"
+
+    def is_contract_integer(value: Any) -> bool:
+        return type(value) is int if is_v14 else isinstance(value, int)
+
     errors: list[str] = []
     warnings: list[str] = []
     if not isinstance(data, dict):
@@ -508,13 +532,13 @@ def _validate_v12_data(
         if window.get("mode") != "calendar_days":
             errors.append("window.mode must equal calendar_days")
         days = window.get("days")
-        if not isinstance(days, int) or days <= 0:
+        if not is_contract_integer(days) or days <= 0:
             errors.append("window.days must be a positive integer")
         window_start = _parsed_date(window.get("start"))
         window_end = _parsed_date(window.get("end"))
         if window_start is None or window_end is None:
             errors.append("window start and end must be ISO dates")
-        elif isinstance(days, int) and window_start != window_end - timedelta(days=days - 1):
+        elif is_contract_integer(days) and window_start != window_end - timedelta(days=days - 1):
             errors.append("window does not contain the declared number of calendar days")
         if report_date is not None and window_end != report_date:
             errors.append("report_date must equal window.end")
@@ -552,12 +576,18 @@ def _validate_v12_data(
             semantic_review = {}
         elif semantic_review.get("status") != "passed":
             errors.append("pipeline.semantic_review.status must be passed")
+        if is_v14:
+            for field in schema["pipeline_contract"]["required_semantic_fields"]:
+                if field not in semantic_review:
+                    errors.append(f"missing pipeline.semantic_review.{field}")
         if semantic_review.get("reviewer_kind") != "semantic_model":
             errors.append("pipeline.semantic_review.reviewer_kind must be semantic_model")
         for field in ("reviewer_id", "invocation_id"):
             if not _non_empty(semantic_review.get(field)):
                 errors.append(f"pipeline.semantic_review.{field} is required")
-        if not isinstance(semantic_review.get("turns_used"), int) or semantic_review.get("turns_used", 0) < 1:
+        if not is_contract_integer(semantic_review.get("turns_used")) or semantic_review.get(
+            "turns_used", 0
+        ) < 1:
             errors.append("pipeline.semantic_review.turns_used must be positive")
         if semantic_review.get("halt_condition_met") is not True:
             errors.append("pipeline.semantic_review.halt_condition_met must be true")
@@ -570,7 +600,7 @@ def _validate_v12_data(
             if not re.fullmatch(r"[0-9a-f]{64}", str(semantic_review.get(field) or "")):
                 errors.append(f"pipeline.semantic_review.{field} must be a SHA-256 hex digest")
         if (
-            not isinstance(semantic_review.get("verified_access_count"), int)
+            not is_contract_integer(semantic_review.get("verified_access_count"))
             or semantic_review.get("verified_access_count", -1) < 0
         ):
             errors.append("pipeline.semantic_review.verified_access_count is invalid")
@@ -579,12 +609,18 @@ def _validate_v12_data(
             errors.append("pipeline.red_team status is invalid")
             red_team = {}
         else:
+            if is_v14:
+                for field in schema["pipeline_contract"]["required_red_team_fields"]:
+                    if field not in red_team:
+                        errors.append(f"missing pipeline.red_team.{field}")
             if red_team.get("reviewer_kind") != "logic_adversary":
                 errors.append("pipeline.red_team.reviewer_kind must be logic_adversary")
             for field in ("reviewer_id", "invocation_id"):
                 if not _non_empty(red_team.get(field)):
                     errors.append(f"pipeline.red_team.{field} is required")
-            if not isinstance(red_team.get("turns_used"), int) or red_team.get("turns_used", 0) < 1:
+            if not is_contract_integer(red_team.get("turns_used")) or red_team.get(
+                "turns_used", 0
+            ) < 1:
                 errors.append("pipeline.red_team.turns_used must be positive")
             if red_team.get("halt_condition_met") is not True:
                 errors.append("pipeline.red_team.halt_condition_met must be true")
@@ -599,6 +635,8 @@ def _validate_v12_data(
         errors.append(f"top_10 must contain at most {schema['max_top_items']} items")
     urls: list[str] = []
     event_ids: list[str] = []
+    semantic_identity_ids: list[str] = []
+    dedupe_records: list[tuple[str, bool, str, str]] = []
     observed_domain_counts = {domain: 0 for domain in schema["domain_mix"]["domains"]}
     eligible_major_urls: set[str] = set()
     eligible_major_urls_by_domain: dict[str, set[str]] = {
@@ -606,7 +644,11 @@ def _validate_v12_data(
     }
     l4_hashes: set[str] = set()
     final_item_hashes: list[str] = []
-    covered_hashes = set(str(value) for value in red_team.get("covered_item_hashes", []))
+    covered_values = red_team.get("covered_item_hashes", [])
+    if is_v14 and not isinstance(covered_values, list):
+        errors.append("pipeline.red_team.covered_item_hashes must be a list")
+        covered_values = []
+    covered_hashes = {str(value) for value in covered_values}
     for index, item in enumerate(items):
         path = f"top_10[{index}]"
         if not isinstance(item, dict):
@@ -631,6 +673,7 @@ def _validate_v12_data(
         event_id = str(item.get("event_id") or "")
         event_ids.append(event_id)
         identity = item.get("event_identity")
+        has_complete_semantic_identity = False
         if not isinstance(identity, dict):
             errors.append(f"{path}.event_identity must be an object")
         elif item.get("identity_quality") == "semantic":
@@ -638,6 +681,8 @@ def _validate_v12_data(
                 expected_event_id = generate_event_id(identity)
                 if event_id != expected_event_id:
                     errors.append(f"{path}.event_id does not match event_identity")
+                else:
+                    has_complete_semantic_identity = True
             except ValueError:
                 errors.append(f"{path}.event_identity is incomplete")
         elif item.get("identity_quality") == "provisional":
@@ -648,6 +693,11 @@ def _validate_v12_data(
             )
             if event_id != expected_event_id:
                 errors.append(f"{path}.event_id does not match provisional content identity")
+        if is_v14 and isinstance(identity, dict):
+            try:
+                semantic_identity_ids.append(generate_event_id(identity))
+            except ValueError:
+                pass
         if item.get("identity_quality") not in schema["enums"]["identity_quality"]:
             errors.append(f"invalid {path}.identity_quality")
         if item.get("intelligence_level") not in schema["enums"]["intelligence_level"]:
@@ -674,6 +724,13 @@ def _validate_v12_data(
             errors.append(f"invalid {path}.corroboration_status")
         if item.get("source_type") == "secondary" and item.get("corroboration_status") != "multi_independent":
             errors.append(f"{path} secondary source requires multi_independent corroboration")
+        if (
+            is_v14
+            and item.get("corroboration_status") == "multi_independent"
+            and isinstance(candidate_refs, list)
+            and len(candidate_refs) < 2
+        ):
+            errors.append(f"{path} multi_independent corroboration requires at least two candidate_refs")
 
         access = item.get("access_check")
         if not isinstance(access, dict):
@@ -701,7 +758,7 @@ def _validate_v12_data(
                 errors.append(f"{path}.access_check.method is invalid")
             status_code = access.get("http_status")
             if method in {"http_get", "api"} and (
-                not isinstance(status_code, int) or not 200 <= status_code < 400
+                not is_contract_integer(status_code) or not 200 <= status_code < 400
             ):
                 errors.append(f"{path}.access_check.http_status must show successful access")
 
@@ -736,6 +793,14 @@ def _validate_v12_data(
         if not url.startswith(("http://", "https://")):
             errors.append(f"{path}.url must be an HTTP(S) URL")
         urls.append(url)
+        dedupe_records.append(
+            (
+                event_id,
+                has_complete_semantic_identity,
+                normalize_url(url),
+                normalize_text(str(item.get("title") or "")),
+            )
+        )
         major_signal = item.get("major_signal")
         if not isinstance(major_signal, bool):
             errors.append(f"{path}.major_signal must be boolean")
@@ -766,18 +831,41 @@ def _validate_v12_data(
             item.get("decision_impact_reason") or ""
         ).strip().lower() in {"", "none"}:
             errors.append(f"{path}.decision_impact_reason is required")
+        if is_v14 and type(item.get("near_term_decision_impact")) is not bool:
+            errors.append(f"{path}.near_term_decision_impact must be boolean")
         if item.get("intelligence_level") == "L4":
             l4_hashes.add(current_hash)
 
-    if len(urls) != len(set(urls)):
+    if not is_v14 and len(urls) != len(set(urls)):
         errors.append("top_10 contains duplicate urls")
     if len(event_ids) != len(set(event_ids)):
         errors.append("top_10 contains duplicate event_ids")
+    if is_v14 and len(semantic_identity_ids) != len(set(semantic_identity_ids)):
+        errors.append("top_10 contains duplicate semantic event identities")
+    if is_v14:
+        duplicate_url = False
+        duplicate_title = False
+        for left_index, left in enumerate(dedupe_records):
+            for right in dedupe_records[left_index + 1 :]:
+                left_id, left_complete, left_url, left_title = left
+                right_id, right_complete, right_url, right_title = right
+                if left_id and left_id == right_id:
+                    continue
+                if left_complete and right_complete and left_id != right_id:
+                    continue
+                if left_url == right_url:
+                    duplicate_url = True
+                if left_title and left_title == right_title:
+                    duplicate_title = True
+        if duplicate_url:
+            errors.append("top_10 contains duplicate urls")
+        if duplicate_title:
+            errors.append("top_10 contains duplicate normalized titles")
     reviewed_hashes = sorted(str(value) for value in semantic_review.get("reviewed_item_hashes", []))
     if reviewed_hashes != sorted(final_item_hashes):
         errors.append("pipeline.semantic_review.reviewed_item_hashes do not match final items")
     if (
-        isinstance(semantic_review.get("verified_access_count"), int)
+        is_contract_integer(semantic_review.get("verified_access_count"))
         and semantic_review.get("verified_access_count", 0) != len(items)
     ):
         errors.append(
@@ -814,7 +902,18 @@ def _validate_v12_data(
             errors.append("pipeline.semantic_review.lineage outputs do not match final items")
     if l4_hashes and not l4_hashes.issubset(covered_hashes):
         errors.append("L4 items require matching red-team item hashes")
-    if not l4_hashes and red_team.get("status") == "passed" and not covered_hashes:
+    if is_v14:
+        if any(re.fullmatch(r"[0-9a-f]{64}", value) is None for value in covered_hashes):
+            errors.append("pipeline.red_team.covered_item_hashes contains an invalid hash")
+        if not covered_hashes.issubset(set(final_item_hashes)):
+            errors.append("pipeline.red_team.covered_item_hashes contains an unknown item hash")
+        if l4_hashes and red_team.get("status") != "passed":
+            errors.append("L4 items require red-team status passed")
+        if not l4_hashes and red_team.get("status") != "not_required":
+            errors.append("no-L4 briefing requires red-team status not_required")
+        if red_team.get("status") == "not_required" and covered_hashes:
+            errors.append("not-required red-team cannot claim covered item hashes")
+    elif not l4_hashes and red_team.get("status") == "passed" and not covered_hashes:
         warnings.append("red-team status is passed but no item hashes are recorded")
 
     mix = data.get("mix")
@@ -850,7 +949,8 @@ def _validate_v12_data(
         for name in ("target_counts", "actual_counts"):
             value = mix.get(name)
             if not isinstance(value, dict) or any(
-                not isinstance(value.get(domain), int) or value[domain] < 0 for domain in domains
+                not is_contract_integer(value.get(domain)) or value[domain] < 0
+                for domain in domains
             ):
                 errors.append(f"mix.{name} must contain non-negative integers")
             else:
@@ -986,7 +1086,10 @@ def _validate_v12_data(
         attempted = coverage.get("source_attempted")
         succeeded = coverage.get("source_succeeded")
         failed = coverage.get("source_failed")
-        if any(not isinstance(value, int) or value < 0 for value in (attempted, succeeded, failed)):
+        if any(
+            not is_contract_integer(value) or value < 0
+            for value in (attempted, succeeded, failed)
+        ):
             errors.append("coverage source counts must be non-negative integers")
         elif attempted != succeeded + failed:
             errors.append("coverage source counts do not reconcile")
@@ -1018,13 +1121,20 @@ def _validate_v12_data(
     else:
         observed = funnel.get("observed")
         dispositions = funnel.get("terminal_dispositions")
-        if not isinstance(observed, int) or observed < 0:
+        if not is_contract_integer(observed) or observed < 0:
             errors.append("candidate_funnel.observed must be a non-negative integer")
         if not isinstance(dispositions, dict) or any(
-            not isinstance(value, int) or value < 0 for value in dispositions.values()
+            not is_contract_integer(value) or value < 0 for value in dispositions.values()
         ):
             errors.append("candidate_funnel.terminal_dispositions must contain non-negative integers")
-        elif isinstance(observed, int):
+        elif is_contract_integer(observed):
+            if is_v14:
+                unknown = sorted(set(dispositions) - V14_TERMINAL_DISPOSITIONS)
+                if unknown:
+                    errors.append(
+                        "candidate_funnel contains unknown terminal dispositions: "
+                        + ", ".join(unknown)
+                    )
             if sum(dispositions.values()) != observed:
                 errors.append("candidate_funnel terminal dispositions do not conserve observed items")
             if dispositions.get("retained") != len(items):
@@ -1073,6 +1183,9 @@ def validate_briefing_data(
         selected_schema = schema or json.loads(V12_SCHEMA_PATH.read_text(encoding="utf-8"))
         return _validate_v12_data(data, selected_schema)
     if version == "1.3":
+        selected_schema = schema or json.loads(V13_SCHEMA_PATH.read_text(encoding="utf-8"))
+        return _validate_v12_data(data, selected_schema)
+    if version == "1.4":
         selected_schema = schema or json.loads(SCHEMA_PATH.read_text(encoding="utf-8"))
         return _validate_v12_data(data, selected_schema)
     return [f"unsupported schema_version: {version or 'missing'}"], []

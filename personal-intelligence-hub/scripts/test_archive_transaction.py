@@ -3,6 +3,7 @@ from __future__ import annotations
 import hashlib
 import json
 import os
+import shutil
 import socket
 import tempfile
 import threading
@@ -13,10 +14,16 @@ from unittest.mock import patch
 from archive_transaction import (
     ArchivePostcommitError,
     ArchiveTransactionError,
+    _create_staging_root,
+    _create_windows_staging_root,
     _archive_metadata_lock,
+    _recover_staging,
+    _rollback,
+    _RollbackRecord,
     _windows_mutex_name,
     commit_briefing_pair,
 )
+from briefing_gate import validate_briefing_data
 
 
 def valid_payload() -> dict:
@@ -93,7 +100,480 @@ def sha256(path: Path) -> str:
     return hashlib.sha256(path.read_bytes()).hexdigest()
 
 
+def windows_owner_group_dacl_sddl(path: Path) -> str:
+    import ctypes
+    from ctypes import wintypes
+
+    owner_security_information = 0x00000001
+    group_security_information = 0x00000002
+    dacl_security_information = 0x00000004
+    security_information = (
+        owner_security_information
+        | group_security_information
+        | dacl_security_information
+    )
+    se_file_object = 1
+    sddl_revision_1 = 1
+
+    advapi32 = ctypes.WinDLL("advapi32", use_last_error=True)
+    kernel32 = ctypes.WinDLL("kernel32", use_last_error=True)
+    advapi32.GetNamedSecurityInfoW.argtypes = [
+        wintypes.LPWSTR,
+        wintypes.DWORD,
+        wintypes.DWORD,
+        ctypes.POINTER(ctypes.c_void_p),
+        ctypes.POINTER(ctypes.c_void_p),
+        ctypes.POINTER(ctypes.c_void_p),
+        ctypes.POINTER(ctypes.c_void_p),
+        ctypes.POINTER(ctypes.c_void_p),
+    ]
+    advapi32.GetNamedSecurityInfoW.restype = wintypes.DWORD
+    advapi32.ConvertSecurityDescriptorToStringSecurityDescriptorW.argtypes = [
+        ctypes.c_void_p,
+        wintypes.DWORD,
+        wintypes.DWORD,
+        ctypes.POINTER(wintypes.LPWSTR),
+        ctypes.POINTER(wintypes.ULONG),
+    ]
+    advapi32.ConvertSecurityDescriptorToStringSecurityDescriptorW.restype = wintypes.BOOL
+    kernel32.LocalFree.argtypes = [ctypes.c_void_p]
+    kernel32.LocalFree.restype = ctypes.c_void_p
+
+    security_descriptor = ctypes.c_void_p()
+    status = advapi32.GetNamedSecurityInfoW(
+        str(path),
+        se_file_object,
+        security_information,
+        None,
+        None,
+        None,
+        None,
+        ctypes.byref(security_descriptor),
+    )
+    if status:
+        raise ctypes.WinError(status)
+    string_descriptor = wintypes.LPWSTR()
+    string_length = wintypes.ULONG()
+    try:
+        converted = advapi32.ConvertSecurityDescriptorToStringSecurityDescriptorW(
+            security_descriptor,
+            sddl_revision_1,
+            security_information,
+            ctypes.byref(string_descriptor),
+            ctypes.byref(string_length),
+        )
+        if not converted:
+            raise ctypes.WinError(ctypes.get_last_error())
+        return string_descriptor.value
+    finally:
+        if string_descriptor:
+            kernel32.LocalFree(ctypes.cast(string_descriptor, ctypes.c_void_p))
+        if security_descriptor:
+            kernel32.LocalFree(security_descriptor)
+
+
 class ArchiveTransactionTests(unittest.TestCase):
+    @unittest.skipUnless(os.name == "nt", "Windows ACL behavior")
+    def test_windows_staging_collision_retries_without_touching_existing(self):
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            collision = root / ".pih-stage-collision"
+            collision.mkdir()
+            collision_marker = collision / "owner.txt"
+            collision_marker.write_text("unchanged", encoding="utf-8")
+
+            colliding_uuid = unittest.mock.Mock(hex="collision")
+            fresh_uuid = unittest.mock.Mock(hex="fresh")
+            with patch(
+                "archive_transaction.uuid.uuid4",
+                side_effect=(colliding_uuid, fresh_uuid),
+            ):
+                created = _create_windows_staging_root(root)
+
+            self.assertEqual(created, root / ".pih-stage-fresh")
+            self.assertTrue(created.is_dir())
+            self.assertEqual(collision_marker.read_text(encoding="utf-8"), "unchanged")
+
+    @unittest.skipUnless(os.name == "nt", "Windows ACL behavior")
+    def test_windows_staging_creation_failure_is_closed(self):
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            with patch(
+                "archive_transaction.Path.mkdir",
+                side_effect=PermissionError("injected staging denial"),
+            ):
+                with self.assertRaisesRegex(
+                    ArchiveTransactionError,
+                    "could not create Windows archive staging",
+                ):
+                    _create_windows_staging_root(root)
+            self.assertEqual(list(root.glob(".pih-stage-*")), [])
+
+    @unittest.skipUnless(os.name == "nt", "Windows ACL behavior")
+    def test_windows_promoted_files_match_direct_child_security_descriptor(self):
+        base = Path(tempfile.gettempdir()).resolve()
+        root = base / f"pih-acl-parity-{os.getpid()}-{os.urandom(8).hex()}"
+        root.mkdir(mode=0o777, parents=False, exist_ok=False)
+        try:
+            reference = root / "direct-child.reference"
+            reference.write_bytes(b"reference")
+            expected_sddl = windows_owner_group_dacl_sddl(reference)
+
+            result = commit_briefing_pair(
+                valid_payload(),
+                news_dir=root,
+                report_date="2026-08-10",
+                run_id="run-20260810",
+                render_markdown=render_markdown,
+            )
+
+            for target in (
+                result.json_path,
+                result.markdown_path,
+                result.manifest_path,
+            ):
+                self.assertEqual(
+                    windows_owner_group_dacl_sddl(target),
+                    expected_sddl,
+                    target.name,
+                )
+                self.assertTrue(os.access(target, os.R_OK), target.name)
+        finally:
+            if root.exists():
+                shutil.rmtree(root)
+
+    @unittest.skipIf(os.name == "nt", "POSIX staging behavior")
+    def test_posix_staging_uses_private_mkdtemp(self):
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            expected = root / ".pih-stage-frozen"
+            with patch(
+                "archive_transaction.tempfile.mkdtemp",
+                return_value=str(expected),
+            ) as make_temp:
+                self.assertEqual(_create_staging_root(root), expected)
+            make_temp.assert_called_once_with(prefix=".pih-stage-", dir=root)
+
+    def test_rollback_preserves_backups_for_repeatable_recovery(self):
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            target_a = root / "a.json"
+            target_b = root / "b.md"
+            backup_a = root / "a.previous"
+            backup_b = root / "b.previous"
+            target_a.write_bytes(b"new-a")
+            target_b.write_bytes(b"new-b")
+            backup_a.write_bytes(b"old-a")
+            backup_b.write_bytes(b"old-b")
+            snapshots = {
+                target_a: _RollbackRecord(
+                    backup=backup_a,
+                    before_sha256=hashlib.sha256(b"old-a").hexdigest(),
+                    promoted_sha256=hashlib.sha256(b"new-a").hexdigest(),
+                ),
+                target_b: _RollbackRecord(
+                    backup=backup_b,
+                    before_sha256=hashlib.sha256(b"old-b").hexdigest(),
+                    promoted_sha256=hashlib.sha256(b"new-b").hexdigest(),
+                ),
+            }
+
+            real_copy2 = shutil.copy2
+            injected = False
+
+            def fail_once(source: Path, destination: Path):
+                nonlocal injected
+                if destination == target_a and not injected:
+                    injected = True
+                    raise OSError("injected rollback copy failure")
+                return real_copy2(source, destination)
+
+            with patch("archive_transaction.shutil.copy2", side_effect=fail_once):
+                failures = _rollback(snapshots)
+
+            self.assertEqual(len(failures), 1)
+            self.assertIn("injected rollback copy failure", failures[0])
+            self.assertEqual(target_a.read_bytes(), b"new-a")
+            self.assertEqual(target_b.read_bytes(), b"old-b")
+            self.assertTrue(backup_a.is_file())
+            self.assertTrue(backup_b.is_file())
+
+            self.assertEqual(_rollback(snapshots), [])
+            self.assertEqual(target_a.read_bytes(), b"old-a")
+            self.assertEqual(target_b.read_bytes(), b"old-b")
+            self.assertTrue(backup_a.is_file())
+            self.assertTrue(backup_b.is_file())
+
+    def test_recovery_journal_is_fully_validated_before_any_target_change(self):
+        cases = (
+            "history_target",
+            "other_date_target",
+            "missing_target",
+            "missing_report_date",
+            "blank_run_id",
+            "mismatched_run_id",
+            "legacy_hashes",
+        )
+        for case in cases:
+            with self.subTest(case=case), tempfile.TemporaryDirectory() as directory:
+                root = Path(directory)
+                stem = "intelligence_20260810_briefing"
+                targets = (
+                    root / f"{stem}.json",
+                    root / f"{stem}.md",
+                    root / f"{stem}.manifest.json",
+                )
+                originals = {}
+                staging = root / ".pih-stage-forged"
+                backup_root = staging / "backup"
+                backup_root.mkdir(parents=True)
+                snapshots = []
+                for index, target in enumerate(targets):
+                    original = f"current-{index}".encode("utf-8")
+                    target.write_bytes(original)
+                    originals[target] = original
+                    backup = backup_root / f"{index}-{target.name}.previous"
+                    backup.write_bytes(f"previous-{index}".encode("utf-8"))
+                    snapshots.append(
+                        {
+                            "target": str(target.resolve()),
+                            "backup": str(backup.resolve()),
+                            "backup_sha256": sha256(backup),
+                            "before_sha256": sha256(backup),
+                            "promoted_sha256": sha256(target),
+                        }
+                    )
+
+                protected = root / ".pih_history_v2.json"
+                protected.write_bytes(b"protected-history")
+                other_date = root / "intelligence_20260809_briefing.json"
+                other_date.write_bytes(b"other-date")
+                (staging / f"{stem}.manifest.json").write_text(
+                    json.dumps(
+                        {
+                            "run_id": "run-20260810",
+                            "report_date": "2026-08-10",
+                            "json_file": f"{stem}.json",
+                            "markdown_file": f"{stem}.md",
+                        }
+                    ),
+                    encoding="utf-8",
+                )
+                if case == "history_target":
+                    snapshots[0]["target"] = str(protected.resolve())
+                elif case == "other_date_target":
+                    snapshots[0]["target"] = str(other_date.resolve())
+                elif case == "missing_target":
+                    snapshots.pop(0)
+
+                journal = {
+                    "contract_version": "1.0",
+                    "run_id": "run-20260810",
+                    "report_date": "2026-08-10",
+                    "phase": "promoting",
+                    "promoted_count": 2,
+                    "snapshots": snapshots,
+                }
+                if case == "missing_report_date":
+                    del journal["report_date"]
+                elif case == "blank_run_id":
+                    journal["run_id"] = "  "
+                elif case == "mismatched_run_id":
+                    journal["run_id"] = "run-forged"
+                elif case == "legacy_hashes":
+                    for snapshot in journal["snapshots"]:
+                        snapshot.pop("before_sha256")
+                        snapshot.pop("promoted_sha256")
+                (staging / "transaction.json").write_text(
+                    json.dumps(journal), encoding="utf-8"
+                )
+
+                with self.assertRaisesRegex(
+                    ArchiveTransactionError, "recovery journal"
+                ):
+                    _recover_staging(root)
+
+                for target, original in originals.items():
+                    self.assertEqual(target.read_bytes(), original)
+                self.assertEqual(protected.read_bytes(), b"protected-history")
+                self.assertEqual(other_date.read_bytes(), b"other-date")
+                self.assertTrue(staging.is_dir())
+
+    def test_stale_absent_snapshots_do_not_delete_new_complete_set(self):
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            stem = "intelligence_20260810_briefing"
+            targets = (
+                root / f"{stem}.json",
+                root / f"{stem}.md",
+                root / f"{stem}.manifest.json",
+            )
+            staging = root / ".pih-stage-interrupted"
+            backup_root = staging / "backup"
+            backup_root.mkdir(parents=True)
+            markdown_backup = backup_root / f"1-{targets[1].name}.previous"
+            markdown_backup.write_bytes(b"old markdown")
+            promoted = (b"stale json", b"stale markdown", b"stale manifest")
+            (staging / targets[2].name).write_text(
+                json.dumps(
+                    {
+                        "run_id": "run-stale",
+                        "report_date": "2026-08-10",
+                        "json_file": targets[0].name,
+                        "markdown_file": targets[1].name,
+                    }
+                ),
+                encoding="utf-8",
+            )
+            snapshots = []
+            for index, target in enumerate(targets):
+                before = sha256(markdown_backup) if index == 1 else None
+                snapshots.append(
+                    {
+                        "target": str(target.resolve()),
+                        "backup": (
+                            str(markdown_backup.resolve()) if index == 1 else None
+                        ),
+                        "backup_sha256": before,
+                        "before_sha256": before,
+                        "promoted_sha256": hashlib.sha256(promoted[index]).hexdigest(),
+                    }
+                )
+            (staging / "transaction.json").write_text(
+                json.dumps(
+                    {
+                        "contract_version": "1.0",
+                        "run_id": "run-stale",
+                        "report_date": "2026-08-10",
+                        "phase": "promoting",
+                        "promoted_count": 1,
+                        "snapshots": snapshots,
+                    }
+                ),
+                encoding="utf-8",
+            )
+            legitimate = (b"legitimate json", b"legitimate markdown", b"legitimate manifest")
+            for target, content in zip(targets, legitimate):
+                target.write_bytes(content)
+
+            with self.assertRaisesRegex(ArchiveTransactionError, "rollback CAS mismatch"):
+                _recover_staging(root)
+
+            self.assertEqual(tuple(target.read_bytes() for target in targets), legitimate)
+            self.assertTrue(staging.is_dir())
+
+    def test_healthy_committed_recovery_only_cleans_staging(self):
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            targets, _, staging = self._seed_committed_recovery(root)
+            committed = {name: path.read_bytes() for name, path in targets.items()}
+
+            _recover_staging(root)
+            _recover_staging(root)
+
+            self.assertFalse(staging.exists())
+            for name, path in targets.items():
+                self.assertEqual(path.read_bytes(), committed[name])
+
+    def test_invalid_committed_recovery_with_foreign_hash_fails_closed(self):
+        cases = (
+            "target_missing",
+            "markdown_corrupt",
+            "sidecar_hash_wrong",
+            "json_gate_failure",
+        )
+        for case in cases:
+            with self.subTest(case=case), tempfile.TemporaryDirectory() as directory:
+                root = Path(directory)
+                targets, _, staging = self._seed_committed_recovery(root)
+                if case == "target_missing":
+                    targets["markdown"].unlink()
+                elif case == "markdown_corrupt":
+                    targets["markdown"].write_bytes(b"corrupt markdown bytes")
+                elif case == "sidecar_hash_wrong":
+                    sidecar = json.loads(
+                        targets["manifest"].read_text(encoding="utf-8")
+                    )
+                    sidecar["json_sha256"] = "0" * 64
+                    targets["manifest"].write_text(
+                        json.dumps(sidecar), encoding="utf-8"
+                    )
+                elif case == "json_gate_failure":
+                    payload = json.loads(targets["json"].read_text(encoding="utf-8"))
+                    del payload["top_10"][0]["retrieved_at"]
+                    targets["json"].write_text(
+                        json.dumps(payload, ensure_ascii=False, indent=2),
+                        encoding="utf-8",
+                    )
+                    sidecar = json.loads(
+                        targets["manifest"].read_text(encoding="utf-8")
+                    )
+                    sidecar["json_sha256"] = sha256(targets["json"])
+                    targets["manifest"].write_text(
+                        json.dumps(sidecar), encoding="utf-8"
+                    )
+
+                foreign = {
+                    name: path.read_bytes() if path.is_file() else None
+                    for name, path in targets.items()
+                }
+
+                with self.assertRaisesRegex(
+                    ArchiveTransactionError,
+                    "rollback was incomplete",
+                ):
+                    _recover_staging(root)
+
+                self.assertTrue(staging.is_dir())
+                journal = json.loads(
+                    (staging / "transaction.json").read_text(encoding="utf-8")
+                )
+                self.assertEqual(
+                    journal["recovery"]["status"],
+                    "rollback_incomplete",
+                )
+                self.assertEqual(
+                    {
+                        name: path.read_bytes() if path.is_file() else None
+                        for name, path in targets.items()
+                    },
+                    foreign,
+                )
+                backups = sorted((staging / "backup").glob("*.previous"))
+                self.assertEqual(len(backups), 3)
+
+                with self.assertRaisesRegex(
+                    ArchiveTransactionError,
+                    "previous committed recovery rollback is still incomplete",
+                ):
+                    _recover_staging(root)
+                self.assertEqual(
+                    {
+                        name: path.read_bytes() if path.is_file() else None
+                        for name, path in targets.items()
+                    },
+                    foreign,
+                )
+                self.assertTrue(staging.is_dir())
+                self.assertEqual(len(list((staging / "backup").glob("*.previous"))), 3)
+
+    def test_invalid_committed_recovery_without_complete_backups_fails_closed(self):
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            targets, _, staging = self._seed_committed_recovery(root)
+            targets["markdown"].write_bytes(b"corrupt markdown bytes")
+            next((staging / "backup").glob("1-*.previous")).unlink()
+            damaged = {name: path.read_bytes() for name, path in targets.items()}
+
+            with self.assertRaisesRegex(ArchiveTransactionError, "backup is missing"):
+                _recover_staging(root)
+
+            self.assertTrue(staging.is_dir())
+            self.assertEqual(
+                {name: path.read_bytes() for name, path in targets.items()},
+                damaged,
+            )
+
     def test_windows_mutex_name_uses_machine_global_namespace(self):
         with tempfile.TemporaryDirectory() as directory:
             name = _windows_mutex_name(Path(directory))
@@ -642,6 +1122,69 @@ class ArchiveTransactionTests(unittest.TestCase):
         targets["markdown"].write_text("old markdown", encoding="utf-8")
         targets["manifest"].write_bytes(b'{"old_manifest":true}')
         return targets
+
+    @staticmethod
+    def _seed_committed_recovery(
+        root: Path,
+    ) -> tuple[dict[str, Path], dict[str, bytes], Path]:
+        targets = ArchiveTransactionTests._seed_existing_set(root)
+        originals = {name: path.read_bytes() for name, path in targets.items()}
+        staging = root / ".pih-stage-committed"
+        backup_root = staging / "backup"
+        backup_root.mkdir(parents=True)
+        snapshots = []
+        for index, (name, path) in enumerate(targets.items()):
+            backup = backup_root / f"{index}-{path.name}.previous"
+            backup.write_bytes(originals[name])
+            snapshots.append(
+                {
+                    "target": str(path.resolve()),
+                    "backup": str(backup.resolve()),
+                    "backup_sha256": sha256(backup),
+                    "before_sha256": sha256(backup),
+                }
+            )
+
+        payload = valid_payload()
+        _, gate_warnings = validate_briefing_data(payload)
+        json_bytes = json.dumps(payload, ensure_ascii=False, indent=2).encode("utf-8")
+        markdown_bytes = render_markdown(payload).encode("utf-8")
+        targets["json"].write_bytes(json_bytes)
+        targets["markdown"].write_bytes(markdown_bytes)
+        targets["manifest"].write_text(
+            json.dumps(
+                {
+                    "contract_version": "1.0",
+                    "run_id": "run-20260810",
+                    "report_date": "2026-08-10",
+                    "schema_version": payload["schema_version"],
+                    "json_file": targets["json"].name,
+                    "markdown_file": targets["markdown"].name,
+                    "json_sha256": hashlib.sha256(json_bytes).hexdigest(),
+                    "markdown_sha256": hashlib.sha256(markdown_bytes).hexdigest(),
+                    "item_count": len(payload["top_10"]),
+                    "committed_at": "2026-08-10T12:00:00+08:00",
+                    "gate_warnings": gate_warnings,
+                }
+            ),
+            encoding="utf-8",
+        )
+        for snapshot, path in zip(snapshots, targets.values()):
+            snapshot["promoted_sha256"] = sha256(path)
+        (staging / "transaction.json").write_text(
+            json.dumps(
+                {
+                    "contract_version": "1.0",
+                    "run_id": "run-20260810",
+                    "report_date": "2026-08-10",
+                    "phase": "committed",
+                    "promoted_count": 3,
+                    "snapshots": snapshots,
+                }
+            ),
+            encoding="utf-8",
+        )
+        return targets, originals, staging
 
 
 if __name__ == "__main__":

@@ -235,7 +235,7 @@ def load_recent_history(
         entry
         for entry in _load_entries(path)
         if (timestamp := _entry_timestamp(entry)) is not None
-        and timestamp.astimezone(current.tzinfo) >= cutoff
+        and cutoff <= timestamp.astimezone(current.tzinfo) <= current
     ]
 
 
@@ -258,10 +258,16 @@ def match_history(
         str(candidate.get("title") or ""), str(candidate.get("source") or "")
     )
     candidate_title = normalize_text(str(candidate.get("title") or ""))
+    candidate_is_semantic = candidate_id.startswith("evt1_")
     for entry in pool:
         entry_id = str(entry.get("event_id") or "")
         if candidate_id and entry_id == candidate_id:
             return {"redundant": True, "match_type": "event_id", "matched_id": entry_id}
+        # A complete semantic identity is the event key.  Stable index or feed URLs
+        # are often reused for multiple releases, so URL/title fallbacks must not
+        # collapse two explicitly different semantic events.
+        if candidate_is_semantic and entry_id.startswith("evt1_"):
+            continue
         entry_urls = {
             normalize_url(str(value))
             for value in [entry.get("canonical_url"), *(entry.get("urls") or [])]

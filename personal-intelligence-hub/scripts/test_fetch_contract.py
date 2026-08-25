@@ -1,9 +1,309 @@
 import asyncio
+import json
+import os
+import subprocess
+import sys
+import textwrap
 import unittest
 from datetime import date
+from pathlib import Path
 from unittest.mock import AsyncMock, patch
 
 import fetch_news
+
+
+def _run_scan_subprocess(*, stubborn: bool) -> tuple[subprocess.CompletedProcess, dict]:
+    program = textwrap.dedent(
+        r"""
+        import asyncio
+        import json
+        import time
+        from datetime import date
+        from unittest.mock import AsyncMock, patch
+
+        import fetch_news
+
+        class Session:
+            def __init__(self, *args, **kwargs):
+                pass
+
+            async def __aenter__(self):
+                return self
+
+            async def __aexit__(self, exc_type, exc, tb):
+                return None
+
+        async def stubborn_source(*args, **kwargs):
+            while True:
+                try:
+                    await asyncio.sleep(3600)
+                except asyncio.CancelledError:
+                    continue
+
+        async def normal_source(*args, **kwargs):
+            return ([], "OK")
+
+        source = stubborn_source if __import__("sys").argv[1] == "stubborn" else normal_source
+        saved = []
+        with (
+            patch("fetch_news.ensure_runtime_dirs"),
+            patch("fetch_news.init_blackboard"),
+            patch("fetch_news.update_phase"),
+            patch("fetch_news.record_scan_stats"),
+            patch("fetch_news.load_cache", return_value={}),
+            patch("fetch_news.save_cache"),
+            patch("fetch_news.load_config", return_value=({"filters": {}}, [])),
+            patch("aiohttp.TCPConnector", return_value=object()),
+            patch("aiohttp.ClientSession", Session),
+            patch("fetch_news.fetch_hackernews", side_effect=source),
+            patch("fetch_news.fetch_github_trending", AsyncMock(return_value=([], "OK"))),
+            patch("fetch_news.fetch_v2ex", AsyncMock(return_value=([], "OK"))),
+            patch("fetch_news.atomic_dump_json", side_effect=lambda path, data: saved.append(data)),
+        ):
+            started = time.monotonic()
+            payload = asyncio.run(
+                fetch_news.scan_all(
+                    report_date=date(2026, 8, 10),
+                    max_concurrency=2,
+                    scan_deadline_seconds=0.04,
+                    cancellation_grace_seconds=0.04,
+                )
+            )
+            elapsed = time.monotonic() - started
+        print(json.dumps({
+            "elapsed": elapsed,
+            "pending": payload["metadata"]["cancellation_pending_sources"],
+            "attempted": payload["coverage"]["source_attempted"],
+        }))
+        """
+    )
+    isolated_temp = Path(os.environ["TEMP"]).resolve()
+    env = os.environ.copy()
+    env["PYTHONDONTWRITEBYTECODE"] = "1"
+    env["TEMP"] = str(isolated_temp)
+    env["TMP"] = str(isolated_temp)
+    env["PYTHONPATH"] = str(Path(__file__).resolve().parent)
+    completed = subprocess.run(
+        [sys.executable, "-B", "-c", program, "stubborn" if stubborn else "normal"],
+        cwd=Path(__file__).resolve().parent,
+        env=env,
+        capture_output=True,
+        text=True,
+        timeout=1.5,
+        check=True,
+    )
+    payload = json.loads(completed.stdout.strip().splitlines()[-1])
+    return completed, payload
+
+
+def _run_owner_starvation_subprocess() -> tuple[subprocess.CompletedProcess, dict]:
+    program = textwrap.dedent(
+        r"""
+        import asyncio
+        import json
+        import time
+        from pathlib import Path
+        from unittest.mock import patch
+
+        import fetch_news
+
+        async def starve_worker_loop(**kwargs):
+            while True:
+                pass
+
+        blackboard = Path(__import__("sys").argv[1])
+        real_isolated_runner = fetch_news._run_in_isolated_daemon_loop
+        timing = {}
+
+        async def timed_isolated_runner(*args, **kwargs):
+            owner_started = time.monotonic()
+            try:
+                return await real_isolated_runner(*args, **kwargs)
+            finally:
+                timing["owner_elapsed"] = time.monotonic() - owner_started
+
+        started = time.monotonic()
+        with (
+            patch("fetch_news._scan_all_impl", side_effect=starve_worker_loop),
+            patch(
+                "fetch_news._run_in_isolated_daemon_loop",
+                side_effect=timed_isolated_runner,
+            ),
+        ):
+            try:
+                asyncio.run(
+                    fetch_news.scan_all(
+                        scan_deadline_seconds=0.04,
+                        cancellation_grace_seconds=0.04,
+                        blackboard_path=blackboard,
+                    )
+                )
+            except Exception as exc:
+                print(json.dumps({
+                    "elapsed": time.monotonic() - started,
+                    "owner_elapsed": timing["owner_elapsed"],
+                    "error_type": type(exc).__name__,
+                    "message": str(exc),
+                    "blackboard_status": json.loads(
+                        blackboard.read_text(encoding="utf-8")
+                    )["status"],
+                }))
+            else:
+                raise AssertionError("starved worker unexpectedly completed")
+        """
+    )
+    env = os.environ.copy()
+    env["PYTHONDONTWRITEBYTECODE"] = "1"
+    env["PYTHONPATH"] = str(Path(__file__).resolve().parent)
+    child_blackboard = (
+        Path(os.environ["TEMP"])
+        / f"starved-blackboard-{os.getpid()}-{os.urandom(6).hex()}.json"
+    )
+    completed = subprocess.run(
+        [sys.executable, "-B", "-c", program, str(child_blackboard)],
+        cwd=Path(__file__).resolve().parent,
+        env=env,
+        capture_output=True,
+        text=True,
+        timeout=1.5,
+        check=True,
+    )
+    payload = json.loads(completed.stdout.strip().splitlines()[-1])
+    return completed, payload
+
+
+def _run_cancelled_commit_subprocess() -> tuple[subprocess.CompletedProcess, dict]:
+    program = textwrap.dedent(
+        r"""
+        import asyncio
+        import hashlib
+        import json
+        import threading
+        import time
+        from datetime import date
+        from pathlib import Path
+        from unittest.mock import AsyncMock, patch
+
+        import fetch_news
+        from hub_utils import atomic_dump_json as real_atomic_dump_json
+
+        root = Path(__import__("sys").argv[1])
+        root.mkdir(parents=True, exist_ok=True)
+        latest = root / "latest.json"
+        current = root / "current.json"
+        cache = root / "cache.json"
+        blackboard = root / "blackboard.json"
+        commit_started = threading.Event()
+        release_commit = threading.Event()
+
+        class Session:
+            def __init__(self, *args, **kwargs):
+                pass
+
+            async def __aenter__(self):
+                return self
+
+            async def __aexit__(self, exc_type, exc, tb):
+                return None
+
+        async def stubborn_source(*args, **kwargs):
+            while True:
+                try:
+                    await asyncio.sleep(3600)
+                except asyncio.CancelledError:
+                    continue
+
+        def controlled_dump(path, data):
+            if Path(path) == latest and not commit_started.is_set():
+                commit_started.set()
+                if not release_commit.wait(1.0):
+                    raise RuntimeError("test commit release timed out")
+            real_atomic_dump_json(Path(path), data)
+
+        def snapshot():
+            result = {}
+            for name, path in {
+                "latest": latest,
+                "current": current,
+                "cache": cache,
+                "blackboard": blackboard,
+            }.items():
+                result[name] = (
+                    hashlib.sha256(path.read_bytes()).hexdigest()
+                    if path.exists()
+                    else None
+                )
+            return result
+
+        async def exercise():
+            with (
+                patch("fetch_news.ensure_runtime_dirs"),
+                patch("fetch_news.load_cache", return_value={}),
+                patch("fetch_news.load_config", return_value=({"filters": {}}, [])),
+                patch("aiohttp.TCPConnector", return_value=object()),
+                patch("aiohttp.ClientSession", Session),
+                patch("fetch_news.fetch_hackernews", side_effect=stubborn_source),
+                patch("fetch_news.fetch_github_trending", AsyncMock(return_value=([], "OK"))),
+                patch("fetch_news.fetch_v2ex", AsyncMock(return_value=([], "OK"))),
+                patch("fetch_news.atomic_dump_json", side_effect=controlled_dump),
+            ):
+                scan_task = asyncio.create_task(
+                    fetch_news.scan_all(
+                        report_date=date(2026, 8, 10),
+                        scan_deadline_seconds=0.04,
+                        cancellation_grace_seconds=0.04,
+                        output_path=latest,
+                        current_output_path=current,
+                        cache_path=cache,
+                        blackboard_path=blackboard,
+                    )
+                )
+                deadline = asyncio.get_running_loop().time() + 1.0
+                while not commit_started.is_set():
+                    if asyncio.get_running_loop().time() >= deadline:
+                        raise AssertionError("commit did not start")
+                    await asyncio.sleep(0.005)
+                release_timer = threading.Timer(0.12, release_commit.set)
+                release_timer.start()
+                cancelled_at = time.monotonic()
+                scan_task.cancel()
+                try:
+                    await scan_task
+                except asyncio.CancelledError:
+                    pass
+                else:
+                    raise AssertionError("scan cancellation was swallowed")
+                cancel_elapsed = time.monotonic() - cancelled_at
+                after_return = snapshot()
+                await asyncio.sleep(0.25)
+                later = snapshot()
+                release_timer.join(timeout=0.5)
+                status = json.loads(blackboard.read_text(encoding="utf-8"))["status"]
+                return {
+                    "cancel_elapsed": cancel_elapsed,
+                    "after_return": after_return,
+                    "later": later,
+                    "blackboard_status": status,
+                }
+
+        print(json.dumps(asyncio.run(exercise())))
+        """
+    )
+    env = os.environ.copy()
+    env["PYTHONDONTWRITEBYTECODE"] = "1"
+    env["PYTHONPATH"] = str(Path(__file__).resolve().parent)
+    child_root = Path(os.environ["TEMP"]) / f"cancel-commit-{os.getpid()}-{os.urandom(6).hex()}"
+    completed = subprocess.run(
+        [sys.executable, "-B", "-c", program, str(child_root)],
+        cwd=Path(__file__).resolve().parent,
+        env=env,
+        capture_output=True,
+        text=True,
+        timeout=2.0,
+        check=True,
+    )
+    payload = json.loads(completed.stdout.strip().splitlines()[-1])
+    return completed, payload
 
 
 class FetchContractTests(unittest.IsolatedAsyncioTestCase):
@@ -501,6 +801,45 @@ class BoundedConcurrencyTests(unittest.IsolatedAsyncioTestCase):
 
         self.assertLess(loop.time() - started, 0.5)
         self.assertEqual(saved[0]["metadata"]["cancellation_pending_sources"], 1)
+
+    def test_scan_process_exits_when_source_ignores_repeated_cancellation(self):
+        completed, payload = _run_scan_subprocess(stubborn=True)
+
+        self.assertNotIn("Task was destroyed", completed.stderr)
+        self.assertEqual(payload["pending"], 1)
+        self.assertEqual(payload["attempted"], 3)
+        self.assertLess(payload["elapsed"], 0.04 + 0.04 + 0.35)
+
+    def test_scan_process_isolation_preserves_normal_source_completion(self):
+        completed, payload = _run_scan_subprocess(stubborn=False)
+
+        self.assertEqual(completed.stderr, "")
+        self.assertEqual(payload["pending"], 0)
+        self.assertEqual(payload["attempted"], 3)
+        self.assertLess(payload["elapsed"], 0.35)
+
+    def test_owner_deadline_bounds_a_starved_isolated_loop(self):
+        completed, payload = _run_owner_starvation_subprocess()
+
+        self.assertEqual(completed.stderr, "")
+        self.assertEqual(payload["error_type"], "ScanOwnerDeadlineExceeded")
+        self.assertIn("owner deadline", payload["message"])
+        self.assertEqual(payload["blackboard_status"], "failed")
+        self.assertLess(
+            payload["owner_elapsed"],
+            0.04
+            + 0.04
+            + fetch_news.OWNER_DEADLINE_EPSILON_SECONDS
+            + 0.2,
+        )
+
+    def test_external_cancel_waits_for_commit_and_prevents_late_writes(self):
+        completed, payload = _run_cancelled_commit_subprocess()
+
+        self.assertEqual(completed.stderr, "")
+        self.assertGreaterEqual(payload["cancel_elapsed"], 0.08)
+        self.assertEqual(payload["after_return"], payload["later"])
+        self.assertEqual(payload["blackboard_status"], "cancelled")
 
     async def test_scan_output_exposes_coverage_quarantine_and_conserved_funnel(self):
         valid = {

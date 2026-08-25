@@ -254,32 +254,6 @@ def post_process_entities(output: dict, focus_data: dict) -> dict:
     return output
 
 
-def sanitize_banned_words(data):
-    banned_map = {
-        "中台": "数据底座",
-        "全面": "系统化",
-        "赋能": "支持",
-        "智慧": "智能",
-        "大脑": "决策引擎",
-        "小助手": "助手",
-        "数字分身": "数字孪生",
-        "卓越": "杰出",
-        "顶尖": "核心",
-        "拯救生命": "保障安全"
-    }
-    if isinstance(data, dict):
-        return {k: sanitize_banned_words(v) for k, v in data.items()}
-    elif isinstance(data, list):
-        return [sanitize_banned_words(item) for item in data]
-    elif isinstance(data, str):
-        if data.startswith("http://") or data.startswith("https://"):
-            return data
-        for banned, replacement in banned_map.items():
-            data = data.replace(banned, replacement)
-        return data
-    return data
-
-
 def refine(
     focus_path: Path | None = None,
     min_score: int | None = None,
@@ -288,8 +262,10 @@ def refine(
     manifest_path: Path | None = None,
     scan_path: Path | None = None,
     candidates_path: Path | None = None,
+    blackboard_path: Path | None = None,
 ) -> None:
-    ensure_runtime_dirs()
+    if blackboard_path is None:
+        ensure_runtime_dirs()
     if manifest_path is None:
         raise RunContractError("--manifest is required; heuristic refinement must belong to an active run")
     manifest = require_stage(manifest_path, "baseline", {"completed", "degraded"})
@@ -307,7 +283,7 @@ def refine(
         or file_sha256(history_path) != history_record.get("artifact_sha256")
     ):
         raise RunContractError("history_snapshot bytes changed")
-    update_phase("refine", "running")
+    update_phase("refine", "running", blackboard_path=blackboard_path)
     scan_data, focus_data = load_inputs(focus_path, baseline_path)
     dedupe_window = dedupe_days or focus_data.get("filters", {}).get("dedupe_days", 7)
     report_clock = datetime.combine(
@@ -327,14 +303,13 @@ def refine(
         max_items_override=max_items,
         history_entries=history_entries,
     )
-    output = sanitize_banned_words(output)
     for candidate in output.get("items", []):
         if isinstance(candidate, dict):
             candidate["candidate_object_sha256"] = candidate_object_hash(candidate)
     output["run_id"] = manifest["run_id"]
     output["baseline_sha256"] = baseline["artifact_sha256"]
     atomic_dump_json(output_path, output)
-    update_phase("refine", "candidates_ready")
+    update_phase("refine", "candidates_ready", blackboard_path=blackboard_path)
     print(f"[OK] heuristic candidates saved to {output_path}")
     return output
 

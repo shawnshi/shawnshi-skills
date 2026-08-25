@@ -1,7 +1,7 @@
 {
   "schema_version": 3,
   "skill": "academic-scientific-visualization",
-  "generated_at": "2026-08-16T22:02:19",
+  "generated_at": "2026-08-25T21:44:11+08:00",
   "hash_algorithm": "SHA-256",
   "text_hash_normalization": "LF",
   "skill_md": "SKILL.md",
@@ -41,15 +41,15 @@
     },
     {
       "path": "assets/nature.mplstyle",
-      "sha256": "05b5cab4b5286cd812ff3ceba31845c08baa083d77382df05ec100383e4ff040"
+      "sha256": "229848397e716ada19a53b10eeef69cf5945487ba92afc1842a269402c15d154"
     },
     {
       "path": "assets/presentation.mplstyle",
-      "sha256": "a47167d633cd0695bc428a42ed4e790a69f90d0204ed560bae6902785ba2b823"
+      "sha256": "d6e9d1580776490e240b6339708a19e409cd980267212a798455e157414c7a17"
     },
     {
       "path": "assets/publication.mplstyle",
-      "sha256": "38244036fb563bdf50b6b15ac927ae62afa3a8f6acf03ec5c9b317adad9c5a14"
+      "sha256": "aa09903da14efc173dc9d441e8a76ca3a0f04a62ef4b806790396e8fd3d2aa33"
     },
     {
       "path": "references/color_palettes.md",

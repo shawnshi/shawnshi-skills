@@ -4,11 +4,12 @@ import argparse
 import asyncio
 import json
 from dataclasses import dataclass
-from datetime import datetime
+from datetime import date, datetime, time
 from pathlib import Path
 from typing import Any
+from zoneinfo import ZoneInfo
 
-from hub_utils import HUB_DIR, NEWS_DIR, RUNTIME_DIR, atomic_dump_json, load_json
+from hub_utils import HUB_DIR, NEWS_DIR, RUNTIME_DIR, atomic_dump_json
 from mix_policy import allocate_target_counts
 
 
@@ -32,6 +33,36 @@ def _candidate_text(item: dict[str, Any]) -> str:
         str(item.get(field) or "")
         for field in ("title", "summary_hint", "keyword_connection_hint")
     ).lower()
+
+
+def _is_verified_primary_lane_signal(
+    item: dict[str, Any],
+    keywords: list[str],
+    window: dict[str, Any],
+) -> bool:
+    from history_manager import normalize_url
+    from run_contract import normalize_published_at
+
+    if not any(keyword in _candidate_text(item) for keyword in keywords):
+        return False
+    if item.get("source_type") != "primary":
+        return False
+    access = item.get("access_check")
+    if not isinstance(access, dict) or access.get("status") != "verified":
+        return False
+    if normalize_url(str(access.get("requested_url") or "")) != normalize_url(
+        str(item.get("url") or "")
+    ):
+        return False
+    try:
+        published = date.fromisoformat(
+            normalize_published_at(str(item.get("published_at") or ""))
+        )
+        start = date.fromisoformat(str(window["start"]))
+        end = date.fromisoformat(str(window["end"]))
+    except (KeyError, TypeError, ValueError):
+        return False
+    return start <= published <= end
 
 
 def assess_supplement_gaps(
@@ -127,7 +158,10 @@ def assess_supplement_gaps(
         policy = {**defaults, **(configured.get(lane, {}) if isinstance(configured, dict) else {})}
         keywords = [str(value).lower() for value in policy.get("keywords", []) if str(value)]
         matching = sum(
-            1 for item in items if any(keyword in _candidate_text(item) for keyword in keywords)
+            1
+            for item in items
+            if isinstance(item, dict)
+            and _is_verified_primary_lane_signal(item, keywords, manifest["window"])
         )
         if matching < int(policy.get("min_candidates", 1)):
             gaps.append(
@@ -192,6 +226,13 @@ async def prepare_run(
     from history_manager import load_recent_history
     from update_index import rebuild_history
 
+    try:
+        focus = json.loads(focus_path.read_text(encoding="utf-8"))
+    except (OSError, UnicodeError, json.JSONDecodeError) as exc:
+        raise RunContractError(f"focus config is unreadable: {focus_path}: {exc}") from exc
+    if not isinstance(focus, dict):
+        raise RunContractError("focus config must be a JSON object")
+
     manifest_path, manifest = create_run(
         report_date=report_date,
         timezone_name=timezone_name,
@@ -207,15 +248,52 @@ async def prepare_run(
         run_id=run_id,
     )
     run_dir = Path(manifest["run_dir"])
-    focus = load_json(focus_path, {})
-    history_snapshot_path = run_dir / "history_snapshot.json"
-    history_now = now or datetime.fromisoformat(manifest["created_at"])
-    rebuild_history(
-        news_dir=news_dir,
-        history_file=history_snapshot_path,
-        now=history_now,
-        exclude_report_date=manifest["report_date"],
+    record_stage(
+        manifest_path,
+        "baseline",
+        "running",
+        metadata={"phase": "binding_inputs"},
+        now=now,
     )
+    try:
+        record_run_artifact(
+            manifest_path,
+            "focus_config",
+            focus_path,
+            metadata={"configuration_role": "candidate_scoring_and_gap_policy"},
+            now=now,
+        )
+    except Exception as exc:
+        record_stage(
+            manifest_path,
+            "baseline",
+            "failed",
+            metadata={"error_type": type(exc).__name__, "phase": "binding_inputs"},
+            now=now,
+        )
+        raise
+    history_snapshot_path = run_dir / "history_snapshot.json"
+    history_now = datetime.combine(
+        date.fromisoformat(manifest["report_date"]),
+        time.max,
+        tzinfo=ZoneInfo(manifest["timezone"]),
+    )
+    try:
+        rebuild_history(
+            news_dir=news_dir,
+            history_file=history_snapshot_path,
+            now=history_now,
+            exclude_report_date=manifest["report_date"],
+        )
+    except Exception as exc:
+        record_stage(
+            manifest_path,
+            "baseline",
+            "failed",
+            metadata={"error_type": type(exc).__name__, "phase": "history_snapshot"},
+            now=now,
+        )
+        raise
     dedupe_days = int(focus.get("filters", {}).get("dedupe_days", 7))
     compact_date = manifest["report_date"].replace("-", "")
     target_state = {}
@@ -270,6 +348,7 @@ async def prepare_run(
     current_path = run_dir / "current_scan.json"
     cache_path = run_dir / "fetch_cache.json"
     candidates_path = run_dir / "intelligence_candidates.json"
+    blackboard_path = run_dir / "intelligence_blackboard.json"
     try:
         scan = await fetch_news.scan_all(
             focus_path=focus_path,
@@ -283,6 +362,7 @@ async def prepare_run(
             output_path=baseline_path,
             current_output_path=current_path,
             cache_path=cache_path,
+            blackboard_path=blackboard_path,
         )
         if scan.get("metadata", {}).get("window") != manifest["window"]:
             raise RunContractError("baseline window does not match run manifest")
@@ -318,12 +398,33 @@ async def prepare_run(
     if baseline_status == "failed":
         raise RunContractError("baseline scan failed; supplement and review stages were not started")
 
-    candidate_pool = refine.refine(
-        focus_path=focus_path,
-        manifest_path=manifest_path,
-        scan_path=baseline_path,
-        candidates_path=candidates_path,
+    record_stage(
+        manifest_path,
+        "supplemental",
+        "running",
+        metadata={"phase": "candidate_refinement"},
+        now=now,
     )
+    try:
+        candidate_pool = refine.refine(
+            focus_path=focus_path,
+            manifest_path=manifest_path,
+            scan_path=baseline_path,
+            candidates_path=candidates_path,
+            blackboard_path=blackboard_path,
+        )
+    except Exception as exc:
+        record_stage(
+            manifest_path,
+            "supplemental",
+            "failed",
+            metadata={
+                "error_type": type(exc).__name__,
+                "phase": "candidate_refinement",
+            },
+            now=now,
+        )
+        raise
     record_run_artifact(
         manifest_path,
         "candidate_pool",

@@ -58,6 +58,33 @@ class ResourceManifestTests(unittest.TestCase):
             ],
         )
 
+    def test_explicit_cross_skill_json_reference_is_hashed(self):
+        skill_dir = self.create_skill(
+            "example-skill",
+            "兼容元数据 `example-skill/skill.json` 必须保持一致。",
+        )
+        legacy_contract = skill_dir / "skill.json"
+        legacy_contract.write_text('{"version":"1.0.0"}\n', encoding="utf-8")
+
+        manifest.generate_manifests(self.root)
+        document = json.loads(
+            (skill_dir / "resource-manifest.json").read_text(encoding="utf-8")
+        )
+
+        dependency = document["declared_local_dependencies"][0]
+        self.assertEqual(dependency["path"], "example-skill/skill.json")
+        self.assertEqual(dependency["resolved_path"], "example-skill/skill.json")
+        self.assertEqual(
+            dependency["sha256"],
+            manifest.canonical_sha256(legacy_contract),
+        )
+
+        legacy_contract.write_text('{"version":"2.0.0"}\n', encoding="utf-8")
+        result = manifest.check_manifests(self.root)
+        codes = {issue["code"] for issue in result["issues"]}
+        self.assertEqual(result["stale"], 1)
+        self.assertIn("declared_local_dependencies_mismatch", codes)
+
     def test_unchanged_manifest_is_byte_stable(self):
         skill_dir = self.create_skill("example-skill")
         first = manifest.generate_manifests(self.root)

@@ -22,13 +22,13 @@
 - 静息心率当前值及其 `observation_date`；
 - HRV 值、Garmin 原始状态及其 `observation_date`；
 - 睡眠 `observation_date`、`duration_hours`、`duration_status`、深睡/REM 占比和躁动；
-- `sleep_debt_h` 与 `sleep_debt_status`；来源未提供睡眠负债时必须保持 `null` 和 `not_provided_by_source`；
+- 完整的 `audit_data.sleep_debt` 对象；来源未提供睡眠负债时必须保持 `sleep_debt_h=null`、`sleep_debt_status=not_provided_by_source`、`method=none`、`baseline_h=null`、`window_days=null`，并携带稳定原因码、原因和最近实际睡眠。顶层 `sleep_debt` 与该对象语义一致，扁平 `audit_data.sleep_debt_h/sleep_debt_status` 仅作兼容；
 - Body Battery 的充入量、峰值、低值及其 `observation_date`；
 - 日均压力、`stress_observation_date` 和 `stress_status`。
 
 每个 KPI 使用自己的观测日期。不同日期的指标不得写成同日快照。机器字段缺失保持 `null`，中文显示“无有效观测”，不能显示 Python `None`，也不能把缺失值写成生理值 0。
 
-上游 bounded 结果中的 `execution_bandwidth=[DATA_UNAVAILABLE]` 或 `sleep_debt=[DATA_UNAVAILABLE]` 是机器侧不可计算哨兵，不是可直接复制到日志的最终内容。必须按本文件第 5 节转写为状态、原因、可观察事实和边界说明。
+上游历史结果中的 `execution_bandwidth=[DATA_UNAVAILABLE]` 或 `sleep_debt=[DATA_UNAVAILABLE]` 是机器侧旧哨兵，不是可直接复制到日志的最终内容。执行带宽和睡眠负债字段不得出现任何 `[DATA_UNAVAILABLE]`，即使其后附有解释；必须按本文件第 5 节转写为结构化状态、原因、可观察事实和边界说明。
 
 ## 3. 评分与血缘边界
 
@@ -49,10 +49,10 @@
 
 ## 5. 复盘投影
 
-只要输出“能量管理（描述性生理背景）”，除逐指标观测、来源和缺口外，必须生成以下五个非空稳定字段。字段不可只有 `not_scored`、`[DATA_UNAVAILABLE]` 或空字符串；不可用时也要写明状态、原因以及仍可观察的事实。
+只要输出“能量管理（描述性生理背景）”，除逐指标观测、来源和缺口外，必须生成以下五个非空稳定字段。个人日记历史标题 `能量管理 (Biological-Cognitive Correlation)` 由 Gate 兼容读取，但新草稿必须统一使用中文标题和本节字段结构。字段不可只有 `not_scored`、`[DATA_UNAVAILABLE]` 或空字符串；不可用时也要写明状态、原因以及仍可观察的事实。
 
 1. **执行带宽**：固定保留 `not_scored`，并说明本技能不从 Garmin 指标生成认知、职业表现或日程承载评分。可以引用用户明确提供的主观状态，但必须与穿戴设备观测分开。
-2. **睡眠负债**：来源提供 `sleep_debt_h` 时，连同 `sleep_debt_status`、口径和适用窗口陈述；来源未提供时写明 `sleep_debt_h=null`、`sleep_debt_status=not_provided_by_source`，并可另列实际睡眠时长，不自行用目标睡眠时长反推债务。
+2. **睡眠负债**：来源提供 `sleep_debt_h` 时，必须同时陈述 `sleep_debt_status=provided_by_source`、非空 `method`、数值 `baseline_h` 和正整数 `window_days`；来源未提供时写明 `sleep_debt_h=null`、`sleep_debt_status=not_provided_by_source`、`method=none`、`baseline_h=null`、`window_days=null`，并可另列实际睡眠时长，不自行用目标睡眠时长反推债务。
 3. **摩擦解构**：分别列出已记录的工作或日程负荷、主观感受、描述性生理观测、外部约束和未知项。不得把活动缺失写成零活动，也不得使用“神经空耗、内分泌死锁、皮质醇淤积”等未经证实的机制标签。
 4. **交叉归因**：核对每项证据的观测日期，只描述同期共现、日期错位和可替代解释；不得写成工作、旅行或日程导致健康变化，也不得反向推断认知或工作表现。
 5. **干预指令**：只能给出可选、非诊断、非强制的一般性建议；至少包含触发条件、最小动作和完成标准，并明确由用户结合主观状态决定。不得由健康数据自动取消或更改会议、训练、闹钟、工作强度或重要决策。

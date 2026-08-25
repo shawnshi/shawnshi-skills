@@ -59,6 +59,23 @@ class HistoryManagerTests(unittest.TestCase):
 
         self.assertEqual(recent, entries)
 
+    def test_recent_history_excludes_entries_after_report_clock(self):
+        entries = [
+            {
+                "event_id": "future",
+                "last_seen_at": "2026-08-20T09:00:00+08:00",
+            },
+            {
+                "event_id": "current",
+                "last_seen_at": "2026-08-10T09:00:00+08:00",
+            },
+        ]
+
+        with patch("history_manager._load_entries", return_value=entries):
+            recent = load_recent_history(days=7, now=NOW)
+
+        self.assertEqual([entry["event_id"] for entry in recent], ["current"])
+
     def test_update_index_dictionary_is_not_silently_empty(self):
         legacy = {
             "urls": {"https://example.org/item?utm_source=x": "2026-08-09T07:00:00+08:00"},
@@ -124,6 +141,61 @@ class HistoryManagerTests(unittest.TestCase):
         )
 
         self.assertTrue(identifier.startswith("cnt1_"))
+
+    def test_different_semantic_events_on_stable_url_are_not_duplicates(self):
+        first_identity = identity()
+        second_identity = {**identity(), "object": "clinical AI evaluation version 2"}
+        entries = [
+            {
+                "event_id": generate_event_id(first_identity),
+                "identity_quality": "semantic",
+                "canonical_url": "https://example.org/releases",
+                "urls": ["https://example.org/releases"],
+                "fingerprints": [],
+                "title": "Release index",
+                "last_seen_at": NOW.isoformat(),
+            }
+        ]
+        candidate = {
+            "event_id": generate_event_id(second_identity),
+            "event_identity": second_identity,
+            "identity_quality": "semantic",
+            "url": "https://example.org/releases",
+            "title": "Release index",
+            "source": "Example",
+        }
+
+        result = match_history(candidate, entries=entries, now=NOW)
+
+        self.assertFalse(result["redundant"])
+        self.assertEqual(result["match_type"], "none")
+
+    def test_provisional_candidate_still_uses_url_fallback(self):
+        entries = [
+            {
+                "event_id": generate_event_id(identity()),
+                "identity_quality": "semantic",
+                "canonical_url": "https://example.org/releases",
+                "urls": ["https://example.org/releases"],
+                "fingerprints": [],
+                "title": "Release index",
+                "last_seen_at": NOW.isoformat(),
+            }
+        ]
+        candidate = {
+            "event_id": generate_content_id(
+                "https://example.org/releases", "Release index", "Example"
+            ),
+            "identity_quality": "provisional",
+            "url": "https://example.org/releases",
+            "title": "Release index",
+            "source": "Example",
+        }
+
+        result = match_history(candidate, entries=entries, now=NOW)
+
+        self.assertTrue(result["redundant"])
+        self.assertEqual(result["match_type"], "url")
 
     def test_url_normalization_removes_tracking_fragment_and_sorts_query(self):
         normalized = normalize_url(
