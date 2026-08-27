@@ -534,6 +534,15 @@ def main() -> None:
     validate_semantic.add_argument("--refined", type=Path, required=True)
     validate_semantic.add_argument("--semantic-receipt", type=Path, required=True)
 
+    validate_red_team = subparsers.add_parser(
+        "validate-red-team-draft",
+        help="Validate a red-team receipt before immutable publication.",
+    )
+    validate_red_team.add_argument("--manifest", type=Path, required=True)
+    validate_red_team.add_argument("--refined", type=Path, required=True)
+    validate_red_team.add_argument("--semantic-receipt", type=Path, required=True)
+    validate_red_team.add_argument("--red-team-receipt", type=Path, required=True)
+
     normalize_date = subparsers.add_parser(
         "normalize-published-at",
         help="Normalize a date or timezone-aware ISO datetime to its source-local YYYY-MM-DD date.",
@@ -651,6 +660,21 @@ def main() -> None:
             args.manifest,
             args.refined,
             args.semantic_receipt,
+        )
+        print(
+            json.dumps(
+                {"status": "valid", "warnings": warnings},
+                ensure_ascii=False,
+            )
+        )
+    elif args.command == "validate-red-team-draft":
+        from run_contract import validate_red_team_draft
+
+        warnings = validate_red_team_draft(
+            args.manifest,
+            args.refined,
+            args.semantic_receipt,
+            args.red_team_receipt,
         )
         print(
             json.dumps(

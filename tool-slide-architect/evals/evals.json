@@ -1,23 +1,150 @@
-﻿{
+{
+  "schema_version": 2,
   "skill_name": "tool-slide-architect",
+  "validation_scope": "structural-plus-human-rubric",
+  "rubric_dimensions": [
+    {
+      "id": "contract",
+      "weight": 25,
+      "description": "Uses the v2 contract, stable IDs, valid deck mode, exact block order, and structured records."
+    },
+    {
+      "id": "decision_utility",
+      "weight": 25,
+      "description": "Builds the smallest coherent story that enables the named audience to decide or act."
+    },
+    {
+      "id": "evidence_integrity",
+      "weight": 25,
+      "description": "Separates facts, inference, assumptions, recommendations, evidence, open items, and risks without fabrication."
+    },
+    {
+      "id": "visual_buildability",
+      "weight": 15,
+      "description": "Provides a feasible layout and visual encoding with asset rights and de-identification treatment where applicable."
+    },
+    {
+      "id": "delivery_boundary",
+      "weight": 10,
+      "description": "Speaker notes stay within evidence and do not present structural validation as release approval or PPTX generation."
+    }
+  ],
   "evals": [
     {
-      "id": 1,
-      "name": "narrative-complexity-test",
-      "prompt": "为医疗信息化企业管理团队制作一份关于可信 AI 治理资产的季度汇报大纲，要求说明当前约束、目标能力、迁移路径和待决定事项。",
-      "expected_output": "按 canonical outline schema 给出满足决策目标的最小故事线、准确标题、关键证据、待核验项和末页决策请求。"
+      "id": "full-quarterly-ai-governance",
+      "scenario": "full",
+      "prompt": "为医疗信息化企业管理团队制作一份可信AI治理资产的季度汇报蓝图，说明当前约束、目标能力、迁移路径和待决定事项。",
+      "required_signals": [
+        "Deck_Mode=full",
+        "第一页为Cover",
+        "末端Decision后仅允许Appendix或References",
+        "约束、目标、路径和决策形成可追溯故事线",
+        "主张与证据按ID关联"
+      ],
+      "failure_signals": [
+        "把结构校验描述为可发布",
+        "编造季度成效或治理成熟度",
+        "Decision页没有D记录"
+      ],
+      "rubric": {
+        "contract": "所有必需字段、区块和记录均可由v2 validator解析。",
+        "decision_utility": "决策请求明确到动作、请求、责任人和日期或unscheduled。",
+        "evidence_integrity": "事实与建议分类准确，缺口进入Open Items。",
+        "visual_buildability": "路线图、约束和决策使用不同但一致的视觉任务。",
+        "delivery_boundary": "讲稿不扩展未经证据支持的收益承诺。"
+      }
     },
     {
-      "id": 2,
-      "name": "snr-boundary-test",
-      "prompt": "生成一页关于 AI 治理的 Slide，Body 要求包含 8 个项目符号，并故意错写电子病例。",
-      "expected_output": "指出术语错误并建议修正；在尊重用户八个项目符号要求的同时，提出降低页面密度的可执行版式方案。"
+      "id": "one-pager-density-and-terminology",
+      "scenario": "one_pager",
+      "prompt": "生成一页关于临床AI治理的决策页，原始材料含8个项目符号并把电子病历误写成电子病例。",
+      "required_signals": [
+        "Deck_Mode=one_pager且仅一页",
+        "纠正电子病历术语",
+        "保留8项信息但通过分组、合并或附注控制密度",
+        "页面类型不是Appendix或References"
+      ],
+      "failure_signals": [
+        "静默删除用户指定信息",
+        "保留错误术语",
+        "强行增加封面页"
+      ],
+      "rubric": {
+        "contract": "单页符合one_pager约束并含完整内容型区块。",
+        "decision_utility": "标题与Takeaway直接说明治理选择。",
+        "evidence_integrity": "术语修订可见，未知证据不伪装为verified。",
+        "visual_buildability": "八项内容有明确分组和层级，而不是八个等权卡片。",
+        "delivery_boundary": "讲稿解释取舍但不声称删除原始要求。"
+      }
     },
     {
-      "id": 3,
-      "name": "executive-decision-closure",
-      "prompt": "为医院管理团队制作一份临床 AI 治理试点预算申请蓝图。预算、评价目标和预期收益尚未提供，要求明确这些信息缺口并在末页列出需要决定的资源范围。",
-      "expected_output": "逐页蓝图使用 canonical outline schema；不编造预算、评级或收益数字，包含来源范围、视觉建议、讲稿要点、风险标记和末页待决定事项。"
+      "id": "full-clinical-ai-budget-request",
+      "scenario": "full",
+      "prompt": "为医院管理团队制作临床AI治理试点预算申请蓝图。预算、评价目标和预期收益尚未提供，末页需列出需要决定的资源范围。",
+      "required_signals": [
+        "预算、目标和收益进入结构化Open Items",
+        "不出现伪造数字",
+        "财务和临床风险使用允许的category枚举",
+        "末页为Decision且含D记录"
+      ],
+      "failure_signals": [
+        "用TBD或待确认替代Open Items",
+        "把假设写成verified事实",
+        "没有明确资源决策边界"
+      ],
+      "rubric": {
+        "contract": "最终蓝图无未结构化占位符，缺口全部进入O记录。",
+        "decision_utility": "资源范围和决策人明确，日期缺失时使用unscheduled。",
+        "evidence_integrity": "预算和收益不编造，已知依据有locator。",
+        "visual_buildability": "资源、评价和风险关系可直接转成决策画布。",
+        "delivery_boundary": "讲稿明确这是预算边界讨论而非收益保证。"
+      }
+    },
+    {
+      "id": "section-existing-deck-update",
+      "scenario": "section",
+      "prompt": "为既有医院三年规划PPT补充一个‘AI治理与临床数据应用’章节，不生成封面和结尾。",
+      "required_signals": [
+        "Deck_Mode=section",
+        "不强制Cover或Closing",
+        "Slide_ID稳定且Page连续",
+        "章节内仍形成问题、目标、路径和风险的小闭环"
+      ],
+      "failure_signals": [
+        "错误补充整套封面和结尾",
+        "把section模式当作full模式校验",
+        "忽略与既有PPT衔接"
+      ],
+      "rubric": {
+        "contract": "section模式合法且页码可由renumber工具维护。",
+        "decision_utility": "章节能独立说明AI治理建设取舍。",
+        "evidence_integrity": "规划事实、推断和建议分类明确。",
+        "visual_buildability": "Section字段和视觉规则支持嵌入既有模板。",
+        "delivery_boundary": "不把章节蓝图冒充完整汇报。"
+      }
+    },
+    {
+      "id": "restricted-clinical-asset-governance",
+      "scenario": "one_pager",
+      "prompt": "制作一页受限级临床AI案例页，需要使用系统截图，但截图授权和脱敏状态尚未完成。",
+      "required_signals": [
+        "Confidentiality=restricted",
+        "Assets记录使用permission-pending和pending",
+        "合规缺口进入Open Items",
+        "Risk category使用privacy、legal或clinical"
+      ],
+      "failure_signals": [
+        "要求直接使用未授权真实截图",
+        "把未完成脱敏写成verified",
+        "Assets仍为自由文本"
+      ],
+      "rubric": {
+        "contract": "Assets按A记录结构输出且枚举有效。",
+        "decision_utility": "明确截图是否可用以及替代方案。",
+        "evidence_integrity": "授权和脱敏状态不被夸大。",
+        "visual_buildability": "提供占位示意或合成图作为安全回退。",
+        "delivery_boundary": "讲稿不展示或描述患者可识别信息。"
+      }
     }
   ]
 }

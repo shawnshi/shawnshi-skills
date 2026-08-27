@@ -1,0 +1,85 @@
+{
+  "schema_version": 3,
+  "skill": "magazine-illustrator",
+  "generated_at": "2026-08-27T20:05:46+08:00",
+  "hash_algorithm": "SHA-256",
+  "text_hash_normalization": "LF",
+  "skill_md": "SKILL.md",
+  "skill_md_sha256": "e70e99db4d64a40394b32ebeaf68fbaaae143de2d664ff91e7d9b4069c76d904",
+  "top_level_files": [
+    "SKILL.md"
+  ],
+  "top_level_file_hashes": [
+    {
+      "path": "SKILL.md",
+      "sha256": "e70e99db4d64a40394b32ebeaf68fbaaae143de2d664ff91e7d9b4069c76d904"
+    }
+  ],
+  "top_level_directories": [
+    "agents",
+    "assets",
+    "evals",
+    "references"
+  ],
+  "resource_directories": [
+    {
+      "name": "references",
+      "file_count": 3
+    },
+    {
+      "name": "assets",
+      "file_count": 1
+    },
+    {
+      "name": "agents",
+      "file_count": 1
+    }
+  ],
+  "resource_file_hashes": [
+    {
+      "path": "agents/openai.yaml",
+      "sha256": "6d0429b34a786199f5d1ce8e7a30cdd8f1844cccab7a1aa9fa0a15e81355f7b8"
+    },
+    {
+      "path": "assets/icon.svg",
+      "sha256": "49315dda7125ec5fc77ef5f2b96126d8b2121c6e72944b4702972e90f321d3ee"
+    },
+    {
+      "path": "evals/evals.json",
+      "sha256": "7512dd08ac738921ccccef2106f995662b61a055c6dd2ddd6e9d58cc51e2a127"
+    },
+    {
+      "path": "references/channel-presets.md",
+      "sha256": "d1983fa5a6ad51164809ab6d6becd7a6697ca17dfd0a720982937e04ebac1d7a"
+    },
+    {
+      "path": "references/prompt-schema.md",
+      "sha256": "5afd9caf7e348e613b874a2fea4045f12e69b21144e5f7c9ed6b4977735a37bb"
+    },
+    {
+      "path": "references/qa-and-safety.md",
+      "sha256": "51d99179b4354853a9ff2b62a36036725283f362c935ee27d1668a02673fc028"
+    }
+  ],
+  "declared_local_dependencies": [
+    {
+      "path": "references/channel-presets.md",
+      "exists": true,
+      "resolved_path": "magazine-illustrator/references/channel-presets.md",
+      "sha256": "d1983fa5a6ad51164809ab6d6becd7a6697ca17dfd0a720982937e04ebac1d7a"
+    },
+    {
+      "path": "references/prompt-schema.md",
+      "exists": true,
+      "resolved_path": "magazine-illustrator/references/prompt-schema.md",
+      "sha256": "5afd9caf7e348e613b874a2fea4045f12e69b21144e5f7c9ed6b4977735a37bb"
+    },
+    {
+      "path": "references/qa-and-safety.md",
+      "exists": true,
+      "resolved_path": "magazine-illustrator/references/qa-and-safety.md",
+      "sha256": "51d99179b4354853a9ff2b62a36036725283f362c935ee27d1668a02673fc028"
+    }
+  ],
+  "missing_declared_dependencies": []
+}

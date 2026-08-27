@@ -12,7 +12,7 @@ class PromptContractTests(unittest.TestCase):
             (ROOT / "references" / "subagent_prompts.json").read_text(encoding="utf-8")
         )
 
-        self.assertEqual(config["contract_version"], "subagent-prompts/1.7")
+        self.assertEqual(config["contract_version"], "subagent-prompts/1.9")
         review_transfer = config["execution_policy"]["review_context_transfer"]
         self.assertEqual(
             review_transfer["mode"],
@@ -111,6 +111,13 @@ class PromptContractTests(unittest.TestCase):
         self.assertEqual(policy["readiness"]["max_unchanged_wait_timeouts"], 2)
         self.assertEqual(policy["readiness"]["wait_timeout_seconds"], 60)
         self.assertEqual(
+            policy["readiness"]["supplement_progress_messages"],
+            [
+                "supplement_progress seq=1 phase=input_validated",
+                "supplement_progress seq=2 phase=source_checked",
+            ],
+        )
+        self.assertEqual(
             policy["readiness"]["relaunch_policy"],
             "forbidden_for_same_registered_request; create_a_new_run_for_a_new_attempt",
         )
@@ -150,6 +157,7 @@ class PromptContractTests(unittest.TestCase):
                 "validate_semantic_drafts",
                 "publish_semantic_outputs",
                 "validate_semantic_and_register_red_team_request",
+                "validate_red_team_draft",
                 "publish_red_team_receipt",
                 "register_review_bundle",
             ],
@@ -232,7 +240,16 @@ class PromptContractTests(unittest.TestCase):
             "no_l4_fast_path",
             config["review_agents"]["RedTeam"]["system_prompt"],
         )
+        self.assertIn(
+            "validation_command",
+            config["review_agents"]["RedTeam"]["system_prompt"],
+        )
         self.assertIn("永久失败", config["common_contract"]["failure_rule"])
+        self.assertIn(
+            "supplement_progress seq=2 phase=source_checked",
+            config["common_contract"]["progress_rule"],
+        )
+        self.assertIn("另一 lane", config["common_contract"]["failure_rule"])
         self.assertIn(
             "failure_kind=infrastructure",
             config["common_contract"]["infrastructure_failure_rule"],

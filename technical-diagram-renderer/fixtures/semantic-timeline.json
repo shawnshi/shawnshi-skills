@@ -1,0 +1,11 @@
+{
+  "template_type": "timeline",
+  "style": 6,
+  "title": "Clinical Platform Rollout",
+  "events": [
+    {"id": "design", "date": "2027 Q1", "label": "Design", "description": "Confirm scope and owners"},
+    {"id": "pilot", "date": "2027 Q2", "label": "Pilot", "description": "Two clinical departments"},
+    {"id": "scale", "date": "2027 Q3", "label": "Scale", "description": "Hospital-wide rollout"},
+    {"id": "review", "date": "2027 Q4", "label": "Review", "description": "Outcome and safety review"}
+  ]
+}

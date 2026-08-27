@@ -57,11 +57,19 @@ def _frontmatter(path):
     if not match:
         raise ValueError(f"Missing YAML frontmatter: {path}")
     values = {}
+    section = None
     for line in match.group(1).splitlines():
-        if ":" not in line or line[:1].isspace():
+        if ":" not in line:
+            continue
+        if line[:1].isspace():
+            if section != "metadata":
+                continue
+            key, value = line.strip().split(":", 1)
+            values[f"metadata.{key.strip()}"] = value.strip().strip("'\"")
             continue
         key, value = line.split(":", 1)
         values[key.strip()] = value.strip().strip("'\"")
+        section = key.strip() if not value.strip() else None
     return values, text
 
 
@@ -119,7 +127,8 @@ def verify(config, root_task_id, actor_id, context_epoch):
         return _error("AUTHORITY_PARSE_FAILED", str(exc))
     if authority_meta.get("name") != config.get("skill_name"):
         return _error("AUTHORITY_NAME_MISMATCH", "authority skill name changed")
-    if authority_meta.get("version") != config.get("authority_version"):
+    authority_version = authority_meta.get("metadata.version") or authority_meta.get("version")
+    if authority_version != config.get("authority_version"):
         return _error("AUTHORITY_VERSION_MISMATCH", "authority skill version changed")
 
     authority_norm = _normalized_path(authority)
@@ -142,11 +151,15 @@ def verify(config, root_task_id, actor_id, context_epoch):
                 "same-name skill exists outside the bound proxy set",
                 candidate=candidate_norm,
             )
-        if schema_version == 1:
-            if _normalized_path(candidate_meta.get("authority_proxy_for", "")) != authority_norm:
-                return _error("PROXY_TARGET_MISMATCH", "proxy points to a different authority")
-            if candidate_meta.get("authority_sha256") != actual_sha256:
-                return _error("PROXY_HASH_MISMATCH", "proxy authority hash is stale")
+        proxy_target = candidate_meta.get("metadata.authority_proxy_for") or candidate_meta.get("authority_proxy_for", "")
+        proxy_version = candidate_meta.get("metadata.authority_version") or candidate_meta.get("authority_version")
+        proxy_sha = candidate_meta.get("metadata.authority_sha256") or candidate_meta.get("authority_sha256")
+        if _normalized_path(proxy_target) != authority_norm:
+            return _error("PROXY_TARGET_MISMATCH", "proxy points to a different authority")
+        if proxy_version != config.get("authority_version"):
+            return _error("PROXY_VERSION_MISMATCH", "proxy authority version is stale")
+        if proxy_sha != actual_sha256:
+            return _error("PROXY_HASH_MISMATCH", "proxy authority hash is stale")
 
     tokenizer_name = "cl100k_base"
     tokenizer = tiktoken.get_encoding(tokenizer_name)

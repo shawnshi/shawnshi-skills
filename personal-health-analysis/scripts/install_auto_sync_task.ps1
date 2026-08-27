@@ -19,8 +19,9 @@ $config = [IO.Path]::GetFullPath($ConfigDir)
 $state = [IO.Path]::GetFullPath($StateRoot)
 $scratch = [IO.Path]::GetFullPath($ScratchRoot)
 $runner = [IO.Path]::GetFullPath((Join-Path $PSScriptRoot 'garmin_auto_sync.py'))
+$authorityConfig = [IO.Path]::GetFullPath((Join-Path (Split-Path -Parent $PSScriptRoot) 'runtime-authority.json'))
 
-foreach ($required in @($python, $config, $runner)) {
+foreach ($required in @($python, $config, $runner, $authorityConfig)) {
     if (-not (Test-Path -LiteralPath $required)) {
         throw "Required path is missing: $required"
     }
@@ -36,14 +37,16 @@ $arguments = @(
     '--garmindb-python', ('"{0}"' -f $python),
     '--scratch-dir', ('"{0}"' -f $scratch),
     '--state-output', ('"{0}"' -f $stateFile),
-    '--timeout-seconds', '600',
+    '--authority-config', ('"{0}"' -f $authorityConfig),
+    '--timeout-seconds', '480',
+    '--total-timeout-seconds', '900',
     '--allow-network', '--allow-sync', '--allow-health-data'
 ) -join ' '
 
 $at = [datetime]::ParseExact($DailyAt, 'HH:mm', [Globalization.CultureInfo]::InvariantCulture)
 $action = New-ScheduledTaskAction -Execute $python -Argument $arguments -WorkingDirectory (Split-Path -Parent $runner)
 $trigger = New-ScheduledTaskTrigger -Daily -At $at
-$settings = New-ScheduledTaskSettingsSet -StartWhenAvailable -MultipleInstances IgnoreNew -ExecutionTimeLimit (New-TimeSpan -Minutes 20) -AllowStartIfOnBatteries -DontStopIfGoingOnBatteries
+$settings = New-ScheduledTaskSettingsSet -StartWhenAvailable -MultipleInstances IgnoreNew -ExecutionTimeLimit (New-TimeSpan -Minutes 18) -AllowStartIfOnBatteries -DontStopIfGoingOnBatteries
 $identity = [Security.Principal.WindowsIdentity]::GetCurrent().Name
 $principal = New-ScheduledTaskPrincipal -UserId $identity -LogonType Interactive -RunLevel Limited
 
@@ -63,4 +66,5 @@ $info = Get-ScheduledTaskInfo -TaskName $TaskName -TaskPath '\'
     run_level = [string]$task.Principal.RunLevel
     start_when_available = $task.Settings.StartWhenAvailable
     multiple_instances = [string]$task.Settings.MultipleInstances
+    execution_time_limit = [string]$task.Settings.ExecutionTimeLimit
 } | ConvertTo-Json -Compress

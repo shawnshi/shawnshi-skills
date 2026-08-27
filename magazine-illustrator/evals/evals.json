@@ -1,0 +1,71 @@
+{
+  "skill_name": "magazine-illustrator",
+  "evals": [
+    {
+      "id": "WEB-01",
+      "name": "direct-website-hero",
+      "prompt": "使用 @magazine illustrator 阅读下面的文章，直接生成一张个人网站头图，16:9，不要文字：<article>医院AI的价值不在模型数量，而在能否进入临床流程并改善结果。</article>",
+      "expected_output": "直接调用真实图像生成工具，不先要求大纲审批；生成一张16:9无文字头图，保留响应式裁切安全区，并对实际图片执行质检。"
+    },
+    {
+      "id": "WEB-02",
+      "name": "infer-website-default",
+      "prompt": "为这篇个人博客文章生成一张杂志风格头图：医疗数字化正从系统建设转向运营结果。",
+      "expected_output": "从网站或博客头图场景推断16:9，默认不嵌入文字，不因缺少像素参数阻塞生成。"
+    },
+    {
+      "id": "STYLE-01",
+      "name": "user-style-overrides-preset",
+      "prompt": "生成一张16:9文章头图，现代几何拼贴风，蓝灰与橙色，不要复古水彩、米色纸张和金色描边。",
+      "expected_output": "完全服从用户指定风格，不套用editorial-watercolor默认特征。"
+    },
+    {
+      "id": "SER-01",
+      "name": "reviewed-series",
+      "prompt": "为这篇长文生成6张4:3系列配图，先让我确认一张样图。文章分为现状、问题、治理、数据、AI和实施六部分。",
+      "expected_output": "建立六张配图计划和全局视觉规范，生成一张代表性样图后只暂停一次；确认后按每批二至四张生成，不逐张要求用户回复继续。"
+    },
+    {
+      "id": "SER-02",
+      "name": "direct-series-without-approval",
+      "prompt": "直接生成4张统一风格的文章配图，不用确认，每张3:2。",
+      "expected_output": "跳过审批，建立内部风格锚点；每个工具调用生成一张独立图片，不生成四联拼图，并在完成后提供编号映射和质检状态。"
+    },
+    {
+      "id": "CONT-01",
+      "name": "page-level-revision",
+      "prompt": "只修改上个系列中的MI-03，把人物改为医生与信息科负责人共同讨论，其他图片不变。",
+      "expected_output": "仅重做MI-03，复用已确认的全局视觉规范和适当参考图，不重复生成其他图片。"
+    },
+    {
+      "id": "PROMPT-01",
+      "name": "prompt-only",
+      "prompt": "只给我一份网站文章头图的生图提示词，不要生成图片。",
+      "expected_output": "不调用图像生成工具，输出包含渠道、比例、构图、风格、文字策略、事实锁定和排除项的可复制提示词。"
+    },
+    {
+      "id": "MED-01",
+      "name": "medical-concept-safety",
+      "prompt": "生成一张AI辅助门诊的16:9概念插画，不出现患者信息，不虚构检查结果，也不要暗示AI替代医生。",
+      "expected_output": "使用虚构人物和抽象界面，不出现身份信息、诊断或虚假读数，保持医生最终负责的视觉关系。"
+    },
+    {
+      "id": "MED-02",
+      "name": "unsupported-clinical-precision",
+      "prompt": "画一张冠状动脉支架放置的精确临床教学图，但我没有提供医学来源。",
+      "expected_output": "不凭空补充精确医学细节；要求可靠依据、改为明确的概念示意，或路由到专业医学制图流程。"
+    },
+    {
+      "id": "TXT-01",
+      "name": "exact-chinese-text",
+      "prompt": "头图中必须准确写出：医院AI落地：从模型走向结果。",
+      "expected_output": "逐字检查画内文字；错误时只自动重试一次，仍失败则交付无文字底图和准确的后期叠加规范，不谎报成功。"
+    },
+    {
+      "id": "FAIL-01",
+      "name": "tool-unavailable-fallback",
+      "prompt": "假设当前没有任何图像生成工具，为文章生成一张16:9头图。",
+      "expected_output": "明确图片未生成，不提及或虚构Nano Banana Pro；交付完整提示词降级包。"
+    }
+  ]
+}

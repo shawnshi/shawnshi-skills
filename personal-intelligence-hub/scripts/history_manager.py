@@ -351,6 +351,85 @@ def _entry_from_item(
     }
 
 
+class HistoryIndexBuilder:
+    """Merge history batches in memory and serialize only after all inputs."""
+
+    def __init__(self, data: Any = None) -> None:
+        self.entries = _coerce_history_entries(data)
+        self._by_id = {
+            str(entry.get("event_id") or ""): entry
+            for entry in self.entries
+            if entry.get("event_id")
+        }
+
+    def merge(
+        self,
+        items: list[dict[str, Any]],
+        *,
+        archive_ref: str | None = None,
+        now: datetime | None = None,
+    ) -> None:
+        current = now or datetime.now().astimezone()
+        if current.tzinfo is None or current.utcoffset() is None:
+            current = current.astimezone()
+        timestamp = current.isoformat()
+        for item in items:
+            incoming = _entry_from_item(
+                item,
+                timestamp=timestamp,
+                archive_ref=archive_ref,
+            )
+            existing = self._by_id.get(incoming["event_id"])
+            if existing is None:
+                self.entries.append(incoming)
+                self._by_id[incoming["event_id"]] = incoming
+                continue
+            existing["urls"] = sorted(
+                set((existing.get("urls") or []) + incoming["urls"])
+            )
+            existing["fingerprints"] = sorted(
+                set((existing.get("fingerprints") or []) + incoming["fingerprints"])
+            )
+            existing["archive_refs"] = sorted(
+                set((existing.get("archive_refs") or []) + incoming["archive_refs"])
+            )
+            existing["first_seen_at"] = _merge_timestamp(
+                str(existing.get("first_seen_at") or ""),
+                timestamp,
+                latest=False,
+            )
+            existing["last_seen_at"] = _merge_timestamp(
+                str(existing.get("last_seen_at") or ""),
+                timestamp,
+                latest=True,
+            )
+            if not existing.get("canonical_url"):
+                existing["canonical_url"] = incoming["canonical_url"]
+            if (
+                existing.get("identity_quality") != "semantic"
+                and incoming["identity_quality"] == "semantic"
+            ):
+                existing["event_identity"] = incoming["event_identity"]
+                existing["identity_quality"] = "semantic"
+
+    def payload(self, *, now: datetime | None = None) -> dict[str, Any]:
+        current = now or datetime.now().astimezone()
+        if current.tzinfo is None or current.utcoffset() is None:
+            current = current.astimezone()
+        self.entries.sort(
+            key=lambda entry: (
+                str(entry.get("event_id") or ""),
+                str(entry.get("canonical_url") or ""),
+            )
+        )
+        return {
+            "resource_kind": "pih_history_index",
+            "schema_version": HISTORY_SCHEMA_VERSION,
+            "generated_at": current.isoformat(),
+            "entries": self.entries,
+        }
+
+
 def save_history_items(
     items: list[dict[str, Any]],
     *,
@@ -362,45 +441,9 @@ def save_history_items(
     current = now or datetime.now().astimezone()
     if current.tzinfo is None or current.utcoffset() is None:
         current = current.astimezone()
-    timestamp = current.isoformat()
-    entries = _coerce_history_entries(load_json(target, {}))
-    by_id = {str(entry.get("event_id") or ""): entry for entry in entries if entry.get("event_id")}
-    for item in items:
-        incoming = _entry_from_item(item, timestamp=timestamp, archive_ref=archive_ref)
-        existing = by_id.get(incoming["event_id"])
-        if existing is None:
-            entries.append(incoming)
-            by_id[incoming["event_id"]] = incoming
-            continue
-        existing["urls"] = sorted(set((existing.get("urls") or []) + incoming["urls"]))
-        existing["fingerprints"] = sorted(
-            set((existing.get("fingerprints") or []) + incoming["fingerprints"])
-        )
-        existing["archive_refs"] = sorted(
-            set((existing.get("archive_refs") or []) + incoming["archive_refs"])
-        )
-        existing["first_seen_at"] = _merge_timestamp(
-            str(existing.get("first_seen_at") or ""),
-            timestamp,
-            latest=False,
-        )
-        existing["last_seen_at"] = _merge_timestamp(
-            str(existing.get("last_seen_at") or ""),
-            timestamp,
-            latest=True,
-        )
-        if not existing.get("canonical_url"):
-            existing["canonical_url"] = incoming["canonical_url"]
-        if existing.get("identity_quality") != "semantic" and incoming["identity_quality"] == "semantic":
-            existing["event_identity"] = incoming["event_identity"]
-            existing["identity_quality"] = "semantic"
-    entries.sort(key=lambda entry: (str(entry.get("event_id") or ""), str(entry.get("canonical_url") or "")))
-    payload = {
-        "resource_kind": "pih_history_index",
-        "schema_version": HISTORY_SCHEMA_VERSION,
-        "generated_at": timestamp,
-        "entries": entries,
-    }
+    builder = HistoryIndexBuilder(load_json(target, {}))
+    builder.merge(items, archive_ref=archive_ref, now=current)
+    payload = builder.payload(now=current)
     atomic_dump_json(target, payload)
     return payload
 

@@ -1,9 +1,24 @@
 {
   "name": "tool-web-slide",
-  "version": "8.4.0",
-  "description": "Web Slide Generator Engine",
+  "version": "9.0.0",
+  "description": "Build, validate, visually inspect, and export browser-based HTML slide decks.",
+  "private": true,
   "type": "module",
-  "dependencies": {
+  "engines": {
+    "node": ">=18"
+  },
+  "scripts": {
+    "init": "node scripts/init-deck.mjs",
+    "build": "node scripts/build-deck.mjs",
+    "preflight": "node scripts/preflight.mjs",
+    "check": "node scripts/qa-deck.mjs",
+    "visual": "node scripts/visual-qa.mjs",
+    "export": "node scripts/export-pdf.mjs",
+    "verify": "node scripts/verify-delivery.mjs",
+    "test": "node --test",
+    "manifest": "node scripts/update-manifest.mjs"
+  },
+  "optionalDependencies": {
     "playwright": "^1.60.0"
   }
 }

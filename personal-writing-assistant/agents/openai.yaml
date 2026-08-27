@@ -1,0 +1,8 @@
+interface:
+  display_name: 医疗数字化写作助手
+  short_description: 医疗数字化专业文章的起草、重构、事实核验与发布审校
+  default_prompt: 使用 $personal-writing-assistant 将这份材料改写为证据充分、可审阅的医疗数字化专业文章。
+  icon_small: assets/icon.svg
+  icon_large: assets/icon.svg
+policy:
+  allow_implicit_invocation: true

@@ -1,4 +1,5 @@
 import json
+import os
 import unittest
 from pathlib import Path
 
@@ -16,7 +17,8 @@ class DefaultReadContractTests(unittest.TestCase):
         locator = cls.config["authority_locator"]
         if locator.get("base") != "user_home":
             raise ValueError("production authority must use a user_home locator")
-        cls.authority_path = Path.home().joinpath(*locator["segments"])
+        override = os.environ.get("PERSONAL_DIARY_AUTHORITY_PATH")
+        cls.authority_path = Path(override) if override else Path.home().joinpath(*locator["segments"])
         cls.authority_text = cls.authority_path.read_text(encoding="utf-8")
 
     def test_personal_diary_grants_bounded_default_reads(self):
@@ -51,7 +53,8 @@ class DefaultReadContractTests(unittest.TestCase):
                 self.assertIn(marker, self.proxy_text)
 
     def test_authority_routes_to_active_health_skill(self):
-        self.assertIn("active `personal-health-analysis` skill", self.authority_text)
+        self.assertIn("canonical `personal-health-analysis`", self.authority_text)
+        self.assertIn("runtime-authority.json", self.authority_text)
         legacy_runtime = (
             Path.home()
             / ".gemini"
@@ -63,6 +66,32 @@ class DefaultReadContractTests(unittest.TestCase):
             str(legacy_runtime),
             self.authority_text,
         )
+
+    def test_current_date_staleness_uses_one_verified_existing_task(self):
+        for marker in (
+            "Current-date freshness gate",
+            "Codex-Garmin-Health-Sync",
+            "RunLevel=Limited",
+            "MultipleInstances=IgnoreNew",
+            "database_fingerprint_changed=true",
+            "run_id",
+            "without retry",
+        ):
+            with self.subTest(marker=marker):
+                self.assertIn(marker, self.authority_text)
+
+    def test_energy_template_discloses_acquisition_audit(self):
+        for marker in (
+            "采集审计",
+            "sync_eligible=",
+            "sync_attempted=",
+            "task_status=",
+            "local_reread=",
+            "live_fallback=",
+            "reason=",
+        ):
+            with self.subTest(marker=marker):
+                self.assertIn(marker, self.authority_text)
 
     def test_energy_projection_is_contentful_when_metrics_are_unavailable(self):
         for marker in (

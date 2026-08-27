@@ -1,4 +1,5 @@
 import unittest
+import importlib.util
 from pathlib import Path
 
 
@@ -7,6 +8,11 @@ SKILL_TEXT = (SKILL_ROOT / "SKILL.md").read_text(encoding="utf-8")
 TEMPLATE_TEXT = (SKILL_ROOT / "assets" / "ooda_template.md").read_text(
     encoding="utf-8"
 )
+GATE_PATH = SKILL_ROOT / "scripts" / "evidence_gate.py"
+SPEC = importlib.util.spec_from_file_location("mentat_evidence_gate", GATE_PATH)
+assert SPEC and SPEC.loader
+GATE = importlib.util.module_from_spec(SPEC)
+SPEC.loader.exec_module(GATE)
 
 
 class MentatInsightDiaryContractTests(unittest.TestCase):
@@ -18,6 +24,32 @@ class MentatInsightDiaryContractTests(unittest.TestCase):
             "同日原子替换",
             "标题数量等于 1",
             "授权范围摘要与实际写入范围摘要相等",
+        ):
+            with self.subTest(required=required):
+                self.assertIn(required, SKILL_TEXT)
+
+    def test_p0_and_p1_contracts_block_meta_logs_and_separate_receipts(self):
+        for required in (
+            "blocked_no_substantive_events",
+            "blocked_low_density",
+            "不生成八段正文、不创建写入范围回执、不保存空洞条目",
+            "journal_meta",
+            "正文与保存回执分离",
+            "不进入八段正文",
+        ):
+            with self.subTest(required=required):
+                self.assertIn(required, SKILL_TEXT)
+
+    def test_p2_contract_has_fixed_dimensions_and_thresholds(self):
+        for required in (
+            "facts",
+            "results",
+            "tradeoffs",
+            "friction",
+            "continuity",
+            "总分 0–3",
+            "总分 4–6",
+            "总分 7–10",
         ):
             with self.subTest(required=required):
                 self.assertIn(required, SKILL_TEXT)
@@ -61,6 +93,87 @@ class MentatInsightDiaryContractTests(unittest.TestCase):
         ):
             with self.subTest(required=required):
                 self.assertIn(required, SKILL_TEXT)
+
+    def test_evidence_gate_blocks_journal_meta_only(self):
+        result = GATE.evaluate(
+            {
+                "events": [
+                    {
+                        "kind": "journal_meta",
+                        "summary": "loaded the diary skill and computed a scope hash",
+                        "source": "current session",
+                        "artifact_or_state": "scope receipt",
+                        "result": "hash matched",
+                        "verification": "receipt",
+                    }
+                ]
+            }
+        )
+        self.assertEqual(result["status"], "blocked_no_substantive_events")
+        self.assertFalse(result["save_allowed"])
+        self.assertEqual(result["total_score"], 0)
+
+    def test_evidence_gate_blocks_low_density_business_event(self):
+        result = GATE.evaluate(
+            {
+                "events": [
+                    {
+                        "kind": "execution",
+                        "summary": "discussed a project",
+                        "source": "user statement",
+                    }
+                ]
+            }
+        )
+        self.assertEqual(result["status"], "blocked_low_density")
+        self.assertEqual(result["total_score"], 1)
+        self.assertFalse(result["save_allowed"])
+
+    def test_evidence_gate_allows_thin_entry_at_four_points(self):
+        result = GATE.evaluate(
+            {
+                "events": [
+                    {
+                        "kind": "state_change",
+                        "summary": "updated a bounded artifact",
+                        "source": "verified file",
+                        "artifact_or_state": "artifact moved to review",
+                        "result": "candidate created",
+                        "next_trigger": "review completed",
+                    }
+                ]
+            }
+        )
+        self.assertEqual(result["status"], "thin")
+        self.assertEqual(result["total_score"], 4)
+        self.assertTrue(result["save_allowed"])
+
+    def test_evidence_gate_allows_full_entry_with_complete_evidence(self):
+        result = GATE.evaluate(
+            {
+                "events": [
+                    {
+                        "kind": "failure",
+                        "summary": "deployment validation failed and was repaired",
+                        "source": "test output",
+                        "artifact_or_state": "candidate artifact",
+                        "result": "validation passed after repair",
+                        "verification": "regression test passed",
+                        "decision": "repair the candidate",
+                        "rejected_alternative": "weaken the validation gate",
+                        "decision_basis": "preserve the contract",
+                        "issue": "schema mismatch",
+                        "effect": "deployment blocked",
+                        "resolution": "candidate corrected",
+                        "next_trigger": "publish after review",
+                        "completion_standard": "remote artifact hash matches",
+                    }
+                ]
+            }
+        )
+        self.assertEqual(result["status"], "substantive")
+        self.assertEqual(result["total_score"], 10)
+        self.assertTrue(result["save_allowed"])
 
 
 if __name__ == "__main__":

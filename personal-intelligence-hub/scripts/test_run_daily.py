@@ -110,6 +110,44 @@ class RunDailyTests(unittest.IsolatedAsyncioTestCase):
             {"status": "valid", "warnings": ["bounded warning"]},
         )
 
+    def test_validate_red_team_draft_command_is_read_only(self):
+        manifest = Path("manifest.json")
+        refined = Path("refined.json")
+        semantic = Path("semantic.json")
+        red_team = Path("red-team.draft.json")
+        output = io.StringIO()
+
+        with (
+            patch.object(
+                sys,
+                "argv",
+                [
+                    "run_daily.py",
+                    "validate-red-team-draft",
+                    "--manifest",
+                    str(manifest),
+                    "--refined",
+                    str(refined),
+                    "--semantic-receipt",
+                    str(semantic),
+                    "--red-team-receipt",
+                    str(red_team),
+                ],
+            ),
+            patch(
+                "run_contract.validate_red_team_draft",
+                return_value=["bounded warning"],
+            ) as validator,
+            redirect_stdout(output),
+        ):
+            run_daily.main()
+
+        validator.assert_called_once_with(manifest, refined, semantic, red_team)
+        self.assertEqual(
+            json.loads(output.getvalue()),
+            {"status": "valid", "warnings": ["bounded warning"]},
+        )
+
     def test_normalize_published_at_command_uses_public_normalizer(self):
         output = io.StringIO()
         with (

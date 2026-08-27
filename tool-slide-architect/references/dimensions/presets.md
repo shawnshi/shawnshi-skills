@@ -1,126 +1,34 @@
-# Preset → Dimension Mapping
+# Style presets
 
-Maps 16 preset styles to their dimension combinations.
+优先从 [../styles/index.json](../styles/index.json) 选择一个 `Style_ID`，只读取相应文件。下表与索引一一对应；维度文件用于少量定制，不是默认加载项。
 
-## Mapping Table
+| Style_ID | 精确路径 | 适用场景 |
+|---|---|---|
+| `anti-gravity` | `references/styles/anti-gravity.md` | 创新、科技主题、发布演讲 |
+| `refined-minimal` | `references/styles/refined-minimal.md` | 高管汇报、作品集、战略表达 |
+| `pixel-art` | `references/styles/pixel-art.md` | 游戏、少儿教育、创意内容 |
+| `vintage` | `references/styles/vintage.md` | 历史、文化、品牌传承 |
+| `corporate` | `references/styles/corporate.md` | 商务、提案、管理层汇报 |
+| `fantasy-animation` | `references/styles/fantasy-animation.md` | 叙事、教育、创意演示 |
+| `scientific` | `references/styles/scientific.md` | 科研、医学、学术内容 |
+| `blueprint` | `references/styles/blueprint.md` | 架构、工程、技术评审 |
+| `dark-atmospheric` | `references/styles/dark-atmospheric.md` | 主题演讲、品牌叙事 |
+| `clinical-deep-blue` | `references/styles/clinical-deep-blue.md` | 医疗、临床、医院高管汇报 |
+| `intuition-machine` | `references/styles/intuition-machine.md` | 技术机制、研究、复杂系统 |
+| `chalkboard` | `references/styles/chalkboard.md` | 教学、工作坊、教程 |
+| `dark-room-standard` | `references/styles/dark-room-standard.md` | 暗场演讲、产品发布 |
+| `editorial-infographic` | `references/styles/editorial-infographic.md` | 解释型内容、政策、研究摘要 |
+| `notion` | `references/styles/notion.md` | 仪表盘、产品、进展汇报 |
+| `watercolor` | `references/styles/watercolor.md` | 健康、教育、温和叙事 |
+| `vector-illustration` | `references/styles/vector-illustration.md` | 解释、教育、品牌展示 |
+| `logical-light-blue` | `references/styles/logical-light-blue.md` | 架构、路线图、业务规划 |
+| `bold-editorial` | `references/styles/bold-editorial.md` | 发布会、主旨演讲、品牌展示 |
 
-| Preset | Texture | Mood | Typography | Density |
-|--------|---------|------|------------|---------|
-| blueprint | grid | cool | technical | balanced |
-| chalkboard | organic | warm | handwritten | balanced |
-| corporate | clean | professional | geometric | balanced |
-| minimal | clean | neutral | geometric | minimal |
-| sketch-notes | organic | warm | handwritten | balanced |
-| watercolor | organic | warm | humanist | minimal |
-| dark-atmospheric | clean | dark | editorial | balanced |
-| notion | clean | neutral | geometric | dense |
-| bold-editorial | clean | vibrant | editorial | balanced |
-| editorial-infographic | clean | cool | editorial | dense |
-| fantasy-animation | organic | vibrant | handwritten | minimal |
-| intuition-machine | clean | cool | technical | dense |
-| pixel-art | pixel | vibrant | technical | balanced |
-| scientific | clean | cool | technical | dense |
-| vector-illustration | clean | vibrant | humanist | balanced |
-| vintage | paper | warm | editorial | balanced |
+## Dimension routing
 
-## Preset Details
+- 信息量调整：读取 [density.md](density.md)。
+- 情绪与色彩调整：读取 [mood.md](mood.md)。
+- 背景与表面质感调整：读取 [texture.md](texture.md)。
+- 字体与语气调整：读取 [typography.md](typography.md)。
 
-### blueprint
-- **Dimensions**: grid + cool + technical + balanced
-- **Feel**: Engineering precision, analytical clarity
-- **Auto-select**: architecture, system, data, analysis, technical
-
-### chalkboard
-- **Dimensions**: organic + warm + handwritten + balanced
-- **Feel**: Classroom warmth, educational
-- **Auto-select**: classroom, teaching, school, chalkboard
-
-### corporate
-- **Dimensions**: clean + professional + geometric + balanced
-- **Feel**: Business credibility, institutional trust
-- **Auto-select**: investor, quarterly, business, corporate
-
-### minimal
-- **Dimensions**: clean + neutral + geometric + minimal
-- **Feel**: Maximum sophistication, executive focus
-- **Auto-select**: executive, minimal, clean, simple
-
-### sketch-notes
-- **Dimensions**: organic + warm + handwritten + balanced
-- **Feel**: Friendly learning, approachable education
-- **Auto-select**: tutorial, learn, education, guide, beginner
-
-### watercolor
-- **Dimensions**: organic + warm + humanist + minimal
-- **Feel**: Artistic, natural, lifestyle
-- **Auto-select**: lifestyle, wellness, travel, artistic
-
-### dark-atmospheric
-- **Dimensions**: clean + dark + editorial + balanced
-- **Feel**: Cinematic, entertainment
-- **Auto-select**: entertainment, music, gaming, atmospheric
-
-### notion
-- **Dimensions**: clean + neutral + geometric + dense
-- **Feel**: SaaS professional, data-forward
-- **Auto-select**: saas, product, dashboard, metrics
-
-### bold-editorial
-- **Dimensions**: clean + vibrant + editorial + balanced
-- **Feel**: Magazine impact, keynote drama
-- **Auto-select**: launch, marketing, keynote, magazine
-
-### editorial-infographic
-- **Dimensions**: clean + cool + editorial + dense
-- **Feel**: Publication quality, informative
-- **Auto-select**: explainer, journalism, science communication
-
-### fantasy-animation
-- **Dimensions**: organic + vibrant + handwritten + minimal
-- **Feel**: Magical, storytelling
-- **Auto-select**: story, fantasy, animation, magical
-
-### intuition-machine
-- **Dimensions**: clean + cool + technical + dense
-- **Feel**: Technical briefing, bilingual documentation
-- **Auto-select**: briefing, academic, research, bilingual
-
-### pixel-art
-- **Dimensions**: pixel + vibrant + technical + balanced
-- **Feel**: Retro gaming, developer culture
-- **Auto-select**: gaming, retro, pixel, developer
-
-### scientific
-- **Dimensions**: clean + cool + technical + dense
-- **Feel**: Academic precision, research quality
-- **Auto-select**: biology, chemistry, medical, scientific
-
-### vector-illustration
-- **Dimensions**: clean + vibrant + humanist + balanced
-- **Feel**: Flat design, friendly creative
-- **Auto-select**: creative, children, kids, cute
-
-### vintage
-- **Dimensions**: paper + warm + editorial + balanced
-- **Feel**: Historical, heritage storytelling
-- **Auto-select**: history, heritage, vintage, expedition
-
-## Building Custom Combinations
-
-When user selects "Custom dimensions", combine any:
-
-- **Texture** (5): clean, grid, organic, pixel, paper
-- **Mood** (6): professional, warm, cool, vibrant, dark, neutral
-- **Typography** (5): geometric, humanist, handwritten, editorial, technical
-- **Density** (3): minimal, balanced, dense
-
-Total possible combinations: 5 × 6 × 5 × 3 = **450 unique styles**
-
-## Recommended Combinations (Beyond Presets)
-
-| Custom Name | Texture | Mood | Typography | Density | Use Case |
-|-------------|---------|------|------------|---------|----------|
-| tech-minimal | clean | neutral | technical | minimal | Developer keynotes |
-| warm-editorial | paper | warm | editorial | balanced | Heritage brands |
-| dark-technical | grid | dark | technical | dense | Security, DevOps |
-| playful-clean | clean | vibrant | humanist | balanced | Startups, apps |
+使用 `Style_ID: custom` 时仍需完整填写 `STYLE_INSTRUCTIONS`。任何定制都不得移除必要引用、保密标记、可访问性或经授权品牌元素。

@@ -9,7 +9,12 @@ from concurrent.futures import ThreadPoolExecutor
 from pathlib import Path
 from unittest.mock import patch
 
-from hub_utils import atomic_dump_json, atomic_write_text
+from hub_utils import (
+    WINDOWS_REPLACE_RETRY_DELAYS,
+    _replace_with_retry,
+    atomic_dump_json,
+    atomic_write_text,
+)
 
 
 SCRIPT_DIR = Path(__file__).resolve().parent
@@ -132,12 +137,17 @@ class ArchiveContractTests(unittest.TestCase):
             barrier = threading.Barrier(2)
             original_replace = os.replace
             source_paths = []
+            synchronized_sources = set()
             source_paths_lock = threading.Lock()
 
             def synchronized_replace(source, destination):
                 with source_paths_lock:
-                    source_paths.append(Path(source))
-                barrier.wait(timeout=5)
+                    source_path = Path(source)
+                    source_paths.append(source_path)
+                    first_attempt = source_path not in synchronized_sources
+                    synchronized_sources.add(source_path)
+                if first_attempt:
+                    barrier.wait(timeout=5)
                 return original_replace(source, destination)
 
             payloads = ("A" * 32768, "B" * 32768)
@@ -167,6 +177,36 @@ class ArchiveContractTests(unittest.TestCase):
 
             self.assertFalse(target.exists())
             self.assertEqual(list(root.iterdir()), [])
+
+    def test_windows_replace_retries_bounded_transient_lock(self):
+        transient = PermissionError(13, "access denied")
+        transient.winerror = 5
+        with (
+            patch("hub_utils.os.name", "nt"),
+            patch("hub_utils.os.replace", side_effect=[transient, transient, None]) as replace,
+            patch("hub_utils.time.sleep") as sleep,
+        ):
+            _replace_with_retry(Path("source"), Path("destination"))
+
+        self.assertEqual(replace.call_count, 3)
+        self.assertEqual(
+            [call.args[0] for call in sleep.call_args_list],
+            list(WINDOWS_REPLACE_RETRY_DELAYS[:2]),
+        )
+
+    def test_windows_replace_fails_closed_after_retry_budget(self):
+        transient = PermissionError(13, "access denied")
+        transient.winerror = 5
+        with (
+            patch("hub_utils.os.name", "nt"),
+            patch("hub_utils.os.replace", side_effect=transient) as replace,
+            patch("hub_utils.time.sleep") as sleep,
+            self.assertRaises(PermissionError),
+        ):
+            _replace_with_retry(Path("source"), Path("destination"))
+
+        self.assertEqual(replace.call_count, len(WINDOWS_REPLACE_RETRY_DELAYS) + 1)
+        self.assertEqual(sleep.call_count, len(WINDOWS_REPLACE_RETRY_DELAYS))
 
 
 if __name__ == "__main__":

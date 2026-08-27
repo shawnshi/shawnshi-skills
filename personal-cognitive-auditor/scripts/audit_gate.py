@@ -42,6 +42,7 @@ NEXT_HEADING = re.compile(r"(?m)^#{1,6}\s+")
 ENERGY_REQUIRED_FIELDS = (
     "数据范围与来源",
     "组件覆盖与新鲜度",
+    "采集审计",
     "睡眠观察",
     "HRV 与静息心率观察",
     "Body Battery 与压力观察",
@@ -52,6 +53,77 @@ ENERGY_REQUIRED_FIELDS = (
     "干预指令",
     "数据缺口与不可判断事项",
 )
+
+ACQUISITION_AUDIT_PATTERNS = {
+    "sync_eligible": re.compile(r"\bsync_eligible=(?:true|false)\b", re.IGNORECASE),
+    "sync_attempted": re.compile(r"\bsync_attempted=(?:started|waited_existing|not_attempted)\b", re.IGNORECASE),
+    "task_status": re.compile(r"\btask_status=[a-z0-9_]+\b", re.IGNORECASE),
+    "local_reread": re.compile(r"\blocal_reread=(?:accepted|rejected|not_run)\b", re.IGNORECASE),
+    "local_status": re.compile(r"\blocal_status=(?:complete|partial|no_data|read_error|not_run)\b", re.IGNORECASE),
+    "live_fallback": re.compile(r"\blive_fallback=(?:used|not_used)\b", re.IGNORECASE),
+    "reason": re.compile(r"\breason=[a-z0-9_]+\b", re.IGNORECASE),
+}
+ACQUISITION_VALUE = re.compile(
+    r"\b(sync_eligible|sync_attempted|task_status|local_reread|local_status|live_fallback|reason)=([a-z0-9_]+)\b",
+    re.IGNORECASE,
+)
+FAILED_TASK_STATUSES = {
+    "failed", "timeout", "invalid", "start_failed", "interrupted_or_terminated"
+}
+ALLOWED_TASK_STATUSES = FAILED_TASK_STATUSES | {"success", "not_checked"}
+TASK_REASON_BINDINGS = {
+    "success": {"sync_verified_local_reread_required"},
+    "timeout": {"task_wait_timeout"},
+    "start_failed": {"task_start_failed"},
+    "interrupted_or_terminated": {"interrupted_or_terminated"},
+}
+
+
+def acquisition_semantic_errors(value: str) -> list[str]:
+    fields = {key.casefold(): item.casefold() for key, item in ACQUISITION_VALUE.findall(value)}
+    if len(fields) < len(ACQUISITION_AUDIT_PATTERNS):
+        return []
+    errors = []
+    eligible = fields["sync_eligible"] == "true"
+    attempted = fields["sync_attempted"]
+    task_status = fields["task_status"]
+    reread = fields["local_reread"]
+    local_status = fields["local_status"]
+    live = fields["live_fallback"]
+    reason = fields["reason"]
+    if attempted in {"started", "waited_existing"} and not eligible:
+        errors.append("attempted sync requires eligibility")
+    if not eligible and attempted != "not_attempted":
+        errors.append("ineligible sync cannot be attempted")
+    if task_status not in ALLOWED_TASK_STATUSES:
+        errors.append("task status must be terminal or not_checked")
+    if attempted == "not_attempted" and task_status not in {"not_checked", "invalid", "start_failed"}:
+        errors.append("unattempted sync has an incompatible task status")
+    if attempted != "not_attempted" and task_status == "not_checked":
+        errors.append("attempted sync requires a task terminal status")
+    if task_status == "success" and reread == "not_run":
+        errors.append("successful sync requires a local reread")
+    if task_status in FAILED_TASK_STATUSES and live == "used":
+        errors.append("failed sync cannot use live fallback in the same acquisition")
+    if live == "used" and reread != "rejected":
+        errors.append("live fallback requires an explicit no-data local reread rejection")
+    if live == "used" and local_status != "no_data":
+        errors.append("live fallback requires structured local_status=no_data")
+    if live == "used" and (attempted != "not_attempted" or task_status != "not_checked"):
+        errors.append("live fallback requires an unattempted sync branch")
+    if live == "used" and eligible:
+        errors.append("live fallback requires sync_eligible=false")
+    if reason in {"not_evaluated", "unknown", "none"}:
+        errors.append("reason must be a stable evaluated code")
+    if task_status in TASK_REASON_BINDINGS and reason not in TASK_REASON_BINDINGS[task_status]:
+        errors.append("reason does not match task terminal status")
+    if reread == "not_run" and local_status != "not_run":
+        errors.append("local status must be not_run when reread did not run")
+    if reread == "accepted" and local_status not in {"complete", "partial"}:
+        errors.append("accepted local reread must be complete or partial")
+    if reread == "rejected" and local_status not in {"no_data", "read_error"}:
+        errors.append("rejected local reread must be no_data or read_error")
+    return errors
 
 COMPOSITE_SCORE_PATTERNS = [
     re.compile(
@@ -333,6 +405,22 @@ def validate_energy_contract(
 
         execution_values = field_values.get("执行带宽", [])
         sleep_debt_values = field_values.get("睡眠负债", [])
+        acquisition_values = field_values.get("采集审计", [])
+        if acquisition_values:
+            acquisition_value = acquisition_values[0]
+            missing_audit_keys = [
+                key
+                for key, pattern in ACQUISITION_AUDIT_PATTERNS.items()
+                if not pattern.search(acquisition_value)
+            ]
+            if missing_audit_keys:
+                errors.append(
+                    "acquisition audit missing or invalid keys: "
+                    + ", ".join(missing_audit_keys)
+                )
+            else:
+                for semantic_error in acquisition_semantic_errors(acquisition_value):
+                    errors.append("acquisition audit state conflict: " + semantic_error)
         sentinel_fields = [
             field
             for field, values in (

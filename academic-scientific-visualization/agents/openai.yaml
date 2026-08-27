@@ -1,0 +1,9 @@
+interface:
+  display_name: Academic Scientific Visualization
+  short_description: 科研论文图表的生成、重构、投稿导出与严格质量验证全流程
+  icon_small: assets/icon.svg
+  icon_large: assets/icon.svg
+  default_prompt: Use $academic-scientific-visualization to create, redesign, or audit
+    a publication figure with explicit statistical and journal-verification status.
+policy:
+  allow_implicit_invocation: true

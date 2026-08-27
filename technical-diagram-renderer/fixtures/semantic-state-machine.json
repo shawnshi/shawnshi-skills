@@ -1,0 +1,19 @@
+{
+  "template_type": "state-machine",
+  "style": 6,
+  "title": "Order Lifecycle",
+  "states": [
+    {"id": "initial", "type": "initial"},
+    {"id": "draft", "type": "state", "label": "Draft"},
+    {"id": "review", "type": "state", "label": "Under Review"},
+    {"id": "approved", "type": "state", "label": "Approved"},
+    {"id": "final", "type": "final"}
+  ],
+  "transitions": [
+    {"from": "initial", "to": "draft"},
+    {"from": "draft", "to": "review", "label": "submit"},
+    {"from": "review", "to": "review", "guard": "needs changes", "action": "request edit"},
+    {"from": "review", "to": "approved", "guard": "valid"},
+    {"from": "approved", "to": "final", "label": "publish"}
+  ]
+}

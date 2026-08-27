@@ -1,18 +1,18 @@
 {
   "schema_version": 3,
   "skill": "mentat-insight-diary",
-  "generated_at": "2026-08-16T22:02:19",
+  "generated_at": "2026-08-26T20:06:42+08:00",
   "hash_algorithm": "SHA-256",
   "text_hash_normalization": "LF",
   "skill_md": "SKILL.md",
-  "skill_md_sha256": "02ad46578cbf14b544344d3f84c92c6dad3b95423bd9082a49156fddedc7189e",
+  "skill_md_sha256": "767a8dcb5c21c2da6dcdccf65d25ee7175c6fa770d938f85c7553e51351ca81e",
   "top_level_files": [
     "SKILL.md"
   ],
   "top_level_file_hashes": [
     {
       "path": "SKILL.md",
-      "sha256": "02ad46578cbf14b544344d3f84c92c6dad3b95423bd9082a49156fddedc7189e"
+      "sha256": "767a8dcb5c21c2da6dcdccf65d25ee7175c6fa770d938f85c7553e51351ca81e"
     }
   ],
   "top_level_directories": [
@@ -22,7 +22,7 @@
   "resource_directories": [
     {
       "name": "scripts",
-      "file_count": 1
+      "file_count": 2
     },
     {
       "name": "assets",
@@ -32,11 +32,15 @@
   "resource_file_hashes": [
     {
       "path": "assets/ooda_template.md",
-      "sha256": "18a2f05cc63946081e2eb63277bff6e79a91baf99625361a3913bfa946a1d939"
+      "sha256": "cd9ae470ee70471dc77f6bbe7f78fba99800c3c6b785a68d13e30df1c9e255c9"
+    },
+    {
+      "path": "scripts/evidence_gate.py",
+      "sha256": "66004f938931e472dbbc8fae6e20aa4a410e8d03aa57823d2a4c16bfd8e3036c"
     },
     {
       "path": "scripts/test_skill_contract.py",
-      "sha256": "60e4c4fd667a3ecf27c2965c0298114f04382e4cacf9c45e340d3f8a17bc57b2"
+      "sha256": "a73182350037cdcd032495d3fb7f06224a8cb86e638bce20ac34d8591b580d16"
     }
   ],
   "declared_local_dependencies": [
@@ -44,7 +48,13 @@
       "path": "assets/ooda_template.md",
       "exists": true,
       "resolved_path": "mentat-insight-diary/assets/ooda_template.md",
-      "sha256": "18a2f05cc63946081e2eb63277bff6e79a91baf99625361a3913bfa946a1d939"
+      "sha256": "cd9ae470ee70471dc77f6bbe7f78fba99800c3c6b785a68d13e30df1c9e255c9"
+    },
+    {
+      "path": "scripts/evidence_gate.py",
+      "exists": true,
+      "resolved_path": "mentat-insight-diary/scripts/evidence_gate.py",
+      "sha256": "66004f938931e472dbbc8fae6e20aa4a410e8d03aa57823d2a4c16bfd8e3036c"
     }
   ],
   "missing_declared_dependencies": []

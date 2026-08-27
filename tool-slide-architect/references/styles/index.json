@@ -1,0 +1,24 @@
+{
+  "schema_version": 1,
+  "styles": [
+    {"id": "anti-gravity", "file": "anti-gravity.md", "name": "Anti-Gravity", "best_for": ["innovation", "technology", "keynote"]},
+    {"id": "refined-minimal", "file": "refined-minimal.md", "name": "Refined Minimal", "best_for": ["executive", "portfolio", "strategy"]},
+    {"id": "pixel-art", "file": "pixel-art.md", "name": "Pixel Art", "best_for": ["gaming", "education", "creative"]},
+    {"id": "vintage", "file": "vintage.md", "name": "Vintage", "best_for": ["history", "heritage", "storytelling"]},
+    {"id": "corporate", "file": "corporate.md", "name": "Corporate", "best_for": ["executive", "business", "proposal"]},
+    {"id": "fantasy-animation", "file": "fantasy-animation.md", "name": "Fantasy Animation", "best_for": ["storytelling", "education", "creative"]},
+    {"id": "scientific", "file": "scientific.md", "name": "Scientific", "best_for": ["research", "medical", "academic"]},
+    {"id": "blueprint", "file": "blueprint.md", "name": "Blueprint", "best_for": ["architecture", "engineering", "technical"]},
+    {"id": "dark-atmospheric", "file": "dark-atmospheric.md", "name": "Dark Atmospheric", "best_for": ["keynote", "brand", "storytelling"]},
+    {"id": "clinical-deep-blue", "file": "clinical-deep-blue.md", "name": "Clinical Deep Blue", "best_for": ["medical", "clinical", "executive"]},
+    {"id": "intuition-machine", "file": "intuition-machine.md", "name": "Intuition Machine", "best_for": ["technology", "research", "systems"]},
+    {"id": "chalkboard", "file": "chalkboard.md", "name": "Chalkboard", "best_for": ["education", "workshop", "tutorial"]},
+    {"id": "dark-room-standard", "file": "dark-room-standard.md", "name": "Dark Room Standard", "best_for": ["cinematic", "keynote", "product"]},
+    {"id": "editorial-infographic", "file": "editorial-infographic.md", "name": "Editorial Infographic", "best_for": ["explainer", "policy", "research"]},
+    {"id": "notion", "file": "notion.md", "name": "Notion", "best_for": ["dashboard", "product", "status"]},
+    {"id": "watercolor", "file": "watercolor.md", "name": "Watercolor", "best_for": ["wellness", "education", "storytelling"]},
+    {"id": "vector-illustration", "file": "vector-illustration.md", "name": "Vector Illustration", "best_for": ["explainer", "education", "brand"]},
+    {"id": "logical-light-blue", "file": "logical-light-blue.md", "name": "Logical Light Blue", "best_for": ["architecture", "roadmap", "business"]},
+    {"id": "bold-editorial", "file": "bold-editorial.md", "name": "Bold Editorial", "best_for": ["launch", "keynote", "brand"]}
+  ]
+}

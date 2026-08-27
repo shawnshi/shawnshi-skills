@@ -1,50 +1,49 @@
 ---
 name: tool-slide-architect
-description: 设计高管汇报、咨询路演和决策型演示文稿的叙事结构、逐页蓝图与讲稿。当用户要求 PPT 大纲、故事线、页面骨架、演讲结构或把复杂材料重组为决策汇报时使用。
+description: 设计、审阅和重构高管汇报、咨询路演、战略方案、项目进展、提案、培训材料与单页演示的叙事结构、逐页蓝图和讲稿；也用于把复杂材料改造成决策型 PPT 大纲，或为实际 PowerPoint/PPTX 制作提供可验证的内容交接。
 ---
 
-# Presentation Blueprint Architect
+# Slide Architect
 
-## Scope
+把演示文稿设计成可追溯、可修改、可交付的叙事蓝图。蓝图不是 `.pptx`；只有用户需要实际演示文稿时才进入 PPT 构建与物理 QA。
 
-本技能产出演示文稿蓝图，不代替物理演示文稿生成。用户需要实际 `.pptx` 时，先完成蓝图，再交给当前可用的演示文稿能力构建和验证。
+## Production flow
 
-## Procedure
+1. **建立 brief**：确认受众、决策或学习目标、场合、时长、语言、比例、保密级别、资料截止日期、品牌模板、必须保留内容和交付物。信息足够时直接推进；只有缺口会改变故事线或风险边界时才提问。
+2. **选择叙事**：读取 [workflows.md](references/workflows.md)，在 `decision / strategy / status / proposal / educational / single-slide / revision` 中选择主模式。先写一句核心主张，再确定最小充分故事线。
+3. **编写蓝图**：严格使用 [outline-template.md](references/outline-template.md) 的 v2 Schema。选择 `full / section / one_pager`，使用稳定唯一的 `Slide_ID`；页面类型与必填记录按页面任务选择。从零开始且模式、页数已知时可用 `scripts/scaffold.py` 生成结构合规的草稿骨架，但必须替换其示例文案。迁移旧稿时按 [modification-guide.md](references/modification-guide.md) 调用 `scripts/migrate_v1.py`，再人工复核。
+4. **分离判断层级**：把事实、推断、假设、建议分别写为 `Claims` 记录；用 ID 将主张与证据连接。未知内容写入 `Open Items`，风险写入 `Risk Flags`，不得用虚假确定性补齐。
+5. **设计信息表达**：按需读取 [content-rules.md](references/content-rules.md)、[design-guidelines.md](references/design-guidelines.md)、[layouts.md](references/layouts.md) 和选定的单个样式文件。样式入口是 [styles/index.json](references/styles/index.json)；不要默认加载全部样式或维度文件。
+6. **行业合规**：医疗、政府、金融材料必须核对隐私、脱敏、资产授权、保密、数据地域与政策适用性。界面截图、患者/客户信息、品牌元素和第三方图片仅在获得授权且完成必要脱敏后使用。
+7. **校验与人工复核**：页面重排后用 `scripts/renumber.py` 修复 `Page`，不改变 `Slide_ID`；再运行 `scripts/validator.py`。它只做结构校验（`validation_scope: structural`）；结构、日期、引用、拓扑和最终稿未结构化占位符等错误必须阻断。结构通过不代表可发布，故事线、数字真实性、视觉质量、承诺风险和法规适用性仍需人工复核。
+8. **按交付物分流**：
+   - 只要故事线或逐页蓝图：交付已验证的 `outline.md`，无需 JSON。
+   - 需要机器交接或实际 `.pptx`：运行 `scripts/build-deck.py` 生成 JSON handoff，再读取 [pptx-handoff.md](references/pptx-handoff.md)，交给可用的演示文稿能力构建、渲染并做物理 QA。
 
-1. 识别受众、决策目标、场合、时长、页数、已有材料和必须保留的事实。背景足够时直接起草；只有缺失信息会改变故事线时才提问。
-2. 选择叙事结构。决策汇报优先使用“为什么做—建成什么—先做什么—靠什么支撑—如何落地—需要决定什么”；其他场景可按 `references/workflows.md` 选择。
-3. 先生成一句核心主张和满足决策目标的最小故事线。每页只承担一个明确任务，页数由场合和时长决定。
-4. 为每页写准确标题、关键证据、视觉表达和讲稿目标。决策页可使用结论式标题，技术页可使用描述性标题；任何标题都不得把未经验证的推断写成事实。
-5. 按需读取：
-   - `references/outline-template.md`：唯一可供脚本解析的蓝图 Schema。
-   - `references/content-rules.md`
-   - `references/design-guidelines.md`
-   - `references/layouts.md`
-   - `references/blueprint-template.md`：字段解释，不是另一套输入格式。
-6. 涉及医疗、金融或政府决策时，标注数据日期、来源、适用范围和待核验项。
-7. 检查首尾闭环、页面顺序、数据重复、视觉密度和讲稿是否只是朗读页面。
-8. 用 `scripts/validator.py` 检查蓝图；确定性结构错误会阻断，标题风格和内容密度只作提示。`scripts/build-deck.py` 只生成结构化 JSON 包，不生成 `.pptx`。
-9. 用户要求实际 `.pptx` 时，将已验证的蓝图交给当前可用的演示文稿能力构建，并对物理文件另行验证。不要把 JSON 包称为演示文稿。
+## Draft and final
 
-图表、资料核验或资产生成可以在任务可独立拆分且并行能力可用时并行处理；主线负责统一口径和最终蓝图。
+- `Status: draft`：允许未闭合项，但必须通过 `Open Items` 明确责任人和计划日期；占位符会产生警告。
+- `Status: final`：禁止 moustache、`TBD`、`TODO`、`待补`、`待确认`、`待核验`、`[INSERT]`、`[BASELINE]` 等未结构化占位符。允许保留结构化 `unverified` Claims 和 Open Items，但必须如实呈现状态、责任人和后续动作；资产授权或脱敏仍为 pending 时保持 `draft`。
+- 最终稿不得把 `none` 当作规避证据责任的写法。没有证据支撑的事实必须准确降级为推断或假设、建立结构化开放项，或删除。
 
-## Boundaries
+## Release rules
 
-- 不使用操控、恐惧或虚假确定性替代证据。
-- 不强制每份演示使用同一种开场、结尾或停顿时长。
-- 不默认生成图片、写入知识库或保存用户偏好。
-- 中间文件放在当前任务临时目录；最终文件写入用户指定或当前工作区。
-- 不使用自动编码修复改写输入文件；校验器默认只读。
+- `Deck_Mode: full` 的第一页使用 `Cover`；叙事必须以 `Closing` 或 `Decision` 结束，终点之后只允许 `Appendix` 或 `References`。
+- `section` 和 `one_pager` 不强制封面或叙事终点；`one_pager` 可使用除 `Appendix`、`References` 外的任意页面类型。
+- `Data` 与 `References` 必须含有效 Evidence 记录；`Decision` 必须含 Decision 记录；`Risk` 必须含 Risk Flags 记录。
+- 存在 Evidence 记录时，`Citation_Treatment` 不能使用 `not-applicable`。
+- 引用、保密标记和经授权的品牌元素属于必要信息，不得因样式偏好而删除。
+- 不把 JSON 包称为 PPT，不把未做渲染检查的 `.pptx` 称为最终版。
 
-## Output
+## Reference routing
 
-逐页蓝图至少包含：
-
-- 页码和页面任务。
-- 与页面任务匹配的准确标题。
-- 证据或待补数据。
-- 推荐图表或版式。
-- 讲稿要点。
-- 来源与风险标记。
-
-机器可解析交付必须遵循 `references/outline-template.md`，包括 `DECK_METADATA`、`STYLE_INSTRUCTIONS`、幻灯片头、四个顶层区块及其嵌套字段。最终稿不得保留占位符；校验模板本身时才使用 `--allow-placeholders`。
+- 场景故事线：[workflows.md](references/workflows.md)
+- v2 唯一机器 Schema：[outline-template.md](references/outline-template.md)
+- 字段语义与记录格式：[blueprint-template.md](references/blueprint-template.md)
+- 论证分析：[analysis-framework.md](references/analysis-framework.md)
+- 内容、证据与合规：[content-rules.md](references/content-rules.md)
+- 设计与可访问性：[design-guidelines.md](references/design-guidelines.md)
+- 页面布局：[layouts.md](references/layouts.md)
+- 修订既有材料：[modification-guide.md](references/modification-guide.md)
+- 命令用法：[cli-reference.md](references/cli-reference.md)
+- 实际 PPT 交接：[pptx-handoff.md](references/pptx-handoff.md)

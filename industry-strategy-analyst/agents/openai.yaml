@@ -1,0 +1,8 @@
+interface:
+  display_name: 行业战略研究分析师
+  short_description: 以公开证据开展行业、竞争格局与战略决策研究并输出可审计建议
+  icon_small: assets/icon.svg
+  icon_large: assets/icon.svg
+  default_prompt: 使用 $industry-strategy-analyst 分析一个明确市场的规模、竞争格局、风险与进入策略。
+policy:
+  allow_implicit_invocation: false

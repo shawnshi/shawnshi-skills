@@ -1,0 +1,355 @@
+{
+  "schema_version": 3,
+  "skill": "technical-diagram-renderer",
+  "generated_at": "2026-08-27T20:05:46+08:00",
+  "hash_algorithm": "SHA-256",
+  "text_hash_normalization": "LF",
+  "skill_md": "SKILL.md",
+  "skill_md_sha256": "413f673f2d80ed3981b444c5c31b0aece3ce89ac0db8c7fe8fcc7586fc1820bb",
+  "top_level_files": [
+    "LICENSE",
+    "SKILL.md",
+    "agentloop-core.svg",
+    "package.json"
+  ],
+  "top_level_file_hashes": [
+    {
+      "path": "LICENSE",
+      "sha256": "7de620051267179686eb5929b2eb264403bb7cbce00ebdee93408c18daa6c03f"
+    },
+    {
+      "path": "SKILL.md",
+      "sha256": "413f673f2d80ed3981b444c5c31b0aece3ce89ac0db8c7fe8fcc7586fc1820bb"
+    },
+    {
+      "path": "agentloop-core.svg",
+      "sha256": "f3a4a9bab77bd6dfa4f1dd83d4f73e0354a9ceb2a757c75763f6bb16f8b7065b"
+    },
+    {
+      "path": "package.json",
+      "sha256": "59a48b8f3c1a943ebc91cf4d0ee2fde3a3b5a8e627de229fe7e9d375c19f65ad"
+    }
+  ],
+  "top_level_directories": [
+    "agents",
+    "assets",
+    "fixtures",
+    "references",
+    "scripts",
+    "templates",
+    "tests"
+  ],
+  "resource_directories": [
+    {
+      "name": "scripts",
+      "file_count": 8
+    },
+    {
+      "name": "references",
+      "file_count": 13
+    },
+    {
+      "name": "assets",
+      "file_count": 8
+    },
+    {
+      "name": "agents",
+      "file_count": 1
+    }
+  ],
+  "resource_file_hashes": [
+    {
+      "path": "agents/openai.yaml",
+      "sha256": "bfcb7c9a9005db901a6a33e30126fe66b4338333233348217d2b7bddab6cc952"
+    },
+    {
+      "path": "assets/icon.svg",
+      "sha256": "e9301497fa98ef56aaca7ede0857b9a18dc06c34040f0679c609a6bf49b1d38b"
+    },
+    {
+      "path": "assets/samples/sample-style1-flat.png",
+      "sha256": "c1c47d91ec35ea0675aa5b89315ce1cff218661e476c98443535f7d3fb6230b1"
+    },
+    {
+      "path": "assets/samples/sample-style2-dark.png",
+      "sha256": "f57a96a6a429b086602c81fe8e14d5f5d6f30686b139a30ccf0bf543ff9d817d"
+    },
+    {
+      "path": "assets/samples/sample-style3-blueprint.png",
+      "sha256": "9fbdaa8ce9a068baf219a36c94cbed36ab6a124a13a7846f0c7f6f420a67d87b"
+    },
+    {
+      "path": "assets/samples/sample-style4-notion.png",
+      "sha256": "5ea71c6bd3e19b927e41efdf4bda496050bfdf965a1a11d1ffdf1c4204220ce4"
+    },
+    {
+      "path": "assets/samples/sample-style5-glass.png",
+      "sha256": "93457ee799feca52e09d21953d5024e2b64142cf2cad7eb35939db2a7ec20fbc"
+    },
+    {
+      "path": "assets/samples/sample-style6-claude.png",
+      "sha256": "33b1723922bf6855efead445a4343284f21f640e458c4d51333ad8b09c99477e"
+    },
+    {
+      "path": "assets/samples/sample-style7-openai.png",
+      "sha256": "1a3de279af496eecfe0c0edd26422503c44bd618175fa7589119133336422e8b"
+    },
+    {
+      "path": "fixtures/agent-memory-types-style4.json",
+      "sha256": "fcaf0fe13e5d0e65f257fe43e3c3eb14062a8b036a403a6ca34504f666ba1d16"
+    },
+    {
+      "path": "fixtures/api-flow-style7.json",
+      "sha256": "cae177ac20bb84c98029592cfd64550d11c94c2d883b9f865abc1d974def1a35"
+    },
+    {
+      "path": "fixtures/mem0-style1.json",
+      "sha256": "256c83d7fd04f327a7cc1c1ea0aadf2c6ab2a944be22057a0bc8154d48747764"
+    },
+    {
+      "path": "fixtures/microservices-style3.json",
+      "sha256": "0794fdb56a53d8e6fa7338165614b994eb18c162fcac100c0cabdd60655ba0c4"
+    },
+    {
+      "path": "fixtures/multi-agent-style5.json",
+      "sha256": "502bf723a5e98d09d7a4d42d804dde25b746fe3d41d0dfaab6330f1389eec9ac"
+    },
+    {
+      "path": "fixtures/semantic-architecture.json",
+      "sha256": "4bd1377d2f846ba3ec8a6e0b2d6dc90f5c2431f1af64a57984424e6bdf50f495"
+    },
+    {
+      "path": "fixtures/semantic-data-flow.json",
+      "sha256": "ba37eb34441a40f9cc63145bb835acdeaf170539e0f79bbd37a960bcc2eecbfb"
+    },
+    {
+      "path": "fixtures/semantic-er-diagram.json",
+      "sha256": "03087c24bdb84116d3a2bf8ef49fd828ced54f59c6af0a28d996171cf33b0dc4"
+    },
+    {
+      "path": "fixtures/semantic-flowchart.json",
+      "sha256": "ac8bf6730dafd67b0d74ba3edf95ad7d7e6b9ec8ad1787ee37683dee91f6e05b"
+    },
+    {
+      "path": "fixtures/semantic-sequence.json",
+      "sha256": "95a209fd42d7cb35ffb653ed53123348d22b710ace68e25270f7899c4884c8fe"
+    },
+    {
+      "path": "fixtures/semantic-state-machine.json",
+      "sha256": "83db34a9b77b054b669120859a0712c92a993450b9537f537a967189c0def87a"
+    },
+    {
+      "path": "fixtures/semantic-timeline.json",
+      "sha256": "214fa347d6bdda20717142e6455d46104e80efa1d7f956f49dfb87a37a6a9325"
+    },
+    {
+      "path": "fixtures/semantic-use-case.json",
+      "sha256": "85824d9b3c7120c9e9b82078297a28def09941f41f5ad6ffcadb801cbfdd7e4c"
+    },
+    {
+      "path": "fixtures/system-architecture-style6.json",
+      "sha256": "463a5f1a96d478d9fb371a8ffd240e7b590651312a14879bf82eae0b186ab178"
+    },
+    {
+      "path": "fixtures/tool-call-style2.json",
+      "sha256": "bd3043da3d4e6b3fb997dde4dc5a4b20287d34b057b134ba416dbd193ce0462e"
+    },
+    {
+      "path": "references/icons.md",
+      "sha256": "4de23bc07ea10f37f58691c529681187810f803da4dcc9875200eda511e54313"
+    },
+    {
+      "path": "references/input-schema.md",
+      "sha256": "21c56c374fcf9864ae82b7a014d54893df0ab99089fa9bcd16b429651b6de01c"
+    },
+    {
+      "path": "references/output-qa.md",
+      "sha256": "20b1f858edcd3c2cf39191cc9b90dc9905ecac663895546dddd26421ad27dafc"
+    },
+    {
+      "path": "references/style-1-flat-icon.md",
+      "sha256": "adf0ffc55c567707606496b42d855c156551e80d9e50df93525cc007e72253be"
+    },
+    {
+      "path": "references/style-2-dark-terminal.md",
+      "sha256": "7b2e63f257aa8371c95c93eecd77f2543de6cfbe180f30f16ba69ada8211f29a"
+    },
+    {
+      "path": "references/style-3-blueprint.md",
+      "sha256": "d2a9d91cf66d28d43d18deaa9dd18bf5dc9bc984c5b35ee72ecdb1d7260a70c9"
+    },
+    {
+      "path": "references/style-4-notion-clean.md",
+      "sha256": "b6b43372828c4aee3545cdcca9e7d41a98cfda332ecd23ace2cc4af72665406c"
+    },
+    {
+      "path": "references/style-5-glassmorphism.md",
+      "sha256": "326a029c06995396190b96548f79135317a29457d207c1ef3db677777666ba2e"
+    },
+    {
+      "path": "references/style-6-claude-official.md",
+      "sha256": "f94f070d02f5521d97511d92422e611da692dc9464103d46ed1c76e9677d6913"
+    },
+    {
+      "path": "references/style-7-openai.md",
+      "sha256": "44e4289744eafbfdbb8eb1925c19089c28d44049929b95e6a80fe38292ba6a1b"
+    },
+    {
+      "path": "references/style-8-dark-luxury.md",
+      "sha256": "04eae0e157c0a991d657a19639299d1c0a62cedf288d258113c08070df55b635"
+    },
+    {
+      "path": "references/style-diagram-matrix.md",
+      "sha256": "7a8d3073ac17ec9e848bec8ebcda7640208f76d2d9ba1d9036c5baca0d03f96b"
+    },
+    {
+      "path": "references/svg-layout-best-practices.md",
+      "sha256": "d21faebc716ead1465c31e8a46c04728b50eb3c8ab1fafc95ae84ec2e1def5e6"
+    },
+    {
+      "path": "scripts/export_drawio.py",
+      "sha256": "cb9b631e3550fcbbc360117c88b3268ce9cb0bad4bc8bc802aaa55fb8106a79d"
+    },
+    {
+      "path": "scripts/generate-from-template.py",
+      "sha256": "0c83a0f4bea197fcbe5945e0f5e85e3446b924caab7df16252e71e100e8107ac"
+    },
+    {
+      "path": "scripts/layout_engine.py",
+      "sha256": "a7211cb46a36cae150458152ad68e456ff542e4b199ce267e20cf9d771f265f6"
+    },
+    {
+      "path": "scripts/README.md",
+      "sha256": "79432228dd41f2c6fa01d27eb4cc7222be5f6fd920f8e4fc0fddffe73476757a"
+    },
+    {
+      "path": "scripts/render-diagram.py",
+      "sha256": "f14f5463d97b38acf1c591fbbab6d0024972eb6266896d2aa65a7489cb1583f9"
+    },
+    {
+      "path": "scripts/semantic_diagrams.py",
+      "sha256": "bbcd001bf0369e1fb5619d49ce8fd935443c0a842b54db5107d48162be8ff6fc"
+    },
+    {
+      "path": "scripts/test-all-styles.py",
+      "sha256": "6286a4e96fe90ce331b229c0461c68904e2a048a0eb03e07bbc529914bead8c5"
+    },
+    {
+      "path": "scripts/validate-svg.py",
+      "sha256": "594047a518400b64d6b68a11c1a6db15b8e27c3fa95816d32a4b6178d8b097f1"
+    },
+    {
+      "path": "templates/agent-architecture.svg",
+      "sha256": "5a7aa6a747bb0591beec6524f18d89772e314d927614524eee330f59bfb98737"
+    },
+    {
+      "path": "templates/agent.svg",
+      "sha256": "fe4297cc47be02ea9f38e8cb79a40d846dcc2ff4cf6b15e465449470c45d2aef"
+    },
+    {
+      "path": "templates/architecture.svg",
+      "sha256": "4d1242c761ce82b6e5f5b16cf27ce53df8ed5081733da6175a3584b0f0824355"
+    },
+    {
+      "path": "templates/class.svg",
+      "sha256": "fe4297cc47be02ea9f38e8cb79a40d846dcc2ff4cf6b15e465449470c45d2aef"
+    },
+    {
+      "path": "templates/comparison-matrix.svg",
+      "sha256": "782e977610510d1b55d14c01120123dfcf89435dbd3afab6c383c5c5b79a0d71"
+    },
+    {
+      "path": "templates/comparison.svg",
+      "sha256": "c15958fe57764b860394a4b4f409895b16777027964be0b5d2d0f77a22879a05"
+    },
+    {
+      "path": "templates/data-flow.svg",
+      "sha256": "3f9276361d50e79fb60225d8f7aaba6de8e53be6d12754a6f73693af698f660a"
+    },
+    {
+      "path": "templates/er-diagram.svg",
+      "sha256": "54ce0c1e85e7dceb886031a0aeefd544723d1c421096c7bd7e0b1d3e401fe23a"
+    },
+    {
+      "path": "templates/flowchart.svg",
+      "sha256": "ee6c2195b25f0b254ada1634ab64f2ef6cae23aff86bac4440e3404cf4b172ff"
+    },
+    {
+      "path": "templates/memory.svg",
+      "sha256": "891b5bf380baae83c9fdeee47e365d834a3257d59b7c666221e307d55c2d61d0"
+    },
+    {
+      "path": "templates/mind-map.svg",
+      "sha256": "45c072bf11831337182c85f41d8142751158549cbaf65b5c1cfdd8ef26dbadbe"
+    },
+    {
+      "path": "templates/network-topology.svg",
+      "sha256": "c15958fe57764b860394a4b4f409895b16777027964be0b5d2d0f77a22879a05"
+    },
+    {
+      "path": "templates/sequence.svg",
+      "sha256": "9f4a36689f211f1016582a37d6fa11521d2fb7f2393b51a7353f788c427058a6"
+    },
+    {
+      "path": "templates/state-machine.svg",
+      "sha256": "25c26126e19981d86ce8a10f47ff8dc5168dd1e622383fe22aa41a8574e0528b"
+    },
+    {
+      "path": "templates/timeline.svg",
+      "sha256": "421253e219b862aa5df2a98571d90c53b18591c4ec1789d5435df95b41720e2e"
+    },
+    {
+      "path": "templates/use-case.svg",
+      "sha256": "fb8b726d891e2a90b50b277ef860c19009943eda9b943d13bf4a99eec5c37583"
+    },
+    {
+      "path": "tests/test_drawio_export.py",
+      "sha256": "a8d577d994f82f7d649d18e1eb75acb799c26c60794c5789f72ae07d6bba1dff"
+    },
+    {
+      "path": "tests/test_layout_engine.py",
+      "sha256": "8e23fda9de4690be877124d78b8aa4e627465cede98de9a28e270f5aeb53fe44"
+    },
+    {
+      "path": "tests/test_renderer_cli.py",
+      "sha256": "3e694afdebcfa76f4383e8dbe3d154bfdb56ceff5c4ccfe51373a2c2833d1cc2"
+    },
+    {
+      "path": "tests/test_validate_svg.py",
+      "sha256": "9fd7f3c5767b3800110b96e047ba47b4e56b3900bbc2ba83d137f1bd368f945a"
+    }
+  ],
+  "declared_local_dependencies": [
+    {
+      "path": "references/icons.md",
+      "exists": true,
+      "resolved_path": "technical-diagram-renderer/references/icons.md",
+      "sha256": "4de23bc07ea10f37f58691c529681187810f803da4dcc9875200eda511e54313"
+    },
+    {
+      "path": "references/input-schema.md",
+      "exists": true,
+      "resolved_path": "technical-diagram-renderer/references/input-schema.md",
+      "sha256": "21c56c374fcf9864ae82b7a014d54893df0ab99089fa9bcd16b429651b6de01c"
+    },
+    {
+      "path": "references/output-qa.md",
+      "exists": true,
+      "resolved_path": "technical-diagram-renderer/references/output-qa.md",
+      "sha256": "20b1f858edcd3c2cf39191cc9b90dc9905ecac663895546dddd26421ad27dafc"
+    },
+    {
+      "path": "references/style-diagram-matrix.md",
+      "exists": true,
+      "resolved_path": "technical-diagram-renderer/references/style-diagram-matrix.md",
+      "sha256": "7a8d3073ac17ec9e848bec8ebcda7640208f76d2d9ba1d9036c5baca0d03f96b"
+    },
+    {
+      "path": "scripts/render-diagram.py",
+      "exists": true,
+      "resolved_path": "technical-diagram-renderer/scripts/render-diagram.py",
+      "sha256": "f14f5463d97b38acf1c591fbbab6d0024972eb6266896d2aa65a7489cb1583f9"
+    }
+  ],
+  "missing_declared_dependencies": []
+}

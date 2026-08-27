@@ -1,0 +1,615 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://winning-health.example/discovery-call/business-modes.schema.json",
+  "title": "discovery-call business mode profiles",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "$schema",
+    "schema_version",
+    "authorization_contract",
+    "profiles"
+  ],
+  "properties": {
+    "$schema": {
+      "type": "string"
+    },
+    "schema_version": {
+      "type": "string",
+      "pattern": "^[1-9][0-9]*\\.[0-9]+\\.[0-9]+$"
+    },
+    "authorization_contract": {
+      "$ref": "#/$defs/authorization_contract"
+    },
+    "profiles": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "briefing",
+        "standard_visit",
+        "strategic_account",
+        "letter"
+      ],
+      "properties": {
+        "briefing": {
+          "$ref": "#/$defs/profile"
+        },
+        "standard_visit": {
+          "$ref": "#/$defs/profile"
+        },
+        "strategic_account": {
+          "$ref": "#/$defs/profile"
+        },
+        "letter": {
+          "$ref": "#/$defs/profile"
+        }
+      }
+    }
+  },
+  "$defs": {
+    "stable_requirement": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "required",
+        "stable"
+      ],
+      "properties": {
+        "required": {
+          "enum": [
+            "always",
+            "when_internal_or_connector",
+            "when_project_scoped_or_internal"
+          ]
+        },
+        "stable": {
+          "const": true
+        }
+      }
+    },
+    "authorization_contract": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "tenant_id",
+        "customer_id",
+        "project_id",
+        "allowed_project_ids",
+        "authorization_expires_at"
+      ],
+      "properties": {
+        "tenant_id": {
+          "$ref": "#/$defs/stable_requirement"
+        },
+        "customer_id": {
+          "$ref": "#/$defs/stable_requirement"
+        },
+        "project_id": {
+          "$ref": "#/$defs/stable_requirement"
+        },
+        "allowed_project_ids": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "required",
+            "must_include"
+          ],
+          "properties": {
+            "required": {
+              "const": "when_internal"
+            },
+            "must_include": {
+              "const": "project_id"
+            }
+          }
+        },
+        "authorization_expires_at": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "required",
+            "timezone_required"
+          ],
+          "properties": {
+            "required": {
+              "const": "when_internal"
+            },
+            "timezone_required": {
+              "const": true
+            }
+          }
+        }
+      }
+    },
+    "profile": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "display_name",
+        "route",
+        "depth",
+        "modules",
+        "optional_modules",
+        "query_budget",
+        "source_budget",
+        "turn_budget",
+        "output_pages",
+        "ttl_days",
+        "required_business_fields",
+        "authorization_requirements",
+        "planning_gate",
+        "query_templates"
+      ],
+      "properties": {
+        "display_name": {
+          "type": "string",
+          "minLength": 1
+        },
+        "route": {
+          "enum": [
+            "research_only",
+            "visit_prep",
+            "strategy",
+            "letter",
+            "refresh"
+          ]
+        },
+        "depth": {
+          "enum": [
+            "quick",
+            "standard",
+            "deep"
+          ]
+        },
+        "modules": {
+          "$ref": "#/$defs/module_list"
+        },
+        "optional_modules": {
+          "$ref": "#/$defs/module_list_allow_empty"
+        },
+        "query_budget": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "public_max",
+            "internal_max",
+            "batch_size",
+            "parallelism"
+          ],
+          "properties": {
+            "public_max": {
+              "type": "integer",
+              "minimum": 1
+            },
+            "internal_max": {
+              "type": "integer",
+              "minimum": 0
+            },
+            "batch_size": {
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 10
+            },
+            "parallelism": {
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 8
+            }
+          }
+        },
+        "source_budget": {
+          "$ref": "#/$defs/range"
+        },
+        "turn_budget": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "formal_max",
+            "questions_per_turn_max"
+          ],
+          "properties": {
+            "formal_max": {
+              "type": "integer",
+              "minimum": 0,
+              "maximum": 3
+            },
+            "questions_per_turn_max": {
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 3
+            }
+          }
+        },
+        "output_pages": {
+          "$ref": "#/$defs/range"
+        },
+        "ttl_days": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "institution",
+            "leader",
+            "procurement",
+            "internal"
+          ],
+          "properties": {
+            "institution": {
+              "type": "integer",
+              "minimum": 1
+            },
+            "leader": {
+              "type": "integer",
+              "minimum": 1
+            },
+            "procurement": {
+              "type": "integer",
+              "minimum": 1
+            },
+            "internal": {
+              "type": "integer",
+              "minimum": 1
+            }
+          }
+        },
+        "required_business_fields": {
+          "type": "array",
+          "minItems": 1,
+          "uniqueItems": true,
+          "items": {
+            "type": "string",
+            "pattern": "^[a-z][a-z0-9_]*$"
+          }
+        },
+        "strategy_variants": {
+          "$ref": "#/$defs/strategy_variants"
+        },
+        "authorization_requirements": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "stable_ids",
+            "internal_stable_ids",
+            "project_allowlist_required_for_internal",
+            "authorization_expiry_required_for_internal"
+          ],
+          "properties": {
+            "stable_ids": {
+              "$ref": "#/$defs/id_list"
+            },
+            "internal_stable_ids": {
+              "$ref": "#/$defs/id_list"
+            },
+            "project_allowlist_required_for_internal": {
+              "const": true
+            },
+            "authorization_expiry_required_for_internal": {
+              "const": true
+            }
+          }
+        },
+        "planning_gate": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "required",
+            "conditional"
+          ],
+          "properties": {
+            "required": {
+              "$ref": "#/$defs/gate_list"
+            },
+            "conditional": {
+              "type": "object",
+              "additionalProperties": {
+                "$ref": "#/$defs/gate_list"
+              }
+            }
+          }
+        },
+        "query_templates": {
+          "type": "array",
+          "minItems": 1,
+          "items": {
+            "$ref": "#/$defs/query_template"
+          }
+        }
+      },
+      "allOf": [
+        {
+          "if": {
+            "properties": {
+              "route": {
+                "const": "strategy"
+              }
+            },
+            "required": [
+              "route"
+            ]
+          },
+          "then": {
+            "required": [
+              "strategy_variants"
+            ]
+          },
+          "else": {
+            "not": {
+              "required": [
+                "strategy_variants"
+              ]
+            }
+          }
+        }
+      ]
+    },
+    "strategy_variants": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "default",
+        "meeting_status_policy",
+        "variants"
+      ],
+      "properties": {
+        "default": {
+          "enum": [
+            "scheduled_visit",
+            "account_planning"
+          ]
+        },
+        "meeting_status_policy": {
+          "$ref": "#/$defs/meeting_status_policy"
+        },
+        "variants": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "scheduled_visit",
+            "account_planning"
+          ],
+          "properties": {
+            "scheduled_visit": {
+              "$ref": "#/$defs/strategy_variant"
+            },
+            "account_planning": {
+              "$ref": "#/$defs/strategy_variant"
+            }
+          }
+        }
+      }
+    },
+    "meeting_status_policy": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "allowed_values",
+        "variant_by_status",
+        "exact_time_without_status",
+        "exact_time_conflicts_with_status",
+        "target_and_objective_imply_meeting"
+      ],
+      "properties": {
+        "allowed_values": {
+          "type": "array",
+          "prefixItems": [
+            {"const": "confirmed"},
+            {"const": "tentative"},
+            {"const": "none"},
+            {"const": "unknown"}
+          ],
+          "items": false,
+          "minItems": 4,
+          "maxItems": 4
+        },
+        "variant_by_status": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "confirmed",
+            "tentative",
+            "none",
+            "unknown"
+          ],
+          "properties": {
+            "confirmed": {"const": "scheduled_visit"},
+            "tentative": {"const": "account_planning"},
+            "none": {"const": "account_planning"},
+            "unknown": {"const": "account_planning"}
+          }
+        },
+        "exact_time_without_status": {
+          "const": "scheduled_visit"
+        },
+        "exact_time_conflicts_with_status": {
+          "type": "array",
+          "prefixItems": [
+            {"const": "none"},
+            {"const": "unknown"}
+          ],
+          "items": false,
+          "minItems": 2,
+          "maxItems": 2
+        },
+        "target_and_objective_imply_meeting": {
+          "const": false
+        }
+      }
+    },
+    "strategy_variant": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "template",
+        "required_business_fields",
+        "planning_gate",
+        "required_sections",
+        "forbidden_sections",
+        "forbidden_business_fields",
+        "forbidden_heading_terms",
+        "forbidden_body_labels"
+      ],
+      "properties": {
+        "template": {
+          "type": "string",
+          "pattern": "^assets/[a-z0-9-]+\\.md$"
+        },
+        "required_business_fields": {
+          "type": "array",
+          "minItems": 1,
+          "uniqueItems": true,
+          "items": {
+            "type": "string",
+            "pattern": "^[a-z][a-z0-9_]*$"
+          }
+        },
+        "planning_gate": {
+          "$ref": "#/$defs/gate_list"
+        },
+        "required_sections": {
+          "type": "array",
+          "minItems": 1,
+          "uniqueItems": true,
+          "items": {
+            "type": "string",
+            "minLength": 1
+          }
+        },
+        "forbidden_sections": {
+          "type": "array",
+          "uniqueItems": true,
+          "items": {
+            "type": "string",
+            "minLength": 1
+          }
+        },
+        "forbidden_business_fields": {
+          "type": "array",
+          "uniqueItems": true,
+          "items": {
+            "type": "string",
+            "pattern": "^[a-z][a-z0-9_]*$"
+          }
+        },
+        "forbidden_heading_terms": {
+          "type": "array",
+          "uniqueItems": true,
+          "items": {
+            "type": "string",
+            "minLength": 1
+          }
+        },
+        "forbidden_body_labels": {
+          "type": "array",
+          "uniqueItems": true,
+          "items": {
+            "type": "string",
+            "minLength": 1
+          }
+        }
+      }
+    },
+    "range": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "min",
+        "max"
+      ],
+      "properties": {
+        "min": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "max": {
+          "type": "integer",
+          "minimum": 1
+        }
+      }
+    },
+    "module": {
+      "enum": [
+        "institution",
+        "leader",
+        "internal",
+        "strategy",
+        "letter"
+      ]
+    },
+    "module_list": {
+      "type": "array",
+      "minItems": 1,
+      "uniqueItems": true,
+      "items": {
+        "$ref": "#/$defs/module"
+      }
+    },
+    "module_list_allow_empty": {
+      "type": "array",
+      "uniqueItems": true,
+      "items": {
+        "$ref": "#/$defs/module"
+      }
+    },
+    "id_list": {
+      "type": "array",
+      "minItems": 1,
+      "uniqueItems": true,
+      "items": {
+        "enum": [
+          "tenant_id",
+          "customer_id",
+          "project_id"
+        ]
+      }
+    },
+    "gate_list": {
+      "type": "array",
+      "minItems": 1,
+      "uniqueItems": true,
+      "items": {
+        "type": "string",
+        "pattern": "^[a-z][a-z0-9_]*$"
+      }
+    },
+    "query_template": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "id",
+        "channel",
+        "scope",
+        "priority",
+        "template"
+      ],
+      "properties": {
+        "id": {
+          "type": "string",
+          "pattern": "^[a-z][a-z0-9-]*$"
+        },
+        "channel": {
+          "enum": [
+            "public",
+            "internal"
+          ]
+        },
+        "scope": {
+          "enum": [
+            "customer",
+            "alias",
+            "person",
+            "topic",
+            "project"
+          ]
+        },
+        "priority": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 100
+        },
+        "template": {
+          "type": "string",
+          "minLength": 3
+        }
+      }
+    }
+  }
+}

@@ -4,6 +4,7 @@ import json
 import os
 import re
 import tempfile
+import time
 from pathlib import Path
 
 
@@ -31,6 +32,10 @@ REFINED_PATH = RUNTIME_DIR / "intelligence_current_refined.json"
 CANDIDATES_PATH = RUNTIME_DIR / "intelligence_candidates.json"
 
 
+WINDOWS_REPLACE_RETRY_DELAYS = (0.05, 0.1, 0.2, 0.4)
+WINDOWS_TRANSIENT_REPLACE_ERRORS = {5, 32, 33}
+
+
 def ensure_runtime_dirs() -> None:
     RUNTIME_DIR.mkdir(parents=True, exist_ok=True)
 
@@ -49,6 +54,22 @@ def dump_json(path: Path, data) -> None:
     path.write_text(json.dumps(data, ensure_ascii=False, indent=2), encoding="utf-8")
 
 
+def _replace_with_retry(source: Path, destination: Path) -> None:
+    for attempt in range(len(WINDOWS_REPLACE_RETRY_DELAYS) + 1):
+        try:
+            os.replace(source, destination)
+            return
+        except PermissionError as exc:
+            retryable = (
+                os.name == "nt"
+                and exc.winerror in WINDOWS_TRANSIENT_REPLACE_ERRORS
+                and attempt < len(WINDOWS_REPLACE_RETRY_DELAYS)
+            )
+            if not retryable:
+                raise
+            time.sleep(WINDOWS_REPLACE_RETRY_DELAYS[attempt])
+
+
 def atomic_write_text(path: Path, text: str) -> None:
     path.parent.mkdir(parents=True, exist_ok=True)
     temporary_path: Path | None = None
@@ -65,7 +86,7 @@ def atomic_write_text(path: Path, text: str) -> None:
             stream.write(text)
             stream.flush()
             os.fsync(stream.fileno())
-        os.replace(temporary_path, path)
+        _replace_with_retry(temporary_path, path)
     except BaseException:
         if temporary_path is not None:
             temporary_path.unlink(missing_ok=True)

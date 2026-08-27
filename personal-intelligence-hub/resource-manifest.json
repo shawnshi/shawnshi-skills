@@ -1,11 +1,11 @@
 {
   "schema_version": 3,
   "skill": "personal-intelligence-hub",
-  "generated_at": "2026-08-25T21:17:50+08:00",
+  "generated_at": "2026-08-26T13:46:32+08:00",
   "hash_algorithm": "SHA-256",
   "text_hash_normalization": "LF",
   "skill_md": "SKILL.md",
-  "skill_md_sha256": "9d7d662eea2a1aec69fe19d2965cc35798b49ccd8c7cd3a3b5e9942edd7aa823",
+  "skill_md_sha256": "cfbc0da8a084d5be81e7551e30c21bdfc647af30bb1a309c85474e3727ee5fcc",
   "top_level_files": [
     "SKILL.md",
     "requirements.txt"
@@ -13,7 +13,7 @@
   "top_level_file_hashes": [
     {
       "path": "SKILL.md",
-      "sha256": "9d7d662eea2a1aec69fe19d2965cc35798b49ccd8c7cd3a3b5e9942edd7aa823"
+      "sha256": "cfbc0da8a084d5be81e7551e30c21bdfc647af30bb1a309c85474e3727ee5fcc"
     },
     {
       "path": "requirements.txt",
@@ -94,7 +94,7 @@
     },
     {
       "path": "references/subagent_prompts.json",
-      "sha256": "c8f3d3970f2ee10c87b9d37f0a4e402c9fd469733168fc9990b16f1f18debd60"
+      "sha256": "22085897ae683fadd09de99e3348952e624b4a5335d49e319a522d87916b066a"
     },
     {
       "path": "scripts/adversarial_audit.py",
@@ -126,11 +126,11 @@
     },
     {
       "path": "scripts/history_manager.py",
-      "sha256": "471230bc6290c72d9e391f77c35292c3f2fce37c9fc73f0e0112255f77ed49d8"
+      "sha256": "99db07f0ec6bd5236aea86f3ba77b0b63de4468fb8dcb7a5a38cace2bd2d90a9"
     },
     {
       "path": "scripts/hub_utils.py",
-      "sha256": "4c6ad7bedcb23aa6cf690d9296cc47d0f4961c07e1b8454b7675236f6e827918"
+      "sha256": "5a811ee089f33791c826a045f257b004697a0114d7d1029e989d6253010dfc9f"
     },
     {
       "path": "scripts/mix_policy.py",
@@ -146,15 +146,15 @@
     },
     {
       "path": "scripts/run_contract.py",
-      "sha256": "620d1b1f5aa932656d004194c0702f2945f943ca1e1d3ad3191845581d54d240"
+      "sha256": "aaf1e9e587f1dfe8c6e92c76b2a4fa827f5e035090feaa138196a3a56a1a3e5b"
     },
     {
       "path": "scripts/run_daily.py",
-      "sha256": "41b34e9d602b2523fa904828ed73f8d4472efb41f36f213d2bd8faab122002dd"
+      "sha256": "b41aabe96214dbc031503bd65054c8fce06bfcfb2164e63ab7738135932889c5"
     },
     {
       "path": "scripts/test_archive_contract.py",
-      "sha256": "94850f901db26ee12aa37920d1b0dc4e384b3c091fedecb695ee1656a1d0a341"
+      "sha256": "8bde528d3924ec4a6e632c16699f7ad8116f4d1085ad0ff134c7d9074fd886c9"
     },
     {
       "path": "scripts/test_archive_transaction.py",
@@ -206,7 +206,7 @@
     },
     {
       "path": "scripts/test_prompt_contract.py",
-      "sha256": "907599d1041772fbc67ef96aebb0ef815178ece87b112d39eaab83583a9515ba"
+      "sha256": "98a10a9690ad4d75ce9634f238396c5858ea7f31e028bb3813df6d5b987fb539"
     },
     {
       "path": "scripts/test_review_progress_gate.py",
@@ -214,19 +214,19 @@
     },
     {
       "path": "scripts/test_run_contract.py",
-      "sha256": "f6a02bc1a619ab003af7a7b90cd66bdba328cd41df6019efb9e90fee5857751b"
+      "sha256": "d1e87293997c39db73946512c3e788d3ee67d6243e30cf94efb3c9e34fc35cd2"
     },
     {
       "path": "scripts/test_run_daily.py",
-      "sha256": "9a168cabd2d851fcea111fcc1665d35daf16431a287d85d954182095e6bbfc82"
+      "sha256": "3a32a21fe3701fcb39b05d87e6a042f0e05eae4d993bdf51b5eb38c41fa69baa"
     },
     {
       "path": "scripts/test_update_index.py",
-      "sha256": "86c0b3d7da85265eeb57139f7f2fec532a4e7665bf4ebcd88016b7b838133481"
+      "sha256": "b13c1bb18a92464fc952ac71dea7f014fa35b34fc090b601536441f060aef78f"
     },
     {
       "path": "scripts/update_index.py",
-      "sha256": "610e7144e8d9c2397cf016e29ec24e27b4f14dc29d5b709cf898bf6ef05d2101"
+      "sha256": "1ef94cabad6fb241da03b33bb95853f245c5d30d30535959ccc3b499d9d948cd"
     },
     {
       "path": "scripts/validate_refined_json.py",
@@ -280,7 +280,7 @@
       "path": "references/subagent_prompts.json",
       "exists": true,
       "resolved_path": "personal-intelligence-hub/references/subagent_prompts.json",
-      "sha256": "c8f3d3970f2ee10c87b9d37f0a4e402c9fd469733168fc9990b16f1f18debd60"
+      "sha256": "22085897ae683fadd09de99e3348952e624b4a5335d49e319a522d87916b066a"
     },
     {
       "path": "scripts/await_artifacts.py",
@@ -298,7 +298,7 @@
       "path": "scripts/run_daily.py",
       "exists": true,
       "resolved_path": "personal-intelligence-hub/scripts/run_daily.py",
-      "sha256": "41b34e9d602b2523fa904828ed73f8d4472efb41f36f213d2bd8faab122002dd"
+      "sha256": "b41aabe96214dbc031503bd65054c8fce06bfcfb2164e63ab7738135932889c5"
     }
   ],
   "missing_declared_dependencies": []

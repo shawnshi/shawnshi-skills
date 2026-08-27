@@ -1,21 +1,23 @@
 {
   "schema_version": 3,
   "skill": "tool-slide-architect",
-  "generated_at": "2026-08-16T22:27:50+08:00",
+  "generated_at": "2026-08-27T20:05:47+08:00",
   "hash_algorithm": "SHA-256",
   "text_hash_normalization": "LF",
   "skill_md": "SKILL.md",
-  "skill_md_sha256": "4432b4368517fae465a1c39b1d1ebb2298135308bd0e853d3c7b26b63fe38404",
+  "skill_md_sha256": "585ac2261f355b976a7484ecee35ab64271c065d221eb2c0fa0692cc3c5d8cc1",
   "top_level_files": [
     "SKILL.md"
   ],
   "top_level_file_hashes": [
     {
       "path": "SKILL.md",
-      "sha256": "4432b4368517fae465a1c39b1d1ebb2298135308bd0e853d3c7b26b63fe38404"
+      "sha256": "585ac2261f355b976a7484ecee35ab64271c065d221eb2c0fa0692cc3c5d8cc1"
     }
   ],
   "top_level_directories": [
+    "agents",
+    "assets",
     "evals",
     "references",
     "scripts"
@@ -23,45 +25,61 @@
   "resource_directories": [
     {
       "name": "scripts",
-      "file_count": 3
+      "file_count": 8
     },
     {
       "name": "references",
-      "file_count": 34
+      "file_count": 35
+    },
+    {
+      "name": "assets",
+      "file_count": 1
+    },
+    {
+      "name": "agents",
+      "file_count": 1
     }
   ],
   "resource_file_hashes": [
     {
+      "path": "agents/openai.yaml",
+      "sha256": "6ca04c8b7391840c0b18ae21e9d91b34daddcf21b37c5ec0721210c287b36d96"
+    },
+    {
+      "path": "assets/icon.svg",
+      "sha256": "e9301497fa98ef56aaca7ede0857b9a18dc06c34040f0679c609a6bf49b1d38b"
+    },
+    {
       "path": "evals/evals.json",
-      "sha256": "68012e54a3f9902da4326f776aaaac509e2f61c9fa0ddea37b9828a0214db375"
+      "sha256": "739b2f9f09145919ef8688c52b70abf76a5f96057a131df1eeeb98c29712eb54"
+    },
+    {
+      "path": "evals/single-slide-outline.md",
+      "sha256": "5642f9e2ac1939edaff5b7073b86ea5a290b489496d714b33716dbe3dcb75533"
     },
     {
       "path": "evals/valid-outline.md",
-      "sha256": "10c3b0a1dd0a967f46729c1bf1a1674168cdbb73a353acc70ce4f40b300c1cb6"
+      "sha256": "95d57711edfd0670a9d96714e35719fa9f0a9c253cb0a0e7cf263ece3120bbcf"
     },
     {
       "path": "references/analysis-framework.md",
-      "sha256": "bd9f0a60826ad7e039c8894777b3a9dcc6e8d6b5e0f03374faeaa07ab68b8bcd"
+      "sha256": "dd82c921bf9329ddf5690d72d0dadfacb1ec9b7ad3df0b929c209fc5f11e88d0"
     },
     {
       "path": "references/blueprint-template.md",
-      "sha256": "9aba69fdf6da2b09a245c3c43caeed6bff02d6d7c4b92c00cc7862c4d60ed665"
+      "sha256": "c08099d67fb19185c537b9b49e1201597cd95c7de7a57ae2e8dd2ff20d26947e"
     },
     {
       "path": "references/cli-reference.md",
-      "sha256": "94172fdca84e92144ee7acf92f532d027e6d7d72c082d6ec102f7fde45fa7334"
-    },
-    {
-      "path": "references/config/preferences-schema.md",
-      "sha256": "3823622e614a4642125807c1d7a53b5e77ca6a5a533c0e7c8b3d1e88e98d1672"
+      "sha256": "3addcfae381ac80311a7c4235e74cae903687792e3010b0df2fd2d4b2f2aa467"
     },
     {
       "path": "references/content-rules.md",
-      "sha256": "0614e3d91a9cf11843cf79bd92f7f86cc5ebadca267cca73316971f8d929ae6f"
+      "sha256": "1fdbfbc9bb69349747bff45293dd1520d755aa85c73be5d51319ebc7d1198acb"
     },
     {
       "path": "references/design-guidelines.md",
-      "sha256": "b417820e2ccf5d7d245970dcd867fb573edf1284b75c8134476da795f4b19595"
+      "sha256": "f8b741a088babd2533f16dbe7727b8ae55afb15848a4bfa759f6c3b3ee15f2a7"
     },
     {
       "path": "references/dimensions/density.md",
@@ -73,7 +91,7 @@
     },
     {
       "path": "references/dimensions/presets.md",
-      "sha256": "3ac55682bff41aa490db07736d303a8b31854b23f49841ba4f089c51a58a6f6b"
+      "sha256": "0298c0aac7a1cc2b2319f77a7a2440a67e66792d60c6b0661b84fc9809875de8"
     },
     {
       "path": "references/dimensions/texture.md",
@@ -85,157 +103,233 @@
     },
     {
       "path": "references/layouts.md",
-      "sha256": "ddba1252475112aaff95008b6d1b5e9086662f6c8c6a3b1fb364e0f4a24d1319"
+      "sha256": "fc5c9b3840ecd5468fa338a8b63c27c27a2de4c65f77967232779c0d68782415"
     },
     {
       "path": "references/modification-guide.md",
-      "sha256": "653ada0a396500c3ee0a6732919f3f80acae4e456374637d0d5b56acd26e2e3c"
+      "sha256": "62a303b0fdac35eea4958a856451852a2f363da437998907afa370589b7bd957"
     },
     {
       "path": "references/outline-template.md",
-      "sha256": "390cc05f82988f586570a7fc24408b35db34e2b7ea00a18ce05eff0d63cf6d52"
+      "sha256": "fd3c2b614f7c8350a6b784b131afebabc554f3f0e2d47f33b6d914dfba785d85"
     },
     {
-      "path": "references/styles/Anti-Gravity  Living Artifact Presentation.md",
-      "sha256": "52827b125b9ed32ecca49f73c7bf0f63a70c72095ef867ecf26bcf317ff068a3"
+      "path": "references/pptx-handoff.md",
+      "sha256": "52fac3ba0018dbfaaf70f81e75cdc41d11b4c30909ab427c67afcf6524f2e825"
     },
     {
-      "path": "references/styles/Refined Minimal Portfolio.md",
-      "sha256": "da7cf120f30f41883d64cabdb30cd11a1409f0269ba8e5c5f4c9d0332b201172"
+      "path": "references/styles/anti-gravity.md",
+      "sha256": "5133a2cb3b92e2cf8033129a7d306e9f63c63100c50a247aa422734b1fe244df"
     },
     {
-      "path": "references/styles/像素纪元Pixel-Art.md",
-      "sha256": "6c3cec76c4957c202c3944a5327b51e050b0ef3351c0dbe6b1c5a00541436b54"
+      "path": "references/styles/blueprint.md",
+      "sha256": "e02209804ff5e11be044f3b9bd81866e6edab99eabe05263dd8ebbd230732de7"
     },
     {
-      "path": "references/styles/历史做旧Vintage.md",
-      "sha256": "973b177f28b30634f20585ec56a89ef518e4aa0813916600bfeac3faad584644"
+      "path": "references/styles/bold-editorial.md",
+      "sha256": "ccbc0f4dbe402e9676bf181931e4978831bb0cc9a3a72168cf95ba9807469061"
     },
     {
-      "path": "references/styles/商务结构化Corporate.md",
-      "sha256": "c8e806afe9c513517b03bead1bd6baa23522606699a6bd13fc55358b2f41ecc8"
+      "path": "references/styles/chalkboard.md",
+      "sha256": "b6b2625cb9f13d879bd212e80be643273de521d2fecd08788741651dd6e8acf2"
     },
     {
-      "path": "references/styles/奇幻绘本Fantasy-Animation.md",
-      "sha256": "348cdf9c926b8c5641cbb78d8fb085920f5f4d381499111baac06dd591e4f910"
+      "path": "references/styles/clinical-deep-blue.md",
+      "sha256": "07464927b0ff82ef430520c23319035d03da6072c55c3c7a26361f16dc29e050"
     },
     {
-      "path": "references/styles/学术插图Scientific.md",
-      "sha256": "97b90c4edc54c5bceaa7be3e668ed5eef9122dea0b1e8084989157133c8790b5"
+      "path": "references/styles/corporate.md",
+      "sha256": "5393f9e0085ead90bc647bf9f2eba9a91dd1252eb7bc2ff84cd0db2312fd1ebd"
     },
     {
-      "path": "references/styles/工程蓝图标准Blueprint.md",
-      "sha256": "c29ebd7a994cc1f77fc36698979e03f60510b6c05944b7061bb6431e4dcf441a"
+      "path": "references/styles/dark-atmospheric.md",
+      "sha256": "e33bec895508d6765900f34500a12101079aec6c9f353702614140e9e2b4e5c2"
     },
     {
-      "path": "references/styles/情绪暗场Dark-Atmospheric.md",
-      "sha256": "56f9d7f5a0d0b58c87ba9a30b351e6a6610fe790243a5a687f3c8968ca31dece"
+      "path": "references/styles/dark-room-standard.md",
+      "sha256": "522efb75bec4c354b6021ab25c663440e601a964cedb234e27701832e7af17be"
     },
     {
-      "path": "references/styles/手术切面标准Clinical-Deep-Blue.md",
-      "sha256": "fcad77efcee42f0d576c9c1856c6d1a7283788be1fbfb546ccf4a81f71c39d90"
+      "path": "references/styles/editorial-infographic.md",
+      "sha256": "3384cea14c4f9c62b63d02fa0bd20a9033ba80f42cc5e92ece3b6519151586bd"
     },
     {
-      "path": "references/styles/技术文献Intuition-Machine.md",
-      "sha256": "aa89d5c701493d80fac6cd51799a3881d9e8ed3cdec5040db5bfc10d240e095e"
+      "path": "references/styles/fantasy-animation.md",
+      "sha256": "4d3eaa9dea59d4486c5af293b61f43677dbabc0d69adf8ab4d27c47d3b4aeaa8"
     },
     {
-      "path": "references/styles/教学粉笔Chalkboard.md",
-      "sha256": "f15f63f8713358a0ea29e0cd00525605edcad1451d8f7b938decf58a7a212db6"
+      "path": "references/styles/index.json",
+      "sha256": "9c254eaf69ff8179718396e8cec2e90fd41e16d66dea59523908f71b2358ba18"
     },
     {
-      "path": "references/styles/暗室标准Dark-Room-Standard.md",
-      "sha256": "1dcb94f304728490fbf5c71cfdbe2b4bfdbcafcd44923a9097b214d555238734"
+      "path": "references/styles/intuition-machine.md",
+      "sha256": "86607ff677d709148b20f94c9bef45c5d2ad60e4e3842cb657dcfcd9cf8ef8ce"
     },
     {
-      "path": "references/styles/杂志级拆解Editorial-Infographic.md",
-      "sha256": "04ee0f2ff86e5ab952ccd2b3c7c97cf8686f30adff84239f90eaa57a73f61e52"
+      "path": "references/styles/logical-light-blue.md",
+      "sha256": "1923b2aa784c84f6d3a5e043eab6f1f54c118dfd6bc0d8485d0934555ec63cf2"
     },
     {
-      "path": "references/styles/极简看板Notion.md",
-      "sha256": "260feac5ca1871de7ce64ce20f48b85f5089ffbebed8afaeba53b2c62cf805bc"
+      "path": "references/styles/notion.md",
+      "sha256": "4abd21610a420640219329191cf771f4e036c9b882a95931b4e987a4dc865f0d"
     },
     {
-      "path": "references/styles/治愈水彩Watercolor.md",
-      "sha256": "13985e1f87f0e5efc472ddebcc761987ca8659dcaac55855bd798b4c74a9d908"
+      "path": "references/styles/pixel-art.md",
+      "sha256": "02552ae9d8f92e0852b881a9a0274d667dfe740207e7ad3813843450235c1a59"
     },
     {
-      "path": "references/styles/矢量插画Vector-Illustration.md",
-      "sha256": "9811ce8938e45be6fd1dd6c00ed8670b66e79bf0da4aec94b32530fac8fa2c4f"
+      "path": "references/styles/refined-minimal.md",
+      "sha256": "aa5bf9122a2a9f1d75c8b01082e45c0f6ec1b1eb92b29958cd409e236719a0e2"
     },
     {
-      "path": "references/styles/等距拓扑标准Logical Light Blue.md",
-      "sha256": "8e330ea475bc4957caf34288d2c908b8e81b17ef155d1d41d4b70b98c6b52296"
+      "path": "references/styles/scientific.md",
+      "sha256": "c1deaefe999e8f41affa2785b2959eeb7138074b68a1e2219c31e3a19df53085"
     },
     {
-      "path": "references/styles/高视效封面Bold-Editorial.md",
-      "sha256": "e32911cfa650ddbd0df349e7bfd2a77707430df57769c89e4d85a178af833e3f"
+      "path": "references/styles/vector-illustration.md",
+      "sha256": "d9939fa32d1ed8408731675fbd28222b7c5729385fbf6b7ee26aaa9343f547e6"
+    },
+    {
+      "path": "references/styles/vintage.md",
+      "sha256": "35d970d804c2508bae709c0b139c779befb7440a614027d732000fb19f49f725"
+    },
+    {
+      "path": "references/styles/watercolor.md",
+      "sha256": "3d8dc1807ef3b625d681d8528fcf5ef58aa449908ca347a67e41988bb1a0a674"
     },
     {
       "path": "references/workflows.md",
-      "sha256": "4d677dc11c7d22c37e33000161d53a14fb61ca1b2242c7f3a4440068527c1c37"
+      "sha256": "e421a13aaafc931dbb0b47e72eb3c0fe7b1750a53b1a8fb8c49405c32d1365c5"
     },
     {
       "path": "scripts/build-deck.py",
-      "sha256": "aaf012c91624739008fa01d75b8e464cbf3e7578dc2a1b75cc414207aec3171c"
+      "sha256": "9d88484d494421b27854a80cbe44f6c09fdfde4db0a01d9a5869e9345def11f8"
+    },
+    {
+      "path": "scripts/migrate_v1.py",
+      "sha256": "8a609d73c826ea050f967e728ee589ee0f5317b28f3953698a08bd649734daac"
+    },
+    {
+      "path": "scripts/renumber.py",
+      "sha256": "d505da4d85411c46365d7d053bd72325239dfd4669bf0b85d3516d392b0d4563"
+    },
+    {
+      "path": "scripts/safe_io.py",
+      "sha256": "3de8eb83f92428fe585becf9a7f4f60c62a760a8263b81468fd26033f88a9a13"
+    },
+    {
+      "path": "scripts/scaffold.py",
+      "sha256": "76d7222afa8a0da7fe70290aba902190b6c69943885055f984801a8e0e50cacb"
+    },
+    {
+      "path": "scripts/test_tools.py",
+      "sha256": "2e94960471202aa4dbcb8525c31b96c4af67936b8c90fe01efdbaf61f1a52edf"
     },
     {
       "path": "scripts/test_validator.py",
-      "sha256": "27ca2e5e4532f7d68efc040fea29becea5c2ec1fffd5e79c0216b5fb5f687a83"
+      "sha256": "237942b0e6056d3e841da507f95b2d9c83bcee182872cd09276ab2f923496957"
     },
     {
       "path": "scripts/validator.py",
-      "sha256": "758403be0649689d3a8f70a285befc11e36604e0273ee60521029a32b420682c"
+      "sha256": "2945e621d2f790b78e97193c5befbe8f1448acb9ea9f244417322c0bae8cd216"
     }
   ],
   "declared_local_dependencies": [
     {
+      "path": "references/analysis-framework.md",
+      "exists": true,
+      "resolved_path": "tool-slide-architect/references/analysis-framework.md",
+      "sha256": "dd82c921bf9329ddf5690d72d0dadfacb1ec9b7ad3df0b929c209fc5f11e88d0"
+    },
+    {
       "path": "references/blueprint-template.md",
       "exists": true,
       "resolved_path": "tool-slide-architect/references/blueprint-template.md",
-      "sha256": "9aba69fdf6da2b09a245c3c43caeed6bff02d6d7c4b92c00cc7862c4d60ed665"
+      "sha256": "c08099d67fb19185c537b9b49e1201597cd95c7de7a57ae2e8dd2ff20d26947e"
+    },
+    {
+      "path": "references/cli-reference.md",
+      "exists": true,
+      "resolved_path": "tool-slide-architect/references/cli-reference.md",
+      "sha256": "3addcfae381ac80311a7c4235e74cae903687792e3010b0df2fd2d4b2f2aa467"
     },
     {
       "path": "references/content-rules.md",
       "exists": true,
       "resolved_path": "tool-slide-architect/references/content-rules.md",
-      "sha256": "0614e3d91a9cf11843cf79bd92f7f86cc5ebadca267cca73316971f8d929ae6f"
+      "sha256": "1fdbfbc9bb69349747bff45293dd1520d755aa85c73be5d51319ebc7d1198acb"
     },
     {
       "path": "references/design-guidelines.md",
       "exists": true,
       "resolved_path": "tool-slide-architect/references/design-guidelines.md",
-      "sha256": "b417820e2ccf5d7d245970dcd867fb573edf1284b75c8134476da795f4b19595"
+      "sha256": "f8b741a088babd2533f16dbe7727b8ae55afb15848a4bfa759f6c3b3ee15f2a7"
     },
     {
       "path": "references/layouts.md",
       "exists": true,
       "resolved_path": "tool-slide-architect/references/layouts.md",
-      "sha256": "ddba1252475112aaff95008b6d1b5e9086662f6c8c6a3b1fb364e0f4a24d1319"
+      "sha256": "fc5c9b3840ecd5468fa338a8b63c27c27a2de4c65f77967232779c0d68782415"
+    },
+    {
+      "path": "references/modification-guide.md",
+      "exists": true,
+      "resolved_path": "tool-slide-architect/references/modification-guide.md",
+      "sha256": "62a303b0fdac35eea4958a856451852a2f363da437998907afa370589b7bd957"
     },
     {
       "path": "references/outline-template.md",
       "exists": true,
       "resolved_path": "tool-slide-architect/references/outline-template.md",
-      "sha256": "390cc05f82988f586570a7fc24408b35db34e2b7ea00a18ce05eff0d63cf6d52"
+      "sha256": "fd3c2b614f7c8350a6b784b131afebabc554f3f0e2d47f33b6d914dfba785d85"
+    },
+    {
+      "path": "references/pptx-handoff.md",
+      "exists": true,
+      "resolved_path": "tool-slide-architect/references/pptx-handoff.md",
+      "sha256": "52fac3ba0018dbfaaf70f81e75cdc41d11b4c30909ab427c67afcf6524f2e825"
+    },
+    {
+      "path": "references/styles/index.json",
+      "exists": true,
+      "resolved_path": "tool-slide-architect/references/styles/index.json",
+      "sha256": "9c254eaf69ff8179718396e8cec2e90fd41e16d66dea59523908f71b2358ba18"
     },
     {
       "path": "references/workflows.md",
       "exists": true,
       "resolved_path": "tool-slide-architect/references/workflows.md",
-      "sha256": "4d677dc11c7d22c37e33000161d53a14fb61ca1b2242c7f3a4440068527c1c37"
+      "sha256": "e421a13aaafc931dbb0b47e72eb3c0fe7b1750a53b1a8fb8c49405c32d1365c5"
     },
     {
       "path": "scripts/build-deck.py",
       "exists": true,
       "resolved_path": "tool-slide-architect/scripts/build-deck.py",
-      "sha256": "aaf012c91624739008fa01d75b8e464cbf3e7578dc2a1b75cc414207aec3171c"
+      "sha256": "9d88484d494421b27854a80cbe44f6c09fdfde4db0a01d9a5869e9345def11f8"
+    },
+    {
+      "path": "scripts/migrate_v1.py",
+      "exists": true,
+      "resolved_path": "tool-slide-architect/scripts/migrate_v1.py",
+      "sha256": "8a609d73c826ea050f967e728ee589ee0f5317b28f3953698a08bd649734daac"
+    },
+    {
+      "path": "scripts/renumber.py",
+      "exists": true,
+      "resolved_path": "tool-slide-architect/scripts/renumber.py",
+      "sha256": "d505da4d85411c46365d7d053bd72325239dfd4669bf0b85d3516d392b0d4563"
+    },
+    {
+      "path": "scripts/scaffold.py",
+      "exists": true,
+      "resolved_path": "tool-slide-architect/scripts/scaffold.py",
+      "sha256": "76d7222afa8a0da7fe70290aba902190b6c69943885055f984801a8e0e50cacb"
     },
     {
       "path": "scripts/validator.py",
       "exists": true,
       "resolved_path": "tool-slide-architect/scripts/validator.py",
-      "sha256": "758403be0649689d3a8f70a285befc11e36604e0273ee60521029a32b420682c"
+      "sha256": "2945e621d2f790b78e97193c5befbe8f1448acb9ea9f244417322c0bae8cd216"
     }
   ],
   "missing_declared_dependencies": []

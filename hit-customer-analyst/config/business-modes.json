@@ -1,0 +1,627 @@
+{
+  "$schema": "../schemas/business-modes.schema.json",
+  "schema_version": "1.0.0",
+  "authorization_contract": {
+    "tenant_id": {
+      "required": "when_internal_or_connector",
+      "stable": true
+    },
+    "customer_id": {
+      "required": "always",
+      "stable": true
+    },
+    "project_id": {
+      "required": "when_internal_or_connector",
+      "stable": true
+    },
+    "allowed_project_ids": {
+      "required": "when_internal",
+      "must_include": "project_id"
+    },
+    "authorization_expires_at": {
+      "required": "when_internal",
+      "timezone_required": true
+    }
+  },
+  "profiles": {
+    "briefing": {
+      "display_name": "会前速览",
+      "route": "visit_prep",
+      "depth": "quick",
+      "modules": [
+        "institution",
+        "strategy"
+      ],
+      "optional_modules": [
+        "leader",
+        "internal"
+      ],
+      "query_budget": {
+        "public_max": 12,
+        "internal_max": 8,
+        "batch_size": 4,
+        "parallelism": 3
+      },
+      "source_budget": {
+        "min": 3,
+        "max": 5
+      },
+      "turn_budget": {
+        "formal_max": 1,
+        "questions_per_turn_max": 3
+      },
+      "output_pages": {
+        "min": 1,
+        "max": 1
+      },
+      "ttl_days": {
+        "institution": 90,
+        "leader": 14,
+        "procurement": 7,
+        "internal": 30
+      },
+      "required_business_fields": [
+        "customer_name",
+        "organization_scope",
+        "target_contact_level",
+        "visit_objective",
+        "minimum_next_step"
+      ],
+      "authorization_requirements": {
+        "stable_ids": [
+          "customer_id"
+        ],
+        "internal_stable_ids": [
+          "tenant_id",
+          "customer_id",
+          "project_id"
+        ],
+        "project_allowlist_required_for_internal": true,
+        "authorization_expiry_required_for_internal": true
+      },
+      "planning_gate": {
+        "required": [
+          "business_fields_complete",
+          "stable_customer_id",
+          "route_depth_compatible",
+          "query_budget_valid",
+          "output_contract_resolved"
+        ],
+        "conditional": {
+          "leader_selected": [
+            "target_identity_or_role_resolved"
+          ],
+          "internal_selected": [
+            "tenant_customer_project_ids_stable",
+            "project_authorized",
+            "authorization_current"
+          ]
+        }
+      },
+      "query_templates": [
+        {
+          "id": "subject",
+          "channel": "public",
+          "scope": "customer",
+          "priority": 10,
+          "template": "{subject} 官网 主管单位 机构职责"
+        },
+        {
+          "id": "current-task",
+          "channel": "public",
+          "scope": "customer",
+          "priority": 20,
+          "template": "{subject} {year} 重点工作 数字化 信息化"
+        },
+        {
+          "id": "procurement",
+          "channel": "public",
+          "scope": "customer",
+          "priority": 30,
+          "template": "{subject} 信息化 采购 中标 合同 验收"
+        },
+        {
+          "id": "person-role",
+          "channel": "public",
+          "scope": "person",
+          "priority": 15,
+          "template": "{subject} {person} 职务 分工"
+        },
+        {
+          "id": "internal-signal",
+          "channel": "internal",
+          "scope": "customer",
+          "priority": 10,
+          "template": "{subject} 项目 阶段 需求 风险 下一步"
+        }
+      ]
+    },
+    "standard_visit": {
+      "display_name": "标准拜访包",
+      "route": "visit_prep",
+      "depth": "standard",
+      "modules": [
+        "institution",
+        "leader",
+        "strategy"
+      ],
+      "optional_modules": [
+        "internal"
+      ],
+      "query_budget": {
+        "public_max": 30,
+        "internal_max": 20,
+        "batch_size": 4,
+        "parallelism": 3
+      },
+      "source_budget": {
+        "min": 8,
+        "max": 12
+      },
+      "turn_budget": {
+        "formal_max": 2,
+        "questions_per_turn_max": 3
+      },
+      "output_pages": {
+        "min": 8,
+        "max": 15
+      },
+      "ttl_days": {
+        "institution": 120,
+        "leader": 14,
+        "procurement": 7,
+        "internal": 30
+      },
+      "required_business_fields": [
+        "customer_name",
+        "organization_scope",
+        "target_contact_level",
+        "visit_objective",
+        "minimum_next_step"
+      ],
+      "authorization_requirements": {
+        "stable_ids": [
+          "customer_id"
+        ],
+        "internal_stable_ids": [
+          "tenant_id",
+          "customer_id",
+          "project_id"
+        ],
+        "project_allowlist_required_for_internal": true,
+        "authorization_expiry_required_for_internal": true
+      },
+      "planning_gate": {
+        "required": [
+          "business_fields_complete",
+          "stable_customer_id",
+          "route_depth_compatible",
+          "query_budget_valid",
+          "output_contract_resolved",
+          "target_identity_or_role_resolved"
+        ],
+        "conditional": {
+          "internal_selected": [
+            "tenant_customer_project_ids_stable",
+            "project_authorized",
+            "authorization_current"
+          ]
+        }
+      },
+      "query_templates": [
+        {
+          "id": "subject",
+          "channel": "public",
+          "scope": "customer",
+          "priority": 10,
+          "template": "{subject} 官网 主管单位 机构职责"
+        },
+        {
+          "id": "strategy",
+          "channel": "public",
+          "scope": "customer",
+          "priority": 20,
+          "template": "{subject} 规划 年度重点 数字化 信息化"
+        },
+        {
+          "id": "operation",
+          "channel": "public",
+          "scope": "customer",
+          "priority": 30,
+          "template": "{subject} 运营 医疗质量 学科 患者服务"
+        },
+        {
+          "id": "procurement",
+          "channel": "public",
+          "scope": "customer",
+          "priority": 25,
+          "template": "{subject} 信息化 采购 中标 合同 验收 运维"
+        },
+        {
+          "id": "person-role",
+          "channel": "public",
+          "scope": "person",
+          "priority": 15,
+          "template": "{subject} {person} 职务 分工 讲话"
+        },
+        {
+          "id": "topic",
+          "channel": "public",
+          "scope": "topic",
+          "priority": 35,
+          "template": "{subject} {topic}"
+        },
+        {
+          "id": "internal-signal",
+          "channel": "internal",
+          "scope": "customer",
+          "priority": 10,
+          "template": "{subject} 合作 项目 需求 决策 风险 下一步"
+        }
+      ]
+    },
+    "strategic_account": {
+      "display_name": "战略客户包",
+      "route": "strategy",
+      "depth": "deep",
+      "modules": [
+        "institution",
+        "leader",
+        "strategy"
+      ],
+      "optional_modules": [
+        "internal"
+      ],
+      "query_budget": {
+        "public_max": 60,
+        "internal_max": 40,
+        "batch_size": 4,
+        "parallelism": 3
+      },
+      "source_budget": {
+        "min": 15,
+        "max": 25
+      },
+      "turn_budget": {
+        "formal_max": 2,
+        "questions_per_turn_max": 3
+      },
+      "output_pages": {
+        "min": 20,
+        "max": 35
+      },
+      "ttl_days": {
+        "institution": 180,
+        "leader": 14,
+        "procurement": 7,
+        "internal": 30
+      },
+      "required_business_fields": [
+        "customer_name",
+        "organization_scope",
+        "strategy_variant",
+        "minimum_next_step"
+      ],
+      "strategy_variants": {
+        "default": "account_planning",
+        "meeting_status_policy": {
+          "allowed_values": [
+            "confirmed",
+            "tentative",
+            "none",
+            "unknown"
+          ],
+          "variant_by_status": {
+            "confirmed": "scheduled_visit",
+            "tentative": "account_planning",
+            "none": "account_planning",
+            "unknown": "account_planning"
+          },
+          "exact_time_without_status": "scheduled_visit",
+          "exact_time_conflicts_with_status": [
+            "none",
+            "unknown"
+          ],
+          "target_and_objective_imply_meeting": false
+        },
+        "variants": {
+          "scheduled_visit": {
+            "template": "assets/visit-strategy-report-template.md",
+            "required_business_fields": [
+              "target_contact_level",
+              "visit_objective"
+            ],
+            "planning_gate": [
+              "target_identity_or_role_resolved"
+            ],
+            "required_sections": [
+              "目标与最小推进动作",
+              "对象假设与验证",
+              "机会资格与投入建议",
+              "时间化议程与参会分工",
+              "材料与演示计划",
+              "会后行动",
+              "CRM/PIMS候选"
+            ],
+            "forbidden_sections": [],
+            "forbidden_business_fields": [
+              "strategic_question",
+              "planning_horizon"
+            ],
+            "forbidden_heading_terms": [],
+            "forbidden_body_labels": []
+          },
+          "account_planning": {
+            "template": "assets/account-strategy-report-template.md",
+            "required_business_fields": [
+              "strategic_question",
+              "planning_horizon"
+            ],
+            "planning_gate": [
+              "strategic_question_resolved",
+              "planning_horizon_resolved"
+            ],
+            "required_sections": [
+              "战略问题与最小推进动作",
+              "判断链与证据边界",
+              "利益相关者与决策结构",
+              "机会资格与投入建议",
+              "情景与触发条件",
+              "30/60/90天账户动作",
+              "验证计划",
+              "风险、承诺边界与停止条件",
+              "CRM/PIMS候选"
+            ],
+            "forbidden_sections": [
+              "时间化议程与参会分工",
+              "材料与演示计划"
+            ],
+            "forbidden_business_fields": [
+              "target_contact_level",
+              "visit_objective",
+              "meeting",
+              "meeting_date",
+              "meeting_time",
+              "meeting_location",
+              "meeting_agenda",
+              "agenda",
+              "material_plan",
+              "presentation_plan",
+              "participant",
+              "participants",
+              "attendee",
+              "attendees"
+            ],
+            "forbidden_heading_terms": [
+              "会议",
+              "拜访对象",
+              "拜访时间",
+              "议程",
+              "参会",
+              "出席",
+              "展示材料",
+              "演示材料",
+              "材料计划",
+              "演示计划",
+              "会议话术",
+              "拜访话术"
+            ],
+            "forbidden_body_labels": [
+              "会议对象",
+              "拜访对象",
+              "会议时间",
+              "拜访时间",
+              "会议地点",
+              "拜访地点",
+              "客户参会人",
+              "我方参会人",
+              "参会人员",
+              "出席人员",
+              "会议议程",
+              "拜访议程",
+              "展示材料",
+              "演示材料",
+              "会议话术",
+              "拜访话术"
+            ]
+          }
+        }
+      },
+      "authorization_requirements": {
+        "stable_ids": [
+          "customer_id"
+        ],
+        "internal_stable_ids": [
+          "tenant_id",
+          "customer_id",
+          "project_id"
+        ],
+        "project_allowlist_required_for_internal": true,
+        "authorization_expiry_required_for_internal": true
+      },
+      "planning_gate": {
+        "required": [
+          "business_fields_complete",
+          "stable_customer_id",
+          "route_depth_compatible",
+          "query_budget_valid",
+          "output_contract_resolved"
+        ],
+        "conditional": {
+          "internal_selected": [
+            "tenant_customer_project_ids_stable",
+            "project_authorized",
+            "authorization_current"
+          ]
+        }
+      },
+      "query_templates": [
+        {
+          "id": "subject",
+          "channel": "public",
+          "scope": "customer",
+          "priority": 10,
+          "template": "{subject} 官网 主管单位 机构职责 沿革"
+        },
+        {
+          "id": "strategy",
+          "channel": "public",
+          "scope": "customer",
+          "priority": 15,
+          "template": "{subject} 最新五年规划 中长期规划 战略 重点任务 数字化"
+        },
+        {
+          "id": "operation",
+          "channel": "public",
+          "scope": "customer",
+          "priority": 25,
+          "template": "{subject} 年报 运营 医疗质量 学科 科研 患者服务"
+        },
+        {
+          "id": "procurement",
+          "channel": "public",
+          "scope": "customer",
+          "priority": 20,
+          "template": "{subject} 信息化 采购 意向 中标 合同 验收 运维 废标"
+        },
+        {
+          "id": "person-role",
+          "channel": "public",
+          "scope": "person",
+          "priority": 15,
+          "template": "{subject} {person} 职务 分工 讲话 署名"
+        },
+        {
+          "id": "topic",
+          "channel": "public",
+          "scope": "topic",
+          "priority": 30,
+          "template": "{subject} {topic} 规划 项目 进展"
+        },
+        {
+          "id": "project",
+          "channel": "public",
+          "scope": "project",
+          "priority": 20,
+          "template": "{subject} {project} 招标 中标 合同 验收"
+        },
+        {
+          "id": "internal-signal",
+          "channel": "internal",
+          "scope": "customer",
+          "priority": 10,
+          "template": "{subject} 合作 项目 决策链 竞对 风险 下一步"
+        }
+      ]
+    },
+    "letter": {
+      "display_name": "一封信",
+      "route": "letter",
+      "depth": "standard",
+      "modules": [
+        "institution",
+        "letter"
+      ],
+      "optional_modules": [
+        "leader",
+        "internal"
+      ],
+      "query_budget": {
+        "public_max": 12,
+        "internal_max": 8,
+        "batch_size": 4,
+        "parallelism": 2
+      },
+      "source_budget": {
+        "min": 3,
+        "max": 5
+      },
+      "turn_budget": {
+        "formal_max": 2,
+        "questions_per_turn_max": 3
+      },
+      "output_pages": {
+        "min": 1,
+        "max": 3
+      },
+      "ttl_days": {
+        "institution": 90,
+        "leader": 7,
+        "procurement": 7,
+        "internal": 14
+      },
+      "required_business_fields": [
+        "customer_name",
+        "organization_scope",
+        "letter_scenario",
+        "recipient_role",
+        "letter_purpose",
+        "expected_action",
+        "signer",
+        "delivery_channel"
+      ],
+      "authorization_requirements": {
+        "stable_ids": [
+          "customer_id"
+        ],
+        "internal_stable_ids": [
+          "tenant_id",
+          "customer_id",
+          "project_id"
+        ],
+        "project_allowlist_required_for_internal": true,
+        "authorization_expiry_required_for_internal": true
+      },
+      "planning_gate": {
+        "required": [
+          "business_fields_complete",
+          "stable_customer_id",
+          "recipient_identity_and_role_confirmed",
+          "route_depth_compatible",
+          "query_budget_valid",
+          "output_contract_resolved"
+        ],
+        "conditional": {
+          "leader_selected": [
+            "target_identity_or_role_resolved"
+          ],
+          "internal_selected": [
+            "tenant_customer_project_ids_stable",
+            "project_authorized",
+            "authorization_current"
+          ]
+        }
+      },
+      "query_templates": [
+        {
+          "id": "subject",
+          "channel": "public",
+          "scope": "customer",
+          "priority": 10,
+          "template": "{subject} 官网 机构全称"
+        },
+        {
+          "id": "recipient",
+          "channel": "public",
+          "scope": "person",
+          "priority": 10,
+          "template": "{subject} {person} 现任 职务 分工"
+        },
+        {
+          "id": "cooperation-fact",
+          "channel": "public",
+          "scope": "topic",
+          "priority": 20,
+          "template": "{subject} {topic} 官方"
+        },
+        {
+          "id": "internal-letter-fact",
+          "channel": "internal",
+          "scope": "customer",
+          "priority": 10,
+          "template": "{subject} 合作事实 承诺 材料 收件人"
+        }
+      ]
+    }
+  }
+}

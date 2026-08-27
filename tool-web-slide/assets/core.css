@@ -1,8 +1,14 @@
 
   :root{
-    /* ============ 主题色(默认: 🔵 克莱因蓝 IKB) ============
-       切换主题: 从 references/themes-swiss.md 复制对应的 :root 块
-       整体替换标有"主题色"注释的所有变量,其他散落的 var() 引用无需逐处改 */
+    /* Canonical runtime contract: body[data-theme="swiss"] +
+       section.slide[data-layout="<layout-id>"]. Theme and layout identifiers
+       are enumerated in references/components.json and references/layouts.json. */
+    --slide-width:1920px;
+    --slide-height:1080px;
+    --slide-aspect:16/9;
+    /* ============ 默认主题: Swiss / IKB ============
+       主题必须由 body[data-theme] 显式选择；Magazine 与 Winning 的覆盖
+       分别位于 magazine.css、winning.css，禁止复制或手改本变量块。 */
     --paper:#fafaf8;          /* 主底色: 高级灰白 */
     --paper-rgb:250,250,248;
     --ink:#0a0a0a;            /* 文字主色: 近黑 */
@@ -63,6 +69,21 @@
     /* 底部分页组件安全区: 主内容最低处不要进入这条区域 */
     --nav-safe-bottom:8vh;
   }
+  body[data-theme="swiss"]{
+    --paper:#fafaf8;
+    --paper-rgb:250,250,248;
+    --ink:#0a0a0a;
+    --ink-rgb:10,10,10;
+    --grey-1:#f0f0ee;
+    --grey-2:#d4d4d2;
+    --grey-3:#737373;
+    --accent:#002fa7;
+    --accent-rgb:0,47,167;
+    --accent-on:#fff;
+    --accent-bright:#5b7bff;
+  }
+  body[data-aspect="4:3"]{--slide-aspect:4/3;--slide-width:1440px;--slide-height:1080px}
+  body[data-aspect="16:10"]{--slide-aspect:16/10;--slide-width:1728px;--slide-height:1080px}
   *{box-sizing:border-box;margin:0;padding:0}
   html,body{
     width:100%;height:100%;overflow:hidden;
@@ -436,6 +457,8 @@
   .span-7{grid-column:span 7}
   .span-8{grid-column:span 8}
   .span-9{grid-column:span 9}
+  .span-10{grid-column:span 10}
+  .span-11{grid-column:span 11}
   .span-12{grid-column:span 12}
 
   /* 经典分栏 */
@@ -481,6 +504,13 @@
     font-family:var(--mono);
     font-size:10px;letter-spacing:.2em;text-transform:uppercase;
     opacity:.6;
+  }
+
+  /* Evidence marker required by the delivery contract. */
+  .source-note{
+    display:block;margin-top:auto;padding-top:var(--sp-4);
+    color:var(--text-helper);border-top:1px solid var(--border-subtle);
+    font-family:var(--sans),var(--sans-zh);font-size:11px;line-height:1.45
   }
 
   /* ============ Icons (Lucide via CDN) ============ */
@@ -652,6 +682,116 @@
   .slide.accent .canvas-card{background:var(--accent);color:var(--accent-on)}
   .slide.grey .canvas-card{background:var(--grey-1);color:var(--ink)}
   .slide.split .canvas-card{padding:0;flex-direction:row}
+
+  /* ============ Canonical layout contract ============
+     Apply exactly one layout-* class to .canvas-card and mirror its id in the
+     owning .slide[data-layout]. These classes define geometry only; theme
+     styles remain in core.css, magazine.css, or winning.css. */
+  .layout-hero{
+    display:flex;flex-direction:column;justify-content:flex-end;
+    position:relative;isolation:isolate
+  }
+  .layout-split{
+    display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);
+    gap:0;padding:0
+  }
+  .layout-split > *{min-width:0;padding:5.6vh 4vw}
+  .layout-tri-grid{
+    display:grid;grid-template-columns:repeat(3,minmax(0,1fr));
+    gap:clamp(16px,2vw,40px);align-items:stretch
+  }
+  .layout-focus{
+    display:grid;grid-template-columns:minmax(0,1fr) minmax(0,2fr) minmax(0,1fr);
+    gap:clamp(16px,2vw,40px);align-items:center
+  }
+  .layout-kpi-scene{position:relative;isolation:isolate;padding:0}
+  .layout-kpi-scene > .scene-media{position:absolute;inset:0;width:100%;height:100%;object-fit:cover;z-index:-2}
+  .layout-kpi-scene > .scene-kpis{
+    position:absolute;left:5vw;right:5vw;bottom:8vh;
+    display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:1.2vw
+  }
+  .layout-z-pattern{
+    display:grid;grid-template-columns:repeat(2,minmax(0,1fr));
+    grid-auto-rows:minmax(0,1fr);gap:clamp(16px,2vh,32px) clamp(20px,3vw,56px)
+  }
+  .layout-gallery{
+    display:grid;grid-template-columns:repeat(4,minmax(0,1fr));
+    gap:clamp(12px,1.4vw,28px);align-items:stretch
+  }
+  .layout-architecture{
+    display:flex;flex-direction:column;justify-content:center;
+    gap:clamp(8px,1.2vh,20px)
+  }
+  .layout-pathway{
+    display:flex;align-items:center;justify-content:space-between;
+    gap:clamp(8px,1vw,20px)
+  }
+  .layout-comparison{
+    display:grid;grid-template-columns:minmax(0,5fr) minmax(0,7fr);
+    gap:clamp(20px,3vw,56px);align-items:stretch
+  }
+  .layout-cdss-matrix,
+  .layout-policy-grid,
+  .layout-drg-matrix{
+    display:grid;grid-template-columns:minmax(10rem,3fr) repeat(3,minmax(0,1fr));
+    grid-auto-rows:minmax(3rem,auto);align-content:center
+  }
+  .layout-emr-radar{
+    display:grid;grid-template-columns:minmax(0,7fr) minmax(16rem,5fr);
+    gap:clamp(20px,3vw,56px);align-items:center
+  }
+  .layout-data-lake-funnel{
+    display:flex;flex-direction:column;align-items:center;justify-content:center;
+    gap:clamp(8px,1.2vh,20px)
+  }
+  .layout-multi-campus{
+    display:grid;grid-template-columns:repeat(3,minmax(0,1fr));
+    grid-template-rows:repeat(3,minmax(0,1fr));place-items:center;gap:1vw
+  }
+  .layout-tri-terminal{
+    display:grid;grid-template-columns:repeat(3,minmax(0,1fr));
+    gap:clamp(16px,2vw,40px);align-items:stretch
+  }
+  .layout-rag-traceability{
+    display:grid;grid-template-columns:minmax(0,3fr) minmax(0,4fr) minmax(0,5fr);
+    gap:clamp(12px,1.6vw,32px);align-items:center
+  }
+  .layout-hl7-bus{
+    display:grid;grid-template-rows:minmax(0,1fr) auto minmax(0,1fr);
+    gap:clamp(12px,1.6vh,28px);align-items:center
+  }
+  .layout-pdca-loop{
+    display:grid;grid-template-columns:repeat(2,minmax(0,1fr));
+    grid-template-rows:repeat(2,minmax(0,1fr));gap:clamp(12px,1.5vw,28px)
+  }
+  .layout-patient-journey{
+    display:flex;align-items:center;justify-content:space-between;
+    gap:clamp(8px,1vw,20px);position:relative
+  }
+
+  /* Canonical modifiers. Use at most two on a slide. */
+  .mod-float-card{
+    position:absolute;z-index:3;right:5vw;bottom:8vh;max-width:min(34rem,42vw);
+    padding:clamp(20px,2.4vw,44px);background:rgba(255,255,255,.86);
+    color:#0a0a0a;border:1px solid rgba(255,255,255,.66);
+    backdrop-filter:blur(18px);box-shadow:0 18px 48px rgba(0,0,0,.16)
+  }
+  .mod-huge-quote{position:relative;isolation:isolate}
+  .mod-huge-quote::before{
+    content:"\201C";position:absolute;z-index:-1;left:-.12em;top:-.34em;
+    font-family:Georgia,serif;font-size:12em;line-height:1;color:currentColor;opacity:.055
+  }
+  .mod-data-badge{
+    display:grid;place-items:center;min-width:8rem;min-height:8rem;padding:1rem;
+    background:var(--accent);color:var(--accent-on);font-weight:700;text-align:center
+  }
+  .mod-duotone{position:relative;isolation:isolate;background:var(--accent)}
+  .mod-duotone > img{filter:grayscale(1) contrast(1.08);mix-blend-mode:multiply;opacity:.82}
+  .mod-scrim{position:relative;isolation:isolate}
+  .mod-scrim::after{
+    content:"";position:absolute;z-index:-1;inset:0;
+    background:linear-gradient(to bottom,rgba(0,0,0,0) 25%,rgba(0,0,0,.82) 100%)
+  }
 
   /* ============ ASCII 点阵呼吸场 · IKB 封面/封底专用 ============
      用法:在 .canvas-card(或 split .half.b-accent)内首位插入 <canvas class="ascii-bg" aria-hidden="true">.
@@ -1172,6 +1312,9 @@
     .pipeline{grid-template-columns:repeat(2,1fr)}
     .grid-2-7-5,.grid-2-6-6,.grid-2-8-4,.grid-2-4-8{grid-template-columns:1fr}
     .grid-12{grid-template-columns:repeat(6,1fr)}
+    .layout-tri-grid,.layout-gallery,.layout-tri-terminal{grid-template-columns:repeat(2,minmax(0,1fr))}
+    .layout-focus,.layout-comparison,.layout-emr-radar,.layout-rag-traceability{grid-template-columns:1fr}
+    .layout-kpi-scene > .scene-kpis{grid-template-columns:repeat(2,minmax(0,1fr))}
   }
   /* ============ Screenshot Framing ============ */
   .mockup-window { background: rgba(var(--ink-rgb), 0.05); border-radius: 12px; overflow: hidden; border: 1px solid rgba(var(--ink-rgb), 0.1); box-shadow: 0 24px 48px -12px rgba(0,0,0,0.15); display: flex; flex-direction: column; }
@@ -1190,7 +1333,7 @@
     body, html { width: 1920px !important; height: auto !important; overflow: visible !important; background: var(--bg, #fff) !important; }
     #deck { position: static !important; width: 100% !important; transform: none !important; display: block !important; }
     .slide { position: relative !important; width: 1920px !important; height: 1080px !important; page-break-after: always !important; page-break-inside: avoid !important; break-inside: avoid !important; flex: none !important; overflow: hidden !important; }
-    #nav, #overview, .chrome { display: none !important; }
+    #nav, #overview, #ctrl-bar, #hint, .presenter-only, .speaker-view, aside.notes { display: none !important; }
     canvas { display: none !important; }
     [data-anim] { opacity: 1 !important; transform: none !important; }
   }
@@ -1216,29 +1359,23 @@
   .ctrl-btn.active{background:#005EB8;border-color:#005EB8;color:#fff;}
   .ctrl-hint{font-family:var(--mono);font-size:0.6rem;color:rgba(255,255,255,0.4);letter-spacing:0.08em;}
 
-  body.doc-mode { padding-top:44px; overflow-y:auto; overflow-x:hidden; background:var(--paper); }
-  body.doc-mode #deck { position:static; display:block; width:100%; height:auto; transform:none !important; transition:none !important; }
+  body.doc-mode { padding-top:44px; overflow-y:auto; overflow-x:hidden; background:var(--grey-1); }
+  body.doc-mode #deck {
+    position:relative;inset:auto;display:flex;flex-direction:column;align-items:center;
+    gap:clamp(20px,3vh,40px);width:100%;height:auto;padding:clamp(20px,3vw,56px);
+    transform:none !important;transition:none !important;will-change:auto
+  }
   body.doc-mode .slide {
-    width:100%; height:auto; min-height:80vh; margin:0;
-    padding:80px 8vw; border-bottom:1px solid rgba(0,0,0,0.05);
-    display:flex; flex-direction:column;
+    width:min(100%,1440px);height:auto;min-height:0;aspect-ratio:var(--slide-aspect);
+    flex:0 0 auto;margin:0;padding:clamp(40px,5.5vh,64px) clamp(36px,5vw,72px);
+    border:1px solid var(--border-subtle);box-shadow:0 12px 36px rgba(0,0,0,.08);
+    display:flex;flex-direction:column;overflow:hidden
   }
   body.doc-mode .canvas-card {
-    width:100%; height:auto; min-height:100%; padding:0; box-shadow:none;
+    width:100%;height:100%;min-height:0;box-shadow:none
   }
+  body.doc-mode.canvas-mode .slide{padding:0}
+  body.doc-mode .layout-split{min-height:100%}
   body.doc-mode #nav { display:none !important; }
   body.doc-mode #hint { display:none !important; }
   body.doc-mode canvas.bg, body.doc-mode canvas.ascii-bg { display:none !important; }
-
-
-
-      body { background: #111; color: #eee; margin: 0; padding: 20px; font-family: sans-serif; display: grid; grid-template-columns: 1fr 1fr; grid-template-rows: auto 1fr; gap: 20px; height: 100vh; box-sizing: border-box; overflow: hidden; }
-      h3 { margin: 0 0 10px 0; font-size: 16px; color: #888; text-transform: uppercase; letter-spacing: 2px; }
-      .preview { border: 1px solid #333; aspect-ratio: 16/9; position: relative; overflow: hidden; background: #000; border-radius: 8px; }
-      .preview iframe { width: 400%; height: 400%; transform: scale(0.25); transform-origin: 0 0; border: none; pointer-events: none; }
-      .bottom { grid-column: 1 / -1; display: grid; grid-template-columns: 3fr 1fr; gap: 20px; overflow: hidden; }
-      .notes { background: #1a1a1a; padding: 30px; font-size: 28px; line-height: 1.6; border-radius: 8px; overflow-y: auto; white-space: pre-wrap; }
-      .sidebar { display: flex; flex-direction: column; gap: 20px; }
-      .timer { background: #1a1a1a; padding: 20px; border-radius: 8px; text-align: center; font-size: 48px; font-family: monospace; font-weight: bold; }
-      .controls { background: #1a1a1a; padding: 20px; border-radius: 8px; flex: 1; display: flex; flex-direction: column; gap: 10px; font-size: 14px; color: #aaa; }
-    

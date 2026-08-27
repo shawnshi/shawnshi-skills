@@ -1,0 +1,132 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://winning-health.example/discovery-call/run-metrics.schema.json",
+  "title": "discovery-call run metrics",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schema",
+    "context_id",
+    "run_id",
+    "business_mode",
+    "started_at",
+    "ended_at",
+    "elapsed_ms",
+    "counters"
+  ],
+  "properties": {
+    "schema": {
+      "const": "discovery-call-run-metrics/v1"
+    },
+    "context_id": {
+      "type": "string"
+    },
+    "run_id": {
+      "type": "string"
+    },
+    "business_mode": {
+      "enum": [
+        "briefing",
+        "standard_visit",
+        "strategic_account",
+        "letter"
+      ]
+    },
+    "started_at": {
+      "type": "string",
+      "format": "date-time"
+    },
+    "ended_at": {
+      "type": [
+        "string",
+        "null"
+      ]
+    },
+    "elapsed_ms": {
+      "type": [
+        "integer",
+        "null"
+      ],
+      "minimum": 0
+    },
+    "counters": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "formal_user_turns",
+        "queries_planned",
+        "queries_executed",
+        "cache_hits",
+        "cache_misses",
+        "sources_opened",
+        "sources_accepted",
+        "claims_created",
+        "claims_reused",
+        "files_persisted",
+        "files_delivered",
+        "input_tokens",
+        "output_tokens"
+      ],
+      "properties": {
+        "formal_user_turns": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "queries_planned": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "queries_executed": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "cache_hits": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "cache_misses": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "sources_opened": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "sources_accepted": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "claims_created": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "claims_reused": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "files_persisted": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "files_delivered": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "input_tokens": {
+          "type": [
+            "integer",
+            "null"
+          ],
+          "minimum": 0
+        },
+        "output_tokens": {
+          "type": [
+            "integer",
+            "null"
+          ],
+          "minimum": 0
+        }
+      }
+    }
+  }
+}

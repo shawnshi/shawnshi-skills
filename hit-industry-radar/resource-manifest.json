@@ -1,7 +1,7 @@
 {
   "schema_version": 3,
   "skill": "hit-industry-radar",
-  "generated_at": "2026-08-25T21:44:12+08:00",
+  "generated_at": "2026-08-16T22:27:49+08:00",
   "hash_algorithm": "SHA-256",
   "text_hash_normalization": "LF",
   "skill_md": "SKILL.md",
@@ -34,7 +34,7 @@
   "resource_file_hashes": [
     {
       "path": ".skill_state/rejected_edits.jsonl",
-      "sha256": "1722bbed752855220c6efb3edaf7bda842beb1338c919d80e3be4d89df53e75c"
+      "sha256": "727719a2e3af1795c42b0a6de97ee8256b55c1617a52f514f7d44ddde993420e"
     },
     {
       "path": "assets/intelligence_targets.json",

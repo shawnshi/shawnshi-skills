@@ -1,7 +1,7 @@
 {
   "schema_version": 3,
   "skill": "tool-url-markdown",
-  "generated_at": "2026-08-25T21:44:12+08:00",
+  "generated_at": "2026-08-16T22:02:19",
   "hash_algorithm": "SHA-256",
   "text_hash_normalization": "LF",
   "skill_md": "SKILL.md",
@@ -21,7 +21,7 @@
     },
     {
       "path": "bun.lock",
-      "sha256": "9da35e14d9feec0ebc5ce3e9090b59d40a9dd011585a3f03c66f53b99690850e"
+      "sha256": "5d9a7ad0b238a7db97670ac22c8fa14920236b3784410b7fdc45237cc11feea3"
     },
     {
       "path": "index.ts",

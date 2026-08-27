@@ -1,0 +1,70 @@
+{
+  "schema_version": 3,
+  "skill": "senior-osint-analyst",
+  "generated_at": "2026-08-27T20:05:46+08:00",
+  "hash_algorithm": "SHA-256",
+  "text_hash_normalization": "LF",
+  "skill_md": "SKILL.md",
+  "skill_md_sha256": "035c59c27ea9d9ca58c90deb070c3543ef91a4fdafadb2c5fb6973ccd3186b18",
+  "top_level_files": [
+    "SKILL.md"
+  ],
+  "top_level_file_hashes": [
+    {
+      "path": "SKILL.md",
+      "sha256": "035c59c27ea9d9ca58c90deb070c3543ef91a4fdafadb2c5fb6973ccd3186b18"
+    }
+  ],
+  "top_level_directories": [
+    "agents",
+    "assets",
+    "references"
+  ],
+  "resource_directories": [
+    {
+      "name": "references",
+      "file_count": 2
+    },
+    {
+      "name": "assets",
+      "file_count": 1
+    },
+    {
+      "name": "agents",
+      "file_count": 1
+    }
+  ],
+  "resource_file_hashes": [
+    {
+      "path": "agents/openai.yaml",
+      "sha256": "08301216ad5379b36eb8bc3213632d6a519e3cecc27d19fe47c5709d0e3cb166"
+    },
+    {
+      "path": "assets/icon.svg",
+      "sha256": "83edb7ff1fcb54461e60f8bab4147bf6e24b4f9bb9e5d29283c614f40b811039"
+    },
+    {
+      "path": "references/evidence-standard.md",
+      "sha256": "e1619d1dd545b98518f5acb1ca43aeade5517f0e106233be737c39b3f7716821"
+    },
+    {
+      "path": "references/report-templates.md",
+      "sha256": "46ad64a13014684bf92021f8939c0c18ee7b9f443ec95a873374a1eacbe13df1"
+    }
+  ],
+  "declared_local_dependencies": [
+    {
+      "path": "references/evidence-standard.md",
+      "exists": true,
+      "resolved_path": "senior-osint-analyst/references/evidence-standard.md",
+      "sha256": "e1619d1dd545b98518f5acb1ca43aeade5517f0e106233be737c39b3f7716821"
+    },
+    {
+      "path": "references/report-templates.md",
+      "exists": true,
+      "resolved_path": "senior-osint-analyst/references/report-templates.md",
+      "sha256": "46ad64a13014684bf92021f8939c0c18ee7b9f443ec95a873374a1eacbe13df1"
+    }
+  ],
+  "missing_declared_dependencies": []
+}

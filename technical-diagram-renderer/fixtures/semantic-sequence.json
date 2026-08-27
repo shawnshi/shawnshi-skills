@@ -1,0 +1,22 @@
+{
+  "template_type": "sequence",
+  "style": 4,
+  "title": "Clinical Query Sequence",
+  "participants": [
+    {"id": "doctor", "label": "Doctor"},
+    {"id": "copilot", "label": "Clinical Copilot"},
+    {"id": "record", "label": "Patient Record"}
+  ],
+  "lifelines": [
+    {"participant": "doctor"},
+    {"participant": "copilot"},
+    {"participant": "record"}
+  ],
+  "messages": [
+    {"from": "doctor", "to": "copilot", "label": "Ask question", "type": "sync"},
+    {"from": "copilot", "to": "record", "label": "Fetch context", "async": true},
+    {"from": "record", "to": "copilot", "label": "Clinical facts", "return": true},
+    {"from": "copilot", "to": "copilot", "label": "Apply safety policy", "type": "sync"},
+    {"from": "copilot", "to": "doctor", "label": "Grounded answer", "return": true}
+  ]
+}

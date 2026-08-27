@@ -1,7 +1,7 @@
 {
   "schema_version": 3,
   "skill": "tool-smart-latex",
-  "generated_at": "2026-08-25T21:44:12+08:00",
+  "generated_at": "2026-08-16T22:27:50+08:00",
   "hash_algorithm": "SHA-256",
   "text_hash_normalization": "LF",
   "skill_md": "SKILL.md",
@@ -49,23 +49,23 @@
     },
     {
       "path": "templates/academic.tex",
-      "sha256": "d89d2ce6378822cca9b5f83a8f1a89489c2969bdc70a422e2e111e8d8e857d1f"
+      "sha256": "a994a4791f349f0d815a523ff6d9a73da208d7ece5bf6763787f74a372760b1b"
     },
     {
       "path": "templates/book.tex",
-      "sha256": "045c3627aed7fdfcc40e288accf84bbcd774efc5422321652308033600d637d7"
+      "sha256": "b1a028e04099fd332f2626df75b6df66510739de30c39148a6be67b283d71b49"
     },
     {
       "path": "templates/cv.tex",
-      "sha256": "75c49a9fbc763037b681301cff9cc65a0ad3e8cacb8a33fd6688dfa7454aa125"
+      "sha256": "8965cacee2b5578ec7af60d1de6c50cf86d78f08bab79453093b22640397508f"
     },
     {
       "path": "templates/tech_book.tex",
-      "sha256": "a1ba33c009caf210ad425aad93d480a58be03c9d87a7106d2cb389d6bb9f501d"
+      "sha256": "4e4d1c21d0774340658634833c2280b167fb16fc80ce160c68dd8a5d81b8c960"
     },
     {
       "path": "templates/tech_report.tex",
-      "sha256": "f9955ae99724b87d48b6891d451a98b7f73ee092261544a04dad1d2b64431c40"
+      "sha256": "aad59b808eb1921be7e5e9c05f2682c7741e58a605f8f437376e6ab03874826e"
     }
   ],
   "declared_local_dependencies": [

@@ -1,50 +1,53 @@
 ---
 name: hit-digital-strategy-partner
-description: 为医疗机构、医疗信息化企业和管理团队制定数字化战略、商业模式、投资优先级、ROI/TCO分析及高管决策备忘录。用于医疗战略咨询、数字化路线图、董事会备忘录、业务模式重构、预算取舍或方案论证；要求把事实、假设和建议分开，不使用操纵性表达或未经证实的数字。
+description: 为医疗机构或医疗信息化企业开展数字化战略、方案选择、投资排序、可审计 ROI/TCO 和高管决策备忘录。用于需要比较方案、明确投资条件或形成路线图的医疗数字化决策；不用于详细技术架构、法律或临床审批、单纯文字润色及一般资讯汇总。
 ---
 
-# 医疗数字化战略分析
+# 医疗数字化战略决策
 
-## 工作原则
+## 使用边界
 
-- 以决策问题为中心，不以制造焦虑或迎合预设结论为目标。
-- 把用户材料、外部事实、计算假设和分析判断分层呈现。
-- 对政策、市场、价格和厂商状态等时效性信息进行当前核验，并引用原始来源。
-- 不编造预算、收益、临床效果、客户意愿或竞争对手能力。
-- 涉及患者、员工或客户数据时，最小化使用和披露。
-- 默认只生成分析和草稿。发布、发送、持久化、修改配置或写入外部系统都需要用户明确授权。
+- 以待决定事项为中心，分开呈现用户材料、外部事实、来源主张、模型假设和分析判断。
+- 不编造预算、收益、临床效果、客户意愿、产品能力或竞争关系；无法取得数据时保留缺口或情景变量。
+- 默认成果成熟度为 `working_draft` 或 `review_ready`。只有满足相应门禁时才可标记 `decision_ready`；`approved_for_execution` 只能记录有权主体已经作出的决定。
+- 涉及临床诊疗影响、医疗器械属性、患者数据、跨境数据、重大安全风险或合同承诺时，只做战略分析并明确转交法务、临床、安全、器械、财务或采购负责人复核。
+- 发布、发送、修改外部系统或替用户作出审批决定，需要用户明确授权。
 
-## 执行流程
+## 选择工作模式
 
-1. 定义决策：明确受众、时间跨度、预算边界、成功指标、不可接受风险和需要拍板的问题。
-2. 建立证据表：列出已知事实、来源、有效日期、未知项和待验证假设。
-3. 构建现状诊断：描述业务流程、技术债、治理约束、资源瓶颈和外部变化。
-4. 提出少量互斥或可组合的方案，说明适用条件、收益、成本、依赖和失败模式。
-5. 量化 ROI/TCO 时公开公式、口径、时间范围和敏感性区间。没有数据时给出待填变量，不给出伪精确结论。
-6. 形成路线图：区分近期验证、中期建设和长期扩展，并为每阶段定义退出条件与责任边界。
-7. 对高影响假设做反证检查。任务包含三个以上可独立研究面时，可在环境支持下并行研究；小任务直接完成。
-8. 根据受众生成决策备忘录、方案对比或路线图。只在用户要求保存时写入文件。
+| 模式 | 适用情况 | 状态与工具 |
+|---|---|---|
+| `direct` | 单一、边界清楚的稳定问题，不需要多来源研究或正式材料 | 直接回答；不创建状态文件，不运行脚本 |
+| `brief` | 有界管理问题，需要简短方案比较 | 小任务可直接完成；需要保存或复核时使用 Blackboard |
+| `board-memo` | 管理层需要短决策材料 | 使用 Blackboard；只保留决策、依据、选项、风险和待拍板事项 |
+| `deep-dive` | 多来源、跨政策/业务/技术/经济/执行的战略研究 | 必须使用 Blackboard，按关键主张组织证据并做反证 |
+| `investment-case` | 投资优先级、预算取舍、ROI/TCO、采购或厂商投标决策 | 必须使用 Blackboard，并读取投资模型与决策 Schema；只有完整财务和责任闭环才可达到 `decision_ready` |
 
-## 可选资源
+模式细则和最小资产见 [references/workflows.md](references/workflows.md)。不要为了满足固定格式把窄问题升级为深度项目。
 
-- 需要结构化黑板时，按需查看 `scripts/blackboard.py` 和 `scripts/blackboard_validate.py` 的参数与输出。黑板中的量化假设使用 `value`、`unit`、`source`、`as_of`、`region` 和 `status` 字段；缺少数据时令 `value=null`、`status=needs_input`。
-- 需要装配用户已授权写入的文件时，按需使用 `scripts/assembler.py`。字数目标只在用户明确给出时作为软提示。
-- 需要文本检查时，可运行 `scripts/compliance_check.py` 或 `scripts/strategy_gate.py`。前者只产生术语与时效性提示；后者仅以无法读取、无效 Schema 和未处理占位符等确定性错误阻断，字数、标题、关键词、量化程度和内容完整度只产生 warning。
-- 通用流程位于 [references/workflows.md](references/workflows.md)；证据检索、分析、编辑和合规复核资料按需读取 `references/retrieval_specialist.md`、`references/analyst.md`、`references/editor.md` 和 `references/compliance_expert.md`。
+## 核心执行要求
 
-## 输出结构
+1. 建立决策契约：受众、组织类型、适用地区、时间范围、预算状态、决策阶段、成功指标、不可接受风险和需要拍板的问题。高影响字段缺失时先追问，或明确降级为 `working_draft` 或 `blocked`。
+2. 区分医疗机构侧与医疗IT厂商侧。复杂任务读取 [references/analyst.md](references/analyst.md)；需要结构化责任、证据和成熟度字段时读取 [references/decision_schema.md](references/decision_schema.md)。
+3. 只收集支持当前决策的最小充分证据。需要当前政策、市场、价格、厂商或临床信息时读取 [references/retrieval_specialist.md](references/retrieval_specialist.md)，核验原始来源、地区、发布日期、事件日期和访问日期。
+4. 比较少量互斥或可组合方案，说明适用条件、收益、成本、依赖、失败模式、最强反证和会改变结论的新证据。
+5. 涉及投资排序或量化论证时读取 [references/investment_model.md](references/investment_model.md)，分别处理医院买方价值与厂商卖方经济性；公开公式、现金流口径、归因、时间范围和敏感性。
+6. 形成带责任人、批准人、验证指标、验收阈值、观察期、付款或资源门槛、回退和退出条件的分阶段路径。
+7. 涉及数据、AI、临床或合同高风险时读取 [references/compliance_expert.md](references/compliance_expert.md)，补齐适用地区、截止日期、预期用途、数据类型和影响人群，并标明专业升级对象。
+8. 并行仅在预计节省大于拆分与合并成本时使用。政策/临床面可读取 [agents/med-policy-researcher.md](agents/med-policy-researcher.md)，商业/厂商面可读取 [agents/hit-commercial-analyst.md](agents/hit-commercial-analyst.md)。并行代理只返回统一证据包，由单一写入者合并 Blackboard。
 
-1. 决策摘要
-2. 事实、假设与信息缺口
-3. 方案对比及推荐条件
-4. ROI/TCO模型与敏感性分析
-5. 风险、依赖和反证结果
-6. 分阶段路线图
-7. 需要管理层决定的事项
+## 状态、装配与质量门禁
 
-## 完成检查
+- Blackboard 是深度任务的唯一机器状态源。按需使用 `scripts/blackboard.py` 初始化、批量更新、校验和检查就绪状态；不要另建平行的 working-memory、证据或假设状态文件。
+- 只有用户需要文件且存在至少一个完成章节时才使用 `scripts/assembler.py`。它默认拒绝空报告和覆盖已有文件；覆盖必须显式授权并传入 `--force`。
+- 交付前使用 `scripts/strategy_gate.py` 做统一检查。`working_draft` 或 `review_ready` 可以带着明确披露的警告供复核；`decision_ready` 或其他正式决策级交付必须使用 `--strict`，警告未处理时不得声称门禁通过。
+- 报告编辑和人工复核边界见 [references/editor.md](references/editor.md)。完整合成案例与反例见 [examples/workflow_example.md](examples/workflow_example.md)。
 
-- 核心建议能追溯到事实或显式假设。
-- 量化结果包含公式、口径和区间。
-- 没有操纵性话术、虚假紧迫感或无依据归因。
-- 外部写入和持久化未在缺少授权时发生。
+## 完成标准
+
+- 决策问题、适用对象、地区、时间范围和成果成熟度明确。
+- 核心主张能回指证据ID或显式假设；冲突证据和信息缺口未被隐藏。
+- 量化结论包含基线、公式、成本与收益边界、现金流期间、归因和敏感性；否则不得标记为 `decision_ready`。
+- 路线图包含责任、验收、资源、复盘和停止条件。
+- 高风险事项已标明当前依据、信息缺口和专业复核对象。
+- 未经授权没有发生外部发布、发送或审批动作。

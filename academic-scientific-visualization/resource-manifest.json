@@ -1,21 +1,27 @@
 {
   "schema_version": 3,
   "skill": "academic-scientific-visualization",
-  "generated_at": "2026-08-25T21:44:11+08:00",
+  "generated_at": "2026-08-27T20:05:46+08:00",
   "hash_algorithm": "SHA-256",
   "text_hash_normalization": "LF",
   "skill_md": "SKILL.md",
-  "skill_md_sha256": "8ac98d3eeadd8a5b972ee279a573c949f85efdeb606425bbd8c48d76584f8c03",
+  "skill_md_sha256": "e736ea7b0074dd3972db77ed8ddd66e2bc50a6ba5983d320ad78e766706ee5c5",
   "top_level_files": [
-    "SKILL.md"
+    "SKILL.md",
+    "requirements.txt"
   ],
   "top_level_file_hashes": [
     {
       "path": "SKILL.md",
-      "sha256": "8ac98d3eeadd8a5b972ee279a573c949f85efdeb606425bbd8c48d76584f8c03"
+      "sha256": "e736ea7b0074dd3972db77ed8ddd66e2bc50a6ba5983d320ad78e766706ee5c5"
+    },
+    {
+      "path": "requirements.txt",
+      "sha256": "7f701d3f7576503580f0edf62f47e5f78b91c4172ce30c3dcd47e1abda9b175b"
     }
   ],
   "top_level_directories": [
+    "agents",
     "assets",
     "references",
     "scripts"
@@ -23,99 +29,155 @@
   "resource_directories": [
     {
       "name": "scripts",
-      "file_count": 2
+      "file_count": 6
     },
     {
       "name": "references",
-      "file_count": 5
+      "file_count": 6
     },
     {
       "name": "assets",
-      "file_count": 4
+      "file_count": 2
+    },
+    {
+      "name": "agents",
+      "file_count": 1
     }
   ],
   "resource_file_hashes": [
     {
-      "path": "assets/color_palettes.py",
-      "sha256": "ffea28da930406ecb11bbeaebfc530dfac40b772827a7653f449cb3b0bb35309"
+      "path": "agents/openai.yaml",
+      "sha256": "3b738e585d90f3338ecfe6e90d1d2beda3a48a98a41ab7ad52212a19654c46f1"
     },
     {
-      "path": "assets/nature.mplstyle",
-      "sha256": "229848397e716ada19a53b10eeef69cf5945487ba92afc1842a269402c15d154"
+      "path": "assets/icon.svg",
+      "sha256": "e9301497fa98ef56aaca7ede0857b9a18dc06c34040f0679c609a6bf49b1d38b"
     },
     {
-      "path": "assets/presentation.mplstyle",
-      "sha256": "d6e9d1580776490e240b6339708a19e409cd980267212a798455e157414c7a17"
+      "path": "assets/visual_profiles.json",
+      "sha256": "87c3717861ac0ed0245706dae315b2c5c2ab7ff0ffd3e56e55d9197c6cc4a5c2"
     },
     {
-      "path": "assets/publication.mplstyle",
-      "sha256": "aa09903da14efc173dc9d441e8a76ca3a0f04a62ef4b806790396e8fd3d2aa33"
+      "path": "references/design_and_statistics.md",
+      "sha256": "2b5ba78b15d1acda844a78351426c0836e8e7954983c6cbf2e668c362cb48287"
     },
     {
-      "path": "references/color_palettes.md",
-      "sha256": "4d9ec64478dee9fc8de43fbde9983a413520c436099b0c560b21eadec572270b"
+      "path": "references/encoding_accessibility.md",
+      "sha256": "2bdac1ce272bcf814b7e7ea026a494448a39d4ac35b8dffdbe16609a5cf47c37"
     },
     {
-      "path": "references/full_visualization_playbook.md",
-      "sha256": "efb607a7fb15d2e6a1bd4ed211e179f78c4affdb06d47241ba599c9a87cfc541"
+      "path": "references/fonts_and_cjk.md",
+      "sha256": "da01c28c169d03faba77ea9f0729b81314424ff5e82638182163ceec46c2aa22"
     },
     {
-      "path": "references/journal_requirements.md",
-      "sha256": "69157b820c78e9bca299ea6f7dcb49624ea778ec3ed619a98e82c3b60e6dc782"
+      "path": "references/journal_profiles.md",
+      "sha256": "fa8ea4cc92edc8982a57100d6e60cc6a2eccbda2743cd5891ed352d33729adaf"
     },
     {
-      "path": "references/matplotlib_examples.md",
-      "sha256": "d9195bb8c1b80f235495ac8a63e86fef0462e99cc2cc7d5d244818bfe5ee08cf"
+      "path": "references/research_integrity.md",
+      "sha256": "0d39190c522f4377d114f55ddad7850ebb34c514940493da967bd1e2e86f8fe2"
     },
     {
-      "path": "references/publication_guidelines.md",
-      "sha256": "c8430dfe7d374edc771c55a0d9c6e1f07ab803f16321d21941835e93944da2d1"
+      "path": "references/task_contracts.md",
+      "sha256": "deb017c95e3d5028d8ea7881dffc7b04d39db5b25461987ac8b0ab3a67022028"
     },
     {
       "path": "scripts/figure_export.py",
-      "sha256": "542f604c2a4dc642c055b24ef26b9e9e808616a33fde0cd2154c975dc83318d0"
+      "sha256": "a4116fcbb37991c9b51a393b33958960126fc0b0cd951e4e2bf088f805d5df9c"
+    },
+    {
+      "path": "scripts/figure_pipeline.py",
+      "sha256": "bad22954415448fa401bdb9c87e1c2c8583d3a749fc9141584fe8a0dd4b8f4b0"
+    },
+    {
+      "path": "scripts/font_preflight.py",
+      "sha256": "35de60af0da73c1d7af88d751c2608de514c69873271c11a1eeabf61f3f5c181"
+    },
+    {
+      "path": "scripts/statistics_gate.py",
+      "sha256": "85d22ff06d9b6fcc202353d134290a8670b60375e26797c98d0345afa64c540d"
     },
     {
       "path": "scripts/style_presets.py",
-      "sha256": "3a4163c6aaaf6792665cf890ab497a2b5070c0ed0adfa524fcaee5262a3f1792"
+      "sha256": "32dd24c8dc67a1cfd3eefce033d5f972714edb1f892d3d50c4cb2b65066d4794"
+    },
+    {
+      "path": "scripts/test_figure_system.py",
+      "sha256": "6f27c802dd8f1a45b2651938ba15a6153166b6c9587f0ea03fb3f73de616aac3"
     }
   ],
   "declared_local_dependencies": [
     {
-      "path": "references/color_palettes.md",
+      "path": "assets/visual_profiles.json",
       "exists": true,
-      "resolved_path": "academic-scientific-visualization/references/color_palettes.md",
-      "sha256": "4d9ec64478dee9fc8de43fbde9983a413520c436099b0c560b21eadec572270b"
+      "resolved_path": "academic-scientific-visualization/assets/visual_profiles.json",
+      "sha256": "87c3717861ac0ed0245706dae315b2c5c2ab7ff0ffd3e56e55d9197c6cc4a5c2"
     },
     {
-      "path": "references/journal_requirements.md",
+      "path": "references/design_and_statistics.md",
       "exists": true,
-      "resolved_path": "academic-scientific-visualization/references/journal_requirements.md",
-      "sha256": "69157b820c78e9bca299ea6f7dcb49624ea778ec3ed619a98e82c3b60e6dc782"
+      "resolved_path": "academic-scientific-visualization/references/design_and_statistics.md",
+      "sha256": "2b5ba78b15d1acda844a78351426c0836e8e7954983c6cbf2e668c362cb48287"
     },
     {
-      "path": "references/matplotlib_examples.md",
+      "path": "references/encoding_accessibility.md",
       "exists": true,
-      "resolved_path": "academic-scientific-visualization/references/matplotlib_examples.md",
-      "sha256": "d9195bb8c1b80f235495ac8a63e86fef0462e99cc2cc7d5d244818bfe5ee08cf"
+      "resolved_path": "academic-scientific-visualization/references/encoding_accessibility.md",
+      "sha256": "2bdac1ce272bcf814b7e7ea026a494448a39d4ac35b8dffdbe16609a5cf47c37"
     },
     {
-      "path": "references/publication_guidelines.md",
+      "path": "references/fonts_and_cjk.md",
       "exists": true,
-      "resolved_path": "academic-scientific-visualization/references/publication_guidelines.md",
-      "sha256": "c8430dfe7d374edc771c55a0d9c6e1f07ab803f16321d21941835e93944da2d1"
+      "resolved_path": "academic-scientific-visualization/references/fonts_and_cjk.md",
+      "sha256": "da01c28c169d03faba77ea9f0729b81314424ff5e82638182163ceec46c2aa22"
+    },
+    {
+      "path": "references/journal_profiles.md",
+      "exists": true,
+      "resolved_path": "academic-scientific-visualization/references/journal_profiles.md",
+      "sha256": "fa8ea4cc92edc8982a57100d6e60cc6a2eccbda2743cd5891ed352d33729adaf"
+    },
+    {
+      "path": "references/research_integrity.md",
+      "exists": true,
+      "resolved_path": "academic-scientific-visualization/references/research_integrity.md",
+      "sha256": "0d39190c522f4377d114f55ddad7850ebb34c514940493da967bd1e2e86f8fe2"
+    },
+    {
+      "path": "references/task_contracts.md",
+      "exists": true,
+      "resolved_path": "academic-scientific-visualization/references/task_contracts.md",
+      "sha256": "deb017c95e3d5028d8ea7881dffc7b04d39db5b25461987ac8b0ab3a67022028"
     },
     {
       "path": "scripts/figure_export.py",
       "exists": true,
       "resolved_path": "academic-scientific-visualization/scripts/figure_export.py",
-      "sha256": "542f604c2a4dc642c055b24ef26b9e9e808616a33fde0cd2154c975dc83318d0"
+      "sha256": "a4116fcbb37991c9b51a393b33958960126fc0b0cd951e4e2bf088f805d5df9c"
+    },
+    {
+      "path": "scripts/figure_pipeline.py",
+      "exists": true,
+      "resolved_path": "academic-scientific-visualization/scripts/figure_pipeline.py",
+      "sha256": "bad22954415448fa401bdb9c87e1c2c8583d3a749fc9141584fe8a0dd4b8f4b0"
+    },
+    {
+      "path": "scripts/font_preflight.py",
+      "exists": true,
+      "resolved_path": "academic-scientific-visualization/scripts/font_preflight.py",
+      "sha256": "35de60af0da73c1d7af88d751c2608de514c69873271c11a1eeabf61f3f5c181"
+    },
+    {
+      "path": "scripts/statistics_gate.py",
+      "exists": true,
+      "resolved_path": "academic-scientific-visualization/scripts/statistics_gate.py",
+      "sha256": "85d22ff06d9b6fcc202353d134290a8670b60375e26797c98d0345afa64c540d"
     },
     {
       "path": "scripts/style_presets.py",
       "exists": true,
       "resolved_path": "academic-scientific-visualization/scripts/style_presets.py",
-      "sha256": "3a4163c6aaaf6792665cf890ab497a2b5070c0ed0adfa524fcaee5262a3f1792"
+      "sha256": "32dd24c8dc67a1cfd3eefce033d5f972714edb1f892d3d50c4cb2b65066d4794"
     }
   ],
   "missing_declared_dependencies": []

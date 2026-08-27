@@ -1,0 +1,17 @@
+{
+  "template_type": "architecture",
+  "style": 1,
+  "title": "Semantic Architecture",
+  "subtitle": "Components and typed connections",
+  "components": [
+    {"id": "client", "label": "Web Client", "type": "channel"},
+    {"id": "gateway", "label": "API Gateway", "type": "edge", "kind": "double_rect"},
+    {"id": "service", "label": "Clinical Service", "type": "service"},
+    {"id": "store", "label": "Patient Store", "type": "database", "kind": "cylinder"}
+  ],
+  "connections": [
+    {"from": "client", "to": "gateway", "label": "HTTPS", "flow": "control"},
+    {"from": "gateway", "to": "service", "label": "request", "flow": "control"},
+    {"from": "service", "to": "store", "label": "read/write", "flow": "data"}
+  ]
+}

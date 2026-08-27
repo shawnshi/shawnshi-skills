@@ -42,6 +42,7 @@ from run_contract import (
     _validate_multi_independent_lineage,
     validate_resource_manifest,
     validate_review_receipt,
+    validate_red_team_draft,
     validate_semantic_draft,
     validate_semantic_history,
 )
@@ -459,7 +460,8 @@ class RunContractTests(unittest.TestCase):
         )
         return manifest_path, request_path, request
 
-    def prepare_supplement_run(self, run_id, gap_ids):
+    def prepare_supplement_run(self, run_id, gap_ids, lane_by_gap=None):
+        lane_by_gap = lane_by_gap or {}
         manifest_path, _ = create_run(
             runtime_dir=self.runtime_dir,
             skill_path=self.skill_file,
@@ -483,7 +485,7 @@ class RunContractTests(unittest.TestCase):
             [
                 {
                     "gap_id": gap_id,
-                    "lane": "TechRadar",
+                    "lane": lane_by_gap.get(gap_id, "TechRadar"),
                     "query_scope": gap_id,
                 }
                 for gap_id in gap_ids
@@ -511,7 +513,7 @@ class RunContractTests(unittest.TestCase):
             "baseline_sha256": request["baseline_sha256"],
             "candidate_pool_sha256": request["candidate_pool_sha256"],
             "gap_id": gap_id,
-            "lane": "TechRadar",
+            "lane": packet["assigned_lanes"][0],
             "status": "failed" if blocked else "no_increment",
             "executed_queries": [gap_id],
             "access_log": access_log,
@@ -1874,6 +1876,68 @@ class RunContractTests(unittest.TestCase):
                 now=self.now + timedelta(seconds=2),
             )
 
+    def test_registration_allows_one_cross_lane_transport_recovery(self):
+        manifest_path, request_path, request = self.prepare_supplement_run(
+            "cross-lane-transport-recovery",
+            ["technology-coverage-integrity", "risk-counterevidence"],
+            lane_by_gap={
+                "technology-coverage-integrity": "TechRadar",
+                "risk-counterevidence": "Ranger",
+            },
+        )
+        url = "https://example.org/local-tls-path"
+        permanent_transport = {
+            "status": "blocked",
+            "checked_at": self.now.isoformat(),
+            "method": "http_get",
+            "requested_url": url,
+            "final_url": url,
+            "http_status": None,
+            "failure_class": "permanent",
+            "error_code": "TLS_SSL_CONNECTION_FAILED",
+        }
+        verified = {
+            "status": "verified",
+            "checked_at": (self.now + timedelta(seconds=1)).isoformat(),
+            "method": "browser",
+            "requested_url": url,
+            "final_url": url,
+            "http_status": 200,
+            "failure_class": "none",
+        }
+        first = self.write_supplement_result(
+            request_path,
+            request,
+            "technology-coverage-integrity",
+            [permanent_transport],
+        )
+        second = self.write_supplement_result(
+            request_path,
+            request,
+            "risk-counterevidence",
+            [verified],
+        )
+
+        _, aggregate = register_supplement_results(
+            manifest_path,
+            request_path,
+            [second, first],
+            now=self.now + timedelta(seconds=2),
+        )
+
+        self.assertEqual(aggregate["status"], "degraded")
+        self.assertEqual(len(aggregate["cross_lane_recoveries"]), 1)
+        recovery = aggregate["cross_lane_recoveries"][0]
+        self.assertEqual(recovery["failed_gap_id"], "technology-coverage-integrity")
+        self.assertEqual(recovery["recovery_gap_id"], "risk-counterevidence")
+        self.assertEqual(recovery["failure_code"], "TLS_SSL_CONNECTION_FAILED")
+        self.assertEqual(
+            load_manifest(manifest_path)["stages"]["supplemental"]["metadata"][
+                "cross_lane_recovery_count"
+            ],
+            1,
+        )
+
     def test_registration_allows_success_before_permanent_failure(self):
         manifest_path, request_path, request = self.prepare_supplement_run(
             "retry-allowed-run",
@@ -2449,8 +2513,17 @@ class RunContractTests(unittest.TestCase):
         self.assertEqual(red_request["max_turns"], 1)
         self.assertEqual(red_request["l4_item_hashes"], [])
         self.assertEqual(red_request["major_signal_item_hashes"], [])
+        validation_command = red_request["execution_packet"]["validation_command"]
+        self.assertIn("validate-red-team-draft", validation_command)
+        self.assertEqual(
+            red_request["execution_packet"]["bound_semantic_receipt_path"],
+            str(semantic.resolve()),
+        )
         red_team = Path(
             red_request["execution_packet"]["output_paths"]["review_receipt"]
+        )
+        red_team_draft = Path(
+            red_request["execution_packet"]["draft_paths"]["review_receipt"]
         )
         receipt = json.loads(semantic.read_text(encoding="utf-8"))
         receipt.update(
@@ -2467,6 +2540,28 @@ class RunContractTests(unittest.TestCase):
                 "reviewed_item_hashes": [],
             }
         )
+        receipt["status"] = "passed"
+        red_team_draft.write_text(json.dumps(receipt), encoding="utf-8")
+        with self.assertRaisesRegex(RunContractError, "must be not_required"):
+            validate_red_team_draft(
+                manifest_path,
+                refined,
+                semantic,
+                red_team_draft,
+            )
+        receipt["status"] = "not_required"
+        red_team_draft.write_text(json.dumps(receipt), encoding="utf-8")
+        self.assertIsInstance(
+            validate_red_team_draft(
+                manifest_path,
+                refined,
+                semantic,
+                red_team_draft,
+            ),
+            list,
+        )
+
+        receipt["status"] = "failed"
         red_team.write_text(json.dumps(receipt), encoding="utf-8")
 
         with self.assertRaisesRegex(RunContractError, "not acceptable"):

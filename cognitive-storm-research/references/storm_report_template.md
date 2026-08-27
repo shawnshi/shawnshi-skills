@@ -1,71 +1,107 @@
-# STORM Research Synthesis Template
+# STORM 综合研究报告模板
 
-All `Synthesis_STORM_*.md` nodes MUST strictly adhere to the following Markdown structural skeleton. If any of the H2 (`##`) sections are missing, the write operation will be blocked by the Vector Lake Validation Engine.
+标准和深度研究使用本模板。保留各部分的核心语义，但可根据受众、语言和证据量调整标题、发现数量和视角数量。没有证据支持的内容标明“未发现”或“不适用”，不得为了填满模板而编造。仅在用户明确要求保存 Markdown 文件时添加所需的 frontmatter。
+
+结构：决策摘要 → 方法与范围 → 关键发现 → 证据与矛盾 → 相关视角 → 选项与建议 → 未知项 → 红队整改 → 来源索引。
 
 ```markdown
----
-aliases: []
-tags: [storm, research, synthesis]
----
+# [研究主题]
 
-# [Topic Name]
+> **研究状态**：[完整 / 部分 / 受阻]
+>
+> **研究档位**：[标准 / 深度]
+>
+> **资料截止时间**：[YYYY-MM-DD HH:mm，时区]
+>
+> **决策问题**：[本报告要支持的具体决策]
 
-> **Executive Summary**: [1-Paragraph Summary explaining the core reality, contradictions, and actionable insights to a CEO who has 60 seconds.]
+## 1. 决策摘要
 
-## 1. Top 5 Key Findings
-1. **[Finding 1]** (Confidence: [1-10]): [Description]
-   - *Supported by*: [Persona(s)]
-   - *Challenged by*: [Persona(s)]
-2. **[Finding 2]** (Confidence: [1-10]): ...
-3. ...
-4. ...
-5. ...
+- **核心结论**：[直接回答决策问题]
+- **建议及强度**：[强 / 中 / 弱 / 暂不建议行动]
+- **关键依据**：[最重要的2–4项证据，附相邻引用]
+- **主要不确定性**：[最可能改变结论的未知项]
+- **改变结论的条件**：[证伪条件或关键新证据]
 
-## 2. The Contradiction Map
-### Clashes
-- **[Clash 1]**: [Description of conflicting views and claims]
-- **[Clash 2]**: ...
+## 2. 研究方法与范围
 
-### Consensus
-- [Description of what every perspective absolutely agreed upon]
+- **受众与用途**：...
+- **地区、时间与关键定义**：...
+- **纳入与排除范围**：...
+- **来源限制与检索方法**：...
+- **完成状态及限制**：...
 
-### The Blind Spot
-- [Description of the critical topic or variable that NONE of the perspectives addressed]
+## 3. 关键发现
 
-## 3. Actionable Insights & Hidden Connections
-- **The Hidden Connection**: [One non-obvious structural link across perspectives]
-- **Actionable Insight**: [What the user should actually DO differently based on this research]
-- **The Frontier Question**: [The one question that changes our entire understanding if answered]
+### [发现标题；按重要性排序，数量由证据决定]
 
-## 4. Multi-Perspective Raw Scan
-### THE PRACTITIONER
-- **Position**: ...
-- **Evidence**: ...
-- **Unique Insight**: ...
+- **类型**：[事实 / 解释 / 预测]
+- **结论**：...
+- **置信度**：[高 / 中 / 低]，理由：...
+- **支持证据**：[S1：来源标题](URL)；[S2：来源标题](URL)
+- **反证或限制**：...
+- **决策含义**：...
 
-### THE ACADEMIC
-- **Position**: ...
-- **Evidence**: ...
-- **Unique Insight**: ...
+[按实际发现数量重复]
 
-### THE SKEPTIC
-- **Position**: ...
-- **Evidence**: ...
-- **Unique Insight**: ...
+## 4. 证据与矛盾图
 
-### THE ECONOMIST
-- **Position**: ...
-- **Evidence**: ...
-- **Unique Insight**: ...
+### 已确认事实
 
-### THE HISTORIAN
-- **Position**: ...
-- **Evidence**: ...
-- **Unique Insight**: ...
+| Claim ID | 事实 | 独立证据链 | 适用口径 |
+|---|---|---|---|
+| C01 | ... | S1、S2 | ... |
 
-## 5. Peer Review (Self-Critique)
-- **Weakest Link**: [Which claim is the least confident and what info is needed to verify it]
-- **Bias Check**: [Did one voice dominate? Was the data heavily skewed?]
-- **Missing Perspective**: [Is there a 6th angle that was omitted?]
-- **Overall Grade**: [Stanford professor grading A-F with rationale]
+### 有争议或未解决主张
+
+| Claim ID | 主张 | 支持证据 | 反对证据 | 冲突原因 | 状态及处理 |
+|---|---|---|---|---|---|
+| C02 | ... | S3 | S4 | 定义/时间/范围/方法/利益 | contested/unconfirmed；如何影响建议 |
+
+- **少数意见**：...
+- **尚未被充分覆盖的变量**：...
+
+## 5. 相关视角
+
+### [视角名称；按主题动态选择3–5个]
+
+- **核心判断**：...
+- **对应主张与来源**：C01、C02；S1、S3
+- **反证或边界**：...
+- **对决策的独特贡献**：...
+
+[按实际视角重复，不固定角色]
+
+## 6. 决策选项与建议
+
+| 选项 | 支持证据 | 主要风险/反证 | 可逆性 | 建议强度 |
+|---|---|---|---|---|
+| A | ... | ... | 高/中/低 | 强/中/弱 |
+
+- **推荐方案**：...
+- **最小下一步**：...
+- **验证指标**：...
+- **证伪条件**：出现哪些证据或结果时应暂停、调整或推翻建议。
+
+## 7. 未知项与后续研究
+
+| 未知项 | 对结论的影响 | 所需证据 | 优先级 |
+|---|---|---|---|
+| ... | ... | ... | 高/中/低 |
+
+## 8. 红队整改与质量状态
+
+- **最弱证据链**：...
+- **偏差与覆盖缺口**：...
+- **发现的问题及整改**：[补证 / 删除 / 降级 / 保留争议]
+- **仍未解决的问题**：...
+- **最终状态**：[完整 / 部分 / 受阻]，理由：...
+
+## 9. 来源索引
+
+| Source ID | 来源与发布者 | 来源类型 | 发布日/事件日/访问日 | 适用范围 | 独立证据链 | 支持的Claim ID |
+|---|---|---|---|---|---|---|
+| S1 | [标题](URL) | 官方/原始数据/论文/二手/体验信号 | ... | ... | L1 | C01 |
 ```
+
+公开来源必须保留可点击链接；用户提供材料使用“文件名＋页码/章节/表图”定位。来源索引不能替代关键主张旁的相邻引用。

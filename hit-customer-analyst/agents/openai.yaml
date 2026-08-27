@@ -1,0 +1,8 @@
+interface:
+  display_name: 医疗客户研究与拜访准备
+  short_description: 生成医疗客户会前速览、标准拜访包、战略客户包或高风险一封信
+  default_prompt: 请使用 $hit-customer-analyst为我的医疗客户任务选择会前速览、标准拜访包、战略客户包或一封信；先消歧，再复用当前有效且可追溯的成果。
+  icon_small: assets/icon.svg
+  icon_large: assets/icon.svg
+policy:
+  allow_implicit_invocation: true

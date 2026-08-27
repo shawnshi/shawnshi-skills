@@ -1,21 +1,23 @@
 {
   "schema_version": 3,
   "skill": "hit-solution-architect",
-  "generated_at": "2026-08-16T22:27:49+08:00",
+  "generated_at": "2026-08-27T20:05:46+08:00",
   "hash_algorithm": "SHA-256",
   "text_hash_normalization": "LF",
   "skill_md": "SKILL.md",
-  "skill_md_sha256": "5a79af88473f7766a770c42a535301bc7d3f60b74d0d9c3df6f6247a5244d919",
+  "skill_md_sha256": "a2c5ae4b4b09a7d1fa86c6b3ed7ab6b44dbdc31e2acd79c031c6a20dcdf3dc28",
   "top_level_files": [
     "SKILL.md"
   ],
   "top_level_file_hashes": [
     {
       "path": "SKILL.md",
-      "sha256": "5a79af88473f7766a770c42a535301bc7d3f60b74d0d9c3df6f6247a5244d919"
+      "sha256": "a2c5ae4b4b09a7d1fa86c6b3ed7ab6b44dbdc31e2acd79c031c6a20dcdf3dc28"
     }
   ],
   "top_level_directories": [
+    "agents",
+    "assets",
     "references",
     "scripts",
     "templates"
@@ -23,87 +25,161 @@
   "resource_directories": [
     {
       "name": "scripts",
-      "file_count": 3
+      "file_count": 5
     },
     {
       "name": "references",
-      "file_count": 8
+      "file_count": 7
+    },
+    {
+      "name": "assets",
+      "file_count": 1
+    },
+    {
+      "name": "agents",
+      "file_count": 1
     }
   ],
   "resource_file_hashes": [
     {
+      "path": "agents/openai.yaml",
+      "sha256": "ad67bdee73b38f1d4bc49ce47e24274f3d1d886cd3e477e741ba988807999c8b"
+    },
+    {
+      "path": "assets/icon.svg",
+      "sha256": "e9301497fa98ef56aaca7ede0857b9a18dc06c34040f0679c609a6bf49b1d38b"
+    },
+    {
+      "path": "references/clinical_safety_cutover.md",
+      "sha256": "55bdf1f828cf2ccabab735110ef178e8520f3343059063a136850da9a3ff4c16"
+    },
+    {
+      "path": "references/delivery_profiles.md",
+      "sha256": "bf0f96db612d2511b7886f28b8063efcf9e29e49d09364af7da53f331234b5b3"
+    },
+    {
       "path": "references/evaluation_standards.md",
-      "sha256": "a269ac159e809b6ff5c400cb41483d88b4bdf0b24f26b2fad19a56a9d2a3e2a8"
+      "sha256": "8fe3e8dc911f9b9ba40faf764673a92fb42666618126a39d50b2d2a89f3b32a9"
+    },
+    {
+      "path": "references/evidence_governance.md",
+      "sha256": "f9402f2195d42eede0b5222b98316d6056bb3fb78cc9ee0178d4dbd44017e7b5"
     },
     {
       "path": "references/maturity_model.md",
-      "sha256": "2c0ed3234f70bc3b597105e1550408ee888db1c4c1531f5c596412791466129f"
+      "sha256": "1761d5d316b7f4ecc4b337d17dfbdb2bb42910f5c34cc5a841104e603734d55d"
     },
     {
-      "path": "references/winning-health-case-studies.md",
-      "sha256": "a23555a79f5cb6f8cadb0d2335b0b1ba25fc26d9c8d6e58e89319ebd95dc1d89"
-    },
-    {
-      "path": "references/winning-health-core-products.md",
-      "sha256": "f225025d260eb8c38a5661c3cfdc2bb43f9b02d05b25800a8fd2af9562a9ea20"
+      "path": "references/scene_routing.md",
+      "sha256": "c5a73fcfc54585106be2d9bec8fb335053f50f2bd4076d6c114471d7b908541e"
     },
     {
       "path": "references/xinchuang_ecosystem.md",
-      "sha256": "ac9e00d8a7a93e526f6ba70af5aa27254449908f7d1d9433194d381c9412e1ee"
-    },
-    {
-      "path": "references/医疗卫生政策要点.md",
-      "sha256": "93abc306b00bcd6a54291496708bc21cd26003a14a33408c98d2ee985c2a7b79"
-    },
-    {
-      "path": "references/卫宁健康典型案例.md",
-      "sha256": "93abc306b00bcd6a54291496708bc21cd26003a14a33408c98d2ee985c2a7b79"
-    },
-    {
-      "path": "references/卫宁健康核心产品.md",
-      "sha256": "93abc306b00bcd6a54291496708bc21cd26003a14a33408c98d2ee985c2a7b79"
+      "sha256": "0f70810913552e77f73f4eb780154d2b325859af6f799f5cc73cafd203568191"
     },
     {
       "path": "scripts/buzzword_auditor.py",
-      "sha256": "bc5cd0d65ae2b0badecaf769feaf77ca25dda081dcc67e64b9d8e9a61ce9ca4a"
+      "sha256": "d519df0eb2d90231d81d1bb7daa5ea1a15041c59ad0513b50daff9b6dee0064f"
     },
     {
       "path": "scripts/logic_checker.py",
-      "sha256": "8732fe536ee2b1d356a637adc7e92f86b8dfeec49a1df6b0976e0898574ce5ca"
+      "sha256": "6fe8d16ceadfb12fece081d848a2232bde96b6280eaf23dea9d65eb16ba26aa5"
     },
     {
-      "path": "scripts/manifest_manager.py",
-      "sha256": "89ed65932346bc9317d3557b3b7b81263c9410c0df743d3f218c636befd4fda2"
+      "path": "scripts/qa_runner.py",
+      "sha256": "26ac54e21cc082937caeea4c1b746acc20cfdb7c7f28427f00ad0f5aa52f23bd"
+    },
+    {
+      "path": "scripts/resource_validator.py",
+      "sha256": "265d4ca930af934544bcd2f08bf72db1bde4e373fc1865b0a4257e394ab702ab"
+    },
+    {
+      "path": "scripts/tests/test_quality_gate.py",
+      "sha256": "caf287281e8c514468e58544e1113580518202b53a5a8c6c4a7a16c360f6dcdb"
+    },
+    {
+      "path": "templates/architecture_review_scorecard.md",
+      "sha256": "23ac1595d6035fd159d9fd9f89e05075410fd7c8254ccb05b042bb7935b55a2b"
+    },
+    {
+      "path": "templates/architecture_traceability.md",
+      "sha256": "0196b60cb859b181843724f5a2fa00011dfa4753747e991805339271b997495c"
     },
     {
       "path": "templates/examples/good_titles_vs_bad_titles.md",
-      "sha256": "6339ffacc1db1cd4fc390b0f302794baa9d8d950dfa84ebefa975afe73d3f9bc"
+      "sha256": "1c1d8f5a6c6a07d0d28261edda1db7a6a1d3fec61c303bfded31d18804d08f79"
     },
     {
       "path": "templates/examples/narrative_vs_matrix_sample.md",
-      "sha256": "9730e73310389fadf06f297ef919644f465379858cef115968c2e2142616d445"
+      "sha256": "0652a58f7c3b508abaebb73911bb06d50d95ad4087c697f6ac2ee783b7840d0a"
+    },
+    {
+      "path": "templates/input_contract.md",
+      "sha256": "8de56b2169112fc6eae055e408121eeabc57ddcc28a981db8d94719bbfa5f11e"
     },
     {
       "path": "templates/structure_standard.md",
-      "sha256": "bbb5f687c695235f1a91aeec31bedd972a2607a1e1afc57da06e71c3cbc348bd"
+      "sha256": "4dcf5822eec86edc4aaa1984712700d0a29562824f548a50de7920503271f8e3"
     },
     {
       "path": "templates/tco_calculator_model.md",
-      "sha256": "59811b0122008debd428bc1b61024fea2d9ec4f04103cfb7563621ae187bd326"
+      "sha256": "7de707f50f98030446506b32dc342385d5039f7523bdea65cd65ee29bc15c9a2"
     }
   ],
   "declared_local_dependencies": [
     {
-      "path": "scripts/buzzword_auditor.py",
+      "path": "references/clinical_safety_cutover.md",
       "exists": true,
-      "resolved_path": "hit-solution-architect/scripts/buzzword_auditor.py",
-      "sha256": "bc5cd0d65ae2b0badecaf769feaf77ca25dda081dcc67e64b9d8e9a61ce9ca4a"
+      "resolved_path": "hit-solution-architect/references/clinical_safety_cutover.md",
+      "sha256": "55bdf1f828cf2ccabab735110ef178e8520f3343059063a136850da9a3ff4c16"
     },
     {
-      "path": "scripts/logic_checker.py",
+      "path": "references/delivery_profiles.md",
       "exists": true,
-      "resolved_path": "hit-solution-architect/scripts/logic_checker.py",
-      "sha256": "8732fe536ee2b1d356a637adc7e92f86b8dfeec49a1df6b0976e0898574ce5ca"
+      "resolved_path": "hit-solution-architect/references/delivery_profiles.md",
+      "sha256": "bf0f96db612d2511b7886f28b8063efcf9e29e49d09364af7da53f331234b5b3"
+    },
+    {
+      "path": "references/evaluation_standards.md",
+      "exists": true,
+      "resolved_path": "hit-solution-architect/references/evaluation_standards.md",
+      "sha256": "8fe3e8dc911f9b9ba40faf764673a92fb42666618126a39d50b2d2a89f3b32a9"
+    },
+    {
+      "path": "references/evidence_governance.md",
+      "exists": true,
+      "resolved_path": "hit-solution-architect/references/evidence_governance.md",
+      "sha256": "f9402f2195d42eede0b5222b98316d6056bb3fb78cc9ee0178d4dbd44017e7b5"
+    },
+    {
+      "path": "references/maturity_model.md",
+      "exists": true,
+      "resolved_path": "hit-solution-architect/references/maturity_model.md",
+      "sha256": "1761d5d316b7f4ecc4b337d17dfbdb2bb42910f5c34cc5a841104e603734d55d"
+    },
+    {
+      "path": "references/scene_routing.md",
+      "exists": true,
+      "resolved_path": "hit-solution-architect/references/scene_routing.md",
+      "sha256": "c5a73fcfc54585106be2d9bec8fb335053f50f2bd4076d6c114471d7b908541e"
+    },
+    {
+      "path": "references/xinchuang_ecosystem.md",
+      "exists": true,
+      "resolved_path": "hit-solution-architect/references/xinchuang_ecosystem.md",
+      "sha256": "0f70810913552e77f73f4eb780154d2b325859af6f799f5cc73cafd203568191"
+    },
+    {
+      "path": "scripts/qa_runner.py",
+      "exists": true,
+      "resolved_path": "hit-solution-architect/scripts/qa_runner.py",
+      "sha256": "26ac54e21cc082937caeea4c1b746acc20cfdb7c7f28427f00ad0f5aa52f23bd"
+    },
+    {
+      "path": "scripts/resource_validator.py",
+      "exists": true,
+      "resolved_path": "hit-solution-architect/scripts/resource_validator.py",
+      "sha256": "265d4ca930af934544bcd2f08bf72db1bde4e373fc1865b0a4257e394ab702ab"
     }
   ],
   "missing_declared_dependencies": []

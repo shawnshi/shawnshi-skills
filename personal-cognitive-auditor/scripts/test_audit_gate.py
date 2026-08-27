@@ -34,6 +34,7 @@ class AuditGateTests(unittest.TestCase):
 ## 能量管理（描述性生理背景）
 - **数据范围与来源:** 2026-08-01，本地 Garmin。
 - **组件覆盖与新鲜度:** sleep=complete；观测日期 2026-08-01。
+- **采集审计:** sync_eligible=false; sync_attempted=not_attempted; task_status=not_checked; local_reread=not_run; local_status=not_run; live_fallback=not_used; reason=historical_window
 - **睡眠观察:** 观测日期 2026-08-01，7.2 小时。
 - **HRV 与静息心率观察:** 各自观测日期均已披露。
 - **Body Battery 与压力观察:** 各自观测日期均已披露。
@@ -62,6 +63,7 @@ class AuditGateTests(unittest.TestCase):
 ## 能量管理 (Biological-Cognitive Correlation)
 - **数据范围与来源:** 2026-08-23 至 2026-08-25，本地 Garmin，只读。
 - **组件覆盖与新鲜度:** sleep/hrv/body_battery/heart_rate/stress 均有观测；最近观测日期 2026-08-24。
+- **采集审计:** sync_eligible=true; sync_attempted=started; task_status=failed; local_reread=rejected; local_status=read_error; live_fallback=not_used; reason=terminal_coverage_stale
 - **睡眠观察:** 观测日期 2026-08-24，6.3 小时。
 - **HRV 与静息心率观察:** HRV 46 ms、静息心率 55 bpm，观测日期均为 2026-08-24。
 - **Body Battery 与压力观察:** 峰值 100、低值 26、充入 55、平均压力 30，观测日期均为 2026-08-24。
@@ -192,6 +194,7 @@ class AuditGateTests(unittest.TestCase):
 ## 能量管理（描述性生理背景）
 - **数据范围与来源:** 本地 Garmin。
 - **组件覆盖与新鲜度:** sleep=complete；观测日期 2026-08-22。
+- **采集审计:** sync_eligible=false; sync_attempted=not_attempted; task_status=not_checked; local_reread=not_run; local_status=not_run; live_fallback=not_used; reason=historical_window
 - **睡眠观察:** 观测日期 2026-08-22，7.0 小时。
 - **HRV 与静息心率观察:** 无有效观测。
 - **Body Battery 与压力观察:** 无有效观测。
@@ -227,6 +230,93 @@ class AuditGateTests(unittest.TestCase):
         self.assertTrue(
             any("complete unavailable-state fields" in item for item in errors)
         )
+
+    def test_template_mode_blocks_incomplete_acquisition_audit(self):
+        text = """# 复盘
+
+## 能量管理（描述性生理背景）
+- **数据范围与来源:** 本地 Garmin。
+- **组件覆盖与新鲜度:** 无有效观测。
+- **采集审计:** sync_eligible=true; sync_attempted=started
+- **睡眠观察:** 无有效观测。
+- **HRV 与静息心率观察:** 无有效观测。
+- **Body Battery 与压力观察:** 无有效观测。
+- **执行带宽:** `not_scored`；不从健康指标生成认知或工作表现评分。
+- **睡眠负债:** sleep_debt_h=null；sleep_debt_status=not_provided_by_source；method=none；baseline_h=null；window_days=null。
+- **摩擦解构:** 已记录负荷为空；未知项已披露。
+- **交叉归因:** 没有同日证据，不建立因果关系。
+- **干预指令:** 没有健康依据时不生成强制安排。
+- **数据缺口与不可判断事项:** 本地无数据。
+"""
+        errors, _ = validate(text, enforce_template_fields=True)
+
+        self.assertTrue(any("acquisition audit missing or invalid keys" in item for item in errors))
+
+    def test_template_mode_blocks_contradictory_acquisition_audit(self):
+        text = """# 复盘
+
+## 能量管理（描述性生理背景）
+- **数据范围与来源:** 本地 Garmin。
+- **组件覆盖与新鲜度:** 无有效观测。
+- **采集审计:** sync_eligible=false; sync_attempted=started; task_status=failed; local_reread=rejected; local_status=read_error; live_fallback=used; reason=sync_failed
+- **睡眠观察:** 无有效观测。
+- **HRV 与静息心率观察:** 无有效观测。
+- **Body Battery 与压力观察:** 无有效观测。
+- **执行带宽:** `not_scored`；不从健康指标生成认知或工作表现评分。
+- **睡眠负债:** sleep_debt_h=null；sleep_debt_status=not_provided_by_source；method=none；baseline_h=null；window_days=null。
+- **摩擦解构:** 已记录负荷为空；未知项已披露。
+- **交叉归因:** 没有同日证据，不建立因果关系。
+- **干预指令:** 没有健康依据时不生成强制安排。
+- **数据缺口与不可判断事项:** 本地无数据。
+"""
+        errors, _ = validate(text, enforce_template_fields=True)
+
+        self.assertTrue(any("acquisition audit state conflict" in item for item in errors))
+
+    def test_acquisition_semantics_reject_nonterminal_task_status(self):
+        from audit_gate import acquisition_semantic_errors
+
+        errors = acquisition_semantic_errors(
+            "sync_eligible=true; sync_attempted=waited_existing; task_status=running; "
+            "local_reread=not_run; local_status=not_run; live_fallback=not_used; reason=task_running"
+        )
+        self.assertTrue(any("terminal" in item for item in errors))
+
+    def test_acquisition_semantics_accepts_drift_before_attempt(self):
+        from audit_gate import acquisition_semantic_errors
+
+        errors = acquisition_semantic_errors(
+            "sync_eligible=false; sync_attempted=not_attempted; task_status=invalid; "
+            "local_reread=not_run; local_status=not_run; live_fallback=not_used; reason=task_arguments_drift"
+        )
+        self.assertEqual(errors, [])
+
+    def test_acquisition_semantics_accepts_start_failure(self):
+        from audit_gate import acquisition_semantic_errors
+
+        errors = acquisition_semantic_errors(
+            "sync_eligible=true; sync_attempted=not_attempted; task_status=start_failed; "
+            "local_reread=not_run; local_status=not_run; live_fallback=not_used; reason=task_start_failed"
+        )
+        self.assertEqual(errors, [])
+
+    def test_live_fallback_requires_structured_no_data(self):
+        from audit_gate import acquisition_semantic_errors
+
+        errors = acquisition_semantic_errors(
+            "sync_eligible=false; sync_attempted=not_attempted; task_status=not_checked; "
+            "local_reread=rejected; local_status=partial; live_fallback=used; reason=live_fallback_used"
+        )
+        self.assertTrue(any("local_status=no_data" in item for item in errors))
+
+    def test_live_fallback_cannot_skip_an_eligible_sync_task(self):
+        from audit_gate import acquisition_semantic_errors
+
+        errors = acquisition_semantic_errors(
+            "sync_eligible=true; sync_attempted=not_attempted; task_status=not_checked; "
+            "local_reread=rejected; local_status=no_data; live_fallback=used; reason=live_fallback_used"
+        )
+        self.assertTrue(any("sync_eligible=false" in item for item in errors))
 
     def test_template_mode_blocks_execution_score_fields(self):
         text = """# 复盘

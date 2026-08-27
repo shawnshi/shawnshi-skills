@@ -14,23 +14,45 @@
 
 政策、市场、价格、厂商状态和临床证据具有时效性，使用前核验当前版本、发布日期、事件日期、适用地区和访问日期。
 
-## 证据记录
+## 统一证据记录
 
-每项关键材料记录：
+每条记录只承载一个可判断的事实或来源主张，使用不可变 ID：`EV-<领域>-<三位序号>`，例如 `EV-POL-001`、`EV-FIN-003`、`EV-CLN-012`。领域建议使用 `POL`（政策）、`FIN`（财务）、`CLN`（临床）、`OPS`（运营）、`TEC`（技术）、`VEN`（厂商）、`MKT`（市场）和 `SEC`（安全）；同一项目内不得复用 ID。
 
-```markdown
-- 标题：
-- 发布机构：
-- 发布日期：
-- 事件或数据日期：
-- 适用地区与对象：
-- 原始链接：
-- 支持的事实或来源主张：
-- 口径、样本和限制：
-- 证据强度：
+```yaml
+evidence_id: EV-OPS-001
+record_type: verified_fact | source_claim
+claim: 单一、可核验的陈述
+source_title: null
+publisher: null
+source_type: primary | secondary | user_material
+published_at: null
+event_or_data_period: null
+accessed_at: null
+region_and_population: null
+locator: 原始链接、文件名+页码/表格/字段
+method_and_denominator: null
+limitations: null
+independence_group: null
+strength: high | medium | low
+status: active | disputed | superseded
+supersedes: null
 ```
 
-付费墙摘要、搜索摘要和厂商营销材料不能单独支撑高影响结论。两个来源只是相互转述时仍算一个证据链。
+- 用户提供的数据也要记录文件/工作表/字段和数据周期，不能只写“内部资料”。
+- `independence_group` 标识共同原始来源；两个材料只是相互转述时仍算一个证据链。
+- 同一来源支持不同主张时使用不同证据 ID；修订记录使用新 ID 并以 `supersedes` 连接，不修改旧记录以掩盖历史。
+- 付费墙摘要、搜索摘要和厂商营销材料不能单独支撑高影响结论。
+- 假设、分析判断、信息缺口和建议分别使用 `AS-`、`JG-`、`GP-`、`RC-` 前缀，不伪装成证据。
+
+## 并行检索与合并
+
+三个以上独立研究面并行时，由协调者先分配领域前缀或不重叠的 ID 段，并定义信息截止日和停止条件。
+
+1. 每个研究者只写自己的分片文件或返回结构化记录，不覆盖共享证据表。
+2. 协调者按 `locator + claim + event_or_data_period` 去重，并检查同源转述、地区、口径和日期。
+3. 对相互冲突的记录全部保留，标为 `disputed`，附上冲突原因和待裁决人；禁止最后写入者覆盖。
+4. 合并后冻结证据 ID。结论、模型变量、风险和建议只引用冻结 ID；新增证据使用新 ID。
+5. 汇总时报告各研究面已覆盖范围、仍缺口和截止条件，不用来源数量冒充证据充分性。
 
 ## 停止条件
 

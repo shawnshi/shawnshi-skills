@@ -3,13 +3,12 @@ from __future__ import annotations
 import hashlib
 import json
 import re
-import uuid
 from datetime import date, datetime, time
 from pathlib import Path
 from typing import Any
 
 from briefing_gate import validate_briefing_data
-from history_manager import save_history_items
+from history_manager import HistoryIndexBuilder
 from hub_utils import HISTORY_PATH, NEWS_DIR, atomic_dump_json
 
 
@@ -226,41 +225,27 @@ def rebuild_history(
         (archive, _verified_archive_payload(archive)) for archive in json_files
     ]
 
+    builder = HistoryIndexBuilder()
+    for archive, archive_payload in verified_json_archives:
+        builder.merge(
+            [
+                item
+                for item in archive_payload.get("top_10", [])
+                if isinstance(item, dict)
+            ]
+            if isinstance(archive_payload.get("top_10"), list)
+            else [],
+            archive_ref=str(archive.relative_to(source_dir)).replace("\\", "/"),
+            now=_archive_datetime(archive, archive_payload, current),
+        )
+    for archive in markdown_files:
+        builder.merge(
+            _markdown_items(archive),
+            archive_ref=str(archive.relative_to(source_dir)).replace("\\", "/"),
+            now=_archive_datetime(archive, {}, current),
+        )
+    payload = builder.payload(now=current)
     target.parent.mkdir(parents=True, exist_ok=True)
-    stage = target.with_name(f".{target.name}.{uuid.uuid4().hex}.rebuild")
-    try:
-        for archive, archive_payload in verified_json_archives:
-            save_history_items(
-                [
-                    item
-                    for item in archive_payload.get("top_10", [])
-                    if isinstance(item, dict)
-                ]
-                if isinstance(archive_payload.get("top_10"), list)
-                else [],
-                archive_ref=str(archive.relative_to(source_dir)).replace("\\", "/"),
-                path=stage,
-                now=_archive_datetime(archive, archive_payload, current),
-            )
-        for archive in markdown_files:
-            save_history_items(
-                _markdown_items(archive),
-                archive_ref=str(archive.relative_to(source_dir)).replace("\\", "/"),
-                path=stage,
-                now=_archive_datetime(archive, {}, current),
-            )
-        if stage.exists():
-            payload = json.loads(stage.read_text(encoding="utf-8"))
-        else:
-            payload = {
-                "resource_kind": "pih_history_index",
-                "schema_version": "2.0",
-                "generated_at": current.isoformat(),
-                "entries": [],
-            }
-        payload["generated_at"] = current.isoformat()
-    finally:
-        stage.unlink(missing_ok=True)
     atomic_dump_json(target, payload)
     print(
         f"[OK] history rebuilt: {len(payload['entries'])} events from "

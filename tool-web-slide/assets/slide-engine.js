@@ -1,3 +1,23 @@
+/* Runtime contract used by preview, visual QA and PDF export. */
+window.__DECK_READY = false;
+window.__DECK_ERROR = null;
+let __resolveDeckReady;
+window.__DECK_READY_PROMISE = new Promise(resolve => { __resolveDeckReady = resolve; });
+function __markDeckReady(error = null) {
+  window.__DECK_ERROR = error ? String(error?.message || error) : null;
+  window.__DECK_READY = !error;
+  __resolveDeckReady?.({ ready: !error, error: window.__DECK_ERROR });
+  document.dispatchEvent(new CustomEvent('web-slide-ready', {
+    detail: { ready: !error, error: window.__DECK_ERROR }
+  }));
+}
+function __revealAnimatedContent() {
+  document.body?.classList.remove('motion-ready');
+  document.querySelectorAll('[data-anim]').forEach(el => {
+    el.style.opacity = '1';
+    el.style.transform = 'none';
+  });
+}
 
   // Windows 平台标记 — 雅黑没有 ExtraLight,需要字重补偿
   if(/Win/i.test(navigator.platform || navigator.userAgentData?.platform || '')){
@@ -6,7 +26,8 @@
   (function(){
     const KEY = 'guizang-ppt-low-power';
     const reduced = matchMedia('(prefers-reduced-motion: reduce)').matches;
-    const stored = localStorage.getItem(KEY);
+    let stored = null;
+    try { stored = localStorage.getItem(KEY); } catch (_) { /* storage may be blocked */ }
     window.__lowPowerMode = stored === '1' || (stored === null && reduced);
     function updateHint(){
       const hint = document.getElementById('hint');
@@ -15,7 +36,9 @@
     window.__setLowPowerMode = function(on, opts={}){
       window.__lowPowerMode = !!on;
       document.body.classList.toggle('low-power', window.__lowPowerMode);
-      if(opts.persist !== false) localStorage.setItem(KEY, window.__lowPowerMode ? '1' : '0');
+      if(opts.persist !== false) {
+        try { localStorage.setItem(KEY, window.__lowPowerMode ? '1' : '0'); } catch (_) { /* no-op */ }
+      }
       if(window.__lowPowerMode && document.getAnimations){
         document.getAnimations().forEach(a=>a.cancel());
       }
@@ -94,58 +117,186 @@ void main(){
   gl_FragColor = vec4(col, 1.0);
 }`;
 
-/* =============== Hybrid MessageBus 同步 & 演讲者视图 =============== */
+/* =============== Isolated message bus & presenter view =============== */
+const urlParams = new URLSearchParams(location.search);
+const fragmentParams = new URLSearchParams(location.hash.replace(/^#/, ''));
+const isSpeaker = urlParams.get('speaker') === '1';
+const role = ['curr', 'next'].includes(urlParams.get('role')) ? urlParams.get('role') : null;
+
+function validCapability(value) {
+  return typeof value === 'string' && /^[A-Za-z0-9_-]{43,128}$/.test(value);
+}
+
+function createCapability() {
+  if (!globalThis.crypto?.getRandomValues) return null;
+  const bytes = new Uint8Array(32);
+  globalThis.crypto.getRandomValues(bytes);
+  return btoa(String.fromCharCode(...bytes)).replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/g, '');
+}
+
+/* Child contexts must receive the capability from the opener. The primary deck
+   always creates its own random value, so an attacker cannot choose it. */
+const suppliedCapability = fragmentParams.get('cap');
+const capability = isSpeaker || role
+  ? (validCapability(suppliedCapability) ? suppliedCapability : null)
+  : createCapability();
+
+function stableDeckId() {
+  const declared = urlParams.get('deckId')
+    || document.documentElement.dataset.deckId
+    || document.body?.dataset.deckId
+    || document.getElementById('deck')?.dataset.deckId;
+  if (declared) return declared.replace(/[^a-zA-Z0-9_.-]/g, '-').slice(0, 96);
+  const seed = `${location.host}${location.pathname}`;
+  let hash = 2166136261;
+  for (let i = 0; i < seed.length; i += 1) {
+    hash ^= seed.charCodeAt(i);
+    hash = Math.imul(hash, 16777619);
+  }
+  return `deck-${(hash >>> 0).toString(36)}`;
+}
+
+const deckId = stableDeckId();
+document.documentElement.dataset.deckId = deckId;
+
 class MessageBus {
-  constructor(channelName) {
+  constructor(id, capabilityToken) {
+    this.deckId = id;
+    this.capability = capabilityToken;
     this.handlers = [];
-    try {
-      this.bc = new BroadcastChannel(channelName);
-      this.bc.onmessage = (e) => this.emit(e.data);
-    } catch(e) {
-      console.warn('BroadcastChannel disabled, using postMessage fallback.');
-      this.bc = null;
-    }
-    window.addEventListener('message', (e) => {
-      if (e.data && e.data.__sync) {
-        this.emit(e.data);
-        if (window.opener && window.opener !== e.source && !window.opener.closed) window.opener.postMessage(e.data, '*');
-        if (window.parent && window.parent !== window && window.parent !== e.source) window.parent.postMessage(e.data, '*');
-        for (let i = 0; i < window.frames.length; i++) {
-          if (window.frames[i] !== e.source) window.frames[i].postMessage(e.data, '*');
-        }
-        if (window.__speakerWin && window.__speakerWin !== e.source && !window.__speakerWin.closed) window.__speakerWin.postMessage(e.data, '*');
+    this.seen = new Set();
+    this.senderId = globalThis.crypto?.randomUUID?.()
+      || `${Date.now().toString(36)}-${Math.random().toString(36).slice(2)}`;
+    this.bc = null;
+    if (this.capability) {
+      try {
+        /* The channel name itself is capability-protected. A predictable deck id
+           must never expose envelopes (including notes) to unrelated same-origin pages. */
+        this.bc = new BroadcastChannel(`web-slide:${id}:${this.capability}`);
+        this.bc.onmessage = event => this.receive(event.data, null, false);
+      } catch (_) {
+        console.info('[web-slide] BroadcastChannel unavailable; using authenticated postMessage.');
       }
+    }
+    window.addEventListener('message', event => {
+      if (location.origin !== 'null' && event.origin !== location.origin) return;
+      if (!this.isKnownSource(event.source)) return;
+      this.receive(event.data, event.source, true);
     });
   }
-  postMessage(data) {
-    data.__sync = true;
-    if (this.bc) this.bc.postMessage(data);
-    if (window.opener && !window.opener.closed) window.opener.postMessage(data, '*');
-    if (window.__speakerWin && !window.__speakerWin.closed) window.__speakerWin.postMessage(data, '*');
-    if (window.parent && window.parent !== window) window.parent.postMessage(data, '*');
-    for (let i = 0; i < window.frames.length; i++) {
-      window.frames[i].postMessage(data, '*');
+
+  envelope(data) {
+    return {
+      ...data,
+      __webSlideSync: 1,
+      deckId: this.deckId,
+      capability: this.capability,
+      senderId: this.senderId,
+      messageId: `${this.senderId}:${Date.now().toString(36)}:${Math.random().toString(36).slice(2)}`
+    };
+  }
+
+  directPeers(exclude = null) {
+    const peers = [];
+    const add = peer => {
+      if (!peer || peer === window || peer === exclude || peers.includes(peer)) return;
+      try { if (!peer.closed) peers.push(peer); } catch (_) { /* inaccessible window */ }
+    };
+    if (isSpeaker) {
+      add(window.opener);
+      for (let i = 0; i < window.frames.length; i += 1) add(window.frames[i]);
+    } else if (role) {
+      add(window.parent !== window ? window.parent : null);
+    } else {
+      add(window.__speakerWin);
     }
+    return peers;
   }
+
+  isKnownSource(source) {
+    if (!source) return false;
+    if (isSpeaker) {
+      if (source === window.opener) return true;
+      for (let i = 0; i < window.frames.length; i += 1) if (source === window.frames[i]) return true;
+      return false;
+    }
+    if (role) return window.parent !== window && source === window.parent;
+    return Boolean(window.__speakerWin && source === window.__speakerWin);
+  }
+
+  sendDirect(message, exclude = null) {
+    const targetOrigin = location.origin === 'null' ? '*' : location.origin;
+    this.directPeers(exclude).forEach(peer => {
+      try { peer.postMessage(message, targetOrigin); } catch (_) { /* closed/inaccessible */ }
+    });
+  }
+
+  postMessage(data) {
+    if (!this.capability) return false;
+    const message = this.envelope(data);
+    this.seen.add(message.messageId);
+    this.bc?.postMessage(message);
+    this.sendDirect(message);
+    return true;
+  }
+
+  receive(message, source, relay) {
+    if (!this.capability || !message || message.__webSlideSync !== 1 || message.deckId !== this.deckId) return;
+    if (message.capability !== this.capability) return;
+    if (message.senderId === this.senderId || this.seen.has(message.messageId)) return;
+    this.seen.add(message.messageId);
+    if (this.seen.size > 500) this.seen.delete(this.seen.values().next().value);
+    this.emit(message);
+    if (relay) this.sendDirect(message, source);
+  }
+
   emit(data) {
-    this.handlers.forEach(fn => fn({ data }));
+    this.handlers.forEach(fn => {
+      try { fn({ data }); } catch (error) { console.error('[web-slide] sync handler failed', error); }
+    });
   }
+
   set onmessage(fn) {
-    this.handlers.push(fn);
+    if (typeof fn === 'function') this.handlers.push(fn);
   }
+
+  close() { this.bc?.close(); }
 }
-const bc = new MessageBus('guizang-ppt-sync');
-const urlParams = new URLSearchParams(location.search);
-const isSpeaker = urlParams.get('speaker') === '1';
-const role = urlParams.get('role'); // 'curr' or 'next'
+
+const bc = new MessageBus(deckId, capability);
+
+function deckUrl(params = {}) {
+  const url = new URL(location.href);
+  ['speaker', 'role', 'slide', 'cap'].forEach(key => url.searchParams.delete(key));
+  url.searchParams.set('deckId', deckId);
+  /* Fragments are not included in HTTP requests or Referer headers. */
+  url.hash = capability ? `cap=${encodeURIComponent(capability)}` : '';
+  Object.entries(params).forEach(([key, value]) => url.searchParams.set(key, value));
+  return url.href;
+}
+
+function declaredAspect() {
+  const value = document.documentElement.dataset.aspect
+    || document.documentElement.dataset.deckAspect
+    || document.body?.dataset.aspect
+    || document.body?.dataset.deckAspect
+    || document.getElementById('deck')?.dataset.aspect
+    || '16:9';
+  const match = String(value).match(/(\d+(?:\.\d+)?)\s*[:/]\s*(\d+(?:\.\d+)?)/);
+  return match ? `${match[1]} / ${match[2]}` : '16 / 9';
+}
 
 if (isSpeaker) {
+  const aspect = declaredAspect();
+  const currentUrl = deckUrl({ role: 'curr' }).replace(/&/g, '&amp;');
+  const nextUrl = deckUrl({ role: 'next' }).replace(/&/g, '&amp;');
   document.documentElement.innerHTML = `
     <head><title>Speaker View</title>
     <style>
-      body { background: #111; color: #eee; margin: 0; padding: 20px; font-family: sans-serif; display: grid; grid-template-columns: 1fr 1fr; grid-template-rows: auto 1fr; gap: 20px; height: 100vh; box-sizing: border-box; overflow: hidden; }
+      * { box-sizing: border-box; }
+      body { background: #111; color: #eee; margin: 0; padding: 20px; font-family: system-ui, sans-serif; display: grid; grid-template-columns: 1fr 1fr; grid-template-rows: minmax(0, 1fr) minmax(0, .72fr); gap: 20px; height: 100vh; overflow: hidden; }
       h3 { margin: 0 0 10px 0; font-size: 16px; color: #888; text-transform: uppercase; letter-spacing: 2px; }
-      .preview { border: 1px solid #333; aspect-ratio: 16/9; position: relative; overflow: hidden; background: #000; border-radius: 8px; }
+      .preview { border: 1px solid #333; aspect-ratio: ${aspect}; position: relative; overflow: hidden; background: #000; border-radius: 8px; max-height: calc(100% - 26px); }
       .preview iframe { width: 400%; height: 400%; transform: scale(0.25); transform-origin: 0 0; border: none; pointer-events: none; }
       .bottom { grid-column: 1 / -1; display: grid; grid-template-columns: 3fr 1fr; gap: 20px; overflow: hidden; }
       .notes { background: #1a1a1a; padding: 30px; font-size: 28px; line-height: 1.6; border-radius: 8px; overflow-y: auto; white-space: pre-wrap; }
@@ -155,8 +306,8 @@ if (isSpeaker) {
     </style>
     </head>
     <body>
-      <div><h3>Current</h3><div class="preview"><iframe id="f-curr" src="?role=curr"></iframe></div></div>
-      <div><h3>Next</h3><div class="preview"><iframe id="f-next" src="?role=next"></iframe></div></div>
+      <div><h3>Current</h3><div class="preview"><iframe id="f-curr" title="Current slide" src="${currentUrl}"></iframe></div></div>
+      <div><h3>Next</h3><div class="preview"><iframe id="f-next" title="Next slide" src="${nextUrl}"></iframe></div></div>
       <div class="bottom">
         <div class="notes" id="notes"></div>
         <div class="sidebar">
@@ -171,15 +322,20 @@ if (isSpeaker) {
       </div>
     </body>
   `;
-  let start = Date.now();
+  const start = Date.now();
   setInterval(() => {
-    let secs = Math.floor((Date.now() - start) / 1000);
+    const secs = Math.floor((Date.now() - start) / 1000);
     document.getElementById('timer').textContent = String(Math.floor(secs / 60)).padStart(2, '0') + ':' + String(secs % 60).padStart(2, '0');
   }, 1000);
-  let notesEl = document.getElementById('notes');
-  let infoEl = document.getElementById('slide-info');
+  const notesEl = document.getElementById('notes');
+  const infoEl = document.getElementById('slide-info');
+  if(!capability){
+    notesEl.textContent = 'Presenter synchronization is disabled: the secure capability token is missing or invalid.';
+    infoEl.textContent = 'Sync disabled';
+    console.error('[web-slide] Presenter URL is missing a valid capability token.');
+  }
   bc.onmessage = (e) => {
-    if (e.data.type === 'notes') {
+    if (e.data.type === 'state') {
       notesEl.textContent = e.data.notes || '无演讲者逐字稿 (No notes for this slide)';
       infoEl.textContent = `Slide ${e.data.idx + 1} / ${e.data.total}`;
     }
@@ -190,14 +346,17 @@ if (isSpeaker) {
       e.preventDefault();
     }
   });
-  throw new Error('Speaker view initialized. Stopping main execution.');
+  bc.postMessage({ type: 'request-state' });
+  __markDeckReady();
 }
 
+if (!isSpeaker) {
 const mouse={x:0.5,y:0.5};
 addEventListener('mousemove',e=>{mouse.x=e.clientX/innerWidth;mouse.y=1-e.clientY/innerHeight});
 
 function bootGL(canvasId, fsSrc){
   const canvas=document.getElementById(canvasId);
+  if(!canvas) return null;
   const gl=canvas.getContext('webgl',{alpha:true,antialias:true,premultipliedAlpha:false});
   if(!gl) return ()=>false;
   const mk=(t,s)=>{const sh=gl.createShader(t);gl.shaderSource(sh,s);gl.compileShader(sh);return sh};
@@ -273,12 +432,15 @@ if(document.body.classList.contains('canvas-mode')){
   startGrid();
 }
 (async function() {
+try {
 addEventListener('swiss-low-power-change', e=>{e.detail.on ? stopGrid() : startGrid();});
 
 // =============== 导航 ===============
 const deck=document.getElementById('deck');
+if(!deck) throw new Error('Deck root #deck is missing.');
 const slides=deck.querySelectorAll('.slide');
 const nav=document.getElementById('nav');
+if(!slides.length) throw new Error('Deck contains no .slide elements.');
 let idx=0,total=slides.length,lock=false;
 
 deck.style.width=(total*100)+'vw';
@@ -287,21 +449,38 @@ slides.forEach((s,i)=>{
   const b=document.createElement('button');
   b.className='dot';b.dataset.i=i;b.setAttribute('aria-label','Page '+(i+1));
   b.onclick=()=>go(i);
-  nav.appendChild(b);
+  nav?.appendChild(b);
 });
 
-function go(n){
-  if(lock)return;
+function slideNotes(slide){
+  if(!slide) return '';
+  const note = slide.querySelector('aside.notes,[data-speaker-notes]');
+  return (slide.dataset.notes || note?.textContent || '').trim();
+}
+
+function publishState(){
+  if(role) return;
+  const slide = slides[idx];
+  bc.postMessage({
+    type:'state', idx, total,
+    notes:slideNotes(slide),
+    title:(slide?.dataset.title || slide?.querySelector('h1,h2,h3')?.textContent || '').trim()
+  });
+}
+
+function go(n, options={}){
+  if(lock && !options.force)return;
   idx=Math.max(0,Math.min(total-1,n));
   window.__currentSlideIndex = idx;
   deck.style.transform=`translateX(${-idx*100}vw)`;
-  nav.querySelectorAll('.dot').forEach((d,i)=>d.classList.toggle('active',i===idx));
+  nav?.querySelectorAll('.dot').forEach((d,i)=>d.classList.toggle('active',i===idx));
   const el=slides[idx];
   const isDark = el.classList.contains('dark') || el.classList.contains('accent');
   document.body.classList.toggle('dark-bg', isDark);
   darkMode = isDark;
   if(window.__playSlide) setTimeout(()=>window.__playSlide(idx), 450);
-  lock=true;setTimeout(()=>lock=false,700);
+  if(!role && options.broadcast !== false) publishState();
+  lock=true;setTimeout(()=>lock=false,role ? 0 : 700);
 }
 
 /* =============== ESC 索引视图 =============== */
@@ -322,7 +501,7 @@ function buildOverview(){
     card.onmouseleave=()=>card.style.borderColor=i===idx?'var(--accent)':'rgba(0,0,0,.12)';
     const wrap=document.createElement('div');
     const isDark = s.classList.contains('dark') || s.classList.contains('accent');
-    wrap.style.cssText='width:100%;aspect-ratio:16/9;overflow:hidden;position:relative;pointer-events:none;background:'+(isDark?'var(--ink)':'var(--paper)');
+    wrap.style.cssText=`width:100%;aspect-ratio:${declaredAspect()};overflow:hidden;position:relative;pointer-events:none;background:${isDark?'var(--ink)':'var(--paper)'}`;
     const clone=s.cloneNode(true);
     clone.style.cssText='width:100vw;height:100vh;transform:scale('+(1/4.5)+');transform-origin:top left;position:absolute;top:0;left:0;pointer-events:none';
     wrap.appendChild(clone);
@@ -344,10 +523,17 @@ function toggleOverview(){
 }
 
 addEventListener('keydown',e=>{
+  if(role)return;
   if(e.key==='Escape'){e.preventDefault();toggleOverview();return;}
   if(e.key==='s'||e.key==='S'){
     e.preventDefault();
-    window.__speakerWin=window.open('?speaker=1','_blank','width=1000,height=600');
+    if(!capability){
+      console.error('[web-slide] Presenter view is unavailable because secure random generation failed.');
+      return;
+    }
+    window.__speakerWin=window.open(deckUrl({speaker:'1'}),`${deckId}-speaker`,'width=1200,height=760');
+    if(!window.__speakerWin) console.warn('[web-slide] Presenter window was blocked by the browser.');
+    else setTimeout(publishState, 250);
     return;
   }
   if(e.key && e.key.toLowerCase()==='b' && !e.metaKey && !e.ctrlKey && !e.altKey){
@@ -390,26 +576,73 @@ addEventListener('touchend',e=>{
   }
 },{passive:true});
 
-const initialSlideParam = new URLSearchParams(location.search).get('slide');
-const initialSlide = initialSlideParam ? Number(initialSlideParam) - 1 : 0;
-go(Number.isFinite(initialSlide) ? initialSlide : 0);
-
-lucide.createIcons();
-
-let motion;
-try {
-  motion = await import('./motion.min.js');
-} catch(e1) {
-  try {
-    motion = await import('https://cdn.jsdelivr.net/npm/motion@11.11.17/+esm');
-  } catch(e2) {
-    console.warn('[motion] local + CDN both failed, disabling animations', e1, e2);
-    document.querySelectorAll('[data-anim]').forEach(el=>{el.style.opacity='1';el.style.transform='none'});
-    document.querySelectorAll('[data-animate="pipeline"] [data-anim]').forEach(el=>el.style.opacity='1');
+bc.onmessage = event => {
+  const message = event.data;
+  if(message.type === 'request-state' && !role){
+    publishState();
+    return;
   }
+  if(message.type === 'state' && role){
+    const target = role === 'next' ? Math.min(message.total - 1, message.idx + 1) : message.idx;
+    go(target, {force:true, broadcast:false});
+    return;
+  }
+  if(message.type === 'key' && !role){
+    dispatchEvent(new KeyboardEvent('keydown', {key:message.key, bubbles:true}));
+  }
+};
+
+if(role){
+  document.body.classList.add('speaker-role');
+  window.__setLowPowerMode?.(true,{persist:false});
+  ['ctrl-bar','hint','nav'].forEach(id=>{
+    const element=document.getElementById(id);
+    if(element) element.style.display='none';
+  });
+  bc.postMessage({type:'request-state'});
 }
 
-if(motion){
+const initialSlideParam = new URLSearchParams(location.search).get('slide');
+const initialSlide = initialSlideParam ? Number(initialSlideParam) - 1 : 0;
+go(Number.isFinite(initialSlide) ? initialSlide : 0,{force:true,broadcast:!role});
+
+async function ensureIcons(){
+  if(!window.lucide?.createIcons){
+    console.warn('[web-slide] Local icon runtime unavailable; using generic SVG fallback.');
+    window.lucide={createIcons(){
+      document.querySelectorAll('[data-lucide]').forEach(node=>{
+        if(node.tagName?.toLowerCase()==='svg')return;
+        const svg=document.createElementNS('http://www.w3.org/2000/svg','svg');
+        for(const attr of node.attributes) if(attr.name!=='data-lucide') svg.setAttribute(attr.name,attr.value);
+        svg.setAttribute('viewBox','0 0 24 24');
+        svg.setAttribute('fill','none');svg.setAttribute('stroke','currentColor');
+        svg.setAttribute('stroke-width','2');svg.setAttribute('stroke-linecap','round');svg.setAttribute('stroke-linejoin','round');
+        svg.setAttribute('aria-hidden',node.getAttribute('aria-label')?'false':'true');
+        const circle=document.createElementNS(svg.namespaceURI,'circle');
+        circle.setAttribute('cx','12');circle.setAttribute('cy','12');circle.setAttribute('r','9');
+        const path=document.createElementNS(svg.namespaceURI,'path');path.setAttribute('d','M8 12h8M12 8v8');
+        svg.append(circle,path);node.replaceWith(svg);
+      });
+    }};
+  }
+  window.lucide.createIcons();
+}
+await ensureIcons();
+
+let motion;
+const staticRuntime = !!window.__WEB_SLIDE_STANDALONE__ || !!role;
+if(!staticRuntime){
+  const localMotionModule = './motion.min.js';
+  try { motion = await import(localMotionModule); }
+  catch(error) { console.warn('[web-slide] Local motion runtime unavailable; animations disabled.',error); }
+}
+if(!motion){
+  __revealAnimatedContent();
+  window.__playSlide = ()=>__revealAnimatedContent();
+  window.__pipeAdvance = ()=>false;
+}
+
+try { if(motion){
   const { animate } = motion;
   document.body.classList.add('motion-ready');
 
@@ -1103,6 +1336,12 @@ if(motion){
 
   playSlide(window.__currentSlideIndex || 0);
 }
+} catch (motionError) {
+  console.error('[web-slide] Motion setup failed; content remains visible.', motionError);
+  __revealAnimatedContent();
+  window.__playSlide = ()=>__revealAnimatedContent();
+  window.__pipeAdvance = ()=>false;
+}
 
 
 /* ============== ASCII 点阵呼吸场 · IKB 封面/封底专用 ==============
@@ -1256,4 +1495,23 @@ if(motion){
   window.toggleFullscreen = toggleFullscreen;
   window.setMode = setMode;
 
+  const bindControl = (id, handler) => {
+    const control = document.getElementById(id);
+    if(!control) return;
+    control.removeAttribute('onclick');
+    control.addEventListener('click', handler);
+  };
+  bindControl('btn-doc', () => setMode('doc'));
+  bindControl('btn-pres', () => setMode('pres'));
+  bindControl('btn-fs', () => toggleFullscreen());
+
+  if(role) bc.postMessage({type:'request-state'});
+  else publishState();
+  __markDeckReady();
+} catch (runtimeError) {
+  __revealAnimatedContent();
+  console.error('[web-slide] Runtime initialization failed.', runtimeError);
+  __markDeckReady(runtimeError);
+}
 })();
+}

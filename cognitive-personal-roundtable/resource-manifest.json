@@ -1,21 +1,23 @@
 {
   "schema_version": 3,
   "skill": "cognitive-personal-roundtable",
-  "generated_at": "2026-08-16T22:27:49+08:00",
+  "generated_at": "2026-08-27T20:05:46+08:00",
   "hash_algorithm": "SHA-256",
   "text_hash_normalization": "LF",
   "skill_md": "SKILL.md",
-  "skill_md_sha256": "464cef1ad491239d492b956bff6ecbedb2b2f758c0a5cec38a484faf79ea4b8a",
+  "skill_md_sha256": "77a87ba854628d4db01a56106064f1af5be0c6ea5596bb4b7c3b6fe50da1cc78",
   "top_level_files": [
     "SKILL.md"
   ],
   "top_level_file_hashes": [
     {
       "path": "SKILL.md",
-      "sha256": "464cef1ad491239d492b956bff6ecbedb2b2f758c0a5cec38a484faf79ea4b8a"
+      "sha256": "77a87ba854628d4db01a56106064f1af5be0c6ea5596bb4b7c3b6fe50da1cc78"
     }
   ],
   "top_level_directories": [
+    "agents",
+    "assets",
     "references",
     "scripts",
     "templates"
@@ -27,13 +29,37 @@
     },
     {
       "name": "references",
+      "file_count": 3
+    },
+    {
+      "name": "assets",
+      "file_count": 1
+    },
+    {
+      "name": "agents",
       "file_count": 1
     }
   ],
   "resource_file_hashes": [
     {
+      "path": "agents/openai.yaml",
+      "sha256": "c6f5f185129b6a7acdc863d30497ffe9e1af6757fcb4058addd44c5e60bfd5b0"
+    },
+    {
+      "path": "assets/icon.svg",
+      "sha256": "51a6923974188748638a424aa59b42b6afad2d910f910a1d43bb13ee10f3ce26"
+    },
+    {
       "path": "references/personas.md",
       "sha256": "ee0c74a6c62e87c9d57985d940c54fde667302c8a14a71c139b8913b3630a1ba"
+    },
+    {
+      "path": "references/perspective-cards.md",
+      "sha256": "93492c3c2857efb2ba89b6abd655f0f40e70530f87865fe4b27021b54bbd7180"
+    },
+    {
+      "path": "references/validation-cases.md",
+      "sha256": "d58e4e0d76c5bf6d03a9b3c41f2e79edf17939af3bff708b75fed97bff097ced"
     },
     {
       "path": "scripts/merger.py",
@@ -46,16 +72,16 @@
   ],
   "declared_local_dependencies": [
     {
-      "path": "references/personas.md",
+      "path": "references/perspective-cards.md",
       "exists": true,
-      "resolved_path": "cognitive-personal-roundtable/references/personas.md",
-      "sha256": "ee0c74a6c62e87c9d57985d940c54fde667302c8a14a71c139b8913b3630a1ba"
+      "resolved_path": "cognitive-personal-roundtable/references/perspective-cards.md",
+      "sha256": "93492c3c2857efb2ba89b6abd655f0f40e70530f87865fe4b27021b54bbd7180"
     },
     {
-      "path": "scripts/merger.py",
+      "path": "references/validation-cases.md",
       "exists": true,
-      "resolved_path": "cognitive-personal-roundtable/scripts/merger.py",
-      "sha256": "6d89130e924103b83007568f269dfd9575741290b417bf56fee7d60616d141d2"
+      "resolved_path": "cognitive-personal-roundtable/references/validation-cases.md",
+      "sha256": "d58e4e0d76c5bf6d03a9b3c41f2e79edf17939af3bff708b75fed97bff097ced"
     }
   ],
   "missing_declared_dependencies": []

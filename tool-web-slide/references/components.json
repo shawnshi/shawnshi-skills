@@ -1,0 +1,63 @@
+{
+  "schemaVersion": "1.0.0",
+  "themeAttribute": "data-theme",
+  "themes": {
+    "swiss": {
+      "baseStylesheet": "assets/core.css",
+      "stylesheet": "assets/core.css",
+      "classes": [
+        "h-hero","h-hero-zh","h-xl","h-xl-zh","h-md","h-sub","lead","body","body-sm",
+        "t-cat","t-meta","t-helper","t-body-sm","t-body","t-body-emp","t-h-prod",
+        "grid-12","span-2","span-3","span-4","span-5","span-6","span-7","span-8","span-9","span-10","span-11","span-12",
+        "grid-2-7-5","grid-2-6-6","grid-2-8-4","grid-2-4-8","grid-3","grid-3-3","grid-4","grid-6",
+        "kpi-hero","kpi-big","kpi-mid","kpi-thin","kpi-thin-sm","kpi-row-4","kpi-cell","stat-card",
+        "timeline-v","tl-node","timeline-h","tl-row","th-node","sub-grid-3-2","sub-card",
+        "stack-row","stack-block","bar-towers","bar-tower","h-bar-chart","v-bar-chart","bar-chart",
+        "frame-img","swiss-img-split","swiss-img-copy","swiss-img-grid","swiss-img-caption",
+        "split-half","half","b-accent","b-grey","b-ink","card-fill","card-ink","card-accent",
+        "dot-mat","ring-mat","cross-mat","hatch"
+      ]
+    },
+    "magazine": {
+      "baseStylesheet": "assets/core.css",
+      "stylesheet": "assets/magazine.css",
+      "classes": [
+        "mag-canvas","mag-header","mag-title","italic","mag-lead","mag-article","mag-drop-cap",
+        "mag-pull-quote","mag-figure","mag-caption","mag-stat","mag-list","mag-folio","mag-byline",
+        "mag-grid","mag-divider"
+      ]
+    },
+    "winning-clinical": {
+      "baseStylesheet": "assets/core.css",
+      "stylesheet": "assets/winning.css",
+      "classes": [
+        "c-header","c-tracker","sep","active","c-action-title","c-pillars","c-pillar","highlight","c-pillar-title","c-pillar-body",
+        "c-statement","c-statement-text","c-statement-sub","c-kpi-group","c-kpi","c-kpi-value","c-kpi-label",
+        "c-timeline","c-timeline-step","c-timeline-marker","c-timeline-year","c-timeline-title","c-timeline-desc","c-footnote",
+        "c-architecture-stack","c-layer","core","c-layer-title","c-layer-items","c-module-box",
+        "c-clinical-pathway","c-pathway-node","c-pathway-arrow","c-comparison-matrix","c-matrix-col-bad","c-matrix-col-good",
+        "cdss-workflow-matrix","is-active","emr-level5-radar","data-lake-funnel","data-source","data-cleansing","data-asset",
+        "policy-compliance-grid","is-met","multi-campus-topology","hub-center","edge-node",
+        "tri-terminal-view","role-doctor","role-nurse","role-patient",
+        "rag-traceability-flow","rag-query","rag-boundary","rag-output","drg-cost-matrix","target",
+        "hl7-integration-bus","hl7-bus-nodes","hl7-bus-node","hl7-bus-line","pdca-quality-loop","pdca-step",
+        "patient-journey-timeline","journey-stage",
+        "s-arch","s-arch-layer","lyr-agt","lyr-dat","lyr-sem","s-arch-lbl","s-arch-body","s-arch-chip","s-arch-arrow",
+        "s-era-grid","s-era","s-era-period","s-era-zh","s-era-en","s-era-role","stacked-ledger","ledger-row","ledger-num","ledger-lbl",
+        "c-matrix-wrapper","c-matrix","c-matrix-quad","sweet-spot","c-matrix-lbl","c-matrix-desc",
+        "c-axis-y","c-axis-x","c-axis-arrow-y","c-axis-arrow-x","c-matrix-item"
+      ]
+    }
+  },
+  "runtimeClasses": [
+    "slide","canvas-card","canvas-mode","doc-mode","dark","grey","accent","hero","split",
+    "chrome","chrome-min","foot","frame","row","col","fill","center","right","top","bottom","nowrap",
+    "rule","kicker","tag","meta","meta-row","callout","source-note","frame-img","img-cap","nav-safe-bottom","nav-safe-bottom-tight",
+    "layout-hero","layout-split","layout-tri-grid","layout-focus","layout-kpi-scene","scene-media","scene-kpis",
+    "layout-z-pattern","layout-gallery","layout-architecture","layout-pathway","layout-comparison",
+    "layout-cdss-matrix","layout-emr-radar","layout-data-lake-funnel","layout-policy-grid","layout-multi-campus",
+    "layout-tri-terminal","layout-rag-traceability","layout-drg-matrix","layout-hl7-bus","layout-pdca-loop","layout-patient-journey",
+    "mod-float-card","mod-huge-quote","mod-data-badge","mod-duotone","mod-scrim",
+    "ico","ico-lg","ico-md","ico-sm","mockup-window","mockup-header","mockup-content","shadow-float"
+  ]
+}

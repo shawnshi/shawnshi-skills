@@ -1,0 +1,46 @@
+{
+  "name": "@yizhiyanhua-ai/fireworks-tech-graph",
+  "version": "1.1.0",
+  "description": "Normalize diagram JSON, render validated SVG diagrams, and optionally export editable basic draw.io/mxGraph files.",
+  "main": "SKILL.md",
+  "keywords": [
+    "codex-skill",
+    "diagram",
+    "svg",
+    "architecture",
+    "data-flow",
+    "flowchart",
+    "sequence-diagram",
+    "er-diagram",
+    "drawio",
+    "mxgraph",
+    "visualization",
+    "python"
+  ],
+  "author": "yizhiyanhua-ai",
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/yizhiyanhua-ai/fireworks-tech-graph.git"
+  },
+  "bugs": {
+    "url": "https://github.com/yizhiyanhua-ai/fireworks-tech-graph/issues"
+  },
+  "homepage": "https://github.com/yizhiyanhua-ai/fireworks-tech-graph#readme",
+  "files": [
+    "SKILL.md",
+    "LICENSE",
+    "agentloop-core.svg",
+    "agents/",
+    "assets/",
+    "fixtures/",
+    "references/",
+    "resource-manifest.json",
+    "scripts/",
+    "templates/",
+    "tests/"
+  ],
+  "engines": {
+    "python": ">=3.10"
+  }
+}

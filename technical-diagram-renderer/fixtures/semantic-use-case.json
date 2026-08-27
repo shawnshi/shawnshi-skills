@@ -1,0 +1,21 @@
+{
+  "template_type": "use-case",
+  "style": 1,
+  "title": "Appointment Service Use Cases",
+  "system": {"label": "Appointment Platform"},
+  "actors": [
+    {"id": "patient", "label": "Patient", "side": "left"},
+    {"id": "staff", "label": "Registration Staff", "side": "right"}
+  ],
+  "use_cases": [
+    {"id": "book", "label": "Book appointment"},
+    {"id": "verify", "label": "Verify identity"},
+    {"id": "reschedule", "label": "Reschedule visit"}
+  ],
+  "relations": [
+    {"from": "patient", "to": "book", "type": "association"},
+    {"from": "staff", "to": "reschedule", "type": "association"},
+    {"from": "book", "to": "verify", "type": "include"},
+    {"from": "reschedule", "to": "book", "type": "extend", "label": "existing booking"}
+  ]
+}

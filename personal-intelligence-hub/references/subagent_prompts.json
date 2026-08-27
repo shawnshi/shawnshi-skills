@@ -1,5 +1,5 @@
 {
-  "contract_version": "subagent-prompts/1.7",
+  "contract_version": "subagent-prompts/1.9",
   "invocation_order": [
     "baseline_candidates",
     "gap_assessment",
@@ -14,9 +14,10 @@
     "identity_rule": "每个新增候选必须记录 identity_quality=semantic、event_id，以及仅含 key_version、primary_domain、actor、action、object、event_date 的完整 event_identity；event_id 必须按系统 generate_event_id(event_identity) 的同一算法重算一致。不能确定完整语义身份时不得把候选用于 multi_independent。",
     "date_rule": "published_at 必须来自来源明确日期或可靠元数据；进入 core 时固定为严格 YYYY-MM-DD，候选为合法 ISO datetime 时调用 run_daily.py normalize-published-at，按其自带时区取日期后规范化；观察时间不得冒充发布日期；未知日期不得进入正式候选。",
     "stop_rule": "达到请求中的 halt_condition、用完 max_turns，或连续检索无增量时停止并返回结构化结果。",
+    "progress_rule": "完成绑定输入哈希验证后发送 supplement_progress seq=1 phase=input_validated；完成允许的来源访问并进入合同自检前发送 supplement_progress seq=2 phase=source_checked。只发送这两个不含业务正文的里程碑及阻断或最终消息，不得发送自由格式状态心跳。",
     "empty_rule": "无增量时返回 status=no_increment、空 candidates、非空 executed_queries、至少一条 access_log 和真实 coverage，不得用弱信号补数。",
     "coverage_rule": "coverage 必须逐项等于 access_log 中 verified 与 blocked 的实际计数；每条访问记录必须同时记录 requested_url 与跳转后的 final_url；候选 access_check.requested_url 必须匹配候选 url，并逐字段对应 access_log 中的 verified 记录。",
-    "failure_rule": "同一规范化 URL 的永久失败不得再次尝试，不因 method 或 gap 分割；同一主机连续两次永久失败后切换另一类优先来源并保留失败日志。所有 blocked 访问必须给出 transient|permanent 的 failure_class 和非空 error_code；永久 HTTP 状态必须标 permanent，可重试 HTTP 状态必须标 transient；verified 必须标 failure_class=none 且不得带 error_code。只有瞬时超时、限流或可重试 HTTP 状态可在轮次预算内重试。",
+    "failure_rule": "同一 gap 内，同一规范化 URL 的永久失败不得再次尝试。跨 gap 时，只有无 HTTP 响应且错误码明确指向本地 TLS、SSL、证书、协议或 curl 传输路径故障，才允许另一 lane 以不同访问方法做一次恢复核验；原失败必须保留，聚合覆盖仍为 degraded，不得同 lane、同方法或再次恢复。HTTP 永久响应始终全局禁止重试。同一主机连续两次永久失败后切换另一类优先来源并保留失败日志。所有 blocked 访问必须给出 transient|permanent 的 failure_class 和非空 error_code；永久 HTTP 状态必须标 permanent，可重试 HTTP 状态必须标 transient；verified 必须标 failure_class=none 且不得带 error_code。只有瞬时超时、限流或可重试 HTTP 状态可在轮次预算内重试。",
     "infrastructure_failure_rule": "只有代理在执行任何查询或访问前初始化失败时，才可返回 status=failed、failure_kind=infrastructure、非空 failure_reason、turns_used=0、halt_condition_met=false，以及空 executed_queries/access_log/candidates 和全零 coverage。"
   },
   "review_common_contract": {
@@ -67,7 +68,7 @@
     "publication": {
       "mode": "sibling_temporary_file_then_atomic_replace",
       "published_artifact_is_immutable": true,
-      "routine_progress": "supplement_blocker_or_final; review_milestones_or_blocker_or_final"
+      "routine_progress": "supplement_milestones_or_blocker_or_final; review_milestones_or_blocker_or_final"
     },
     "readiness": {
       "primary_signal": "artifact_ready_control_message_with_path_and_sha256",
@@ -79,6 +80,10 @@
       "review_progress_messages": [
         "review_progress seq=1 phase=input_validated",
         "review_progress seq=2 phase=lineage_ready"
+      ],
+      "supplement_progress_messages": [
+        "supplement_progress seq=1 phase=input_validated",
+        "supplement_progress seq=2 phase=source_checked"
       ],
       "progress_fingerprint": [
         "latest_event_ordinal",
@@ -104,6 +109,7 @@
       "validate_semantic_drafts",
       "publish_semantic_outputs",
       "validate_semantic_and_register_red_team_request",
+      "validate_red_team_draft",
       "publish_red_team_receipt",
       "register_review_bundle"
     ]
@@ -306,8 +312,8 @@
       "mission": "检查重大资讯资格、反证、日期、来源独立性、行动时序和 L4 条目。",
       "max_turns": 2,
       "halt_condition": "全部 L4、重大资讯资格、日期、来源独立性与行动时序完成反证检查，或发现阻断问题。",
-      "output_contract": "读取 red_team_review_request.json 并生成 review-receipt/1.0；reviewer_kind 固定为 logic_adversary，reviewer_id 固定为 RedTeam；原样返回 request_sha256、challenge、invocation_id，包含 turns_used、halt_condition_met、baseline_sha256、output_sha256。L4 必须 status=passed 且 reviewed_item_hashes 覆盖请求中的全部 l4_item_hashes；review_mode=no_l4_fast_path 时必须一轮完成、明确 not_required 并返回空覆盖。",
-      "system_prompt": "先读取已登记的 red-team review request，只审查其中 refined_sha256 绑定的 core；完成输入哈希校验后发送不含业务内容的 review_progress seq=1 phase=input_validated。review_mode=no_l4_fast_path 时不得联网或扩展事件：一轮内复核绑定哈希、无 L4 事实、major_signal_item_hashes 对应条目的重大资讯资格、日期/来源独立性与行动时序，然后生成 not_required 空覆盖回执。review_mode=l4_full_review 时覆盖全部 l4_item_hashes，优先复用登记证据，仅在证据冲突时补充核验。发现阻断问题时不得返回 passed；不得修改 refined core 后继续沿用旧哈希。",
+      "output_contract": "读取 red_team_review_request.json 并生成 review-receipt/1.0 draft；reviewer_kind 固定为 logic_adversary，reviewer_id 固定为 RedTeam；原样返回 request_sha256、challenge、invocation_id，包含 turns_used、halt_condition_met、baseline_sha256、output_sha256。L4 必须 status=passed 且 reviewed_item_hashes 覆盖请求中的全部 l4_item_hashes；review_mode=no_l4_fast_path 时必须一轮完成、明确 not_required 并返回空覆盖。写入 execution_packet.draft_paths 后必须执行 validation_command；只有返回 status=valid 才可原子提升到 output_paths 并发送 artifact_ready。",
+      "system_prompt": "先读取已登记的 red-team review request，只审查其中 refined_sha256 绑定的 core；完成输入哈希校验后发送不含业务内容的 review_progress seq=1 phase=input_validated。review_mode=no_l4_fast_path 时不得联网或扩展事件：一轮内复核绑定哈希、无 L4 事实、major_signal_item_hashes 对应条目的重大资讯资格、日期/来源独立性与行动时序，然后生成 not_required 空覆盖 draft。review_mode=l4_full_review 时覆盖全部 l4_item_hashes，优先复用登记证据，仅在证据冲突时补充核验。发现阻断问题时不得返回 passed；不得修改 refined core 后继续沿用旧哈希。发布前必须执行 execution_packet.validation_command，校验失败时最多在轮次预算内修正合同字段，不得发布无效回执。",
       "progress_contract": "只发送 input_validated 里程碑；消息不得包含候选、结论或回执正文。"
     }
   }

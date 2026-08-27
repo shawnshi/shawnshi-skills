@@ -1,22 +1,23 @@
 {
   "schema_version": 3,
   "skill": "academic-paper-reader",
-  "generated_at": "2026-08-16T22:02:19",
+  "generated_at": "2026-08-27T20:05:46+08:00",
   "hash_algorithm": "SHA-256",
   "text_hash_normalization": "LF",
   "skill_md": "SKILL.md",
-  "skill_md_sha256": "1b1938ca394695c9677418b9300bad94666de7ce8efc22bc551d88ed2bf57054",
+  "skill_md_sha256": "a47c63d49abf6bf799ccb53873d7dc113dc149026819df035a116a42e3bce9e1",
   "top_level_files": [
     "SKILL.md"
   ],
   "top_level_file_hashes": [
     {
       "path": "SKILL.md",
-      "sha256": "1b1938ca394695c9677418b9300bad94666de7ce8efc22bc551d88ed2bf57054"
+      "sha256": "a47c63d49abf6bf799ccb53873d7dc113dc149026819df035a116a42e3bce9e1"
     }
   ],
   "top_level_directories": [
     "agents",
+    "assets",
     "examples",
     "resources",
     "scripts"
@@ -28,7 +29,11 @@
     },
     {
       "name": "resources",
-      "file_count": 2
+      "file_count": 4
+    },
+    {
+      "name": "assets",
+      "file_count": 1
     },
     {
       "name": "examples",
@@ -42,47 +47,71 @@
   "resource_file_hashes": [
     {
       "path": "agents/openai.yaml",
-      "sha256": "7be137001fbf6ad12b83640d2f863e128801da8961fa660e8f059ae2270bec0d"
+      "sha256": "b9e45aaa4f094a7381017cf42444e5db606b39f7831892c02b1fc5242e10c560"
+    },
+    {
+      "path": "assets/icon.svg",
+      "sha256": "e9301497fa98ef56aaca7ede0857b9a18dc06c34040f0679c609a6bf49b1d38b"
     },
     {
       "path": "examples/APR-Reference.md",
-      "sha256": "a9cf4a416d285a58ba39871fd3d295ca81b4ffb2d0549b9b61a66a354b5aea54"
+      "sha256": "646dfe660d36f7baf3a67a015c746eedc2a49187556943f8bee16aab0243f5ef"
+    },
+    {
+      "path": "resources/source_evidence_protocol.md",
+      "sha256": "ba9938ed8f6ea311a6a57fa9400885d37e599fce46e6fc37e875d1584a2e8356"
     },
     {
       "path": "resources/storytelling_manual.md",
-      "sha256": "23f31b28b23eedc3d1dc2c9aacd1954ea00032be562c085958a6dce141d9121d"
+      "sha256": "0228dafb56b9a030bbcb08f6e919f85e118e72b1b26ab3da75e5aa456b487832"
+    },
+    {
+      "path": "resources/study_type_guides.md",
+      "sha256": "ad76fd318093533e3f8e3bab0b5206d70e0d2a23c00ea16a8985ed9d8783f37f"
     },
     {
       "path": "resources/template.md",
-      "sha256": "3a91dfe6831e3dfd060a58d7bde0b234445da46d61a578fff75e05f894c3f96f"
+      "sha256": "83d9a1d9cee307fd794194788d752bc793d34ccfcb5a6907c22b8913385473ec"
     },
     {
       "path": "scripts/paper_audit_gate.py",
-      "sha256": "f53dcf8647b29d81bea7e477b6b588a9af241336699bc3bac137c284c9d6027d"
+      "sha256": "2dc7ddebd41f7a8c834a017d22c7e84712b14d9cdaf004d36a893e2add441fe7"
     },
     {
       "path": "scripts/test_paper_audit_gate.py",
-      "sha256": "e29e055858b3a618bf1c800f430fe79d9f20c6c64f4f859ef7369700507300be"
+      "sha256": "2c5b629c0292ab13bdc7d4a91047d2b1c2b3faee6cd7f2276df2761f9d6fc673"
     }
   ],
   "declared_local_dependencies": [
     {
+      "path": "resources/source_evidence_protocol.md",
+      "exists": true,
+      "resolved_path": "academic-paper-reader/resources/source_evidence_protocol.md",
+      "sha256": "ba9938ed8f6ea311a6a57fa9400885d37e599fce46e6fc37e875d1584a2e8356"
+    },
+    {
       "path": "resources/storytelling_manual.md",
       "exists": true,
       "resolved_path": "academic-paper-reader/resources/storytelling_manual.md",
-      "sha256": "23f31b28b23eedc3d1dc2c9aacd1954ea00032be562c085958a6dce141d9121d"
+      "sha256": "0228dafb56b9a030bbcb08f6e919f85e118e72b1b26ab3da75e5aa456b487832"
+    },
+    {
+      "path": "resources/study_type_guides.md",
+      "exists": true,
+      "resolved_path": "academic-paper-reader/resources/study_type_guides.md",
+      "sha256": "ad76fd318093533e3f8e3bab0b5206d70e0d2a23c00ea16a8985ed9d8783f37f"
     },
     {
       "path": "resources/template.md",
       "exists": true,
       "resolved_path": "academic-paper-reader/resources/template.md",
-      "sha256": "3a91dfe6831e3dfd060a58d7bde0b234445da46d61a578fff75e05f894c3f96f"
+      "sha256": "83d9a1d9cee307fd794194788d752bc793d34ccfcb5a6907c22b8913385473ec"
     },
     {
       "path": "scripts/paper_audit_gate.py",
       "exists": true,
       "resolved_path": "academic-paper-reader/scripts/paper_audit_gate.py",
-      "sha256": "f53dcf8647b29d81bea7e477b6b588a9af241336699bc3bac137c284c9d6027d"
+      "sha256": "2dc7ddebd41f7a8c834a017d22c7e84712b14d9cdaf004d36a893e2add441fe7"
     }
   ],
   "missing_declared_dependencies": []

@@ -19,12 +19,17 @@ class AuthorityGateTests(unittest.TestCase):
             encoding="utf-8",
         )
 
-    def _proxy(self, path: Path) -> None:
+    def _proxy(self, path: Path, authority: Path, digest: str) -> None:
         path.parent.mkdir(parents=True, exist_ok=True)
         path.write_text(
             "---\n"
             "name: personal-diary-writer\n"
             "description: Bound test proxy for diary writes.\n"
+            "metadata:\n"
+            "  version: 11.0.0-proxy\n"
+            f"  authority_proxy_for: {authority.as_posix()}\n"
+            "  authority_version: 11.0.0\n"
+            f"  authority_sha256: {digest}\n"
             "---\n"
             "body\n",
             encoding="utf-8",
@@ -41,7 +46,7 @@ class AuthorityGateTests(unittest.TestCase):
             proxy = root / "proxy" / "SKILL.md"
             self._skill(authority)
             digest = authority_gate.sha256_file(authority)
-            self._proxy(proxy)
+            self._proxy(proxy, authority, digest)
             config = {
                 "schema_version": 2,
                 "skill_name": "personal-diary-writer",
@@ -89,6 +94,26 @@ class AuthorityGateTests(unittest.TestCase):
             result = authority_gate.verify(config, "task-2", "root", "epoch-1")
             self.assertFalse(result["ok"])
             self.assertEqual(result["error_code"], "UNBOUND_SKILL_FORK")
+
+    def test_schema_v2_stale_proxy_hash_fails_closed(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            authority = root / "authority" / "SKILL.md"
+            proxy = root / "proxy" / "SKILL.md"
+            self._skill(authority)
+            digest = authority_gate.sha256_file(authority)
+            self._proxy(proxy, authority, "0" * 64)
+            config = {
+                "schema_version": 2,
+                "skill_name": "personal-diary-writer",
+                "authority_locator": self._absolute(authority),
+                "authority_version": "11.0.0",
+                "authority_sha256": digest,
+                "candidate_locators": [self._absolute(authority), self._absolute(proxy)],
+                "allowed_proxy_locators": [self._absolute(proxy)],
+            }
+            result = authority_gate.verify(config, "task-4", "root", "epoch-1")
+            self.assertEqual(result["error_code"], "PROXY_HASH_MISMATCH")
 
     def test_hash_drift_fails_closed(self):
         with tempfile.TemporaryDirectory() as tmp:

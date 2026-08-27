@@ -1,23 +1,79 @@
 {
   "schema_version": 3,
   "skill": "tool-text-forger",
-  "generated_at": "2026-08-16T22:02:19",
+  "generated_at": "2026-08-27T20:05:47+08:00",
   "hash_algorithm": "SHA-256",
   "text_hash_normalization": "LF",
   "skill_md": "SKILL.md",
-  "skill_md_sha256": "c013751f91870cc3d1cebb947ec47ac6c639ececf41f8153c0778ce2d04cef8e",
+  "skill_md_sha256": "c45a4dfac0d9e39d8fba0e53b4c895896ec76f2c2be9aa1b97c2d71e5fc9c281",
   "top_level_files": [
     "SKILL.md"
   ],
   "top_level_file_hashes": [
     {
       "path": "SKILL.md",
-      "sha256": "c013751f91870cc3d1cebb947ec47ac6c639ececf41f8153c0778ce2d04cef8e"
+      "sha256": "c45a4dfac0d9e39d8fba0e53b4c895896ec76f2c2be9aa1b97c2d71e5fc9c281"
     }
   ],
-  "top_level_directories": [],
-  "resource_directories": [],
-  "resource_file_hashes": [],
-  "declared_local_dependencies": [],
+  "top_level_directories": [
+    "agents",
+    "assets",
+    "references",
+    "scripts"
+  ],
+  "resource_directories": [
+    {
+      "name": "scripts",
+      "file_count": 2
+    },
+    {
+      "name": "references",
+      "file_count": 1
+    },
+    {
+      "name": "assets",
+      "file_count": 1
+    },
+    {
+      "name": "agents",
+      "file_count": 1
+    }
+  ],
+  "resource_file_hashes": [
+    {
+      "path": "agents/openai.yaml",
+      "sha256": "b6d5ce972ee94d9532b35930358105f11c1577dc6c8ba3e0bf1df2bb0929066c"
+    },
+    {
+      "path": "assets/icon.svg",
+      "sha256": "49315dda7125ec5fc77ef5f2b96126d8b2121c6e72944b4702972e90f321d3ee"
+    },
+    {
+      "path": "references/controlled-editing.md",
+      "sha256": "4c2577a76a6692779ccea1fb16e74f3241c5f55f4edf064f7b29b54da5123ff9"
+    },
+    {
+      "path": "scripts/check_text_invariants.py",
+      "sha256": "2bd9f0f19bf86e7b0b1a3d04788493ea6b811b9173881ee5b84d4759923fe1b1"
+    },
+    {
+      "path": "scripts/tests/test_check_text_invariants.py",
+      "sha256": "9820fcb304668bccaedefd63369ebce94515f92e9c6e2826eff117f5b5d3c523"
+    }
+  ],
+  "declared_local_dependencies": [
+    {
+      "path": "references/controlled-editing.md",
+      "exists": true,
+      "resolved_path": "tool-text-forger/references/controlled-editing.md",
+      "sha256": "4c2577a76a6692779ccea1fb16e74f3241c5f55f4edf064f7b29b54da5123ff9"
+    },
+    {
+      "path": "scripts/check_text_invariants.py",
+      "exists": true,
+      "resolved_path": "tool-text-forger/scripts/check_text_invariants.py",
+      "sha256": "2bd9f0f19bf86e7b0b1a3d04788493ea6b811b9173881ee5b84d4759923fe1b1"
+    }
+  ],
   "missing_declared_dependencies": []
 }

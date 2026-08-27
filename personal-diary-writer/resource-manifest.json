@@ -1,11 +1,11 @@
 {
   "schema_version": 3,
   "skill": "personal-diary-writer",
-  "generated_at": "2026-08-25T20:41:48+08:00",
+  "generated_at": "2026-08-27T20:05:46+08:00",
   "hash_algorithm": "SHA-256",
   "text_hash_normalization": "LF",
   "skill_md": "SKILL.md",
-  "skill_md_sha256": "47e7583348fc7bb20724fbaa8e5a321ebee571331f94274af44f208d6ff400c3",
+  "skill_md_sha256": "f18b99b7f2b83c982e8ab2c54ebf2b4b201f6fcb2fe6764fb4f42b5daba6471a",
   "top_level_files": [
     "SKILL.md",
     "authority.json"
@@ -13,11 +13,11 @@
   "top_level_file_hashes": [
     {
       "path": "SKILL.md",
-      "sha256": "47e7583348fc7bb20724fbaa8e5a321ebee571331f94274af44f208d6ff400c3"
+      "sha256": "f18b99b7f2b83c982e8ab2c54ebf2b4b201f6fcb2fe6764fb4f42b5daba6471a"
     },
     {
       "path": "authority.json",
-      "sha256": "41217feb8d867a1773304b6f20546efdb9ac5b39e34b963fa5d6edae512e9fc2"
+      "sha256": "26f331dd0d7bc368750ec00dd368074e2c05b7c932cea29385ff044e245db88a"
     }
   ],
   "top_level_directories": [
@@ -32,15 +32,15 @@
   "resource_file_hashes": [
     {
       "path": "scripts/authority_gate.py",
-      "sha256": "1053f30feab1c4a18991021d0c99c49cd7018ec2e5d6c8d3112071fe3f1520d4"
+      "sha256": "9739d7461ea5d30c5ab7d5aac97f896217cdaaa293040174edbfe7d5b0394fc2"
     },
     {
       "path": "scripts/test_authority_gate.py",
-      "sha256": "b954bf6014d6c5ef4a2f6b5fd3ce416b860f208f5be7bac12731582cb4323b41"
+      "sha256": "b933d12c6978f932990663d23af4037117ca8853923cb553fa47b75537df1773"
     },
     {
       "path": "scripts/test_default_read_contract.py",
-      "sha256": "1bd9d27dd4e2282a0ac1474b05ccd99c1921196a413aa346d70386a0b9d5eb17"
+      "sha256": "cf55147d2c35ed80a5da202d102664fd004b85d32af65ed4de9973b0d2917801"
     }
   ],
   "declared_local_dependencies": [
@@ -48,13 +48,13 @@
       "path": "scripts/authority_gate.py",
       "exists": true,
       "resolved_path": "personal-diary-writer/scripts/authority_gate.py",
-      "sha256": "1053f30feab1c4a18991021d0c99c49cd7018ec2e5d6c8d3112071fe3f1520d4"
+      "sha256": "9739d7461ea5d30c5ab7d5aac97f896217cdaaa293040174edbfe7d5b0394fc2"
     },
     {
       "path": "scripts/test_authority_gate.py",
       "exists": true,
       "resolved_path": "personal-diary-writer/scripts/test_authority_gate.py",
-      "sha256": "b954bf6014d6c5ef4a2f6b5fd3ce416b860f208f5be7bac12731582cb4323b41"
+      "sha256": "b933d12c6978f932990663d23af4037117ca8853923cb553fa47b75537df1773"
     }
   ],
   "missing_declared_dependencies": []

@@ -1,7 +1,7 @@
 {
   "schema_version": 3,
   "skill": "officecli",
-  "generated_at": "2026-08-25T21:44:12+08:00",
+  "generated_at": "2026-08-16T22:02:19",
   "hash_algorithm": "SHA-256",
   "text_hash_normalization": "LF",
   "skill_md": "SKILL.md",
@@ -15,11 +15,11 @@
   "top_level_file_hashes": [
     {
       "path": "LICENSE",
-      "sha256": "0ef10002c77f6f3672795877e8a276f5a2840105474c87aa6c0bcd8904b12fc7"
+      "sha256": "7e282402a5a6db33995fe638bb3fe79013f9884d8f7d15a42e481c1e86aadda1"
     },
     {
       "path": "NOTICE",
-      "sha256": "762d2098c370da58737a2f235ddf962f041762b803e5bf6f10cd921894836586"
+      "sha256": "3a4715b268e148a8e9566f5e835f766f5c95c3da4d6e5ddd908806a258a2f07b"
     },
     {
       "path": "SKILL.md",

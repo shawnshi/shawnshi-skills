@@ -1,0 +1,8 @@
+interface:
+  display_name: 医疗技术方案架构
+  short_description: 设计与评审医疗应用、数据、信创迁移及临床系统技术方案
+  icon_small: assets/icon.svg
+  icon_large: assets/icon.svg
+  default_prompt: 使用 $hit-solution-architect 选择合适交付模式，设计或评审证据可追溯、边界清晰且可验收的医疗技术方案。
+policy:
+  allow_implicit_invocation: true

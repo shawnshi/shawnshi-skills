@@ -2,6 +2,7 @@ import hashlib
 import json
 import tempfile
 import unittest
+import update_index
 from copy import deepcopy
 from unittest.mock import patch
 from datetime import datetime
@@ -276,6 +277,48 @@ class UpdateIndexTests(unittest.TestCase):
 
             self.assertTrue(history.is_file())
             self.assertEqual(list(history.parent.glob(".*.rebuild")), [])
+
+    def test_history_rebuild_writes_index_once_after_all_archives(self):
+        now = datetime(2026, 8, 12, 10, 0, tzinfo=ZoneInfo("Asia/Shanghai"))
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            news = root / "news"
+            news.mkdir()
+            history = root / "history.json"
+            for report_date in ("2026-08-09", "2026-08-10"):
+                archive = news / (
+                    f"intelligence_{report_date.replace('-', '')}_briefing.md"
+                )
+                archive.write_text(
+                    "# Legacy briefing\n\nhttps://example.org/shared-event\n",
+                    encoding="utf-8",
+                )
+            original_writer = update_index.atomic_dump_json
+            with (
+                patch.object(
+                    update_index,
+                    "atomic_dump_json",
+                    wraps=original_writer,
+                ) as final_writer,
+                patch("history_manager.atomic_dump_json") as intermediate_writer,
+            ):
+                rebuilt = rebuild_history(
+                    news_dir=news,
+                    history_file=history,
+                    now=now,
+                )
+
+        final_writer.assert_called_once()
+        intermediate_writer.assert_not_called()
+        self.assertEqual(len(rebuilt["entries"]), 1)
+        self.assertEqual(
+            rebuilt["entries"][0]["first_seen_at"],
+            "2026-08-09T00:00:00+08:00",
+        )
+        self.assertEqual(
+            rebuilt["entries"][0]["last_seen_at"],
+            "2026-08-10T00:00:00+08:00",
+        )
 
     def test_json_archives_rebuild_v2_history_idempotently_without_rewrite(self):
         now = datetime(2026, 8, 12, 10, 0, tzinfo=ZoneInfo("Asia/Shanghai"))

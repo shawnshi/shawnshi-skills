@@ -1,0 +1,22 @@
+{
+  "template_type": "data-flow",
+  "style": 3,
+  "title": "Referral Data Flow",
+  "external_entities": [
+    {"id": "clinic", "label": "Community Clinic"},
+    {"id": "hospital", "label": "Referral Hospital"}
+  ],
+  "processes": [
+    {"id": "validate", "label": "Validate Referral"},
+    {"id": "route", "label": "Route Appointment"}
+  ],
+  "data_stores": [
+    {"id": "registry", "label": "Referral Registry"}
+  ],
+  "flows": [
+    {"from": "clinic", "to": "validate", "label": "referral request"},
+    {"from": "validate", "to": "registry", "label": "validated record"},
+    {"from": "validate", "to": "route", "label": "eligible request"},
+    {"from": "route", "to": "hospital", "label": "appointment notice"}
+  ]
+}

@@ -1,98 +1,62 @@
-# Content & Style Rules
+# Content, evidence and compliance rules
 
-Guidelines for slide deck content quality and style consistency.
+## Content
 
-## Content Rules
+- 每页承担一个主要任务；标题、Takeaway、正文和视觉指向同一结论。
+- 结论页可用结论式标题；规范、数据字典、方法和测试页可用准确描述式标题。
+- 正文只保留听众需要看到的信息。方法细节、限定条件和问答准备可放讲稿或 Appendix，但不得隐藏会改变结论的限制。
+- 避免“赋能、抓手、领先、革命性”等空洞措辞；改写成业务动作、机制、指标或责任关系。
+- 不以恐惧、虚假紧迫感、权威暗示或未经核实的客户问题推动决定。
 
-### 1. Respect Reader Attention
-- Each slide should communicate ONE main idea
-- Remove redundant information
-- Prioritize clarity over comprehensiveness
+## Evidence
 
-### 2. Data Traceability
-- Every actual statistic must include source, source date, and applicable scope
-- Cite sources directly on slides with data
-- If evidence is unavailable, keep the item as a clearly marked input gap during drafting; do not invent a number to make the claim look specific
+- 将事实、推断、假设和建议写为不同 Claim 记录。
+- 每个可见统计数字注明口径、单位、时间和范围，并链接可定位 Evidence。
+- 来源日期未知时可写 `undated`，但 locator 仍必须可复核。
+- 不同口径的数据不得放在同一比较中；确需并列时显式标记差异。
+- 案例成效不得外推为本项目承诺。预测、ROI 和节省测算必须展示假设、基线和敏感性。
+- 结构校验只验证格式、关联和基础语义，不能证明来源真实或结论正确。
 
-### 3. Self-Contained Prompts
-- Every detail must be in the image prompt
-- No external references (e.g., "like slide 2")
-- Include all colors, layouts, and content explicitly
+## Draft and final
 
-### 4. No Placeholders
-- Every element must be fully specified
-- No "[insert data here]" or "TBD"
-- All text content finalized before generation
+- 草稿允许未闭合内容，但用 Open Items 记录类别、描述、责任人和日期。未结构化占位符会告警。
+- 最终稿禁止 moustache、`TBD`、`TODO`、`待补`、`待确认`、`待核验`、`[INSERT]`、`[BASELINE]` 等未结构化占位符。
+- 最终稿可保留结构化 `unverified` Claims、Open Items 和 Risk Flags；页面必须准确表达其状态，不得把它们写成已证实或已解决。
+- 资产权利为 `permission-pending` 或脱敏状态为 `pending` 时保持 `Status: draft`；取得许可、完成脱敏、换用合规替代资产或移除后才能标记 `final`。
 
-## Style Rules
+## Privacy, confidentiality and rights
 
-### 1. Accurate Headlines
-Decision slides often benefit from a conclusion headline. Technical specifications, data dictionaries, test reports, and regulatory pages may use precise descriptive headlines.
+- 根据 `Confidentiality` 控制分发、导出、截图、外部链接和讲稿内容。
+- 患者、客户、员工、采购、合同、财务和安全信息按最小必要原则使用。
+- 真实系统界面、病例、聊天记录、邮件和内部看板必须获得授权，并在使用前完成适当脱敏；用 Assets 记录权利和脱敏状态。
+- `permission-pending` 或 `pending` 的资产不能进入对外或最终物理 PPT；应取得许可、替换为自有/许可资产，或移除。
+- Logo、字体、模板、照片、插画、地图和第三方图表均需核对许可。必要的引用、保密标记和授权品牌元素不得被样式规则删除。
 
-The examples below use variables and are not business facts:
+## Regulated domains
 
-| Generic | Evidence-backed alternative |
-|-----|------|
-| "Key Statistics" | "Usage changed from `[BASELINE]` to `[CURRENT]` during `[PERIOD]`" |
-| "Our Solution" | "The proposed scope consolidates `[VERIFIED_SYSTEM_COUNT]` systems" |
-| "Benefits" | "Measured weekly time changed by `[VERIFIED_HOURS]` hours" |
+### Healthcare
 
-### 2. Avoid Abstract Clichés
-Review these terms and replace them when they hide the actual mechanism:
-- "Dive into", "explore", "journey", "赋能", "抓手", "降维打击"
-- "Let's look at", "let me show you"
-- "Exciting", "amazing", "revolutionary"
+- 不展示可识别患者信息；检查文本、影像、二维码、ID、文件名和截图边缘。
+- 临床结论注明人群、机构、时间和研究设计；模型指标不能直接等同临床结局。
+- 把产品能力、试点结果和正式临床应用状态分开。
 
-Healthcare terminology should be used only when it is accurate for the source material. A keyword scan is a writing prompt, not a release gate.
+### Government
 
-### 3. Meaningful Back Cover
-Not just "Thank you" or "Questions?"
+- 政策结论标明发布机关、文件版本、生效或资料日期和适用地域。
+- 区分政策目标、任务要求、资金渠道、已批复项目和推测机会。
+- 不把其他地区做法直接描述为本地强制要求。
 
-Include one of:
-- Clear call-to-action
-- Memorable key takeaway
-- Thought-provoking closing statement
-- Contact information with purpose
+### Finance
 
-### 4. Consistent Visual Language
-Throughout the deck:
-- Same icon style
-- Same color usage patterns
-- Same layout grid system
-- Same typography hierarchy
+- 金额注明币种、含税口径、期间和名义/实际值；预测与历史值分开。
+- 收益、节省和估值说明基线、计算方法与敏感性。
+- 不把市场评论写成确定回报或个性化投资承诺。
 
-## Slide Structure
+## Release review
 
-| Position | Type | Purpose |
-|----------|------|---------|
-| 1 | Cover | Title, visual hook, topic introduction |
-| 2 to N-1 | Content | Key points, data, explanations |
-| N | Back Cover | Summary, call-to-action, memorable close |
-
-## Key Specifications
-
-| Specification | Value |
-|---------------|-------|
-| Aspect Ratio | Use the requested format; default to 16:9 only when unspecified |
-| Slide Count | Dynamic based on content |
-| Required Slides | Cover + Back Cover minimum |
-| Footers | Project-dependent; data citations must remain visible |
-| Language Priority | `--lang` → source language → ask user |
-| Tone | Direct, confident (avoid AI phrases) |
-
-## Style Quick Reference
-
-| Style | Visual Summary |
-|-------|----------------|
-| `sketch-notes` | Hand-drawn, warm off-white, conceptual icons |
-| `blueprint` | Technical schematics, grid texture, blue tones |
-| `bold-editorial` | High contrast, dark backgrounds, magazine impact |
-| `vector-illustration` | Flat vector, black outlines, retro colors |
-| `minimal` | Maximum whitespace, single accent, zen-like |
-| `storytelling` | Full-bleed imagery, cinematic, emotional |
-| `warm` | Soft gradients, rounded shapes, wellness palette |
-| `notion` | Dashboard aesthetic, clean data viz, SaaS-inspired |
-| `corporate` | Navy/gold, structured layouts, business polish |
-| `playful` | Vibrant coral/teal/yellow, dynamic, energetic |
-
-Full style specifications: `references/styles/<style>.md`
+- [ ] 关键 Claim 分类和核验状态准确
+- [ ] 数据、引用、单位、日期和范围可复核
+- [ ] Open Items 与 Risk Flags 没有被正文掩盖
+- [ ] 资产权利和脱敏状态满足实际交付场景
+- [ ] 保密标记、必要引用和政策适用性可见
+- [ ] 人工复核已覆盖内容正确性、合规性和承诺风险

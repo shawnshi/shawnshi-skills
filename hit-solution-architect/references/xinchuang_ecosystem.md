@@ -6,7 +6,7 @@
 
 | policy_or_catalog_id | 正式名称 | 发布机构 | 地区 | 文号或版本 | 生效日期 | 官方来源 | 项目适用性 |
 | :--- | :--- | :--- | :--- | :--- | :--- | :--- | :--- |
-| `[POLICY-001]` | `[待核验]` | `[待核验]` | `[REGION]` | `[VERSION]` | `[DATE]` | `[URL_OR_FILE]` | `[待确认]` |
+| `{{POLICY_ID}}` | `{{OFFICIAL_TITLE}}` | `{{ISSUER}}` | `{{REGION}}` | `{{VERSION}}` | `{{DATE}}` | `{{URL_OR_FILE}}` | `{{APPLICABILITY}}` |
 
 不得用内部摘要替代政策原文，不得从行业标签推断某家医院的强制替代范围。
 
@@ -16,7 +16,7 @@
 
 | candidate_id | 类别 | 厂商与产品 | 精确版本 | 架构或部署条件 | 官方兼容证据 | 验证日期 | 证据强度 |
 | :--- | :--- | :--- | :--- | :--- | :--- | :--- | :--- |
-| `[CANDIDATE-001]` | `[CATEGORY]` | `[PRODUCT]` | `[VERSION]` | `[CONDITIONS]` | `[URL_OR_REPORT]` | `[DATE]` | `A / B / C` |
+| `{{CANDIDATE_ID}}` | `{{CATEGORY}}` | `{{PRODUCT}}` | `{{VERSION}}` | `{{CONDITIONS}}` | `{{URL_OR_REPORT}}` | `{{DATE}}` | `A / B / C` |
 
 证据强度：
 
@@ -28,7 +28,7 @@
 
 | test_id | 工作负载与数据规模 | 环境 | 指标与单位 | 基线 | 测试结果 | 测试日期 | 差距与限制 |
 | :--- | :--- | :--- | :--- | :--- | :--- | :--- | :--- |
-| `[TEST-001]` | `[WORKLOAD]` | `[ENVIRONMENT]` | `[METRIC]` | `[BASELINE]` | `[RESULT]` | `[DATE]` | `[LIMITATIONS]` |
+| `{{TEST_ID}}` | `{{WORKLOAD}}` | `{{ENVIRONMENT}}` | `{{METRIC}}` | `{{BASELINE}}` | `{{RESULT}}` | `{{DATE}}` | `{{LIMITATIONS}}` |
 
 “兼容”“高性能”“低迁移成本”等结论只能由明确版本、环境和测试口径支持。
 
@@ -44,7 +44,7 @@
 
 | risk_id | 触发条件 | 影响 | 验证动作 | 缓解与回退 | 责任人 | 剩余风险 |
 | :--- | :--- | :--- | :--- | :--- | :--- | :--- |
-| `[RISK-001]` | `[TRIGGER]` | `[IMPACT]` | `[TEST]` | `[MITIGATION]` | `[OWNER]` | `[RESIDUAL]` |
+| `{{RISK_ID}}` | `{{TRIGGER}}` | `{{IMPACT}}` | `{{TEST}}` | `{{MITIGATION}}` | `{{OWNER}}` | `{{RESIDUAL}}` |
 
 ## 5. 阶段计划
 
@@ -52,6 +52,6 @@
 
 | phase_id | 范围 | 进入条件 | 退出条件 | duration | 回退条件 |
 | :--- | :--- | :--- | :--- | :--- | :--- |
-| `[PHASE-01]` | `[SCOPE]` | `[ENTRY]` | `[EXIT]` | `[待客户确认]` | `[ROLLBACK]` |
+| `{{PHASE_ID}}` | `{{SCOPE}}` | `{{ENTRY}}` | `{{EXIT}}` | `{{DURATION}}` | `{{ROLLBACK}}` |
 
 正式方案必须说明每个候选产品的版本、证据日期、适用环境和未验证项，不得依据个人偏好或未经证实的厂商印象做选择。

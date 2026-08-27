@@ -1,0 +1,182 @@
+{
+  "schema_version": 1,
+  "last_reviewed": "2026-08-26",
+  "aliases": {
+    "default": "generic-draft",
+    "generic": "generic-draft",
+    "nature": "nature-final",
+    "plos": "plos-one-final",
+    "plos-one": "plos-one-final",
+    "ieee": "ieee-journal"
+  },
+  "palettes": {
+    "okabe_ito": ["#E69F00", "#56B4E9", "#009E73", "#F0E442", "#0072B2", "#D55E00", "#CC79A7", "#000000"],
+    "tol_bright": ["#4477AA", "#EE6677", "#228833", "#CCBB44", "#66CCEE", "#AA3377", "#BBBBBB"],
+    "tol_muted": ["#332288", "#88CCEE", "#44AA99", "#117733", "#999933", "#DDCC77", "#CC6677", "#882255", "#AA4499"],
+    "tol_high_contrast": ["#004488", "#DDAA33", "#BB5566"]
+  },
+  "styles": {
+    "publication": {
+      "palette": "okabe_ito",
+      "rcParams": {
+        "figure.dpi": 100,
+        "figure.facecolor": "white",
+        "figure.constrained_layout.use": true,
+        "font.size": 8,
+        "font.family": "sans-serif",
+        "font.sans-serif": ["Arial", "Helvetica", "DejaVu Sans"],
+        "axes.linewidth": 0.6,
+        "axes.labelsize": 8,
+        "axes.titlesize": 8,
+        "axes.spines.top": false,
+        "axes.spines.right": false,
+        "axes.grid": false,
+        "xtick.labelsize": 7,
+        "ytick.labelsize": 7,
+        "xtick.direction": "out",
+        "ytick.direction": "out",
+        "lines.linewidth": 1.25,
+        "lines.markersize": 4,
+        "legend.fontsize": 7,
+        "legend.frameon": false,
+        "savefig.transparent": false,
+        "savefig.facecolor": "white",
+        "pdf.fonttype": 42,
+        "ps.fonttype": 42,
+        "svg.fonttype": "none"
+      }
+    },
+    "nature": {
+      "extends": "publication",
+      "palette": "okabe_ito",
+      "rcParams": {
+        "font.size": 7,
+        "axes.labelsize": 8,
+        "axes.titlesize": 8,
+        "xtick.labelsize": 6,
+        "ytick.labelsize": 6,
+        "legend.fontsize": 6
+      }
+    },
+    "presentation": {
+      "extends": "publication",
+      "palette": "tol_bright",
+      "rcParams": {
+        "font.size": 14,
+        "axes.labelsize": 16,
+        "axes.titlesize": 18,
+        "xtick.labelsize": 12,
+        "ytick.labelsize": 12,
+        "legend.fontsize": 12,
+        "axes.linewidth": 1.5,
+        "lines.linewidth": 2.5,
+        "lines.markersize": 8
+      }
+    }
+  },
+  "profiles": {
+    "generic-draft": {
+      "display_name": "Generic publication draft",
+      "style": "publication",
+      "verification": {
+        "state": "draft_only",
+        "last_verified_on": null,
+        "review_due_on": null,
+        "sources": []
+      },
+      "dimensions": {
+        "width_targets_mm": {"single": 89.0, "double": 178.0},
+        "max_height_mm": 240.0,
+        "tolerance_mm": 0.6
+      },
+      "figure_types": {
+        "line_art": {"formats": ["pdf", "svg", "png"], "raster_dpi": 600},
+        "photo": {"formats": ["tiff", "png"], "raster_dpi": 300},
+        "combination": {"formats": ["pdf", "tiff", "png"], "raster_dpi": 600}
+      },
+      "color": {"allowed_modes": ["RGB", "GRAYSCALE"], "alpha_allowed": false},
+      "tiff": {"compression": "tiff_lzw"},
+      "pdf": {"forbid_type3": true},
+      "max_file_mb": null
+    },
+    "nature-final": {
+      "display_name": "Nature final submission",
+      "style": "nature",
+      "verification": {
+        "state": "official_verified",
+        "last_verified_on": "2026-08-26",
+        "review_due_on": "2027-02-26",
+        "sources": [
+          {"title": "Nature final submission", "url": "https://www.nature.com/nature/for-authors/final-submission", "accessed_on": "2026-08-26"}
+        ]
+      },
+      "dimensions": {
+        "width_targets_mm": {"single": 89.0, "double": 183.0},
+        "max_height_mm": 247.0,
+        "tolerance_mm": 0.6
+      },
+      "figure_types": {
+        "line_art": {"formats": ["pdf", "eps"], "raster_dpi": 1000},
+        "photo": {"formats": ["tiff"], "raster_dpi": 300},
+        "combination": {"formats": ["pdf", "eps", "tiff"], "raster_dpi": 600}
+      },
+      "color": {"allowed_modes": ["RGB", "GRAYSCALE"], "alpha_allowed": false},
+      "tiff": {"compression": "tiff_lzw"},
+      "pdf": {"forbid_type3": true},
+      "max_file_mb": null
+    },
+    "plos-one-final": {
+      "display_name": "PLOS ONE final figure",
+      "style": "publication",
+      "verification": {
+        "state": "official_verified",
+        "last_verified_on": "2026-08-26",
+        "review_due_on": "2027-02-26",
+        "sources": [
+          {"title": "PLOS ONE Figures", "url": "https://journals.plos.org/plosone/s/figures", "accessed_on": "2026-08-26"}
+        ]
+      },
+      "dimensions": {
+        "width_range_mm": [66.8, 190.5],
+        "max_height_mm": 222.3,
+        "tolerance_mm": 0.6
+      },
+      "figure_types": {
+        "line_art": {"formats": ["tiff", "eps"], "raster_dpi": 600, "max_raster_dpi": 600},
+        "photo": {"formats": ["tiff"], "raster_dpi": 300, "max_raster_dpi": 600},
+        "combination": {"formats": ["tiff", "eps"], "raster_dpi": 600, "max_raster_dpi": 600}
+      },
+      "color": {"allowed_modes": ["RGB", "GRAYSCALE"], "alpha_allowed": false},
+      "tiff": {"compression": "tiff_lzw"},
+      "pdf": {"forbid_type3": true},
+      "max_file_mb": 10.0
+    },
+    "ieee-journal": {
+      "display_name": "IEEE journal graphics",
+      "style": "publication",
+      "verification": {
+        "state": "official_verified",
+        "last_verified_on": "2026-08-26",
+        "review_due_on": "2027-02-26",
+        "sources": [
+          {"title": "IEEE Resolution and Size", "url": "https://journals.ieeeauthorcenter.ieee.org/create-your-ieee-journal-article/create-graphics-for-your-article/resolution-and-size/", "accessed_on": "2026-08-26"},
+          {"title": "IEEE File Formatting", "url": "https://journals.ieeeauthorcenter.ieee.org/create-your-ieee-journal-article/create-graphics-for-your-article/file-formatting/", "accessed_on": "2026-08-26"}
+        ]
+      },
+      "dimensions": {
+        "width_targets_mm": {"single": 88.9, "double": 182.0},
+        "max_height_mm": 220.0,
+        "tolerance_mm": 0.6
+      },
+      "figure_types": {
+        "line_art": {"formats": ["pdf", "eps", "tiff", "png"], "raster_dpi": 600},
+        "photo": {"formats": ["tiff", "png"], "raster_dpi": 300},
+        "combination": {"formats": ["pdf", "eps", "tiff", "png"], "raster_dpi": 600}
+      },
+      "color": {"allowed_modes": ["RGB", "GRAYSCALE"], "alpha_allowed": false},
+      "tiff": {"compression": "tiff_lzw"},
+      "pdf": {"forbid_type3": true},
+      "max_file_mb": null
+    }
+  }
+}

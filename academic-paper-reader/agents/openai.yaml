@@ -1,4 +1,8 @@
 interface:
-  display_name: "学术论文深度拆解"
-  short_description: "深入拆解论文问题、机制、证据、局限与演化，并保存同目录报告"
-  default_prompt: "使用 $academic-paper-reader 深入拆解这篇论文，并将报告保存到源文件同目录。"
+  display_name: 学术论文深度拆解
+  short_description: 按研究类型核验版本、方法、数字、证据、局限与复现风险
+  default_prompt: 使用 $academic-paper-reader 对这篇论文做标准拆解，并为关键结论建立可回查的证据索引。
+  icon_small: assets/icon.svg
+  icon_large: assets/icon.svg
+policy:
+  allow_implicit_invocation: true

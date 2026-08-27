@@ -1,0 +1,8 @@
+interface:
+  display_name: STORM 深度研究
+  short_description: 多来源证据、冲突分析与红队复核驱动的复杂议题决策研究
+  icon_small: assets/icon.svg
+  icon_large: assets/icon.svg
+  default_prompt: 使用 $cognitive-storm-research 对一个复杂争议议题开展多来源研究，标明证据、冲突、未知项和证伪条件。
+policy:
+  allow_implicit_invocation: true

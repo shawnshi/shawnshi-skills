@@ -1,0 +1,8 @@
+interface:
+  display_name: Web Slide Builder
+  short_description: 构建、验证并交付可离线运行的浏览器 HTML 幻灯片
+  icon_small: assets/icon.svg
+  icon_large: assets/icon.svg
+  default_prompt: 使用 $tool-web-slide 构建并验证一份可在浏览器运行的 HTML 演示。
+policy:
+  allow_implicit_invocation: true

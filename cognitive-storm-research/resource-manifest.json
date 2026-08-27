@@ -1,33 +1,51 @@
 {
   "schema_version": 3,
   "skill": "cognitive-storm-research",
-  "generated_at": "2026-08-16T22:02:19",
+  "generated_at": "2026-08-27T20:05:46+08:00",
   "hash_algorithm": "SHA-256",
   "text_hash_normalization": "LF",
   "skill_md": "SKILL.md",
-  "skill_md_sha256": "50b9c02030bf50d8d030142155c58e8583e5c73c30c21e4dc0a8e1b142ad60d6",
+  "skill_md_sha256": "d3e354d7fde4a588be4d8227853fb29083f0017ac032436bb91ae3ee6b5fe6cb",
   "top_level_files": [
     "SKILL.md"
   ],
   "top_level_file_hashes": [
     {
       "path": "SKILL.md",
-      "sha256": "50b9c02030bf50d8d030142155c58e8583e5c73c30c21e4dc0a8e1b142ad60d6"
+      "sha256": "d3e354d7fde4a588be4d8227853fb29083f0017ac032436bb91ae3ee6b5fe6cb"
     }
   ],
   "top_level_directories": [
+    "agents",
+    "assets",
     "references"
   ],
   "resource_directories": [
     {
       "name": "references",
       "file_count": 1
+    },
+    {
+      "name": "assets",
+      "file_count": 1
+    },
+    {
+      "name": "agents",
+      "file_count": 1
     }
   ],
   "resource_file_hashes": [
     {
+      "path": "agents/openai.yaml",
+      "sha256": "a503c636c65a4f8e3afb1719d71789deaa041a89c1a48a941e63bc827ccc189d"
+    },
+    {
+      "path": "assets/icon.svg",
+      "sha256": "83edb7ff1fcb54461e60f8bab4147bf6e24b4f9bb9e5d29283c614f40b811039"
+    },
+    {
       "path": "references/storm_report_template.md",
-      "sha256": "5121ff74e59a67bfe1b54f79a62eb4ddf8e60e41ba7521aec4a82b1aa894694a"
+      "sha256": "2efa1af97b2112c6903d80ae17a7302ab46472a542cd861eeb190e71c579cf44"
     }
   ],
   "declared_local_dependencies": [
@@ -35,7 +53,7 @@
       "path": "references/storm_report_template.md",
       "exists": true,
       "resolved_path": "cognitive-storm-research/references/storm_report_template.md",
-      "sha256": "5121ff74e59a67bfe1b54f79a62eb4ddf8e60e41ba7521aec4a82b1aa894694a"
+      "sha256": "2efa1af97b2112c6903d80ae17a7302ab46472a542cd861eeb190e71c579cf44"
     }
   ],
   "missing_declared_dependencies": []

@@ -1,0 +1,37 @@
+{
+  "template_type": "er-diagram",
+  "style": 4,
+  "title": "Clinical Encounter Model",
+  "entities": [
+    {
+      "id": "patient",
+      "label": "Patient",
+      "attributes": [
+        {"name": "patient_id", "key": "PK", "type": "UUID"},
+        {"name": "name", "type": "VARCHAR"}
+      ]
+    },
+    {
+      "id": "encounter",
+      "label": "Encounter",
+      "attributes": [
+        {"name": "encounter_id", "key": "PK", "type": "UUID"},
+        {"name": "patient_id", "key": "FK", "type": "UUID"},
+        {"name": "started_at", "type": "TIMESTAMP"}
+      ]
+    },
+    {
+      "id": "diagnosis",
+      "label": "Diagnosis",
+      "attributes": [
+        {"name": "diagnosis_id", "key": "PK", "type": "UUID"},
+        {"name": "encounter_id", "key": "FK", "type": "UUID"},
+        {"name": "icd_code", "type": "VARCHAR"}
+      ]
+    }
+  ],
+  "relationships": [
+    {"from": "patient", "to": "encounter", "label": "has", "from_cardinality": "1", "to_cardinality": "0..*"},
+    {"from": "encounter", "to": "diagnosis", "label": "records", "cardinality": ["1", "0..*"]}
+  ]
+}

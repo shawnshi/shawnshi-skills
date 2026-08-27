@@ -1533,6 +1533,113 @@ def _validate_access_retry_policy(
             )
 
 
+_PATH_LOCAL_PERMANENT_ERROR_MARKERS = (
+    "TLS",
+    "SSL",
+    "CERTIFICATE",
+    "PROTOCOL",
+    "CURL_EXIT",
+)
+
+
+def _is_path_local_permanent_failure(access: dict[str, Any]) -> bool:
+    """Return whether a permanent failure is local to one access path.
+
+    HTTP responses remain URL-global. Only transport failures without an HTTP
+    response may be recovered once by another lane through a different method.
+    """
+    if (
+        access.get("status") != "blocked"
+        or access.get("failure_class") != "permanent"
+        or access.get("http_status") is not None
+    ):
+        return False
+    error_code = str(access.get("error_code") or "").upper()
+    return any(marker in error_code for marker in _PATH_LOCAL_PERMANENT_ERROR_MARKERS)
+
+
+def _validate_cross_lane_access_retry_policy(
+    ordered_access: list[tuple[str, str, int, dict[str, Any]]],
+    gap_lanes: dict[str, str],
+) -> list[dict[str, Any]]:
+    """Validate global retry policy with one bounded path-local recovery.
+
+    A different lane may recover a local TLS/transport failure through a
+    different access method. The original failure remains in coverage and the
+    recovery is recorded in the aggregate. Authoritative HTTP failures,
+    same-lane retries, same-method retries and repeated recovery attempts stay
+    fail-closed.
+    """
+    permanent_requests: dict[str, tuple[str, dict[str, Any]]] = {}
+    recovered_requests: set[str] = set()
+    recoveries: list[dict[str, Any]] = []
+    consecutive_host = ""
+    consecutive_count = 0
+    for index, (_checked_at, gap_id, _log_index, access) in enumerate(ordered_access):
+        requested_url = normalize_url(str(access.get("requested_url") or ""))
+        previous = permanent_requests.get(requested_url)
+        if previous is not None:
+            previous_gap, previous_access = previous
+            is_bounded_recovery = (
+                requested_url not in recovered_requests
+                and gap_id != previous_gap
+                and gap_lanes.get(gap_id) != gap_lanes.get(previous_gap)
+                and access.get("status") == "verified"
+                and access.get("method") != previous_access.get("method")
+                and _is_path_local_permanent_failure(previous_access)
+            )
+            if not is_bounded_recovery:
+                raise RunContractError(
+                    f"supplement result access_log[{index}] retries a permanent failure"
+                )
+            recoveries.append(
+                {
+                    "requested_url": requested_url,
+                    "failed_gap_id": previous_gap,
+                    "failed_method": previous_access.get("method"),
+                    "failure_code": previous_access.get("error_code"),
+                    "recovery_gap_id": gap_id,
+                    "recovery_method": access.get("method"),
+                }
+            )
+            recovered_requests.add(requested_url)
+            permanent_requests.pop(requested_url, None)
+            consecutive_host = ""
+            consecutive_count = 0
+            continue
+        if requested_url in recovered_requests:
+            raise RunContractError(
+                f"supplement result access_log[{index}] repeats a coordinated recovery"
+            )
+        http_status = access.get("http_status")
+        declared_class = access.get("failure_class")
+        is_permanent = access.get("status") == "blocked" and (
+            declared_class == "permanent"
+            or (
+                isinstance(http_status, int)
+                and not isinstance(http_status, bool)
+                and 400 <= http_status < 500
+                and http_status not in {408, 425, 429}
+            )
+        )
+        if not is_permanent:
+            consecutive_host = ""
+            consecutive_count = 0
+            continue
+        permanent_requests[requested_url] = (gap_id, deepcopy(access))
+        host = urlparse(requested_url).hostname or ""
+        if host == consecutive_host:
+            consecutive_count += 1
+        else:
+            consecutive_host = host
+            consecutive_count = 1
+        if consecutive_count > 2:
+            raise RunContractError(
+                f"supplement result access_log[{index}] exceeds permanent failure host limit"
+            )
+    return recoveries
+
+
 def register_supplement_results(
     manifest_path: str | Path,
     request_path: str | Path,
@@ -1811,7 +1918,10 @@ def register_supplement_results(
             raise RunContractError(
                 "supplement access chronology is ambiguous at an equal timestamp"
             )
-    _validate_access_retry_policy([entry[3] for entry in ordered_access])
+    cross_lane_recoveries = _validate_cross_lane_access_retry_policy(
+        ordered_access,
+        {gap_id: str(gap.get("lane") or "") for gap_id, gap in gaps.items()},
+    )
 
     if seen != set(gaps):
         missing = sorted(set(gaps) - seen)
@@ -1870,6 +1980,7 @@ def register_supplement_results(
         "status": aggregate_status,
         "completed_at": current.isoformat(),
         "coverage": coverage_total,
+        "cross_lane_recoveries": cross_lane_recoveries,
         "timing": timing,
         "results": sorted(results, key=lambda result: str(result["gap_id"])),
     }
@@ -1884,6 +1995,7 @@ def register_supplement_results(
         metadata={
             "gap_count": len(results),
             "coverage": coverage_total,
+            "cross_lane_recovery_count": len(cross_lane_recoveries),
             "result_status": aggregate_status,
             **timing,
         },
@@ -2166,6 +2278,24 @@ def build_review_request(
         request["execution_packet"]["bound_refined_path"] = str(
             refined_file.resolve()
         )
+        request["execution_packet"]["bound_semantic_receipt_path"] = str(
+            Path(semantic_receipt_path).resolve()
+        )
+        request["execution_packet"]["validation_command"] = [
+            "python",
+            "-X",
+            "utf8",
+            str((HUB_DIR / "scripts" / "run_daily.py").resolve()),
+            "validate-red-team-draft",
+            "--manifest",
+            str(Path(manifest_path).resolve()),
+            "--refined",
+            str(refined_file.resolve()),
+            "--semantic-receipt",
+            str(Path(semantic_receipt_path).resolve()),
+            "--red-team-receipt",
+            draft_paths["review_receipt"],
+        ]
         request.update(scope or {})
     request_path = Path(manifest["run_dir"]) / f"{review_kind}_review_request.json"
     stage_name = "semantic_review" if review_kind == "semantic" else "red_team"
@@ -2303,6 +2433,16 @@ def _validate_review_execution_paths(
                 Path(str(output_paths.get("review_receipt") or "")).resolve(),
             )
         )
+        if allow_draft_paths:
+            draft_paths = packet.get("draft_paths")
+            if not isinstance(draft_paths, dict):
+                raise RunContractError("review request draft_paths are missing")
+            accepted.append(
+                (
+                    bound_refined,
+                    Path(str(draft_paths.get("review_receipt") or "")).resolve(),
+                )
+            )
     if (refined, receipt) not in accepted:
         mode = "draft/output" if allow_draft_paths else "final output"
         raise RunContractError(
@@ -2781,6 +2921,36 @@ def validate_semantic_draft(
         raise RunContractError("semantic draft gate failed: " + "; ".join(errors))
     if sorted(item_hashes) != sorted(receipt.get("reviewed_item_hashes", [])):
         raise RunContractError("semantic draft reviewed item hashes mismatch")
+    return warnings
+
+
+def validate_red_team_draft(
+    manifest_path: str | Path,
+    refined_path: str | Path,
+    semantic_receipt_path: str | Path,
+    red_team_receipt_path: str | Path,
+) -> list[str]:
+    """Validate a red-team draft before immutable publication."""
+    warnings = validate_semantic_draft(
+        manifest_path,
+        refined_path,
+        semantic_receipt_path,
+    )
+    manifest = load_manifest(manifest_path)
+    receipt_file = Path(red_team_receipt_path)
+    _validate_review_execution_paths(
+        manifest,
+        "red_team",
+        refined_path,
+        receipt_file,
+        allow_draft_paths=True,
+    )
+    validate_review_receipt(
+        load_json(receipt_file, {}),
+        manifest_path,
+        refined_path,
+        expected_kind="red_team",
+    )
     return warnings
 
 

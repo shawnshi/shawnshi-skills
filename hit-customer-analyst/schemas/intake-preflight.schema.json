@@ -1,0 +1,269 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://winning-health.example/discovery-call/intake-preflight.schema.json",
+  "title": "discovery-call structured intake preflight",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schema",
+    "business_mode",
+    "candidate_sets",
+    "confirmations"
+  ],
+  "properties": {
+    "schema": {
+      "const": "discovery-call-intake/v1"
+    },
+    "request_id": {
+      "type": "string",
+      "pattern": "^[A-Za-z0-9._-]{3,128}$"
+    },
+    "business_mode": {
+      "enum": [
+        "briefing",
+        "standard_visit",
+        "strategic_account",
+        "letter"
+      ]
+    },
+    "candidate_sets": {
+      "type": "array",
+      "minItems": 1,
+      "items": {
+        "$ref": "#/$defs/candidate_set"
+      }
+    },
+    "confirmations": {
+      "type": "array",
+      "maxItems": 0,
+      "description": "模型可写intake不得内嵌自报确认；冲突须由认证宿主核验后重建单一候选intake。",
+      "items": {
+        "$ref": "#/$defs/confirmation"
+      }
+    }
+  },
+  "$defs": {
+    "field": {
+      "enum": [
+        "customer_name",
+        "organization_scope",
+        "target_person",
+        "target_role",
+        "target_contact_level",
+        "meeting_status",
+        "meeting_time",
+        "project_id",
+        "recipient_identity",
+        "recipient_role",
+        "visit_objective",
+        "minimum_next_step",
+        "strategic_question",
+        "planning_horizon",
+        "strategy_variant",
+        "letter_scenario",
+        "letter_purpose",
+        "expected_action",
+        "signer",
+        "delivery_channel"
+      ]
+    },
+    "time_range": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "start",
+        "end"
+      ],
+      "properties": {
+        "start": {
+          "type": "string",
+          "format": "date-time"
+        },
+        "end": {
+          "type": "string",
+          "format": "date-time"
+        },
+        "timezone": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 100
+        }
+      }
+    },
+    "candidate": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "candidate_id",
+        "value",
+        "status",
+        "source_ref"
+      ],
+      "properties": {
+        "candidate_id": {
+          "type": "string",
+          "pattern": "^[A-Za-z0-9._-]{3,128}$"
+        },
+        "value": {
+          "oneOf": [
+            {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 500
+            },
+            {
+              "$ref": "#/$defs/time_range"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "status": {
+          "enum": [
+            "asserted",
+            "explicit_unknown"
+          ]
+        },
+        "source_ref": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 500
+        }
+      },
+      "allOf": [
+        {
+          "if": {
+            "properties": {
+              "status": {
+                "const": "explicit_unknown"
+              }
+            },
+            "required": [
+              "status"
+            ]
+          },
+          "then": {
+            "properties": {
+              "value": {
+                "type": "null"
+              }
+            }
+          },
+          "else": {
+            "properties": {
+              "value": {
+                "oneOf": [
+                  {
+                    "type": "string",
+                    "minLength": 1,
+                    "maxLength": 500
+                  },
+                  {
+                    "$ref": "#/$defs/time_range"
+                  }
+                ]
+              }
+            }
+          }
+        }
+      ]
+    },
+    "candidate_set": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "field",
+        "candidates"
+      ],
+      "properties": {
+        "field": {
+          "$ref": "#/$defs/field"
+        },
+        "candidates": {
+          "type": "array",
+          "minItems": 1,
+          "items": {
+            "$ref": "#/$defs/candidate"
+          }
+        }
+      },
+      "allOf": [
+        {
+          "if": {
+            "properties": {
+              "field": {
+                "const": "meeting_status"
+              }
+            },
+            "required": [
+              "field"
+            ]
+          },
+          "then": {
+            "properties": {
+              "candidates": {
+                "items": {
+                  "properties": {
+                    "value": {
+                      "enum": [
+                        "confirmed",
+                        "tentative",
+                        "none",
+                        "unknown"
+                      ]
+                    },
+                    "status": {
+                      "const": "asserted"
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      ]
+    },
+    "confirmation": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "field",
+        "selected_candidate_ids",
+        "allow_multiple",
+        "confirmed_by",
+        "confirmed_at",
+        "confirmation_ref"
+      ],
+      "properties": {
+        "field": {
+          "$ref": "#/$defs/field"
+        },
+        "selected_candidate_ids": {
+          "type": "array",
+          "minItems": 1,
+          "uniqueItems": true,
+          "items": {
+            "type": "string",
+            "pattern": "^[A-Za-z0-9._-]{3,128}$"
+          }
+        },
+        "allow_multiple": {
+          "type": "boolean"
+        },
+        "confirmed_by": {
+          "const": "user"
+        },
+        "confirmed_at": {
+          "type": "string",
+          "format": "date-time"
+        },
+        "confirmation_ref": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 500
+        }
+      }
+    }
+  }
+}

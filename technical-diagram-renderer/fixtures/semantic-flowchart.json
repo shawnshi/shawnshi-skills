@@ -1,0 +1,21 @@
+{
+  "template_type": "flowchart",
+  "style": 1,
+  "title": "Referral Review Flow",
+  "steps": [
+    {"id": "start", "type": "start", "label": "Start"},
+    {"id": "capture", "type": "process", "label": "Capture referral"},
+    {"id": "complete", "type": "decision", "label": "Information complete?"},
+    {"id": "schedule", "type": "process", "label": "Schedule visit"},
+    {"id": "return", "type": "process", "label": "Return for correction"},
+    {"id": "end", "type": "end", "label": "End"}
+  ],
+  "flows": [
+    {"from": "start", "to": "capture"},
+    {"from": "capture", "to": "complete"},
+    {"from": "complete", "to": "schedule", "label": "Yes"},
+    {"from": "complete", "to": "return", "label": "No"},
+    {"from": "schedule", "to": "end"},
+    {"from": "return", "to": "end"}
+  ]
+}

@@ -1,31 +1,106 @@
-# Blueprint-Only Workflows
+# Narrative workflows
 
-## Standard Flow
+先选一个主模式，再按受众和时长删减。不要把下列顺序机械地变成目录；每一页都要推动听众完成一次理解或决定。
 
-1. Draft `outline.md` using `references/outline-template.md`.
-2. Validate it:
-   ```bash
-   python scripts/validator.py path\to\outline.md
-   ```
-   Use `--allow-placeholders` only when checking the reusable template itself.
-3. Package the validated final outline:
-   ```bash
-   python scripts/build-deck.py path\to\deck-dir
-   ```
-4. Review `blueprint_bundle.json` and the validated `outline.md`.
+## Decision
 
-## Revision Flow
+**适用**：立项、预算、方案选择、治理授权、阶段闸门。
 
-When revising a deck:
-1. Edit `outline.md`
-2. Re-run the validator
-3. Re-run `build-deck.py`
+1. 决策为何现在必须发生
+2. 已核实的现状与约束
+3. 选项及统一比较维度
+4. 推荐方案及证据
+5. 成本、收益、风险与依赖
+6. 实施边界与近期动作
+7. 明确请求：谁在何时决定什么
 
-## Output
+终点优先使用 `Decision`。不要把推荐方案伪装成唯一客观答案。
 
-The workflow only emits blueprint assets:
+## Strategy
 
-- `outline.md`
-- `blueprint_bundle.json`
+**适用**：战略规划、三年路线图、能力建设、转型方案。
 
-No slide image generation or PPTX assembly is part of this workflow. Build a physical `.pptx` with an available presentation capability after the blueprint passes validation.
+1. 外部变化与业务使命
+2. 当前能力与关键差距
+3. 战略原则与目标状态
+4. 核心能力或重点方向
+5. 组合优先级与取舍
+6. 分期路线图、指标和治理
+7. 需要确认的战略边界或资源承诺
+
+长篇规划可在主体后增加 `Appendix` 和 `References`，但不能用附录掩盖主线缺口。
+
+## Status
+
+**适用**：周报、月报、委员会进展汇报、项目复盘。
+
+1. 结论先行：整体状态与本期变化
+2. 目标、里程碑和实际结果
+3. 偏差及已验证原因
+4. 风险、依赖和待协调事项
+5. 下期动作、责任人和日期
+6. 需要升级或决策的事项
+
+只报告“做了什么”通常不够；必须说明对目标、时间、预算或质量的影响。
+
+## Proposal
+
+**适用**：咨询提案、售前方案、合作建议、项目建议书。
+
+1. 客户目标与问题定义
+2. 当前约束和成功标准
+3. 建议方法与范围边界
+4. 工作包、交付物和验收方式
+5. 团队、计划和协作机制
+6. 商务假设、依赖和风险
+7. 最小下一步
+
+不得用未经核实的客户痛点、案例收益或承诺数字制造紧迫感。
+
+## Educational
+
+**适用**：培训、知识分享、方法讲解、课程材料。
+
+1. 学习目标与前置知识
+2. 核心概念和边界
+3. 机制或步骤拆解
+4. 贯穿案例
+5. 常见误区与反例
+6. 练习、检查或迁移应用
+7. 总结与下一步学习
+
+结尾可以是 `Closing`，无需人为制造商业决策。
+
+## Single-slide
+
+**适用**：一页结论、一页架构、一页路线图、一页决策卡。
+
+1. 先定义唯一页面任务。
+2. 选择除 `Appendix`、`References` 外最贴切的页面类型。
+3. 用一个标题、一个 Takeaway、一个主视觉完成主线。
+4. 事实、证据、开放项和风险仍按 v2 记录，不因为只有一页而降低标准。
+
+单页不需要伪造 `Cover` 或 `Closing`。
+
+## Revision
+
+**适用**：重构既有 PPT、大纲或逐页内容。
+
+1. 建立页面清单：`Slide_ID`、当前任务、证据、受众价值、处理决定。
+2. 标记 `keep / rewrite / merge / split / move / remove / add`。
+3. 先修复故事线和证据链，再调整版式和视觉。
+4. 保持 `Slide_ID` 稳定；新增页生成新 ID，删除页不复用旧 ID。
+5. 对标题、数字、引用、风险和品牌资产做变更审计。
+6. 重新校验完整蓝图；需要实际 PPT 时再执行 JSON handoff 和物理 QA。
+
+## Mode selection
+
+| 用户真正要完成的事 | 主模式 |
+|---|---|
+| 批准、选择或授权 | `decision` |
+| 对齐未来方向与投资组合 | `strategy` |
+| 判断进度、偏差与下一步 | `status` |
+| 争取客户或合作方接受方案 | `proposal` |
+| 帮助听众掌握知识或方法 | `educational` |
+| 只交付一页 | `single-slide` |
+| 改造已有材料 | `revision`，并叠加最接近的业务模式 |

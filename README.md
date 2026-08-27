@@ -92,7 +92,7 @@ description: 说明技能做什么，以及用户在什么场景下应使用它�
 
 ## 5. Skill inventory
 
-当前库存为 50 个用户技能，不包含 `.system`、`scripts`、`shared`、`examples` 和 `reports`。功能说明取自各技能 `SKILL.md` 的当前 `description`。
+当前库存为 53 个用户技能，不包含 `.system`、`scripts`、`shared`、`examples` 和 `reports`。功能说明取自各技能 `SKILL.md` 的当前 `description`。
 
 ### Academic and cognitive research
 
@@ -110,6 +110,8 @@ description: 说明技能做什么，以及用户在什么场景下应使用它�
 | `cognitive-morphism-mapper` | 把业务或组织问题抽象为对象、关系和约束，再映射到控制论、生态学、博弈论等成熟领域，借用可验证机制生成跨领域方案 |
 | `cognitive-personal-roundtable` | 用彼此有张力的分析视角对复杂议题进行结构化圆桌辩论，呈现冲突、共识、遗漏变量和决策选项 |
 | `cognitive-storm-research` | 对复杂、争议或高风险议题开展多来源深度研究，建立事实底座、比较互相冲突的视角、进行红队复核并形成带引用的综合报告 |
+| `industry-strategy-analyst` | 以公开且可追溯的证据开展行业与市场研究，形成市场边界、规模、需求、价值链、竞争格局、供应商比较、情景预测、风险和可执行建议 |
+| `senior-osint-analyst` | 以合法公开来源开展政策、行业、企业、技术、供应链、地区或重大事件的开源情报研究，执行实体与时效核验、交叉验证和替代假设分析 |
 
 ### Healthcare strategy
 
@@ -128,6 +130,7 @@ description: 说明技能做什么，以及用户在什么场景下应使用它�
 |---|---|
 | `image-promp-gen` | 将简短主题转化为适合海报、书籍封面、专辑封面、文章配图和社交媒体视觉的平面设计图像提示词，擅长丝网印刷、负空间、象征构图和有限色板 |
 | `image-studio-architect` | 使用当前图像生成能力创建或编辑海报、封面、插画、概念图、社交媒体图片和其他视觉资产，并根据输入完整度补足构图、色彩、光线、材质与画幅 |
+| `magazine-illustrator` | 为文章、博客、公众号、报告和演示文稿设计并直接生成杂志式位图插画，包括头图、封面、章节插图、系列配图和可复制的图像生成提示词 |
 | `mentat-collaboration-audit` | 基于真实会话记录、日志、工具调用和遥测事件审计系统效率与人机协作摩擦，复算等待、技能载入、错误重试、子代理Token、上下文压缩和写入授权指标，并按需生成Markdown报告和HTML审计面板 |
 | `mentat-dream-cycle` | 以审计、预览和事务化方式检查临时文件、热记忆、失败日志及知识图谱待治理项，生成可执行的清理与归档建议，并在获得明确授权后执行限定范围的安全维护 |
 | `mentat-insight-diary` | 将真实发生的系统事件、执行摩擦、失败、权衡和改进动作整理为OODA结构的内观审计日志，并在生成或更新日志时默认原子保存到权威季度档案 |
@@ -158,7 +161,7 @@ description: 说明技能做什么，以及用户在什么场景下应使用它�
 | `tool-blogger-publisher` | 将 Markdown 转换为适合 Google Blogger、微信公众号和邮件订阅系统粘贴或导入的内联样式 HTML 片段，并校验结构、链接、图片和基础安全 |
 | `tool-concept-synthesis` | 跨来源梳理概念、实体与关系，形成有证据支撑的体系图和战略长文 |
 | `tool-document-summarizer` | 提取医疗信息化、商业方案、招标材料和政策文件的结构化摘要与标签 |
-| `tool-drawio` | 将系统架构、流程、数据流、时序、状态和实体关系转换为结构化 JSON 与可验证 SVG |
+| `technical-diagram-renderer` | 将已确认的系统关系或流程描述规范化为结构化 JSON，并生成经过结构与安全校验的静态 SVG 技术图，按需单向导出基础 `.drawio`/mxGraph 文件 |
 | `tool-markdown-converter` | 将 PDF、Office、HTML、富文本和杂乱笔记转换为结构清晰的 Markdown |
 | `tool-slide-architect` | 设计高管汇报、咨询路演和决策型演示文稿的叙事结构、逐页蓝图与讲稿 |
 | `tool-smart-latex` | 将 Markdown 或结构化内容转换为 LaTeX，并在环境允许时编译为 PDF |
@@ -180,7 +183,7 @@ description: 说明技能做什么，以及用户在什么场景下应使用它�
 - 单页网页演示：`tool-web-slide`
 - 位图提示词：`image-promp-gen`
 - 位图生成或编辑：`image-studio-architect`
-- 系统结构图：`tool-drawio`
+- 系统结构图：`technical-diagram-renderer`
 - 单篇论文：`academic-paper-reader`
 - 多源横纵研究：`cognitive-hv-analysis`
 - 多视角证据研究：`cognitive-storm-research`
@@ -239,4 +242,4 @@ pwsh -NoProfile -ExecutionPolicy Bypass -File scripts/repair_skills.ps1 -Mode Ga
 
 禁止在维护流程中重新生成 `skill.json`。旧工具如果仍依赖该文件，应修订或移除该工具，不得恢复双重真相源。
 
-Last updated: 2026-08-16
+Last updated: 2026-08-27

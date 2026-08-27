@@ -1,0 +1,34 @@
+{
+  "schemaVersion": "1.0.0",
+  "attribute": "data-layout",
+  "layouts": [
+    {"id":"hero","label":"Hero / 封面主张","themes":["magazine","swiss","winning-clinical"],"componentClass":"layout-hero","description":"单一主张、封面或章节页。"},
+    {"id":"split","label":"Split / 左右分屏","themes":["magazine","swiss","winning-clinical"],"componentClass":"layout-split","description":"图片与正文或两种观点的1:1分屏。"},
+    {"id":"tri-grid","label":"Tri Grid / 三列网格","themes":["magazine","swiss","winning-clinical"],"componentClass":"layout-tri-grid","description":"三个同层级观点、案例或指标。"},
+    {"id":"focus","label":"Focus / 黄金聚焦","themes":["magazine","swiss","winning-clinical"],"componentClass":"layout-focus","description":"1:2:1结构，中心承载核心视觉。"},
+    {"id":"kpi-scene","label":"KPI Scene / 场景指标","themes":["magazine","swiss","winning-clinical"],"componentClass":"layout-kpi-scene","description":"满版场景图与悬浮信息。"},
+    {"id":"z-pattern","label":"Z Pattern / 图文交替","themes":["magazine","swiss","winning-clinical"],"componentClass":"layout-z-pattern","description":"两列多行的Z形阅读路径。"},
+    {"id":"gallery","label":"Gallery / 四列阵列","themes":["magazine","swiss","winning-clinical"],"componentClass":"layout-gallery","description":"同构图片、团队、产品或案例阵列。"},
+    {"id":"architecture","label":"Architecture / 分层架构","themes":["magazine","swiss","winning-clinical"],"componentClass":"layout-architecture","description":"自上而下的层级架构。"},
+    {"id":"pathway","label":"Pathway / 水平流程","themes":["magazine","swiss","winning-clinical"],"componentClass":"layout-pathway","description":"患者旅程、数据流或业务流程。"},
+    {"id":"comparison","label":"Comparison / 不对称对比","themes":["magazine","swiss","winning-clinical"],"componentClass":"layout-comparison","description":"改造前后、问题方案或投入收益对比。"},
+    {"id":"cdss-matrix","label":"CDSS Matrix / 干预矩阵","themes":["winning-clinical"],"componentClass":"layout-cdss-matrix","description":"临床阶段与决策干预二维矩阵。"},
+    {"id":"emr-radar","label":"EMR Radar / 能力雷达","themes":["winning-clinical"],"componentClass":"layout-emr-radar","description":"电子病历能力现状与目标对标。"},
+    {"id":"data-lake-funnel","label":"Data Lake Funnel / 数据提纯","themes":["winning-clinical"],"componentClass":"layout-data-lake-funnel","description":"异构数据源到标准数据资产的收敛。"},
+    {"id":"policy-grid","label":"Policy Grid / 政策映射","themes":["winning-clinical"],"componentClass":"layout-policy-grid","description":"政策条款、系统能力与状态对应。"},
+    {"id":"multi-campus","label":"Multi Campus / 一院多区","themes":["winning-clinical"],"componentClass":"layout-multi-campus","description":"中心平台与院区节点拓扑。"},
+    {"id":"tri-terminal","label":"Tri Terminal / 医护患三端","themes":["winning-clinical"],"componentClass":"layout-tri-terminal","description":"医生、护士与患者三端业务并列。"},
+    {"id":"rag-traceability","label":"RAG Traceability / 证据链","themes":["winning-clinical"],"componentClass":"layout-rag-traceability","description":"问题、知识边界和有引用输出的链路。"},
+    {"id":"drg-matrix","label":"DRG Matrix / 价值成本","themes":["winning-clinical"],"componentClass":"layout-drg-matrix","description":"临床价值与资源消耗的二维矩阵。"},
+    {"id":"hl7-bus","label":"HL7 Bus / 集成总线","themes":["winning-clinical"],"componentClass":"layout-hl7-bus","description":"业务系统与集成平台的上下挂载拓扑。"},
+    {"id":"pdca-loop","label":"PDCA Loop / 质控闭环","themes":["winning-clinical"],"componentClass":"layout-pdca-loop","description":"计划、执行、检查和改进闭环。"},
+    {"id":"patient-journey","label":"Patient Journey / 患者旅程","themes":["winning-clinical"],"componentClass":"layout-patient-journey","description":"健康、诊疗、康复和随访时间轴。"}
+  ],
+  "modifiers": [
+    {"id":"float-card","label":"Float Card / 浮动卡片","themes":["magazine","swiss","winning-clinical"],"componentClass":"mod-float-card","description":"大图上的半透明注解卡。"},
+    {"id":"huge-quote","label":"Huge Quote / 巨型引号","themes":["magazine","swiss","winning-clinical"],"componentClass":"mod-huge-quote","description":"低透明度引号底纹。"},
+    {"id":"data-badge","label":"Data Badge / 数据徽章","themes":["magazine","swiss","winning-clinical"],"componentClass":"mod-data-badge","description":"单一关键数字的高对比徽章。"},
+    {"id":"duotone","label":"Duotone / 双色调","themes":["magazine","swiss","winning-clinical"],"componentClass":"mod-duotone","description":"将照片收敛到主题色。"},
+    {"id":"scrim","label":"Scrim / 渐变遮罩","themes":["magazine","swiss","winning-clinical"],"componentClass":"mod-scrim","description":"提升大图上文字可读性。"}
+  ]
+}

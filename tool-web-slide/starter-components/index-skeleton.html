@@ -1,42 +1,32 @@
-<!DOCTYPE html>
-<html lang="zh-CN">
+<!doctype html>
+<html lang="{{LANG}}" data-theme="{{THEME}}" data-aspect="{{ASPECT}}" data-deck-width="{{DECK_WIDTH}}" data-deck-height="{{DECK_HEIGHT}}" data-target-browser="{{TARGET_BROWSER}}" data-target-os="{{TARGET_OS}}" data-delivery-profile="{{DELIVERY_PROFILE}}" data-evidence-policy="{{EVIDENCE_POLICY}}" data-offline-required="{{OFFLINE_REQUIRED}}">
 <head>
-<meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Presentation Title</title>
-<link rel="preconnect" href="https://fonts.googleapis.com">
-<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link href="https://fonts.googleapis.com/css2?family=Inter:wght@200;300;400;500;600;700;800;900&family=JetBrains+Mono:wght@300;400;500;600&family=Noto+Sans+SC:wght@200;300;400;500;700;900&display=swap" rel="stylesheet">
-
-  <link rel="stylesheet" href="./assets/core.css">
-  <!-- STYLE_CSS_HERE -->
-  <!-- NOTE: Add the specific style CSS here, e.g., <link rel="stylesheet" href="./assets/winning.css"> -->
-  <!-- You can also inject <style> tags here to define brand colors or override design systems. -->
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="referrer" content="no-referrer">
+  <meta name="web-slide-aspect" content="{{ASPECT}}">
+  <title>{{TITLE}}</title>
+  <!-- WEB_SLIDE_STYLES -->
 </head>
-<body class="canvas-mode">
-
-<!-- ========== CONTROL BAR ========== -->
-<div id="ctrl-bar">
-  <div class="ctrl-logo">Presentation</div>
-  <div class="ctrl-actions">
-    <span class="ctrl-hint" id="mode-hint">当前：演示模式</span>
-    <button class="ctrl-btn" id="btn-doc" onclick="setMode('doc')">📄 阅读模式</button>
-    <button class="ctrl-btn active" id="btn-pres" onclick="setMode('pres')">▶ 演示模式</button>
-    <button class="ctrl-btn" id="btn-fs" onclick="toggleFullscreen()" title="全屏">⛶ 全屏</button>
+<body class="canvas-mode" data-theme="{{THEME}}" data-aspect="{{ASPECT}}" data-deck-width="{{DECK_WIDTH}}" data-deck-height="{{DECK_HEIGHT}}" data-target-browser="{{TARGET_BROWSER}}" data-target-os="{{TARGET_OS}}" data-delivery-profile="{{DELIVERY_PROFILE}}" data-evidence-policy="{{EVIDENCE_POLICY}}" data-offline-required="{{OFFLINE_REQUIRED}}" data-slide-count="{{SLIDE_COUNT}}">
+  <div id="ctrl-bar" aria-label="演示控制栏">
+    <div class="ctrl-logo">{{TITLE}}</div>
+    <div class="ctrl-actions">
+      <span class="ctrl-hint" id="mode-hint">当前：演示模式</span>
+      <button class="ctrl-btn" id="btn-doc" type="button">📄 阅读模式</button>
+      <button class="ctrl-btn active" id="btn-pres" type="button">▶ 演示模式</button>
+      <button class="ctrl-btn" id="btn-fs" type="button" title="全屏">⛶ 全屏</button>
+    </div>
   </div>
-</div>
 
-<canvas id="bg-grid" class="bg"></canvas>
-<div id="hint">← → 翻页 · B 静态 · ESC 索引</div>
+  <canvas id="bg-grid" class="bg" aria-hidden="true"></canvas>
+  <div id="hint">← → 翻页 · B 静态 · ESC 索引</div>
 
-<div id="deck">
-<!-- SLIDES_HERE -->
-<!-- NOTE: Replace this comment with the actual `<section class="slide">` elements -->
-</div>
+  <main id="deck" aria-label="{{TITLE}}">
+    <!-- WEB_SLIDE_SLIDES -->
+  </main>
+  <nav id="nav" aria-label="幻灯片导航"></nav>
 
-<div id="nav"></div>
-
-<script src="https://unpkg.com/lucide@latest/dist/umd/lucide.min.js"></script>
-<script src="./assets/slide-engine.js"></script>
+  <!-- WEB_SLIDE_SCRIPTS -->
 </body>
 </html>

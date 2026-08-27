@@ -1,0 +1,90 @@
+{
+  "schema_version": 3,
+  "skill": "industry-strategy-analyst",
+  "generated_at": "2026-08-27T20:05:46+08:00",
+  "hash_algorithm": "SHA-256",
+  "text_hash_normalization": "LF",
+  "skill_md": "SKILL.md",
+  "skill_md_sha256": "cfdd9a6f292dc4554e4c78caed05aeacd8ac92cef64322403628d12a6d4f48fe",
+  "top_level_files": [
+    "SKILL.md"
+  ],
+  "top_level_file_hashes": [
+    {
+      "path": "SKILL.md",
+      "sha256": "cfdd9a6f292dc4554e4c78caed05aeacd8ac92cef64322403628d12a6d4f48fe"
+    }
+  ],
+  "top_level_directories": [
+    "agents",
+    "assets",
+    "references"
+  ],
+  "resource_directories": [
+    {
+      "name": "references",
+      "file_count": 4
+    },
+    {
+      "name": "assets",
+      "file_count": 1
+    },
+    {
+      "name": "agents",
+      "file_count": 1
+    }
+  ],
+  "resource_file_hashes": [
+    {
+      "path": "agents/openai.yaml",
+      "sha256": "bbce2e038464db2cacfc09b4044f29acada11d73b58b86ab9a7258d99074e088"
+    },
+    {
+      "path": "assets/icon.svg",
+      "sha256": "e9301497fa98ef56aaca7ede0857b9a18dc06c34040f0679c609a6bf49b1d38b"
+    },
+    {
+      "path": "references/market-sizing-and-forecasting.md",
+      "sha256": "5f467f6f1a228eaf91093d0c5a00f54600192e13fa61a53bf2cb71c9e661f348"
+    },
+    {
+      "path": "references/output-patterns.md",
+      "sha256": "9b859abf74646c610dfd5e2391c8c575c1af25fe11c652296823840abaa5a050"
+    },
+    {
+      "path": "references/research-protocol.md",
+      "sha256": "be77d5bbe80e778f09aadd096ffabc144587b16dec6991a7502e951627689eac"
+    },
+    {
+      "path": "references/vendor-evaluation.md",
+      "sha256": "38b3c03df98ad5cd5373cd4d3c358837c59a1edbff11b0738feea50769cdfab2"
+    }
+  ],
+  "declared_local_dependencies": [
+    {
+      "path": "references/market-sizing-and-forecasting.md",
+      "exists": true,
+      "resolved_path": "industry-strategy-analyst/references/market-sizing-and-forecasting.md",
+      "sha256": "5f467f6f1a228eaf91093d0c5a00f54600192e13fa61a53bf2cb71c9e661f348"
+    },
+    {
+      "path": "references/output-patterns.md",
+      "exists": true,
+      "resolved_path": "industry-strategy-analyst/references/output-patterns.md",
+      "sha256": "9b859abf74646c610dfd5e2391c8c575c1af25fe11c652296823840abaa5a050"
+    },
+    {
+      "path": "references/research-protocol.md",
+      "exists": true,
+      "resolved_path": "industry-strategy-analyst/references/research-protocol.md",
+      "sha256": "be77d5bbe80e778f09aadd096ffabc144587b16dec6991a7502e951627689eac"
+    },
+    {
+      "path": "references/vendor-evaluation.md",
+      "exists": true,
+      "resolved_path": "industry-strategy-analyst/references/vendor-evaluation.md",
+      "sha256": "38b3c03df98ad5cd5373cd4d3c358837c59a1edbff11b0738feea50769cdfab2"
+    }
+  ],
+  "missing_declared_dependencies": []
+}

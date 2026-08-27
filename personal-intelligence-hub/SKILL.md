@@ -65,7 +65,7 @@ python -X utf8 scripts/run_daily.py prepare --report-date YYYY-MM-DD --timezone 
 
 每个代理必须先处理绑定的基线候选，再补充检索；不得绕过基线直接做开放式搜索。当前资讯必须联网核验，优先监管、政府、公司公告、采购原文、论文、标准和项目主页。新闻与评论只作线索或独立佐证。
 
-补检不得对同一 URL 的永久失败做同参数重试；同一主机连续两次永久失败后必须切换到另一类优先来源，并把失败保留在 `access_log`，不得通过删除失败记录美化覆盖率。只有瞬时超时、限流或可重试 HTTP 状态可在轮次预算内重试；达到 gap 的合格增量或连续检索无增量时立即停止。
+补检不得在同一 gap 内对同一 URL 的永久失败做重试；HTTP 永久响应在所有 gap 中都不得重试。若某次永久失败没有 HTTP 响应，且错误码明确指向本地 TLS、SSL、证书、协议或 curl 传输路径故障，另一 lane 可用不同访问方法做一次恢复核验；必须保留原失败、把聚合覆盖标为 `degraded` 并登记 cross-lane recovery，禁止同 lane、同方法或再次恢复。同一主机连续两次永久失败后必须切换到另一类优先来源，并把失败保留在 `access_log`，不得通过删除失败记录美化覆盖率。只有瞬时超时、限流或可重试 HTTP 状态可在轮次预算内重试；达到 gap 的合格增量或连续检索无增量时立即停止。
 
 每个结果必须符合 `supplement-result/1.0`，原样返回：
 
@@ -83,7 +83,7 @@ python -X utf8 scripts/run_daily.py prepare --report-date YYYY-MM-DD --timezone 
 python -X utf8 scripts/run_daily.py register-supplement --manifest <run_manifest.json> --request <supplement_request.json> --result <lane-1.json> --result <lane-2.json>
 ```
 
-等待代理时先完成本地可并行的确定性检查，以原子发布后的 `artifact_ready` 控制消息为主信号。语义代理在输入哈希验证后发送 `review_progress seq=1 phase=input_validated`，在候选选择、血缘与回执映射完成后发送 `review_progress seq=2 phase=lineage_ready`；红队在输入哈希验证后发送 `review_progress seq=1 phase=input_validated`。心跳不得包含候选、结论或回执正文。
+等待代理时先完成本地可并行的确定性检查，以原子发布后的 `artifact_ready` 控制消息为主信号。补检代理在输入哈希验证后发送 `supplement_progress seq=1 phase=input_validated`，在完成允许的来源访问、进入合同自检前发送 `supplement_progress seq=2 phase=source_checked`；新序号属于可比较的状态变化并清零该代理的连续静止等待计数。语义代理在输入哈希验证后发送 `review_progress seq=1 phase=input_validated`，在候选选择、血缘与回执映射完成后发送 `review_progress seq=2 phase=lineage_ready`；红队在输入哈希验证后发送 `review_progress seq=1 phase=input_validated`。心跳不得包含候选、结论或回执正文。
 
 每个阶段最多允许两次、每次不超过 60 秒的 `wait_agent`；若两次都没有新的 `artifact_ready`、阻断消息或可比较的代理状态变化，只允许一次 `list_agents`、一次下述文件观察，并在运行日志可读时读取一次仅含最新事件 ordinal、时间戳、工具调用计数和已收到里程碑序号的进度指纹。把该指纹交给 `scripts/review_progress_gate.py` 的阶段专属状态文件；它以原子状态机返回 `continue_wait`、`send_reminder`、`verify_artifact` 或 `declare_lost`。`running` 且进度指纹增长表示进展，必须继续等待；单凭超时、没有正式文件或仍为 `running` 不得判定失联或中止代理。为防无效工具循环无限续期，同一里程碑内最多允许 15 次增长检查；达到上限后发送定向提醒，提醒后连续三次仍无新里程碑则执行 `declare_lost`。代理明确失败/退出或提醒后连续三次静止也由状态机判为 `declare_lost`。穿插本地工作、发送说明或缩短单次等待不会重置预算；只有新控制里程碑才清零无里程碑增长计数。
 
@@ -155,9 +155,15 @@ refined core 与语义回执通过上述校验后先登记红队请求，再把�
 python -X utf8 scripts/run_daily.py prepare-review --manifest <run_manifest.json> --kind red_team --refined <refined_core.json> --semantic-receipt <semantic_receipt.json> --max-turns 2
 ```
 
-请求会确定性写入 `review_mode`、L4 条目哈希和重大资讯哈希。没有 L4 时，`review_mode=no_l4_fast_path` 且 `max_turns=1`：独立 RedTeam 只复核绑定哈希、无 L4 事实、重大资讯资格、日期/来源独立性与行动时序，复用登记证据且不得联网扩展事件，随后生成 `not_required` 空覆盖回执。存在 L4 时使用完整红队路径，但仍优先复用登记证据，仅在冲突时补充核验。
+请求会确定性写入 `review_mode`、L4 条目哈希和重大资讯哈希。没有 L4 时，`review_mode=no_l4_fast_path` 且 `max_turns=1`：独立 RedTeam 只复核绑定哈希、无 L4 事实、重大资讯资格、日期/来源独立性与行动时序，复用登记证据且不得联网扩展事件，随后生成 `not_required` 空覆盖 draft。存在 L4 时使用完整红队路径，但仍优先复用登记证据，仅在冲突时补充核验。
 
-红队回执必须原样返回 request SHA-256、challenge、reviewer/invocation 标识、轮次与停止状态。不得修改 refined 后继续使用旧请求或回执。产物稳定后直接登记两份回执；登记命令会在写入阶段状态前重新验证两者：
+红队回执必须原样返回 request SHA-256、challenge、reviewer/invocation 标识、轮次与停止状态。不得修改 refined 后继续使用旧请求或回执。RedTeam 必须先写入请求指定的 draft path，再执行请求内的 `validation_command`；等价命令如下：
+
+```powershell
+python -X utf8 scripts/run_daily.py validate-red-team-draft --manifest <run_manifest.json> --refined <refined_core.json> --semantic-receipt <semantic_receipt.json> --red-team-receipt <red_team_receipt.draft.json>
+```
+
+只有 draft gate 返回 `status=valid` 才可原子提升到最终 `red_team_receipt.json` 并发送 `artifact_ready`。产物稳定后登记两份回执；登记命令会在写入阶段状态前重新验证两者：
 
 ```powershell
 python -X utf8 scripts/run_daily.py register-review --manifest <run_manifest.json> --refined <refined_core.json> --semantic-receipt <semantic_receipt.json> --red-team-receipt <red_team_receipt.json>

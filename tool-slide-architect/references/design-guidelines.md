@@ -1,227 +1,70 @@
-# Design Guidelines
+# Design guidelines
 
-Detailed design principles for slide decks.
+设计服务于理解、比较和决定。不要用装饰掩盖论证缺口。
 
-## Audience Guidelines
+## Select a system
 
-Design decisions adapt to target audience. Use `--audience` to set.
+1. 若用户提供品牌模板，以已授权的 `Template_Ref` 为先，并记录不可更改规则。
+2. 否则从 [styles/index.json](styles/index.json) 选择一个 `Style_ID`，只读取对应样式文件。
+3. 样式仍不足时，才按需读取 `dimensions/` 中的密度、情绪、纹理或字体维度。不要默认加载全部维度。
+4. 自定义样式使用 `Style_ID: custom`，完整填写全局样式字段。
 
-| Audience | Content Density | Visual Style | Terminology | Slides |
-|----------|-----------------|--------------|-------------|--------|
-| `beginners` | Low | Friendly, illustrative | Plain language | 8-15 |
-| `intermediate` | Medium | Balanced, structured | Some jargon OK | 10-20 |
-| `experts` | High | Data-rich, precise | Technical terms | 12-25 |
-| `executives` | Low-Medium | Clean, impactful | Business language | 8-12 |
-| `general` | Medium | Accessible, engaging | Minimal jargon | 10-18 |
+无论采用哪种样式，必要引用、保密标记、可访问性和授权品牌元素优先于装饰规则。
 
-### Audience → Density Mapping
+## Grid and hierarchy
 
-Recommended density dimension based on audience:
+- 使用一致的安全边距、列网格、标题基线和页脚区域。
+- 每页只设一个第一视觉焦点；标题、关键数字或主图只能有一个主导元素。
+- 正文、注释、引用和图例形成稳定字号层级；不靠缩小字号解决溢出。
+- 复杂页面先减少内容，再增加空间；确需高密度时保持清晰分组和阅读顺序。
 
-| Audience | Recommended Density | Rationale |
-|----------|-------------------|-----------|
-| `executives` | minimal | One insight per slide, respect time |
-| `beginners` | minimal → balanced | Single concepts, build understanding |
-| `general` | balanced | Accessible but informative |
-| `intermediate` | balanced | Standard information density |
-| `experts` | balanced → dense | Can handle more data per slide |
+## Density
 
-**Automatic Density Selection**:
-- If `--audience executives` → default to `minimal` density
-- If `--audience beginners` → default to `minimal` or `balanced`
-- If `--audience experts` → allow `dense` density
-- Otherwise → default to `balanced`
+| Density | 适用 | 约束 |
+|---|---|---|
+| `minimal` | 封面、章节页、单一结论、演讲型页面 | 一个焦点，少量辅助文字 |
+| `balanced` | 大多数咨询和业务页面 | 一个主判断，2–4 个支撑组 |
+| `dense` | 数据、技术评审、附录 | 定义、单位、图例、引用和留白均不可省 |
 
-### Audience-Specific Principles
+受众专业不等于允许不可读。现场投屏仍需在远距离辨认标题、结论和关键数据。
 
-**Beginners**:
-- One concept per slide
-- Visual metaphors over abstract diagrams
-- Step-by-step progression
-- Generous whitespace
+## Charts and diagrams
 
-**Experts**:
-- Multiple data points per slide acceptable
-- Technical diagrams with precise labels
-- Assume domain knowledge
-- Dense but organized information
+- 图表标题写结论或准确的问题，不只写指标名称。
+- 轴、单位、基线、区间、样本和缺失值处理完整；不要截断坐标轴制造夸张差异。
+- 颜色只承担有限且一致的语义；同一系列跨页保持同色。
+- 流程图和架构图优先呈现真实关系；节点文字短，连接方向明确，避免交叉线和无意义层级。
+- 只有关系确实复杂时才使用图；简单事实用一句话或小表格更有效。
 
-**Executives**:
-- Lead with insights, not data
-- "So what?" on every slide
-- Decision-enabling content
-- Bottom-line upfront (BLUF)
+## Typography and localization
 
-## Visual Hierarchy Principles
+- 优先使用目标环境可嵌入或稳定替代的字体；准备 CJK 与非拉丁文字回退字体。
+- 不把长中文强行转为全大写或拉宽字距。
+- 标题避免自动换行造成语义断裂；人工设置短语级换行。
+- 数字、单位和标点格式全稿统一。
 
-| Principle | Description |
-|-----------|-------------|
-| Focal Point | ONE dominant element per slide draws attention first |
-| Rule of Thirds | Position key elements at grid intersections |
-| Z-Pattern | Guide eye: top-left → top-right → bottom-left → bottom-right |
-| Size Contrast | Headlines 2-3x larger than body text |
-| Breathing Room | Minimum 10% margin from all edges |
+## Accessibility
 
-## Content Density
+- 正文与背景保持足够对比；投影环境按更保守的对比处理。
+- 不只依靠红/绿或明暗传递状态，同时使用文字、形状或图案。
+- 图表直接标注关键系列，减少仅靠图例辨认。
+- 图片中的重要文字应转换为可编辑文本或在讲稿中提供等价说明。
+- 检查色盲可辨识、字号、阅读顺序和替代说明。
 
-See `references/dimensions/density.md` for full density dimension specs.
+## Images and assets
 
-| Level | Description | Use When |
-|-------|-------------|----------|
-| High | Multiple data points, detailed charts, dense text | Expert audience, technical reviews |
-| Medium | Key points with supporting details | General business, mixed audiences |
-| Low | One main idea, large visuals, minimal text | Beginners, keynotes, emotional impact |
+- 图片必须服务页面任务；不使用与内容无关的“科技感”背景。
+- 真实系统界面仅在授权且脱敏后使用。检查姓名、头像、号码、时间戳、二维码、浏览器地址、文件路径和隐藏侧栏。
+- 用 Assets 记录引用、权利与脱敏状态；待许可或待脱敏资产是物理构建阻断项。
+- Logo 和品牌元素按授权规则放置；引用与保密标记不因样式偏好被删除。
 
-**High-Density Principles** (McKinsey-style):
-- Every element earns its space
-- Data speaks louder than decoration
-- Annotations explain insights, not describe data
-- White space is strategic, not filler
+## Physical QA
 
-**Density by Slide Type**:
-| Slide Type | Recommended Density |
-|------------|-------------------|
-| Cover/Title | minimal |
-| Agenda/Overview | balanced |
-| Content/Analysis | balanced or dense |
-| Data/Metrics | dense |
-| Quote/Impact | minimal |
-| Summary/Takeaway | balanced |
+实际 `.pptx` 至少完成：
 
-## Color Selection
-
-See `references/dimensions/mood.md` for full mood dimension specs.
-
-**Content-First Approach**:
-1. Analyze content topic, mood, and industry
-2. Consider target audience expectations
-3. Match palette to subject matter
-4. Ensure strong contrast for readability
-
-**Quick Palette Guide**:
-| Content Type | Recommended Mood |
-|--------------|-----------------|
-| Technical/Architecture | cool |
-| Educational/Friendly | warm |
-| Corporate/Professional | professional |
-| Creative/Artistic | vibrant |
-| Scientific/Medical | cool or neutral |
-| Entertainment/Gaming | dark or vibrant |
-
-## Typography Principles
-
-See `references/dimensions/typography.md` for full typography dimension specs.
-
-| Element | Treatment |
-|---------|-----------|
-| Headlines | Bold, 2-3x body size, narrative style |
-| Body Text | Regular weight, readable size |
-| Captions | Smaller, lighter weight |
-| Data Labels | Monospace for technical content |
-| Emphasis | Use bold or color, not underlines |
-
-## Font Recommendations
-
-**English Fonts**:
-| Font | Style | Best For |
-|------|-------|----------|
-| Liter | Sans-serif, geometric | Modern, clean, technical |
-| HedvigLettersSans | Sans-serif, distinctive | Brand-forward, creative |
-| Oranienbaum | High-contrast serif | Elegant, classical |
-| SortsMillGoudy | Classical serif | Traditional, readable |
-| Coda | Round sans-serif | Friendly, approachable |
-
-**Chinese Fonts**:
-| Font | Style | Best For |
-|------|-------|----------|
-| MiSans | Modern sans-serif | Clean, versatile, screen-optimized |
-| Noto Sans SC | Neutral sans-serif | Standard, multilingual |
-| siyuanSongti | Refined Song typeface | Elegant, editorial |
-| alimamashuheiti | Geometric sans-serif | Commercial, structured |
-| LXGW Bright | Song-Kai hybrid | Warm, readable |
-
-**Multilingual Pairing**:
-| Use Case | English | Chinese |
-|----------|---------|---------|
-| Technical | Liter | MiSans |
-| Editorial | Oranienbaum | siyuanSongti |
-| Friendly | Coda | LXGW Bright |
-| Corporate | HedvigLettersSans | alimamashuheiti |
-
-## Typography & Localization
-
-When generating prompts for non-English languages (e.g., `zh`, `ja`, `ko`), strict font instructions are required to prevent "tofu" boxes (missing glyphs) or poor rendering.
-
-**Prompt Injection Rules**:
-When a downstream presentation capability generates visual assets, pass the following language guidance explicitly:
-
-**Chinese (zh)**:
-> "Text Rendering: Use 'Noto Sans SC' or 'SimHei' font. Ensure Chinese characters are rendered with correct strokes, bold weight, and high contrast against the background. No missing glyphs."
-
-**Japanese (ja)**:
-> "Text Rendering: Use 'Noto Sans JP' or 'Meiryo' font. Ensure Kanji, Hiragana, and Katakana are legible. Avoid Han Unification errors."
-
-**Korean (ko)**:
-> "Text Rendering: Use 'Noto Sans KR' or 'Malgun Gothic'. Ensure Hangul characters are distinct and balanced."
-
-**General Non-Latin**:
-> "Ensure all text is legible and fully rendered. If specific characters cannot be rendered, fallback to a clean sans-serif universal font."
-
-## Visual Elements Reference
-
-See `references/dimensions/texture.md` for full texture dimension specs.
-
-### Background Treatments
-
-| Treatment | Description | Best For |
-|-----------|-------------|----------|
-| Solid color | Single background color | Clean, minimal |
-| Split background | Two colors, diagonal or vertical | Contrast, sections |
-| Gradient | Subtle vertical or diagonal fade | Modern, dynamic |
-| Textured | Pattern or texture overlay | Character, style |
-
-### Typography Treatments
-
-| Treatment | Description | Best For |
-|-----------|-------------|----------|
-| Size contrast | 3-4x difference headline vs body | Impact, hierarchy |
-| All-caps headers | Uppercase with letter spacing | Authority, structure |
-| Monospace data | Fixed-width for numbers/code | Technical, precision |
-| Hand-drawn | Organic, imperfect letterforms | Friendly, approachable |
-
-### Geometric Accents
-
-| Element | Description | Best For |
-|---------|-------------|----------|
-| Diagonal dividers | Angled section separators | Energy, movement |
-| Corner brackets | L-shaped frames | Focus, framing |
-| Circles/hexagons | Shape frames for images | Modern, tech |
-| Underline accents | Thick lines under headers | Emphasis, hierarchy |
-
-## Consistency Requirements
-
-| Element | Guideline |
-|---------|-----------|
-| Spacing | Consistent margins and padding throughout |
-| Colors | Maximum 3-4 colors per slide, palette consistent across deck |
-| Typography | Same font families and sizes for same content types |
-| Visual Language | Repeat patterns, shapes, and treatments |
-
-## Dimension Combination Guide
-
-When combining dimensions, consider compatibility:
-
-| Audience | Recommended Dimensions |
-|----------|----------------------|
-| Executives | clean + neutral + geometric + minimal |
-| Beginners | organic + warm + humanist + minimal |
-| General | any texture + any mood + humanist/geometric + balanced |
-| Experts | grid/clean + cool + technical + balanced/dense |
-
-| Content Type | Recommended Dimensions |
-|--------------|----------------------|
-| Tutorial | organic + warm + handwritten + balanced |
-| Technical | grid + cool + technical + balanced |
-| Business | clean + professional + geometric + balanced |
-| Creative | organic + vibrant + humanist + balanced |
-| Data-heavy | clean + cool + technical + dense |
+1. 渲染所有页面为图片或 PDF。
+2. 检查溢出、裁切、重叠、错位、字体替换和断行。
+3. 检查图表数据、单位、标签、引用、保密标记和页码。
+4. 检查截图、图片、Logo 的权利和脱敏状态。
+5. 检查母版、比例、动画、讲稿和备份页行为。
+6. 修复后重新渲染；不能只检查源代码或对象树。

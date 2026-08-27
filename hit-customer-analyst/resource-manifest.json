@@ -1,71 +1,436 @@
 {
   "schema_version": 3,
   "skill": "hit-customer-analyst",
-  "generated_at": "2026-08-16T22:02:19",
+  "generated_at": "2026-08-27T20:33:15+08:00",
   "hash_algorithm": "SHA-256",
   "text_hash_normalization": "LF",
   "skill_md": "SKILL.md",
-  "skill_md_sha256": "a23915801727b0a5c824850761ceb00888b2a2151692f418c82880281db0af31",
+  "skill_md_sha256": "822bca29af3d354e8cb9248062de29c69dd1b5e81532008dcffc153957bdc775",
   "top_level_files": [
-    "SKILL.md"
+    "SKILL.md",
+    "requirements.txt"
   ],
   "top_level_file_hashes": [
     {
       "path": "SKILL.md",
-      "sha256": "a23915801727b0a5c824850761ceb00888b2a2151692f418c82880281db0af31"
+      "sha256": "822bca29af3d354e8cb9248062de29c69dd1b5e81532008dcffc153957bdc775"
+    },
+    {
+      "path": "requirements.txt",
+      "sha256": "7d1645155d88d7328164814a2f56ae3bbb4d25a1f545cee331805e80306674cf"
     }
   ],
   "top_level_directories": [
+    "agents",
     "assets",
+    "config",
     "references",
-    "scripts"
+    "schemas",
+    "scripts",
+    "tests"
   ],
   "resource_directories": [
     {
       "name": "scripts",
-      "file_count": 1
+      "file_count": 11
     },
     {
       "name": "references",
-      "file_count": 1
+      "file_count": 16
     },
     {
       "name": "assets",
+      "file_count": 9
+    },
+    {
+      "name": "agents",
       "file_count": 1
     }
   ],
   "resource_file_hashes": [
     {
-      "path": "assets/briefing_template.md",
-      "sha256": "9b8c094946a6e36133d6b51849179827eb6759cb9a04105d510eb4bd9372e67a"
+      "path": "agents/openai.yaml",
+      "sha256": "691e7588e4461a1ff187e7e80fdece491fda60663ff6aa2d726125352e925e98"
     },
     {
-      "path": "references/workflow.md",
-      "sha256": "6525d2f333b1b13ee0e7dadf408a32bf67255feef8c0bb532f1ed6a5a79f58a8"
+      "path": "assets/account-strategy-report-template.md",
+      "sha256": "a474969d3dc39b2b5c227062d27fd8914b8a592515556729036b98b9cc7ef283"
     },
     {
-      "path": "scripts/brief_gate.py",
-      "sha256": "203334e6557306a9c5a552b805a1f9a42c1cac4d1939259196f9868b2256b5f4"
+      "path": "assets/briefing-template.md",
+      "sha256": "40e2483ee8234206478df8437da0b7e6c70e1651349bd3b4520107616e04b9a6"
+    },
+    {
+      "path": "assets/comprehensive-report-template.md",
+      "sha256": "b68da1dd0c6aa1c8cbd7e6532289f2d7d8c9653e18ba4e27681f7df0a16c84a6"
+    },
+    {
+      "path": "assets/customer-letter-output-template.md",
+      "sha256": "1454f4ce0e74907fa0275abd34a0478c98a7ab8c00bc141fc55d98cbcf8638e7"
+    },
+    {
+      "path": "assets/icon.svg",
+      "sha256": "e9301497fa98ef56aaca7ede0857b9a18dc06c34040f0679c609a6bf49b1d38b"
+    },
+    {
+      "path": "assets/institution-research-report-template.md",
+      "sha256": "3a128c40b86d298c65a03635df18ed610a23652d52c8b9f35f80eafb16587495"
+    },
+    {
+      "path": "assets/internal-retrieval-report-template.md",
+      "sha256": "8c3996867007670bb010319ee41077e3f0c40115a1aecdb234be7d589f9e87c5"
+    },
+    {
+      "path": "assets/leader-research-report-template.md",
+      "sha256": "e408942df14c599cd429f5cbe0c5b16ec45ebe53cb4af4c6678df43d96bd8657"
+    },
+    {
+      "path": "assets/visit-strategy-report-template.md",
+      "sha256": "98a73b3e21a45e89c973a5feec886e3c899efbc746fae19527835a216f4bcfe6"
+    },
+    {
+      "path": "config/business-modes.json",
+      "sha256": "27cc902b655cfd0c6770eb35d480fc62df89aadeb34134018608874ef8856861"
+    },
+    {
+      "path": "references/business-modes.md",
+      "sha256": "3e877bc3ed257ed8f1c2fcecc291b18503e231f0f621ab030d3d9aa9e0661608"
+    },
+    {
+      "path": "references/customer-research-context.md",
+      "sha256": "4ce0214194aaa5dc340146ee1ff82adc2b9ead632325238fb94ecad85629eae6"
+    },
+    {
+      "path": "references/decision-intelligence-framework.md",
+      "sha256": "52b7ab7de1272942ddbea60747a17f9b47792247a9d02dccdbb2ee933e8b179d"
+    },
+    {
+      "path": "references/freshness-feedback.md",
+      "sha256": "83eea07f064c8bfd78bcd8635f281494efa7172b9402a7cf165bf6b1954f1483"
+    },
+    {
+      "path": "references/governance-raci.md",
+      "sha256": "81451c8d065dcde4060e3d4ce8bd11ce40c86aa471da57204a348f6c571d41e0"
+    },
+    {
+      "path": "references/interaction-form.md",
+      "sha256": "9fb6bd039e32eac531426cd2a2e5b8344441ac394a8686df0caa2008415c5583"
+    },
+    {
+      "path": "references/ragflow-integration.md",
+      "sha256": "37ca726048bfb76f3cd6556f45d77259b2b07bb38891bbce52a7bc4db335981d"
+    },
+    {
+      "path": "references/research-depth-and-search-matrix.md",
+      "sha256": "eeac7468186a2acabf8a7413955fcd292660d301fbe9976a569785ed28acd6ee"
+    },
+    {
+      "path": "references/source-profile-rules.md",
+      "sha256": "2cc8952a762e645185fe65effb9b7ae098a4f6dc5158702bdea5bb6c66bce3d9"
+    },
+    {
+      "path": "references/subskill-customer-letter.md",
+      "sha256": "cecabb0258a9b0e2ef63d1039665cef3f03ceef238bf99111c928f200760c9fc"
+    },
+    {
+      "path": "references/subskill-institution-research.md",
+      "sha256": "bad9ba956f3526fdccebc4792e85a91ebb6771cc16c0802acf8ac186506e99d3"
+    },
+    {
+      "path": "references/subskill-internal-retrieval.md",
+      "sha256": "acb64250449bdd64f8218d003353f993bc11927076d6d303e1317c81690f3dba"
+    },
+    {
+      "path": "references/subskill-leader-research.md",
+      "sha256": "2698ecbd190bedaf6e4ab2dc5d450aaf3d3a632003b84a626abb36fb49a45463"
+    },
+    {
+      "path": "references/subskill-visit-strategy.md",
+      "sha256": "54d5dc6096d1403b80680f6031ccc551622188dc3e47d01ebafbdb8b817f78df"
+    },
+    {
+      "path": "references/validation-cases.md",
+      "sha256": "ea7f196b6807589494982637e6a08ab6e6f9e98d66ef5c75504b290457dbf37a"
+    },
+    {
+      "path": "references/workbuddy-runtime.md",
+      "sha256": "4efc2355ba35243bf81bb97699fa06b1049ec6904d6ab4dd85e15398b0443064"
+    },
+    {
+      "path": "schemas/business-modes.schema.json",
+      "sha256": "d171431e7fe2fabedf8cef9574b32fe39b36bb7f125e9e16091ac5e358792046"
+    },
+    {
+      "path": "schemas/capability-receipt.schema.json",
+      "sha256": "a63cba095eeb74e9e3fb3560be1037d702dab5646ef2b80cd0aa21954ba66244"
+    },
+    {
+      "path": "schemas/evidence-manifest.schema.json",
+      "sha256": "746d749b87902fb9853130e5723ab28b9ffe8cba9ebeaa4ae0d5f0d89b75a623"
+    },
+    {
+      "path": "schemas/governance-context.schema.json",
+      "sha256": "0692cdb0600c79863c91f7abe2df489e0b44fdbf6e73ec6ec8e7af084e70578a"
+    },
+    {
+      "path": "schemas/intake-preflight.schema.json",
+      "sha256": "f901210ad622b025ba0df556b80c33aacc8698b131e0a4cf7eca9684a580eab1"
+    },
+    {
+      "path": "schemas/run-metrics.schema.json",
+      "sha256": "b90063589e363695a32d765d6450c3bafef2ada7f5a92c4c7f90e5348c8376e8"
+    },
+    {
+      "path": "schemas/search-plan.schema.json",
+      "sha256": "76cc23044753fd45a2e14c0dc6e1c18a4c1f9e6dc81057089634d505fecdcc07"
+    },
+    {
+      "path": "schemas/source-cache.schema.json",
+      "sha256": "660ba3254f4a87c13f1fdb740965cdc9b2e51fa3ef5a2bfd4081d68d61345d6e"
+    },
+    {
+      "path": "schemas/source-capture-receipt.schema.json",
+      "sha256": "b92a578d8f92880f2e07820cbc187ded759de7bf7b31d05ab7fbfc80af2b9e4c"
+    },
+    {
+      "path": "scripts/build_candidate.py",
+      "sha256": "72adcaef68b8fcbeef6cd9f831ddce720d1c4aeef238e5b33916336897926edd"
+    },
+    {
+      "path": "scripts/capability_receipt.py",
+      "sha256": "476e01e2a4c3c35e9f04d1013137b95c5054bf6635b9525c9a2e68ee45056a13"
+    },
+    {
+      "path": "scripts/commit_run.py",
+      "sha256": "2025d80bf76f5b3478498ad5197cf18ba6f497e0b1bfb78cbcf13e162663f681"
+    },
+    {
+      "path": "scripts/governance.py",
+      "sha256": "455dbaab67f3360b86cb656074c17469d2412696da91828c522045158a18c0b9"
+    },
+    {
+      "path": "scripts/init_workspace.py",
+      "sha256": "d225caec20a715c906e524445627647696f3c7b54309b840c67639a7d3bfd9d0"
+    },
+    {
+      "path": "scripts/preflight_intake.py",
+      "sha256": "1f96755df976c7553f794faa0420aa2385a4f4b03cbb741a088f624d3c5a2d74"
+    },
+    {
+      "path": "scripts/recover_workspace.py",
+      "sha256": "56afeedfb22d80951f51510c716eb98bc3791aeb4e2966e0a2276d56af47f444"
+    },
+    {
+      "path": "scripts/research_plan.py",
+      "sha256": "d6384b6efd8bf09415ccec8cf5295996eb1c6e69f1953f6a612883de37c2d117"
+    },
+    {
+      "path": "scripts/run_tests.py",
+      "sha256": "a6d4ae1f7d8cb63a479d4b4a48321382a3f9397537fd879b27160e53a544c52c"
+    },
+    {
+      "path": "scripts/runtime_tx.py",
+      "sha256": "bcebd559d5dcbcf87ddf817b715ca076fe8145b889d9112f1eb37f07e6fb33a9"
+    },
+    {
+      "path": "scripts/validate_outputs.py",
+      "sha256": "38ccdbc3106eab0740fdfa021f666cb758426b5119976f5d9945a7610f41dfab"
+    },
+    {
+      "path": "tests/__init__.py",
+      "sha256": "73932820b52bc359155e1b88f295c852512cebbc8c29aaef7769ab0b87be28b7"
+    },
+    {
+      "path": "tests/common.py",
+      "sha256": "d0bd90e47962ef2bd78355a323e83ee4e9a9a9b358a22a83468366c01289ff37"
+    },
+    {
+      "path": "tests/fixture_builder.py",
+      "sha256": "dd701c365100d436144db0e2896d9f59ebc07e484e735abefa75d595ec24d11d"
+    },
+    {
+      "path": "tests/negative_case_map.json",
+      "sha256": "76f6ab38ced4eacb57e17057d4ba006f09a8bfb1fab19e04bce3de11055aa56c"
+    },
+    {
+      "path": "tests/test_behavioral_negatives.py",
+      "sha256": "2d3d0de19028686f1f709acc6bf7e180fae61e4ec7a251e1528c7b58488afba3"
+    },
+    {
+      "path": "tests/test_briefing_release_e2e.py",
+      "sha256": "1b5c64dbedd0f3991c2067c6b01690ae4c569bd8cf4be96b20e16c5afe1a388c"
+    },
+    {
+      "path": "tests/test_candidate_builder.py",
+      "sha256": "e793faecf942df2cf89a67210c4836291b78410dac962327c5a1f22fb0bbc708"
+    },
+    {
+      "path": "tests/test_capability_receipt.py",
+      "sha256": "a6d8a2e9c56c7f6f3fc81473a2042e510452bd610aed558db61f5e6fbc2eeec4"
+    },
+    {
+      "path": "tests/test_contract_bundle_trust.py",
+      "sha256": "ba0f800d473f9b695f65a66c6b397829741d9de10852b8a03ed9f9d86eb9342d"
+    },
+    {
+      "path": "tests/test_generic_approval_ready.py",
+      "sha256": "408490071ebab83153715306e7c70fef4253a21852e66c89d57eb30057f17297"
+    },
+    {
+      "path": "tests/test_governance_action_assertions.py",
+      "sha256": "5c4f0afb88175c50bb89f0196d113790898395e599b2916c16d94b346d7e5703"
+    },
+    {
+      "path": "tests/test_governance_cli.py",
+      "sha256": "87e7dd2449820b9a7543ea4426baaa831bd2dab4ede6026303a4646d724b32a2"
+    },
+    {
+      "path": "tests/test_governance_context.py",
+      "sha256": "ddc09ece3124b308f210d6165c553d8c4489bdeba05d66b384ec353a34c6c82c"
+    },
+    {
+      "path": "tests/test_initializer_cli.py",
+      "sha256": "5cf698a96b3356054a1af9e94bb40b28e0c413a7d93204656f650315c6405c24"
+    },
+    {
+      "path": "tests/test_letter_lifecycle.py",
+      "sha256": "4491deb4bd15ecf7d57f7513eb7962d376846b5f1c778dc59a41afcac57780ea"
+    },
+    {
+      "path": "tests/test_negative_case_map.py",
+      "sha256": "af88016142fe0b8f81c2c1fa729caa88f55e74e5519f5b42d29fc3917f3e359b"
+    },
+    {
+      "path": "tests/test_preflight_intake.py",
+      "sha256": "755abdc20f429038dee505d8968bb68234b5cf1d5dedfa61ce8ce98e445aac91"
+    },
+    {
+      "path": "tests/test_profile_and_planning.py",
+      "sha256": "3f634d5b8077c3c5e2b6ce939b298bdd8978b44459d3a161355e598ca23848bb"
+    },
+    {
+      "path": "tests/test_release_negative_extensions.py",
+      "sha256": "938162e70822181d5974531f3fc993390508c472c455cf3043701e013e29157d"
+    },
+    {
+      "path": "tests/test_research_plan_intake_binding.py",
+      "sha256": "b4a15049b5b247d3062857d953f7fcc040f7c50cdff29e792a4de722d92ebc57"
+    },
+    {
+      "path": "tests/test_runtime_transactions.py",
+      "sha256": "e6f60e71c1ff8940187b00ab0b4ef407c8f73ee643ea56f1acfdbaeba1c9a04d"
+    },
+    {
+      "path": "tests/test_strategy_variant_assets.py",
+      "sha256": "562dc4d10413579da354533dbc1ec43514d92fe0c246640b2daeab1d1359398b"
+    },
+    {
+      "path": "tests/test_timezone_context.py",
+      "sha256": "4380ab4be18038da03088b46c6c6812cdea33d3a7da70a3b6bb4d33841706b6b"
     }
   ],
   "declared_local_dependencies": [
     {
-      "path": "assets/briefing_template.md",
+      "path": "assets/briefing-template.md",
       "exists": true,
-      "resolved_path": "hit-customer-analyst/assets/briefing_template.md",
-      "sha256": "9b8c094946a6e36133d6b51849179827eb6759cb9a04105d510eb4bd9372e67a"
+      "resolved_path": "hit-customer-analyst/assets/briefing-template.md",
+      "sha256": "40e2483ee8234206478df8437da0b7e6c70e1651349bd3b4520107616e04b9a6"
     },
     {
-      "path": "references/workflow.md",
+      "path": "references/business-modes.md",
       "exists": true,
-      "resolved_path": "hit-customer-analyst/references/workflow.md",
-      "sha256": "6525d2f333b1b13ee0e7dadf408a32bf67255feef8c0bb532f1ed6a5a79f58a8"
+      "resolved_path": "hit-customer-analyst/references/business-modes.md",
+      "sha256": "3e877bc3ed257ed8f1c2fcecc291b18503e231f0f621ab030d3d9aa9e0661608"
     },
     {
-      "path": "scripts/brief_gate.py",
+      "path": "references/customer-research-context.md",
       "exists": true,
-      "resolved_path": "hit-customer-analyst/scripts/brief_gate.py",
-      "sha256": "203334e6557306a9c5a552b805a1f9a42c1cac4d1939259196f9868b2256b5f4"
+      "resolved_path": "hit-customer-analyst/references/customer-research-context.md",
+      "sha256": "4ce0214194aaa5dc340146ee1ff82adc2b9ead632325238fb94ecad85629eae6"
+    },
+    {
+      "path": "references/decision-intelligence-framework.md",
+      "exists": true,
+      "resolved_path": "hit-customer-analyst/references/decision-intelligence-framework.md",
+      "sha256": "52b7ab7de1272942ddbea60747a17f9b47792247a9d02dccdbb2ee933e8b179d"
+    },
+    {
+      "path": "references/freshness-feedback.md",
+      "exists": true,
+      "resolved_path": "hit-customer-analyst/references/freshness-feedback.md",
+      "sha256": "83eea07f064c8bfd78bcd8635f281494efa7172b9402a7cf165bf6b1954f1483"
+    },
+    {
+      "path": "references/governance-raci.md",
+      "exists": true,
+      "resolved_path": "hit-customer-analyst/references/governance-raci.md",
+      "sha256": "81451c8d065dcde4060e3d4ce8bd11ce40c86aa471da57204a348f6c571d41e0"
+    },
+    {
+      "path": "references/interaction-form.md",
+      "exists": true,
+      "resolved_path": "hit-customer-analyst/references/interaction-form.md",
+      "sha256": "9fb6bd039e32eac531426cd2a2e5b8344441ac394a8686df0caa2008415c5583"
+    },
+    {
+      "path": "references/ragflow-integration.md",
+      "exists": true,
+      "resolved_path": "hit-customer-analyst/references/ragflow-integration.md",
+      "sha256": "37ca726048bfb76f3cd6556f45d77259b2b07bb38891bbce52a7bc4db335981d"
+    },
+    {
+      "path": "references/research-depth-and-search-matrix.md",
+      "exists": true,
+      "resolved_path": "hit-customer-analyst/references/research-depth-and-search-matrix.md",
+      "sha256": "eeac7468186a2acabf8a7413955fcd292660d301fbe9976a569785ed28acd6ee"
+    },
+    {
+      "path": "references/subskill-institution-research.md",
+      "exists": true,
+      "resolved_path": "hit-customer-analyst/references/subskill-institution-research.md",
+      "sha256": "bad9ba956f3526fdccebc4792e85a91ebb6771cc16c0802acf8ac186506e99d3"
+    },
+    {
+      "path": "references/workbuddy-runtime.md",
+      "exists": true,
+      "resolved_path": "hit-customer-analyst/references/workbuddy-runtime.md",
+      "sha256": "4efc2355ba35243bf81bb97699fa06b1049ec6904d6ab4dd85e15398b0443064"
+    },
+    {
+      "path": "scripts/build_candidate.py",
+      "exists": true,
+      "resolved_path": "hit-customer-analyst/scripts/build_candidate.py",
+      "sha256": "72adcaef68b8fcbeef6cd9f831ddce720d1c4aeef238e5b33916336897926edd"
+    },
+    {
+      "path": "scripts/commit_run.py",
+      "exists": true,
+      "resolved_path": "hit-customer-analyst/scripts/commit_run.py",
+      "sha256": "2025d80bf76f5b3478498ad5197cf18ba6f497e0b1bfb78cbcf13e162663f681"
+    },
+    {
+      "path": "scripts/init_workspace.py",
+      "exists": true,
+      "resolved_path": "hit-customer-analyst/scripts/init_workspace.py",
+      "sha256": "d225caec20a715c906e524445627647696f3c7b54309b840c67639a7d3bfd9d0"
+    },
+    {
+      "path": "scripts/preflight_intake.py",
+      "exists": true,
+      "resolved_path": "hit-customer-analyst/scripts/preflight_intake.py",
+      "sha256": "1f96755df976c7553f794faa0420aa2385a4f4b03cbb741a088f624d3c5a2d74"
+    },
+    {
+      "path": "scripts/recover_workspace.py",
+      "exists": true,
+      "resolved_path": "hit-customer-analyst/scripts/recover_workspace.py",
+      "sha256": "56afeedfb22d80951f51510c716eb98bc3791aeb4e2966e0a2276d56af47f444"
+    },
+    {
+      "path": "scripts/validate_outputs.py",
+      "exists": true,
+      "resolved_path": "hit-customer-analyst/scripts/validate_outputs.py",
+      "sha256": "38ccdbc3106eab0740fdfa021f666cb758426b5119976f5d9945a7610f41dfab"
     }
   ],
   "missing_declared_dependencies": []

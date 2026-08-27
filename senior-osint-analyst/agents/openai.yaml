@@ -1,0 +1,8 @@
+interface:
+  display_name: 高级开源情报分析
+  short_description: 基于合法公开来源的检索、交叉验证、战略研判与情报简报
+  default_prompt: 使用 $senior-osint-analyst 对指定议题开展合法公开信息核验，并形成证据可追溯的战略情报简报。
+  icon_small: assets/icon.svg
+  icon_large: assets/icon.svg
+policy:
+  allow_implicit_invocation: false

@@ -19,7 +19,7 @@
 
 | capability_id | 能力维度 | 当前证据 | 证据日期 | 适用范围 | 已确认差距 | 目标状态 | 验收方法 | 责任人 |
 | :--- | :--- | :--- | :--- | :--- | :--- | :--- | :--- | :--- |
-| `[CAP-001]` | `[DIMENSION]` | `[SOURCE_OR_OBSERVATION]` | `[DATE]` | `[SCOPE]` | `[GAP]` | `[TARGET]` | `[TEST]` | `[OWNER]` |
+| `{{CAPABILITY_ID}}` | `{{DIMENSION}}` | `{{SOURCE_OR_OBSERVATION}}` | `{{DATE}}` | `{{SCOPE}}` | `{{GAP}}` | `{{TARGET}}` | `{{TEST}}` | `{{OWNER}}` |
 
 ## 判断规则
 

@@ -6,15 +6,15 @@
 
 | 字段 | 内容 |
 | :--- | :--- |
-| `standard_id` | `[待核验]` |
-| `official_title` | `[待核验]` |
-| `issuer` | `[待核验]` |
-| `region` | `[待核验]` |
-| `version_or_notice_no` | `[待核验]` |
-| `effective_date` | `[待核验]` |
-| `official_source` | `[待核验 URL 或文件]` |
-| `applicable_organizations` | `[待核验]` |
-| `project_relevance` | `[待客户确认]` |
+| `standard_id` | `{{STANDARD_ID}}` |
+| `official_title` | `{{OFFICIAL_TITLE}}` |
+| `issuer` | `{{ISSUER}}` |
+| `region` | `{{REGION}}` |
+| `version_or_notice_no` | `{{VERSION_OR_NOTICE_NO}}` |
+| `effective_date` | `{{EFFECTIVE_DATE}}` |
+| `official_source` | `{{OFFICIAL_URL_OR_FILE}}` |
+| `applicable_organizations` | `{{APPLICABLE_ORGANIZATIONS}}` |
+| `project_relevance` | `{{PROJECT_RELEVANCE}}` |
 | `evidence_strength` | `A / B / C` |
 
 证据强度建议：
@@ -39,7 +39,7 @@
 
 | requirement_id | 原文要求 | 来源定位 | 适用条件 | 当前证据 | 差距 | 责任人 | 验收方法 |
 | :--- | :--- | :--- | :--- | :--- | :--- | :--- | :--- |
-| `[REQ-001]` | `[原文摘录或准确转述]` | `[文件/页码/条款]` | `[条件]` | `[客户证据]` | `[差距]` | `[OWNER]` | `[TEST]` |
+| `{{REQ_ID}}` | `{{REQUIREMENT_TEXT}}` | `{{FILE_PAGE_CLAUSE}}` | `{{APPLICABILITY}}` | `{{CUSTOMER_EVIDENCE}}` | `{{GAP}}` | `{{OWNER}}` | `{{TEST}}` |
 
 ## 使用边界
 

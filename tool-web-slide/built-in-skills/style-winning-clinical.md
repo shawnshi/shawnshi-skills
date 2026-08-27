@@ -1,93 +1,81 @@
-# Winning Clinical Style (极简医疗风)
+# Winning Clinical Style（极简医疗风）
 
-This is the dictionary and visual constraint for the "Winning Clinical" style. Use this when the user asks for "Winning Clinical", "极简医疗风", "卫宁模板", or "医疗汇报".
+适用于医院数智化规划、医疗产品方案、架构、临床流程和管理决策汇报。机器可读契约以 `references/components.json` 和 `references/layouts.json` 为准。
 
-## Visual Constraints (Winning Health 2.1.0 Design System)
-- **Primary Color**: `#005EB8` (var(--primary-600)) for strategic bases, `#E3F2FD` (var(--primary-100)) for highlights.
-- **Secondary Color**: `#00B5E2` (var(--secondary)) for AI accents.
-- **Accent Color**: `#F2A900` (var(--accent)) for distinct alerts/warnings.
-- **Gray Scale**: `#1A232C` (var(--gray-900)) for main text (ink), `#F2F6FA` (var(--gray-100)) for paper backgrounds.
-- **Aesthetic**: Strictly minimalist, professional, rigid grid-based. Dual-mode rules for high-density medical IT interfaces and high-signal-to-noise ratio architectural presentations.
-- **Prohibitions**: No 3D objects, no cartoonish illustrations, no fluid shapes. Strict right angles and solid colors. Maximum 3 accent colors per slide.
-- **Top-Tier HIT (医疗数字化) Requirements**: Presentations in this domain require extreme structural clarity. You must translate complex hospital workflows (HIS, EMR, PACS) and data lakes into rigorous layered architectures, precise data flow arrows, and clinical pathways.
+## 启用方式
 
-## Component Dictionary
-Use ONLY the following CSS classes for layout and content formatting:
+1. 按顺序加载 `assets/core.css`、`assets/winning.css`。
+2. 在 `<body>` 设置 `data-theme="winning-clinical"`，不得使用内容关键词或 CSS 类猜测主题。
+3. 每页 `<section class="slide">` 必须设置一个合法 `data-layout`；其 `.canvas-card` 使用对应 `layout-*` 类。
 
-### Layout Primitives
-- `.c-header`: Top level header block containing `.c-tracker` and `.c-action-title`.
-- `.c-tracker`: Meta-information for the slide (e.g., `OUR VISION / 01`). Use Lucide icons.
-- `.c-action-title`: The main headline of the slide, max font size 4.5vw.
-- `.c-pillars`: A flex container for comparing or listing 2-3 items.
-- `.c-pillar`: A column inside `.c-pillars`. 
-- `.c-pillar.highlight`: A column with a highlighted top border (var(--accent)).
-- `.c-pillar-title`: The title inside a pillar.
-- `.c-pillar-body`: The text content inside a pillar.
-
-### Medical IT / HIT Specific Components
-- `.c-statement`: Full slide container for a bold, declarative statement (Hero Quote).
-- `.c-statement-text`: The large text of the statement.
-- `.c-statement-sub`: The subtitle/attribution.
-- `.c-kpi-group`: Grid container for highlighting key metrics/ROIs.
-- `.c-kpi`: A single metric column.
-- `.c-kpi-value`: The large number (wrap suffixes like "%" in `<span>`).
-- `.c-kpi-label`: The description of the metric.
-- `.c-timeline`: A horizontal connecting line for roadmap phases.
-- `.c-timeline-step`: A step in the timeline.
-- `.c-timeline-marker`: The circular dot on the timeline.
-- `.c-timeline-year`: The year/phase label.
-- `.c-timeline-title`: The title of the phase.
-- `.c-timeline-desc`: The description.
-
-### Enterprise / HIT Architecture Components (企业级架构)
-- `.c-architecture-stack`: A vertical stack container for layered system architectures (e.g., IaaS -> PaaS -> SaaS).
-- `.c-layer`: A single layer block inside the stack.
-- `.c-layer.core`: The core/engine layer (highlighted with primary color).
-- `.c-layer-title`: Title of the layer.
-- `.c-layer-items`: A flex container for modular components within a layer.
-- `.c-module-box`: A small rectangular box representing a software module (e.g., "EMR", "CDR").
-- `.c-clinical-pathway`: A horizontal flow container specifically for patient journey or data flow.
-- `.c-pathway-node`: A step in the clinical pathway.
-- `.c-pathway-arrow`: An arrow `->` between nodes, typically using Lucide icons (`<i data-lucide="arrow-right"></i>`).
-- `.c-comparison-matrix`: A grid layout for Before/After or Pain Point/Solution comparisons.
-- `.c-matrix-col-bad`: The "Before/Pain Point" column (styled with muted red/gray).
-- `.c-matrix-col-good`: The "After/Solution" column (styled with Winning Blue/Teal).
-- `.cdss-workflow-matrix`: A specialized 2D grid matrix mapping clinical stages to AI interventions (CDSS alerts).
-- `.emr-level5-radar`: A specialized placeholder container for EMR (Electronic Medical Record) Level 5-7 radar charts or pentagon capability layouts.
-- `.data-lake-funnel`: A layout showing heterogeneous data ingestion (HIS, LIS, PACS) mapping into standardized CDR/ODR assets. Includes `.data-source`, `.data-cleansing`, and `.data-asset`.
-- `.policy-compliance-grid`: A matrix aligning software features directly with national evaluation metrics (互联互通标准化, 智慧医院国考).
-- `.multi-campus-topology`: A hub-and-spoke layout for "一院多区" (Multi-campus) architectures, featuring a `.hub-center` and multiple `.edge-node`s.
-- `.tri-terminal-view`: A rigid 3-column layout contrasting the distinct workflows for Doctors (`.role-doctor`), Nurses (`.role-nurse`), and Patients (`.role-patient`).
-
-### Era / Timeline Components (Legacy)
-- `.s-era-grid`: A grid container for historical roadmaps or stages.
-- `.s-era`: An individual stage block.
-- `.s-era.highlight`: Highlighted stage block.
-- `.s-era-period`: The year or period string (e.g., `1994 - 2014`).
-- `.s-era-zh`: The Chinese title for the stage.
-- `.s-era-en`: The English subtitle.
-- `.s-era-role`: The description of the stage.
-
-### Typography
-- `.h-xl-zh`: Extra large Chinese headline.
-- `.t-cat`: Category small tag text.
-- `.t-meta`: Metadata text, usually smaller and semi-transparent.
-- `.lead`: Lead paragraph text, slightly larger than body.
-
-## Example Slide
 ```html
-<section class="slide" data-animate="hero">
-  <div class="canvas-card" style="display:flex;flex-direction:column">
-    <div class="c-header" data-anim="hero-text">
-      <div class="c-tracker"><i data-lucide="compass"></i> 顶层设计 <span class="sep">/</span> <span class="active">01</span></div>
-      <h2 class="c-action-title">构建<strong>平台化中枢</strong>。</h2>
+<body class="canvas-mode" data-theme="winning-clinical" data-aspect="16:9">
+```
+
+## 品牌与可读性
+
+- 主蓝：`--primary-600: #005EB8`，蓝底文字固定 `--primary-on: #FFFFFF`。
+- AI青：`--secondary: #00B5E2` 仅用于填充；白底小字使用对比度更高的 `--secondary-700: #007A99`。
+- 警示金：`--warning: #F2A900`，金底文字固定 `--warning-on: #1A232C`，禁止白字。
+- 正文：`--gray-900: #1A232C`；辅助文字最低使用 `--gray-600: #536577`，不以低透明度浅灰承载关键信息。
+- 每页最多三种语义色；不用3D、卡通、液态形状和无业务含义的装饰。
+
+## 通用决策组件
+
+| 组件 | 类 |
+|---|---|
+| 页眉与结论标题 | `.c-header`、`.c-tracker`、`.c-action-title` |
+| MECE支柱 | `.c-pillars`、`.c-pillar`、`.highlight`、`.c-pillar-title`、`.c-pillar-body` |
+| 核心主张 | `.c-statement`、`.c-statement-text`、`.c-statement-sub` |
+| KPI | `.c-kpi-group`、`.c-kpi`、`.c-kpi-value`、`.c-kpi-label` |
+| 路线图 | `.c-timeline`、`.c-timeline-step`、`.c-timeline-marker`、`.c-timeline-year`、`.c-timeline-title`、`.c-timeline-desc` |
+| 来源 | `.c-footnote` |
+
+## 医疗数字化组件
+
+| 场景 | 主类及必要子类 | 对应布局 ID |
+|---|---|---|
+| 企业架构 | `.c-architecture-stack`、`.c-layer`、`.core`、`.c-layer-title`、`.c-layer-items`、`.c-module-box` | `architecture` |
+| 临床路径 | `.c-clinical-pathway`、`.c-pathway-node`、`.c-pathway-arrow` | `pathway` |
+| 改造前后对比 | `.c-comparison-matrix`、`.c-matrix-col-bad`、`.c-matrix-col-good` | `comparison` |
+| CDSS干预矩阵 | `.cdss-workflow-matrix` | `cdss-matrix` |
+| 电子病历能力雷达 | `.emr-level5-radar` | `emr-radar` |
+| 数据湖提纯 | `.data-lake-funnel`、`.data-source`、`.data-cleansing`、`.data-asset` | `data-lake-funnel` |
+| 政策指标映射 | `.policy-compliance-grid` | `policy-grid` |
+| 一院多区 | `.multi-campus-topology`、`.hub-center`、`.edge-node` | `multi-campus` |
+| 医护患三端 | `.tri-terminal-view`、`.role-doctor`、`.role-nurse`、`.role-patient` | `tri-terminal` |
+| RAG证据链 | `.rag-traceability-flow`、`.rag-query`、`.rag-boundary`、`.rag-output` | `rag-traceability` |
+| DRG/DIP价值成本 | `.drg-cost-matrix` | `drg-matrix` |
+| HL7/ESB总线 | `.hl7-integration-bus`、`.hl7-bus-nodes`、`.hl7-bus-node`、`.hl7-bus-line` | `hl7-bus` |
+| 单病种PDCA | `.pdca-quality-loop`、`.pdca-step` | `pdca-loop` |
+| 全生命周期旅程 | `.patient-journey-timeline`、`.journey-stage` | `patient-journey` |
+
+所有上述主类都有真实几何和视觉实现，不再作为空占位容器。雷达、矩阵和拓扑可以承载静态 HTML/SVG；涉及精确数据时仍须提供数据、刻度、图例、来源和日期。
+
+## 兼容组件
+
+既有页面可继续使用 `.s-arch*`、`.s-era*`、`.stacked-ledger`、`.ledger-*` 和 `.c-matrix*`。新页面优先使用上表的语义组件。共享的 `slide`、`canvas-card`、`layout-*`、`t-meta`、`frame-img` 等由 `core.css` 提供。
+
+## 最小示例
+
+```html
+<section class="slide" data-slide-id="platform-architecture" data-layout="architecture" data-evidence="required" data-animate="hero">
+  <div class="canvas-card layout-architecture">
+    <header class="c-header" data-anim="hero-text">
+      <div class="c-tracker">总体架构 <span class="sep">/</span> <span class="active">01</span></div>
+      <h2 class="c-action-title">把分散系统收敛为<strong>可治理的平台中枢</strong></h2>
+    </header>
+    <div class="c-architecture-stack">
+      <section class="c-layer core">
+        <h3 class="c-layer-title">临床智能中枢</h3>
+        <div class="c-layer-items"><span class="c-module-box">CDR</span><span class="c-module-box">AI Gateway</span></div>
+      </section>
+      <section class="c-layer">
+        <h3 class="c-layer-title">业务应用</h3>
+        <div class="c-layer-items"><span class="c-module-box">EMR</span><span class="c-module-box">PACS</span></div>
+      </section>
     </div>
-    <div class="c-pillars" style="margin-top:4vh" data-anim="bottom">
-      <div class="c-pillar highlight" data-anim="col">
-        <h3 class="c-pillar-title">数据标准</h3>
-        <p class="c-pillar-body">统一的数据与业务中台建设，标准化数据原生落盘。</p>
-      </div>
-    </div>
+    <p class="c-footnote source-note" data-source="项目范围说明" data-source-date="2026-08"><strong>来源：</strong>项目范围说明，2026-08</p>
   </div>
 </section>
 ```

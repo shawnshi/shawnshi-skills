@@ -1,0 +1,99 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://example.invalid/discovery-call/governance-context.schema.json",
+  "title": "Discovery Call Trusted Governance Context",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["schema", "context_id", "customer_id", "runtime_actor_id", "updated_at", "identity_assertion", "actors", "action_assertions", "external_requests"],
+  "$defs": {
+    "timestamp": {"type": "string", "format": "date-time"},
+    "nullableTimestamp": {"type": ["string", "null"], "format": "date-time"},
+    "id": {"type": "string", "pattern": "^[A-Za-z0-9][A-Za-z0-9._-]{2,127}$"},
+    "sha256": {"type": "string", "pattern": "^[0-9a-f]{64}$"},
+    "signature": {"type": "string", "pattern": "^[A-Za-z0-9+/]{86}==$"}
+  },
+  "properties": {
+    "schema": {"const": "discovery-call-governance/v1"},
+    "context_id": {"type": "string", "pattern": "^dcx-[0-9]{8}-[A-Za-z0-9]{8}$"},
+    "customer_id": {"type": "string", "minLength": 3, "maxLength": 128},
+    "runtime_actor_id": {"$ref": "#/$defs/id"},
+    "updated_at": {"$ref": "#/$defs/timestamp"},
+    "identity_assertion": {
+      "type": "object", "additionalProperties": false,
+      "required": ["schema", "issuer", "audience", "key_id", "issued_at", "expires_at", "signature"],
+      "properties": {
+        "schema": {"const": "discovery-call-identity-assertion/v1"},
+        "issuer": {"type": "string", "minLength": 1},
+        "audience": {"const": "discovery-call-governance"},
+        "key_id": {"type": "string", "minLength": 1},
+        "issued_at": {"$ref": "#/$defs/timestamp"},
+        "expires_at": {"$ref": "#/$defs/timestamp"},
+        "signature": {"$ref": "#/$defs/signature"}
+      }
+    },
+    "actors": {
+      "type": "object",
+      "additionalProperties": {
+        "type": "object", "additionalProperties": false,
+        "required": ["display_name", "actor_type", "identity_provider", "status", "grants"],
+        "properties": {
+          "display_name": {"type": "string", "minLength": 1, "maxLength": 100},
+          "actor_type": {"const": "human"},
+          "identity_provider": {"type": "string", "minLength": 1, "maxLength": 100},
+          "status": {"enum": ["active", "inactive"]},
+          "grants": {"type": "array", "items": {
+            "type": "object", "additionalProperties": false,
+            "required": ["grant_id", "role", "operations", "business_modes", "customer_ids", "valid_from", "expires_at"],
+            "properties": {
+              "grant_id": {"$ref": "#/$defs/id"},
+              "role": {"enum": ["requester", "account_owner", "runtime_owner", "evidence_reviewer", "commercial_reviewer", "external_approver", "authorization_owner"]},
+              "operations": {"type": "array", "minItems": 1, "items": {"type": "string", "minLength": 1}},
+              "business_modes": {"type": "array", "minItems": 1, "items": {"type": "string", "minLength": 1}},
+              "customer_ids": {"type": "array", "minItems": 1, "items": {"type": "string", "minLength": 1}},
+              "valid_from": {"$ref": "#/$defs/timestamp"},
+              "expires_at": {"$ref": "#/$defs/timestamp"}
+            }
+          }}
+        }
+      }
+    },
+    "action_assertions": {
+      "type": "object",
+      "additionalProperties": {
+        "type": "object", "additionalProperties": false,
+        "required": ["schema", "action_id", "event_type", "source", "verified", "decision", "actor_id", "operation", "context_id", "customer_id", "business_mode", "target_artifact_type", "target_content_version", "target_body_sha256", "target_context_sha256", "session_id", "nonce", "issuer", "audience", "key_id", "issued_at", "expires_at", "signature", "consumed_at", "consumed_by_run_id"],
+        "properties": {
+          "schema": {"const": "discovery-call-action-assertion/v1"}, "action_id": {"$ref": "#/$defs/id"},
+          "event_type": {"const": "governance_action_approved"}, "source": {"const": "authenticated_human_action"},
+          "verified": {"const": true}, "decision": {"const": "approved"}, "actor_id": {"$ref": "#/$defs/id"},
+          "operation": {"type": "string", "minLength": 1}, "context_id": {"type": "string"}, "customer_id": {"type": "string"},
+          "business_mode": {"enum": ["briefing", "standard_visit", "strategic_account", "letter"]},
+          "target_artifact_type": {"type": "string", "minLength": 1}, "target_content_version": {"type": "string", "pattern": "^[1-9][0-9]*$"},
+          "target_body_sha256": {"$ref": "#/$defs/sha256"}, "target_context_sha256": {"type": "string", "pattern": "^(|[0-9a-f]{64})$"},
+          "session_id": {"type": "string", "minLength": 1}, "nonce": {"type": "string", "minLength": 16},
+          "issuer": {"type": "string", "minLength": 1}, "audience": {"const": "discovery-call-governance"}, "key_id": {"type": "string", "minLength": 1},
+          "issued_at": {"$ref": "#/$defs/timestamp"}, "expires_at": {"$ref": "#/$defs/timestamp"}, "signature": {"$ref": "#/$defs/signature"},
+          "consumed_at": {"$ref": "#/$defs/nullableTimestamp"}, "consumed_by_run_id": {"type": ["string", "null"]}
+        }
+      }
+    },
+    "external_requests": {
+      "type": "object",
+      "additionalProperties": {
+        "type": "object", "additionalProperties": false,
+        "required": ["schema", "request_id", "event_type", "actor_id", "source", "verified", "operation", "business_mode", "context_id", "customer_id", "approval_run_id", "internal_content_version", "approved_body_sha256", "approved_context_sha256", "session_id", "nonce", "issuer", "audience", "key_id", "issued_at", "requested_at", "expires_at", "signature", "consumed_at", "consumed_by_run_id"],
+        "properties": {
+          "schema": {"const": "discovery-call-external-request-assertion/v1"}, "request_id": {"$ref": "#/$defs/id"},
+          "event_type": {"const": "external_output_requested"}, "actor_id": {"$ref": "#/$defs/id"}, "source": {"const": "authenticated_user_turn"},
+          "verified": {"const": true}, "operation": {"const": "emit_external"}, "business_mode": {"const": "letter"},
+          "context_id": {"type": "string"}, "customer_id": {"type": "string"}, "approval_run_id": {"type": "string"},
+          "internal_content_version": {"type": "string", "pattern": "^[1-9][0-9]*$"}, "approved_body_sha256": {"$ref": "#/$defs/sha256"}, "approved_context_sha256": {"$ref": "#/$defs/sha256"},
+          "session_id": {"type": "string", "minLength": 1}, "nonce": {"type": "string", "minLength": 16},
+          "issuer": {"type": "string", "minLength": 1}, "audience": {"const": "discovery-call-governance"}, "key_id": {"type": "string", "minLength": 1},
+          "issued_at": {"$ref": "#/$defs/timestamp"}, "requested_at": {"$ref": "#/$defs/timestamp"}, "expires_at": {"$ref": "#/$defs/timestamp"}, "signature": {"$ref": "#/$defs/signature"},
+          "consumed_at": {"$ref": "#/$defs/nullableTimestamp"}, "consumed_by_run_id": {"type": ["string", "null"]}
+        }
+      }
+    }
+  }
+}

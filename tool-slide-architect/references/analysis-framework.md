@@ -1,163 +1,85 @@
-# Presentation Analysis Framework
+# Presentation analysis framework
 
-Deep content analysis for effective slide deck creation.
+在写页面前完成这份轻量分析。目标是减少无效页，不是制造更多术语。
 
-## 1. Message Hierarchy
+## 1. Brief
 
-Identify the core message structure before designing slides.
+| 问题 | 输出 |
+|---|---|
+| 谁是主要听众，谁有决定权？ | 角色、知识水平、利益和授权边界 |
+| 演示后要发生什么？ | 可观察的决定、行动或学习结果 |
+| 场合和时长是什么？ | 正式程度、可用分钟数、问答时间 |
+| 哪些内容必须保留？ | 原文、数字、合规声明、品牌模板 |
+| 资料边界是什么？ | 来源、截止日期、保密级别和适用地域 |
+| 最终要交付什么？ | `outline.md`、JSON handoff、实际 `.pptx` |
 
-### Core Message (One Sentence)
-- What is the single most important takeaway?
-- If the audience remembers only one thing, what should it be?
-- Can you state it in ≤15 words?
+没有答案不一定要停下。只有答案会改变故事线、授权边界或重大风险时才提问；其余缺口写入 Open Items。
 
-### Supporting Points (3-5 Maximum)
-- What evidence supports the core message?
-- What sub-topics must be covered?
-- Prioritize by audience relevance, not source order
+## 2. Core argument
 
-### Call-to-Action
-- What should the audience DO after viewing?
-- Is it clear, specific, and achievable?
-- Where does it appear (slide position)?
+写出：
 
-## 2. Audience Decision Matrix
+- 一句核心主张：听众只记住一件事时应该记住什么。
+- 3–5 个支撑判断：每个都能被证明、限定或明确标为假设/建议。
+- 一个目标动作：谁在什么时间决定或完成什么。
 
-| Question | Analysis |
-|----------|----------|
-| Who is the primary audience? | [Role, expertise level, relationship to topic] |
-| What do they currently believe? | [Existing knowledge, assumptions, biases] |
-| What decision do we want them to make? | [Specific action or conclusion] |
-| What barriers exist? | [Objections, concerns, missing information] |
-| What evidence will convince them? | [Data types, credibility sources, emotional hooks] |
+删除不能服务核心主张、受众任务或风险披露的内容。
 
-### Audience Adaptation
+## 3. Decision logic
 
-| Audience Type | Content Focus | Visual Treatment |
-|---------------|---------------|------------------|
-| Executives (院长/CEO) | Outcomes, ROI, 国考排名, 政策红利 | High-level, clean, data highlights |
-| Technical (信息科/CIO) | Architecture, 安全等保, 互联互通, 信创 | Detailed diagrams, 架构拓扑图, 信创适配表 |
-| Clinical (医务/质管/CMO) | 医疗质量, 路径依从性, 专病上报率 | 临床路径流图, 数据漏斗, 质控预警图 |
-| Financial (财务科/医保/CFO) | DRG/DIP 结余, 控费分析, 科室核算 | 瀑布图, 盈亏平衡表, 结余/超支趋势对比图 |
-| General | Benefits, stories, relatability | Visual metaphors, simple charts |
-| Investors | Market size, traction, team | Growth charts, milestones, comparisons |
-| Learners | Step-by-step, examples, practice | Progressive reveals, exercises |
+对每个关键判断分别回答：
 
-## 3. Visual Opportunity Map
+1. 它是事实、推断、假设还是建议？
+2. 核验状态是什么？
+3. 哪条证据支持它，证据适用范围是什么？
+4. 如果证据不成立，结论或行动会如何变化？
+5. 是否需要独立呈现风险、选项或决策请求？
 
-Identify which content benefits from visualization.
+避免三类常见错误：把政策目标当建设成效、把相关性当因果、把供应商能力当客户现状。
 
-### Content-to-Visual Mapping
+## 4. Narrative selection
 
-| Content Type | Visual Treatment | Example |
-|--------------|------------------|---------|
-| Comparisons | Side-by-side, before/after | Feature comparison table |
-| Processes | Flow diagrams, numbered steps | Workflow illustration |
-| Hierarchies | Org charts, pyramids, trees | Organizational structure |
-| Timelines | Horizontal/vertical timelines | Project milestones |
-| Statistics | Charts, highlighted numbers | Key metrics with context |
-| Concepts | Icons, metaphors, illustrations | Abstract idea visualization |
-| Relationships | Venn diagrams, networks | Ecosystem or dependencies |
-| Lists | Structured grids, icon rows | Feature bullets with icons |
+从 [workflows.md](workflows.md) 选择主模式。按以下条件删减：
 
-### Visual Priority
+- 时间短：保留结论、证据、影响、风险、请求。
+- 高管受众：减少过程描述，保留取舍和结果。
+- 专业评审：增加方法、定义、边界、基线和引用。
+- 混合受众：主体讲共识，技术细节放 Appendix。
+- 单页：只保留一个页面任务和一个主视觉。
 
-Rate each piece of content:
-- **Must Visualize**: Complex data, key differentiators, memorable moments
-- **Should Visualize**: Supporting evidence, secondary points
-- **Text Only**: Simple statements, transitions, minor details
+## 5. Page economics
 
-## 4. Presentation Flow
+每页通过以下检查：
 
-Structure for impact and retention.
+- **任务**：该页为何存在？
+- **变化**：听众看完后多知道、相信或决定了什么？
+- **证据**：页面结论由什么支撑？
+- **视觉**：哪种关系值得被看见，而不是写成列表？
+- **转场**：为什么下一页自然出现？
 
-### Opening (First 2-3 Slides)
+合并重复任务；拆分同时承担多个重大判断的页面；删除只重复讲稿或资料原顺序的页面。
 
-| Element | Purpose |
-|---------|---------|
-| Hook | Capture attention (surprising stat, question, story) |
-| Context | Why this matters now |
-| Preview | What audience will learn/gain |
+## 6. Visual choice
 
-### Middle (Content Slides)
+| 关系 | 优先表达 |
+|---|---|
+| 时间变化 | 折线、时间轴、斜率图 |
+| 类别比较 | 条形图、点图、统一维度矩阵 |
+| 构成 | 堆叠图；类别很少时才用环图 |
+| 流程和依赖 | 流程图、泳道、依赖图 |
+| 层级和能力 | 分层图、树或能力地图 |
+| 决策 | 选项矩阵、决策卡 |
+| 风险 | 概率×影响矩阵、风险清单 |
+| 单个关键数字 | key-stat，并同时给出基准与范围 |
 
-| Pattern | When to Use |
-|---------|-------------|
-| Problem → Solution | Introducing new products/ideas |
-| Situation → Complication → Resolution | Complex business cases |
-| What → Why → How | Educational content |
-| Past → Present → Future | Transformation stories |
-| Claim → Evidence → Implication | Data-driven arguments |
+视觉类型不能弥补数据定义不一致。先统一口径、单位、时间范围和样本，再画图。
 
-### Closing (Final 2-3 Slides)
+## 7. Pre-outline check
 
-| Element | Purpose |
-|---------|---------|
-| Synthesis | Tie back to core message |
-| Call-to-Action | Clear next steps |
-| Memorable Close | Resonant quote, image, or statement |
-
-### Transitions
-
-- Each slide should answer: "What comes next?"
-- Use narrative connectors between sections
-- Build logical progression, not topic jumps
-
-## 5. Content Adaptation
-
-Decide what to keep, transform, or omit.
-
-### Keep (High Value)
-- Core arguments and evidence
-- Unique insights or data
-- Audience-relevant examples
-- Memorable quotes or statistics
-
-### Simplify (Medium Value)
-- Technical details → Visual summaries
-- Long explanations → Bullet hierarchies
-- Multiple examples → Best 1-2 examples
-- Background context → Brief framing
-
-### Visualize (Transform)
-- Data tables → Charts or highlighted numbers
-- Process descriptions → Flow diagrams
-- Comparisons in text → Side-by-side visuals
-- Abstract concepts → Concrete metaphors
-
-### Omit (Low Value)
-- Tangential information
-- Redundant examples
-- Excessive caveats
-- Background the audience already knows
-
-## 6. Analysis Checklist
-
-Before outline creation, confirm:
-
-### Message Clarity
-- [ ] Core message stated in one sentence
-- [ ] 3-5 supporting points identified
-- [ ] Call-to-action defined
-
-### Audience Fit
-- [ ] Primary audience identified
-- [ ] Existing beliefs mapped
-- [ ] Desired decision clear
-- [ ] Evidence matches audience needs
-
-### Visual Planning
-- [ ] Key visualizations identified
-- [ ] Chart/diagram types selected
-- [ ] Visual priority assigned
-
-### Flow Design
-- [ ] Opening hook defined
-- [ ] Middle pattern selected
-- [ ] Closing approach planned
-- [ ] Transitions considered
-
-### Content Decisions
-- [ ] Keep/simplify/visualize/omit applied
-- [ ] Source material fully processed
-- [ ] No important content overlooked
+- [ ] 核心主张和目标动作明确
+- [ ] 叙事模式与 `Deck_Mode` 已选
+- [ ] 关键事实、推断、假设和建议已分开
+- [ ] 证据可定位，适用范围已记录
+- [ ] 隐私、保密、地域政策和资产授权边界已识别
+- [ ] 每页只有一个主要任务
+- [ ] 主体终点和问答备份策略明确

@@ -1,0 +1,310 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://winning-health.example/discovery-call/evidence-manifest.schema.json",
+  "title": "discovery-call evidence manifest",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schema",
+    "context_id",
+    "run_id",
+    "business_mode",
+    "customer_id",
+    "project_id",
+    "updated_at",
+    "connector_audit",
+    "sources",
+    "claims",
+    "query_links"
+  ],
+  "properties": {
+    "schema": {
+      "const": "discovery-call-evidence-manifest/v1"
+    },
+    "context_id": {
+      "type": "string",
+      "pattern": "^dcx-[0-9]{8}-[A-Za-z0-9]{8}$"
+    },
+    "run_id": {
+      "type": "string",
+      "pattern": "^dcr-[0-9]{8}T[0-9]{6}-[A-Za-z0-9]{4}$"
+    },
+    "business_mode": {
+      "enum": [
+        "briefing",
+        "standard_visit",
+        "strategic_account",
+        "letter"
+      ]
+    },
+    "customer_id": {
+      "type": "string",
+      "minLength": 3
+    },
+    "project_id": {
+      "type": [
+        "string",
+        "null"
+      ]
+    },
+    "updated_at": {
+      "type": "string",
+      "format": "date-time"
+    },
+    "connector_audit": {
+      "$ref": "#/$defs/connector_audit"
+    },
+    "sources": {
+      "type": "object",
+      "additionalProperties": {
+        "$ref": "#/$defs/source_record"
+      }
+    },
+    "claims": {
+      "type": "object",
+      "additionalProperties": {
+        "$ref": "#/$defs/claim_record"
+      }
+    },
+    "query_links": {
+      "type": "object",
+      "additionalProperties": {
+        "type": "array",
+        "items": {
+          "type": "string"
+        }
+      }
+    }
+  },
+  "$defs": {
+    "source_record": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "source_id", "locator", "canonical_locator", "final_url", "cache_key",
+        "source_fingerprint", "content_sha256", "retrieved_at", "capture_method", "length",
+        "capture_receipt"
+      ],
+      "properties": {
+        "source_id": {"type": "string", "pattern": "^SRC-(I|L|N)-[0-9]{3,}$"},
+        "locator": {"type": "string", "minLength": 1},
+        "canonical_locator": {"type": "string", "minLength": 1},
+        "final_url": {"type": "string", "minLength": 1},
+        "cache_key": {"type": "string", "pattern": "^[0-9a-f]{64}$"},
+        "source_fingerprint": {"type": "string", "pattern": "^sha256:[0-9a-f]{64}$"},
+        "content_sha256": {"type": "string", "pattern": "^[0-9a-f]{64}$"},
+        "retrieved_at": {"type": "string", "format": "date-time"},
+        "published_at": {"type": ["string", "null"], "format": "date-time"},
+        "source_updated_at": {"type": ["string", "null"], "format": "date-time"},
+        "internal_recorded_at": {"type": ["string", "null"], "format": "date-time"},
+        "capture_method": {"enum": ["raw-bytes-v1", "text-nfc-lf-utf8-v1"]},
+        "length": {"type": "integer", "minimum": 0},
+        "capture_receipt": {"$ref": "#/$defs/source_capture_receipt"}
+      }
+    },
+    "source_capture_receipt": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "schema", "issuer", "audience", "key_id", "issued_at", "expires_at",
+        "receipt_id", "source_id", "locator", "final_url", "canonical_locator",
+        "content_sha256", "length", "capture_method", "retrieved_at", "run_id",
+        "customer_id", "project_id", "signature"
+      ],
+      "properties": {
+        "schema": {"const": "discovery-call-source-capture-receipt/v1"},
+        "issuer": {"type": "string", "minLength": 3},
+        "audience": {"const": "discovery-call-source-capture"},
+        "key_id": {"type": "string", "minLength": 3},
+        "issued_at": {"type": "string", "format": "date-time"},
+        "expires_at": {"type": "string", "format": "date-time"},
+        "receipt_id": {"type": "string", "minLength": 3},
+        "source_id": {"type": "string", "pattern": "^SRC-(I|L|N)-[0-9]{3,}$"},
+        "locator": {"type": "string", "minLength": 1},
+        "final_url": {"type": "string", "minLength": 1},
+        "canonical_locator": {"type": "string", "minLength": 1},
+        "content_sha256": {"type": "string", "pattern": "^[0-9a-f]{64}$"},
+        "length": {"type": "integer", "minimum": 0},
+        "capture_method": {"enum": ["raw-bytes-v1", "text-nfc-lf-utf8-v1"]},
+        "retrieved_at": {"type": "string", "format": "date-time"},
+        "run_id": {"type": "string", "pattern": "^dcr-[0-9]{8}T[0-9]{6}-[A-Za-z0-9]{4}$"},
+        "customer_id": {"type": "string", "minLength": 3},
+        "project_id": {"type": ["string", "null"]},
+        "signature": {"type": "string", "minLength": 80}
+      }
+    },
+    "claim_record": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "claim_id", "information_type", "ttl_class", "evidence_anchor_at", "date_basis",
+        "verified_at", "ttl_days", "expires_at", "verification_status", "supporting_source_ids"
+      ],
+      "properties": {
+        "claim_id": {"type": "string", "pattern": "^CLM-(I|L|N)-[0-9]{3,}$"},
+        "information_type": {"enum": ["institution", "leader", "procurement", "internal"]},
+        "ttl_class": {"enum": ["institution", "leader", "procurement", "internal"]},
+        "evidence_anchor_at": {"type": "string", "format": "date-time"},
+        "date_basis": {"enum": ["published_at", "updated_at", "retrieved_at", "internal_recorded_at"]},
+        "verified_at": {"type": "string", "format": "date-time"},
+        "ttl_days": {"type": "integer", "minimum": 1},
+        "expires_at": {"type": "string", "format": "date-time"},
+        "verification_status": {"enum": ["asserted", "verified_single", "corroborated", "conflicted", "stale", "invalidated", "unusable"]},
+        "supporting_source_ids": {
+          "type": "array", "minItems": 1, "uniqueItems": true,
+          "items": {"type": "string", "pattern": "^SRC-(I|L|N)-[0-9]{3,}$"}
+        }
+      }
+    },
+    "connector_audit": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "status",
+        "connector_id",
+        "call_id",
+        "called_at",
+        "tenant_id",
+        "customer_id",
+        "project_id",
+        "allowed_project_ids",
+        "authorization_owner",
+        "authorization_expires_at",
+        "authorized_roots",
+        "allowed_dataset_aliases",
+        "allowed_confidentiality",
+        "authorization_purpose",
+        "capability_receipt_id",
+        "server_filter_verified",
+        "response_scope_verified",
+        "response_fingerprint",
+        "isolated_record_count"
+      ],
+      "properties": {
+        "status": {
+          "enum": [
+            "not_applicable",
+            "not_configured",
+            "connected",
+            "no_hits",
+            "permission_denied",
+            "failed"
+          ]
+        },
+        "connector_id": {
+          "type": ["string", "null"]
+        },
+        "call_id": {
+          "type": ["string", "null"]
+        },
+        "called_at": {
+          "type": ["string", "null"],
+          "format": "date-time"
+        },
+        "tenant_id": {
+          "type": ["string", "null"]
+        },
+        "customer_id": {
+          "type": ["string", "null"]
+        },
+        "project_id": {
+          "type": ["string", "null"]
+        },
+        "allowed_project_ids": {
+          "type": "array",
+          "uniqueItems": true,
+          "description": "真实调用时必须包含同对象的project_id；动态成员相等性由commit_run运行时校验。",
+          "items": {"type": "string", "minLength": 3}
+        },
+        "authorization_owner": {
+          "type": ["string", "null"]
+        },
+        "authorization_expires_at": {
+          "type": ["string", "null"],
+          "format": "date-time"
+        },
+        "authorized_roots": {
+          "type": "array", "uniqueItems": true, "items": {"type": "string", "minLength": 1}
+        },
+        "allowed_dataset_aliases": {
+          "type": "array", "uniqueItems": true, "items": {"type": "string", "minLength": 1}
+        },
+        "allowed_confidentiality": {
+          "type": "array", "uniqueItems": true, "items": {"type": "string", "minLength": 1}
+        },
+        "authorization_purpose": {"type": ["string", "null"]},
+        "capability_receipt_id": {"type": ["string", "null"]},
+        "authorization_actor_id": {"type": ["string", "null"]},
+        "capability_operation": {"type": ["string", "null"]},
+        "capability_receipt_verified": {"type": "boolean"},
+        "capability_receipt_issuer": {"type": ["string", "null"]},
+        "capability_receipt_key_id": {"type": ["string", "null"]},
+        "capability_receipt_sha256": {"type": ["string", "null"], "pattern": "^[0-9a-f]{64}$"},
+        "capability_receipt_verified_at": {"type": ["string", "null"], "format": "date-time"},
+        "capability_receipt_expires_at": {"type": ["string", "null"], "format": "date-time"},
+        "server_filter_verified": {
+          "type": "boolean"
+        },
+        "response_scope_verified": {
+          "type": "boolean"
+        },
+        "response_fingerprint": {
+          "type": ["string", "null"]
+        },
+        "isolated_record_count": {
+          "type": "integer",
+          "minimum": 0
+        }
+      },
+      "allOf": [
+        {
+          "if": {
+            "properties": {
+              "status": {"enum": ["connected", "no_hits"]}
+            },
+            "required": ["status"]
+          },
+          "then": {
+            "required": [
+              "authorization_actor_id", "capability_operation",
+              "capability_receipt_verified", "capability_receipt_issuer",
+              "capability_receipt_key_id", "capability_receipt_sha256",
+              "capability_receipt_verified_at", "capability_receipt_expires_at"
+            ],
+            "properties": {
+              "connector_id": {"type": "string", "minLength": 1},
+              "call_id": {"type": "string", "minLength": 1},
+              "called_at": {"type": "string", "minLength": 1},
+              "tenant_id": {"type": "string", "minLength": 3},
+              "customer_id": {"type": "string", "minLength": 3},
+              "project_id": {"type": "string", "minLength": 3},
+              "allowed_project_ids": {
+                "type": "array",
+                "minItems": 1,
+                "contains": {"type": "string", "minLength": 3}
+              },
+              "authorization_owner": {"type": "string", "minLength": 1},
+              "authorization_expires_at": {"type": "string", "minLength": 1},
+              "authorized_roots": {"type": "array", "minItems": 1},
+              "allowed_dataset_aliases": {"type": "array", "minItems": 1},
+              "allowed_confidentiality": {"type": "array", "minItems": 1},
+              "authorization_purpose": {"type": "string", "minLength": 1},
+              "capability_receipt_id": {"type": "string", "minLength": 3},
+              "authorization_actor_id": {"type": "string", "minLength": 3},
+              "capability_operation": {"const": "internal_read"},
+              "capability_receipt_verified": {"const": true},
+              "capability_receipt_issuer": {"type": "string", "minLength": 3},
+              "capability_receipt_key_id": {"type": "string", "minLength": 3},
+              "capability_receipt_sha256": {"type": "string", "pattern": "^[0-9a-f]{64}$"},
+              "capability_receipt_verified_at": {"type": "string", "format": "date-time"},
+              "capability_receipt_expires_at": {"type": "string", "format": "date-time"},
+              "server_filter_verified": {"const": true},
+              "response_scope_verified": {"const": true},
+              "response_fingerprint": {"type": "string", "minLength": 3}
+            }
+          }
+        }
+      ]
+    }
+  }
+}
