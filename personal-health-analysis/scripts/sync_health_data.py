@@ -5,6 +5,7 @@ from __future__ import annotations
 
 import argparse
 import copy
+from concurrent.futures import ThreadPoolExecutor
 import hashlib
 import hmac
 import json
@@ -84,6 +85,7 @@ PACKAGE_EVIDENCE_NAMES = ("garmindb", "garminconnect")
 SUPPORTED_PACKAGE_VERSIONS = {"garmindb": "3.8.0", "garminconnect": "0.3.9"}
 MAX_METADATA_BYTES = 1024 * 1024
 MAX_TOKEN_STORE_BYTES = 1024 * 1024
+TREE_HASH_WORKERS = min(16, max(4, (os.cpu_count() or 1) * 2))
 
 
 class WindowError(ValueError):
@@ -376,18 +378,24 @@ def _site_packages_tree_evidence(site_packages: Path) -> tuple[str, int]:
 
     files = scan()
     initial_names = [item.relative_to(site_packages).as_posix() for item in files]
-    digest = hashlib.sha256()
-    for candidate in files:
+    def hash_one(candidate: Path) -> tuple[bytes, int, str]:
         relative = candidate.relative_to(site_packages).as_posix().encode("utf-8")
         try:
             size = candidate.stat().st_size
         except OSError as exc:
             raise SyncConfigurationError("runner_site_packages_scan_failed") from exc
+        return relative, size, _file_sha256(candidate)
+
+    with ThreadPoolExecutor(max_workers=TREE_HASH_WORKERS) as executor:
+        evidence = list(executor.map(hash_one, files))
+
+    digest = hashlib.sha256()
+    for relative, size, file_sha256 in evidence:
         digest.update(relative)
         digest.update(b"\0")
         digest.update(str(size).encode("ascii"))
         digest.update(b"\0")
-        digest.update(_file_sha256(candidate).encode("ascii"))
+        digest.update(file_sha256.encode("ascii"))
         digest.update(b"\n")
     final_names = [
         item.relative_to(site_packages).as_posix()
@@ -1008,12 +1016,16 @@ def execute_sync(
         }
     try:
         python_executable, cli_path = locate_garmindb_cli(garmindb_python)
-        current_bindings = {
-            "config": build_config_binding(Path(config_dir)),
-            "runner": build_runner_binding(python_executable, cli_path),
+        current_config = build_config_binding(Path(config_dir))
+        planned_runner = plan["bindings"]["runner"]
+        current_runner_files = {
+            "interpreter": _runner_file_binding(python_executable),
+            "cli": _runner_file_binding(cli_path),
         }
-        validate_sync_bindings(current_bindings)
-        if plan["bindings"] != current_bindings:
+        if plan["bindings"]["config"] != current_config or any(
+            planned_runner[name] != current_runner_files[name]
+            for name in ("interpreter", "cli")
+        ):
             raise SyncPlanError("plan_bindings_mismatch")
     except SyncPlanError as exc:
         return EXIT_AUTHORIZATION, {

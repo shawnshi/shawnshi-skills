@@ -15,6 +15,15 @@ content_version: "{{content_version}}"
 evidence_cutoff_date: "{{evidence_cutoff_date}}"
 updated_at: "{{updated_at}}"
 runtime_owner: {{runtime_owner_yaml}}
+reviewer: ""
+reviewed_at: ""
+reviewed_content_version: ""
+reviewed_body_sha256: ""
+reviewer_actor_id: ""
+reviewer_role: ""
+reviewer_authority_id: ""
+reviewer_identity_provider: ""
+review_action_event_id: ""
 ---
 
 # {{客户中文规范名称}}机构研究报告
@@ -90,11 +99,11 @@ runtime_owner: {{runtime_owner_yaml}}
 
 ## 10. 来源台账
 
-`F2`要求支持来源中存在至少一对来源：该同一对的`source_group`、`locator/source_locator（URL/稳定定位）`、`source_fingerprint`、`upstream_id`四项都有效且逐项不同；`upstream_id`为`unknown:<source_id>`的来源不能成为该对成员；其他补充支持来源不影响这对成立。不存在这样的同一对时不得标记为`corroborated`。`source_fingerprint`写64位小写SHA-256（可加`sha256:`前缀）或`scheme:stable-id`。
+台账14列逐列投影验签machine source；定位只写raw HTTP(S) URL或受控stable-id，所有单元格禁止Markdown链接/图片、反引号、HTML和Cf；备注只用`none/capture_limitation/metadata_unavailable/scope_limited`。`source_fingerprint`必须精确写`sha256:<64位小写content_sha256>`。F2只按已验签machine source的`source_group/canonical_locator/content_sha256/upstream_id`判定，必须存在同一对四项同时有效且逐项不同；Markdown值不得建立独立性。
 
 | source_id | 标题/文档名 | 发布者/提供者 | URL/稳定定位 | 发布/更新日期 | 访问日期 | 来源等级 | source_group | 权限 | 适用客户/项目 | 备注 | source_fingerprint | upstream_id | external_use |
 |---|---|---|---|---|---|---|---|---|---|---|---|---|---|
-| {{SRC-I-001}} | {{标题}} | {{单位}} | {{完整URL或稳定定位}} | {{日期}} | {{日期}} | {{S/A/B/C/internal}} | {{独立来源组}} | {{public/internal-authorized/restricted}} | {{范围}} | {{内容}} | {{64位小写SHA-256/sha256:.../scheme:stable-id}} | {{上游来源ID/unknown:SRC-I-001}} | {{true/false；外发是否已授权}} |
+| {{SRC-I-001}} | {{纯文本标题}} | {{纯文本单位}} | {{raw HTTP(S) URL或受控stable-id}} | {{日期}} | {{日期}} | {{S/A/B/C/internal}} | {{独立来源组}} | {{public/internal-authorized/restricted}} | {{范围}} | {{none/受控审计码}} | {{sha256:64位小写SHA-256}} | {{上游来源ID/unknown:SRC-I-001}} | {{true/false；外发是否已授权}} |
 
 ## 11. 覆盖、缺口与停止条件
 

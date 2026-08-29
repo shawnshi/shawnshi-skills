@@ -1,0 +1,89 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://winning-health.example/discovery-call/forward-evaluation-manifest.schema.json",
+  "title": "discovery-call forward evaluation manifest v3",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schema", "evaluation_id", "created_at", "attestation_issued_at", "attestation_expires_at",
+    "target_skill_id", "target_skill_version", "target_skill_tree_sha256", "plan", "runs", "host_attestation"
+  ],
+  "properties": {
+    "schema": {"const": "discovery-call-forward-evaluation/v3"},
+    "evaluation_id": {"type": "string", "minLength": 6},
+    "created_at": {"type": "string", "format": "date-time"},
+    "attestation_issued_at": {"type": "string", "format": "date-time"},
+    "attestation_expires_at": {"type": "string", "format": "date-time"},
+    "target_skill_id": {"const": "discovery-call"},
+    "target_skill_version": {"type": "string", "minLength": 1},
+    "target_skill_tree_sha256": {"$ref": "#/$defs/sha256"},
+    "plan": {"$ref": "#/$defs/artifactRef"},
+    "runs": {"type": "array", "minItems": 18, "items": {"$ref": "#/$defs/run"}},
+    "host_attestation": {"type": "object"}
+  },
+  "$defs": {
+    "sha256": {"type": "string", "pattern": "^[0-9a-f]{64}$"},
+    "artifactRef": {
+      "type": "object", "additionalProperties": false, "required": ["path", "sha256"],
+      "properties": {"path": {"type": "string", "minLength": 1}, "sha256": {"$ref": "#/$defs/sha256"}}
+    },
+    "reviewer": {
+      "type": "object", "additionalProperties": false,
+      "required": [
+        "actor_id", "display_name", "actor_type", "identity_provider", "identity_assertion_id",
+        "decision", "reviewed_at", "output_sha256", "evidence_sha256", "findings_sha256"
+      ],
+      "properties": {
+        "actor_id": {"type": "string", "minLength": 6},
+        "display_name": {"type": "string", "minLength": 1},
+        "actor_type": {"const": "human"},
+        "identity_provider": {"type": "string", "minLength": 6},
+        "identity_assertion_id": {"type": "string", "minLength": 6},
+        "decision": {"const": "pass"},
+        "reviewed_at": {"type": "string", "format": "date-time"},
+        "output_sha256": {"$ref": "#/$defs/sha256"},
+        "evidence_sha256": {"$ref": "#/$defs/sha256"},
+        "findings_sha256": {"$ref": "#/$defs/sha256"}
+      }
+    },
+    "run": {
+      "type": "object", "additionalProperties": false,
+      "required": [
+        "slot_id", "run_id", "context_id", "host_session_id", "scenario_id", "test_class",
+        "business_mode", "terminal_state", "artifacts", "source_failures", "clarifications",
+        "manual_edit_level", "key_facts", "key_conclusion", "risk_codes", "reviewer", "second_reviewer"
+      ],
+      "properties": {
+        "slot_id": {"type": "string", "minLength": 6},
+        "run_id": {"type": "string", "minLength": 6},
+        "context_id": {"type": "string", "minLength": 6},
+        "host_session_id": {"type": "string", "minLength": 6},
+        "scenario_id": {"type": "string", "minLength": 6},
+        "test_class": {"enum": ["T1", "T2", "T3"]},
+        "business_mode": {"enum": ["briefing", "standard_visit", "strategic_account", "letter"]},
+        "terminal_state": {"enum": ["completed", "blocked", "safe_refusal", "failed"]},
+        "artifacts": {
+          "type": "object", "additionalProperties": false,
+          "required": ["launch_input", "raw_input", "output", "tool_trace", "validation_result", "side_effect_audit", "execution_receipt"],
+          "properties": {
+            "launch_input": {"$ref": "#/$defs/artifactRef"},
+            "raw_input": {"$ref": "#/$defs/artifactRef"},
+            "output": {"$ref": "#/$defs/artifactRef"},
+            "tool_trace": {"$ref": "#/$defs/artifactRef"},
+            "validation_result": {"$ref": "#/$defs/artifactRef"},
+            "side_effect_audit": {"$ref": "#/$defs/artifactRef"},
+            "execution_receipt": {"$ref": "#/$defs/artifactRef"}
+          }
+        },
+        "source_failures": {"type": "array", "items": {"type": "string"}, "uniqueItems": true},
+        "clarifications": {"type": "array", "items": {"type": "string"}, "uniqueItems": true},
+        "manual_edit_level": {"const": "none"},
+        "key_facts": {"type": "array", "minItems": 1, "items": {"type": "string"}, "uniqueItems": true},
+        "key_conclusion": {"type": "string", "minLength": 1},
+        "risk_codes": {"type": "array", "items": {"type": "string"}, "uniqueItems": true},
+        "reviewer": {"$ref": "#/$defs/reviewer"},
+        "second_reviewer": {"$ref": "#/$defs/reviewer"}
+      }
+    }
+  }
+}

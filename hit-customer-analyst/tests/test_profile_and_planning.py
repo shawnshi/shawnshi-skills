@@ -7,7 +7,7 @@ import unittest
 from datetime import datetime, timedelta, timezone
 from pathlib import Path
 
-from tests.common import CONFIG, SKILL_ROOT, load_json, research_plan as rp, runtime_tx as tx
+from tests.common import CONFIG, SKILL_ROOT, load_json, research_plan as rp, runtime_tx as tx, test_intake_gate
 
 
 NOW = datetime(2026, 8, 26, 4, 0, 0, tzinfo=timezone.utc)
@@ -28,6 +28,7 @@ def bound_candidate(root: Path, plan: dict) -> tuple[Path, Path]:
         "authorization": {},
         "runtime_files": {},
         "artifacts": {},
+        "intake_preflight": dict(plan["intake_preflight"]),
     }
     source_manifest = {**common, "latest_run_id": "dcr-20260826T030000-Src1", "transaction_sequence": 1}
     candidate_manifest = {**common, "latest_run_id": plan["run_id"], "transaction_sequence": 2}
@@ -38,14 +39,15 @@ def bound_candidate(root: Path, plan: dict) -> tuple[Path, Path]:
     tx.atomic_write_json(
         candidate / "runtime" / "candidate-receipt.json",
         {
-            "schema": "discovery-call-candidate-receipt/v1",
+            "schema": "discovery-call-candidate-receipt/v2",
             "context_id": plan["context_id"],
             "run_id": plan["run_id"],
             "source_manifest_revision": 1,
             "source_manifest_sha256": source_digest,
             "source_workspace": str(source),
             "candidate_workspace": str(candidate),
-            "payload_sha256": candidate_digest,
+            "input_payload_sha256": hashlib.sha256(b"profile-planning-test-input").hexdigest(),
+            "final_manifest_sha256": candidate_digest,
         },
     )
     return source, candidate
@@ -91,6 +93,7 @@ def build(mode: str, **overrides):
         "organization_scope": "示例医院主院区",
         "business_fields": fields_for(mode),
         "generated_at": NOW,
+        "intake_preflight": test_intake_gate(mode, at=NOW),
     }
     arguments.update(overrides)
     return rp.build_search_plan(**arguments)
@@ -120,6 +123,8 @@ class BusinessProfileTests(unittest.TestCase):
     def test_all_machine_schema_files_are_json(self):
         expected = {
             "business-modes.schema.json",
+            "intake-preflight.schema.json",
+            "request-binding-receipt.schema.json",
             "search-plan.schema.json",
             "source-cache.schema.json",
             "evidence-manifest.schema.json",
@@ -135,6 +140,17 @@ class BusinessProfileTests(unittest.TestCase):
         template = (SKILL_ROOT / "assets" / "briefing-template.md").read_text(encoding="utf-8")
         for interval in ("0—5分钟", "5—20分钟", "20—25分钟", "25—30分钟"):
             self.assertIn(interval, template)
+
+    def test_role_level_visit_does_not_force_named_leader_research(self):
+        config = rp.load_config(CONFIG)
+        for mode in ("standard_visit", "strategic_account"):
+            with self.subTest(mode=mode):
+                profile = config["profiles"][mode]
+                self.assertNotIn("leader", profile["modules"])
+                self.assertIn("leader", profile["optional_modules"])
+                plan = build(mode)
+                self.assertTrue(plan["planning_ready"], plan["gate_results"])
+                self.assertNotIn("leader", plan["selected_modules"])
 
     def test_each_mode_builds_planning_ready_compatible_plan(self):
         for mode in rp.BUSINESS_MODES:
@@ -206,6 +222,7 @@ class ResearchPlanTests(unittest.TestCase):
             organization_scope="示例医院主院区",
             business_fields=fields_for("briefing"),
             generated_at=NOW.replace(year=2028),
+            intake_preflight=test_intake_gate("briefing", at=NOW.replace(year=2028)),
         )
         future_query = next(query for query in future["queries"] if query["purpose"] == "current-task")
         self.assertIn("2028", future_query["query"])
@@ -227,16 +244,16 @@ class ResearchPlanTests(unittest.TestCase):
                 final_url="HTTPS://Example.COM:443/a/?b=2&a=1#fragment",
                 retrieved_at=NOW,
             )
-            hit = cache.lookup("https://example.com/a?a=1&b=2", at=NOW + timedelta(days=89))
+            hit = cache.lookup("https://redirect.example/source", at=NOW + timedelta(days=89))
             self.assertEqual(hit["content_sha256"], entry["content_sha256"])
             self.assertEqual(entry["final_url"], "HTTPS://Example.COM:443/a/?b=2&a=1#fragment")
-            self.assertEqual(entry["canonical_locator"], "https://example.com/a?a=1&b=2")
+            self.assertEqual(entry["canonical_locator"], "https://redirect.example/source")
             self.assertEqual(entry["retrieved_at"], "2026-08-26T04:00:00Z")
             self.assertEqual(entry["capture_method"], rp.CAPTURE_METHOD_TEXT)
             self.assertEqual(entry["length"], len("official content".encode("utf-8")))
             self.assertEqual(entry["source_fingerprint"], "sha256:" + entry["content_sha256"])
             self.assertIsNone(
-                cache.lookup("https://example.com/a?a=1&b=2", at=NOW + timedelta(days=90))
+                cache.lookup("https://redirect.example/source", at=NOW + timedelta(days=90))
             )
 
     def test_capture_source_snapshot_is_content_derived_and_canonical(self):
@@ -255,7 +272,7 @@ class ResearchPlanTests(unittest.TestCase):
             retrieved_at=NOW,
         )
         expected = hashlib.sha256(normalized.encode("utf-8")).hexdigest()
-        self.assertEqual(first["canonical_locator"], "https://example.com/a?a=1&b=2")
+        self.assertEqual(first["canonical_locator"], "https://redirect.example/source")
         self.assertEqual(first["content_sha256"], expected)
         self.assertEqual(first["source_fingerprint"], "sha256:" + expected)
         self.assertEqual(first["content_sha256"], second["content_sha256"])
@@ -349,6 +366,31 @@ class ResearchPlanTests(unittest.TestCase):
             source_record["cache_key"] = hashlib.sha256(
                 source_record["canonical_locator"].encode("utf-8")
             ).hexdigest()
+            source_record.update(
+                {
+                    "source_title": "Example source",
+                    "publisher_or_provider": "Example publisher",
+                    "publication_or_update_date": "未标注",
+                    "access_date": NOW.date().isoformat(),
+                    "published_at": None,
+                    "source_updated_at": None,
+                    "internal_recorded_at": None,
+                    "source_level": "A",
+                    "source_group": "example-group",
+                    "permission": "public",
+                    "applicable_scope": "示例客户",
+                    "notes": "none",
+                    "upstream_id": "record:example-source",
+                    "external_use": "true",
+                    "tenant_id": None,
+                    "project_id": None,
+                    # This unit exercises deterministic record assembly; the
+                    # candidate validator separately verifies the host signature.
+                    "capture_receipt": {
+                        "schema": "discovery-call-source-capture-receipt/v3"
+                    },
+                }
+            )
             updated = rp.update_evidence_manifest(
                 paths["evidence_manifest"],
                 sources={"SRC-I-001": source_record},
@@ -362,8 +404,18 @@ class ResearchPlanTests(unittest.TestCase):
                         "verified_at": NOW.isoformat(),
                         "ttl_days": 90,
                         "expires_at": (NOW + timedelta(days=90)).isoformat(),
+                        "claim_type": "F",
+                        "provenance": "public",
                         "verification_status": "verified_single",
+                        "claim_text": "示例来源已确认",
+                        "time_scope": "当前口径",
+                        "supporting_source_refs": "SRC-I-001",
                         "supporting_source_ids": ["SRC-I-001"],
+                        "supporting_source_receipt_sha256s": {"SRC-I-001": "a" * 64},
+                        "counter_source_refs": "无",
+                        "counter_source_ids": [],
+                        "confidence": "高",
+                        "downstream_impact": "用于测试",
                     }
                 },
                 query_links={plan["queries"][0]["query_id"]: ["SRC-I-001", "SRC-I-001"]},

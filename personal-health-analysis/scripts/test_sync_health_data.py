@@ -1,4 +1,5 @@
 import contextlib
+import hashlib
 import importlib.util
 import io
 import json
@@ -731,6 +732,27 @@ class SyncHealthDataCliTests(unittest.TestCase):
             after["runner"]["environment"]["site_packages_file_count"],
             before["runner"]["environment"]["site_packages_file_count"] + 1,
         )
+
+    def test_parallel_tree_digest_matches_sequential_contract(self):
+        with tempfile.TemporaryDirectory() as root:
+            _, _, interpreter, _ = self.make_bound_environment(root)
+            site_packages = Path(root) / "runner-venv" / "Lib" / "site-packages"
+            files = sorted(
+                (item for item in site_packages.rglob("*") if item.is_file()),
+                key=lambda item: item.relative_to(site_packages).as_posix(),
+            )
+            digest = hashlib.sha256()
+            for item in files:
+                relative = item.relative_to(site_packages).as_posix().encode("utf-8")
+                digest.update(relative)
+                digest.update(b"\0")
+                digest.update(str(item.stat().st_size).encode("ascii"))
+                digest.update(b"\0")
+                digest.update(self.module._file_sha256(item).encode("ascii"))
+                digest.update(b"\n")
+            actual, count = self.module._site_packages_tree_evidence(site_packages)
+        self.assertEqual(actual, digest.hexdigest())
+        self.assertEqual(count, len(files))
 
     def test_valid_plan_still_fails_closed_without_a_trusted_runner(self):
         start, end = self.module.parse_window("2026-08-01", "2026-08-07")

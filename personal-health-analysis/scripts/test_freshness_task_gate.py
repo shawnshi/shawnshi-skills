@@ -1,6 +1,7 @@
 import argparse
 import importlib.util
 import unittest
+from datetime import date, timedelta
 from pathlib import Path
 
 
@@ -16,7 +17,7 @@ def args():
         allow_network=True,
         allow_sync=True,
         allow_health_data=True,
-        end="2026-08-26",
+        end=date.today().isoformat(),
         max_polls=3,
         poll_seconds=0.1,
         task_name="Codex-Garmin-Health-Sync",
@@ -24,6 +25,13 @@ def args():
         runner=r"C:\skill\scripts\garmin_auto_sync.py",
         authority_config=r"C:\skill\runtime-authority.json",
         state_output=r"C:\state\status.json",
+        allow_direct_sync=False,
+        direct_config_dir=None,
+        direct_garmindb_python=None,
+        direct_scratch_dir=None,
+        direct_days=7,
+        direct_timeout_seconds=480,
+        direct_total_timeout_seconds=900,
     )
 
 
@@ -55,14 +63,17 @@ def task(state="Ready"):
     }
 
 
-def terminal(run_id="new", status="success"):
+def terminal(run_id="new", status="success", end=None):
+    end = end or date.today().isoformat()
+    start = (date.fromisoformat(end) - timedelta(days=6)).isoformat()
     payload = {
         "status": status,
         "run_id": run_id,
-        "requested_window": {"end": "2026-08-26"},
+        "requested_window": {"start": start, "end": end},
         "runtime_binding": {"authority_version": "11.6.0", "authority_sha256": "a" * 64},
         "database_fingerprint_changed": True,
-        "component_latest_observation_dates": {name: "2026-08-26" for name in gate.COMPONENTS},
+        "component_latest_observation_dates": {name: end for name in gate.COMPONENTS},
+        "health_values_persisted": False,
     }
     if status == "failed":
         payload["error_code"] = "sync_failed"
@@ -77,6 +88,7 @@ class FreshnessTaskGateTests(unittest.TestCase):
             "authority_version": "11.6.0",
             "authority_sha256": "a" * 64,
             "task_binding": {"arguments_sha256": "b" * 64},
+            "entrypoints": {"scripts/garmin_auto_sync.py": r"C:\skill\scripts\garmin_auto_sync.py"},
         }
         self.original_read = Path.read_text
         Path.read_text = lambda self, encoding=None: "{}"
@@ -119,7 +131,7 @@ class FreshnessTaskGateTests(unittest.TestCase):
         authority = {"authority_version": "11.6.0", "authority_sha256": "a" * 64}
         for invalid in ("2026-08-27", "2026-8-26", "bad"):
             with self.subTest(invalid=invalid):
-                state = terminal()
+                state = terminal(end="2026-08-26")
                 state["component_latest_observation_dates"]["sleep"] = invalid
                 self.assertIsNotNone(gate.validate_terminal_state(state, "2026-08-26", authority, "new"))
 
@@ -135,6 +147,134 @@ class FreshnessTaskGateTests(unittest.TestCase):
             "arguments_sha256": "b" * 64,
         }
         self.assertEqual(gate.validate_task(snapshot, expected), "task_user_drift")
+
+    def test_permission_denied_never_falls_back_to_direct_sync(self):
+        options = args()
+        options.allow_direct_sync = True
+        called = []
+        code, audit = gate.run_gate(
+            options,
+            probe=lambda _: {"ok": False, "exists": None, "error_code": "task_probe_permission_denied"},
+            state_reader=lambda: None,
+            sleeper=lambda _: None,
+            direct_runner=lambda: called.append(True) or 0,
+        )
+        self.assertEqual(code, 1)
+        self.assertEqual(audit["reason"], "task_probe_permission_denied")
+        self.assertEqual(called, [])
+
+    def test_verified_missing_task_uses_direct_sync_and_binds_new_terminal(self):
+        options = args()
+        options.end = "2026-08-26"
+        options.allow_direct_sync = True
+        states = iter((terminal("old", end="2026-08-26"), terminal("new", end="2026-08-26")))
+        probes = iter((
+            {"ok": True, "exists": False, "reason": "task_missing"},
+            {"ok": True, "exists": False, "reason": "task_missing"},
+        ))
+        code, audit = gate.run_gate(
+            options,
+            probe=lambda _: next(probes),
+            state_reader=lambda: next(states),
+            sleeper=lambda _: None,
+            direct_runner=lambda: 0,
+            today=date(2026, 8, 26),
+        )
+        self.assertEqual(code, 0)
+        self.assertEqual(audit["sync_attempted"], "direct")
+        self.assertEqual(audit["task_status"], "success")
+
+    def test_missing_then_permission_denied_never_runs_direct(self):
+        options = args()
+        options.end = "2026-08-26"
+        options.allow_direct_sync = True
+        probes = iter((
+            {"ok": True, "exists": False, "reason": "task_missing"},
+            {"ok": False, "exists": None, "error_code": "task_probe_permission_denied"},
+        ))
+        called = []
+        code, audit = gate.run_gate(
+            options,
+            probe=lambda _: next(probes),
+            state_reader=lambda: None,
+            sleeper=lambda _: None,
+            direct_runner=lambda: called.append(True) or 0,
+            today=date(2026, 8, 26),
+        )
+        self.assertEqual(code, 1)
+        self.assertEqual(audit["reason"], "task_probe_permission_denied")
+        self.assertEqual(called, [])
+
+    def test_direct_sync_rejects_old_terminal_run_id(self):
+        options = args()
+        options.end = "2026-08-26"
+        options.allow_direct_sync = True
+        probes = iter((
+            {"ok": True, "exists": False, "reason": "task_missing"},
+            {"ok": True, "exists": False, "reason": "task_missing"},
+        ))
+        old = terminal("old")
+        code, audit = gate.run_gate(
+            options,
+            probe=lambda _: next(probes),
+            state_reader=lambda: old,
+            sleeper=lambda _: None,
+            direct_runner=lambda: 0,
+            today=date(2026, 8, 26),
+        )
+        self.assertEqual(code, 1)
+        self.assertEqual(audit["reason"], "direct_terminal_run_id_missing")
+
+    def test_direct_sync_rejects_terminal_start_mismatch(self):
+        options = args()
+        options.end = "2026-08-26"
+        options.allow_direct_sync = True
+        probes = iter((
+            {"ok": True, "exists": False, "reason": "task_missing"},
+            {"ok": True, "exists": False, "reason": "task_missing"},
+        ))
+        bad = terminal("new", end="2026-08-26")
+        bad["requested_window"]["start"] = "2026-08-21"
+        states = iter((terminal("old", end="2026-08-26"), bad))
+        code, audit = gate.run_gate(
+            options,
+            probe=lambda _: next(probes),
+            state_reader=lambda: next(states),
+            sleeper=lambda _: None,
+            direct_runner=lambda: 0,
+            today=date(2026, 8, 26),
+        )
+        self.assertEqual(code, 1)
+        self.assertEqual(audit["reason"], "terminal_window_mismatch")
+
+    def test_malformed_missing_snapshot_never_runs_direct(self):
+        options = args()
+        options.allow_direct_sync = True
+        called = []
+        code, audit = gate.run_gate(
+            options,
+            probe=lambda _: {"ok": True, "exists": False},
+            state_reader=lambda: None,
+            sleeper=lambda _: None,
+            direct_runner=lambda: called.append(True) or 0,
+        )
+        self.assertEqual(code, 1)
+        self.assertEqual(audit["reason"], "task_probe_invalid")
+        self.assertEqual(called, [])
+
+    def test_non_current_end_rejected_before_probe(self):
+        options = args()
+        options.end = "2020-01-01"
+        called = []
+        code, audit = gate.run_gate(
+            options,
+            probe=lambda _: called.append(True) or task(),
+            state_reader=lambda: None,
+            sleeper=lambda _: None,
+        )
+        self.assertEqual(code, 2)
+        self.assertEqual(audit["reason"], "requested_end_not_current")
+        self.assertEqual(called, [])
 
 
 if __name__ == "__main__":

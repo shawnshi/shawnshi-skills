@@ -8,11 +8,41 @@ import importlib.util
 import json
 import os
 import shutil
+import stat
 import subprocess
 import sys
 import tempfile
+from dataclasses import dataclass
 from datetime import datetime, timezone
 from pathlib import Path
+from typing import Any, Mapping
+
+import preflight_intake as intake_preflight
+import build_candidate as candidate_builder
+
+try:
+    from candidate_attestation import (
+        CandidateAttestationError,
+        VerifiedCandidateAttestation,
+        canonical_intake_gate_sha256,
+        claim_candidate_attestation_nonce,
+        verify_candidate_attestation,
+    )
+except ModuleNotFoundError:
+    _candidate_attestation_path = Path(__file__).with_name("candidate_attestation.py")
+    _candidate_attestation_spec = importlib.util.spec_from_file_location(
+        "candidate_attestation", _candidate_attestation_path
+    )
+    if _candidate_attestation_spec is None or _candidate_attestation_spec.loader is None:
+        raise RuntimeError(f"无法加载候选签章模块：{_candidate_attestation_path}")
+    _candidate_attestation_module = importlib.util.module_from_spec(_candidate_attestation_spec)
+    sys.modules["candidate_attestation"] = _candidate_attestation_module
+    _candidate_attestation_spec.loader.exec_module(_candidate_attestation_module)
+    CandidateAttestationError = _candidate_attestation_module.CandidateAttestationError
+    VerifiedCandidateAttestation = _candidate_attestation_module.VerifiedCandidateAttestation
+    canonical_intake_gate_sha256 = _candidate_attestation_module.canonical_intake_gate_sha256
+    claim_candidate_attestation_nonce = _candidate_attestation_module.claim_candidate_attestation_nonce
+    verify_candidate_attestation = _candidate_attestation_module.verify_candidate_attestation
 
 try:
     from capability_receipt import CapabilityReceiptError, verify_capability_receipt
@@ -75,7 +105,143 @@ CANDIDATE_RECEIPT_FIELDS = {
     "source_manifest_sha256",
     "source_workspace",
     "candidate_workspace",
-    "payload_sha256",
+    "input_payload_sha256",
+    "final_manifest_sha256",
+}
+
+
+@dataclass(frozen=True)
+class CandidateSnapshot:
+    workspace: Path
+    marker: dict[str, Any]
+    manifest: dict[str, Any]
+    manifest_bytes: bytes
+    payload_by_relative: dict[Path, bytes]
+    monitored_bytes: dict[Path, bytes]
+    attestation_path: Path
+    attestation_expected: dict[str, Any]
+    attestation: VerifiedCandidateAttestation
+
+
+def _unique_json_object(pairs: list[tuple[str, Any]]) -> dict[str, Any]:
+    value: dict[str, Any] = {}
+    for key, item in pairs:
+        if key in value:
+            raise TxError(f"candidate JSON包含重复字段：{key}")
+        value[key] = item
+    return value
+
+
+def _json_bytes(raw: bytes, label: str) -> dict[str, Any]:
+    try:
+        value = json.loads(raw.decode("utf-8"), object_pairs_hook=_unique_json_object)
+    except TxError:
+        raise
+    except (UnicodeError, json.JSONDecodeError) as exc:
+        raise TxError(f"{label}不是有效UTF-8 JSON：{exc}") from exc
+    if not isinstance(value, dict):
+        raise TxError(f"{label}必须为JSON对象。")
+    return value
+
+
+def _read_candidate_bytes(candidate: Path, relative: Path, label: str) -> bytes:
+    if relative.is_absolute() or ".." in relative.parts:
+        raise TxError(f"{label}路径越界。")
+    common_flags = os.O_RDONLY | getattr(os, "O_CLOEXEC", 0) | getattr(os, "O_NOFOLLOW", 0)
+    directory_flags = common_flags | getattr(os, "O_DIRECTORY", 0)
+    directory_descriptors: list[int] = []
+    descriptor: int | None = None
+    try:
+        try:
+            root_descriptor = os.open(candidate, directory_flags)
+            directory_descriptors.append(root_descriptor)
+            if not stat.S_ISDIR(os.fstat(root_descriptor).st_mode):
+                raise TxError(f"{label}候选根不是普通目录。")
+            for component in relative.parts[:-1]:
+                next_descriptor = os.open(component, directory_flags, dir_fd=directory_descriptors[-1])
+                directory_descriptors.append(next_descriptor)
+                if not stat.S_ISDIR(os.fstat(next_descriptor).st_mode):
+                    raise TxError(f"{label}父路径不是普通目录。")
+            descriptor = os.open(relative.name, common_flags, dir_fd=directory_descriptors[-1])
+        except OSError as exc:
+            raise TxError(f"{label}缺失、为符号链接或无法读取：{exc}") from exc
+        assert descriptor is not None
+        metadata = os.fstat(descriptor)
+        if not stat.S_ISREG(metadata.st_mode):
+            raise TxError(f"{label}不是普通文件。")
+        chunks: list[bytes] = []
+        while True:
+            chunk = os.read(descriptor, 1024 * 1024)
+            if not chunk:
+                break
+            chunks.append(chunk)
+        return b"".join(chunks)
+    finally:
+        if descriptor is not None:
+            os.close(descriptor)
+        for directory_descriptor in reversed(directory_descriptors):
+            os.close(directory_descriptor)
+
+
+def _snapshot_manifest_payload(
+    candidate: Path,
+    manifest: Mapping[str, Any],
+) -> tuple[dict[Path, bytes], dict[Path, bytes]]:
+    payload: dict[Path, bytes] = {}
+    monitored: dict[Path, bytes] = {}
+    artifacts = manifest.get("artifacts")
+    if not isinstance(artifacts, dict):
+        raise TxError("candidate manifest.artifacts无效。")
+    artifact_paths: set[Path] = set()
+    for artifact_type, record in artifacts.items():
+        if not isinstance(record, dict):
+            raise TxError(f"candidate manifest成果记录无效：{artifact_type}")
+        relative = Path(str(record.get("path", "")))
+        expected_sha = str(record.get("sha256", ""))
+        if len(relative.parts) != 1 or relative.suffix.casefold() != ".md" or relative in artifact_paths:
+            raise TxError(f"candidate manifest成果路径无效或重复：{relative}")
+        raw = _read_candidate_bytes(candidate, relative, f"candidate成果{relative}")
+        if sha256_bytes(raw) != expected_sha:
+            raise CASMismatch(f"candidate成果与已签manifest摘要不一致：{relative}")
+        artifact_paths.add(relative)
+        payload[relative] = raw
+        monitored[relative] = raw
+    actual_markdown: set[Path] = set()
+    for path in candidate.glob("*.md"):
+        if path.is_symlink() or not path.is_file():
+            raise TxError(f"candidate根目录含非普通Markdown：{path.name}")
+        actual_markdown.add(Path(path.name))
+    if actual_markdown != artifact_paths:
+        missing = sorted(str(path) for path in artifact_paths - actual_markdown)
+        extra = sorted(str(path) for path in actual_markdown - artifact_paths)
+        raise TxError(f"candidate Markdown集合与已签manifest不一致：缺少={missing}；未登记={extra}")
+
+    runtime_records = manifest.get("runtime_files")
+    expected_runtime_names = {relative.name for relative in COMMITTABLE_RUNTIME_RELS}
+    allowed_runtime_names = expected_runtime_names | {GOVERNANCE_CONTEXT_REL.name}
+    actual_runtime_names = set(runtime_records) if isinstance(runtime_records, dict) else set()
+    if not expected_runtime_names <= actual_runtime_names or not actual_runtime_names <= allowed_runtime_names:
+        missing = sorted(expected_runtime_names - actual_runtime_names)
+        extra = sorted(actual_runtime_names - allowed_runtime_names)
+        raise TxError(f"candidate manifest必须绑定四件套机器文件：缺少={missing}；未知={extra}")
+    assert isinstance(runtime_records, dict)
+    for name, record in runtime_records.items():
+        if not isinstance(record, dict):
+            raise TxError(f"candidate manifest机器文件记录无效：{name}")
+        relative = Path(str(record.get("path", "")))
+        expected_relative = Path("runtime") / name
+        if relative != expected_relative:
+            raise TxError(f"candidate manifest机器文件路径无效：{name}")
+        raw = _read_candidate_bytes(candidate, relative, f"candidate机器文件{relative}")
+        if sha256_bytes(raw) != str(record.get("sha256", "")):
+            raise CASMismatch(f"candidate机器文件与已签manifest摘要不一致：{relative}")
+        monitored[relative] = raw
+        if relative in COMMITTABLE_RUNTIME_RELS:
+            payload[relative] = raw
+    return payload, monitored
+BOUND_INTAKE_FIELDS = set(intake_preflight.PERSISTED_GATE_STABLE_FIELDS) | {
+    "evaluated_at",
+    "expires_at",
 }
 
 
@@ -83,7 +249,7 @@ def _validated_candidate_workspace(
     args: argparse.Namespace,
     workspace: Path,
     existing: dict[str, object],
-) -> Path | None:
+) -> CandidateSnapshot | None:
     if not args.candidate_workspace:
         return None
     supplied = Path(args.candidate_workspace).expanduser()
@@ -92,19 +258,13 @@ def _validated_candidate_workspace(
     candidate = supplied.resolve()
     if candidate == workspace or not candidate.is_dir():
         raise TxError("--candidate-workspace必须是与正式区分离的普通目录。")
-    marker_path = candidate / CANDIDATE_RECEIPT_REL
-    candidate_manifest_path = candidate / MANIFEST_REL
-    for path, label in ((marker_path, "candidate receipt"), (candidate_manifest_path, "candidate manifest")):
-        if path.is_symlink() or not path.is_file():
-            raise TxError(f"{label}缺失或不是普通文件。")
-    try:
-        marker = json.loads(marker_path.read_text(encoding="utf-8"))
-        candidate_manifest = json.loads(candidate_manifest_path.read_text(encoding="utf-8"))
-    except (OSError, UnicodeError, json.JSONDecodeError) as exc:
-        raise TxError(f"candidate收据或manifest无法读取：{exc}") from exc
+    marker_bytes = _read_candidate_bytes(candidate, CANDIDATE_RECEIPT_REL, "candidate receipt")
+    manifest_bytes = _read_candidate_bytes(candidate, MANIFEST_REL, "candidate manifest")
+    marker = _json_bytes(marker_bytes, "candidate receipt")
+    candidate_manifest = _json_bytes(manifest_bytes, "candidate manifest")
     if not isinstance(marker, dict) or set(marker) != CANDIDATE_RECEIPT_FIELDS:
         raise TxError("candidate receipt字段不完整或含未知字段。")
-    if marker.get("schema") != "discovery-call-candidate-receipt/v1":
+    if marker.get("schema") != "discovery-call-candidate-receipt/v2":
         raise TxError("candidate receipt schema无效。")
     if Path(str(marker.get("source_workspace", ""))).resolve() != workspace:
         raise TxError("candidate receipt未绑定当前正式workspace。")
@@ -116,10 +276,15 @@ def _validated_candidate_workspace(
         raise CASMismatch("candidate receipt的source manifest SHA-256已过期。")
     if marker.get("context_id") != existing.get("context_id"):
         raise TxError("candidate receipt context_id与正式workspace不一致。")
-    payload_digest = str(marker.get("payload_sha256", ""))
-    if len(payload_digest) != 64 or any(char not in "0123456789abcdef" for char in payload_digest):
-        raise TxError("candidate receipt payload_sha256无效。")
-    if sha256_file(candidate_manifest_path) != payload_digest:
+    input_payload_digest = str(marker.get("input_payload_sha256", ""))
+    final_manifest_digest = str(marker.get("final_manifest_sha256", ""))
+    for field, digest in (
+        ("input_payload_sha256", input_payload_digest),
+        ("final_manifest_sha256", final_manifest_digest),
+    ):
+        if len(digest) != 64 or any(char not in "0123456789abcdef" for char in digest):
+            raise TxError(f"candidate receipt {field}无效。")
+    if sha256_bytes(manifest_bytes) != final_manifest_digest:
         raise TxError("candidate receipt未绑定当前candidate manifest。")
     if not isinstance(candidate_manifest, dict):
         raise TxError("candidate manifest必须为JSON对象。")
@@ -129,42 +294,113 @@ def _validated_candidate_workspace(
         raise TxError("candidate manifest run_id与收据不一致。")
     if candidate_manifest.get("transaction_sequence") != args.expected_manifest_revision + 1:
         raise TxError("candidate manifest事务序号未绑定source revision。")
-    return candidate
+    candidate_intake = candidate_manifest.get("intake_preflight")
+    established_intake = existing.get("intake_preflight")
+    if (
+        not isinstance(candidate_intake, dict)
+        or not isinstance(established_intake, dict)
+        or not BOUND_INTAKE_FIELDS <= set(candidate_intake)
+        or not BOUND_INTAKE_FIELDS <= set(established_intake)
+    ):
+        raise TxError("candidate或正式manifest缺少宿主签名请求绑定的intake门禁。")
+    candidate_attestation_file = getattr(args, "candidate_attestation_file", None)
+    if not candidate_attestation_file:
+        raise TxError("候选提交必须提供--candidate-attestation-file；本地candidate receipt不构成授权。")
+    attestation_path = Path(candidate_attestation_file).expanduser()
+    attestation_expected = {
+        "context_id": marker.get("context_id"),
+        "run_id": marker.get("run_id"),
+        "source_manifest_revision": marker.get("source_manifest_revision"),
+        "source_manifest_sha256": marker.get("source_manifest_sha256"),
+        "source_workspace": marker.get("source_workspace"),
+        "candidate_workspace": marker.get("candidate_workspace"),
+        "input_payload_sha256": input_payload_digest,
+        "final_manifest_sha256": final_manifest_digest,
+        "intake_gate_sha256": canonical_intake_gate_sha256(candidate_intake),
+        "formal_workspace": str(workspace),
+        "customer_id": str(existing.get("customer_id", "")),
+    }
+    try:
+        attestation = verify_candidate_attestation(
+            attestation_path,
+            expected=attestation_expected,
+        )
+    except CandidateAttestationError as exc:
+        raise TxError(f"candidate_attestation_invalid：{exc}") from exc
+    payload_by_relative, monitored = _snapshot_manifest_payload(candidate, candidate_manifest)
+    for field in intake_preflight.PERSISTED_GATE_STABLE_FIELDS:
+        if candidate_intake.get(field) != established_intake.get(field):
+            raise TxError(f"candidate intake_preflight.{field}与正式manifest不一致。")
+    try:
+        expiry = datetime.fromisoformat(str(candidate_intake["expires_at"]).replace("Z", "+00:00"))
+    except ValueError as exc:
+        raise TxError("candidate intake_preflight.expires_at无效。") from exc
+    if expiry.tzinfo is None or expiry.astimezone(timezone.utc) <= datetime.now(timezone.utc):
+        raise TxError("candidate intake_preflight已过期；禁止提交。")
+    monitored[CANDIDATE_RECEIPT_REL] = marker_bytes
+    monitored[MANIFEST_REL] = manifest_bytes
+    return CandidateSnapshot(
+        workspace=candidate,
+        marker=marker,
+        manifest=candidate_manifest,
+        manifest_bytes=manifest_bytes,
+        payload_by_relative=payload_by_relative,
+        monitored_bytes=monitored,
+        attestation_path=attestation_path,
+        attestation_expected=attestation_expected,
+        attestation=attestation,
+    )
 
 
-def _candidate_map(args: argparse.Namespace, workspace: Path) -> dict[Path, bytes]:
-    planned: dict[Path, bytes] = {}
-    if args.candidate_workspace:
-        candidate_input = Path(args.candidate_workspace).expanduser()
-        if candidate_input.is_symlink():
-            raise TxError("--candidate-workspace不得为符号链接。")
-        candidate = candidate_input.resolve()
-        if not candidate.is_dir():
-            raise TxError("--candidate-workspace必须是普通目录。")
-        for source in candidate.glob("*.md"):
-            if source.is_file() and not source.is_symlink():
-                planned[workspace / source.name] = source.read_bytes()
-        for relative in COMMITTABLE_RUNTIME_RELS:
-            source = candidate / relative
-            if source.is_file() and not source.is_symlink():
-                planned[workspace / relative] = source.read_bytes()
-    else:
-        # An arbitrary file map cannot prove that Markdown, the four machine
-        # evidence files, and the candidate receipt came from one build.  It
-        # also allowed callers to inject lifecycle/governance frontmatter.
-        # Recovery is handled by the WAL recovery path, not by an unbound map.
-        raise TxError("普通--file-map提交已禁用；请使用build_candidate生成并绑定--candidate-workspace。")
+def _candidate_map(snapshot: CandidateSnapshot, workspace: Path) -> dict[Path, bytes]:
+    planned = {
+        workspace / relative: raw
+        for relative, raw in snapshot.payload_by_relative.items()
+        if len(relative.parts) == 1 or relative in COMMITTABLE_RUNTIME_RELS
+    }
     included_runtime = {
         path.relative_to(workspace)
         for path in planned
         if path.relative_to(workspace) in COMMITTABLE_RUNTIME_RELS
     }
-    if included_runtime and included_runtime != COMMITTABLE_RUNTIME_RELS:
+    if included_runtime != COMMITTABLE_RUNTIME_RELS:
         missing = sorted((COMMITTABLE_RUNTIME_RELS - included_runtime), key=lambda item: item.as_posix())
         raise TxError("机器运行文件必须四件套同事务提交，缺少：" + ", ".join(item.as_posix() for item in missing))
     if not planned:
         raise TxError("候选中没有可提交文件。")
     return planned
+
+
+def _assert_candidate_snapshot_unchanged(snapshot: CandidateSnapshot) -> None:
+    """Detect a non-cooperating writer; committed data still comes from snapshot."""
+
+    for relative, expected in snapshot.monitored_bytes.items():
+        current = _read_candidate_bytes(snapshot.workspace, relative, f"candidate稳定性复检{relative}")
+        if current != expected:
+            raise CASMismatch(f"candidate在封印读取后发生变化：{relative}")
+
+
+def _fresh_candidate_attestation(
+    snapshot: CandidateSnapshot,
+    *,
+    at: datetime,
+) -> VerifiedCandidateAttestation:
+    """Re-read and re-verify the host authorization immediately before WAL."""
+
+    try:
+        verified = verify_candidate_attestation(
+            snapshot.attestation_path,
+            expected=snapshot.attestation_expected,
+            at=at,
+        )
+    except CandidateAttestationError as exc:
+        raise TxError(f"candidate_attestation_invalid：WAL前复验失败：{exc}") from exc
+    if (
+        verified.attestation_id != snapshot.attestation.attestation_id
+        or verified.attestation_sha256 != snapshot.attestation.attestation_sha256
+    ):
+        raise CASMismatch("candidate attestation在preview期间发生替换；必须重新开始提交。")
+    return verified
 
 
 def _candidate_postflight(workspace: Path) -> None:
@@ -188,6 +424,21 @@ def _candidate_postflight(workspace: Path) -> None:
     if manifest is None:
         raise TxError("candidate提交后缺少runtime/manifest.json。")
     verify_manifest_artifacts(workspace, manifest)
+
+
+def _attested_candidate_postflight(
+    workspace: Path,
+    snapshot: CandidateSnapshot,
+) -> None:
+    """Keep the transaction uncommitted if the host seal expires mid-WAL."""
+
+    _assert_candidate_snapshot_unchanged(snapshot)
+    _fresh_candidate_attestation(snapshot, at=datetime.now(timezone.utc))
+    _candidate_postflight(workspace)
+    # The validator may be materially slower than a hash check. Re-check after
+    # it returns so an authorization expiring during postflight cannot be
+    # committed by the tiny pre-validation freshness observation alone.
+    _fresh_candidate_attestation(snapshot, at=datetime.now(timezone.utc))
 
 
 def _preview(workspace: Path, planned: dict[Path, bytes], deletes: list[Path], strict: bool) -> None:
@@ -257,6 +508,31 @@ def _planned_runtime_json(
     return value
 
 
+def _planned_sensitive_evidence(workspace: Path, planned: dict[Path, bytes]) -> bool:
+    evidence = _planned_runtime_json(
+        workspace,
+        planned,
+        EVIDENCE_MANIFEST_REL,
+        "runtime/evidence-manifest.json",
+    )
+    sources = evidence.get("sources")
+    claims = evidence.get("claims")
+    if not isinstance(sources, dict) or not isinstance(claims, dict):
+        raise TxError("evidence-manifest.json的sources/claims无效。")
+    return bool(
+        any(str(source_id).startswith("SRC-N-") for source_id in sources)
+        or any(str(claim_id).startswith("CLM-N-") for claim_id in claims)
+        or any(
+            isinstance(record, dict)
+            and (
+                record.get("source_level") == "internal"
+                or record.get("permission") in {"internal-authorized", "restricted"}
+            )
+            for record in sources.values()
+        )
+    )
+
+
 def _connector_authorization(
     workspace: Path,
     planned: dict[Path, bytes],
@@ -266,7 +542,7 @@ def _connector_authorization(
     expected_run_id: str,
     capability_receipt_file: str | None,
     *,
-    internal_selected: bool,
+    sensitive_evidence: bool,
 ) -> dict[str, object]:
     internal_metadata: dict[str, str] = {}
     candidates = {source for source in workspace.glob("*.md")} | {
@@ -279,7 +555,7 @@ def _connector_authorization(
             internal_metadata = metadata
             break
     connector_status = internal_metadata.get("connector_status")
-    receipt_required = internal_selected or connector_status in {"connected", "no_hits"}
+    receipt_required = sensitive_evidence or connector_status in {"connected", "no_hits"}
     if not receipt_required:
         return authorization
     if not internal_metadata:
@@ -342,6 +618,8 @@ def _connector_authorization(
         raise TxError("研究计划capability_operation必须为internal_read。")
     if plan_authorization.get("capability_receipt_verified") is not True:
         raise TxError("研究计划未记录宿主签名能力收据验证。")
+    if plan_authorization.get("capability_receipt_run_id") != expected_run_id:
+        raise TxError("研究计划capability_receipt_run_id未绑定本次候选run。")
     if not capability_receipt_file:
         raise TxError("提交任何internal候选必须提供--capability-receipt-file进行当前时点复验。")
     try:
@@ -403,6 +681,8 @@ def _connector_authorization(
         raise TxError("connector_audit.capability_receipt_id与本run研究计划不一致。")
     if audit.get("capability_receipt_verified") is not True:
         raise TxError("connector_audit必须记录宿主能力收据已验证。")
+    if audit.get("capability_receipt_run_id") != expected_run_id:
+        raise TxError("connector_audit.capability_receipt_run_id未绑定本次候选run。")
     if audit.get("capability_receipt_verified_at") != plan_authorization.get("capability_receipt_verified_at"):
         raise TxError("connector_audit.capability_receipt_verified_at与研究计划验证谱系不一致。")
     for key, value in immutable_receipt_audit.items():
@@ -419,6 +699,7 @@ def _connector_authorization(
         "tenant_id", "customer_id", "project_id", "connector_id", "call_id", "called_at",
         "authorization_owner", "authorization_expires_at", "authorization_purpose",
         "capability_receipt_id", "authorization_actor_id", "capability_operation",
+        "capability_receipt_run_id",
         "capability_receipt_issuer", "capability_receipt_key_id",
         "capability_receipt_sha256", "capability_receipt_verified_at",
         "capability_receipt_expires_at", "response_fingerprint",
@@ -462,29 +743,64 @@ def _connector_authorization(
 
 
 def commit(args: argparse.Namespace) -> dict[str, object]:
+    # The legacy file-map path has no candidate receipt or intake lineage.  It
+    # must be rejected before locks and WAL recovery: otherwise --recover could
+    # mutate the formal workspace even though the requested commit is invalid.
+    if args.file_map:
+        raise TxError("普通--file-map提交已禁用；请使用build_candidate生成并绑定--candidate-workspace。")
+    if getattr(args, "delete", None):
+        raise TxError("commit_run删除接口已禁用；候选提交不得删除正式区文件。")
     supplied_workspace = Path(args.workspace).expanduser()
     workspace = supplied_workspace.resolve()
     if Path(os.path.abspath(supplied_workspace)) != workspace or not workspace.is_dir():
         raise TxError("工作区不存在或为符号链接。")
+    if args.candidate_workspace:
+        if not args.intake_input:
+            raise TxError("候选提交必须提供--intake-input并在任何锁或恢复写入前复验当前宿主请求。")
+        preliminary_manifest = load_manifest(workspace, required=True)
+        preliminary_gate = preliminary_manifest.get("intake_preflight")
+        try:
+            verified_intake = intake_preflight.verify_persisted_gate(
+                args.intake_input,
+                preliminary_gate if isinstance(preliminary_gate, dict) else {},
+                expected_business_mode=str(preliminary_manifest.get("business_mode", "")),
+                expected_customer_name=str(preliminary_manifest.get("customer_display_name", "")),
+                expected_organization_scope=str(preliminary_manifest.get("organization_scope", "")),
+            )
+        except intake_preflight.PreflightError as exc:
+            raise TxError(f"当前请求intake复验失败：{exc}") from exc
     with output_root_lock(workspace.parent, timeout=args.lock_timeout):
         with workspace_lock(workspace, timeout=args.lock_timeout):
             if unfinished_transaction(workspace):
                 if not args.recover:
                     raise RecoveryRequired("检测到未完成事务；请加--recover或先运行recover_workspace.py。")
-                recover_transaction(workspace, strategy=args.recovery_strategy, postflight=None)
+                # A candidate WAL may be recovered long after its short host
+                # authorization expired. This entry point has not yet rebuilt
+                # a trusted CandidateSnapshot, so it must never front-run the
+                # checks below with a roll-forward. Roll back first; a fresh
+                # commit requires a fresh, unconsumed host authorization.
+                recover_transaction(workspace, strategy="rollback", postflight=None)
             existing = assert_manifest_cas(
                 workspace, args.expected_manifest_revision, args.expected_manifest_sha256
             )
             verify_manifest_artifacts(workspace, existing)
-            _validated_candidate_workspace(args, workspace, existing)
-            planned = _candidate_map(args, workspace)
+            candidate_snapshot = _validated_candidate_workspace(args, workspace, existing)
+            if candidate_snapshot is None:
+                raise TxError("候选提交缺少受宿主证明的candidate snapshot。")
+            try:
+                candidate_documents = candidate_builder._load_documents(
+                    candidate_snapshot.workspace
+                )
+                candidate_builder._assert_intake_semantic_binding(
+                    verified_intake=verified_intake,
+                    business_mode=str(existing.get("business_mode", "")),
+                    records={},
+                    live_documents=candidate_documents,
+                )
+            except candidate_builder.CandidateError as exc:
+                raise TxError(f"candidate_intake_semantic_drift：{exc}") from exc
+            planned = _candidate_map(candidate_snapshot, workspace)
             deletes: list[Path] = []
-            for value in args.delete or []:
-                target = workspace / value
-                relative = Path(relative_target(workspace, target))
-                if relative == GOVERNANCE_CONTEXT_REL:
-                    raise TxError("runtime/governance-context.json是宿主信任根，commit_run不得删除。")
-                deletes.append(target)
             if args.strict:
                 missing_runtime = [
                     relative.as_posix()
@@ -535,6 +851,7 @@ def commit(args: argparse.Namespace) -> dict[str, object]:
                     authorization[key] = total_metadata[key]
             authorization["customer_id"] = str(existing.get("customer_id", ""))
             selected = selected_callable_modules(candidate_total.decode("utf-8"))
+            sensitive_evidence = _planned_sensitive_evidence(workspace, planned)
             authorization = _connector_authorization(
                 workspace,
                 planned,
@@ -543,9 +860,13 @@ def commit(args: argparse.Namespace) -> dict[str, object]:
                 str(existing.get("customer_id", "")),
                 str(total_metadata.get("latest_run_id", "")),
                 args.capability_receipt_file,
-                internal_selected="internal" in selected,
+                sensitive_evidence=sensitive_evidence or "internal" in selected,
             )
             overlay = dict(planned)
+            candidate_intake = None
+            raw_candidate_intake = candidate_snapshot.manifest.get("intake_preflight")
+            if isinstance(raw_candidate_intake, dict):
+                candidate_intake = dict(raw_candidate_intake)
             manifest = build_manifest(
                 workspace,
                 identity={
@@ -569,13 +890,44 @@ def commit(args: argparse.Namespace) -> dict[str, object]:
                 selected_modules=selected,
                 authorization=authorization,
                 transaction_sequence=int(existing["transaction_sequence"]) + 1,
+                intake_preflight=candidate_intake,
+                candidate_attestation=None,
+                delivery_summary=(
+                    dict(candidate_snapshot.manifest["delivery_summary"])
+                    if isinstance(candidate_snapshot.manifest.get("delivery_summary"), dict)
+                    else None
+                ),
                 overlay=overlay,
                 deletes=deletes,
+            )
+            # The preview proves candidate content, not the authorization
+            # timing of a WAL that has not started yet.  Do not carry an old
+            # audit forward or synthesize a misleading WAL timestamp here;
+            # the fresh host verification below installs this run's audit.
+            manifest.pop("candidate_attestation", None)
+            planned[workspace / MANIFEST_REL] = (
+                json.dumps(manifest, ensure_ascii=False, indent=2, sort_keys=True) + "\n"
+            ).encode("utf-8")
+            _assert_candidate_snapshot_unchanged(candidate_snapshot)
+            _preview(workspace, planned, deletes, args.strict)
+            _assert_candidate_snapshot_unchanged(candidate_snapshot)
+            fresh_attestation = _fresh_candidate_attestation(
+                candidate_snapshot,
+                at=datetime.now(timezone.utc),
+            )
+            try:
+                claim_candidate_attestation_nonce(
+                    fresh_attestation,
+                    workspace=workspace,
+                )
+            except CandidateAttestationError as exc:
+                raise TxError(f"candidate_attestation_invalid：{exc}") from exc
+            manifest["candidate_attestation"] = fresh_attestation.audit_summary(
+                candidate_snapshot.attestation_expected,
             )
             planned[workspace / MANIFEST_REL] = (
                 json.dumps(manifest, ensure_ascii=False, indent=2, sort_keys=True) + "\n"
             ).encode("utf-8")
-            _preview(workspace, planned, deletes, args.strict)
             expected = {path: file_state(path).as_dict() for path in list(planned) + deletes}
             tx_id = transactional_commit(
                 workspace,
@@ -583,16 +935,24 @@ def commit(args: argparse.Namespace) -> dict[str, object]:
                 deletes=deletes,
                 expected=expected,
                 operation=args.operation,
-                postflight=_candidate_postflight,
+                postflight=lambda committed_workspace: _attested_candidate_postflight(
+                    committed_workspace,
+                    candidate_snapshot,
+                ),
             )
             revision, digest = manifest_state(workspace)
+            committed_manifest = load_manifest(workspace)
+            assert committed_manifest is not None
             return {
                 "workspace": str(workspace),
                 "transaction_id": tx_id,
                 "manifest_revision": revision,
                 "manifest_sha256": digest,
+                "candidate_attestation_id": fresh_attestation.attestation_id,
+                "candidate_attestation_sha256": fresh_attestation.attestation_sha256,
                 "committed": [str(path.relative_to(workspace)) for path in planned],
                 "deleted": [str(path.relative_to(workspace)) for path in deletes],
+                "delivery_summary": committed_manifest.get("delivery_summary"),
             }
 
 
@@ -602,17 +962,24 @@ def build_parser() -> argparse.ArgumentParser:
     source = parser.add_mutually_exclusive_group(required=True)
     source.add_argument("--candidate-workspace")
     source.add_argument("--file-map", help=argparse.SUPPRESS)
-    parser.add_argument("--delete", action="append", help="随事务删除的工作区相对普通文件")
     parser.add_argument("--expected-manifest-revision", type=int, required=True)
     parser.add_argument("--expected-manifest-sha256", required=True)
     parser.add_argument("--expected-content-version")
     parser.add_argument("--expected-latest-run-id")
     parser.add_argument("--expected-total-sha256")
+    parser.add_argument(
+        "--intake-input",
+        help="候选提交必填；在锁、恢复和事务写入前重新验签当前宿主请求绑定的intake v3普通文件（不接受-或stdin）",
+    )
     parser.add_argument("--operation", default="commit_run")
     parser.add_argument("--strict", action="store_true")
     parser.add_argument(
         "--capability-receipt-file",
-        help="任何本轮selected internal候选提交时用于当前时点二次验证的宿主签名能力收据",
+        help="任何本轮敏感证据候选提交时用于当前时点二次验证的宿主签名能力收据",
+    )
+    parser.add_argument(
+        "--candidate-attestation-file",
+        help="认证宿主对最终candidate manifest签发的短期Ed25519 attestation；候选提交必填",
     )
     parser.add_argument("--recover", action="store_true")
     parser.add_argument("--recovery-strategy", choices=("auto", "rollback", "roll-forward"), default="auto")

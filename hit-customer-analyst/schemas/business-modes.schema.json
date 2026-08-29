@@ -134,6 +134,7 @@
         "source_budget",
         "turn_budget",
         "output_pages",
+        "delivery_contract",
         "ttl_days",
         "required_business_fields",
         "authorization_requirements",
@@ -222,6 +223,21 @@
         },
         "output_pages": {
           "$ref": "#/$defs/range"
+        },
+        "delivery_contract": {
+          "$ref": "#/$defs/delivery_contract"
+        },
+        "delivery_budget": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["page_proxy", "visible_chars_max", "nonblank_lines_max", "section_visible_chars_max", "conclusion_visible_chars_max"],
+          "properties": {
+            "page_proxy": {"const": "markdown-one-page/v1"},
+            "visible_chars_max": {"type": "integer", "minimum": 1000, "maximum": 5000},
+            "nonblank_lines_max": {"type": "integer", "minimum": 20, "maximum": 120},
+            "section_visible_chars_max": {"type": "integer", "minimum": 200, "maximum": 1500},
+            "conclusion_visible_chars_max": {"type": "integer", "minimum": 40, "maximum": 300}
+          }
         },
         "ttl_days": {
           "type": "object",
@@ -338,6 +354,14 @@
               ]
             }
           }
+        },
+        {
+          "if": {
+            "properties": {"depth": {"const": "quick"}},
+            "required": ["depth"]
+          },
+          "then": {"required": ["delivery_budget"]},
+          "else": {"not": {"required": ["delivery_budget"]}}
         }
       ]
     },
@@ -371,7 +395,16 @@
               "$ref": "#/$defs/strategy_variant"
             },
             "account_planning": {
-              "$ref": "#/$defs/strategy_variant"
+              "allOf": [
+                {
+                  "$ref": "#/$defs/strategy_variant"
+                },
+                {
+                  "required": [
+                    "template_by_recommendation"
+                  ]
+                }
+              ]
             }
           }
         }
@@ -452,6 +485,9 @@
           "type": "string",
           "pattern": "^assets/[a-z0-9-]+\\.md$"
         },
+        "template_by_recommendation": {
+          "$ref": "#/$defs/template_by_recommendation"
+        },
         "required_business_fields": {
           "type": "array",
           "minItems": 1,
@@ -471,6 +507,52 @@
           "items": {
             "type": "string",
             "minLength": 1
+          }
+        },
+        "required_action_fields": {
+          "type": "array",
+          "minItems": 1,
+          "uniqueItems": true,
+          "items": {
+            "enum": [
+              "action",
+              "action_disposition",
+              "external_interaction",
+              "resource_commitment",
+              "owner",
+              "due_date",
+              "dependency",
+              "completion_criteria",
+              "adjust_or_stop_trigger",
+              "crm_candidate"
+            ]
+          }
+        },
+        "required_no_go_fields": {
+          "type": "array",
+          "minItems": 1,
+          "uniqueItems": true,
+          "items": {
+            "enum": [
+              "recommendation",
+              "investment_intensity",
+              "recommendation_reason",
+              "minimum_stop_condition"
+            ]
+          }
+        },
+        "forbidden_followup_fields": {
+          "type": "array",
+          "minItems": 1,
+          "uniqueItems": true,
+          "items": {
+            "enum": [
+              "meeting_time",
+              "meeting_target",
+              "meeting_participants",
+              "meeting_agenda",
+              "meeting_materials"
+            ]
           }
         },
         "forbidden_sections": {
@@ -504,6 +586,60 @@
             "type": "string",
             "minLength": 1
           }
+        }
+      }
+    },
+    "template_by_recommendation": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "default",
+        "no_go"
+      ],
+      "properties": {
+        "default": {
+          "$ref": "#/$defs/template_pair"
+        },
+        "no_go": {
+          "$ref": "#/$defs/template_pair"
+        }
+      }
+    },
+    "template_pair": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "visit_strategy",
+        "comprehensive_report"
+      ],
+      "properties": {
+        "visit_strategy": {
+          "type": "string",
+          "pattern": "^assets/[a-z0-9-]+\\.md$"
+        },
+        "comprehensive_report": {
+          "type": "string",
+          "pattern": "^assets/[a-z0-9-]+\\.md$"
+        }
+      }
+    },
+    "delivery_contract": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "formal_artifact",
+        "audit_artifact"
+      ],
+      "properties": {
+        "formal_artifact": {
+          "enum": [
+            "briefing_delivery",
+            "visit_strategy",
+            "customer_letter_external"
+          ]
+        },
+        "audit_artifact": {
+          "const": "comprehensive_report"
         }
       }
     },

@@ -1,0 +1,37 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://winning-health.example/discovery-call/candidate-attestation.schema.json",
+  "title": "discovery-call host-signed candidate attestation",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schema", "issuer", "audience", "key_id", "attestation_id", "issued_at",
+    "expires_at", "host_authorized_at", "session_id", "nonce", "input_payload_sha256", "final_manifest_sha256", "intake_gate_sha256",
+    "context_id", "run_id", "source_manifest_revision", "source_manifest_sha256",
+    "source_workspace", "candidate_workspace", "formal_workspace", "customer_id", "signature"
+  ],
+  "properties": {
+    "schema": {"const": "discovery-call-candidate-attestation/v3"},
+    "issuer": {"type": "string", "minLength": 3},
+    "audience": {"const": "discovery-call-candidate-commit"},
+    "key_id": {"type": "string", "minLength": 3},
+    "attestation_id": {"type": "string", "minLength": 3},
+    "issued_at": {"type": "string", "format": "date-time"},
+    "expires_at": {"type": "string", "format": "date-time"},
+    "host_authorized_at": {"type": "string", "format": "date-time"},
+    "session_id": {"type": "string", "pattern": "^[A-Za-z0-9][A-Za-z0-9._:-]{2,127}$"},
+    "nonce": {"type": "string", "pattern": "^[A-Za-z0-9_-]{22,128}$"},
+    "input_payload_sha256": {"type": "string", "pattern": "^[0-9a-f]{64}$"},
+    "final_manifest_sha256": {"type": "string", "pattern": "^[0-9a-f]{64}$"},
+    "intake_gate_sha256": {"type": "string", "pattern": "^[0-9a-f]{64}$"},
+    "context_id": {"type": "string", "pattern": "^dcx-[0-9]{8}-[A-Za-z0-9]{8}$"},
+    "run_id": {"type": "string", "pattern": "^dcr-[0-9]{8}T[0-9]{6}-[A-Za-z0-9]{4}$"},
+    "source_manifest_revision": {"type": "integer", "minimum": 1},
+    "source_manifest_sha256": {"type": "string", "pattern": "^[0-9a-f]{64}$"},
+    "source_workspace": {"type": "string", "minLength": 1},
+    "candidate_workspace": {"type": "string", "minLength": 1},
+    "formal_workspace": {"type": "string", "minLength": 1},
+    "customer_id": {"type": "string", "pattern": "^[A-Za-z0-9][A-Za-z0-9._:-]{2,127}$"},
+    "signature": {"type": "string", "minLength": 80}
+  }
+}

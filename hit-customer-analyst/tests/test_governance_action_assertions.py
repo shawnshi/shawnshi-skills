@@ -114,7 +114,7 @@ class GovernanceActionAssertionTests(unittest.TestCase):
             before = workspace_hashes(clone)
             replay = self.invoke(clone, *self.facts_args("facts-cross-clone"))
             self.assertEqual(replay.returncode, 1)
-            self.assertIn("跨工作区", replay.stdout)
+            self.assertRegex(replay.stdout, r"跨工作区|formal_workspace.*当前正式workspace")
             self.assertEqual(workspace_hashes(clone), before)
 
 

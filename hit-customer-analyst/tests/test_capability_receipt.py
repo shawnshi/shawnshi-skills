@@ -16,10 +16,13 @@ from cryptography.hazmat.primitives.asymmetric.ed25519 import Ed25519PrivateKey
 
 from tests.common import (
     SKILL_ROOT,
+    attest_candidate,
+    bind_intake_payload,
     load_json,
     research_plan as rp,
     run_python,
     runtime_tx as tx,
+    test_intake_gate,
     write_intake,
 )
 from tests.fixture_builder import (
@@ -187,6 +190,13 @@ class CapabilityReceiptTests(unittest.TestCase):
                 "minimum_next_step": "安排专题方案交流",
             },
             "generated_at": self.now,
+            "intake_preflight": test_intake_gate(
+                "standard_visit",
+                at=self.now,
+                customer_name="示例医院",
+                organization_scope="示例医院主院区",
+                customer_id=self.expected["customer_id"],
+            ),
         }
 
     def test_self_reported_id_cannot_ready_or_generate_internal_query(self):
@@ -208,6 +218,7 @@ class CapabilityReceiptTests(unittest.TestCase):
             audit = plan["authorization_context"]
             self.assertTrue(audit["capability_receipt_verified"])
             self.assertEqual(audit["authorization_actor_id"], self.expected["actor_id"])
+            self.assertEqual(audit["capability_receipt_run_id"], self.expected["run_id"])
 
     def test_initializer_records_only_verified_receipt_lineage(self):
         with tempfile.TemporaryDirectory() as temporary:
@@ -229,7 +240,9 @@ class CapabilityReceiptTests(unittest.TestCase):
                     ],
                 }
             )
-            intake.write_text(json.dumps(intake_payload, ensure_ascii=False), encoding="utf-8")
+            intake_payload["subject_resolution"]["customer_id"] = self.expected["customer_id"]
+            intake_payload["subject_resolution"]["id_source"] = "host_attested_external"
+            bind_intake_payload(intake, intake_payload)
             receipt = self.write_receipt(root)
             arguments = [
                 "示例医院",
@@ -268,6 +281,7 @@ class CapabilityReceiptTests(unittest.TestCase):
             authorization = load_json(workspace / "runtime" / "manifest.json")["authorization"]
             self.assertTrue(authorization["capability_receipt_verified"])
             self.assertEqual(authorization["authorization_actor_id"], self.expected["actor_id"])
+            self.assertEqual(authorization["capability_receipt_run_id"], self.expected["run_id"])
             self.assertRegex(authorization["capability_receipt_sha256"], r"^[0-9a-f]{64}$")
             self.assertFalse(any(path.name == receipt.name for path in workspace.rglob("*")))
 
@@ -337,7 +351,7 @@ class CapabilityReceiptTests(unittest.TestCase):
                     ],
                 }
             )
-            intake.write_text(json.dumps(intake_payload, ensure_ascii=False), encoding="utf-8")
+            bind_intake_payload(intake, intake_payload)
             authorization_expires_at = (self.now + timedelta(minutes=10)).isoformat().replace(
                 "+00:00", "Z"
             )
@@ -435,7 +449,7 @@ class CapabilityReceiptTests(unittest.TestCase):
                         "key_claim_ids": "",
                         "summary_sync_status": "synced",
                         "downstream_invalidation": "none",
-                        "gaps_blockers": "等待本run授权后检索",
+                        "gaps_blockers": "authorization_missing",
                     },
                     {"artifact_type": "visit_strategy", "action": "reused", "key_claim_ids": "CLM-I-001, CLM-L-001"},
                 ],
@@ -448,6 +462,7 @@ class CapabilityReceiptTests(unittest.TestCase):
                     str(workspace),
                     "--payload", str(payload_path),
                     "--output-root", str(root / "candidates"),
+                    "--intake-input", str(intake),
                     "--json",
                 ],
             )
@@ -514,12 +529,15 @@ class CapabilityReceiptTests(unittest.TestCase):
                 project_id="project-demo",
                 generated_at=run_b_at,
             )
+            candidate_attestation_path = attest_candidate(candidate)
 
             commit_base = [
                 str(workspace),
                 "--candidate-workspace", str(candidate),
                 "--expected-manifest-revision", str(revision),
                 "--expected-manifest-sha256", digest,
+                "--intake-input", str(intake),
+                "--candidate-attestation-file", str(candidate_attestation_path),
                 "--json",
             ]
             locally_asserted = run_python(
@@ -573,6 +591,7 @@ class CapabilityReceiptTests(unittest.TestCase):
                     "isolated_record_count": 0,
                 }
             )
+            self.assertEqual(evidence["connector_audit"]["capability_receipt_run_id"], run_b)
             source_cache_path = candidate / "runtime" / "source-cache.json"
             source_cache = load_json(source_cache_path)
             receipt_total = {
@@ -588,6 +607,18 @@ class CapabilityReceiptTests(unittest.TestCase):
                 )
                 source["capture_receipt"] = capture_receipt
                 source_cache["entries"][source["cache_key"]]["capture_receipt"] = capture_receipt
+            for claim in evidence["claims"].values():
+                claim["supporting_source_receipt_sha256s"] = {
+                    source_id: hashlib.sha256(
+                        json.dumps(
+                            evidence["sources"][source_id]["capture_receipt"],
+                            ensure_ascii=False,
+                            sort_keys=True,
+                            separators=(",", ":"),
+                        ).encode("utf-8")
+                    ).hexdigest()
+                    for source_id in claim["supporting_source_ids"]
+                }
             tx.atomic_write_json(evidence_path, evidence)
             tx.atomic_write_json(source_cache_path, source_cache)
 
@@ -618,8 +649,26 @@ class CapabilityReceiptTests(unittest.TestCase):
             tx.atomic_write_json(candidate_manifest_path, refreshed_manifest)
             marker_path = candidate / "runtime" / "candidate-receipt.json"
             marker = load_json(marker_path)
-            marker["payload_sha256"] = hashlib.sha256(candidate_manifest_path.read_bytes()).hexdigest()
+            marker["schema"] = "discovery-call-candidate-receipt/v2"
+            marker.pop("payload_sha256", None)
+            marker["final_manifest_sha256"] = hashlib.sha256(candidate_manifest_path.read_bytes()).hexdigest()
             tx.atomic_write_json(marker_path, marker)
+            attest_candidate(candidate)
+
+            old_run_receipt = root / "old-run-capability-receipt.json"
+            old_run_receipt.write_text(
+                json.dumps(self.envelope(**{**dynamic_expected, "run_id": run_a}), ensure_ascii=False),
+                encoding="utf-8",
+            )
+            before_old_run_attempt = tx.manifest_state(workspace)
+            rejected_old_run = run_python(
+                "commit_run.py",
+                [*commit_base, "--capability-receipt-file", str(old_run_receipt)],
+                env={cr.TRUSTED_KEYS_ENV: self.trust_env},
+            )
+            self.assertEqual(rejected_old_run.returncode, 2)
+            self.assertIn("capability_receipt_invalid", rejected_old_run.stderr)
+            self.assertEqual(tx.manifest_state(workspace), before_old_run_attempt)
 
             validation = run_python(
                 "validate_outputs.py", [str(candidate), "--profile", "candidate", "--json"]
@@ -637,8 +686,10 @@ class CapabilityReceiptTests(unittest.TestCase):
             self.assertEqual(final_manifest["evidence_run_id"], run_b)
             self.assertEqual(final_manifest["authorization"]["capability_receipt_id"], "receipt-run-b")
             self.assertTrue(final_manifest["authorization"]["capability_receipt_verified"])
+            self.assertEqual(final_manifest["authorization"]["capability_receipt_run_id"], run_b)
             final_evidence = load_json(workspace / "runtime" / "evidence-manifest.json")
             self.assertEqual(final_evidence["connector_audit"]["status"], "no_hits")
+            self.assertEqual(final_evidence["connector_audit"]["capability_receipt_run_id"], run_b)
             self.assertEqual(final_evidence["run_id"], run_b)
 
     def test_receipt_schema_is_packaged(self):
@@ -651,13 +702,28 @@ class CapabilityReceiptTests(unittest.TestCase):
         retrieved = (self.now - timedelta(minutes=2)).isoformat().replace("+00:00", "Z")
         expected: dict[str, object] = {
             "source_id": "SRC-I-001",
+            "source_title": "Example source",
+            "publisher_or_provider": "Example publisher",
             "locator": "https://example.org/source",
             "final_url": "https://example.org/source",
             "canonical_locator": "https://example.org/source",
+            "publication_or_update_date": "2026-08-26",
+            "access_date": "2026-08-27",
             "content_sha256": "a" * 64,
             "length": 128,
             "capture_method": "text-nfc-lf-utf8-v1",
             "retrieved_at": retrieved,
+            "published_at": (self.now - timedelta(days=1)).isoformat().replace("+00:00", "Z"),
+            "source_updated_at": None,
+            "internal_recorded_at": None,
+            "source_level": "A",
+            "source_group": "example-group",
+            "permission": "public",
+            "applicable_scope": "示例客户",
+            "notes": "none",
+            "upstream_id": "record:example-source",
+            "external_use": "true",
+            "tenant_id": self.expected["tenant_id"],
             "run_id": self.expected["run_id"],
             "customer_id": self.expected["customer_id"],
             "project_id": self.expected["project_id"],
@@ -692,6 +758,17 @@ class CapabilityReceiptTests(unittest.TestCase):
             missing.pop("signature")
             with self.assertRaises(cr.CapabilityReceiptError):
                 cr.verify_source_capture_receipt(missing, expected=expected, at=self.now)
+
+            unsafe, unsafe_expected = self.source_envelope(
+                source_title="[承诺三个月上线](https://example.org/source)"
+            )
+            unsafe_expected["source_title"] = unsafe["source_title"]
+            with self.assertRaises(cr.CapabilityReceiptError):
+                cr.verify_source_capture_receipt(
+                    unsafe,
+                    expected=unsafe_expected,
+                    at=self.now,
+                )
 
 
 if __name__ == "__main__":

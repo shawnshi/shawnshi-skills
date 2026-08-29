@@ -19,6 +19,7 @@ from dataclasses import dataclass
 from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any, Mapping, Sequence
+from urllib.parse import parse_qsl, urlencode, urlsplit, urlunsplit
 
 from cryptography.exceptions import InvalidSignature
 from cryptography.hazmat.primitives.asymmetric.ed25519 import Ed25519PublicKey
@@ -26,7 +27,7 @@ from cryptography.hazmat.primitives.asymmetric.ed25519 import Ed25519PublicKey
 
 RECEIPT_SCHEMA = "discovery-call-capability-receipt/v1"
 RECEIPT_AUDIENCE = "discovery-call-internal"
-SOURCE_RECEIPT_SCHEMA = "discovery-call-source-capture-receipt/v1"
+SOURCE_RECEIPT_SCHEMA = "discovery-call-source-capture-receipt/v3"
 SOURCE_RECEIPT_AUDIENCE = "discovery-call-source-capture"
 TRUSTED_KEYS_ENV = "DISCOVERY_CALL_CAPABILITY_TRUSTED_KEYS_JSON"
 MAX_RECEIPT_BYTES = 64 * 1024
@@ -65,18 +66,40 @@ SOURCE_REQUIRED_FIELDS = {
     "expires_at",
     "receipt_id",
     "source_id",
+    "source_title",
+    "publisher_or_provider",
     "locator",
     "final_url",
     "canonical_locator",
+    "publication_or_update_date",
+    "access_date",
     "content_sha256",
     "length",
     "capture_method",
     "retrieved_at",
+    "published_at",
+    "source_updated_at",
+    "internal_recorded_at",
+    "source_level",
+    "source_group",
+    "permission",
+    "applicable_scope",
+    "notes",
+    "upstream_id",
+    "external_use",
+    "tenant_id",
     "run_id",
     "customer_id",
     "project_id",
     "signature",
 }
+UNSAFE_VISIBLE_RE = re.compile(
+    r"(?:!?\[[^\]\n]*\]\s*(?:\([^\)\n]*\)|\[[^\]\n]*\])|`|<[^>\n]+>)"
+)
+STABLE_LOCATOR_RE = re.compile(
+    r"^(?:urn|record|document|dataset|ragflow|archive):[A-Za-z0-9][A-Za-z0-9._~:/?#@!$&'*+,;=%-]*$",
+    re.IGNORECASE,
+)
 SCALAR_SCOPE_FIELDS = (
     "receipt_id",
     "actor_id",
@@ -118,6 +141,7 @@ class VerifiedCapabilityReceipt:
     def audit_fields(self) -> dict[str, object]:
         return {
             "authorization_actor_id": self.actor_id,
+            "capability_receipt_run_id": self.run_id,
             "capability_operation": self.operation,
             "capability_receipt_verified": True,
             "capability_receipt_issuer": self.issuer,
@@ -149,6 +173,44 @@ class VerifiedSourceCaptureReceipt:
 
 def _normalized(value: Any) -> str:
     return re.sub(r"\s+", " ", unicodedata.normalize("NFKC", str(value or ""))).strip()
+
+
+def _safe_visible_scalar(value: Any, label: str) -> str:
+    text = _normalized(value)
+    if (
+        not isinstance(value, str)
+        or not text
+        or text != value
+        or UNSAFE_VISIBLE_RE.search(text)
+        or any(unicodedata.category(char) == "Cf" for char in text)
+    ):
+        raise CapabilityReceiptError(
+            f"{label}必须是规范化可见纯文本，不得包含Markdown链接/图片、代码标记、HTML或隐藏控制字符。"
+        )
+    return text
+
+
+def _canonical_locator(value: str) -> str:
+    """Canonicalize only raw HTTP(S) URLs or controlled stable identifiers."""
+
+    text = _safe_visible_scalar(value, "source locator")
+    if STABLE_LOCATOR_RE.fullmatch(text):
+        return text.casefold()
+    try:
+        parsed = urlsplit(text)
+        parsed_port = parsed.port
+    except ValueError as exc:
+        raise CapabilityReceiptError("source locator不是有效raw URL或受控stable-id。") from exc
+    if parsed.scheme.casefold() not in {"http", "https"} or not parsed.netloc:
+        raise CapabilityReceiptError("source locator只允许raw HTTP(S) URL或受控stable-id。")
+    host = (parsed.hostname or "").casefold()
+    if not host or parsed.username is not None or parsed.password is not None:
+        raise CapabilityReceiptError("source locator主机无效或包含禁止的userinfo。")
+    default_port = (parsed.scheme.casefold(), parsed_port) in {("http", 80), ("https", 443)}
+    port = f":{parsed_port}" if parsed_port and not default_port else ""
+    path = re.sub(r"/+", "/", parsed.path or "/").rstrip("/") or "/"
+    query = urlencode(sorted(parse_qsl(parsed.query, keep_blank_values=True)))
+    return urlunsplit((parsed.scheme.casefold(), host + port, path, query, ""))
 
 
 def _unique_object(pairs: Sequence[tuple[str, Any]]) -> dict[str, Any]:
@@ -349,16 +411,30 @@ def verify_source_capture_receipt(
             detail.append("缺少=" + ",".join(missing))
         if extra:
             detail.append("未知=" + ",".join(extra))
-        raise CapabilityReceiptError("source capture receipt字段不符合v1契约：" + "；".join(detail))
+        raise CapabilityReceiptError("source capture receipt字段不符合v3契约：" + "；".join(detail))
     if payload.get("schema") != SOURCE_RECEIPT_SCHEMA or payload.get("audience") != SOURCE_RECEIPT_AUDIENCE:
         raise CapabilityReceiptError("source capture receipt的schema/audience无效。")
     for key in (
-        "issuer", "key_id", "receipt_id", "source_id", "locator", "final_url",
-        "canonical_locator", "content_sha256", "capture_method", "run_id", "customer_id",
+        "issuer", "key_id", "receipt_id", "source_id", "source_title",
+        "publisher_or_provider", "locator", "final_url", "canonical_locator",
+        "publication_or_update_date", "access_date", "content_sha256",
+        "capture_method", "source_group", "applicable_scope", "notes",
+        "upstream_id", "run_id", "customer_id",
     ):
         value = payload.get(key)
         if not isinstance(value, str) or not value or value != _normalized(value):
             raise CapabilityReceiptError(f"source capture receipt.{key}必须是规范化非空字符串。")
+    for key in (
+        "source_title", "publisher_or_provider", "publication_or_update_date",
+        "access_date", "source_group", "applicable_scope", "notes", "upstream_id",
+    ):
+        _safe_visible_scalar(payload.get(key), f"source capture receipt.{key}")
+    locator_canonical = _canonical_locator(str(payload["locator"]))
+    _canonical_locator(str(payload["final_url"]))
+    if payload.get("canonical_locator") != locator_canonical:
+        raise CapabilityReceiptError(
+            "source capture receipt.canonical_locator必须精确等于raw locator的规范化结果。"
+        )
     for key in ("issuer", "key_id", "receipt_id", "customer_id"):
         if not ID_RE.fullmatch(str(payload[key])):
             raise CapabilityReceiptError(f"source capture receipt.{key}不是稳定标识符。")
@@ -368,26 +444,54 @@ def verify_source_capture_receipt(
         raise CapabilityReceiptError("source capture receipt.run_id无效。")
     if not re.fullmatch(r"[0-9a-f]{64}", str(payload["content_sha256"])):
         raise CapabilityReceiptError("source capture receipt.content_sha256无效。")
+    if not re.fullmatch(r"\d{4}-\d{2}-\d{2}", str(payload["access_date"])):
+        raise CapabilityReceiptError("source capture receipt.access_date必须为YYYY-MM-DD。")
     if payload.get("capture_method") not in {"raw-bytes-v1", "text-nfc-lf-utf8-v1"}:
         raise CapabilityReceiptError("source capture receipt.capture_method无效。")
     if not isinstance(payload.get("length"), int) or isinstance(payload.get("length"), bool) or payload["length"] < 0:
         raise CapabilityReceiptError("source capture receipt.length无效。")
-    project_id = payload.get("project_id")
-    if project_id is not None and (
-        not isinstance(project_id, str) or not ID_RE.fullmatch(project_id)
-    ):
-        raise CapabilityReceiptError("source capture receipt.project_id必须是稳定标识符或null。")
+    if payload.get("source_level") not in {"S", "A", "B", "C", "internal"}:
+        raise CapabilityReceiptError("source capture receipt.source_level无效。")
+    if payload.get("permission") not in {"public", "internal-authorized", "restricted"}:
+        raise CapabilityReceiptError("source capture receipt.permission无效。")
+    if payload.get("external_use") not in {"true", "false"}:
+        raise CapabilityReceiptError("source capture receipt.external_use必须为true或false。")
+    if payload.get("notes") not in {
+        "none", "capture_limitation", "metadata_unavailable", "scope_limited"
+    }:
+        raise CapabilityReceiptError("source capture receipt.notes只能使用受控审计码。")
+    if payload.get("permission") == "restricted" and payload.get("external_use") != "false":
+        raise CapabilityReceiptError("restricted来源不得标记external_use=true。")
+    for key in ("tenant_id", "project_id"):
+        scope_id = payload.get(key)
+        if scope_id is not None and (
+            not isinstance(scope_id, str) or not ID_RE.fullmatch(scope_id)
+        ):
+            raise CapabilityReceiptError(f"source capture receipt.{key}必须是稳定标识符或null。")
+    sensitive = bool(
+        payload.get("source_level") == "internal"
+        or payload.get("permission") in {"internal-authorized", "restricted"}
+    )
+    if sensitive and (payload.get("tenant_id") is None or payload.get("project_id") is None):
+        raise CapabilityReceiptError("内部或受限来源必须绑定非空tenant_id与project_id。")
 
     issued = _timestamp(payload.get("issued_at"), "source capture receipt.issued_at")
     retrieved = _timestamp(payload.get("retrieved_at"), "source capture receipt.retrieved_at")
     expires = _timestamp(payload.get("expires_at"), "source capture receipt.expires_at")
+    for key in ("published_at", "source_updated_at", "internal_recorded_at"):
+        if payload.get(key) is not None:
+            _timestamp(payload.get(key), f"source capture receipt.{key}")
     now = (at or datetime.now(timezone.utc)).astimezone(timezone.utc)
     if retrieved > issued or issued > now or expires <= now or expires <= issued:
         raise CapabilityReceiptError("source capture receipt时间谱系无效、尚未签发或已过期。")
 
     expected_fields = (
-        "source_id", "locator", "final_url", "canonical_locator", "content_sha256",
-        "length", "capture_method", "retrieved_at", "run_id", "customer_id", "project_id",
+        "source_id", "source_title", "publisher_or_provider", "locator", "final_url",
+        "canonical_locator", "publication_or_update_date", "access_date", "content_sha256",
+        "length", "capture_method", "retrieved_at", "published_at", "source_updated_at",
+        "internal_recorded_at", "source_level", "source_group", "permission",
+        "applicable_scope", "notes", "upstream_id", "external_use", "tenant_id",
+        "run_id", "customer_id", "project_id",
     )
     missing_expected = [key for key in expected_fields if key not in expected]
     if missing_expected:

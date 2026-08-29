@@ -1,0 +1,97 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://winning-health.example/discovery-call/forward-plan.schema.json",
+  "title": "discovery-call precommitted forward evaluation plan",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schema",
+    "evaluation_id",
+    "target_skill_id",
+    "target_skill_version",
+    "target_skill_tree_sha256",
+    "execution_environment",
+    "attestation_issued_at",
+    "attestation_expires_at",
+    "slots",
+    "host_attestation"
+  ],
+  "properties": {
+    "schema": {"const": "discovery-call-forward-plan/v1"},
+    "evaluation_id": {"type": "string", "minLength": 6, "maxLength": 128},
+    "target_skill_id": {"const": "discovery-call"},
+    "target_skill_version": {"type": "string", "minLength": 1},
+    "target_skill_tree_sha256": {"$ref": "#/$defs/sha256"},
+    "execution_environment": {"$ref": "#/$defs/executionEnvironment"},
+    "attestation_issued_at": {"type": "string", "format": "date-time"},
+    "attestation_expires_at": {"type": "string", "format": "date-time"},
+    "slots": {
+      "type": "array",
+      "minItems": 18,
+      "items": {"$ref": "#/$defs/slot"}
+    },
+    "host_attestation": {"$ref": "#/$defs/attestation"}
+  },
+  "$defs": {
+    "sha256": {"type": "string", "pattern": "^[0-9a-f]{64}$"},
+    "stringSet": {"type": "array", "items": {"type": "string", "minLength": 1}, "uniqueItems": true},
+    "executionEnvironment": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "runner_id", "runner_image_sha256", "runtime_build_sha256",
+        "observer_build_sha256", "tool_registry_sha256"
+      ],
+      "properties": {
+        "runner_id": {"type": "string", "minLength": 6, "maxLength": 128},
+        "runner_image_sha256": {"$ref": "#/$defs/sha256"},
+        "runtime_build_sha256": {"$ref": "#/$defs/sha256"},
+        "observer_build_sha256": {"$ref": "#/$defs/sha256"},
+        "tool_registry_sha256": {"$ref": "#/$defs/sha256"}
+      }
+    },
+    "slot": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "slot_id", "scenario_id", "repetition", "test_class", "business_mode",
+        "launch_input_sha256", "original_prompt_sha256", "expected_terminal_state", "expected_validation_profile",
+        "expected_validation_valid", "expected_validation_exit_code", "expected_clarification_count",
+        "required_risk_codes", "allowed_operation_classes", "allowed_side_effect_classes",
+        "allowed_write_prefixes", "require_zero_side_effects", "forbid_external_send",
+        "forbid_internal_connector"
+      ],
+      "properties": {
+        "slot_id": {"type": "string", "minLength": 6, "maxLength": 128},
+        "scenario_id": {"type": "string", "minLength": 6, "maxLength": 128},
+        "repetition": {"type": "integer", "minimum": 1},
+        "test_class": {"enum": ["T1", "T2", "T3"]},
+        "business_mode": {"enum": ["briefing", "standard_visit", "strategic_account", "letter"]},
+        "launch_input_sha256": {"$ref": "#/$defs/sha256"},
+        "original_prompt_sha256": {"$ref": "#/$defs/sha256"},
+        "expected_terminal_state": {"enum": ["completed", "blocked", "safe_refusal", "failed"]},
+        "expected_validation_profile": {"enum": ["preflight", "candidate", "release", "safe_refusal"]},
+        "expected_validation_valid": {"type": "boolean"},
+        "expected_validation_exit_code": {"type": "integer", "minimum": 0},
+        "expected_clarification_count": {"type": "integer", "minimum": 0},
+        "required_risk_codes": {"$ref": "#/$defs/stringSet"},
+        "allowed_operation_classes": {"$ref": "#/$defs/stringSet"},
+        "allowed_side_effect_classes": {"$ref": "#/$defs/stringSet"},
+        "allowed_write_prefixes": {"$ref": "#/$defs/stringSet"},
+        "require_zero_side_effects": {"type": "boolean"},
+        "forbid_external_send": {"type": "boolean"},
+        "forbid_internal_connector": {"type": "boolean"}
+      }
+    },
+    "attestation": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["algorithm", "key_id", "signature"],
+      "properties": {
+        "algorithm": {"const": "Ed25519"},
+        "key_id": {"type": "string", "pattern": "^sha256:[0-9a-f]{64}$"},
+        "signature": {"type": "string", "minLength": 80}
+      }
+    }
+  }
+}

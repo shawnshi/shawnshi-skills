@@ -1,0 +1,19 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://winning-health.example/discovery-call/forward-tool-trace.schema.json",
+  "title": "host-observed discovery-call forward tool trace",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["schema", "evaluation_id", "slot_id", "run_id", "context_id", "host_session_id", "trace_source", "trace_complete", "events"],
+  "properties": {
+    "schema": {"const": "discovery-call-forward-tool-trace/v3"},
+    "evaluation_id": {"type": "string", "minLength": 6},
+    "slot_id": {"type": "string", "minLength": 6},
+    "run_id": {"type": "string", "minLength": 6},
+    "context_id": {"type": "string", "minLength": 6},
+    "host_session_id": {"type": "string", "minLength": 6},
+    "trace_source": {"const": "host_observer"},
+    "trace_complete": {"const": true},
+    "events": {"type": "array", "minItems": 4, "items": {"type": "object"}}
+  }
+}

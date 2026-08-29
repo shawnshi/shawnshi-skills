@@ -1,7 +1,7 @@
 {
   "schema_version": 3,
   "skill": "tool-slide-architect",
-  "generated_at": "2026-08-27T20:05:47+08:00",
+  "generated_at": "2026-08-29T20:18:37+08:00",
   "hash_algorithm": "SHA-256",
   "text_hash_normalization": "LF",
   "skill_md": "SKILL.md",
@@ -43,7 +43,7 @@
   "resource_file_hashes": [
     {
       "path": "agents/openai.yaml",
-      "sha256": "6ca04c8b7391840c0b18ae21e9d91b34daddcf21b37c5ec0721210c287b36d96"
+      "sha256": "62d0801e49365474f113e2bb4b5b6c1699bc0d8e7c3414bc66d4f1fcc178725c"
     },
     {
       "path": "assets/icon.svg",

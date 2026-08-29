@@ -36,16 +36,12 @@ runtime_owner: {{runtime_owner_yaml}}
 workflow_stage: "{{workflow_stage}}"
 ---
 
-# {{客户中文规范名称}}客户研究与拜访准备报告
+# {{客户中文规范名称}}客户研究与行动准备报告
 
 > 用户业务模式：{{会前速览/标准拜访包/战略客户包/一封信}}｜内部研究档位：{{快速版/标准版/深度版}}｜信息截止：{{YYYY-MM-DD}}
-> ready_for_use：{{true/false}}｜closed仅表示本次生成结束，不表示已审核或可外发。
-
-会前速览的用户正文另按1页模板交付；本文件保留必要审计。标准拜访包和战略客户包展开判断链、G-C-P、机会资格和执行计划。第2、8、9节属于审计区，转换为面向高层的Word/PPT时可放附录，但不得从权威Markdown删除。
-
 ## 1. 决策摘要
 
-| 核心问题 | 当前结论 | claim_id | 对拜访的意义 |
+| 核心问题 | 当前结论 | claim_id | 对业务决策的意义 |
 |---|---|---|---|
 | 主体与边界 | {{内容}} | {{CLM-I-001}} | {{内容}} |
 | 当前重点任务 | {{内容}} | {{CLM-I-002}} | {{内容}} |
@@ -55,8 +51,6 @@ workflow_stage: "{{workflow_stage}}"
 | 最小推进动作 | {{仅一个主动作}} | {{CLM-I/L/N-###}} | {{内容}} |
 
 ## 2. 任务上下文与成果状态
-
-> 以下为机器审计与恢复信息，不属于1页速览正文。
 
 | 模块 | selected_in_run | run_action | module_status | review_status | connector_status | freshness_status | content_version | latest_run_id | updated_at | summary_sync_status | key_claim_ids | downstream_invalidation | gaps/blockers | 成果链接 |
 |---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|
@@ -68,22 +62,20 @@ workflow_stage: "{{workflow_stage}}"
 | 客户信内部审核稿 | {{letter_selected_in_run}} | {{letter_run_action}} | {{letter_status}} | {{letter_review_status}} | {{letter_connector_status}} | {{letter_freshness_status}} | {{letter_content_version}} | {{letter_latest_run_id}} | {{letter_updated_at}} | {{letter_summary_sync_status}} | {{letter_key_claim_ids}} | {{letter_downstream_invalidation}} | {{letter_gaps_blockers}} | {{letter_link}} |
 | 客户信外发版 | {{external_letter_selected_in_run}} | {{external_letter_run_action}} | {{external_letter_status}} | {{external_letter_review_status}} | {{external_letter_connector_status}} | {{external_letter_freshness_status}} | {{external_letter_content_version}} | {{external_letter_latest_run_id}} | {{external_letter_updated_at}} | {{external_letter_summary_sync_status}} | {{external_letter_key_claim_ids}} | {{external_letter_downstream_invalidation}} | {{external_letter_gaps_blockers}} | {{external_letter_link}} |
 
-`selected_in_run=false`表示本轮未调用；已有历史文件可保留其原状态和链接。只有从未生成过的模块才写`module_status=not_called`并留空成果列。“成果链接”是第15列也是唯一链接列：Markdown目标即`artifact_path`，显示文本即`link`，不得另加第16列。
-
 ### 2.1 本次RACI与审核SLA
 
 | 角色 | 姓名（稳定角色/账号） | 本次责任 | 截止时间/状态 |
 |---|---|---|---|
-| account_owner | {{内容}} | 客户目标和下一步负责 | {{内容}} |
-| runtime_owner | {{runtime_owner}} | 研究、合并和修订 | {{内容}} |
-| evidence_reviewer | {{内容}} | 事实与证据复核 | {{review_due_at}} |
-| commercial_reviewer | {{内容/不适用}} | 机会、承诺和投入复核 | {{review_due_at/不适用}} |
-| external_approver | {{内容/不适用}} | 外发审批 | {{review_due_at/不适用}} |
-| authorization_owner | {{内容/不适用}} | 内部数据授权 | {{authorization_expires_at/不适用}} |
+| account_owner | {{受控我方角色/姓名（受控我方角色）}} | account_decision | {{YYYY-MM-DD/带时区时间/pending}} |
+| runtime_owner | {{受控我方角色/姓名（受控我方角色）}} | research_execution | {{YYYY-MM-DD/带时区时间/pending}} |
+| evidence_reviewer | {{受控我方角色/姓名（受控我方角色）}} | evidence_review | {{YYYY-MM-DD/带时区时间/pending}} |
+| commercial_reviewer | {{受控我方角色/姓名（受控我方角色）/not_applicable}} | commercial_review | {{YYYY-MM-DD/带时区时间/pending/not_applicable}} |
+| external_approver | {{受控我方角色/姓名（受控我方角色）/not_applicable}} | external_approval | {{YYYY-MM-DD/带时区时间/pending/not_applicable}} |
+| authorization_owner | {{受控我方角色/姓名（受控我方角色）/not_applicable}} | data_authorization | {{YYYY-MM-DD/带时区时间/pending/not_applicable}} |
 
 ## 3. 综合判断链
 
-| 环节 | 判断 | claim_id | 反证/局限 | 置信度 | 现场验证问题 |
+| 环节 | 判断 | claim_id | 反证/局限 | 置信度 | 验证问题或动作 |
 |---|---|---|---|---|---|
 | 发展阶段 | {{内容}} | {{CLM-I-###}} | {{内容}} | {{高/中/低}} | {{问题}} |
 | 核心矛盾 | {{内容}} | {{CLM-I/N-###}} | {{内容}} | {{高/中/低}} | {{问题}} |
@@ -101,7 +93,7 @@ workflow_stage: "{{workflow_stage}}"
 
 ## 4.1 机会资格与投入建议
 
-| 维度 | 当前判断 | claim_id | 缺口/现场问题 |
+| 维度 | 当前判断 | claim_id | 缺口/验证问题 |
 |---|---|---|---|
 | Budget | {{来源、状态、口径；未知则不猜}} | {{CLM-I/N-###}} | {{内容}} |
 | Authority | {{业务/技术/预算/采购/验收角色}} | {{CLM-I/L/N-###}} | {{内容}} |
@@ -113,60 +105,41 @@ workflow_stage: "{{workflow_stage}}"
 - 投入强度：{{低/中/高}}；依据：{{内容}}
 - 继续投入的前提/停止条件：{{内容}}
 
-## 4.2 拜访执行与下一步
+## 4.2 执行与下一步
 
-| 时间 | 议题/动作 | 我方owner | 材料/演示 | 目标信号 |
-|---:|---|---|---|---|
-| {{0—5分钟}} | {{开场}} | {{真人/稳定角色}} | {{材料/无}} | {{内容}} |
-| {{5—25分钟}} | {{核心议题}} | {{真人/稳定角色}} | {{版本与授权}} | {{内容}} |
-| {{最后5分钟}} | {{收口}} | {{真人/稳定角色}} | {{内容}} | {{最小推进动作}} |
-
-| action | owner | due_date | 依赖 | 完成标准 | CRM/PIMS候选 |
-|---|---|---|---|---|---|
-| {{唯一主动作}} | {{真人/稳定角色}} | {{YYYY-MM-DD}} | {{内容}} | {{内容}} | {{是/否}} |
+| action | action_disposition | external_interaction | resource_commitment | owner | due_date | 依赖 | 完成标准 | 继续/调整/no-go条件 | CRM/PIMS候选 |
+|---|---|---|---|---|---|---|---|---|---|
+| {{唯一主动作}} | {{advance/adjust/stop/archive/observe/recheck}} | {{none/customer_contact}} | {{none/proposed/approved}} | {{受控我方角色/姓名（受控我方角色）}} | {{YYYY-MM-DD}} | {{内容}} | {{可观察结果}} | {{信号或停止条件}} | {{是/否}} |
 
 ## 5. 高价值发现
 
-快速版最多5条，标准/深度最多8条。claim 类型只能为 `F/F2/A/H/R`；`public/U/N` 只表示 provenance。
-
-| 序号 | claim_id | claim_type | provenance | 发现 | 业务影响 | 置信度 |
-|---|---|---|---|---|---|---|
-| 1 | {{CLM-I/L/N-###}} | {{F/F2/A/H/R}} | {{public/U/N}} | {{内容}} | {{内容}} | {{高/中/低}} |
+| 序号 | claim_id | claim_type | provenance | 发现 | impact_type | 业务影响 | 置信度 |
+|---|---|---|---|---|---|---|---|
+| 1 | {{CLM-I/L/N-###}} | {{F/F2/A/H/R}} | {{public/U/N}} | {{权威claim正文}} | {{decision/verification/risk/resource}} | {{影响机会决策/需要补充验证/存在误判风险/影响资源投入}} | {{高/中/低}} |
 
 ## 6. 异常审核队列
 
-| 审核项 | 类型 | 待审核内容 | claim_id/source_id | 风险 | runtime_owner | 审核结论 |
-|---|---|---|---|---|---|---|
-| {{REV-001}} | {{冲突/低置信度/内部敏感/承诺/外发事实}} | {{内容}} | {{CLM-... / SRC-...}} | {{影响}} | {{角色}} | {{not_started/pending/approved/changes_requested}} |
-
-### 可用状态
-
-- ready_for_use：{{true/false}}
-- 必要审核人：{{姓名（稳定角色/账号）}}
-- review_due_at：{{带时区时间}}
-- 未通过原因/解除条件：{{内容/无}}
-
-## 7. 关键缺口与现场验证
-
-| 缺口 | 优先级 | 待核实事项 | 影响 | 验证方式 | 责任角色/时点 |
+| review_id | review_type | claim_or_source_ref | risk_code | owner | review_status |
 |---|---|---|---|---|---|
-| {{GAP-001}} | {{高/中/低}} | {{内容}} | {{影响}} | {{现场/内部/补检}} | {{内容}} |
+| {{REV-001}} | {{evidence_conflict/low_confidence/internal_sensitive/commitment_review/external_fact_review}} | {{CLM-.../SRC-...}} | {{decision_risk/compliance_risk/confidentiality_risk/commitment_risk}} | {{受控我方角色/姓名（受控我方角色）}} | {{not_started/pending/approved/changes_requested}} |
+
+## 7. 关键缺口与验证计划
+
+| claim_ref | claim_type_ref | provenance_ref | evidence_state | impact_type | verification_mode | owner | due_date |
+|---|---|---|---|---|---|---|---|
+| {{CLM-I/L/N-###}} | {{F/F2/A/H/R}} | {{public/U/N}} | {{unknown/conflicted/stale/insufficient}} | {{decision/verification/risk/resource}} | {{internal_review/public_refresh/authorized_customer_contact}} | {{受控我方角色/姓名（受控我方角色）}} | {{YYYY-MM-DD}} |
 
 ## 8. 主张与来源导航
 
-本节只导航，不重新定义主张或来源；权威双台账位于独立研究成果。
-
-| 序号 | claim_id | 对应成果 | 用途 |
+| 序号 | claim_id | artifact_type | usage_code |
 |---|---|---|---|
-| 1 | {{CLM-I/L/N-###}} | {{相对链接}} | {{摘要/判断链/GCP}} |
+| 1 | {{CLM-I/L/N-###}} | {{institution_research/leader_research/internal_retrieval}} | {{decision_summary/judgment_chain/gcp/qualification/action/finding/gap}} |
 
-| 序号 | source_id | 对应成果 | 状态 |
+| 序号 | source_id | artifact_type | source_status |
 |---|---|---|---|
-| 1 | {{SRC-I/L/N-###}} | {{相对链接}} | {{current/stale/invalidated}} |
+| 1 | {{SRC-I/L/N-###}} | {{institution_research/leader_research/internal_retrieval}} | {{current/stale/invalidated}} |
 
 ## 8.1 刷新结果记录
-
-每个完成合并的 refresh run 追加一行；非 refresh run 不新增行。五类结果单元格只允许填写逗号分隔的 claim/source ID 列表，或精确值 `none`，不得写自由文本或占位符。
 
 | run_id | 新增 | 更正 | 失效 | 未变化 | 待确认 |
 |---|---|---|---|---|---|

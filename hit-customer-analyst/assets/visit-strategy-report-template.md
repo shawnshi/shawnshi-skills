@@ -32,10 +32,6 @@ minimum_next_step: "{{minimum_next_step}}"
 
 # {{客户中文规范名称}}交流策略与议题设计
 
-> 内部使用｜拜访对象/层级：{{target_contact_level}}｜拜访时间：{{时间/待确认}}｜ready_for_use：{{true/false}}
-
-`strategy_variant`固定为`scheduled_visit`；`target_contact_level`、`visit_objective`和`minimum_next_step`必须与 frontmatter 一致，不得只在自由文本中隐含。
-
 ## 1. 目标与最小推进动作
 
 | 项目 | 内容 | claim_id |
@@ -107,23 +103,19 @@ minimum_next_step: "{{minimum_next_step}}"
 | {{唯一主动作}} | {{真人/稳定角色}} | {{YYYY-MM-DD}} | {{内容}} | {{内容}} | {{是/否}} |
 | {{最多一个备选}} | {{真人/稳定角色}} | {{YYYY-MM-DD}} | {{触发条件}} | {{内容}} | {{是/否}} |
 
-## 10. 依据导航与缺口
+## 10. CRM/PIMS候选
 
-本成果引用研究模块中的 claim_id；不在此重复定义主张或来源。
+| 候选类型 | 内容 | owner | due_date | 写回状态 |
+|---|---|---|---|---|
+| action | {{唯一主动作及完成标准}} | {{真人/稳定角色}} | {{YYYY-MM-DD}} | candidate_only |
+| verification | {{关键待验证事项}} | {{真人/稳定角色}} | {{YYYY-MM-DD}} | candidate_only |
+
+## 11. 依据导航与缺口
 
 | 序号 | claim_id | 来源成果 | 使用位置 |
 |---|---|---|---|
-| 1 | {{CLM-I/L/N-###}} | {{相对链接}} | {{章节}} |
+| 1 | {{CLM-I-###}} | [机构研究成果](./{{safe_name}}机构研究报告.md) | {{target/assumption/agenda/qualification/roles/materials/questions/risk/action/crm}} |
 
-| 缺口 | 影响 | 现场验证/责任角色 |
-|---|---|---|
-| {{内容}} | {{内容}} | {{内容}} |
-
-## 11. 审核与可用状态
-
-- review_status：{{pending/approved/changes_requested}}
-- reviewer：{{姓名（稳定角色/账号）/待定}}
-- reviewed_at：{{带时区时间/空}}
-- ready_for_use：{{true/false}}
-- review_due_at：{{带时区时间}}
-- 未通过原因/解除条件：{{内容/无}}
+| claim_ref | claim_type_ref | provenance_ref | evidence_state | impact_type | verification_mode | owner | due_date |
+|---|---|---|---|---|---|---|---|
+| {{CLM-I/L/N-###}} | {{F/F2/A/H/R}} | {{public/U/N}} | {{unknown/conflicted/stale/insufficient}} | {{decision/verification/risk/resource}} | {{internal_review/public_refresh/authorized_customer_contact}} | {{真人/稳定角色}} | {{YYYY-MM-DD}} |

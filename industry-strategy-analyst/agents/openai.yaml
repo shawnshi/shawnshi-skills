@@ -6,3 +6,8 @@ interface:
   default_prompt: 使用 $industry-strategy-analyst 分析一个明确市场的规模、竞争格局、风险与进入策略。
 policy:
   allow_implicit_invocation: false
+  products:
+  - chatgpt
+  - codex
+  - api
+  - atlas

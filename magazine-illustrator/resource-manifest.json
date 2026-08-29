@@ -1,7 +1,7 @@
 {
   "schema_version": 3,
   "skill": "magazine-illustrator",
-  "generated_at": "2026-08-27T20:05:46+08:00",
+  "generated_at": "2026-08-29T20:18:36+08:00",
   "hash_algorithm": "SHA-256",
   "text_hash_normalization": "LF",
   "skill_md": "SKILL.md",
@@ -38,7 +38,7 @@
   "resource_file_hashes": [
     {
       "path": "agents/openai.yaml",
-      "sha256": "6d0429b34a786199f5d1ce8e7a30cdd8f1844cccab7a1aa9fa0a15e81355f7b8"
+      "sha256": "55593e1bef8a9f8c5b880a9ee4106f36c341a8fa239b6b1c9560b24136dbf8b4"
     },
     {
       "path": "assets/icon.svg",

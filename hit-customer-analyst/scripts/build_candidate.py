@@ -9,6 +9,7 @@ workspace: it only reads the live workspace and writes a new candidate tree.
 from __future__ import annotations
 
 import argparse
+import importlib.util
 import json
 import os
 import re
@@ -20,6 +21,21 @@ from pathlib import Path
 from typing import Any, Mapping
 
 import validate_outputs as validator
+import preflight_intake as intake_preflight
+
+try:
+    from candidate_attestation import write_seal_request
+except ModuleNotFoundError:
+    _candidate_attestation_path = Path(__file__).with_name("candidate_attestation.py")
+    _candidate_attestation_spec = importlib.util.spec_from_file_location(
+        "candidate_attestation", _candidate_attestation_path
+    )
+    if _candidate_attestation_spec is None or _candidate_attestation_spec.loader is None:
+        raise RuntimeError(f"无法加载候选签章模块：{_candidate_attestation_path}")
+    _candidate_attestation_module = importlib.util.module_from_spec(_candidate_attestation_spec)
+    sys.modules["candidate_attestation"] = _candidate_attestation_module
+    _candidate_attestation_spec.loader.exec_module(_candidate_attestation_module)
+    write_seal_request = _candidate_attestation_module.write_seal_request
 from runtime_tx import (
     EVIDENCE_MANIFEST_REL,
     RUN_METRICS_REL,
@@ -70,6 +86,10 @@ WORKFLOW_STAGES = {"research", "synthesis", "output", "review", "closed", "pause
 RUN_ACTIONS = {"created", "updated", "reused", "not_called"}
 SUMMARY_SYNC_STATUSES = {"synced", "out_of_sync"}
 DOWNSTREAM_INVALIDATIONS = {"none", "stale", "invalidated"}
+BOUND_INTAKE_FIELDS = set(intake_preflight.PERSISTED_GATE_STABLE_FIELDS) | {
+    "evaluated_at",
+    "expires_at",
+}
 TYPE_METADATA_FIELDS = {
     "institution_research": set(),
     "leader_research": set(),
@@ -282,7 +302,7 @@ def _new_document_text(
         **identity,
         "latest_run_id": "",
         "module_status": "partial",
-        "review_status": "not_required" if artifact_type == "institution_research" else "not_started",
+        "review_status": "not_started",
         "connector_status": "not_applicable",
         "freshness_status": "current",
         "content_version": "1",
@@ -306,8 +326,6 @@ def _new_document_text(
 
 
 def _review_status(artifact_type: str, module_status: str, freshness_status: str) -> str:
-    if artifact_type == "institution_research":
-        return "not_required"
     if module_status != "completed":
         return "not_started"
     if freshness_status == "current":
@@ -402,15 +420,23 @@ def _normalize_artifacts(value: object) -> dict[str, dict[str, Any]]:
                 }
             )
         record["key_claim_ids"] = str(item.get("key_claim_ids", "")).strip()
+        if record["key_claim_ids"] and validator.canonical_key_claim_ids(
+            record["key_claim_ids"]
+        ) is None:
+            raise CandidateError(
+                f"artifacts[{index}].key_claim_ids只能写去重排序claim_id列表或none。"
+            )
         sync = str(item.get("summary_sync_status", "synced")).strip()
         invalidation = str(item.get("downstream_invalidation", "none")).strip()
-        gaps = str(item.get("gaps_blockers", "无")).strip()
+        gaps = str(item.get("gaps_blockers", "none")).strip()
         if sync not in SUMMARY_SYNC_STATUSES:
             raise CandidateError(f"artifacts[{index}].summary_sync_status无效。")
         if invalidation not in DOWNSTREAM_INVALIDATIONS:
             raise CandidateError(f"artifacts[{index}].downstream_invalidation无效。")
-        if not gaps or any(char in gaps for char in "\r\n"):
-            raise CandidateError(f"artifacts[{index}].gaps_blockers不能为空或包含换行。")
+        if validator.canonical_status_tokens(gaps) is None:
+            raise CandidateError(
+                f"artifacts[{index}].gaps_blockers只能写none，或受控gap/blocker码与claim_id的去重排序列表。"
+            )
         record.update(
             {
                 "summary_sync_status": sync,
@@ -518,6 +544,98 @@ def _normalize_payload(
     }
 
 
+def _selected_intake_value(
+    verified_intake: Mapping[str, Any],
+    field: str,
+) -> str | None:
+    selected = verified_intake.get("selected_values")
+    record = selected.get(field) if isinstance(selected, Mapping) else None
+    values = record.get("values") if isinstance(record, Mapping) else None
+    if not isinstance(values, list) or len(values) != 1 or not isinstance(values[0], str):
+        return None
+    return intake_preflight.normalize_text(values[0])
+
+
+def _effective_artifact_metadata(
+    artifact_type: str,
+    records: Mapping[str, Mapping[str, Any]],
+    live_documents: Mapping[str, validator.Document],
+) -> Mapping[str, str]:
+    existing = live_documents.get(artifact_type)
+    effective = dict(existing.frontmatter) if existing is not None else {}
+    record = records.get(artifact_type)
+    if isinstance(record, Mapping) and record.get("action") in {"created", "updated"}:
+        metadata = record.get("metadata")
+        if isinstance(metadata, Mapping):
+            effective.update({str(key): str(value) for key, value in metadata.items()})
+    return effective
+
+
+def _assert_intake_semantic_binding(
+    *,
+    verified_intake: Mapping[str, Any],
+    business_mode: str,
+    records: Mapping[str, Mapping[str, Any]],
+    live_documents: Mapping[str, validator.Document],
+) -> None:
+    """Bind high-impact delivery semantics to the reverified signed intake.
+
+    Hash/identity equality alone is insufficient if a model-writable payload
+    can replace the requested objective, target, strategic question or letter
+    recipient.  This check happens before the candidate directory is created
+    and applies equally to newly written and reused artifacts.
+    """
+
+    artifact_type = (
+        "customer_letter_internal" if business_mode == "letter" else "visit_strategy"
+    )
+    effective = _effective_artifact_metadata(artifact_type, records, live_documents)
+    if not effective:
+        raise CandidateError(f"{business_mode}缺少与当前签名intake绑定的{artifact_type}成果。")
+
+    if business_mode == "letter":
+        required_fields = tuple(validator.LETTER_CONTEXT_FIELDS)
+    elif business_mode == "strategic_account":
+        expected_variant = _selected_intake_value(verified_intake, "strategy_variant")
+        actual_variant = intake_preflight.normalize_text(effective.get("strategy_variant", ""))
+        if expected_variant is None or actual_variant != expected_variant:
+            raise CandidateError("交流策略strategy_variant与当前签名intake不一致。")
+        required_fields = (
+            ("strategic_question", "planning_horizon", "minimum_next_step")
+            if actual_variant == "account_planning"
+            else ("visit_objective", "minimum_next_step")
+        )
+    else:
+        if intake_preflight.normalize_text(effective.get("strategy_variant", "")) != "scheduled_visit":
+            raise CandidateError(f"{business_mode}交流策略必须绑定scheduled_visit分支。")
+        required_fields = ("visit_objective", "minimum_next_step")
+
+    for field in required_fields:
+        expected = _selected_intake_value(verified_intake, field)
+        actual = intake_preflight.normalize_text(effective.get(field, ""))
+        if expected is None or actual != expected:
+            raise CandidateError(f"{artifact_type}.{field}与当前签名intake不一致。")
+
+    if business_mode in {"briefing", "standard_visit"} or (
+        business_mode == "strategic_account"
+        and intake_preflight.normalize_text(effective.get("strategy_variant", ""))
+        == "scheduled_visit"
+    ):
+        signed_targets = {
+            value
+            for field in ("target_contact_level", "target_role", "target_person")
+            for value in [_selected_intake_value(verified_intake, field)]
+            if value is not None
+        }
+        actual_target = intake_preflight.normalize_text(
+            effective.get("target_contact_level", "")
+        )
+        if not signed_targets or actual_target not in signed_targets:
+            raise CandidateError(
+                "visit_strategy.target_contact_level未绑定当前签名intake中的对象/角色/层级。"
+            )
+
+
 def _reset_review_updates(
     artifact_type: str,
     module_status: str,
@@ -609,7 +727,7 @@ def _render_artifact(
 
 def _claims_for(document: validator.Document) -> str:
     claims = sorted(set(validator.CLAIM_RE.findall(validator.body_without_placeholders(document))))
-    return ", ".join(claims)
+    return ", ".join(claims) or "none"
 
 
 def _status_extras(
@@ -626,18 +744,18 @@ def _status_extras(
             str(record.get("summary_sync_status", "synced")),
             claim_ids,
             str(record.get("downstream_invalidation", "none")),
-            str(record.get("gaps_blockers", "无")),
+            str(record.get("gaps_blockers", "none")),
         ]
     old = previous_rows.get(artifact_type, [])
     if len(old) == 15:
         return old[10:14]
     if document is None:
-        return ["not_applicable", "", "none", "无"]
+        return ["not_applicable", "", "none", "none"]
     return [
         "not_applicable" if artifact_type == "customer_letter_external" else "synced",
         _claims_for(document),
         "none",
-        "无",
+        "none",
     ]
 
 
@@ -712,6 +830,7 @@ def _write_candidate_manifest(
     total: validator.Document,
     transaction_sequence: int,
 ) -> None:
+    candidate_documents = _candidate_documents(candidate)
     rows = validator.parse_status_rows(total)
     selected_modules = [
         ACTION_TYPES[artifact_type]
@@ -721,6 +840,12 @@ def _write_candidate_manifest(
         and len(row) >= 2
         and row[1] == "true"
     ]
+    business_mode = total.frontmatter.get("business_mode", "")
+    delivery_summary = validator.delivery_summary_for_documents(
+        candidate_documents,
+        business_mode=business_mode,
+        selected_modules=selected_modules,
+    )
     raw_authorization = live_manifest.get("authorization", {})
     authorization = dict(raw_authorization) if isinstance(raw_authorization, dict) else {}
     manifest = build_manifest(
@@ -731,7 +856,7 @@ def _write_candidate_manifest(
             "customer_display_name": total.frontmatter.get("customer_display_name", ""),
             "organization_scope": total.frontmatter.get("organization_scope", ""),
         },
-        business_mode=total.frontmatter.get("business_mode", ""),
+        business_mode=business_mode,
         route=total.frontmatter.get("route", ""),
         depth=total.frontmatter.get("depth", ""),
         task_timezone=(
@@ -746,6 +871,7 @@ def _write_candidate_manifest(
         selected_modules=selected_modules,
         authorization=authorization,
         transaction_sequence=transaction_sequence,
+        delivery_summary=delivery_summary,
         intake_preflight=(
             dict(live_manifest["intake_preflight"])
             if isinstance(live_manifest.get("intake_preflight"), dict)
@@ -854,9 +980,34 @@ def build(args: argparse.Namespace) -> dict[str, Any]:
         verify_manifest_artifacts(workspace, live_manifest)
     except (CASMismatch, TxError) as exc:
         raise CandidateError(str(exc)) from exc
+    intake_gate = live_manifest.get("intake_preflight")
+    if not isinstance(intake_gate, dict) or not BOUND_INTAKE_FIELDS <= set(intake_gate):
+        raise CandidateError("正式workspace缺少宿主签名请求绑定的当前intake门禁。")
+    try:
+        gate_expiry = datetime.fromisoformat(str(intake_gate["expires_at"]).replace("Z", "+00:00"))
+    except ValueError as exc:
+        raise CandidateError("正式workspace的intake门禁过期时间无效。") from exc
+    if gate_expiry.tzinfo is None or gate_expiry.astimezone(timezone.utc) <= datetime.now(timezone.utc):
+        raise CandidateError("正式workspace的intake门禁已过期；必须从当前宿主请求重新预检。")
+    try:
+        verified_intake = intake_preflight.verify_persisted_gate(
+            args.intake_input,
+            intake_gate,
+            expected_business_mode=str(live_manifest.get("business_mode", "")),
+            expected_customer_name=str(live_manifest.get("customer_display_name", "")),
+            expected_organization_scope=str(live_manifest.get("organization_scope", "")),
+        )
+    except intake_preflight.PreflightError as exc:
+        raise CandidateError(f"当前请求intake复验失败：{exc}") from exc
     live_documents = _load_documents(workspace)
     total = _validate_live_identity(workspace, live_manifest, live_documents)
     normalized = _normalize_payload(payload, manifest=live_manifest, total=total)
+    _assert_intake_semantic_binding(
+        verified_intake=verified_intake,
+        business_mode=str(live_manifest.get("business_mode", "")),
+        records=normalized["artifacts"],
+        live_documents=live_documents,
+    )
     if normalized["expected_manifest_revision"] != expected_revision or normalized["expected_manifest_sha256"] != expected_hash:
         raise CandidateError("manifest CAS字段在解析期间发生漂移。")
 
@@ -958,21 +1109,23 @@ def build(args: argparse.Namespace) -> dict[str, Any]:
             transaction_sequence=expected_revision + 1,
         )
         marker = {
-            "schema": "discovery-call-candidate-receipt/v1",
+            "schema": "discovery-call-candidate-receipt/v2",
             "context_id": normalized["context_id"],
             "run_id": normalized["run_id"],
             "source_manifest_revision": expected_revision,
             "source_manifest_sha256": expected_hash,
             "source_workspace": str(workspace),
             "candidate_workspace": str(candidate),
-            # Bind the receipt to the candidate manifest.  That manifest in
-            # turn hashes every Markdown artifact and tracked runtime file.
-            "payload_sha256": sha256_file(candidate / "runtime" / "manifest.json"),
+            "input_payload_sha256": payload_sha256,
+            # This local marker is not an authorization.  commit_run requires
+            # a separate host Ed25519 attestation over this final digest.
+            "final_manifest_sha256": sha256_file(candidate / "runtime" / "manifest.json"),
         }
         (candidate / CANDIDATE_MARKER_REL).write_text(
             json.dumps(marker, ensure_ascii=False, indent=2, sort_keys=True) + "\n",
             encoding="utf-8",
         )
+        seal_request_path, seal_request = write_seal_request(candidate)
         validation = _validate_candidate(candidate)
         candidate_by_type = _candidate_documents(candidate)
         differences = _diff(live_documents, candidate_by_type)
@@ -989,6 +1142,8 @@ def build(args: argparse.Namespace) -> dict[str, Any]:
             "expected_latest_run_id": live_total_state.latest_run_id,
             "expected_total_sha256": live_total_state.sha256,
             "operation": f"candidate_{normalized['run_id']}",
+            "intake_input": str(Path(args.intake_input).expanduser().resolve()),
+            "candidate_attestation_file": str(candidate / "runtime" / "candidate-attestation.json"),
         }
         command = [
             sys.executable,
@@ -1008,6 +1163,10 @@ def build(args: argparse.Namespace) -> dict[str, Any]:
             live_total_state.sha256,
             "--operation",
             commit_parameters["operation"],
+            "--intake-input",
+            commit_parameters["intake_input"],
+            "--candidate-attestation-file",
+            commit_parameters["candidate_attestation_file"],
             "--json",
         ]
         return {
@@ -1019,6 +1178,12 @@ def build(args: argparse.Namespace) -> dict[str, Any]:
             "run_id": normalized["run_id"],
             "validation": validation,
             "diff": differences,
+            "candidate_seal_request": {
+                "status": "pending_host_signature",
+                "request_path": str(seal_request_path),
+                "attestation_path": commit_parameters["candidate_attestation_file"],
+                "request": seal_request,
+            },
             "next_commit": {
                 "script": str(Path(__file__).with_name("commit_run.py")),
                 "parameters": commit_parameters,
@@ -1037,6 +1202,11 @@ def build_parser() -> argparse.ArgumentParser:
     parser.add_argument("workspace", help="已有runtime/manifest.json保护的正式工作区")
     parser.add_argument("--payload", required=True, help="discovery-call-candidate-run/v1 JSON文件")
     parser.add_argument("--output-root", required=True, help="用于新建隔离candidate容器的目录")
+    parser.add_argument(
+        "--intake-input",
+        required=True,
+        help="与当前宿主请求绑定的intake v3普通文件（不接受-或stdin）；在创建候选目录前重新验签",
+    )
     parser.add_argument("--json", action="store_true", help="输出机器可读结果（默认同样输出JSON）")
     return parser
 

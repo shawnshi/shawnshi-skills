@@ -1,0 +1,51 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://winning-health.example/discovery-call/forward-validation-result.schema.json",
+  "title": "discovery-call forward run validation result",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schema", "evaluation_id", "slot_id", "run_id", "context_id", "host_session_id",
+    "validator_name", "validator_version", "validator_sha256", "validator_input_sha256",
+    "raw_tool_output", "raw_tool_output_sha256", "adapter_name", "adapter_version", "adapter_sha256",
+    "profile", "executed_at", "exit_code", "valid", "terminal_state", "workspace_tree_sha256",
+    "bindings", "summary", "summary_sha256"
+  ],
+  "properties": {
+    "schema": {"const": "discovery-call-forward-validation-result/v1"},
+    "evaluation_id": {"type": "string", "minLength": 6},
+    "slot_id": {"type": "string", "minLength": 6},
+    "run_id": {"type": "string", "minLength": 6},
+    "context_id": {"type": "string", "minLength": 6},
+    "host_session_id": {"type": "string", "minLength": 6},
+    "validator_name": {"type": "string", "minLength": 1},
+    "validator_version": {"type": "string", "minLength": 1},
+    "validator_sha256": {"$ref": "#/$defs/sha256"},
+    "validator_input_sha256": {"$ref": "#/$defs/sha256"},
+    "raw_tool_output": {"type": "string", "minLength": 2},
+    "raw_tool_output_sha256": {"$ref": "#/$defs/sha256"},
+    "adapter_name": {"const": "validate_forward_evaluation.py:validation-adapter"},
+    "adapter_version": {"type": "string", "minLength": 1},
+    "adapter_sha256": {"$ref": "#/$defs/sha256"},
+    "profile": {"enum": ["preflight", "candidate", "release", "safe_refusal"]},
+    "executed_at": {"type": "string", "format": "date-time"},
+    "exit_code": {"type": "integer", "minimum": 0},
+    "valid": {"type": "boolean"},
+    "terminal_state": {"enum": ["completed", "blocked", "safe_refusal", "failed"]},
+    "workspace_tree_sha256": {"$ref": "#/$defs/sha256"},
+    "bindings": {
+      "type": "object", "additionalProperties": false,
+      "required": ["launch_input_sha256", "raw_input_sha256", "output_sha256", "tool_trace_sha256", "side_effect_audit_sha256"],
+      "properties": {
+        "launch_input_sha256": {"$ref": "#/$defs/sha256"},
+        "raw_input_sha256": {"$ref": "#/$defs/sha256"},
+        "output_sha256": {"$ref": "#/$defs/sha256"},
+        "tool_trace_sha256": {"$ref": "#/$defs/sha256"},
+        "side_effect_audit_sha256": {"$ref": "#/$defs/sha256"}
+      }
+    },
+    "summary": {"type": "object"},
+    "summary_sha256": {"$ref": "#/$defs/sha256"}
+  },
+  "$defs": {"sha256": {"type": "string", "pattern": "^[0-9a-f]{64}$"}}
+}

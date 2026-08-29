@@ -1,0 +1,102 @@
+{
+  "schema_version": 3,
+  "skill": "image-prompt-gen",
+  "generated_at": "2026-08-29T20:18:36+08:00",
+  "hash_algorithm": "SHA-256",
+  "text_hash_normalization": "LF",
+  "skill_md": "SKILL.md",
+  "skill_md_sha256": "8a4917c8840630d1cdd2cc9a8e4d5c90ee784f62f860083b1d10fc26186d7f5b",
+  "top_level_files": [
+    "SKILL.md"
+  ],
+  "top_level_file_hashes": [
+    {
+      "path": "SKILL.md",
+      "sha256": "8a4917c8840630d1cdd2cc9a8e4d5c90ee784f62f860083b1d10fc26186d7f5b"
+    }
+  ],
+  "top_level_directories": [
+    "references",
+    "scripts",
+    "tests"
+  ],
+  "resource_directories": [
+    {
+      "name": "scripts",
+      "file_count": 1
+    },
+    {
+      "name": "references",
+      "file_count": 5
+    }
+  ],
+  "resource_file_hashes": [
+    {
+      "path": "references/carrier-guides.md",
+      "sha256": "f5f3ee03cc72b06ea7a95cf8d9152803b2860a47869c9987e241899d722c2d00"
+    },
+    {
+      "path": "references/prompt-examples.md",
+      "sha256": "7569895df883160222cec877c651f25174ef90fa20142b989f8450b778be187f"
+    },
+    {
+      "path": "references/release-notes.md",
+      "sha256": "3164454071aae39e2f3ce1426988c9f3993bb14b2fa1274165e86dd1073df894"
+    },
+    {
+      "path": "references/text-and-qa.md",
+      "sha256": "ab66f61604fb88ea7de30419b68e4657552fa617b846102c7096d538cf1dc483"
+    },
+    {
+      "path": "references/visual-language.md",
+      "sha256": "cdc8fe55b12022e3683328ff297b8552233f5c109b4d3fd7d653dac753623e0e"
+    },
+    {
+      "path": "scripts/generate_prompt.py",
+      "sha256": "f2c5078ddd3bf6ea42e948846dfdcbd84078360113a41c5505f1d9b51198afd8"
+    },
+    {
+      "path": "tests/test_generate_prompt.py",
+      "sha256": "ca512ecb20124b9b42b2a401a7e5944674d70143436a8ed6174b539d13361565"
+    }
+  ],
+  "declared_local_dependencies": [
+    {
+      "path": "references/carrier-guides.md",
+      "exists": true,
+      "resolved_path": "image-prompt-gen/references/carrier-guides.md",
+      "sha256": "f5f3ee03cc72b06ea7a95cf8d9152803b2860a47869c9987e241899d722c2d00"
+    },
+    {
+      "path": "references/prompt-examples.md",
+      "exists": true,
+      "resolved_path": "image-prompt-gen/references/prompt-examples.md",
+      "sha256": "7569895df883160222cec877c651f25174ef90fa20142b989f8450b778be187f"
+    },
+    {
+      "path": "references/release-notes.md",
+      "exists": true,
+      "resolved_path": "image-prompt-gen/references/release-notes.md",
+      "sha256": "3164454071aae39e2f3ce1426988c9f3993bb14b2fa1274165e86dd1073df894"
+    },
+    {
+      "path": "references/text-and-qa.md",
+      "exists": true,
+      "resolved_path": "image-prompt-gen/references/text-and-qa.md",
+      "sha256": "ab66f61604fb88ea7de30419b68e4657552fa617b846102c7096d538cf1dc483"
+    },
+    {
+      "path": "references/visual-language.md",
+      "exists": true,
+      "resolved_path": "image-prompt-gen/references/visual-language.md",
+      "sha256": "cdc8fe55b12022e3683328ff297b8552233f5c109b4d3fd7d653dac753623e0e"
+    },
+    {
+      "path": "scripts/generate_prompt.py",
+      "exists": true,
+      "resolved_path": "image-prompt-gen/scripts/generate_prompt.py",
+      "sha256": "f2c5078ddd3bf6ea42e948846dfdcbd84078360113a41c5505f1d9b51198afd8"
+    }
+  ],
+  "missing_declared_dependencies": []
+}

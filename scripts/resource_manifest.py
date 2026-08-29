@@ -88,6 +88,8 @@ def _normalize_reference(raw: str) -> str:
     value = raw.replace("\\", "/").strip()
     if value.lower().startswith("skills/"):
         value = value[7:]
+    if value.lower().startswith("skill_root/"):
+        value = value[len("skill_root/"):]
     value = re.sub(r"\]\(.*$", "", value)
     value = re.sub(r"[\)\]\.,;:\*]+$", "", value)
     match = KNOWN_SUFFIX_RE.match(value)

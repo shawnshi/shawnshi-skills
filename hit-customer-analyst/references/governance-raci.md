@@ -1,4 +1,4 @@
-# RACI、审核与可用状态 v2.7.0
+# RACI、审核与可用状态 v2.10.0
 
 ## 1. 核心原则
 
@@ -42,7 +42,7 @@ authorization_expires_at: ""
 
 旧v2.5成果允许没有这些字段；实际更新时补写。无内部检索时授权字段可留空。选择internal时，除上述frontmatter字段外，机器授权还必须同时有效地绑定三重范围、项目白名单、用途、授权根/数据集/密级、connector_id和宿主签发的capability receipt ID。该收据不得由Skill自造或从用户文本推断。
 
-leader、internal、visit_strategy新增通用审核绑定：
+institution、leader、internal、visit_strategy新增通用审核绑定：
 
 ```yaml
 reviewer: "姓名（稳定角色/账号）"
@@ -59,9 +59,9 @@ reviewed_body_sha256: "64位小写SHA-256"
 所有新审批还必须写入结构化身份谱系：
 
 ```yaml
-# briefing/leader/internal/visit_strategy
+# briefing/institution/leader/internal/visit_strategy
 reviewer_actor_id: "employee_id"
-reviewer_role: "evidence_reviewer|commercial_reviewer"
+reviewer_role: "按下表artifact/mode矩阵"
 reviewer_authority_id: "grant_id"
 reviewer_identity_provider: "corp-sso"
 review_action_event_id: "signed_event_id"
@@ -84,6 +84,23 @@ readiness_action_event_id: "signed_event_id"
 readiness_target_body_sha256: "审批前总报告正文SHA-256"
 ```
 
+`reviewer_role`与`readiness_reviewer_role`不得按自由文本解释，必须按成果与模式同时判定：
+
+| 操作 | artifact | business_mode | 允许角色 |
+|---|---|---|---|
+| 通用成果审核 | institution_research / leader_research / internal_retrieval | 任一适用模式 | `evidence_reviewer` |
+| 通用成果审核 | visit_strategy | standard_visit / strategic_account | `commercial_reviewer` |
+| 通用成果审核 | briefing_delivery | briefing（含具名身份、采购、合作或内部事实） | `evidence_reviewer` |
+| 通用成果审核 | briefing_delivery | briefing（仅公开机构事实的低风险速览） | `evidence_reviewer`或`account_owner` |
+| 客户信事实复核 | customer_letter_internal | letter | `evidence_reviewer`；写入`fact_reviewer_role` |
+| 客户信外发审批 | customer_letter_internal | letter | `external_approver`；写入`approver_role` |
+| 包级mark-ready | comprehensive_report | briefing | `evidence_reviewer`或`account_owner` |
+| 包级mark-ready | comprehensive_report | standard_visit | `commercial_reviewer` |
+| 包级mark-ready | comprehensive_report | strategic_account | `account_owner` |
+| 包级mark-ready | comprehensive_report | letter | `external_approver` |
+
+表中“低风险速览”沿用第4节和第6节边界；不满足该边界时，`account_owner`不能替代`evidence_reviewer`完成事实审核。通用成果的`reviewer_role`记录成果审核角色，综合报告的`readiness_reviewer_role`只记录包级mark-ready角色，二者不得互相替代。
+
 非approved或`ready_for_use=false`时，对应显示字段、哈希字段和身份谱系字段必须全部清空。旧成果只有自由文本审批人时可读但不再视为有效批准；更新前先降级为pending/changes_requested或ready=false，再走可信身份审批。
 
 治理写命令的`--reviewer/--approver`仅用于友好显示，`--actor-id`才是授权查询键。宿主显示名与actor登记不一致、actor停用、grant过期或不覆盖当前操作/客户/模式时，命令必须在文件哈希不变的前提下退出。
@@ -99,7 +116,7 @@ readiness_target_body_sha256: "审批前总报告正文SHA-256"
 | 战略客户包 | 全部关键事实、竞争与投入建议、win/no-go | evidence_reviewer＋commercial_reviewer＋account_owner |
 | 一封信内部稿 | 收件人、外发事实、承诺、签署与渠道 | evidence_reviewer＋external_approver |
 
-机构研究默认`not_required`只适用于内部底稿。其关键结论一旦进入标准拜访包、战略客户包或一封信，必须在上层成果审核中被覆盖。
+institution、leader、internal完成执行后均进入`pending`。所有被本轮选中或被任一下游成果引用的研究载体，必须由与生成者独立的`evidence_reviewer`按当前正文SHA完成宿主签名审核，才能mark-ready或release；把载体标为unselected不能绕过仍存在的下游claim引用。该审核是语义事实门禁，candidate封印和来源收据只证明完整性与捕获谱系，不能替代人工事实判断。
 
 ## 5. 审核SLA
 
@@ -145,7 +162,7 @@ SLA超时、会议临近或管理层催办都不能替代审核。每次超时�
 
 状态保持“试运行”，直到以下条件均有真实项目记录支撑：
 
-1. 四种业务模式各完成至少一次端到端演练，覆盖新建、复用/TTL、人工审核、mark-ready和会后回填候选；
+1. 发布计数只以[发布前向评估证据门禁](forward-evaluation.md)为准：四种业务模式各不少于3个成功T1正链，共至少12个正链slot；另有不少于3个T2冲突阻断和不少于3个T3高风险安全拒绝，共至少6个负链slot、总slot不少于18，且T2/T3不得占用T1额度；
 2. account_owner、主/备reviewer、authorization_owner和故障响应人均已实名排班，审核SLA在实际工作时段可兑现；
 3. `closed`冒充ready、匿名审批、越权内部检索、未经确认写回或自动发送事件为零；
 4. 会前速览稳定满足1页，其他模式的用户正文与审计附件可分发且关键主张可回溯；

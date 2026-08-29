@@ -51,7 +51,7 @@ description: 对事实基本定稿的现有文本进行忠实校对、轻度润�
 当原文和修订稿都可安全保存为 UTF-8 文本文件，且高风险、严格局部或结构化任务需要精确验证时，解析本技能的绝对目录为 `SKILL_ROOT`，运行：
 
 ```bash
-python "<SKILL_ROOT>/scripts/check_text_invariants.py" ORIGINAL REVISED --mode strict
+python "$SKILL_ROOT/scripts/check_text_invariants.py" ORIGINAL REVISED --mode strict
 ```
 
 严格局部或结构化字段修改时，改用 `--mode exact --exact-replacement '原片段=>新片段'` 声明唯一授权替换；可重复传入多个唯一片段，`exact` 模式缺少替换声明会直接失败，并要求除此之外的字符全部不变。高风险文本用 `--protect-term` 或 `--terms-file` 加入专有名词，以及完整的“主体—责任”“条件—结论”“论断—引用”保护短语；只保护主体名称不能证明职责未被调换。脚本用于发现数字、单位、URL、占位符、引用、直接引语、限定词的增删与换位，以及标题、表格和 JSON 结构或值的变化。脚本通过不代表语义必然正确，仍需人工检查未加入保护清单的事实绑定、立场和新增命题。

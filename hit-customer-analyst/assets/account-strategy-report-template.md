@@ -32,10 +32,6 @@ minimum_next_step: "{{minimum_next_step}}"
 
 # {{客户中文规范名称}}账户经营策略与验证计划
 
-> 内部使用｜经营周期：{{planning_horizon}}｜本轮不是已排定会议准备｜ready_for_use：{{true/false}}
-
-`strategic_question`、`planning_horizon`和`minimum_next_step`必须与 frontmatter 一致。未确认的预算、角色和项目窗口保留为缺口或验证任务，不得补造会议、参会人员或客户承诺。
-
 ## 1. 战略问题与最小推进动作
 
 | 项目 | 内容 | claim_id |
@@ -58,8 +54,6 @@ minimum_next_step: "{{minimum_next_step}}"
 | 角色层级 | 当前可核实职责 | 事项/阶段 | 影响方式 | 证据 claim_id | 缺口与验证动作 |
 |---|---|---|---|---|---|
 | {{正式角色/待核实角色}} | {{内容}} | {{发起/预算/技术/采购/实施/验收}} | {{决策/审批/影响/执行}} | {{CLM-I/L/N-###}} | {{内容}} |
-
-不得把会议出席、讲话、领导小组成员或在任期间采购结果直接写成预算权、采购决定权或个人厂商偏好。
 
 ## 4. 机会资格与投入建议
 
@@ -85,13 +79,11 @@ minimum_next_step: "{{minimum_next_step}}"
 
 ## 6. 30/60/90天账户动作
 
-| 周期 | action | owner | due_date | 依赖 | 完成标准 | CRM/PIMS候选 |
-|---|---|---|---|---|---|---|
-| 30天 | {{唯一主动作}} | {{真人/稳定角色}} | {{YYYY-MM-DD}} | {{内容}} | {{可观察结果}} | {{是/否}} |
-| 60天 | {{后续动作或明确观察条件}} | {{真人/稳定角色}} | {{YYYY-MM-DD}} | {{内容}} | {{可观察结果}} | {{是/否}} |
-| 90天 | {{后续动作、调整或退出判断}} | {{真人/稳定角色}} | {{YYYY-MM-DD}} | {{内容}} | {{可观察结果}} | {{是/否}} |
-
-第一行必须与`minimum_next_step`一致；没有明确owner、due_date和完成标准的动作不能计为可执行推进。
+| 周期 | action | action_disposition | external_interaction | resource_commitment | owner | due_date | 依赖 | 完成标准 | 调整/停止触发 | CRM/PIMS候选 |
+|---|---|---|---|---|---|---|---|---|---|---|
+| 30天 | {{唯一主动作}} | {{advance/adjust/stop/archive/observe/recheck}} | {{none/customer_contact}} | {{none/proposed/approved}} | {{真人/稳定角色}} | {{YYYY-MM-DD}} | {{内容或无依赖}} | {{可观察结果}} | {{继续、调整或停止的可观察信号}} | {{是/否}} |
+| 60天 | {{后续动作或明确观察条件}} | {{advance/adjust/stop/archive/observe/recheck}} | {{none/customer_contact}} | {{none/proposed/approved}} | {{真人/稳定角色}} | {{YYYY-MM-DD}} | {{内容或无依赖}} | {{可观察结果}} | {{继续、调整或停止的可观察信号}} | {{是/否}} |
+| 90天 | {{后续动作、调整或退出判断}} | {{advance/adjust/stop/archive/observe/recheck}} | {{none/customer_contact}} | {{none/proposed/approved}} | {{真人/稳定角色}} | {{YYYY-MM-DD}} | {{内容或无依赖}} | {{可观察结果}} | {{继续、调整或停止的可观察信号}} | {{是/否}} |
 
 ## 7. 验证计划
 
@@ -115,26 +107,12 @@ minimum_next_step: "{{minimum_next_step}}"
 | action | {{唯一主动作及完成标准}} | {{事实/假设/建议}} | {{真人/稳定角色}} | {{YYYY-MM-DD}} | candidate_only |
 | verification | {{待验证事项}} | {{事实缺口/假设}} | {{真人/稳定角色}} | {{YYYY-MM-DD}} | candidate_only |
 
-默认只生成写回候选；未获得目标系统、三重范围和数据所有者批准时不得实际写回。
-
 ## 10. 依据导航与缺口
-
-本成果引用研究模块中的 claim_id；不在此重复定义主张或来源。
 
 | 序号 | claim_id | 来源成果 | 使用位置 |
 |---|---|---|---|
-| 1 | {{CLM-I/L/N-###}} | {{相对链接}} | {{章节}} |
+| 1 | {{CLM-I-###}} | [机构研究成果](./{{safe_name}}机构研究报告.md) | {{strategic_question/judgment_chain/stakeholder/qualification/scenario/action/verification/risk/crm}} |
 
-| 缺口 | 影响 | 责任角色与验证期限 |
-|---|---|---|
-| {{内容}} | {{内容}} | {{角色；YYYY-MM-DD}} |
-
-## 11. 审核与可用状态
-
-- strategy_variant：account_planning
-- review_status：{{pending/approved/changes_requested}}
-- reviewer：{{姓名（稳定角色/账号）/待定}}
-- reviewed_at：{{带时区时间/空}}
-- ready_for_use：{{true/false}}
-- review_due_at：{{带时区时间}}
-- 未通过原因/解除条件：{{内容/无}}
+| claim_ref | claim_type_ref | provenance_ref | evidence_state | impact_type | verification_mode | owner | due_date |
+|---|---|---|---|---|---|---|---|
+| {{CLM-I/L/N-###}} | {{F/F2/A/H/R}} | {{public/U/N}} | {{unknown/conflicted/stale/insufficient}} | {{decision/verification/risk/resource}} | {{internal_review/public_refresh/authorized_customer_contact}} | {{真人/稳定角色}} | {{YYYY-MM-DD}} |

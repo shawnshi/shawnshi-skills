@@ -1,4 +1,4 @@
-# Skill 1：机构研究 v2.7.0
+# Skill 1：机构研究 v2.10.0
 
 ## 目标与成果契约
 
@@ -7,7 +7,7 @@
 模块进入`running`后，立即在本run隔离候选工作区使用[机构研究成果模板](../assets/institution-research-report-template.md)创建并只更新候选：
 
 ```text
-{{客户中文规范名称}}机构研究报告.md
+{{safe_name}}机构研究报告.md
 ```
 
 本模块不得直接修改正式Markdown、综合总报告、人物报告、内部检索报告、策略或客户信；正式写入由主流程统一事务提交。结束时向主流程返回：
@@ -22,7 +22,7 @@ updated_at｜summary_sync_status｜downstream_invalidation｜sync_classification
 - 有可用成果但关键项缺失、预算触顶或存在未解冲突：`partial`；
 - 主体无法锁定、权限或工具故障使本模块无法形成有效成果：`blocked`。
 
-默认并始终保持`review_status: not_required`、`connector_status: not_applicable`。新生成且反映当前证据截止日的成果为`freshness_status: current`；后续关键依赖变化时由主流程改为`freshness_status: stale`，审核状态仍为`not_required`。
+默认`review_status: not_started`、`connector_status: not_applicable`。内容达到`completed`时必须提交独立事实审核并设`review_status: pending`；状态按`not_started → pending → approved | changes_requested`迁移。partial/blocked可保持`not_started`作为缺口透明的底稿，但不能支撑关键策略、ready或外发事实。审核通过时必须绑定`reviewer/reviewed_at/reviewed_content_version/reviewed_body_sha256`及宿主签名actor动作；非approved时审核绑定字段全部清空。新生成且反映当前证据截止日的成果为`freshness_status: current`；关键依赖变化时改为`freshness_status: stale`和`review_status: changes_requested`。
 
 ## 输入与规则
 
@@ -116,5 +116,6 @@ claim_type/provenance/verification_status → 主张与时间口径 →
 - 受限信息未出现在同步摘要；
 - 已返回摘要载荷和必要的下游失效信号。
 - 标准拜访包或战略客户包所需的BANT、采购时序、竞争位置和投入判断有事实基础或明确缺口。
+- completed时`review_status: pending`；approved时通用审核字段与当前正文、版本和宿主动作一致。被选中或被下游引用时，未approved不得ready/release。
 
 任何关键项不满足，继续研究或标`partial`；不得用常识、用户陈述或低质来源补齐。

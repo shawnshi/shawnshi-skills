@@ -12,6 +12,7 @@ from pathlib import Path
 
 from tests.common import governance, load_json, run_python, runtime_tx as tx, write_intake
 from tests.fixture_builder import (
+    FIXTURE_EVIDENCE_CUTOFF,
     bind_candidate_machine_bundle,
     install_governance_context,
     record_action_assertion,
@@ -56,6 +57,8 @@ class BriefingReleaseE2ETests(unittest.TestCase):
                 "测试负责人",
                 "--business-mode",
                 "briefing",
+                "--evidence-cutoff-date",
+                FIXTURE_EVIDENCE_CUTOFF,
                 "--intake-input",
                 str(intake),
                 "--json",
@@ -63,6 +66,7 @@ class BriefingReleaseE2ETests(unittest.TestCase):
         )
         self.assertEqual(initialized.returncode, 0, initialized.stderr or initialized.stdout)
         workspace = Path(json.loads(initialized.stdout)["workspace"])
+        install_governance_context(workspace)
         total_path = next(workspace.glob("*客户研究与拜访准备报告.md"))
         initial_total = tx.parse_frontmatter(total_path.read_text(encoding="utf-8"))
         initial_run = initial_total["latest_run_id"]
@@ -86,41 +90,68 @@ class BriefingReleaseE2ETests(unittest.TestCase):
 
 | source_id | 标题/文档名 | 发布者/提供者 | URL/稳定定位 | 发布/更新日期 | 访问日期 | 来源等级 | source_group | 权限 | 适用客户/项目 | 备注 | source_fingerprint | upstream_id | external_use |
 |---|---|---|---|---|---|---|---|---|---|---|---|---|---|
-| SRC-I-001 | 示例医院官网简介 | 示例医院 | https://example.org/hospital/profile | 2026-08-27 | 2026-08-27 | A | official-site | public | 示例医院 | 主体确认 | sha256:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa | official:example-hospital | true |
+| SRC-I-001 | 示例医院官网简介 | 示例医院 | https://example.org/hospital/profile | 2026-08-27 | 2026-08-27 | A | official-site | public | 示例医院 | none | sha256:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa | official:example-hospital | true |
 """
         strategy_body = """
 # 示例医院交流策略与议题设计
 
 ## 目标与最小推进动作
 
-- 拜访对象：信息中心主任
-- 拜访目标：核实客户核心任务
-- 最小推进动作：确认下一次技术交流
-- 事实依据：CLM-I-001
+| 项目 | 内容 | claim_id |
+|---|---|---|
+| 主要目标 | 核实客户核心任务 | CLM-I-001 |
+| 最小推进动作 | 确认下一次技术交流 | CLM-I-001 |
+| 成功标准 | 客户确认后续技术交流责任人与时间 | CLM-I-001 |
+
+- 目标对象：信息中心主任
 
 ## 机会资格
 
-客户主体已核实；预算、采购时序和决策角色在现场验证（CLM-I-001）。
+| 维度 | 当前判断 | claim_id | 待验证问题 |
+|---|---|---|---|
+| Budget | 预算状态尚无可靠证据 | CLM-I-001 | 核实正式预算或采购安排 |
+| Authority | 已知对象层级但决策角色尚待确认 | CLM-I-001 | 核实预算采购和验收责任角色 |
+| Need | 核心任务需要客户现场确认 | CLM-I-001 | 核实任务压力与目标结果 |
+| Timing/采购时序 | 当前没有可靠采购时序证据 | CLM-I-001 | 核实审批计划和采购窗口 |
+| 竞争位置 | 存量供应商格局尚待核实 | CLM-I-001 | 核实现有系统和切换约束 |
+
+- 建议：monitor
+- 投入强度：低
+- 前提与停止条件：确认真实任务和责任角色；无法确认时转为观察
 
 ## 议程
 
-围绕客户核心任务、当前边界和下一步安排展开（CLM-I-001）。
+| 时间 | 环节/议题 | 客户对象 | 我方owner | 目标信号 |
+|---|---|---|---|---|
+| 0—5分钟 | 对齐交流目标和证据边界 | 信息中心主任 | 客户负责人 | 客户确认或修正交流目标 |
+| 5—25分钟 | 验证核心任务和决策角色 | 信息中心主任 | 方案顾问 | 获得任务与角色的事实反馈 |
+| 最后5分钟 | 收口并确认后续技术交流 | 信息中心主任 | 客户负责人 | 明确动作责任人与日期 |
 
 ## 参会分工
 
-客户负责人主持，方案顾问记录事实与待核实项。
+| 参会人/角色 | RACI | 负责内容 | 备用安排 |
+|---|---|---|---|
+| 客户负责人 | A | 主持交流并确认下一步 | 无法出席时由账户责任岗接替 |
+| 方案顾问 | R | 记录事实和能力边界 | 使用书面问题清单补充记录 |
 
-## 材料
+## 材料计划
 
-只使用经授权的方案简介，不展示未经核验的案例或数字。
+| 材料/演示 | 用途与展示时点 | owner | 版本/授权 | 备用/不展示边界 |
+|---|---|---|---|---|
+| 授权方案简介 | 客户确认任务后按需展示 | 方案顾问 | 当前授权外发版本 | 未确认需求前不展示产品能力清单 |
 
 ## 会后行动
 
-由客户负责人确认下一次技术交流，不作效果、价格或工期承诺。
+| action | owner | due_date | 依赖 | 完成标准 | CRM/PIMS候选 |
+|---|---|---|---|---|---|
+| 确认下一次技术交流 | 客户负责人 | 2026-08-27 | 客户确认沟通窗口 | 形成书面时间与责任人记录 | 是 |
 
 ## CRM/PIMS
 
-仅形成待人工确认的候选记录，不自动写回。
+| 候选类型 | 内容 | owner | due_date | 写回状态 |
+|---|---|---|---|---|
+| action | 确认下一次技术交流并记录责任人 | 客户负责人 | 2026-08-27 | candidate_only |
+| verification | 核实任务角色预算与采购时序 | 方案顾问 | 2026-08-27 | candidate_only |
 """
         briefing_body = f"""
 # 示例医院会前速览
@@ -145,7 +176,7 @@ class BriefingReleaseE2ETests(unittest.TestCase):
 | Authority | 已知对象层级，具体决策角色需现场确认 | CLM-I-001 |
 | Budget/Procurement | 未获得可核验预算或采购证据 | CLM-I-001 |
 | Competition | 存量格局待现场核实 | CLM-I-001 |
-| 建议 | monitor；投入低，先完成事实验证 | CLM-I-001 |
+| 建议 | 建议=monitor；投入强度=低；边界=先完成事实验证 | CLM-I-001 |
 
 ## 建议交流节奏
 
@@ -153,8 +184,8 @@ class BriefingReleaseE2ETests(unittest.TestCase):
 |---:|---|---|
 | 0—5分钟 | 确认客户目标 | 客户修正或确认目标 |
 | 5—20分钟 | 交流核心任务 | 获得事实反馈 |
-| 20—25分钟 | 验证角色与采购边界 | 明确未知项 |
-| 25—30分钟 | 确认下一步 | 明确动作与责任人 |
+| 20—25分钟 | 验证角色与采购边界 | 明确预算角色等未知事项 |
+| 25—30分钟 | 确认可执行下一步安排 | 明确动作与责任人 |
 
 ## 三个现场问题
 
@@ -189,13 +220,13 @@ class BriefingReleaseE2ETests(unittest.TestCase):
 
 {status_header}
 |---|---|---|---|---|---|---|---|---|---|---|---|---|---|
-| 机构研究 | true | created | queued | not_required | not_applicable | current | 1 | {initial_run} | {initial_updated} | pending | 待提取 | none | 待评估 | [机构研究](./示例医院机构研究报告.md) |
-| 人物研究 | false | not_called | not_called | not_required | not_applicable | current |  |  |  | not_applicable |  | none | 无 |  |
-| 内部检索 | false | not_called | not_called | not_required | not_applicable | current |  |  |  | not_applicable |  | none | 无 |  |
-| 交流策略 | true | created | queued | not_started | not_applicable | current | 1 | {initial_run} | {initial_updated} | pending | 待提取 | none | 待评估 | [交流策略](./示例医院交流策略与议题设计.md) |
-| 会前速览 | true | created | queued | not_started | not_applicable | current | 1 | {initial_run} | {initial_updated} | pending | 待提取 | none | 待评估 | [会前速览](./示例医院会前速览.md) |
-| 客户信内部审核稿 | false | not_called | not_called | not_required | not_applicable | current |  |  |  | not_applicable |  | none | 无 |  |
-| 客户信外发版 | false | not_called | not_called | not_required | not_applicable | current |  |  |  | not_applicable |  | none | 无 |  |
+| 机构研究 | true | created | queued | not_started | not_applicable | current | 1 | {initial_run} | {initial_updated} | pending | none | none | input_missing | [机构研究](./示例医院机构研究报告.md) |
+| 人物研究 | false | not_called | not_called | not_required | not_applicable | current |  |  |  | not_applicable |  | none | none |  |
+| 内部检索 | false | not_called | not_called | not_required | not_applicable | current |  |  |  | not_applicable |  | none | none |  |
+| 交流策略 | true | created | queued | not_started | not_applicable | current | 1 | {initial_run} | {initial_updated} | pending | none | none | input_missing | [交流策略](./示例医院交流策略与议题设计.md) |
+| 会前速览 | true | created | queued | not_started | not_applicable | current | 1 | {initial_run} | {initial_updated} | pending | none | none | input_missing | [会前速览](./示例医院会前速览.md) |
+| 客户信内部审核稿 | false | not_called | not_called | not_required | not_applicable | current |  |  |  | not_applicable |  | none | none |  |
+| 客户信外发版 | false | not_called | not_called | not_required | not_applicable | current |  |  |  | not_applicable |  | none | none |  |
 
 ## 8.1 刷新结果记录
 
@@ -267,6 +298,8 @@ class BriefingReleaseE2ETests(unittest.TestCase):
                 str(payload_path),
                 "--output-root",
                 str(root / "candidates"),
+                "--intake-input",
+                str(intake),
                 "--json",
             ],
         )
@@ -297,7 +330,13 @@ class BriefingReleaseE2ETests(unittest.TestCase):
         self.assertEqual(machine_manifest["evidence_run_id"], run_id)
         self.assertEqual(
             set(machine_manifest["runtime_files"]),
-            {"search-plan.json", "source-cache.json", "evidence-manifest.json", "run-metrics.json"},
+            {
+                "search-plan.json",
+                "source-cache.json",
+                "evidence-manifest.json",
+                "run-metrics.json",
+                "governance-context.json",
+            },
         )
         evidence = load_json(workspace / "runtime" / "evidence-manifest.json")
         cache = load_json(workspace / "runtime" / "source-cache.json")
@@ -308,8 +347,14 @@ class BriefingReleaseE2ETests(unittest.TestCase):
 
     def _ready_release(self, root: Path) -> Path:
         workspace = self._init_build_and_commit_candidate(root)
-        install_governance_context(workspace)
         actions = (
+            (
+                "approve-institution",
+                "reviewer-institution",
+                "approve_artifact:institution",
+                "institution_research",
+                ("--approve-artifact", "institution", "--reviewer", "周洁（机构事实审核岗）"),
+            ),
             (
                 "approve-strategy",
                 "reviewer-strategy",
@@ -363,6 +408,7 @@ class BriefingReleaseE2ETests(unittest.TestCase):
 
         registry = load_json(workspace / "runtime" / "governance-context.json")
         expected_operations = {
+            "approve-institution": "approve_artifact:institution",
             "approve-strategy": "approve_artifact:strategy",
             "approve-briefing": "approve_artifact:briefing",
             "ready-briefing": "mark_ready:briefing",

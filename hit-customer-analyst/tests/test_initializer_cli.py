@@ -6,7 +6,7 @@ import tempfile
 import unittest
 from pathlib import Path
 
-from tests.common import load_json, run_python, write_intake
+from tests.common import bind_intake_payload, load_json, run_python, write_intake
 
 
 class InitializerCLITests(unittest.TestCase):
@@ -56,12 +56,12 @@ class InitializerCLITests(unittest.TestCase):
             "standard_visit": (
                 "visit_prep",
                 "standard",
-                {"institution", "leader", "strategy"},
+                {"institution", "strategy"},
             ),
             "strategic_account": (
                 "strategy",
                 "deep",
-                {"institution", "leader", "strategy"},
+                {"institution", "strategy"},
             ),
             "letter": ("letter", "standard", {"institution", "letter"}),
         }
@@ -209,7 +209,7 @@ class InitializerCLITests(unittest.TestCase):
                     ],
                 }
             )
-            intake.write_text(json.dumps(payload, ensure_ascii=False), encoding="utf-8")
+            bind_intake_payload(intake, payload)
             output_root = root / "out"
             result = run_python(
                 "init_workspace.py",

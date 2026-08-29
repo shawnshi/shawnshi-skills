@@ -52,5 +52,21 @@ try {
         working_directory = if ($action) { [string]$action.WorkingDirectory } else { $null }
     } | ConvertTo-Json -Compress
 } catch [Microsoft.Management.Infrastructure.CimException] {
-    [ordered]@{ ok = $true; exists = $false; task_name = $TaskName } | ConvertTo-Json -Compress
+    $category = [string]$_.CategoryInfo.Category
+    $fqid = [string]$_.FullyQualifiedErrorId
+    $hresult = '0x' + [Convert]::ToString([int]$_.Exception.HResult, 16)
+    if ($category -eq 'ObjectNotFound' -or $fqid -match '0x80070002' -or $hresult -eq '0x80070002') {
+        [ordered]@{ ok = $true; exists = $false; task_name = $TaskName; reason = 'task_missing' } | ConvertTo-Json -Compress
+        exit 0
+    }
+    $errorCode = if ($category -eq 'PermissionDenied' -or $fqid -match '0x80041003' -or $hresult -eq '0x80041003') {
+        'task_probe_permission_denied'
+    } else {
+        'task_probe_failed'
+    }
+    [ordered]@{ ok = $false; exists = $null; task_name = $TaskName; error_code = $errorCode } | ConvertTo-Json -Compress
+    exit 2
+} catch {
+    [ordered]@{ ok = $false; exists = $null; task_name = $TaskName; error_code = 'task_probe_failed' } | ConvertTo-Json -Compress
+    exit 2
 }

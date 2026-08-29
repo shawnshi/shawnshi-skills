@@ -54,6 +54,17 @@
         "min": 1,
         "max": 1
       },
+      "delivery_contract": {
+        "formal_artifact": "briefing_delivery",
+        "audit_artifact": "comprehensive_report"
+      },
+      "delivery_budget": {
+        "page_proxy": "markdown-one-page/v1",
+        "visible_chars_max": 3200,
+        "nonblank_lines_max": 80,
+        "section_visible_chars_max": 900,
+        "conclusion_visible_chars_max": 80
+      },
       "ttl_days": {
         "institution": 90,
         "leader": 14,
@@ -142,10 +153,10 @@
       "depth": "standard",
       "modules": [
         "institution",
-        "leader",
         "strategy"
       ],
       "optional_modules": [
+        "leader",
         "internal"
       ],
       "query_budget": {
@@ -165,6 +176,10 @@
       "output_pages": {
         "min": 8,
         "max": 15
+      },
+      "delivery_contract": {
+        "formal_artifact": "visit_strategy",
+        "audit_artifact": "comprehensive_report"
       },
       "ttl_days": {
         "institution": 120,
@@ -266,10 +281,10 @@
       "depth": "deep",
       "modules": [
         "institution",
-        "leader",
         "strategy"
       ],
       "optional_modules": [
+        "leader",
         "internal"
       ],
       "query_budget": {
@@ -289,6 +304,10 @@
       "output_pages": {
         "min": 20,
         "max": 35
+      },
+      "delivery_contract": {
+        "formal_artifact": "visit_strategy",
+        "audit_artifact": "comprehensive_report"
       },
       "ttl_days": {
         "institution": 180,
@@ -353,6 +372,16 @@
           },
           "account_planning": {
             "template": "assets/account-strategy-report-template.md",
+            "template_by_recommendation": {
+              "default": {
+                "visit_strategy": "assets/account-strategy-report-template.md",
+                "comprehensive_report": "assets/comprehensive-report-template.md"
+              },
+              "no_go": {
+                "visit_strategy": "assets/account-no-go-strategy-template.md",
+                "comprehensive_report": "assets/account-no-go-comprehensive-template.md"
+              }
+            },
             "required_business_fields": [
               "strategic_question",
               "planning_horizon"
@@ -371,6 +400,31 @@
               "验证计划",
               "风险、承诺边界与停止条件",
               "CRM/PIMS候选"
+            ],
+            "required_action_fields": [
+              "action",
+              "action_disposition",
+              "external_interaction",
+              "resource_commitment",
+              "owner",
+              "due_date",
+              "dependency",
+              "completion_criteria",
+              "adjust_or_stop_trigger",
+              "crm_candidate"
+            ],
+            "required_no_go_fields": [
+              "recommendation",
+              "investment_intensity",
+              "recommendation_reason",
+              "minimum_stop_condition"
+            ],
+            "forbidden_followup_fields": [
+              "meeting_time",
+              "meeting_target",
+              "meeting_participants",
+              "meeting_agenda",
+              "meeting_materials"
             ],
             "forbidden_sections": [
               "时间化议程与参会分工",
@@ -394,6 +448,7 @@
             ],
             "forbidden_heading_terms": [
               "会议",
+              "拜访",
               "拜访对象",
               "拜访时间",
               "议程",
@@ -543,6 +598,10 @@
       "output_pages": {
         "min": 1,
         "max": 3
+      },
+      "delivery_contract": {
+        "formal_artifact": "customer_letter_external",
+        "audit_artifact": "comprehensive_report"
       },
       "ttl_days": {
         "institution": 90,

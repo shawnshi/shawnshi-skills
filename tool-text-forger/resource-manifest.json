@@ -1,18 +1,18 @@
 {
   "schema_version": 3,
   "skill": "tool-text-forger",
-  "generated_at": "2026-08-27T20:05:47+08:00",
+  "generated_at": "2026-08-29T20:18:37+08:00",
   "hash_algorithm": "SHA-256",
   "text_hash_normalization": "LF",
   "skill_md": "SKILL.md",
-  "skill_md_sha256": "c45a4dfac0d9e39d8fba0e53b4c895896ec76f2c2be9aa1b97c2d71e5fc9c281",
+  "skill_md_sha256": "af50928f8f020c81dc0b68f23aff3f1cec1ce19c08dc336188a4630429023e75",
   "top_level_files": [
     "SKILL.md"
   ],
   "top_level_file_hashes": [
     {
       "path": "SKILL.md",
-      "sha256": "c45a4dfac0d9e39d8fba0e53b4c895896ec76f2c2be9aa1b97c2d71e5fc9c281"
+      "sha256": "af50928f8f020c81dc0b68f23aff3f1cec1ce19c08dc336188a4630429023e75"
     }
   ],
   "top_level_directories": [
@@ -42,7 +42,7 @@
   "resource_file_hashes": [
     {
       "path": "agents/openai.yaml",
-      "sha256": "b6d5ce972ee94d9532b35930358105f11c1577dc6c8ba3e0bf1df2bb0929066c"
+      "sha256": "3ad1d3d301d8a1b35ba8c919bb9e7f779c8e69dcb78a53b735f60bc303e483ac"
     },
     {
       "path": "assets/icon.svg",

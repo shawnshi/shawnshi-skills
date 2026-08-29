@@ -54,6 +54,7 @@ OUTPUT_LOCK_NAME = ".discovery-call.output.lock"
 WORKSPACE_LOCK_NAME = ".discovery-call.workspace.lock"
 TX_DIR_PREFIX = ".discovery-call-txn-"
 CONTENT_VERSION_RE = re.compile(r"^[1-9][0-9]*$")
+DELIVERY_SUMMARY_UNSET = object()
 
 
 class TxError(RuntimeError):
@@ -378,6 +379,8 @@ def build_manifest(
     authorization: Mapping[str, object],
     transaction_sequence: int,
     intake_preflight: Mapping[str, object] | None = None,
+    candidate_attestation: Mapping[str, object] | None = None,
+    delivery_summary: Mapping[str, object] | None | object = DELIVERY_SUMMARY_UNSET,
     overlay: Mapping[Path, bytes] | None = None,
     deletes: tuple[Path, ...] | list[Path] = (),
 ) -> dict[str, object]:
@@ -473,6 +476,41 @@ def build_manifest(
         "transaction_sequence": transaction_sequence,
         "updated_at": utc_now(),
     }
+    if candidate_attestation is None:
+        existing_manifest_path = workspace / MANIFEST_REL
+        if existing_manifest_path.is_file() and not existing_manifest_path.is_symlink():
+            try:
+                existing_payload = json.loads(existing_manifest_path.read_text(encoding="utf-8"))
+            except (OSError, UnicodeError, json.JSONDecodeError):
+                existing_payload = None
+            if isinstance(existing_payload, dict) and isinstance(existing_payload.get("candidate_attestation"), dict):
+                candidate_attestation = existing_payload["candidate_attestation"]
+    if candidate_attestation is not None:
+        manifest["candidate_attestation"] = dict(candidate_attestation)
+    if delivery_summary is DELIVERY_SUMMARY_UNSET:
+        inherited_delivery_summary: Mapping[str, object] | None = None
+        existing_manifest_path = workspace / MANIFEST_REL
+        if existing_manifest_path.is_file() and not existing_manifest_path.is_symlink():
+            try:
+                existing_payload = json.loads(existing_manifest_path.read_text(encoding="utf-8"))
+            except (OSError, UnicodeError, json.JSONDecodeError):
+                existing_payload = None
+            if isinstance(existing_payload, dict) and isinstance(existing_payload.get("delivery_summary"), dict):
+                inherited_delivery_summary = existing_payload["delivery_summary"]
+        delivery_summary = inherited_delivery_summary
+    if delivery_summary is not None:
+        required_summary = {
+            "schema",
+            "source_artifact_type",
+            "recommendation",
+            "investment_intensity",
+            "primary_action",
+            "owner",
+            "due_date",
+        }
+        if set(delivery_summary) != required_summary:
+            raise TxError("delivery_summary字段不符合受控决策五元组契约。")
+        manifest["delivery_summary"] = dict(delivery_summary)
     if evidence_run_id is not None:
         # Governance mutations advance ``latest_run_id`` without rewriting the
         # research snapshot.  Keep the four-file research lineage explicit so
@@ -491,10 +529,25 @@ def build_manifest(
             "business_mode",
             "evaluated_at",
             "expires_at",
+            "request_binding_receipt_id",
+            "request_binding_receipt_sha256",
+            "request_bundle_id",
+            "request_revision",
+            "raw_request_sha256",
+            "mention_ledger_sha256",
+            "subject_resolution",
+            "subject_resolution_sha256",
+            "safety_authorizations_sha256",
+            "safety_directives_sha256",
+            "safety_authorization_codes",
         }
         if not required_gate_fields <= set(intake_preflight):
             raise TxError("运行清单intake_preflight缺少可信ready收据字段。")
         manifest["intake_preflight"] = dict(intake_preflight)
+        subject_resolution = intake_preflight.get("subject_resolution")
+        if not isinstance(subject_resolution, Mapping):
+            raise TxError("运行清单intake_preflight.subject_resolution无效。")
+        manifest["subject_binding"] = dict(subject_resolution)
     normalized_timezone = normalize_task_timezone(task_timezone)
     if normalized_timezone is not None:
         manifest["task_timezone"] = normalized_timezone
@@ -777,35 +830,23 @@ def recover_transaction(
     selected = strategy
     if strategy == "auto":
         selected = "roll-forward" if all_after else "rollback"
-    if selected == "roll-forward":
-        for entry in entries:
-            target = workspace / str(entry["target"])
-            after_exists = bool(entry.get("after_exists", True))
-            staged = _transaction_member(tx_dir, entry.get("new", ""), "new") if after_exists else None
-            if after_exists and (staged is None or not staged.is_file()):
-                raise TxError(f"缺少前滚候选：{staged}")
-            if after_exists and not (target.exists() and sha256_file(target) == entry["after_sha256"]):
-                assert staged is not None
-                mode = target.stat().st_mode & 0o777 if target.exists() else 0o600
-                atomic_write_bytes(target, staged.read_bytes(), mode=mode)
-            elif not after_exists and target.exists():
-                if target.is_symlink() or not target.is_file():
-                    raise TxError(f"拒绝删除非普通事务目标：{target}")
-                target.unlink()
-                fsync_directory(target.parent)
-        if postflight is not None:
-            postflight(workspace)
-        journal["state"] = "committed"
-        _write_journal(workspace, journal)
-        result = "rolled_forward"
-    else:
-        for entry in reversed(entries):
-            target = workspace / str(entry["target"])
-            before = entry["before"]
+    # A caller that cannot supply a postflight has no trustworthy way to
+    # establish that a possibly old candidate authorization still matches the
+    # complete recovered state. In that case recovery is deliberately
+    # loss-safe: restore the before image even when every target already holds
+    # the staged bytes. Candidate-aware callers may request roll-forward only
+    # with a fail-closed postflight.
+    if selected == "roll-forward" and postflight is None:
+        selected = "rollback"
+
+    def restore_before_images() -> None:
+        for restore_entry in reversed(entries):
+            target = workspace / str(restore_entry["target"])
+            before = restore_entry["before"]
             if not isinstance(before, dict):
                 raise TxError("事务日志before状态无效。")
             if bool(before.get("exists")):
-                backup = _transaction_member(tx_dir, entry.get("old", ""), "old")
+                backup = _transaction_member(tx_dir, restore_entry.get("old", ""), "old")
                 if not backup.is_file() or sha256_file(backup) != before.get("sha256"):
                     raise TxError(f"回滚备份缺失或哈希不符：{backup}")
                 mode = target.stat().st_mode & 0o777 if target.exists() else 0o600
@@ -815,6 +856,38 @@ def recover_transaction(
                     raise TxError(f"拒绝删除非普通事务新文件：{target}")
                 target.unlink()
                 fsync_directory(target.parent)
+
+    if selected == "roll-forward":
+        try:
+            for entry in entries:
+                target = workspace / str(entry["target"])
+                after_exists = bool(entry.get("after_exists", True))
+                staged = _transaction_member(tx_dir, entry.get("new", ""), "new") if after_exists else None
+                if after_exists and (staged is None or not staged.is_file()):
+                    raise TxError(f"缺少前滚候选：{staged}")
+                if after_exists and not (target.exists() and sha256_file(target) == entry["after_sha256"]):
+                    assert staged is not None
+                    mode = target.stat().st_mode & 0o777 if target.exists() else 0o600
+                    atomic_write_bytes(target, staged.read_bytes(), mode=mode)
+                elif not after_exists and target.exists():
+                    if target.is_symlink() or not target.is_file():
+                        raise TxError(f"拒绝删除非普通事务目标：{target}")
+                    target.unlink()
+                    fsync_directory(target.parent)
+            assert postflight is not None
+            postflight(workspace)
+            journal["state"] = "committed"
+            _write_journal(workspace, journal)
+            result = "rolled_forward"
+        except BaseException:
+            # A failed recovered postflight is still an untrusted after image.
+            # Restore every before image before surfacing the error so callers
+            # never observe an invalid candidate as the recovered workspace.
+            restore_before_images()
+            _cleanup_transaction(workspace, journal)
+            raise
+    else:
+        restore_before_images()
         result = "rolled_back"
     _cleanup_transaction(workspace, journal)
     return result

@@ -1,14 +1,20 @@
-# Skill 4：一封信 v2.7.0
+# Skill 4：一封信 v2.10.0
 
 ## 任务边界
 
 仅在用户选择“一封信”且属于高风险正式信件时，生成首次拜访邀约、来访邀请、会后感谢、材料报送、方案交流或项目跟进信。高风险判定见[四种业务模式](business-modes.md)；普通感谢、通知、材料转发和无关键事实的通用写作不调用本模块。客户信分为内部审核稿和纯净外发版；本模块不自动发送。
+
+若宿主签名的安全指令台账包含虚构领导批准、患者资料、未授权内部邮件/CRM、未经核验的3个月上线/效果/价格等承诺、直接发送或由AI承担审批/执行责任，本模块不得开始制稿。预检必须以固定五段返回：拒绝项、逐项原因、可做部分、所需补充材料、实名审批路径；普通问题数固定为0，内部稿路径为null，外发文件列表为空，`send_attempted=false`且`ready_for_use=false`。该失败分支不得检索、建目录、生成业务文件或调用任何发送工具。
+
+患者资料或CRM/内部邮件只有在宿主签发并由当前request receipt覆盖的授权后，才可用于`internal_review_draft`；授权通过`safety_authorizations_sha256`显式绑定当前`request_bundle_id/request_revision`、主体摘要、`material_scope_sha256`、issuer与TTL，且活动directive必须给出相同材料范围摘要。不同患者材料、CRM数据集、项目或请求不得复用授权。预检发生在run生成之前，因此不要求run_id。授权必须固定`external_allowed=false`。它不构成事实审核、外发审批或用户再次请求，不得用于`approve-letter`、`emit-external`、`mark-ready`或release；若同一请求仍要求直接外发，必须继续拒绝。
 
 ## 执行门禁与文件契约
 
 仅在本信件场景所需的研究成果可用、未调用模块原因透明、所需确认轮次完成、用户选择客户信，并确认场景、收件对象（姓名或明确称谓）及角色/身份确认状态、目的、期望动作、签署人和发送渠道后执行；不得把客户信路由扩张为三路全量研究。新建 context 时本轮至少一个 institution/leader/internal 模块承载 claim/source 台账；续建时至少一个 organization_scope 匹配且 completed/current 的历史研究成果已登记为本轮 selected/reused。
 
 内部稿 frontmatter 必须结构化持久化`letter_scenario`、`recipient_role`、`letter_purpose`、`expected_action`、`signer`和`delivery_channel`；`recipient_role`必须同时包含收件对象（姓名或明确称谓）、角色/身份及确认状态，不新增独立`recipient`字段。六项须非空、非占位并与内部审核摘要一致。审批绑定同时绑定这组信件上下文；任一项变化都使既有批准失效。
+
+六项元数据出现在内部摘要，不等于外发正文已经可用。候选外发正文规范化后至少20个可见字符，并须在`EXTERNAL_BODY_START/END`之间分行呈现称谓、实质正文和签署人；正文另须用一个完整非行动句连续承载`letter_purpose`，并用请/期待/希望等请求语在同一句连续承载`expected_action`。收件称谓和签署人分别锚定`recipient_role`与`signer`。只写“您好。”、三行锚点、通用“事项已记录”空话、把行动字符分散到无关句子，或只在内部摘要写目的/行动，均失败关闭；事实复核、审批、抽取和ready操作不得绕过这一门禁。
 
 开始执行时在本run隔离候选工作区使用[客户信内部审核模板](../assets/customer-letter-output-template.md)创建内部稿候选：
 
@@ -42,7 +48,7 @@ connector_status: "not_applicable"
 freshness_status: "current"
 ```
 
-外发版继承同一`context_id/customer_id/customer_display_name/organization_scope/safe_name/evidence_cutoff_date/runtime_owner`，使用外发 run_id、`content_version: 1`和该 run 的带时区更新时间。它只包含完整YAML frontmatter、标题和经过批准的信件正文，不得包含内部审核说明、主张ID、来源ID、任何HTML注释、待核实项、销售判断、竞对、价格底线、关系评价、受限资料或配置的内部词。总报告分别登记内部审核稿和外发版；不存在的外发版不得显示链接。
+外发版继承同一`context_id/customer_id/customer_display_name/organization_scope/safe_name/evidence_cutoff_date/runtime_owner`，使用外发 run_id、`content_version: 1`和该 run 的带时区更新时间。`letter_purpose`和`expected_action`在intake与候选校验中都必须包含明确动作和对象；正文使用肯定目的句、独立背景/价值句、肯定请求句、精确称谓和末行签署人。外发正文只允许普通段落、换行和简单强调，禁止HTML、Markdown链接/图片、标题、列表、表格、代码块和不可见格式字符；也不得包含内部审核说明、主张ID、来源ID、待核实项、销售判断、竞对、价格底线、关系评价、受限资料或配置的内部词。总报告分别登记内部审核稿和外发版；不存在的外发版不得显示链接。
 
 外发预检必须确认`approved_content_version`等于预检前内部稿当前版本，且按[统一上下文契约](customer-research-context.md#外发审批与生成事务)固定规则重新计算的正文 SHA-256 与六项结构化上下文 SHA-256 分别等于`approved_body_sha256`和`approved_context_sha256`。`approve`和`emit_external`每次都必须向内部稿“版本与审核记录”追加记录，不得覆盖历史；最新记录须与 frontmatter 一致。成功时在一个事务内：内部稿登记`external_output_required=true`并递增版本，在正文和上下文不变时把批准版本绑定到新内部版本；外发版新建为版本1；总报告递增版本并记录新 run、generated 动作和链接。三者使用同一外发 run_id 与 updated_at，evidence_cutoff_date 不因抽取推进。任何写入或校验失败全部回滚。该流程只生成文件，不调用邮件、消息或其他发送工具。
 

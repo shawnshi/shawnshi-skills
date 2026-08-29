@@ -9,7 +9,7 @@ import unittest
 from pathlib import Path
 from unittest import mock
 
-from tests.common import research_plan as rp, write_intake
+from tests.common import bind_intake_payload, research_plan as rp, write_intake
 
 
 class _FakeRuntimeWorkspace:
@@ -47,11 +47,12 @@ def _append_field(path: Path, field: str, value: str) -> None:
             ],
         }
     )
-    path.write_text(json.dumps(payload, ensure_ascii=False), encoding="utf-8")
+    bind_intake_payload(path, payload)
 
 
 class ResearchPlanIntakeBindingTests(unittest.TestCase):
     def _arguments(self, root: Path, intake: Path) -> list[str]:
+        intake_payload = json.loads(intake.read_text(encoding="utf-8"))
         return [
             "research_plan.py",
             "plan",
@@ -68,7 +69,7 @@ class ResearchPlanIntakeBindingTests(unittest.TestCase):
             "--customer-name",
             "示例医院",
             "--customer-id",
-            "customer.demo",
+            intake_payload["subject_resolution"]["customer_id"],
             "--organization-scope",
             "示例医院",
             "--intake-input",

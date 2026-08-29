@@ -1,7 +1,7 @@
 {
   "schema_version": 3,
   "skill": "academic-paper-reader",
-  "generated_at": "2026-08-27T20:05:46+08:00",
+  "generated_at": "2026-08-29T20:18:35+08:00",
   "hash_algorithm": "SHA-256",
   "text_hash_normalization": "LF",
   "skill_md": "SKILL.md",
@@ -47,7 +47,7 @@
   "resource_file_hashes": [
     {
       "path": "agents/openai.yaml",
-      "sha256": "b9e45aaa4f094a7381017cf42444e5db606b39f7831892c02b1fc5242e10c560"
+      "sha256": "4595b0658e3ee8b4ddb16d5ae6a1b20a0ba3e691ed4e4e510dc469147b21cb25"
     },
     {
       "path": "assets/icon.svg",

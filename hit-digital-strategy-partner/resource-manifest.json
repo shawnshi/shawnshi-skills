@@ -1,7 +1,7 @@
 {
   "schema_version": 3,
   "skill": "hit-digital-strategy-partner",
-  "generated_at": "2026-08-27T20:05:46+08:00",
+  "generated_at": "2026-08-29T20:18:36+08:00",
   "hash_algorithm": "SHA-256",
   "text_hash_normalization": "LF",
   "skill_md": "SKILL.md",
@@ -19,7 +19,6 @@
     "agents",
     "assets",
     "examples",
-    "memory",
     "references",
     "scripts",
     "tests"
@@ -57,7 +56,7 @@
     },
     {
       "path": "agents/openai.yaml",
-      "sha256": "b4e9e834b36667ff068a384d2c4c9d6cb451401988b7d8ac78eff2fc460be438"
+      "sha256": "d30e3f56bc08ff8f57a2e6f72724ad09861e1c3fc57f3b17ffc50358a48c4525"
     },
     {
       "path": "assets/icon.svg",

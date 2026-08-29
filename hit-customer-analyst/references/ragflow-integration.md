@@ -1,4 +1,4 @@
-# RAGFlow与企业知识库接口 v2.7.0
+# RAGFlow与企业知识库接口 v2.10.0
 
 本文件是接口契约，不是连接器实现，也不能证明任何系统已接入。本轮若未计划也不依赖知识库，只使用用户提供或其他已授权材料，记录`connector_status: not_applicable`。计划使用但没有可调用工具、服务端过滤或当前权限时，不执行连接和写回，按实际情况记录`not_configured/permission_denied/failed`。不得把MCP名称、服务地址、接口文档或模拟返回写成connected。
 
@@ -15,7 +15,7 @@
 
 只通过文档、静态配置、连接器名称或本地模板检查不算连接成功。`capability_receipt_id`是宿主稳定ID但不是授权证明；Skill只读取并验证宿主签名的v1收据，不接受自报或自行签发的能力JSON。宿主把`issuer -> key_id -> Ed25519公钥`映射注入`DISCOVERY_CALL_CAPABILITY_TRUSTED_KEYS_JSON`，私钥永不进入Skill或workspace。收据缺失、签名/key无效、过期，或actor、run、connector、operation、tenant/customer/project、项目白名单、授权责任人/有效期、root、dataset、密级、用途任一不匹配时，必须失败关闭internal。
 
-生产镜像必须提供Python `cryptography`的Ed25519实现，且上述环境变量只能由受保护宿主配置。workspace、用户附件、候选文件和Skill目录均不得提供或覆盖信任根；依赖或宿主信任根不可用时失败关闭。连接器返回内容进入证据前，还须由宿主签发不同audience的source-capture receipt，绑定内容摘要、长度、定位、捕获方法/时间和当前run/customer/project；不得用本地两份相同摘要冒充独立证明。
+生产镜像必须提供Python `cryptography`的Ed25519实现，且上述环境变量只能由受保护宿主配置。workspace、用户附件、候选文件和Skill目录均不得提供或覆盖信任根；依赖或宿主信任根不可用时失败关闭。连接器返回内容进入证据前，还须由宿主捕获服务根据实际响应内容、元数据和授权谱系签发不同audience的v3 source-capture receipt，逐项绑定raw locator、canonical locator、final URL、标题/发布者、内容摘要、长度、捕获方法、全部TTL日期、来源分组/上游、权限、外发许可及当前tenant/run/customer/project；不得把模型候选字段提交给通用签名器照单签发，也不得用本地两份相同摘要冒充独立证明。
 
 ## 接入前门禁
 

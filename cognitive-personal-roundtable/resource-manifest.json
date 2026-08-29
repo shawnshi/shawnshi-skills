@@ -1,7 +1,7 @@
 {
   "schema_version": 3,
   "skill": "cognitive-personal-roundtable",
-  "generated_at": "2026-08-27T20:05:46+08:00",
+  "generated_at": "2026-08-29T20:18:35+08:00",
   "hash_algorithm": "SHA-256",
   "text_hash_normalization": "LF",
   "skill_md": "SKILL.md",
@@ -43,7 +43,7 @@
   "resource_file_hashes": [
     {
       "path": "agents/openai.yaml",
-      "sha256": "c6f5f185129b6a7acdc863d30497ffe9e1af6757fcb4058addd44c5e60bfd5b0"
+      "sha256": "0dcd8b44f825ff1cfbdb8f3d0d0725e03d70dd9124ada60c536ee9e7bdc1b4eb"
     },
     {
       "path": "assets/icon.svg",

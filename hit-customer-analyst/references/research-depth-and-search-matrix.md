@@ -1,4 +1,4 @@
-# 深度检索、覆盖矩阵与停止规则 v2.7.0
+# 深度检索、覆盖矩阵与停止规则 v2.10.0
 
 ## 目录
 
@@ -143,6 +143,6 @@ source_id/source_group/source_locator/source_fingerprint/upstream_id｜
 时间口径｜意义｜拜访影响｜反证/局限/待核实
 ```
 
-F2的支持来源中必须存在至少一对来源：该同一对的`source_group`、`locator/source_locator`、`source_fingerprint`、`upstream_id`四项都有效且逐项不同；`upstream_id`为`unknown:<source_id>`的来源不能成为该对成员；其他补充来源不影响这对成立。`source_fingerprint`必须等于机器清单的`sha256:<content_sha256>`并与source cache一致；只有不存在这样的同一对时才不得标F2。
+F2独立性只从已验签machine source计算：支持来源中必须存在同一对在`source_group`、`canonical_locator`、`content_sha256`、`upstream_id`四项都有效且逐项不同；`upstream_id`为`unknown:<source_id>`的来源不能成为该对成员。Markdown显示值不得建立独立性；`source_fingerprint`必须精确等于机器清单的`sha256:<content_sha256>`并与source cache及v3捕获收据一致。
 
 模块独立成果候选的末章分别登记来源台账和主张台账。模块只写隔离候选工作区内自己的候选文件，不得直接修改正式Markdown或综合总报告。结束时把`module_status`、`review_status`、`connector_status`、`freshness_status`、摘要、关键主张ID、缺口、权限级别和下游失效信号返回主流程，由主流程串行汇总并统一事务提交。

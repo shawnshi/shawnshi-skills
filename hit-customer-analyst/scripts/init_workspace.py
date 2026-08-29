@@ -31,7 +31,9 @@ except ModuleNotFoundError:
     CapabilityReceiptError = _capability_module.CapabilityReceiptError
     verify_capability_receipt = _capability_module.verify_capability_receipt
 from runtime_tx import (
+    DELIVERY_SUMMARY_UNSET,
     MANIFEST_REL,
+    RESEARCH_RUNTIME_RELS,
     CASMismatch,
     RecoveryRequired,
     TxError,
@@ -75,7 +77,7 @@ CONNECTOR_STATUSES = {
 FRESHNESS_STATUSES = {"current", "stale", "invalidated"}
 ROUTES = {"research_only", "visit_prep", "strategy", "letter", "refresh"}
 CONTENT_VERSION_RE = re.compile(r"^[1-9][0-9]*$")
-IDENTIFIER_RE = re.compile(r"^[A-Za-z0-9._-]{3,128}$")
+IDENTIFIER_RE = re.compile(r"^[A-Za-z0-9][A-Za-z0-9._:-]{2,127}$")
 COMMON_REQUIRED_FIELDS = {
     "schema",
     "artifact_type",
@@ -111,7 +113,29 @@ LETTER_CONTEXT_FIELDS = {
     "signer",
     "delivery_channel",
 }
-STRATEGY_CONTEXT_FIELDS = {"target_contact_level", "visit_objective", "minimum_next_step"}
+STRATEGY_VARIANTS = {"scheduled_visit", "account_planning"}
+SCHEDULED_STRATEGY_CONTEXT_FIELDS = {
+    "target_contact_level",
+    "visit_objective",
+    "minimum_next_step",
+}
+ACCOUNT_STRATEGY_CONTEXT_FIELDS = {
+    "strategic_question",
+    "planning_horizon",
+    "minimum_next_step",
+}
+READINESS_APPROVAL_FIELDS = {
+    "readiness_reviewer",
+    "readiness_reviewed_at",
+    "readiness_content_version",
+    "readiness_body_sha256",
+    "readiness_target_body_sha256",
+    "readiness_reviewer_actor_id",
+    "readiness_reviewer_role",
+    "readiness_reviewer_authority_id",
+    "readiness_reviewer_identity_provider",
+    "readiness_action_event_id",
+}
 INTERNAL_LETTER_FIELDS = APPROVAL_FIELDS | LETTER_CONTEXT_FIELDS | {"external_output_required"}
 EXTERNAL_LINEAGE_FIELDS = APPROVAL_FIELDS | {"source_internal_content_version"}
 
@@ -161,7 +185,7 @@ RUN_ARTIFACT_ORDER = (
 )
 MODE_LABELS = {"quick": "快速版", "standard": "标准版", "deep": "深度版"}
 DEFAULT_REVIEW_STATUS = {
-    "institution_research": "not_required",
+    "institution_research": "not_started",
     "leader_research": "not_started",
     "internal_retrieval": "not_started",
     "visit_strategy": "not_started",
@@ -193,6 +217,38 @@ class InitError(RuntimeError):
     """Safe, user-actionable initialization failure."""
 
 
+SUBJECT_IDENTITY_FIELDS = (
+    "schema",
+    "issuer",
+    "customer_id",
+    "canonical_customer_name",
+    "canonical_entity_key",
+    "jurisdiction",
+    "canonical_subject_sha256",
+    "organization_scope_sha256",
+    "id_source",
+)
+
+
+def assert_resume_subject_binding(
+    manifest: dict[str, object] | None,
+    intake_preflight: dict[str, object] | None,
+) -> None:
+    """Prevent an ordinary resume from rebinding one context to another entity."""
+    existing = manifest.get("subject_binding") if isinstance(manifest, dict) else None
+    incoming = intake_preflight.get("subject_resolution") if isinstance(intake_preflight, dict) else None
+    if not isinstance(existing, dict):
+        raise InitError("既有上下文缺少subject_binding；普通resume不得隐式补绑，请先执行受审计迁移。")
+    if not isinstance(incoming, dict):
+        raise InitError("当前intake缺少宿主签名subject_resolution。")
+    mismatched = [field for field in SUBJECT_IDENTITY_FIELDS if existing.get(field) != incoming.get(field)]
+    if mismatched:
+        raise InitError(
+            "subject_resolution与既有上下文规范主体不一致；普通resume不得改绑："
+            + ",".join(mismatched)
+        )
+
+
 def require_ready_intake(args: argparse.Namespace) -> dict[str, object] | None:
     """Recompute the intake gate before any output-root write or lock."""
     if not args.business_mode:
@@ -203,8 +259,11 @@ def require_ready_intake(args: argparse.Namespace) -> dict[str, object] | None:
     if not args.intake_input:
         raise InitError("使用--business-mode时必须提供--intake-input，并先完成输入消歧。")
     try:
-        payload = PREFLIGHT.load_payload(args.intake_input)
-        result = PREFLIGHT.evaluate_intake(payload, now=now_utc())
+        result = PREFLIGHT.evaluate_intake_file(
+            args.intake_input,
+            now=now_utc(),
+            require_request_binding=True,
+        )
     except PREFLIGHT.PreflightError as exc:
         raise InitError(f"intake预检无效：{exc}") from exc
     if result.get("business_mode") != args.business_mode:
@@ -232,6 +291,15 @@ def require_ready_intake(args: argparse.Namespace) -> dict[str, object] | None:
     ) != scope_values[0]:
         raise InitError("intake预检中的organization_scope与命令行不一致。")
     args.organization_scope = scope_values[0]
+    subject_resolution = result.get("subject_resolution")
+    if not isinstance(subject_resolution, dict):
+        raise InitError("intake预检缺少宿主签名的规范主体解析证明。")
+    resolved_customer_id = str(subject_resolution.get("customer_id", ""))
+    if not IDENTIFIER_RE.fullmatch(resolved_customer_id):
+        raise InitError("subject_resolution.customer_id无效。")
+    if args.customer_id and args.customer_id != resolved_customer_id:
+        raise InitError("--customer-id与宿主签名subject_resolution不一致。")
+    args.customer_id = resolved_customer_id
     for field in (
         "visit_objective",
         "minimum_next_step",
@@ -275,13 +343,10 @@ def require_ready_intake(args: argparse.Namespace) -> dict[str, object] | None:
         ) != target_values[0]:
             raise InitError("intake预检中的拜访对象层级/角色与命令行不一致。")
         args.target_contact_level = target_values[0]
-    return {
-        "gate_id": result["gate_id"],
-        "input_sha256": result["input_sha256"],
-        "business_mode": result["business_mode"],
-        "evaluated_at": result["evaluated_at"],
-        "expires_at": result["expires_at"],
-    }
+    try:
+        return PREFLIGHT.verified_gate_record(result)
+    except PREFLIGHT.PreflightError as exc:
+        raise InitError(f"intake预检无法生成可信持久化门禁：{exc}") from exc
 
 
 def has_extra_frontmatter_block(body: str) -> bool:
@@ -366,7 +431,7 @@ def parse_identifier_list(values: list[str] | None, label: str) -> list[str]:
             if not value:
                 continue
             if not IDENTIFIER_RE.fullmatch(value):
-                raise InitError(f"{label}只能包含字母、数字、点、下划线和连字符。")
+                raise InitError(f"{label}只能包含字母、数字、点、下划线、冒号和连字符。")
             if value not in selected:
                 selected.append(value)
     return selected
@@ -476,7 +541,7 @@ def validate_content_version(value: str) -> str:
 
 def increment_content_version(value: str) -> str:
     if not CONTENT_VERSION_RE.fullmatch(value):
-        raise InitError("现有综合报告content_version不是正整数，无法安全续建。")
+        raise InitError("现有成果content_version不是正整数，无法安全续建。")
     return str(int(value) + 1)
 
 
@@ -512,10 +577,6 @@ def explicit_safe_name(value: str) -> str:
     if normalized != canonical:
         raise InitError(f"--safe-name 不是规范形式；请使用：{canonical}")
     return canonical
-
-
-def customer_id_for(customer_name: str) -> str:
-    return "cust-" + hashlib.sha256(customer_name.encode("utf-8")).hexdigest()[:12]
 
 
 def new_context_id(timestamp: datetime) -> str:
@@ -761,6 +822,27 @@ def validate_existing_fields(path: Path, data: dict[str, str]) -> None:
         raise InitError(f"现有成果{path.name}的日期或带时区updated_at无效。") from exc
 
 
+def strategy_context_fields(variant: str) -> set[str]:
+    """Return the branch-specific strategy fields or fail closed."""
+    if variant == "scheduled_visit":
+        return set(SCHEDULED_STRATEGY_CONTEXT_FIELDS)
+    if variant == "account_planning":
+        return set(ACCOUNT_STRATEGY_CONTEXT_FIELDS)
+    raise InitError(
+        f"交流策略strategy_variant={variant or '空'}无效，需先迁移为"
+        "scheduled_visit或account_planning。"
+    )
+
+
+def strategy_template_file(variant: str) -> str:
+    strategy_context_fields(variant)
+    return (
+        "account-strategy-report-template.md"
+        if variant == "account_planning"
+        else TEMPLATES["visit_strategy"]
+    )
+
+
 def audit_existing_workspace(workspace: Path, total_path: Path) -> dict[Path, dict[str, str]]:
     """Perform structural and identity checks before any resume write."""
     if workspace.is_symlink():
@@ -800,8 +882,16 @@ def audit_existing_workspace(workspace: Path, total_path: Path) -> dict[Path, di
             raise InitError(f"现有成果{path.name}的artifact_type应为{expected_type}。")
         if expected_type == "customer_letter_internal" and not INTERNAL_LETTER_FIELDS <= data.keys():
             raise InitError(f"现有客户信内部稿{path.name}缺少v2.5.1审批字段，需先迁移。")
-        if expected_type == "visit_strategy" and not STRATEGY_CONTEXT_FIELDS <= data.keys():
-            raise InitError(f"现有交流策略{path.name}缺少v2.5.1执行上下文字段，需先迁移。")
+        if expected_type == "visit_strategy":
+            variant = data.get("strategy_variant", "")
+            required_strategy_fields = strategy_context_fields(variant) | {"strategy_variant"}
+            missing_strategy_fields = sorted(required_strategy_fields - data.keys())
+            if missing_strategy_fields:
+                raise InitError(
+                    f"现有交流策略{path.name}缺少{variant}分支字段："
+                    + ", ".join(missing_strategy_fields)
+                    + "；需先迁移。"
+                )
         if expected_type == "customer_letter_external" and not EXTERNAL_LINEAGE_FIELDS <= data.keys():
             raise InitError(f"现有客户信外发版{path.name}缺少v2.5.1谱系字段，需先迁移。")
         for key, expected in identity.items():
@@ -875,7 +965,7 @@ def status_values(
     summary_sync_status: str | None = None,
     key_claim_ids: str = "",
     downstream_invalidation: str = "none",
-    gaps_blockers: str = "无",
+    gaps_blockers: str = "none",
 ) -> dict[str, str]:
     if path is None:
         return {
@@ -891,7 +981,7 @@ def status_values(
             "summary_sync_status": "not_applicable",
             "key_claim_ids": "",
             "downstream_invalidation": "none",
-            "gaps_blockers": "无",
+            "gaps_blockers": "none",
             "link": "",
         }
     data = frontmatter if frontmatter is not None else read_frontmatter(path)
@@ -963,28 +1053,34 @@ def update_total_rows(
     *,
     selected_types: set[str],
     created_types: set[str],
+    reset_types: set[str] | None = None,
     planned_actions: dict[str, str],
     planned_frontmatter: dict[str, dict[str, str]] | None = None,
 ) -> str:
     planned_frontmatter = planned_frontmatter or {}
+    reset_types = reset_types or set()
     for artifact_type, label in STATUS_LABELS.items():
         path = paths.get(artifact_type)
         selected = artifact_type in selected_types
         action = planned_actions.get(artifact_type, "not_called")
         extras = existing_status_extras(text, label)
-        if artifact_type in created_types:
+        if artifact_type in created_types or artifact_type in reset_types:
             extras = {
                 "summary_sync_status": "pending",
-                "key_claim_ids": "待提取",
+                "key_claim_ids": "none",
                 "downstream_invalidation": "none",
-                "gaps_blockers": "待评估",
+                "gaps_blockers": (
+                    "artifact_unavailable"
+                    if artifact_type in reset_types
+                    else "input_missing"
+                ),
             }
         elif path is not None and not extras:
             extras = {
                 "summary_sync_status": "out_of_sync",
-                "key_claim_ids": "待提取",
+                "key_claim_ids": "none",
                 "downstream_invalidation": "none",
-                "gaps_blockers": "待评估",
+                "gaps_blockers": "input_missing",
             }
         if action == "updated":
             extras["summary_sync_status"] = "pending"
@@ -1105,6 +1201,39 @@ def ensure_refresh_section(text: str) -> str:
         line.strip() == REFRESH_SEPARATOR for line in section
     ) != 1:
         raise InitError("刷新结果记录表头损坏，无法安全续建。")
+    return text.rstrip() + "\n"
+
+
+NEUTRAL_EXECUTION_SECTION = """## 4.2 执行与下一步
+
+| action | action_disposition | external_interaction | resource_commitment | owner | due_date | 依赖 | 完成标准 | 继续/调整/no-go条件 | CRM/PIMS候选 |
+|---|---|---|---|---|---|---|---|---|---|
+| {{唯一主动作}} | {{advance/adjust/stop/archive/observe/recheck}} | {{none/customer_contact}} | {{none/proposed/approved}} | {{真人/稳定角色}} | {{YYYY-MM-DD}} | {{内容}} | {{可观察结果}} | {{信号或停止条件}} | {{是/否}} |
+
+建议为`no_go`时只允许四组受控值：`stop→停止主动投入`、`archive→归档当前机会`、`observe→被动观察证据变化`、`recheck→内部复核机会资格`；action必须逐字匹配，`external_interaction`和`resource_commitment`均须为`none`，并且不得在完成标准或停止条件中另行安排面客推进或资源投入。
+
+"""
+
+
+def neutralize_account_comprehensive_report(text: str) -> str:
+    """Remove the legacy meeting-only execution block from account planning totals."""
+    text = text.replace("对拜访的意义", "对业务决策的意义")
+    text = text.replace("现场验证问题", "验证问题或动作")
+    text = text.replace("缺口/现场问题", "缺口/验证问题")
+    text = text.replace("## 7. 关键缺口与现场验证", "## 7. 关键缺口与验证计划")
+    text = text.replace("{{现场/内部/补检}}", "{{沟通核实/内部核验/补检}}")
+    legacy_heading = "## 4.2 拜访执行与下一步"
+    if legacy_heading in text:
+        pattern = r"^## 4\.2 拜访执行与下一步\s*$.*?(?=^## 5\. 高价值发现\s*$)"
+        text, count = re.subn(
+            pattern,
+            NEUTRAL_EXECUTION_SECTION,
+            text,
+            count=1,
+            flags=re.MULTILINE | re.DOTALL,
+        )
+        if count != 1:
+            raise InitError("综合报告的旧拜访执行章节无法安全迁移为账户动作。")
     return text.rstrip() + "\n"
 
 
@@ -1290,7 +1419,7 @@ def _initialize_locked(
     )
     requested_customer_id = args.customer_id
     if requested_customer_id and not IDENTIFIER_RE.fullmatch(requested_customer_id):
-        raise InitError("--customer-id 只能包含字母、数字、点、下划线和连字符。")
+        raise InitError("--customer-id 只能包含字母、数字、点、下划线、冒号和连字符。")
     requested_owner = (
         normalize_metadata_text(args.runtime_owner, "--runtime-owner", max_length=100)
         if args.runtime_owner
@@ -1329,7 +1458,7 @@ def _initialize_locked(
     connector_id = args.internal_connector_id or ""
     for value, label in ((tenant_id, "--tenant-id"), (project_id, "--project-id"), (connector_id, "--internal-connector-id")):
         if value and not IDENTIFIER_RE.fullmatch(value):
-            raise InitError(f"{label}只能包含字母、数字、点、下划线和连字符。")
+            raise InitError(f"{label}只能包含字母、数字、点、下划线、冒号和连字符。")
     authorization_owner = (
         normalize_metadata_text(args.authorization_owner, "--authorization-owner", max_length=100)
         if args.authorization_owner else ""
@@ -1340,10 +1469,10 @@ def _initialize_locked(
     )
     capability_receipt_id = args.capability_receipt_id or ""
     if capability_receipt_id and not IDENTIFIER_RE.fullmatch(capability_receipt_id):
-        raise InitError("--capability-receipt-id只能包含字母、数字、点、下划线和连字符。")
+        raise InitError("--capability-receipt-id只能包含字母、数字、点、下划线、冒号和连字符。")
     authorization_actor_id = args.authorization_actor_id or ""
     if authorization_actor_id and not IDENTIFIER_RE.fullmatch(authorization_actor_id):
-        raise InitError("--authorization-actor-id只能包含字母、数字、点、下划线和连字符。")
+        raise InitError("--authorization-actor-id只能包含字母、数字、点、下划线、冒号和连字符。")
     authorization_expires_at = (
         validate_authorization_expiry(args.authorization_expires_at)
         if args.authorization_expires_at else ""
@@ -1372,6 +1501,7 @@ def _initialize_locked(
         if not args.recover:
             validate_workspace_postflight(workspace)
         existing_manifest = load_manifest(workspace, required=False)
+        assert_resume_subject_binding(existing_manifest, intake_preflight)
         existing_task_timezone = (
             normalize_task_timezone(existing_manifest.get("task_timezone"))
             if existing_manifest and "task_timezone" in existing_manifest
@@ -1493,8 +1623,10 @@ def _initialize_locked(
             raise InitError("新建任务必须显式提供--task-timezone或--evidence-cutoff-date，避免跨时区日期偏差。")
         context_id = unique_new_context_id(Path(args.output_root), requested_context, timestamp)
         task_timezone = requested_task_timezone
-        customer_id = requested_customer_id or customer_id_for(customer_name)
         organization_scope = requested_scope or customer_name
+        if not requested_customer_id:
+            raise InitError("新建上下文缺少宿主签名subject_resolution.customer_id。")
+        customer_id = requested_customer_id
         if selected_profile:
             configured_route = str(selected_profile.get("route", ""))
             configured_depth = str(selected_profile.get("depth", ""))
@@ -1586,6 +1718,7 @@ def _initialize_locked(
             raise InitError("--allowed-project-ids必须包含--project-id。")
     receipt_audit: dict[str, object] = {
         "authorization_actor_id": authorization_actor_id,
+        "capability_receipt_run_id": "",
         "capability_operation": "internal_read",
         "capability_receipt_verified": False,
         "capability_receipt_issuer": "",
@@ -1680,6 +1813,7 @@ def _initialize_locked(
     )
     if business_mode != "strategic_account" and strategy_variant != "scheduled_visit":
         raise InitError("只有strategic_account可使用account_planning；会前任务必须使用scheduled_visit。")
+    strategy_context_fields(strategy_variant)
     common.update(
         {
             "target_contact_level": args.target_contact_level or "待确认",
@@ -1705,6 +1839,9 @@ def _initialize_locked(
     created: list[str] = []
     created_types: set[str] = set()
     preserved: list[str] = []
+    migrated: list[str] = []
+    migrated_types: set[str] = set()
+    previous_strategy_variant = ""
     selected_types = [TYPE_FOR_MODULE[name] for name in modules]
     selected_status_types = set(selected_types)
     planned_text: dict[Path, str] = {}
@@ -1717,6 +1854,51 @@ def _initialize_locked(
                 raise InitError(f"拒绝覆盖现有成果：{path}")
             if not path.is_file() or path.is_symlink():
                 raise InitError(f"成果路径不是普通文件：{path}")
+            if artifact_type == "visit_strategy":
+                existing_strategy = audited.get(path) or read_frontmatter(path)
+                existing_variant = existing_strategy.get("strategy_variant", "")
+                strategy_context_fields(existing_variant)
+                if existing_variant != strategy_variant:
+                    previous_strategy_variant = existing_variant
+                    migrated_version = increment_content_version(
+                        existing_strategy.get("content_version", "")
+                    )
+                    review = DEFAULT_REVIEW_STATUS[artifact_type]
+                    values = common | {
+                        "module_status": "queued",
+                        "review_status": review,
+                        "connector_status": "not_applicable",
+                        "content_version": migrated_version,
+                    }
+                    planned_text[path] = inject_runtime_frontmatter(
+                        render_template(strategy_template_file(strategy_variant), values),
+                        runtime_frontmatter,
+                    )
+                    planned_frontmatter[artifact_type] = {
+                        "schema": SCHEMA,
+                        "artifact_type": artifact_type,
+                        "context_id": context_id,
+                        "latest_run_id": latest_run_id,
+                        "customer_id": customer_id,
+                        "customer_display_name": customer_name,
+                        "organization_scope": organization_scope,
+                        "safe_name": safe_name,
+                        "module_status": "queued",
+                        "review_status": review,
+                        "connector_status": "not_applicable",
+                        "freshness_status": "current",
+                        "content_version": migrated_version,
+                        "evidence_cutoff_date": requested_cutoff,
+                        "updated_at": timestamp_iso,
+                        "runtime_owner": runtime_owner,
+                        "strategy_variant": strategy_variant,
+                    } | {
+                        field: common[field]
+                        for field in strategy_context_fields(strategy_variant)
+                    } | runtime_frontmatter
+                    migrated.append(path.name)
+                    migrated_types.add(artifact_type)
+                    continue
             preserved.append(path.name)
             continue
         connector = effective_connector_status if artifact_type == "internal_retrieval" else "not_applicable"
@@ -1727,14 +1909,14 @@ def _initialize_locked(
             "connector_status": connector,
         }
         template_file = (
-            "account-strategy-report-template.md"
-            if artifact_type == "visit_strategy" and strategy_variant == "account_planning"
+            strategy_template_file(strategy_variant)
+            if artifact_type == "visit_strategy"
             else TEMPLATES[artifact_type]
         )
         planned_text[path] = inject_runtime_frontmatter(
             render_template(template_file, values), runtime_frontmatter
         )
-        planned_frontmatter[artifact_type] = {
+        planned_frontmatter[artifact_type] = ({
             "schema": SCHEMA,
             "artifact_type": artifact_type,
             "context_id": context_id,
@@ -1751,7 +1933,17 @@ def _initialize_locked(
             "evidence_cutoff_date": requested_cutoff,
             "updated_at": timestamp_iso,
             "runtime_owner": runtime_owner,
-        } | runtime_frontmatter
+        } | (
+            {
+                "strategy_variant": strategy_variant,
+                **{
+                    field: common[field]
+                    for field in strategy_context_fields(strategy_variant)
+                },
+            }
+            if artifact_type == "visit_strategy"
+            else {}
+        ) | runtime_frontmatter)
         paths[artifact_type] = path
         created.append(path.name)
         created_types.add(artifact_type)
@@ -1798,9 +1990,10 @@ def _initialize_locked(
             created_types.add(artifact_type)
 
     if route in {"visit_prep", "strategy", "letter"} and not (
-        {"institution_research", "leader_research", "internal_retrieval"} & paths.keys()
+        {"institution_research", "leader_research", "internal_retrieval"}
+        & set(selected_types)
     ):
-        raise InitError(f"route={route}缺少研究成果，无法为claim_id提供权威台账。")
+        raise InitError(f"route={route}缺少选中研究载体，无法为claim_id提供权威台账。")
 
     audited_by_type = {data.get("artifact_type", ""): data for data in audited.values()}
     action_map: dict[str, str] = {}
@@ -1849,6 +2042,13 @@ def _initialize_locked(
     if args.resume:
         total_text = total_path.read_text(encoding="utf-8")
         total_text = ensure_refresh_section(total_text)
+        if strategy_variant == "account_planning":
+            total_text = neutralize_account_comprehensive_report(total_text)
+        readiness_reset = (
+            {field: "" for field in READINESS_APPROVAL_FIELDS}
+            if "visit_strategy" in migrated_types
+            else {}
+        )
         total_text = replace_frontmatter(
             total_text,
             {
@@ -1865,7 +2065,7 @@ def _initialize_locked(
                 "updated_at": timestamp_iso,
                 "runtime_owner": runtime_owner,
                 "workflow_stage": "planning",
-            } | runtime_frontmatter,
+            } | runtime_frontmatter | readiness_reset,
         )
         total_text = update_total_banner(total_text, mode=mode, evidence_cutoff_date=total_cutoff)
         total_text = update_total_rows(
@@ -1873,6 +2073,7 @@ def _initialize_locked(
             paths,
             selected_types=selected_status_types,
             created_types=created_types,
+            reset_types=migrated_types,
             planned_actions=planned_actions,
             planned_frontmatter=planned_frontmatter,
         )
@@ -1904,7 +2105,7 @@ def _initialize_locked(
             "summary_sync_status": "not_applicable",
             "key_claim_ids": "",
             "downstream_invalidation": "none",
-            "gaps_blockers": "无",
+            "gaps_blockers": "none",
             "link": "",
         }
         values = common | {
@@ -1934,9 +2135,9 @@ def _initialize_locked(
                     run_action="created" if artifact_type in created_types else "not_called",
                     frontmatter=planned_frontmatter.get(artifact_type),
                     summary_sync_status="pending" if artifact_type in created_types else "not_applicable",
-                    key_claim_ids="待提取" if artifact_type in created_types else "",
+                    key_claim_ids="none" if artifact_type in created_types else "",
                     downstream_invalidation="none",
-                    gaps_blockers="待评估" if artifact_type in created_types else "无",
+                    gaps_blockers="input_missing" if artifact_type in created_types else "none",
                 )
                 if path
                 else empty_status
@@ -1968,6 +2169,18 @@ def _initialize_locked(
     total_version = next_total_version if args.resume else new_content_version
     planned_bytes = {path: text.encode("utf-8") for path, text in planned_text.items()}
     planned_bytes[total_path] = total_text.encode("utf-8")
+    planned_deletes = (
+        sorted(
+            (
+                workspace / relative
+                for relative in RESEARCH_RUNTIME_RELS
+                if (workspace / relative).exists()
+            ),
+            key=lambda path: path.as_posix(),
+        )
+        if migrated_types
+        else []
+    )
     previous_sequence = int((existing_manifest or {}).get("transaction_sequence", 0))
     manifest = build_manifest(
         workspace,
@@ -1989,12 +2202,25 @@ def _initialize_locked(
         authorization=authorization,
         transaction_sequence=previous_sequence + 1,
         intake_preflight=intake_preflight,
+        # Letter mode has an independent lifecycle and must never inherit a
+        # prior visit/account decision merely because a historical strategy
+        # artifact remains in the context.  Same-mode governance mutations
+        # continue to preserve summaries through build_manifest's sentinel.
+        delivery_summary=None if business_mode == "letter" else DELIVERY_SUMMARY_UNSET,
         overlay=planned_bytes,
+        deletes=planned_deletes,
     )
+    # Entering a new planning run invalidates any earlier one-time candidate
+    # authorization.  Inheriting it would bind the new gate/run to an old
+    # formal root and can both block a legitimate resume and misstate release
+    # readiness.  A fresh candidate commit must install the next attestation.
+    manifest.pop("candidate_attestation", None)
     manifest_bytes = (json.dumps(manifest, ensure_ascii=False, indent=2, sort_keys=True) + "\n").encode("utf-8")
     if args.resume:
         expected = dict(baseline_states)
         for path in planned_bytes:
+            expected.setdefault(path, file_state(path).as_dict())
+        for path in planned_deletes:
             expected.setdefault(path, file_state(path).as_dict())
         expected.setdefault(workspace / MANIFEST_REL, file_state(workspace / MANIFEST_REL).as_dict())
         planned_bytes[workspace / MANIFEST_REL] = manifest_bytes
@@ -2002,6 +2228,7 @@ def _initialize_locked(
             transactional_commit(
                 workspace,
                 planned_bytes,
+                deletes=planned_deletes,
                 expected=expected,
                 operation="init_resume",
                 postflight=validate_runtime_postflight,
@@ -2045,8 +2272,14 @@ def _initialize_locked(
         "refresh_modules": [name for name in TYPE_FOR_MODULE if name in refresh_modules],
         "created": created,
         "preserved": preserved,
+        "migrated": migrated,
+        "invalidated_runtime_files": [
+            path.relative_to(result_workspace).as_posix()
+            for path in planned_deletes
+        ],
         "intake_preflight": intake_preflight,
         "strategy_variant": strategy_variant,
+        "previous_strategy_variant": previous_strategy_variant,
     }
 
 
@@ -2060,7 +2293,23 @@ def initialize(args: argparse.Namespace) -> dict[str, object]:
     output_root = Path(args.output_root).expanduser()
     if output_root.is_symlink():
         raise InitError("--output-root不得为符号链接。")
-    output_root.mkdir(parents=True, exist_ok=True)
+    # A resume identity mismatch is a pure precondition failure.  Resolve and
+    # compare the signed subject before creating/truncating the root lock so a
+    # same-name, different-entity request leaves the entire tree byte-stable.
+    # The check is repeated under both locks below to close the race window.
+    if args.resume:
+        if not output_root.is_dir():
+            raise InitError("续建的--output-root必须是现有目录。")
+        prelock_root = output_root.resolve()
+        customer_name = normalize_customer_name(args.customer_name)
+        safe_name = explicit_safe_name(args.safe_name) if args.safe_name else normalize_safe_component(customer_name)
+        prelock_workspace = find_resume_workspace(prelock_root, safe_name, args.context_id)
+        assert_resume_subject_binding(
+            load_manifest(prelock_workspace, required=False),
+            intake_preflight,
+        )
+    else:
+        output_root.mkdir(parents=True, exist_ok=True)
     root = output_root.resolve()
     with output_root_lock(root, timeout=args.lock_timeout):
         recovery = "not_requested"
@@ -2068,6 +2317,7 @@ def initialize(args: argparse.Namespace) -> dict[str, object]:
             customer_name = normalize_customer_name(args.customer_name)
             safe_name = explicit_safe_name(args.safe_name) if args.safe_name else normalize_safe_component(customer_name)
             workspace = find_resume_workspace(root, safe_name, args.context_id)
+            assert_resume_subject_binding(load_manifest(workspace, required=False), intake_preflight)
             with workspace_lock(workspace, timeout=args.lock_timeout):
                 if unfinished_transaction(workspace):
                     if not args.recover:
@@ -2095,7 +2345,10 @@ def build_parser() -> argparse.ArgumentParser:
     parser.add_argument("--safe-name", help="显式安全名称，1—48字符且不得包含路径片段")
     parser.add_argument("--context-id", help="新建时指定或续建时选择 dcx-YYYYMMDD-8chars")
     parser.add_argument("--run-id", help="可选显式run_id；若在init同run验证宿主能力收据时必需；常规候选收据应绑定后续candidate run")
-    parser.add_argument("--customer-id", help="可选稳定客户ID；续建时必须与既有上下文一致")
+    parser.add_argument(
+        "--customer-id",
+        help="可选显式客户ID；如提供必须与宿主签名subject_resolution一致，续建时还必须与既有上下文一致",
+    )
     parser.add_argument("--organization-scope", help="院区、部门或项目范围；新建默认使用客户规范名称")
     parser.add_argument("--runtime-owner", help="运行负责人/角色；续建默认沿用")
     parser.add_argument(
@@ -2105,7 +2358,7 @@ def build_parser() -> argparse.ArgumentParser:
     )
     parser.add_argument(
         "--intake-input",
-        help="结构化intake JSON；使用--business-mode时必需，初始化器会在任何目录写入前重新计算门禁",
+        help="当前宿主签名的intake v3普通文件（不接受-或stdin）；使用--business-mode时必需，初始化器会在任何目录写入前重新计算门禁",
     )
     parser.add_argument("--strategy-variant", choices=("scheduled_visit", "account_planning"), help="策略成果变体；strategic_account默认account_planning")
     parser.add_argument("--target-contact-level", help="拜访对象层级或角色；须与intake一致")

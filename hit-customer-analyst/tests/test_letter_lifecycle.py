@@ -8,7 +8,7 @@ import unittest
 from datetime import datetime, timezone
 from pathlib import Path
 
-from tests.common import SCRIPTS, load_module, run_python, runtime_tx as tx
+from tests.common import SCRIPTS, attest_candidate, load_module, run_python, runtime_tx as tx
 from tests.fixture_builder import build_pending_letter_workspace, record_action_assertion, record_external_request
 
 
@@ -42,10 +42,7 @@ class LetterLifecycleTests(unittest.TestCase):
         timestamp = now.isoformat().replace("+00:00", "Z")
         run_id = validator.new_run_id(now)
         next_letter_version = str(int(letter.frontmatter["content_version"]) + 1)
-        revised = letter.text.replace(
-            "诚请您确认九月技术交流的合适时间",
-            "诚请您确认十月技术交流的合适时间",
-        )
+        revised = letter.text.replace("相关同事参加", "产品与技术同事参加")
         revised = validator.replace_flat_frontmatter(
             revised,
             {
@@ -114,19 +111,21 @@ class LetterLifecycleTests(unittest.TestCase):
         from tests.fixture_builder import _rebuild_manifest
         _rebuild_manifest(candidate, list(live_manifest.get("selected_modules", [])))
         marker = {
-            "schema": "discovery-call-candidate-receipt/v1",
+            "schema": "discovery-call-candidate-receipt/v2",
             "context_id": total.frontmatter["context_id"],
             "run_id": run_id,
             "source_manifest_revision": revision,
             "source_manifest_sha256": digest,
             "source_workspace": str(workspace.resolve()),
             "candidate_workspace": str(candidate.resolve()),
-            "payload_sha256": tx.sha256_file(candidate / tx.MANIFEST_REL),
+            "input_payload_sha256": hashlib.sha256(b"letter-revision-test-input").hexdigest(),
+            "final_manifest_sha256": tx.sha256_file(candidate / tx.MANIFEST_REL),
         }
         (candidate / "runtime" / "candidate-receipt.json").write_text(
             json.dumps(marker, ensure_ascii=False, indent=2, sort_keys=True) + "\n",
             encoding="utf-8",
         )
+        attestation = attest_candidate(candidate)
         committed = run_python(
             "commit_run.py",
             [
@@ -139,6 +138,10 @@ class LetterLifecycleTests(unittest.TestCase):
                 digest,
                 "--operation",
                 "submit_letter_revision",
+                "--intake-input",
+                str(next(workspace.parent.glob("intake-letter-*.json"))),
+                "--candidate-attestation-file",
+                str(attestation),
                 "--json",
             ],
         )
@@ -157,6 +160,20 @@ class LetterLifecycleTests(unittest.TestCase):
                 issue["code"] for issue in json.loads(blocked_strict.stdout)["issues"]
             }
             self.assertIn("ready_for_use_required", blocked_codes)
+
+            record_action_assertion(workspace, event_id="approve-institution", actor_id="reviewer-institution", operation="approve_artifact:institution", artifact_type="institution_research")
+            institution = self._govern(
+                workspace,
+                "--approve-artifact",
+                "institution",
+                "--reviewer",
+                "周洁（机构事实审核岗）",
+                "--actor-id",
+                "reviewer-institution",
+                "--action-event-id",
+                "approve-institution",
+            )
+            self.assertEqual(institution["operation"], "approve_institution")
 
             record_action_assertion(workspace, event_id="facts-first", actor_id="reviewer-letter-facts", operation="review_letter_facts", artifact_type="customer_letter_internal")
             facts = self._govern(
@@ -221,7 +238,7 @@ class LetterLifecycleTests(unittest.TestCase):
             self._submit_revision(workspace, root / "revision-candidate")
             pending_meta = tx.parse_frontmatter(internal.read_text(encoding="utf-8"))
             self.assertEqual(pending_meta["review_status"], "pending")
-            self.assertIn("十月技术交流", internal.read_text(encoding="utf-8"))
+            self.assertIn("产品与技术同事参加", internal.read_text(encoding="utf-8"))
 
             record_action_assertion(workspace, event_id="facts-second", actor_id="reviewer-letter-facts", operation="review_letter_facts", artifact_type="customer_letter_internal")
             self._govern(
@@ -254,7 +271,7 @@ class LetterLifecycleTests(unittest.TestCase):
             )
             self.assertEqual(reemitted["operation"], "emit_external")
             latest_external = next(workspace.glob("*客户信（外发版）.md"))
-            self.assertIn("十月技术交流", latest_external.read_text(encoding="utf-8"))
+            self.assertIn("产品与技术同事参加", latest_external.read_text(encoding="utf-8"))
             self.assertEqual(len(list((workspace / "archive" / "letters").glob("*.md"))), 1)
 
             final_validation = self._govern(workspace)

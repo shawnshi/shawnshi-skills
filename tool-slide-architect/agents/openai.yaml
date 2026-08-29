@@ -5,4 +5,9 @@ interface:
   icon_large: assets/icon.svg
   default_prompt: 请使用 $tool-slide-architect 将我的材料重组为可验证的决策型演示蓝图，并明确证据、风险与开放项。
 policy:
+  products:
+  - chatgpt
+  - codex
+  - api
+  - atlas
   allow_implicit_invocation: true

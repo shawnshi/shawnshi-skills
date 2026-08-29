@@ -5,4 +5,9 @@ interface:
   icon_large: assets/icon.svg
   default_prompt: 使用 $cognitive-storm-research 对一个复杂争议议题开展多来源研究，标明证据、冲突、未知项和证伪条件。
 policy:
+  products:
+  - chatgpt
+  - codex
+  - api
+  - atlas
   allow_implicit_invocation: true

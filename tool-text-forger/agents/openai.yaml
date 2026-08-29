@@ -1,8 +1,12 @@
 interface:
   display_name: "Text Forger"
   short_description: "忠实校对、润色、压缩并受控重组已有文本，避免事实与格式漂移"
-  default_prompt: "使用 $tool-text-forger 忠实校对并精炼这份已有文本，保持事实与原意不变。"
   icon_small: "./assets/icon.svg"
   icon_large: "./assets/icon.svg"
 policy:
+  products:
+  - "chatgpt"
+  - "codex"
+  - "api"
+  - "atlas"
   allow_implicit_invocation: true

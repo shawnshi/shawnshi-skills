@@ -13,6 +13,7 @@
     "depth",
     "customer_id",
     "organization_scope",
+    "subject_resolution",
     "selected_modules",
     "authorization_context",
     "internal_queries_suppressed",
@@ -25,7 +26,7 @@
   ],
   "properties": {
     "schema": {
-      "const": "discovery-call-search-plan/v1"
+      "const": "discovery-call-search-plan/v2"
     },
     "context_id": {
       "type": "string",
@@ -59,11 +60,31 @@
     },
     "customer_id": {
       "type": "string",
-      "minLength": 3
+      "pattern": "^[A-Za-z0-9][A-Za-z0-9._:-]{2,127}$"
     },
     "organization_scope": {
       "type": "string",
       "minLength": 1
+    },
+    "subject_resolution": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["schema", "attestation_id", "issuer", "customer_id", "canonical_customer_name", "canonical_entity_key", "jurisdiction", "canonical_subject_sha256", "organization_scope_sha256", "id_source", "evidence_sha256", "issued_at", "expires_at"],
+      "properties": {
+        "schema": {"const": "discovery-call-subject-resolution/v1"},
+        "attestation_id": {"type": "string", "minLength": 3},
+        "issuer": {"type": "string", "minLength": 3},
+        "customer_id": {"type": "string", "pattern": "^[A-Za-z0-9][A-Za-z0-9._:-]{2,127}$"},
+        "canonical_customer_name": {"type": "string", "minLength": 1},
+        "canonical_entity_key": {"type": "string", "pattern": "^[A-Za-z0-9][A-Za-z0-9._:-]{2,127}$"},
+        "jurisdiction": {"type": "string", "pattern": "^[A-Za-z0-9][A-Za-z0-9._:-]{2,127}$"},
+        "canonical_subject_sha256": {"type": "string", "pattern": "^[0-9a-f]{64}$"},
+        "organization_scope_sha256": {"type": "string", "pattern": "^[0-9a-f]{64}$"},
+        "id_source": {"enum": ["host_attested_external", "canonical_derived"]},
+        "evidence_sha256": {"type": "string", "pattern": "^[0-9a-f]{64}$"},
+        "issued_at": {"type": "string", "format": "date-time"},
+        "expires_at": {"type": "string", "format": "date-time"}
+      }
     },
     "selected_modules": {
       "type": "array",
@@ -106,6 +127,10 @@
         "authorization_purpose": {"type": ["string", "null"]},
         "capability_receipt_id": {"type": ["string", "null"]},
         "authorization_actor_id": {"type": ["string", "null"]},
+        "capability_receipt_run_id": {
+          "type": ["string", "null"],
+          "pattern": "^dcr-[0-9]{8}T[0-9]{6}-[A-Za-z0-9]{4}$"
+        },
         "capability_operation": {"const": "internal_read"},
         "capability_receipt_verified": {"type": "boolean"},
         "capability_receipt_issuer": {"type": ["string", "null"]},
@@ -196,17 +221,59 @@
     "intake_preflight": {
       "type": "object",
       "additionalProperties": false,
-      "required": ["gate_id", "input_sha256", "business_mode", "evaluated_at", "expires_at"],
+      "required": [
+        "gate_id", "input_sha256", "business_mode", "evaluated_at", "expires_at",
+        "request_binding_receipt_id", "request_binding_receipt_sha256",
+        "request_bundle_id", "request_revision", "raw_request_sha256",
+        "mention_ledger_sha256", "subject_resolution_sha256",
+        "safety_authorizations_sha256", "safety_directives_sha256",
+        "subject_resolution", "safety_authorization_codes"
+      ],
       "properties": {
         "gate_id": {"type": "string", "pattern": "^dcg-[0-9a-f]{16}$"},
         "input_sha256": {"type": "string", "pattern": "^[0-9a-f]{64}$"},
         "business_mode": {"enum": ["briefing", "standard_visit", "strategic_account", "letter"]},
         "evaluated_at": {"type": "string", "format": "date-time"},
-        "expires_at": {"type": "string", "format": "date-time"}
+        "expires_at": {"type": "string", "format": "date-time"},
+        "request_binding_receipt_id": {"type": "string", "pattern": "^[A-Za-z0-9][A-Za-z0-9._:-]{2,127}$"},
+        "request_binding_receipt_sha256": {"type": "string", "pattern": "^[0-9a-f]{64}$"},
+        "request_bundle_id": {"type": "string", "pattern": "^[A-Za-z0-9][A-Za-z0-9._:-]{2,127}$"},
+        "request_revision": {"type": "integer", "minimum": 1},
+        "raw_request_sha256": {"type": "string", "pattern": "^[0-9a-f]{64}$"},
+        "mention_ledger_sha256": {"type": "string", "pattern": "^[0-9a-f]{64}$"},
+        "subject_resolution_sha256": {"type": "string", "pattern": "^[0-9a-f]{64}$"},
+        "safety_authorizations_sha256": {"type": "string", "pattern": "^[0-9a-f]{64}$"},
+        "safety_directives_sha256": {"type": "string", "pattern": "^[0-9a-f]{64}$"},
+        "subject_resolution": {"$ref": "#/$defs/subject_resolution"},
+        "safety_authorization_codes": {
+          "type": "array",
+          "uniqueItems": true,
+          "items": {"enum": ["unauthorized_patient_information", "unauthorized_internal_source"]}
+        }
       }
     }
   },
   "$defs": {
+    "subject_resolution": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["schema", "attestation_id", "issuer", "customer_id", "canonical_customer_name", "canonical_entity_key", "jurisdiction", "canonical_subject_sha256", "organization_scope_sha256", "id_source", "evidence_sha256", "issued_at", "expires_at"],
+      "properties": {
+        "schema": {"const": "discovery-call-subject-resolution/v1"},
+        "attestation_id": {"type": "string", "minLength": 3},
+        "issuer": {"type": "string", "minLength": 3},
+        "customer_id": {"type": "string", "pattern": "^[A-Za-z0-9][A-Za-z0-9._:-]{2,127}$"},
+        "canonical_customer_name": {"type": "string", "minLength": 1},
+        "canonical_entity_key": {"type": "string", "pattern": "^[A-Za-z0-9][A-Za-z0-9._:-]{2,127}$"},
+        "jurisdiction": {"type": "string", "pattern": "^[A-Za-z0-9][A-Za-z0-9._:-]{2,127}$"},
+        "canonical_subject_sha256": {"type": "string", "pattern": "^[0-9a-f]{64}$"},
+        "organization_scope_sha256": {"type": "string", "pattern": "^[0-9a-f]{64}$"},
+        "id_source": {"enum": ["host_attested_external", "canonical_derived"]},
+        "evidence_sha256": {"type": "string", "pattern": "^[0-9a-f]{64}$"},
+        "issued_at": {"type": "string", "format": "date-time"},
+        "expires_at": {"type": "string", "format": "date-time"}
+      }
+    },
     "query": {
       "type": "object",
       "additionalProperties": false,
@@ -265,7 +332,7 @@
         "properties": {
           "authorization_context": {
             "required": [
-              "authorization_actor_id", "capability_operation",
+              "authorization_actor_id", "capability_receipt_run_id", "capability_operation",
               "capability_receipt_verified", "capability_receipt_issuer",
               "capability_receipt_key_id", "capability_receipt_sha256",
               "capability_receipt_verified_at", "capability_receipt_expires_at"

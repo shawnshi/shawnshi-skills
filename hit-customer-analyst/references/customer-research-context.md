@@ -1,4 +1,4 @@
-# CustomerResearchContext统一上下文契约 v2.7.0
+# CustomerResearchContext统一上下文契约 v2.10.0
 
 ## 目录
 
@@ -21,13 +21,15 @@ CustomerResearchContext 是 discovery-call 的唯一逻辑状态模型。它服�
 - 运行记录：每个 run_id 的 route、depth、objective、target_evidence_cutoff_date、selected_modules，以及各成果 created/updated/reused/generated/not_called 动作。
 - 刷新记录：新增、更正、失效、未变化和待确认事项。
 
-每个独立成果继续记录v2.5字段。`briefing_delivery`是会前速览必需的可独立交付成果，必须使用1页模板、独立文件头和通用审核绑定。leader、internal、visit_strategy和briefing的approved必须绑定`reviewer、reviewed_at、reviewed_content_version、reviewed_body_sha256`及可信actor身份谱系；非approved时全部清空。交流策略固定记录`strategy_variant`：scheduled_visit记录`target_contact_level/visit_objective/minimum_next_step`，account_planning记录`strategic_question/planning_horizon/minimum_next_step`；客户信内部稿继续使用既有六项信件上下文、审批绑定和可信身份谱系。
+每个独立成果继续记录v2.5字段。`briefing_delivery`是会前速览必需的可独立交付成果，必须使用1页模板、独立文件头和通用审核绑定。institution、leader、internal、visit_strategy和briefing的approved必须绑定`reviewer、reviewed_at、reviewed_content_version、reviewed_body_sha256`及可信actor身份谱系；非approved时全部清空。交流策略固定记录`strategy_variant`：scheduled_visit记录`target_contact_level/visit_objective/minimum_next_step`，account_planning记录`strategic_question/planning_horizon/minimum_next_step`；客户信内部稿继续使用既有六项信件上下文、审批绑定和可信身份谱系。
 
-总报告的`artifact_type`固定为`comprehensive_report`；其module_status描述主流程综合，review_status默认`not_required`。v2.7最终交付必须通过独立就绪审批：`ready_for_use=true`及全部readiness显示、哈希和actor身份谱系与当前总报告一致。`closed`只表示运行结束，不等于ready或approved。
+总报告的`artifact_type`固定为`comprehensive_report`；其module_status描述主流程综合，review_status默认`not_required`。当前最终交付必须通过独立就绪审批：`ready_for_use=true`及全部readiness显示、哈希和actor身份谱系与当前总报告一致。`closed`只表示运行结束，不等于ready或approved。
 
 ## 标识和逻辑字段
 
-context_id 在同一客户与 organization_scope 内稳定复用；run_id 每次执行唯一，在持久化字段中始终写作 latest_run_id。context_id 格式为 dcx-YYYYMMDD-8chars；context_id_short 取最后一段8位，只用于目录名且不另行持久化。显示名称与路径名称分开保存。
+context_id 在同一已签名主体与 organization_scope 内稳定复用；run_id 每次执行唯一，在持久化字段中始终写作 latest_run_id。context_id 格式为 dcx-YYYYMMDD-8chars；context_id_short 取最后一段8位，只用于目录名且不另行持久化。显示名称与路径名称分开保存。
+
+主体绑定来自request receipt v2中的`subject_resolution`。`canonical_entity_key + jurisdiction`定义稳定实体，`organization_scope_sha256`独立约束院区/部门/预算范围；`id_source`只允许`canonical_derived|host_attested_external`。manifest的`subject_binding`持久化当前验签记录；普通resume必须保持`schema、issuer、customer_id、canonical_customer_name、canonical_entity_key、jurisdiction、canonical_subject_sha256、organization_scope_sha256、id_source`不变，但允许`attestation_id、evidence_sha256、issued_at、expires_at`随同一主体的新request刷新。旧context缺绑定时必须先用当前验签intake运行`migrate_workspace.py`；该迁移保留原ID、备份原manifest并只允许同一主体/范围。身份或scope变化须新建context。
 
 runtime_owner 依次取用户明确负责人、项目元数据负责人、当前执行用户；三者都不可用时统一写“待确认”，不得留空或回退到 Skill 维护负责人。
 
@@ -120,12 +122,22 @@ runtime_owner 依次取用户明确负责人、项目元数据负责人、当前
 
     runtime_sidecars
       manifest.json
-        intake_preflight, authorization, runtime_files, revision, task_timezone
+        intake_preflight, subject_binding
+        delivery_summary（仅含visit_strategy的三种业务模式）
+        authorization, runtime_files, revision, task_timezone
       search-plan.json, source-cache.json
       evidence-manifest.json, run-metrics.json
       governance-context.json
 
+候选区另有`candidate-receipt.json`与`candidate-seal-request.json`，二者都是不可信的本地绑定材料，不构成提交授权。最终候选必须由认证宿主签发独立audience的短期Ed25519 attestation，精确绑定input payload SHA、最终manifest SHA、完整`intake_preflight`哈希、context/run、source manifest CAS、formal/candidate规范绝对路径、customer/session、签发/过期时间、`host_authorized_at`与nonce；`commit_run.py`只使用一次打开取得并已对照签名manifest校验的候选bytes进入预览与WAL。正式manifest只持久化完整非秘密签名信封及其SHA，不持久化可被本地补写的`verified_at/wal_authorized_at`作为安全证据。WAL前必须把签名nonce原子消费到宿主隔离账本；外发生命周期与release重验宿主签名、当前formal root、完整gate及同一nonce消费记录，任一缺失、克隆路径或双清码均失败关闭。
+
 `governance-context.json`是认证宿主注入的可信登记，Skill只能在经授权的WAL事务内消费外发请求事件，不得新建actor/grant/event。另四个研究机器文件必须与Markdown使用同一`context_id/run_id/business_mode`，由manifest记录schema和SHA-256。
+
+`intake_preflight`必须包含结构化intake摘要以及宿主request binding的`receipt_id/receipt_sha256/request_bundle_id/request_revision/raw_request_sha256/mention_ledger_sha256/subject_resolution_sha256/safety_authorizations_sha256/safety_directives_sha256`，并持久化当前主体解析及内部草稿安全授权码。原始请求bundle不写入workspace；上述摘要与组合gate必须从init传播到candidate manifest和search plan，commit采用candidate中的当前收据，不得回退继承正式区旧收据。
+
+`delivery_summary`仅用于含`visit_strategy`的briefing、标准拜访包和战略客户包，其对象精确包含`schema、source_artifact_type、recommendation、investment_intensity、primary_action、owner、due_date`。它由候选中经过校验的briefing/策略/综合报告派生，写入候选manifest并被宿主签章及commit绑定；正式manifest和commit结果必须保留完全相同的七个字段。letter模式不得残留该对象，改由独立信件生命周期状态约束。最终对话状态只能据commit返回的正式manifest与验证结果生成，不能以候选文件或正文存在代替提交成功。
+
+安全授权不是外发授权。患者资料或CRM/内部邮件的宿主授权只允许`purpose: internal_review_draft`且`external_allowed: false`；含该授权码的上下文不得执行客户信审批、`emit_external`、`mark-ready`或release。若当前请求同时要求直接外发，安全授权不得抵消对应风险，预检固定失败并保持工作区不变。
 
     institution_profile
       identity, positioning, history, development_timeline
@@ -191,9 +203,14 @@ runtime_owner 依次取用户明确负责人、项目元数据负责人、当前
     partial | completed | blocked → queued → running    仅刷新或纠错
     running → queued                                     中断后安全重排
 
-partial、completed、blocked 都是本轮可交付终态。blocked 必须写明已尝试动作、影响和解除条件。
+partial、completed、blocked 都是本轮可交付终态。`gaps/blockers`只能写`none`，或由下列受控码与当前权威ledger中的`claim_id`组成的英文逗号加空格分隔、去重排序列表；不得写自由句：
 
-成果登记中partial/blocked的`gaps/blockers`不得写“无”；blocked统一采用“已尝试：…；影响：…；解除条件：…”以便机械校验和恢复。
+- 原因码：`evidence_insufficient`、`evidence_conflicted`、`source_unavailable`、`authorization_missing`、`qualification_failed`、`resource_limit`、`connector_unavailable`、`review_pending`、`input_missing`、`artifact_unavailable`；
+- 已尝试码：`attempted_internal_review`、`attempted_public_refresh`、`attempted_connector_retry`、`attempted_input_request`；
+- 影响码：`impact_decision_blocked`、`impact_evidence_unavailable`、`impact_delivery_blocked`；
+- 解除码：`release_verified_evidence`、`release_authorization_restored`、`release_connector_restored`、`release_review_approved`、`release_input_received`。
+
+partial/blocked不得写`none`；blocked必须同时至少包含一个`attempted_*`、`impact_*`和`release_*`码，以便机械校验和恢复。
 
 ### 审核状态 review_status
 
@@ -211,7 +228,7 @@ partial、completed、blocked 都是本轮可交付终态。blocked 必须写明
     not_started → pending → approved | changes_requested
     changes_requested → pending
 
-institution 默认`not_required`；leader、internal、visit_strategy、customer_letter 默认需要审核，执行中为`not_started`，内容完成后为`pending`。leader/internal/visit_strategy只有在通用审核四字段与当前版本、正文哈希一致时才能approved；customer_letter继续按专用审批五字段。任何状态都不授权自动发送。
+institution、leader、internal、visit_strategy、customer_letter默认需要审核，执行中为`not_started`，内容完成后为`pending`。institution/leader/internal/visit_strategy只有在通用审核字段与当前版本、正文哈希及宿主签名actor动作一致时才能approved；所有被选中或被任一下游claim引用的研究载体在ready/release前必须approved。customer_letter继续按专用审批字段。任何状态都不授权自动发送。
 
 ### 连接状态 connector_status
 
@@ -274,7 +291,7 @@ connector_status 不得代替 module_status。例：资料库未配置但本地�
 
 | 模块 | 独立成果 | 默认审核 | 连接状态适用 |
 |---|---|---|---|
-| institution | {{safe_name}}机构研究报告.md | not_required | 否 |
+| institution | {{safe_name}}机构研究报告.md | not_started→pending→approved | 被选中或被下游引用时是 |
 | leader | {{safe_name}}人物研究报告.md | pending | 否 |
 | internal | {{safe_name}}内部信息检索报告.md | pending | 是 |
 | visit_strategy | {{safe_name}}交流策略与议题设计.md | pending | 否 |
@@ -282,7 +299,7 @@ connector_status 不得代替 module_status。例：资料库未配置但本地�
 
 逻辑模块固定为上述5个。为让外发生成拥有独立版本、谱系、run_id和回滚审计，综合报告另持久化第6行“客户信外发版”；它是`customer_letter`的派生成果，不是可由`--modules`选择的模块，仅外发事务可把其登记为`selected_in_run=true/run_action=generated`。运行记录中的`selected_modules`沿用历史字段名，但在该系统事务中可包含审计名称`external_letter`。
 
-`external_letter`在成果登记和全部历史运行摘要中的动作只允许`generated`或`not_called`；`created`、`reused`、`updated`均非法。生成外发版的 run 写`generated`，其他 run 写`not_called`。
+`external_letter`在成果登记和全部历史运行摘要中的动作只允许`generated`、`reused`或`not_called`；`created`、`updated`均非法。生成外发版的 run 写`generated`；后续保留同一已批准外发版参与就绪/交付门禁的 run 写`reused`；未调用写`not_called`。
 
 成果登记表至少包含：
 
@@ -295,14 +312,14 @@ connector_status 不得代替 module_status。例：资料库未配置但本地�
 | review_status | 使用合法枚举 |
 | connector_status | 使用合法枚举 |
 | freshness_status | 使用合法枚举 |
-| 成果链接（artifact_path/link） | 这是成果登记的唯一物理列：Markdown 链接目标是成果的独立相对`artifact_path`，显示文本是`link`；文件不存在时不能伪造链接或拆出第16列 |
+| 成果链接（artifact_path/link） | 这是成果登记的唯一物理列：Markdown 链接目标是成果的独立相对`artifact_path`，显示文本必须精确等于该行固定模块标签；文件不存在时整格为空，不能伪造链接或拆出第16列 |
 | content_version | 每次实际更新递增 |
 | latest_run_id | 最后修改该文件的 run_id |
 | updated_at | 带时区时间；只有该成果实际修改时更新 |
 | summary_sync_status | pending、synced、out_of_sync 或 not_applicable |
-| key_claim_ids | 总报告摘要所依赖的主张ID；无则写“无” |
+| key_claim_ids | 只能写成果正文实际引用且存在于当前权威ledger的全部`claim_id`，去重并按字典序用英文逗号加空格连接；无引用写`none`，未调用可留空 |
 | downstream_invalidation | 只用 none、stale、invalidated |
-| gaps/blockers | 无则写“无” |
+| gaps/blockers | 只用`none`，或上文受控gap/blocker码与当前`claim_id`的去重排序列表；不得写自由句 |
 | reviewer/reviewed_* | leader/internal/visit_strategy approved时绑定当前版本与正文；其他状态清空 |
 
 已有文件在本轮未调用时保留，但 selected_in_run 为 false、module_status 不冒充本轮状态，latest_run_id 保持原值。
@@ -333,7 +350,7 @@ connector_status 不得代替 module_status。例：资料库未配置但本地�
 
 旧上下文的`research_only`按兼容门禁直接关闭；v2.6新请求即使只要客户研究，也按会前速览、标准拜访包或战略客户包的最终成果范围建模，不向用户呈现`research_only`。未选择客户信不构成缺口。
 
-策略或客户信内部稿达到`completed/pending/current`后，可以在明确标注“待人工审核、未发送、ready_for_use=false”的前提下关闭本次内部生产运行；`approved`只用于确认模块审核已通过，仍不代表总成果ready或已发送。completed人物与内部判断同样至少进入pending。partial/blocked研究可作为缺口透明的阶段性底稿进入closed，但不能支撑关键策略或外发事实。
+策略或客户信内部稿达到`completed/pending/current`后，可以在明确标注“待人工审核、未发送、ready_for_use=false”的前提下关闭本次内部生产运行；`approved`只用于确认模块审核已通过，仍不代表总成果ready或已发送。completed机构、人物与内部研究均至少进入pending；被选中或被任何下游claim引用时，未approved不得ready/release。partial/blocked研究可作为缺口透明的阶段性底稿进入closed，但不能支撑关键策略或外发事实。
 
 任何route只有在必需成果已实际持久化、文件审计通过后才能进入closed。最终业务使用还必须取得宿主签名的短期人工动作事件，独立执行`--mark-ready --reviewer <显示名> --actor-id <actor_id> --action-event-id <event_id>`并完成readiness哈希/版本/可信actor谱系绑定。无文件写入能力时必须设paused，不得声称本轮完成。
 
@@ -351,13 +368,13 @@ connector_status 不得代替 module_status。例：资料库未配置但本地�
 
 总报告、模块、briefing和外发版都必须是工作目录内的普通文件。初始化、续建、校验和外发生成均拒绝符号链接、路径逃逸及重复frontmatter。
 
-任何研究run先由`build_candidate.py`基于当前manifest创建新的隔离候选工作区；模块、汇总器和`research_plan.py`只能写该候选区。候选提交必须同时包含本run的`runtime/search-plan.json`、`source-cache.json`、`evidence-manifest.json`和`run-metrics.json`；缺文件、schema/context/run/mode不匹配、清单SHA不匹配或正式区发生任何变化都拒绝提交。
+任何研究run先由`build_candidate.py --intake-input <intake.json>`重验当前宿主请求并基于当前manifest创建新的隔离候选工作区；模块、汇总器和`research_plan.py`只能写该候选区。候选提交必须再次向`commit_run.py`提供同一`--intake-input`，并同时包含本run的`runtime/search-plan.json`、`source-cache.json`、`evidence-manifest.json`和`run-metrics.json`；当前request revision漂移、缺文件、schema/context/run/mode不匹配、清单SHA不匹配或正式区发生任何变化都拒绝提交。
 
-`runtime/manifest.json.evidence_run_id`记录四件套所属研究run。四件套必须run一致，且该run必须存在于综合报告版本历史；后续审批、就绪等治理run可以推进`latest_run_id`而不伪造研究重跑。Markdown主张/来源仍须与当前evidence/source-cache逐项一致。每条source另嵌入宿主签名source-capture receipt，绑定定位、内容摘要、长度、捕获方法与时间及run/customer/project；候选校验使用受保护宿主信任根验签，不持久化敏感原文。
+`runtime/manifest.json.evidence_run_id`记录四件套所属研究run。四件套必须run一致，且该run必须存在于综合报告版本历史；后续审批、就绪等治理run可以推进`latest_run_id`而不伪造研究重跑。Markdown主张/来源的全部实质字段仍须与当前evidence/source-cache逐项一致。每条source另嵌入宿主捕获服务按实际内容、响应元数据和授权谱系签发的v3 source-capture receipt，绑定raw/canonical/final定位、标题/发布者、内容摘要、长度、捕获方法、全部TTL日期锚点、来源分组/上游、来源等级、权限、外发许可及tenant/run/customer/project；candidate/release拒绝v1/v2，使用受保护宿主信任根验签，不持久化敏感原文。`provenance=N`与内部/授权/受限来源必须分别由`internal_retrieval`中的`CLM-N-*`与`SRC-N-*`承载，并触发当前宿主能力收据授权。
 
-init/resume的`scaffold`允许保留上一研究run四件套作为历史快照；只有candidate/release才要求新plan与当前selected_modules、同一份intake收据完全绑定。两处持久化的`intake_preflight.expires_at`必须相等且在校验时仍有效，否则报`intake_preflight_expired`并重新预检、重建候选。
+init/resume的`scaffold`允许保留上一研究run四件套作为历史快照；intake v1/v2、request receipt v1或缺request binding/subject binding的历史成果只能读取诊断。任何resume/build/plan/commit前，先用当前intake v3/receipt v2执行`migrate_workspace.py`的dry-run和正式迁移，或新建上下文；迁移不得改变legacy customer_id、规范主体或scope。candidate/release要求新plan与当前selected_modules、同一份组合intake gate完全绑定。manifest与plan中的gate、intake、receipt、bundle、revision、raw、ledger、主体解析和安全摘要及`expires_at`必须一致，且校验时仍有效；否则报漂移或`intake_preflight_expired`并重新预检、重建候选。
 
-主流程在候选中完成综合报告和`--profile candidate`预检后，以当前manifest revision/hash为CAS前提调用`commit_run.py --strict`统一提交Markdown与四个机器文件。各目标经WAL和原子替换，提交后立即全量复检；任一写入或复检失败时回滚本run全部目标和manifest。发现journal或异常中断时先运行`recover_workspace.py <workspace> --strategy auto`，不得手工复制候选文件到正式区。
+主流程在候选中完成综合报告和`--profile candidate`预检后，以当前manifest revision/hash为CAS前提调用`commit_run.py --strict`统一提交Markdown与四个机器文件。commit前必须先验证candidate receipt绑定的manifest，再由manifest复验全部Markdown工件和严格且仅有的`search-plan/source-cache/evidence-manifest/run-metrics`四件套；封印后任一文件漂移或四件套缺失/多出均拒绝。各目标经WAL和原子替换，提交后立即全量复检；任一写入或复检失败时回滚本run全部目标和manifest。发现journal或异常中断时运行`recover_workspace.py <workspace> --strategy auto`恢复before image。公开roll-forward无论after含伪造签章还是旧合法签章都不采用；有journal时`--strategy roll-forward`先回滚并清理，再以`public_roll_forward_disabled`退出2，无journal时返回`no_transaction`。不得手工复制候选文件到正式区。
 
 ### 验证profile
 
@@ -410,9 +427,9 @@ init/resume的`scaffold`允许保留上一研究run四件套作为历史快照�
 - claim_type：F事实、F2交叉验证事实、A分析、H假设、R建议。
 - provenance：public、U用户提供、N内部记录。U/N 只表示来源，不表示已核实。
 - verification_status：asserted、verified_single、corroborated、conflicted、stale、invalidated、unusable。
-- F 只能对应 verified_single；F2 只能对应 corroborated。F2 要求支持来源中存在至少一对来源：该同一对的 source_group、locator/source_locator、content_sha256、upstream_id 四项都有效且逐项不同；upstream_id 为`unknown:<source_id>`的来源不能成为该对成员；其他补充支持来源不影响这对成立。不存在这样的同一对时不能形成 F2。
-- source_id 与 claim_id 分开；正文引用 claim_id，主张台账再连接支持和反证 source_id。每条来源必须给出稳定locator、非空source_group、实际捕获内容的content_sha256、capture metadata、upstream_id、权限、适用范围和`external_use: true|false`；restricted不得标true，internal-authorized也不自动代表可外发。
-- 每条claim在evidence manifest中必须记录信息类别、证据锚点、日期基础、核验时间、TTL、到期时间和支持来源；验证器重算TTL并校验source cache/Markdown/evidence manifest三方内容SHA绑定。
+- F 只能对应 verified_single；F2 只能对应 corroborated。F2只从已验签machine source计算，要求支持来源中存在同一对在source_group、canonical_locator、content_sha256、upstream_id四项都有效且逐项不同；Markdown显示值不得建立独立性，upstream_id为`unknown:<source_id>`的来源不能成为该对成员。
+- source_id 与 claim_id 分开；正文引用 claim_id，主张台账再连接规范source_id列表。每条来源的14列和每条主张的10列必须逐列绑定验签machine record；raw locator只允许HTTP(S) URL或受控stable-id且禁止Markdown/HTML/反引号/Cf。来源由宿主捕获服务基于实际内容、响应元数据与授权谱系签发v3 receipt；candidate seal不证明claim的语义蕴含。
+- 每条claim在evidence manifest中必须逐列记录台账字段、信息类别、证据锚点、TTL和逐来源v3 receipt完整信封摘要；验证器重算TTL并校验source cache/Markdown/evidence manifest/receipt绑定。所有被选中或被任一下游成果引用的研究载体，mark-ready/release前必须由独立`evidence_reviewer`按当前正文SHA批准。
 - 销售判断使用 information_subtype: sales_judgement；历史口头信息使用 information_subtype: oral_history，不能重定义 A 或 H。
 - 权限：public、internal-authorized、restricted；来源等级：S、A、B、C、internal。
 - A、H、R 回指主张ID，并写推理、反证或边界、置信度和验证方式。

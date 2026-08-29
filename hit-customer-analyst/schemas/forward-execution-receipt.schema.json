@@ -1,0 +1,60 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://winning-health.example/discovery-call/forward-execution-receipt.schema.json",
+  "title": "externally signed discovery-call cold-start execution receipt",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schema", "evaluation_id", "slot_id", "run_id", "context_id", "host_session_id",
+    "target_skill_id", "target_skill_version", "target_skill_tree_sha256", "runner_id",
+    "runner_image_sha256", "runtime_build_sha256", "observer_build_sha256", "tool_registry_sha256",
+    "started_at", "completed_at", "terminal_state",
+    "cold_start", "fresh_context", "execution_kind", "expected_answer_disclosed", "tests_visible",
+    "test_modules_loaded", "hardcoded_fixture_used", "skill_process_has_signing_key", "artifacts",
+    "attestation_issued_at", "attestation_expires_at", "host_attestation"
+  ],
+  "properties": {
+    "schema": {"const": "discovery-call-forward-execution-receipt/v1"},
+    "evaluation_id": {"type": "string", "minLength": 6},
+    "slot_id": {"type": "string", "minLength": 6},
+    "run_id": {"type": "string", "minLength": 6},
+    "context_id": {"type": "string", "minLength": 6},
+    "host_session_id": {"type": "string", "minLength": 6},
+    "target_skill_id": {"const": "discovery-call"},
+    "target_skill_version": {"type": "string", "minLength": 1},
+    "target_skill_tree_sha256": {"$ref": "#/$defs/sha256"},
+    "runner_id": {"type": "string", "minLength": 6},
+    "runner_image_sha256": {"$ref": "#/$defs/sha256"},
+    "runtime_build_sha256": {"$ref": "#/$defs/sha256"},
+    "observer_build_sha256": {"$ref": "#/$defs/sha256"},
+    "tool_registry_sha256": {"$ref": "#/$defs/sha256"},
+    "started_at": {"type": "string", "format": "date-time"},
+    "completed_at": {"type": "string", "format": "date-time"},
+    "terminal_state": {"enum": ["completed", "blocked", "safe_refusal", "failed"]},
+    "cold_start": {"const": true},
+    "fresh_context": {"const": true},
+    "execution_kind": {"const": "independent_blind_run"},
+    "expected_answer_disclosed": {"const": false},
+    "tests_visible": {"const": false},
+    "test_modules_loaded": {"type": "array", "maxItems": 0},
+    "hardcoded_fixture_used": {"const": false},
+    "skill_process_has_signing_key": {"const": false},
+    "artifacts": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["launch_input", "raw_input", "output", "tool_trace", "validation_result", "side_effect_audit"],
+      "properties": {
+        "launch_input": {"$ref": "#/$defs/sha256"},
+        "raw_input": {"$ref": "#/$defs/sha256"},
+        "output": {"$ref": "#/$defs/sha256"},
+        "tool_trace": {"$ref": "#/$defs/sha256"},
+        "validation_result": {"$ref": "#/$defs/sha256"},
+        "side_effect_audit": {"$ref": "#/$defs/sha256"}
+      }
+    },
+    "attestation_issued_at": {"type": "string", "format": "date-time"},
+    "attestation_expires_at": {"type": "string", "format": "date-time"},
+    "host_attestation": {"type": "object"}
+  },
+  "$defs": {"sha256": {"type": "string", "pattern": "^[0-9a-f]{64}$"}}
+}

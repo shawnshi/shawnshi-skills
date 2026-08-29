@@ -3,28 +3,55 @@
   "skill_name": "personal-diary-writer",
   "authority_locator": {
     "base": "user_home",
-    "segments": [".gemini", "config", "skills", "personal-diary-writer", "SKILL.md"]
+    "segments": [
+      ".gemini",
+      "config",
+      "skills",
+      "personal-diary-writer",
+      "SKILL.md"
+    ]
   },
-  "authority_version": "11.6.0",
-  "authority_sha256": "8ce56642818c6c1751679fade01362e753bcb179465806bfe54d6d0bb189e2a0",
+  "authority_version": "11.6.1",
+  "authority_sha256": "77dd7cd5680b30284beed85949a706f5d6645146753488b7b730351217568dc8",
   "candidate_locators": [
     {
       "base": "user_home",
-      "segments": [".gemini", "config", "skills", "personal-diary-writer", "SKILL.md"]
+      "segments": [
+        ".gemini",
+        "config",
+        "skills",
+        "personal-diary-writer",
+        "SKILL.md"
+      ]
     },
     {
       "base": "user_home",
-      "segments": [".codex", "skills", "personal-diary-writer", "SKILL.md"]
+      "segments": [
+        ".codex",
+        "skills",
+        "personal-diary-writer",
+        "SKILL.md"
+      ]
     },
     {
       "base": "user_home",
-      "segments": [".agents", "skills", "personal-diary-writer", "SKILL.md"]
+      "segments": [
+        ".agents",
+        "skills",
+        "personal-diary-writer",
+        "SKILL.md"
+      ]
     }
   ],
   "allowed_proxy_locators": [
     {
       "base": "user_home",
-      "segments": [".codex", "skills", "personal-diary-writer", "SKILL.md"]
+      "segments": [
+        ".codex",
+        "skills",
+        "personal-diary-writer",
+        "SKILL.md"
+      ]
     }
   ]
 }

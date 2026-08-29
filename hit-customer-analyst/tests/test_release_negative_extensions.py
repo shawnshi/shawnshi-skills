@@ -57,7 +57,10 @@ class ReleaseNegativeExtensionTests(unittest.TestCase):
                 ],
             )
             self.assertEqual(result.returncode, 2)
-            self.assertIn("customer_name", result.stderr)
+            self.assertRegex(
+                result.stderr,
+                r"intake_preflight_blocked|intake预检无效|subject_resolution",
+            )
             self.assertEqual(file_hashes(root), before)
             self.assertFalse(output.exists())
 

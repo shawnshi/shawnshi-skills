@@ -45,8 +45,7 @@ test('static server serves local files and rejects missing paths', async () => {
     assert.equal(isNetworkRequestAllowed('blob:https://example.com/id', server.baseUrl), true);
     assert.equal(isNetworkRequestAllowed('about:blank', server.baseUrl), true);
     assert.equal(isNetworkRequestAllowed('https://example.com/runtime.js', server.baseUrl, true), true);
-    const localFileUrl = ['file:', '///etc/passwd'].join('');
-    assert.equal(isNetworkRequestAllowed(localFileUrl, server.baseUrl, true), false);
+    assert.equal(isNetworkRequestAllowed('file:///etc/passwd', server.baseUrl, true), false);
   } finally {
     await server?.close();
     await rm(directory, { recursive: true, force: true });

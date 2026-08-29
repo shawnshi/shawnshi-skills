@@ -1,4 +1,4 @@
-# 四模式交互表单 v2.7.0
+# 四模式交互表单 v2.10.0
 
 ## 通用规则
 
@@ -12,20 +12,26 @@
 
 ## 工具调用前 intake 预检
 
-在创建客户工作区、生成检索计划或发起公开/内部检索前，先把用户原话中同一高影响字段的每次出现保留为独立候选，并运行：
+在创建客户工作区、生成认证检索计划或发起内部检索前，认证宿主先从当前请求事件序列和附件直接捕获完整原始bundle，按`discovery-call-high-impact-occurrences/v2`提取每一次机构、人物、角色、会议状态/时间、项目范围、拜访目标、最小动作及信件关键字段提及，并签发`discovery-call-request-binding-receipt/v2`。v2 coverage对每个提及额外签名绑定精确`candidate_field`，并要求intake v3候选值通过`mention_ids`逐项反向绑定；收据还必须签名绑定`subject_resolution`、`safety_authorizations`和逐项`safety_directives`。模型不得提供待签ledger、截短原话、删除历史冲突、自行决定安全状态或自行签名。宿主不具备独立捕获/签发能力、抽取器无法完整解析或信任根不可用时，认证正式流程停止，不能降级为自报完整。仅当前三种模式同时满足`public_only + draft + 无高影响冲突 + 无敏感材料`时，可按[公开资料草稿执行档](public-draft-runtime.md)直接做未登录公开Web只读检索；该路径不创建任何正式或候选业务文件。
+
+把全部active mention保留为独立候选，并运行：
 
 ```bash
 python3 scripts/preflight_intake.py <intake.json> > <intake-gate.json>
 ```
 
-输入契约见 `schemas/intake-preflight.schema.json`。主体、机构范围、拜访对象姓名/职务/层级、会议状态、会议时间、项目范围、收件对象、拜访目标、最小动作、签署人和发送渠道不得在抽取时静默覆盖。等价候选可以自动合并；不同候选只有绑定本轮用户确认后才能选择，模型不得以来源顺序、检索结果偏好或“更合理”为由自行裁决。
+输入契约见`schemas/intake-preflight.schema.json`，宿主收据契约见`schemas/request-binding-receipt.schema.json`。新执行必须使用`discovery-call-intake/v3`与request receipt v2；intake v1/v2都只可读取诊断。intake的`request_binding`只引用同目录宿主原始bundle和收据；宿主另以受保护环境注入当前请求上下文。预检会验证Ed25519签名、当前request revision与最后用户事件、原文/附件摘要、字符范围、ledger摘要、可确定提及完整性以及mention→candidate、asserted candidate→mention双向覆盖。主体、机构范围、拜访对象姓名/职务/层级、会议状态、会议时间、项目范围、收件对象、拜访目标、最小动作、签署人和发送渠道不得在抽取时静默覆盖。文本规范值默认精确相等；别名只能由宿主签名的等价关系扩展，当前版本没有等价证明时失败关闭。不同候选只有绑定真实用户确认的后续宿主请求版本后才能选择，模型不得靠删除候选、来源顺序、检索结果偏好或“更合理”自行裁决。
+
+`subject_resolution`必须由宿主签名，并同时给出规范显示名、稳定`canonical_entity_key`、`jurisdiction`、主体摘要、独立的`organization_scope_sha256`和`id_source`。`canonical_derived`只能按签名主体摘要派生；`host_attested_external`必须附宿主证明摘要。院区、部门或项目范围不得改变主体ID。普通resume若发现`customer_id`、规范显示名、entity key、jurisdiction、主体摘要、scope摘要、issuer、schema或id_source与既有上下文不同，必须失败关闭；证明信封和时效可为同一主体刷新。旧workspace缺少绑定时，用`migrate_workspace.py <workspace> --intake-input <intake-v3.json> --dry-run`预演，再去掉`--dry-run`执行；迁移保留原ID、备份原manifest并只允许同一主体/范围。身份或scope变化仍须新建context。
 
 - `status=blocked`或退出码3：只展示返回的阻塞问题并停止；不得初始化、生成查询、联网或访问内部资料。
-- `status=ready`且未超过`expires_at`：初始化和研究计划都必须传同一原始输入`--intake-input <intake.json>`，由各命令在任何写入/检索前重算状态、`input_sha256`和时效；不接受脱离原始输入的自报ready或手改回执。
-- 用户补充、更正或新增任何候选后：原回执立即失效，使用完整新输入重跑预检。
+- `status=ready`且未超过`expires_at`：初始化和研究计划都必须传同一原始输入`--intake-input <intake.json>`，由各命令在任何写入/检索前重新读取宿主bundle/收据并重算状态、`input_sha256`、request receipt SHA、raw request SHA、mention ledger SHA和时效；gate ID由这些摘要共同派生。不接受脱离原始输入的自报ready、手改回执或模型生成的“原话”副本。
+- 用户补充、更正、新增任何候选或附件后：原request revision和回执立即失效，宿主从完整当前事件序列重新捕获、抽取、签发，再用完整新输入重跑预检。
 - 预检回执仅表示可以开始初始化或检索，不代表研究计划完整、证据已核验、成果已审核或`ready_for_use=true`。被阻断的预检必须保持零业务副作用：输出根目录、候选目录、查询计划和四个运行机器文件均不得新建或改动。
 
-`meeting_status`只允许`confirmed|tentative|none|unknown`，并使用候选`status=asserted`；它表达“会议是否成立”，不表达具体时间。会议时间另用带时区的`start/end`结构；时间待定用候选`status=explicit_unknown`和`value=null`，不得补成默认日期。`confirmed`即使具体时间待定也表示已有需执行准备的会议；`tentative`保守按账户规划继续，待认证宿主核验确认后才转会议准备；`none/unknown`且无确切会议时间时按账户规划。`none/unknown`与确切时间并存属于跨字段冲突，必须澄清；同一字段多时间冲突仍阻断。结构化输入只保留完成消歧所需字段和来源定位，不复制患者信息、私人信息或未获授权的客户内部内容。
+若一封信的宿主安全指令台账包含虚构批准、患者信息、未授权内部邮件/CRM、未经核验的排期/效果/价格、直接外发或非真人责任人，预检不进入普通补问流程：返回`questions=[]`，并固定给出五段——拒绝项、逐项原因、可做部分、所需补充材料、实名审批路径。该分支不得搜索、初始化或生成任何业务文件。患者/CRM授权只可声明`purpose=internal_review_draft`且`external_allowed=false`；即使授权有效，也不得生成外发版、批准、mark-ready或release。
+
+`meeting_status`只允许`confirmed|tentative|none|unknown`，并使用候选`status=asserted`；它表达“会议是否成立”，不表达具体时间。会议时间另用带时区的`start/end`结构；IANA `timezone`必须与start/end的UTC offset一致。时间待定用候选`status=explicit_unknown`和`value=null`，不得补成默认日期。`confirmed`即使具体时间待定也表示已有需执行准备的会议；`tentative`保守按账户规划继续，待认证宿主核验确认后才转会议准备；`none/unknown`且无确切会议时间时按账户规划。`none/unknown`与确切时间并存属于跨字段冲突，必须澄清；同一字段多时间冲突仍阻断。原始bundle不复制进workspace，收据只保留完成消歧所需摘要、范围和规范值；发现患者信息、私人信息或未获授权内部内容时由宿主停止捕获并请求脱敏材料。
 
 ### 最小输入
 
@@ -111,7 +117,7 @@ python3 scripts/preflight_intake.py <intake.json> > <intake-gate.json>
 
 先判断是否属于[高风险信件](business-modes.md#一封信)。普通感谢、通知、材料转发或无关键事实的通用文案转普通写作，不加载本技能。
 
-最多2轮，优先补齐：
+未命中上述高风险失败分支时，最多2轮，优先补齐：
 
 1. 场景；收件对象（姓名或明确称谓）、角色/身份和确认状态；
 2. 目的、希望对方采取的动作；

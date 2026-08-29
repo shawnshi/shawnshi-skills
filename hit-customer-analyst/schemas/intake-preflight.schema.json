@@ -6,13 +6,17 @@
   "additionalProperties": false,
   "required": [
     "schema",
+    "request_id",
     "business_mode",
     "candidate_sets",
-    "confirmations"
+    "confirmations",
+    "request_binding",
+    "subject_resolution",
+    "safety_authorizations"
   ],
   "properties": {
     "schema": {
-      "const": "discovery-call-intake/v1"
+      "const": "discovery-call-intake/v3"
     },
     "request_id": {
       "type": "string",
@@ -40,9 +44,100 @@
       "items": {
         "$ref": "#/$defs/confirmation"
       }
+    },
+    "request_binding": {
+      "$ref": "#/$defs/request_binding"
+    },
+    "subject_resolution": {
+      "$ref": "#/$defs/subject_resolution"
+    },
+    "safety_authorizations": {
+      "type": "array",
+      "maxItems": 2,
+      "items": {"$ref": "#/$defs/safety_authorization"}
     }
   },
   "$defs": {
+    "sha256": {"type": "string", "pattern": "^[0-9a-f]{64}$"},
+    "id": {"type": "string", "pattern": "^[A-Za-z0-9][A-Za-z0-9._:-]{2,127}$"},
+    "subject_resolution": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["schema", "attestation_id", "issuer", "customer_id", "canonical_customer_name", "canonical_entity_key", "jurisdiction", "canonical_subject_sha256", "organization_scope_sha256", "id_source", "evidence_sha256", "issued_at", "expires_at"],
+      "properties": {
+        "schema": {"const": "discovery-call-subject-resolution/v1"},
+        "attestation_id": {"$ref": "#/$defs/id"},
+        "issuer": {"$ref": "#/$defs/id"},
+        "customer_id": {"$ref": "#/$defs/id"},
+        "canonical_customer_name": {"type": "string", "minLength": 1, "maxLength": 500},
+        "canonical_entity_key": {"$ref": "#/$defs/id"},
+        "jurisdiction": {"$ref": "#/$defs/id"},
+        "canonical_subject_sha256": {"$ref": "#/$defs/sha256"},
+        "organization_scope_sha256": {"$ref": "#/$defs/sha256"},
+        "id_source": {"enum": ["host_attested_external", "canonical_derived"]},
+        "evidence_sha256": {"$ref": "#/$defs/sha256"},
+        "issued_at": {"type": "string", "format": "date-time"},
+        "expires_at": {"type": "string", "format": "date-time"}
+      }
+    },
+    "safety_authorization": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["schema", "authorization_id", "issuer", "risk_code", "subject_sha256", "request_bundle_id", "request_revision", "material_scope_sha256", "purpose", "external_allowed", "evidence_sha256", "issued_at", "expires_at"],
+      "properties": {
+        "schema": {"const": "discovery-call-safety-authorization/v1"},
+        "authorization_id": {"$ref": "#/$defs/id"},
+        "issuer": {"$ref": "#/$defs/id"},
+        "risk_code": {"enum": ["unauthorized_patient_information", "unauthorized_internal_source"]},
+        "subject_sha256": {"$ref": "#/$defs/sha256"},
+        "request_bundle_id": {"$ref": "#/$defs/id"},
+        "request_revision": {"type": "integer", "minimum": 1},
+        "material_scope_sha256": {"$ref": "#/$defs/sha256"},
+        "purpose": {"const": "internal_review_draft"},
+        "external_allowed": {"const": false},
+        "evidence_sha256": {"$ref": "#/$defs/sha256"},
+        "issued_at": {"type": "string", "format": "date-time"},
+        "expires_at": {"type": "string", "format": "date-time"}
+      }
+    },
+    "request_binding": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "receipt_id",
+        "request_bundle_id",
+        "request_revision",
+        "raw_request_sha256",
+        "raw_request_file",
+        "receipt_file"
+      ],
+      "properties": {
+        "receipt_id": {
+          "type": "string",
+          "pattern": "^[A-Za-z0-9][A-Za-z0-9._:-]{2,127}$"
+        },
+        "request_bundle_id": {
+          "type": "string",
+          "pattern": "^[A-Za-z0-9][A-Za-z0-9._:-]{2,127}$"
+        },
+        "request_revision": {
+          "type": "integer",
+          "minimum": 1
+        },
+        "raw_request_sha256": {
+          "type": "string",
+          "pattern": "^[0-9a-f]{64}$"
+        },
+        "raw_request_file": {
+          "type": "string",
+          "pattern": "^[^/\\\\]{1,255}$"
+        },
+        "receipt_file": {
+          "type": "string",
+          "pattern": "^[^/\\\\]{1,255}$"
+        }
+      }
+    },
     "field": {
       "enum": [
         "customer_name",
@@ -97,7 +192,8 @@
         "candidate_id",
         "value",
         "status",
-        "source_ref"
+        "source_ref",
+        "mention_ids"
       ],
       "properties": {
         "candidate_id": {
@@ -129,6 +225,15 @@
           "type": "string",
           "minLength": 1,
           "maxLength": 500
+        },
+        "mention_ids": {
+          "type": "array",
+          "maxItems": 200,
+          "uniqueItems": true,
+          "items": {
+            "type": "string",
+            "pattern": "^[A-Za-z0-9][A-Za-z0-9._:-]{2,127}$"
+          }
         }
       },
       "allOf": [

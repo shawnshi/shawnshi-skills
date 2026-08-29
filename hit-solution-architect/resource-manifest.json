@@ -1,7 +1,7 @@
 {
   "schema_version": 3,
   "skill": "hit-solution-architect",
-  "generated_at": "2026-08-27T20:05:46+08:00",
+  "generated_at": "2026-08-29T20:18:36+08:00",
   "hash_algorithm": "SHA-256",
   "text_hash_normalization": "LF",
   "skill_md": "SKILL.md",
@@ -43,7 +43,7 @@
   "resource_file_hashes": [
     {
       "path": "agents/openai.yaml",
-      "sha256": "ad67bdee73b38f1d4bc49ce47e24274f3d1d886cd3e477e741ba988807999c8b"
+      "sha256": "2444f42a85f59a6f1781d296db5863d6206ab4b9f340c1e728a601f2f15fccd8"
     },
     {
       "path": "assets/icon.svg",

@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Validate discovery-call v2.6 outputs and perform governed review operations."""
+"""Validate discovery-call v2.9 outputs and perform governed review operations."""
 
 from __future__ import annotations
 
@@ -15,10 +15,20 @@ import uuid
 from dataclasses import asdict, dataclass
 from datetime import date, datetime, timedelta, timezone
 from pathlib import Path
-from typing import Mapping
-from urllib.parse import unquote, urlsplit, urlunsplit
+from typing import Mapping, Sequence
+from urllib.parse import parse_qsl, unquote, urlencode, urlsplit, urlunsplit
+
+import preflight_intake as intake_preflight
 
 from capability_receipt import CapabilityReceiptError, verify_source_capture_receipt
+from candidate_attestation import (
+    ATTESTATION_AUDIENCE,
+    ATTESTATION_SCHEMA,
+    AUDIT_FIELDS as CANDIDATE_ATTESTATION_AUDIT_FIELDS,
+    AUDIT_SCHEMA as CANDIDATE_ATTESTATION_AUDIT_SCHEMA,
+    CandidateAttestationError,
+    verify_persisted_candidate_attestation,
+)
 
 from governance import (
     GOVERNANCE_CONTEXT_REL,
@@ -56,17 +66,26 @@ BUSINESS_CONFIG_PATH = Path(__file__).resolve().parent.parent / "config" / "busi
 # protected files themselves.  Any intentional contract change must update the
 # relevant constant in the same reviewed change and rerun the trust tests.
 TRUSTED_SCHEMA_SHA256 = {
-    "business-modes.schema.json": "d171431e7fe2fabedf8cef9574b32fe39b36bb7f125e9e16091ac5e358792046",
+    "business-modes.schema.json": "1d9be7bfbbe543cb132c61b87054c3a94164fd831ed4879347ff4b904718f659",
+    "candidate-attestation.schema.json": "90274641c12f5e00ab3e05c7a5f0d87b2d0feed4bad3180b637aab6dc6908c74",
+    "candidate-seal-request.schema.json": "88ccf3a84a17c6ec62df756e7bb5a4ec7601f5d21dcede17e8209f82acf49788",
     "capability-receipt.schema.json": "a63cba095eeb74e9e3fb3560be1037d702dab5646ef2b80cd0aa21954ba66244",
-    "evidence-manifest.schema.json": "746d749b87902fb9853130e5723ab28b9ffe8cba9ebeaa4ae0d5f0d89b75a623",
+    "evidence-manifest.schema.json": "c9ddd02398b9a1a7f918a02baf1d061e8948a8a48769448bce1f649746dc3ea9",
+    "forward-evaluation-manifest.schema.json": "6004f1073efc307c56a6d456081f4ddff86e9a6cc214303547f13f0b3a02f239",
+    "forward-execution-receipt.schema.json": "e22aed5779e8fb765ee054e97d47bbe53e897ef13d8a226cc6e8feaa7708004c",
+    "forward-plan.schema.json": "ac84be414bd166fddaf7b0d001f3f6502e5eefc39fb95ea07b52f882c2d5c8eb",
+    "forward-side-effect-audit.schema.json": "72d0efe09babb47bf04c042726dedc3a9d19b7d310d787acab91821a4982a8ed",
+    "forward-tool-trace.schema.json": "77fd66863d6ad665fa915299afa4f445c857f0418f8fdb422862fe0c64bea7da",
+    "forward-validation-result.schema.json": "a327bea4f27712cc7ee49cfd612c6c208836a13af80a3c15a09d5a8619605e6d",
     "governance-context.schema.json": "0692cdb0600c79863c91f7abe2df489e0b44fdbf6e73ec6ec8e7af084e70578a",
-    "intake-preflight.schema.json": "f901210ad622b025ba0df556b80c33aacc8698b131e0a4cf7eca9684a580eab1",
+    "intake-preflight.schema.json": "c3d6e3c28ae500fbfe5ecaf774ecae0255e7b8d9fe6b2922fc5421023bba49f3",
+    "request-binding-receipt.schema.json": "e2c92e117d29b0552cc36e0a446f9b3683a54d4738ced6413f60218afb7af28f",
     "run-metrics.schema.json": "b90063589e363695a32d765d6450c3bafef2ada7f5a92c4c7f90e5348c8376e8",
-    "search-plan.schema.json": "76cc23044753fd45a2e14c0dc6e1c18a4c1f9e6dc81057089634d505fecdcc07",
-    "source-cache.schema.json": "660ba3254f4a87c13f1fdb740965cdc9b2e51fa3ef5a2bfd4081d68d61345d6e",
-    "source-capture-receipt.schema.json": "b92a578d8f92880f2e07820cbc187ded759de7bf7b31d05ab7fbfc80af2b9e4c",
+    "search-plan.schema.json": "f1a50cb7d6d0914ac584ab197ac60c456ebb21bf146d9992207969a2ed4ffc95",
+    "source-cache.schema.json": "04014056e9f2ce6fff396f75aa3cc2be67d4c2beb9f3d68772691fbfc75fc782",
+    "source-capture-receipt.schema.json": "87012899a7942bc75acb25ab03d249dc80500fb4a9056a18d5cd87a90e2c41de",
 }
-TRUSTED_BUSINESS_CONFIG_SHA256 = "27cc902b655cfd0c6770eb35d480fc62df89aadeb34134018608874ef8856861"
+TRUSTED_BUSINESS_CONFIG_SHA256 = "1a2eb2e21a43afdc17c0b89c7a569b8e61591c5842ee90114ac240f0c6f8daf4"
 REQUIRED_FIELDS = {
     "schema",
     "artifact_type",
@@ -186,7 +205,7 @@ UNSAFE_DOWNSTREAM_VERIFICATIONS = {"conflicted", "stale", "invalidated", "unusab
 CONTEXT_RE = re.compile(r"^dcx-\d{8}-[A-Za-z0-9]{8}$")
 RUN_RE = re.compile(r"^dcr-\d{8}T\d{6}-[A-Za-z0-9]{4}$")
 CONTENT_VERSION_RE = re.compile(r"^[1-9][0-9]*$")
-IDENTIFIER_RE = re.compile(r"^[A-Za-z0-9._-]{3,128}$")
+IDENTIFIER_RE = re.compile(r"^[A-Za-z0-9][A-Za-z0-9._:-]{2,127}$")
 INVALID_SAFE_CHARS = re.compile(r'[<>:"/\\|?*#%()\[\]\x00-\x1f\x7f]+')
 WINDOWS_RESERVED = re.compile(r"^(?:CON|PRN|AUX|NUL|COM[1-9]|LPT[1-9])(?:\..*)?$", re.I)
 PLACEHOLDER_RE = re.compile(r"\{\{[^{}\n]+\}\}")
@@ -218,6 +237,7 @@ FORBIDDEN_EXTERNAL_TERMS = {
     "来源ID",
 }
 HTML_COMMENT_RE = re.compile(r"<!--[\s\S]*?-->")
+RAW_HTML_TAG_RE = re.compile(r"</?[A-Za-z][^>\n]*>")
 APPROVAL_FIELDS = {
     "approver",
     "approved_at",
@@ -298,14 +318,59 @@ GENERIC_REVIEW_FIELDS = {
     "reviewer_identity_provider",
     "review_action_event_id",
 }
-GENERIC_REVIEW_TYPES = {"leader_research", "internal_retrieval", "visit_strategy", "briefing_delivery"}
+GENERIC_REVIEW_TYPES = {
+    "institution_research", "leader_research", "internal_retrieval",
+    "visit_strategy", "briefing_delivery",
+}
 GENERIC_REVIEW_TARGETS = {
+    "institution": "institution_research",
     "leader": "leader_research",
     "internal": "internal_retrieval",
     "strategy": "visit_strategy",
     "briefing": "briefing_delivery",
 }
 BUSINESS_MODES = {"briefing", "standard_visit", "strategic_account", "letter"}
+RECOMMENDATIONS = {"win", "conditional_win", "monitor", "no_go"}
+EXPECTED_DELIVERY_CONTRACTS = {
+    "briefing": {
+        "formal_artifact": "briefing_delivery",
+        "audit_artifact": "comprehensive_report",
+    },
+    "standard_visit": {
+        "formal_artifact": "visit_strategy",
+        "audit_artifact": "comprehensive_report",
+    },
+    "strategic_account": {
+        "formal_artifact": "visit_strategy",
+        "audit_artifact": "comprehensive_report",
+    },
+    "letter": {
+        "formal_artifact": "customer_letter_external",
+        "audit_artifact": "comprehensive_report",
+    },
+}
+STRATEGY_AUDIT_HEADINGS = {
+    "任务上下文与成果状态",
+    "本次RACI与审核SLA",
+    "异常审核队列",
+    "主张与来源导航",
+    "刷新结果记录",
+    "版本与同步记录",
+}
+NO_GO_TOTAL_REQUIRED_SECTIONS = {
+    "决策摘要",
+    "任务上下文与成果状态",
+    "综合判断链",
+    "G-C-P 推演",
+    "机会资格与投入建议",
+    "执行与下一步",
+    "刷新结果记录",
+    "版本与同步记录",
+}
+NO_GO_TOTAL_OPTIONAL_SECTIONS = {
+    "高价值发现",
+    "关键缺口与验证计划",
+}
 AUTHORIZATION_FIELDS = {
     "tenant_id",
     "project_id",
@@ -323,6 +388,26 @@ READINESS_FIELDS = {
     "readiness_reviewer_authority_id",
     "readiness_reviewer_identity_provider",
     "readiness_action_event_id",
+}
+COMMON_FRONTMATTER_FIELDS = (
+    REQUIRED_FIELDS
+    | {"business_mode", "ready_for_use"}
+    | AUTHORIZATION_FIELDS
+)
+ARTIFACT_FRONTMATTER_FIELDS = {
+    "comprehensive_report": COMMON_FRONTMATTER_FIELDS | TOTAL_REQUIRED_FIELDS | READINESS_FIELDS,
+    "institution_research": COMMON_FRONTMATTER_FIELDS | GENERIC_REVIEW_FIELDS,
+    "leader_research": COMMON_FRONTMATTER_FIELDS | GENERIC_REVIEW_FIELDS,
+    "internal_retrieval": COMMON_FRONTMATTER_FIELDS | GENERIC_REVIEW_FIELDS,
+    "visit_strategy": COMMON_FRONTMATTER_FIELDS | GENERIC_REVIEW_FIELDS | STRATEGY_CONTEXT_FIELDS,
+    "briefing_delivery": COMMON_FRONTMATTER_FIELDS | GENERIC_REVIEW_FIELDS | {"delivery_state", "page_proxy"},
+    "customer_letter_internal": COMMON_FRONTMATTER_FIELDS | INTERNAL_LETTER_FIELDS,
+    "customer_letter_external": (
+        COMMON_FRONTMATTER_FIELDS
+        | INTERNAL_LETTER_FIELDS
+        | EXTERNAL_LINEAGE_FIELDS
+        | {"source_internal_content_version"}
+    ),
 }
 
 
@@ -476,7 +561,7 @@ def validate_trusted_contract_bundle(issues: list[Issue]) -> bool:
 
 
 def markdown_without_fenced_code(text: str) -> str:
-    """Mask fenced code so examples cannot be parsed as control metadata."""
+    """Mask rendered code blocks so examples cannot satisfy delivery contracts."""
     output: list[str] = []
     fence: tuple[str, int] | None = None
     for line in text.replace("\r\n", "\n").replace("\r", "\n").split("\n"):
@@ -489,8 +574,30 @@ def markdown_without_fenced_code(text: str) -> str:
                 fence = None
             output.append("")
             continue
-        output.append("" if fence else line)
+        if fence or re.match(r"^(?: {4,}|\t)\S", line):
+            output.append("")
+        else:
+            output.append(line)
     return "\n".join(output)
+
+
+def contains_markdown_code_block(text: str) -> bool:
+    """Return true for fenced or four-space/tab-indented Markdown code blocks."""
+
+    return bool(
+        re.search(r"(?m)^[ \t]{0,3}(?:`{3,}|~{3,})", text)
+        or re.search(r"(?m)^(?: {4,}|\t)\S", text)
+    )
+
+
+def contains_markdown_link_or_image(text: str) -> bool:
+    """Detect inline/reference links and images whose destinations are not visible text."""
+
+    return bool(
+        re.search(r"!?\[[^\]\n]*\]\([^\)\n]*\)", text)
+        or re.search(r"!?\[[^\]\n]*\]\[[^\]\n]*\]", text)
+        or re.search(r"(?m)^[ \t]{0,3}\[[^\]\n]+\]:\s*\S", text)
+    )
 
 
 def has_extra_frontmatter_block(body: str) -> bool:
@@ -833,6 +940,90 @@ def strategy_variant_contract(
     return contract if isinstance(contract, Mapping) else None
 
 
+def delivery_contract_for_mode(
+    business_mode: str,
+    *,
+    profiles: Mapping[str, object] | None = None,
+) -> dict[str, str]:
+    """Return the exact user-delivery/audit split for one public mode.
+
+    The mapping is deliberately total over the four public modes.  A missing,
+    extra, or remapped field is a contract failure rather than a fallback to the
+    comprehensive report as an informal delivery.
+    """
+
+    expected = EXPECTED_DELIVERY_CONTRACTS.get(business_mode)
+    if expected is None:
+        raise ValueError(f"unsupported business_mode={business_mode or 'empty'}")
+    configured = profiles if profiles is not None else load_business_profiles()
+    profile = configured.get(business_mode) if isinstance(configured, Mapping) else None
+    contract = profile.get("delivery_contract") if isinstance(profile, Mapping) else None
+    if not isinstance(contract, Mapping) or set(contract) != {"formal_artifact", "audit_artifact"}:
+        raise ValueError(f"profiles.{business_mode}.delivery_contract missing or malformed")
+    actual = {
+        "formal_artifact": str(contract.get("formal_artifact", "")),
+        "audit_artifact": str(contract.get("audit_artifact", "")),
+    }
+    if actual != expected:
+        raise ValueError(
+            f"profiles.{business_mode}.delivery_contract must equal {expected}, got {actual}"
+        )
+    return actual
+
+
+def recommendation_template_pair(
+    business_mode: str,
+    variant: str,
+    recommendation: str,
+    *,
+    profiles: Mapping[str, object] | None = None,
+) -> dict[str, str]:
+    """Select the account strategy/audit template pair without guessing.
+
+    `win`, `conditional_win`, and `monitor` share the default pair; `no_go`
+    selects the closed-code pair.  Unknown recommendations and malformed maps
+    raise so callers can fail closed.
+    """
+
+    if business_mode != "strategic_account" or variant != "account_planning":
+        raise ValueError(
+            "template_by_recommendation is only valid for strategic_account/account_planning"
+        )
+    if recommendation not in RECOMMENDATIONS:
+        raise ValueError(f"unsupported recommendation={recommendation or 'empty'}")
+    contract = strategy_variant_contract(
+        business_mode,
+        variant,
+        profiles=profiles,
+    )
+    if not isinstance(contract, Mapping):
+        raise ValueError(f"strategy_variant={variant or 'empty'} contract missing")
+    mapping = contract.get("template_by_recommendation")
+    if not isinstance(mapping, Mapping) or set(mapping) != {"default", "no_go"}:
+        raise ValueError("template_by_recommendation must contain only default and no_go")
+    expected_keys = {"visit_strategy", "comprehensive_report"}
+    validated: dict[str, dict[str, str]] = {}
+    for route_name in ("default", "no_go"):
+        pair = mapping.get(route_name)
+        if not isinstance(pair, Mapping) or set(pair) != expected_keys:
+            raise ValueError(
+                f"template_by_recommendation.{route_name} must contain the exact artifact pair"
+            )
+        validated[route_name] = {
+            key: str(pair.get(key, "")) for key in sorted(expected_keys)
+        }
+        for artifact_type, relative in validated[route_name].items():
+            if not re.fullmatch(r"assets/[a-z0-9-]+\.md", relative):
+                raise ValueError(f"{route_name}.{artifact_type} template path invalid")
+            target = BUSINESS_CONFIG_PATH.parent.parent / relative
+            if not target.is_file() or target.is_symlink():
+                raise ValueError(f"{route_name}.{artifact_type} template unavailable")
+    if validated["default"]["visit_strategy"] != contract.get("template"):
+        raise ValueError("default visit_strategy template must equal the variant scaffold template")
+    branch = "no_go" if recommendation == "no_go" else "default"
+    return validated[branch]
+
+
 def context_id_valid(value: str) -> bool:
     if not CONTEXT_RE.fullmatch(value):
         return False
@@ -904,6 +1095,18 @@ def letter_context_sha256(data: dict[str, str]) -> str:
     return hashlib.sha256(canonical.encode("utf-8")).hexdigest()
 
 
+def canonical_subject_digest(customer_name: object, entity_key: object, jurisdiction: object) -> str:
+    """Recompute the host-attested subject tuple without performing alias resolution."""
+    canonical_name = re.sub(r"\s+", " ", unicodedata.normalize("NFKC", str(customer_name or ""))).strip()
+    payload = {
+        "canonical_customer_name": canonical_name,
+        "canonical_entity_key": str(entity_key or ""),
+        "jurisdiction": str(jurisdiction or ""),
+    }
+    serialized = json.dumps(payload, ensure_ascii=False, sort_keys=True, separators=(",", ":"))
+    return hashlib.sha256(serialized.encode("utf-8")).hexdigest()
+
+
 def strategy_required_fields(data: Mapping[str, str]) -> set[str]:
     variant = data.get("strategy_variant", "")
     if variant == "scheduled_visit":
@@ -913,35 +1116,394 @@ def strategy_required_fields(data: Mapping[str, str]) -> set[str]:
     return {"strategy_variant"}
 
 
+def h2_sections(body: str) -> dict[str, list[str]]:
+    """Return exact H2 section bodies, normalizing optional numeric prefixes."""
+
+    matches = list(
+        re.finditer(
+            r"^##\s+(?:(?:\d+(?:\.\d+)*)[.)]?\s+)?(.+?)\s*$",
+            body,
+            flags=re.MULTILINE,
+        )
+    )
+    sections: dict[str, list[str]] = {}
+    for index, match in enumerate(matches):
+        end = matches[index + 1].start() if index + 1 < len(matches) else len(body)
+        sections.setdefault(match.group(1).strip(), []).append(body[match.end() : end])
+    return sections
+
+
+def markdown_preamble(body: str) -> str:
+    """Return content before the first H2, including an optional H1/banner."""
+
+    match = re.search(r"^##(?!#)\s+\S", body, re.MULTILINE)
+    return body[: match.start()] if match else body
+
+
+def markdown_table_blocks(section: str) -> list[tuple[list[str], list[list[str]]]]:
+    """Parse contiguous Markdown tables as (header, data rows)."""
+
+    raw_blocks: list[list[str]] = []
+    current: list[str] = []
+    for line in section.splitlines():
+        if line.lstrip().startswith("|"):
+            current.append(line)
+        elif current:
+            raw_blocks.append(current)
+            current = []
+    if current:
+        raw_blocks.append(current)
+    tables: list[tuple[list[str], list[list[str]]]] = []
+    for block in raw_blocks:
+        rows = [split_table_cells(line) for line in block]
+        if len(rows) < 2:
+            continue
+        separator = rows[1]
+        if not separator or not all(re.fullmatch(r":?-{3,}:?", cell.strip()) for cell in separator):
+            continue
+        tables.append((rows[0], rows[2:]))
+    return tables
+
+
+def operational_cell(value: str) -> bool:
+    """Whether a fixed-contract table cell contains resolved, usable content."""
+
+    return resolved_business_text(value) and not PLACEHOLDER_RE.search(value)
+
+
+INTERNAL_OWNER_ROLES = {
+    "账户负责人",
+    "客户负责人",
+    "客户责任岗",
+    "战略账户责任岗",
+    "方案顾问",
+    "售前顾问",
+    "方案负责人",
+    "方案责任岗",
+    "技术负责人",
+    "技术经理",
+    "技术架构师",
+    "产品经理",
+    "客户成功",
+    "证据负责人",
+    "运行负责人",
+    "测试负责人",
+    "商务审核岗",
+    "拜访策略审核岗",
+    "人物事实审核岗",
+    "客户信事实复核岗",
+    "会前简报事实审核岗",
+    "交付就绪审核岗",
+}
+OWNER_NAMED_ROLE_RE = re.compile(r"([\u4e00-\u9fffA-Za-z·]{2,12})\(([^()]{2,20})\)")
+
+
+def stable_owner_cell(value: str) -> bool:
+    """Accept a short accountable identity/role, never an action sentence."""
+
+    normalized = unicodedata.normalize("NFKC", value).strip()
+    if not operational_cell(normalized) or not 2 <= len(compact_contract_text(normalized)) <= 40:
+        return False
+    if normalized in INTERNAL_OWNER_ROLES:
+        return True
+    named = OWNER_NAMED_ROLE_RE.fullmatch(normalized)
+    return bool(named and named.group(2) in INTERNAL_OWNER_ROLES)
+
+
+VACUOUS_DELIVERY_TEXTS = {
+    "已讨论",
+    "已沟通",
+    "已完成",
+    "内容",
+    "待补充",
+    "待确认",
+    "待核实",
+    "未知",
+    "暂无",
+    "无",
+    "同上",
+    "略",
+    "tbd",
+    "n/a",
+}
+
+
+def meaningful_delivery_text(value: str, *, minimum_chars: int = 4) -> bool:
+    """Reject empty-shell delivery prose while allowing explicit, explained gaps."""
+
+    if PLACEHOLDER_RE.search(value):
+        return False
+    normalized = unicodedata.normalize("NFKC", value).strip()
+    visible = normalize_evidence_text(normalized)
+    compact = compact_contract_text(visible)
+    meta_shell = bool(
+        re.fullmatch(
+            r"(?:相关|上述|以上|本项|该项|本节|具体)?"
+            r"(?:内容|事项|信息|情况|结果)?"
+            r"(?:已经|已)?(?:记录|完成|讨论|沟通|处理|说明)"
+            r"(?:并(?:已)?完成)?",
+            compact,
+        )
+    )
+    return bool(
+        len(compact) >= minimum_chars
+        and visible.casefold().rstrip("。.!！?？;；:：") not in VACUOUS_DELIVERY_TEXTS
+        and not meta_shell
+        and not any(
+            (ord(char) < 32 and char not in "\r\n\t") or ord(char) == 127
+            for char in normalized
+        )
+    )
+
+
+LETTER_PURPOSE_ACTION_RE = re.compile(
+    r"(?:确认|说明|澄清|同步|商议|讨论|邀请|跟进|回应|感谢|征询|安排|请求)"
+)
+LETTER_EXPECTED_ACTION_RE = re.compile(
+    r"(?:确认|提供|回复|安排|选择|反馈|提交|签署|指定|告知|同意|审阅|参加|协调|预约|补充)"
+)
+
+
+def substantive_letter_field(value: str, *, purpose: bool) -> bool:
+    action_pattern = LETTER_PURPOSE_ACTION_RE if purpose else LETTER_EXPECTED_ACTION_RE
+    return bool(
+        meaningful_delivery_text(value, minimum_chars=6)
+        and not LETTER_PURPOSE_META_RE.search(value)
+        and action_pattern.search(unicodedata.normalize("NFKC", value))
+    )
+
+
+BRIEFING_DECISION_RE = re.compile(
+    r"^建议\s*=\s*(win|conditional_win|monitor|no_go)\s*；\s*"
+    r"投入强度\s*=\s*(低|中|高)\s*；\s*边界\s*=\s*(.+)$",
+    re.IGNORECASE,
+)
+PRIMARY_ACTION_VERB_RE = re.compile(
+    r"(?:安排|确认|组织|提交|复核|预约|制定|形成|核实|验证|归档|观察|停止|退出|同步|澄清|召开|完成)"
+)
+VACUOUS_PRIMARY_ACTION_RE = re.compile(
+    r"^(?:不采取任何动作|无需(?:任何)?动作|暂无动作|无动作|不推进|什么也不做)[。.!！]?$"
+)
+DELIVERY_SUMMARY_FIELDS = (
+    "recommendation",
+    "investment_intensity",
+    "primary_action",
+    "owner",
+    "due_date",
+)
+
+
+def briefing_delivery_summary(document: Document) -> dict[str, str] | None:
+    visible = markdown_without_fenced_code(document.body)
+    sections = h2_sections(visible)
+    opportunity = sections.get("机会与边界", [])
+    action_sections = sections.get("最小推进动作", [])
+    if len(opportunity) != 1 or len(action_sections) != 1:
+        return None
+    tables = markdown_table_blocks(opportunity[0])
+    rows = tables[0][1] if len(tables) == 1 else []
+    suggestion = next((row[1] for row in rows if len(row) == 3 and row[0] == "建议"), "")
+    decision = BRIEFING_DECISION_RE.fullmatch(suggestion.strip())
+    action_body = action_sections[0]
+    extracted = {
+        label: re.findall(rf"^\s*-\s*{re.escape(label)}：\s*(.+)$", action_body, re.MULTILINE)
+        for label in ("动作", "Owner", "Due date")
+    }
+    if decision is None or any(len(values) != 1 for values in extracted.values()):
+        return None
+    return {
+        "recommendation": decision.group(1).casefold(),
+        "investment_intensity": decision.group(2),
+        "primary_action": normalize_evidence_text(extracted["动作"][0]).rstrip("。.!！"),
+        "owner": normalize_evidence_text(extracted["Owner"][0]),
+        "due_date": extracted["Due date"][0].strip(),
+    }
+
+
+def strategy_delivery_summary(document: Document) -> dict[str, str] | None:
+    visible = markdown_without_fenced_code(document.body)
+    sections = h2_sections(visible)
+    qualification = sections.get("机会资格与投入建议", [])
+    if len(qualification) != 1:
+        qualification = sections.get("机会资格", [])
+    if len(qualification) != 1:
+        return None
+    recommendation = re.search(
+        r"^\s*-\s*建议：\s*(win|conditional_win|monitor|no_go)\s*$",
+        qualification[0],
+        re.MULTILINE,
+    )
+    investment = re.search(
+        r"^\s*-\s*投入强度：\s*(低|中|高)(?:；\s*依据：\s*.+)?\s*$",
+        qualification[0],
+        re.MULTILINE,
+    )
+    if recommendation is None or investment is None:
+        return None
+    variant = document.frontmatter.get("strategy_variant", "scheduled_visit")
+    action_sections = sections.get(
+        "30/60/90天账户动作" if variant == "account_planning" else "会后行动",
+        [],
+    )
+    tables = markdown_table_blocks(action_sections[0]) if len(action_sections) == 1 else []
+    if len(tables) != 1 or not tables[0][1]:
+        return None
+    header, rows = tables[0]
+    action_key = "action"
+    try:
+        action_index = header.index(action_key)
+        owner_index = header.index("owner")
+        due_index = header.index("due_date")
+    except ValueError:
+        return None
+    row = rows[0]
+    if max(action_index, owner_index, due_index) >= len(row):
+        return None
+    return {
+        "recommendation": recommendation.group(1),
+        "investment_intensity": investment.group(1),
+        "primary_action": normalize_evidence_text(row[action_index]).rstrip("。.!！"),
+        "owner": normalize_evidence_text(row[owner_index]),
+        "due_date": row[due_index].strip(),
+    }
+
+
+def delivery_summary_for_documents(
+    by_type: Mapping[str, Document],
+    *,
+    business_mode: str | None = None,
+    selected_modules: Sequence[str] | None = None,
+) -> dict[str, str] | None:
+    """Return the current run's strategy decision summary, never a stale carrier.
+
+    A workspace may retain a historical ``visit_strategy`` Markdown file when
+    switching to the letter branch.  File presence alone therefore cannot
+    select a decision for the current delivery.  Callers that build or verify
+    a manifest must supply the current business mode and selected module set.
+    """
+
+    if business_mode is None:
+        total = by_type.get("comprehensive_report")
+        if total is not None:
+            business_mode = total.frontmatter.get("business_mode")
+    if business_mode not in {"briefing", "standard_visit", "strategic_account"}:
+        return None
+    if selected_modules is not None and "strategy" not in set(selected_modules):
+        return None
+    strategy = by_type.get("visit_strategy")
+    if strategy is None:
+        return None
+    summary = strategy_delivery_summary(strategy)
+    if summary is None:
+        return None
+    return {
+        "schema": "discovery-call-delivery-summary/v1",
+        "source_artifact_type": "visit_strategy",
+        **summary,
+    }
+
+
 def validate_briefing_contract(document: Document, issues: list[Issue]) -> None:
     """Enforce the one-page briefing as a small, stable delivery contract."""
     data = document.frontmatter
+    visible_body = markdown_without_fenced_code(document.body)
+    if HTML_COMMENT_RE.search(document.body) or RAW_HTML_TAG_RE.search(document.body):
+        add(
+            issues,
+            "error",
+            "briefing_html_comment_forbidden",
+            document.path,
+            "会前速览不得包含HTML注释或原始HTML标签；禁止把正式章节隐藏、折叠或移出默认渲染区域。",
+        )
+    if contains_markdown_link_or_image(document.body):
+        add(
+            issues,
+            "error",
+            "briefing_markdown_link_forbidden",
+            document.path,
+            "会前速览不得使用Markdown链接或图片；核心判断、事实、问题和动作必须直接显示在默认渲染文本中。",
+        )
     if data.get("page_proxy") != "markdown-one-page/v1":
         add(issues, "error", "briefing_page_proxy_invalid", document.path, "page_proxy必须为markdown-one-page/v1。")
     expected_state = "ready" if data.get("review_status") == "approved" else "draft_for_review"
     if data.get("delivery_state") != expected_state:
         add(issues, "error", "briefing_delivery_state_invalid", document.path, f"delivery_state应为{expected_state}。")
-    required = ("一句话判断", "会前必须知道", "机会与边界", "三个现场问题", "最小推进动作", "未决风险")
+    required = (
+        "一句话判断",
+        "会前必须知道",
+        "机会与边界",
+        "建议交流节奏",
+        "三个现场问题",
+        "最小推进动作",
+        "未决风险",
+    )
     for heading in required:
-        if len(re.findall(rf"^##\s+{re.escape(heading)}\s*$", document.body, flags=re.MULTILINE)) != 1:
+        if len(re.findall(rf"^##\s+{re.escape(heading)}\s*$", visible_body, flags=re.MULTILINE)) != 1:
             add(issues, "error", "briefing_section_invalid", document.path, f"一页简报必须且只能有一个“{heading}”章节。")
-    visible = normalize_evidence_text(body_without_placeholders(document))
-    nonblank_lines = [line for line in document.body.splitlines() if line.strip()]
-    if len(visible) > 3200 or len(nonblank_lines) > 80:
-        add(issues, "error", "briefing_page_limit_exceeded", document.path, "一页简报超过3200可见字符或80个非空行。")
+            if heading == "建议交流节奏":
+                add(issues, "error", "briefing_agenda_required", document.path, "一页简报必须保留固定的“建议交流节奏”章节。")
+    profiles = load_business_profiles(issues)
+    briefing_profile = profiles.get("briefing", {}) if isinstance(profiles, dict) else {}
+    delivery_budget = (
+        briefing_profile.get("delivery_budget")
+        if isinstance(briefing_profile, dict)
+        else None
+    )
+    if not isinstance(delivery_budget, dict):
+        add(issues, "error", "briefing_delivery_budget_missing", document.path, "可信业务配置缺少会前速览delivery_budget。")
+        delivery_budget = {
+            "visible_chars_max": 0,
+            "nonblank_lines_max": 0,
+            "section_visible_chars_max": 0,
+            "conclusion_visible_chars_max": 0,
+        }
+    visible = normalize_evidence_text(PLACEHOLDER_RE.sub("", visible_body))
+    nonblank_lines = [line for line in visible_body.splitlines() if line.strip()]
+    visible_max = int(delivery_budget.get("visible_chars_max", 0))
+    line_max = int(delivery_budget.get("nonblank_lines_max", 0))
+    if len(visible) > visible_max or len(nonblank_lines) > line_max:
+        add(issues, "error", "briefing_page_limit_exceeded", document.path, f"一页代理超过{visible_max}可见字符或{line_max}个非空行。")
+    visible_sections = h2_sections(PLACEHOLDER_RE.sub("", visible_body))
+    section_max = int(delivery_budget.get("section_visible_chars_max", 0))
+    oversized_sections = sorted(
+        heading
+        for heading in required
+        for body in visible_sections.get(heading, [])
+        if len(normalize_evidence_text(body)) > section_max
+    )
+    if oversized_sections:
+        add(
+            issues,
+            "error",
+            "briefing_section_budget_exceeded",
+            document.path,
+            f"一页代理单节超过{section_max}可见字符：" + ", ".join(oversized_sections),
+        )
+    completed = data.get("module_status") == "completed"
     question_section = re.search(
         r"^##\s+三个现场问题\s*$([\s\S]*?)(?=^##\s+|\Z)",
-        document.body,
+        visible_body,
         flags=re.MULTILINE,
     )
-    questions = re.findall(r"^\s*\d+\.\s+\S", question_section.group(1), flags=re.MULTILINE) if question_section else []
+    questions = (
+        re.findall(r"^\s*\d+\.\s+(.+)$", question_section.group(1), flags=re.MULTILINE)
+        if question_section
+        else []
+    )
     if len(questions) != 3:
         add(issues, "error", "briefing_question_count_invalid", document.path, "一页简报必须恰有3个现场问题。")
-    if len(re.findall(r"^\s*-\s*动作：\s*\S", document.body, flags=re.MULTILINE)) != 1:
+    elif completed and any(
+        not meaningful_delivery_text(question, minimum_chars=8)
+        or not re.search(r"[?？]\s*$", question)
+        or not re.search(r"(?:什么|谁|是否|如何|哪|能否|可否|何时|多久|有无|为何|多少)", question)
+        for question in questions
+    ):
+        add(issues, "error", "briefing_question_content_invalid", document.path, "三个现场问题必须分别包含可执行的完整问题，不能只写短词或空壳。")
+    if len(re.findall(r"^\s*-\s*动作：\s*\S", visible_body, flags=re.MULTILINE)) != 1:
         add(issues, "error", "briefing_action_count_invalid", document.path, "一页简报必须恰有1个主动作。")
     fact_section = re.search(
         r"^##\s+会前必须知道\s*$([\s\S]*?)(?=^##\s+|\Z)",
-        document.body,
+        visible_body,
         flags=re.MULTILINE,
     )
     fact_rows: list[list[str]] = []
@@ -960,6 +1522,11 @@ def validate_briefing_contract(document: Document, issues: list[Issue]) -> None:
             continue
         if any(PLACEHOLDER_RE.search(cell) for cell in cells):
             continue
+        if completed and (
+            not meaningful_delivery_text(cells[0], minimum_chars=6)
+            or not meaningful_delivery_text(cells[2], minimum_chars=6)
+        ):
+            add(issues, "error", "briefing_fact_content_invalid", document.path, f"“会前必须知道”第{index}条事实及业务意义不能为空或为短句空壳。")
         fact_types = BRIEFING_FACT_TYPE_RE.findall(cells[1])
         if len(fact_types) != 1:
             add(issues, "error", "briefing_fact_type_invalid", document.path, f"“会前必须知道”第{index}条必须明确且只标一个F或F2。")
@@ -968,16 +1535,21 @@ def validate_briefing_contract(document: Document, issues: list[Issue]) -> None:
 
     conclusion_section = re.search(
         r"^##\s+一句话判断\s*$([\s\S]*?)(?=^##\s+|\Z)",
-        document.body,
+        visible_body,
         flags=re.MULTILINE,
     )
     conclusion = conclusion_section.group(1).strip() if conclusion_section else ""
-    if conclusion and not PLACEHOLDER_RE.search(conclusion) and not CLAIM_RE.search(conclusion):
+    conclusion_max = int(delivery_budget.get("conclusion_visible_chars_max", 0))
+    if len(normalize_evidence_text(PLACEHOLDER_RE.sub("", conclusion))) > conclusion_max:
+        add(issues, "error", "briefing_conclusion_budget_exceeded", document.path, f"一句话判断超过{conclusion_max}可见字符。")
+    if completed and not meaningful_delivery_text(conclusion, minimum_chars=20):
+        add(issues, "error", "briefing_conclusion_content_invalid", document.path, "一句话判断必须是可直接使用的完整判断，不能留空或只写短句。")
+    elif conclusion and not PLACEHOLDER_RE.search(conclusion) and not CLAIM_RE.search(conclusion):
         add(issues, "error", "briefing_conclusion_claim_missing", document.path, "一句话判断必须引用至少一个合法claim_id。")
 
     opportunity_section = re.search(
         r"^##\s+机会与边界\s*$([\s\S]*?)(?=^##\s+|\Z)",
-        document.body,
+        visible_body,
         flags=re.MULTILINE,
     )
     opportunity_rows: list[list[str]] = []
@@ -992,18 +1564,93 @@ def validate_briefing_contract(document: Document, issues: list[Issue]) -> None:
             for line in table_lines[2:]
             if any(cell.strip() for cell in split_table_cells(line))
         ]
+    expected_opportunity_labels = [
+        "Need",
+        "Authority",
+        "Budget/Procurement",
+        "Competition",
+        "建议",
+    ]
+    if (
+        len(opportunity_rows) != len(expected_opportunity_labels)
+        or [cells[0] if cells else "" for cells in opportunity_rows]
+        != expected_opportunity_labels
+    ):
+        add(
+            issues,
+            "error",
+            "briefing_opportunity_rows_invalid",
+            document.path,
+            "“机会与边界”必须按固定顺序各保留Need、Authority、Budget/Procurement、Competition、建议一行。",
+        )
+    briefing_decision_match: re.Match[str] | None = None
     for index, cells in enumerate(opportunity_rows, 1):
         if len(cells) != 3:
             add(issues, "error", "briefing_opportunity_row_shape", document.path, f"“机会与边界”第{index}条必须恰有3列并单列依据claim_id。")
             continue
         if any(PLACEHOLDER_RE.search(cell) for cell in cells):
             continue
+        label_terms = {
+            "Need": r"(?:需求|任务|压力|问题|目标|结果|待核实|待确认|未知)",
+            "Authority": r"(?:角色|职责|权限|决策|审批|责任|待核实|待确认|未知)",
+            "Budget/Procurement": r"(?:预算|采购|资金|立项|待核实|待确认|未知)",
+            "Competition": r"(?:竞争|存量|供应商|厂商|替代|切换|待核实|待确认|未知)",
+        }
+        if cells[0] == "建议":
+            briefing_decision_match = BRIEFING_DECISION_RE.fullmatch(cells[1].strip())
+            content_valid = bool(
+                briefing_decision_match is not None
+                and meaningful_delivery_text(briefing_decision_match.group(3), minimum_chars=6)
+            )
+        else:
+            content_valid = bool(
+                meaningful_delivery_text(cells[1], minimum_chars=6)
+                and re.search(label_terms.get(cells[0], r"$^"), cells[1], re.IGNORECASE)
+            )
+        if completed and not content_valid:
+            add(issues, "error", "briefing_opportunity_content_invalid", document.path, f"“机会与边界”第{index}条当前判断不能为空或为短句空壳；证据不足时须写明具体缺口。")
         if not CLAIM_RE.search(cells[2]):
             add(issues, "error", "briefing_opportunity_claim_missing", document.path, f"“机会与边界”第{index}条判断或建议必须引用至少一个claim_id。")
 
+    agenda_section = re.search(
+        r"^##\s+建议交流节奏\s*$([\s\S]*?)(?=^##\s+|\Z)",
+        visible_body,
+        flags=re.MULTILINE,
+    )
+    agenda_tables = markdown_table_blocks(agenda_section.group(1)) if agenda_section else []
+    agenda_rows = agenda_tables[0][1] if agenda_tables else []
+    expected_agenda_slots = ["0—5分钟", "5—20分钟", "20—25分钟", "25—30分钟"]
+    actual_agenda_slots = [
+        re.sub(r"[-–—]", "—", cells[0].strip()) if cells else ""
+        for cells in agenda_rows
+    ]
+    if (
+        actual_agenda_slots != expected_agenda_slots
+        or any(len(cells) != 3 for cells in agenda_rows)
+    ):
+        add(
+            issues,
+            "error",
+            "briefing_agenda_rows_invalid",
+            document.path,
+            "“建议交流节奏”必须恰有0—5、5—20、20—25、25—30分钟四行且每行3列。",
+        )
+    elif completed and any(
+        not meaningful_delivery_text(cells[1], minimum_chars=6)
+        or not meaningful_delivery_text(cells[2], minimum_chars=6)
+        for cells in agenda_rows
+    ):
+        add(
+            issues,
+            "error",
+            "briefing_agenda_content_invalid",
+            document.path,
+            "“建议交流节奏”每个时段的议题/动作和目标信号都必须是可执行内容，不能留空或写空壳短句。",
+        )
+
     action_section = re.search(
         r"^##\s+最小推进动作\s*$([\s\S]*?)(?=^##\s+|\Z)",
-        document.body,
+        visible_body,
         flags=re.MULTILINE,
     )
     action_text = action_section.group(1) if action_section else ""
@@ -1014,6 +1661,75 @@ def validate_briefing_contract(document: Document, issues: list[Issue]) -> None:
         add(issues, "error", "briefing_action_claim_count_invalid", document.path, "最小推进动作只能有一行“依据claim_id：”。")
     elif not PLACEHOLDER_RE.search(evidence_lines[0]) and not CLAIM_RE.search(evidence_lines[0]):
         add(issues, "error", "briefing_action_claim_missing", document.path, "最小推进动作的依据必须引用至少一个claim_id。")
+    action_fields = {
+        label: re.findall(
+            rf"^\s*-\s*{re.escape(label)}：\s*(.+)$",
+            action_text,
+            flags=re.MULTILINE,
+        )
+        for label in ("动作", "Owner", "Due date", "红线")
+    }
+    if any(len(values) != 1 for values in action_fields.values()):
+        add(
+            issues,
+            "error",
+            "briefing_action_fields_invalid",
+            document.path,
+            "最小推进动作必须各有且仅有一行动作、Owner、Due date和红线。",
+        )
+    elif document.frontmatter.get("module_status") == "completed":
+        unresolved = sorted(
+            label
+            for label, values in action_fields.items()
+            if not operational_cell(values[0])
+            or not meaningful_delivery_text(
+                values[0],
+                minimum_chars=(4 if label in {"动作", "Owner"} else 6),
+            )
+        )
+        if unresolved:
+            add(
+                issues,
+                "error",
+                "briefing_action_fields_invalid",
+                document.path,
+                "最小推进动作存在未解析字段：" + ", ".join(unresolved),
+            )
+        if not date_valid(action_fields["Due date"][0].strip()):
+            add(
+                issues,
+                "error",
+                "briefing_action_due_date_invalid",
+                document.path,
+                "最小推进动作的Due date必须为YYYY-MM-DD。",
+            )
+        if not stable_owner_cell(action_fields["Owner"][0]):
+            add(issues, "error", "briefing_action_owner_invalid", document.path, "Owner必须为受控格式的真人姓名、稳定角色或账号，不得夹带动作。")
+        primary_action = normalize_evidence_text(action_fields["动作"][0]).rstrip("。.!！")
+        recommendation = (
+            briefing_decision_match.group(1).casefold()
+            if briefing_decision_match is not None
+            else ""
+        )
+        controlled_no_go_actions = {
+            normalize_evidence_text(value).rstrip("。.!！")
+            for value in NO_GO_CONTROLLED_ACTIONS.values()
+        }
+        if (
+            VACUOUS_PRIMARY_ACTION_RE.fullmatch(primary_action)
+            or not PRIMARY_ACTION_VERB_RE.search(primary_action)
+            or (recommendation == "no_go" and primary_action not in controlled_no_go_actions)
+        ):
+            add(issues, "error", "briefing_primary_action_invalid", document.path, "主动作必须包含明确动作与对象；no_go只能使用受控的停止、归档、观察或复核动作。")
+        if not re.search(r"(?:不得|禁止|未经|不承诺|不触碰|不展示|不外发)", action_fields["红线"][0]):
+            add(issues, "error", "briefing_action_redline_invalid", document.path, "红线必须明确写出不得、禁止、未经授权或其他可执行限制。")
+
+    risk_sections = h2_sections(visible_body).get("未决风险", [])
+    if completed and (
+        len(risk_sections) != 1
+        or not meaningful_delivery_text(risk_sections[0], minimum_chars=8)
+    ):
+        add(issues, "error", "briefing_risk_content_invalid", document.path, "未决风险必须写明具体风险或明确说明无阻断及其依据，不能留空或写空壳短句。")
 
 
 def validate_briefing_claim_contract(
@@ -1025,9 +1741,10 @@ def validate_briefing_claim_contract(
     briefing = by_type.get("briefing_delivery")
     if briefing is None:
         return
+    visible_body = markdown_without_fenced_code(briefing.body)
     fact_section = re.search(
         r"^##\s+会前必须知道\s*$([\s\S]*?)(?=^##\s+|\Z)",
-        briefing.body,
+        visible_body,
         flags=re.MULTILINE,
     )
     if fact_section:
@@ -1056,7 +1773,7 @@ def validate_briefing_claim_contract(
     for heading in evidence_sections:
         match = re.search(
             rf"^##\s+{re.escape(heading)}\s*$([\s\S]*?)(?=^##\s+|\Z)",
-            briefing.body,
+            visible_body,
             flags=re.MULTILINE,
         )
         if match is None:
@@ -1065,6 +1782,40 @@ def validate_briefing_claim_contract(
         missing = sorted(set(CLAIM_RE.findall(body)) - claims.keys())
         if missing:
             add(issues, "error", "briefing_claim_invalid", briefing.path, f"“{heading}”引用未定义claim：{', '.join(missing)}。")
+
+    strategy = by_type.get("visit_strategy")
+    briefing_summary = briefing_delivery_summary(briefing)
+    strategy_summary = strategy_delivery_summary(strategy) if strategy is not None else None
+    completed_pair = (
+        strategy is not None
+        and briefing.frontmatter.get("module_status") == "completed"
+        and strategy.frontmatter.get("module_status") == "completed"
+    )
+    decision_contract_active = completed_pair or (
+        briefing_summary is not None or strategy_summary is not None
+    )
+    if decision_contract_active and (briefing_summary is None or strategy_summary is None):
+        add(
+            issues,
+            "error",
+            "briefing_delivery_summary_invalid",
+            briefing.path,
+            "会前速览与交流策略必须都能形成受控决策五元组。",
+        )
+    elif decision_contract_active and briefing_summary is not None and strategy_summary is not None:
+        drift = [
+            field
+            for field in DELIVERY_SUMMARY_FIELDS
+            if briefing_summary.get(field) != strategy_summary.get(field)
+        ]
+        if drift:
+            add(
+                issues,
+                "error",
+                "briefing_strategy_decision_drift",
+                briefing.path,
+                "会前速览与交流策略的建议/投入/主动作责任必须逐字段一致：" + ", ".join(drift),
+            )
 
 
 def validate_frontmatter(
@@ -1082,6 +1833,46 @@ def validate_frontmatter(
     if missing:
         add(issues, "error", "frontmatter_required", document.path, "缺少字段：" + ", ".join(missing))
         return
+    allowed_frontmatter = ARTIFACT_FRONTMATTER_FIELDS.get(data.get("artifact_type", ""))
+    if allowed_frontmatter is not None:
+        unknown_frontmatter = sorted(set(data) - allowed_frontmatter)
+        if unknown_frontmatter:
+            add(
+                issues,
+                "error",
+                "frontmatter_unknown_field",
+                document.path,
+                "frontmatter含未登记字段：" + ", ".join(unknown_frontmatter),
+            )
+    if data.get("module_status") == "completed":
+        hidden_format_characters = sorted(
+            {f"U+{ord(character):04X}" for character in document.body if unicodedata.category(character) == "Cf"}
+        )
+        if hidden_format_characters:
+            add(
+                issues,
+                "error",
+                "invisible_format_character_forbidden",
+                document.path,
+                "completed成果不得包含零宽、软连字符或其他不可见格式字符："
+                + ", ".join(hidden_format_characters),
+            )
+        if HTML_COMMENT_RE.search(document.body) or RAW_HTML_TAG_RE.search(document.body):
+            add(
+                issues,
+                "error",
+                "delivery_hidden_content_forbidden",
+                document.path,
+                "completed Markdown成果不得包含HTML注释或原始HTML标签；禁止隐藏、折叠或改变默认可见交付。",
+            )
+        if contains_markdown_code_block(document.body):
+            add(
+                issues,
+                "error",
+                "delivery_code_block_forbidden",
+                document.path,
+                "completed成果不得包含围栏式或缩进式Markdown代码块；正式交付内容必须在默认渲染视图中直接可见。",
+            )
     if data.get("artifact_type") == "customer_letter_internal":
         approval_missing = sorted(INTERNAL_LETTER_FIELDS - data.keys())
         if approval_missing:
@@ -1139,11 +1930,12 @@ def validate_frontmatter(
         add(issues, "error", "uncalled_artifact_exists", document.path, "not_called模块不得存在成果文件。")
     if data["review_status"] == "approved" and data["module_status"] != "completed":
         add(issues, "error", "review_state_conflict", document.path, "approved仅能与completed组合。")
-    if data["artifact_type"] in {"comprehensive_report", "institution_research"} and data["review_status"] != "not_required":
-        add(issues, "error", "review_not_applicable", document.path, "综合报告和机构研究的review_status必须为not_required。")
+    if data["artifact_type"] == "comprehensive_report" and data["review_status"] != "not_required":
+        add(issues, "error", "review_not_applicable", document.path, "综合报告的review_status必须为not_required。")
     if data["module_status"] in {"queued", "running"} and data["review_status"] in {"pending", "approved", "changes_requested"}:
         add(issues, "error", "review_state_conflict", document.path, "未完成执行的成果不能进入已提交或已处理审核状态。")
     if data["module_status"] == "completed" and data["artifact_type"] in {
+        "institution_research",
         "leader_research",
         "internal_retrieval",
         "visit_strategy",
@@ -1177,6 +1969,11 @@ def validate_frontmatter(
             unresolved = sorted(
                 key for key in LETTER_CONTEXT_FIELDS if not resolved_business_text(data.get(key, ""))
             )
+            if not substantive_letter_field(data.get("letter_purpose", ""), purpose=True):
+                unresolved.append("letter_purpose")
+            if not substantive_letter_field(data.get("expected_action", ""), purpose=False):
+                unresolved.append("expected_action")
+            unresolved = sorted(set(unresolved))
             if unresolved:
                 add(
                     issues,
@@ -1408,14 +2205,42 @@ def validate_letter_review_history(by_type: dict[str, Document], issues: list[Is
 def collect_ledgers(
     documents: list[Document], issues: list[Issue]
 ) -> tuple[dict[str, ClaimDefinition], dict[str, SourceDefinition]]:
+    """Collect definitions only from the two authoritative research ledgers.
+
+    Claim/source-shaped references in downstream delivery tables are not
+    definitions and must never be promoted into the evidence registry.
+    """
+
     claims: dict[str, ClaimDefinition] = {}
     sources: dict[str, SourceDefinition] = {}
+    claim_header = [
+        "claim_id", "claim_type", "provenance", "verification_status", "主张内容",
+        "时间/口径", "支持 source_id", "反证 source_id", "置信度", "下游影响/备注",
+    ]
+    source_header = [
+        "source_id", "标题/文档名", "发布者/提供者", "URL/稳定定位", "发布/更新日期",
+        "访问日期", "来源等级", "source_group", "权限", "适用客户/项目", "备注",
+        "source_fingerprint", "upstream_id", "external_use",
+    ]
     for document in documents:
-        for line in document.body.splitlines():
-            if "{{" in line or not line.lstrip().startswith("|"):
-                continue
-            cells = split_table_cells(line)
-            if cells and CLAIM_RE.fullmatch(cells[0]):
+        artifact_type = document.frontmatter.get("artifact_type")
+        if artifact_type not in RESEARCH_PREFIX:
+            continue
+        sections = h2_sections(document.body)
+        claim_tables = [
+            rows
+            for body in sections.get("主张台账", [])
+            for header, rows in markdown_table_blocks(body)
+            if header == claim_header
+        ]
+        source_tables = [
+            rows
+            for body in sections.get("来源台账", [])
+            for header, rows in markdown_table_blocks(body)
+            if header == source_header
+        ]
+        for cells in [row for rows in claim_tables for row in rows]:
+            if cells and CLAIM_RE.fullmatch(cells[0]) and not any("{{" in cell for cell in cells):
                 claim_id = cells[0]
                 expected_type = {
                     "I": "institution_research",
@@ -1433,8 +2258,10 @@ def collect_ledgers(
                 if claim_id in claims:
                     add(issues, "error", "claim_duplicate", document.path, f"claim_id重复定义：{claim_id}")
                 else:
+                    line = "| " + " | ".join(cells) + " |"
                     claims[claim_id] = ClaimDefinition(claim_id, document, cells, line)
-            if cells and SOURCE_RE.fullmatch(cells[0]):
+        for cells in [row for rows in source_tables for row in rows]:
+            if cells and SOURCE_RE.fullmatch(cells[0]) and not any("{{" in cell for cell in cells):
                 source_id = cells[0]
                 expected_type = {
                     "I": "institution_research",
@@ -1452,6 +2279,7 @@ def collect_ledgers(
                 if source_id in sources:
                     add(issues, "error", "source_duplicate", document.path, f"source_id重复定义：{source_id}")
                 else:
+                    line = "| " + " | ".join(cells) + " |"
                     sources[source_id] = SourceDefinition(source_id, document, cells, line)
     return claims, sources
 
@@ -1465,17 +2293,43 @@ def normalize_evidence_text(value: str) -> str:
 
 
 def normalize_locator(value: str) -> str:
-    normalized = normalize_evidence_text(value)
+    normalized = re.sub(r"\s+", " ", unicodedata.normalize("NFKC", value)).strip()
+    stable = re.fullmatch(
+        r"(?:urn|record|document|dataset|ragflow|archive):[A-Za-z0-9][A-Za-z0-9._~:/?#@!$&'*+,;=%-]*",
+        normalized,
+        re.IGNORECASE,
+    )
+    if stable:
+        return normalized.casefold()
     try:
         parsed = urlsplit(normalized)
-        if not parsed.scheme or not parsed.netloc:
-            return normalized
+        parsed_port = parsed.port
+        if parsed.scheme.casefold() not in {"http", "https"} or not parsed.netloc:
+            return ""
         host = (parsed.hostname or "").casefold()
-        port = f":{parsed.port}" if parsed.port else ""
+        if not host or parsed.username is not None or parsed.password is not None:
+            return ""
+        default_port = (parsed.scheme.casefold(), parsed_port) in {("http", 80), ("https", 443)}
+        port = f":{parsed_port}" if parsed_port and not default_port else ""
         path = re.sub(r"/+", "/", parsed.path).rstrip("/") or "/"
-        return urlunsplit((parsed.scheme.casefold(), host + port, path, parsed.query, ""))
+        query = urlencode(sorted(parse_qsl(parsed.query, keep_blank_values=True)))
+        return urlunsplit((parsed.scheme.casefold(), host + port, path, query, ""))
     except ValueError:
-        return normalized
+        return ""
+
+
+SOURCE_LEDGER_MARKUP_RE = re.compile(
+    r"(?:!?\[[^\]\n]*\]\s*(?:\([^\)\n]*\)|\[[^\]\n]*\])|`|<[^>\n]+>)"
+)
+
+
+def source_ledger_scalar_safe(value: str) -> bool:
+    return bool(
+        value
+        and value == re.sub(r"\s+", " ", unicodedata.normalize("NFKC", value)).strip()
+        and not SOURCE_LEDGER_MARKUP_RE.search(value)
+        and not any(unicodedata.category(char) == "Cf" for char in value)
+    )
 
 
 def unresolved_evidence_value(value: str) -> bool:
@@ -1501,6 +2355,22 @@ def supporting_sources(
     if len(definition.cells) < 7:
         return []
     return [sources[source_id] for source_id in SOURCE_RE.findall(definition.cells[6]) if source_id in sources]
+
+
+def requires_internal_authorization(
+    claims: Mapping[str, ClaimDefinition] | None,
+    sources: Mapping[str, SourceDefinition] | None,
+) -> bool:
+    """Return whether the evidence ledger contains internal/restricted data."""
+
+    return bool(
+        any(len(item.cells) >= 3 and item.cells[2] == "N" for item in (claims or {}).values())
+        or any(
+            len(item.cells) >= 9
+            and (item.cells[6] == "internal" or item.cells[8] in {"internal-authorized", "restricted"})
+            for item in (sources or {}).values()
+        )
+    )
 
 
 def f2_independence_values(source: SourceDefinition) -> tuple[str, str, str, str] | None:
@@ -1555,11 +2425,30 @@ def validate_claim_graph(
         if len(cells) != 10:
             add(issues, "error", "claim_row_shape", definition.document.path, f"{claim_id}主张台账必须恰有10列；正文竖线须写为\\|。")
             continue
+        if any(not source_ledger_scalar_safe(cell) for cell in cells):
+            add(
+                issues,
+                "error",
+                "claim_ledger_markup_forbidden",
+                definition.document.path,
+                f"{claim_id}主张台账只允许可见纯文本与受控ID，不得包含Markdown链接/图片、代码标记、HTML或隐藏字符。",
+            )
         claim_type, provenance, verification = cells[1], cells[2], cells[3]
         if claim_type not in CLAIM_TYPES:
             add(issues, "error", "claim_type_invalid", definition.document.path, f"{claim_id} claim_type无效：{claim_type}")
         if provenance not in PROVENANCE_VALUES:
             add(issues, "error", "provenance_invalid", definition.document.path, f"{claim_id} provenance无效：{provenance}")
+        if provenance == "N" and (
+            not claim_id.startswith("CLM-N-")
+            or definition.document.frontmatter.get("artifact_type") != "internal_retrieval"
+        ):
+            add(
+                issues,
+                "error",
+                "internal_claim_carrier_invalid",
+                definition.document.path,
+                f"{claim_id}的provenance=N只能由internal_retrieval中的CLM-N-*承载。",
+            )
         if verification not in VERIFICATION_STATUSES:
             add(issues, "error", "verification_invalid", definition.document.path, f"{claim_id} verification_status无效：{verification}")
         if claim_type == "F" and verification != "verified_single":
@@ -1575,9 +2464,28 @@ def validate_claim_graph(
         if verification in {"conflicted", "stale", "invalidated", "unusable"} and cells[8] == "高":
             add(issues, "error", "claim_confidence_conflict", definition.document.path, f"{claim_id}处于{verification}时不得标高置信度。")
         support_ids = SOURCE_RE.findall(cells[6])
+        canonical_support_refs = ", ".join(sorted(set(support_ids)))
+        if not support_ids or cells[6] != canonical_support_refs:
+            add(
+                issues,
+                "error",
+                "claim_support_refs_invalid",
+                definition.document.path,
+                f"{claim_id}支持来源必须只写去重排序的source_id列表，并以逗号空格分隔。",
+            )
         if not support_ids:
             add(issues, "error", "claim_source_missing", definition.document.path, f"{claim_id}没有支持source_id。")
-        for source_id in support_ids + SOURCE_RE.findall(cells[7]):
+        counter_ids = SOURCE_RE.findall(cells[7])
+        canonical_counter_refs = "无" if not counter_ids else ", ".join(sorted(set(counter_ids)))
+        if cells[7] != canonical_counter_refs:
+            add(
+                issues,
+                "error",
+                "claim_counter_refs_invalid",
+                definition.document.path,
+                f"{claim_id}反证来源只能写“无”或去重排序的source_id列表。",
+            )
+        for source_id in support_ids + counter_ids:
             if source_id not in sources:
                 add(issues, "error", "claim_source_orphan", definition.document.path, f"{claim_id}引用未定义来源{source_id}。")
         expected_prefix = claim_id.split("-")[1]
@@ -1595,60 +2503,9 @@ def validate_claim_graph(
             unique_support = list(dict.fromkeys(support_ids))
             if len(unique_support) < 2:
                 add(issues, "error", "fact2_sources_insufficient", definition.document.path, f"{claim_id}: F2至少需要两个支持来源。")
-            groups = {
-                normalize_evidence_text(sources[source_id].cells[7])
-                for source_id in unique_support
-                if source_id in sources and len(sources[source_id].cells) >= 8
-                and not unresolved_evidence_value(sources[source_id].cells[7])
-                and not normalize_evidence_text(sources[source_id].cells[7]).startswith("unknown:")
-            }
-            if len(groups) < 2:
-                add(issues, "error", "fact2_source_groups_not_independent", definition.document.path, f"{claim_id}: F2至少需要两个不同source_group。")
-            source_defs = [sources[source_id] for source_id in unique_support if source_id in sources]
-            locators = {
-                normalize_locator(source.cells[3])
-                for source in source_defs
-                if len(source.cells) >= 4
-                and not unresolved_evidence_value(source.cells[3])
-                and not normalize_evidence_text(source.cells[3]).startswith("unknown:")
-            }
-            fingerprints = {
-                normalize_evidence_text(source.cells[11])
-                for source in source_defs
-                if len(source.cells) >= 13
-                and source_fingerprint_valid(source.cells[11])
-            }
-            upstream_ids = {
-                normalize_evidence_text(source.cells[12])
-                for source in source_defs
-                if len(source.cells) >= 13
-                and not unresolved_evidence_value(source.cells[12])
-                and not normalize_evidence_text(source.cells[12]).startswith("unknown:")
-            }
-            if len(locators) < 2:
-                add(issues, "error", "fact2_locator_not_independent", definition.document.path, f"{claim_id}: F2支持来源的稳定定位必须不同。")
-            if len(fingerprints) < 2:
-                add(issues, "error", "fact2_source_fingerprint_not_independent", definition.document.path, f"{claim_id}: F2至少需要两个不同且格式有效的source_fingerprint。")
-            if len(upstream_ids) < 2:
-                add(issues, "error", "fact2_upstream_not_independent", definition.document.path, f"{claim_id}: F2至少需要两个不同且已确认的upstream_id。")
-            independence_values = [
-                values
-                for source in source_defs
-                if (values := f2_independence_values(source)) is not None
-            ]
-            has_fourfold_independent_pair = any(
-                all(left[index] != right[index] for index in range(4))
-                for left_index, left in enumerate(independence_values)
-                for right in independence_values[left_index + 1 :]
-            )
-            if not has_fourfold_independent_pair:
-                add(
-                    issues,
-                    "error",
-                    "fact2_sources_not_fourfold_independent",
-                    definition.document.path,
-                    f"{claim_id}: F2必须存在同一对来源，其source_group、稳定定位、source_fingerprint、upstream_id四项同时有效且互不相同。",
-                )
+            # Fourfold independence is evaluated later from independently
+            # verified machine-source receipts.  Markdown cells are display
+            # projections and must never establish F2 independence.
 
 
 def validate_machine_evidence(
@@ -1674,6 +2531,12 @@ def validate_machine_evidence(
         runtime_manifest = None
     if isinstance(runtime_manifest, dict):
         evidence_run_id = str(runtime_manifest.get("evidence_run_id", ""))
+    runtime_authorization = (
+        runtime_manifest.get("authorization", {})
+        if isinstance(runtime_manifest, dict)
+        and isinstance(runtime_manifest.get("authorization"), dict)
+        else {}
+    )
     if not evidence_path.exists():
         if require_machine:
             add(issues, "error", "machine_evidence_missing", evidence_path, "candidate/release校验要求runtime/evidence-manifest.json。")
@@ -1726,10 +2589,16 @@ def validate_machine_evidence(
         except (OSError, UnicodeError, json.JSONDecodeError):
             pass
     required_source_fields = {
-        "source_id", "locator", "canonical_locator", "final_url", "cache_key",
+        "source_id", "source_title", "publisher_or_provider", "locator",
+        "canonical_locator", "final_url", "cache_key", "publication_or_update_date",
+        "access_date", "source_group", "applicable_scope", "notes", "upstream_id",
         "source_fingerprint", "content_sha256", "retrieved_at", "capture_method", "length",
+        "published_at", "source_updated_at", "internal_recorded_at", "source_level",
+        "permission", "external_use", "tenant_id", "project_id",
     }
     source_verification_time = (current_time or datetime.now(timezone.utc)).astimezone(timezone.utc)
+    verified_machine_sources: dict[str, dict[str, object]] = {}
+    verified_source_receipt_hashes: dict[str, str] = {}
     for source_id, definition in sources.items():
         record = machine_sources.get(source_id)
         if not isinstance(record, dict):
@@ -1744,6 +2613,7 @@ def validate_machine_evidence(
         fingerprint = str(record.get("source_fingerprint", ""))
         if record.get("source_id") != source_id or not re.fullmatch(r"[0-9a-f]{64}", digest) or fingerprint != f"sha256:{digest}":
             add(issues, "error", "machine_source_content_unbound", evidence_path, f"{source_id}必须绑定内容SHA-256。")
+        receipt_verified = False
         if require_machine:
             receipt = record.get("capture_receipt")
             if not isinstance(receipt, dict):
@@ -1756,23 +2626,40 @@ def validate_machine_evidence(
                 )
             else:
                 try:
-                    verify_source_capture_receipt(
+                    verified_receipt = verify_source_capture_receipt(
                         receipt,
                         expected={
                             "source_id": source_id,
+                            "source_title": record.get("source_title"),
+                            "publisher_or_provider": record.get("publisher_or_provider"),
                             "locator": record.get("locator"),
                             "final_url": record.get("final_url"),
                             "canonical_locator": record.get("canonical_locator"),
+                            "publication_or_update_date": record.get("publication_or_update_date"),
+                            "access_date": record.get("access_date"),
                             "content_sha256": record.get("content_sha256"),
                             "length": record.get("length"),
                             "capture_method": record.get("capture_method"),
                             "retrieved_at": record.get("retrieved_at"),
+                            "published_at": record.get("published_at"),
+                            "source_updated_at": record.get("source_updated_at"),
+                            "internal_recorded_at": record.get("internal_recorded_at"),
+                            "source_level": record.get("source_level"),
+                            "source_group": record.get("source_group"),
+                            "permission": record.get("permission"),
+                            "applicable_scope": record.get("applicable_scope"),
+                            "notes": record.get("notes"),
+                            "upstream_id": record.get("upstream_id"),
+                            "external_use": record.get("external_use"),
+                            "tenant_id": record.get("tenant_id"),
                             "run_id": evidence.get("run_id"),
                             "customer_id": evidence.get("customer_id"),
-                            "project_id": evidence.get("project_id"),
+                            "project_id": record.get("project_id"),
                         },
                         at=source_verification_time,
                     )
+                    receipt_verified = True
+                    verified_source_receipt_hashes[source_id] = verified_receipt.receipt_sha256
                 except CapabilityReceiptError as exc:
                     add(
                         issues,
@@ -1781,15 +2668,88 @@ def validate_machine_evidence(
                         evidence_path,
                         f"{source_id}来源捕获收据验证失败：{exc}",
                     )
+        ledger_binding_valid = len(definition.cells) == 14
         if len(definition.cells) >= 12 and definition.cells[11] != fingerprint:
+            ledger_binding_valid = False
             add(issues, "error", "source_fingerprint_machine_drift", definition.document.path, f"{source_id}台账指纹与机器快照不一致。")
+        if len(definition.cells) == 14:
+            ledger_binding = {
+                "source_title": definition.cells[1],
+                "publisher_or_provider": definition.cells[2],
+                "locator": definition.cells[3],
+                "publication_or_update_date": definition.cells[4],
+                "access_date": definition.cells[5],
+                "source_level": definition.cells[6],
+                "source_group": definition.cells[7],
+                "permission": definition.cells[8],
+                "applicable_scope": definition.cells[9],
+                "notes": definition.cells[10],
+                "upstream_id": definition.cells[12],
+                "external_use": definition.cells[13],
+            }
+            for field, expected in ledger_binding.items():
+                if record.get(field) != expected:
+                    ledger_binding_valid = False
+                    add(
+                        issues,
+                        "error",
+                        "source_ledger_machine_drift",
+                        definition.document.path,
+                        f"{source_id}.{field}与Markdown来源台账不一致。",
+                    )
+            ledger_locator = definition.cells[3]
+            record_locator = str(record.get("locator", ""))
+            canonical = str(record.get("canonical_locator", ""))
+            if (
+                not source_ledger_scalar_safe(ledger_locator)
+                or normalize_locator(ledger_locator) != canonical
+                or normalize_locator(record_locator) != canonical
+                or not normalize_locator(str(record.get("final_url", "")))
+            ):
+                ledger_binding_valid = False
+                add(
+                    issues,
+                    "error",
+                    "source_locator_machine_drift",
+                    definition.document.path,
+                    f"{source_id}的raw locator必须逐字绑定验签记录，且canonical_locator必须由locator规范化生成。",
+                )
+        sensitive_source = bool(
+            record.get("source_level") == "internal"
+            or record.get("permission") in {"internal-authorized", "restricted"}
+        )
+        if sensitive_source:
+            expected_tenant = runtime_authorization.get("tenant_id")
+            expected_project = runtime_authorization.get("project_id")
+            if (
+                not expected_tenant
+                or not expected_project
+                or record.get("tenant_id") != expected_tenant
+                or record.get("project_id") != expected_project
+                or evidence.get("project_id") != expected_project
+            ):
+                add(
+                    issues,
+                    "error",
+                    "machine_source_authorization_scope_drift",
+                    evidence_path,
+                    f"{source_id}内部/受限来源必须绑定当前manifest的tenant_id与project_id。",
+                )
         cache_key = str(record.get("cache_key", ""))
         cache = cache_entries.get(cache_key)
         snapshot_fields = (
             "cache_key",
+            "source_title",
+            "publisher_or_provider",
             "locator",
             "canonical_locator",
             "final_url",
+            "publication_or_update_date",
+            "access_date",
+            "source_group",
+            "applicable_scope",
+            "notes",
+            "upstream_id",
             "source_fingerprint",
             "content_sha256",
             "retrieved_at",
@@ -1798,6 +2758,11 @@ def validate_machine_evidence(
             "published_at",
             "source_updated_at",
             "internal_recorded_at",
+            "source_level",
+            "permission",
+            "external_use",
+            "tenant_id",
+            "project_id",
             "capture_receipt",
         )
         if not isinstance(cache, dict) or any(cache.get(field) != record.get(field) for field in snapshot_fields):
@@ -1809,9 +2774,55 @@ def validate_machine_evidence(
             add(issues, "error", "source_capture_method_invalid", evidence_path, f"{source_id}.capture_method无效。")
         if not isinstance(record.get("length"), int) or isinstance(record.get("length"), bool) or int(record.get("length", -1)) < 0:
             add(issues, "error", "source_capture_length_invalid", evidence_path, f"{source_id}.length无效。")
+        if receipt_verified:
+            verified_machine_sources[source_id] = record
     if require_machine:
         for source_id in sorted(set(machine_sources) - set(sources)):
             add(issues, "error", "machine_source_orphan", evidence_path, f"机器清单含未在Markdown台账定义的{source_id}。")
+
+    for claim_id, definition in claims.items():
+        if len(definition.cells) < 7 or definition.cells[1] != "F2":
+            continue
+        support_ids = list(dict.fromkeys(SOURCE_RE.findall(definition.cells[6])))
+        signed_values: list[tuple[str, str, str, str]] = []
+        for supporting_id in support_ids:
+            source = verified_machine_sources.get(supporting_id)
+            if source is None:
+                continue
+            group = normalize_evidence_text(str(source.get("source_group", "")))
+            canonical = str(source.get("canonical_locator", ""))
+            digest = str(source.get("content_sha256", ""))
+            upstream = normalize_evidence_text(str(source.get("upstream_id", "")))
+            if (
+                unresolved_evidence_value(group)
+                or group.startswith("unknown:")
+                or not canonical
+                or not re.fullmatch(r"[0-9a-f]{64}", digest)
+                or unresolved_evidence_value(upstream)
+                or upstream.startswith("unknown:")
+            ):
+                continue
+            signed_values.append((group, canonical, digest, upstream))
+        if len({item[0] for item in signed_values}) < 2:
+            add(issues, "error", "fact2_source_groups_not_independent", definition.document.path, f"{claim_id}: F2至少需要两个验签后不同的source_group。")
+        if len({item[1] for item in signed_values}) < 2:
+            add(issues, "error", "fact2_locator_not_independent", definition.document.path, f"{claim_id}: F2至少需要两个验签后不同的canonical_locator。")
+        if len({item[2] for item in signed_values}) < 2:
+            add(issues, "error", "fact2_source_fingerprint_not_independent", definition.document.path, f"{claim_id}: F2至少需要两个验签后不同的内容SHA-256。")
+        if len({item[3] for item in signed_values}) < 2:
+            add(issues, "error", "fact2_upstream_not_independent", definition.document.path, f"{claim_id}: F2至少需要两个验签后不同的upstream_id。")
+        if not any(
+            all(left[index] != right[index] for index in range(4))
+            for left_index, left in enumerate(signed_values)
+            for right in signed_values[left_index + 1 :]
+        ):
+            add(
+                issues,
+                "error",
+                "fact2_sources_not_fourfold_independent",
+                definition.document.path,
+                f"{claim_id}: F2必须存在同一对已验签来源，其source_group、canonical_locator、content_sha256、upstream_id四项同时有效且互不相同。",
+            )
 
     profiles = load_business_profiles()
     profile = profiles.get(total.frontmatter.get("business_mode", ""), {})
@@ -1825,7 +2836,10 @@ def validate_machine_evidence(
     }
     required_claim_fields = {
         "claim_id", "information_type", "ttl_class", "evidence_anchor_at", "date_basis",
-        "verified_at", "ttl_days", "expires_at", "verification_status", "supporting_source_ids",
+        "verified_at", "ttl_days", "expires_at", "claim_type", "provenance",
+        "verification_status", "claim_text", "time_scope", "supporting_source_refs",
+        "supporting_source_ids", "counter_source_refs", "counter_source_ids",
+        "supporting_source_receipt_sha256s", "confidence", "downstream_impact",
     }
     for claim_id, definition in claims.items():
         record = machine_claims.get(claim_id)
@@ -1873,6 +2887,50 @@ def validate_machine_evidence(
         machine_support = record.get("supporting_source_ids")
         if not isinstance(machine_support, list) or sorted(set(map(str, machine_support))) != support_ids:
             add(issues, "error", "claim_support_machine_drift", evidence_path, f"{claim_id}支持来源与Markdown台账不一致。")
+        if any(source_id not in verified_machine_sources for source_id in support_ids):
+            add(
+                issues,
+                "error",
+                "claim_support_receipt_unverified",
+                evidence_path,
+                f"{claim_id}的全部支持来源必须先通过独立宿主source-capture receipt验签。",
+            )
+        expected_receipt_hashes = {
+            source_id: verified_source_receipt_hashes[source_id]
+            for source_id in support_ids
+            if source_id in verified_source_receipt_hashes
+        }
+        if record.get("supporting_source_receipt_sha256s") != expected_receipt_hashes:
+            add(
+                issues,
+                "error",
+                "claim_support_receipt_binding_drift",
+                evidence_path,
+                f"{claim_id}必须逐来源绑定本次验签source-capture receipt的完整信封摘要。",
+            )
+        counter_ids = sorted(set(SOURCE_RE.findall(definition.cells[7] if len(definition.cells) > 7 else "")))
+        claim_binding = {
+            "claim_type": definition.cells[1],
+            "provenance": definition.cells[2],
+            "verification_status": definition.cells[3],
+            "claim_text": definition.cells[4],
+            "time_scope": definition.cells[5],
+            "supporting_source_refs": definition.cells[6],
+            "counter_source_refs": definition.cells[7],
+            "confidence": definition.cells[8],
+            "downstream_impact": definition.cells[9],
+        }
+        drift_fields = [field for field, value in claim_binding.items() if record.get(field) != value]
+        if record.get("counter_source_ids") != counter_ids:
+            drift_fields.append("counter_source_ids")
+        if drift_fields:
+            add(
+                issues,
+                "error",
+                "claim_ledger_machine_drift",
+                definition.document.path,
+                f"{claim_id}主张台账与候选machine claim逐列不一致：{', '.join(sorted(set(drift_fields)))}。",
+            )
         basis_field = {
             "retrieved_at": "retrieved_at",
             "published_at": "published_at",
@@ -1901,8 +2959,6 @@ def validate_machine_evidence(
                 evidence_path,
                 f"{claim_id}.evidence_anchor_at必须等于支持来源中最新的{basis_field}。",
             )
-        if len(definition.cells) > 3 and record.get("verification_status") != definition.cells[3]:
-            add(issues, "error", "claim_verification_machine_drift", evidence_path, f"{claim_id}.verification_status与Markdown台账不一致。")
     if require_machine:
         for claim_id in sorted(set(machine_claims) - set(claims)):
             add(issues, "error", "machine_claim_orphan", evidence_path, f"机器清单含未在Markdown台账定义的{claim_id}。")
@@ -1918,6 +2974,14 @@ def validate_machine_evidence(
             fingerprint = definition.cells[11]
             upstream_id = definition.cells[12]
             external_use = definition.cells[13]
+            if any(not source_ledger_scalar_safe(cell) for cell in definition.cells):
+                add(
+                    issues,
+                    "error",
+                    "source_ledger_markup_forbidden",
+                    definition.document.path,
+                    f"{source_id}来源台账只允许可见纯文本与raw locator，不得包含Markdown链接/图片、代码标记、HTML或隐藏字符。",
+                )
             if unresolved_evidence_value(definition.cells[1]):
                 add(issues, "error", "source_title_missing", definition.document.path, f"{source_id}标题/文档名不能为空或待确认。")
             if unresolved_evidence_value(definition.cells[2]):
@@ -1928,14 +2992,34 @@ def validate_machine_evidence(
                 add(issues, "error", "source_access_date_invalid", definition.document.path, f"{source_id}访问日期必须为YYYY-MM-DD。")
             if unresolved_evidence_value(definition.cells[9]):
                 add(issues, "error", "source_scope_missing", definition.document.path, f"{source_id}适用客户/项目不能为空或待确认。")
+            if definition.cells[10] not in {
+                "none", "capture_limitation", "metadata_unavailable", "scope_limited"
+            }:
+                add(issues, "error", "source_notes_code_invalid", definition.document.path, f"{source_id}备注只能使用受控审计码，不得承载事实或建议。")
             if unresolved_evidence_value(locator) or normalize_evidence_text(locator).startswith("unknown:"):
                 add(issues, "error", "source_locator_missing", definition.document.path, f"{source_id}必须记录非空稳定定位。")
+            elif not normalize_locator(locator):
+                add(issues, "error", "source_locator_raw_invalid", definition.document.path, f"{source_id}的稳定定位只允许raw HTTP(S) URL或受控stable-id。")
             if unresolved_evidence_value(source_group) or normalize_evidence_text(source_group).startswith("unknown:"):
                 add(issues, "error", "source_group_missing", definition.document.path, f"{source_id}必须记录非空source_group。")
             if level not in SOURCE_LEVELS:
                 add(issues, "error", "source_level_invalid", definition.document.path, f"{source_id}来源等级无效：{level!r}。")
             if permission not in SOURCE_PERMISSIONS:
                 add(issues, "error", "source_permission_invalid", definition.document.path, f"{source_id}权限无效：{permission!r}。")
+            if (
+                level == "internal"
+                or permission in {"internal-authorized", "restricted"}
+            ) and (
+                not source_id.startswith("SRC-N-")
+                or definition.document.frontmatter.get("artifact_type") != "internal_retrieval"
+            ):
+                add(
+                    issues,
+                    "error",
+                    "internal_source_carrier_invalid",
+                    definition.document.path,
+                    f"{source_id}的内部/受限证据只能由internal_retrieval中的SRC-N-*承载。",
+                )
             if external_use not in SOURCE_EXTERNAL_USE_VALUES:
                 add(issues, "error", "source_external_use_invalid", definition.document.path, f"{source_id}的external_use必须为true或false。")
             if permission == "restricted" and external_use == "true":
@@ -2128,10 +3212,24 @@ def link_target(cell: str) -> str:
     return match.group(1).strip() if match else ""
 
 
-def validate_status_sync(by_type: dict[str, Document], issues: list[Issue], strict: bool) -> None:
+def status_link_parts(cell: str) -> tuple[str, str] | None:
+    match = re.fullmatch(r"\[([^\]]+)\]\(([^)]+)\)", cell.strip())
+    if match is None:
+        return None
+    return match.group(1).strip(), match.group(2).strip()
+
+
+def validate_status_sync(
+    by_type: dict[str, Document],
+    issues: list[Issue],
+    strict: bool,
+    *,
+    claims: Mapping[str, ClaimDefinition] | None = None,
+) -> None:
     total = by_type.get("comprehensive_report")
     if not total:
         return
+    current_claim_ids = set(claims) if claims is not None else None
     rows = parse_status_rows(total)
     for artifact_type, label in STATUS_LABELS.items():
         artifact = by_type.get(artifact_type)
@@ -2155,8 +3253,8 @@ def validate_status_sync(by_type: dict[str, Document], issues: list[Issue], stri
             add(issues, "error", "selected_in_run_invalid", total.path, f"{label}.selected_in_run必须为true或false。")
         if run_action not in RUN_ACTIONS:
             add(issues, "error", "run_action_invalid", total.path, f"{label}.run_action无效：{run_action!r}。")
-        if artifact_type == "customer_letter_external" and run_action not in {"generated", "not_called"}:
-            add(issues, "error", "external_run_action_invalid", total.path, "客户信外发版run_action只允许generated或not_called。")
+        if artifact_type == "customer_letter_external" and run_action not in {"generated", "reused", "not_called"}:
+            add(issues, "error", "external_run_action_invalid", total.path, "客户信外发版run_action只允许generated、reused或not_called。")
         row_values = {
             "module_status": row[3],
             "review_status": row[4],
@@ -2170,13 +3268,45 @@ def validate_status_sync(by_type: dict[str, Document], issues: list[Issue], stri
         key_claim_ids = row[11]
         downstream_invalidation = row[12]
         gaps_blockers = row[13]
-        target = link_target(row[14])
+        status_link = status_link_parts(row[14])
+        target = status_link[1] if status_link is not None else ""
         if summary_sync_status not in SUMMARY_SYNC_STATUSES:
             add(issues, "error", "summary_sync_status_invalid", total.path, f"{label}.summary_sync_status无效。")
         if downstream_invalidation not in DOWNSTREAM_INVALIDATIONS:
             add(issues, "error", "downstream_invalidation_invalid", total.path, f"{label}.downstream_invalidation无效。")
-        if not gaps_blockers.strip():
-            add(issues, "error", "gaps_blockers_missing", total.path, f"{label}.gaps/blockers不能为空；无则写“无”。")
+        allow_empty_key_claims = artifact is None and selected == "false" and run_action == "not_called"
+        parsed_key_claims = canonical_key_claim_ids(
+            key_claim_ids,
+            current_claim_ids,
+            allow_empty=allow_empty_key_claims,
+        )
+        if parsed_key_claims is None:
+            add(
+                issues,
+                "error",
+                "key_claim_ids_contract_invalid",
+                total.path,
+                f"{label}.key_claim_ids只能是当前权威ledger中的去重排序claim_id列表；无引用写none，未调用也可留空。",
+            )
+        parsed_gap_tokens = canonical_status_tokens(gaps_blockers, current_claim_ids)
+        if parsed_gap_tokens is None:
+            add(
+                issues,
+                "error",
+                "gaps_blockers_contract_invalid",
+                total.path,
+                f"{label}.gaps/blockers只能写none，或受控gap/blocker码与当前claim_id的去重排序列表。",
+            )
+        elif row_values["module_status"] in {"partial", "blocked"} and not parsed_gap_tokens:
+            add(issues, "error", "terminal_gap_missing", total.path, f"{label}为partial/blocked时必须登记受控缺口或阻塞码。")
+        elif row_values["module_status"] == "blocked" and not status_blocked_recovery_complete(parsed_gap_tokens):
+            add(
+                issues,
+                "error",
+                "blocked_recovery_contract_invalid",
+                total.path,
+                f"{label}为blocked时，gaps/blockers必须同时包含attempted_*、impact_*、release_*受控码。",
+            )
         if artifact is None:
             if selected == "true":
                 add(issues, "error", "selected_artifact_missing", total.path, f"{label}本轮已选但成果文件不存在。")
@@ -2201,9 +3331,14 @@ def validate_status_sync(by_type: dict[str, Document], issues: list[Issue], stri
                         total.path,
                         f"{label}未调用时{field}应为{expected!r}。",
                     )
-            if target:
-                add(issues, "error", "status_phantom_link", total.path, f"{label}未调用却存在链接。")
-            if summary_sync_status != "not_applicable" or key_claim_ids or downstream_invalidation != "none":
+            if row[14].strip():
+                add(issues, "error", "status_phantom_link", total.path, f"{label}未调用却存在链接或链接文本。")
+            empty_key_claim_values = {"", "none"}
+            if (
+                summary_sync_status != "not_applicable"
+                or key_claim_ids not in empty_key_claim_values
+                or downstream_invalidation != "none"
+            ):
                 add(issues, "error", "status_uncalled_registry", total.path, f"{label}未调用时同步/主张/失效字段不符合空登记。")
             continue
         if selected == "false" and run_action != "not_called":
@@ -2217,8 +3352,18 @@ def validate_status_sync(by_type: dict[str, Document], issues: list[Issue], stri
             if row_value != artifact_value:
                 add(issues, "error", "status_sync_mismatch", total.path, f"{label}.{field}={row_value!r}，成果为{artifact_value!r}。")
         expected_target = "./" + artifact.path.name
-        if unquote(target) != expected_target:
-            add(issues, "error", "status_link_mismatch", total.path, f"{label}链接应为{expected_target}。")
+        if (
+            status_link is None
+            or status_link[0] != label
+            or unquote(target) != expected_target
+        ):
+            add(
+                issues,
+                "error",
+                "status_link_mismatch",
+                total.path,
+                f"{label}成果链接必须完整写为[{label}]({expected_target})。",
+            )
         if selected == "true" and run_action in {"created", "updated", "generated"}:
             if artifact.frontmatter.get("latest_run_id") != total.frontmatter.get("latest_run_id"):
                 planned_update = (
@@ -2239,8 +3384,22 @@ def validate_status_sync(by_type: dict[str, Document], issues: list[Issue], stri
         if artifact.frontmatter.get("module_status") == "completed" and artifact_type != "customer_letter_external":
             if not CLAIM_RE.search(key_claim_ids):
                 add(issues, "error", "key_claim_ids_missing", total.path, f"{label}completed时必须登记key_claim_ids。")
-        registered_claims = set(CLAIM_RE.findall(key_claim_ids))
+        registered_claims = set(parsed_key_claims or [])
         body_claims = set(CLAIM_RE.findall(body_without_placeholders(artifact)))
+        expected_registered_claims = (
+            body_claims
+            if current_claim_ids is None
+            else body_claims & current_claim_ids
+        )
+        binding_required = selected == "true" or artifact.frontmatter.get("module_status") == "completed"
+        if binding_required and registered_claims != expected_registered_claims:
+            add(
+                issues,
+                "error",
+                "key_claim_ids_binding_mismatch",
+                total.path,
+                f"{label}.key_claim_ids必须精确等于成果正文引用的当前ledger claim_id全集：{sorted(expected_registered_claims)}。",
+            )
         if registered_claims - body_claims:
             add(issues, "error", "key_claim_ids_not_in_artifact", total.path, f"{label}.key_claim_ids包含成果正文未引用的主张：{sorted(registered_claims - body_claims)}。")
         prefix = RESEARCH_PREFIX.get(artifact_type)
@@ -2475,7 +3634,7 @@ def parse_run_summary(summary: str, total: Document, run_id: str, issues: list[I
         add(issues, "error", "run_history_generated_invalid", total.path, f"{run_id}仅external_letter可使用generated动作。")
     invalid_external_actions = [
         action
-        for action in ("created", "updated", "reused")
+        for action in ("created", "updated")
         if "external_letter" in action_sets[action]
     ]
     if invalid_external_actions:
@@ -2484,7 +3643,7 @@ def parse_run_summary(summary: str, total: Document, run_id: str, issues: list[I
             "error",
             "run_history_external_action_invalid",
             total.path,
-            f"{run_id}的external_letter只允许generated或not_called，不能属于：{', '.join(invalid_external_actions)}。",
+            f"{run_id}的external_letter只允许generated、reused或not_called，不能属于：{', '.join(invalid_external_actions)}。",
         )
     if "external_letter" in selected and fields["route"] != "letter":
         add(issues, "error", "run_history_external_route_invalid", total.path, f"{run_id}选择external_letter时route必须为letter。")
@@ -2632,14 +3791,6 @@ def validate_route_gate(by_type: dict[str, Document], issues: list[Issue], stric
             row = rows.get(artifact_type, [])
             if artifact_type != "customer_letter_external" and len(row) >= 11 and row[10] != "synced":
                 add(issues, "error", "selected_module_unsynced", total.path, f"{STATUS_LABELS[artifact_type]}尚未同步到综合报告。")
-            if len(row) >= 14 and row[13] in {"", "待评估", "待提取", "待确认"}:
-                add(issues, "error", "selected_module_gaps_unresolved", total.path, f"{STATUS_LABELS[artifact_type]}必须明确填写gaps/blockers；无则写“无”。")
-            if len(row) >= 14 and artifact.frontmatter.get("module_status") in {"partial", "blocked"} and normalize_evidence_text(row[13]) in {"无", "none", "n/a", "na", "暂无"}:
-                add(issues, "error", "terminal_gap_missing", total.path, f"{STATUS_LABELS[artifact_type]}为partial/blocked时必须写明实际缺口或阻塞。")
-            if len(row) >= 14 and artifact.frontmatter.get("module_status") == "blocked":
-                gap_text = row[13]
-                if not all(token in gap_text for token in ("尝试", "影响", "解除")):
-                    add(issues, "error", "blocked_resolution_incomplete", total.path, f"{STATUS_LABELS[artifact_type]}为blocked时gaps/blockers必须包含已尝试动作、影响和解除条件。")
     if total.frontmatter.get("workflow_stage") == "closed" and total.frontmatter.get("module_status") != "completed":
         add(issues, "error", "closed_total_incomplete", total.path, "workflow_stage=closed时综合报告module_status必须为completed。")
 
@@ -2696,8 +3847,8 @@ def validate_route_gate(by_type: dict[str, Document], issues: list[Issue], stric
                 add(issues, "error", "review_stage_research_nonterminal", artifact.path, "review/closed阶段的研究成果必须为partial/completed/blocked终态。")
             if artifact.frontmatter.get("freshness_status") != "current":
                 add(issues, "error", "review_stage_research_stale", artifact.path, "review/closed阶段引用的研究成果必须current；stale/invalidated应先刷新或移除依赖。")
-        allowed_reviews = {"not_required"} if artifact_type == "institution_research" else set()
-        if artifact_type in {"leader_research", "internal_retrieval"}:
+        allowed_reviews: set[str] = set()
+        if artifact_type in RESEARCH_PREFIX:
             allowed_reviews = (
                 {"pending", "approved"}
                 if artifact.frontmatter.get("module_status") == "completed"
@@ -2746,6 +3897,58 @@ def validate_route_gate(by_type: dict[str, Document], issues: list[Issue], stric
         add(issues, "error", "letter_review_gate", artifact.path, f"letter在当前阶段的审核状态必须为{sorted(letter_reviews)}。")
 
 
+def required_research_review_types(by_type: Mapping[str, Document]) -> set[str]:
+    """Return selected or downstream-referenced research carriers.
+
+    The reference pass deliberately ignores the selected flag so a delivery
+    cannot evade fact review by marking a still-referenced carrier unselected.
+    """
+
+    total = by_type.get("comprehensive_report")
+    selected: set[str] = set()
+    if total is not None:
+        selected = {
+            artifact_type
+            for artifact_type, row in parse_status_rows(total).items()
+            if artifact_type in RESEARCH_PREFIX and len(row) >= 2 and row[1] == "true"
+        }
+    prefix_to_type = {prefix: artifact_type for artifact_type, prefix in RESEARCH_PREFIX.items()}
+    referenced: set[str] = set()
+    for artifact_type, document in by_type.items():
+        if artifact_type in RESEARCH_PREFIX:
+            continue
+        for claim_id in CLAIM_RE.findall(body_without_placeholders(document)):
+            referenced_type = prefix_to_type.get(claim_id.split("-")[1])
+            if referenced_type:
+                referenced.add(referenced_type)
+    return selected | referenced
+
+
+def validate_research_fact_review_gate(
+    by_type: Mapping[str, Document],
+    issues: list[Issue],
+    strict: bool,
+) -> None:
+    total = by_type.get("comprehensive_report")
+    if total is None or not (strict or total.frontmatter.get("ready_for_use") == "true"):
+        return
+    for artifact_type in sorted(required_research_review_types(by_type)):
+        artifact = by_type.get(artifact_type)
+        if (
+            artifact is None
+            or artifact.frontmatter.get("module_status") != "completed"
+            or artifact.frontmatter.get("freshness_status") != "current"
+            or artifact.frontmatter.get("review_status") != "approved"
+        ):
+            add(
+                issues,
+                "error",
+                "research_fact_review_required",
+                artifact.path if artifact is not None else total.path,
+                f"被选中或被下游引用的{artifact_type}必须由独立evidence_reviewer按当前正文SHA完成approved审核。",
+            )
+
+
 def validate_links(documents: list[Document], root: Path, issues: list[Issue]) -> None:
     for document in documents:
         for raw_target in LINK_RE.findall(document.body):
@@ -2785,6 +3988,88 @@ def extract_external_body(document: Document) -> str | None:
 
 def normalize_body(value: str) -> str:
     return re.sub(r"\s+", " ", value).strip()
+
+
+def compact_contract_text(value: str) -> str:
+    """Normalize a delivery-field value for deterministic anchor checks."""
+
+    normalized = unicodedata.normalize("NFKC", value).casefold()
+    return "".join(char for char in normalized if char.isalnum())
+
+
+def context_anchor(value: str) -> str:
+    """Use the explicit recipient/signer token before role/status qualifiers."""
+
+    return re.split(r"[｜|,，;；/（(]", unicodedata.normalize("NFKC", value), maxsplit=1)[0].strip()
+
+
+def bounded_ordered_text_contains(expected: str, actual: str) -> bool:
+    """Allow small particles inside an action phrase, not characters scattered across prose."""
+
+    return bounded_ordered_text_span(expected, actual) is not None
+
+
+def bounded_ordered_text_span(expected: str, actual: str) -> tuple[int, int] | None:
+    """Return the normalized-text span used for a bounded ordered anchor match."""
+
+    needle = compact_contract_text(expected)
+    normalized_actual = unicodedata.normalize("NFKC", actual).casefold()
+    indexed_haystack = [
+        (character, index)
+        for index, character in enumerate(normalized_actual)
+        if character.isalnum()
+    ]
+    haystack = "".join(character for character, _index in indexed_haystack)
+    if not needle or not haystack:
+        return None
+    allowed_extra = max(4, len(needle) // 2)
+    for start, candidate in enumerate(haystack):
+        if candidate != needle[0]:
+            continue
+        cursor = start
+        for character in needle[1:]:
+            cursor = haystack.find(character, cursor + 1)
+            if cursor < 0:
+                break
+        else:
+            if cursor - start + 1 <= len(needle) + allowed_extra:
+                return indexed_haystack[start][1], indexed_haystack[cursor][1] + 1
+    return None
+
+
+LETTER_NEGATIVE_POLARITY_RE = re.compile(
+    r"(?:不|非|勿|无|未|莫|毋|别|暂缓|暂停|停止|取消|拒绝|避免)"
+)
+LETTER_PURPOSE_META_RE = re.compile(
+    r"(?:元数据|字段|提示词|系统指令|发信目的为|letter_purpose|expected_action)",
+    re.IGNORECASE,
+)
+
+
+def positive_letter_anchor(expected: str, sentence: str) -> bool:
+    """Require an expected-action anchor without local negative polarity."""
+
+    if any(unicodedata.category(character) == "Cf" for character in sentence):
+        return False
+    normalized = unicodedata.normalize("NFKC", sentence).casefold()
+    span = bounded_ordered_text_span(expected, normalized)
+    if span is None:
+        return False
+    start, end = span
+    local_window = normalized[max(0, start - 10) : end]
+    return LETTER_NEGATIVE_POLARITY_RE.search(local_window) is None
+
+
+def external_markdown_forbidden(value: str) -> bool:
+    """Allow plain paragraphs and simple emphasis, but reject structural Markdown."""
+
+    return bool(
+        contains_markdown_code_block(value)
+        or re.search(r"(?m)^[ \t]{0,3}(?:#{1,6}\s|>|[-+*]\s|\d+[.)、]\s|\|)", value)
+        or re.search(r"(?m)^[ \t]{0,3}(?:-{3,}|_{3,}|\*{3,})[ \t]*$", value)
+        or contains_markdown_link_or_image(value)
+        or "`" in value
+    )
 
 
 def canonical_approved_body(value: str | None) -> str:
@@ -2829,6 +4114,176 @@ def validate_letter_isolation(by_type: dict[str, Document], issues: list[Issue])
         elif internal.frontmatter.get("module_status") == "completed" and not normalize_body(approved_body):
             add(issues, "error", "external_body_empty", internal.path, "completed内部稿的外发正文不能为空。")
         elif approved_body is not None and not PLACEHOLDER_RE.search(approved_body):
+            if internal.frontmatter.get("module_status") == "completed":
+                if not substantive_letter_field(
+                    internal.frontmatter.get("letter_purpose", ""), purpose=True
+                ) or not substantive_letter_field(
+                    internal.frontmatter.get("expected_action", ""), purpose=False
+                ):
+                    add(
+                        issues,
+                        "error",
+                        "letter_context_non_substantive",
+                        internal.path,
+                        "letter_purpose和expected_action必须分别包含明确动作及对象；空壳、元叙述或仅称‘已记录/已处理’不得进入候选外发正文。",
+                    )
+                hidden_format_characters = sorted(
+                    {
+                        f"U+{ord(character):04X}"
+                        for character in approved_body
+                        if unicodedata.category(character) == "Cf"
+                    }
+                )
+                if hidden_format_characters:
+                    add(
+                        issues,
+                        "error",
+                        "letter_external_format_character_forbidden",
+                        internal.path,
+                        "候选外发正文不得包含零宽、软连字符或其他不可见格式字符："
+                        + ", ".join(hidden_format_characters),
+                    )
+                if HTML_COMMENT_RE.search(approved_body) or RAW_HTML_TAG_RE.search(approved_body):
+                    add(
+                        issues,
+                        "error",
+                        "letter_external_html_forbidden",
+                        internal.path,
+                        "候选外发正文只允许纯文本或受控Markdown，不得使用HTML注释、details/summary或其他原始HTML隐藏/折叠内容。",
+                    )
+                if external_markdown_forbidden(approved_body):
+                    add(
+                        issues,
+                        "error",
+                        "letter_external_markdown_forbidden",
+                        internal.path,
+                        "候选外发正文只允许普通段落、换行和简单强调；不得使用代码块、标题、列表、表格、链接或行内代码。",
+                    )
+                visible_approved_body = markdown_without_fenced_code(approved_body)
+                compact_body = compact_contract_text(visible_approved_body)
+                if len(compact_body) < 20:
+                    add(
+                        issues,
+                        "error",
+                        "letter_external_body_too_short",
+                        internal.path,
+                        "候选外发正文规范化后必须至少有20个可见字符，不能只保留问候或落款。",
+                    )
+                recipient = context_anchor(internal.frontmatter.get("recipient_role", ""))
+                if not recipient or compact_contract_text(recipient) not in compact_body:
+                    add(
+                        issues,
+                        "error",
+                        "letter_recipient_anchor_missing",
+                        internal.path,
+                        "候选外发正文必须明确承载recipient_role中的收件对象或称谓。",
+                    )
+                signer = context_anchor(internal.frontmatter.get("signer", ""))
+                lines = [line.strip() for line in visible_approved_body.splitlines() if line.strip()]
+                salutation_valid = bool(
+                    lines
+                    and recipient
+                    and re.fullmatch(
+                        rf"(?:尊敬的)?{re.escape(recipient)}(?:[，,]?您好)?[:：]",
+                        unicodedata.normalize("NFKC", lines[0]).strip(),
+                    )
+                )
+                signer_indexes = [
+                    index
+                    for index, line in enumerate(lines)
+                    if signer
+                    and compact_contract_text(signer) == compact_contract_text(line)
+                ]
+                signer_index = signer_indexes[-1] if signer_indexes else -1
+                structure_valid = bool(
+                    len(lines) >= 3
+                    and salutation_valid
+                    and signer_index >= 2
+                    and signer_index == len(lines) - 1
+                )
+                substantive_lines = lines[1:signer_index] if structure_valid else []
+                substantive_body = "\n".join(substantive_lines)
+                if not structure_valid or not meaningful_delivery_text(
+                    substantive_body,
+                    minimum_chars=20,
+                ):
+                    add(
+                        issues,
+                        "error",
+                        "letter_external_structure_invalid",
+                        internal.path,
+                        "候选外发正文必须将称谓、至少一段实质正文和签署人分行呈现；不得把三项锚点拼成一行。",
+                    )
+                sentences = [
+                    sentence.strip()
+                    for sentence in re.split(r"(?<=[。！？!?；;])", substantive_body)
+                    if sentence.strip()
+                ]
+                negation_re = LETTER_NEGATIVE_POLARITY_RE
+                action_sentence_indexes = [
+                    index
+                    for index, sentence in enumerate(sentences)
+                    if positive_letter_anchor(
+                        internal.frontmatter.get("expected_action", ""), sentence
+                    )
+                    and re.search(r"(?:请|烦请|敬请|诚请|期待|希望|可否|能否)", sentence)
+                    and not negation_re.search(sentence)
+                ]
+                purpose = internal.frontmatter.get("letter_purpose", "")
+                purpose_meta_sentence_indexes = [
+                    index
+                    for index, sentence in enumerate(sentences)
+                    if bounded_ordered_text_contains(purpose, sentence)
+                    and LETTER_PURPOSE_META_RE.search(sentence)
+                ]
+                purpose_sentence_indexes = [
+                    index
+                    for index, sentence in enumerate(sentences)
+                    if index not in action_sentence_indexes
+                    and bounded_ordered_text_contains(purpose, sentence)
+                    and meaningful_delivery_text(sentence, minimum_chars=8)
+                    and not negation_re.search(sentence)
+                    and index not in purpose_meta_sentence_indexes
+                ]
+                has_context_sentence = any(
+                    index not in action_sentence_indexes
+                    and index not in purpose_sentence_indexes
+                    and meaningful_delivery_text(sentence, minimum_chars=8)
+                    and not negation_re.search(sentence)
+                    for index, sentence in enumerate(sentences)
+                )
+                if not action_sentence_indexes:
+                    add(
+                        issues,
+                        "error",
+                        "letter_expected_action_missing",
+                        internal.path,
+                        "候选外发正文必须用请/期待/希望等请求语，在同一句中连续承载expected_action；不得把行动字符分散到无关正文。",
+                    )
+                if purpose_meta_sentence_indexes:
+                    add(
+                        issues,
+                        "error",
+                        "letter_purpose_meta_forbidden",
+                        internal.path,
+                        "外发正文不得用元数据、字段名、提示词或‘发信目的为’等内部元叙述冒充真实来函目的。",
+                    )
+                if not has_context_sentence or not purpose_sentence_indexes:
+                    add(
+                        issues,
+                        "error",
+                        "letter_purpose_anchor_missing",
+                        internal.path,
+                        "候选外发正文必须分别提供：连续承载letter_purpose的肯定句，以及独立于目的/行动请求的背景或客户价值句；否定表达和通用空话不能替代发信目的。",
+                    )
+                if not signer or compact_contract_text(signer) not in compact_body:
+                    add(
+                        issues,
+                        "error",
+                        "letter_signer_anchor_missing",
+                        internal.path,
+                        "候选外发正文必须明确承载signer中的签署人。",
+                    )
             for leak in external_leaks(approved_body):
                 add(issues, "error", "external_candidate_leak", internal.path, f"标记间候选外发正文包含禁用内容：{leak}")
         required = internal.frontmatter.get("external_output_required") == "true"
@@ -2851,6 +4306,14 @@ def validate_letter_isolation(by_type: dict[str, Document], issues: list[Issue])
             add(issues, "error", "external_title_invalid", external.path, f"外发版标题应为：{expected_title}")
         if not normalize_body(clean):
             add(issues, "error", "external_body_empty", external.path, "外发版正文为空。")
+        if external_markdown_forbidden(clean):
+            add(
+                issues,
+                "error",
+                "letter_external_markdown_forbidden",
+                external.path,
+                "外发版只允许普通段落、换行和简单强调；不得包含代码块、标题、列表、表格、链接或行内代码。",
+            )
         for leak in external_leaks(external.body):
             code = "external_html_comment" if leak == "HTML注释" else "external_internal_leak"
             add(issues, "error", code, external.path, f"外发版包含禁用内容：{leak}")
@@ -3065,9 +4528,9 @@ def registry_row(
     extras: list[str] | None = None,
 ) -> str:
     if data is None or path is None:
-        cells = [label, "false", "not_called", "not_called", "not_required", "not_applicable", "current", "", "", "", "not_applicable", "", "none", "无", ""]
+        cells = [label, "false", "not_called", "not_called", "not_required", "not_applicable", "current", "", "", "", "not_applicable", "", "none", "none", ""]
     else:
-        preserved = extras or ["synced", "待提取", "none", "无"]
+        preserved = extras or ["synced", "none", "none", "none"]
         cells = [
             label,
             "true" if action != "not_called" else "false",
@@ -3127,12 +4590,12 @@ def update_operation_rows(
             data = by_type[artifact_type].frontmatter
             path = by_type[artifact_type].path
         row = current_rows.get(artifact_type, [])
-        extras = row[10:14] if len(row) >= 15 else ["out_of_sync", "待提取", "none", "待评估"]
+        extras = row[10:14] if len(row) >= 15 else ["out_of_sync", "none", "none", "input_missing"]
         if artifact_type in actions:
             extras[0] = "not_applicable" if artifact_type == "customer_letter_external" else "synced"
             extras[2] = "none"
             if artifact_type == "customer_letter_external":
-                extras[1], extras[3] = "无", "无"
+                extras[1], extras[3] = "none", "none"
         replacement = registry_row(label, data, path, action=actions.get(artifact_type, "not_called"), extras=extras)
         text = replace_or_insert_status_row(text, label, replacement)
     return text
@@ -3292,6 +4755,44 @@ def rollback_mutation(mutation: Mutation) -> None:
         raise OSError("事务回滚不完整：" + "; ".join(rollback_errors))
 
 
+def internal_only_safety_authorization_codes(root: Path) -> list[str]:
+    """Return internal-only codes only after re-verifying the durable host seal."""
+    try:
+        manifest = load_manifest(root)
+    except TxError as exc:
+        raise RuntimeError(f"无法读取内部授权边界：{exc}") from exc
+    if not isinstance(manifest, dict):
+        raise RuntimeError("无法读取内部授权边界：缺少runtime manifest。")
+    gate = manifest.get("intake_preflight")
+    audit = manifest.get("candidate_attestation")
+    if not isinstance(gate, dict) or not isinstance(audit, dict):
+        raise RuntimeError("无法读取内部授权边界：缺少完整intake门禁或独立候选签章。")
+    try:
+        verify_persisted_candidate_attestation(
+            audit,
+            current_intake_gate=gate,
+            current_workspace=root.resolve(),
+        )
+    except CandidateAttestationError as exc:
+        raise RuntimeError(f"无法读取内部授权边界：candidate_gate_attestation_invalid：{exc}") from exc
+    codes = gate.get("safety_authorization_codes") if isinstance(gate, dict) else None
+    if not isinstance(codes, list) or any(
+        code not in {"unauthorized_patient_information", "unauthorized_internal_source"}
+        for code in codes
+    ):
+        raise RuntimeError("无法读取内部授权边界：safety_authorization_codes无效。")
+    return sorted(set(codes))
+
+
+def reject_external_lifecycle_for_internal_only_sources(root: Path, operation: str) -> None:
+    codes = internal_only_safety_authorization_codes(root)
+    if codes:
+        raise RuntimeError(
+            "internal_review_draft_only：签名授权仅允许内部审核稿，不得执行"
+            f"{operation}；受限风险=" + ",".join(codes)
+        )
+
+
 def review_letter_facts(
     root: Path,
     documents: list[Document],
@@ -3421,6 +4922,7 @@ def approve_internal(
     action_event_id: str,
     snapshot: WorkspaceSnapshot,
 ) -> Mutation:
+    reject_external_lifecycle_for_internal_only_sources(root, "外发审批")
     internals = [doc for doc in documents if doc.frontmatter.get("artifact_type") == "customer_letter_internal"]
     totals = [doc for doc in documents if doc.frontmatter.get("artifact_type") == "comprehensive_report"]
     if len(internals) != 1 or len(totals) != 1:
@@ -3876,6 +5378,8 @@ def mark_ready_for_use(
     if len(totals) != 1:
         raise RuntimeError("就绪审批需要且只能有一个综合报告。")
     total = totals[0]
+    if total.frontmatter.get("business_mode", "") == "letter":
+        reject_external_lifecycle_for_internal_only_sources(root, "mark-ready")
     if total.frontmatter.get("module_status") != "completed" or total.frontmatter.get("freshness_status") != "current":
         raise RuntimeError("ready_for_use审批前综合报告必须completed/current。")
     if total.frontmatter.get("workflow_stage") not in {"output", "review", "closed"}:
@@ -3883,7 +5387,18 @@ def mark_ready_for_use(
     by_type = {doc.frontmatter.get("artifact_type", ""): doc for doc in documents}
     rows = parse_status_rows(total)
     selected = {key for key, row in rows.items() if len(row) >= 2 and row[1] == "true"}
-    for artifact_type in selected & (GENERIC_REVIEW_TYPES | {"customer_letter_internal"}):
+    for artifact_type in required_research_review_types(by_type):
+        artifact = by_type.get(artifact_type)
+        if (
+            artifact is None
+            or artifact.frontmatter.get("module_status") != "completed"
+            or artifact.frontmatter.get("freshness_status") != "current"
+            or artifact.frontmatter.get("review_status") != "approved"
+        ):
+            raise RuntimeError(
+                f"{artifact_type}被选中或被下游引用，但未完成独立evidence_reviewer的当前正文SHA审核，不得标记ready_for_use。"
+            )
+    for artifact_type in selected & ((GENERIC_REVIEW_TYPES - set(RESEARCH_PREFIX)) | {"customer_letter_internal"}):
         artifact = by_type.get(artifact_type)
         if artifact is None or artifact.frontmatter.get("review_status") != "approved":
             raise RuntimeError(f"{artifact_type}未完成approved审核，不得标记ready_for_use。")
@@ -3949,7 +5464,7 @@ def mark_ready_for_use(
     actions = {
         artifact_type: "reused"
         for artifact_type in selected
-        if artifact_type in by_type and artifact_type != "customer_letter_external"
+        if artifact_type in by_type
     }
     if total.frontmatter.get("route") in {"visit_prep", "strategy", "letter"} and not (
         actions.keys() & {"institution_research", "leader_research", "internal_retrieval"}
@@ -4032,6 +5547,7 @@ def emit_external(
     request_event_id: str,
     snapshot: WorkspaceSnapshot,
 ) -> Mutation:
+    reject_external_lifecycle_for_internal_only_sources(root, "外发版生成")
     internals = [doc for doc in documents if doc.frontmatter.get("artifact_type") == "customer_letter_internal"]
     totals = [doc for doc in documents if doc.frontmatter.get("artifact_type") == "comprehensive_report"]
     if len(internals) != 1 or len(totals) != 1:
@@ -4194,6 +5710,84 @@ DEFAULT_TTL_DAYS = {
 }
 
 
+def validate_candidate_attestation_audit(
+    root: Path,
+    manifest_path: Path,
+    manifest: Mapping[str, object],
+    issues: list[Issue],
+    validation_profile: str,
+) -> None:
+    audit = manifest.get("candidate_attestation")
+    if audit is None:
+        if validation_profile == "release":
+            add(issues, "error", "candidate_attestation_required", manifest_path, "release必须保留可历史验签的完整宿主候选签章材料。")
+        return
+    if not isinstance(audit, dict) or set(audit) != CANDIDATE_ATTESTATION_AUDIT_FIELDS:
+        add(issues, "error", "candidate_attestation_audit_invalid", manifest_path, "candidate attestation审计摘要字段不完整或含未知字段。")
+        return
+    if (
+        audit.get("schema") != CANDIDATE_ATTESTATION_AUDIT_SCHEMA
+        or audit.get("attestation_schema") != ATTESTATION_SCHEMA
+        or audit.get("audience") != ATTESTATION_AUDIENCE
+    ):
+        add(issues, "error", "candidate_attestation_audit_invalid", manifest_path, "candidate attestation审计schema/audience无效。")
+    for field in (
+        "attestation_sha256", "source_manifest_sha256", "input_payload_sha256",
+        "final_manifest_sha256", "intake_gate_sha256",
+    ):
+        if not re.fullmatch(r"[0-9a-f]{64}", str(audit.get(field, ""))):
+            add(issues, "error", "candidate_attestation_audit_invalid", manifest_path, f"candidate_attestation.{field}不是SHA-256。")
+    for field in (
+        "attestation_id", "issuer", "key_id", "session_id", "customer_id",
+        "source_workspace", "candidate_workspace", "formal_workspace",
+    ):
+        if not isinstance(audit.get(field), str) or not str(audit[field]).strip():
+            add(issues, "error", "candidate_attestation_audit_invalid", manifest_path, f"candidate_attestation.{field}缺失。")
+    if audit.get("context_id") != manifest.get("context_id"):
+        add(issues, "error", "candidate_attestation_lineage_drift", manifest_path, "candidate attestation context_id与正式manifest不一致。")
+    if audit.get("customer_id") != manifest.get("customer_id"):
+        add(issues, "error", "candidate_attestation_lineage_drift", manifest_path, "candidate attestation customer_id与正式manifest不一致。")
+    if not RUN_RE.fullmatch(str(audit.get("run_id", ""))):
+        add(issues, "error", "candidate_attestation_lineage_drift", manifest_path, "candidate attestation run_id无效。")
+    source_revision = audit.get("source_manifest_revision")
+    transaction_sequence = manifest.get("transaction_sequence")
+    if (
+        not isinstance(source_revision, int)
+        or isinstance(source_revision, bool)
+        or not isinstance(transaction_sequence, int)
+        or source_revision < 1
+        or source_revision >= transaction_sequence
+    ):
+        add(issues, "error", "candidate_attestation_lineage_drift", manifest_path, "candidate attestation source revision必须早于当前正式事务序号。")
+    source_workspace = Path(str(audit.get("source_workspace", "")))
+    candidate_workspace = Path(str(audit.get("candidate_workspace", "")))
+    if not source_workspace.is_absolute() or not candidate_workspace.is_absolute() or candidate_workspace == source_workspace:
+        add(issues, "error", "candidate_attestation_lineage_drift", manifest_path, "candidate/source workspace必须是两个不同的绝对身份路径。")
+    issued = parse_expiry(str(audit.get("issued_at", "")))
+    expires = parse_expiry(str(audit.get("expires_at", "")))
+    host_authorized = parse_expiry(str(audit.get("host_authorized_at", "")))
+    if (
+        issued is None
+        or expires is None
+        or host_authorized is None
+        or not (issued <= host_authorized < expires)
+        or expires - issued > timedelta(minutes=15)
+    ):
+        add(issues, "error", "candidate_attestation_time_invalid", manifest_path, "candidate attestation签发、宿主授权与过期时间无效。")
+    intake_gate = manifest.get("intake_preflight")
+    if not isinstance(intake_gate, dict):
+        add(issues, "error", "candidate_attestation_gate_missing", manifest_path, "candidate attestation缺少当前完整intake门禁供复验。")
+        return
+    try:
+        verify_persisted_candidate_attestation(
+            audit,
+            current_intake_gate=intake_gate,
+            current_workspace=root.resolve(),
+        )
+    except CandidateAttestationError as exc:
+        add(issues, "error", "candidate_attestation_signature_or_gate_invalid", manifest_path, str(exc))
+
+
 def validate_runtime_manifest(
     root: Path,
     by_type: dict[str, Document],
@@ -4201,6 +5795,9 @@ def validate_runtime_manifest(
     strict: bool,
     validation_profile: str = "candidate",
     current_time: datetime | None = None,
+    *,
+    claims: Mapping[str, ClaimDefinition] | None = None,
+    sources: Mapping[str, SourceDefinition] | None = None,
 ) -> None:
     total = by_type.get("comprehensive_report")
     if total is None:
@@ -4216,6 +5813,13 @@ def validate_runtime_manifest(
         add(issues, "error", "runtime_manifest_invalid", manifest_path, str(exc))
         return
     assert manifest is not None
+    validate_candidate_attestation_audit(
+        root,
+        manifest_path,
+        manifest,
+        issues,
+        validation_profile,
+    )
     data = total.frontmatter
     top_level = {
         "context_id": data.get("context_id", ""),
@@ -4232,9 +5836,95 @@ def validate_runtime_manifest(
     for key, expected in top_level.items():
         if str(manifest.get(key, "")) != expected:
             add(issues, "error", "runtime_manifest_drift", manifest_path, f"{key}与综合报告不一致。")
+    actual_subject_binding = manifest.get("subject_binding")
+    intake_gate = manifest.get("intake_preflight")
+    signed_subject_resolution = (
+        intake_gate.get("subject_resolution") if isinstance(intake_gate, dict) else None
+    )
+    if not isinstance(actual_subject_binding, dict):
+        add(issues, "error", "runtime_subject_binding_missing", manifest_path, "缺少规范主体绑定摘要。")
+    else:
+        if actual_subject_binding != signed_subject_resolution:
+            add(issues, "error", "runtime_subject_binding_drift", manifest_path, "subject_binding必须与签名intake中的subject_resolution逐字段一致。")
+        canonical_name = re.sub(
+            r"\s+",
+            " ",
+            unicodedata.normalize("NFKC", data.get("customer_display_name", "")),
+        ).strip()
+        entity_key = actual_subject_binding.get("canonical_entity_key")
+        jurisdiction = actual_subject_binding.get("jurisdiction")
+        expected_subject_sha = canonical_subject_digest(canonical_name, entity_key, jurisdiction)
+        expected_scope_sha = hashlib.sha256(
+            re.sub(
+                r"\s+",
+                " ",
+                unicodedata.normalize("NFKC", data.get("organization_scope", "")),
+            ).strip().encode("utf-8")
+        ).hexdigest()
+        if actual_subject_binding.get("schema") != "discovery-call-subject-resolution/v1":
+            add(issues, "error", "runtime_subject_binding_drift", manifest_path, "subject_binding.schema无效。")
+        if actual_subject_binding.get("canonical_customer_name") != canonical_name:
+            add(issues, "error", "runtime_subject_binding_drift", manifest_path, "subject_binding.canonical_customer_name与成果主体不一致。")
+        if not isinstance(entity_key, str) or not re.fullmatch(r"[A-Za-z0-9][A-Za-z0-9._:-]{2,127}", entity_key):
+            add(issues, "error", "runtime_subject_binding_drift", manifest_path, "subject_binding.canonical_entity_key无效。")
+        if not isinstance(jurisdiction, str) or not re.fullmatch(r"[A-Za-z0-9][A-Za-z0-9._:-]{2,127}", jurisdiction):
+            add(issues, "error", "runtime_subject_binding_drift", manifest_path, "subject_binding.jurisdiction无效。")
+        if actual_subject_binding.get("canonical_subject_sha256") != expected_subject_sha:
+            add(issues, "error", "runtime_subject_binding_drift", manifest_path, "subject_binding.canonical_subject_sha256与规范主体三元组不一致。")
+        if actual_subject_binding.get("organization_scope_sha256") != expected_scope_sha:
+            add(issues, "error", "runtime_subject_binding_drift", manifest_path, "subject_binding.organization_scope_sha256与成果范围不一致。")
+        if actual_subject_binding.get("customer_id") != data.get("customer_id", ""):
+            add(issues, "error", "runtime_subject_binding_drift", manifest_path, "subject_binding.customer_id与成果不一致。")
+        id_source = actual_subject_binding.get("id_source")
+        if id_source not in {"canonical_derived", "host_attested_external"}:
+            add(issues, "error", "runtime_subject_binding_drift", manifest_path, "subject_binding.id_source无效。")
+        elif id_source == "canonical_derived" and actual_subject_binding.get("customer_id") != "cust-" + expected_subject_sha[:12]:
+            add(issues, "error", "runtime_subject_binding_drift", manifest_path, "canonical_derived customer_id与规范主体不一致。")
     expected_ready = data.get("ready_for_use", "false") == "true"
     if manifest.get("ready_for_use") is not expected_ready:
         add(issues, "error", "runtime_manifest_ready_drift", manifest_path, "ready_for_use与综合报告不一致。")
+    safety_codes = intake_gate.get("safety_authorization_codes") if isinstance(intake_gate, dict) else None
+    if not isinstance(safety_codes, list) or any(
+        code not in {"unauthorized_patient_information", "unauthorized_internal_source"}
+        for code in safety_codes
+    ):
+        add(issues, "error", "runtime_safety_authorization_invalid", manifest_path, "intake_preflight.safety_authorization_codes无效。")
+    elif safety_codes and data.get("business_mode") == "letter":
+        internal_letter = by_type.get("customer_letter_internal")
+        if internal_letter is not None and internal_letter.frontmatter.get("review_status") == "approved":
+            add(issues, "error", "internal_only_source_external_approval", internal_letter.path, "内部来源授权仅允许internal_review_draft，不得形成外发审批状态。")
+        if by_type.get("customer_letter_external") is not None:
+            add(issues, "error", "internal_only_source_external_artifact", by_type["customer_letter_external"].path, "内部来源授权不得生成外发版。")
+        if expected_ready:
+            add(issues, "error", "internal_only_source_ready_forbidden", total.path, "内部来源授权不得标记ready_for_use。")
+        if validation_profile == "release":
+            add(issues, "error", "internal_only_source_release_forbidden", total.path, "内部来源授权仅支持内部审核稿，不得通过release校验。")
+    selected_modules = manifest.get("selected_modules")
+    selected_module_names = (
+        [str(item) for item in selected_modules]
+        if isinstance(selected_modules, list)
+        and all(isinstance(item, str) for item in selected_modules)
+        else []
+    )
+    expected_delivery_summary = delivery_summary_for_documents(
+        by_type,
+        business_mode=data.get("business_mode"),
+        selected_modules=selected_module_names,
+    )
+    manifest_delivery_summary = manifest.get("delivery_summary")
+    current_strategy_selected = (
+        data.get("business_mode") in {"briefing", "standard_visit", "strategic_account"}
+        and "strategy" in selected_module_names
+    )
+    if validation_profile in {"candidate", "release"} and current_strategy_selected:
+        if expected_delivery_summary is None:
+            add(issues, "error", "delivery_summary_invalid", manifest_path, "交流策略无法形成受控决策五元组。")
+        elif manifest_delivery_summary != expected_delivery_summary:
+            add(issues, "error", "runtime_delivery_summary_drift", manifest_path, "manifest.delivery_summary必须与当前交流策略的建议、投入、动作、owner和日期完全一致。")
+    elif validation_profile in {"candidate", "release"} and manifest_delivery_summary is not None:
+        add(issues, "error", "runtime_delivery_summary_stale", manifest_path, "当前候选无交流策略时manifest不得保留历史决策五元组。")
+    elif manifest_delivery_summary is not None and expected_delivery_summary is not None and manifest_delivery_summary != expected_delivery_summary:
+        add(issues, "error", "runtime_delivery_summary_drift", manifest_path, "manifest.delivery_summary与当前交流策略不一致。")
     records = manifest.get("artifacts")
     if not isinstance(records, dict):
         add(issues, "error", "runtime_manifest_artifacts_invalid", manifest_path, "artifacts必须为对象。")
@@ -4280,7 +5970,7 @@ def validate_runtime_manifest(
 
     runtime_records = manifest.get("runtime_files", {})
     expected_runtime = {
-        "search-plan.json": "discovery-call-search-plan/v1",
+        "search-plan.json": "discovery-call-search-plan/v2",
         "source-cache.json": "discovery-call-source-cache/v1",
         "evidence-manifest.json": "discovery-call-evidence-manifest/v1",
         "run-metrics.json": "discovery-call-run-metrics/v1",
@@ -4422,7 +6112,7 @@ def validate_runtime_manifest(
         if require_runtime and (not isinstance(intake, dict) or not isinstance(established_intake, dict)):
             add(issues, "error", "search_plan_intake_missing", root / "runtime" / "search-plan.json", "candidate/release计划必须绑定当前intake预检收据。")
         elif require_runtime and isinstance(intake, dict) and isinstance(established_intake, dict):
-            for key in ("gate_id", "input_sha256", "business_mode", "evaluated_at", "expires_at"):
+            for key in intake_preflight.PERSISTED_GATE_STABLE_FIELDS:
                 if intake.get(key) != established_intake.get(key):
                     add(issues, "error", "search_plan_intake_drift", root / "runtime" / "search-plan.json", f"intake_preflight.{key}与manifest不一致。")
             expiry_text = str(established_intake.get("expires_at", ""))
@@ -4451,9 +6141,28 @@ def validate_runtime_manifest(
         else {}
     )
     connector_status = str(connector_audit.get("status", ""))
+    machine_sources = (
+        evidence_payload.get("sources", {})
+        if isinstance(evidence_payload, dict)
+        and isinstance(evidence_payload.get("sources"), dict)
+        else {}
+    )
+    machine_sensitive = any(
+        isinstance(record, dict)
+        and (
+            record.get("source_level") == "internal"
+            or record.get("permission") in {"internal-authorized", "restricted"}
+        )
+        for record in machine_sources.values()
+    )
     signed_internal_required = bool(
         require_runtime
-        and ("internal" in expected_modules or connector_status in {"connected", "no_hits"})
+        and (
+            "internal" in expected_modules
+            or connector_status in {"connected", "no_hits"}
+            or machine_sensitive
+            or requires_internal_authorization(claims, sources)
+        )
     )
     if signed_internal_required:
         authorization = manifest.get("authorization")
@@ -4472,6 +6181,7 @@ def validate_runtime_manifest(
             )
         immutable_receipt_fields = (
             "authorization_actor_id",
+            "capability_receipt_run_id",
             "capability_operation",
             "capability_receipt_issuer",
             "capability_receipt_key_id",
@@ -4497,6 +6207,17 @@ def validate_runtime_manifest(
                     root / "runtime" / "evidence-manifest.json",
                     f"connector_audit.{field}与manifest授权谱系不一致。",
                 )
+        evidence_run_id = str(evidence_payload.get("run_id", "")) if isinstance(evidence_payload, dict) else ""
+        plan_run_id = str(plan.get("run_id", "")) if isinstance(plan, dict) else ""
+        receipt_run_id = str(authorization.get("capability_receipt_run_id", ""))
+        if not receipt_run_id or receipt_run_id != evidence_run_id or receipt_run_id != plan_run_id:
+            add(
+                issues,
+                "error",
+                "capability_receipt_run_drift",
+                manifest_path,
+                "宿主能力收据必须同时绑定当前search plan与evidence manifest的run_id。",
+            )
         if authorization.get("capability_operation") != "internal_read":
             add(issues, "error", "capability_operation_invalid", manifest_path, "internal能力操作必须精确为internal_read。")
         receipt_sha = str(authorization.get("capability_receipt_sha256", ""))
@@ -4570,11 +6291,2221 @@ def validate_runtime_manifest(
         add(issues, "error", "connector_authorization_expired", evidence_path, "连接器调用授权无效或已过期。")
 
 
+SCHEDULED_SECTION_ALIASES: dict[str, tuple[str, ...]] = {
+    "目标与最小推进动作": ("目标与最小推进动作",),
+    "机会资格": ("机会资格", "机会资格与投入建议"),
+    "议程": ("议程", "时间化议程与参会分工"),
+    "参会分工": ("参会分工", "时间化议程与参会分工"),
+    "材料": ("材料", "材料计划", "材料与演示计划"),
+    "会后行动": ("会后行动",),
+    "CRM/PIMS": ("CRM/PIMS", "CRM/PIMS候选"),
+}
+ACCOUNT_ACTION_LABELS = {
+    "action": "action",
+    "action_disposition": "action_disposition",
+    "external_interaction": "external_interaction",
+    "resource_commitment": "resource_commitment",
+    "owner": "owner",
+    "due_date": "due_date",
+    "dependency": "依赖",
+    "completion_criteria": "完成标准",
+    "adjust_or_stop_trigger": "调整/停止触发",
+    "crm_candidate": "CRM/PIMS候选",
+}
+ACTION_DISPOSITIONS = {"advance", "adjust", "stop", "archive", "observe", "recheck"}
+NO_GO_DISPOSITIONS = {"stop", "archive", "observe", "recheck"}
+NO_GO_ADVANCEMENT_RE = re.compile(r"(?:继续|推进|争取|加码|投标|演示|跟进|促成|扩大投入)")
+NO_GO_EXTERNAL_ACTION_RE = re.compile(
+    r"(?:提交|发送|邀约|邀请|试用|报价|签约|立项|拜访|会谈|会议|交流|沟通|"
+    r"产品方案|方案给|推动|推进|争取|促成|加码|投标|演示|跟进|扩大投入)"
+)
+EXTERNAL_INTERACTION_VALUES = {"none", "customer_contact"}
+RESOURCE_COMMITMENT_VALUES = {"none", "proposed", "approved"}
+NO_GO_CONTROLLED_ACTIONS = {
+    "stop": "停止主动投入",
+    "archive": "归档当前机会",
+    "observe": "被动观察证据变化",
+    "recheck": "内部复核机会资格",
+}
+NO_GO_ACTION_OUTCOMES = {
+    "stop": ("no_go_recorded", "reopen_internal_review"),
+    "archive": ("opportunity_archived", "reopen_internal_review"),
+    "observe": ("evidence_watch_recorded", "archive_if_unchanged"),
+    "recheck": ("qualification_review_recorded", "keep_no_go_if_unresolved"),
+}
+NO_GO_DEPENDENCY_VALUES = {
+    "none",
+    "无",
+    "无依赖",
+    "内部复核",
+    "内部证据更新",
+    "公开证据变化",
+}
+NO_GO_EVIDENCE_STATES = {"insufficient_evidence", "conflicted_evidence", "disqualified", "not_applicable"}
+NO_GO_STAKEHOLDER_ROLES = {"known_role", "unknown_role", "decision_role_unverified"}
+NO_GO_ROLE_STATES = {"verified", "unverified", "conflicted"}
+NO_GO_STAGES = {"qualification", "monitoring", "closure"}
+NO_GO_INFLUENCE_STATES = {"verified", "unverified", "not_applicable"}
+NO_GO_QUALIFICATION_STATES = {"unverified", "insufficient", "disqualified", "not_applicable"}
+NO_GO_SCENARIO_VALUES = {
+    "基准情景": ("evidence_unchanged", "maintain_no_go", "被动观察证据变化"),
+    "上行情景": ("new_verified_evidence", "reopen_internal_review", "内部复核机会资格"),
+    "下行情景": ("disqualifying_evidence", "close_opportunity", "归档当前机会"),
+}
+NO_GO_VERIFICATION_SOURCES = {"internal_evidence", "public_evidence", "none"}
+NO_GO_VERIFICATION_SIGNALS = {"keep_no_go", "reopen_internal_review", "archive"}
+NO_GO_RISK_CODES = {"evidence_insufficient", "authorization_missing", "resource_limit", "qualification_failed"}
+NO_GO_CONSEQUENCE_CODES = {"maintain_no_go", "close_opportunity", "internal_review_required"}
+NO_GO_REASON_CODES = {"evidence_insufficient", "qualification_failed", "authorization_missing", "resource_limit"}
+NO_GO_STOP_CODES = {"evidence_still_insufficient", "qualification_failed", "authorization_unavailable", "resource_limit_reached"}
+NO_GO_TOTAL_DECISION_LABELS = {
+    "主体与边界", "当前重点任务", "决策影响者", "项目与采购窗口",
+    "主要机会与风险", "最小推进动作", "客户主体", "责任角色", "当前任务",
+}
+NO_GO_TOTAL_EFFECT_CODES = {
+    "maintain_no_go", "internal_review_required", "close_opportunity", "no_external_action",
+}
+STATUS_GAP_BLOCKER_CODES = {
+    "evidence_insufficient",
+    "evidence_conflicted",
+    "source_unavailable",
+    "authorization_missing",
+    "qualification_failed",
+    "resource_limit",
+    "connector_unavailable",
+    "review_pending",
+    "input_missing",
+    "artifact_unavailable",
+    "attempted_internal_review",
+    "attempted_public_refresh",
+    "attempted_connector_retry",
+    "attempted_input_request",
+    "impact_decision_blocked",
+    "impact_evidence_unavailable",
+    "impact_delivery_blocked",
+    "release_verified_evidence",
+    "release_authorization_restored",
+    "release_connector_restored",
+    "release_review_approved",
+    "release_input_received",
+}
+STATUS_BLOCKED_CODE_PREFIXES = ("attempted_", "impact_", "release_")
+
+
+def canonical_key_claim_ids(
+    value: str,
+    current_claim_ids: set[str] | None = None,
+    *,
+    allow_empty: bool = False,
+) -> list[str] | None:
+    """Parse the exact claim registry representation used by status rows."""
+
+    if value == "none" or (allow_empty and value == ""):
+        return []
+    tokens = value.split(", ")
+    if (
+        not tokens
+        or value != ", ".join(tokens)
+        or tokens != sorted(set(tokens))
+        or any(
+            not CLAIM_RE.fullmatch(token)
+            or (current_claim_ids is not None and token not in current_claim_ids)
+            for token in tokens
+        )
+    ):
+        return None
+    return tokens
+
+
+def canonical_status_tokens(
+    value: str,
+    current_claim_ids: set[str] | None = None,
+) -> list[str] | None:
+    """Parse a status cell without accepting prose or ambiguous separators."""
+
+    if value == "none":
+        return []
+    tokens = value.split(", ")
+    if (
+        not tokens
+        or value != ", ".join(tokens)
+        or tokens != sorted(set(tokens))
+        or "none" in tokens
+    ):
+        return None
+    if any(
+        token not in STATUS_GAP_BLOCKER_CODES
+        and not (
+            CLAIM_RE.fullmatch(token)
+            and (current_claim_ids is None or token in current_claim_ids)
+        )
+        for token in tokens
+    ):
+        return None
+    return tokens
+
+
+def status_blocked_recovery_complete(tokens: list[str] | None) -> bool:
+    """Keep blocked recovery auditable while retaining the closed-code contract."""
+
+    return bool(
+        tokens
+        and all(any(token.startswith(prefix) for token in tokens) for prefix in STATUS_BLOCKED_CODE_PREFIXES)
+    )
+
+
+def no_go_action_semantics_valid(
+    disposition: str,
+    action: str,
+    owner: str,
+    dependency: str,
+    completion_criteria: str,
+    trigger: str,
+    external_interaction: str,
+    resource_commitment: str,
+) -> bool:
+    """Authorize no-go actions only through closed codes and explicit zero commitments."""
+
+    normalized_action = normalize_evidence_text(action)
+    controlled_action = NO_GO_CONTROLLED_ACTIONS.get(disposition)
+    normalized_dependency = normalize_evidence_text(dependency)
+    combined = " ".join((action, owner, dependency, completion_criteria, trigger))
+    return bool(
+        controlled_action is not None
+        and normalized_action == normalize_evidence_text(controlled_action)
+        and stable_owner_cell(owner)
+        and external_interaction == "none"
+        and resource_commitment == "none"
+        and normalized_dependency
+        in {normalize_evidence_text(value) for value in NO_GO_DEPENDENCY_VALUES}
+        and NO_GO_ACTION_OUTCOMES.get(disposition) == (completion_criteria, trigger)
+        and not NO_GO_EXTERNAL_ACTION_RE.search(combined)
+        and not NO_GO_ADVANCEMENT_RE.search(combined)
+    )
+
+
+def resolved_section_body(value: str) -> bool:
+    visible = re.sub(r"[|#>*_`\-:：\s]", "", value)
+    return meaningful_delivery_text(visible, minimum_chars=8)
+
+
+STRATEGY_NAV_ARTIFACT_BY_PREFIX = {
+    "I": "institution_research",
+    "L": "leader_research",
+    "N": "internal_retrieval",
+}
+STRATEGY_NAV_LABEL_BY_PREFIX = {
+    "I": "机构研究成果",
+    "L": "人物研究成果",
+    "N": "内部检索成果",
+}
+SCHEDULED_NAV_USAGE_CODES = {
+    "target", "assumption", "agenda", "qualification", "roles",
+    "materials", "questions", "risk", "action", "crm",
+}
+ACCOUNT_NAV_USAGE_CODES = {
+    "strategic_question", "judgment_chain", "stakeholder", "qualification",
+    "scenario", "action", "verification", "risk", "crm",
+}
+STRATEGY_GAP_HEADER = [
+    "claim_ref", "claim_type_ref", "provenance_ref", "evidence_state",
+    "impact_type", "verification_mode", "owner", "due_date",
+]
+
+
+def strategy_navigation_contract_errors(
+    strategy: Document,
+    sections: Mapping[str, list[str]],
+    *,
+    usage_codes: set[str],
+    by_type: Mapping[str, Document] | None = None,
+    claims: Mapping[str, ClaimDefinition] | None = None,
+) -> list[str]:
+    """Validate evidence navigation as typed local bindings, never as prose."""
+
+    bodies = sections.get("依据导航与缺口", [])
+    if not bodies:
+        return []
+    tables = markdown_table_blocks(bodies[0]) if len(bodies) == 1 else []
+    errors: list[str] = []
+    if (
+        len(bodies) != 1
+        or len(tables) != 2
+        or tables[0][0] != ["序号", "claim_id", "来源成果", "使用位置"]
+        or tables[1][0] != STRATEGY_GAP_HEADER
+        or not 1 <= len(tables[0][1]) <= 20
+        or not 1 <= len(tables[1][1]) <= 10
+    ):
+        return ["固定双表表头或行数无效"]
+
+    navigation_rows = tables[0][1]
+    seen_navigation: set[tuple[str, str]] = set()
+    for index, row in enumerate(navigation_rows, start=1):
+        if len(row) != 4 or row[0] != str(index) or not CLAIM_RE.fullmatch(row[1]):
+            errors.append(f"导航第{index}行形状/序号/claim_id无效")
+            continue
+        claim_id = row[1]
+        prefix = claim_id.split("-")[1]
+        artifact_type = STRATEGY_NAV_ARTIFACT_BY_PREFIX.get(prefix)
+        expected_label = STRATEGY_NAV_LABEL_BY_PREFIX.get(prefix)
+        linked_artifact = by_type.get(artifact_type) if by_type is not None and artifact_type else None
+        link = status_link_parts(row[2])
+        expected_target = f"./{linked_artifact.path.name}" if linked_artifact is not None else ""
+        if (
+            artifact_type is None
+            or expected_label is None
+            or link is None
+            or link[0] != expected_label
+            or linked_artifact is None
+            or linked_artifact.frontmatter.get("artifact_type") != artifact_type
+            or linked_artifact.path.parent != strategy.path.parent
+            or not linked_artifact.path.is_file()
+            or link[1] != expected_target
+        ):
+            errors.append(f"{claim_id}来源成果链接未绑定当前实际{expected_label or '研究'}文件")
+        if row[3] not in usage_codes:
+            errors.append(f"{claim_id}使用位置不是当前策略分支受控代码")
+        if claims is not None and claim_id not in claims:
+            errors.append(f"{claim_id}不在当前权威claim ledger")
+        navigation_key = (claim_id, row[3])
+        if navigation_key in seen_navigation:
+            errors.append(f"{claim_id}/{row[3]}重复导航")
+        seen_navigation.add(navigation_key)
+
+    for index, row in enumerate(tables[1][1], start=1):
+        claim_id = row[0] if row else ""
+        definition = claims.get(claim_id) if claims is not None else None
+        if (
+            len(row) != 8
+            or any(contains_markdown_link_or_image(cell) for cell in row)
+            or not CLAIM_RE.fullmatch(claim_id)
+            or row[1] not in {"F", "F2", "A", "H", "R"}
+            or row[2] not in {"public", "U", "N"}
+            or row[3] not in {"unknown", "conflicted", "stale", "insufficient"}
+            or row[4] not in {"decision", "verification", "risk", "resource"}
+            or row[5] not in {"internal_review", "public_refresh", "authorized_customer_contact"}
+            or not stable_owner_cell(row[6])
+            or not date_valid(row[7])
+            or (
+                claims is not None
+                and (
+                    definition is None
+                    or len(definition.cells) < 3
+                    or definition.cells[1] != row[1]
+                    or definition.cells[2] != row[2]
+                )
+            )
+        ):
+            errors.append(f"缺口第{index}行不是权威claim绑定的固定8列代码记录")
+    return errors
+
+
+def validate_scheduled_strategy_sections(
+    strategy: Document,
+    issues: list[Issue],
+    *,
+    by_type: Mapping[str, Document] | None = None,
+    claims: Mapping[str, ClaimDefinition] | None = None,
+) -> None:
+    """Enforce fixed, executable scheduled-visit tables rather than prose shells."""
+
+    global_visible = markdown_without_fenced_code(strategy.body)
+    sections = h2_sections(global_visible)
+    allowed_sections = {
+        "目标与最小推进动作",
+        "对象假设与验证",
+        "议题与节奏",
+        "机会资格",
+        "机会资格与投入建议",
+        "议程",
+        "参会分工",
+        "时间化议程与参会分工",
+        "材料",
+        "材料计划",
+        "材料与演示计划",
+        "问题清单",
+        "红线、异议与承诺边界",
+        "会后行动",
+        "CRM/PIMS",
+        "CRM/PIMS候选",
+        "依据导航与缺口",
+    }
+    missing: list[str] = []
+    empty: list[str] = []
+    for logical, aliases in SCHEDULED_SECTION_ALIASES.items():
+        matched = [body for alias in aliases for body in sections.get(alias, [])]
+        if not matched:
+            missing.append(logical)
+        elif not any(resolved_section_body(body) for body in matched):
+            empty.append(logical)
+    if missing:
+        add(
+            issues,
+            "error",
+            "presales_section_missing",
+            strategy.path,
+            "scheduled_visit缺少独立二级章节：" + ", ".join(missing),
+        )
+    if empty:
+        add(
+            issues,
+            "error",
+            "presales_section_empty",
+            strategy.path,
+            "scheduled_visit章节不能只写待补充或空表：" + ", ".join(empty),
+        )
+
+    def bodies_for(logical: str) -> list[str]:
+        return [
+            body
+            for alias in SCHEDULED_SECTION_ALIASES[logical]
+            for body in sections.get(alias, [])
+        ]
+
+    structure_errors: list[str] = []
+    unexpected_sections = sorted(set(sections) - allowed_sections)
+    if unexpected_sections:
+        structure_errors.append("非契约二级章节：" + ", ".join(unexpected_sections))
+    hidden_link_sections = sorted(
+        section_name
+        for section_name, bodies in sections.items()
+        if section_name != "依据导航与缺口"
+        and any(contains_markdown_link_or_image(body) for body in bodies)
+    )
+    if hidden_link_sections:
+        structure_errors.append(
+            "核心/行动章节不得包含Markdown链接或图片：" + ", ".join(hidden_link_sections)
+        )
+    if re.search(r"(?m)^#{3,6}\s+", global_visible):
+        structure_errors.append("scheduled_visit不得新增H3-H6子章节")
+
+    allowed_table_headers = {
+        ("项目", "内容", "claim_id"),
+        ("假设", "claim_id", "风险", "验证问题"),
+        ("顺序", "议题", "进入依据 claim_id", "建议表达", "观察信号"),
+        ("维度", "当前判断", "claim_id", "待验证问题"),
+        ("时间", "环节/议题", "客户对象", "我方owner", "目标信号"),
+        ("参会人/角色", "RACI", "负责内容", "备用安排"),
+        ("材料/演示", "用途与展示时点", "owner", "版本/授权", "备用/不展示边界"),
+        ("场景", "风险依据 claim_id", "建议回应", "禁止承诺", "升级角色"),
+        ("action", "owner", "due_date", "依赖", "完成标准", "CRM/PIMS候选"),
+        ("候选类型", "内容", "owner", "due_date", "写回状态"),
+        ("序号", "claim_id", "来源成果", "使用位置"),
+        tuple(STRATEGY_GAP_HEADER),
+    }
+    table_header_counts: dict[tuple[str, ...], int] = {}
+    for header, _rows in markdown_table_blocks(global_visible):
+        signature = tuple(header)
+        table_header_counts[signature] = table_header_counts.get(signature, 0) + 1
+        if signature not in allowed_table_headers:
+            structure_errors.append("非契约表头：" + "/".join(header))
+    duplicate_table_headers = sorted(
+        "/".join(header)
+        for header, count in table_header_counts.items()
+        if header in allowed_table_headers and count > 1
+    )
+    if duplicate_table_headers:
+        structure_errors.append("重复契约表：" + ", ".join(duplicate_table_headers))
+
+    allowed_bullet_locations = {
+        "目标对象": {"目标与最小推进动作"},
+        "建议": {"机会资格", "机会资格与投入建议"},
+        "投入强度": {"机会资格", "机会资格与投入建议"},
+        "前提与停止条件": {"机会资格", "机会资格与投入建议"},
+    }
+    for section_name, bodies in sections.items():
+        for section_body in bodies:
+            for line in section_body.splitlines():
+                bullet = re.match(r"^\s*[-*+]\s+([^:：]+)[:：]", line)
+                if bullet:
+                    label = bullet.group(1).strip()
+                    if section_name not in allowed_bullet_locations.get(label, set()):
+                        structure_errors.append(f"{section_name}含非契约列表项：{label}")
+                elif re.match(r"^\s*[-*+]\s+\S", line):
+                    structure_errors.append(f"{section_name}含无标签列表动作")
+                if section_name != "问题清单" and re.match(r"^\s*\d+[.)、]\s+\S", line):
+                    structure_errors.append(f"{section_name}含非契约编号动作")
+                if (
+                    line.strip()
+                    and not line.lstrip().startswith("|")
+                    and bullet is None
+                    and not (
+                        section_name == "问题清单"
+                        and re.match(r"^\s*\d+[.)、]\s+\S", line)
+                    )
+                ):
+                    structure_errors.append(f"{section_name}含非契约自由正文")
+
+    scheduled_preamble = markdown_preamble(global_visible)
+    if any(
+        line.strip() and not re.match(r"^#(?!#)\s+\S", line.strip())
+        for line in scheduled_preamble.splitlines()
+    ):
+        structure_errors.append("标题区含非契约自由正文")
+
+    structured_conclusion_counts = {
+        label: len(re.findall(rf"^\s*-\s*{re.escape(label)}：", global_visible, re.MULTILINE))
+        for label in ("建议", "投入强度", "前提与停止条件")
+    }
+    if any(count != 1 for count in structured_conclusion_counts.values()):
+        structure_errors.append("建议/投入强度/前提与停止条件必须全文件唯一")
+    scheduled_action_header = ["action", "owner", "due_date", "依赖", "完成标准", "CRM/PIMS候选"]
+    scheduled_action_tables = [
+        (header, rows)
+        for header, rows in markdown_table_blocks(global_visible)
+        if header == scheduled_action_header
+    ]
+    if len(scheduled_action_tables) != 1:
+        structure_errors.append("会后action固定表必须全文件唯一")
+
+    optional_table_contracts = {
+        "对象假设与验证": (["假设", "claim_id", "风险", "验证问题"], 4),
+        "议题与节奏": (["顺序", "议题", "进入依据 claim_id", "建议表达", "观察信号"], 5),
+        "红线、异议与承诺边界": (["场景", "风险依据 claim_id", "建议回应", "禁止承诺", "升级角色"], 5),
+    }
+    for section_name, (expected_header, column_count) in optional_table_contracts.items():
+        bodies = sections.get(section_name, [])
+        if not bodies:
+            continue
+        tables = markdown_table_blocks(bodies[0]) if len(bodies) == 1 else []
+        if (
+            len(bodies) != 1
+            or len(tables) != 1
+            or tables[0][0] != expected_header
+            or not 1 <= len(tables[0][1]) <= 8
+            or any(
+                len(row) != column_count
+                or any(not meaningful_delivery_text(cell, minimum_chars=2) for cell in row)
+                for row in tables[0][1]
+            )
+        ):
+            structure_errors.append(section_name + "固定表")
+
+    question_bodies = sections.get("问题清单", [])
+    if question_bodies:
+        question_tables = markdown_table_blocks(question_bodies[0]) if len(question_bodies) == 1 else []
+        questions = (
+            re.findall(r"^\s*(\d+)\.\s+(.+)$", question_bodies[0], re.MULTILINE)
+            if len(question_bodies) == 1
+            else []
+        )
+        if (
+            question_tables
+            or [number for number, _question in questions] != ["1", "2", "3"]
+            or any(
+                not meaningful_delivery_text(question, minimum_chars=8)
+                or not re.search(r"[?？]\s*$", question)
+                for _number, question in questions
+            )
+        ):
+            structure_errors.append("问题清单必须恰有三个可见问题且不得包含表格或行动列表")
+
+    navigation_bodies = sections.get("依据导航与缺口", [])
+    if navigation_bodies:
+        navigation_errors = strategy_navigation_contract_errors(
+            strategy,
+            sections,
+            usage_codes=SCHEDULED_NAV_USAGE_CODES,
+            by_type=by_type,
+            claims=claims,
+        )
+        if navigation_errors:
+            add(
+                issues,
+                "error",
+                "strategy_navigation_contract_invalid",
+                strategy.path,
+                "scheduled_visit依据导航必须绑定当前实际研究成果，使用位置和缺口必须为受控代码，缺口不得含任何链接或图片："
+                + ", ".join(navigation_errors),
+            )
+            structure_errors.append("依据导航与缺口闭合契约")
+
+    target_bodies = bodies_for("目标与最小推进动作")
+    target_tables = markdown_table_blocks(target_bodies[0]) if len(target_bodies) == 1 else []
+    target_header, target_rows = target_tables[0] if target_tables else ([], [])
+    target_labels = ["主要目标", "最小推进动作", "成功标准"]
+    target_map = {row[0]: row for row in target_rows if len(row) == 3}
+    if (
+        len(target_bodies) != 1
+        or len(target_tables) != 1
+        or target_header != ["项目", "内容", "claim_id"]
+        or [row[0] if row else "" for row in target_rows] != target_labels
+        or any(
+            label not in target_map
+            or not meaningful_delivery_text(target_map[label][1], minimum_chars=6)
+            or not CLAIM_RE.fullmatch(target_map[label][2])
+            for label in target_labels
+        )
+        or (
+            "主要目标" in target_map
+            and normalize_evidence_text(target_map["主要目标"][1])
+            != normalize_evidence_text(strategy.frontmatter.get("visit_objective", ""))
+        )
+        or (
+            "最小推进动作" in target_map
+            and normalize_evidence_text(target_map["最小推进动作"][1])
+            != normalize_evidence_text(strategy.frontmatter.get("minimum_next_step", ""))
+        )
+    ):
+        structure_errors.append("目标与最小推进动作固定表")
+
+    qualification_bodies = bodies_for("机会资格")
+    qualification_tables = markdown_table_blocks(qualification_bodies[0]) if len(qualification_bodies) == 1 else []
+    qualification_header, qualification_rows = qualification_tables[0] if qualification_tables else ([], [])
+    qualification_labels = ["Budget", "Authority", "Need", "Timing/采购时序", "竞争位置"]
+    qualification_body = qualification_bodies[0] if len(qualification_bodies) == 1 else ""
+    if (
+        len(qualification_bodies) != 1
+        or len(qualification_tables) != 1
+        or qualification_header != ["维度", "当前判断", "claim_id", "待验证问题"]
+        or [row[0] if row else "" for row in qualification_rows] != qualification_labels
+        or any(
+            len(row) != 4
+            or not meaningful_delivery_text(row[1], minimum_chars=6)
+            or not CLAIM_RE.fullmatch(row[2])
+            or not meaningful_delivery_text(row[3], minimum_chars=6)
+            for row in qualification_rows
+        )
+        or re.search(r"^\s*-\s*建议：\s*(win|conditional_win|monitor|no_go)\s*$", qualification_body, re.MULTILINE) is None
+        or re.search(r"^\s*-\s*投入强度：\s*(低|中|高)\s*$", qualification_body, re.MULTILINE) is None
+        or (
+            (stop_match := re.search(r"^\s*-\s*前提与停止条件：\s*(.+)$", qualification_body, re.MULTILINE)) is None
+            or not meaningful_delivery_text(stop_match.group(1), minimum_chars=8)
+        )
+    ):
+        structure_errors.append("机会资格与投入建议固定表/结论")
+
+    agenda_bodies = bodies_for("议程")
+    participant_bodies = bodies_for("参会分工")
+    combined = sections.get("时间化议程与参会分工", [])
+    combined_tables = markdown_table_blocks(combined[0]) if len(combined) == 1 else []
+    if combined_tables:
+        agenda_table = combined_tables[0]
+        participant_table = combined_tables[1] if len(combined_tables) > 1 else ([], [])
+        agenda_layout_invalid = bool(
+            len(combined) != 1
+            or len(combined_tables) != 2
+            or any(sections.get(alias) for alias in ("议程",))
+            or any(sections.get(alias) for alias in ("参会分工",))
+        )
+    else:
+        agenda_tables = markdown_table_blocks(agenda_bodies[0]) if len(agenda_bodies) == 1 else []
+        participant_tables = markdown_table_blocks(participant_bodies[0]) if len(participant_bodies) == 1 else []
+        agenda_table = agenda_tables[0] if agenda_tables else ([], [])
+        participant_table = participant_tables[0] if participant_tables else ([], [])
+        agenda_layout_invalid = bool(
+            combined
+            or len(agenda_bodies) != 1
+            or len(participant_bodies) != 1
+            or len(agenda_tables) != 1
+            or len(participant_tables) != 1
+        )
+    agenda_header, agenda_rows = agenda_table
+    if (
+        agenda_layout_invalid
+        or agenda_header != ["时间", "环节/议题", "客户对象", "我方owner", "目标信号"]
+        or len(agenda_rows) != 3
+        or any(
+            len(row) != 5
+            or not re.search(r"(?:分钟|最后)", row[0])
+            or any(not meaningful_delivery_text(cell, minimum_chars=4) for cell in row[1:])
+            or not stable_owner_cell(row[3])
+            for row in agenda_rows
+        )
+    ):
+        structure_errors.append("时间化议程固定表")
+    participant_header, participant_rows = participant_table
+    if (
+        agenda_layout_invalid
+        or participant_header != ["参会人/角色", "RACI", "负责内容", "备用安排"]
+        or not 1 <= len(participant_rows) <= 8
+        or any(
+            len(row) != 4
+            or not stable_owner_cell(row[0])
+            or row[1] not in {"R", "A", "C", "I"}
+            or not meaningful_delivery_text(row[2], minimum_chars=4)
+            or not meaningful_delivery_text(row[3], minimum_chars=4)
+            for row in participant_rows
+        )
+    ):
+        structure_errors.append("参会RACI固定表")
+
+    material_bodies = bodies_for("材料")
+    material_tables = markdown_table_blocks(material_bodies[0]) if len(material_bodies) == 1 else []
+    material_header, material_rows = material_tables[0] if material_tables else ([], [])
+    if (
+        len(material_bodies) != 1
+        or len(material_tables) != 1
+        or material_header != ["材料/演示", "用途与展示时点", "owner", "版本/授权", "备用/不展示边界"]
+        or not 1 <= len(material_rows) <= 6
+        or any(
+            len(row) != 5
+            or any(not meaningful_delivery_text(cell, minimum_chars=4) for cell in row)
+            or not stable_owner_cell(row[2])
+            for row in material_rows
+        )
+    ):
+        structure_errors.append("材料与演示固定表")
+
+    action_bodies = bodies_for("会后行动")
+    action_tables = markdown_table_blocks(action_bodies[0]) if len(action_bodies) == 1 else []
+    action_header, action_rows = action_tables[0] if action_tables else ([], [])
+    if (
+        len(action_bodies) != 1
+        or len(action_tables) != 1
+        or action_header != ["action", "owner", "due_date", "依赖", "完成标准", "CRM/PIMS候选"]
+        or not 1 <= len(action_rows) <= 2
+        or any(
+            len(row) != 6
+            or not meaningful_delivery_text(row[0], minimum_chars=4)
+            or not stable_owner_cell(row[1])
+            or not date_valid(row[2])
+            or not meaningful_delivery_text(row[3], minimum_chars=4)
+            or not meaningful_delivery_text(row[4], minimum_chars=6)
+            or row[5] not in {"是", "否"}
+            for row in action_rows
+        )
+        or (
+            action_rows
+            and normalize_evidence_text(action_rows[0][0])
+            != normalize_evidence_text(strategy.frontmatter.get("minimum_next_step", ""))
+        )
+    ):
+        structure_errors.append("会后行动固定表")
+
+    crm_bodies = bodies_for("CRM/PIMS")
+    crm_tables = markdown_table_blocks(crm_bodies[0]) if len(crm_bodies) == 1 else []
+    crm_header, crm_rows = crm_tables[0] if crm_tables else ([], [])
+    if (
+        len(crm_bodies) != 1
+        or len(crm_tables) != 1
+        or crm_header != ["候选类型", "内容", "owner", "due_date", "写回状态"]
+        or not 1 <= len(crm_rows) <= 5
+        or any(
+            len(row) != 5
+            or row[0] not in {"action", "verification", "risk", "opportunity"}
+            or not meaningful_delivery_text(row[1], minimum_chars=6)
+            or not stable_owner_cell(row[2])
+            or not date_valid(row[3])
+            or row[4] != "candidate_only"
+            for row in crm_rows
+        )
+    ):
+        structure_errors.append("CRM/PIMS候选固定表")
+
+    if structure_errors:
+        add(
+            issues,
+            "error",
+            "scheduled_strategy_structure_invalid",
+            strategy.path,
+            "scheduled_visit交付结构或可执行字段无效：" + ", ".join(structure_errors),
+        )
+
+
+def validate_account_action_contract(
+    strategy: Document,
+    contract: Mapping[str, object],
+    issues: list[Issue],
+    *,
+    by_type: Mapping[str, Document] | None = None,
+    claims: Mapping[str, ClaimDefinition] | None = None,
+) -> None:
+    """Enforce executable account actions, recommendation and stop conditions."""
+
+    if strategy.frontmatter.get("module_status") != "completed":
+        return
+    global_visible = markdown_without_fenced_code(strategy.body)
+    sections = h2_sections(global_visible)
+    structure_errors: list[str] = []
+    allowed_sections = {
+        "战略问题与最小推进动作",
+        "判断链与证据边界",
+        "利益相关者与决策结构",
+        "机会资格与投入建议",
+        "情景与触发条件",
+        "30/60/90天账户动作",
+        "验证计划",
+        "风险、承诺边界与停止条件",
+        "CRM/PIMS候选",
+        "依据导航与缺口",
+    }
+    unexpected_sections = sorted(set(sections) - allowed_sections)
+    if unexpected_sections:
+        structure_errors.append("非契约二级章节：" + ", ".join(unexpected_sections))
+    if re.search(r"(?m)^#{3,6}\s+", global_visible):
+        structure_errors.append("account_planning不得新增H3-H6子章节")
+
+    allowed_table_headers = {
+        ("项目", "内容", "claim_id"),
+        ("环节", "当前判断", "claim_id", "反证/替代解释", "置信度", "验证方式"),
+        ("角色层级", "当前可核实职责", "事项/阶段", "影响方式", "证据 claim_id", "缺口与验证动作"),
+        ("维度", "当前判断", "claim_id", "缺口/反证", "下一验证动作"),
+        ("情景", "触发信号", "可能影响", "应对动作", "owner", "复核日期"),
+        (
+            "周期", "action", "action_disposition", "external_interaction", "resource_commitment",
+            "owner", "due_date", "依赖", "完成标准", "调整/停止触发", "CRM/PIMS候选",
+        ),
+        ("待验证主张/假设", "当前状态", "验证问题或动作", "目标对象/来源", "owner", "due_date", "通过/停止信号"),
+        ("风险/停止条件", "依据 claim_id", "业务后果", "预防或降级动作", "升级角色"),
+        ("候选类型", "内容", "数据属性", "owner", "due_date", "写回状态"),
+        ("序号", "claim_id", "来源成果", "使用位置"),
+        tuple(STRATEGY_GAP_HEADER),
+    }
+    header_counts: dict[tuple[str, ...], int] = {}
+    for table_header, _table_rows in markdown_table_blocks(global_visible):
+        signature = tuple(table_header)
+        header_counts[signature] = header_counts.get(signature, 0) + 1
+        if signature not in allowed_table_headers:
+            structure_errors.append("非契约表头：" + "/".join(table_header))
+    duplicate_headers = sorted(
+        "/".join(table_header)
+        for table_header, count in header_counts.items()
+        if table_header in allowed_table_headers and count > 1
+    )
+    if duplicate_headers:
+        structure_errors.append("重复契约表：" + ", ".join(duplicate_headers))
+
+    allowed_bullet_locations = {
+        "建议": {"机会资格与投入建议"},
+        "投入强度": {"机会资格与投入建议"},
+        "建议理由": {"机会资格与投入建议"},
+        "停止继续投入的最低条件": {"风险、承诺边界与停止条件"},
+        "禁止承诺": {"风险、承诺边界与停止条件"},
+    }
+    for section_name, bodies in sections.items():
+        for section_body in bodies:
+            for line in section_body.splitlines():
+                bullet = re.match(r"^\s*[-*+]\s+([^:：]+)[:：]", line)
+                if bullet:
+                    label = bullet.group(1).strip()
+                    if section_name not in allowed_bullet_locations.get(label, set()):
+                        structure_errors.append(f"{section_name}含非契约列表项：{label}")
+                elif re.match(r"^\s*[-*+]\s+\S", line):
+                    structure_errors.append(f"{section_name}含无标签列表动作")
+                if re.match(r"^\s*\d+[.)、]\s+\S", line):
+                    structure_errors.append(f"{section_name}含非契约编号动作")
+                if line.strip() and not line.lstrip().startswith("|") and bullet is None:
+                    structure_errors.append(f"{section_name}含非契约自由正文")
+
+    account_preamble = markdown_preamble(global_visible)
+    if any(
+        line.strip() and not re.match(r"^#(?!#)\s+\S", line.strip())
+        for line in account_preamble.splitlines()
+    ):
+        structure_errors.append("标题区含非契约自由正文")
+
+    navigation_bodies = sections.get("依据导航与缺口", [])
+    if navigation_bodies:
+        navigation_errors = strategy_navigation_contract_errors(
+            strategy,
+            sections,
+            usage_codes=ACCOUNT_NAV_USAGE_CODES,
+            by_type=by_type,
+            claims=claims,
+        )
+        if navigation_errors:
+            add(
+                issues,
+                "error",
+                "strategy_navigation_contract_invalid",
+                strategy.path,
+                "account_planning依据导航必须绑定当前实际研究成果，使用位置和缺口必须为受控代码，缺口不得含任何链接或图片："
+                + ", ".join(navigation_errors),
+            )
+            structure_errors.append("依据导航与缺口闭合契约")
+
+    linked_core_sections = sorted(
+        section_name
+        for section_name, bodies in sections.items()
+        if section_name != "依据导航与缺口"
+        and any(contains_markdown_link_or_image(body) for body in bodies)
+    )
+    if linked_core_sections:
+        add(
+            issues,
+            "error",
+            "account_strategy_hidden_link_forbidden",
+            strategy.path,
+            "账户策略的判断、资格、行动与风险章节不得包含Markdown链接或图片；链接只允许出现在依据导航指定列："
+            + ", ".join(linked_core_sections),
+        )
+    action_sections = sections.get("30/60/90天账户动作", [])
+    tables = markdown_table_blocks(action_sections[0]) if len(action_sections) == 1 else []
+    header, rows = tables[0] if tables else ([], [])
+    configured_action_fields = [
+        str(field)
+        for field in contract.get("required_action_fields", [])
+        if isinstance(field, str)
+    ]
+    configured_no_go_fields = {
+        str(field)
+        for field in contract.get("required_no_go_fields", [])
+        if isinstance(field, str)
+    }
+    expected_action_fields = list(ACCOUNT_ACTION_LABELS)
+    expected_no_go_fields = {
+        "recommendation",
+        "investment_intensity",
+        "recommendation_reason",
+        "minimum_stop_condition",
+    }
+    contract_invalid = (
+        configured_action_fields != expected_action_fields
+        or configured_no_go_fields != expected_no_go_fields
+    )
+    if contract_invalid:
+        add(
+            issues,
+            "error",
+            "account_strategy_contract_invalid",
+            strategy.path,
+            "account_planning机器契约缺少固定动作或No-Go字段定义。",
+        )
+    account_action_header = ["周期"] + [
+        ACCOUNT_ACTION_LABELS[field] for field in configured_action_fields if field in ACCOUNT_ACTION_LABELS
+    ]
+    expected_cycles = ["30天", "60天", "90天"]
+    invalid = contract_invalid or len(tables) != 1 or header != account_action_header or len(rows) != 3
+    if not invalid:
+        invalid = [row[0] if row else "" for row in rows] != expected_cycles
+    if not invalid:
+        for row in rows:
+            if len(row) != len(account_action_header):
+                invalid = True
+                break
+            if (
+                not all(operational_cell(row[index]) for index in (1, 7, 8, 9))
+                or not stable_owner_cell(row[5])
+            ):
+                invalid = True
+                break
+            if (
+                row[2] not in ACTION_DISPOSITIONS
+                or row[3] not in EXTERNAL_INTERACTION_VALUES
+                or row[4] not in RESOURCE_COMMITMENT_VALUES
+                or not date_valid(row[6].strip())
+                or row[10] not in {"是", "否"}
+            ):
+                invalid = True
+                break
+    minimum_next_step = strategy.frontmatter.get("minimum_next_step", "")
+    if not invalid and normalize_evidence_text(rows[0][1]) != normalize_evidence_text(minimum_next_step):
+        invalid = True
+    if invalid:
+        add(
+            issues,
+            "error",
+            "account_strategy_action_invalid",
+            strategy.path,
+            "账户策略必须提供固定11列的30/60/90天动作；每行action、action_disposition、external_interaction、resource_commitment、owner、due_date、依赖、完成标准、调整/停止触发和CRM/PIMS候选均须可执行，30天action须等于minimum_next_step。",
+        )
+
+    def first_table(name: str) -> tuple[list[str], list[list[str]]]:
+        bodies = sections.get(name, [])
+        tables = markdown_table_blocks(bodies[0]) if len(bodies) == 1 else []
+        return tables[0] if tables else ([], [])
+
+    def has_exactly_one_table(name: str) -> bool:
+        bodies = sections.get(name, [])
+        return len(bodies) == 1 and len(markdown_table_blocks(bodies[0])) == 1
+
+    question_header, question_rows = first_table("战略问题与最小推进动作")
+    question_labels = ["待决策问题", "经营周期", "最小推进动作", "完成标准"]
+    question_map = {row[0]: row for row in question_rows if len(row) == 3}
+    if (
+        not has_exactly_one_table("战略问题与最小推进动作")
+        or question_header != ["项目", "内容", "claim_id"]
+        or [row[0] if row else "" for row in question_rows] != question_labels
+        or any(
+            label not in question_map
+            or not meaningful_delivery_text(question_map[label][1], minimum_chars=(2 if label == "经营周期" else 6))
+            or not CLAIM_RE.fullmatch(question_map[label][2])
+            for label in question_labels
+        )
+        or (
+            "待决策问题" in question_map
+            and normalize_evidence_text(question_map["待决策问题"][1])
+            != normalize_evidence_text(strategy.frontmatter.get("strategic_question", ""))
+        )
+        or (
+            "经营周期" in question_map
+            and normalize_evidence_text(question_map["经营周期"][1])
+            != normalize_evidence_text(strategy.frontmatter.get("planning_horizon", ""))
+        )
+        or (
+            "最小推进动作" in question_map
+            and normalize_evidence_text(question_map["最小推进动作"][1])
+            != normalize_evidence_text(strategy.frontmatter.get("minimum_next_step", ""))
+        )
+    ):
+        structure_errors.append("战略问题与最小推进动作")
+
+    chain_header, chain_rows = first_table("判断链与证据边界")
+    chain_labels = ["客户发展或履职阶段", "核心任务或矛盾", "数字化支撑点"]
+    if (
+        not has_exactly_one_table("判断链与证据边界")
+        or chain_header != ["环节", "当前判断", "claim_id", "反证/替代解释", "置信度", "验证方式"]
+        or [row[0] if row else "" for row in chain_rows] != chain_labels
+        or any(
+            len(row) != 6
+            or not meaningful_delivery_text(row[1], minimum_chars=6)
+            or not CLAIM_RE.fullmatch(row[2])
+            or not meaningful_delivery_text(row[3], minimum_chars=6)
+            or row[4] not in {"高", "中", "低"}
+            or not meaningful_delivery_text(row[5], minimum_chars=6)
+            for row in chain_rows
+        )
+    ):
+        structure_errors.append("判断链与证据边界")
+
+    stakeholder_header, stakeholder_rows = first_table("利益相关者与决策结构")
+    if (
+        not has_exactly_one_table("利益相关者与决策结构")
+        or stakeholder_header != ["角色层级", "当前可核实职责", "事项/阶段", "影响方式", "证据 claim_id", "缺口与验证动作"]
+        or not 1 <= len(stakeholder_rows) <= 10
+        or any(
+            len(row) != 6
+            or any(not meaningful_delivery_text(row[index], minimum_chars=4) for index in (0, 1, 2, 3, 5))
+            or not CLAIM_RE.fullmatch(row[4])
+            for row in stakeholder_rows
+        )
+    ):
+        structure_errors.append("利益相关者与决策结构")
+
+    qualification_table_header, qualification_table_rows = first_table("机会资格与投入建议")
+    qualification_labels = ["Budget", "Authority", "Need", "Timing/采购时序", "竞争位置"]
+    if (
+        not has_exactly_one_table("机会资格与投入建议")
+        or qualification_table_header != ["维度", "当前判断", "claim_id", "缺口/反证", "下一验证动作"]
+        or [row[0] if row else "" for row in qualification_table_rows] != qualification_labels
+        or any(
+            len(row) != 5
+            or not meaningful_delivery_text(row[1], minimum_chars=6)
+            or not CLAIM_RE.fullmatch(row[2])
+            or not meaningful_delivery_text(row[3], minimum_chars=6)
+            or not meaningful_delivery_text(row[4], minimum_chars=6)
+            for row in qualification_table_rows
+        )
+    ):
+        structure_errors.append("机会资格固定表")
+
+    scenario_header, scenario_rows = first_table("情景与触发条件")
+    if (
+        not has_exactly_one_table("情景与触发条件")
+        or scenario_header != ["情景", "触发信号", "可能影响", "应对动作", "owner", "复核日期"]
+        or [row[0] if row else "" for row in scenario_rows] != ["基准情景", "上行情景", "下行情景"]
+        or any(
+            len(row) != 6
+            or any(not meaningful_delivery_text(row[index], minimum_chars=4) for index in (1, 2, 3))
+            or not stable_owner_cell(row[4])
+            or not date_valid(row[5])
+            for row in scenario_rows
+        )
+    ):
+        structure_errors.append("三情景与触发条件")
+
+    verification_header, verification_rows = first_table("验证计划")
+    if (
+        not has_exactly_one_table("验证计划")
+        or verification_header != ["待验证主张/假设", "当前状态", "验证问题或动作", "目标对象/来源", "owner", "due_date", "通过/停止信号"]
+        or not 1 <= len(verification_rows) <= 10
+        or any(
+            len(row) != 7
+            or not meaningful_delivery_text(row[0], minimum_chars=4)
+            or row[1] not in {"conflicted", "unknown", "stale", "H"}
+            or not meaningful_delivery_text(row[2], minimum_chars=6)
+            or not meaningful_delivery_text(row[3], minimum_chars=4)
+            or not stable_owner_cell(row[4])
+            or not date_valid(row[5])
+            or not meaningful_delivery_text(row[6], minimum_chars=6)
+            for row in verification_rows
+        )
+    ):
+        structure_errors.append("验证计划")
+
+    risk_header, risk_rows = first_table("风险、承诺边界与停止条件")
+    if (
+        not has_exactly_one_table("风险、承诺边界与停止条件")
+        or risk_header != ["风险/停止条件", "依据 claim_id", "业务后果", "预防或降级动作", "升级角色"]
+        or not 1 <= len(risk_rows) <= 8
+        or any(
+            len(row) != 5
+            or not meaningful_delivery_text(row[0], minimum_chars=6)
+            or not CLAIM_RE.fullmatch(row[1])
+            or not meaningful_delivery_text(row[2], minimum_chars=6)
+            or not meaningful_delivery_text(row[3], minimum_chars=6)
+            or not stable_owner_cell(row[4])
+            for row in risk_rows
+        )
+    ):
+        structure_errors.append("风险与停止条件固定表")
+
+    crm_header, crm_rows = first_table("CRM/PIMS候选")
+    if (
+        not has_exactly_one_table("CRM/PIMS候选")
+        or crm_header != ["候选类型", "内容", "数据属性", "owner", "due_date", "写回状态"]
+        or not 1 <= len(crm_rows) <= 8
+        or any(
+            len(row) != 6
+            or row[0] not in {"action", "verification", "risk", "opportunity"}
+            or not meaningful_delivery_text(row[1], minimum_chars=6)
+            or row[2] not in {"事实", "假设", "建议", "事实缺口", "风险"}
+            or not stable_owner_cell(row[3])
+            or not date_valid(row[4])
+            or row[5] != "candidate_only"
+            for row in crm_rows
+        )
+    ):
+        structure_errors.append("CRM/PIMS候选")
+
+    if structure_errors:
+        add(
+            issues,
+            "error",
+            "account_strategy_structure_invalid",
+            strategy.path,
+            "account_planning核心结构或可执行字段无效：" + ", ".join(structure_errors),
+        )
+
+    qualification = sections.get("机会资格与投入建议", [])
+    qualification_body = qualification[0] if len(qualification) == 1 else ""
+    recommendation_match = re.search(
+        r"^\s*-\s*建议：\s*(win|conditional_win|monitor|no_go)\s*$",
+        qualification_body,
+        flags=re.MULTILINE,
+    )
+    investment_match = re.search(
+        r"^\s*-\s*投入强度：\s*(低|中|高)\s*$",
+        qualification_body,
+        flags=re.MULTILINE,
+    )
+    reason_match = re.search(
+        r"^\s*-\s*建议理由：\s*(.+)$",
+        qualification_body,
+        flags=re.MULTILINE,
+    )
+    stop_sections = sections.get("风险、承诺边界与停止条件", [])
+    stop_body = stop_sections[0] if len(stop_sections) == 1 else ""
+    stop_match = re.search(
+        r"^\s*-\s*停止继续投入的最低条件：\s*(.+)$",
+        stop_body,
+        flags=re.MULTILINE,
+    )
+    if (
+        recommendation_match is None
+        or investment_match is None
+        or reason_match is None
+        or not meaningful_delivery_text(reason_match.group(1), minimum_chars=8)
+        or stop_match is None
+        or not meaningful_delivery_text(stop_match.group(1), minimum_chars=8)
+    ):
+        add(
+            issues,
+            "error",
+            "account_strategy_no_go_fields_invalid",
+            strategy.path,
+            "账户策略必须结构化给出win/conditional_win/monitor/no_go建议、投入强度、具体建议理由和可观察的最低停止条件。",
+        )
+    elif recommendation_match.group(1) == "no_go" and rows:
+        conflicting = [
+            row[0]
+            for row in rows
+            if len(row) != 11
+            or row[2] not in NO_GO_DISPOSITIONS
+            or not no_go_action_semantics_valid(
+                row[2], row[1], row[5], row[7], row[8], row[9], row[3], row[4]
+            )
+        ]
+        controlled_actions = {
+            normalize_evidence_text(value) for value in NO_GO_CONTROLLED_ACTIONS.values()
+        }
+        question_conflicts = [
+            label
+            for label, row in question_map.items()
+            if label == "完成标准" and (len(row) != 3 or row[1] != "no_go_decision_recorded")
+        ]
+        chain_conflicts = [
+            row[0] if row else "未知环节"
+            for row in chain_rows
+            if len(row) != 6
+            or row[1] not in NO_GO_EVIDENCE_STATES
+            or row[3] not in NO_GO_EVIDENCE_STATES
+            or normalize_evidence_text(row[5]) not in controlled_actions
+        ]
+        stakeholder_conflicts = [
+            row[0] if row else "未知角色"
+            for row in stakeholder_rows
+            if len(row) != 6
+            or row[0] not in NO_GO_STAKEHOLDER_ROLES
+            or row[1] not in NO_GO_ROLE_STATES
+            or row[2] not in NO_GO_STAGES
+            or row[3] not in NO_GO_INFLUENCE_STATES
+            or normalize_evidence_text(row[5]) not in controlled_actions
+        ]
+        qualification_conflicts = [
+            row[0] if row else "未知维度"
+            for row in qualification_table_rows
+            if len(row) != 5
+            or row[1] not in NO_GO_QUALIFICATION_STATES
+            or row[3] not in NO_GO_QUALIFICATION_STATES
+            or normalize_evidence_text(row[4]) not in controlled_actions
+        ]
+        scenario_conflicts = [
+            row[0]
+            for row in scenario_rows
+            if len(row) != 6
+            or NO_GO_SCENARIO_VALUES.get(row[0]) != (row[1], row[2], row[3])
+            or not stable_owner_cell(row[4])
+        ]
+        verification_conflicts = [
+            row[0] if row else "未知主张"
+            for row in verification_rows
+            if len(row) != 7
+            or not CLAIM_RE.fullmatch(row[0])
+            or normalize_evidence_text(row[2]) not in controlled_actions
+            or row[3] not in NO_GO_VERIFICATION_SOURCES
+            or not stable_owner_cell(row[4])
+            or row[6] not in NO_GO_VERIFICATION_SIGNALS
+        ]
+        risk_conflicts = [
+            row[0] if row else "未知风险"
+            for row in risk_rows
+            if len(row) != 5
+            or row[0] not in NO_GO_RISK_CODES
+            or row[2] not in NO_GO_CONSEQUENCE_CODES
+            or normalize_evidence_text(row[3]) not in controlled_actions
+            or not stable_owner_cell(row[4])
+        ]
+        crm_conflicts = [
+            row[0] if row else "未知候选"
+            for row in crm_rows
+            if len(row) != 6
+            or row[0] not in {"action", "verification"}
+            or not stable_owner_cell(row[3])
+            or normalize_evidence_text(row[1]) not in controlled_actions
+            or row[2] != ("建议" if row[0] == "action" else "事实缺口")
+        ]
+        no_go_bullet_conflicts: list[str] = []
+        if investment_match.group(1) != "低":
+            no_go_bullet_conflicts.append("投入强度")
+        if reason_match.group(1) not in NO_GO_REASON_CODES:
+            no_go_bullet_conflicts.append("建议理由")
+        if stop_match.group(1) not in NO_GO_STOP_CODES:
+            no_go_bullet_conflicts.append("最低停止条件")
+        forbidden_matches = re.findall(
+            r"^\s*-\s*禁止承诺：\s*(.+)$", stop_body, re.MULTILINE
+        )
+        if forbidden_matches != ["all_unapproved_commitments"]:
+            no_go_bullet_conflicts.append("禁止承诺")
+        if navigation_bodies:
+            no_go_bullet_conflicts.append("依据导航与缺口")
+
+        uncontracted_sections: list[str] = []
+        for section_name, bodies in sections.items():
+            for body in bodies:
+                for line in body.splitlines():
+                    stripped = line.strip()
+                    if not stripped or stripped.startswith("|"):
+                        continue
+                    if re.match(r"^[-*+]\s+[^:：]+[:：]\s*\S", stripped):
+                        continue
+                    uncontracted_sections.append(section_name)
+                    break
+        preamble = global_visible.split("\n##", 1)[0]
+        if any(
+            line.strip() and not re.match(r"^#(?!#)\s+\S", line.strip())
+            for line in preamble.splitlines()
+        ):
+            uncontracted_sections.append("标题前言")
+        for prefix, values in (
+            ("战略问题:", question_conflicts),
+            ("判断链:", chain_conflicts),
+            ("利益相关者:", stakeholder_conflicts),
+            ("资格:", qualification_conflicts),
+            ("情景:", scenario_conflicts),
+            ("验证:", verification_conflicts),
+            ("风险:", risk_conflicts),
+            ("CRM:", crm_conflicts),
+            ("字段:", no_go_bullet_conflicts),
+            ("自由文本:", sorted(set(uncontracted_sections))),
+        ):
+            conflicting.extend(prefix + value for value in values)
+        if conflicting:
+            add(
+                issues,
+                "error",
+                "account_strategy_no_go_conflict",
+                strategy.path,
+                "建议为no_go时必须使用闭合代码契约：所有动作、结果、情景、验证、风险、CRM及理由/停止条件均使用模板枚举，owner使用登记我方角色；不得保留自由正文、导航缺口或任何对客推进与资源承诺：" + ", ".join(conflicting),
+            )
+
+
+def validate_comprehensive_delivery_contract(
+    total: Document,
+    strategy: Document | None,
+    issues: list[Issue],
+    *,
+    claims: Mapping[str, ClaimDefinition] | None = None,
+) -> None:
+    """Enforce the minimum decision-ready total for standard and strategic packs."""
+
+    if (
+        total.frontmatter.get("module_status") != "completed"
+        or total.frontmatter.get("business_mode") not in {"standard_visit", "strategic_account"}
+    ):
+        return
+    validate_account_comprehensive_contract(total, set(), set(), issues, claims=claims)
+    sections = h2_sections(markdown_without_fenced_code(total.body))
+    required_sections = (
+        "决策摘要",
+        "综合判断链",
+        "G-C-P 推演",
+        "机会资格与投入建议",
+        "执行与下一步",
+    )
+    linked_core_sections = sorted(
+        name
+        for name in required_sections
+        if any(contains_markdown_link_or_image(body) for body in sections.get(name, []))
+    )
+    if linked_core_sections:
+        add(
+            issues,
+            "error",
+            "comprehensive_hidden_link_forbidden",
+            total.path,
+            "综合报告核心判断、资格与行动章节不得包含Markdown链接或图片；关键内容必须直接可见："
+            + ", ".join(linked_core_sections),
+        )
+    missing = [name for name in required_sections if len(sections.get(name, [])) != 1]
+    if missing:
+        add(
+            issues,
+            "error",
+            "comprehensive_section_missing",
+            total.path,
+            "标准拜访包/战略客户包综合报告缺少唯一核心章节：" + ", ".join(missing),
+        )
+
+    def first_table(name: str) -> tuple[list[str], list[list[str]]]:
+        bodies = sections.get(name, [])
+        tables = markdown_table_blocks(bodies[0]) if len(bodies) == 1 else []
+        return tables[0] if tables else ([], [])
+
+    def has_exactly_one_table(name: str) -> bool:
+        bodies = sections.get(name, [])
+        return len(bodies) == 1 and len(markdown_table_blocks(bodies[0])) == 1
+
+    decision_header, decision_rows = first_table("决策摘要")
+    expected_decision_header = ["核心问题", "当前结论", "claim_id", "对业务决策的意义"]
+    decision_invalid = (
+        not has_exactly_one_table("决策摘要")
+        or decision_header != expected_decision_header
+        or not 3 <= len(decision_rows) <= 6
+        or any(
+            len(row) != 4
+            or not meaningful_delivery_text(row[0])
+            or not meaningful_delivery_text(row[1])
+            or not CLAIM_RE.fullmatch(row[2])
+            or not meaningful_delivery_text(row[3])
+            for row in decision_rows
+        )
+    )
+    if decision_invalid:
+        add(issues, "error", "comprehensive_decision_summary_invalid", total.path, "决策摘要必须使用固定4列表，提供3—6条有claim_id支撑且有业务意义的结论。")
+
+    chain_header, chain_rows = first_table("综合判断链")
+    expected_chain_header = ["环节", "判断", "claim_id", "反证/局限", "置信度", "验证问题或动作"]
+    expected_chain_labels = ["发展阶段", "核心矛盾", "决策者关注", "信息化支撑", "最小推进动作"]
+    chain_invalid = (
+        not has_exactly_one_table("综合判断链")
+        or chain_header != expected_chain_header
+        or [row[0] if row else "" for row in chain_rows] != expected_chain_labels
+        or any(
+            len(row) != 6
+            or not meaningful_delivery_text(row[1])
+            or not CLAIM_RE.fullmatch(row[2])
+            or not meaningful_delivery_text(row[3])
+            or row[4] not in {"高", "中", "低"}
+            or not meaningful_delivery_text(row[5])
+            for row in chain_rows
+        )
+    )
+    if chain_invalid:
+        add(issues, "error", "comprehensive_judgment_chain_invalid", total.path, "综合判断链必须按固定5个环节填写判断、claim_id、反证、置信度和验证动作。")
+
+    gcp_header, gcp_rows = first_table("G-C-P 推演")
+    expected_gcp_header = ["模块", "结论", "claim_id", "边界", "置信度"]
+    expected_gcp_labels = ["G：目标任务", "C：承接能力", "P：政策与项目风险"]
+    gcp_invalid = (
+        not has_exactly_one_table("G-C-P 推演")
+        or gcp_header != expected_gcp_header
+        or [row[0] if row else "" for row in gcp_rows] != expected_gcp_labels
+        or any(
+            len(row) != 5
+            or not meaningful_delivery_text(row[1], minimum_chars=6)
+            or not CLAIM_RE.fullmatch(row[2])
+            or not meaningful_delivery_text(row[3], minimum_chars=6)
+            or row[4] not in {"高", "中", "低"}
+            for row in gcp_rows
+        )
+    )
+    if gcp_invalid:
+        add(issues, "error", "comprehensive_gcp_invalid", total.path, "G-C-P推演必须按G目标任务、C承接能力、P政策与项目风险三行填写结论、claim_id、边界和置信度。")
+
+    qualification_header, qualification_rows = first_table("机会资格与投入建议")
+    expected_qualification_header = ["维度", "当前判断", "claim_id", "缺口/验证问题"]
+    expected_qualification_labels = ["Budget", "Authority", "Need", "Timing/采购时序", "竞争位置"]
+    qualification_invalid = (
+        not has_exactly_one_table("机会资格与投入建议")
+        or qualification_header != expected_qualification_header
+        or [row[0] if row else "" for row in qualification_rows] != expected_qualification_labels
+        or any(
+            len(row) != 4
+            or not meaningful_delivery_text(row[1])
+            or not CLAIM_RE.fullmatch(row[2])
+            or not meaningful_delivery_text(row[3])
+            for row in qualification_rows
+        )
+    )
+    qualification_body = sections.get("机会资格与投入建议", [""])[0]
+    global_visible = markdown_without_fenced_code(total.body)
+    global_conclusion_counts = {
+        label: len(re.findall(rf"^\s*-\s*{re.escape(label)}：", global_visible, re.MULTILINE))
+        for label in ("建议", "投入强度", "继续投入的前提/停止条件")
+    }
+    recommendation = re.search(r"^\s*-\s*建议：\s*(win|conditional_win|monitor|no_go)\s*$", qualification_body, re.MULTILINE)
+    investment = re.search(r"^\s*-\s*投入强度：\s*(低|中|高)(?:；\s*依据：\s*(.+))?\s*$", qualification_body, re.MULTILINE)
+    stop_condition = re.search(r"^\s*-\s*继续投入的前提/停止条件：\s*(.+)$", qualification_body, re.MULTILINE)
+    strategy_recommendation = None
+    strategy_summary = strategy_delivery_summary(strategy) if strategy is not None else None
+    if strategy is not None:
+        strategy_sections = h2_sections(markdown_without_fenced_code(strategy.body))
+        strategy_qualification = strategy_sections.get("机会资格与投入建议", [])
+        if len(strategy_qualification) != 1:
+            strategy_qualification = strategy_sections.get("机会资格", [])
+        if len(strategy_qualification) == 1:
+            strategy_recommendation = re.search(
+                r"^\s*-\s*建议：\s*(win|conditional_win|monitor|no_go)\s*$",
+                strategy_qualification[0],
+                re.MULTILINE,
+            )
+    if (
+        qualification_invalid
+        or recommendation is None
+        or investment is None
+        or not meaningful_delivery_text(investment.group(2) or "", minimum_chars=6)
+        or stop_condition is None
+        or not meaningful_delivery_text(stop_condition.group(1), minimum_chars=8)
+        or strategy_recommendation is None
+        or recommendation.group(1) != strategy_recommendation.group(1)
+        or strategy_summary is None
+        or recommendation.group(1) != strategy_summary.get("recommendation")
+        or investment.group(1) != strategy_summary.get("investment_intensity")
+        or any(count != 1 for count in global_conclusion_counts.values())
+    ):
+        add(issues, "error", "comprehensive_qualification_invalid", total.path, "机会资格必须完整填写BANT、采购时序、竞争位置、建议、投入强度与依据、继续/停止条件。")
+
+    action_header, action_rows = first_table("执行与下一步")
+    expected_action_header = ["action", "action_disposition", "external_interaction", "resource_commitment", "owner", "due_date", "依赖", "完成标准", "继续/调整/no-go条件", "CRM/PIMS候选"]
+    action_invalid = (
+        not has_exactly_one_table("执行与下一步")
+        or action_header != expected_action_header
+        or len(action_rows) != 1
+    )
+    if not action_invalid:
+        row = action_rows[0]
+        action_invalid = bool(
+            len(row) != 10
+            or not operational_cell(row[0])
+            or row[1] not in ACTION_DISPOSITIONS
+            or row[2] not in EXTERNAL_INTERACTION_VALUES
+            or row[3] not in RESOURCE_COMMITMENT_VALUES
+            or not stable_owner_cell(row[4])
+            or not date_valid(row[5])
+            or not meaningful_delivery_text(row[6])
+            or not meaningful_delivery_text(row[7])
+            or not meaningful_delivery_text(row[8])
+            or row[9] not in {"是", "否"}
+        )
+        if not action_invalid and strategy is not None:
+            action_invalid = bool(
+                normalize_evidence_text(row[0])
+                != normalize_evidence_text(strategy.frontmatter.get("minimum_next_step", ""))
+                or strategy_summary is None
+                or normalize_evidence_text(row[0]).rstrip("。.!！")
+                != strategy_summary.get("primary_action")
+                or normalize_evidence_text(row[4]) != strategy_summary.get("owner")
+                or row[5].strip() != strategy_summary.get("due_date")
+            )
+    if action_invalid:
+        add(issues, "error", "comprehensive_action_invalid", total.path, "执行与下一步必须恰有一个固定10列的可执行动作，且action、owner、due_date须与策略决策五元组一致。")
+    if recommendation is not None and recommendation.group(1) == "no_go" and action_rows:
+        row = action_rows[0]
+        if len(row) != 10 or row[1] not in NO_GO_DISPOSITIONS or not no_go_action_semantics_valid(
+            row[1], row[0], row[4], row[6], row[7], row[8], row[2], row[3]
+        ):
+            add(issues, "error", "comprehensive_no_go_conflict", total.path, "综合报告建议为no_go时只能停止、归档、观察或复核，且不得同时安排继续推进类动作。")
+        no_go_conflicts: list[str] = []
+        controlled_actions = {
+            normalize_evidence_text(value) for value in NO_GO_CONTROLLED_ACTIONS.values()
+        }
+        if (
+            investment is None
+            or investment.group(1) != "低"
+            or investment.group(2) not in NO_GO_REASON_CODES
+        ):
+            no_go_conflicts.append("投入强度/理由")
+        if stop_condition is None or stop_condition.group(1) not in NO_GO_STOP_CODES:
+            no_go_conflicts.append("停止条件")
+        if any(
+            len(item) != 4
+            or item[0] not in NO_GO_TOTAL_DECISION_LABELS
+            or (
+                normalize_evidence_text(item[1]) not in controlled_actions
+                if item[0] == "最小推进动作"
+                else item[1] not in NO_GO_EVIDENCE_STATES | {"verified"}
+            )
+            or not CLAIM_RE.fullmatch(item[2])
+            or item[3] not in NO_GO_TOTAL_EFFECT_CODES
+            for item in decision_rows
+        ):
+            no_go_conflicts.append("决策摘要")
+        if any(
+            len(item) != 6
+            or item[1] not in NO_GO_EVIDENCE_STATES
+            or not CLAIM_RE.fullmatch(item[2])
+            or item[3] not in NO_GO_EVIDENCE_STATES
+            or normalize_evidence_text(item[5]) not in controlled_actions
+            for item in chain_rows
+        ):
+            no_go_conflicts.append("综合判断链")
+        if any(
+            len(item) != 5
+            or item[1] not in NO_GO_EVIDENCE_STATES
+            or not CLAIM_RE.fullmatch(item[2])
+            or item[3] not in NO_GO_EVIDENCE_STATES
+            for item in gcp_rows
+        ):
+            no_go_conflicts.append("G-C-P")
+        if any(
+            len(item) != 4
+            or item[1] not in NO_GO_QUALIFICATION_STATES
+            or not CLAIM_RE.fullmatch(item[2])
+            or item[3] not in NO_GO_QUALIFICATION_STATES
+            for item in qualification_rows
+        ):
+            no_go_conflicts.append("机会资格")
+
+        strategy_action_rows: list[list[str]] = []
+        if strategy is not None:
+            strategy_sections = h2_sections(markdown_without_fenced_code(strategy.body))
+            strategy_action_bodies = strategy_sections.get("30/60/90天账户动作", [])
+            strategy_action_tables = (
+                markdown_table_blocks(strategy_action_bodies[0])
+                if len(strategy_action_bodies) == 1
+                else []
+            )
+            if strategy_action_tables:
+                strategy_action_rows = strategy_action_tables[0][1]
+        if not strategy_action_rows or len(strategy_action_rows[0]) != 11 or row != strategy_action_rows[0][1:]:
+            no_go_conflicts.append("策略/综合动作未逐字段绑定")
+
+        finding_bodies = sections.get("高价值发现", [])
+        if finding_bodies:
+            finding_tables = markdown_table_blocks(finding_bodies[0]) if len(finding_bodies) == 1 else []
+            if not finding_tables or any(
+                len(item) != 8 or item[2] not in {"F", "F2"}
+                for item in finding_tables[0][1]
+            ):
+                no_go_conflicts.append("高价值发现")
+        gap_bodies = sections.get("关键缺口与验证计划", [])
+        if gap_bodies:
+            gap_tables = markdown_table_blocks(gap_bodies[0]) if len(gap_bodies) == 1 else []
+            if not gap_tables or any(
+                len(item) != 8 or item[5] not in {"internal_review", "public_refresh"}
+                for item in gap_tables[0][1]
+            ):
+                no_go_conflicts.append("关键缺口")
+        if sections.get("主张与来源导航"):
+            no_go_conflicts.append("主张与来源导航")
+        if no_go_conflicts:
+            add(
+                issues,
+                "error",
+                "comprehensive_no_go_contract_invalid",
+                total.path,
+                "综合报告为no_go时，判断、资格、影响、动作、发现和验证必须使用闭合代码并与账户策略首行动作逐字段一致："
+                + ", ".join(sorted(set(no_go_conflicts))),
+            )
+
+
+def validate_strategy_delivery_separation(
+    strategy: Document,
+    issues: list[Issue],
+) -> None:
+    """Keep governance workpapers out of the formal strategy body."""
+
+    visible = markdown_without_fenced_code(strategy.body)
+    headings = {
+        re.sub(r"^\d+(?:\.\d+)*[.)]?\s+", "", match.group(1).strip())
+        for match in re.finditer(r"^#{2,6}\s+(.+?)\s*$", visible, re.MULTILINE)
+    }
+    forbidden = sorted(headings & STRATEGY_AUDIT_HEADINGS)
+    if forbidden:
+        add(
+            issues,
+            "error",
+            "strategy_audit_heading_forbidden",
+            strategy.path,
+            "交流策略是正式业务交付，正文不得混入综合报告的状态、审核、异常、刷新或版本审计章节："
+            + ", ".join(forbidden),
+        )
+
+
+def validate_recommendation_template_route(
+    total: Document,
+    strategy: Document,
+    contract: Mapping[str, object],
+    profiles: Mapping[str, object],
+    issues: list[Issue],
+) -> None:
+    """Resolve and enforce the recommendation-specific account template route."""
+
+    if strategy.frontmatter.get("strategy_variant") != "account_planning":
+        return
+    # Init/resume intentionally keeps the ordinary account scaffold until a
+    # completed candidate has a structured recommendation to route on.
+    if strategy.frontmatter.get("module_status") != "completed":
+        return
+    qualification = h2_sections(markdown_without_fenced_code(strategy.body)).get(
+        "机会资格与投入建议",
+        [],
+    )
+    raw_recommendations = (
+        re.findall(r"^\s*-\s*建议：\s*(.+?)\s*$", qualification[0], re.MULTILINE)
+        if len(qualification) == 1
+        else []
+    )
+    if len(raw_recommendations) != 1:
+        add(
+            issues,
+            "error",
+            "recommendation_template_route_invalid",
+            strategy.path,
+            "账户策略必须恰有一个结构化建议，才能确定性选择正式策略与综合审计模板。",
+        )
+        return
+    recommendation = raw_recommendations[0].strip()
+    try:
+        selected_pair = recommendation_template_pair(
+            total.frontmatter.get("business_mode", ""),
+            "account_planning",
+            recommendation,
+            profiles=profiles,
+        )
+    except ValueError as exc:
+        add(
+            issues,
+            "error",
+            "recommendation_template_route_invalid",
+            strategy.path,
+            "账户策略模板选择失败并已关闭：" + str(exc),
+        )
+        return
+    if recommendation != "no_go":
+        return
+
+    required_strategy = {
+        str(section).strip()
+        for section in contract.get("required_sections", [])
+        if isinstance(section, str) and section.strip()
+    }
+    strategy_sections = h2_sections(markdown_without_fenced_code(strategy.body))
+    strategy_missing = sorted(required_strategy - set(strategy_sections))
+    strategy_extra = sorted(set(strategy_sections) - required_strategy)
+    strategy_repeated = sorted(
+        heading for heading, bodies in strategy_sections.items() if len(bodies) != 1
+    )
+
+    total_sections = h2_sections(markdown_without_fenced_code(total.body))
+    allowed_total = NO_GO_TOTAL_REQUIRED_SECTIONS | NO_GO_TOTAL_OPTIONAL_SECTIONS
+    total_missing = sorted(NO_GO_TOTAL_REQUIRED_SECTIONS - set(total_sections))
+    total_extra = sorted(set(total_sections) - allowed_total)
+    total_repeated = sorted(
+        heading for heading, bodies in total_sections.items() if len(bodies) != 1
+    )
+    conflicts: list[str] = []
+    if strategy_missing:
+        conflicts.append("strategy缺少=" + ",".join(strategy_missing))
+    if strategy_extra:
+        conflicts.append("strategy多出=" + ",".join(strategy_extra))
+    if strategy_repeated:
+        conflicts.append("strategy重复=" + ",".join(strategy_repeated))
+    if total_missing:
+        conflicts.append("comprehensive缺少=" + ",".join(total_missing))
+    if total_extra:
+        conflicts.append("comprehensive多出=" + ",".join(total_extra))
+    if total_repeated:
+        conflicts.append("comprehensive重复=" + ",".join(total_repeated))
+    if conflicts:
+        add(
+            issues,
+            "error",
+            "no_go_template_route_mismatch",
+            strategy.path,
+            "no_go必须采用确定性选择的专用策略/审计模板结构"
+            f"（{selected_pair['visit_strategy']}；{selected_pair['comprehensive_report']}）："
+            + "; ".join(conflicts),
+        )
+
+
+def validate_account_comprehensive_contract(
+    total: Document,
+    forbidden_heading_terms: set[str],
+    forbidden_body_labels: set[str],
+    issues: list[Issue],
+    *,
+    claims: Mapping[str, ClaimDefinition] | None = None,
+) -> None:
+    """Enforce the comprehensive-report allowlist and prevent shadow execution plans."""
+
+    visible = markdown_without_fenced_code(total.body)
+    minute_pattern = r"(?:\b\d+\s*[-–—]\s*\d+\s*分钟|(?:前|随后|最后)?[一二三四五六七八九十]+分钟)"
+    headings = h2_sections(visible)
+    allowed_sections = {
+        "决策摘要",
+        "任务上下文与成果状态",
+        "综合判断链",
+        "G-C-P 推演",
+        "机会资格与投入建议",
+        "执行与下一步",
+        "高价值发现",
+        "异常审核队列",
+        "关键缺口与验证计划",
+        "主张与来源导航",
+        "刷新结果记录",
+        "版本与同步记录",
+    }
+    bad_headings = sorted(
+        heading
+        for heading in headings
+        if heading not in allowed_sections
+        or any(term in heading for term in forbidden_heading_terms)
+    )
+    bad_labels: set[str] = set()
+    allowed_subheading_parents = {
+        "本次RACI与审核SLA": "任务上下文与成果状态",
+    }
+    current_h2 = ""
+    current_h3 = ""
+    line_locations: list[tuple[str, str, str]] = []
+    for line in visible.splitlines():
+        h2_match = re.match(r"^##(?!#)\s+(.+?)\s*$", line)
+        if h2_match:
+            current_h2 = re.sub(
+                r"^\d+(?:\.\d+)*[.)]?\s+", "", h2_match.group(1).strip()
+            )
+            current_h3 = ""
+        h3_match = re.match(r"^(#{3,6})\s+(.+?)\s*$", line)
+        if h3_match:
+            current_h3 = re.sub(
+                r"^\d+(?:\.\d+)*[.)]?\s+", "", h3_match.group(2).strip()
+            )
+            if (
+                h3_match.group(1) != "###"
+                or allowed_subheading_parents.get(current_h3) != current_h2
+            ):
+                bad_labels.add("非契约子章节或父章节：" + current_h3)
+        line_locations.append((line, current_h2, current_h3))
+
+    allowed_table_headers = {
+        ("核心问题", "当前结论", "claim_id", "对业务决策的意义"),
+        (
+            "模块", "selected_in_run", "run_action", "module_status", "review_status",
+            "connector_status", "freshness_status", "content_version", "latest_run_id",
+            "updated_at", "summary_sync_status", "key_claim_ids", "downstream_invalidation",
+            "gaps/blockers", "成果链接",
+        ),
+        ("角色", "姓名（稳定角色/账号）", "本次责任", "截止时间/状态"),
+        ("环节", "判断", "claim_id", "反证/局限", "置信度", "验证问题或动作"),
+        ("模块", "结论", "claim_id", "边界", "置信度"),
+        ("维度", "当前判断", "claim_id", "缺口/验证问题"),
+        (
+            "action", "action_disposition", "external_interaction", "resource_commitment",
+            "owner", "due_date", "依赖", "完成标准", "继续/调整/no-go条件", "CRM/PIMS候选",
+        ),
+        ("序号", "claim_id", "claim_type", "provenance", "发现", "impact_type", "业务影响", "置信度"),
+        ("review_id", "review_type", "claim_or_source_ref", "risk_code", "owner", "review_status"),
+        ("claim_ref", "claim_type_ref", "provenance_ref", "evidence_state", "impact_type", "verification_mode", "owner", "due_date"),
+        ("序号", "claim_id", "artifact_type", "usage_code"),
+        ("序号", "source_id", "artifact_type", "source_status"),
+        ("run_id", "新增", "更正", "失效", "未变化", "待确认"),
+        ("updated_at", "content_version", "latest_run_id", "变更摘要", "runtime_owner"),
+    }
+    header_counts: dict[tuple[str, ...], int] = {}
+    for header, _rows in markdown_table_blocks(visible):
+        signature = tuple(header)
+        header_counts[signature] = header_counts.get(signature, 0) + 1
+        if signature not in allowed_table_headers:
+            bad_labels.add("非契约表头：" + "/".join(header))
+    duplicate_headers = [
+        "/".join(header)
+        for header, count in header_counts.items()
+        if header in allowed_table_headers and count > 1
+    ]
+    if duplicate_headers:
+        bad_labels.add("重复契约表：" + ", ".join(sorted(duplicate_headers)))
+
+    review_bodies = headings.get("异常审核队列", [])
+    if review_bodies:
+        review_tables = markdown_table_blocks(review_bodies[0]) if len(review_bodies) == 1 else []
+        expected_review_header = [
+            "review_id", "review_type", "claim_or_source_ref",
+            "risk_code", "owner", "review_status",
+        ]
+        if (
+            len(review_bodies) != 1
+            or len(review_tables) != 1
+            or review_tables[0][0] != expected_review_header
+            or not 1 <= len(review_tables[0][1]) <= 10
+            or any(
+                len(row) != 6
+                or not re.fullmatch(r"REV-\d{3,}", row[0])
+                or row[1] not in {
+                    "evidence_conflict", "low_confidence", "internal_sensitive",
+                    "commitment_review", "external_fact_review",
+                }
+                or not (CLAIM_RE.fullmatch(row[2]) or SOURCE_RE.fullmatch(row[2]))
+                or row[3] not in {
+                    "decision_risk", "compliance_risk", "confidentiality_risk", "commitment_risk",
+                }
+                or not stable_owner_cell(row[4])
+                or row[5] not in {"not_started", "pending", "approved", "changes_requested"}
+                for row in review_tables[0][1]
+            )
+        ):
+            bad_labels.add("异常审核队列固定代码表无效")
+
+    navigation_bodies = headings.get("主张与来源导航", [])
+    if navigation_bodies:
+        navigation_tables = markdown_table_blocks(navigation_bodies[0]) if len(navigation_bodies) == 1 else []
+        expected_claim_nav = ["序号", "claim_id", "artifact_type", "usage_code"]
+        expected_source_nav = ["序号", "source_id", "artifact_type", "source_status"]
+        artifact_by_prefix = {
+            "I": "institution_research", "L": "leader_research", "N": "internal_retrieval"
+        }
+        claim_rows = navigation_tables[0][1] if len(navigation_tables) >= 1 else []
+        source_rows = navigation_tables[1][1] if len(navigation_tables) >= 2 else []
+        if (
+            len(navigation_bodies) != 1
+            or len(navigation_tables) != 2
+            or navigation_tables[0][0] != expected_claim_nav
+            or navigation_tables[1][0] != expected_source_nav
+            or not claim_rows
+            or not source_rows
+            or any(
+                len(row) != 4
+                or not CLAIM_RE.fullmatch(row[1])
+                or row[2] != artifact_by_prefix.get(row[1].split("-")[1] if CLAIM_RE.fullmatch(row[1]) else "")
+                or row[3] not in {
+                    "decision_summary", "judgment_chain", "gcp", "qualification",
+                    "action", "finding", "gap",
+                }
+                for row in claim_rows
+            )
+            or any(
+                len(row) != 4
+                or not SOURCE_RE.fullmatch(row[1])
+                or row[2] != artifact_by_prefix.get(row[1].split("-")[1] if SOURCE_RE.fullmatch(row[1]) else "")
+                or row[3] not in {"current", "stale", "invalidated"}
+                for row in source_rows
+            )
+        ):
+            bad_labels.add("主张与来源导航固定代码表无效")
+
+    raci_heading_present = bool(
+        re.search(r"^###\s+(?:\d+(?:\.\d+)*[.)]?\s+)?本次RACI与审核SLA\s*$", visible, re.MULTILINE)
+    )
+    raci_tables = [
+        (header, rows)
+        for header, rows in markdown_table_blocks(visible)
+        if header == ["角色", "姓名（稳定角色/账号）", "本次责任", "截止时间/状态"]
+    ]
+    if raci_heading_present or raci_tables:
+        expected_raci_roles = [
+            "account_owner", "runtime_owner", "evidence_reviewer",
+            "commercial_reviewer", "external_approver", "authorization_owner",
+        ]
+        responsibility_by_role = {
+            "account_owner": "account_decision",
+            "runtime_owner": "research_execution",
+            "evidence_reviewer": "evidence_review",
+            "commercial_reviewer": "commercial_review",
+            "external_approver": "external_approval",
+            "authorization_owner": "data_authorization",
+        }
+        raci_rows = raci_tables[0][1] if len(raci_tables) == 1 else []
+        if (
+            not raci_heading_present
+            or len(raci_tables) != 1
+            or [row[0] if row else "" for row in raci_rows] != expected_raci_roles
+            or any(
+                len(row) != 4
+                or (row[1] != "not_applicable" and not stable_owner_cell(row[1]))
+                or row[2] != responsibility_by_role.get(row[0])
+                or not (
+                    row[3] in {"pending", "not_applicable"}
+                    or date_valid(row[3])
+                    or timestamp_valid(row[3])
+                )
+                for row in raci_rows
+            )
+        ):
+            bad_labels.add("RACI与审核SLA固定代码表无效")
+
+    allowed_list_labels = {
+        "建议",
+        "投入强度",
+        "继续投入的前提/停止条件",
+    }
+    list_label_locations = {
+        "建议": ("机会资格与投入建议", ""),
+        "投入强度": ("机会资格与投入建议", ""),
+        "继续投入的前提/停止条件": ("机会资格与投入建议", ""),
+    }
+    for line, parent_h2, parent_h3 in line_locations:
+        list_match = re.match(r"^\s*(?:[-*+]\s+|\d+[.)、]\s+)([^:：]+)[:：]", line)
+        if list_match:
+            label = list_match.group(1).strip()
+            if label not in allowed_list_labels:
+                bad_labels.add("非契约列表项：" + label)
+            elif list_label_locations.get(label) != (parent_h2, parent_h3):
+                bad_labels.add("列表项父章节无效：" + label)
+        elif (
+            parent_h2
+            and line.strip()
+            and not line.lstrip().startswith("|")
+            and not re.match(r"^##(?!#)\s+\S", line)
+            and not re.match(r"^#{3,6}\s+\S", line)
+        ):
+            bad_labels.add("章节含非契约自由正文：" + parent_h2)
+        if not line.lstrip().startswith("|"):
+            continue
+        cells = split_table_cells(line)
+        bad_labels.update(cell for cell in cells if cell in forbidden_body_labels)
+        if (
+            "时间" in cells
+            and "议题/动作" in cells
+            and any(cell in {"材料/演示", "展示材料", "演示材料"} for cell in cells)
+        ):
+            bad_labels.update({"时间化议程", "材料/演示"})
+
+    preamble_lines = [line.strip() for line in markdown_preamble(visible).splitlines() if line.strip()]
+    customer_name = total.frontmatter.get("customer_display_name", "")
+    allowed_titles = {
+        f"# {customer_name}客户研究与行动准备报告",
+        f"# {customer_name}客户研究与拜访准备报告",
+        f"# {customer_name}No-Go客户研究与行动准备报告",
+    }
+    mode_label = {
+        "briefing": "会前速览",
+        "standard_visit": "标准拜访包",
+        "strategic_account": "战略客户包",
+        "letter": "一封信",
+    }.get(total.frontmatter.get("business_mode", ""), "")
+    depth_label = {"quick": "快速版", "standard": "标准版", "deep": "深度版"}.get(
+        total.frontmatter.get("depth", ""), ""
+    )
+    allowed_banner_line = (
+        f"> 用户业务模式：{mode_label}｜内部研究档位：{depth_label}｜信息截止：{total.frontmatter.get('evidence_cutoff_date', '')}"
+    )
+    preamble_valid = bool(
+        not preamble_lines
+        or (
+            preamble_lines[0] in allowed_titles
+            and preamble_lines[1:] in ([], [allowed_banner_line])
+        )
+    )
+    if not preamble_valid:
+        bad_labels.add("标题区含非契约自由正文")
+
+    for header, rows in markdown_table_blocks(visible):
+        normalized_header = [normalize_evidence_text(cell) for cell in header]
+        has_time_slot = any(re.search(r"(?:时段|时间|分钟)", cell) for cell in normalized_header)
+        has_meeting_plan = any(
+            re.search(r"(?:议题|主题|议程|材料|资料|演示|参会|出席)", cell)
+            for cell in normalized_header
+        )
+        has_stage_axis = any(
+            re.search(r"(?:阶段|环节|顺序|流程|时段|时间)", cell)
+            for cell in normalized_header
+        )
+        has_discussion_axis = any(
+            re.search(r"(?:讨论|主题|议题|议程|交流|内容|动作|安排|方案)", cell)
+            for cell in normalized_header
+        )
+        has_customer_axis = any(
+            re.search(r"(?:客户|院方|甲方|对象|参会|出席|联系人)", cell)
+            for cell in normalized_header
+        )
+        has_owner_axis = any(
+            re.search(r"(?:我方|乙方|owner|负责人|责任人|主持|讲解)", cell, re.IGNORECASE)
+            for cell in normalized_header
+        )
+        has_material_axis = any(
+            re.search(r"(?:材料|资料|附件|演示|截图|介绍|PPT|方案包)", cell, re.IGNORECASE)
+            for cell in normalized_header
+        )
+        if has_discussion_axis and (
+            (has_stage_axis and (has_owner_axis or has_customer_axis or has_material_axis))
+            or (has_owner_axis and (has_customer_axis or has_material_axis))
+        ):
+            bad_labels.add("会议执行语义组合表")
+        if has_time_slot and has_meeting_plan:
+            bad_labels.add("改名后的时间化会议表")
+        if rows and any(
+            re.search(minute_pattern, cell)
+            for row in rows
+            for cell in row
+        ) and has_meeting_plan:
+            bad_labels.add("分钟级会议安排")
+    account_mode = total.frontmatter.get("business_mode") == "strategic_account"
+    if (
+        account_mode
+        and "开场" in visible
+        and "收口" in visible
+        and re.search(r"(?:展示|讲解|方案|材料|下次交流|客户活动|产品介绍)", visible)
+    ):
+        bad_labels.add("账户报告单元格中的开场/收口会议执行序列")
+
+    finding_tables = [
+        (header, rows)
+        for header, rows in markdown_table_blocks(visible)
+        if header == [
+            "序号", "claim_id", "claim_type", "provenance", "发现",
+            "impact_type", "业务影响", "置信度",
+        ]
+    ]
+    if finding_tables:
+        finding_conflicts: list[str] = []
+        for row in finding_tables[0][1]:
+            if len(row) != 8:
+                finding_conflicts.append("列数无效")
+                continue
+            claim_id = row[1]
+            definition = claims.get(claim_id) if claims is not None else None
+            impact_values = {
+                "decision": "影响机会决策",
+                "verification": "需要补充验证",
+                "risk": "存在误判风险",
+                "resource": "影响资源投入",
+            }
+            if (
+                not CLAIM_RE.fullmatch(claim_id)
+                or row[2] not in {"F", "F2", "A", "H", "R"}
+                or row[3] not in {"public", "U", "N"}
+                or not meaningful_delivery_text(row[4], minimum_chars=6)
+                or row[5] not in impact_values
+                or row[6] != impact_values.get(row[5])
+                or row[7] not in {"高", "中", "低"}
+            ):
+                finding_conflicts.append(claim_id or "未知claim")
+                continue
+            if claims is not None and (
+                definition is None
+                or len(definition.cells) < 5
+                or definition.cells[1] != row[2]
+                or definition.cells[2] != row[3]
+                or normalize_evidence_text(definition.cells[4])
+                != normalize_evidence_text(row[4])
+            ):
+                finding_conflicts.append(claim_id)
+        if finding_conflicts:
+            add(
+                issues,
+                "error",
+                "comprehensive_finding_claim_mismatch",
+                total.path,
+                "高价值发现的claim_type、provenance和发现正文必须逐项匹配权威claim台账；impact_type与业务影响必须使用固定映射，不得借claim新增事实或执行计划："
+                + ", ".join(sorted(set(finding_conflicts))),
+            )
+
+    expected_gap_header = [
+        "claim_ref", "claim_type_ref", "provenance_ref", "evidence_state",
+        "impact_type", "verification_mode", "owner", "due_date",
+    ]
+    gap_bodies = headings.get("关键缺口与验证计划", [])
+    gap_tables = markdown_table_blocks(gap_bodies[0]) if len(gap_bodies) == 1 else []
+    if gap_bodies and (
+        len(gap_bodies) != 1
+        or len(gap_tables) != 1
+        or gap_tables[0][0] != expected_gap_header
+        or not 1 <= len(gap_tables[0][1]) <= 10
+    ):
+        add(
+            issues,
+            "error",
+            "comprehensive_gap_contract_invalid",
+            total.path,
+            "关键缺口与验证计划如出现，必须恰有一张1—10行的固定8列表。",
+        )
+    elif gap_tables:
+        gap_conflicts: list[str] = []
+        for row in gap_tables[0][1]:
+            claim_id = row[0] if row else ""
+            definition = claims.get(claim_id) if claims is not None else None
+            if (
+                len(row) != 8
+                or not CLAIM_RE.fullmatch(claim_id)
+                or row[1] not in {"F", "F2", "A", "H", "R"}
+                or row[2] not in {"public", "U", "N"}
+                or row[3] not in {"unknown", "conflicted", "stale", "insufficient"}
+                or row[4] not in {"decision", "verification", "risk", "resource"}
+                or row[5] not in {"internal_review", "public_refresh", "authorized_customer_contact"}
+                or not stable_owner_cell(row[6])
+                or not date_valid(row[7])
+                or (
+                    claims is not None
+                    and (
+                        definition is None
+                        or len(definition.cells) < 3
+                        or definition.cells[1] != row[1]
+                        or definition.cells[2] != row[2]
+                    )
+                )
+            ):
+                gap_conflicts.append(claim_id or "未知claim")
+        if gap_conflicts:
+            add(
+                issues,
+                "error",
+                "comprehensive_gap_contract_invalid",
+                total.path,
+                "关键缺口只能引用权威claim，并使用受控evidence_state、impact_type和verification_mode；owner必须是稳定身份，due_date必须是日期："
+                + ", ".join(sorted(set(gap_conflicts))),
+            )
+    if re.search(minute_pattern, visible) and re.search(
+        r"(?:会议|拜访|议程|开场|收口|参会|出席|材料|资料|演示)",
+        visible,
+    ):
+        bad_labels.add("正文中的分钟级会议安排")
+    sequence_markers = set(
+        re.findall(
+            r"(?m)^\s*(?:[-*+]\s+|\d+[.)、]\s+)?(开场|开局|核心|收口|结束|总结)\s*[:：|]",
+            visible,
+        )
+    )
+    if (
+        len(sequence_markers) >= 2
+        and re.search(r"(?:交流|方案|客户|主任|反馈|介绍|截图|下次|双方)", visible)
+    ):
+        bad_labels.add("正文中的序列化会议计划")
+    if bad_headings or bad_labels:
+        detail = sorted(set(bad_headings) | bad_labels)
+        add(
+            issues,
+            "error",
+            (
+                "account_comprehensive_structure_forbidden"
+                if account_mode
+                else "comprehensive_structure_forbidden"
+            ),
+            total.path,
+            "综合报告只能使用模板规定的章节、表格和列表，不得增加影子结论、动作或会议执行结构："
+            + ", ".join(detail),
+        )
+
+
+def validate_workspace_delivery_contract(
+    by_type: Mapping[str, Document],
+    total: Document,
+    profile: Mapping[str, object],
+    issues: list[Issue],
+    *,
+    strict: bool,
+) -> None:
+    """Enforce the configured formal-delivery/audit-carrier boundary."""
+
+    business_mode = total.frontmatter.get("business_mode", "")
+    try:
+        contract = delivery_contract_for_mode(
+            business_mode,
+            profiles={business_mode: profile},
+        )
+    except ValueError as exc:
+        add(
+            issues,
+            "error",
+            "delivery_contract_invalid",
+            total.path,
+            "业务模式交付契约缺失或漂移：" + str(exc),
+        )
+        return
+    audit = by_type.get(contract["audit_artifact"])
+    if audit is not total:
+        add(
+            issues,
+            "error",
+            "delivery_audit_carrier_invalid",
+            total.path,
+            "综合报告必须是唯一审计与状态载体。",
+        )
+        return
+    if not (strict or total.frontmatter.get("ready_for_use") == "true"):
+        return
+
+    formal_type = contract["formal_artifact"]
+    formal = by_type.get(formal_type)
+    if formal is None:
+        add(
+            issues,
+            "error",
+            "formal_delivery_required",
+            total.path,
+            f"{business_mode}缺少正式交付成果{formal_type}。",
+        )
+        return
+    if (
+        formal.frontmatter.get("module_status") != "completed"
+        or formal.frontmatter.get("freshness_status") != "current"
+        or formal.frontmatter.get("review_status") != "approved"
+    ):
+        add(
+            issues,
+            "error",
+            "formal_delivery_not_ready",
+            formal.path,
+            f"正式交付成果{formal_type}必须completed/current/approved。",
+        )
+    if formal_type == "briefing_delivery" and formal.frontmatter.get("delivery_state") != "ready":
+        add(
+            issues,
+            "error",
+            "formal_delivery_not_ready",
+            formal.path,
+            "会前速览正式交付还必须delivery_state=ready。",
+        )
+    status_row = parse_status_rows(total).get(formal_type, [])
+    if len(status_row) < 3 or status_row[1] != "true" or status_row[2] == "not_called":
+        add(
+            issues,
+            "error",
+            "formal_delivery_unselected",
+            total.path,
+            f"正式交付成果{formal_type}必须在综合审计载体登记为本轮selected且动作非not_called。",
+        )
+
+
 def validate_operating_governance(
     by_type: dict[str, Document],
     issues: list[Issue],
     strict: bool,
     current_time: datetime | None = None,
+    *,
+    claims: Mapping[str, ClaimDefinition] | None = None,
+    sources: Mapping[str, SourceDefinition] | None = None,
 ) -> None:
     total = by_type.get("comprehensive_report")
     if total is None:
@@ -4588,6 +8519,14 @@ def validate_operating_governance(
         add(issues, "error", "business_mode_required", total.path, "严格交付必须通过四种业务模式之一启动。")
     profiles = load_business_profiles(issues)
     profile = profiles.get(business_mode, {}) if business_mode else {}
+    if business_mode in BUSINESS_MODES:
+        validate_workspace_delivery_contract(
+            by_type,
+            total,
+            profile if isinstance(profile, Mapping) else {},
+            issues,
+            strict=strict,
+        )
     if isinstance(profile, dict) and data.get("route") != "refresh":
         expected_route = str(profile.get("route", ""))
         expected_depth = str(profile.get("depth", ""))
@@ -4623,6 +8562,7 @@ def validate_operating_governance(
     authorization_required = bool(
         internal_selected
         or (internal and internal.frontmatter.get("connector_status") == "connected")
+        or requires_internal_authorization(claims, sources)
     )
     if authorization_required:
         missing = sorted(field for field in AUTHORIZATION_FIELDS if not data.get(field, "").strip())
@@ -4714,7 +8654,10 @@ def validate_operating_governance(
 
     if business_mode in {"briefing", "standard_visit", "strategic_account"}:
         strategy = by_type.get("visit_strategy")
+        if business_mode in {"standard_visit", "strategic_account"}:
+            validate_comprehensive_delivery_contract(total, strategy, issues, claims=claims)
         if strategy is not None:
+            validate_strategy_delivery_separation(strategy, issues)
             actual_variant = strategy.frontmatter.get("strategy_variant", "")
             expected_variant = actual_variant if business_mode == "strategic_account" else "scheduled_visit"
             if actual_variant != expected_variant or expected_variant not in {"scheduled_visit", "account_planning"}:
@@ -4733,9 +8676,19 @@ def validate_operating_governance(
                     f"strategy_variant={expected_variant}缺少可执行的业务模式契约。",
                 )
             else:
+                validate_recommendation_template_route(
+                    total,
+                    strategy,
+                    contract,
+                    profiles,
+                    issues,
+                )
                 forbidden_fields = {
                     str(field)
-                    for field in contract.get("forbidden_business_fields", [])
+                    for field in (
+                        list(contract.get("forbidden_business_fields", []))
+                        + list(contract.get("forbidden_followup_fields", []))
+                    )
                     if isinstance(field, str)
                 }
                 present_fields = sorted(
@@ -4824,6 +8777,29 @@ def validate_operating_governance(
                         f"strategy_variant={expected_variant}不得把未确认会议信息写成结构化事实标签："
                         + ", ".join(sorted(present_body_labels)),
                     )
+                if strategy.frontmatter.get("module_status") == "completed":
+                    if expected_variant == "scheduled_visit":
+                        validate_scheduled_strategy_sections(
+                            strategy,
+                            issues,
+                            by_type=by_type,
+                            claims=claims,
+                        )
+                    elif expected_variant == "account_planning":
+                        validate_account_action_contract(
+                            strategy,
+                            contract,
+                            issues,
+                            by_type=by_type,
+                            claims=claims,
+                        )
+                        validate_account_comprehensive_contract(
+                            total,
+                            forbidden_terms,
+                            forbidden_body_labels,
+                            issues,
+                            claims=claims,
+                        )
                 if strict:
                     if business_mode == "strategic_account":
                         required_sections = [
@@ -4957,6 +8933,7 @@ def validate_trusted_governance(
             add(issues, "error", "action_event_global_claim_invalid", document.path, str(exc))
 
     generic_requirements = {
+        "institution_research": ("institution", {"evidence_reviewer"}),
         "leader_research": ("leader", {"evidence_reviewer"}),
         "internal_retrieval": ("internal", {"evidence_reviewer"}),
         "visit_strategy": ("strategy", {"commercial_reviewer"}),
@@ -5221,14 +9198,31 @@ def validate_loaded(
         current_time,
         validation_profile,
     )
-    validate_status_sync(by_type, issues, strict)
+    validate_status_sync(by_type, issues, strict, claims=claims)
     validate_letter_review_history(by_type, issues, strict)
     validate_run_history(by_type, issues)
     validate_refresh_ledger(by_type, claims, sources, issues, strict)
     validate_route_gate(by_type, issues, strict)
-    validate_operating_governance(by_type, issues, strict, current_time)
+    validate_research_fact_review_gate(by_type, issues, strict)
+    validate_operating_governance(
+        by_type,
+        issues,
+        strict,
+        current_time,
+        claims=claims,
+        sources=sources,
+    )
     validate_trusted_governance(root, by_type, issues)
-    validate_runtime_manifest(root, by_type, issues, strict, validation_profile, current_time)
+    validate_runtime_manifest(
+        root,
+        by_type,
+        issues,
+        strict,
+        validation_profile,
+        current_time,
+        claims=claims,
+        sources=sources,
+    )
     validate_links(documents, root, issues)
     validate_letter_isolation(by_type, issues)
 
@@ -5346,7 +9340,7 @@ def validate(
 
 def build_parser() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(
-        description="校验discovery-call v2.6成果契约，并执行可审计审批、就绪和客户信修订。"
+        description="校验discovery-call v2.9成果契约，并执行可审计审批、就绪和客户信修订。"
     )
     parser.add_argument("workspace", type=Path, help="客户研究工作目录")
     parser.add_argument("--strict", action="store_true", help="最终交付校验：拒绝占位符及本轮非终态模块")
@@ -5360,7 +9354,7 @@ def build_parser() -> argparse.ArgumentParser:
     operations.add_argument("--approve-letter", action="store_true", help="为pending内部稿写入审核人、版本和正文哈希审批戳")
     operations.add_argument("--review-letter-facts", action="store_true", help="由独立evidence_reviewer复核客户信事实与证据边界")
     operations.add_argument("--emit-external", action="store_true", help="从带有效审批戳的approved内部稿事务生成纯净外发版")
-    operations.add_argument("--approve-artifact", choices=sorted(GENERIC_REVIEW_TARGETS), help="审批人物、内部检索或策略成果")
+    operations.add_argument("--approve-artifact", choices=sorted(GENERIC_REVIEW_TARGETS), help="审批机构、人物、内部检索、策略或简报成果")
     operations.add_argument("--begin-letter-revision", action="store_true", help="归档现行外发版并事务开启新一轮客户信修订")
     operations.add_argument("--mark-ready", action="store_true", help="完成最终独立就绪审批并设置ready_for_use=true")
     operations.add_argument("--recovery-preflight", action="store_true", help="仅做恢复安全预检，允许模块与总报告暂时不同步")

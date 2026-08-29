@@ -33,6 +33,20 @@ from typing import Any, Callable, Mapping, Sequence
 from urllib.parse import parse_qsl, urlencode, urlsplit, urlunsplit
 
 try:
+    from candidate_attestation import write_seal_request
+except ModuleNotFoundError:
+    _candidate_attestation_path = Path(__file__).with_name("candidate_attestation.py")
+    _candidate_attestation_spec = importlib.util.spec_from_file_location(
+        "candidate_attestation", _candidate_attestation_path
+    )
+    if _candidate_attestation_spec is None or _candidate_attestation_spec.loader is None:
+        raise RuntimeError(f"无法加载候选签章模块：{_candidate_attestation_path}")
+    _candidate_attestation_module = importlib.util.module_from_spec(_candidate_attestation_spec)
+    sys.modules["candidate_attestation"] = _candidate_attestation_module
+    _candidate_attestation_spec.loader.exec_module(_candidate_attestation_module)
+    write_seal_request = _candidate_attestation_module.write_seal_request
+
+try:
     from capability_receipt import CapabilityReceiptError, verify_capability_receipt
 except ModuleNotFoundError:
     _capability_path = Path(__file__).with_name("capability_receipt.py")
@@ -48,6 +62,13 @@ except ModuleNotFoundError:
 
 SKILL_ROOT = Path(__file__).resolve().parents[1]
 DEFAULT_CONFIG = SKILL_ROOT / "config" / "business-modes.json"
+# Production planning is intentionally pinned to the reviewed package
+# contract.  Read-only developer commands may inspect another config, but a
+# customer run must never let a caller replace routing, budgets or query
+# templates with an arbitrary file.  Update this digest only in the same
+# reviewed change as ``config/business-modes.json``.
+TRUSTED_BUSINESS_CONFIG_SHA256 = "1a2eb2e21a43afdc17c0b89c7a569b8e61591c5842ee90114ac240f0c6f8daf4"
+MAX_CONFIG_BYTES = 512 * 1024
 RUNTIME_DIRNAME = "runtime"
 SEARCH_PLAN_NAME = "search-plan.json"
 SOURCE_CACHE_NAME = "source-cache.json"
@@ -68,7 +89,32 @@ EXPECTED_COMPATIBILITY = {
     "strategic_account": ("strategy", "deep"),
     "letter": ("letter", "standard"),
 }
-ID_RE = re.compile(r"^[A-Za-z0-9._-]{3,128}$")
+KNOWN_PLANNING_GATES = {
+    "business_fields_complete",
+    "stable_customer_id",
+    "route_depth_compatible",
+    "query_budget_valid",
+    "output_contract_resolved",
+    "target_identity_or_role_resolved",
+    "recipient_identity_and_role_confirmed",
+    "tenant_customer_project_ids_stable",
+    "project_authorized",
+    "authorization_current",
+    "authorization_owner_resolved",
+    "connector_id_stable",
+    "authorized_roots_present",
+    "allowed_dataset_aliases_present",
+    "allowed_confidentiality_present",
+    "authorization_purpose_resolved",
+    "capability_receipt_bound",
+    "authorization_actor_id_stable",
+    "capability_receipt_verified",
+    "strategy_variant_valid",
+    "strategic_question_resolved",
+    "planning_horizon_resolved",
+}
+KNOWN_CONDITIONAL_GATES = {"leader_selected", "internal_selected"}
+ID_RE = re.compile(r"^[A-Za-z0-9][A-Za-z0-9._:-]{2,127}$")
 CONTEXT_RE = re.compile(r"^dcx-\d{8}-[A-Za-z0-9]{8}$")
 RUN_RE = re.compile(r"^dcr-\d{8}T\d{6}-[A-Za-z0-9]{4}$")
 UNRESOLVED = {
@@ -118,8 +164,11 @@ def require_ready_intake(
     now: datetime,
 ) -> tuple[dict[str, object], dict[str, object]]:
     try:
-        payload = PREFLIGHT.load_payload(path_text)
-        result = PREFLIGHT.evaluate_intake(payload, now=now)
+        result = PREFLIGHT.evaluate_intake_file(
+            path_text,
+            now=now,
+            require_request_binding=True,
+        )
     except PREFLIGHT.PreflightError as exc:
         raise PlanError(f"intake预检无效：{exc}") from exc
     if result.get("business_mode") != business_mode:
@@ -136,13 +185,10 @@ def require_ready_intake(
     scope_values = selected.get("organization_scope", {}).get("values", []) if isinstance(selected, dict) else []
     if customer_values != [normalized_text(customer_name)] or scope_values != [normalized_text(organization_scope)]:
         raise PlanError("intake预检的客户主体或组织范围与研究计划不一致。")
-    receipt = {
-        "gate_id": result["gate_id"],
-        "input_sha256": result["input_sha256"],
-        "business_mode": result["business_mode"],
-        "evaluated_at": result["evaluated_at"],
-        "expires_at": result["expires_at"],
-    }
+    try:
+        receipt = PREFLIGHT.verified_gate_record(result)
+    except PREFLIGHT.PreflightError as exc:
+        raise PlanError(f"intake预检无法生成可信持久化门禁：{exc}") from exc
     return receipt, dict(selected)
 
 
@@ -284,7 +330,9 @@ def capture_source_snapshot(
         raise PlanError("source snapshot retrieved_at必须包含时区。")
     payload, capture_method = canonicalize_source_content(content)
     digest = hashlib.sha256(payload).hexdigest()
-    canonical = canonicalize_source_locator(resolved)
+    # Cache identity and the signed canonical locator bind the requested stable
+    # locator.  A redirect target remains separately preserved in final_url.
+    canonical = canonicalize_source_locator(requested)
     return {
         "locator": requested,
         "final_url": resolved,
@@ -298,9 +346,28 @@ def capture_source_snapshot(
 
 
 def load_config(path: Path | str = DEFAULT_CONFIG) -> dict[str, Any]:
-    config = read_json(Path(path))
+    supplied = Path(path).expanduser()
+    if supplied.is_symlink():
+        raise PlanError("business mode配置不得为符号链接。")
+    resolved = supplied.resolve()
+    if not resolved.is_file() or resolved.stat().st_size > MAX_CONFIG_BYTES:
+        raise PlanError("business mode配置必须是受限大小的普通文件。")
+    config = read_json(resolved)
     validate_config(config)
     return config
+
+
+def load_trusted_production_config() -> dict[str, Any]:
+    """Load the one package-pinned contract allowed to create runtime state."""
+    if DEFAULT_CONFIG.is_symlink() or not DEFAULT_CONFIG.is_file():
+        raise PlanError("受信business mode配置缺失、不是普通文件或包含重定向。")
+    raw = DEFAULT_CONFIG.read_bytes()
+    actual = hashlib.sha256(raw).hexdigest()
+    if actual != TRUSTED_BUSINESS_CONFIG_SHA256:
+        raise PlanError(
+            "受信business mode配置摘要漂移；生产plan已失败关闭，需完成代码评审并更新可信摘要。"
+        )
+    return load_config(DEFAULT_CONFIG)
 
 
 def _positive_range(value: Any, label: str) -> None:
@@ -313,6 +380,9 @@ def _positive_range(value: Any, label: str) -> None:
 
 
 def validate_config(config: Mapping[str, Any]) -> None:
+    expected_root = {"$schema", "schema_version", "authorization_contract", "profiles"}
+    if set(config) != expected_root:
+        raise PlanError("business mode配置顶层字段必须与受信schema完全一致。")
     if config.get("schema_version") != "1.0.0":
         raise PlanError("business mode schema_version必须为1.0.0。")
     profiles = config.get("profiles")
@@ -338,6 +408,7 @@ def validate_config(config: Mapping[str, Any]) -> None:
             "source_budget",
             "turn_budget",
             "output_pages",
+            "delivery_contract",
             "ttl_days",
             "required_business_fields",
             "authorization_requirements",
@@ -347,8 +418,39 @@ def validate_config(config: Mapping[str, Any]) -> None:
         missing = sorted(required - set(profile))
         if missing:
             raise PlanError(f"profiles.{mode}缺少：{', '.join(missing)}")
+        allowed_profile = required | {
+            "display_name",
+            "optional_modules",
+            "delivery_budget",
+            "strategy_variants",
+        }
+        unknown_profile = sorted(set(profile) - allowed_profile)
+        if unknown_profile:
+            raise PlanError(
+                f"profiles.{mode}包含未授权字段：{', '.join(unknown_profile)}"
+            )
         if (profile["route"], profile["depth"]) != EXPECTED_COMPATIBILITY[mode]:
             raise PlanError(f"profiles.{mode}的route/depth兼容映射无效。")
+        expected_delivery_contract = {
+            "briefing": {
+                "formal_artifact": "briefing_delivery",
+                "audit_artifact": "comprehensive_report",
+            },
+            "standard_visit": {
+                "formal_artifact": "visit_strategy",
+                "audit_artifact": "comprehensive_report",
+            },
+            "strategic_account": {
+                "formal_artifact": "visit_strategy",
+                "audit_artifact": "comprehensive_report",
+            },
+            "letter": {
+                "formal_artifact": "customer_letter_external",
+                "audit_artifact": "comprehensive_report",
+            },
+        }[mode]
+        if profile.get("delivery_contract") != expected_delivery_contract:
+            raise PlanError(f"profiles.{mode}.delivery_contract无效。")
         modules = profile["modules"]
         optional = profile.get("optional_modules", [])
         if not isinstance(modules, list) or not modules or len(set(modules)) != len(modules):
@@ -366,12 +468,32 @@ def validate_config(config: Mapping[str, Any]) -> None:
             raise PlanError(f"profiles.{mode}.query_budget字段无效。")
         if not all(isinstance(query_budget[key], int) for key in expected_query_keys):
             raise PlanError(f"profiles.{mode}.query_budget必须为整数。")
-        if query_budget["public_max"] < 1 or query_budget["internal_max"] < 0:
+        if not 1 <= query_budget["public_max"] <= 120 or not 0 <= query_budget["internal_max"] <= 80:
             raise PlanError(f"profiles.{mode}.query_budget上限无效。")
         if not 1 <= query_budget["batch_size"] <= 10 or not 1 <= query_budget["parallelism"] <= 8:
             raise PlanError(f"profiles.{mode}.batch_size/parallelism无效。")
         _positive_range(profile["source_budget"], f"profiles.{mode}.source_budget")
         _positive_range(profile["output_pages"], f"profiles.{mode}.output_pages")
+        delivery_budget = profile.get("delivery_budget")
+        if mode == "briefing":
+            expected_delivery_keys = {
+                "page_proxy",
+                "visible_chars_max",
+                "nonblank_lines_max",
+                "section_visible_chars_max",
+                "conclusion_visible_chars_max",
+            }
+            if not isinstance(delivery_budget, dict) or set(delivery_budget) != expected_delivery_keys:
+                raise PlanError("profiles.briefing.delivery_budget字段无效。")
+            if delivery_budget.get("page_proxy") != "markdown-one-page/v1":
+                raise PlanError("profiles.briefing.delivery_budget.page_proxy无效。")
+            if not all(
+                isinstance(delivery_budget[key], int) and not isinstance(delivery_budget[key], bool)
+                for key in expected_delivery_keys - {"page_proxy"}
+            ):
+                raise PlanError("profiles.briefing.delivery_budget数值字段必须为整数。")
+        elif delivery_budget is not None:
+            raise PlanError(f"profiles.{mode}不得声明briefing delivery_budget。")
         turn = profile["turn_budget"]
         if not isinstance(turn, dict) or set(turn) != {"formal_max", "questions_per_turn_max"}:
             raise PlanError(f"profiles.{mode}.turn_budget字段无效。")
@@ -397,6 +519,23 @@ def validate_config(config: Mapping[str, Any]) -> None:
         gate = profile["planning_gate"]
         if not isinstance(gate, dict) or not gate.get("required") or not isinstance(gate.get("conditional"), dict):
             raise PlanError(f"profiles.{mode}.planning_gate无效。")
+        if set(gate) != {"required", "conditional"}:
+            raise PlanError(f"profiles.{mode}.planning_gate包含未授权字段。")
+        required_gates = gate.get("required")
+        conditional_gates = gate.get("conditional")
+        if (
+            not isinstance(required_gates, list)
+            or len(required_gates) != len(set(required_gates))
+            or not set(required_gates) <= KNOWN_PLANNING_GATES
+            or not set(conditional_gates) <= KNOWN_CONDITIONAL_GATES
+            or any(
+                not isinstance(values, list)
+                or len(values) != len(set(values))
+                or not set(values) <= KNOWN_PLANNING_GATES
+                for values in conditional_gates.values()
+            )
+        ):
+            raise PlanError(f"profiles.{mode}.planning_gate含未知或重复门禁。")
         templates = profile["query_templates"]
         if not isinstance(templates, list) or not templates:
             raise PlanError(f"profiles.{mode}.query_templates不能为空。")
@@ -404,6 +543,8 @@ def validate_config(config: Mapping[str, Any]) -> None:
         for template in templates:
             if not isinstance(template, dict):
                 raise PlanError(f"profiles.{mode}.query_templates元素必须为对象。")
+            if set(template) != {"id", "channel", "scope", "priority", "template"}:
+                raise PlanError(f"profiles.{mode} query template字段必须完全匹配受信契约。")
             if template.get("id") in ids:
                 raise PlanError(f"profiles.{mode}存在重复query template id。")
             ids.add(template.get("id"))
@@ -411,7 +552,12 @@ def validate_config(config: Mapping[str, Any]) -> None:
                 raise PlanError(f"profiles.{mode} query channel无效。")
             if template.get("scope") not in {"customer", "alias", "person", "topic", "project"}:
                 raise PlanError(f"profiles.{mode} query scope无效。")
-            if not isinstance(template.get("priority"), int) or not normalized_text(template.get("template")):
+            if (
+                not isinstance(template.get("priority"), int)
+                or isinstance(template.get("priority"), bool)
+                or not 0 <= template["priority"] <= 100
+                or not normalized_text(template.get("template"))
+            ):
                 raise PlanError(f"profiles.{mode} query template无效。")
 
 
@@ -428,6 +574,7 @@ def _gate_checks(
     authorization: Mapping[str, Any],
     people: Sequence[str],
     now: datetime,
+    expected_customer_id: str | None = None,
 ) -> dict[str, bool]:
     required_fields = profile["required_business_fields"]
     project_id = authorization.get("project_id")
@@ -450,7 +597,11 @@ def _gate_checks(
     )
     checks = {
         "business_fields_complete": all(is_resolved(business_fields.get(key)) for key in required_fields),
-        "stable_customer_id": stable_id(authorization.get("customer_id")),
+        "stable_customer_id": (
+            stable_id(authorization.get("customer_id"))
+            and isinstance(expected_customer_id, str)
+            and authorization.get("customer_id") == expected_customer_id
+        ),
         "stable_project_id": stable_id(project_id),
         "route_depth_compatible": (
             profile.get("route"),
@@ -506,8 +657,17 @@ def evaluate_planning_gate(
     authorization: Mapping[str, Any],
     people: Sequence[str],
     now: datetime,
+    expected_customer_id: str | None = None,
 ) -> tuple[bool, dict[str, list[str]]]:
-    checks = _gate_checks(profile, selected_modules, business_fields, authorization, people, now)
+    checks = _gate_checks(
+        profile,
+        selected_modules,
+        business_fields,
+        authorization,
+        people,
+        now,
+        expected_customer_id,
+    )
     names = list(profile["planning_gate"]["required"])
     conditionals = profile["planning_gate"]["conditional"]
     for trigger, gate_names in conditionals.items():
@@ -728,6 +888,68 @@ def build_search_plan(
     if not set(modules) <= set(profile["modules"] + profile.get("optional_modules", [])):
         raise PlanError("selected_modules包含business_mode未授权模块。")
     now = generated_at or utc_now()
+    required_intake_fields = {
+        "gate_id",
+        "input_sha256",
+        "business_mode",
+        "evaluated_at",
+        "expires_at",
+        "request_binding_receipt_id",
+        "request_binding_receipt_sha256",
+        "request_bundle_id",
+        "request_revision",
+        "raw_request_sha256",
+        "mention_ledger_sha256",
+        "subject_resolution_sha256",
+        "safety_authorizations_sha256",
+        "safety_directives_sha256",
+        "subject_resolution",
+        "safety_authorization_codes",
+    }
+    if not isinstance(intake_preflight, Mapping) or not required_intake_fields <= set(intake_preflight):
+        raise PlanError("build_search_plan缺少宿主签名请求绑定的当前intake门禁。")
+    if intake_preflight.get("business_mode") != business_mode:
+        raise PlanError("intake_preflight.business_mode与研究计划不一致。")
+    subject_resolution = intake_preflight.get("subject_resolution")
+    if not isinstance(subject_resolution, Mapping):
+        raise PlanError("intake_preflight.subject_resolution无效。")
+    expected_customer_id = str(subject_resolution.get("customer_id", ""))
+    if customer_id != expected_customer_id:
+        raise PlanError("customer_id与宿主签名subject_resolution不一致。")
+    canonical_name = normalized_text(subject_resolution.get("canonical_customer_name"))
+    if canonical_name != subject_resolution.get("canonical_customer_name") or canonical_name != normalized_text(customer_name):
+        raise PlanError("customer_name与宿主签名subject_resolution不一致。")
+    entity_key = subject_resolution.get("canonical_entity_key")
+    jurisdiction = subject_resolution.get("jurisdiction")
+    if not stable_id(entity_key) or normalized_text(entity_key) != entity_key:
+        raise PlanError("subject_resolution.canonical_entity_key无效。")
+    if not stable_id(jurisdiction) or normalized_text(jurisdiction) != jurisdiction:
+        raise PlanError("subject_resolution.jurisdiction无效。")
+    subject_payload = {
+        "canonical_customer_name": canonical_name,
+        "canonical_entity_key": entity_key,
+        "jurisdiction": jurisdiction,
+    }
+    expected_subject_sha = hashlib.sha256(
+        json.dumps(subject_payload, ensure_ascii=False, sort_keys=True, separators=(",", ":")).encode("utf-8")
+    ).hexdigest()
+    if subject_resolution.get("canonical_subject_sha256") != expected_subject_sha:
+        raise PlanError("subject_resolution.canonical_subject_sha256与规范主体三元组不一致。")
+    id_source = subject_resolution.get("id_source")
+    if id_source == "canonical_derived" and expected_customer_id != "cust-" + expected_subject_sha[:12]:
+        raise PlanError("canonical_derived customer_id与规范主体三元组不一致。")
+    if id_source not in {"canonical_derived", "host_attested_external"}:
+        raise PlanError("subject_resolution.id_source无效。")
+    if subject_resolution.get("organization_scope_sha256") != hashlib.sha256(
+        normalized_text(organization_scope).encode("utf-8")
+    ).hexdigest():
+        raise PlanError("organization_scope与宿主签名subject_resolution不一致。")
+    try:
+        intake_expiry = parse_timestamp(str(intake_preflight["expires_at"]))
+    except (ValueError, PlanError) as exc:
+        raise PlanError("intake_preflight.expires_at无效。") from exc
+    if intake_expiry <= now.astimezone(timezone.utc):
+        raise PlanError("intake_preflight已过期；必须从当前宿主请求重新预检。")
     fields = dict(business_fields or {})
     fields.setdefault("customer_name", customer_name)
     fields.setdefault("organization_scope", organization_scope)
@@ -748,6 +970,7 @@ def build_search_plan(
         "authorization_purpose": authorization_purpose,
         "capability_receipt_id": capability_receipt_id,
         "authorization_actor_id": authorization_actor_id,
+        "capability_receipt_run_id": None,
         "capability_operation": "internal_read",
         "capability_receipt_verified": False,
         "capability_receipt_issuer": None,
@@ -783,7 +1006,7 @@ def build_search_plan(
             raise PlanError(f"capability_receipt_invalid：{exc}") from exc
         authorization.update(verified_receipt.audit_fields())
     planning_ready, gate_results = evaluate_planning_gate(
-        profile, modules, fields, authorization, people, now
+        profile, modules, fields, authorization, people, now, expected_customer_id
     )
     queries = build_query_queue(
         profile,
@@ -814,7 +1037,7 @@ def build_search_plan(
     if internal_queries_suppressed:
         queries = [query for query in queries if query.get("channel") != "internal"]
     plan = {
-        "schema": "discovery-call-search-plan/v1",
+        "schema": "discovery-call-search-plan/v2",
         "context_id": context_id,
         "run_id": run_id,
         "business_mode": business_mode,
@@ -822,6 +1045,7 @@ def build_search_plan(
         "depth": profile["depth"],
         "customer_id": customer_id,
         "organization_scope": organization_scope,
+        "subject_resolution": dict(subject_resolution),
         "selected_modules": modules,
         "strategy_variant": fields.get("strategy_variant", "scheduled_visit") if "strategy" in modules else None,
         "authorization_context": {
@@ -838,6 +1062,7 @@ def build_search_plan(
             "authorization_purpose": authorization_purpose,
             "capability_receipt_id": capability_receipt_id,
             "authorization_actor_id": authorization_actor_id,
+            "capability_receipt_run_id": authorization["capability_receipt_run_id"],
             "capability_operation": authorization["capability_operation"],
             "capability_receipt_verified": authorization["capability_receipt_verified"],
             "capability_receipt_issuer": authorization["capability_receipt_issuer"],
@@ -857,6 +1082,7 @@ def build_search_plan(
             "source": profile["source_budget"],
             "turn": profile["turn_budget"],
             "output_pages": profile["output_pages"],
+            "delivery_budget": profile.get("delivery_budget"),
             "ttl_days": profile["ttl_days"],
         },
         "queries": queries,
@@ -931,7 +1157,7 @@ class SourceCache:
             or not isinstance(entry.get("final_url"), str)
             or not normalized_text(entry.get("final_url"))
             or not isinstance(canonical, str)
-            or canonical != canonicalize_source_locator(str(entry.get("final_url")))
+            or canonical != canonicalize_source_locator(str(entry.get("locator")))
             or hashlib.sha256(canonical.encode("utf-8")).hexdigest() != key
             or entry.get("capture_method") not in CAPTURE_METHODS
             or isinstance(entry.get("length"), bool)
@@ -1097,7 +1323,8 @@ class RuntimeWorkspace:
         "source_manifest_sha256",
         "source_workspace",
         "candidate_workspace",
-        "payload_sha256",
+        "input_payload_sha256",
+        "final_manifest_sha256",
     }
 
     def __init__(self, workspace: Path | str, *, source_workspace: Path | str):
@@ -1136,17 +1363,18 @@ class RuntimeWorkspace:
         marker = read_json(marker_path)
         if not isinstance(marker, dict) or set(marker) != self.RECEIPT_FIELDS:
             raise PlanError("candidate receipt字段不完整或含未知字段。")
-        if marker.get("schema") != "discovery-call-candidate-receipt/v1":
+        if marker.get("schema") != "discovery-call-candidate-receipt/v2":
             raise PlanError("candidate receipt schema无效。")
         if Path(str(marker.get("candidate_workspace", ""))).resolve() != self.workspace:
             raise PlanError("candidate receipt未绑定当前候选路径。")
         if Path(str(marker.get("source_workspace", ""))).resolve() != self.source_workspace:
             raise PlanError("candidate receipt未绑定当前source workspace。")
-        if not CONTENT_SHA256_RE.fullmatch(str(marker.get("payload_sha256", ""))):
-            raise PlanError("candidate receipt payload_sha256无效。")
+        for field in ("input_payload_sha256", "final_manifest_sha256"):
+            if not CONTENT_SHA256_RE.fullmatch(str(marker.get(field, ""))):
+                raise PlanError(f"candidate receipt {field}无效。")
         source_manifest = read_json(source_manifest_path)
         candidate_manifest = read_json(candidate_manifest_path)
-        if self._file_sha256(candidate_manifest_path) != marker.get("payload_sha256"):
+        if self._file_sha256(candidate_manifest_path) != marker.get("final_manifest_sha256"):
             raise PlanError("candidate receipt未绑定当前candidate manifest。")
         source_revision = marker.get("source_manifest_revision")
         if not isinstance(source_revision, int) or isinstance(source_revision, bool) or source_revision < 1:
@@ -1174,6 +1402,21 @@ class RuntimeWorkspace:
         generated_at: datetime | None = None,
     ) -> dict[str, Path]:
         now = generated_at or parse_timestamp(str(plan["generated_at"]))
+        if plan.get("planning_ready") is not True:
+            raise PlanError("planning_ready=false；禁止生成或持久化query/batch及运行机器文件。")
+        plan_intake = plan.get("intake_preflight")
+        required_intake_fields = set(PREFLIGHT.PERSISTED_GATE_STABLE_FIELDS) | {
+            "evaluated_at",
+            "expires_at",
+        }
+        if not isinstance(plan_intake, dict) or not required_intake_fields <= set(plan_intake):
+            raise PlanError("研究计划缺少宿主签名请求绑定的当前intake门禁。")
+        try:
+            intake_expiry = parse_timestamp(str(plan_intake["expires_at"]))
+        except (ValueError, PlanError) as exc:
+            raise PlanError("研究计划intake门禁过期时间无效。") from exc
+        if intake_expiry <= now.astimezone(timezone.utc):
+            raise PlanError("研究计划intake门禁已过期；禁止持久化query/batch。")
         if (
             self._receipt.get("context_id") != plan.get("context_id")
             or self._receipt.get("run_id") != plan.get("run_id")
@@ -1183,6 +1426,12 @@ class RuntimeWorkspace:
         candidate_manifest = read_json(candidate_manifest_path)
         if candidate_manifest.get("business_mode") != plan.get("business_mode"):
             raise PlanError("候选manifest与研究计划business_mode不一致。")
+        established_intake = candidate_manifest.get("intake_preflight")
+        if not isinstance(established_intake, dict):
+            raise PlanError("候选manifest缺少intake门禁。")
+        for field in PREFLIGHT.PERSISTED_GATE_STABLE_FIELDS:
+            if established_intake.get(field) != plan_intake.get(field):
+                raise PlanError(f"候选manifest与研究计划的intake_preflight.{field}不一致。")
         established_authorization = candidate_manifest.get("authorization")
         plan_authorization = plan.get("authorization_context")
         if not isinstance(established_authorization, dict) or not isinstance(plan_authorization, dict):
@@ -1267,6 +1516,7 @@ class RuntimeWorkspace:
                     "authorization_purpose": plan.get("authorization_context", {}).get("authorization_purpose"),
                     "capability_receipt_id": plan.get("authorization_context", {}).get("capability_receipt_id"),
                     "authorization_actor_id": plan.get("authorization_context", {}).get("authorization_actor_id"),
+                    "capability_receipt_run_id": plan.get("authorization_context", {}).get("capability_receipt_run_id"),
                     "capability_operation": plan.get("authorization_context", {}).get("capability_operation"),
                     "capability_receipt_verified": plan.get("authorization_context", {}).get("capability_receipt_verified", False),
                     "capability_receipt_issuer": plan.get("authorization_context", {}).get("capability_receipt_issuer"),
@@ -1303,12 +1553,14 @@ class RuntimeWorkspace:
                 "run_id": payload.get("run_id", ""),
             }
         candidate_manifest["runtime_files"] = runtime_files
+        candidate_manifest["intake_preflight"] = dict(plan_intake)
         candidate_manifest["evidence_run_id"] = str(plan["run_id"])
         candidate_manifest["updated_at"] = isoformat(now)
         atomic_write_json(candidate_manifest_path, candidate_manifest)
         refreshed_receipt = dict(self._receipt)
-        refreshed_receipt["payload_sha256"] = self._file_sha256(candidate_manifest_path)
+        refreshed_receipt["final_manifest_sha256"] = self._file_sha256(candidate_manifest_path)
         atomic_write_json(self.runtime / CANDIDATE_MARKER_NAME, refreshed_receipt)
+        write_seal_request(self.workspace)
         self._receipt = refreshed_receipt
         return {
             "search_plan": search_path,
@@ -1320,8 +1572,12 @@ class RuntimeWorkspace:
 def validate_evidence_source_record(source_id: str, value: Mapping[str, Any]) -> dict[str, Any]:
     record = copy.deepcopy(dict(value))
     required = {
-        "source_id", "locator", "canonical_locator", "final_url", "cache_key",
+        "source_id", "source_title", "publisher_or_provider", "locator",
+        "canonical_locator", "final_url", "cache_key", "publication_or_update_date",
+        "access_date", "source_group", "applicable_scope", "notes", "upstream_id",
         "source_fingerprint", "content_sha256", "retrieved_at", "capture_method", "length",
+        "published_at", "source_updated_at", "internal_recorded_at", "source_level",
+        "permission", "external_use", "tenant_id", "project_id", "capture_receipt",
     }
     missing = sorted(required - set(record))
     if missing:
@@ -1331,9 +1587,47 @@ def validate_evidence_source_record(source_id: str, value: Mapping[str, Any]) ->
         raise PlanError(f"{source_id}机器来源ID或content_sha256无效。")
     if record.get("source_fingerprint") != f"sha256:{digest}":
         raise PlanError(f"{source_id}.source_fingerprint必须由内容SHA-256生成。")
+    if record.get("canonical_locator") != canonicalize_source_locator(str(record.get("locator", ""))):
+        raise PlanError(f"{source_id}.canonical_locator必须由raw locator规范化生成。")
     if record.get("capture_method") not in CAPTURE_METHODS or not isinstance(record.get("length"), int) or isinstance(record.get("length"), bool) or record["length"] < 0:
         raise PlanError(f"{source_id}捕获方法或长度无效。")
     parse_timestamp(str(record.get("retrieved_at", "")))
+    for field in ("published_at", "source_updated_at", "internal_recorded_at"):
+        if record.get(field) is not None:
+            parse_timestamp(str(record[field]))
+    if record.get("source_level") not in {"S", "A", "B", "C", "internal"}:
+        raise PlanError(f"{source_id}.source_level无效。")
+    if record.get("permission") not in {"public", "internal-authorized", "restricted"}:
+        raise PlanError(f"{source_id}.permission无效。")
+    if record.get("external_use") not in {"true", "false"}:
+        raise PlanError(f"{source_id}.external_use必须为true或false。")
+    if record.get("notes") not in {
+        "none", "capture_limitation", "metadata_unavailable", "scope_limited"
+    }:
+        raise PlanError(f"{source_id}.notes只能使用受控审计码。")
+    if record.get("permission") == "restricted" and record.get("external_use") != "false":
+        raise PlanError(f"{source_id}为restricted时external_use必须为false。")
+    for field in ("tenant_id", "project_id"):
+        value = record.get(field)
+        if value is not None and (not isinstance(value, str) or not ID_RE.fullmatch(value)):
+            raise PlanError(f"{source_id}.{field}必须为稳定标识符或null。")
+    if (
+        record.get("source_level") == "internal"
+        or record.get("permission") in {"internal-authorized", "restricted"}
+    ) and (record.get("tenant_id") is None or record.get("project_id") is None):
+        raise PlanError(f"{source_id}内部/受限来源必须绑定tenant_id与project_id。")
+    for field in (
+        "source_title", "publisher_or_provider", "publication_or_update_date",
+        "access_date", "source_group", "applicable_scope", "notes", "upstream_id",
+    ):
+        value = record.get(field)
+        if not isinstance(value, str) or not normalized_text(value) or value != normalized_text(value):
+            raise PlanError(f"{source_id}.{field}必须为规范化非空字符串。")
+    if not re.fullmatch(r"\d{4}-\d{2}-\d{2}", str(record.get("access_date", ""))):
+        raise PlanError(f"{source_id}.access_date必须为YYYY-MM-DD。")
+    receipt = record.get("capture_receipt")
+    if not isinstance(receipt, dict) or receipt.get("schema") != "discovery-call-source-capture-receipt/v3":
+        raise PlanError(f"{source_id}必须携带v3宿主签名source-capture receipt。")
     return record
 
 
@@ -1346,7 +1640,10 @@ def validate_evidence_claim_record(
     record = copy.deepcopy(dict(value))
     required = {
         "claim_id", "information_type", "ttl_class", "evidence_anchor_at", "date_basis",
-        "verified_at", "ttl_days", "expires_at", "verification_status", "supporting_source_ids",
+        "verified_at", "ttl_days", "expires_at", "claim_type", "provenance",
+        "verification_status", "claim_text", "time_scope", "supporting_source_refs",
+        "supporting_source_ids", "counter_source_refs", "counter_source_ids",
+        "supporting_source_receipt_sha256s", "confidence", "downstream_impact",
     }
     missing = sorted(required - set(record))
     if missing:
@@ -1370,6 +1667,23 @@ def validate_evidence_claim_record(
     source_ids = record.get("supporting_source_ids")
     if not isinstance(source_ids, list) or not source_ids or len(source_ids) != len(set(source_ids)):
         raise PlanError(f"{claim_id}.supporting_source_ids必须是非空去重数组。")
+    receipt_hashes = record.get("supporting_source_receipt_sha256s")
+    if (
+        not isinstance(receipt_hashes, dict)
+        or set(receipt_hashes) != set(source_ids)
+        or any(not isinstance(value, str) or not CONTENT_SHA256_RE.fullmatch(value) for value in receipt_hashes.values())
+    ):
+        raise PlanError(f"{claim_id}.supporting_source_receipt_sha256s必须逐来源绑定宿主收据摘要。")
+    counter_ids = record.get("counter_source_ids")
+    if not isinstance(counter_ids, list) or len(counter_ids) != len(set(counter_ids)):
+        raise PlanError(f"{claim_id}.counter_source_ids必须是去重数组。")
+    for field in (
+        "claim_type", "provenance", "verification_status", "claim_text", "time_scope",
+        "supporting_source_refs", "counter_source_refs", "confidence", "downstream_impact",
+    ):
+        item = record.get(field)
+        if not isinstance(item, str) or not normalized_text(item) or item != normalized_text(item):
+            raise PlanError(f"{claim_id}.{field}必须为规范化非空字符串。")
     return record
 
 
@@ -1422,7 +1736,6 @@ def build_parser() -> argparse.ArgumentParser:
     profile_parser.add_argument("--business-mode", choices=BUSINESS_MODES, required=True)
 
     plan_parser = subparsers.add_parser("plan", help="生成并持久化离线研究计划")
-    plan_parser.add_argument("--config", type=Path, default=DEFAULT_CONFIG)
     plan_parser.add_argument("--workspace", type=Path, required=True)
     plan_parser.add_argument(
         "--source-workspace",
@@ -1439,7 +1752,7 @@ def build_parser() -> argparse.ArgumentParser:
     plan_parser.add_argument(
         "--intake-input",
         required=True,
-        help="结构化intake JSON；规划器会在创建runtime目录前重新计算门禁",
+        help="当前宿主签名的intake v3普通文件（不接受-或stdin）；规划器会在创建runtime目录前重新计算门禁",
     )
     plan_parser.add_argument("--tenant-id")
     plan_parser.add_argument("--project-id")
@@ -1458,11 +1771,7 @@ def build_parser() -> argparse.ArgumentParser:
         help="宿主签发的Ed25519能力收据普通文件；文件本身不会写入workspace",
     )
     plan_parser.add_argument("--module", action="append")
-    plan_parser.add_argument("--alias", action="append", default=[])
     plan_parser.add_argument("--person", action="append", default=[])
-    plan_parser.add_argument("--topic", action="append", default=[])
-    plan_parser.add_argument("--project", action="append", default=[])
-    plan_parser.add_argument("--query", action="append", default=[])
     plan_parser.add_argument("--business-field", action="append", default=[])
     plan_parser.add_argument(
         "--require-planning-ready",
@@ -1477,13 +1786,15 @@ def build_parser() -> argparse.ArgumentParser:
 def main() -> int:
     args = build_parser().parse_args()
     try:
-        config = load_config(args.config)
         if args.command == "validate-config":
+            config = load_config(args.config)
             print(json.dumps({"valid": True, "profiles": list(BUSINESS_MODES)}, ensure_ascii=False))
             return 0
         if args.command == "profile":
+            config = load_config(args.config)
             print(json.dumps(profile_for(args.business_mode, config), ensure_ascii=False, indent=2))
             return 0
+        config = load_trusted_production_config()
         planned_at = utc_now()
         intake_preflight, intake_values = require_ready_intake(
             args.intake_input,
@@ -1493,6 +1804,28 @@ def main() -> int:
             now=planned_at,
         )
         business_fields = parse_business_fields(args.business_field)
+        signed_field_names = {
+            str(field)
+            for field, record in intake_values.items()
+            if isinstance(field, str)
+            and isinstance(record, dict)
+            and len(record.get("values", [])) == 1
+        }
+        # target_contact_level may be the normalized machine alias of one
+        # signed target_person/target_role/target_contact_level assertion.  No
+        # other unsigned --business-field may enter a production plan.
+        allowed_business_fields = signed_field_names | (
+            {"target_contact_level"}
+            if signed_field_names & {"target_person", "target_role", "target_contact_level"}
+            else set()
+        )
+        unsigned_business_fields = sorted(set(business_fields) - allowed_business_fields)
+        if unsigned_business_fields:
+            raise PlanError(
+                "--business-field必须来自同一份签名intake："
+                + ", ".join(unsigned_business_fields)
+                + "。"
+            )
         for field, record in intake_values.items():
             if not isinstance(record, dict):
                 continue
@@ -1555,11 +1888,7 @@ def main() -> int:
             capability_receipt_file=args.capability_receipt_file,
             business_fields=business_fields,
             selected_modules=args.module,
-            aliases=args.alias,
             people=args.person,
-            topics=args.topic,
-            projects=args.project,
-            custom_queries=args.query,
             config=config,
             generated_at=planned_at,
             intake_preflight=intake_preflight,

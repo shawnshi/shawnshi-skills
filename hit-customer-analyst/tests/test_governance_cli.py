@@ -21,6 +21,12 @@ def hashes(workspace: Path) -> dict[str, str]:
 
 class GovernanceCliTests(unittest.TestCase):
     def approve(self, workspace: Path) -> None:
+        record_action_assertion(workspace, event_id="institution-cli", actor_id="reviewer-institution", operation="approve_artifact:institution", artifact_type="institution_research")
+        institution = run_python(
+            "validate_outputs.py",
+            [str(workspace), "--approve-artifact", "institution", "--reviewer", "周洁（机构事实审核岗）", "--actor-id", "reviewer-institution", "--action-event-id", "institution-cli", "--json"],
+        )
+        self.assertEqual(institution.returncode, 0, institution.stderr or institution.stdout)
         record_action_assertion(workspace, event_id="facts-cli", actor_id="reviewer-letter-facts", operation="review_letter_facts", artifact_type="customer_letter_internal")
         facts = run_python(
             "validate_outputs.py",

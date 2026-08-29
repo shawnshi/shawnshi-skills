@@ -1,23 +1,33 @@
 {
   "schema_version": 3,
   "skill": "personal-diary-writer",
-  "generated_at": "2026-08-27T20:05:46+08:00",
+  "generated_at": "2026-08-29T20:18:36+08:00",
   "hash_algorithm": "SHA-256",
   "text_hash_normalization": "LF",
   "skill_md": "SKILL.md",
-  "skill_md_sha256": "f18b99b7f2b83c982e8ab2c54ebf2b4b201f6fcb2fe6764fb4f42b5daba6471a",
+  "skill_md_sha256": "8274cd39f0c2c7645084b59d229d348883259585bbba2dd1df402187a663cc32",
   "top_level_files": [
     "SKILL.md",
-    "authority.json"
+    "SKILL.md.bak_20260829_193004",
+    "authority.json",
+    "authority.json.bak_20260829_193004"
   ],
   "top_level_file_hashes": [
     {
       "path": "SKILL.md",
-      "sha256": "f18b99b7f2b83c982e8ab2c54ebf2b4b201f6fcb2fe6764fb4f42b5daba6471a"
+      "sha256": "8274cd39f0c2c7645084b59d229d348883259585bbba2dd1df402187a663cc32"
+    },
+    {
+      "path": "SKILL.md.bak_20260829_193004",
+      "sha256": "e54e05926631aa7f2912cb78e37821a6fc49212baf7831885e88976780ddafdd"
     },
     {
       "path": "authority.json",
-      "sha256": "26f331dd0d7bc368750ec00dd368074e2c05b7c932cea29385ff044e245db88a"
+      "sha256": "254eb973ec106cc942fcf181120765c6618ba72647aa8a42c406437b445e5328"
+    },
+    {
+      "path": "authority.json.bak_20260829_193004",
+      "sha256": "a9a2eaa0fff3d7b373015644b32902f448635d7222be70c7c72c29f66d68c67b"
     }
   ],
   "top_level_directories": [
@@ -44,6 +54,12 @@
     }
   ],
   "declared_local_dependencies": [
+    {
+      "path": "personal-diary-writer/SKILL.md",
+      "exists": true,
+      "resolved_path": "personal-diary-writer/SKILL.md",
+      "sha256": "8274cd39f0c2c7645084b59d229d348883259585bbba2dd1df402187a663cc32"
+    },
     {
       "path": "scripts/authority_gate.py",
       "exists": true,

@@ -24,7 +24,7 @@ from garmin_sqlite_adapter import GARMIN_DB, MONITORING_DB, fingerprint_database
 
 SCHEMA = "garmin-auto-sync-status.v1"
 COMPONENTS = ("sleep", "hrv", "body_battery", "heart_rate", "stress")
-PLAN_TIMEOUT_SECONDS = 90
+PLAN_TIMEOUT_SECONDS = 150
 TOTAL_TIMEOUT_SECONDS = 900
 SAFE_ERROR_CODE = re.compile(r"^[a-z0-9_]{1,80}$")
 

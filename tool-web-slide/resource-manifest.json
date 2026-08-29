@@ -1,7 +1,7 @@
 {
   "schema_version": 3,
   "skill": "tool-web-slide",
-  "generated_at": "2026-08-27T20:05:47+08:00",
+  "generated_at": "2026-08-29T20:18:37+08:00",
   "hash_algorithm": "SHA-256",
   "text_hash_normalization": "LF",
   "skill_md": "SKILL.md",
@@ -60,7 +60,7 @@
   "resource_file_hashes": [
     {
       "path": "agents/openai.yaml",
-      "sha256": "d74e5cc4b842e19fc288222e052f4b506c0f73b23cf61b5ba9e709bef3f67af1"
+      "sha256": "a7b347979f59aaae6ebb81f800c6015798ecae8d43a53a0743c7ab94111fe1e9"
     },
     {
       "path": "assets/core.css",
@@ -196,7 +196,7 @@
     },
     {
       "path": "tests/runtime-static.test.mjs",
-      "sha256": "2c9e78ef372cc53c047f586c636ecb162d5a9015a18d943acf64e73bdb378c26"
+      "sha256": "b8bdf7188f12a30b19a62d94a111a89cf3e5faf1bf26ede24e8f4586e82e8cc8"
     }
   ],
   "declared_local_dependencies": [

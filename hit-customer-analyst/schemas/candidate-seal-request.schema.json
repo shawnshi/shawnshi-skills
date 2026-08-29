@@ -1,0 +1,27 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://winning-health.example/discovery-call/candidate-seal-request.schema.json",
+  "title": "discovery-call unsigned candidate seal request",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schema", "audience", "input_payload_sha256", "final_manifest_sha256", "intake_gate_sha256",
+    "context_id", "run_id", "source_manifest_revision", "source_manifest_sha256",
+    "source_workspace", "candidate_workspace", "formal_workspace", "customer_id"
+  ],
+  "properties": {
+    "schema": {"const": "discovery-call-candidate-seal-request/v3"},
+    "audience": {"const": "discovery-call-candidate-commit"},
+    "input_payload_sha256": {"type": "string", "pattern": "^[0-9a-f]{64}$"},
+    "final_manifest_sha256": {"type": "string", "pattern": "^[0-9a-f]{64}$"},
+    "intake_gate_sha256": {"type": "string", "pattern": "^[0-9a-f]{64}$"},
+    "context_id": {"type": "string", "pattern": "^dcx-[0-9]{8}-[A-Za-z0-9]{8}$"},
+    "run_id": {"type": "string", "pattern": "^dcr-[0-9]{8}T[0-9]{6}-[A-Za-z0-9]{4}$"},
+    "source_manifest_revision": {"type": "integer", "minimum": 1},
+    "source_manifest_sha256": {"type": "string", "pattern": "^[0-9a-f]{64}$"},
+    "source_workspace": {"type": "string", "minLength": 1},
+    "candidate_workspace": {"type": "string", "minLength": 1},
+    "formal_workspace": {"type": "string", "minLength": 1},
+    "customer_id": {"type": "string", "pattern": "^[A-Za-z0-9][A-Za-z0-9._:-]{2,127}$"}
+  }
+}

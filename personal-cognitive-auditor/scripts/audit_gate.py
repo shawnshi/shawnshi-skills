@@ -56,7 +56,7 @@ ENERGY_REQUIRED_FIELDS = (
 
 ACQUISITION_AUDIT_PATTERNS = {
     "sync_eligible": re.compile(r"\bsync_eligible=(?:true|false)\b", re.IGNORECASE),
-    "sync_attempted": re.compile(r"\bsync_attempted=(?:started|waited_existing|not_attempted)\b", re.IGNORECASE),
+    "sync_attempted": re.compile(r"\bsync_attempted=(?:started|waited_existing|direct|not_attempted)\b", re.IGNORECASE),
     "task_status": re.compile(r"\btask_status=[a-z0-9_]+\b", re.IGNORECASE),
     "local_reread": re.compile(r"\blocal_reread=(?:accepted|rejected|not_run)\b", re.IGNORECASE),
     "local_status": re.compile(r"\blocal_status=(?:complete|partial|no_data|read_error|not_run)\b", re.IGNORECASE),
@@ -91,7 +91,7 @@ def acquisition_semantic_errors(value: str) -> list[str]:
     local_status = fields["local_status"]
     live = fields["live_fallback"]
     reason = fields["reason"]
-    if attempted in {"started", "waited_existing"} and not eligible:
+    if attempted in {"started", "waited_existing", "direct"} and not eligible:
         errors.append("attempted sync requires eligibility")
     if not eligible and attempted != "not_attempted":
         errors.append("ineligible sync cannot be attempted")

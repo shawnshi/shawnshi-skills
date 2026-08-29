@@ -1,9 +1,14 @@
 interface:
   display_name: Technical Diagram Renderer
   short_description: Render validated SVG and draw.io diagrams
-  default_prompt: Use $technical-diagram-renderer to turn confirmed system relationships into validated
+  default_prompt: Use $tool-drawio to turn confirmed system relationships into validated
     SVG and reusable JSON, with a basic draw.io export when requested.
   icon_small: assets/icon.svg
   icon_large: assets/icon.svg
 policy:
+  products:
+  - chatgpt
+  - codex
+  - api
+  - atlas
   allow_implicit_invocation: true

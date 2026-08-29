@@ -473,25 +473,12 @@ class BehavioralNegativeTests(unittest.TestCase):
 
     def test_N27_output_route_requires_research_carrier(self):
         with tempfile.TemporaryDirectory() as temporary:
-            result = run_python(
-                "init_workspace.py",
-                [
-                    "行为测试医院",
-                    "--output-root",
-                    temporary,
-                    "--task-timezone",
-                    "Asia/Shanghai",
-                    "--runtime-owner",
-                    "测试负责人",
-                    "--route",
-                    "strategy",
-                    "--modules",
-                    "strategy",
-                    "--json",
-                ],
-            )
-            self.assertEqual(result.returncode, 2)
-            self.assertRegex(result.stderr, r"business-mode|intake-input|业务模式")
+            workspace = build_pending_strategy_workspace(Path(temporary) / "output")
+            next(workspace.glob("*机构研究报告.md")).unlink()
+            next(workspace.glob("*人物研究报告.md")).unlink()
+            returncode, codes = self.validate_codes(workspace)
+            self.assertEqual(returncode, 1)
+            self.assertIn("route_research_carrier_missing", codes)
 
     def test_N28_resume_without_new_cutoff_preserves_existing_evidence_state(self):
         with tempfile.TemporaryDirectory() as temporary:
@@ -565,7 +552,9 @@ class BehavioralNegativeTests(unittest.TestCase):
             workspace = build_pending_letter_workspace(Path(temporary) / "output")
             letter = self.letter_path(workspace)
             text = letter.read_text(encoding="utf-8").replace(
-                "张主任，您好：", "张主任，您好：\n\n<!-- internal -->", 1
+                "`EXTERNAL_BODY_START`",
+                "`EXTERNAL_BODY_START`\n\n<!-- internal -->",
+                1,
             )
             letter.write_text(text, encoding="utf-8")
             self.assert_validation_code(
@@ -765,7 +754,7 @@ class BehavioralNegativeTests(unittest.TestCase):
             def mutate(row: str) -> str:
                 cells = row.split("|")
                 cells[4] = " partial "
-                cells[14] = " 无 "
+                cells[14] = " none "
                 return "|".join(cells)
 
             self.alter_status_row(total, "机构研究", mutate)
