@@ -4,7 +4,9 @@
   "_meta": {
     "threshold_status": "configurable_method_assumptions",
     "boundary": "Thresholds are screening parameters, not universal investment facts or trade rules. Evidence-only profiles define required checks and must not be interpreted as a financial-screen pass.",
-    "last_reviewed": "2026-08-05"
+    "default_data_access_mode": "free_public",
+    "free_source_policy": "references/free-data-policy.md",
+    "last_reviewed": "2026-08-30"
   },
   "profiles": {
     "quality_equity": {

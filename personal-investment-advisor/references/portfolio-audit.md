@@ -46,7 +46,7 @@
 
 分配计算始终是 `research_only` 实验：不得执行交易，不得把实验结果写回持仓，不得生成订单、止损止盈或默认仓位上限。策略遵循 `inverse_volatility_policy_schema.json`，结构参考 `inverse_volatility_policy.example.json`；具体离线参数和失败条件以 `rebalance_weights.py --help` 及专属测试为准。没有显式策略、已验证行情包、完整分桶和必要汇率时不计算。
 
-当前方法名为 `inverse_volatility_allocation`。它忽略相关性，不能称为风险平价；波动率观测必须带期间、样本数、日期、来源和定位。实验输出使用 `experimental_weight`，不等于目标权重或操作建议。
+当前方法名为 `inverse_volatility_allocation`。它忽略相关性，不能称为风险平价；波动率观测必须带期间、样本数、日期、来源和定位。实验输出使用 `experimental_weight`，不等于目标权重或操作建议。免费数据无法通过主动 Alpha 门禁时，这一风险型实验仍可独立运行，不得把结果升级为 Rank/Yank、`candidate_weight` 或 `allocation_gap`。
 
 ## 主动组合研究的额外门禁
 

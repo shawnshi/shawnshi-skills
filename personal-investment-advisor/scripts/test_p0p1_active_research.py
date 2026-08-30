@@ -29,7 +29,7 @@ def evidence(day="2026-08-01T00:00:00+00:00"):
         "observed_at": day,
         "available_at": day,
         "retrieved_at": "2026-08-20T00:00:00+00:00",
-        "source_locator": "dataset://licensed-point-in-time-snapshot",
+        "source_locator": "https://data.sec.gov/api/xbrl/companyfacts/CIK0000000001.json",
         "content_sha256": SHA_A,
     }
 
@@ -50,22 +50,23 @@ def alpha_package():
                 "turnover": 0.02,
             }
         )
-    components = lambda score: [
-        {
-            "name": "quality",
-            "score": score,
-            "confidence": 0.9,
-            "decay_half_life_days": 120,
-            "evidence": evidence(),
-        },
-        {
-            "name": "momentum",
-            "score": score * 0.8,
-            "confidence": 0.8,
-            "decay_half_life_days": 60,
-            "evidence": evidence("2026-08-15T00:00:00+00:00"),
-        },
-    ]
+    def components(score):
+        return [
+            {
+                "name": "quality",
+                "score": score,
+                "confidence": 0.9,
+                "decay_half_life_days": 120,
+                "evidence": evidence(),
+            },
+            {
+                "name": "momentum",
+                "score": score * 0.8,
+                "confidence": 0.8,
+                "decay_half_life_days": 60,
+                "evidence": evidence("2026-08-15T00:00:00+00:00"),
+            },
+        ]
     return {
         "schema_version": "pia_alpha_evidence_v1",
         "decision_scope": "research_only",
@@ -168,7 +169,7 @@ def construction_policy():
             "window_start": "2025-08-20T00:00:00+00:00",
             "window_end": "2026-08-19T00:00:00+00:00",
             "as_of": "2026-08-20T00:00:00+00:00",
-            "source_locator": "dataset://licensed-return-history",
+            "source_locator": "https://query1.finance.yahoo.com/v8/finance/chart/AAA",
             "content_sha256": SHA_B,
         },
         "risk_aversion": 5.0,
@@ -206,6 +207,28 @@ class AlphaValidationTests(unittest.TestCase):
         self.assertEqual(report["promotion_status"], "experimental_only")
         self.assertFalse(report["formal_use_allowed"])
         self.assertTrue(report["fail_closed"]["triggered"])
+
+    def test_free_source_limitations_are_experimental_not_invalid(self):
+        package = alpha_package()
+        package["universe"]["survivorship_bias_control"] = False
+        package["universe"]["corporate_action_adjusted"] = False
+        report = evaluate_alpha_package(package, promotion_policy())
+        self.assertEqual(report["status"], "incomplete")
+        self.assertEqual(report["promotion_status"], "experimental_only")
+        self.assertFalse(report["promotion_checks"]["survivorship_bias_control"])
+        self.assertFalse(report["promotion_checks"]["corporate_action_adjusted"])
+        self.assertFalse(report["formal_use_allowed"])
+        self.assertEqual(report["errors"], [])
+        self.assertEqual(len(report["warnings"]), 2)
+
+    def test_data_quality_flags_must_be_boolean(self):
+        package = alpha_package()
+        package["universe"]["survivorship_bias_control"] = "unknown"
+        report = evaluate_alpha_package(package, promotion_policy())
+        self.assertEqual(report["status"], "invalid_input")
+        self.assertTrue(
+            any("survivorship_bias_control must be a boolean" in error for error in report["errors"])
+        )
 
     def test_future_or_unaligned_evidence_fails_contract(self):
         package = alpha_package()

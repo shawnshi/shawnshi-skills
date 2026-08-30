@@ -1,4 +1,4 @@
- 工具是人类意志的延申。
+工具是人类意志的延伸。
 
 
 ## 1. Runtime contract
@@ -92,7 +92,7 @@ description: 说明技能做什么，以及用户在什么场景下应使用它�
 
 ## 5. Skill inventory
 
-当前库存为 53 个用户技能，不包含 `.system`、`scripts`、`shared`、`examples` 和 `reports`。功能说明取自各技能 `SKILL.md` 的当前 `description`。
+当前库存为 54 个用户技能，不包含 `.system`、`scripts`、`shared`、`examples` 和 `reports`。功能说明取自各技能 `SKILL.md` 的当前 `description`。
 
 ### Academic and cognitive research
 
@@ -129,6 +129,7 @@ description: 说明技能做什么，以及用户在什么场景下应使用它�
 | Skill | 功能说明 |
 |---|---|
 | `image-promp-gen` | 将简短主题转化为适合海报、书籍封面、专辑封面、文章配图和社交媒体视觉的平面设计图像提示词，擅长丝网印刷、负空间、象征构图和有限色板 |
+| `image-prompt-gen` | 将简短主题或现有视觉要求转化为原创、可执行的平面设计图像提示词，也可在用户明确要求时直接生成或编辑图片 |
 | `image-studio-architect` | 使用当前图像生成能力创建或编辑海报、封面、插画、概念图、社交媒体图片和其他视觉资产，并根据输入完整度补足构图、色彩、光线、材质与画幅 |
 | `magazine-illustrator` | 为文章、博客、公众号、报告和演示文稿设计并直接生成杂志式位图插画，包括头图、封面、章节插图、系列配图和可复制的图像生成提示词 |
 | `mentat-collaboration-audit` | 基于真实会话记录、日志、工具调用和遥测事件审计系统效率与人机协作摩擦，复算等待、技能载入、错误重试、子代理Token、上下文压缩和写入授权指标，并按需生成Markdown报告和HTML审计面板 |
@@ -242,4 +243,4 @@ pwsh -NoProfile -ExecutionPolicy Bypass -File scripts/repair_skills.ps1 -Mode Ga
 
 禁止在维护流程中重新生成 `skill.json`。旧工具如果仍依赖该文件，应修订或移除该工具，不得恢复双重真相源。
 
-Last updated: 2026-08-27
+Last updated: 2026-08-30

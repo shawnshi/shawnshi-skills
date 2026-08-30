@@ -1,6 +1,6 @@
 # 命令目录
 
-运行前先检查 `scripts/requirements.txt` 与命令 `--help`。不要自动安装依赖或修改全局环境。
+运行前先检查 `scripts/requirements.txt` 与命令 `--help`。不要自动安装依赖或修改全局环境。默认遵循 [free-data-policy.md](free-data-policy.md)，不把付费终端或机构数据库设为前置条件。
 
 ## 稳定入口
 
@@ -10,6 +10,7 @@
 
 - 证券身份：`instrument_gate.py`
 - 美股实时证据：`live_evidence_probe.py`
+- 美股免费点时年度财务：`pia.py edgar-fundamentals <代码...> --as-of <ISO 日期> [--user-agent <含真实邮箱的说明>]`；底层为 `sec_edgar_fundamentals.py`，只选取 `filed <= as_of` 的 SEC `companyfacts` 事实，不获取价格
 - 研究 Brief：`research_brief_gate.py`
 - 财务筛选：`quality_screener.py`
 - 通用行情与财务：`yf.py`

@@ -1,8 +1,12 @@
 interface:
   display_name: "Personal Investment Advisor"
-  short_description: "核验行情与原始披露，执行只读持仓审计、Alpha 验证和主动组合研究"
+  short_description: "面向个人投资者，以免费公开数据开展可追溯的只读投资研究"
   brand_color: "#1F6F5B"
-  default_prompt: "使用 $personal-investment-advisor 对我的持仓或候选股票开展只读、证据可追溯的研究；先核验行情、公司原始披露与数据时点。若要求主动收益研究，依次执行 Alpha 验证、Rank & Yank、风险平价候选构造和非执行提案。"
+  default_prompt: >-
+    使用 $personal-investment-advisor 对我的持仓或候选股票开展只读、证据可追溯的研究。
+    默认只用 SEC EDGAR、交易所与发行人披露、Yahoo Finance、Akshare 等免费公开来源；
+    明确数据缺口，不要求购买专业数据库。主动收益研究仍须依次通过 Alpha 验证、
+    Rank & Yank、候选构造和非执行提案门禁。
 
 policy:
   allow_implicit_invocation: true

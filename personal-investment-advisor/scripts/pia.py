@@ -13,7 +13,7 @@ import os
 import subprocess
 import sys
 from pathlib import Path
-from typing import Any, Sequence
+from typing import Any, NoReturn, Sequence
 
 from status_contract import (
     CONTRACT_VERSION,
@@ -34,7 +34,7 @@ CHILD_TIMEOUT_SECONDS = 300
 class JsonArgumentParser(argparse.ArgumentParser):
     """Emit the same machine-readable failure contract for CLI usage errors."""
 
-    def error(self, message: str) -> None:
+    def error(self, message: str) -> NoReturn:
         envelope = make_envelope(
             command="cli",
             status=STATUS_FAILED,
@@ -322,6 +322,15 @@ def _build_parser() -> JsonArgumentParser:
     screen.add_argument("--industry-type")
     screen.add_argument("--profiles-file")
 
+    edgar = subparsers.add_parser(
+        "edgar-fundamentals",
+        help="Build free point-in-time annual fundamentals from SEC EDGAR.",
+    )
+    edgar.add_argument("symbols", nargs="+")
+    edgar.add_argument("--as-of", required=True)
+    edgar.add_argument("--user-agent")
+    edgar.add_argument("--timeout", type=float)
+
     portfolio = subparsers.add_parser(
         "portfolio-audit",
         help="Load validated portfolio and position context; full audit remains external.",
@@ -418,6 +427,20 @@ def _dispatch(args: argparse.Namespace) -> tuple[dict[str, Any], int]:
             child_arguments=child,
             completion_scope="financial_quality_prescreen",
             limitations=["screen output is descriptive and is not validated alpha"],
+        )
+
+    if args.command == "edgar-fundamentals":
+        child = [*args.symbols, "--as-of", args.as_of]
+        _append_option(child, "--user-agent", args.user_agent)
+        _append_option(child, "--timeout", args.timeout)
+        return _run_child(
+            public_command=args.command,
+            script_name="sec_edgar_fundamentals.py",
+            child_arguments=child,
+            completion_scope="free_sec_point_in_time_fundamentals",
+            limitations=[
+                "SEC filings do not establish historical index membership or delisting returns"
+            ],
         )
 
     if args.command == "portfolio-audit":

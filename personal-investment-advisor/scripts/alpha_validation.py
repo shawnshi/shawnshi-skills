@@ -8,9 +8,8 @@ import json
 import math
 import statistics
 from datetime import datetime
-from pathlib import Path
 from statistics import NormalDist
-from typing import Any
+from typing import Any, NoReturn
 
 from active_research_contract import (
     base_report,
@@ -216,6 +215,8 @@ def _validate_package(package: Any) -> tuple[list[str], dict[str, Any]]:
 
     universe = package.get("universe")
     symbols: list[str] = []
+    survivorship_bias_control = False
+    corporate_action_adjusted = False
     if not isinstance(universe, dict):
         errors.append("package.universe must be an object")
     else:
@@ -232,8 +233,11 @@ def _validate_package(package: Any) -> tuple[list[str], dict[str, Any]]:
             if not isinstance(universe.get(field), str) or not universe[field].strip():
                 errors.append(f"package.universe.{field} must be a non-empty string")
         for field in ("survivorship_bias_control", "corporate_action_adjusted"):
-            if universe.get(field) is not True:
-                errors.append(f"package.universe.{field} must equal true")
+            value = universe.get(field)
+            if not isinstance(value, bool):
+                errors.append(f"package.universe.{field} must be a boolean")
+        survivorship_bias_control = universe.get("survivorship_bias_control") is True
+        corporate_action_adjusted = universe.get("corporate_action_adjusted") is True
         errors.extend(
             validate_evidence_stamp(
                 universe.get("point_in_time_evidence"),
@@ -341,11 +345,13 @@ def _validate_package(package: Any) -> tuple[list[str], dict[str, Any]]:
                     f"package.trial_net_excess_returns.{trial_id} must align one-for-one with observations"
                 )
                 continue
-            values = [finite_number(value) for value in raw_values]
-            if any(value is None for value in values):
+            trial_values = [finite_number(value) for value in raw_values]
+            if any(value is None for value in trial_values):
                 errors.append(f"package.trial_net_excess_returns.{trial_id} contains a non-finite value")
             else:
-                parsed_trials[trial_id] = [float(value) for value in values if value is not None]
+                parsed_trials[trial_id] = [
+                    float(value) for value in trial_values if value is not None
+                ]
 
     signals = package.get("signals")
     if not isinstance(signals, list) or not signals:
@@ -408,6 +414,8 @@ def _validate_package(package: Any) -> tuple[list[str], dict[str, Any]]:
         "trials": parsed_trials,
         "selected_trial_id": selected_trial_id,
         "symbols": symbols,
+        "survivorship_bias_control": survivorship_bias_control,
+        "corporate_action_adjusted": corporate_action_adjusted,
     }
     return errors, context
 
@@ -424,7 +432,12 @@ def evaluate_alpha_package(
     errors = package_errors + policy_errors
     if errors:
         return fail_report(SCHEMA_VERSION, "alpha_contract_validation_failed", errors)
-    assert isinstance(package, dict) and isinstance(policy, dict)
+    if not isinstance(package, dict) or not isinstance(policy, dict):
+        return fail_report(
+            SCHEMA_VERSION,
+            "alpha_contract_internal_type_guard_failed",
+            ["validated package and policy must remain objects"],
+        )
     observations = context["observations"]
     annualization = int(context["annualization"])
     cost_rate = context["total_cost_bps"] / 10_000.0
@@ -490,6 +503,8 @@ def evaluate_alpha_package(
         "cost_stress_multiplier": stress_multiplier,
     }
     checks = {
+        "survivorship_bias_control": bool(context["survivorship_bias_control"]),
+        "corporate_action_adjusted": bool(context["corporate_action_adjusted"]),
         "oos_observations": len(oos) >= int(policy["min_oos_observations"]),
         "net_information_ratio": information_ratio is not None
         and information_ratio >= float(policy["min_net_information_ratio"]),
@@ -526,6 +541,20 @@ def evaluate_alpha_package(
             "metrics": metrics,
             "promotion_checks": checks,
             "fail_closed": {"enforced": True, "triggered": not eligible},
+            "warnings": [
+                warning
+                for warning, present in (
+                    (
+                        "Survivorship bias is not controlled; results remain experimental.",
+                        not context["survivorship_bias_control"],
+                    ),
+                    (
+                        "Corporate-action adjustment is not verified; results remain experimental.",
+                        not context["corporate_action_adjusted"],
+                    ),
+                )
+                if present
+            ],
             "limitations": [
                 "Eligibility is an active-research gate, not evidence that future excess returns will occur.",
                 "The report does not authorize target weights, orders, leverage, or execution.",
@@ -536,7 +565,7 @@ def evaluate_alpha_package(
 
 
 class JsonArgumentParser(argparse.ArgumentParser):
-    def error(self, message: str) -> None:
+    def error(self, message: str) -> NoReturn:
         print(json.dumps(fail_report(SCHEMA_VERSION, "argument_error", [message]), indent=2))
         raise SystemExit(2)
 
