@@ -1,12 +1,12 @@
 # personal-cognitive-auditor Handoff Contract
 
-本技能默认只在对话中交付复盘。只有用户明确要求保存或交给 `personal-diary-writer` 时，才生成下列载荷；生成载荷不等于授权写入。
+本技能默认只在对话中交付复盘。周、月、季度 canonical 自动保存使用独立的周期审计 payload 和结构化请求门，不需要本交接载荷。只有用户明确要求交接到其他流程时，才生成下列载荷；生成载荷不等于授权写入。
 
 ## Required Fields
 
 ```json
 {
-  "period_type": "daily|weekly|monthly|annual",
+  "period_type": "daily|weekly|monthly|quarterly|annual",
   "audit_title": "string",
   "audit_body_markdown": "string",
   "next_tactics": ["string"],
@@ -26,7 +26,7 @@
 
 ## Handoff Rules
 
-- 先展示完整复盘、目标写入位置和载荷，等待用户确认后再调用持久化流程。
+- 日度、年度、自定义路径和外部交接先展示完整复盘、目标写入位置和载荷，等待用户确认后再调用持久化流程；周、月、季度 canonical 自动保存另走受保护的 `periodic-audit-request-v1` 门。
 - 保留正文中的数据缺口、来源窗口和不确定性。
 - 不在载荷中加入人格标签、医学判断、隐藏推理或超出任务所需的私人数据。
 - `personal-diary-writer` 仍须执行自己的预览和确认门禁；本载荷不能绕过该门禁。

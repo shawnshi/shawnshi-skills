@@ -6,8 +6,3 @@ interface:
   default_prompt: 使用 $magazine-illustrator 阅读这篇文章并直接生成一张适合个人网站的 16:9 杂志风格头图。
 policy:
   allow_implicit_invocation: true
-  products:
-  - chatgpt
-  - codex
-  - api
-  - atlas

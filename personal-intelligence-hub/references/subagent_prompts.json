@@ -1,5 +1,5 @@
 {
-  "contract_version": "subagent-prompts/1.9",
+  "contract_version": "subagent-prompts/2.0",
   "invocation_order": [
     "baseline_candidates",
     "gap_assessment",
@@ -9,19 +9,20 @@
     "archive"
   ],
   "common_contract": {
-    "input_binding": "每个任务必须读取已登记的 supplement_request.json，并原样返回 run_id、request_sha256、baseline_sha256、candidate_pool_sha256、gap_id 和 lane。",
+    "input_binding": "每个补检任务先运行 execution packet 绑定的 agent_helper.context_command；帮助脚本在本地校验已登记 request、manifest、prompt 和 lane_slice 的路径与 SHA-256，只向代理返回当前 gap 的紧凑上下文。代理不得直接展开完整 supplement_request、prompt_config、candidate_pool、history_snapshot 或脚本源码。静态 run/hash 字段由 agent_helper.finalize_command 确定性装配。",
     "evidence_rule": "先处理绑定的基线候选，再只针对缺口补充检索；原始来源优先，事实、来源主张、推断与未知项分开。",
     "identity_rule": "每个新增候选必须记录 identity_quality=semantic、event_id，以及仅含 key_version、primary_domain、actor、action、object、event_date 的完整 event_identity；event_id 必须按系统 generate_event_id(event_identity) 的同一算法重算一致。不能确定完整语义身份时不得把候选用于 multi_independent。",
     "date_rule": "published_at 必须来自来源明确日期或可靠元数据；进入 core 时固定为严格 YYYY-MM-DD，候选为合法 ISO datetime 时调用 run_daily.py normalize-published-at，按其自带时区取日期后规范化；观察时间不得冒充发布日期；未知日期不得进入正式候选。",
-    "stop_rule": "达到请求中的 halt_condition、用完 max_turns，或连续检索无增量时停止并返回结构化结果。",
-    "progress_rule": "完成绑定输入哈希验证后发送 supplement_progress seq=1 phase=input_validated；完成允许的来源访问并进入合同自检前发送 supplement_progress seq=2 phase=source_checked。只发送这两个不含业务正文的里程碑及阻断或最终消息，不得发送自由格式状态心跳。",
+    "stop_rule": "达到请求中的 halt_condition、用完 max_turns，触及 execution_budget 的查询数、URL 数或时限，或连续检索无增量时停止并返回结构化结果。",
+    "budget_rule": "只消费 agent_helper 返回的当前 gap 紧凑上下文；每个 gap 最多执行 execution_budget.max_queries 个查询、访问 execution_budget.max_urls 个 URL，并在 max_duration_seconds 内结束来源核验。source_checked 后立即记录 completed_at，随后只能在 finalization.grace_seconds 内写动态 draft 并运行确定性 helper；不得继续检索或读取其他上下文。调用层必须原样传递 launch_plan.tool_budget 与 timeout_ms。",
+    "progress_rule": "agent_helper context 成功后发送 supplement_progress seq=1 phase=input_validated；完成允许的来源访问后，先记录 source-check completed_at，再发送 supplement_progress seq=2 phase=source_checked。随后只写动态 draft 并运行 agent_helper finalize，不再读取合同或源码。只发送这两个不含业务正文的里程碑及阻断或最终消息，不得发送自由格式状态心跳。",
     "empty_rule": "无增量时返回 status=no_increment、空 candidates、非空 executed_queries、至少一条 access_log 和真实 coverage，不得用弱信号补数。",
     "coverage_rule": "coverage 必须逐项等于 access_log 中 verified 与 blocked 的实际计数；每条访问记录必须同时记录 requested_url 与跳转后的 final_url；候选 access_check.requested_url 必须匹配候选 url，并逐字段对应 access_log 中的 verified 记录。",
     "failure_rule": "同一 gap 内，同一规范化 URL 的永久失败不得再次尝试。跨 gap 时，只有无 HTTP 响应且错误码明确指向本地 TLS、SSL、证书、协议或 curl 传输路径故障，才允许另一 lane 以不同访问方法做一次恢复核验；原失败必须保留，聚合覆盖仍为 degraded，不得同 lane、同方法或再次恢复。HTTP 永久响应始终全局禁止重试。同一主机连续两次永久失败后切换另一类优先来源并保留失败日志。所有 blocked 访问必须给出 transient|permanent 的 failure_class 和非空 error_code；永久 HTTP 状态必须标 permanent，可重试 HTTP 状态必须标 transient；verified 必须标 failure_class=none 且不得带 error_code。只有瞬时超时、限流或可重试 HTTP 状态可在轮次预算内重试。",
-    "infrastructure_failure_rule": "只有代理在执行任何查询或访问前初始化失败时，才可返回 status=failed、failure_kind=infrastructure、非空 failure_reason、turns_used=0、halt_condition_met=false，以及空 executed_queries/access_log/candidates 和全零 coverage。"
+    "infrastructure_failure_rule": "degraded 或 failed 必须写规范化 failure_kind 与非空 failure_reason；status=degraded 只允许 source_access 或 published_at_conflict，status=failed 只允许 infrastructure。只有代理在执行任何查询或访问前初始化失败时，才可返回 status=failed、failure_kind=infrastructure、非空 failure_reason、turns_used=0、halt_condition_met=false，以及空 executed_queries/access_log/candidates 和全零 coverage。completed/no_increment 不得包含 failed coverage。"
   },
   "review_common_contract": {
-    "request_rule": "评估者必须先读取已登记的对应 review_request.json，原样返回 request_sha256、challenge、reviewer_kind、reviewer_id、invocation_id，并遵守 max_turns 与 halt_condition。",
+    "request_rule": "SemanticEvaluator 必须先运行已登记 execution_packet.agent_helper.context_command，由帮助脚本校验 review_request 及其绑定；不得直接展开 request 正文。RedTeam 在没有语义 helper 时只读取已登记 request 与其明确绑定的 refined core。回执字段由确定性 finalizer 或 validation_command 校验，并遵守 max_turns 与 halt_condition。",
     "turn_rule": "回执必须给出 1..max_turns 的 turns_used；只有达到请求中的可判定停止条件才可令 halt_condition_met=true。",
     "attestation_limit": "本合同提供运行内挑战绑定与防重放，不等同于外部运行时的加密身份签名；调用者仍须实际使用独立代理。"
   },
@@ -36,47 +37,87 @@
         "run_manifest_path",
         "registered_request_path",
         "bound_input_paths",
+        "lane_slice",
         "assigned_gap_ids",
         "assigned_lanes",
         "output_paths",
         "output_path_by_gap",
         "write_authorization",
         "per_gap_max_turns",
-        "per_gap_halt_condition"
+        "per_gap_halt_condition",
+        "execution_budget",
+        "finalization",
+        "tool_budget",
+        "agent_helper",
+        "task_message",
+        "progress",
+        "usage_budget"
       ]
     },
     "review_context_transfer": {
-      "mode": "self_contained_registered_request",
+      "mode": "compact_helper_packet",
       "inherit_conversation_history": false,
       "task_message_fields": [
-        "registered_request_path",
-        "execute_execution_packet"
+        "agent_helper.context_command",
+        "agent_helper.finalize_command",
+        "dynamic_draft_path"
       ],
       "forbidden_redundant_reads": [
+        "registered_request_body",
+        "baseline",
+        "history_snapshot",
+        "history_review_slice",
+        "candidate_pool",
+        "supplement",
+        "briefing_schema",
+        "old_runs",
         "full_skill_contract",
         "full_prompt_config",
-        "full_parent_conversation"
+        "full_parent_conversation",
+        "script_source"
       ],
-      "authoritative_packet_field": "execution_packet"
+      "authoritative_packet_field": "agent_helper_context"
     },
     "parallelism": {
       "max_supplement_workers": 3,
-      "overflow_strategy": "launch_fresh_worker_when_first_slot_frees",
+      "overflow_strategy": "canary_first_then_bounded_fanout",
+      "canary_workers": 1,
+      "stop_fanout_on_canary_infrastructure_failure": true,
       "one_gap_per_worker": true,
       "root_must_not_duplicate_assigned_searches": true
     },
+    "observability": {
+      "supplement_token_budget_per_gap": 30000,
+      "supplement_finalization_grace_seconds": 60,
+      "supplement_tool_budget_soft": 8,
+      "supplement_tool_budget_hard": 12,
+      "downstream_headroom_tokens": 70000,
+      "downstream_headroom_cost_usd": 1.0,
+      "semantic_token_budget": 40000,
+      "semantic_timeout_ms": 240000,
+      "semantic_tool_budget_soft": 6,
+      "semantic_tool_budget_hard": 10,
+      "red_team_token_budget": 30000,
+      "red_team_timeout_ms": 120000,
+      "normal_run_token_ceiling": 250000,
+      "normal_run_token_meter": "total_tokens - cache_read_tokens - cache_write_tokens",
+      "normal_run_cost_usd_ceiling": 3.0,
+      "telemetry_command": "python -X utf8 scripts/session_telemetry.py --manifest <manifest> --stage <stage> --invocation-id <id> --status <status> --session <session.jsonl>"
+    },
     "publication": {
-      "mode": "sibling_temporary_file_then_atomic_replace",
+      "mode": "supplement_dynamic_draft_then_agent_helper_then_deterministic_parent_finalizer",
       "published_artifact_is_immutable": true,
-      "routine_progress": "supplement_milestones_or_blocker_or_final; review_milestones_or_blocker_or_final"
+      "routine_progress": "supplement_milestones_or_blocker_or_draft_ready; review_milestones_or_blocker_or_final"
     },
     "readiness": {
-      "primary_signal": "artifact_ready_control_message_with_path_and_sha256",
+      "primary_signal": "agent_helper_draft_ready_or_review_artifact_ready_control_message_with_path_and_sha256",
       "watch_command": "python -X utf8 scripts/await_artifacts.py --path <artifact.json>",
       "watch_mode": "single_fallback_only",
       "watch_timeout_seconds": 10,
-      "wait_timeout_seconds": 60,
-      "max_unchanged_wait_timeouts": 2,
+      "completion_strategy": "async_nonblocking_wakeup",
+      "forbid_interactive_blocking_wait": true,
+      "max_blocking_wait_calls": 0,
+      "timeout_decision": "degraded_timeout",
       "review_progress_messages": [
         "review_progress seq=1 phase=input_validated",
         "review_progress seq=2 phase=lineage_ready"
@@ -93,8 +134,9 @@
       ],
       "progress_gate_command": "python -X utf8 scripts/review_progress_gate.py --state <run_dir>/<review_kind>_progress_state.json --manifest <manifest> --review-kind <review_kind> --invocation-id <invocation_id> --request-sha256 <request_sha256> --agent-status <status> --event-ordinal <n> --last-event-at <iso_datetime> --tool-call-count <n> --milestone-seq <0|1|2>",
       "progress_gate_watch_command": "当调用层没有代理内部事件遥测时，使用 python -X utf8 scripts/review_progress_gate.py --state <run_dir>/<review_kind>_progress_state.json --manifest <manifest> --review-kind <review_kind> --invocation-id <invocation_id> --request-sha256 <request_sha256> --agent-status <status> --milestone-seq <0|1|2> --watch-path <draft-1> [--watch-path <draft-2>]；不得猜测事件计数，时间流逝本身不算进展。",
-      "lost_agent_rule": "单凭超时、无正式文件或 running 状态不得判失联。把进度指纹交给 review_progress_gate.py：明确失败/退出、提醒后连续三次静止，或同一里程碑内 15 次增长后提醒且再连续三次没有新里程碑，才可中止或重启。",
-      "after_wait_gate": "stop_waiting_until_artifact_control_message_or_progress_fingerprint_changes",
+      "supplement_progress_gate_command": "python -X utf8 scripts/review_progress_gate.py --state <run_dir>/supplement_<gap_id>_progress_state.json --review-kind supplement --progress-id <gap_id> --agent-status <status> --milestone-seq <0|1|2> --watch-path <supplement-draft>",
+      "lost_agent_rule": "单凭无正式文件或 running 状态不得判失联。把进度指纹交给 review_progress_gate.py：明确失败/退出、提醒后连续三次静止，或同一里程碑内 15 次增长后提醒且再连续三次没有新里程碑，才可中止或重启；运行时明确 timeout 时登记 degraded_timeout。",
+      "after_wait_gate": "resume_only_on_completion_wakeup_or_progress_event",
       "on_exhaustion": "inspect_once_then_send_one_targeted_nudge_or_fail_closed",
       "relaunch_policy": "forbidden_for_same_registered_request; create_a_new_run_for_a_new_attempt",
       "artifact_first": true
@@ -133,6 +175,7 @@
       "data_provenance",
       "turns_used",
       "halt_condition_met",
+      "started_at",
       "completed_at"
     ],
     "properties": {
@@ -255,7 +298,7 @@
         }
       },
       "confidence": {"enum": ["high", "medium", "low"]},
-      "failure_kind": {"enum": ["infrastructure"]},
+      "failure_kind": {"enum": ["infrastructure", "source_access", "published_at_conflict"]},
       "failure_reason": {"type": "string", "minLength": 1},
       "data_provenance": {
         "type": "object",
@@ -268,8 +311,27 @@
       },
       "turns_used": {"type": "integer", "minimum": 0},
       "halt_condition_met": {"type": "boolean"},
+      "started_at": {"type": "string"},
       "completed_at": {"type": "string"}
-    }
+    },
+    "allOf": [
+      {
+        "if": {"properties": {"status": {"const": "degraded"}}},
+        "then": {
+          "required": ["failure_kind", "failure_reason"],
+          "properties": {
+            "failure_kind": {"enum": ["source_access", "published_at_conflict"]}
+          }
+        }
+      },
+      {
+        "if": {"properties": {"status": {"const": "failed"}}},
+        "then": {
+          "required": ["failure_kind", "failure_reason"],
+          "properties": {"failure_kind": {"const": "infrastructure"}}
+        }
+      }
+    ]
   },
   "supplement_agents": {
     "TechRadar": {
@@ -302,9 +364,9 @@
       "role": "语义评估",
       "mission": "对基线与补检候选执行统一门槛、事件去重、领域内排序和 L1-L4 推演。",
       "max_turns": 2,
-      "halt_condition": "所有最终条目批量完成语义评估、登记证据核验与候选对象哈希到输出条目哈希的映射，或发现阻断问题。",
-      "output_contract": "读取 semantic_review_request.json，生成 briefing core 1.4 和 review-receipt/1.0。回执的 reviewer_kind 固定为 semantic_model，reviewer_id 固定为 SemanticEvaluator；原样返回 request_sha256、challenge、invocation_id，包含 turns_used、halt_condition_met、baseline_sha256、input_bundle_sha256、output_sha256、reviewed_item_hashes、lineage_bindings、逐条 access_log，以及绑定 input_bundle_sha256 和 access_log_sha256 的 data_provenance。multi_independent 的全部 lineage inputs 必须具有可重算且与 final event_id 相同的 semantic event_identity；至少两个规范化不同来源、两个不同 host 与 URL，且每个 candidate.url 都有本回执 verified access。两份 draft 必须先通过 run_daily.py validate-semantic-draft，才可原子提升为最终输出。",
-      "system_prompt": "先读取已登记的 semantic review request，并按 bound_artifacts 校验各输入 SHA-256；完成后发送不含业务内容的 review_progress seq=1 phase=input_validated。历史去重只读取 history_review_slice；history_snapshot 仅作完整归档溯源绑定，不重复载入，旧运行没有切片时才回退。一次读取各所需绑定文件，在本地批量完成门禁、去重、排序、血缘和回执构造；日期、URL、access_check 与对象哈希一致时复用登记证据，不得重新联网访问已经 verified 的 URL，只有缺失或冲突时才补充核验。进入 core 的 published_at 固定为严格 YYYY-MM-DD；候选为合法 ISO datetime 时调用 python -X utf8 scripts/run_daily.py normalize-published-at --value <iso_datetime>，按其自带时区取日期后规范化，不得原样写入 datetime。启发式候选只可作为输入，不可直接授权成稿。每个最终条目必须保留 candidate_refs；lineage_bindings 必须把对应 candidate_object_sha256 映射到完整输出条目哈希。multi_independent 必须逐个核验全部 lineage inputs：每个候选都须为 semantic identity，event_id 按完整 event_identity 重算后与 final item.event_id 相同；任一 provisional、缺失身份或异事件候选都会令整条失败。来源名称按大小写与空白规范化，且须有至少两个不同 host/URL；每个 candidate.url 都须出现在本回执 verified access_log。不得用主观关系标签替代事件身份。最终 access_check.requested_url 必须匹配条目 url，final_url 只记录跳转结果，且 access_check 必须逐字段存在于回执 access_log；每个入选条目使用唯一映射，补充佐证不计入 retained-item access 数。按 requested_ratio 选择，不足时保留供给例外；不得强制把通用技术改写为医疗事件。完成候选选择、血缘与回执映射后发送 review_progress seq=2 phase=lineage_ready。不要在聊天或工具输出中回显完整输入或产物；先把两份产物写到目标旁唯一 draft，运行 python -X utf8 scripts/run_daily.py validate-semantic-draft --manifest <manifest> --refined <core-draft> --semantic-receipt <receipt-draft>；只有 status=valid 才可分别原子提升并发送 artifact_ready。",
+      "halt_condition": "所有最终条目批量完成语义判断与登记证据核验，或发现阻断问题。",
+      "output_contract": "先运行 execution_packet.agent_helper.context_command，只生成 semantic-dynamic/1.0 草稿。动态草稿只含语义选择、事件身份、分级、中文判断与行动杠杆；不得生成静态 run/hash、coverage、candidate_funnel、mix、pipeline、access_log、lineage 或回执字段。随后运行 agent_helper.finalize_command，由帮助脚本确定性生成 briefing core 1.4、semantic-decision/1.0 与 review-receipt/1.0，校验并原子发布。",
+      "system_prompt": "第一步只运行 execution_packet.agent_helper.context_command；帮助脚本在本地校验 request、manifest、prompt 与全部 bound_artifacts 的路径和 SHA-256，并只返回已具备登记访问证据、已排除历史重复的紧凑候选。context 成功后通过 contact_supervisor 发送 review_progress seq=1 phase=input_validated。代理不得再读取完整 semantic_review_request、baseline、history_snapshot、history_review_slice、candidate_pool、supplement、briefing schema、旧 run、prompt config 或脚本源码，不得重新联网核验已登记 URL。只在 helper 返回的 eligible_candidates 中批量完成门禁、排序、事件身份、L1-L4、中文推演和行动建议；弱供给允许少于 10 条并由 helper 确定性生成供给例外。写完唯一获授权的 semantic-dynamic 草稿后，通过 contact_supervisor 发送 review_progress seq=2 phase=lineage_ready，并立即运行 agent_helper.finalize_command；不得继续分析或读取其他文件。帮助脚本负责日期规范化、静态证据复制、event_id、coverage、funnel、mix、lineage、哈希、回执和原子发布。",
       "progress_contract": "只发送 input_validated 与 lineage_ready 两个里程碑；消息不得包含候选、结论或回执正文。"
     },
     "RedTeam": {
@@ -312,8 +374,8 @@
       "mission": "检查重大资讯资格、反证、日期、来源独立性、行动时序和 L4 条目。",
       "max_turns": 2,
       "halt_condition": "全部 L4、重大资讯资格、日期、来源独立性与行动时序完成反证检查，或发现阻断问题。",
-      "output_contract": "读取 red_team_review_request.json 并生成 review-receipt/1.0 draft；reviewer_kind 固定为 logic_adversary，reviewer_id 固定为 RedTeam；原样返回 request_sha256、challenge、invocation_id，包含 turns_used、halt_condition_met、baseline_sha256、output_sha256。L4 必须 status=passed 且 reviewed_item_hashes 覆盖请求中的全部 l4_item_hashes；review_mode=no_l4_fast_path 时必须一轮完成、明确 not_required 并返回空覆盖。写入 execution_packet.draft_paths 后必须执行 validation_command；只有返回 status=valid 才可原子提升到 output_paths 并发送 artifact_ready。",
-      "system_prompt": "先读取已登记的 red-team review request，只审查其中 refined_sha256 绑定的 core；完成输入哈希校验后发送不含业务内容的 review_progress seq=1 phase=input_validated。review_mode=no_l4_fast_path 时不得联网或扩展事件：一轮内复核绑定哈希、无 L4 事实、major_signal_item_hashes 对应条目的重大资讯资格、日期/来源独立性与行动时序，然后生成 not_required 空覆盖 draft。review_mode=l4_full_review 时覆盖全部 l4_item_hashes，优先复用登记证据，仅在证据冲突时补充核验。发现阻断问题时不得返回 passed；不得修改 refined core 后继续沿用旧哈希。发布前必须执行 execution_packet.validation_command，校验失败时最多在轮次预算内修正合同字段，不得发布无效回执。",
+      "output_contract": "仅当 red-team request 的 reviewer_kind=logic_adversary 时生成 review-receipt/1.0 draft；原样返回 request_sha256、challenge、invocation_id、turns_used、halt_condition_met、baseline_sha256 与 output_sha256。l4_full_review 与 targeted_review 成功状态均为 passed；l4_full_review 覆盖全部 l4_item_hashes，targeted_review 的 reviewed_item_hashes 必须精确覆盖 request 中 major_signal_item_hashes 与 conflict_item_hashes 的并集。deterministic_fast_path=true 的请求由脚本直接生成 not_required 回执，不得启动 RedTeam。",
+      "system_prompt": "只处理 reviewer_kind=logic_adversary 且 deterministic_fast_path=false 的 l4_full_review 或 targeted_review 请求；读取 refined_sha256 绑定的 core，完成输入哈希校验后发送 review_progress seq=1 phase=input_validated。l4_full_review 必须覆盖全部 l4_item_hashes；targeted_review 必须复核全部 major_signal_item_hashes、conflict_item_hashes 与 semantic_conflict。优先复用登记证据，仅在证据冲突时补充核验。发现阻断问题时不得返回该模式的成功状态；不得修改 refined core 后继续沿用旧哈希。发布前必须执行 execution_packet.validation_command。deterministic_fast_path=true 时停止，不生成任何文件。",
       "progress_contract": "只发送 input_validated 里程碑；消息不得包含候选、结论或回执正文。"
     }
   }

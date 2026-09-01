@@ -5,8 +5,10 @@ import sys
 from pathlib import Path
 from typing import Any
 
+from periodic_topology import PERIODIC_HEADING_PATTERNS, validate_periodic_topology
 
-ALLOWED_PERIOD_TYPES = {"daily", "weekly", "monthly", "annual"}
+
+ALLOWED_PERIOD_TYPES = {"daily", "weekly", "monthly", "quarterly", "annual"}
 REQUIRED_HANDOFF_FIELDS = {
     "period_type",
     "audit_title",
@@ -604,6 +606,8 @@ def validate(
     text: str,
     strict_human_mode: bool = False,
     enforce_template_fields: bool = False,
+    period_type: str | None = None,
+    period_id: str | None = None,
 ) -> tuple[list[str], list[str]]:
     """Return deterministic errors and non-blocking editorial warnings."""
     errors: list[str] = []
@@ -612,6 +616,7 @@ def validate(
     if not text.strip():
         return ["audit body is empty"], warnings
 
+    errors.extend(validate_periodic_topology(text, period_type, period_id))
     placeholders = find_placeholders(text)
     if placeholders:
         preview = ", ".join(placeholders[:8])
@@ -673,7 +678,18 @@ def main() -> int:
         action="store_true",
         help="Treat bundled-template markers as blocking for a template-derived draft",
     )
+    parser.add_argument(
+        "--period-type",
+        choices=tuple(PERIODIC_HEADING_PATTERNS),
+        help="Validate the strict topology for one periodic autosave payload",
+    )
+    parser.add_argument(
+        "--period-id",
+        help="Exact YYYY-Www, YYYY-MM, or YYYY-QN identifier bound to the payload",
+    )
     args = parser.parse_args()
+    if (args.period_type is None) != (args.period_id is None):
+        parser.error("--period-type and --period-id must be provided together")
 
     path = Path(args.audit_path)
     if not path.is_file():
@@ -690,6 +706,8 @@ def main() -> int:
         text,
         args.strict_human_mode,
         args.enforce_template_fields,
+        args.period_type,
+        args.period_id,
     )
     for warning in warnings:
         print(f"[WARN] {warning}")

@@ -3,51 +3,25 @@
   "skill_name": "personal-health-analysis",
   "authority_version": "11.6.1",
   "authority_locator": {
-    "base": "user_home",
+    "base": "skill_root",
     "segments": [
-      ".codex",
-      "skills",
-      "personal-health-analysis",
       "SKILL.md"
     ]
   },
-  "authority_sha256": "e4221d809ca1a279f98b6f43ff1e99cc4dc0c86a40fd94ee3ddf1e4e446fa27c",
-  "proxy_locators": [
-    {
-      "base": "user_home",
-      "segments": [
-        ".gemini",
-        "config",
-        "skills",
-        "personal-health-analysis",
-        "SKILL.md"
-      ]
-    },
-    {
-      "base": "user_home",
-      "segments": [
-        ".agents",
-        "skills",
-        "personal-health-analysis",
-        "SKILL.md"
-      ]
-    }
-  ],
+  "authority_sha256": "fa85cb9246010cd13f1d54f7d74acf5c80824fe756b13e0e728cfe2788f8c98c",
+  "proxy_locators": [],
   "entrypoint_sha256": {
     "scripts/garmin_auto_sync.py": "78dfc544aa1baa1a2dc0f09268273b3b417244f9ec51fc0f37d9b9adcc13ee5e",
     "scripts/garmin_intelligence.py": "230ecbab67ba54dfed3bf396c58538e4a5ddf1c5b7dce32d126eca19fd41b85d",
-    "scripts/garmin_sqlite_adapter.py": "f9cf984e766ad68f2a0c95517974005eddee2a7eb76a87ebfdeb82abd186ccf1",
-    "scripts/freshness_task_gate.py": "d0775f5dbc1e3a1fbc84148467644b5b28b92011fec7977326d11624a26b98b8",
+    "scripts/garmin_sqlite_adapter.py": "3919675bcd2f52f290d6f930f9a0cfdd96911956e87ddda329eeef655fd67676",
+    "scripts/freshness_task_gate.py": "0be22869c31efc2149bf0aec01f86a8d3701bebb4b886abd7ba2988ec0e733b4",
     "scripts/garmin_auth.py": "a1c78c4c9d6c9baa6ff121df2a8c6ae3ae14faa4771f00ed83dba1da2a406b3c",
     "scripts/garmin_capabilities.py": "24dfbbe5464c396540609992622e73db58239a1a02826a2f5c5aa3d50664bce8",
     "scripts/garmin_data.py": "0273163ce475ae7287b57a77b407bfae60b634cb9099aa53cb61e9ae0130d9b4",
     "scripts/garmin_patterns.py": "4cd4b719795bdcc6ecf858e30dfc19db27abd6e46834db1240838070dbb5e6b0",
     "scripts/runtime_preflight.py": "a9f348bc75e83cb207cc947a80aa502c38926f8a80e4a2f2e9cafd1aac64c9c9",
-    "scripts/runtime_authority.py": "0625581732df02667e59a85797266b39a6386cfd4d022346cfd4b3a542624949",
+    "scripts/runtime_authority.py": "1239acf27fc5f26e8ec1d38b47dfdf503df407abef7d155232982081d959de91",
     "scripts/scheduled_task_probe.ps1": "1dea36c42b1e1467019925dd7efedc1d8d552468d7e3b77cf537ccf073917e98",
     "scripts/sync_health_data.py": "4393d4d1c48090a5003d58ac18c7525911ee8a3a6e1eae1906777f18461087c7"
-  },
-  "task_binding": {
-    "arguments_sha256": "83bf03dc2aa8f3a3c8ea42204769213c3b58cd904379972925010c217606174c"
   }
 }

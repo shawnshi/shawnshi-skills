@@ -1,12 +1,8 @@
 interface:
   display_name: "Cognitive Personal Roundtable"
   short_description: "用证据化多视角压力测试识别复杂决策中的冲突、假设与验证路径"
+  default_prompt: "Use $cognitive-personal-roundtable to stress-test this consequential decision with evidence-backed perspectives, conflicts, and validation paths."
   icon_small: "./assets/icon.svg"
   icon_large: "./assets/icon.svg"
 policy:
-  products:
-    - "chatgpt"
-    - "codex"
-    - "api"
-    - "atlas"
   allow_implicit_invocation: true

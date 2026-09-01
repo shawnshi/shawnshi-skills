@@ -1,13 +1,8 @@
 interface:
   display_name: 医疗客户研究与拜访准备
   short_description: 公开资料可生成内部草稿，认证宿主可交付正式售前成果
-  default_prompt: 请使用 $discovery-call 准备医疗客户会前速览、标准拜访包、战略客户包或一封信；认证宿主不可用时，仅按安全的公开资料草稿档执行。
+  default_prompt: 请使用 $hit-customer-analyst 准备医疗客户会前速览、标准拜访包、战略客户包或一封信；认证宿主不可用时，仅按安全的公开资料草稿档执行。
   icon_small: assets/icon.svg
   icon_large: assets/icon.svg
 policy:
   allow_implicit_invocation: false
-  products:
-  - chatgpt
-  - codex
-  - api
-  - atlas

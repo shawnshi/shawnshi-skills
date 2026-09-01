@@ -5,37 +5,37 @@
 ## 自动保存契约
 
 - 明确生成个人日志周审计时，允许经 `personal-diary-writer` 权威门读取当前自然周的 canonical 个人日志日期块；不得扩展到其他周。
-- 周审计通过 `audit_gate.py` 后默认保存，除非用户要求草稿、预览或不保存。原始周审计请求仅授权 canonical 季度个人日志，不授权任何第二处存储。
-- 保存载荷必须以周期结束日的 `# YYYY-MM-DD 星期X` 为唯一一级标题，完整保留该日既有七段日志，并新增或替换一个 `## [YYYY-Www] Weekly Cognitive Audit｜起始日期 至 结束日期` 区块。
-- 先对独立周审计草稿运行审计门，再对完整日期块运行 `diary_ops.py scope`；只能用同一字节载荷和范围回执执行 `replace-date`。写后要求日期标题与周审计标题各恰好出现一次，并验证非目标历史不变。
+- 周审计通过内容门、周期拓扑门和受保护请求门后默认保存。只有精确 canonical 请求或 `AUDIT_AUTOSAVE` 结构化命令可触发；草稿、预览、只读、不保存及其他修饰请求保持只读。
+- payload 的第一个非空行且唯一 H2 必须是 `## [YYYY-Www] Weekly Cognitive Audit｜起始日期 至 结束日期`；其余标题只能是 H3 或更深，不得携带日期 H1 或其他 H2。
+- 先运行 `audit_gate.py --period-type weekly --period-id YYYY-Www --enforce-template-fields`，再用同一字节 payload、`periodic-audit-request-v1` artifact 和范围回执执行 `diary_ops.py scope/replace --action replace-weekly-audit --week YYYY-Www`。完整保留周期结束日既有日记及其他周期审计；日期块不存在时只创建日期标题与本周审计。写后要求日期标题与目标周审计标题各恰好出现一次。
 
 ## 建议内容
 
 ```markdown
-# [起始日期至结束日期] Weekly Audit
+## [YYYY-Www] Weekly Cognitive Audit｜[起始日期] 至 [结束日期]
 
-## 时间范围与证据
+### 时间范围与证据
 - **周期:** [日期与时区]
 - **材料:** [来源及覆盖范围]
 - **数据缺口:** [未提供或无法核实的部分]
 
-## 本周关键事实
+### 本周关键事实
 - [重要事件、产出或约束及证据]
 
-## 承诺对照
+### 承诺对照
 | 承诺 | 状态 | 证据 | 偏离原因或未知 |
 |---|---|---|---|
 | [承诺] | [完成/部分完成/未完成/无法判断] | [证据] | [说明] |
 
-## 重复模式
+### 重复模式
 - **观察:** [按证据量列出；没有可靠重复模式时说明不足]
 - **证据强度:** [高/中/低及理由]
 - **替代解释:** [外部约束、样本不足或其他可能]
 
-## 时间背景
+### 时间背景
 - **日程:** [默认只读日程能证明安排，不能单独证明出席或实际投入]
 
-## 能量管理（描述性生理背景）
+### 能量管理（描述性生理背景）
 - **数据范围与来源:** [请求窗口、实际观测窗口、本地/实时来源]
 - **组件覆盖与新鲜度:** [逐组件状态、最近观测日期和缺口]
 - **采集审计:** `sync_eligible=<true|false>; sync_attempted=<started|waited_existing|not_attempted>; task_status=<终态|not_checked>; local_reread=<accepted|rejected|not_run>; local_status=<complete|partial|no_data|read_error|not_run>; live_fallback=<used|not_used>; reason=<稳定原因码>`
@@ -49,10 +49,10 @@
 - **干预指令:** [可选；写触发条件、最小动作和完成标准，由用户结合主观状态决定]
 - **数据缺口与不可判断事项:** [包括趋势资格不足；不得扩窗]
 
-## 风险与数据缺口
+### 风险与数据缺口
 - [待核实事项]
 
-## 下周行动
+### 下周行动
 1. [触发条件、最小动作、完成标准]
 ```
 

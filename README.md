@@ -3,9 +3,9 @@
 
 ## 1. Runtime contract
 
-- Codex 只以每个技能目录中的 `SKILL.md` 作为运行真相源。
+- 支持 Skills 目录约定的宿主只以每个技能目录中的 `SKILL.md` 作为运行真相源；仓库克隆本身不是已激活的运行时安装。
 - 每个技能聚焦一个可描述、可触发、可验证的工作。
-- 仓库级执行指令写在并由 Codex 自动加载的 `AGENTS.md`；本 README 只记录库级 Schema、库存和维护说明，不得扩张权限或凌驾上位指令。
+- 仓库级执行指令写在 `AGENTS.md`；支持该机制的宿主会自动加载，其他宿主仍须遵守自身上位合同。本 README 只记录库级 Schema、库存和维护说明，不得扩张权限或凌驾上位指令。
 - 外部系统能力由真实工具、插件或 MCP 提供。技能不得用散文虚构工具接口。
 
 ## 2. Required shape
@@ -56,7 +56,7 @@ description: 说明技能做什么，以及用户在什么场景下应使用它�
 ## 3. Execution boundaries
 
 - 不要求输出 `<thought>`、`<Thinking>` 或其他内部推理稿。以证据、假设、验证结果和残余风险替代。
-- 不硬编码用户目录、`.gemini`、`.kimi`、会话 ID 或 `file:///` 链接。
+- 不硬编码用户目录、其他宿主的技能目录或会话 ID。安全测试可以保留被拒绝路径的最小夹具，但不得把夹具当作运行时定位。
 - 不写入当前 Codex 不存在的工具名。通过自然语言描述所需能力，或在 `agents/openai.yaml` 中声明真实依赖。
 - 子代理只在任务可以独立拆分且并行能力可用时采用；必须保留单代理降级路径。
 - 联网、安装依赖、控制外部应用、发送消息、发布、合并、删除和永久写入都属于显式授权分支；只有下表声明的窄化归档合同，才可把对应的生成请求本身视为向封闭档案或状态目标写入的授权。
@@ -72,9 +72,10 @@ description: 说明技能做什么，以及用户在什么场景下应使用它�
 <!-- automatic-persistence-exceptions:start -->
 | Skill | 构成写入授权的请求 | 封闭目标集合 | 只读退出条件 |
 |---|---|---|---|
+| `mentat-collaboration-audit` | 明确要求生成并保存协作审计报告、面板或大屏 | 当前工作区 `output/mentat-collaboration-audit` 归档目录内同批次 MD/HTML 与提交回执 | 普通审计、分析、草稿、预览或不保存 |
 | `mentat-insight-diary` | 生成、更新、记录或写 Mentat 日志 | 权威入口返回的 canonical 季度档案 | 草稿、预览、分析、审计技能或不保存 |
-| `personal-cognitive-auditor` | 生成当前自然周的个人日志审计 | `personal-diary-writer` 权威入口返回的 canonical 季度个人日志内同周审计区块 | 草稿、预览、不保存、其他周期、自定义路径或第二处存储 |
-| `personal-diary-writer` | 承接 `mentat-insight-diary` 的 canonical Mentat 请求，或 `personal-cognitive-auditor` 的当前自然周个人日志审计请求 | 对应权威入口返回的 canonical 季度档案或 canonical 季度个人日志 | 普通个人日记、草稿、预览、不保存、自定义路径或第二处存储 |
+| `personal-cognitive-auditor` | 受保护的本周、本月或本季度个人日志审计请求，或绑定周期 ID 的 `AUDIT_AUTOSAVE` 命令 | `personal-diary-writer` 权威入口返回的 canonical 季度个人日志内同周期审计区块 | 草稿、预览、只读、不保存、日度/年度、自定义路径或第二处存储 |
+| `personal-diary-writer` | 精确的“更新个人日志”请求、受保护的周期审计请求，或 canonical Mentat 日志请求 | 对应权威入口返回的 canonical 季度个人日志或 Mentat 季度档案 | 草稿、预览、只读、不保存、自定义路径、跨日期复用或第二处存储 |
 | `personal-health-analysis` | 明确启用 Garmin 自动同步 | 绑定的 GarminDB 本地数据库、一个当前用户计划任务及单一脱敏运行状态文件 | 仅诊断、预览、试运行、不同步、禁用、移除自动同步或自定义第二处存储 |
 | `personal-intelligence-hub` | 生成正式日简报 | 正式新闻文件及新闻目录内的去重索引 | 预览或明确不保存 |
 | `hit-weekly-brief` | 生成正式数字健康周报 | DigitalHealthWeeklyBrief 本地归档 | 草稿、预览或明确不保存 |
@@ -89,6 +90,7 @@ description: 说明技能做什么，以及用户在什么场景下应使用它�
 - 不提交 `node_modules`、缓存、日志、临时下载、测试输出或生成音频。
 - 不把同一说明同时复制到 `SKILL.md` 和 `references/`。
 - `resource-manifest.json` 只记录资源与引用状态，不定义技能语义。当前 schema v3 使用 LF 规范化 SHA-256 校验 `SKILL.md`、顶层文件、全部受管资源文件和明确引用，并拒绝绝对路径、根外路径与磁盘不一致。
+- 需要运行时权威绑定的技能使用相对 `skill_root` 定位和同样的 LF 规范化 SHA-256；复制到新的技能目录后路径无需改写，但修改受绑定文件后必须刷新对应配置并运行该技能的权威门测试。
 
 ## 5. Skill inventory
 
@@ -141,10 +143,10 @@ description: 说明技能做什么，以及用户在什么场景下应使用它�
 
 | Skill | 功能说明 |
 |---|---|
-| `personal-cognitive-auditor` | 基于用户提供或明确授权读取的日志、日程与健康数据，生成事实导向的日、周、月或年度复盘，识别承诺偏差、重复模式和可执行改进 |
+| `personal-cognitive-auditor` | 基于用户提供或明确授权读取的日志、日程与健康数据，生成事实导向的日、周、月、季度或年度复盘；受保护的周/月/季度请求通过门禁后写入 canonical 季度日志 |
 | `personal-cognitive-prescription` | 从用户提供的近期问题、决策或复盘材料中识别认知盲区，并给出可核验到具体章节的跨领域阅读处方 |
-| `personal-diary-writer` | 将已确认的个人日志安全写入权威本地档案，并为明确生成或更新的 Mentat 日志提供 canonical 季度档案自动保存例外 |
-| `personal-health-analysis` | 以本地优先、失败关闭方式分析用户授权的 Garmin 数据，验证本地数据库读取窗口与设备/固件时期，披露时间范围、缺失和来源，并生成非诊断性报告、离线面板或研究用途 FHIR R4 包装 |
+| `personal-diary-writer` | 生成并保存个人日记、周期审计或 Mentat 日志；精确“更新个人日志”及其他受保护请求通过内容门后写入对应 canonical 季度档案 |
+| `personal-health-analysis` | 以本地优先、失败关闭方式分析用户授权的 Garmin 睡眠、HRV、心率、压力、身体电量、体重和非位置化活动摘要，并生成非诊断性报告或零外联趋势面板 |
 | `personal-intelligence-hub` | 对指定主题开展多来源情报扫描、去重、证据核验、情景推演和红队审查，并生成带来源的战略简报 |
 | `personal-investment-advisor` | 执行点时财务筛选、结构化预期差与三情景估值、持仓及行情身份审计、实时行情刷新与离线 Daily Sync 评估、组合情景压测、只读逆波动率分配实验和研究校准；固定为 `research_only` |
 | `personal-musicbee-dj` | 在本地 Windows 电脑上根据歌曲、歌单、流派、场景或情绪请求启动并控制 MusicBee 播放，必要时生成临时 M3U 歌单 |
@@ -225,7 +227,7 @@ pwsh -NoProfile -ExecutionPolicy Bypass -File scripts/repair_skills.ps1 -Mode Ga
 - 每个用户技能存在 schema v3 `resource-manifest.json`；清单字段、规范化哈希、全部受管资源、声明依赖和可移植路径与磁盘一致。
 - 可选 `agents/openai.yaml` 必须能安全解析，界面字段、精确 `$skill-name` 默认提示、图标路径、颜色、调用策略和 MCP 依赖类型有效。
 - 不存在 `skill.json`。
-- 对 `SKILL.md`、脚本、参考资料、配置和界面元数据执行一致检查；不存在旧运行时工具令牌、外部运行时路径、思维稿指令、硬编码模型版本、强制子代理或强制持久化。
+- 对 `SKILL.md`、脚本、参考资料、配置和界面元数据执行一致检查；不存在旧运行时工具令牌、机器绑定的外部运行时路径、过程稿指令、硬编码模型版本、强制子代理或强制持久化。强制行为检查只解释技能正文与说明性资源，不把源代码变量或安全测试夹具误判为用户指令。
 - `_runtime` 目录属于用户运行产物，不进入源码一致性扫描，也不得被当作技能资源或业务事实。
 - 触发所有权矩阵不存在未知技能和重复信号。
 

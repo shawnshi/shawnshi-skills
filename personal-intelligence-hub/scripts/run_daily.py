@@ -26,6 +26,7 @@ class PrepareResult:
     baseline_path: Path
     candidates_path: Path
     supplement_request_path: Path | None
+    execution_cli_path: Path
 
 
 def _candidate_text(item: dict[str, Any]) -> str:
@@ -108,15 +109,9 @@ def assess_supplement_gaps(
         coverage = manifest.get("stages", {}).get("baseline", {}).get("metadata", {}).get("coverage", {})
     policy = focus.get("coverage_policy", {})
     source_rate = float(coverage.get("source_success_rate", 0.0) or 0.0)
-    dated_rate = float(coverage.get("dated_candidate_rate", 0.0) or 0.0)
     minimum_source = float(policy.get("minimum_source_success_rate", 0.7))
-    minimum_dated = float(policy.get("minimum_dated_candidate_rate", 0.7))
-    coverage_degraded = (
-        int(coverage.get("source_failed", 0) or 0) > 0
-        or source_rate < minimum_source
-        or dated_rate < minimum_dated
-    )
-    if coverage_degraded:
+    source_coverage_degraded = source_rate < minimum_source
+    if source_coverage_degraded:
         existing_lanes = {str(gap["lane"]) for gap in gaps}
         for lane, gap_id, scope in (
             (
@@ -173,6 +168,20 @@ def assess_supplement_gaps(
                     "halt_condition": "找到并核验至少一个直接来源事件、确认无增量或用完最大轮次",
                 }
             )
+    budget = focus.get("coverage_policy", {}).get("supplement_budget", {})
+    max_queries = int(budget.get("max_queries_per_gap", 2))
+    max_urls = int(budget.get("max_urls_per_gap", 4))
+    max_duration_seconds = int(budget.get("max_duration_seconds", 150))
+    max_turns = int(budget.get("max_turns_per_gap", 2))
+    for gap in gaps:
+        gap.update(
+            {
+                "max_queries": max_queries,
+                "max_urls": max_urls,
+                "max_duration_seconds": max_duration_seconds,
+                "max_turns": min(int(gap["max_turns"]), max_turns),
+            }
+        )
     return gaps
 
 
@@ -213,6 +222,14 @@ async def prepare_run(
             f"{MAX_SCAN_DEADLINE_SECONDS}"
         )
 
+    effective_now = now or datetime.now(ZoneInfo(timezone_name))
+    if effective_now.tzinfo is None or effective_now.utcoffset() is None:
+        raise RunContractError("prepare now must be timezone-aware")
+    effective_report_date = report_date or effective_now.astimezone(
+        ZoneInfo(timezone_name)
+    ).date().isoformat()
+    compact_date = effective_report_date.replace("-", "")
+
     import fetch_news
     import refine
     from run_contract import (
@@ -232,6 +249,15 @@ async def prepare_run(
         raise RunContractError(f"focus config is unreadable: {focus_path}: {exc}") from exc
     if not isinstance(focus, dict):
         raise RunContractError("focus config must be a JSON object")
+    existing_targets = [
+        news_dir / f"intelligence_{compact_date}_briefing.{suffix}"
+        for suffix in ("json", "md", "manifest.json")
+    ]
+    if any(path.exists() for path in existing_targets) and not allow_existing_archive_replacement:
+        raise RunContractError(
+            "formal archive targets already exist; pass "
+            "--allow-existing-archive-replacement for an explicit replacement run"
+        )
 
     manifest_path, manifest = create_run(
         report_date=report_date,
@@ -310,8 +336,6 @@ async def prepare_run(
             "dedupe_days": dedupe_days,
             "allow_existing_archive_replacement": bool(
                 allow_existing_archive_replacement
-                or manifest["report_date"]
-                == datetime.fromisoformat(manifest["created_at"]).date().isoformat()
             ),
         },
         now=now,
@@ -364,10 +388,14 @@ async def prepare_run(
             cache_path=cache_path,
             blackboard_path=blackboard_path,
         )
+        if not isinstance(scan, dict):
+            raise RunContractError("baseline scan did not return an object")
         if scan.get("metadata", {}).get("window") != manifest["window"]:
             raise RunContractError("baseline window does not match run manifest")
         coverage = scan.get("coverage") or {}
-        run_status = coverage.get("run_status")
+        if not isinstance(coverage, dict):
+            raise RunContractError("baseline coverage is invalid")
+        run_status = str(coverage.get("run_status") or "")
         baseline_status = {
             "complete": "completed",
             "degraded": "degraded",
@@ -413,6 +441,8 @@ async def prepare_run(
             candidates_path=candidates_path,
             blackboard_path=blackboard_path,
         )
+        if not isinstance(candidate_pool, dict):
+            raise RunContractError("candidate refinement did not return an object")
     except Exception as exc:
         record_stage(
             manifest_path,
@@ -458,7 +488,36 @@ async def prepare_run(
             metadata={"result_status": "no_increment", "gap_count": 0},
             now=now,
         )
-    return PrepareResult(manifest_path, baseline_path, candidates_path, request_path)
+    finalized_manifest = load_manifest(manifest_path)
+    snapshot = finalized_manifest.get("bundle_snapshot")
+    execution_cli_path = (
+        Path(str(snapshot["execution_cli_path"]))
+        if isinstance(snapshot, dict)
+        else Path(__file__).resolve()
+    )
+    return PrepareResult(
+        manifest_path,
+        baseline_path,
+        candidates_path,
+        request_path,
+        execution_cli_path,
+    )
+
+
+def _enforce_run_scoped_cli(manifest_path: Path) -> None:
+    try:
+        manifest = json.loads(manifest_path.read_text(encoding="utf-8"))
+    except (OSError, json.JSONDecodeError):
+        return
+    snapshot = manifest.get("bundle_snapshot") if isinstance(manifest, dict) else None
+    if not isinstance(snapshot, dict):
+        return
+    expected = Path(str(snapshot.get("execution_cli_path") or "")).resolve()
+    if Path(__file__).resolve() != expected:
+        raise RuntimeError(
+            "this run is bound to its immutable execution CLI; rerun with: "
+            f"python -X utf8 {expected}"
+        )
 
 
 def _ratio_from_args(args: argparse.Namespace) -> tuple[dict[str, float] | None, str, str]:
@@ -534,6 +593,14 @@ def main() -> None:
     validate_semantic.add_argument("--refined", type=Path, required=True)
     validate_semantic.add_argument("--semantic-receipt", type=Path, required=True)
 
+    finalize_semantic = subparsers.add_parser(
+        "finalize-semantic-decision",
+        help="Assemble lineage and receipt fields from a semantic core and compact decision, then publish.",
+    )
+    finalize_semantic.add_argument("--manifest", type=Path, required=True)
+    finalize_semantic.add_argument("--refined", type=Path, required=True)
+    finalize_semantic.add_argument("--decision", type=Path, required=True)
+
     validate_red_team = subparsers.add_parser(
         "validate-red-team-draft",
         help="Validate a red-team receipt before immutable publication.",
@@ -553,6 +620,25 @@ def main() -> None:
     supplement.add_argument("--manifest", type=Path, required=True)
     supplement.add_argument("--request", type=Path, required=True)
     supplement.add_argument("--result", type=Path, action="append", required=True)
+
+    finalize_supplement = subparsers.add_parser(
+        "finalize-supplement",
+        help="Validate draft gap results, atomically publish finals, and register the aggregate.",
+    )
+    finalize_supplement.add_argument("--manifest", type=Path, required=True)
+    finalize_supplement.add_argument("--request", type=Path, required=True)
+    finalize_supplement.add_argument("--draft", type=Path, action="append", required=True)
+
+    reconcile_supplement = subparsers.add_parser(
+        "reconcile-supplement",
+        help="Convert per-gap terminal progress states and available drafts into a registered aggregate.",
+    )
+    reconcile_supplement.add_argument("--manifest", type=Path, required=True)
+    reconcile_supplement.add_argument("--request", type=Path, required=True)
+    reconcile_supplement.add_argument("--result", type=Path, action="append", default=[])
+    reconcile_supplement.add_argument(
+        "--progress-state", type=Path, action="append", default=[]
+    )
 
     review = subparsers.add_parser("register-review", help="Register semantic and red-team receipts.")
     review.add_argument("--manifest", type=Path, required=True)
@@ -578,6 +664,11 @@ def main() -> None:
     status.add_argument("--manifest", type=Path, required=True)
 
     args = parser.parse_args()
+    if hasattr(args, "manifest"):
+        try:
+            _enforce_run_scoped_cli(args.manifest)
+        except RuntimeError as exc:
+            parser.error(str(exc))
     if args.command == "prepare":
         if args.window_days <= 0:
             parser.error("--window-days must be positive")
@@ -619,6 +710,7 @@ def main() -> None:
             "baseline_path": str(result.baseline_path.resolve()),
             "candidates_path": str(result.candidates_path.resolve()),
             "supplement_request_path": str(result.supplement_request_path.resolve()) if result.supplement_request_path else None,
+            "execution_cli_path": str(result.execution_cli_path.resolve()),
         }, ensure_ascii=False, indent=2))
     elif args.command == "prepare-review":
         from run_contract import build_review_request
@@ -667,6 +759,24 @@ def main() -> None:
                 ensure_ascii=False,
             )
         )
+    elif args.command == "finalize-semantic-decision":
+        from run_contract import finalize_semantic_decision
+
+        refined_path, receipt_path = finalize_semantic_decision(
+            args.manifest,
+            args.refined,
+            args.decision,
+        )
+        print(
+            json.dumps(
+                {
+                    "status": "registered",
+                    "refined_path": str(refined_path),
+                    "semantic_receipt_path": str(receipt_path),
+                },
+                ensure_ascii=False,
+            )
+        )
     elif args.command == "validate-red-team-draft":
         from run_contract import validate_red_team_draft
 
@@ -689,6 +799,36 @@ def main() -> None:
             args.manifest, args.request, args.result
         )
         print(json.dumps({"artifact_path": str(path.resolve()), "status": aggregate["status"]}, ensure_ascii=False))
+    elif args.command == "finalize-supplement":
+        from run_contract import register_supplement_results
+
+        path, aggregate = register_supplement_results(
+            args.manifest,
+            args.request,
+            args.draft,
+            publish_drafts=True,
+        )
+        print(
+            json.dumps(
+                {"artifact_path": str(path.resolve()), "status": aggregate["status"]},
+                ensure_ascii=False,
+            )
+        )
+    elif args.command == "reconcile-supplement":
+        from run_contract import reconcile_supplement_progress
+
+        path, aggregate = reconcile_supplement_progress(
+            args.manifest,
+            args.request,
+            args.result,
+            args.progress_state,
+        )
+        print(
+            json.dumps(
+                {"artifact_path": str(path.resolve()), "status": aggregate["status"]},
+                ensure_ascii=False,
+            )
+        )
     elif args.command == "register-review":
         from run_contract import register_review_bundle
 

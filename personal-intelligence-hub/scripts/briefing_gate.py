@@ -6,7 +6,7 @@ import math
 import re
 from datetime import date, datetime, timedelta
 from pathlib import Path
-from typing import Any
+from typing import Any, cast
 from zoneinfo import ZoneInfo, ZoneInfoNotFoundError
 
 from history_manager import (
@@ -114,7 +114,10 @@ def _find_unresolved(value: Any, path: str = "$") -> list[str]:
 def _validate_v11_data(
     data: dict[str, Any], schema: dict[str, Any] | None = None
 ) -> tuple[list[str], list[str]]:
-    schema = schema or json.loads(V11_SCHEMA_PATH.read_text(encoding="utf-8"))
+    schema = cast(
+        dict[str, Any],
+        schema or json.loads(V11_SCHEMA_PATH.read_text(encoding="utf-8")),
+    )
     errors: list[str] = []
     warnings: list[str] = []
     if not isinstance(data, dict):
@@ -185,7 +188,10 @@ def _validate_v11_data(
         if item.get("confidence") not in schema["enums"]["confidence"]:
             errors.append(f"invalid top_10[{index}].confidence")
         primary_domain = item.get("primary_domain")
-        if primary_domain not in schema["enums"]["primary_domain"]:
+        if (
+            not isinstance(primary_domain, str)
+            or primary_domain not in schema["enums"]["primary_domain"]
+        ):
             errors.append(f"invalid top_10[{index}].primary_domain")
         else:
             observed_domain_counts[primary_domain] += 1
@@ -491,7 +497,10 @@ def _ratio_map(
 def _validate_v12_data(
     data: dict[str, Any], schema: dict[str, Any] | None = None
 ) -> tuple[list[str], list[str]]:
-    schema = schema or json.loads(SCHEMA_PATH.read_text(encoding="utf-8"))
+    schema = cast(
+        dict[str, Any],
+        schema or json.loads(SCHEMA_PATH.read_text(encoding="utf-8")),
+    )
     is_v14 = str(schema.get("version") or "") == "1.4"
 
     def is_contract_integer(value: Any) -> bool:
@@ -532,13 +541,14 @@ def _validate_v12_data(
         if window.get("mode") != "calendar_days":
             errors.append("window.mode must equal calendar_days")
         days = window.get("days")
-        if not is_contract_integer(days) or days <= 0:
+        days_value = cast(int, days) if is_contract_integer(days) else None
+        if days_value is None or days_value <= 0:
             errors.append("window.days must be a positive integer")
         window_start = _parsed_date(window.get("start"))
         window_end = _parsed_date(window.get("end"))
         if window_start is None or window_end is None:
             errors.append("window start and end must be ISO dates")
-        elif is_contract_integer(days) and window_start != window_end - timedelta(days=days - 1):
+        elif days_value is not None and window_start != window_end - timedelta(days=days_value - 1):
             errors.append("window does not contain the declared number of calendar days")
         if report_date is not None and window_end != report_date:
             errors.append("report_date must equal window.end")
@@ -613,14 +623,28 @@ def _validate_v12_data(
                 for field in schema["pipeline_contract"]["required_red_team_fields"]:
                     if field not in red_team:
                         errors.append(f"missing pipeline.red_team.{field}")
-            if red_team.get("reviewer_kind") != "logic_adversary":
-                errors.append("pipeline.red_team.reviewer_kind must be logic_adversary")
+            reviewer_kind = red_team.get("reviewer_kind")
+            deterministic_no_l4 = (
+                reviewer_kind == "deterministic_gate"
+                and red_team.get("status") == "not_required"
+            )
+            if reviewer_kind not in {"logic_adversary", "deterministic_gate"}:
+                errors.append(
+                    "pipeline.red_team.reviewer_kind must be logic_adversary or deterministic_gate"
+                )
             for field in ("reviewer_id", "invocation_id"):
                 if not _non_empty(red_team.get(field)):
                     errors.append(f"pipeline.red_team.{field} is required")
-            if not is_contract_integer(red_team.get("turns_used")) or red_team.get(
-                "turns_used", 0
-            ) < 1:
+            turns_used = red_team.get("turns_used")
+            turns_value = (
+                cast(int, turns_used) if is_contract_integer(turns_used) else None
+            )
+            if deterministic_no_l4:
+                if turns_value != 0:
+                    errors.append(
+                        "pipeline.red_team.turns_used must be zero for deterministic_gate"
+                    )
+            elif turns_value is None or turns_value < 1:
                 errors.append("pipeline.red_team.turns_used must be positive")
             if red_team.get("halt_condition_met") is not True:
                 errors.append("pipeline.red_team.halt_condition_met must be true")
@@ -757,8 +781,11 @@ def _validate_v12_data(
             if method not in {"http_get", "browser", "api", "document"}:
                 errors.append(f"{path}.access_check.method is invalid")
             status_code = access.get("http_status")
+            status_value = (
+                cast(int, status_code) if is_contract_integer(status_code) else None
+            )
             if method in {"http_get", "api"} and (
-                not is_contract_integer(status_code) or not 200 <= status_code < 400
+                status_value is None or not 200 <= status_value < 400
             ):
                 errors.append(f"{path}.access_check.http_status must show successful access")
 
@@ -909,8 +936,8 @@ def _validate_v12_data(
             errors.append("pipeline.red_team.covered_item_hashes contains an unknown item hash")
         if l4_hashes and red_team.get("status") != "passed":
             errors.append("L4 items require red-team status passed")
-        if not l4_hashes and red_team.get("status") != "not_required":
-            errors.append("no-L4 briefing requires red-team status not_required")
+        if not l4_hashes and red_team.get("status") == "passed" and not covered_hashes:
+            errors.append("targeted red-team review must record covered item hashes")
         if red_team.get("status") == "not_required" and covered_hashes:
             errors.append("not-required red-team cannot claim covered item hashes")
     elif not l4_hashes and red_team.get("status") == "passed" and not covered_hashes:
@@ -1073,11 +1100,16 @@ def _validate_v12_data(
             errors.append("coverage.run_status is invalid")
         if coverage.get("coverage_confidence") not in schema["enums"]["coverage_confidence"]:
             errors.append("coverage.coverage_confidence is invalid")
-        expected_coverage_confidence = {
-            "complete": "high",
-            "degraded": "medium",
-            "failed": "low",
-        }.get(coverage.get("run_status"))
+        run_status = coverage.get("run_status")
+        expected_coverage_confidence = (
+            {
+                "complete": "high",
+                "degraded": "medium",
+                "failed": "low",
+            }.get(run_status)
+            if isinstance(run_status, str)
+            else None
+        )
         if (
             expected_coverage_confidence is not None
             and coverage.get("coverage_confidence") != expected_coverage_confidence
@@ -1087,18 +1119,28 @@ def _validate_v12_data(
         succeeded = coverage.get("source_succeeded")
         failed = coverage.get("source_failed")
         if any(
-            not is_contract_integer(value) or value < 0
+            not is_contract_integer(value) or cast(int, value) < 0
             for value in (attempted, succeeded, failed)
         ):
             errors.append("coverage source counts must be non-negative integers")
-        elif attempted != succeeded + failed:
-            errors.append("coverage source counts do not reconcile")
         else:
-            expected_rate = succeeded / attempted if attempted else 0.0
-            if not isinstance(coverage.get("source_success_rate"), (int, float)) or not math.isclose(
-                float(coverage.get("source_success_rate", -1)), expected_rate, abs_tol=1e-6
-            ):
-                errors.append("coverage.source_success_rate does not match counts")
+            attempted_value = cast(int, attempted)
+            succeeded_value = cast(int, succeeded)
+            failed_value = cast(int, failed)
+            if attempted_value != succeeded_value + failed_value:
+                errors.append("coverage source counts do not reconcile")
+            else:
+                expected_rate = (
+                    succeeded_value / attempted_value if attempted_value else 0.0
+                )
+                if not isinstance(
+                    coverage.get("source_success_rate"), (int, float)
+                ) or not math.isclose(
+                    float(coverage.get("source_success_rate", -1)),
+                    expected_rate,
+                    abs_tol=1e-6,
+                ):
+                    errors.append("coverage.source_success_rate does not match counts")
         dated_rate = coverage.get("dated_candidate_rate")
         if not isinstance(dated_rate, (int, float)) or not 0 <= float(dated_rate) <= 1:
             errors.append("coverage.dated_candidate_rate must be between 0 and 1")
@@ -1121,10 +1163,11 @@ def _validate_v12_data(
     else:
         observed = funnel.get("observed")
         dispositions = funnel.get("terminal_dispositions")
-        if not is_contract_integer(observed) or observed < 0:
+        if not is_contract_integer(observed) or cast(int, observed) < 0:
             errors.append("candidate_funnel.observed must be a non-negative integer")
         if not isinstance(dispositions, dict) or any(
-            not is_contract_integer(value) or value < 0 for value in dispositions.values()
+            not is_contract_integer(value) or cast(int, value) < 0
+            for value in dispositions.values()
         ):
             errors.append("candidate_funnel.terminal_dispositions must contain non-negative integers")
         elif is_contract_integer(observed):
@@ -1135,7 +1178,7 @@ def _validate_v12_data(
                         "candidate_funnel contains unknown terminal dispositions: "
                         + ", ".join(unknown)
                     )
-            if sum(dispositions.values()) != observed:
+            if sum(dispositions.values()) != cast(int, observed):
                 errors.append("candidate_funnel terminal dispositions do not conserve observed items")
             if dispositions.get("retained") != len(items):
                 errors.append("candidate_funnel retained count does not match top_10")

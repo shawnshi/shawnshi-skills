@@ -3,12 +3,16 @@ import importlib.util
 import unittest
 from datetime import date, timedelta
 from pathlib import Path
+from unittest.mock import patch
 
 
 MODULE_PATH = Path(__file__).with_name("freshness_task_gate.py")
 SPEC = importlib.util.spec_from_file_location("freshness_task_gate", MODULE_PATH)
+if SPEC is None:
+    raise RuntimeError("freshness_task_gate module spec is unavailable")
 gate = importlib.util.module_from_spec(SPEC)
-assert SPEC.loader is not None
+if SPEC.loader is None:
+    raise RuntimeError("freshness_task_gate module loader is unavailable")
 SPEC.loader.exec_module(gate)
 
 
@@ -25,6 +29,12 @@ def args():
         runner=r"C:\skill\scripts\garmin_auto_sync.py",
         authority_config=r"C:\skill\runtime-authority.json",
         state_output=r"C:\state\status.json",
+        task_config_dir=r"C:\config",
+        task_garmindb_python=r"C:\GarminDB\python.exe",
+        task_scratch_dir=r"C:\scratch",
+        task_days=7,
+        task_timeout_seconds=480,
+        task_total_timeout_seconds=900,
         allow_direct_sync=False,
         direct_config_dir=None,
         direct_garmindb_python=None,
@@ -59,7 +69,7 @@ def task(state="Ready"):
             r"C:\skill\runtime-authority.json --state-output C:\state\status.json "
             "--allow-network --allow-sync --allow-health-data"
         ),
-        "arguments_sha256": "b" * 64,
+        "arguments_sha256": gate.expected_task_arguments_sha256(args()),
     }
 
 
@@ -87,15 +97,14 @@ class FreshnessTaskGateTests(unittest.TestCase):
             "ok": True,
             "authority_version": "11.6.0",
             "authority_sha256": "a" * 64,
-            "task_binding": {"arguments_sha256": "b" * 64},
             "entrypoints": {"scripts/garmin_auto_sync.py": r"C:\skill\scripts\garmin_auto_sync.py"},
         }
-        self.original_read = Path.read_text
-        Path.read_text = lambda self, encoding=None: "{}"
+        self.read_text_patcher = patch.object(Path, "read_text", return_value="{}")
+        self.read_text_patcher.start()
 
     def tearDown(self):
         gate.runtime_authority.verify = self.original_verify
-        Path.read_text = self.original_read
+        self.read_text_patcher.stop()
 
     def test_started_task_ignores_old_terminal_until_new_run_id(self):
         probes = iter((task("Ready"), {"ok": True}, task("Running"), task("Ready")))
@@ -144,9 +153,34 @@ class FreshnessTaskGateTests(unittest.TestCase):
             "task_name": args().task_name,
             "python": args().python,
             "working_directory": str(Path(args().runner).resolve().parent),
-            "arguments_sha256": "b" * 64,
+            "arguments_sha256": gate.expected_task_arguments_sha256(args()),
         }
         self.assertEqual(gate.validate_task(snapshot, expected), "task_user_drift")
+
+    def test_task_argument_binding_is_installation_specific_and_recomputed(self):
+        first = args()
+        second = argparse.Namespace(**vars(first))
+        second.runner = r"D:\portable\skill\scripts\garmin_auto_sync.py"
+        second.authority_config = r"D:\portable\skill\runtime-authority.json"
+        second.state_output = r"D:\portable\state\status.json"
+        second.task_config_dir = r"D:\portable\config"
+        second.task_garmindb_python = r"D:\portable\GarminDB\python.exe"
+        second.task_scratch_dir = r"D:\portable\scratch"
+
+        first_hash = gate.expected_task_arguments_sha256(first)
+        second_hash = gate.expected_task_arguments_sha256(second)
+
+        self.assertNotEqual(first_hash, second_hash)
+        snapshot = task()
+        expected = {
+            "task_name": first.task_name,
+            "python": first.python,
+            "working_directory": str(Path(first.runner).resolve().parent),
+            "arguments_sha256": first_hash,
+        }
+        self.assertIsNone(gate.validate_task(snapshot, expected))
+        expected["arguments_sha256"] = second_hash
+        self.assertEqual(gate.validate_task(snapshot, expected), "task_arguments_drift")
 
     def test_permission_denied_never_falls_back_to_direct_sync(self):
         options = args()

@@ -1,23 +1,18 @@
 {
   "schema_version": 3,
   "skill": "personal-cognitive-auditor",
-  "generated_at": "2026-08-29T20:18:36+08:00",
+  "generated_at": "2026-09-01T19:54:14+08:00",
   "hash_algorithm": "SHA-256",
   "text_hash_normalization": "LF",
   "skill_md": "SKILL.md",
-  "skill_md_sha256": "9c0f183cb0095f76f4763baee7d860ab73ae4a34ace807390f7751cddd654d77",
+  "skill_md_sha256": "47015113416742e9c5b0738baf8caeefc15de918f3940fcec798ebc8d4234812",
   "top_level_files": [
-    "SKILL.md",
-    "SKILL.md.bak_20260829_193004"
+    "SKILL.md"
   ],
   "top_level_file_hashes": [
     {
       "path": "SKILL.md",
-      "sha256": "9c0f183cb0095f76f4763baee7d860ab73ae4a34ace807390f7751cddd654d77"
-    },
-    {
-      "path": "SKILL.md.bak_20260829_193004",
-      "sha256": "364ee83a160f743337f97fc7eaed937537ba2265b526c1b834421cca86a6e5db"
+      "sha256": "47015113416742e9c5b0738baf8caeefc15de918f3940fcec798ebc8d4234812"
     }
   ],
   "top_level_directories": [
@@ -28,7 +23,7 @@
   "resource_directories": [
     {
       "name": "scripts",
-      "file_count": 3
+      "file_count": 4
     },
     {
       "name": "references",
@@ -36,7 +31,7 @@
     },
     {
       "name": "prompts",
-      "file_count": 4
+      "file_count": 5
     }
   ],
   "resource_file_hashes": [
@@ -50,15 +45,19 @@
     },
     {
       "path": "prompts/MONTHLY.md",
-      "sha256": "1db34759b76bf48a0137f243db2d2daa53d60ae59e7af05d6e31a6710d36d42f"
+      "sha256": "8ac5b912a584578477784ec0f88c7f1147526a8bc02676c302a8d13e2711f2db"
+    },
+    {
+      "path": "prompts/QUARTERLY.md",
+      "sha256": "0c3aeddb4a9cad93e9299f9309b0e51d66f881bb56f9906a2d9c0dbaced4406d"
     },
     {
       "path": "prompts/WEEKLY.md",
-      "sha256": "3704cf65349cd8cc40f78dd8f7e2139ff65e56bca3d5fe5cafbe8c3957bac303"
+      "sha256": "d3af13e987595c92eb3147873ba8f8443240bcce0bb7a4fc4073291ae13248f4"
     },
     {
       "path": "references/config.md",
-      "sha256": "b487de899fcaf8f7c16f9a1a7f6a7dbbfddea8c60116e63572961b782bf7bc21"
+      "sha256": "113e737a30ddd932ddc2dd7bd8a383318ba0200ba45df23641e4d894a0a1ebfe"
     },
     {
       "path": "references/energy_management.md",
@@ -66,7 +65,7 @@
     },
     {
       "path": "references/handoff_contract.md",
-      "sha256": "88f42d71e576a21454c89566456639614fefe98c5f4e935767d64737dafc1abc"
+      "sha256": "60d98c32f3e75369405ef2deb055ee3f1494e345031972c02e4e40d55c9380b3"
     },
     {
       "path": "references/semantic_layer.md",
@@ -82,15 +81,19 @@
     },
     {
       "path": "scripts/audit_gate.py",
-      "sha256": "bdcccd4b9e09654485024aa7a092675affc622c0f8c99e1eb9804cbf35f819b3"
+      "sha256": "1df54f1368a41b79b8fce0d38d72c0b64a7582fa12a3aa049507fbf169d2cc90"
+    },
+    {
+      "path": "scripts/periodic_topology.py",
+      "sha256": "f5c3170b22b18fba69ddef6bdb6394b15ab7d5d78711331d11b3d6af9924263c"
     },
     {
       "path": "scripts/test_audit_gate.py",
-      "sha256": "70775d11a3714ba326057a75443260899d5c18cadc2751df73ae430f47be6364"
+      "sha256": "6cda5efde7be0dd7aeea6154b0ba7a0fb6b1df6d44044e86e9f29d225d55e4cd"
     },
     {
       "path": "scripts/test_weekly_autosave_contract.py",
-      "sha256": "92d54ddcd8b3b56773b02c3597f877059d2fb687c40bdf79a72970f6e128b4b8"
+      "sha256": "60970968b55234ceada03f148b419e453a43ad727538a336e9afcdca5cd02878"
     }
   ],
   "declared_local_dependencies": [
@@ -104,7 +107,7 @@
       "path": "references/handoff_contract.md",
       "exists": true,
       "resolved_path": "personal-cognitive-auditor/references/handoff_contract.md",
-      "sha256": "88f42d71e576a21454c89566456639614fefe98c5f4e935767d64737dafc1abc"
+      "sha256": "60d98c32f3e75369405ef2deb055ee3f1494e345031972c02e4e40d55c9380b3"
     },
     {
       "path": "references/semantic_layer.md",
@@ -122,7 +125,7 @@
       "path": "scripts/audit_gate.py",
       "exists": true,
       "resolved_path": "personal-cognitive-auditor/scripts/audit_gate.py",
-      "sha256": "bdcccd4b9e09654485024aa7a092675affc622c0f8c99e1eb9804cbf35f819b3"
+      "sha256": "1df54f1368a41b79b8fce0d38d72c0b64a7582fa12a3aa049507fbf169d2cc90"
     }
   ],
   "missing_declared_dependencies": []

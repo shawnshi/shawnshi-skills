@@ -1,18 +1,18 @@
 {
   "schema_version": 3,
   "skill": "image-prompt-gen",
-  "generated_at": "2026-08-29T20:18:36+08:00",
+  "generated_at": "2026-09-01T19:54:14+08:00",
   "hash_algorithm": "SHA-256",
   "text_hash_normalization": "LF",
   "skill_md": "SKILL.md",
-  "skill_md_sha256": "8a4917c8840630d1cdd2cc9a8e4d5c90ee784f62f860083b1d10fc26186d7f5b",
+  "skill_md_sha256": "74360602b0489a3759921c47a413d4076ad66c7588f88e43cf29dc17a96b4a89",
   "top_level_files": [
     "SKILL.md"
   ],
   "top_level_file_hashes": [
     {
       "path": "SKILL.md",
-      "sha256": "8a4917c8840630d1cdd2cc9a8e4d5c90ee784f62f860083b1d10fc26186d7f5b"
+      "sha256": "74360602b0489a3759921c47a413d4076ad66c7588f88e43cf29dc17a96b4a89"
     }
   ],
   "top_level_directories": [

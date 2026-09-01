@@ -904,7 +904,11 @@ def _snapshot_existing(
     return snapshots
 
 
-def _rollback(snapshots: dict[Path, _RollbackRecord]) -> list[str]:
+def _rollback(
+    snapshots: dict[Path, _RollbackRecord],
+    *,
+    allowed_current_sha256: dict[str, str | None] | None = None,
+) -> list[str]:
     failures: list[str] = []
     for target, snapshot in snapshots.items():
         try:
@@ -914,10 +918,13 @@ def _rollback(snapshots: dict[Path, _RollbackRecord]) -> list[str]:
         except OSError as exc:
             failures.append(f"{target}: could not read rollback target: {exc}")
             continue
-        if current_sha256 not in {
+        allowed_hashes: set[str | None] = {
             snapshot.before_sha256,
             snapshot.promoted_sha256,
-        }:
+        }
+        if allowed_current_sha256 is not None:
+            allowed_hashes.add(allowed_current_sha256.get(target.name))
+        if current_sha256 not in allowed_hashes:
             failures.append(
                 f"{target}: rollback CAS mismatch; current hash is neither "
                 "before_sha256 nor promoted_sha256"
@@ -932,7 +939,10 @@ def _rollback(snapshots: dict[Path, _RollbackRecord]) -> list[str]:
             )
             if current_sha256 == snapshot.before_sha256:
                 continue
-            if current_sha256 != snapshot.promoted_sha256:
+            allowed_hashes: set[str | None] = {snapshot.promoted_sha256}
+            if allowed_current_sha256 is not None:
+                allowed_hashes.add(allowed_current_sha256.get(target.name))
+            if current_sha256 not in allowed_hashes:
                 failures.append(
                     f"{target}: rollback CAS changed during recovery"
                 )
@@ -1137,6 +1147,7 @@ def commit_briefing_pair(
                     ) from exc
                 raise ArchiveTransactionError(f"promotion failed: {exc}") from exc
 
+            postcommit_ran = False
             try:
                 result = _verify_committed_files(
                     targets,
@@ -1148,19 +1159,44 @@ def commit_briefing_pair(
                 journal["phase"] = "committed"
                 _write_journal(journal_path, journal)
                 if postcommit_action is not None:
+                    postcommit_ran = True
                     try:
                         postcommit_action(result)
                     except Exception as exc:
+                        try:
+                            _verify_committed_files(
+                                targets,
+                                payload,
+                                markdown_text,
+                                sidecar,
+                                gate,
+                            )
+                        except Exception as verification_exc:
+                            raise ArchiveTransactionError(
+                                "postcommit action changed committed archive bytes"
+                            ) from verification_exc
                         raise ArchivePostcommitError(
                             "formal archive committed, but the postcommit action failed: "
                             + str(exc),
                             result,
                         ) from exc
+                    result = _verify_committed_files(
+                        targets,
+                        payload,
+                        markdown_text,
+                        sidecar,
+                        gate,
+                    )
                 return result
             except ArchivePostcommitError:
                 raise
             except Exception as exc:
-                rollback_failures = _rollback(snapshots)
+                rollback_failures = _rollback(
+                    snapshots,
+                    allowed_current_sha256=(
+                        _current_target_state(targets) if postcommit_ran else None
+                    ),
+                )
                 if rollback_failures:
                     preserve_staging = True
                     raise ArchiveTransactionError(

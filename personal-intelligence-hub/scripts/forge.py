@@ -3,6 +3,7 @@ from __future__ import annotations
 import argparse
 import json
 import math
+import re
 from copy import deepcopy
 from datetime import date, datetime, time, timedelta
 from pathlib import Path
@@ -277,13 +278,19 @@ def _assert_pipeline_provenance(payload: dict[str, Any], manifest: dict[str, Any
     if coverage.get("baseline_status") != expected_baseline_status:
         raise ForgeContractError("coverage.baseline_status does not match run manifest")
 
-    results = supplement.get("results") if isinstance(supplement.get("results"), list) else []
+    raw_results = supplement.get("results")
+    results: list[Any] = []
+    if isinstance(raw_results, list):
+        results.extend(raw_results)
     lane_failures = sorted(
         {
             str(result.get("lane"))
             for result in results
-            if result.get("status") in {"degraded", "failed"}
-            or int((result.get("coverage") or {}).get("failed", 0)) > 0
+            if isinstance(result, dict)
+            and (
+                result.get("status") in {"degraded", "failed"}
+                or int((result.get("coverage") or {}).get("failed", 0)) > 0
+            )
         }
     )
     if sorted(str(value) for value in coverage.get("required_lane_failures", [])) != lane_failures:
@@ -518,6 +525,11 @@ def render_briefing(
     )
     template = environment.get_template(path.name)
     rendered = template.render(**payload, date=payload["report_date"])
+    rendered = re.sub(r"(?<!\n)(?=## )", "\n", rendered)
+    rendered = re.sub(r"(?<!\n)(?=- (?:事实|覆盖说明)：)", "\n", rendered)
+    rendered = re.sub(r"\n+(?=## )", "\n\n", rendered)
+    rendered = re.sub(r"(## [^\n]+)\n+", r"\1\n\n", rendered)
+    rendered = re.sub(r"\n{3,}", "\n\n", rendered)
     if not rendered.endswith("\n"):
         rendered += "\n"
     return rendered

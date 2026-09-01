@@ -1,4 +1,5 @@
 import json
+import re
 import shutil
 import subprocess
 import sys
@@ -239,6 +240,56 @@ description: 用于测试根门禁的示例技能。
         self.assertNotEqual(result.returncode, 0)
         self.assertIn("stale_automatic_persistence_exceptions=1", result.stderr)
 
+    def test_source_code_literals_do_not_count_as_runtime_or_persistence_directives(self):
+        result = self.run_gate(
+            self.build_fixture(
+                declared=False,
+                contract_line="只生成分析，不写入。",
+                script_fixture=(
+                    'required = set(PERSISTED_GATE_STABLE_FIELDS)\n'
+                    'assert is_blocked("file:///etc/passwd")\n'
+                ),
+            )
+        )
+
+        self.assertEqual(result.returncode, 0, result.stdout + result.stderr)
+
+    def test_reference_persistence_directive_remains_blocking(self):
+        root = self.build_fixture(
+            declared=False,
+            contract_line="只生成分析，不写入。",
+        )
+        references = root / "example-skill" / "references"
+        references.mkdir()
+        (references / "rules.md").write_text(
+            "必须将结果持久化到知识库。",
+            encoding="utf-8",
+        )
+        self.regenerate_manifests(root)
+
+        result = self.run_gate(root)
+
+        self.assertNotEqual(result.returncode, 0)
+        self.assertIn("mandatory_persistence_skills=1", result.stderr)
+
+    def test_reference_automatic_persistence_remains_blocking(self):
+        root = self.build_fixture(
+            declared=False,
+            contract_line="只生成分析，不写入。",
+        )
+        references = root / "example-skill" / "references"
+        references.mkdir()
+        (references / "archive.md").write_text(
+            "正式结果自动保存到权威档案。\n",
+            encoding="utf-8",
+        )
+        self.regenerate_manifests(root)
+
+        result = self.run_gate(root)
+
+        self.assertNotEqual(result.returncode, 0)
+        self.assertIn("undeclared_automatic_persistence_skills=1", result.stderr)
+
     def test_gate_rejects_undeclared_default_personal_log_write(self):
         result = self.run_gate(
             self.build_fixture(
@@ -375,7 +426,8 @@ description: 用于测试根门禁的示例技能。
         result = self.run_gate(root, ("example-skill",))
 
         self.assertEqual(result.returncode, 0, result.stdout + result.stderr)
-        self.assertIn("Scope                                     : Selection", result.stdout)
+        clean_stdout = re.sub(r"\x1b\[[0-9;]*m", "", result.stdout)
+        self.assertIn("Scope                                     : Selection", clean_stdout)
 
     def test_gate_rejects_unknown_include_skill(self):
         root = self.build_fixture(declared=False, contract_line="只生成草稿。")

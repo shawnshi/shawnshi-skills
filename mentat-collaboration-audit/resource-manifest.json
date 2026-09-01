@@ -1,11 +1,11 @@
 {
   "schema_version": 3,
   "skill": "mentat-collaboration-audit",
-  "generated_at": "2026-08-24T06:28:36+08:00",
+  "generated_at": "2026-09-01T20:26:19+08:00",
   "hash_algorithm": "SHA-256",
   "text_hash_normalization": "LF",
   "skill_md": "SKILL.md",
-  "skill_md_sha256": "c2f0a9260ecbc5141c79cec8d4b1e20336944d0155f479fc415d5f204b471fc6",
+  "skill_md_sha256": "8d1d67ac46353df89b85e7e1d99d6848ccea3a303950d1f52665c1ef819a006b",
   "top_level_files": [
     "SKILL.md",
     "generate_final_report.py"
@@ -13,7 +13,7 @@
   "top_level_file_hashes": [
     {
       "path": "SKILL.md",
-      "sha256": "c2f0a9260ecbc5141c79cec8d4b1e20336944d0155f479fc415d5f204b471fc6"
+      "sha256": "8d1d67ac46353df89b85e7e1d99d6848ccea3a303950d1f52665c1ef819a006b"
     },
     {
       "path": "generate_final_report.py",

@@ -13,6 +13,12 @@
     "window",
     "mix_request"
   ],
+  "bundle_snapshot_contract": {
+    "version": "pih-bundle-snapshot/1.0",
+    "scope": "all resource-manifest files plus SKILL.md and the resource manifest",
+    "post_prepare_rule": "all subsequent commands and agent helpers use bundle_snapshot.execution_cli_path or paths under bundle_snapshot.snapshot_root",
+    "drift_rule": "installed bundle drift never invalidates the immutable run snapshot; invoking the installed CLI after drift fails with the run-scoped CLI path"
+  },
   "hash_bound_artifacts": [
     "history_snapshot",
     "candidate_pool",
@@ -30,7 +36,58 @@
   "terminal_statuses": [
     "completed",
     "degraded",
+    "degraded_timeout",
     "skipped",
     "not_required"
-  ]
+  ],
+  "telemetry_contract": {
+    "version": "pih-execution-telemetry/1.0",
+    "registration_key": "stage:invocation_id",
+    "content_policy": "aggregate_only_no_message_content",
+    "normal_run_token_ceiling": 250000,
+    "token_meter": "total_tokens - cache_read_tokens - cache_write_tokens",
+    "raw_total_tokens_retained_for_observability": true,
+    "normal_run_cost_usd_ceiling": 3.0,
+    "failure_usage_included": true,
+    "new_launches_blocked_at_ceiling": true,
+    "token_reservation_required_before_launch": true,
+    "cost_reservation_required_before_launch": true,
+    "reservation_registry": "manifest.telemetry.reservations",
+    "settlement_rule": "trusted_telemetry_requires_exact_reserved_stage_invocation_and_unique_source_hashes; unavailable_telemetry_keeps_full_reservation",
+    "runtime_usage_budget_semantics": "launch_and_future_launch_gate_not_running_interrupt",
+    "downstream_headroom": {
+      "tokens": 70000,
+      "cost_usd": 1.0
+    }
+  },
+  "supplement_progress_contract": {
+    "isolation_key": "gap_id",
+    "durable_terminal_statuses": [
+      "degraded_timeout",
+      "declare_lost"
+    ],
+    "reconciler": "scripts/run_daily.py reconcile-supplement"
+  },
+  "supplement_execution_contract": {
+    "context_helper": "scripts/supplement_agent.py context",
+    "draft_helper": "scripts/supplement_agent.py finalize",
+    "source_check_completed_at_before_finalization": true,
+    "timeout_includes_finalization_grace": true,
+    "tool_budget_pass_through_required": true
+  },
+  "review_execution_contract": {
+    "semantic_timeout_ms": 240000,
+    "semantic_token_budget": 40000,
+    "semantic_tool_budget": {
+      "soft": 6,
+      "hard": 10,
+      "block": "*"
+    },
+    "semantic_context_mode": "compact_helper_packet",
+    "semantic_write_scope": "semantic_dynamic_only",
+    "semantic_static_finalization": "scripts/semantic_agent.py",
+    "red_team_token_budget": 30000,
+    "red_team_timeout_ms": 120000,
+    "timeout_pass_through_required": true
+  }
 }

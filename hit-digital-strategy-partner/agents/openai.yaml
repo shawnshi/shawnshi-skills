@@ -1,12 +1,8 @@
 interface:
   display_name: "HIT Digital Strategy Partner"
   short_description: "医疗数字化战略、投资排序与可审计ROI/TCO决策支持"
+  default_prompt: "Use $hit-digital-strategy-partner to compare healthcare digital investment options with auditable ROI, TCO, risks, and decision gates."
   icon_small: "./assets/icon.svg"
   icon_large: "./assets/icon.svg"
 policy:
-  products:
-    - "chatgpt"
-    - "codex"
-    - "api"
-    - "atlas"
   allow_implicit_invocation: true

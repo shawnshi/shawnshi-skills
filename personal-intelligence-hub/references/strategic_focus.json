@@ -183,16 +183,22 @@
     "minimum_source_success_rate": 0.7,
     "minimum_dated_candidate_rate": 0.7,
     "source_concentration_warning": 0.5,
+    "supplement_budget": {
+      "max_queries_per_gap": 2,
+      "max_urls_per_gap": 4,
+      "max_duration_seconds": 150,
+      "max_turns_per_gap": 2
+    },
     "lanes": {
       "Sentinel": {
         "min_candidates": 1,
-        "max_turns": 3,
+        "max_turns": 2,
         "query_scope": "医疗政策、支付、采购与竞对原始来源",
         "keywords": ["policy", "regulation", "procurement", "payment", "政策", "监管", "采购", "支付", "竞对"]
       },
       "Ranger": {
         "min_candidates": 1,
-        "max_turns": 3,
+        "max_turns": 2,
         "query_scope": "技术与医疗数字化失败、漏洞、处罚与执行摩擦",
         "keywords": ["risk", "failure", "vulnerability", "breach", "处罚", "漏洞", "失败", "中断", "风险"]
       }

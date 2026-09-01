@@ -1,5 +1,6 @@
 import unittest
 from copy import deepcopy
+from typing import Any
 
 from briefing_gate import validate_briefing_data
 from history_manager import generate_content_id, generate_event_id
@@ -151,7 +152,7 @@ class BriefingV14ContractTests(unittest.TestCase):
         for path, expected in cases:
             with self.subTest(path=path):
                 payload = cloned_v14_payload()
-                target = payload
+                target: Any = payload
                 for key in path[:-1]:
                     target = target[key]
                 target[path[-1]] = True
@@ -207,7 +208,7 @@ class BriefingV14ContractTests(unittest.TestCase):
         errors, _ = validate_briefing_data(payload)
 
         self.assertIn(
-            "no-L4 briefing requires red-team status not_required",
+            "targeted red-team review must record covered item hashes",
             errors,
         )
 

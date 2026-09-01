@@ -12,7 +12,9 @@ from threading import Event
 from unittest.mock import patch
 from zoneinfo import ZoneInfo
 
+from briefing_gate import validate_briefing_data
 from history_manager import generate_event_id
+from mix_policy import select_candidates_with_mix
 from run_contract import (
     RunContractError,
     build_review_request,
@@ -23,30 +25,37 @@ from run_contract import (
     canonical_json_bytes,
     create_run,
     file_sha256,
+    finalize_semantic_decision,
     item_hash,
     load_manifest,
     load_review_progress_state,
     normalize_published_at,
+    normalize_supplement_failure_kind,
     record_stage,
     record_run_artifact,
+    record_execution_telemetry,
+    reconcile_supplement_progress,
     registered_candidate_lineage,
     review_scope,
     review_input_bundle_sha256,
-    register_review_bundle,
     register_review_receipt,
     register_supplement_results,
     update_review_progress,
+    _assert_execution_budget_allows_launch,
     _validate_access_log_entry,
     _validate_access_retry_policy,
     _validate_bound_candidate_source_type,
     _validate_multi_independent_lineage,
     validate_resource_manifest,
     validate_review_receipt,
-    validate_red_team_draft,
     validate_semantic_draft,
     validate_semantic_history,
+    validate_supplement_failure_kind,
 )
 from review_progress_gate import evaluate_progress, main as progress_gate_main
+from semantic_agent import (  # pyright: ignore[reportMissingImports]
+    build_agent_context as build_semantic_agent_context,
+)
 from test_contract_fixtures import cloned_v14_payload
 
 
@@ -73,6 +82,20 @@ class RunContractTests(unittest.TestCase):
         )
         self.now = datetime(2026, 8, 10, 9, 0, tzinfo=ZoneInfo("Asia/Shanghai"))
 
+    def test_supplement_failure_kind_is_closed_and_aliases_are_normalized(self):
+        self.assertEqual(
+            normalize_supplement_failure_kind("date_conflict"),
+            "published_at_conflict",
+        )
+        self.assertEqual(
+            normalize_supplement_failure_kind("bound_source_access_blocked"),
+            "source_access",
+        )
+        with self.assertRaisesRegex(RunContractError, "failure_kind is invalid"):
+            normalize_supplement_failure_kind("arbitrary_failure")
+        with self.assertRaisesRegex(RunContractError, "requires failure_kind"):
+            validate_supplement_failure_kind(None, "degraded")
+
     def test_publication_datetime_normalizes_in_its_own_timezone(self):
         self.assertEqual(
             normalize_published_at("2026-08-20T23:30:00-07:00"),
@@ -89,12 +112,17 @@ class RunContractTests(unittest.TestCase):
         l3 = {"title": "l3", "intelligence_level": "L3", "major_signal": True}
         l4 = {"title": "l4", "intelligence_level": "L4", "major_signal": False}
 
-        fast = review_scope({"top_10": [l3]})
+        fast = review_scope(
+            {"top_10": [{**l3, "major_signal": False}]}
+        )
+        targeted = review_scope({"top_10": [l3]})
         full = review_scope({"top_10": [l3, l4]})
 
         self.assertEqual(fast["review_mode"], "no_l4_fast_path")
         self.assertEqual(fast["l4_item_hashes"], [])
-        self.assertEqual(fast["major_signal_item_hashes"], [item_hash(l3)])
+        self.assertEqual(fast["major_signal_item_hashes"], [])
+        self.assertEqual(targeted["review_mode"], "targeted_review")
+        self.assertEqual(targeted["major_signal_item_hashes"], [item_hash(l3)])
         self.assertEqual(full["review_mode"], "l4_full_review")
         self.assertEqual(full["l4_item_hashes"], [item_hash(l4)])
 
@@ -460,6 +488,205 @@ class RunContractTests(unittest.TestCase):
         )
         return manifest_path, request_path, request
 
+    def prepare_targeted_red_team_request(self, item_updates):
+        manifest_path, _ = self.new_run()
+        baseline = self.runtime_dir / "targeted-review-baseline.json"
+        baseline.write_text('{"items": []}', encoding="utf-8")
+        record_stage(
+            manifest_path,
+            "baseline",
+            "degraded",
+            artifact_path=baseline,
+            metadata={
+                "coverage": {
+                    "source_attempted": 10,
+                    "source_succeeded": 8,
+                    "source_failed": 2,
+                    "raw_candidates": 10,
+                    "dated_candidates": 9,
+                    "reasons": [],
+                }
+            },
+            now=self.now,
+        )
+        self.bind_history(manifest_path)
+        manifest = load_manifest(manifest_path)
+        refined = cloned_v14_payload()
+        refined.update(
+            {
+                "run_id": manifest["run_id"],
+                "report_date": manifest["report_date"],
+                "generated_at": self.now.isoformat(),
+                "topic": manifest["topic"],
+                "region": manifest["region"],
+                "window": manifest["window"],
+            }
+        )
+        item = refined["top_10"][0]
+        item.update(item_updates)
+        _, refined["mix"] = select_candidates_with_mix(
+            refined["top_10"],
+            10,
+            {
+                "default_ratio": refined["mix"]["default_ratio"],
+                "requested_ratio": refined["mix"]["requested_ratio"],
+                "ratio_source": refined["mix"]["ratio_source"],
+                "ratio_reason": refined["mix"]["ratio_reason"],
+                "max_ratio_shift": 0.2,
+            },
+        )
+        candidate = {
+            "candidate_id": item["candidate_refs"][0],
+            "url": item["url"],
+            "title": item["title"],
+            "source": item["source"],
+            "published_at": item["published_at"],
+            "published_at_source": item["published_at_source"],
+            "access_check": deepcopy(item["access_check"]),
+        }
+        candidate["candidate_object_sha256"] = candidate_object_hash(candidate)
+        extra_candidates = []
+        for index in (2, 3):
+            extra = {
+                "candidate_id": candidate_ref(f"https://example.org/{index}"),
+                "url": f"https://example.org/{index}",
+                "title": f"candidate {index}",
+            }
+            extra["candidate_object_sha256"] = candidate_object_hash(extra)
+            extra_candidates.append(extra)
+        self.bind_candidates(manifest_path, [candidate, *extra_candidates])
+        supplement = self.runtime_dir / "targeted-review-supplement.json"
+        supplement.write_text(
+            '{"coverage":{"attempted":0,"succeeded":0,"failed":0},"results":[]}',
+            encoding="utf-8",
+        )
+        record_stage(
+            manifest_path,
+            "supplemental",
+            "completed",
+            artifact_path=supplement,
+            now=self.now,
+        )
+        _, semantic_request = build_review_request(
+            manifest_path,
+            None,
+            "semantic",
+            now=self.now,
+        )
+        core_draft = Path(
+            semantic_request["execution_packet"]["draft_paths"]["refined_core"]
+        )
+        decision = Path(
+            semantic_request["execution_packet"]["draft_paths"]["decision"]
+        )
+        core_draft.write_text(json.dumps(refined), encoding="utf-8")
+        decision.write_text(
+            json.dumps(
+                {
+                    "contract_version": "semantic-decision/1.0",
+                    "status": "passed",
+                    "turns_used": 1,
+                    "halt_condition_met": True,
+                }
+            ),
+            encoding="utf-8",
+        )
+        refined_path, semantic_receipt = finalize_semantic_decision(
+            manifest_path,
+            core_draft,
+            decision,
+            now=self.now,
+        )
+        telemetry_path = Path(manifest["run_dir"]) / (
+            "execution_telemetry_semantic_review_"
+            f"{semantic_request['invocation_id']}.json"
+        )
+        telemetry_path.write_text(
+            json.dumps(
+                {
+                    "contract_version": "pih-execution-telemetry/1.0",
+                    "run_id": manifest["run_id"],
+                    "stage": "semantic_review",
+                    "invocation_id": semantic_request["invocation_id"],
+                    "status": "completed",
+                    "usage": {
+                        "input_tokens": 60,
+                        "output_tokens": 40,
+                        "reasoning_tokens": 0,
+                        "cache_read_tokens": 0,
+                        "cache_write_tokens": 0,
+                        "total_tokens": 100,
+                        "cost_usd": 0.1,
+                        "assistant_messages": 1,
+                        "tool_results": 0,
+                        "tool_errors": 0,
+                    },
+                    "duration_seconds": 1.0,
+                    "sources": [{"path": "semantic.jsonl", "sha256": "1" * 64}],
+                }
+            ),
+            encoding="utf-8",
+        )
+        record_execution_telemetry(
+            manifest_path,
+            telemetry_path,
+            now=self.now,
+        )
+        _, red_request = build_review_request(
+            manifest_path,
+            refined_path,
+            "red_team",
+            semantic_receipt_path=semantic_receipt,
+            now=self.now,
+        )
+        return manifest_path, refined_path, red_request
+
+    def register_targeted_red_team_receipt(
+        self,
+        manifest_path,
+        refined_path,
+        request,
+    ):
+        receipt_path = Path(
+            request["execution_packet"]["output_paths"]["review_receipt"]
+        )
+        receipt = {
+            "contract_version": "review-receipt/1.0",
+            "run_id": load_manifest(manifest_path)["run_id"],
+            "review_kind": "red_team",
+            "status": "passed",
+            "reviewer_kind": "logic_adversary",
+            "reviewer_id": request["reviewer_id"],
+            "invocation_id": request["invocation_id"],
+            "challenge": request["challenge"],
+            "request_sha256": load_manifest(manifest_path)["artifacts"]
+            ["red_team_request"]["artifact_sha256"],
+            "baseline_sha256": request["baseline_sha256"],
+            "output_sha256": file_sha256(refined_path),
+            "reviewed_item_hashes": sorted(
+                set(request.get("major_signal_item_hashes", []))
+                | set(request.get("conflict_item_hashes", []))
+            ),
+            "turns_used": 1,
+            "halt_condition_met": True,
+            "completed_at": self.now.isoformat(),
+        }
+        receipt_path.write_text(json.dumps(receipt), encoding="utf-8")
+        validate_review_receipt(
+            receipt,
+            manifest_path,
+            refined_path,
+            expected_kind="red_team",
+        )
+        register_review_receipt(
+            manifest_path,
+            refined_path,
+            receipt_path,
+            "red_team",
+            now=self.now,
+        )
+        return receipt_path
+
     def prepare_supplement_run(self, run_id, gap_ids, lane_by_gap=None):
         lane_by_gap = lane_by_gap or {}
         manifest_path, _ = create_run(
@@ -506,6 +733,8 @@ class RunContractTests(unittest.TestCase):
         completed_at = max(
             datetime.fromisoformat(access["checked_at"]) for access in access_log
         )
+        request_created_at = datetime.fromisoformat(request["created_at"])
+        started_at = max(request_created_at, completed_at - timedelta(seconds=1))
         result = {
             "contract_version": "supplement-result/1.0",
             "run_id": request["run_id"],
@@ -514,7 +743,15 @@ class RunContractTests(unittest.TestCase):
             "candidate_pool_sha256": request["candidate_pool_sha256"],
             "gap_id": gap_id,
             "lane": packet["assigned_lanes"][0],
-            "status": "failed" if blocked else "no_increment",
+            "status": "degraded" if blocked else "no_increment",
+            **(
+                {
+                    "failure_kind": "source_access",
+                    "failure_reason": "registered access evidence contains blocked sources",
+                }
+                if blocked
+                else {}
+            ),
             "executed_queries": [gap_id],
             "access_log": access_log,
             "candidates": [],
@@ -533,10 +770,193 @@ class RunContractTests(unittest.TestCase):
             },
             "turns_used": 1,
             "halt_condition_met": not blocked,
+            "started_at": started_at.isoformat(),
             "completed_at": completed_at.isoformat(),
         }
         result_path.write_text(json.dumps(result), encoding="utf-8")
         return result_path
+
+    def test_major_signal_without_l4_uses_targeted_red_team(self):
+        manifest_path, refined_path, request = self.prepare_targeted_red_team_request(
+            {
+                "major_signal": True,
+                "major_signal_reason": "requires independent qualification",
+                "intelligence_level": "L3",
+                "confidence": "high",
+                "near_term_decision_impact": True,
+                "decision_impact_reason": "changes immediate qualification priority",
+            }
+        )
+
+        self.assertEqual(request["review_mode"], "targeted_review")
+        self.assertFalse(request["deterministic_fast_path"])
+        self.assertEqual(request["reviewer_kind"], "logic_adversary")
+        self.assertEqual(request["max_turns"], 1)
+        self.assertEqual(request["execution_packet"]["timeout_ms"], 120000)
+        self.register_targeted_red_team_receipt(
+            manifest_path,
+            refined_path,
+            request,
+        )
+        self.assertEqual(
+            load_manifest(manifest_path)["stages"]["red_team"]["status"],
+            "completed",
+        )
+        errors, _ = validate_briefing_data(
+            json.loads(refined_path.read_text(encoding="utf-8"))
+        )
+        self.assertNotIn("targeted red-team review must record covered item hashes", errors)
+
+    def test_conflict_without_l4_uses_targeted_red_team(self):
+        manifest_path, refined_path, request = self.prepare_targeted_red_team_request(
+            {"evidence_conflict": True}
+        )
+
+        self.assertEqual(request["review_mode"], "targeted_review")
+        self.assertFalse(request["deterministic_fast_path"])
+        self.assertEqual(request["reviewer_kind"], "logic_adversary")
+        self.assertEqual(request["max_turns"], 1)
+        refined_item = json.loads(refined_path.read_text(encoding="utf-8"))["top_10"][0]
+        self.assertEqual(request["conflict_item_hashes"], [item_hash(refined_item)])
+        self.register_targeted_red_team_receipt(
+            manifest_path,
+            refined_path,
+            request,
+        )
+        self.assertEqual(
+            load_manifest(manifest_path)["stages"]["red_team"]["status"],
+            "completed",
+        )
+
+    def test_execution_budget_reserves_pending_agent_before_launch(self):
+        within = {
+            "telemetry": {
+                "executions": {
+                    "semantic:one": {
+                        "usage": {"total_tokens": 170000, "cost_usd": 2.0}
+                    }
+                }
+            }
+        }
+        budget = _assert_execution_budget_allows_launch(
+            within,
+            reserved_tokens=80000,
+            reserved_cost_usd=1.0,
+        )
+        self.assertEqual(budget["remaining_cost_usd"], 1.0)
+        cached_usage = {
+            "telemetry": {
+                "executions": {
+                    "supplemental:one": {
+                        "usage": {
+                            "total_tokens": 500000,
+                            "cache_read_tokens": 450000,
+                            "cache_write_tokens": 0,
+                            "cost_usd": 0.5,
+                        }
+                    }
+                }
+            }
+        }
+        cached_budget = _assert_execution_budget_allows_launch(
+            cached_usage,
+            reserved_tokens=80000,
+            reserved_cost_usd=1.0,
+        )
+        self.assertEqual(cached_budget["actual_tokens"], 50000)
+        self.assertEqual(cached_budget["raw_total_tokens"], 500000)
+        no_reservation_headroom = deepcopy(within)
+        no_reservation_headroom["telemetry"]["executions"]["semantic:one"][
+            "usage"
+        ]["total_tokens"] = 170001
+        with self.assertRaisesRegex(RunContractError, "reservation unavailable"):
+            _assert_execution_budget_allows_launch(
+                no_reservation_headroom,
+                reserved_tokens=80000,
+                reserved_cost_usd=1.0,
+            )
+        ceiling_reached = deepcopy(within)
+        ceiling_reached["telemetry"]["executions"]["semantic:one"]["usage"] = {
+            "total_tokens": 250000,
+            "cost_usd": 3.0,
+        }
+        with self.assertRaisesRegex(RunContractError, "budget exceeded"):
+            _assert_execution_budget_allows_launch(
+                ceiling_reached,
+                reserved_tokens=1,
+                reserved_cost_usd=0.01,
+            )
+
+    def test_unavailable_supplement_telemetry_keeps_cost_reservation(self):
+        manifest_path, _, request = self.prepare_supplement_run(
+            "unavailable-telemetry-run",
+            ["gap-a"],
+        )
+        manifest = load_manifest(manifest_path)
+        reservation = manifest["telemetry"]["reservations"]["supplemental:gap-a"]
+        self.assertEqual(reservation["status"], "reserved")
+        self.assertEqual(reservation["cost_usd"], 2.0)
+        self.assertEqual(
+            manifest["telemetry"]["summary"]["accounted_total_cost_usd"],
+            2.0,
+        )
+        semantic_headroom = _assert_execution_budget_allows_launch(
+            manifest,
+            reserved_tokens=40000,
+            reserved_cost_usd=0.75,
+        )
+        self.assertEqual(semantic_headroom["remaining_cost_usd"], 1.0)
+        self.assertEqual(
+            request["execution_packets"][0]["usage_budget"]["cost_usd"],
+            2.0,
+        )
+
+    def test_execution_telemetry_settles_reservation_to_actual_usage(self):
+        manifest_path, _, _ = self.prepare_supplement_run(
+            "settled-telemetry-run",
+            ["gap-a"],
+        )
+        run_dir = Path(load_manifest(manifest_path)["run_dir"])
+        artifact = run_dir / "execution_telemetry_supplemental_gap-a.json"
+        artifact.write_text(
+            json.dumps(
+                {
+                    "contract_version": "pih-execution-telemetry/1.0",
+                    "run_id": "settled-telemetry-run",
+                    "stage": "supplemental",
+                    "invocation_id": "gap-a",
+                    "status": "completed",
+                    "usage": {
+                        "input_tokens": 10,
+                        "output_tokens": 5,
+                        "reasoning_tokens": 0,
+                        "cache_read_tokens": 0,
+                        "cache_write_tokens": 0,
+                        "total_tokens": 15,
+                        "cost_usd": 0.25,
+                        "assistant_messages": 1,
+                        "tool_results": 0,
+                        "tool_errors": 0,
+                    },
+                    "duration_seconds": 1.0,
+                    "sources": [{"path": "supplement.jsonl", "sha256": "2" * 64}],
+                }
+            ),
+            encoding="utf-8",
+        )
+        record_execution_telemetry(manifest_path, artifact, now=self.now)
+
+        manifest = load_manifest(manifest_path)
+        reservation = manifest["telemetry"]["reservations"]["supplemental:gap-a"]
+        self.assertEqual(reservation["status"], "settled")
+        summary = manifest["telemetry"]["summary"]
+        self.assertEqual(summary["reserved_cost_usd"], 0.0)
+        self.assertEqual(summary["accounted_total_cost_usd"], 0.25)
+        _assert_execution_budget_allows_launch(
+            manifest,
+            reserved_tokens=80000,
+            reserved_cost_usd=2.75,
+        )
 
     def test_calendar_window_is_exactly_seven_inclusive_dates(self):
         window = calendar_window("2026-08-10", 7, "Asia/Shanghai")
@@ -655,6 +1075,57 @@ class RunContractTests(unittest.TestCase):
 
         with self.assertRaisesRegex(RunContractError, "skill bundle"):
             load_manifest(manifest_path)
+
+    def test_schema3_run_uses_immutable_bundle_snapshot_after_source_drift(self):
+        bundle = self.runtime_dir / "snapshot-source"
+        scripts = bundle / "scripts"
+        scripts.mkdir(parents=True)
+        skill = bundle / "SKILL.md"
+        run_cli = scripts / "run_daily.py"
+        skill.write_text("snapshot skill", encoding="utf-8")
+        run_cli.write_text("print('snapshot')\n", encoding="utf-8")
+        skill_hash = hashlib.sha256(b"snapshot skill").hexdigest()
+        cli_hash = hashlib.sha256(b"print('snapshot')\n").hexdigest()
+        resource_manifest = bundle / "resource-manifest.json"
+        resource_manifest.write_text(
+            json.dumps(
+                {
+                    "schema_version": 3,
+                    "skill": bundle.name,
+                    "hash_algorithm": "SHA-256",
+                    "text_hash_normalization": "LF",
+                    "skill_md": "SKILL.md",
+                    "skill_md_sha256": skill_hash,
+                    "top_level_file_hashes": [],
+                    "resource_file_hashes": [
+                        {"path": "scripts/run_daily.py", "sha256": cli_hash}
+                    ],
+                    "declared_local_dependencies": [],
+                    "missing_declared_dependencies": [],
+                }
+            ),
+            encoding="utf-8",
+        )
+        manifest_path, created = create_run(
+            runtime_dir=self.runtime_dir,
+            skill_path=skill,
+            resource_manifest_path=resource_manifest,
+            report_date="2026-09-01",
+            timezone_name="Asia/Shanghai",
+            run_id="snapshot-run",
+            now=self.now,
+        )
+        snapshot = created["bundle_snapshot"]
+        self.assertTrue(Path(snapshot["execution_cli_path"]).is_file())
+        self.assertNotEqual(Path(created["skill_path"]), skill.resolve())
+
+        run_cli.write_text("print('drifted')\n", encoding="utf-8")
+        loaded = load_manifest(manifest_path)
+        self.assertEqual(loaded["skill_bundle_sha256"], created["skill_bundle_sha256"])
+        self.assertEqual(
+            Path(snapshot["execution_cli_path"]).read_text(encoding="utf-8"),
+            "print('snapshot')\n",
+        )
 
     def test_tool_cache_changes_do_not_invalidate_the_active_run(self):
         scripts = self.runtime_dir / "scripts"
@@ -875,6 +1346,76 @@ class RunContractTests(unittest.TestCase):
                 now=self.now,
             )
         self.assertEqual(file_sha256(manifest_path), failed_sha)
+
+    def test_semantic_finalizer_timeout_expires_reservation_and_terminalizes_stage(self):
+        manifest_path, _, request = self.prepare_semantic_run()
+        packet = request["execution_packet"]
+        timeout = timedelta(milliseconds=packet["timeout_ms"] + 1)
+        with self.assertRaisesRegex(
+            RunContractError, "completed after registered timeout"
+        ):
+            finalize_semantic_decision(
+                manifest_path,
+                packet["draft_paths"]["refined_core"],
+                packet["draft_paths"]["decision"],
+                now=self.now + timeout,
+            )
+
+        manifest = load_manifest(manifest_path)
+        key = f"semantic_review:{request['invocation_id']}"
+        self.assertEqual(
+            manifest["telemetry"]["reservations"][key]["status"],
+            "expired",
+        )
+        self.assertEqual(
+            manifest["stages"]["semantic_review"]["status"],
+            "degraded_timeout",
+        )
+        self.assertEqual(
+            manifest["telemetry"]["summary"]["active_reservation_count"],
+            0,
+        )
+
+    def test_review_timeout_is_recorded_as_terminal_degraded_checkpoint(self):
+        manifest_path, request_path, request = self.prepare_semantic_run()
+        request_sha = file_sha256(request_path)
+        state_path = self.runtime_dir / "semantic_timeout_state.json"
+        fingerprint = {
+            "event_ordinal": 1,
+            "last_event_at": self.now.isoformat(),
+            "tool_call_count": 1,
+            "milestone_seq": 0,
+        }
+
+        _, decision = update_review_progress(
+            manifest_path,
+            "semantic",
+            request["invocation_id"],
+            request_sha,
+            state_path,
+            fingerprint,
+            "timed_out",
+            evaluate_progress,
+            now=self.now,
+        )
+
+        self.assertEqual(decision, "degraded_timeout")
+        manifest = load_manifest(manifest_path)
+        stage = manifest["stages"]["semantic_review"]
+        self.assertEqual(stage["status"], "degraded_timeout")
+        self.assertEqual(stage["metadata"]["progress_decision"], "degraded_timeout")
+        with self.assertRaisesRegex(RunContractError, "final"):
+            update_review_progress(
+                manifest_path,
+                "semantic",
+                request["invocation_id"],
+                request_sha,
+                state_path,
+                dict(fingerprint, event_ordinal=2),
+                "running",
+                evaluate_progress,
+                now=self.now,
+            )
 
     def test_two_concurrent_progress_updates_preserve_both_events(self):
         manifest_path, request_path, request = self.prepare_semantic_run()
@@ -1132,7 +1673,7 @@ class RunContractTests(unittest.TestCase):
         with self.assertRaisesRegex(RunContractError, "history slice lineage"):
             review_input_bundle_sha256(tampered_manifest)
 
-        _, request = build_review_request(
+        request_path, request = build_review_request(
             manifest_path,
             None,
             "semantic",
@@ -1178,9 +1719,19 @@ class RunContractTests(unittest.TestCase):
             ),
         )
         self.assertIn(
-            "validate-semantic-draft",
-            packet["validation_command"],
+            "semantic_agent.py",
+            " ".join(packet["validation_command"]),
         )
+        self.assertEqual(packet["validation_command"], packet["agent_helper"]["finalize_command"])
+        self.assertIn("decision", packet["draft_paths"])
+        self.assertIn("dynamic", packet["draft_paths"])
+        self.assertEqual(packet["write_scope"], [packet["draft_paths"]["dynamic"]])
+        self.assertNotIn(packet["draft_paths"]["review_receipt"], packet["write_scope"])
+        self.assertEqual(packet["tool_budget"], {"soft": 6, "hard": 10, "block": "*"})
+        context = build_semantic_agent_context(request_path)
+        self.assertEqual(context["contract_version"], "semantic-agent-context/1.0")
+        self.assertEqual(context["dynamic_draft_path"], packet["draft_paths"]["dynamic"])
+        self.assertNotIn("bound_artifacts", context)
         self.assertEqual(request["contract_version"], "review-request/1.1")
         self.assertEqual(
             load_manifest(manifest_path)["stages"]["semantic_review"]["status"],
@@ -1203,21 +1754,40 @@ class RunContractTests(unittest.TestCase):
             metadata={"source_total": 3, "source_ok": 3, "source_failed": 0},
             now=self.now,
         )
-        self.bind_candidates(manifest_path)
+        self.bind_candidates(
+            manifest_path,
+            items=[
+                {
+                    "title": "Agent release",
+                    "url": "https://example.org/agent",
+                    "provisional_domain": "technology",
+                    "summary": "A new agent runtime.",
+                },
+                {
+                    "title": "Clinical AI release",
+                    "url": "https://example.org/clinical",
+                    "provisional_domain": "healthcare_digital",
+                    "summary": "A clinical AI deployment.",
+                },
+            ],
+        )
 
-        with self.assertRaisesRegex(RunContractError, "max_turns"):
-            build_supplement_request(
-                manifest_path,
-                [
-                    {
-                        "gap_id": "bad-turns",
-                        "lane": "TechRadar",
-                        "query_scope": "AI",
-                        "max_turns": 0,
-                    }
-                ],
-                now=self.now,
-            )
+        for field, value in (("max_turns", 0), ("max_queries", 0)):
+            with self.subTest(field=field), self.assertRaisesRegex(
+                RunContractError, field
+            ):
+                build_supplement_request(
+                    manifest_path,
+                    [
+                        {
+                            "gap_id": f"bad-{field}",
+                            "lane": "TechRadar",
+                            "query_scope": "AI",
+                            field: value,
+                        }
+                    ],
+                    now=self.now,
+                )
         request_path, request = build_supplement_request(
             manifest_path,
             [
@@ -1233,6 +1803,7 @@ class RunContractTests(unittest.TestCase):
         )
 
         self.assertTrue(request_path.exists())
+        self.assertEqual(request["contract_version"], "supplement-request/1.1")
         self.assertEqual(request["run_id"], "run-test-001")
         self.assertEqual(request["baseline_sha256"], load_manifest(manifest_path)["stages"]["baseline"]["artifact_sha256"])
         self.assertEqual(request["gaps"][0]["gap_id"], "technology")
@@ -1262,6 +1833,51 @@ class RunContractTests(unittest.TestCase):
             packet["output_paths"]["result"],
         )
         self.assertTrue(packet["write_authorization"]["forbid_other_writes"])
+        self.assertEqual(set(packet["bound_input_paths"]), {"lane_slice"})
+        self.assertEqual(
+            packet["execution_budget"],
+            {"max_queries": 3, "max_urls": 6, "max_duration_seconds": 180},
+        )
+        self.assertEqual(
+            packet["finalization"],
+            {
+                "grace_seconds": 60,
+                "result_completed_at_semantics": "source_check_completed",
+            },
+        )
+        self.assertEqual(
+            packet["tool_budget"],
+            {"soft": 8, "hard": 12, "block": "*"},
+        )
+        self.assertTrue(Path(packet["agent_helper"]["path"]).is_file())
+        self.assertEqual(
+            packet["agent_helper"]["sha256"],
+            file_sha256(Path(packet["agent_helper"]["path"])),
+        )
+        self.assertIn("supplement_agent.py context", packet["task_message"])
+        self.assertIn("supplement_agent.py finalize", packet["task_message"])
+        self.assertIn("stop all research", packet["task_message"])
+        lane_slice_path = Path(packet["lane_slice"]["path"])
+        lane_slice = json.loads(lane_slice_path.read_text(encoding="utf-8"))
+        self.assertEqual(lane_slice["gap"]["gap_id"], "technology")
+        self.assertEqual(len(lane_slice["candidates"]), 1)
+        self.assertEqual(
+            lane_slice["candidates"][0]["url"], "https://example.org/agent"
+        )
+        self.assertNotIn("history_snapshot", packet["bound_input_paths"])
+        self.assertEqual(len(request["launch_plan"]), 1)
+        self.assertEqual(request["launch_plan"][0]["workers"][0]["gap_id"], "technology")
+
+        original_lane_slice = lane_slice_path.read_bytes()
+        lane_slice_path.write_text("{}", encoding="utf-8")
+        with self.assertRaisesRegex(RunContractError, "lane slice path or hash"):
+            register_supplement_results(
+                manifest_path,
+                request_path,
+                [],
+                now=self.now,
+            )
+        lane_slice_path.write_bytes(original_lane_slice)
 
         forged_request = self.runtime_dir / "forged-request.json"
         forged_request.write_text(json.dumps(request), encoding="utf-8")
@@ -1278,6 +1894,194 @@ class RunContractTests(unittest.TestCase):
                 manifest_path,
                 [{"gap_id": "other", "lane": "Ranger", "query_scope": "risk"}],
                 now=self.now,
+            )
+
+    def test_supplement_launch_plan_uses_bounded_fresh_waves(self):
+        _, _, request = self.prepare_supplement_run(
+            "launch-plan-run",
+            ["gap-a", "gap-b", "gap-c", "gap-d"],
+        )
+
+        self.assertEqual([len(wave["workers"]) for wave in request["launch_plan"]], [1, 3])
+        self.assertEqual(request["launch_plan"][0]["mode"], "canary")
+        self.assertEqual(
+            [
+                worker["gap_id"]
+                for wave in request["launch_plan"]
+                for worker in wave["workers"]
+            ],
+            ["gap-a", "gap-b", "gap-c", "gap-d"],
+        )
+        self.assertTrue(
+            all(
+                "supplement_agent.py context" in worker["task_message"]
+                and worker["timeout_ms"] == 240_000
+                and worker["tool_budget"]
+                == {"soft": 8, "hard": 12, "block": "*"}
+                and worker["token_budget"] == 30_000
+                and worker["cost_budget_usd"] == 0.5
+                for wave in request["launch_plan"]
+                for worker in wave["workers"]
+            )
+        )
+
+    def test_supplement_timeout_state_reconciles_to_degraded_manifest(self):
+        manifest_path, request_path, request = self.prepare_supplement_run(
+            "timeout-reconcile-run",
+            ["gap-timeout"],
+        )
+        packet = request["execution_packets"][0]
+        state_path = Path(packet["progress"]["state_path"])
+        state_path.write_text(
+            json.dumps(
+                {
+                    "progress_id": "gap-timeout",
+                    "last_decision": "degraded_timeout",
+                    "terminal_status": "degraded_timeout",
+                    "recorded_at": self.now.isoformat(),
+                    "previous_fingerprint": {
+                        "event_ordinal": 1,
+                        "last_event_at": self.now.isoformat(),
+                        "tool_call_count": 1,
+                        "milestone_seq": 1,
+                    },
+                }
+            ),
+            encoding="utf-8",
+        )
+
+        late_result = self.write_supplement_result(
+            request_path,
+            request,
+            "gap-timeout",
+            [
+                {
+                    "status": "verified",
+                    "checked_at": (self.now + timedelta(seconds=1)).isoformat(),
+                    "method": "http_get",
+                    "requested_url": "https://example.org/late",
+                    "final_url": "https://example.org/late",
+                    "http_status": 200,
+                    "failure_class": "none",
+                }
+            ],
+        )
+        aggregate_path, aggregate = reconcile_supplement_progress(
+            manifest_path,
+            request_path,
+            [late_result],
+            [],
+            now=self.now + timedelta(seconds=2),
+        )
+
+        self.assertEqual(aggregate["status"], "degraded")
+        self.assertEqual(aggregate["results"][0]["status"], "failed")
+        self.assertIn(
+            "degraded_timeout",
+            aggregate["results"][0]["failure_reason"],
+        )
+        self.assertTrue(aggregate_path.is_file())
+        manifest = load_manifest(manifest_path)
+        self.assertEqual(manifest["stages"]["supplemental"]["status"], "degraded")
+        final_path = Path(packet["output_paths"]["result"])
+        self.assertTrue(final_path.is_file())
+
+    def test_supplement_finalizer_validates_before_atomic_publication(self):
+        manifest_path, request_path, request = self.prepare_supplement_run(
+            "finalizer-run",
+            ["gap-a"],
+        )
+        access_log = [
+            {
+                "status": "verified",
+                "checked_at": (self.now + timedelta(seconds=1)).isoformat(),
+                "method": "http_get",
+                "requested_url": "https://example.org/source",
+                "final_url": "https://example.org/source",
+                "http_status": 200,
+                "failure_class": "none",
+            }
+        ]
+        final_path = self.write_supplement_result(
+            request_path,
+            request,
+            "gap-a",
+            access_log,
+        )
+        draft_path = Path(request["execution_packets"][0]["output_paths"]["draft"])
+        final_path.replace(draft_path)
+        invalid = json.loads(draft_path.read_text(encoding="utf-8"))
+        invalid.pop("started_at")
+        draft_path.write_text(json.dumps(invalid), encoding="utf-8")
+
+        with self.assertRaisesRegex(RunContractError, "started_at"):
+            register_supplement_results(
+                manifest_path,
+                request_path,
+                [draft_path],
+                publish_drafts=True,
+                now=self.now + timedelta(seconds=2),
+            )
+        self.assertTrue(draft_path.exists())
+        self.assertFalse(final_path.exists())
+
+        invalid["started_at"] = request["created_at"]
+        draft_path.write_text(json.dumps(invalid), encoding="utf-8")
+        _, aggregate = register_supplement_results(
+            manifest_path,
+            request_path,
+            [draft_path],
+            publish_drafts=True,
+            now=self.now + timedelta(seconds=2),
+        )
+
+        self.assertFalse(draft_path.exists())
+        self.assertTrue(final_path.exists())
+        self.assertEqual(aggregate["status"], "no_increment")
+
+    def test_supplement_result_enforces_query_and_duration_budgets(self):
+        manifest_path, request_path, request = self.prepare_supplement_run(
+            "bounded-result-run",
+            ["gap-a"],
+        )
+        access_log = [
+            {
+                "status": "verified",
+                "checked_at": (self.now + timedelta(seconds=1)).isoformat(),
+                "method": "http_get",
+                "requested_url": "https://example.org/source",
+                "final_url": "https://example.org/source",
+                "http_status": 200,
+                "failure_class": "none",
+            }
+        ]
+        result_path = self.write_supplement_result(
+            request_path,
+            request,
+            "gap-a",
+            access_log,
+        )
+        result = json.loads(result_path.read_text(encoding="utf-8"))
+        result["executed_queries"] = ["q1", "q2", "q3", "q4"]
+        result_path.write_text(json.dumps(result), encoding="utf-8")
+        with self.assertRaisesRegex(RunContractError, "max_queries"):
+            register_supplement_results(
+                manifest_path,
+                request_path,
+                [result_path],
+                now=self.now + timedelta(seconds=2),
+            )
+
+        result["executed_queries"] = ["q1"]
+        result["started_at"] = self.now.isoformat()
+        result["completed_at"] = (self.now + timedelta(seconds=181)).isoformat()
+        result_path.write_text(json.dumps(result), encoding="utf-8")
+        with self.assertRaisesRegex(RunContractError, "max_duration_seconds"):
+            register_supplement_results(
+                manifest_path,
+                request_path,
+                [result_path],
+                now=self.now + timedelta(seconds=182),
             )
 
     def test_review_receipt_rejects_heuristic_reviewer_and_hash_mismatch(self):
@@ -1402,6 +2206,7 @@ class RunContractTests(unittest.TestCase):
                     },
                     "turns_used": 1,
                     "halt_condition_met": True,
+                    "started_at": self.now.isoformat(),
                     "completed_at": self.now.isoformat(),
                 }
             ),
@@ -1533,7 +2338,9 @@ class RunContractTests(unittest.TestCase):
             "failure_class": "permanent",
             "error_code": "HTTP_404",
         }
-        permanent_retry["status"] = "failed"
+        permanent_retry["status"] = "degraded"
+        permanent_retry["failure_kind"] = "source_access"
+        permanent_retry["failure_reason"] = "source access failed"
         permanent_retry["access_log"] = [blocked, dict(blocked)]
         permanent_retry["coverage"] = {
             "attempted": 2,
@@ -1681,7 +2488,9 @@ class RunContractTests(unittest.TestCase):
                 "failure_class": "permanent",
                 "error_code": error_code,
             }
-            permanent_transport["status"] = "failed"
+            permanent_transport["status"] = "degraded"
+            permanent_transport["failure_kind"] = "source_access"
+            permanent_transport["failure_reason"] = "source access failed"
             permanent_transport["access_log"] = [
                 blocked_transport,
                 deepcopy(blocked_transport),
@@ -1711,7 +2520,9 @@ class RunContractTests(unittest.TestCase):
                     )
 
         unclassified_transport = json.loads(json.dumps(aggregate["results"][0]))
-        unclassified_transport["status"] = "failed"
+        unclassified_transport["status"] = "degraded"
+        unclassified_transport["failure_kind"] = "source_access"
+        unclassified_transport["failure_reason"] = "source access failed"
         unclassified_transport["access_log"] = [
             {
                 "status": "blocked",
@@ -2072,6 +2883,7 @@ class RunContractTests(unittest.TestCase):
                     },
                     "turns_used": 0,
                     "halt_condition_met": False,
+                    "started_at": self.now.isoformat(),
                     "completed_at": self.now.isoformat(),
                 }
             ),
@@ -2118,6 +2930,163 @@ class RunContractTests(unittest.TestCase):
         result_path.write_text(json.dumps(bad), encoding="utf-8")
         with self.assertRaisesRegex(RunContractError, "run_id"):
             register_supplement_results(manifest_path, request_path, [result_path], now=self.now)
+
+    def test_semantic_finalizer_assembles_receipt_and_publishes(self):
+        manifest_path, _ = self.new_run()
+        baseline = self.runtime_dir / "semantic-finalizer-baseline.json"
+        baseline.write_text('{"items": []}', encoding="utf-8")
+        record_stage(
+            manifest_path,
+            "baseline",
+            "degraded",
+            artifact_path=baseline,
+            metadata={
+                "coverage": {
+                    "source_attempted": 10,
+                    "source_succeeded": 8,
+                    "source_failed": 2,
+                    "raw_candidates": 10,
+                    "dated_candidates": 9,
+                    "reasons": [],
+                }
+            },
+            now=self.now,
+        )
+        self.bind_history(manifest_path)
+        manifest = load_manifest(manifest_path)
+        refined_payload = cloned_v14_payload()
+        refined_payload.update(
+            {
+                "run_id": manifest["run_id"],
+                "report_date": manifest["report_date"],
+                "generated_at": self.now.isoformat(),
+                "topic": manifest["topic"],
+                "region": manifest["region"],
+                "window": manifest["window"],
+            }
+        )
+        item = refined_payload["top_10"][0]
+        candidate = {
+            "candidate_id": item["candidate_refs"][0],
+            "event_id": item["event_id"],
+            "event_identity": deepcopy(item["event_identity"]),
+            "identity_quality": "semantic",
+            "primary_domain": item["primary_domain"],
+            "url": item["url"],
+            "title": item["title"],
+            "source": item["source"],
+            "source_type": item["source_type"],
+            "published_at": item["published_at"],
+            "published_at_source": item["published_at_source"],
+            "access_check": deepcopy(item["access_check"]),
+        }
+        candidate["candidate_object_sha256"] = candidate_object_hash(candidate)
+        corroborating_url = "https://independent.example.net/corroboration"
+        corroborating = {
+            "candidate_id": candidate_ref(corroborating_url),
+            "event_id": item["event_id"],
+            "event_identity": deepcopy(item["event_identity"]),
+            "identity_quality": "semantic",
+            "primary_domain": item["primary_domain"],
+            "url": corroborating_url,
+            "title": "Independent clinical AI evaluation report",
+            "source": "Independent Evaluator",
+            "source_type": "secondary",
+            "published_at": item["published_at"],
+            "published_at_source": item["published_at_source"],
+            "access_check": {
+                "status": "verified",
+                "checked_at": "2026-08-10T09:01:00+08:00",
+                "method": "http_get",
+                "requested_url": corroborating_url,
+                "final_url": corroborating_url,
+                "http_status": 200,
+            },
+        }
+        corroborating["candidate_object_sha256"] = candidate_object_hash(
+            corroborating
+        )
+        item["candidate_refs"] = [
+            candidate["candidate_id"],
+            corroborating["candidate_id"],
+        ]
+        item["corroboration_status"] = "multi_independent"
+        extra_candidates = []
+        for index in (2,):
+            extra = {
+                "candidate_id": candidate_ref(f"https://example.org/{index}"),
+                "url": f"https://example.org/{index}",
+                "title": f"candidate {index}",
+            }
+            extra["candidate_object_sha256"] = candidate_object_hash(extra)
+            extra_candidates.append(extra)
+        self.bind_candidates(
+            manifest_path,
+            [candidate, corroborating, *extra_candidates],
+        )
+        supplement = self.runtime_dir / "semantic-finalizer-supplement.json"
+        supplement.write_text(
+            '{"coverage":{"attempted":0,"succeeded":0,"failed":0},"results":[]}',
+            encoding="utf-8",
+        )
+        record_stage(
+            manifest_path,
+            "supplemental",
+            "completed",
+            artifact_path=supplement,
+            now=self.now,
+        )
+        _, request = build_review_request(
+            manifest_path,
+            None,
+            "semantic",
+            now=self.now,
+        )
+        self.assertEqual(request["execution_packet"]["timeout_ms"], 240000)
+        core_draft = Path(request["execution_packet"]["draft_paths"]["refined_core"])
+        decision = Path(request["execution_packet"]["draft_paths"]["decision"])
+        core_draft.write_text(json.dumps(refined_payload), encoding="utf-8")
+        decision.write_text(
+            json.dumps(
+                {
+                    "contract_version": "semantic-decision/1.0",
+                    "status": "passed",
+                    "turns_used": 1,
+                    "halt_condition_met": True,
+                }
+            ),
+            encoding="utf-8",
+        )
+
+        refined_path, receipt_path = finalize_semantic_decision(
+            manifest_path,
+            core_draft,
+            decision,
+            now=self.now,
+        )
+
+        receipt = json.loads(receipt_path.read_text(encoding="utf-8"))
+        self.assertEqual(receipt["reviewed_item_hashes"], [item_hash(item)])
+        self.assertEqual(
+            receipt["lineage_bindings"][0]["inputs"][0][
+                "candidate_object_sha256"
+            ],
+            candidate["candidate_object_sha256"],
+        )
+        self.assertEqual(
+            receipt["lineage_bindings"][0]["inputs"][1][
+                "candidate_object_sha256"
+            ],
+            corroborating["candidate_object_sha256"],
+        )
+        self.assertEqual(len(receipt["access_log"]), 2)
+        self.assertEqual(receipt["output_sha256"], file_sha256(refined_path))
+        self.assertEqual(
+            load_manifest(manifest_path)["stages"]["semantic_review"]["status"],
+            "completed",
+        )
+        self.assertFalse(core_draft.exists())
+        self.assertFalse(decision.exists())
 
     def test_review_registration_binds_semantic_and_red_team_receipts(self):
         manifest_path, _ = self.new_run()
@@ -2513,93 +3482,24 @@ class RunContractTests(unittest.TestCase):
         self.assertEqual(red_request["max_turns"], 1)
         self.assertEqual(red_request["l4_item_hashes"], [])
         self.assertEqual(red_request["major_signal_item_hashes"], [])
-        validation_command = red_request["execution_packet"]["validation_command"]
-        self.assertIn("validate-red-team-draft", validation_command)
-        self.assertEqual(
-            red_request["execution_packet"]["bound_semantic_receipt_path"],
-            str(semantic.resolve()),
-        )
+        self.assertTrue(red_request["deterministic_fast_path"])
+        self.assertEqual(red_request["reviewer_kind"], "deterministic_gate")
+        self.assertEqual(red_request["reviewer_id"], "NoL4Gate")
+        self.assertEqual(red_request["execution_packet"]["timeout_ms"], 0)
+        self.assertEqual(red_request["network_policy"], "forbidden")
         red_team = Path(
             red_request["execution_packet"]["output_paths"]["review_receipt"]
         )
-        red_team_draft = Path(
-            red_request["execution_packet"]["draft_paths"]["review_receipt"]
-        )
-        receipt = json.loads(semantic.read_text(encoding="utf-8"))
-        receipt.update(
-            {
-                "review_kind": "red_team",
-                "status": "failed",
-                "reviewer_kind": "logic_adversary",
-                "reviewer_id": red_request["reviewer_id"],
-                "invocation_id": red_request["invocation_id"],
-                "challenge": red_request["challenge"],
-                "request_sha256": load_manifest(manifest_path)["artifacts"]["red_team_request"]["artifact_sha256"],
-                "turns_used": 1,
-                "halt_condition_met": True,
-                "reviewed_item_hashes": [],
-            }
-        )
-        receipt["status"] = "passed"
-        red_team_draft.write_text(json.dumps(receipt), encoding="utf-8")
-        with self.assertRaisesRegex(RunContractError, "must be not_required"):
-            validate_red_team_draft(
-                manifest_path,
-                refined,
-                semantic,
-                red_team_draft,
-            )
-        receipt["status"] = "not_required"
-        red_team_draft.write_text(json.dumps(receipt), encoding="utf-8")
-        self.assertIsInstance(
-            validate_red_team_draft(
-                manifest_path,
-                refined,
-                semantic,
-                red_team_draft,
-            ),
-            list,
-        )
-
-        receipt["status"] = "failed"
-        red_team.write_text(json.dumps(receipt), encoding="utf-8")
-
-        with self.assertRaisesRegex(RunContractError, "not acceptable"):
-            register_review_bundle(
-                manifest_path,
-                refined,
-                semantic,
-                red_team,
-                now=self.now,
-            )
-        self.assertEqual(
-            load_manifest(manifest_path)["stages"]["semantic_review"]["status"],
-            "completed",
-        )
-        self.assertEqual(
-            load_manifest(manifest_path)["stages"]["red_team"]["status"],
-            "running",
-        )
-
-        receipt["status"] = "passed"
-        red_team.write_text(json.dumps(receipt), encoding="utf-8")
-        with self.assertRaisesRegex(RunContractError, "must be not_required"):
-            register_review_bundle(
-                manifest_path,
-                refined,
-                semantic,
-                red_team,
-                now=self.now,
-            )
-
-        receipt["status"] = "not_required"
-        red_team.write_text(json.dumps(receipt), encoding="utf-8")
-        register_review_bundle(
+        receipt = json.loads(red_team.read_text(encoding="utf-8"))
+        self.assertEqual(receipt["status"], "not_required")
+        self.assertEqual(receipt["reviewer_kind"], "deterministic_gate")
+        self.assertEqual(receipt["reviewed_item_hashes"], [])
+        self.assertEqual(receipt["turns_used"], 0)
+        validate_review_receipt(
+            receipt,
             manifest_path,
             refined,
-            semantic,
-            red_team,
-            now=self.now + timedelta(seconds=90),
+            expected_kind="red_team",
         )
 
         stages = load_manifest(manifest_path)["stages"]
@@ -2614,20 +3514,8 @@ class RunContractTests(unittest.TestCase):
             "no_l4_fast_path",
         )
         self.assertEqual(stages["red_team"]["metadata"]["max_turns"], 1)
-        self.assertEqual(stages["red_team"]["metadata"]["turns_used"], 1)
+        self.assertEqual(stages["red_team"]["metadata"]["turns_used"], 0)
         self.assertEqual(stages["red_team"]["metadata"]["elapsed_seconds"], 0.0)
-        self.assertEqual(
-            stages["red_team"]["metadata"]["request_to_receipt_seconds"],
-            0.0,
-        )
-        self.assertEqual(
-            stages["red_team"]["metadata"]["receipt_to_registration_seconds"],
-            90.0,
-        )
-        self.assertEqual(
-            stages["red_team"]["metadata"]["request_to_registration_seconds"],
-            90.0,
-        )
 
 
 if __name__ == "__main__":

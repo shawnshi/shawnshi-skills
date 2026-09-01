@@ -5,9 +5,4 @@ interface:
   icon_large: assets/icon.svg
   default_prompt: 使用 $hit-solution-architect 选择合适交付模式，设计或评审证据可追溯、边界清晰且可验收的医疗技术方案。
 policy:
-  products:
-  - chatgpt
-  - codex
-  - api
-  - atlas
   allow_implicit_invocation: true

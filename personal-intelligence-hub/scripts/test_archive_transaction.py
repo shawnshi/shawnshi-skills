@@ -9,7 +9,7 @@ import tempfile
 import threading
 import unittest
 from pathlib import Path
-from unittest.mock import patch
+from unittest.mock import Mock, patch
 
 from archive_transaction import (
     ArchivePostcommitError,
@@ -164,6 +164,7 @@ def windows_owner_group_dacl_sddl(path: Path) -> str:
         )
         if not converted:
             raise ctypes.WinError(ctypes.get_last_error())
+        assert string_descriptor.value is not None
         return string_descriptor.value
     finally:
         if string_descriptor:
@@ -182,8 +183,8 @@ class ArchiveTransactionTests(unittest.TestCase):
             collision_marker = collision / "owner.txt"
             collision_marker.write_text("unchanged", encoding="utf-8")
 
-            colliding_uuid = unittest.mock.Mock(hex="collision")
-            fresh_uuid = unittest.mock.Mock(hex="fresh")
+            colliding_uuid = Mock(hex="collision")
+            fresh_uuid = Mock(hex="fresh")
             with patch(
                 "archive_transaction.uuid.uuid4",
                 side_effect=(colliding_uuid, fresh_uuid),
@@ -609,7 +610,7 @@ class ArchiveTransactionTests(unittest.TestCase):
         with tempfile.TemporaryDirectory() as directory:
             root = Path(directory)
             observed: dict[str, object] = {}
-            expected_state = {
+            expected_state: dict[str, str | None] = {
                 f"intelligence_20260810_briefing.{suffix}": None
                 for suffix in ("json", "md", "manifest.json")
             }
@@ -656,6 +657,28 @@ class ArchiveTransactionTests(unittest.TestCase):
             self.assertEqual(list(root.glob("intelligence_*_briefing*")), [])
             self.assertEqual(list(root.glob(".pih-stage-*")), [])
             self.assertFalse((root / ".pih-archive.lock").exists())
+
+    def test_postcommit_mutation_rolls_back_formal_set(self):
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+
+            def mutate_markdown(result) -> None:
+                result.markdown_path.write_text("mutated", encoding="utf-8")
+
+            with self.assertRaisesRegex(
+                ArchiveTransactionError, "committed Markdown differs"
+            ):
+                commit_briefing_pair(
+                    valid_payload(),
+                    news_dir=root,
+                    report_date="2026-08-10",
+                    run_id="run-20260810",
+                    render_markdown=render_markdown,
+                    postcommit_action=mutate_markdown,
+                )
+
+            self.assertEqual(list(root.glob("intelligence_*_briefing*")), [])
+            self.assertEqual(list(root.glob(".pih-stage-*")), [])
 
     def test_postcommit_failure_preserves_verified_formal_set(self):
         with tempfile.TemporaryDirectory() as directory:
@@ -785,7 +808,7 @@ class ArchiveTransactionTests(unittest.TestCase):
         with tempfile.TemporaryDirectory() as directory:
             root = Path(directory)
             targets = self._seed_existing_set(root)
-            expected_state = {
+            expected_state: dict[str, str | None] = {
                 path.name: hashlib.sha256(path.read_bytes()).hexdigest()
                 for path in targets.values()
             }

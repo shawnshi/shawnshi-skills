@@ -52,6 +52,7 @@
 - 日期：事件 {{ item.event_date }}（{{ item.event_date_source }}）｜发布 {{ item.published_at }}（{{ item.published_at_source }}）｜检索 {{ item.retrieved_at }}
 - 访问核验：{{ item.access_check.status }} / {{ item.access_check.method }} / HTTP {{ item.access_check.http_status }}
 - 等级：{{ item.intelligence_level }}｜条目置信度：{{ item.confidence }}{% if item.major_signal %}｜重大资讯：{{ item.major_signal_reason }}{% endif %}
+
 - 事实：{{ item.fact }}
 - 连接：{{ item.connection }}
 - 推断：{{ item.deduction }}
@@ -60,7 +61,6 @@
 
 {% endfor %}
 {% if not technology_items %}- 当前窗口没有通过质量门的技术资讯。{% endif %}
-
 ## 医疗数字化资讯
 
 {% set healthcare_items = top_10 | selectattr("primary_domain", "equalto", "healthcare_digital") | list %}
@@ -72,6 +72,7 @@
 - 日期：事件 {{ item.event_date }}（{{ item.event_date_source }}）｜发布 {{ item.published_at }}（{{ item.published_at_source }}）｜检索 {{ item.retrieved_at }}
 - 访问核验：{{ item.access_check.status }} / {{ item.access_check.method }} / HTTP {{ item.access_check.http_status }}
 - 等级：{{ item.intelligence_level }}｜条目置信度：{{ item.confidence }}{% if item.major_signal %}｜重大资讯：{{ item.major_signal_reason }}{% endif %}
+
 - 事实：{{ item.fact }}
 - 连接：{{ item.connection }}
 - 推断：{{ item.deduction }}
@@ -81,12 +82,14 @@
 {% endfor %}
 {% if not healthcare_items %}- 当前窗口没有通过质量门的医疗数字化资讯。{% endif %}
 
+
 ## 覆盖状态
 
 - 运行状态：{{ coverage.run_status }}｜覆盖置信度：{{ coverage.coverage_confidence }}｜基线状态：{{ coverage.baseline_status }}
 - 来源：尝试 {{ coverage.source_attempted }} / 成功 {{ coverage.source_succeeded }} / 失败 {{ coverage.source_failed }}（成功率 {{ (coverage.source_success_rate * 100) | round(1) }}%）
 - 有效发布日期候选比例：{{ (coverage.dated_candidate_rate * 100) | round(1) }}%
 {% if coverage.required_lane_failures %}- 未完成车道：{{ coverage.required_lane_failures | join("、") }}{% endif %}
+
 {% for reason in coverage.reasons -%}
 - 覆盖说明：{{ reason }}
 {% endfor %}
@@ -111,7 +114,6 @@
 - 反方案例：{{ adversarial_audit.devil_advocate }}
 - 盲点：{{ adversarial_audit.blind_spots }}
 {% endif %}
-
 ## 数据缺口
 
 {% for gap in data_gaps -%}

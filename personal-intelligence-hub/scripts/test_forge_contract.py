@@ -15,6 +15,7 @@ from forge import (
     assemble_final_payload,
     forge_briefing,
     preview_briefing,
+    render_briefing,
 )
 from history_manager import generate_event_id
 from run_contract import (
@@ -96,6 +97,14 @@ class ForgeContractTests(unittest.TestCase):
 
     def tearDown(self):
         self.directory.cleanup()
+
+    def test_template_keeps_list_items_and_headings_separated(self):
+        markdown = render_briefing(valid_v14_payload())
+        self.assertNotRegex(markdown, r"置信度：[^\n]+- 事实：")
+        self.assertNotRegex(markdown, r"未完成车道：[^\n]+- 覆盖说明：")
+        self.assertNotIn("\n\n\n## ", markdown)
+        for heading in ("## 医疗数字化资讯", "## 覆盖状态", "## 数据缺口"):
+            self.assertIn(f"\n\n{heading}\n", markdown)
 
     def _run_with_baseline(
         self,
@@ -306,31 +315,38 @@ class ForgeContractTests(unittest.TestCase):
             semantic_receipt_path=semantic,
             now=self.now,
         )
-        manifest = load_manifest(manifest_path)
-        red = Path(red_request["execution_packet"]["output_paths"]["review_receipt"])
-        red.write_text(
-            json.dumps(
-                {
-                    "contract_version": "review-receipt/1.0",
-                    "run_id": run_id,
-                    "review_kind": "red_team",
-                    "status": "not_required",
-                    "reviewer_kind": "logic_adversary",
-                    "reviewer_id": red_request["reviewer_id"],
-                    "invocation_id": red_request["invocation_id"],
-                    "challenge": red_request["challenge"],
-                    "request_sha256": manifest["artifacts"]["red_team_request"]["artifact_sha256"],
-                    "baseline_sha256": manifest["stages"]["baseline"]["artifact_sha256"],
-                    "output_sha256": file_sha256(refined),
-                    "reviewed_item_hashes": [],
-                    "turns_used": 1,
-                    "halt_condition_met": True,
-                    "completed_at": self.now.isoformat(),
-                }
-            ),
-            encoding="utf-8",
-        )
-        register_review_receipt(manifest_path, refined, red, "red_team", now=self.now)
+        if not red_request.get("deterministic_fast_path"):
+            manifest = load_manifest(manifest_path)
+            red = Path(red_request["execution_packet"]["output_paths"]["review_receipt"])
+            red.write_text(
+                json.dumps(
+                    {
+                        "contract_version": "review-receipt/1.0",
+                        "run_id": run_id,
+                        "review_kind": "red_team",
+                        "status": "not_required",
+                        "reviewer_kind": "logic_adversary",
+                        "reviewer_id": red_request["reviewer_id"],
+                        "invocation_id": red_request["invocation_id"],
+                        "challenge": red_request["challenge"],
+                        "request_sha256": manifest["artifacts"]["red_team_request"]["artifact_sha256"],
+                        "baseline_sha256": manifest["stages"]["baseline"]["artifact_sha256"],
+                        "output_sha256": file_sha256(refined),
+                        "reviewed_item_hashes": [],
+                        "turns_used": 1,
+                        "halt_condition_met": True,
+                        "completed_at": self.now.isoformat(),
+                    }
+                ),
+                encoding="utf-8",
+            )
+            register_review_receipt(
+                manifest_path,
+                refined,
+                red,
+                "red_team",
+                now=self.now,
+            )
         return refined
 
     def test_forge_requires_receipts_then_commits_pair_and_history(self):

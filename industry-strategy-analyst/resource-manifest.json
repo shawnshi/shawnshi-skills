@@ -1,18 +1,18 @@
 {
   "schema_version": 3,
   "skill": "industry-strategy-analyst",
-  "generated_at": "2026-08-29T20:18:36+08:00",
+  "generated_at": "2026-09-01T19:54:14+08:00",
   "hash_algorithm": "SHA-256",
   "text_hash_normalization": "LF",
   "skill_md": "SKILL.md",
-  "skill_md_sha256": "a7cc8b56c2abf717eefca25894a5ef35d26a432b774f3d5086e02ba7eefbdfab",
+  "skill_md_sha256": "ccf855822209cea572122c0996b1c5fe6e11c132a4bc3f3c0d4c2b2f9d2300e5",
   "top_level_files": [
     "SKILL.md"
   ],
   "top_level_file_hashes": [
     {
       "path": "SKILL.md",
-      "sha256": "a7cc8b56c2abf717eefca25894a5ef35d26a432b774f3d5086e02ba7eefbdfab"
+      "sha256": "ccf855822209cea572122c0996b1c5fe6e11c132a4bc3f3c0d4c2b2f9d2300e5"
     }
   ],
   "top_level_directories": [
@@ -37,7 +37,7 @@
   "resource_file_hashes": [
     {
       "path": "agents/openai.yaml",
-      "sha256": "1e05b9da43a00de0e70194727cf2f0a44e14c2c5d2224c29b1d5ac0caf22b584"
+      "sha256": "bbce2e038464db2cacfc09b4044f29acada11d73b58b86ab9a7258d99074e088"
     },
     {
       "path": "assets/icon.svg",
@@ -53,7 +53,7 @@
     },
     {
       "path": "references/research-protocol.md",
-      "sha256": "ed6f940254ac4c2cad82261678bfbe815d9d4787df8f9007960a3102c645964f"
+      "sha256": "e16e539af1be88da4a969b5c67d8c8df4a727572775b913026c7ef13af95e8ba"
     },
     {
       "path": "references/vendor-evaluation.md",
@@ -77,7 +77,7 @@
       "path": "references/research-protocol.md",
       "exists": true,
       "resolved_path": "industry-strategy-analyst/references/research-protocol.md",
-      "sha256": "ed6f940254ac4c2cad82261678bfbe815d9d4787df8f9007960a3102c645964f"
+      "sha256": "e16e539af1be88da4a969b5c67d8c8df4a727572775b913026c7ef13af95e8ba"
     },
     {
       "path": "references/vendor-evaluation.md",

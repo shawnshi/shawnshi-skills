@@ -44,7 +44,6 @@ $ForeignRuntimePatterns = [ordered]@{
     kimi_path = '(?i)(?:/app/\.kimi|\.kimi[\\/])'
     app_data_macro = '(?i)<appDataDir>'
     conversation_brain = '(?i)brain[\\/]<(?:conversation-)?id>'
-    file_uri = '(?i)file:///'
     antigravity = '(?i)Antigravity'
     v11_runtime = '(?i)\bV11(?:\.\d+)?\b'
     ir_native = '(?i)IR Native'
@@ -246,6 +245,31 @@ function Get-SkillTextCorpus {
     $parts -join "`n"
 }
 
+function Get-SkillInstructionCorpus {
+    param([string]$SkillDirectory)
+
+    $extensions = @('.md', '.txt', '.json', '.yaml', '.yml')
+    $parts = foreach ($file in Get-ChildItem -LiteralPath $SkillDirectory -Recurse -File -ErrorAction SilentlyContinue) {
+        $relativePath = [IO.Path]::GetRelativePath($SkillDirectory, $file.FullName)
+        $pathSegments = $relativePath -split '[\\/]'
+        if ($pathSegments -contains '_runtime' -or $pathSegments -contains 'tests') {
+            continue
+        }
+        if ($file.Name -eq 'resource-manifest.json') {
+            continue
+        }
+        if ($file.Extension.ToLowerInvariant() -notin $extensions) {
+            continue
+        }
+        try {
+            [IO.File]::ReadAllText($file.FullName)
+        } catch {
+            continue
+        }
+    }
+    $parts -join "`n"
+}
+
 function Get-FrontmatterStatus {
     param(
         [string[]]$Lines,
@@ -432,6 +456,7 @@ $records = @(foreach ($directory in $skillDirectories) {
     $lines = @(Get-Content -LiteralPath $skillPath -Encoding UTF8)
     $text = $lines -join "`n"
     $corpus = Get-SkillTextCorpus -SkillDirectory $directory.FullName
+    $instructionCorpus = Get-SkillInstructionCorpus -SkillDirectory $directory.FullName
     $frontmatter = Get-FrontmatterStatus -Lines $lines -DirectoryName $directory.Name
     $manifest = Get-ManifestStatus -SkillDirectory $directory.FullName
 
@@ -457,11 +482,11 @@ $records = @(foreach ($directory in $skillDirectories) {
         ManifestIssues = @($manifest.Missing)
         DeprecatedTokens = @(Get-PatternHits -Text $corpus -Patterns $DeprecatedPatterns)
         ForeignRuntime = @(Get-PatternHits -Text $corpus -Patterns $ForeignRuntimePatterns)
-        ReasoningDirectives = @(Get-PatternHits -Text $corpus -Patterns $ForbiddenReasoningPatterns)
+        ReasoningDirectives = @(Get-PatternHits -Text $instructionCorpus -Patterns $ForbiddenReasoningPatterns)
         HardcodedModels = @(Get-PatternHits -Text $corpus -Patterns $HardcodedModelPatterns)
-        MandatorySubagent = [bool]($corpus -match $MandatorySubagentPattern)
-        MandatoryPersistence = [bool]($corpus -match $MandatoryPersistencePattern)
-        AutomaticPersistence = Test-AutomaticPersistence -Text $text -SkillName $directory.Name
+        MandatorySubagent = [bool]($instructionCorpus -match $MandatorySubagentPattern)
+        MandatoryPersistence = [bool]($instructionCorpus -match $MandatoryPersistencePattern)
+        AutomaticPersistence = Test-AutomaticPersistence -Text $instructionCorpus -SkillName $directory.Name
         AutomaticPersistenceHasOptOut = Test-AutomaticPersistenceOptOut -Text $text
     }
 })

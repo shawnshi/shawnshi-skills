@@ -5,13 +5,14 @@
 - `daily`
 - `weekly`
 - `monthly`
+- `quarterly`
 - `annual`
 
 日期、时区和周期起点采用用户明确指定的值；未指定时使用当前会话可确认的本地日期与时区，并在输出中说明。
 
 ## Input Contract
 
-日历与本地 Garmin 在本技能触发后具有默认读取授权，范围限于当前复盘周期和完成复盘所需的最小字段。当前周期末端数据不新鲜时，可按主技能的新鲜度门启动一次用户此前已经启用、身份核验通过的 `Codex-Garmin-Health-Sync` 任务；除此之外不授权联网、写操作、认证持久化、注册或修改任务、直接运行同步脚本。Garmin 采集必须继承当前 `personal-health-analysis` 的授权、预检和失败关闭规则。
+日历与本地 Garmin 在本技能触发后具有默认读取授权，范围限于当前复盘周期和完成复盘所需的最小字段。当前周期末端数据不新鲜时，只能按主技能的新鲜度门执行一次 `sync_health_data.py sync --dry-run`，通过后再执行一次带 `--allow-network --allow-sync --allow-health-data` 的受控同步；不得启动、注册、更新或修复计划任务。Garmin 采集必须继承当前 `personal-health-analysis` 的授权、预检和失败关闭规则。
 
 | 输入 | 可接受来源 | 缺失时处理 |
 |---|---|---|
@@ -32,4 +33,5 @@ Schema、完整性、数据库变化、依赖或读取错误必须失败关闭�
 - 草稿可用 [audit_gate.py](../scripts/audit_gate.py) 检查。
 - 未处理占位符和已经出现但不符合 Schema 的 `Handoff Payload` 是硬错误。
 - 章节、措辞、术语和量化建议只产生软提示。
-- 交接仅在用户明确要求保存时生成，并遵守 [handoff_contract.md](handoff_contract.md)。
+- 周、月、季度 canonical 自动保存必须同时传入 `--period-type` 和 `--period-id`，使目标周期 H2 唯一且其余标题只能为 H3 或更深。
+- 自动保存不等于交接；交接仅在用户明确要求时生成，并遵守 [handoff_contract.md](handoff_contract.md)。

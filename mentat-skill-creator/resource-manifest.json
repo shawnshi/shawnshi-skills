@@ -1,7 +1,7 @@
 {
   "schema_version": 3,
   "skill": "mentat-skill-creator",
-  "generated_at": "2026-08-16T22:27:49+08:00",
+  "generated_at": "2026-09-01T20:16:03+08:00",
   "hash_algorithm": "SHA-256",
   "text_hash_normalization": "LF",
   "skill_md": "SKILL.md",
@@ -62,7 +62,7 @@
       "path": "scripts/repair_skills.ps1",
       "exists": true,
       "resolved_path": "scripts/repair_skills.ps1",
-      "sha256": "044a24446393cb6406f150f5679e7d33ddde036e4d23adbb64f7bdff519b8bca"
+      "sha256": "fba6685c8f8cd24e7b41bbbed4378defed5ab7b19cc2277142ca3c1a818ba804"
     },
     {
       "path": "scripts/test_mentat_skill_creator.py",

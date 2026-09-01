@@ -1,7 +1,7 @@
 {
   "schema_version": 3,
   "skill": "cognitive-storm-research",
-  "generated_at": "2026-08-29T20:18:35+08:00",
+  "generated_at": "2026-09-01T19:54:14+08:00",
   "hash_algorithm": "SHA-256",
   "text_hash_normalization": "LF",
   "skill_md": "SKILL.md",
@@ -37,7 +37,7 @@
   "resource_file_hashes": [
     {
       "path": "agents/openai.yaml",
-      "sha256": "21032cfc5ca0b5bdfc43c4f96be8788e721f58cd991582977a42776cdeb80cbb"
+      "sha256": "a503c636c65a4f8e3afb1719d71789deaa041a89c1a48a941e63bc827ccc189d"
     },
     {
       "path": "assets/icon.svg",

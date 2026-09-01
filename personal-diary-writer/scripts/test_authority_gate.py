@@ -2,12 +2,16 @@ import importlib.util
 import tempfile
 import unittest
 from pathlib import Path
+from unittest.mock import patch
 
 
 MODULE_PATH = Path(__file__).with_name("authority_gate.py")
 SPEC = importlib.util.spec_from_file_location("authority_gate", MODULE_PATH)
+if SPEC is None:
+    raise RuntimeError("authority_gate module spec is unavailable")
 authority_gate = importlib.util.module_from_spec(SPEC)
-assert SPEC.loader is not None
+if SPEC.loader is None:
+    raise RuntimeError("authority_gate module loader is unavailable")
 SPEC.loader.exec_module(authority_gate)
 
 
@@ -59,14 +63,24 @@ class AuthorityGateTests(unittest.TestCase):
                 ],
                 "allowed_proxy_locators": [self._absolute(proxy)],
             }
-            result = authority_gate.verify(config, "task-1", "root", "epoch-1")
+            with patch.object(authority_gate, "tiktoken", None):
+                result = authority_gate.verify(config, "task-1", "root", "epoch-1")
             self.assertTrue(result["ok"])
             event = result["skill_load"]
             self.assertEqual(event["context_epoch"], "epoch-1")
             self.assertEqual(event["actor_type"], "root")
             self.assertEqual(event["skill_sha256"], digest)
-            self.assertGreater(event["skill_tokens"], 0)
-            self.assertEqual(event["tokenizer"], "cl100k_base")
+            self.assertIsNone(event["skill_tokens"])
+            self.assertIsNone(event["tokenizer"])
+            self.assertGreater(event["skill_characters"], 0)
+
+    def test_text_hash_is_newline_invariant(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            skill = Path(tmp) / "SKILL.md"
+            skill.write_bytes(b"---\nname: example\n---\nbody\n")
+            lf_hash = authority_gate.sha256_file(skill)
+            skill.write_bytes(b"---\r\nname: example\r\n---\r\nbody\r\n")
+            self.assertEqual(authority_gate.sha256_file(skill), lf_hash)
 
     def test_codex_root_actor_is_not_misclassified_as_subagent(self):
         self.assertEqual(authority_gate._actor_type("codex-root"), "root")

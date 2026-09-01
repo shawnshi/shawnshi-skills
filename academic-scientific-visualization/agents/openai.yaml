@@ -6,9 +6,4 @@ interface:
   default_prompt: Use $academic-scientific-visualization to create, redesign, or audit
     a publication figure with explicit statistical and journal-verification status.
 policy:
-  products:
-  - chatgpt
-  - codex
-  - api
-  - atlas
   allow_implicit_invocation: true

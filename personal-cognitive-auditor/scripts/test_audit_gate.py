@@ -4,10 +4,63 @@ from pathlib import Path
 
 
 sys.path.insert(0, str(Path(__file__).parent))
-from audit_gate import ENERGY_REQUIRED_FIELDS, validate
+from audit_gate import ENERGY_REQUIRED_FIELDS, validate, validate_handoff_payload
 
 
 class AuditGateTests(unittest.TestCase):
+    def test_quarterly_handoff_period_is_supported(self):
+        payload = {
+            "period_type": "quarterly",
+            "audit_title": "2026-Q3 Quarterly Audit",
+            "audit_body_markdown": "证据充分的季度审计正文",
+            "next_tactics": ["形成下一季度行动清单"],
+            "followup_flags": [],
+            "requires_mentat_diary": False,
+        }
+
+        self.assertEqual(validate_handoff_payload(payload), [])
+
+    def test_periodic_topology_accepts_unique_target_h2_and_h3_sections(self):
+        text = (
+            "## [2026-08] Monthly Cognitive Audit｜2026-08-01 至 2026-08-31\n\n"
+            "### 时间范围与证据\n\n- 证据：完整。\n"
+        )
+        errors, _ = validate(text, period_type="monthly", period_id="2026-08")
+
+        self.assertEqual(errors, [])
+
+    def test_periodic_topology_blocks_atx_and_setext_h1_h2(self):
+        tails = (
+            "## 非目标区块\n\n- 证据：不得写入。\n",
+            "   ## 缩进非目标区块\n\n- 证据：不得写入。\n",
+            "Setext 非目标区块\n---\n",
+            "Setext 一级区块\n===\n",
+            "   # 缩进一级区块\n",
+        )
+        for tail in tails:
+            with self.subTest(tail=tail):
+                text = "## [2026-08] Monthly Cognitive Audit\n\n" + tail
+                errors, _ = validate(
+                    text,
+                    period_type="monthly",
+                    period_id="2026-08",
+                )
+                self.assertTrue(any("unique target H2" in item for item in errors))
+
+    def test_periodic_topology_blocks_h1_or_mismatched_period(self):
+        cases = (
+            ("# 2026年8月审计\n\n## [2026-08] Monthly Cognitive Audit\n", "2026-08"),
+            ("## [2026-07] Monthly Cognitive Audit\n", "2026-08"),
+        )
+        for text, period_id in cases:
+            with self.subTest(text=text):
+                errors, _ = validate(
+                    text + "\n证据：存在。\n",
+                    period_type="monthly",
+                    period_id=period_id,
+                )
+                self.assertTrue(any("unique target H2" in item for item in errors))
+
     def test_literal_template_syntax_is_non_blocking_in_free_form(self):
         errors, warnings = validate("证据：原文把 [事件] 作为字段示例。")
 
@@ -366,6 +419,7 @@ class AuditGateTests(unittest.TestCase):
                 "DAILY.md",
                 "WEEKLY.md",
                 "MONTHLY.md",
+                "QUARTERLY.md",
                 "ANNUAL.md",
             )),
         ]

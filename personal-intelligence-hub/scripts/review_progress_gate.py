@@ -19,10 +19,12 @@ TERMINAL_FAILURE_STATES = {
     "failed",
     "interrupted",
 }
+TIMEOUT_STATES = {"timed_out", "timeout"}
 MAX_GROWTH_CHECKS_WITHOUT_MILESTONE = 15
 REVIEW_MILESTONE_LIMITS = {
     "semantic": 2,
     "red_team": 1,
+    "supplement": 2,
 }
 
 
@@ -38,7 +40,7 @@ def _milestone_limit(review_kind: str | None) -> tuple[str | None, int]:
         return None, 2
     normalized = str(review_kind).strip().lower()
     if normalized not in REVIEW_MILESTONE_LIMITS:
-        raise ValueError("review_kind must be semantic or red_team")
+        raise ValueError("review_kind must be semantic, red_team, or supplement")
     return normalized, REVIEW_MILESTONE_LIMITS[normalized]
 
 
@@ -181,10 +183,18 @@ def evaluate_progress(
     agent_status: str,
     *,
     review_kind: str | None = None,
+    progress_id: str | None = None,
 ) -> tuple[dict[str, Any], str]:
     current = validate_fingerprint(fingerprint, review_kind=review_kind)
     status = str(agent_status).strip().lower()
+    normalized_kind, _ = _milestone_limit(review_kind)
+    normalized_progress_id = str(progress_id or "").strip()
+    if normalized_kind == "supplement" and not normalized_progress_id:
+        raise ValueError("supplement progress requires progress_id")
     previous_state = state if isinstance(state, dict) else {}
+    previous_progress_id = str(previous_state.get("progress_id") or "").strip()
+    if previous_progress_id and normalized_progress_id != previous_progress_id:
+        raise ValueError("progress identity changed")
     next_state = {
         "previous_fingerprint": current,
         "watched_artifacts_sha256": current.get("watched_artifacts_sha256"),
@@ -197,6 +207,8 @@ def evaluate_progress(
             previous_state.get("growth_checks_without_milestone", 0) or 0
         ),
     }
+    if normalized_progress_id:
+        next_state["progress_id"] = normalized_progress_id
     if "watched_artifacts_ready" in current:
         next_state["watched_artifacts_ready"] = current["watched_artifacts_ready"]
     if status == "artifact_ready":
@@ -205,10 +217,14 @@ def evaluate_progress(
         if current.get("watched_artifacts_ready") is True:
             return next_state, "verify_artifact"
         return next_state, "declare_lost"
+    if status in TIMEOUT_STATES:
+        return next_state, "degraded_timeout"
     if status in TERMINAL_FAILURE_STATES:
         return next_state, "declare_lost"
     if status != "running":
-        raise ValueError("agent_status must be running, artifact_ready, or terminal")
+        raise ValueError(
+            "agent_status must be running, artifact_ready, completed, timed_out, or terminal"
+        )
 
     raw_previous = previous_state.get("previous_fingerprint")
     if not isinstance(raw_previous, dict):
@@ -313,6 +329,7 @@ def main() -> int:
     parser.add_argument("--tool-call-count", type=int)
     parser.add_argument("--milestone-seq", type=int, default=0)
     parser.add_argument("--review-kind", choices=sorted(REVIEW_MILESTONE_LIMITS))
+    parser.add_argument("--progress-id")
     parser.add_argument("--manifest", type=Path)
     parser.add_argument("--invocation-id")
     parser.add_argument("--request-sha256")
@@ -321,6 +338,8 @@ def main() -> int:
     args = parser.parse_args()
     try:
         if args.manifest is not None:
+            if args.review_kind == "supplement":
+                raise ValueError("supplement progress uses an isolated state file without --manifest")
             if (
                 args.review_kind is None
                 or not str(args.invocation_id or "").strip()
@@ -382,9 +401,15 @@ def main() -> int:
                 fingerprint,
                 args.agent_status,
                 review_kind=args.review_kind,
+                progress_id=args.progress_id,
             )
     except (KeyError, TypeError, ValueError, json.JSONDecodeError, OSError) as exc:
         parser.error(str(exc))
+    if args.manifest is None:
+        next_state["last_decision"] = decision
+        if decision in {"degraded_timeout", "declare_lost"}:
+            next_state["terminal_status"] = decision
+            next_state["recorded_at"] = fingerprint["last_event_at"]
     mirror_error = None
     try:
         atomic_write_json(args.state, next_state)
@@ -402,7 +427,11 @@ def main() -> int:
             sort_keys=True,
         )
     )
-    return 4 if decision == "declare_lost" else 0
+    if decision == "declare_lost":
+        return 4
+    if decision == "degraded_timeout":
+        return 5
+    return 0
 
 
 if __name__ == "__main__":

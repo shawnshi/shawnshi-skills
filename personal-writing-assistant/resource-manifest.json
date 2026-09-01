@@ -1,7 +1,7 @@
 {
   "schema_version": 3,
   "skill": "personal-writing-assistant",
-  "generated_at": "2026-08-29T20:18:37+08:00",
+  "generated_at": "2026-09-01T19:54:15+08:00",
   "hash_algorithm": "SHA-256",
   "text_hash_normalization": "LF",
   "skill_md": "SKILL.md",
@@ -42,7 +42,7 @@
   "resource_file_hashes": [
     {
       "path": "agents/openai.yaml",
-      "sha256": "e0ef487fb3fdb19d9a346dc4fc17af8a6edaaba9a63b19fc94e38ce77486eb74"
+      "sha256": "3a9b142cff97324ca8a2c504023a6b44d5ebf20be6500636fe44ea1d2baf833c"
     },
     {
       "path": "assets/icon.svg",

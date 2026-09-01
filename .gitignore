@@ -10,6 +10,9 @@ tmp/
 temp/
 *.log
 *.bak
+*.bak_*
+/.skill_state.json
+.skill_state/
 .vscode/
 .idea/
 venv/

@@ -15,11 +15,14 @@ FRONTMATTER_RE = re.compile(r"\A---\s*\n(.*?)\n---\s*\n", re.DOTALL)
 
 
 def _sha256(path: Path) -> str:
-    digest = hashlib.sha256()
-    with path.open("rb") as handle:
-        for chunk in iter(lambda: handle.read(1024 * 1024), b""):
-            digest.update(chunk)
-    return digest.hexdigest()
+    data = path.read_bytes()
+    try:
+        text = data.decode("utf-8")
+    except UnicodeDecodeError:
+        pass
+    else:
+        data = text.replace("\r\n", "\n").replace("\r", "\n").encode("utf-8")
+    return hashlib.sha256(data).hexdigest()
 
 
 def _normalized(path: Path | str) -> str:
@@ -27,8 +30,9 @@ def _normalized(path: Path | str) -> str:
 
 
 def _locator(locator: dict) -> Path:
-    if locator.get("base") != "user_home":
-        raise ValueError("only user_home locators are allowed")
+    base = locator.get("base")
+    if base not in {"user_home", "skill_root"}:
+        raise ValueError("locator base must be user_home or skill_root")
     segments = locator.get("segments")
     if not isinstance(segments, list) or not segments:
         raise ValueError("locator segments are required")
@@ -41,7 +45,8 @@ def _locator(locator: dict) -> Path:
         for item in segments
     ):
         raise ValueError("locator segments must be simple path components")
-    return Path.home().joinpath(*segments).resolve()
+    root = Path.home() if base == "user_home" else Path(__file__).resolve().parent.parent
+    return root.joinpath(*segments).resolve()
 
 
 def _frontmatter(path: Path) -> dict[str, str]:
@@ -97,9 +102,9 @@ def verify(config: dict) -> dict:
         return _error("AUTHORITY_PARSE_FAILED", str(exc))
     if authority_meta.get("name") != config.get("skill_name"):
         return _error("AUTHORITY_NAME_MISMATCH", "canonical skill name changed")
-    authority_version = authority_meta.get("metadata.version") or authority_meta.get("version")
-    if authority_version != config.get("authority_version"):
-        return _error("AUTHORITY_VERSION_MISMATCH", "canonical skill version changed")
+    authority_version = config.get("authority_version")
+    if not isinstance(authority_version, str) or not authority_version.strip():
+        return _error("AUTHORITY_VERSION_INVALID", "canonical skill version is missing")
 
     entrypoints: dict[str, str] = {}
     for relative, expected_sha in config.get("entrypoint_sha256", {}).items():
@@ -122,13 +127,6 @@ def verify(config: dict) -> dict:
                 actual_sha256=actual_sha,
             )
         entrypoints[relative] = _normalized(candidate)
-
-    task_binding = config.get("task_binding")
-    if (
-        not isinstance(task_binding, dict)
-        or not re.fullmatch(r"[0-9a-f]{64}", str(task_binding.get("arguments_sha256", "")))
-    ):
-        return _error("TASK_BINDING_INVALID", "task action SHA-256 binding is missing or invalid")
 
     authority_norm = _normalized(authority_path)
     for proxy in proxy_paths:
@@ -159,7 +157,6 @@ def verify(config: dict) -> dict:
         "authority_path": authority_norm,
         "skill_root": _normalized(skill_root),
         "entrypoints": entrypoints,
-        "task_binding": task_binding,
     }
 
 

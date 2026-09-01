@@ -1,3 +1,6 @@
+import json
+import subprocess
+import sys
 import tempfile
 import unittest
 from datetime import datetime, timedelta
@@ -142,6 +145,87 @@ class ReviewProgressGateTests(unittest.TestCase):
                 dict(self.first, milestone_seq=2),
                 "running",
                 review_kind="red_team",
+            )
+
+    def test_supplement_progress_requires_isolated_identity(self):
+        first = dict(self.first, milestone_seq=1)
+
+        state, decision = evaluate_progress(
+            None,
+            first,
+            "running",
+            review_kind="supplement",
+            progress_id="gap-tech",
+        )
+
+        self.assertEqual(decision, "continue_wait")
+        self.assertEqual(state["progress_id"], "gap-tech")
+        with self.assertRaisesRegex(ValueError, "progress identity changed"):
+            evaluate_progress(
+                state,
+                dict(first, event_ordinal=101),
+                "running",
+                review_kind="supplement",
+                progress_id="gap-healthcare",
+            )
+        with self.assertRaisesRegex(ValueError, "progress_id"):
+            evaluate_progress(
+                None,
+                first,
+                "running",
+                review_kind="supplement",
+            )
+
+    def test_explicit_timeout_produces_durable_degraded_decision(self):
+        state, decision = evaluate_progress(
+            None,
+            self.first,
+            "timed_out",
+            review_kind="semantic",
+        )
+
+        self.assertEqual(decision, "degraded_timeout")
+        self.assertEqual(state["previous_fingerprint"]["event_ordinal"], 100)
+
+    def test_supplement_timeout_survives_cli_process_exit(self):
+        with tempfile.TemporaryDirectory() as directory:
+            state_path = Path(directory) / "gap-timeout.json"
+            command = [
+                sys.executable,
+                "-X",
+                "utf8",
+                str(Path(__file__).with_name("review_progress_gate.py")),
+                "--state",
+                str(state_path),
+                "--agent-status",
+                "timed_out",
+                "--event-ordinal",
+                "1",
+                "--last-event-at",
+                "2026-08-24T06:05:00+08:00",
+                "--tool-call-count",
+                "2",
+                "--review-kind",
+                "supplement",
+                "--progress-id",
+                "gap-tech",
+            ]
+
+            completed = subprocess.run(
+                command,
+                capture_output=True,
+                text=True,
+                check=False,
+            )
+
+            self.assertEqual(completed.returncode, 5)
+            state = json.loads(state_path.read_text(encoding="utf-8"))
+            self.assertEqual(state["progress_id"], "gap-tech")
+            self.assertEqual(state["last_decision"], "degraded_timeout")
+            self.assertEqual(state["terminal_status"], "degraded_timeout")
+            self.assertEqual(
+                state["recorded_at"],
+                "2026-08-24T06:05:00+08:00",
             )
 
     def test_regressing_fingerprint_is_rejected(self):

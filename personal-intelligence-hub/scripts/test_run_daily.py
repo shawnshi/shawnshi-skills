@@ -426,8 +426,11 @@ class RunDailyTests(unittest.IsolatedAsyncioTestCase):
                     runtime / "runs" / "daily-test" / "intelligence_blackboard.json",
                 ],
             )
-            self.assertTrue(result.supplement_request_path.exists())
-            request = json.loads(result.supplement_request_path.read_text(encoding="utf-8"))
+            self.assertIsNotNone(result.supplement_request_path)
+            supplement_request_path = result.supplement_request_path
+            assert supplement_request_path is not None
+            self.assertTrue(supplement_request_path.exists())
+            request = json.loads(supplement_request_path.read_text(encoding="utf-8"))
             self.assertEqual(request["run_id"], "daily-test")
             self.assertEqual(
                 {gap["lane"] for gap in request["gaps"]},
@@ -461,6 +464,24 @@ class RunDailyTests(unittest.IsolatedAsyncioTestCase):
             self.assertEqual(review_slice["entries"], [])
             self.assertEqual(manifest["stages"]["supplemental"]["status"], "running")
 
+    def test_run_scoped_cli_rejects_installed_path(self):
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            manifest = root / "run_manifest.json"
+            expected = root / "snapshot" / "scripts" / "run_daily.py"
+            manifest.write_text(
+                json.dumps(
+                    {
+                        "bundle_snapshot": {
+                            "execution_cli_path": str(expected.resolve())
+                        }
+                    }
+                ),
+                encoding="utf-8",
+            )
+            with self.assertRaisesRegex(RuntimeError, "immutable execution CLI"):
+                run_daily._enforce_run_scoped_cli(manifest)
+
     async def test_invalid_concurrency_is_rejected_before_run_creation(self):
         with tempfile.TemporaryDirectory() as directory:
             root = Path(directory)
@@ -489,6 +510,28 @@ class RunDailyTests(unittest.IsolatedAsyncioTestCase):
                     max_concurrency=0,
                 )
 
+            self.assertFalse(runtime.exists())
+
+    async def test_existing_archive_requires_explicit_replacement_before_run_creation(self):
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            news = root / "news"
+            news.mkdir()
+            (news / "intelligence_20260901_briefing.json").write_text(
+                "{}", encoding="utf-8"
+            )
+            focus = root / "focus.json"
+            focus.write_text("{}", encoding="utf-8")
+            runtime = root / "runtime"
+            with self.assertRaisesRegex(
+                RunContractError, "formal archive targets already exist"
+            ):
+                await run_daily.prepare_run(
+                    report_date="2026-09-01",
+                    runtime_dir=runtime,
+                    news_dir=news,
+                    focus_path=focus,
+                )
             self.assertFalse(runtime.exists())
 
     async def test_missing_or_malformed_focus_is_rejected_before_run_creation(self):

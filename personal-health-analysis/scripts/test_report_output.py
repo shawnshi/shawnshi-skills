@@ -541,7 +541,7 @@ console.log(JSON.stringify({{
 
         self.assertEqual(
             output_dir,
-            Path(r"C:\Users\shich\MEMORY\raw\garmin").resolve(),
+            (Path.home() / "MEMORY" / "raw" / "garmin").resolve(),
         )
 
     def test_report_dir_override_has_priority(self):
