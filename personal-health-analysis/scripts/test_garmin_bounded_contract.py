@@ -108,9 +108,9 @@ class GarminRuntimeContractTests(unittest.TestCase):
         hrv_source = inspect.getsource(sqlite_adapter.get_hrv_data)
         activities_source = inspect.getsource(sqlite_adapter.get_activities_data)
 
-        self.assertIn("AND day <= '{end_date}'", summary_source)
-        self.assertIn("AND day <= '{end_date}'", sleep_source)
-        self.assertIn("AND day <= '{end_date}'", hrv_source)
+        self.assertIn("AND day < '{end_exclusive}'", summary_source)
+        self.assertIn("AND day < '{end_exclusive}'", sleep_source)
+        self.assertIn("AND day < '{end_exclusive}'", hrv_source)
         self.assertIn("AND start_time < '{end_exclusive}'", activities_source)
 
     def test_bounded_adapter_supports_non_filling_reads(self):

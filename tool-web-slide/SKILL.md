@@ -7,7 +7,7 @@ description: 将演示内容构建为可在浏览器运行、验证和交付的 
 
 ## 交付边界
 
-- 产物是 HTML 演示，不得称作或冒充原生 PowerPoint。用户明确需要可编辑 `.pptx` 时，使用 `Presentations`；只需要叙事结构或逐页蓝图时，使用 `tool-slide-architect`。
+- 产物是 HTML 演示，不得称作或冒充原生 PowerPoint。用户明确需要可编辑 `.pptx` 时，先确认当前可用的 PPTX 构建与渲染能力（officecli 仅在确实可用时使用），不假定存在 `Presentations`；缺能力时交付 `tool-slide-architect` 蓝图并标注未完成，不伪造 PPTX。只需要叙事结构或逐页蓝图时，使用 `tool-slide-architect`。
 - HTML 可以按需导出 PDF；PDF 是静态快照，不保留网页交互。
 - 默认使用可移交的 `bundle`：`index.html` 加本地资产。只有用户明确要求单文件，或交付环境需要时，才使用 `standalone`，并将运行所需 CSS、JavaScript、字体和图像内联或嵌入。
 
@@ -40,9 +40,9 @@ description: 将演示内容构建为可在浏览器运行、验证和交付的 
 3. **分片设计**：先锁定内容地图、设计令牌、导航和页面契约，再实现页面。只有页面组相互独立时才并行；每个分片必须有唯一文件或页码所有权，公共样式、配置和导航只由主线合并。
 4. **构建**：运行 `npm run build -- <projectDir>`。每页保留一个主要结论，标题、证据、图表和讲稿形成清楚层级；只使用选定主题已实现的组件和规范布局。`bundle` 必须复制全部本地运行资产；`standalone` 不得留下本地文件引用。
 5. **静态 QA**：运行 `npm run check -- <output/index.html>`，生成 `qa-report/qa-report.json`。不得以警告替代阻断性错误。页面身份、画布、布局、标题、资源引用、离线约束和证据标记必须满足交付契约；禁止内联事件处理器及页面片段中的不受信任脚本。`standalone` 只允许内容与技能内 canonical asset 一致、由构建器以 `data-web-slide-asset` 标记并转义的内建运行时脚本。
-6. **视觉 QA**：运行 `npm run visual -- <output/index.html> <output/qa-report>`。脚本按档位自动执行代表页、每类布局或全页覆盖，并为截图和报告记录内容哈希。默认只允许当前本地静态服务器、`data:`、`blob:` 和 `about:` 请求，检查文字溢出、遮挡、对比度、图表与图片、导航、动画、目标分辨率和缩放。只有配置明确为 `offlineRequired:false`、档位不是高保障且用户明确授权联网时，才可增加 `--allow-network`，并记录依赖域名。发现问题后重新构建并重复静态与视觉 QA。
+6. **视觉 QA**：运行 `npm run visual -- <output/index.html> <output/qa-report>`。脚本按档位自动执行代表页、每类布局或全页覆盖，并为截图和报告记录内容哈希。默认只允许当前本地静态服务器、`data:`、`blob:` 和 `about:` 请求，自动检测部分文字/元素 overflow 并生成截图，不自动证明无遮挡、对比度合格或无裁切。必须另行看图复核遮挡、对比度、裁切、图表与图片，并检查导航、动画、目标分辨率和缩放；记录人工视觉和内容语义复核结果，未执行须标为未完成。只有配置明确为 `offlineRequired:false`、档位不是高保障且用户明确授权联网时，才可增加 `--allow-network`，并记录依赖域名。发现问题后重新构建并重复静态与视觉 QA。
 7. **PDF**：用户要求或交付模式规定时，运行 `npm run export -- <output/index.html> <output/deck.pdf>`；成功时同时生成 `qa-report/pdf.json`。联网规则与视觉 QA 相同；`offlineRequired:true` 或高保障档位不得用 `--allow-network` 绕过。确认字体与图片加载完成、页数与 HTML 一致、无空白页、控制栏或裁切，并抽查复杂页。
-8. **最终门禁与交付**：运行 `npm run verify -- <output/index.html>`。该命令把当前 HTML、清单、静态报告、视觉覆盖、截图和 PDF 的哈希、目标环境及网络策略交叉核对，并生成 `qa-report/delivery.json`；退出非零时不得宣称档位验收完成。技能本身发生变化时另运行 `npm test` 和 `npm run manifest -- . --check`。最终链接必须指向实际文件，并明确未通过或未执行的门禁，不能把“脚本已运行”表述成“页面已验收”。
+8. **最终门禁与交付**：运行 `npm run verify -- <output/index.html>`。该命令把当前 HTML、清单、静态报告、视觉覆盖、截图和 PDF 的哈希、目标环境及网络策略交叉核对，并生成 `qa-report/delivery.json`；退出非零时不得宣称档位验收完成；退出 0 只证明机器凭证门禁通过，不单独证明人工视觉或内容语义复核通过。技能本身发生变化时另运行 `npm test` 和 `npm run manifest -- . --check`。最终链接必须指向实际文件，并明确未通过或未执行的门禁，不能把“脚本已运行”表述成“页面已验收”。
 
 ## 交付物
 

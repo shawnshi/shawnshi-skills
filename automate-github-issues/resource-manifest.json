@@ -1,11 +1,11 @@
 {
   "schema_version": 3,
   "skill": "automate-github-issues",
-  "generated_at": "2026-08-22T10:39:21+08:00",
+  "generated_at": "2026-09-05T17:15:44+08:00",
   "hash_algorithm": "SHA-256",
   "text_hash_normalization": "LF",
   "skill_md": "SKILL.md",
-  "skill_md_sha256": "2e7e6e52f7d4b8c422e77380c5701f39402af0bd613214e7c6b2042c9f55c52a",
+  "skill_md_sha256": "bdddfcb392dc332c98ba7c9cb4873cf0db262c107544985aa3b3512faf7b0b66",
   "top_level_files": [
     "README.md",
     "SKILL.md",
@@ -19,7 +19,7 @@
     },
     {
       "path": "SKILL.md",
-      "sha256": "2e7e6e52f7d4b8c422e77380c5701f39402af0bd613214e7c6b2042c9f55c52a"
+      "sha256": "bdddfcb392dc332c98ba7c9cb4873cf0db262c107544985aa3b3512faf7b0b66"
     },
     {
       "path": "package.json",

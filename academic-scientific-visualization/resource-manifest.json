@@ -1,11 +1,11 @@
 {
   "schema_version": 3,
   "skill": "academic-scientific-visualization",
-  "generated_at": "2026-09-01T19:54:14+08:00",
+  "generated_at": "2026-09-05T17:15:44+08:00",
   "hash_algorithm": "SHA-256",
   "text_hash_normalization": "LF",
   "skill_md": "SKILL.md",
-  "skill_md_sha256": "e736ea7b0074dd3972db77ed8ddd66e2bc50a6ba5983d320ad78e766706ee5c5",
+  "skill_md_sha256": "4486ed858052d41adf2f8cdb5408915dbda687d944c93e3e61bff957bbc3d676",
   "top_level_files": [
     "SKILL.md",
     "requirements.txt"
@@ -13,7 +13,7 @@
   "top_level_file_hashes": [
     {
       "path": "SKILL.md",
-      "sha256": "e736ea7b0074dd3972db77ed8ddd66e2bc50a6ba5983d320ad78e766706ee5c5"
+      "sha256": "4486ed858052d41adf2f8cdb5408915dbda687d944c93e3e61bff957bbc3d676"
     },
     {
       "path": "requirements.txt",
@@ -67,7 +67,7 @@
     },
     {
       "path": "references/fonts_and_cjk.md",
-      "sha256": "da01c28c169d03faba77ea9f0729b81314424ff5e82638182163ceec46c2aa22"
+      "sha256": "b665fd043c64fcbccf45666059d700c6c4bb02de6186bf357daa62b4431c3838"
     },
     {
       "path": "references/journal_profiles.md",
@@ -129,7 +129,7 @@
       "path": "references/fonts_and_cjk.md",
       "exists": true,
       "resolved_path": "academic-scientific-visualization/references/fonts_and_cjk.md",
-      "sha256": "da01c28c169d03faba77ea9f0729b81314424ff5e82638182163ceec46c2aa22"
+      "sha256": "b665fd043c64fcbccf45666059d700c6c4bb02de6186bf357daa62b4431c3838"
     },
     {
       "path": "references/journal_profiles.md",

@@ -3,10 +3,12 @@ from __future__ import annotations
 import argparse
 import json
 import os
+from collections import Counter
 from copy import deepcopy
 from datetime import date, datetime, time
 from pathlib import Path
 from typing import Any
+from urllib.parse import urlsplit
 from zoneinfo import ZoneInfo
 
 from history_manager import generate_event_id, load_recent_history, match_history, normalize_url
@@ -150,10 +152,66 @@ def _date_failure_disqualifies(result: dict[str, Any]) -> bool:
     )
 
 
-def _eligible_candidates(
+def _candidate_event_id(candidate: dict[str, Any]) -> str:
+    identity = candidate.get("event_identity")
+    if isinstance(identity, dict):
+        try:
+            return generate_event_id(identity)
+        except ValueError:
+            return ""
+    value = str(candidate.get("event_id") or "")
+    return value if value.startswith("evt1_") else ""
+
+
+def _source_identity(candidate: dict[str, Any]) -> str:
+    normalized = normalize_url(str(candidate.get("url") or ""))
+    host = str(urlsplit(normalized).hostname or "").casefold()
+    if host:
+        return f"host:{host}"
+    source = str(candidate.get("source") or "").strip().casefold()
+    return f"source:{source}"
+
+
+def _candidate_projection(
+    entry: dict[str, Any],
+    *,
+    candidate_refs: list[str],
+    corroboration_status: str,
+) -> dict[str, Any]:
+    candidate = entry["candidate"]
+    source_type = _source_type(candidate)
+    return {
+        "candidate_id": str(candidate.get("candidate_id") or ""),
+        "candidate_refs": candidate_refs,
+        "title": candidate.get("title"),
+        "url": candidate.get("url"),
+        "source": candidate.get("source"),
+        "published_at": normalize_published_at(candidate.get("published_at")),
+        "published_at_source": candidate.get("published_at_source"),
+        "primary_domain": str(
+            candidate.get("primary_domain")
+            or candidate.get("provisional_domain")
+            or ""
+        ),
+        "secondary_domains": deepcopy(
+            candidate.get("secondary_domains")
+            or candidate.get("provisional_secondary_domains")
+            or []
+        ),
+        "source_type": source_type,
+        "corroboration_status": corroboration_status,
+        "summary": str(
+            candidate.get("summary") or candidate.get("summary_hint") or ""
+        ).strip(),
+        "suggested_event_identity": deepcopy(candidate.get("event_identity")),
+        "access_check": _access_projection(entry["access_check"]),
+    }
+
+
+def _candidate_assessment(
     request: dict[str, Any],
     manifest: dict[str, Any],
-) -> list[dict[str, Any]]:
+) -> tuple[list[dict[str, Any]], list[dict[str, str]]]:
     _, pool = _bound_artifact(request, "candidate_pool")
     _, supplement = _bound_artifact(request, "supplement")
     history_path, _ = _bound_artifact(request, "history_snapshot")
@@ -176,27 +234,34 @@ def _eligible_candidates(
                     if date_disqualified:
                         date_disqualified_urls.add(normalized)
 
-    candidates: list[dict[str, Any]] = []
-    for candidate in pool.get("items", []):
-        if not isinstance(candidate, dict):
-            continue
-        normalized_url = normalize_url(str(candidate.get("url") or ""))
-        access = verified_access.get(normalized_url)
-        if normalized_url in date_disqualified_urls or not isinstance(access, dict):
-            continue
-        candidates.append({"candidate": deepcopy(candidate), "access_check": access})
+    entries: list[dict[str, Any]] = []
+    # Prefer the article-level supplement projection when it re-registers a
+    # heuristic candidate. The untouched pool record remains an explicit
+    # duplicate disposition so funnel conservation is preserved.
     for result in results:
         if not isinstance(result, dict):
             continue
         for candidate in result.get("candidates", []):
-            if not isinstance(candidate, dict):
-                continue
-            if normalize_url(str(candidate.get("url") or "")) in date_disqualified_urls:
-                continue
-            access = candidate.get("access_check")
-            if not isinstance(access, dict) or access.get("status") != "verified":
-                continue
-            candidates.append({"candidate": deepcopy(candidate), "access_check": access})
+            if isinstance(candidate, dict):
+                normalized_url = normalize_url(str(candidate.get("url") or ""))
+                access = candidate.get("access_check")
+                entries.append(
+                    {
+                        "candidate": deepcopy(candidate),
+                        "access_check": access if isinstance(access, dict) else None,
+                        "date_disqualified": normalized_url in date_disqualified_urls,
+                    }
+                )
+    for candidate in pool.get("items", []):
+        if isinstance(candidate, dict):
+            normalized_url = normalize_url(str(candidate.get("url") or ""))
+            entries.append(
+                {
+                    "candidate": deepcopy(candidate),
+                    "access_check": verified_access.get(normalized_url),
+                    "date_disqualified": normalized_url in date_disqualified_urls,
+                }
+            )
 
     report_clock = datetime.combine(
         date.fromisoformat(str(manifest["report_date"])),
@@ -210,15 +275,36 @@ def _eligible_candidates(
         path=history_path,
     )
     eligible: list[dict[str, Any]] = []
+    dispositions: list[dict[str, str]] = []
+    pending_secondary: dict[str, list[dict[str, Any]]] = {}
     seen: set[str] = set()
-    for entry in candidates:
+    for entry in entries:
         candidate = entry["candidate"]
         candidate_id = str(candidate.get("candidate_id") or "")
-        if not candidate_id or candidate_id in seen:
+        disposition = {
+            "candidate_id": candidate_id or "missing",
+            "url": str(candidate.get("url") or ""),
+            "source_type": _source_type(candidate),
+            "reason": "eligible",
+        }
+        dispositions.append(disposition)
+        if not candidate_id:
+            disposition["reason"] = "missing_candidate_id"
             continue
+        if candidate_id in seen:
+            disposition["reason"] = "duplicate_candidate_id"
+            continue
+        seen.add(candidate_id)
         claimed_hash = str(candidate.get("candidate_object_sha256") or "")
         if claimed_hash != candidate_object_hash(candidate):
-            raise RunContractError("semantic eligible candidate hash is invalid")
+            raise RunContractError("semantic candidate hash is invalid")
+        if entry["date_disqualified"]:
+            disposition["reason"] = "published_at_conflict"
+            continue
+        access = entry.get("access_check")
+        if not isinstance(access, dict) or access.get("status") != "verified":
+            disposition["reason"] = "missing_verified_access"
+            continue
         history_probe = {
             "url": candidate.get("url"),
             "title": candidate.get("title"),
@@ -226,41 +312,66 @@ def _eligible_candidates(
             "published_at": candidate.get("published_at"),
         }
         if match_history(history_probe, entries=recent_history, now=report_clock).get("redundant"):
+            disposition["reason"] = "historical_duplicate"
             continue
-        published_at = normalize_published_at(candidate.get("published_at"))
+        try:
+            normalize_published_at(candidate.get("published_at"))
+        except RunContractError:
+            disposition["reason"] = "invalid_published_at"
+            continue
         primary_domain = str(
             candidate.get("primary_domain")
             or candidate.get("provisional_domain")
             or ""
         )
-        source_type = _source_type(candidate)
-        if (
-            primary_domain not in {"technology", "healthcare_digital"}
-            or source_type != "primary"
-        ):
+        if primary_domain not in {"technology", "healthcare_digital"}:
+            disposition["reason"] = "unsupported_domain"
             continue
-        summary = str(candidate.get("summary") or candidate.get("summary_hint") or "").strip()
-        eligible.append(
-            {
-                "candidate_id": candidate_id,
-                "title": candidate.get("title"),
-                "url": candidate.get("url"),
-                "source": candidate.get("source"),
-                "published_at": published_at,
-                "published_at_source": candidate.get("published_at_source"),
-                "primary_domain": primary_domain,
-                "secondary_domains": deepcopy(
-                    candidate.get("secondary_domains")
-                    or candidate.get("provisional_secondary_domains")
-                    or []
-                ),
-                "source_type": source_type,
-                "summary": summary,
-                "suggested_event_identity": deepcopy(candidate.get("event_identity")),
-                "access_check": _access_projection(entry["access_check"]),
-            }
+        if disposition["source_type"] == "primary":
+            eligible.append(
+                _candidate_projection(
+                    entry,
+                    candidate_refs=[candidate_id],
+                    corroboration_status="single_primary",
+                )
+            )
+            continue
+        event_id = _candidate_event_id(candidate)
+        if not event_id:
+            disposition["reason"] = "secondary_without_independent_corroboration"
+            continue
+        pending_secondary.setdefault(event_id, []).append(
+            {"entry": entry, "disposition": disposition}
         )
-        seen.add(candidate_id)
+
+    for group in pending_secondary.values():
+        independent = {_source_identity(value["entry"]["candidate"]) for value in group}
+        if len(group) < 2 or len(independent) < 2:
+            for value in group:
+                value["disposition"]["reason"] = (
+                    "secondary_without_independent_corroboration"
+                )
+            continue
+        canonical = group[0]["entry"]
+        refs = [
+            str(value["entry"]["candidate"].get("candidate_id") or "")
+            for value in group
+        ]
+        eligible.append(
+            _candidate_projection(
+                canonical,
+                candidate_refs=refs,
+                corroboration_status="multi_independent",
+            )
+        )
+    return eligible, dispositions
+
+
+def _eligible_candidates(
+    request: dict[str, Any],
+    manifest: dict[str, Any],
+) -> list[dict[str, Any]]:
+    eligible, _ = _candidate_assessment(request, manifest)
     return eligible
 
 
@@ -297,7 +408,7 @@ def build_agent_context(request_path: str | Path) -> dict[str, Any]:
             "event_identity_exact_fields": sorted(IDENTITY_FIELDS),
             "intelligence_level_allowed": ["L1", "L2", "L3", "L4"],
             "confidence_allowed": ["high", "medium", "low"],
-            "selection_rule": "Select only candidate_id values from eligible_candidates; every exposed item is a registered primary source, and weak supply may yield fewer than 10 items.",
+            "selection_rule": "Select only candidate_id values from eligible_candidates; every exposed item is either a registered primary source or a secondary-source event group with at least two independent candidate_refs. Weak supply may yield fewer than 10 items.",
             "top_level_text_fields": ["punchline", "insights", "digest", "market"],
             "text_rule": "Every text field must be one non-empty natural-language string; insights is not a list, and actionability must describe an action rather than a rating word.",
         },
@@ -363,7 +474,13 @@ def _coverage(manifest: dict[str, Any], supplement: dict[str, Any]) -> dict[str,
     }
 
 
-def _candidate_funnel(pool: dict[str, Any], supplemental_count: int, retained: int) -> dict[str, Any]:
+def _candidate_funnel(
+    pool: dict[str, Any],
+    supplemental_count: int,
+    eligible: list[dict[str, Any]],
+    selected_candidate_ids: set[str],
+    dispositions: list[dict[str, str]],
+) -> dict[str, Any]:
     baseline = pool["candidate_funnel"]
     fixed = {
         str(key): int(value)
@@ -371,12 +488,42 @@ def _candidate_funnel(pool: dict[str, Any], supplemental_count: int, retained: i
         if key != "retained_for_review"
     }
     downstream = int(baseline["retained_for_review"]) + supplemental_count
-    if retained > downstream:
-        raise RunContractError("semantic retained count exceeds registered supply")
+    if len(dispositions) != downstream:
+        raise RunContractError("semantic candidate dispositions do not cover registered supply")
+    selected_groups = {
+        str(candidate["candidate_id"]): [str(value) for value in candidate["candidate_refs"]]
+        for candidate in eligible
+        if str(candidate["candidate_id"]) in selected_candidate_ids
+    }
+    selected_ref_owner = {
+        reference: canonical
+        for canonical, references in selected_groups.items()
+        for reference in references
+    }
+    final_dispositions: list[dict[str, str]] = []
+    reason_counts: Counter[str] = Counter()
+    for record in dispositions:
+        finalized = deepcopy(record)
+        candidate_id = str(finalized["candidate_id"])
+        if finalized["reason"] == "eligible":
+            owner = selected_ref_owner.get(candidate_id)
+            if owner is None:
+                finalized["reason"] = "semantic_not_selected"
+            elif owner == candidate_id:
+                finalized["reason"] = "retained"
+            else:
+                finalized["reason"] = "semantic_duplicate"
+        reason_counts[finalized["reason"]] += 1
+        final_dispositions.append(finalized)
+    retained = reason_counts.pop("retained", 0)
+    semantic_duplicate = reason_counts.pop("semantic_duplicate", 0)
+    if retained != len(selected_candidate_ids):
+        raise RunContractError("semantic retained dispositions do not match selected items")
+    below_quality_gate = sum(reason_counts.values())
     fixed.update(
         {
-            "semantic_duplicate": 0,
-            "below_quality_gate": downstream - retained,
+            "semantic_duplicate": semantic_duplicate,
+            "below_quality_gate": below_quality_gate,
             "semantic_capacity": 0,
             "red_team_rejected": 0,
             "retained": retained,
@@ -385,6 +532,8 @@ def _candidate_funnel(pool: dict[str, Any], supplemental_count: int, retained: i
     return {
         "observed": int(baseline["observed"]) + supplemental_count,
         "terminal_dispositions": fixed,
+        "quality_gate_reasons": dict(sorted(reason_counts.items())),
+        "candidate_dispositions": final_dispositions,
     }
 
 
@@ -456,10 +605,11 @@ def assemble_and_finalize(
         raise RunContractError("semantic dynamic turns_used is invalid")
     if dynamic.get("halt_condition_met") is not True:
         raise RunContractError("semantic dynamic halt condition is not met")
-    eligible = {item["candidate_id"]: item for item in _eligible_candidates(request, manifest)}
+    eligible_items, candidate_dispositions = _candidate_assessment(request, manifest)
+    eligible = {item["candidate_id"]: item for item in eligible_items}
     selected = dynamic.get("selected_items")
-    if not isinstance(selected, list) or not 1 <= len(selected) <= 10:
-        raise RunContractError("semantic selected_items must contain 1..10 items")
+    if not isinstance(selected, list) or len(selected) > 10:
+        raise RunContractError("semantic selected_items must contain 0..10 items")
     seen: set[str] = set()
     final_items: list[dict[str, Any]] = []
     for index, review in enumerate(selected):
@@ -493,7 +643,7 @@ def assemble_and_finalize(
             "event_id": event_id,
             "event_identity": deepcopy(identity),
             "identity_quality": "semantic",
-            "candidate_refs": [candidate_id],
+            "candidate_refs": deepcopy(candidate["candidate_refs"]),
             "title": candidate["title"],
             "title_zh": _nonempty(review.get("title_zh"), f"selected_items[{index}].title_zh"),
             "url": candidate["url"],
@@ -518,7 +668,7 @@ def assemble_and_finalize(
             "actionability": _nonempty(review.get("actionability"), f"selected_items[{index}].actionability"),
             "intelligence_level": level,
             "confidence": confidence,
-            "corroboration_status": "single_primary" if candidate["source_type"] == "primary" else "single_secondary",
+            "corroboration_status": candidate["corroboration_status"],
             "summary_zh": _nonempty(review.get("summary_zh"), f"selected_items[{index}].summary_zh"),
         }
         if item["major_signal"] is True and not major_signal_eligible(item):
@@ -558,7 +708,13 @@ def assemble_and_finalize(
         "action_levers": validated_actions,
         "pipeline": {},
         "coverage": _coverage(manifest, supplement),
-        "candidate_funnel": _candidate_funnel(pool, supplemental_count, len(final_items)),
+        "candidate_funnel": _candidate_funnel(
+            pool,
+            supplemental_count,
+            eligible_items,
+            seen,
+            candidate_dispositions,
+        ),
         "mix": mix,
         "top_10": final_items,
         "data_gaps": _data_gaps(supplement, mix),

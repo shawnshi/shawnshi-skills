@@ -1,18 +1,18 @@
 {
   "schema_version": 3,
   "skill": "tool-smart-latex",
-  "generated_at": "2026-08-16T22:27:50+08:00",
+  "generated_at": "2026-09-05T20:37:47+08:00",
   "hash_algorithm": "SHA-256",
   "text_hash_normalization": "LF",
   "skill_md": "SKILL.md",
-  "skill_md_sha256": "e17ff870ebf3f516814707e06478a99532ff5e626d02d2753e415fed52539e86",
+  "skill_md_sha256": "3c1fd96eea0e5d9cc21031ef977d1f788405e47587819f3b4229d42396146066",
   "top_level_files": [
     "SKILL.md"
   ],
   "top_level_file_hashes": [
     {
       "path": "SKILL.md",
-      "sha256": "e17ff870ebf3f516814707e06478a99532ff5e626d02d2753e415fed52539e86"
+      "sha256": "3c1fd96eea0e5d9cc21031ef977d1f788405e47587819f3b4229d42396146066"
     }
   ],
   "top_level_directories": [
@@ -23,7 +23,7 @@
   "resource_directories": [
     {
       "name": "scripts",
-      "file_count": 3
+      "file_count": 4
     },
     {
       "name": "references",
@@ -33,7 +33,7 @@
   "resource_file_hashes": [
     {
       "path": "references/styles.md",
-      "sha256": "7dccf3f977f8961baad1f91dad42b5dd8bfcf4eb6ff87e25db57d2fd0a271961"
+      "sha256": "277cae26f69218a897ef405535f0d61f24311885d758f81838321f19b5d09cbe"
     },
     {
       "path": "scripts/process_idioms.py",
@@ -41,31 +41,35 @@
     },
     {
       "path": "scripts/smart_engine.py",
-      "sha256": "d990343e05b1511df743e70f45fc4d9217f9a175d0bd4edc5e89d3de2f7dcd99"
+      "sha256": "569b2f730f7a92eebd272cbc52508dec18b54e88a9665a718aef107507f54687"
+    },
+    {
+      "path": "scripts/test_skill_contract.py",
+      "sha256": "8292212299d8c4400862dd42814569556692b67893c1e27a796ca15775523287"
     },
     {
       "path": "scripts/test_smart_engine.py",
-      "sha256": "2a288b6a78a77e48e40d5bc684fecb170d37acc9635674c4c413c5c0758f46d9"
+      "sha256": "7665c1da963dc8326a5ddad788c3d87414b6d31ea56904bd3bfc12c74d82581b"
     },
     {
       "path": "templates/academic.tex",
-      "sha256": "a994a4791f349f0d815a523ff6d9a73da208d7ece5bf6763787f74a372760b1b"
+      "sha256": "6478dcce318afddc618d7293b65bdfb65eba3219e1b6f0d9a764dac6e5cb75ea"
     },
     {
       "path": "templates/book.tex",
-      "sha256": "b1a028e04099fd332f2626df75b6df66510739de30c39148a6be67b283d71b49"
+      "sha256": "045c3627aed7fdfcc40e288accf84bbcd774efc5422321652308033600d637d7"
     },
     {
       "path": "templates/cv.tex",
-      "sha256": "8965cacee2b5578ec7af60d1de6c50cf86d78f08bab79453093b22640397508f"
+      "sha256": "75c49a9fbc763037b681301cff9cc65a0ad3e8cacb8a33fd6688dfa7454aa125"
     },
     {
       "path": "templates/tech_book.tex",
-      "sha256": "4e4d1c21d0774340658634833c2280b167fb16fc80ce160c68dd8a5d81b8c960"
+      "sha256": "a1ba33c009caf210ad425aad93d480a58be03c9d87a7106d2cb389d6bb9f501d"
     },
     {
       "path": "templates/tech_report.tex",
-      "sha256": "aad59b808eb1921be7e5e9c05f2682c7741e58a605f8f437376e6ab03874826e"
+      "sha256": "a97e0c5837d7395726780841e745b03c154c209295767e2cd9c24cf510dee484"
     }
   ],
   "declared_local_dependencies": [
@@ -73,7 +77,7 @@
       "path": "references/styles.md",
       "exists": true,
       "resolved_path": "tool-smart-latex/references/styles.md",
-      "sha256": "7dccf3f977f8961baad1f91dad42b5dd8bfcf4eb6ff87e25db57d2fd0a271961"
+      "sha256": "277cae26f69218a897ef405535f0d61f24311885d758f81838321f19b5d09cbe"
     },
     {
       "path": "scripts/process_idioms.py",
@@ -85,7 +89,7 @@
       "path": "scripts/smart_engine.py",
       "exists": true,
       "resolved_path": "tool-smart-latex/scripts/smart_engine.py",
-      "sha256": "d990343e05b1511df743e70f45fc4d9217f9a175d0bd4edc5e89d3de2f7dcd99"
+      "sha256": "569b2f730f7a92eebd272cbc52508dec18b54e88a9665a718aef107507f54687"
     }
   ],
   "missing_declared_dependencies": []

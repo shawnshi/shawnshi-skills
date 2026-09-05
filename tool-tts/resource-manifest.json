@@ -1,11 +1,11 @@
 {
   "schema_version": 3,
   "skill": "tool-tts",
-  "generated_at": "2026-08-20T23:36:03+08:00",
+  "generated_at": "2026-09-05T17:15:45+08:00",
   "hash_algorithm": "SHA-256",
   "text_hash_normalization": "LF",
   "skill_md": "SKILL.md",
-  "skill_md_sha256": "cff80738d966027652a5cb880f74457b435a0886bccb676e7f4ab90e4d5ca6cd",
+  "skill_md_sha256": "4effbfb325d998c697bd18774f6792739588ca02a298916dc67d4525a09fcfd2",
   "top_level_files": [
     "SKILL.md",
     "install.ps1"
@@ -13,7 +13,7 @@
   "top_level_file_hashes": [
     {
       "path": "SKILL.md",
-      "sha256": "cff80738d966027652a5cb880f74457b435a0886bccb676e7f4ab90e4d5ca6cd"
+      "sha256": "4effbfb325d998c697bd18774f6792739588ca02a298916dc67d4525a09fcfd2"
     },
     {
       "path": "install.ps1",

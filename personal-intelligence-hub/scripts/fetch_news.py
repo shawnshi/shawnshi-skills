@@ -1,7 +1,8 @@
 from __future__ import annotations
 
-import asyncio
 import argparse
+import asyncio
+import contextlib
 import random
 import re
 import threading
@@ -11,7 +12,15 @@ from pathlib import Path
 from zoneinfo import ZoneInfo, ZoneInfoNotFoundError
 
 from blackboard import init_blackboard, record_scan_stats, update_phase
-from hub_utils import CURRENT_SCAN_PATH, FETCH_CACHE_PATH, HUB_DIR, LATEST_SCAN_PATH, atomic_dump_json, ensure_runtime_dirs, load_json
+from hub_utils import (
+    CURRENT_SCAN_PATH,
+    FETCH_CACHE_PATH,
+    HUB_DIR,
+    LATEST_SCAN_PATH,
+    atomic_dump_json,
+    ensure_runtime_dirs,
+    load_json,
+)
 
 
 USER_AGENT = (
@@ -41,10 +50,8 @@ def _utc_now() -> datetime:
 
 
 def _consume_task_result(task: asyncio.Task) -> None:
-    try:
+    with contextlib.suppress(BaseException):
         task.exception()
-    except BaseException:
-        pass
 
 
 class ScanOwnerDeadlineExceeded(TimeoutError):
@@ -116,15 +123,11 @@ async def _run_in_isolated_daemon_loop(
         try:
             result = isolated_loop.run_until_complete(scan_task)
         except BaseException as exc:
-            try:
+            with contextlib.suppress(RuntimeError):
                 owner_loop.call_soon_threadsafe(finish, None, exc)
-            except RuntimeError:
-                pass
         else:
-            try:
+            with contextlib.suppress(RuntimeError):
                 owner_loop.call_soon_threadsafe(finish, result, None)
-            except RuntimeError:
-                pass
         finally:
             with state_lock:
                 state.clear()
@@ -133,7 +136,7 @@ async def _run_in_isolated_daemon_loop(
                 # There is no public hard-stop operation for an asyncio Task.
                 # These tasks have already exceeded the configured grace and
                 # their isolated loop is intentionally discarded now.
-                pending_task._log_destroy_pending = False
+                pending_task._log_destroy_pending = False  # type: ignore[attr-defined]
             isolated_loop.close()
             asyncio.set_event_loop(None)
 
@@ -153,10 +156,8 @@ async def _run_in_isolated_daemon_loop(
         if isinstance(isolated_loop, asyncio.AbstractEventLoop) and isinstance(
             scan_task, asyncio.Task
         ):
-            try:
+            with contextlib.suppress(RuntimeError):
                 isolated_loop.call_soon_threadsafe(scan_task.cancel)
-            except RuntimeError:
-                pass
 
     try:
         done, _pending = await asyncio.wait(
@@ -407,6 +408,8 @@ async def fetch_with_retry(
                 await asyncio.sleep((2 ** attempt) + random.uniform(0, 1))
             else:
                 break
+    if last_error is None:  # pragma: no cover - the loop always executes
+        raise RuntimeError("request failed without an exception")
     raise last_error
 
 
@@ -487,7 +490,7 @@ async def parse_rss(
         items = []
         for entry in feed.entries[:limit]:
             link = entry.get("link", "")
-            if not link or link in cache:
+            if not link:
                 continue
             desc_raw = entry.get("summary", "") or entry.get("description", "")
             desc = BeautifulSoup(desc_raw, "html.parser").get_text().strip() if desc_raw else ""
@@ -527,12 +530,9 @@ async def fetch_hackernews(
             is_json=True,
             semaphore=semaphore,
         )
-        pending_ids = []
-        for story_id in ids[:10]:
-            hn_url = f"https://news.ycombinator.com/item?id={story_id}"
-            if hn_url in cache:
-                continue
-            pending_ids.append(story_id)
+        # Discovery cache records observations but does not suppress candidates.
+        # Formal history remains the authority for published-event deduplication.
+        pending_ids = list(ids[:10])
 
         async def fetch_story(story_id):
             return await fetch_with_retry(
@@ -549,8 +549,8 @@ async def fetch_hackernews(
         )
         items = []
         failed = 0
-        for story_id, data in zip(pending_ids, results):
-            if isinstance(data, Exception):
+        for story_id, data in zip(pending_ids, results, strict=True):
+            if not isinstance(data, dict):
                 failed += 1
                 continue
             items.append(
@@ -586,7 +586,7 @@ async def fetch_v2ex(
         items = []
         for topic in data[:10]:
             url = topic.get("url")
-            if not url or url in cache:
+            if not url:
                 continue
             items.append(
                 _build_v2ex_item(topic, retrieved_at=_utc_now().isoformat())
@@ -618,8 +618,6 @@ async def fetch_github_trending(
             if not title_el:
                 continue
             url = "https://github.com" + title_el["href"]
-            if url in cache:
-                continue
             items.append(
                 _build_github_item(
                     title=title_el.get_text(strip=True),
@@ -774,7 +772,7 @@ async def _scan_all_impl(
 
     raw_items = []
     source_meta = {}
-    for (name, _), result in zip(tasks_meta, results):
+    for (name, _), result in zip(tasks_meta, results, strict=True):
         if isinstance(result, Exception):
             source_meta[name] = str(result)
             continue

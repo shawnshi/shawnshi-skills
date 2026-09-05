@@ -44,7 +44,7 @@ def _is_verified_primary_lane_signal(
     from history_manager import normalize_url
     from run_contract import normalize_published_at
 
-    if not any(keyword in _candidate_text(item) for keyword in keywords):
+    if keywords and not any(keyword in _candidate_text(item) for keyword in keywords):
         return False
     if item.get("source_type") != "primary":
         return False
@@ -79,7 +79,12 @@ def assess_supplement_gaps(
     maximum = int(focus.get("filters", {}).get("max_top10", 10))
     targets = allocate_target_counts(maximum, manifest["mix_request"]["requested_ratio"])
     counts = {
-        domain: sum(1 for item in items if item.get("provisional_domain") == domain)
+        domain: sum(
+            1
+            for item in items
+            if item.get("provisional_domain") == domain
+            and _is_verified_primary_lane_signal(item, [], manifest["window"])
+        )
         for domain in ("technology", "healthcare_digital")
     }
     gaps: list[dict[str, Any]] = []
@@ -90,7 +95,8 @@ def assess_supplement_gaps(
                 "lane": "TechRadar",
                 "query_scope": "通用技术原始来源；补足通过质量门的技术候选",
                 "max_turns": 3,
-                "halt_condition": "达到技术目标候选数、原始来源无增量或用完最大轮次",
+                "halt_condition": "完成绑定候选核验并达到技术目标候选数、原始来源无增量或用完最大轮次",
+                "verify_bound_candidates": True,
             }
         )
     if counts["healthcare_digital"] < targets["healthcare_digital"]:
@@ -100,7 +106,8 @@ def assess_supplement_gaps(
                 "lane": "HealthcareRadar",
                 "query_scope": "医疗 AI、临床信息系统、支付政策与医院数字化原始来源",
                 "max_turns": 3,
-                "halt_condition": "达到医疗数字化目标候选数、原始来源无增量或用完最大轮次",
+                "halt_condition": "完成绑定候选核验并达到医疗数字化目标候选数、原始来源无增量或用完最大轮次",
+                "verify_bound_candidates": True,
             }
         )
 
@@ -132,7 +139,8 @@ def assess_supplement_gaps(
                         "lane": lane,
                         "query_scope": scope,
                         "max_turns": 3,
-                        "halt_condition": "至少完成一个直接来源访问核验、确认无增量或用完最大轮次",
+                        "halt_condition": "完成绑定候选核验并至少完成一个直接来源访问核验、确认无增量或用完最大轮次",
+                        "verify_bound_candidates": True,
                     }
                 )
 

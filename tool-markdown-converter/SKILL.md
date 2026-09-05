@@ -30,4 +30,4 @@ description: 将 PDF、Office、HTML、富文本和杂乱笔记转换为结构�
 
 ## Output
 
-交付 Markdown 文件、转换摘要、缺失或降级项，以及可点击的绝对本地文件链接。
+交付 Markdown 文件、转换摘要、缺失或降级项，以及清晰的本地输出路径。

@@ -40,9 +40,7 @@ description: 设计、生成、重构和严格审查科研论文图表，覆盖�
 
 ### 环境与字体
 
-在导入 Matplotlib 前设置无头后端和任务级可写缓存：
-
-    MPLBACKEND=Agg MPLCONFIGDIR=/tmp/figure-mpl-cache
+在导入 Matplotlib 前将 `MPLBACKEND` 设为 `Agg`，并把 `MPLCONFIGDIR` 指向当前系统可写的任务级临时目录（例如 `<temp>/figure-mpl-cache`）。
 
 运行 [scripts/font_preflight.py](scripts/font_preflight.py) 检查依赖、外部工具、字体解析和已声明字形。流水线构图后还会从实际 Figure 重新提取标题、轴标签、分类刻度、图例和注释；未在 target.labels 声明的文字或缺字形均为 FAIL。存在中文、日文或韩文时读取 [references/fonts_and_cjk.md](references/fonts_and_cjk.md)。静默字体回退不是通过。缺包、字体、TeX 或系统工具时只报告缺口；未经授权不要安装。
 

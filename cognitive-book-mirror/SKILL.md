@@ -25,7 +25,7 @@ description: 将书籍或长文重构为“原文主张—个人映射”的伴�
 ## 处理长文本
 
 - 常规长度由主代理直接处理。
-- 只有文本可按章节独立拆分且当前环境支持并行时，才使用子代理；统一章节术语、引用位置和个人材料边界。
+- 只有文本可按章节独立拆分且当前环境支持并行时，才读取 [agents/mirror-agent.md](agents/mirror-agent.md) 并使用子代理；统一章节术语、引用位置和个人材料边界。
 - 如需结构化提取，只能对用户显式指定的 `.md` 或 `.txt` 运行 `python scripts/extract_and_pack.py --file <path> --output-dir <scratch-dir>`；个人上下文必须逐个使用 `--context <path>` 指定。脚本不得自动查找日记、治理文件、历史聊天或调用其他技能。
 - PDF、EPUB 或 Office 文件先使用当前可用的转换能力，在用户指定的临时位置生成文本；本技能不自动转换、不修改源文件。
 - 合并分片时使用 `python scripts/stitch_and_format.py --results-dir <dir> --output <file>`；输出路径必须显式提供，不得写入记忆库。

@@ -1,7 +1,6 @@
 import unittest
 from pathlib import Path
 
-
 SKILL_ROOT = Path(__file__).resolve().parents[1]
 
 
@@ -33,7 +32,10 @@ class PeriodicAutoSaveContractTests(unittest.TestCase):
         expected = {
             "weekly": ("[YYYY-Www] Weekly Cognitive Audit", "replace-weekly-audit"),
             "monthly": ("[YYYY-MM] Monthly Cognitive Audit", "replace-monthly-audit"),
-            "quarterly": ("[YYYY-QN] Quarterly Cognitive Audit", "replace-quarterly-audit"),
+            "quarterly": (
+                "[YYYY-QN] Quarterly Cognitive Audit",
+                "replace-quarterly-audit",
+            ),
         }
         for period, (heading, action) in expected.items():
             with self.subTest(period=period):
@@ -44,6 +46,20 @@ class PeriodicAutoSaveContractTests(unittest.TestCase):
                 self.assertIn("`periodic-audit-request-v1`", prompt)
                 self.assertIn("`diary_ops.py scope/replace", prompt)
                 self.assertIn(action, prompt)
+
+    def test_generation_is_not_save_authorization_and_preserves_periodic_blocks(self):
+        for marker in (
+            "## 最短用法：生成不等于保存",
+            "本周个人日志审计，草稿",
+            "内容门通过不等于保存授权",
+            "--enforce-template-fields --period-type weekly --period-id <YYYY-Www>",
+            "模板模式仍须填写能量管理稳定字段",
+            "人工检查只支持草稿交付",
+            "replace-personal-diary",
+            "重复或非法周期区块失败关闭",
+        ):
+            with self.subTest(marker=marker):
+                self.assertIn(marker, self.skill)
 
     def test_failure_stops_persistence(self):
         for marker in ("审计门", "权威门", "请求门", "范围门", "写后校验失败"):

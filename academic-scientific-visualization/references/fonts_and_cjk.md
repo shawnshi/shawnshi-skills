@@ -2,7 +2,7 @@
 
 自动化运行前显式设置可写缓存和无头后端：
 
-    MPLBACKEND=Agg MPLCONFIGDIR=/tmp/figure-mpl-cache python scripts/font_preflight.py \
+    MPLBACKEND=Agg MPLCONFIGDIR=<writable-temp>/figure-mpl-cache python scripts/font_preflight.py \
       --font-family "Noto Sans CJK SC" --text "时间（小时）" --text "响应值"
 
 字体选择顺序：

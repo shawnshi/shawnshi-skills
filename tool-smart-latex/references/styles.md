@@ -9,6 +9,14 @@ author: System
 
 This document lists the available document styles for the Smart Doc LaTeX engine.
 
+## Typography contract takes precedence
+
+Read the skill's `SKILL.md` typography procedure and the current `WRITING.md` before selecting a style. A bundled preset is a starting point, not a publisher-approved exception. Only explicit user instructions or an applicable supplied template or publisher, journal, legal, or brand guide override conflicting defaults; retain the other requirements.
+
+For ordinary English body text, check 10–12 pt, an actual baseline distance of 120–145% of the font size, and a target of 45–90 characters per line. Use left alignment unless an explicit governing style requires justification; enable the appropriate language's hyphenation when justification is required. Apply Chinese spacing and punctuation to Chinese passages; do not reinterpret the English character-count target as a Chinese character limit.
+
+Inspect the actual body font, baseline, and column width in the generated task copy. In particular, the `book` preset's `\onehalfspacing`, CTeX defaults, and the CV's compact geometry do not establish compliance. Adapt only the task copy as needed, recompile, and inspect the final PDF. The engine does not automatically apply this contract or rewrite protected literals. The 15–18 px and long-form 16–20 px screen defaults are not PDF point-size settings.
+
 ## Supported Styles
 
 | Style Code | Description | Target Audience | Template File |

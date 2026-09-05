@@ -38,7 +38,7 @@
 ### 能量管理（描述性生理背景）
 - **数据范围与来源:** [请求窗口、实际观测窗口、本地/实时来源]
 - **组件覆盖与新鲜度:** [逐组件状态、最近观测日期和缺口]
-- **采集审计:** `sync_eligible=<true|false>; sync_attempted=<started|waited_existing|not_attempted>; task_status=<终态|not_checked>; local_reread=<accepted|rejected|not_run>; local_status=<complete|partial|no_data|read_error|not_run>; live_fallback=<used|not_used>; reason=<稳定原因码>`
+- **采集审计:** `sync_eligible=<true|false>; sync_attempted=<started|waited_existing|direct|not_attempted>; task_status=<success|failed|timeout|invalid|start_failed|interrupted_or_terminated|not_checked>; local_reread=<accepted|rejected|not_run>; local_status=<complete|partial|no_data|read_error|not_run>; live_fallback=<used|not_used>; reason=<稳定原因码>`
 - **睡眠观察:** [时长、阶段占比、躁动和各自观测日期]
 - **HRV 与静息心率观察:** [值、原始状态和各自观测日期]
 - **Body Battery 与压力观察:** [值和各自观测日期]

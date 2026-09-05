@@ -1,7 +1,7 @@
 {
   "schema_version": 3,
   "skill": "technical-diagram-renderer",
-  "generated_at": "2026-09-01T19:54:15+08:00",
+  "generated_at": "2026-09-05T20:37:47+08:00",
   "hash_algorithm": "SHA-256",
   "text_hash_normalization": "LF",
   "skill_md": "SKILL.md",
@@ -15,7 +15,7 @@
   "top_level_file_hashes": [
     {
       "path": "LICENSE",
-      "sha256": "7de620051267179686eb5929b2eb264403bb7cbce00ebdee93408c18daa6c03f"
+      "sha256": "8e0ec382a1d2bdc66d7e69841533f2b3b02ac2fc5e6bab78bda5d9106e7ad767"
     },
     {
       "path": "SKILL.md",

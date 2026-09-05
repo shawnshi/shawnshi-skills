@@ -1,6 +1,7 @@
 ---
 name: automate-github-issues
 description: 审计、设计或配置 GitHub Issue 分析、任务拆分、冲突检测、代理分派和受控合并流程。用户要求自动分流 GitHub Issues、搭建 Issue 到 PR 流水线、评估多代理修复方案，或明确要求配置 Jules 版本的 fleet 工作流时使用。
+disable-model-invocation: true
 ---
 
 # GitHub Issue 自动化

@@ -1,7 +1,7 @@
 {
   "schema_version": 3,
   "skill": "cognitive-personal-roundtable",
-  "generated_at": "2026-09-01T19:54:14+08:00",
+  "generated_at": "2026-09-05T20:37:45+08:00",
   "hash_algorithm": "SHA-256",
   "text_hash_normalization": "LF",
   "skill_md": "SKILL.md",
@@ -18,18 +18,12 @@
   "top_level_directories": [
     "agents",
     "assets",
-    "references",
-    "scripts",
-    "templates"
+    "references"
   ],
   "resource_directories": [
     {
-      "name": "scripts",
-      "file_count": 1
-    },
-    {
       "name": "references",
-      "file_count": 3
+      "file_count": 2
     },
     {
       "name": "assets",
@@ -43,15 +37,11 @@
   "resource_file_hashes": [
     {
       "path": "agents/openai.yaml",
-      "sha256": "38c864c9c3fd33329d87b4bff79575e3cd54216d7197a359f7dc947ff3a00ac8"
+      "sha256": "43c1f5232c2e4feea24ae3197fe6c87800a2ffd2ae310ad3b94dfdd8d43b4d2e"
     },
     {
       "path": "assets/icon.svg",
       "sha256": "51a6923974188748638a424aa59b42b6afad2d910f910a1d43bb13ee10f3ce26"
-    },
-    {
-      "path": "references/personas.md",
-      "sha256": "ee0c74a6c62e87c9d57985d940c54fde667302c8a14a71c139b8913b3630a1ba"
     },
     {
       "path": "references/perspective-cards.md",
@@ -60,14 +50,6 @@
     {
       "path": "references/validation-cases.md",
       "sha256": "d58e4e0d76c5bf6d03a9b3c41f2e79edf17939af3bff708b75fed97bff097ced"
-    },
-    {
-      "path": "scripts/merger.py",
-      "sha256": "6d89130e924103b83007568f269dfd9575741290b417bf56fee7d60616d141d2"
-    },
-    {
-      "path": "templates/ascii_topology.md",
-      "sha256": "9f5a91a486b29441a527ac8848fea0eca1ea91da8926da0d2ca13f92ac6501c6"
     }
   ],
   "declared_local_dependencies": [

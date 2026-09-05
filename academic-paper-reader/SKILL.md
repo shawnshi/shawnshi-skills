@@ -105,7 +105,7 @@ description: 深入拆解一篇目标学术论文，核验论文身份与版本�
 保存标准或深度 Markdown 后运行：
 
 ```bash
-python3 scripts/paper_audit_gate.py REPORT.md --mode standard
+python scripts/paper_audit_gate.py REPORT.md --mode standard
 ```
 
 先把脚本解析为本技能目录下的实际路径，不要假定当前工作目录就是技能目录。

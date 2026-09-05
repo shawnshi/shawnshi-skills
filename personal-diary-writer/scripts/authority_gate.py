@@ -6,24 +6,18 @@ import re
 from datetime import datetime, timezone
 from pathlib import Path
 
-try:
-    import tiktoken
-except ImportError:  # Optional telemetry only; authority decisions must remain stdlib-only.
-    tiktoken = None
+import tiktoken
 
 
 FRONTMATTER_RE = re.compile(r"\A---\s*\n(.*?)\n---\s*\n", re.DOTALL)
 
 
 def sha256_file(path):
-    data = Path(path).read_bytes()
-    try:
-        text = data.decode("utf-8")
-    except UnicodeDecodeError:
-        pass
-    else:
-        data = text.replace("\r\n", "\n").replace("\r", "\n").encode("utf-8")
-    return hashlib.sha256(data).hexdigest()
+    digest = hashlib.sha256()
+    with open(path, "rb") as handle:
+        for chunk in iter(lambda: handle.read(1024 * 1024), b""):
+            digest.update(chunk)
+    return digest.hexdigest()
 
 
 def _normalized_path(path):
@@ -34,11 +28,11 @@ def _resolve_locator(locator):
     if not isinstance(locator, dict):
         raise ValueError("locator must be an object")
     base = locator.get("base")
-    if base in {"user_home", "skill_root"}:
-        root = Path.home() if base == "user_home" else Path(__file__).resolve().parent.parent
+    if base == "user_home":
+        root = Path.home()
         segments = locator.get("segments", [])
         if not isinstance(segments, list) or not segments:
-            raise ValueError(f"{base} locator requires non-empty segments")
+            raise ValueError("user_home locator requires non-empty segments")
         if any(
             not isinstance(segment, str)
             or not segment
@@ -133,9 +127,9 @@ def verify(config, root_task_id, actor_id, context_epoch):
         return _error("AUTHORITY_PARSE_FAILED", str(exc))
     if authority_meta.get("name") != config.get("skill_name"):
         return _error("AUTHORITY_NAME_MISMATCH", "authority skill name changed")
-    authority_version = config.get("authority_version")
-    if not isinstance(authority_version, str) or not authority_version.strip():
-        return _error("AUTHORITY_VERSION_INVALID", "authority version is missing")
+    authority_version = authority_meta.get("metadata.version") or authority_meta.get("version")
+    if authority_version != config.get("authority_version"):
+        return _error("AUTHORITY_VERSION_MISMATCH", "authority skill version changed")
 
     authority_norm = _normalized_path(authority)
     allowed_proxies = {
@@ -167,12 +161,8 @@ def verify(config, root_task_id, actor_id, context_epoch):
         if proxy_sha != actual_sha256:
             return _error("PROXY_HASH_MISMATCH", "proxy authority hash is stale")
 
-    if tiktoken is None:
-        tokenizer_name = None
-        skill_tokens = None
-    else:
-        tokenizer_name = "cl100k_base"
-        skill_tokens = len(tiktoken.get_encoding(tokenizer_name).encode(authority_text))
+    tokenizer_name = "cl100k_base"
+    tokenizer = tiktoken.get_encoding(tokenizer_name)
     event = {
         "schema_version": 2,
         "event_id": f"skill-load-{actual_sha256[:12]}-{context_epoch}",
@@ -189,9 +179,8 @@ def verify(config, root_task_id, actor_id, context_epoch):
         "skill_path": authority_norm,
         "skill_version": config["authority_version"],
         "skill_sha256": actual_sha256,
-        "skill_tokens": skill_tokens,
+        "skill_tokens": len(tokenizer.encode(authority_text)),
         "tokenizer": tokenizer_name,
-        "skill_characters": len(authority_text),
     }
     return {"ok": True, "authority_path": authority_norm, "skill_load": event}
 

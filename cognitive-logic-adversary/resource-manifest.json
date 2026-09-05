@@ -1,47 +1,38 @@
 {
   "schema_version": 3,
   "skill": "cognitive-logic-adversary",
-  "generated_at": "2026-08-16T22:27:49+08:00",
+  "generated_at": "2026-09-05T20:37:45+08:00",
   "hash_algorithm": "SHA-256",
   "text_hash_normalization": "LF",
   "skill_md": "SKILL.md",
-  "skill_md_sha256": "7003996c79f2d934e275070f858221ebf8026d5ab7d41a72d2da7f26492d4c95",
+  "skill_md_sha256": "cc36a5bc39d2173ee22a32bceb06403100d2a20177a18a7b0b33ecb7190ba459",
   "top_level_files": [
     "SKILL.md"
   ],
   "top_level_file_hashes": [
     {
       "path": "SKILL.md",
-      "sha256": "7003996c79f2d934e275070f858221ebf8026d5ab7d41a72d2da7f26492d4c95"
+      "sha256": "cc36a5bc39d2173ee22a32bceb06403100d2a20177a18a7b0b33ecb7190ba459"
     }
   ],
   "top_level_directories": [
-    "Workflows",
     "references",
     "scripts"
   ],
   "resource_directories": [
     {
       "name": "scripts",
-      "file_count": 2
+      "file_count": 1
     },
     {
       "name": "references",
-      "file_count": 4
+      "file_count": 2
     }
   ],
   "resource_file_hashes": [
     {
-      "path": "references/agents.md",
-      "sha256": "51a8d04b77626b703832f0e638c7da8c9d56402800391cad102855d6606ccae4"
-    },
-    {
-      "path": "references/integration.md",
-      "sha256": "679eca3b7fd3e295834105587f8455cdaf4a5d2b15019f1dae3949802fd4268b"
-    },
-    {
       "path": "references/output_format.md",
-      "sha256": "40bd73f64b6ed2960f5fc7c11a0a62d797aeb77dd60e96472b3b69e583cbb63a"
+      "sha256": "cade83a67175b76e9f30331ac74572cb1d95da0513d3f691184e8b92f3c70477"
     },
     {
       "path": "references/philosophy.md",
@@ -50,26 +41,6 @@
     {
       "path": "scripts/game_resolver.py",
       "sha256": "7d4d9dfc697b8f7c7b25c6420746061cd70332fa70a6677c2037a567e58de59d"
-    },
-    {
-      "path": "scripts/session_merger.py",
-      "sha256": "16c08ce92595fc1f9f863d93affe1d850f3a1ff67d2a71ef0db1ce6b969836e8"
-    },
-    {
-      "path": "Workflows/AdversarialValidation.md",
-      "sha256": "7ea1de8bb4f1f62ace8cc235338d209d6ec44e0d13ab06039e39b4b64148262d"
-    },
-    {
-      "path": "Workflows/Debate.md",
-      "sha256": "199772118753279cdb1f74bf3d0df430f5bf2f7f631c91825469f68f87fcaf41"
-    },
-    {
-      "path": "Workflows/ParallelAnalysis.md",
-      "sha256": "815d8eed168445937b8c2103dea70669877d1c6dcac86797922c8640ffdb686d"
-    },
-    {
-      "path": "Workflows/Quick.md",
-      "sha256": "0f4f4438b78688251c19650c8a9f67dc6778dc0704e4a539fd62494837d13454"
     }
   ],
   "declared_local_dependencies": [
@@ -77,19 +48,13 @@
       "path": "references/output_format.md",
       "exists": true,
       "resolved_path": "cognitive-logic-adversary/references/output_format.md",
-      "sha256": "40bd73f64b6ed2960f5fc7c11a0a62d797aeb77dd60e96472b3b69e583cbb63a"
+      "sha256": "cade83a67175b76e9f30331ac74572cb1d95da0513d3f691184e8b92f3c70477"
     },
     {
       "path": "scripts/game_resolver.py",
       "exists": true,
       "resolved_path": "cognitive-logic-adversary/scripts/game_resolver.py",
       "sha256": "7d4d9dfc697b8f7c7b25c6420746061cd70332fa70a6677c2037a567e58de59d"
-    },
-    {
-      "path": "scripts/session_merger.py",
-      "exists": true,
-      "resolved_path": "cognitive-logic-adversary/scripts/session_merger.py",
-      "sha256": "16c08ce92595fc1f9f863d93affe1d850f3a1ff67d2a71ef0db1ce6b969836e8"
     }
   ],
   "missing_declared_dependencies": []

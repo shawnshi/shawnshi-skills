@@ -1,7 +1,7 @@
 {
   "schema_version": 3,
   "skill": "personal-write-humanizer",
-  "generated_at": "2026-08-16T22:02:19",
+  "generated_at": "2026-09-05T17:15:44+08:00",
   "hash_algorithm": "SHA-256",
   "text_hash_normalization": "LF",
   "skill_md": "SKILL.md",
@@ -32,7 +32,7 @@
   "resource_file_hashes": [
     {
       "path": "references/CHECKLIST.md",
-      "sha256": "19e5f99a6688033ae468f095d96cb045cd7aaaea0c10f25d6157b64fc64e5b02"
+      "sha256": "17ec9e20946289a0bf538c9f24dd6bd048577551776b384c217547931fa229fe"
     },
     {
       "path": "references/EVALUATIONS.md",
@@ -44,7 +44,7 @@
     },
     {
       "path": "references/GUIDELINES.md",
-      "sha256": "579c029db16f7dee0690ba2924e659f7e2693bb9f22fef5b25a13c50d46034da"
+      "sha256": "431401758f8fae4ad4c398d6ace614fa3fd12e21b9e9e6af8671a007f5474678"
     },
     {
       "path": "scripts/humanize_engine.py",
@@ -56,7 +56,7 @@
       "path": "references/CHECKLIST.md",
       "exists": true,
       "resolved_path": "personal-write-humanizer/references/CHECKLIST.md",
-      "sha256": "19e5f99a6688033ae468f095d96cb045cd7aaaea0c10f25d6157b64fc64e5b02"
+      "sha256": "17ec9e20946289a0bf538c9f24dd6bd048577551776b384c217547931fa229fe"
     },
     {
       "path": "references/EVALUATIONS.md",
@@ -74,7 +74,7 @@
       "path": "references/GUIDELINES.md",
       "exists": true,
       "resolved_path": "personal-write-humanizer/references/GUIDELINES.md",
-      "sha256": "579c029db16f7dee0690ba2924e659f7e2693bb9f22fef5b25a13c50d46034da"
+      "sha256": "431401758f8fae4ad4c398d6ace614fa3fd12e21b9e9e6af8671a007f5474678"
     },
     {
       "path": "scripts/humanize_engine.py",

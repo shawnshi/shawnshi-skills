@@ -1,6 +1,7 @@
 ---
 name: personal-musicbee-dj
 description: 在本地 Windows 电脑上根据歌曲、歌单、流派、场景或情绪请求启动并控制 MusicBee 播放，必要时生成临时 M3U 歌单。用于“播放音乐”“放点专注音乐”“切换歌单”“用 MusicBee 播放”等明确播放请求；不用于远程设备、流媒体账户管理或未经请求记录收听偏好。
+disable-model-invocation: true
 ---
 
 # MusicBee 本地播放
@@ -20,8 +21,7 @@ description: 在本地 Windows 电脑上根据歌曲、歌单、流派、场景�
 3. 在技能目录运行：
 
    ```powershell
-   $env:PYTHONIOENCODING = "utf-8"
-   python src/cli.py --type <type> --value "<value>" --intensity <intensity>
+   python -X utf8 src/cli.py --type <type> --value "<value>" --intensity <intensity>
    ```
 
 4. 将脚本生成的临时歌单保存在当前任务允许的临时位置；不要把调试日志或播放历史写入永久目录。

@@ -1,7 +1,7 @@
 {
   "schema_version": 3,
   "skill": "cognitive-morphism-mapper",
-  "generated_at": "2026-08-21T08:54:56+08:00",
+  "generated_at": "2026-09-05T20:37:45+08:00",
   "hash_algorithm": "SHA-256",
   "text_hash_normalization": "LF",
   "skill_md": "SKILL.md",
@@ -16,8 +16,6 @@
     }
   ],
   "top_level_directories": [
-    "assets",
-    "commands",
     "examples",
     "modules",
     "references",
@@ -30,11 +28,7 @@
     },
     {
       "name": "references",
-      "file_count": 5
-    },
-    {
-      "name": "assets",
-      "file_count": 1
+      "file_count": 4
     },
     {
       "name": "examples",
@@ -43,32 +37,8 @@
   ],
   "resource_file_hashes": [
     {
-      "path": "assets/morphism-template.html",
-      "sha256": "be98b6fc8b8c74766de0e6b1b73595db3c669f38a4c7832ad1d249fba6364436"
-    },
-    {
-      "path": "commands/add-domain.md",
-      "sha256": "e20f855b21303da82c209ef6da999177c3a05d21e27595a318334da0dded2e9a"
-    },
-    {
-      "path": "commands/config.md",
-      "sha256": "f7b3dcf3dcf68b0913754f8d6332944ad15ad2ce619362726252df6ad42d8763"
-    },
-    {
-      "path": "commands/extract.md",
-      "sha256": "7cc872d1d429ace86435d8f7ed07df8162b33459d194da64d47b4db91263a2f6"
-    },
-    {
-      "path": "commands/map.md",
-      "sha256": "1a6df025d71b7389a423f01e3523db4d93bbd25588c3377b18e2f4b7b10e5ea0"
-    },
-    {
-      "path": "commands/synthesize.md",
-      "sha256": "7d9e439270d591e571af0d6f6039375257348dc339e5b7fa2f217f22f716fed2"
-    },
-    {
       "path": "examples/.gitkeep",
-      "sha256": "56f0d6ac8fbc29ea59e8eb8ce626949efcce2b16cd4ac9242e5630a6f35afdc3"
+      "sha256": "e0b9e19b2208bb5d83ec8e46da2c0b2f75f963136fefc38ead9cf8a4d7e40932"
     },
     {
       "path": "modules/adjoint_balancer.md",
@@ -105,10 +75,6 @@
     {
       "path": "references/_template.md",
       "sha256": "9da80ecac3df06e703cc079702053cb2ea788b32e63322fc43a15ec5676526f2"
-    },
-    {
-      "path": "references/modules.md",
-      "sha256": "f60fe52297ac178266001c9520d59f565a142777fd2342b6588ad62da492d19b"
     },
     {
       "path": "references/protocols.md",

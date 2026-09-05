@@ -77,6 +77,18 @@ $endif$
     \vspace{1.5cm}
   \end{@twocolumnfalse}
 ]
+$elseif(abstract)$
+% An abstract does not require title metadata or a title block.
+\twocolumn[
+  \begin{@twocolumnfalse}
+    \renewcommand{\abstractname}{\large 摘要}
+    \begin{abstract}
+      \normalsize
+      $abstract$
+    \end{abstract}
+    \vspace{1.5cm}
+  \end{@twocolumnfalse}
+]
 $endif$
 
 $body$

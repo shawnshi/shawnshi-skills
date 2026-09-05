@@ -1,8 +1,8 @@
 interface:
   display_name: "Text Forger"
   short_description: "忠实校对、润色、压缩并受控重组已有文本，避免事实与格式漂移"
-  default_prompt: "Use $tool-text-forger to faithfully proofread, compress, or restructure this draft without changing its facts, position, or format."
   icon_small: "./assets/icon.svg"
   icon_large: "./assets/icon.svg"
+  default_prompt: "使用 $tool-text-forger 忠实校对、压缩或受控重组这段既有文本，并保持事实与格式不变量。"
 policy:
   allow_implicit_invocation: true

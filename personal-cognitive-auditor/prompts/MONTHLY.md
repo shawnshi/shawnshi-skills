@@ -1,6 +1,6 @@
 # Monthly Audit Template
 
-本模板用于月度复盘，可按材料和用户目标裁剪。默认只读获取当月日历和本地 Garmin 健康摘要；窗口包含当前自然日且末日数据不新鲜时，可按主技能新鲜度门启动一次已授权同步任务并披露结果。其他联网和来源只使用当前任务明确授权的数据。日历安排不等于实际出席或完成。只有请求窗口本身满足资格时才使用本地 `patterns`，不自动扩窗。
+本模板用于月度复盘，可按材料和用户目标裁剪。默认只读获取当月日历和本地 Garmin 健康摘要；窗口包含当前自然日且末日数据不新鲜时，可按主技能新鲜度门执行一次受控两阶段同步并披露结果。其他联网和来源只使用当前任务明确授权的数据。日历安排不等于实际出席或完成。只有请求窗口本身满足资格时才使用本地 `patterns`，不自动扩窗。
 
 ## 自动保存契约
 
@@ -37,7 +37,7 @@
 ### 能量管理（描述性生理背景）
 - **数据范围与来源:** [请求窗口、实际观测窗口、本地/实时来源]
 - **组件覆盖与新鲜度:** [逐组件状态、最近观测日期和缺口]
-- **采集审计:** `sync_eligible=<true|false>; sync_attempted=<started|waited_existing|not_attempted>; task_status=<终态|not_checked>; local_reread=<accepted|rejected|not_run>; local_status=<complete|partial|no_data|read_error|not_run>; live_fallback=<used|not_used>; reason=<稳定原因码>`
+- **采集审计:** `sync_eligible=<true|false>; sync_attempted=<started|waited_existing|direct|not_attempted>; task_status=<success|failed|timeout|invalid|start_failed|interrupted_or_terminated|not_checked>; local_reread=<accepted|rejected|not_run>; local_status=<complete|partial|no_data|read_error|not_run>; live_fallback=<used|not_used>; reason=<稳定原因码>`
 - **睡眠观察:** [时长、阶段占比、躁动和观测日期]
 - **HRV 与静息心率观察:** [值、原始状态和各自观测日期]
 - **Body Battery 与压力观察:** [值和各自观测日期]

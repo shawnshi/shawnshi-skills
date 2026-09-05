@@ -50,7 +50,7 @@ project/
 ```
 
 | 字段 | 约束 |
-|---|---|
+| --- | --- |
 | `schemaVersion` | 当前为 `1.0.0` |
 | `theme` | 必须存在于 `components.json` 的 `themes` 中 |
 | `aspect` | 正数比例，格式为 `宽:高`，例如 `16:9`、`16:10`、`4:3` |
@@ -69,7 +69,7 @@ project/
 ### 交付档位与门禁
 
 | 档位 | 静态 QA | 视觉检查 | PDF | 额外约束 |
-|---|---|---|---|---|
+| --- | --- | --- | --- | --- |
 | `quick-internal` | 必须 | `sample`：首、中、末代表页；不超过三页时全页 | 可选 | 内部快速沟通 |
 | `standard-client` | 必须 | `layouts`：每类布局至少一页，并含首末页 | 可选 | 默认客户交付 |
 | `high-assurance` | 必须 | `all`：全页 | 必须 | 强制 `offlineRequired=true`、`evidencePolicy=required` |
@@ -81,7 +81,8 @@ project/
 ## 页面身份与布局
 
 - 新页面必须显式提供 `data-slide-id`；它是深链接、讲稿和增量构建使用的稳定身份，不得用页码充当身份。
-- `data-slide-id` 只能包含小写字母、数字和连字符，且全 deck 唯一。
+- `data-slide-id` 必须匹配 `^[a-z0-9]+(?:-[a-z0-9]+)*$`，且全 deck 唯一。
+- 接收 Slide Architect 蓝图时遵循 [Web handoff 人工映射契约](../../tool-slide-architect/references/pptx-handoff.md)：不改源 `Slide_ID`，另存稳定 source → target 对照（`S001` → `s001`），空 ID 或碰撞必须拒绝，不能用页码解决；显式保持页数、顺序、Claims/Evidence、讲稿和 Open Items。当前没有自动蓝图适配器。
 - 为兼容旧片段，构建器会从文件名生成缺失的 ID，并写入产物；应在下一次编辑时把该 ID 补回源文件。
 - 页面必须使用 `data-layout="<canonical-id>"`，ID 以 `references/layouts.json` 为准。
 - `data-evidence` 描述该页证据状态；无事实主张的封面或章节页可使用 `none`，高保障模式除外。
@@ -148,4 +149,4 @@ node scripts/export-pdf.mjs <projectDir>/dist/index.html <projectDir>/dist/deck.
 node scripts/verify-delivery.mjs <projectDir>/dist/index.html
 ```
 
-构建成功不等于视觉验收完成。只有最终验证返回 0，才表示该档位要求的静态、视觉与 PDF 门禁已全部满足；无法执行的门禁必须明确标为未完成。
+构建成功不等于视觉验收完成。最终验证返回 0 只表示该档位的机器凭证门禁满足：自动视觉脚本检测部分 overflow、采集截图并记录哈希，不自动证明遮挡、对比度、裁切或语义正确。必须另行看图和复核内容，记录复核人、覆盖页面、问题及处理结果；`verify` 不单独证明人工视觉或语义 review 通过。无法执行的门禁或复核必须明确标为未完成。

@@ -147,6 +147,8 @@ def _ignore_file(path: Path) -> bool:
         lower in IGNORED_FILE_NAMES
         or lower in {"resource-manifest.json", "skill.json"}
         or lower.endswith((".bak", ".log", ".pyc", ".pyo"))
+        or ".bak_" in lower
+        or ".bak-" in lower
         or (lower.startswith("resource-manifest.") and lower.endswith(".tmp"))
     )
 
@@ -287,8 +289,10 @@ def validate_manifest(root: Path, skill_dir: Path) -> list[dict[str, str]]:
         actual = _load_manifest(manifest_path)
     except (OSError, UnicodeError, json.JSONDecodeError, ManifestContractError) as exc:
         return [{"code": "manifest_parse_error", "detail": str(exc)}]
-    generated_at = actual.get("generated_at")
-    if not _valid_generated_at(generated_at):
+    generated_at_value = actual.get("generated_at")
+    if isinstance(generated_at_value, str) and _valid_generated_at(generated_at_value):
+        generated_at = generated_at_value
+    else:
         issues.append({"code": "generated_at_invalid", "detail": "generated_at is not ISO-8601"})
         generated_at = "1970-01-01T00:00:00"
     try:
@@ -457,10 +461,11 @@ def main() -> int:
     root = args.root.resolve()
     if args.mode == "generate":
         result = generate_manifests(root, args.include_skill, args.exclude_skill)
-        failed = int(result["failed"])
+        failed_value = result["failed"]
     else:
         result = check_manifests(root, args.include_skill, args.exclude_skill)
-        failed = int(result["stale"])
+        failed_value = result["stale"]
+    failed = failed_value if isinstance(failed_value, int) else 1
     print(
         json.dumps(result, ensure_ascii=False, separators=(",", ":"))
         if args.json else json.dumps(result, ensure_ascii=False, indent=2)

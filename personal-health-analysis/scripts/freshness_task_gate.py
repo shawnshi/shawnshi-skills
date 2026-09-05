@@ -4,7 +4,6 @@
 from __future__ import annotations
 
 import argparse
-import hashlib
 import json
 import os
 import subprocess
@@ -23,53 +22,6 @@ TERMINAL_STATUSES = {"success", "failed"}
 
 def _norm(value: str | Path) -> str:
     return os.path.normcase(os.path.abspath(os.fspath(value))).replace("\\", "/")
-
-
-def expected_task_arguments_sha256(args: argparse.Namespace) -> str:
-    required = (
-        "runner",
-        "task_config_dir",
-        "task_garmindb_python",
-        "task_scratch_dir",
-        "state_output",
-        "authority_config",
-    )
-    values = {}
-    for name in required:
-        raw = getattr(args, name, None)
-        if not isinstance(raw, str) or not raw.strip() or '"' in raw:
-            raise ValueError(f"{name}_invalid")
-        values[name] = str(Path(raw).resolve())
-    if not 1 <= args.task_days <= 31:
-        raise ValueError("task_days_invalid")
-    if args.task_timeout_seconds <= 0 or args.task_total_timeout_seconds <= 0:
-        raise ValueError("task_timeout_invalid")
-    task_arguments = " ".join(
-        (
-            "-B",
-            f'"{values["runner"]}"',
-            "--days",
-            str(args.task_days),
-            "--config-dir",
-            f'"{values["task_config_dir"]}"',
-            "--garmindb-python",
-            f'"{values["task_garmindb_python"]}"',
-            "--scratch-dir",
-            f'"{values["task_scratch_dir"]}"',
-            "--state-output",
-            f'"{values["state_output"]}"',
-            "--authority-config",
-            f'"{values["authority_config"]}"',
-            "--timeout-seconds",
-            str(args.task_timeout_seconds),
-            "--total-timeout-seconds",
-            str(args.task_total_timeout_seconds),
-            "--allow-network",
-            "--allow-sync",
-            "--allow-health-data",
-        )
-    )
-    return hashlib.sha256(task_arguments.encode("utf-8")).hexdigest()
 
 
 def _parse_json(text: str) -> dict:
@@ -167,11 +119,9 @@ def validate_terminal_state(
     dates = state.get("component_latest_observation_dates") or {}
     for component in COMPONENTS:
         observation = dates.get(component)
-        if not isinstance(observation, str):
-            return "terminal_date_invalid"
         try:
             parsed = date.fromisoformat(observation)
-        except ValueError:
+        except (TypeError, ValueError):
             return "terminal_date_invalid"
         if parsed.isoformat() != end:
             return "terminal_coverage_stale"
@@ -200,16 +150,12 @@ def run_gate(
     if not (args.allow_network and args.allow_sync and args.allow_health_data):
         audit["reason"] = "capability_denied"
         return 2, audit
-    requested_end = getattr(args, "end", None)
-    if not isinstance(requested_end, str):
-        audit["reason"] = "requested_end_invalid"
-        return 2, audit
     try:
-        date.fromisoformat(requested_end)
-    except ValueError:
+        date.fromisoformat(args.end)
+    except (TypeError, ValueError):
         audit["reason"] = "requested_end_invalid"
         return 2, audit
-    if requested_end != (today or date.today()).isoformat():
+    if args.end != (today or date.today()).isoformat():
         audit["reason"] = "requested_end_not_current"
         return 2, audit
     if not 1 <= args.max_polls <= 240 or not 0.1 <= args.poll_seconds <= 10:
@@ -219,11 +165,6 @@ def run_gate(
     if not authority.get("ok"):
         audit.update({"task_status": "invalid", "reason": "runtime_authority_mismatch"})
         return 2, audit
-    try:
-        task_arguments_sha256 = expected_task_arguments_sha256(args)
-    except (OSError, RuntimeError, ValueError) as exc:
-        audit.update({"task_status": "invalid", "reason": f"task_binding_config_invalid:{exc}"})
-        return 2, audit
     expected = {
         "task_name": args.task_name,
         "python": args.python,
@@ -231,7 +172,7 @@ def run_gate(
         "authority_config": args.authority_config,
         "state_output": args.state_output,
         "working_directory": str(Path(args.runner).resolve().parent),
-        "arguments_sha256": task_arguments_sha256,
+        "arguments_sha256": (authority.get("task_binding") or {}).get("arguments_sha256"),
     }
     snapshot = probe("Inspect")
     task_error = validate_task(snapshot, expected)
@@ -268,10 +209,10 @@ def run_gate(
                 if expected_run_id is None
                 else validate_terminal_state(
                     current_state,
-                    requested_end,
+                    args.end,
                     authority,
                     expected_run_id,
-                    (date.fromisoformat(requested_end) - timedelta(days=args.direct_days - 1)).isoformat(),
+                    (date.fromisoformat(args.end) - timedelta(days=args.direct_days - 1)).isoformat(),
                 )
             )
             if direct_code != 0 or error:
@@ -318,7 +259,7 @@ def run_gate(
         ):
             continue
         if isinstance(current_state, dict) and current_state.get("status") in TERMINAL_STATUSES:
-            error = validate_terminal_state(current_state, requested_end, authority, expected_run_id)
+            error = validate_terminal_state(current_state, args.end, authority, expected_run_id)
             if error:
                 audit.update({"task_status": str(current_state.get("status")), "reason": error})
                 return 1, audit
@@ -335,12 +276,6 @@ def build_parser() -> argparse.ArgumentParser:
     parser.add_argument("--runner", required=True)
     parser.add_argument("--authority-config", required=True)
     parser.add_argument("--state-output", required=True)
-    parser.add_argument("--task-config-dir", required=True)
-    parser.add_argument("--task-garmindb-python", required=True)
-    parser.add_argument("--task-scratch-dir", required=True)
-    parser.add_argument("--task-days", type=int, default=7)
-    parser.add_argument("--task-timeout-seconds", type=int, default=480)
-    parser.add_argument("--task-total-timeout-seconds", type=int, default=900)
     parser.add_argument("--end", required=True)
     parser.add_argument("--max-polls", type=int, default=204)
     parser.add_argument("--poll-seconds", type=float, default=5.0)

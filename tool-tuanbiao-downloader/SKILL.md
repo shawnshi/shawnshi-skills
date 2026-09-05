@@ -1,6 +1,7 @@
 ---
 name: tool-tuanbiao-downloader
 description: 从合法公开来源下载、校验并按需合并团体标准或其他标准文件。当用户提供标准编号、公开链接，或要求批量获取和整理标准 PDF 时使用。
+disable-model-invocation: true
 ---
 
 # Standard Document Downloader

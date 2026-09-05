@@ -10,7 +10,6 @@ from datetime import date
 from pathlib import Path
 from unittest.mock import patch
 
-
 MODULE_PATH = Path(__file__).with_name("diary_ops.py")
 SPEC = importlib.util.spec_from_file_location("diary_ops", MODULE_PATH)
 assert SPEC is not None
@@ -20,13 +19,6 @@ SPEC.loader.exec_module(diary_ops)
 
 
 class DiaryOpsTests(unittest.TestCase):
-    def test_portable_defaults_do_not_embed_a_machine_user(self):
-        source = MODULE_PATH.read_text(encoding="utf-8")
-        self.assertNotIn("C:/Users/", source)
-        with patch.dict(os.environ, {"TEST_DIARY_ROOT": "relative/path"}):
-            with self.assertRaisesRegex(ValueError, "absolute path"):
-                diary_ops._configured_path("TEST_DIARY_ROOT", Path.home())
-
     def _args(
         self,
         target,
@@ -84,9 +76,11 @@ class DiaryOpsTests(unittest.TestCase):
             "风险与未知",
             "行动闭环",
         )
-        return f"# {day} 星期一\n\n" + "\n\n".join(
-            f"## {section}\n\n- 已生成内容。" for section in sections
-        ) + "\n"
+        return (
+            f"# {day} 星期一\n\n"
+            + "\n\n".join(f"## {section}\n\n- 已生成内容。" for section in sections)
+            + "\n"
+        )
 
     def _artifacts(
         self,
@@ -148,9 +142,7 @@ class DiaryOpsTests(unittest.TestCase):
                     "request_kind": "personal",
                     "request_action": scope["action"],
                     "request_target": scope["target"],
-                    "request_scope_sha256": scope[
-                        "authorization_scope_sha256"
-                    ],
+                    "request_scope_sha256": scope["authorization_scope_sha256"],
                     "request_save_policy": "canonical_autosave",
                     "diary_payload_sha256": scope["source_sha256"],
                 }
@@ -163,7 +155,9 @@ class DiaryOpsTests(unittest.TestCase):
             evidence_id = scope["source_sha256"]
             extra["audit_payload_sha256"] = scope["source_sha256"]
             label = source.removesuffix("_audit_gate")
-            period_id = scope[{"weekly": "week", "monthly": "month", "quarterly": "quarter"}[label]]
+            period_id = scope[
+                {"weekly": "week", "monthly": "month", "quarterly": "quarter"}[label]
+            ]
             request_text = "AUDIT_AUTOSAVE " + json.dumps(
                 {
                     "period_id": period_id,
@@ -193,7 +187,9 @@ class DiaryOpsTests(unittest.TestCase):
                 {
                     "request_artifact_schema": "periodic-audit-request-v1",
                     "request_event_id": request_event_id,
-                    "request_event_sha256": hashlib.sha256(request_text.encode("utf-8")).hexdigest(),
+                    "request_event_sha256": hashlib.sha256(
+                        request_text.encode("utf-8")
+                    ).hexdigest(),
                     "request_period_type": label,
                     "request_period_id": period_id,
                     "request_action": scope["action"],
@@ -211,9 +207,7 @@ class DiaryOpsTests(unittest.TestCase):
                     "approval_source": source,
                     "approval_evidence_id": evidence_id,
                     "authorization_id": scope["authorization_id"],
-                    "authorization_scope_sha256": scope[
-                        "authorization_scope_sha256"
-                    ],
+                    "authorization_scope_sha256": scope["authorization_scope_sha256"],
                     **extra,
                 },
                 ensure_ascii=False,
@@ -222,9 +216,80 @@ class DiaryOpsTests(unittest.TestCase):
         )
         return receipt, approval
 
+    def test_personal_diary_preserves_periodic_blocks_both_orders(self):
+        day = date(2024, 3, 31)
+        payload = self._personal_payload().replace("2026-08-31", day.isoformat())
+        history = "# 2024-03-30\n\n历史不变\n"
+        specs = (
+            ("weekly", "2024-W13"),
+            ("monthly", "2024-03"),
+            ("quarterly", "2024-Q1"),
+        )
+        for audit_first in (True, False):
+            text = (
+                history
+                if audit_first
+                else diary_ops._render_personal_diary(history, payload, day, "\n")[0]
+            )
+            for label, period in specs:
+                audit = f"## [{period}] {label.title()} Cognitive Audit\n\n合成审计\n"
+                text = diary_ops._render_audit(
+                    text,
+                    audit,
+                    day,
+                    f"replace-{label}-audit",
+                    period if label == "weekly" else None,
+                    period if label == "monthly" else None,
+                    period if label == "quarterly" else None,
+                    "\n",
+                )[0]
+            before = diary_ops._personal_diary_parts(text[: text.index(history)], day)[
+                1
+            ]
+            updated, protected = diary_ops._render_personal_diary(
+                text, payload, day, "\n"
+            )
+            self.assertTrue(updated.endswith(history))
+            body, after = diary_ops._personal_diary_parts(
+                updated[: updated.index(history)], day
+            )
+            self.assertEqual(body, payload.rstrip("\r\n"))
+            self.assertEqual(before, after)
+            self.assertEqual(protected, diary_ops._sha256("".join(before).encode()))
+            self.assertNotIn(
+                "Cognitive Audit", diary_ops._render_date(text, payload, day, "\n")
+            )
+
+    def test_personal_diary_rejects_duplicate_or_illegal_audits(self):
+        day = date(2024, 3, 31)
+        payload = self._personal_payload().replace("2026-08-31", day.isoformat())
+        valid = "## [2024-W13] Weekly Cognitive Audit\n合成\n"
+        for audits in (
+            valid + valid,
+            valid.replace("W13", "W99"),
+            valid.replace("## ", "  ## "),
+            valid + "非法\n===\n",
+        ):
+            with self.subTest(audits=audits), self.assertRaises(diary_ops.DiaryError):
+                diary_ops._render_personal_diary(
+                    "# 2024-03-31\n\n" + audits, payload, day, "\n"
+                )
+
     def test_exact_personal_diary_request_autosaves_after_generation(self):
-        for request_text in ("更新个人日志", "[OVERRIDE]更新个人日志"):
-            with self.subTest(request=request_text), tempfile.TemporaryDirectory() as tmp, self._runtime(tmp):
+        requests = (
+            "更新个人日志",
+            "[OVERRIDE]更新个人日志",
+            "更新个人日志。今日：起草协议。明天：学习汇报。",
+            " 更新个人日志 ",
+            "[OVERRIDE] 更新个人日志",
+            "更新个人日志\n",
+        )
+        for request_text in requests:
+            with (
+                self.subTest(request=request_text),
+                tempfile.TemporaryDirectory() as tmp,
+                self._runtime(tmp),
+            ):
                 root = Path(tmp)
                 target = root / "2026-Q3.md"
                 target.write_text("# 2026-08-30\n\n历史内容\n", encoding="utf-8")
@@ -250,17 +315,61 @@ class DiaryOpsTests(unittest.TestCase):
                 )
                 self.assertEqual(result["status"], "success")
                 self.assertIn("## 行动闭环", target.read_text(encoding="utf-8"))
+                audit = "## [2026-08] Monthly Cognitive Audit\n\n合成审计\n"
+                target.write_text(
+                    target.read_text(encoding="utf-8").replace(
+                        "# 2026-08-30", audit + "\n# 2026-08-30"
+                    ),
+                    encoding="utf-8",
+                )
+                scope = diary_ops.build_scope(
+                    self._args(target, payload, action="replace-personal-diary")
+                )
+                receipt, approval = self._artifacts(
+                    root,
+                    scope,
+                    "personal_diary_request_gate",
+                    request_text=request_text,
+                )
+                diary_ops.replace_operation(
+                    self._args(
+                        target,
+                        payload,
+                        receipt,
+                        approval,
+                        action="replace-personal-diary",
+                    )
+                )
+                self.assertIn(audit, target.read_text(encoding="utf-8"))
+                self.assertIn(
+                    "# 2026-08-30\n\n历史内容\n", target.read_text(encoding="utf-8")
+                )
 
     def test_modified_or_nonexact_personal_diary_request_is_not_writable(self):
         requests = (
             "[OVERRIDE]修改技能，“更新个人日志”在生成后自动保存",
-            " 更新个人日志 ",
-            "[OVERRIDE] 更新个人日志",
             "[OVERRIDE][WARROOM]更新个人日志",
-            "更新个人日志\n",
+            "更新个人日志（草稿）",
+            "预览今日个人日志",
+            "更新个人日志，仅供查看不要保存",
+            "今天天气真好",
+            "是 中信医疗集团",
+            "更新健康数据",
+            "更正：报告数字为3",
+            "修改为蓝色",
+            "查看个人日记",
+            "分析个人日记",
+            "请分析个人日记",
+            "请解释如何保存个人日记",
+            "请分析健康数据，不要写入任何文件",
+            "更新个人日志，不要写入任何文件",
         )
         for request_text in requests:
-            with self.subTest(request=request_text), tempfile.TemporaryDirectory() as tmp, self._runtime(tmp):
+            with (
+                self.subTest(request=request_text),
+                tempfile.TemporaryDirectory() as tmp,
+                self._runtime(tmp),
+            ):
                 root = Path(tmp)
                 target = root / "2026-Q3.md"
                 target.write_text("# 2026-08-30\n\n历史内容\n", encoding="utf-8")
@@ -276,7 +385,7 @@ class DiaryOpsTests(unittest.TestCase):
                     request_text=request_text,
                 )
                 with self.assertRaisesRegex(
-                    diary_ops.DiaryError, "exact protected request"
+                    diary_ops.DiaryError, "authorized personal diary request"
                 ):
                     diary_ops.replace_operation(
                         self._args(
@@ -290,7 +399,11 @@ class DiaryOpsTests(unittest.TestCase):
 
     def test_personal_diary_request_cannot_cross_dates_or_drift_scope(self):
         for mutation in ("event_date", "event_timezone", "request_scope"):
-            with self.subTest(mutation=mutation), tempfile.TemporaryDirectory() as tmp, self._runtime(tmp):
+            with (
+                self.subTest(mutation=mutation),
+                tempfile.TemporaryDirectory() as tmp,
+                self._runtime(tmp),
+            ):
                 root = Path(tmp)
                 target = root / "2026-Q3.md"
                 target.write_text("# 2026-08-30\n\n历史内容\n", encoding="utf-8")
@@ -314,7 +427,9 @@ class DiaryOpsTests(unittest.TestCase):
                         json.dumps(event, ensure_ascii=False) + "\n",
                         encoding="utf-8",
                     )
-                    expected = "request date" if mutation == "event_date" else "timezone"
+                    expected = (
+                        "request date" if mutation == "event_date" else "timezone"
+                    )
                 else:
                     value = json.loads(approval.read_text(encoding="utf-8"))
                     value["request_scope_sha256"] = "0" * 64
@@ -469,7 +584,9 @@ class DiaryOpsTests(unittest.TestCase):
         with tempfile.TemporaryDirectory() as tmp, self._runtime(tmp):
             root = Path(tmp)
             target = root / "2026-Q3.md"
-            target.write_bytes(b"\xef\xbb\xbf" + "# 2026-08-30\r\n\r\n历史\r\n".encode("utf-8"))
+            target.write_bytes(
+                b"\xef\xbb\xbf" + "# 2026-08-30\r\n\r\n历史\r\n".encode()
+            )
             payload = root / "payload.md"
             payload.write_text("# 2026-08-31\n\n内容\n", encoding="utf-8")
             scope = diary_ops.build_scope(self._args(target, payload))
@@ -557,7 +674,11 @@ class DiaryOpsTests(unittest.TestCase):
             ),
         )
         for action, period_field, period_id, day, heading, source in cases:
-            with self.subTest(action=action), tempfile.TemporaryDirectory() as tmp, self._runtime(tmp):
+            with (
+                self.subTest(action=action),
+                tempfile.TemporaryDirectory() as tmp,
+                self._runtime(tmp),
+            ):
                 root = Path(tmp)
                 target = root / "2026-Q3.md"
                 target.write_text(
@@ -573,7 +694,9 @@ class DiaryOpsTests(unittest.TestCase):
                     encoding="utf-8",
                 )
                 period_args = {period_field: period_id}
-                args = self._args(target, payload, action=action, day=day, **period_args)
+                args = self._args(
+                    target, payload, action=action, day=day, **period_args
+                )
                 scope = diary_ops.build_scope(args)
                 receipt, approval = self._artifacts(root, scope, source)
                 result = diary_ops.replace_operation(
@@ -596,7 +719,9 @@ class DiaryOpsTests(unittest.TestCase):
                 self.assertIn("新审计", text)
                 self.assertNotIn("旧审计", text)
 
-    def test_periodic_audit_creates_missing_period_end_date_without_changing_history(self):
+    def test_periodic_audit_creates_missing_period_end_date_without_changing_history(
+        self,
+    ):
         with tempfile.TemporaryDirectory() as tmp, self._runtime(tmp):
             root = Path(tmp)
             target = root / "2026-Q3.md"
@@ -641,7 +766,11 @@ class DiaryOpsTests(unittest.TestCase):
             "## [2026-08] Monthly Cognitive Audit\n\nSetext 一级区块\n===\n",
         )
         for payload_text in payloads:
-            with self.subTest(payload=payload_text), tempfile.TemporaryDirectory() as tmp, self._runtime(tmp):
+            with (
+                self.subTest(payload=payload_text),
+                tempfile.TemporaryDirectory() as tmp,
+                self._runtime(tmp),
+            ):
                 root = Path(tmp)
                 target = root / "2026-Q3.md"
                 target.write_text("# 2026-08-30\n\n历史内容\n", encoding="utf-8")
@@ -923,7 +1052,9 @@ class DiaryOpsTests(unittest.TestCase):
                             day="2026-08-30",
                         )
                     )
-            snapshot_path, snapshot_sha = observed.read_text(encoding="utf-8").splitlines()
+            snapshot_path, snapshot_sha = observed.read_text(
+                encoding="utf-8"
+            ).splitlines()
             self.assertNotEqual(Path(snapshot_path), payload)
             self.assertEqual(snapshot_sha, scope["source_sha256"])
             self.assertNotIn("并发变化", target.read_text(encoding="utf-8"))

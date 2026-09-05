@@ -1,18 +1,18 @@
 {
   "schema_version": 3,
   "skill": "personal-travel-research",
-  "generated_at": "2026-08-16T22:02:19",
+  "generated_at": "2026-09-05T17:15:44+08:00",
   "hash_algorithm": "SHA-256",
   "text_hash_normalization": "LF",
   "skill_md": "SKILL.md",
-  "skill_md_sha256": "42e7fe7051b56bfaf4cd57f27ab0c0ebe3ee13cb02a8b3fc5fec5e2cb383ff92",
+  "skill_md_sha256": "9b9096ff66c2f2090c84877b0b1d3dd277e685522ca496bfa1354d63c811bd12",
   "top_level_files": [
     "SKILL.md"
   ],
   "top_level_file_hashes": [
     {
       "path": "SKILL.md",
-      "sha256": "42e7fe7051b56bfaf4cd57f27ab0c0ebe3ee13cb02a8b3fc5fec5e2cb383ff92"
+      "sha256": "9b9096ff66c2f2090c84877b0b1d3dd277e685522ca496bfa1354d63c811bd12"
     }
   ],
   "top_level_directories": [],

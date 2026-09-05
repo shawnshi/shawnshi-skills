@@ -1,8 +1,8 @@
 interface:
   display_name: "HIT Digital Strategy Partner"
   short_description: "医疗数字化战略、投资排序与可审计ROI/TCO决策支持"
-  default_prompt: "Use $hit-digital-strategy-partner to compare healthcare digital investment options with auditable ROI, TCO, risks, and decision gates."
   icon_small: "./assets/icon.svg"
   icon_large: "./assets/icon.svg"
+  default_prompt: "使用 $hit-digital-strategy-partner 比较医疗数字化方案、投资条件与 ROI/TCO，并形成高管决策建议。"
 policy:
   allow_implicit_invocation: true

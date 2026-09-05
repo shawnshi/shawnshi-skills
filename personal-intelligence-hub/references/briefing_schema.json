@@ -131,6 +131,50 @@
       "halt_condition_met"
     ]
   },
+  "candidate_funnel_contract": {
+    "required_fields": [
+      "observed",
+      "terminal_dispositions",
+      "quality_gate_reasons",
+      "candidate_dispositions"
+    ],
+    "terminal_dispositions_allowed": [
+      "invalid_or_unknown_date",
+      "outside_window",
+      "source_exclusion",
+      "historical_duplicate",
+      "below_heuristic_threshold",
+      "candidate_capacity",
+      "semantic_duplicate",
+      "below_quality_gate",
+      "semantic_capacity",
+      "red_team_rejected",
+      "retained"
+    ],
+    "quality_gate_reasons_allowed": [
+      "missing_candidate_id",
+      "duplicate_candidate_id",
+      "published_at_conflict",
+      "missing_verified_access",
+      "historical_duplicate",
+      "invalid_published_at",
+      "unsupported_domain",
+      "secondary_without_independent_corroboration",
+      "semantic_not_selected"
+    ],
+    "candidate_disposition_required_fields": [
+      "candidate_id",
+      "url",
+      "source_type",
+      "reason"
+    ],
+    "conservation_rules": [
+      "sum(terminal_dispositions.values()) == observed",
+      "terminal_dispositions.retained == len(top_10)",
+      "sum(quality_gate_reasons.values()) == terminal_dispositions.below_quality_gate",
+      "len(candidate_dispositions) == retained + semantic_duplicate + below_quality_gate"
+    ]
+  },
   "required_gap_fields": ["gap_id", "lane", "status", "description", "impact"],
   "l4_required_audit_fields": ["devil_advocate", "blind_spots"]
 }

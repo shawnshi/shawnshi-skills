@@ -4,6 +4,7 @@ import subprocess
 import tempfile
 import unittest
 from pathlib import Path
+from typing import cast
 
 import resource_manifest as manifest
 
@@ -15,6 +16,10 @@ class ResourceManifestTests(unittest.TestCase):
     def setUp(self):
         self.root = Path(tempfile.mkdtemp())
         self.addCleanup(shutil.rmtree, self.root, ignore_errors=True)
+
+    @staticmethod
+    def issues(result: dict[str, object]) -> list[dict[str, object]]:
+        return cast(list[dict[str, object]], result["issues"])
 
     def create_skill(self, name: str, body: str = "") -> Path:
         skill_dir = self.root / name
@@ -58,6 +63,19 @@ class ResourceManifestTests(unittest.TestCase):
             ],
         )
 
+    def test_timestamped_backup_file_is_ignored(self):
+        skill_dir = self.create_skill("example-skill")
+        (skill_dir / "SKILL.md.bak_20260829_193004").write_text(
+            "stale backup", encoding="utf-8"
+        )
+
+        manifest.generate_manifests(self.root)
+        document = json.loads(
+            (skill_dir / "resource-manifest.json").read_text(encoding="utf-8")
+        )
+
+        self.assertNotIn("SKILL.md.bak_20260829_193004", document["top_level_files"])
+
     def test_explicit_cross_skill_json_reference_is_hashed(self):
         skill_dir = self.create_skill(
             "example-skill",
@@ -81,7 +99,7 @@ class ResourceManifestTests(unittest.TestCase):
 
         legacy_contract.write_text('{"version":"2.0.0"}\n', encoding="utf-8")
         result = manifest.check_manifests(self.root)
-        codes = {issue["code"] for issue in result["issues"]}
+        codes = {issue["code"] for issue in self.issues(result)}
         self.assertEqual(result["stale"], 1)
         self.assertIn("declared_local_dependencies_mismatch", codes)
 
@@ -143,7 +161,7 @@ class ResourceManifestTests(unittest.TestCase):
         manifest_path.write_text(json.dumps(document), encoding="utf-8")
 
         result = manifest.check_manifests(self.root)
-        codes = {issue["code"] for issue in result["issues"]}
+        codes = {issue["code"] for issue in self.issues(result)}
 
         self.assertEqual(result["stale"], 1)
         self.assertIn("schema_version_mismatch", codes)
@@ -160,7 +178,7 @@ class ResourceManifestTests(unittest.TestCase):
         result = manifest.check_manifests(self.root)
 
         self.assertEqual(result["stale"], 1)
-        self.assertEqual(result["issues"][0]["code"], "manifest_parse_error")
+        self.assertEqual(self.issues(result)[0]["code"], "manifest_parse_error")
 
     def test_nonportable_dependency_fails_without_overwriting_manifest(self):
         skill_dir = self.create_skill("example-skill")
@@ -226,7 +244,7 @@ class ResourceManifestTests(unittest.TestCase):
         resource.write_text("after\n", encoding="utf-8")
 
         result = manifest.check_manifests(self.root)
-        codes = {issue["code"] for issue in result["issues"]}
+        codes = {issue["code"] for issue in self.issues(result)}
 
         self.assertEqual(result["stale"], 1)
         self.assertIn("resource_file_hashes_mismatch", codes)
@@ -251,7 +269,7 @@ class ResourceManifestTests(unittest.TestCase):
 
         config.write_text('{"baseUrl":"after"}\n', encoding="utf-8")
         result = manifest.check_manifests(self.root)
-        codes = {issue["code"] for issue in result["issues"]}
+        codes = {issue["code"] for issue in self.issues(result)}
 
         self.assertEqual(result["stale"], 1)
         self.assertIn("top_level_file_hashes_mismatch", codes)
@@ -266,7 +284,7 @@ class ResourceManifestTests(unittest.TestCase):
         resource.write_text("after\n", encoding="utf-8")
 
         result = manifest.check_manifests(self.root)
-        codes = {issue["code"] for issue in result["issues"]}
+        codes = {issue["code"] for issue in self.issues(result)}
 
         self.assertEqual(result["stale"], 1)
         self.assertIn("resource_file_hashes_mismatch", codes)

@@ -1,13 +1,15 @@
 ---
 name: personal-health-analysis
 description: 以本地优先方式分析 Garmin 睡眠时长与规律、HRV 厂商基线、心率、压力、身体电量、体重、非位置化活动摘要、活动强度、夜间呼吸/血氧、VO₂max 估计及数据质量，并生成 Markdown 报告或零外联 HTML 趋势面板。用于“分析睡眠”“查看 HRV/心率/压力”“评估身体状态”“生成多维健康画像”“分析个人趋势或睡眠规律”“生成健康报告或趋势图”“检查或启用 Garmin 自动同步”等请求；显式调用本技能即默认授权读取请求窗口内相关健康指标，并在本地明确无数据时对同一窗口和组件执行一次实时只读回退；登录、同步和活动轨迹下载仍需单独授权，仅提供非诊断性健康信息。
+metadata:
+  version: "11.6.2"
 ---
 
 # Garmin 健康数据分析
 
 ## 环境与授权
 
-- 本目录是当前安装实例的健康运行时权威。每次被个人日记或认知复盘调用时，先运行 `<SKILL_PYTHON> scripts/runtime_authority.py --config runtime-authority.json`；配置使用相对定位绑定本目录，复制或安装后必须在目标目录重新生成并验证技能与入口哈希。仅在返回 `ok=true` 后使用其 `skill_root`、`entrypoints` 与版本；任何绑定漂移都返回 `HEALTH_RUNTIME_AUTHORITY_MISMATCH`，并停止健康读取、同步与实时回退。
+- 本目录是唯一健康运行时权威。每次被个人日记或认知复盘调用时，先运行 `<SKILL_PYTHON> scripts/runtime_authority.py --config runtime-authority.json`；仅在返回 `ok=true` 后使用其 `skill_root`、`entrypoints` 与版本。其他发现代理只允许指向同一版本和 SHA-256 的本权威文件，禁止执行代理目录中的脚本。权威、入口哈希或代理绑定漂移时返回 `HEALTH_RUNTIME_AUTHORITY_MISMATCH`，停止健康读取、同步与实时回退。
 - 显式调用本技能即授权读取本次请求窗口内与分析用途绑定的 Garmin 健康指标；不再逐项询问健康数据授权。普通趋势面板默认组件仍为 `sleep,hrv,body_battery,heart_rate,stress`；未指定指标的综合健康分析默认使用全面健康画像，并增加体重、非位置化已记录活动摘要、日常活动强度、HRV 厂商基线、睡眠起止/清醒、夜间呼吸/血氧及最新分模态 VO₂max 估计。体重和活动只在请求窗口内做汇总，并各读取截至窗口末端的单条最近记录用于披露新鲜度；不得据此扩展趋势窗口。活动画像不得读取活动 ID、名称、描述、设备序列号、坐标或原始轨迹。面板 `activities` 组件、逐活动明细、原始活动文件与 `training_load_series` 仍只有任务明确需要时才读取。用户指定更窄指标时继续缩小。饮水、账户 Profile/Settings、设备闹钟、原始轨迹和认证材料不属于默认健康指标授权。
 - 默认先读取 Garmin 本地数据库；本地分析不要求登录。显式调用本技能同时授权：仅当本地结果明确为 `no_data`、日期窗口与组件清单保持不变且实时预检通过时，对同一窗口和组件执行云端只读回退。`partial`、数据库变化、Schema 错误或其他读取异常不得触发回退。个人日志或认知复盘的 current-date 新鲜度请求直接运行两阶段同步（`sync_health_data.py`），不再启动 Windows 计划任务；授权、身份或覆盖验证失败不得进入该分支。
 - 技能执行健康读取命令时自动附加 `--allow-health-data`；进入上述一次性回退时再自动附加 `--allow-network`。两个 CLI 标志仍是本次命令的显式能力门，不得从脚本中移除，也不得跨命令、跨窗口或跨用途复用。默认授权不包含直接跳过本地读取、Garmin 登录或认证状态探测、令牌创建或刷新、数据库同步、活动文件下载及其他持久化；这些操作分别需要本次明确授权，并继续要求 `--allow-token-write`、`--allow-sync` 或 `--allow-download`。
@@ -21,7 +23,7 @@ description: 以本地优先方式分析 Garmin 睡眠时长与规律、HRV 厂�
 
 ## 工作流程
 
-1. 明确问题、时间范围和期望输出：单项指标、日度摘要、描述性模式分析或图表。未指定时间时使用默认最近 14天；未指定指标时只读取该分析所需的最小组件。样本不足必须回显资格状态，不能把 7 天请求悄悄改成 28 天或更长窗口。
+1. 明确问题、时间范围和期望输出：单项指标、日度摘要、描述性模式分析或图表。未指定时间时使用默认最近 14 天（交互层 `N=14`）；本地读取、回退、报告命名和面板等窗口型 CLI 均显式传入同一个 `--days <N>`，不依赖各 CLI 已有默认值，且不修改这些 CLI defaults。用户指定窗口时以该窗口为准；未指定指标时只读取该分析所需的最小组件。样本不足必须回显资格状态，不能把 7 天请求悄悄改成 28 天或更长窗口。
 2. 默认使用本地、只读、失败关闭路径。先用同一 `<SKILL_PYTHON>` 运行 `<SKILL_PYTHON> scripts/runtime_preflight.py --mode local`：
    - 单项或汇总：`<SKILL_PYTHON> scripts/garmin_data.py <sleep|hrv|heart_rate|body_battery|stress|summary> --days <N> --source local --allow-health-data`
    - 同日准备度输入观察或基线变化：`<SKILL_PYTHON> scripts/garmin_intelligence.py <readiness|baseline_change|insight_cn> --days <N> --source local --allow-health-data`。`readiness` 只对齐同日原始/厂商指标并固定返回 `not_scored`，不计算复合分数或行动等级。
@@ -31,7 +33,7 @@ description: 以本地优先方式分析 Garmin 睡眠时长与规律、HRV 厂�
    - 显式调用本技能后的本地无数据回退：仅当本地结果为 `no_data`，先让同一解释器通过 `--mode live` 预检，再消耗本次默认授权，运行 `<SKILL_PYTHON> scripts/garmin_chart.py dashboard --days <N> --source local --fallback-live --components <COMMA_SEPARATED_COMPONENTS> --allow-network --allow-health-data --output <HTML_PATH>`。面板默认组件使用 `sleep,hrv,body_battery,heart_rate,stress`；用户指定指标时按请求缩小。`activities` 或 `training_load_series` 必须由用户明确请求后写入组件清单。
    - `--days N` 表示截至本地当前日、首尾包含的 N 个自然日；适配器必须收到同一个 `N`，不得以 `N-1` 再缩短一次窗口。`--period` 只接受正整数天数或 `YTD`，且 `YTD` 包含 1 月 1 日与当前日。非法、零值或负值不得静默改写。报告必须回显实际起止日期、数据日期和每项覆盖率。
 3. 在 Windows 控制台乱码时设置 `PYTHONIOENCODING=utf-8`。不要自动安装依赖、登录账户或修改数据库。
-4. 检查数据采集时间、缺失率、设备佩戴空档和脚本错误。本地单项、汇总、洞察及面板必须在数据库前后 SHA-256、Schema、WAL/SHM 均未变化的验证读取窗口内完成；结果只披露数据库名和摘要。覆盖状态按实际非空观测区分 `complete`、`partial` 与 `no_data`；只有 `no_data` 可以进入已授权的实时回退，`partial` 继续使用本地数据。SQL、Schema 或读取窗口错误必须以非零退出和机器可读 `read_error` 失败关闭。缺失聚合必须保持 `null`，不得变成生理值 0。
+4. 检查数据采集时间、缺失率、设备佩戴空档和脚本错误。本地单项、汇总、洞察及面板必须在数据库前后 SHA-256、Schema、WAL/SHM 均未变化的验证读取窗口内完成；结果只披露数据库名和摘要。全库 SHA-256 的读取成本随数据库及 WAL/SHM 大小增长，并非只随请求天数增长；在测量前不得以缩短窗口、缓存或抽样替代完整性门，也不得弱化前后全量哈希校验。覆盖状态按实际非空观测区分 `complete`、`partial` 与 `no_data`；只有 `no_data` 可以进入已授权的实时回退，`partial` 继续使用本地数据。SQL、Schema 或读取窗口错误必须以非零退出和机器可读 `read_error` 失败关闭。缺失聚合必须保持 `null`，不得变成生理值 0。
    - HTML 面板只嵌入 `dashboard.v3` 展示契约允许的字段；用户缩小组件范围时，本地提取器不得读取无关健康表，视图构造器还必须再次丢弃未请求字段。不得携带未渲染的健康指标、设备序列号、本地路径、数据库哈希或调试数据。页面保持零外联。
    - 信任栏必须显示请求日期、实际观测日期、有效来源、新鲜度、逐指标覆盖、设备/固件时期证据和完整性状态。日期只有自然日语义时，应明确说明没有可靠时区信息。
    - 静息心率百分比变化只使用 `baseline_change` 的合格结果：至少 21 个成对历史日、日期对齐、方差可分类，且设备、固件、分析算法时期和厂商算法时期均有可比证据。固件一致不能替代厂商算法时期证据；任何门禁未通过都显示“未计算”和原因，不绘制基线参考线。
@@ -43,9 +45,9 @@ description: 以本地优先方式分析 Garmin 睡眠时长与规律、HRV 厂�
    - 夜间呼吸率和夜间血氧只展示设备记录及同一个人的时间趋势，不使用单点阈值判断呼吸疾病或缺氧。血氧数据来自消费级设备时必须明确非诊断用途。
    - Body Battery 与睡眠评分都受睡眠、压力等上游信号影响；Body Battery 还结合 HRV、活动等输入。两项不能当作彼此独立的重复证据，也不得合成为总健康分。
    - 全面画像优先展示睡眠规律、HRV 厂商基线、Body Battery 动态、体重、非位置化已记录活动、日常活动分布、夜间生理和 VO₂max 新鲜度八个互补视角。体重窗口趋势至少需要 3 次测量且跨越 14 天；否则只报告观测和新鲜度，不计算变化速度。已记录活动是事件流，空白日不等于零活动；活动摘要不得读取位置、活动标识、名称或描述。睡眠连续性固定命名为 `device_estimated_sleep_continuity`，不是临床睡眠效率；步数不使用通用“1 万步”阈值；强度分钟默认只比较用户自己的 Garmin 目标；VO₂max 不跨跑步与骑行模态比较。
-5. 显式调用本技能默认授权一次“本地 `no_data` 后、同窗口、同组件”的实时只读回退；不得因该授权跳过本地路径。回退前必须让同一 `<SKILL_PYTHON>` 通过 `scripts/runtime_preflight.py --mode live`，命令同时传入 `--allow-network` 与 `--allow-health-data`。日期沿用请求窗口，未指定时为最近 7 天；自动回退使用 `--source local --fallback-live` 并以 `--components` 绑定默认五个面板组件或用户指定的更窄子集。用户明确要求直接实时来源时可使用 `--source live`，仍须绑定精确窗口和最小组件。实时面板不读取 Profile、体成分、补水、Fitness Age 或设备闹钟；实时洞察按用途继续缩小组件。不具备当前实时实现的分析必须在客户端初始化前返回 `LIVE_ANALYSIS_NOT_SUPPORTED`。点时查询还必须显式给出日期、IANA 时区和最大容差。能力对象只能消费一次；不得直接调用 `get_client()` 绕过 CLI 门禁。
-6. 只有用户明确要求同步后，才执行两阶段同步：先运行 `<SKILL_PYTHON> scripts/sync_health_data.py sync --start <YYYY-MM-DD> --end <YYYY-MM-DD> --dry-run --config-dir <TRUSTED_CONFIG_DIR> --garmindb-python <TRUSTED_GARMINDB_PYTHON> --plan-output <SESSION_SCRATCH>/sync-plan.json` 生成短期计划；核对范围和绑定摘要后，再在计划有效期内运行 `<SKILL_PYTHON> scripts/sync_health_data.py sync --start <YYYY-MM-DD> --end <YYYY-MM-DD> --allow-network --allow-sync --config-dir <TRUSTED_CONFIG_DIR> --garmindb-python <TRUSTED_GARMINDB_PYTHON> --plan-file <SESSION_SCRATCH>/sync-plan.json`。GarminDB runner 可使用显式指定的全局 Python 或虚拟环境，不要求独立虚拟目录；必须在解释器相邻安装中定位 CLI，并核对固定版本 `garmindb==3.8.0` 与 `garminconnect==0.3.9`。计划同时绑定配置、同目录令牌、解析后的绝对数据根及 `DBs` 目录身份；执行时只把配置与令牌复制到自动删除的临时目录，并把临时配置改写为已绑定的绝对数据根。GarminDB 的结束日为开区间，因此临时配置把用户结束日加一天，只用于保持用户窗口首尾包含；运行分成“精确窗口下载”和“仅导入本次新增文件并分析”两个子阶段，禁止全历史重复导入。启动前要重新核对计划有效期、配置、令牌、数据根、临时副本和 runner，子进程以 `python -I -B`、清理环境和关闭 stdin 运行；联网与同步能力绑定精确日期窗口并在启动前各消费一次。计划还绑定解释器与 CLI 身份、可选 `pyvenv.cfg`、完整 site-packages 文件树及固定包元数据。不得从全局 `PATH` 寻找 CLI 或切换备用 API。文件哈希不是签名，也不能抵御同一 Windows 用户下可同时改写技能、计划和 runner 的敌对进程；这类要求必须使用独立服务账号、代码签名/WDAC/AppLocker 或不可变镜像作为外部信任根。同步返回成功后必须用目标数据库指纹和请求窗口的本地覆盖复核，不能只看退出码。默认安装不包含 GarminDB。
-   - 用户明确要求启用自动同步时，使用 `scripts/install_auto_sync_task.ps1` 注册当前用户计划任务。默认每日 06:30 同步最近 7 个自然日，`StartWhenAvailable=true`、`MultipleInstances=IgnoreNew`、`RunLevel=Limited`、`LogonType=Interactive`；不保存账户密码，也不唤醒设备。调度动作必须绑定本目录的 `runtime-authority.json` 与 `scripts/garmin_auto_sync.py`；计划任务参数哈希由新鲜度门根据当前安装路径和注册参数确定性重算，源码配置不得保存机器专属参数哈希。每次同步重新生成 900 秒短期计划。运行器总预算必须短于任务的物理执行上限，并在获得单例锁后、每个阶段开始前、成功或失败时原子更新脱敏状态；外部终止后遗留的 `running` 状态必须被下一次读取识别为 `interrupted_or_terminated`，不得误报成功。失败不在同一次运行中重试，等待下一日调度或由获授权的新鲜度门启动一次。日记和复盘需要新鲜度同步时，直接运行两阶段同步：先 `sync_health_data.py sync --dry-run` 生成短期计划，再 `sync_health_data.py sync --allow-network --allow-sync` 执行，沿用 7 个自然日窗口并验证终态起止日期、数据库变化和五组件末端覆盖。不再经 Windows 计划任务 `Codex-Garmin-Health-Sync` 触发（该计划任务已弃用）；授权、身份或覆盖验证失败均失败关闭。
+5. 显式调用本技能默认授权一次“本地 `no_data` 后、同窗口、同组件”的实时只读回退；不得因该授权跳过本地路径。回退前必须让同一 `<SKILL_PYTHON>` 通过 `scripts/runtime_preflight.py --mode live`，命令同时传入 `--allow-network` 与 `--allow-health-data`。日期沿用请求窗口，未指定时为最近 14 天（与本地读取同一个 `N=14`）；自动回退使用 `--source local --fallback-live` 并以 `--components` 绑定默认五个面板组件或用户指定的更窄子集。用户明确要求直接实时来源时可使用 `--source live`，仍须绑定精确窗口和最小组件。实时面板不读取 Profile、体成分、补水、Fitness Age 或设备闹钟；实时洞察按用途继续缩小组件。不具备当前实时实现的分析必须在客户端初始化前返回 `LIVE_ANALYSIS_NOT_SUPPORTED`。点时查询还必须显式给出日期、IANA 时区和最大容差。能力对象只能消费一次；不得直接调用 `get_client()` 绕过 CLI 门禁。
+6. 只有用户明确要求同步后，才执行两阶段同步：先运行 `<SKILL_PYTHON> scripts/sync_health_data.py sync --start <YYYY-MM-DD> --end <YYYY-MM-DD> --dry-run --config-dir <TRUSTED_CONFIG_DIR> --garmindb-python <TRUSTED_GARMINDB_PYTHON> --plan-output <SESSION_SCRATCH>/sync-plan.json` 生成短期计划；核对范围和绑定摘要后，再在计划有效期内运行 `<SKILL_PYTHON> scripts/sync_health_data.py sync --start <YYYY-MM-DD> --end <YYYY-MM-DD> --allow-network --allow-sync --config-dir <TRUSTED_CONFIG_DIR> --garmindb-python <TRUSTED_GARMINDB_PYTHON> --plan-file <SESSION_SCRATCH>/sync-plan.json`。GarminDB runner 可使用显式指定的全局 Python 或虚拟环境，不要求独立虚拟目录；必须在解释器相邻安装中定位 CLI，并核对固定版本 `garmindb==3.8.0` 与 `garminconnect==0.3.9`。计划同时绑定配置、同目录令牌、解析后的绝对数据根及 `DBs` 目录身份；执行时只把配置与令牌复制到自动删除的临时目录，并把临时配置改写为已绑定的绝对数据根。GarminDB 的配置结束日为开区间，临时配置把用户结束日加一天；3.8.0 CLI 还会用不含当天的天数截断，因此 `sync_health_data.py` 内置有界子进程适配，仅对固定 AST 摘要匹配的 `__get_date_and_days` 非 latest 分支修正当天计数，并核对返回范围与请求完全一致。日期不得在未来，不改变系统时钟或上游安装。v3 短期计划新增适配器所属源文件身份/哈希绑定，旧计划必须重新生成；子进程在执行任何上游代码前核对 CLI 原始字节哈希、方法形状、临时配置摘要、精确窗口与过期时间，失败即停止；运行分成“精确窗口下载”和“仅导入本次新增文件并分析”两个子阶段，禁止全历史重复导入。启动前要重新核对计划有效期、配置、令牌、数据根、临时副本和 runner，子进程以 `python -I -B`、清理环境和关闭 stdin 运行；联网与同步能力绑定精确日期窗口并在启动前各消费一次。计划还绑定解释器与 CLI 身份、可选 `pyvenv.cfg`、完整 site-packages 文件树及固定包元数据。不得从全局 `PATH` 寻找 CLI 或切换备用 API。文件哈希不是签名，也不能抵御同一 Windows 用户下可同时改写技能、计划和 runner 的敌对进程；这类要求必须使用独立服务账号、代码签名/WDAC/AppLocker 或不可变镜像作为外部信任根。同步返回成功后必须用目标数据库指纹和请求窗口的本地覆盖复核，不能只看退出码。默认安装不包含 GarminDB。
+   - 用户明确要求启用自动同步时，使用 `scripts/install_auto_sync_task.ps1` 注册当前用户计划任务。默认每日 06:30 同步最近 7 个自然日，`StartWhenAvailable=true`、`MultipleInstances=IgnoreNew`、`RunLevel=Limited`、`LogonType=Interactive`；不保存账户密码，也不唤醒设备。调度动作必须绑定本目录的 `runtime-authority.json` 与 `scripts/garmin_auto_sync.py`，每次重新生成 900 秒短期计划。运行器总预算必须短于任务的物理执行上限，并在获得单例锁后、每个阶段开始前、成功或失败时原子更新脱敏状态；外部终止后遗留的 `running` 状态必须被下一次读取识别为 `interrupted_or_terminated`，不得误报成功。失败不在同一次运行中重试，等待下一日调度或由获授权的新鲜度门启动一次。日记和复盘需要新鲜度同步时，直接运行两阶段同步：先 `sync_health_data.py sync --dry-run` 生成短期计划，再 `sync_health_data.py sync --allow-network --allow-sync` 执行，沿用 7 个自然日窗口并验证终态起止日期、数据库变化和五组件末端覆盖。不经计划任务触发；授权、身份或覆盖验证失败均失败关闭。
    - 自动同步状态只允许保存运行 ID、请求窗口、当前阶段、逐组件观测数量和最近观测日期、运行时绑定哈希、数据库指纹变化布尔值、错误类型及完成时间；不得保存健康数值、令牌、配置内容、本地路径或子进程原始错误正文。只有权威绑定通过、数据库指纹发生变化、五个必需组件的最近观测日期均到达请求末日、且同步后本地重读通过，才允许 `status=success`。注册后检查任务动作、最低权限、下次运行时间和状态文件，并手动启动一次任务完成跨表面验证。
 7. 将观察值、可能解释和不能判断的事项分开。`baseline_change` 只描述相对个人基线的变化，不对应疾病风险；覆盖不足、日期未对齐、基线少于 21 个同日样本、零方差、`duplicate_conflict`、`cross_epoch`、`manufacturer_algorithm_epoch_unknown`、`analysis_algorithm_epoch_unknown` 或其他 `epoch_unknown` 时不分类。`patterns` 的方向只表示高于、低于、等于或混合于个人历史中位数，不含健康好坏含义。`readiness` 始终不生成复合分数、红黄绿灯或行动等级。任何脚本结果都不得决定训练、补剂、日程或重要决策。
 8. 仅在指标多、周期长且任务可独立拆分时使用子代理；传递最小化、去标识的数据。未经用户许可不得把健康数据发送给外部服务。
@@ -62,7 +64,7 @@ description: 以本地优先方式分析 Garmin 睡眠时长与规律、HRV 厂�
 
 ## 报告归档契约
 
-- Garmin 分析产出的 `.md` 和 `.html` 默认保存在当前用户主目录下的 `MEMORY/raw/garmin`；可用 `GARMIN_REPORT_DIR` 指定其他绝对归档目录，源码不得保存用户名或机器专属路径。
+- Garmin 分析产出的 `.md` 和 `.html` 默认保存在 `C:\Users\shich\MEMORY\raw\garmin`。
 - `GARMIN_REPORT_DIR` 可覆盖默认目录；`GARMIN_OUTPUT_DIR` 仅作为旧版兼容项。用户显式指定的输出路径优先。
 - 同一次分析的 Markdown 和 HTML 必须共享文件名主干，例如 `health_analysis_7days_20260727_093045.md` 与 `.html`。
 - 临时 JSON、数据库副本、FIT/GPX 活动文件、认证令牌和调试日志不得写入报告归档目录；中间文件放入当前会话的 `scratch`。

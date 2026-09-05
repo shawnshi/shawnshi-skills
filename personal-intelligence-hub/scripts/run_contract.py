@@ -8,15 +8,21 @@ import re
 import shutil
 import time as monotonic_time
 import uuid
+from collections.abc import Callable, Iterator, Sequence
 from contextlib import contextmanager
 from copy import deepcopy
 from datetime import date, datetime, time, timedelta, timezone
 from pathlib import Path
-from typing import Any, Callable, Iterator, Sequence
+from typing import Any
 from urllib.parse import urlparse
 from zoneinfo import ZoneInfo, ZoneInfoNotFoundError
 
-from history_manager import generate_event_id, load_recent_history, match_history, normalize_url
+from history_manager import (
+    generate_event_id,
+    load_recent_history,
+    match_history,
+    normalize_url,
+)
 from hub_utils import HUB_DIR, RUNTIME_DIR, atomic_dump_json, load_json
 
 
@@ -1662,6 +1668,7 @@ def _candidate_lane_summary(candidate: dict[str, Any]) -> dict[str, Any]:
         "title",
         "url",
         "published_at",
+        "published_at_source",
         "source",
         "source_type",
         "provisional_domain",
@@ -1816,6 +1823,9 @@ def build_supplement_request(
         if not 1 <= max_turns <= 10 or not halt_condition:
             raise RunContractError("supplement gap max_turns or halt_condition is invalid")
         budget = _normalized_supplement_budget(gap)
+        verify_bound_candidates = gap.get("verify_bound_candidates", False)
+        if not isinstance(verify_bound_candidates, bool):
+            raise RunContractError("supplement gap verify_bound_candidates must be boolean")
         normalized_gaps.append(
             {
                 "gap_id": gap_id,
@@ -1823,6 +1833,7 @@ def build_supplement_request(
                 "query_scope": query_scope,
                 "max_turns": max_turns,
                 "halt_condition": halt_condition,
+                "verify_bound_candidates": verify_bound_candidates,
                 **budget,
             }
         )
@@ -1939,6 +1950,16 @@ def build_supplement_request(
         draft_path = run_dir / f"supplement_{gap['gap_id']}.draft.json"
         progress_state_path = run_dir / f"supplement_{gap['gap_id']}_progress_state.json"
         lane_slice_path = run_dir / f"supplement_{gap['gap_id']}_lane_slice.json"
+        lane_candidates = _lane_slice_candidates(candidate_pool, gap["lane"], focus)
+        required_bound_candidate_ids = (
+            [
+                str(candidate.get("candidate_ref") or "")
+                for candidate in lane_candidates[: int(gap["max_urls"])]
+                if str(candidate.get("candidate_ref") or "")
+            ]
+            if gap["verify_bound_candidates"]
+            else []
+        )
         lane_slice = {
             "contract_version": "supplement-lane-slice/1.0",
             "run_id": manifest["run_id"],
@@ -1948,7 +1969,8 @@ def build_supplement_request(
             "candidate_pool_sha256": str(candidate_record["artifact_sha256"]),
             "history_snapshot_sha256": history_snapshot_sha256,
             "source_candidate_count": len(candidate_pool.get("items", [])),
-            "candidates": _lane_slice_candidates(candidate_pool, gap["lane"], focus),
+            "candidates": lane_candidates,
+            "required_bound_candidate_ids": required_bound_candidate_ids,
         }
         atomic_dump_json(lane_slice_path, lane_slice)
         lane_slice_binding = {
@@ -2002,6 +2024,10 @@ def build_supplement_request(
                     "python -X utf8 scripts/supplement_agent.py context "
                     "--request <supplement_request.json> --gap-id <gap_id>"
                 ),
+                "verify_bound_command": (
+                    "python -X utf8 scripts/supplement_agent.py verify-bound "
+                    "--request <supplement_request.json> --gap-id <gap_id> --write-draft"
+                ),
                 "finalize_command": (
                     "python -X utf8 scripts/supplement_agent.py finalize "
                     "--request <supplement_request.json> --gap-id <gap_id>"
@@ -2017,7 +2043,15 @@ def build_supplement_request(
                 "Send supplement_progress seq=1 phase=input_validated through the existing "
                 "contact_supervisor channel after context succeeds; it is a message, not a tool name. "
                 "Check only the assigned sources/query scope within the query, URL, turn, and "
-                "source-duration budgets. Record completed_at when source checking ends, then "
+                "source-duration budgets. When context lists required_bound_candidate_urls, attempt "
+                "each one before open search and preserve every outcome in access_log. Re-register "
+                "each bound candidate that passes access, date, domain, and source-quality gates in "
+                "candidates with the same candidate_id and URL; the deterministic finalizer supplies "
+                "event_id. Fast helper: you may run python -X utf8 scripts/supplement_agent.py verify-bound "
+                f"--request \"{request_path.resolve()}\" --gap-id \"{gap['gap_id']}\" --write-draft "
+                "to quickly verify bound candidates and write the initial draft. "
+                "Use actual clock values, never rounded or future timestamps. Record "
+                "completed_at when source checking ends, then "
                 "send supplement_progress seq=2 phase=source_checked through contact_supervisor "
                 "and stop all research. "
                 "Write only the dynamic fields listed by the helper to its draft_path. Then run "
@@ -3421,19 +3455,26 @@ def build_review_request(
     )
     budget_state: dict[str, float | int] | None = None
     if not deterministic_fast_path:
-        current_budget = _execution_budget_state(manifest)
-        available_cost_usd = round(
-            3.0 - float(current_budget["accounted_cost_usd"]),
-            6,
+        observability = prompt_config.get("execution_policy", {}).get(
+            "observability", {}
         )
-        if available_cost_usd <= 0:
-            raise RunContractError(
-                "execution budget exceeded or reservation unavailable; new agent launch is forbidden"
+        review_cost_budget_usd = float(
+            observability.get(
+                "semantic_cost_budget_usd"
+                if review_kind == "semantic"
+                else "red_team_cost_budget_usd",
+                0.5,
             )
+        )
+        if (
+            not math.isfinite(review_cost_budget_usd)
+            or review_cost_budget_usd <= 0
+        ):
+            raise RunContractError("review cost budget is invalid")
         budget_state = _assert_execution_budget_allows_launch(
             manifest,
             reserved_tokens=review_token_budget,
-            reserved_cost_usd=available_cost_usd,
+            reserved_cost_usd=review_cost_budget_usd,
         )
     if review_kind == "semantic":
         default_halt = "所有最终条目批量完成语义评估并生成完整血缘映射，或发现阻断问题"
@@ -3852,6 +3893,8 @@ def finalize_semantic_decision(
     decision_file = Path(decision_path).resolve()
     expected_refined_draft = Path(str(draft_paths.get("refined_core") or "")).resolve()
     expected_decision = Path(str(draft_paths.get("decision") or "")).resolve()
+    refined_final = Path(str(output_paths.get("refined_core") or "")).resolve()
+    receipt_final = Path(str(output_paths.get("review_receipt") or "")).resolve()
     if refined_draft != expected_refined_draft or decision_file != expected_decision:
         raise RunContractError("semantic finalizer input path is not authorized")
     current = _aware_now(manifest["timezone"], now)
@@ -3896,7 +3939,21 @@ def finalize_semantic_decision(
         raise RunContractError("semantic decision turns_used exceeds request")
     if decision.get("halt_condition_met") is not True:
         raise RunContractError("semantic decision halt_condition_met must be true")
-    refined = load_json(refined_draft, {})
+    if refined_final.is_file() and receipt_final.is_file():
+        validate_semantic_draft(manifest_path, refined_final, receipt_final)
+        register_review_receipt(
+            manifest_path,
+            refined_final,
+            receipt_final,
+            "semantic_review",
+            now=current,
+        )
+        decision_file.unlink(missing_ok=True)
+        return refined_final, receipt_final
+    refined_source = refined_draft if refined_draft.is_file() else refined_final
+    if not refined_source.is_file():
+        raise RunContractError("semantic refined draft and recoverable final are missing")
+    refined = load_json(refined_source, {})
     lineage = registered_candidate_lineage(manifest)
     reviewed_item_hashes: list[str] = []
     lineage_bindings: list[dict[str, Any]] = []
@@ -4020,7 +4077,7 @@ def finalize_semantic_decision(
         "request_sha256": request_sha,
         "baseline_sha256": manifest["stages"]["baseline"]["artifact_sha256"],
         "input_bundle_sha256": review_input_bundle_sha256(manifest),
-        "output_sha256": file_sha256(refined_draft),
+        "output_sha256": file_sha256(refined_source),
         "reviewed_item_hashes": reviewed_item_hashes,
         "lineage_bindings": lineage_bindings,
         "access_log": access_log,
@@ -4036,21 +4093,17 @@ def finalize_semantic_decision(
     }
     receipt_draft = Path(str(draft_paths.get("review_receipt") or "")).resolve()
     atomic_dump_json(receipt_draft, receipt)
-    validate_semantic_draft(manifest_path, refined_draft, receipt_draft)
-    refined_final = Path(str(output_paths.get("refined_core") or "")).resolve()
-    receipt_final = Path(str(output_paths.get("review_receipt") or "")).resolve()
-    for draft, final in (
-        (refined_draft, refined_final),
+    validate_semantic_draft(manifest_path, refined_source, receipt_draft)
+    promotion_pairs = (
+        (refined_source, refined_final),
         (receipt_draft, receipt_final),
-    ):
-        if final.exists() and file_sha256(final) != file_sha256(draft):
+    )
+    for source, final in promotion_pairs:
+        if final.exists() and file_sha256(final) != file_sha256(source):
             raise RunContractError("semantic final path already contains different bytes")
-    for draft, final in (
-        (refined_draft, refined_final),
-        (receipt_draft, receipt_final),
-    ):
+    for source, final in promotion_pairs:
         if not final.exists():
-            os.replace(draft, final)
+            os.replace(source, final)
     register_review_receipt(
         manifest_path,
         refined_final,
@@ -4312,14 +4365,13 @@ def validate_review_receipt(
             and request.get("max_turns") != 1
         ):
             raise RunContractError("no-L4 red-team request must use one turn")
-        if receipt.get("reviewer_kind") == "deterministic_gate":
-            if not _deterministic_red_team_fast_path(
-                refined,
-                semantic_receipt,
-            ):
-                raise RunContractError(
-                    "deterministic red-team fast-path conditions are not met"
-                )
+        if (
+            receipt.get("reviewer_kind") == "deterministic_gate"
+            and not _deterministic_red_team_fast_path(refined, semantic_receipt)
+        ):
+            raise RunContractError(
+                "deterministic red-team fast-path conditions are not met"
+            )
     if receipt.get("request_sha256") != request_sha:
         raise RunContractError("review receipt request_sha256 mismatch")
     for field in ("reviewer_id", "invocation_id", "challenge"):

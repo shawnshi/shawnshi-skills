@@ -1,11 +1,11 @@
 {
   "schema_version": 3,
   "skill": "mentat-collaboration-audit",
-  "generated_at": "2026-09-01T20:26:19+08:00",
+  "generated_at": "2026-09-05T20:37:46+08:00",
   "hash_algorithm": "SHA-256",
   "text_hash_normalization": "LF",
   "skill_md": "SKILL.md",
-  "skill_md_sha256": "8d1d67ac46353df89b85e7e1d99d6848ccea3a303950d1f52665c1ef819a006b",
+  "skill_md_sha256": "9d24d506d5c56a455859dc5163b5bef58eece906ef8c398a88565ac9ff234bec",
   "top_level_files": [
     "SKILL.md",
     "generate_final_report.py"
@@ -13,7 +13,7 @@
   "top_level_file_hashes": [
     {
       "path": "SKILL.md",
-      "sha256": "8d1d67ac46353df89b85e7e1d99d6848ccea3a303950d1f52665c1ef819a006b"
+      "sha256": "9d24d506d5c56a455859dc5163b5bef58eece906ef8c398a88565ac9ff234bec"
     },
     {
       "path": "generate_final_report.py",
@@ -68,7 +68,7 @@
     },
     {
       "path": "resources/.gitkeep",
-      "sha256": "56f0d6ac8fbc29ea59e8eb8ce626949efcce2b16cd4ac9242e5630a6f35afdc3"
+      "sha256": "e0b9e19b2208bb5d83ec8e46da2c0b2f75f963136fefc38ead9cf8a4d7e40932"
     },
     {
       "path": "scripts/assets/template.html",
@@ -171,12 +171,6 @@
       "exists": true,
       "resolved_path": "mentat-collaboration-audit/references/WORKFLOW.md",
       "sha256": "ae3521fb2a74f1cc9fed0ecf5068d4a9cc53d9764a65c0eceaa99b6990528f7f"
-    },
-    {
-      "path": "scripts/context_recovery_receipt.py",
-      "exists": true,
-      "resolved_path": "mentat-collaboration-audit/scripts/context_recovery_receipt.py",
-      "sha256": "9bd9be46565ce66826ab9db5046e530c72c80a78573a9e2b6f2a64ca6abe5404"
     },
     {
       "path": "scripts/freeze_jsonl_snapshot.py",

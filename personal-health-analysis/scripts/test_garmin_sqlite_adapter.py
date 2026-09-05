@@ -3,7 +3,7 @@ import io
 import json
 import tempfile
 import unittest
-from datetime import datetime
+from datetime import datetime, timedelta
 from pathlib import Path
 from unittest.mock import patch
 
@@ -148,6 +148,51 @@ class MissingObservationContractTests(unittest.TestCase):
                     connection.execute("INSERT INTO sample VALUES (1)")
             finally:
                 connection.close()
+
+    def test_summary_sleep_hrv_timestamp_end_day_windows_do_not_change_database(self):
+        today = datetime.now().date()
+        for days in (1, 3):
+            for suffix in ("", " 00:00:00", " 00:00:00.000000", " 23:59:59.999999"):
+                for missing_middle in (False, True):
+                    with self.subTest(days=days, suffix=suffix, missing=missing_middle), tempfile.TemporaryDirectory() as root:
+                        database = Path(root) / "garmin.db"
+                        start = today - timedelta(days=days - 1)
+                        expected = [(start + timedelta(days=i)).isoformat() for i in range(days)]
+                        present = [d for i, d in enumerate(expected) if not (missing_middle and days == 3 and i == 1)]
+                        statements: list[tuple[str, tuple]] = [
+                            ("CREATE TABLE daily_summary (day TEXT, rhr REAL, hr_max REAL, stress_avg REAL, bb_max REAL, bb_charged REAL, bb_min REAL, sweat_loss REAL, rr_waking_avg REAL, steps REAL)", ()),
+                            ("CREATE TABLE sleep (day TEXT, total_sleep TEXT, deep_sleep TEXT, light_sleep TEXT, rem_sleep TEXT, awake TEXT, score REAL, avg_rr REAL, avg_spo2 REAL, avg_stress REAL)", ()),
+                            ("CREATE TABLE hrv (day TEXT, last_night_avg REAL, status TEXT)", ()),
+                        ]
+                        stored_dates = [d + suffix for d in present] + [
+                            (start - timedelta(days=1)).isoformat() + " 23:59:59.999999",
+                            (today + timedelta(days=1)).isoformat(),
+                            (today + timedelta(days=1)).isoformat() + " 00:00:00.000000",
+                        ]
+                        for stored in stored_dates:
+                            statements.extend([
+                                ("INSERT INTO daily_summary VALUES (?, 60, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL)", (stored,)),
+                                ("INSERT INTO sleep VALUES (?, '08:00:00', NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL)", (stored,)),
+                                ("INSERT INTO hrv VALUES (?, 45, NULL)", (stored,)),
+                            ])
+                        _create_database(database, statements)
+                        before = adapter.fingerprint_database(database)
+                        with patch.object(adapter, "GARMIN_DB", database), adapter.verified_database_read_window([database]):
+                            for reader, metric, value, null_field in (
+                                (adapter.get_summary, "resting_heart_rate", 60, "stress_avg"),
+                                (adapter.get_sleep_data, "sleep_time_seconds", 28800, "sleep_score"),
+                                (adapter.get_hrv_data, "hrv_avg", 45, "status"),
+                            ):
+                                for fill_missing in (False, True):
+                                    with self.subTest(reader=reader.__name__, fill_missing=fill_missing):
+                                        frame = reader(days=days, fill_missing=fill_missing)
+                                        self.assertEqual(sorted(frame["date"]), expected if fill_missing else present)
+                                        observed = frame.loc[frame[metric].notna()]
+                                        self.assertEqual(sorted(observed["date"]), present)
+                                        self.assertTrue((observed[metric] == value).all())
+                                        self.assertTrue(frame[null_field].isna().all())
+                                        self.assertEqual(observed.loc[observed["date"] == today.isoformat(), metric].tolist(), [value])
+                        self.assertEqual(adapter.fingerprint_database(database), before)
 
     def test_days_must_be_positive(self):
         with self.assertRaises(ValueError):

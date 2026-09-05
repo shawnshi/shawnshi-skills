@@ -1,18 +1,18 @@
 {
   "schema_version": 3,
   "skill": "personal-cognitive-prescription",
-  "generated_at": "2026-08-16T22:02:19",
+  "generated_at": "2026-09-05T17:15:44+08:00",
   "hash_algorithm": "SHA-256",
   "text_hash_normalization": "LF",
   "skill_md": "SKILL.md",
-  "skill_md_sha256": "2de424949c50595ada6988610a9b53f309f134f5359bd7ac4462b9a4fca10f5d",
+  "skill_md_sha256": "409f71134579e83bdb09bf34f59b9ee24ea518be3ce88fc4b55b8a416054ae16",
   "top_level_files": [
     "SKILL.md"
   ],
   "top_level_file_hashes": [
     {
       "path": "SKILL.md",
-      "sha256": "2de424949c50595ada6988610a9b53f309f134f5359bd7ac4462b9a4fca10f5d"
+      "sha256": "409f71134579e83bdb09bf34f59b9ee24ea518be3ce88fc4b55b8a416054ae16"
     }
   ],
   "top_level_directories": [],

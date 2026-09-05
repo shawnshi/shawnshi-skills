@@ -1,6 +1,7 @@
 ---
 name: personal-travel-research
 description: 为城市或地区制作历史、考古、古建筑、博物馆与重点文物的出发前研究资料，并核验当前开放信息。用于“旅行研究”“博物馆功课”“古建功课”“出发前文化资料”等请求；不替代实时订票、签证、安保或无障碍信息确认。
+disable-model-invocation: true
 ---
 
 # 文化旅行研究

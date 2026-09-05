@@ -1,6 +1,7 @@
 ---
 name: tool-tts
 description: 将用户提供的文本合成为语音并在明确要求时播放。当用户要求朗读、语音提醒、生成音频、多角色播报或带情绪标签的语音输出时使用。
+disable-model-invocation: true
 ---
 
 # Text to Speech

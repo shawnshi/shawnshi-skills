@@ -3,7 +3,7 @@ import json
 import re
 import sys
 from pathlib import Path
-from typing import Any
+from typing import Any, NoReturn
 
 try:
     from blackboard import validate_state
@@ -65,9 +65,7 @@ PROVENANCE_HINT_RE = re.compile(
 URL_OR_CITATION_RE = re.compile(
     r"(?:https?://|\[[^\]]+\]\(https?://|\[\^?\d+\])", re.IGNORECASE
 )
-TABLE_SEPARATOR_RE = re.compile(
-    r"^\s*\|?\s*:?-{3,}:?\s*(?:\|\s*:?-{3,}:?\s*)+\|?\s*$"
-)
+TABLE_SEPARATOR_RE = re.compile(r"^\s*\|?\s*:?-{3,}:?\s*(?:\|\s*:?-{3,}:?\s*)+\|?\s*$")
 
 COMPLIANCE_TOPIC_KEYWORDS = {
     "personal_and_health_data": (
@@ -140,7 +138,7 @@ COMPLIANCE_TOPIC_KEYWORDS = {
 class JsonArgumentParser(argparse.ArgumentParser):
     """Keep command-line failures machine readable."""
 
-    def error(self, message: str) -> None:
+    def error(self, message: str) -> NoReturn:
         emit_json(
             {
                 "status": "fail",
@@ -219,7 +217,9 @@ def find_placeholders(text: str) -> list[str]:
     for pattern in PLACEHOLDER_PATTERNS:
         for match in pattern.finditer(text):
             start, end = match.span()
-            if any(start < old_end and end > old_start for old_start, old_end in occupied):
+            if any(
+                start < old_end and end > old_start for old_start, old_end in occupied
+            ):
                 continue
             occupied.append((start, end))
             hits.append(match.group(0))
@@ -337,7 +337,8 @@ def find_terminology_warnings(text: str, rules: dict) -> list[str]:
             variants = configured_definition_variants(definition)
             first_use_context = text[max(0, match.start() - 160) : match.end() + 160]
             full_text_has_definition = any(
-                variant and variant.casefold() in text.casefold() for variant in variants
+                variant and variant.casefold() in text.casefold()
+                for variant in variants
             )
             first_use_has_definition = any(
                 variant and variant.casefold() in first_use_context.casefold()
@@ -371,7 +372,9 @@ def scalar_text_values(value: Any) -> list[str]:
 
 def detect_compliance_topics(text: str, blackboard: dict, rules: dict) -> list[str]:
     review_topics = rules.get("review_topics", {})
-    healthcare_topics = review_topics.get("healthcare", []) if isinstance(review_topics, dict) else []
+    healthcare_topics = (
+        review_topics.get("healthcare", []) if isinstance(review_topics, dict) else []
+    )
     if not isinstance(healthcare_topics, list):
         return []
     corpus = "\n".join([text, *scalar_text_values(blackboard)]).casefold()
@@ -473,8 +476,7 @@ def check_high_risk_compliance(
         verification_rule = str(rules.get("verification_rule", "")).strip()
         message = (
             "high-risk topics still require a completed, named professional review "
-            "record: "
-            + ", ".join(topics)
+            "record: " + ", ".join(topics)
         )
         if verification_rule:
             message += f"; configured rule: {verification_rule}"
@@ -521,7 +523,9 @@ def nested_dict(value: Any) -> dict:
 def blackboard_mode_errors(blackboard: dict, requested_mode: str) -> list[str]:
     errors: list[str] = []
     metadata_mode = str(nested_dict(blackboard.get("metadata")).get("mode", "")).strip()
-    alignment_mode = str(nested_dict(blackboard.get("alignment")).get("mode", "")).strip()
+    alignment_mode = str(
+        nested_dict(blackboard.get("alignment")).get("mode", "")
+    ).strip()
 
     for location, recorded_mode in (
         ("metadata.mode", metadata_mode),
@@ -610,14 +614,15 @@ def maturity_checks(
         )
 
     if maturity == "working_draft":
-        warnings.append("blackboard maturity is working_draft; do not present it as decision-ready")
+        warnings.append(
+            "blackboard maturity is working_draft; do not present it as decision-ready"
+        )
     elif maturity == "blocked":
         errors.append("blackboard maturity is blocked")
     elif maturity == "approved_for_execution":
         context = compliance_context(blackboard)
-        approval = (
-            context.get("authority_and_approvals")
-            or metadata_approval(blackboard)
+        approval = context.get("authority_and_approvals") or metadata_approval(
+            blackboard
         )
         if not approval_record_complete(approval):
             errors.append(
@@ -642,7 +647,9 @@ def metadata_approval(blackboard: dict) -> Any:
 
 def approval_record_complete(approval: Any) -> bool:
     if isinstance(approval, list):
-        return bool(approval) and all(approval_record_complete(item) for item in approval)
+        return bool(approval) and all(
+            approval_record_complete(item) for item in approval
+        )
     if not isinstance(approval, dict):
         return False
     required = ("authority", "authority_role", "decision", "as_of", "source")
@@ -656,6 +663,7 @@ def evaluate(
     blackboard_errors: list[str] | None = None,
     *,
     strict: bool = False,
+    textual_only: bool = False,
     medical_terms: dict | None = None,
     compliance_rules: dict | None = None,
     configuration_errors: list[str] | None = None,
@@ -678,8 +686,27 @@ def evaluate(
     if placeholders:
         errors.append("unresolved placeholders: " + ", ".join(placeholders[:8]))
 
+    if textual_only:
+        maturity = report_maturity(text)
+        if mode != "brief" or blackboard:
+            errors.append("--textual-only requires brief mode without a blackboard")
+        if strict:
+            errors.append("--textual-only cannot be used with --strict")
+        if maturity not in {"working_draft", "review_ready"} or re.search(
+            r"\b(?:decision[-_ ]ready|approved[-_ ]for[-_ ]execution|blocked)\b",
+            text,
+            re.IGNORECASE,
+        ):
+            errors.append(
+                "textual-only requires explicit draft maturity and no formal or blocked status"
+            )
+        warnings.append(
+            "textual-only draft check: evidence, financial, compliance and decision readiness "
+            "are not validated; not authorization for formal financial or decision delivery"
+        )
+
     if not blackboard:
-        if not supplied_blackboard_errors:
+        if not textual_only and not supplied_blackboard_errors:
             errors.append("blackboard JSON object is empty")
     elif validate_state is None:
         errors.append(BLACKBOARD_IMPORT_ERROR or "blackboard validator is unavailable")
@@ -696,13 +723,21 @@ def evaluate(
                 state_errors = state_report.get("errors", [])
                 state_warnings = state_report.get("warnings", [])
                 if isinstance(state_errors, list):
-                    errors.extend(format_blackboard_issue(item) for item in state_errors)
+                    errors.extend(
+                        format_blackboard_issue(item) for item in state_errors
+                    )
                 else:
-                    errors.append("blackboard validator returned invalid errors payload")
+                    errors.append(
+                        "blackboard validator returned invalid errors payload"
+                    )
                 if isinstance(state_warnings, list):
-                    warnings.extend(format_blackboard_issue(item) for item in state_warnings)
+                    warnings.extend(
+                        format_blackboard_issue(item) for item in state_warnings
+                    )
                 else:
-                    errors.append("blackboard validator returned invalid warnings payload")
+                    errors.append(
+                        "blackboard validator returned invalid warnings payload"
+                    )
 
         errors.extend(blackboard_mode_errors(blackboard, mode))
         maturity_errors, maturity_warnings, maturity = maturity_checks(
@@ -730,7 +765,9 @@ def evaluate(
             warnings.append("report may omit recorded residual risks")
 
     if medical_terms is None:
-        medical_terms, term_errors = load_json_object(MEDICAL_TERMS_PATH, "medical terms")
+        medical_terms, term_errors = load_json_object(
+            MEDICAL_TERMS_PATH, "medical terms"
+        )
         errors.extend(term_errors)
     if medical_terms:
         warnings.extend(find_terminology_warnings(text, medical_terms))
@@ -765,6 +802,10 @@ def evaluate(
         "mode": mode,
         "maturity": maturity or None,
         "blackboard_ready": blackboard_ready,
+        "scope": "textual_only" if textual_only else "report_and_blackboard",
+        "unchecked": ["evidence", "financial", "compliance", "decision_readiness"]
+        if textual_only
+        else [],
         "compliance_review_topics": compliance_topics,
     }
 
@@ -776,6 +817,11 @@ def build_parser() -> argparse.ArgumentParser:
     parser.add_argument("--path", required=True, type=Path)
     parser.add_argument("--mode", required=True, choices=SUPPORTED_MODES)
     parser.add_argument("--blackboard", type=Path)
+    parser.add_argument(
+        "--textual-only",
+        action="store_true",
+        help="Only check brief draft text without Blackboard; never validates financial or decision readiness.",
+    )
     parser.add_argument(
         "--strict",
         action="store_true",
@@ -806,7 +852,12 @@ def main(argv: list[str] | None = None) -> int:
         )
         return 1
 
-    blackboard, blackboard_errors = load_blackboard(args.blackboard)
+    if args.textual_only and args.blackboard is None:
+        blackboard, blackboard_errors = {}, []
+    else:
+        blackboard, blackboard_errors = load_blackboard(args.blackboard)
+    if args.textual_only and args.blackboard is not None:
+        blackboard_errors.append("--textual-only does not accept --blackboard")
     medical_terms, term_errors = load_json_object(MEDICAL_TERMS_PATH, "medical terms")
     compliance_rules, compliance_errors = load_json_object(
         COMPLIANCE_RULES_PATH, "compliance rules"
@@ -817,6 +868,7 @@ def main(argv: list[str] | None = None) -> int:
         blackboard,
         blackboard_errors,
         strict=args.strict,
+        textual_only=args.textual_only,
         medical_terms=medical_terms,
         compliance_rules=compliance_rules,
         configuration_errors=[*term_errors, *compliance_errors],

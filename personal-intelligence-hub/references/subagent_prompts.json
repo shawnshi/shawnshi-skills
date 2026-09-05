@@ -19,6 +19,8 @@
     "empty_rule": "无增量时返回 status=no_increment、空 candidates、非空 executed_queries、至少一条 access_log 和真实 coverage，不得用弱信号补数。",
     "coverage_rule": "coverage 必须逐项等于 access_log 中 verified 与 blocked 的实际计数；每条访问记录必须同时记录 requested_url 与跳转后的 final_url；候选 access_check.requested_url 必须匹配候选 url，并逐字段对应 access_log 中的 verified 记录。",
     "failure_rule": "同一 gap 内，同一规范化 URL 的永久失败不得再次尝试。跨 gap 时，只有无 HTTP 响应且错误码明确指向本地 TLS、SSL、证书、协议或 curl 传输路径故障，才允许另一 lane 以不同访问方法做一次恢复核验；原失败必须保留，聚合覆盖仍为 degraded，不得同 lane、同方法或再次恢复。HTTP 永久响应始终全局禁止重试。同一主机连续两次永久失败后切换另一类优先来源并保留失败日志。所有 blocked 访问必须给出 transient|permanent 的 failure_class 和非空 error_code；永久 HTTP 状态必须标 permanent，可重试 HTTP 状态必须标 transient；verified 必须标 failure_class=none 且不得带 error_code。只有瞬时超时、限流或可重试 HTTP 状态可在轮次预算内重试。",
+    "verification_rule": "context 给出 required_bound_candidate_urls 时，必须先逐个访问这些已排序候选，再使用剩余 URL 预算开放检索；每个必检 URL 都必须在 access_log 中留下 verified 或 blocked 终态。HTTP 成功只证明受控探针取得可识别文档，不证明事实、发布日期或原始来源类型；日期必须有非 unknown 的独立来源元数据且位于窗口内，source_type 只能保留已有证据，缺省为 secondary。通过访问、日期、领域和来源质量门的绑定候选必须以相同 candidate_id 与 URL 重新登记到 candidates，以携带文章级 source_type 和 event_identity；这不是被禁止的重复，deterministic finalizer 会生成 event_id，不得因不知道哈希算法而省略。不得跳过后声称无增量。",
+    "redirect_rule": "HTTP 3xx 不是正文核验终态。仅沿 HTTP(S) Location 做有界跟随，最多 5 跳并计入同一 URL 访问；保留原地址为 requested_url、最终落点为 final_url。只有最终落点成功取得可识别正文才记 verified；缺失 Location、循环、非 HTTP(S) 跳转或最终失败必须保留为 blocked。",
     "infrastructure_failure_rule": "degraded 或 failed 必须写规范化 failure_kind 与非空 failure_reason；status=degraded 只允许 source_access 或 published_at_conflict，status=failed 只允许 infrastructure。只有代理在执行任何查询或访问前初始化失败时，才可返回 status=failed、failure_kind=infrastructure、非空 failure_reason、turns_used=0、halt_condition_met=false，以及空 executed_queries/access_log/candidates 和全零 coverage。completed/no_increment 不得包含 failed coverage。"
   },
   "review_common_contract": {
@@ -94,10 +96,12 @@
       "downstream_headroom_tokens": 70000,
       "downstream_headroom_cost_usd": 1.0,
       "semantic_token_budget": 40000,
+      "semantic_cost_budget_usd": 0.5,
       "semantic_timeout_ms": 240000,
       "semantic_tool_budget_soft": 6,
       "semantic_tool_budget_hard": 10,
       "red_team_token_budget": 30000,
+      "red_team_cost_budget_usd": 0.5,
       "red_team_timeout_ms": 120000,
       "normal_run_token_ceiling": 250000,
       "normal_run_token_meter": "total_tokens - cache_read_tokens - cache_write_tokens",

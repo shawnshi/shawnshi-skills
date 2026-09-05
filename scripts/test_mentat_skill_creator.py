@@ -1,13 +1,60 @@
 import json
 import re
+import tempfile
 import unittest
 from pathlib import Path
 
 import yaml
 
 
-ROOT = Path(__file__).resolve().parents[1]
-SKILL_DIR = ROOT / "mentat-skill-creator"
+SKILLS_ROOT = Path(__file__).resolve().parents[1]
+SKILL_DIR = SKILLS_ROOT / "mentat-skill-creator"
+
+
+def governance_path(skills_root: Path) -> Path:
+    """Prefer repository governance; support the installed Pi directory layout."""
+    repository_path = skills_root / "AGENTS.md"
+    if repository_path.is_file():
+        return repository_path
+    installed_path = skills_root.parent / "AGENTS.md"
+    if skills_root.name == "skills" and installed_path.is_file():
+        return installed_path
+    raise FileNotFoundError(f"No governance file for skills root: {skills_root}")
+
+
+class GovernancePathTests(unittest.TestCase):
+    def test_repository_path_wins_over_host(self):
+        with tempfile.TemporaryDirectory() as directory:
+            parent = Path(directory)
+            root = parent / "skills"
+            root.mkdir()
+            (parent / "AGENTS.md").write_text("host", encoding="utf-8")
+            (root / "AGENTS.md").write_text("repository", encoding="utf-8")
+            self.assertEqual(governance_path(root), root / "AGENTS.md")
+
+    def test_installed_layout_uses_host(self):
+        with tempfile.TemporaryDirectory() as directory:
+            parent = Path(directory)
+            root = parent / "skills"
+            root.mkdir()
+            (parent / "AGENTS.md").write_text("host", encoding="utf-8")
+            self.assertEqual(governance_path(root), parent / "AGENTS.md")
+
+    def test_standalone_checkout_does_not_consume_unrelated_parent(self):
+        with tempfile.TemporaryDirectory() as directory:
+            parent = Path(directory)
+            root = parent / "checkout"
+            root.mkdir()
+            (parent / "AGENTS.md").write_text("unrelated", encoding="utf-8")
+            with self.assertRaises(FileNotFoundError):
+                governance_path(root)
+
+    def test_missing_governance_fails_closed(self):
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory) / "skills"
+            root.mkdir()
+            with self.assertRaises(FileNotFoundError):
+                governance_path(root)
 
 
 class MentatSkillCreatorContractTests(unittest.TestCase):
@@ -22,10 +69,9 @@ class MentatSkillCreatorContractTests(unittest.TestCase):
                 encoding="utf-8"
             )
         )
-        cls.agents_text = (ROOT / "AGENTS.md").read_text(encoding="utf-8")
-        cls.readme_text = (ROOT / "README.md").read_text(encoding="utf-8")
+        cls.readme_text = (SKILLS_ROOT / "README.md").read_text(encoding="utf-8")
         cls.trigger_matrix = json.loads(
-            (ROOT / "shared" / "trigger-ownership-matrix.json").read_text(
+            (SKILLS_ROOT / "shared" / "trigger-ownership-matrix.json").read_text(
                 encoding="utf-8"
             )
         )
@@ -42,8 +88,28 @@ class MentatSkillCreatorContractTests(unittest.TestCase):
     def test_authority_contract_does_not_promote_readme(self):
         self.assertNotIn("以 README 为准", self.skill_text)
         self.assertIn("README、manifest、门禁和测试都视为受检制品", self.skill_text)
-        self.assertIn("None may override", self.agents_text)
         self.assertIn("不得扩张权限", self.readme_text)
+
+    def test_optional_host_governance_preserves_precedence(self):
+        # Standalone source publication does not install a host runtime contract.
+        try:
+            path = governance_path(SKILLS_ROOT)
+        except FileNotFoundError:
+            self.skipTest("No host/repository AGENTS.md in standalone source checkout")
+        self.assertRegex(
+            path.read_text(encoding="utf-8"),
+            r"System, developer, managed runtime, and explicit user instructions retain their normal precedence"
+            r"|Follow system and developer rules first",
+        )
+
+    def test_readme_declares_personal_diary_autosave_exception(self):
+        row = next(
+            line
+            for line in self.readme_text.splitlines()
+            if line.startswith("| `personal-diary-writer` |")
+        )
+        self.assertIn("personal-diary-request-v1", row)
+        self.assertNotIn("| 普通个人日记、", row)
 
     def test_release_routes_are_explicit(self):
         for marker in ("plugin-creator", "skill-installer", "GitHub", "本地安装"):

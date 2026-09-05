@@ -1,7 +1,7 @@
 {
   "schema_version": 3,
   "skill": "tool-text-forger",
-  "generated_at": "2026-09-01T19:54:15+08:00",
+  "generated_at": "2026-09-05T17:15:45+08:00",
   "hash_algorithm": "SHA-256",
   "text_hash_normalization": "LF",
   "skill_md": "SKILL.md",
@@ -42,7 +42,7 @@
   "resource_file_hashes": [
     {
       "path": "agents/openai.yaml",
-      "sha256": "bd630546f7938422b798187ed51840c52ce9dd091b878d9fd53d0c5697d47246"
+      "sha256": "5306a628945e4211a3740fc7e4d2199d450ea257d241620b15c30ce66aee246a"
     },
     {
       "path": "assets/icon.svg",

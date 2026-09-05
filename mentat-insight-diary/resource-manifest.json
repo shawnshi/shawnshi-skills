@@ -1,18 +1,18 @@
 {
   "schema_version": 3,
   "skill": "mentat-insight-diary",
-  "generated_at": "2026-08-26T20:06:42+08:00",
+  "generated_at": "2026-09-05T19:39:11+08:00",
   "hash_algorithm": "SHA-256",
   "text_hash_normalization": "LF",
   "skill_md": "SKILL.md",
-  "skill_md_sha256": "767a8dcb5c21c2da6dcdccf65d25ee7175c6fa770d938f85c7553e51351ca81e",
+  "skill_md_sha256": "887afbc2a50e4bb2f5b6041671e06482840becd09e810e59bfccebea9cb662ff",
   "top_level_files": [
     "SKILL.md"
   ],
   "top_level_file_hashes": [
     {
       "path": "SKILL.md",
-      "sha256": "767a8dcb5c21c2da6dcdccf65d25ee7175c6fa770d938f85c7553e51351ca81e"
+      "sha256": "887afbc2a50e4bb2f5b6041671e06482840becd09e810e59bfccebea9cb662ff"
     }
   ],
   "top_level_directories": [
@@ -40,7 +40,7 @@
     },
     {
       "path": "scripts/test_skill_contract.py",
-      "sha256": "a73182350037cdcd032495d3fb7f06224a8cb86e638bce20ac34d8591b580d16"
+      "sha256": "63d6845acf22f2d5cb525ab968e5fa0566fa6e715b4296b3d75c875ebbf793af"
     }
   ],
   "declared_local_dependencies": [

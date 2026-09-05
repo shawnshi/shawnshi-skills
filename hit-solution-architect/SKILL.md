@@ -98,6 +98,14 @@ QA_PROFILE=proposal
 python3 scripts/qa_runner.py "$QA_TARGET_FILE" --profile "$QA_PROFILE" --stage release
 ```
 
+以上默认退出码 0 保留旧契约，仅表示自动检查无硬错误。正式发布流水线必须使用严格门：
+
+```bash
+python3 scripts/qa_runner.py "$QA_TARGET_FILE" --profile "$QA_PROFILE" --stage release --require-release-ready --review-complete
+```
+
+仅在调用方已完成实际人工复核、留存证据并取得所需责任人的真实批准后，才可执行上述带 `--review-complete` 的命令；不得自动添加该声明或用它代替批准。`--require-release-ready` 只允许 `--stage release`，且仅当报告 `gate.release_ready` 严格为 `true` 时返回 0；未声明复核完成或存在硬错误均非零。该严格门不执行人工复核、不生成签署，也不授权对外发布。
+
 将 `QA_PROFILE` 设为本次选择的 `brief`、`proposal`、`blueprint`、`design` 或 `review`。按任务增加 `--require migration`、`--require tco`、`--require clinical-safety` 或 `--require evidence`。自动检查无硬错误只代表自动门禁通过，不代表人工复核完成或可以对外发布；仅在方案逻辑、产品适配、承诺风险和项目可执行性复核已实际完成并留痕后增加 `--review-complete`，不得把该参数当作复核本身。维护技能资源时运行 `python3 scripts/resource_validator.py`。
 
 最终确认：

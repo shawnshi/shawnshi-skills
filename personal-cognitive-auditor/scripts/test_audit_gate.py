@@ -4,7 +4,14 @@ from pathlib import Path
 
 
 sys.path.insert(0, str(Path(__file__).parent))
-from audit_gate import ENERGY_REQUIRED_FIELDS, validate, validate_handoff_payload
+from audit_gate import (
+    ACQUISITION_AUDIT_CONTRACT,
+    ACQUISITION_FIELD_ENUMS,
+    ALLOWED_TASK_STATUSES,
+    ENERGY_REQUIRED_FIELDS,
+    validate,
+    validate_handoff_payload,
+)
 
 
 class AuditGateTests(unittest.TestCase):
@@ -429,6 +436,31 @@ class AuditGateTests(unittest.TestCase):
                 text = path.read_text(encoding="utf-8")
                 for field in ENERGY_REQUIRED_FIELDS:
                     self.assertIn(f"**{field}:**", text)
+
+    def test_acquisition_contract_matches_parser_across_content_surfaces(self):
+        skill_root = Path(__file__).parent.parent
+        contract_paths = [
+            skill_root / "references" / "energy_management.md",
+            skill_root / "references" / "templates.md",
+            *(skill_root / "prompts" / name for name in (
+                "DAILY.md",
+                "WEEKLY.md",
+                "MONTHLY.md",
+                "QUARTERLY.md",
+                "ANNUAL.md",
+            )),
+            skill_root.parent / "personal-diary-writer" / "SKILL.md",
+        ]
+
+        self.assertEqual(
+            set(ACQUISITION_FIELD_ENUMS["task_status"]), ALLOWED_TASK_STATUSES
+        )
+        for path in contract_paths:
+            with self.subTest(path=path):
+                self.assertIn(
+                    f"`{ACQUISITION_AUDIT_CONTRACT}`",
+                    path.read_text(encoding="utf-8"),
+                )
 
     def test_blocks_numeric_composite_energy_score(self):
         errors, _ = validate("证据：Garmin。\n- 能量总分：78")

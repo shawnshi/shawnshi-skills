@@ -34,7 +34,7 @@ description: 对计划、论证和关键决策执行红队压力测试，识别�
 3. 重构一版钢人方案：保留原目标，减少无证假设，增加监测、回滚和证伪路径。
 4. 如果没有发现致命漏洞，如实说明，并列出残余风险；不要为了满足格式捏造问题。
 
-需要处理结构化的多轮辩论结果时，可按需读取 [references/output_format.md](references/output_format.md)，并在确认输入格式后使用 [scripts/game_resolver.py](scripts/game_resolver.py) 或 [scripts/session_merger.py](scripts/session_merger.py)。这些脚本只辅助排序和合并，不能证明方案在数学上更优，也不要自动安装依赖。
+需要处理结构化的多方案评估时，按需读取 [references/output_format.md](references/output_format.md)，并在确认输入格式后使用 [scripts/game_resolver.py](scripts/game_resolver.py) 辅助排序。脚本结果不是数学最优性证明，也不授权自动安装依赖。
 
 ## 交付
 

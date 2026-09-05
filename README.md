@@ -3,9 +3,9 @@
 
 ## 1. Runtime contract
 
-- 支持 Skills 目录约定的宿主只以每个技能目录中的 `SKILL.md` 作为运行真相源；仓库克隆本身不是已激活的运行时安装。
+- 本目录为当前 Pi 使用的本地技能库；每个技能目录中的 `SKILL.md` 是该技能的入口，执行仍受当前运行时能力与上位指令约束。
 - 每个技能聚焦一个可描述、可触发、可验证的工作。
-- 仓库级执行指令写在 `AGENTS.md`；支持该机制的宿主会自动加载，其他宿主仍须遵守自身上位合同。本 README 只记录库级 Schema、库存和维护说明，不得扩张权限或凌驾上位指令。
+- 执行遵循宿主已加载的指令及适用的仓库 `AGENTS.md`；本地安装目录不一定包含仓库级文件。本 README 只记录库级 Schema、库存和维护说明，不得扩张权限或凌驾上位指令。
 - 外部系统能力由真实工具、插件或 MCP 提供。技能不得用散文虚构工具接口。
 
 ## 2. Required shape
@@ -15,10 +15,8 @@
 ```text
 skills/
 ├── <skill-name>/           # 一级用户技能
-├── .system/                # Codex 内置技能，不计入用户技能库存
 ├── scripts/                # 本库门禁、资源索引和共享校验脚本
-├── shared/                 # 跨技能协议、Schema 与触发所有权矩阵
-├── examples/               # 共享校验样例
+├── shared/                 # 活跃的跨模型核验、结构模板与触发所有权矩阵
 └── README.md               # 本文件，库级合同
 ```
 
@@ -34,7 +32,7 @@ skill-name/
 └── resource-manifest.json   # 本库门禁使用的资源索引
 ```
 
-`SKILL.md` 的 frontmatter 只能包含：
+`SKILL.md` 的 frontmatter 至少包含：
 
 ```yaml
 ---
@@ -47,8 +45,9 @@ description: 说明技能做什么，以及用户在什么场景下应使用它�
 
 - `name` 必须与目录名一致，只使用小写字母、数字和单连字符，长度不超过 64。
 - `description` 必须同时写明能力和触发场景，长度为 1–1024 个字符。
-- 不在 frontmatter 中加入 `version`、`tier`、`triggers`、`allowed-tools` 或运行时私有字段。
-- 正文使用命令式步骤，写清输入、处理、输出、验证和失败处理。
+- 可选字段限于 Pi 当前支持的 `license`、`compatibility`、`metadata`、`allowed-tools` 与 `disable-model-invocation`；低频或有外部副作用的手动技能用 `disable-model-invocation: true` 从自动路由提示中隐藏。
+- 不加入 `version`、`tier`、`triggers`、`benefits-from` 等未被当前运行时消费的字段；版本等机器契约可放入 `metadata`。
+- 正文写清目标、必要上下文、真实边界、可用工具或命令、交付物、验证和失败处理，不规定隐藏推理步骤。
 - 不强制固定章节名。门禁不得因为缺少 `When to Use`、`Workflow`、`Telemetry` 等标题而失败。
 - `SKILL.md` 不超过 500 行；大段模板、规范和示例放入 `references/`。
 - 所有技能内资源使用相对技能目录的路径引用，避免深层引用链。
@@ -56,8 +55,8 @@ description: 说明技能做什么，以及用户在什么场景下应使用它�
 ## 3. Execution boundaries
 
 - 不要求输出 `<thought>`、`<Thinking>` 或其他内部推理稿。以证据、假设、验证结果和残余风险替代。
-- 不硬编码用户目录、其他宿主的技能目录或会话 ID。安全测试可以保留被拒绝路径的最小夹具，但不得把夹具当作运行时定位。
-- 不写入当前 Codex 不存在的工具名。通过自然语言描述所需能力，或在 `agents/openai.yaml` 中声明真实依赖。
+- 不硬编码用户目录、`.gemini`、`.kimi`、会话 ID 或 `file:///` 链接。
+- 不把其他运行时的工具名当作当前可调用接口。通过自然语言描述所需能力，并核对宿主实际暴露的工具；`agents/openai.yaml` 仅在对应消费者支持时生效。
 - 子代理只在任务可以独立拆分且并行能力可用时采用；必须保留单代理降级路径。
 - 联网、安装依赖、控制外部应用、发送消息、发布、合并、删除和永久写入都属于显式授权分支；只有下表声明的窄化归档合同，才可把对应的生成请求本身视为向封闭档案或状态目标写入的授权。
 - 临时文件放入当前任务可写的临时目录；最终产物写入用户指定或当前工作区的输出位置。
@@ -72,10 +71,9 @@ description: 说明技能做什么，以及用户在什么场景下应使用它�
 <!-- automatic-persistence-exceptions:start -->
 | Skill | 构成写入授权的请求 | 封闭目标集合 | 只读退出条件 |
 |---|---|---|---|
-| `mentat-collaboration-audit` | 明确要求生成并保存协作审计报告、面板或大屏 | 当前工作区 `output/mentat-collaboration-audit` 归档目录内同批次 MD/HTML 与提交回执 | 普通审计、分析、草稿、预览或不保存 |
-| `mentat-insight-diary` | 生成、更新、记录或写 Mentat 日志 | 权威入口返回的 canonical 季度档案 | 草稿、预览、分析、审计技能或不保存 |
-| `personal-cognitive-auditor` | 受保护的本周、本月或本季度个人日志审计请求，或绑定周期 ID 的 `AUDIT_AUTOSAVE` 命令 | `personal-diary-writer` 权威入口返回的 canonical 季度个人日志内同周期审计区块 | 草稿、预览、只读、不保存、日度/年度、自定义路径或第二处存储 |
-| `personal-diary-writer` | 精确的“更新个人日志”请求、受保护的周期审计请求，或 canonical Mentat 日志请求 | 对应权威入口返回的 canonical 季度个人日志或 Mentat 季度档案 | 草稿、预览、只读、不保存、自定义路径、跨日期复用或第二处存储 |
+| `mentat-insight-diary` | 生成、更新、记录或写 Mentat 日志，且取证完成、证据门允许保存 | 权威入口返回的 canonical 季度档案 | 草稿、预览、分析、审计技能、不保存、来源未就绪、来源读取失败或证据不足 |
+| `personal-cognitive-auditor` | 生成当前自然周、月或季度的精确 canonical 个人日志审计请求 | `personal-diary-writer` 权威入口返回的 canonical 季度个人日志内同周期审计区块 | 草稿、预览、只读、不保存、日度、年度、自定义路径或第二处存储 |
+| `personal-diary-writer` | 生成通过受保护 `personal-diary-request-v1` 与内容门的完整个人日记，承接 `mentat-insight-diary` 的 canonical Mentat 请求，或承接 `personal-cognitive-auditor` 的当前自然周、月、季度审计请求 | 对应权威入口返回的 canonical 季度个人日志或 canonical Mentat 季度档案 | 草稿、预览、只读、不保存、跨日期复用、自定义路径或第二处存储 |
 | `personal-health-analysis` | 明确启用 Garmin 自动同步 | 绑定的 GarminDB 本地数据库、一个当前用户计划任务及单一脱敏运行状态文件 | 仅诊断、预览、试运行、不同步、禁用、移除自动同步或自定义第二处存储 |
 | `personal-intelligence-hub` | 生成正式日简报 | 正式新闻文件及新闻目录内的去重索引 | 预览或明确不保存 |
 | `hit-weekly-brief` | 生成正式数字健康周报 | DigitalHealthWeeklyBrief 本地归档 | 草稿、预览或明确不保存 |
@@ -90,11 +88,10 @@ description: 说明技能做什么，以及用户在什么场景下应使用它�
 - 不提交 `node_modules`、缓存、日志、临时下载、测试输出或生成音频。
 - 不把同一说明同时复制到 `SKILL.md` 和 `references/`。
 - `resource-manifest.json` 只记录资源与引用状态，不定义技能语义。当前 schema v3 使用 LF 规范化 SHA-256 校验 `SKILL.md`、顶层文件、全部受管资源文件和明确引用，并拒绝绝对路径、根外路径与磁盘不一致。
-- 需要运行时权威绑定的技能使用相对 `skill_root` 定位和同样的 LF 规范化 SHA-256；复制到新的技能目录后路径无需改写，但修改受绑定文件后必须刷新对应配置并运行该技能的权威门测试。
 
 ## 5. Skill inventory
 
-当前库存为 54 个用户技能，不包含 `.system`、`scripts`、`shared`、`examples` 和 `reports`。功能说明取自各技能 `SKILL.md` 的当前 `description`。
+当前库存为 53 个用户技能，不包含 `.system`、`scripts`、`shared` 和 `reports`。以下为功能摘要，完整触发条件、授权范围和退出边界以对应 `SKILL.md` 为准。
 
 ### Academic and cognitive research
 
@@ -119,34 +116,33 @@ description: 说明技能做什么，以及用户在什么场景下应使用它�
 
 | Skill | 功能说明 |
 |---|---|
-| `hit-customer-analyst` | 基于可核验公开信息研究医院、卫健行政机构及医疗信息化客户，形成机构画像、采购与项目线索、公开职业角色、厂商格局和拜访准备简报 |
+| `hit-customer-analyst` | 面向医疗卫生信息化售前开展重点客户研究与重要拜访准备，提供会前速览、标准拜访包、战略客户包和一封信四种模式；不用于一般机构介绍或私人背景调查 |
 | `hit-digital-strategy-partner` | 为医疗机构、医疗信息化企业和管理团队制定数字化战略、商业模式、投资优先级、ROI/TCO分析及高管决策备忘录 |
 | `hit-industry-radar` | 检索并分析指定周期内的医疗信息化、数字健康、医疗AI、监管政策和竞争厂商动态，生成带来源、事件日期、影响判断和行动建议的行业雷达 |
 | `hit-lectures-scout` | 检索、筛选和解释医疗AI、数字医疗与临床信息学论文及预印本，按研究类型评估证据质量，并将学术信号转化为可验证的研发、产品或市场假设 |
-| `hit-solution-architect` | 设计医疗机构数字化、信创改造、数据平台和临床信息系统方案，覆盖现状诊断、目标架构、迁移路径、互操作、安全合规、容灾及TCO/ROI |
+| `hit-solution-architect` | 设计和评审医疗机构应用、数据、集成、基础设施、安全、容灾、信创迁移及临床 AI 技术方案；业务战略、预算取舍和投资排序转交 `hit-digital-strategy-partner` |
 | `hit-weekly-brief` | 汇总并研判指定周期内的数字健康、医疗政策、医疗AI、医疗信息化技术和行业研究，生成面向管理层的带来源周报 |
 
 ### Image and system workflows
 
 | Skill | 功能说明 |
 |---|---|
-| `image-promp-gen` | 将简短主题转化为适合海报、书籍封面、专辑封面、文章配图和社交媒体视觉的平面设计图像提示词，擅长丝网印刷、负空间、象征构图和有限色板 |
 | `image-prompt-gen` | 将简短主题或现有视觉要求转化为原创、可执行的平面设计图像提示词，也可在用户明确要求时直接生成或编辑图片 |
 | `image-studio-architect` | 使用当前图像生成能力创建或编辑海报、封面、插画、概念图、社交媒体图片和其他视觉资产，并根据输入完整度补足构图、色彩、光线、材质与画幅 |
 | `magazine-illustrator` | 为文章、博客、公众号、报告和演示文稿设计并直接生成杂志式位图插画，包括头图、封面、章节插图、系列配图和可复制的图像生成提示词 |
 | `mentat-collaboration-audit` | 基于真实会话记录、日志、工具调用和遥测事件审计系统效率与人机协作摩擦，复算等待、技能载入、错误重试、子代理Token、上下文压缩和写入授权指标，并按需生成Markdown报告和HTML审计面板 |
 | `mentat-dream-cycle` | 以审计、预览和事务化方式检查临时文件、热记忆、失败日志及知识图谱待治理项，生成可执行的清理与归档建议，并在获得明确授权后执行限定范围的安全维护 |
-| `mentat-insight-diary` | 将真实发生的系统事件、执行摩擦、失败、权衡和改进动作整理为OODA结构的内观审计日志，并在生成或更新日志时默认原子保存到权威季度档案 |
+| `mentat-insight-diary` | 先核查日期与授权来源，区分未取证、读取失败和检查后无事件；证据门通过后生成八段 OODA 日志并原子保存到权威季度档案，不默认扫描全部历史会话 |
 | `mentat-skill-creator` | 显式维护本地 Codex skills 库的根治理合同、资源清单、触发所有权、批量迁移和发布门禁；通用新技能与可安装插件分别转交系统 creator |
 
 ### Personal workflows
 
 | Skill | 功能说明 |
 |---|---|
-| `personal-cognitive-auditor` | 基于用户提供或明确授权读取的日志、日程与健康数据，生成事实导向的日、周、月、季度或年度复盘；受保护的周/月/季度请求通过门禁后写入 canonical 季度日志 |
+| `personal-cognitive-auditor` | 基于授权日志、日历与 Garmin 数据生成日、周、月、季度或年度复盘；个人周、月、季度审计通过校验和结构化请求门后保存到 canonical 季度日志 |
 | `personal-cognitive-prescription` | 从用户提供的近期问题、决策或复盘材料中识别认知盲区，并给出可核验到具体章节的跨领域阅读处方 |
-| `personal-diary-writer` | 生成并保存个人日记、周期审计或 Mentat 日志；精确“更新个人日志”及其他受保护请求通过内容门后写入对应 canonical 季度档案 |
-| `personal-health-analysis` | 以本地优先、失败关闭方式分析用户授权的 Garmin 睡眠、HRV、心率、压力、身体电量、体重和非位置化活动摘要，并生成非诊断性报告或零外联趋势面板 |
+| `personal-diary-writer` | 完整个人日记通过受保护请求与内容门后自动保存；承接 Mentat 和个人周、月、季度审计的受保护写入，草稿或非标准路径仍执行确认门 |
+| `personal-health-analysis` | 以本地优先、失败关闭方式分析用户授权的 Garmin 数据，验证本地数据库读取窗口与设备/固件时期，披露时间范围、缺失和来源，并生成非诊断性报告、离线面板或研究用途 FHIR R4 包装 |
 | `personal-intelligence-hub` | 对指定主题开展多来源情报扫描、去重、证据核验、情景推演和红队审查，并生成带来源的战略简报 |
 | `personal-investment-advisor` | 执行点时财务筛选、结构化预期差与三情景估值、持仓及行情身份审计、实时行情刷新与离线 Daily Sync 评估、组合情景压测、只读逆波动率分配实验和研究校准；固定为 `research_only` |
 | `personal-musicbee-dj` | 在本地 Windows 电脑上根据歌曲、歌单、流派、场景或情绪请求启动并控制 MusicBee 播放，必要时生成临时 M3U 歌单 |
@@ -184,7 +180,7 @@ description: 说明技能做什么，以及用户在什么场景下应使用它�
 - 去机器腔：`personal-write-humanizer`
 - 演示文稿蓝图：`tool-slide-architect`
 - 单页网页演示：`tool-web-slide`
-- 位图提示词：`image-promp-gen`
+- 位图提示词：`image-prompt-gen`
 - 位图生成或编辑：`image-studio-architect`
 - 系统结构图：`technical-diagram-renderer`
 - 单篇论文：`academic-paper-reader`
@@ -222,12 +218,12 @@ pwsh -NoProfile -ExecutionPolicy Bypass -File scripts/repair_skills.ps1 -Mode Ga
 门禁必须检查：
 
 - 一级用户技能数与 README 库存一致。
-- frontmatter 仅含 `name` 和 `description`。
+- frontmatter 包含 `name` 和 `description`，且可选字段仅使用 Pi 当前支持的集合。
 - 名称、描述、行数和本地引用有效。
 - 每个用户技能存在 schema v3 `resource-manifest.json`；清单字段、规范化哈希、全部受管资源、声明依赖和可移植路径与磁盘一致。
 - 可选 `agents/openai.yaml` 必须能安全解析，界面字段、精确 `$skill-name` 默认提示、图标路径、颜色、调用策略和 MCP 依赖类型有效。
 - 不存在 `skill.json`。
-- 对 `SKILL.md`、脚本、参考资料、配置和界面元数据执行一致检查；不存在旧运行时工具令牌、机器绑定的外部运行时路径、过程稿指令、硬编码模型版本、强制子代理或强制持久化。强制行为检查只解释技能正文与说明性资源，不把源代码变量或安全测试夹具误判为用户指令。
+- 对 `SKILL.md`、脚本、参考资料、配置和界面元数据执行一致检查；不存在旧运行时工具令牌、外部运行时路径、思维稿指令、硬编码模型版本、强制子代理或强制持久化。
 - `_runtime` 目录属于用户运行产物，不进入源码一致性扫描，也不得被当作技能资源或业务事实。
 - 触发所有权矩阵不存在未知技能和重复信号。
 
@@ -245,4 +241,10 @@ pwsh -NoProfile -ExecutionPolicy Bypass -File scripts/repair_skills.ps1 -Mode Ga
 
 禁止在维护流程中重新生成 `skill.json`。旧工具如果仍依赖该文件，应修订或移除该工具，不得恢复双重真相源。
 
-Last updated: 2026-08-30
+### 8.1 Verified baseline (2026-09-05)
+
+- 全库 `repair_skills.ps1 -Mode Gate`：53 个技能，8 项自动持久化例外，19 类触发所有权；阻断项为 0。
+- Mentat 定向回归：`mentat-insight-diary/scripts/test_skill_contract.py` 的 14 项测试通过。
+- Gate 只证明其覆盖的静态合同与资源一致性，不代表所有技能已在新会话中端到端验证，也不代替发布前的敏感信息检查。
+
+Last updated: 2026-09-05

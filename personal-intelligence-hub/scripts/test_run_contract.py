@@ -1,5 +1,6 @@
-import json
 import hashlib
+import json
+import os
 import tempfile
 import unittest
 from concurrent.futures import ThreadPoolExecutor
@@ -17,6 +18,11 @@ from history_manager import generate_event_id
 from mix_policy import select_candidates_with_mix
 from run_contract import (
     RunContractError,
+    _assert_execution_budget_allows_launch,
+    _validate_access_log_entry,
+    _validate_access_retry_policy,
+    _validate_bound_candidate_source_type,
+    _validate_multi_independent_lineage,
     build_review_request,
     build_supplement_request,
     candidate_object_hash,
@@ -31,21 +37,16 @@ from run_contract import (
     load_review_progress_state,
     normalize_published_at,
     normalize_supplement_failure_kind,
-    record_stage,
-    record_run_artifact,
     record_execution_telemetry,
+    record_run_artifact,
+    record_stage,
     reconcile_supplement_progress,
     registered_candidate_lineage,
-    review_scope,
     review_input_bundle_sha256,
+    review_scope,
     register_review_receipt,
     register_supplement_results,
     update_review_progress,
-    _assert_execution_budget_allows_launch,
-    _validate_access_log_entry,
-    _validate_access_retry_policy,
-    _validate_bound_candidate_source_type,
-    _validate_multi_independent_lineage,
     validate_resource_manifest,
     validate_review_receipt,
     validate_semantic_draft,
@@ -328,13 +329,15 @@ class RunContractTests(unittest.TestCase):
                 second["source"],
                 candidate_identity=changed_identity,
             )
-            with self.subTest(identity_field=field):
-                with self.assertRaisesRegex(RunContractError, "final item.event_id"):
-                    _validate_multi_independent_lineage(
-                        item,
-                        [first, changed],
-                        verified,
-                    )
+            with (
+                self.subTest(identity_field=field),
+                self.assertRaisesRegex(RunContractError, "final item.event_id"),
+            ):
+                _validate_multi_independent_lineage(
+                    item,
+                    [first, changed],
+                    verified,
+                )
 
         missing_identity = deepcopy(second)
         missing_identity.pop("event_identity")
@@ -910,6 +913,25 @@ class RunContractTests(unittest.TestCase):
             request["execution_packets"][0]["usage_budget"]["cost_usd"],
             2.0,
         )
+        missing_review_telemetry = deepcopy(manifest)
+        semantic_reservation = deepcopy(reservation)
+        semantic_reservation.update(
+            {
+                "stage": "semantic_review",
+                "invocation_id": "semantic-without-telemetry",
+                "tokens": 40000,
+                "cost_usd": 0.5,
+            }
+        )
+        missing_review_telemetry["telemetry"]["reservations"][
+            "semantic_review:semantic-without-telemetry"
+        ] = semantic_reservation
+        red_team_headroom = _assert_execution_budget_allows_launch(
+            missing_review_telemetry,
+            reserved_tokens=30000,
+            reserved_cost_usd=0.5,
+        )
+        self.assertEqual(red_team_headroom["accounted_cost_usd"], 2.5)
 
     def test_execution_telemetry_settles_reservation_to_actual_usage(self):
         manifest_path, _, _ = self.prepare_supplement_run(
@@ -1236,14 +1258,16 @@ class RunContractTests(unittest.TestCase):
                 raise OSError("injected manifest commit failure")
             return real_atomic_dump_json(path, payload)
 
-        with patch("run_contract.atomic_dump_json", side_effect=fail_manifest_commit):
-            with self.assertRaisesRegex(OSError, "injected manifest commit failure"):
-                build_review_request(
-                    manifest_path,
-                    None,
-                    "semantic",
-                    now=self.now,
-                )
+        with (
+            patch("run_contract.atomic_dump_json", side_effect=fail_manifest_commit),
+            self.assertRaisesRegex(OSError, "injected manifest commit failure"),
+        ):
+            build_review_request(
+                manifest_path,
+                None,
+                "semantic",
+                now=self.now,
+            )
 
         orphan_sha = file_sha256(request_path)
         orphan = json.loads(request_path.read_text(encoding="utf-8"))
@@ -2508,16 +2532,18 @@ class RunContractTests(unittest.TestCase):
             result_path.write_text(
                 json.dumps(permanent_transport), encoding="utf-8"
             )
-            with self.subTest(error_code=error_code):
-                with self.assertRaisesRegex(
+            with (
+                self.subTest(error_code=error_code),
+                self.assertRaisesRegex(
                     RunContractError, "chronology is ambiguous"
-                ):
-                    register_supplement_results(
-                        manifest_path,
-                        request_path,
-                        [result_path],
-                        now=self.now + timedelta(seconds=60),
-                    )
+                ),
+            ):
+                register_supplement_results(
+                    manifest_path,
+                    request_path,
+                    [result_path],
+                    now=self.now + timedelta(seconds=60),
+                )
 
         unclassified_transport = json.loads(json.dumps(aggregate["results"][0]))
         unclassified_transport["status"] = "degraded"
@@ -3043,6 +3069,7 @@ class RunContractTests(unittest.TestCase):
             now=self.now,
         )
         self.assertEqual(request["execution_packet"]["timeout_ms"], 240000)
+        self.assertEqual(request["execution_packet"]["usage_budget"]["cost_usd"], 0.5)
         core_draft = Path(request["execution_packet"]["draft_paths"]["refined_core"])
         decision = Path(request["execution_packet"]["draft_paths"]["decision"])
         core_draft.write_text(json.dumps(refined_payload), encoding="utf-8")
@@ -3056,6 +3083,52 @@ class RunContractTests(unittest.TestCase):
                 }
             ),
             encoding="utf-8",
+        )
+
+        real_replace = os.replace
+        refined_final = Path(request["execution_packet"]["output_paths"]["refined_core"])
+        receipt_final = Path(request["execution_packet"]["output_paths"]["review_receipt"])
+        promotion_count = 0
+
+        def fail_second_promotion(source, destination):
+            nonlocal promotion_count
+            if Path(destination) in {refined_final, receipt_final}:
+                promotion_count += 1
+                if promotion_count == 2:
+                    raise OSError("injected second semantic promotion failure")
+            return real_replace(source, destination)
+
+        with (
+            patch("run_contract.os.replace", side_effect=fail_second_promotion),
+            self.assertRaisesRegex(OSError, "second semantic promotion"),
+        ):
+            finalize_semantic_decision(
+                manifest_path,
+                core_draft,
+                decision,
+                now=self.now,
+            )
+        self.assertTrue(refined_final.is_file())
+        self.assertFalse(receipt_final.exists())
+
+        with (
+            patch(
+                "run_contract.register_review_receipt",
+                side_effect=RunContractError("injected semantic registration failure"),
+            ),
+            self.assertRaisesRegex(RunContractError, "registration failure"),
+        ):
+            finalize_semantic_decision(
+                manifest_path,
+                core_draft,
+                decision,
+                now=self.now,
+            )
+        self.assertTrue(refined_final.is_file())
+        self.assertTrue(receipt_final.is_file())
+        self.assertEqual(
+            load_manifest(manifest_path)["stages"]["semantic_review"]["status"],
+            "running",
         )
 
         refined_path, receipt_path = finalize_semantic_decision(

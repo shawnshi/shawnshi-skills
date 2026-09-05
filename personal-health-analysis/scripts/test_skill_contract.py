@@ -3,7 +3,6 @@ import json
 import unittest
 from pathlib import Path
 
-
 SKILL_ROOT = Path(__file__).resolve().parent.parent
 REPO_ROOT = SKILL_ROOT.parent
 CANONICAL_TEXT_HASH_SUFFIXES = {
@@ -108,7 +107,9 @@ class SkillContractTests(unittest.TestCase):
         ]
         combined = "\n".join(path.read_text(encoding="utf-8") for path in documents)
         self.assertIn("<SKILL_PYTHON> scripts/garmin_data.py", combined)
-        self.assertIn("<SKILL_PYTHON> scripts/runtime_preflight.py --mode local", combined)
+        self.assertIn(
+            "<SKILL_PYTHON> scripts/runtime_preflight.py --mode local", combined
+        )
         self.assertNotIn("必须解析为该隔离环境的解释器", combined)
         self.assertNotIn("必须是技能隔离 `.venv` 中的解释器", combined)
         self.assertNotRegex(combined, r"(?m)(?:^|\s)python3?\s+scripts/")
@@ -121,7 +122,11 @@ class SkillContractTests(unittest.TestCase):
         skill_text = (SKILL_ROOT / "SKILL.md").read_text(encoding="utf-8")
         metadata = (SKILL_ROOT / "agents" / "openai.yaml").read_text(encoding="utf-8")
         self.assertIn("RUNTIME_DEPENDENCY_UNAVAILABLE", skill_text)
-        for script_name in ("garmin_data.py", "garmin_intelligence.py", "garmin_chart.py"):
+        for script_name in (
+            "garmin_data.py",
+            "garmin_intelligence.py",
+            "garmin_chart.py",
+        ):
             self.assertRegex(
                 skill_text,
                 rf"{script_name}[^\n]*--source local[^\n]*--allow-health-data",
@@ -130,9 +135,7 @@ class SkillContractTests(unittest.TestCase):
 
     def test_live_fallback_is_bound_to_no_data_network_and_exact_components(self):
         skill_text = (SKILL_ROOT / "SKILL.md").read_text(encoding="utf-8")
-        api_text = (SKILL_ROOT / "references" / "api.md").read_text(
-            encoding="utf-8"
-        )
+        api_text = (SKILL_ROOT / "references" / "api.md").read_text(encoding="utf-8")
         combined = skill_text + "\n" + api_text
         self.assertIn("--fallback-live", combined)
         self.assertIn("--components", combined)
@@ -144,15 +147,13 @@ class SkillContractTests(unittest.TestCase):
 
     def test_explicit_skill_invocation_defaults_health_read_but_not_side_effects(self):
         skill_text = (SKILL_ROOT / "SKILL.md").read_text(encoding="utf-8")
-        api_text = (SKILL_ROOT / "references" / "api.md").read_text(
-            encoding="utf-8"
-        )
+        api_text = (SKILL_ROOT / "references" / "api.md").read_text(encoding="utf-8")
         advanced_text = (SKILL_ROOT / "references" / "advanced_tools.md").read_text(
             encoding="utf-8"
         )
         combined = "\n".join((skill_text, api_text, advanced_text))
         self.assertIn("显式调用本技能即授权", combined)
-        self.assertIn("默认最近 7 天", combined)
+        self.assertIn("默认最近 14 天", combined)
         self.assertIn(
             "sleep,hrv,body_battery,heart_rate,stress",
             combined,
@@ -169,10 +170,27 @@ class SkillContractTests(unittest.TestCase):
         ):
             self.assertIn(independent_grant, combined)
         metadata = (SKILL_ROOT / "agents" / "openai.yaml").read_text(encoding="utf-8")
-        self.assertIn("after explicit local no_data automatically use one bounded live read-only fallback", metadata)
-        self.assertIn("Ask separately before login, token writes, sync, downloads", metadata)
+        self.assertIn(
+            "after explicit local no_data automatically use one bounded live read-only fallback",
+            metadata,
+        )
+        self.assertIn(
+            "Ask separately before login, token writes, sync, downloads", metadata
+        )
         self.assertNotIn("ask separately before network", metadata)
         self.assertIn("allow_implicit_invocation: false", metadata)
+
+    def test_interactive_window_and_integrity_contract(self):
+        skill = (SKILL_ROOT / "SKILL.md").read_text(encoding="utf-8")
+        api = (SKILL_ROOT / "references/api.md").read_text(encoding="utf-8")
+        for text in (skill, api):
+            self.assertIn("N=14", text)
+            self.assertIn("同一个 `--days <N>`", text)
+            self.assertNotIn("未指定时为最近 7 天", text)
+            self.assertNotIn("默认最近 7 天", text)
+        self.assertIn("不修改这些 CLI defaults", skill)
+        self.assertIn("成本随数据库及 WAL/SHM 大小增长", skill)
+        self.assertIn("不得弱化前后全量哈希校验", skill)
 
     def test_sync_contract_requires_plan_and_explicit_runner(self):
         skill_text = (SKILL_ROOT / "SKILL.md").read_text(encoding="utf-8")
@@ -188,7 +206,7 @@ class SkillContractTests(unittest.TestCase):
             self.assertIn(flag, skill_text)
         self.assertNotIn("shutil.which", sync_source)
         self.assertIn("trusted_garmindb_python_required", sync_source)
-        self.assertIn("SYNC_PLAN_VERSION = 2", sync_source)
+        self.assertIn("SYNC_PLAN_VERSION = 3", sync_source)
         self.assertIn('"garmindb": "3.8.0"', sync_source)
         self.assertIn('"garminconnect": "0.3.9"', sync_source)
         self.assertIn("site_packages_tree_sha256", sync_source)
@@ -206,8 +224,7 @@ class SkillContractTests(unittest.TestCase):
         self.assertNotIn(".jules", manifest["top_level_directories"])
 
         top_hashes = {
-            item["path"]: item["sha256"]
-            for item in manifest["top_level_file_hashes"]
+            item["path"]: item["sha256"] for item in manifest["top_level_file_hashes"]
         }
         self.assertEqual(set(top_hashes), set(manifest["top_level_files"]))
         for relative, digest in top_hashes.items():

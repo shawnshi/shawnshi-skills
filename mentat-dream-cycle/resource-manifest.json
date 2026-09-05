@@ -1,18 +1,18 @@
 {
   "schema_version": 3,
   "skill": "mentat-dream-cycle",
-  "generated_at": "2026-08-16T22:02:19",
+  "generated_at": "2026-09-05T17:15:44+08:00",
   "hash_algorithm": "SHA-256",
   "text_hash_normalization": "LF",
   "skill_md": "SKILL.md",
-  "skill_md_sha256": "1e9dc92097191925f3d5429c8fd74461b2349e4bf3fa6aa66f21ff1cea45ca44",
+  "skill_md_sha256": "9e3ae915b03c0e8f222918de63534ac15c5b1258ab822af8721dc47b158e6c54",
   "top_level_files": [
     "SKILL.md"
   ],
   "top_level_file_hashes": [
     {
       "path": "SKILL.md",
-      "sha256": "1e9dc92097191925f3d5429c8fd74461b2349e4bf3fa6aa66f21ff1cea45ca44"
+      "sha256": "9e3ae915b03c0e8f222918de63534ac15c5b1258ab822af8721dc47b158e6c54"
     }
   ],
   "top_level_directories": [

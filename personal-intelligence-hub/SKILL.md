@@ -44,7 +44,7 @@ python -X utf8 scripts/run_daily.py prepare --report-date YYYY-MM-DD --timezone 
 3. 先使用 `references/karpathy_feeds.json` 执行基线扫描；
 4. 将未知或无效发布日期放入 quarantine，记录来源覆盖和守恒候选漏斗；
 5. 将基线制成带 `candidate_id` 与 `candidate_object_sha256` 的 `candidates_only` 启发式候选池；
-6. 根据领域供给、低于阈值的来源成功率、政策竞对和风险反证缺口生成 `supplement_request.json`。日期有效率不足继续作为 coverage/data gap 披露，不为无法通过少量联网补检修复的全局日期指标额外启动 integrity 代理。
+6. 根据已经完成文章级访问核验的一手候选供给、低于阈值的来源成功率、政策竞对和风险反证缺口生成 `supplement_request.json`；未核验的启发式候选不得冒充可入选供给。日期有效率不足继续作为 coverage/data gap 披露，不为无法通过少量联网补检修复的全局日期指标额外启动 integrity 代理。
 
 基线阶段未达到 `completed` 或 `degraded` 前，不得启动补充检索。启发式候选只用于排序和发现缺口，不得直接成为最终事实、等级、推断、置信度或归档内容。
 
@@ -63,9 +63,9 @@ python -X utf8 scripts/run_daily.py prepare --report-date YYYY-MM-DD --timezone 
 
 按 `execution_policy` 使用最小任务包启动代理：任务只传已登记请求路径、明确分派的 `gap_id`/`lane`、execution packet 的预算和停止条件。每个 worker 首先运行 run-scoped packet 绑定的 `scripts/supplement_agent.py context`；该帮助脚本在本地校验 request、manifest、prompt 与 lane slice 的路径和 SHA-256，只输出当前 gap 的紧凑上下文。代理不得直接展开完整 request、prompt config、candidate pool、history snapshot、其他 gap 的 slice 或脚本源码。运行时支持上下文继承控制时必须关闭完整会话历史继承。严格按 request 的确定性 `launch_plan` 执行：第一 wave 只运行 1 条 canary gap；若其为基础设施失败，停止后续 fanout 并进入 reconciler。canary 通过后，余下 gap 最多 3 个并行，不得把两个 lane 混入同一代理。已经分派的检索不得由根任务重复执行。
 
-补检代理只在发现阻断时发送中间状态；其余情况在来源核验结束时固定 `completed_at`，只把动态字段写入 execution packet 授权的 draft 路径，随后运行 packet 绑定的 `scripts/supplement_agent.py finalize`。帮助脚本确定性装配静态哈希、`event_id`、coverage 与 provenance；成功后代理发送一次 `draft_ready` 控制消息（绝对路径与 SHA-256）并结束。`source_checked` 后禁止继续检索，必须在 `finalization.grace_seconds` 内完成上述收口。代理不得写最终路径；父任务必须用确定性 finalizer 验证全部 drafts，再逐文件原子提升并登记 aggregate。语义与红队代理另按对应阶段发送不含业务内容的有限里程碑心跳。
+补检代理只在发现阻断时发送中间状态；其余情况在来源核验结束时固定 `completed_at`，只把动态字段写入 execution packet 授权的 draft 路径，随后运行 packet 绑定的 `scripts/supplement_agent.py finalize`。帮助脚本确定性装配静态哈希、`event_id`、coverage 与 provenance；成功后代理发送一次 `draft_ready` 控制消息（绝对路径与 SHA-256）并结束。`source_checked` 后禁止继续检索，必须在 `finalization.grace_seconds` 内完成上述收口。`verify-bound` 是受控文档访问探针：HTTP 成功本身不证明正文事实、发布日期或原始来源类型；空正文、登录页、软 404 和不可识别文档记为 blocked，日期缺失/无效/超窗单独记为 `date_disqualified`，不回填窗口日期。正常代理仍可把实际读取的可识别文档、独立日期元数据和已有来源类型写入动态 draft。代理不得写最终路径；父任务必须用确定性 finalizer 验证全部 drafts，再逐文件原子提升并登记 aggregate。语义与红队代理另按对应阶段发送不含业务内容的有限里程碑心跳。
 
-每个代理必须先处理绑定的基线候选，再补充检索；不得绕过基线直接做开放式搜索。当前资讯必须联网核验，优先监管、政府、公司公告、采购原文、论文、标准和项目主页。新闻与评论只作线索或独立佐证。
+每个代理必须先处理绑定的基线候选，再补充检索；context 返回 `required_bound_candidate_urls` 时，必须在开放检索前逐个核验，并为每个 URL 保留 verified 或 blocked 终态。通过访问、日期、领域和来源质量门的绑定候选必须以相同 `candidate_id` 与 URL 重新登记到 `candidates`，以携带文章级 `source_type` 与 `event_identity`；deterministic finalizer 负责生成 `event_id`，不得因不知道哈希算法而省略。不得绕过基线直接做开放式搜索。所有运行时间戳必须来自实际时钟，不得填入整点占位或未来时间。当前资讯必须联网核验，优先监管、政府、公司公告、采购原文、论文、标准和项目主页。新闻与评论只作线索或独立佐证。HTTP 3xx 不是正文核验终态：仅沿 HTTP(S) Location 有界跟随最多 5 跳，保留原始 requested URL 与最终 final URL；只有最终落点取得可识别正文才算 verified。
 
 补检不得在同一 gap 内对同一 URL 的永久失败做重试；HTTP 永久响应在所有 gap 中都不得重试。若某次永久失败没有 HTTP 响应，且错误码明确指向本地 TLS、SSL、证书、协议或 curl 传输路径故障，另一 lane 可用不同访问方法做一次恢复核验；必须保留原失败、把聚合覆盖标为 `degraded` 并登记 cross-lane recovery，禁止同 lane、同方法或再次恢复。同一主机连续两次永久失败后必须切换到另一类优先来源，并把失败保留在 `access_log`，不得通过删除失败记录美化覆盖率。只有瞬时超时、限流或可重试 HTTP 状态可在轮次预算内重试；达到 gap 的合格增量或连续检索无增量时立即停止。
 
@@ -93,7 +93,7 @@ python -X utf8 scripts/run_daily.py reconcile-supplement --manifest <run_manifes
 
 等待代理时先完成本地可并行的确定性检查，以 `draft_ready`（补检）或原子发布后的 `artifact_ready`（评审）控制消息为主信号。所有里程碑都通过运行时现有的 `contact_supervisor`/supervisor 通道发送，不假定存在名为 `supplement_progress` 或 `review_progress` 的独立工具。补检代理在帮助脚本完成输入哈希验证后发送 `supplement_progress seq=1 phase=input_validated`；完成允许的来源访问后先固定来源核验 `completed_at`，再发送 `supplement_progress seq=2 phase=source_checked`。此后只允许写动态 draft 并运行确定性帮助脚本，不得继续检索或读取合同源码。新序号属于可比较的状态变化并清零该代理的连续静止等待计数。语义代理在紧凑帮助脚本完成全部绑定校验后发送 `review_progress seq=1 phase=input_validated`，在动态语义选择完成后发送 `review_progress seq=2 phase=lineage_ready`；红队在输入哈希验证后发送 `review_progress seq=1 phase=input_validated`。心跳不得包含候选、结论或回执正文。
 
-所有代理必须异步启动。交互会话禁止调用阻塞式 `subagent_wait` 或 `wait_agent`；只允许为已知 run 注册一次非阻塞完成唤醒并结束当前回合，收到完成、阻断或进度事件后再恢复。非交互会话依赖运行时 auto-drain，不自行轮询或休眠。补检必须按 `launch_plan` 把每个 worker 的 `timeout_ms`、`tool_budget`、`token_budget` 与 `cost_budget_usd` 原样传给运行时；`timeout_ms` 包含来源核验预算与独立 finalization grace，`tool_budget.hard` 是运行中可强制的工具调用上限。语义与非确定性红队必须把 execution packet 的 `timeout_ms`、`usage_budget.tokens` 与 `usage_budget.cost_usd` 原样传给运行时。启动前由脚本按全部待启动 worker 的预算 Token 上限预留总额，并额外保留语义与红队合计 70,000 Token、1 美元的下游 headroom；无法保留时不得启动补检。预算 Token 固定为运行时 `total_tokens - cache_read_tokens - cache_write_tokens`，原始总 Token 仍单独保留用于可观测性但不重复占用缓存命中的运行预算。预留后会超过 250,000 预算 Token 时不得启动，累计费用达到 3 美元时也不得启动。Token 与费用预算属于启动预留和终态结算门，运行时不保证在已启动代理越界的瞬间中断；不得把它们描述为活动中的硬停止器。活动中的有界停止依赖 `timeout_ms`、`tool_budget`、查询/URL/轮次限制和收口帮助脚本。等待期间先完成本地可并行的确定性检查；每次恢复只读取一次代理状态和一次下述文件观察，并在运行日志可读时读取仅含最新事件 ordinal、时间戳、工具调用计数和已收到里程碑序号的进度指纹。把该指纹交给 `scripts/review_progress_gate.py` 的阶段专属状态文件；它以原子状态机返回 `continue_wait`、`send_reminder`、`verify_artifact`、`degraded_timeout` 或 `declare_lost`。补检必须使用 `--review-kind supplement --progress-id <gap_id>` 与逐 gap 独立状态文件，禁止多个 worker 共享状态。`running` 且进度指纹增长表示进展；单凭没有正式文件或仍为 `running` 不得判定失联。运行时明确报告 timeout 时传入 `--agent-status timed_out`，由状态机登记 `degraded_timeout`，不得继续等待清理终态。为防无效工具循环无限续期，同一里程碑内最多允许 15 次增长检查；达到上限后发送定向提醒，提醒后连续三次仍无新里程碑则执行 `declare_lost`。代理明确失败/退出或提醒后连续三次静止也由状态机判为 `declare_lost`。穿插本地工作、发送说明或恢复回合不会重置预算；只有新控制里程碑才清零无里程碑增长计数。
+所有代理必须异步启动。交互会话禁止调用阻塞式 `subagent_wait` 或 `wait_agent`；只允许为已知 run 注册一次非阻塞完成唤醒并结束当前回合，收到完成、阻断或进度事件后再恢复。非交互会话依赖运行时 auto-drain，不自行轮询或休眠。补检必须按 `launch_plan` 把每个 worker 的 `timeout_ms`、`tool_budget`、`token_budget` 与 `cost_budget_usd` 原样传给运行时；`timeout_ms` 包含来源核验预算与独立 finalization grace，`tool_budget.hard` 是运行中可强制的工具调用上限。语义与非确定性红队必须把 execution packet 的 `timeout_ms`、`usage_budget.tokens` 与 `usage_budget.cost_usd` 原样传给运行时。启动前由脚本按全部待启动 worker 的预算 Token 上限预留总额，并额外保留语义与红队合计 70,000 Token、1 美元的下游 headroom；语义与红队各自最多预留 0.5 美元，不能由先启动的语义阶段占用红队份额。无法保留时不得启动补检。预算 Token 固定为运行时 `total_tokens - cache_read_tokens - cache_write_tokens`，原始总 Token 仍单独保留用于可观测性但不重复占用缓存命中的运行预算。预留后会超过 250,000 预算 Token 时不得启动，累计费用达到 3 美元时也不得启动。Token 与费用预算属于启动预留和终态结算门，运行时不保证在已启动代理越界的瞬间中断；不得把它们描述为活动中的硬停止器。活动中的有界停止依赖 `timeout_ms`、`tool_budget`、查询/URL/轮次限制和收口帮助脚本。等待期间先完成本地可并行的确定性检查；每次恢复只读取一次代理状态和一次下述文件观察，并在运行日志可读时读取仅含最新事件 ordinal、时间戳、工具调用计数和已收到里程碑序号的进度指纹。把该指纹交给 `scripts/review_progress_gate.py` 的阶段专属状态文件；它以原子状态机返回 `continue_wait`、`send_reminder`、`verify_artifact`、`degraded_timeout` 或 `declare_lost`。补检必须使用 `--review-kind supplement --progress-id <gap_id>` 与逐 gap 独立状态文件，禁止多个 worker 共享状态。`running` 且进度指纹增长表示进展；单凭没有正式文件或仍为 `running` 不得判定失联。运行时明确报告 timeout 时传入 `--agent-status timed_out`，由状态机登记 `degraded_timeout`，不得继续等待清理终态。为防无效工具循环无限续期，同一里程碑内最多允许 15 次增长检查；达到上限后发送定向提醒，提醒后连续三次仍无新里程碑则执行 `declare_lost`。代理明确失败/退出或提醒后连续三次静止也由状态机判为 `declare_lost`。穿插本地工作、发送说明或恢复回合不会重置预算；只有新控制里程碑才清零无里程碑增长计数。
 
 ```powershell
 python -X utf8 scripts/review_progress_gate.py --state <run_dir>/semantic_progress_state.json --manifest <run_manifest.json> --review-kind semantic --invocation-id <semantic_request.invocation_id> --request-sha256 <manifest.artifacts.semantic_review_request.artifact_sha256> --agent-status running --event-ordinal <n> --last-event-at <iso_datetime> --tool-call-count <n> --milestone-seq <0|1|2>
@@ -148,14 +148,14 @@ draft gate 必须在允许发布前使用绑定的完整 history snapshot 重跑
 1. 验证发布日期、访问回执和直接来源；
 2. 先按结构化 `event_id` 合并同一事件；只有任一侧缺少完整语义身份时，才按规范化 URL 与标题指纹兜底，不得把共享稳定 URL 的不同完整事件身份合并；
 3. 同一事件的多个来源作为佐证，不重复计数；
-4. 区分事实、来源主张、分析推断、行动和未知项；
-5. 分别在 `technology` 与 `healthcare_digital` 领域内评分，通用技术不得被强制改写为医疗事件；
+4. 区分事实、来源主张、分析推断、行动和未知项；一手来源可单独进入语义候选，二手来源只有在同一结构化事件身份下获得至少两个独立来源及访问回执时才可作为 `multi_independent` 候选组；
+5. 分别在 `technology` 与 `healthcare_digital` 领域内评分，通用技术不得被强制改写为医疗事件；临床、肿瘤、指南与临床决策等明确医疗语义必须参与医疗数字化领域计分；
 6. 依据 manifest 的请求比例选择，不足 10 条时不补数；
 7. 代理生成 1.4 refined core 与 compact semantic decision；脚本生成 `review-receipt/1.0`。
 
 脚本生成的语义回执必须绑定输入 bundle 与 refined 文件 SHA-256，覆盖所有最终条目的完整对象哈希，逐项映射 `candidate_object_sha256 → output_item_sha256`，并提供与最终 `access_check` 对应的访问日志及其哈希。每个最终条目的 `requested_url` 必须匹配条目 URL，`final_url` 仅记录跳转落点，入选条目按唯一映射计数。`model_used=heuristic`、血缘或访问日志不一致时停止。
 
-语义产物原子发布并由就绪信号确认后，不得并行预启动红队，也不得因为评估代理尚未发送额外聊天消息而继续等待。下一步的红队请求命令必须接收语义回执，并在创建请求前于同一进程重新执行同一 semantic draft gate；验证失败时不得留下 `red_team_review_request.json`。
+语义 core 与 receipt 分别原子提升并登记为一个可重入阶段提交；这不是跨文件单一原子事务。第二次提升或登记中断后，同一 invocation 必须复用已验证字节恢复，禁止生成新身份或覆盖不同内容。两份产物完成登记并由就绪信号确认后，不得并行预启动红队，也不得因为评估代理尚未发送额外聊天消息而继续等待。下一步的红队请求命令必须接收语义回执，并在创建请求前于同一进程重新执行同一 semantic draft gate；验证失败时不得留下 `red_team_review_request.json`。
 
 ### 4. 逻辑红队
 
@@ -190,12 +190,12 @@ python -X utf8 scripts/run_daily.py forge --manifest <run_manifest.json> --refin
 归档器必须：
 
 1. 重新验证技能全树、资源清单内部哈希、历史快照、运行身份、refined 字节、语义回执和红队回执；
-2. 从已登记证据重算 coverage、候选漏斗、重大资讯调比、供给例外和历史重复，再生成最终 `pipeline` 并运行 `briefing_gate.py`；
+2. 从已登记证据重算 coverage、候选漏斗、重大资讯调比、供给例外和历史重复；候选漏斗必须为每个进入下游的候选保留明确 disposition，并把未访问核验、二手来源缺少独立佐证、历史重复、日期冲突与语义未选择分开计数，再生成最终 `pipeline` 并运行 `briefing_gate.py`；
 3. 从同一 JSON payload 确定性渲染 Markdown；
 4. 在同一 staging 中准备 JSON、Markdown 和 commit sidecar；
 5. 先取得按新闻目录派生的操作系统级排他守卫；Windows 必须使用跨登录会话的 `Global\` mutex 且创建失败时封闭拒绝，不得降级到会话级守卫；目录元数据锁必须带随机 owner token，回收与释放前复核所有权；守卫覆盖旧锁判断、恢复、接管、历史重检和整个提交区，阻断并发接管及跨报告日历史检查竞争；活动进程或无法验证的异地主机锁不得接管，只回收同机已确认死亡且元数据未变化的锁；
 6. 最终重读并核对 SHA-256；`postcommit_action` 返回后再次重读正式三件套，任何后置动作导致的字节变化都触发回滚；
-7. 在同一守卫内、staging 前从正式档案重建并比对历史快照，逐条重跑事件去重；正式三件套验证成功后仍在该守卫内更新派生的 history v2，随后才释放守卫并登记 archive 阶段；可捕获的中途失败立即回滚，进程中断留下的未完成事务由下次归档先恢复。
+7. 在同一守卫内、staging 前从正式档案重建并比对历史快照，逐条重跑事件去重；正式 JSON、Markdown、sidecar 三件套属于事务提交，派生 history v2 是随后在同一守卫内执行的独立可恢复更新，不得把四者声称为单一原子写。history 更新或 archive 登记失败必须保持明确未完成状态，并由下次归档先恢复/重建后再成功登记；可捕获的三件套提交中途失败立即回滚，进程中断留下的未完成事务由下次归档先恢复。
 
 不得单独手写正式 Markdown、直接运行旧 `forge.py` 无参入口，或在回执未通过时写入新闻目录。
 

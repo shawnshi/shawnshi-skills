@@ -56,23 +56,52 @@ ENERGY_REQUIRED_FIELDS = (
     "数据缺口与不可判断事项",
 )
 
-ACQUISITION_AUDIT_PATTERNS = {
-    "sync_eligible": re.compile(r"\bsync_eligible=(?:true|false)\b", re.IGNORECASE),
-    "sync_attempted": re.compile(r"\bsync_attempted=(?:started|waited_existing|direct|not_attempted)\b", re.IGNORECASE),
-    "task_status": re.compile(r"\btask_status=[a-z0-9_]+\b", re.IGNORECASE),
-    "local_reread": re.compile(r"\blocal_reread=(?:accepted|rejected|not_run)\b", re.IGNORECASE),
-    "local_status": re.compile(r"\blocal_status=(?:complete|partial|no_data|read_error|not_run)\b", re.IGNORECASE),
-    "live_fallback": re.compile(r"\blive_fallback=(?:used|not_used)\b", re.IGNORECASE),
-    "reason": re.compile(r"\breason=[a-z0-9_]+\b", re.IGNORECASE),
+ACQUISITION_FIELD_ENUMS = {
+    "sync_eligible": ("true", "false"),
+    "sync_attempted": ("started", "waited_existing", "direct", "not_attempted"),
+    "task_status": (
+        "success",
+        "failed",
+        "timeout",
+        "invalid",
+        "start_failed",
+        "interrupted_or_terminated",
+        "not_checked",
+    ),
+    "local_reread": ("accepted", "rejected", "not_run"),
+    "local_status": ("complete", "partial", "no_data", "read_error", "not_run"),
+    "live_fallback": ("used", "not_used"),
 }
+ACQUISITION_AUDIT_CONTRACT = "; ".join(
+    f"{field}=<{'|'.join(values)}>"
+    for field, values in ACQUISITION_FIELD_ENUMS.items()
+) + "; reason=<稳定原因码>"
+
+
+def _enum_pattern(field: str) -> re.Pattern[str]:
+    alternatives = "|".join(
+        re.escape(value) for value in ACQUISITION_FIELD_ENUMS[field]
+    )
+    return re.compile(rf"\b{field}=(?:{alternatives})\b", re.IGNORECASE)
+
+
+ACQUISITION_AUDIT_PATTERNS = {
+    field: (
+        re.compile(r"\btask_status=[a-z0-9_]+\b", re.IGNORECASE)
+        if field == "task_status"
+        else _enum_pattern(field)
+    )
+    for field in ACQUISITION_FIELD_ENUMS
+}
+ACQUISITION_AUDIT_PATTERNS["reason"] = re.compile(
+    r"\breason=[a-z0-9_]+\b", re.IGNORECASE
+)
 ACQUISITION_VALUE = re.compile(
     r"\b(sync_eligible|sync_attempted|task_status|local_reread|local_status|live_fallback|reason)=([a-z0-9_]+)\b",
     re.IGNORECASE,
 )
-FAILED_TASK_STATUSES = {
-    "failed", "timeout", "invalid", "start_failed", "interrupted_or_terminated"
-}
-ALLOWED_TASK_STATUSES = FAILED_TASK_STATUSES | {"success", "not_checked"}
+ALLOWED_TASK_STATUSES = set(ACQUISITION_FIELD_ENUMS["task_status"])
+FAILED_TASK_STATUSES = ALLOWED_TASK_STATUSES - {"success", "not_checked"}
 TASK_REASON_BINDINGS = {
     "success": {"sync_verified_local_reread_required"},
     "timeout": {"task_wait_timeout"},

@@ -7,16 +7,18 @@
 !!! Dependency: Requires Pandoc and XeLaTeX (TeX Live/MiKTeX) in system PATH.
 """
 
-import os
-import sys
 import argparse
-import subprocess
+import os
 import re
-import shutil
+import subprocess
+import sys
 from pathlib import Path
 
 # Configuration
-TEMPLATE_DIR = os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), 'templates')
+TEMPLATE_DIR = os.path.join(
+    os.path.dirname(os.path.dirname(os.path.abspath(__file__))), "templates"
+)
+
 
 def detect_style(file_path):
     """
@@ -24,27 +26,49 @@ def detect_style(file_path):
     """
     try:
         # Read first 3000 chars for analysis
-        with open(file_path, 'r', encoding='utf-8', errors='ignore') as f:
+        with open(file_path, encoding="utf-8", errors="ignore") as f:
             content = f.read(3000).lower()
     except Exception as e:
         print(f"Warning: Could not read file for analysis: {e}")
-        return "tech_report" # Default
+        return "tech_report"  # Default
 
-    scores = {
-        "academic": 0,
-        "cv": 0,
-        "tech_report": 0,
-        "book": 0,
-        "tech_book": 0
-    }
+    scores = {"academic": 0, "cv": 0, "tech_report": 0, "book": 0, "tech_book": 0}
 
     # Keyword Weights
     keywords = {
-        "academic": ["abstract", "introduction", "reference", "conclusion", "method", "doi", "figure", "table"],
-        "cv": ["education", "experience", "skills", "project", "resume", "curriculum vitae", "contact", "email"],
-        "tech_report": ["code", "python", "java", "function", "api", "install", "usage", "guide", "tutorial"],
+        "academic": [
+            "abstract",
+            "introduction",
+            "reference",
+            "conclusion",
+            "method",
+            "doi",
+            "figure",
+            "table",
+        ],
+        "cv": [
+            "education",
+            "experience",
+            "skills",
+            "project",
+            "resume",
+            "curriculum vitae",
+            "contact",
+            "email",
+        ],
+        "tech_report": [
+            "code",
+            "python",
+            "java",
+            "function",
+            "api",
+            "install",
+            "usage",
+            "guide",
+            "tutorial",
+        ],
         "book": ["chapter", "prologue", "once upon a time", "dialogue", "story"],
-        "tech_book": ["o'reilly", "technical", "programming", "software", "hardware"]
+        "tech_book": ["o'reilly", "technical", "programming", "software", "hardware"],
     }
 
     for style, words in keywords.items():
@@ -53,14 +77,15 @@ def detect_style(file_path):
             scores[style] += content.count(word)
 
     # Heuristics
-    if file_path.endswith('.md') and "```" in content:
+    if file_path.endswith(".md") and "```" in content:
         scores["tech_report"] += 5
         scores["tech_book"] += 5
-    
+
     # Return style with max score
     best_style = max(scores, key=scores.get)
     print(f"DEBUG: Detection scores: {scores}")
     return best_style
+
 
 def convert_and_compile(input_file, template_path, output_tex, style, title, author):
     """
@@ -69,41 +94,58 @@ def convert_and_compile(input_file, template_path, output_tex, style, title, aut
     try:
         # Build pandoc command array natively using the template
         cmd = [
-            'pandoc', input_file,
-            '--template', template_path,
-            '--extract-media', '.',
-            '-o', output_tex
+            "pandoc",
+            input_file,
+            "--template",
+            template_path,
+            "--resource-path",
+            str(Path(input_file).resolve().parent),
+            "--extract-media",
+            (Path(output_tex).resolve().parent / "media").as_posix(),
+            "-o",
+            output_tex,
         ]
-        
+
         # Add metadata variables
         if title:
-            cmd.extend(['-V', f'title={title}'])
+            cmd.extend(["-V", f"title={title}"])
         if author:
-            cmd.extend(['-V', f'author={author}'])
-            
+            cmd.extend(["-V", f"author={author}"])
+
         # Add conditional variables based on style
-        if style == 'academic' or style == 'tech_report':
-            # Simplified abstract extraction placeholder. 
-            cmd.extend(['-V', 'abstract=']) 
-            if style == 'tech_report':
-                cmd.extend(['-V', 'toc=true', '--listings'])
-        
-        if style == 'book' or style == 'tech_book':
-             cmd.extend(['-V', 'toc=true'])
+        if style == "tech_report":
+            cmd.extend(["-V", "toc=true", "--listings"])
+
+        if style == "book" or style == "tech_book":
+            cmd.extend(["-V", "toc=true"])
 
         # On Windows, we might need to force the environment to use UTF-8
         env = os.environ.copy()
         env["PYTHONIOENCODING"] = "utf-8"
-        
-        print(f"Running Pandoc conversion with template: {os.path.basename(template_path)}...")
-        subprocess.run(cmd, capture_output=True, text=True, encoding='utf-8', check=True, env=env)
+
+        print(
+            f"Running Pandoc conversion with template: {os.path.basename(template_path)}..."
+        )
+        subprocess.run(
+            cmd,
+            capture_output=True,
+            text=True,
+            encoding="utf-8",
+            check=True,
+            env=env,
+            timeout=60,
+        )
         return True
     except subprocess.CalledProcessError as e:
         print(f"Error running pandoc: {e.stderr}")
         sys.exit(1)
-    except FileNotFoundError:
-        print("Error: 'pandoc' not found. Please install Pandoc.")
+    except subprocess.TimeoutExpired:
+        print("Error: Pandoc conversion timed out after 60 seconds.")
         sys.exit(1)
+    except FileNotFoundError:
+        print("Error: 'pandoc' not found; conversion was not performed.")
+        sys.exit(1)
+
 
 def compile_tex(tex_file):
     """
@@ -114,54 +156,73 @@ def compile_tex(tex_file):
         # Compile from the output directory so Windows path separators are never
         # interpreted as TeX commands. Shell escape remains explicitly disabled.
         cmd = [
-            'xelatex',
-            '-interaction=nonstopmode',
-            '-halt-on-error',
-            '-no-shell-escape',
+            "xelatex",
+            "-interaction=nonstopmode",
+            "-halt-on-error",
+            "-no-shell-escape",
             tex_path.name,
         ]
         print(f"Compiling: {' '.join(cmd)}")
         run_options = {
-            'check': True,
-            'capture_output': True,
-            'text': True,
-            'encoding': 'utf-8',
-            'errors': 'replace',
-            'cwd': str(tex_path.parent),
+            "check": True,
+            "capture_output": True,
+            "text": True,
+            "encoding": "utf-8",
+            "errors": "replace",
+            "cwd": str(tex_path.parent),
+            "timeout": 40,
         }
         subprocess.run(cmd, **run_options)  # First pass
         subprocess.run(cmd, **run_options)  # Second pass
         print(f"Compilation successful: {tex_path.with_suffix('.pdf')}")
         return True
+    except subprocess.TimeoutExpired:
+        print("Error: XeLaTeX compilation timed out after 40 seconds per pass.")
+        return False
+    except FileNotFoundError:
+        print("Error: 'xelatex' not found; PDF was not compiled.")
+        return False
     except subprocess.CalledProcessError as e:
         print("Error: Compilation failed. Please check the .log file.")
-        
+
         # Output detailed error context from log instead of just last 20 lines
-        log_file = tex_path.with_suffix('.log')
+        log_file = tex_path.with_suffix(".log")
         if log_file.exists():
-             with open(log_file, 'r', encoding='utf-8', errors='ignore') as f:
-                 log_content = f.read()
-                 # Search for the first LaTeX Error line to provide actionable feedback
-                 error_match = re.search(r'!\s(.*?\n(?:l\.\d+.*?\n)?)', log_content, flags=re.MULTILINE)
-                 if error_match:
-                     print("\n--- LaTeX Error Detected ---")
-                     print(error_match.group(0).strip())
-                 else:
-                     print("\n--- Log Tail ---")
-                     print(''.join(log_content.splitlines()[-20:]))
+            with open(log_file, encoding="utf-8", errors="ignore") as f:
+                log_content = f.read()
+                # Search for the first LaTeX Error line to provide actionable feedback
+                error_match = re.search(
+                    r"!\s(.*?\n(?:l\.\d+.*?\n)?)", log_content, flags=re.MULTILINE
+                )
+                if error_match:
+                    print("\n--- LaTeX Error Detected ---")
+                    print(error_match.group(0).strip())
+                else:
+                    print("\n--- Log Tail ---")
+                    print("".join(log_content.splitlines()[-20:]))
         else:
-             print("\n--- Command Output ---")
-             print((e.stdout or e.stderr or "")[-500:])
+            print("\n--- Command Output ---")
+            print((e.stdout or e.stderr or "")[-500:])
         return False
+
 
 def main():
     parser = argparse.ArgumentParser(description="Smart Doc-to-LaTeX Native Engine")
-    parser.add_argument('--input', required=True, help="Input file path (.md, .docx, .txt)")
-    parser.add_argument('--style', default='auto', choices=['auto', 'academic', 'cv', 'tech_report', 'book', 'tech_book'], help="Target document style")
-    parser.add_argument('--title', help="Document title override")
-    parser.add_argument('--author', help="Document author override")
-    parser.add_argument('--output', help="Output directory (default: input file's directory)")
-    
+    parser.add_argument(
+        "--input", required=True, help="Input file path (.md, .docx, .txt)"
+    )
+    parser.add_argument(
+        "--style",
+        default="auto",
+        choices=["auto", "academic", "cv", "tech_report", "book", "tech_book"],
+        help="Target document style",
+    )
+    parser.add_argument("--title", help="Document title override")
+    parser.add_argument("--author", help="Document author override")
+    parser.add_argument(
+        "--output", help="Output directory (default: input file's directory)"
+    )
+
     args = parser.parse_args()
 
     # 1. Validation
@@ -171,7 +232,7 @@ def main():
 
     # 2. Style Detection
     style = args.style
-    if style == 'auto':
+    if style == "auto":
         print("Analyzing document structure...")
         style = detect_style(args.input)
         print(f"Detected Style: {style.upper()}")
@@ -184,11 +245,14 @@ def main():
 
     # 4. Metadata
     filename_base = os.path.splitext(os.path.basename(args.input))[0]
-    title = args.title if args.title else filename_base.replace('_', ' ').title()
-    author = args.author if args.author else "Author"
+    # Only explicit CLI overrides replace the source document's metadata.
+    title = args.title
+    author = args.author
 
     # 5. Save Output Logic
-    output_dir = args.output if args.output else os.path.dirname(os.path.abspath(args.input))
+    output_dir = (
+        args.output if args.output else os.path.dirname(os.path.abspath(args.input))
+    )
     os.makedirs(output_dir, exist_ok=True)
     output_tex = os.path.join(output_dir, f"{filename_base}_{style}.tex")
 
@@ -199,6 +263,7 @@ def main():
     # 7. Compile to PDF
     if not compile_tex(output_tex):
         sys.exit(1)
+
 
 if __name__ == "__main__":
     main()

@@ -1,18 +1,18 @@
 {
   "schema_version": 3,
   "skill": "mentat-skill-creator",
-  "generated_at": "2026-09-01T20:16:03+08:00",
+  "generated_at": "2026-09-05T20:44:38+08:00",
   "hash_algorithm": "SHA-256",
   "text_hash_normalization": "LF",
   "skill_md": "SKILL.md",
-  "skill_md_sha256": "fe04f2182a748bac0266f533302cdf9335eccd32efd526f8421d7baf5ca3bde8",
+  "skill_md_sha256": "ce375409fa3b77d12885454928c2352c101820449b7956f4a48ece334f1b2361",
   "top_level_files": [
     "SKILL.md"
   ],
   "top_level_file_hashes": [
     {
       "path": "SKILL.md",
-      "sha256": "fe04f2182a748bac0266f533302cdf9335eccd32efd526f8421d7baf5ca3bde8"
+      "sha256": "ce375409fa3b77d12885454928c2352c101820449b7956f4a48ece334f1b2361"
     }
   ],
   "top_level_directories": [
@@ -62,13 +62,13 @@
       "path": "scripts/repair_skills.ps1",
       "exists": true,
       "resolved_path": "scripts/repair_skills.ps1",
-      "sha256": "fba6685c8f8cd24e7b41bbbed4378defed5ab7b19cc2277142ca3c1a818ba804"
+      "sha256": "54e381bef803b4de5c8a07672e7da66055026a91af817b28eaf5074ddfe5fea4"
     },
     {
       "path": "scripts/test_mentat_skill_creator.py",
       "exists": true,
       "resolved_path": "scripts/test_mentat_skill_creator.py",
-      "sha256": "3bf038f1f7b4c63119af6bcd38855c5a2d2059413260ff0d542a97c00adb06f4"
+      "sha256": "27fa9371353c0f388eba20c060a43f49523cbfd9b7f8f96d604683b049a88f1e"
     },
     {
       "path": "scripts/validate_openai_yaml.py",

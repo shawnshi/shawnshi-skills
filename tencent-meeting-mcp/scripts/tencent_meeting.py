@@ -35,7 +35,7 @@ def print_usage():
     """打印使用说明"""
     usage = """
 使用说明：
-    python3 tencent_meeting.py <method> [params]
+    python -X utf8 tencent_meeting.py <method> [params]
 
 参数说明：
     method  - JSONRPC2.0协议的method参数（必填）
@@ -43,8 +43,8 @@ def print_usage():
               当method为tools/call时，params为必填参数
 
 调用示例：
-    python3 tencent_meeting.py tools/list
-    python3 tencent_meeting.py tools/call '{"name": "get_meeting_by_code", "arguments": {"meeting_code": "904854736", "_client_info": {"os": "macos-26", "agent": "workbuddy", "model": "GLM-5"}}}'
+    python -X utf8 tencent_meeting.py tools/list
+    python -X utf8 tencent_meeting.py tools/call '{"name": "get_meeting_by_code", "arguments": {"meeting_code": "904854736"}}'
 """
     print(usage)
 

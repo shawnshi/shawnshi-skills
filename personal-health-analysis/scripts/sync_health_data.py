@@ -4,12 +4,14 @@
 from __future__ import annotations
 
 import argparse
+import ast
 import copy
 from concurrent.futures import ThreadPoolExecutor
 import hashlib
 import hmac
 import json
 import os
+import sqlite3
 import subprocess
 import tempfile
 from contextlib import contextmanager
@@ -38,8 +40,16 @@ SKILL_ROOT = Path(__file__).resolve().parent.parent
 CONFIG_NAME = "GarminConnectConfig.json"
 TOKEN_STORE_NAME = "garmin_tokens.json"
 SYNC_STATS = ("monitoring", "sleep", "rhr", "hrv", "weight")
+REQUIRED_COVERAGE_COMPONENTS = (
+    "sleep",
+    "hrv",
+    "heart_rate",
+    "body_battery",
+    "stress",
+)
+SYNC_DATABASE_NAMES = ("garmin.db", "garmin_monitoring.db")
 SYNC_OPERATION = "garmindb_sync"
-SYNC_PLAN_VERSION = 2
+SYNC_PLAN_VERSION = 3
 DEFAULT_PLAN_TTL_SECONDS = 300
 MAX_PLAN_TTL_SECONDS = 900
 SYNC_PLAN_FIELDS = frozenset(
@@ -66,7 +76,7 @@ CONFIG_BINDING_FIELDS = frozenset(
         "db_dir_identity_sha256",
     }
 )
-RUNNER_BINDING_FIELDS = frozenset({"interpreter", "cli", "environment"})
+RUNNER_BINDING_FIELDS = frozenset({"interpreter", "cli", "adapter", "environment"})
 RUNNER_FILE_BINDING_FIELDS = frozenset(
     {"filename", "sha256", "size_bytes", "path_sha256", "file_identity_sha256"}
 )
@@ -87,6 +97,78 @@ MAX_METADATA_BYTES = 1024 * 1024
 MAX_TOKEN_STORE_BYTES = 1024 * 1024
 TREE_HASH_WORKERS = min(16, max(4, (os.cpu_count() or 1) * 2))
 
+# GarminDB 3.8.0 GarminDbMain.__get_date_and_days, AST without locations.
+# Origin: installed garmindb_cli.py; full original CLI stays hash-bound in the plan.
+UPSTREAM_DATE_METHOD_SHA256 = "0969e144a693559faae318a15a6d0b05493d9031e6a7c6b85a89fe5d35bf71ae"
+# Internal child bootstrap, not a second runner. Executed only by execute_sync
+# after both capabilities are consumed; its owning file is authority/plan-bound.
+# No upstream module executes until hashes, window, config and AST pass.
+_DATE_ADAPTER_CODE = r'''
+import ast
+import datetime
+import hashlib
+import json
+import pathlib
+import sys
+
+def fail(reason):
+    print(json.dumps({"ok": False, "status": "date_adapter_rejected", "error": reason}))
+    raise SystemExit(4)
+
+try:
+    cli, cli_sha, method_sha, start_text, end_text, config_sha, expiry = sys.argv[1:8]
+    args = sys.argv[8:]
+    stats = ["--monitoring", "--sleep", "--rhr", "--hrv", "--weight"]
+    if len(args) < 2 or args[0] != "--config" or args[2:] not in (
+        ["--download", *stats], ["--import", "--analyze", "--latest", *stats]
+    ):
+        fail("adapter_arguments_invalid")
+    start = datetime.date.fromisoformat(start_text)
+    end = datetime.date.fromisoformat(end_text)
+    if start > end or end > datetime.date.today():
+        fail("adapter_window_invalid")
+    if datetime.datetime.now(datetime.timezone.utc) >= datetime.datetime.fromisoformat(expiry):
+        fail("adapter_plan_expired")
+    raw_config = (pathlib.Path(args[1]) / "GarminConnectConfig.json").read_bytes()
+    if hashlib.sha256(raw_config).hexdigest() != config_sha:
+        fail("adapter_config_changed")
+    data = json.loads(raw_config)["data"]
+    for stat in ("", "monitoring_", "sleep_", "rhr_", "hrv_", "weight_"):
+        if (data[stat + "start_date"], data[stat + "end_date"]) != (
+            start.strftime("%m/%d/%Y"),
+            (end + datetime.timedelta(days=1)).strftime("%m/%d/%Y")
+        ):
+            fail("adapter_config_window_mismatch")
+    raw = pathlib.Path(cli).read_bytes()
+    if hashlib.sha256(raw).hexdigest() != cli_sha:
+        fail("adapter_cli_changed")
+    tree = ast.parse(raw, filename=cli)
+    methods = [method for node in tree.body
+               if isinstance(node, ast.ClassDef) and node.name == "GarminDbMain"
+               for method in node.body
+               if isinstance(method, ast.FunctionDef) and method.name == "__get_date_and_days"]
+    if len(methods) != 1 or hashlib.sha256(
+        ast.dump(methods[0], include_attributes=False).encode("utf-8")
+    ).hexdigest() != method_sha:
+        fail("runner_date_method_unsupported")
+    method = methods[0]
+    # Only the reviewed non-latest clamp changes: range(0, days) needs today + 1.
+    clamp = method.body[0].orelse[1]
+    clamp.value = ast.parse("min((datetime.date.today() - date).days + 1, days)", mode="eval").body
+    guard = ast.parse(
+        "if latest or (date, days) != (datetime.date.fromisoformat(" + repr(start_text)
+        + "), " + str((end - start).days + 1) + "):\n"
+        "    raise RuntimeError('adapter_date_range_mismatch')"
+    ).body[0]
+    method.body.insert(-1, guard)
+    ast.fix_missing_locations(tree)
+    code = compile(tree, cli, "exec")
+except (OSError, ValueError, SyntaxError, KeyError, TypeError, IndexError):
+    fail("adapter_preflight_invalid")
+sys.argv = [cli, *args]
+exec(code, {"__name__": "__main__", "__file__": cli, "__package__": None})
+'''
+
 
 class WindowError(ValueError):
     pass
@@ -97,6 +179,10 @@ class SyncConfigurationError(RuntimeError):
 
 
 class SyncPlanError(ValueError):
+    pass
+
+
+class SyncVerificationError(RuntimeError):
     pass
 
 
@@ -169,6 +255,8 @@ def parse_window(start_raw: str | None, end_raw: str | None) -> tuple[date, date
         raise WindowError("invalid_iso_date") from exc
     if start > end:
         raise WindowError("start_after_end")
+    if end > date.today():
+        raise WindowError("future_window_forbidden")
     return start, end
 
 
@@ -446,6 +534,22 @@ def _read_package_evidence(site_packages: Path) -> list[dict]:
     return [found[name][0] for name in PACKAGE_EVIDENCE_NAMES if len(found[name]) == 1]
 
 
+def _validate_upstream_date_method(cli_path: Path) -> None:
+    """Read source only: unsupported CLI shapes fail before auth/network/imports."""
+    try:
+        tree = ast.parse(_read_bounded_file(cli_path, maximum_bytes=MAX_METADATA_BYTES))
+    except (SyntaxError, ValueError) as exc:
+        raise SyncConfigurationError("runner_date_method_unsupported") from exc
+    methods = [method for node in tree.body
+               if isinstance(node, ast.ClassDef) and node.name == "GarminDbMain"
+               for method in node.body
+               if isinstance(method, ast.FunctionDef) and method.name == "__get_date_and_days"]
+    if len(methods) != 1 or _sha256_bytes(
+        ast.dump(methods[0], include_attributes=False).encode("utf-8")
+    ) != UPSTREAM_DATE_METHOD_SHA256:
+        raise SyncConfigurationError("runner_date_method_unsupported")
+
+
 def build_runner_binding(interpreter: Path, cli_path: Path) -> dict:
     environment_root, pyvenv_config, environment_kind = (
         _runner_environment_for_interpreter(interpreter)
@@ -458,9 +562,11 @@ def build_runner_binding(interpreter: Path, cli_path: Path) -> dict:
         raise SyncConfigurationError("runner_package_evidence_incomplete")
     if versions != SUPPORTED_PACKAGE_VERSIONS:
         raise SyncConfigurationError("runner_package_version_unsupported")
+    _validate_upstream_date_method(cli_path)
     return {
         "interpreter": _runner_file_binding(interpreter),
         "cli": _runner_file_binding(cli_path),
+        "adapter": _runner_file_binding(Path(__file__).resolve()),
         "environment": {
             "evidence_method": (
                 "isolated_venv_filesystem_read_only"
@@ -594,7 +700,7 @@ def validate_sync_bindings(bindings: object) -> None:
     runner = bindings.get("runner")
     if not isinstance(runner, dict) or set(runner) != RUNNER_BINDING_FIELDS:
         raise SyncPlanError("plan_runner_binding_invalid")
-    for field in ("interpreter", "cli"):
+    for field in ("interpreter", "cli", "adapter"):
         identity = runner.get(field)
         if not isinstance(identity, dict) or set(identity) != RUNNER_FILE_BINDING_FIELDS:
             raise SyncPlanError("plan_runner_binding_invalid")
@@ -819,8 +925,8 @@ def prepare_windowed_config(
     if not isinstance(data, dict):
         raise SyncConfigurationError("garmin_config_data_invalid")
     start_value = start.strftime("%m/%d/%Y")
-    # GarminDB treats configured end dates as exclusive. Advance by one day so
-    # the user-facing inclusive window remains inclusive at the upstream CLI.
+    # GarminDB config end dates are exclusive. The bound child adapter also
+    # corrects the CLI's today clamp; adding one day here alone is insufficient.
     end_value = (end + timedelta(days=1)).strftime("%m/%d/%Y")
     data["start_date"] = start_value
     data["end_date"] = end_value
@@ -883,13 +989,23 @@ def locate_garmindb_cli(
 
 
 def build_garmindb_commands(
-    python_executable: Path, cli_path: Path, config_dir: Path
+    python_executable: Path, cli_path: Path, config_dir: Path,
+    *, start: date, end: date, cli_sha256: str, config_sha256: str,
+    expires_at: str,
 ) -> tuple[list[str], list[str]]:
     base = [
         str(python_executable),
         "-I",
         "-B",
+        "-c",
+        _DATE_ADAPTER_CODE,
         str(cli_path),
+        cli_sha256,
+        UPSTREAM_DATE_METHOD_SHA256,
+        start.isoformat(),
+        end.isoformat(),
+        config_sha256,
+        expires_at,
         "--config",
         str(config_dir),
     ]
@@ -919,12 +1035,167 @@ def _sanitized_runner_environment() -> dict[str, str]:
     return {key: value for key, value in os.environ.items() if key.upper() in allowed}
 
 
+def _sync_database_fingerprint(config_dir: Path) -> dict[str, str]:
+    _, config = _read_config_source(config_dir)
+    db_dir = _resolve_bound_data_root(config_dir, config) / "DBs"
+    return {
+        name: _file_sha256(db_dir / name)
+        for name in SYNC_DATABASE_NAMES
+        if (db_dir / name).is_file()
+    }
+
+
+def _table_columns(connection: sqlite3.Connection, table: str) -> set[str]:
+    if table not in {"sleep", "hrv", "daily_summary", "days_summary"}:
+        raise SyncVerificationError("coverage_table_invalid")
+    return {
+        str(row[1])
+        for row in connection.execute(f'PRAGMA table_info("{table}")').fetchall()
+    }
+
+
+def _latest_non_null_date(
+    connection: sqlite3.Connection,
+    *,
+    table: str,
+    date_column: str,
+    value_columns: tuple[str, ...],
+    start: date,
+    end: date,
+) -> tuple[str | None, int]:
+    columns = _table_columns(connection, table)
+    required = {date_column, *value_columns}
+    if not required.issubset(columns):
+        raise SyncVerificationError("coverage_schema_invalid")
+    values_present = " OR ".join(f'"{name}" IS NOT NULL' for name in value_columns)
+    query = (
+        f'SELECT MAX(substr("{date_column}", 1, 10)), '
+        f'COUNT(DISTINCT substr("{date_column}", 1, 10)) '
+        f'FROM "{table}" '
+        f'WHERE substr("{date_column}", 1, 10) BETWEEN ? AND ? '
+        f'AND ({values_present})'
+    )
+    row = connection.execute(query, (start.isoformat(), end.isoformat())).fetchone()
+    if row is None:
+        return None, 0
+    latest = row[0] if isinstance(row[0], str) else None
+    return latest, int(row[1] or 0)
+
+
+def _end_date_source_presence(data_root: Path, end: date) -> dict[str, bool]:
+    date_text = end.isoformat()
+    daily_summary = (
+        data_root
+        / "FitFiles"
+        / "Monitoring"
+        / str(end.year)
+        / f"daily_summary_{date_text}.json"
+    )
+    candidates = {
+        "sleep": data_root / "Sleep" / f"sleep_{date_text}.json",
+        "hrv": data_root / "RHR" / f"hrv_{date_text}.json",
+        "heart_rate": daily_summary,
+        "body_battery": daily_summary,
+        "stress": daily_summary,
+    }
+    return {
+        component: path.is_file() and path.stat().st_size > 0
+        for component, path in candidates.items()
+    }
+
+
+def _verify_post_sync_state(
+    config_dir: Path,
+    start: date,
+    end: date,
+    before_fingerprint: dict[str, str],
+) -> dict:
+    _, config = _read_config_source(config_dir)
+    data_root = _resolve_bound_data_root(config_dir, config)
+    db_dir = data_root / "DBs"
+    garmin_db = db_dir / "garmin.db"
+    if not garmin_db.is_file() or garmin_db.stat().st_size <= 0:
+        raise SyncVerificationError("garmin_database_unavailable")
+    try:
+        connection = sqlite3.connect(f"{garmin_db.resolve().as_uri()}?mode=ro", uri=True)
+        try:
+            tables = {
+                str(row[0])
+                for row in connection.execute(
+                    "SELECT name FROM sqlite_master WHERE type = 'table'"
+                ).fetchall()
+            }
+            summary_table = next(
+                (name for name in ("daily_summary", "days_summary") if name in tables),
+                None,
+            )
+            if not {"sleep", "hrv"}.issubset(tables) or summary_table is None:
+                raise SyncVerificationError("coverage_schema_invalid")
+            specifications = {
+                "sleep": ("sleep", "day", ("total_sleep",)),
+                "hrv": ("hrv", "day", ("last_night_avg",)),
+                "heart_rate": (summary_table, "day", ("rhr",)),
+                "body_battery": (summary_table, "day", ("bb_max",)),
+                "stress": (summary_table, "day", ("stress_avg",)),
+            }
+            latest_dates = {}
+            observation_counts = {}
+            for component, (table, date_column, value_columns) in specifications.items():
+                latest, count = _latest_non_null_date(
+                    connection,
+                    table=table,
+                    date_column=date_column,
+                    value_columns=value_columns,
+                    start=start,
+                    end=end,
+                )
+                latest_dates[component] = latest
+                observation_counts[component] = count
+        finally:
+            connection.close()
+    except sqlite3.Error as exc:
+        raise SyncVerificationError("coverage_query_failed") from exc
+
+    after_fingerprint = _sync_database_fingerprint(config_dir)
+    expected_end = end.isoformat()
+    stale_components = [
+        component
+        for component in REQUIRED_COVERAGE_COMPONENTS
+        if latest_dates.get(component) != expected_end
+    ]
+    source_presence = _end_date_source_presence(data_root, end)
+    return {
+        "database_changed": before_fingerprint != after_fingerprint,
+        "component_observation_counts": observation_counts,
+        "component_latest_observation_dates": latest_dates,
+        "stale_components": stale_components,
+        "no_source_data_components": [
+            component for component in stale_components if not source_presence[component]
+        ],
+        "source_present_without_coverage_components": [
+            component for component in stale_components if source_presence[component]
+        ],
+    }
+
+
 def classify_process_result(returncode: int, output: str) -> tuple[int, dict]:
+    if returncode == EXIT_CONFIGURATION:
+        try:
+            adapter_error = json.loads(output)
+        except (ValueError, TypeError):
+            adapter_error = None
+        if isinstance(adapter_error, dict) and adapter_error.get("status") == "date_adapter_rejected":
+            return EXIT_CONFIGURATION, {
+                "ok": False, "status": "configuration_error",
+                "error": "date_adapter_rejected",
+            }
     normalized = (output or "").casefold()
     if "429" in normalized or "too many requests" in normalized:
         return EXIT_RATE_LIMIT, {"ok": False, "status": "rate_limited"}
     if "failed to login" in normalized or "authentication failed" in normalized:
         return EXIT_SYNC_FAILURE, {"ok": False, "status": "authentication_failed"}
+    if "failed to parse" in normalized or "exception in" in normalized:
+        return EXIT_SYNC_FAILURE, {"ok": False, "status": "import_failed"}
     if returncode != 0:
         return EXIT_SYNC_FAILURE, {
             "ok": False,
@@ -945,9 +1216,15 @@ def execute_sync(
     garmindb_python: Path | None = None,
     timeout_seconds: int = 900,
     runner=None,
+    post_sync_verifier=None,
 ) -> tuple[int, dict]:
     requested_window = {"start": start.isoformat(), "end": end.isoformat()}
-    capability_request = {"window": requested_window}
+    try:
+        parse_window(start.isoformat(), end.isoformat())
+    except WindowError as exc:
+        return EXIT_USAGE, {"ok": False, "status": "usage_error", "error": str(exc),
+                            "requested_window": requested_window}
+    capability_request: dict[str, object] = {"window": requested_window}
     try:
         require_capability(
             network_capability,
@@ -1021,10 +1298,11 @@ def execute_sync(
         current_runner_files = {
             "interpreter": _runner_file_binding(python_executable),
             "cli": _runner_file_binding(cli_path),
+            "adapter": _runner_file_binding(Path(__file__).resolve()),
         }
         if plan["bindings"]["config"] != current_config or any(
             planned_runner[name] != current_runner_files[name]
-            for name in ("interpreter", "cli")
+            for name in ("interpreter", "cli", "adapter")
         ):
             raise SyncPlanError("plan_bindings_mismatch")
     except SyncPlanError as exc:
@@ -1043,7 +1321,10 @@ def execute_sync(
         }
 
     runner = subprocess.run if runner is None else runner
+    verifier = _verify_post_sync_state if post_sync_verifier is None else post_sync_verifier
+    current_stage = "preflight"
     try:
+        before_fingerprint = _sync_database_fingerprint(Path(config_dir))
         with prepare_windowed_config(
             Path(config_dir),
             start,
@@ -1068,6 +1349,11 @@ def execute_sync(
             temporary_token_store_sha256 = _file_sha256(temporary_token_store)
             # Re-read the runner bytes and isolated environment immediately before
             # invocation so a post-plan path or file replacement fails closed.
+            if any(planned_runner[name] != _runner_file_binding(path) for name, path in (
+                ("interpreter", python_executable), ("cli", cli_path),
+                ("adapter", Path(__file__).resolve()),
+            )):
+                raise SyncConfigurationError("bound_runner_changed")
             current_runner = build_runner_binding(python_executable, cli_path)
             if plan["bindings"]["runner"] != current_runner:
                 raise SyncConfigurationError("bound_runner_changed")
@@ -1086,7 +1372,10 @@ def execute_sync(
             if _file_sha256(temporary_token_store) != temporary_token_store_sha256:
                 raise SyncConfigurationError("temporary_token_store_changed")
             commands = build_garmindb_commands(
-                python_executable, cli_path, temp_config_dir
+                python_executable, cli_path, temp_config_dir,
+                start=start, end=end, cli_sha256=current_runner["cli"]["sha256"],
+                config_sha256=temporary_config_sha256,
+                expires_at=plan["expires_at"],
             )
             consume_capability(
                 network_capability,
@@ -1103,6 +1392,22 @@ def execute_sync(
             for current_stage, command in zip(
                 ("download", "import_analyze"), commands, strict=True
             ):
+                load_and_validate_sync_plan(
+                    Path(plan_file), expected_start=start, expected_end=end,
+                    expected_bindings=current_bindings,
+                )
+                if any(planned_runner[name] != _runner_file_binding(path) for name, path in (
+                    ("interpreter", python_executable), ("cli", cli_path),
+                    ("adapter", Path(__file__).resolve()),
+                )):
+                    raise SyncConfigurationError("bound_runner_changed")
+                if _file_sha256(temporary_config) != temporary_config_sha256:
+                    raise SyncConfigurationError("temporary_config_changed")
+                # Download may persist refreshed tokens in this disposable store;
+                # offline import must not compare that output with its input hash.
+                if (current_stage == "download"
+                        and _file_sha256(temporary_token_store) != temporary_token_store_sha256):
+                    raise SyncConfigurationError("temporary_token_store_changed")
                 completed = runner(
                     command,
                     cwd=temp_config_dir,
@@ -1123,12 +1428,31 @@ def execute_sync(
                     payload["stage"] = current_stage
                     break
             else:
-                exit_code = EXIT_OK
-                payload = {
-                    "ok": True,
-                    "status": "sync_completed",
-                    "stages": ["download", "import_analyze"],
-                }
+                if plan["bindings"]["config"] != build_config_binding(Path(config_dir)):
+                    raise SyncConfigurationError("bound_config_changed_after_sync")
+                verification = verifier(
+                    Path(config_dir),
+                    start,
+                    end,
+                    before_fingerprint,
+                )
+                stale_components = verification.get("stale_components") or []
+                if stale_components:
+                    exit_code = EXIT_SYNC_FAILURE
+                    payload = {
+                        "ok": False,
+                        "status": "sync_incomplete",
+                        "stages": ["download", "import_analyze"],
+                        **verification,
+                    }
+                else:
+                    exit_code = EXIT_OK
+                    payload = {
+                        "ok": True,
+                        "status": "sync_completed",
+                        "stages": ["download", "import_analyze"],
+                        **verification,
+                    }
     except subprocess.TimeoutExpired:
         exit_code, payload = EXIT_TIMEOUT, {
             "ok": False,
@@ -1145,6 +1469,12 @@ def execute_sync(
         exit_code, payload = EXIT_CONFIGURATION, {
             "ok": False,
             "status": "configuration_error",
+            "error": str(exc),
+        }
+    except SyncVerificationError as exc:
+        exit_code, payload = EXIT_SYNC_FAILURE, {
+            "ok": False,
+            "status": "post_sync_verification_failed",
             "error": str(exc),
         }
     except Exception as exc:

@@ -232,11 +232,18 @@ class RunDailyTests(unittest.IsolatedAsyncioTestCase):
         self.assertEqual(
             {(gap["gap_id"], gap["lane"]) for gap in gaps},
             {
-                ("technology-coverage-integrity", "TechRadar"),
-                ("healthcare-coverage-integrity", "HealthcareRadar"),
+                ("technology-supply", "TechRadar"),
+                ("healthcare-digital-supply", "HealthcareRadar"),
                 ("policy-competition", "Sentinel"),
                 ("risk-counterevidence", "Ranger"),
             },
+        )
+        supply_gaps = {
+            gap["gap_id"]: gap for gap in gaps if gap["lane"] in {"TechRadar", "HealthcareRadar"}
+        }
+        self.assertTrue(supply_gaps["technology-supply"]["verify_bound_candidates"])
+        self.assertTrue(
+            supply_gaps["healthcare-digital-supply"]["verify_bound_candidates"]
         )
 
     def test_verified_primary_evidence_can_satisfy_policy_and_risk_lanes(self):

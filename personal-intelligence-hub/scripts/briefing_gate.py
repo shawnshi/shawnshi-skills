@@ -4,6 +4,7 @@ import argparse
 import json
 import math
 import re
+from collections import Counter
 from datetime import date, datetime, timedelta
 from pathlib import Path
 from typing import Any, cast
@@ -29,6 +30,17 @@ TEMPLATE_PATH = ROOT / "references" / "briefing_template.md"
 TEMPLATE_TOKEN_PATTERN = re.compile(r"\{\{.*?\}\}|\{%.*?%\}")
 UNRESOLVED_SENTINELS = {"TBD", "TODO", "LLM_PENDING"}
 STRICT_ISO_DATE_PATTERN = re.compile(r"\d{4}-\d{2}-\d{2}\Z")
+V14_QUALITY_GATE_REASONS = {
+    "missing_candidate_id",
+    "duplicate_candidate_id",
+    "published_at_conflict",
+    "missing_verified_access",
+    "historical_duplicate",
+    "invalid_published_at",
+    "unsupported_domain",
+    "secondary_without_independent_corroboration",
+    "semantic_not_selected",
+}
 V14_TERMINAL_DISPOSITIONS = {
     "invalid_or_unknown_date",
     "outside_window",
@@ -1182,6 +1194,66 @@ def _validate_v12_data(
                 errors.append("candidate_funnel terminal dispositions do not conserve observed items")
             if dispositions.get("retained") != len(items):
                 errors.append("candidate_funnel retained count does not match top_10")
+        if is_v14:
+            quality_reasons = funnel.get("quality_gate_reasons")
+            candidate_dispositions = funnel.get("candidate_dispositions")
+            quality_reasons_valid = isinstance(quality_reasons, dict) and not any(
+                reason not in V14_QUALITY_GATE_REASONS
+                or not is_contract_integer(value)
+                or cast(int, value) < 0
+                for reason, value in quality_reasons.items()
+            )
+            if not quality_reasons_valid:
+                errors.append("candidate_funnel.quality_gate_reasons is invalid")
+            if not isinstance(candidate_dispositions, list) or any(
+                not isinstance(record, dict)
+                or not str(record.get("candidate_id") or "")
+                or not str(record.get("url") or "")
+                or record.get("source_type") not in {"primary", "secondary"}
+                or record.get("reason")
+                not in V14_QUALITY_GATE_REASONS | {"retained", "semantic_duplicate"}
+                for record in candidate_dispositions
+            ):
+                errors.append("candidate_funnel.candidate_dispositions is invalid")
+            elif isinstance(dispositions, dict):
+                record_counts = Counter(
+                    str(record["reason"]) for record in candidate_dispositions
+                )
+                expected_downstream = sum(
+                    int(dispositions.get(reason, 0))
+                    for reason in ("retained", "semantic_duplicate", "below_quality_gate")
+                )
+                if len(candidate_dispositions) != expected_downstream:
+                    errors.append(
+                        "candidate_funnel candidate dispositions do not cover downstream supply"
+                    )
+                if record_counts["retained"] != int(dispositions.get("retained", 0)):
+                    errors.append("candidate_funnel retained dispositions do not reconcile")
+                if record_counts["semantic_duplicate"] != int(
+                    dispositions.get("semantic_duplicate", 0)
+                ):
+                    errors.append(
+                        "candidate_funnel semantic duplicate dispositions do not reconcile"
+                    )
+                detailed_quality = {
+                    reason: count
+                    for reason, count in record_counts.items()
+                    if reason in V14_QUALITY_GATE_REASONS and count
+                }
+                if quality_reasons_valid and detailed_quality != {
+                    str(reason): int(value)
+                    for reason, value in cast(dict[str, int], quality_reasons).items()
+                    if value
+                }:
+                    errors.append(
+                        "candidate_funnel quality gate reasons do not reconcile"
+                    )
+                if sum(detailed_quality.values()) != int(
+                    dispositions.get("below_quality_gate", 0)
+                ):
+                    errors.append(
+                        "candidate_funnel below-quality dispositions do not reconcile"
+                    )
 
     gaps = data.get("data_gaps")
     if not isinstance(gaps, list):

@@ -10,11 +10,8 @@ from pathlib import Path
 
 MODULE_PATH = Path(__file__).with_name("garmin_auto_sync.py")
 SPEC = importlib.util.spec_from_file_location("garmin_auto_sync", MODULE_PATH)
-if SPEC is None:
-    raise RuntimeError("garmin_auto_sync module spec is unavailable")
 auto_sync = importlib.util.module_from_spec(SPEC)
-if SPEC.loader is None:
-    raise RuntimeError("garmin_auto_sync module loader is unavailable")
+assert SPEC.loader is not None
 SPEC.loader.exec_module(auto_sync)
 
 
@@ -36,7 +33,8 @@ class GarminAutoSyncTests(unittest.TestCase):
         self.assertEqual(auto_sync._stale_components(valid, "2026-08-23"), [])
         for invalid in ("2026-8-23", "2026-08-24", "not-a-date", None):
             with self.subTest(invalid=invalid):
-                dates = {**valid, "sleep": invalid}
+                dates = dict(valid)
+                dates["sleep"] = invalid
                 self.assertIn("sleep", auto_sync._stale_components(dates, "2026-08-23"))
 
     def test_all_three_capabilities_are_required(self):
@@ -117,17 +115,9 @@ class GarminAutoSyncTests(unittest.TestCase):
             self.assertEqual(state["latest_observation_date"], "2026-08-23")
             self.assertTrue(state["database_fingerprint_changed"])
             persisted = json.loads(state_path.read_text(encoding="utf-8"))
-
-            def keys_in(value):
-                if isinstance(value, dict):
-                    return set(value) | set().union(*(keys_in(item) for item in value.values()))
-                if isinstance(value, list):
-                    return set().union(*(keys_in(item) for item in value))
-                return set()
-
-            self.assertTrue(
-                {"latest_duration_hours", "latest", "highest"}.isdisjoint(keys_in(persisted))
-            )
+            serialized = json.dumps(persisted)
+            for sensitive_value in ("8.25", '"latest": 48', '"latest": 52', '"latest": 100'):
+                self.assertNotIn(sensitive_value, serialized)
             self.assertFalse(persisted["health_values_persisted"])
             plan_timeout = next(timeout for command, timeout in calls if "--plan-output" in command)
             self.assertEqual(plan_timeout, auto_sync.PLAN_TIMEOUT_SECONDS)

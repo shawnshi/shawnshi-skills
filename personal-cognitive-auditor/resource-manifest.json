@@ -1,18 +1,18 @@
 {
   "schema_version": 3,
   "skill": "personal-cognitive-auditor",
-  "generated_at": "2026-09-01T19:54:14+08:00",
+  "generated_at": "2026-09-05T17:19:37+08:00",
   "hash_algorithm": "SHA-256",
   "text_hash_normalization": "LF",
   "skill_md": "SKILL.md",
-  "skill_md_sha256": "47015113416742e9c5b0738baf8caeefc15de918f3940fcec798ebc8d4234812",
+  "skill_md_sha256": "ecbc2a579275935860fe799d7d711db8a21322fe3897363c6574751e01c592b5",
   "top_level_files": [
     "SKILL.md"
   ],
   "top_level_file_hashes": [
     {
       "path": "SKILL.md",
-      "sha256": "47015113416742e9c5b0738baf8caeefc15de918f3940fcec798ebc8d4234812"
+      "sha256": "ecbc2a579275935860fe799d7d711db8a21322fe3897363c6574751e01c592b5"
     }
   ],
   "top_level_directories": [
@@ -37,23 +37,23 @@
   "resource_file_hashes": [
     {
       "path": "prompts/ANNUAL.md",
-      "sha256": "fdfc9cda765a2c91b5f3aaf0168fcf603cfe0846be0bc7b60499710a0dd62456"
+      "sha256": "731b0ca7a481c8a8717cf68116c10adc8932bd5749122def02c68899f3f31b08"
     },
     {
       "path": "prompts/DAILY.md",
-      "sha256": "36693b559c2a58f0e59f3934a08a74085afca1ce2e7af69aaac1d6404099da7d"
+      "sha256": "311358cd372629f9ae50ea5f43c24b8cc0cd8c12bcd2f62b62458e2d7fae96f8"
     },
     {
       "path": "prompts/MONTHLY.md",
-      "sha256": "8ac5b912a584578477784ec0f88c7f1147526a8bc02676c302a8d13e2711f2db"
+      "sha256": "3bb84c9fb34f1e809f89ef0ae5601d8a71b49cc26044c281c14a3925fef65f41"
     },
     {
       "path": "prompts/QUARTERLY.md",
-      "sha256": "0c3aeddb4a9cad93e9299f9309b0e51d66f881bb56f9906a2d9c0dbaced4406d"
+      "sha256": "e034c0ba375226a2298e0e63532fd4de1900057c76cbe3194810071d6d9e04cb"
     },
     {
       "path": "prompts/WEEKLY.md",
-      "sha256": "d3af13e987595c92eb3147873ba8f8443240bcce0bb7a4fc4073291ae13248f4"
+      "sha256": "2c94d3d14aaab1b76c19a1a2de83b299acec2c0769e6f678552fe84bf56a738d"
     },
     {
       "path": "references/config.md",
@@ -61,7 +61,7 @@
     },
     {
       "path": "references/energy_management.md",
-      "sha256": "3beefa2c4a886862f0d34b7852bb23e4f4501979d45f016eddc1559731f1c0b6"
+      "sha256": "75dfc56fc2b393df6c3a970aa6dae43293f692914816cd9716a9595a443262df"
     },
     {
       "path": "references/handoff_contract.md",
@@ -73,7 +73,7 @@
     },
     {
       "path": "references/templates.md",
-      "sha256": "2ffa9c6e53c4f84420fdfd93a24ff483bd740dfd60e3d36ca9816493cb34ec20"
+      "sha256": "dc7b3ecca3b2f172d046fc2934c7e37529ac3b1221f4d499b797649fb683e4fe"
     },
     {
       "path": "references/work_nodes.md",
@@ -81,7 +81,7 @@
     },
     {
       "path": "scripts/audit_gate.py",
-      "sha256": "1df54f1368a41b79b8fce0d38d72c0b64a7582fa12a3aa049507fbf169d2cc90"
+      "sha256": "f4599741cea79018a4931c7d28b57af29f3d89af7bcdcd599a6aca4da677069e"
     },
     {
       "path": "scripts/periodic_topology.py",
@@ -89,11 +89,11 @@
     },
     {
       "path": "scripts/test_audit_gate.py",
-      "sha256": "6cda5efde7be0dd7aeea6154b0ba7a0fb6b1df6d44044e86e9f29d225d55e4cd"
+      "sha256": "f67796a4999e328ad063ed90dee724fdab80e96c5788fdf7369632036a3ee925"
     },
     {
       "path": "scripts/test_weekly_autosave_contract.py",
-      "sha256": "60970968b55234ceada03f148b419e453a43ad727538a336e9afcdca5cd02878"
+      "sha256": "265293f3cbea9179fd40994abceaf1804790fa6f04de305ae2afbd0a0580eb18"
     }
   ],
   "declared_local_dependencies": [
@@ -101,7 +101,7 @@
       "path": "references/energy_management.md",
       "exists": true,
       "resolved_path": "personal-cognitive-auditor/references/energy_management.md",
-      "sha256": "3beefa2c4a886862f0d34b7852bb23e4f4501979d45f016eddc1559731f1c0b6"
+      "sha256": "75dfc56fc2b393df6c3a970aa6dae43293f692914816cd9716a9595a443262df"
     },
     {
       "path": "references/handoff_contract.md",
@@ -119,13 +119,13 @@
       "path": "references/templates.md",
       "exists": true,
       "resolved_path": "personal-cognitive-auditor/references/templates.md",
-      "sha256": "2ffa9c6e53c4f84420fdfd93a24ff483bd740dfd60e3d36ca9816493cb34ec20"
+      "sha256": "dc7b3ecca3b2f172d046fc2934c7e37529ac3b1221f4d499b797649fb683e4fe"
     },
     {
       "path": "scripts/audit_gate.py",
       "exists": true,
       "resolved_path": "personal-cognitive-auditor/scripts/audit_gate.py",
-      "sha256": "1df54f1368a41b79b8fce0d38d72c0b64a7582fa12a3aa049507fbf169d2cc90"
+      "sha256": "f4599741cea79018a4931c7d28b57af29f3d89af7bcdcd599a6aca4da677069e"
     }
   ],
   "missing_declared_dependencies": []

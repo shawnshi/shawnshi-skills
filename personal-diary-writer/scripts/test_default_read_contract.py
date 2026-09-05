@@ -15,11 +15,11 @@ class DefaultReadContractTests(unittest.TestCase):
         cls.proxy_text = cls.authority_text
         cls.config = json.loads(AUTHORITY_CONFIG.read_text(encoding="utf-8"))
         locator = cls.config["authority_locator"]
-        if locator.get("base") != "skill_root":
-            raise ValueError("production authority must use a portable skill_root locator")
-        cls.authority_path = SKILL_ROOT.joinpath(*locator["segments"])
+        if locator.get("base") != "user_home":
+            raise ValueError("production authority must use a user_home locator")
+        cls.authority_path = Path.home().joinpath(*locator["segments"])
         if cls.authority_path.resolve() != AUTHORITY_SKILL.resolve():
-            raise ValueError("production authority must bind to this installed skill")
+            raise ValueError("production authority must bind to the Pi standalone skill")
 
     def test_personal_diary_grants_bounded_default_reads(self):
         self.assertIn("最近 3 天 Garmin 健康摘要", self.proxy_text)
@@ -95,12 +95,13 @@ class DefaultReadContractTests(unittest.TestCase):
     def test_energy_template_discloses_acquisition_audit(self):
         for marker in (
             "采集审计",
-            "sync_eligible=",
-            "sync_attempted=",
-            "task_status=",
-            "local_reread=",
-            "live_fallback=",
-            "reason=",
+            "sync_eligible=<true|false>",
+            "sync_attempted=<started|waited_existing|direct|not_attempted>",
+            "task_status=<success|failed|timeout|invalid|start_failed|interrupted_or_terminated|not_checked>",
+            "local_reread=<accepted|rejected|not_run>",
+            "local_status=<complete|partial|no_data|read_error|not_run>",
+            "live_fallback=<used|not_used>",
+            "reason=<稳定原因码>",
         ):
             with self.subTest(marker=marker):
                 self.assertIn(marker, self.authority_text)
@@ -152,7 +153,7 @@ class DefaultReadContractTests(unittest.TestCase):
             "personal_diary_request_gate",
             "replace-personal-diary",
             "canonical_autosave",
-            "精确字符串相等",
+            "无需人工确认",
             "元请求不会被识别为日记写入授权",
             "audit_gate.py --enforce-template-fields",
         ):

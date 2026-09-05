@@ -1,18 +1,18 @@
 {
   "schema_version": 3,
   "skill": "cognitive-book-mirror",
-  "generated_at": "2026-08-16T22:02:19",
+  "generated_at": "2026-09-05T17:15:44+08:00",
   "hash_algorithm": "SHA-256",
   "text_hash_normalization": "LF",
   "skill_md": "SKILL.md",
-  "skill_md_sha256": "9eacd7359853033fac729d011e47126fd83868ec2300a1a62aa4709977a1b7ff",
+  "skill_md_sha256": "146a64c4b1db7c37fa8465cc67263c8bd674550d1d74f2678c6a625024875060",
   "top_level_files": [
     "SKILL.md"
   ],
   "top_level_file_hashes": [
     {
       "path": "SKILL.md",
-      "sha256": "9eacd7359853033fac729d011e47126fd83868ec2300a1a62aa4709977a1b7ff"
+      "sha256": "146a64c4b1db7c37fa8465cc67263c8bd674550d1d74f2678c6a625024875060"
     }
   ],
   "top_level_directories": [
@@ -52,6 +52,12 @@
     }
   ],
   "declared_local_dependencies": [
+    {
+      "path": "agents/mirror-agent.md",
+      "exists": true,
+      "resolved_path": "cognitive-book-mirror/agents/mirror-agent.md",
+      "sha256": "a780b0dd758d30646554cde21876048c2dc4059d1fe50f6974f8cc8055fabc37"
+    },
     {
       "path": "scripts/extract_and_pack.py",
       "exists": true,

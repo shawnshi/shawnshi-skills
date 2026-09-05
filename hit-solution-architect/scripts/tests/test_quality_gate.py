@@ -4,27 +4,39 @@ from __future__ import annotations
 
 import hashlib
 import json
+import os
 import subprocess
 import sys
 import tempfile
 import unittest
 from pathlib import Path
 
-
 SCRIPT_DIR = Path(__file__).resolve().parents[1]
 
 
 class ScriptTestCase(unittest.TestCase):
-    def run_script(self, script: str, *arguments: object) -> tuple[subprocess.CompletedProcess[str], dict]:
+    def run_script(
+        self, script: str, *arguments: object
+    ) -> tuple[subprocess.CompletedProcess[str], dict]:
         completed = subprocess.run(
-            [sys.executable, str(SCRIPT_DIR / script), *(str(argument) for argument in arguments)],
+            [
+                sys.executable,
+                "-B",
+                str(SCRIPT_DIR / script),
+                *(str(argument) for argument in arguments),
+            ],
             text=True,
+            encoding="utf-8",
+            env={**os.environ, "PYTHONUTF8": "1", "PYTHONDONTWRITEBYTECODE": "1"},
             capture_output=True,
             check=False,
+            timeout=30,
         )
         try:
             report = json.loads(completed.stdout)
-        except json.JSONDecodeError as exc:  # pragma: no cover - improves failure diagnostics
+        except (
+            json.JSONDecodeError
+        ) as exc:  # pragma: no cover - improves failure diagnostics
             self.fail(
                 f"{script} did not emit JSON (exit={completed.returncode}).\n"
                 f"stdout={completed.stdout!r}\nstderr={completed.stderr!r}\n{exc}"
@@ -54,8 +66,14 @@ class LogicCheckerTests(ScriptTestCase):
                 "--review-complete",
             )
         self.assertEqual(completed.returncode, 1)
-        finding = next(item for item in report["errors"] if item["code"] == "E_UNRESOLVED_PLACEHOLDER")
-        self.assertEqual(finding["instances"], ["[OWNER]", "[TEST]", "[待核验]", "{{FIELD}}"])
+        finding = next(
+            item
+            for item in report["errors"]
+            if item["code"] == "E_UNRESOLVED_PLACEHOLDER"
+        )
+        self.assertEqual(
+            finding["instances"], ["[OWNER]", "[TEST]", "[待核验]", "{{FIELD}}"]
+        )
 
     def test_technical_identifiers_are_not_placeholders(self) -> None:
         with tempfile.TemporaryDirectory() as temporary:
@@ -73,7 +91,9 @@ class LogicCheckerTests(ScriptTestCase):
                 "--review-complete",
             )
         self.assertEqual(completed.returncode, 0)
-        self.assertNotIn("E_UNRESOLVED_PLACEHOLDER", {item["code"] for item in report["errors"]})
+        self.assertNotIn(
+            "E_UNRESOLVED_PLACEHOLDER", {item["code"] for item in report["errors"]}
+        )
 
     def test_review_allows_controlled_placeholders_only_in_gap_sections(self) -> None:
         with tempfile.TemporaryDirectory() as temporary:
@@ -86,9 +106,12 @@ class LogicCheckerTests(ScriptTestCase):
                 "logic_checker.py", draft, "--profile", "review", "--stage", "review"
             )
         self.assertEqual(completed.returncode, 0)
-        self.assertNotIn("E_UNRESOLVED_PLACEHOLDER", {item["code"] for item in report["errors"]})
+        self.assertNotIn(
+            "E_UNRESOLVED_PLACEHOLDER", {item["code"] for item in report["errors"]}
+        )
         self.assertIn(
-            "W_CONTROLLED_REVIEW_PLACEHOLDER", {item["code"] for item in report["warnings"]}
+            "W_CONTROLLED_REVIEW_PLACEHOLDER",
+            {item["code"] for item in report["warnings"]},
         )
 
     def test_review_blocks_placeholders_in_commitment_sections(self) -> None:
@@ -101,7 +124,9 @@ class LogicCheckerTests(ScriptTestCase):
                 "logic_checker.py", draft, "--profile", "review", "--stage", "review"
             )
         self.assertEqual(completed.returncode, 1)
-        self.assertIn("E_UNRESOLVED_PLACEHOLDER", {item["code"] for item in report["errors"]})
+        self.assertIn(
+            "E_UNRESOLVED_PLACEHOLDER", {item["code"] for item in report["errors"]}
+        )
 
     def test_negative_scope_does_not_satisfy_required_modules(self) -> None:
         with tempfile.TemporaryDirectory() as temporary:
@@ -143,7 +168,10 @@ class LogicCheckerTests(ScriptTestCase):
                 "--review-complete",
             )
         self.assertEqual(completed.returncode, 1)
-        self.assertIn("E_UNSOURCED_QUANTIFIED_BENEFIT", {item["code"] for item in report["errors"]})
+        self.assertIn(
+            "E_UNSOURCED_QUANTIFIED_BENEFIT",
+            {item["code"] for item in report["errors"]},
+        )
 
     def test_sourced_quantification_is_not_a_release_error(self) -> None:
         with tempfile.TemporaryDirectory() as temporary:
@@ -162,7 +190,10 @@ class LogicCheckerTests(ScriptTestCase):
                 "--review-complete",
             )
         self.assertEqual(completed.returncode, 0)
-        self.assertNotIn("E_UNSOURCED_QUANTIFIED_BENEFIT", {item["code"] for item in report["errors"]})
+        self.assertNotIn(
+            "E_UNSOURCED_QUANTIFIED_BENEFIT",
+            {item["code"] for item in report["errors"]},
+        )
 
     def test_release_quantification_requires_unit_date_and_region(self) -> None:
         with tempfile.TemporaryDirectory() as temporary:
@@ -181,11 +212,15 @@ class LogicCheckerTests(ScriptTestCase):
                 "--review-complete",
             )
         self.assertEqual(completed.returncode, 1)
-        self.assertIn("E_INCOMPLETE_QUANT_METADATA", {item["code"] for item in report["errors"]})
+        self.assertIn(
+            "E_INCOMPLETE_QUANT_METADATA", {item["code"] for item in report["errors"]}
+        )
 
     def test_release_review_is_not_reported_as_pass(self) -> None:
         with tempfile.TemporaryDirectory() as temporary:
-            draft = self.write_draft(Path(temporary), "# 摘要\n现状已核实，风险已登记。\n")
+            draft = self.write_draft(
+                Path(temporary), "# 摘要\n现状已核实，风险已登记。\n"
+            )
             completed, report = self.run_script(
                 "logic_checker.py", draft, "--profile", "brief", "--stage", "release"
             )
@@ -207,11 +242,16 @@ class LogicCheckerTests(ScriptTestCase):
         codes = {item["code"] for item in report["errors"]}
         self.assertIn("E_DUPLICATE_SECTION", codes)
         self.assertIn("E_EMPTY_SECTION", codes)
-        self.assertEqual([item["title"] for item in report["structure"]["sections"]], ["1. 现状", "2. 现状"])
+        self.assertEqual(
+            [item["title"] for item in report["structure"]["sections"]],
+            ["1. 现状", "2. 现状"],
+        )
 
     def test_brief_accepts_h1_and_design_is_a_supported_profile(self) -> None:
         with tempfile.TemporaryDirectory() as temporary:
-            brief = self.write_draft(Path(temporary), "# 摘要\n现状已核实，风险已登记。\n")
+            brief = self.write_draft(
+                Path(temporary), "# 摘要\n现状已核实，风险已登记。\n"
+            )
             brief_completed, brief_report = self.run_script(
                 "logic_checker.py", brief, "--profile", "brief", "--stage", "draft"
             )
@@ -221,19 +261,25 @@ class LogicCheckerTests(ScriptTestCase):
                 "logic_checker.py", design, "--profile", "design", "--stage", "draft"
             )
         self.assertEqual(brief_completed.returncode, 0)
-        self.assertNotIn("E_MISSING_HEADINGS", {item["code"] for item in brief_report["errors"]})
+        self.assertNotIn(
+            "E_MISSING_HEADINGS", {item["code"] for item in brief_report["errors"]}
+        )
         self.assertEqual(design_completed.returncode, 0)
         self.assertEqual(design_report["profile"], "design")
 
     def test_utf8_bom_and_crlf_are_supported(self) -> None:
         with tempfile.TemporaryDirectory() as temporary:
             draft = Path(temporary) / "bom.md"
-            draft.write_bytes("# 摘要\r\n现状已核实，风险已登记。\r\n".encode("utf-8-sig"))
+            draft.write_bytes(
+                "# 摘要\r\n现状已核实，风险已登记。\r\n".encode("utf-8-sig")
+            )
             completed, report = self.run_script(
                 "logic_checker.py", draft, "--profile", "brief", "--stage", "draft"
             )
         self.assertEqual(completed.returncode, 0)
-        self.assertNotIn("E_MISSING_HEADINGS", {item["code"] for item in report["errors"]})
+        self.assertNotIn(
+            "E_MISSING_HEADINGS", {item["code"] for item in report["errors"]}
+        )
 
     def test_oversized_input_is_a_structured_runtime_error(self) -> None:
         with tempfile.TemporaryDirectory() as temporary:
@@ -244,7 +290,9 @@ class LogicCheckerTests(ScriptTestCase):
         self.assertEqual(completed.returncode, 2)
         self.assertEqual(report["errors"][0]["code"], "E_FILE_READ")
 
-    def test_conditional_modules_use_documented_names_and_are_not_profile_defaults(self) -> None:
+    def test_conditional_modules_use_documented_names_and_are_not_profile_defaults(
+        self,
+    ) -> None:
         with tempfile.TemporaryDirectory() as temporary:
             draft = self.write_draft(
                 Path(temporary),
@@ -276,7 +324,9 @@ class LogicCheckerTests(ScriptTestCase):
         self.assertEqual(required_modules, {"migration", "clinical-safety", "evidence"})
 
     def test_read_failure_uses_runtime_exit_code(self) -> None:
-        missing = Path(tempfile.gettempdir()) / "quality-gate-file-that-does-not-exist.md"
+        missing = (
+            Path(tempfile.gettempdir()) / "quality-gate-file-that-does-not-exist.md"
+        )
         completed, report = self.run_script("logic_checker.py", missing)
         self.assertEqual(completed.returncode, 2)
         self.assertEqual(report["errors"][0]["code"], "E_FILE_READ")
@@ -284,7 +334,9 @@ class LogicCheckerTests(ScriptTestCase):
     def test_invalid_stage_is_a_structured_argument_error(self) -> None:
         with tempfile.TemporaryDirectory() as temporary:
             draft = self.write_draft(Path(temporary), "# 摘要\n正文。\n")
-            completed, report = self.run_script("logic_checker.py", draft, "--stage", "publish")
+            completed, report = self.run_script(
+                "logic_checker.py", draft, "--stage", "publish"
+            )
         self.assertEqual(completed.returncode, 2)
         self.assertEqual(report["errors"][0]["code"], "E_ARGUMENT")
 
@@ -296,7 +348,9 @@ class BuzzwordAuditorTests(ScriptTestCase):
                 Path(temporary),
                 "> **赋能**\n\n```text\n**赋能**\n```\n\n正文中的 `**赋能**` 是术语示例。\n",
             )
-            completed, report = self.run_script("buzzword_auditor.py", draft, "--bold-hint", 0)
+            completed, report = self.run_script(
+                "buzzword_auditor.py", draft, "--bold-hint", 0
+            )
         self.assertEqual(completed.returncode, 0)
         self.assertEqual(report["summary"]["bold_count"], 0)
         self.assertEqual(report["warnings"], [])
@@ -304,7 +358,9 @@ class BuzzwordAuditorTests(ScriptTestCase):
     def test_negative_bold_hint_is_structured_argument_error(self) -> None:
         with tempfile.TemporaryDirectory() as temporary:
             draft = self.write_draft(Path(temporary), "正文。\n")
-            completed, report = self.run_script("buzzword_auditor.py", draft, "--bold-hint", -1)
+            completed, report = self.run_script(
+                "buzzword_auditor.py", draft, "--bold-hint", -1
+            )
         self.assertEqual(completed.returncode, 2)
         self.assertEqual(report["errors"][0]["code"], "E_ARGUMENT")
 
@@ -323,6 +379,50 @@ class BuzzwordAuditorTests(ScriptTestCase):
 
 
 class QaRunnerTests(ScriptTestCase):
+    def test_release_ready_exit_contract(self) -> None:
+        cases = [
+            ([], False, 0, False),
+            (["--require-release-ready"], False, 1, False),
+            (["--require-release-ready", "--review-complete"], False, 0, True),
+            (["--require-release-ready", "--review-complete"], True, 1, False),
+        ]
+        with tempfile.TemporaryDirectory() as temporary:
+            for flags, has_error, exit_code, ready in cases:
+                with self.subTest(flags=flags, has_error=has_error):
+                    content = "# 摘要\n现状已核实，风险已登记。\n"
+                    if has_error:
+                        content += "负责人 [OWNER]。\n"
+                    draft = self.write_draft(Path(temporary), content)
+                    completed, report = self.run_script(
+                        "qa_runner.py",
+                        draft,
+                        "--profile",
+                        "brief",
+                        "--stage",
+                        "release",
+                        *flags,
+                    )
+                    self.assertEqual(completed.returncode, exit_code)
+                    self.assertIs(report["gate"]["release_ready"], ready)
+                    self.assertEqual(bool(report["errors"]), has_error)
+
+    def test_require_release_ready_rejects_non_release_stages(self) -> None:
+        with tempfile.TemporaryDirectory() as temporary:
+            draft = self.write_draft(
+                Path(temporary), "# 摘要\n现状已核实，风险已登记。\n"
+            )
+            for stage in ("draft", "review"):
+                with self.subTest(stage=stage):
+                    completed, report = self.run_script(
+                        "qa_runner.py",
+                        draft,
+                        "--stage",
+                        stage,
+                        "--require-release-ready",
+                    )
+                    self.assertEqual(completed.returncode, 2)
+                    self.assertEqual(report["errors"][0]["code"], "E_ARGUMENT")
+
     def test_combines_logic_and_style_and_writes_one_report(self) -> None:
         with tempfile.TemporaryDirectory() as temporary:
             root = Path(temporary)
@@ -354,7 +454,9 @@ class QaRunnerTests(ScriptTestCase):
 
 
 class ResourceValidatorTests(ScriptTestCase):
-    def make_manifest(self, root: Path, content: str, *, expected_hash: str | None = None) -> Path:
+    def make_manifest(
+        self, root: Path, content: str, *, expected_hash: str | None = None
+    ) -> Path:
         references = root / "references"
         references.mkdir()
         resource = references / "resource.md"
@@ -367,7 +469,9 @@ class ResourceValidatorTests(ScriptTestCase):
             "top_level_directories": ["references"],
             "resource_directories": [{"name": "references", "file_count": 1}],
             "top_level_file_hashes": [],
-            "resource_file_hashes": [{"path": "references/resource.md", "sha256": digest}],
+            "resource_file_hashes": [
+                {"path": "references/resource.md", "sha256": digest}
+            ],
             "declared_local_dependencies": [],
         }
         manifest_path = root / "resource-manifest.json"
@@ -388,7 +492,9 @@ class ResourceValidatorTests(ScriptTestCase):
     def test_hash_mismatch_and_placeholder_are_blocking(self) -> None:
         with tempfile.TemporaryDirectory() as temporary:
             root = Path(temporary)
-            manifest = self.make_manifest(root, "<!-- Placeholder -->", expected_hash="0" * 64)
+            manifest = self.make_manifest(
+                root, "<!-- Placeholder -->", expected_hash="0" * 64
+            )
             completed, report = self.run_script("resource_validator.py", manifest)
         self.assertEqual(completed.returncode, 1)
         codes = {item["code"] for item in report["errors"]}
@@ -415,7 +521,9 @@ class ResourceValidatorTests(ScriptTestCase):
             manifest_path.write_text(json.dumps(manifest), encoding="utf-8")
             completed, report = self.run_script("resource_validator.py", manifest_path)
         self.assertEqual(completed.returncode, 1)
-        self.assertIn("E_PATH_OUTSIDE_SKILL", {item["code"] for item in report["errors"]})
+        self.assertIn(
+            "E_PATH_OUTSIDE_SKILL", {item["code"] for item in report["errors"]}
+        )
 
     def test_invalid_json_uses_runtime_exit_code(self) -> None:
         with tempfile.TemporaryDirectory() as temporary:

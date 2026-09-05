@@ -7,16 +7,15 @@ errors are part of the contract alongside the Python implementation details.
 
 from __future__ import annotations
 
-from concurrent.futures import ThreadPoolExecutor
 import importlib.util
 import json
-from pathlib import Path
 import subprocess
 import sys
 import tempfile
 import threading
 import unittest
-
+from concurrent.futures import ThreadPoolExecutor
+from pathlib import Path
 
 SKILL_ROOT = Path(__file__).resolve().parents[1]
 SCRIPTS = SKILL_ROOT / "scripts"
@@ -32,9 +31,10 @@ def run_cli(
     input_text: str | None = None,
 ) -> subprocess.CompletedProcess[str]:
     return subprocess.run(
-        [sys.executable, str(script), *(str(argument) for argument in arguments)],
+        [sys.executable, "-B", str(script), *(str(argument) for argument in arguments)],
         cwd=SKILL_ROOT,
         text=True,
+        encoding="utf-8",
         capture_output=True,
         input=input_text,
         timeout=timeout,
@@ -61,7 +61,9 @@ def json_payload(result: subprocess.CompletedProcess[str]) -> dict:
     )
 
 
-def assert_structured_failure(test: unittest.TestCase, result: subprocess.CompletedProcess[str]) -> dict:
+def assert_structured_failure(
+    test: unittest.TestCase, result: subprocess.CompletedProcess[str]
+) -> dict:
     test.assertNotEqual(result.returncode, 0, result.stdout + result.stderr)
     test.assertNotIn("Traceback", result.stdout + result.stderr)
     payload = json_payload(result)
@@ -70,7 +72,9 @@ def assert_structured_failure(test: unittest.TestCase, result: subprocess.Comple
 
 
 def load_blackboard_module():
-    spec = importlib.util.spec_from_file_location("strategy_blackboard_for_tests", BLACKBOARD)
+    spec = importlib.util.spec_from_file_location(
+        "strategy_blackboard_for_tests", BLACKBOARD
+    )
     if spec is None or spec.loader is None:
         raise RuntimeError("cannot load blackboard module")
     module = importlib.util.module_from_spec(spec)
@@ -461,7 +465,9 @@ def investment_state() -> dict:
     return state
 
 
-def validate_state_cli(state: dict, *, strict: bool = True) -> subprocess.CompletedProcess[str]:
+def validate_state_cli(
+    state: dict, *, strict: bool = True
+) -> subprocess.CompletedProcess[str]:
     """Persist a state at the canonical path and exercise the validate CLI."""
 
     directory = tempfile.TemporaryDirectory()
@@ -497,7 +503,9 @@ class BlackboardCliTests(unittest.TestCase):
                 "--mode",
                 "deep-dive",
             )
-            self.assertEqual(initialized.returncode, 0, initialized.stdout + initialized.stderr)
+            self.assertEqual(
+                initialized.returncode, 0, initialized.stdout + initialized.stderr
+            )
             result = run_cli(
                 BLACKBOARD,
                 "--workspace-root",
@@ -510,13 +518,18 @@ class BlackboardCliTests(unittest.TestCase):
         self.assertFalse(payload["ready"])
         self.assertTrue(payload["warnings"])
 
-    def test_investment_draft_allows_alignment_or_evidence_as_first_update(self) -> None:
+    def test_investment_draft_allows_alignment_or_evidence_as_first_update(
+        self,
+    ) -> None:
         first_updates = (
             ("alignment", "decision", "set", "是否批准投资案例研究"),
             ("evidence", "gaps", "append", "待补充预算依据"),
         )
         for section, key, action, value in first_updates:
-            with self.subTest(section=section), tempfile.TemporaryDirectory() as directory:
+            with (
+                self.subTest(section=section),
+                tempfile.TemporaryDirectory() as directory,
+            ):
                 initialized = run_cli(
                     BLACKBOARD,
                     "--workspace-root",
@@ -555,7 +568,9 @@ class BlackboardCliTests(unittest.TestCase):
             stored = status["state"][section][key]
             self.assertEqual(stored, [value] if action == "append" else value)
 
-    def test_enabled_investment_model_still_blocks_bad_cash_flow_and_reference(self) -> None:
+    def test_enabled_investment_model_still_blocks_bad_cash_flow_and_reference(
+        self,
+    ) -> None:
         with tempfile.TemporaryDirectory() as directory:
             initialized = run_cli(
                 BLACKBOARD,
@@ -567,7 +582,9 @@ class BlackboardCliTests(unittest.TestCase):
                 "--mode",
                 "investment-case",
             )
-            self.assertEqual(initialized.returncode, 0, initialized.stdout + initialized.stderr)
+            self.assertEqual(
+                initialized.returncode, 0, initialized.stdout + initialized.stderr
+            )
             result = run_cli(
                 BLACKBOARD,
                 "--workspace-root",
@@ -600,8 +617,12 @@ class BlackboardCliTests(unittest.TestCase):
         payload = assert_structured_failure(self, result)
         self.assertEqual(payload["error"]["code"], "INVALID_UPDATE")
         errors = payload["error"]["details"]["errors"]
-        self.assertTrue(any("existing scenario ID" in error for error in errors), payload)
-        self.assertTrue(any("does not equal benefit-cost" in error for error in errors), payload)
+        self.assertTrue(
+            any("existing scenario ID" in error for error in errors), payload
+        )
+        self.assertTrue(
+            any("does not equal benefit-cost" in error for error in errors), payload
+        )
         self.assertEqual(status["revision"], 0)
         self.assertIsNone(status["state"]["quantitative_model"]["applicable"])
         self.assertEqual(status["state"]["quantitative_model"]["cash_flows"], [])
@@ -618,7 +639,9 @@ class BlackboardCliTests(unittest.TestCase):
                 "--mode",
                 "deep-dive",
             )
-            self.assertEqual(initialized.returncode, 0, initialized.stdout + initialized.stderr)
+            self.assertEqual(
+                initialized.returncode, 0, initialized.stdout + initialized.stderr
+            )
 
             start_together = threading.Barrier(50)
 
@@ -683,7 +706,9 @@ class BlackboardCliTests(unittest.TestCase):
                 "--mode",
                 "brief",
             )
-            self.assertEqual(initialized.returncode, 0, initialized.stdout + initialized.stderr)
+            self.assertEqual(
+                initialized.returncode, 0, initialized.stdout + initialized.stderr
+            )
 
             value_file = Path(directory) / "alignment.json"
             value_file.write_text(
@@ -706,7 +731,9 @@ class BlackboardCliTests(unittest.TestCase):
                 "--value",
                 f"@{value_file}",
             )
-            self.assertEqual(from_file.returncode, 0, from_file.stdout + from_file.stderr)
+            self.assertEqual(
+                from_file.returncode, 0, from_file.stdout + from_file.stderr
+            )
 
             from_stdin = run_cli(
                 BLACKBOARD,
@@ -721,7 +748,9 @@ class BlackboardCliTests(unittest.TestCase):
                 "-",
                 input_text='["stdin-risk"]',
             )
-            self.assertEqual(from_stdin.returncode, 0, from_stdin.stdout + from_stdin.stderr)
+            self.assertEqual(
+                from_stdin.returncode, 0, from_stdin.stdout + from_stdin.stderr
+            )
 
             status = run_cli(BLACKBOARD, "--workspace-root", directory, "status")
             state = json_payload(status)["state"]
@@ -742,7 +771,9 @@ class BlackboardCliTests(unittest.TestCase):
                 "--mode",
                 "brief",
             )
-            self.assertEqual(initialized.returncode, 0, initialized.stdout + initialized.stderr)
+            self.assertEqual(
+                initialized.returncode, 0, initialized.stdout + initialized.stderr
+            )
 
             malformed_file = Path(directory) / "malformed.json"
             malformed_file.write_text('{"decision": ', encoding="utf-8")
@@ -846,7 +877,9 @@ class BlackboardCliTests(unittest.TestCase):
 
 
 class AssemblerCliTests(unittest.TestCase):
-    def assemble(self, directory: str, *arguments: object) -> subprocess.CompletedProcess[str]:
+    def assemble(
+        self, directory: str, *arguments: object
+    ) -> subprocess.CompletedProcess[str]:
         return run_cli(ASSEMBLER, "--path", directory, *arguments)
 
     def test_preserves_markdown_rules_and_triple_quoted_body(self) -> None:
@@ -855,16 +888,18 @@ class AssemblerCliTests(unittest.TestCase):
             chapter.write_text(
                 "---\ntitle: remove only this frontmatter\n---\n"
                 "# 中心判断\n第一段\n---\n## 关键证据\n"
-                '\"\"\"这段三引号正文必须保留\"\"\"\n---\n收尾\n',
+                '"""这段三引号正文必须保留"""\n---\n收尾\n',
                 encoding="utf-8",
             )
-            result = self.assemble(directory, "--output", "report.md", "--mode", "brief")
+            result = self.assemble(
+                directory, "--output", "report.md", "--mode", "brief"
+            )
             report = (Path(directory) / "report.md").read_text(encoding="utf-8")
 
         self.assertEqual(result.returncode, 0, result.stdout + result.stderr)
         self.assertNotIn("remove only this frontmatter", report)
         self.assertIn("第一段\n---\n## 关键证据", report)
-        self.assertIn('\"\"\"这段三引号正文必须保留\"\"\"', report)
+        self.assertIn('"""这段三引号正文必须保留"""', report)
         self.assertIn("---\n收尾", report)
 
     def test_zero_chapters_is_a_structured_failure(self) -> None:
@@ -921,7 +956,9 @@ class AssemblerCliTests(unittest.TestCase):
             original = output.read_text(encoding="utf-8")
 
             chapter.write_text("# 第二版\n新正文\n", encoding="utf-8")
-            refused = self.assemble(directory, "--output", "report.md", "--mode", "brief")
+            refused = self.assemble(
+                directory, "--output", "report.md", "--mode", "brief"
+            )
             self.assertEqual(output.read_text(encoding="utf-8"), original)
             refusal = assert_structured_failure(self, refused)
             self.assertEqual(refusal["error"]["code"], "output_exists")
@@ -953,7 +990,9 @@ class AssemblerCliTests(unittest.TestCase):
             }
             for relative_path, content in files.items():
                 (root / relative_path).write_text(content, encoding="utf-8")
-            result = self.assemble(directory, "--output", "report.md", "--mode", "brief")
+            result = self.assemble(
+                directory, "--output", "report.md", "--mode", "brief"
+            )
 
         self.assertEqual(result.returncode, 0, result.stdout + result.stderr)
         payload = json_payload(result)
@@ -973,11 +1012,13 @@ class AssemblerCliTests(unittest.TestCase):
         with tempfile.TemporaryDirectory() as directory:
             chapter = Path(directory) / "chapter1.md"
             chapter.write_bytes(
-                ("\ufeff---\r\ntitle: remove me\r\n---\r\n# 正文\r\n保留内容\r\n").encode(
-                    "utf-8"
-                )
+                (
+                    "\ufeff---\r\ntitle: remove me\r\n---\r\n# 正文\r\n保留内容\r\n"
+                ).encode("utf-8")
             )
-            result = self.assemble(directory, "--output", "report.md", "--mode", "brief")
+            result = self.assemble(
+                directory, "--output", "report.md", "--mode", "brief"
+            )
             report = (Path(directory) / "report.md").read_text(encoding="utf-8")
 
         self.assertEqual(result.returncode, 0, result.stdout + result.stderr)
@@ -1033,6 +1074,44 @@ class AssemblerCliTests(unittest.TestCase):
 
 
 class StrategyGateCliTests(unittest.TestCase):
+    def test_brief_without_blackboard_is_explicitly_textual_only(self) -> None:
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            (root / "chapter1.md").write_text("# 建议\n仅供讨论。\n", encoding="utf-8")
+            assembled = run_cli(ASSEMBLER, "--path", root, "--mode", "brief")
+            self.assertEqual(assembled.returncode, 0, assembled.stdout)
+            report = root / "final_report.md"
+            args = ("--path", report, "--mode", "brief")
+            self.assertNotEqual(run_cli(GATE, *args).returncode, 0)
+            result = run_cli(GATE, *args, "--textual-only")
+            self.assertEqual(result.returncode, 0, result.stdout)
+            payload = json_payload(result)
+            self.assertEqual(payload["scope"], "textual_only")
+            self.assertIsNone(payload["blackboard_ready"])
+            self.assertIn("financial", payload["unchecked"])
+            self.assertNotEqual(
+                run_cli(GATE, *args, "--textual-only", "--strict").returncode, 0
+            )
+            for mode in ("board-memo", "deep-dive", "investment-case"):
+                with self.subTest(mode=mode):
+                    self.assertNotEqual(
+                        run_cli(
+                            GATE, "--path", report, "--mode", mode, "--textual-only"
+                        ).returncode,
+                        0,
+                    )
+            for text in (
+                "Maturity: decision_ready",
+                "Maturity: approved_for_execution",
+                "无成熟度",
+                "Maturity: working_draft\nMaturity: decision_ready",
+            ):
+                with self.subTest(text=text):
+                    report.write_text(text, encoding="utf-8")
+                    self.assertNotEqual(
+                        run_cli(GATE, *args, "--textual-only").returncode, 0
+                    )
+
     def write_state(self, root: Path, state: dict) -> Path:
         path = root / "blackboard.json"
         path.write_text(json.dumps(state, ensure_ascii=False), encoding="utf-8")
@@ -1067,7 +1146,9 @@ class StrategyGateCliTests(unittest.TestCase):
             result = self.run_gate(Path(directory), " \n\t", brief_state())
 
         payload = assert_structured_failure(self, result)
-        self.assertTrue(any("report text is empty" in error for error in payload["errors"]))
+        self.assertTrue(
+            any("report text is empty" in error for error in payload["errors"])
+        )
 
     def test_real_placeholders_are_blocking(self) -> None:
         with tempfile.TemporaryDirectory() as directory:
@@ -1129,9 +1210,7 @@ class StrategyGateCliTests(unittest.TestCase):
         )
 
         with tempfile.TemporaryDirectory() as second_directory:
-            strict = self.run_gate(
-                Path(second_directory), report, state, strict=True
-            )
+            strict = self.run_gate(Path(second_directory), report, state, strict=True)
         strict_payload = json_payload(strict)
         self.assertEqual(strict.returncode, 0, strict.stdout + strict.stderr)
         self.assertEqual(strict_payload["status"], "pass")
@@ -1237,10 +1316,14 @@ class StrategyGateCliTests(unittest.TestCase):
                 for warning in complete_payload["warnings"]
             )
         )
-        self.assertIn("personal_and_health_data", complete_payload["compliance_review_topics"])
+        self.assertIn(
+            "personal_and_health_data", complete_payload["compliance_review_topics"]
+        )
         self.assertIn("cross_border_data", complete_payload["compliance_review_topics"])
 
-    def test_quantitative_table_warning_is_aggregated_and_honors_provenance(self) -> None:
+    def test_quantitative_table_warning_is_aggregated_and_honors_provenance(
+        self,
+    ) -> None:
         table = (
             "核心判断：分阶段推进。建议先试点。行动可回退。风险需要监测。\n\n"
             "| 项目 | 金额 |\n"
@@ -1250,9 +1333,7 @@ class StrategyGateCliTests(unittest.TestCase):
             "| 运维 | 20万元 |\n"
         )
         with tempfile.TemporaryDirectory() as first_directory:
-            unsupported = self.run_gate(
-                Path(first_directory), table, brief_state()
-            )
+            unsupported = self.run_gate(Path(first_directory), table, brief_state())
         unsupported_payload = json_payload(unsupported)
         table_warnings = [
             warning
@@ -1265,20 +1346,28 @@ class StrategyGateCliTests(unittest.TestCase):
             table.replace(
                 "| 项目 | 金额 |",
                 "| 项目 | 金额 | 来源 |",
-            ).replace(
+            )
+            .replace(
                 "| --- | ---: |",
                 "| --- | ---: | --- |",
-            ).replace("| 软件 | 100万元 |", "| 软件 | 100万元 | 院方预算表 |")
+            )
+            .replace("| 软件 | 100万元 |", "| 软件 | 100万元 | 院方预算表 |")
             .replace("| 实施 | 50万元 |", "| 实施 | 50万元 | 院方预算表 |")
             .replace("| 运维 | 20万元 |", "| 运维 | 20万元 | 院方预算表 |"),
             table + "来源：院方预算表；截至：2026年1月。\n",
         )
         for index, sourced in enumerate(sourced_variants):
-            with self.subTest(provenance_variant=index), tempfile.TemporaryDirectory() as directory:
+            with (
+                self.subTest(provenance_variant=index),
+                tempfile.TemporaryDirectory() as directory,
+            ):
                 result = self.run_gate(Path(directory), sourced, brief_state())
                 payload = json_payload(result)
                 self.assertFalse(
-                    any("table starting line" in warning for warning in payload["warnings"]),
+                    any(
+                        "table starting line" in warning
+                        for warning in payload["warnings"]
+                    ),
                     payload,
                 )
 

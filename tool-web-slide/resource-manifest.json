@@ -1,11 +1,11 @@
 {
   "schema_version": 3,
   "skill": "tool-web-slide",
-  "generated_at": "2026-09-01T19:54:15+08:00",
+  "generated_at": "2026-09-05T17:15:45+08:00",
   "hash_algorithm": "SHA-256",
   "text_hash_normalization": "LF",
   "skill_md": "SKILL.md",
-  "skill_md_sha256": "cfba035a3d66b5735cfe40ea6ebd6af97d92a1251c8fd87046fc8c70d428b6b9",
+  "skill_md_sha256": "4bc43baa24d838adc3c32267a1bae10cb0214dce79de01562d4d09b0a6fa8d0a",
   "top_level_files": [
     "SKILL.md",
     "THIRD_PARTY_NOTICES.md",
@@ -15,7 +15,7 @@
   "top_level_file_hashes": [
     {
       "path": "SKILL.md",
-      "sha256": "cfba035a3d66b5735cfe40ea6ebd6af97d92a1251c8fd87046fc8c70d428b6b9"
+      "sha256": "4bc43baa24d838adc3c32267a1bae10cb0214dce79de01562d4d09b0a6fa8d0a"
     },
     {
       "path": "THIRD_PARTY_NOTICES.md",
@@ -112,7 +112,7 @@
     },
     {
       "path": "references/delivery-contract.md",
-      "sha256": "3ea3d2d585b094efeea065aa60fce3fe6d8bbdb602d8ef87f5a77c76775bda57"
+      "sha256": "1d24f372e55063d6ffa9adf6c470cea9823887efa444a841b57fb58d1aceffca"
     },
     {
       "path": "references/layout-patterns.md",
@@ -210,7 +210,7 @@
       "path": "references/delivery-contract.md",
       "exists": true,
       "resolved_path": "tool-web-slide/references/delivery-contract.md",
-      "sha256": "3ea3d2d585b094efeea065aa60fce3fe6d8bbdb602d8ef87f5a77c76775bda57"
+      "sha256": "1d24f372e55063d6ffa9adf6c470cea9823887efa444a841b57fb58d1aceffca"
     },
     {
       "path": "references/layout-patterns.md",

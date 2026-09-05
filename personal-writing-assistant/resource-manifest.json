@@ -1,18 +1,18 @@
 {
   "schema_version": 3,
   "skill": "personal-writing-assistant",
-  "generated_at": "2026-09-01T19:54:15+08:00",
+  "generated_at": "2026-09-05T17:15:44+08:00",
   "hash_algorithm": "SHA-256",
   "text_hash_normalization": "LF",
   "skill_md": "SKILL.md",
-  "skill_md_sha256": "4fbbad6362da881e19df3c4dfb7f9ffad48e23dbc72e71931feea3f8f285b25d",
+  "skill_md_sha256": "bf26bb3e45b5dd294ea082137a0347c1aa42128f7f81c6e72806609e9e0cb8d5",
   "top_level_files": [
     "SKILL.md"
   ],
   "top_level_file_hashes": [
     {
       "path": "SKILL.md",
-      "sha256": "4fbbad6362da881e19df3c4dfb7f9ffad48e23dbc72e71931feea3f8f285b25d"
+      "sha256": "bf26bb3e45b5dd294ea082137a0347c1aa42128f7f81c6e72806609e9e0cb8d5"
     }
   ],
   "top_level_directories": [
@@ -58,7 +58,7 @@
     },
     {
       "path": "references/my_voice_samples.md",
-      "sha256": "2ca7baae822f30025536d2ad2d8e570751d8ef478775833794e20f9aa1c85490"
+      "sha256": "6b181f26a909941ebe7c7251fbed2a6fa81b636bf652f7332e36b4c9fb4431ee"
     },
     {
       "path": "scripts/text_qa.py",
@@ -82,7 +82,7 @@
       "path": "references/my_voice_samples.md",
       "exists": true,
       "resolved_path": "personal-writing-assistant/references/my_voice_samples.md",
-      "sha256": "2ca7baae822f30025536d2ad2d8e570751d8ef478775833794e20f9aa1c85490"
+      "sha256": "6b181f26a909941ebe7c7251fbed2a6fa81b636bf652f7332e36b4c9fb4431ee"
     },
     {
       "path": "scripts/text_qa.py",

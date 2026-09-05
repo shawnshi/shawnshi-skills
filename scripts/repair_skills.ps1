@@ -53,7 +53,7 @@ $ForeignRuntimePatterns = [ordered]@{
 $ForbiddenReasoningPatterns = [ordered]@{
     thought_xml = '(?i)<\/?thought>'
     thinking_xml = '(?i)<\/?thinking>'
-    reasoning_draft = '(?i)(\u601D\u7EF4\u7A3F|\u63A8\u7406\u8349\u7A3F|\u5185\u90E8\u63A8\u7406|chain[- ]of[- ]thought)'
+    reasoning_draft = '(?i)(?<!\u4E0D)(?<!\u4E0D\u5F97)(?<!\u7981\u6B62)(?:\u8F93\u51FA|\u5C55\u793A|\u5199\u51FA|\u8BB0\u5F55|\u4FDD\u5B58|provide|show|write|include)[^\r\n]{0,24}(?:\u601D\u7EF4\u7A3F|\u63A8\u7406\u8349\u7A3F|\u5185\u90E8\u63A8\u7406|chain[- ]of[- ]thought)'
 }
 
 $HardcodedModelPatterns = [ordered]@{
@@ -63,7 +63,7 @@ $HardcodedModelPatterns = [ordered]@{
 }
 
 $MandatorySubagentPattern = '(?im)^\s*(?:[-*]\s*)?(?:\u5FC5\u987B|\u5F3A\u5236|\u52A1\u5FC5|must|required)[^\r\n]{0,80}(?:\u5B50\u4EE3\u7406|subagent)'
-$MandatoryPersistencePattern = '(?im)^\s*(?:[-*]\s*)?(?:\u5FC5\u987B|\u5F3A\u5236|\u52A1\u5FC5|must|required)[^\r\n]{0,100}(?:Vector Lake|\u5165\u6E56|MEMORY|\u77E5\u8BC6\u5E93|\u6301\u4E45\u5316|persist)'
+$MandatoryPersistencePattern = '(?im)^\s*(?:[-*]\s*)?(?:\u5FC5\u987B|\u5F3A\u5236|\u52A1\u5FC5|must|required)[^\r\n]{0,100}(?:Vector Lake|\u5165\u6E56|MEMORY|\u77E5\u8BC6\u5E93|\u957F\u671F\u8BB0\u5FC6|long[- ]term memory)'
 $ArchiveTargetPattern = '(?i)(?:\u6863\u6848|\u5F52\u6863|\u7D22\u5F15|\u65E5\u5FD7|\u65E5\u8BB0|\u8D26\u672C|\u6570\u636E\u5E93|\u53BB\u91CD\u72B6\u6001|\u957F\u671F\u72B6\u6001|\u957F\u671F\u8BB0\u5FC6|archive|history\s+index|dedup(?:lication)?\s+state|canonical\s+(?:file|store)|diary|journal|ledger|database|MEMORY|\u77E5\u8BC6\u5E93|Vector Lake)'
 $LocalFilePersistencePattern = '(?i)(?:\u751F\u6210|\u65E5\u5FD7|\u65E5\u8BB0|\u957F\u671F|\u6301\u4E45)[^\r\n]{0,40}(?:\u9ED8\u8BA4|\u81EA\u52A8|\u76F4\u63A5|\u65E0\u9700|\u65E0\u987B|\u4E0D\u518D)[^\r\n]{0,30}(?:\u5199\u5165|\u5199\u8FDB|\u5B58\u5165|\u5B58\u50A8|\u6301\u4E45\u5316|\u8FFD\u52A0|\u540C\u6B65|\u843D\u76D8|\u4FDD\u5B58)[^\r\n]{0,30}(?:\u672C\u5730\u6587\u4EF6|local\s+file)'
 $AutomaticPersistenceBehaviorPattern = '(?i)(?:(?:\u9ED8\u8BA4(?:\u81EA\u52A8)?|\u81EA\u52A8|\u751F\u6210\u540E|\u5B8C\u6210\u540E)(?:\u4F1A)?[^\r\n]{0,20}(?:\u5C06|\u628A)?[^\r\n]{0,20}(?:\u7ED3\u679C|\u5185\u5BB9)?[^\r\n]{0,12}(?:\u4FDD\u5B58|\u5F52\u6863|\u5199\u5165|\u5199\u8FDB|\u5B58\u5165|\u5B58\u50A8|\u843D\u76D8)|\u76F4\u63A5[^\r\n]{0,20}(?:\u4FDD\u5B58|\u5F52\u6863|\u5199\u5165|\u5199\u8FDB|\u5B58\u5165|\u5B58\u50A8|\u843D\u76D8)|(?:\u8BF7\u6C42|\u751F\u6210|\u66F4\u65B0|\u8BB0\u5F55|\u5199)[^\r\n]{0,80}(?:\u6784\u6210|\u5373\u4E3A|\u89C6\u4E3A|\u540C\u65F6|\u5C31\u662F|\u672C\u8EAB\u5C31\u662F)[^\r\n]{0,40}(?:\u6388\u6743|\u8BB8\u53EF)[^\r\n]{0,40}(?:\u4FDD\u5B58|\u5F52\u6863|\u5199\u5165|\u5199\u8FDB|\u5B58\u5165|\u5B58\u50A8|\u843D\u76D8)|(?:\u65E0\u9700|\u65E0\u987B|\u4E0D\u518D)[^\r\n]{0,30}(?:\u8BE2\u95EE|\u8BF7\u6C42|\u989D\u5916)?[^\r\n]{0,12}(?:\u786E\u8BA4|\u6388\u6743)[^\r\n]{0,30}(?:\u4FDD\u5B58|\u5F52\u6863|\u5199\u5165|\u5199\u8FDB|\u5B58\u5165|\u5B58\u50A8|\u843D\u76D8)|(?:generate|update|record|request)[^\r\n]{0,80}(?:constitutes?|counts?\s+as|is)[^\r\n]{0,30}authori[sz](?:e|ation)[^\r\n]{0,40}(?:save|persist|archive|write|store)|(?:automatically|by\s+default|without\s+(?:another|separate|additional)\s+confirmation)[^\r\n]{0,50}(?:save|persist|archive|write|store)|(?:save|persist|archive|write|store|stored|archived)[^\r\n]{0,20}by\s+default|no\s+additional\s+confirmation[^\r\n]{0,40}(?:save|persist|archive|write|store))'
@@ -245,31 +245,6 @@ function Get-SkillTextCorpus {
     $parts -join "`n"
 }
 
-function Get-SkillInstructionCorpus {
-    param([string]$SkillDirectory)
-
-    $extensions = @('.md', '.txt', '.json', '.yaml', '.yml')
-    $parts = foreach ($file in Get-ChildItem -LiteralPath $SkillDirectory -Recurse -File -ErrorAction SilentlyContinue) {
-        $relativePath = [IO.Path]::GetRelativePath($SkillDirectory, $file.FullName)
-        $pathSegments = $relativePath -split '[\\/]'
-        if ($pathSegments -contains '_runtime' -or $pathSegments -contains 'tests') {
-            continue
-        }
-        if ($file.Name -eq 'resource-manifest.json') {
-            continue
-        }
-        if ($file.Extension.ToLowerInvariant() -notin $extensions) {
-            continue
-        }
-        try {
-            [IO.File]::ReadAllText($file.FullName)
-        } catch {
-            continue
-        }
-    }
-    $parts -join "`n"
-}
-
 function Get-FrontmatterStatus {
     param(
         [string[]]$Lines,
@@ -301,7 +276,8 @@ function Get-FrontmatterStatus {
         }
     }
 
-    $unexpected = @($keys | Where-Object { $_ -notin @('name', 'description') } | Sort-Object -Unique)
+    $allowedFrontmatterKeys = @('name', 'description', 'license', 'compatibility', 'metadata', 'allowed-tools', 'disable-model-invocation')
+    $unexpected = @($keys | Where-Object { $_ -notin $allowedFrontmatterKeys } | Sort-Object -Unique)
     $duplicate = @($keys | Group-Object | Where-Object Count -gt 1 | ForEach-Object Name)
     $nameValid = $name -match '^[a-z0-9]+(?:-[a-z0-9]+)*$' -and $name.Length -le 64 -and $name -eq $DirectoryName
     $descriptionValid = $description.Length -ge 1 -and $description.Length -le 1024
@@ -456,7 +432,6 @@ $records = @(foreach ($directory in $skillDirectories) {
     $lines = @(Get-Content -LiteralPath $skillPath -Encoding UTF8)
     $text = $lines -join "`n"
     $corpus = Get-SkillTextCorpus -SkillDirectory $directory.FullName
-    $instructionCorpus = Get-SkillInstructionCorpus -SkillDirectory $directory.FullName
     $frontmatter = Get-FrontmatterStatus -Lines $lines -DirectoryName $directory.Name
     $manifest = Get-ManifestStatus -SkillDirectory $directory.FullName
 
@@ -472,7 +447,8 @@ $records = @(foreach ($directory in $skillDirectories) {
             $frontmatter.HasTriggerContext -and
             $frontmatter.UnexpectedKeys.Count -eq 0 -and
             $frontmatter.DuplicateKeys.Count -eq 0 -and
-            $frontmatter.Keys.Count -eq 2
+            ($frontmatter.Keys -contains 'name') -and
+            ($frontmatter.Keys -contains 'description')
         )
         FrontmatterKeys = @($frontmatter.Keys)
         UnexpectedFrontmatterKeys = @($frontmatter.UnexpectedKeys)
@@ -482,11 +458,11 @@ $records = @(foreach ($directory in $skillDirectories) {
         ManifestIssues = @($manifest.Missing)
         DeprecatedTokens = @(Get-PatternHits -Text $corpus -Patterns $DeprecatedPatterns)
         ForeignRuntime = @(Get-PatternHits -Text $corpus -Patterns $ForeignRuntimePatterns)
-        ReasoningDirectives = @(Get-PatternHits -Text $instructionCorpus -Patterns $ForbiddenReasoningPatterns)
+        ReasoningDirectives = @(Get-PatternHits -Text $corpus -Patterns $ForbiddenReasoningPatterns)
         HardcodedModels = @(Get-PatternHits -Text $corpus -Patterns $HardcodedModelPatterns)
-        MandatorySubagent = [bool]($instructionCorpus -match $MandatorySubagentPattern)
-        MandatoryPersistence = [bool]($instructionCorpus -match $MandatoryPersistencePattern)
-        AutomaticPersistence = Test-AutomaticPersistence -Text $instructionCorpus -SkillName $directory.Name
+        MandatorySubagent = [bool]($corpus -match $MandatorySubagentPattern)
+        MandatoryPersistence = [bool]($corpus -match $MandatoryPersistencePattern)
+        AutomaticPersistence = Test-AutomaticPersistence -Text $text -SkillName $directory.Name
         AutomaticPersistenceHasOptOut = Test-AutomaticPersistenceOptOut -Text $text
     }
 })

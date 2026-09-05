@@ -1,18 +1,18 @@
 {
   "schema_version": 3,
   "skill": "tool-blogger-publisher",
-  "generated_at": "2026-08-16T22:02:19",
+  "generated_at": "2026-09-05T17:15:45+08:00",
   "hash_algorithm": "SHA-256",
   "text_hash_normalization": "LF",
   "skill_md": "SKILL.md",
-  "skill_md_sha256": "f8d1a5d23e3fb40f44fbe8923cc77779316df341310da6d73256da8c1be36c00",
+  "skill_md_sha256": "249a59481a2435304d47a0fd0711229e6a83513682019c8ad8ff7ad1d08585b5",
   "top_level_files": [
     "SKILL.md"
   ],
   "top_level_file_hashes": [
     {
       "path": "SKILL.md",
-      "sha256": "f8d1a5d23e3fb40f44fbe8923cc77779316df341310da6d73256da8c1be36c00"
+      "sha256": "249a59481a2435304d47a0fd0711229e6a83513682019c8ad8ff7ad1d08585b5"
     }
   ],
   "top_level_directories": [],

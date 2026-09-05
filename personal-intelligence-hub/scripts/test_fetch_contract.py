@@ -466,6 +466,38 @@ class BoundedConcurrencyTests(unittest.IsolatedAsyncioTestCase):
         self.assertNotEqual(status, "OK")
         self.assertIn("recognized RSS", status)
 
+    async def test_discovery_cache_does_not_hide_unarchived_rss_candidate(self):
+        feed = type(
+            "Feed",
+            (),
+            {
+                "version": "rss20",
+                "bozo": False,
+                "feed": {"title": "Example"},
+                "entries": [
+                    {
+                        "title": "still eligible",
+                        "link": "https://example.org/unarchived",
+                        "published": "Sun, 09 Aug 2026 10:00:00 GMT",
+                    }
+                ],
+            },
+        )()
+        cache = {"https://example.org/unarchived": 1.0}
+        with (
+            patch("fetch_news.fetch_with_retry", AsyncMock(return_value="feed")),
+            patch("feedparser.parse", return_value=feed),
+        ):
+            items, status = await fetch_news.parse_rss(
+                object(),
+                "https://example.org/feed",
+                "Example",
+                cache,
+            )
+
+        self.assertEqual(status, "OK")
+        self.assertEqual([item["url"] for item in items], ["https://example.org/unarchived"])
+
     async def test_rss_updated_time_is_not_used_as_publication_time(self):
         feed = type(
             "Feed",
@@ -538,7 +570,9 @@ class BoundedConcurrencyTests(unittest.IsolatedAsyncioTestCase):
 
     async def test_fetch_does_not_retry_permanent_http_error(self):
         class PermanentHttpError(Exception):
-            pass
+            def __init__(self, status):
+                super().__init__("permanent client response")
+                self.status = status
 
         class Response:
             def __init__(self, status, tracker):
@@ -553,9 +587,7 @@ class BoundedConcurrencyTests(unittest.IsolatedAsyncioTestCase):
                 return None
 
             def raise_for_status(self):
-                error = PermanentHttpError("permanent client response")
-                error.status = self.status
-                raise error
+                raise PermanentHttpError(self.status)
 
         class Session:
             def __init__(self, status, tracker):
@@ -623,19 +655,23 @@ class BoundedConcurrencyTests(unittest.IsolatedAsyncioTestCase):
             def get(self, *args, **kwargs):
                 return Response()
 
-        with patch.object(fetch_news.asyncio, "sleep", new=AsyncMock()) as sleep:
-            with self.assertRaisesRegex(RuntimeError, "invalid library"):
-                await fetch_news.fetch_with_retry(
-                    Session(), "https://example.org/permanent"
-                )
+        with (
+            patch.object(fetch_news.asyncio, "sleep", new=AsyncMock()) as sleep,
+            self.assertRaisesRegex(RuntimeError, "invalid library"),
+        ):
+            await fetch_news.fetch_with_retry(
+                Session(), "https://example.org/permanent"
+            )
 
         self.assertEqual(tracker["attempts"], 1)
         sleep.assert_not_called()
 
     async def test_scan_rejects_excessive_concurrency_before_runtime_writes(self):
-        with patch("fetch_news.ensure_runtime_dirs") as ensure_runtime_dirs:
-            with self.assertRaisesRegex(ValueError, "between 1 and"):
-                await fetch_news.scan_all(max_concurrency=fetch_news.MAX_CONCURRENCY + 1)
+        with (
+            patch("fetch_news.ensure_runtime_dirs") as ensure_runtime_dirs,
+            self.assertRaisesRegex(ValueError, "between 1 and"),
+        ):
+            await fetch_news.scan_all(max_concurrency=fetch_news.MAX_CONCURRENCY + 1)
 
         ensure_runtime_dirs.assert_not_called()
 
@@ -677,9 +713,9 @@ class BoundedConcurrencyTests(unittest.IsolatedAsyncioTestCase):
             patch("fetch_news.init_blackboard"),
             patch("fetch_news.update_phase") as update_phase,
             patch("fetch_news._scan_all_impl", side_effect=RuntimeError("boom")),
+            self.assertRaisesRegex(RuntimeError, "boom"),
         ):
-            with self.assertRaisesRegex(RuntimeError, "boom"):
-                await fetch_news.scan_all(max_concurrency=2)
+            await fetch_news.scan_all(max_concurrency=2)
 
         self.assertEqual(
             [call.args for call in update_phase.call_args_list],
@@ -751,9 +787,11 @@ class BoundedConcurrencyTests(unittest.IsolatedAsyncioTestCase):
         )
 
     async def test_scan_rejects_invalid_deadline_before_runtime_writes(self):
-        with patch("fetch_news.ensure_runtime_dirs") as ensure_runtime_dirs:
-            with self.assertRaisesRegex(ValueError, "scan_deadline_seconds"):
-                await fetch_news.scan_all(scan_deadline_seconds=0)
+        with (
+            patch("fetch_news.ensure_runtime_dirs") as ensure_runtime_dirs,
+            self.assertRaisesRegex(ValueError, "scan_deadline_seconds"),
+        ):
+            await fetch_news.scan_all(scan_deadline_seconds=0)
 
         ensure_runtime_dirs.assert_not_called()
 

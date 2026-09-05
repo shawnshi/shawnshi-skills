@@ -32,20 +32,13 @@ description: 基于真实会话记录、日志、工具调用和遥测事件审�
 9. 用户要求持久化报告、仪表盘或审计面板时，先运行 `python scripts/report_output.py --period <1d|7d|30d|90d|year>`，取得同一批次的 `markdown` 和 `html` 绝对路径；再在当前会话 `scratch` 建立 canonical manifest。每条建议必须使用稳定 `R-xx`、关联 `F-xx`、状态、授权、验证标准、验证结果和证据；有上一批 manifest 时传入并禁止编号消失或语义漂移。
 10. 运行 `python scripts/report_pair.py --manifest <MANIFEST_JSON> --markdown <ALLOCATED_MD> --html <ALLOCATED_HTML> [--previous-manifest <PREVIOUS_JSON>] [--markdown-template <FILLED_MD_TEMPLATE>] [--html-template <FILLED_HTML_TEMPLATE>]`。脚本先从同一 manifest 渲染并交叉核验两种格式，再排他写入 MD、HTML 和哈希回执；不得分别手写两份建议表，也不得覆盖既有批次。
 
-## 可选资源
+## 按需资源
 
-- 需要完整报告结构时读取 [references/report-template.md](references/report-template.md)。
-- 需要事件字段、错误信封、子代理回包或授权指纹时读取 [references/SCHEMA.md](references/SCHEMA.md)。
-- 需要五类控制和防刷绿指标时读取 [references/WORKFLOW.md](references/WORKFLOW.md)。
-- 保存过的聚合 JSON 可运行 `python scripts/validate_agent_audit.py <report.json>` 验证。Schema、字段类型、来源标识和覆盖状态错误会阻断；篇幅、关键词、固定条目数和语言比例只产生提示。
-- 用户要求交互式仪表盘时，可使用 `assets/template.html`；模板必须保持自包含，不从网络加载脚本。
-- 当前唯一数据入口是 `generate_final_report.py` 的显式 `--input` 聚合流程；不保留会扫描私有会话目录的兼容入口。
-- `scripts/freeze_jsonl_snapshot.py` 只复制调用时已经完整换行的 JSONL 前缀，默认拒绝覆盖；它不做 JSON 语义解析，也不读取或修复尾部半条记录。提供 receipt 时先暂存并刷新两份文件、最后发布 receipt；只有 receipt 存在且哈希匹配才视为已提交批次。
-- `scripts/skill_load_receipt.py` 只对本次实际全文读取的 `SKILL.md` 生成回执；不得扫描技能目录后批量补造载入事件。
-- `scripts/standardize_codex_rollout.py` 只消费调用方显式选择并冻结的单个 rollout 快照；不得自行扫描会话目录。首条 `session_meta` 绑定该 rollout 的执行者，内嵌父线程元数据不得改写 actor。它对当前已知写入入口采用保守识别，未知工具语义保持未分类，不以名称猜测授权。
-- `scripts/report_pair.py` 的 manifest 是建议清单唯一事实源；Markdown/HTML 的编号、状态、验证结果、标准与证据不一致即阻断写入。三份文件先写入同目录隐藏暂存文件并 `fsync`，Markdown/HTML 发布后最后发布 receipt 作为提交标记。默认模板只提供结构，完整报告必须在调用前填入审计范围、发现、指标和限制。
-- 上下文压缩后需要核验语义恢复时，在当前会话 `scratch` 创建只含 `objective`、`authorization_scope`、`completed_steps`、`output_paths` 的 JSON 状态包，再运行 `python scripts/context_recovery_receipt.py --state <STATE_JSON> --root-task-id <ROOT_TASK_ID> --actor-id <ACTOR_ID> --context-epoch <EPOCH> --output <SESSION_SCRATCH>/context-recovery.jsonl [--append]`。本机全局钩子使用 `brain/<ROOT_TASK_ID>/scratch/mentat-collaboration-audit/context-state.json` 作为会话限定状态包；重要里程碑后应原子更新。正文只留在状态包，钩子运行态与回执仅保留哈希和计数。
-- `scripts/hooks/codex_hook.py` 仅拒绝可确定证明的情况：同一会话回合两次同状态超时后的再次等待、缺失的补丁更新／删除目标、非仓库中的仓库型 Git 操作，以及零匹配或多匹配的字面通配路径。复合命令、动态路径和专用工具覆盖未知时失败开放并记录覆盖缺口。
+- 报告结构：[references/report-template.md](references/report-template.md)。
+- 事件字段、错误信封、子代理回包与授权指纹：[references/SCHEMA.md](references/SCHEMA.md)。
+- 快照冻结、Rollout 标准化、五类控制、上下文恢复与成对报告提交：[references/WORKFLOW.md](references/WORKFLOW.md)。
+- 保存过的聚合 JSON 使用 `python scripts/validate_agent_audit.py <report.json>` 验证；用户要求交互式仪表盘时使用自包含的 `assets/template.html`。
+- 脚本的输入、哈希、幂等、原子提交和失败语义以脚本帮助、Schema 与确定性测试为准，不在主技能重复实现细节。
 
 ## 验证分层
 
@@ -59,7 +52,7 @@ description: 基于真实会话记录、日志、工具调用和遥测事件审�
 - 用户显式指定的 `--output-dir` 优先。只有本次任务明确选择既有配置时，才可加 `--use-configured-output-dir` 读取 `MENTAT_AUDIT_REPORT_DIR`；环境变量本身不授权改变写入位置。
 - 同一次审计的 Markdown 与 HTML 必须共享主干，例如 `collaboration_audit_7d_20260727_101530.md` 与 `.html`。
 - 原始会话、标准事件集、聚合 JSON、提示词正文、凭据和调试文件不得默认写入报告目录；中间态放入当前会话的 `scratch`，JSON持久化仍需用户指定路径。
-- 普通只读审计不自动落盘。用户提出“生成报告、面板、大屏并保存”即授权保存该次请求的本地 MD/HTML，不授权整改、外部发布、长期记忆或 Vector Lake 写入。用户要求草稿、预览或不保存时，则保持只读，不写入归档目录。
+- 普通只读审计不自动落盘。用户提出“生成报告、面板、大屏并保存”即授权保存该次请求的本地MD/HTML，不授权整改、外部发布、长期记忆或Vector Lake写入。
 
 ## 输出结构
 

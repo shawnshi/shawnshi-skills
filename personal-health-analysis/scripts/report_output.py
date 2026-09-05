@@ -11,7 +11,7 @@ from typing import Mapping
 
 REPORT_DIR_ENV = "GARMIN_REPORT_DIR"
 LEGACY_OUTPUT_DIR_ENV = "GARMIN_OUTPUT_DIR"
-DEFAULT_REPORT_DIR = Path.home() / "MEMORY" / "raw" / "garmin"
+DEFAULT_REPORT_DIR = Path(r"C:\Users\shich\MEMORY\raw\garmin")
 
 
 def get_report_dir(

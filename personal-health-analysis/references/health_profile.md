@@ -8,7 +8,7 @@
 <SKILL_PYTHON> scripts/garmin_health_profile.py --days <N> --source local --timezone <IANA_TIMEZONE> --allow-health-data
 ```
 
-- 未指定窗口时仍使用技能默认最近 7 天；脚本允许 1–366 天，不得为了满足分析资格静默扩窗。
+- 未指定窗口时使用技能交互默认最近 14 天（N=14）；脚本允许 1–366 天，不得为了满足分析资格静默扩窗。
 - 画像读取 `garmin.db` 中请求日期范围内的 `daily_summary|days_summary`、`sleep`、`hrv`、`weight`，`attributes` 中最新的 `vo2max_running|vo2max_cycling`，以及 `garmin_activities.db` 中非位置化的活动汇总字段。体重和活动各可额外读取截至窗口末端的单条最近记录，只用于报告新鲜度与 `outside_requested_window`，不得纳入请求窗口趋势。
 - 活动查询只允许 `type`、起始日期、耗时、移动时间、距离、平均/最高心率、热量及 Garmin 训练负荷/效果字段；不得查询或输出活动 ID、名称、描述、设备序列号、起止坐标或原始轨迹。活动库缺失时只将该模块标为 `source_unavailable`，不能遮蔽其他健康模块。
 - 睡眠起止时间缺少偏移时，只有调用方明确传入 IANA 时区才计算钟点规律；输出必须标记为 `caller_timezone_applied_to_naive_source`。没有时区时保持 `timezone_required`。

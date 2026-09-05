@@ -1,11 +1,11 @@
 {
   "schema_version": 3,
   "skill": "personal-health-analysis",
-  "generated_at": "2026-09-01T20:40:12+08:00",
+  "generated_at": "2026-09-05T19:23:41+08:00",
   "hash_algorithm": "SHA-256",
   "text_hash_normalization": "LF",
   "skill_md": "SKILL.md",
-  "skill_md_sha256": "fa85cb9246010cd13f1d54f7d74acf5c80824fe756b13e0e728cfe2788f8c98c",
+  "skill_md_sha256": "630cbc09c5d363fb894bdc7720e07a60613bf7ab22f7b4c1c9677328b1abd004",
   "top_level_files": [
     ".gitignore",
     "SKILL.md",
@@ -22,7 +22,7 @@
     },
     {
       "path": "SKILL.md",
-      "sha256": "fa85cb9246010cd13f1d54f7d74acf5c80824fe756b13e0e728cfe2788f8c98c"
+      "sha256": "630cbc09c5d363fb894bdc7720e07a60613bf7ab22f7b4c1c9677328b1abd004"
     },
     {
       "path": "install.ps1",
@@ -42,7 +42,7 @@
     },
     {
       "path": "runtime-authority.json",
-      "sha256": "ce4f65ebef6fb0d853f694d503364da2a429b0945882ba38484395aed0f48be5"
+      "sha256": "fb7c5bced0e18d8a05e96f3bef8532d8a5f4b8c62af3968bdd5eb58b2ace7987"
     }
   ],
   "top_level_directories": [
@@ -77,7 +77,7 @@
   "resource_file_hashes": [
     {
       "path": "agents/openai.yaml",
-      "sha256": "fe2161225a8ba56478dd9e13d6f01689fb079479bde8b5441b4d99f48a3b5dcd"
+      "sha256": "5d1eba235b38590b45301d4821a0ae3b3b0b4e88f83199feb3e9b641c3a25eb1"
     },
     {
       "path": "assets/dashboard_v2.html",
@@ -89,11 +89,11 @@
     },
     {
       "path": "references/api.md",
-      "sha256": "c4af5d64a0c10e84ca93fc963e5232815d8c3ad309f389ab1cc48dbc3659b9f3"
+      "sha256": "3347df10af29232aed5c0e73e1ce97adaee4e3477ecf6584a2b48f9ed8ab1d6e"
     },
     {
       "path": "references/external_acceptance.md",
-      "sha256": "3b03caec4cd2cddb34b50cfdff90b7de3c32b9e06ff318e7822d257eb51de9db"
+      "sha256": "f55dece060557a2f830efb75ba93bc7ec29cc83787f7f0a3bf89dbc54673183d"
     },
     {
       "path": "references/health_analysis.md",
@@ -101,7 +101,7 @@
     },
     {
       "path": "references/health_profile.md",
-      "sha256": "6701430904bfbb8e629c659ff0af1ff73a3028172e3a2079799eca2b7699373c"
+      "sha256": "85641e86dd181aa2bf68acc7a9ae764517013b5b511ae11593a293b163810712"
     },
     {
       "path": "resources/clinical_guidelines.json",
@@ -117,7 +117,7 @@
     },
     {
       "path": "scripts/freshness_task_gate.py",
-      "sha256": "0be22869c31efc2149bf0aec01f86a8d3701bebb4b886abd7ba2988ec0e733b4"
+      "sha256": "d0775f5dbc1e3a1fbc84148467644b5b28b92011fec7977326d11624a26b98b8"
     },
     {
       "path": "scripts/garmin_activity_files.py",
@@ -173,7 +173,7 @@
     },
     {
       "path": "scripts/garmin_sqlite_adapter.py",
-      "sha256": "3919675bcd2f52f290d6f930f9a0cfdd96911956e87ddda329eeef655fd67676"
+      "sha256": "ec36efea22f50334d4dce68d588ed0145d3e9c19ba9e635cbee6c706a5fe90b0"
     },
     {
       "path": "scripts/install_auto_sync_task.ps1",
@@ -189,11 +189,11 @@
     },
     {
       "path": "scripts/report_output.py",
-      "sha256": "1c60356d0a3bef65799242c45c96dcd9335761c3360b255539476b5601034871"
+      "sha256": "1ba46e946d14d99c3fdfb2308ff44f41050187a9be3cf12ce10afc6f7e2d162d"
     },
     {
       "path": "scripts/runtime_authority.py",
-      "sha256": "1239acf27fc5f26e8ec1d38b47dfdf503df407abef7d155232982081d959de91"
+      "sha256": "0625581732df02667e59a85797266b39a6386cfd4d022346cfd4b3a542624949"
     },
     {
       "path": "scripts/runtime_preflight.py",
@@ -205,7 +205,7 @@
     },
     {
       "path": "scripts/sync_health_data.py",
-      "sha256": "4393d4d1c48090a5003d58ac18c7525911ee8a3a6e1eae1906777f18461087c7"
+      "sha256": "9af8f92474726baf9cd9e0b313726bcc17dd4c191fafdaffbbc6c7b9fd5952ff"
     },
     {
       "path": "scripts/test_fhir_external_acceptance.py",
@@ -213,7 +213,7 @@
     },
     {
       "path": "scripts/test_freshness_task_gate.py",
-      "sha256": "3cc53072f591af0111765a0394728c76c0e85da1e854dc1b8582a51dda452327"
+      "sha256": "99cbbdaa3c34b2ad868e134858125067b5188e671ec28772703eb40878e1b268"
     },
     {
       "path": "scripts/test_garmin_activity_files_cli.py",
@@ -225,11 +225,11 @@
     },
     {
       "path": "scripts/test_garmin_auto_sync.py",
-      "sha256": "d5905d814bf66eddb02845c294b697b2e3cd9da5f7b9174a16e834c7fd452d5a"
+      "sha256": "101b019129e3c9d6c9173562e588df1cc3c922b4d744afb0b60aa04d354fe106"
     },
     {
       "path": "scripts/test_garmin_bounded_contract.py",
-      "sha256": "a96bf238c8146547c63336a46a8dfca966a8aa57af63470eed9277dcd2199d73"
+      "sha256": "28abe12a96716e92e9a9d07165e5df2598e1f9c7fbe688908241fb6ed6f9bb8f"
     },
     {
       "path": "scripts/test_garmin_capabilities.py",
@@ -273,7 +273,7 @@
     },
     {
       "path": "scripts/test_garmin_sqlite_adapter.py",
-      "sha256": "e31c5a1ecc7e2dfb7a8babcc7108a45e15dfafd90d0d58ae7cf17ad4ffb62fc1"
+      "sha256": "b5d67b8ab1897742474bbcc9d5d42d592acff5116b3d7dec8a8592a94f11e0fb"
     },
     {
       "path": "scripts/test_installed_environment_gate.py",
@@ -289,11 +289,11 @@
     },
     {
       "path": "scripts/test_report_output.py",
-      "sha256": "b7aae5a56f4dc87ff0c202e22b2b39b86da14f2c0fb580327d334fa0d7347a6c"
+      "sha256": "058867d1cb7c0b10ddb4449d60d903cc2d4dd4b691afd6b1db3b74b93a3c9e66"
     },
     {
       "path": "scripts/test_runtime_authority.py",
-      "sha256": "8acc3f76cc72d8c9fba9505c65b63de9fd09b5fb9d6eacb1e6d647e75c6d40bf"
+      "sha256": "769409ed13dd9d049a76030aa6ed1d0954460a438739e66d3c3ded6dc193ad56"
     },
     {
       "path": "scripts/test_runtime_preflight.py",
@@ -301,11 +301,11 @@
     },
     {
       "path": "scripts/test_skill_contract.py",
-      "sha256": "8b11fd3906630d0bb463047dbbe14e58deee6a9a5c6ef8c8248a09c131892ce8"
+      "sha256": "18d0105aff5b0df8c63c883299297da5f82a04304fdb86c274ab882e1adcbb3b"
     },
     {
       "path": "scripts/test_sync_health_data.py",
-      "sha256": "80cdf8171855ff893b9cbd9155015fee14661fce58991fcca87f47e1fae0b05b"
+      "sha256": "ff67378e5530e996306994b30c06aa1d2b2b3f78ed2a73471f477c78e9fb533f"
     },
     {
       "path": "scripts/test_wheelhouse_integrity.py",
@@ -321,7 +321,7 @@
       "path": "agents/openai.yaml",
       "exists": true,
       "resolved_path": "personal-health-analysis/agents/openai.yaml",
-      "sha256": "fe2161225a8ba56478dd9e13d6f01689fb079479bde8b5441b4d99f48a3b5dcd"
+      "sha256": "5d1eba235b38590b45301d4821a0ae3b3b0b4e88f83199feb3e9b641c3a25eb1"
     },
     {
       "path": "assets/dashboard_v2.html",
@@ -339,13 +339,13 @@
       "path": "references/api.md",
       "exists": true,
       "resolved_path": "personal-health-analysis/references/api.md",
-      "sha256": "c4af5d64a0c10e84ca93fc963e5232815d8c3ad309f389ab1cc48dbc3659b9f3"
+      "sha256": "3347df10af29232aed5c0e73e1ce97adaee4e3477ecf6584a2b48f9ed8ab1d6e"
     },
     {
       "path": "references/external_acceptance.md",
       "exists": true,
       "resolved_path": "personal-health-analysis/references/external_acceptance.md",
-      "sha256": "3b03caec4cd2cddb34b50cfdff90b7de3c32b9e06ff318e7822d257eb51de9db"
+      "sha256": "f55dece060557a2f830efb75ba93bc7ec29cc83787f7f0a3bf89dbc54673183d"
     },
     {
       "path": "references/health_analysis.md",
@@ -357,7 +357,7 @@
       "path": "references/health_profile.md",
       "exists": true,
       "resolved_path": "personal-health-analysis/references/health_profile.md",
-      "sha256": "6701430904bfbb8e629c659ff0af1ff73a3028172e3a2079799eca2b7699373c"
+      "sha256": "85641e86dd181aa2bf68acc7a9ae764517013b5b511ae11593a293b163810712"
     },
     {
       "path": "resources/clinical_guidelines.json",
@@ -453,7 +453,7 @@
       "path": "scripts/garmin_sqlite_adapter.py",
       "exists": true,
       "resolved_path": "personal-health-analysis/scripts/garmin_sqlite_adapter.py",
-      "sha256": "3919675bcd2f52f290d6f930f9a0cfdd96911956e87ddda329eeef655fd67676"
+      "sha256": "ec36efea22f50334d4dce68d588ed0145d3e9c19ba9e635cbee6c706a5fe90b0"
     },
     {
       "path": "scripts/install_auto_sync_task.ps1",
@@ -465,13 +465,13 @@
       "path": "scripts/report_output.py",
       "exists": true,
       "resolved_path": "personal-health-analysis/scripts/report_output.py",
-      "sha256": "1c60356d0a3bef65799242c45c96dcd9335761c3360b255539476b5601034871"
+      "sha256": "1ba46e946d14d99c3fdfb2308ff44f41050187a9be3cf12ce10afc6f7e2d162d"
     },
     {
       "path": "scripts/runtime_authority.py",
       "exists": true,
       "resolved_path": "personal-health-analysis/scripts/runtime_authority.py",
-      "sha256": "1239acf27fc5f26e8ec1d38b47dfdf503df407abef7d155232982081d959de91"
+      "sha256": "0625581732df02667e59a85797266b39a6386cfd4d022346cfd4b3a542624949"
     },
     {
       "path": "scripts/runtime_preflight.py",
@@ -483,7 +483,7 @@
       "path": "scripts/sync_health_data.py",
       "exists": true,
       "resolved_path": "personal-health-analysis/scripts/sync_health_data.py",
-      "sha256": "4393d4d1c48090a5003d58ac18c7525911ee8a3a6e1eae1906777f18461087c7"
+      "sha256": "9af8f92474726baf9cd9e0b313726bcc17dd4c191fafdaffbbc6c7b9fd5952ff"
     },
     {
       "path": "scripts/wheelhouse_integrity.py",

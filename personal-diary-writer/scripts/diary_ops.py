@@ -13,10 +13,11 @@ import secrets
 import subprocess
 import sys
 import tempfile
+from collections.abc import Iterator
 from contextlib import contextmanager
 from datetime import date, datetime
 from pathlib import Path
-from typing import Any, Iterator
+from typing import Any
 from zoneinfo import ZoneInfo
 
 DATE_HEADING = re.compile(r"(?m)^# (\d{4}-\d{2}-\d{2})(?:[^\r\n]*)\r?$")
@@ -43,39 +44,53 @@ PERSONAL_DIARY_H2 = (
     "## 风险与未知",
     "## 行动闭环",
 )
-def _configured_path(variable: str, default: Path) -> Path:
-    value = os.environ.get(variable)
-    path = Path(value).expanduser() if value else default
-    if not path.is_absolute():
-        raise ValueError(f"{variable} must be an absolute path")
-    return path
-
-
-DEFAULT_ROOT = _configured_path(
-    "PERSONAL_DIARY_ROOT",
-    Path.home() / "MEMORY" / "raw" / "privacy" / "Diary",
+DEFAULT_ROOT = Path("C:/Users/shich/MEMORY/raw/privacy/Diary")
+SESSION_ROOT = Path("C:/Users/shich/.pi/agent/sessions")
+MENTAT_GATE = Path(
+    "C:/Users/shich/.pi/agent/skills/mentat-insight-diary/scripts/evidence_gate.py"
 )
-SESSION_ROOT = _configured_path(
-    "PI_SESSION_ROOT",
-    Path.home() / ".pi" / "agent" / "sessions",
+WEEKLY_GATE = Path(
+    "C:/Users/shich/.pi/agent/skills/personal-cognitive-auditor/scripts/audit_gate.py"
 )
-SKILLS_ROOT = _configured_path(
-    "PI_SKILLS_ROOT",
-    Path.home() / ".pi" / "agent" / "skills",
-)
-MENTAT_GATE = _configured_path(
-    "MENTAT_EVIDENCE_GATE",
-    SKILLS_ROOT / "mentat-insight-diary" / "scripts" / "evidence_gate.py",
-)
-WEEKLY_GATE = _configured_path(
-    "PERSONAL_AUDIT_GATE",
-    SKILLS_ROOT / "personal-cognitive-auditor" / "scripts" / "audit_gate.py",
-)
-PERIODIC_TOPOLOGY = _configured_path(
-    "PERSONAL_AUDIT_TOPOLOGY",
-    WEEKLY_GATE.with_name("periodic_topology.py"),
-)
+PERIODIC_TOPOLOGY = WEEKLY_GATE.with_name("periodic_topology.py")
 CONFIRMATION_PREFIXES = ("确认写入", "确认保存")
+PERSONAL_DIARY_AUTOSAVE_DENY_KEYWORDS = (
+    "不写",
+    "不要写",
+    "禁止写",
+    "无需写",
+    "暂不写",
+    "别写",
+    "草稿",
+    "预览",
+    "只读",
+    "不保存",
+    "不要保存",
+    "暂不保存",
+    "无需保存",
+    "仅供查看",
+    "修改技能",
+    "更新技能",
+    "修复技能",
+    "审计技能",
+    "检查技能",
+    "查看技能",
+    "创建技能",
+)
+PERSONAL_DIARY_VALID_PREFIXES = (
+    "更新个人日志",
+    "更新个人日记",
+    "生成个人日志",
+    "生成个人日记",
+    "记录个人日志",
+    "记录今日日志",
+    "写个人日志",
+    "写个人日记",
+    "记个人日志",
+    "记日记",
+    "保存个人日志",
+    "保存个人日记",
+)
 
 
 class DiaryError(ValueError):
@@ -131,7 +146,9 @@ def _audit_spec(
         if not match:
             raise DiaryError("weekly audit requires an ISO week in YYYY-Www form")
         try:
-            period_end = date.fromisocalendar(int(match.group(1)), int(match.group(2)), 7)
+            period_end = date.fromisocalendar(
+                int(match.group(1)), int(match.group(2)), 7
+            )
         except ValueError as exc:
             raise DiaryError(f"invalid ISO week: {week}") from exc
         label, period_id, heading = "weekly", week or "", WEEKLY_HEADING
@@ -142,7 +159,9 @@ def _audit_spec(
         year, month_number = int(match.group(1)), int(match.group(2))
         if not 1 <= month_number <= 12:
             raise DiaryError("monthly audit requires a month in YYYY-MM form")
-        period_end = date(year, month_number, calendar.monthrange(year, month_number)[1])
+        period_end = date(
+            year, month_number, calendar.monthrange(year, month_number)[1]
+        )
         label, period_id, heading = "monthly", month or "", MONTHLY_HEADING
     elif action == "replace-quarterly-audit" and supplied == ["quarter"]:
         match = re.fullmatch(r"(\d{4})-Q([1-4])", quarter or "")
@@ -238,7 +257,9 @@ def _validate_personal_diary_payload(text: str, day: date) -> None:
             "eight required H2 sections in order, with no other H1/H2 or Setext headings"
         )
     for index, match in enumerate(h2_matches):
-        end = h2_matches[index + 1].start() if index + 1 < len(h2_matches) else len(text)
+        end = (
+            h2_matches[index + 1].start() if index + 1 < len(h2_matches) else len(text)
+        )
         if not text[match.end() : end].strip():
             raise DiaryError("canonical personal diary sections must not be empty")
 
@@ -266,9 +287,7 @@ def _read_payload(
         "replace-monthly-audit",
         "replace-quarterly-audit",
     }:
-        label, period_id, _, _ = _audit_spec(
-            day, action, week, month, quarter
-        )
+        label, period_id, _, _ = _audit_spec(day, action, week, month, quarter)
         with _immutable_gate_snapshot(source, ".md") as snapshot:
             _run_gate(
                 [
@@ -312,7 +331,9 @@ def _audit_span(
     if not matches:
         return None
     current = matches[0]
-    following = [item for item in H2_HEADING.finditer(block) if item.start() > current.start()]
+    following = [
+        item for item in H2_HEADING.finditer(block) if item.start() > current.start()
+    ]
     return current.start(), following[0].start() if following else len(block)
 
 
@@ -355,38 +376,37 @@ def _render_audit(
     quarter: str | None,
     newline: str,
 ) -> tuple[str, str]:
-    label, period_id, heading, _ = _audit_spec(
-        day, action, week, month, quarter
-    )
+    label, period_id, heading, _ = _audit_spec(day, action, week, month, quarter)
     span = _date_span(text, day)
     payload_block = payload.rstrip("\r\n")
     if span is None:
         date_block = f"# {day.isoformat()}" + newline * 2 + payload_block + newline
         first = DATE_HEADING.search(text)
         if first:
-            rendered = text[: first.start()] + date_block + newline + text[first.start() :]
+            rendered = (
+                text[: first.start()] + date_block + newline + text[first.start() :]
+            )
         elif text.strip():
-            raise DiaryError("cannot insert into a non-empty target without date headings")
+            raise DiaryError(
+                "cannot insert into a non-empty target without date headings"
+            )
         else:
             rendered = date_block
         return rendered, _sha256(b"")
     start, end = span
     date_block = text[start:end]
-    protected_before = _protected_audit_content(
-        date_block, heading, period_id, label
-    )
+    protected_before = _protected_audit_content(date_block, heading, period_id, label)
     audit = _audit_span(date_block, heading, period_id, label)
     if audit is None:
-        updated_block = date_block.rstrip("\r\n") + newline * 2 + payload_block + newline
+        updated_block = (
+            date_block.rstrip("\r\n") + newline * 2 + payload_block + newline
+        )
     else:
         audit_start, audit_end = audit
         suffix = date_block[audit_end:]
         separator = newline * 2 if suffix else newline
         updated_block = (
-            date_block[:audit_start]
-            + payload_block
-            + separator
-            + suffix.lstrip("\r\n")
+            date_block[:audit_start] + payload_block + separator + suffix.lstrip("\r\n")
         )
     if (
         _protected_audit_content(updated_block, heading, period_id, label)
@@ -396,6 +416,68 @@ def _render_audit(
     return text[:start] + updated_block + text[end:], _sha256(
         protected_before.encode("utf-8")
     )
+
+
+def _personal_diary_parts(block: str, day: date) -> tuple[str, list[str]]:
+    """Separate diary-owned text from validated, opaque periodic H2 blocks."""
+    headings = list(MARKDOWN_ATX_H2.finditer(block))
+    diary = block[: headings[0].start()] if headings else block
+    audits: list[str] = []
+    seen: set[tuple[str, str]] = set()
+    for index, heading in enumerate(headings):
+        end = headings[index + 1].start() if index + 1 < len(headings) else len(block)
+        section = block[heading.start() : end]
+        title = heading.group(0).rstrip("\r\n")
+        if title in PERSONAL_DIARY_H2:
+            diary += section
+            continue
+        for label, pattern in (
+            ("weekly", WEEKLY_HEADING),
+            ("monthly", MONTHLY_HEADING),
+            ("quarterly", QUARTERLY_HEADING),
+        ):
+            match = pattern.fullmatch(title)
+            if match:
+                period = match.group(1)
+                key = (label, period)
+                if key in seen:
+                    raise DiaryError("duplicate periodic audit block")
+                seen.add(key)
+                _audit_spec(
+                    day,
+                    f"replace-{label}-audit",
+                    period if label == "weekly" else None,
+                    period if label == "monthly" else None,
+                    period if label == "quarterly" else None,
+                )
+                if MARKDOWN_ATX_H1.search(section) or MARKDOWN_SETEXT.search(section):
+                    raise DiaryError("illegal periodic audit topology")
+                audits.append(section)
+                break
+        else:
+            raise DiaryError("unrecognized or illegal periodic H2 block")
+    return diary.rstrip("\r\n"), audits
+
+
+def _render_personal_diary(
+    text: str, payload: str, day: date, newline: str
+) -> tuple[str, str]:
+    _validate_personal_diary_payload(payload, day)
+    span = _date_span(text, day)
+    audits = _personal_diary_parts(text[span[0] : span[1]], day)[1] if span else []
+    protected = "".join(audits)
+    if span and audits:
+        start, end = span
+        updated = payload.rstrip("\r\n") + newline * 2 + protected
+        rendered = text[:start] + updated + text[end:]
+    else:
+        rendered = _render_date(text, payload, day, newline)
+    result_span = _date_span(rendered, day)
+    assert result_span is not None
+    diary, after = _personal_diary_parts(rendered[result_span[0] : result_span[1]], day)
+    if diary != payload.rstrip("\r\n") or after != audits:
+        raise DiaryError("personal diary render changed payload or protected audits")
+    return rendered, _sha256(protected.encode("utf-8"))
 
 
 def _render_operation(
@@ -408,16 +490,16 @@ def _render_operation(
     quarter: str | None,
     newline: str,
 ) -> tuple[str, str | None]:
-    if action in {"replace-date", "replace-personal-diary"}:
+    if action == "replace-date":
         return _render_date(text, payload, day, newline), None
+    if action == "replace-personal-diary":
+        return _render_personal_diary(text, payload, day, newline)
     if action in {
         "replace-weekly-audit",
         "replace-monthly-audit",
         "replace-quarterly-audit",
     }:
-        return _render_audit(
-            text, payload, day, action, week, month, quarter, newline
-        )
+        return _render_audit(text, payload, day, action, week, month, quarter, newline)
     raise DiaryError(f"unsupported action: {action}")
 
 
@@ -456,9 +538,7 @@ def _scope_fields(
 def build_scope(args: argparse.Namespace) -> dict[str, Any]:
     day = date.fromisoformat(args.date)
     target = Path(args.file)
-    _validate_matrix(
-        day, args.kind, args.action, args.week, args.month, args.quarter
-    )
+    _validate_matrix(day, args.kind, args.action, args.week, args.month, args.quarter)
     _validate_target(target, day, args.kind)
     target_raw, target_text, newline, _ = _read_target(target)
     source_raw, payload_raw, payload_text = _read_payload(
@@ -481,7 +561,9 @@ def build_scope(args: argparse.Namespace) -> dict[str, Any]:
         newline,
     )
     scope_nonce = getattr(args, "scope_nonce", None) or secrets.token_hex(16)
-    if not isinstance(scope_nonce, str) or not re.fullmatch(r"[0-9a-f]{32}", scope_nonce):
+    if not isinstance(scope_nonce, str) or not re.fullmatch(
+        r"[0-9a-f]{32}", scope_nonce
+    ):
         raise DiaryError("scope nonce must be 128-bit lowercase hex")
     fields = _scope_fields(
         target,
@@ -583,7 +665,9 @@ def _protected_user_event(
     try:
         session.relative_to(SESSION_ROOT.resolve())
     except ValueError as exc:
-        raise DiaryError("session evidence is outside the protected Pi session root") from exc
+        raise DiaryError(
+            "session evidence is outside the protected Pi session root"
+        ) from exc
     try:
         lines = session.read_text(encoding="utf-8").splitlines()
     except (OSError, UnicodeError) as exc:
@@ -638,6 +722,32 @@ def _period_id_at_event(event: dict[str, Any], label: str) -> str:
     raise DiaryError(f"unsupported periodic request type: {label}")
 
 
+def _is_personal_diary_autosave_authorized(text: str) -> bool:
+    normalized = text.strip()
+    for prefix in ("[OVERRIDE]", "[WARROOM]"):
+        if normalized.startswith(prefix):
+            normalized = normalized[len(prefix) :].strip()
+            break
+    if normalized.startswith(("[OVERRIDE]", "[WARROOM]")):
+        return False
+    if any(kw in normalized for kw in PERSONAL_DIARY_AUTOSAVE_DENY_KEYWORDS):
+        return False
+    # A read/explanation request can mention saving without authorizing it.
+    if re.match(
+        r"^(?:(?:请你|请|帮我|麻烦你|麻烦)\s*)*(?:查看|分析|解释|阅读|查询|审阅|总结|检查)",
+        normalized,
+    ):
+        return False
+    if any(normalized.startswith(p) for p in PERSONAL_DIARY_VALID_PREFIXES):
+        return True
+    if ("个人日志" in normalized or "个人日记" in normalized) and any(
+        act in normalized
+        for act in ("更新", "生成", "记录", "写", "保存", "修改", "补写", "录入")
+    ):
+        return True
+    return False
+
+
 def _verify_personal_diary_request(
     value: dict[str, Any], receipt: dict[str, Any], args: argparse.Namespace
 ) -> None:
@@ -653,19 +763,20 @@ def _verify_personal_diary_request(
         "approval_evidence_id": receipt.get("source_sha256"),
     }
     if any(value.get(key) != item for key, item in expected.items()):
-        raise DiaryError("personal diary request artifact is not bound to the write scope")
+        raise DiaryError(
+            "personal diary request artifact is not bound to the write scope"
+        )
     event, text = _protected_user_event(
         value.get("request_event_id"), preserve_whitespace=True
     )
     if value.get("request_event_sha256") != _sha256(text.encode("utf-8")):
-        raise DiaryError("personal diary request artifact is not bound to the user event")
-    if text not in {
-        "更新个人日志",
-        "[OVERRIDE]更新个人日志",
-        "[WARROOM]更新个人日志",
-    }:
         raise DiaryError(
-            "personal diary autosave requires the exact protected request 更新个人日志"
+            "personal diary request artifact is not bound to the user event"
+        )
+    if not _is_personal_diary_autosave_authorized(text):
+        raise DiaryError(
+            "personal diary autosave requires an authorized personal diary request; "
+            "draft, preview, read-only, or meta/management requests are not writable"
         )
     if _local_day_at_event(event, "personal diary") != date.fromisoformat(args.date):
         raise DiaryError("personal diary request date does not match the write date")
@@ -677,7 +788,12 @@ def _verify_personal_diary_request(
         raise DiaryError("personal diary payload changed after scope")
     with _immutable_gate_snapshot(source, ".md") as snapshot:
         _run_gate(
-            [sys.executable, str(WEEKLY_GATE), str(snapshot), "--enforce-template-fields"],
+            [
+                sys.executable,
+                str(WEEKLY_GATE),
+                str(snapshot),
+                "--enforce-template-fields",
+            ],
             "personal diary content gate",
         )
 
@@ -845,9 +961,10 @@ def _load_approval(
     )
     if value.get("approval_source") != expected_source:
         raise DiaryError("approval source does not match the diary operation matrix")
-    if not isinstance(value.get("approval_evidence_id"), str) or not value[
-        "approval_evidence_id"
-    ].strip():
+    if (
+        not isinstance(value.get("approval_evidence_id"), str)
+        or not value["approval_evidence_id"].strip()
+    ):
         raise DiaryError("approval evidence id is required")
     for key in ("authorization_id", "authorization_scope_sha256"):
         if value.get(key) != receipt.get(key):
@@ -905,9 +1022,7 @@ def _scope_args_from_replace(
 def replace_operation(args: argparse.Namespace) -> dict[str, Any]:
     day = date.fromisoformat(args.date)
     target = Path(args.file)
-    _validate_matrix(
-        day, args.kind, args.action, args.week, args.month, args.quarter
-    )
+    _validate_matrix(day, args.kind, args.action, args.week, args.month, args.quarter)
     _validate_target(target, day, args.kind)
     receipt = _load_scope(Path(args.scope_file))
     approval = _load_approval(Path(args.approval_file), receipt, args)
@@ -965,7 +1080,9 @@ def replace_operation(args: argparse.Namespace) -> dict[str, Any]:
             1 for item in DATE_HEADING.findall(rendered) if item == day.isoformat()
         )
         if day_count != 1:
-            raise DiaryError("render verification failed: date heading count is not one")
+            raise DiaryError(
+                "render verification failed: date heading count is not one"
+            )
         period_heading_count = None
         if args.action in {
             "replace-weekly-audit",
@@ -1007,7 +1124,9 @@ def replace_operation(args: argparse.Namespace) -> dict[str, Any]:
                     pass
         written = target.read_bytes()
         if written != encoded:
-            raise DiaryError("write verification failed: target bytes differ from render")
+            raise DiaryError(
+                "write verification failed: target bytes differ from render"
+            )
 
     return {
         "schema_version": 2,

@@ -1,6 +1,7 @@
 ---
 name: tool-blogger-publisher
 description: 将 Markdown 转换为适合 Google Blogger、微信公众号和邮件订阅系统粘贴或导入的内联样式 HTML 片段，并校验结构、链接、图片和基础安全。用于“Markdown 转 Blogger HTML”“生成公众号排版”“邮件内联 HTML”“导出跨平台文章 HTML”等请求；只生成制品，不自动发布。
+disable-model-invocation: true
 ---
 
 # Markdown 转内联 HTML
@@ -44,6 +45,6 @@ description: 将 Markdown 转换为适合 Google Blogger、微信公众号和邮
 
 ## 交付
 
-短片段可直接在对话中交付。长文或用户要求文件时，将 HTML 写入用户指定或当前任务允许的输出目录，并提供可点击的绝对路径链接。只生成 HTML 制品；发布到 Blogger、微信公众号、邮件系统或其他外部平台必须另行获得明确授权。
+短片段可直接在对话中交付。长文或用户要求文件时，将 HTML 写入用户指定或当前任务允许的输出目录，并提供清晰的本地文件路径。只生成 HTML 制品；发布到 Blogger、微信公众号、邮件系统或其他外部平台必须另行获得明确授权。
 
 不要自动记录排版规则或把文章内容写入长期记忆。只有用户明确要求保存模板或偏好时才持久化。

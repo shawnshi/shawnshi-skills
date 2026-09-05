@@ -209,6 +209,35 @@ def cloned_v13_payload():
 def valid_v14_payload():
     payload = valid_v13_payload()
     payload["schema_version"] = "1.4"
+    retained_ref = payload["top_10"][0]["candidate_refs"][0]
+    payload["candidate_funnel"].update(
+        {
+            "quality_gate_reasons": {
+                "missing_verified_access": 1,
+                "semantic_not_selected": 1,
+            },
+            "candidate_dispositions": [
+                {
+                    "candidate_id": retained_ref,
+                    "url": payload["top_10"][0]["url"],
+                    "source_type": "primary",
+                    "reason": "retained",
+                },
+                {
+                    "candidate_id": "cand_unverified",
+                    "url": "https://example.org/unverified",
+                    "source_type": "primary",
+                    "reason": "missing_verified_access",
+                },
+                {
+                    "candidate_id": "cand_not_selected",
+                    "url": "https://example.org/not-selected",
+                    "source_type": "secondary",
+                    "reason": "semantic_not_selected",
+                },
+            ],
+        }
+    )
     return payload
 
 

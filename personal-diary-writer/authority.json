@@ -2,17 +2,25 @@
   "schema_version": 2,
   "skill_name": "personal-diary-writer",
   "authority_locator": {
-    "base": "skill_root",
+    "base": "user_home",
     "segments": [
+      ".pi",
+      "agent",
+      "skills",
+      "personal-diary-writer",
       "SKILL.md"
     ]
   },
-  "authority_version": "11.9.1",
-  "authority_sha256": "97a09523c544672553c28535f26cd2de4b04af32c6408318f339656635844d85",
+  "authority_version": "11.10.1",
+  "authority_sha256": "6da34d49f32d3420eb722ed7fca34b6a6de1e0ae32a6aad689033216f0a6237c",
   "candidate_locators": [
     {
-      "base": "skill_root",
+      "base": "user_home",
       "segments": [
+        ".pi",
+        "agent",
+        "skills",
+        "personal-diary-writer",
         "SKILL.md"
       ]
     }

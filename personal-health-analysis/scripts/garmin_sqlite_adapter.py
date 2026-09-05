@@ -12,9 +12,10 @@ import contextvars
 import hashlib
 import json
 import sqlite3
-import pandas as pd
-from pathlib import Path
 from datetime import datetime, timedelta
+from pathlib import Path
+
+import pandas as pd
 
 # Default path for GarminDB SQLite files (Nested within .GarminDb)
 DB_DIR = Path.home() / ".GarminDb"
@@ -290,16 +291,16 @@ def get_max_metrics():
         for k, v in zip(df['key'], df['value']):
             if k not in result:
                 result[k] = v
-        
+
         vo2_max = result.get('vo2max_running') or result.get('vo2max_cycling')
         fitness_age = result.get('fitness_age')
-        
+
         try:
             if vo2_max is not None:
                 vo2_max = round(float(vo2_max), 1)
         except (TypeError, ValueError):
             vo2_max = None
-            
+
         metrics = {
             "vo2_max": vo2_max,
             "fitness_age": fitness_age
@@ -356,7 +357,7 @@ def get_activities_data(days=30):
     start_date = _window_start(days)
     end_exclusive = (datetime.now() + timedelta(days=1)).strftime('%Y-%m-%d')
     conn = get_connection(ACTIVITIES_DB)
-    
+
     query = f"""
         SELECT activity_id, name, type, start_time, elapsed_time, distance, avg_hr, max_hr, calories, avg_speed, ascent, training_load
         FROM activities
@@ -370,7 +371,7 @@ def get_activities_data(days=30):
         raise LocalDatabaseReadError("activities_query_failed") from exc
     finally:
         conn.close()
-    
+
     # Standardize column names to match the expected format in intelligence layer
     if not df.empty:
         # Performance: Replace slow .apply lambda with vectorized string slicing for faster date extraction
@@ -395,8 +396,9 @@ def get_summary(days=7, fill_missing=True):
     """
     start_date = _window_start(days)
     end_date = datetime.now().strftime('%Y-%m-%d')
+    end_exclusive = (datetime.fromisoformat(end_date) + timedelta(days=1)).strftime('%Y-%m-%d')
     conn = get_connection(GARMIN_DB)
-    
+
     try:
         table_name = _get_summary_table_name(conn)
         if not table_name:
@@ -407,7 +409,7 @@ def get_summary(days=7, fill_missing=True):
                    sweat_loss, rr_waking_avg, steps
             FROM {table_name}
             WHERE day >= '{start_date}'
-              AND day <= '{end_date}'
+              AND day < '{end_exclusive}'
             ORDER BY day DESC
         """
         df = pd.read_sql_query(query, conn)
@@ -417,7 +419,7 @@ def get_summary(days=7, fill_missing=True):
         raise LocalDatabaseReadError("summary_query_failed") from exc
     finally:
         conn.close()
-    
+
     if not df.empty and 'day' in df.columns:
         df = df.rename(columns={'day': 'date'})
         # Performance: Replace slow .apply lambda with vectorized string slicing for faster date extraction
@@ -432,7 +434,7 @@ def get_summary(days=7, fill_missing=True):
             df = pd.DataFrame({'date': [d.strftime('%Y-%m-%d') for d in date_rng]})
         else:
             df = pd.DataFrame(columns=['date'])
-        
+
     expected_cols = [
         'resting_heart_rate', 'max_hr', 'stress_avg', 'body_battery_highest',
         'body_battery_lowest', 'body_battery_charged', 'sweat_loss',
@@ -440,7 +442,7 @@ def get_summary(days=7, fill_missing=True):
         'medium_stress_duration'
     ]
     _ensure_missing_columns(df, expected_cols)
-        
+
     return df
 
 def get_daily_friction_matrix(days=90, derivation_config=None):
@@ -455,7 +457,7 @@ def get_daily_friction_matrix(days=90, derivation_config=None):
     """
     start_date = _window_start(days)
     end_date = datetime.now().strftime('%Y-%m-%d')
-    
+
     # 1. Physical Load from activities
     conn_act = get_connection(ACTIVITIES_DB)
     q_act = f"SELECT start_time, training_load FROM activities WHERE start_time >= '{start_date}' AND training_load IS NOT NULL"
@@ -465,14 +467,14 @@ def get_daily_friction_matrix(days=90, derivation_config=None):
         raise LocalDatabaseReadError("friction_activity_query_failed") from exc
     finally:
         conn_act.close()
-    
+
     if not df_act.empty:
         # Performance: Replace slow .apply lambda with vectorized string slicing for faster date extraction
         df_act['date'] = df_act['start_time'].astype(str).str[:10]
         df_load = df_act.groupby('date')['training_load'].sum().reset_index()
     else:
         df_load = pd.DataFrame(columns=['date', 'training_load'])
-        
+
     # 2. Raw daily observations. These remain descriptive inputs only.
     try:
         conn_sum = get_connection(GARMIN_DB)
@@ -480,7 +482,7 @@ def get_daily_friction_matrix(days=90, derivation_config=None):
         cur.execute("SELECT name FROM sqlite_master WHERE type='table'")
         tables = [r[0] for r in cur.fetchall()]
         table_name = 'daily_summary' if 'daily_summary' in tables else 'days_summary' if 'days_summary' in tables else None
-        
+
         if table_name:
             q_sum = f"SELECT day as date, stress_avg, rhr as resting_heart_rate, bb_max as body_battery_highest, bb_min as body_battery_lowest FROM {table_name} WHERE day >= '{start_date}'"
             df_sum = pd.read_sql_query(q_sum, conn_sum)
@@ -491,13 +493,13 @@ def get_daily_friction_matrix(days=90, derivation_config=None):
     finally:
         if 'conn_sum' in locals():
             conn_sum.close()
-    
+
     # 3. Merge with a complete date index while retaining missing observations.
     date_rng = pd.date_range(start=start_date, end=end_date, freq='D')
     df_base = pd.DataFrame({'date': [d.strftime('%Y-%m-%d') for d in date_rng]})
-    
+
     df = df_base.merge(df_sum, on='date', how='left').merge(df_load, on='date', how='left')
-    
+
     _ensure_missing_columns(
         df,
         [
@@ -527,7 +529,7 @@ def get_daily_friction_matrix(days=90, derivation_config=None):
         df['daily_friction_load'] = pd.to_numeric(
             df[input_field], errors='coerce'
         ) * float(scale)
-    
+
     return df
 
 
@@ -535,15 +537,16 @@ def get_sleep_data(days=14, fill_missing=True):
     """Extract detailed sleep metrics."""
     start_date = _window_start(days)
     end_date = datetime.now().strftime('%Y-%m-%d')
+    end_exclusive = (datetime.fromisoformat(end_date) + timedelta(days=1)).strftime('%Y-%m-%d')
     conn = get_connection(GARMIN_DB)
-    
+
     query = f"""
         SELECT day, total_sleep, deep_sleep, light_sleep, rem_sleep, 
                awake as awake_time, score as sleep_score, avg_rr as avg_respiration, 
                avg_spo2, avg_stress
         FROM sleep
         WHERE day >= '{start_date}'
-          AND day <= '{end_date}'
+          AND day < '{end_exclusive}'
         ORDER BY day DESC
     """
     try:
@@ -552,7 +555,7 @@ def get_sleep_data(days=14, fill_missing=True):
         raise LocalDatabaseReadError("sleep_query_failed") from exc
     finally:
         conn.close()
-    
+
     if not df.empty and 'day' in df.columns:
         df = df.rename(columns={'day': 'date'})
         # Performance: Replace slow .apply lambda with vectorized string slicing for faster date extraction
@@ -587,7 +590,7 @@ def get_sleep_data(days=14, fill_missing=True):
             df = pd.DataFrame({'date': [d.strftime('%Y-%m-%d') for d in date_rng]})
         else:
             df = pd.DataFrame(columns=['date'])
-        
+
     _ensure_missing_columns(
         df,
         [
@@ -603,7 +606,7 @@ def get_biomechanics_data(days=30):
     """Extract advanced running dynamics and biomechanical wear & tear data."""
     start_date = _window_start(days)
     conn = get_connection(ACTIVITIES_DB)
-    
+
     query = f"""
         SELECT a.activity_id, a.start_time, a.distance, a.avg_speed, a.anaerobic_training_effect,
                s.avg_ground_contact_time, s.avg_stance_time_percent
@@ -618,7 +621,7 @@ def get_biomechanics_data(days=30):
         raise LocalDatabaseReadError("biomechanics_query_failed") from exc
     finally:
         conn.close()
-    
+
     if not df.empty:
         # Performance: Replace slow .apply lambda with vectorized string slicing for faster date extraction
         df['date'] = df['start_time'].astype(str).str[:10]
@@ -641,14 +644,15 @@ def get_hrv_data(days=7, fill_missing=True):
     """Extract HRV data."""
     start_date = _window_start(days)
     end_date = datetime.now().strftime('%Y-%m-%d')
+    end_exclusive = (datetime.fromisoformat(end_date) + timedelta(days=1)).strftime('%Y-%m-%d')
     conn = get_connection(GARMIN_DB)
-    
+
     try:
         query = f"""
             SELECT day, last_night_avg as hrv_avg, status
             FROM hrv
             WHERE day >= '{start_date}'
-              AND day <= '{end_date}'
+              AND day < '{end_exclusive}'
             ORDER BY day DESC
         """
         df = pd.read_sql_query(query, conn)
@@ -656,7 +660,7 @@ def get_hrv_data(days=7, fill_missing=True):
         raise LocalDatabaseReadError("hrv_query_failed") from exc
     finally:
         conn.close()
-    
+
     if not df.empty and 'day' in df.columns:
         df = df.rename(columns={'day': 'date'})
         # Performance: Replace slow .apply lambda with vectorized string slicing for faster date extraction
@@ -671,9 +675,9 @@ def get_hrv_data(days=7, fill_missing=True):
             df = pd.DataFrame({'date': [d.strftime('%Y-%m-%d') for d in date_rng]})
         else:
             df = pd.DataFrame(columns=['date'])
-        
+
     _ensure_missing_columns(df, ['hrv_avg', 'status'])
-        
+
     return df
 
 def main():

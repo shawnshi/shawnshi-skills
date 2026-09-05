@@ -1,4 +1,6 @@
+import json
 import unittest
+from pathlib import Path
 
 from mix_policy import allocate_target_counts, major_signal_eligible, select_candidates_with_mix
 from refine import post_process_entities, score_item
@@ -46,6 +48,23 @@ class MixPolicyTests(unittest.TestCase):
         _, _, _, domain_scores = score_item(item, focus)
 
         self.assertEqual(domain_scores["healthcare_digital"], 0)
+
+    def test_oncology_guideline_research_is_classified_as_healthcare(self):
+        focus_path = Path(__file__).resolve().parent.parent / "references" / "strategic_focus.json"
+        focus = json.loads(focus_path.read_text(encoding="utf-8"))
+        item = {
+            "title": (
+                "A collective capability boundary in frontier large language models "
+                "on guideline-conformant and case-specific oncology decision-making"
+            ),
+            "raw_desc": "Evaluation of LLMs for oncology clinical decisions.",
+            "source": "arXiv (cs.AI)",
+        }
+
+        _, _, primary_domain, scores = score_item(item, focus)
+
+        self.assertEqual(primary_domain, "healthcare_digital")
+        self.assertGreater(scores["healthcare_digital"], scores["technology"])
 
     def test_entity_linking_does_not_corrupt_markdown_link_titles(self):
         output = {

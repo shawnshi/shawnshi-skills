@@ -1,18 +1,18 @@
 {
   "schema_version": 3,
   "skill": "senior-osint-analyst",
-  "generated_at": "2026-09-01T19:54:15+08:00",
+  "generated_at": "2026-09-05T17:15:44+08:00",
   "hash_algorithm": "SHA-256",
   "text_hash_normalization": "LF",
   "skill_md": "SKILL.md",
-  "skill_md_sha256": "035c59c27ea9d9ca58c90deb070c3543ef91a4fdafadb2c5fb6973ccd3186b18",
+  "skill_md_sha256": "e52af433ea9083975a8888b500bac68fab62659f2e4f574c5634a9daf6c415d9",
   "top_level_files": [
     "SKILL.md"
   ],
   "top_level_file_hashes": [
     {
       "path": "SKILL.md",
-      "sha256": "035c59c27ea9d9ca58c90deb070c3543ef91a4fdafadb2c5fb6973ccd3186b18"
+      "sha256": "e52af433ea9083975a8888b500bac68fab62659f2e4f574c5634a9daf6c415d9"
     }
   ],
   "top_level_directories": [
@@ -49,7 +49,7 @@
     },
     {
       "path": "references/report-templates.md",
-      "sha256": "76a566764bff0652f08dd399388077e72fb1025c812f99e0785e3ba73e5e7762"
+      "sha256": "e4bf09d9768baa44ff4406a947e3e95cd91875ab6ce0317f010d9335599e9679"
     }
   ],
   "declared_local_dependencies": [
@@ -63,7 +63,7 @@
       "path": "references/report-templates.md",
       "exists": true,
       "resolved_path": "senior-osint-analyst/references/report-templates.md",
-      "sha256": "76a566764bff0652f08dd399388077e72fb1025c812f99e0785e3ba73e5e7762"
+      "sha256": "e4bf09d9768baa44ff4406a947e3e95cd91875ab6ce0317f010d9335599e9679"
     }
   ],
   "missing_declared_dependencies": []

@@ -1,18 +1,18 @@
 {
   "schema_version": 3,
   "skill": "cognitive-hv-analysis",
-  "generated_at": "2026-08-16T22:02:19",
+  "generated_at": "2026-09-05T17:15:44+08:00",
   "hash_algorithm": "SHA-256",
   "text_hash_normalization": "LF",
   "skill_md": "SKILL.md",
-  "skill_md_sha256": "0d0fb8bc21c055e86dbd135a08f9599eb04fb28893200149de57835ca5b4ea27",
+  "skill_md_sha256": "8c7fb409631aabd027c34abe6f343bc44afd7bc40187da3112a6a8e969841aa2",
   "top_level_files": [
     "SKILL.md"
   ],
   "top_level_file_hashes": [
     {
       "path": "SKILL.md",
-      "sha256": "0d0fb8bc21c055e86dbd135a08f9599eb04fb28893200149de57835ca5b4ea27"
+      "sha256": "8c7fb409631aabd027c34abe6f343bc44afd7bc40187da3112a6a8e969841aa2"
     }
   ],
   "top_level_directories": [
@@ -27,9 +27,16 @@
   "resource_file_hashes": [
     {
       "path": "references/schema.json",
-      "sha256": "fa1718e7c00c4a72dcc8ec6535f1c158450c2f04e729ed54f995825e3c61c899"
+      "sha256": "d271583a4b823d5005c91821b6141547a46052f440794a0aebfd61b974795bbe"
     }
   ],
-  "declared_local_dependencies": [],
+  "declared_local_dependencies": [
+    {
+      "path": "references/schema.json",
+      "exists": true,
+      "resolved_path": "cognitive-hv-analysis/references/schema.json",
+      "sha256": "d271583a4b823d5005c91821b6141547a46052f440794a0aebfd61b974795bbe"
+    }
+  ],
   "missing_declared_dependencies": []
 }

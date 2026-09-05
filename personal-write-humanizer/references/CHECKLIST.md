@@ -8,4 +8,4 @@ After rewriting the text, please verify against this checklist:
 4.  **[ ] 去虚浮**: 检查是否删除了“里程碑”、“蓝图”、“不仅……而且……”等空洞词汇？
 5.  **[ ] 朗读测试**: 如果大声读出来，是否感觉像是在跟朋友聊天？
 
-**Goal**: Score at least 4/5 based on the "Quality Evaluation Standard" in `SKILL.md`.
+**Goal**: Score at least 4/5 using the criteria in [EVALUATIONS.md](EVALUATIONS.md).

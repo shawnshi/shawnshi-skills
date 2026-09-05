@@ -6,7 +6,7 @@
 
 1. 将复盘请求窗口原样传给 Garmin 分析，不为满足算法样本量自动扩大窗口。
 2. 使用同一 Python 解释器完成本地预检与读取，不在失败后静默换解释器。先通过 canonical `personal-health-analysis` 的 `runtime-authority.json`；权威、版本、入口哈希或 `.gemini` 代理绑定不一致时失败关闭。
-3. 当前周期末端数据不新鲜时，按主技能的新鲜度门最多启动一次已存在、已启用且动作仍绑定该权威的 `Codex-Garmin-Health-Sync` 任务；成功后重新执行本地读取。该动作不是 `partial` 的云端回退。
+3. 当前周期末端数据不新鲜时，按主技能的新鲜度门直接运行一次两阶段受控同步（`sync_health_data.py sync --dry-run` 后 `--allow-network --allow-sync`）；成功后重新执行本地读取。不得启动、注册或修复计划任务。该动作不是 `partial` 的云端回退。
 4. 同步失败、限流或覆盖验证失败不得在同一次复盘中重试；保留同步前本地证据并披露缺口。历史周期、草稿、预览、只读、不同步或不联网请求不触发同步。
 5. `complete`：使用本地结果。
 6. `partial`：继续使用本地结果，披露逐组件缺口；不得转云端。
@@ -52,7 +52,7 @@
 
 只要输出“能量管理（描述性生理背景）”，除逐指标观测、来源和缺口外，必须生成以下六个非空稳定字段。个人日记历史标题 `能量管理 (Biological-Cognitive Correlation)` 由 Gate 兼容读取，但新草稿必须统一使用中文标题和本节字段结构。字段不可只有 `not_scored`、`[DATA_UNAVAILABLE]` 或空字符串；不可用时也要写明状态、原因以及仍可观察的事实。
 
-1. **采集审计**：使用稳定键值 `sync_eligible=<true|false>; sync_attempted=<started|waited_existing|direct|not_attempted>; task_status=<终态|not_checked>; local_reread=<accepted|rejected|not_run>; local_status=<complete|partial|no_data|read_error|not_run>; live_fallback=<used|not_used>; reason=<稳定原因码>`。`direct` 只表示 canonical 探针可靠确认任务不存在后，经同一 freshness gate 执行的一次受控直同步；权限不足或查询错误不得使用。实时回退必须由结构化 `local_status=no_data` 证明；不得只写“已联网”或“未联网”。
+1. **采集审计**：使用稳定键值 `sync_eligible=<true|false>; sync_attempted=<started|waited_existing|direct|not_attempted>; task_status=<success|failed|timeout|invalid|start_failed|interrupted_or_terminated|not_checked>; local_reread=<accepted|rejected|not_run>; local_status=<complete|partial|no_data|read_error|not_run>; live_fallback=<used|not_used>; reason=<稳定原因码>`。`direct` 只表示 canonical 探针可靠确认任务不存在后，经同一 freshness gate 执行的一次受控直同步；权限不足或查询错误不得使用。实时回退必须由结构化 `local_status=no_data` 证明；不得只写“已联网”或“未联网”。
 2. **执行带宽**：固定保留 `not_scored`，并说明本技能不从 Garmin 指标生成认知、职业表现或日程承载评分。可以引用用户明确提供的主观状态，但必须与穿戴设备观测分开。
 3. **睡眠负债**：来源提供 `sleep_debt_h` 时，必须同时陈述 `sleep_debt_status=provided_by_source`、非空 `method`、数值 `baseline_h` 和正整数 `window_days`；来源未提供时写明 `sleep_debt_h=null`、`sleep_debt_status=not_provided_by_source`、`method=none`、`baseline_h=null`、`window_days=null`，并可另列实际睡眠时长，不自行用目标睡眠时长反推债务。
 4. **摩擦解构**：分别列出已记录的工作或日程负荷、主观感受、描述性生理观测、外部约束和未知项。不得把活动缺失写成零活动，也不得使用“神经空耗、内分泌死锁、皮质醇淤积”等未经证实的机制标签。

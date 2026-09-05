@@ -94,6 +94,56 @@ class MentatInsightDiaryContractTests(unittest.TestCase):
             with self.subTest(required=required):
                 self.assertIn(required, SKILL_TEXT)
 
+    def test_collection_precedes_scoring_and_preserves_privacy(self):
+        self.assertLess(SKILL_TEXT.index("## 取证前置检查"), SKILL_TEXT.index("## P0 实质事件门"))
+        for required in (
+            "collection.status=ready",
+            "needs_source",
+            "source_error",
+            "不得用空数组代替尚未执行的取证",
+            "不自动读取私人日记、健康数据、邮件或全部会话目录",
+            "已有可用来源时直接读取最小相关片段",
+            "不把错误转换成空事件",
+            "跨日会话只提取目标日期的事件",
+            "只对已检查范围下结论",
+            "不验证取证完整性",
+        ):
+            with self.subTest(required=required):
+                self.assertIn(required, SKILL_TEXT)
+
+    def test_empty_input_only_proves_no_submitted_events(self):
+        result = GATE.evaluate({"events": []})
+        self.assertEqual(result["status"], "blocked_no_substantive_events")
+        self.assertEqual(result["total_score"], 0)
+        self.assertFalse(result["save_allowed"])
+        self.assertNotIn("collection", result)
+
+    def test_collection_metadata_does_not_change_event_score(self):
+        event = {
+            "kind": "execution",
+            "summary": "ran a bounded task",
+            "source": "current visible tool result",
+        }
+        payload = {"events": [event]}
+        expected = GATE.evaluate(payload)
+        payload["collection"] = {
+            "status": "ready",
+            "period": "2026-09-05",
+            "timezone": "Asia/Shanghai",
+            "checked_sources": ["current conversation"],
+            "unchecked_sources": [],
+            "errors": [],
+        }
+        self.assertEqual(GATE.evaluate(payload), expected)
+
+    def test_plan_only_is_not_substantive(self):
+        result = GATE.evaluate({"events": [{
+            "kind": "plan", "summary": "plan a repair", "source": "user request"
+        }]})
+        self.assertEqual(result["status"], "blocked_no_substantive_events")
+        self.assertEqual(result["excluded_event_count"], 1)
+        self.assertFalse(result["save_allowed"])
+
     def test_evidence_gate_blocks_journal_meta_only(self):
         result = GATE.evaluate(
             {

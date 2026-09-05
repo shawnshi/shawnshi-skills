@@ -38,6 +38,24 @@ def _bind_two_item_payload(payload: dict, second: dict) -> None:
         "retained": 2,
         "below_quality_gate": 1,
     }
+    if payload.get("schema_version") == "1.4":
+        below_record = next(
+            record
+            for record in payload["candidate_funnel"]["candidate_dispositions"]
+            if record["reason"] == "missing_verified_access"
+        )
+        payload["candidate_funnel"]["quality_gate_reasons"] = {
+            "missing_verified_access": 1
+        }
+        payload["candidate_funnel"]["candidate_dispositions"] = [
+            {
+                "candidate_id": item["candidate_refs"][0],
+                "url": item["url"],
+                "source_type": item["source_type"],
+                "reason": "retained",
+            }
+            for item in payload["top_10"]
+        ] + [below_record]
     payload["mix"].update(
         {
             "target_counts": {"technology": 1, "healthcare_digital": 1},
@@ -244,6 +262,30 @@ class BriefingV14ContractTests(unittest.TestCase):
         errors, _ = validate_briefing_data(payload)
 
         self.assertTrue(any("unknown terminal dispositions" in error for error in errors))
+
+    def test_v14_requires_per_candidate_funnel_dispositions(self):
+        payload = cloned_v14_payload()
+        del payload["candidate_funnel"]["candidate_dispositions"]
+
+        errors, _ = validate_briefing_data(payload)
+
+        self.assertIn(
+            "candidate_funnel.candidate_dispositions is invalid",
+            errors,
+        )
+
+    def test_v14_quality_gate_reason_counts_must_reconcile(self):
+        payload = cloned_v14_payload()
+        payload["candidate_funnel"]["quality_gate_reasons"][
+            "missing_verified_access"
+        ] = 2
+
+        errors, _ = validate_briefing_data(payload)
+
+        self.assertIn(
+            "candidate_funnel quality gate reasons do not reconcile",
+            errors,
+        )
 
     def test_v14_secondary_source_requires_two_candidate_references(self):
         payload = cloned_v14_payload()
@@ -595,6 +637,23 @@ class BriefingV14ContractTests(unittest.TestCase):
             "retained": 2,
             "below_quality_gate": 1,
         }
+        below_record = next(
+            record
+            for record in payload["candidate_funnel"]["candidate_dispositions"]
+            if record["reason"] == "missing_verified_access"
+        )
+        payload["candidate_funnel"]["quality_gate_reasons"] = {
+            "missing_verified_access": 1
+        }
+        payload["candidate_funnel"]["candidate_dispositions"] = [
+            {
+                "candidate_id": item["candidate_refs"][0],
+                "url": item["url"],
+                "source_type": item["source_type"],
+                "reason": "retained",
+            }
+            for item in selected
+        ] + [below_record]
         payload["pipeline"]["semantic_review"].update(
             {
                 "verified_access_count": 2,
