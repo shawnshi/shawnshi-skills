@@ -12,11 +12,12 @@ from pathlib import Path
 
 from dashboard_gate import SCHEMA, validate_dashboard
 
-
 INDEX_FILENAME = "dashboard_index.json"
 LOCK_FILENAME = ".dashboard_index.lock"
 GENERATIONS_DIRNAME = "generations"
 INDEX_SCHEMA_VERSION = 3
+# Archive versions are explicit; accepting an archive is not a current research pass.
+SUPPORTED_ARCHIVE_CONTRACT_VERSIONS = ("7.0", "7.1")
 WINDOWS_RESERVED_NAMES = {
     "CON",
     "PRN",
@@ -204,7 +205,7 @@ def _load_index(index_path: Path) -> dict:
         raise DashboardCatalogError("dashboard index schema version is unsupported")
     if (
         not isinstance(index.get("dashboard_contract_version"), str)
-        or index.get("dashboard_contract_version") != str(SCHEMA["version"])
+        or index.get("dashboard_contract_version") not in SUPPORTED_ARCHIVE_CONTRACT_VERSIONS
     ):
         raise DashboardCatalogError("dashboard contract version is unsupported")
     if not isinstance(index.get("dashboards"), dict):
@@ -236,7 +237,7 @@ def _parse_archived_at(value: object) -> datetime:
 
 
 def _entry_sort_key(symbol: str, entry: dict) -> tuple[datetime, str]:
-    if entry.get("dashboard_contract_version") != str(SCHEMA["version"]):
+    if entry.get("dashboard_contract_version") not in SUPPORTED_ARCHIVE_CONTRACT_VERSIONS:
         raise DashboardCatalogError(
             f"dashboard index entry contract mismatch for {symbol}"
         )
@@ -423,11 +424,15 @@ def register_dashboard(
     index_path = _managed_file_path(root_path, INDEX_FILENAME)
     with _catalog_lock(root_path):
         index = _load_index(index_path)
+        # Validate every retained entry independently of the container version.
+        # Never overwrite a malformed prior index, even for another symbol.
+        for indexed_symbol, indexed_entry in index["dashboards"].items():
+            if not isinstance(indexed_entry, dict):
+                raise DashboardCatalogError(
+                    f"dashboard index entry for {indexed_symbol} must be an object"
+                )
+            _entry_sort_key(indexed_symbol, indexed_entry)
         current_entry = index["dashboards"].get(symbol)
-        if current_entry is not None and not isinstance(current_entry, dict):
-            raise DashboardCatalogError(
-                f"dashboard index entry for {symbol} must be an object"
-            )
         if current_entry is not None:
             current_key = _entry_sort_key(symbol, current_entry)
             if incoming_key <= current_key:
@@ -438,6 +443,8 @@ def register_dashboard(
                 }
 
         index["dashboards"][symbol] = incoming_entry
+        # This is the container contract only; retained entries keep their version.
+        index["dashboard_contract_version"] = str(SCHEMA["version"])
         updated_at = incoming_key[0]
         if index.get("updated_at") is not None:
             updated_at = max(
@@ -540,7 +547,7 @@ def resolve_dashboards(root: str | Path, symbols: list[str]) -> dict:
                 }
             )
             continue
-        if entry.get("dashboard_contract_version") != str(SCHEMA["version"]):
+        if entry.get("dashboard_contract_version") not in SUPPORTED_ARCHIVE_CONTRACT_VERSIONS:
             report["entries"].append(
                 {
                     "symbol": symbol,
@@ -727,6 +734,7 @@ def resolve_dashboards(root: str | Path, symbols: list[str]) -> dict:
                 "symbol": symbol,
                 "status": "valid",
                 "reason": None,
+                "dashboard_contract_version": entry["dashboard_contract_version"],
                 "json_path": str(json_path),
                 "markdown_path": str(markdown_path),
                 "markdown_available": True,

@@ -489,6 +489,25 @@ class ResourceValidatorTests(ScriptTestCase):
         self.assertEqual(report["status"], "pass")
         self.assertEqual(before, after)
 
+    def test_schema_versions_are_explicit_and_unknown_versions_fail(self):
+        for version in (1, 3, 999, 2, None, True, "3", [], {}):
+            with self.subTest(version=version), tempfile.TemporaryDirectory() as temporary:
+                root = Path(temporary)
+                path = self.make_manifest(root, "# Resource\nUseful content.\n")
+                manifest = json.loads(path.read_text(encoding="utf-8"))
+                if version is None:
+                    del manifest["schema_version"]
+                else:
+                    manifest["schema_version"] = version
+                path.write_text(json.dumps(manifest), encoding="utf-8")
+                completed, report = self.run_script("resource_validator.py", path)
+                supported = type(version) is int and version in (1, 3)
+                self.assertEqual(completed.returncode, 0 if supported else 1)
+                self.assertEqual(report["status"], "pass" if supported else "fail")
+                if not supported:
+                    self.assertIn("E_UNSUPPORTED_MANIFEST_SCHEMA",
+                                  {item["code"] for item in report["errors"]})
+
     def test_hash_mismatch_and_placeholder_are_blocking(self) -> None:
         with tempfile.TemporaryDirectory() as temporary:
             root = Path(temporary)

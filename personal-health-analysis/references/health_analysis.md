@@ -61,10 +61,11 @@
 
 每个分析必须先输出请求范围、实际观测范围和逐指标资格，不得只给最终数值。
 
-- 连续性状态使用 `complete`、`partial`、`no_observations` 或 `no_requested_dates`，并报告有效日、缺失日、覆盖率、最长缺失连续段和窗口末端缺失连续段。
+- 连续性状态使用 `complete`、`partial`、`no_observations` 或 `no_requested_dates`，并报告有效日、缺失日、覆盖率、最长缺失连续段和窗口末端缺失连续段。末日暂无来源观测只证明该日缺记录；若为尚未结束的当天，记录可能未完整，不据此判定同步失败，也不把历史有效数据扩写为整个窗口无数据。
 - 数值归一化只接受严格 `YYYY-MM-DD` 日期与有限数值。同日相同值属于幂等重复；同日不同值写入 `conflicting_duplicate_dates` 并排除该日。基础基线分析可以直接返回 `duplicate_conflict`。
 - 缺失、非数值、无穷值和超出请求范围的记录不参与派生计算。生理字段中的 0 或负值保留为事实，但默认不进入需要正值的趋势计算；这不等于把缺失改写成 0。
-- 已知跨设备、固件或算法时期返回 `cross_epoch`；无法证明同一时期返回 `epoch_unknown`。厂商算法时期和本技能分析算法时期必须分别有已知证据；只知道固件号时返回 `manufacturer_algorithm_epoch_unknown`。这些状态都不输出中位数比较、标准化变化或滞后相关系数。
+- 已知跨设备、固件或算法时期返回 `cross_epoch`；无法证明同一时期返回 `epoch_unknown`。设备历史库存不等于逐观测使用记录：内部归属证据必须覆盖参与比较的每个组件/日期，不能用最新设备、某一组件或库存时间替其他观测作证。缺失归属的明细原因为 `device_attribution_unknown`，重复冲突为 `device_attribution_conflict`；都不等于已证实多设备使用。确有归属的跨设备/固件观测仍阻断比较。
+- 厂商算法时期和本技能分析算法时期必须分别有已知证据；归属完整但厂商时期未知时返回 `manufacturer_algorithm_epoch_unknown`，分析时期未知时返回 `analysis_algorithm_epoch_unknown`。归属未知不消除这两项独立限制。上述状态都不输出合格中位数比较、标准化变化或滞后相关系数。
 - 默认面板只读取 `sleep`、`hrv`、`body_battery`、`heart_rate`、`stress`。训练负荷和活动数据必须由分析用途或用户请求单独纳入。
 
 ## 4. `patterns.v1` 描述性方法
@@ -79,6 +80,7 @@
 ### 睡眠规律
 
 - 固定检查请求结束日前的 14 个自然日，至少需要 7 个有效夜晚。睡眠时长离散度使用小时标准差；睡眠时点使用 24 小时圆周标准差，避免把午夜两侧误判为相距近 24 小时。
+- 画像的 3 夜窗口描述不是本节的正式规律性资格：其旧字段 `status` 只表示描述可用，正式判定使用 `qualified_regularity`。模式分析新增 `duration_observed_nights`、`timing_observed_nights`，即使时期门未通过也保留实际来源有效日数；面板样本栏使用这些计数，不把被门禁抑制的分析样本数写成来源没有记录。
 - 时长与时点资格独立。时长合格而时点来源不支持时，总状态为 `partial_available`，同时保留 `duration_status=eligible` 与 `timing_status=source_not_supported`。
 - 时点只接受每晚成对、带 UTC 偏移且起点早于终点的 ISO 时间。没有起止时间返回 `source_not_supported`；无时区返回 `timezone_unknown`；偏移混杂返回 `mixed_utc_offset`；有效夜晚不足返回 `insufficient_valid_nights`。不得推断缺失时区或跨午夜关系。
 - 睡眠时长或时点出现同日冲突记录时，对应维度返回 `duplicate_conflict` 且不计算离散度；不能从另一条重复记录中挑选有利值。

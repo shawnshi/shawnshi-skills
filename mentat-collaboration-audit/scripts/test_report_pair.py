@@ -53,6 +53,78 @@ def make_successor(previous):
 
 
 class ReportPairTests(unittest.TestCase):
+    def test_default_templates_lead_with_six_result_questions(self):
+        rendered = render_report_pair(make_manifest())
+        questions = (
+            "哪些任务已完成，哪些仍未解决？",
+            "哪项有证据的可避免摩擦代价最高？",
+            "AI 把哪些工作转交给了用户？",
+            "哪些必要的人类决策必须保留？",
+            "上次整改得到了什么后续检验？",
+            "下一项唯一实验是什么，什么结果会推翻它？",
+        )
+        for kind in ("markdown", "html"):
+            text = rendered[kind]
+            positions = [text.index(question) for question in questions]
+            self.assertEqual(positions, sorted(positions))
+            self.assertLess(positions[-1], text.index("支撑证据：运行指标与口径"))
+            self.assertNotRegex(text, report_pair.UNRESOLVED_PLACEHOLDER_PATTERN)
+            for lens in ("任务收敛", "用户介入", "返工", "自主性校准", "维护价值",
+                         "委派收益", "上下文与规则负担", "改进实验"):
+                self.assertIn(lens, text)
+            for boundary in ("来源声明", "已核验出处", "分子／分母", "替代解释",
+                             "不可用", "不可计算", "未知", "cohort", "不认证"):
+                self.assertIn(boundary, text)
+
+    def test_legacy_manifest_without_analysis_defaults_unknown_not_green(self):
+        manifest = make_manifest()
+        self.assertNotIn("collaboration_analysis", manifest)
+        rendered = render_report_pair(manifest)
+        self.assertEqual(rendered["validation"]["status"], "pass")
+        self.assertNotIn("<p>—</p>", rendered["html"])
+        self.assertIn("结论不可用", rendered["html"])
+        self.assertIn("任务分母", rendered["markdown"])
+        self.assertIn("暴露／可比后续／实际观察分母", rendered["markdown"])
+        for kind in ("markdown", "html"):
+            body = rendered[kind].split("<body>")[-1]
+            self.assertNotRegex(body, r"(?<![0-9])0%")
+            self.assertIn("不认证", rendered[kind])
+        self.assertTrue(all(row["validation"]["result"] == "not_run"
+                            for row in parse_html_recommendations(rendered["html"])))
+
+    def test_recommendation_markup_is_escaped_with_exact_pair_parity(self):
+        manifest = make_manifest()
+        payload = '<script>alert("synthetic")</script> & | <img src=x onerror=alert(1)>'
+        item = manifest["recommendations"][0]
+        for key in ("action", "owner", "implementation_layer"):
+            item[key] = payload
+        item["validation"] = {"criterion": payload, "result": "pass", "evidence": [payload]}
+        manifest["title"] = payload
+        rendered = render_report_pair(manifest)
+        self.assertEqual(parse_markdown_recommendations(rendered["markdown"]),
+                         parse_html_recommendations(rendered["html"]))
+        for kind in ("markdown", "html"):
+            self.assertNotIn("<script>", rendered[kind])
+            self.assertNotIn("<img", rendered[kind])
+            self.assertIn("&lt;script&gt;", rendered[kind])
+        self.assertEqual(parse_html_recommendations(rendered["html"])[0]["action"], payload)
+        report_pair._assert_self_contained_template(rendered["html"])
+
+    def test_custom_filled_templates_keep_existing_placeholder_contract(self):
+        manifest = make_manifest()
+        rendered = render_report_pair(
+            manifest,
+            markdown_template_text="# Explicit synthetic evidence\n{{RECOMMENDATIONS}}",
+            html_template_text="<!doctype html><html><body><h1>{{TITLE}}</h1>"
+                               "<p>Explicit synthetic evidence</p>{{RECOMMENDATIONS}}</body></html>",
+        )
+        self.assertEqual(rendered["validation"]["status"], "pass")
+        self.assertIn("Explicit synthetic evidence", rendered["html"])
+        self.assertNotIn("{{", rendered["html"])
+        with self.assertRaisesRegex(ReportPairError, "network resources"):
+            render_report_pair(manifest, html_template_text=
+                               '<script src="https://example.invalid/x.js"></script>{{RECOMMENDATIONS}}')
+
     def test_six_item_round_trip(self):
         manifest = make_manifest()
 

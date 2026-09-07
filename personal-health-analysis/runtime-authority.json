@@ -12,20 +12,23 @@
       "SKILL.md"
     ]
   },
-  "authority_sha256": "630cbc09c5d363fb894bdc7720e07a60613bf7ab22f7b4c1c9677328b1abd004",
+  "authority_sha256": "4671c2987bc6017304adcc075a1f6e50c6e0995783c58153b66a8450278618ac",
   "entrypoint_sha256": {
+    "scripts/garmin_health_profile.py": "4e93cea75f60f43c678d1c4767db134d99648dfd99ff7d3bc822ee764ee778fa",
     "scripts/garmin_auto_sync.py": "78dfc544aa1baa1a2dc0f09268273b3b417244f9ec51fc0f37d9b9adcc13ee5e",
-    "scripts/garmin_intelligence.py": "230ecbab67ba54dfed3bf396c58538e4a5ddf1c5b7dce32d126eca19fd41b85d",
-    "scripts/garmin_sqlite_adapter.py": "deea165289e40f35d472bf2aaac6d338a4394b44df25c7d3e79e6363f26f2676",
+    "scripts/garmin_intelligence.py": "1ac91155ab2347728450c4dca41369fbcfb208fdb74e030c424f451c088fdd2d",
+    "scripts/garmin_sqlite_adapter.py": "e14b743ff12f00ec4abdd776d75ec6a7403103d28918ba07e3332c8429e06b86",
     "scripts/freshness_task_gate.py": "d0775f5dbc1e3a1fbc84148467644b5b28b92011fec7977326d11624a26b98b8",
     "scripts/garmin_auth.py": "a1c78c4c9d6c9baa6ff121df2a8c6ae3ae14faa4771f00ed83dba1da2a406b3c",
     "scripts/garmin_capabilities.py": "24dfbbe5464c396540609992622e73db58239a1a02826a2f5c5aa3d50664bce8",
     "scripts/garmin_data.py": "0273163ce475ae7287b57a77b407bfae60b634cb9099aa53cb61e9ae0130d9b4",
-    "scripts/garmin_patterns.py": "4cd4b719795bdcc6ecf858e30dfc19db27abd6e46834db1240838070dbb5e6b0",
+    "scripts/garmin_patterns.py": "9f6a7ca8d88bb08a388f8e26a0c1b73a8edf3f9d9256c6822f1b7aeef711059f",
     "scripts/runtime_preflight.py": "a9f348bc75e83cb207cc947a80aa502c38926f8a80e4a2f2e9cafd1aac64c9c9",
     "scripts/runtime_authority.py": "0625581732df02667e59a85797266b39a6386cfd4d022346cfd4b3a542624949",
     "scripts/scheduled_task_probe.ps1": "1dea36c42b1e1467019925dd7efedc1d8d552468d7e3b77cf537ccf073917e98",
-    "scripts/sync_health_data.py": "9af8f92474726baf9cd9e0b313726bcc17dd4c191fafdaffbbc6c7b9fd5952ff"
+    "scripts/sync_health_data.py": "9af8f92474726baf9cd9e0b313726bcc17dd4c191fafdaffbbc6c7b9fd5952ff",
+    "scripts/garmin_chart.py": "c441cf476623675828a3280a38b4cb3f6a0255cc0ef27e7a67860ee9fd47f428",
+    "assets/dashboard_v2.html": "940bcdf22704997a3f4f30a8c7662abb7788ef2784ae345b76b2d8b1a3e8b17a"
   },
   "task_binding": {
     "arguments_sha256": "83bf03dc2aa8f3a3c8ea42204769213c3b58cd904379972925010c217606174c"

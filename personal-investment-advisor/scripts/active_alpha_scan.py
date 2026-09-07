@@ -9,12 +9,11 @@ from typing import Any
 
 from active_research_contract import (
     base_report,
-    canonical_sha256,
     fail_report,
     finite_number,
     parse_aware_iso,
     positive_integer,
-    read_json,
+    read_json_snapshot,
     utc,
 )
 
@@ -200,16 +199,16 @@ def main() -> int:
     parser.add_argument("--policy-file", required=True)
     args = parser.parse_args()
     try:
-        package = read_json(args.alpha_package, "alpha_package")
-        validation = read_json(args.validation_report, "validation_report")
-        policy = read_json(args.policy_file, "scan_policy")
+        package, package_sha256 = read_json_snapshot(args.alpha_package, "alpha_package")
+        validation, validation_sha256 = read_json_snapshot(args.validation_report, "validation_report")
+        policy, policy_sha256 = read_json_snapshot(args.policy_file, "scan_policy")
         report = run_active_scan(
             package,
             validation,
             policy,
-            package_sha256=canonical_sha256(args.alpha_package),
-            validation_sha256=canonical_sha256(args.validation_report),
-            policy_sha256=canonical_sha256(args.policy_file),
+            package_sha256=package_sha256,
+            validation_sha256=validation_sha256,
+            policy_sha256=policy_sha256,
         )
     except (OSError, ValueError, json.JSONDecodeError) as exc:
         report = fail_report(SCHEMA_VERSION, "input_read_failed", [str(exc)])

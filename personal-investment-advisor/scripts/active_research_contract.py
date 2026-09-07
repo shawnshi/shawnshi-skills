@@ -10,6 +10,8 @@ from pathlib import Path
 from typing import Any
 
 
+# Inclusive UTF-8 input byte capacity, independent of provider transport ownership.
+MAX_JSON_BYTES = 32 * 1024 * 1024
 RESERVED_SOURCE_LOCATORS = ("example.com", "example.test", ".invalid", "localhost")
 
 
@@ -64,26 +66,32 @@ def normalize_symbol(value: Any) -> str:
     return str(value or "").strip().upper()
 
 
-def canonical_sha256(path: str | Path) -> str:
-    document = json.loads(Path(path).expanduser().read_text(encoding="utf-8"))
-    payload = json.dumps(
-        document,
-        ensure_ascii=False,
-        sort_keys=True,
-        separators=(",", ":"),
-    ).encode("utf-8")
-    return hashlib.sha256(payload).hexdigest()
+def read_json_snapshot(path: str | Path, label: str) -> tuple[Any, str]:
+    """Read once and bind the parsed input to its canonical digest.
 
+    Callers must treat the returned document as immutable evidence. The digest
+    is computed before business validation or sanitization can change it.
+    """
 
-def read_json(path: str | Path, label: str) -> Any:
     try:
-        return json.loads(Path(path).expanduser().read_text(encoding="utf-8"))
+        with Path(path).expanduser().open("rb") as stream:
+            payload = stream.read(MAX_JSON_BYTES + 1)
+        if len(payload) > MAX_JSON_BYTES:
+            raise ValueError(f"{label}_size_limit: input exceeds {MAX_JSON_BYTES} bytes")
+        document = json.loads(payload.decode("utf-8"))
     except OSError as exc:
         raise ValueError(f"{label}_read_error: {exc}") from exc
     except json.JSONDecodeError as exc:
         raise ValueError(
             f"{label}_json_error: line {exc.lineno}, column {exc.colno}: {exc.msg}"
         ) from exc
+    payload = json.dumps(
+        document,
+        ensure_ascii=False,
+        sort_keys=True,
+        separators=(",", ":"),
+    ).encode("utf-8")
+    return document, hashlib.sha256(payload).hexdigest()
 
 
 def validate_evidence_stamp(

@@ -41,10 +41,10 @@
       "additionalProperties": false
     },
     "observations": {
-      "type": "array", "minItems": 1,
+      "type": "array", "minItems": 1, "maxItems": 10000,
       "items": {"type": "object", "required": ["date", "segment", "gross_return", "benchmark_return", "turnover"], "properties": {"date": {"type": "string", "format": "date-time"}, "segment": {"enum": ["in_sample", "out_of_sample"]}, "gross_return": {"type": "number", "exclusiveMinimum": -1}, "benchmark_return": {"type": "number", "exclusiveMinimum": -1}, "turnover": {"type": "number", "minimum": 0, "maximum": 1}}, "additionalProperties": false}
     },
-    "trial_net_excess_returns": {"type": "object", "minProperties": 1, "additionalProperties": {"type": "array", "items": {"type": "number"}}},
+    "trial_net_excess_returns": {"type": "object", "description": "Selected trial must reconcile pointwise, including in-sample observations, to gross_return - benchmark_return - turnover * sum(cost_model bps) / 10000. Runtime absolute tolerance is 1e-12 in fractional returns, with zero relative tolerance. DSR and PBO then use the exact recomputed selected sequence. Runtime also enforces at most 1000000 total trial-return cells across all arrays.", "minProperties": 1, "maxProperties": 1000, "additionalProperties": {"type": "array", "maxItems": 10000, "items": {"type": "number"}}},
     "signals": {
       "type": "array", "minItems": 1,
       "items": {"type": "object", "required": ["symbol", "expected_excess_return_annualized", "expected_return_standard_error", "economic_rationale", "invalidation_condition", "components"], "properties": {"symbol": {"type": "string", "minLength": 1}, "expected_excess_return_annualized": {"type": "number"}, "expected_return_standard_error": {"type": "number", "minimum": 0}, "economic_rationale": {"type": "string", "minLength": 1}, "invalidation_condition": {"type": "string", "minLength": 1}, "components": {"type": "array", "minItems": 1, "items": {"type": "object", "required": ["name", "score", "confidence", "decay_half_life_days", "evidence"], "properties": {"name": {"type": "string", "minLength": 1}, "score": {"type": "number", "minimum": -5, "maximum": 5}, "confidence": {"type": "number", "minimum": 0, "maximum": 1}, "decay_half_life_days": {"type": "number", "exclusiveMinimum": 0}, "evidence": {"$ref": "#/$defs/evidence"}}, "additionalProperties": false}}}},

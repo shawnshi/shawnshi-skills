@@ -1,18 +1,18 @@
 {
   "schema_version": 3,
   "skill": "hit-solution-architect",
-  "generated_at": "2026-09-05T17:15:44+08:00",
+  "generated_at": "2026-09-07T06:17:23+08:00",
   "hash_algorithm": "SHA-256",
   "text_hash_normalization": "LF",
   "skill_md": "SKILL.md",
-  "skill_md_sha256": "e3074e400294eed4f6688c9b43447929a325f1d166c9e0c92a0e5d9b657d7a2a",
+  "skill_md_sha256": "eefe5be50d34658ba00a0e685f8602bedae8f172887e6cde01a0ea045b9682a0",
   "top_level_files": [
     "SKILL.md"
   ],
   "top_level_file_hashes": [
     {
       "path": "SKILL.md",
-      "sha256": "e3074e400294eed4f6688c9b43447929a325f1d166c9e0c92a0e5d9b657d7a2a"
+      "sha256": "eefe5be50d34658ba00a0e685f8602bedae8f172887e6cde01a0ea045b9682a0"
     }
   ],
   "top_level_directories": [
@@ -91,11 +91,11 @@
     },
     {
       "path": "scripts/resource_validator.py",
-      "sha256": "265d4ca930af934544bcd2f08bf72db1bde4e373fc1865b0a4257e394ab702ab"
+      "sha256": "6d85292f8182a7e8abc0008bc2401515133d7b2bf8b28c0e788a67937a4e06d7"
     },
     {
       "path": "scripts/tests/test_quality_gate.py",
-      "sha256": "3b98364e10b806964d2f95707236fa84f694def6c2934fdb898dfcb9a8ddf1c9"
+      "sha256": "b44120a63a00af37f04a158518b2efd7c7ace7e09548e5b3a4dbe7ba44e5b51c"
     },
     {
       "path": "templates/architecture_review_scorecard.md",
@@ -179,7 +179,7 @@
       "path": "scripts/resource_validator.py",
       "exists": true,
       "resolved_path": "hit-solution-architect/scripts/resource_validator.py",
-      "sha256": "265d4ca930af934544bcd2f08bf72db1bde4e373fc1865b0a4257e394ab702ab"
+      "sha256": "6d85292f8182a7e8abc0008bc2401515133d7b2bf8b28c0e788a67937a4e06d7"
     }
   ],
   "missing_declared_dependencies": []

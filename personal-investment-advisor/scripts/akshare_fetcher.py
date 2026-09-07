@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """
 ===================================
 Standalone Fetcher (Combiner for Yahoo Finance Skill)
@@ -17,22 +16,22 @@ and uses resilient endpoints.
 """
 
 import argparse
-import contextlib
-import io
 import json
 import logging
-import multiprocessing
 import random
 import time
 from datetime import datetime, timezone
-from typing import Optional, Dict, Any
+from typing import Any
 
 import pandas as pd
-from tenacity import (
-    retry,
-    stop_after_attempt,
-    wait_exponential,
-    retry_if_exception_type,
+
+from provider_runtime import (
+    OPERATION_SECONDS,
+    SUPPLEMENT_SECONDS,
+    ProviderError,
+    error_outcome,
+    require_data,
+    run_provider,
 )
 
 logger = logging.getLogger(__name__)
@@ -42,7 +41,7 @@ USER_AGENTS = [
     'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
 ]
 
-def _safe_float(val: Any) -> Optional[float]:
+def _safe_float(val: Any) -> float | None:
     try:
         if pd.isna(val) or val == '' or val is None:
             return None
@@ -51,114 +50,55 @@ def _safe_float(val: Any) -> Optional[float]:
         return None
 
 
-def _provider_process_worker(provider: str, symbol: str, send_connection: Any) -> None:
-    """Run one optional provider in a disposable process and return one payload."""
-    captured_output = io.StringIO()
-    try:
-        with (
-            contextlib.redirect_stdout(captured_output),
-            contextlib.redirect_stderr(captured_output),
-        ):
-            if provider == "efinance_quote":
-                import efinance as ef
-
-                frame = ef.stock.get_latest_quote([symbol])
-            elif provider == "akshare_chip_distribution":
-                import akshare as ak
-
-                frame = ak.stock_cyq_em(symbol=symbol)
-            else:
-                raise ValueError(f"unsupported isolated provider: {provider}")
-        send_connection.send({"status": "ok", "data": frame})
-    except Exception as exc:
-        send_connection.send(
-            {
-                "status": "error",
-                "error_type": type(exc).__name__,
-                "error": str(exc),
-            }
-        )
-    finally:
-        send_connection.close()
+REQUIRED_QUOTE_METRICS = ("volume_ratio", "turnover_rate")
+REQUIRED_CHIP_METRICS = ("profit_ratio", "avg_cost", "concentration")
 
 
-def _run_isolated_provider(
-    provider: str,
-    symbol: str,
-    timeout_seconds: float,
-) -> pd.DataFrame:
-    """Return provider data or an empty frame; always reap the child process."""
-    context = multiprocessing.get_context("spawn")
-    receive_connection, send_connection = context.Pipe(duplex=False)
-    process = context.Process(
-        target=_provider_process_worker,
-        args=(provider, symbol, send_connection),
-    )
-    try:
-        process.start()
-    except Exception as exc:
-        receive_connection.close()
-        send_connection.close()
-        logger.warning(f"Failed to start isolated {provider} provider: {exc}")
-        return pd.DataFrame()
-    send_connection.close()
-
-    payload = None
-    try:
-        if receive_connection.poll(timeout_seconds):
-            payload = receive_connection.recv()
-        else:
-            logger.warning(
-                f"Isolated {provider} provider timed out for {symbol} "
-                f"after {timeout_seconds:.1f}s"
-            )
-    except (EOFError, OSError) as exc:
-        logger.warning(f"Isolated {provider} provider failed for {symbol}: {exc}")
-    finally:
-        receive_connection.close()
-        alive = process.is_alive()
-        if alive:
-            process.terminate()
-        process.join(timeout=1.0)
-        alive = process.is_alive()
-        if alive:
-            process.kill()
-            process.join(timeout=1.0)
-            alive = process.is_alive()
-        if alive:
-            logger.error(
-                f"Isolated {provider} provider process could not be reaped for {symbol}"
-            )
-        else:
-            process.close()
-
-    if not isinstance(payload, dict) or payload.get("status") != "ok":
-        if isinstance(payload, dict) and payload.get("error"):
-            logger.warning(
-                f"Isolated {provider} provider error for {symbol}: "
-                f"{payload.get('error_type', 'Error')}: {payload['error']}"
-            )
-        return pd.DataFrame()
-    frame = payload.get("data")
+def _provider_frame(provider, symbol, **kwargs):
+    if provider == "efinance_quote":
+        import efinance as ef
+        frame = ef.stock.get_latest_quote([symbol])
+    elif provider == "akshare_chip_distribution":
+        import akshare as ak
+        frame = ak.stock_cyq_em(symbol=symbol)
+    elif provider == "akshare_history":
+        import akshare as ak
+        frame = ak.stock_zh_a_hist(symbol=symbol, period="daily", adjust="qfq", **kwargs)
+    else:
+        raise ValueError(f"unsupported isolated provider: {provider}")
     if not isinstance(frame, pd.DataFrame):
-        logger.warning(f"Isolated {provider} provider returned non-tabular data")
-        return pd.DataFrame()
+        raise TypeError("provider returned non-DataFrame")
     return frame
+
+
+def _run_isolated_provider(provider, symbol, timeout_seconds, **kwargs):
+    """Explicit outcome; only a genuine empty DataFrame means no_data."""
+    return run_provider(_provider_frame, provider, symbol, timeout_seconds=timeout_seconds, **kwargs)
+
+
+def _frame_outcome(frame):
+    if not isinstance(frame, pd.DataFrame):
+        raise TypeError("provider returned non-DataFrame")
+    return frame.attrs.get("pia_provider_outcome", {"status": "no_data" if frame.empty else "ok"})
 
 
 class StandaloneDataFetcher:
     """
     Standalone fetcher combining efinance (latest quote) and akshare (chip distribution).
     """
-    
-    def __init__(self, sleep_min: float = 1.0, sleep_max: float = 3.0):
+
+    def __init__(self, sleep_min: float = 1.0, sleep_max: float = 3.0, *,
+                 supplement_seconds: float = SUPPLEMENT_SECONDS,
+                 operation_seconds: float = OPERATION_SECONDS):
         if sleep_min < 0 or sleep_max < sleep_min:
             raise ValueError("sleep bounds must satisfy 0 <= sleep_min <= sleep_max")
+        self.supplement_seconds = supplement_seconds
+        self.operation_seconds = operation_seconds
         self.sleep_min = sleep_min
         self.sleep_max = sleep_max
-        self._last_request_time: Optional[float] = None
-            
-    def _enforce_rate_limit(self) -> None:
+        self._last_request_time: float | None = None
+
+    def _enforce_rate_limit(self, deadline=None) -> None:
         """Wait once for a randomized request-start interval using a monotonic clock."""
         target_interval = random.uniform(self.sleep_min, self.sleep_max)
         now = time.monotonic()
@@ -167,48 +107,39 @@ class StandaloneDataFetcher:
             return
         elapsed = max(0.0, now - self._last_request_time)
         delay = max(0.0, target_interval - elapsed)
+        if deadline is not None and delay >= deadline - time.monotonic():
+            raise TimeoutError("provider_operation_deadline_during_rate_limit")
         if delay:
             time.sleep(delay)
         self._last_request_time = time.monotonic()
 
+    def _bounded_frame(self, provider, symbol, seconds, **kwargs):
+        deadline = time.monotonic() + seconds
+        self._enforce_rate_limit(deadline)
+        outcome = _run_isolated_provider(provider, symbol, deadline - time.monotonic(), **kwargs)
+        frame = require_data(outcome)
+        _frame_outcome(frame)
+        frame.attrs["pia_provider_outcome"] = {key: value for key, value in outcome.items() if key != "data"}
+        return frame
+
     def _fetch_quote_ef(self, symbol: str) -> pd.DataFrame:
-        self._enforce_rate_limit()
-        return _run_isolated_provider("efinance_quote", symbol, 8.0)
+        return self._bounded_frame("efinance_quote", symbol, self.supplement_seconds)
 
     def _fetch_chip_distribution_ak(self, symbol: str) -> pd.DataFrame:
-        self._enforce_rate_limit()
-        return _run_isolated_provider("akshare_chip_distribution", symbol, 8.0)
+        return self._bounded_frame("akshare_chip_distribution", symbol, self.supplement_seconds)
 
-    @retry(
-        stop=stop_after_attempt(3),
-        wait=wait_exponential(multiplier=1, min=2, max=10),
-        retry=retry_if_exception_type((ConnectionError, TimeoutError, Exception)),
-    )
     def get_history(self, symbol: str, start_date: str = None, end_date: str = None) -> pd.DataFrame:
-        """
-        Fetch historical daily K-lines for A-shares using akshare.
-        Returns a DataFrame compatible with yfinance output (Index: Date, Columns: Open, High, Low, Close, Volume).
-        """
-        import akshare as ak
-        self._enforce_rate_limit()
-        
-        # akshare expects start_date/end_date in YYYYMMDD format
+        """One isolated history operation, with at most three adapter attempts."""
         start = start_date.replace("-", "") if start_date else "20000101"
         end = end_date.replace("-", "") if end_date else time.strftime("%Y%m%d")
-        
-        # Fail closed through tenacity without mutating process-wide proxy
-        # environment variables. Provider routing belongs to the operator.
-        df = ak.stock_zh_a_hist(
-            symbol=symbol,
-            period="daily",
-            start_date=start,
-            end_date=end,
-            adjust="qfq",
+        df = self._bounded_frame(
+            "akshare_history", symbol, self.operation_seconds,
+            start_date=start, end_date=end,
         )
 
         if df.empty:
-            return pd.DataFrame()
-            
+            return df
+
         # Map akshare columns to yfinance format
         # akshare cols: 日期, 开盘, 收盘, 最高, 最低, 成交量, 成交额, 振幅, 涨跌幅, 涨跌额, 换手率
         df = df.rename(columns={
@@ -219,14 +150,14 @@ class StandaloneDataFetcher:
             "最低": "Low",
             "成交量": "Volume"
         })
-        
+
         df["Date"] = pd.to_datetime(df["Date"])
         df.set_index("Date", inplace=True)
-        
+
         # Return only the necessary columns
         return df[["Open", "High", "Low", "Close", "Volume"]]
 
-    def get_sector_info(self, symbol: str) -> Optional[str]:
+    def get_sector_info(self, symbol: str) -> str | None:
         """Return no value until a source-backed sector adapter is available.
 
         A natural-language collection instruction is not market evidence and must
@@ -234,13 +165,15 @@ class StandaloneDataFetcher:
         """
         return None
 
-    def get_enhanced_metrics(self, symbol: str, skip_chip_dist: bool = False) -> Dict[str, Any]:
+    def get_enhanced_metrics(self, symbol: str, skip_chip_dist: bool = False) -> dict[str, Any]:
         """
         Fetch enhanced metrics for a given A-share symbol.
         Expects symbol in 6-digit format (e.g. '600519').
         """
         metrics = {
             "enhancement_status": "unavailable",
+            "provider_outcomes": {},
+            "required_metrics": list(REQUIRED_QUOTE_METRICS + (() if skip_chip_dist else REQUIRED_CHIP_METRICS)),
             "volume_ratio": None,
             "turnover_rate": None,
             "profit_ratio": None,
@@ -253,15 +186,16 @@ class StandaloneDataFetcher:
             "chip_70_high": None,
             "belong_boards": None
         }
-        
+
         if not (symbol.isdigit() and len(symbol) == 6):
             return metrics
-            
+
         metrics['belong_boards'] = self.get_sector_info(symbol)
-            
+
         # 1. Fetch Latest Quote via efinance for Volume Ratio, Turnover Rate, Amplitude
         try:
             df_quote = self._fetch_quote_ef(symbol)
+            metrics["provider_outcomes"]["quote"] = _frame_outcome(df_quote)
             if not df_quote.empty:
                 metrics["enhancement_status"] = "partial"
                 row = df_quote.iloc[0]
@@ -281,12 +215,13 @@ class StandaloneDataFetcher:
                 if '流通市值' in row:
                     metrics['circ_mv_cny'] = _safe_float(row['流通市值'])
         except Exception as e:
-            logger.warning(f"Failed to fetch realtime quote for {symbol}: {e}")
+            metrics["provider_outcomes"]["quote"] = e.outcome if isinstance(e, ProviderError) else error_outcome(e)
 
         # 2. Fetch Chip Distribution via akshare (if not skipped)
         if not skip_chip_dist:
             try:
                 df_chips = self._fetch_chip_distribution_ak(symbol=symbol)
+                metrics["provider_outcomes"]["chips"] = _frame_outcome(df_chips)
                 if not df_chips.empty:
                     latest = df_chips.iloc[-1]
                     if '获利比例' in latest:
@@ -304,11 +239,18 @@ class StandaloneDataFetcher:
                     if '70%成本区间上限' in latest:
                         metrics['chip_70_high'] = _safe_float(latest['70%成本区间上限'])
             except Exception as e:
-                logger.warning(f"Failed to fetch chip distribution for {symbol}: {e}")
-        if any(metrics.get(key) is not None for key in ["profit_ratio", "avg_cost", "concentration", "chip_90_low", "chip_90_high"]):
-            metrics["enhancement_status"] = "ok"
-        elif metrics["enhancement_status"] == "partial":
-            metrics["enhancement_status"] = "partial"
+                metrics["provider_outcomes"]["chips"] = e.outcome if isinstance(e, ProviderError) else error_outcome(e)
+        required = metrics["required_metrics"]
+        metrics["evidence_status"] = (
+            "complete" if all(metrics.get(key) is not None for key in required)
+            else "partial" if any(metrics.get(key) is not None for key in required)
+            else "unavailable"
+        )
+        hard_failure = any(item["status"] in {"error", "timeout"} for item in metrics["provider_outcomes"].values())
+        metrics["enhancement_status"] = (
+            "error" if hard_failure else "ok" if metrics["evidence_status"] == "complete"
+            else metrics["evidence_status"]
+        )
 
         return metrics
 
@@ -317,7 +259,7 @@ def _utc_now() -> datetime:
     return datetime.now(timezone.utc)
 
 
-def _enhanced_payload(symbol: str, metrics: Dict[str, Any], retrieved_at: datetime) -> Dict[str, Any]:
+def _enhanced_payload(symbol: str, metrics: dict[str, Any], retrieved_at: datetime) -> dict[str, Any]:
     gaps = []
     if metrics.get("belong_boards") is None:
         gaps.append("sector_info_unavailable")
@@ -330,7 +272,14 @@ def _enhanced_payload(symbol: str, metrics: Dict[str, Any], retrieved_at: dateti
     ):
         if metrics.get(field) is None:
             gaps.append(f"{field}_unavailable")
-    status = "complete" if metrics.get("enhancement_status") == "ok" else "insufficient_data"
+    outcomes = metrics.get("provider_outcomes", {})
+    hard_failure = metrics.get("enhancement_status") == "error" or any(
+        item.get("status") in {"error", "timeout"} for item in outcomes.values()
+    )
+    required = metrics.get("required_metrics", REQUIRED_QUOTE_METRICS + REQUIRED_CHIP_METRICS)
+    status = "data_error" if hard_failure else (
+        "complete" if all(metrics.get(field) is not None for field in required) else "insufficient_data"
+    )
     return {
         "status": status,
         "symbol": symbol,
@@ -353,7 +302,7 @@ def _history_payload(
     retrieved_at: datetime,
     *,
     limit: int,
-) -> Dict[str, Any]:
+) -> dict[str, Any]:
     if history is None or history.empty:
         return {
             "status": "insufficient_data",
@@ -443,13 +392,14 @@ def main() -> int:
             "mode": args.mode,
             "retrieved_at": retrieved_at.isoformat(),
             "as_of_date": retrieved_at.date().isoformat(),
-            "data_gaps": [str(exc)],
+            "data_gaps": ["provider_operation_failed"],
+            "provider_outcome": exc.outcome if isinstance(exc, ProviderError) else error_outcome(exc),
         }
         print(json.dumps(payload, ensure_ascii=False, indent=2))
         return 2
 
     print(json.dumps(payload, ensure_ascii=False, indent=2))
-    return 0 if payload["status"] == "complete" else 1
+    return 0 if payload["status"] == "complete" else 2 if payload["status"] == "data_error" else 1
 
 
 if __name__ == "__main__":

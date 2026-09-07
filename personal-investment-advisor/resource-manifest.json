@@ -1,18 +1,18 @@
 {
   "schema_version": 3,
   "skill": "personal-investment-advisor",
-  "generated_at": "2026-09-05T20:37:47+08:00",
+  "generated_at": "2026-09-07T13:23:56+08:00",
   "hash_algorithm": "SHA-256",
   "text_hash_normalization": "LF",
   "skill_md": "SKILL.md",
-  "skill_md_sha256": "e88d46859a68ef88dcbee83ae3a3b54d60e71b982be160e6110350e3bc244d39",
+  "skill_md_sha256": "f6b6389e14d72d4daf948393642575740f1ed4a580fefa7258a3d3408411121b",
   "top_level_files": [
     "SKILL.md"
   ],
   "top_level_file_hashes": [
     {
       "path": "SKILL.md",
-      "sha256": "e88d46859a68ef88dcbee83ae3a3b54d60e71b982be160e6110350e3bc244d39"
+      "sha256": "f6b6389e14d72d4daf948393642575740f1ed4a580fefa7258a3d3408411121b"
     }
   ],
   "top_level_directories": [
@@ -24,7 +24,7 @@
   "resource_directories": [
     {
       "name": "scripts",
-      "file_count": 58
+      "file_count": 63
     },
     {
       "name": "references",
@@ -46,11 +46,11 @@
     },
     {
       "path": "references/active-research.md",
-      "sha256": "32ca410763d91740ac603954ac79edbed2228e408971f860e7dca0dadacc59a4"
+      "sha256": "c6692301fa0aa22aef4f0681e8b502a114ac5495bcb08da5a9ea76d0000c184a"
     },
     {
       "path": "references/active_construction_policy_schema.json",
-      "sha256": "0b3f63da8c7ce786af8dd3d471d380ad0da505d0ebfb2a0ce7118a9589acdc55"
+      "sha256": "2709ee55b8a888698afbc9a3ec3395a9fcdbe29bebeef9dd4c2abd1567c86c6b"
     },
     {
       "path": "references/active_scan_policy_schema.json",
@@ -58,7 +58,7 @@
     },
     {
       "path": "references/alpha_evidence_schema.json",
-      "sha256": "7a8a2ff46857f9dd3e46d5d8fe99d8e192753fb70677f055484cb4df19b67a86"
+      "sha256": "601b21858c5510bb989a39f5cbd92a707f299f6f81ea4facda3414b28998e8c1"
     },
     {
       "path": "references/alpha_promotion_policy_schema.json",
@@ -66,27 +66,27 @@
     },
     {
       "path": "references/calibration.md",
-      "sha256": "c88815a159bb6bd270a9c992acac84e929413ad89ae1c85eb4e0ca48b140bca0"
+      "sha256": "68de35f722811c446b1572081644cf88e9d37ec7b64802b993d708b77ecb12a8"
     },
     {
       "path": "references/command-catalog.md",
-      "sha256": "f3e6d3d8001c61579362336954885bffe7393514599fdf1c15a6ebc386b8c608"
+      "sha256": "5882fbc0447e8cfb3e76a858c9b85d647309b7557832b8d752fef1a13934acdb"
     },
     {
       "path": "references/company-research.md",
-      "sha256": "d556bb877f449b9f43b623cb14df6ac810a918c960013432d126a9752614008a"
+      "sha256": "c087943f0589a17962fe0fb62aa23b29dd7d1efa417d788e8458030f5ed28b3c"
     },
     {
       "path": "references/daily-sync.md",
-      "sha256": "883565989439ceba19ce35106015cde086ea8a191b1abb2e5f9de09ed52a00fd"
+      "sha256": "a2c23b8822f1b030a5821c268ea6e469ed8ebb6684a11bc29157387fae9ba18a"
     },
     {
       "path": "references/dashboard_schema.json",
-      "sha256": "af82a4849b293a911ae9decd2f10d7b779942e62f02ea8479400e153e67d65b9"
+      "sha256": "eb3a496569f8c1c6e1c6f436f82353ddd9f805179a1da52ed932fc09b4ef9635"
     },
     {
       "path": "references/free-data-policy.md",
-      "sha256": "27c17e8ada4f3b1fe07c6f2ae635aafab03ee4f1766126e0f2db079808075c22"
+      "sha256": "134b1b97179c0d198b57e0bf9cff551e3ed2f69cc6a893fa38e7c81835a58386"
     },
     {
       "path": "references/inverse_volatility_policy.example.json",
@@ -98,11 +98,11 @@
     },
     {
       "path": "references/method_profiles.json",
-      "sha256": "aac0e50b964607f94edd8ba99293ff14be3af0a501fe7a0b3b672da3ac7d783e"
+      "sha256": "b87165cab64e1fe84e63eb610928828ead175ed8386b08091210019a67f84b0c"
     },
     {
       "path": "references/portfolio-audit.md",
-      "sha256": "600c25db2274792a6d15fcfe683d27ed99b2b8637050849c5b85a375d3337d6f"
+      "sha256": "58883c8e01c2a762a5a461e31ad9568d9f35fdfd3d921799d69ec6aeb956a007"
     },
     {
       "path": "references/portfolio_positions.example.json",
@@ -122,7 +122,7 @@
     },
     {
       "path": "references/status-contract.md",
-      "sha256": "bb0dffcfcaa277abd6187bf2f07925ba5a72022d71965b1d32210c5374a6c114"
+      "sha256": "483a98534ddd7e475636903c5813acfbde66b3cf43fa172e23cfa68881b9e640"
     },
     {
       "path": "references/thesis_red_team_schema.json",
@@ -130,31 +130,31 @@
     },
     {
       "path": "resources/.gitkeep",
-      "sha256": "e0b9e19b2208bb5d83ec8e46da2c0b2f75f963136fefc38ead9cf8a4d7e40932"
+      "sha256": "56f0d6ac8fbc29ea59e8eb8ce626949efcce2b16cd4ac9242e5630a6f35afdc3"
     },
     {
       "path": "scripts/active_alpha_scan.py",
-      "sha256": "07703b491ec6808690d7fba085e8bca83c1522c78856d87e8cf0ab38620beae2"
+      "sha256": "ab0a95636ffbc7df39c8d41286ba001db0aaf9b235ac1c85e531b54f10fbc7d1"
     },
     {
       "path": "scripts/active_portfolio_constructor.py",
-      "sha256": "fae37ff99324fa4830c0a41d5cd9723f83455537019da744b8455182bf9eb148"
+      "sha256": "3820004ec3009fa647594e8c0d5babdbd6c91404d78e6af1396be8290105c99f"
     },
     {
       "path": "scripts/active_research_contract.py",
-      "sha256": "1a279765c2baedd970058aa8ff4ce5227c0e201f83ede0e8c6ff14cefac8647a"
+      "sha256": "5140c943a49825586ed4845538da21a4ff3b5e6c5cbeb0189616df56d2189774"
     },
     {
       "path": "scripts/advice_journal.py",
-      "sha256": "cd92552474f59090c7936a60272fa308ab80f89ce6151e1b7fe9e2fc270dd7e7"
+      "sha256": "a99f07eca59a61340c87b14578fdb582a3655004ecc385f6fbccc9b5a203b1b5"
     },
     {
       "path": "scripts/akshare_fetcher.py",
-      "sha256": "9c4a8be9aa7791e7152d43ea0ca033aea2b2a08c4ce51c0a437c3771c69c9e75"
+      "sha256": "c56a10fefd6f7b83ebba2cb5b6106a515237d4ae3d4dc77adad323558284fd1e"
     },
     {
       "path": "scripts/alpha_validation.py",
-      "sha256": "2a202176d4bda325e2a07cfbe773a8828d77b3e83075c75a5e2abae95e9a95a6"
+      "sha256": "b2d4a9943e43c13cc3f21fe35b01f8c94434d39f6309e9ea2a991d8335eef26d"
     },
     {
       "path": "scripts/broker_sync.py",
@@ -166,15 +166,15 @@
     },
     {
       "path": "scripts/dashboard_catalog.py",
-      "sha256": "9c416e480d97facdc8c8a3fe9c24cfa4984580cb668a0a5692e04e43935dec08"
+      "sha256": "b4abf6eb6565624fb6f7d77ae1391e9044c6d62180b3bc52cbe83cec72e7b2b1"
     },
     {
       "path": "scripts/dashboard_gate.py",
-      "sha256": "2c44095f7c611efd387b6402aebf93497edce60cf44ad98d0952e1df892d2099"
+      "sha256": "5eaf21b3f6f0ba4943d24474b59d5877b37419324206f501f72e833d020bdba0"
     },
     {
       "path": "scripts/dashboard_math_gate.py",
-      "sha256": "df1c1083a3990819276b6614dd86d048c3f8f3e3c4ce9ba1454fce43a7bcb188"
+      "sha256": "15a99e72026d756b0b5bbcc76bb5d4bd400bcac918e9a1bdc09d3d0be6c65697"
     },
     {
       "path": "scripts/decision_outcome_report.py",
@@ -198,7 +198,7 @@
     },
     {
       "path": "scripts/pia.py",
-      "sha256": "134c98a8a444b2b571a356b27d4bdde3fab2a5ba05467fb8490aa1c470598c5a"
+      "sha256": "d95c9581317e4cba8ca4440436c43f39cd71cccbedac3f6e3b04553da50c9a5b"
     },
     {
       "path": "scripts/portfolio_loader.py",
@@ -209,8 +209,12 @@
       "sha256": "b5c028c1383914e374d2fd53ad5022126ca2b49aa614ee15215abfa5bd76f810"
     },
     {
+      "path": "scripts/provider_runtime.py",
+      "sha256": "99e2afea7e845f4eacd07166e0170c821bb83fd323cb4bdf5bcc819f8024a09c"
+    },
+    {
       "path": "scripts/quality_screener.py",
-      "sha256": "91d548240d8df89d4a4c5e6bfa871a27aab3ac82bf7d590d0a3122dc6601195e"
+      "sha256": "3d3beb6d2c1012cda05361920113198d2af3215227dd93ef1bd4f064e2898716"
     },
     {
       "path": "scripts/quote_evidence_contract.py",
@@ -222,7 +226,7 @@
     },
     {
       "path": "scripts/rebalance_proposal.py",
-      "sha256": "61cd5b151b4bb86611f5feded12ca4edfc955df783a754c9b4c2159ca2834b50"
+      "sha256": "1611f272e1332dbecfc053a6f20524cc862c6686297f9f8db8bdbcff2a6d453f"
     },
     {
       "path": "scripts/rebalance_weights.py",
@@ -238,15 +242,15 @@
     },
     {
       "path": "scripts/save_dashboard.py",
-      "sha256": "f6b8b76ab68b923344b153b245240b334dd01c4b85e0d78f2f8e36869c22ce53"
+      "sha256": "70167ab75ac65f6824c3bd183298ef37d7a9cfea07d7fa8d136bcd67c970971d"
     },
     {
       "path": "scripts/sec_edgar_fundamentals.py",
-      "sha256": "60cff34c8079818aa77de4c313be7986049f82185303fff0ea13c3843ee6a815"
+      "sha256": "cec9da26455a0759c8e83c2f330ee7b397d9b4452d889a867514285201c0b8d4"
     },
     {
       "path": "scripts/status_contract.py",
-      "sha256": "c296d035b64b0f1a93814df1c77d7bdb1322582d8e0c4ecc2814a5a8229de005"
+      "sha256": "c2ccbe4ff8e9dd6157c9b30f4dbdb2d184d72f189ef8c2df7ac1e8fc0a039bc9"
     },
     {
       "path": "scripts/sync_outcomes.py",
@@ -254,7 +258,7 @@
     },
     {
       "path": "scripts/test_investment_controls.py",
-      "sha256": "31794d8060792b14833076e2e8076cd6971e4f3d9823bd69b0f627345ce5960f"
+      "sha256": "1ff609073219fe363d5fd305e12d48b946f0dcfa9fa47def3733d66f288ec308"
     },
     {
       "path": "scripts/test_p0_calibration.py",
@@ -294,11 +298,11 @@
     },
     {
       "path": "scripts/test_p0p1_active_research.py",
-      "sha256": "c2db54bc813121300ae4ea35417f4e7f92a593499fc3d6535aeb125ecc9afd72"
+      "sha256": "2d8ea041aadbd9b4fa36e0c21eefa5f31cb08ada5f3b3dd5902511f9345f3bec"
     },
     {
       "path": "scripts/test_p1_dashboard_ashare_contracts.py",
-      "sha256": "dda4bd856fc435dad4f4107f13f6f299647a508104869e14019249e91059129e"
+      "sha256": "7d86ac242d98380126a1d713216665d2bc8f366e4641177f58ce58298b4db1d1"
     },
     {
       "path": "scripts/test_p1_dashboard_source_freshness.py",
@@ -326,7 +330,7 @@
     },
     {
       "path": "scripts/test_p1_research_evidence_contracts.py",
-      "sha256": "d6892221922184a9b0569c621520764a301d63b3960e8829fdc4afc585249da4"
+      "sha256": "decb93182133f5f9115d62a083f1ac1ea1b553316c6a37dc0043ffa6d692c5a5"
     },
     {
       "path": "scripts/test_p1_scenario_analyzer_contracts.py",
@@ -334,11 +338,11 @@
     },
     {
       "path": "scripts/test_p1_sec_edgar_fundamentals.py",
-      "sha256": "a3221a318cb6018c9e2ba8c5d14835ebb159c21377c776e899c70176dafd4a2e"
+      "sha256": "a88ac87c7dd7f012ba7fd76fcd601b0e0e3fe0e079115383b22151f0361502b0"
     },
     {
       "path": "scripts/test_p1_status_cli.py",
-      "sha256": "bbb01d06c39f3ad63f4627059aedfab9ae616fd04193bd446233e4b893901dcc"
+      "sha256": "75dc0aec27a757759a6f841a77d31f6c07586b33a1905130ec4c5036276f6010"
     },
     {
       "path": "scripts/test_p2_cli_status_contracts.py",
@@ -350,7 +354,23 @@
     },
     {
       "path": "scripts/test_p2_yf_daily_sync.py",
-      "sha256": "f20434fa9f95abc5bbf0fcb72194915242865aa97fdfc0f1d5194939d4bf03ae"
+      "sha256": "a5e4017639da40010384ef5bf244e5e68da287aa791cafe5bb4e4e25dfc2dad1"
+    },
+    {
+      "path": "scripts/test_stage2_contracts.py",
+      "sha256": "b36759d33b91fb9f15e1d7aef0beb537d935bc4939bb14e04c367c676d2b5210"
+    },
+    {
+      "path": "scripts/test_stage3a_provider.py",
+      "sha256": "320e6f87e2d1dbf1941a64cd1866b7a6b582232264ee02bff20b82b4c2b4a2a7"
+    },
+    {
+      "path": "scripts/test_stage3b_resources.py",
+      "sha256": "6ac3feeea1581481fe52378e42b141e9cf0b3f7a2df2c6aa5251ddbcadcc73c4"
+    },
+    {
+      "path": "scripts/test_stage4a_etf.py",
+      "sha256": "e63a27e32d87d3faba4af3dc33c43cb238e3dfc2eb0cca2c392678246e7398b3"
     },
     {
       "path": "scripts/thesis_evidence_gate.py",
@@ -362,7 +382,7 @@
     },
     {
       "path": "scripts/yf.py",
-      "sha256": "bd09bbf542d9644275ed9f20b993101a288e861d149371820bfe7f8821b30888"
+      "sha256": "0f9f330d83bb61c898653534625cd6c0d3876fa5b53ae4006ebc4951083b9510"
     }
   ],
   "declared_local_dependencies": [
@@ -376,13 +396,13 @@
       "path": "references/active-research.md",
       "exists": true,
       "resolved_path": "personal-investment-advisor/references/active-research.md",
-      "sha256": "32ca410763d91740ac603954ac79edbed2228e408971f860e7dca0dadacc59a4"
+      "sha256": "c6692301fa0aa22aef4f0681e8b502a114ac5495bcb08da5a9ea76d0000c184a"
     },
     {
       "path": "references/active_construction_policy_schema.json",
       "exists": true,
       "resolved_path": "personal-investment-advisor/references/active_construction_policy_schema.json",
-      "sha256": "0b3f63da8c7ce786af8dd3d471d380ad0da505d0ebfb2a0ce7118a9589acdc55"
+      "sha256": "2709ee55b8a888698afbc9a3ec3395a9fcdbe29bebeef9dd4c2abd1567c86c6b"
     },
     {
       "path": "references/active_scan_policy_schema.json",
@@ -394,7 +414,7 @@
       "path": "references/alpha_evidence_schema.json",
       "exists": true,
       "resolved_path": "personal-investment-advisor/references/alpha_evidence_schema.json",
-      "sha256": "7a8a2ff46857f9dd3e46d5d8fe99d8e192753fb70677f055484cb4df19b67a86"
+      "sha256": "601b21858c5510bb989a39f5cbd92a707f299f6f81ea4facda3414b28998e8c1"
     },
     {
       "path": "references/alpha_promotion_policy_schema.json",
@@ -406,37 +426,37 @@
       "path": "references/calibration.md",
       "exists": true,
       "resolved_path": "personal-investment-advisor/references/calibration.md",
-      "sha256": "c88815a159bb6bd270a9c992acac84e929413ad89ae1c85eb4e0ca48b140bca0"
+      "sha256": "68de35f722811c446b1572081644cf88e9d37ec7b64802b993d708b77ecb12a8"
     },
     {
       "path": "references/command-catalog.md",
       "exists": true,
       "resolved_path": "personal-investment-advisor/references/command-catalog.md",
-      "sha256": "f3e6d3d8001c61579362336954885bffe7393514599fdf1c15a6ebc386b8c608"
+      "sha256": "5882fbc0447e8cfb3e76a858c9b85d647309b7557832b8d752fef1a13934acdb"
     },
     {
       "path": "references/company-research.md",
       "exists": true,
       "resolved_path": "personal-investment-advisor/references/company-research.md",
-      "sha256": "d556bb877f449b9f43b623cb14df6ac810a918c960013432d126a9752614008a"
+      "sha256": "c087943f0589a17962fe0fb62aa23b29dd7d1efa417d788e8458030f5ed28b3c"
     },
     {
       "path": "references/daily-sync.md",
       "exists": true,
       "resolved_path": "personal-investment-advisor/references/daily-sync.md",
-      "sha256": "883565989439ceba19ce35106015cde086ea8a191b1abb2e5f9de09ed52a00fd"
+      "sha256": "a2c23b8822f1b030a5821c268ea6e469ed8ebb6684a11bc29157387fae9ba18a"
     },
     {
       "path": "references/dashboard_schema.json",
       "exists": true,
       "resolved_path": "personal-investment-advisor/references/dashboard_schema.json",
-      "sha256": "af82a4849b293a911ae9decd2f10d7b779942e62f02ea8479400e153e67d65b9"
+      "sha256": "eb3a496569f8c1c6e1c6f436f82353ddd9f805179a1da52ed932fc09b4ef9635"
     },
     {
       "path": "references/free-data-policy.md",
       "exists": true,
       "resolved_path": "personal-investment-advisor/references/free-data-policy.md",
-      "sha256": "27c17e8ada4f3b1fe07c6f2ae635aafab03ee4f1766126e0f2db079808075c22"
+      "sha256": "134b1b97179c0d198b57e0bf9cff551e3ed2f69cc6a893fa38e7c81835a58386"
     },
     {
       "path": "references/inverse_volatility_policy_schema.json",
@@ -448,13 +468,13 @@
       "path": "references/method_profiles.json",
       "exists": true,
       "resolved_path": "personal-investment-advisor/references/method_profiles.json",
-      "sha256": "aac0e50b964607f94edd8ba99293ff14be3af0a501fe7a0b3b672da3ac7d783e"
+      "sha256": "b87165cab64e1fe84e63eb610928828ead175ed8386b08091210019a67f84b0c"
     },
     {
       "path": "references/portfolio-audit.md",
       "exists": true,
       "resolved_path": "personal-investment-advisor/references/portfolio-audit.md",
-      "sha256": "600c25db2274792a6d15fcfe683d27ed99b2b8637050849c5b85a375d3337d6f"
+      "sha256": "58883c8e01c2a762a5a461e31ad9568d9f35fdfd3d921799d69ec6aeb956a007"
     },
     {
       "path": "references/portfolio_schema.json",
@@ -478,7 +498,7 @@
       "path": "references/status-contract.md",
       "exists": true,
       "resolved_path": "personal-investment-advisor/references/status-contract.md",
-      "sha256": "bb0dffcfcaa277abd6187bf2f07925ba5a72022d71965b1d32210c5374a6c114"
+      "sha256": "483a98534ddd7e475636903c5813acfbde66b3cf43fa172e23cfa68881b9e640"
     },
     {
       "path": "references/thesis_red_team_schema.json",
@@ -490,7 +510,7 @@
       "path": "scripts/pia.py",
       "exists": true,
       "resolved_path": "personal-investment-advisor/scripts/pia.py",
-      "sha256": "134c98a8a444b2b571a356b27d4bdde3fab2a5ba05467fb8490aa1c470598c5a"
+      "sha256": "d95c9581317e4cba8ca4440436c43f39cd71cccbedac3f6e3b04553da50c9a5b"
     },
     {
       "path": "scripts/requirements.txt",
@@ -502,13 +522,13 @@
       "path": "scripts/sec_edgar_fundamentals.py",
       "exists": true,
       "resolved_path": "personal-investment-advisor/scripts/sec_edgar_fundamentals.py",
-      "sha256": "60cff34c8079818aa77de4c313be7986049f82185303fff0ea13c3843ee6a815"
+      "sha256": "cec9da26455a0759c8e83c2f330ee7b397d9b4452d889a867514285201c0b8d4"
     },
     {
       "path": "scripts/status_contract.py",
       "exists": true,
       "resolved_path": "personal-investment-advisor/scripts/status_contract.py",
-      "sha256": "c296d035b64b0f1a93814df1c77d7bdb1322582d8e0c4ecc2814a5a8229de005"
+      "sha256": "c2ccbe4ff8e9dd6157c9b30f4dbdb2d184d72f189ef8c2df7ac1e8fc0a039bc9"
     }
   ],
   "missing_declared_dependencies": []

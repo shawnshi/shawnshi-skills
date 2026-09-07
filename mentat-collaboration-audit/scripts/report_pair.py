@@ -288,7 +288,7 @@ def validate_manifest(
 
 
 def _markdown_cell(value: str) -> str:
-    return value.replace("&", "&amp;").replace("|", "&#124;")
+    return html_lib.escape(value, quote=False).replace("|", "&#124;")
 
 
 def _json_list(value: Sequence[str]) -> str:
@@ -449,11 +449,18 @@ def render_html(
         scope += f' · Previous report ID: {current["previous_report_id"]}'
     replacements = {
         "{{TITLE}}": html_lib.escape(current["title"]),
-        "{{SCOPE_AND_COVERAGE}}": html_lib.escape(scope),
-        "{{KEY_FINDINGS}}": "<p>—</p>",
-        "{{FINDINGS_TABLE}}": "<p>—</p>",
-        "{{METRICS}}": "<p>—</p>",
-        "{{LIMITATIONS}}": "<p>—</p>",
+        "{{SCOPE_AND_COVERAGE}}": html_lib.escape(
+            scope + " · 审计范围与覆盖：未知；来源、时间、冻结快照、有效／跳过记录未提供。"
+        ),
+        "{{KEY_FINDINGS}}": "<p>结论不可用：尚未提供经核验的任务、介入、返工与整改后续证据。</p>",
+        "{{FINDINGS_TABLE}}": "<p>证据缺失：未提供发现指针及出处核验；八个视角不可据此判为无问题。</p>",
+        "{{METRICS}}": "<p>不可计算：未提供指标、分子／分母、样本量、口径版本与覆盖；缺失不等于零。</p>",
+        "{{LIMITATIONS}}": (
+            "<p>未知：未覆盖证据与残余风险待核验。解析完整不代表历史或标签完整。"
+            "旧聚合 JSON 验证器不认证 collaboration_analysis 扩展及保存后的篡改；"
+            "须从已授权输入严格聚合并核验指针。report_pair 仅验证建议同源与提交完整性，"
+            "不认证正文结论，也不消费该扩展自动填报。未明确要求时不保存、整改或新增遥测。</p>"
+        ),
     }
     for placeholder, value in replacements.items():
         rendered = rendered.replace(placeholder, value)

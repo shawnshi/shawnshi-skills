@@ -6,10 +6,10 @@
 @Version: 2.0
 @Maintenance Protocol: Scoring logic updates must sync SKILL.md.
 """
-import sys
-import json
 import argparse
-from typing import List, Dict, Any, Optional
+import json
+import math
+from typing import Any, Dict, List, NoReturn
 
 
 class GameTheoryResolver:
@@ -36,8 +36,50 @@ class GameTheoryResolver:
     RISK_PENALTY = {"low": 0.0, "medium": 0.15, "high": 0.35, "critical": 0.6}
 
     def __init__(self, data: Dict[str, Any]):
+        if not isinstance(data, dict):
+            raise ValueError("top-level JSON must be an object")
+        options = data.get("options")
+        if not isinstance(options, list) or not options:
+            raise ValueError("options must be a non-empty array")
+        names = set()
+        for index, option in enumerate(options):
+            path = f"options[{index}]"
+            if not isinstance(option, dict):
+                raise ValueError(f"{path} must be an object")
+            name = option.get("name")
+            if not isinstance(name, str) or not name.strip():
+                raise ValueError(f"{path}.name must be a non-empty string")
+            if name in names:
+                raise ValueError(f"{path}.name is duplicated: {name!r}")
+            names.add(name)
+            scores = option.get("agent_scores")
+            if not isinstance(scores, list) or not scores:
+                raise ValueError(f"{path}.agent_scores must be a non-empty array")
+            structured = isinstance(scores[0], dict)
+            for score_index, entry in enumerate(scores):
+                score_path = f"{path}.agent_scores[{score_index}]"
+                if structured:
+                    if not isinstance(entry, dict):
+                        raise ValueError(f"{score_path} must be an object; mixed formats are invalid")
+                    self._validate_unit_number(entry.get("score"), f"{score_path}.score")
+                    self._validate_unit_number(entry.get("confidence", 1.0), f"{score_path}.confidence")
+                    if "agent" in entry and (not isinstance(entry["agent"], str) or not entry["agent"].strip()):
+                        raise ValueError(f"{score_path}.agent must be a non-empty string when supplied")
+                else:
+                    self._validate_unit_number(entry, score_path)
+            self._validate_unit_number(option.get("friction", 0.5), f"{path}.friction")
+            risk = option.get("risk_level", "medium")
+            if not isinstance(risk, str) or risk not in self.RISK_PENALTY:
+                raise ValueError(f"{path}.risk_level must be low, medium, high, or critical")
         self.data = data
-        self.options = data.get("options", [])
+        self.options = options
+
+    @staticmethod
+    def _validate_unit_number(value: Any, path: str) -> None:
+        # Range check precedes isfinite so arbitrarily large JSON integers do not overflow.
+        if (isinstance(value, bool) or not isinstance(value, (int, float))
+                or not 0 <= value <= 1 or not math.isfinite(value)):
+            raise ValueError(f"{path} must be a finite number in [0, 1], not a boolean")
 
     def _extract_scores(self, option: Dict) -> List[float]:
         """Extract raw scores, supporting both flat and structured formats."""
@@ -141,45 +183,44 @@ class GameTheoryResolver:
         return "\n".join(lines)
 
 
-def main():
-    parser = argparse.ArgumentParser(
+class InputArgumentParser(argparse.ArgumentParser):
+    def error(self, message: str) -> NoReturn:
+        raise ValueError(message)
+
+
+def main() -> int:
+    parser = InputArgumentParser(
         description="Game Theory Resolver V2.0 — Compute weighted consensus, "
                     "stability scores, and Pareto frontier from debate results."
     )
     parser.add_argument("input", help="Path to debate_results.json")
     parser.add_argument("--pareto", action="store_true", help="Also compute Pareto frontier")
     parser.add_argument("--chart", action="store_true", help="Include text bar chart")
-    args = parser.parse_args()
-
     try:
+        args = parser.parse_args()
         with open(args.input, 'r', encoding='utf-8') as f:
             data = json.load(f)
-
         resolver = GameTheoryResolver(data)
-        analysis = resolver.resolve_consensus()
+    except (OSError, ValueError) as exc:
+        # JSON/UTF-8/Schema and argument failures are expected input errors.
+        print(json.dumps({"status": "Error", "message": str(exc)}, indent=4))
+        return 2
 
-        output = {
-            "status": "Success",
-            "version": "2.0",
-            "optimal_consensus_point": analysis[0] if analysis else None,
-            "full_analysis": analysis,
-        }
-
-        if args.pareto:
-            output["pareto_frontier"] = resolver.pareto_frontier()
-
-        if args.chart:
-            output["stability_chart"] = resolver.text_chart(analysis)
-
-        print(json.dumps(output, indent=4, ensure_ascii=False))
-
-    except FileNotFoundError:
-        print(json.dumps({"status": "Error", "message": f"File not found: {args.input}"}, indent=4))
-    except json.JSONDecodeError as e:
-        print(json.dumps({"status": "Error", "message": f"Invalid JSON: {e}"}, indent=4))
-    except Exception as e:
-        print(json.dumps({"status": "Error", "message": str(e)}, indent=4))
+    # Computation defects deliberately propagate with the original traceback.
+    analysis = resolver.resolve_consensus()
+    output = {
+        "status": "Success",
+        "version": "2.0",
+        "optimal_consensus_point": analysis[0] if analysis else None,
+        "full_analysis": analysis,
+    }
+    if args.pareto:
+        output["pareto_frontier"] = resolver.pareto_frontier()
+    if args.chart:
+        output["stability_chart"] = resolver.text_chart(analysis)
+    print(json.dumps(output, indent=4, ensure_ascii=False, allow_nan=False))
+    return 0
 
 
 if __name__ == "__main__":
-    main()
+    raise SystemExit(main())

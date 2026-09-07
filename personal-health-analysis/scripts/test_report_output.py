@@ -10,9 +10,8 @@ from datetime import date, datetime, timedelta
 from pathlib import Path
 from unittest.mock import Mock, patch
 
-from garmin_capabilities import require_capability
-
 import garmin_chart
+from garmin_capabilities import require_capability
 from report_output import build_report_paths, get_report_dir
 
 
@@ -51,6 +50,10 @@ def comparable_summary(start_day, prior_days):
         "measurement_epoch_evidence": {
             "analysis_algorithm_epoch": "personal-health-analysis:baseline-change:v2",
             "manufacturer_algorithm_epoch": "synthetic-manufacturer-v1",
+            "observation_attributions": [
+                {"component": component, "date": item["date"], "serial_number": "must-not-be-embedded", "software_version": "19.00"}
+                for component, rows in (("hrv", hrv), ("heart_rate", heart_rate), ("sleep", sleep)) for item in rows
+            ],
             "firmware_history": [
                 {
                     "timestamp": f"{start_day.isoformat()}T00:00:00",
@@ -77,7 +80,7 @@ def comparable_summary(start_day, prior_days):
 
 class ReportOutputContractTests(unittest.TestCase):
     @unittest.skipUnless(shutil.which("node"), "Node.js is required for DOM runtime validation")
-    def test_dashboard_keeps_history_and_marks_unsynced_terminal_day(self):
+    def test_dashboard_keeps_history_without_claiming_terminal_day_sync_failure(self):
         start = date(2026, 8, 23)
         end = start + timedelta(days=1)
         summary = {
@@ -118,14 +121,17 @@ const document = {{ getElementById(id) {{ return elements[id] || (elements[id] =
 const window = {{ addEventListener(event, callback) {{ if (event === 'DOMContentLoaded') callback(); }} }};
 {runtime_source}
 const ids=['rhr-chart','hrv-chart','sleep-chart','battery-chart','steps-chart','stress-chart','respiration-chart','spo2-chart'];
-console.log(JSON.stringify(Object.fromEntries(ids.map(id=>[id,{{children:elements[id].children.length,note:elements[id].children[1]?.textContent||'',svg:elements[id].children[0]?.nodeName||''}}]))));
+console.log(JSON.stringify({{charts:Object.fromEntries(ids.map(id=>[id,{{children:elements[id].children.length,note:elements[id].children[1]?.textContent||'',svg:elements[id].children[0]?.nodeName||''}}])),baselineReason:elements['baseline-meta'].textContent,deviceEvidence:elements['trust-device-epoch'].textContent}}));
 """
         completed = subprocess.run([shutil.which("node"), "-"], input=harness, check=True, capture_output=True, text=True, encoding="utf-8")
         rendered = json.loads(completed.stdout)
-        for item in rendered.values():
+        self.assertIn("观测设备归属未知", rendered["baselineReason"])
+        self.assertIn("库存记录", rendered["deviceEvidence"])
+        self.assertIn("不代表观测使用", rendered["deviceEvidence"])
+        for item in rendered["charts"].values():
             self.assertEqual(item["children"], 2)
             self.assertEqual(item["svg"], "svg")
-            self.assertEqual(item["note"], "2026-08-24 当日未同步；图表保留此前已同步观测。")
+            self.assertEqual(item["note"], "2026-08-24 暂无来源观测；若为当天，记录可能尚未完整，不代表同步失败。图表保留此前有效观测。")
         self.assertIn("整体评价与后续建议", html)
         self.assertIn("后续建议（非处方）", html)
 
@@ -252,6 +258,8 @@ console.log(JSON.stringify({{
                 "series",
                 "heatmap",
                 "patterns",
+                "problem_insights",
+                "user_context_review",
                 "narrative",
             },
         )
@@ -350,7 +358,7 @@ console.log(JSON.stringify({{
         )
         self.assertIsNotNone(payload["baseline"]["rhr"]["delta_pct"])
 
-        summary["measurement_epoch_evidence"]["firmware_history"] = []
+        summary["measurement_epoch_evidence"]["observation_attributions"] = []
         unknown_epoch = garmin_chart.build_dashboard_payload(
             summary,
             days=garmin_chart.MIN_PAIRED_BASELINE_DAYS + 1,
@@ -363,6 +371,11 @@ console.log(JSON.stringify({{
             generated_at="2026-08-09T12:00:00+08:00",
         )
         self.assertEqual(unknown_epoch["baseline"]["status"], "epoch_unknown")
+        self.assertEqual(unknown_epoch["baseline"]["epoch_status"], "device_attribution_unknown")
+        self.assertEqual(unknown_epoch["meta"]["device_epoch"]["device_count_basis"], "inventory_not_observed_use")
+        serialized = json.dumps(decode_dashboard_payload(garmin_chart.render_report(unknown_epoch)))
+        self.assertNotIn("must-not-be-embedded", serialized)
+        self.assertNotIn("observation_attributions", serialized)
         self.assertFalse(unknown_epoch["baseline"]["qualified"])
         self.assertIsNone(unknown_epoch["baseline"]["rhr"]["delta_pct"])
 

@@ -6,7 +6,7 @@ import sys
 import unittest
 from datetime import date
 from pathlib import Path
-from unittest.mock import MagicMock, patch
+from unittest.mock import patch
 
 import pandas as pd
 
@@ -112,86 +112,23 @@ class AShareFetcherContractTests(unittest.TestCase):
         fetcher = akshare_fetcher.StandaloneDataFetcher(sleep_min=0, sleep_max=0)
         self.assertIsNone(fetcher.get_sector_info("600519"))
 
-    def test_isolated_provider_timeout_terminates_child_and_fails_closed(self):
-        with patch.object(akshare_fetcher.multiprocessing, "get_context") as get_context:
-            context = get_context.return_value
-            receive_connection = MagicMock()
-            send_connection = MagicMock()
-            context.Pipe.return_value = (receive_connection, send_connection)
-            receive_connection.poll.return_value = False
-            process = context.Process.return_value
-            process.is_alive.side_effect = [True, False]
-            result = akshare_fetcher._run_isolated_provider(
-                "akshare_chip_distribution",
-                "600519",
-                0.01,
-            )
+    def test_isolated_provider_timeout_is_not_empty_data(self):
+        outcome = {"status": "timeout", "error_type": "TimeoutError", "error": "deadline"}
+        with patch.object(akshare_fetcher, "run_provider", return_value=outcome):
+            result = akshare_fetcher._run_isolated_provider("efinance_quote", "600519", .01)
+        self.assertEqual(result, outcome)
+        with self.assertRaises(akshare_fetcher.ProviderError):
+            akshare_fetcher.require_data(result)
 
-        self.assertTrue(result.empty)
-        get_context.assert_called_once_with("spawn")
-        context.Pipe.assert_called_once_with(duplex=False)
-        process.start.assert_called_once_with()
-        process.terminate.assert_called_once_with()
-        process.join.assert_called_once_with(timeout=1.0)
-        process.close.assert_called_once_with()
-        receive_connection.close.assert_called_once_with()
-        send_connection.close.assert_called_once_with()
-
-    def test_isolated_provider_kill_fallback_and_start_failure_are_bounded(self):
-        with patch.object(akshare_fetcher.multiprocessing, "get_context") as get_context:
-            context = get_context.return_value
-            receive_connection = MagicMock()
-            send_connection = MagicMock()
-            context.Pipe.return_value = (receive_connection, send_connection)
-            receive_connection.poll.return_value = False
-            process = context.Process.return_value
-            process.is_alive.side_effect = [True, True, False]
-            result = akshare_fetcher._run_isolated_provider(
-                "efinance_quote", "600519", 0.01
-            )
-
-        self.assertTrue(result.empty)
-        process.terminate.assert_called_once_with()
-        process.kill.assert_called_once_with()
-        self.assertEqual(process.join.call_count, 2)
-        process.close.assert_called_once_with()
-
-        with patch.object(akshare_fetcher.multiprocessing, "get_context") as get_context:
-            context = get_context.return_value
-            receive_connection = MagicMock()
-            send_connection = MagicMock()
-            context.Pipe.return_value = (receive_connection, send_connection)
-            process = context.Process.return_value
-            process.start.side_effect = OSError("spawn blocked")
-            result = akshare_fetcher._run_isolated_provider(
-                "efinance_quote", "600519", 0.01
-            )
-
-        self.assertTrue(result.empty)
-        receive_connection.close.assert_called_once_with()
-        send_connection.close.assert_called_once_with()
-        process.join.assert_not_called()
-
-        with patch.object(akshare_fetcher.multiprocessing, "get_context") as get_context:
-            context = get_context.return_value
-            receive_connection = MagicMock()
-            send_connection = MagicMock()
-            context.Pipe.return_value = (receive_connection, send_connection)
-            receive_connection.poll.return_value = True
-            receive_connection.recv.side_effect = EOFError("truncated provider payload")
-            process = context.Process.return_value
-            process.is_alive.side_effect = [False, False]
-            result = akshare_fetcher._run_isolated_provider(
-                "efinance_quote", "600519", 0.01
-            )
-
-        self.assertTrue(result.empty)
-        receive_connection.close.assert_called_once_with()
-        process.join.assert_called_once_with(timeout=1.0)
-        process.close.assert_called_once_with()
+    def test_isolated_provider_spawn_and_eof_are_operation_errors(self):
+        for native in (PermissionError("spawn blocked"), EOFError("truncated provider payload")):
+            outcome = akshare_fetcher.error_outcome(native)
+            with patch.object(akshare_fetcher, "run_provider", return_value=outcome):
+                result = akshare_fetcher._run_isolated_provider("efinance_quote", "600519", .01)
+            self.assertEqual(result["status"], "error")
+            self.assertEqual(result["error_type"], type(native).__name__)
 
     def test_history_provider_failure_never_mutates_process_proxy(self):
-        fetcher = akshare_fetcher.StandaloneDataFetcher(sleep_min=0, sleep_max=0)
         observed_proxy_values = []
 
         def fail_history(**kwargs):
@@ -209,8 +146,8 @@ class AShareFetcherContractTests(unittest.TestCase):
             patch("akshare.stock_zh_a_hist", side_effect=fail_history),
             self.assertRaises(ConnectionError),
         ):
-            akshare_fetcher.StandaloneDataFetcher.get_history.__wrapped__(
-                fetcher,
+            akshare_fetcher._provider_frame(
+                "akshare_history",
                 "600519",
                 start_date="2026-07-01",
                 end_date="2026-07-31",

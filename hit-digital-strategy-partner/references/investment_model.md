@@ -15,7 +15,9 @@
 - **财务/现金门禁**：超出批准预算、现金承受能力或厂商可接受的营运资金上限；
 - **合同门禁**：验收、责任、SLA、知识产权、退出或回款条件不可接受。
 
-门禁结果使用 `pass`、`conditional`、`fail`、`unknown`。`unknown` 不等于 `pass`。对强制和安全事项可以“必须处理”，但仍应比较修复路径、范围和时序，而不是自动批准任一指定产品。
+持久化 Schema v2 的 `portfolio.gate_results[].result` 只接受 `pass`、`conditional`、`fail`、`deferred`。业务上的 `unknown` 表示证据未决，不是机器枚举，也不自动对应 `deferred` 或 `pass`。将未知事项及影响、补证责任人和解除条件写入 `evidence.gaps`；按当前请求的动作独立判断门禁，并在 `rationale` 中引用缺口及选择理由。例如临床生产准入尚无必要安全证据时，该准入门为 `fail`（未满足准入条件，不是已经证实产品有害），同时将 `metadata.maturity` 保持为 `blocked`。
+
+`deferred` 仅用于有明确理由的暂缓决定，`conditional` 仅用于已经界定且可检验的条件；两者均不能隐藏承重未知。枚举或 gap 的存在本身不会让现有校验器推断阻塞，提交者必须如实保留 `working_draft` 或 `blocked` 成熟度，并在补证后重新判定，不能据此达到 `decision_ready`。可直接提取的合成编码片段见 [../examples/workflow_example.md](../examples/workflow_example.md)。对强制和安全事项可以“必须处理”，但仍应比较修复路径、范围和时序，而不是自动批准任一指定产品。
 
 ### 2. 再做可解释排序
 
@@ -111,7 +113,8 @@ ROI_nominal = (Σ attributable_cash_benefit_t - nominal_TCO) / nominal_TCO
 
 需要自动门禁时，不要只保存自然语言公式或汇总数字。Blackboard 中的假设、成本、收益、现金流、公式、情景和输出都使用全局唯一且大小写敏感的稳定 ID；所有引用必须精确指向已存在记录。
 
-- 现金流至少包含 `id`、`period_index`、`cost`、`benefit`、`net` 和 `unit`；`net` 必须等于 `benefit - cost`。分情景现金流再记录 `scenario_id`，同一情景内期间不得重复。
+- Schema v2 的 `quantitative_model.cash_flows` 必须保留 `id`、`period`、`cost`、`benefit`、`net`；`period` 是期间标识，同一 `scenario_id` 内不得重复，不能用 `period_index` 替代。`net` 必须等于 `benefit - cost`。模型的 `currency` 声明币种，现金流建议同时写 `unit` 以免脱离模型时混用单位。
+- `period_index` 是可选的 NPV 折现指数：若提供非 null 值则优先使用，须为非负整数且不超过 `horizon_years`；省略或 null 时回退到 `period`，此时 `period` 也须可解析为非负整数。期间标签如 `2026` 或 `2026Q1` 不是从零起算的折现指数，应另给 `period_index`。现有自动 NPV 按 `horizon_years` 检查指数，月度现金流须另行明确可验证的折现口径，不可直接将月份编号配年度折现率。
 - 折现率作为有 ID 的假设保存，使用小数比率而不是百分数字符串。NPV 公式或情景通过 `discount_rate_assumption_id` 引用它。
 - 公式至少包含 `id`、`formula_type` 和 `input_ids`。核心白名单类型为 `tco`、`total_benefit`、`net_benefit`、`roi` 和 `npv`；`expression` 只供人阅读，不会被解析或执行。
 - 情景至少包含 `id`、`scenario_type`、`assumption_ids`，并通过 `cash_flow_ids` 或内嵌 `cash_flows` 提供可复算输入。至少保留下行和基准情景；不能只写“收益下降20%”再填一个未经复算的输出。

@@ -15,7 +15,7 @@ import re
 import statistics
 from datetime import date, datetime, timedelta
 from numbers import Real
-from typing import Any, Iterable
+from typing import Any, Callable, Iterable
 
 
 METHOD_VERSION = "patterns.v1"
@@ -509,10 +509,12 @@ def _sleep_result_template(
             "duration_status": None,
             "duration_source": None,
             "duration_valid_nights": 0,
+            "duration_observed_nights": 0,
             "duration_sample_dates": [],
             "duration_excluded_dates": [],
             "timing_status": None,
             "timing_valid_nights": 0,
+            "timing_observed_nights": 0,
             "timing_sample_dates": [],
             "timing_excluded_dates": [],
             "utc_offset_minutes": None,
@@ -533,6 +535,8 @@ def sleep_regularity_snapshot(
     epoch_status: str,
     window_days: int = 14,
     min_valid_nights: int = 7,
+    *,
+    epoch_evaluator: Callable[[dict[str, list[str]]], dict[str, Any]] | None = None,
 ) -> dict[str, Any]:
     """Describe sleep-duration and local clock-time dispersion.
 
@@ -570,17 +574,6 @@ def sleep_regularity_snapshot(
     }
     requested_set = set(requested)
     result["window_start"] = window_start.isoformat()
-
-    if epoch_comparable is not True:
-        result["status"] = (
-            "cross_epoch" if epoch_comparable is False else "epoch_unknown"
-        )
-        result["limitations"] = [
-            "cross_epoch_comparison_withheld"
-            if epoch_comparable is False
-            else "epoch_comparability_unknown"
-        ]
-        return result
 
     record_list = list(records)
     analysis_dates = sorted(target_dates & requested_set)
@@ -653,7 +646,52 @@ def sleep_regularity_snapshot(
     if conflicting_dates:
         limitations.append("conflicting_sleep_duplicates_excluded")
 
+    duration_values = {
+        str(item["date"]): float(item["value"])
+        for item in duration_normalized["values"]
+    }
+    duration_conflicts = set(duration_normalized["conflicting_duplicate_dates"])
+    interval_duration_values = {
+        day: (end - start).total_seconds()
+        for day, (start, end) in valid_by_date.items()
+        if day not in duration_conflicts
+    }
+    # Choose one source for both candidate counts and calculations, never a
+    # union of direct durations and timestamp intervals. Sparse direct values
+    # remain visible when neither source meets the minimum sample gate.
+    if duration_conflicts or len(duration_values) >= min_valid_nights:
+        selected_duration_values = duration_values
+        result["duration_source"] = "sleep_time_seconds" if duration_values else None
+    elif len(interval_duration_values) >= min_valid_nights:
+        selected_duration_values = interval_duration_values
+        result["duration_source"] = "timestamp_interval_seconds"
+        if duration_field_supported:
+            limitations.append("sleep_time_seconds_insufficient_used_timestamp_intervals")
+    elif duration_values:
+        selected_duration_values = duration_values
+        result["duration_source"] = "sleep_time_seconds"
+    else:
+        selected_duration_values = interval_duration_values
+        result["duration_source"] = "timestamp_interval_seconds" if interval_duration_values else None
+
     timing_dates = sorted(valid_by_date)
+    # Attribute only the terminal-window candidates used by these dimensions.
+    if epoch_evaluator is not None:
+        epoch = epoch_evaluator({"sleep": sorted(set(selected_duration_values) | set(timing_dates))})
+        epoch_comparable, epoch_status = epoch["comparable"], epoch["status"]
+        result.update(epoch_comparable=epoch_comparable, epoch_status=epoch_status)
+    result["duration_observed_nights"] = len(selected_duration_values)
+    result["timing_observed_nights"] = len(timing_dates)
+    if epoch_comparable is not True:
+        status = "cross_epoch" if epoch_comparable is False else "epoch_unknown"
+        result.update(status=status, duration_status=status, timing_status=status)
+        result["limitations"] = [
+            "cross_epoch_comparison_withheld"
+            if epoch_comparable is False
+            else "epoch_comparability_unknown"
+        ]
+        return result
+
     result["timing_valid_nights"] = len(timing_dates)
     result["timing_sample_dates"] = timing_dates
     result["timing_excluded_dates"] = sorted(set(invalid_dates + conflicting_dates))
@@ -698,44 +736,22 @@ def sleep_regularity_snapshot(
             ]
         )
 
-    duration_values = {
-        str(item["date"]): float(item["value"])
-        for item in duration_normalized["values"]
-    }
-    duration_conflicts = set(duration_normalized["conflicting_duplicate_dates"])
-    interval_duration_values = {
-        day: (end - start).total_seconds()
-        for day, (start, end) in valid_by_date.items()
-        if day not in duration_conflicts
-    }
-    if duration_conflicts:
-        selected_duration_values = {}
-        result["duration_source"] = None
-    elif len(duration_values) >= min_valid_nights:
-        selected_duration_values = duration_values
-        result["duration_source"] = "sleep_time_seconds"
-    elif len(interval_duration_values) >= min_valid_nights:
-        selected_duration_values = interval_duration_values
-        result["duration_source"] = "timestamp_interval_seconds"
-        if duration_field_supported:
-            limitations.append(
-                "sleep_time_seconds_insufficient_used_timestamp_intervals"
-            )
-    else:
-        selected_duration_values = {}
-
     duration_excluded = set(duration_normalized["conflicting_duplicate_dates"])
     duration_excluded.update(duration_normalized["non_positive_fact_dates"])
     if result["duration_source"] == "timestamp_interval_seconds":
         duration_excluded.update(invalid_dates)
         duration_excluded.update(conflicting_dates)
     result["duration_excluded_dates"] = sorted(duration_excluded)
-    result["duration_sample_dates"] = sorted(selected_duration_values)
-    result["duration_valid_nights"] = len(selected_duration_values)
+    result["duration_sample_dates"] = (
+        sorted(selected_duration_values)
+        if len(selected_duration_values) >= min_valid_nights and not duration_conflicts
+        else []
+    )
+    result["duration_valid_nights"] = len(result["duration_sample_dates"])
     if duration_conflicts:
         result["duration_status"] = "duplicate_conflict"
         limitations.append("conflicting_sleep_duration_duplicates_fail_closed")
-    elif selected_duration_values:
+    elif len(selected_duration_values) >= min_valid_nights:
         durations = [
             selected_duration_values[day] / 3600
             for day in result["duration_sample_dates"]
@@ -827,6 +843,7 @@ def lagged_rank_association(
     epoch_status: str,
     min_pairs: int = 28,
     outcome_allow_zero: bool = False,
+    epoch_evaluator: Callable[[dict[str, list[str]]], dict[str, Any]] | None = None,
 ) -> dict[str, Any]:
     """Return an exploratory Spearman association for exact ``t -> t+1`` pairs.
 
@@ -861,16 +878,6 @@ def lagged_rank_association(
     if exposure_coverage_semantics != "explicit_daily_zero":
         result["status"] = "load_coverage_unknown"
         result["limitations"] = ["explicit_daily_zero_coverage_required"]
-        return result
-    if epoch_comparable is not True:
-        result["status"] = (
-            "cross_epoch" if epoch_comparable is False else "epoch_unknown"
-        )
-        result["limitations"] = [
-            "cross_epoch_association_withheld"
-            if epoch_comparable is False
-            else "epoch_comparability_unknown"
-        ]
         return result
     if not requested:
         result["status"] = "no_requested_dates"
@@ -923,6 +930,24 @@ def lagged_rank_association(
                     outcome_by_date[outcome_day],
                 )
             )
+
+    # Attribution uses the exact same pairs as the correlation, excluding
+    # unpaired terminal exposures and initial outcomes.
+    if epoch_evaluator is not None:
+        epoch = epoch_evaluator({
+            "exposure": [pair[0] for pair in pairs],
+            "outcome": [pair[1] for pair in pairs],
+        })
+        epoch_comparable, epoch_status = epoch["comparable"], epoch["status"]
+        result.update(epoch_comparable=epoch_comparable, epoch_status=epoch_status)
+    if epoch_comparable is not True:
+        result["status"] = "cross_epoch" if epoch_comparable is False else "epoch_unknown"
+        result["limitations"] = [
+            "cross_epoch_association_withheld"
+            if epoch_comparable is False
+            else "epoch_comparability_unknown"
+        ]
+        return result
 
     result["pair_count"] = len(pairs)
     result["pair_dates"] = [

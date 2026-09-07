@@ -1,4 +1,4 @@
-# 信息源、主张、证据与合规规则 v2.10.0
+# 信息源、主张、证据与合规规则 v2.6.0
 
 ## 目录
 
@@ -65,19 +65,15 @@ source_id｜标题/文档名｜发布者/提供者｜source_locator｜发布日�
 访问日期｜来源等级｜source_group｜权限｜适用客户/项目｜备注｜source_fingerprint｜upstream_id｜external_use
 
 claim_id｜claim_type｜provenance｜verification_status｜主张内容｜时间/口径｜
-支持source_id｜反证source_id｜置信度｜下游影响/备注
+支持source_id｜反证source_id｜置信度｜下游影响｜备注
 ```
 
 - 来源ID使用`SRC-I/L/N-001`，主张ID使用`CLM-I/L/N-001`；编号在同一任务内稳定，重试不得为同一对象另起编号；
 - 正文引用主张ID；主张台账再连接一个或多个来源ID；
-- 可见台账的14列来源字段和10列主张字段必须逐列精确投影已验签machine record；标题、发布者、主张、时间口径和影响字段也不得只靠候选签章自证。所有单元格禁止Markdown链接/图片、反引号、HTML和Unicode Cf隐藏字符；支持/反证字段只允许去重排序的规范`SRC-I/L/N-###`列表，无反证精确写`无`；
-- `source_locator`只允许可稳定复查的raw HTTP(S) URL或受控stable-id，禁止Markdown链接。`canonical_locator`必须由该raw locator规范化生成，redirect目标另存`final_url`。Markdown的`source_fingerprint`必须精确写为`sha256:<content_sha256>`，其中哈希对实际捕获内容按固定规范化计算；URL哈希、文档ID、ETag、版本号或`scheme:stable-id`均不能替代内容哈希；
-- 文本快照统一做Unicode NFC、CRLF/CR转LF、UTF-8无BOM后哈希；二进制文件对原始字节哈希。`runtime/source-cache.json`必须保留`final_url/retrieved_at/capture_method/length/content_sha256`，来源台账指纹必须与缓存完全一致；
-- `upstream_id`标识最初原文/新闻稿/数据库记录的共同上游，无法识别时精确写`unknown:<source_id>`，该来源不能成为满足 F2 门槛的来源对成员；
+- `source_locator`使用可稳定复查的规范URL、文档路径加页码/段落或稳定记录ID；`source_fingerprint`写64位小写SHA-256（可加`sha256:`前缀），或来源系统提供的`scheme:stable-id`不可变指纹；`upstream_id`标识最初原文/新闻稿/数据库记录的共同上游，无法识别时精确写`unknown:<source_id>`，该来源不能成为满足 F2 门槛的来源对成员；
 - 每条来源必须显式写`external_use: true|false`。公开来源在许可允许且内容适合外发时可写true；内部来源只有获得当前事项的明确外发授权才可写true；restricted一律写false；
 - 转载、镜像、摘要、同一新闻稿、同一数据库上游或联合发布材料归入同一`source_group`和`upstream_id`；
-- 每条来源必须携带宿主捕获服务按实际内容、响应元数据和授权谱系签发的v3 source-capture receipt；模型候选字段和candidate seal不能替代捕获服务签名，也不能证明claim受来源语义支持；
-- `F2`只从已验签machine source计算，且支持来源中必须存在同一对在`source_group`、`canonical_locator`、`content_sha256`、`upstream_id`四项都有效且逐项不同；不得用Markdown显示值建立独立性。`upstream_id`为`unknown:<source_id>`的来源不能成为该对成员；其他补充支持来源不影响这对成立。
+- `F2`要求支持来源中存在至少一对来源：该同一对的`source_group`、`locator/source_locator`、`source_fingerprint`、`upstream_id`四项都有效且逐项不同；`upstream_id`为`unknown:<source_id>`的来源不能成为该对成员；其他补充支持来源不影响这对成立。只有候选对缺字段、共享任一字段或可追溯到共同上游时，该候选对不成立；仍应继续检查其他候选对；
 - 身份、金额、当前职务和当前项目阶段等关键主张，形成`F2`时原则上至少有一个直接原始来源；
 - 搜索摘要、AI摘要和匿名信息只用于发现来源，不登记为有效支持证据。
 
@@ -101,8 +97,6 @@ claim_id｜claim_type｜provenance｜verification_status｜主张内容｜时间
 综合分数只能表示覆盖和证据可靠程度，不表示事实正确概率；关键身份或事实冲突时不得给出高综合置信度。
 
 证据可靠不等于当前有效。复用任何主张前还须按[时效、反馈与回填](freshness-feedback.md)检查TTL、事件有效期和变化信号；过期主张即使来源等级为S也先标`stale`，不得继续作为ready_for_use成果的关键依赖。
-
-每条claim必须持久化`information_type/ttl_class、evidence_anchor_at、date_basis、verified_at、ttl_days、expires_at`。`expires_at`由机器按“当前business_mode上限与信息类别上限取较短者”重算，不信任模型手写日期；明示法定/合同有效期更早时再取更早日期。只有访问日期时`date_basis=retrieved_at`且降低置信度。任一关键claim过期、缺TTL字段、支持来源指纹不匹配或不能在`runtime/evidence-manifest.json`中找到，candidate/release均不得继续作为当前事实使用。
 
 ## 权限分级与成果同步
 
@@ -157,8 +151,7 @@ summary_sync_status｜downstream_invalidation｜sync_classification
 
 - 三轴字段完整，U/N没有被当作核实状态；
 - 主张ID与来源ID分离，正文引用可回溯；
-- F2 的支持来源中已找到至少一对已验签machine source；该同一对的`source_group`、`canonical_locator`、`content_sha256`、`upstream_id`四项都有效且逐项不同；`upstream_id`为`unknown:<source_id>`的来源不是该对成员；
-- 每条被正文引用的claim在evidence manifest中有唯一全字段记录，逐来源绑定已验签source receipt完整信封摘要，TTL可重算且未过期；所有被选中或被下游引用的研究载体均已由独立`evidence_reviewer`按当前正文SHA审核；
+- F2 的支持来源中已找到至少一对来源；该同一对的`source_group`、`locator/source_locator`、`source_fingerprint`、`upstream_id`四项都有效且逐项不同，`upstream_id`为`unknown:<source_id>`的来源不是该对成员；其他补充来源不影响该对成立；
 - 主体、身份、日期、职务、金额、阶段和口径已核对；
 - 冲突没有被“最新模块”或用户选择静默覆盖；
 - 采购事实与岗位角色分开，未推断个人厂商偏好；

@@ -11,12 +11,11 @@ import numpy as np
 
 from active_research_contract import (
     base_report,
-    canonical_sha256,
     fail_report,
     finite_number,
     parse_aware_iso,
     positive_integer,
-    read_json,
+    read_json_snapshot,
     valid_sha256,
     valid_source_locator,
     utc,
@@ -26,6 +25,7 @@ from active_research_contract import (
 SCHEMA_VERSION = "pia_active_portfolio_construction_v1"
 POLICY_SCHEMA_VERSION = "pia_active_construction_policy_v1"
 SCAN_SCHEMA_VERSION = "pia_active_alpha_scan_v1"
+MAX_CONSTRUCTION_ASSETS = 250
 
 
 def _weight_map(value: Any, symbols: list[str], label: str) -> tuple[dict[str, float], list[str]]:
@@ -100,6 +100,8 @@ def _validate_policy(policy: Any, symbols: list[str], as_of: Any) -> list[str]:
     if not isinstance(covariance, dict):
         errors.append("policy.covariance must be an object")
     else:
+        if covariance.get("annualized") is not True:
+            errors.append("policy.covariance.annualized must be true; supply verified annualized fractional-return covariance")
         if covariance.get("symbols") != symbols:
             errors.append("policy.covariance.symbols must exactly match scan ranking order")
         matrix = covariance.get("matrix")
@@ -148,7 +150,14 @@ def _bounded_simplex_projection(values: np.ndarray, lower: np.ndarray, upper: np
     for _ in range(200):
         midpoint = (left + right) / 2.0
         candidate = np.clip(values - midpoint, lower, upper)
-        if float(candidate.sum()) > 1.0:
+        total = float(candidate.sum())
+        # The clipped sum is monotone: a 1e-14 mass residual also bounds
+        # each weight's error. Stop far below the final 1e-10 feasibility gate,
+        # or when floating-point endpoints cannot narrow any further.
+        if abs(total - 1.0) <= 1e-14 or midpoint in (left, right):
+            left = right = midpoint
+            break
+        if total > 1.0:
             left = midpoint
         else:
             right = midpoint
@@ -212,6 +221,20 @@ def run_construction(
     scan_sha256: str,
     policy_sha256: str,
 ) -> dict[str, Any]:
+    # Reject dimensions before symbol expansion, matrix conversion or eigensolve.
+    rankings_input = scan.get("rankings") if isinstance(scan, dict) else None
+    policy_symbols = policy.get("symbols") if isinstance(policy, dict) else None
+    covariance_input = policy.get("covariance") if isinstance(policy, dict) else None
+    matrix_input = covariance_input.get("matrix") if isinstance(covariance_input, dict) else None
+    if any(isinstance(value, list) and len(value) > MAX_CONSTRUCTION_ASSETS
+           for value in (rankings_input, policy_symbols, matrix_input)) or (
+        isinstance(matrix_input, list) and any(
+            isinstance(row, list) and len(row) > MAX_CONSTRUCTION_ASSETS for row in matrix_input
+        )
+    ):
+        return fail_report(SCHEMA_VERSION, "construction_contract_failed", [
+            f"construction_size_limit: at most {MAX_CONSTRUCTION_ASSETS} assets per dense matrix"
+        ])
     errors: list[str] = []
     if not isinstance(scan, dict) or scan.get("schema_version") != SCAN_SCHEMA_VERSION:
         errors.append(f"scan report must use {SCAN_SCHEMA_VERSION}")
@@ -250,7 +273,7 @@ def run_construction(
     trade_cap = float(policy["max_trade_weight"])
     effective_lower = np.maximum(minimum, current - trade_cap)
     effective_upper = np.minimum(maximum, current + trade_cap)
-    if float(effective_lower.sum()) > 1.0 + 1e-10 or float(effective_upper.sum()) < 1.0 - 1e-10:
+    if np.any(effective_lower > effective_upper) or float(effective_lower.sum()) > 1.0 + 1e-10 or float(effective_upper.sum()) < 1.0 - 1e-10:
         return fail_report(SCHEMA_VERSION, "trade_cap_bounds_infeasible", ["max_trade_weight conflicts with portfolio bounds"])
 
     tolerance = float(policy["tolerance"])
@@ -291,6 +314,23 @@ def run_construction(
     if one_way_turnover > turnover_limit and one_way_turnover > 0:
         active = current + (active - current) * (turnover_limit / one_way_turnover)
         one_way_turnover = 0.5 * float(np.abs(active - current).sum())
+    # Post-processing can leave the feasible box when current weights violate new bounds.
+    # Keep policy feasibility independent of the caller's optimizer convergence tolerance.
+    constraint_tolerance = 1e-10
+    constraint_errors = []
+    if not np.all(np.isfinite(active)):
+        constraint_errors.append("final weights must be finite")
+    if abs(float(active.sum()) - 1.0) > constraint_tolerance:
+        constraint_errors.append("final weights must sum to 1.0")
+    if np.any(active < minimum - constraint_tolerance) or np.any(active > maximum + constraint_tolerance):
+        constraint_errors.append("final weights violate minimum_weights or maximum_weights")
+    if np.any(np.abs(active - current) > trade_cap + constraint_tolerance):
+        constraint_errors.append("final weights violate max_trade_weight")
+    if one_way_turnover > turnover_limit + constraint_tolerance:
+        constraint_errors.append("final weights violate max_one_way_turnover")
+    if constraint_errors:
+        return fail_report(SCHEMA_VERSION, "final_constraints_violated", constraint_errors)
+
     predicted_volatility = math.sqrt(max(0.0, float(active @ covariance @ active)))
     expected_gross = float(active @ robust_returns)
     estimated_cost = one_way_turnover * cost_rate
@@ -331,6 +371,7 @@ def run_construction(
                 "robust_expected_excess_returns": {
                     symbol: round(float(robust_returns[index]), 12) for index, symbol in enumerate(symbols)
                 },
+                "covariance_annualized": True,
                 "transaction_cost_bps": float(policy["transaction_cost_bps"]),
                 "risk_aversion": risk_aversion,
             },
@@ -357,13 +398,13 @@ def main() -> int:
     parser.add_argument("--policy-file", required=True)
     args = parser.parse_args()
     try:
-        scan = read_json(args.scan_report, "scan_report")
-        policy = read_json(args.policy_file, "construction_policy")
+        scan, scan_sha256 = read_json_snapshot(args.scan_report, "scan_report")
+        policy, policy_sha256 = read_json_snapshot(args.policy_file, "construction_policy")
         report = run_construction(
             scan,
             policy,
-            scan_sha256=canonical_sha256(args.scan_report),
-            policy_sha256=canonical_sha256(args.policy_file),
+            scan_sha256=scan_sha256,
+            policy_sha256=policy_sha256,
         )
     except (OSError, ValueError, json.JSONDecodeError) as exc:
         report = fail_report(SCHEMA_VERSION, "input_read_failed", [str(exc)])

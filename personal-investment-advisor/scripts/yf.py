@@ -25,33 +25,40 @@ __version__ = "2.2.2"
 # ///
 
 import argparse
-import sys
 import json
 import math
 import os
 import re
+import sys
 import time
 from collections import deque
 from concurrent.futures import FIRST_COMPLETED, ThreadPoolExecutor, wait
 from datetime import date, datetime
 from pathlib import Path
-from typing import List, Optional, Dict, Any, Tuple
+from typing import Any
 
-import pandas as pd
 import dateparser
+import pandas as pd
 import requests
 import yfinance as yf
 from rich.console import Console
-from rich.table import Table
 from rich.panel import Panel
+from rich.table import Table
 
+from history_integrity_gate import evaluate_history_integrity
 from portfolio_loader import (
     build_portfolio_package,
     is_cash_position,
     load_positions,
     normalize_symbol,
 )
-from history_integrity_gate import evaluate_history_integrity
+from provider_runtime import (
+    OPERATION_SECONDS,
+    ProviderError,
+    error_outcome,
+    require_data,
+    run_provider,
+)
 from quote_evidence_contract import (
     MAX_QUOTE_AGE_SECONDS,
     MAX_QUOTE_FUTURE_SKEW_SECONDS,
@@ -81,23 +88,9 @@ INFO_KEYS_DEFAULT = [
     "country", "website",
 ]
 
-MAX_RETRIES = 2
-RETRY_BACKOFF_BASE = 1.5  # seconds
-REQUEST_TIMEOUT = 10  # seconds for search API
-# Regex: all uppercase letters, digits, dots, dashes (e.g. AAPL, BRK-B, 0700.HK)
+REQUEST_TIMEOUT = 10  # search transport timeout, within the operation deadline
 TICKER_PATTERN = re.compile(r'^[A-Z0-9][A-Z0-9.\-]{0,11}$')
-PERMANENT_TRANSPORT_ERROR_MARKERS = (
-    "invalid library",
-    "certificate verify failed",
-    "unsupported protocol",
-    "invalid url",
-    "no host supplied",
-    "unable to open database file",
-    "permission denied",
-    "access is denied",
-    "read-only file system",
-    "yfinance_cache_unwritable",
-)
+_YFINANCE_CACHE_DIR = None
 SYSTEMIC_BATCH_ERROR_MARKERS = (
     "invalid library",
     "openssl_internal:invalid library",
@@ -106,11 +99,12 @@ SYSTEMIC_BATCH_ERROR_MARKERS = (
 
 
 def configure_yfinance_cache(
-    cache_dir: Optional[str],
+    cache_dir: str | None,
     *,
     task_local_default: bool = False,
-) -> Optional[str]:
+) -> str | None:
     """Configure all yfinance SQLite caches before the first ticker request."""
+    global _YFINANCE_CACHE_DIR
     selected = cache_dir or os.environ.get("PIA_YFINANCE_CACHE_DIR")
     if not selected and task_local_default:
         selected = str(Path.cwd() / "tmp" / "pia-yfinance-cache")
@@ -141,6 +135,7 @@ def configure_yfinance_cache(
             probe_path.unlink(missing_ok=True)
         except OSError:
             pass
+    _YFINANCE_CACHE_DIR = str(resolved)
     return str(resolved)
 
 
@@ -161,34 +156,49 @@ def _is_likely_ticker(query: str) -> bool:
     return bool(TICKER_PATTERN.match(query))
 
 
-def _http_status_from_exception(exc: Exception) -> Optional[int]:
-    status = getattr(exc, "status", None) or getattr(exc, "status_code", None)
-    response = getattr(exc, "response", None)
-    if status is None and response is not None:
-        status = getattr(response, "status_code", None)
-    return status if isinstance(status, int) else None
+def _yahoo_provider(symbol, operation, cache_dir=None, **kwargs):
+    if cache_dir:
+        yf.set_tz_cache_location(cache_dir)
+    ticker = yf.Ticker(symbol)
+    if operation == "history":
+        data = ticker.history(**kwargs, raise_errors=True)
+        if not isinstance(data, pd.DataFrame):
+            raise TypeError("history provider returned non-DataFrame")
+    elif operation == "info":
+        data = ticker.info
+        if not isinstance(data, dict):
+            raise TypeError("info provider returned non-object")
+    elif operation == "news":
+        data = ticker.news
+        if not isinstance(data, list):
+            raise TypeError("news provider returned non-list")
+    else:
+        raise ValueError("unsupported Yahoo operation")
+    return data
 
 
-def _is_retryable_error(exc: Exception) -> bool:
-    """Return False when repeating the same request cannot repair the failure."""
-    if isinstance(
-        exc,
-        (
-            PermissionError,
-            FileNotFoundError,
-            IsADirectoryError,
-            NotADirectoryError,
-        ),
-    ):
-        return False
-    status = _http_status_from_exception(exc)
-    if status is not None:
-        return status in {408, 425, 429} or 500 <= status <= 599
-    message = str(exc).lower()
-    return not any(marker in message for marker in PERMANENT_TRANSPORT_ERROR_MARKERS)
+def _call_yahoo(symbol, operation, *, timeout_seconds=OPERATION_SECONDS, max_attempts=3, **kwargs):
+    return require_data(run_provider(
+        _yahoo_provider, symbol, operation,
+        _YFINANCE_CACHE_DIR or os.environ.get("PIA_YFINANCE_CACHE_DIR"),
+        timeout_seconds=timeout_seconds, max_attempts=max_attempts, **kwargs,
+    ))
 
 
-def _systemic_transport_signature(errors: List[str]) -> Optional[str]:
+def _search_provider(query):
+    response = requests.get(
+        "https://query2.finance.yahoo.com/v1/finance/search",
+        params={"q": query, "quotesCount": 1, "newsCount": 0},
+        headers={"User-Agent": "Mozilla/5.0"}, timeout=REQUEST_TIMEOUT,
+    )
+    response.raise_for_status()
+    data = response.json()
+    if not isinstance(data, dict) or not isinstance(data.get("quotes", []), list):
+        raise TypeError("search provider returned invalid object")
+    return data
+
+
+def _systemic_transport_signature(errors: list[str]) -> str | None:
     message = " ".join(str(error) for error in errors).lower()
     for marker in SYSTEMIC_BATCH_ERROR_MARKERS:
         if marker in message:
@@ -196,76 +206,40 @@ def _systemic_transport_signature(errors: List[str]) -> Optional[str]:
     return None
 
 
-def _retry(fn, retries=MAX_RETRIES, label="operation"):
-    """Execute fn with exponential backoff retries. Returns result or raises."""
-    last_err = None
-    for attempt in range(retries + 1):
-        try:
-            return fn()
-        except Exception as e:
-            last_err = e
-            if attempt < retries and _is_retryable_error(e):
-                wait = RETRY_BACKOFF_BASE ** (attempt + 1)
-                console.print(
-                    f"[yellow]⚠ {label} failed (attempt {attempt + 1}/{retries + 1}): {e}. "
-                    f"Retrying in {wait:.1f}s...[/yellow]"
-                )
-                time.sleep(wait)
-            else:
-                break
-    raise last_err
-
-
-def search_symbol(query: str) -> Optional[str]:
-    """Search for a stock symbol using Yahoo Finance search API."""
-    url = "https://query2.finance.yahoo.com/v1/finance/search"
-    params = {"q": query, "quotesCount": 1, "newsCount": 0}
-    headers = {
-        'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) '
-                       'AppleWebKit/537.36 (KHTML, like Gecko) '
-                       'Chrome/120.0.0.0 Safari/537.36'
-    }
-    try:
-        def _do_search():
-            resp = requests.get(url, params=params, headers=headers, timeout=REQUEST_TIMEOUT)
-            resp.raise_for_status()
-            return resp.json()
-
-        data = _retry(_do_search, label=f"symbol search for '{query}'")
-        if "quotes" in data and len(data["quotes"]) > 0:
-            return data["quotes"][0]["symbol"]
-    except Exception as e:
-        console.print(f"[red]✗ Symbol search failed for '{query}': {e}[/red]")
-    return None
+def search_symbol(query: str) -> str | None:
+    """Genuine empty search returns None; operation failures remain exceptions."""
+    data = require_data(run_provider(_search_provider, query))
+    quotes = data.get("quotes", [])
+    return quotes[0]["symbol"] if quotes else None
 
 
 def resolve_symbol(
     query: str,
     *,
     return_info: bool = False,
-) -> Optional[str] | Tuple[Optional[str], Optional[Dict[str, Any]]]:
+) -> str | None | tuple[str | None, dict[str, Any] | None]:
     """Resolve a query to a ticker symbol.
 
     If the query looks like a ticker (e.g. AAPL), validate it directly first
     to avoid an unnecessary search API call. Callers may reuse the returned
     metadata so the validation request is not repeated by the data fetch.
     """
-    resolved_info: Optional[Dict[str, Any]] = None
+    resolved_info: dict[str, Any] | None = None
     if _is_likely_ticker(query):
-        # Fast path: try direct validation
-        try:
-            ticker = yf.Ticker(query)
-            info = ticker.info
-            # If we get a valid longName or shortName, it's a real ticker
-            if info and (info.get("longName") or info.get("shortName")):
-                resolved_info = info
-                return (query, resolved_info) if return_info else query
-        except Exception:
-            pass  # Fall through to search
+        # A hard validation failure must not trigger a new search/retry layer.
+        info = _call_yahoo(query, "info")
+        if info and (info.get("longName") or info.get("shortName")):
+            resolved_info = info
+            return (query, resolved_info) if return_info else query
 
     # Slow path: use search API
     symbol = search_symbol(query)
     return (symbol, resolved_info) if return_info else symbol
+
+
+def _provider_error_text(exc):
+    outcome = exc.outcome if isinstance(exc, ProviderError) else error_outcome(exc)
+    return json.dumps(outcome, ensure_ascii=False)
 
 
 def get_stock_data(
@@ -278,10 +252,9 @@ def get_stock_data(
     fetch_info: bool = True,
     fetch_news: bool = True,
     a_share_history_source: str = "yahoo",
-    prefetched_info: Optional[Dict[str, Any]] = None,
-) -> Tuple[Any, Dict, List, List[str]]:
+    prefetched_info: dict[str, Any] | None = None,
+) -> tuple[Any, dict, list, list[str]]:
     """Fetch stock data with granular control. Returns (history, info, news, errors)."""
-    ticker = yf.Ticker(symbol)
     history = None
     info = {}
     news = []
@@ -309,88 +282,61 @@ def get_stock_data(
             kwargs['interval'] = interval
 
         try:
-            def _fetch_hist():
-                # A-Share physical decoupling for daily data
-                is_a_share = symbol.endswith(".SS") or symbol.endswith(".SZ") or symbol.endswith(".BJ")
-                is_daily = not interval or interval in ["1d", "1wk", "1mo"]
-                
-                if (
-                    is_a_share
-                    and is_daily
-                    and a_share_history_source in {"akshare", "auto"}
-                ):
-                    try:
-                        from akshare_fetcher import StandaloneDataFetcher
-                        fetcher = StandaloneDataFetcher()
-                        code = symbol.split(".")[0]
-                        # Best effort mapping of dates
-                        start_date = kwargs.get('start', None)
-                        end_date = kwargs.get('end', None)
-                        df = fetcher.get_history(code, start_date=start_date, end_date=end_date)
-                        if not df.empty:
-                            df.attrs["pia_source"] = "Akshare"
-                            df.attrs["pia_source_locator"] = "akshare:stock_zh_a_hist"
-                            df.attrs["pia_adjustment"] = "qfq"
-                            console.print(f"[green]✓ A-share history synchronized for {symbol}[/green]")
-                            return df
-                        else:
-                            if a_share_history_source == "akshare":
-                                raise ValueError("Akshare returned empty A-share history")
-                            console.print(f"[yellow]⚠ Akshare returned empty history for {symbol}, falling back to Yahoo[/yellow]")
-                    except Exception as e:
-                        if a_share_history_source == "akshare":
-                            raise
-                        console.print(f"[yellow]⚠ A-share history fallback failed for {symbol}: {e}. Trying Yahoo Finance...[/yellow]")
-
-                yahoo_history = ticker.history(**kwargs)
-                if yahoo_history is not None:
-                    yahoo_history.attrs["pia_source"] = "Yahoo Finance"
-                    yahoo_history.attrs["pia_source_locator"] = f"yfinance:{symbol}:history"
-                    yahoo_history.attrs["pia_adjustment"] = "provider_default"
-                return yahoo_history
-                
-            history = _retry(_fetch_hist, label=f"price history for {symbol}")
-        except Exception as e:
-            errors.append(f"Price history fetch failed: {e}")
-            console.print(f"[red]✗ Price history for {symbol}: {e}[/red]")
+            deadline = time.monotonic() + OPERATION_SECONDS
+            is_a_share = symbol.endswith((".SS", ".SZ", ".BJ"))
+            use_akshare = is_a_share and (not interval or interval in {"1d", "1wk", "1mo"}) and a_share_history_source in {"akshare", "auto"}
+            if use_akshare:
+                from akshare_fetcher import StandaloneDataFetcher
+                fetcher = StandaloneDataFetcher(operation_seconds=OPERATION_SECONDS)
+                history = fetcher.get_history(symbol.split(".")[0], start_date=kwargs.get("start"), end_date=kwargs.get("end"))
+                if not history.empty:
+                    history.attrs.update(pia_source="Akshare", pia_source_locator="akshare:stock_zh_a_hist", pia_adjustment="qfq")
+            # Only genuine no_data allows explicit auto fallback. It consumed
+            # one adapter invocation, leaving at most two and the same deadline.
+            if not use_akshare or (history.empty and a_share_history_source == "auto"):
+                attempts_left = 3 - history.attrs.get("pia_provider_outcome", {}).get("attempts", 1) if use_akshare else 3
+                if attempts_left > 0 and time.monotonic() < deadline:
+                    history = _call_yahoo(symbol, "history", timeout_seconds=deadline-time.monotonic(), max_attempts=attempts_left, **kwargs)
+                    history.attrs.update(pia_source="Yahoo Finance", pia_source_locator=f"yfinance:{symbol}:history", pia_adjustment="provider_default")
+                elif use_akshare:
+                    # Preserve the actual successful empty response. A skipped
+                    # fallback is not a new provider exception or timeout.
+                    history.attrs["pia_fallback_skipped"] = "attempt_or_deadline_budget"
+                else:
+                    raise TimeoutError("history_operation_deadline")
+        except Exception as exc:
+            errors.append(f"Price history fetch failed: {_provider_error_text(exc)}")
 
     if fetch_info:
         if prefetched_info is not None:
             info = prefetched_info
         else:
             try:
-                def _fetch_info():
-                    return ticker.info
-                info = _retry(_fetch_info, label=f"info for {symbol}")
-            except Exception as e:
-                errors.append(f"Info fetch failed: {e}")
-                console.print(f"[red]✗ Info for {symbol}: {e}[/red]")
-
+                info = _call_yahoo(symbol, "info")
+            except Exception as exc:
+                errors.append(f"Info fetch failed: {_provider_error_text(exc)}")
     if fetch_news:
         try:
-            def _fetch_news():
-                return ticker.news
-            news = _retry(_fetch_news, label=f"news for {symbol}")
-        except Exception as e:
-            errors.append(f"News fetch failed: {e}")
-            console.print(f"[red]✗ News for {symbol}: {e}[/red]")
+            news = _call_yahoo(symbol, "news")
+        except Exception as exc:
+            errors.append(f"News fetch failed: {_provider_error_text(exc)}")
 
     return history, info, news, errors
 
 
 def fetch_daily_sync_batch(
-    symbols: List[str],
+    symbols: list[str],
     *,
     max_workers: int = 2,
-) -> Dict[str, Tuple[Any, Dict, List, List[str]]]:
+) -> dict[str, tuple[Any, dict, list, list[str]]]:
     """Fetch independent quote-only metadata concurrently, preserving fail-closed results."""
     unique_symbols = list(dict.fromkeys(symbols))
     if not unique_symbols:
         return {}
     workers = max(1, min(int(max_workers), len(unique_symbols), 4))
-    results: Dict[str, Tuple[Any, Dict, List, List[str]]] = {}
+    results: dict[str, tuple[Any, dict, list, list[str]]] = {}
 
-    def fetch(symbol: str) -> Tuple[Any, Dict, List, List[str]]:
+    def fetch(symbol: str) -> tuple[Any, dict, list, list[str]]:
         return get_stock_data(
             symbol,
             fetch_price=False,
@@ -399,9 +345,9 @@ def fetch_daily_sync_batch(
         )
 
     queued = deque(unique_symbols)
-    systemic_failures: Dict[str, int] = {}
+    systemic_failures: dict[str, int] = {}
     successful_results = 0
-    circuit_breaker: Optional[str] = None
+    circuit_breaker: str | None = None
     circuit_threshold = min(2, workers, len(unique_symbols))
 
     with ThreadPoolExecutor(max_workers=workers) as executor:
@@ -416,7 +362,7 @@ def fetch_daily_sync_batch(
             submit_one()
 
         while in_flight:
-            completed, _ = wait(tuple(in_flight), return_when=FIRST_COMPLETED)
+            completed, _ = wait(tuple(in_flight), timeout=OPERATION_SECONDS + 2.0, return_when=FIRST_COMPLETED)
             for future in completed:
                 symbol = in_flight.pop(future)
                 try:
@@ -468,17 +414,17 @@ def fetch_daily_sync_batch(
                     f"systemic transport failure: {circuit_breaker}"
                 ],
             )
-    return results
+    return {symbol: results[symbol] for symbol in unique_symbols}
 
 
-def filter_info(info: Dict[str, Any], full: bool = False) -> Dict[str, Any]:
+def filter_info(info: dict[str, Any], full: bool = False) -> dict[str, Any]:
     """Return curated info dict. If full=True, return raw dict."""
     if full or not info:
         return info
     return {k: info[k] for k in INFO_KEYS_DEFAULT if k in info}
 
 
-def extract_earnings_snapshot(info: Dict[str, Any]) -> Dict[str, Any]:
+def extract_earnings_snapshot(info: dict[str, Any]) -> dict[str, Any]:
     if not info:
         return {}
 
@@ -501,7 +447,7 @@ def extract_earnings_snapshot(info: Dict[str, Any]) -> Dict[str, Any]:
     }
 
 
-def extract_catalyst_map(news_items: List[Dict[str, Any]], earnings_snapshot: Dict[str, Any]) -> Dict[str, Any]:
+def extract_catalyst_map(news_items: list[dict[str, Any]], earnings_snapshot: dict[str, Any]) -> dict[str, Any]:
     upcoming = []
     active = []
     broken = []
@@ -526,7 +472,7 @@ def extract_catalyst_map(news_items: List[Dict[str, Any]], earnings_snapshot: Di
     }
 
 
-def _has_quote_result(result: Dict[str, Any]) -> bool:
+def _has_quote_result(result: dict[str, Any]) -> bool:
     candidates = [
         (result.get("summary") or {}).get("last_close"),
         (result.get("info") or {}).get("currentPrice"),
@@ -548,7 +494,7 @@ def _has_quote_result(result: Dict[str, Any]) -> bool:
     return False
 
 
-def _positive_finite_number(value: Any) -> Optional[float]:
+def _positive_finite_number(value: Any) -> float | None:
     """Return a positive finite float without changing its market precision."""
     if isinstance(value, bool):
         return None
@@ -561,7 +507,7 @@ def _positive_finite_number(value: Any) -> Optional[float]:
     return number
 
 
-def select_portfolio_current_price(history: Any, info: Dict[str, Any]) -> Optional[float]:
+def select_portfolio_current_price(history: Any, info: dict[str, Any]) -> float | None:
     """Select an unrounded market price for portfolio valuation.
 
     Summary values are intentionally presentation-oriented and rounded. They must
@@ -583,8 +529,8 @@ def select_portfolio_current_price(history: Any, info: Dict[str, Any]) -> Option
 
 
 def _expected_position_metadata(
-    portfolio_payload: Optional[Dict[str, Any]],
-) -> Dict[str, Dict[str, Any]]:
+    portfolio_payload: dict[str, Any] | None,
+) -> dict[str, dict[str, Any]]:
     """Build the active, non-cash identity contract used by a strict batch audit."""
     if not portfolio_payload or portfolio_payload.get("_status") != "ok":
         return {}
@@ -602,7 +548,7 @@ def _expected_position_metadata(
     }
 
 
-def _expected_market(symbol: str, position: Optional[Dict[str, Any]]) -> Optional[str]:
+def _expected_market(symbol: str, position: dict[str, Any] | None) -> str | None:
     market = str((position or {}).get("market") or "").strip().upper()
     if market not in {"CN", "HK", "US", "CASH"}:
         return None
@@ -617,7 +563,7 @@ def _expected_market(symbol: str, position: Optional[Dict[str, Any]]) -> Optiona
     return market
 
 
-def _provider_market(exchange: Any) -> Optional[str]:
+def _provider_market(exchange: Any) -> str | None:
     value = re.sub(r"[^A-Z0-9]+", "", str(exchange or "").upper())
     if not value:
         return None
@@ -641,7 +587,7 @@ def _provider_market(exchange: Any) -> Optional[str]:
     return None
 
 
-def _markets_compatible(expected: Optional[str], actual: Optional[str]) -> bool:
+def _markets_compatible(expected: str | None, actual: str | None) -> bool:
     if expected is None or actual is None:
         return False
     if expected == "CN":
@@ -649,7 +595,7 @@ def _markets_compatible(expected: Optional[str], actual: Optional[str]) -> bool:
     return expected == actual
 
 
-def _expected_asset_kind(position: Optional[Dict[str, Any]]) -> Optional[str]:
+def _expected_asset_kind(position: dict[str, Any] | None) -> str | None:
     if not position:
         return None
     asset_type = str(position.get("asset_type") or "").strip().lower()
@@ -663,7 +609,7 @@ def _expected_asset_kind(position: Optional[Dict[str, Any]]) -> Optional[str]:
     }.get(asset_type)
 
 
-def load_history_integrity_packets(path: Optional[str]) -> Dict[str, Dict[str, Any]]:
+def load_history_integrity_packets(path: str | None) -> dict[str, dict[str, Any]]:
     """Load source-backed ETF history-integrity packets keyed by normalized symbol.
 
     A file may contain either one packet or ``{"symbols": {symbol: packet}}``.
@@ -687,7 +633,7 @@ def load_history_integrity_packets(path: Optional[str]) -> Dict[str, Dict[str, A
             "history integrity file must contain one packet or a symbols object"
         )
 
-    normalized: Dict[str, Dict[str, Any]] = {}
+    normalized: dict[str, dict[str, Any]] = {}
     for symbol, packet in packets.items():
         normalized_symbol = normalize_symbol(symbol or "")
         if not normalized_symbol or not isinstance(packet, dict):
@@ -698,11 +644,11 @@ def load_history_integrity_packets(path: Optional[str]) -> Dict[str, Dict[str, A
 
 def history_integrity_decision(
     symbol: str,
-    info: Optional[Dict[str, Any]],
-    expected_position: Optional[Dict[str, Any]],
-    packets: Optional[Dict[str, Dict[str, Any]]],
-    history: Optional[pd.DataFrame] = None,
-) -> Dict[str, Any]:
+    info: dict[str, Any] | None,
+    expected_position: dict[str, Any] | None,
+    packets: dict[str, dict[str, Any]] | None,
+    history: pd.DataFrame | None = None,
+) -> dict[str, Any]:
     """Decide whether derived technical metrics may be emitted for one symbol."""
     normalized_symbol = normalize_symbol(symbol or "")
     expected_kind = _expected_asset_kind(expected_position)
@@ -857,7 +803,7 @@ def history_integrity_decision(
     }
 
 
-def _provider_asset_kind(quote_type: Any) -> Optional[str]:
+def _provider_asset_kind(quote_type: Any) -> str | None:
     normalized = re.sub(r"[^A-Z]", "", str(quote_type or "").upper())
     return {
         "EQUITY": "EQUITY",
@@ -869,7 +815,7 @@ def _provider_asset_kind(quote_type: Any) -> Optional[str]:
     }.get(normalized)
 
 
-def _history_suppression_gap(report: Dict[str, Any]) -> str:
+def _history_suppression_gap(report: dict[str, Any]) -> str:
     detail = str(report.get("detail_status") or "")
     if detail in {
         "asset_identity_unknown",
@@ -891,15 +837,15 @@ def _history_suppression_gap(report: Dict[str, Any]) -> str:
 
 
 def _quote_contract_report(
-    result: Dict[str, Any],
-    expected_position: Optional[Dict[str, Any]],
+    result: dict[str, Any],
+    expected_position: dict[str, Any] | None,
     *,
     now_epoch: float,
     max_quote_age_seconds: int,
-) -> Dict[str, Any]:
+) -> dict[str, Any]:
     """Validate quote identity and freshness against one portfolio position."""
-    errors: List[str] = []
-    warnings: List[str] = []
+    errors: list[str] = []
+    warnings: list[str] = []
     info = result.get("info") if isinstance(result.get("info"), dict) else {}
     result_symbol = normalize_symbol(result.get("symbol") or "")
     expected_symbol = normalize_symbol(
@@ -1019,7 +965,7 @@ def _quote_contract_report(
     }
 
 
-def list_active_non_cash_symbols(portfolio_payload: Dict[str, Any]) -> List[str]:
+def list_active_non_cash_symbols(portfolio_payload: dict[str, Any]) -> list[str]:
     """Return the strict quote-coverage universe from a validated loader payload."""
     return [
         normalize_symbol(position.get("symbol") or "")
@@ -1030,30 +976,30 @@ def list_active_non_cash_symbols(portfolio_payload: Dict[str, Any]) -> List[str]
 
 
 def build_portfolio_batch_audit(
-    results: List[Dict[str, Any]],
+    results: list[dict[str, Any]],
     requested_count: int,
-    expected_symbols: Optional[List[str]] = None,
-    portfolio_load_status: Optional[str] = None,
-    portfolio_load_error: Optional[str] = None,
-    expected_position_metadata: Optional[Dict[str, Dict[str, Any]]] = None,
-    now_epoch: Optional[float] = None,
+    expected_symbols: list[str] | None = None,
+    portfolio_load_status: str | None = None,
+    portfolio_load_error: str | None = None,
+    expected_position_metadata: dict[str, dict[str, Any]] | None = None,
+    now_epoch: float | None = None,
     max_quote_age_seconds: int = MAX_QUOTE_AGE_SECONDS,
-    portfolio_snapshot_binding: Optional[Dict[str, Any]] = None,
-) -> Dict[str, Any]:
+    portfolio_snapshot_binding: dict[str, Any] | None = None,
+) -> dict[str, Any]:
     """Audit quote coverage and strict identity for one validated portfolio."""
-    portfolio_status_counts: Dict[str, int] = {}
+    portfolio_status_counts: dict[str, int] = {}
     inactive_symbols = set()
-    resolved_symbols: List[str] = []
-    quote_failed_symbols: List[str] = []
-    unmatched_symbols: List[str] = []
+    resolved_symbols: list[str] = []
+    quote_failed_symbols: list[str] = []
+    unmatched_symbols: list[str] = []
     quote_success_count = 0
     portfolio_matched_count = 0
     quote_contract_matched_count = 0
-    quote_contract_failures: Dict[str, List[str]] = {}
-    quote_contract_warnings: Dict[str, List[str]] = {}
-    quote_freshness_contracts: Dict[str, Dict[str, Any]] = {}
-    result_error_symbols: List[str] = []
-    stale_quote_symbols: List[str] = []
+    quote_contract_failures: dict[str, list[str]] = {}
+    quote_contract_warnings: dict[str, list[str]] = {}
+    quote_freshness_contracts: dict[str, dict[str, Any]] = {}
+    result_error_symbols: list[str] = []
+    stale_quote_symbols: list[str] = []
     position_metadata = {
         normalize_symbol(symbol): metadata
         for symbol, metadata in (expected_position_metadata or {}).items()
@@ -1184,7 +1130,7 @@ def build_portfolio_batch_audit(
     }
 
 
-def compute_summary(history) -> Optional[Dict[str, Any]]:
+def compute_summary(history) -> dict[str, Any] | None:
     """Compute summary statistics from price history DataFrame."""
     if history is None or history.empty or len(history) < 2:
         return None
@@ -1192,12 +1138,12 @@ def compute_summary(history) -> Optional[Dict[str, Any]]:
     closes = history['Close']
     first_close = closes.iloc[0]
     last_close = closes.iloc[-1]
-    
+
     # Calculate Drawdown metrics
     rolling_max = closes.cummax()
     drawdowns = (closes - rolling_max) / rolling_max
     max_drawdown = drawdowns.min() * 100
-    
+
     current_high = history['High'].max()
     dd_from_high = ((last_close - current_high) / current_high) * 100 if current_high > 0 else 0
 
@@ -1257,7 +1203,7 @@ def compute_summary(history) -> Optional[Dict[str, Any]]:
     }
 
 
-def format_news_item(item: Dict[str, Any]) -> Dict[str, str]:
+def format_news_item(item: dict[str, Any]) -> dict[str, str]:
     """Normalize news item structure."""
     content = item.get('content', item)
     title = content.get('title', 'No Title')
@@ -1431,7 +1377,7 @@ def main():
         default="yahoo",
         help=(
             "A-share daily-history provider. 'akshare' fails closed; 'auto' "
-            "falls back to Yahoo; default keeps Yahoo for compatibility."
+            "falls back to Yahoo only on genuine empty data within one budget; default keeps Yahoo."
         ),
     )
     parser.add_argument(
@@ -1515,7 +1461,7 @@ def main():
     portfolio_load_status = None
     portfolio_load_error = None
     expected_portfolio_symbols = None
-    expected_position_metadata: Dict[str, Dict[str, Any]] = {}
+    expected_position_metadata: dict[str, dict[str, Any]] = {}
     if args.with_portfolio:
         try:
             portfolio_payload = load_positions(args.positions_file)
@@ -1560,7 +1506,7 @@ def main():
     results = []
     has_failure = bool(history_integrity_load_error)
     all_failed = True
-    daily_sync_prefetch: Dict[str, Tuple[Any, Dict, List, List[str]]] = {}
+    daily_sync_prefetch: dict[str, tuple[Any, dict, list, list[str]]] = {}
     if args.daily_sync and expected_position_metadata:
         batch_symbols = [
             normalized
@@ -1584,7 +1530,15 @@ def main():
         if args.daily_sync and normalized_query in expected_position_metadata:
             symbol = normalized_query
         else:
-            resolution = resolve_symbol(query, return_info=True)
+            try:
+                resolution = resolve_symbol(query, return_info=True)
+            except Exception as exc:
+                has_failure = True
+                if args.json:
+                    results.append({"query": query, "status": "failed", "error": _provider_error_text(exc)})
+                else:
+                    console.print(_provider_error_text(exc))
+                continue
             if isinstance(resolution, tuple):
                 symbol, prefetched_info = resolution
             else:
@@ -1635,7 +1589,7 @@ def main():
                     "Info fetch failed: provider returned empty metadata"
                 )
 
-        if fetch_errors:
+        if fetch_errors or (fetch_price and (history is None or history.empty)):
             has_failure = True
 
         # 3. Gate derived ETF metrics against a source-backed action ledger.
@@ -1710,6 +1664,8 @@ def main():
                 "data_gaps": [],
                 "history_integrity": history_integrity,
             }
+            if fetch_price and history is not None and history.empty and not fetch_errors:
+                result_entry["status"] = "insufficient_data"
             if history_integrity_load_error:
                 result_entry["history_integrity"]["file_error"] = (
                     history_integrity_load_error
@@ -1717,8 +1673,8 @@ def main():
             if fetch_info:
                 # Basic info
                 curated_info = filter_info(info, full=args.full_info)
-                
-                # Enhanced A-share info 
+
+                # Enhanced A-share info
                 is_a_share_symbol = bool(
                     symbol
                     and (
@@ -1734,11 +1690,11 @@ def main():
                         try:
                             from akshare_fetcher import StandaloneDataFetcher
                             fetcher = StandaloneDataFetcher()
-                            
+
                             # Context-Aware Downgrading: Skip heavy chip distribution if scanning multiple stocks in lean mode
                             skip_chip = args.lean and len(args.queries) > 2
                             enhanced_metrics = fetcher.get_enhanced_metrics(a_share_code, skip_chip_dist=skip_chip)
-                            
+
                             # Merge into info
                             if curated_info is None:
                                 curated_info = {}
@@ -1746,18 +1702,24 @@ def main():
                             curated_info.update({
                                 k: v for k, v in enhanced_metrics.items() if v is not None
                             })
+                            if enhanced_metrics.get("enhancement_status") == "error":
+                                has_failure = True
+                                fetch_errors.append("A-share enhancement operation failed: " + json.dumps(enhanced_metrics.get("provider_outcomes", {})))
+                            elif enhanced_metrics.get("enhancement_status") != "ok":
+                                has_failure = True
+                                result_entry["status"] = "insufficient_data"
                             if enhanced_metrics.get("enhancement_status") != "ok":
                                 result_entry["data_gaps"].append(
                                     f"A股增强指标状态={enhanced_metrics.get('enhancement_status', 'unavailable')}"
                                 )
                         except Exception as e:
-                            # Silently fail or log for agents
-                            result_entry["data_gaps"].append(f"A股增强指标获取失败: {e}")
+                            has_failure = True
+                            fetch_errors.append("A-share enhancement operation failed: " + _provider_error_text(e))
                 elif is_a_share_symbol:
                     result_entry["data_gaps"].append("A股增强指标未请求")
                 else:
                     result_entry["data_gaps"].append("筹码增强字段不适用(非A股)")
-                
+
                 result_entry["info"] = curated_info
                 result_entry["earnings_snapshot"] = extract_earnings_snapshot(info)
             if fetch_news:
@@ -1778,11 +1740,11 @@ def main():
                         hist_data = hist_data.drop(columns=['Datetime'])
                     elif 'Date' in hist_data.columns:
                         hist_data['Date'] = hist_data['Date'].dt.strftime('%Y-%m-%d')
-                    
+
                     if args.lean and len(hist_data) > 6:
                         # Lean mode: truncate long history but keep trend markers
                         is_intraday = args.interval in ["1m", "2m", "5m", "15m", "30m", "60m", "90m", "1h"]
-                        
+
                         if is_intraday and len(hist_data) > 20:
                             # Intraday: keeps first 5, last 10, and resamples middle
                             first_part = hist_data.iloc[:5]
@@ -1798,7 +1760,7 @@ def main():
                         else:
                             # Fallback for short intraday
                             lean_history = pd.concat([hist_data.iloc[:3], hist_data.iloc[-3:]], ignore_index=True)
-                            
+
                         result_entry["history"] = lean_history.to_dict(orient='records')
                         result_entry["history_truncated"] = True
                     else:
@@ -1809,7 +1771,7 @@ def main():
                     result_entry["data_gaps"].append(
                         _history_suppression_gap(history_integrity)
                     )
-                        
+
                 result_entry["summary"] = summary
                 if summary is None and history_integrity["technical_metrics_allowed"]:
                     result_entry["data_gaps"].append("未生成价格摘要统计")
@@ -1852,7 +1814,7 @@ def main():
                     result_entry["data_gaps"].append(
                         "持仓文件无效，持仓匹配与组合风险无法判断"
                     )
-            
+
             # Load thesis.md for research calls. Daily Sync stays quote-only and
             # leaves Thesis evidence assessment to the dedicated red-team stage.
             try:
@@ -1906,7 +1868,7 @@ def main():
                     json.dumps(
                         {
                             "status": (
-                                "complete" if batch_audit["complete"] else "incomplete"
+                                "complete" if batch_audit["complete"] and not has_failure else "incomplete"
                             ),
                             "records": results,
                             "portfolio_batch_audit": batch_audit,

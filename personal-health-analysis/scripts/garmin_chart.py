@@ -24,6 +24,14 @@ from garmin_capabilities import (
 sys.path.insert(0, str(Path(__file__).parent))
 from garmin_auth import get_client
 from garmin_data import LIVE_SUMMARY_COMPONENTS, fetch_summary, get_date_range
+from garmin_health_profile import (
+    ContextReadError,
+    ContextValidationError,
+    _context_review,
+    _load_context,
+    _problem_insights,
+    _validate_context,
+)
 from garmin_intelligence import (
     HAS_SQLITE,
     MIN_PAIRED_BASELINE_DAYS,
@@ -193,9 +201,7 @@ def _dated_map(records: list[dict[str, Any]], field: str, transform=_clean_value
         if not date or date in conflicts:
             continue
         value = transform(record.get(field))
-        if date not in result:
-            result[date] = value
-        elif result[date] is None and value is not None:
+        if date not in result or result[date] is None and value is not None:
             result[date] = value
         elif value is not None and result[date] is not None and value != result[date]:
             result[date] = None
@@ -605,6 +611,7 @@ def _baseline_view(summary_data: dict[str, Any]) -> dict[str, Any]:
         "baseline_start": metrics.get("baseline_start_date"),
         "baseline_end": metrics.get("baseline_end_date"),
         "epoch_status": epoch.get("status") or "epoch_unknown",
+        "device_attribution_status": epoch.get("device_attribution_status") or "unknown",
         "method": "prior_same_date_mean",
         "analysis_algorithm_epoch": algorithm_epoch,
         "rhr": {
@@ -669,6 +676,8 @@ def _safe_device_epoch(
     return {
         "status": baseline.get("epoch_status") or "epoch_unknown",
         "device_count": len(serials) if serials else len(devices),
+        "device_count_basis": "inventory_not_observed_use",
+        "device_attribution_status": baseline.get("device_attribution_status") or "unknown",
         "firmware_versions": firmware_versions,
         "analysis_algorithm_epoch": baseline.get("analysis_algorithm_epoch"),
         "manufacturer_algorithm_epoch": evidence.get(
@@ -737,6 +746,11 @@ def _scope_dashboard_source(
         "manufacturer_algorithm_epoch": source_epoch.get(
             "manufacturer_algorithm_epoch"
         ),
+        "observation_attributions": [
+            {key: item.get(key) for key in ("component", "date", "serial_number", "software_version")}
+            for item in _records(source_epoch.get("observation_attributions", []))
+            if item.get("component") in components
+        ],
         "firmware_history": [
             {
                 "timestamp": item.get("timestamp"),
@@ -904,6 +918,7 @@ def build_dashboard_payload(
     requested_start: str | None = None,
     requested_end: str | None = None,
     generated_at: str | None = None,
+    context_records: list[dict[str, Any]] | None = None,
 ) -> dict[str, Any]:
     """Build the allowlisted, audit-oriented dashboard.v3 view model."""
     if not isinstance(days, int) or isinstance(days, bool) or days < 1:
@@ -1149,7 +1164,113 @@ def build_dashboard_payload(
             ],
         },
     }
+    if context_records is not None:
+        if "sleep" not in components:
+            raise ContextValidationError("CONTEXT_NOT_REQUESTED")
+        records = _validate_context({"schema_version": 1, "records": context_records}, dates)
+        payload["user_context_review"] = _context_review(records, dates, [
+            {"date": day, "total_sleep": value * 3600 if value is not None else None}
+            for day, value in zip(dates, series["sleep_total_h"], strict=True)
+        ])
+        payload["narrative"]["unknowns"][-1] = "本人主动提供的情境仅作描述性复盘；不能仅凭设备与情境记录判断原因或急迫性。"
     return _project_dashboard_payload(payload)
+
+
+def _dashboard_problem_insights(payload: dict[str, Any]) -> dict[str, Any]:
+    """Adapt existing rendered summaries only; unavailable profile fields stay absent."""
+    meta = payload.get("meta")
+    if not isinstance(meta, dict):
+        meta = {}
+    source = meta.get("source")
+    if not isinstance(source, dict):
+        source = {}
+    components = source.get("components") or []
+    requested = meta.get("requested_range") or {}
+    coverage = payload.get("coverage") or {}
+    kpis = payload.get("kpis") or {}
+
+    def summary(kpi_key, coverage_key):
+        kpi, cov = kpis.get(kpi_key) or {}, coverage.get(coverage_key) or {}
+        return {"latest": kpi.get("value"), "latest_date": kpi.get("observed_date"), "coverage": {
+            "status": "no_observations" if cov.get("status") == "no_data" else cov.get("status"),
+            "requested_days": cov.get("requested_days"), "observed_days": cov.get("observed_days"),
+            "missing_days": cov.get("missing_days"), "coverage_fraction": cov.get("coverage_ratio"),
+            "latest_observation_date": cov.get("last_date"),
+            "trailing_missing_days": cov.get("current_missing_streak_days"),
+        }}
+
+    modules, allowed = {}, {}
+    if "sleep" in components:
+        modules["sleep_health"] = {"duration": summary("sleep", "sleep_total"),
+            "qualified_regularity": (payload.get("patterns") or {}).get("sleep_regularity") or {}}
+        allowed["sleep_opportunity_and_continuity"] = {"sleep_duration": "/kpis/sleep"}
+    if "heart_rate" in components or "hrv" in components:
+        recovery, metrics = {}, {}
+        if "heart_rate" in components:
+            recovery["resting_heart_rate"] = summary("rhr", "rhr")
+            metrics["resting_heart_rate"] = "/kpis/rhr"
+        if "hrv" in components:
+            recovery["hrv"] = {"last_night": summary("hrv", "hrv")}
+            metrics["last_night_hrv"] = "/kpis/hrv"
+        modules["autonomic_recovery"] = recovery
+        allowed["recovery_observation"] = metrics
+    entries = [entry for entry in coverage.values() if entry.get("status") != "not_requested"]
+    state = "no_data" if not any(entry.get("observed_days") for entry in entries) else "complete" if entries and all(entry.get("status") == "complete" for entry in entries) else "partial"
+    result = _problem_insights(modules, requested, state)
+    result["items"] = [item for item in result["items"] if item["id"] in allowed]
+    for item in result["items"]:
+        item["observations"] = [obs for obs in item["observations"] if obs["metric"] in allowed[item["id"]]]
+        for obs in item["observations"]:
+            obs["evidence_pointer"] = allowed[item["id"]][obs["metric"]]
+        item["provenance"]["source"] = "existing_rendered_dashboard_summaries"
+        if item["id"] == "sleep_opportunity_and_continuity":
+            item["missing_evidence"].append("dashboard_has_no_sleep_timing_or_continuity_summary")
+        else:
+            # An omitted component is not a data gap in this narrower request.
+            observations = item["observations"]
+            item["qualification"]["status"] = (
+                "no_observations" if not any(obs["value"] is not None for obs in observations)
+                else "descriptive_available" if all(obs["coverage"]["status"] == "complete" for obs in observations)
+                else "partial_observation"
+            )
+    quality_ids = {item["id"] for item in result["items"] if any(
+        obs["coverage"]["status"] != "complete" for obs in item["observations"]
+    ) or item["qualification"].get("formal_regularity_status") == "duplicate_conflict"}
+    actions = []
+    for action in result["optional_actions"]:
+        action["applies_to"] = [key for key in action["applies_to"] if key in allowed
+                                and (action["id"] != "verify_observation_coverage" or key in quality_ids)]
+        if action["applies_to"]:
+            actions.append(action)
+    result["optional_actions"] = actions[:2]
+    for item in result["items"]:
+        item["optional_action_ids"] = [a["id"] for a in actions[:2] if item["id"] in a["applies_to"]]
+    return {
+        "schema": result["schema"], "data_status": result["data_status"],
+        "items": [{key: item[key] for key in (
+            "id", "question", "observations", "interpretation", "qualification",
+            "possible_explanations", "missing_evidence", "next_observation_criteria",
+        )} for item in result["items"]],
+        "optional_actions": result["optional_actions"],
+    }
+
+
+def _project_context_review(value: Any) -> dict[str, Any] | None:
+    """Persist only UI-consumed aggregate counts; never raw context or clock times."""
+    if not isinstance(value, dict) or value.get("schema") != "user-context-review.v1":
+        return None
+    fields = ("context_recorded_days", "context_missing_days", "action_selected_days",
+              "action_recorded_days", "action_completed_days", "action_not_completed_days",
+              "action_missing_days", "sleep_opportunity_recorded_days",
+              "sleep_opportunity_median_minutes", "sleepiness_recorded_days",
+              "caffeine_time_recorded_days", "paired_sleep_duration_days",
+              "paired_device_sleep_duration_median_minutes")
+    def aggregate(source):
+        source = source if isinstance(source, dict) else {}
+        return {key: source.get(key) if type(source.get(key)) in (int, float) and math.isfinite(source[key]) and source[key] >= 0 else None for key in fields}
+    return {"schema": "user-context-review.v1", "source": "USER-REPORTED",
+            "summary": aggregate(value.get("summary")),
+            "objective_outcome_comparison": "not_evaluated", "effectiveness": "not_evaluated"}
 
 
 def _project_coverage(value: Any) -> dict[str, Any]:
@@ -1320,8 +1441,10 @@ def _project_patterns(value: Any) -> dict[str, Any]:
                 "duration_status",
                 "duration_source",
                 "duration_valid_nights",
+                "duration_observed_nights",
                 "timing_status",
                 "timing_valid_nights",
+                "timing_observed_nights",
             )
         }
         | {
@@ -1492,6 +1615,8 @@ def _project_dashboard_payload(payload: dict[str, Any]) -> dict[str, Any]:
                 for key in (
                     "status",
                     "device_count",
+                    "device_count_basis",
+                    "device_attribution_status",
                     "firmware_versions",
                     "analysis_algorithm_epoch",
                     "manufacturer_algorithm_epoch",
@@ -1571,12 +1696,16 @@ def _project_dashboard_payload(payload: dict[str, Any]) -> dict[str, Any]:
             ],
         },
         "patterns": patterns,
+        "problem_insights": _dashboard_problem_insights(payload),
+        "user_context_review": (
+            _project_context_review(payload.get("user_context_review"))
+            if "sleep" in (source.get("components") or []) else None
+        ),
         "narrative": {
             "overall": narrative.get("overall"),
             "unknowns": [str(item) for item in narrative.get("unknowns") or []],
-            "optional_considerations": [
-                str(item) for item in narrative.get("optional_considerations") or []
-            ],
+            # Keep the v3 key, but the sole action list now lives in problem_insights.
+            "optional_considerations": [],
             "escalation": [str(item) for item in narrative.get("escalation") or []],
         },
     }
@@ -1886,6 +2015,7 @@ def main(argv: list[str] | None = None) -> int:
     parser.add_argument("--days", type=int)
     parser.add_argument("--period")
     parser.add_argument("--output")
+    parser.add_argument("--context-file", help="Explicit local user-context JSON; requires sleep component")
     parser.add_argument(
         "--source",
         choices=["local", "live"],
@@ -1967,6 +2097,19 @@ def main(argv: list[str] | None = None) -> int:
         )
         print(json.dumps({"status": status}), file=sys.stderr)
         return 2
+    context_records = None
+    if args.context_file is not None:
+        if "sleep" not in selected_components:
+            print(json.dumps({"status": "context_not_requested", "error_code": "CONTEXT_NOT_REQUESTED"}), file=sys.stderr)
+            return 2
+        try:
+            context_records = _load_context(args.context_file, _calendar_dates(requested_start, requested_end))
+        except ContextValidationError:
+            print(json.dumps({"status": "invalid_context", "error_code": "CONTEXT_INVALID"}), file=sys.stderr)
+            return 2
+        except ContextReadError as exc:
+            print(json.dumps({"status": "read_error", "error_code": "CONTEXT_READ_ERROR", "error_type": exc.error_type, "errno": exc.errno}), file=sys.stderr)
+            return 1
     if args.source == "live":
         start_date, end_date = requested_start, requested_end
         request = {
@@ -2063,6 +2206,7 @@ def main(argv: list[str] | None = None) -> int:
         live_fallback_attempted=live_fallback_attempted,
         requested_start=requested_start,
         requested_end=requested_end,
+        context_records=context_records,
     )
     html = render_report(charts_data)
     if args.output:

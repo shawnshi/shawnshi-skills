@@ -1,11 +1,11 @@
 {
   "schema_version": 3,
   "skill": "personal-diary-writer",
-  "generated_at": "2026-09-05T17:21:28+08:00",
+  "generated_at": "2026-09-06T21:36:10+08:00",
   "hash_algorithm": "SHA-256",
   "text_hash_normalization": "LF",
   "skill_md": "SKILL.md",
-  "skill_md_sha256": "6da34d49f32d3420eb722ed7fca34b6a6de1e0ae32a6aad689033216f0a6237c",
+  "skill_md_sha256": "9d9a9b1270797faa8053391d38b8feddbef56f513042422b3da3939a953503d2",
   "top_level_files": [
     "SKILL.md",
     "authority.json"
@@ -13,23 +13,36 @@
   "top_level_file_hashes": [
     {
       "path": "SKILL.md",
-      "sha256": "6da34d49f32d3420eb722ed7fca34b6a6de1e0ae32a6aad689033216f0a6237c"
+      "sha256": "9d9a9b1270797faa8053391d38b8feddbef56f513042422b3da3939a953503d2"
     },
     {
       "path": "authority.json",
-      "sha256": "f13ad0b45324d515fd2032407b2d7ae735635c4ab51f165e3d193debdc825195"
+      "sha256": "323d724916212a8a1452a7654b59c80426390fd6a69b27fe6ed57f0d37066387"
     }
   ],
   "top_level_directories": [
+    "references",
     "scripts"
   ],
   "resource_directories": [
     {
       "name": "scripts",
       "file_count": 5
+    },
+    {
+      "name": "references",
+      "file_count": 2
     }
   ],
   "resource_file_hashes": [
+    {
+      "path": "references/private-data-read.md",
+      "sha256": "90c5ecccb4e76e23f90909b2b486e54c569d15f31cccda28442f5acc2865fdd2"
+    },
+    {
+      "path": "references/write-protocol.md",
+      "sha256": "91db88b7801326402b5080de8271616f31db109d451d58528c8e5e01b0576b6d"
+    },
     {
       "path": "scripts/authority_gate.py",
       "sha256": "9739d7461ea5d30c5ab7d5aac97f896217cdaaa293040174edbfe7d5b0394fc2"
@@ -44,14 +57,26 @@
     },
     {
       "path": "scripts/test_default_read_contract.py",
-      "sha256": "2a7f6020684f219f830c6322a5e5dd852e1e7fa70ffc8b1568aa0be8876cb939"
+      "sha256": "68143d22bb121e95bd3556e2e857e70ca2c6309ec545e80621d3f891fd0058b1"
     },
     {
       "path": "scripts/test_diary_ops.py",
-      "sha256": "47f8cab1a435ee0555f41c87ff0e36ac05223065866efb0310c16e9f1254a2bc"
+      "sha256": "d740e5981228c84adbb87a12013e285dd4dc4770d630da9d9d8c3d7e73a15e27"
     }
   ],
   "declared_local_dependencies": [
+    {
+      "path": "references/private-data-read.md",
+      "exists": true,
+      "resolved_path": "personal-diary-writer/references/private-data-read.md",
+      "sha256": "90c5ecccb4e76e23f90909b2b486e54c569d15f31cccda28442f5acc2865fdd2"
+    },
+    {
+      "path": "references/write-protocol.md",
+      "exists": true,
+      "resolved_path": "personal-diary-writer/references/write-protocol.md",
+      "sha256": "91db88b7801326402b5080de8271616f31db109d451d58528c8e5e01b0576b6d"
+    },
     {
       "path": "scripts/authority_gate.py",
       "exists": true,

@@ -16,6 +16,7 @@ from run_contract import (  # pyright: ignore[reportMissingImports]
 from semantic_agent import (  # pyright: ignore[reportMissingImports]
     _candidate_assessment,
     _candidate_funnel,
+    _candidate_projection,
     _date_failure_disqualifies,
     assemble_and_finalize,
 )
@@ -221,7 +222,7 @@ class SemanticAgentCandidateTests(unittest.TestCase):
 
 
 class SemanticAgentFinalizeTests(unittest.TestCase):
-    def test_empty_selection_produces_zero_item_core(self) -> None:
+    def _assemble(self, candidate: dict | None = None, identity: dict | None = None) -> dict:
         with TemporaryDirectory() as temp_dir:
             root = Path(temp_dir)
             core_path = root / "refined.json"
@@ -308,6 +309,36 @@ class SemanticAgentFinalizeTests(unittest.TestCase):
                 ],
                 "selected_items": [],
             }
+            eligible = []
+            dispositions = []
+            if candidate is not None:
+                pool["candidate_funnel"].update(observed=1, retained_for_review=1)
+                pool["candidate_funnel"]["terminal_dispositions"]["retained_for_review"] = 1
+                dispositions = [{
+                    "candidate_id": candidate["candidate_id"], "url": candidate["url"],
+                    "source_type": "primary", "reason": "eligible",
+                }]
+                eligible = [_candidate_projection(
+                    {"candidate": candidate, "access_check": _access(candidate["url"])},
+                    candidate_refs=[candidate["candidate_id"]],
+                    corroboration_status="single_primary",
+                )]
+                dynamic["selected_items"] = [{
+                    "candidate_id": candidate["candidate_id"],
+                    "event_identity": identity,
+                    "title_zh": "已核验政策通知",
+                    "fact": "文件早于网页发布。",
+                    "connection": "支付系统适配要求。",
+                    "deduction": "核对本地适用范围。",
+                    "actionability": "由医保部门核对实施期限。",
+                    "intelligence_level": "L2",
+                    "confidence": "high",
+                    "summary_zh": "保留原始事件日期与发布日期。",
+                    "major_signal": False,
+                    "major_signal_reason": "none",
+                    "near_term_decision_impact": False,
+                    "decision_impact_reason": "none",
+                }]
             artifacts = {
                 "candidate_pool": (root / "pool.json", pool),
                 "supplement": (root / "supplement.json", supplement),
@@ -317,7 +348,7 @@ class SemanticAgentFinalizeTests(unittest.TestCase):
                     "semantic_agent._load_packet",
                     return_value=(root / "request.json", request, packet, manifest),
                 ),
-                patch("semantic_agent._candidate_assessment", return_value=([], [])),
+                patch("semantic_agent._candidate_assessment", return_value=(eligible, dispositions)),
                 patch(
                     "semantic_agent._bound_artifact",
                     side_effect=lambda _request, name: artifacts[name],
@@ -331,8 +362,63 @@ class SemanticAgentFinalizeTests(unittest.TestCase):
 
             core = json.loads(core_path.read_text(encoding="utf-8"))
             self.assertEqual(result, (core_path, decision_path))
-            self.assertEqual(core["top_10"], [])
-            self.assertEqual(core["candidate_funnel"]["terminal_dispositions"]["retained"], 0)
+            return core
+
+    def test_empty_selection_produces_zero_item_core(self) -> None:
+        core = self._assemble()
+        self.assertEqual(core["top_10"], [])
+        self.assertEqual(core["candidate_funnel"]["terminal_dispositions"]["retained"], 0)
+
+    def _dated_candidate(self, event_day: str | int = "2026-08-31") -> tuple[dict, dict]:
+        identity = {
+            "key_version": "v1", "primary_domain": "healthcare_digital",
+            "actor": "国家医疗保障局", "action": "印发",
+            "object": "分组方案实施通知", "event_date": event_day,
+        }
+        candidate = _candidate("https://example.org/policy", event_identity=identity)
+        candidate["published_at"] = "2026-09-02"
+        return candidate, identity
+
+    def test_registered_event_date_precedes_publication_and_is_preserved(self) -> None:
+        candidate, identity = self._dated_candidate()
+        item = self._assemble(candidate, identity)["top_10"][0]
+        self.assertEqual(item["published_at"], "2026-09-02")
+        self.assertEqual(item["event_date"], "2026-08-31")
+        self.assertEqual(item["event_date"], item["event_identity"]["event_date"])
+        self.assertEqual(item["event_date_source"], "event_identity.event_date")
+
+    def test_explicit_event_date_and_provenance_are_preserved(self) -> None:
+        candidate, identity = self._dated_candidate()
+        candidate.pop("event_identity")
+        candidate.update(event_date="2026-08-31", event_date_source="signed notice")
+        item = self._assemble(candidate, identity)["top_10"][0]
+        self.assertEqual(item["event_date"], "2026-08-31")
+        self.assertEqual(item["event_date_source"], "signed notice")
+
+    def test_missing_event_evidence_keeps_publication_fallback(self) -> None:
+        candidate, identity = self._dated_candidate("2026-09-02")
+        candidate.pop("event_identity")
+        item = self._assemble(candidate, identity)["top_10"][0]
+        self.assertEqual(item["event_date"], "2026-09-02")
+        self.assertEqual(item["event_date_source"], "published_at")
+
+    def test_model_cannot_replace_registered_event_date_with_publication(self) -> None:
+        candidate, identity = self._dated_candidate()
+        with self.assertRaisesRegex(RunContractError, "identity does not match evidence"):
+            self._assemble(candidate, {**identity, "event_date": "2026-09-02"})
+
+    def test_future_or_invalid_registered_event_dates_are_rejected(self) -> None:
+        for event_day in ("2026-09-03", "2026-02-30", "20260831", "unknown", "", 20260831):
+            with self.subTest(event_day=event_day):
+                candidate, identity = self._dated_candidate(event_day)
+                with self.assertRaises(RunContractError):
+                    self._assemble(candidate, identity)
+
+    def test_conflicting_registered_event_dates_are_rejected(self) -> None:
+        candidate, identity = self._dated_candidate()
+        candidate.update(event_date="2026-09-01", event_date_source="source page")
+        with self.assertRaisesRegex(RunContractError, "conflicting event dates"):
+            self._assemble(candidate, identity)
 
 
 class SemanticAgentDateFailureTests(unittest.TestCase):

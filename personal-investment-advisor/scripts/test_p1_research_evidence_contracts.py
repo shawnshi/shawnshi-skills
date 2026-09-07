@@ -13,7 +13,6 @@ from urllib.parse import urlparse
 
 import pandas as pd
 
-
 SCRIPT_DIR = Path(__file__).resolve().parent
 if str(SCRIPT_DIR) not in sys.path:
     sys.path.insert(0, str(SCRIPT_DIR))
@@ -24,7 +23,6 @@ import test_investment_controls as fixtures
 from live_evidence_probe import probe_us_stock
 from quality_screener import evaluate_ticker, load_profiles
 from research_brief_gate import validate_research_brief
-
 
 NOW = datetime(2026, 7, 30, 12, 0, tzinfo=timezone.utc)
 RESERVED_TEST_CONTACT = "PIA Research formal@research.example"
@@ -265,7 +263,7 @@ class QualityMethodContractTests(unittest.TestCase):
             now=NOW,
         )
         self.assertEqual(result["status"], "not_applicable")
-        self.assertEqual(result["profile_version"], "3.0")
+        self.assertEqual(result["profile_version"], "3.1")
         self.assertIsNone(result["source_locator"])
 
     def test_successful_screen_carries_provenance_and_data_period(self):
@@ -273,7 +271,7 @@ class QualityMethodContractTests(unittest.TestCase):
         with patch.object(
             quality_module,
             "fetch_yf_data",
-            return_value=(object(), income, cashflow, balance),
+            return_value=(income, cashflow, balance),
         ):
             result = evaluate_ticker(
                 "AAPL",

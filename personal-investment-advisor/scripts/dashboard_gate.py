@@ -12,6 +12,7 @@ from research_brief_gate import validate_research_brief
 
 SCHEMA_PATH = Path(__file__).resolve().parent.parent / "references" / "dashboard_schema.json"
 SCHEMA = json.loads(SCHEMA_PATH.read_text(encoding="utf-8"))
+METHOD_PROFILES = json.loads((SCHEMA_PATH.parent / "method_profiles.json").read_text(encoding="utf-8"))
 
 
 def _parse_iso_date(value):
@@ -555,8 +556,14 @@ def _validate_current_quote_evidence(items, research_brief):
         if not isinstance(max_age_seconds, int) or isinstance(max_age_seconds, bool):
             item_errors.append(f"{prefix}.market_state has no strict quote freshness policy")
         if observed_at is not None and retrieved_at is not None:
-            if observed_at.date() != brief_as_of:
+            etf_quote = (
+                _get_nested(research_brief, ["instrument", "asset_type"]) == "etf"
+                and research_brief.get("method_profile") == "etf_research"
+            )
+            if observed_at.date() != brief_as_of and not etf_quote:
                 item_errors.append(f"{prefix}.observed_at date must equal research_brief.as_of_date")
+            if observed_at.date() > brief_as_of:
+                item_errors.append(f"{prefix}.observed_at cannot be after research_brief.as_of_date")
             if retrieved_at.date() != brief_as_of:
                 item_errors.append(f"{prefix}.retrieved_at date must equal research_brief.as_of_date")
             age_seconds = (retrieved_at - observed_at).total_seconds()
@@ -585,9 +592,10 @@ def _validate_current_valuation_contract(
     *,
     research_brief=None,
     strict_current_contract=False,
+    etf=False,
 ):
     errors = []
-    expected_version = SCHEMA.get("current_valuation_contract_version", "2.0")
+    expected_version = SCHEMA["etf_contract"]["valuation_contract_version"] if etf else SCHEMA.get("current_valuation_contract_version", "2.0")
     if scenarios.get("valuation_contract_version") != expected_version:
         return [
             "scenario_analysis.valuation_contract_version must be "
@@ -650,13 +658,14 @@ def _validate_current_valuation_contract(
         for field in SCHEMA.get("required_current_scenario_case_fields", []):
             if case.get(field) in (None, "", []):
                 errors.append(f"missing {prefix}.{field}")
-        for field in (
-            "enterprise_value",
-            "net_debt",
-            "equity_value",
-            "diluted_shares",
-            "per_share_value",
-        ):
+        numeric_fields = ("nav_per_unit", "per_share_value") if etf else (
+            "enterprise_value", "net_debt", "equity_value", "diluted_shares", "per_share_value",
+        )
+        if etf:
+            for field in SCHEMA["etf_contract"]["corporate_fields"]:
+                if case.get(field) != "not_applicable":
+                    errors.append(f"{prefix}.{field} must be not_applicable for ETF")
+        for field in numeric_fields:
             if not _finite_json_number(case.get(field)):
                 errors.append(f"{prefix}.{field} must be a finite JSON number")
         if _finite_json_number(case.get("diluted_shares")) and float(case["diluted_shares"]) <= 0:
@@ -775,6 +784,129 @@ def _validate_current_valuation_contract(
     return errors
 
 
+def _validate_etf_research(data):
+    """Validate supplied ETF observations, not the truth of external identity claims."""
+    errors = []
+    brief = data.get("research_brief")
+    brief = brief if isinstance(brief, dict) else {}
+    instrument = brief.get("instrument")
+    instrument = instrument if isinstance(instrument, dict) else {}
+    if (data.get("market_type"), instrument.get("asset_type"), brief.get("method_profile")) != ("ETF", "etf", "etf_research"):
+        errors.append("ETF requires matching market_type, instrument.asset_type and method_profile")
+    block = data.get("etf_research")
+    if not isinstance(block, dict):
+        return errors + ["etf_research must be an object"]
+    if block.get("contract_version") != "1.0":
+        errors.append("etf_research.contract_version must be 1.0")
+    if not isinstance(block.get("coverage_scope"), str) or not block["coverage_scope"].strip():
+        errors.append("etf_research.coverage_scope must state claimed scope and gaps")
+    if block.get("premium_discount_basis") != "quote_vs_last_published_nav":
+        errors.append("etf_research.premium_discount_basis must be quote_vs_last_published_nav (not simultaneous fair value)")
+    items = data.get("evidence_items")
+    items = items if isinstance(items, list) else []
+    try:
+        cutoff = date.fromisoformat(str(brief.get("as_of_date")))
+    except ValueError:
+        return errors + ["ETF requires a valid research cutoff"]
+
+    def bound_item(index, label):
+        if not isinstance(index, int) or isinstance(index, bool) or not 0 <= index < len(items) or not isinstance(items[index], dict):
+            errors.append(f"etf_research.{label} requires a valid evidence_index")
+            return {}
+        return items[index]
+
+    def observation(kind):
+        link = block.get(kind)
+        link = link if isinstance(link, dict) else {}
+        item = bound_item(link.get("evidence_index"), kind)
+        value = item.get("etf_observation")
+        value = value if isinstance(value, dict) else {}
+        if value.get("kind") != kind:
+            errors.append(f"ETF {kind} evidence must carry matching etf_observation.kind")
+        for field in ("symbol", "market", "currency"):
+            if value.get(field) != instrument.get(field):
+                errors.append(f"ETF {kind}.{field} must match instrument")
+        if item.get("source_tier") not in SCHEMA["primary_source_tiers"]:
+            errors.append(f"ETF {kind} requires primary-source evidence")
+        if item.get("freshness") not in ("current", "historical"):
+            errors.append(f"ETF {kind} availability/freshness is unknown")
+        errors.extend(_validate_evidence_items([item], strict_current_contract=True))
+        try:
+            published = _parse_aware_datetime(item.get("published_at"))
+            retrieved = _parse_aware_datetime(item.get("retrieved_at"))
+            if published > retrieved or retrieved.date() > cutoff:
+                errors.append(f"ETF {kind} requires published <= retrieved <= cutoff")
+        except (ValueError, TypeError):
+            errors.append(f"ETF {kind} publication and retrieval require timezone-aware timestamps")
+        return value, item
+
+    identity, _ = observation("identity")
+    if identity.get("asset_type") != "etf":
+        errors.append("ETF source identity must identify asset_type etf")
+    for field in ("benchmark", "replication_method"):
+        if not isinstance(identity.get(field), str) or not identity[field].strip():
+            errors.append(f"ETF identity.{field} is required")
+    nav, nav_item = observation("nav")
+    if not _is_positive_json_number(nav.get("value")) or nav.get("unit") != "currency_per_unit":
+        errors.append("ETF nav requires positive value and currency_per_unit")
+    try:
+        nav_date = date.fromisoformat(str(nav.get("valuation_date")))
+        published_date = _parse_aware_datetime(nav_item.get("published_at")).date()
+        max_age = METHOD_PROFILES["profiles"]["etf_research"]["freshness_policy"]["nav_max_age_calendar_days"]
+        if not (nav_date <= published_date <= cutoff) or not 0 <= (cutoff - nav_date).days <= max_age:
+            errors.append("ETF NAV stale/future: valuation <= publication <= cutoff and profile freshness window required")
+    except (ValueError, TypeError):
+        errors.append("ETF nav.valuation_date must be an available ISO date")
+    quote = bound_item(block.get("quote_evidence_index"), "quote")
+    if quote.get("source_tier") != "market_data":
+        errors.append("ETF quote must bind market_data evidence")
+    errors.extend(_validate_current_quote_evidence([quote], brief))
+    errors.extend(_validate_evidence_items([quote], strict_current_contract=True))
+    current_price = _get_nested(data, ["dashboard", "data_perspective", "price_position", "current_price"])
+    if current_price != quote.get("price"):
+        errors.append("ETF displayed current_price must match bound quote")
+    fees, _ = observation("fees")
+    if (not _finite_json_number(fees.get("value")) or not 0 <= fees["value"] < 1 or fees.get("unit") != "ratio_per_year" or fees.get("fee_basis") != "total_expense_ratio"):
+        errors.append("ETF fees require total_expense_ratio in ratio_per_year [0,1)")
+    tracking, tracking_item = observation("tracking")
+    if not _finite_json_number(tracking.get("value")) or tracking.get("unit") != "ratio" or tracking.get("tracking_type") not in SCHEMA["etf_contract"]["tracking_types"]:
+        errors.append("ETF tracking requires numeric ratio and difference/error type")
+    if tracking.get("tracking_type") == "tracking_error" and _finite_json_number(tracking.get("value")) and tracking["value"] < 0:
+        errors.append("ETF tracking_error cannot be negative")
+    if tracking.get("benchmark") != identity.get("benchmark") or not isinstance(tracking.get("methodology"), str) or not tracking["methodology"].strip():
+        errors.append("ETF tracking requires matching benchmark and methodology")
+    try:
+        start = date.fromisoformat(str(tracking.get("period_start")))
+        end = date.fromisoformat(str(tracking.get("period_end")))
+        published = _parse_aware_datetime(tracking_item.get("published_at")).date()
+        if not start < end <= published <= cutoff:
+            errors.append("ETF tracking requires period_start < period_end <= publication <= cutoff")
+    except (TypeError, ValueError):
+        errors.append("ETF tracking period must contain ISO dates")
+    for kind in SCHEMA["etf_contract"]["ancillary_coverage"]:
+        coverage = block.get(kind)
+        if not isinstance(coverage, dict):
+            errors.append(f"ETF {kind} must declare evidenced or gap coverage")
+        elif coverage.get("status") == "gap":
+            reason = coverage.get("reason")
+            if not isinstance(reason, str) or not reason.strip():
+                errors.append(f"ETF {kind} gap requires reason")
+            expected = f"{kind}: {reason}"
+            gaps = data.get("data_gaps")
+            if not isinstance(gaps, list) or expected not in gaps:
+                errors.append(f"ETF {kind} gap must also appear in data_gaps")
+        elif coverage.get("status") == "evidenced":
+            value, _ = observation(kind)
+            if not isinstance(value.get("summary"), str) or not value["summary"].strip():
+                errors.append(f"ETF {kind} evidence requires a scoped summary")
+        else:
+            errors.append(f"ETF {kind} coverage status must be evidenced or gap")
+    scenarios = data.get("scenario_analysis") or {}
+    if scenarios.get("valuation_method") != "nav_index_currency_stress" or scenarios.get("currency") != instrument.get("currency"):
+        errors.append("ETF scenarios require nav_index_currency_stress and instrument currency")
+    return errors
+
+
 def _validate_scenario_analysis(data, *, required, research_brief=None):
     scenarios = data.get("scenario_analysis")
     if scenarios is None:
@@ -786,6 +918,12 @@ def _validate_scenario_analysis(data, *, required, research_brief=None):
     if not isinstance(scenarios, dict):
         return ["scenario_analysis must be an object"]
 
+    etf_version = scenarios.get("valuation_contract_version") == SCHEMA["etf_contract"]["valuation_contract_version"]
+    etf_requested = etf_version or "etf_research" in data or (required and _get_nested(data, ["research_brief", "instrument", "asset_type"]) == "etf")
+    if etf_requested:
+        return _validate_etf_research(data) + _validate_current_valuation_contract(
+            scenarios, research_brief=research_brief, strict_current_contract=True, etf=True,
+        )
     if required or scenarios.get("valuation_contract_version") is not None:
         return _validate_current_valuation_contract(
             scenarios,

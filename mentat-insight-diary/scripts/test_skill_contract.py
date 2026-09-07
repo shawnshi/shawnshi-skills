@@ -1,5 +1,9 @@
-import unittest
 import importlib.util
+import json
+import subprocess
+import sys
+import tempfile
+import unittest
 from pathlib import Path
 
 
@@ -16,6 +20,48 @@ SPEC.loader.exec_module(GATE)
 
 
 class MentatInsightDiaryContractTests(unittest.TestCase):
+    OPTIONAL_FIELDS = (
+        "artifact_or_state", "result", "verification", "decision",
+        "rejected_alternative", "decision_basis", "issue", "effect",
+        "resolution", "next_trigger", "completion_standard",
+    )
+
+    def test_optional_fields_reject_invalid_types_including_excluded_events(self):
+        for field in self.OPTIONAL_FIELDS:
+            for value in (42, 0.5, True, [], {}):
+                for kind in ("execution", "plan", "journal_meta"):
+                    event = {"kind": kind, "summary": "synthetic", "source": "fixture", field: value}
+                    with self.subTest(field=field, value=value, kind=kind), self.assertRaises(ValueError):
+                        GATE.evaluate({"events": [event]})
+
+    def test_optional_missing_null_and_empty_preserve_score(self):
+        event = {"kind": "execution", "summary": "synthetic", "source": "fixture"}
+        expected = GATE.evaluate({"events": [event]})
+        for value in (None, "", " \t\n"):
+            with self.subTest(value=value):
+                enriched = {**event, **dict.fromkeys(self.OPTIONAL_FIELDS, value)}
+                self.assertEqual(GATE.evaluate({"events": [enriched]}), expected)
+        for kind in GATE.ALLOWED_KINDS:
+            GATE.evaluate({"events": [{**event, "kind": kind}]})
+
+    def test_invalid_kind_and_optional_types_return_cli_invalid_input(self):
+        events = [{"kind": kind, "summary": "synthetic", "source": "fixture"}
+                  for kind in ([], {}, None, 42, True)]
+        events += [{"kind": "execution", "summary": "synthetic", "source": "fixture", field: value}
+                   for field in self.OPTIONAL_FIELDS for value in ([], 42, {})]
+        with tempfile.TemporaryDirectory() as directory:
+            path = Path(directory) / "evidence.json"
+            for event in events:
+                with self.subTest(event=event):
+                    path.write_text(json.dumps({"events": [event]}), encoding="utf-8")
+                    result = subprocess.run([sys.executable, "-B", str(GATE_PATH), str(path)],
+                        capture_output=True, text=True, encoding="utf-8", timeout=30)
+                    self.assertEqual(result.returncode, 2, result.stdout + result.stderr)
+                    self.assertEqual(result.stdout, "")
+                    payload = json.loads(result.stderr)
+                    self.assertEqual(payload["status"], "invalid_input")
+                    self.assertFalse(payload["save_allowed"])
+
     def test_generation_defaults_to_canonical_atomic_save(self):
         for required in (
             "生成完成后自动保存",
@@ -124,7 +170,7 @@ class MentatInsightDiaryContractTests(unittest.TestCase):
             "summary": "ran a bounded task",
             "source": "current visible tool result",
         }
-        payload = {"events": [event]}
+        payload: dict = {"events": [event]}
         expected = GATE.evaluate(payload)
         payload["collection"] = {
             "status": "ready",

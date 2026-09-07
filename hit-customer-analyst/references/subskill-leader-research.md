@@ -1,4 +1,4 @@
-# Skill 2：人物研究 v2.10.0
+# Skill 2：人物研究 v2.6.0
 
 ## 目录
 
@@ -17,7 +17,7 @@
 模块进入`running`后，立即在本run隔离候选工作区使用[人物研究成果模板](../assets/leader-research-report-template.md)创建并只更新候选：
 
 ```text
-{{safe_name}}人物研究报告.md
+{{客户中文规范名称}}人物研究报告.md
 ```
 
 本模块不得直接修改正式Markdown、综合总报告或其他模块成果；正式写入由主流程统一事务提交。结束时向主流程返回：
@@ -32,7 +32,8 @@ downstream_invalidation｜sync_classification
 - 身份锁定且关键维度完成：`completed`；
 - 身份锁定但关键维度缺失、预算触顶或存在未解冲突：`partial`；
 - 用户指定的具名对象无法唯一锁定：生成预验证失败说明，标`blocked`；
-- 对象尚未明确：只形成角色级信息和待确认问题，标`partial`，不批量画像候选人。
+- 未指定具名对象且任务只需正式角色：在既有报告正文明确“角色级研究，不含具名主张”，用主张/来源台账记录正式部门职责和决策边界；近期权威原始材料足以支持本次角色判断、无未解关键冲突时可标`completed`并提交人工审核。不要求编造姓名或个人履历，不批量画像候选人。
+- 角色依据不足、具名身份仍需确认或其他关键维度未完成：仍标`partial`；具名身份冲突不得改称角色级研究后批准。
 
 默认`connector_status: not_applicable`、`review_status: not_started`。任何 completed 人物成果都须提交审核并设`review_status: pending`；partial/blocked 可保持`not_started`并作为缺口透明的研究底稿交付，但不能支撑关键策略或外发事实。审核通过时必须按[审核治理](governance-raci.md)绑定`reviewer/reviewed_at/reviewed_content_version/reviewed_body_sha256`；非approved时四字段清空。人物现职和分工按[时效规则](freshness-feedback.md)默认30天TTL，具名高层拜访前7天内必须复核。
 
@@ -136,16 +137,16 @@ source_id/source_group/source_locator/source_fingerprint/upstream_id｜反证/�
 标`completed`前确认：
 
 - 独立人物报告存在且非空，未修改其他成果；
-- 身份满足近期原始来源、唯一识别项和同名排除；
+- 具名研究的身份满足近期原始来源、唯一识别项和同名排除；角色级研究须有近期权威原始职责证据、清晰组织范围，且不含具名身份、履历、观点或个人权限主张；
 - 当前职务、正式分工、履历和项目角色无未解关键冲突；
 - 观点明确区分本人表达、机构立场和会议主题；
-- source_id与claim_id分离；每个来源有稳定locator、非空source_group、实际捕获内容的content_sha256、upstream_id和`external_use=true|false`；F2的支持来源中必须存在至少一对来源，该同一对的source_group、locator/source_locator、content_sha256、upstream_id四项都有效且逐项不同，upstream_id为`unknown:<source_id>`的来源不能成为该对成员，其他补充来源不影响该对成立；关键人物claim的机器TTL未过期；
+- source_id与claim_id分离；每个来源有稳定 locator、非空source_group、格式有效的source_fingerprint、upstream_id和`external_use=true|false`；F2的支持来源中必须存在至少一对来源，该同一对的source_group、locator/source_locator、source_fingerprint、upstream_id四项都有效且逐项不同，upstream_id为`unknown:<source_id>`的来源不能成为该对成员，其他补充来源不影响该对成立；
 - 采购角色按阶段核验，未推断个人厂商偏好；
 - 组织协作只使用公开职业事项；
-- 九维画像有结论或明确非关键缺口，关键缺口则为`partial`；
+- 具名研究九维画像有结论或明确非关键缺口；角色级研究只完成任务相关的正式职责、决策程序与验证问题，个人画像不适用。两者的关键缺口均为`partial`；
 - 资料预警、预算使用、停止原因和置信度完整；
 - 受限信息未进入同步摘要；
 - 已返回必要的下游失效信号。
 - approved时通用审核四字段完整且与当前正文和版本匹配；否则保持pending或changes_requested。
 
-身份失败仍生成阻塞报告；公开信息不足仍生成`partial`成果。不得编造履历、性格、偏好、关系或私人背景。
+身份失败仍生成阻塞报告；关键公开依据不足仍生成`partial`成果。审核人须核验角色证据充分且没有具名主张；机械校验不替代语义审核。沿用 v2.5 正文及台账，不新增必填元数据；`partial/blocked`不能批准。不得编造履历、性格、偏好、关系或私人背景。

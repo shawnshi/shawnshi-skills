@@ -9,13 +9,16 @@ from __future__ import annotations
 
 import importlib.util
 import json
+import re
 import subprocess
 import sys
 import tempfile
 import threading
 import unittest
 from concurrent.futures import ThreadPoolExecutor
+from contextlib import contextmanager
 from pathlib import Path
+from unittest.mock import patch
 
 SKILL_ROOT = Path(__file__).resolve().parents[1]
 SCRIPTS = SKILL_ROOT / "scripts"
@@ -483,13 +486,141 @@ def validate_state_cli(
     return result
 
 
+def documented_json(marker: str) -> dict:
+    text = (SKILL_ROOT / "examples" / "workflow_example.md").read_text(encoding="utf-8")
+    match = re.search(r"<!-- " + re.escape(marker) + r" -->\s*```json\s*(.*?)```", text, re.DOTALL)
+    if match is None:
+        raise AssertionError(f"missing documented machine example: {marker}")
+    return json.loads(match.group(1))
+
+
+class DocumentedInvestmentContractTests(unittest.TestCase):
+    def test_documented_cash_flows_update_and_pass_strict_cli(self):
+        patch = documented_json("cash-flow-v2")
+        state = investment_state()
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            path = root / "tmp" / "strategy_blackboard.json"
+            path.parent.mkdir()
+            path.write_text(json.dumps(state), encoding="utf-8")
+            result = run_cli(BLACKBOARD, "--workspace-root", root, "update",
+                             "--section", "quantitative_model", "--value", "-",
+                             input_text=json.dumps(patch))
+            self.assertEqual(result.returncode, 0, result.stdout + result.stderr)
+            result = run_cli(BLACKBOARD, "--workspace-root", root, "validate", "--strict")
+            self.assertEqual(result.returncode, 0, result.stdout + result.stderr)
+            self.assertTrue(json_payload(result)["ready"])
+
+    def test_documented_period_remains_required_and_unique(self):
+        for defect in ("missing", "duplicate", "invalid_index"):
+            state = investment_state()
+            state["quantitative_model"].update(documented_json("cash-flow-v2"))
+            rows = state["quantitative_model"]["cash_flows"]
+            if defect == "missing":
+                del rows[0]["period"]
+            elif defect == "duplicate":
+                rows[1]["period"] = rows[0]["period"]
+            else:
+                rows[1]["period_index"] = -1
+            with self.subTest(defect=defect):
+                payload = assert_structured_failure(self, validate_state_cli(state))
+                self.assertFalse(payload["ready"])
+                expected = {"missing": "REQUIRED", "duplicate": "DUPLICATE_PERIOD",
+                            "invalid_index": "UNVERIFIABLE_FORMULA"}[defect]
+                self.assertIn(expected, {x["code"] for x in payload["issues"]})
+
+    def test_unknown_documented_as_gap_and_blocked_not_an_enum(self):
+        patch = documented_json("unresolved-gate-v2")
+        state = investment_state()
+        for section, fields in patch.items():
+            state[section].update(fields)
+        self.assertEqual(state["metadata"]["maturity"], "blocked")
+        self.assertTrue(state["evidence"]["gaps"])
+        gate = state["portfolio"]["gate_results"][0]
+        self.assertEqual(gate["result"], "fail")
+        self.assertIn("GP-", gate["rationale"])
+        result = validate_state_cli(state, strict=False)
+        self.assertEqual(json_payload(result)["errors"], [])
+        self.assertFalse(json_payload(result)["ready"])
+        self.assertNotEqual(validate_state_cli(state).returncode, 0)
+        gate["result"] = "unknown"
+        payload = assert_structured_failure(self, validate_state_cli(state))
+        self.assertIn("GATE_RESULT", {x["code"] for x in payload["issues"]})
+
+
+class BlackboardLockBoundaryTests(unittest.TestCase):
+    def test_target_existence_probes_hold_the_same_lock_as_replace(self) -> None:
+        module = load_blackboard_module()
+        for operation in ("load", "save", "update"):
+            with self.subTest(operation=operation), tempfile.TemporaryDirectory() as directory:
+                root = Path(directory)
+                target = module.blackboard_path(root)
+                state = brief_state()
+                with module._file_lock(target, exclusive=True):
+                    module._atomic_write_unlocked(target, state)
+                real_lock = module._file_lock
+                real_exists = Path.exists
+                held = False
+
+                @contextmanager
+                def guarded_lock(path, *, exclusive):
+                    nonlocal held
+                    with real_lock(path, exclusive=exclusive):
+                        held = True
+                        try:
+                            yield
+                        finally:
+                            held = False
+
+                def guarded_exists(path):
+                    if path == target:
+                        self.assertTrue(held, "target stat escaped the transaction lock")
+                    return real_exists(path)
+
+                with patch.object(module, "_file_lock", guarded_lock), patch.object(
+                    Path, "exists", guarded_exists
+                ), patch.object(module, "_print"):
+                    if operation == "load":
+                        module.load_state(root)
+                    elif operation == "save":
+                        module.save_state(target, state)
+                    else:
+                        module.cmd_update(module.argparse.Namespace(
+                            workspace_root=root, expect_revision=None,
+                            section="evidence", key="gaps", action="append",
+                            value='"synthetic-gap"',
+                        ))
+
+    @unittest.skipUnless(sys.platform == "win32", "Windows byte-range lock")
+    def test_failed_acquisition_is_not_masked_by_an_unlock_attempt(self) -> None:
+        import msvcrt
+        module = load_blackboard_module()
+        acquisition_error = PermissionError("synthetic lock acquisition failure")
+        with tempfile.TemporaryDirectory() as directory, patch.object(
+            msvcrt, "locking", side_effect=[acquisition_error, OSError("spurious unlock")]
+        ) as locking:
+            with self.assertRaises(PermissionError) as caught:
+                with module._file_lock(Path(directory) / "state.json", exclusive=True):
+                    self.fail("failed acquisition entered the transaction")
+            self.assertIs(caught.exception, acquisition_error)
+            self.assertEqual(locking.call_count, 1)
+
+
 class BlackboardCliTests(unittest.TestCase):
     def test_uninitialized_workspace_fails_instead_of_manufacturing_state(self) -> None:
-        with tempfile.TemporaryDirectory() as directory:
-            result = run_cli(BLACKBOARD, "--workspace-root", directory, "status")
-
-        payload = assert_structured_failure(self, result)
-        self.assertEqual(payload["error"]["code"], "NOT_INITIALIZED")
+        commands = [
+            ("status",),
+            ("update", "--section", "evidence", "--key", "gaps",
+             "--action", "append", "--value", '"synthetic-gap"'),
+        ]
+        for arguments in commands:
+            with self.subTest(command=arguments[0]), tempfile.TemporaryDirectory() as directory:
+                result = run_cli(BLACKBOARD, "--workspace-root", directory, *arguments)
+                payload = assert_structured_failure(self, result)
+                self.assertEqual(payload["error"]["code"], "NOT_INITIALIZED")
+                self.assertEqual(payload["error"]["message"],
+                                 "blackboard is not initialized; run the init command first")
+                self.assertFalse((Path(directory) / "tmp" / "strategy_blackboard.json").exists())
 
     def test_ready_is_a_hard_gate_even_with_strict_flag(self) -> None:
         with tempfile.TemporaryDirectory() as directory:
@@ -901,6 +1032,91 @@ class AssemblerCliTests(unittest.TestCase):
         self.assertIn("第一段\n---\n## 关键证据", report)
         self.assertIn('"""这段三引号正文必须保留"""', report)
         self.assertIn("---\n收尾", report)
+
+    def test_quoted_frontmatter_preserves_body_and_rejects_empty(self):
+        keys = ('"title"', "'title'", r'"ti\"tle"', "'ti''tle'")
+        for key in keys:
+            for body in ("# Body\nUseful\n---\nKept\n", " \n"):
+                with self.subTest(key=key, body=body), tempfile.TemporaryDirectory() as directory:
+                    root = Path(directory)
+                    (root / "chapter1.md").write_text(
+                        f"---\n{key}: private-metadata\n---\n{body}", encoding="utf-8"
+                    )
+                    output = root / "report.md"
+                    result = self.assemble(directory, "--output", "report.md", "--mode", "brief")
+                    if body.strip():
+                        self.assertEqual(result.returncode, 0, result.stdout + result.stderr)
+                        report = output.read_text(encoding="utf-8")
+                        self.assertNotIn("private-metadata", report)
+                        self.assertIn(body.strip(), report)
+                    else:
+                        payload = assert_structured_failure(self, result)
+                        self.assertEqual(payload["error"]["code"], "empty_chapters")
+                        self.assertFalse(output.exists())
+                        output.write_bytes(b"original\r\n")
+                        result = self.assemble(directory, "--output", "report.md", "--mode", "brief", "--force")
+                        payload = assert_structured_failure(self, result)
+                        self.assertEqual(payload["error"]["code"], "empty_chapters")
+                        self.assertEqual(output.read_bytes(), b"original\r\n")
+
+    def test_cleaned_empty_chapters_fail_without_writing_or_overwriting(self):
+        for contents in (("",), (" \n\t",), ("---\ntitle: metadata\n---\n",),
+                         ("", "---\ntitle: metadata\n---\n \n")):
+            with self.subTest(contents=contents), tempfile.TemporaryDirectory() as directory:
+                root = Path(directory)
+                for i, content in enumerate(contents, 1):
+                    (root / f"chapter{i}.md").write_text(content, encoding="utf-8")
+                result = self.assemble(directory, "--output", "nested/report.md", "--mode", "brief")
+                payload = assert_structured_failure(self, result)
+                self.assertEqual(payload["error"]["code"], "empty_chapters")
+                self.assertFalse((root / "nested").exists())
+                output = root / "report.md"
+                output.write_text("original", encoding="utf-8")
+                result = self.assemble(directory, "--output", "report.md", "--mode", "brief", "--force")
+                assert_structured_failure(self, result)
+                self.assertEqual(output.read_text(encoding="utf-8"), "original")
+
+    def test_mixed_empty_chapters_are_warned_and_skipped(self):
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            (root / "chapter1.md").write_text(" \n", encoding="utf-8")
+            (root / "chapter2.md").write_text("# Body\nUseful\n---\nKept\n", encoding="utf-8")
+            result = self.assemble(directory, "--mode", "brief")
+            self.assertEqual(result.returncode, 0, result.stdout)
+            payload = json_payload(result)
+            self.assertEqual(payload["status"], "success_with_warnings")
+            self.assertEqual(payload["chapters_merged"], 1)
+            self.assertEqual(payload["chapter_order"], ["chapter2.md"])
+            self.assertTrue(any("chapter1.md" in w and "skipped" in w for w in payload["warnings"]))
+            self.assertIn("Useful\n---\nKept", (root / "final_report.md").read_text(encoding="utf-8"))
+
+    def test_explicit_empty_draft_warns_but_never_claims_formal_maturity(self):
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            (root / "chapter1.md").write_text("---\ntitle: metadata\n---\n", encoding="utf-8")
+            result = self.assemble(directory, "--mode", "brief", "--allow-empty")
+            self.assertEqual(result.returncode, 0, result.stdout)
+            payload = json_payload(result)
+            self.assertEqual(payload["chapters_merged"], 0)
+            self.assertEqual(payload["status"], "success_with_warnings")
+            for maturity in ("decision_ready", "approved_for_execution"):
+                state = brief_state(maturity="decision_ready")
+                state["metadata"]["maturity"] = maturity
+                blackboard = root / "blackboard.json"
+                blackboard.write_text(json.dumps(state), encoding="utf-8")
+                result = self.assemble(directory, "--mode", "brief", "--allow-empty",
+                                       "--blackboard", blackboard, "--output", "formal.md")
+                assert_structured_failure(self, result)
+                self.assertFalse((root / "formal.md").exists())
+
+    def test_leading_horizontal_rules_without_yaml_are_preserved(self):
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            body = "---\nA paragraph, not YAML\n---\n"
+            (root / "chapter1.md").write_text(body, encoding="utf-8")
+            result = self.assemble(directory, "--mode", "brief")
+            self.assertEqual(result.returncode, 0, result.stdout)
+            self.assertIn(body, (root / "final_report.md").read_text(encoding="utf-8"))
 
     def test_zero_chapters_is_a_structured_failure(self) -> None:
         with tempfile.TemporaryDirectory() as directory:

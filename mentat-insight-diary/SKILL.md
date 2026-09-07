@@ -62,7 +62,7 @@ description: 将有实质证据的系统事件、执行摩擦、失败、权衡�
 - `thin`：总分 4–6；允许生成八段条目，但标题标记“薄证据”，每个事实或缺口只出现一次，不用同义改写填满章节。
 - `substantive`：总分 7–10；生成完整八段 OODA。
 
-脚本返回 `save_allowed=false` 时，原始请求不构成实际写入许可。输入 Schema、字段类型或枚举无效属于门禁错误，必须停止，不能降级为人工放行。
+脚本返回 `save_allowed=false` 时，原始请求不构成实际写入许可。输入 Schema、字段类型或枚举无效属于门禁错误，脚本在 stderr 返回单个 JSON：`status=invalid_input`、`save_allowed=false`，退出 2（stdout 为空）；必须停止，不能当作低密度或降级为人工放行。
 
 ## P1 正文与保存回执分离
 
@@ -74,7 +74,7 @@ description: 将有实质证据的系统事件、执行摩擦、失败、权衡�
 ## 执行流程
 
 1. 执行取证前置检查，确定记录时间范围、事件范围和来源覆盖。未指定日期时使用当前本地日期；历史补录不得迁移其他日期的事件。`needs_source` 或 `source_error` 到此停止，不把取证缺口报告为评分失败。
-2. 在 `collection.status=ready` 后建立 `evidence.json` 的 `events`：每项事件至少有 `kind`、`summary` 和 `source`，按证据补充 `artifact_or_state`、`result`、`verification`、`decision`、`rejected_alternative`、`decision_basis`、`issue`、`effect`、`resolution`、`next_trigger`、`completion_standard`。未知项留空，不用占位文本伪装证据。
+2. 在 `collection.status=ready` 后建立 `evidence.json` 的 `events`：每项事件至少有 `kind`、`summary` 和 `source`，按证据补充 `artifact_or_state`、`result`、`verification`、`decision`、`rejected_alternative`、`decision_basis`、`issue`、`effect`、`resolution`、`next_trigger`、`completion_standard`。这些已知可选证据字段只接受字符串或 null；省略、null、空串和纯空白字符串均表示无该项证据，不增加分数；数字、布尔值、数组和对象均为无效输入，包括 `plan` 与 `journal_meta` 条目。`kind` 必须先是字符串且属于上述枚举；`summary` 和 `source` 必须为非空白字符串，不接受 null。未知项留空，不用占位文本伪装证据。
 3. 运行 P0/P2 门禁。若 `save_allowed=false`，返回状态、总分、缺失维度、实际检查范围、未检查来源和“未更新 Mentat”，只对已检查范围下结论，到此停止；不得读取模板、生成八段正文、调用写入器或更改既有同日条目。
 4. 门禁通过后读取 [assets/ooda_template.md](assets/ooda_template.md)，严格按八段标题及顺序组织内容，不合并、改名或回退到旧四段模板：
    - Observe：记录事实和直接观测，不加入原因判断。

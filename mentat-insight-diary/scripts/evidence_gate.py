@@ -20,6 +20,11 @@ SUBSTANTIVE_KINDS = {
 EXCLUDED_KINDS = {"plan", "journal_meta"}
 ALLOWED_KINDS = SUBSTANTIVE_KINDS | EXCLUDED_KINDS
 DIMENSIONS = ("facts", "results", "tradeoffs", "friction", "continuity")
+OPTIONAL_EVIDENCE_FIELDS = (
+    "artifact_or_state", "result", "verification", "decision",
+    "rejected_alternative", "decision_basis", "issue", "effect",
+    "resolution", "next_trigger", "completion_standard",
+)
 
 
 def _present(event: dict[str, Any], field: str) -> bool:
@@ -37,11 +42,15 @@ def _validate(payload: Any) -> list[dict[str, Any]]:
         if not isinstance(event, dict):
             raise ValueError(f"events[{index}] must be an object")
         kind = event.get("kind")
-        if kind not in ALLOWED_KINDS:
+        if not isinstance(kind, str) or kind not in ALLOWED_KINDS:
             raise ValueError(f"events[{index}].kind is invalid: {kind!r}")
         for required in ("summary", "source"):
             if not _present(event, required):
                 raise ValueError(f"events[{index}].{required} must be a non-empty string")
+        for field in OPTIONAL_EVIDENCE_FIELDS:
+            value = event.get(field)
+            if value is not None and not isinstance(value, str):
+                raise ValueError(f"events[{index}].{field} must be a string or null")
     return events
 
 

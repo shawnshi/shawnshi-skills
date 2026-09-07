@@ -657,7 +657,9 @@ def _fetch_local_summary_unverified(
         "measurement_epoch_evidence": {
             "analysis_algorithm_epoch": BASELINE_ALGORITHM_EPOCH,
             "manufacturer_algorithm_epoch": "not_available_in_local_schema",
-            "firmware_epoch_proxy": "serial_number_and_software_version",
+            "firmware_epoch_proxy": "inventory_only_not_observation_attribution",
+            "device_attribution_status": "not_available_in_local_schema",
+            "observation_attributions": [],
             "firmware_history": firmware_history,
         },
         "body_composition_detailed": body_composition_detailed,
@@ -777,9 +779,14 @@ def _normalize_dated_numeric_values(
 
 
 def _epoch_comparability(
-    summary_data: dict[str, Any], observation_dates: list[str]
+    summary_data: dict[str, Any], required_observations: dict[str, list[str]]
 ) -> dict[str, Any]:
-    """Conservatively test whether one baseline crosses known firmware epochs."""
+    """Check attributed observations, never infer use from device inventory.
+
+    Attribution is an internal source contract, not a CLI input. Every required
+    component/date needs an explicit device and firmware; inventory timestamps
+    cannot prove which device measured that observation.
+    """
     evidence = summary_data.get("measurement_epoch_evidence") or {}
     algorithm_epoch = evidence.get("analysis_algorithm_epoch")
     manufacturer_epoch = evidence.get("manufacturer_algorithm_epoch")
@@ -791,53 +798,60 @@ def _epoch_comparability(
             "unverified",
             "not_available",
             "not_available_in_local_schema",
+            "none",
+            "null",
+            "nan",
+            "inf",
+            "-inf",
         }
 
     analysis_epoch_known = known_epoch(algorithm_epoch)
     manufacturer_epoch_known = known_epoch(manufacturer_epoch)
-    history = evidence.get("firmware_history") or []
-    events_by_serial: dict[str, list[tuple[datetime, str]]] = {}
-    for item in history:
-        serial = item.get("serial_number")
-        firmware = item.get("software_version")
-        timestamp = item.get("timestamp")
-        if not serial or not firmware or not timestamp:
+    required = {
+        (component, day)
+        for component, days in required_observations.items()
+        for day in days
+    }
+    attributed: dict[tuple[str, str], set[tuple[str, str]]] = {}
+    invalid = set()
+    for item in evidence.get("observation_attributions") or []:
+        if not isinstance(item, dict):
             continue
-        try:
-            observed_at = datetime.fromisoformat(str(timestamp).replace("Z", "+00:00"))
-            if observed_at.tzinfo is not None:
-                observed_at = observed_at.replace(tzinfo=None)
-        except (TypeError, ValueError):
+        component, day = item.get("component"), item.get("date")
+        if not isinstance(component, str) or not isinstance(day, str):
             continue
-        events_by_serial.setdefault(str(serial), []).append(
-            (observed_at, str(firmware))
-        )
-    for events in events_by_serial.values():
-        events.sort(key=lambda item: (item[0], item[1]))
+        key = (component, day)
+        if key not in required:
+            continue
+        serial, firmware = item.get("serial_number"), item.get("software_version")
+        if not all(
+            isinstance(value, (str, int, float))
+            and not isinstance(value, bool)
+            and known_epoch(value)
+            for value in (serial, firmware)
+        ):
+            invalid.add(key)
+            continue
+        attributed.setdefault(key, set()).add((str(serial).strip(), str(firmware).strip()))
 
     observed_epochs = set()
-    unknown_dates = []
-    for day in observation_dates:
-        try:
-            day_end = datetime.fromisoformat(f"{day}T23:59:59.999999")
-        except ValueError:
-            unknown_dates.append(day)
-            continue
-        matched = False
-        for serial, events in events_by_serial.items():
-            effective = [item for item in events if item[0] <= day_end]
-            if effective:
-                observed_epochs.add(f"{serial}|{effective[-1][1]}")
-                matched = True
-        if not matched:
-            unknown_dates.append(day)
+    unknown = set()
+    conflicts = set()
+    for key in required:
+        candidates = attributed.get(key, set())
+        if len(candidates) > 1:
+            conflicts.add(key)
+        if key in invalid or len(candidates) != 1:
+            unknown.add(key)
+        else:
+            observed_epochs.update(candidates)
 
     cross_epoch = len(observed_epochs) > 1
     comparable = False if cross_epoch else None
     if (
         not cross_epoch
         and len(observed_epochs) == 1
-        and not unknown_dates
+        and not unknown
         and analysis_epoch_known
         and manufacturer_epoch_known
     ):
@@ -845,6 +859,10 @@ def _epoch_comparability(
     status = "epoch_unknown"
     if cross_epoch:
         status = "cross_epoch"
+    elif conflicts:
+        status = "device_attribution_conflict"
+    elif unknown or not required:
+        status = "device_attribution_unknown"
     elif not manufacturer_epoch_known:
         status = "manufacturer_algorithm_epoch_unknown"
     elif not analysis_epoch_known:
@@ -854,12 +872,19 @@ def _epoch_comparability(
     return {
         "comparable": comparable,
         "status": status,
-        "observed_epochs": sorted(observed_epochs),
+        "observed_epochs": [f"epoch_{index + 1}" for index in range(len(observed_epochs))],
+        "observed_epoch_count": len(observed_epochs),
+        "device_attribution_status": (
+            "conflict" if conflicts else "unknown" if unknown or not required else "complete"
+        ),
+        "required_observations": len(required),
+        "attributed_observations": len(required - unknown),
         "analysis_algorithm_epoch": algorithm_epoch,
         "analysis_algorithm_epoch_known": analysis_epoch_known,
         "manufacturer_algorithm_epoch": manufacturer_epoch or "not_available",
         "manufacturer_algorithm_epoch_known": manufacturer_epoch_known,
-        "unknown_observation_dates": unknown_dates,
+        "unknown_observation_dates": sorted({day for _, day in unknown}),
+        "unknown_observation_components": sorted({component for component, _ in unknown}),
     }
 
 
@@ -981,6 +1006,15 @@ def _pattern_reason(result: dict[str, Any]) -> str:
         return "满足精确日期配对门槛；只报告探索性关联，相关不代表因果。"
     if status == "eligible" and result.get("observed_days") is not None:
         return "满足有效夜晚门槛；只描述离散度，不作睡眠疾病判断。"
+    if status == "epoch_unknown":
+        epoch_reasons = {
+            "device_attribution_unknown": "观测设备归属未知；历史设备库存不证明实际使用，比较已停用。",
+            "device_attribution_conflict": "观测设备归属存在冲突，比较已停用。",
+            "manufacturer_algorithm_epoch_unknown": "厂商算法时期未知，比较已停用。",
+            "analysis_algorithm_epoch_unknown": "分析算法时期未知，比较已停用。",
+        }
+        if result.get("epoch_status") in epoch_reasons:
+            return epoch_reasons[result["epoch_status"]]
     reasons = {
         "not_requested": "本次授权范围未包含该数据组件。",
         "duplicate_conflict": "同一日期存在冲突值，衍生比较已停用。",
@@ -1015,7 +1049,6 @@ def analyze_health_patterns(
     )
     trends: dict[str, dict[str, Any]] = {}
     continuity: dict[str, dict[str, Any]] = {}
-    normalized_by_metric: dict[str, dict[str, Any]] = {}
 
     for metric_id, spec in PATTERN_METRICS.items():
         records = summary_data.get(spec["records_key"]) or []
@@ -1025,7 +1058,6 @@ def analyze_health_patterns(
             requested_dates,
             allow_zero=False,
         )
-        normalized_by_metric[metric_id] = normalized
         observed_dates = [str(item["date"]) for item in normalized["facts"]]
         continuity_result = observation_continuity(requested_dates, observed_dates)
         continuity_result.update(
@@ -1042,7 +1074,9 @@ def analyze_health_patterns(
             continuity_result["limitations"] = ["component_not_requested"]
             epoch = {"comparable": None, "status": "not_requested"}
         else:
-            epoch = _epoch_comparability(summary_data, observed_dates)
+            epoch = _epoch_comparability(
+                summary_data, {spec["component"]: observed_dates}
+            )
         trend = robust_personal_trend(
             records,
             spec["field"],
@@ -1066,26 +1100,16 @@ def analyze_health_patterns(
         continuity[metric_id] = continuity_result
 
     sleep_requested = _pattern_component_requested(summary_data, "sleep")
-    sleep_observation_dates = sorted(
-        {
-            str(record.get("date"))
-            for record in summary_data.get("sleep") or []
-            if isinstance(record, dict)
-            and str(record.get("date")) in set(requested_dates)
-        }
-    )
-    sleep_epoch = (
-        _epoch_comparability(summary_data, sleep_observation_dates)
-        if sleep_requested
-        else {"comparable": None, "status": "not_requested"}
-    )
     sleep_regularity = sleep_regularity_snapshot(
         summary_data.get("sleep") or [],
         requested_dates,
-        epoch_comparable=sleep_epoch["comparable"],
-        epoch_status=sleep_epoch["status"],
+        epoch_comparable=None,
+        epoch_status="not_evaluated" if sleep_requested else "not_requested",
         window_days=14,
         min_valid_nights=7,
+        epoch_evaluator=(
+            lambda candidates: _epoch_comparability(summary_data, candidates)
+        ) if sleep_requested else None,
     )
     if not sleep_requested:
         sleep_regularity.update(
@@ -1111,22 +1135,6 @@ def analyze_health_patterns(
                         [
                             *(sleep_regularity.get("limitations") or []),
                             "fourteen_calendar_day_window_required",
-                        ]
-                    )
-                ),
-            }
-        )
-    elif normalized_by_metric["sleep_duration"]["conflicting_duplicate_dates"]:
-        sleep_regularity.update(
-            {
-                "status": "duplicate_conflict",
-                "duration_status": "duplicate_conflict",
-                "duration_sd_hours": None,
-                "limitations": list(
-                    dict.fromkeys(
-                        [
-                            *(sleep_regularity.get("limitations") or []),
-                            "conflicting_sleep_duration_duplicates_fail_closed",
                         ]
                     )
                 ),
@@ -1158,22 +1166,6 @@ def analyze_health_patterns(
         outcome_requested = _pattern_component_requested(
             summary_data, PATTERN_METRICS[outcome_id]["component"]
         )
-        outcome_dates = [
-            str(item["date"])
-            for item in normalized_by_metric[outcome_id]["values"]
-        ]
-        load_dates = [
-            str(item["date"])
-            for item in normalize_daily_numeric(
-                load_records,
-                "acute_load",
-                requested_dates,
-                allow_zero=True,
-            )["values"]
-        ]
-        association_epoch = _epoch_comparability(
-            summary_data, sorted(set(load_dates) | set(outcome_dates))
-        )
         association = lagged_rank_association(
             load_records,
             "acute_load",
@@ -1181,10 +1173,17 @@ def analyze_health_patterns(
             outcome_field,
             requested_dates,
             exposure_coverage_semantics=load_semantics,
-            epoch_comparable=association_epoch["comparable"],
-            epoch_status=association_epoch["status"],
+            epoch_comparable=None,
+            epoch_status="not_evaluated",
             min_pairs=28,
             outcome_allow_zero=False,
+            epoch_evaluator=lambda candidates: _epoch_comparability(
+                summary_data,
+                {
+                    "training_load_series": candidates["exposure"],
+                    PATTERN_METRICS[outcome_id]["component"]: candidates["outcome"],
+                },
+            ),
         )
         if not load_requested or not outcome_requested:
             association.update(
@@ -1219,13 +1218,13 @@ def analyze_health_patterns(
             "sleep_duration_regularity",
             "睡眠时长离散度",
             "duration_status",
-            "duration_valid_nights",
+            "duration_observed_nights",
         ),
         (
             "sleep_timing_regularity",
             "睡眠时点离散度",
             "timing_status",
-            "timing_valid_nights",
+            "timing_observed_nights",
         ),
     ):
         item = {
@@ -1332,7 +1331,14 @@ def analyze_baseline_change(summary_data: dict[str, Any]) -> dict[str, Any]:
     paired_dates = sorted(set(hrv_by_date) & set(rhr_by_date))
     current_date = paired_dates[-1] if paired_dates else None
     prior_dates = paired_dates[:-1]
-    epoch_comparability = _epoch_comparability(summary_data, paired_dates)
+    epoch_comparability = _epoch_comparability(
+        summary_data,
+        {
+            "hrv": paired_dates,
+            "heart_rate": paired_dates,
+            "sleep": sorted(set(paired_dates) & set(resp_by_date)),
+        },
+    )
     if duplicate_conflicts:
         return {
             "analysis_type": "personal_baseline_change_signal",
@@ -1856,14 +1862,15 @@ def analyze_device_health(summary_data: dict[str, Any]) -> dict[str, Any]:
     return {
         "analysis_type": "device_audit",
         "devices": records or [],
-        "measurement_epoch_evidence": summary_data.get(
-            "measurement_epoch_evidence",
-            {
+        "measurement_epoch_evidence": {
+            key: value
+            for key, value in (summary_data.get("measurement_epoch_evidence") or {
                 "analysis_algorithm_epoch": BASELINE_ALGORITHM_EPOCH,
                 "manufacturer_algorithm_epoch": "not_available_in_local_schema",
                 "firmware_history": [],
-            },
-        ),
+            }).items()
+            if key != "observation_attributions"
+        },
         "observations": (
             [f"Multiple recorded firmware versions: {', '.join(versions)}"]
             if len(versions) > 1

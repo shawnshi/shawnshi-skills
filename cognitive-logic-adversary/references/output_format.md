@@ -41,6 +41,21 @@
 
 保留无法消解的事实、预测、价值或优先级分歧。只有证据改变了前提、风险排序或推荐时才记录修正，不复述未变化的立场。
 
+## 确定性排序输入
+
+Python 3 标准库脚本 `scripts/game_resolver.py` 读取一个 JSON 文件：
+
+```json
+{"options":[{"name":"A","agent_scores":[0.8,0.6],"friction":0.2,"risk_level":"medium"},{"name":"B","agent_scores":[{"agent":"reviewer","score":0.7,"confidence":0.9}]}]}
+```
+
+- 顶层必须为对象；`options` 为非空对象数组。每项必须有非空字符串 `name`（精确、区分大小写且不得重复）和非空 `agent_scores`。
+- 单个方案的评分数组只能全部为数值，或全部为含 `score` 的对象，不能混用。结构化条目的 `confidence` 默认为 1；可选 `agent` 若提供须为非空字符串。
+- `score`、`confidence`、`friction` 都为 [0, 1] 内有限数值，拒绝布尔值、字符串、NaN/Infinity，不截断或强制转换。`friction` 默认 0.5；`risk_level` 默认 `medium`，仅接受 `low/medium/high/critical`。显式 null 不等于省略。
+- 保留现有公式：置信度加权平均；原始分数总体标准差（四位小数）；`stability = weighted_consensus × (1-friction) × (1-risk_penalty) × (1-consensus_distance)`。风险惩罚依次为 0、0.15、0.35、0.6；全部置信度为 0 时加权共识仍为 0。
+- `python scripts/game_resolver.py INPUT.json --pareto --chart` 成功返回单个 JSON、`status=Success`、退出 0；参数、读取、UTF-8、JSON 或输入 Schema 错误返回 stdout 单个 JSON、`status=Error`、退出 2。`--help` 为普通帮助文本；意外计算异常保留原生诊断并非零退出。
+- 输出键和合法输入排序语义不变。Pareto 只比较加权共识与分歧，不代表正式博弈均衡；全零置信度也不证明有充分证据。
+
 ## 质量门
 
 - 事实、估计、推断和价值判断已分开。

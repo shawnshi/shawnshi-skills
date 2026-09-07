@@ -180,14 +180,30 @@ def _candidate_projection(
 ) -> dict[str, Any]:
     candidate = entry["candidate"]
     source_type = _source_type(candidate)
+    published_at = normalize_published_at(candidate.get("published_at"))
+    identity = candidate.get("event_identity")
+    identity_date = identity.get("event_date") if isinstance(identity, dict) else None
+    explicit_date = candidate.get("event_date")
+    if identity_date is not None and explicit_date is not None and identity_date != explicit_date:
+        raise RunContractError("semantic candidate has conflicting event dates")
+    event_date = identity_date if identity_date is not None else explicit_date
+    if event_date is None:
+        event_date = published_at
+        event_date_source = "published_at"
+    else:
+        event_date_source = candidate.get("event_date_source") or (
+            "event_identity.event_date" if identity_date is not None else "candidate.event_date"
+        )
     return {
         "candidate_id": str(candidate.get("candidate_id") or ""),
         "candidate_refs": candidate_refs,
         "title": candidate.get("title"),
         "url": candidate.get("url"),
         "source": candidate.get("source"),
-        "published_at": normalize_published_at(candidate.get("published_at")),
+        "published_at": published_at,
         "published_at_source": candidate.get("published_at_source"),
+        "event_date": event_date,
+        "event_date_source": event_date_source,
         "primary_domain": str(
             candidate.get("primary_domain")
             or candidate.get("provisional_domain")
@@ -623,9 +639,14 @@ def assemble_and_finalize(
         identity = review.get("event_identity")
         if not isinstance(identity, dict) or set(identity) != IDENTITY_FIELDS:
             raise RunContractError(f"semantic selected_items[{index}] event_identity is invalid")
-        if identity.get("primary_domain") != candidate["primary_domain"] or identity.get("event_date") != candidate["published_at"]:
+        if identity.get("primary_domain") != candidate["primary_domain"] or identity.get("event_date") != candidate["event_date"]:
             raise RunContractError(f"semantic selected_items[{index}] identity does not match evidence")
         try:
+            if not isinstance(identity["event_date"], str):
+                raise ValueError("event_date must be a string")
+            event_day = date.fromisoformat(identity["event_date"])
+            if event_day.isoformat() != identity["event_date"] or event_day > date.fromisoformat(candidate["published_at"]):
+                raise ValueError("event_date must be an ISO date no later than published_at")
             event_id = generate_event_id(identity)
         except ValueError as exc:
             raise RunContractError(f"semantic selected_items[{index}] identity is invalid") from exc
@@ -650,8 +671,8 @@ def assemble_and_finalize(
             "source": candidate["source"],
             "source_type": candidate["source_type"],
             "access_check": deepcopy(candidate["access_check"]),
-            "event_date": candidate["published_at"],
-            "event_date_source": "published_at",
+            "event_date": candidate["event_date"],
+            "event_date_source": candidate["event_date_source"],
             "published_at": candidate["published_at"],
             "published_at_source": candidate["published_at_source"],
             "observed_at": candidate["access_check"]["checked_at"],

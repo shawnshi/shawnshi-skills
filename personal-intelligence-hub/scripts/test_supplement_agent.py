@@ -95,6 +95,7 @@ class SupplementAgentTests(unittest.TestCase):
                     "lane": "TechRadar",
                     "query_scope": "AI agents",
                     "max_turns": 3,
+                    "max_urls": 4,
                     "verify_bound_candidates": True,
                 }
             ],
@@ -115,6 +116,8 @@ class SupplementAgentTests(unittest.TestCase):
             ["https://example.org/agent"],
         )
         self.assertEqual(context["required_bound_candidate_count"], 1)
+        self.assertEqual(context["execution_budget"]["max_urls"], 4)
+        self.assertTrue(any("not unique URLs" in value for value in context["draft_instructions"]))
         self.assertIn("redirect_rule", context["rules"])
         self.assertIn("verification_rule", context["rules"])
         self.assertTrue(
@@ -375,6 +378,12 @@ class SupplementAgentTests(unittest.TestCase):
             ("", "https://example.org/article"),
             ("<html><title>Login</title>Sign in</html>", "https://example.org/login"),
             ("<html><title>404 Not Found</title>missing</html>", "https://example.org/article"),
+            ("<html><title>Making sure you're not a bot!</title>" +
+             "Please wait a moment while we ensure the security of your connection. " * 5 +
+             "Sadly, you must enable JavaScript to get past this challenge. Protected by Anubis.</html>",
+             "https://example.org/article"),
+            ('<html><script id="anubis_challenge">{}</script>' + 'loading challenge ' * 30 + '</html>',
+             "https://example.org/article"),
         )
         for body, final_url in cases:
             with self.subTest(final_url=final_url, body=body):
@@ -434,6 +443,48 @@ class SupplementAgentTests(unittest.TestCase):
             dynamic["bound_candidate_decisions"][0]["decision"],
             "date_disqualified",
         )
+
+    def test_fifth_access_attempt_is_rejected_without_erasing_draft(self):
+        from supplement_agent import verify_bound_candidates
+
+        with patch("supplement_agent._fetch_url", return_value=("verified", "https://example.org/agent", 200, "none", None)), patch("supplement_agent.time.sleep"):
+            dynamic = verify_bound_candidates(self.request_path, "technology")
+        # Observed failure: four initial probes plus an appended blocked recheck.
+        first = deepcopy(dynamic["access_log"][0])
+        dynamic["access_log"] = [deepcopy(first) for _ in range(4)]
+        for i, access in enumerate(dynamic["access_log"][1:], 1):
+            access["requested_url"] = access["final_url"] = f"https://example.org/article-{i}"
+        dynamic["candidates"].append(deepcopy(dynamic["candidates"][0]))
+        blocked = deepcopy(dynamic["access_log"][0])
+        blocked.update(status="blocked", failure_class="permanent", error_code="BOT_CHALLENGE")
+        dynamic["access_log"].append(blocked)
+        draft = Path(self.request["execution_packets"][0]["output_paths"]["draft"])
+        draft.write_text(json.dumps(dynamic), encoding="utf-8")
+        original = draft.read_bytes()
+        with self.assertRaisesRegex(RunContractError, "5 attempts; exceeds max_urls=4"):
+            assemble_result(self.request_path, "technology", dynamic)
+        self.assertEqual(draft.read_bytes(), original)
+
+    def test_verify_bound_preflights_overbudget_and_repeated_urls_without_fetch_or_write(self):
+        from supplement_agent import verify_bound_candidates
+
+        draft = Path(self.request["execution_packets"][0]["output_paths"]["draft"])
+        draft.write_bytes(b"original evidence")
+        for urls, message in (([f"https://example.org/{i}" for i in range(4)], "exceeds max_urls"), (["https://example.org/agent"], "must not repeat")):
+            with self.subTest(urls=urls), patch("supplement_agent._fetch_url") as fetch:
+                with self.assertRaisesRegex(RunContractError, message):
+                    verify_bound_candidates(self.request_path, "technology", urls=urls)
+                fetch.assert_not_called()
+                self.assertEqual(draft.read_bytes(), b"original evidence")
+
+    def test_verify_bound_preserves_no_http_response(self):
+        from supplement_agent import verify_bound_candidates
+
+        with patch("supplement_agent._fetch_url", return_value=("blocked", "https://example.org/agent", None, "permanent", "error_SSLCertVerificationError")), patch("supplement_agent.time.sleep"):
+            dynamic = verify_bound_candidates(self.request_path, "technology")
+        self.assertIsNone(dynamic["access_log"][0]["http_status"])
+        _, result = assemble_result(self.request_path, "technology", dynamic)
+        self.assertEqual(result["coverage"], {"attempted": 1, "succeeded": 0, "failed": 1})
 
     def test_verify_bound_candidates_generates_valid_draft(self):
         from supplement_agent import verify_bound_candidates

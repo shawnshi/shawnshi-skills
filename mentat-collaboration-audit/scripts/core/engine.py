@@ -13,10 +13,12 @@ import json
 import math
 import re
 from collections import Counter, defaultdict
+from collections.abc import Iterable
 from datetime import datetime, timezone
 from pathlib import Path
-from typing import Any, Iterable
+from typing import Any
 
+from collaboration_analysis import CollaborationAnalysis
 
 WAIT_EVENTS = {"wait", "wait_agent"}
 WRITE_EVENTS = {
@@ -31,6 +33,7 @@ WRITE_EVENTS = {
 WRITE_OPERATIONS = WRITE_EVENTS | {"create", "update", "write"}
 FAILURE_STATUSES = {"blocked", "error", "failed", "failure"}
 SHA256_PATTERN = re.compile(r"^[0-9a-f]{64}$")
+AUTHORIZATION_ID_PATTERN = re.compile(r"^[A-Za-z0-9][A-Za-z0-9._:-]{0,127}$")
 
 
 def _issue(source: Path, category: str, detail: str, line: int | None = None) -> dict[str, Any]:
@@ -185,7 +188,7 @@ def iter_records(path: Path) -> Iterable[dict[str, Any]]:
 def number(record: dict[str, Any], *keys: str) -> float | None:
     for key in keys:
         value = record.get(key)
-        if isinstance(value, (int, float)) and not isinstance(value, bool):
+        if isinstance(value, (int, float)) and not isinstance(value, bool) and math.isfinite(value):
             return float(value)
     return None
 
@@ -325,6 +328,10 @@ def _wait_metrics(records: list[dict[str, Any]]) -> dict[str, Any]:
 
 
 def _is_formal_skill_load(record: dict[str, Any]) -> bool:
+    if (any(field in record and record[field] not in ("ok", "success", "completed")
+            for field in ("status", "outcome"))
+            or ("token_measurement_status" in record and record["token_measurement_status"] != "ok")):
+        return False
     required_text = ("root_task_id", "actor_id", "context_epoch", "skill_name", "tokenizer")
     if any(not isinstance(record.get(field), str) or not record[field].strip() for field in required_text):
         return False
@@ -337,81 +344,347 @@ def _is_formal_skill_load(record: dict[str, Any]) -> bool:
     return isinstance(tokens, int) and not isinstance(tokens, bool) and tokens >= 0
 
 
-def _skill_load_metrics(records: list[dict[str, Any]]) -> dict[str, Any]:
-    raw_loads = [record for record in records if event_type(record) == "skill_load"]
-    loads = [record for record in raw_loads if _is_formal_skill_load(record)]
-    candidates = [record for record in records if event_type(record) == "skill_load_candidate"]
-    seen: set[tuple[str, str, str, str, str]] = set()
-    duplicates = 0
-    loaded_tokens = 0
-    token_observations = 0
+def _nonempty_string(record: dict[str, Any], field: str) -> str:
+    value = record.get(field)
+    return value if isinstance(value, str) and value.strip() else ""
 
-    for record in loads:
-        values = (
-            text_value(record, "root_task_id"),
-            text_value(record, "actor_id"),
-            text_value(record, "context_epoch"),
-            text_value(record, "skill_name", "skill"),
-            text_value(record, "skill_sha256"),
-        )
-        loaded_tokens += record["skill_tokens"]
-        token_observations += 1
-        if values in seen:
-            duplicates += 1
+
+def _invalid_candidate_binding(record: dict[str, Any]) -> bool:
+    return (event_type(record) == "skill_load" and "candidate_event_id" in record
+            and not _nonempty_string(record, "candidate_event_id"))
+
+
+def _occurrence_id(record: dict[str, Any]) -> str:
+    # Old receipts also carried event_id, but derived it from the business key.
+    return _nonempty_string(record, "event_id") if record.get("event_identity") == "occurrence" else ""
+
+
+def _skill_pair_key(record: dict[str, Any]) -> tuple[str, ...]:
+    return tuple(_nonempty_string(record, field) for field in (
+        "root_task_id", "actor_id", "context_epoch", "skill_name", "skill_path_sha256",
+    ))
+
+
+def _token_scope_key(record: dict[str, Any]) -> tuple[str, ...]:
+    values = tuple(_nonempty_string(record, field) for field in (
+        "root_task_id", "actor_id", "token_scope_id", "tokenizer", "token_measurement_basis",
+    ))
+    return tuple("" if value.strip().lower() in {"unknown", "unverified"} else value for value in values)
+
+
+class _SkillLoadState:
+    """Count deliveries separately from occurrences; retain only keys and counters."""
+
+    def __init__(self) -> None:
+        self.deliveries: dict[tuple[str, ...], str] = {}
+        self.replays = self.conflicts = 0
+        self.conflicted_deliveries: set[tuple[str, ...]] = set()
+        self.raw_loads = self.loads = self.unverified_occurrences = self.duplicates = 0
+        self.candidate_count = self.invalid_candidate_bindings = 0
+        self.seen: Counter[tuple[str, ...]] = Counter()
+        self.tokens: Counter[str] = Counter()
+        self.tokenizer_loads: Counter[str] = Counter()
+        self.scoped_tokens: Counter[tuple[str, ...]] = Counter()
+        self.receipts: Counter[tuple[str, ...]] = Counter()
+        self.linked_receipts: Counter[tuple[str, ...]] = Counter()
+        self.candidates: Counter[tuple[str, ...]] = Counter()
+        self.identified_candidates: Counter[tuple[str, ...]] = Counter()
+
+    def update(self, record: dict[str, Any]) -> None:
+        kind = event_type(record)
+        occurrence = _occurrence_id(record)
+        pair_key = _skill_pair_key(record)
+        self.invalid_candidate_bindings += int(_invalid_candidate_binding(record))
+        if occurrence:
+            delivery_key = (pair_key[0], pair_key[1], kind, occurrence)
+            fields = ("context_epoch", "skill_name", "skill_path_sha256", "skill_sha256",
+                      "skill_tokens", "tokenizer", "candidate_event_id",
+                      "token_measurement_basis", "token_scope_id", "status", "outcome",
+                      "token_measurement_status", "token_measurement_error_type")
+            fingerprint = json.dumps({field: record[field] for field in fields if field in record}, sort_keys=True)
+            if delivery_key in self.deliveries:
+                if self.deliveries[delivery_key] != fingerprint:
+                    self.conflicts += 1
+                    if delivery_key not in self.conflicted_deliveries:
+                        # Retract the first payload as well: neither version proves an occurrence.
+                        previous = json.loads(self.deliveries[delivery_key])
+                        previous.update(root_task_id=pair_key[0], actor_id=pair_key[1],
+                                        event_type=kind, event_id=occurrence, event_identity="occurrence")
+                        self._apply(previous, -1)
+                        if kind == "skill_load":
+                            self.raw_loads += 1
+                        else:
+                            self.candidate_count += 1
+                        self.conflicted_deliveries.add(delivery_key)
+                else:
+                    self.replays += 1
+                return
+            self.deliveries[delivery_key] = fingerprint
+        self._apply(record, 1)
+
+    def _apply(self, record: dict[str, Any], delta: int) -> None:
+        kind = event_type(record)
+        occurrence = _occurrence_id(record)
+        pair_key = _skill_pair_key(record)
+        if kind == "skill_load_candidate":
+            self.candidate_count += delta
+            if all(pair_key):
+                self.candidates[pair_key] += delta
+                if occurrence:
+                    self.identified_candidates[(*pair_key, occurrence)] += delta
+            return
+        self.raw_loads += delta
+        if not _is_formal_skill_load(record):
+            return
+        self.loads += delta
+        self.tokens[record["tokenizer"]] += delta * record["skill_tokens"]
+        self.tokenizer_loads[record["tokenizer"]] += delta
+        if not self.tokenizer_loads[record["tokenizer"]]:
+            del self.tokens[record["tokenizer"]]
+        scope = _token_scope_key(record)
+        self.scoped_tokens[scope] += delta * record["skill_tokens"]
+        if occurrence:
+            business_key = (*pair_key[:4], record["skill_sha256"])
+            before = self.seen[business_key]
+            self.seen[business_key] += delta
+            self.duplicates += max(0, before + delta - 1) - max(0, before - 1)
         else:
-            seen.add(values)
+            self.unverified_occurrences += delta
+        candidate_id = _nonempty_string(record, "candidate_event_id")
+        if candidate_id:
+            if occurrence:
+                self.linked_receipts[(*pair_key, candidate_id)] += delta
+        elif "candidate_event_id" not in record:
+            self.receipts[pair_key] += delta
 
-    receipt_keys = Counter(
-        (
-            text_value(record, "root_task_id"),
-            text_value(record, "actor_id"),
-            text_value(record, "context_epoch"),
-            text_value(record, "skill_name", "skill"),
-            text_value(record, "skill_path_sha256"),
-        )
-        for record in loads
-    )
-    verified_candidates = 0
-    for record in candidates:
-        key = (
-            text_value(record, "root_task_id"),
-            text_value(record, "actor_id"),
-            text_value(record, "context_epoch"),
-            text_value(record, "skill_name", "skill"),
-            text_value(record, "skill_path_sha256"),
-        )
-        if all(key) and receipt_keys[key] > 0:
-            verified_candidates += 1
-            receipt_keys[key] -= 1
+    def metrics(self) -> dict[str, Any]:
+        exact_by_key: Counter[tuple[str, ...]] = Counter()
+        for key, count in self.identified_candidates.items():
+            exact_by_key[key[:-1]] += min(count, self.linked_receipts[key])
+        exact = sum(exact_by_key.values())
+        matched = exact + sum(min(count - exact_by_key[key], self.receipts[key])
+                              for key, count in self.candidates.items())
+        complete = not (self.unverified_occurrences or self.conflicts or self.raw_loads != self.loads)
+        return {
+            "skill_load_count": self.loads,
+            "skill_load_candidate_count": self.candidate_count,
+            "verified_candidate_count": matched if not self.conflicts else None,
+            "receipt_coverage": ratio(matched, self.candidate_count) if not self.conflicts else None,
+            "occurrence_matched_candidate_count": exact if not self.conflicts else None,
+            "occurrence_receipt_coverage": ratio(exact, self.candidate_count) if not self.conflicts else None,
+            "receipt_pairing_basis": "business_key_upper_bound" if matched != exact else "occurrence",
+            "duplicate_load_count": self.duplicates if complete else None,
+            "duplicate_load_rate": ratio(self.duplicates, self.loads) if complete else None,
+            "observed_duplicate_load_count": self.duplicates,
+            "occurrence_load_count": self.loads - self.unverified_occurrences,
+            "unverified_occurrence_count": self.unverified_occurrences,
+            "occurrence_identity_coverage": ratio(self.loads - self.unverified_occurrences, self.raw_loads),
+            "event_replay_count": self.replays,
+            "event_identity_conflict_count": self.conflicts,
+            "loaded_tokens": sum(self.tokens.values()) if len(self.tokens) <= 1 and not self.conflicts else None,
+            "loaded_tokens_by_tokenizer": dict(sorted(self.tokens.items())),
+            "token_observation_count": self.loads,
+            "token_coverage": ratio(self.loads, self.raw_loads),
+            "unverifiable_load_count": self.raw_loads - self.loads,
+        }
 
+
+class _TokenShareState:
+    def __init__(self) -> None:
+        self.observations = self.invalid = self.conflicts = 0
+        self.scopes: Counter[tuple[str, ...]] = Counter()
+        self.tokens: Counter[tuple[str, ...]] = Counter()
+        self.deliveries: dict[tuple[str, ...], str] = {}
+
+    def update(self, record: dict[str, Any]) -> None:
+        if ("input_tokens" not in record and "prompt_tokens" not in record
+                and event_type(record) not in {"usage", "token_usage"}
+                and "skill_tokens_included" not in record):
+            return
+        occurrence = _occurrence_id(record)
+        if occurrence:
+            delivery_key = (_nonempty_string(record, "root_task_id"),
+                            _nonempty_string(record, "actor_id"), event_type(record), occurrence)
+            fields = ("input_tokens", "prompt_tokens", "token_scope_id", "tokenizer",
+                      "token_measurement_basis", "skill_tokens_included", "skill_load_coverage_complete",
+                      "token_measurement_status", "token_measurement_error_type")
+            fingerprint = json.dumps({field: record[field] for field in fields if field in record}, sort_keys=True)
+            if delivery_key in self.deliveries:
+                if self.deliveries[delivery_key] != fingerprint:
+                    self.invalid += 1
+                    self.conflicts += 1
+                return
+            self.deliveries[delivery_key] = fingerprint
+        self.observations += 1
+        value = record.get("input_tokens", record.get("prompt_tokens"))
+        key = _token_scope_key(record)
+        if (not isinstance(value, int) or isinstance(value, bool) or value < 0
+                or ("token_measurement_status" in record and record["token_measurement_status"] != "ok")
+                or not all(key) or key[-1] != "model_input"
+                or record.get("skill_tokens_included") is not True
+                or record.get("skill_load_coverage_complete") is not True
+                or ("input_tokens" in record and "prompt_tokens" in record
+                    and record["input_tokens"] != record["prompt_tokens"])):
+            self.invalid += 1
+            return
+        self.scopes[key] += 1
+        self.tokens[key] += value
+
+    def metrics(self, skills: _SkillLoadState, coverage: dict[str, Any]) -> dict[str, Any]:
+        reason = "compatible"
+        matching = sum(1 for key in self.scopes if key in skills.scoped_tokens)
+        if coverage.get("status") != "complete":
+            reason = "source_coverage_unverified"
+        elif skills.conflicts or skills.unverified_occurrences or skills.raw_loads != skills.loads:
+            reason = "skill_occurrence_evidence_incomplete"
+        elif not skills.loads or not self.observations:
+            reason = "missing_skill_or_input_measurement"
+        elif self.invalid:
+            reason = "input_measurement_metadata_incomplete"
+        elif any(not all(key) or key[-1] != "model_input" for key in skills.scoped_tokens):
+            reason = "skill_measurement_basis_incompatible"
+        elif set(self.scopes) != set(skills.scoped_tokens):
+            reason = "tokenizer_basis_or_scope_mismatch"
+        elif len({key[-2:] for key in self.scopes}) != 1:
+            reason = "mixed_tokenizers_or_bases"
+        elif any(count != 1 for count in self.scopes.values()):
+            reason = "multiple_input_measurements_per_scope"
+        elif any(skills.scoped_tokens[key] > self.tokens[key] for key in self.scopes):
+            reason = "skill_tokens_exceed_input_scope"
+        elif not sum(self.tokens.values()):
+            reason = "zero_input_tokens"
+        compatible = reason == "compatible"
+        return {
+            "skill_input_token_share": ratio(sum(skills.tokens.values()), sum(self.tokens.values())) if compatible else None,
+            "skill_input_token_share_reason": reason,
+            "skill_input_token_share_numerator": sum(skills.tokens.values()) if compatible else None,
+            "skill_input_token_share_denominator": sum(self.tokens.values()) if compatible else None,
+            "skill_input_token_share_coverage": ratio(matching if compatible else 0, self.observations),
+            "input_measurement_observation_count": self.observations,
+            "compatible_scope_count": matching if compatible else 0,
+        }
+
+
+def _retry_classification(record: dict[str, Any]) -> str:
+    fields = ("error_category", "error_type", "failure_type", "error_signature",
+              "hypothesis_delta", "changed_variable", "retry_evidence")
+    categories = {_nonempty_string(record, field).strip().lower()
+                  for field in ("error_category", "error_type", "failure_type")
+                  if _nonempty_string(record, field)}
+    if len(categories) > 1:
+        return "conflicting"
+    category = _nonempty_string(record, "error_category") or _nonempty_string(record, "error_type") or _nonempty_string(record, "failure_type")
+    signature = _nonempty_string(record, "error_signature")
+    hypothesis = _nonempty_string(record, "hypothesis_delta") or _nonempty_string(record, "changed_variable")
+    changed = record.get("hypothesis_changed")
+    if changed is False and hypothesis:
+        return "conflicting"
+    if any(field in record and record[field] is not None and not isinstance(record[field], str)
+           for field in fields):
+        return "unverified"
+    if "hypothesis_changed" in record and not isinstance(changed, bool):
+        return "unverified"
+    if not category or category.strip().lower() == "unknown" or not signature:
+        return "unverified"
+    if changed is False and _nonempty_string(record, "retry_evidence"):
+        return "blind"
+    if hypothesis:
+        return "rationale_recorded"
+    return "unverified"
+
+
+def _retry_evidence_metrics(classifications: Counter[str], count: int) -> dict[str, Any]:
+    classified = classifications["blind"] + classifications["rationale_recorded"]
     return {
-        "skill_load_count": len(loads),
-        "skill_load_candidate_count": len(candidates),
-        "verified_candidate_count": verified_candidates,
-        "receipt_coverage": ratio(verified_candidates, len(candidates)),
-        "duplicate_load_count": duplicates,
-        "duplicate_load_rate": ratio(duplicates, len(loads)),
-        "loaded_tokens": loaded_tokens,
-        "token_observation_count": token_observations,
-        "token_coverage": ratio(token_observations, len(raw_loads)),
-        "unverifiable_load_count": len(raw_loads) - len(loads),
+        "blind_retry_count": classifications["blind"],
+        "blind_retry_rate": ratio(classifications["blind"], classified),
+        "rationale_recorded_retry_count": classifications["rationale_recorded"],
+        "unverified_retry_count": count - classified,
+        "conflicting_retry_evidence_count": classifications["conflicting"],
+        "retry_classification_coverage": ratio(classified, count),
     }
+
+
+class _AuthorizationState:
+    def __init__(self) -> None:
+        self.writes = self.attempts = self.commits = self.unmatched = self.commit_events = 0
+        self.unkeyed_unknown = 0
+        self.pending: Counter[tuple[str, ...]] = Counter()
+        self.confirmed: set[tuple[str, ...]] = set()
+        self.uncertain_commits = 0
+
+    def update(self, record: dict[str, Any]) -> None:
+        self.writes += 1
+        kind = event_type(record)
+        key = tuple(_nonempty_string(record, field) for field in ("root_task_id", "actor_id", "call_id"))
+        if kind == "write_attempt":
+            self.attempts += 1
+        if kind == "write_commit":
+            self.commit_events += 1
+            if (any(field in record and record[field] not in ("ok", "success", "completed")
+                    for field in ("status", "outcome"))
+                    or ("side_effect_state" in record and record["side_effect_state"] != "committed")):
+                self.uncertain_commits += 1
+                return
+            self.commits += 1
+            if all(key):
+                self.confirmed.add(key)
+            write_scope = _nonempty_string(record, "write_scope_sha256")
+            authorization_scope = _nonempty_string(record, "authorization_scope_sha256")
+            if (("authorization_conflict" in record and record["authorization_conflict"] is not False)
+                    or not AUTHORIZATION_ID_PATTERN.fullmatch(_nonempty_string(record, "authorization_id"))
+                    or not SHA256_PATTERN.fullmatch(write_scope)
+                    or write_scope != authorization_scope):
+                self.unmatched += 1
+        elif record.get("side_effect_state") not in ("none", "not_started", "rolled_back"):
+            if all(key):
+                self.pending[key] += 1
+            else:
+                self.unkeyed_unknown += 1
+
+    def metrics(self, coverage: dict[str, Any]) -> dict[str, Any]:
+        unknown = self.unkeyed_unknown + self.uncertain_commits + sum(
+            count for key, count in self.pending.items() if key not in self.confirmed
+        )
+        if coverage.get("status") != "complete" or unknown:
+            status = "outcome_uncertain"
+        elif self.commits:
+            status = "confirmed_commits_unmatched" if self.unmatched else "confirmed_commits_matched"
+        elif self.writes:
+            status = "attempts_without_confirmed_commit"
+        else:
+            status = "no_write_intent_observed"
+        return {
+            "write_event_count": self.writes,
+            "write_attempt_count": self.attempts,
+            "write_commit_event_count": self.commit_events,
+            "write_commit_count": self.commits,
+            "unmatched_write_count": self.unmatched,
+            "unmatched_write_rate": ratio(self.unmatched, self.commits),
+            "uncertain_write_outcome_count": unknown,
+            "authorization_evidence_status": status,
+        }
+
+
+def _skill_load_metrics(records: list[dict[str, Any]]) -> dict[str, Any]:
+    state = _SkillLoadState()
+    for record in records:
+        if event_type(record) in {"skill_load", "skill_load_candidate"}:
+            state.update(record)
+    return state.metrics()
 
 
 def _retry_metrics(records: list[dict[str, Any]]) -> dict[str, Any]:
     retries = [record for record in records if event_type(record) == "retry" or record.get("retry_of")]
-    blind = 0
+    classifications: Counter[str] = Counter()
     signatures: Counter[tuple[str, str, str, str]] = Counter()
     connector_eof = 0
     eof_without_fallback = 0
     ambiguous_write_retries = 0
 
     for record in retries:
-        category = text_value(record, "error_category", "error_type", "failure_type")
         signature = text_value(record, "error_signature")
-        hypothesis = text_value(record, "hypothesis_delta", "changed_variable")
-        if not category or not signature or not hypothesis:
-            blind += 1
+        classifications[_retry_classification(record)] += 1
 
         if signature:
             signatures[
@@ -435,8 +708,7 @@ def _retry_metrics(records: list[dict[str, Any]]) -> dict[str, Any]:
     repeated_beyond_first = sum(max(0, count - 1) for count in signatures.values())
     return {
         "retry_count": len(retries),
-        "blind_retry_count": blind,
-        "blind_retry_rate": ratio(blind, len(retries)),
+        **_retry_evidence_metrics(classifications, len(retries)),
         "same_signature_retries_beyond_first": repeated_beyond_first,
         "max_same_signature_attempts": max(signatures.values(), default=0),
         "connector_eof_count": connector_eof,
@@ -481,38 +753,20 @@ def _subagent_metrics(records: list[dict[str, Any]]) -> dict[str, Any]:
     }
 
 
-def _authorization_metrics(records: list[dict[str, Any]]) -> dict[str, Any]:
-    writes = [record for record in records if event_type(record) in WRITE_EVENTS]
-    attempts = [record for record in writes if event_type(record) == "write_attempt"]
-    commits = [record for record in writes if event_type(record) == "write_commit"]
-    unmatched = 0
-    for record in commits:
-        authorization_id = text_value(record, "authorization_id")
-        write_scope = text_value(record, "write_scope_sha256")
-        authorization_scope = text_value(record, "authorization_scope_sha256")
-        if not authorization_id or not write_scope or write_scope != authorization_scope:
-            unmatched += 1
-
-    readonly_approvals = sum(
-        1
-        for record in records
-        if event_type(record) == "approval_request"
+def _authorization_metrics(records: list[dict[str, Any]], coverage: dict[str, Any]) -> dict[str, Any]:
+    state = _AuthorizationState()
+    for record in records:
+        if event_type(record) in WRITE_EVENTS:
+            state.update(record)
+    result = state.metrics(coverage)
+    result["readonly_approval_rounds"] = sum(
+        1 for record in records if event_type(record) == "approval_request"
         and text_value(record, "task_mode").lower() in {"audit_only", "read_only"}
     )
-    return {
-        "write_event_count": len(writes),
-        "write_attempt_count": len(attempts),
-        "write_commit_count": len(commits),
-        "unmatched_write_count": unmatched,
-        "unmatched_write_rate": ratio(unmatched, len(commits)),
-        "authorization_evidence_status": (
-            "no_writes" if not commits else "complete" if unmatched == 0 else "partial"
-        ),
-        "readonly_approval_rounds": readonly_approvals,
-    }
+    return result
 
 
-def _context_metrics(records: list[dict[str, Any]]) -> dict[str, Any]:
+def _context_metrics(records: list[dict[str, Any]], coverage: dict[str, Any]) -> dict[str, Any]:
     root_tasks = {text_value(record, "root_task_id") for record in records if text_value(record, "root_task_id")}
     compaction_events = [record for record in records if event_type(record) == "context_compacted"]
     recovery_events = [record for record in records if event_type(record) == "context_recovered"]
@@ -536,12 +790,12 @@ def _context_metrics(records: list[dict[str, Any]]) -> dict[str, Any]:
         for record in compaction_events
         if (text_value(record, "root_task_id"), text_value(record, "context_epoch")) in semantic_recovery_keys
     )
-    total_input_tokens = sum(int(number(record, "input_tokens", "prompt_tokens") or 0) for record in records)
-    skill_tokens = sum(
-        record["skill_tokens"]
-        for record in records
-        if event_type(record) == "skill_load" and _is_formal_skill_load(record)
-    )
+    skills = _SkillLoadState()
+    inputs = _TokenShareState()
+    for record in records:
+        inputs.update(record)
+        if event_type(record) in {"skill_load", "skill_load_candidate"}:
+            skills.update(record)
     return {
         "root_task_count": len(root_tasks),
         "context_compaction_count": compactions,
@@ -551,7 +805,7 @@ def _context_metrics(records: list[dict[str, Any]]) -> dict[str, Any]:
         "context_recovery_coverage": ratio(matched_recoveries, compactions),
         "semantic_recovery_verified_count": semantic_recoveries,
         "semantic_recovery_coverage": ratio(semantic_recoveries, compactions),
-        "skill_input_token_share": ratio(skill_tokens, total_input_tokens),
+        **inputs.metrics(skills, coverage),
     }
 
 
@@ -683,28 +937,26 @@ class _StreamingAggregate:
         self.timeout_streaks: dict[tuple[str, str], tuple[str, int]] = {}
         self.wait_last_timestamps: dict[tuple[str, str], float] = {}
         self.wait_out_of_order = self.wait_missing_timestamps = 0
-        self.raw_skill_loads = self.valid_skill_loads = 0
-        self.skill_duplicates = self.skill_tokens = 0
-        self.skill_seen: set[tuple[str, str, str, str, str]] = set()
-        self.skill_receipts: Counter[tuple[str, str, str, str, str]] = Counter()
-        self.skill_candidates: Counter[tuple[str, str, str, str, str]] = Counter()
-        self.skill_candidate_count = 0
-        self.retry_count = self.retry_blind = 0
+        self.skills = _SkillLoadState()
+        self.inputs = _TokenShareState()
+        self.analysis = CollaborationAnalysis()
+        self.retry_count = 0
+        self.retry_classifications: Counter[str] = Counter()
         self.retry_signatures: Counter[tuple[str, str, str, str]] = Counter()
         self.connector_eof = self.eof_without_fallback = self.ambiguous_write_retries = 0
         self.root_tokens = self.child_tokens = 0
         self.spawns = self.full_history_forks = self.minimal_packets = 0
-        self.write_count = self.write_attempts = self.write_commits = self.unmatched_writes = 0
+        self.authorization = _AuthorizationState()
         self.readonly_approvals = 0
         self.root_tasks: set[str] = set()
         self.compactions: Counter[tuple[str, str]] = Counter()
         self.recovery_keys: set[tuple[str, str]] = set()
         self.semantic_recovery_keys: set[tuple[str, str]] = set()
         self.recovery_count = 0
-        self.total_input_tokens = 0
 
     def update(self, record: dict[str, Any]) -> None:
         self.record_count += 1
+        self.analysis.update(record)
         kind = event_type(record)
         root = text_value(record, "root_task_id")
         actor = text_value(record, "actor_id", default="root")
@@ -730,7 +982,7 @@ class _StreamingAggregate:
 
         if root:
             self.root_tasks.add(root)
-        self.total_input_tokens += int(input_tokens or 0)
+        self.inputs.update(record)
         tokens = token_count(record)
         is_child = text_value(record, "actor_type").lower() == "subagent" or bool(record.get("parent_actor_id"))
         if is_child:
@@ -740,10 +992,8 @@ class _StreamingAggregate:
 
         if kind in WAIT_EVENTS:
             self._update_wait(record, root or "unknown-root", actor)
-        if kind == "skill_load":
-            self._update_skill_load(record)
-        elif kind == "skill_load_candidate":
-            self._update_skill_candidate(record)
+        if kind in {"skill_load", "skill_load_candidate"}:
+            self.skills.update(record)
         if kind == "retry" or record.get("retry_of"):
             self._update_retry(record)
         if kind == "subagent_spawn":
@@ -754,16 +1004,7 @@ class _StreamingAggregate:
             if all(record.get(field) not in (None, "", []) for field in required):
                 self.minimal_packets += 1
         if kind in WRITE_EVENTS:
-            self.write_count += 1
-            if kind == "write_attempt":
-                self.write_attempts += 1
-            elif kind == "write_commit":
-                self.write_commits += 1
-                authorization_id = text_value(record, "authorization_id")
-                write_scope = text_value(record, "write_scope_sha256")
-                authorization_scope = text_value(record, "authorization_scope_sha256")
-                if not authorization_id or not write_scope or write_scope != authorization_scope:
-                    self.unmatched_writes += 1
+            self.authorization.update(record)
         if kind == "approval_request" and text_value(record, "task_mode").lower() in {"audit_only", "read_only"}:
             self.readonly_approvals += 1
         context_key = (root, text_value(record, "context_epoch"))
@@ -811,48 +1052,13 @@ class _StreamingAggregate:
             self.wait_local_count += 1
             self.wait_local_duration += duration_seconds(record) or 0.0
 
-    @staticmethod
-    def _skill_key(record: dict[str, Any]) -> tuple[str, str, str, str, str]:
-        return (
-            text_value(record, "root_task_id"),
-            text_value(record, "actor_id"),
-            text_value(record, "context_epoch"),
-            text_value(record, "skill_name", "skill"),
-            text_value(record, "skill_path_sha256"),
-        )
 
-    def _update_skill_load(self, record: dict[str, Any]) -> None:
-        self.raw_skill_loads += 1
-        if not _is_formal_skill_load(record):
-            return
-        self.valid_skill_loads += 1
-        self.skill_tokens += record["skill_tokens"]
-        identity = (
-            text_value(record, "root_task_id"),
-            text_value(record, "actor_id"),
-            text_value(record, "context_epoch"),
-            text_value(record, "skill_name", "skill"),
-            text_value(record, "skill_sha256"),
-        )
-        if identity in self.skill_seen:
-            self.skill_duplicates += 1
-        else:
-            self.skill_seen.add(identity)
-        self.skill_receipts[self._skill_key(record)] += 1
 
-    def _update_skill_candidate(self, record: dict[str, Any]) -> None:
-        self.skill_candidate_count += 1
-        key = self._skill_key(record)
-        if all(key):
-            self.skill_candidates[key] += 1
 
     def _update_retry(self, record: dict[str, Any]) -> None:
         self.retry_count += 1
-        category = text_value(record, "error_category", "error_type", "failure_type")
         signature = text_value(record, "error_signature")
-        hypothesis = text_value(record, "hypothesis_delta", "changed_variable")
-        if not category or not signature or not hypothesis:
-            self.retry_blind += 1
+        self.retry_classifications[_retry_classification(record)] += 1
         if signature:
             self.retry_signatures[
                 (
@@ -872,6 +1078,10 @@ class _StreamingAggregate:
                 self.ambiguous_write_retries += 1
 
     def finalize(self, coverage: dict[str, Any]) -> dict[str, Any]:
+        coverage = _semantic_coverage(coverage, self.skills.conflicts + self.inputs.conflicts,
+                                      self.retry_classifications["conflicting"],
+                                      self.skills.invalid_candidate_bindings)
+        analysis, coverage = self.analysis.finalize(coverage)
         components: list[dict[str, Any]] = []
         for name, group in self.groups.items():
             durations = group["durations"]
@@ -891,9 +1101,6 @@ class _StreamingAggregate:
                 }
             )
         components.sort(key=lambda item: (item["failures"], item["count"]), reverse=True)
-        verified_candidates = sum(
-            min(count, self.skill_receipts[key]) for key, count in self.skill_candidates.items()
-        )
         repeated_retries = sum(max(0, count - 1) for count in self.retry_signatures.values())
         compaction_count = sum(self.compactions.values())
         matched_recoveries = sum(
@@ -931,22 +1138,10 @@ class _StreamingAggregate:
                 "out_of_order_sequence_count": self.wait_out_of_order,
                 "missing_sequence_timestamp_count": self.wait_missing_timestamps,
             },
-            "skill_load": {
-                "skill_load_count": self.valid_skill_loads,
-                "skill_load_candidate_count": self.skill_candidate_count,
-                "verified_candidate_count": verified_candidates,
-                "receipt_coverage": ratio(verified_candidates, self.skill_candidate_count),
-                "duplicate_load_count": self.skill_duplicates,
-                "duplicate_load_rate": ratio(self.skill_duplicates, self.valid_skill_loads),
-                "loaded_tokens": self.skill_tokens,
-                "token_observation_count": self.valid_skill_loads,
-                "token_coverage": ratio(self.valid_skill_loads, self.raw_skill_loads),
-                "unverifiable_load_count": self.raw_skill_loads - self.valid_skill_loads,
-            },
+            "skill_load": self.skills.metrics(),
             "retry": {
                 "retry_count": self.retry_count,
-                "blind_retry_count": self.retry_blind,
-                "blind_retry_rate": ratio(self.retry_blind, self.retry_count),
+                **_retry_evidence_metrics(self.retry_classifications, self.retry_count),
                 "same_signature_retries_beyond_first": repeated_retries,
                 "max_same_signature_attempts": max(self.retry_signatures.values(), default=0),
                 "connector_eof_count": self.connector_eof,
@@ -963,14 +1158,7 @@ class _StreamingAggregate:
                 "structured_packet_rate": ratio(self.minimal_packets, self.spawns),
             },
             "authorization": {
-                "write_event_count": self.write_count,
-                "write_attempt_count": self.write_attempts,
-                "write_commit_count": self.write_commits,
-                "unmatched_write_count": self.unmatched_writes,
-                "unmatched_write_rate": ratio(self.unmatched_writes, self.write_commits),
-                "authorization_evidence_status": (
-                    "no_writes" if not self.write_commits else "complete" if self.unmatched_writes == 0 else "partial"
-                ),
+                **self.authorization.metrics(coverage),
                 "readonly_approval_rounds": self.readonly_approvals,
             },
             "context": {
@@ -984,16 +1172,21 @@ class _StreamingAggregate:
                 "context_recovery_coverage": ratio(matched_recoveries, compaction_count),
                 "semantic_recovery_verified_count": semantic_recoveries,
                 "semantic_recovery_coverage": ratio(semantic_recoveries, compaction_count),
-                "skill_input_token_share": ratio(self.skill_tokens, self.total_input_tokens),
+                **self.inputs.metrics(self.skills, coverage),
             },
         }
-        return _report_payload(components, dict(self.failure_types.most_common()), operational, coverage, self.record_count)
+        report = _report_payload(components, dict(self.failure_types.most_common()), operational, coverage, self.record_count)
+        report["collaboration_analysis"] = analysis
+        return report
 
 
 LIMITATIONS = [
     "Only explicit fields in the supplied records were aggregated.",
     "Missing durations, token counts, state versions, and fingerprints are not inferred.",
-    "Write authorization is complete only when commit events carry matching scope receipts.",
+    "Authorization status describes observed intent, outcomes and fingerprints, never natural-language permission.",
+    "Legacy skill receipt IDs do not establish occurrence identity; business-key candidate pairing is only an upper bound.",
+    "Blind retry rate uses classified retries only; missing rationale remains unverified and coverage must be shown.",
+    "Skill text volume is not billed input or cost; token share requires compatible complete model-input scopes.",
     "A context recovery event proves presence; semantic recovery requires required_fields_verified=true.",
     "Wait sequence metrics fail closed when same-task actor timestamps are missing or regress.",
     "Correlation in telemetry does not establish causation.",
@@ -1009,6 +1202,7 @@ def _report_payload(
 ) -> dict[str, Any]:
     return {
         "schema_version": 2,
+        "metric_semantics_version": 2,
         "coverage": coverage,
         "record_count": record_count,
         "component_count": len(components),
@@ -1017,6 +1211,21 @@ def _report_payload(
         "operational_metrics": operational_metrics,
         "limitations": list(LIMITATIONS),
     }
+
+
+def _semantic_coverage(coverage: dict[str, Any], identity_conflicts: int,
+                       retry_conflicts: int, invalid_candidate_bindings: int) -> dict[str, Any]:
+    issues = list(coverage.get("issues", []))
+    for count, category, detail in (
+        (identity_conflicts, "event_identity_conflict", "occurrence delivery payload(s) conflict"),
+        (invalid_candidate_bindings, "invalid_candidate_binding", "skill load record(s) have an invalid explicit candidate binding"),
+        (retry_conflicts, "conflicting_retry_evidence", "retry record(s) contain contradictory structured evidence"),
+    ):
+        if count and not any(issue.get("category") == category for issue in issues):
+            issues.append(_issue(Path("<records>"), category, f"{count} {detail}"))
+    if issues != coverage.get("issues", []):
+        return {**coverage, "status": "partial", "issues": issues}
+    return coverage
 
 
 def aggregate_path(path: Path) -> dict[str, Any]:
@@ -1071,15 +1280,37 @@ def aggregate(
             "issues": [],
         }
 
+    wait = _wait_metrics(materialized)
+    if coverage.get("status") in {"complete", "partial"}:
+        sequence_issues = []
+        for field, category in (("out_of_order_sequence_count", "out_of_order_sequence"),
+                                ("missing_sequence_timestamp_count", "missing_sequence_timestamp")):
+            if wait[field] and not any(issue.get("category") == category for issue in coverage.get("issues", [])):
+                sequence_issues.append(_issue(Path("<records>"), category, f"{wait[field]} wait event(s) have unverified ordering"))
+        if sequence_issues:
+            coverage = {**coverage, "status": "partial", "issues": [*coverage.get("issues", []), *sequence_issues]}
+    skills = _skill_load_metrics(materialized)
+    retry = _retry_metrics(materialized)
+    inputs = _TokenShareState()
+    analysis_state = CollaborationAnalysis()
+    for record in materialized:
+        inputs.update(record)
+        analysis_state.update(record)
+    coverage = _semantic_coverage(coverage, skills["event_identity_conflict_count"] + inputs.conflicts,
+                                  retry["conflicting_retry_evidence_count"],
+                                  sum(_invalid_candidate_binding(record) for record in materialized))
+    analysis, coverage = analysis_state.finalize(coverage)
     operational = {
-            "wait": _wait_metrics(materialized),
-            "skill_load": _skill_load_metrics(materialized),
-            "retry": _retry_metrics(materialized),
+            "wait": wait,
+            "skill_load": skills,
+            "retry": retry,
             "subagent": _subagent_metrics(materialized),
-            "authorization": _authorization_metrics(materialized),
-            "context": _context_metrics(materialized),
+            "authorization": _authorization_metrics(materialized, coverage),
+            "context": _context_metrics(materialized, coverage),
     }
-    return _report_payload(components, failure_types, operational, coverage, len(materialized))
+    report = _report_payload(components, failure_types, operational, coverage, len(materialized))
+    report["collaboration_analysis"] = analysis
+    return report
 
 
 def main() -> int:
@@ -1089,7 +1320,7 @@ def main() -> int:
     parser.add_argument(
         "--strict",
         action="store_true",
-        help="Return exit code 2 when any source file or record was skipped.",
+        help="Return exit code 2 for incomplete coverage, including sequence or structured evidence conflicts.",
     )
     args = parser.parse_args()
 

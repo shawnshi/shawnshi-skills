@@ -136,6 +136,9 @@ class ExternalReceiptSecurityTests(unittest.TestCase):
         receipt = {
             "schema_version": 2,
             "event_id": "skill-load-sample",
+            "event_identity": "occurrence",
+            "candidate_event_id": "candidate-sample",
+            "token_measurement_basis": "skill_text",
             "timestamp": "2026-08-16T12:00:01Z",
             "root_task_id": "r-receipt",
             "actor_id": "root",
@@ -160,6 +163,9 @@ class ExternalReceiptSecurityTests(unittest.TestCase):
         )
         self.assertNotIn("skill_path", event)
         self.assertEqual(event["skill_path_sha256"], "a" * 64)
+        self.assertEqual(event["event_identity"], "occurrence")
+        self.assertEqual(event["candidate_event_id"], "candidate-sample")
+        self.assertEqual(event["token_measurement_basis"], "skill_text")
 
     def test_external_receipts_reject_absolute_paths_and_extra_secrets(self):
         fixtures = (
@@ -309,7 +315,9 @@ class ExtractorRemediationTests(unittest.TestCase):
         self.assertEqual(tool_event["outcome"], "validation_guard")
         self.assertFalse(tool_event["executor_failure"])
         self.assertEqual(summary["tool_failures"], 0)
-        self.assertEqual(next(event for event in events if event["event_type"] == "write_attempt")["authorization_id"], "auth-rejected")
+        attempt = next(event for event in events if event["event_type"] == "write_attempt")
+        self.assertEqual(attempt["authorization_id"], "auth-rejected")
+        self.assertEqual(attempt["side_effect_state"], "not_started")
         self.assertNotIn("secret validation detail", json.dumps(events))
 
     def test_duplicate_is_suppressed_and_conflicting_receipts_fail_closed(self):
@@ -632,6 +640,9 @@ class EndToEndTests(unittest.TestCase):
         self.assertEqual(event_types.count("write_attempt"), 2)
         self.assertEqual(event_types.count("write_commit"), 2)
         self.assertEqual(event_types.count("skill_load_candidate"), 1)
+        candidate = next(event for event in events if event["event_type"] == "skill_load_candidate")
+        self.assertEqual(candidate["event_identity"], "occurrence")
+        self.assertTrue(candidate["event_id"])
         self.assertEqual(event_types.count("context_recovered"), 1)
         parser_event = next(event for event in events if event.get("event_id") == "tool-parser-1")
         self.assertEqual(parser_event["status"], "error")

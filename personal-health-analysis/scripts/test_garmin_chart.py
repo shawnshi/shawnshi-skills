@@ -445,6 +445,151 @@ class GarminChartFailureContractTests(unittest.TestCase):
         self.assertEqual(rc, 0)
         get_client.assert_not_called()
 
+class GarminChartProblemInsightTests(unittest.TestCase):
+    @staticmethod
+    def fixture(count=2):
+        days = ["2026-09-01", "2026-09-02"][:count]
+        return {
+            "sleep": [{"date": day, "sleep_time_seconds": 25200, "deep_sleep_seconds": 3600,
+                       "rem_sleep_seconds": 7200, "light_sleep_seconds": 14400,
+                       "avg_respiration": 15, "avg_spo2": 97, "sleep_score": 80} for day in days],
+            "hrv": [{"date": day, "last_night_avg": 45} for day in days],
+            "heart_rate": [{"date": day, "resting_hr": 60} for day in days],
+            "body_battery": [{"date": day, "highest": 80, "lowest": 30} for day in days],
+            "stress": [{"date": day, "avg_stress": 25, "steps": 4000} for day in days],
+            "activities": [{"date": "2026-09-01", "activity_name": "PRIVATE_ACTIVITY", "calories": 9999}],
+            "weight": [{"date": "2026-09-01", "weight": 9999}],
+            "device_info": [{"serial_number": "PRIVATE_SERIAL", "software_version": "1"}],
+            "debug_path": "C:/private/context.json",
+        }
+
+    def build(self, count=2, components=None, context=None):
+        with patch("garmin_health_profile.build_profile", side_effect=AssertionError("no profile DB loader")):
+            return garmin_chart.build_dashboard_payload(
+                self.fixture(count), days=2, requested_start="2026-09-01", requested_end="2026-09-02",
+                requested_source="local", effective_source="local", live_fallback_attempted=False,
+                selected_components=components or garmin_chart.DASHBOARD_DEFAULT_COMPONENTS,
+                context_records=context,
+            )
+
+    def test_complete_partial_no_data_and_unknown_epoch(self):
+        for count, status in ((2, "complete"), (1, "partial"), (0, "no_data")):
+            with self.subTest(status=status):
+                payload = self.build(count)
+                result = payload["problem_insights"]
+                self.assertEqual(result["data_status"], status)
+                self.assertLessEqual(len(result["optional_actions"]), 2)
+                self.assertEqual(payload["narrative"]["optional_considerations"], [])
+                self.assertFalse(payload["baseline"]["qualified"])
+                self.assertEqual(result["items"][1]["qualification"]["comparison_status"], "epoch_unknown")
+                self.assertEqual(result["items"][0]["observations"][0]["value"], 7 if count else None)
+                if count == 1:
+                    self.assertEqual(result["optional_actions"][0]["id"], "verify_observation_coverage")
+                    self.assertEqual(payload["kpis"]["sleep"]["observed_date"], "2026-09-01")
+                for forbidden in ("PRIVATE_ACTIVITY", "PRIVATE_SERIAL", "C:/private", "9999", "/modules/"):
+                    self.assertNotIn(forbidden, json.dumps(payload))
+
+    def test_filtered_components_do_not_leak_metrics_or_context(self):
+        for components, expected in ((["hrv"], ["last_night_hrv"]), (["heart_rate"], ["resting_heart_rate"]), (["sleep"], ["sleep_duration"]), (["stress"], [])):
+            payload = self.build(components=components)
+            items = payload["problem_insights"]["items"]
+            self.assertEqual([obs["metric"] for item in items for obs in item["observations"]], expected)
+            self.assertIsNone(payload["user_context_review"])
+            if components == ["hrv"]:
+                self.assertEqual(items[0]["qualification"]["status"], "descriptive_available")
+                self.assertEqual(payload["problem_insights"]["optional_actions"], [])
+        with self.assertRaisesRegex(garmin_chart.ContextValidationError, "CONTEXT_NOT_REQUESTED"):
+            self.build(components=["hrv"], context=[])
+
+    def test_context_aggregates_and_strict_projection(self):
+        context = [{"date": "2026-09-01", "sleep_opportunity_minutes": 480, "caffeine_last_time": "13:37",
+                    "user_selected_action": "observe_sleep_opportunity", "performed": False}]
+        payload = self.build(context=context)
+        review = payload["user_context_review"]
+        self.assertEqual(review["summary"]["action_completed_days"], 0)
+        self.assertEqual(review["summary"]["action_not_completed_days"], 1)
+        self.assertEqual(review["summary"]["action_missing_days"], 1)
+        self.assertEqual(review["summary"]["paired_device_sleep_duration_median_minutes"], 420)
+        self.assertEqual(review["effectiveness"], "not_evaluated")
+        review["records"] = context
+        review["summary"]["raw_path"] = "C:/private/context.json"
+        review["summary"]["action_completed_days"] = {"raw": "PRIVATE"}
+        payload["problem_insights"]["items"][0]["question"] = "<img src=x onerror=alert(1)>"
+        result = garmin_chart._project_dashboard_payload(payload)
+        serialized = json.dumps(result)
+        for forbidden in ("13:37", "C:/private", "PRIVATE", "<img", '"records"'):
+            self.assertNotIn(forbidden, serialized)
+        self.assertIsNone(result["user_context_review"]["summary"]["action_completed_days"])
+        result["meta"]["source"]["components"] = ["hrv"]
+        self.assertIsNone(garmin_chart._project_dashboard_payload(result)["user_context_review"])
+
+    def test_context_permission_and_component_gate_before_read(self):
+        for extra, status in (([], "HEALTH_DATA_ACCESS_NOT_AUTHORIZED"),
+                              (["--allow-health-data", "--components", "hrv"], "context_not_requested"),
+                              (["--source", "live", "--allow-health-data"], "NETWORK_ACCESS_NOT_AUTHORIZED")):
+            stderr = io.StringIO()
+            with patch.object(garmin_chart, "_load_context") as read, patch.object(garmin_chart, "_load_summary") as db, patch("sys.stderr", stderr):
+                rc = garmin_chart.main(["dashboard", "--days", "2", "--context-file", "//private/share.json", *extra])
+            self.assertEqual(rc, 2)
+            self.assertEqual(json.loads(stderr.getvalue())["status"], status)
+            read.assert_not_called()
+            db.assert_not_called()
+
+    def test_invalid_context_fails_before_db_and_redacts_errors(self):
+        with tempfile.TemporaryDirectory() as temp:
+            path = Path(temp) / "sensitive-name.json"
+            invalids = ['{"schema_version":1,"records":[],"extra":"x"}',
+                        '{"schema_version":1,"records":[{"date":"1999-01-01"}]}',
+                        '{"schema_version":1,"schema_version":1,"records":[]}',
+                        '{"schema_version":1,"records":[{"date":"2026-09-01","caffeine_last_time":"<script>"}]}']
+            for raw in invalids:
+                path.write_text(raw, encoding="utf-8")
+                stderr = io.StringIO()
+                with patch.object(garmin_chart, "_load_summary") as db, patch("sys.stderr", stderr):
+                    rc = garmin_chart.main(["dashboard", "--days", "2", "--allow-health-data", "--context-file", str(path)])
+                self.assertEqual(rc, 2)
+                self.assertEqual(json.loads(stderr.getvalue())["status"], "invalid_context")
+                self.assertNotIn(str(path), stderr.getvalue())
+                db.assert_not_called()
+            for filename, expected in ((str(Path(temp)/"missing.json"), "read_error"), ("//private/share.json", "invalid_context")):
+                stderr = io.StringIO()
+                with patch.object(garmin_chart, "_load_summary") as db, patch("sys.stderr", stderr):
+                    garmin_chart.main(["dashboard", "--days", "2", "--allow-health-data", "--context-file", filename])
+                self.assertEqual(json.loads(stderr.getvalue())["status"], expected)
+                self.assertNotIn(filename, stderr.getvalue())
+                db.assert_not_called()
+
+    def test_cli_synthetic_html_and_omitted_context_no_additional_read(self):
+        import base64
+        import re
+        with tempfile.TemporaryDirectory() as temp:
+            context = Path(temp)/"context.json"
+            context.write_text(json.dumps({"schema_version": 1, "records": [{"date": "2026-09-01", "sleep_opportunity_minutes": 480}]}), encoding="utf-8")
+            for supplied in (False, True):
+                output = Path
+                output = Path(temp)/f"dashboard-{supplied}.html"
+                with patch.object(garmin_chart, "get_date_range", return_value=("2026-09-01", "2026-09-02")), patch.object(garmin_chart, "_load_summary", return_value=self.fixture()), patch.object(garmin_chart, "_load_context", wraps=garmin_chart._load_context) as read:
+                    rc = garmin_chart.main(["dashboard", "--days", "2", "--allow-health-data", "--output", str(output), *(["--context-file", str(context)] if supplied else [])])
+                self.assertEqual(rc, 0)
+                self.assertEqual(read.call_count, int(supplied))
+                html = output.read_text(encoding="utf-8")
+                match = re.search(r'type="application/octet-stream">([^<]+)', html)
+                assert match is not None
+                payload = json.loads(base64.b64decode(match.group(1)))
+                self.assertEqual(payload["user_context_review"] is not None, supplied)
+                self.assertIn("重点问题与证据", html)
+                self.assertNotIn(str(context), html)
+                self.assertLessEqual(len(payload["problem_insights"]["optional_actions"]), 2)
+
+    def test_malicious_prose_is_encoded_not_executable(self):
+        payload = self.build()
+        attack = '</script><img src=x onerror="window.ATTACK=true">'
+        payload["narrative"]["overall"] = attack
+        html = garmin_chart.render_report(payload)
+        self.assertNotIn(attack, html)
+        self.assertNotIn("innerHTML", html)
+        self.assertIn("connect-src 'none'", html)
+
 
 if __name__ == "__main__":
     unittest.main()

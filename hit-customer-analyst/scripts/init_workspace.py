@@ -5,7 +5,6 @@ from __future__ import annotations
 
 import argparse
 import hashlib
-import importlib.util
 import json
 import os
 import re
@@ -15,26 +14,12 @@ import sys
 import tempfile
 import unicodedata
 import uuid
-from datetime import datetime, timedelta, timezone
+from datetime import datetime, timezone
 from pathlib import Path
+from zoneinfo import ZoneInfo, ZoneInfoNotFoundError
 
-try:
-    from capability_receipt import CapabilityReceiptError, verify_capability_receipt
-except ModuleNotFoundError:
-    _capability_path = Path(__file__).with_name("capability_receipt.py")
-    _capability_spec = importlib.util.spec_from_file_location("capability_receipt", _capability_path)
-    if _capability_spec is None or _capability_spec.loader is None:
-        raise RuntimeError(f"无法加载能力收据验证模块：{_capability_path}")
-    _capability_module = importlib.util.module_from_spec(_capability_spec)
-    sys.modules["capability_receipt"] = _capability_module
-    _capability_spec.loader.exec_module(_capability_module)
-    CapabilityReceiptError = _capability_module.CapabilityReceiptError
-    verify_capability_receipt = _capability_module.verify_capability_receipt
 from runtime_tx import (
-    DELIVERY_SUMMARY_UNSET,
     MANIFEST_REL,
-    RESEARCH_RUNTIME_RELS,
-    CASMismatch,
     RecoveryRequired,
     TxError,
     atomic_write_json,
@@ -42,22 +27,19 @@ from runtime_tx import (
     file_state,
     fsync_directory,
     load_manifest,
-    manifest_state,
-    normalize_task_timezone,
     output_root_lock,
     recover_transaction,
     transactional_commit,
-    task_date_at,
     unfinished_transaction,
     verify_manifest_artifacts,
     workspace_lock,
 )
 
-
 SKILL_ROOT = Path(__file__).resolve().parents[1]
 ASSET_ROOT = SKILL_ROOT / "assets"
 BUSINESS_MODES_FILE = SKILL_ROOT / "config" / "business-modes.json"
 SCHEMA = "discovery-call-output/v2.5"
+VALIDATOR_TIMEOUT_SECONDS = 60.0
 INVALID_SAFE_CHARS = re.compile(r'[<>:"/\\|?*#%()\[\]\x00-\x1f\x7f]+')
 WINDOWS_RESERVED = re.compile(r"^(?:CON|PRN|AUX|NUL|COM[1-9]|LPT[1-9])(?:\..*)?$", re.I)
 CONTEXT_RE = re.compile(r"^dcx-\d{8}-[A-Za-z0-9]{8}$")
@@ -65,7 +47,13 @@ RUN_RE = re.compile(r"^dcr-\d{8}T\d{6}-[A-Za-z0-9]{4}$")
 MODULE_CHOICES = {"institution", "leader", "internal", "strategy", "letter"}
 MODULE_STATUSES = {"not_called", "queued", "running", "partial", "completed", "blocked"}
 TERMINAL_STATUSES = {"partial", "completed", "blocked"}
-REVIEW_STATUSES = {"not_required", "not_started", "pending", "approved", "changes_requested"}
+REVIEW_STATUSES = {
+    "not_required",
+    "not_started",
+    "pending",
+    "approved",
+    "changes_requested",
+}
 CONNECTOR_STATUSES = {
     "not_applicable",
     "not_configured",
@@ -77,7 +65,7 @@ CONNECTOR_STATUSES = {
 FRESHNESS_STATUSES = {"current", "stale", "invalidated"}
 ROUTES = {"research_only", "visit_prep", "strategy", "letter", "refresh"}
 CONTENT_VERSION_RE = re.compile(r"^[1-9][0-9]*$")
-IDENTIFIER_RE = re.compile(r"^[A-Za-z0-9][A-Za-z0-9._:-]{2,127}$")
+IDENTIFIER_RE = re.compile(r"^[A-Za-z0-9._-]{3,128}$")
 COMMON_REQUIRED_FIELDS = {
     "schema",
     "artifact_type",
@@ -113,30 +101,14 @@ LETTER_CONTEXT_FIELDS = {
     "signer",
     "delivery_channel",
 }
-STRATEGY_VARIANTS = {"scheduled_visit", "account_planning"}
-SCHEDULED_STRATEGY_CONTEXT_FIELDS = {
+STRATEGY_CONTEXT_FIELDS = {
     "target_contact_level",
     "visit_objective",
     "minimum_next_step",
 }
-ACCOUNT_STRATEGY_CONTEXT_FIELDS = {
-    "strategic_question",
-    "planning_horizon",
-    "minimum_next_step",
-}
-READINESS_APPROVAL_FIELDS = {
-    "readiness_reviewer",
-    "readiness_reviewed_at",
-    "readiness_content_version",
-    "readiness_body_sha256",
-    "readiness_target_body_sha256",
-    "readiness_reviewer_actor_id",
-    "readiness_reviewer_role",
-    "readiness_reviewer_authority_id",
-    "readiness_reviewer_identity_provider",
-    "readiness_action_event_id",
-}
-INTERNAL_LETTER_FIELDS = APPROVAL_FIELDS | LETTER_CONTEXT_FIELDS | {"external_output_required"}
+INTERNAL_LETTER_FIELDS = (
+    APPROVAL_FIELDS | LETTER_CONTEXT_FIELDS | {"external_output_required"}
+)
 EXTERNAL_LINEAGE_FIELDS = APPROVAL_FIELDS | {"source_internal_content_version"}
 
 TYPE_FOR_MODULE = {
@@ -153,7 +125,6 @@ TEMPLATES = {
     "internal_retrieval": "internal-retrieval-report-template.md",
     "visit_strategy": "visit-strategy-report-template.md",
     "customer_letter_internal": "customer-letter-output-template.md",
-    "briefing_delivery": "briefing-template.md",
 }
 SUFFIXES = {
     "comprehensive_report": "客户研究与拜访准备报告.md",
@@ -163,190 +134,27 @@ SUFFIXES = {
     "visit_strategy": "交流策略与议题设计.md",
     "customer_letter_internal": "客户信（内部待审核稿）.md",
     "customer_letter_external": "客户信（外发版）.md",
-    "briefing_delivery": "会前速览.md",
 }
 STATUS_LABELS = {
     "institution_research": "机构研究",
     "leader_research": "人物研究",
     "internal_retrieval": "内部检索",
     "visit_strategy": "交流策略",
-    "briefing_delivery": "会前速览",
     "customer_letter_internal": "客户信内部审核稿",
     "customer_letter_external": "客户信外发版",
 }
-RUN_ARTIFACT_ORDER = (
-    "institution",
-    "leader",
-    "internal",
-    "strategy",
-    "briefing",
-    "letter",
-    "external_letter",
-)
 MODE_LABELS = {"quick": "快速版", "standard": "标准版", "deep": "深度版"}
 DEFAULT_REVIEW_STATUS = {
-    "institution_research": "not_started",
+    "institution_research": "not_required",
     "leader_research": "not_started",
     "internal_retrieval": "not_started",
     "visit_strategy": "not_started",
     "customer_letter_internal": "not_started",
-    "briefing_delivery": "not_started",
 }
-
-
-def _load_preflight_module():
-    try:
-        import preflight_intake as module
-
-        return module
-    except ModuleNotFoundError:
-        path = Path(__file__).with_name("preflight_intake.py")
-        spec = importlib.util.spec_from_file_location("preflight_intake", path)
-        if spec is None or spec.loader is None:
-            raise InitError(f"无法加载intake预检模块：{path}")
-        module = importlib.util.module_from_spec(spec)
-        sys.modules["preflight_intake"] = module
-        spec.loader.exec_module(module)
-        return module
-
-
-PREFLIGHT = _load_preflight_module()
 
 
 class InitError(RuntimeError):
     """Safe, user-actionable initialization failure."""
-
-
-SUBJECT_IDENTITY_FIELDS = (
-    "schema",
-    "issuer",
-    "customer_id",
-    "canonical_customer_name",
-    "canonical_entity_key",
-    "jurisdiction",
-    "canonical_subject_sha256",
-    "organization_scope_sha256",
-    "id_source",
-)
-
-
-def assert_resume_subject_binding(
-    manifest: dict[str, object] | None,
-    intake_preflight: dict[str, object] | None,
-) -> None:
-    """Prevent an ordinary resume from rebinding one context to another entity."""
-    existing = manifest.get("subject_binding") if isinstance(manifest, dict) else None
-    incoming = intake_preflight.get("subject_resolution") if isinstance(intake_preflight, dict) else None
-    if not isinstance(existing, dict):
-        raise InitError("既有上下文缺少subject_binding；普通resume不得隐式补绑，请先执行受审计迁移。")
-    if not isinstance(incoming, dict):
-        raise InitError("当前intake缺少宿主签名subject_resolution。")
-    mismatched = [field for field in SUBJECT_IDENTITY_FIELDS if existing.get(field) != incoming.get(field)]
-    if mismatched:
-        raise InitError(
-            "subject_resolution与既有上下文规范主体不一致；普通resume不得改绑："
-            + ",".join(mismatched)
-        )
-
-
-def require_ready_intake(args: argparse.Namespace) -> dict[str, object] | None:
-    """Recompute the intake gate before any output-root write or lock."""
-    if not args.business_mode:
-        raise InitError(
-            "新建或续建必须显式使用--business-mode并提供同一份--intake-input；"
-            "旧--route/--mode仅可作为业务模式派生后的兼容参数。"
-        )
-    if not args.intake_input:
-        raise InitError("使用--business-mode时必须提供--intake-input，并先完成输入消歧。")
-    try:
-        result = PREFLIGHT.evaluate_intake_file(
-            args.intake_input,
-            now=now_utc(),
-            require_request_binding=True,
-        )
-    except PREFLIGHT.PreflightError as exc:
-        raise InitError(f"intake预检无效：{exc}") from exc
-    if result.get("business_mode") != args.business_mode:
-        raise InitError("intake预检business_mode与--business-mode不一致。")
-    if result.get("status") != "ready" or result.get("safe_to_initialize_or_search") is not True:
-        questions = [
-            str(item.get("question", ""))
-            for item in result.get("questions", [])
-            if isinstance(item, dict) and item.get("question")
-        ]
-        detail = "；".join(questions) or "存在未消解的关键输入冲突或缺失。"
-        raise InitError(f"intake_preflight_blocked：{detail}")
-    selected = result.get("selected_values", {})
-    customer = selected.get("customer_name", {}) if isinstance(selected, dict) else {}
-    customer_values = customer.get("values", []) if isinstance(customer, dict) else []
-    normalized_customer = normalize_customer_name(args.customer_name)
-    if customer_values != [normalized_customer]:
-        raise InitError("intake预检中的唯一客户主体与命令行customer_name不一致。")
-    scope = selected.get("organization_scope", {}) if isinstance(selected, dict) else {}
-    scope_values = scope.get("values", []) if isinstance(scope, dict) else []
-    if len(scope_values) != 1 or not isinstance(scope_values[0], str):
-        raise InitError("intake预检未形成唯一organization_scope。")
-    if args.organization_scope and normalize_metadata_text(
-        args.organization_scope, "--organization-scope"
-    ) != scope_values[0]:
-        raise InitError("intake预检中的organization_scope与命令行不一致。")
-    args.organization_scope = scope_values[0]
-    subject_resolution = result.get("subject_resolution")
-    if not isinstance(subject_resolution, dict):
-        raise InitError("intake预检缺少宿主签名的规范主体解析证明。")
-    resolved_customer_id = str(subject_resolution.get("customer_id", ""))
-    if not IDENTIFIER_RE.fullmatch(resolved_customer_id):
-        raise InitError("subject_resolution.customer_id无效。")
-    if args.customer_id and args.customer_id != resolved_customer_id:
-        raise InitError("--customer-id与宿主签名subject_resolution不一致。")
-    args.customer_id = resolved_customer_id
-    for field in (
-        "visit_objective",
-        "minimum_next_step",
-        "strategic_question",
-        "planning_horizon",
-        "strategy_variant",
-        "recipient_identity",
-        "recipient_role",
-        "letter_scenario",
-        "letter_purpose",
-        "expected_action",
-        "signer",
-        "delivery_channel",
-    ):
-        record = selected.get(field, {}) if isinstance(selected, dict) else {}
-        values = record.get("values", []) if isinstance(record, dict) else []
-        if len(values) == 1 and isinstance(values[0], str):
-            supplied = getattr(args, field, None)
-            if supplied and normalize_metadata_text(supplied, f"--{field.replace('_', '-')}") != values[0]:
-                raise InitError(f"intake预检中的{field}与命令行不一致。")
-            setattr(args, field, values[0])
-    project_record = selected.get("project_id", {}) if isinstance(selected, dict) else {}
-    project_values = project_record.get("values", []) if isinstance(project_record, dict) else []
-    if project_record:
-        if args.project_id and project_values != [args.project_id]:
-            raise InitError("intake预检中的project_id与命令行--project-id不一致。")
-        if len(project_values) == 1 and isinstance(project_values[0], str):
-            args.project_id = args.project_id or project_values[0]
-    elif args.project_id:
-        raise InitError("--project-id必须先写入同一份intake并通过预检。")
-    target_values: list[str] = []
-    for field in ("target_contact_level", "target_role", "target_person"):
-        record = selected.get(field, {}) if isinstance(selected, dict) else {}
-        values = record.get("values", []) if isinstance(record, dict) else []
-        if len(values) == 1 and isinstance(values[0], str):
-            target_values = values
-            break
-    if target_values:
-        if args.target_contact_level and normalize_metadata_text(
-            args.target_contact_level, "--target-contact-level"
-        ) != target_values[0]:
-            raise InitError("intake预检中的拜访对象层级/角色与命令行不一致。")
-        args.target_contact_level = target_values[0]
-    try:
-        return PREFLIGHT.verified_gate_record(result)
-    except PREFLIGHT.PreflightError as exc:
-        raise InitError(f"intake预检无法生成可信持久化门禁：{exc}") from exc
 
 
 def has_extra_frontmatter_block(body: str) -> bool:
@@ -367,7 +175,10 @@ def has_extra_frontmatter_block(body: str) -> bool:
         if not fence_char and re.fullmatch(r"---[ \t]*", line):
             delimiters.append(index)
     for left, right in zip(delimiters, delimiters[1:]):
-        if any(re.fullmatch(r"[A-Za-z_][A-Za-z0-9_-]*:\s*.*", line) for line in lines[left + 1 : right]):
+        if any(
+            re.fullmatch(r"[A-Za-z_][A-Za-z0-9_-]*:\s*.*", line)
+            for line in lines[left + 1 : right]
+        ):
             return True
     return False
 
@@ -382,11 +193,16 @@ def load_business_profiles() -> dict[str, dict[str, object]]:
         raise InitError("business-modes.json缺少profiles对象。")
     required = {"briefing", "standard_visit", "strategic_account", "letter"}
     if not required <= profiles.keys():
-        raise InitError("business-modes.json缺少业务模式：" + ", ".join(sorted(required - profiles.keys())))
+        raise InitError(
+            "business-modes.json缺少业务模式："
+            + ", ".join(sorted(required - profiles.keys()))
+        )
     return profiles
 
 
-def configured_module_values(values: list[str] | None, include_strategy: bool, include_letter: bool) -> set[str]:
+def configured_module_values(
+    values: list[str] | None, include_strategy: bool, include_letter: bool
+) -> set[str]:
     selected: set[str] = set()
     for value in values or []:
         selected.update(part.strip() for part in value.split(",") if part.strip())
@@ -400,14 +216,22 @@ def configured_module_values(values: list[str] | None, include_strategy: bool, i
     return selected
 
 
-def modules_for_business_mode(args: argparse.Namespace, profile: dict[str, object]) -> list[str]:
+def modules_for_business_mode(
+    args: argparse.Namespace, profile: dict[str, object]
+) -> list[str]:
     required = profile.get("modules")
     optional = profile.get("optional_modules", [])
-    if not isinstance(required, list) or not all(value in MODULE_CHOICES for value in required):
+    if not isinstance(required, list) or not all(
+        value in MODULE_CHOICES for value in required
+    ):
         raise InitError("业务模式配置中的modules无效。")
-    if not isinstance(optional, list) or not all(value in MODULE_CHOICES for value in optional):
+    if not isinstance(optional, list) or not all(
+        value in MODULE_CHOICES for value in optional
+    ):
         raise InitError("业务模式配置中的optional_modules无效。")
-    explicit = configured_module_values(args.modules, args.include_strategy, args.include_letter)
+    explicit = configured_module_values(
+        args.modules, args.include_strategy, args.include_letter
+    )
     invalid = explicit - set(required) - set(optional)
     if invalid:
         raise InitError("本业务模式不允许加选模块：" + ", ".join(sorted(invalid)))
@@ -431,7 +255,7 @@ def parse_identifier_list(values: list[str] | None, label: str) -> list[str]:
             if not value:
                 continue
             if not IDENTIFIER_RE.fullmatch(value):
-                raise InitError(f"{label}只能包含字母、数字、点、下划线、冒号和连字符。")
+                raise InitError(f"{label}只能包含字母、数字、点、下划线和连字符。")
             if value not in selected:
                 selected.append(value)
     return selected
@@ -482,7 +306,9 @@ def normalize_metadata_text(value: str, label: str, *, max_length: int = 200) ->
     value = unicodedata.normalize("NFKC", value).strip()
     if not value:
         raise InitError(f"{label}不能为空。")
-    if len(value) > max_length or any(ord(char) < 32 or ord(char) == 127 for char in value):
+    if len(value) > max_length or any(
+        ord(char) < 32 or ord(char) == 127 for char in value
+    ):
         raise InitError(f"{label}过长或包含控制字符。")
     return value
 
@@ -497,40 +323,14 @@ def validate_evidence_cutoff(value: str) -> str:
     return parsed.strftime("%Y-%m-%d")
 
 
-def validated_task_timezone(name: str) -> str:
+def local_date_for_timezone(name: str) -> str:
     try:
-        normalized = normalize_task_timezone(name)
-    except TxError as exc:
-        raise InitError("--task-timezone 必须是有效IANA时区，例如Asia/Shanghai。") from exc
-    if normalized is None:  # Defensive: CLI only calls this for a supplied value.
-        raise InitError("--task-timezone 必须是有效IANA时区，例如Asia/Shanghai。")
-    return normalized
-
-
-def local_date_for_timezone(name: str, *, instant: datetime | None = None) -> str:
-    normalized = validated_task_timezone(name)
-    try:
-        return task_date_at(instant or now_utc(), normalized).isoformat()
-    except TxError as exc:
-        raise InitError("无法按--task-timezone计算任务日期。") from exc
-
-
-def validate_cutoff_not_future(value: str, task_timezone: str | None, *, instant: datetime) -> str:
-    """Validate a date against the persisted task calendar or legacy date-only envelope."""
-    normalized = validate_evidence_cutoff(value)
-    cutoff = datetime.strptime(normalized, "%Y-%m-%d").date()
-    try:
-        limit = (
-            task_date_at(instant, task_timezone)
-            if task_timezone is not None
-            else instant.astimezone(timezone.utc).date() + timedelta(days=1)
-        )
-    except TxError as exc:
-        raise InitError("无法确定信息截止日期的时区基准。") from exc
-    if cutoff > limit:
-        basis = f"任务时区{task_timezone}" if task_timezone else "未指定任务时区的兼容民用日窗口"
-        raise InitError(f"--evidence-cutoff-date不得晚于{basis}当前日期{limit.isoformat()}。")
-    return normalized
+        zone = ZoneInfo(name)
+    except (ZoneInfoNotFoundError, ValueError) as exc:
+        raise InitError(
+            "--task-timezone 必须是有效IANA时区，例如Asia/Shanghai。"
+        ) from exc
+    return datetime.now(zone).date().isoformat()
 
 
 def validate_content_version(value: str) -> str:
@@ -541,7 +341,7 @@ def validate_content_version(value: str) -> str:
 
 def increment_content_version(value: str) -> str:
     if not CONTENT_VERSION_RE.fullmatch(value):
-        raise InitError("现有成果content_version不是正整数，无法安全续建。")
+        raise InitError("现有综合报告content_version不是正整数，无法安全续建。")
     return str(int(value) + 1)
 
 
@@ -577,6 +377,10 @@ def explicit_safe_name(value: str) -> str:
     if normalized != canonical:
         raise InitError(f"--safe-name 不是规范形式；请使用：{canonical}")
     return canonical
+
+
+def customer_id_for(customer_name: str) -> str:
+    return "cust-" + hashlib.sha256(customer_name.encode("utf-8")).hexdigest()[:12]
 
 
 def new_context_id(timestamp: datetime) -> str:
@@ -618,6 +422,14 @@ def context_id_candidates(output_root: Path, context_id: str) -> list[Path]:
         if not path.is_dir() or path.is_symlink() or path.resolve().parent != root:
             continue
         if path.name.endswith(f"-{short}"):
+            # A directory-name match is already a target, not an unrelated
+            # workspace whose unreadable metadata may safely be skipped.
+            try:
+                load_manifest(path, required=False)
+            except (TxError, OSError, UnicodeError) as exc:
+                raise InitError(
+                    f"匹配context_id的运行清单无法读取：{path / MANIFEST_REL}：{exc}"
+                ) from exc
             matches.add(path.resolve())
             continue
         manifest_path = path / MANIFEST_REL
@@ -631,7 +443,9 @@ def context_id_candidates(output_root: Path, context_id: str) -> list[Path]:
     return sorted(matches)
 
 
-def unique_new_context_id(output_root: Path, requested: str | None, timestamp: datetime) -> str:
+def unique_new_context_id(
+    output_root: Path, requested: str | None, timestamp: datetime
+) -> str:
     if requested:
         if context_id_candidates(output_root, requested):
             raise InitError(f"context_id已在输出根目录使用：{requested}")
@@ -643,29 +457,44 @@ def unique_new_context_id(output_root: Path, requested: str | None, timestamp: d
     raise InitError("连续生成的context_id发生冲突；请稍后重试。")
 
 
-def find_resume_workspace(output_root: Path, safe_name: str, context_id: str | None) -> Path:
+def find_resume_workspace(
+    output_root: Path, safe_name: str, context_id: str | None
+) -> Path:
     expanded_root = output_root.expanduser()
     if expanded_root.is_symlink():
         raise InitError("--output-root 不得为符号链接。")
     root = expanded_root.resolve()
     if context_id:
         short = context_short(context_id)
-        candidates = sorted(
-            path.resolve()
-            for path in root.glob(f"客户研究-*-{short}")
-            if path.is_dir() and not path.is_symlink() and path.resolve().parent == root
-        ) if root.is_dir() else []
+        candidates = (
+            sorted(
+                path.resolve()
+                for path in root.glob(f"客户研究-*-{short}")
+                if path.is_dir()
+                and not path.is_symlink()
+                and path.resolve().parent == root
+            )
+            if root.is_dir()
+            else []
+        )
         if not candidates:
             raise InitError(f"找不到指定 context_id 的工作目录：{context_id}")
         if len(candidates) > 1:
             raise InitError(f"context_id短码{short}匹配多个目录，需人工消歧。")
         return candidates[0]
     prefix = f"客户研究-{safe_name}-"
-    candidates = sorted(
-        path.resolve()
-        for path in root.iterdir()
-        if path.is_dir() and not path.is_symlink() and path.name.startswith(prefix) and path.resolve().parent == root
-    ) if root.is_dir() else []
+    candidates = (
+        sorted(
+            path.resolve()
+            for path in root.iterdir()
+            if path.is_dir()
+            and not path.is_symlink()
+            and path.name.startswith(prefix)
+            and path.resolve().parent == root
+        )
+        if root.is_dir()
+        else []
+    )
     if not candidates:
         raise InitError("未找到可续建工作目录；请检查 --output-root/--safe-name。")
     if len(candidates) > 1:
@@ -681,7 +510,11 @@ def parse_modules(
     defaults: list[str] | None = None,
 ) -> list[str]:
     selected: set[str] = set()
-    for value in values if values is not None else (defaults if defaults is not None else ["institution"]):
+    for value in (
+        values
+        if values is not None
+        else (defaults if defaults is not None else ["institution"])
+    ):
         selected.update(part.strip() for part in value.split(",") if part.strip())
     if include_strategy:
         selected.add("strategy")
@@ -702,7 +535,10 @@ def parse_refresh_modules(values: list[str] | None) -> set[str]:
     allowed = {"institution", "leader", "internal"}
     unknown = sorted(selected - allowed)
     if unknown:
-        raise InitError("--refresh-modules只允许institution、leader、internal：" + ", ".join(unknown))
+        raise InitError(
+            "--refresh-modules只允许institution、leader、internal："
+            + ", ".join(unknown)
+        )
     return selected
 
 
@@ -717,15 +553,21 @@ def validate_refresh_modules(
     if not refresh_modules:
         return
     if not resume or route not in {"visit_prep", "strategy", "letter"}:
-        raise InitError("--refresh-modules仅用于续建的visit_prep/strategy/letter组合路由。")
+        raise InitError(
+            "--refresh-modules仅用于续建的visit_prep/strategy/letter组合路由。"
+        )
     if not refresh_modules <= set(modules):
         raise InitError("--refresh-modules中的研究模块必须同时列入--modules。")
     if existing_types is not None:
         missing = sorted(
-            module for module in refresh_modules if TYPE_FOR_MODULE[module] not in existing_types
+            module
+            for module in refresh_modules
+            if TYPE_FOR_MODULE[module] not in existing_types
         )
         if missing:
-            raise InitError("--refresh-modules只能更新既有研究成果；缺少：" + ", ".join(missing))
+            raise InitError(
+                "--refresh-modules只能更新既有研究成果；缺少：" + ", ".join(missing)
+            )
 
 
 def validate_route_modules(route: str, modules: list[str], *, resume: bool) -> None:
@@ -743,18 +585,26 @@ def validate_route_modules(route: str, modules: list[str], *, resume: bool) -> N
         raise InitError("选择letter时主路由必须为letter，以执行最高外发门禁。")
     if route == "refresh":
         if not resume:
-            raise InitError("refresh只能续建既有上下文；新任务请使用research_only或visit_prep。")
+            raise InitError(
+                "refresh只能续建既有上下文；新任务请使用research_only或visit_prep。"
+            )
         if {"strategy", "letter"} & selected:
-            raise InitError("refresh只刷新研究模块；需要策略或客户信时请使用strategy/letter主路由。")
+            raise InitError(
+                "refresh只刷新研究模块；需要策略或客户信时请使用strategy/letter主路由。"
+            )
     if route in {"visit_prep", "strategy", "letter"} and not (
         {"institution", "leader", "internal"} & selected
     ):
         phase = "新建" if not resume else "续建"
-        raise InitError(f"{phase}route={route}至少把一个研究模块列为本轮selected，作为claim台账载体或复用依赖。")
+        raise InitError(
+            f"{phase}route={route}至少把一个研究模块列为本轮selected，作为claim台账载体或复用依赖。"
+        )
 
 
 def validate_template_assets(modules: list[str]) -> None:
-    artifact_types = ["comprehensive_report"] + [TYPE_FOR_MODULE[name] for name in modules]
+    artifact_types = ["comprehensive_report"] + [
+        TYPE_FOR_MODULE[name] for name in modules
+    ]
     for artifact_type in artifact_types:
         path = ASSET_ROOT / TEMPLATES[artifact_type]
         if not path.is_file():
@@ -780,7 +630,9 @@ def read_frontmatter(path: Path) -> dict[str, str]:
             continue
         match = re.fullmatch(r"([A-Za-z_][A-Za-z0-9_-]*):\s*(.*?)\s*", line)
         if not match:
-            raise InitError(f"frontmatter第{line_number}行不是受支持的扁平key: value：{path}")
+            raise InitError(
+                f"frontmatter第{line_number}行不是受支持的扁平key: value：{path}"
+            )
         key, value = match.groups()
         if key in data:
             raise InitError(f"frontmatter字段{key}重复：{path}")
@@ -804,46 +656,36 @@ def validate_existing_fields(path: Path, data: dict[str, str]) -> None:
         (data.get("review_status") in REVIEW_STATUSES, "review_status无效"),
         (data.get("connector_status") in CONNECTOR_STATUSES, "connector_status无效"),
         (data.get("freshness_status") in FRESHNESS_STATUSES, "freshness_status无效"),
-        (bool(CONTENT_VERSION_RE.fullmatch(data.get("content_version", ""))), "content_version无效"),
+        (
+            bool(CONTENT_VERSION_RE.fullmatch(data.get("content_version", ""))),
+            "content_version无效",
+        ),
         (bool(RUN_RE.fullmatch(data.get("latest_run_id", ""))), "latest_run_id无效"),
         (bool(CONTEXT_RE.fullmatch(data.get("context_id", ""))), "context_id无效"),
         (bool(IDENTIFIER_RE.fullmatch(data.get("customer_id", ""))), "customer_id无效"),
-        (normalize_safe_component(data.get("safe_name", "")) == data.get("safe_name"), "safe_name不是规范形式"),
+        (
+            normalize_safe_component(data.get("safe_name", ""))
+            == data.get("safe_name"),
+            "safe_name不是规范形式",
+        ),
     )
     for valid, message in checks:
         if not valid:
             raise InitError(f"现有成果{path.name}的{message}。")
     try:
         datetime.strptime(data.get("evidence_cutoff_date", ""), "%Y-%m-%d")
-        parsed = datetime.fromisoformat(data.get("updated_at", "").replace("Z", "+00:00"))
+        parsed = datetime.fromisoformat(
+            data.get("updated_at", "").replace("Z", "+00:00")
+        )
         if parsed.tzinfo is None:
             raise ValueError
     except ValueError as exc:
         raise InitError(f"现有成果{path.name}的日期或带时区updated_at无效。") from exc
 
 
-def strategy_context_fields(variant: str) -> set[str]:
-    """Return the branch-specific strategy fields or fail closed."""
-    if variant == "scheduled_visit":
-        return set(SCHEDULED_STRATEGY_CONTEXT_FIELDS)
-    if variant == "account_planning":
-        return set(ACCOUNT_STRATEGY_CONTEXT_FIELDS)
-    raise InitError(
-        f"交流策略strategy_variant={variant or '空'}无效，需先迁移为"
-        "scheduled_visit或account_planning。"
-    )
-
-
-def strategy_template_file(variant: str) -> str:
-    strategy_context_fields(variant)
-    return (
-        "account-strategy-report-template.md"
-        if variant == "account_planning"
-        else TEMPLATES["visit_strategy"]
-    )
-
-
-def audit_existing_workspace(workspace: Path, total_path: Path) -> dict[Path, dict[str, str]]:
+def audit_existing_workspace(
+    workspace: Path, total_path: Path
+) -> dict[Path, dict[str, str]]:
     """Perform structural and identity checks before any resume write."""
     if workspace.is_symlink():
         raise InitError("续建工作目录不能是符号链接。")
@@ -852,12 +694,21 @@ def audit_existing_workspace(workspace: Path, total_path: Path) -> dict[Path, di
     missing_total = sorted(required_total - total_data.keys())
     if missing_total:
         raise InitError("现有综合报告缺少字段：" + ", ".join(missing_total))
-    if total_data.get("schema") != SCHEMA or total_data.get("artifact_type") != "comprehensive_report":
+    if (
+        total_data.get("schema") != SCHEMA
+        or total_data.get("artifact_type") != "comprehensive_report"
+    ):
         raise InitError("现有综合报告schema/artifact_type无效，需先迁移。")
     validate_existing_fields(total_path, total_data)
     identity = {
         key: total_data.get(key, "")
-        for key in ("context_id", "customer_id", "customer_display_name", "organization_scope", "safe_name")
+        for key in (
+            "context_id",
+            "customer_id",
+            "customer_display_name",
+            "organization_scope",
+            "safe_name",
+        )
     }
     audited: dict[Path, dict[str, str]] = {total_path: total_data}
     for path in sorted(workspace.glob("*.md")):
@@ -875,25 +726,36 @@ def audit_existing_workspace(workspace: Path, total_path: Path) -> dict[Path, di
             raise InitError(f"现有成果{path.name}的schema无效，需先迁移。")
         validate_existing_fields(path, data)
         expected_type = next(
-            (artifact_type for artifact_type, suffix in SUFFIXES.items() if path.name.endswith(suffix)),
+            (
+                artifact_type
+                for artifact_type, suffix in SUFFIXES.items()
+                if path.name.endswith(suffix)
+            ),
             None,
         )
         if expected_type and data.get("artifact_type") != expected_type:
             raise InitError(f"现有成果{path.name}的artifact_type应为{expected_type}。")
-        if expected_type == "customer_letter_internal" and not INTERNAL_LETTER_FIELDS <= data.keys():
-            raise InitError(f"现有客户信内部稿{path.name}缺少v2.5.1审批字段，需先迁移。")
-        if expected_type == "visit_strategy":
-            variant = data.get("strategy_variant", "")
-            required_strategy_fields = strategy_context_fields(variant) | {"strategy_variant"}
-            missing_strategy_fields = sorted(required_strategy_fields - data.keys())
-            if missing_strategy_fields:
-                raise InitError(
-                    f"现有交流策略{path.name}缺少{variant}分支字段："
-                    + ", ".join(missing_strategy_fields)
-                    + "；需先迁移。"
-                )
-        if expected_type == "customer_letter_external" and not EXTERNAL_LINEAGE_FIELDS <= data.keys():
-            raise InitError(f"现有客户信外发版{path.name}缺少v2.5.1谱系字段，需先迁移。")
+        if (
+            expected_type == "customer_letter_internal"
+            and not data.keys() >= INTERNAL_LETTER_FIELDS
+        ):
+            raise InitError(
+                f"现有客户信内部稿{path.name}缺少v2.5.1审批字段，需先迁移。"
+            )
+        if (
+            expected_type == "visit_strategy"
+            and not data.keys() >= STRATEGY_CONTEXT_FIELDS
+        ):
+            raise InitError(
+                f"现有交流策略{path.name}缺少v2.5.1执行上下文字段，需先迁移。"
+            )
+        if (
+            expected_type == "customer_letter_external"
+            and not data.keys() >= EXTERNAL_LINEAGE_FIELDS
+        ):
+            raise InitError(
+                f"现有客户信外发版{path.name}缺少v2.5.1谱系字段，需先迁移。"
+            )
         for key, expected in identity.items():
             if data.get(key) != expected:
                 raise InitError(f"现有成果{path.name}的{key}与综合报告不一致。")
@@ -965,7 +827,7 @@ def status_values(
     summary_sync_status: str | None = None,
     key_claim_ids: str = "",
     downstream_invalidation: str = "none",
-    gaps_blockers: str = "none",
+    gaps_blockers: str = "无",
 ) -> dict[str, str]:
     if path is None:
         return {
@@ -981,7 +843,7 @@ def status_values(
             "summary_sync_status": "not_applicable",
             "key_claim_ids": "",
             "downstream_invalidation": "none",
-            "gaps_blockers": "none",
+            "gaps_blockers": "无",
             "link": "",
         }
     data = frontmatter if frontmatter is not None else read_frontmatter(path)
@@ -997,39 +859,48 @@ def status_values(
             "updated_at",
         )
     }
-    return {
-        "selected_in_run": "true" if selected_in_run else "false",
-        "run_action": run_action,
-    } | values | {
-        "summary_sync_status": summary_sync_status or ("pending" if run_action in {"created", "updated"} else "synced"),
-        "key_claim_ids": key_claim_ids,
-        "downstream_invalidation": downstream_invalidation,
-        "gaps_blockers": gaps_blockers,
-        "link": markdown_link(STATUS_LABELS[artifact_type], path.name),
-    }
+    return (
+        {
+            "selected_in_run": "true" if selected_in_run else "false",
+            "run_action": run_action,
+        }
+        | values
+        | {
+            "summary_sync_status": summary_sync_status
+            or ("pending" if run_action in {"created", "updated"} else "synced"),
+            "key_claim_ids": key_claim_ids,
+            "downstream_invalidation": downstream_invalidation,
+            "gaps_blockers": gaps_blockers,
+            "link": markdown_link(STATUS_LABELS[artifact_type], path.name),
+        }
+    )
 
 
 def status_row(label: str, values: dict[str, str]) -> str:
-    return "| " + " | ".join(
-        markdown_cell(value)
-        for value in [
-            label,
-            values["selected_in_run"],
-            values["run_action"],
-            values["module_status"],
-            values["review_status"],
-            values["connector_status"],
-            values["freshness_status"],
-            values["content_version"],
-            values["latest_run_id"],
-            values["updated_at"],
-            values["summary_sync_status"],
-            values["key_claim_ids"],
-            values["downstream_invalidation"],
-            values["gaps_blockers"],
-            values["link"],
-        ]
-    ) + " |"
+    return (
+        "| "
+        + " | ".join(
+            markdown_cell(value)
+            for value in [
+                label,
+                values["selected_in_run"],
+                values["run_action"],
+                values["module_status"],
+                values["review_status"],
+                values["connector_status"],
+                values["freshness_status"],
+                values["content_version"],
+                values["latest_run_id"],
+                values["updated_at"],
+                values["summary_sync_status"],
+                values["key_claim_ids"],
+                values["downstream_invalidation"],
+                values["gaps_blockers"],
+                values["link"],
+            ]
+        )
+        + " |"
+    )
 
 
 def existing_status_extras(text: str, label: str) -> dict[str, str]:
@@ -1053,34 +924,28 @@ def update_total_rows(
     *,
     selected_types: set[str],
     created_types: set[str],
-    reset_types: set[str] | None = None,
     planned_actions: dict[str, str],
     planned_frontmatter: dict[str, dict[str, str]] | None = None,
 ) -> str:
     planned_frontmatter = planned_frontmatter or {}
-    reset_types = reset_types or set()
     for artifact_type, label in STATUS_LABELS.items():
         path = paths.get(artifact_type)
         selected = artifact_type in selected_types
         action = planned_actions.get(artifact_type, "not_called")
         extras = existing_status_extras(text, label)
-        if artifact_type in created_types or artifact_type in reset_types:
+        if artifact_type in created_types:
             extras = {
                 "summary_sync_status": "pending",
-                "key_claim_ids": "none",
+                "key_claim_ids": "待提取",
                 "downstream_invalidation": "none",
-                "gaps_blockers": (
-                    "artifact_unavailable"
-                    if artifact_type in reset_types
-                    else "input_missing"
-                ),
+                "gaps_blockers": "待评估",
             }
         elif path is not None and not extras:
             extras = {
                 "summary_sync_status": "out_of_sync",
-                "key_claim_ids": "none",
+                "key_claim_ids": "待提取",
                 "downstream_invalidation": "none",
-                "gaps_blockers": "input_missing",
+                "gaps_blockers": "待评估",
             }
         if action == "updated":
             extras["summary_sync_status"] = "pending"
@@ -1095,24 +960,15 @@ def update_total_rows(
                 **extras,
             ),
         )
-        pattern = rf"^\|\s*{re.escape(label)}\s*\|.*$"
-        occurrences = len(re.findall(pattern, text, flags=re.MULTILINE))
-        if occurrences == 1:
-            text = re.sub(pattern, lambda _: replacement, text, count=1, flags=re.MULTILINE)
-        elif occurrences == 0 and artifact_type == "briefing_delivery":
-            anchor = STATUS_LABELS["customer_letter_internal"]
-            anchor_pattern = rf"^\|\s*{re.escape(anchor)}\s*\|.*$"
-            if len(re.findall(anchor_pattern, text, flags=re.MULTILINE)) != 1:
-                raise InitError("总报告缺少唯一客户信内部审核稿状态行，无法迁移会前速览登记。")
-            text = re.sub(
-                anchor_pattern,
-                lambda match: replacement + "\n" + match.group(0),
-                text,
-                count=1,
-                flags=re.MULTILINE,
-            )
-        else:
-            raise InitError(f"总报告缺少或重复标准状态行：{label}")
+        text, count = re.subn(
+            rf"^\|\s*{re.escape(label)}\s*\|.*$",
+            replacement,
+            text,
+            count=1,
+            flags=re.MULTILINE,
+        )
+        if count != 1:
+            raise InitError(f"总报告缺少标准状态行：{label}")
     return text
 
 
@@ -1139,13 +995,33 @@ def append_run_record(
         target_cutoff=target_cutoff,
     )
     owner = runtime_owner.replace("|", r"\|")
-    row = f"| {updated_at} | {content_version} | {latest_run_id} | {summary} | {owner} |"
+    row = (
+        f"| {updated_at} | {content_version} | {latest_run_id} | {summary} | {owner} |"
+    )
     lines = text.rstrip().splitlines()
-    heading = next((index for index, line in enumerate(lines) if line.strip() == "## 9. 版本与同步记录"), None)
+    heading = next(
+        (
+            index
+            for index, line in enumerate(lines)
+            if line.strip() == "## 9. 版本与同步记录"
+        ),
+        None,
+    )
     if heading is None:
         raise InitError("总报告缺少版本与同步记录章节，无法追加运行记录。")
-    section_end = next((index for index in range(heading + 1, len(lines)) if lines[index].startswith("## ")), len(lines))
-    table_rows = [index for index in range(heading + 1, section_end) if lines[index].lstrip().startswith("|")]
+    section_end = next(
+        (
+            index
+            for index in range(heading + 1, len(lines))
+            if lines[index].startswith("## ")
+        ),
+        len(lines),
+    )
+    table_rows = [
+        index
+        for index in range(heading + 1, section_end)
+        if lines[index].lstrip().startswith("|")
+    ]
     if len(table_rows) < 3:
         raise InitError("版本与同步记录表损坏，无法追加运行记录。")
     lines.insert(table_rows[-1] + 1, row)
@@ -1161,7 +1037,7 @@ def run_summary(
     target_cutoff: str,
 ) -> str:
     clean_objective = re.sub(r"[;=|\r\n]+", " ", objective).strip()
-    selected = [name for name in RUN_ARTIFACT_ORDER if action_map.get(name) != "not_called"]
+    selected = [name for name, action in action_map.items() if action != "not_called"]
     parts = [
         f"route={route}",
         f"depth={depth}",
@@ -1169,7 +1045,7 @@ def run_summary(
         "selected_modules=" + (",".join(selected) or "none"),
     ]
     for action in ("created", "updated", "reused", "generated", "not_called"):
-        names = [name for name in RUN_ARTIFACT_ORDER if action_map.get(name, "not_called") == action]
+        names = [name for name, value in action_map.items() if value == action]
         parts.append(f"{action}=" + (",".join(names) or "none"))
     parts.append(f"target_evidence_cutoff_date={target_cutoff}")
     return "; ".join(parts)
@@ -1192,48 +1068,21 @@ def ensure_refresh_section(text: str) -> str:
         block = f"{REFRESH_HEADING}\n\n{REFRESH_HEADER}\n{REFRESH_SEPARATOR}\n\n"
         text = text.replace(marker, block + marker, 1)
     lines = text.splitlines()
-    heading = next((i for i, line in enumerate(lines) if line.strip() == REFRESH_HEADING), None)
+    heading = next(
+        (i for i, line in enumerate(lines) if line.strip() == REFRESH_HEADING), None
+    )
     if heading is None:
         raise InitError("总报告缺少刷新结果记录章节。")
-    section_end = next((i for i in range(heading + 1, len(lines)) if lines[i].startswith("## ")), len(lines))
+    section_end = next(
+        (i for i in range(heading + 1, len(lines)) if lines[i].startswith("## ")),
+        len(lines),
+    )
     section = lines[heading + 1 : section_end]
-    if sum(line.strip() == REFRESH_HEADER for line in section) != 1 or sum(
-        line.strip() == REFRESH_SEPARATOR for line in section
-    ) != 1:
+    if (
+        sum(line.strip() == REFRESH_HEADER for line in section) != 1
+        or sum(line.strip() == REFRESH_SEPARATOR for line in section) != 1
+    ):
         raise InitError("刷新结果记录表头损坏，无法安全续建。")
-    return text.rstrip() + "\n"
-
-
-NEUTRAL_EXECUTION_SECTION = """## 4.2 执行与下一步
-
-| action | action_disposition | external_interaction | resource_commitment | owner | due_date | 依赖 | 完成标准 | 继续/调整/no-go条件 | CRM/PIMS候选 |
-|---|---|---|---|---|---|---|---|---|---|
-| {{唯一主动作}} | {{advance/adjust/stop/archive/observe/recheck}} | {{none/customer_contact}} | {{none/proposed/approved}} | {{真人/稳定角色}} | {{YYYY-MM-DD}} | {{内容}} | {{可观察结果}} | {{信号或停止条件}} | {{是/否}} |
-
-建议为`no_go`时只允许四组受控值：`stop→停止主动投入`、`archive→归档当前机会`、`observe→被动观察证据变化`、`recheck→内部复核机会资格`；action必须逐字匹配，`external_interaction`和`resource_commitment`均须为`none`，并且不得在完成标准或停止条件中另行安排面客推进或资源投入。
-
-"""
-
-
-def neutralize_account_comprehensive_report(text: str) -> str:
-    """Remove the legacy meeting-only execution block from account planning totals."""
-    text = text.replace("对拜访的意义", "对业务决策的意义")
-    text = text.replace("现场验证问题", "验证问题或动作")
-    text = text.replace("缺口/现场问题", "缺口/验证问题")
-    text = text.replace("## 7. 关键缺口与现场验证", "## 7. 关键缺口与验证计划")
-    text = text.replace("{{现场/内部/补检}}", "{{沟通核实/内部核验/补检}}")
-    legacy_heading = "## 4.2 拜访执行与下一步"
-    if legacy_heading in text:
-        pattern = r"^## 4\.2 拜访执行与下一步\s*$.*?(?=^## 5\. 高价值发现\s*$)"
-        text, count = re.subn(
-            pattern,
-            NEUTRAL_EXECUTION_SECTION,
-            text,
-            count=1,
-            flags=re.MULTILINE | re.DOTALL,
-        )
-        if count != 1:
-            raise InitError("综合报告的旧拜访执行章节无法安全迁移为账户动作。")
     return text.rstrip() + "\n"
 
 
@@ -1241,8 +1090,13 @@ def append_refresh_record(text: str, latest_run_id: str) -> str:
     text = ensure_refresh_section(text)
     lines = text.rstrip().splitlines()
     heading = next(i for i, line in enumerate(lines) if line.strip() == REFRESH_HEADING)
-    section_end = next((i for i in range(heading + 1, len(lines)) if lines[i].startswith("## ")), len(lines))
-    table_rows = [i for i in range(heading + 1, section_end) if lines[i].lstrip().startswith("|")]
+    section_end = next(
+        (i for i in range(heading + 1, len(lines)) if lines[i].startswith("## ")),
+        len(lines),
+    )
+    table_rows = [
+        i for i in range(heading + 1, section_end) if lines[i].lstrip().startswith("|")
+    ]
     if len(table_rows) < 2:
         raise InitError("刷新结果记录表损坏，无法追加本轮记录。")
     for index in table_rows[2:]:
@@ -1257,16 +1111,22 @@ def append_refresh_record(text: str, latest_run_id: str) -> str:
 def assert_total_resumable(text: str) -> None:
     if "## 9. 版本与同步记录" not in text:
         raise InitError("总报告缺少版本与同步记录章节，无法安全续建。")
-    for artifact_type, label in STATUS_LABELS.items():
-        count = len(re.findall(rf"^\|\s*{re.escape(label)}\s*\|.*$", text, flags=re.MULTILINE))
-        if artifact_type == "briefing_delivery" and count == 0:
-            continue
-        if count != 1:
+    for label in STATUS_LABELS.values():
+        if (
+            len(
+                re.findall(
+                    rf"^\|\s*{re.escape(label)}\s*\|.*$", text, flags=re.MULTILINE
+                )
+            )
+            != 1
+        ):
             raise InitError(f"总报告状态行{label}缺失或重复，无法安全续建。")
 
 
 def update_total_banner(text: str, *, mode: str, evidence_cutoff_date: str) -> str:
-    modern_replacement = f"内部研究档位：{MODE_LABELS[mode]}｜信息截止：{evidence_cutoff_date}"
+    modern_replacement = (
+        f"内部研究档位：{MODE_LABELS[mode]}｜信息截止：{evidence_cutoff_date}"
+    )
     updated, count = re.subn(
         r"内部研究档位：.*?｜信息截止：\d{4}-\d{2}-\d{2}",
         modern_replacement,
@@ -1299,7 +1159,9 @@ def render_template(template_file: str, values: dict[str, str]) -> str:
 
 
 def atomic_write(path: Path, text: str) -> None:
-    with tempfile.NamedTemporaryFile("w", encoding="utf-8", dir=path.parent, delete=False) as handle:
+    with tempfile.NamedTemporaryFile(
+        "w", encoding="utf-8", newline="", dir=path.parent, delete=False
+    ) as handle:
         temporary = Path(handle.name)
         handle.write(text)
         handle.flush()
@@ -1311,23 +1173,74 @@ def atomic_write(path: Path, text: str) -> None:
             temporary.unlink()
 
 
-def validate_workspace_postflight(workspace: Path) -> None:
+# Only stage-dependent errors that planning itself removes are repairable here.
+# Hash drift, authorization, identity and transaction errors are never ignored.
+REFRESH_PLANNING_CODES = frozenset(
+    {
+        "freshness_ttl_exceeded",
+        "review_stage_research_stale",
+        "review_stage_status_invalid",
+        "selected_output_stale",
+        "route_required_artifact_stale",
+        "review_stage_total_not_ready",
+        "closed_total_ignores_invalidation",
+        "closed_output_changes_requested",
+        "ready_state_conflict",
+        "ready_review_missing",
+    }
+)
+
+
+def validate_workspace_postflight(
+    workspace: Path,
+    *,
+    allow_refresh_planning: bool = False,
+) -> None:
     validator = Path(__file__).with_name("validate_outputs.py")
-    result = subprocess.run(
-        [sys.executable, str(validator), str(workspace), "--profile", "scaffold", "--json"],
-        text=True,
-        capture_output=True,
-        check=False,
-    )
+    try:
+        result = subprocess.run(
+            [sys.executable, str(validator), str(workspace), "--json"],
+            text=True,
+            encoding="utf-8",
+            env={**os.environ, "PYTHONIOENCODING": "utf-8"},
+            capture_output=True,
+            check=False,
+            timeout=VALIDATOR_TIMEOUT_SECONDS,
+        )
+    except subprocess.TimeoutExpired as exc:
+        raise InitError(
+            f"提交后校验器超时（{VALIDATOR_TIMEOUT_SECONDS:g}秒）：{workspace}"
+        ) from exc
     try:
         payload = json.loads(result.stdout)
     except json.JSONDecodeError as exc:
         detail = (result.stderr or result.stdout).strip()[:500]
         raise InitError(f"提交后校验器未返回有效JSON：{detail or '无诊断'}") from exc
     errors = payload.get("errors")
+    error_issues = [
+        issue for issue in payload.get("issues", []) if issue.get("severity") == "error"
+    ]
+    if (
+        allow_refresh_planning
+        and result.returncode == 1
+        and isinstance(errors, int)
+        and errors == len(error_issues)
+        and error_issues
+        and all(issue.get("code") in REFRESH_PLANNING_CODES for issue in error_issues)
+    ):
+        return
     if result.returncode != 0 or not isinstance(errors, int) or errors:
-        codes = [issue.get("code", "unknown") for issue in payload.get("issues", []) if issue.get("severity") == "error"]
-        detail = ", ".join(codes[:8]) or (result.stderr.strip()[:500] if result.stderr else "unknown")
+        codes = [issue.get("code", "unknown") for issue in error_issues]
+        config_details = [
+            issue.get("message", "")
+            for issue in error_issues
+            if issue.get("code") == "business_config_read_error"
+        ]
+        detail = ", ".join(codes[:8]) or (
+            result.stderr.strip()[:500] if result.stderr else "unknown"
+        )
+        if config_details:
+            detail += ": " + "; ".join(config_details)
         raise InitError(f"提交后全量校验失败：{detail}")
 
 
@@ -1399,27 +1312,23 @@ def build_common(
     }
 
 
-def _initialize_locked(
-    args: argparse.Namespace,
-    intake_preflight: dict[str, object] | None = None,
-) -> dict[str, object]:
+def _initialize_locked(args: argparse.Namespace) -> dict[str, object]:
     customer_name = normalize_customer_name(args.customer_name)
-    safe_name = explicit_safe_name(args.safe_name) if args.safe_name else normalize_safe_component(customer_name)
+    safe_name = (
+        explicit_safe_name(args.safe_name)
+        if args.safe_name
+        else normalize_safe_component(customer_name)
+    )
     requested_safe_name = safe_name if args.safe_name else None
     timestamp = now_utc()
     timestamp_iso = timestamp.isoformat().replace("+00:00", "Z")
-    latest_run_id = args.run_id or new_run_id(timestamp)
-    if not RUN_RE.fullmatch(latest_run_id):
-        raise InitError("--run-id必须符合dcr-YYYYMMDDTHHMMSS-4chars。")
-    requested_task_timezone = validated_task_timezone(args.task_timezone) if args.task_timezone else None
+    latest_run_id = new_run_id(timestamp)
     default_cutoff = (
-        local_date_for_timezone(requested_task_timezone, instant=timestamp)
-        if requested_task_timezone
-        else None
+        local_date_for_timezone(args.task_timezone) if args.task_timezone else None
     )
     requested_customer_id = args.customer_id
     if requested_customer_id and not IDENTIFIER_RE.fullmatch(requested_customer_id):
-        raise InitError("--customer-id 只能包含字母、数字、点、下划线、冒号和连字符。")
+        raise InitError("--customer-id 只能包含字母、数字、点、下划线和连字符。")
     requested_owner = (
         normalize_metadata_text(args.runtime_owner, "--runtime-owner", max_length=100)
         if args.runtime_owner
@@ -1449,38 +1358,42 @@ def _initialize_locked(
         raise InitError("refresh是续建后台路由，不能与--business-mode同时指定。")
     if args.route == "refresh" and not args.resume:
         raise InitError("refresh只能与--resume一起使用。")
-    if args.internal_connector_status in {"connected", "no_hits"}:
+    if args.internal_connector_status == "connected":
         raise InitError(
-            "init阶段禁止声明connected/no_hits；请通过commit_run.py提交候选成果及runtime/evidence-manifest.json连接审计。"
+            "init阶段禁止声明connected；请通过commit_run.py提交候选成果及runtime/evidence-manifest.json连接审计。"
         )
     tenant_id = args.tenant_id or ""
     project_id = args.project_id or ""
     connector_id = args.internal_connector_id or ""
-    for value, label in ((tenant_id, "--tenant-id"), (project_id, "--project-id"), (connector_id, "--internal-connector-id")):
+    for value, label in (
+        (tenant_id, "--tenant-id"),
+        (project_id, "--project-id"),
+        (connector_id, "--internal-connector-id"),
+    ):
         if value and not IDENTIFIER_RE.fullmatch(value):
-            raise InitError(f"{label}只能包含字母、数字、点、下划线、冒号和连字符。")
+            raise InitError(f"{label}只能包含字母、数字、点、下划线和连字符。")
     authorization_owner = (
-        normalize_metadata_text(args.authorization_owner, "--authorization-owner", max_length=100)
-        if args.authorization_owner else ""
+        normalize_metadata_text(
+            args.authorization_owner, "--authorization-owner", max_length=100
+        )
+        if args.authorization_owner
+        else ""
     )
-    authorization_purpose = (
-        normalize_metadata_text(args.authorization_purpose, "--authorization-purpose", max_length=300)
-        if args.authorization_purpose else ""
-    )
-    capability_receipt_id = args.capability_receipt_id or ""
-    if capability_receipt_id and not IDENTIFIER_RE.fullmatch(capability_receipt_id):
-        raise InitError("--capability-receipt-id只能包含字母、数字、点、下划线、冒号和连字符。")
-    authorization_actor_id = args.authorization_actor_id or ""
-    if authorization_actor_id and not IDENTIFIER_RE.fullmatch(authorization_actor_id):
-        raise InitError("--authorization-actor-id只能包含字母、数字、点、下划线、冒号和连字符。")
     authorization_expires_at = (
         validate_authorization_expiry(args.authorization_expires_at)
-        if args.authorization_expires_at else ""
+        if args.authorization_expires_at
+        else ""
     )
-    allowed_project_ids = parse_identifier_list(args.allowed_project_ids, "--allowed-project-ids")
+    allowed_project_ids = parse_identifier_list(
+        args.allowed_project_ids, "--allowed-project-ids"
+    )
     authorized_roots = parse_text_list(args.authorized_root, "--authorized-root")
-    allowed_dataset_aliases = parse_text_list(args.allowed_dataset_alias, "--allowed-dataset-alias")
-    allowed_confidentiality = parse_text_list(args.allowed_confidentiality, "--allowed-confidentiality")
+    allowed_dataset_aliases = parse_text_list(
+        args.allowed_dataset_alias, "--allowed-dataset-alias"
+    )
+    allowed_confidentiality = parse_text_list(
+        args.allowed_confidentiality, "--allowed-confidentiality"
+    )
     existing_manifest: dict[str, object] | None = None
     baseline_states: dict[Path, dict[str, object]] = {}
     original_total_text: str | None = None
@@ -1489,40 +1402,42 @@ def _initialize_locked(
         raise InitError("--context-id 必须符合 dcx-YYYYMMDD-8chars。")
 
     if args.resume:
-        workspace = find_resume_workspace(Path(args.output_root), safe_name, requested_context)
+        workspace = find_resume_workspace(
+            Path(args.output_root), safe_name, requested_context
+        )
+        existing_manifest = load_manifest(workspace, required=False)
+        if existing_manifest is not None:
+            # initialize() has recovered any WAL; verify before trusting a new baseline.
+            verify_manifest_artifacts(workspace, existing_manifest)
         total_candidates = list(workspace.glob(f"*{SUFFIXES['comprehensive_report']}"))
         if len(total_candidates) != 1:
             raise InitError("续建目录必须恰有一个综合报告。")
         total_path = total_candidates[0]
         audited = audit_existing_workspace(workspace, total_path)
         existing = audited[total_path]
+        if args.task_timezone and args.task_timezone != existing.get(
+            "task_timezone", "UTC"
+        ):
+            raise InitError(
+                "--task-timezone 与既有上下文不一致；不得重新解释既有证据日期。"
+            )
         original_total_text = total_path.read_text(encoding="utf-8")
         assert_total_resumable(original_total_text)
         if not args.recover:
-            validate_workspace_postflight(workspace)
-        existing_manifest = load_manifest(workspace, required=False)
-        assert_resume_subject_binding(existing_manifest, intake_preflight)
-        existing_task_timezone = (
-            normalize_task_timezone(existing_manifest.get("task_timezone"))
-            if existing_manifest and "task_timezone" in existing_manifest
-            else None
-        )
-        if (
-            requested_task_timezone
-            and existing_task_timezone
-            and requested_task_timezone != existing_task_timezone
-        ):
-            raise InitError(
-                "--task-timezone与既有上下文不一致；任务时区建立后不得在同一context中变更。"
+            validate_workspace_postflight(
+                workspace, allow_refresh_planning=bool(refresh_modules)
             )
-        task_timezone = requested_task_timezone or existing_task_timezone
         baseline_states = {
             path: file_state(path).as_dict()
             for path in workspace.glob("*.md")
             if path.is_file() and not path.is_symlink()
         }
-        baseline_states[workspace / MANIFEST_REL] = file_state(workspace / MANIFEST_REL).as_dict()
-        next_total_version = increment_content_version(existing.get("content_version", ""))
+        baseline_states[workspace / MANIFEST_REL] = file_state(
+            workspace / MANIFEST_REL
+        ).as_dict()
+        next_total_version = increment_content_version(
+            existing.get("content_version", "")
+        )
         context_id = existing.get("context_id", "")
         if not CONTEXT_RE.fullmatch(context_id):
             raise InitError("现有综合报告context_id无效。")
@@ -1543,7 +1458,9 @@ def _initialize_locked(
         if requested_scope and requested_scope != organization_scope:
             raise InitError("--organization-scope 与现有上下文不一致。")
         manifest_business_mode = str((existing_manifest or {}).get("business_mode", ""))
-        existing_business_mode = manifest_business_mode or existing.get("business_mode", "")
+        existing_business_mode = manifest_business_mode or existing.get(
+            "business_mode", ""
+        )
         if selected_profile:
             configured_route = str(selected_profile.get("route", ""))
             configured_depth = str(selected_profile.get("depth", ""))
@@ -1563,7 +1480,12 @@ def _initialize_locked(
         modules = (
             modules_for_business_mode(args, selected_profile)
             if selected_profile
-            else parse_modules(args.modules, args.include_strategy, args.include_letter, defaults=inherited_modules)
+            else parse_modules(
+                args.modules,
+                args.include_strategy,
+                args.include_letter,
+                defaults=inherited_modules,
+            )
         )
         validate_template_assets(modules)
         runtime_owner = requested_owner or existing.get("runtime_owner") or "待指定"
@@ -1620,13 +1542,14 @@ def _initialize_locked(
             raise InitError("目录名与frontmatter中的safe_name/context_id不一致。")
     else:
         if explicit_cutoff is None and default_cutoff is None:
-            raise InitError("新建任务必须显式提供--task-timezone或--evidence-cutoff-date，避免跨时区日期偏差。")
-        context_id = unique_new_context_id(Path(args.output_root), requested_context, timestamp)
-        task_timezone = requested_task_timezone
+            raise InitError(
+                "新建任务必须显式提供--task-timezone或--evidence-cutoff-date，避免跨时区日期偏差。"
+            )
+        context_id = unique_new_context_id(
+            Path(args.output_root), requested_context, timestamp
+        )
+        customer_id = requested_customer_id or customer_id_for(customer_name)
         organization_scope = requested_scope or customer_name
-        if not requested_customer_id:
-            raise InitError("新建上下文缺少宿主签名subject_resolution.customer_id。")
-        customer_id = requested_customer_id
         if selected_profile:
             configured_route = str(selected_profile.get("route", ""))
             configured_depth = str(selected_profile.get("depth", ""))
@@ -1642,7 +1565,9 @@ def _initialize_locked(
             business_mode = infer_business_mode(route, mode)
         runtime_owner = requested_owner or "待确认"
         requested_cutoff = explicit_cutoff or default_cutoff
-        if requested_cutoff is None:  # Defensive: guarded above, keeps the type and invariant explicit.
+        if (
+            requested_cutoff is None
+        ):  # Defensive: guarded above, keeps the type and invariant explicit.
             raise InitError("无法确定新建任务的信息截止日期。")
         total_cutoff = requested_cutoff
         total_freshness = "current"
@@ -1656,18 +1581,17 @@ def _initialize_locked(
         validate_refresh_modules(refresh_modules, modules, route=route, resume=False)
         final_workspace = workspace_path(Path(args.output_root), safe_name, context_id)
         if final_workspace.exists():
-            raise InitError("目标工作目录已存在；请用 --resume 或指定新的 --context-id。")
-
-    requested_cutoff = validate_cutoff_not_future(
-        requested_cutoff,
-        task_timezone,
-        instant=timestamp,
-    )
-    total_cutoff = validate_cutoff_not_future(
-        total_cutoff,
-        task_timezone,
-        instant=timestamp,
-    )
+            raise InitError(
+                "目标工作目录已存在；请用 --resume 或指定新的 --context-id。"
+            )
+        staging_parent = Path(
+            tempfile.mkdtemp(
+                prefix=f".{final_workspace.name}.staging-", dir=final_workspace.parent
+            )
+        )
+        workspace = staging_parent / final_workspace.name
+        workspace.mkdir(parents=False, exist_ok=False)
+        total_path = workspace / f"{safe_name}{SUFFIXES['comprehensive_report']}"
 
     inherited_authorization = (existing_manifest or {}).get("authorization", {})
     if not isinstance(inherited_authorization, dict):
@@ -1683,26 +1607,45 @@ def _initialize_locked(
     tenant_id = tenant_id or str(inherited_authorization.get("tenant_id", ""))
     project_id = project_id or str(inherited_authorization.get("project_id", ""))
     connector_id = connector_id or str(inherited_authorization.get("connector_id", ""))
-    authorization_owner = authorization_owner or str(inherited_authorization.get("authorization_owner", ""))
-    authorization_purpose = authorization_purpose or str(inherited_authorization.get("authorization_purpose", ""))
-    # A capability receipt is bound to one run and must never be inherited into
-    # a new run.  Stable scope may be inherited; authority must be re-issued.
-    authorization_expires_at = authorization_expires_at or str(inherited_authorization.get("authorization_expires_at", ""))
-    allowed_project_ids = allowed_project_ids or list(inherited_authorization.get("allowed_project_ids", []) or [])
-    authorized_roots = authorized_roots or list(inherited_authorization.get("authorized_roots", []) or [])
-    allowed_dataset_aliases = allowed_dataset_aliases or list(inherited_authorization.get("allowed_dataset_aliases", []) or [])
-    allowed_confidentiality = allowed_confidentiality or list(inherited_authorization.get("allowed_confidentiality", []) or [])
+    authorization_owner = authorization_owner or str(
+        inherited_authorization.get("authorization_owner", "")
+    )
+    authorization_expires_at = authorization_expires_at or str(
+        inherited_authorization.get("authorization_expires_at", "")
+    )
+    allowed_project_ids = allowed_project_ids or list(
+        inherited_authorization.get("allowed_project_ids", []) or []
+    )
+    authorized_roots = authorized_roots or list(
+        inherited_authorization.get("authorized_roots", []) or []
+    )
+    allowed_dataset_aliases = allowed_dataset_aliases or list(
+        inherited_authorization.get("allowed_dataset_aliases", []) or []
+    )
+    allowed_confidentiality = allowed_confidentiality or list(
+        inherited_authorization.get("allowed_confidentiality", []) or []
+    )
     internal_selected = "internal" in modules
     effective_connector_status = args.internal_connector_status
-    if args.resume and internal_selected and effective_connector_status == "not_configured":
+    if (
+        args.resume
+        and internal_selected
+        and effective_connector_status == "not_configured"
+    ):
         internal_existing = next(
-            (data for data in audited.values() if data.get("artifact_type") == "internal_retrieval"),
+            (
+                data
+                for data in audited.values()
+                if data.get("artifact_type") == "internal_retrieval"
+            ),
             {},
         )
-        effective_connector_status = internal_existing.get("connector_status", "not_configured")
-    if effective_connector_status in {"connected", "no_hits"} and not internal_selected:
-        raise InitError("connector_status=connected/no_hits时必须选择internal模块。")
-    if internal_selected and effective_connector_status in {"connected", "no_hits"}:
+        effective_connector_status = internal_existing.get(
+            "connector_status", "not_configured"
+        )
+    if effective_connector_status == "connected" and not internal_selected:
+        raise InitError("connector_status=connected时必须选择internal模块。")
+    if internal_selected and effective_connector_status == "connected":
         required_auth = {
             "tenant_id": tenant_id,
             "customer_id": customer_id,
@@ -1713,75 +1656,26 @@ def _initialize_locked(
         missing = [key for key, value in required_auth.items() if not value]
         if missing:
             raise InitError("内部连接器connected缺少授权字段：" + ", ".join(missing))
-        authorization_expires_at = validate_authorization_expiry(authorization_expires_at)
+        authorization_expires_at = validate_authorization_expiry(
+            authorization_expires_at
+        )
         if project_id not in allowed_project_ids:
             raise InitError("--allowed-project-ids必须包含--project-id。")
-    receipt_audit: dict[str, object] = {
-        "authorization_actor_id": authorization_actor_id,
-        "capability_receipt_run_id": "",
-        "capability_operation": "internal_read",
-        "capability_receipt_verified": False,
-        "capability_receipt_issuer": "",
-        "capability_receipt_key_id": "",
-        "capability_receipt_sha256": "",
-        "capability_receipt_verified_at": "",
-        "capability_receipt_expires_at": "",
-    }
-    if args.capability_receipt_file:
-        if not internal_selected:
-            raise InitError("--capability-receipt-file仅可用于选择了internal的run。")
-        if not args.run_id:
-            raise InitError("使用宿主能力收据时必须显式提供收据绑定的--run-id。")
-        try:
-            verified_receipt = verify_capability_receipt(
-                args.capability_receipt_file,
-                expected={
-                    "receipt_id": capability_receipt_id,
-                    "actor_id": authorization_actor_id,
-                    "run_id": latest_run_id,
-                    "connector_id": connector_id,
-                    "operation": "internal_read",
-                    "tenant_id": tenant_id,
-                    "customer_id": customer_id,
-                    "project_id": project_id,
-                    "allowed_project_ids": allowed_project_ids,
-                    "authorization_owner": authorization_owner,
-                    "authorization_expires_at": authorization_expires_at,
-                    "authorized_roots": authorized_roots,
-                    "allowed_dataset_aliases": allowed_dataset_aliases,
-                    "allowed_confidentiality": allowed_confidentiality,
-                    "authorization_purpose": authorization_purpose,
-                },
-                at=timestamp,
-            )
-        except CapabilityReceiptError as exc:
-            raise InitError(f"capability_receipt_invalid：{exc}") from exc
-        receipt_audit.update(verified_receipt.audit_fields())
     authorization = {
         "tenant_id": tenant_id,
         "customer_id": customer_id,
         "project_id": project_id,
         "connector_id": connector_id,
-        "connector_status": effective_connector_status if internal_selected else "not_applicable",
+        "connector_status": effective_connector_status
+        if internal_selected
+        else "not_applicable",
         "authorization_owner": authorization_owner,
         "authorization_expires_at": authorization_expires_at,
         "allowed_project_ids": allowed_project_ids,
         "authorized_roots": authorized_roots,
         "allowed_dataset_aliases": allowed_dataset_aliases,
         "allowed_confidentiality": allowed_confidentiality,
-        "authorization_purpose": authorization_purpose,
-        "capability_receipt_id": capability_receipt_id,
-        **receipt_audit,
     }
-    # All intake and capability gates must finish before a new customer
-    # workspace or staging directory is created.
-    if not args.resume:
-        staging_parent = Path(
-            tempfile.mkdtemp(prefix=f".{final_workspace.name}.staging-", dir=final_workspace.parent)
-        )
-        workspace = staging_parent / final_workspace.name
-        workspace.mkdir(parents=False, exist_ok=False)
-        total_path = workspace / f"{safe_name}{SUFFIXES['comprehensive_report']}"
     runtime_frontmatter = {
         "business_mode": business_mode,
         "tenant_id": tenant_id,
@@ -1808,42 +1702,10 @@ def _initialize_locked(
     common["会前速览/标准拜访包/战略客户包/一封信"] = (
         str(selected_profile.get("display_name", "")) if selected_profile else "未指定"
     )
-    strategy_variant = args.strategy_variant or (
-        "account_planning" if business_mode == "strategic_account" else "scheduled_visit"
-    )
-    if business_mode != "strategic_account" and strategy_variant != "scheduled_visit":
-        raise InitError("只有strategic_account可使用account_planning；会前任务必须使用scheduled_visit。")
-    strategy_context_fields(strategy_variant)
-    common.update(
-        {
-            "target_contact_level": args.target_contact_level or "待确认",
-            "visit_objective": args.visit_objective or "待确认",
-            "minimum_next_step": args.minimum_next_step or "待确认",
-            "strategic_question": args.strategic_question or "待确认",
-            "planning_horizon": args.planning_horizon or "待确认",
-            "letter_scenario": args.letter_scenario or "{{发送场景}}",
-            "recipient_role": (
-                "｜".join(
-                    value
-                    for value in (args.recipient_identity, args.recipient_role)
-                    if value
-                )
-                or "{{收件对象与角色}}"
-            ),
-            "letter_purpose": args.letter_purpose or "{{发信目的}}",
-            "expected_action": args.expected_action or "{{期望对方动作}}",
-            "signer": args.signer or "{{签署人}}",
-            "delivery_channel": args.delivery_channel or "{{发送渠道}}",
-        }
-    )
     created: list[str] = []
     created_types: set[str] = set()
     preserved: list[str] = []
-    migrated: list[str] = []
-    migrated_types: set[str] = set()
-    previous_strategy_variant = ""
     selected_types = [TYPE_FOR_MODULE[name] for name in modules]
-    selected_status_types = set(selected_types)
     planned_text: dict[Path, str] = {}
     planned_frontmatter: dict[str, dict[str, str]] = {}
     paths = collect_artifact_paths(workspace, safe_name)
@@ -1854,69 +1716,23 @@ def _initialize_locked(
                 raise InitError(f"拒绝覆盖现有成果：{path}")
             if not path.is_file() or path.is_symlink():
                 raise InitError(f"成果路径不是普通文件：{path}")
-            if artifact_type == "visit_strategy":
-                existing_strategy = audited.get(path) or read_frontmatter(path)
-                existing_variant = existing_strategy.get("strategy_variant", "")
-                strategy_context_fields(existing_variant)
-                if existing_variant != strategy_variant:
-                    previous_strategy_variant = existing_variant
-                    migrated_version = increment_content_version(
-                        existing_strategy.get("content_version", "")
-                    )
-                    review = DEFAULT_REVIEW_STATUS[artifact_type]
-                    values = common | {
-                        "module_status": "queued",
-                        "review_status": review,
-                        "connector_status": "not_applicable",
-                        "content_version": migrated_version,
-                    }
-                    planned_text[path] = inject_runtime_frontmatter(
-                        render_template(strategy_template_file(strategy_variant), values),
-                        runtime_frontmatter,
-                    )
-                    planned_frontmatter[artifact_type] = {
-                        "schema": SCHEMA,
-                        "artifact_type": artifact_type,
-                        "context_id": context_id,
-                        "latest_run_id": latest_run_id,
-                        "customer_id": customer_id,
-                        "customer_display_name": customer_name,
-                        "organization_scope": organization_scope,
-                        "safe_name": safe_name,
-                        "module_status": "queued",
-                        "review_status": review,
-                        "connector_status": "not_applicable",
-                        "freshness_status": "current",
-                        "content_version": migrated_version,
-                        "evidence_cutoff_date": requested_cutoff,
-                        "updated_at": timestamp_iso,
-                        "runtime_owner": runtime_owner,
-                        "strategy_variant": strategy_variant,
-                    } | {
-                        field: common[field]
-                        for field in strategy_context_fields(strategy_variant)
-                    } | runtime_frontmatter
-                    migrated.append(path.name)
-                    migrated_types.add(artifact_type)
-                    continue
             preserved.append(path.name)
             continue
-        connector = effective_connector_status if artifact_type == "internal_retrieval" else "not_applicable"
+        connector = (
+            effective_connector_status
+            if artifact_type == "internal_retrieval"
+            else "not_applicable"
+        )
         review = DEFAULT_REVIEW_STATUS[artifact_type]
         values = common | {
             "module_status": "queued",
             "review_status": review,
             "connector_status": connector,
         }
-        template_file = (
-            strategy_template_file(strategy_variant)
-            if artifact_type == "visit_strategy"
-            else TEMPLATES[artifact_type]
-        )
         planned_text[path] = inject_runtime_frontmatter(
-            render_template(template_file, values), runtime_frontmatter
+            render_template(TEMPLATES[artifact_type], values), runtime_frontmatter
         )
-        planned_frontmatter[artifact_type] = ({
+        planned_frontmatter[artifact_type] = {
             "schema": SCHEMA,
             "artifact_type": artifact_type,
             "context_id": context_id,
@@ -1933,105 +1749,46 @@ def _initialize_locked(
             "evidence_cutoff_date": requested_cutoff,
             "updated_at": timestamp_iso,
             "runtime_owner": runtime_owner,
-        } | (
-            {
-                "strategy_variant": strategy_variant,
-                **{
-                    field: common[field]
-                    for field in strategy_context_fields(strategy_variant)
-                },
-            }
-            if artifact_type == "visit_strategy"
-            else {}
-        ) | runtime_frontmatter)
+        } | runtime_frontmatter
         paths[artifact_type] = path
         created.append(path.name)
         created_types.add(artifact_type)
 
-    if business_mode == "briefing":
-        artifact_type = "briefing_delivery"
-        selected_status_types.add(artifact_type)
-        path = workspace / f"{safe_name}{SUFFIXES[artifact_type]}"
-        if path.exists():
-            if not args.resume:
-                raise InitError(f"拒绝覆盖现有成果：{path}")
-            if not path.is_file() or path.is_symlink():
-                raise InitError(f"成果路径不是普通文件：{path}")
-            preserved.append(path.name)
-        else:
-            values = common | {
-                "module_status": "queued",
-                "review_status": DEFAULT_REVIEW_STATUS[artifact_type],
-                "connector_status": "not_applicable",
-            }
-            planned_text[path] = inject_runtime_frontmatter(
-                render_template(TEMPLATES[artifact_type], values), runtime_frontmatter
-            )
-            planned_frontmatter[artifact_type] = {
-                "schema": SCHEMA,
-                "artifact_type": artifact_type,
-                "context_id": context_id,
-                "latest_run_id": latest_run_id,
-                "customer_id": customer_id,
-                "customer_display_name": customer_name,
-                "organization_scope": organization_scope,
-                "safe_name": safe_name,
-                "module_status": "queued",
-                "review_status": DEFAULT_REVIEW_STATUS[artifact_type],
-                "connector_status": "not_applicable",
-                "freshness_status": "current",
-                "content_version": new_content_version,
-                "evidence_cutoff_date": requested_cutoff,
-                "updated_at": timestamp_iso,
-                "runtime_owner": runtime_owner,
-            } | runtime_frontmatter
-            paths[artifact_type] = path
-            created.append(path.name)
-            created_types.add(artifact_type)
-
     if route in {"visit_prep", "strategy", "letter"} and not (
-        {"institution_research", "leader_research", "internal_retrieval"}
-        & set(selected_types)
+        {"institution_research", "leader_research", "internal_retrieval"} & paths.keys()
     ):
-        raise InitError(f"route={route}缺少选中研究载体，无法为claim_id提供权威台账。")
+        raise InitError(f"route={route}缺少研究成果，无法为claim_id提供权威台账。")
 
     audited_by_type = {data.get("artifact_type", ""): data for data in audited.values()}
     action_map: dict[str, str] = {}
     for module, artifact_type in TYPE_FOR_MODULE.items():
         if artifact_type not in selected_types:
             action_map[module] = "not_called"
-        elif artifact_type in created_types:
-            action_map[module] = "created"
-        elif not args.resume:
+        elif artifact_type in created_types or not args.resume:
             action_map[module] = "created"
         elif module in refresh_modules:
             action_map[module] = "updated"
-        elif module in {"institution", "leader", "internal"} and route in {"visit_prep", "strategy", "letter"}:
+        elif module in {"institution", "leader", "internal"} and route in {
+            "visit_prep",
+            "strategy",
+            "letter",
+        }:
             existing_data = audited_by_type.get(artifact_type, {})
             action_map[module] = (
                 "reused"
                 if existing_data.get("freshness_status") == "current"
-                and existing_data.get("module_status") in {"partial", "completed", "blocked"}
+                and existing_data.get("module_status")
+                in {"partial", "completed", "blocked"}
                 else "updated"
             )
         else:
             action_map[module] = "updated"
-    action_map["briefing"] = (
-        "created"
-        if "briefing_delivery" in created_types
-        else "updated"
-        if business_mode == "briefing"
-        else "not_called"
-    )
     action_map["external_letter"] = "not_called"
     planned_actions = {
         TYPE_FOR_MODULE[module]: action
         for module, action in action_map.items()
         if module in TYPE_FOR_MODULE
-    } | {
-        "briefing_delivery": action_map["briefing"],
-        "customer_letter_external": "not_called",
-    }
+    } | {"customer_letter_external": "not_called"}
     common["run_summary"] = run_summary(
         route=route,
         depth=mode,
@@ -2042,13 +1799,6 @@ def _initialize_locked(
     if args.resume:
         total_text = total_path.read_text(encoding="utf-8")
         total_text = ensure_refresh_section(total_text)
-        if strategy_variant == "account_planning":
-            total_text = neutralize_account_comprehensive_report(total_text)
-        readiness_reset = (
-            {field: "" for field in READINESS_APPROVAL_FIELDS}
-            if "visit_strategy" in migrated_types
-            else {}
-        )
         total_text = replace_frontmatter(
             total_text,
             {
@@ -2065,15 +1815,21 @@ def _initialize_locked(
                 "updated_at": timestamp_iso,
                 "runtime_owner": runtime_owner,
                 "workflow_stage": "planning",
-            } | runtime_frontmatter | readiness_reset,
+                "readiness_reviewer": "",
+                "readiness_reviewed_at": "",
+                "readiness_content_version": "",
+                "readiness_body_sha256": "",
+            }
+            | runtime_frontmatter,
         )
-        total_text = update_total_banner(total_text, mode=mode, evidence_cutoff_date=total_cutoff)
+        total_text = update_total_banner(
+            total_text, mode=mode, evidence_cutoff_date=total_cutoff
+        )
         total_text = update_total_rows(
             total_text,
             paths,
-            selected_types=selected_status_types,
+            selected_types=set(selected_types),
             created_types=created_types,
-            reset_types=migrated_types,
             planned_actions=planned_actions,
             planned_frontmatter=planned_frontmatter,
         )
@@ -2105,7 +1861,7 @@ def _initialize_locked(
             "summary_sync_status": "not_applicable",
             "key_claim_ids": "",
             "downstream_invalidation": "none",
-            "gaps_blockers": "none",
+            "gaps_blockers": "无",
             "link": "",
         }
         values = common | {
@@ -2121,23 +1877,26 @@ def _initialize_locked(
             ("leader_research", "leader"),
             ("internal_retrieval", "internal"),
             ("visit_strategy", "strategy"),
-            ("briefing_delivery", "briefing"),
             ("customer_letter_internal", "letter"),
             ("customer_letter_external", "external_letter"),
         ):
             path = paths.get(artifact_type)
-            selected = artifact_type in selected_status_types
+            selected = artifact_type in selected_types
             status = (
                 status_values(
                     artifact_type,
                     path,
                     selected_in_run=selected,
-                    run_action="created" if artifact_type in created_types else "not_called",
+                    run_action="created"
+                    if artifact_type in created_types
+                    else "not_called",
                     frontmatter=planned_frontmatter.get(artifact_type),
-                    summary_sync_status="pending" if artifact_type in created_types else "not_applicable",
-                    key_claim_ids="none" if artifact_type in created_types else "",
+                    summary_sync_status="pending"
+                    if artifact_type in created_types
+                    else "not_applicable",
+                    key_claim_ids="待提取" if artifact_type in created_types else "",
                     downstream_invalidation="none",
-                    gaps_blockers="input_missing" if artifact_type in created_types else "none",
+                    gaps_blockers="待评估" if artifact_type in created_types else "无",
                 )
                 if path
                 else empty_status
@@ -2155,32 +1914,38 @@ def _initialize_locked(
                     f"{stem}_updated_at": status["updated_at"],
                     f"{stem}_summary_sync_status": status["summary_sync_status"],
                     f"{stem}_key_claim_ids": status["key_claim_ids"],
-                    f"{stem}_downstream_invalidation": status["downstream_invalidation"],
+                    f"{stem}_downstream_invalidation": status[
+                        "downstream_invalidation"
+                    ],
                     f"{stem}_gaps_blockers": status["gaps_blockers"],
                     f"{stem}_link": status["link"],
                 }
             )
         total_text = inject_runtime_frontmatter(
-            ensure_refresh_section(render_template(TEMPLATES["comprehensive_report"], values)),
+            ensure_refresh_section(
+                render_template(TEMPLATES["comprehensive_report"], values)
+            ),
             runtime_frontmatter,
         )
         created.insert(0, total_path.name)
 
+    if not args.resume and business_mode == "briefing":
+        total_text += (
+            "\n<!-- briefing:start -->\n"
+            + render_template("briefing-template.md", values)
+            + "\n<!-- briefing:end -->\n"
+        )
+
+    # The total owns the task calendar; absence retains the legacy UTC contract.
+    # Resume preserves the original field (including absence), never rebases dates.
+    if not args.resume and args.task_timezone:
+        total_text = inject_runtime_frontmatter(
+            total_text, {"task_timezone": args.task_timezone}
+        )
+
     total_version = next_total_version if args.resume else new_content_version
     planned_bytes = {path: text.encode("utf-8") for path, text in planned_text.items()}
     planned_bytes[total_path] = total_text.encode("utf-8")
-    planned_deletes = (
-        sorted(
-            (
-                workspace / relative
-                for relative in RESEARCH_RUNTIME_RELS
-                if (workspace / relative).exists()
-            ),
-            key=lambda path: path.as_posix(),
-        )
-        if migrated_types
-        else []
-    )
     previous_sequence = int((existing_manifest or {}).get("transaction_sequence", 0))
     manifest = build_manifest(
         workspace,
@@ -2193,7 +1958,6 @@ def _initialize_locked(
         business_mode=business_mode,
         route=route,
         depth=mode,
-        task_timezone=task_timezone,
         latest_run_id=latest_run_id,
         content_version=total_version,
         stage="planning",
@@ -2201,34 +1965,23 @@ def _initialize_locked(
         selected_modules=modules,
         authorization=authorization,
         transaction_sequence=previous_sequence + 1,
-        intake_preflight=intake_preflight,
-        # Letter mode has an independent lifecycle and must never inherit a
-        # prior visit/account decision merely because a historical strategy
-        # artifact remains in the context.  Same-mode governance mutations
-        # continue to preserve summaries through build_manifest's sentinel.
-        delivery_summary=None if business_mode == "letter" else DELIVERY_SUMMARY_UNSET,
         overlay=planned_bytes,
-        deletes=planned_deletes,
     )
-    # Entering a new planning run invalidates any earlier one-time candidate
-    # authorization.  Inheriting it would bind the new gate/run to an old
-    # formal root and can both block a legitimate resume and misstate release
-    # readiness.  A fresh candidate commit must install the next attestation.
-    manifest.pop("candidate_attestation", None)
-    manifest_bytes = (json.dumps(manifest, ensure_ascii=False, indent=2, sort_keys=True) + "\n").encode("utf-8")
+    manifest_bytes = (
+        json.dumps(manifest, ensure_ascii=False, indent=2, sort_keys=True) + "\n"
+    ).encode("utf-8")
     if args.resume:
         expected = dict(baseline_states)
         for path in planned_bytes:
             expected.setdefault(path, file_state(path).as_dict())
-        for path in planned_deletes:
-            expected.setdefault(path, file_state(path).as_dict())
-        expected.setdefault(workspace / MANIFEST_REL, file_state(workspace / MANIFEST_REL).as_dict())
+        expected.setdefault(
+            workspace / MANIFEST_REL, file_state(workspace / MANIFEST_REL).as_dict()
+        )
         planned_bytes[workspace / MANIFEST_REL] = manifest_bytes
         try:
             transactional_commit(
                 workspace,
                 planned_bytes,
-                deletes=planned_deletes,
                 expected=expected,
                 operation="init_resume",
                 postflight=validate_runtime_postflight,
@@ -2248,9 +2001,9 @@ def _initialize_locked(
             validate_runtime_postflight(result_workspace)
             staging_parent.rmdir()
         except (InitError, TxError, OSError, UnicodeError) as exc:
-            if 'final_workspace' in locals() and final_workspace.exists():
+            if "final_workspace" in locals() and final_workspace.exists():
                 shutil.rmtree(final_workspace, ignore_errors=True)
-            if 'staging_parent' in locals() and staging_parent.exists():
+            if "staging_parent" in locals() and staging_parent.exists():
                 shutil.rmtree(staging_parent, ignore_errors=True)
             if isinstance(exc, InitError):
                 raise
@@ -2265,21 +2018,14 @@ def _initialize_locked(
         "route": route,
         "depth": mode,
         "business_mode": business_mode,
-        "task_timezone": task_timezone,
         "manifest_revision": previous_sequence + 1,
         "organization_scope": organization_scope,
         "selected_modules": modules,
-        "refresh_modules": [name for name in TYPE_FOR_MODULE if name in refresh_modules],
+        "refresh_modules": [
+            name for name in TYPE_FOR_MODULE if name in refresh_modules
+        ],
         "created": created,
         "preserved": preserved,
-        "migrated": migrated,
-        "invalidated_runtime_files": [
-            path.relative_to(result_workspace).as_posix()
-            for path in planned_deletes
-        ],
-        "intake_preflight": intake_preflight,
-        "strategy_variant": strategy_variant,
-        "previous_strategy_variant": previous_strategy_variant,
     }
 
 
@@ -2289,39 +2035,27 @@ def initialize(args: argparse.Namespace) -> dict[str, object]:
         raise InitError("--lock-timeout不能为负数。")
     if args.recover and not args.resume:
         raise InitError("--recover只能与--resume一起使用。")
-    intake_preflight = require_ready_intake(args)
     output_root = Path(args.output_root).expanduser()
     if output_root.is_symlink():
         raise InitError("--output-root不得为符号链接。")
-    # A resume identity mismatch is a pure precondition failure.  Resolve and
-    # compare the signed subject before creating/truncating the root lock so a
-    # same-name, different-entity request leaves the entire tree byte-stable.
-    # The check is repeated under both locks below to close the race window.
-    if args.resume:
-        if not output_root.is_dir():
-            raise InitError("续建的--output-root必须是现有目录。")
-        prelock_root = output_root.resolve()
-        customer_name = normalize_customer_name(args.customer_name)
-        safe_name = explicit_safe_name(args.safe_name) if args.safe_name else normalize_safe_component(customer_name)
-        prelock_workspace = find_resume_workspace(prelock_root, safe_name, args.context_id)
-        assert_resume_subject_binding(
-            load_manifest(prelock_workspace, required=False),
-            intake_preflight,
-        )
-    else:
-        output_root.mkdir(parents=True, exist_ok=True)
+    output_root.mkdir(parents=True, exist_ok=True)
     root = output_root.resolve()
     with output_root_lock(root, timeout=args.lock_timeout):
         recovery = "not_requested"
         if args.resume:
             customer_name = normalize_customer_name(args.customer_name)
-            safe_name = explicit_safe_name(args.safe_name) if args.safe_name else normalize_safe_component(customer_name)
+            safe_name = (
+                explicit_safe_name(args.safe_name)
+                if args.safe_name
+                else normalize_safe_component(customer_name)
+            )
             workspace = find_resume_workspace(root, safe_name, args.context_id)
-            assert_resume_subject_binding(load_manifest(workspace, required=False), intake_preflight)
             with workspace_lock(workspace, timeout=args.lock_timeout):
                 if unfinished_transaction(workspace):
                     if not args.recover:
-                        raise RecoveryRequired("检测到未完成事务；请用--resume --recover恢复后再续建。")
+                        raise RecoveryRequired(
+                            "检测到未完成事务；请用--resume --recover恢复后再续建。"
+                        )
                     recovery = recover_transaction(
                         workspace,
                         strategy=args.recovery_strategy,
@@ -2329,9 +2063,9 @@ def initialize(args: argparse.Namespace) -> dict[str, object]:
                     )
                 elif args.recover:
                     recovery = "no_transaction_reconcile"
-                result = _initialize_locked(args, intake_preflight)
+                result = _initialize_locked(args)
         else:
-            result = _initialize_locked(args, intake_preflight)
+            result = _initialize_locked(args)
         result["recovery"] = recovery
         return result
 
@@ -2341,15 +2075,19 @@ def build_parser() -> argparse.ArgumentParser:
         description="安全生成或续建 discovery-call v2.5 的 1+N 成果工作目录。"
     )
     parser.add_argument("customer_name", help="客户中文规范名称")
-    parser.add_argument("--output-root", default=".", help="工作目录父目录（默认当前目录）")
-    parser.add_argument("--safe-name", help="显式安全名称，1—48字符且不得包含路径片段")
-    parser.add_argument("--context-id", help="新建时指定或续建时选择 dcx-YYYYMMDD-8chars")
-    parser.add_argument("--run-id", help="可选显式run_id；若在init同run验证宿主能力收据时必需；常规候选收据应绑定后续candidate run")
     parser.add_argument(
-        "--customer-id",
-        help="可选显式客户ID；如提供必须与宿主签名subject_resolution一致，续建时还必须与既有上下文一致",
+        "--output-root", default=".", help="工作目录父目录（默认当前目录）"
     )
-    parser.add_argument("--organization-scope", help="院区、部门或项目范围；新建默认使用客户规范名称")
+    parser.add_argument("--safe-name", help="显式安全名称，1—48字符且不得包含路径片段")
+    parser.add_argument(
+        "--context-id", help="新建时指定或续建时选择 dcx-YYYYMMDD-8chars"
+    )
+    parser.add_argument(
+        "--customer-id", help="可选稳定客户ID；续建时必须与既有上下文一致"
+    )
+    parser.add_argument(
+        "--organization-scope", help="院区、部门或项目范围；新建默认使用客户规范名称"
+    )
     parser.add_argument("--runtime-owner", help="运行负责人/角色；续建默认沿用")
     parser.add_argument(
         "--business-mode",
@@ -2357,31 +2095,22 @@ def build_parser() -> argparse.ArgumentParser:
         help="业务入口；从config/business-modes.json映射route/depth/modules",
     )
     parser.add_argument(
-        "--intake-input",
-        help="当前宿主签名的intake v3普通文件（不接受-或stdin）；使用--business-mode时必需，初始化器会在任何目录写入前重新计算门禁",
+        "--route",
+        choices=sorted(ROUTES),
+        help="本轮路由；新建默认research_only，续建默认沿用",
     )
-    parser.add_argument("--strategy-variant", choices=("scheduled_visit", "account_planning"), help="策略成果变体；strategic_account默认account_planning")
-    parser.add_argument("--target-contact-level", help="拜访对象层级或角色；须与intake一致")
-    parser.add_argument("--visit-objective", help="本次拜访主要目标；须与intake一致")
-    parser.add_argument("--minimum-next-step", help="最小推进动作；须与intake一致")
-    parser.add_argument("--strategic-question", help="账户规划需回答的战略问题；须与intake一致")
-    parser.add_argument("--planning-horizon", help="账户规划周期；须与intake一致")
-    parser.add_argument("--recipient-identity", help="收件对象姓名或正式称谓；如提供须与intake一致")
-    parser.add_argument("--recipient-role", help="收件对象角色；须与intake一致")
-    parser.add_argument("--letter-scenario", help="客户信业务场景；须与intake一致")
-    parser.add_argument("--letter-purpose", help="客户信目的；须与intake一致")
-    parser.add_argument("--expected-action", help="希望收件人采取的动作；须与intake一致")
-    parser.add_argument("--signer", help="签署人或稳定签署角色；须与intake一致")
-    parser.add_argument("--delivery-channel", help="拟使用的发送渠道；须与intake一致")
-    parser.add_argument("--route", choices=sorted(ROUTES), help="本轮路由；新建默认research_only，续建默认沿用")
-    parser.add_argument("--mode", choices=sorted(MODE_LABELS), help="研究档位；新建默认standard，续建默认沿用")
+    parser.add_argument(
+        "--mode",
+        choices=sorted(MODE_LABELS),
+        help="研究档位；新建默认standard，续建默认沿用",
+    )
     parser.add_argument(
         "--evidence-cutoff-date",
         help="本轮目标信息截止日期YYYY-MM-DD；续建未指定时保留既有截止日期",
     )
     parser.add_argument(
         "--task-timezone",
-        help="新建截止日期所用IANA时区；新建时须至少与--evidence-cutoff-date提供一项，同时提供时按该时区校验显式日期",
+        help="新建截止日期所用IANA时区；新建时须与--evidence-cutoff-date二选一显式提供",
     )
     parser.add_argument("--run-objective", help="本轮可审计目标；默认使用route")
     parser.add_argument(
@@ -2394,7 +2123,9 @@ def build_parser() -> argparse.ArgumentParser:
         action="append",
         help="续建输出路由中需同run更新的既有研究模块：institution,leader,internal；必须同时列入--modules",
     )
-    parser.add_argument("--include-strategy", action="store_true", help="兼容加选strategy")
+    parser.add_argument(
+        "--include-strategy", action="store_true", help="兼容加选strategy"
+    )
     parser.add_argument("--include-letter", action="store_true", help="兼容加选letter")
     parser.add_argument(
         "--internal-connector-status",
@@ -2405,27 +2136,40 @@ def build_parser() -> argparse.ArgumentParser:
     parser.add_argument("--internal-connector-id", help="内部连接器稳定标识")
     parser.add_argument("--tenant-id", help="内部授权租户稳定标识")
     parser.add_argument("--project-id", help="项目稳定标识")
-    parser.add_argument("--allowed-project-ids", action="append", help="授权项目ID，可逗号分隔或重复")
-    parser.add_argument("--authorization-owner", help="内部授权责任人")
-    parser.add_argument("--authorization-purpose", help="本轮内部数据使用目的")
-    parser.add_argument("--capability-receipt-id", help="宿主连接器能力/授权收据稳定ID")
-    parser.add_argument("--authorization-actor-id", help="宿主认证的当前运行真人稳定actor_id")
     parser.add_argument(
-        "--capability-receipt-file",
-        help="宿主签发的Ed25519能力收据普通文件；文件本身不会写入workspace",
+        "--allowed-project-ids", action="append", help="授权项目ID，可逗号分隔或重复"
     )
-    parser.add_argument("--authorization-expires-at", help="带时区的ISO 8601授权到期时间")
-    parser.add_argument("--authorized-root", action="append", help="授权根范围，可重复")
-    parser.add_argument("--allowed-dataset-alias", action="append", help="允许的数据集别名，可重复")
-    parser.add_argument("--allowed-confidentiality", action="append", help="允许的密级，可重复")
-    parser.add_argument("--content-version", default="1", help="新成果内容版本")
-    parser.add_argument("--resume", action="store_true", help="续建；继承或显式选择模块，保留既有文件并登记计划动作")
-    parser.add_argument("--recover", action="store_true", help="续建前恢复未完成事务，并允许合法中断状态对账")
+    parser.add_argument("--authorization-owner", help="内部授权责任人")
     parser.add_argument(
-        "--recovery-strategy", choices=("auto", "rollback", "roll-forward"), default="auto",
+        "--authorization-expires-at", help="带时区的ISO 8601授权到期时间"
+    )
+    parser.add_argument("--authorized-root", action="append", help="授权根范围，可重复")
+    parser.add_argument(
+        "--allowed-dataset-alias", action="append", help="允许的数据集别名，可重复"
+    )
+    parser.add_argument(
+        "--allowed-confidentiality", action="append", help="允许的密级，可重复"
+    )
+    parser.add_argument("--content-version", default="1", help="新成果内容版本")
+    parser.add_argument(
+        "--resume",
+        action="store_true",
+        help="续建；继承或显式选择模块，保留既有文件并登记计划动作",
+    )
+    parser.add_argument(
+        "--recover",
+        action="store_true",
+        help="续建前恢复未完成事务，并允许合法中断状态对账",
+    )
+    parser.add_argument(
+        "--recovery-strategy",
+        choices=("auto", "rollback", "roll-forward"),
+        default="auto",
         help="未完成事务恢复策略（默认auto）",
     )
-    parser.add_argument("--lock-timeout", type=float, default=60.0, help="等待POSIX运行锁秒数")
+    parser.add_argument(
+        "--lock-timeout", type=float, default=60.0, help="等待POSIX运行锁秒数"
+    )
     parser.add_argument("--json", action="store_true", help="输出JSON结果")
     return parser
 

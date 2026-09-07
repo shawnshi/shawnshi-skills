@@ -51,6 +51,12 @@ SKILL_RECEIPT_FIELDS = frozenset(
         "skill_sha256",
         "skill_tokens",
         "tokenizer",
+        "event_identity",
+        "candidate_event_id",
+        "token_measurement_basis",
+        "token_scope_id",
+        "token_measurement_status",
+        "token_measurement_error_type",
     }
 )
 CONTEXT_RECEIPT_FIELDS = frozenset(
@@ -846,6 +852,8 @@ def main() -> int:
                         write_attempts += 1
                     receipt_metadata(attempt, diary_receipt)
                     bind_authorization(attempt, external_receipt, diary_receipt)
+                    if diary_receipt["receipt_type"] == "write_rejected":
+                        attempt["side_effect_state"] = "not_started"
 
                     if diary_receipt["receipt_type"] == "write_commit" and not executor_failure and not call["commit_event"]:
                         commit = base_event(
@@ -904,6 +912,7 @@ def main() -> int:
                         "read_candidate",
                     )
                     candidate.update({
+                        "event_identity": "occurrence",
                         "context_epoch": call["context_epoch"],
                         "skill_name": skill_name,
                         "skill_path_sha256": sha256_text(path_text.lower().replace("\\", "/")),

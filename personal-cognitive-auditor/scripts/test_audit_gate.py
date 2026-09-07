@@ -1,7 +1,8 @@
+import subprocess
 import sys
+import tempfile
 import unittest
 from pathlib import Path
-
 
 sys.path.insert(0, str(Path(__file__).parent))
 from audit_gate import (
@@ -12,6 +13,7 @@ from audit_gate import (
     validate,
     validate_handoff_payload,
 )
+from periodic_counterexamples import PERIODS, topology_cases
 
 
 class AuditGateTests(unittest.TestCase):
@@ -27,52 +29,57 @@ class AuditGateTests(unittest.TestCase):
 
         self.assertEqual(validate_handoff_payload(payload), [])
 
-    def test_periodic_topology_accepts_unique_target_h2_and_h3_sections(self):
-        text = (
-            "## [2026-08] Monthly Cognitive Audit｜2026-08-01 至 2026-08-31\n\n"
-            "### 时间范围与证据\n\n- 证据：完整。\n"
-        )
-        errors, _ = validate(text, period_type="monthly", period_id="2026-08")
+    def test_shared_periodic_topology_cases_through_validate_and_cli(self):
+        gate = Path(__file__).with_name("audit_gate.py")
+        with tempfile.TemporaryDirectory() as tmp:
+            payload = Path(tmp) / "synthetic.md"
+            for label, _, period_id, _ in PERIODS:
+                for case_id, text, accepted in topology_cases(label, period_id):
+                    with self.subTest(period=label, case=case_id):
+                        for enforce_template_fields in (False, True):
+                            with self.subTest(enforce_template_fields=enforce_template_fields):
+                                errors, _ = validate(
+                                    text,
+                                    enforce_template_fields=enforce_template_fields,
+                                    period_type=label,
+                                    period_id=period_id,
+                                )
+                                self.assertEqual(errors == [], accepted, errors)
+                                if not accepted:
+                                    self.assertTrue(any("unique target H2" in e for e in errors))
+                        payload.write_text(text, encoding="utf-8")
+                        result = subprocess.run(
+                            [
+                                sys.executable, "-B", str(gate), str(payload),
+                                "--enforce-template-fields", "--period-type", label,
+                                "--period-id", period_id,
+                            ],
+                            capture_output=True, text=True, encoding="utf-8",
+                            timeout=30, check=False,
+                        )
+                        self.assertEqual(result.returncode, 0 if accepted else 1,
+                                         result.stdout + result.stderr)
+                        self.assertIn("[PASS]" if accepted else "unique target H2",
+                                      result.stdout)
 
-        self.assertEqual(errors, [])
-
-    def test_periodic_topology_blocks_atx_and_setext_h1_h2(self):
-        tails = (
-            "## 非目标区块\n\n- 证据：不得写入。\n",
-            "   ## 缩进非目标区块\n\n- 证据：不得写入。\n",
-            "Setext 非目标区块\n---\n",
-            "Setext 一级区块\n===\n",
-            "   # 缩进一级区块\n",
-        )
-        for tail in tails:
-            with self.subTest(tail=tail):
-                text = "## [2026-08] Monthly Cognitive Audit\n\n" + tail
-                errors, _ = validate(
-                    text,
-                    period_type="monthly",
-                    period_id="2026-08",
+    def test_periodic_topology_accepts_minimal_free_form_without_energy_fields(self):
+        for label, _, period_id, _ in PERIODS:
+            with self.subTest(period=label):
+                text = (
+                    f"## [{period_id}] {label.title()} Cognitive Audit\n\n"
+                    "### 时间范围与证据\n\n- 证据：仅合成夹具。\n"
                 )
-                self.assertTrue(any("unique target H2" in item for item in errors))
+                errors, _ = validate(text, period_type=label, period_id=period_id)
 
-    def test_periodic_topology_blocks_h1_or_mismatched_period(self):
-        cases = (
-            ("# 2026年8月审计\n\n## [2026-08] Monthly Cognitive Audit\n", "2026-08"),
-            ("## [2026-07] Monthly Cognitive Audit\n", "2026-08"),
-        )
-        for text, period_id in cases:
-            with self.subTest(text=text):
-                errors, _ = validate(
-                    text + "\n证据：存在。\n",
-                    period_type="monthly",
-                    period_id=period_id,
-                )
-                self.assertTrue(any("unique target H2" in item for item in errors))
+                self.assertEqual(errors, [])
 
     def test_literal_template_syntax_is_non_blocking_in_free_form(self):
         errors, warnings = validate("证据：原文把 [事件] 作为字段示例。")
 
         self.assertEqual(errors, [])
-        self.assertTrue(any("possible unresolved template markers" in item for item in warnings))
+        self.assertTrue(
+            any("possible unresolved template markers" in item for item in warnings)
+        )
 
     def test_template_mode_blocks_unresolved_template_fields(self):
         errors, _ = validate(
@@ -80,7 +87,9 @@ class AuditGateTests(unittest.TestCase):
             enforce_template_fields=True,
         )
 
-        self.assertTrue(any("possible unresolved template markers" in item for item in errors))
+        self.assertTrue(
+            any("possible unresolved template markers" in item for item in errors)
+        )
 
     def test_style_terms_remain_editorial_warnings(self):
         errors, warnings = validate("证据存在，但草稿写了冷酷判词。")
@@ -152,7 +161,9 @@ class AuditGateTests(unittest.TestCase):
 """
         errors, _ = validate(text, enforce_template_fields=True)
 
-        self.assertTrue(any("energy-management section missing fields" in item for item in errors))
+        self.assertTrue(
+            any("energy-management section missing fields" in item for item in errors)
+        )
         self.assertTrue(any("数据范围与来源" in item for item in errors))
 
     def test_template_mode_blocks_missing_energy_fields(self):
@@ -164,9 +175,13 @@ class AuditGateTests(unittest.TestCase):
 """
         errors, _ = validate(text, enforce_template_fields=True)
 
-        self.assertTrue(any("energy-management section missing fields" in item for item in errors))
+        self.assertTrue(
+            any("energy-management section missing fields" in item for item in errors)
+        )
 
-    def test_previous_template_shape_is_blocked_when_four_projection_fields_are_missing(self):
+    def test_previous_template_shape_is_blocked_when_four_projection_fields_are_missing(
+        self,
+    ):
         text = """# 周复盘
 
 ## 能量管理（描述性生理背景）
@@ -310,7 +325,9 @@ class AuditGateTests(unittest.TestCase):
 """
         errors, _ = validate(text, enforce_template_fields=True)
 
-        self.assertTrue(any("acquisition audit missing or invalid keys" in item for item in errors))
+        self.assertTrue(
+            any("acquisition audit missing or invalid keys" in item for item in errors)
+        )
 
     def test_template_mode_blocks_contradictory_acquisition_audit(self):
         text = """# 复盘
@@ -331,7 +348,9 @@ class AuditGateTests(unittest.TestCase):
 """
         errors, _ = validate(text, enforce_template_fields=True)
 
-        self.assertTrue(any("acquisition audit state conflict" in item for item in errors))
+        self.assertTrue(
+            any("acquisition audit state conflict" in item for item in errors)
+        )
 
     def test_acquisition_semantics_reject_nonterminal_task_status(self):
         from audit_gate import acquisition_semantic_errors
@@ -422,13 +441,16 @@ class AuditGateTests(unittest.TestCase):
         skill_root = Path(__file__).parent.parent
         template_paths = [
             skill_root / "references" / "templates.md",
-            *(skill_root / "prompts" / name for name in (
-                "DAILY.md",
-                "WEEKLY.md",
-                "MONTHLY.md",
-                "QUARTERLY.md",
-                "ANNUAL.md",
-            )),
+            *(
+                skill_root / "prompts" / name
+                for name in (
+                    "DAILY.md",
+                    "WEEKLY.md",
+                    "MONTHLY.md",
+                    "QUARTERLY.md",
+                    "ANNUAL.md",
+                )
+            ),
         ]
 
         for path in template_paths:
@@ -439,17 +461,25 @@ class AuditGateTests(unittest.TestCase):
 
     def test_acquisition_contract_matches_parser_across_content_surfaces(self):
         skill_root = Path(__file__).parent.parent
+        diary_root = skill_root.parent / "personal-diary-writer"
+        diary_contract = "references/private-data-read.md"
+        self.assertIn(
+            diary_contract, (diary_root / "SKILL.md").read_text(encoding="utf-8")
+        )
         contract_paths = [
             skill_root / "references" / "energy_management.md",
             skill_root / "references" / "templates.md",
-            *(skill_root / "prompts" / name for name in (
-                "DAILY.md",
-                "WEEKLY.md",
-                "MONTHLY.md",
-                "QUARTERLY.md",
-                "ANNUAL.md",
-            )),
-            skill_root.parent / "personal-diary-writer" / "SKILL.md",
+            *(
+                skill_root / "prompts" / name
+                for name in (
+                    "DAILY.md",
+                    "WEEKLY.md",
+                    "MONTHLY.md",
+                    "QUARTERLY.md",
+                    "ANNUAL.md",
+                )
+            ),
+            diary_root / diary_contract,
         ]
 
         self.assertEqual(
@@ -500,21 +530,19 @@ class AuditGateTests(unittest.TestCase):
         self.assertTrue(any("partial local Garmin" in item for item in errors))
 
     def test_blocks_multiline_partial_cloud_fallback(self):
-        errors, _ = validate(
-            "证据：本地状态 partial。\n下一步：执行云端回退。"
-        )
+        errors, _ = validate("证据：本地状态 partial。\n下一步：执行云端回退。")
 
         self.assertTrue(any("partial local Garmin" in item for item in errors))
 
     def test_blocks_mixed_partial_fallback_statement(self):
-        errors, _ = validate(
-            "partial 时通常未执行云端回退，但本次随后执行云端回退。"
-        )
+        errors, _ = validate("partial 时通常未执行云端回退，但本次随后执行云端回退。")
 
         self.assertTrue(any("partial local Garmin" in item for item in errors))
 
     def test_blocks_sleep_debt_when_source_does_not_provide_it(self):
-        text = "证据：Garmin。sleep_debt_h=2.5；sleep_debt_status=not_provided_by_source"
+        text = (
+            "证据：Garmin。sleep_debt_h=2.5；sleep_debt_status=not_provided_by_source"
+        )
         errors, _ = validate(text)
 
         self.assertTrue(any("sleep debt value" in item for item in errors))
@@ -545,9 +573,7 @@ class AuditGateTests(unittest.TestCase):
         self.assertEqual(errors, [])
 
     def test_blocks_forced_action_after_a_non_forcing_clause(self):
-        errors, _ = validate(
-            "证据：睡眠较短，不需要取消会议，但必须停止训练。"
-        )
+        errors, _ = validate("证据：睡眠较短，不需要取消会议，但必须停止训练。")
 
         self.assertTrue(any("must not force" in item for item in errors))
 

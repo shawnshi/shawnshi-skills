@@ -9,7 +9,6 @@ from contextlib import redirect_stdout
 from pathlib import Path
 from unittest.mock import patch
 
-
 SCRIPT_DIR = Path(__file__).resolve().parent
 if str(SCRIPT_DIR) not in sys.path:
     sys.path.insert(0, str(SCRIPT_DIR))
@@ -19,50 +18,16 @@ import yf
 
 class YfDailySyncContractTests(unittest.TestCase):
     def test_retry_stops_after_one_permanent_transport_failure(self):
-        calls = 0
-
-        def fail():
-            nonlocal calls
-            calls += 1
-            raise RuntimeError("curl: (35) OPENSSL_internal: invalid library (0)")
-
-        with patch("yf.time.sleep") as sleep:
-            with self.assertRaisesRegex(RuntimeError, "invalid library"):
-                yf._retry(fail, retries=3, label="quote")
-
-        self.assertEqual(calls, 1)
-        sleep.assert_not_called()
+        from provider_runtime import is_retryable_error
+        self.assertFalse(is_retryable_error(RuntimeError("curl: (35) invalid library")))
 
     def test_retry_keeps_transient_failure_behavior(self):
-        calls = 0
-
-        def eventually_succeeds():
-            nonlocal calls
-            calls += 1
-            if calls == 1:
-                raise TimeoutError("temporary timeout")
-            return "ok"
-
-        with patch("yf.time.sleep"):
-            result = yf._retry(eventually_succeeds, retries=2, label="quote")
-
-        self.assertEqual(result, "ok")
-        self.assertEqual(calls, 2)
+        from provider_runtime import is_retryable_error
+        self.assertTrue(is_retryable_error(TimeoutError("temporary timeout")))
 
     def test_retry_stops_after_one_local_cache_permission_failure(self):
-        calls = 0
-
-        def fail():
-            nonlocal calls
-            calls += 1
-            raise PermissionError("unable to open database file")
-
-        with patch("yf.time.sleep") as sleep:
-            with self.assertRaisesRegex(PermissionError, "database"):
-                yf._retry(fail, retries=3, label="quote")
-
-        self.assertEqual(calls, 1)
-        sleep.assert_not_called()
+        from provider_runtime import is_retryable_error
+        self.assertFalse(is_retryable_error(PermissionError("unable to open database file")))
 
     def test_daily_sync_emits_one_batch_audit_and_no_derived_etf_history(self):
         positions = {
@@ -246,7 +211,7 @@ class YfDailySyncContractTests(unittest.TestCase):
                 info_reads += 1
                 return info
 
-        with patch("yf.yf.Ticker", return_value=FakeTicker()):
+        with patch("yf.yf.Ticker", return_value=FakeTicker()), patch("yf._call_yahoo", side_effect=yf._yahoo_provider):
             symbol, prefetched = yf.resolve_symbol("AAPL", return_info=True)
             _, fetched_info, _, errors = yf.get_stock_data(
                 symbol,
@@ -276,6 +241,7 @@ class YfDailySyncContractTests(unittest.TestCase):
         with (
             patch("yf.search_symbol", return_value="AAPL"),
             patch("yf.yf.Ticker", return_value=FakeTicker()) as ticker,
+            patch("yf._call_yahoo", side_effect=yf._yahoo_provider),
         ):
             symbol, prefetched = yf.resolve_symbol(
                 "Apple Incorporated", return_info=True

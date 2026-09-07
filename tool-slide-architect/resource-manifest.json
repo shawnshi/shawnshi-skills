@@ -1,7 +1,7 @@
 {
   "schema_version": 3,
   "skill": "tool-slide-architect",
-  "generated_at": "2026-09-05T17:15:45+08:00",
+  "generated_at": "2026-09-06T20:31:58+08:00",
   "hash_algorithm": "SHA-256",
   "text_hash_normalization": "LF",
   "skill_md": "SKILL.md",
@@ -115,7 +115,7 @@
     },
     {
       "path": "references/pptx-handoff.md",
-      "sha256": "c4e7155f59a85888bf4a2eb7a6c34f04653a97cec20151c555f6738d7f1e52cc"
+      "sha256": "e5d770fe547dddfd355f2809f2dc768c09aa6aa548107917372d09804ee1e6e5"
     },
     {
       "path": "references/styles/anti-gravity.md",
@@ -287,7 +287,7 @@
       "path": "references/pptx-handoff.md",
       "exists": true,
       "resolved_path": "tool-slide-architect/references/pptx-handoff.md",
-      "sha256": "c4e7155f59a85888bf4a2eb7a6c34f04653a97cec20151c555f6738d7f1e52cc"
+      "sha256": "e5d770fe547dddfd355f2809f2dc768c09aa6aa548107917372d09804ee1e6e5"
     },
     {
       "path": "references/styles/index.json",

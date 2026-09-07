@@ -1,18 +1,18 @@
 {
   "schema_version": 3,
   "skill": "industry-strategy-analyst",
-  "generated_at": "2026-09-05T17:21:28+08:00",
+  "generated_at": "2026-09-07T06:17:23+08:00",
   "hash_algorithm": "SHA-256",
   "text_hash_normalization": "LF",
   "skill_md": "SKILL.md",
-  "skill_md_sha256": "bcb1b42273b2c13652fe3ca4e14c28136431c332f4ac3066c643ca8cff9f29bd",
+  "skill_md_sha256": "91810420ef3fab57b6fd0b16197af6cf3cf712ef04ffeb065eed40ef5942659b",
   "top_level_files": [
     "SKILL.md"
   ],
   "top_level_file_hashes": [
     {
       "path": "SKILL.md",
-      "sha256": "bcb1b42273b2c13652fe3ca4e14c28136431c332f4ac3066c643ca8cff9f29bd"
+      "sha256": "91810420ef3fab57b6fd0b16197af6cf3cf712ef04ffeb065eed40ef5942659b"
     }
   ],
   "top_level_directories": [
@@ -57,7 +57,7 @@
     },
     {
       "path": "references/vendor-evaluation.md",
-      "sha256": "a6490907a82cd40e4e59a0130c0b777a0c9dbfdc6e79debb3cd127f37e5c9239"
+      "sha256": "ba1c1e3fed5ea15b20b6ad09ff222db252c188a27dee288a8e2a6790498a36ed"
     }
   ],
   "declared_local_dependencies": [
@@ -83,7 +83,7 @@
       "path": "references/vendor-evaluation.md",
       "exists": true,
       "resolved_path": "industry-strategy-analyst/references/vendor-evaluation.md",
-      "sha256": "a6490907a82cd40e4e59a0130c0b777a0c9dbfdc6e79debb3cd127f37e5c9239"
+      "sha256": "ba1c1e3fed5ea15b20b6ad09ff222db252c188a27dee288a8e2a6790498a36ed"
     }
   ],
   "missing_declared_dependencies": []

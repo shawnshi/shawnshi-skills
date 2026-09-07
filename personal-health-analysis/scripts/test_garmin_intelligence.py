@@ -351,6 +351,11 @@ class SafetyBoundaryTests(unittest.TestCase):
                 "measurement_epoch_evidence": {
                     "analysis_algorithm_epoch": module.BASELINE_ALGORITHM_EPOCH,
                     "manufacturer_algorithm_epoch": "synthetic-manufacturer-v1",
+                    "observation_attributions": [
+                        {"component": component, "date": item["date"], "serial_number": "synthetic", "software_version": "1.0"}
+                        for component, rows in (("hrv", hrv), ("heart_rate", heart_rate), ("sleep", sleep))
+                        for item in rows
+                    ],
                     "firmware_history": [
                         {
                             "timestamp": "2026-06-01 00:00:00",
@@ -622,6 +627,10 @@ class SafetyBoundaryTests(unittest.TestCase):
                 "measurement_epoch_evidence": {
                     "analysis_algorithm_epoch": module.BASELINE_ALGORITHM_EPOCH,
                     "manufacturer_algorithm_epoch": "not_available_in_local_schema",
+                    "observation_attributions": [
+                        {"component": component, "date": day, "serial_number": "synthetic", "software_version": "1.0"}
+                        for component in ("hrv", "heart_rate") for day in dates
+                    ],
                     "firmware_history": [
                         {
                             "timestamp": "2026-06-01T00:00:00+08:00",
@@ -1024,6 +1033,10 @@ class SafetyBoundaryTests(unittest.TestCase):
             "measurement_epoch_evidence": {
                 "analysis_algorithm_epoch": module.BASELINE_ALGORITHM_EPOCH,
                 "manufacturer_algorithm_epoch": "not_available_in_local_schema",
+                "observation_attributions": [
+                    {"component": component, "date": item["date"], "serial_number": "alpha", "software_version": "1.0" if item["date"] < "2026-07-15" else "2.0"}
+                    for component, rows in (("hrv", hrv), ("heart_rate", heart_rate)) for item in rows
+                ],
                 "firmware_history": [
                     {
                         "timestamp": "2026-07-01 00:00:00",
@@ -1044,8 +1057,9 @@ class SafetyBoundaryTests(unittest.TestCase):
         self.assertEqual(result["status"], "not_comparable")
         self.assertEqual(result["classification"], "not_comparable_cross_epoch")
         self.assertFalse(result["epoch_comparability"]["comparable"])
-        self.assertIn("alpha|1.0", result["epoch_comparability"]["observed_epochs"])
-        self.assertIn("alpha|2.0", result["epoch_comparability"]["observed_epochs"])
+        self.assertEqual(result["epoch_comparability"]["observed_epoch_count"], 2)
+        self.assertEqual(result["epoch_comparability"]["observed_epochs"], ["epoch_1", "epoch_2"])
+        self.assertNotIn("alpha", __import__("json").dumps(result))
 
     def _patched_local_extractors(self, summary_side_effect=None):
         empty = module.pd.DataFrame()
@@ -1082,6 +1096,107 @@ class SafetyBoundaryTests(unittest.TestCase):
             )
         )
         return stack
+
+
+class ObservationAttributionTests(unittest.TestCase):
+    def setUp(self):
+        self.days = ["2026-07-01", "2026-07-02"]
+        self.required = {"hrv": self.days, "heart_rate": self.days}
+        self.evidence = {
+            "analysis_algorithm_epoch": "synthetic-analysis-v1",
+            "manufacturer_algorithm_epoch": "synthetic-manufacturer-v1",
+            "firmware_history": [
+                {"timestamp": "2025-01-01", "serial_number": "retired-device", "software_version": "0.1"},
+                {"timestamp": "2026-01-01", "serial_number": "current-inventory", "software_version": "2.0"},
+            ],
+            "observation_attributions": [
+                {"component": component, "date": day, "serial_number": "actual-synthetic-source", "software_version": "1.0"}
+                for component, days in self.required.items() for day in days
+            ],
+        }
+
+    def evaluate(self):
+        return module._epoch_comparability({"measurement_epoch_evidence": self.evidence}, self.required)
+
+    def test_inventory_alone_does_not_prove_multidevice_use(self):
+        self.evidence["observation_attributions"] = []
+        result = self.evaluate()
+        self.assertIsNone(result["comparable"])
+        self.assertEqual(result["status"], "device_attribution_unknown")
+        self.assertEqual(result["observed_epochs"], [])
+        self.assertEqual(result["required_observations"], 4)
+        self.assertEqual(result["attributed_observations"], 0)
+
+    def test_attributed_single_source_ignores_unrelated_inventory_and_preserves_privacy(self):
+        result = self.evaluate()
+        self.assertTrue(result["comparable"])
+        self.assertEqual(result["status"], "single_known_epoch")
+        self.assertEqual(result["attributed_observations"], 4)
+        self.assertNotIn("actual-synthetic-source", __import__("json").dumps(result))
+        self.assertEqual(result["observed_epoch_count"], 1)
+
+    def test_known_cross_device_or_firmware_remains_blocked(self):
+        for key, value in (("serial_number", "other-device"), ("software_version", "2.0")):
+            with self.subTest(key=key):
+                self.setUp()
+                self.evidence["observation_attributions"][-1][key] = value
+                self.evidence["manufacturer_algorithm_epoch"] = "unknown"
+                result = self.evaluate()
+                self.assertIs(result["comparable"], False)
+                self.assertEqual(result["status"], "cross_epoch")
+                self.assertEqual(result["observed_epoch_count"], 2)
+
+    def test_missing_component_or_date_cannot_borrow_other_observation(self):
+        for removal in (lambda item: item["component"] == "heart_rate", lambda item: item["date"] == self.days[-1]):
+            with self.subTest(removal=removal):
+                self.setUp()
+                self.evidence["observation_attributions"] = [item for item in self.evidence["observation_attributions"] if not removal(item)]
+                result = self.evaluate()
+                self.assertIsNone(result["comparable"])
+                self.assertEqual(result["status"], "device_attribution_unknown")
+                self.assertEqual(result["attributed_observations"], 2)
+
+    def test_wrong_component_and_out_of_scope_conflicts_are_not_evidence(self):
+        self.evidence["observation_attributions"] += [
+            {"component": "sleep", "date": self.days[0], "serial_number": "unrelated", "software_version": "9.0"},
+            {"component": "hrv", "date": "2025-01-01", "serial_number": "unrelated", "software_version": "9.0"},
+        ]
+        self.assertTrue(self.evaluate()["comparable"])
+        self.evidence["observation_attributions"] = self.evidence["observation_attributions"][-2:]
+        self.assertIsNone(self.evaluate()["comparable"])
+
+    def test_unknown_identity_or_version_including_invalid_duplicate_blocks(self):
+        for key in ("serial_number", "software_version"):
+            for value in (None, "", "unknown", " unverified ", "nan", True):
+                with self.subTest(key=key, value=value):
+                    self.setUp()
+                    self.evidence["observation_attributions"].append({**self.evidence["observation_attributions"][0], key: value})
+                    self.assertIsNone(self.evaluate()["comparable"])
+                    self.assertEqual(self.evaluate()["status"], "device_attribution_unknown")
+
+    def test_duplicate_attribution_is_idempotent_but_conflict_is_not_proven_use(self):
+        duplicate = dict(self.evidence["observation_attributions"][0])
+        self.evidence["observation_attributions"].append(duplicate)
+        self.assertTrue(self.evaluate()["comparable"])
+        duplicate["serial_number"] = "conflicting-claim"
+        result = self.evaluate()
+        self.assertIsNone(result["comparable"])
+        self.assertEqual(result["status"], "device_attribution_conflict")
+        self.assertEqual(result["attributed_observations"], 3)
+
+    def test_algorithm_gates_remain_independent(self):
+        for field, status in (("manufacturer_algorithm_epoch", "manufacturer_algorithm_epoch_unknown"), ("analysis_algorithm_epoch", "analysis_algorithm_epoch_unknown")):
+            with self.subTest(field=field):
+                self.setUp()
+                self.evidence[field] = "unknown"
+                result = self.evaluate()
+                self.assertIsNone(result["comparable"])
+                self.assertEqual(result["status"], status)
+                self.assertEqual(result["device_attribution_status"], "complete")
+
+    def test_empty_required_scope_never_proves_comparability(self):
+        self.required = {}
+        self.assertIsNone(self.evaluate()["comparable"])
 
 
 if __name__ == "__main__":

@@ -3,7 +3,10 @@
 The validator never creates, merges, repairs, or rewrites resources. It checks
 path containment before reading a declared file, normalizes UTF-8 text to LF
 when requested by the manifest, verifies SHA-256 hashes, and rejects empty or
-placeholder-only declared resources.
+placeholder-only declared resources. Supported manifest versions are integer 1
+(legacy resource-hash fixtures) and 3 (current library manifests). Both use the
+local declared-resource checks below; the root v3 Gate remains responsible for
+full library Schema equality. The report schema version is separate.
 """
 
 from __future__ import annotations
@@ -17,6 +20,7 @@ from typing import Any, Sequence
 
 
 SCHEMA_VERSION = "2.0"
+SUPPORTED_MANIFEST_VERSIONS = (1, 3)
 EXIT_OK = 0
 EXIT_CONTENT_FAILURE = 1
 EXIT_RUNTIME_FAILURE = 2
@@ -132,6 +136,16 @@ def validate_manifest(manifest: dict[str, Any], *, manifest_path: Path, skill_ro
     warnings: list[dict[str, Any]] = []
     checked_files = 0
     normalize_lf = manifest.get("text_hash_normalization") == "LF"
+    manifest_version = manifest.get("schema_version")
+    if type(manifest_version) is not int or manifest_version not in SUPPORTED_MANIFEST_VERSIONS:
+        errors.append(
+            {
+                "code": "E_UNSUPPORTED_MANIFEST_SCHEMA",
+                "actual": manifest_version,
+                "supported": list(SUPPORTED_MANIFEST_VERSIONS),
+                "message": "schema_version 必须为整数 1（旧资源清单）或 3（当前库清单）；不推断缺失版本。",
+            }
+        )
 
     if manifest.get("hash_algorithm", "SHA-256").upper() != "SHA-256":
         errors.append(

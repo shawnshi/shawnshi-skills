@@ -28,6 +28,14 @@ def safe_print(message: str) -> None:
     print(message.encode(encoding, errors="replace").decode(encoding, errors="replace"))
 
 
+def _etf_literal_json(value):
+    """Keep ETF source text literal, including embedded backticks and raw HTML."""
+    text = json.dumps(value, ensure_ascii=False, indent=2)
+    longest_run = max((len(run) for run in re.findall(r"`+", text)), default=0)
+    fence = "`" * max(3, longest_run + 1)
+    return f"{fence}json\n{text}\n{fence}\n\n"
+
+
 def render_markdown(data, raw_json):
     stock_name = data.get("stock_name", "Unknown")
     stock_code = data.get("stock_code", "Unknown")
@@ -144,6 +152,40 @@ def render_markdown(data, raw_json):
     md += f"| **MACD** | {ts.get('macd_signal', '--')} | 趋势得分: {ts.get('trend_score', '--')}/100 |\n"
     md += f"| **量能分析** | {va.get('volume_status', '--')} | 换手率: {va.get('turnover_rate', '--')} (量比: {va.get('volume_ratio', '--')}) |\n"
     md += f"| **筹码结构** | {cs.get('chip_health', '--')} | 获利比例: {cs.get('profit_ratio', '--')} |\n\n"
+
+    if isinstance(data.get("etf_research"), dict):
+        md += "## ETF NAV 与覆盖边界\n\n"
+        md += "企业价值、净债务、股权价值与稀释股数：not_applicable。\n"
+        md += "折溢价比较当前报价与最近已公布 NAV，不代表同时点公允价值；情景是假设压力测试，不是预测。\n\n"
+        etf = data["etf_research"]
+        comparison = {"premium_discount_basis": etf.get("premium_discount_basis")}
+        for name, index in (
+            ("quote", etf.get("quote_evidence_index")),
+            ("nav", etf.get("nav", {}).get("evidence_index")),
+        ):
+            item = evidence_items[index] if type(index) is int and 0 <= index < len(evidence_items) else {}
+            fields = ("price", "currency", "observed_at") if name == "quote" else ("published_at",)
+            comparison[name] = {
+                "evidence_index": index,
+                "source_locator": item.get("source_locator"),
+                **{field: item.get(field) for field in fields},
+            }
+            if name == "nav":
+                observation = item.get("etf_observation", {})
+                comparison[name].update({field: observation.get(field) for field in ("value", "currency", "valuation_date")})
+        md += "### 报价 / NAV 比较两端（证据索引从 0 开始）\n\n"
+        md += _etf_literal_json(comparison)
+        md += _etf_literal_json(etf)
+        md += "### NAV / 指数 / 币种情景与显式假设\n\n"
+        md += _etf_literal_json(data.get("scenario_analysis"))
+        md += "### 来源绑定的 ETF 观测\n\n"
+        for index, item in enumerate(evidence_items):
+            if "etf_observation" in item:
+                md += _etf_literal_json({
+                    "evidence_index": index,
+                    "source_locator": item.get("source_locator"),
+                    "etf_observation": item["etf_observation"],
+                })
 
     md += "## 🔍 深度逻辑穿透 (Qualitative Analysis)\n\n"
     md += f"**趋势推演**: {qa.get('trend_analysis', '')}\n\n"

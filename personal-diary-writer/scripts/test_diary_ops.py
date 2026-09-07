@@ -17,6 +17,14 @@ diary_ops = importlib.util.module_from_spec(SPEC)
 assert SPEC.loader is not None
 SPEC.loader.exec_module(diary_ops)
 
+AUDITOR_SCRIPTS = Path(__file__).resolve().parents[2] / "personal-cognitive-auditor" / "scripts"
+FIXTURE_SPEC = importlib.util.spec_from_file_location(
+    "periodic_counterexamples", AUDITOR_SCRIPTS / "periodic_counterexamples.py"
+)
+assert FIXTURE_SPEC is not None and FIXTURE_SPEC.loader is not None
+periodic_counterexamples = importlib.util.module_from_spec(FIXTURE_SPEC)
+FIXTURE_SPEC.loader.exec_module(periodic_counterexamples)
+
 
 class DiaryOpsTests(unittest.TestCase):
     def _args(
@@ -49,14 +57,16 @@ class DiaryOpsTests(unittest.TestCase):
         return argparse.Namespace(**values)
 
     @contextmanager
-    def _runtime(self, tmp):
+    def _runtime(self, tmp, *, real_audit_gate=False):
         root = Path(tmp)
         session_root = root / "sessions"
         session_root.mkdir(parents=True)
         session = session_root / "session.jsonl"
         session.write_text("", encoding="utf-8")
-        weekly_gate = root / "weekly_gate.py"
-        weekly_gate.write_text("raise SystemExit(0)\n", encoding="utf-8")
+        weekly_gate = AUDITOR_SCRIPTS / "audit_gate.py"
+        if not real_audit_gate:
+            weekly_gate = root / "weekly_gate.py"
+            weekly_gate.write_text("raise SystemExit(0)\n", encoding="utf-8")
         with (
             patch.object(diary_ops, "DEFAULT_ROOT", root),
             patch.object(diary_ops, "SESSION_ROOT", session_root),
@@ -719,73 +729,105 @@ class DiaryOpsTests(unittest.TestCase):
                 self.assertIn("新审计", text)
                 self.assertNotIn("旧审计", text)
 
-    def test_periodic_audit_creates_missing_period_end_date_without_changing_history(
-        self,
-    ):
-        with tempfile.TemporaryDirectory() as tmp, self._runtime(tmp):
-            root = Path(tmp)
-            target = root / "2026-Q3.md"
-            history = "# 2026-08-30\n\n历史内容\n"
-            target.write_text(history, encoding="utf-8")
-            payload = root / "monthly.md"
-            payload.write_text(
-                "## [2026-08] Monthly Cognitive Audit\n\n### 关键事实\n\n月度审计\n",
-                encoding="utf-8",
-            )
-            args = self._args(
-                target,
-                payload,
-                action="replace-monthly-audit",
-                month="2026-08",
-                day="2026-08-31",
-            )
-            scope = diary_ops.build_scope(args)
-            receipt, approval = self._artifacts(root, scope, "monthly_audit_gate")
-            result = diary_ops.replace_operation(
-                self._args(
-                    target,
-                    payload,
-                    receipt,
-                    approval,
-                    action="replace-monthly-audit",
-                    month="2026-08",
-                    day="2026-08-31",
-                )
-            )
-            text = target.read_text(encoding="utf-8")
-            self.assertEqual(result["date_heading_count"], 1)
-            self.assertEqual(result["period_heading_count"], 1)
-            self.assertIn("# 2026-08-31\n\n## [2026-08]", text)
-            self.assertIn(history.rstrip(), text)
-
-    def test_periodic_payload_rejects_all_extra_h2_forms_when_date_is_missing(self):
-        payloads = (
-            "## [2026-08] Monthly Cognitive Audit\n\n## 非目标区块\n\n不得写入\n",
-            "## [2026-08] Monthly Cognitive Audit\n\n   ## 缩进非目标区块\n\n不得写入\n",
-            "## [2026-08] Monthly Cognitive Audit\n\nSetext 非目标区块\n---\n",
-            "## [2026-08] Monthly Cognitive Audit\n\nSetext 一级区块\n===\n",
-        )
-        for payload_text in payloads:
-            with (
-                self.subTest(payload=payload_text),
-                tempfile.TemporaryDirectory() as tmp,
-                self._runtime(tmp),
-            ):
-                root = Path(tmp)
-                target = root / "2026-Q3.md"
-                target.write_text("# 2026-08-30\n\n历史内容\n", encoding="utf-8")
-                payload = root / "monthly.md"
-                payload.write_text(payload_text, encoding="utf-8")
-                with self.assertRaisesRegex(diary_ops.DiaryError, "topology gate"):
-                    diary_ops.build_scope(
-                        self._args(
-                            target,
-                            payload,
-                            action="replace-monthly-audit",
-                            month="2026-08",
-                            day="2026-08-31",
+    def test_shared_periodic_topology_cases_through_scope_and_real_gate_replace(self):
+        fixtures = periodic_counterexamples
+        history = "# 2024-03-30\n\n合成历史不变\n"
+        for label, field, period_id, day in fixtures.PERIODS:
+            for date_exists in (False, True):
+                for case_id, text, accepted in fixtures.topology_cases(label, period_id):
+                    with (
+                        self.subTest(period=label, date_exists=date_exists, case=case_id),
+                        tempfile.TemporaryDirectory() as tmp,
+                        self._runtime(tmp, real_audit_gate=True),
+                    ):
+                        root = Path(tmp)
+                        target = root / "2024-Q1.md"
+                        others = "".join(
+                            fixtures.periodic_payload(other, other_id) + "\n"
+                            for other, _, other_id, _ in fixtures.PERIODS if other != label
                         )
+                        prefix = f"# {day}\n\n合成日记不变\n\n" + others
+                        original = (prefix if date_exists else "") + history
+                        target.write_text(original, encoding="utf-8")
+                        original_bytes = target.read_bytes()
+                        payload = root / "periodic.md"
+                        payload.write_text(text, encoding="utf-8")
+                        args = self._args(
+                            target, payload, action=f"replace-{label}-audit",
+                            day=day, **{field: period_id},
+                        )
+                        if not accepted:
+                            with self.assertRaisesRegex(diary_ops.DiaryError, "topology gate"):
+                                diary_ops.build_scope(args)
+                            self.assertEqual(target.read_bytes(), original_bytes)
+                            self.assertEqual(sorted(p.name for p in root.iterdir()),
+                                             ["2024-Q1.md", "periodic.md", "sessions"])
+                            continue
+                        # Repeat the transaction: payload and protected content stay exact;
+                        # the writer may normalize blank separators between date blocks.
+                        expected_block = (
+                            (prefix if date_exists else f"# {day}\n\n") + text.strip("\n")
+                        )
+                        for _ in range(2):
+                            scope = diary_ops.build_scope(args)
+                            receipt, approval = self._artifacts(root, scope, f"{label}_audit_gate")
+                            args.scope_file, args.approval_file = str(receipt), str(approval)
+                            result = diary_ops.replace_operation(args)
+                            self.assertEqual(result["status"], "success")
+                            self.assertEqual(result["date_heading_count"], 1)
+                            self.assertEqual(result["period_heading_count"], 1)
+                            self.assertEqual(result["authorization_scope_sha256"],
+                                             result["write_scope_sha256"])
+                            after = target.read_text(encoding="utf-8")
+                            self.assertTrue(after.endswith(history))
+                            self.assertEqual(after[:-len(history)].rstrip("\n"), expected_block)
+                            self.assertEqual(list(root.glob(target.name + ".*.tmp")), [])
+                            self.assertFalse(target.with_name(target.name + ".lock").exists())
+
+    def test_periodic_real_gate_failures_preserve_target_and_cleanup(self):
+        fixtures = periodic_counterexamples
+        for label, field, period_id, day in fixtures.PERIODS:
+            for failure in ("target-drift", "payload-drift", "content-gate", "replace-failure"):
+                with (
+                    self.subTest(period=label, failure=failure),
+                    tempfile.TemporaryDirectory() as tmp,
+                    self._runtime(tmp, real_audit_gate=True),
+                ):
+                    root = Path(tmp)
+                    target = root / "2024-Q1.md"
+                    target.write_text("# 2024-03-30\n\n合成历史\n", encoding="utf-8")
+                    payload = root / "periodic.md"
+                    text = fixtures.periodic_payload(label, period_id)
+                    if failure == "content-gate":
+                        text = text.split("### 能量管理", 1)[0]
+                    payload.write_text(text, encoding="utf-8")
+                    args = self._args(
+                        target, payload, action=f"replace-{label}-audit",
+                        day=day, **{field: period_id},
                     )
+                    scope = diary_ops.build_scope(args)
+                    receipt, approval = self._artifacts(root, scope, f"{label}_audit_gate")
+                    args.scope_file, args.approval_file = str(receipt), str(approval)
+                    expected_error = "audit gate did not pass"
+                    if failure == "target-drift":
+                        target.write_text("# 2024-03-30\n\n合成并发变化\n", encoding="utf-8")
+                        expected_error = "scope receipt"
+                    elif failure == "payload-drift":
+                        payload.write_text(text + "\n合成并发变化\n", encoding="utf-8")
+                        expected_error = "not bound to the payload"
+                    before = target.read_bytes()
+                    if failure == "replace-failure":
+                        with (
+                            patch.object(diary_ops.os, "replace", side_effect=OSError("synthetic blocked")),
+                            self.assertRaisesRegex(OSError, "synthetic blocked"),
+                        ):
+                            diary_ops.replace_operation(args)
+                    else:
+                        with self.assertRaisesRegex(diary_ops.DiaryError, expected_error):
+                            diary_ops.replace_operation(args)
+                    self.assertEqual(target.read_bytes(), before)
+                    self.assertEqual(sorted(p.name for p in root.iterdir()),
+                                     ["2024-Q1.md", "approval.json", "periodic.md", "scope.json", "sessions"])
 
     def test_exact_current_period_alias_is_accepted_from_protected_user_event(self):
         with tempfile.TemporaryDirectory() as tmp, self._runtime(tmp):

@@ -90,7 +90,8 @@
         },
         "sources_opened": {
           "type": "integer",
-          "minimum": 0
+          "minimum": 0,
+          "description": "For explicitly declared current semantics: business original-source read requests including failures and rereads; excludes hash-byte reads and rule/Skill reads. Legacy values may have unknown semantics; consult counter_semantics."
         },
         "sources_accepted": {
           "type": "integer",
@@ -124,6 +125,54 @@
             "integer",
             "null"
           ],
+          "minimum": 0
+        }
+      }
+    },
+    "unmeasured_counters": {
+      "type": "array",
+      "uniqueItems": true,
+      "items": {
+        "type": "string"
+      },
+      "description": "这些计数器未观测；其兼容性默认0不得解释为实际零次。"
+    },
+    "measurement_scope": {
+      "type": "string",
+      "enum": [
+        "post_skill_read_to_precommit_snapshot",
+        "legacy_recorded_start_to_precommit_snapshot"
+      ],
+      "description": "Optional for legacy v1 files; absence means interval coverage is unspecified, never end-to-end."
+    },
+    "coverage_exclusions": {
+      "type": "array",
+      "uniqueItems": true,
+      "items": {
+        "type": "string"
+      }
+    },
+    "counter_semantics": {
+      "type": "object",
+      "additionalProperties": {
+        "type": "string"
+      },
+      "description": "New sessions explicitly declare current counting rules. Missing legacy semantics remain unknown; historical counts must not be reinterpreted as current-rule counts."
+    },
+    "event_counts": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "business_source_open": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "hash_bytes_read": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "rule_read": {
+          "type": "integer",
           "minimum": 0
         }
       }

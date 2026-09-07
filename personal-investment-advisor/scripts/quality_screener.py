@@ -1,5 +1,6 @@
 import argparse
 import json
+import os
 import sys
 from datetime import date, datetime, timezone
 from pathlib import Path
@@ -10,8 +11,8 @@ import numpy as np
 import pandas as pd
 import yfinance as yf
 from tabulate import tabulate
-from tenacity import retry, stop_after_attempt, wait_exponential
 
+from provider_runtime import ProviderError, error_outcome, require_data, run_provider
 
 DEFAULT_PROFILES_PATH = Path(__file__).resolve().parent.parent / "references" / "method_profiles.json"
 VALID_MARKETS = {"CN", "HK", "US"}
@@ -272,15 +273,31 @@ def evaluate_metrics(
     }
 
 
-@retry(stop=stop_after_attempt(3), wait=wait_exponential(multiplier=1, min=2, max=10))
-def fetch_yf_data(ticker_symbol: str):
+def _yf_financial_provider(ticker_symbol: str, cache_dir=None):
+    if cache_dir:
+        yf.set_tz_cache_location(cache_dir)
     ticker = yf.Ticker(ticker_symbol)
-    income = ticker.financials
-    cashflow = ticker.cashflow
-    balance = ticker.balance_sheet
-    if income.empty or cashflow.empty or balance.empty:
-        raise ValueError("financial statements unavailable")
-    return ticker, income, cashflow, balance
+    frames = (ticker.financials, ticker.cashflow, ticker.balance_sheet)
+    if not all(isinstance(frame, pd.DataFrame) for frame in frames):
+        raise TypeError("financial provider returned non-DataFrame")
+    return frames
+
+
+def fetch_yf_data(ticker_symbol: str):
+    """Return three statements, not a live provider object, with one retry owner."""
+    return require_data(run_provider(_yf_financial_provider, ticker_symbol, os.environ.get("PIA_YFINANCE_CACHE_DIR")))
+
+
+def _a_share_financial_provider(code):
+    import akshare as ak
+    frame = ak.stock_financial_analysis_indicator(symbol=code)
+    if not isinstance(frame, pd.DataFrame):
+        raise TypeError("financial provider returned non-DataFrame")
+    return frame
+
+
+class FinancialDataUnavailable(ValueError):
+    """A successful response lacks required financial evidence."""
 
 
 def extract_yf_metrics(
@@ -357,12 +374,10 @@ def extract_a_share_metrics(
     dict[str, Any]
     | tuple[dict[str, Any], dict[str, Any] | None, dict[str, int]]
 ):
-    import akshare as ak
-
     code = ticker_symbol.split(".")[0]
-    frame = ak.stock_financial_analysis_indicator(symbol=code)
+    frame = require_data(run_provider(_a_share_financial_provider, code))
     if frame.empty:
-        raise ValueError("A-share financial indicators unavailable")
+        raise FinancialDataUnavailable("A-share financial indicators unavailable")
     if "日期" in frame.columns:
         frame["日期"] = pd.to_datetime(frame["日期"], errors="coerce")
         cutoff = _parse_iso_date(as_of_date)
@@ -372,7 +387,7 @@ def extract_a_share_metrics(
             (frame["日期"].dt.month == 12) & (frame["日期"].dt.day == 31)
         ].sort_values("日期", ascending=False)
     if frame.empty:
-        raise ValueError("A-share financial indicators unavailable at or before as_of_date")
+        raise FinancialDataUnavailable("A-share financial indicators unavailable at or before as_of_date")
 
     def column(names: list[str]) -> pd.Series:
         for name in names:
@@ -493,7 +508,7 @@ def evaluate_ticker(
                 f"{ticker_symbol.split('.')[0]}"
             )
         else:
-            _, income, cashflow, balance = fetch_yf_data(ticker_symbol)
+            income, cashflow, balance = fetch_yf_data(ticker_symbol)
             income = _filter_statement_as_of(income, cutoff)
             cashflow = _filter_statement_as_of(cashflow, cutoff)
             balance = _filter_statement_as_of(balance, cutoff)
@@ -511,12 +526,11 @@ def evaluate_ticker(
             source_locator = (
                 f"https://finance.yahoo.com/quote/{quote(ticker_symbol, safe='')}/financials"
             )
+    except FinancialDataUnavailable as exc:
+        return {**base, "status": "insufficient_data", "reason": str(exc)}
     except Exception as exc:
-        return {
-            **base,
-            "status": "data_error",
-            "reason": str(exc),
-        }
+        outcome = exc.outcome if isinstance(exc, ProviderError) else error_outcome(exc)
+        return {**base, "status": "data_error", "reason": outcome["error"], "provider_outcome": outcome}
     result = evaluate_metrics(metrics, profile, metric_observations)
     return {
         **base,

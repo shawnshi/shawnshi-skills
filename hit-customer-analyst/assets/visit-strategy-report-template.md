@@ -19,12 +19,6 @@ reviewer: ""
 reviewed_at: ""
 reviewed_content_version: ""
 reviewed_body_sha256: ""
-reviewer_actor_id: ""
-reviewer_role: ""
-reviewer_authority_id: ""
-reviewer_identity_provider: ""
-review_action_event_id: ""
-strategy_variant: "scheduled_visit"
 target_contact_level: "{{target_contact_level}}"
 visit_objective: "{{visit_objective}}"
 minimum_next_step: "{{minimum_next_step}}"
@@ -32,12 +26,16 @@ minimum_next_step: "{{minimum_next_step}}"
 
 # {{客户中文规范名称}}交流策略与议题设计
 
+> 内部使用｜拜访对象/层级：{{strategy.target_contact_level}}｜拜访时间：{{时间/待确认}}｜ready_for_use：{{true/false}}
+
+三个业务字段只填写frontmatter。正文保留strategy渲染标记，finalize从同一字段填充；已手写正文不自动覆盖，仍须通过一致性校验。
+
 ## 1. 目标与最小推进动作
 
 | 项目 | 内容 | claim_id |
-|---|---|---|
-| 主要目标 | {{visit_objective}} | {{CLM-I/L/N-###}} |
-| 最小推进动作 | {{minimum_next_step}} | {{CLM-I/L/N-###}} |
+| --- | --- | --- |
+| 主要目标 | {{strategy.visit_objective}} | {{CLM-I/L/N-###}} |
+| 最小推进动作 | {{strategy.minimum_next_step}} | {{CLM-I/L/N-###}} |
 | 成功标准 | {{会议结束时可观察的结果}} | {{CLM-I/L/N-###}} |
 
 ## 2. 对象假设与验证
@@ -55,7 +53,7 @@ minimum_next_step: "{{minimum_next_step}}"
 ## 4. 机会资格与投入建议
 
 | 维度 | 当前判断 | claim_id | 待验证问题 |
-|---|---|---|---|
+| --- | --- | --- | --- |
 | Budget | {{预算来源/状态/口径/未知}} | {{CLM-I/N-###}} | {{问题}} |
 | Authority | {{业务/技术/预算/采购/验收角色}} | {{CLM-I/L/N-###}} | {{问题}} |
 | Need | {{任务、压力与可观察结果}} | {{CLM-I/L/N-###}} | {{问题}} |
@@ -69,7 +67,7 @@ minimum_next_step: "{{minimum_next_step}}"
 ## 5. 时间化议程与参会分工
 
 | 时间 | 环节/议题 | 客户对象 | 我方owner | 目标信号 |
-|---:|---|---|---|---|
+| ---: | --- | --- | --- | --- |
 | {{0—5分钟}} | {{开场}} | {{角色}} | {{姓名/稳定角色}} | {{内容}} |
 | {{5—25分钟}} | {{核心议题}} | {{角色}} | {{姓名/稳定角色}} | {{内容}} |
 | {{最后5分钟}} | {{收口}} | {{角色}} | {{姓名/稳定角色}} | {{最小推进动作}} |
@@ -98,24 +96,34 @@ minimum_next_step: "{{minimum_next_step}}"
 
 ## 9. 会后行动
 
+填写说明：主动作和备选的due_date只填有效YYYY-MM-DD；“前”、时区、日终等说明放入依赖/触发条件，保留原始截止含义。
+
 | action | owner | due_date | 依赖 | 完成标准 | CRM/PIMS候选 |
 |---|---|---|---|---|---|
 | {{唯一主动作}} | {{真人/稳定角色}} | {{YYYY-MM-DD}} | {{内容}} | {{内容}} | {{是/否}} |
+备选单列，不计入唯一主动作；无备选时删除下表：
+
+| 备选action | owner | due_date | 触发条件 | 完成标准 | CRM/PIMS候选 |
+|---|---|---|---|---|---|
 | {{最多一个备选}} | {{真人/稳定角色}} | {{YYYY-MM-DD}} | {{触发条件}} | {{内容}} | {{是/否}} |
 
-## 10. CRM/PIMS候选
+## 10. 依据导航与缺口
 
-| 候选类型 | 内容 | owner | due_date | 写回状态 |
-|---|---|---|---|---|
-| action | {{唯一主动作及完成标准}} | {{真人/稳定角色}} | {{YYYY-MM-DD}} | candidate_only |
-| verification | {{关键待验证事项}} | {{真人/稳定角色}} | {{YYYY-MM-DD}} | candidate_only |
-
-## 11. 依据导航与缺口
+本成果引用研究模块中的 claim_id；不在此重复定义主张或来源。
 
 | 序号 | claim_id | 来源成果 | 使用位置 |
 |---|---|---|---|
-| 1 | {{CLM-I-###}} | [机构研究成果](./{{safe_name}}机构研究报告.md) | {{target/assumption/agenda/qualification/roles/materials/questions/risk/action/crm}} |
+| 1 | {{CLM-I/L/N-###}} | {{相对链接}} | {{章节}} |
 
-| claim_ref | claim_type_ref | provenance_ref | evidence_state | impact_type | verification_mode | owner | due_date |
-|---|---|---|---|---|---|---|---|
-| {{CLM-I/L/N-###}} | {{F/F2/A/H/R}} | {{public/U/N}} | {{unknown/conflicted/stale/insufficient}} | {{decision/verification/risk/resource}} | {{internal_review/public_refresh/authorized_customer_contact}} | {{真人/稳定角色}} | {{YYYY-MM-DD}} |
+| 缺口 | 影响 | 现场验证/责任角色 |
+|---|---|---|
+| {{内容}} | {{内容}} | {{内容}} |
+
+## 11. 审核与可用状态
+
+- review_status：{{pending/approved/changes_requested}}
+- reviewer：{{姓名（稳定角色/账号）/待定}}
+- reviewed_at：{{带时区时间/空}}
+- ready_for_use：{{true/false}}
+- review_due_at：{{带时区时间}}
+- 未通过原因/解除条件：{{内容/无}}

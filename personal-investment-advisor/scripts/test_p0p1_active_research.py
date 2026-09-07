@@ -12,6 +12,7 @@ SCRIPT_DIR = Path(__file__).resolve().parent
 if str(SCRIPT_DIR) not in sys.path:
     sys.path.insert(0, str(SCRIPT_DIR))
 
+import alpha_validation  # noqa: E402
 import pia  # noqa: E402
 from active_alpha_scan import run_active_scan  # noqa: E402
 from active_portfolio_constructor import run_construction  # noqa: E402
@@ -100,7 +101,7 @@ def alpha_package():
         },
         "observations": observations,
         "trial_net_excess_returns": {
-            "selected": [value - 0.0011 for value in gross],
+            "selected": [value - 0.001 - 0.02 * 5 / 10_000 for value in gross],
             "weak": [0.001, -0.001, 0.0005, -0.0005] * 4,
             "inverse": [-value + 0.001 for value in gross],
         },
@@ -163,6 +164,7 @@ def construction_policy():
         "minimum_weights": {"AAA": 0.1, "BBB": 0.1},
         "maximum_weights": {"AAA": 0.9, "BBB": 0.9},
         "covariance": {
+            "annualized": True,
             "symbols": ["AAA", "BBB"],
             "matrix": [[0.04, 0.006], [0.006, 0.09]],
             "observation_count": 252,
@@ -198,6 +200,28 @@ class AlphaValidationTests(unittest.TestCase):
         self.assertIsNotNone(report["metrics"]["deflated_sharpe_probability"])
         self.assertIsNotNone(report["metrics"]["probability_backtest_overfitting"])
         self.assertEqual(report["metrics"]["cost_bps_per_unit_turnover"], 5.0)
+
+    def test_selected_trial_must_reconcile_every_observation(self):
+        for index in (0, 8, 15):
+            with self.subTest(index=index):
+                package = alpha_package()
+                package["trial_net_excess_returns"]["selected"][index] += 0.00009
+                report = evaluate_alpha_package(package, promotion_policy())
+                self.assertEqual(report["status"], "invalid_input")
+                self.assertFalse(report["formal_use_allowed"])
+                self.assertTrue(any("selected trial" in error for error in report["errors"]))
+
+    def test_reconciled_trial_uses_computed_sequence_with_roundoff_tolerance(self):
+        package = alpha_package()
+        expected = evaluate_alpha_package(package, promotion_policy())
+        package["trial_net_excess_returns"]["selected"][0] += 5e-13
+        with mock.patch("alpha_validation._probability_backtest_overfitting", wraps=alpha_validation._probability_backtest_overfitting) as pbo:
+            report = evaluate_alpha_package(package, promotion_policy())
+        self.assertEqual(report["status"], "complete")
+        self.assertEqual(report["metrics"], expected["metrics"])
+        self.assertEqual(pbo.call_args.args[0]["selected"], alpha_package()["trial_net_excess_returns"]["selected"])
+        package["trial_net_excess_returns"]["selected"][0] += 2e-12
+        self.assertEqual(evaluate_alpha_package(package, promotion_policy())["status"], "invalid_input")
 
     def test_threshold_failure_is_incomplete_and_fail_closed(self):
         policy = promotion_policy()
@@ -290,6 +314,60 @@ class ActivePipelineTests(unittest.TestCase):
         self.assertNotIn("target_weight", rendered)
         self.assertNotIn('"order"', rendered)
 
+    def test_covariance_requires_explicit_annualized_true(self):
+        for value in (None, False, "true", 1):
+            with self.subTest(value=value):
+                policy = construction_policy()
+                if value is None:
+                    del policy["covariance"]["annualized"]
+                else:
+                    policy["covariance"]["annualized"] = value
+                report = run_construction(self.scan, policy, scan_sha256=SHA_A, policy_sha256=SHA_B)
+                self.assertEqual(report["status"], "invalid_input")
+                self.assertFalse(report["formal_use_allowed"])
+                self.assertTrue(any("annualized" in error for error in report["errors"]))
+
+    def test_annualized_volatility_matches_supplied_matrix(self):
+        policy = construction_policy()
+        report = run_construction(self.scan, policy, scan_sha256=SHA_A, policy_sha256=SHA_B)
+        weights = [report["active_candidate"]["weights"][s] for s in policy["symbols"]]
+        variance = sum(weights[i] * policy["covariance"]["matrix"][i][j] * weights[j] for i in range(2) for j in range(2))
+        self.assertAlmostEqual(report["active_candidate"]["predicted_annualized_volatility"], variance ** 0.5, places=10)
+
+    def test_turnover_scaling_cannot_restore_out_of_bounds_weights(self):
+        for limit in (0.0, 0.05):
+            with self.subTest(limit=limit):
+                policy = construction_policy()
+                policy["minimum_weights"] = {"AAA": 0.7, "BBB": 0.1}
+                policy["maximum_weights"] = {"AAA": 0.9, "BBB": 0.3}
+                policy["max_one_way_turnover"] = limit
+                report = run_construction(self.scan, policy, scan_sha256=SHA_A, policy_sha256=SHA_B)
+                self.assertNotEqual(report["status"], "complete")
+                self.assertFalse(report["formal_use_allowed"])
+                self.assertNotIn("active_candidate", report)
+
+    def test_component_lower_above_upper_is_infeasible_even_when_sums_pass(self):
+        policy = construction_policy()
+        policy["max_trade_weight"] = 0.1
+        policy["minimum_weights"] = {"AAA": 0.7, "BBB": 0.0}
+        report = run_construction(self.scan, policy, scan_sha256=SHA_A, policy_sha256=SHA_B)
+        self.assertEqual(report["detail_status"], "trade_cap_bounds_infeasible")
+        self.assertFalse(report["formal_use_allowed"])
+        self.assertNotIn("active_candidate", report)
+
+    def test_final_constraints_hold_with_binding_turnover(self):
+        policy = construction_policy()
+        policy["max_one_way_turnover"] = 0.01
+        report = run_construction(self.scan, policy, scan_sha256=SHA_A, policy_sha256=SHA_B)
+        self.assertEqual(report["status"], "complete", report)
+        weights = report["active_candidate"]["weights"]
+        self.assertAlmostEqual(sum(weights.values()), 1.0)
+        for symbol, value in weights.items():
+            self.assertGreaterEqual(value, policy["minimum_weights"][symbol] - 1e-10)
+            self.assertLessEqual(value, policy["maximum_weights"][symbol] + 1e-10)
+            self.assertLessEqual(abs(value - policy["current_weights"][symbol]), policy["max_trade_weight"] + 1e-10)
+        self.assertLessEqual(sum(abs(weights[s] - policy["current_weights"][s]) for s in weights) / 2, 0.01 + 1e-10)
+
     def test_non_psd_covariance_fails_closed(self):
         policy = construction_policy()
         policy["covariance"]["matrix"] = [[0.04, 0.2], [0.2, 0.09]]
@@ -348,7 +426,11 @@ class ActivePipelineTests(unittest.TestCase):
                 args = parser.parse_args(argv[command])
                 pia._dispatch(args)
                 self.assertEqual(run.call_args.kwargs["script_name"], script)
-                self.assertEqual(run.call_args.kwargs["child_arguments"], child_arguments)
+                self.assertEqual(
+                    run.call_args.kwargs["child_arguments"],
+                    [value if value.startswith("--") else str(Path(value).resolve())
+                     for value in child_arguments],
+                )
 
     def test_actual_stable_cli_completes_four_stage_pipeline(self):
         with tempfile.TemporaryDirectory() as temporary_directory:

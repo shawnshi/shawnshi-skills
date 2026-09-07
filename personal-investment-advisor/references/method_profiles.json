@@ -1,6 +1,6 @@
 {
   "resource_kind": "investment_method_profiles",
-  "version": "3.0",
+  "version": "3.1",
   "_meta": {
     "threshold_status": "configurable_method_assumptions",
     "boundary": "Thresholds are screening parameters, not universal investment facts or trade rules. Evidence-only profiles define required checks and must not be interpreted as a financial-screen pass.",
@@ -12,8 +12,14 @@
     "quality_equity": {
       "profile_version": "3.0",
       "description": "Non-financial operating company quality screen; requires cash-flow and margin evidence.",
-      "applicable_markets": ["CN", "HK", "US"],
-      "applicable_asset_types": ["stock"],
+      "applicable_markets": [
+        "CN",
+        "HK",
+        "US"
+      ],
+      "applicable_asset_types": [
+        "stock"
+      ],
       "screening_mode": "descriptive_filter",
       "alpha_validation_status": "not_validated",
       "data_requirements": {
@@ -23,20 +29,38 @@
         "universe_as_of_required_for_backtest": true
       },
       "thresholds": {
-        "roe_avg": {"min": 0.08},
-        "fcf_positive_ratio": {"min": 0.75},
-        "interest_coverage_min": {"min": 2.0},
-        "gross_margin_avg": {"min": 0.15},
-        "ocf_to_net_income_avg": {"min": 0.7},
-        "net_margin_avg": {"min": 0.05},
-        "dilution": {"max": 0.20}
+        "roe_avg": {
+          "min": 0.08
+        },
+        "fcf_positive_ratio": {
+          "min": 0.75
+        },
+        "interest_coverage_min": {
+          "min": 2.0
+        },
+        "gross_margin_avg": {
+          "min": 0.15
+        },
+        "ocf_to_net_income_avg": {
+          "min": 0.7
+        },
+        "net_margin_avg": {
+          "min": 0.05
+        },
+        "dilution": {
+          "max": 0.2
+        }
       }
     },
     "a_share_basic": {
       "profile_version": "3.0",
       "description": "Limited A-share primary screen when only common profitability fields are available.",
-      "applicable_markets": ["CN"],
-      "applicable_asset_types": ["stock"],
+      "applicable_markets": [
+        "CN"
+      ],
+      "applicable_asset_types": [
+        "stock"
+      ],
       "screening_mode": "descriptive_filter",
       "alpha_validation_status": "not_validated",
       "data_requirements": {
@@ -46,18 +70,35 @@
         "universe_as_of_required_for_backtest": true
       },
       "thresholds": {
-        "roe_avg": {"min": 0.08},
-        "gross_margin_avg": {"min": 0.15},
-        "net_margin_avg": {"min": 0.05},
-        "dilution": {"max": 0.20}
+        "roe_avg": {
+          "min": 0.08
+        },
+        "gross_margin_avg": {
+          "min": 0.15
+        },
+        "net_margin_avg": {
+          "min": 0.05
+        },
+        "dilution": {
+          "max": 0.2
+        }
       }
     },
     "financial_institution": {
       "profile_version": "3.0",
       "description": "Evidence-only routing profile for banks and insurers; generic industrial-company ratios cannot establish financial quality.",
-      "applicable_markets": ["CN", "HK", "US"],
-      "applicable_asset_types": ["stock"],
-      "applicable_industry_types": ["bank", "insurance"],
+      "applicable_markets": [
+        "CN",
+        "HK",
+        "US"
+      ],
+      "applicable_asset_types": [
+        "stock"
+      ],
+      "applicable_industry_types": [
+        "bank",
+        "insurance"
+      ],
       "screening_mode": "evidence_only",
       "alpha_validation_status": "not_validated",
       "required_evidence_checks": [
@@ -71,10 +112,16 @@
       "thresholds": {}
     },
     "etf_research": {
-      "profile_version": "3.0",
+      "profile_version": "3.1",
       "description": "Evidence-only ETF research contract; financial-statement quality screening is not applicable.",
-      "applicable_markets": ["CN", "HK", "US"],
-      "applicable_asset_types": ["etf"],
+      "applicable_markets": [
+        "CN",
+        "HK",
+        "US"
+      ],
+      "applicable_asset_types": [
+        "etf"
+      ],
       "screening_mode": "evidence_only",
       "alpha_validation_status": "not_validated",
       "required_evidence_checks": [
@@ -88,7 +135,13 @@
         "holdings_concentration",
         "corporate_actions_and_adjustments"
       ],
-      "thresholds": {}
+      "thresholds": {},
+      "dashboard_contract": "etf_nav1.0",
+      "freshness_policy": {
+        "nav_max_age_calendar_days": 5,
+        "boundary": "Calendar-day NAV age at research cutoff; not a business-calendar guarantee. Valuation <= publication <= retrieval <= cutoff. Quote retains market-state age limits.",
+        "ancillary_coverage": "Evidence or explicit gap; missing ancillary data cannot support a complete claim for that metric."
+      }
     }
   }
 }

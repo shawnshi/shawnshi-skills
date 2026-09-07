@@ -2,6 +2,40 @@
 
 以下机构、资料、合同、数字和地区均为虚构，仅用于演示结构与计算，不得作为市场、医院、厂商、产品或监管事实引用。示例中的“内部数据”也是假造的测试输入。
 
+## Schema v2 的最薄机器片段（合成回归）
+
+下列 JSON 是 section 更新片段，不是完整 Blackboard，不能当作独立状态文件。测试 `tests/test_strategy_toolchain.py` 的 `investment_state()` 提供完整合成上下文、稳定 ID、基准/下行情景、公式与输出；`DocumentedInvestmentContractTests` 直接提取本节 JSON，经真实 `update` 与 `validate --strict` CLI 验证，无需手工重写片段。示例金额单位为 CNY，不与后文百万元案例混用，也不构成真实批准。
+
+将以下片段作为 `blackboard.py update --section quantitative_model --value -` 的标准输入（只用于已初始化且含对应情景/公式的测试状态）。`period` 保留期间标签，`period_index` 单独提供从零起算的年度折现指数：
+
+<!-- cash-flow-v2 -->
+```json
+{
+  "cash_flows": [
+    {"id":"CF-B-0","scenario_id":"SCN-BASE","period":"2026","period_index":0,"cost":100,"benefit":0,"net":-100,"unit":"CNY"},
+    {"id":"CF-B-1","scenario_id":"SCN-BASE","period":"2027","period_index":1,"cost":0,"benefit":150,"net":150,"unit":"CNY"},
+    {"id":"CF-D-0","scenario_id":"SCN-DOWN","period":"2026","period_index":0,"cost":100,"benefit":0,"net":-100,"unit":"CNY"},
+    {"id":"CF-D-1","scenario_id":"SCN-DOWN","period":"2027","period_index":1,"cost":0,"benefit":80,"net":80,"unit":"CNY"}
+  ]
+}
+```
+
+以下为多个 section 的更新片段；测试合并进同一完整合成状态后校验。`unknown` 仅在缺口说明中表达。此处请求是临床生产准入，必要安全证据未取得，因此准入门选择 `fail` 并明确理由，而不是自动把未知转成通过或延期。`blocked` 使严格就绪检查失败；现有机器门不会仅凭 gap 或 `fail` 自动推断成熟度，禁止删去阻塞标记来获取通过。
+
+<!-- unresolved-gate-v2 -->
+```json
+{
+  "metadata": {"maturity":"blocked"},
+  "evidence": {"gaps":["GP-SAF-001: unknown，临床风险尚未评估；责任人：临床安全负责人；取得适用专科离线评测及专业复核后重新判定生产准入。"]},
+  "portfolio": {"gate_results":[
+    {"candidate_id":"PRJ-001","gate":"临床生产准入","result":"fail","rationale":"GP-SAF-001 未决：缺少必要安全证据，当前生产准入条件未满足；不是已证实产品有害，也不是批准延期或通过。","owner":"临床安全负责人"},
+    {"candidate_id":"PRJ-002","gate":"维持现状","result":"conditional","rationale":"仅维持现有范围并监测风险，不批准新临床用途。","owner":"管理层"}
+  ]}
+}
+```
+
+后文表格中的 `unknown` 同样是业务证据状态，不可直接写入 `gate_results[].result`；承重未知必须按上述缺口、理由和成熟度合同编码。
+
 ## 示例一：医院投资组合与项目 ROI
 
 ### 决策上下文

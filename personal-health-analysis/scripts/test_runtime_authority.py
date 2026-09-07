@@ -1,5 +1,7 @@
 import importlib.util
 import json
+import shutil
+import tempfile
 import unittest
 from pathlib import Path
 from unittest import mock
@@ -41,6 +43,32 @@ class RuntimeAuthorityTests(unittest.TestCase):
         self.assertEqual(result["authority_version"], "11.6.2")
         self.assertIn("scripts/garmin_auto_sync.py", result["entrypoints"])
         self.assertRegex(result["task_binding"]["arguments_sha256"], r"^[0-9a-f]{64}$")
+
+    def test_profile_is_bound_and_tampering_an_isolated_copy_is_rejected(self):
+        source = MODULE_PATH.parent.parent
+        config = json.loads((source / "runtime-authority.json").read_text(encoding="utf-8"))
+        profile_path = "scripts/garmin_health_profile.py"
+        self.assertEqual(config["entrypoint_sha256"][profile_path], authority._sha256(source / profile_path))
+        with tempfile.TemporaryDirectory(prefix="profile-authority-synthetic-") as folder:
+            root = Path(folder)
+            for relative in ("SKILL.md", *config["entrypoint_sha256"]):
+                target = root / relative
+                target.parent.mkdir(parents=True, exist_ok=True)
+                shutil.copyfile(source / relative, target)
+            gate_path = root / "scripts/runtime_authority.py"
+            isolated_spec = importlib.util.spec_from_file_location("isolated_profile_authority", gate_path)
+            if isolated_spec is None or isolated_spec.loader is None:
+                raise RuntimeError("isolated authority module spec unavailable")
+            isolated = importlib.util.module_from_spec(isolated_spec)
+            isolated_spec.loader.exec_module(isolated)
+            with mock.patch.object(isolated, "_locator", return_value=root / "SKILL.md"):
+                self.assertTrue(isolated.verify(config)["ok"])
+                with (root / profile_path).open("ab") as handle:
+                    handle.write(b"\n# synthetic tamper\n")
+                result = isolated.verify(config)
+            self.assertFalse(result["ok"])
+            self.assertEqual(result["error_code"], "ENTRYPOINT_HASH_MISMATCH")
+            self.assertEqual(result["entrypoint"], profile_path)
 
     def test_hash_drift_fails_closed(self):
         skill = MODULE_PATH.parent.parent / "SKILL.md"

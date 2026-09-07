@@ -8,11 +8,10 @@ from typing import Any
 
 from active_research_contract import (
     base_report,
-    canonical_sha256,
     fail_report,
     finite_number,
     positive_integer,
-    read_json,
+    read_json_snapshot,
 )
 
 
@@ -146,13 +145,13 @@ def main() -> int:
     parser.add_argument("--policy-file", required=True)
     args = parser.parse_args()
     try:
-        construction = read_json(args.construction_report, "construction_report")
-        policy = read_json(args.policy_file, "proposal_policy")
+        construction, construction_sha256 = read_json_snapshot(args.construction_report, "construction_report")
+        policy, policy_sha256 = read_json_snapshot(args.policy_file, "proposal_policy")
         report = run_proposal(
             construction,
             policy,
-            construction_sha256=canonical_sha256(args.construction_report),
-            policy_sha256=canonical_sha256(args.policy_file),
+            construction_sha256=construction_sha256,
+            policy_sha256=policy_sha256,
         )
     except (OSError, ValueError, json.JSONDecodeError) as exc:
         report = fail_report(SCHEMA_VERSION, "input_read_failed", [str(exc)])

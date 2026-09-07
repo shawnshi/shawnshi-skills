@@ -5,6 +5,7 @@ import os
 import re
 from datetime import datetime, timezone
 from pathlib import Path
+from uuid import uuid4
 
 import tiktoken
 
@@ -34,10 +35,13 @@ def _metadata(text):
     return values
 
 
-def build_receipt(skill_path, root_task_id, actor_id, context_epoch):
+def build_receipt(skill_path, root_task_id, actor_id, context_epoch, event_id=None, candidate_event_id=None):
     identities = (root_task_id, actor_id, context_epoch)
     if any(not isinstance(value, str) or not value.strip() for value in identities):
         raise ValueError("root_task_id, actor_id and context_epoch are required")
+    for value in (event_id, candidate_event_id):
+        if value is not None and (not isinstance(value, str) or not value.strip()):
+            raise ValueError("event_id and candidate_event_id must be non-empty strings when supplied")
     path = Path(skill_path).resolve()
     if not path.is_file() or path.name != "SKILL.md":
         raise FileNotFoundError(path)
@@ -48,7 +52,8 @@ def build_receipt(skill_path, root_task_id, actor_id, context_epoch):
     normalized_path = os.path.normcase(str(path)).replace("\\", "/")
     receipt = {
         "schema_version": 2,
-        "event_id": f"skill-load-{digest[:12]}-{context_epoch}",
+        "event_id": event_id if event_id is not None else f"skill-load-{uuid4()}",
+        "event_identity": "occurrence",
         "timestamp": datetime.now(timezone.utc).isoformat().replace("+00:00", "Z"),
         "root_task_id": root_task_id,
         "actor_id": actor_id,
@@ -63,16 +68,18 @@ def build_receipt(skill_path, root_task_id, actor_id, context_epoch):
         "skill_version": meta.get("version"),
         "skill_sha256": digest,
     }
+    if candidate_event_id is not None:
+        receipt["candidate_event_id"] = candidate_event_id
+    receipt["token_measurement_basis"] = "skill_text"
     tokenizer_name = "cl100k_base"
     try:
         tokenizer = tiktoken.get_encoding(tokenizer_name)
         receipt["skill_tokens"] = len(tokenizer.encode(text))
         receipt["tokenizer"] = tokenizer_name
-    except Exception:
-        # A receipt remains useful for identity and deduplication when the
-        # optional tokenizer cache is unavailable. Missing fields are explicit
-        # coverage debt; character counts must not impersonate model tokens.
-        pass
+    except (OSError, ValueError, RuntimeError) as exc:
+        # Preserve a measurement error, not a fabricated zero-token observation.
+        receipt["token_measurement_status"] = "error"
+        receipt["token_measurement_error_type"] = type(exc).__name__
     return receipt
 
 
@@ -95,6 +102,11 @@ def append_receipt(output_path, receipt):
     try:
         os.close(lock_fd)
         key = receipt_key(receipt)
+        if receipt.get("event_identity") == "occurrence" and (
+            not isinstance(receipt.get("event_id"), str) or not receipt["event_id"].strip()
+        ):
+            raise ValueError("occurrence receipts require event_id")
+        replay = False
         if output.exists():
             with output.open("r", encoding="utf-8") as handle:
                 for line_number, line in enumerate(handle, start=1):
@@ -106,8 +118,26 @@ def append_receipt(output_path, receipt):
                         raise ValueError(
                             f"invalid receipt JSON at {output}:{line_number}"
                         ) from exc
-                    if receipt_key(existing) == key:
-                        return False
+                    existing_key = receipt_key(existing)
+                    if receipt.get("event_identity") == "occurrence":
+                        if (existing.get("event_identity") == "occurrence"
+                                and existing.get("event_id") == receipt["event_id"]
+                                and existing_key[:2] == key[:2]):
+                            fields = RECEIPT_KEY_FIELDS + (
+                                "skill_path_sha256", "skill_tokens", "tokenizer",
+                                "candidate_event_id", "token_measurement_basis", "token_scope_id",
+                                "status", "outcome", "token_measurement_status", "token_measurement_error_type",
+                            )
+                            existing_payload = {field: existing[field] for field in fields if field in existing}
+                            receipt_payload = {field: receipt[field] for field in fields if field in receipt}
+                            if json.dumps(existing_payload, sort_keys=True) != json.dumps(receipt_payload, sort_keys=True):
+                                raise ValueError("event_id conflicts with an existing occurrence receipt")
+                            replay = True
+                    elif existing.get("event_identity") != "occurrence" and existing_key == key:
+                        # Preserve append compatibility for caller-supplied legacy receipts.
+                        replay = True
+        if replay:
+            return False
 
         line = json.dumps(receipt, ensure_ascii=False, sort_keys=True) + "\n"
         with output.open("a", encoding="utf-8", newline="\n") as handle:
@@ -126,9 +156,12 @@ def main():
     parser.add_argument("--actor-id", required=True)
     parser.add_argument("--context-epoch", required=True)
     parser.add_argument("--output")
+    parser.add_argument("--event-id", help="Stable ID for one real load; reuse only to replay its receipt. Omission creates a new occurrence.")
+    parser.add_argument("--candidate-event-id", help="Optional ID of the exact observed candidate occurrence.")
     args = parser.parse_args()
     receipt = build_receipt(
-        args.skill_path, args.root_task_id, args.actor_id, args.context_epoch
+        args.skill_path, args.root_task_id, args.actor_id, args.context_epoch,
+        event_id=args.event_id, candidate_event_id=args.candidate_event_id,
     )
     if args.output:
         append_receipt(args.output, receipt)

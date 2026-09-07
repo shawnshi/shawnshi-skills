@@ -8,11 +8,10 @@ import json
 import math
 import os
 import re
-from datetime import date, datetime, time, timezone
-from typing import Any, cast
+from datetime import date, datetime, timedelta, timezone
+from typing import Any
 
 import requests
-
 
 SCHEMA_VERSION = "pia_sec_edgar_fundamentals_v1"
 TICKER_MAP_URL = "https://www.sec.gov/files/company_tickers.json"
@@ -61,7 +60,8 @@ PREFERRED_UNITS = {
 }
 
 
-def parse_as_of(value: str) -> datetime:
+def parse_as_of(value: str) -> date | datetime:
+    """Preserve date-only cutoffs; datetimes require conservative filed-date filtering."""
     rendered = value.strip()
     try:
         if "T" in rendered:
@@ -72,7 +72,27 @@ def parse_as_of(value: str) -> datetime:
         parsed_date = date.fromisoformat(rendered)
     except ValueError as exc:
         raise ValueError("--as-of must be an ISO date or timezone-aware datetime") from exc
-    return datetime.combine(parsed_date, time.max, tzinfo=timezone.utc)
+    return parsed_date
+
+
+def _filed_cutoff(as_of: date | datetime) -> date:
+    if isinstance(as_of, datetime):
+        if as_of.tzinfo is None or as_of.utcoffset() is None:
+            raise ValueError("as_of datetime must include a timezone")
+        # companyfacts has no accepted timestamp: never assume same-day availability.
+        return as_of.astimezone(timezone.utc).date() - timedelta(days=1)
+    return as_of
+
+
+def _validate_as_of(as_of: date | datetime, now: datetime) -> None:
+    if isinstance(as_of, datetime):
+        if as_of.tzinfo is None or as_of.utcoffset() is None:
+            raise ValueError("as_of datetime must include a timezone")
+        future = as_of > now
+    else:
+        future = as_of > now.date()
+    if future:
+        raise ValueError("--as-of cannot be in the future")
 
 
 def validate_user_agent(value: str | None) -> str:
@@ -121,9 +141,9 @@ def _latest_annual_fact(
     us_gaap: dict[str, Any],
     candidates: tuple[str, ...],
     preferred_units: tuple[str, ...],
-    as_of: datetime,
+    as_of: date | datetime,
 ) -> dict[str, Any] | None:
-    cutoff = as_of.date()
+    cutoff = _filed_cutoff(as_of)
     for tag in candidates:
         concept = us_gaap.get(tag)
         if not isinstance(concept, dict):
@@ -153,9 +173,9 @@ def _latest_instant_fact(
     us_gaap: dict[str, Any],
     candidates: tuple[str, ...],
     preferred_units: tuple[str, ...],
-    as_of: datetime,
+    as_of: date | datetime,
 ) -> dict[str, Any] | None:
-    cutoff = as_of.date()
+    cutoff = _filed_cutoff(as_of)
     for tag in candidates:
         concept = us_gaap.get(tag)
         if not isinstance(concept, dict):
@@ -182,11 +202,12 @@ def extract_company_snapshot(
     companyfacts: dict[str, Any],
     *,
     symbol: str,
-    as_of: datetime,
+    as_of: date | datetime,
     source_locator: str,
     content_sha256: str,
     retrieved_at: datetime,
 ) -> dict[str, Any]:
+    _validate_as_of(as_of, datetime.now(timezone.utc))
     facts_root = companyfacts.get("facts")
     us_gaap = facts_root.get("us-gaap", {}) if isinstance(facts_root, dict) else {}
     selected: dict[str, Any] = {}
@@ -212,24 +233,59 @@ def extract_company_snapshot(
         or not math.isfinite(float(fact["value"]))
     )
     derived: dict[str, float] = {}
-    if not missing:
-        net_income = float(cast(dict[str, Any], selected["net_income"])["value"])
-        equity = float(cast(dict[str, Any], selected["stockholders_equity"])["value"])
-        cash_flow = float(cast(dict[str, Any], selected["operating_cash_flow"])["value"])
-        shares = float(cast(dict[str, Any], selected["diluted_shares"])["value"])
-        if equity > 0:
-            derived["roe"] = net_income / equity
-        if shares > 0:
-            derived["operating_cash_flow_per_diluted_share"] = cash_flow / shares
+    derived_units: dict[str, str] = {}
+    unavailable: dict[str, str] = {}
+    for metric, numerator_name, denominator_name in (
+        ("net_income_to_period_end_equity", "net_income", "stockholders_equity"),
+        ("operating_cash_flow_per_diluted_share", "operating_cash_flow", "diluted_shares"),
+    ):
+        if numerator_name in missing or denominator_name in missing:
+            unavailable[metric] = "required_facts_missing_or_nonfinite"
+            continue
+        numerator = selected[numerator_name]
+        denominator = selected[denominator_name]
+        currency = numerator["unit"]
+        equity_ratio = denominator_name == "stockholders_equity"
+        if not re.fullmatch(r"[A-Z]{3}", currency) or denominator["unit"] != (currency if equity_ratio else "shares"):
+            unavailable[metric] = "incompatible_units_or_currency"
+            continue
+        aligned = numerator["period_end"] == denominator["period_end"]
+        if equity_ratio:
+            aligned = aligned and denominator["form"] in {"10-K", "10-K/A"}
+        else:
+            aligned = aligned and numerator["period_start"] == denominator["period_start"]
+        if not aligned:
+            unavailable[metric] = "incompatible_accounting_periods"
+            continue
+        if denominator["value"] <= 0:
+            unavailable[metric] = "denominator_must_be_positive"
+            continue
+        value = float(numerator["value"]) / float(denominator["value"])
+        if not math.isfinite(value):
+            unavailable[metric] = "derived_value_nonfinite"
+            continue
+        derived[metric] = value
+        derived_units[metric] = "ratio" if equity_ratio else f"{currency}/shares"
+    complete = not missing and not unavailable
     return {
         "symbol": symbol,
         "cik": str(companyfacts.get("cik") or "").zfill(10),
         "entity_name": companyfacts.get("entityName"),
-        "status": "complete" if not missing else "insufficient_evidence",
-        "detail_status": "point_in_time_annual_snapshot_complete" if not missing else "required_annual_facts_missing",
+        "status": "complete" if complete else "insufficient_evidence",
+        "detail_status": (
+            "point_in_time_annual_snapshot_complete" if complete
+            else "required_annual_facts_missing" if missing
+            else "derived_metrics_unavailable"
+        ),
         "as_of": as_of.isoformat(),
+        "availability_granularity": (
+            "filed_date_before_cutoff_day" if isinstance(as_of, datetime) else "filed_date"
+        ),
+        "cutoff_day_complete": False,
         "facts": selected,
         "derived": derived,
+        "derived_units": derived_units,
+        "unavailable_derivations": unavailable,
         "missing_facts": missing,
         "evidence": {
             "source_provider": "SEC EDGAR companyfacts",
@@ -238,7 +294,9 @@ def extract_company_snapshot(
             "content_sha256": content_sha256,
         },
         "limitations": [
-            "The snapshot uses facts filed on or before as_of and does not use later amendments.",
+            "Date-only cutoffs include available filings through that filed date; today's retrieval is not an end-of-day completeness claim.",
+            "Datetime cutoffs exclude all filings on the cutoff UTC date because companyfacts provides no accepted timestamps.",
+            "The equity ratio uses aligned annual period-end equity, not average-equity ROE; raw facts remain available when derivations cannot be aligned.",
             "SEC companyfacts does not establish historical index membership or delisting returns.",
             "No price is fetched; P/E and cash-flow yield require a separately time-bound price source.",
         ],
@@ -257,11 +315,12 @@ def fetch_json(session: requests.Session, url: str, *, user_agent: str, timeout:
 def build_report(
     symbols: list[str],
     *,
-    as_of: datetime,
+    as_of: date | datetime,
     user_agent: str,
     timeout: float = 30.0,
     session: requests.Session | None = None,
 ) -> dict[str, Any]:
+    _validate_as_of(as_of, datetime.now(timezone.utc))
     normalized = [symbol.strip().upper().replace(".", "-") for symbol in symbols]
     if not normalized or any(not symbol for symbol in normalized) or len(normalized) != len(set(normalized)):
         raise ValueError("symbols must be non-empty and unique")
@@ -334,8 +393,7 @@ def main() -> int:
     try:
         user_agent = validate_user_agent(args.user_agent or os.environ.get("PIA_SEC_USER_AGENT"))
         as_of = parse_as_of(args.as_of)
-        if as_of > datetime.now(timezone.utc):
-            raise ValueError("--as-of cannot be in the future")
+        _validate_as_of(as_of, datetime.now(timezone.utc))
         if not 1 <= args.timeout <= 120:
             raise ValueError("--timeout must be between 1 and 120 seconds")
         report = build_report(

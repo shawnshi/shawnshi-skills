@@ -1,56 +1,17 @@
 from __future__ import annotations
 
-import hashlib
 import json
 import tempfile
 import unittest
 from datetime import datetime, timedelta, timezone
 from pathlib import Path
 
-from tests.common import CONFIG, SKILL_ROOT, load_json, research_plan as rp, runtime_tx as tx, test_intake_gate
+from tests.common import CONFIG, SKILL_ROOT, load_json, research_plan as rp
 
 
 NOW = datetime(2026, 8, 26, 4, 0, 0, tzinfo=timezone.utc)
 CONTEXT_ID = "dcx-20260826-Abcd1234"
 RUN_ID = "dcr-20260826T040000-Ab12"
-
-
-def bound_candidate(root: Path, plan: dict) -> tuple[Path, Path]:
-    source = root / "source"
-    candidate = root / "candidate"
-    (source / "runtime").mkdir(parents=True)
-    (candidate / "runtime").mkdir(parents=True)
-    common = {
-        "schema": "discovery-call-runtime/v1",
-        "context_id": plan["context_id"],
-        "customer_id": plan["customer_id"],
-        "business_mode": plan["business_mode"],
-        "authorization": {},
-        "runtime_files": {},
-        "artifacts": {},
-        "intake_preflight": dict(plan["intake_preflight"]),
-    }
-    source_manifest = {**common, "latest_run_id": "dcr-20260826T030000-Src1", "transaction_sequence": 1}
-    candidate_manifest = {**common, "latest_run_id": plan["run_id"], "transaction_sequence": 2}
-    tx.atomic_write_json(source / "runtime" / "manifest.json", source_manifest)
-    tx.atomic_write_json(candidate / "runtime" / "manifest.json", candidate_manifest)
-    source_digest = hashlib.sha256((source / "runtime" / "manifest.json").read_bytes()).hexdigest()
-    candidate_digest = hashlib.sha256((candidate / "runtime" / "manifest.json").read_bytes()).hexdigest()
-    tx.atomic_write_json(
-        candidate / "runtime" / "candidate-receipt.json",
-        {
-            "schema": "discovery-call-candidate-receipt/v2",
-            "context_id": plan["context_id"],
-            "run_id": plan["run_id"],
-            "source_manifest_revision": 1,
-            "source_manifest_sha256": source_digest,
-            "source_workspace": str(source),
-            "candidate_workspace": str(candidate),
-            "input_payload_sha256": hashlib.sha256(b"profile-planning-test-input").hexdigest(),
-            "final_manifest_sha256": candidate_digest,
-        },
-    )
-    return source, candidate
 
 
 def fields_for(mode: str) -> dict[str, str]:
@@ -67,13 +28,13 @@ def fields_for(mode: str) -> dict[str, str]:
             }
         )
     if mode == "strategic_account":
-        common["strategy_variant"] = "scheduled_visit"
         common["strategic_question"] = "未来三年怎样形成院级数字化治理能力"
     if mode == "letter":
         common.update(
             {
                 "letter_scenario": "首次拜访邀约",
-                "recipient_role": "王院长｜分管信息化副院长｜身份已确认",
+                "recipient_role": "王院长｜分管信息化副院长",
+                "recipient_identity_status": "confirmed",
                 "letter_purpose": "邀请参加数字化专题交流",
                 "expected_action": "确认可交流时间",
                 "signer": "战略咨询部",
@@ -93,7 +54,6 @@ def build(mode: str, **overrides):
         "organization_scope": "示例医院主院区",
         "business_fields": fields_for(mode),
         "generated_at": NOW,
-        "intake_preflight": test_intake_gate(mode, at=NOW),
     }
     arguments.update(overrides)
     return rp.build_search_plan(**arguments)
@@ -123,8 +83,6 @@ class BusinessProfileTests(unittest.TestCase):
     def test_all_machine_schema_files_are_json(self):
         expected = {
             "business-modes.schema.json",
-            "intake-preflight.schema.json",
-            "request-binding-receipt.schema.json",
             "search-plan.schema.json",
             "source-cache.schema.json",
             "evidence-manifest.schema.json",
@@ -140,17 +98,6 @@ class BusinessProfileTests(unittest.TestCase):
         template = (SKILL_ROOT / "assets" / "briefing-template.md").read_text(encoding="utf-8")
         for interval in ("0—5分钟", "5—20分钟", "20—25分钟", "25—30分钟"):
             self.assertIn(interval, template)
-
-    def test_role_level_visit_does_not_force_named_leader_research(self):
-        config = rp.load_config(CONFIG)
-        for mode in ("standard_visit", "strategic_account"):
-            with self.subTest(mode=mode):
-                profile = config["profiles"][mode]
-                self.assertNotIn("leader", profile["modules"])
-                self.assertIn("leader", profile["optional_modules"])
-                plan = build(mode)
-                self.assertTrue(plan["planning_ready"], plan["gate_results"])
-                self.assertNotIn("leader", plan["selected_modules"])
 
     def test_each_mode_builds_planning_ready_compatible_plan(self):
         for mode in rp.BUSINESS_MODES:
@@ -170,7 +117,7 @@ class BusinessProfileTests(unittest.TestCase):
             {"tenant_customer_project_ids_stable", "project_authorized", "authorization_current"}
             <= set(blocked["gate_results"]["failed"])
         )
-        locally_asserted = build(
+        ready = build(
             "standard_visit",
             selected_modules=modules,
             tenant_id="tenant.demo",
@@ -178,9 +125,7 @@ class BusinessProfileTests(unittest.TestCase):
             allowed_project_ids=["project.demo"],
             authorization_expires_at="2026-09-30T12:00:00+08:00",
         )
-        self.assertFalse(locally_asserted["planning_ready"])
-        self.assertTrue(locally_asserted["internal_queries_suppressed"])
-        self.assertIn("capability_receipt_verified", locally_asserted["gate_results"]["failed"])
+        self.assertTrue(ready["planning_ready"], ready["gate_results"])
 
 
 class ResearchPlanTests(unittest.TestCase):
@@ -222,7 +167,6 @@ class ResearchPlanTests(unittest.TestCase):
             organization_scope="示例医院主院区",
             business_fields=fields_for("briefing"),
             generated_at=NOW.replace(year=2028),
-            intake_preflight=test_intake_gate("briefing", at=NOW.replace(year=2028)),
         )
         future_query = next(query for query in future["queries"] if query["purpose"] == "current-task")
         self.assertIn("2028", future_query["query"])
@@ -237,94 +181,66 @@ class ResearchPlanTests(unittest.TestCase):
                 clock=lambda: NOW,
             )
             entry = cache.put(
-                "https://redirect.example/source",
+                "HTTPS://Example.COM/a/?b=2&a=1#fragment",
                 "official content",
                 ttl_class="institution",
                 metadata={"title": "official"},
-                final_url="HTTPS://Example.COM:443/a/?b=2&a=1#fragment",
-                retrieved_at=NOW,
+                fetched_at=NOW,
             )
-            hit = cache.lookup("https://redirect.example/source", at=NOW + timedelta(days=89))
+            hit = cache.lookup("https://example.com/a?a=1&b=2", at=NOW + timedelta(days=89))
             self.assertEqual(hit["content_sha256"], entry["content_sha256"])
-            self.assertEqual(entry["final_url"], "HTTPS://Example.COM:443/a/?b=2&a=1#fragment")
-            self.assertEqual(entry["canonical_locator"], "https://redirect.example/source")
-            self.assertEqual(entry["retrieved_at"], "2026-08-26T04:00:00Z")
-            self.assertEqual(entry["capture_method"], rp.CAPTURE_METHOD_TEXT)
-            self.assertEqual(entry["length"], len("official content".encode("utf-8")))
-            self.assertEqual(entry["source_fingerprint"], "sha256:" + entry["content_sha256"])
             self.assertIsNone(
-                cache.lookup("https://redirect.example/source", at=NOW + timedelta(days=90))
+                cache.lookup("https://example.com/a?a=1&b=2", at=NOW + timedelta(days=90))
             )
 
-    def test_capture_source_snapshot_is_content_derived_and_canonical(self):
-        decomposed = "Cafe\u0301\r\n第二行"
-        normalized = "Caf\u00e9\n第二行"
-        first = rp.capture_source_snapshot(
-            "https://redirect.example/source",
-            decomposed,
-            final_url="HTTPS://Example.COM:443/a//?b=2&a=1#fragment",
-            retrieved_at=NOW,
-        )
-        second = rp.capture_source_snapshot(
-            "https://redirect.example/source",
-            normalized,
-            final_url="https://example.com/a?a=1&b=2",
-            retrieved_at=NOW,
-        )
-        expected = hashlib.sha256(normalized.encode("utf-8")).hexdigest()
-        self.assertEqual(first["canonical_locator"], "https://redirect.example/source")
-        self.assertEqual(first["content_sha256"], expected)
-        self.assertEqual(first["source_fingerprint"], "sha256:" + expected)
-        self.assertEqual(first["content_sha256"], second["content_sha256"])
-        self.assertEqual(first["capture_method"], rp.CAPTURE_METHOD_TEXT)
-        self.assertEqual(first["length"], len(normalized.encode("utf-8")))
-
-        raw = rp.capture_source_snapshot(
-            "https://example.com/raw",
-            b"a\r\nb",
-            retrieved_at=NOW,
-        )
-        self.assertEqual(raw["capture_method"], rp.CAPTURE_METHOD_RAW_BYTES)
-        self.assertEqual(raw["content_sha256"], hashlib.sha256(b"a\r\nb").hexdigest())
-        self.assertNotEqual(raw["content_sha256"], hashlib.sha256(b"a\nb").hexdigest())
-
-    def test_source_cache_treats_tampered_fingerprint_as_cache_miss(self):
+    def test_R03_invalid_url_port_is_plan_error_without_cache_mutation(self):
         with tempfile.TemporaryDirectory() as temporary:
-            path = Path(temporary) / "source-cache.json"
-            cache = rp.SourceCache(
-                path,
-                {"institution": 90, "leader": 14, "procurement": 7, "internal": 30},
-                clock=lambda: NOW,
-            )
-            entry = cache.put(
-                "https://example.com/a",
-                "official content",
-                ttl_class="institution",
-                retrieved_at=NOW,
-            )
-            payload = load_json(path)
-            payload["entries"][entry["cache_key"]]["source_fingerprint"] = (
-                "sha256:" + hashlib.sha256(entry["canonical_locator"].encode("utf-8")).hexdigest()
-            )
-            path.write_text(json.dumps(payload, ensure_ascii=False), encoding="utf-8")
-            self.assertIsNone(cache.lookup("https://example.com/a", at=NOW))
+            path = Path(temporary) / 'source-cache.json'
+            cache = rp.SourceCache(path, {'institution': 90}, clock=lambda: NOW)
+            cache.put('https://example.test/a', 'valid', ttl_class='institution')
+            before = path.read_bytes()
+            for locator in ('https://example.test:bad/a', 'https://example.test:65536/a', 'https://[broken/a'):
+                with self.subTest(locator=locator):
+                    with self.assertRaises(rp.PlanError) as caught:
+                        rp.canonical_locator(locator)
+                    self.assertIsInstance(caught.exception.__cause__, ValueError)
+                    with self.assertRaises(rp.PlanError):
+                        cache.lookup(locator)
+                    with self.assertRaises(rp.PlanError):
+                        cache.put(locator, 'invalid', ttl_class='institution')
+                    self.assertEqual(path.read_bytes(), before)
 
-    def test_source_cache_schema_requires_content_snapshot_fields(self):
-        schema = load_json(SKILL_ROOT / "schemas" / "source-cache.schema.json")
-        entry = schema["$defs"]["entry"]
-        self.assertTrue(
-            {"final_url", "retrieved_at", "capture_method", "length", "content_sha256"}
-            <= set(entry["required"])
-        )
-        self.assertEqual(entry["properties"]["source_fingerprint"]["pattern"], "^sha256:[0-9a-f]{64}$")
+    def test_R03_malformed_cache_root_and_entries_are_not_misses(self):
+        with tempfile.TemporaryDirectory() as temporary:
+            path = Path(temporary) / 'source-cache.json'
+            cache = rp.SourceCache(path, {'institution': 90}, clock=lambda: NOW)
+            valid = {'schema': 'discovery-call-source-cache/v1', 'entries': {}}
+            invalid = [[], None, 1, {}, {**valid, 'entries': []}, {**valid, 'entries': None}]
+            invalid.extend({**valid, 'entries': {'bad': entry}} for entry in (
+                [], None, False, '', 1, {}, {'expires_at': None}, {'expires_at': 1},
+                {'expires_at': 'broken'}, {'expires_at': '2026-08-26T00:00:00'},
+            ))
+            for payload in invalid:
+                with self.subTest(payload=payload):
+                    path.write_text(json.dumps(payload), encoding='utf-8')
+                    before = path.read_bytes()
+                    with self.assertRaises(rp.PlanError):
+                        cache.load()
+                    with self.assertRaises(rp.PlanError):
+                        cache.lookup('https://example.test/missing')
+                    with self.assertRaises(rp.PlanError):
+                        cache.put('https://example.test/a', 'new', ttl_class='institution')
+                    self.assertEqual(path.read_bytes(), before)
+            path.unlink()
+            self.assertIsNone(cache.lookup('https://example.test/missing'))
+            self.assertFalse(path.exists())
 
     def test_machine_files_metrics_and_markdown_independence(self):
         with tempfile.TemporaryDirectory() as temporary:
-            root = Path(temporary)
-            plan = build("briefing")
-            source, workspace = bound_candidate(root, plan)
+            workspace = Path(temporary)
             (workspace / "临时报告.md").write_text("temporary", encoding="utf-8")
-            paths = rp.RuntimeWorkspace(workspace, source_workspace=source).materialize(plan, generated_at=NOW)
+            plan = build("briefing")
+            paths = rp.RuntimeWorkspace(workspace).materialize(plan, generated_at=NOW)
             self.assertEqual(set(paths), {"search_plan", "source_cache", "evidence_manifest", "run_metrics"})
             for path in paths.values():
                 self.assertTrue(path.is_file())
@@ -351,73 +267,13 @@ class ResearchPlanTests(unittest.TestCase):
 
     def test_evidence_manifest_update_preserves_offline_connector_audit(self):
         with tempfile.TemporaryDirectory() as temporary:
-            root = Path(temporary)
+            workspace = Path(temporary)
             plan = build("briefing")
-            source, workspace = bound_candidate(root, plan)
-            paths = rp.RuntimeWorkspace(workspace, source_workspace=source).materialize(plan, generated_at=NOW)
-            source_record = {
-                "source_id": "SRC-I-001",
-                **rp.capture_source_snapshot(
-                    "https://example.test",
-                    "example source",
-                    retrieved_at=NOW,
-                ),
-            }
-            source_record["cache_key"] = hashlib.sha256(
-                source_record["canonical_locator"].encode("utf-8")
-            ).hexdigest()
-            source_record.update(
-                {
-                    "source_title": "Example source",
-                    "publisher_or_provider": "Example publisher",
-                    "publication_or_update_date": "未标注",
-                    "access_date": NOW.date().isoformat(),
-                    "published_at": None,
-                    "source_updated_at": None,
-                    "internal_recorded_at": None,
-                    "source_level": "A",
-                    "source_group": "example-group",
-                    "permission": "public",
-                    "applicable_scope": "示例客户",
-                    "notes": "none",
-                    "upstream_id": "record:example-source",
-                    "external_use": "true",
-                    "tenant_id": None,
-                    "project_id": None,
-                    # This unit exercises deterministic record assembly; the
-                    # candidate validator separately verifies the host signature.
-                    "capture_receipt": {
-                        "schema": "discovery-call-source-capture-receipt/v3"
-                    },
-                }
-            )
+            paths = rp.RuntimeWorkspace(workspace).materialize(plan, generated_at=NOW)
             updated = rp.update_evidence_manifest(
                 paths["evidence_manifest"],
-                sources={"SRC-I-001": source_record},
-                claims={
-                    "CLM-I-001": {
-                        "claim_id": "CLM-I-001",
-                        "information_type": "institution",
-                        "ttl_class": "institution",
-                        "evidence_anchor_at": NOW.isoformat(),
-                        "date_basis": "retrieved_at",
-                        "verified_at": NOW.isoformat(),
-                        "ttl_days": 90,
-                        "expires_at": (NOW + timedelta(days=90)).isoformat(),
-                        "claim_type": "F",
-                        "provenance": "public",
-                        "verification_status": "verified_single",
-                        "claim_text": "示例来源已确认",
-                        "time_scope": "当前口径",
-                        "supporting_source_refs": "SRC-I-001",
-                        "supporting_source_ids": ["SRC-I-001"],
-                        "supporting_source_receipt_sha256s": {"SRC-I-001": "a" * 64},
-                        "counter_source_refs": "无",
-                        "counter_source_ids": [],
-                        "confidence": "高",
-                        "downstream_impact": "用于测试",
-                    }
-                },
+                sources={"SRC-I-001": {"locator": "https://example.test"}},
+                claims={"CLM-I-001": {"source_ids": ["SRC-I-001"]}},
                 query_links={plan["queries"][0]["query_id"]: ["SRC-I-001", "SRC-I-001"]},
                 updated_at=NOW + timedelta(seconds=1),
             )

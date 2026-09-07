@@ -12,6 +12,7 @@ import json
 import os
 import subprocess
 import sys
+import time
 from pathlib import Path
 from typing import Any, NoReturn, Sequence
 
@@ -29,6 +30,107 @@ from status_contract import (
 
 SCRIPT_DIR = Path(__file__).resolve().parent
 CHILD_TIMEOUT_SECONDS = 300
+MAX_CHILD_STREAM_BYTES = 32 * 1024 * 1024
+CHILD_READ_BYTES = 64 * 1024
+CHILD_CLEANUP_SECONDS = 1.0
+
+
+class ChildCapabilityError(RuntimeError):
+    pass
+
+
+class ChildOutputLimitError(RuntimeError):
+    pass
+
+
+def _check_nonblocking_pipes() -> None:
+    """Probe before launching business code (Windows requires Python >=3.12)."""
+    try:
+        reader, writer = os.pipe()
+    except OSError as exc:
+        raise ChildCapabilityError(f"nonblocking pipe probe unavailable: {exc}") from exc
+    try:
+        try:
+            os.set_blocking(reader, False)
+            try:
+                os.read(reader, 1)
+            except BlockingIOError:
+                return
+            raise ChildCapabilityError("nonblocking pipe probe did not report would-block")
+        except (OSError, AttributeError, NotImplementedError) as exc:
+            raise ChildCapabilityError(f"nonblocking pipes unavailable: {exc}") from exc
+    finally:
+        os.close(reader)
+        os.close(writer)
+
+
+def _reap_child(process: subprocess.Popen) -> None:
+    if process.poll() is None:
+        process.terminate()
+        try:
+            process.wait(timeout=CHILD_CLEANUP_SECONDS)
+        except subprocess.TimeoutExpired:
+            process.kill()
+            try:
+                process.wait(timeout=CHILD_CLEANUP_SECONDS)
+            except subprocess.TimeoutExpired as exc:
+                raise RuntimeError("child_cleanup_failed: exact child did not exit after kill") from exc
+
+
+def _execute_child(invocation: list[str]) -> subprocess.CompletedProcess:
+    """Fair, bounded binary pipe reads; own no reader threads or temp transport.
+
+    Only the exact child is owned. After it exits, drain currently available
+    bytes, but never wait for EOF from inherited descendant pipe handles.
+    """
+    _check_nonblocking_pipes()
+    deadline = time.monotonic() + CHILD_TIMEOUT_SECONDS
+    process = subprocess.Popen(
+        invocation, cwd=str(SCRIPT_DIR), stdout=subprocess.PIPE,
+        stderr=subprocess.PIPE, shell=False, bufsize=0,
+    )
+    buffers = {"stdout": bytearray(), "stderr": bytearray()}
+    streams = {name: stream for name, stream in
+               (("stdout", process.stdout), ("stderr", process.stderr)) if stream is not None}
+    try:
+        for stream in streams.values():
+            os.set_blocking(stream.fileno(), False)
+        open_streams = dict(streams)
+        while True:
+            if time.monotonic() >= deadline:
+                raise subprocess.TimeoutExpired(invocation, CHILD_TIMEOUT_SECONDS)
+            exited = process.poll() is not None
+            received = False
+            for name, stream in list(open_streams.items()):
+                remaining = MAX_CHILD_STREAM_BYTES - len(buffers[name])
+                try:
+                    data = os.read(stream.fileno(), min(CHILD_READ_BYTES, remaining + 1))
+                except BlockingIOError:
+                    continue
+                except BrokenPipeError:
+                    data = b""
+                if not data:
+                    del open_streams[name]
+                    continue
+                received = True
+                if len(data) > remaining:
+                    raise ChildOutputLimitError(
+                        f"{name} exceeded {MAX_CHILD_STREAM_BYTES} bytes; partial output discarded"
+                    )
+                buffers[name].extend(data)
+            if exited and not received:
+                break
+            if not received:
+                time.sleep(min(0.005, max(0.0, deadline - time.monotonic())))
+        return subprocess.CompletedProcess(
+            invocation, process.returncode,
+            buffers["stdout"].decode("utf-8", errors="replace"),
+            buffers["stderr"].decode("utf-8", errors="replace"),
+        )
+    finally:
+        for stream in streams.values():
+            stream.close()
+        _reap_child(process)
 
 
 class JsonArgumentParser(argparse.ArgumentParser):
@@ -73,8 +175,13 @@ def _output_signature(path: Path | None) -> tuple[int, int] | None:
     return stat.st_mtime_ns, stat.st_size
 
 
-def _resolved_path(value: str) -> Path:
-    return Path(value).expanduser().resolve(strict=False)
+def _path_argument(value: str) -> str:
+    """Bind user paths to the caller's cwd once, before routing or alias checks."""
+
+    try:
+        return str(Path(value).expanduser().resolve(strict=False))
+    except (OSError, RuntimeError) as exc:
+        raise argparse.ArgumentTypeError(f"cannot resolve path {value!r}: {exc}") from exc
 
 
 def _same_file(left: Path, right: Path) -> bool:
@@ -102,12 +209,15 @@ def _path_conflict_failure(
 def _screen_status(payload: Any, child_exit_code: int) -> str:
     """Interpret quality-screen business pass/fail separately from CLI failure."""
 
+    if child_exit_code < 0 or child_exit_code >= exit_code_for(STATUS_FAILED):
+        return STATUS_FAILED
     if not isinstance(payload, list) or not payload:
         return STATUS_FAILED
     native = [
         item.get("status") if isinstance(item, dict) else None for item in payload
     ]
-    if any(status in {"data_error", "invalid", "invalid_input"} for status in native):
+    allowed = {"pass", "fail", "insufficient_data", "insufficient_evidence", "not_applicable"}
+    if any(not isinstance(status, str) or status not in allowed for status in native):
         return STATUS_FAILED
     if any(
         status in {"insufficient_data", "insufficient_evidence", "not_applicable"}
@@ -137,17 +247,19 @@ def _run_child(
     }
     output_before = _output_signature(required_output)
     try:
-        completed = subprocess.run(
-            invocation,
-            cwd=str(SCRIPT_DIR),
-            capture_output=True,
-            text=True,
-            encoding="utf-8",
-            errors="replace",
-            check=False,
-            shell=False,
-            timeout=CHILD_TIMEOUT_SECONDS,
+        completed = _execute_child(invocation)
+    except (ChildCapabilityError, ChildOutputLimitError) as exc:
+        envelope = make_envelope(
+            command=public_command,
+            status=STATUS_FAILED,
+            detail_status=("child_output_size_limit" if isinstance(exc, ChildOutputLimitError)
+                           else "child_transport_unavailable"),
+            errors=[str(exc)],
+            limitations=limitations,
+            route=route,
+            completion_scope=completion_scope,
         )
+        return envelope, exit_code_for(envelope["status"])
     except subprocess.TimeoutExpired:
         envelope = make_envelope(
             command=public_command,
@@ -224,8 +336,12 @@ def _run_child(
             )
             return envelope, exit_code_for(envelope["status"])
         try:
-            rendered_output = required_output.read_text(encoding="utf-8")
-        except OSError as exc:
+            with required_output.open("rb") as stream:
+                output_bytes = stream.read(MAX_CHILD_STREAM_BYTES + 1)
+            if len(output_bytes) > MAX_CHILD_STREAM_BYTES:
+                raise ValueError(f"json_output_file_size_limit: exceeds {MAX_CHILD_STREAM_BYTES} bytes")
+            rendered_output = output_bytes.decode("utf-8")
+        except (OSError, ValueError) as exc:
             envelope = make_envelope(
                 command=public_command,
                 status=STATUS_FAILED,
@@ -309,7 +425,7 @@ def _build_parser() -> JsonArgumentParser:
     research = subparsers.add_parser(
         "research", help="Validate a structured research brief before research."
     )
-    research.add_argument("brief_json")
+    research.add_argument("brief_json", type=_path_argument)
 
     screen = subparsers.add_parser(
         "screen", help="Run the profile-driven financial quality pre-screen."
@@ -320,7 +436,7 @@ def _build_parser() -> JsonArgumentParser:
     screen.add_argument("--asset-type")
     screen.add_argument("--as-of-date")
     screen.add_argument("--industry-type")
-    screen.add_argument("--profiles-file")
+    screen.add_argument("--profiles-file", type=_path_argument)
 
     edgar = subparsers.add_parser(
         "edgar-fundamentals",
@@ -336,59 +452,61 @@ def _build_parser() -> JsonArgumentParser:
         help="Load validated portfolio and position context; full audit remains external.",
     )
     portfolio.add_argument("symbol")
-    portfolio.add_argument("--positions-file", required=True)
+    portfolio.add_argument("--positions-file", required=True, type=_path_argument)
     portfolio.add_argument("--current-price", type=float)
 
     daily = subparsers.add_parser(
         "daily-sync", help="Audit a supplied portfolio and quote package offline."
     )
-    daily.add_argument("--positions-file", required=True)
-    daily.add_argument("--quotes-file", required=True)
-    daily.add_argument("--thesis-evidence-file")
+    daily.add_argument("--positions-file", required=True, type=_path_argument)
+    daily.add_argument("--quotes-file", required=True, type=_path_argument)
+    daily.add_argument("--thesis-evidence-file", type=_path_argument)
     daily.add_argument("--now-epoch", type=float)
     daily.add_argument("--max-quote-age-seconds", type=int)
 
     scenario = subparsers.add_parser(
         "scenario", help="Run the explicit-input portfolio scenario analyzer."
     )
-    scenario.add_argument("portfolio_json")
-    scenario.add_argument("assumptions_json")
-    scenario.add_argument("--output")
+    scenario.add_argument("portfolio_json", type=_path_argument)
+    scenario.add_argument("assumptions_json", type=_path_argument)
+    scenario.add_argument("--output", type=_path_argument)
 
     calibrate = subparsers.add_parser(
         "calibrate", help="Write the benchmark-aware decision outcome report."
     )
-    calibrate.add_argument("--journal-path")
-    calibrate.add_argument("--output-path", required=True)
+    calibrate.add_argument(
+        "--journal-path", type=_path_argument, default=os.environ.get("PIA_ADVICE_JOURNAL")
+    )
+    calibrate.add_argument("--output-path", required=True, type=_path_argument)
 
     alpha_validate = subparsers.add_parser(
         "alpha-validate",
         help="Validate a point-in-time alpha package against promotion gates.",
     )
-    alpha_validate.add_argument("alpha_package")
-    alpha_validate.add_argument("--policy-file", required=True)
+    alpha_validate.add_argument("alpha_package", type=_path_argument)
+    alpha_validate.add_argument("--policy-file", required=True, type=_path_argument)
 
     alpha_scan = subparsers.add_parser(
         "alpha-scan",
         help="Rank signals from an alpha package that passed validation.",
     )
-    alpha_scan.add_argument("alpha_package")
-    alpha_scan.add_argument("--validation-report", required=True)
-    alpha_scan.add_argument("--policy-file", required=True)
+    alpha_scan.add_argument("alpha_package", type=_path_argument)
+    alpha_scan.add_argument("--validation-report", required=True, type=_path_argument)
+    alpha_scan.add_argument("--policy-file", required=True, type=_path_argument)
 
     construct = subparsers.add_parser(
         "portfolio-construct",
         help="Construct ERC and robust active research candidates offline.",
     )
-    construct.add_argument("scan_report")
-    construct.add_argument("--policy-file", required=True)
+    construct.add_argument("scan_report", type=_path_argument)
+    construct.add_argument("--policy-file", required=True, type=_path_argument)
 
     proposal = subparsers.add_parser(
         "rebalance-proposal",
         help="Compare current and candidate allocations without execution.",
     )
-    proposal.add_argument("construction_report")
-    proposal.add_argument("--policy-file", required=True)
+    proposal.add_argument("construction_report", type=_path_argument)
+    proposal.add_argument("--policy-file", required=True, type=_path_argument)
 
     validate = subparsers.add_parser(
         "validate", help="Run a selected current contract gate."
@@ -397,7 +515,7 @@ def _build_parser() -> JsonArgumentParser:
         "kind",
         choices=("research-brief", "dashboard", "dashboard-math", "history"),
     )
-    validate.add_argument("json_path")
+    validate.add_argument("json_path", type=_path_argument)
     return parser
 
 
@@ -478,9 +596,9 @@ def _dispatch(args: argparse.Namespace) -> tuple[dict[str, Any], int]:
         )
 
     if args.command == "scenario":
-        output_path = _resolved_path(args.output) if args.output else None
+        output_path = Path(args.output) if args.output else None
         if output_path is not None and any(
-            _same_file(output_path, _resolved_path(input_path))
+            _same_file(output_path, Path(input_path))
             for input_path in (args.portfolio_json, args.assumptions_json)
         ):
             return _path_conflict_failure(
@@ -501,9 +619,9 @@ def _dispatch(args: argparse.Namespace) -> tuple[dict[str, Any], int]:
         )
 
     if args.command == "calibrate":
-        output_path = _resolved_path(args.output_path)
-        journal_value = args.journal_path or os.environ.get("PIA_ADVICE_JOURNAL")
-        if journal_value and _same_file(output_path, _resolved_path(journal_value)):
+        output_path = Path(args.output_path)
+        journal_value = args.journal_path
+        if journal_value and _same_file(output_path, Path(journal_value)):
             return _path_conflict_failure(
                 command=args.command,
                 completion_scope="calibration_report_write",

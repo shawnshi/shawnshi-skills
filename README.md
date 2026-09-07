@@ -97,7 +97,7 @@ description: 说明技能做什么，以及用户在什么场景下应使用它�
 
 | Skill | 功能说明 |
 |---|---|
-| `academic-paper-reader` | 深入拆解单篇学术论文，解释研究问题、方法、证据、局限与学术演化位置，并用贯穿案例和必要的机制图降低理解门槛 |
+| `academic-paper-reader` | 深入拆解目标学术论文，核验身份与版本，审查方法、数据、关键数字、证据强度、局限及复现条件，并提供页码、章节和表图证据索引 |
 | `academic-scientific-visualization` | 设计、生成和审查可投稿的科学图表，包括多面板布局、误差棒、显著性标注、防色盲编码、期刊尺寸和矢量导出 |
 | `automate-github-issues` | 审计、设计或配置 GitHub Issue 分析、任务拆分、冲突检测、代理分派和受控合并流程 |
 | `cognitive-book-mirror` | 将书籍或长文重构为“原文主张—个人映射”的伴读分析，在保留作者原意的同时结合用户明确提供并授权使用的个人材料 |
@@ -107,7 +107,7 @@ description: 说明技能做什么，以及用户在什么场景下应使用它�
 | `cognitive-ideation-brainstorming` | 将模糊创意或产品需求收敛为可验证的问题、范围、方案和设计决策 |
 | `cognitive-logic-adversary` | 对计划、论证和关键决策执行红队压力测试，识别矛盾、脆弱假设、单点故障和激励错位，并重构为更可防守的方案 |
 | `cognitive-morphism-mapper` | 把业务或组织问题抽象为对象、关系和约束，再映射到控制论、生态学、博弈论等成熟领域，借用可验证机制生成跨领域方案 |
-| `cognitive-personal-roundtable` | 用彼此有张力的分析视角对复杂议题进行结构化圆桌辩论，呈现冲突、共识、遗漏变量和决策选项 |
+| `cognitive-personal-roundtable` | 对存在真实取舍的复杂议题开展证据化多视角压力测试，识别事实冲突、底层假设、遗漏变量和可执行决策路径；不替代检索与专业审查 |
 | `cognitive-storm-research` | 对复杂、争议或高风险议题开展多来源深度研究，建立事实底座、比较互相冲突的视角、进行红队复核并形成带引用的综合报告 |
 | `industry-strategy-analyst` | 以公开且可追溯的证据开展行业与市场研究，形成市场边界、规模、需求、价值链、竞争格局、供应商比较、情景预测、风险和可执行建议 |
 | `senior-osint-analyst` | 以合法公开来源开展政策、行业、企业、技术、供应链、地区或重大事件的开源情报研究，执行实体与时效核验、交叉验证和替代假设分析 |
@@ -116,8 +116,8 @@ description: 说明技能做什么，以及用户在什么场景下应使用它�
 
 | Skill | 功能说明 |
 |---|---|
-| `hit-customer-analyst` | 面向医疗卫生信息化售前开展重点客户研究与重要拜访准备，提供会前速览、标准拜访包、战略客户包和一封信四种模式；不用于一般机构介绍或私人背景调查 |
-| `hit-digital-strategy-partner` | 为医疗机构、医疗信息化企业和管理团队制定数字化战略、商业模式、投资优先级、ROI/TCO分析及高管决策备忘录 |
+| `hit-customer-analyst` | 医疗客户研究与拜访准备的 2.6.2 交付候选，仅用于明确指定候选版本的内部试用、验证或修订；提供会前速览、标准拜访包、战略客户包和一封信四种模式。入口要求常规业务继续使用原 `discovery-call`，该入口不在本库库存内 |
+| `hit-digital-strategy-partner` | 为医疗机构或医疗信息化企业开展数字化战略、方案选择、投资排序、可审计 ROI/TCO 和高管决策备忘录；不用于详细技术架构或临床审批 |
 | `hit-industry-radar` | 检索并分析指定周期内的医疗信息化、数字健康、医疗AI、监管政策和竞争厂商动态，生成带来源、事件日期、影响判断和行动建议的行业雷达 |
 | `hit-lectures-scout` | 检索、筛选和解释医疗AI、数字医疗与临床信息学论文及预印本，按研究类型评估证据质量，并将学术信号转化为可验证的研发、产品或市场假设 |
 | `hit-solution-architect` | 设计和评审医疗机构应用、数据、集成、基础设施、安全、容灾、信创迁移及临床 AI 技术方案；业务战略、预算取舍和投资排序转交 `hit-digital-strategy-partner` |
@@ -132,8 +132,8 @@ description: 说明技能做什么，以及用户在什么场景下应使用它�
 | `magazine-illustrator` | 为文章、博客、公众号、报告和演示文稿设计并直接生成杂志式位图插画，包括头图、封面、章节插图、系列配图和可复制的图像生成提示词 |
 | `mentat-collaboration-audit` | 基于真实会话记录、日志、工具调用和遥测事件审计系统效率与人机协作摩擦，复算等待、技能载入、错误重试、子代理Token、上下文压缩和写入授权指标，并按需生成Markdown报告和HTML审计面板 |
 | `mentat-dream-cycle` | 以审计、预览和事务化方式检查临时文件、热记忆、失败日志及知识图谱待治理项，生成可执行的清理与归档建议，并在获得明确授权后执行限定范围的安全维护 |
-| `mentat-insight-diary` | 先核查日期与授权来源，区分未取证、读取失败和检查后无事件；证据门通过后生成八段 OODA 日志并原子保存到权威季度档案，不默认扫描全部历史会话 |
-| `mentat-skill-creator` | 显式维护本地 Codex skills 库的根治理合同、资源清单、触发所有权、批量迁移和发布门禁；通用新技能与可安装插件分别转交系统 creator |
+| `mentat-insight-diary` | 将有实质证据的系统事件、执行摩擦、失败、权衡和改进动作整理为 OODA 日志；证据不足时阻止模板化元日志，通过证据门后按请求原子保存到权威季度档案 |
+| `mentat-skill-creator` | 仅在用户显式调用时维护当前 Pi 本地技能库的根治理合同、资源清单、触发所有权、批量迁移与发布门禁；通用新技能、无关单技能更新及插件打包不触发 |
 
 ### Personal workflows
 
@@ -143,12 +143,12 @@ description: 说明技能做什么，以及用户在什么场景下应使用它�
 | `personal-cognitive-prescription` | 从用户提供的近期问题、决策或复盘材料中识别认知盲区，并给出可核验到具体章节的跨领域阅读处方 |
 | `personal-diary-writer` | 完整个人日记通过受保护请求与内容门后自动保存；承接 Mentat 和个人周、月、季度审计的受保护写入，草稿或非标准路径仍执行确认门 |
 | `personal-health-analysis` | 以本地优先、失败关闭方式分析用户授权的 Garmin 数据，验证本地数据库读取窗口与设备/固件时期，披露时间范围、缺失和来源，并生成非诊断性报告、离线面板或研究用途 FHIR R4 包装 |
-| `personal-intelligence-hub` | 对指定主题开展多来源情报扫描、去重、证据核验、情景推演和红队审查，并生成带来源的战略简报 |
-| `personal-investment-advisor` | 执行点时财务筛选、结构化预期差与三情景估值、持仓及行情身份审计、实时行情刷新与离线 Daily Sync 评估、组合情景压测、只读逆波动率分配实验和研究校准；固定为 `research_only` |
+| `personal-intelligence-hub` | 基线优先生成技术与医疗数字化资讯简报，按缺口补检、事件去重、语义评估和独立红队核验来源；正式日简报按声明合同自动保存 |
+| `personal-investment-advisor` | 默认使用免费公开来源，结合用户明确提供的持仓，执行证券身份核验、财报研究、估值情景、组合风险审计、主动机会验证和研究复盘；固定为 `research_only`，不生成交易指令 |
 | `personal-musicbee-dj` | 在本地 Windows 电脑上根据歌曲、歌单、流派、场景或情绪请求启动并控制 MusicBee 播放，必要时生成临时 M3U 歌单 |
 | `personal-travel-research` | 为城市或地区制作历史、考古、古建筑、博物馆与重点文物的出发前研究资料，并核验当前开放信息 |
 | `personal-write-humanizer` | 在不改变事实、业务含义和作者立场的前提下重写中文文本，减少机器化句式、客服口吻、空泛名词和过度排比，恢复自然母语节奏 |
-| `personal-writing-assistant` | 起草、重构和深度润色医疗数字化领域的内参、观点文章、政策解读与行业长文，强化论点、证据、临床或管理指标和读者可读性 |
+| `personal-writing-assistant` | 起草、重构、润色、核验和审校医疗卫生与医疗数字化领域的内参、观点文章、政策解读、案例及白皮书；仅在医疗主题与写作成稿同时成立时使用 |
 
 ### Meetings and utility workflows
 
@@ -166,9 +166,9 @@ description: 说明技能做什么，以及用户在什么场景下应使用它�
 | `tool-smart-latex` | 将 Markdown 或结构化内容转换为 LaTeX，并在环境允许时编译为 PDF |
 | `tool-text-forger` | 在不改变事实和原意的前提下润色、校对和重组现有文本 |
 | `tool-tts` | 将用户提供的文本合成为语音并在明确要求时播放 |
-| `tool-tuanbiao-downloader` | 从合法公开来源下载、校验并按需合并团体标准或其他标准文件 |
+| `tool-tuanbiao-downloader` | 仅下载全国团体标准信息平台公开可访问的 kkfileview 图片型标准并合并为 PDF；需显式调用并提供图片查看链接或已核实的路径 ID，不支持其他站点或普通 PDF 链接 |
 | `tool-url-markdown` | 从公开或用户有权访问的网页提取正文并保存为结构清晰的 Markdown |
-| `tool-web-slide` | 将演示文稿内容构建为可在浏览器运行的单页 HTML 幻灯片并进行视觉验证 |
+| `tool-web-slide` | 将演示内容构建为可在浏览器运行、验证和交付的 HTML 幻灯片、离线演示包或单文件 HTML；不用于原生 PPTX 或仅需故事线的任务 |
 | `tool-youtube-summary` | 从 YouTube 视频、字幕、转录稿或长文中提取论点、证据和结构，并生成摘要、观点矩阵或长文 |
 
 ## 6. Trigger ownership
@@ -241,10 +241,17 @@ pwsh -NoProfile -ExecutionPolicy Bypass -File scripts/repair_skills.ps1 -Mode Ga
 
 禁止在维护流程中重新生成 `skill.json`。旧工具如果仍依赖该文件，应修订或移除该工具，不得恢复双重真相源。
 
-### 8.1 Verified baseline (2026-09-05)
+### 8.1 Current validation (2026-09-07)
 
-- 全库 `repair_skills.ps1 -Mode Gate`：53 个技能，8 项自动持久化例外，19 类触发所有权；阻断项为 0。
-- Mentat 定向回归：`mentat-insight-diary/scripts/test_skill_contract.py` 的 14 项测试通过。
+- 本次全库 `repair_skills.ps1 -Mode Gate` 通过：53 个技能，8 项自动持久化例外，19 类触发所有权，阻断项为 0。
+- 资源索引独立检查：53 个技能，过期或缺失清单为 0；界面元数据独立检查：19 份配置，错误为 0。
+- 本次修复 `hit-customer-analyst` 的三项发布阻塞：生成缺失的资源清单，将默认提示中的技能标识改为 `$hit-customer-analyst`，移除校验器不接受的 `policy.products` 字段；未放宽校验规则或改变客户研究业务逻辑。
+- `hit-customer-analyst` 仍为交付候选；静态门禁通过不改变其限定内部试用状态，真实发布验收以该技能的 `references/release-acceptance.md` 为准。
 - Gate 只证明其覆盖的静态合同与资源一致性，不代表所有技能已在新会话中端到端验证，也不代替发布前的敏感信息检查。
 
-Last updated: 2026-09-05
+### 8.2 Historical baseline (2026-09-05)
+
+- 此前记录：全库 Gate 通过，53 个技能、8 项自动持久化例外、19 类触发所有权，阻断项为 0。
+- 此前记录：`mentat-insight-diary/scripts/test_skill_contract.py` 的 14 项测试通过；本次未重跑该回归。
+
+Last updated: 2026-09-07

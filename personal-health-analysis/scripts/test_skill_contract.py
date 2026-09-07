@@ -44,6 +44,15 @@ def sha256(path: Path) -> str:
     return hashlib.sha256(payload).hexdigest()
 
 
+def skill_contract_text() -> str:
+    """Validate entry contracts along the explicitly linked branch document."""
+    entry = (SKILL_ROOT / "SKILL.md").read_text(encoding="utf-8")
+    relative = "references/workflow_contract.md"
+    if f"({relative}#" not in entry:
+        raise AssertionError("SKILL.md must route to the execution contract")
+    return entry + "\n" + (SKILL_ROOT / relative).read_text(encoding="utf-8")
+
+
 class SkillContractTests(unittest.TestCase):
     def test_default_dependencies_are_isolated_and_exclude_unsafe_sync_pair(self):
         requirements = (SKILL_ROOT / "requirements.txt").read_text(encoding="utf-8")
@@ -101,6 +110,7 @@ class SkillContractTests(unittest.TestCase):
     def test_documented_commands_use_a_verified_current_interpreter(self):
         documents = [
             SKILL_ROOT / "SKILL.md",
+            SKILL_ROOT / "references" / "workflow_contract.md",
             SKILL_ROOT / "references" / "api.md",
             SKILL_ROOT / "references" / "advanced_tools.md",
             SKILL_ROOT / "references" / "external_acceptance.md",
@@ -119,7 +129,7 @@ class SkillContractTests(unittest.TestCase):
             self.assertIn(flag, combined)
 
     def test_skill_commands_preserve_cli_permission_and_no_implicit_trigger(self):
-        skill_text = (SKILL_ROOT / "SKILL.md").read_text(encoding="utf-8")
+        skill_text = skill_contract_text()
         metadata = (SKILL_ROOT / "agents" / "openai.yaml").read_text(encoding="utf-8")
         self.assertIn("RUNTIME_DEPENDENCY_UNAVAILABLE", skill_text)
         for script_name in (
@@ -134,7 +144,7 @@ class SkillContractTests(unittest.TestCase):
         self.assertIn("allow_implicit_invocation: false", metadata)
 
     def test_live_fallback_is_bound_to_no_data_network_and_exact_components(self):
-        skill_text = (SKILL_ROOT / "SKILL.md").read_text(encoding="utf-8")
+        skill_text = skill_contract_text()
         api_text = (SKILL_ROOT / "references" / "api.md").read_text(encoding="utf-8")
         combined = skill_text + "\n" + api_text
         self.assertIn("--fallback-live", combined)
@@ -146,7 +156,7 @@ class SkillContractTests(unittest.TestCase):
         self.assertNotIn("本地读取失败不得自动切换到实时接口", combined)
 
     def test_explicit_skill_invocation_defaults_health_read_but_not_side_effects(self):
-        skill_text = (SKILL_ROOT / "SKILL.md").read_text(encoding="utf-8")
+        skill_text = skill_contract_text()
         api_text = (SKILL_ROOT / "references" / "api.md").read_text(encoding="utf-8")
         advanced_text = (SKILL_ROOT / "references" / "advanced_tools.md").read_text(
             encoding="utf-8"
@@ -181,7 +191,7 @@ class SkillContractTests(unittest.TestCase):
         self.assertIn("allow_implicit_invocation: false", metadata)
 
     def test_interactive_window_and_integrity_contract(self):
-        skill = (SKILL_ROOT / "SKILL.md").read_text(encoding="utf-8")
+        skill = skill_contract_text()
         api = (SKILL_ROOT / "references/api.md").read_text(encoding="utf-8")
         for text in (skill, api):
             self.assertIn("N=14", text)
@@ -193,7 +203,7 @@ class SkillContractTests(unittest.TestCase):
         self.assertIn("不得弱化前后全量哈希校验", skill)
 
     def test_sync_contract_requires_plan_and_explicit_runner(self):
-        skill_text = (SKILL_ROOT / "SKILL.md").read_text(encoding="utf-8")
+        skill_text = skill_contract_text()
         sync_source = (SKILL_ROOT / "scripts" / "sync_health_data.py").read_text(
             encoding="utf-8"
         )

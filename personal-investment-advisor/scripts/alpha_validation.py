@@ -13,13 +13,12 @@ from typing import Any, NoReturn
 
 from active_research_contract import (
     base_report,
-    canonical_sha256,
     fail_report,
     finite_number,
     normalize_symbol,
     parse_aware_iso,
     positive_integer,
-    read_json,
+    read_json_snapshot,
     utc,
     valid_sha256,
     validate_evidence_stamp,
@@ -30,7 +29,11 @@ SCHEMA_VERSION = "pia_alpha_validation_report_v1"
 PACKAGE_SCHEMA_VERSION = "pia_alpha_evidence_v1"
 POLICY_SCHEMA_VERSION = "pia_alpha_promotion_policy_v1"
 MAX_TRIALS = 1_000
+MAX_OBSERVATIONS = 10_000
+MAX_TRIAL_CELLS = 1_000_000
 MAX_PBO_SPLITS = 2_000
+# Absolute tolerance in fractional returns; no relative tolerance or cost forgiveness.
+SELECTED_RETURN_ABS_TOLERANCE = 1e-12
 
 
 def _sample_std(values: list[float]) -> float:
@@ -198,6 +201,22 @@ def _validate_policy(policy: Any) -> list[str]:
 def _validate_package(package: Any) -> tuple[list[str], dict[str, Any]]:
     if not isinstance(package, dict):
         return ["alpha package root must be an object"], {}
+    # Bound both axes and their product before parsing/copying numeric series.
+    model_input = package.get("model")
+    ledger_input = model_input.get("trial_ledger") if isinstance(model_input, dict) else None
+    observations_input = package.get("observations")
+    trials_input = package.get("trial_net_excess_returns")
+    if (isinstance(ledger_input, list) and len(ledger_input) > MAX_TRIALS
+        or isinstance(observations_input, list) and len(observations_input) > MAX_OBSERVATIONS
+        or isinstance(trials_input, dict) and len(trials_input) > MAX_TRIALS):
+        return [f"alpha_size_limit: at most {MAX_TRIALS} trials and {MAX_OBSERVATIONS} observations"], {}
+    if isinstance(trials_input, dict):
+        cells = 0
+        for values in trials_input.values():
+            if isinstance(values, list):
+                cells += len(values)
+                if len(values) > MAX_OBSERVATIONS or cells > MAX_TRIAL_CELLS:
+                    return [f"alpha_size_limit: at most {MAX_OBSERVATIONS} observations per trial and {MAX_TRIAL_CELLS} total trial cells"], {}
     errors: list[str] = []
     if package.get("schema_version") != PACKAGE_SCHEMA_VERSION:
         errors.append(f"package.schema_version must equal {PACKAGE_SCHEMA_VERSION}")
@@ -352,6 +371,25 @@ def _validate_package(package: Any) -> tuple[list[str], dict[str, Any]]:
                 parsed_trials[trial_id] = [
                     float(value) for value in trial_values if value is not None
                 ]
+
+    if not errors:
+        assert isinstance(selected_trial_id, str)
+        computed_selected = [
+            item["gross_return"] - item["benchmark_return"]
+            - item["turnover"] * (total_cost_bps / 10_000.0)
+            for item in parsed_observations
+        ]
+        if any(
+            not math.isclose(actual, expected, rel_tol=0.0, abs_tol=SELECTED_RETURN_ABS_TOLERANCE)
+            for actual, expected in zip(parsed_trials[selected_trial_id], computed_selected, strict=True)
+        ):
+            errors.append(
+                "package selected trial must equal gross_return - benchmark_return - "
+                "turnover * total_cost_bps / 10000 at every observation (absolute tolerance 1e-12)"
+            )
+        else:
+            # DSR/PBO consume the exact recomputation, not the independently supplied series.
+            parsed_trials[selected_trial_id] = computed_selected
 
     signals = package.get("signals")
     if not isinstance(signals, list) or not signals:
@@ -576,13 +614,13 @@ def main() -> int:
     parser.add_argument("--policy-file", required=True)
     args = parser.parse_args()
     try:
-        package = read_json(args.alpha_package, "alpha_package")
-        policy = read_json(args.policy_file, "promotion_policy")
+        package, package_sha256 = read_json_snapshot(args.alpha_package, "alpha_package")
+        policy, policy_sha256 = read_json_snapshot(args.policy_file, "promotion_policy")
         report = evaluate_alpha_package(
             package,
             policy,
-            package_sha256=canonical_sha256(args.alpha_package),
-            policy_sha256=canonical_sha256(args.policy_file),
+            package_sha256=package_sha256,
+            policy_sha256=policy_sha256,
         )
     except (OSError, ValueError, json.JSONDecodeError) as exc:
         report = fail_report(SCHEMA_VERSION, "input_read_failed", [str(exc)])

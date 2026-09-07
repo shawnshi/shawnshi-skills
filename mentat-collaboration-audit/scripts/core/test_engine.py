@@ -316,12 +316,15 @@ class AggregateTests(unittest.TestCase):
                 "action": "persist",
                 "target": "store-a",
                 "authorization_id": "auth-1",
-                "write_scope_sha256": "scope-b",
-                "authorization_scope_sha256": "scope-b",
+                "write_scope_sha256": "b" * 64,
+                "authorization_scope_sha256": "b" * 64,
             },
             {"event_type": "context_compacted", "root_task_id": "r1"},
         ]
 
+        for index, record in enumerate(records):
+            if record.get("event_type") == "skill_load":
+                record.update(event_id=f"synthetic-load-{index}", event_identity="occurrence")
         report = engine.aggregate(records)
         metrics = report["operational_metrics"]
 
@@ -334,8 +337,10 @@ class AggregateTests(unittest.TestCase):
         self.assertEqual(metrics["skill_load"]["loaded_tokens"], 300)
         self.assertEqual(metrics["skill_load"]["token_coverage"], 1.0)
         self.assertEqual(metrics["skill_load"]["unverifiable_load_count"], 0)
-        self.assertEqual(metrics["retry"]["blind_retry_count"], 1)
-        self.assertAlmostEqual(metrics["retry"]["blind_retry_rate"], 1 / 3, places=4)
+        self.assertEqual(metrics["retry"]["blind_retry_count"], 0)
+        self.assertEqual(metrics["retry"]["blind_retry_rate"], 0.0)
+        self.assertEqual(metrics["retry"]["unverified_retry_count"], 1)
+        self.assertAlmostEqual(metrics["retry"]["retry_classification_coverage"], 2 / 3, places=4)
         self.assertEqual(metrics["retry"]["ambiguous_write_retry_count"], 1)
         self.assertAlmostEqual(metrics["subagent"]["child_token_share"], 1 / 3, places=4)
         self.assertTrue(math.isclose(metrics["subagent"]["child_to_root_token_ratio"], 0.5))
@@ -456,7 +461,7 @@ class AggregateTests(unittest.TestCase):
         self.assertEqual(metrics["skill_load"]["receipt_coverage"], 1.0)
         self.assertEqual(metrics["authorization"]["write_attempt_count"], 1)
         self.assertEqual(metrics["authorization"]["write_commit_count"], 1)
-        self.assertEqual(metrics["authorization"]["authorization_evidence_status"], "partial")
+        self.assertEqual(metrics["authorization"]["authorization_evidence_status"], "outcome_uncertain")
         self.assertEqual(metrics["context"]["context_recovery_coverage"], 1.0)
         self.assertEqual(metrics["context"]["semantic_recovery_coverage"], 0.0)
 

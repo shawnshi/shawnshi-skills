@@ -1,11 +1,14 @@
 import base64
 import json
 import re
+import shutil
+import subprocess
 import unittest
 from datetime import date, timedelta
 
 import garmin_chart
 import garmin_intelligence
+import garmin_patterns
 
 
 def _dates(start: str, count: int) -> list[str]:
@@ -55,6 +58,11 @@ def _known_epoch_summary(start: str = "2026-07-01", count: int = 28) -> dict:
         "measurement_epoch_evidence": {
             "analysis_algorithm_epoch": "test:patterns:v1",
             "manufacturer_algorithm_epoch": "synthetic-manufacturer-v1",
+            "observation_attributions": [
+                {"component": component, "date": day, "serial_number": "synthetic-device", "software_version": "1.0"}
+                for component in ("heart_rate", "hrv", "sleep", "training_load_series")
+                for day in days
+            ],
             "firmware_history": [
                 {
                     "timestamp": "2026-06-01T00:00:00+08:00",
@@ -73,7 +81,155 @@ def _embedded_payload(html: str) -> dict:
     return json.loads(base64.b64decode(encoded).decode("utf-8"))
 
 
+class ReviewedCandidateScopeTests(unittest.TestCase):
+    def mutate_attribution(self, summary, component, day, mutation):
+        entries = summary["measurement_epoch_evidence"]["observation_attributions"]
+        item = next(entry for entry in entries if entry["component"] == component and entry["date"] == day)
+        if mutation == "missing":
+            entries.remove(item)
+        elif mutation == "conflict":
+            entries.append({**item, "serial_number": "conflicting-synthetic-device"})
+        else:
+            item["serial_number"] = "other-synthetic-device"
+
+    def analyze(self, summary, count):
+        return garmin_intelligence.analyze_health_patterns(
+            summary, requested_start="2026-07-01", requested_end=_dates("2026-07-01", count)[-1]
+        )
+
+    def timestamp_summary(self):
+        summary = _known_epoch_summary(count=14)
+        summary["sleep"] = [
+            {"date": day, "sleep_start": f"{day}T00:00:00+08:00", "sleep_end": f"{day}T08:00:00+08:00"}
+            for day in _dates("2026-07-01", 14)[-7:]
+        ]
+        return summary
+
+    def test_sleep_ignores_attribution_before_actual_trailing_window(self):
+        for mutation in ("missing", "cross", "conflict"):
+            with self.subTest(mutation=mutation):
+                summary = _known_epoch_summary(count=28)
+                self.mutate_attribution(summary, "sleep", "2026-07-01", mutation)
+                sleep = self.analyze(summary, 28)["sleep_regularity"]
+                self.assertEqual(sleep["duration_status"], "eligible")
+                self.assertEqual(sleep["duration_observed_nights"], 14)
+
+    def test_lag_ignores_unpaired_final_exposure_and_initial_outcome(self):
+        for component, day in (("training_load_series", "2026-07-29"), ("hrv", "2026-07-01")):
+            for mutation in ("missing", "cross", "conflict"):
+                with self.subTest(component=component, mutation=mutation):
+                    summary = _known_epoch_summary(count=29)
+                    summary["component_status"]["training_load_series"]["zero_semantics"] = "explicit_daily_zero"
+                    self.mutate_attribution(summary, component, day, mutation)
+                    association = self.analyze(summary, 29)["lagged_associations"]["hrv"]
+                    self.assertEqual(association["status"], "eligible")
+                    self.assertEqual(association["pair_count"], 28)
+                    self.assertIsNotNone(association["spearman_rho"])
+
+    def test_actual_sleep_and_lag_participants_still_require_unambiguous_attribution(self):
+        for mutation, expected in (("missing", "device_attribution_unknown"), ("conflict", "device_attribution_conflict"), ("cross", "cross_epoch")):
+            with self.subTest(mutation=mutation):
+                summary = _known_epoch_summary(count=28)
+                self.mutate_attribution(summary, "sleep", "2026-07-28", mutation)
+                sleep = self.analyze(summary, 28)["sleep_regularity"]
+                self.assertEqual(sleep["epoch_status"], expected)
+                self.assertIsNone(sleep["duration_sd_hours"])
+                for component, day in (("training_load_series", "2026-07-01"), ("hrv", "2026-07-02")):
+                    summary = _known_epoch_summary(count=29)
+                    summary["component_status"]["training_load_series"]["zero_semantics"] = "explicit_daily_zero"
+                    self.mutate_attribution(summary, component, day, mutation)
+                    association = self.analyze(summary, 29)["lagged_associations"]["hrv"]
+                    self.assertEqual(association["epoch_status"], expected)
+                    self.assertIsNone(association["spearman_rho"])
+
+    def test_timestamp_duration_counts_follow_selected_source_under_both_epoch_gates(self):
+        for comparable in (True, None):
+            for sparse_direct in (False, True):
+                with self.subTest(comparable=comparable, sparse_direct=sparse_direct):
+                    rows = self.timestamp_summary()["sleep"]
+                    if sparse_direct:
+                        for row in rows[:3]:
+                            row["sleep_time_seconds"] = 21600
+                    result = garmin_patterns.sleep_regularity_snapshot(
+                        rows + rows, _dates("2026-07-01", 14), comparable,
+                        "single_known_epoch" if comparable else "device_attribution_unknown",
+                    )
+                    self.assertEqual(result["duration_observed_nights"], 7)
+                    self.assertEqual(result["duration_source"], "timestamp_interval_seconds")
+                    if comparable:
+                        self.assertEqual(result["duration_valid_nights"], 7)
+                        self.assertEqual(result["duration_status"], "eligible")
+                    else:
+                        self.assertIsNone(result["duration_sd_hours"])
+
+    def test_duration_candidates_do_not_union_incompatible_sources(self):
+        rows = self.timestamp_summary()["sleep"][:4]
+        rows += [{"date": day, "sleep_time_seconds": 21600} for day in _dates("2026-07-01", 3)]
+        result = garmin_patterns.sleep_regularity_snapshot(rows, _dates("2026-07-01", 14), True, "single_known_epoch")
+        self.assertEqual(result["duration_observed_nights"], 3)
+        self.assertEqual(result["duration_status"], "insufficient_valid_nights")
+        self.assertIsNone(result["duration_sd_hours"])
+
+    @unittest.skipUnless(shutil.which("node"), "Node required for existing DOM contract")
+    def test_timestamp_duration_samples_reach_dashboard_eligibility_table(self):
+        for attributed in (True, False):
+            with self.subTest(attributed=attributed):
+                summary = self.timestamp_summary()
+                if not attributed:
+                    summary["measurement_epoch_evidence"]["observation_attributions"] = []
+                payload = garmin_chart.build_dashboard_payload(
+                    summary, days=14, requested_source="local", effective_source="local",
+                    selected_components=("sleep",), live_fallback_attempted=False,
+                    requested_start="2026-07-01", requested_end="2026-07-14",
+                    generated_at="2026-07-14T12:00:00+08:00",
+                )
+                html = garmin_chart.render_report(payload)
+                embedded = _embedded_payload(html)
+                entry = next(item for item in embedded["patterns"]["eligibility"] if item["id"] == "sleep_duration_regularity")
+                self.assertEqual(entry["observed_days"], 7)
+                runtime = re.findall(r"<script(?: [^>]*)?>(.*?)</script>", html, re.DOTALL)[-1]
+                renderer = "function renderAnalysisReadiness" + runtime.split("function renderAnalysisReadiness", 1)[1].split("function renderList", 1)[0]
+                harness = """
+class Node { constructor(){this.children=[];this.textContent='';} append(...nodes){this.children.push(...nodes);} replaceChildren(...nodes){this.children=nodes;} setAttribute(){} }
+const body=new Node(); const document={createElement(){return new Node();}};
+function byId(){return body;} function text(){}
+""" + renderer + "\nrenderAnalysisReadiness(" + json.dumps(embedded) + ");\nconsole.log(JSON.stringify(body.children.map(row=>row.children.map(cell=>cell.textContent))));"
+                completed = subprocess.run([shutil.which("node"), "-"], input=harness, capture_output=True, text=True, encoding="utf-8", check=True)
+                row = next(item for item in json.loads(completed.stdout) if item[0] == "睡眠时长离散度")
+                self.assertEqual(row[2], "7/7")
+                self.assertEqual(row[1], "可计算" if attributed else "时期未知")
+
+
 class HealthPatternIntegrationTests(unittest.TestCase):
+    def test_missing_attribution_preserves_source_sample_counts_without_comparison(self):
+        summary = _known_epoch_summary(count=7)
+        summary["measurement_epoch_evidence"]["observation_attributions"] = []
+        result = garmin_intelligence.analyze_health_patterns(
+            summary, requested_start="2026-07-01", requested_end="2026-07-07"
+        )
+        sleep = result["sleep_regularity"]
+        self.assertEqual(sleep["duration_observed_nights"], 7)
+        self.assertEqual(sleep["status"], "insufficient_window")
+        self.assertIsNone(sleep["duration_sd_hours"])
+        entry = next(item for item in result["eligibility"] if item["id"] == "sleep_duration_regularity")
+        self.assertEqual(entry["observed_days"], 7)
+        self.assertEqual(result["trends"]["rhr"]["epoch_status"], "device_attribution_unknown")
+        self.assertIn("归属未知", result["eligibility"][0]["reason"])
+
+    def test_lag_comparison_requires_both_component_attributions(self):
+        summary = _known_epoch_summary(count=29)
+        summary["component_status"]["training_load_series"]["zero_semantics"] = "explicit_daily_zero"
+        evidence = summary["measurement_epoch_evidence"]
+        evidence["observation_attributions"] = [
+            item for item in evidence["observation_attributions"] if item["component"] != "training_load_series"
+        ]
+        result = garmin_intelligence.analyze_health_patterns(
+            summary, requested_start="2026-07-01", requested_end="2026-07-29"
+        )
+        for item in result["lagged_associations"].values():
+            self.assertEqual(item["epoch_status"], "device_attribution_unknown")
+            self.assertIsNone(item["spearman_rho"])
+
     def test_patterns_use_exact_scope_and_fail_closed_for_load_semantics(self):
         summary = _known_epoch_summary()
         summary["sleep"].append(

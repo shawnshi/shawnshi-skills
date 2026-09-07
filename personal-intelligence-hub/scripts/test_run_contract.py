@@ -1990,6 +1990,7 @@ class RunContractTests(unittest.TestCase):
                 }
             ],
         )
+        original_evidence = late_result.read_bytes()
         aggregate_path, aggregate = reconcile_supplement_progress(
             manifest_path,
             request_path,
@@ -2008,7 +2009,119 @@ class RunContractTests(unittest.TestCase):
         manifest = load_manifest(manifest_path)
         self.assertEqual(manifest["stages"]["supplemental"]["status"], "degraded")
         final_path = Path(packet["output_paths"]["result"])
-        self.assertTrue(final_path.is_file())
+        self.assertEqual(final_path.read_bytes(), original_evidence)
+        self.assertTrue(final_path.with_suffix(".failure.json").is_file())
+        self.assertIn(file_sha256(final_path), aggregate["results"][0]["failure_reason"])
+        self.assertEqual(aggregate["coverage"], {"attempted": 0, "succeeded": 0, "failed": 0})
+
+    def _failed_canary_fixture(self, run_id):
+        manifest, request_path, request = self.prepare_supplement_run(run_id, ["canary", "downstream"])
+        packet = request["execution_packets"][0]
+        state = Path(packet["progress"]["state_path"])
+        state.write_text(json.dumps({"progress_id": "canary", "terminal_status": "declare_lost"}), encoding="utf-8")
+        draft = Path(packet["output_paths"]["draft"])
+        draft.write_bytes(b'{"access_log": ["original invalid evidence"], "candidates": [1, 2]}')
+        return manifest, request_path, request, draft
+
+    def _supplement_bytes(self, manifest):
+        return {str(p): p.read_bytes() for p in manifest.parent.iterdir() if p.is_file()}
+
+    def test_reconcile_missing_downstream_preserves_all_evidence(self):
+        manifest, request_path, _, draft = self._failed_canary_fixture("missing-downstream")
+        before = self._supplement_bytes(manifest)
+        with self.assertRaisesRegex(RunContractError, "neither result nor terminal"):
+            reconcile_supplement_progress(manifest, request_path, [], [], now=self.now)
+        self.assertEqual(self._supplement_bytes(manifest), before)
+        self.assertIn(b"original invalid evidence", draft.read_bytes())
+
+    def test_reconcile_stopped_canary_explicit_unstarted_is_failed_not_no_increment(self):
+        manifest, request_path, request, draft = self._failed_canary_fixture("stopped-canary")
+        original = draft.read_bytes()
+        _, aggregate = reconcile_supplement_progress(manifest, request_path, [], [], unstarted_gap_ids=["downstream"], now=self.now)
+        self.assertEqual(draft.read_bytes(), original)
+        self.assertEqual(aggregate["status"], "degraded")
+        self.assertEqual(aggregate["coverage"], {"attempted": 0, "succeeded": 0, "failed": 0})
+        self.assertEqual([r["status"] for r in aggregate["results"]], ["failed", "failed"])
+        downstream = next(r for r in aggregate["results"] if r["gap_id"] == "downstream")
+        self.assertIn("not_started_after_canary_failure; canary_gap_id=canary", downstream["failure_reason"])
+        self.assertEqual(downstream["candidates"], [])
+        self.assertFalse(downstream["halt_condition_met"])
+        self.assertTrue(all(Path(p["output_paths"]["result"]).with_suffix(".failure.json").is_file() for p in request["execution_packets"]))
+        self.assertTrue(all(not Path(p["output_paths"]["result"]).exists() for p in request["execution_packets"]))
+
+    def test_reconcile_unstarted_assertion_rejects_execution_evidence(self):
+        for evidence in ("state", "draft", "result", "telemetry", "registered_telemetry"):
+            with self.subTest(evidence=evidence):
+                manifest, request_path, request, _ = self._failed_canary_fixture("unstarted-" + evidence)
+                packet = request["execution_packets"][1]
+                if evidence == "registered_telemetry":
+                    data = json.loads(manifest.read_text(encoding="utf-8"))
+                    data.setdefault("telemetry", {}).setdefault("executions", {})["supplemental:downstream"] = {"status": "failed"}
+                    manifest.write_text(json.dumps(data), encoding="utf-8")
+                else:
+                    target = (Path(packet["progress"]["state_path"]) if evidence == "state" else
+                              manifest.parent / "execution_telemetry_supplemental_downstream.json" if evidence == "telemetry" else
+                              Path(packet["output_paths"][evidence]))
+                    target.write_text(json.dumps({"progress_id": "downstream"}), encoding="utf-8")
+                before = self._supplement_bytes(manifest)
+                with self.assertRaisesRegex(RunContractError, "has execution evidence"):
+                    reconcile_supplement_progress(manifest, request_path, [], [], unstarted_gap_ids=["downstream"], now=self.now)
+                self.assertEqual(self._supplement_bytes(manifest), before)
+
+    def test_reconcile_unstarted_requires_failed_canary_and_subsequent_wave(self):
+        for case in ("unknown", "duplicate", "canary", "not_terminal"):
+            with self.subTest(case=case):
+                manifest, request_path, request, _ = self._failed_canary_fixture("unstarted-invalid-" + case)
+                ids = {"unknown": ["unknown"], "duplicate": ["downstream", "downstream"], "canary": ["canary"], "not_terminal": ["downstream"]}[case]
+                if case == "not_terminal":
+                    state = Path(request["execution_packets"][0]["progress"]["state_path"])
+                    state.write_text(json.dumps({"progress_id": "canary", "terminal_status": None}), encoding="utf-8")
+                before = self._supplement_bytes(manifest)
+                with self.assertRaises(RunContractError):
+                    reconcile_supplement_progress(manifest, request_path, [], [], unstarted_gap_ids=ids, now=self.now)
+                self.assertEqual(self._supplement_bytes(manifest), before)
+
+    def test_reconcile_invalid_later_result_does_not_write_failure_receipt(self):
+        manifest, request_path, request, _ = self._failed_canary_fixture("invalid-later-result")
+        later = Path(request["execution_packets"][1]["output_paths"]["draft"])
+        later.write_text(json.dumps({"gap_id": "downstream", "contract_version": "invalid"}), encoding="utf-8")
+        before = self._supplement_bytes(manifest)
+        with self.assertRaisesRegex(RunContractError, "contract_version"):
+            reconcile_supplement_progress(manifest, request_path, [later], [], now=self.now)
+        self.assertEqual(self._supplement_bytes(manifest), before)
+
+    def test_reconcile_ready_lane_keeps_its_coverage_beside_failed_canary(self):
+        manifest, request_path, request, draft = self._failed_canary_fixture("mixed-ready-reconcile")
+        ready = self.write_supplement_result(request_path, request, "downstream", [{
+            "status": "verified", "checked_at": self.now.isoformat(), "method": "http_get",
+            "requested_url": "https://example.org/ready", "final_url": "https://example.org/ready",
+            "http_status": 200, "failure_class": "none",
+        }])
+        original = draft.read_bytes()
+        _, aggregate = reconcile_supplement_progress(manifest, request_path, [ready], [], now=self.now)
+        self.assertEqual(draft.read_bytes(), original)
+        self.assertEqual(aggregate["coverage"], {"attempted": 1, "succeeded": 1, "failed": 0})
+        self.assertEqual(aggregate["status"], "degraded")
+
+    def test_reconcile_failure_receipt_conflict_preserves_all_bytes(self):
+        manifest, request_path, request, _ = self._failed_canary_fixture("failure-receipt-conflict")
+        failure = Path(request["execution_packets"][0]["output_paths"]["result"]).with_suffix(".failure.json")
+        failure.write_bytes(b'{"original": "receipt"}')
+        before = self._supplement_bytes(manifest)
+        with self.assertRaisesRegex(RunContractError, "failure path already contains different bytes"):
+            reconcile_supplement_progress(manifest, request_path, [], [], unstarted_gap_ids=["downstream"], now=self.now)
+        self.assertEqual(self._supplement_bytes(manifest), before)
+
+    def test_reconcile_rejects_unauthorized_result_path_before_writes(self):
+        manifest, request_path, _, _ = self._failed_canary_fixture("unauthorized-result")
+        outside = self.runtime_dir / "unrelated-result.json"
+        outside.write_text(json.dumps({"gap_id": "canary"}), encoding="utf-8")
+        original = outside.read_bytes()
+        before = self._supplement_bytes(manifest)
+        with self.assertRaisesRegex(RunContractError, "output path"):
+            reconcile_supplement_progress(manifest, request_path, [outside], [], now=self.now)
+        self.assertEqual(outside.read_bytes(), original)
+        self.assertEqual(self._supplement_bytes(manifest), before)
 
     def test_supplement_finalizer_validates_before_atomic_publication(self):
         manifest_path, request_path, request = self.prepare_supplement_run(

@@ -22,38 +22,11 @@ expected_action: "{{expected_action}}"
 signer: "{{signer}}"
 delivery_channel: "{{delivery_channel}}"
 external_output_required: "{{external_output_required}}"
-fact_reviewer: ""
-fact_reviewed_at: ""
-fact_reviewed_content_version: ""
-fact_reviewed_body_sha256: ""
-fact_reviewed_context_sha256: ""
-fact_reviewer_actor_id: ""
-fact_reviewer_role: ""
-fact_reviewer_authority_id: ""
-fact_reviewer_identity_provider: ""
-fact_reviewed_run_id: ""
-fact_review_action_event_id: ""
 approver: {{approver_yaml}}
 approved_at: "{{approved_at}}"
 approved_content_version: "{{approved_content_version}}"
 approved_body_sha256: "{{approved_body_sha256}}"
 approved_context_sha256: "{{approved_context_sha256}}"
-approval_run_id: ""
-approval_action_event_id: ""
-approver_actor_id: ""
-approver_role: ""
-approval_authority_id: ""
-approver_identity_provider: ""
-external_request_event_id: ""
-external_requested_by_actor_id: ""
-external_requested_at: ""
-revision_action_event_id: ""
-revision_run_id: ""
-revision_actor_id: ""
-revision_at: ""
-revision_target_content_version: ""
-revision_target_body_sha256: ""
-revision_target_context_sha256: ""
 ---
 
 # {{客户中文规范名称}}客户信（内部待审核稿）
@@ -89,9 +62,7 @@ revision_target_context_sha256: ""
 - [ ] approver可追溯到真人及稳定角色/账号，不是“领导/销售/审核人”等占位
 - [ ] 审批戳中的`approver`、`approved_at`、`approved_content_version`、`approved_body_sha256`与`approved_context_sha256`已绑定当前正文和六项结构化信件上下文；任一变化后必须重新审批
 
-外发版只能从与完整审批戳绑定且哈希一致的批准正文生成；缺失、过期或不匹配的审批戳均不得外发。外发正文及外发版只允许普通段落、换行和简单强调；禁止HTML、Markdown链接/图片、标题、列表、表格、围栏式或缩进式代码块及不可见Unicode格式字符。
-
-候选外发正文不是“非空即可”：规范化后必须至少有20个可见字符，并在标记区间内明确承载`recipient_role`中的收件对象/称谓、`letter_purpose`所表达的背景或客户价值、`expected_action`所表达的行动请求和`signer`中的签署人。发信目的必须在独立于行动请求的完整句子中连续表达；称谓、正文和签署人分行呈现。锚点只出现在内部审核摘要、正文只写“您好”或通用空话时，必须退回修改，不能进入事实复核、审批、抽取或ready。
+外发版只能从与完整审批戳绑定且哈希一致的批准正文生成；缺失、过期或不匹配的审批戳均不得外发。外发正文及外发版禁止包含HTML注释。
 
 ## 3. 已批准外发正文边界
 
@@ -99,7 +70,7 @@ revision_target_context_sha256: ""
 
 {{称谓}}：
 
-{{纯净外发正文；先用完整句子表达letter_purpose，再用请/期待/希望等请求语明确表达expected_action，不能只写问候或泛泛致意。不得包含本文件其他章节、claim_id、source_id、内部标签或审核说明。}}
+{{纯净外发正文。不得包含本文件其他章节、claim_id、source_id、内部标签或审核说明。}}
 
 {{落款}}
 

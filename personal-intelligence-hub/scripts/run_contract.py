@@ -2634,6 +2634,7 @@ def register_supplement_results(
     *,
     publish_drafts: bool = False,
     now: datetime | None = None,
+    _reconciled_failures: dict[Path, dict[str, Any]] | None = None,
 ) -> tuple[Path, dict[str, Any]]:
     manifest = require_stage(manifest_path, "baseline", {"completed", "degraded"})
     request_file = Path(request_path)
@@ -2818,7 +2819,8 @@ def register_supplement_results(
     degraded = False
     for raw_path in result_paths:
         result_file = Path(raw_path)
-        result = load_json(result_file, {})
+        reconciled = (_reconciled_failures or {}).get(result_file.resolve())
+        result = deepcopy(reconciled) if reconciled is not None else load_json(result_file, {})
         if result.get("contract_version") != "supplement-result/1.0":
             raise RunContractError("invalid supplement result contract_version")
         if result.get("run_id") != manifest["run_id"]:
@@ -2834,7 +2836,11 @@ def register_supplement_results(
             raise RunContractError("supplement result has unknown or duplicate gap_id")
         resolved_result_path = result_file.resolve()
         allowed_result_paths = {packet_paths[gap_id]}
-        if publish_drafts:
+        if reconciled is not None:
+            if result.get("status") != "failed" or result.get("failure_kind") != "infrastructure":
+                raise RunContractError("reconciled receipt must be an infrastructure failure")
+            allowed_result_paths = {packet_paths[gap_id].with_suffix(".failure.json")}
+        if publish_drafts and reconciled is None:
             allowed_result_paths.add(packet_draft_paths[gap_id])
         if resolved_result_path not in allowed_result_paths:
             raise RunContractError(
@@ -3067,9 +3073,16 @@ def register_supplement_results(
         if existing.get("results") == sorted(results, key=lambda result: str(result["gap_id"])):
             return existing_path, existing
         raise RunContractError("supplemental stage is terminal with different results")
+    # Validate every receipt and publication target before any write. Failure receipts
+    # never replace worker evidence, including invalid or late drafts.
+    for failure_path, failure in (_reconciled_failures or {}).items():
+        if failure_path.exists() and load_json(failure_path, {}) != failure:
+            raise RunContractError("supplement failure path already contains different bytes")
     if publish_drafts:
         publications: list[tuple[Path, Path]] = []
         for gap_id, source_path in result_source_paths.items():
+            if source_path in (_reconciled_failures or {}):
+                continue
             final_path = packet_paths[gap_id]
             if source_path == final_path:
                 continue
@@ -3078,6 +3091,9 @@ def register_supplement_results(
                     "supplement final path already contains different bytes"
                 )
             publications.append((source_path, final_path))
+        for failure_path, failure in (_reconciled_failures or {}).items():
+            if not failure_path.exists():
+                atomic_dump_json(failure_path, failure)
         for source_path, final_path in publications:
             if not final_path.exists():
                 os.replace(source_path, final_path)
@@ -3142,6 +3158,7 @@ def reconcile_supplement_progress(
     result_paths: Sequence[str | Path],
     progress_state_paths: Sequence[str | Path],
     *,
+    unstarted_gap_ids: Sequence[str] = (),
     now: datetime | None = None,
 ) -> tuple[Path, dict[str, Any]]:
     """Turn durable per-gap terminal states into a registered aggregate."""
@@ -3165,6 +3182,7 @@ def reconcile_supplement_progress(
     }
     expected_state_paths: dict[Path, str] = {}
     draft_paths: dict[str, Path] = {}
+    final_paths: dict[str, Path] = {}
     for packet in request.get("execution_packets", []):
         if not isinstance(packet, dict):
             raise RunContractError("supplement execution packet is invalid")
@@ -3181,10 +3199,13 @@ def reconcile_supplement_progress(
         gap_id = str(assigned[0])
         state_path = Path(str(progress.get("state_path") or "")).resolve()
         draft_path = Path(str(outputs.get("draft") or "")).resolve()
-        if gap_id not in gaps:
+        if gap_id not in gaps or gap_id in draft_paths or state_path in expected_state_paths:
             raise RunContractError("supplement progress binding is invalid")
         expected_state_paths[state_path] = gap_id
         draft_paths[gap_id] = draft_path
+        final_paths[gap_id] = Path(str(outputs.get("result") or "")).resolve()
+    if set(draft_paths) != set(gaps):
+        raise RunContractError("supplement execution packets do not cover every gap")
     explicitly_supplied_states: set[Path] = set()
     for raw_state_path in progress_state_paths:
         state_path = Path(raw_state_path).resolve()
@@ -3210,7 +3231,35 @@ def reconcile_supplement_progress(
         gap_id = str(result.get("gap_id") or "")
         if gap_id not in gaps or gap_id in supplied_results:
             raise RunContractError("supplement result has unknown or duplicate gap_id")
+        if result_path not in {draft_paths[gap_id], final_paths[gap_id]}:
+            raise RunContractError("supplement result path does not match execution packet output path")
         supplied_results[gap_id] = result_path
+    unstarted = set(unstarted_gap_ids)
+    if len(unstarted) != len(unstarted_gap_ids) or not unstarted <= set(gaps):
+        raise RunContractError("unstarted gaps are unknown or duplicated")
+    canary_id = ""
+    if unstarted:
+        plan = request.get("launch_plan") or []
+        if not plan or plan[0].get("mode") != "canary" or plan[0].get("stop_on_infrastructure_failure") is not True or len(plan[0].get("workers", [])) != 1:
+            raise RunContractError("unstarted gaps require a stopped canary launch plan")
+        canary_id = str(plan[0]["workers"][0].get("gap_id") or "")
+        canary_state = supplied_states.get(canary_id)
+        if not canary_state or canary_state[1].get("terminal_status") not in {"degraded_timeout", "declare_lost"}:
+            raise RunContractError("unstarted gaps require a terminal failed canary state")
+        downstream = {
+            str(worker.get("gap_id") or "")
+            for wave in plan[1:] for worker in wave.get("workers", [])
+        }
+        if not unstarted <= downstream or canary_id in unstarted:
+            raise RunContractError("unstarted gaps must belong to subsequent launch-plan waves")
+        for gap_id in unstarted:
+            telemetry_path = Path(manifest["run_dir"]) / f"execution_telemetry_supplemental_{gap_id}.json"
+            if (gap_id in supplied_states or gap_id in supplied_results
+                or draft_paths[gap_id].exists() or final_paths[gap_id].exists()
+                or final_paths[gap_id].with_suffix(".failure.json").exists()
+                or telemetry_path.exists()
+                or f"supplemental:{gap_id}" in manifest.get("telemetry", {}).get("executions", {})):
+                raise RunContractError(f"unstarted gap {gap_id} has execution evidence")
     current = _aware_now(manifest["timezone"], now)
     request_sha = file_sha256(request_file)
     baseline_sha = str(manifest["stages"]["baseline"]["artifact_sha256"])
@@ -3220,12 +3269,13 @@ def reconcile_supplement_progress(
         )
     )
     reconciled_paths: list[Path] = []
+    failures: dict[Path, dict[str, Any]] = {}
     for gap_id, gap in gaps.items():
         state_record = supplied_states.get(gap_id)
         terminal_status = (
             state_record[1].get("terminal_status") if state_record else None
         )
-        if terminal_status not in {"degraded_timeout", "declare_lost"}:
+        if gap_id not in unstarted and terminal_status not in {"degraded_timeout", "declare_lost"}:
             if gap_id in supplied_results:
                 reconciled_paths.append(supplied_results[gap_id])
                 continue
@@ -3236,8 +3286,18 @@ def reconcile_supplement_progress(
             raise RunContractError(
                 f"supplement gap {gap_id} progress state is not terminal"
             )
-        assert state_record is not None
-        state_path, _ = state_record
+        if gap_id in unstarted:
+            state_path, _ = supplied_states[canary_id]
+            reason = f"not_started_after_canary_failure; canary_gap_id={canary_id}"
+        else:
+            assert state_record is not None
+            state_path, _ = state_record
+            reason = str(terminal_status)
+        reason += f"; progress_state_sha256={file_sha256(state_path)}"
+        for evidence_path in sorted({draft_paths[gap_id], final_paths[gap_id]}, key=str):
+            if evidence_path.is_file():
+                reason += f"; unvalidated_evidence_path={evidence_path}; sha256={file_sha256(evidence_path)}"
+        reason += "; coverage counts validated evidence only, not unvalidated worker attempts"
         access_log: list[dict[str, Any]] = []
         result = {
             "contract_version": "supplement-result/1.0",
@@ -3249,9 +3309,7 @@ def reconcile_supplement_progress(
             "lane": gap["lane"],
             "status": "failed",
             "failure_kind": "infrastructure",
-            "failure_reason": (
-                f"{terminal_status}; progress_state_sha256={file_sha256(state_path)}"
-            ),
+            "failure_reason": reason,
             "executed_queries": [],
             "access_log": access_log,
             "candidates": [],
@@ -3269,8 +3327,8 @@ def reconcile_supplement_progress(
             "started_at": current.isoformat(),
             "completed_at": current.isoformat(),
         }
-        terminal_result_path = supplied_results.get(gap_id, draft_paths[gap_id])
-        atomic_dump_json(terminal_result_path, result)
+        terminal_result_path = final_paths[gap_id].with_suffix(".failure.json")
+        failures[terminal_result_path] = result
         reconciled_paths.append(terminal_result_path)
     return register_supplement_results(
         manifest_path,
@@ -3278,6 +3336,7 @@ def reconcile_supplement_progress(
         reconciled_paths,
         publish_drafts=True,
         now=current,
+        _reconciled_failures=failures,
     )
 
 

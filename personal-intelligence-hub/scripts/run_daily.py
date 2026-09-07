@@ -647,6 +647,10 @@ def main() -> None:
     reconcile_supplement.add_argument(
         "--progress-state", type=Path, action="append", default=[]
     )
+    reconcile_supplement.add_argument(
+        "--unstarted-gap", action="append", default=[],
+        help="Assert a downstream gap was never launched after terminal canary failure; repeat per gap.",
+    )
 
     review = subparsers.add_parser("register-review", help="Register semantic and red-team receipts.")
     review.add_argument("--manifest", type=Path, required=True)
@@ -830,6 +834,7 @@ def main() -> None:
             args.request,
             args.result,
             args.progress_state,
+            unstarted_gap_ids=args.unstarted_gap,
         )
         print(
             json.dumps(

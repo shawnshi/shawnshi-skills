@@ -1,6 +1,8 @@
 interface:
   display_name: "Mentat Skills Governance"
-  short_description: "维护并验证本地 Codex 技能库的治理合同与发布门禁"
-  default_prompt: "Use $mentat-skill-creator to perform a read-only audit of this local Codex skills library and report findings without modifying files."
+  short_description: "维护并验证当前 Pi 本地技能库的治理合同与发布门禁"
+  default_prompt: >-
+    Use $mentat-skill-creator to perform a read-only audit of this local Pi
+    skills library and report findings without modifying files.
 policy:
   allow_implicit_invocation: false

@@ -6,7 +6,7 @@
 
 | 模式 | 选择条件 | 最小产出 | 必需门禁 |
 | --- | --- | --- | --- |
-| `direct` | 单一稳定问题；无多来源研究、量化模型或正式文件 | 结论、依据、必要限制 | 人工事实检查 |
+| `direct` | 单一稳定问题；无多来源研究、量化模型或正式文件 | 结论、依据、必要限制 | 相称的事实与边界检查，不要求另行人工批准或运行脚本 |
 | `brief` | 有界管理问题；通常比较2—3个选项 | 建议、条件、关键事实、风险、待验证项 | 保存时执行统一质量门禁 |
 | `board-memo` | 管理层需要短决策材料 | 待决定事项、事实与未知、选项、财务影响、风险、下一验证点 | Blackboard校验；`decision_ready`时使用严格质量门禁 |
 | `deep-dive` | 关键主张依赖多个研究面或冲突证据 | 可独立核验的证据链、方案比较、反证、路线图 | Blackboard校验；`decision_ready`时使用严格质量门禁 |
@@ -59,7 +59,7 @@
 
 ## 文件交付
 
-需要文件时才创建章节并装配。必须至少有一个非空章节；装配后运行统一质量门禁。`working_draft` 和 `review_ready` 可以带着明确披露的警告供复核；`decision_ready` 必须通过严格门禁。文件头的成熟度必须与Blackboard一致，不能用脚本成功状态替代管理结论。
+需要文件时才创建章节并装配。默认必须至少有一个清理前置 frontmatter 后仍非空白的章节；全空时返回 `empty_chapters`，不创建或覆盖输出（即使带 `--force`）。混合输入跳过空章节并在 warnings 列出文件，`chapters_merged`、`chapter_order` 和 `audit` 只记录实际合并章节。只把文件开头、有闭合分隔符且首个有效行是映射键的块视为 frontmatter；普通 Markdown 水平分隔线及有歧义的非映射块保留。显式 `--allow-empty` 仅允许标题草稿，返回警告；无正文且 Blackboard 为 `decision_ready/approved_for_execution` 时仍拒绝，不能通过空草稿声明正式成熟度。装配后运行统一质量门禁。`working_draft` 和 `review_ready` 可以带着明确披露的警告供复核；`decision_ready` 必须通过严格门禁。文件头的成熟度必须与Blackboard一致，不能用脚本成功状态替代管理结论。
 
 ## 最短工具路径
 
@@ -74,6 +74,10 @@ python scripts/blackboard.py --workspace-root "$PROJECT_ROOT" update \
   --value @/absolute/path/quantitative_model.json \
   --expect-revision 3
 ```
+
+`blackboard.py status/validate/ready` 的实际读取路径可创建 `.lock` 文件及父目录，即使目标尚未初始化，也不是物理零写入。严格只读源码审计应读取已提供的 JSON，在内存中调用 `validate_state(state)` 校验，不运行这些 CLI 或把其称为无写入。
+
+目标文件的存在性检查、读取和替换均须在同一事务锁内；Windows 的存在性检查也可能短暂打开不共享句柄，不能放在锁外。只有成功取得锁才执行解锁，保留获取失败的原始异常。该锁只协调使用同一锁文件的调用方，不能保证外部编辑器、同步或安全软件持有句柄时替换成功；错误仍返回失败，不自动重试或重复提交事务。
 
 起草期间可按需运行 `blackboard.py validate` 定位缺口。只有消费纯状态的自动化才单独运行 `blackboard.py ready`；已有报告时由 `strategy_gate.py` 同时检查报告和Blackboard，避免重复执行多个等价门禁。
 
@@ -92,4 +96,4 @@ python scripts/strategy_gate.py \
 
 `--strict` 只用于要求无警告的正式交付；草稿和复核稿应保留并披露警告，而不是通过放宽字段或改写成熟度来消除警告。
 
-无 Blackboard 的 `brief` 仅可显式使用 `strategy_gate.py --path REPORT --mode brief --textual-only` 检查文本草稿；报告须声明 `working_draft` 或 `review_ready`。输出 `scope: textual_only`，不验证证据、财务、合规或决策就绪度，不得据此放行正式财务交付。该路径拒绝 `--strict`、正式成熟度及其他模式；已有 Blackboard 时仍走原统一门禁，正式交付仍必须严格检查。装配成功不代表门禁通过。
+纯对话且不生成文件、不使用 Blackboard 的 `brief` 不运行文件门禁；无 Blackboard 的 `brief` 文件仅可显式使用 `strategy_gate.py --path REPORT --mode brief --textual-only` 检查文本草稿；报告须声明 `working_draft` 或 `review_ready`。输出 `scope: textual_only`，不验证证据、财务、合规或决策就绪度，不得据此放行正式财务交付。该路径拒绝 `--strict`、正式成熟度及其他模式；已有 Blackboard 时仍走原统一门禁，正式交付仍必须严格检查。装配成功不代表门禁通过。

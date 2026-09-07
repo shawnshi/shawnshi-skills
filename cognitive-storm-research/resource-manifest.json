@@ -1,18 +1,18 @@
 {
   "schema_version": 3,
   "skill": "cognitive-storm-research",
-  "generated_at": "2026-09-05T17:15:44+08:00",
+  "generated_at": "2026-09-07T06:17:23+08:00",
   "hash_algorithm": "SHA-256",
   "text_hash_normalization": "LF",
   "skill_md": "SKILL.md",
-  "skill_md_sha256": "d3e354d7fde4a588be4d8227853fb29083f0017ac032436bb91ae3ee6b5fe6cb",
+  "skill_md_sha256": "787644d5e45a70e5f7020d37ffe24fdf4a6f0efeeab4be86c7cb293da3cc3d9f",
   "top_level_files": [
     "SKILL.md"
   ],
   "top_level_file_hashes": [
     {
       "path": "SKILL.md",
-      "sha256": "d3e354d7fde4a588be4d8227853fb29083f0017ac032436bb91ae3ee6b5fe6cb"
+      "sha256": "787644d5e45a70e5f7020d37ffe24fdf4a6f0efeeab4be86c7cb293da3cc3d9f"
     }
   ],
   "top_level_directories": [

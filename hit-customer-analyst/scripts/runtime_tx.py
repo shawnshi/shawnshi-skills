@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""POSIX locking, CAS, manifests, and recoverable multi-file commits.
+"""Windows/POSIX locking, CAS, manifests, and recoverable multi-file commits.
 
 The Markdown artifacts remain the human-readable layer.  The runtime manifest
 and write-ahead journal are the machine authority for concurrency and crash
@@ -9,7 +9,7 @@ recovery.
 from __future__ import annotations
 
 import contextlib
-import fcntl
+import errno
 import hashlib
 import json
 import os
@@ -21,10 +21,14 @@ import tempfile
 import time
 import uuid
 from dataclasses import dataclass
-from datetime import date, datetime, timezone
+from datetime import datetime, timezone
 from pathlib import Path
 from typing import Callable, Iterator, Mapping
-from zoneinfo import ZoneInfo, ZoneInfoNotFoundError
+
+if os.name == "nt":
+    import msvcrt
+else:
+    import fcntl
 
 
 RUNTIME_SCHEMA = "discovery-call-runtime/v1"
@@ -32,29 +36,11 @@ JOURNAL_SCHEMA = "discovery-call-transaction/v1"
 RUNTIME_DIR = "runtime"
 MANIFEST_REL = Path(RUNTIME_DIR) / "manifest.json"
 EVIDENCE_MANIFEST_REL = Path(RUNTIME_DIR) / "evidence-manifest.json"
-SEARCH_PLAN_REL = Path(RUNTIME_DIR) / "search-plan.json"
-SOURCE_CACHE_REL = Path(RUNTIME_DIR) / "source-cache.json"
-RUN_METRICS_REL = Path(RUNTIME_DIR) / "run-metrics.json"
-GOVERNANCE_CONTEXT_REL = Path(RUNTIME_DIR) / "governance-context.json"
-AUDITED_RUNTIME_RELS = {
-    EVIDENCE_MANIFEST_REL,
-    SEARCH_PLAN_REL,
-    SOURCE_CACHE_REL,
-    RUN_METRICS_REL,
-    GOVERNANCE_CONTEXT_REL,
-}
-RESEARCH_RUNTIME_RELS = {
-    EVIDENCE_MANIFEST_REL,
-    SEARCH_PLAN_REL,
-    SOURCE_CACHE_REL,
-    RUN_METRICS_REL,
-}
 JOURNAL_NAME = ".discovery-call.txn.json"
 OUTPUT_LOCK_NAME = ".discovery-call.output.lock"
 WORKSPACE_LOCK_NAME = ".discovery-call.workspace.lock"
 TX_DIR_PREFIX = ".discovery-call-txn-"
 CONTENT_VERSION_RE = re.compile(r"^[1-9][0-9]*$")
-DELIVERY_SUMMARY_UNSET = object()
 
 
 class TxError(RuntimeError):
@@ -93,29 +79,16 @@ def utc_now() -> str:
     return datetime.now(timezone.utc).replace(microsecond=0).isoformat().replace("+00:00", "Z")
 
 
-def normalize_task_timezone(value: object) -> str | None:
-    """Validate an optional persisted IANA timezone without consulting host TZ."""
-    if value is None:
-        return None
-    if not isinstance(value, str) or not value or value != value.strip():
-        raise TxError("运行清单task_timezone必须是非空IANA时区字符串。")
-    try:
-        return ZoneInfo(value).key
-    except (ZoneInfoNotFoundError, ValueError) as exc:
-        raise TxError("运行清单task_timezone不是有效IANA时区。") from exc
-
-
-def task_date_at(instant: datetime, task_timezone: str) -> date:
-    """Return the task civil date for one aware instant and persisted timezone."""
-    if instant.tzinfo is None or instant.utcoffset() is None:
-        raise TxError("任务日期计算要求带时区时间。")
-    normalized = normalize_task_timezone(task_timezone)
-    if normalized is None:  # Defensive: the public contract requires a timezone here.
-        raise TxError("任务日期计算缺少task_timezone。")
-    return instant.astimezone(ZoneInfo(normalized)).date()
-
-
 def fsync_directory(path: Path) -> None:
+    """Sync POSIX directory entries; Windows only validates the directory.
+
+    Windows stdlib cannot fsync directories. File fsync and same-directory
+    replace still apply, but host power-loss durability is not promised there.
+    """
+    if os.name == "nt":
+        if not stat.S_ISDIR(path.stat().st_mode):
+            raise NotADirectoryError(str(path))
+        return
     descriptor = os.open(path, os.O_RDONLY | getattr(os, "O_DIRECTORY", 0))
     try:
         os.fsync(descriptor)
@@ -196,6 +169,12 @@ def assert_file_cas(path: Path, expected: Mapping[str, object]) -> None:
 
 
 class PosixFileLock:
+    """Cooperating-process lock; historical API name retained on Windows.
+
+    Windows locks byte zero (also on an empty file); POSIX uses flock.
+    Lock files must not be removed or replaced while any writer is active.
+    """
+
     def __init__(self, path: Path, *, timeout: float = 60.0) -> None:
         self.path = path
         self.timeout = timeout
@@ -203,6 +182,8 @@ class PosixFileLock:
 
     def __enter__(self) -> "PosixFileLock":
         self.path.parent.mkdir(parents=True, exist_ok=True)
+        if self.path.is_symlink():
+            raise TxError(f"运行锁不得为符号链接：{self.path}")
         try:
             descriptor = os.open(
                 self.path,
@@ -211,34 +192,65 @@ class PosixFileLock:
             )
         except OSError as exc:
             raise TxError(f"运行锁无法安全打开：{self.path}: {exc}") from exc
-        if not stat.S_ISREG(os.fstat(descriptor).st_mode):
+        try:
+            opened = os.fstat(descriptor)
+            named = self.path.lstat()
+            if (
+                not stat.S_ISREG(opened.st_mode)
+                or not stat.S_ISREG(named.st_mode)
+                or getattr(named, "st_file_attributes", 0)
+                & getattr(stat, "FILE_ATTRIBUTE_REPARSE_POINT", 0)
+                or not os.path.samestat(opened, named)
+            ):
+                raise TxError(f"运行锁不是同一路径的普通文件：{self.path}")
+            self._handle = os.fdopen(descriptor, "r+", encoding="utf-8")
+        except BaseException:
             os.close(descriptor)
-            raise TxError(f"运行锁不是普通文件：{self.path}")
-        self._handle = os.fdopen(descriptor, "r+", encoding="utf-8")
+            raise
         deadline = time.monotonic() + self.timeout
-        while True:
-            try:
-                fcntl.flock(self._handle.fileno(), fcntl.LOCK_EX | fcntl.LOCK_NB)
-                break
-            except BlockingIOError:
-                if time.monotonic() >= deadline:
-                    self._handle.close()
-                    self._handle = None
-                    raise LockTimeout(f"等待运行锁超时：{self.path}")
-                time.sleep(0.05)
-        self._handle.seek(0)
-        self._handle.truncate()
-        self._handle.write(f"pid={os.getpid()} acquired_at={utc_now()}\n")
-        self._handle.flush()
-        os.fsync(self._handle.fileno())
+        try:
+            while True:
+                try:
+                    if os.name == "nt":
+                        self._handle.seek(0)
+                        msvcrt.locking(self._handle.fileno(), msvcrt.LK_NBLCK, 1)
+                    else:
+                        fcntl.flock(self._handle.fileno(), fcntl.LOCK_EX | fcntl.LOCK_NB)
+                    break
+                except OSError as exc:
+                    contention = (
+                        exc.errno == errno.EACCES if os.name == "nt"
+                        else isinstance(exc, BlockingIOError)
+                    )
+                    if not contention:
+                        raise
+                    if time.monotonic() >= deadline:
+                        raise LockTimeout(f"等待运行锁超时：{self.path}") from exc
+                    time.sleep(0.05)
+            self._handle.seek(0)
+            self._handle.write(f"pid={os.getpid()} acquired_at={utc_now()}\n")
+            self._handle.flush()
+            self._handle.truncate()
+            os.fsync(self._handle.fileno())
+        except BaseException:
+            # close releases even a lock acquired before metadata/fsync failed.
+            self._handle.close()
+            self._handle = None
+            raise
         return self
 
     def __exit__(self, exc_type, exc, traceback) -> None:
         if self._handle is None:
             return
-        fcntl.flock(self._handle.fileno(), fcntl.LOCK_UN)
-        self._handle.close()
-        self._handle = None
+        try:
+            if os.name == "nt":
+                self._handle.seek(0)
+                msvcrt.locking(self._handle.fileno(), msvcrt.LK_UNLCK, 1)
+            else:
+                fcntl.flock(self._handle.fileno(), fcntl.LOCK_UN)
+        finally:
+            self._handle.close()
+            self._handle = None
 
 
 def output_root_lock(root: Path, *, timeout: float = 60.0) -> PosixFileLock:
@@ -266,9 +278,13 @@ def atomic_write_bytes(path: Path, data: bytes, *, mode: int | None = None) -> N
     descriptor, temporary_name = tempfile.mkstemp(prefix=f".{path.name}.", dir=path.parent)
     temporary = Path(temporary_name)
     try:
-        if mode is not None:
-            os.fchmod(descriptor, mode)
         with os.fdopen(descriptor, "wb") as handle:
+            if mode is not None:
+                if os.name == "nt":
+                    # Windows chmod controls only the read-only attribute, not ACLs.
+                    os.chmod(temporary, stat.S_IWRITE if mode & stat.S_IWUSR else stat.S_IREAD)
+                else:
+                    os.fchmod(handle.fileno(), mode)
             handle.write(data)
             handle.flush()
             os.fsync(handle.fileno())
@@ -276,6 +292,9 @@ def atomic_write_bytes(path: Path, data: bytes, *, mode: int | None = None) -> N
         fsync_directory(path.parent)
     finally:
         if temporary.exists():
+            if os.name == "nt":
+                # Only our disposable candidate: never clear a target's ACL/attribute.
+                temporary.chmod(stat.S_IWRITE)
             temporary.unlink()
 
 
@@ -302,8 +321,6 @@ def load_manifest(workspace: Path, *, required: bool = True) -> dict[str, object
         raise TxError("运行清单schema无效。")
     if not isinstance(payload.get("transaction_sequence"), int) or payload["transaction_sequence"] < 1:
         raise TxError("运行清单transaction_sequence无效。")
-    if "task_timezone" in payload:
-        normalize_task_timezone(payload["task_timezone"])
     return payload
 
 
@@ -344,23 +361,6 @@ def verify_manifest_artifacts(workspace: Path, manifest: Mapping[str, object]) -
             raise CASMismatch(f"清单成果缺失或路径无效：{relative}")
         if sha256_file(target) != expected_hash:
             raise CASMismatch(f"清单成果被绕过事务修改：{relative}")
-    runtime_files = manifest.get("runtime_files", {})
-    if not isinstance(runtime_files, dict):
-        raise TxError("运行清单runtime_files无效。")
-    for name, record in runtime_files.items():
-        if not isinstance(record, dict):
-            raise TxError(f"运行清单机器文件记录无效：{name}")
-        relative = record.get("path")
-        expected_hash = record.get("sha256")
-        if not isinstance(relative, str) or not isinstance(expected_hash, str):
-            raise TxError(f"运行清单机器文件路径/哈希无效：{name}")
-        target = workspace / relative
-        if Path(relative) not in AUDITED_RUNTIME_RELS:
-            raise TxError(f"运行清单包含未受控机器文件：{relative}")
-        if _relative_target(workspace, target) != relative or not target.is_file() or target.is_symlink():
-            raise CASMismatch(f"清单机器文件缺失或路径无效：{relative}")
-        if sha256_file(target) != expected_hash:
-            raise CASMismatch(f"清单机器文件被绕过事务修改：{relative}")
 
 
 def build_manifest(
@@ -370,7 +370,6 @@ def build_manifest(
     business_mode: str,
     route: str,
     depth: str,
-    task_timezone: str | None,
     latest_run_id: str,
     content_version: str,
     stage: str,
@@ -378,9 +377,6 @@ def build_manifest(
     selected_modules: list[str],
     authorization: Mapping[str, object],
     transaction_sequence: int,
-    intake_preflight: Mapping[str, object] | None = None,
-    candidate_attestation: Mapping[str, object] | None = None,
-    delivery_summary: Mapping[str, object] | None | object = DELIVERY_SUMMARY_UNSET,
     overlay: Mapping[Path, bytes] | None = None,
     deletes: tuple[Path, ...] | list[Path] = (),
 ) -> dict[str, object]:
@@ -402,7 +398,7 @@ def build_manifest(
         artifact_type = metadata.get("artifact_type")
         if not artifact_type:
             continue
-        record: dict[str, object] = {
+        artifacts[artifact_type] = {
             "path": path.name,
             "sha256": sha256_bytes(raw),
             "state": {
@@ -414,49 +410,7 @@ def build_manifest(
             "content_version": metadata.get("content_version", ""),
             "latest_run_id": metadata.get("latest_run_id", ""),
         }
-        if artifact_type == "visit_strategy":
-            record["strategy_variant"] = metadata.get("strategy_variant", "")
-        artifacts[artifact_type] = record
-    runtime_files: dict[str, dict[str, object]] = {}
-    for relative in sorted(AUDITED_RUNTIME_RELS, key=lambda item: item.as_posix()):
-        path = workspace / relative
-        resolved = path.resolve(strict=False)
-        if resolved in deleted:
-            continue
-        raw = overlay.get(resolved)
-        if raw is None:
-            if not path.exists():
-                continue
-            if path.is_symlink() or not path.is_file():
-                raise TxError(f"机器审计文件不是普通文件：{relative.as_posix()}")
-            raw = path.read_bytes()
-        try:
-            payload = json.loads(raw.decode("utf-8"))
-        except (UnicodeError, json.JSONDecodeError) as exc:
-            raise TxError(f"机器审计文件不是有效UTF-8 JSON：{relative.as_posix()}") from exc
-        if not isinstance(payload, dict) or not isinstance(payload.get("schema"), str):
-            raise TxError(f"机器审计文件缺少schema：{relative.as_posix()}")
-        runtime_files[relative.name] = {
-            "path": relative.as_posix(),
-            "sha256": sha256_bytes(raw),
-            "schema": payload.get("schema", ""),
-            "context_id": payload.get("context_id", ""),
-            "run_id": payload.get("run_id", ""),
-        }
-    research_names = {relative.name for relative in RESEARCH_RUNTIME_RELS}
-    present_research_names = research_names & set(runtime_files)
-    evidence_run_id: str | None = None
-    if present_research_names:
-        if present_research_names != research_names:
-            missing = sorted(research_names - present_research_names)
-            raise TxError("研究机器文件必须四件套同事务绑定，缺少：" + ", ".join(missing))
-        research_run_ids = {
-            str(runtime_files[name].get("run_id", "")) for name in research_names
-        }
-        if len(research_run_ids) != 1 or not next(iter(research_run_ids)):
-            raise TxError("研究机器四件套run_id必须非空且完全一致。")
-        evidence_run_id = next(iter(research_run_ids))
-    manifest: dict[str, object] = {
+    return {
         "schema": RUNTIME_SCHEMA,
         "context_id": identity.get("context_id", ""),
         "customer_id": identity.get("customer_id", ""),
@@ -472,86 +426,9 @@ def build_manifest(
         "selected_modules": selected_modules,
         "authorization": dict(authorization),
         "artifacts": artifacts,
-        "runtime_files": runtime_files,
         "transaction_sequence": transaction_sequence,
         "updated_at": utc_now(),
     }
-    if candidate_attestation is None:
-        existing_manifest_path = workspace / MANIFEST_REL
-        if existing_manifest_path.is_file() and not existing_manifest_path.is_symlink():
-            try:
-                existing_payload = json.loads(existing_manifest_path.read_text(encoding="utf-8"))
-            except (OSError, UnicodeError, json.JSONDecodeError):
-                existing_payload = None
-            if isinstance(existing_payload, dict) and isinstance(existing_payload.get("candidate_attestation"), dict):
-                candidate_attestation = existing_payload["candidate_attestation"]
-    if candidate_attestation is not None:
-        manifest["candidate_attestation"] = dict(candidate_attestation)
-    if delivery_summary is DELIVERY_SUMMARY_UNSET:
-        inherited_delivery_summary: Mapping[str, object] | None = None
-        existing_manifest_path = workspace / MANIFEST_REL
-        if existing_manifest_path.is_file() and not existing_manifest_path.is_symlink():
-            try:
-                existing_payload = json.loads(existing_manifest_path.read_text(encoding="utf-8"))
-            except (OSError, UnicodeError, json.JSONDecodeError):
-                existing_payload = None
-            if isinstance(existing_payload, dict) and isinstance(existing_payload.get("delivery_summary"), dict):
-                inherited_delivery_summary = existing_payload["delivery_summary"]
-        delivery_summary = inherited_delivery_summary
-    if delivery_summary is not None:
-        required_summary = {
-            "schema",
-            "source_artifact_type",
-            "recommendation",
-            "investment_intensity",
-            "primary_action",
-            "owner",
-            "due_date",
-        }
-        if set(delivery_summary) != required_summary:
-            raise TxError("delivery_summary字段不符合受控决策五元组契约。")
-        manifest["delivery_summary"] = dict(delivery_summary)
-    if evidence_run_id is not None:
-        # Governance mutations advance ``latest_run_id`` without rewriting the
-        # research snapshot.  Keep the four-file research lineage explicit so
-        # validators can bind evidence to its originating run instead of the
-        # latest governance event.
-        manifest["evidence_run_id"] = evidence_run_id
-    if intake_preflight is None:
-        current = load_manifest(workspace, required=False)
-        inherited = current.get("intake_preflight") if isinstance(current, dict) else None
-        if isinstance(inherited, dict):
-            intake_preflight = inherited
-    if intake_preflight is not None:
-        required_gate_fields = {
-            "gate_id",
-            "input_sha256",
-            "business_mode",
-            "evaluated_at",
-            "expires_at",
-            "request_binding_receipt_id",
-            "request_binding_receipt_sha256",
-            "request_bundle_id",
-            "request_revision",
-            "raw_request_sha256",
-            "mention_ledger_sha256",
-            "subject_resolution",
-            "subject_resolution_sha256",
-            "safety_authorizations_sha256",
-            "safety_directives_sha256",
-            "safety_authorization_codes",
-        }
-        if not required_gate_fields <= set(intake_preflight):
-            raise TxError("运行清单intake_preflight缺少可信ready收据字段。")
-        manifest["intake_preflight"] = dict(intake_preflight)
-        subject_resolution = intake_preflight.get("subject_resolution")
-        if not isinstance(subject_resolution, Mapping):
-            raise TxError("运行清单intake_preflight.subject_resolution无效。")
-        manifest["subject_binding"] = dict(subject_resolution)
-    normalized_timezone = normalize_task_timezone(task_timezone)
-    if normalized_timezone is not None:
-        manifest["task_timezone"] = normalized_timezone
-    return manifest
 
 
 def _relative_target(workspace: Path, path: Path) -> str:
@@ -570,7 +447,7 @@ def _relative_target(workspace: Path, path: Path) -> str:
         raise TxError(f"事务目标路径包含符号链接或重定向：{path}")
     root_artifact = len(relative.parts) == 1 and relative.suffix.casefold() == ".md" and not relative.name.startswith(".")
     archive_letter = len(relative.parts) >= 3 and relative.parts[:2] == ("archive", "letters")
-    if not root_artifact and relative not in ({MANIFEST_REL} | AUDITED_RUNTIME_RELS) and not archive_letter:
+    if not root_artifact and relative not in {MANIFEST_REL, EVIDENCE_MANIFEST_REL, Path("runtime/search-plan.json"), Path("runtime/run-metrics.json")} and not archive_letter:
         raise TxError(
             f"事务只允许根目录成果、runtime清单或archive/letters/普通文件：{path}"
         )
@@ -648,6 +525,7 @@ def _transaction_member(tx_dir: Path, relative: object, bucket: str) -> Path:
     if (
         bucket_dir.is_symlink()
         or member.is_symlink()
+        or member.resolve(strict=False) != Path(os.path.abspath(member))
         or member.resolve(strict=False).parent != bucket_dir.resolve()
     ):
         raise TxError(f"事务暂存成员包含符号链接或越界：{member}")
@@ -657,7 +535,8 @@ def _transaction_member(tx_dir: Path, relative: object, bucket: str) -> Path:
 def _kill_failpoint(applied_count: int) -> None:
     configured = os.environ.get("DISCOVERY_CALL_TX_SIGKILL_AFTER", "").strip()
     if configured and configured.isdigit() and int(configured) == applied_count:
-        os.kill(os.getpid(), signal.SIGKILL)
+        # Windows os.kill with SIGTERM invokes TerminateProcess (no cleanup).
+        os.kill(os.getpid(), signal.SIGTERM if os.name == "nt" else signal.SIGKILL)
 
 
 def transactional_commit(
@@ -830,23 +709,63 @@ def recover_transaction(
     selected = strategy
     if strategy == "auto":
         selected = "roll-forward" if all_after else "rollback"
-    # A caller that cannot supply a postflight has no trustworthy way to
-    # establish that a possibly old candidate authorization still matches the
-    # complete recovered state. In that case recovery is deliberately
-    # loss-safe: restore the before image even when every target already holds
-    # the staged bytes. Candidate-aware callers may request roll-forward only
-    # with a fail-closed postflight.
-    if selected == "roll-forward" and postflight is None:
-        selected = "rollback"
-
-    def restore_before_images() -> None:
-        for restore_entry in reversed(entries):
-            target = workspace / str(restore_entry["target"])
-            before = restore_entry["before"]
+    if selected == "roll-forward":
+        # Validate and freeze every candidate before touching any formal target.
+        # Use these exact bytes after preflight, not a second read of mutable staging.
+        candidates: dict[str, bytes] = {}
+        for entry in entries:
+            if not bool(entry.get("after_exists", True)):
+                continue
+            staged = _transaction_member(tx_dir, entry.get("new", ""), "new")
+            try:
+                state = staged.lstat()
+                if (
+                    not stat.S_ISREG(state.st_mode)
+                    or getattr(state, "st_file_attributes", 0)
+                    & getattr(stat, "FILE_ATTRIBUTE_REPARSE_POINT", 0)
+                ):
+                    raise TxError(f"前滚候选不是普通文件：{staged}")
+                raw = staged.read_bytes()
+            except OSError as exc:
+                raise TxError(f"前滚候选无法读取：{staged}: {exc}") from exc
+            if sha256_bytes(raw) != entry["after_sha256"]:
+                raise TxError(f"前滚候选哈希不符：{staged}")
+            candidates[str(entry["target"])] = raw
+        for entry in entries:
+            target = workspace / str(entry["target"])
+            after_exists = bool(entry.get("after_exists", True))
+            if after_exists and not (target.exists() and sha256_file(target) == entry["after_sha256"]):
+                mode = target.stat().st_mode & 0o777 if target.exists() else 0o600
+                atomic_write_bytes(target, candidates[str(entry["target"])], mode=mode)
+            elif not after_exists and target.exists():
+                if target.is_symlink() or not target.is_file():
+                    raise TxError(f"拒绝删除非普通事务目标：{target}")
+                target.unlink()
+                fsync_directory(target.parent)
+        if postflight is not None:
+            postflight(workspace)
+        journal["state"] = "committed"
+        _write_journal(workspace, journal)
+        result = "rolled_forward"
+    else:
+        for entry in reversed(entries):
+            target = workspace / str(entry["target"])
+            _relative_target(workspace, target)
+            before = entry["before"]
             if not isinstance(before, dict):
                 raise TxError("事务日志before状态无效。")
+            actual = file_state(target)
+            # A failed replace may leave a protected target untouched. Recheck
+            # disk state, not journal.applied (which can lag a successful replace).
+            if _same_state(actual, before):
+                continue
+            after_exists = bool(entry.get("after_exists", True))
+            if actual.exists != after_exists or (
+                after_exists and actual.sha256 != entry["after_sha256"]
+            ):
+                raise CASMismatch(f"恢复目标存在第三方修改，停止自动恢复：{target}")
             if bool(before.get("exists")):
-                backup = _transaction_member(tx_dir, restore_entry.get("old", ""), "old")
+                backup = _transaction_member(tx_dir, entry.get("old", ""), "old")
                 if not backup.is_file() or sha256_file(backup) != before.get("sha256"):
                     raise TxError(f"回滚备份缺失或哈希不符：{backup}")
                 mode = target.stat().st_mode & 0o777 if target.exists() else 0o600
@@ -856,38 +775,6 @@ def recover_transaction(
                     raise TxError(f"拒绝删除非普通事务新文件：{target}")
                 target.unlink()
                 fsync_directory(target.parent)
-
-    if selected == "roll-forward":
-        try:
-            for entry in entries:
-                target = workspace / str(entry["target"])
-                after_exists = bool(entry.get("after_exists", True))
-                staged = _transaction_member(tx_dir, entry.get("new", ""), "new") if after_exists else None
-                if after_exists and (staged is None or not staged.is_file()):
-                    raise TxError(f"缺少前滚候选：{staged}")
-                if after_exists and not (target.exists() and sha256_file(target) == entry["after_sha256"]):
-                    assert staged is not None
-                    mode = target.stat().st_mode & 0o777 if target.exists() else 0o600
-                    atomic_write_bytes(target, staged.read_bytes(), mode=mode)
-                elif not after_exists and target.exists():
-                    if target.is_symlink() or not target.is_file():
-                        raise TxError(f"拒绝删除非普通事务目标：{target}")
-                    target.unlink()
-                    fsync_directory(target.parent)
-            assert postflight is not None
-            postflight(workspace)
-            journal["state"] = "committed"
-            _write_journal(workspace, journal)
-            result = "rolled_forward"
-        except BaseException:
-            # A failed recovered postflight is still an untrusted after image.
-            # Restore every before image before surfacing the error so callers
-            # never observe an invalid candidate as the recovered workspace.
-            restore_before_images()
-            _cleanup_transaction(workspace, journal)
-            raise
-    else:
-        restore_before_images()
         result = "rolled_back"
     _cleanup_transaction(workspace, journal)
     return result

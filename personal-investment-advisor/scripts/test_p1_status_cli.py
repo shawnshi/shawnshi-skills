@@ -164,8 +164,10 @@ class StableRouterTests(unittest.TestCase):
     def _parse(self, *argv):
         return pia._build_parser().parse_args(list(argv))
 
-    @mock.patch.object(pia.subprocess, "run")
-    def test_research_route_keeps_metacharacters_in_one_non_shell_argument(self, run):
+    @mock.patch.object(pia.subprocess, "Popen", side_effect=AssertionError("router mock boundary drift"))
+    @mock.patch.object(pia, "_execute_child")
+    def test_research_route_keeps_metacharacters_in_one_non_shell_argument(self, run, spawn_guard):
+        self.addCleanup(spawn_guard.assert_not_called)
         run.return_value = self._completed(
             {"status": "ok", "detail_status": "research_brief_valid"}
         )
@@ -173,15 +175,17 @@ class StableRouterTests(unittest.TestCase):
         envelope, code = pia._dispatch(self._parse("research", suspicious))
 
         invocation = run.call_args.args[0]
-        self.assertEqual(invocation[-1], suspicious)
-        self.assertFalse(run.call_args.kwargs["shell"])
+        self.assertEqual(invocation[-1], str(Path(suspicious).resolve()))
+        self.assertFalse(envelope["route"]["shell"])
         self.assertEqual(Path(invocation[1]).name, "research_brief_gate.py")
         self.assertEqual(envelope["status"], STATUS_COMPLETE)
         self.assertEqual(code, 0)
         self.assertEqual(envelope["completion_scope"], "research_brief_validation")
 
-    @mock.patch.object(pia.subprocess, "run")
-    def test_screen_business_fail_is_a_completed_screen_not_router_failure(self, run):
+    @mock.patch.object(pia.subprocess, "Popen", side_effect=AssertionError("router mock boundary drift"))
+    @mock.patch.object(pia, "_execute_child")
+    def test_screen_business_fail_is_a_completed_screen_not_router_failure(self, run, spawn_guard):
+        self.addCleanup(spawn_guard.assert_not_called)
         run.return_value = self._completed([{"symbol": "ABC", "status": "fail"}])
         args = self._parse("screen", "--tickers", "ABC", "--profile", "quality_us")
         envelope, code = pia._dispatch(args)
@@ -193,8 +197,10 @@ class StableRouterTests(unittest.TestCase):
         self.assertEqual(envelope["detail_status"], "screen_completed")
         self.assertEqual(code, 0)
 
-    @mock.patch.object(pia.subprocess, "run")
-    def test_screen_missing_evidence_uses_evidence_exit_code(self, run):
+    @mock.patch.object(pia.subprocess, "Popen", side_effect=AssertionError("router mock boundary drift"))
+    @mock.patch.object(pia, "_execute_child")
+    def test_screen_missing_evidence_uses_evidence_exit_code(self, run, spawn_guard):
+        self.addCleanup(spawn_guard.assert_not_called)
         run.return_value = self._completed(
             [{"symbol": "ABC", "status": "insufficient_evidence"}],
             returncode=1,
@@ -204,8 +210,10 @@ class StableRouterTests(unittest.TestCase):
         self.assertEqual(envelope["status"], STATUS_INSUFFICIENT_EVIDENCE)
         self.assertEqual(code, 2)
 
-    @mock.patch.object(pia.subprocess, "run")
-    def test_daily_sync_preserves_incomplete_without_claiming_completion(self, run):
+    @mock.patch.object(pia.subprocess, "Popen", side_effect=AssertionError("router mock boundary drift"))
+    @mock.patch.object(pia, "_execute_child")
+    def test_daily_sync_preserves_incomplete_without_claiming_completion(self, run, spawn_guard):
+        self.addCleanup(spawn_guard.assert_not_called)
         run.return_value = self._completed(
             {"status": "incomplete", "errors": ["thesis_red_team_incomplete"]},
             returncode=1,
@@ -224,13 +232,15 @@ class StableRouterTests(unittest.TestCase):
         self.assertIn("--thesis-evidence-file", invocation)
         self.assertEqual(
             invocation[invocation.index("--thesis-evidence-file") + 1],
-            "evidence.json",
+            str(Path("evidence.json").resolve()),
         )
         self.assertEqual(envelope["status"], STATUS_INCOMPLETE)
         self.assertEqual(code, 1)
 
-    @mock.patch.object(pia.subprocess, "run")
-    def test_scenario_route_uses_only_the_fixed_analyzer_and_explicit_args(self, run):
+    @mock.patch.object(pia.subprocess, "Popen", side_effect=AssertionError("router mock boundary drift"))
+    @mock.patch.object(pia, "_execute_child")
+    def test_scenario_route_uses_only_the_fixed_analyzer_and_explicit_args(self, run, spawn_guard):
+        self.addCleanup(spawn_guard.assert_not_called)
         run.return_value = self._completed(
             {"status": "ok", "detail_status": "scenario_analysis_valid", "valid": True}
         )
@@ -244,14 +254,16 @@ class StableRouterTests(unittest.TestCase):
         self.assertEqual(Path(invocation[1]).name, "portfolio_scenario_analyzer.py")
         self.assertEqual(
             invocation[2:],
-            ["portfolio.json", "assumptions.json"],
+            [str(Path(name).resolve()) for name in ("portfolio.json", "assumptions.json")],
         )
-        self.assertFalse(run.call_args.kwargs["shell"])
+        self.assertFalse(envelope["route"]["shell"])
         self.assertEqual(envelope["status"], STATUS_COMPLETE)
         self.assertEqual(code, 0)
 
-    @mock.patch.object(pia.subprocess, "run")
-    def test_scenario_output_route_reads_new_json_file_instead_of_stdout(self, run):
+    @mock.patch.object(pia.subprocess, "Popen", side_effect=AssertionError("router mock boundary drift"))
+    @mock.patch.object(pia, "_execute_child")
+    def test_scenario_output_route_reads_new_json_file_instead_of_stdout(self, run, spawn_guard):
+        self.addCleanup(spawn_guard.assert_not_called)
         with tempfile.TemporaryDirectory(dir=os.environ.get("PIA_TEST_TMPDIR")) as tmpdir:
             output = Path(tmpdir) / "scenario.json"
 
@@ -283,8 +295,10 @@ class StableRouterTests(unittest.TestCase):
         self.assertEqual(envelope["result"]["detail_status"], "scenario_analysis_valid")
         self.assertEqual(code, 0)
 
-    @mock.patch.object(pia.subprocess, "run")
-    def test_scenario_output_cannot_resolve_to_an_input(self, run):
+    @mock.patch.object(pia.subprocess, "Popen", side_effect=AssertionError("router mock boundary drift"))
+    @mock.patch.object(pia, "_execute_child")
+    def test_scenario_output_cannot_resolve_to_an_input(self, run, spawn_guard):
+        self.addCleanup(spawn_guard.assert_not_called)
         with tempfile.TemporaryDirectory(dir=os.environ.get("PIA_TEST_TMPDIR")) as tmpdir:
             portfolio = Path(tmpdir) / "portfolio.json"
             assumptions = Path(tmpdir) / "assumptions.json"
@@ -308,8 +322,10 @@ class StableRouterTests(unittest.TestCase):
         self.assertEqual(envelope["detail_status"], "output_path_conflicts_with_input")
         self.assertEqual(code, 3)
 
-    @mock.patch.object(pia.subprocess, "run")
-    def test_portfolio_audit_discloses_position_context_only(self, run):
+    @mock.patch.object(pia.subprocess, "Popen", side_effect=AssertionError("router mock boundary drift"))
+    @mock.patch.object(pia, "_execute_child")
+    def test_portfolio_audit_discloses_position_context_only(self, run, spawn_guard):
+        self.addCleanup(spawn_guard.assert_not_called)
         run.return_value = self._completed(
             {
                 "portfolio_context": {"position_status": "matched"},
@@ -327,8 +343,10 @@ class StableRouterTests(unittest.TestCase):
         self.assertEqual(code, 1)
         self.assertTrue(envelope["limitations"])
 
-    @mock.patch.object(pia.subprocess, "run")
-    def test_calibrate_requires_a_verified_output_file(self, run):
+    @mock.patch.object(pia.subprocess, "Popen", side_effect=AssertionError("router mock boundary drift"))
+    @mock.patch.object(pia, "_execute_child")
+    def test_calibrate_requires_a_verified_output_file(self, run, spawn_guard):
+        self.addCleanup(spawn_guard.assert_not_called)
         with tempfile.TemporaryDirectory(dir=os.environ.get("PIA_TEST_TMPDIR")) as tmpdir:
             output = Path(tmpdir) / "calibration.md"
 
@@ -344,8 +362,10 @@ class StableRouterTests(unittest.TestCase):
         self.assertEqual(envelope["detail_status"], "report_written")
         self.assertEqual(code, 0)
 
-    @mock.patch.object(pia.subprocess, "run")
-    def test_calibration_output_cannot_resolve_to_the_journal(self, run):
+    @mock.patch.object(pia.subprocess, "Popen", side_effect=AssertionError("router mock boundary drift"))
+    @mock.patch.object(pia, "_execute_child")
+    def test_calibration_output_cannot_resolve_to_the_journal(self, run, spawn_guard):
+        self.addCleanup(spawn_guard.assert_not_called)
         with tempfile.TemporaryDirectory(dir=os.environ.get("PIA_TEST_TMPDIR")) as tmpdir:
             journal = Path(tmpdir) / "journal.jsonl"
             journal.write_text("{}\n", encoding="utf-8")
@@ -387,8 +407,10 @@ class StableRouterTests(unittest.TestCase):
             self.assertNotEqual(completed.returncode, 0)
             self.assertEqual(journal.read_bytes(), original)
 
-    @mock.patch.object(pia.subprocess, "run")
-    def test_validate_dashboard_always_uses_current_strict_contract(self, run):
+    @mock.patch.object(pia.subprocess, "Popen", side_effect=AssertionError("router mock boundary drift"))
+    @mock.patch.object(pia, "_execute_child")
+    def test_validate_dashboard_always_uses_current_strict_contract(self, run, spawn_guard):
+        self.addCleanup(spawn_guard.assert_not_called)
         run.return_value = self._completed(
             {"status": "ok", "detail_status": "dashboard_contract_valid"}
         )
@@ -401,8 +423,10 @@ class StableRouterTests(unittest.TestCase):
         self.assertEqual(envelope["status"], STATUS_COMPLETE)
         self.assertEqual(code, 0)
 
-    @mock.patch.object(pia.subprocess, "run")
-    def test_unknown_child_status_fails_closed(self, run):
+    @mock.patch.object(pia.subprocess, "Popen", side_effect=AssertionError("router mock boundary drift"))
+    @mock.patch.object(pia, "_execute_child")
+    def test_unknown_child_status_fails_closed(self, run, spawn_guard):
+        self.addCleanup(spawn_guard.assert_not_called)
         run.return_value = self._completed(
             {"status": "new_unreviewed_state", "detail_status": "new"}
         )

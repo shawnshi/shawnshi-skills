@@ -1,4 +1,4 @@
-# 四模式交互表单 v2.10.0
+# 四模式交互表单 v2.6.0
 
 ## 通用规则
 
@@ -9,40 +9,6 @@
 - 未回答不视为同意；可按假设继续时建立H主张并说明影响。
 - `refresh`只作后台动作，不作为第五个选项。
 - 外发内容、关键身份冲突和会改变主推进动作的冲突必须确认。
-
-## 工具调用前 intake 预检
-
-在创建客户工作区、生成认证检索计划或发起内部检索前，认证宿主先从当前请求事件序列和附件直接捕获完整原始bundle，按`discovery-call-high-impact-occurrences/v2`提取每一次机构、人物、角色、会议状态/时间、项目范围、拜访目标、最小动作及信件关键字段提及，并签发`discovery-call-request-binding-receipt/v2`。v2 coverage对每个提及额外签名绑定精确`candidate_field`，并要求intake v3候选值通过`mention_ids`逐项反向绑定；收据还必须签名绑定`subject_resolution`、`safety_authorizations`和逐项`safety_directives`。模型不得提供待签ledger、截短原话、删除历史冲突、自行决定安全状态或自行签名。宿主不具备独立捕获/签发能力、抽取器无法完整解析或信任根不可用时，认证正式流程停止，不能降级为自报完整。仅当前三种模式同时满足`public_only + draft + 无高影响冲突 + 无敏感材料`时，可按[公开资料草稿执行档](public-draft-runtime.md)直接做未登录公开Web只读检索；该路径不创建任何正式或候选业务文件。
-
-把全部active mention保留为独立候选，并运行：
-
-```bash
-python3 scripts/preflight_intake.py <intake.json> > <intake-gate.json>
-```
-
-输入契约见`schemas/intake-preflight.schema.json`，宿主收据契约见`schemas/request-binding-receipt.schema.json`。新执行必须使用`discovery-call-intake/v3`与request receipt v2；intake v1/v2都只可读取诊断。intake的`request_binding`只引用同目录宿主原始bundle和收据；宿主另以受保护环境注入当前请求上下文。预检会验证Ed25519签名、当前request revision与最后用户事件、原文/附件摘要、字符范围、ledger摘要、可确定提及完整性以及mention→candidate、asserted candidate→mention双向覆盖。主体、机构范围、拜访对象姓名/职务/层级、会议状态、会议时间、项目范围、收件对象、拜访目标、最小动作、签署人和发送渠道不得在抽取时静默覆盖。文本规范值默认精确相等；别名只能由宿主签名的等价关系扩展，当前版本没有等价证明时失败关闭。不同候选只有绑定真实用户确认的后续宿主请求版本后才能选择，模型不得靠删除候选、来源顺序、检索结果偏好或“更合理”自行裁决。
-
-`subject_resolution`必须由宿主签名，并同时给出规范显示名、稳定`canonical_entity_key`、`jurisdiction`、主体摘要、独立的`organization_scope_sha256`和`id_source`。`canonical_derived`只能按签名主体摘要派生；`host_attested_external`必须附宿主证明摘要。院区、部门或项目范围不得改变主体ID。普通resume若发现`customer_id`、规范显示名、entity key、jurisdiction、主体摘要、scope摘要、issuer、schema或id_source与既有上下文不同，必须失败关闭；证明信封和时效可为同一主体刷新。旧workspace缺少绑定时，用`migrate_workspace.py <workspace> --intake-input <intake-v3.json> --dry-run`预演，再去掉`--dry-run`执行；迁移保留原ID、备份原manifest并只允许同一主体/范围。身份或scope变化仍须新建context。
-
-- `status=blocked`或退出码3：只展示返回的阻塞问题并停止；不得初始化、生成查询、联网或访问内部资料。
-- `status=ready`且未超过`expires_at`：初始化和研究计划都必须传同一原始输入`--intake-input <intake.json>`，由各命令在任何写入/检索前重新读取宿主bundle/收据并重算状态、`input_sha256`、request receipt SHA、raw request SHA、mention ledger SHA和时效；gate ID由这些摘要共同派生。不接受脱离原始输入的自报ready、手改回执或模型生成的“原话”副本。
-- 用户补充、更正、新增任何候选或附件后：原request revision和回执立即失效，宿主从完整当前事件序列重新捕获、抽取、签发，再用完整新输入重跑预检。
-- 预检回执仅表示可以开始初始化或检索，不代表研究计划完整、证据已核验、成果已审核或`ready_for_use=true`。被阻断的预检必须保持零业务副作用：输出根目录、候选目录、查询计划和四个运行机器文件均不得新建或改动。
-
-若一封信的宿主安全指令台账包含虚构批准、患者信息、未授权内部邮件/CRM、未经核验的排期/效果/价格、直接外发或非真人责任人，预检不进入普通补问流程：返回`questions=[]`，并固定给出五段——拒绝项、逐项原因、可做部分、所需补充材料、实名审批路径。该分支不得搜索、初始化或生成任何业务文件。患者/CRM授权只可声明`purpose=internal_review_draft`且`external_allowed=false`；即使授权有效，也不得生成外发版、批准、mark-ready或release。
-
-`meeting_status`只允许`confirmed|tentative|none|unknown`，并使用候选`status=asserted`；它表达“会议是否成立”，不表达具体时间。会议时间另用带时区的`start/end`结构；IANA `timezone`必须与start/end的UTC offset一致。时间待定用候选`status=explicit_unknown`和`value=null`，不得补成默认日期。`confirmed`即使具体时间待定也表示已有需执行准备的会议；`tentative`保守按账户规划继续，待认证宿主核验确认后才转会议准备；`none/unknown`且无确切会议时间时按账户规划。`none/unknown`与确切时间并存属于跨字段冲突，必须澄清；同一字段多时间冲突仍阻断。原始bundle不复制进workspace，收据只保留完成消歧所需摘要、范围和规范值；发现患者信息、私人信息或未获授权内部内容时由宿主停止捕获并请求脱敏材料。
-
-### 最小输入
-
-| 模式/分支 | 预检可继续所需最小业务输入 |
-|---|---|
-| 会前速览、标准拜访包 | 客户主体；拜访对象姓名/职务/层级至少一项；目标；最小推进动作。会议时间不是必填，未知时不得猜测 |
-| 战略客户包－已确认会议 | 客户主体；`meeting_status=confirmed`（具体时间可未知），或在未提供状态的兼容输入中有唯一确切会议时间；对象姓名/职务/层级至少一项；目标；最小推进动作 |
-| 战略客户包－账户规划 | 客户主体；战略问题；经营周期；最小推进动作。`meeting_status=tentative|none|unknown`可明确选择该分支；未提供任何可信会议事实时也默认该分支 |
-| 一封信 | 客户主体；收件角色；信件场景；目的；期望动作；签署人/稳定签署角色；发送渠道 |
-
-内部检索另要求项目和授权契约；上述最小输入只表示intake可进入后续步骤，不表示证据、审核或外发门禁已通过。人物姓名、项目范围、会议时间等非必填信息若出现冲突，仍必须先消歧。
 
 ## 模式确认
 
@@ -57,7 +23,7 @@ python3 scripts/preflight_intake.py <intake.json> > <intake-gate.json>
 
 若用户同时要求多项，选择最终业务用途最完整的模式。例如“先更新人物，再设计下周拜访”选标准拜访包，人物更新作为后台刷新；“更新研究并写邀约信”选一封信。
 
-只要求结构化客户研究时仍映射到四模式：快速摸排或1页结论选会前速览；常规研究选标准拜访包；客户全景、重大机会或投入取舍选战略客户包。会前速览或标准拜访包没有已排定会议时，可以后续交流的角色层级、验证目标和最小动作填充业务字段；战略客户包没有会议时改用account_planning，以战略问题、经营周期和最小动作组织成果。不向用户暴露`research_only`或`strategy_variant`。
+只要求结构化客户研究时仍映射到四模式：快速摸排或1页结论选会前速览；常规研究选标准拜访包；客户全景、重大机会或投入取舍选战略客户包。没有已排定会议时，以后续交流的角色层级、验证目标和最小动作填充业务字段，不向用户暴露`research_only`。
 
 ## 会前速览
 
@@ -94,8 +60,6 @@ python3 scripts/preflight_intake.py <intake.json> > <intake-gate.json>
 
 通常2轮。
 
-先抽取`meeting_status`，再派生内部字段`strategy_variant`：`confirmed`为`scheduled_visit`，具体时间可待定；`tentative|none|unknown`为`account_planning`。未提供状态时，唯一确切会议时间可兼容派生`scheduled_visit`，否则默认`account_planning`。`none/unknown`与确切时间并存必须澄清。拜访对象和拜访目标本身不证明会议成立。用户无需理解内部字段，也不得为继续流程要求用户虚构会议对象、时间、参会人或材料。
-
 第一轮确认：
 
 1. 客户/项目/院区范围和经营周期；
@@ -111,17 +75,19 @@ python3 scripts/preflight_intake.py <intake.json> > <intake-gate.json>
 
 用户不知道预算或决策角色时不要求编造；保留缺口并转为验证计划。
 
-只有`scheduled_visit`才补充拜访对象/层级、目标、最小结果、议程、参会分工和材料授权。`account_planning`只要求战略问题、经营周期和最小推进动作；利益相关者未知时按正式角色层级形成验证计划，不把未知姓名变成阻塞项。
-
 ## 一封信
+
+高风险及缺项处理以[subskill-customer-letter.md](subskill-customer-letter.md)为权威；拒绝虚构或代审批后，不在关键输入缺失时继续生成个性化正文。
 
 先判断是否属于[高风险信件](business-modes.md#一封信)。普通感谢、通知、材料转发或无关键事实的通用文案转普通写作，不加载本技能。
 
-未命中上述高风险失败分支时，最多2轮，优先补齐：
+最多2轮，优先补齐：
 
 1. 场景；收件对象（姓名或明确称谓）、角色/身份和确认状态；
 2. 目的、希望对方采取的动作；
 3. 签署人、发送渠道和是否涉及金额/排期/效果/资源/案例等承诺。
+
+新研究规划通过 `--business-field recipient_identity_status=confirmed|unconfirmed|conflicted` 显式记录收件人确认状态。只有准确枚举值 `confirmed` 且 `recipient_role` 已明确时通过该规划门；缺失、`unconfirmed`、`conflicted` 均不通过，其他枚举值报输入错误。不从角色描述中的“已确认”或 `confirmed` 子串推断确认。该字段是新规划输入，不改旧 v2.5 成果格式，也不回填旧成果假造确认。
 
 完成内部稿后进入pending。审核必须取得可追溯到真人和稳定角色/账号的approver；审核超时不自动批准。审核通过不等于发送授权。只有用户再次明确要求“生成外发版”时才生成纯净外发文件，永不发送。
 

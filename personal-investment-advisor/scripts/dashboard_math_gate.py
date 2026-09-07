@@ -39,6 +39,75 @@ def _materially_equal(left: float | None, right: float | None) -> bool:
     return abs(left - right) <= tolerance
 
 
+def _validate_etf_math(data: dict) -> list[str]:
+    block = data.get("etf_research")
+    scenarios = data.get("scenario_analysis")
+    if not isinstance(block, dict) or not isinstance(scenarios, dict):
+        return ["ETF math requires etf_research and scenario_analysis objects"]
+    errors = []
+    items = data.get("evidence_items")
+    items = items if isinstance(items, list) else []
+
+    def item(index):
+        if isinstance(index, int) and not isinstance(index, bool) and 0 <= index < len(items) and isinstance(items[index], dict):
+            return items[index]
+        return {}
+
+    nav_link = block.get("nav")
+    nav_item = item(nav_link.get("evidence_index") if isinstance(nav_link, dict) else None)
+    nav = _to_float(_get_nested(nav_item, ["etf_observation", "value"]))
+    price = _to_float(item(block.get("quote_evidence_index")).get("price"))
+    premium = _to_float(block.get("premium_discount"))
+    if nav is None or nav <= 0 or price is None or price <= 0 or premium is None:
+        errors.append("ETF premium math requires positive NAV/price and finite premium_discount")
+    elif not math.isclose(premium, price / nav - 1, rel_tol=1e-9, abs_tol=1e-8):
+        errors.append("ETF premium_discount must equal market price / NAV - 1 (ratio)")
+    values = {}
+    case_assumptions = {}
+    for name in ("base", "bull", "bear"):
+        case = scenarios.get(name)
+        if not isinstance(case, dict):
+            errors.append(f"ETF {name} scenario is required")
+            continue
+        reference = _to_float(case.get("nav_per_unit"))
+        result = _to_float(case.get("per_share_value"))
+        assumptions = case.get("assumptions")
+        assumptions = assumptions if isinstance(assumptions, list) else []
+        named = {a.get("name"): a for a in assumptions if isinstance(a, dict) and isinstance(a.get("name"), str)}
+        if len(named) != 2 or len(assumptions) != 2 or set(named) != {"index_return", "currency_return"}:
+            errors.append(f"ETF {name} requires exactly index_return and currency_return assumptions")
+        index_return = _to_float(named.get("index_return", {}).get("value"))
+        currency_return = _to_float(named.get("currency_return", {}).get("value"))
+        if index_return is None or currency_return is None or index_return <= -1 or currency_return <= -1 or any(a.get("unit") != "ratio" for a in named.values()):
+            errors.append(f"ETF {name} return assumptions require finite ratios > -1")
+            continue
+        if nav is None or reference is None or reference <= 0 or not math.isclose(reference, nav, rel_tol=1e-9, abs_tol=1e-8):
+            errors.append(f"ETF {name}.nav_per_unit must equal bound NAV")
+            continue
+        expected = reference * (1 + index_return) * (1 + currency_return)
+        if result is None or not math.isclose(result, expected, rel_tol=1e-9, abs_tol=1e-8):
+            errors.append(f"ETF {name}.per_share_value must equal NAV * (1 + index_return) * (1 + currency_return)")
+        else:
+            values[name] = result
+        case_assumptions[name] = named
+    if len(values) == 3 and not values["bear"] <= values["base"] <= values["bull"]:
+        errors.append("ETF scenario values must satisfy bear <= base <= bull")
+    sensitivity = scenarios.get("sensitivity")
+    if not isinstance(sensitivity, list) or not sensitivity:
+        errors.append("ETF sensitivity is required")
+    else:
+        for s in sensitivity:
+            if not isinstance(s, dict):
+                errors.append("ETF sensitivity must be an object")
+                continue
+            low, base, high = [_to_float(s.get(key)) for key in ("low", "base", "high")]
+            parameter = s.get("parameter")
+            reference = _to_float(case_assumptions.get("base", {}).get(parameter, {}).get("value")) if isinstance(parameter, str) else None
+            if low is None or base is None or high is None or reference is None or s.get("unit") != "ratio" or not low <= base <= high or base != reference:
+                errors.append("ETF sensitivity must bracket the base return assumption in ratio units")
+    return errors
+
+
 def _validate_valuation_math(data: dict) -> list[str]:
     scenarios = data.get("scenario_analysis")
     if not isinstance(scenarios, dict) or scenarios.get("valuation_contract_version") != "2.0":
@@ -213,7 +282,14 @@ def validate_math_consistency(data: dict) -> list[str]:
     if confidence_score is not None and not (0 <= confidence_score <= 100):
         errors.append("confidence_details.score must be between 0 and 100")
 
-    errors.extend(_validate_valuation_math(data))
+    etf_requested = (
+        "etf_research" in data
+        or _get_nested(data, ["scenario_analysis", "valuation_contract_version"]) == "etf_nav1.0"
+    )
+    if etf_requested:
+        errors.extend(_validate_etf_math(data))
+    else:
+        errors.extend(_validate_valuation_math(data))
     return errors
 
 

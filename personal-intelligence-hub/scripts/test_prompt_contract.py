@@ -2,7 +2,6 @@ import json
 import unittest
 from pathlib import Path
 
-
 ROOT = Path(__file__).resolve().parent.parent
 
 
@@ -213,6 +212,16 @@ class PromptContractTests(unittest.TestCase):
 
     def test_skill_progress_examples_match_current_cli_and_drafts(self):
         skill = (ROOT / "SKILL.md").read_text(encoding="utf-8")
+
+        self.assertIn("`references/workflow_protocols.md`", skill)
+        protocols = (ROOT / "references" / "workflow_protocols.md").read_text(
+            encoding="utf-8"
+        )
+        for section in ("supplement", "runtime"):
+            self.assertIn(f"`{section}` 节", skill)
+            marker = f"## {section}\n\n"
+            self.assertEqual(protocols.count(marker), 1)
+            skill += "\n" + protocols.split(marker, 1)[1].split("\n## ", 1)[0]
 
         self.assertIn("--invocation-id <semantic_request.invocation_id>", skill)
         self.assertIn("--request-sha256 <manifest.artifacts.semantic_review_request.artifact_sha256>", skill)

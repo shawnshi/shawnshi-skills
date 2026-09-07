@@ -10,6 +10,9 @@ from datetime import datetime
 from pathlib import Path
 from typing import Any, Dict, List
 
+MAX_JOURNAL_BYTES = 64 * 1024 * 1024
+MAX_APPEND_INPUT_BYTES = 64 * 1024 * 1024
+
 DASHBOARD_SCHEMA_PATH = (
     Path(__file__).resolve().parent.parent / "references" / "dashboard_schema.json"
 )
@@ -28,6 +31,8 @@ def resolve_journal_path(path: str | None = None) -> Path:
 
 
 def _atomic_write_text(path: Path, content: str) -> None:
+    if len(content.encode("utf-8")) > MAX_JOURNAL_BYTES:
+        raise ValueError(f"journal_size_limit: result exceeds {MAX_JOURNAL_BYTES} bytes")
     descriptor, temporary_name = tempfile.mkstemp(
         prefix=f".{path.name}.", suffix=".tmp", dir=str(path.parent), text=True
     )
@@ -218,9 +223,14 @@ def append_entry(data: Dict[str, Any], archive_path: str | None = None, journal_
     path = resolve_journal_path(journal_path)
     path.parent.mkdir(parents=True, exist_ok=True)
     entry = build_journal_entry(data, archive_path=archive_path)
+    payload = (json.dumps(entry, ensure_ascii=False) + "\n").encode("utf-8")
+    if len(payload) > MAX_JOURNAL_BYTES:
+        raise ValueError(f"journal_size_limit: entry exceeds {MAX_JOURNAL_BYTES} bytes")
     with _journal_lock(path):
-        with path.open("a", encoding="utf-8", newline="\n") as f:
-            f.write(json.dumps(entry, ensure_ascii=False) + "\n")
+        with path.open("ab") as f:
+            if os.fstat(f.fileno()).st_size + len(payload) > MAX_JOURNAL_BYTES:
+                raise ValueError(f"journal_size_limit: append exceeds {MAX_JOURNAL_BYTES} bytes")
+            f.write(payload)
             f.flush()
             os.fsync(f.fileno())
     return path
@@ -230,8 +240,12 @@ def load_entries(path: str | None = None) -> List[Dict[str, Any]]:
     journal_path = resolve_journal_path(path)
     if not journal_path.exists():
         return []
+    with journal_path.open("rb") as stream:
+        payload = stream.read(MAX_JOURNAL_BYTES + 1)
+    if len(payload) > MAX_JOURNAL_BYTES:
+        raise ValueError(f"journal_size_limit: input exceeds {MAX_JOURNAL_BYTES} bytes")
     entries = []
-    for line in journal_path.read_text(encoding="utf-8").splitlines():
+    for line in payload.decode("utf-8").splitlines():
         if line.strip():
             entries.append(json.loads(line))
     return entries
@@ -335,7 +349,15 @@ def batch_update_outcomes(updates: Dict[str, Dict[str, Any]], journal_path: str 
     return path
 
 
-if __name__ == "__main__":
+def _read_append_input(path: str) -> Any:
+    with Path(path).open("rb") as stream:
+        payload = stream.read(MAX_APPEND_INPUT_BYTES + 1)
+    if len(payload) > MAX_APPEND_INPUT_BYTES:
+        raise ValueError(f"journal_append_input_size_limit: exceeds {MAX_APPEND_INPUT_BYTES} bytes")
+    return json.loads(payload.decode("utf-8"))
+
+
+def main() -> None:
     parser = argparse.ArgumentParser(description="Research journal utilities.")
     subparsers = parser.add_subparsers(dest="command", required=True)
 
@@ -357,7 +379,7 @@ if __name__ == "__main__":
     args = parser.parse_args()
 
     if args.command == "append":
-        payload = json.loads(Path(args.json_file).read_text(encoding="utf-8"))
+        payload = _read_append_input(args.json_file)
         result = append_entry(payload, archive_path=args.archive_path, journal_path=args.journal_path)
         print(f"journal updated: {result}")
     elif args.command == "update-outcome":
@@ -372,3 +394,7 @@ if __name__ == "__main__":
             journal_path=args.journal_path,
         )
         print(f"journal updated: {result}")
+
+
+if __name__ == "__main__":
+    main()

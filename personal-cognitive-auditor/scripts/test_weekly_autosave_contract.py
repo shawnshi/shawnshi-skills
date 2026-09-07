@@ -8,6 +8,15 @@ class PeriodicAutoSaveContractTests(unittest.TestCase):
     @classmethod
     def setUpClass(cls):
         cls.skill = (SKILL_ROOT / "SKILL.md").read_text(encoding="utf-8")
+        cls.entry = cls.skill
+        cls.contract_paths = (
+            "references/periodic_save.md",
+            "references/energy_management.md",
+        )
+        for relative_path in cls.contract_paths:
+            if relative_path not in cls.entry:
+                raise AssertionError(f"Missing entry link: {relative_path}")
+            cls.skill += "\n" + (SKILL_ROOT / relative_path).read_text(encoding="utf-8")
         cls.prompts = {
             period: (SKILL_ROOT / "prompts" / filename).read_text(encoding="utf-8")
             for period, filename in {

@@ -1,4 +1,4 @@
-# 内部信息检索 v2.10.0
+# 内部信息检索 v2.6.0
 
 ## 目标与成果契约
 
@@ -7,7 +7,7 @@
 模块进入`running`后，立即在本run隔离候选工作区使用[内部检索成果模板](../assets/internal-retrieval-report-template.md)创建并只更新候选：
 
 ```text
-{{safe_name}}内部信息检索报告.md
+{{客户中文规范名称}}内部信息检索报告.md
 ```
 
 本模块不得直接修改正式Markdown、综合总报告或其他模块成果；正式写入由主流程统一事务提交。结束时向主流程返回：
@@ -31,8 +31,7 @@ updated_at｜summary_sync_status｜downstream_invalidation｜sync_classification
 ```text
 tenant_id｜customer_id｜project_id｜customer_type｜organization_scope｜
 allowed_project_ids｜authorized_roots｜allowed_dataset_aliases｜
-allowed_confidentiality｜requester｜authorization_owner｜authorization_purpose｜
-authorization_expires_at｜connector_id｜capability_receipt_id
+allowed_confidentiality｜requester｜purpose｜expires_at
 ```
 
 强制规则：
@@ -40,7 +39,6 @@ authorization_expires_at｜connector_id｜capability_receipt_id
 - 客户名称只用于检索扩展，权限判断使用消歧后的稳定`customer_id`；
 - `tenant_id/customer_id/project_id`三重范围均须非空并与目标记录完全一致；不得以organization_scope替代project_id；
 - 必须记录实名`authorization_owner`和带时区`authorization_expires_at`，授权过期立即停止；
-- 必须记录与业务目标一致的`authorization_purpose`，以及由认证宿主签发、可回查且绑定本run/身份/连接器/操作/三重范围的`capability_receipt_id`；
 - 当前目录、同院历史报告或可见挂载库不自动等于已授权；
 - 只访问`authorized_roots`、白名单数据集和允许项目；
 - `allowed_project_ids`必须包含且只允许访问本轮`project_id`；
@@ -61,7 +59,7 @@ authorization_expires_at｜connector_id｜capability_receipt_id
 
 内部检索按研究档位控制查询组合：快速版不超过8组，标准版不超过20组，深度版不超过40组。所有白名单渠道已尝试且连续两轮无高价值新增可提前停止；预算触顶但关键项未核验时标`partial`。
 
-连接器执行前必须完成一次受限探测，确认收据当前有效、实际工具存在、当前身份可用、三重过滤被服务端接受、返回结果带tenant/customer/project/密级元数据。任一检查失败时必须在任何internal query/batch和机器计划写入前失败关闭；可以另起不含internal的公开资料候选run透明降级。
+连接器执行前必须完成一次受限探测，确认实际工具存在、当前身份可用、三重过滤被服务端接受、返回结果带tenant/customer/project/密级元数据。任一检查失败即按真实结果写not_configured、permission_denied或failed，不得继续扩大查询。
 
 按客户类型补充：
 
@@ -82,22 +80,21 @@ authorization_expires_at｜connector_id｜capability_receipt_id
 | 销售判断、竞争和关系判断 | A/H | N | asserted |
 | 知识库命中片段 | F/H候选 | N | asserted |
 
-U/N永不等于核实。用户再次确认不自动形成F2；F2的支持来源中必须存在至少一对来源，该同一对的`source_group`、`locator/source_locator`、`content_sha256`、`upstream_id`四项都有效且逐项不同；`upstream_id`为`unknown:<source_id>`的来源不能成为该对成员，其他补充来源不影响该对成立。
+U/N永不等于核实。用户再次确认不自动形成F2；F2的支持来源中必须存在至少一对来源，该同一对的`source_group`、`locator/source_locator`、`source_fingerprint`、`upstream_id`四项都有效且逐项不同；`upstream_id`为`unknown:<source_id>`的来源不能成为该对成员，其他补充来源不影响该对成立。
 
 ## 来源和主张登记
 
 为文档或原文建立`source_id=SRC-N-001...`，为合作事实、项目阶段、存量系统、需求、承诺、风险等分别建立`claim_id=CLM-N-001...`：
 
 ```text
-source_id｜标题/文档名｜发布者/提供者｜source_locator｜发布/更新日期｜
-访问日期｜来源等级｜source_group｜权限｜适用客户/项目｜备注｜
-source_fingerprint｜upstream_id｜external_use
+source_id｜文档名｜更新时间｜提供者/来源系统｜customer_id｜
+project_id｜权限｜external_use=true|false｜source_locator｜source_group｜source_fingerprint｜upstream_id
 
 claim_id｜claim_type｜provenance｜verification_status｜主张｜
-时间范围｜支持source_id｜反证source_id｜置信度｜下游影响
+适用项目/时间｜支持source_id｜反证source_id｜置信度｜下游影响
 ```
 
-重试不得为同一文档或主张重新编号。Markdown的`source_fingerprint`必须等于机器清单的`sha256:<content_sha256>`；实际内容SHA、捕获元数据和逐claim TTL仅存于四个机器文件并可重算。稳定记录ID、URL哈希或ETag不能替代。无命中只表示本次查询没有结果，不表示事实不存在。
+重试不得为同一文档或主张重新编号。无命中只表示本次查询没有结果，不表示事实不存在。
 
 ## 独立成果结构
 

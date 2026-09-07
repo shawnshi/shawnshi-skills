@@ -62,8 +62,10 @@ class SkillLoadReceiptTests(unittest.TestCase):
             self.assertRegex(receipt["skill_sha256"], r"^[0-9a-f]{64}$")
             self.assertNotIn("skill_tokens", receipt)
             self.assertNotIn("tokenizer", receipt)
+            self.assertEqual(receipt["token_measurement_status"], "error")
+            self.assertEqual(receipt["token_measurement_error_type"], "RuntimeError")
 
-    def test_append_is_idempotent_for_formal_duplicate_key(self):
+    def test_append_is_idempotent_for_replayed_event_identity(self):
         with tempfile.TemporaryDirectory() as tmp:
             root = Path(tmp)
             skill = root / "SKILL.md"
@@ -77,6 +79,51 @@ class SkillLoadReceiptTests(unittest.TestCase):
 
         self.assertEqual(len(records), 1)
 
+    def test_distinct_occurrences_of_same_business_key_are_retained(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            skill = Path(tmp) / "SKILL.md"
+            output = Path(tmp) / "receipts.jsonl"
+            skill.write_text("---\nname: sample\n---\nbody\n", encoding="utf-8")
+            first = receipt_module.build_receipt(skill, "task-1", "root", "epoch-1")
+            second = receipt_module.build_receipt(skill, "task-1", "root", "epoch-1")
+            self.assertNotEqual(first["event_id"], second["event_id"])
+            self.assertEqual(first["event_identity"], "occurrence")
+            self.assertEqual(first["token_measurement_basis"], "skill_text")
+            self.assertTrue(receipt_module.append_receipt(output, first))
+            self.assertTrue(receipt_module.append_receipt(output, second))
+            self.assertEqual(len(output.read_text(encoding="utf-8").splitlines()), 2)
+
+    def test_explicit_replay_and_conflict_preserve_existing_receipts(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            skill = Path(tmp) / "SKILL.md"
+            output = Path(tmp) / "receipts.jsonl"
+            skill.write_text("---\nname: sample\n---\nbody\n", encoding="utf-8")
+            first = receipt_module.build_receipt(skill, "task-1", "root", "1", event_id="stable-1", candidate_event_id="candidate-1")
+            replay = receipt_module.build_receipt(skill, "task-1", "root", "1", event_id="stable-1", candidate_event_id="candidate-1")
+            self.assertTrue(receipt_module.append_receipt(output, first))
+            before = output.read_bytes()
+            self.assertFalse(receipt_module.append_receipt(output, replay))
+            for conflicting in (dict(replay, skill_tokens=replay["skill_tokens"] + 1),
+                                dict(replay, outcome=None), dict(replay, skill_tokens=True)):
+                with self.assertRaisesRegex(ValueError, "conflicts"):
+                    receipt_module.append_receipt(output, conflicting)
+            self.assertEqual(output.read_bytes(), before)
+            self.assertFalse(output.with_suffix(".jsonl.lock").exists())
+
+    def test_legacy_append_remains_readable_without_fabricating_occurrences(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            skill = Path(tmp) / "SKILL.md"
+            output = Path(tmp) / "receipts.jsonl"
+            skill.write_text("---\nname: sample\n---\nbody\n", encoding="utf-8")
+            legacy = receipt_module.build_receipt(skill, "task-1", "root", "1")
+            legacy.pop("event_identity")
+            legacy.pop("event_id")
+            self.assertTrue(receipt_module.append_receipt(output, legacy))
+            self.assertFalse(receipt_module.append_receipt(output, legacy))
+            current = receipt_module.build_receipt(skill, "task-1", "root", "1")
+            self.assertTrue(receipt_module.append_receipt(output, current))
+            self.assertNotIn("event_id", json.loads(output.read_text(encoding="utf-8").splitlines()[0]))
+
     def test_changed_epoch_is_a_distinct_receipt(self):
         with tempfile.TemporaryDirectory() as tmp:
             root = Path(tmp)
@@ -89,6 +136,21 @@ class SkillLoadReceiptTests(unittest.TestCase):
             self.assertTrue(receipt_module.append_receipt(output, first))
             self.assertTrue(receipt_module.append_receipt(output, second))
             self.assertEqual(len(output.read_text(encoding="utf-8").splitlines()), 2)
+
+    def test_replay_still_checks_the_entire_existing_receipt_file(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            skill = Path(tmp) / "SKILL.md"
+            output = Path(tmp) / "receipts.jsonl"
+            skill.write_text("---\nname: sample\n---\nbody\n", encoding="utf-8")
+            receipt = receipt_module.build_receipt(skill, "task-1", "root", "1", event_id="stable")
+            receipt_module.append_receipt(output, receipt)
+            with output.open("a", encoding="utf-8") as handle:
+                handle.write("{invalid}\n")
+            before = output.read_bytes()
+            with self.assertRaisesRegex(ValueError, "invalid receipt JSON"):
+                receipt_module.append_receipt(output, receipt)
+            self.assertEqual(output.read_bytes(), before)
+            self.assertFalse(output.with_suffix(".jsonl.lock").exists())
 
     def test_malformed_existing_receipt_fails_closed_and_releases_lock(self):
         with tempfile.TemporaryDirectory() as tmp:

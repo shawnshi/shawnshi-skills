@@ -262,7 +262,10 @@ def get_devices_info():
 
 
 def get_device_firmware_history():
-    """Return deterministic timestamped firmware evidence for epoch checks."""
+    """Return device inventory history, not per-observation source attribution.
+
+    Rows do not identify which device measured any health component/date.
+    """
     conn = get_connection(GARMIN_DB)
     query = """
         SELECT timestamp, serial_number, software_version

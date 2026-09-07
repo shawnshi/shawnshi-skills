@@ -6,6 +6,59 @@
 
 优先运行 `python scripts/pia.py --help` 查看稳定子命令。该入口只做参数路由和状态归一，不绕过底层业务门禁。若某个子命令尚未接通，必须返回非零和结构化未完成状态。
 
+所有显式文件或目录参数均在调用者工作目录中解析一次，再以绝对路径交给子进程；含空格或中文的路径需按 Shell 规则引用。`calibrate` 的 `PIA_ADVICE_JOURNAL` 环境路径也采用此口径。未提供的路径不触发额外输入发现。
+
+稳定路由的子进程传输要求 Windows Python >=3.12（本轮验证为 3.13），POSIX 需实际支持非阻塞管道。启动业务子进程前用自有管道探测能力；不支持时返回 `child_transport_unavailable`，不启动业务代码，不归类为无数据。无需新增依赖或全局配置。
+
+stdout、stderr 各限 32 MiB（33,554,432 字节，含边界），轮流以最多 64 KiB 读取；空闲等待最多 5 ms。超过任一上限即丢弃部分输出、返回 `child_output_size_limit` 并终止该子进程，不能将有效 JSON 前缀视为成功。完整有界字节读完后才按 UTF-8 解码，保留原有 `errors="replace"` 语义，分块边界不会破坏多字节字符。业务退出码、非法 JSON、报告文件是否新生成仍独立核验；JSON 报告文件也限 32 MiB，使用上限加一字节读取。
+
+原有 300 秒执行期限不变；超时、容量超限或取消时，最多等待 1 秒终止，再最多等待 1 秒强制结束并回收直接子进程，无法回收属于错误。路由不拥有任意后代进程树；直接子进程退出后只排空当前可读字节，不等待后代持有的管道 EOF。不新增读取线程或临时传输文件。已由明确命令创建的报告可能在失败后保留，失败不授权自动归档、删除或重跑。
+
+## 主动研究的离线交接
+
+`pia.py` 的 stdout 是状态信封，下游输入需要信封中的原始 `result`，不能直接把整个 stdout 当作验证、扫描或构造报告。主动研究四个子命令没有 `--output`；`scenario --output` 是另一个命令的原始结果写出选项，不能用于这条链路。
+
+以下 Python 示例在调用者工作目录中运行四阶段，输入文件名见代码。仅当用户已逐项授权读取这五个输入和创建 `validation.json`、`scan.json`、`construction.json`、`proposal.json` 时运行；示例不增加自动保存权限。可将代码用于已授权的任务脚本，以 `python handoff.py <pia.py 的绝对路径>` 运行。输出采用独占创建，已有文件不覆盖；任何失败都停止下游，保留已完成的独立阶段。写出中断可能留下不完整文件，必须检查后另行授权清理或更换输出路径，不得直接重跑覆盖。
+
+```python
+import json
+import subprocess
+import sys
+from pathlib import Path
+
+PIA = Path(sys.argv[1]).resolve(strict=True)
+
+
+def stage(arguments, output):
+    completed = subprocess.run(
+        [sys.executable, "-B", str(PIA), *arguments],
+        capture_output=True, text=True, encoding="utf-8", check=False, timeout=300,
+    )
+    envelope = json.loads(completed.stdout)
+    if (
+        completed.returncode != 0
+        or envelope.get("status") != "complete"
+        or envelope.get("exit_code") != 0
+        or envelope.get("route", {}).get("child_exit_code") != 0
+        or not isinstance(envelope.get("result"), dict)
+    ):
+        raise RuntimeError(f"Stage stopped: {arguments[0]}: {envelope}")
+    with Path(output).open("x", encoding="utf-8") as stream:
+        json.dump(envelope["result"], stream, ensure_ascii=False, indent=2)
+
+
+stage(["alpha-validate", "package.json", "--policy-file", "promotion.json"],
+      "validation.json")
+stage(["alpha-scan", "package.json", "--validation-report", "validation.json",
+       "--policy-file", "scan-policy.json"], "scan.json")
+stage(["portfolio-construct", "scan.json", "--policy-file", "construction-policy.json"],
+      "construction.json")
+stage(["rebalance-proposal", "construction.json", "--policy-file", "proposal-policy.json"],
+      "proposal.json")
+```
+
+每个入口对每份包、策略或上游报告只读取一次，先对实际解析对象计算规范 JSON SHA-256，再将同一对象交给计算；禁止重新加载路径取哈希或对清洗后的对象补算输入哈希。规范化保持 Unicode、按键排序、使用紧凑分隔符，因此缩进或键顺序不改变摘要。扫描核对验证报告绑定的包摘要，并记录验证报告及扫描策略摘要；构造和提案继续记录其上游报告与策略摘要。包内来源定位和证据哈希仍须由调用者核验；摘要只能绑定内容，不能证明来源真实或给予交易权限。路径在读取前已被他人替换仍可能改变输入，跨文件快照也不是事务；输入需由调用者保持不变，业务哈希门禁保持失败关闭。
+
 ## 直接门禁与分析命令
 
 - 证券身份：`instrument_gate.py`

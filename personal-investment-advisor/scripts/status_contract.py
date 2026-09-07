@@ -121,9 +121,14 @@ def aggregate_status(statuses: Iterable[Any]) -> str:
     return max(normalized, key=_STATUS_PRIORITY.__getitem__)
 
 
-def status_from_payload(payload: Any, child_exit_code: int) -> str:
-    """Derive a canonical status from JSON output and a child exit code."""
+MAX_STATUS_DEPTH = 64
 
+
+def _payload_status(payload: Any, depth: int = 0) -> str:
+    """Inspect every stage envelope, bounding malformed or cyclic nesting."""
+
+    if depth > MAX_STATUS_DEPTH:
+        return STATUS_FAILED
     if isinstance(payload, dict):
         candidates = [normalize_status(payload.get("status"))]
         if payload.get("valid") is False:
@@ -141,29 +146,35 @@ def status_from_payload(payload: Any, child_exit_code: int) -> str:
             and completeness.get("complete") is False
         ):
             candidates.append(STATUS_INCOMPLETE)
-        stages = payload.get("stages")
-        if isinstance(stages, list) and stages:
-            stage_statuses = [
-                stage.get("status")
-                for stage in stages
-                if isinstance(stage, dict) and "status" in stage
-            ]
-            if stage_statuses:
-                candidates.extend(stage_statuses)
-        status = aggregate_status(candidates)
-    elif isinstance(payload, list) and payload:
-        native_statuses = [
-            item.get("status") if isinstance(item, dict) else None for item in payload
-        ]
-        status = aggregate_status(native_statuses)
-    else:
-        return STATUS_FAILED
+        if "stages" in payload:
+            stages = payload["stages"]
+            if not isinstance(stages, list):
+                candidates.append(STATUS_FAILED)
+            else:
+                candidates.extend(
+                    _payload_status(stage, depth + 1)
+                    if isinstance(stage, dict) else STATUS_FAILED
+                    for stage in stages
+                )
+        return aggregate_status(candidates)
+    if isinstance(payload, list) and payload:
+        return aggregate_status(
+            _payload_status(item, depth + 1)
+            if isinstance(item, dict) else STATUS_FAILED
+            for item in payload
+        )
+    return STATUS_FAILED
+
+
+def status_from_payload(payload: Any, child_exit_code: int) -> str:
+    """Derive a canonical status from JSON output and a child exit code."""
 
     # Native children use 0 for success, 1 for an incomplete/business failure,
     # and 2 for invalid input or insufficient evidence.  Crash-style or stable
     # public failure exits (3+) always outrank a softer payload declaration.
     if child_exit_code < 0 or child_exit_code >= exit_code_for(STATUS_FAILED):
         return STATUS_FAILED
+    status = _payload_status(payload)
     if child_exit_code == 2 and status in {STATUS_COMPLETE, STATUS_INCOMPLETE}:
         return STATUS_FAILED
     if child_exit_code == 1 and status == STATUS_COMPLETE:

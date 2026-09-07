@@ -1,24 +1,29 @@
 {
   "schema_version": 3,
   "skill": "hit-lectures-scout",
-  "generated_at": "2026-08-20T23:36:03+08:00",
+  "generated_at": "2026-09-06T15:57:18+08:00",
   "hash_algorithm": "SHA-256",
   "text_hash_normalization": "LF",
   "skill_md": "SKILL.md",
-  "skill_md_sha256": "3b503fe002c0b9c1a478e0005494a2ff805416bbd0f786bd525e03c4a5612d69",
+  "skill_md_sha256": "fd606bfa6180a1d3e31ec322ccb52c54735cae872acc6d47485cd1ccdec90fdf",
   "top_level_files": [
     "SKILL.md"
   ],
   "top_level_file_hashes": [
     {
       "path": "SKILL.md",
-      "sha256": "3b503fe002c0b9c1a478e0005494a2ff805416bbd0f786bd525e03c4a5612d69"
+      "sha256": "fd606bfa6180a1d3e31ec322ccb52c54735cae872acc6d47485cd1ccdec90fdf"
     }
   ],
   "top_level_directories": [
-    "assets"
+    "assets",
+    "scripts"
   ],
   "resource_directories": [
+    {
+      "name": "scripts",
+      "file_count": 2
+    },
     {
       "name": "assets",
       "file_count": 6
@@ -31,7 +36,7 @@
     },
     {
       "path": "assets/report_template.md",
-      "sha256": "58ab9ffd78d380b7ca1053ba1b9d0bb265430c1ab2344b0ccfc28f6a91f5de9f"
+      "sha256": "1c097fdefc76cb77aa153d5505e5885e6057f5d9c0a2d934410676c9d28cb7ff"
     },
     {
       "path": "assets/task_journals_cn.md",
@@ -48,6 +53,14 @@
     {
       "path": "assets/task_preprints_fallback.md",
       "sha256": "08844f6143898ed44324a09c9f784e8cfe8632969b0d14eb222418568d94ec62"
+    },
+    {
+      "path": "scripts/test_validate_lectures_scout.py",
+      "sha256": "ca452b405558852adb59302ad4fd651120663fe1505141a51310644323dcc085"
+    },
+    {
+      "path": "scripts/validate_lectures_scout.py",
+      "sha256": "a03af5b366cb0cc81b2cf4a936bfa48edfc57d5a0fe0e936df88d9a847c8085b"
     }
   ],
   "declared_local_dependencies": [
@@ -61,7 +74,7 @@
       "path": "assets/report_template.md",
       "exists": true,
       "resolved_path": "hit-lectures-scout/assets/report_template.md",
-      "sha256": "58ab9ffd78d380b7ca1053ba1b9d0bb265430c1ab2344b0ccfc28f6a91f5de9f"
+      "sha256": "1c097fdefc76cb77aa153d5505e5885e6057f5d9c0a2d934410676c9d28cb7ff"
     },
     {
       "path": "assets/task_journals_cn.md",
@@ -74,6 +87,42 @@
       "exists": true,
       "resolved_path": "hit-lectures-scout/assets/task_journals_en.md",
       "sha256": "6e68918648dba9b043823f0a67b0032c8d3a70d35081e70f01c587d0c122d4d7"
+    },
+    {
+      "path": "scripts/test_validate_lectures_scout.py",
+      "exists": true,
+      "resolved_path": "hit-lectures-scout/scripts/test_validate_lectures_scout.py",
+      "sha256": "ca452b405558852adb59302ad4fd651120663fe1505141a51310644323dcc085"
+    },
+    {
+      "path": "scripts/validate_lectures_scout.py",
+      "exists": true,
+      "resolved_path": "hit-lectures-scout/scripts/validate_lectures_scout.py",
+      "sha256": "a03af5b366cb0cc81b2cf4a936bfa48edfc57d5a0fe0e936df88d9a847c8085b"
+    },
+    {
+      "path": "shared/references/report_archive.md",
+      "exists": true,
+      "resolved_path": "shared/references/report_archive.md",
+      "sha256": "f0a6ad72a05021457462f172e9c7d81e01407b84b60ac6cd1b48bb97fb158274"
+    },
+    {
+      "path": "shared/scripts/report_archive.py",
+      "exists": true,
+      "resolved_path": "shared/scripts/report_archive.py",
+      "sha256": "131d8f4de46b3369f73fbd645a080cb81120b8d756fa0c54710296d31c08c223"
+    },
+    {
+      "path": "shared/scripts/report_archive_windows.py",
+      "exists": true,
+      "resolved_path": "shared/scripts/report_archive_windows.py",
+      "sha256": "a12b69cfd135f3312504dd7cc711f9d6ccaac50954502f083f2bfbd26aa3c538"
+    },
+    {
+      "path": "shared/scripts/test_report_archive.py",
+      "exists": true,
+      "resolved_path": "shared/scripts/test_report_archive.py",
+      "sha256": "9c6d587211a9297ed9ec5541efe0900fcb90d646e6cd0e5b47ecdc29611cdb48"
     }
   ],
   "missing_declared_dependencies": []

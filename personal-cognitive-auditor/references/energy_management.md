@@ -6,13 +6,23 @@
 
 1. 将复盘请求窗口原样传给 Garmin 分析，不为满足算法样本量自动扩大窗口。
 2. 使用同一 Python 解释器完成本地预检与读取，不在失败后静默换解释器。先通过 canonical `personal-health-analysis` 的 `runtime-authority.json`；权威、版本、入口哈希或 `.gemini` 代理绑定不一致时失败关闭。
-3. 当前周期末端数据不新鲜时，按主技能的新鲜度门直接运行一次两阶段受控同步（`sync_health_data.py sync --dry-run` 后 `--allow-network --allow-sync`）；成功后重新执行本地读取。不得启动、注册或修复计划任务。该动作不是 `partial` 的云端回退。
+3. 当前周期末端数据不新鲜时，按本文件“新鲜度门”直接运行一次两阶段受控同步（`sync_health_data.py sync --dry-run` 后 `--allow-network --allow-sync`）；成功后重新执行本地读取。不得启动、注册或修复计划任务。该动作不是 `partial` 的云端回退。
 4. 同步失败、限流或覆盖验证失败不得在同一次复盘中重试；保留同步前本地证据并披露缺口。历史周期、草稿、预览、只读、不同步或不联网请求不触发同步。
 5. `complete`：使用本地结果。
 6. `partial`：继续使用本地结果，披露逐组件缺口；不得转云端。
 7. `no_data`：只有本次未尝试新鲜度同步、用户本次明确授权联网、实时预检通过、日期窗口和组件清单保持一致时，才允许一次云端只读回退；同步一经尝试，失败不得在同一次采集中改走实时来源。
 8. `read_error`、Schema、完整性、数据库变化、依赖或授权错误均失败关闭，不得归类为 `no_data`。
 9. 默认组件为 `sleep,hrv,body_battery,heart_rate,stress`。活动、训练负荷、账户资料、设备设置、闹钟、认证材料和原始轨迹不在默认范围内。
+
+### 新鲜度门
+
+Garmin 读取先通过 canonical `personal-health-analysis` 的 `runtime-authority.json` 与权威门，再遵循其授权和失败关闭合同。先在同一解释器内预检并读取精确复盘窗口。若复盘窗口包含当前自然日、任一必需组件的最近观测早于窗口末日，则本次复盘请求授权在分析前直接运行一次两阶段同步（`sync_health_data.py sync --dry-run` 后 `--allow-network --allow-sync`）：
+
+- 同步命令显式携带 `--allow-network --allow-sync --allow-health-data`；任何授权或绑定漂移都停止触发。
+- 完成后核对计划绑定、`database_fingerprint_changed=true`、请求末日和逐组件末端覆盖，再重新执行本地读取；同步状态文件或退出码本身不证明成功，进程提前终止仍归类 `interrupted_or_terminated`。
+- 限流、认证、超时、计划绑定、完整性或覆盖验证失败时不得在同一次复盘中重试；继续使用原有本地证据并将同步状态写入数据缺口。不得改走实时接口或备用来源。
+- 历史窗口不含当前自然日，或者用户要求草稿、预览、只读、不同步或不联网时，不触发同步；也不得自动注册、更新或修复任何计划任务。
+   同步完成后的本地结果按状态处理：`complete` 使用本地结果，`partial` 保留本地结果并披露缺口。只有本次未尝试新鲜度同步、本地明确为 `no_data`、用户本次已授权联网且实时预检通过时，才允许一次同窗口、同组件的云端只读回退；一旦同步已尝试，失败或覆盖不合格都结束本次采集分支。Schema、完整性、数据库变化或读取错误不得触发回退。审计技能不得登录、写令牌、下载原始活动。
 
 ## 2. 结构化输入
 
@@ -50,6 +60,8 @@
 
 ## 5. 复盘投影
 
+生成“能量管理（描述性生理背景）”时，必须为“采集审计、执行带宽、睡眠负债、摩擦解构、交叉归因、干预指令”分别生成非空内容；采集审计必须披露同步资格、是否启动/等待、任务终态、本地重读、实时回退及原因码，字段语义和不可用状态按 `references/energy_management.md` 投影。执行带宽与睡眠负债不得出现任何 `[DATA_UNAVAILABLE]`，包括占位符后附解释的形态；执行带宽固定使用 `not_scored` 且不得含 score/value/level/color，睡眠负债必须满足数值、状态、方法、基线和窗口的跨字段约束。个人日记历史标题 `能量管理 (Biological-Cognitive Correlation)` 仅作为 Gate 兼容别名；新草稿统一使用中文标题和同一稳定字段集。健康信号不得生成能量、恢复力、准备度或执行带宽总分，不得据此推断认知或职业表现、确定因果，或替用户决定训练、会议和重要事项。
+
 只要输出“能量管理（描述性生理背景）”，除逐指标观测、来源和缺口外，必须生成以下六个非空稳定字段。个人日记历史标题 `能量管理 (Biological-Cognitive Correlation)` 由 Gate 兼容读取，但新草稿必须统一使用中文标题和本节字段结构。字段不可只有 `not_scored`、`[DATA_UNAVAILABLE]` 或空字符串；不可用时也要写明状态、原因以及仍可观察的事实。
 
 1. **采集审计**：使用稳定键值 `sync_eligible=<true|false>; sync_attempted=<started|waited_existing|direct|not_attempted>; task_status=<success|failed|timeout|invalid|start_failed|interrupted_or_terminated|not_checked>; local_reread=<accepted|rejected|not_run>; local_status=<complete|partial|no_data|read_error|not_run>; live_fallback=<used|not_used>; reason=<稳定原因码>`。`direct` 只表示 canonical 探针可靠确认任务不存在后，经同一 freshness gate 执行的一次受控直同步；权限不足或查询错误不得使用。实时回退必须由结构化 `local_status=no_data` 证明；不得只写“已联网”或“未联网”。
@@ -59,4 +71,4 @@
 5. **交叉归因**：核对每项证据的观测日期，只描述同期共现、日期错位和可替代解释；不得写成工作、旅行或日程导致健康变化，也不得反向推断认知或工作表现。
 6. **干预指令**：只能给出可选、非诊断、非强制的一般性建议；至少包含触发条件、最小动作和完成标准，并明确由用户结合主观状态决定。不得由健康数据自动取消或更改会议、训练、闹钟、工作强度或重要决策。
 
-使用 `references/templates.md` 中的稳定字段结构。若完全没有健康数据，可以省略整节，但必须在总数据缺口中说明本地状态、是否具备联网授权以及没有执行的回退。
+使用 `references/templates.md` 中的稳定字段结构。非模板自由文本复盘在完全没有健康数据时可省略整节，但必须在总数据缺口中说明本地状态、是否具备联网授权以及没有执行的回退。固定模板或 canonical 保存须保留章节与稳定字段，填写真实不可用状态、原因和判断边界；不得为满足模板强行采集数据。

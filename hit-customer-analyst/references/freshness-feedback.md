@@ -1,8 +1,8 @@
-# 信息时效、会后反馈与系统回填 v2.10.0
+# 信息时效、会后反馈与系统回填 v2.6.0
 
 ## 1. TTL规则
 
-TTL是逐claim的可复测属性，不是成果文件的一个统一日期。每条claim在`runtime/evidence-manifest.json`记录`information_type/ttl_class、evidence_anchor_at、date_basis、verified_at、ttl_days、expires_at、supporting_source_ids、verification_status`。TTL从支持该主张的最新有效证据锚点计算；只有访问日期时，从访问日期计算并记`date_basis=retrieved_at`、降低置信度。TTL是复用上限，不替代事件有效期、来源更新或现场确认。
+TTL从支持该主张的最新有效日期计算；只有访问日期时，从访问日期计算并降低置信度。TTL是复用上限，不替代事件有效期、来源更新或现场确认。
 
 先应用当前业务模式的成果级上限，再应用下表的信息类别上限，取更短者：
 
@@ -27,20 +27,20 @@ TTL是逐claim的可复测属性，不是成果文件的一个统一日期。每
 
 法律、政策、采购公告等原文若明确有效期，以明确有效期优先。已知事实发生变化时不等待TTL，立即标`stale`或`invalidated`。
 
-计算时先取当前`business_mode`对该类别的上限，再取信息类别默认TTL，以较短者写入`ttl_days`；明示事件终止或有效期更早时，`expires_at`取更早值。验证器使用工作区`task_timezone`的当前民用时间重算，不信任Markdown或模型手写的到期结论。
-
 ## 2. 复用判断
 
 打开既有context时逐项执行：
 
 1. 识别本模式会实际使用的关键claim；
-2. 核对claim的支持source ID、内容SHA、事件/有效/核验日期和TTL，并重算`expires_at`；
+2. 比较事件日期、有效日期、最新核验日期和TTL；
 3. 未到期且无变化信号可reused；
 4. 到期但仍可能有效先标stale并定向刷新；
 5. 被新证据否定标invalidated，保留历史来源和更正原因；
 6. 无法及时复核时从正文结论降为现场问题，`ready_for_use=false`。
 
-`evidence_cutoff_date`只表示本轮证据检查截止日，不代表所有主张都在当天更新。成果文件最近修改时间、source抓取日期和总报告cutoff都不得替代主张TTL。关键claim缺机器TTL记录、已过期或支持来源内容SHA漂移时，立即转`stale`，不得以手工改`freshness_status=current`绕过。
+`evidence_cutoff_date`只表示本轮证据检查截止日，不代表所有主张都在当天更新。成果文件最近修改时间不得替代主张TTL。
+
+自然过期或已按规则清空旧审核戳、标为 changes_requested/stale 的成果，正常使用`init_workspace.py <客户> --output-root <父目录> --resume --refresh-modules institution,leader`规划受影响模块。入口只容许可由 planning 解除的时效/阶段审核错误，转为`planning`、`ready_for_use=false`并清空总报告旧就绪戳；证据日期、研究正文及有效历史审核记录不改写。刷新及重新审核前不得 ready。身份/权限、正文或 manifest 哈希漂移、文件损坏、CAS 及未恢复事务仍阻断；`--recover`不是自然过期的常规入口。
 
 ## 3. 各模式处置
 

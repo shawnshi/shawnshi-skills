@@ -366,7 +366,7 @@ class DashboardArchiveLifecycleTests(unittest.TestCase):
                 f"```json\n{json_path.read_text(encoding='utf-8').rstrip()}\n```",
                 markdown_path.read_text(encoding="utf-8"),
             )
-            self.assertEqual(index["dashboards"]["AAPL"]["dashboard_contract_version"], "7.0")
+            self.assertEqual(index["dashboards"]["AAPL"]["dashboard_contract_version"], "7.1")
             self.assertRegex(
                 index["dashboards"]["AAPL"]["json_sha256"],
                 r"^[0-9a-f]{64}$",

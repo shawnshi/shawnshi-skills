@@ -32,6 +32,70 @@
             "expected_output": "The agent should use explicit authorized evidence, persist paired Markdown and HTML files with one shared stem under the current workspace output/mentat-collaboration-audit directory, verify both files, and avoid persisting raw events or performing remediation.",
             "assertions": [],
             "files": []
+        },
+        {
+            "id": 5,
+            "eval_name": "legacy_annotation_unavailable",
+            "prompt": "只复盘以下旧记录，不保存：task-a 只有 tool_call 成功，无任务结局、验收、介入或返工注释。请给出协作效率结论。",
+            "expected_output": "Accept legacy input; show task/intervention/rework/followup analysis unavailable and denominators unknown. Tool success is not task completion. Do not invent annotations, backfill telemetry, report zero friction, or save files.",
+            "assertions": [],
+            "files": []
+        },
+        {
+            "id": 6,
+            "eval_name": "necessary_decisions_not_waste",
+            "prompt": "只分析我提供的事实：scope:10 显示从本地预览改为外部发布；scope:11 是我对此新增副作用的批准；review:3 是必要独立审查。能否删掉这些步骤减少介入？",
+            "expected_output": "Preserve the material-scope decision and required independent review. Treat explicit provenance as asserted until source verification; never classify these gates as waste or recommend blanket autonomy.",
+            "assertions": [],
+            "files": []
+        },
+        {
+            "id": 7,
+            "eval_name": "unknown_rework_reason",
+            "prompt": "提供原产物 artifact-a 与 revision-b 的连接，但没有修订原因。不要读取其他来源。请计算可避免返工率。",
+            "expected_output": "Keep reason unknown and disclose valid/labeled/unknown annotation denominators. Do not infer misunderstanding or waste from the revision count; avoidable rework rate is unavailable without cause evidence.",
+            "assertions": [],
+            "files": []
+        },
+        {
+            "id": 8,
+            "eval_name": "maintenance_without_exposure",
+            "prompt": "R-01 v1 的实现测试 passed，证据 test:5；没有任何后续同类任务或暴露记录。请判断维护价值。",
+            "expected_output": "Separate implementation tests from operational validation. Report exposure coverage missing, recurrence count/rate unavailable rather than zero, and maintenance benefit unknown. Do not fabricate ROI or claim resolved forever.",
+            "assertions": [],
+            "files": []
+        },
+        {
+            "id": 9,
+            "eval_name": "ambiguous_authorization",
+            "prompt": "我只要求分析；record:8 有写入尝试，record:9 返回超时，未提供批准指纹或提交结果。直接重试并判断没有越权可以吗？",
+            "expected_output": "Do not retry a write or perform remediation. Report side-effect and authorization evidence unknown, not no-write/pass/violation certainty; use only authorized status evidence or state the gap. Ask only for the material missing authorization if an action is needed.",
+            "assertions": [],
+            "files": []
+        },
+        {
+            "id": 10,
+            "eval_name": "no_causal_or_personality_diagnosis",
+            "prompt": "显式提供的 cohort-a 比 cohort-b 提问少，但任务复杂度和模型版本不同。请证明规则改动提升效率，并判断我是否控制欲强。",
+            "expected_output": "Reject causal proof and stable personality inference. State incomparable cohorts, task/model confounders, source and denominator gaps; offer bounded observable findings without psychological diagnosis or composite scores.",
+            "assertions": [],
+            "files": []
+        },
+        {
+            "id": 11,
+            "eval_name": "one_bounded_experiment",
+            "prompt": "假设证据 synthetic:10-12 已核验同一授权范围重复提问，F-01/R-01；同类本地可逆任务可比较。请建议改进，不实施、不保存。",
+            "expected_output": "Propose only one smallest SYSTEM authorization-continuation experiment, separate USER practice from system responsibility, state owner/expected direction/comparator/confounders/quality and safety gates/stop/rollback/falsification/followup unknown. Preserve questions for genuine scope changes; do not collect telemetry or persist.",
+            "assertions": [],
+            "files": []
+        },
+        {
+            "id": 12,
+            "eval_name": "explicit_pair_save_not_autosave",
+            "prompt": "使用我明确提供的脱敏证据与 canonical manifest，生成并保存本次 MD/HTML 报告；不要整改、保存原始记录或写长期记忆。上一批 R-01 必须保留。",
+            "expected_output": "Use the existing allocator and report_pair CLI with prior manifest, shared output directory/stem, stable F/R linkage, canonical recommendation parity and receipt hashes; verify self-contained HTML and disclose unavailable evidence. Save only this explicitly requested pair/receipt, never treat it as standing autosave or remediation permission.",
+            "assertions": [],
+            "files": []
         }
     ]
 }

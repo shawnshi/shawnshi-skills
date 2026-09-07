@@ -185,6 +185,7 @@ def build_agent_context(
         "gap": deepcopy(gap),
         "window": deepcopy(lane_slice["window"]),
         "lane": lane,
+        "execution_budget": deepcopy(packet["execution_budget"]),
         "role": {
             "role": role.get("role"),
             "mission": role.get("mission"),
@@ -255,6 +256,7 @@ def build_agent_context(
         },
         "draft_instructions": [
             "Attempt every required_bound_candidate_url before open search and preserve each outcome in access_log.",
+            "max_urls bounds access attempts (access_log entries), not unique URLs. Rechecks consume the same budget; never delete earlier evidence to fit. Read and retain body/date/source evidence during the initial access, or exclude unverified claims when the budget is exhausted.",
             "Fast helper: run 'python -X utf8 scripts/supplement_agent.py verify-bound --request <request> --gap-id <gap_id> --write-draft' to fast-verify bound candidates deterministically and generate the initial draft.",
             "For each verified bound candidate that also passes date, domain, and source-quality rules, emit an enriched candidate using the same candidate_id and URL; this re-registration is required to carry article-level source_type and event_identity into semantic review and is not prohibited as a duplicate. The deterministic finalizer generates event_id, so never omit a candidate merely because that hash algorithm is unavailable.",
             "A redirect landing page is a successful access only after the final HTTP(S) destination is fetched; preserve the original URL as requested_url and the landing URL as final_url.",
@@ -358,9 +360,13 @@ def assemble_result(
         not isinstance(access_log, list)
         or not isinstance(candidates, list)
         or (not access_log and not infrastructure_failure)
-        or len(access_log) > int(gap["max_urls"])
     ):
         raise RunContractError("access_log or candidates are invalid")
+    if len(access_log) > int(gap["max_urls"]):
+        raise RunContractError(
+            f"access_log has {len(access_log)} attempts; exceeds max_urls={gap['max_urls']} "
+            "(rechecks count; preserve evidence, do not deduplicate)"
+        )
     validated_access = [
         _validate_access_log_entry(
             access,
@@ -618,6 +624,8 @@ def _recognizable_document_body(body: bytes, content_type: str, final_url: str) 
     soft_error_markers = (
         "<title>404", "<title>not found", "page not found", "页面不存在",
         "soft 404", "access denied", "<title>login", "<title>sign in",
+        "<title>making sure you're not a bot!", "id=\"anubis_challenge\"",
+        "id='anubis_challenge'", "/.within.website/x/cmd/anubis/",
     )
     if any(marker in lowered for marker in soft_error_markers):
         return False
@@ -757,6 +765,13 @@ def verify_bound_candidates(
             "published_at_source": "unknown",
         }))
 
+    if len(items_to_check) > int(gap["max_urls"]):
+        raise RunContractError(
+            f"verify-bound requires {len(items_to_check)} attempts; exceeds max_urls={gap['max_urls']}"
+        )
+    if len({normalize_url(item[1]) for item in items_to_check}) != len(items_to_check):
+        raise RunContractError("verify-bound URLs must not repeat bound or additional URLs")
+
     started_at = datetime.now(timezone.utc)
     access_log: list[dict[str, Any]] = []
     bound_candidate_decisions: list[dict[str, Any]] = []
@@ -776,7 +791,7 @@ def verify_bound_candidates(
             "method": "http_get",
             "requested_url": target_url,
             "final_url": final_url,
-            "http_status": http_code or 200,
+            "http_status": http_code,
             "failure_class": fail_class,
         }
         if err_code:

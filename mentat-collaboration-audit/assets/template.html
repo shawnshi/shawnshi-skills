@@ -23,9 +23,42 @@
     <h1>{{TITLE}}</h1>
     <p class="meta">{{SCOPE_AND_COVERAGE}}</p>
   </header>
-  <section class="card"><h2>关键结论</h2>{{KEY_FINDINGS}}</section>
-  <section class="card"><h2>发现与证据</h2>{{FINDINGS_TABLE}}</section>
-  <section class="card"><h2>指标与口径</h2>{{METRICS}}</section>
+  <section class="card">
+    <h2>六个结果问题</h2>
+    <p class="meta">默认正文是待补证据的骨架，不是已完成审计。每项结论旁列证据指针、来源声明／已核验出处、分子／分母、覆盖与未知；缺证据不填零、不判通过、不合成总分。</p>
+    <h3>1. 哪些任务已完成，哪些仍未解决？</h3>
+    <p>不可用：缺少根任务结局与验收证据。已验收、失败、阻塞、放弃、未完成与未知分列；任务分母、已分类分母及未见结局数量未知。</p>
+    <h3>2. 哪项有证据的可避免摩擦代价最高？</h3>
+    <p>不可用：缺少可比较的影响证据。绑定 F-xx、直接观察的代价单位与比较范围；不能排序就保持未知，不用消息数估算注意力时间或金额。</p>
+    <h3>3. AI 把哪些工作转交给了用户？</h3>
+    <p>不可用：缺少纠错、恢复、重复授权与合理需求变更的出处。介入及返工各自的有效注释／已知原因／未知原因分母未知，不代表全部消息或修订。</p>
+    <h3>4. 哪些必要的人类决策必须保留？</h3>
+    <p>不可用：缺少授权与决策证据。保留目标选择、实质范围变化、必要审批、独立审查与安全停止；不记作浪费，不笼统要求“更自主”。</p>
+    <h3>5. 上次整改得到了什么后续检验？</h3>
+    <p>不可用：缺少 R-xx、版本、失败签名及 cohort。暴露／可比后续／实际观察分母、复发分子和观察覆盖未知；无暴露时复发数／率不可计算。实现测试与运行验证分列，不证明收益归因。</p>
+    <h3>6. 下一项唯一实验是什么，什么结果会推翻它？</h3>
+    <p>待定：证据不足。足够时只选一个 SYSTEM 修复或 USER 使用动作，列所有者、最小变化、预期方向、同类比较与混杂因素、质量／安全护栏、停止／回滚／证伪条件及后续状态。实践步骤见 IMPROVEMENT.md，不默认采集或保存。</p>
+    {{KEY_FINDINGS}}
+  </section>
+  <section class="card">
+    <h2>八个视角的发现与证据</h2>
+    <p class="meta">下表是检查位置，不是已证实问题。稳定 F-xx 连接 R-xx；指针存在不证明内容支持结论，user/runtime/reviewer 是来源声明，不是身份认证。</p>
+    <div class="table-wrap"><table>
+      <thead><tr><th>视角</th><th>F-xx／证据与出处核验</th><th>结论／定性或计算边界</th><th>分子／分母／覆盖／未知</th><th>替代解释</th></tr></thead>
+      <tbody>
+        <tr><td>任务收敛</td><td>未提供</td><td>不可用；状态可计算，验收需核验</td><td>未知</td><td>范围截断、外部依赖</td></tr>
+        <tr><td>用户介入</td><td>未提供</td><td>不可用；标签可计数，必要性需核验</td><td>未知</td><td>新需求、必要决策</td></tr>
+        <tr><td>返工</td><td>未提供</td><td>不可用；标签不自动表示浪费</td><td>未知</td><td>合理探索、需求变化</td></tr>
+        <tr><td>自主性校准</td><td>未提供</td><td>不可用；定性合同核对，无评分</td><td>未知</td><td>回执缺失、载荷变化</td></tr>
+        <tr><td>维护价值</td><td>未提供</td><td>不可用；复发可计算，收益归因属判断</td><td>未知</td><td>无暴露、cohort／版本变化</td></tr>
+        <tr><td>委派收益</td><td>未提供</td><td>不可用；Token 不等于加速或浪费</td><td>未知</td><td>独立审查、难度选择</td></tr>
+        <tr><td>上下文与规则负担</td><td>未提供</td><td>不可用；载入统计不证明因果</td><td>未知</td><td>必要重读、任务复杂度</td></tr>
+        <tr><td>改进实验</td><td>未提供</td><td>不可用；比较可复算，因果属判断</td><td>未知</td><td>选择偏差、模型更新</td></tr>
+      </tbody>
+    </table></div>
+    {{FINDINGS_TABLE}}
+  </section>
+  <section class="card"><h2>支撑证据：运行指标与口径</h2>{{METRICS}}</section>
   <section class="card" data-report-pair-section="recommendations"><h2>整改建议</h2><div class="table-wrap">{{RECOMMENDATIONS}}</div></section>
   <section class="card"><h2>未知项与残余风险</h2>{{LIMITATIONS}}</section>
 </main>

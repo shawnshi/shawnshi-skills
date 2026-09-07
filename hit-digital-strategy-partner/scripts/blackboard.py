@@ -160,6 +160,7 @@ def _file_lock(path: Path, *, exclusive: bool) -> Iterator[None]:
     lock_path = _lock_path(path)
     lock_path.parent.mkdir(parents=True, exist_ok=True)
     handle = lock_path.open("a+b")
+    acquired = False
     try:
         if os.name == "nt":  # pragma: no cover - exercised on Windows hosts
             import msvcrt
@@ -176,18 +177,20 @@ def _file_lock(path: Path, *, exclusive: bool) -> Iterator[None]:
 
             mode = fcntl.LOCK_EX if exclusive else fcntl.LOCK_SH
             fcntl.flock(handle.fileno(), mode)
+        acquired = True
         yield
     finally:
         try:
-            if os.name == "nt":  # pragma: no cover - exercised on Windows hosts
-                import msvcrt
+            if acquired:
+                if os.name == "nt":  # pragma: no cover - exercised on Windows hosts
+                    import msvcrt
 
-                handle.seek(0)
-                msvcrt.locking(handle.fileno(), msvcrt.LK_UNLCK, 1)
-            else:
-                import fcntl
+                    handle.seek(0)
+                    msvcrt.locking(handle.fileno(), msvcrt.LK_UNLCK, 1)
+                else:
+                    import fcntl
 
-                fcntl.flock(handle.fileno(), fcntl.LOCK_UN)
+                    fcntl.flock(handle.fileno(), fcntl.LOCK_UN)
         finally:
             handle.close()
 
@@ -672,17 +675,13 @@ def load_state(workspace_root: Path) -> tuple[Path, dict[str, Any]]:
     """Load an initialized blackboard; never manufacture missing state."""
 
     path = blackboard_path(workspace_root)
-    if not path.exists():
-        raise BlackboardError(
-            "NOT_INITIALIZED",
-            "blackboard is not initialized; run the init command first",
-            details={"path": str(path)},
-        )
+    # Even a Windows stat probe can briefly hold a non-sharing file handle.
+    # Serialize all target access, not just JSON reads and atomic replacement.
     with _file_lock(path, exclusive=False):
         if not path.exists():
             raise BlackboardError(
                 "NOT_INITIALIZED",
-                "blackboard disappeared while it was being opened",
+                "blackboard is not initialized; run the init command first",
                 details={"path": str(path)},
             )
         return path, _normalize_loaded_state(_read_json_unlocked(path))
@@ -696,13 +695,13 @@ def save_state(
 ) -> None:
     """Compatibility API for safe writes by companion scripts."""
 
-    if not path.exists():
-        raise BlackboardError(
-            "NOT_INITIALIZED",
-            "refusing to create state outside the init command",
-            details={"path": str(path)},
-        )
     with _file_lock(path, exclusive=True):
+        if not path.exists():
+            raise BlackboardError(
+                "NOT_INITIALIZED",
+                "refusing to create state outside the init command",
+                details={"path": str(path)},
+            )
         current = _normalize_loaded_state(_read_json_unlocked(path))
         current_revision = current.get("metadata", {}).get("revision")
         if expected_revision is None:
@@ -2973,17 +2972,11 @@ def cmd_init(args: argparse.Namespace) -> int:
 
 def cmd_update(args: argparse.Namespace) -> int:
     path = blackboard_path(args.workspace_root)
-    if not path.exists():
-        raise BlackboardError(
-            "NOT_INITIALIZED",
-            "blackboard is not initialized; run the init command first",
-            details={"path": str(path)},
-        )
     with _file_lock(path, exclusive=True):
         if not path.exists():
             raise BlackboardError(
                 "NOT_INITIALIZED",
-                "blackboard disappeared while waiting for the lock",
+                "blackboard is not initialized; run the init command first",
                 details={"path": str(path)},
             )
         state = _normalize_loaded_state(_read_json_unlocked(path))

@@ -40,10 +40,12 @@ description: 为医疗机构或医疗信息化企业开展数字化战略、方�
 
 - Blackboard 是深度任务的唯一机器状态源。按需使用 `scripts/blackboard.py` 初始化、批量更新、校验和检查就绪状态；不要另建平行的 working-memory、证据或假设状态文件。
 - 只有用户需要文件且存在至少一个完成章节时才使用 `scripts/assembler.py`。它默认拒绝空报告和覆盖已有文件；覆盖必须显式授权并传入 `--force`。
-- 交付前使用 `scripts/strategy_gate.py` 做统一检查。`working_draft` 或 `review_ready` 可以带着明确披露的警告供复核；`decision_ready` 或其他正式决策级交付必须使用 `--strict`，警告未处理时不得声称门禁通过。
+- `direct` 及不生成文件、不使用 Blackboard 的纯对话 `brief`，按问题范围执行相称的事实与边界检查，不运行文件型门禁，也不为满足门禁创建文件。文件交付使用 `scripts/strategy_gate.py` 统一检查；无 Blackboard 的 `brief` 文件按下述 `--textual-only` 路径。`working_draft` 或 `review_ready` 可以带着明确披露的警告供复核；`decision_ready` 或其他正式决策级交付必须使用 `--strict`，警告未处理时不得声称门禁通过。
 - 报告编辑和人工复核边界见 [references/editor.md](references/editor.md)。完整合成案例与反例见 [examples/workflow_example.md](examples/workflow_example.md)。
 
 ## 完成标准
+
+以下要求按所选模式和当前问题适用；`direct` 与纯对话 `brief` 不机械补齐无关路线图、财务模型或文件资产，事实、授权和高风险边界不豁免。
 
 - 决策问题、适用对象、地区、时间范围和成果成熟度明确。
 - 核心主张能回指证据ID或显式假设；冲突证据和信息缺口未被隐藏。
@@ -52,4 +54,4 @@ description: 为医疗机构或医疗信息化企业开展数字化战略、方�
 - 高风险事项已标明当前依据、信息缺口和专业复核对象。
 - 未经授权没有发生外部发布、发送或审批动作。
 
-无 Blackboard 的 `brief` 仅可显式使用 `strategy_gate.py --path REPORT --mode brief --textual-only` 检查文本草稿；报告须声明 `working_draft` 或 `review_ready`。输出 `scope: textual_only`，不验证证据、财务、合规或决策就绪度，不得据此放行正式财务交付。该路径拒绝 `--strict`、正式成熟度及其他模式；已有 Blackboard 时仍走原统一门禁，正式交付仍必须严格检查。装配成功不代表门禁通过。
+无 Blackboard 的 `brief` 文件仅可显式使用 `strategy_gate.py --path REPORT --mode brief --textual-only` 检查文本草稿；报告须声明 `working_draft` 或 `review_ready`。输出 `scope: textual_only`，不验证证据、财务、合规或决策就绪度，不得据此放行正式财务交付。该路径拒绝 `--strict`、正式成熟度及其他模式；已有 Blackboard 时仍走原统一门禁，正式交付仍必须严格检查。装配成功不代表门禁通过。

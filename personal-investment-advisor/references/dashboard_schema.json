@@ -1,6 +1,6 @@
 {
   "resource_kind": "investment_dashboard_contract",
-  "version": "7.0",
+  "version": "7.1",
   "strict_profile": "2026-08-05",
   "required_top_level": [
     "stock_name",
@@ -36,7 +36,8 @@
     "feedback_status",
     "management_claim_tracking",
     "scenario_analysis",
-    "tags"
+    "tags",
+    "etf_research"
   ],
   "required_dashboard_sections": [
     "core_conclusion",
@@ -157,7 +158,10 @@
     "content_sha256"
   ],
   "source_locator_contract": {
-    "allowed_http_schemes": ["http", "https"],
+    "allowed_http_schemes": [
+      "http",
+      "https"
+    ],
     "blocked_hostnames": [
       "localhost",
       "example.com",
@@ -329,18 +333,56 @@
     "as_of_date"
   ],
   "enums": {
-    "market_type": ["A股", "港股", "美股", "ETF", "其他"],
-    "research_mode": ["research_only"],
-    "confidence_level": ["高", "中", "低"],
-    "weight_status": ["within_target", "above_target", "above_max", "unknown"],
-    "feedback_status": ["pending", "reviewed", "closed"],
-    "monitoring_boundary_role": ["downside_boundary", "upside_boundary"],
-    "monitoring_boundary_operator": ["lte", "gte"],
-    "monitoring_boundary_authority_status": ["user_confirmed", "unverified_legacy"],
-    "monitoring_boundary_metric": ["regular_market_price"],
-    "monitoring_boundary_quote_basis": ["regular_market_price"],
-    "monitoring_boundary_decision_scope": ["observation_only"],
-    "monitoring_proximity_mode": ["explicit_relative_pct"],
+    "market_type": [
+      "A股",
+      "港股",
+      "美股",
+      "ETF",
+      "其他"
+    ],
+    "research_mode": [
+      "research_only"
+    ],
+    "confidence_level": [
+      "高",
+      "中",
+      "低"
+    ],
+    "weight_status": [
+      "within_target",
+      "above_target",
+      "above_max",
+      "unknown"
+    ],
+    "feedback_status": [
+      "pending",
+      "reviewed",
+      "closed"
+    ],
+    "monitoring_boundary_role": [
+      "downside_boundary",
+      "upside_boundary"
+    ],
+    "monitoring_boundary_operator": [
+      "lte",
+      "gte"
+    ],
+    "monitoring_boundary_authority_status": [
+      "user_confirmed",
+      "unverified_legacy"
+    ],
+    "monitoring_boundary_metric": [
+      "regular_market_price"
+    ],
+    "monitoring_boundary_quote_basis": [
+      "regular_market_price"
+    ],
+    "monitoring_boundary_decision_scope": [
+      "observation_only"
+    ],
+    "monitoring_proximity_mode": [
+      "explicit_relative_pct"
+    ],
     "source_tier": [
       "company_primary",
       "regulator",
@@ -402,5 +444,49 @@
       "chip_structure_mode": "not_applicable",
       "chip_health_value": "不适用(非A股)"
     }
+  },
+  "etf_contract": {
+    "version": "1.0",
+    "valuation_contract_version": "etf_nav1.0",
+    "valuation_method": "nav_index_currency_stress",
+    "discriminator": {
+      "market_type": "ETF",
+      "asset_type": "etf",
+      "method_profile": "etf_research"
+    },
+    "corporate_fields": [
+      "enterprise_value",
+      "net_debt",
+      "equity_value",
+      "diluted_shares"
+    ],
+    "corporate_value": "not_applicable",
+    "required_evidence": [
+      "identity",
+      "nav",
+      "fees",
+      "tracking"
+    ],
+    "ancillary_coverage": [
+      "holdings_concentration",
+      "liquidity",
+      "assets",
+      "share_changes",
+      "corporate_actions"
+    ],
+    "evidence_binding": "Zero-based evidence_index into evidence_items; typed etf_observation carries kind, symbol, market, currency and metric fields. Core requires primary source. Ancillary status=evidenced or gap with reason.",
+    "nav_unit": "currency_per_unit",
+    "fee_unit": "ratio_per_year",
+    "tracking_types": [
+      "tracking_difference",
+      "tracking_error"
+    ],
+    "premium_discount_basis": "quote_vs_last_published_nav",
+    "scenario_assumptions": [
+      "index_return",
+      "currency_return"
+    ],
+    "scenario_formula": "nav_per_unit * (1 + index_return) * (1 + currency_return)",
+    "migration": "Stock 2.0 and legacy unversioned scenarios unchanged. New ETF requires etf_nav1.0. Historical ETF corporate/legacy archives remain readable without strict mode; no automatic migration."
   }
 }

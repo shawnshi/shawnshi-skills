@@ -54,17 +54,6 @@
         "min": 1,
         "max": 1
       },
-      "delivery_contract": {
-        "formal_artifact": "briefing_delivery",
-        "audit_artifact": "comprehensive_report"
-      },
-      "delivery_budget": {
-        "page_proxy": "markdown-one-page/v1",
-        "visible_chars_max": 3200,
-        "nonblank_lines_max": 80,
-        "section_visible_chars_max": 900,
-        "conclusion_visible_chars_max": 80
-      },
       "ttl_days": {
         "institution": 90,
         "leader": 14,
@@ -153,10 +142,10 @@
       "depth": "standard",
       "modules": [
         "institution",
+        "leader",
         "strategy"
       ],
       "optional_modules": [
-        "leader",
         "internal"
       ],
       "query_budget": {
@@ -176,10 +165,6 @@
       "output_pages": {
         "min": 8,
         "max": 15
-      },
-      "delivery_contract": {
-        "formal_artifact": "visit_strategy",
-        "audit_artifact": "comprehensive_report"
       },
       "ttl_days": {
         "institution": 120,
@@ -281,10 +266,10 @@
       "depth": "deep",
       "modules": [
         "institution",
+        "leader",
         "strategy"
       ],
       "optional_modules": [
-        "leader",
         "internal"
       ],
       "query_budget": {
@@ -305,10 +290,6 @@
         "min": 20,
         "max": 35
       },
-      "delivery_contract": {
-        "formal_artifact": "visit_strategy",
-        "audit_artifact": "comprehensive_report"
-      },
       "ttl_days": {
         "institution": 180,
         "leader": 14,
@@ -318,170 +299,11 @@
       "required_business_fields": [
         "customer_name",
         "organization_scope",
-        "strategy_variant",
-        "minimum_next_step"
+        "target_contact_level",
+        "visit_objective",
+        "minimum_next_step",
+        "strategic_question"
       ],
-      "strategy_variants": {
-        "default": "account_planning",
-        "meeting_status_policy": {
-          "allowed_values": [
-            "confirmed",
-            "tentative",
-            "none",
-            "unknown"
-          ],
-          "variant_by_status": {
-            "confirmed": "scheduled_visit",
-            "tentative": "account_planning",
-            "none": "account_planning",
-            "unknown": "account_planning"
-          },
-          "exact_time_without_status": "scheduled_visit",
-          "exact_time_conflicts_with_status": [
-            "none",
-            "unknown"
-          ],
-          "target_and_objective_imply_meeting": false
-        },
-        "variants": {
-          "scheduled_visit": {
-            "template": "assets/visit-strategy-report-template.md",
-            "required_business_fields": [
-              "target_contact_level",
-              "visit_objective"
-            ],
-            "planning_gate": [
-              "target_identity_or_role_resolved"
-            ],
-            "required_sections": [
-              "目标与最小推进动作",
-              "对象假设与验证",
-              "机会资格与投入建议",
-              "时间化议程与参会分工",
-              "材料与演示计划",
-              "会后行动",
-              "CRM/PIMS候选"
-            ],
-            "forbidden_sections": [],
-            "forbidden_business_fields": [
-              "strategic_question",
-              "planning_horizon"
-            ],
-            "forbidden_heading_terms": [],
-            "forbidden_body_labels": []
-          },
-          "account_planning": {
-            "template": "assets/account-strategy-report-template.md",
-            "template_by_recommendation": {
-              "default": {
-                "visit_strategy": "assets/account-strategy-report-template.md",
-                "comprehensive_report": "assets/comprehensive-report-template.md"
-              },
-              "no_go": {
-                "visit_strategy": "assets/account-no-go-strategy-template.md",
-                "comprehensive_report": "assets/account-no-go-comprehensive-template.md"
-              }
-            },
-            "required_business_fields": [
-              "strategic_question",
-              "planning_horizon"
-            ],
-            "planning_gate": [
-              "strategic_question_resolved",
-              "planning_horizon_resolved"
-            ],
-            "required_sections": [
-              "战略问题与最小推进动作",
-              "判断链与证据边界",
-              "利益相关者与决策结构",
-              "机会资格与投入建议",
-              "情景与触发条件",
-              "30/60/90天账户动作",
-              "验证计划",
-              "风险、承诺边界与停止条件",
-              "CRM/PIMS候选"
-            ],
-            "required_action_fields": [
-              "action",
-              "action_disposition",
-              "external_interaction",
-              "resource_commitment",
-              "owner",
-              "due_date",
-              "dependency",
-              "completion_criteria",
-              "adjust_or_stop_trigger",
-              "crm_candidate"
-            ],
-            "required_no_go_fields": [
-              "recommendation",
-              "investment_intensity",
-              "recommendation_reason",
-              "minimum_stop_condition"
-            ],
-            "forbidden_followup_fields": [
-              "meeting_time",
-              "meeting_target",
-              "meeting_participants",
-              "meeting_agenda",
-              "meeting_materials"
-            ],
-            "forbidden_sections": [
-              "时间化议程与参会分工",
-              "材料与演示计划"
-            ],
-            "forbidden_business_fields": [
-              "target_contact_level",
-              "visit_objective",
-              "meeting",
-              "meeting_date",
-              "meeting_time",
-              "meeting_location",
-              "meeting_agenda",
-              "agenda",
-              "material_plan",
-              "presentation_plan",
-              "participant",
-              "participants",
-              "attendee",
-              "attendees"
-            ],
-            "forbidden_heading_terms": [
-              "会议",
-              "拜访",
-              "拜访对象",
-              "拜访时间",
-              "议程",
-              "参会",
-              "出席",
-              "展示材料",
-              "演示材料",
-              "材料计划",
-              "演示计划",
-              "会议话术",
-              "拜访话术"
-            ],
-            "forbidden_body_labels": [
-              "会议对象",
-              "拜访对象",
-              "会议时间",
-              "拜访时间",
-              "会议地点",
-              "拜访地点",
-              "客户参会人",
-              "我方参会人",
-              "参会人员",
-              "出席人员",
-              "会议议程",
-              "拜访议程",
-              "展示材料",
-              "演示材料",
-              "会议话术",
-              "拜访话术"
-            ]
-          }
-        }
-      },
       "authorization_requirements": {
         "stable_ids": [
           "customer_id"
@@ -500,7 +322,8 @@
           "stable_customer_id",
           "route_depth_compatible",
           "query_budget_valid",
-          "output_contract_resolved"
+          "output_contract_resolved",
+          "target_identity_or_role_resolved"
         ],
         "conditional": {
           "internal_selected": [
@@ -598,10 +421,6 @@
       "output_pages": {
         "min": 1,
         "max": 3
-      },
-      "delivery_contract": {
-        "formal_artifact": "customer_letter_external",
-        "audit_artifact": "comprehensive_report"
       },
       "ttl_days": {
         "institution": 90,

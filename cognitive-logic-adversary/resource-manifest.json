@@ -1,18 +1,18 @@
 {
   "schema_version": 3,
   "skill": "cognitive-logic-adversary",
-  "generated_at": "2026-09-05T20:37:45+08:00",
+  "generated_at": "2026-09-07T15:41:26+08:00",
   "hash_algorithm": "SHA-256",
   "text_hash_normalization": "LF",
   "skill_md": "SKILL.md",
-  "skill_md_sha256": "cc36a5bc39d2173ee22a32bceb06403100d2a20177a18a7b0b33ecb7190ba459",
+  "skill_md_sha256": "bc79e8fcd16db5642d1513635ee636dac7d3e3d0f80f95b2d5fdaddec0b8238f",
   "top_level_files": [
     "SKILL.md"
   ],
   "top_level_file_hashes": [
     {
       "path": "SKILL.md",
-      "sha256": "cc36a5bc39d2173ee22a32bceb06403100d2a20177a18a7b0b33ecb7190ba459"
+      "sha256": "bc79e8fcd16db5642d1513635ee636dac7d3e3d0f80f95b2d5fdaddec0b8238f"
     }
   ],
   "top_level_directories": [
@@ -22,7 +22,7 @@
   "resource_directories": [
     {
       "name": "scripts",
-      "file_count": 1
+      "file_count": 2
     },
     {
       "name": "references",
@@ -32,15 +32,19 @@
   "resource_file_hashes": [
     {
       "path": "references/output_format.md",
-      "sha256": "cade83a67175b76e9f30331ac74572cb1d95da0513d3f691184e8b92f3c70477"
+      "sha256": "76e7f03859787223e4cfbff4201d4b8ce6eb96501d31a4cf9d55d0786fbb6fc2"
     },
     {
       "path": "references/philosophy.md",
-      "sha256": "17df972eb55a7c11f6db0a8e7538d6c4ddecbc92ba9e22231bf1406fda9fa413"
+      "sha256": "bbc27e4d859d13bf68ebb2b66095abae198262058240363b2f99f2bad58675c9"
     },
     {
       "path": "scripts/game_resolver.py",
-      "sha256": "7d4d9dfc697b8f7c7b25c6420746061cd70332fa70a6677c2037a567e58de59d"
+      "sha256": "c2a6f4fbc21df9e9e82339bdbac222ee449c5da927d190e1f665b563b06d259b"
+    },
+    {
+      "path": "scripts/test_game_resolver.py",
+      "sha256": "4b279feb396775db3024b57295910b990f0b31c11dd0f8e096771e3d2d0002d9"
     }
   ],
   "declared_local_dependencies": [
@@ -48,13 +52,13 @@
       "path": "references/output_format.md",
       "exists": true,
       "resolved_path": "cognitive-logic-adversary/references/output_format.md",
-      "sha256": "cade83a67175b76e9f30331ac74572cb1d95da0513d3f691184e8b92f3c70477"
+      "sha256": "76e7f03859787223e4cfbff4201d4b8ce6eb96501d31a4cf9d55d0786fbb6fc2"
     },
     {
       "path": "scripts/game_resolver.py",
       "exists": true,
       "resolved_path": "cognitive-logic-adversary/scripts/game_resolver.py",
-      "sha256": "7d4d9dfc697b8f7c7b25c6420746061cd70332fa70a6677c2037a567e58de59d"
+      "sha256": "c2a6f4fbc21df9e9e82339bdbac222ee449c5da927d190e1f665b563b06d259b"
     }
   ],
   "missing_declared_dependencies": []

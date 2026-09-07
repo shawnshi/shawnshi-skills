@@ -126,6 +126,15 @@ termination_trigger: []
 next_decision_date: null
 ```
 
+### Blackboard v2 持久化映射（本轮相关字段）
+
+上述 YAML 是业务交接视图，不是可直接覆盖 Blackboard 的 JSON Schema。持久化仍以 `scripts/blackboard.py` 的 Schema v2 为准：
+
+- 成熟度写入 `metadata.maturity`；信息缺口写入 `evidence.gaps`，在说明中保留 `GP-` 标识、影响、责任人及解除条件。
+- 方案门禁写入 `portfolio.gate_results`，每项为 `candidate_id`、`gate`、`result`、`rationale`、`owner`；`result` 仅接受 `pass/conditional/fail/deferred`。`unknown` 是未决证据，不是枚举；不能自动对应 `deferred` 或 `pass`。当前请求因缺少必要证据不能准入时可记 `fail`，但必须说明未满足哪项准入条件，不能暗示产品危害已被证实。
+- 未解决的承重未知要求 `metadata.maturity=working_draft` 或 `blocked`，不能达到 `decision_ready`；gap 和门禁值本身不触发现有校验器的成熟度推断，必须同时保存如实的成熟度。
+- 现金流写入 `quantitative_model.cash_flows`；`period` 必需且同情景内唯一，`period_index` 只是可选 NPV 指数，不能替代期间标识。数值约束见 [investment_model.md](investment_model.md)，可提取的合成片段见 [../examples/workflow_example.md](../examples/workflow_example.md)。
+
 ## 5. 冲突与成熟度
 
 - 证据冲突：保留双方记录，标记 `disputed`，说明口径差异和裁决责任人；不能取“更顺眼”的数字。

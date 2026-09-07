@@ -1,18 +1,18 @@
 {
   "schema_version": 3,
   "skill": "mentat-insight-diary",
-  "generated_at": "2026-09-05T19:39:11+08:00",
+  "generated_at": "2026-09-06T22:34:45+08:00",
   "hash_algorithm": "SHA-256",
   "text_hash_normalization": "LF",
   "skill_md": "SKILL.md",
-  "skill_md_sha256": "887afbc2a50e4bb2f5b6041671e06482840becd09e810e59bfccebea9cb662ff",
+  "skill_md_sha256": "c0982d78af6320449d57890af54b05df21edfccab67f231d4605c42f910a0bca",
   "top_level_files": [
     "SKILL.md"
   ],
   "top_level_file_hashes": [
     {
       "path": "SKILL.md",
-      "sha256": "887afbc2a50e4bb2f5b6041671e06482840becd09e810e59bfccebea9cb662ff"
+      "sha256": "c0982d78af6320449d57890af54b05df21edfccab67f231d4605c42f910a0bca"
     }
   ],
   "top_level_directories": [
@@ -36,11 +36,11 @@
     },
     {
       "path": "scripts/evidence_gate.py",
-      "sha256": "66004f938931e472dbbc8fae6e20aa4a410e8d03aa57823d2a4c16bfd8e3036c"
+      "sha256": "5b19386626f621f6c79133e780aa39c968787ed2ebad624cdec397b6c7cb368d"
     },
     {
       "path": "scripts/test_skill_contract.py",
-      "sha256": "63d6845acf22f2d5cb525ab968e5fa0566fa6e715b4296b3d75c875ebbf793af"
+      "sha256": "b9a853e18eb9748ad04d9975c61efcb83ac0bb158617d99adc0ca238aff760cd"
     }
   ],
   "declared_local_dependencies": [
@@ -54,7 +54,7 @@
       "path": "scripts/evidence_gate.py",
       "exists": true,
       "resolved_path": "mentat-insight-diary/scripts/evidence_gate.py",
-      "sha256": "66004f938931e472dbbc8fae6e20aa4a410e8d03aa57823d2a4c16bfd8e3036c"
+      "sha256": "5b19386626f621f6c79133e780aa39c968787ed2ebad624cdec397b6c7cb368d"
     }
   ],
   "missing_declared_dependencies": []

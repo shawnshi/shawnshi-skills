@@ -1,7 +1,7 @@
 {
   "schema_version": 1,
   "skill": "mentat-skill-creator",
-  "note": "These fixtures validate the declared route and permission contract. They do not prove model-host routing by themselves.",
+  "note": "These fixtures validate the declared route and permission contract. They do not prove model-host routing by themselves. Named external handoffs and their mutation allowances apply only when that capability is actually available and the action is authorized; they are not guaranteed tools. Codex in example requests denotes an explicitly requested external format, not the current Pi host. If a creator is absent, authorized local copy edits may proceed narrowly using the existing README and local validators without loading this skill. Missing capabilities genuinely required for creation, packaging or installation must be reported, not fabricated.",
   "cases": [
     {
       "id": "explicit_audit_only",

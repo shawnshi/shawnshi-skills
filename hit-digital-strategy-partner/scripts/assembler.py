@@ -62,7 +62,7 @@ def _is_frontmatter_delimiter(line: str) -> bool:
 
 
 def clean_content(content: str) -> str:
-    """Remove only a complete YAML frontmatter block at the start of a file.
+    """Remove a complete leading frontmatter block beginning with a mapping key.
 
     A UTF-8 BOM and CRLF line endings are supported. An opening delimiter without
     a closing delimiter is preserved because it may be legitimate Markdown. No
@@ -79,7 +79,16 @@ def clean_content(content: str) -> str:
 
     for index, line in enumerate(lines[1:], start=1):
         if _is_frontmatter_delimiter(line):
-            return "".join(lines[index + 1 :])
+            # Only recognize a leading metadata mapping, not a paragraph between
+            # horizontal rules. Ambiguous/non-mapping blocks remain Markdown.
+            meaningful = [item.strip() for item in lines[1:index]
+                          if item.strip() and not item.lstrip().startswith("#")]
+            if meaningful and re.match(
+                r'''(?:[\w.-]+|"(?:[^"\\]|\\.)*"|'(?:[^']|'')*')[ \t]*:(?:\s|$)''',
+                meaningful[0],
+            ):
+                return "".join(lines[index + 1 :])
+            return content
 
     return content
 
@@ -429,10 +438,16 @@ Audience: Strategic Decision Makers
     toc: list[str] = []
     audit_results: list[dict] = []
     chapter_contents: list[str] = []
+    merged_chapters: list[ChapterFile] = []
+    empty_chapters: list[str] = []
 
     for chapter in chapters:
         raw_text = read_text_input(chapter.path, "chapter")
         clean_text = clean_content(raw_text)
+        if not clean_text.strip():
+            empty_chapters.append(chapter.relative_path)
+            continue
+        merged_chapters.append(chapter)
         word_count = count_words(clean_text)
         toc.extend(extract_action_titles(clean_text))
         chapter_contents.append(clean_text)
@@ -447,6 +462,21 @@ Audience: Strategic Decision Makers
                 ),
             }
         )
+
+    if not merged_chapters:
+        if not allow_empty:
+            raise AssemblyError(
+                "empty_chapters",
+                "all chapter bodies are empty after frontmatter removal; no output written",
+                path=project_path,
+                details={"files": empty_chapters},
+            )
+        if maturity in {"decision_ready", "approved_for_execution"}:
+            raise AssemblyError(
+                "empty_draft_maturity_conflict",
+                "--allow-empty cannot produce a decision-ready or approved report",
+                path=project_path,
+            )
 
     if toc:
         merged_content.append("## [Strategic Insight Index]\n")
@@ -464,8 +494,10 @@ Audience: Strategic Decision Makers
         row["file"] for row in audit_results if row["depth_guide_met"] is False
     ]
     warnings: list[str] = []
-    if not chapters:
-        warnings.append("no chapters were merged because --allow-empty was specified")
+    if not merged_chapters:
+        warnings.append("no chapters were merged because --allow-empty was specified; title-only draft")
+    if empty_chapters:
+        warnings.append("cleaned-empty chapters skipped: " + ", ".join(empty_chapters))
     if failed_chapters:
         warnings.append(
             "user-specified chapter depth guide was not met after frontmatter removal: "
@@ -489,8 +521,8 @@ Audience: Strategic Decision Makers
         "path": str(output_path.resolve(strict=False)),
         "mode": mode,
         "blackboard": blackboard_audit,
-        "chapters_merged": len(chapters),
-        "chapter_order": [chapter.relative_path for chapter in chapters],
+        "chapters_merged": len(merged_chapters),
+        "chapter_order": [chapter.relative_path for chapter in merged_chapters],
         "duplicate_chapter_numbers": duplicates,
         "unnumbered_chapters": unnumbered,
         "audit": audit_results,
@@ -526,7 +558,7 @@ def build_parser() -> argparse.ArgumentParser:
     parser.add_argument(
         "--allow-empty",
         action="store_true",
-        help="Allow a title-only draft when no chapter files are present.",
+        help="Allow a title-only draft when no non-empty chapter bodies remain; not for formal maturity.",
     )
     parser.add_argument(
         "--force",

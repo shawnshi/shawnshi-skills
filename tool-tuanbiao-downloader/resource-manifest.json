@@ -1,18 +1,18 @@
 {
   "schema_version": 3,
   "skill": "tool-tuanbiao-downloader",
-  "generated_at": "2026-09-05T17:15:45+08:00",
+  "generated_at": "2026-09-06T07:02:55+08:00",
   "hash_algorithm": "SHA-256",
   "text_hash_normalization": "LF",
   "skill_md": "SKILL.md",
-  "skill_md_sha256": "e1e808d28e690a01b0337e286bb7db75e5dc108d59a89df55920580fa9a4686b",
+  "skill_md_sha256": "60079c259d8379f5d62d98b24a4e81beef5651611fb471cdecaebf41431372c1",
   "top_level_files": [
     "SKILL.md"
   ],
   "top_level_file_hashes": [
     {
       "path": "SKILL.md",
-      "sha256": "e1e808d28e690a01b0337e286bb7db75e5dc108d59a89df55920580fa9a4686b"
+      "sha256": "60079c259d8379f5d62d98b24a4e81beef5651611fb471cdecaebf41431372c1"
     }
   ],
   "top_level_directories": [
@@ -32,7 +32,7 @@
   "resource_file_hashes": [
     {
       "path": "references/troubleshooting.md",
-      "sha256": "3c93579e9a5deaa679d65e24ed45457b5f984bd2dd2e9c90a42b21bcbd93b5a2"
+      "sha256": "386a0cdc9852d72bae7850b9408c362506ec784c1b3847c736068a768b97d8d2"
     },
     {
       "path": "scripts/downloader.py",
@@ -44,6 +44,12 @@
     }
   ],
   "declared_local_dependencies": [
+    {
+      "path": "references/troubleshooting.md",
+      "exists": true,
+      "resolved_path": "tool-tuanbiao-downloader/references/troubleshooting.md",
+      "sha256": "386a0cdc9852d72bae7850b9408c362506ec784c1b3847c736068a768b97d8d2"
+    },
     {
       "path": "scripts/downloader.py",
       "exists": true,

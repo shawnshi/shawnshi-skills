@@ -1,11 +1,11 @@
 {
   "schema_version": 3,
   "skill": "mentat-collaboration-audit",
-  "generated_at": "2026-09-05T20:37:46+08:00",
+  "generated_at": "2026-09-06T21:44:05+08:00",
   "hash_algorithm": "SHA-256",
   "text_hash_normalization": "LF",
   "skill_md": "SKILL.md",
-  "skill_md_sha256": "9d24d506d5c56a455859dc5163b5bef58eece906ef8c398a88565ac9ff234bec",
+  "skill_md_sha256": "f136ca7890c79d0737dc3c5151b1bbce04ac6eb7120d1e5762497f15fb22c74b",
   "top_level_files": [
     "SKILL.md",
     "generate_final_report.py"
@@ -13,7 +13,7 @@
   "top_level_file_hashes": [
     {
       "path": "SKILL.md",
-      "sha256": "9d24d506d5c56a455859dc5163b5bef58eece906ef8c398a88565ac9ff234bec"
+      "sha256": "f136ca7890c79d0737dc3c5151b1bbce04ac6eb7120d1e5762497f15fb22c74b"
     },
     {
       "path": "generate_final_report.py",
@@ -30,11 +30,11 @@
   "resource_directories": [
     {
       "name": "scripts",
-      "file_count": 19
+      "file_count": 22
     },
     {
       "name": "references",
-      "file_count": 3
+      "file_count": 6
     },
     {
       "name": "resources",
@@ -48,27 +48,39 @@
   "resource_file_hashes": [
     {
       "path": "assets/template.html",
-      "sha256": "132bd561c80219eec6ef5e940de230b0126bac815816842767987e3ca10078e1"
+      "sha256": "4dc84dda036d31a9ab3bb45ed61d3675ff134b56318643ea5154db3a22c0d2e2"
     },
     {
       "path": "evals/evals.json",
-      "sha256": "669ef15c738f5fde6deeb7b50b983e1a06b68c9e3580da1341951fca4ee9daf6"
+      "sha256": "cb5666ec2daba8ab6ec6b6c1a4ee7ca57277b1a52f3d4612391f3dcebdca23cd"
+    },
+    {
+      "path": "references/ANALYSIS.md",
+      "sha256": "ba33083d229551bc51b86abb75f459ef71353cce1e30d8734d101583fb1f4dbc"
+    },
+    {
+      "path": "references/CODEX-HOOKS.md",
+      "sha256": "2029859327e339e60987b4d5524b95591813ef866e426d2b7d893977c0483bda"
+    },
+    {
+      "path": "references/IMPROVEMENT.md",
+      "sha256": "bfeaa4436f4e1be8faf93746e96af99f7e5d5c9c4e65c737ca7baf2f1de33cf1"
     },
     {
       "path": "references/report-template.md",
-      "sha256": "169cb3b4848adaede7b8f12906db665d7f874ddff3a129d59ba5b49b46715e1d"
+      "sha256": "81c2eb3e9615d1afd12725c8675c1fc186edfb12070002025cb096f9ab8c2d13"
     },
     {
       "path": "references/SCHEMA.md",
-      "sha256": "477aa7d7a3faba0e29637977e8ba72a449d4ae628c126e6b7a3914258e325f02"
+      "sha256": "0e29ad37a1ab930cca41c0f273bf2500d4c586c4d7d65b0cbb4f5610215b9bb5"
     },
     {
       "path": "references/WORKFLOW.md",
-      "sha256": "ae3521fb2a74f1cc9fed0ecf5068d4a9cc53d9764a65c0eceaa99b6990528f7f"
+      "sha256": "ab3f1504d01d7041ed17fed07a70fe39fa6a50fd77a34820bcec800fb0ae90c5"
     },
     {
       "path": "resources/.gitkeep",
-      "sha256": "e0b9e19b2208bb5d83ec8e46da2c0b2f75f963136fefc38ead9cf8a4d7e40932"
+      "sha256": "56f0d6ac8fbc29ea59e8eb8ce626949efcce2b16cd4ac9242e5630a6f35afdc3"
     },
     {
       "path": "scripts/assets/template.html",
@@ -79,12 +91,24 @@
       "sha256": "9bd9be46565ce66826ab9db5046e530c72c80a78573a9e2b6f2a64ca6abe5404"
     },
     {
+      "path": "scripts/core/collaboration_analysis.py",
+      "sha256": "21cdf41fe57662537f7190ebe9ae801242951630123df8e5f70a3c3c429153e9"
+    },
+    {
       "path": "scripts/core/engine.py",
-      "sha256": "6cab922a2b8ed7f404c92d9bf8b484c7d39c36241010da2221dd150208cb4380"
+      "sha256": "d1ffc2fccd78cf7080a4abe17beab97e33b912c62db5451ea2a6e71fa1d33567"
+    },
+    {
+      "path": "scripts/core/test_collaboration_analysis.py",
+      "sha256": "34c3b0c608e82eab97b36de72c075e014af7462b81d896610094880facb6c4b5"
     },
     {
       "path": "scripts/core/test_engine.py",
-      "sha256": "97c73560e20f60070c2cf617d8ae50894bd2fbc07b1daf8e5ca3626dfc5f9ee1"
+      "sha256": "73d61b137da9254bea82d45fe891b2feddd66da714eda5574b967611e5f0cc4b"
+    },
+    {
+      "path": "scripts/core/test_phase1_semantics.py",
+      "sha256": "bee15f00385ac8434115ed04752a7429894778756f0f973a60916a1e1a723ed0"
     },
     {
       "path": "scripts/freeze_jsonl_snapshot.py",
@@ -104,15 +128,15 @@
     },
     {
       "path": "scripts/report_pair.py",
-      "sha256": "00d642fa148191a4dc1aeb70c439d516f8f332f0d4b51513de2aa1c20f9e2eda"
+      "sha256": "ddbf4d917f7f860f3efee8b8df984fa0ca8b7e344a0ae9a9c894a7bc10eefb23"
     },
     {
       "path": "scripts/skill_load_receipt.py",
-      "sha256": "720dcf3a2e54498cc8486d71061e90d43fe86ff09d0b75406810a84abebf32ac"
+      "sha256": "e8e2391b2a456097bd6a5502e784fb44c171718132668477e57f43f9c6e9007f"
     },
     {
       "path": "scripts/standardize_codex_rollout.py",
-      "sha256": "7f42193856774704c19b54244684aa50a89ca6490628dbf05f4b5c95afc996e6"
+      "sha256": "17b281c240278484288aa6e22e824089e39a3774711b47c92131fa727d2871e6"
     },
     {
       "path": "scripts/test_context_recovery_receipt.py",
@@ -128,23 +152,23 @@
     },
     {
       "path": "scripts/test_report_pair.py",
-      "sha256": "cde73ca53de4dc89c6927c1deb2a4235c98c83b6929c62247d652addb69f84f9"
+      "sha256": "5d2ec79fb2f69731d76f1f54eba2f105afafa49347303ad564356e4b295f6f98"
     },
     {
       "path": "scripts/test_skill_load_receipt.py",
-      "sha256": "8da880b2b2ee70919cedba8f05c36b7111c81bb4e49c888ece5fc6857ee28a82"
+      "sha256": "815b8940a2850b06c4b4ca816a6f3ca4e4568ba0d2df65f2c9f761bf78ecc725"
     },
     {
       "path": "scripts/test_standardize_codex_rollout.py",
-      "sha256": "9def55ee21b6eb3db3eea9cf4cf899f8a9f027f2eb52ef1f91284f4f3c8f36ca"
+      "sha256": "1ae7b6e41998c0ff200ae797f2763e6370c561a8cef3013ee64084d5f6967092"
     },
     {
       "path": "scripts/test_validate_agent_audit.py",
-      "sha256": "20c13a411c591ded00ca52137a27a92037f9b0c48337bd37e6d7a0348c43f7bb"
+      "sha256": "254ee8cc4c863dfd0a3c41d36e916844d75a75abff5a43bbc50d1935814e610c"
     },
     {
       "path": "scripts/validate_agent_audit.py",
-      "sha256": "75a326dc3331bde9efa32f326d1f0cd8d3ed8c970c10af3c37312708471c0506"
+      "sha256": "b53921373ca8a0b8579fae28ae607b05d71cc41f4fc27aa1feacd9a54b895e9c"
     }
   ],
   "declared_local_dependencies": [
@@ -152,67 +176,49 @@
       "path": "assets/template.html",
       "exists": true,
       "resolved_path": "mentat-collaboration-audit/assets/template.html",
-      "sha256": "132bd561c80219eec6ef5e940de230b0126bac815816842767987e3ca10078e1"
+      "sha256": "4dc84dda036d31a9ab3bb45ed61d3675ff134b56318643ea5154db3a22c0d2e2"
+    },
+    {
+      "path": "references/ANALYSIS.md",
+      "exists": true,
+      "resolved_path": "mentat-collaboration-audit/references/ANALYSIS.md",
+      "sha256": "ba33083d229551bc51b86abb75f459ef71353cce1e30d8734d101583fb1f4dbc"
+    },
+    {
+      "path": "references/CODEX-HOOKS.md",
+      "exists": true,
+      "resolved_path": "mentat-collaboration-audit/references/CODEX-HOOKS.md",
+      "sha256": "2029859327e339e60987b4d5524b95591813ef866e426d2b7d893977c0483bda"
+    },
+    {
+      "path": "references/IMPROVEMENT.md",
+      "exists": true,
+      "resolved_path": "mentat-collaboration-audit/references/IMPROVEMENT.md",
+      "sha256": "bfeaa4436f4e1be8faf93746e96af99f7e5d5c9c4e65c737ca7baf2f1de33cf1"
     },
     {
       "path": "references/report-template.md",
       "exists": true,
       "resolved_path": "mentat-collaboration-audit/references/report-template.md",
-      "sha256": "169cb3b4848adaede7b8f12906db665d7f874ddff3a129d59ba5b49b46715e1d"
+      "sha256": "81c2eb3e9615d1afd12725c8675c1fc186edfb12070002025cb096f9ab8c2d13"
     },
     {
       "path": "references/SCHEMA.md",
       "exists": true,
       "resolved_path": "mentat-collaboration-audit/references/SCHEMA.md",
-      "sha256": "477aa7d7a3faba0e29637977e8ba72a449d4ae628c126e6b7a3914258e325f02"
+      "sha256": "0e29ad37a1ab930cca41c0f273bf2500d4c586c4d7d65b0cbb4f5610215b9bb5"
     },
     {
       "path": "references/WORKFLOW.md",
       "exists": true,
       "resolved_path": "mentat-collaboration-audit/references/WORKFLOW.md",
-      "sha256": "ae3521fb2a74f1cc9fed0ecf5068d4a9cc53d9764a65c0eceaa99b6990528f7f"
-    },
-    {
-      "path": "scripts/freeze_jsonl_snapshot.py",
-      "exists": true,
-      "resolved_path": "mentat-collaboration-audit/scripts/freeze_jsonl_snapshot.py",
-      "sha256": "9394e1113af02330c00f50214419e2f54584252ef45396c4e8fff2ef8b5f6ce5"
-    },
-    {
-      "path": "scripts/hooks/codex_hook.py",
-      "exists": true,
-      "resolved_path": "mentat-collaboration-audit/scripts/hooks/codex_hook.py",
-      "sha256": "b7ea70750867a0125684f1192d0dae50f6259f8ec4029b57e74d93fede8f9179"
-    },
-    {
-      "path": "scripts/report_output.py",
-      "exists": true,
-      "resolved_path": "mentat-collaboration-audit/scripts/report_output.py",
-      "sha256": "c8d4f2f7070c03b95da2e4599646be0630ea3bb76ff38bfc27248a8016a98aac"
-    },
-    {
-      "path": "scripts/report_pair.py",
-      "exists": true,
-      "resolved_path": "mentat-collaboration-audit/scripts/report_pair.py",
-      "sha256": "00d642fa148191a4dc1aeb70c439d516f8f332f0d4b51513de2aa1c20f9e2eda"
-    },
-    {
-      "path": "scripts/skill_load_receipt.py",
-      "exists": true,
-      "resolved_path": "mentat-collaboration-audit/scripts/skill_load_receipt.py",
-      "sha256": "720dcf3a2e54498cc8486d71061e90d43fe86ff09d0b75406810a84abebf32ac"
-    },
-    {
-      "path": "scripts/standardize_codex_rollout.py",
-      "exists": true,
-      "resolved_path": "mentat-collaboration-audit/scripts/standardize_codex_rollout.py",
-      "sha256": "7f42193856774704c19b54244684aa50a89ca6490628dbf05f4b5c95afc996e6"
+      "sha256": "ab3f1504d01d7041ed17fed07a70fe39fa6a50fd77a34820bcec800fb0ae90c5"
     },
     {
       "path": "scripts/validate_agent_audit.py",
       "exists": true,
       "resolved_path": "mentat-collaboration-audit/scripts/validate_agent_audit.py",
-      "sha256": "75a326dc3331bde9efa32f326d1f0cd8d3ed8c970c10af3c37312708471c0506"
+      "sha256": "b53921373ca8a0b8579fae28ae607b05d71cc41f4fc27aa1feacd9a54b895e9c"
     }
   ],
   "missing_declared_dependencies": []
