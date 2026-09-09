@@ -10,8 +10,6 @@ from pathlib import Path
 from typing import Any
 from zoneinfo import ZoneInfo
 
-from jinja2 import Environment, FileSystemLoader, StrictUndefined
-
 from archive_transaction import (
     ArchiveCommitResult,
     ArchivePostcommitError,
@@ -21,6 +19,7 @@ from blackboard import finalize_briefing, update_phase
 from briefing_gate import validate_briefing_data
 from history_manager import load_recent_history, match_history, normalize_url
 from hub_utils import HUB_DIR, NEWS_DIR, atomic_dump_json
+from jinja2 import Environment, FileSystemLoader, StrictUndefined
 from run_contract import (
     RunContractError,
     file_sha256,
@@ -33,8 +32,8 @@ from run_contract import (
     validate_registered_candidate_funnel,
     validate_review_receipt,
 )
+from semantic_agent import registered_coverage_diagnostics, validate_coverage_reasons
 from update_index import HistoryArchiveError, rebuild_history
-
 
 TEMPLATE_PATH = HUB_DIR / "references" / "briefing_template.md"
 
@@ -310,8 +309,10 @@ def _assert_pipeline_provenance(payload: dict[str, Any], manifest: dict[str, Any
     expected_reasons = sorted(
         str(value) for value in baseline_coverage.get("reasons", []) if str(value)
     ) + [f"supplement lane degraded: {lane}" for lane in lane_failures]
-    if sorted(str(value) for value in coverage.get("reasons", [])) != sorted(expected_reasons):
-        raise ForgeContractError("coverage.reasons do not match registered artifacts")
+    try:
+        validate_coverage_reasons(coverage.get("reasons", []), expected_reasons, manifest)
+    except RunContractError as exc:
+        raise ForgeContractError(str(exc)) from exc
 
     supplemental_candidates = sum(
         len(result.get("candidates", []))
@@ -507,6 +508,12 @@ def assemble_final_payload(
     errors, _ = validate_briefing_data(payload)
     if errors:
         raise ForgeContractError("briefing gate blocked archive: " + "; ".join(errors))
+    # Enrich a copy only after original signed/registered core validation. Legacy
+    # omission is accepted as input, never propagated into newly forged output.
+    diagnostics = registered_coverage_diagnostics(manifest)
+    payload["coverage"]["reasons"] = [
+        reason for reason in payload["coverage"]["reasons"] if reason not in diagnostics
+    ] + diagnostics
     return payload
 
 

@@ -14,7 +14,9 @@ from run_contract import (
     load_manifest,
     record_execution_telemetry,
 )
-from session_telemetry import summarize_sessions  # pyright: ignore[reportMissingImports]
+from session_telemetry import (
+    summarize_sessions,  # pyright: ignore[reportMissingImports]
+)
 
 
 class SessionTelemetryTests(unittest.TestCase):
@@ -171,7 +173,7 @@ class SessionTelemetryTests(unittest.TestCase):
             )
 
         payload["invocation_id"] = "invocation-2"
-        payload["usage"]["total_tokens"] = 260000
+        payload["usage"]["total_tokens"] = 1000001
         payload["usage"]["cost_usd"] = 3.5
         payload["sources"] = [{"path": "overrun.jsonl", "sha256": "5" * 64}]
         manifest = load_manifest(self.manifest_path)

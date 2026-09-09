@@ -108,7 +108,7 @@ class PromptContractTests(unittest.TestCase):
         )
         self.assertTrue(policy["parallelism"]["one_gap_per_worker"])
         self.assertEqual(
-            policy["observability"]["normal_run_token_ceiling"], 250000
+            policy["observability"]["normal_run_token_ceiling"], 1000000
         )
         self.assertEqual(
             policy["observability"]["normal_run_token_meter"],
@@ -118,7 +118,7 @@ class PromptContractTests(unittest.TestCase):
         self.assertEqual(policy["observability"]["red_team_timeout_ms"], 120000)
         self.assertEqual(
             policy["observability"]["supplement_finalization_grace_seconds"],
-            60,
+            300,
         )
         self.assertEqual(policy["observability"]["supplement_tool_budget_soft"], 8)
         self.assertEqual(policy["observability"]["supplement_tool_budget_hard"], 12)
@@ -241,7 +241,7 @@ class PromptContractTests(unittest.TestCase):
         self.assertEqual(telemetry["version"], "pih-execution-telemetry/1.0")
         self.assertEqual(telemetry["content_policy"], "aggregate_only_no_message_content")
         self.assertTrue(telemetry["failure_usage_included"])
-        self.assertEqual(telemetry["normal_run_token_ceiling"], 250000)
+        self.assertEqual(telemetry["normal_run_token_ceiling"], 1000000)
         self.assertEqual(
             telemetry["token_meter"],
             "total_tokens - cache_read_tokens - cache_write_tokens",
@@ -271,9 +271,9 @@ class PromptContractTests(unittest.TestCase):
         review_execution = schema["review_execution_contract"]
         self.assertTrue(review_execution["timeout_pass_through_required"])
         self.assertEqual(review_execution["semantic_context_mode"], "compact_helper_packet")
-        self.assertEqual(review_execution["semantic_token_budget"], 40000)
+        self.assertEqual(review_execution["semantic_token_budget"], 200000)
         self.assertEqual(review_execution["semantic_tool_budget"]["hard"], 10)
-        self.assertEqual(review_execution["red_team_token_budget"], 30000)
+        self.assertEqual(review_execution["red_team_token_budget"], 100000)
 
     def test_semantic_prompt_targets_v14_and_emits_receipt(self):
         text = (ROOT / "references" / "prompts" / "v1_refine_system.md").read_text(

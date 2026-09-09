@@ -11,8 +11,8 @@
       "SKILL.md"
     ]
   },
-  "authority_version": "11.10.2",
-  "authority_sha256": "9d9a9b1270797faa8053391d38b8feddbef56f513042422b3da3939a953503d2",
+  "authority_version": "11.10.3",
+  "authority_sha256": "6dc14644995f34cd53d972a8d35fa773ea60007481c69e7a910cf7aa8e26d934",
   "candidate_locators": [
     {
       "base": "user_home",

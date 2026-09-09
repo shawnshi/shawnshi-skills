@@ -80,7 +80,7 @@ class SemanticAgentCandidateTests(unittest.TestCase):
         ):
             return _candidate_assessment({}, self.manifest)
 
-    def test_assessment_distinguishes_missing_access_from_eligible(self) -> None:
+    def test_legacy_URL_access_does_not_authorize_bare_pool(self) -> None:
         verified = _candidate("https://example.org/verified")
         unverified = _candidate("https://example.org/unverified")
         pool = {"items": [verified, unverified]}
@@ -96,11 +96,11 @@ class SemanticAgentCandidateTests(unittest.TestCase):
 
         eligible, dispositions = self._assess(pool, supplement)
 
-        self.assertEqual([item["candidate_id"] for item in eligible], [verified["candidate_id"]])
+        self.assertEqual(eligible, [])
         self.assertEqual(
             {item["candidate_id"]: item["reason"] for item in dispositions},
             {
-                verified["candidate_id"]: "eligible",
+                verified["candidate_id"]: "missing_verified_access",
                 unverified["candidate_id"]: "missing_verified_access",
             },
         )
@@ -222,7 +222,7 @@ class SemanticAgentCandidateTests(unittest.TestCase):
 
 
 class SemanticAgentFinalizeTests(unittest.TestCase):
-    def _assemble(self, candidate: dict | None = None, identity: dict | None = None) -> dict:
+    def _assemble(self, candidate: dict | None = None, identity: dict | None = None, dynamic_overrides: dict | None = None) -> dict:
         with TemporaryDirectory() as temp_dir:
             root = Path(temp_dir)
             core_path = root / "refined.json"
@@ -278,7 +278,7 @@ class SemanticAgentFinalizeTests(unittest.TestCase):
                     "supplemental": {"status": "degraded"},
                 },
             }
-            pool = {
+            pool: dict[str, Any] = {
                 "candidate_funnel": {
                     "observed": 0,
                     "retained_for_review": 0,
@@ -312,6 +312,7 @@ class SemanticAgentFinalizeTests(unittest.TestCase):
             eligible = []
             dispositions = []
             if candidate is not None:
+                pool["items"] = [candidate]
                 pool["candidate_funnel"].update(observed=1, retained_for_review=1)
                 pool["candidate_funnel"]["terminal_dispositions"]["retained_for_review"] = 1
                 dispositions = [{
@@ -339,6 +340,8 @@ class SemanticAgentFinalizeTests(unittest.TestCase):
                     "near_term_decision_impact": False,
                     "decision_impact_reason": "none",
                 }]
+            if dynamic_overrides:
+                dynamic.update(dynamic_overrides)
             artifacts = {
                 "candidate_pool": (root / "pool.json", pool),
                 "supplement": (root / "supplement.json", supplement),
@@ -349,6 +352,8 @@ class SemanticAgentFinalizeTests(unittest.TestCase):
                     return_value=(root / "request.json", request, packet, manifest),
                 ),
                 patch("semantic_agent._candidate_assessment", return_value=(eligible, dispositions)),
+                patch("semantic_agent.registered_coverage_diagnostics", side_effect=lambda value:
+                      __import__("semantic_agent")._coverage_diagnostics(value, pool, supplement, dispositions, {})),
                 patch(
                     "semantic_agent._bound_artifact",
                     side_effect=lambda _request, name: artifacts[name],
@@ -365,7 +370,15 @@ class SemanticAgentFinalizeTests(unittest.TestCase):
             return core
 
     def test_empty_selection_produces_zero_item_core(self) -> None:
-        core = self._assemble()
+        from zero_report import zero_report_fields, zero_supply_gap
+
+        malicious: dict[str, Any] = dict.fromkeys(zero_report_fields(), "Market silence; no innovations")
+        malicious["action_levers"] = []
+        core = self._assemble(dynamic_overrides=malicious)
+        for field, expected in zero_report_fields().items():
+            self.assertEqual(core[field], expected)
+        self.assertIn(zero_supply_gap(), core["data_gaps"])
+        self.assertTrue(any(gap["description"] == "source unavailable" for gap in core["data_gaps"]))
         self.assertEqual(core["top_10"], [])
         self.assertEqual(core["candidate_funnel"]["terminal_dispositions"]["retained"], 0)
 
@@ -452,6 +465,92 @@ class SemanticAgentDateFailureTests(unittest.TestCase):
                 }
             )
         )
+
+
+class CoverageDiagnosticsTests(unittest.TestCase):
+    def fixture(self):
+        from semantic_agent import _coverage_diagnostics
+
+        manifest: dict[str, Any] = {"stages": {"baseline": {"metadata": {"coverage": {
+            "source_attempted": 123, "source_succeeded": 88, "source_failed": 35,
+        }}}}}
+        pool: dict[str, Any] = {"items": [{"url": f"https://example.org/{index}"} for index in range(17)]}
+        logs = [{"requested_url": f"https://example.org/{index}",
+                 "status": "verified" if index < 2 else "blocked"}
+                for index in [0, 1, 2, 3, 4, 4, 4]]
+        supplement = {"results": [{"gap_id": "tech", "access_log": logs,
+            "executed_queries": ["actual query"], "coverage": {"succeeded": 999},
+            "bound_candidate_decisions": [{"decision": "source_quality_rejected"},
+                {"decision": "access_blocked"}, {"decision": "date_disqualified"}]}]}
+        dispositions = [{"reason": "missing_verified_access"}] * 16 + [{"reason": "duplicate_candidate_id"}]
+        request = {"gaps": [{"gap_id": "tech", "max_queries": 2, "max_urls": 8}]}
+        return _coverage_diagnostics, manifest, pool, supplement, dispositions, request
+
+    def test_feed_article_pool_and_quality_are_distinct(self):
+        helper, *inputs = self.fixture()
+        reasons = "\n".join(helper(*inputs))
+        self.assertIn("feed: attempts=123; succeeded=88; failed=35", reasons)
+        self.assertIn("article: attempts=7; completed=7; verified=2; blocked=5; pending=0", reasons)
+        self.assertIn("pool-urls: unique=17; attempted=5; unattempted=12", reasons)
+        self.assertIn("source_quality_rejected=1; access_blocked=1; date_disqualified=1", reasons)
+        self.assertIn("access_or_ownership_excluded=16; date_excluded=0; duplicate_records=1", reasons)
+        self.assertIn("unused_queries=1; unused_urls=1", reasons)
+        self.assertNotIn("999", reasons)
+        from forge import render_briefing
+        from test_contract_fixtures import cloned_v14_payload
+
+        payload = cloned_v14_payload()
+        payload["coverage"].update(source_attempted=130, source_succeeded=90, source_failed=40,
+                                   source_success_rate=90 / 130, reasons=reasons.splitlines())
+        markdown = render_briefing(payload)
+        self.assertIn("非已核验文章数）：尝试 130 / 成功 90 / 失败 40", markdown)
+        self.assertIn("diagnostic/feed: attempts=123; succeeded=88", markdown)
+        self.assertIn("diagnostic/article: attempts=7; completed=7; verified=2", markdown)
+        self.assertNotIn("verified=90", markdown)
+
+    def test_owned_metadata_exclusion_is_not_missing_access_or_quality(self):
+        helper, manifest, pool, supplement, dispositions, request = self.fixture()
+        pool["items"][0]["access_check"] = {"status": "verified"}
+        reasons = "\n".join(helper(manifest, pool, supplement, dispositions, request))
+        self.assertIn("missing_access_evidence=15; ownership_excluded=1", reasons)
+        self.assertIn("source_quality_rejected=1", reasons)
+
+    def test_broker_reservations_count_pending_and_unused_budgets(self):
+        helper, manifest, pool, _, dispositions, _ = self.fixture()
+        manifest["article_broker_evidence"] = {"medical": {"events": [
+            {"kind": "query_reserved", "query": "hospital policy"},
+            {"kind": "query_recorded"},
+            {"kind": "http_reserved", "url": "https://example.org/0"},
+        ]}}
+        reasons = "\n".join(helper(manifest, pool, {"results": []}, dispositions,
+            {"gaps": [{"gap_id": "medical", "max_queries": 2, "max_urls": 4}]}))
+        self.assertIn("attempts=1; completed=0; verified=0; blocked=0; pending=1", reasons)
+        self.assertIn("unique=17; attempted=1; unattempted=16", reasons)
+        self.assertIn("unused_queries=1; unused_urls=3", reasons)
+
+    def test_diagnostics_do_not_reclassify_conserved_v14_funnel(self):
+        pool = {"candidate_funnel": {"observed": 17, "retained_for_review": 17,
+            "terminal_dispositions": {"retained_for_review": 17}}}
+        dispositions = [{"candidate_id": str(index), "reason": "missing_verified_access"}
+                        for index in range(16)] + [{"candidate_id": "dup", "reason": "duplicate_candidate_id"}]
+        funnel = _candidate_funnel(pool, 0, [], set(), dispositions)
+        self.assertEqual(funnel["terminal_dispositions"]["below_quality_gate"], 17)
+        self.assertEqual(sum(funnel["terminal_dispositions"].values()), 17)
+        self.assertEqual(funnel["quality_gate_reasons"], {"missing_verified_access": 16, "duplicate_candidate_id": 1})
+
+    def test_supplied_diagnostics_must_be_complete_exact_and_unique(self):
+        from semantic_agent import validate_coverage_reasons
+
+        helper, manifest, pool, supplement, dispositions, request = self.fixture()
+        canonical = helper(manifest, pool, supplement, dispositions, request)
+        with patch("semantic_agent.registered_coverage_diagnostics", return_value=canonical):
+            validate_coverage_reasons(["legacy"], ["legacy"], {})
+            validate_coverage_reasons(["legacy"] + canonical, ["legacy"], {})
+            for supplied in (canonical[:-1], canonical + canonical[:1],
+                             [canonical[0].replace("88", "90")] + canonical[1:],
+                             ["diagnostic/spoof: verified=90"], [" diagnostic/feed: malformed"]):
+                with self.subTest(supplied=supplied), self.assertRaisesRegex(RunContractError, "coverage.reasons"):
+                    validate_coverage_reasons(["legacy"] + supplied, ["legacy"], {})
 
 
 if __name__ == "__main__":

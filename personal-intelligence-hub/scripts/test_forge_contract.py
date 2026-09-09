@@ -1,5 +1,5 @@
-import json
 import hashlib
+import json
 import tempfile
 import threading
 import unittest
@@ -8,8 +8,8 @@ from pathlib import Path
 from unittest.mock import patch
 from zoneinfo import ZoneInfo
 
-from archive_transaction import ArchiveTransactionError
 import forge as forge_module
+from archive_transaction import ArchiveTransactionError
 from forge import (
     ForgeContractError,
     assemble_final_payload,
@@ -28,10 +28,10 @@ from run_contract import (
     file_sha256,
     item_hash,
     load_manifest,
-    record_stage,
     record_run_artifact,
-    review_input_bundle_sha256,
+    record_stage,
     register_review_receipt,
+    review_input_bundle_sha256,
 )
 from test_contract_fixtures import valid_v12_payload, valid_v14_payload
 from update_index import rebuild_history
@@ -116,6 +116,7 @@ class ForgeContractTests(unittest.TestCase):
             runtime_dir=self.runtime,
             skill_path=self.skill,
             report_date=report_date,
+            window_days=7,
             now=self.now,
             run_id=run_id,
         )
@@ -136,7 +137,9 @@ class ForgeContractTests(unittest.TestCase):
         compact_date = report_date.replace("-", "")
         for suffix in ("json", "md", "manifest.json"):
             target = self.news / f"intelligence_{compact_date}_briefing.{suffix}"
-            target_state[target.name] = file_sha256(target) if target.is_file() else None
+            target_state[target.name] = (
+                file_sha256(target) if target.is_file() else None
+            )
         record_run_artifact(
             manifest_path,
             "history_snapshot",
@@ -197,6 +200,7 @@ class ForgeContractTests(unittest.TestCase):
             "published_at": "2026-08-09",
             "published_at_source": "page_metadata",
         }
+        candidate["access_check"] = valid_v14_payload()["top_10"][0]["access_check"]
         candidate["candidate_object_sha256"] = candidate_object_hash(candidate)
         review_candidates = [candidate]
         for index in (2, 3):
@@ -276,8 +280,12 @@ class ForgeContractTests(unittest.TestCase):
                     "reviewer_id": semantic_request["reviewer_id"],
                     "invocation_id": semantic_request["invocation_id"],
                     "challenge": semantic_request["challenge"],
-                    "request_sha256": manifest["artifacts"]["semantic_review_request"]["artifact_sha256"],
-                    "baseline_sha256": manifest["stages"]["baseline"]["artifact_sha256"],
+                    "request_sha256": manifest["artifacts"]["semantic_review_request"][
+                        "artifact_sha256"
+                    ],
+                    "baseline_sha256": manifest["stages"]["baseline"][
+                        "artifact_sha256"
+                    ],
                     "input_bundle_sha256": review_input_bundle_sha256(manifest),
                     "access_log": semantic_access_log,
                     "data_provenance": {
@@ -294,7 +302,9 @@ class ForgeContractTests(unittest.TestCase):
                             "inputs": [
                                 {
                                     "candidate_ref": item["candidate_refs"][0],
-                                    "candidate_object_sha256": candidate["candidate_object_sha256"],
+                                    "candidate_object_sha256": candidate[
+                                        "candidate_object_sha256"
+                                    ],
                                 }
                             ],
                         }
@@ -307,7 +317,9 @@ class ForgeContractTests(unittest.TestCase):
             ),
             encoding="utf-8",
         )
-        register_review_receipt(manifest_path, refined, semantic, "semantic_review", now=self.now)
+        register_review_receipt(
+            manifest_path, refined, semantic, "semantic_review", now=self.now
+        )
         _, red_request = build_review_request(
             manifest_path,
             refined,
@@ -317,7 +329,9 @@ class ForgeContractTests(unittest.TestCase):
         )
         if not red_request.get("deterministic_fast_path"):
             manifest = load_manifest(manifest_path)
-            red = Path(red_request["execution_packet"]["output_paths"]["review_receipt"])
+            red = Path(
+                red_request["execution_packet"]["output_paths"]["review_receipt"]
+            )
             red.write_text(
                 json.dumps(
                     {
@@ -329,8 +343,12 @@ class ForgeContractTests(unittest.TestCase):
                         "reviewer_id": red_request["reviewer_id"],
                         "invocation_id": red_request["invocation_id"],
                         "challenge": red_request["challenge"],
-                        "request_sha256": manifest["artifacts"]["red_team_request"]["artifact_sha256"],
-                        "baseline_sha256": manifest["stages"]["baseline"]["artifact_sha256"],
+                        "request_sha256": manifest["artifacts"]["red_team_request"][
+                            "artifact_sha256"
+                        ],
+                        "baseline_sha256": manifest["stages"]["baseline"][
+                            "artifact_sha256"
+                        ],
                         "output_sha256": file_sha256(refined),
                         "reviewed_item_hashes": [],
                         "turns_used": 1,
@@ -355,7 +373,11 @@ class ForgeContractTests(unittest.TestCase):
         payload = valid_v14_payload()
         payload.update({"run_id": "run-forge", "model_used": "semantic_model"})
         payload["coverage"].update(
-            {"run_status": "degraded", "coverage_confidence": "medium", "baseline_status": "degraded"}
+            {
+                "run_status": "degraded",
+                "coverage_confidence": "medium",
+                "baseline_status": "degraded",
+            }
         )
         refined.write_text(json.dumps(payload, ensure_ascii=False), encoding="utf-8")
 
@@ -381,10 +403,14 @@ class ForgeContractTests(unittest.TestCase):
         markdown = result.markdown_path.read_text(encoding="utf-8")
         history = json.loads(self.history.read_text(encoding="utf-8"))
         self.assertEqual(archived["pipeline"]["semantic_review"]["status"], "passed")
-        self.assertEqual(archived["top_10"][0]["title"], "Clinical AI evaluation published")
+        self.assertEqual(
+            archived["top_10"][0]["title"], "Clinical AI evaluation published"
+        )
         self.assertIn("临床 AI 评估发布", markdown)
         self.assertEqual(history["schema_version"], "2.0")
-        self.assertEqual(load_manifest(manifest_path)["stages"]["archive"]["status"], "completed")
+        self.assertEqual(
+            load_manifest(manifest_path)["stages"]["archive"]["status"], "completed"
+        )
 
     def test_forge_rejects_v14_boolean_funnel_count_with_gate_error(self):
         manifest_path = self.root / "run-manifest.json"
@@ -434,13 +460,19 @@ class ForgeContractTests(unittest.TestCase):
         payload = valid_v14_payload()
         payload.update({"run_id": "run-forge", "model_used": "semantic_model"})
         payload["coverage"].update(
-            {"run_status": "degraded", "coverage_confidence": "medium", "baseline_status": "degraded"}
+            {
+                "run_status": "degraded",
+                "coverage_confidence": "medium",
+                "baseline_status": "degraded",
+            }
         )
         refined.write_text(json.dumps(payload), encoding="utf-8")
         refined = self._register_reviews(manifest_path, refined)
         wrong_history = self.runtime / "history.json"
 
-        with self.assertRaisesRegex(ForgeContractError, "history_path must be canonical"):
+        with self.assertRaisesRegex(
+            ForgeContractError, "history_path must be canonical"
+        ):
             forge_briefing(
                 manifest_path,
                 refined,
@@ -459,13 +491,19 @@ class ForgeContractTests(unittest.TestCase):
         payload = valid_v14_payload()
         payload.update({"run_id": "run-forge", "model_used": "semantic_model"})
         payload["coverage"].update(
-            {"run_status": "degraded", "coverage_confidence": "medium", "baseline_status": "degraded"}
+            {
+                "run_status": "degraded",
+                "coverage_confidence": "medium",
+                "baseline_status": "degraded",
+            }
         )
         refined.write_text(json.dumps(payload), encoding="utf-8")
         refined = self._register_reviews(manifest_path, refined)
         wrong_news = self.root / "wrong-news"
 
-        with self.assertRaisesRegex(ForgeContractError, "archive news_dir does not match"):
+        with self.assertRaisesRegex(
+            ForgeContractError, "archive news_dir does not match"
+        ):
             forge_briefing(
                 manifest_path,
                 refined,
@@ -483,7 +521,11 @@ class ForgeContractTests(unittest.TestCase):
         payload = valid_v14_payload()
         payload.update({"run_id": "run-forge", "model_used": "semantic_model"})
         payload["coverage"].update(
-            {"run_status": "degraded", "coverage_confidence": "medium", "baseline_status": "degraded"}
+            {
+                "run_status": "degraded",
+                "coverage_confidence": "medium",
+                "baseline_status": "degraded",
+            }
         )
         refined.write_text(json.dumps(payload), encoding="utf-8")
         refined = self._register_reviews(manifest_path, refined)
@@ -497,22 +539,25 @@ class ForgeContractTests(unittest.TestCase):
                 raise OSError("injected derived history failure")
             return original_rebuild(*args, **kwargs)
 
-        with patch.object(forge_module, "rebuild_history", side_effect=fail_history_postcommit):
-            with self.assertRaisesRegex(ForgeContractError, "derived history failure"):
-                forge_briefing(
-                    manifest_path,
-                    refined,
-                    news_dir=self.news,
-                    history_path=self.history,
-                    update_runtime_state=False,
-                    now=self.now,
-                )
+        with patch.object(
+            forge_module, "rebuild_history", side_effect=fail_history_postcommit
+        ), self.assertRaisesRegex(ForgeContractError, "derived history failure"):
+            forge_briefing(
+                manifest_path,
+                refined,
+                news_dir=self.news,
+                history_path=self.history,
+                update_runtime_state=False,
+                now=self.now,
+            )
 
         compact = self.news / "intelligence_20260810_briefing"
         self.assertTrue(compact.with_suffix(".json").is_file())
         self.assertTrue(compact.with_suffix(".md").is_file())
         self.assertTrue((self.news / f"{compact.name}.manifest.json").is_file())
-        self.assertEqual(load_manifest(manifest_path)["stages"]["archive"]["status"], "failed")
+        self.assertEqual(
+            load_manifest(manifest_path)["stages"]["archive"]["status"], "failed"
+        )
 
     def test_same_day_replacement_rebuilds_history_without_ghost_event(self):
         old_payload = _retarget_fixture_event(
@@ -532,7 +577,11 @@ class ForgeContractTests(unittest.TestCase):
         payload = valid_v14_payload()
         payload.update({"run_id": "run-forge", "model_used": "semantic_model"})
         payload["coverage"].update(
-            {"run_status": "degraded", "coverage_confidence": "medium", "baseline_status": "degraded"}
+            {
+                "run_status": "degraded",
+                "coverage_confidence": "medium",
+                "baseline_status": "degraded",
+            }
         )
         refined.write_text(json.dumps(payload), encoding="utf-8")
         refined = self._register_reviews(manifest_path, refined)
@@ -557,7 +606,11 @@ class ForgeContractTests(unittest.TestCase):
         payload = valid_v12_payload()
         payload.update({"run_id": "run-forge", "model_used": "semantic_model"})
         payload["coverage"].update(
-            {"run_status": "degraded", "coverage_confidence": "medium", "baseline_status": "degraded"}
+            {
+                "run_status": "degraded",
+                "coverage_confidence": "medium",
+                "baseline_status": "degraded",
+            }
         )
         refined.write_text(json.dumps(payload, ensure_ascii=False), encoding="utf-8")
         refined = self._register_reviews(manifest_path, refined)
@@ -571,16 +624,20 @@ class ForgeContractTests(unittest.TestCase):
         payload = valid_v14_payload()
         payload.update({"run_id": "run-forge", "model_used": "semantic_model"})
         payload["coverage"].update(
-            {"run_status": "degraded", "coverage_confidence": "medium", "baseline_status": "degraded"}
+            {
+                "run_status": "degraded",
+                "coverage_confidence": "medium",
+                "baseline_status": "degraded",
+            }
         )
         refined.write_text(json.dumps(payload), encoding="utf-8")
         refined = self._register_reviews(manifest_path, refined)
         manifest_before = manifest_path.read_bytes()
-        news_before = sorted(str(path.relative_to(self.news)) for path in self.news.rglob("*"))
-
-        assembled, markdown = preview_briefing(
-            manifest_path, refined, now=self.now
+        news_before = sorted(
+            str(path.relative_to(self.news)) for path in self.news.rglob("*")
         )
+
+        assembled, markdown = preview_briefing(manifest_path, refined, now=self.now)
 
         self.assertEqual(assembled["pipeline"]["semantic_review"]["status"], "passed")
         self.assertIn("临床 AI 评估发布", markdown)
@@ -611,7 +668,9 @@ class ForgeContractTests(unittest.TestCase):
         )
         refined.write_text(json.dumps(payload), encoding="utf-8")
 
-        with self.assertRaisesRegex(RunContractError, "requested_url does not match item url"):
+        with self.assertRaisesRegex(
+            RunContractError, "requested_url does not match item url"
+        ):
             self._register_reviews(manifest_path, refined)
 
     def test_forge_rejects_core_identity_drift(self):
@@ -620,7 +679,11 @@ class ForgeContractTests(unittest.TestCase):
         payload = valid_v14_payload()
         payload.update({"run_id": "run-forge", "report_date": "2026-08-09"})
         payload["coverage"].update(
-            {"run_status": "degraded", "coverage_confidence": "medium", "baseline_status": "degraded"}
+            {
+                "run_status": "degraded",
+                "coverage_confidence": "medium",
+                "baseline_status": "degraded",
+            }
         )
         refined.write_text(json.dumps(payload), encoding="utf-8")
         with self.assertRaisesRegex(RunContractError, "report_date"):
@@ -632,7 +695,11 @@ class ForgeContractTests(unittest.TestCase):
         payload = valid_v14_payload()
         payload.update({"run_id": "run-forge", "model_used": "semantic_model"})
         payload["coverage"].update(
-            {"run_status": "degraded", "coverage_confidence": "medium", "baseline_status": "degraded"}
+            {
+                "run_status": "degraded",
+                "coverage_confidence": "medium",
+                "baseline_status": "degraded",
+            }
         )
         payload["mix"].update(
             {
@@ -660,13 +727,21 @@ class ForgeContractTests(unittest.TestCase):
         payload = valid_v14_payload()
         payload.update({"run_id": "run-forge", "model_used": "semantic_model"})
         payload["coverage"].update(
-            {"run_status": "degraded", "coverage_confidence": "medium", "baseline_status": "degraded"}
+            {
+                "run_status": "degraded",
+                "coverage_confidence": "medium",
+                "baseline_status": "degraded",
+            }
         )
         refined.write_text(json.dumps(payload), encoding="utf-8")
         refined = self._register_reviews(manifest_path, refined)
-        (self.root / "resource-manifest.json").write_text('{"changed":true}', encoding="utf-8")
+        (self.root / "resource-manifest.json").write_text(
+            '{"changed":true}', encoding="utf-8"
+        )
 
-        with self.assertRaisesRegex(ForgeContractError, "skill bundle|resource manifest"):
+        with self.assertRaisesRegex(
+            ForgeContractError, "skill bundle|resource manifest"
+        ):
             forge_briefing(
                 manifest_path,
                 refined,
@@ -681,7 +756,9 @@ class ForgeContractTests(unittest.TestCase):
         historical_payload = valid_v12_payload()
         historical_payload["report_date"] = "2026-08-09"
         historical_payload["generated_at"] = "2026-08-09T09:00:00+08:00"
-        historical_payload["window"].update({"start": "2026-08-03", "end": "2026-08-09"})
+        historical_payload["window"].update(
+            {"start": "2026-08-03", "end": "2026-08-09"}
+        )
         historical_item = historical_payload["top_10"][0]
         historical_item["observed_at"] = "2026-08-09T09:00:00+08:00"
         historical_item["retrieved_at"] = "2026-08-09T09:00:00+08:00"
@@ -699,7 +776,11 @@ class ForgeContractTests(unittest.TestCase):
         payload = valid_v14_payload()
         payload.update({"run_id": "run-forge", "model_used": "semantic_model"})
         payload["coverage"].update(
-            {"run_status": "degraded", "coverage_confidence": "medium", "baseline_status": "degraded"}
+            {
+                "run_status": "degraded",
+                "coverage_confidence": "medium",
+                "baseline_status": "degraded",
+            }
         )
         refined.write_text(json.dumps(payload), encoding="utf-8")
         with self.assertRaisesRegex(RunContractError, "bound history snapshot"):
@@ -850,7 +931,11 @@ class ForgeContractTests(unittest.TestCase):
         payload = valid_v14_payload()
         payload.update({"run_id": "run-forge", "model_used": "semantic_model"})
         payload["coverage"].update(
-            {"run_status": "degraded", "coverage_confidence": "medium", "baseline_status": "degraded"}
+            {
+                "run_status": "degraded",
+                "coverage_confidence": "medium",
+                "baseline_status": "degraded",
+            }
         )
         refined.write_text(json.dumps(payload), encoding="utf-8")
         refined = self._register_reviews(manifest_path, refined)
@@ -878,7 +963,11 @@ class ForgeContractTests(unittest.TestCase):
             }
         )
         payload["coverage"].update(
-            {"run_status": "degraded", "coverage_confidence": "medium", "baseline_status": "degraded"}
+            {
+                "run_status": "degraded",
+                "coverage_confidence": "medium",
+                "baseline_status": "degraded",
+            }
         )
         refined.write_text(json.dumps(payload), encoding="utf-8")
         with self.assertRaisesRegex(RunContractError, "cannot precede run creation"):

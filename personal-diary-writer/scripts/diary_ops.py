@@ -882,7 +882,7 @@ def _immutable_gate_snapshot(data: bytes, suffix: str) -> Iterator[Path]:
         yield snapshot
 
 
-def _verify_mentat_gate(value: dict[str, Any]) -> None:
+def _verify_mentat_gate(value: dict[str, Any], args: argparse.Namespace) -> None:
     input_value = value.get("gate_input_path")
     expected_sha = value.get("gate_input_sha256")
     if not isinstance(input_value, str) or not isinstance(expected_sha, str):
@@ -909,6 +909,36 @@ def _verify_mentat_gate(value: dict[str, Any]) -> None:
         "substantive",
     }:
         raise DiaryError("Mentat evidence gate did not authorize saving")
+    target_day = date.fromisoformat(args.date)
+    if result.get("collection_date") != target_day.isoformat():
+        raise DiaryError("Mentat evidence gate date does not match the write date")
+    window = result.get("collection_window")
+    if not isinstance(window, dict):
+        raise DiaryError("Mentat evidence gate did not return a bound collection window")
+    if window.get("timezone") != "Asia/Shanghai":
+        raise DiaryError("Mentat evidence gate timezone does not match the write target")
+    expected_start = f"{target_day.isoformat()}T00:00:00+08:00"
+    if window.get("window_start") != expected_start:
+        raise DiaryError("Mentat evidence gate window does not start at the write date")
+    cutoff = window.get("cutoff")
+    if not isinstance(cutoff, str) or not cutoff.strip():
+        raise DiaryError("Mentat evidence gate cutoff does not match the write date")
+    try:
+        cutoff_dt = datetime.fromisoformat(cutoff.replace("Z", "+00:00"))
+    except ValueError as exc:
+        raise DiaryError("Mentat evidence gate cutoff does not match the write date") from exc
+    if cutoff_dt.tzinfo is None or cutoff_dt.utcoffset() is None:
+        raise DiaryError("Mentat evidence gate cutoff does not match the write date")
+    gate_tz = ZoneInfo("Asia/Shanghai")
+    expected_cutoff_start = datetime.fromisoformat(
+        f"{target_day.isoformat()}T00:00:00+08:00"
+    )
+    expected_cutoff_end = datetime.fromisoformat(
+        f"{date.fromordinal(target_day.toordinal() + 1).isoformat()}T00:00:00+08:00"
+    )
+    local_cutoff = cutoff_dt.astimezone(gate_tz)
+    if not expected_cutoff_start < local_cutoff <= expected_cutoff_end:
+        raise DiaryError("Mentat evidence gate cutoff does not match the write date")
 
 
 def _verify_audit_gate(value: dict[str, Any], args: argparse.Namespace) -> None:
@@ -974,7 +1004,7 @@ def _load_approval(
     elif expected_source == "personal_diary_request_gate":
         _verify_personal_diary_request(value, receipt, args)
     elif expected_source == "mentat_evidence_gate":
-        _verify_mentat_gate(value)
+        _verify_mentat_gate(value, args)
     else:
         _verify_periodic_request(value, receipt, args)
         _verify_audit_gate(value, args)

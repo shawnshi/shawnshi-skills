@@ -1,14 +1,14 @@
-import json
 import hashlib
 import io
+import json
 import subprocess
 import sys
 import tempfile
 import unittest
+from contextlib import redirect_stdout
 from datetime import datetime
 from pathlib import Path
 from unittest.mock import patch
-from contextlib import redirect_stdout
 from zoneinfo import ZoneInfo
 
 import run_daily
@@ -181,7 +181,9 @@ class RunDailyTests(unittest.IsolatedAsyncioTestCase):
             items.append(
                 {
                     "provisional_domain": "technology",
-                    "title": "policy model release" if index == 0 else f"technology {index}",
+                    "title": "policy model release"
+                    if index == 0
+                    else f"technology {index}",
                     "summary_hint": "primary source",
                     "keyword_connection_hint": "policy" if index == 0 else "technology",
                 }
@@ -239,14 +241,16 @@ class RunDailyTests(unittest.IsolatedAsyncioTestCase):
             },
         )
         supply_gaps = {
-            gap["gap_id"]: gap for gap in gaps if gap["lane"] in {"TechRadar", "HealthcareRadar"}
+            gap["gap_id"]: gap
+            for gap in gaps
+            if gap["lane"] in {"TechRadar", "HealthcareRadar"}
         }
         self.assertTrue(supply_gaps["technology-supply"]["verify_bound_candidates"])
         self.assertTrue(
             supply_gaps["healthcare-digital-supply"]["verify_bound_candidates"]
         )
 
-    def test_verified_primary_evidence_can_satisfy_policy_and_risk_lanes(self):
+    def test_untrusted_primary_access_claims_cannot_satisfy_required_lanes(self):
         def candidate(title, url):
             return {
                 "provisional_domain": "technology",
@@ -270,7 +274,9 @@ class RunDailyTests(unittest.IsolatedAsyncioTestCase):
                 ],
                 *[
                     {
-                        **candidate(f"healthcare {index}", f"https://example.org/h{index}"),
+                        **candidate(
+                            f"healthcare {index}", f"https://example.org/h{index}"
+                        ),
                         "provisional_domain": "healthcare_digital",
                     }
                     for index in range(4)
@@ -309,7 +315,8 @@ class RunDailyTests(unittest.IsolatedAsyncioTestCase):
 
         gaps = run_daily.assess_supplement_gaps(candidates, manifest, focus)
 
-        self.assertEqual(gaps, [])
+        self.assertEqual(len(gaps), 4)
+        self.assertEqual({gap["lane"] for gap in gaps}, {"TechRadar", "HealthcareRadar", "Sentinel", "Ranger"})
 
     async def test_prepare_runs_baseline_before_candidates_and_builds_bound_gaps(self):
         with tempfile.TemporaryDirectory() as directory:
@@ -338,8 +345,16 @@ class RunDailyTests(unittest.IsolatedAsyncioTestCase):
                         "filters": {"max_top10": 10},
                         "coverage_policy": {
                             "lanes": {
-                                "Sentinel": {"min_candidates": 1, "query_scope": "policy procurement", "keywords": ["policy"]},
-                                "Ranger": {"min_candidates": 1, "query_scope": "risk failure", "keywords": ["risk"]}
+                                "Sentinel": {
+                                    "min_candidates": 1,
+                                    "query_scope": "policy procurement",
+                                    "keywords": ["policy"],
+                                },
+                                "Ranger": {
+                                    "min_candidates": 1,
+                                    "query_scope": "risk failure",
+                                    "keywords": ["risk"],
+                                },
                             }
                         },
                     }
@@ -385,15 +400,17 @@ class RunDailyTests(unittest.IsolatedAsyncioTestCase):
                         "region": kwargs["region"],
                         "window": {
                             "mode": "calendar_days",
-                            "days": 7,
-                            "start": "2026-08-04",
+                            "days": 3,
+                            "start": "2026-08-08",
                             "end": "2026-08-10",
                             "timezone": "Asia/Shanghai",
                         },
                     },
                 }
                 kwargs["output_path"].write_text(json.dumps(payload), encoding="utf-8")
-                kwargs["current_output_path"].write_text(json.dumps(payload), encoding="utf-8")
+                kwargs["current_output_path"].write_text(
+                    json.dumps(payload), encoding="utf-8"
+                )
                 return payload
 
             def fake_refine(*args, **kwargs):
@@ -406,9 +423,15 @@ class RunDailyTests(unittest.IsolatedAsyncioTestCase):
                     "model_used": "heuristic",
                     "run_id": "daily-test",
                     "items": [],
-                    "candidate_funnel": {"observed": 0, "retained_for_review": 0, "terminal_dispositions": {"retained_for_review": 0}},
+                    "candidate_funnel": {
+                        "observed": 0,
+                        "retained_for_review": 0,
+                        "terminal_dispositions": {"retained_for_review": 0},
+                    },
                 }
-                kwargs["candidates_path"].write_text(json.dumps(payload), encoding="utf-8")
+                kwargs["candidates_path"].write_text(
+                    json.dumps(payload), encoding="utf-8"
+                )
                 return payload
 
             with (
@@ -478,11 +501,7 @@ class RunDailyTests(unittest.IsolatedAsyncioTestCase):
             expected = root / "snapshot" / "scripts" / "run_daily.py"
             manifest.write_text(
                 json.dumps(
-                    {
-                        "bundle_snapshot": {
-                            "execution_cli_path": str(expected.resolve())
-                        }
-                    }
+                    {"bundle_snapshot": {"execution_cli_path": str(expected.resolve())}}
                 ),
                 encoding="utf-8",
             )
@@ -519,7 +538,9 @@ class RunDailyTests(unittest.IsolatedAsyncioTestCase):
 
             self.assertFalse(runtime.exists())
 
-    async def test_existing_archive_requires_explicit_replacement_before_run_creation(self):
+    async def test_existing_archive_requires_explicit_replacement_before_run_creation(
+        self,
+    ):
         with tempfile.TemporaryDirectory() as directory:
             root = Path(directory)
             news = root / "news"
@@ -589,30 +610,453 @@ class RunDailyTests(unittest.IsolatedAsyncioTestCase):
 
             with (
                 patch("update_index.rebuild_history", side_effect=fake_rebuild_history),
-                patch("fetch_news.scan_all", side_effect=RuntimeError("network stack failed")),
+                patch(
+                    "fetch_news.scan_all",
+                    side_effect=RuntimeError("network stack failed"),
+                ),
+                self.assertRaisesRegex(RuntimeError, "network stack failed"),
             ):
-                with self.assertRaisesRegex(RuntimeError, "network stack failed"):
-                    await run_daily.prepare_run(
-                        report_date="2026-08-10",
-                        runtime_dir=runtime,
-                        news_dir=root / "news",
-                        skill_path=skill,
-                        focus_path=focus,
-                        run_id="failed-run",
-                        now=datetime(2026, 8, 10, 9, 0, tzinfo=ZoneInfo("Asia/Shanghai")),
-                    )
+                await run_daily.prepare_run(
+                    report_date="2026-08-10",
+                    runtime_dir=runtime,
+                    news_dir=root / "news",
+                    skill_path=skill,
+                    focus_path=focus,
+                    run_id="failed-run",
+                    now=datetime(2026, 8, 10, 9, 0, tzinfo=ZoneInfo("Asia/Shanghai")),
+                )
 
-            manifest = load_manifest(runtime / "runs" / "failed-run" / "run_manifest.json")
+            manifest = load_manifest(
+                runtime / "runs" / "failed-run" / "run_manifest.json"
+            )
             self.assertEqual(manifest["stages"]["baseline"]["status"], "failed")
             self.assertEqual(
                 manifest["stages"]["baseline"]["metadata"]["error_type"],
                 "RuntimeError",
             )
 
+    def test_check_expansion_triggers_when_eligible(self):
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            run_dir = root / "runs" / "test_3_to_7"
+            run_dir.mkdir(parents=True)
+            manifest_path = run_dir / "run_manifest.json"
+            manifest_path.write_text(
+                json.dumps(
+                    {
+                        "contract_version": "pih-run/1.0",
+                        "run_id": "test_3_to_7",
+                        "report_date": "2023-01-10",
+                        "timezone": "Asia/Shanghai",
+                        "topic": "技术与医疗数字化",
+                        "region": "中国、美国与全球",
+                        "window": {"days": 3},
+                        "explicit_window": False,
+                        "mix_request": {"ratio_source": "schema_default"},
+                        "skill_path": str(root / "SKILL.md"),
+                        "resource_manifest_path": str(root / "resource-manifest.json"),
+                        "skill_sha256": "fake",
+                        "skill_bundle_sha256": "fake",
+                        "resource_manifest_sha256": "fake",
+                        "created_at": "2023-01-10T12:00:00Z",
+                        "artifacts": {},
+                        "stages": {},
+                    }
+                ),
+                encoding="utf-8",
+            )
+            refined_path = run_dir / "test_refined.json"
+            refined_path.write_text(
+                json.dumps(
+                    {
+                        "candidate_funnel": {
+                            "candidate_dispositions": [{"reason": "retained"}] * 3
+                        }
+                    }
+                ),
+                encoding="utf-8",
+            )
+            receipt_path = run_dir / "test_receipt.json"
+            receipt_path.write_text("{}", encoding="utf-8")
+
+            with (
+                patch(
+                    "sys.argv",
+                    [
+                        "run_daily.py",
+                        "check-expansion",
+                        "--manifest",
+                        str(manifest_path),
+                        "--refined",
+                        str(refined_path),
+                        "--semantic-receipt",
+                        str(receipt_path),
+                    ],
+                ),
+                patch("sys.stdout", new_callable=io.StringIO) as stdout,
+                patch(
+                    "run_contract.load_manifest",
+                    return_value=json.loads(manifest_path.read_text(encoding="utf-8")),
+                ),
+                patch("run_contract.validate_semantic_draft", return_value=[]),
+            ):
+                import run_daily
+
+                refined_path.write_text(json.dumps({"top_10": [{}] * 3}), encoding="utf-8")
+                run_daily.main()
+                output = json.loads(stdout.getvalue())
+                self.assertEqual(output["action"], "expand")
+                self.assertIn("--window-days 7", output["next_command"])
+                self.assertIn(
+                    "--linked-from-run-id test_3_to_7", output["next_command"]
+                )
+
+    def test_check_expansion_rejects_invalid_draft(self):
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            run_dir = root / "runs" / "test_invalid"
+            run_dir.mkdir(parents=True)
+            manifest_path = run_dir / "test_manifest.json"
+            manifest_path.write_text("{}", encoding="utf-8")
+            refined_path = run_dir / "test_refined.json"
+            refined_path.write_text("{}", encoding="utf-8")
+            receipt_path = run_dir / "test_receipt.json"
+            receipt_path.write_text("{}", encoding="utf-8")
+
+            with (
+                patch(
+                    "sys.argv",
+                    [
+                        "run_daily.py",
+                        "check-expansion",
+                        "--manifest",
+                        str(manifest_path),
+                        "--refined",
+                        str(refined_path),
+                        "--semantic-receipt",
+                        str(receipt_path),
+                    ],
+                ),
+                patch("sys.stdout", new_callable=io.StringIO) as stdout,
+            ):
+                import run_daily
+
+                with self.assertRaises(SystemExit):
+                    run_daily.main()
+                output = json.loads(stdout.getvalue())
+                self.assertEqual(output["action"], "reject")
+                self.assertIn("Semantic draft validation failed", output["reason"])
+
+    def test_check_expansion_skips_when_explicit(self):
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            run_dir = root / "runs" / "test_explicit"
+            run_dir.mkdir(parents=True)
+            manifest_path = run_dir / "test_manifest_explicit.json"
+            manifest_path.write_text(
+                json.dumps(
+                    {
+                        "contract_version": "pih-run/1.0",
+                        "run_id": "test_explicit",
+                        "report_date": "2023-01-10",
+                        "timezone": "Asia/Shanghai",
+                        "topic": "技术与医疗数字化",
+                        "region": "中国、美国与全球",
+                        "window": {"days": 3},
+                        "explicit_window": True,
+                        "mix_request": {"ratio_source": "schema_default"},
+                        "skill_path": str(root / "SKILL.md"),
+                        "resource_manifest_path": str(root / "resource-manifest.json"),
+                        "skill_sha256": "fake",
+                        "skill_bundle_sha256": "fake",
+                        "resource_manifest_sha256": "fake",
+                        "created_at": "2023-01-10T12:00:00Z",
+                    }
+                ),
+                encoding="utf-8",
+            )
+            refined_path = run_dir / "test_refined.json"
+            refined_path.write_text(
+                json.dumps(
+                    {
+                        "candidate_funnel": {
+                            "candidate_dispositions": [{"reason": "retained"}] * 3
+                        }
+                    }
+                ),
+                encoding="utf-8",
+            )
+            receipt_path = run_dir / "test_receipt.json"
+            receipt_path.write_text("{}", encoding="utf-8")
+
+            with (
+                patch(
+                    "sys.argv",
+                    [
+                        "run_daily.py",
+                        "check-expansion",
+                        "--manifest",
+                        str(manifest_path),
+                        "--refined",
+                        str(refined_path),
+                        "--semantic-receipt",
+                        str(receipt_path),
+                    ],
+                ),
+                patch("sys.stdout", new_callable=io.StringIO) as stdout,
+                patch(
+                    "run_contract.load_manifest",
+                    return_value=json.loads(manifest_path.read_text(encoding="utf-8")),
+                ),
+                patch("run_contract.validate_semantic_draft", return_value=[]),
+            ):
+                import run_daily
+
+                refined_path.write_text(json.dumps({"top_10": [{}] * 3}), encoding="utf-8")
+                run_daily.main()
+                output = json.loads(stdout.getvalue())
+                self.assertEqual(output["action"], "continue")
+                self.assertIn("explicit window", output["reason"])
+
+    def test_check_expansion_skips_when_sufficient_items(self):
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            run_dir = root / "runs" / "test_sufficient"
+            run_dir.mkdir(parents=True)
+            manifest_path = run_dir / "test_manifest.json"
+            manifest_path.write_text(
+                json.dumps(
+                    {
+                        "contract_version": "pih-run/1.0",
+                        "run_id": "test_sufficient",
+                        "report_date": "2023-01-10",
+                        "timezone": "Asia/Shanghai",
+                        "topic": "技术与医疗数字化",
+                        "region": "中国、美国与全球",
+                        "window": {"days": 3},
+                        "explicit_window": False,
+                        "mix_request": {"ratio_source": "schema_default"},
+                        "skill_path": str(root / "SKILL.md"),
+                        "resource_manifest_path": str(root / "resource-manifest.json"),
+                        "skill_sha256": "fake",
+                        "skill_bundle_sha256": "fake",
+                        "resource_manifest_sha256": "fake",
+                        "created_at": "2023-01-10T12:00:00Z",
+                    }
+                ),
+                encoding="utf-8",
+            )
+            refined_path = run_dir / "test_refined.json"
+            refined_path.write_text(
+                json.dumps(
+                    {
+                        "candidate_funnel": {
+                            "candidate_dispositions": [{"reason": "retained"}] * 10
+                        }
+                    }
+                ),
+                encoding="utf-8",
+            )
+            receipt_path = run_dir / "test_receipt.json"
+            receipt_path.write_text("{}", encoding="utf-8")
+
+            with (
+                patch(
+                    "sys.argv",
+                    [
+                        "run_daily.py",
+                        "check-expansion",
+                        "--manifest",
+                        str(manifest_path),
+                        "--refined",
+                        str(refined_path),
+                        "--semantic-receipt",
+                        str(receipt_path),
+                    ],
+                ),
+                patch("sys.stdout", new_callable=io.StringIO) as stdout,
+                patch(
+                    "run_contract.load_manifest",
+                    return_value=json.loads(manifest_path.read_text(encoding="utf-8")),
+                ),
+                patch("run_contract.validate_semantic_draft", return_value=[]),
+            ):
+                import run_daily
+
+                refined_path.write_text(json.dumps({"top_10": [{}] * 10}), encoding="utf-8")
+                run_daily.main()
+                output = json.loads(stdout.getvalue())
+                self.assertEqual(output["action"], "continue")
+                self.assertIn("sufficient items", output["reason"])
+
+    def test_check_expansion_skips_when_linked_from_another_run(self):
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            run_dir = root / "runs" / "test_linked"
+            run_dir.mkdir(parents=True)
+            manifest_path = run_dir / "test_manifest.json"
+            manifest_path.write_text(
+                json.dumps(
+                    {
+                        "contract_version": "pih-run/1.0",
+                        "run_id": "test_linked",
+                        "report_date": "2023-01-10",
+                        "timezone": "Asia/Shanghai",
+                        "topic": "技术与医疗数字化",
+                        "region": "中国、美国与全球",
+                        "window": {"days": 3},
+                        "explicit_window": False,
+                        "linked_from_run_id": "test_3_to_7",
+                        "mix_request": {"ratio_source": "schema_default"},
+                        "skill_path": str(root / "SKILL.md"),
+                        "resource_manifest_path": str(root / "resource-manifest.json"),
+                        "skill_sha256": "fake",
+                        "skill_bundle_sha256": "fake",
+                        "resource_manifest_sha256": "fake",
+                        "created_at": "2023-01-10T12:00:00Z",
+                    }
+                ),
+                encoding="utf-8",
+            )
+            refined_path = run_dir / "test_refined.json"
+            refined_path.write_text(
+                json.dumps(
+                    {
+                        "candidate_funnel": {
+                            "candidate_dispositions": [{"reason": "retained"}] * 3
+                        }
+                    }
+                ),
+                encoding="utf-8",
+            )
+            receipt_path = run_dir / "test_receipt.json"
+            receipt_path.write_text("{}", encoding="utf-8")
+
+            with (
+                patch(
+                    "sys.argv",
+                    [
+                        "run_daily.py",
+                        "check-expansion",
+                        "--manifest",
+                        str(manifest_path),
+                        "--refined",
+                        str(refined_path),
+                        "--semantic-receipt",
+                        str(receipt_path),
+                    ],
+                ),
+                patch("sys.stdout", new_callable=io.StringIO) as stdout,
+                patch(
+                    "run_contract.load_manifest",
+                    return_value=json.loads(manifest_path.read_text(encoding="utf-8")),
+                ),
+                patch("run_contract.validate_semantic_draft", return_value=[]),
+            ):
+                import run_daily
+
+                refined_path.write_text(json.dumps({"top_10": [{}] * 3}), encoding="utf-8")
+                run_daily.main()
+                output = json.loads(stdout.getvalue())
+                self.assertEqual(output["action"], "continue")
+                self.assertIn("already expanded", output["reason"])
+
+    def test_check_expansion_real_e2e_verifies_funnel_and_triggers_when_eligible(self):
+        from expansion_test_fixture import registered_selection
+
+        manifest_path, refined, receipt = registered_selection(self, 1)
+
+        with (
+            patch(
+                "sys.argv",
+                [
+                    "run_daily.py",
+                    "check-expansion",
+                    "--manifest",
+                    str(manifest_path),
+                    "--refined",
+                    str(refined),
+                    "--semantic-receipt",
+                    str(receipt),
+                ],
+            ),
+            patch("sys.stdout", new_callable=io.StringIO) as stdout,
+        ):
+            import run_daily
+
+            try:
+                run_daily.main()
+            except SystemExit:
+                pass
+            output = json.loads(stdout.getvalue())
+            self.assertEqual(output["action"], "expand")
+            self.assertIn("Only 1 entries", output["reason"])
+            self.assertIn("--window-days 7", output["next_command"])
+
+    def test_check_expansion_real_e2e_skips_when_sufficient_items(self):
+        from expansion_test_fixture import registered_selection
+
+        manifest_path, refined, receipt = registered_selection(self, 10)
+
+        with (
+            patch(
+                "sys.argv",
+                [
+                    "run_daily.py",
+                    "check-expansion",
+                    "--manifest",
+                    str(manifest_path),
+                    "--refined",
+                    str(refined),
+                    "--semantic-receipt",
+                    str(receipt),
+                ],
+            ),
+            patch("sys.stdout", new_callable=io.StringIO) as stdout,
+        ):
+            import run_daily
+
+            try:
+                run_daily.main()
+            except SystemExit:
+                pass
+            output = json.loads(stdout.getvalue())
+        if output["action"] != "continue":
+            print(output)
+        self.assertEqual(output["action"], "continue")
+        self.assertIn("sufficient items", output["reason"])
+
+    def test_check_expansion_real_gate_rejects_tampered_selection(self):
+        import run_daily
+        from expansion_test_fixture import registered_selection
+
+        manifest_path, refined, receipt = registered_selection(self, 10)
+        core = json.loads(refined.read_text(encoding="utf-8"))
+        core["top_10"] = []
+        refined.write_text(json.dumps(core), encoding="utf-8")
+        with (
+            patch("sys.argv", ["run_daily.py", "check-expansion", "--manifest",
+                  str(manifest_path), "--refined", str(refined),
+                  "--semantic-receipt", str(receipt)]),
+            patch("sys.stdout", new_callable=io.StringIO) as stdout,
+        ):
+            with self.assertRaises(SystemExit) as caught:
+                run_daily.main()
+            self.assertNotEqual(caught.exception.code, 0)
+            self.assertEqual(json.loads(stdout.getvalue())["action"], "reject")
+
 
 class ImportPerformanceContractTests(unittest.TestCase):
     def _fresh_imports(self, module_name):
-        names = ["fetch_news", "refine", "forge", "run_contract", "aiohttp", "feedparser", "bs4"]
+        names = [
+            "fetch_news",
+            "refine",
+            "forge",
+            "run_contract",
+            "aiohttp",
+            "feedparser",
+            "bs4",
+        ]
         code = (
             "import importlib,json,sys; "
             f"importlib.import_module({module_name!r}); "
@@ -630,7 +1074,7 @@ class ImportPerformanceContractTests(unittest.TestCase):
     def test_run_daily_does_not_eagerly_import_command_specific_modules(self):
         loaded = self._fresh_imports("run_daily")
 
-        self.assertEqual(loaded, {name: False for name in loaded})
+        self.assertEqual(loaded, dict.fromkeys(loaded, False))
 
     def test_fetch_news_does_not_eagerly_import_network_parsers(self):
         loaded = self._fresh_imports("fetch_news")

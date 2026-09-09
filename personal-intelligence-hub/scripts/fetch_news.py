@@ -22,13 +22,12 @@ from hub_utils import (
     load_json,
 )
 
-
 USER_AGENT = (
     "Mozilla/5.0 (Windows NT 10.0; Win64; x64) "
     "AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36"
 )
 DEFAULT_TIMEZONE = "Asia/Shanghai"
-DEFAULT_WINDOW_DAYS = 7
+DEFAULT_WINDOW_DAYS = 3
 DEFAULT_MAX_CONCURRENCY = 8
 MAX_CONCURRENCY = 32
 DEFAULT_SCAN_DEADLINE_SECONDS = 300.0

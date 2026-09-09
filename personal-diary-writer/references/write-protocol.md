@@ -24,6 +24,8 @@
 
 ## Personal diary checkpoint
 
+- 正式个人日记保存前必须执行默认日历与近 3 天健康读取；只有用户明确排除来源、仅用当次文本或对应读取门真实失败时才允许缺口。逐项核对来源结果与原因，不得用 `not_requested_for_task` 跳过默认采集。内容门和写入器只验证正文与写入合同，不证明采集发生；调用层必须在最终交付中披露两个来源的实际状态。
+
 - drafts/previews 不写入；草稿、预览、只读、不保存请求不生成 scope/approval，不展示待确认 hash，也不要求保存确认。后续另行明确要求保存时重新判定授权，不复用草稿阶段的同意。
 - 除 canonical 个人日记生成后自动保存外，非 canonical 的 personal diaries、custom paths、knowledge bases、Vector Lake、STQM、外部系统和任何第二处持久化必须分别取得明确授权。
 - 只有用户后续另行明确要求保存、且未命中自动保存例外的 canonical 个人日记写入，才先展示固定正文、canonical 目标、日期、动作和完整 `authorization_scope_sha256`，并要求用户回复“确认写入 <该 SHA-256>”或“确认保存 <该 SHA-256>”。调用层只保存该用户消息的 Pi session event ID；写入器从受保护会话记录核验角色、完整文本和 scope hash。正文、目标、日期、动作或 nonce 变化时，旧 scope 与 approval 同时失效。

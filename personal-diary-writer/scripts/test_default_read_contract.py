@@ -118,7 +118,7 @@ class DefaultReadContractTests(unittest.TestCase):
             "非 canonical 目标不在本写入器能力范围，不创建 scope", self.write_contract
         )
 
-    def test_eight_sections_stay_in_entry_without_forced_health_collection(self):
+    def test_eight_sections_preserve_explicit_read_exclusions(self):
         headings = re.findall(r"^\d+\. `## (.+)`$", self.entry_text, re.MULTILINE)
         self.assertEqual(
             headings,
@@ -133,10 +133,27 @@ class DefaultReadContractTests(unittest.TestCase):
                 "行动闭环",
             ],
         )
-        self.assertIn("没有健康读取需求时不得为填模板强行采集", self.read_contract)
+        self.assertIn("用户明确排除来源或读取门失败时不强行采集", self.read_contract)
         self.assertIn(
             "完整八章日记仍保留能量章节并注明未读取及判断边界", self.read_contract
         )
+
+    def test_formal_diary_requires_default_reads_before_save(self):
+        for marker in (
+            "正式个人日记默认必须读取",
+            "正式个人日记先执行默认读取，再进入保存分支",
+            "用户仅提供今日/明日事项不构成免采集指令",
+            "只有用户明确要求仅用当次文本或排除相应来源时才跳过对应读取",
+            "Mentat 与周期审计不继承此默认",
+            "最终交付须分别说明日历和健康数据的读取结果",
+        ):
+            with self.subTest(marker=marker):
+                self.assertIn(marker, self.entry_text)
+        self.assertIn("D-2 至 D，含当日共 3 个自然日", self.read_contract)
+        self.assertIn("某一来源失败不阻止另一来源", self.read_contract)
+        self.assertIn("不得用 `not_requested_for_task` 跳过默认采集", self.write_contract)
+        self.assertNotIn("没有健康读取需求时不得为填模板强行采集", self.read_contract)
+        self.assertNotIn("个人日记可只读获取", self.read_contract)
 
     def test_standalone_authority_hash_still_binds_exact_entry_bytes(self):
         self.assertEqual(

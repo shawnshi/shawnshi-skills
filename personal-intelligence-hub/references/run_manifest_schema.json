@@ -44,7 +44,7 @@
     "version": "pih-execution-telemetry/1.0",
     "registration_key": "stage:invocation_id",
     "content_policy": "aggregate_only_no_message_content",
-    "normal_run_token_ceiling": 250000,
+    "normal_run_token_ceiling": 1000000,
     "token_meter": "total_tokens - cache_read_tokens - cache_write_tokens",
     "raw_total_tokens_retained_for_observability": true,
     "normal_run_cost_usd_ceiling": 3.0,
@@ -56,7 +56,7 @@
     "settlement_rule": "trusted_telemetry_requires_exact_reserved_stage_invocation_and_unique_source_hashes; unavailable_telemetry_keeps_full_reservation",
     "runtime_usage_budget_semantics": "launch_and_future_launch_gate_not_running_interrupt",
     "downstream_headroom": {
-      "tokens": 70000,
+      "tokens": 300000,
       "cost_usd": 1.0
     }
   },
@@ -77,7 +77,7 @@
   },
   "review_execution_contract": {
     "semantic_timeout_ms": 240000,
-    "semantic_token_budget": 40000,
+    "semantic_token_budget": 200000,
     "semantic_tool_budget": {
       "soft": 6,
       "hard": 10,
@@ -86,7 +86,7 @@
     "semantic_context_mode": "compact_helper_packet",
     "semantic_write_scope": "semantic_dynamic_only",
     "semantic_static_finalization": "scripts/semantic_agent.py",
-    "red_team_token_budget": 30000,
+    "red_team_token_budget": 100000,
     "red_team_timeout_ms": 120000,
     "timeout_pass_through_required": true
   }

@@ -1,7 +1,7 @@
 {
   "schema_version": 3,
   "skill": "cognitive-logic-adversary",
-  "generated_at": "2026-09-07T15:41:26+08:00",
+  "generated_at": "2026-09-09T20:58:02+08:00",
   "hash_algorithm": "SHA-256",
   "text_hash_normalization": "LF",
   "skill_md": "SKILL.md",

@@ -16,6 +16,8 @@ from zoneinfo import ZoneInfo
 from briefing_gate import validate_briefing_data
 from history_manager import generate_event_id
 from mix_policy import select_candidates_with_mix
+from review_progress_gate import evaluate_progress
+from review_progress_gate import main as progress_gate_main
 from run_contract import (
     RunContractError,
     _assert_execution_budget_allows_launch,
@@ -25,9 +27,9 @@ from run_contract import (
     _validate_multi_independent_lineage,
     build_review_request,
     build_supplement_request,
+    calendar_window,
     candidate_object_hash,
     candidate_ref,
-    calendar_window,
     canonical_json_bytes,
     create_run,
     file_sha256,
@@ -37,15 +39,15 @@ from run_contract import (
     load_review_progress_state,
     normalize_published_at,
     normalize_supplement_failure_kind,
+    reconcile_supplement_progress,
     record_execution_telemetry,
     record_run_artifact,
     record_stage,
-    reconcile_supplement_progress,
+    register_review_receipt,
+    register_supplement_results,
     registered_candidate_lineage,
     review_input_bundle_sha256,
     review_scope,
-    register_review_receipt,
-    register_supplement_results,
     update_review_progress,
     validate_resource_manifest,
     validate_review_receipt,
@@ -53,7 +55,6 @@ from run_contract import (
     validate_semantic_history,
     validate_supplement_failure_kind,
 )
-from review_progress_gate import evaluate_progress, main as progress_gate_main
 from semantic_agent import (  # pyright: ignore[reportMissingImports]
     build_agent_context as build_semantic_agent_context,
 )
@@ -758,6 +759,7 @@ class RunContractTests(unittest.TestCase):
             "executed_queries": [gap_id],
             "access_log": access_log,
             "candidates": [],
+            "bound_candidate_decisions": [],
             "coverage": {
                 "attempted": len(access_log),
                 "succeeded": verified,
@@ -836,7 +838,7 @@ class RunContractTests(unittest.TestCase):
             "telemetry": {
                 "executions": {
                     "semantic:one": {
-                        "usage": {"total_tokens": 170000, "cost_usd": 2.0}
+                        "usage": {"total_tokens": 920000, "cost_usd": 2.0}
                     }
                 }
             }
@@ -871,7 +873,7 @@ class RunContractTests(unittest.TestCase):
         no_reservation_headroom = deepcopy(within)
         no_reservation_headroom["telemetry"]["executions"]["semantic:one"][
             "usage"
-        ]["total_tokens"] = 170001
+        ]["total_tokens"] = 920001
         with self.assertRaisesRegex(RunContractError, "reservation unavailable"):
             _assert_execution_budget_allows_launch(
                 no_reservation_headroom,
@@ -880,7 +882,7 @@ class RunContractTests(unittest.TestCase):
             )
         ceiling_reached = deepcopy(within)
         ceiling_reached["telemetry"]["executions"]["semantic:one"]["usage"] = {
-            "total_tokens": 250000,
+            "total_tokens": 1000000,
             "cost_usd": 3.0,
         }
         with self.assertRaisesRegex(RunContractError, "budget exceeded"):
@@ -1865,7 +1867,7 @@ class RunContractTests(unittest.TestCase):
         self.assertEqual(
             packet["finalization"],
             {
-                "grace_seconds": 60,
+                "grace_seconds": 300,
                 "result_completed_at_semantics": "source_check_completed",
             },
         )
@@ -1928,6 +1930,11 @@ class RunContractTests(unittest.TestCase):
 
         self.assertEqual([len(wave["workers"]) for wave in request["launch_plan"]], [1, 3])
         self.assertEqual(request["launch_plan"][0]["mode"], "canary")
+        for wave in request["launch_plan"]:
+            for worker in wave["workers"]:
+                packet = request["execution_packets"][worker["packet_index"]]
+                self.assertEqual(worker["timeout_ms"], 1000 * (
+                    packet["execution_budget"]["max_duration_seconds"] + packet["finalization"]["grace_seconds"]))
         self.assertEqual(
             [
                 worker["gap_id"]
@@ -1939,10 +1946,10 @@ class RunContractTests(unittest.TestCase):
         self.assertTrue(
             all(
                 "supplement_agent.py context" in worker["task_message"]
-                and worker["timeout_ms"] == 240_000
+                and worker["timeout_ms"] == 480_000
                 and worker["tool_budget"]
                 == {"soft": 8, "hard": 12, "block": "*"}
-                and worker["token_budget"] == 30_000
+                and worker["token_budget"] == 150_000
                 and worker["cost_budget_usd"] == 0.5
                 for wave in request["launch_plan"]
                 for worker in wave["workers"]
@@ -2334,6 +2341,7 @@ class RunContractTests(unittest.TestCase):
                     "executed_queries": ["AI agents official release"],
                     "access_log": access_log,
                     "candidates": [],
+            "bound_candidate_decisions": [],
                     "coverage": {"attempted": 1, "succeeded": 1, "failed": 0},
                     "confidence": "medium",
                     "data_provenance": {
@@ -3011,6 +3019,7 @@ class RunContractTests(unittest.TestCase):
                     "executed_queries": [],
                     "access_log": access_log,
                     "candidates": [],
+            "bound_candidate_decisions": [],
                     "coverage": {"attempted": 0, "succeeded": 0, "failed": 0},
                     "confidence": "low",
                     "data_provenance": {
@@ -3070,7 +3079,7 @@ class RunContractTests(unittest.TestCase):
         with self.assertRaisesRegex(RunContractError, "run_id"):
             register_supplement_results(manifest_path, request_path, [result_path], now=self.now)
 
-    def test_semantic_finalizer_assembles_receipt_and_publishes(self):
+    def test_semantic_finalizer_selects_exact_owned_version_and_publishes(self):
         manifest_path, _ = self.new_run()
         baseline = self.runtime_dir / "semantic-finalizer-baseline.json"
         baseline.write_text('{"items": []}', encoding="utf-8")
@@ -3150,15 +3159,16 @@ class RunContractTests(unittest.TestCase):
             corroborating["candidate_id"],
         ]
         item["corroboration_status"] = "multi_independent"
-        extra_candidates = []
-        for index in (2,):
-            extra = {
-                "candidate_id": candidate_ref(f"https://example.org/{index}"),
-                "url": f"https://example.org/{index}",
-                "title": f"candidate {index}",
-            }
-            extra["candidate_object_sha256"] = candidate_object_hash(extra)
-            extra_candidates.append(extra)
+        # Same ref and evidence projection, but an earlier-sorted access version.
+        # Deterministic selection must honor the exact owned access of the item.
+        other_version = deepcopy(candidate)
+        for seconds in range(1, 1000):
+            other_version["access_check"]["checked_at"] = (self.now + timedelta(seconds=seconds)).isoformat()
+            other_version["candidate_object_sha256"] = candidate_object_hash(other_version)
+            if other_version["candidate_object_sha256"] < candidate["candidate_object_sha256"]:
+                break
+        self.assertLess(other_version["candidate_object_sha256"], candidate["candidate_object_sha256"])
+        extra_candidates = [other_version]
         self.bind_candidates(
             manifest_path,
             [candidate, corroborating, *extra_candidates],
@@ -3321,11 +3331,14 @@ class RunContractTests(unittest.TestCase):
         candidate["candidate_object_sha256"] = candidate_object_hash(candidate)
         extra_candidates = []
         for index in (2, 3):
-            extra = {
+            extra: dict = {
                 "candidate_id": candidate_ref(f"https://example.org/{index}"),
                 "url": f"https://example.org/{index}",
                 "title": f"candidate {index}",
             }
+            extra.update({"published_at": item["published_at"],
+                          "published_at_source": item["published_at_source"],
+                          "access_check": {**item["access_check"], "requested_url": extra["url"], "final_url": extra["url"]}})
             extra["candidate_object_sha256"] = candidate_object_hash(extra)
             extra_candidates.append(extra)
         self.bind_candidates(manifest_path, [candidate, *extra_candidates])
@@ -3333,7 +3346,7 @@ class RunContractTests(unittest.TestCase):
         skipped.write_text('{"coverage":{"attempted":0,"succeeded":0,"failed":0},"results":[]}', encoding="utf-8")
         record_stage(manifest_path, "supplemental", "completed", artifact_path=skipped, now=self.now)
         manifest = load_manifest(manifest_path)
-        semantic_access_log = [item["access_check"]]
+        semantic_access_log = [item["access_check"], *[c["access_check"] for c in extra_candidates]]
         _, semantic_request = build_review_request(
             manifest_path, None, "semantic", now=self.now
         )

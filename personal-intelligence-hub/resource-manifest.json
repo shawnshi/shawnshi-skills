@@ -1,11 +1,11 @@
 {
   "schema_version": 3,
   "skill": "personal-intelligence-hub",
-  "generated_at": "2026-09-06T20:31:58+08:00",
+  "generated_at": "2026-09-09T07:15:06+08:00",
   "hash_algorithm": "SHA-256",
   "text_hash_normalization": "LF",
   "skill_md": "SKILL.md",
-  "skill_md_sha256": "36d8a19219ed30390489dd7d10cf14a5413a2a236905f82a1b7257d35c305600",
+  "skill_md_sha256": "7c2daf9be81636c8d864d7453d1f0363f54711851aafa92b0a9b41e2e0f4b02e",
   "top_level_files": [
     "SKILL.md",
     "requirements.txt"
@@ -13,7 +13,7 @@
   "top_level_file_hashes": [
     {
       "path": "SKILL.md",
-      "sha256": "36d8a19219ed30390489dd7d10cf14a5413a2a236905f82a1b7257d35c305600"
+      "sha256": "7c2daf9be81636c8d864d7453d1f0363f54711851aafa92b0a9b41e2e0f4b02e"
     },
     {
       "path": "requirements.txt",
@@ -28,7 +28,7 @@
   "resource_directories": [
     {
       "name": "scripts",
-      "file_count": 40
+      "file_count": 54
     },
     {
       "name": "references",
@@ -66,11 +66,11 @@
     },
     {
       "path": "references/briefing_template.md",
-      "sha256": "7a9d6c279f2f253af4f4b787f41df721150abc1ca58455e75f901baa271ced39"
+      "sha256": "c8d81c6771b0d9c7a3f981f0fc881779affbd11abcf08728deb2ea6154658892"
     },
     {
       "path": "references/karpathy_feeds.json",
-      "sha256": "e28341b51c2e1f36dded08b5b9ffc26d4e3c5e8a42f902742a5859e194ca46a9"
+      "sha256": "84991da2ec059da9a33f6fd1db2e6139114f6fc32af7c6e2c88cf86a736c00ad"
     },
     {
       "path": "references/prompts/v1_refine_system.md",
@@ -86,7 +86,7 @@
     },
     {
       "path": "references/run_manifest_schema.json",
-      "sha256": "ecb105a83dba77a1e8f37b16024c700c8c8daa555ac2f35962adab3a49f65148"
+      "sha256": "a9bfc4c294576babe54a4f20bc3b5f589aa2c9d1179cac01aa4f488446ad308c"
     },
     {
       "path": "references/strategic_focus.json",
@@ -94,11 +94,11 @@
     },
     {
       "path": "references/subagent_prompts.json",
-      "sha256": "53ea4bf02f9f3cb481647215ceeef9e0cc97a762ecb49b06769910766a0bb6f0"
+      "sha256": "097ec25c142fd9ac4f6ee4948522c67e7d5393ad136b0e7ed185fbd9f7aeb0e3"
     },
     {
       "path": "references/workflow_protocols.md",
-      "sha256": "0c2d020931f7ecd224b4b48c1a5a51c4ca3a3e8d6b292216a5dcb57a4677fbff"
+      "sha256": "57298c2a24b631c408fd29d705c5378b1a6066205b5eef71d842d98d6acfa90d"
     },
     {
       "path": "scripts/adversarial_audit.py",
@@ -107,6 +107,10 @@
     {
       "path": "scripts/archive_transaction.py",
       "sha256": "28325640473874387bd8f907c92620c952dfbb12b50d430374697d50b9a6e92b"
+    },
+    {
+      "path": "scripts/article_broker.py",
+      "sha256": "4e5f2950ceae2600171b912f526c63c1323a13db129fab0cd0467d03f0f2efff"
     },
     {
       "path": "scripts/await_artifacts.py",
@@ -118,15 +122,19 @@
     },
     {
       "path": "scripts/briefing_gate.py",
-      "sha256": "1de8432c94d19dea85b104bbd84b180d818f6cd15acf9457734b5746506d8bc7"
+      "sha256": "81a0522e9a545bf0fb1d5fbc0168b89cde68d63e1446520a689a4c62d0b8ee6b"
+    },
+    {
+      "path": "scripts/expansion_test_fixture.py",
+      "sha256": "87292394d8c76c199bbfb99d45e53ef596b7194a27bf977b631d9156a8aad203"
     },
     {
       "path": "scripts/fetch_news.py",
-      "sha256": "c81d12beb6b44500862e57b0c0d50233596698e4170746b4302100f7053b62e0"
+      "sha256": "b138f4f9702362cdb6ca296b4a9cc138126dc884e4f5494687ff223121472221"
     },
     {
       "path": "scripts/forge.py",
-      "sha256": "ecf0558a62cae0f78d50860058e0a3e5895b92b549018f83143f7401e8a9ca87"
+      "sha256": "0fe7d6fb68d6f3af2c16baaf46732974e9328eb122dc8ea31585cd53a682d951"
     },
     {
       "path": "scripts/history_manager.py",
@@ -142,7 +150,7 @@
     },
     {
       "path": "scripts/refine.py",
-      "sha256": "aae01517c650ce801cbca058ed38e70f3ce3dbcc10056cfdf179c5f09548c5a1"
+      "sha256": "a759d564db8962a9341b3c56a432641f9ee8518d939d5ac7063910b971d0978a"
     },
     {
       "path": "scripts/review_progress_gate.py",
@@ -150,23 +158,27 @@
     },
     {
       "path": "scripts/run_contract.py",
-      "sha256": "ed95221a0c5242aec291c76b16ffa957e885987c3ee3c50cb230dd56e9d1b61b"
+      "sha256": "c2f3c04d6e1a86bf801c89a93cad32f743fa7101eff143195d632445d435cc88"
     },
     {
       "path": "scripts/run_daily.py",
-      "sha256": "df4458fe6d1a6f04f6bb1ee35d44e01ac6ad1bc63b7f50bdcd1386a84feb41bc"
+      "sha256": "970d844f2297eb0744e9d346b61cccc8da854afab7f0cf50a2da99c407112021"
     },
     {
       "path": "scripts/semantic_agent.py",
-      "sha256": "e032c868a973b6b26c796d5fed210b5abded4c917342c7a515264b042396ebea"
+      "sha256": "21c956b24221e4159c33d6c774572012d810d6a2bef6efbbec89bc10fd166d23"
     },
     {
       "path": "scripts/session_telemetry.py",
       "sha256": "1ce64a4f7cd92d3306d78d8584aa1cb482ba2d7e570c9f44f726b04bca18bc1a"
     },
     {
+      "path": "scripts/source_kind.py",
+      "sha256": "8d773e1d498302a1bb9951b074be2e84603aabcdf22f9d3a549db42e2821f9e5"
+    },
+    {
       "path": "scripts/supplement_agent.py",
-      "sha256": "717ff01b576748cfe5fd7f5a17171bc7eea52d0be40f82bb0f3735205e2af233"
+      "sha256": "c89d09e64af470088eee2d909c22b158848c89fb2dcd7be864f13d3b3ed7be31"
     },
     {
       "path": "scripts/test_archive_contract.py",
@@ -175,6 +187,18 @@
     {
       "path": "scripts/test_archive_transaction.py",
       "sha256": "91c329d218e9b0c2d4975fae87451143a7ba6d6a0ac31686cfb8d9de323fb234"
+    },
+    {
+      "path": "scripts/test_article_broker_contract.py",
+      "sha256": "cabf0b41eacf3f33c2b392c8e307d0d5e9fe262d7cf8d03a6f43967af1785c62"
+    },
+    {
+      "path": "scripts/test_article_broker_evidence.py",
+      "sha256": "c2e296120f8cc490f0dafb4b0fb885cf7a384ea21a86e7ef287be317540fd2d9"
+    },
+    {
+      "path": "scripts/test_article_broker_review_fixes.py",
+      "sha256": "36aca6e00855aa6d4aea6393719c301fcc22d810874abffa7ec47fdca6d71692"
     },
     {
       "path": "scripts/test_await_artifacts.py",
@@ -194,11 +218,23 @@
     },
     {
       "path": "scripts/test_briefing_v13_contract.py",
-      "sha256": "3ea09277bab8ffe212eed1093775a703fd6544d579573c518803ebbf9a76ec63"
+      "sha256": "e063477b6690a1b49e5f4e0111a84665201218f41122516c18c6657f5c2546a9"
     },
     {
       "path": "scripts/test_contract_fixtures.py",
       "sha256": "f19adb639772547edfdea28c5ef2b7ffe89a5ecfcf9891c271abcaa1ffebf343"
+    },
+    {
+      "path": "scripts/test_date_ownership.py",
+      "sha256": "812d49fdd32e083e70ffdeece25dc9e4f6ab83f0db65097696c305ad9bd13ffa"
+    },
+    {
+      "path": "scripts/test_date_ownership_registration.py",
+      "sha256": "93298fc7306f2fe917a17a554890fc6a70ba84fe38845dfa8680643fd932f84c"
+    },
+    {
+      "path": "scripts/test_feed_endpoints.py",
+      "sha256": "bbbdae941a46789303c3666d359ba1c2281d3dc3ed13d59bf37c64aec845949f"
     },
     {
       "path": "scripts/test_fetch_contract.py",
@@ -206,15 +242,23 @@
     },
     {
       "path": "scripts/test_forge_contract.py",
-      "sha256": "ed42a32ced4272ddd8eb8c9290af19ed63ca85261ecaa283bd4ac87e64f50105"
+      "sha256": "8dca0fbbedff5b197e84477231b80dac0590ae45fc2397112be5c9f261ecd3fb"
     },
     {
       "path": "scripts/test_history_manager.py",
       "sha256": "ba28c4ce8c5b9b6c29f989bf327f96a9276abc672b2df19205225cb86ffb44e4"
     },
     {
+      "path": "scripts/test_live_access_proof.py",
+      "sha256": "4e06aa58e51827f9bab84c681e9d541f10e5cf4c85adfab524d6e6ac49127291"
+    },
+    {
       "path": "scripts/test_mix_policy.py",
       "sha256": "c68d2685082549fed39d67f514e1a9a3fefe2c45abe2c27f8adefbb4f373a7a4"
+    },
+    {
+      "path": "scripts/test_parent_supplement_finalization.py",
+      "sha256": "02f2de460b9a3ae25c5354a931a1d083e29ef12e7db9d3fecd55089dbbd2e5d9"
     },
     {
       "path": "scripts/test_pipeline_contract.py",
@@ -222,7 +266,7 @@
     },
     {
       "path": "scripts/test_prompt_contract.py",
-      "sha256": "67594a9930451c7e744e82ffe28ecaf1a9df60a2131dfb0b0f3ea3b1f75cace5"
+      "sha256": "8a82965a589647ceff39dd7621d24671e9506dd83453c981d9a5ae25b0ea9c9f"
     },
     {
       "path": "scripts/test_review_progress_gate.py",
@@ -230,23 +274,31 @@
     },
     {
       "path": "scripts/test_run_contract.py",
-      "sha256": "97a5684725c28aa3be2100db37cbfe42d3b24227c6179943b613d42138863399"
+      "sha256": "d0c523d06d237a0a4db8d8f432fd344471954fbf747a0d2e8011634cbc3cb268"
     },
     {
       "path": "scripts/test_run_daily.py",
-      "sha256": "fef95cc3d20a9136ea46a29fe1d0493495f9bdb3f4556c9b7a53181d3c788063"
+      "sha256": "741551f1c48e3d3935ed76cfd8eef7c71e6163aafdebada69a45da0806fb48f9"
+    },
+    {
+      "path": "scripts/test_run_daily_broker_entry.py",
+      "sha256": "419ab29656557fa647544b747d639072b227ca01536731a1b1e6fbd148990560"
     },
     {
       "path": "scripts/test_semantic_agent.py",
-      "sha256": "4556dac0839b965d3459fa3bd9df76ca1f7d275ec597e74a215f74d88386a55c"
+      "sha256": "7a0f92376813dfc81dc12465348779f1a1a1d00a7b7cc84d46415d608844ec08"
     },
     {
       "path": "scripts/test_session_telemetry.py",
-      "sha256": "c711ab36d130587cb0aca3c326d8533389621986169c8b33c06de00c4b13785c"
+      "sha256": "6226349098e1cf6799b1884ae75ee39dbfd4338a7fcf366a4f81801a092f8b52"
+    },
+    {
+      "path": "scripts/test_source_kind_zero_report.py",
+      "sha256": "e0990c9a5960c0cf90d9d810e61ede3768543dc84ea0c60f0d152d51957438dc"
     },
     {
       "path": "scripts/test_supplement_agent.py",
-      "sha256": "27b7a7f67806cb6af7b924eac0d17daf65e2045b8b85261b96b1b6e32a600071"
+      "sha256": "4ffc1d125655c19b025ba0bc11bd72f201a57b55b521f8ee42a58f2944a18380"
     },
     {
       "path": "scripts/test_update_index.py",
@@ -259,6 +311,10 @@
     {
       "path": "scripts/validate_refined_json.py",
       "sha256": "61b4aecc4cb68d5cf232a9224d0c924170fc34eb87ce54a6dbafdb10b3337078"
+    },
+    {
+      "path": "scripts/zero_report.py",
+      "sha256": "78697080c4d0db65783259c741ea809f3401df9e41d34a81867c9862da921043"
     }
   ],
   "declared_local_dependencies": [
@@ -284,13 +340,13 @@
       "path": "references/briefing_template.md",
       "exists": true,
       "resolved_path": "personal-intelligence-hub/references/briefing_template.md",
-      "sha256": "7a9d6c279f2f253af4f4b787f41df721150abc1ca58455e75f901baa271ced39"
+      "sha256": "c8d81c6771b0d9c7a3f981f0fc881779affbd11abcf08728deb2ea6154658892"
     },
     {
       "path": "references/karpathy_feeds.json",
       "exists": true,
       "resolved_path": "personal-intelligence-hub/references/karpathy_feeds.json",
-      "sha256": "e28341b51c2e1f36dded08b5b9ffc26d4e3c5e8a42f902742a5859e194ca46a9"
+      "sha256": "84991da2ec059da9a33f6fd1db2e6139114f6fc32af7c6e2c88cf86a736c00ad"
     },
     {
       "path": "references/quality_standard.md",
@@ -308,19 +364,19 @@
       "path": "references/subagent_prompts.json",
       "exists": true,
       "resolved_path": "personal-intelligence-hub/references/subagent_prompts.json",
-      "sha256": "53ea4bf02f9f3cb481647215ceeef9e0cc97a762ecb49b06769910766a0bb6f0"
+      "sha256": "097ec25c142fd9ac4f6ee4948522c67e7d5393ad136b0e7ed185fbd9f7aeb0e3"
     },
     {
       "path": "references/workflow_protocols.md",
       "exists": true,
       "resolved_path": "personal-intelligence-hub/references/workflow_protocols.md",
-      "sha256": "0c2d020931f7ecd224b4b48c1a5a51c4ca3a3e8d6b292216a5dcb57a4677fbff"
+      "sha256": "57298c2a24b631c408fd29d705c5378b1a6066205b5eef71d842d98d6acfa90d"
     },
     {
       "path": "scripts/run_daily.py",
       "exists": true,
       "resolved_path": "personal-intelligence-hub/scripts/run_daily.py",
-      "sha256": "df4458fe6d1a6f04f6bb1ee35d44e01ac6ad1bc63b7f50bdcd1386a84feb41bc"
+      "sha256": "970d844f2297eb0744e9d346b61cccc8da854afab7f0cf50a2da99c407112021"
     }
   ],
   "missing_declared_dependencies": []

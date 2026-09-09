@@ -11,11 +11,18 @@ from typing import Any
 from urllib.parse import urlsplit
 from zoneinfo import ZoneInfo
 
-from history_manager import generate_event_id, load_recent_history, match_history, normalize_url
+from history_manager import (
+    generate_event_id,
+    load_recent_history,
+    match_history,
+    normalize_url,
+)
 from hub_utils import atomic_dump_json, load_json
 from mix_policy import major_signal_eligible, select_candidates_with_mix
 from run_contract import (
     RunContractError,
+    candidate_date_owned,
+    candidate_date_ownership,
     candidate_object_hash,
     file_sha256,
     finalize_semantic_decision,
@@ -23,7 +30,9 @@ from run_contract import (
     normalize_published_at,
     normalize_supplement_failure_kind,
 )
-
+from source_kind import classify_source_type as _source_type
+from zero_report import semantic_data_gaps as _data_gaps
+from zero_report import zero_report_data_gaps, zero_report_fields
 
 CONTEXT_VERSION = "semantic-agent-context/1.0"
 DYNAMIC_VERSION = "semantic-dynamic/1.0"
@@ -134,16 +143,6 @@ def _access_projection(access: dict[str, Any]) -> dict[str, Any]:
     }
 
 
-def _source_type(candidate: dict[str, Any]) -> str:
-    claimed = candidate.get("source_type")
-    if claimed in {"primary", "secondary"}:
-        return str(claimed)
-    url = normalize_url(str(candidate.get("url") or ""))
-    source = str(candidate.get("source") or "").lower()
-    if "arxiv.org/" in url or "research" in source or "journal" in source:
-        return "primary"
-    return "secondary"
-
 
 def _date_failure_disqualifies(result: dict[str, Any]) -> bool:
     return (
@@ -231,24 +230,10 @@ def _candidate_assessment(
     _, pool = _bound_artifact(request, "candidate_pool")
     _, supplement = _bound_artifact(request, "supplement")
     history_path, _ = _bound_artifact(request, "history_snapshot")
-    verified_access: dict[str, dict[str, Any]] = {}
-    date_disqualified_urls: set[str] = set()
     results = supplement.get("results")
     if not isinstance(results, list):
         raise RunContractError("semantic supplement results are invalid")
-    for result in results:
-        if not isinstance(result, dict):
-            continue
-        date_disqualified = _date_failure_disqualifies(result)
-        for access in result.get("access_log", []):
-            if not isinstance(access, dict) or access.get("status") != "verified":
-                continue
-            for raw_url in (access.get("requested_url"), access.get("final_url")):
-                normalized = normalize_url(str(raw_url or ""))
-                if normalized:
-                    verified_access.setdefault(normalized, deepcopy(access))
-                    if date_disqualified:
-                        date_disqualified_urls.add(normalized)
+    ownership = candidate_date_ownership(manifest, pool, supplement)
 
     entries: list[dict[str, Any]] = []
     # Prefer the article-level supplement projection when it re-registers a
@@ -259,23 +244,23 @@ def _candidate_assessment(
             continue
         for candidate in result.get("candidates", []):
             if isinstance(candidate, dict):
-                normalized_url = normalize_url(str(candidate.get("url") or ""))
                 access = candidate.get("access_check")
                 entries.append(
                     {
                         "candidate": deepcopy(candidate),
                         "access_check": access if isinstance(access, dict) else None,
-                        "date_disqualified": normalized_url in date_disqualified_urls,
+                        "date_disqualified": str(candidate.get("candidate_id")) in ownership["rejected_refs"],
+                        "owned": candidate_date_owned(candidate, ownership),
                     }
                 )
     for candidate in pool.get("items", []):
         if isinstance(candidate, dict):
-            normalized_url = normalize_url(str(candidate.get("url") or ""))
             entries.append(
                 {
                     "candidate": deepcopy(candidate),
-                    "access_check": verified_access.get(normalized_url),
-                    "date_disqualified": normalized_url in date_disqualified_urls,
+                    "access_check": candidate.get("access_check"),
+                    "date_disqualified": str(candidate.get("candidate_id")) in ownership["rejected_refs"],
+                    "owned": candidate_date_owned(candidate, ownership),
                 }
             )
 
@@ -310,7 +295,6 @@ def _candidate_assessment(
         if candidate_id in seen:
             disposition["reason"] = "duplicate_candidate_id"
             continue
-        seen.add(candidate_id)
         claimed_hash = str(candidate.get("candidate_object_sha256") or "")
         if claimed_hash != candidate_object_hash(candidate):
             raise RunContractError("semantic candidate hash is invalid")
@@ -318,9 +302,10 @@ def _candidate_assessment(
             disposition["reason"] = "published_at_conflict"
             continue
         access = entry.get("access_check")
-        if not isinstance(access, dict) or access.get("status") != "verified":
+        if not entry["owned"] or not isinstance(access, dict) or access.get("status") != "verified":
             disposition["reason"] = "missing_verified_access"
             continue
+        seen.add(candidate_id)
         history_probe = {
             "url": candidate.get("url"),
             "title": candidate.get("title"),
@@ -447,6 +432,124 @@ def _nonempty(value: Any, field: str) -> str:
     return text
 
 
+def _coverage_diagnostics(
+    manifest: dict[str, Any], pool: dict[str, Any], supplement: dict[str, Any],
+    dispositions: list[dict[str, str]], supplement_request: dict[str, Any],
+) -> list[str]:
+    """Advisory counts from registered inputs; never reinterpret the 1.4 funnel."""
+    baseline = manifest["stages"]["baseline"]["metadata"]["coverage"]
+    results = {str(result["gap_id"]): result for result in supplement.get("results", [])}
+    ledgers = manifest.get("article_broker_evidence", {})
+    accesses: list[dict[str, Any]] = []
+    attempted_urls: set[str] = set()
+    attempts = pending = 0
+    budget_reasons = []
+    gaps = {str(gap["gap_id"]): gap for gap in supplement_request.get("gaps", [])}
+    for gap_id in sorted(set(results) | set(ledgers) | set(gaps)):
+        result = results.get(gap_id, {})
+        if gap_id in ledgers:
+            events = ledgers[gap_id]["events"]
+            reservations = [event for event in events if event["kind"] == "http_reserved"]
+            completed = [event for event in events if event["kind"] == "http_recorded"]
+            logs = []
+            for event in completed:
+                path = Path(event["proof_path"])
+                if file_sha256(path) != event["proof_sha256"]:
+                    raise RunContractError("coverage diagnostic broker proof changed")
+                logs.append(load_json(path, {})["access"])
+            used_urls = len(reservations)
+            pending += len(reservations) - len(completed)
+            used_queries = sum(event["kind"] == "query_reserved" for event in events)
+            attempted_urls.update(normalize_url(str(event["url"])) for event in reservations)
+        else:
+            logs = result.get("access_log", [])
+            used_urls = len(logs)
+            used_queries = len(result.get("executed_queries", []))
+        accesses.extend(logs)
+        attempts += used_urls
+        attempted_urls.update(normalize_url(str(log["requested_url"])) for log in logs)
+        if gap_id in gaps:
+            gap = gaps[gap_id]
+            budget_reasons.append(
+                f"diagnostic/lane-budget {gap_id}: unused_queries={int(gap['max_queries']) - used_queries}; "
+                f"unused_urls={int(gap['max_urls']) - used_urls} (registered usage; not stop justification)"
+            )
+    pool_urls = {normalize_url(str(item["url"])) for item in pool.get("items", [])}
+    reasons = Counter(record["reason"] for record in dispositions)
+    # Same supplement-first record order as _candidate_assessment; split missing
+    # article evidence from present access that does not own the candidate metadata.
+    candidates = [candidate for result in supplement.get("results", [])
+                  for candidate in result.get("candidates", [])] + pool.get("items", [])
+    ownership_excluded = sum(
+        disposition["reason"] == "missing_verified_access"
+        and isinstance(candidate.get("access_check"), dict)
+        and candidate["access_check"].get("status") == "verified"
+        for candidate, disposition in zip(candidates, dispositions, strict=True)
+    )
+    decisions = Counter(
+        decision["decision"] for result in results.values()
+        for decision in result.get("bound_candidate_decisions", [])
+    )
+    return [
+        f"diagnostic/feed: attempts={baseline['source_attempted']}; succeeded={baseline['source_succeeded']}; "
+        f"failed={baseline['source_failed']} (feed retrieval, not article verification)",
+        f"diagnostic/article: attempts={attempts}; completed={len(accesses)}; "
+        f"verified={sum(log.get('status') == 'verified' for log in accesses)}; "
+        f"blocked={sum(log.get('status') == 'blocked' for log in accesses)}; pending={pending} "
+        "(access outcomes, not qualified articles; pending counts broker reservations only)",
+        f"diagnostic/pool-urls: unique={len(pool_urls)}; attempted={len(pool_urls & attempted_urls)}; "
+        f"unattempted={len(pool_urls - attempted_urls)} (unique requested URLs, not access attempts)",
+        f"diagnostic/bound-decisions: source_quality_rejected={decisions['source_quality_rejected']}; "
+        f"access_blocked={decisions['access_blocked']}; date_disqualified={decisions['date_disqualified']}; "
+        f"domain_rejected={decisions['domain_rejected']}; infrastructure_unavailable={decisions['infrastructure_unavailable']} "
+        "(registered lane decisions, not inferred from missing access)",
+        f"diagnostic/semantic-eligibility: access_or_ownership_excluded={reasons['missing_verified_access']}; "
+        f"date_excluded={reasons['published_at_conflict'] + reasons['invalid_published_at']}; "
+        f"duplicate_records={reasons['duplicate_candidate_id'] + reasons['historical_duplicate']}; "
+        f"uncorroborated_secondary={reasons['secondary_without_independent_corroboration']}; "
+        f"unsupported_domain={reasons['unsupported_domain']}; "
+        f"missing_access_evidence={reasons['missing_verified_access'] - ownership_excluded}; "
+        f"ownership_excluded={ownership_excluded} "
+        "(eligibility exclusions, not source-quality rejections)",
+    ] + budget_reasons
+
+
+def registered_coverage_diagnostics(manifest: dict[str, Any]) -> list[str]:
+    """Recompute for semantic validation and forge from the same hash-bound inputs."""
+    records = {
+        "candidate_pool": manifest["artifacts"]["candidate_pool"],
+        "supplement": manifest["stages"]["supplemental"],
+        "history_snapshot": manifest["artifacts"]["history_snapshot"],
+    }
+    request = {"bound_artifacts": {name: {
+        "path": record["artifact_path"], "sha256": record["artifact_sha256"]
+    } for name, record in records.items()}}
+    _, pool = _bound_artifact(request, "candidate_pool")
+    _, supplement = _bound_artifact(request, "supplement")
+    _, dispositions = _candidate_assessment(request, manifest)
+    supplement_request = {}
+    record = manifest.get("artifacts", {}).get("supplement_request")
+    if record:
+        path = Path(record["artifact_path"])
+        if file_sha256(path) != record["artifact_sha256"]:
+            raise RunContractError("coverage diagnostic request changed")
+        supplement_request = load_json(path, {})
+    return _coverage_diagnostics(manifest, pool, supplement, dispositions, supplement_request)
+
+
+def validate_coverage_reasons(
+    reasons: list[str], legacy_reasons: list[str], manifest: dict[str, Any],
+) -> None:
+    # Exact legacy-only input remains valid; new output is always enriched after
+    # signed core validation. Partial, duplicate, or spoofed diagnostics fail closed.
+    if not isinstance(reasons, list) or any(not isinstance(reason, str) for reason in reasons):
+        raise RunContractError("coverage.reasons must be a list of strings")
+    if sorted(reasons) == sorted(legacy_reasons):
+        return
+    if sorted(reasons) != sorted(legacy_reasons + registered_coverage_diagnostics(manifest)):
+        raise RunContractError("coverage.reasons do not match registered artifacts")
+
+
 def _coverage(manifest: dict[str, Any], supplement: dict[str, Any]) -> dict[str, Any]:
     baseline_stage = manifest["stages"]["baseline"]
     baseline = baseline_stage["metadata"]["coverage"]
@@ -472,6 +575,7 @@ def _coverage(manifest: dict[str, Any], supplement: dict[str, Any]) -> dict[str,
     denominator = int(baseline["raw_candidates"]) + supplemental_candidates
     reasons = sorted(str(value) for value in baseline.get("reasons", []) if str(value))
     reasons.extend(f"supplement lane degraded: {lane}" for lane in sorted(failures))
+    reasons.extend(registered_coverage_diagnostics(manifest))
     return {
         "run_status": run_status,
         "coverage_confidence": "medium" if run_status == "degraded" else "high",
@@ -569,43 +673,6 @@ def _mix(manifest: dict[str, Any], items: list[dict[str, Any]]) -> dict[str, Any
     return mix
 
 
-def _data_gaps(
-    supplement: dict[str, Any],
-    mix: dict[str, Any],
-) -> list[dict[str, str]]:
-    gaps: list[dict[str, str]] = []
-    for result in supplement.get("results", []):
-        if not isinstance(result, dict):
-            continue
-        coverage = result.get("coverage") or {}
-        failed = int(coverage.get("failed", 0))
-        if result.get("status") not in {"degraded", "failed"} and failed == 0:
-            continue
-        gap_id = str(result.get("gap_id") or "supplement-coverage")
-        lane = str(result.get("lane") or "supplement")
-        gaps.append(
-            {
-                "gap_id": gap_id,
-                "lane": lane,
-                "status": "open",
-                "description": f"补检车道状态为 {result.get('status')}，并保留 {failed} 条受阻访问。",
-                "impact": "该车道的事件供给与结论覆盖置信度降低。",
-            }
-        )
-    supply = mix.get("supply_exception") or {}
-    if supply.get("applied") is True:
-        missing = "、".join(str(value) for value in supply.get("missing_domains", []))
-        gaps.append(
-            {
-                "gap_id": "verified-domain-supply",
-                "lane": "SemanticEvaluator",
-                "status": "open",
-                "description": f"登记且已核验的候选供给不足，未达到请求比例：{missing}。",
-                "impact": "正式条目领域比例偏离请求比例，不以弱证据补数。",
-            }
-        )
-    return gaps
-
 
 def assemble_and_finalize(
     request_path: str | Path,
@@ -696,6 +763,8 @@ def assemble_and_finalize(
             item["major_signal"] = False
             item["major_signal_reason"] = "none"
         final_items.append(item)
+    if not final_items:
+        dynamic = {**dynamic, **zero_report_fields()}
     actions = dynamic.get("action_levers")
     if not isinstance(actions, list) or not actions:
         raise RunContractError("semantic action_levers are required")
@@ -740,6 +809,10 @@ def assemble_and_finalize(
         "top_10": final_items,
         "data_gaps": _data_gaps(supplement, mix),
     }
+    if not final_items:
+        core["data_gaps"] = zero_report_data_gaps(
+            supplement, mix, manifest["stages"]["baseline"]["metadata"]["coverage"]
+        )
     draft_paths = packet["draft_paths"]
     core_path = Path(str(draft_paths["refined_core"])).resolve()
     decision_path = Path(str(draft_paths["decision"])).resolve()

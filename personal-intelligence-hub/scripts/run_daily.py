@@ -12,7 +12,6 @@ from zoneinfo import ZoneInfo
 from hub_utils import HUB_DIR, NEWS_DIR, RUNTIME_DIR, atomic_dump_json
 from mix_policy import allocate_target_counts
 
-
 DEFAULT_FOCUS_PATH = HUB_DIR / "references" / "strategic_focus.json"
 DEFAULT_MAX_CONCURRENCY = 8
 MAX_CONCURRENCY = 32
@@ -41,43 +40,28 @@ def _is_verified_primary_lane_signal(
     keywords: list[str],
     window: dict[str, Any],
 ) -> bool:
-    from history_manager import normalize_url
-    from run_contract import normalize_published_at
-
-    if keywords and not any(keyword in _candidate_text(item) for keyword in keywords):
-        return False
-    if item.get("source_type") != "primary":
-        return False
-    access = item.get("access_check")
-    if not isinstance(access, dict) or access.get("status") != "verified":
-        return False
-    if normalize_url(str(access.get("requested_url") or "")) != normalize_url(
-        str(item.get("url") or "")
-    ):
-        return False
-    try:
-        published = date.fromisoformat(
-            normalize_published_at(str(item.get("published_at") or ""))
-        )
-        start = date.fromisoformat(str(window["start"]))
-        end = date.fromisoformat(str(window["end"]))
-    except (KeyError, TypeError, ValueError):
-        return False
-    return start <= published <= end
+    # This entry receives heuristic pool data, not authenticated article evidence.
+    # Self-claimed source/access/date fields cannot suppress required investigation.
+    # Registered article evidence is still assessed downstream by semantic/forge.
+    return False
 
 
 def assess_supplement_gaps(
     candidates: dict[str, Any],
     manifest: dict[str, Any],
     focus: dict[str, Any],
+    *,
+    article_broker_version: int = 1,
 ) -> list[dict[str, Any]]:
-    from run_contract import RunContractError
+    from run_contract import RunContractError, _lane_slice_candidates
 
     items = candidates.get("items")
     if not isinstance(items, list):
         raise RunContractError("candidate pool items must be a list")
     maximum = int(focus.get("filters", {}).get("max_top10", 10))
-    targets = allocate_target_counts(maximum, manifest["mix_request"]["requested_ratio"])
+    targets = allocate_target_counts(
+        maximum, manifest["mix_request"]["requested_ratio"]
+    )
     counts = {
         domain: sum(
             1
@@ -113,7 +97,12 @@ def assess_supplement_gaps(
 
     coverage = candidates.get("metadata", {}).get("coverage")
     if not isinstance(coverage, dict):
-        coverage = manifest.get("stages", {}).get("baseline", {}).get("metadata", {}).get("coverage", {})
+        coverage = (
+            manifest.get("stages", {})
+            .get("baseline", {})
+            .get("metadata", {})
+            .get("coverage", {})
+        )
     policy = focus.get("coverage_policy", {})
     source_rate = float(coverage.get("source_success_rate", 0.0) or 0.0)
     minimum_source = float(policy.get("minimum_source_success_rate", 0.7))
@@ -148,18 +137,43 @@ def assess_supplement_gaps(
         "Sentinel": {
             "min_candidates": 1,
             "query_scope": "医疗政策、支付、采购与竞对原始来源",
-            "keywords": ["policy", "regulation", "procurement", "payment", "政策", "监管", "采购", "支付", "竞对"],
+            "keywords": [
+                "policy",
+                "regulation",
+                "procurement",
+                "payment",
+                "政策",
+                "监管",
+                "采购",
+                "支付",
+                "竞对",
+            ],
         },
         "Ranger": {
             "min_candidates": 1,
             "query_scope": "技术与医疗数字化失败、漏洞、处罚与执行摩擦",
-            "keywords": ["risk", "failure", "vulnerability", "breach", "处罚", "漏洞", "失败", "中断", "风险"],
+            "keywords": [
+                "risk",
+                "failure",
+                "vulnerability",
+                "breach",
+                "处罚",
+                "漏洞",
+                "失败",
+                "中断",
+                "风险",
+            ],
         },
     }
     configured = focus.get("coverage_policy", {}).get("lanes", {})
     for lane, defaults in lane_defaults.items():
-        policy = {**defaults, **(configured.get(lane, {}) if isinstance(configured, dict) else {})}
-        keywords = [str(value).lower() for value in policy.get("keywords", []) if str(value)]
+        policy = {
+            **defaults,
+            **(configured.get(lane, {}) if isinstance(configured, dict) else {}),
+        }
+        keywords = [
+            str(value).lower() for value in policy.get("keywords", []) if str(value)
+        ]
         matching = sum(
             1
             for item in items
@@ -169,7 +183,9 @@ def assess_supplement_gaps(
         if matching < int(policy.get("min_candidates", 1)):
             gaps.append(
                 {
-                    "gap_id": "policy-competition" if lane == "Sentinel" else "risk-counterevidence",
+                    "gap_id": "policy-competition"
+                    if lane == "Sentinel"
+                    else "risk-counterevidence",
                     "lane": lane,
                     "query_scope": str(policy["query_scope"]),
                     "max_turns": int(policy.get("max_turns", 3)),
@@ -190,6 +206,16 @@ def assess_supplement_gaps(
                 "max_turns": min(int(gap["max_turns"]), max_turns),
             }
         )
+        if article_broker_version == 2:
+            # Use the request builder's lane slice and exact required-bound rule.
+            lane_candidates = _lane_slice_candidates(candidates, gap["lane"], focus)
+            bound_count = (
+                sum(bool(str(item.get("candidate_ref") or ""))
+                    for item in lane_candidates[:max_urls])
+                if gap.get("verify_bound_candidates") else 0
+            )
+            if bound_count < max_urls:
+                gap["article_broker"] = True
     return gaps
 
 
@@ -197,7 +223,8 @@ async def prepare_run(
     *,
     report_date: str | None = None,
     timezone_name: str = "Asia/Shanghai",
-    window_days: int = 7,
+    window_days: int = 3,
+    explicit_window: bool = False,
     topic: str = "技术与医疗数字化",
     region: str = "中国、美国与全球",
     requested_ratio: dict[str, float] | None = None,
@@ -209,37 +236,39 @@ async def prepare_run(
     allow_existing_archive_replacement: bool = False,
     skill_path: Path = HUB_DIR / "SKILL.md",
     run_id: str | None = None,
+    linked_from_run_id: str | None = None,
     max_concurrency: int = DEFAULT_MAX_CONCURRENCY,
     scan_deadline_seconds: float = DEFAULT_SCAN_DEADLINE_SECONDS,
+    article_broker_version: int = 1,
     now: datetime | None = None,
 ) -> PrepareResult:
     from run_contract import RunContractError
 
+    if type(article_broker_version) is not int or article_broker_version not in {1, 2}:
+        raise RunContractError("article_broker_version must be 1 or 2 for a new run")
     if max_concurrency <= 0:
         raise RunContractError("max_concurrency must be positive")
     if max_concurrency > MAX_CONCURRENCY:
         raise RunContractError(
             f"max_concurrency must be between 1 and {MAX_CONCURRENCY}"
         )
-    if (
-        scan_deadline_seconds <= 0
-        or scan_deadline_seconds > MAX_SCAN_DEADLINE_SECONDS
-    ):
+    if scan_deadline_seconds <= 0 or scan_deadline_seconds > MAX_SCAN_DEADLINE_SECONDS:
         raise RunContractError(
-            "scan_deadline_seconds must be between 0 and "
-            f"{MAX_SCAN_DEADLINE_SECONDS}"
+            f"scan_deadline_seconds must be between 0 and {MAX_SCAN_DEADLINE_SECONDS}"
         )
 
     effective_now = now or datetime.now(ZoneInfo(timezone_name))
     if effective_now.tzinfo is None or effective_now.utcoffset() is None:
         raise RunContractError("prepare now must be timezone-aware")
-    effective_report_date = report_date or effective_now.astimezone(
-        ZoneInfo(timezone_name)
-    ).date().isoformat()
+    effective_report_date = (
+        report_date
+        or effective_now.astimezone(ZoneInfo(timezone_name)).date().isoformat()
+    )
     compact_date = effective_report_date.replace("-", "")
 
     import fetch_news
     import refine
+    from history_manager import load_recent_history
     from run_contract import (
         build_supplement_request,
         create_run,
@@ -248,20 +277,24 @@ async def prepare_run(
         record_run_artifact,
         record_stage,
     )
-    from history_manager import load_recent_history
     from update_index import rebuild_history
 
     try:
         focus = json.loads(focus_path.read_text(encoding="utf-8"))
     except (OSError, UnicodeError, json.JSONDecodeError) as exc:
-        raise RunContractError(f"focus config is unreadable: {focus_path}: {exc}") from exc
+        raise RunContractError(
+            f"focus config is unreadable: {focus_path}: {exc}"
+        ) from exc
     if not isinstance(focus, dict):
         raise RunContractError("focus config must be a JSON object")
     existing_targets = [
         news_dir / f"intelligence_{compact_date}_briefing.{suffix}"
         for suffix in ("json", "md", "manifest.json")
     ]
-    if any(path.exists() for path in existing_targets) and not allow_existing_archive_replacement:
+    if (
+        any(path.exists() for path in existing_targets)
+        and not allow_existing_archive_replacement
+    ):
         raise RunContractError(
             "formal archive targets already exist; pass "
             "--allow-existing-archive-replacement for an explicit replacement run"
@@ -271,6 +304,7 @@ async def prepare_run(
         report_date=report_date,
         timezone_name=timezone_name,
         window_days=window_days,
+        explicit_window_days=explicit_window,
         topic=topic,
         region=region,
         requested_ratio=requested_ratio,
@@ -280,6 +314,7 @@ async def prepare_run(
         skill_path=skill_path,
         now=now,
         run_id=run_id,
+        linked_from_run_id=linked_from_run_id,
     )
     run_dir = Path(manifest["run_dir"])
     record_stage(
@@ -294,7 +329,11 @@ async def prepare_run(
             manifest_path,
             "focus_config",
             focus_path,
-            metadata={"configuration_role": "candidate_scoring_and_gap_policy"},
+            metadata={
+                "configuration_role": "candidate_scoring_and_gap_policy",
+                # Immutable artifact metadata preserves opt-in even with no broker gaps.
+                **({"article_broker_version": 2} if article_broker_version == 2 else {}),
+            },
             now=now,
         )
     except Exception as exc:
@@ -428,11 +467,16 @@ async def prepare_run(
         "baseline",
         baseline_status,
         artifact_path=baseline_path,
-        metadata={"coverage": coverage, "candidate_funnel": scan.get("candidate_funnel", {})},
+        metadata={
+            "coverage": coverage,
+            "candidate_funnel": scan.get("candidate_funnel", {}),
+        },
         now=now,
     )
     if baseline_status == "failed":
-        raise RunContractError("baseline scan failed; supplement and review stages were not started")
+        raise RunContractError(
+            "baseline scan failed; supplement and review stages were not started"
+        )
 
     record_stage(
         manifest_path,
@@ -467,14 +511,26 @@ async def prepare_run(
         manifest_path,
         "candidate_pool",
         candidates_path,
-        input_sha256=load_manifest(manifest_path)["stages"]["baseline"]["artifact_sha256"],
+        input_sha256=load_manifest(manifest_path)["stages"]["baseline"][
+            "artifact_sha256"
+        ],
         metadata={"candidate_funnel": candidate_pool.get("candidate_funnel", {})},
         now=now,
     )
-    gaps = assess_supplement_gaps(candidate_pool, load_manifest(manifest_path), focus)
+    registered_manifest = load_manifest(manifest_path)
+    registered_pool_path = Path(
+        registered_manifest["artifacts"]["candidate_pool"]["artifact_path"]
+    )
+    registered_pool = json.loads(registered_pool_path.read_text(encoding="utf-8"))
+    gaps = assess_supplement_gaps(
+        registered_pool, registered_manifest, focus,
+        article_broker_version=article_broker_version,
+    )
     request_path: Path | None = None
     if gaps:
-        request_path, _ = build_supplement_request(manifest_path, gaps, now=now)
+        request_path, _ = build_supplement_request(
+            manifest_path, gaps, article_broker_version=article_broker_version, now=now,
+        )
     else:
         no_increment_path = run_dir / "supplement_results.json"
         atomic_dump_json(
@@ -482,7 +538,9 @@ async def prepare_run(
             {
                 "contract_version": "supplement-aggregate/1.0",
                 "run_id": manifest["run_id"],
-                "baseline_sha256": load_manifest(manifest_path)["stages"]["baseline"]["artifact_sha256"],
+                "baseline_sha256": load_manifest(manifest_path)["stages"]["baseline"][
+                    "artifact_sha256"
+                ],
                 "status": "no_increment",
                 "coverage": {"attempted": 0, "succeeded": 0, "failed": 0},
                 "results": [],
@@ -528,7 +586,9 @@ def _enforce_run_scoped_cli(manifest_path: Path) -> None:
         )
 
 
-def _ratio_from_args(args: argparse.Namespace) -> tuple[dict[str, float] | None, str, str]:
+def _ratio_from_args(
+    args: argparse.Namespace,
+) -> tuple[dict[str, float] | None, str, str]:
     from run_contract import RunContractError
 
     if args.technology_ratio is None:
@@ -546,19 +606,28 @@ def _ratio_from_args(args: argparse.Namespace) -> tuple[dict[str, float] | None,
 
 
 def main() -> None:
-    parser = argparse.ArgumentParser(description="Run the staged personal intelligence workflow.")
+    parser = argparse.ArgumentParser(
+        description="Run the staged personal intelligence workflow."
+    )
     subparsers = parser.add_subparsers(dest="command", required=True)
 
-    prepare = subparsers.add_parser("prepare", help="Create a run, fetch baseline, build candidates and gaps.")
+    prepare = subparsers.add_parser(
+        "prepare", help="Create a run, fetch baseline, build candidates and gaps."
+    )
     prepare.add_argument("--report-date")
     prepare.add_argument("--timezone", default="Asia/Shanghai")
-    prepare.add_argument("--window-days", type=int, default=7)
+    prepare.add_argument("--window-days", type=int, default=None)
     prepare.add_argument("--topic", default="技术与医疗数字化")
     prepare.add_argument("--region", default="中国、美国与全球")
     prepare.add_argument("--focus-config", type=Path, default=DEFAULT_FOCUS_PATH)
     prepare.add_argument("--technology-ratio", type=float)
     prepare.add_argument("--ratio-reason")
+    prepare.add_argument(
+        "--article-broker-version", type=int, choices=[1, 2], default=1,
+        help="Opt new runs into article broker v2 where URL budget remains (default: v1).",
+    )
     prepare.add_argument("--run-id")
+    prepare.add_argument("--linked-from-run-id")
     prepare.add_argument(
         "--max-concurrency",
         type=int,
@@ -624,7 +693,13 @@ def main() -> None:
     )
     normalize_date.add_argument("--value", required=True)
 
-    supplement = subparsers.add_parser("register-supplement", help="Validate and register all gap results.")
+    broker_request = subparsers.add_parser("build-supplement-request", help="Build a NEW immutable request; no native public calls")
+    broker_request.add_argument("--manifest", type=Path, required=True)
+    broker_request.add_argument("--gaps", type=Path, required=True)
+    broker_request.add_argument("--article-broker-version", type=int, choices=[1, 2], default=1)
+    supplement = subparsers.add_parser(
+        "register-supplement", help="Validate and register all gap results."
+    )
     supplement.add_argument("--manifest", type=Path, required=True)
     supplement.add_argument("--request", type=Path, required=True)
     supplement.add_argument("--result", type=Path, action="append", required=True)
@@ -635,7 +710,9 @@ def main() -> None:
     )
     finalize_supplement.add_argument("--manifest", type=Path, required=True)
     finalize_supplement.add_argument("--request", type=Path, required=True)
-    finalize_supplement.add_argument("--draft", type=Path, action="append", required=True)
+    finalize_supplement.add_argument(
+        "--draft", type=Path, action="append", required=True
+    )
 
     reconcile_supplement = subparsers.add_parser(
         "reconcile-supplement",
@@ -643,22 +720,30 @@ def main() -> None:
     )
     reconcile_supplement.add_argument("--manifest", type=Path, required=True)
     reconcile_supplement.add_argument("--request", type=Path, required=True)
-    reconcile_supplement.add_argument("--result", type=Path, action="append", default=[])
+    reconcile_supplement.add_argument(
+        "--result", type=Path, action="append", default=[]
+    )
     reconcile_supplement.add_argument(
         "--progress-state", type=Path, action="append", default=[]
     )
     reconcile_supplement.add_argument(
-        "--unstarted-gap", action="append", default=[],
+        "--unstarted-gap",
+        action="append",
+        default=[],
         help="Assert a downstream gap was never launched after terminal canary failure; repeat per gap.",
     )
 
-    review = subparsers.add_parser("register-review", help="Register semantic and red-team receipts.")
+    review = subparsers.add_parser(
+        "register-review", help="Register semantic and red-team receipts."
+    )
     review.add_argument("--manifest", type=Path, required=True)
     review.add_argument("--refined", type=Path, required=True)
     review.add_argument("--semantic-receipt", type=Path, required=True)
     review.add_argument("--red-team-receipt", type=Path, required=True)
 
-    archive = subparsers.add_parser("forge", help="Validate receipts and atomically archive the briefing pair.")
+    archive = subparsers.add_parser(
+        "forge", help="Validate receipts and atomically archive the briefing pair."
+    )
     archive.add_argument("--manifest", type=Path, required=True)
     archive.add_argument("--refined", type=Path, required=True)
     archive.add_argument("--news-dir", type=Path)
@@ -672,6 +757,14 @@ def main() -> None:
     preview.add_argument("--refined", type=Path, required=True)
     preview.add_argument("--format", choices=("markdown", "json"), default="markdown")
 
+    check_expansion = subparsers.add_parser(
+        "check-expansion",
+        help="Check if the window should be expanded from 3 to 7 days.",
+    )
+    check_expansion.add_argument("--manifest", type=Path, required=True)
+    check_expansion.add_argument("--refined", type=Path, required=True)
+    check_expansion.add_argument("--semantic-receipt", type=Path, required=True)
+
     status = subparsers.add_parser("status", help="Print a run manifest.")
     status.add_argument("--manifest", type=Path, required=True)
 
@@ -682,14 +775,16 @@ def main() -> None:
         except RuntimeError as exc:
             parser.error(str(exc))
     if args.command == "prepare":
-        if args.window_days <= 0:
+        window_days = args.window_days
+        explicit_window = window_days is not None
+        if not explicit_window:
+            window_days = 3
+        if window_days <= 0:
             parser.error("--window-days must be positive")
         if args.max_concurrency <= 0:
             parser.error("--max-concurrency must be positive")
         if args.max_concurrency > MAX_CONCURRENCY:
-            parser.error(
-                f"--max-concurrency must be between 1 and {MAX_CONCURRENCY}"
-            )
+            parser.error(f"--max-concurrency must be between 1 and {MAX_CONCURRENCY}")
         if (
             args.scan_deadline_seconds <= 0
             or args.scan_deadline_seconds > MAX_SCAN_DEADLINE_SECONDS
@@ -703,7 +798,8 @@ def main() -> None:
             prepare_run(
                 report_date=args.report_date,
                 timezone_name=args.timezone,
-                window_days=args.window_days,
+                window_days=window_days,
+                explicit_window=explicit_window,
                 topic=args.topic,
                 region=args.region,
                 requested_ratio=ratio,
@@ -713,17 +809,29 @@ def main() -> None:
                 news_dir=args.news_dir,
                 allow_existing_archive_replacement=args.allow_existing_archive_replacement,
                 run_id=args.run_id,
+                linked_from_run_id=args.linked_from_run_id,
                 max_concurrency=args.max_concurrency,
                 scan_deadline_seconds=args.scan_deadline_seconds,
+                article_broker_version=args.article_broker_version,
             )
         )
-        print(json.dumps({
-            "manifest_path": str(result.manifest_path.resolve()),
-            "baseline_path": str(result.baseline_path.resolve()),
-            "candidates_path": str(result.candidates_path.resolve()),
-            "supplement_request_path": str(result.supplement_request_path.resolve()) if result.supplement_request_path else None,
-            "execution_cli_path": str(result.execution_cli_path.resolve()),
-        }, ensure_ascii=False, indent=2))
+        print(
+            json.dumps(
+                {
+                    "manifest_path": str(result.manifest_path.resolve()),
+                    "baseline_path": str(result.baseline_path.resolve()),
+                    "candidates_path": str(result.candidates_path.resolve()),
+                    "supplement_request_path": str(
+                        result.supplement_request_path.resolve()
+                    )
+                    if result.supplement_request_path
+                    else None,
+                    "execution_cli_path": str(result.execution_cli_path.resolve()),
+                },
+                ensure_ascii=False,
+                indent=2,
+            )
+        )
     elif args.command == "prepare-review":
         from run_contract import build_review_request
 
@@ -804,13 +912,23 @@ def main() -> None:
                 ensure_ascii=False,
             )
         )
+    elif args.command == "build-supplement-request":
+        from run_contract import build_supplement_request
+        request_path, request = build_supplement_request(args.manifest,
+            json.loads(args.gaps.read_text(encoding="utf-8")), article_broker_version=args.article_broker_version)
+        print(json.dumps({"request_path": str(request_path), "article_broker_version": request.get("article_broker_version")}, ensure_ascii=False))
     elif args.command == "register-supplement":
         from run_contract import register_supplement_results
 
         path, aggregate = register_supplement_results(
             args.manifest, args.request, args.result
         )
-        print(json.dumps({"artifact_path": str(path.resolve()), "status": aggregate["status"]}, ensure_ascii=False))
+        print(
+            json.dumps(
+                {"artifact_path": str(path.resolve()), "status": aggregate["status"]},
+                ensure_ascii=False,
+            )
+        )
     elif args.command == "finalize-supplement":
         from run_contract import register_supplement_results
 
@@ -852,6 +970,140 @@ def main() -> None:
             args.red_team_receipt,
         )
         print(json.dumps({"status": "registered"}, ensure_ascii=False))
+    elif args.command == "check-expansion":
+        import shlex
+        import sys
+
+        from hub_utils import load_json
+        from run_contract import (
+            RunContractError,
+            load_manifest,
+            validate_semantic_draft,
+        )
+
+        try:
+            validate_semantic_draft(args.manifest, args.refined, args.semantic_receipt)
+        except (RunContractError, OSError, ValueError) as exc:
+            print(
+                json.dumps(
+                    {
+                        "action": "reject",
+                        "reason": f"Semantic draft validation failed: {exc}",
+                    },
+                    ensure_ascii=False,
+                    indent=2,
+                )
+            )
+            raise SystemExit(1) from exc
+
+        manifest = load_manifest(args.manifest)
+        refined = load_json(args.refined, {})
+
+        # The gate above verifies evidence, history dedupe, lineage and the funnel.
+        # Count selected events, not retained source candidates (many may support one event).
+        items_count = len(refined["top_10"])
+
+        window_meta = manifest.get("window", {})
+        window_days = window_meta.get("days", 3)
+        explicit_window = manifest.get("explicit_window", False)
+        linked_from = manifest.get("linked_from_run_id")
+
+        if (
+            items_count < 10
+            and window_days == 3
+            and not explicit_window
+            and not linked_from
+        ):
+            bundle_snapshot = manifest.get("bundle_snapshot", {})
+            execution_cli = bundle_snapshot.get("execution_cli_path")
+            if not execution_cli:
+                execution_cli = sys.argv[0]
+
+            cmd = [
+                sys.executable,
+                "-X",
+                "utf8",
+                execution_cli,
+                "prepare",
+                "--report-date",
+                str(manifest.get("report_date")),
+                "--timezone",
+                str(manifest.get("timezone")),
+                "--window-days",
+                "7",
+                "--topic",
+                str(manifest.get("topic")),
+                "--region",
+                str(manifest.get("region")),
+                "--linked-from-run-id",
+                str(manifest.get("run_id")),
+            ]
+
+            ratio = manifest.get("mix_request", {})
+            if ratio.get("ratio_source") == "user":
+                cmd.extend(
+                    [
+                        "--technology-ratio",
+                        str(ratio.get("requested_ratio", {}).get("technology", 0.6)),
+                        "--ratio-reason",
+                        str(ratio.get("ratio_reason", "")),
+                    ]
+                )
+
+            artifacts = manifest.get("artifacts", {})
+            focus_record = artifacts.get("focus_config", {})
+            focus_path = focus_record.get("artifact_path")
+            if focus_record.get("metadata", {}).get("article_broker_version") == 2:
+                cmd.extend(["--article-broker-version", "2"])
+            history_meta = artifacts.get("history_snapshot", {}).get("metadata", {})
+            news_dir = history_meta.get("news_dir")
+            allow_replace = history_meta.get(
+                "allow_existing_archive_replacement", False
+            )
+
+            if focus_path:
+                cmd.extend(["--focus-config", str(focus_path)])
+            if news_dir:
+                cmd.extend(["--news-dir", str(news_dir)])
+            if allow_replace:
+                cmd.append("--allow-existing-archive-replacement")
+
+            print(
+                json.dumps(
+                    {
+                        "action": "expand",
+                        "reason": f"Only {items_count} entries after evidence gates, expanding to 7 days.",
+                        "next_argv": cmd,
+                        "next_command": shlex.join(cmd),
+                    },
+                    ensure_ascii=False,
+                    indent=2,
+                )
+            )
+        else:
+            reason = []
+            if items_count >= 10:
+                reason.append(f"sufficient items ({items_count})")
+            if window_days != 3:
+                reason.append(f"window_days is {window_days}")
+            if explicit_window:
+                reason.append("explicit window requested")
+            if linked_from:
+                reason.append(f"already expanded from {linked_from}")
+
+            print(
+                json.dumps(
+                    {
+                        "action": "continue",
+                        "reason": ", ".join(reason)
+                        if reason
+                        else "no expansion criteria met",
+                    },
+                    ensure_ascii=False,
+                    indent=2,
+                )
+            )
+
     elif args.command == "preview":
         from forge import preview_briefing
 
@@ -871,11 +1123,17 @@ def main() -> None:
         if args.history_path is not None:
             kwargs["history_path"] = args.history_path
         result = forge_briefing(args.manifest, args.refined, **kwargs)
-        print(json.dumps({
-            "json_path": str(result.json_path.resolve()),
-            "markdown_path": str(result.markdown_path.resolve()),
-            "commit_receipt": str(result.manifest_path.resolve()),
-        }, ensure_ascii=False, indent=2))
+        print(
+            json.dumps(
+                {
+                    "json_path": str(result.json_path.resolve()),
+                    "markdown_path": str(result.markdown_path.resolve()),
+                    "commit_receipt": str(result.manifest_path.resolve()),
+                },
+                ensure_ascii=False,
+                indent=2,
+            )
+        )
     else:
         from run_contract import load_manifest
 

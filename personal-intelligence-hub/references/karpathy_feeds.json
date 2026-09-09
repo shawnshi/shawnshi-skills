@@ -417,7 +417,7 @@
   },
   {
     "name": "NVIDIA Healthcare",
-    "url": "https://blogs.nvidia.com/blog/category/healthcare/feed/"
+    "url": "https://blogs.nvidia.com/blog/tag/healthcare-life-sciences/feed/"
   },
   {
     "name": "arXiv (cs.CL)",
@@ -457,7 +457,7 @@
   },
   {
     "name": "Google DeepMind",
-    "url": "https://blog.google/rss/innovation-ai/google-deepmind/"
+    "url": "https://deepmind.google/blog/rss.xml"
   },
   {
     "name": "Google Research",

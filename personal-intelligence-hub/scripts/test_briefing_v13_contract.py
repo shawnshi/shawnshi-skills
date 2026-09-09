@@ -685,3 +685,68 @@ class BriefingV14ContractTests(unittest.TestCase):
 
 if __name__ == "__main__":
     unittest.main()
+
+
+def test_fresh_bundle_forge_enriches_legacy_and_matches_semantic_helper(tmp_path):
+    import json
+    from pathlib import Path
+
+    import pytest
+    from forge import ForgeContractError, _assert_pipeline_provenance, preview_briefing
+    from hub_utils import HUB_DIR
+    from run_contract import (
+        RunContractError,
+        load_manifest,
+        validate_registered_pipeline_summary,
+    )
+    from semantic_agent import _coverage, registered_coverage_diagnostics
+    from test_contract_fixtures import valid_v14_payload
+    from test_forge_contract import ForgeContractTests
+
+    fixture = ForgeContractTests()
+    fixture.setUp()
+    try:
+        # NEW registered fixture bound to the current resource manifest/bundle;
+        # no news scan, network, archive commit, or production run is used.
+        fixture.skill = HUB_DIR / "SKILL.md"
+        manifest_path = fixture._run_with_baseline()
+        manifest = load_manifest(manifest_path)
+        legacy = valid_v14_payload()
+        legacy.update(run_id="run-forge", model_used="semantic_model")
+        legacy["coverage"].update(run_status="degraded", coverage_confidence="medium", baseline_status="degraded")
+        assert not any(reason.startswith("diagnostic/") for reason in legacy["coverage"]["reasons"])
+        refined = fixture.runtime / "refined.json"
+        refined.write_text(json.dumps(legacy), encoding="utf-8")
+        refined = fixture._register_reviews(manifest_path, refined)
+        original_bytes = refined.read_bytes()
+        payload, markdown = preview_briefing(manifest_path, refined, now=fixture.now)
+        assert refined.read_bytes() == original_bytes
+        manifest = load_manifest(manifest_path)
+        canonical = registered_coverage_diagnostics(manifest)
+        assert all(reason in payload["coverage"]["reasons"] for reason in canonical)
+        supplement = json.loads(Path(manifest["stages"]["supplemental"]["artifact_path"]).read_text(encoding="utf-8"))
+        assert _coverage(manifest, supplement)["reasons"] == payload["coverage"]["reasons"]
+        for bad_reasons in (payload["coverage"]["reasons"][:-1],
+                            payload["coverage"]["reasons"] + [canonical[0]],
+                            [reason.replace("succeeded=8", "succeeded=90") for reason in payload["coverage"]["reasons"]]):
+            tampered = deepcopy(payload)
+            tampered["coverage"]["reasons"] = bad_reasons
+            with pytest.raises(ForgeContractError, match="coverage.reasons"):
+                _assert_pipeline_provenance(tampered, manifest)
+            with pytest.raises(RunContractError, match="coverage.reasons"):
+                validate_registered_pipeline_summary(tampered, manifest)
+        assert payload["candidate_funnel"] == legacy["candidate_funnel"]
+        assert payload["coverage"]["source_succeeded"] == legacy["coverage"]["source_succeeded"]
+        assert "非已核验文章数" in markdown and "覆盖诊断：diagnostic/feed:" in markdown
+        assert "feed: attempts=10; succeeded=8; failed=2" in markdown
+        assert "article: attempts=0; completed=0; verified=0; blocked=0; pending=0" in markdown
+        (tmp_path / "fresh-bundle-preview.md").write_text(markdown, encoding="utf-8")
+        (tmp_path / "fresh-bundle-preview.json").write_text(json.dumps(payload, ensure_ascii=False, indent=2), encoding="utf-8")
+        (tmp_path / "fresh-bundle-evidence.json").write_text(json.dumps({
+            "skill_bundle_sha256": manifest["skill_bundle_sha256"],
+            "resource_manifest_sha256": manifest["resource_manifest_sha256"],
+            "schema_version": payload["schema_version"], "signed_core_unchanged": True,
+            "semantic_forge_diagnostics_equal": True,
+        }, indent=2), encoding="utf-8")
+    finally:
+        fixture.tearDown()

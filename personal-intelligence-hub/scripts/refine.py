@@ -12,10 +12,12 @@ from hub_utils import (
     CANDIDATES_PATH,
     HUB_DIR,
     LATEST_SCAN_PATH,
-    REFINED_PATH as _REFINED_PATH,
     atomic_dump_json,
     ensure_runtime_dirs,
     load_json,
+)
+from hub_utils import (
+    REFINED_PATH as _REFINED_PATH,
 )
 from mix_policy import DOMAINS
 from run_contract import (
@@ -25,7 +27,6 @@ from run_contract import (
     file_sha256,
     require_stage,
 )
-
 
 FOCUS_PATH = HUB_DIR / "references" / "strategic_focus.json"
 PROMPT_PATH = HUB_DIR / "references" / "prompts" / "v1_refine_system.md"
@@ -140,6 +141,8 @@ def make_candidate(
             else "none"
         ),
     }
+    if item.get("source_type") in ("primary", "secondary"):
+        candidate["source_type"] = item["source_type"]
     candidate["candidate_object_sha256"] = candidate_object_hash(candidate)
     return candidate
 
@@ -245,7 +248,7 @@ def post_process_entities(output: dict, focus_data: dict) -> dict:
         for entry in focus_data.get("domains", {}).get(domain, {}).get("keywords", [])
     ]
     entities = sorted(list(set(competitors + keywords)), key=len, reverse=True)
-    
+
     for candidate in output.get("top_10", []):
         if "summary_zh" in candidate:
             candidate["summary_zh"] = enforce_entity_linking(candidate["summary_zh"], entities)

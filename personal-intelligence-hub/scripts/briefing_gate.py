@@ -18,7 +18,7 @@ from history_manager import (
 )
 from mix_policy import allocate_target_counts
 from run_contract import item_hash
-
+from zero_report import zero_report_fields, zero_supply_gap
 
 ROOT = Path(__file__).resolve().parent.parent
 SCHEMA_PATH = ROOT / "references" / "briefing_schema.json"
@@ -669,6 +669,12 @@ def _validate_v12_data(
         items = []
     if len(items) > int(schema["max_top_items"]):
         errors.append(f"top_10 must contain at most {schema['max_top_items']} items")
+    if is_v14 and data.get("top_10") == []:
+        for field, expected in zero_report_fields().items():
+            if data.get(field) != expected:
+                errors.append(f"zero-report {field} must match deterministic collection-insufficient value")
+        if not isinstance(data.get("data_gaps"), list) or zero_supply_gap() not in data["data_gaps"]:
+            errors.append("zero-report data_gaps must include the deterministic zero-supply gap")
     urls: list[str] = []
     event_ids: list[str] = []
     semantic_identity_ids: list[str] = []

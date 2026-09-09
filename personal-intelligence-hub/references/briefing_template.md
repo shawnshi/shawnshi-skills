@@ -20,6 +20,7 @@
 ## 行动杠杆
 
 {% for lever in action_levers -%}
+
 - **[{{ lever.domain }}] {{ lever.task }}**
   - 责任角色：{{ lever.owner_type }}
   - 启动条件：{{ lever.trigger }}
@@ -33,9 +34,9 @@
 
 ## 领域配比
 
-- 合同默认：技术 {{ (mix.default_ratio.technology * 100) | round | int }}% / 医疗数字化 {{ (mix.default_ratio.healthcare_digital * 100) | round | int }}%
-- 本次请求：技术 {{ (mix.requested_ratio.technology * 100) | round | int }}% / 医疗数字化 {{ (mix.requested_ratio.healthcare_digital * 100) | round | int }}%（{{ mix.ratio_source }}{% if mix.ratio_reason != "none" %}：{{ mix.ratio_reason }}{% endif %}）
-- 生效比例：技术 {{ (mix.effective_ratio.technology * 100) | round | int }}% / 医疗数字化 {{ (mix.effective_ratio.healthcare_digital * 100) | round | int }}%
+- 合同默认：技术 {{ (mix.default_ratio.technology *100) | round | int }}% / 医疗数字化 {{ (mix.default_ratio.healthcare_digital* 100) | round | int }}%
+- 本次请求：技术 {{ (mix.requested_ratio.technology *100) | round | int }}% / 医疗数字化 {{ (mix.requested_ratio.healthcare_digital* 100) | round | int }}%（{{ mix.ratio_source }}{% if mix.ratio_reason != "none" %}：{{ mix.ratio_reason }}{% endif %}）
+- 生效比例：技术 {{ (mix.effective_ratio.technology *100) | round | int }}% / 医疗数字化 {{ (mix.effective_ratio.healthcare_digital* 100) | round | int }}%
 - 目标条数：技术 {{ mix.target_counts.technology }} / 医疗数字化 {{ mix.target_counts.healthcare_digital }}
 - 实际条数：技术 {{ mix.actual_counts.technology }} / 医疗数字化 {{ mix.actual_counts.healthcare_digital }}
 {% if mix.adjustment.applied %}- 重大资讯调比：{{ mix.adjustment.reason }}{% endif %}
@@ -45,6 +46,7 @@
 
 {% set technology_items = top_10 | selectattr("primary_domain", "equalto", "technology") | list %}
 {% for item in technology_items -%}
+
 ### {{ loop.index }}. [{{ item.title_zh }}]({{ item.url }})
 
 - 原文标题：{{ item.title }}
@@ -61,10 +63,12 @@
 
 {% endfor %}
 {% if not technology_items %}- 当前窗口没有通过质量门的技术资讯。{% endif %}
+
 ## 医疗数字化资讯
 
 {% set healthcare_items = top_10 | selectattr("primary_domain", "equalto", "healthcare_digital") | list %}
 {% for item in healthcare_items -%}
+
 ### {{ loop.index }}. [{{ item.title_zh }}]({{ item.url }})
 
 - 原文标题：{{ item.title }}
@@ -82,23 +86,23 @@
 {% endfor %}
 {% if not healthcare_items %}- 当前窗口没有通过质量门的医疗数字化资讯。{% endif %}
 
-
 ## 覆盖状态
 
 - 运行状态：{{ coverage.run_status }}｜覆盖置信度：{{ coverage.coverage_confidence }}｜基线状态：{{ coverage.baseline_status }}
-- 来源：尝试 {{ coverage.source_attempted }} / 成功 {{ coverage.source_succeeded }} / 失败 {{ coverage.source_failed }}（成功率 {{ (coverage.source_success_rate * 100) | round(1) }}%）
-- 有效发布日期候选比例：{{ (coverage.dated_candidate_rate * 100) | round(1) }}%
+- 兼容总计（Feed 抓取 + 文章访问，非已核验文章数）：尝试 {{ coverage.source_attempted }} / 成功 {{ coverage.source_succeeded }} / 失败 {{ coverage.source_failed }}（成功率 {{ (coverage.source_success_rate * 100) | round(1) }}%）
+- 已登记日期候选比例（非文章核验率）：{{ (coverage.dated_candidate_rate * 100) | round(1) }}%
 {% if coverage.required_lane_failures %}- 未完成车道：{{ coverage.required_lane_failures | join("、") }}{% endif %}
 
 {% for reason in coverage.reasons -%}
-- 覆盖说明：{{ reason }}
+
+- {% if reason.startswith("diagnostic/") %}覆盖诊断{% else %}覆盖说明{% endif %}：{{ reason }}
 {% endfor %}
 
 ## 候选漏斗
 
 - 观察候选：{{ candidate_funnel.observed }}
 {% for disposition, count in candidate_funnel.terminal_dispositions | dictsort -%}
-- {{ disposition }}：{{ count }}
+- {{ disposition }}{% if disposition == "below_quality_gate" %}（兼容排除总计，含访问/日期/归属不足，非真实质量拒绝数）{% endif %}：{{ count }}
 {% endfor %}
 
 ## 流程回执
@@ -109,14 +113,17 @@
 - 逻辑红队：{{ pipeline.red_team.status }}
 
 {% if adversarial_audit is defined and adversarial_audit %}
+
 ## 反方审查
 
 - 反方案例：{{ adversarial_audit.devil_advocate }}
 - 盲点：{{ adversarial_audit.blind_spots }}
 {% endif %}
+
 ## 数据缺口
 
 {% for gap in data_gaps -%}
+
 - **{{ gap.gap_id }} / {{ gap.lane }} / {{ gap.status }}**：{{ gap.description }}；影响：{{ gap.impact }}
 {% endfor %}
 {% if not data_gaps %}- 当前没有已知数据缺口。{% endif %}

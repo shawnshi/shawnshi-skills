@@ -13,6 +13,7 @@ temp/
 *.bak_*
 /.skill_state.json
 .skill_state/
+NUL
 .vscode/
 .idea/
 venv/

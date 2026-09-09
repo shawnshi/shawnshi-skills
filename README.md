@@ -71,7 +71,6 @@ description: 说明技能做什么，以及用户在什么场景下应使用它�
 <!-- automatic-persistence-exceptions:start -->
 | Skill | 构成写入授权的请求 | 封闭目标集合 | 只读退出条件 |
 |---|---|---|---|
-| `mentat-insight-diary` | 生成、更新、记录或写 Mentat 日志，且取证完成、证据门允许保存 | 权威入口返回的 canonical 季度档案 | 草稿、预览、分析、审计技能、不保存、来源未就绪、来源读取失败或证据不足 |
 | `personal-cognitive-auditor` | 生成当前自然周、月或季度的精确 canonical 个人日志审计请求 | `personal-diary-writer` 权威入口返回的 canonical 季度个人日志内同周期审计区块 | 草稿、预览、只读、不保存、日度、年度、自定义路径或第二处存储 |
 | `personal-diary-writer` | 生成通过受保护 `personal-diary-request-v1` 与内容门的完整个人日记，承接 `mentat-insight-diary` 的 canonical Mentat 请求，或承接 `personal-cognitive-auditor` 的当前自然周、月、季度审计请求 | 对应权威入口返回的 canonical 季度个人日志或 canonical Mentat 季度档案 | 草稿、预览、只读、不保存、跨日期复用、自定义路径或第二处存储 |
 | `personal-health-analysis` | 明确启用 Garmin 自动同步 | 绑定的 GarminDB 本地数据库、一个当前用户计划任务及单一脱敏运行状态文件 | 仅诊断、预览、试运行、不同步、禁用、移除自动同步或自定义第二处存储 |
@@ -91,7 +90,7 @@ description: 说明技能做什么，以及用户在什么场景下应使用它�
 
 ## 5. Skill inventory
 
-当前库存为 53 个用户技能，不包含 `.system`、`scripts`、`shared` 和 `reports`。以下为功能摘要，完整触发条件、授权范围和退出边界以对应 `SKILL.md` 为准。
+当前库存为 51 个用户技能，不包含 `.system`、`scripts`、`shared` 和 `reports`。以下为功能摘要，完整触发条件、授权范围和退出边界以对应 `SKILL.md` 为准。
 
 ### Academic and cognitive research
 
@@ -131,8 +130,6 @@ description: 说明技能做什么，以及用户在什么场景下应使用它�
 | `image-studio-architect` | 使用当前图像生成能力创建或编辑海报、封面、插画、概念图、社交媒体图片和其他视觉资产，并根据输入完整度补足构图、色彩、光线、材质与画幅 |
 | `magazine-illustrator` | 为文章、博客、公众号、报告和演示文稿设计并直接生成杂志式位图插画，包括头图、封面、章节插图、系列配图和可复制的图像生成提示词 |
 | `mentat-collaboration-audit` | 基于真实会话记录、日志、工具调用和遥测事件审计系统效率与人机协作摩擦，复算等待、技能载入、错误重试、子代理Token、上下文压缩和写入授权指标，并按需生成Markdown报告和HTML审计面板 |
-| `mentat-dream-cycle` | 以审计、预览和事务化方式检查临时文件、热记忆、失败日志及知识图谱待治理项，生成可执行的清理与归档建议，并在获得明确授权后执行限定范围的安全维护 |
-| `mentat-insight-diary` | 将有实质证据的系统事件、执行摩擦、失败、权衡和改进动作整理为 OODA 日志；证据不足时阻止模板化元日志，通过证据门后按请求原子保存到权威季度档案 |
 | `mentat-skill-creator` | 仅在用户显式调用时维护当前 Pi 本地技能库的根治理合同、资源清单、触发所有权、批量迁移与发布门禁；通用新技能、无关单技能更新及插件打包不触发 |
 
 ### Personal workflows
@@ -141,7 +138,7 @@ description: 说明技能做什么，以及用户在什么场景下应使用它�
 |---|---|
 | `personal-cognitive-auditor` | 基于授权日志、日历与 Garmin 数据生成日、周、月、季度或年度复盘；个人周、月、季度审计通过校验和结构化请求门后保存到 canonical 季度日志 |
 | `personal-cognitive-prescription` | 从用户提供的近期问题、决策或复盘材料中识别认知盲区，并给出可核验到具体章节的跨领域阅读处方 |
-| `personal-diary-writer` | 完整个人日记通过受保护请求与内容门后自动保存；承接 Mentat 和个人周、月、季度审计的受保护写入，草稿或非标准路径仍执行确认门 |
+| `personal-diary-writer` | 完整个人日记通过受保护请求与内容门后自动保存；承接 Mentat 和个人周、月、季度审计的受保护写入；草稿不保存，当前写入器拒绝非 canonical 路径 |
 | `personal-health-analysis` | 以本地优先、失败关闭方式分析用户授权的 Garmin 数据，验证本地数据库读取窗口与设备/固件时期，披露时间范围、缺失和来源，并生成非诊断性报告、离线面板或研究用途 FHIR R4 包装 |
 | `personal-intelligence-hub` | 基线优先生成技术与医疗数字化资讯简报，按缺口补检、事件去重、语义评估和独立红队核验来源；正式日简报按声明合同自动保存 |
 | `personal-investment-advisor` | 默认使用免费公开来源，结合用户明确提供的持仓，执行证券身份核验、财报研究、估值情景、组合风险审计、主动机会验证和研究复盘；固定为 `research_only`，不生成交易指令 |
@@ -241,7 +238,17 @@ pwsh -NoProfile -ExecutionPolicy Bypass -File scripts/repair_skills.ps1 -Mode Ga
 
 禁止在维护流程中重新生成 `skill.json`。旧工具如果仍依赖该文件，应修订或移除该工具，不得恢复双重真相源。
 
-### 8.1 Current validation (2026-09-07)
+### 8.1 Current validation (2026-09-09)
+
+- 按本地一级 `SKILL.md` 盘点为 51 个技能；`mentat-dream-cycle`、`mentat-insight-diary` 当前不在本目录，已从库存表移除。
+- 自动持久化例外表保留 7 项现存技能合同；移除缺失技能的独立条目，不改变其他技能入口中已有的受保护写入边界。
+- 已清理 `shared/trigger-ownership-matrix.json` 中对缺失技能 `mentat-insight-diary` 的 3 处引用：移除其独占触发类别及两处辅助技能引用，不把相关请求转派给其他技能。触发所有权由 19 类调整为 18 类。
+- 全库 `repair_skills.ps1 -Mode Gate` 通过：51 个技能、7 项自动持久化例外、18 类触发所有权，阻断项为 0。此结果仅证明静态合同与资源一致性，不代表所有技能已在新会话中端到端验证。
+- 本地安装目录不含 `.git`；源码发布目标为 [shawnshi/shawnshi-skills](https://github.com/shawnshi/shawnshi-skills) 的 `main` 分支，通过独立 Git 工作副本同步，排除缓存、运行产物及敏感信息。发布副本按实际文件和 Git 字节表示生成资源清单，不保留空目录或运行日志的清单条目。
+- 发布副本全库 Gate 通过。测试分别在适用环境运行：本地安装目录根测试 94 项通过；日记测试运行 63 项，跳过 4 项缺少已移除 Mentat 技能的可选集成，其余通过；发布副本资讯测试运行 337 项，跳过 1 项，其余通过。发布副本单独复验日记写入器 36 项，跳过相同 4 项，其余通过。
+- 新增缺失 Mentat 证据门时拒绝写入且不创建目标目录的回归测试，未放宽生产写入门。依赖宿主目录布局的根合同及日记入口测试在本地安装目录验证，不将独立克隆中的路径不匹配写成代码通过。
+
+### 8.2 Historical validation (2026-09-07)
 
 - 本次全库 `repair_skills.ps1 -Mode Gate` 通过：53 个技能，8 项自动持久化例外，19 类触发所有权，阻断项为 0。
 - 资源索引独立检查：53 个技能，过期或缺失清单为 0；界面元数据独立检查：19 份配置，错误为 0。
@@ -249,9 +256,9 @@ pwsh -NoProfile -ExecutionPolicy Bypass -File scripts/repair_skills.ps1 -Mode Ga
 - `hit-customer-analyst` 仍为交付候选；静态门禁通过不改变其限定内部试用状态，真实发布验收以该技能的 `references/release-acceptance.md` 为准。
 - Gate 只证明其覆盖的静态合同与资源一致性，不代表所有技能已在新会话中端到端验证，也不代替发布前的敏感信息检查。
 
-### 8.2 Historical baseline (2026-09-05)
+### 8.3 Historical baseline (2026-09-05)
 
 - 此前记录：全库 Gate 通过，53 个技能、8 项自动持久化例外、19 类触发所有权，阻断项为 0。
 - 此前记录：`mentat-insight-diary/scripts/test_skill_contract.py` 的 14 项测试通过；本次未重跑该回归。
 
-Last updated: 2026-09-07
+Last updated: 2026-09-09

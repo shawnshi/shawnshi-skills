@@ -160,7 +160,6 @@
                     "primary_skill": "personal-cognitive-auditor",
                     "secondary_skills": [
                         "personal-diary-writer",
-                        "mentat-insight-diary",
                         "personal-health-analysis"
                     ],
                     "request_signals": [
@@ -184,24 +183,10 @@
                     ]
                 },
                 {
-                    "id": "system_first_person_diary",
-                    "primary_skill": "mentat-insight-diary",
-                    "secondary_skills": [
-                        "personal-diary-writer"
-                    ],
-                    "request_signals": [
-                        "mentat introspection diary",
-                        "system ooda log",
-                        "mentat audit diary",
-                        "first person system reflection"
-                    ]
-                },
-                {
                     "id": "atomic_diary_writeback",
                     "primary_skill": "personal-diary-writer",
                     "secondary_skills": [
-                        "personal-cognitive-auditor",
-                        "mentat-insight-diary"
+                        "personal-cognitive-auditor"
                     ],
                     "request_signals": [
                         "atomic diary writeback",
