@@ -8,12 +8,39 @@ import re
 import sys
 from datetime import date, datetime, timezone
 from pathlib import Path
+from urllib.parse import urlsplit
 from zoneinfo import ZoneInfo, ZoneInfoNotFoundError
+
+
+def visible_content(content: str) -> str:
+    """Ignore fenced examples while preserving source line numbers."""
+    fence = ""
+    lines: list[str] = []
+    for line in content.splitlines():
+        marker = re.match(r"^ {0,3}(`{3,}|~{3,})(.*)$", line)
+        if fence:
+            if (
+                marker and marker[1][0] == fence[0]
+                and len(marker[1]) >= len(fence) and not marker[2].strip()
+            ):
+                fence = ""
+            lines.append("")
+        elif marker and (marker[1][0] != "`" or "`" not in marker[2]):
+            fence = marker[1]
+            lines.append("")
+        else:
+            # Four-space/tab indented Markdown is code, not report structure.
+            lines.append("" if line.startswith(("    ", "\t")) else line)
+    return "\n".join(lines)
+
+
+def report_header(content: str) -> str:
+    return re.split(r"^ {0,3}##(?:[ \t]+|$)", content, maxsplit=1, flags=re.M)[0]
 
 
 def metadata(content: str, label: str) -> str:
     """One exact, unformatted header field before the first level-two section."""
-    preamble = content.split("\n## ", 1)[0]
+    preamble = report_header(visible_content(content))
     values = re.findall(rf"^{re.escape(label)}：[ \t]*(.+?)[ \t]*$", preamble, re.M)
     if len(values) != 1:
         raise ValueError(f"{label} must occur exactly once in the header")
@@ -36,9 +63,38 @@ PLACEHOLDER_RE = re.compile(
     r"按报告周期[^\]]*|待填写[^\]]*|"
     r"若周期尚未结束[^\]]*|"
     r"主体与动作|事实/来源主张|推断及适用条件|"
-    r"高/中/低|原始页面 URL"
+    r"高/中/低|原始页面 URL|直接来源编号|来源编号|"
+    r"本期事实及来源|主张及限制|结论、条件及不确定性|"
+    r"影响机制、适用地区、生效或实施时点、背景及不确定性|"
+    r"事实依据、业务传导链及失效条件|覆盖范围、停止原因及影响结论的待核事项|"
+    r"基于本期事件的结论[^\]]*|事实、来源机构主张[^\]]*|"
+    r"说明影响机制[^\]]*|从已核实事实出发[^\]]*|未公开、来源冲突[^\]]*"
     r")\]"
 )
+
+
+EVENT_HEADER = ["事件日期", "主体与已核实动作", "事实或来源主张", "分析判断", "证据强度", "直接来源"]
+
+
+def table_cells(line: str) -> list[str]:
+    """Support escaped pipes; all other pipes delimit Markdown cells."""
+    body = line.strip()[1:]
+    if body.endswith("|") and not body.endswith("\\|"):
+        body = body[:-1]
+    return [cell.strip() for cell in re.split(r"(?<!\\)\|", body)]
+
+
+def has_source_url(value: str) -> bool:
+    """URL syntax only: no network access or claims about source authenticity."""
+    for match in re.finditer(r"https?://[^\s<>\[\]）]+", value):
+        candidate = match[0].rstrip(").,;，。；")
+        try:
+            parsed = urlsplit(candidate)
+            if parsed.hostname and not parsed.username and not parsed.password and parsed.port != 0:
+                return True
+        except ValueError:
+            continue
+    return False
 
 
 def parse_date(value: str) -> date:
@@ -178,11 +234,14 @@ def validate_report(
 
     if "\ufffd" in content:
         errors.append("report contains Unicode replacement characters")
+    if "<!--" in content or "-->" in content:
+        errors.append("HTML comments are not supported in final reports")
 
     placeholders = sorted(set(PLACEHOLDER_RE.findall(content)))
     if placeholders:
         errors.append("report contains unresolved template placeholders")
 
+    content = visible_content(content)
     first_heading = next(
         (
             line.strip()
@@ -213,7 +272,7 @@ def validate_report(
 
     is_partial_period = cutoff_date <= period_end
     if is_partial_period:
-        preamble = "\n".join(content.splitlines()[:15])
+        preamble = report_header(content)
         if not ("截至" in preamble or "生成时点" in preamble):
             errors.append(
                 "partial-week report must state its cutoff time in the preamble"
@@ -236,10 +295,20 @@ def validate_report(
             empty_markers += 1
         if not line.startswith("|"):
             continue
-        cells = [cell.strip() for cell in line.strip("|").split("|")]
-        if cells[0] == "事件日期" or all(re.fullmatch(r":?-{3,}:?", c) for c in cells):
+        cells = table_cells(line)
+        if cells[0] == "事件日期":
+            if cells != EVENT_HEADER:
+                errors.append(f"line {line_number}: event header must match the six-column template")
+            continue
+        if all(re.fullmatch(r":?-{3,}:?", c) for c in cells):
+            if len(cells) != 6:
+                errors.append(f"line {line_number}: event separator must have six columns")
             continue
         event_rows += 1
+        if len(cells) != 6 or not all(cells):
+            errors.append(f"line {line_number}: event row must contain six nonempty columns")
+        elif not has_source_url(cells[-1]):
+            errors.append(f"line {line_number}: event row requires a direct HTTP(S) source URL")
         event_dates = event_dates_from_row(line, period_start, period_end)
         if not event_dates:
             errors.append(f"line {line_number}: malformed event date row")

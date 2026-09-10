@@ -104,6 +104,18 @@
     "coverage_confidence": ["low", "medium", "high"]
   },
   "required_access_check_fields": ["status", "checked_at", "method", "requested_url", "final_url", "http_status"],
+  "access_evidence_union": {
+    "legacy": {"methods": ["http_get", "browser", "api", "document"], "final_url": "required HTTP(S)", "http_get_api_status": "200..399"},
+    "native_readable": {
+      "contract_version": "article-broker/3.0",
+      "required_fields": ["status", "checked_at", "method", "requested_url", "final_url", "http_status", "failure_class", "error_code", "native_evidence"],
+      "final_url": null,
+      "http_status": null,
+      "required_native_evidence_fields": ["contract_version", "request_sha256", "gap_id", "reservation_id", "invocation_id", "receipt_sha256", "readable_text_sha256", "transport_visibility"],
+      "transport_visibility": {"dns": "unknown", "redirects": "unknown", "http_status": "unknown", "final_url": "unknown", "raw_bytes": "unavailable"},
+      "authority": "Exact sealed parent-attested receipt and candidate lineage; readable text digest is not a raw-byte digest"
+    }
+  },
   "pipeline_contract": {
     "required_semantic_fields": [
       "status",

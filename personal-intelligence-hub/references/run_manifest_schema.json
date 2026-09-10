@@ -1,6 +1,7 @@
 {
   "resource_kind": "personal_intelligence_hub_run_contract",
   "version": "1.0",
+  "parent_supplement_finalization_contract": {"version": "parent-supplement-finalization/1.0", "manifest_field": "parent_supplement_finalizations", "key": "gap_id", "max_raw_draft_bytes": 1048576, "final_draft_base64": {"type": "string", "maxLength": 1398104}, "policy": "New native-v3 requests carry finalization.parent_receipt_version=1. The bound finalize --parent validates within the unchanged 300s grace and atomically journals parent-supplement-finalization/1.0 in run_manifest.parent_supplement_finalizations[gap_id], binding run/request/packet SHA, sealed broker evidence and completed_at, actual finalized_at, original/final draft SHA and exact final bytes. Retry the same CLI after interruption: only the journaled source/final bytes recover, without a new clock. Later finalize-supplement accepts unchanged timely-attested bytes while revalidating semantic/proof/terminal gates. Missing receipts retain strict grace; v2 and old frozen requests are unchanged. Never synthesize receipts for old events or use mtime; no budgets increase."},
   "immutable_fields": [
     "run_id",
     "skill_sha256",

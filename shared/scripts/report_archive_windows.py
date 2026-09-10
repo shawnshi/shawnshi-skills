@@ -46,6 +46,10 @@ def descriptor(path: Path) -> str:
 
 @native_errors
 def apply(path: Path, policy: str) -> None:
+    # Reapplying an already exact inherited policy can add AUTO_INHERITED
+    # control bits. Preserve the OS-created descriptor without a setter call.
+    if descriptor(path) == policy:
+        return
     sd = security.ConvertStringSecurityDescriptorToSecurityDescriptor(policy, 1)
     protected = sd.GetSecurityDescriptorControl()[0] & security.SE_DACL_PROTECTED
     flags = SECURITY_PARTS | (security.PROTECTED_DACL_SECURITY_INFORMATION if protected

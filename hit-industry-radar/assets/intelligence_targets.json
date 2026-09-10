@@ -8,13 +8,20 @@
       "https://www.beckershospitalreview.com/healthcare-information-technology.html"
     ],
     "china_hit": [
-      "https://www.ccgp.gov.cn/ (中国政府采购网)",
-      "https://www.chima.org.cn/ (中国医院协会信息专业委员会)",
-      "https://www.nhc.gov.cn/ (国家卫生健康委员会)"
+      "https://www.ccgp.gov.cn/",
+      "https://www.chima.org.cn/",
+      "https://www.nhc.gov.cn/"
     ],
     "winning_baseline": [
-      "https://www.cninfo.com.cn/ (巨潮资讯)",
-      "https://www.winning.com.cn/ (厂商官网示例；不能作为独立验证)"
+      "https://www.cninfo.com.cn/",
+      "https://www.winning.com.cn/"
     ]
+  },
+  "source_notes": {
+    "https://www.ccgp.gov.cn/": "中国政府采购网",
+    "https://www.chima.org.cn/": "中国医院协会信息专业委员会",
+    "https://www.nhc.gov.cn/": "国家卫生健康委员会",
+    "https://www.cninfo.com.cn/": "巨潮资讯",
+    "https://www.winning.com.cn/": "厂商官网示例；不能作为独立验证"
   }
 }

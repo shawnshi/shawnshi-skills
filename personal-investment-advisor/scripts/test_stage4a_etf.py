@@ -242,7 +242,7 @@ class ArchiveVersionCompatibilityTests(unittest.TestCase):
                     data, _, old_files = self.legacy_archive(root, header, version)
                     report = resolve_dashboards(root, [data["stock_code"]])
                     self.assertTrue(report["complete"], report)
-                    self.assertEqual(report["dashboard_contract_version"], "7.1")
+                    self.assertEqual(report["dashboard_contract_version"], "7.2")
                     self.assertEqual(report["entries"][0]["dashboard_contract_version"], version)
                     self.assertTrue(validate_dashboard(data, require_scenarios=True))
                     for path, original in old_files.items():
@@ -255,7 +255,7 @@ class ArchiveVersionCompatibilityTests(unittest.TestCase):
             result = archive_dashboard(synthetic_etf(), root, "SYNTHETF")
             self.assertTrue(result["index_updated"])
             index = json.loads((root / "dashboard_index.json").read_text(encoding="utf-8"))
-            self.assertEqual(index["dashboard_contract_version"], "7.1")
+            self.assertEqual(index["dashboard_contract_version"], "7.2")
             self.assertEqual(index["dashboards"][data["stock_code"]], old_index["dashboards"][data["stock_code"]])
             self.assertEqual(index["dashboards"]["SYNTHETF"]["dashboard_contract_version"], "7.1")
             report = resolve_dashboards(root, [data["stock_code"], "SYNTHETF"])
@@ -281,7 +281,7 @@ class ArchiveVersionCompatibilityTests(unittest.TestCase):
 
     def test_bad_versions_and_invalid_indexes_rejected_without_overwrite(self):
         mutations = []
-        for version in ("6.9", "7.2", "arbitrary", 7.0, None, [], {}):
+        for version in ("6.9", "7.3", "arbitrary", 7.0, None, [], {}):
             mutations.extend((
                 lambda index, symbol, value=version: index.update(dashboard_contract_version=value),
                 lambda index, symbol, value=version: index["dashboards"][symbol].update(dashboard_contract_version=value),

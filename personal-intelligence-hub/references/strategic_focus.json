@@ -3,7 +3,9 @@
   "_meta": {
     "purpose": "Daily technology and healthcare-digital intelligence profile. Weights and mix are method parameters, not business facts.",
     "override": "User instructions override the default mix via --technology-ratio plus --ratio-reason. --focus-config changes scan weights, lanes, thresholds and dedupe settings; it does not override the run mix.",
-    "last_updated": "2026-09-02"
+    "last_updated": "2026-09-10",
+    "scoring_version": "content-relevance/2.0",
+    "scoring_policy": "Presence once per configured concept including aliases; existing weights unchanged. WebAssembly, JIT, local variables, DeepSeek and security patch use provisional uncalibrated weight 4, not probability or optimized calibration. Source preferences only break content-score ties. Explicit primary_domain remains an input override."
   },
   "mix_policy": {
     "default_ratio": {
@@ -30,7 +32,7 @@
         {"keyword": "LLM", "weight": 6},
         {"keyword": "reasoning model", "weight": 8},
         {"keyword": "multimodal", "weight": 7},
-        {"keyword": "AI agent", "weight": 8},
+        {"keyword": "AI agent", "aliases": ["AI agents"], "weight": 8},
         {"keyword": "agentic infrastructure", "weight": 8},
         {"keyword": "model context protocol", "weight": 7},
         {"keyword": "MCP", "weight": 5},
@@ -48,13 +50,18 @@
         {"keyword": "vector database", "weight": 6},
         {"keyword": "cybersecurity", "weight": 6},
         {"keyword": "zero-day", "weight": 8},
-        {"keyword": "vulnerability", "weight": 5},
+        {"keyword": "vulnerability", "aliases": ["vulnerabilities", "security hole", "security holes", "CVE"], "weight": 5},
         {"keyword": "software supply chain", "weight": 7},
         {"keyword": "developer tools", "weight": 5},
-        {"keyword": "compiler", "weight": 5},
+        {"keyword": "compiler", "aliases": ["compilers"], "weight": 5},
+        {"keyword": "WebAssembly", "aliases": ["wasm"], "weight": 4},
+        {"keyword": "JIT", "weight": 4},
+        {"keyword": "local variables", "aliases": ["local variable"], "weight": 4},
+        {"keyword": "DeepSeek", "weight": 4},
+        {"keyword": "security patch", "aliases": ["security patches"], "weight": 4},
         {"keyword": "Kubernetes", "weight": 5},
         {"keyword": "confidential computing", "weight": 6},
-        {"keyword": "人工智能", "weight": 4},
+        {"keyword": "人工智能", "aliases": ["AI", "artificial intelligence"], "weight": 4},
         {"keyword": "推理模型", "weight": 8},
         {"keyword": "多模态", "weight": 7},
         {"keyword": "智能体", "weight": 6},
@@ -193,7 +200,7 @@
     "supplement_budget": {
       "max_queries_per_gap": 2,
       "max_urls_per_gap": 4,
-      "max_duration_seconds": 150,
+      "max_duration_seconds": 600,
       "max_turns_per_gap": 2
     },
     "lanes": {

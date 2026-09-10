@@ -1,6 +1,6 @@
 {
   "resource_kind": "investment_dashboard_contract",
-  "version": "7.1",
+  "version": "7.2",
   "strict_profile": "2026-08-05",
   "required_top_level": [
     "stock_name",
@@ -37,7 +37,8 @@
     "management_claim_tracking",
     "scenario_analysis",
     "tags",
-    "etf_research"
+    "etf_research",
+    "dashboard_contract_version"
   ],
   "required_dashboard_sections": [
     "core_conclusion",
@@ -488,5 +489,126 @@
     ],
     "scenario_formula": "nav_per_unit * (1 + index_return) * (1 + currency_return)",
     "migration": "Stock 2.0 and legacy unversioned scenarios unchanged. New ETF requires etf_nav1.0. Historical ETF corporate/legacy archives remain readable without strict mode; no automatic migration."
+  },
+  "v72_contract": {
+    "dashboard_contract_version": "7.2",
+    "stock_valuation_contract_version": "3.0",
+    "stock_methods": [
+      "enterprise_value_bridge",
+      "DDM",
+      "FCFE"
+    ],
+    "ordinary_equity_bridge": {
+      "required_components": [
+        "enterprise_value",
+        "net_debt",
+        "nonoperating_assets",
+        "noncontrolling_interest",
+        "preferred_claims",
+        "other_senior_claims"
+      ],
+      "formula": "enterprise_value - net_debt + nonoperating_assets - noncontrolling_interest - preferred_claims - other_senior_claims",
+      "net_debt": "true debt less cash; only signed bridge component; never absorbs other claims",
+      "component": {
+        "required_fields": [
+          "value",
+          "status",
+          "unit",
+          "currency",
+          "as_of_date",
+          "evidence_index",
+          "value_type",
+          "measurement_basis",
+          "rationale",
+          "claim_ids"
+        ],
+        "status": [
+          "included",
+          "not_applicable"
+        ],
+        "unit": [
+          "currency",
+          "shares"
+        ],
+        "currency": "exact scenario/instrument currency, unscaled currency or share units",
+        "not_applicable": "value=null, value_type=measurement_basis=not_applicable, claim_ids=[]; sourced dated rationale still required",
+        "value_type": [
+          "reported_fact",
+          "analyst_estimate",
+          "not_applicable"
+        ],
+        "measurement_basis": [
+          "reported_amount",
+          "reported_market_value",
+          "estimated_economic_fair_value",
+          "not_applicable"
+        ],
+        "claim_ids": "unique economic instrument identifiers within each scenario across numerator AND shares, not source document IDs",
+        "economic_adjustments": "reported_amount/book value cannot be treated as market value; use reported_market_value or transparent analyst_estimate"
+      }
+    },
+    "direct_equity": {
+      "corporate_bridge_components": "all explicitly sourced not_applicable; enterprise_value/net_debt top-level case fields are string not_applicable",
+      "ordinary_equity_cashflows": "nonempty typed components plus cash_flow_kind, years > 0, discount_rate ratio in (0,1); sum value/(1+discount_rate)**years",
+      "cash_flow_kind": [
+        "dividend",
+        "fcfe",
+        "terminal_ordinary_equity"
+      ],
+      "terminal_boundary": "at most one terminal value, after or at final explicit cashflow; excludes that explicit distribution from terminal value"
+    },
+    "share_basis": {
+      "required_fields": [
+        "basis",
+        "as_of_date",
+        "ordinary_shares",
+        "incremental_shares"
+      ],
+      "basis": [
+        "current_diluted",
+        "hypothetical_as_converted"
+      ],
+      "ordinary_shares": "sourced component, unit shares",
+      "incremental_shares": "explicit sourced list; same date; never duplicate numerator claims",
+      "formula": "diluted_shares = ordinary_shares + sum(incremental_shares); per_share_value = ordinary equity/diluted_shares"
+    },
+    "etf_contract_version": "1.1",
+    "etf_valuation_contract_version": "etf_nav1.1",
+    "premium_discount_basis": "quote_vs_observed_nav",
+    "etf_core": "identity, NAV, total expense ratio, tracking remain required, unchanged math and freshness windows",
+    "source_timing_contract_version": "1.0",
+    "publication_precision": [
+      "exact",
+      "day",
+      "unknown"
+    ],
+    "required_timed_evidence_fields": [
+      "timing_contract_version",
+      "publication_precision",
+      "published_at",
+      "availability_observed_at",
+      "valuation_date",
+      "source_capture_receipt"
+    ],
+    "day_publication": "published_at=null; publication_date YYYY-MM-DD and publication_utc_offset ±HH:MM; not exact midnight and not intraday availability proof",
+    "unknown_publication": "published_at=null; no publication_date or publication_utc_offset claim",
+    "availability": "valuation_date <= availability_observed_at UTC date; observed <= retrieved <= source_policy.cutoff_at <= now",
+    "capture_receipt": {
+      "contract_version": "1.0",
+      "verification_method": "sha256_raw_bytes_v1",
+      "required_fields": [
+        "raw_artifact",
+        "source_locator",
+        "content_sha256",
+        "byte_count",
+        "availability_observed_at",
+        "retrieved_at",
+        "verified_at"
+      ],
+      "binding": "source_locator/hash/observation/retrieval exactly match evidence; raw_artifact never auto-dereferenced",
+      "verification": "explicit verify_source_capture on authorized regular file, nonempty <=32MiB; verified_at >= retrieved and <= now; can be later than research cutoff without backdating availability",
+      "boundary": "structural receipt pass does not authenticate primary origin or historical availability; new construction/publication must reverify actual raw bytes plus capture records externally"
+    },
+    "compatibility": "7.0/7.1 archives keep original bytes/versions; stock2.0 EV-net_debt and ETF1.0 semantics unchanged; no auto migration"
   }
 }

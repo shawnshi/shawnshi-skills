@@ -31,7 +31,7 @@ description: 基线优先生成技术与医疗数字化资讯简报，按缺口�
 使用统一入口：
 
 ```powershell
-python -X utf8 scripts/run_daily.py prepare --report-date YYYY-MM-DD --timezone Asia/Shanghai --article-broker-version 2
+python -X utf8 scripts/run_daily.py prepare --report-date YYYY-MM-DD --timezone Asia/Shanghai --article-broker-version 3
 ```
 
 记录返回的 `execution_cli_path`。下文所有 `python -X utf8 scripts/run_daily.py ...` 在生产 run 中均表示 `python -X utf8 <execution_cli_path> ...`；不得在 prepare 后改回安装目录脚本。
@@ -57,7 +57,7 @@ python -X utf8 scripts/run_daily.py prepare --report-date YYYY-MM-DD --timezone 
 
 仅在基线 `completed`/`degraded` 后，按已登记 gap/lane 先核验绑定候选，再补缺口；根任务不重复已分派检索。canary 基础设施失败即停止 fanout；成功后最多 3 个 worker 并行。保留真实日期、访问日志与失败，禁止弱资讯补数。代理只写授权 draft，父任务确定性校验后原子发布；timeout/失联按持久化逐 gap 状态 reconciler 收口，不得只依赖 stdout。
 
-新 run 使用 `prepare --article-broker-version 2`；四个必检 URL 占满预算的 lane 仍走非 broker 路径，`verify-bound` 在 CLI JSON 的独立 `body_evidence` 字段交付首次访问的有界正文和原始日期元数据，不额外访问或持久化证据，不自动提升日期/来源/事实资格。访问后因质量/领域排除可为 `no_increment`，日期或访问问题为 `degraded`；`failed/infrastructure` 仅限零查询、零访问证据的初始化失败。旧 run 快照不改写。
+新 run 默认 article-broker/3.0（也可显式 prepare --article-broker-version 3）。所有 lane 包括四个 required URL 占满预算者都走父级 native fetch_content(mode=readable)，CLI 只 reserve/record；禁止 v3 broker-http、verify-bound 或 portal fallback。先访问 required URLs，再在剩余预算 web_search(includeContent=false) 发现文章。读取 references/workflow_protocols.md 的 v3 receipt/date 合同；旧 run/v2 冻结回放不改写。
 
 prepare 未返回 request 时，脚本已登记结构化 `no_increment`，不要伪造补检结果。
 
@@ -134,4 +134,8 @@ python -X utf8 scripts/run_daily.py forge --manifest <run_manifest.json> --refin
 
 自动保存只授权正式新闻文件及新闻目录内的 `.pih_history_v2.json` 去重索引，不授权写入个人长期记忆、知识图谱、邮件、外部发布或其他系统。review challenge 只提供运行内绑定与防重放，不是外部运行时的加密身份签名；执行者必须真实调用独立 SemanticEvaluator；仅在 `deterministic_fast_path=false` 时另行调用独立 RedTeam。确定性快速路径以已登记的 NoL4Gate 回执满足红队阶段，不启动第二个代理；L4、重大资讯及冲突的红队要求不变。
 
-Stage-C broker v2 continuation: parent must consume `next_action` on each operation; first 403 means choose an alternative original-source URL or purposeful different search, not silent closure. `broker-seal` requires ledger-grounded stop eligibility. Exact bound-only evidence may close without artificial search; expired/error/pending evidence is retained for failed reconciliation, never backdated. See workflow_protocols.md Stage-C; 1.4, source150/grace300 and all budgets remain unchanged.
+Stage-C broker v2 continuation: parent must consume `next_action` on each operation; first 403 means choose an alternative original-source URL or purposeful different search, not silent closure. `broker-seal` requires ledger-grounded stop eligibility. Exact all-good bound-only evidence, or v3-only fully settled exact-required `bound_budget_exhausted` evidence, may close without artificial search; the latter preserves failures/successes and requires degraded coverage for exclusions (zero eligible: degraded/low). Date/source/lineage/semantic gates remain unchanged. Expired/error/pending evidence is retained for failed reconciliation, never backdated. See workflow_protocols.md Stage-C; New v3 runs use source600/grace300 (launch timeout 900000ms); 1.4, other budgets and old frozen runs remain unchanged.
+
+### Timely parent finalization receipt (new native v3 only)
+
+New native-v3 requests carry finalization.parent_receipt_version=1. The bound finalize --parent validates within the unchanged 300s grace and atomically journals parent-supplement-finalization/1.0 in run_manifest.parent_supplement_finalizations[gap_id], binding run/request/packet SHA, sealed broker evidence and completed_at, actual finalized_at, original/final draft SHA and exact final bytes. Retry the same CLI after interruption: only the journaled source/final bytes recover, without a new clock. Later finalize-supplement accepts unchanged timely-attested bytes while revalidating semantic/proof/terminal gates. Missing receipts retain strict grace; v2 and old frozen requests are unchanged. Never synthesize receipts for old events or use mtime; no budgets increase.

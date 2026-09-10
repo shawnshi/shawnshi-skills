@@ -30,3 +30,7 @@ Daily Sync 核验持仓身份、行情覆盖、时效和已确认观察边界。
 证据包必须绑定同一持仓快照，窗口结束时间距评估时点不超过一小时，逐标的覆盖全部活动非现金持仓，并闭合宏观、板块和监管三个范围。每条证据必须是公开一手 URL、带发布时间、获取时间、内容 SHA-256 和可核查主张。门禁只验证包结构、时间、覆盖、引用和绑定，不替代对来源真实性与语义判断的独立复核。存在 `fatal_breach` 不代表流程失败：只要证据覆盖闭合，工作流可为 `complete`，同时由 `fatal_event_status=fatal_breach_detected` 明确报警。
 
 没有新闻不能升级为“未发现致命事件”，股价变化也不能单独证明 Thesis 失效。最终报告必须把行情闭合度与 Thesis 证据状态分开呈现。
+
+## 读取 Dashboard 7.2 的局部边界
+
+目录可读取真实版本 7.0/7.1/7.2，不能改旧 JSON 版本或将档案价格用于当前行情。7.2 公开来源的日级/未知首次发布时间与实际 availability_observed_at 分离，详见 company-research；这只扩展 Dashboard 取证表达，不修改本文件 Thesis 红队 evidence 包或行情契约。不得把原件重验 verified_at、文件 mtime 或 retrieved_at 填入 published_at，也不得用来源观测时间替代报价秒级时效核验。缺事件证据仍不升级为 Thesis 安全。

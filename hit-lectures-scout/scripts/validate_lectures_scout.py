@@ -22,12 +22,83 @@ PLACEHOLDER_RE = re.compile(
 )
 
 
+def structural_lines(content: str) -> list[str]:
+    """Top-level Markdown subset; preserve line numbers, hide code and comments.
+
+    Fences use >=3 backticks/tildes with <=3 spaces indentation; only the same
+    character and at least the opening length closes them. Indented code is not
+    structural. This is deliberately not a general Markdown renderer.
+    """
+    lines = []
+    fence = ""
+    in_comment = False
+    for line in content.splitlines():
+        if fence:
+            if re.fullmatch(r" {0,3}" + re.escape(fence[0]) + "{" + str(len(fence)) + r",}[ \t]*", line):
+                fence = ""
+            lines.append("")
+            continue
+        # Fence info is literal, but an existing comment masks fake openers.
+        opening = re.fullmatch(r" {0,3}(`{3,}|~{3,})(.*)", line)
+        if not in_comment and opening and (opening[1][0] == "~" or "`" not in opening[2]):
+            fence = opening[1]
+            lines.append("")
+            continue
+        # Hide whole comment-bearing lines, not just the comment delimiters:
+        # inline fragments must never be promoted into standalone metadata.
+        if in_comment or "<!--" in line:
+            for delimiter in re.findall(r"<!--|-->", line):
+                in_comment = delimiter == "<!--"
+            lines.append("")
+            continue
+        indent = 0
+        for char in line:
+            if char == " ":
+                indent += 1
+            elif char == "\t":
+                indent += 4 - indent % 4
+            else:
+                break
+            if indent >= 4:
+                break
+        lines.append("" if indent >= 4 else line)
+    return lines
+
+
+def markdown_heading(line: str) -> str:
+    match = re.fullmatch(r" {0,3}(#{1,6})[ \t]+(.+?)[ \t]*", line)
+    if not match:
+        return ""
+    return match[1] + " " + re.sub(r"[ \t]+#+$", "", match[2])
+
+
+def table_cells(line: str) -> list[str]:
+    """Split outer-pipe rows on unescaped pipes; retain cell Markdown verbatim."""
+    cells = []
+    start = 0
+    escaped = False
+    for index, char in enumerate(line):
+        if char == "|" and not escaped:
+            cells.append(line[start:index].strip())
+            start = index + 1
+        escaped = char == "\\" and not escaped
+    cells.append(line[start:].strip())
+    # Do not strip arbitrary pipes: extra empty columns must stay observable.
+    if len(cells) < 3 or cells[0] or cells[-1]:
+        return []
+    return cells[1:-1]
+
+
 def metadata(content: str, label: str) -> str:
-    preamble = content.split("\n## ", 1)[0]
-    values = re.findall(rf"^{re.escape(label)}：[ \t]*(.+?)[ \t]*$", preamble, re.M)
-    if len(values) != 1:
+    preamble = []
+    for line in structural_lines(content):
+        if markdown_heading(line).startswith(("## ", "### ", "#### ", "##### ", "###### ")):
+            break
+        preamble.append(line)
+    values = re.findall(rf"^{re.escape(label)}：([^\n]*)$", "\n".join(preamble), re.M)
+    if len(values) != 1 or not values[0].strip():
         raise ValueError(f"{label} must occur exactly once in header")
-    return values[0]
+    return values[0].strip()
 
 
 def original_link(value: str) -> bool:
@@ -76,7 +147,8 @@ def validate_report(file_path: Path, period_start: date, period_end: date,
         return errors + [f"invalid metadata: {exc}"]
     if not allow_custom_filename and file_path.name != f"DHLS-{issue_date:%Y%m%d}.md":
         errors.append("issue filename mismatch")
-    heading = next((s for s in content.splitlines() if s.startswith("# ")), "")
+    lines = structural_lines(content)
+    heading = next((s for s in lines if s.startswith("# ")), "")
     if heading != f"# 医疗数字化文献侦察报告 - {issue_date}":
         errors.append("title issue date mismatch")
     if "\ufffd" in content or PLACEHOLDER_RE.search(content):
@@ -89,17 +161,25 @@ def validate_report(file_path: Path, period_start: date, period_end: date,
     references = []
     current_rows = 0
     empty_count = 0
-    for number, line in enumerate(content.splitlines(), 1):
-        line = line.strip()
-        if line.startswith("## "):
-            section = line
+    tables = {name: [] for name in ("## 本期研究", "## 背景研究", "## 来源")}
+    in_table = False
+    for number, raw_line in enumerate(lines, 1):
+        heading = markdown_heading(raw_line)
+        line = raw_line.strip()
+        if heading:
+            section = heading
             sections.append(section)
         if section == "## 本期研究" and line == EMPTY:
             empty_count += 1
-        if not line.startswith("|") or section not in {"## 本期研究", "## 背景研究", "## 来源"}:
+        if not line.startswith("|") or section not in tables:
+            in_table = False
             continue
-        cells = [x.strip() for x in line.strip("|").split("|")]
-        if all(re.fullmatch(r":?-{3,}:?", c) for c in cells):
+        cells = table_cells(line)
+        if not in_table:
+            tables[section].append([])
+        tables[section][-1].append((number, cells))
+        in_table = True
+        if cells and all(re.fullmatch(r":?-{3,}:?", c) for c in cells):
             continue
         if section == "## 来源":
             if cells == SOURCE_HEADER:
@@ -143,10 +223,28 @@ def validate_report(file_path: Path, period_start: date, period_end: date,
         errors.append("required/duplicate research or source section")
     if (current_rows == 0 and empty_count != 1) or (current_rows and empty_count) or empty_count > 1:
         errors.append("empty research marker missing or contradictory")
-    references.extend(re.findall(r"\[(S\d+)\]", content))
+    visible = "\n".join(lines)
+    references.extend(re.findall(r"\[(S\d+)\]", visible))
+    for name, blocks in tables.items():
+        header = SOURCE_HEADER if name == "## 来源" else RESEARCH_HEADER
+        # Legacy genuine zero-result reports may omit both tables. Any table
+        # present, even an empty one, must have the exact header and delimiter.
+        required = (name == "## 本期研究" and (current_rows or empty_count != 1)
+                    or name == "## 来源" and (ids or sources or references))
+        if len(blocks) > 1 or (required and not blocks):
+            errors.append(f"{name}: required/duplicate table")
+        for block in blocks:
+            number = block[0][0]
+            rows = [cells for _, cells in block]
+            if rows[0] != header or sum(cells == header for cells in rows) != 1:
+                errors.append(f"line {number}: correct unique table header required")
+            separators = [i for i, cells in enumerate(rows) if cells and
+                          all(re.fullmatch(r":?-{3,}:?", c) for c in cells)]
+            if separators != [1] or len(rows[1]) != len(header):
+                errors.append(f"line {number}: adjacent table separator with {len(header)} columns required")
     if any(ref not in sources for ref in references):
         errors.append("unknown source reference ID")
-    if any(ref not in ids for ref in re.findall(r"\[(R\d+)\]", content)):
+    if any(ref not in ids for ref in re.findall(r"\[(R\d+)\]", visible)):
         errors.append("unknown research reference ID")
     return errors
 

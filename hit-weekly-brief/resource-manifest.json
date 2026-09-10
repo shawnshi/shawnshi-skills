@@ -1,18 +1,18 @@
 {
   "schema_version": 3,
   "skill": "hit-weekly-brief",
-  "generated_at": "2026-09-06T10:36:04+08:00",
+  "generated_at": "2026-09-10T11:00:51+08:00",
   "hash_algorithm": "SHA-256",
   "text_hash_normalization": "LF",
   "skill_md": "SKILL.md",
-  "skill_md_sha256": "0aabce92fba9fe0c9ec1468dd4724aabcb453d9e3e3647a0b55bb635cecbe554",
+  "skill_md_sha256": "a3746cff6f57a6c31b6a327060ad9fc4dea48f2bedee1d05163fb40b983df0ed",
   "top_level_files": [
     "SKILL.md"
   ],
   "top_level_file_hashes": [
     {
       "path": "SKILL.md",
-      "sha256": "0aabce92fba9fe0c9ec1468dd4724aabcb453d9e3e3647a0b55bb635cecbe554"
+      "sha256": "a3746cff6f57a6c31b6a327060ad9fc4dea48f2bedee1d05163fb40b983df0ed"
     }
   ],
   "top_level_directories": [
@@ -24,11 +24,11 @@
   "resource_directories": [
     {
       "name": "scripts",
-      "file_count": 2
+      "file_count": 3
     },
     {
       "name": "references",
-      "file_count": 1
+      "file_count": 2
     },
     {
       "name": "assets",
@@ -42,35 +42,43 @@
   "resource_file_hashes": [
     {
       "path": "assets/Task_policy.md",
-      "sha256": "39f08b2b602bc43259be9d2e89035b3b7b3ec714e6c909b7e9af5a5526f361fb"
+      "sha256": "7a2b8c6e9cc0b9b0b5e397d851e76b898b0f013481267baaab540c66139c1641"
     },
     {
       "path": "assets/Task_serendipity.md",
-      "sha256": "d559836699f475780d100a6f6721be8e19c48a0c1c474f2389b22f51823fce2c"
+      "sha256": "928c55f6aced0ad5f88f1f4f117694d40d3d9b992e77a404268d0a87bfb7555c"
     },
     {
       "path": "assets/Task_strategy.md",
-      "sha256": "dc5bcf00ff0b345d0679b77cb87ae5b96834fb0ea5c6eb58cdef1f9b8e0743c6"
+      "sha256": "eb4197b48b77d9179bb9e77ae7d24c7ae75e8495a81b425bbcdb6ae45a89f8d6"
     },
     {
       "path": "assets/Task_tech.md",
-      "sha256": "90add761d2b573c4934c78d0f8a14ba2b38d59e81349e9bc03d72c71748ba00a"
+      "sha256": "6f3a81482a07798eb1d706d2b46214df803b020b2eb67a59b4186aa8c6d547ef"
     },
     {
       "path": "examples/DHWB-Reference.md",
-      "sha256": "d6c1ccb6b7278bf5c62233fabe9868880f21549fd6cd458622b708f5fc6e9ac5"
+      "sha256": "96608872be26f3e413f4a9ef0f5a2c6274f0e84a80f48496b76e95789d8747fa"
+    },
+    {
+      "path": "references/research-workflow.md",
+      "sha256": "8177c3bbe8925e32808358b8bbeebfe42e6bc335615cf90df8fce3793489210e"
     },
     {
       "path": "references/template.md",
-      "sha256": "783c8a21320b6d5d59fecba3e23d9c1db9450c798e76c49a83dbca3280d38075"
+      "sha256": "04bcfc5d7cdef07519a8afb70e86747a7bdfce583284bc28f22db0eccf271e2d"
+    },
+    {
+      "path": "scripts/test_audit_regressions.py",
+      "sha256": "8c769d2384338bd6fc3115b7c531f6520578fb0a2d33fca6cb3d930ee1877828"
     },
     {
       "path": "scripts/test_validate_weekly_brief.py",
-      "sha256": "553975d1ce49956534dde357d380b404b3aae399fc96c904ed299dad94e935db"
+      "sha256": "433140d66fbbe1a1b0f2da507d0b999e9a84020e5046f434c18ffd2259d0bfb5"
     },
     {
       "path": "scripts/validate_weekly_brief.py",
-      "sha256": "a13af34d54d60e57b24308464bc88b877b0379ecaff664b0b32fd126d92eb378"
+      "sha256": "473c26b01c5781002d2f6476a1fdf08ff023eb41bb96f356ca5e1aefb1af557a"
     }
   ],
   "declared_local_dependencies": [
@@ -78,49 +86,37 @@
       "path": "examples/DHWB-Reference.md",
       "exists": true,
       "resolved_path": "hit-weekly-brief/examples/DHWB-Reference.md",
-      "sha256": "d6c1ccb6b7278bf5c62233fabe9868880f21549fd6cd458622b708f5fc6e9ac5"
+      "sha256": "96608872be26f3e413f4a9ef0f5a2c6274f0e84a80f48496b76e95789d8747fa"
+    },
+    {
+      "path": "references/research-workflow.md",
+      "exists": true,
+      "resolved_path": "hit-weekly-brief/references/research-workflow.md",
+      "sha256": "8177c3bbe8925e32808358b8bbeebfe42e6bc335615cf90df8fce3793489210e"
     },
     {
       "path": "references/template.md",
       "exists": true,
       "resolved_path": "hit-weekly-brief/references/template.md",
-      "sha256": "783c8a21320b6d5d59fecba3e23d9c1db9450c798e76c49a83dbca3280d38075"
+      "sha256": "04bcfc5d7cdef07519a8afb70e86747a7bdfce583284bc28f22db0eccf271e2d"
     },
     {
       "path": "scripts/test_validate_weekly_brief.py",
       "exists": true,
       "resolved_path": "hit-weekly-brief/scripts/test_validate_weekly_brief.py",
-      "sha256": "553975d1ce49956534dde357d380b404b3aae399fc96c904ed299dad94e935db"
+      "sha256": "433140d66fbbe1a1b0f2da507d0b999e9a84020e5046f434c18ffd2259d0bfb5"
     },
     {
       "path": "scripts/validate_weekly_brief.py",
       "exists": true,
       "resolved_path": "hit-weekly-brief/scripts/validate_weekly_brief.py",
-      "sha256": "a13af34d54d60e57b24308464bc88b877b0379ecaff664b0b32fd126d92eb378"
+      "sha256": "473c26b01c5781002d2f6476a1fdf08ff023eb41bb96f356ca5e1aefb1af557a"
     },
     {
       "path": "shared/references/report_archive.md",
       "exists": true,
       "resolved_path": "shared/references/report_archive.md",
-      "sha256": "f0a6ad72a05021457462f172e9c7d81e01407b84b60ac6cd1b48bb97fb158274"
-    },
-    {
-      "path": "shared/scripts/report_archive.py",
-      "exists": true,
-      "resolved_path": "shared/scripts/report_archive.py",
-      "sha256": "131d8f4de46b3369f73fbd645a080cb81120b8d756fa0c54710296d31c08c223"
-    },
-    {
-      "path": "shared/scripts/report_archive_windows.py",
-      "exists": true,
-      "resolved_path": "shared/scripts/report_archive_windows.py",
-      "sha256": "a12b69cfd135f3312504dd7cc711f9d6ccaac50954502f083f2bfbd26aa3c538"
-    },
-    {
-      "path": "shared/scripts/test_report_archive.py",
-      "exists": true,
-      "resolved_path": "shared/scripts/test_report_archive.py",
-      "sha256": "9c6d587211a9297ed9ec5541efe0900fcb90d646e6cd0e5b47ecdc29611cdb48"
+      "sha256": "fd99761eab41ec23a56877635b269544558baad61dfe07a2d9df8e273d6be0a4"
     }
   ],
   "missing_declared_dependencies": []

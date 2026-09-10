@@ -1,6 +1,6 @@
 {
   "resource_kind": "research_brief_contract",
-  "version": "1.4",
+  "version": "1.5",
   "required_top_level": [
     "research_id",
     "instrument",
@@ -146,5 +146,16 @@
   "key_variable_limits": {
     "minimum": 1,
     "maximum": 20
+  },
+  "source_timing_contract": {
+    "version": "1.0",
+    "required_for_dashboard": "7.2",
+    "required_source_policy_fields": [
+      "timing_contract_version",
+      "cutoff_at"
+    ],
+    "cutoff_at": "seconds-level timezone-aware ISO timestamp; UTC date equals cutoff_date; <= now",
+    "nonexact_evidence": "primary captured sources only, availability proves no earlier than observation; publication remains unknown or day precision",
+    "compatibility": "older Briefs without timing_contract_version/cutoff_at remain readable; adding cutoff_at requires explicit timing contract"
   }
 }

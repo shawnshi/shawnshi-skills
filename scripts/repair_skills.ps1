@@ -209,8 +209,14 @@ function Test-AutomaticPersistence {
 function Test-AutomaticPersistenceOptOut {
     param([string]$Text)
 
+    # Direct enumerations must bind an explicit no-save trigger to a complete
+    # negative persistence consequence, not merely mention preview/read-only.
+    $enumeratedNoSave = '(?:\u4E8B\u5B9E\u95EE\u7B54|\u4E34\u65F6\u5206\u6790|\u9884\u89C8|\u8349\u7A3F)'
+    $noSaveEffect = '(?:\u4E0D(?:\u843D\u76D8|\u5199\u5165|\u4FDD\u5B58|\u5F52\u6863)(?:\u62A5\u544A)?|\u4E0D\u6267\u884C(?:\u62A5\u544A)?(?:\u843D\u76D8|\u5199\u5165|\u4FDD\u5B58|\u5F52\u6863)(?:\u6216\u5F52\u6863)?(?:\s+validate/commit)?)'
+    $directNoSavePattern = '(?:^|[\u3002\uFF1B;])\s*(?:[-*]\s+|\d+\.\s+)?(?:' + $enumeratedNoSave + '[\u3001/\u6216])*\s*(?:\u660E\u786E)?\u4E0D\u4FDD\u5B58\s*(?:\u53EA\u5728\u7B54\u590D\u4EA4\u4ED8[\uFF0C,]\s*)?' + $noSaveEffect + '\s*(?=\u3002|$)'
+
     foreach ($line in $Text -split '\r?\n') {
-        if ($line -match $AutomaticPersistenceOptOutRelationPattern) {
+        if ($line -match $AutomaticPersistenceOptOutRelationPattern -or $line -match $directNoSavePattern) {
             return $true
         }
     }

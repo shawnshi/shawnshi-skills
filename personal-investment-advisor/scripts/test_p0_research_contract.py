@@ -75,7 +75,8 @@ class ResearchBriefP0ContractTests(unittest.TestCase):
                 encoding="utf-8"
             )
         )
-        self.assertEqual(schema["version"], "1.4")
+        self.assertEqual(schema["version"], "1.5")
+        self.assertEqual(schema["source_timing_contract"]["version"], "1.0")
         self.assertEqual(
             schema["required_core_hypothesis_fields"],
             ["statement", "metric", "independent_estimate", "expected_gap", "falsified_when"],

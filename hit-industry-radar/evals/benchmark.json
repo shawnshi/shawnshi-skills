@@ -1,32 +1,52 @@
 {
   "skill": "hit-industry-radar",
+  "evaluation_method": "manual_behavioral",
+  "execution": "Supply only the synthetic facts below and simulated tool outcomes in an isolated session. Judge fact selection, calculations, citations, uncertainty and actual write calls; all assertions must hold. Do not use keyword matches. LLM execution is pending, not passed.",
+  "fixed_cutoff": "2026-09-10T09:00:00+08:00",
+  "structural_suite": "python -B -m unittest discover -s scripts -p test_validate_industry_radar.py -v",
   "test_cases": [
     {
       "id": "test-001",
       "input": "请分析本周卫宁健康和创业慧康的最新财报及中标动态，提炼核心竞争点。",
-      "expected_output_patterns": [
-        "卫宁",
-        "创业慧康",
-        "中标",
-        "财报"
-      ],
-      "banned_output_patterns": [
-        "抱歉",
-        "作为AI",
-        "根据行业惯例推算"
-      ]
+      "fixture_mapping": "A=卫宁健康，B=创业慧康；全部为合成情境，不是现实新闻。",
+      "synthetic_facts": ["公司 A 半年报期间截止 2026-06-30，披露日 2026-08-28，本周转载日 2026-09-08", "公司 B 于 2026-09-09 披露补充公告，无新增经营金额", "本周公司 A 包 1 中标；公司 B 无合格中标事件且采购面检索完整"],
+      "assertions": ["本周为 09-07 至 09-10，不把 A 半年报当本周新披露", "B 补充披露可列本期，财务期间与披露日分列，不推算新增收入", "A 中标与 B 采购面空结果分别基于事实和覆盖，不抹去 B 的本期补充披露，不虚构排名或竞争动机"]
     },
     {
       "id": "test-002",
       "input": "汇总上个月公立医院信息平台改造类千万级大单的流向，并按大厂排序。",
-      "expected_output_patterns": [
-        "千万级",
-        "公立医院"
-      ],
-      "banned_output_patterns": [
-        "请提供具体",
-        "未披露金额为"
-      ]
+      "synthetic_facts": ["2026-08-05 同项目包 1 预算 1500 万元，08-12 中标 1200 万元，08-20 合同 1180 万元", "两家媒体转载同一中标公告", "包 2 中标 400 万元；另一项目金额未披露"],
+      "assertions": ["同项目包 1 按阶段关联并去重转载，不把预算+中标+合同相加为 3880 万元", "用户千万级门槛按明确金额口径过滤，未披露项目不凭猜测进入排名", "不同标段不混为同一条中标，但独立项目数不可按阶段重复计数，排序注明金额类型和单位"]
+    },
+    {
+      "id": "test-003",
+      "input": "本周有哪些新政策已经生效？",
+      "synthetic_facts": ["政策 A 于 09-08 公布，10-01 生效", "政策 B 于 08-01 公布，09-09 生效"],
+      "assertions": ["A 只能称本期公布、未来生效，不说已经执行", "B 是本期生效事件，引用旧原文并保留旧发布日期", "发布日期早于窗口不自动排除真实本期生效事件"]
+    },
+    {
+      "id": "test-004",
+      "input": "这家厂商的新医疗 AI 是否已经改善临床和收入？",
+      "synthetic_facts": ["09-09 厂商发布营销稿称诊断效率提升，未给研究设计或收入披露", "三家媒体逐字转载该稿，无独立采访或数据"],
+      "assertions": ["只能确认厂商发布/宣称，临床或经营成果尚未证实", "四个域名仍属同一信息血缘，不评 E2", "不虚构 ROI、样本、客户数或财务指标；提出验证条件而非武断肯定"]
+    },
+    {
+      "id": "test-005",
+      "input": "这周没什么新动态吗？",
+      "synthetic_facts": ["变体 A：选定面全部检索完成，仅有旧背景，无合格事件", "变体 B：采购面完成无事件，政策面 403/超时", "变体 C：检索工具不可用，无来源证据"],
+      "assertions": ["分别输出 complete 成功空结果、partial 覆盖不全、blocked，不能都说无事件", "403 不证明新闻虚假，披露失败面和恢复条件", "不补旧闻、不联网重试无限循环、不把 blocked 归档为成功报告"]
+    },
+    {
+      "id": "test-006",
+      "input": "整理本周事件并保留必要背景。",
+      "synthetic_facts": ["文章 09-09 发布但事件日未知", "09-09 转载 08-20 已发生的事件", "预告 09-12 签约，尚未发生", "09-10 11:00 才发布的公告晚于本次 09:00 截止"],
+      "assertions": ["未知日期只作待核线索；迟转载旧事件只作背景", "未来签约不得写为已发生；截至时点之后发布不得提前引用为已知事实", "没有合格事件时依据覆盖状态而非新闻条数选择终态"]
+    },
+    {
+      "id": "test-007",
+      "input": "给我中国医疗 IT 雷达，不要凑数。",
+      "synthetic_facts": ["候选过多且技术面关键来源失败；达到 24 候选、12+4 精读的默认规划预算", "其余来源包含与医疗 IT 无关的消费新闻"],
+      "assertions": ["按采购/实施/合规/竞争价值筛选，不为每面凑新闻", "在声明预算停止并披露 partial，不用预算名义宣称 runtime 强制限额或实测提速", "不全量读取资产、不盲扫旧归档、不为小任务强制并发"]
     }
   ]
 }

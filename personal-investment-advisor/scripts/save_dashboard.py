@@ -153,10 +153,23 @@ def render_markdown(data, raw_json):
     md += f"| **量能分析** | {va.get('volume_status', '--')} | 换手率: {va.get('turnover_rate', '--')} (量比: {va.get('volume_ratio', '--')}) |\n"
     md += f"| **筹码结构** | {cs.get('chip_health', '--')} | 获利比例: {cs.get('profit_ratio', '--')} |\n\n"
 
+    if data.get("dashboard_contract_version") == "7.2":
+        md += "## Publication precision / 可得时间边界\n\n"
+        md += "published_at 仅为实际发布时间；day 不是午夜精确发布；unknown 不推定首次发布时间。availability_observed_at 只证明所捕获内容至迟于该时刻已可见，不证明此前可得。\n\n"
+        md += "回执结构通过不认证来源真实；新建/发布须显式重验原件 SHA 与取证记录。verified_at 是重验时刻，不回填发布时间或观测时间。报价仍按实际观测/获取时刻及市场状态执行秒级时效门。\n\n"
+        md += _etf_literal_json(data.get("research_brief", {}).get("source_policy"))
+        for index, item in enumerate(evidence_items):
+            if item.get("timing_contract_version"):
+                md += _etf_literal_json({"evidence_index": index, **item})
+        if data.get("scenario_analysis", {}).get("valuation_contract_version") == "3.0":
+            md += "## Ordinary equity / 普通股权益\n\n"
+            md += "企业价值 − 真实净债务 + 非经营资产 − 少数股东权益 − 优先股 − 其他优先索偿；DDM/FCFE 直接折现普通股现金流，不虚构企业价值。账面金额不自动等于经济公允价值；股数日期与当前/假设转换口径见下。\n\n"
+            md += _etf_literal_json(data["scenario_analysis"])
+
     if isinstance(data.get("etf_research"), dict):
         md += "## ETF NAV 与覆盖边界\n\n"
         md += "企业价值、净债务、股权价值与稀释股数：not_applicable。\n"
-        md += "折溢价比较当前报价与最近已公布 NAV，不代表同时点公允价值；情景是假设压力测试，不是预测。\n\n"
+        md += ("折溢价比较当前报价与已捕获可得 NAV，不声称已知首次公布时刻，不代表同时点公允价值；情景是假设压力测试，不是预测。\n\n" if data.get("dashboard_contract_version") == "7.2" else "折溢价比较当前报价与最近已公布 NAV，不代表同时点公允价值；情景是假设压力测试，不是预测。\n\n")
         etf = data["etf_research"]
         comparison = {"premium_discount_basis": etf.get("premium_discount_basis")}
         for name, index in (
@@ -164,7 +177,7 @@ def render_markdown(data, raw_json):
             ("nav", etf.get("nav", {}).get("evidence_index")),
         ):
             item = evidence_items[index] if type(index) is int and 0 <= index < len(evidence_items) else {}
-            fields = ("price", "currency", "observed_at") if name == "quote" else ("published_at",)
+            fields = ("price", "currency", "observed_at") if name == "quote" else ("published_at", "publication_precision", "publication_date", "publication_utc_offset", "availability_observed_at", "retrieved_at")
             comparison[name] = {
                 "evidence_index": index,
                 "source_locator": item.get("source_locator"),
@@ -243,14 +256,14 @@ def render_markdown(data, raw_json):
 
     md += "\n## 🔴 情报与风险 (Intelligence)\n\n"
     md += f"**市场情绪**: {intel.get('sentiment_summary', '')}\n\n"
-    
+
     thesis_tracking = intel.get("thesis_tracking", {})
     if thesis_tracking:
         md += "**图谱协同追踪 (Thesis Tracking)**:\n"
         md += f"- 历史预判: {thesis_tracking.get('previous_thesis', '无记录')}\n"
         md += f"- 当前状态: {thesis_tracking.get('status', 'N/A')}\n"
         md += f"- 逻辑推演: {thesis_tracking.get('reasoning', '')}\n\n"
-        
+
     if intel.get("positive_catalysts"):
         md += "**催化剂**:\n"
         for item in intel["positive_catalysts"]:
@@ -580,7 +593,7 @@ def save_dashboard():
     match = re.search(r'\{.*\}', content, re.DOTALL)
     if match:
         json_str = match.group(0)
-        
+
     try:
         parsed = json.loads(json_str)
     except json.JSONDecodeError as e:
@@ -613,7 +626,7 @@ def save_dashboard():
             )
         except Exception as exc:
             safe_print(f"Warning: research journal append failed: {exc}")
-    
+
     if args.delete_input and args.file:
         try:
             input_source = Path(args.file)

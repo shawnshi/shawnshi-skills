@@ -17,7 +17,7 @@ LOCK_FILENAME = ".dashboard_index.lock"
 GENERATIONS_DIRNAME = "generations"
 INDEX_SCHEMA_VERSION = 3
 # Archive versions are explicit; accepting an archive is not a current research pass.
-SUPPORTED_ARCHIVE_CONTRACT_VERSIONS = ("7.0", "7.1")
+SUPPORTED_ARCHIVE_CONTRACT_VERSIONS = ("7.0", "7.1", "7.2")
 WINDOWS_RESERVED_NAMES = {
     "CON",
     "PRN",
@@ -348,7 +348,6 @@ def register_dashboard(
     generation_id: str,
 ) -> dict:
     root_path = Path(root).expanduser().resolve()
-    root_path.mkdir(parents=True, exist_ok=True)
     symbol = canonical_symbol(dashboard.get("stock_code"))
     safe_archive_component(symbol, "stock_code")
     generation_id = safe_archive_component(generation_id, "generation_id")
@@ -412,7 +411,7 @@ def register_dashboard(
     timestamp = archived_at.astimezone(timezone.utc).isoformat()
     incoming_entry = {
         "stock_code": str(dashboard["stock_code"]).strip(),
-        "dashboard_contract_version": str(SCHEMA["version"]),
+        "dashboard_contract_version": dashboard.get("dashboard_contract_version", "7.1"),
         "generation_id": generation_id,
         "json_path": json_relative,
         "markdown_path": markdown_relative,
@@ -420,7 +419,8 @@ def register_dashboard(
         "markdown_sha256": _sha256(markdown_bytes),
         "archived_at": timestamp,
     }
-    incoming_key = (_parse_archived_at(timestamp), generation_id)
+    # Validate incoming metadata before the lock can create or mutate files.
+    incoming_key = _entry_sort_key(symbol, incoming_entry)
     index_path = _managed_file_path(root_path, INDEX_FILENAME)
     with _catalog_lock(root_path):
         index = _load_index(index_path)
@@ -662,6 +662,11 @@ def resolve_dashboards(root: str | Path, symbols: list[str]) -> dict:
             continue
 
         validation_errors = validate_dashboard(payload)
+        payload_version = payload.get("dashboard_contract_version")
+        entry_version = entry.get("dashboard_contract_version")
+        if ((payload_version is not None and payload_version != entry_version)
+                or (payload_version is None and entry_version == "7.2")):
+            validation_errors.append("dashboard payload/index contract version mismatch")
         if validation_errors:
             report["entries"].append(
                 {

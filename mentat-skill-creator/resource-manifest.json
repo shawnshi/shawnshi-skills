@@ -62,7 +62,7 @@
       "path": "scripts/repair_skills.ps1",
       "exists": true,
       "resolved_path": "scripts/repair_skills.ps1",
-      "sha256": "54e381bef803b4de5c8a07672e7da66055026a91af817b28eaf5074ddfe5fea4"
+      "sha256": "6bfbe358956f8ff6f6f75368292f6fe65e6af50c7b47ba39738ef85342b0e2e1"
     },
     {
       "path": "scripts/test_mentat_skill_creator.py",

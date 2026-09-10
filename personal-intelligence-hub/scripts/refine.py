@@ -20,6 +20,8 @@ from hub_utils import (
     REFINED_PATH as _REFINED_PATH,
 )
 from mix_policy import DOMAINS
+from relevance import SCORING_VERSION, content_relevance, source_preference
+from relevance import keyword_matches as keyword_matches
 from run_contract import (
     RunContractError,
     candidate_object_hash,
@@ -34,14 +36,6 @@ PROMPT_PATH = HUB_DIR / "references" / "prompts" / "v1_refine_system.md"
 REFINED_PATH = _REFINED_PATH
 
 
-def keyword_matches(text: str, keyword: str) -> bool:
-    normalized_keyword = keyword.lower()
-    if re.fullmatch(r"[a-z0-9][a-z0-9 .+\-/]*", normalized_keyword):
-        pattern = rf"(?<![a-z0-9]){re.escape(normalized_keyword)}(?![a-z0-9])"
-        return re.search(pattern, text) is not None
-    return normalized_keyword in text
-
-
 def load_inputs(
     focus_path: Path | None = None,
     scan_path: Path | None = None,
@@ -54,20 +48,15 @@ def load_inputs(
     return scan_data, focus_data
 
 
-def score_item(item: dict, focus_data: dict) -> tuple[int, list[str], str, dict[str, int]]:
+def score_item(
+    item: dict, focus_data: dict
+) -> tuple[int, list[str], str, dict[str, int]]:
     text = (item.get("title", "") + " " + item.get("raw_desc", "")).lower()
     domain_scores: dict[str, int] = {}
     matched_by_domain: dict[str, list[str]] = {}
     for domain in DOMAINS:
         domain_config = focus_data.get("domains", {}).get(domain, {})
-        score = 0
-        matched: list[str] = []
-        for entry in domain_config.get("keywords", []):
-            keyword = str(entry["keyword"])
-            if keyword_matches(text, keyword):
-                score += int(entry["weight"])
-                matched.append(keyword)
-        score += int(domain_config.get("priority_sources", {}).get(item.get("source", ""), 0))
+        score, matched = content_relevance(text, domain_config)
         domain_scores[domain] = score
         matched_by_domain[domain] = matched
 
@@ -110,7 +99,9 @@ def make_candidate(
 ) -> dict:
     summary = item.get("raw_desc", "").strip() or item.get("title", "")
     summary = summary[:220]
-    connection = "、".join(matched[:3]) if matched else "与当前战略重心关联较弱，但建议观察"
+    connection = (
+        "、".join(matched[:3]) if matched else "与当前战略重心关联较弱，但建议观察"
+    )
     provisional_level = level_from_score(score, runner_available)
     candidate_id = candidate_ref(str(item.get("url") or ""))
     candidate = {
@@ -121,7 +112,8 @@ def make_candidate(
         "published_at": item.get("time", "unknown"),
         "published_at_source": item.get("published_at_source", "unknown"),
         "observed_at": item.get("observed_at") or item.get("retrieved_at"),
-        "retrieved_at": item.get("retrieved_at") or datetime.now().astimezone().isoformat(),
+        "retrieved_at": item.get("retrieved_at")
+        or datetime.now().astimezone().isoformat(),
         "provisional_domain": primary_domain,
         "provisional_secondary_domains": [
             domain
@@ -130,8 +122,14 @@ def make_candidate(
         ],
         "domain_scores": domain_scores,
         "heuristic_rank": score,
+        "source_preference": source_preference(
+            item.get("source", ""),
+            focus_data.get("domains", {}).get(primary_domain, {}),
+        ),
         "provisional_level": provisional_level,
-        "source_confidence_hint": confidence_from_source(item.get("source", ""), focus_data),
+        "source_confidence_hint": confidence_from_source(
+            item.get("source", ""), focus_data
+        ),
         "summary_hint": summary,
         "keyword_connection_hint": connection,
         "claimed_major_signal": item.get("major_signal") is True,
@@ -173,8 +171,18 @@ def heuristics(
             )
         )
 
-    max_candidates = max_items_override if max_items_override is not None else focus_data.get("filters", {}).get("max_candidates", focus_data.get("filters", {}).get("max_top10", 10) * 5)
-    min_score = min_score_override if min_score_override is not None else focus_data.get("filters", {}).get("min_score_for_top10", 4)
+    max_candidates = (
+        max_items_override
+        if max_items_override is not None
+        else focus_data.get("filters", {}).get(
+            "max_candidates", focus_data.get("filters", {}).get("max_top10", 10) * 5
+        )
+    )
+    min_score = (
+        min_score_override
+        if min_score_override is not None
+        else focus_data.get("filters", {}).get("min_score_for_top10", 4)
+    )
     qualified_candidates = [
         candidate for candidate in scored if candidate["heuristic_rank"] >= min_score
     ]
@@ -182,6 +190,7 @@ def heuristics(
         qualified_candidates,
         key=lambda candidate: (
             -int(candidate.get("heuristic_rank", 0)),
+            -int(candidate.get("source_preference", 0)),
             str(candidate.get("title") or ""),
             str(candidate.get("url") or ""),
         ),
@@ -190,10 +199,14 @@ def heuristics(
     rejected_by_reason = {
         "historical_duplicate": len(scan_data["items"]) - len(scored),
         "below_heuristic_threshold": len(scored) - len(qualified_candidates),
-        "candidate_capacity": max(0, len(qualified_candidates) - len(ranked_candidates)),
+        "candidate_capacity": max(
+            0, len(qualified_candidates) - len(ranked_candidates)
+        ),
     }
     baseline_funnel = scan_data.get("candidate_funnel")
-    if isinstance(baseline_funnel, dict) and isinstance(baseline_funnel.get("raw"), int):
+    if isinstance(baseline_funnel, dict) and isinstance(
+        baseline_funnel.get("raw"), int
+    ):
         observed = int(baseline_funnel["raw"])
         terminal_dispositions = {
             "invalid_or_unknown_date": int(baseline_funnel.get("quarantined", 0)),
@@ -209,7 +222,9 @@ def heuristics(
             "retained_for_review": len(ranked_candidates),
         }
     if sum(terminal_dispositions.values()) != observed:
-        raise RuntimeError("refinement candidate funnel does not conserve baseline observations")
+        raise RuntimeError(
+            "refinement candidate funnel does not conserve baseline observations"
+        )
     return {
         "contract_version": "candidate-pool/1.0",
         "artifact_kind": "candidates_only",
@@ -223,11 +238,16 @@ def heuristics(
             "rejected_by_reason": rejected_by_reason,
             "terminal_dispositions": terminal_dispositions,
         },
-        "metadata": scan_data.get("metadata", {}),
+        "metadata": {
+            **scan_data.get("metadata", {}),
+            "scoring": {
+                "version": SCORING_VERSION,
+                "heuristic_rank": "content keyword relevance; not probability",
+                "domain_scores": "content only; explicit primary_domain override preserved",
+                "source_preference": "sorting tie-break only; not authentication",
+            },
+        },
     }
-
-
-
 
 
 def enforce_entity_linking(text: str, entities: list[str]) -> str:
@@ -235,7 +255,9 @@ def enforce_entity_linking(text: str, entities: list[str]) -> str:
         return text
     for entity in entities:
         if len(entity) >= 2:
-            pattern = re.compile(rf"(?<!\[\[)({re.escape(entity)})(?!\]\])", flags=re.IGNORECASE)
+            pattern = re.compile(
+                rf"(?<!\[\[)({re.escape(entity)})(?!\]\])", flags=re.IGNORECASE
+            )
             text = pattern.sub(r"[[\1]]", text)
     return text
 
@@ -251,9 +273,13 @@ def post_process_entities(output: dict, focus_data: dict) -> dict:
 
     for candidate in output.get("top_10", []):
         if "summary_zh" in candidate:
-            candidate["summary_zh"] = enforce_entity_linking(candidate["summary_zh"], entities)
+            candidate["summary_zh"] = enforce_entity_linking(
+                candidate["summary_zh"], entities
+            )
         if "deduction" in candidate:
-            candidate["deduction"] = enforce_entity_linking(candidate["deduction"], entities)
+            candidate["deduction"] = enforce_entity_linking(
+                candidate["deduction"], entities
+            )
     return output
 
 
@@ -270,7 +296,9 @@ def refine(
     if blackboard_path is None:
         ensure_runtime_dirs()
     if manifest_path is None:
-        raise RunContractError("--manifest is required; heuristic refinement must belong to an active run")
+        raise RunContractError(
+            "--manifest is required; heuristic refinement must belong to an active run"
+        )
     manifest = require_stage(manifest_path, "baseline", {"completed", "degraded"})
     baseline = manifest["stages"]["baseline"]
     baseline_path = scan_path or LATEST_SCAN_PATH
@@ -279,11 +307,12 @@ def refine(
         raise RunContractError("latest scan bytes do not match the baseline receipt")
     history_record = manifest.get("artifacts", {}).get("history_snapshot")
     if not isinstance(history_record, dict):
-        raise RunContractError("history_snapshot artifact is required before refinement")
+        raise RunContractError(
+            "history_snapshot artifact is required before refinement"
+        )
     history_path = Path(str(history_record.get("artifact_path") or ""))
-    if (
-        not history_path.is_file()
-        or file_sha256(history_path) != history_record.get("artifact_sha256")
+    if not history_path.is_file() or file_sha256(history_path) != history_record.get(
+        "artifact_sha256"
     ):
         raise RunContractError("history_snapshot bytes changed")
     update_phase("refine", "running", blackboard_path=blackboard_path)
@@ -318,7 +347,9 @@ def refine(
 
 
 if __name__ == "__main__":
-    parser = argparse.ArgumentParser(description="Build parameterized intelligence candidates.")
+    parser = argparse.ArgumentParser(
+        description="Build parameterized intelligence candidates."
+    )
     parser.add_argument("--focus-config", type=Path)
     parser.add_argument("--min-score", type=int)
     parser.add_argument("--max-items", type=int)

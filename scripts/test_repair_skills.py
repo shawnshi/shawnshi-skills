@@ -6,7 +6,6 @@ import tempfile
 import unittest
 from pathlib import Path
 
-
 SCRIPT_PATH = Path(__file__).with_name("repair_skills.ps1")
 RESOURCE_MANIFEST_SCRIPT = Path(__file__).with_name("resource_manifest.py")
 OPENAI_YAML_SCRIPT = Path(__file__).with_name("validate_openai_yaml.py")
@@ -50,20 +49,22 @@ class RepairSkillsPersistenceTests(unittest.TestCase):
         scripts_dir = temp_root / "scripts"
         scripts_dir.mkdir()
         shutil.copy2(SCRIPT_PATH, scripts_dir / SCRIPT_PATH.name)
-        shutil.copy2(RESOURCE_MANIFEST_SCRIPT, scripts_dir / RESOURCE_MANIFEST_SCRIPT.name)
+        shutil.copy2(
+            RESOURCE_MANIFEST_SCRIPT, scripts_dir / RESOURCE_MANIFEST_SCRIPT.name
+        )
         shutil.copy2(OPENAI_YAML_SCRIPT, scripts_dir / OPENAI_YAML_SCRIPT.name)
 
         exception_block = ""
         if declared:
             row = table_row or f"| `{skill_name}` | generate | archive | preview |"
             duplicate = f"\n{row}" if duplicate_row else ""
-            exception_block = """
+            exception_block = f"""
 <!-- automatic-persistence-exceptions:start -->
 | Skill | Request | Target | Opt-out |
 |---|---|---|---|
 {row}{duplicate}
 <!-- automatic-persistence-exceptions:end -->
-""".format(row=row, duplicate=duplicate)
+"""
         (temp_root / "README.md").write_text(
             "当前库存为 1 个用户技能。\n" + exception_block,
             encoding="utf-8",
@@ -97,8 +98,10 @@ description: 用于测试根门禁的示例技能。
                 script_fixture,
                 encoding="utf-8",
             )
-        skill_text = (skill_dir / "SKILL.md").read_text(encoding="utf-8").replace(
-            "name: example-skill", f"name: {skill_name}", 1
+        skill_text = (
+            (skill_dir / "SKILL.md")
+            .read_text(encoding="utf-8")
+            .replace("name: example-skill", f"name: {skill_name}", 1)
         )
         (skill_dir / "SKILL.md").write_text(skill_text, encoding="utf-8")
         self.regenerate_manifests(temp_root)
@@ -110,17 +113,17 @@ description: 用于测试根门禁的示例技能。
         include_skills: tuple[str, ...] = (),
     ) -> subprocess.CompletedProcess[str]:
         command = [
-                "pwsh",
-                "-NoProfile",
-                "-ExecutionPolicy",
-                "Bypass",
-                "-File",
-                str(root / "scripts" / SCRIPT_PATH.name),
-                "-Mode",
-                "Gate",
-                "-Root",
-                str(root),
-            ]
+            "pwsh",
+            "-NoProfile",
+            "-ExecutionPolicy",
+            "Bypass",
+            "-File",
+            str(root / "scripts" / SCRIPT_PATH.name),
+            "-Mode",
+            "Gate",
+            "-Root",
+            str(root),
+        ]
         if include_skills:
             command.extend(["-IncludeSkills", *include_skills])
         return subprocess.run(
@@ -143,6 +146,50 @@ description: 用于测试根门禁的示例技能。
         self.assertEqual(result.returncode, 0, result.stdout + result.stderr)
         self.assertIn("Skill audit gate passed.", result.stdout)
 
+    def test_gate_accepts_direct_enumerated_no_save_exit(self):
+        exits = (
+            "事实问答、临时分析、预览、草稿或明确不保存只在答复交付，不落盘报告。",
+            "预览/草稿/不保存不执行报告落盘或归档 validate/commit。",
+            "不保存不归档。",
+        )
+        for exit_text in exits:
+            with self.subTest(exit_text=exit_text):
+                result = self.run_gate(
+                    self.build_fixture(
+                        declared=True,
+                        has_opt_out=False,
+                        contract_line="正式结果自动保存到权威档案；" + exit_text,
+                    )
+                )
+                self.assertEqual(result.returncode, 0, result.stdout + result.stderr)
+
+    def test_gate_rejects_unbound_or_contradictory_enumerated_no_save(self):
+        exits = (
+            "事实问答、临时分析只在答复交付，不落盘报告。",
+            "预览/草稿不执行报告落盘或归档 validate/commit。",
+            "并非不保存只在答复交付，不落盘报告。",
+            "不保存并非不落盘报告。",
+            "预览图保持只读；不保存选项仅用于显示。",
+            "预览/草稿/不保存选项展示后，不落盘报告。",
+            "预览/草稿/不保存。其他流程不落盘报告。",
+            "预览/草稿/不保存仍执行报告落盘或归档 validate/commit。",
+            "预览/草稿/不保存只在答复交付，仍归档报告。",
+            "预览/草稿/不保存不落盘报告，但仍归档。",
+            "预览/草稿/不保存不落盘报告；仍归档。",
+            "预览/草稿/不保存不执行报告落盘或归档 validate/commit，但仍保存报告。",
+        )
+        for exit_text in exits:
+            with self.subTest(exit_text=exit_text):
+                result = self.run_gate(
+                    self.build_fixture(
+                        declared=True,
+                        has_opt_out=False,
+                        contract_line="正式结果自动保存到权威档案；" + exit_text,
+                    )
+                )
+                self.assertNotEqual(result.returncode, 0)
+                self.assertIn("automatic_persistence_opt_out_failures=1", result.stderr)
+
     def test_gate_accepts_supported_optional_frontmatter(self):
         root = self.build_fixture(declared=True)
         skill_path = root / "example-skill" / "SKILL.md"
@@ -164,9 +211,7 @@ description: 用于测试根门禁的示例技能。
         self.assertEqual(result.returncode, 0, result.stdout + result.stderr)
 
     def test_gate_rejects_declared_contract_without_opt_out(self):
-        result = self.run_gate(
-            self.build_fixture(declared=True, has_opt_out=False)
-        )
+        result = self.run_gate(self.build_fixture(declared=True, has_opt_out=False))
 
         self.assertNotEqual(result.returncode, 0)
         self.assertIn("automatic_persistence_opt_out_failures=1", result.stderr)
@@ -239,9 +284,7 @@ description: 用于测试根门禁的示例技能。
         self.assertIn("automatic_persistence_table_malformed_rows=1", result.stderr)
 
     def test_gate_rejects_duplicate_contract_table_row(self):
-        result = self.run_gate(
-            self.build_fixture(declared=True, duplicate_row=True)
-        )
+        result = self.run_gate(self.build_fixture(declared=True, duplicate_row=True))
 
         self.assertNotEqual(result.returncode, 0)
         self.assertIn("automatic_persistence_table_duplicate_skills=1", result.stderr)
@@ -472,7 +515,9 @@ description: 用于测试根门禁的示例技能。
         self.assertNotEqual(result.returncode, 0)
         self.assertIn("validator_integration_failures=1", result.stderr)
 
-    def test_selection_gate_filters_unrelated_trigger_noise_but_keeps_related_errors(self):
+    def test_selection_gate_filters_unrelated_trigger_noise_but_keeps_related_errors(
+        self,
+    ):
         root = self.build_fixture(declared=False, contract_line="只生成草稿。")
         matrix_path = root / "shared" / "trigger-ownership-matrix.json"
         matrix = {
@@ -570,9 +615,7 @@ description: 用于测试根门禁的示例技能。
             self.build_fixture(
                 declared=True,
                 has_opt_out=False,
-                contract_line=(
-                    "预览图保持只读；正式结果自动保存到权威档案。"
-                ),
+                contract_line=("预览图保持只读；正式结果自动保存到权威档案。"),
             )
         )
 

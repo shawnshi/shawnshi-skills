@@ -7,56 +7,36 @@ description: 检索并分析指定周期内的医疗信息化、数字健康、�
 
 ## 执行流程
 
-1. 确定时间窗口、地区、主题和重点对象。用户未指定时，以最近 7 天为主，并用更长窗口核验事件是否重复。
-2. 制定检索面：政策监管、医疗机构与项目、主要厂商、技术与科研、跨行业影响。只保留与用户决策有关的面。
-3. 检索当前来源。优先监管机构、政府采购平台、公司公告、论文原文、产品发布页和可信行业机构。
-4. 分别记录网页发布日期和事件发生日期。超出时间窗口但构成必要背景的内容标为“背景”，不得列为本期新事件。
-5. 按事件实体、动作、日期和项目进行去重。转述同一新闻的多篇文章只算一个事件。
-6. 区分事实、来源观点和分析推断。没有披露金额、版本或进度时写“未披露”，不要补全数字。
-7. 对影响较大的事件进行第二来源核验，并说明证据强度与不确定性。
-8. 当任务包含三个以上独立检索面且并行能力可用时，可并行检索；不要让并行成为小型周报的硬条件。
-9. 生成正式报告后默认直接归档，无需再次询问或等待用户确认。用户明确要求预览、草稿或不保存时，只在答复中交付并保持只读，不写入归档目录。
+1. 默认中国医疗 IT，按采购、实施、合规和竞争价值筛选。默认含今天的滚动 7 日（rolling7）；明确“本周”用周一至截止日（natural_week），历史区间用 explicit。默认 Asia/Shanghai，固定带偏移的截止时点，禁止未来事件；日期细则见研究合同。仅范围或写入身份有实质歧义才问一个问题。
+2. 检索前读 [references/research_contract.md](references/research_contract.md)：有界检索、记录覆盖；区分事件/发布日期、背景/未知日期线索，按项目/标段/阶段去重，转载不算独立证据。预算仅为规划界限，不保证运行时强制执行。
+3. 分开事实、来源主张、推断和建议。金额、版本、进度未披露就保留未知；营销材料只支持“发布/宣称”，不证明临床或经营成效。重要结论核对独立证据，不为数字或条数补旧闻。
+4. 正式雷达/战报默认自动归档，无需再确认；事实问答、临时分析、预览、草稿或明确不保存只在答复交付，不落盘报告。只读答复也须遵循事实与覆盖规则，不强制完整文件结构。
 
 ## 自动保存与命名
 
 - 保存目录优先级为：用户本次指定目录 > 已确认的既有稳定归档目录 > 当前用户既有 MEMORY 工作区下的 `raw/HealthcareIndustryRadar`。解析不到唯一 MEMORY 工作区时停止写入并报告路径歧义，不另建平行目录。默认行为不授权发布、更新知识库或写入其他系统。
-- 默认文件名为 `DHWB-Radar-YYYYMMDD.md`，其中日期是本次时间窗口结束日；用户未指定窗口时，使用默认最近 7 天窗口的结束日。
-- 先在当前会话隔离临时目录生成与最终文件同名的 UTF-8 定稿。确认标题和时间窗口一致、正文非空、没有未解析占位符、关键事件包含直接来源后，再原子发布到归档目录。
-- 保存前检查目标是否已存在。若目标与本次报告属于同一时间窗口和同一档期，则在验证通过后原子替换；若路径已被不同语义的文件占用，则停止写入并报告冲突，不静默覆盖，也不擅自改名。
+- 默认文件名 `DHWB-Radar-YYYYMMDD.md`，日期恒为窗口结束日。
+- 正式定稿按 [references/report_schema.md](references/report_schema.md) 在当前会话隔离临时目录生成同名 UTF-8 文件，运行 [scripts/validate_industry_radar.py](scripts/validate_industry_radar.py)，再人工核验事实。结构通过不是写入授权或安全发布能力。
+- 仅 complete 或显式披露缺口的 partial 正式定稿进入共享安全归档；blocked 检索只交付诊断与恢复条件，不能归档成成功报告。按 report_schema.md 的绝对路径与 CLI 顺序运行共享 `validate --skill hit-industry-radar`，将成功 stdout 保存为隔离临时 JSON 计划，再 `commit --plan`；两步逐次使用相同精确 `--allow-target`。预览/草稿/不保存不执行报告落盘或归档 validate/commit。
+- 目标父目录必须已经存在；缺目录、路径歧义、校验器/Windows 权限能力缺失均 BLOCKED，不自动建目录、安装依赖、冒用 skill、复制、rename/replace 或放宽权限绕过。保留隔离定稿和失败回执。
+- 保存前由门禁检查目标。替换身份必须同时匹配技能、周期起止、出刊日（结束日）、窗口模式、去首尾空白的非空报告范围和报告时区；自定义文件名不豁免身份。旧目标缺元数据、标题不符或不同身份都拒绝，不自动迁移旧报告、改名或覆盖。`--allow-custom-period` 为 weekly 专属，radar 传入即拒绝。
 - 发布后以 UTF-8 重新读取正式文件，复核标题、时间窗口、文件名、来源链接和非空内容，并计算 SHA-256。最终答复报告绝对路径、验证结果和哈希。
 
-## 输出结构
+共享资源从本技能绝对目录的父目录（skills root）解析，不从 radar 子目录拼接。本机解析值：
 
-```markdown
-# 医疗行业雷达｜[时间范围]
+- `shared/scripts/report_archive.py` → `C:/Users/shich/.pi/agent/skills/shared/scripts/report_archive.py`（唯一 validate/commit 入口）。
+- `shared/scripts/report_archive_windows.py` → `C:/Users/shich/.pi/agent/skills/shared/scripts/report_archive_windows.py`（复用原生后端，不复制）。
+- `shared/references/report_archive.md` → `C:/Users/shich/.pi/agent/skills/shared/references/report_archive.md`（执行前读权限、事务与恢复边界）。
+- `shared/scripts/test_report_archive.py` → `C:/Users/shich/.pi/agent/skills/shared/scripts/test_report_archive.py`（仅临时夹具回归）。
 
-## 结论摘要
-- [最重要变化及原因]
+## 按需资源与验收
 
-## 关键事件
-| 事件日期 | 主体 | 已核实动作 | 影响 | 证据强度 | 来源 |
-|---|---|---|---|---|---|
+S-T-C 分析按需读 [references/stc_framework.md](references/stc_framework.md)，保持厂商中立。`assets/` 只读相关地区/对象提示，不是事实来源。不得全量加载资产或盲扫既往归档、个人历史。
 
-## 竞争与技术变化
-[按主题归纳，不重复新闻正文]
-
-## 传导影响
-[事实 -> 影响机制 -> 可能结果；明确标注推断]
-
-## 建议动作
-[行动、适用条件、负责人建议、验证节点]
-
-## 信息缺口
-[尚不能确认的事项]
-```
-
-需要行业框架时，按需读取 [references/stc_framework.md](references/stc_framework.md)；其中 S-T-C 表示已核实信号、传导机制和成立条件，不要求把厂商视为威胁或生成反击话术。`assets/` 中的任务文件只作为可选检索提示，时间范围以本次任务为准，不得视为当前事实来源。
+行为验收见 [evals/benchmark.json](evals/benchmark.json) 和 [evals/evals.json](evals/evals.json)；确定性测试见 [scripts/test_validate_industry_radar.py](scripts/test_validate_industry_radar.py)。历史 hit_audit_gate.py 的 radar 分支不是当前验收入口，本技能不依赖其数字、口号或双链要求。
 
 ## 完成检查
 
-- 所有链接真实可访问，并尽量指向原始页面。
-- 事件日期、发布日期和背景材料已分开。
-- 同一事件没有因多次转载重复计数。
-- 重要推断包含证据链和不确定性。
-- 没有为了凑数量保留低价值资讯。
-- 正式报告已按约定路径归档，并通过发布后回读检查；只读退出请求除外。
+- 来源、日期、证据血缘、采购阶段和金额口径经人工复核；403/超时不等于“无事件”，结构通过不证明事实。
+- 明确 complete（声明范围检索完成，允许成功空结果）、partial（覆盖缺口）或 blocked（无可用检索证据），不把失败包装为空结果。
+- 内容状态与归档状态分开；只有 commit 退出 0 且回执 `status=COMMITTED` 才报告归档成功。记录绝对目标、SHA-256 和真实访问证据；limited-token AccessCheck 不等于实际非提升进程打开。SACL 不在保证范围，非合作写者仍有竞争窗口；POSTCOMMIT 失败可能已写入，保留证据而非自动回滚。

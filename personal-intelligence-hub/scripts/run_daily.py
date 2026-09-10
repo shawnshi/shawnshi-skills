@@ -51,9 +51,9 @@ def assess_supplement_gaps(
     manifest: dict[str, Any],
     focus: dict[str, Any],
     *,
-    article_broker_version: int = 1,
+    article_broker_version: int = 3,
 ) -> list[dict[str, Any]]:
-    from run_contract import RunContractError, _lane_slice_candidates
+    from run_contract import RunContractError, select_supplement_bound_candidates
 
     items = candidates.get("items")
     if not isinstance(items, list):
@@ -195,7 +195,7 @@ def assess_supplement_gaps(
     budget = focus.get("coverage_policy", {}).get("supplement_budget", {})
     max_queries = int(budget.get("max_queries_per_gap", 2))
     max_urls = int(budget.get("max_urls_per_gap", 4))
-    max_duration_seconds = int(budget.get("max_duration_seconds", 150))
+    max_duration_seconds = int(budget.get("max_duration_seconds", 600))
     max_turns = int(budget.get("max_turns_per_gap", 2))
     for gap in gaps:
         gap.update(
@@ -206,15 +206,13 @@ def assess_supplement_gaps(
                 "max_turns": min(int(gap["max_turns"]), max_turns),
             }
         )
-        if article_broker_version == 2:
+        if article_broker_version in {2, 3}:
             # Use the request builder's lane slice and exact required-bound rule.
-            lane_candidates = _lane_slice_candidates(candidates, gap["lane"], focus)
-            bound_count = (
-                sum(bool(str(item.get("candidate_ref") or ""))
-                    for item in lane_candidates[:max_urls])
-                if gap.get("verify_bound_candidates") else 0
+            _, required_ids = select_supplement_bound_candidates(
+                candidates, gap, focus, article_broker_version=article_broker_version
             )
-            if bound_count < max_urls:
+            bound_count = len(required_ids)
+            if article_broker_version == 3 or bound_count < max_urls:
                 gap["article_broker"] = True
     return gaps
 
@@ -239,13 +237,17 @@ async def prepare_run(
     linked_from_run_id: str | None = None,
     max_concurrency: int = DEFAULT_MAX_CONCURRENCY,
     scan_deadline_seconds: float = DEFAULT_SCAN_DEADLINE_SECONDS,
-    article_broker_version: int = 1,
+    article_broker_version: int = 3,
     now: datetime | None = None,
 ) -> PrepareResult:
     from run_contract import RunContractError
 
-    if type(article_broker_version) is not int or article_broker_version not in {1, 2}:
-        raise RunContractError("article_broker_version must be 1 or 2 for a new run")
+    if type(article_broker_version) is not int or article_broker_version not in {
+        1,
+        2,
+        3,
+    }:
+        raise RunContractError("article_broker_version must be 1, 2 or 3 for a new run")
     if max_concurrency <= 0:
         raise RunContractError("max_concurrency must be positive")
     if max_concurrency > MAX_CONCURRENCY:
@@ -332,7 +334,11 @@ async def prepare_run(
             metadata={
                 "configuration_role": "candidate_scoring_and_gap_policy",
                 # Immutable artifact metadata preserves opt-in even with no broker gaps.
-                **({"article_broker_version": 2} if article_broker_version == 2 else {}),
+                **(
+                    {"article_broker_version": article_broker_version}
+                    if article_broker_version in {2, 3}
+                    else {}
+                ),
             },
             now=now,
         )
@@ -523,13 +529,18 @@ async def prepare_run(
     )
     registered_pool = json.loads(registered_pool_path.read_text(encoding="utf-8"))
     gaps = assess_supplement_gaps(
-        registered_pool, registered_manifest, focus,
+        registered_pool,
+        registered_manifest,
+        focus,
         article_broker_version=article_broker_version,
     )
     request_path: Path | None = None
     if gaps:
         request_path, _ = build_supplement_request(
-            manifest_path, gaps, article_broker_version=article_broker_version, now=now,
+            manifest_path,
+            gaps,
+            article_broker_version=article_broker_version,
+            now=now,
         )
     else:
         no_increment_path = run_dir / "supplement_results.json"
@@ -623,8 +634,11 @@ def main() -> None:
     prepare.add_argument("--technology-ratio", type=float)
     prepare.add_argument("--ratio-reason")
     prepare.add_argument(
-        "--article-broker-version", type=int, choices=[1, 2], default=1,
-        help="Opt new runs into article broker v2 where URL budget remains (default: v1).",
+        "--article-broker-version",
+        type=int,
+        choices=[1, 2, 3],
+        default=3,
+        help="Article broker version (default: v3 native readable, including full-bound lanes; v1/v2 are explicit legacy choices).",
     )
     prepare.add_argument("--run-id")
     prepare.add_argument("--linked-from-run-id")
@@ -693,10 +707,15 @@ def main() -> None:
     )
     normalize_date.add_argument("--value", required=True)
 
-    broker_request = subparsers.add_parser("build-supplement-request", help="Build a NEW immutable request; no native public calls")
+    broker_request = subparsers.add_parser(
+        "build-supplement-request",
+        help="Build a NEW immutable request; no native public calls",
+    )
     broker_request.add_argument("--manifest", type=Path, required=True)
     broker_request.add_argument("--gaps", type=Path, required=True)
-    broker_request.add_argument("--article-broker-version", type=int, choices=[1, 2], default=1)
+    broker_request.add_argument(
+        "--article-broker-version", type=int, choices=[1, 2, 3], default=3
+    )
     supplement = subparsers.add_parser(
         "register-supplement", help="Validate and register all gap results."
     )
@@ -914,9 +933,21 @@ def main() -> None:
         )
     elif args.command == "build-supplement-request":
         from run_contract import build_supplement_request
-        request_path, request = build_supplement_request(args.manifest,
-            json.loads(args.gaps.read_text(encoding="utf-8")), article_broker_version=args.article_broker_version)
-        print(json.dumps({"request_path": str(request_path), "article_broker_version": request.get("article_broker_version")}, ensure_ascii=False))
+
+        request_path, request = build_supplement_request(
+            args.manifest,
+            json.loads(args.gaps.read_text(encoding="utf-8")),
+            article_broker_version=args.article_broker_version,
+        )
+        print(
+            json.dumps(
+                {
+                    "request_path": str(request_path),
+                    "article_broker_version": request.get("article_broker_version"),
+                },
+                ensure_ascii=False,
+            )
+        )
     elif args.command == "register-supplement":
         from run_contract import register_supplement_results
 
@@ -1053,8 +1084,15 @@ def main() -> None:
             artifacts = manifest.get("artifacts", {})
             focus_record = artifacts.get("focus_config", {})
             focus_path = focus_record.get("artifact_path")
-            if focus_record.get("metadata", {}).get("article_broker_version") == 2:
-                cmd.extend(["--article-broker-version", "2"])
+            if focus_record.get("metadata", {}).get("article_broker_version") in {2, 3}:
+                cmd.extend(
+                    [
+                        "--article-broker-version",
+                        str(focus_record["metadata"]["article_broker_version"]),
+                    ]
+                )
+            else:
+                cmd.extend(["--article-broker-version", "1"])
             history_meta = artifacts.get("history_snapshot", {}).get("metadata", {})
             news_dir = history_meta.get("news_dir")
             allow_replace = history_meta.get(

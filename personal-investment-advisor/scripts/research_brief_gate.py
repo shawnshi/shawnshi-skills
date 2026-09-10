@@ -7,6 +7,7 @@ from datetime import date
 from pathlib import Path
 from typing import Any
 
+from source_timing_contract import validate_timing_policy
 
 ROOT = Path(__file__).resolve().parent.parent
 SCHEMA_PATH = ROOT / "references" / "research_brief_schema.json"
@@ -342,6 +343,8 @@ def validate_research_brief(
         for field in schema["required_source_policy_fields"]:
             if source_policy.get(field) in (None, "", []):
                 errors.append(f"missing source_policy.{field}")
+        if "timing_contract_version" in source_policy or "cutoff_at" in source_policy:
+            errors.extend(validate_timing_policy(source_policy))
         cutoff_date = source_policy.get("cutoff_date")
         if not _valid_iso_date(cutoff_date):
             errors.append("source_policy.cutoff_date must be an ISO date")

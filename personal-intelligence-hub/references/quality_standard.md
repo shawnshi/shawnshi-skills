@@ -9,6 +9,8 @@
 
 等级表示推演深度，不代表扫描覆盖充分。`confidence` 只描述条目主张可信度；运行覆盖另用 `coverage.coverage_confidence` 表达，来源佐证另用 `corroboration_status` 表达。
 
+初筛 `content-relevance/2.0` 的 `heuristic_rank` 与 `domain_scores` 仅为配置关键词的内容相关分，不是概率或正式质量等级。来源名称偏好单独存为 `source_preference`，只在内容分相同时排序，不授予来源认证、入池资格或默认领域。显式输入 `primary_domain` 覆盖保留。初筛与新 v3 TechRadar 共用配置概念及别名匹配；同一概念只计一次，不同概念仍可相加。既有权重不变，新增概念的 4 分为未经校准的临时存在权重，不声称最优阈值。历史回放的人工相关性标签保持 unknown；没有人工真值就不得报告 precision、recall 或噪声率。220 字符 `summary_hint` 不等于完整 `raw_desc`，匹配器一致不代表输入覆盖一致。
+
 ## 2. 条目硬门槛
 
 每条正式资讯必须同时具备：
@@ -69,3 +71,18 @@ challenge 只证明回执读取了本次预登记请求并防止旧回执重放�
 - 请求比例、生效比例、目标条数、实际条数、调整和供给例外可以机器复算。
 - JSON 与 Markdown 路径、条目数、实际比例、链接核验和覆盖缺口必须回报。
 - 任一硬错误、回执不匹配或事务失败时，不得宣称归档完成。
+
+### 可读性与信息完整性（semantic-readability/1.0）
+
+可执行写作合同位于 `subagent_prompts.json` 的 `review_agents.SemanticEvaluator.readability_contract`，由已登记 request 冻结，并随紧凑 context 的 `agent_contract` 交付；不读取安装目录的当前配置来改写旧请求。
+
+- 多条资讯的 `insights` 建议写成 2–4 个自然段，交代共同问题、具体信号、联系机制与差异、决策意义和边界；不能只列标题或免责声明，也不强造趋势。
+- `fact` 独立交代主体、变化、问题与必要性；证据提供时补足方法、样本或评测对象、比较、结果和限制。`connection` 说明连接对象、关系及相关原因；`deduction` 明确证据到条件性判断的推导及不可外推范围。
+- `actionability` 包含责任角色、处理对象、启动条件、步骤和可观察验收；`summary_zh` 独立呈现主要发现、关键证据和限制。必要陌生术语简释，使用完整连贯句，字段可分段，不机械重复。
+- 缺失证据直说当前材料未提供，不编造方法、数字、临床获益或 ROI。段数与篇幅仅为软指导，不设最低字数或填充要求。
+- `evidence_excerpt` 只交付已验证 native-v3 ledger 所绑定 proof 的精确 readable 前缀，整个摘录对象最多约 4,000 UTF-8 JSON 字节；与候选 `summary` 分开。提供全文本及摘录各自 SHA-256、Unicode 偏移、长度、截断与覆盖描述；这些不是 raw HTTP hash，也不保证来源页含论文全文。摘录外缺项不能证明整篇论文不存在相应内容。旧访问无登记正文时显式 unavailable，文件、哈希或绑定错误必须失败。
+- 确定性测试验证合同送达、证据绑定和渲染保真，不证明信息充分或理解；语义充分性仍需人工或模型审查，不新增自报布尔字段冒充独立 QA。已有全部硬门禁和预算保持不变。
+
+## Native readable evidence (article-broker/3.0)
+
+NEW runs use parent web_search discovery plus reserved native fetch_content(mode=readable), never custom article HTTP. RSS aiohttp is unchanged. Unknown final URL/status remain null only in the strict native evidence union; DNS/redirect visibility is unknown, and readable UTF-8 SHA-256 is not raw-byte proof. Exact parent receipt attestation is not provider authentication. Full receipt/proof, deterministic publication offsets/parser/text digest and exact candidate/semantic lineage must survive finalization and forge. Publication/update/event dates are not interchangeable; missing/conflicting/out-of-window/truncated/challenge/portal evidence cannot qualify an article. New v3 runs use source600/grace300 (launch timeout 900000ms); query2/fetch4 accounting is unchanged and old frozen v2 replay remains strict.

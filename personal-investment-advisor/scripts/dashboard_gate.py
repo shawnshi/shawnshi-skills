@@ -8,7 +8,14 @@ from urllib.parse import unquote, urlparse
 
 from dashboard_math_gate import collect_math_warnings, validate_math_consistency
 from research_brief_gate import validate_research_brief
-
+from source_timing_contract import (
+    PRIMARY_TIERS,
+    TIMING_FIELDS,
+    availability_day,
+    aware,
+    validate_source_timing,
+    validate_timing_policy,
+)
 
 SCHEMA_PATH = Path(__file__).resolve().parent.parent / "references" / "dashboard_schema.json"
 SCHEMA = json.loads(SCHEMA_PATH.read_text(encoding="utf-8"))
@@ -68,7 +75,10 @@ def _validate_evidence_items(items, *, strict_current_contract=False):
         if not isinstance(item, dict):
             errors.append(f"evidence_items[{idx}] must be an object")
             continue
+        timed = item.get("timing_contract_version") == "1.0"
         for key in SCHEMA["required_evidence_fields"]:
+            if key == "published_at" and timed and item.get("publication_precision") in ("day", "unknown"):
+                continue
             if item.get(key) in (None, "", []):
                 errors.append(f"missing evidence_items[{idx}].{key}")
         if item.get("source_tier") not in SCHEMA["enums"]["source_tier"]:
@@ -113,7 +123,7 @@ def _validate_evidence_items(items, *, strict_current_contract=False):
                     max_date_value=item.get("as_of_date"),
                 )
             )
-        for field in ["published_at", "retrieved_at", "as_of_date"]:
+        for field in (["retrieved_at", "as_of_date"] if timed else ["published_at", "retrieved_at", "as_of_date"]):
             value = item.get(field)
             try:
                 _parse_iso_date(value)
@@ -125,8 +135,8 @@ def _validate_evidence_items(items, *, strict_current_contract=False):
         if not isinstance(count, int) or isinstance(count, bool) or count < 1:
             errors.append(f"evidence_items[{idx}].independent_source_count must be an integer >= 1")
         try:
-            published = _parse_iso_date(item.get("published_at"))
-            retrieved = _parse_iso_date(item.get("retrieved_at"))
+            published = availability_day(item) if timed else _parse_iso_date(item.get("published_at"))
+            retrieved = aware(item.get("retrieved_at")).date() if timed else _parse_iso_date(item.get("retrieved_at"))
             as_of = _parse_iso_date(item.get("as_of_date"))
             if published > retrieved:
                 errors.append(f"evidence_items[{idx}] published_at cannot be after retrieved_at")
@@ -189,9 +199,9 @@ def _validate_evidence_against_brief(
         if cutoff is None:
             source_dates_within_cutoff = False
         else:
-            for field in ("published_at", "as_of_date"):
+            for field in (("availability_observed_at", "as_of_date") if item.get("timing_contract_version") == "1.0" else ("published_at", "as_of_date")):
                 try:
-                    evidence_date = _parse_iso_date(item.get(field))
+                    evidence_date = availability_day(item) if field == "availability_observed_at" else _parse_iso_date(item.get(field))
                 except (TypeError, ValueError):
                     source_dates_within_cutoff = False
                     continue
@@ -208,7 +218,12 @@ def _validate_evidence_against_brief(
                 and item.get("freshness") == "current"
             ):
                 try:
-                    published_date = _parse_iso_date(item.get("published_at"))
+                    if item.get("publication_precision") == "day":
+                        published_date = _parse_iso_date(item.get("publication_date"))
+                    elif item.get("timing_contract_version") == "1.0":
+                        published_date = aware(item.get("published_at")).date()
+                    else:
+                        published_date = _parse_iso_date(item.get("published_at"))
                 except (TypeError, ValueError):
                     published_date = None
                 if published_date is not None and published_date < cutoff:
@@ -232,6 +247,54 @@ def _validate_evidence_against_brief(
             "research_brief.source_policy.primary_source_required requires at least "
             "one matching primary evidence item"
         )
+    return errors
+
+
+def _validate_v72_timing(data):
+    errors = []
+    version = data.get("dashboard_contract_version")
+    if "dashboard_contract_version" in data and (not isinstance(version, str) or version not in ("7.0", "7.1", "7.2")):
+        errors.append("dashboard_contract_version must be a supported string when present")
+    v72 = version == "7.2"
+    brief = data.get("research_brief")
+    brief = brief if isinstance(brief, dict) else {}
+    policy = brief.get("source_policy")
+    policy = policy if isinstance(policy, dict) else {}
+    scenarios = data.get("scenario_analysis")
+    scenarios = scenarios if isinstance(scenarios, dict) else {}
+    items = data.get("evidence_items")
+    items = items if isinstance(items, list) else []
+    if not v72:
+        if scenarios.get("valuation_contract_version") in ("3.0", "etf_nav1.1") or policy.get("timing_contract_version") is not None or any(isinstance(i, dict) and any(k in i for k in TIMING_FIELDS if k != "published_at") for i in items):
+            errors.append("new valuation/timing semantics require explicit dashboard_contract_version 7.2")
+        return errors
+    errors.extend(validate_timing_policy(policy))
+    for index, item in enumerate(items):
+        if not isinstance(item, dict):
+            continue
+        prefix = f"evidence_items[{index}]"
+        quote = item.get("source_tier") == "market_data" or item.get("source_type") in ("quote", "market_data")
+        if quote and any(k in item for k in TIMING_FIELDS if k != "published_at"):
+            errors.append(f"{prefix} quote timing cannot use public-source availability substitutes")
+        if not quote and (item.get("source_tier") in PRIMARY_TIERS or "timing_contract_version" in item):
+            errors.extend(validate_source_timing(item, policy, prefix))
+        else:
+            try:
+                if not aware(item.get("published_at")) <= aware(item.get("retrieved_at")) <= aware(policy.get("cutoff_at")):
+                    errors.append(f"{prefix} exact publication/retrieval exceeds cutoff")
+            except (ValueError, TypeError):
+                errors.append(f"{prefix} exact publication/retrieval requires aware timestamps")
+    # Input retrieval after an intraday cutoff is lookahead even on the same day.
+    for name in ("base", "bull", "bear", "sensitivity"):
+        block = scenarios.get(name)
+        records = block.get("assumptions") if isinstance(block, dict) else block
+        for record in records if isinstance(records, list) else []:
+            if isinstance(record, dict):
+                try:
+                    if aware(record.get("retrieved_at")) > aware(policy.get("cutoff_at")):
+                        errors.append(f"scenario_analysis.{name} input retrieved after cutoff_at")
+                except (ValueError, TypeError):
+                    errors.append(f"scenario_analysis.{name} input retrieval/cutoff malformed")
     return errors
 
 
@@ -593,9 +656,10 @@ def _validate_current_valuation_contract(
     research_brief=None,
     strict_current_contract=False,
     etf=False,
+    v72=False,
 ):
     errors = []
-    expected_version = SCHEMA["etf_contract"]["valuation_contract_version"] if etf else SCHEMA.get("current_valuation_contract_version", "2.0")
+    expected_version = ("etf_nav1.1" if etf else "3.0") if v72 else (SCHEMA["etf_contract"]["valuation_contract_version"] if etf else SCHEMA.get("current_valuation_contract_version", "2.0"))
     if scenarios.get("valuation_contract_version") != expected_version:
         return [
             "scenario_analysis.valuation_contract_version must be "
@@ -661,6 +725,8 @@ def _validate_current_valuation_contract(
         numeric_fields = ("nav_per_unit", "per_share_value") if etf else (
             "enterprise_value", "net_debt", "equity_value", "diluted_shares", "per_share_value",
         )
+        if v72 and not etf and scenarios.get("valuation_method") in ("DDM", "FCFE"):
+            numeric_fields = ("equity_value", "diluted_shares", "per_share_value")
         if etf:
             for field in SCHEMA["etf_contract"]["corporate_fields"]:
                 if case.get(field) != "not_applicable":
@@ -796,12 +862,15 @@ def _validate_etf_research(data):
     block = data.get("etf_research")
     if not isinstance(block, dict):
         return errors + ["etf_research must be an object"]
-    if block.get("contract_version") != "1.0":
-        errors.append("etf_research.contract_version must be 1.0")
+    v72 = data.get("dashboard_contract_version") == "7.2"
+    expected_etf = "1.1" if v72 else "1.0"
+    if block.get("contract_version") != expected_etf:
+        errors.append(f"etf_research.contract_version must be {expected_etf}")
     if not isinstance(block.get("coverage_scope"), str) or not block["coverage_scope"].strip():
         errors.append("etf_research.coverage_scope must state claimed scope and gaps")
-    if block.get("premium_discount_basis") != "quote_vs_last_published_nav":
-        errors.append("etf_research.premium_discount_basis must be quote_vs_last_published_nav (not simultaneous fair value)")
+    expected_basis = "quote_vs_observed_nav" if v72 else "quote_vs_last_published_nav"
+    if block.get("premium_discount_basis") != expected_basis:
+        errors.append(f"etf_research.premium_discount_basis must be {expected_basis} (not simultaneous fair value)")
     items = data.get("evidence_items")
     items = items if isinstance(items, list) else []
     try:
@@ -832,7 +901,9 @@ def _validate_etf_research(data):
             errors.append(f"ETF {kind} availability/freshness is unknown")
         errors.extend(_validate_evidence_items([item], strict_current_contract=True))
         try:
-            published = _parse_aware_datetime(item.get("published_at"))
+            if v72:
+                errors.extend(validate_source_timing(item, brief.get("source_policy"), f"ETF {kind}"))
+            published = _parse_aware_datetime(item.get("availability_observed_at") if v72 else item.get("published_at"))
             retrieved = _parse_aware_datetime(item.get("retrieved_at"))
             if published > retrieved or retrieved.date() > cutoff:
                 errors.append(f"ETF {kind} requires published <= retrieved <= cutoff")
@@ -851,7 +922,9 @@ def _validate_etf_research(data):
         errors.append("ETF nav requires positive value and currency_per_unit")
     try:
         nav_date = date.fromisoformat(str(nav.get("valuation_date")))
-        published_date = _parse_aware_datetime(nav_item.get("published_at")).date()
+        published_date = availability_day(nav_item) if v72 else _parse_aware_datetime(nav_item.get("published_at")).date()
+        if v72 and nav_item.get("valuation_date") != nav.get("valuation_date"):
+            errors.append("ETF NAV timing valuation_date must match bound NAV valuation_date")
         max_age = METHOD_PROFILES["profiles"]["etf_research"]["freshness_policy"]["nav_max_age_calendar_days"]
         if not (nav_date <= published_date <= cutoff) or not 0 <= (cutoff - nav_date).days <= max_age:
             errors.append("ETF NAV stale/future: valuation <= publication <= cutoff and profile freshness window required")
@@ -878,7 +951,9 @@ def _validate_etf_research(data):
     try:
         start = date.fromisoformat(str(tracking.get("period_start")))
         end = date.fromisoformat(str(tracking.get("period_end")))
-        published = _parse_aware_datetime(tracking_item.get("published_at")).date()
+        published = availability_day(tracking_item) if v72 else _parse_aware_datetime(tracking_item.get("published_at")).date()
+        if v72 and tracking_item.get("valuation_date") != tracking.get("period_end"):
+            errors.append("ETF tracking timing valuation_date must equal period_end")
         if not start < end <= published <= cutoff:
             errors.append("ETF tracking requires period_start < period_end <= publication <= cutoff")
     except (TypeError, ValueError):
@@ -918,17 +993,19 @@ def _validate_scenario_analysis(data, *, required, research_brief=None):
     if not isinstance(scenarios, dict):
         return ["scenario_analysis must be an object"]
 
-    etf_version = scenarios.get("valuation_contract_version") == SCHEMA["etf_contract"]["valuation_contract_version"]
+    v72 = data.get("dashboard_contract_version") == "7.2"
+    etf_version = scenarios.get("valuation_contract_version") in ("etf_nav1.0", "etf_nav1.1")
     etf_requested = etf_version or "etf_research" in data or (required and _get_nested(data, ["research_brief", "instrument", "asset_type"]) == "etf")
     if etf_requested:
         return _validate_etf_research(data) + _validate_current_valuation_contract(
-            scenarios, research_brief=research_brief, strict_current_contract=True, etf=True,
+            scenarios, research_brief=research_brief, strict_current_contract=True, etf=True, v72=v72,
         )
     if required or scenarios.get("valuation_contract_version") is not None:
         return _validate_current_valuation_contract(
             scenarios,
             research_brief=research_brief,
             strict_current_contract=required,
+            v72=v72,
         )
 
     errors = []
@@ -1161,6 +1238,8 @@ def validate_dashboard(data: dict, *, require_scenarios: bool = False) -> list[s
     errors = []
     if not isinstance(data, dict):
         return ["dashboard root must be an object"]
+    # A declared 7.2 artifact cannot shed its gates on offline catalog read.
+    require_scenarios = require_scenarios or data.get("dashboard_contract_version") == "7.2"
 
     for key in SCHEMA["required_top_level"]:
         if key not in data:
@@ -1267,6 +1346,7 @@ def validate_dashboard(data: dict, *, require_scenarios: bool = False) -> list[s
     if require_scenarios:
         errors.extend(_validate_strict_freshness_flags(data))
 
+    errors.extend(_validate_v72_timing(data))
     errors.extend(
         _validate_evidence_items(
             data.get("evidence_items"),

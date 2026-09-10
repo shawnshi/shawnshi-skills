@@ -77,6 +77,15 @@ class WeeklyBriefValidationTests(unittest.TestCase):
     def write_report(
         self, directory: str, name: str, content: str = VALID_CONTENT
     ) -> Path:
+        # Date-focused legacy fixtures use four columns. Expand only their exact
+        # synthetic rows to the current source schema; production never migrates
+        # reports here. Shape/URL negative cases live in test_audit_regressions.py.
+        content = content.replace(
+            "| 事件日期 | 主体与动作 | 已核实事实 | 影响判断 |\n|---|---|---|---|",
+            "| 事件日期 | 主体与已核实动作 | 事实或来源主张 | 分析判断 | 证据强度 | 直接来源 |\n|---|---|---|---|---|---|",
+        ).replace(
+            "| 机构 | 动作 | 判断 |", "| 机构 | 动作 | 判断 | 中 | https://example.org/source |"
+        )
         path = Path(directory) / name
         path.write_text(content, encoding="utf-8")
         return path
@@ -853,7 +862,8 @@ class WeeklyBriefTemplateContractTests(unittest.TestCase):
             cutoff = datetime.fromisoformat("2026-07-12T16:30:00Z")
             self.assertEqual([], self.validate(path, cutoff=cutoff))
             path.write_text(
-                content.replace("| 7月13日 |", "| 7月14日 |"), encoding="utf-8"
+                path.read_text(encoding="utf-8").replace("| 7月13日 |", "| 7月14日 |"),
+                encoding="utf-8",
             )
             self.assertTrue(
                 any(
@@ -873,7 +883,7 @@ class WeeklyBriefTemplateContractTests(unittest.TestCase):
                 "partial-week report must state that the week has not ended",
                 self.validate(path, cutoff=cutoff, report_timezone="UTC"),
             )
-            content = content.replace(
+            content = path.read_text(encoding="utf-8").replace(
                 "> 覆盖范围：", "> 截至上述时点，本周尚未结束。覆盖范围："
             )
             path.write_text(content, encoding="utf-8")
@@ -917,6 +927,7 @@ class WeeklyBriefTemplateContractTests(unittest.TestCase):
                     "REGION": "合成地区",
                     "AUDIENCE": "合成受众",
                     "YYYY-MM-DD": "2000-01-03",
+                    "原始页面 URL": "https://example.org/synthetic",
                 }
                 content = re.sub(
                     r"\[([^\]\n]+)\]",

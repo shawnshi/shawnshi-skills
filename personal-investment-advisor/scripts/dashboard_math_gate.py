@@ -7,6 +7,8 @@ import sys
 from pathlib import Path
 from typing import Any
 
+from ordinary_equity_contract import validate_ordinary_equity
+
 
 def _get_nested(data: dict, path: list[str], default: Any = None) -> Any:
     current = data
@@ -110,7 +112,7 @@ def _validate_etf_math(data: dict) -> list[str]:
 
 def _validate_valuation_math(data: dict) -> list[str]:
     scenarios = data.get("scenario_analysis")
-    if not isinstance(scenarios, dict) or scenarios.get("valuation_contract_version") != "2.0":
+    if not isinstance(scenarios, dict) or scenarios.get("valuation_contract_version") not in ("2.0", "3.0"):
         return []
 
     errors: list[str] = []
@@ -126,7 +128,7 @@ def _validate_valuation_math(data: dict) -> list[str]:
         diluted_shares = _to_float(case.get("diluted_shares"))
         per_share_value = _to_float(case.get("per_share_value"))
 
-        if enterprise_value is not None and net_debt is not None and equity_value is not None:
+        if scenarios.get("valuation_contract_version") == "2.0" and enterprise_value is not None and net_debt is not None and equity_value is not None:
             expected_equity = enterprise_value - net_debt
             if not _materially_equal(equity_value, expected_equity):
                 errors.append(
@@ -284,12 +286,13 @@ def validate_math_consistency(data: dict) -> list[str]:
 
     etf_requested = (
         "etf_research" in data
-        or _get_nested(data, ["scenario_analysis", "valuation_contract_version"]) == "etf_nav1.0"
+        or _get_nested(data, ["scenario_analysis", "valuation_contract_version"]) in ("etf_nav1.0", "etf_nav1.1")
     )
     if etf_requested:
         errors.extend(_validate_etf_math(data))
     else:
         errors.extend(_validate_valuation_math(data))
+        errors.extend(validate_ordinary_equity(data))
     return errors
 
 

@@ -1,6 +1,7 @@
 """Scout structural-gate regressions; synthetic records are not research evidence."""
 from __future__ import annotations
 
+import re
 import subprocess
 import sys
 import tempfile
@@ -12,6 +13,9 @@ sys.path.insert(0, str(Path(__file__).resolve().parent))
 import validate_lectures_scout as validator
 
 ROW = "| R1 | 2000-01-05 | Synthetic method | 预印本 | v2 | https://example.org/paper/v2 | S1 |"
+RESEARCH_TABLE = "| 研究ID | 日期 | 标题 | 评审状态 | 版本 | 永久链接 | 来源编号 |\n|---|---|---|---|---|---|---|"
+SOURCE_TABLE = "| 来源编号 | 原始链接 |\n|---|---|"
+SOURCE_ROW = "| S1 | https://example.org/paper/v2 |"
 CONTENT = """# 医疗数字化文献侦察报告 - 2000-01-09
 
 报告周期：2000-01-03 至 2000-01-09
@@ -96,11 +100,14 @@ class ValidateLecturesScoutTests(unittest.TestCase):
 
     def test_title_mismatch(self):
         self.rejects(CONTENT.replace("报告 - 2000-01-09", "报告 - 2000-01-10"), "title issue date mismatch")
+        title = CONTENT.splitlines()[0]
+        for wrong in (" " + title, title + " ###"):
+            self.rejects(CONTENT.replace(title, wrong), "title issue date mismatch")
 
     def test_current_outside_window_background_allowed(self):
         old = ROW.replace("R1", "R2").replace("2000-01-05", "1999-12-01")
         self.rejects(CONTENT.replace(ROW, old), "current research outside")
-        self.assertEqual([], self.check(CONTENT + "\n## 背景研究\n" + old + "\n"))
+        self.assertEqual([], self.check(CONTENT + "\n## 背景研究\n" + RESEARCH_TABLE + "\n" + old + "\n"))
 
     def test_research_after_cutoff_and_invalid_date(self):
         self.rejects(CONTENT.replace("2000-01-05", "2000-02-02"), "research date after cutoff")
@@ -192,6 +199,156 @@ class ValidateLecturesScoutTests(unittest.TestCase):
 
     def test_background_does_not_count_as_current_result(self):
         self.rejects(CONTENT.replace("## 本期研究", "## 本期研究\n\n## 背景研究"), "empty research marker missing")
+
+    def test_nonempty_tables_require_unique_header_and_separator(self):
+        for table in (RESEARCH_TABLE, SOURCE_TABLE):
+            header, separator = table.splitlines()
+            for replacement in ("", header, separator, header + "\n\n" + separator,
+                                header + "\n|---|", table + "\n" + table):
+                with self.subTest(table=header, replacement=replacement):
+                    self.assertTrue(self.check(CONTENT.replace(table, replacement)))
+
+    def test_fenced_tables_do_not_count_as_research_or_sources(self):
+        for fence in ("```", "~~~", "````", "   ~~~python"):
+            close = fence.strip().rstrip("python")
+            for block in (RESEARCH_TABLE + "\n" + ROW, SOURCE_TABLE + "\n" + SOURCE_ROW):
+                with self.subTest(fence=fence, block=block):
+                    self.assertTrue(self.check(CONTENT.replace(block, fence + "\n" + block + "\n" + close)))
+
+    def test_escaped_pipe_titles_and_backslash_parity(self):
+        for title in (r"A\|B", r"`A\|B`", r"A\\\|B", "[method](https://example.org/method)"):
+            with self.subTest(title=title):
+                self.assertEqual([], self.check(CONTENT.replace("Synthetic method", title)))
+        self.assertTrue(self.check(CONTENT.replace("Synthetic method", r"A\\|B")))
+        self.assertTrue(self.check(CONTENT.replace("Synthetic method", "A|B")))
+
+    def test_fenced_metadata_title_and_sections_cannot_rescue_report(self):
+        field = "报告周期：2000-01-03 至 2000-01-09"
+        for fence in ("```md", "~~~md"):
+            close = fence[:3]
+            self.rejects(CONTENT.replace(field, fence + "\n" + field + "\n" + close), "exactly once")
+            self.rejects(fence + "\n" + CONTENT + "\n" + close, "invalid metadata")
+            self.assertTrue(self.check(CONTENT.replace("## 本期研究", fence + "\n## 本期研究\n" + close)))
+            self.rejects(CONTENT.replace(CONTENT.splitlines()[0], fence + "\n" + CONTENT.splitlines()[0] + "\n" + close), "title issue")
+        self.assertEqual(field.split("：")[1], validator.metadata(CONTENT, "报告周期"))
+        with self.assertRaises(ValueError):
+            validator.metadata(CONTENT.replace(field, "") + "\n" + field, "报告周期")
+
+    def test_fence_info_comments_hide_entire_report_and_metadata(self):
+        for fence in ("```<!-- -->", "~~~<!-- -->"):
+            content = fence + "\n" + CONTENT + "\n" + fence[:3]
+            with self.subTest(fence=fence, interface="validate_report"):
+                self.rejects(content, "invalid metadata")
+            for label in ("报告周期", "出刊日期", "生成时点", "报告时区", "命名依据"):
+                with (self.subTest(fence=fence, interface="metadata", label=label),
+                      self.assertRaises(ValueError)):
+                    validator.metadata(content, label)
+
+    def test_existing_comment_hides_fake_fence_openers(self):
+        for fence in ("```", "~~~", "```<!-- -->", "~~~<!-- -->"):
+            content = "<!--\n" + fence + "\n-->\n" + CONTENT
+            with self.subTest(fence=fence):
+                self.assertEqual([], self.check(content))
+                self.assertEqual("explicit", validator.metadata(content, "命名依据"))
+
+    def test_fence_length_kind_and_fake_references(self):
+        fake = "\n## 来源\n" + SOURCE_TABLE + "\n| S9 | https://example.org/fake |\n[S99] [R99]\n"
+        for block in ("````md\n```\n" + fake + "~~~~\n````",
+                      "~~~md\n```\n" + fake + "~~~", "   ```\n" + fake + "   ```"):
+            self.assertEqual([], self.check(CONTENT + "\n" + block))
+        self.assertTrue(self.check(CONTENT.replace(RESEARCH_TABLE, "```\n" + RESEARCH_TABLE)))
+
+    def test_indented_quoted_and_inline_pseudo_structure_ignored(self):
+        field = "报告周期：2000-01-03 至 2000-01-09"
+        for prefix, suffix in (("    ", ""), ("\t", ""), ("> ", ""), ("`", "`")):
+            with self.subTest(prefix=prefix):
+                self.rejects(CONTENT.replace(field, prefix + field + suffix), "exactly once")
+                self.assertTrue(self.check(CONTENT.replace("## 本期研究", prefix + "## 本期研究" + suffix)))
+        self.assertTrue(self.check(CONTENT.replace(ROW, "    " + ROW)))
+
+    def test_mixed_tab_indented_tables_do_not_count_as_structure(self):
+        for prefix in (" \t", "  \t", "   \t"):
+            content = "\n".join(prefix + line if line.startswith("|") else line
+                                for line in CONTENT.splitlines())
+            with self.subTest(prefix=prefix):
+                self.rejects(content, "empty research marker missing")
+                for table in (RESEARCH_TABLE, SOURCE_TABLE):
+                    self.assertEqual([""] * 2, validator.structural_lines(
+                        "\n".join(prefix + line for line in table.splitlines())))
+        for prefix in ("", " ", "  ", "   "):
+            line = prefix + ROW
+            self.assertEqual([line], validator.structural_lines(line))
+
+    def test_crlf_metadata_and_aligned_tables(self):
+        self.assertEqual("explicit", validator.metadata(CONTENT.replace("\n", "\r\n"), "命名依据"))
+        self.assertEqual([], self.check(CONTENT.replace("|---|---|", "|:---|---:|")))
+        # Markdown ATX variants still end the preamble; body metadata cannot rescue it.
+        field = "报告周期：2000-01-03 至 2000-01-09"
+        for heading in ("  ## 说明 ##", "### 说明", "##\t说明"):
+            self.rejects(CONTENT.replace(field, "").replace("## 本期研究", heading + "\n" + field + "\n## 本期研究"), "exactly once")
+
+    def test_comments_cannot_supply_metadata_or_tables(self):
+        field = "报告周期：2000-01-03 至 2000-01-09"
+        self.rejects(CONTENT.replace(field, "<!--\n" + field + "\n-->"), "exactly once")
+        self.assertTrue(self.check(CONTENT.replace(ROW, "<!--\n" + ROW + "\n-->")))
+        self.assertEqual([], self.check(CONTENT + "\n<!--\n## 来源\n[S9] [R9]\n-->"))
+        self.rejects(CONTENT.replace(field, "<!-- note -->" + field), "exactly once")
+
+    def test_empty_metadata_duplicates_are_not_ignored(self):
+        for value in ("", " \t", "\u3000"):
+            self.rejects(CONTENT.replace("命名依据：explicit", "命名依据：" + value + "\n命名依据：explicit"), "exactly once")
+
+    def test_empty_table_and_legacy_tableless_zero_result(self):
+        empty = CONTENT.replace(ROW, validator.EMPTY).replace(SOURCE_ROW, "")
+        self.assertEqual([], self.check(empty))
+        self.assertEqual([], self.check(empty.replace(RESEARCH_TABLE, "").replace(SOURCE_TABLE, "")))
+        self.assertEqual([], self.check(empty + "\n## 背景研究\n仅背景文字，无结构化研究。"))
+        self.assertTrue(self.check(empty.replace(SOURCE_TABLE, "") + "\n[S1]"))
+        self.assertTrue(self.check(empty.replace(RESEARCH_TABLE, "| wrong |\n|---|")))
+
+    def test_background_nonempty_requires_its_own_table(self):
+        old = ROW.replace("R1", "R2").replace("2000-01-05", "1999-12-01")
+        self.assertTrue(self.check(CONTENT + "\n## 背景研究\n" + old))
+        self.assertEqual([], self.check(CONTENT + "\n## 背景研究\n" + RESEARCH_TABLE + "\n" + old))
+
+    def test_multiple_tables_wrong_columns_and_detached_rows(self):
+        for addition in ("\n" + RESEARCH_TABLE + "\n" + ROW.replace("R1", "R2"),
+                         "\n\n" + ROW.replace("R1", "R2"),
+                         "\n| unrelated |\n|---|\n| cell |"):
+            self.assertTrue(self.check(CONTENT.replace(ROW, ROW + addition)))
+        for old, new in (("| S1 | https://example.org/paper/v2 |", "| S1 | https://example.org/paper/v2 | extra |"),
+                         ("| R1 |", "|| R1 |"), ("| S1 |\n", "| S1 ||\n")):
+            self.assertTrue(self.check(CONTENT.replace(old, new)))
+        self.assertTrue(self.check(CONTENT.replace(RESEARCH_TABLE, RESEARCH_TABLE.replace("标题", "论文"))))
+
+    def test_subheading_closes_research_table(self):
+        self.assertTrue(self.check(CONTENT.replace(ROW, "### 说明\n" + ROW)))
+        self.assertEqual([], self.check(CONTENT + "\n### 来源解释\n普通 Markdown。"))
+
+    def test_filled_real_template(self):
+        template = (Path(validator.__file__).resolve().parents[1] / "assets/report_template.md").read_text(encoding="utf-8")
+        replacements = {"[ISSUE_DATE]": "2000-01-09", "[PERIOD_START]": "2000-01-03",
+                        "[PERIOD_END]": "2000-01-09", "[CUTOFF_TIME 带偏移ISO-8601]": "2000-01-10T00:00:00+08:00",
+                        "[WINDOW_MODE]": "explicit", "[YYYY-MM-DD]": "2000-01-05", "[标题]": r"A\|B",
+                        "[待填写评审状态]": "预印本", "[待填写已核实版本]": "v2",
+                        "[永久HTTPS链接]": "https://example.org/paper/v2", "[原始HTTPS链接]": "https://example.org/paper/v2",
+                        "[论文标题]": "Synthetic method"}
+        for old, new in replacements.items():
+            template = template.replace(old, new)
+        template = re.sub(r"\[待填写[^\]]*\]", "合成测试，原文未报告", template)
+        self.assertEqual([], self.check(template))
+
+    def test_cli_valid_and_invalid_markdown_subset(self):
+        for content, expected in ((CONTENT.replace("Synthetic method", r"A\|B"), 0),
+                                  (CONTENT.replace(RESEARCH_TABLE, ""), 1),
+                                  (CONTENT.replace(ROW, "~~~\n" + ROW + "\n~~~"), 1)):
+            self.path.write_text(content, encoding="utf-8")
+            result = subprocess.run([sys.executable, "-B", "-X", "utf8", validator.__file__,
+                "--file", str(self.path), "--period-start", "2000-01-03", "--period-end", "2000-01-09",
+                "--issue-date", "2000-01-09", "--cutoff", "2000-01-10T00:00:00+08:00"],
+                capture_output=True, text=True, encoding="utf-8", timeout=20)
+            self.assertEqual(expected, result.returncode, result.stdout + result.stderr)
+            self.assertNotIn("Traceback", result.stderr)
 
     def test_cli_malformed_url_has_failure_without_traceback(self):
         self.path.write_text(CONTENT.replace("https://example.org/paper/v2", "https://[broken"), encoding="utf-8")

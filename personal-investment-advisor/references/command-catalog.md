@@ -90,3 +90,7 @@ stage(["rebalance-proposal", "construction.json", "--policy-file", "proposal-pol
 `yf.py` 的所有联网模式都必须先绑定可写 SQLite 缓存。显式 `--cache-dir` 优先，其次使用 `PIA_YFINANCE_CACHE_DIR`，否则落到当前工作目录的 `tmp/pia-yfinance-cache`。缓存目录即使已经存在也要通过实际写入探针；权限、只读文件系统或 SQLite 打开失败属于永久本地错误，同参数不得退避重试。
 
 `scenario --output` 不得解析为组合或假设输入文件；`calibrate --output-path` 不得解析为研究日记。所有整文件写出路径（情景结果、校准报告、券商快照、管理层承诺跟踪和研究日记结果更新）均使用唯一的同目录临时文件、`fsync` 与原子替换，冲突或写出失败时保留原文件。研究日记的追加和读改写还使用跨进程独占锁；锁等待超过 5 秒时失败关闭，不覆盖其他写入者的结果。
+
+## Dashboard 7.2 验收补充
+
+原有 Brief、Dashboard `--strict-current-contract`、数学门和保存 CLI 不变；新语义由显式版本选择。新建/发布前还须在调用方脚本显式调用 `source_timing_contract.verify_source_capture`，对获授权的真实 raw 文件重算完整 SHA 并匹配候选的 source_capture_receipt；参见 company-research 的回执契约。此 helper 无联网、扫描、自动归档或全局路径参数。结构门只核验回执链，不能把自报回执称为已外部核验；保留原件/取证日志供独立审计，旧档加载不自动打开定位符。

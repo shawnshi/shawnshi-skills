@@ -1311,3 +1311,127 @@ def test_stage_c_query_whitespace_case_is_not_different(new_run):
     with pytest.raises(rc.RunContractError, match="duplicate"):
         broker.operate(request, "tech", "reserve-query", query=" agency   ORIGINAL filing ")
     assert new_run[0].read_bytes() == before
+
+
+@pytest.fixture
+def six_source_receipt():
+    """Receipt validation needs no frozen bundle, subprocess, or network."""
+    ledger = {"request_sha256": "a" * 64, "gap_id": "tech"}
+    reservation = {
+        "id": "query-1",
+        "query": "release",
+        "arguments": {
+            "query": "release", "numResults": 5,
+            "workflow": "none", "includeContent": False,
+        },
+    }
+    receipt = {
+        **ledger,
+        "reservation_id": reservation["id"],
+        "tool": "web_search",
+        "query": reservation["query"],
+        "responseId": "six-source-response",
+        "outcome": "matched",
+        "error": None,
+        "results": [
+            {"url": f"https://example.org/release-{n}", "title": f"Release {n}"}
+            for n in range(6)
+        ],
+        "proof_subset": {"text": "actual public tool response fixture"},
+        "parent_attestation": "actual_public_tool_receipt",
+    }
+    return receipt, ledger, reservation
+
+
+@pytest.mark.parametrize("requested", [1, 5])
+def test_validate_receipt_six_sources_exceed_request_hint_intact(six_source_receipt, requested):
+    receipt, ledger, reservation = six_source_receipt
+    reservation["arguments"]["numResults"] = requested
+    before = deepcopy((receipt, ledger, reservation))
+    broker.validate_receipt(receipt, ledger, reservation)
+    assert (receipt, ledger, reservation) == before
+    assert len(receipt["results"]) == 6
+
+
+@pytest.mark.parametrize("mutation, message", [
+    ({"results": {}}, "query results invalid"),
+    ({"request_sha256": "foreign"}, "foreign or invalid"),
+    ({"gap_id": "foreign"}, "foreign or invalid"),
+    ({"reservation_id": "query-2"}, "foreign or invalid"),
+    ({"query": "foreign"}, "foreign or invalid"),
+    ({"tool": "foreign"}, "foreign or invalid"),
+    ({"parent_attestation": "foreign"}, "foreign or invalid"),
+    ({"extra": True}, "foreign or invalid"),
+    ({"proof_subset": {}}, "public proof subset"),
+    ({"proof_subset": {"text": "x" * 65536}}, "public proof subset"),
+    ({"outcome": "error", "error": "provider failed"}, "error outcome"),
+    ({"outcome": "error", "error": "", "results": []}, "error outcome"),
+    ({"outcome": "empty"}, "search outcome is ambiguous"),
+    ({"outcome": "unknown"}, "search outcome required"),
+    ({"error": "provider failed"}, "search outcome is ambiguous"),
+    ({"responseId": ""}, "search outcome is ambiguous"),
+])
+def test_validate_receipt_six_sources_invalid_envelope_rejected(six_source_receipt, mutation, message):
+    receipt, ledger, reservation = six_source_receipt
+    receipt.update(mutation)
+    with pytest.raises(rc.RunContractError, match=message):
+        broker.validate_receipt(receipt, ledger, reservation)
+
+
+@pytest.mark.parametrize("last_result, message", [
+    (None, "result subset"),
+    ({"url": URL}, "result subset"),
+    ({"url": URL, "title": 42}, "result subset"),
+    ({"url": URL, "title": "release", "extra": True}, "result subset"),
+    ({"url": "http://127.0.0.1/release", "title": "private"}, "unsafe public URL"),
+    ({"url": "https://user:secret@example.org/release", "title": "credentials"}, "unsafe public URL"),
+])
+def test_validate_receipt_sixth_source_still_validated(six_source_receipt, last_result, message):
+    receipt, ledger, reservation = six_source_receipt
+    receipt["results"][-1] = last_result
+    with pytest.raises(rc.RunContractError, match=message):
+        broker.validate_receipt(receipt, ledger, reservation)
+
+
+def test_validate_receipt_serialized_size_boundary_unchanged(six_source_receipt):
+    receipt, ledger, reservation = six_source_receipt
+    receipt["proof_subset"] = {"text": ""}
+    receipt["proof_subset"]["text"] = "x" * (65536 - len(json.dumps(receipt)))
+    assert len(json.dumps(receipt)) == 65536
+    broker.validate_receipt(receipt, ledger, reservation)
+    receipt["proof_subset"]["text"] += "x"
+    with pytest.raises(rc.RunContractError, match="public proof subset required and bounded"):
+        broker.validate_receipt(receipt, ledger, reservation)
+
+
+def test_validate_receipt_valid_error_preserved(six_source_receipt):
+    receipt, ledger, reservation = six_source_receipt
+    receipt.update(outcome="error", error="provider failed", results=[])
+    before = deepcopy(receipt)
+    broker.validate_receipt(receipt, ledger, reservation)
+    assert receipt == before
+
+
+def test_six_source_receipt_registration_replay_discovery(new_run, six_source_receipt):
+    request_path, _ = setup(new_run, max_queries=2)
+    receipt, _, _ = six_source_receipt
+    data = broker.operate(request_path, "tech", "reserve-query", query=receipt["query"])
+    receipt["request_sha256"] = data["request_sha256"]
+    before = rc.load_manifest(new_run[0])
+    original = deepcopy(receipt)
+    data = broker.operate(request_path, "tech", "record-query", receipt=receipt)
+    manifest = rc.load_manifest(new_run[0])
+    ledger = manifest["article_broker_evidence"]["tech"]
+    assert receipt == original
+    assert ledger["events"][-1]["receipt"] == original
+    assert ledger["events"][:-1] == before["article_broker_evidence"]["tech"]["events"]
+    broker.validate_append(before, manifest)
+    request = rc.load_json(request_path, {})
+    broker.validate_ledgers(manifest, request)
+    assert data["next_action"]["available_discovered_urls"] == sorted(r["url"] for r in original["results"])
+    assert data["next_action"]["remaining_queries"] == 1
+    assert data["next_action"]["remaining_urls"] == 4
+    assert data["query_reservations"][-1]["arguments"]["numResults"] == 5
+    with pytest.raises(rc.RunContractError, match="duplicate receipt"):
+        broker.operate(request_path, "tech", "record-query", receipt=receipt)
+    assert rc.load_manifest(new_run[0]) == manifest

@@ -687,6 +687,38 @@ if __name__ == "__main__":
     unittest.main()
 
 
+def test_native_access_union_keeps_legacy_strict():
+    from article_broker import NATIVE_VISIBILITY
+
+    payload = cloned_v14_payload()
+    item = payload["top_10"][0]
+    access = item["access_check"]
+    access.update(method="native_readable", final_url=None, http_status=None,
+                  failure_class="none", error_code=None, native_evidence={
+                      "contract_version": "article-broker/3.0", "request_sha256": "a" * 64,
+                      "gap_id": "tech", "reservation_id": "fetch-1",
+                      "invocation_id": "a" * 64 + ":tech:fetch-1",
+                      "receipt_sha256": "b" * 64, "readable_text_sha256": "c" * 64,
+                      "transport_visibility": deepcopy(NATIVE_VISIBILITY)})
+    def rebind():
+        sha = item_hash(item)
+        payload["pipeline"]["semantic_review"]["reviewed_item_hashes"] = [sha]
+        payload["pipeline"]["semantic_review"]["lineage_bindings"][0]["output_item_sha256"] = sha
+    rebind()
+    assert validate_briefing_data(payload)[0] == []
+    access["http_status"] = 200
+    rebind()
+    assert any("native evidence invalid" in e for e in validate_briefing_data(payload)[0])
+    access["http_status"] = None
+    access["method"] = "http_get"
+    rebind()
+    assert any("must show successful access" in e for e in validate_briefing_data(payload)[0])
+    legacy = cloned_v13_payload()
+    legacy["top_10"][0]["access_check"] = deepcopy(access)
+    legacy["top_10"][0]["access_check"]["method"] = "native_readable"
+    assert any("requires schema 1.4" in e for e in validate_briefing_data(legacy)[0])
+
+
 def test_fresh_bundle_forge_enriches_legacy_and_matches_semantic_helper(tmp_path):
     import json
     from pathlib import Path

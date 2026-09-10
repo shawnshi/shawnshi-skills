@@ -4,8 +4,10 @@ import argparse
 import base64
 import hashlib
 import json
+import os
 import re
 import ssl
+import tempfile
 import time
 import urllib.error
 import urllib.parse
@@ -19,17 +21,22 @@ from typing import Any
 
 from article_broker import MAX_BODY as MAX_FETCH_BODY_BYTES
 from history_manager import generate_event_id, normalize_url
-from hub_utils import atomic_dump_json, load_json
+from hub_utils import _replace_with_retry, atomic_dump_json, load_json
 from run_contract import (
+    MAX_PARENT_DRAFT_BASE64_CHARS,
     STAGE_FINAL,
     RunContractError,
+    _read_parent_draft_bytes,
     _validate_access_log_entry,
+    _validate_parent_draft_bytes,
     _validate_supplement_candidate,
     candidate_object_hash,
     candidate_ref,
     canonical_json_bytes,
+    commit_manifest,
     file_sha256,
     load_manifest,
+    locked_manifest,
     normalize_published_at,
     validate_supplement_failure_kind,
 )
@@ -67,7 +74,9 @@ def _aware_datetime(value: Any, field: str) -> datetime:
 def _load_bound_packet(
     request_path: str | Path,
     gap_id: str,
-) -> tuple[Path, dict[str, Any], dict[str, Any], dict[str, Any], dict[str, Any], dict[str, Any]]:
+) -> tuple[
+    Path, dict[str, Any], dict[str, Any], dict[str, Any], dict[str, Any], dict[str, Any]
+]:
     request_file = Path(request_path).resolve()
     request = load_json(request_file, {})
     if request.get("contract_version") != "supplement-request/1.1":
@@ -85,8 +94,7 @@ def _load_bound_packet(
     packets = [
         packet
         for packet in request.get("execution_packets", [])
-        if isinstance(packet, dict)
-        and packet.get("assigned_gap_ids") == [gap_id]
+        if isinstance(packet, dict) and packet.get("assigned_gap_ids") == [gap_id]
     ]
     if len(packets) != 1:
         raise RunContractError("gap execution packet is missing or duplicated")
@@ -98,24 +106,32 @@ def _load_bound_packet(
     request_record = manifest.get("artifacts", {}).get("supplement_request")
     if (
         not isinstance(request_record, dict)
-        or Path(str(request_record.get("artifact_path") or "")).resolve() != request_file
+        or Path(str(request_record.get("artifact_path") or "")).resolve()
+        != request_file
         or request_record.get("artifact_sha256") != file_sha256(request_file)
     ):
-        raise RunContractError("supplement request does not match the registered artifact")
-    if request.get("baseline_sha256") != manifest.get("stages", {}).get("baseline", {}).get("artifact_sha256"):
+        raise RunContractError(
+            "supplement request does not match the registered artifact"
+        )
+    if request.get("baseline_sha256") != manifest.get("stages", {}).get(
+        "baseline", {}
+    ).get("artifact_sha256"):
         raise RunContractError("supplement request baseline binding mismatch")
     candidate_record = manifest.get("artifacts", {}).get("candidate_pool")
-    if (
-        not isinstance(candidate_record, dict)
-        or request.get("candidate_pool_sha256") != candidate_record.get("artifact_sha256")
-    ):
+    if not isinstance(candidate_record, dict) or request.get(
+        "candidate_pool_sha256"
+    ) != candidate_record.get("artifact_sha256"):
         raise RunContractError("supplement request candidate binding mismatch")
     prompt_path = Path(str(packet.get("prompt_config_path") or "")).resolve()
-    if not prompt_path.is_file() or packet.get("prompt_config_sha256") != file_sha256(prompt_path):
+    if not prompt_path.is_file() or packet.get("prompt_config_sha256") != file_sha256(
+        prompt_path
+    ):
         raise RunContractError("supplement prompt config binding mismatch")
     prompt_config = load_json(prompt_path, {})
     lane_binding = packet.get("lane_slice")
-    if not isinstance(lane_binding, dict) or lane_binding != (packet.get("bound_input_paths") or {}).get("lane_slice"):
+    if not isinstance(lane_binding, dict) or lane_binding != (
+        packet.get("bound_input_paths") or {}
+    ).get("lane_slice"):
         raise RunContractError("supplement lane slice binding is invalid")
     lane_path = Path(str(lane_binding.get("path") or "")).resolve()
     if not lane_path.is_file() or lane_binding.get("sha256") != file_sha256(lane_path):
@@ -125,7 +141,8 @@ def _load_bound_packet(
         lane_slice.get("contract_version") != "supplement-lane-slice/1.0"
         or lane_slice.get("run_id") != manifest.get("run_id")
         or lane_slice.get("gap") != gap
-        or lane_slice.get("candidate_pool_sha256") != request.get("candidate_pool_sha256")
+        or lane_slice.get("candidate_pool_sha256")
+        != request.get("candidate_pool_sha256")
     ):
         raise RunContractError("supplement lane slice binding mismatch")
     output_paths = packet.get("output_paths")
@@ -133,7 +150,10 @@ def _load_bound_packet(
     if not isinstance(output_paths, dict) or not isinstance(authorization, dict):
         raise RunContractError("supplement output authorization is invalid")
     draft_path = Path(str(output_paths.get("draft") or "")).resolve()
-    allowed = [Path(str(value)).resolve() for value in authorization.get("agent_allowed_paths", [])]
+    allowed = [
+        Path(str(value)).resolve()
+        for value in authorization.get("agent_allowed_paths", [])
+    ]
     if authorization.get("forbid_other_writes") is not True or allowed != [draft_path]:
         raise RunContractError("supplement draft authorization mismatch")
     return request_file, request, packet, gap, lane_slice, prompt_config
@@ -187,7 +207,11 @@ def build_agent_context(
     draft_path = Path(str(packet["output_paths"]["draft"])).resolve()
     context = {
         "contract_version": CONTEXT_VERSION,
-        **({"article_broker": deepcopy(packet["article_broker"])} if "article_broker" in packet else {}),
+        **(
+            {"article_broker": deepcopy(packet["article_broker"])}
+            if "article_broker" in packet
+            else {}
+        ),
         "run_id": request["run_id"],
         "request_path": str(request_file),
         "request_sha256": file_sha256(request_file),
@@ -202,7 +226,12 @@ def build_agent_context(
         },
         "rules": selected_rules,
         "bound_candidates": deepcopy(
-            candidates[: max(candidate_limit, len(required_candidates))]
+            required_candidates
+            + [
+                candidate
+                for candidate in candidates
+                if str(candidate.get("candidate_ref") or "") not in required_ids
+            ][: max(0, candidate_limit - len(required_candidates))]
         ),
         "bound_candidate_count": len(candidates),
         "required_bound_candidate_urls": [
@@ -245,7 +274,11 @@ def build_agent_context(
             "candidate_primary_domain_allowed": ["technology", "healthcare_digital"],
             "candidate_secondary_domains_allowed": ["technology", "healthcare_digital"],
             "candidate_secondary_domain_rule": "list; omit the primary domain and use [] when no second domain applies",
-            "failure_kind_allowed": ["source_access", "published_at_conflict", "infrastructure"],
+            "failure_kind_allowed": [
+                "source_access",
+                "published_at_conflict",
+                "infrastructure",
+            ],
             "failure_kind_required_for_status": ["degraded", "failed"],
             "candidate_required": [
                 "title",
@@ -274,26 +307,41 @@ def build_agent_context(
             "Use actual runtime clock values for started_at, checked_at, and completed_at. Never invent rounded or future timestamps.",
             "Reserve tool calls to persist the complete dynamic fields to draft_path before the hard cap and before optional milestone chatter; do not spend the last write call on contact_supervisor.",
             "Record completed_at when source checking ends, stop research, and persist it unchanged; source_checked is not finalized and needs no chat call.",
-            "Run supplement_agent.py finalize with the same request and gap_id if a tool call remains. On every parent fallback, including already assembled drafts, the parent must first run the bound finalize --parent once before terminal loss and within the existing grace; only on success use finalize-supplement. Already assembled drafts skip reassembly, never the parent guard; no new research, budget increase, or timestamp repair.",
+            "New native-v3 parent_receipt_version=1 journals timely finalization for later unchanged aggregation; retry the same parent CLI after interruption, never create receipts for past execution. Run supplement_agent.py finalize with the same request and gap_id if a tool call remains. On every parent fallback, including already assembled drafts, the parent must first run the bound finalize --parent once before terminal loss and within the existing grace; only on success use finalize-supplement. Already assembled drafts skip reassembly, never the parent guard; no new research, budget increase, or timestamp repair.",
         ],
         "finalize_command": (
             "python -X utf8 scripts/supplement_agent.py finalize "
-            f"--request \"{request_file}\" --gap-id \"{gap_id}\""
+            f'--request "{request_file}" --gap-id "{gap_id}"'
         ),
         "verify_bound_command": (
             "python -X utf8 scripts/supplement_agent.py verify-bound "
-            f"--request \"{request_file}\" --gap-id \"{gap_id}\" --write-draft"
+            f'--request "{request_file}" --gap-id "{gap_id}" --write-draft'
         ),
     }
 
-    if request.get("article_broker_version") == 2 and "article_broker" in packet:
+    if request.get("article_broker_version") in {2, 3} and "article_broker" in packet:
         context["draft_instructions"] = [packet["task_message"]]
         context.pop("verify_bound_command", None)
         context["broker_handoff"] = {
-            "parent_only": True, "worker_write_authorization": "draft_only_unchanged",
-            "commands": ["broker-checkpoint", "broker-reserve-query", "broker-record-query", "broker-http", "broker-seal", "broker-evidence"],
+            "parent_only": True,
+            "worker_write_authorization": "draft_only_unchanged",
+            "commands": [
+                "broker-checkpoint",
+                "broker-reserve-query",
+                "broker-record-query",
+                *(
+                    ["broker-reserve-fetch", "broker-record-fetch"]
+                    if request.get("article_broker_version") == 3
+                    else ["broker-http"]
+                ),
+                "broker-seal",
+                "broker-evidence",
+            ],
             "parent_command_prefix": f'python -B -X utf8 scripts/supplement_agent.py <command> --parent --request "{request_file}" --gap-id "{gap_id}"',
-            "candidate_proof_fields": ["broker_body_proof_sha256", "published_at_proof"],
+            "candidate_proof_fields": [
+                "broker_body_proof_sha256",
+                "published_at_proof",
+            ],
             "public_tool_authority": "Actual receipt attested by trusted parent, not cryptographic provider proof",
         }
     return context
@@ -305,23 +353,33 @@ def assemble_result(
     dynamic: dict[str, Any],
     *,
     _parent_raw_bytes: bytes | None = None,
+    _validate_only: bool = False,
 ) -> tuple[Path, dict[str, Any]]:
-    request_file, request, packet, gap, lane_slice, _ = _load_bound_packet(request_path, gap_id)
+    request_file, request, packet, gap, lane_slice, _ = _load_bound_packet(
+        request_path, gap_id
+    )
     broker_empty = False
     broker_bound_only = False
     if "article_broker" in packet:
-        if request.get("article_broker_version") != 2:
-            raise RunContractError("article broker assembly BLOCKED pending authoritative evidence contract")
+        if request.get("article_broker_version") not in {2, 3}:
+            raise RunContractError(
+                "article broker assembly BLOCKED pending authoritative evidence contract"
+            )
         from article_broker import validate_result
+
         broker_empty = validate_result(request_path, gap_id, dynamic)
         broker_bound_only = not dynamic.get("executed_queries")
     elif "broker_evidence_sha256" in dynamic:
-        raise RunContractError("article broker proof requires bound operational request")
+        raise RunContractError(
+            "article broker proof requires bound operational request"
+        )
     if not isinstance(dynamic, dict):
         raise RunContractError("supplement dynamic draft must be an object")
     extra = sorted(set(dynamic) - DYNAMIC_FIELDS)
     if extra:
-        raise RunContractError(f"supplement dynamic draft has forbidden fields: {extra}")
+        raise RunContractError(
+            f"supplement dynamic draft has forbidden fields: {extra}"
+        )
     required = {
         "status",
         "executed_queries",
@@ -341,7 +399,9 @@ def assemble_result(
     completed_at = _aware_datetime(dynamic["completed_at"], "completed_at")
     request_started_at = _aware_datetime(request["created_at"], "request.created_at")
     if started_at < request_started_at or completed_at < started_at:
-        raise RunContractError("source-checking timestamps are outside the request window")
+        raise RunContractError(
+            "source-checking timestamps are outside the request window"
+        )
     if completed_at.astimezone(timezone.utc) > datetime.now(timezone.utc):
         raise RunContractError("completed_at cannot be in the future")
     if (completed_at - started_at).total_seconds() > int(gap["max_duration_seconds"]):
@@ -359,35 +419,48 @@ def assemble_result(
             for decision in dynamic.get("bound_candidate_decisions", [])
         )
         has_date_conflict = any(
-            isinstance(decision, dict) and decision.get("decision") == "date_disqualified"
+            isinstance(decision, dict)
+            and decision.get("decision") == "date_disqualified"
             for decision in dynamic.get("bound_candidate_decisions", [])
         )
         if status == "degraded":
             if has_date_conflict and not (has_blocked_access or has_blocked_bound):
                 dynamic["failure_kind"] = "published_at_conflict"
                 if not dynamic.get("failure_reason"):
-                    dynamic["failure_reason"] = "One or more candidates have publication dates outside the request window"
+                    dynamic["failure_reason"] = (
+                        "One or more candidates have publication dates outside the request window"
+                    )
             else:
                 dynamic["failure_kind"] = "source_access"
                 if not dynamic.get("failure_reason"):
-                    dynamic["failure_reason"] = "One or more source URLs could not be verified or were blocked"
+                    dynamic["failure_reason"] = (
+                        "One or more source URLs could not be verified or were blocked"
+                    )
         elif status == "failed":
             dynamic["failure_kind"] = "infrastructure"
             if not dynamic.get("failure_reason"):
-                dynamic["failure_reason"] = "Execution failed before source checking could complete"
-    failure_kind = validate_supplement_failure_kind(
-        dynamic.get("failure_kind"), status
-    )
-    if failure_kind is not None and not str(dynamic.get("failure_reason") or "").strip():
+                dynamic["failure_reason"] = (
+                    "Execution failed before source checking could complete"
+                )
+    failure_kind = validate_supplement_failure_kind(dynamic.get("failure_kind"), status)
+    if (
+        failure_kind is not None
+        and not str(dynamic.get("failure_reason") or "").strip()
+    ):
         dynamic["failure_reason"] = f"Supplement {status} due to {failure_kind}"
     infrastructure_failure = failure_kind == "infrastructure"
     if infrastructure_failure and (
-        dynamic["executed_queries"] or dynamic["access_log"] or dynamic["candidates"]
+        dynamic["executed_queries"]
+        or dynamic["access_log"]
+        or dynamic["candidates"]
         or any(
             isinstance(decision, dict)
             and decision.get("decision") != "infrastructure_unavailable"
-            for decision in (dynamic["bound_candidate_decisions"]
-                             if isinstance(dynamic["bound_candidate_decisions"], list) else [])
+            for decision in (
+                dynamic["bound_candidate_decisions"]
+                if isinstance(dynamic["bound_candidate_decisions"], list)
+                else []
+            )
         )
     ):
         raise RunContractError(
@@ -426,8 +499,12 @@ def assemble_result(
     ]
     for index, evidence in enumerate(validated_access):
         checked_at = _aware_datetime(evidence[1], f"access_log[{index}].checked_at")
-        if checked_at < started_at.astimezone(timezone.utc) or checked_at > completed_at.astimezone(timezone.utc):
-            raise RunContractError(f"access_log[{index}].checked_at is outside source-checking time")
+        if checked_at < started_at.astimezone(
+            timezone.utc
+        ) or checked_at > completed_at.astimezone(timezone.utc):
+            raise RunContractError(
+                f"access_log[{index}].checked_at is outside source-checking time"
+            )
     required_ids = {
         str(value)
         for value in lane_slice.get("required_bound_candidate_ids", [])
@@ -479,9 +556,7 @@ def assemble_result(
             or outcome not in allowed_bound_decisions
             or not reason
         ):
-            raise RunContractError(
-                f"bound_candidate_decisions[{index}] is invalid"
-            )
+            raise RunContractError(f"bound_candidate_decisions[{index}] is invalid")
         decision_by_id[candidate_id] = decision
     if set(decision_by_id) != required_ids:
         raise RunContractError(
@@ -510,9 +585,11 @@ def assemble_result(
             raise RunContractError(
                 "bound candidate registration decision does not match candidates"
             )
-        if registered_candidate is not None and normalize_url(
-            str(registered_candidate.get("url") or "")
-        ) != required_candidate_urls_by_id[candidate_id]:
+        if (
+            registered_candidate is not None
+            and normalize_url(str(registered_candidate.get("url") or ""))
+            != required_candidate_urls_by_id[candidate_id]
+        ):
             raise RunContractError(
                 "bound candidate registration does not preserve the bound URL"
             )
@@ -543,9 +620,13 @@ def assemble_result(
         try:
             candidate["event_id"] = generate_event_id(identity)
         except ValueError as exc:
-            raise RunContractError(f"candidate {index} event_identity is invalid") from exc
+            raise RunContractError(
+                f"candidate {index} event_identity is invalid"
+            ) from exc
         access = candidate.get("access_check")
-        if not isinstance(access, dict) or normalize_url(str(access.get("requested_url") or "")) != normalize_url(str(candidate.get("url") or "")):
+        if not isinstance(access, dict) or normalize_url(
+            str(access.get("requested_url") or "")
+        ) != normalize_url(str(candidate.get("url") or "")):
             raise RunContractError(f"candidate {index} access_check does not match url")
         candidate_evidence = _validate_supplement_candidate(
             candidate,
@@ -555,11 +636,21 @@ def assemble_result(
             completed_at,
         )
         if candidate_evidence not in validated_access:
-            raise RunContractError(f"candidate {index} access_check is absent from access_log")
+            raise RunContractError(
+                f"candidate {index} access_check is absent from access_log"
+            )
         candidate["candidate_id"] = candidate_ref(str(candidate["url"]))
         candidate["candidate_object_sha256"] = candidate_object_hash(candidate)
-    succeeded = sum(1 for item in access_log if isinstance(item, dict) and item.get("status") == "verified")
-    failed = sum(1 for item in access_log if isinstance(item, dict) and item.get("status") == "blocked")
+    succeeded = sum(
+        1
+        for item in access_log
+        if isinstance(item, dict) and item.get("status") == "verified"
+    )
+    failed = sum(
+        1
+        for item in access_log
+        if isinstance(item, dict) and item.get("status") == "blocked"
+    )
     if succeeded + failed != len(access_log):
         raise RunContractError("access_log contains an invalid status")
     if status in {"completed", "no_increment"} and failed:
@@ -600,7 +691,11 @@ def assemble_result(
         raise RunContractError(f"{status} supplement draft cannot contain candidates")
     result = {
         "contract_version": "supplement-result/1.0",
-        **({"broker_evidence_sha256": dynamic["broker_evidence_sha256"]} if "article_broker" in packet else {}),
+        **(
+            {"broker_evidence_sha256": dynamic["broker_evidence_sha256"]}
+            if "article_broker" in packet
+            else {}
+        ),
         "run_id": request["run_id"],
         "request_sha256": file_sha256(request_file),
         "baseline_sha256": request["baseline_sha256"],
@@ -621,7 +716,9 @@ def assemble_result(
         "data_provenance": {
             "request_sha256": file_sha256(request_file),
             "candidate_pool_sha256": request["candidate_pool_sha256"],
-            "access_log_sha256": hashlib.sha256(canonical_json_bytes(access_log)).hexdigest(),
+            "access_log_sha256": hashlib.sha256(
+                canonical_json_bytes(access_log)
+            ).hexdigest(),
         },
         "turns_used": turns_used,
         "halt_condition_met": halt_condition_met,
@@ -633,8 +730,19 @@ def assemble_result(
     if str(dynamic.get("failure_reason") or "").strip():
         result["failure_reason"] = dynamic["failure_reason"]
     draft_path = Path(str(packet["output_paths"]["draft"])).resolve()
+    if _validate_only:
+        return draft_path, result
     if "article_broker" in packet and _parent_raw_bytes is None:
         raise RunContractError("article broker finalization requires --parent guard")
+    if (
+        request.get("article_broker_version") == 3
+        or packet["finalization"].get("parent_receipt_version") is not None
+    ):
+        _validate_parent_draft_bytes(
+            json.dumps(result, ensure_ascii=False, indent=2)
+            .replace("\n", os.linesep)
+            .encode("utf-8")
+        )
     if _parent_raw_bytes is not None:
         _guard_parent_finalization(request_path, gap_id, result, _parent_raw_bytes)
     atomic_dump_json(draft_path, result)
@@ -642,23 +750,44 @@ def assemble_result(
 
 
 def _guard_parent_finalization(
-    request_path: str | Path, gap_id: str, draft: dict[str, Any], raw: bytes,
-    *, _registration_source: Path | None = None,
+    request_path: str | Path,
+    gap_id: str,
+    draft: dict[str, Any],
+    raw: bytes,
+    *,
+    _registration_source: Path | None = None,
+    _allow_pending: bool = False,
 ) -> None:
     """Recheck durable loss, source time and unchanged evidence immediately before replacement."""
-    _, _, packet, gap, _, _ = _load_bound_packet(request_path, gap_id)
+    _, request, packet, gap, _, _ = _load_bound_packet(request_path, gap_id)
+    bounded = (
+        request.get("article_broker_version") == 3
+        or packet["finalization"].get("parent_receipt_version") is not None
+    )
+    if bounded:
+        _validate_parent_draft_bytes(raw)
     manifest = load_manifest(packet["run_manifest_path"])
     if manifest.get("stages", {}).get("supplemental", {}).get("status") in STAGE_FINAL:
-        raise RunContractError("parent finalization cannot resume a terminal supplemental stage")
+        raise RunContractError(
+            "parent finalization cannot resume a terminal supplemental stage"
+        )
     state_path = Path(packet["progress"]["state_path"])
     if state_path.exists():
         state = load_json(state_path, {})
         if not isinstance(state, dict) or state.get("progress_id") != gap_id:
             raise RunContractError("supplement progress identity mismatch")
         if state.get("terminal_status"):
-            raise RunContractError("parent finalization cannot resume terminal progress")
+            raise RunContractError(
+                "parent finalization cannot resume terminal progress"
+            )
     final_path = Path(packet["output_paths"]["result"])
-    if (final_path.exists() and (_registration_source is None or final_path.resolve() != _registration_source.resolve())) or final_path.with_suffix(".failure.json").exists():
+    if (
+        final_path.exists()
+        and (
+            _registration_source is None
+            or final_path.resolve() != _registration_source.resolve()
+        )
+    ) or final_path.with_suffix(".failure.json").exists():
         raise RunContractError("parent finalization cannot replace published evidence")
     completed = _aware_datetime(draft.get("completed_at"), "completed_at")
     started = _aware_datetime(draft.get("started_at"), "started_at")
@@ -666,32 +795,228 @@ def _guard_parent_finalization(
     if not isinstance(grace, int) or isinstance(grace, bool) or not 1 <= grace <= 300:
         raise RunContractError("supplement finalization grace is invalid")
     current = datetime.now(timezone.utc)
-    if completed < started or completed > current or (completed - started).total_seconds() > int(gap["max_duration_seconds"]):
+    if (
+        completed < started
+        or completed > current
+        or (completed - started).total_seconds() > int(gap["max_duration_seconds"])
+    ):
         raise RunContractError("parent finalization source time is invalid")
-    if current > completed + timedelta(seconds=grace):
+    receipt = manifest.get("parent_supplement_finalizations", {}).get(gap_id)
+    if receipt is not None:
+        _validate_parent_receipt(request_path, request, packet, gap_id, receipt)
+        finalized = _aware_datetime(receipt.get("finalized_at"), "finalized_at")
+        accepted = {receipt["final_draft_sha256"]}
+        if _allow_pending:
+            accepted.add(receipt["source_draft_sha256"])
+        if (
+            hashlib.sha256(raw).hexdigest() not in accepted
+            or receipt["completed_at"] != draft.get("completed_at")
+            or not completed <= finalized <= completed + timedelta(seconds=grace)
+            or finalized > current
+        ):
+            raise RunContractError("parent finalization receipt draft/time mismatch")
+    elif current > completed + timedelta(seconds=grace):
         raise RunContractError("parent finalization grace expired")
-    source_path = _registration_source if _registration_source is not None else Path(packet["output_paths"]["draft"])
-    if source_path.read_bytes() != raw:
+    source_path = (
+        _registration_source
+        if _registration_source is not None
+        else Path(packet["output_paths"]["draft"])
+    )
+    source_raw = (
+        _read_parent_draft_bytes(source_path) if bounded else source_path.read_bytes()
+    )
+    if source_raw != raw:
         raise RunContractError("supplement draft changed during parent finalization")
+
+
+def _decode_parent_draft(encoded: str) -> bytes:
+    if not isinstance(encoded, str):
+        raise RunContractError(
+            "parent finalization receipt payload must be a base64 string"
+        )
+    if len(encoded) > MAX_PARENT_DRAFT_BASE64_CHARS:
+        raise RunContractError(
+            "parent finalization receipt payload exceeds 1398104 characters"
+        )
+    try:
+        raw = base64.b64decode(encoded, validate=True)
+    except (ValueError, TypeError) as exc:
+        raise RunContractError("parent finalization receipt payload invalid") from exc
+    return _validate_parent_draft_bytes(raw)
+
+
+def _validate_parent_receipt(request_path, request, packet, gap_id, receipt):
+    """Trusted-parent journal, not provider authentication or evidence of old execution."""
+    if (
+        request.get("article_broker_version") != 3
+        or packet["finalization"].get("parent_receipt_version") != 1
+        or not isinstance(receipt, dict)
+        or receipt.get("contract_version") != "parent-supplement-finalization/1.0"
+        or receipt.get("parent_attestation") != "validated_within_source_grace"
+        or receipt.get("run_id") != request["run_id"]
+        or receipt.get("request_sha256") != file_sha256(request_path)
+        or receipt.get("gap_id") != gap_id
+        or receipt.get("packet_sha256")
+        != hashlib.sha256(canonical_json_bytes(packet)).hexdigest()
+    ):
+        raise RunContractError("parent finalization receipt binding mismatch")
+    try:
+        final_raw = _decode_parent_draft(receipt["final_draft_base64"])
+        final = json.loads(final_raw)
+    except RunContractError:
+        raise
+    except (KeyError, ValueError, TypeError) as exc:
+        raise RunContractError("parent finalization receipt payload invalid") from exc
+    if (
+        not isinstance(final, dict)
+        or hashlib.sha256(final_raw).hexdigest() != receipt.get("final_draft_sha256")
+        or final.get("completed_at") != receipt.get("completed_at")
+        or final.get("broker_evidence_sha256") != receipt.get("broker_evidence_sha256")
+    ):
+        raise RunContractError("parent finalization receipt payload mismatch")
+    completed = _aware_datetime(receipt.get("completed_at"), "completed_at")
+    finalized = _aware_datetime(receipt.get("finalized_at"), "finalized_at")
+    if not completed <= finalized <= completed + timedelta(
+        seconds=packet["finalization"]["grace_seconds"]
+    ) or finalized > datetime.now(timezone.utc):
+        raise RunContractError("parent finalization receipt time mismatch")
+    # Sealed ledger digest transitively binds every native proof; re-read all proof bytes.
+    from article_broker import validate_result
+
+    validate_result(request_path, gap_id, final)
+    return final_raw
+
+
+def _materialize_parent_draft(path, raw):
+    """The manifest journal commits first; a crash leaves exact-byte recovery, not a new clock."""
+    _validate_parent_draft_bytes(raw)
+    temporary = None
+    try:
+        with tempfile.NamedTemporaryFile(
+            dir=path.parent, prefix=f".{path.name}.", suffix=".tmp", delete=False
+        ) as stream:
+            temporary = Path(stream.name)
+            stream.write(raw)
+            stream.flush()
+            os.fsync(stream.fileno())
+        _replace_with_retry(temporary, path)
+    finally:
+        if temporary is not None:
+            temporary.unlink(missing_ok=True)
+
+
+def _finalize_with_receipt(request_path, gap_id):
+    _, request, packet, _, _, _ = _load_bound_packet(request_path, gap_id)
+    if (
+        request.get("article_broker_version") != 3
+        or packet["finalization"].get("parent_receipt_version") != 1
+    ):
+        raise RunContractError("unsupported parent finalization receipt version")
+    draft_path = Path(packet["output_paths"]["draft"])
+    with locked_manifest(packet["run_manifest_path"]) as (manifest, sha):
+        if (
+            manifest.get("stages", {}).get("supplemental", {}).get("status")
+            in STAGE_FINAL
+        ):
+            raise RunContractError(
+                "parent finalization cannot resume a terminal supplemental stage"
+            )
+        raw = _read_parent_draft_bytes(draft_path)
+        draft = json.loads(raw)
+        if not isinstance(draft, dict):
+            raise RunContractError("supplement draft must be an object")
+        _guard_parent_finalization(
+            request_path, gap_id, draft, raw, _allow_pending=True
+        )
+        prior = manifest.get("parent_supplement_finalizations", {}).get(gap_id)
+        if prior is not None:
+            final_raw = _validate_parent_receipt(
+                request_path, request, packet, gap_id, prior
+            )
+            if raw != final_raw:
+                _materialize_parent_draft(draft_path, final_raw)
+            return draft_path, "already_assembled"
+        assembled = draft.get("contract_version") == "supplement-result/1.0"
+        dynamic = (
+            {
+                key: deepcopy(value)
+                for key, value in draft.items()
+                if key in DYNAMIC_FIELDS
+            }
+            if assembled
+            else draft
+        )
+        _, result = assemble_result(request_path, gap_id, dynamic, _validate_only=True)
+        if assembled and canonical_json_bytes(result) != canonical_json_bytes(draft):
+            raise RunContractError("assembled supplement draft semantic mismatch")
+        final_raw = (
+            raw
+            if assembled
+            else json.dumps(result, ensure_ascii=False, indent=2)
+            .replace("\n", os.linesep)
+            .encode("utf-8")
+        )
+        _validate_parent_draft_bytes(final_raw)
+        # Validation can consume time: take the actual clock and guard again immediately at commit.
+        _guard_parent_finalization(request_path, gap_id, result, raw)
+        finalized = datetime.now(timezone.utc)
+        if finalized > _aware_datetime(
+            result["completed_at"], "completed_at"
+        ) + timedelta(seconds=packet["finalization"]["grace_seconds"]):
+            raise RunContractError("parent finalization grace expired")
+        receipt = {
+            "contract_version": "parent-supplement-finalization/1.0",
+            "parent_attestation": "validated_within_source_grace",
+            "run_id": request["run_id"],
+            "request_sha256": file_sha256(request_path),
+            "gap_id": gap_id,
+            "packet_sha256": hashlib.sha256(canonical_json_bytes(packet)).hexdigest(),
+            "broker_evidence_sha256": result["broker_evidence_sha256"],
+            "completed_at": result["completed_at"],
+            "finalized_at": finalized.isoformat(),
+            "source_draft_sha256": hashlib.sha256(raw).hexdigest(),
+            "final_draft_sha256": hashlib.sha256(final_raw).hexdigest(),
+            "final_draft_base64": base64.b64encode(final_raw).decode("ascii"),
+        }
+        manifest.setdefault("parent_supplement_finalizations", {})[gap_id] = receipt
+        commit_manifest(packet["run_manifest_path"], manifest, sha)
+        _materialize_parent_draft(draft_path, final_raw)
+        return draft_path, "already_assembled" if assembled else "assembled"
 
 
 def finalize_parent_draft(request_path: str | Path, gap_id: str) -> tuple[Path, str]:
     """Assemble only persisted worker evidence; formal registration remains a separate gate."""
     request_file, request, packet, gap, _, _ = _load_bound_packet(request_path, gap_id)
-    if "article_broker" in packet and request.get("article_broker_version") != 2:
-        raise RunContractError("article broker finalization BLOCKED pending authoritative evidence contract")
+    if "article_broker" in packet and request.get("article_broker_version") not in {
+        2,
+        3,
+    }:
+        raise RunContractError(
+            "article broker finalization BLOCKED pending authoritative evidence contract"
+        )
+    if packet["finalization"].get("parent_receipt_version") is not None:
+        return _finalize_with_receipt(request_path, gap_id)
     draft_path = Path(packet["output_paths"]["draft"])
-    raw = draft_path.read_bytes()
+    raw = (
+        _read_parent_draft_bytes(draft_path)
+        if request.get("article_broker_version") == 3
+        else draft_path.read_bytes()
+    )
     draft = json.loads(raw)
     if not isinstance(draft, dict):
         raise RunContractError("supplement draft must be an object")
     _guard_parent_finalization(request_path, gap_id, draft, raw)
     if draft.get("contract_version") == "supplement-result/1.0":
-        if (draft.get("run_id") != request["run_id"] or draft.get("gap_id") != gap_id
-                or draft.get("lane") != gap["lane"] or draft.get("request_sha256") != file_sha256(request_file)):
+        if (
+            draft.get("run_id") != request["run_id"]
+            or draft.get("gap_id") != gap_id
+            or draft.get("lane") != gap["lane"]
+            or draft.get("request_sha256") != file_sha256(request_file)
+        ):
             raise RunContractError("assembled supplement draft binding mismatch")
         if "article_broker" in packet:
             from article_broker import validate_result
+
             validate_result(request_path, gap_id, draft)
         return draft_path, "already_assembled"
     output_path, _ = assemble_result(request_path, gap_id, draft, _parent_raw_bytes=raw)
@@ -700,8 +1025,17 @@ def finalize_parent_draft(request_path: str | Path, gap_id: str) -> tuple[Path, 
 
 def _publication_meta_field(attributes: dict[str, str | None]) -> str | None:
     """Explicit publication fields only; modified/retrieved dates are not publication."""
-    fields = {"article:published_time": "article:published_time", "datepublished": "datePublished", "pubdate": "pubdate"}
-    key = attributes.get("property") or attributes.get("name") or attributes.get("itemprop") or ""
+    fields = {
+        "article:published_time": "article:published_time",
+        "datepublished": "datePublished",
+        "pubdate": "pubdate",
+    }
+    key = (
+        attributes.get("property")
+        or attributes.get("name")
+        or attributes.get("itemprop")
+        or ""
+    )
     return fields.get(key.lower())
 
 
@@ -722,7 +1056,10 @@ class _VisibleTextParser(HTMLParser):
             field = _publication_meta_field(attributes)
             raw = attributes.get("content")
             if field and raw:
-                if len(self.publication_metadata) < 16 and len(json.dumps(raw, ensure_ascii=False).encode("utf-8")) <= 128:
+                if (
+                    len(self.publication_metadata) < 16
+                    and len(json.dumps(raw, ensure_ascii=False).encode("utf-8")) <= 128
+                ):
                     self.publication_metadata.append({"field": field, "raw": raw})
                 else:
                     self.publication_metadata_truncated = True
@@ -756,16 +1093,29 @@ def _recognizable_document_body(body: bytes, content_type: str, final_url: str) 
     lowered = text.lower()
     final_path = urllib.parse.urlsplit(final_url).path.lower()
     soft_error_markers = (
-        "<title>404", "<title>not found", "page not found", "页面不存在",
-        "soft 404", "access denied", "<title>login", "<title>sign in",
-        "<title>making sure you're not a bot!", "id=\"anubis_challenge\"",
-        "id='anubis_challenge'", "/.within.website/x/cmd/anubis/",
-        "<title>just a moment", "/cdn-cgi/challenge-platform/",
-        "<title>attention required! | cloudflare", "<title>verify you are human",
+        "<title>404",
+        "<title>not found",
+        "page not found",
+        "页面不存在",
+        "soft 404",
+        "access denied",
+        "<title>login",
+        "<title>sign in",
+        "<title>making sure you're not a bot!",
+        'id="anubis_challenge"',
+        "id='anubis_challenge'",
+        "/.within.website/x/cmd/anubis/",
+        "<title>just a moment",
+        "/cdn-cgi/challenge-platform/",
+        "<title>attention required! | cloudflare",
+        "<title>verify you are human",
     )
     if any(marker in lowered for marker in soft_error_markers):
         return False
-    if any(segment in {"login", "signin", "sign-in", "auth"} for segment in final_path.split("/")):
+    if any(
+        segment in {"login", "signin", "sign-in", "auth"}
+        for segment in final_path.split("/")
+    ):
         return False
     if media_type == "text/plain":
         visible = text
@@ -776,7 +1126,9 @@ def _recognizable_document_body(body: bytes, content_type: str, final_url: str) 
     return len(" ".join(visible.split())) >= 200
 
 
-def _document_body_evidence(body: bytes, content_type: str, *, truncated: bool) -> dict[str, Any]:
+def _document_body_evidence(
+    body: bytes, content_type: str, *, truncated: bool
+) -> dict[str, Any]:
     """Untrusted excerpts from this access only; hashes identify bytes, not source truth."""
     text = _decode_document_body(body, content_type)
     parser = _VisibleTextParser()
@@ -785,7 +1137,9 @@ def _document_body_evidence(body: bytes, content_type: str, *, truncated: bool) 
         text = " ".join(parser.parts)
     visible = " ".join(text.split())
     # Bound serialized UTF-8, not characters: four multilingual excerpts must fit tool output.
-    excerpt, text_truncated = _bounded_json_string_prefix(visible, MAX_EVIDENCE_TEXT_JSON_BYTES)
+    excerpt, text_truncated = _bounded_json_string_prefix(
+        visible, MAX_EVIDENCE_TEXT_JSON_BYTES
+    )
     return {
         "content_type": content_type[:256],
         "body_sha256": hashlib.sha256(body).hexdigest(),
@@ -795,7 +1149,8 @@ def _document_body_evidence(body: bytes, content_type: str, *, truncated: bool) 
         "text_sha256": hashlib.sha256(excerpt.encode("utf-8")).hexdigest(),
         "text_truncated": truncated or text_truncated,
         "publication_metadata": parser.publication_metadata,
-        "publication_metadata_truncated": truncated or parser.publication_metadata_truncated,
+        "publication_metadata_truncated": truncated
+        or parser.publication_metadata_truncated,
     }
 
 
@@ -843,41 +1198,105 @@ def _fetch_url(url: str, timeout_seconds: float = 8.0) -> FetchResult:
                 content_type = str(resp.headers.get("Content-Type", ""))
                 # urllib does not decompress responses; reject rather than decode compressed bytes.
                 encodings = _response_header_values(resp.headers, "Content-Encoding")
-                if encodings and (len(encodings) != 1 or encodings[0].strip().lower() != "identity"):
-                    return FetchResult("blocked", final_url, code, "permanent", "UNEXPECTED_CONTENT_ENCODING")
+                if encodings and (
+                    len(encodings) != 1 or encodings[0].strip().lower() != "identity"
+                ):
+                    return FetchResult(
+                        "blocked",
+                        final_url,
+                        code,
+                        "permanent",
+                        "UNEXPECTED_CONTENT_ENCODING",
+                    )
                 lengths = _response_header_values(resp.headers, "Content-Length")
                 transfers = _response_header_values(resp.headers, "Transfer-Encoding")
                 # Reject duplicates (even identical), lists and CL+TE before body access.
                 # Accept chunked only when the HTTP client actually selected its decoder.
-                if (len(lengths) > 1 or (lengths and not re.fullmatch(r"[0-9]+", lengths[0].strip()))
-                        or (transfers and (lengths or len(transfers) != 1
-                            or transfers[0].lower() != "chunked" or not getattr(resp, "chunked", False)))):
-                    return FetchResult("blocked", final_url, code, "permanent", "AMBIGUOUS_HTTP_FRAMING")
+                if (
+                    len(lengths) > 1
+                    or (lengths and not re.fullmatch(r"[0-9]+", lengths[0].strip()))
+                    or (
+                        transfers
+                        and (
+                            lengths
+                            or len(transfers) != 1
+                            or transfers[0].lower() != "chunked"
+                            or not getattr(resp, "chunked", False)
+                        )
+                    )
+                ):
+                    return FetchResult(
+                        "blocked",
+                        final_url,
+                        code,
+                        "permanent",
+                        "AMBIGUOUS_HTTP_FRAMING",
+                    )
                 expected_length = int(lengths[0].strip()) if lengths else None
                 body = resp.read(MAX_FETCH_BODY_BYTES + 1)
                 if len(body) > MAX_FETCH_BODY_BYTES:
-                    return FetchResult("blocked", final_url, code, "permanent", "BODY_BYTE_LIMIT_EXCEEDED")
+                    return FetchResult(
+                        "blocked",
+                        final_url,
+                        code,
+                        "permanent",
+                        "BODY_BYTE_LIMIT_EXCEEDED",
+                    )
                 # Bounded HTTPResponse.read does not raise on short Content-Length.
                 # Chunked/EOF completion otherwise follows the accepted client's semantics,
                 # not strict raw-wire validation of chunk CRLF or trailer termination.
                 if expected_length is not None and len(body) != expected_length:
-                    return FetchResult("blocked", final_url, code, "transient", "INCOMPLETE_HTTP_BODY")
-                recognizable = _recognizable_document_body(body, content_type, final_url)
+                    return FetchResult(
+                        "blocked", final_url, code, "transient", "INCOMPLETE_HTTP_BODY"
+                    )
+                recognizable = _recognizable_document_body(
+                    body, content_type, final_url
+                )
                 if time.monotonic() >= deadline:
-                    return FetchResult("blocked", final_url, code, "transient", "HTTP_DEADLINE_EXCEEDED")
+                    return FetchResult(
+                        "blocked",
+                        final_url,
+                        code,
+                        "transient",
+                        "HTTP_DEADLINE_EXCEEDED",
+                    )
                 if recognizable:
-                    evidence = _document_body_evidence(body, content_type, truncated=False)
+                    evidence = _document_body_evidence(
+                        body, content_type, truncated=False
+                    )
                     if time.monotonic() >= deadline:
-                        return FetchResult("blocked", final_url, code, "transient", "HTTP_DEADLINE_EXCEEDED")
-                    return FetchResult("verified", final_url, code, "none", None, evidence)
-                return FetchResult("blocked", final_url, code, "permanent", "CONTENT_NOT_VERIFIED")
+                        return FetchResult(
+                            "blocked",
+                            final_url,
+                            code,
+                            "transient",
+                            "HTTP_DEADLINE_EXCEEDED",
+                        )
+                    return FetchResult(
+                        "verified", final_url, code, "none", None, evidence
+                    )
+                return FetchResult(
+                    "blocked", final_url, code, "permanent", "CONTENT_NOT_VERIFIED"
+                )
             is_perm = 400 <= code < 500 and code not in {408, 425, 429}
-            return FetchResult("blocked", final_url, code, ("permanent" if is_perm else "transient"), f"HTTP_{code}")
+            return FetchResult(
+                "blocked",
+                final_url,
+                code,
+                ("permanent" if is_perm else "transient"),
+                f"HTTP_{code}",
+            )
     except urllib.error.HTTPError as exc:
         final_url = exc.geturl() or url
         code = exc.code
         is_perm = 400 <= code < 500 and code not in {408, 425, 429}
-        return FetchResult("blocked", final_url, code, ("permanent" if is_perm else "transient"), f"HTTP_{code}")
+        return FetchResult(
+            "blocked",
+            final_url,
+            code,
+            ("permanent" if is_perm else "transient"),
+            f"HTTP_{code}",
+        )
     except Exception as exc:
         reason = exc.reason if isinstance(exc, urllib.error.URLError) else exc
         message = str(reason).lower()
@@ -888,10 +1307,9 @@ def _fetch_url(url: str, timeout_seconds: float = 8.0) -> FetchResult:
             "invalid library",
             "no host supplied",
         )
-        permanent = (
-            isinstance(reason, (ValueError, ssl.SSLCertVerificationError))
-            or any(marker in message for marker in permanent_markers)
-        )
+        permanent = isinstance(
+            reason, (ValueError, ssl.SSLCertVerificationError)
+        ) or any(marker in message for marker in permanent_markers)
         error_name = type(reason).__name__
         return FetchResult(
             "blocked",
@@ -911,18 +1329,30 @@ def verify_bound_candidates(
     write_draft: bool = True,
     timeout_seconds: float = 8.0,
 ) -> dict[str, Any]:
-    request_file, request, packet, gap, lane_slice, _ = _load_bound_packet(request_path, gap_id)
+    request_file, request, packet, gap, lane_slice, _ = _load_bound_packet(
+        request_path, gap_id
+    )
     if "article_broker" in packet:
-        if request.get("article_broker_version") != 2:
-            raise RunContractError("article broker HTTP BLOCKED pending authoritative evidence contract")
-        raise RunContractError("article broker requires parent broker-checkpoint/broker-http; verify-bound cannot write parent evidence")
+        if request.get("article_broker_version") not in {2, 3}:
+            raise RunContractError(
+                "article broker HTTP BLOCKED pending authoritative evidence contract"
+            )
+        raise RunContractError(
+            "article broker requires parent broker-checkpoint/broker-http; verify-bound cannot write parent evidence"
+        )
     window = lane_slice.get("window", {})
     start_day = str(window.get("start", "2026-08-29"))
     end_day = str(window.get("end", "2026-09-04"))
     lane = str(gap.get("lane") or "")
-    default_domain = "healthcare_digital" if lane in {"HealthcareRadar", "Sentinel"} else "technology"
+    default_domain = (
+        "healthcare_digital"
+        if lane in {"HealthcareRadar", "Sentinel"}
+        else "technology"
+    )
 
-    required_ids = [str(x) for x in lane_slice.get("required_bound_candidate_ids", []) if str(x)]
+    required_ids = [
+        str(x) for x in lane_slice.get("required_bound_candidate_ids", []) if str(x)
+    ]
     slice_candidates = {
         str(c.get("candidate_ref") or ""): c
         for c in lane_slice.get("candidates", [])
@@ -940,14 +1370,20 @@ def verify_bound_candidates(
             u_clean = str(u).strip()
             if u_clean:
                 cid = candidate_ref(u_clean)
-                items_to_check.append((cid, u_clean, {
-                    "candidate_ref": cid,
-                    "url": u_clean,
-                    "title": u_clean,
-                    "source": "Web",
-                    "published_at": "unknown",
-                    "published_at_source": "unknown",
-                }))
+                items_to_check.append(
+                    (
+                        cid,
+                        u_clean,
+                        {
+                            "candidate_ref": cid,
+                            "url": u_clean,
+                            "title": u_clean,
+                            "source": "Web",
+                            "published_at": "unknown",
+                            "published_at_source": "unknown",
+                        },
+                    )
+                )
 
     if not items_to_check and not required_ids and slice_candidates:
         max_u = int(gap.get("max_urls", 4))
@@ -959,24 +1395,36 @@ def verify_bound_candidates(
         fallback_url = (
             "https://www.gov.cn"
             if lane == "Sentinel"
-            else ("https://blog.hl7.org" if lane == "HealthcareRadar" else "https://arxiv.org")
+            else (
+                "https://blog.hl7.org"
+                if lane == "HealthcareRadar"
+                else "https://arxiv.org"
+            )
         )
         cid = candidate_ref(fallback_url)
-        items_to_check.append((cid, fallback_url, {
-            "candidate_ref": cid,
-            "url": fallback_url,
-            "title": "Portal Check",
-            "source": "Web",
-            "published_at": "unknown",
-            "published_at_source": "unknown",
-        }))
+        items_to_check.append(
+            (
+                cid,
+                fallback_url,
+                {
+                    "candidate_ref": cid,
+                    "url": fallback_url,
+                    "title": "Portal Check",
+                    "source": "Web",
+                    "published_at": "unknown",
+                    "published_at_source": "unknown",
+                },
+            )
+        )
 
     if len(items_to_check) > int(gap["max_urls"]):
         raise RunContractError(
             f"verify-bound requires {len(items_to_check)} attempts; exceeds max_urls={gap['max_urls']}"
         )
     if len({normalize_url(item[1]) for item in items_to_check}) != len(items_to_check):
-        raise RunContractError("verify-bound URLs must not repeat bound or additional URLs")
+        raise RunContractError(
+            "verify-bound URLs must not repeat bound or additional URLs"
+        )
 
     started_at = datetime.now(timezone.utc)
     access_log: list[dict[str, Any]] = []
@@ -987,9 +1435,7 @@ def verify_bound_candidates(
     body_evidence: list[dict[str, Any]] = []
 
     for cid, target_url, cand_meta in items_to_check:
-        fetched = _fetch_url(
-            target_url, timeout_seconds=timeout_seconds
-        )
+        fetched = _fetch_url(target_url, timeout_seconds=timeout_seconds)
         checked_at = datetime.now(timezone.utc).isoformat()
 
         acc_entry = {
@@ -1005,12 +1451,14 @@ def verify_bound_candidates(
             acc_entry["error_code"] = fetched.error_code
         access_log.append(acc_entry)
         if fetched.status == "verified" and fetched.body_evidence is not None:
-            body_evidence.append({
-                "candidate_id": cid,
-                "access_log_index": len(access_log) - 1,
-                "access_check": deepcopy(acc_entry),
-                **deepcopy(fetched.body_evidence),
-            })
+            body_evidence.append(
+                {
+                    "candidate_id": cid,
+                    "access_log_index": len(access_log) - 1,
+                    "access_check": deepcopy(acc_entry),
+                    **deepcopy(fetched.body_evidence),
+                }
+            )
 
         is_required = cid in required_ids
         if fetched.status == "verified":
@@ -1020,7 +1468,8 @@ def verify_bound_candidates(
                 pub_day = normalize_published_at(str(pub_raw or ""))
                 date_is_eligible = (
                     start_day <= pub_day <= end_day
-                    and pub_source.lower() not in {"", "unknown", "retrieved_at", "observation_time"}
+                    and pub_source.lower()
+                    not in {"", "unknown", "retrieved_at", "observation_time"}
                 )
             except Exception:
                 pub_day = ""
@@ -1028,18 +1477,22 @@ def verify_bound_candidates(
             if not date_is_eligible:
                 has_date_conflict = True
                 if is_required:
-                    bound_candidate_decisions.append({
-                        "candidate_id": cid,
-                        "decision": "date_disqualified",
-                        "reason": "Document access succeeded, but publication date evidence is missing, unknown, invalid, or outside the requested window.",
-                    })
+                    bound_candidate_decisions.append(
+                        {
+                            "candidate_id": cid,
+                            "decision": "date_disqualified",
+                            "reason": "Document access succeeded, but publication date evidence is missing, unknown, invalid, or outside the requested window.",
+                        }
+                    )
                 continue
             if is_required:
-                bound_candidate_decisions.append({
-                    "candidate_id": cid,
-                    "decision": "registered",
-                    "reason": "Recognizable document content was accessed and independent publication metadata is within the requested window; factual truth was not inferred.",
-                })
+                bound_candidate_decisions.append(
+                    {
+                        "candidate_id": cid,
+                        "decision": "registered",
+                        "reason": "Recognizable document content was accessed and independent publication metadata is within the requested window; factual truth was not inferred.",
+                    }
+                )
 
             cand_title = str(cand_meta.get("title") or "Accessed publication").strip()
             cand_domain = cand_meta.get("provisional_domain") or default_domain
@@ -1071,16 +1524,22 @@ def verify_bound_candidates(
                 "access_check": deepcopy(acc_entry),
                 "summary": cand_meta.get("summary_hint") or cand_title,
             }
-            if is_required or urls or (not required_ids and cand_meta.get("title") != "Portal Check"):
+            if (
+                is_required
+                or urls
+                or (not required_ids and cand_meta.get("title") != "Portal Check")
+            ):
                 candidates.append(cand_obj)
         else:
             has_blocked = True
             if is_required:
-                bound_candidate_decisions.append({
-                    "candidate_id": cid,
-                    "decision": "access_blocked",
-                    "reason": f"HTTP fetch failed or blocked: {fetched.error_code}",
-                })
+                bound_candidate_decisions.append(
+                    {
+                        "candidate_id": cid,
+                        "decision": "access_blocked",
+                        "reason": f"HTTP fetch failed or blocked: {fetched.error_code}",
+                    }
+                )
 
     completed_at = datetime.now(timezone.utc)
     if (completed_at - started_at).total_seconds() < 1.0:
@@ -1166,7 +1625,9 @@ def _bounded_json_string_prefix(text: str, max_bytes: int) -> tuple[str, bool]:
     return text[:low], True
 
 
-def _compact_broker_cli_evidence(request_path: str | Path, gap_id: str, payload: dict[str, Any]) -> dict[str, Any]:
+def _compact_broker_cli_evidence(
+    request_path: str | Path, gap_id: str, payload: dict[str, Any]
+) -> dict[str, Any]:
     """Bound parent CLI display bytes without changing the durable broker proof files."""
     _, _, packet, _, _, _ = _load_bound_packet(request_path, gap_id)
     manifest_path = Path(str(packet["run_manifest_path"])).resolve()
@@ -1174,7 +1635,8 @@ def _compact_broker_cli_evidence(request_path: str | Path, gap_id: str, payload:
     proof_events = {
         event["id"]: event
         for event in ledger["events"]
-        if isinstance(event, dict) and event.get("kind") == "http_recorded"
+        if isinstance(event, dict)
+        and event.get("kind") in {"http_recorded", "fetch_recorded"}
     }
     query_receipts = []
     for receipt in payload.get("query_receipts", []):
@@ -1199,7 +1661,10 @@ def _compact_broker_cli_evidence(request_path: str | Path, gap_id: str, payload:
             str(proof.get("body_text") or ""), BROKER_CLI_BODY_TEXT_JSON_BYTES
         )
         metadata = deepcopy(proof.get("metadata", {}))
-        if len(json.dumps(metadata, ensure_ascii=False).encode("utf-8")) > BROKER_CLI_METADATA_JSON_BYTES:
+        if (
+            len(json.dumps(metadata, ensure_ascii=False).encode("utf-8"))
+            > BROKER_CLI_METADATA_JSON_BYTES
+        ):
             metadata = {"omitted": True, "metadata_sha256": _json_sha256(metadata)}
         proofs.append(
             {
@@ -1212,18 +1677,38 @@ def _compact_broker_cli_evidence(request_path: str | Path, gap_id: str, payload:
                 "body_sha256": proof.get("body_sha256"),
                 "body_bytes": len(body),
                 "body_text": body_text,
-                "body_text_truncated": truncated or bool(proof.get("body_text_truncated")),
-                "body_text_sha256": hashlib.sha256(body_text.encode("utf-8")).hexdigest(),
+                "body_text_truncated": truncated
+                or bool(proof.get("body_text_truncated")),
+                "body_text_sha256": hashlib.sha256(
+                    body_text.encode("utf-8")
+                ).hexdigest(),
                 "content_type": proof.get("content_type"),
                 "redirects": deepcopy(proof.get("redirects", [])),
                 "metadata": metadata,
             }
         )
+    for original, compact in zip(payload.get("proofs", []), proofs, strict=True):
+        if original.get("evidence_kind") == "native_readable":
+            for key in ("body_sha256", "body_bytes", "content_type", "redirects"):
+                compact.pop(key, None)
+            compact.update(
+                evidence_kind="native_readable",
+                readable_text_sha256=original["readable_text_sha256"],
+                receipt_sha256=original["receipt_sha256"],
+                transport_visibility=original["transport_visibility"],
+            )
     advice = deepcopy(payload.get("next_action"))
-    if isinstance(advice, dict) and len(json.dumps(advice, ensure_ascii=False).encode("utf-8")) > 6000:
+    if (
+        isinstance(advice, dict)
+        and len(json.dumps(advice, ensure_ascii=False).encode("utf-8")) > 6000
+    ):
         advice["url_lists_sha256"] = _json_sha256(advice)
         advice["url_lists_omitted"] = True
-        for key in ("missing_required_urls", "available_discovered_urls", "globally_permanent_discovered_urls"):
+        for key in (
+            "missing_required_urls",
+            "available_discovered_urls",
+            "globally_permanent_discovered_urls",
+        ):
             advice[key + "_count"] = len(advice[key])
             advice[key] = []
     return {
@@ -1238,10 +1723,13 @@ def _compact_broker_cli_evidence(request_path: str | Path, gap_id: str, payload:
         "remaining_queries": payload.get("remaining_queries"),
         "executed_queries": deepcopy(payload.get("executed_queries", [])),
         "query_reservations": deepcopy(payload.get("query_reservations", [])),
+        "fetch_reservations": deepcopy(payload.get("fetch_reservations", [])),
         "query_receipts": query_receipts,
         "access_log": deepcopy(payload.get("access_log", [])),
         "proofs": proofs,
-        "required_bound_candidate_ids": deepcopy(payload.get("required_bound_candidate_ids", [])),
+        "required_bound_candidate_ids": deepcopy(
+            payload.get("required_bound_candidate_ids", [])
+        ),
         "untrusted_content_rule": payload.get("untrusted_content_rule"),
     }
 
@@ -1258,38 +1746,59 @@ def main() -> int:
     finalize_parser = subparsers.add_parser("finalize")
     finalize_parser.add_argument("--request", type=Path, required=True)
     finalize_parser.add_argument("--gap-id", required=True)
-    finalize_parser.add_argument("--parent", action="store_true", help="Guarded assembly of persisted worker evidence before terminal loss; does not register results")
+    finalize_parser.add_argument(
+        "--parent",
+        action="store_true",
+        help="Guarded assembly of persisted worker evidence before terminal loss; does not register results",
+    )
     verify_parser = subparsers.add_parser("verify-bound")
     verify_parser.add_argument("--request", type=Path, required=True)
     verify_parser.add_argument("--gap-id", required=True)
     verify_parser.add_argument("--urls", nargs="*", default=None)
     verify_parser.add_argument("--query", default=None)
     verify_parser.add_argument("--write-draft", action="store_true", default=True)
-    for command in ("checkpoint", "reserve-query", "record-query", "http", "seal", "evidence"):
-        broker = subparsers.add_parser("broker-" + command, help="Parent-only evidence API; never invokes native web_search")
+    for command in (
+        "checkpoint",
+        "reserve-query",
+        "record-query",
+        "http",
+        "reserve-fetch",
+        "record-fetch",
+        "seal",
+        "evidence",
+    ):
+        broker = subparsers.add_parser(
+            "broker-" + command,
+            help="Parent-only evidence API; never invokes native web_search",
+        )
         broker.add_argument("--request", type=Path, required=True)
         broker.add_argument("--gap-id", required=True)
         broker.add_argument("--parent", action="store_true", required=True)
         if command == "reserve-query":
             broker.add_argument("--query", required=True)
             broker.add_argument("--num-results", type=int, default=5)
-        if command == "record-query":
+        if command in {"record-query", "record-fetch"}:
             broker.add_argument("--receipt", type=Path, required=True)
-        if command == "http":
+        if command in {"http", "reserve-fetch"}:
             broker.add_argument("--url", required=True)
     args = parser.parse_args()
     try:
         if args.command.startswith("broker-"):
             from article_broker import evidence, operate
+
             operation = args.command.removeprefix("broker-")
             kwargs = {}
             if operation == "reserve-query":
                 kwargs = {"query": args.query, "num_results": args.num_results}
-            elif operation == "record-query":
+            elif operation in {"record-query", "record-fetch"}:
                 kwargs = {"receipt": load_json(args.receipt, {})}
-            elif operation == "http":
+            elif operation in {"http", "reserve-fetch"}:
                 kwargs = {"url": args.url}
-            payload = evidence(args.request, args.gap_id) if operation == "evidence" else operate(args.request, args.gap_id, operation, **kwargs)
+            payload = (
+                evidence(args.request, args.gap_id)
+                if operation == "evidence"
+                else operate(args.request, args.gap_id, operation, **kwargs)
+            )
             payload = _compact_broker_cli_evidence(args.request, args.gap_id, payload)
             print(json.dumps(payload, ensure_ascii=False, indent=2))
             return 0
@@ -1321,7 +1830,7 @@ def main() -> int:
                         "body_evidence": verification["body_evidence"],
                         "finalize_command": (
                             f"python -X utf8 scripts/supplement_agent.py finalize "
-                            f"--request \"{args.request.resolve()}\" --gap-id \"{args.gap_id}\""
+                            f'--request "{args.request.resolve()}" --gap-id "{args.gap_id}"'
                         ),
                     },
                     ensure_ascii=False,

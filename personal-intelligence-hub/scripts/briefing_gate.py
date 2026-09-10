@@ -158,7 +158,9 @@ def _validate_v11_data(
         for field in ("start", "end"):
             if not _valid_date_or_unknown(window.get(field)):
                 errors.append(f"window.{field} must be an ISO date or unknown")
-    window_start = _parsed_date(window.get("start")) if isinstance(window, dict) else None
+    window_start = (
+        _parsed_date(window.get("start")) if isinstance(window, dict) else None
+    )
     window_end = _parsed_date(window.get("end")) if isinstance(window, dict) else None
     if window_start and window_end and window_start > window_end:
         errors.append("window.start cannot be after window.end")
@@ -183,9 +185,9 @@ def _validate_v11_data(
         errors.append(f"top_10 must contain at most {schema['max_top_items']} items")
     urls: list[str] = []
     has_l4 = False
-    observed_domain_counts: dict[str, int] = {
-        domain: 0 for domain in schema["domain_mix"]["domains"]
-    }
+    observed_domain_counts: dict[str, int] = dict.fromkeys(
+        schema["domain_mix"]["domains"], 0
+    )
     for index, item in enumerate(items):
         if not isinstance(item, dict):
             errors.append(f"top_10[{index}] must be an object")
@@ -225,7 +227,9 @@ def _validate_v11_data(
         major_signal = item.get("major_signal")
         if not isinstance(major_signal, bool):
             errors.append(f"top_10[{index}].major_signal must be boolean")
-        if major_signal is True and str(item.get("major_signal_reason") or "").strip().lower() in {
+        if major_signal is True and str(
+            item.get("major_signal_reason") or ""
+        ).strip().lower() in {
             "",
             "none",
         }:
@@ -279,8 +283,7 @@ def _validate_v11_data(
                 errors.append(f"mix.{ratio_name} must be an object")
                 continue
             if any(
-                not isinstance(ratio.get(domain), (int, float))
-                for domain in domains
+                not isinstance(ratio.get(domain), (int, float)) for domain in domains
             ):
                 errors.append(f"mix.{ratio_name} must contain numeric domain ratios")
                 continue
@@ -301,10 +304,7 @@ def _validate_v11_data(
             errors.append("mix.default_ratio must equal the schema default")
         if "default_ratio" in ratios and "effective_ratio" in ratios:
             if any(
-                abs(
-                    ratios["effective_ratio"][domain]
-                    - ratios["default_ratio"][domain]
-                )
+                abs(ratios["effective_ratio"][domain] - ratios["default_ratio"][domain])
                 > float(mix_contract["max_ratio_shift"]) + 1e-9
                 for domain in domains
             ):
@@ -340,20 +340,30 @@ def _validate_v11_data(
                 trigger_urls = []
             if applied is True:
                 if adjustment.get("favored_domain") not in domains:
-                    errors.append("mix.adjustment.favored_domain must be a valid domain")
+                    errors.append(
+                        "mix.adjustment.favored_domain must be a valid domain"
+                    )
                 if str(adjustment.get("reason") or "").strip().lower() in {"", "none"}:
                     errors.append("mix.adjustment.reason is required when applied")
                 if not trigger_urls:
-                    errors.append("mix.adjustment.trigger_urls is required when applied")
+                    errors.append(
+                        "mix.adjustment.trigger_urls is required when applied"
+                    )
                 elif any(url not in urls for url in trigger_urls):
-                    errors.append("mix.adjustment.trigger_urls must reference retained items")
-            elif "default_ratio" in ratios and "effective_ratio" in ratios and any(
-                not math.isclose(
-                    ratios["default_ratio"][domain],
-                    ratios["effective_ratio"][domain],
-                    abs_tol=1e-9,
+                    errors.append(
+                        "mix.adjustment.trigger_urls must reference retained items"
+                    )
+            elif (
+                "default_ratio" in ratios
+                and "effective_ratio" in ratios
+                and any(
+                    not math.isclose(
+                        ratios["default_ratio"][domain],
+                        ratios["effective_ratio"][domain],
+                        abs_tol=1e-9,
+                    )
+                    for domain in domains
                 )
-                for domain in domains
             ):
                 errors.append("mix adjustment is required when effective_ratio changes")
 
@@ -372,7 +382,10 @@ def _validate_v11_data(
             ):
                 errors.append("mix.supply_exception.missing_domains is invalid")
 
-        if "actual_counts" in count_maps and count_maps["actual_counts"] != observed_domain_counts:
+        if (
+            "actual_counts" in count_maps
+            and count_maps["actual_counts"] != observed_domain_counts
+        ):
             errors.append("mix.actual_counts does not match retained items")
         if "target_counts" in count_maps:
             if sum(count_maps["target_counts"].values()) != len(items):
@@ -383,7 +396,11 @@ def _validate_v11_data(
                 )
                 if count_maps["target_counts"] != expected_targets:
                     errors.append("mix.target_counts does not match effective_ratio")
-        if "target_counts" in count_maps and "actual_counts" in count_maps and isinstance(supply_exception, dict):
+        if (
+            "target_counts" in count_maps
+            and "actual_counts" in count_maps
+            and isinstance(supply_exception, dict)
+        ):
             expected_missing = [
                 domain
                 for domain in domains
@@ -394,12 +411,21 @@ def _validate_v11_data(
             if deviation and supply_exception.get("applied") is not True:
                 errors.append("mix deviation requires supply_exception")
             if not deviation and supply_exception.get("applied") is True:
-                errors.append("mix.supply_exception cannot be applied without deviation")
+                errors.append(
+                    "mix.supply_exception cannot be applied without deviation"
+                )
             if supply_exception.get("applied") is True:
-                if str(supply_exception.get("reason") or "").strip().lower() in {"", "none"}:
-                    errors.append("mix.supply_exception.reason is required when applied")
+                if str(supply_exception.get("reason") or "").strip().lower() in {
+                    "",
+                    "none",
+                }:
+                    errors.append(
+                        "mix.supply_exception.reason is required when applied"
+                    )
                 if supply_exception.get("missing_domains") != expected_missing:
-                    errors.append("mix.supply_exception.missing_domains does not match deviation")
+                    errors.append(
+                        "mix.supply_exception.missing_domains does not match deviation"
+                    )
     gaps = data.get("data_gaps")
     if not isinstance(gaps, list):
         errors.append("data_gaps must be a list")
@@ -414,13 +440,15 @@ def _validate_v11_data(
 
     unresolved = _find_unresolved(data)
     if unresolved:
-        errors.append(
-            "unresolved template value at: " + ", ".join(unresolved[:10])
-        )
+        errors.append("unresolved template value at: " + ", ".join(unresolved[:10]))
     if len(items) < 3:
-        warnings.append("fewer than three verified signals; confirm that the scan scope was sufficient")
+        warnings.append(
+            "fewer than three verified signals; confirm that the scan scope was sufficient"
+        )
     if not levers:
-        warnings.append("no action levers; acceptable when evidence does not justify an action")
+        warnings.append(
+            "no action levers; acceptable when evidence does not justify an action"
+        )
     return errors, warnings
 
 
@@ -560,8 +588,12 @@ def _validate_v12_data(
         window_end = _parsed_date(window.get("end"))
         if window_start is None or window_end is None:
             errors.append("window start and end must be ISO dates")
-        elif days_value is not None and window_start != window_end - timedelta(days=days_value - 1):
-            errors.append("window does not contain the declared number of calendar days")
+        elif days_value is not None and window_start != window_end - timedelta(
+            days=days_value - 1
+        ):
+            errors.append(
+                "window does not contain the declared number of calendar days"
+            )
         if report_date is not None and window_end != report_date:
             errors.append("report_date must equal window.end")
         try:
@@ -590,7 +622,11 @@ def _validate_v12_data(
         baseline_sha = str(pipeline.get("baseline_sha256") or "")
         if not re.fullmatch(r"[0-9a-f]{64}", baseline_sha):
             errors.append("pipeline.baseline_sha256 must be a SHA-256 hex digest")
-        if pipeline.get("supplement_status") not in {"completed", "degraded", "no_increment"}:
+        if pipeline.get("supplement_status") not in {
+            "completed",
+            "degraded",
+            "no_increment",
+        }:
             errors.append("pipeline.supplement_status is invalid")
         semantic_review = pipeline.get("semantic_review") or {}
         if not isinstance(semantic_review, dict):
@@ -603,13 +639,16 @@ def _validate_v12_data(
                 if field not in semantic_review:
                     errors.append(f"missing pipeline.semantic_review.{field}")
         if semantic_review.get("reviewer_kind") != "semantic_model":
-            errors.append("pipeline.semantic_review.reviewer_kind must be semantic_model")
+            errors.append(
+                "pipeline.semantic_review.reviewer_kind must be semantic_model"
+            )
         for field in ("reviewer_id", "invocation_id"):
             if not _non_empty(semantic_review.get(field)):
                 errors.append(f"pipeline.semantic_review.{field} is required")
-        if not is_contract_integer(semantic_review.get("turns_used")) or semantic_review.get(
-            "turns_used", 0
-        ) < 1:
+        if (
+            not is_contract_integer(semantic_review.get("turns_used"))
+            or semantic_review.get("turns_used", 0) < 1
+        ):
             errors.append("pipeline.semantic_review.turns_used must be positive")
         if semantic_review.get("halt_condition_met") is not True:
             errors.append("pipeline.semantic_review.halt_condition_met must be true")
@@ -620,14 +659,19 @@ def _validate_v12_data(
             "output_sha256",
         ):
             if not re.fullmatch(r"[0-9a-f]{64}", str(semantic_review.get(field) or "")):
-                errors.append(f"pipeline.semantic_review.{field} must be a SHA-256 hex digest")
+                errors.append(
+                    f"pipeline.semantic_review.{field} must be a SHA-256 hex digest"
+                )
         if (
             not is_contract_integer(semantic_review.get("verified_access_count"))
             or semantic_review.get("verified_access_count", -1) < 0
         ):
             errors.append("pipeline.semantic_review.verified_access_count is invalid")
         red_team = pipeline.get("red_team") or {}
-        if not isinstance(red_team, dict) or red_team.get("status") not in {"passed", "not_required"}:
+        if not isinstance(red_team, dict) or red_team.get("status") not in {
+            "passed",
+            "not_required",
+        }:
             errors.append("pipeline.red_team status is invalid")
             red_team = {}
         else:
@@ -660,8 +704,12 @@ def _validate_v12_data(
                 errors.append("pipeline.red_team.turns_used must be positive")
             if red_team.get("halt_condition_met") is not True:
                 errors.append("pipeline.red_team.halt_condition_met must be true")
-            if not re.fullmatch(r"[0-9a-f]{64}", str(red_team.get("request_sha256") or "")):
-                errors.append("pipeline.red_team.request_sha256 must be a SHA-256 hex digest")
+            if not re.fullmatch(
+                r"[0-9a-f]{64}", str(red_team.get("request_sha256") or "")
+            ):
+                errors.append(
+                    "pipeline.red_team.request_sha256 must be a SHA-256 hex digest"
+                )
 
     items = data.get("top_10")
     if not isinstance(items, list):
@@ -672,14 +720,21 @@ def _validate_v12_data(
     if is_v14 and data.get("top_10") == []:
         for field, expected in zero_report_fields().items():
             if data.get(field) != expected:
-                errors.append(f"zero-report {field} must match deterministic collection-insufficient value")
-        if not isinstance(data.get("data_gaps"), list) or zero_supply_gap() not in data["data_gaps"]:
-            errors.append("zero-report data_gaps must include the deterministic zero-supply gap")
+                errors.append(
+                    f"zero-report {field} must match deterministic collection-insufficient value"
+                )
+        if (
+            not isinstance(data.get("data_gaps"), list)
+            or zero_supply_gap() not in data["data_gaps"]
+        ):
+            errors.append(
+                "zero-report data_gaps must include the deterministic zero-supply gap"
+            )
     urls: list[str] = []
     event_ids: list[str] = []
     semantic_identity_ids: list[str] = []
     dedupe_records: list[tuple[str, bool, str, str]] = []
-    observed_domain_counts = {domain: 0 for domain in schema["domain_mix"]["domains"]}
+    observed_domain_counts = dict.fromkeys(schema["domain_mix"]["domains"], 0)
     eligible_major_urls: set[str] = set()
     eligible_major_urls_by_domain: dict[str, set[str]] = {
         domain: set() for domain in schema["domain_mix"]["domains"]
@@ -697,7 +752,9 @@ def _validate_v12_data(
             errors.append(f"{path} must be an object")
             continue
         for field in schema["required_item_fields"]:
-            if field not in item or (field != "secondary_domains" and not _non_empty(item.get(field))):
+            if field not in item or (
+                field != "secondary_domains" and not _non_empty(item.get(field))
+            ):
                 errors.append(f"missing {path}.{field}")
         candidate_refs = item.get("candidate_refs")
         if (
@@ -709,7 +766,9 @@ def _validate_v12_data(
                 for value in candidate_refs
             )
         ):
-            errors.append(f"{path}.candidate_refs must contain unique candidate references")
+            errors.append(
+                f"{path}.candidate_refs must contain unique candidate references"
+            )
         current_hash = item_hash(item)
         final_item_hashes.append(current_hash)
         event_id = str(item.get("event_id") or "")
@@ -734,7 +793,9 @@ def _validate_v12_data(
                 str(item.get("source") or ""),
             )
             if event_id != expected_event_id:
-                errors.append(f"{path}.event_id does not match provisional content identity")
+                errors.append(
+                    f"{path}.event_id does not match provisional content identity"
+                )
         if is_v14 and isinstance(identity, dict):
             try:
                 semantic_identity_ids.append(generate_event_id(identity))
@@ -751,7 +812,10 @@ def _validate_v12_data(
             errors.append(f"invalid {path}.primary_domain")
         else:
             observed_domain_counts[primary_domain] += 1
-            if isinstance(identity, dict) and identity.get("primary_domain") != primary_domain:
+            if (
+                isinstance(identity, dict)
+                and identity.get("primary_domain") != primary_domain
+            ):
                 errors.append(f"{path}.event_identity primary_domain mismatch")
         secondary = item.get("secondary_domains")
         if not isinstance(secondary, list) or any(
@@ -762,17 +826,27 @@ def _validate_v12_data(
             errors.append(f"{path}.secondary_domains cannot repeat primary_domain")
         if item.get("source_type") not in schema["enums"]["source_type"]:
             errors.append(f"invalid {path}.source_type")
-        if item.get("corroboration_status") not in schema["enums"]["corroboration_status"]:
+        if (
+            item.get("corroboration_status")
+            not in schema["enums"]["corroboration_status"]
+        ):
             errors.append(f"invalid {path}.corroboration_status")
-        if item.get("source_type") == "secondary" and item.get("corroboration_status") != "multi_independent":
-            errors.append(f"{path} secondary source requires multi_independent corroboration")
+        if (
+            item.get("source_type") == "secondary"
+            and item.get("corroboration_status") != "multi_independent"
+        ):
+            errors.append(
+                f"{path} secondary source requires multi_independent corroboration"
+            )
         if (
             is_v14
             and item.get("corroboration_status") == "multi_independent"
             and isinstance(candidate_refs, list)
             and len(candidate_refs) < 2
         ):
-            errors.append(f"{path} multi_independent corroboration requires at least two candidate_refs")
+            errors.append(
+                f"{path} multi_independent corroboration requires at least two candidate_refs"
+            )
 
         access = item.get("access_check")
         if not isinstance(access, dict):
@@ -786,18 +860,39 @@ def _validate_v12_data(
             requested_url = str(access.get("requested_url") or "")
             if not requested_url.startswith(("http://", "https://")):
                 errors.append(f"{path}.access_check.requested_url must be HTTP(S)")
-            elif normalize_url(requested_url) != normalize_url(str(item.get("url") or "")):
+            elif normalize_url(requested_url) != normalize_url(
+                str(item.get("url") or "")
+            ):
                 errors.append(f"{path}.access_check.requested_url must match item url")
-            if not str(access.get("final_url") or "").startswith(("http://", "https://")):
+            if access.get("method") != "native_readable" and not str(
+                access.get("final_url") or ""
+            ).startswith(("http://", "https://")):
                 errors.append(f"{path}.access_check.final_url must be HTTP(S)")
             checked_at = _aware_datetime(access.get("checked_at"))
             if checked_at is None:
                 errors.append(f"{path}.access_check.checked_at must be timezone-aware")
             elif generated_at is not None and checked_at > generated_at:
-                errors.append(f"{path}.access_check.checked_at cannot follow generated_at")
+                errors.append(
+                    f"{path}.access_check.checked_at cannot follow generated_at"
+                )
             method = access.get("method")
-            if method not in {"http_get", "browser", "api", "document"}:
+            if method not in {
+                "http_get",
+                "browser",
+                "api",
+                "document",
+                "native_readable",
+            }:
                 errors.append(f"{path}.access_check.method is invalid")
+            if method == "native_readable":
+                if schema.get("version") != "1.4":
+                    errors.append(f"{path}.access_check native evidence requires schema 1.4")
+                try:
+                    from article_broker import validate_native_access
+
+                    validate_native_access(access)
+                except ValueError as exc:
+                    errors.append(f"{path}.access_check native evidence invalid: {exc}")
             status_code = access.get("http_status")
             status_value = (
                 cast(int, status_code) if is_contract_integer(status_code) else None
@@ -805,13 +900,17 @@ def _validate_v12_data(
             if method in {"http_get", "api"} and (
                 status_value is None or not 200 <= status_value < 400
             ):
-                errors.append(f"{path}.access_check.http_status must show successful access")
+                errors.append(
+                    f"{path}.access_check.http_status must show successful access"
+                )
 
         published = _parsed_date(item.get("published_at"))
         if published is None:
             errors.append(f"{path}.published_at must be a known ISO date")
-        elif window_start is not None and window_end is not None and not (
-            window_start <= published <= window_end
+        elif (
+            window_start is not None
+            and window_end is not None
+            and not (window_start <= published <= window_end)
         ):
             errors.append(f"{path}.published_at is outside window")
         event_day = _parsed_date(item.get("event_date"))
@@ -819,7 +918,9 @@ def _validate_v12_data(
             errors.append(f"{path}.event_date must be an ISO date or unknown")
         if event_day is not None and published is not None and event_day > published:
             errors.append(f"{path}.event_date cannot follow published_at")
-        if isinstance(identity, dict) and identity.get("event_date") != item.get("event_date"):
+        if isinstance(identity, dict) and identity.get("event_date") != item.get(
+            "event_date"
+        ):
             errors.append(f"{path}.event_identity event_date mismatch")
         observed_at = _aware_datetime(item.get("observed_at"))
         retrieved_at = _aware_datetime(item.get("retrieved_at"))
@@ -832,7 +933,11 @@ def _validate_v12_data(
                 errors.append(f"{path}.observed_at cannot follow generated_at")
             if retrieved_at is not None and retrieved_at > generated_at:
                 errors.append(f"{path}.retrieved_at cannot follow generated_at")
-        if published is not None and retrieved_at is not None and retrieved_at.date() < published:
+        if (
+            published is not None
+            and retrieved_at is not None
+            and retrieved_at.date() < published
+        ):
             errors.append(f"{path}.retrieved_at cannot precede published_at")
         url = str(item.get("url") or "")
         if not url.startswith(("http://", "https://")):
@@ -906,13 +1011,16 @@ def _validate_v12_data(
             errors.append("top_10 contains duplicate urls")
         if duplicate_title:
             errors.append("top_10 contains duplicate normalized titles")
-    reviewed_hashes = sorted(str(value) for value in semantic_review.get("reviewed_item_hashes", []))
+    reviewed_hashes = sorted(
+        str(value) for value in semantic_review.get("reviewed_item_hashes", [])
+    )
     if reviewed_hashes != sorted(final_item_hashes):
-        errors.append("pipeline.semantic_review.reviewed_item_hashes do not match final items")
-    if (
-        is_contract_integer(semantic_review.get("verified_access_count"))
-        and semantic_review.get("verified_access_count", 0) != len(items)
-    ):
+        errors.append(
+            "pipeline.semantic_review.reviewed_item_hashes do not match final items"
+        )
+    if is_contract_integer(
+        semantic_review.get("verified_access_count")
+    ) and semantic_review.get("verified_access_count", 0) != len(items):
         errors.append(
             "pipeline.semantic_review.verified_access_count must equal distinct retained-item access mappings"
         )
@@ -923,7 +1031,9 @@ def _validate_v12_data(
         lineage_outputs: list[str] = []
         for index, binding in enumerate(lineage_bindings):
             if not isinstance(binding, dict):
-                errors.append(f"pipeline.semantic_review.lineage_bindings[{index}] must be an object")
+                errors.append(
+                    f"pipeline.semantic_review.lineage_bindings[{index}] must be an object"
+                )
                 continue
             output_hash = str(binding.get("output_item_sha256") or "")
             lineage_outputs.append(output_hash)
@@ -936,22 +1046,36 @@ def _validate_v12_data(
             for input_index, value in enumerate(inputs):
                 if (
                     not isinstance(value, dict)
-                    or re.fullmatch(r"cand-[0-9a-f]{64}", str(value.get("candidate_ref") or "")) is None
-                    or re.fullmatch(r"[0-9a-f]{64}", str(value.get("candidate_object_sha256") or "")) is None
+                    or re.fullmatch(
+                        r"cand-[0-9a-f]{64}", str(value.get("candidate_ref") or "")
+                    )
+                    is None
+                    or re.fullmatch(
+                        r"[0-9a-f]{64}", str(value.get("candidate_object_sha256") or "")
+                    )
+                    is None
                 ):
                     errors.append(
                         "pipeline.semantic_review.lineage_bindings"
                         f"[{index}].inputs[{input_index}] is invalid"
                     )
         if sorted(lineage_outputs) != sorted(final_item_hashes):
-            errors.append("pipeline.semantic_review.lineage outputs do not match final items")
+            errors.append(
+                "pipeline.semantic_review.lineage outputs do not match final items"
+            )
     if l4_hashes and not l4_hashes.issubset(covered_hashes):
         errors.append("L4 items require matching red-team item hashes")
     if is_v14:
-        if any(re.fullmatch(r"[0-9a-f]{64}", value) is None for value in covered_hashes):
-            errors.append("pipeline.red_team.covered_item_hashes contains an invalid hash")
+        if any(
+            re.fullmatch(r"[0-9a-f]{64}", value) is None for value in covered_hashes
+        ):
+            errors.append(
+                "pipeline.red_team.covered_item_hashes contains an invalid hash"
+            )
         if not covered_hashes.issubset(set(final_item_hashes)):
-            errors.append("pipeline.red_team.covered_item_hashes contains an unknown item hash")
+            errors.append(
+                "pipeline.red_team.covered_item_hashes contains an unknown item hash"
+            )
         if l4_hashes and red_team.get("status") != "passed":
             errors.append("L4 items require red-team status passed")
         if not l4_hashes and red_team.get("status") == "passed" and not covered_hashes:
@@ -969,24 +1093,38 @@ def _validate_v12_data(
         for field in schema["domain_mix"]["required_mix_fields"]:
             if field not in mix:
                 errors.append(f"missing mix.{field}")
-        default_ratio = _ratio_map(mix.get("default_ratio"), "mix.default_ratio", domains, errors)
-        requested_ratio = _ratio_map(mix.get("requested_ratio"), "mix.requested_ratio", domains, errors)
-        effective_ratio = _ratio_map(mix.get("effective_ratio"), "mix.effective_ratio", domains, errors)
+        default_ratio = _ratio_map(
+            mix.get("default_ratio"), "mix.default_ratio", domains, errors
+        )
+        requested_ratio = _ratio_map(
+            mix.get("requested_ratio"), "mix.requested_ratio", domains, errors
+        )
+        effective_ratio = _ratio_map(
+            mix.get("effective_ratio"), "mix.effective_ratio", domains, errors
+        )
         expected_default = schema["domain_mix"]["default_ratio"]
         if default_ratio and any(
-            not math.isclose(default_ratio[domain], float(expected_default[domain]), abs_tol=1e-9)
+            not math.isclose(
+                default_ratio[domain], float(expected_default[domain]), abs_tol=1e-9
+            )
             for domain in domains
         ):
             errors.append("mix.default_ratio must equal the schema default")
         ratio_source = mix.get("ratio_source")
         if ratio_source not in {"schema_default", "focus_config", "user"}:
             errors.append("mix.ratio_source is invalid")
-        if ratio_source != "schema_default" and str(mix.get("ratio_reason") or "").strip().lower() in {"", "none"}:
+        if ratio_source != "schema_default" and str(
+            mix.get("ratio_reason") or ""
+        ).strip().lower() in {"", "none"}:
             errors.append("mix.ratio_reason is required for a non-default request")
-        if requested_ratio and effective_ratio and any(
-            abs(effective_ratio[domain] - requested_ratio[domain])
-            > float(schema["domain_mix"]["max_ratio_shift"]) + 1e-9
-            for domain in domains
+        if (
+            requested_ratio
+            and effective_ratio
+            and any(
+                abs(effective_ratio[domain] - requested_ratio[domain])
+                > float(schema["domain_mix"]["max_ratio_shift"]) + 1e-9
+                for domain in domains
+            )
         ):
             errors.append("mix.effective_ratio exceeds max shift from requested_ratio")
 
@@ -1002,9 +1140,16 @@ def _validate_v12_data(
                 count_maps[name] = {domain: value[domain] for domain in domains}
         if count_maps.get("actual_counts") != observed_domain_counts:
             errors.append("mix.actual_counts does not match retained items")
-        if "target_counts" in count_maps and sum(count_maps["target_counts"].values()) != len(items):
+        if "target_counts" in count_maps and sum(
+            count_maps["target_counts"].values()
+        ) != len(items):
             errors.append("mix.target_counts must sum to retained item count")
-        if effective_ratio and "target_counts" in count_maps and count_maps["target_counts"] != allocate_target_counts(len(items), effective_ratio):
+        if (
+            effective_ratio
+            and "target_counts" in count_maps
+            and count_maps["target_counts"]
+            != allocate_target_counts(len(items), effective_ratio)
+        ):
             errors.append("mix.target_counts does not match effective_ratio")
 
         adjustment = mix.get("adjustment")
@@ -1019,14 +1164,18 @@ def _validate_v12_data(
         if not isinstance(applied, bool):
             errors.append("mix.adjustment.applied must be boolean")
         expected_effective = dict(requested_ratio or {})
-        favored = [domain for domain in domains if eligible_major_urls_by_domain[domain]]
+        favored = [
+            domain for domain in domains if eligible_major_urls_by_domain[domain]
+        ]
         expected_applied = False
         expected_favored = "none"
         expected_triggers: list[str] = []
         expected_reason = "none"
         if requested_ratio and len(favored) == 1:
             expected_favored = favored[0]
-            other_domain = next(domain for domain in domains if domain != expected_favored)
+            other_domain = next(
+                domain for domain in domains if domain != expected_favored
+            )
             shift = min(
                 float(schema["domain_mix"]["max_ratio_shift"]),
                 requested_ratio[other_domain],
@@ -1035,11 +1184,16 @@ def _validate_v12_data(
                 expected_applied = True
                 expected_effective[expected_favored] += shift
                 expected_effective[other_domain] -= shift
-                expected_triggers = sorted(eligible_major_urls_by_domain[expected_favored])
+                expected_triggers = sorted(
+                    eligible_major_urls_by_domain[expected_favored]
+                )
                 expected_reason = "；".join(
                     sorted(
                         {
-                            str(item.get("major_signal_reason") or "已通过高影响资讯门槛")
+                            str(
+                                item.get("major_signal_reason")
+                                or "已通过高影响资讯门槛"
+                            )
                             for item in items
                             if item.get("url") in expected_triggers
                         }
@@ -1050,11 +1204,19 @@ def _validate_v12_data(
                 expected_reason = "requested ratio has no remaining adjustment headroom"
         elif len(favored) > 1:
             expected_reason = "两个领域均有高影响资讯，维持请求比例"
-        if requested_ratio and effective_ratio and any(
-            not math.isclose(effective_ratio[domain], expected_effective[domain], abs_tol=1e-9)
-            for domain in domains
+        if (
+            requested_ratio
+            and effective_ratio
+            and any(
+                not math.isclose(
+                    effective_ratio[domain], expected_effective[domain], abs_tol=1e-9
+                )
+                for domain in domains
+            )
         ):
-            errors.append("mix.effective_ratio does not match recomputed major-signal policy")
+            errors.append(
+                "mix.effective_ratio does not match recomputed major-signal policy"
+            )
         if applied is not expected_applied:
             errors.append("mix.adjustment.applied does not match recomputed policy")
         actual_triggers = adjustment.get("trigger_urls")
@@ -1064,7 +1226,9 @@ def _validate_v12_data(
         if sorted(str(url) for url in actual_triggers) != expected_triggers:
             errors.append("mix.adjustment.trigger_urls do not match recomputed policy")
         if adjustment.get("favored_domain") != expected_favored:
-            errors.append("mix.adjustment.favored_domain does not match recomputed policy")
+            errors.append(
+                "mix.adjustment.favored_domain does not match recomputed policy"
+            )
         if str(adjustment.get("reason") or "") != expected_reason:
             errors.append("mix.adjustment.reason does not match recomputed policy")
 
@@ -1079,14 +1243,17 @@ def _validate_v12_data(
         if not isinstance(supply.get("applied"), bool):
             errors.append("mix.supply_exception.applied must be boolean")
         missing_domains = supply.get("missing_domains")
-        if not isinstance(missing_domains, list) or any(domain not in domains for domain in missing_domains):
+        if not isinstance(missing_domains, list) or any(
+            domain not in domains for domain in missing_domains
+        ):
             errors.append("mix.supply_exception.missing_domains is invalid")
             missing_domains = []
         if "target_counts" in count_maps and "actual_counts" in count_maps:
             expected_missing = [
                 domain
                 for domain in domains
-                if count_maps["actual_counts"][domain] < count_maps["target_counts"][domain]
+                if count_maps["actual_counts"][domain]
+                < count_maps["target_counts"][domain]
             ]
             expected_supply = {
                 "applied": bool(expected_missing),
@@ -1097,18 +1264,28 @@ def _validate_v12_data(
                 ),
                 "missing_domains": expected_missing,
             }
-            if any(supply.get(field) != value for field, value in expected_supply.items()):
-                errors.append("mix.supply_exception does not match recomputed target shortfall")
+            if any(
+                supply.get(field) != value for field, value in expected_supply.items()
+            ):
+                errors.append(
+                    "mix.supply_exception does not match recomputed target shortfall"
+                )
             deviation = count_maps["actual_counts"] != count_maps["target_counts"]
             if deviation and supply.get("applied") is not True:
                 errors.append("mix deviation requires supply_exception")
             if not deviation and supply.get("applied") is True:
-                errors.append("mix.supply_exception cannot be applied without deviation")
+                errors.append(
+                    "mix.supply_exception cannot be applied without deviation"
+                )
             if supply.get("applied") is True:
                 if missing_domains != expected_missing:
-                    errors.append("mix.supply_exception.missing_domains does not match deviation")
+                    errors.append(
+                        "mix.supply_exception.missing_domains does not match deviation"
+                    )
                 if str(supply.get("reason") or "").strip().lower() in {"", "none"}:
-                    errors.append("mix.supply_exception.reason is required when applied")
+                    errors.append(
+                        "mix.supply_exception.reason is required when applied"
+                    )
 
     coverage = data.get("coverage")
     if not isinstance(coverage, dict):
@@ -1116,7 +1293,10 @@ def _validate_v12_data(
     else:
         if coverage.get("run_status") not in schema["enums"]["run_status"]:
             errors.append("coverage.run_status is invalid")
-        if coverage.get("coverage_confidence") not in schema["enums"]["coverage_confidence"]:
+        if (
+            coverage.get("coverage_confidence")
+            not in schema["enums"]["coverage_confidence"]
+        ):
             errors.append("coverage.coverage_confidence is invalid")
         run_status = coverage.get("run_status")
         expected_coverage_confidence = (
@@ -1169,9 +1349,13 @@ def _validate_v12_data(
         if coverage.get("run_status") == "complete" and (
             coverage.get("baseline_status") in {"degraded", "failed"} or lane_failures
         ):
-            errors.append("coverage.run_status must be degraded when required coverage failed")
+            errors.append(
+                "coverage.run_status must be degraded when required coverage failed"
+            )
         if attempted == 0 and coverage.get("run_status") == "complete":
-            errors.append("coverage.run_status cannot be complete without attempted sources")
+            errors.append(
+                "coverage.run_status cannot be complete without attempted sources"
+            )
         if coverage.get("run_status") == "failed" and items:
             errors.append("failed coverage cannot retain formal top items")
 
@@ -1187,7 +1371,9 @@ def _validate_v12_data(
             not is_contract_integer(value) or cast(int, value) < 0
             for value in dispositions.values()
         ):
-            errors.append("candidate_funnel.terminal_dispositions must contain non-negative integers")
+            errors.append(
+                "candidate_funnel.terminal_dispositions must contain non-negative integers"
+            )
         elif is_contract_integer(observed):
             if is_v14:
                 unknown = sorted(set(dispositions) - V14_TERMINAL_DISPOSITIONS)
@@ -1197,7 +1383,9 @@ def _validate_v12_data(
                         + ", ".join(unknown)
                     )
             if sum(dispositions.values()) != cast(int, observed):
-                errors.append("candidate_funnel terminal dispositions do not conserve observed items")
+                errors.append(
+                    "candidate_funnel terminal dispositions do not conserve observed items"
+                )
             if dispositions.get("retained") != len(items):
                 errors.append("candidate_funnel retained count does not match top_10")
         if is_v14:
@@ -1227,14 +1415,20 @@ def _validate_v12_data(
                 )
                 expected_downstream = sum(
                     int(dispositions.get(reason, 0))
-                    for reason in ("retained", "semantic_duplicate", "below_quality_gate")
+                    for reason in (
+                        "retained",
+                        "semantic_duplicate",
+                        "below_quality_gate",
+                    )
                 )
                 if len(candidate_dispositions) != expected_downstream:
                     errors.append(
                         "candidate_funnel candidate dispositions do not cover downstream supply"
                     )
                 if record_counts["retained"] != int(dispositions.get("retained", 0)):
-                    errors.append("candidate_funnel retained dispositions do not reconcile")
+                    errors.append(
+                        "candidate_funnel retained dispositions do not reconcile"
+                    )
                 if record_counts["semantic_duplicate"] != int(
                     dispositions.get("semantic_duplicate", 0)
                 ):
@@ -1277,7 +1471,9 @@ def _validate_v12_data(
     if unresolved:
         errors.append("unresolved template value at: " + ", ".join(unresolved[:10]))
     if len(items) < 3:
-        warnings.append("fewer than three verified signals; confirm that the scan scope was sufficient")
+        warnings.append(
+            "fewer than three verified signals; confirm that the scan scope was sufficient"
+        )
     source_counts: dict[str, int] = {}
     for item in items:
         source = str(item.get("source") or "")
@@ -1285,7 +1481,9 @@ def _validate_v12_data(
     if items and max(source_counts.values(), default=0) / len(items) > 0.5:
         warnings.append("one source supplies more than half of retained items")
     if not levers:
-        warnings.append("no action levers; acceptable when evidence does not justify an action")
+        warnings.append(
+            "no action levers; acceptable when evidence does not justify an action"
+        )
     return errors, warnings
 
 

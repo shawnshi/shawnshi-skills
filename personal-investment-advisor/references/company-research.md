@@ -88,3 +88,35 @@ Dashboard 必须绑定已通过门禁的同代码 Research Brief，且证据层�
 `freshness_flags` 使用由证据覆盖派生的状态，不再使用四个自报布尔值。行情证据闭合时为 `fresh`；历史披露保持 `historical`；没有新闻扫描时为 `not_assessed`；没有持仓上下文时为 `not_applicable`。声明状态与证据、日期或持仓输入不一致时，Dashboard 门禁失败关闭。
 
 只有用户另行批准持久化，才运行 `save_dashboard.py`。JSON 是规范输入，Markdown 只供阅读。发布必须使用不可变 generation 和带 SHA-256 的索引提交点；索引失败、latest 未前进或输入身份变化时命令失败，不得让未索引文件进入 Daily Sync。
+
+## 6. Dashboard 7.2 显式新契约（不迁移旧原件）
+
+上述 7.1 / stock2.0 / ETF1.0 是保留的旧分支；7.2 不是给旧原始数据换标签。新语义必须设置顶层 `dashboard_contract_version="7.2"`，Brief `source_policy.timing_contract_version="1.0"`、`cutoff_at`（含时区和秒，UTC 日期等于 `cutoff_date`）。目录容器/解析器为 7.2，显式接受 7.0/7.1/7.2；旧未显式标记的有效输入仍标记 7.1，不因解析器升级而升级记录。不可变 JSON/Markdown/哈希不改动。
+
+### stock3.0 普通股权益
+
+`scenario_analysis.valuation_contract_version="3.0"`；方法为 `enterprise_value_bridge`、`DDM` 或 `FCFE`。币种必须与 Brief 一致，不做隐式换汇或百万/亿单位缩放。每情景 `ordinary_equity_bridge` 必须恰含六项：`enterprise_value`、`net_debt`、`nonoperating_assets`、`noncontrolling_interest`、`preferred_claims`、`other_senior_claims`。桥公式：EV − 真净债务 + 非经营资产 − 少数股东权益 − 优先股索偿 − 其他优先索偿。净债务仅为债务减现金，可为负，绝不能吸收少数股东、投资资产或优先股；其他桥金额非负。
+
+每项为 `{value,status,unit,currency,as_of_date,evidence_index,value_type,measurement_basis,rationale,claim_ids}`：`unit="currency"` 表示未缩放的币种总额；来源索引从 0 开始，绑定一手证据。`status="included"` 时须为有限数值；`reported_fact` 仅在确为报告事实时使用；不确定经济价值用 `analyst_estimate` + `measurement_basis="estimated_economic_fair_value"` 和明确估算依据/局限。经济调整不得把 `reported_amount` 当市场值（真净债务及股数可用报告金额）；直接报告的市场值为 `reported_market_value`。账面参考可写在依据中，不自动等于市场值。
+
+不适用不是缺失/未知：调整须显式 `status="not_applicable",value=null,value_type="not_applicable",measurement_basis="not_applicable",claim_ids=[]`，并保留日期、来源、币种、单位及理由。EV 与净债务在桥方法中必须给数值，不可省略或默认零。`claim_ids` 使用经济工具唯一标识，不是文档 ID；每情景分子与股数间都不得重复，不得给同一工具改名规避审计。
+
+`share_basis={basis,as_of_date,ordinary_shares,incremental_shares}`；`basis` 为 `current_diluted` 或 `hypothetical_as_converted`，股数分项用同一来源组件形状但 `unit="shares"`，全部同一股数日期。显式空增量列表表示无增量；假设转换必须列出增量。普通股数加增量重算 `diluted_shares`，`equity_value/diluted_shares` 重算每股值。不得既扣减同一优先索偿又把其假设转换加入分母；实际与假设稀释必须分开说明。标识只能发现结构重复，不能自动识别同一工具的不同别名，独立研究复核仍必须核对经济实质。
+
+DDM/FCFE 不虚构企业价值或净债务：六个公司桥组件均为有来源的不适用项，情景顶层 `enterprise_value`、`net_debt` 为字符串 `not_applicable`；`ordinary_equity_cashflows` 为非空组件列表，增加 `cash_flow_kind`、`years>0`、`discount_rate`（比例且 0<r<1）。DDM 用 `dividend`，FCFE 用 `fcfe`（允许负现金流），终值用 `terminal_ordinary_equity`。重算普通股权益为 Σ value/(1+r)^years；最多一个终值，不早于最后显式现金流，终值不得再次包含该期显式分配。每项的 value 为未来普通股现金流/普通股终值的透明模型假设，绝不视为已报告未来事实。敏感性、三情景与证伪条件仍保留。
+
+### precision-aware public source timing1.0
+
+7.2 的一手非报价证据显式带 `timing_contract_version="1.0"`、`publication_precision`、`published_at`、`availability_observed_at`、`valuation_date`、`source_capture_receipt`。`exact` 的 published_at 必须是真实含时区发布时间且不晚于观测；`day` 则 published_at=null，另有 `publication_date` 和 `publication_utc_offset`；`unknown` 则 published_at=null，不捏造发布日期。day 仅给日级披露信息，不能把午夜当首次发布，更不能自动满足该日较早的日内 cutoff。
+
+一手公开内容在 cutoff 前实际捕获可用于当前研究，不强求来源没有公布的首次发布时间秒数；须满足 `valuation_date <= observed availability (UTC date)` 和 `observed <= retrieved <= cutoff_at`，所有时刻不在未来。NAV 的 valuation_date 同时绑定 NAV 估值日，tracking 绑定 period_end。identity/fees/所有已声明其他 ETF 观测同样适用，不仅 NAV。二手来源不能借此替代一手不明发布时间；旧式二手证据在 7.2 必须用实际精确 publication/retrieval <= cutoff。报价仍走实际 observed_at/retrieved_at + 市场状态秒级时效门，不能用 availability_observed_at 更新陈旧报价。
+
+ETF 新分支为 `etf_research.contract_version="1.1"` 与 `valuation_contract_version="etf_nav1.1"`；`premium_discount_basis="quote_vs_observed_nav"` 不声称最近已知首次公布 NAV 或同时点公允价值。NAV、身份、total_expense_ratio 和 tracking 核心门及 5 个日历日 NAV 窗口不变；不以价格代 NAV、管理费代 TER。旧 ETF1.0 的精确 published_at 语义不改变。
+
+### 原件重验与小型回执（新建/发布必做）
+
+`source_timing_contract.verify_source_capture(raw_path, source_locator=..., availability_observed_at=..., retrieved_at=..., expected_sha256=..., expected_receipt=...)` 仅打开调用者显式授权的本地非空普通文件（非符号链接、最大 32 MiB），不扫描、不联网。先以真实取证日志提供 URL/观测/获取时刻，再对完整原件 bytes 重算 SHA；不可从 mtime 或本次重验时刻反推过去观测。回执含 `contract_version="1.0"`、`verification_method="sha256_raw_bytes_v1"`、`raw_artifact`、`source_locator`、`content_sha256`、`byte_count`、`availability_observed_at`、`retrieved_at`、`verified_at`。Dashboard 保存同一 content_sha256 和精确匹配的 URL/观测/获取时刻；回执只是结构链，原件不复制进 JSON。片段指纹不得冒充完整原件指纹。
+
+复验时显式传入实际文件、预期 SHA 和已有回执，源 bytes/定位/时刻绑定不符即失败；`verified_at` 为本次重验时间，允许晚于研究 cutoff，但不扩大历史可得窗口。Dashboard/save/catalog 不自动解引用 raw_artifact；离线旧档无需原件仍可读取。**单独结构双门通过不证明来源真实、内容语义正确或历史可得。新建/发布方必须实际运行原件复验并独立核对原始取证记录与引用内容**。取得观测时刻的可信性依赖取证日志，不由 hash 自动证明。
+
+最小可运行合成构建例见 `scripts/test_dashboard_v72_contract.py` 的 `synthetic_stock` / `synthetic_timed_etf`，其中所有数值、来源内容和主体均为隔离测试，不是实际投资证据。

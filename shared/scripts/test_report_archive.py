@@ -67,6 +67,59 @@ class ReportArchiveWindowsTests(unittest.TestCase):
         self.assertEqual(requested.GetSecurityDescriptorGroup(), installed.GetSecurityDescriptorGroup())
         return actual
 
+    def test_exact_policy_is_idempotent_without_native_setter(self):
+        candidate = self.parent / "exact.md"
+        candidate.write_bytes(b"")
+        policy = self.security.parent_owner_policy(self.parent, candidate)
+        self.assertEqual(policy, self.security.descriptor(candidate))
+        with patch.object(self.security.security, "SetNamedSecurityInfo") as setter:
+            self.security.apply(candidate, policy)
+            self.security.apply(candidate, policy)
+            setter.assert_not_called()
+        self.assertEqual(policy, self.security.descriptor(candidate))
+
+    def test_different_policy_still_sets_and_checks_exact_descriptor(self):
+        candidate = self.parent / "different.md"
+        candidate.write_bytes(b"")
+        policy = self.security.descriptor(candidate)
+        # Inject a mismatch without altering any real ACL: no-op must not mask it.
+        with (patch.object(self.security, "descriptor", return_value="different-policy"),
+              patch.object(self.security.security, "SetNamedSecurityInfo") as setter):
+            with self.assertRaisesRegex(self.security.CapabilityError, "fidelity unavailable"):
+                self.security.apply(candidate, policy)
+            setter.assert_called_once()
+
+    def test_scout_fresh_cli_create_replace_and_readback(self):
+        source = self.draft_dir / "DHLS-20000109.md"
+        target = self.parent / source.name
+        content = CONTENT.replace("# 数字健康周报｜2000年1月3日—9日",
+                                  "# 医疗数字化文献侦察报告 - 2000-01-09")
+        content = content.replace("报告时区：Asia/Shanghai", "报告时区：Asia/Shanghai\n命名依据：explicit")
+        content = content.replace("## 关键事件与来源", "## 本期研究").replace(
+            "本周期未发现符合纳入标准的事件", "本周期未发现符合纳入标准的研究\n\n## 来源")
+        script = Path(archive.__file__)
+        policies = []
+        for suffix in ("", "\n修订：合成测试。\n"):
+            source.write_text(content + suffix, encoding="utf-8")
+            checked = subprocess.run([sys.executable, "-B", "-X", "utf8", str(script),
+                "validate", "--source", str(source), "--target", str(target),
+                "--allow-target", str(target), "--skill", "hit-lectures-scout"],
+                capture_output=True, text=True, encoding="utf-8", timeout=20)
+            self.assertEqual(0, checked.returncode, checked.stdout + checked.stderr)
+            plan = self.draft_dir / "scout-plan.json"
+            plan.write_text(checked.stdout, encoding="utf-8")
+            committed = subprocess.run([sys.executable, "-B", "-X", "utf8", str(script),
+                "commit", "--plan", str(plan), "--allow-target", str(target)],
+                capture_output=True, text=True, encoding="utf-8", timeout=20)
+            self.assertEqual(0, committed.returncode, committed.stdout + committed.stderr)
+            receipt = json.loads(committed.stdout)
+            self.assertEqual("COMMITTED", receipt["status"])
+            self.assertEqual(source.read_bytes(), target.read_bytes())
+            self.assertEqual(archive.digest(target.read_bytes()), receipt["sha256"])
+            self.assertEqual("read/write/modify", receipt["security"]["limited_token_accesscheck"])
+            policies.append(self.security.descriptor(target))
+        self.assertEqual(policies[0], policies[1])
+
     def test_new_real_owner_inherited_dacl_and_limited_access(self):
         result = self.publish()
         self.assertTrue(self.source.exists())
@@ -182,7 +235,9 @@ class ReportArchiveWindowsTests(unittest.TestCase):
         self.publish()
         plan = self.plan()
         original_policy = self.security.descriptor(self.target)
-        policy = self.set_protected_fixture_policy(self.target, original_policy.replace("D:AI", "D:PAI"))
+        # A preserved OS-created DACL need not carry AUTO_INHERITED. Protect
+        # either spelling rather than relying on a redundant setter to add AI.
+        policy = self.set_protected_fixture_policy(self.target, original_policy.replace("D:", "D:P", 1))
         self.assertNotEqual(original_policy, policy)
         result = archive.commit(plan, self.target)
         self.assertEqual("COLLISION", result["code"])
@@ -296,6 +351,321 @@ class ReportArchiveWindowsTests(unittest.TestCase):
         self.assertEqual(archive.digest(self.source.read_bytes()), read.stdout.strip())
         plan_file.write_text('{"schema":1,"schema":1}', encoding="utf-8")
         self.assertNotEqual(0, run("commit", "--plan", plan_file, "--allow-target", self.target).returncode)
+
+
+# Independent small oracle: fixed historical dates, no validator constants or news.
+RADAR_CONTENT = """# 医疗行业雷达｜2000-01-03 至 2000-01-09
+报告周期：2000-01-03 至 2000-01-09
+出刊日期：2000-01-09
+生成时点：2000-01-09T09:00:00+08:00
+报告时区：Asia/Shanghai
+窗口模式：explicit
+报告范围：中国医疗 IT；合成采购
+检索状态：complete
+
+## 结论摘要
+合成检索完成，没有可纳入事件；不代表全行业无事件。
+
+## 关键事件
+| 事件ID | 事件日期 | 发布日期 | 主体 | 已核实动作 | 事件键 | 证据强度 | 来源编号 | 影响（推断） | 限制 |
+|---|---|---|---|---|---|---|---|---|---|
+本周期未发现符合纳入标准的公开事件
+
+## 检索覆盖
+| 检索面 | 状态 | 查询/来源及结果说明 |
+|---|---|---|
+| 采购 | complete | 合成查询：指定窗口采购公告检索完成，仅旧事件，未纳入 |
+
+## 来源
+| 来源编号 | 原始链接 | 血缘 | 类型 | 访问状态 |
+|---|---|---|---|---|
+
+## 信息缺口
+仅为合成采购面，不证明其他行业面已检索。
+"""
+RADAR_PARTIAL = RADAR_CONTENT.replace("检索状态：complete", "检索状态：partial").replace(
+    "本周期未发现符合纳入标准的公开事件", "覆盖不完整，暂无可纳入的已核实事件").replace(
+    "## 来源", "| 政策 | blocked | 合成政策来源超时，未获取证据 |\n\n## 来源").replace(
+    "仅为合成采购面，不证明其他行业面已检索。", "政策面超时，不能判断政策事件；仅采购面检索完成。")
+RADAR_BLOCKED = RADAR_CONTENT.replace("检索状态：complete", "检索状态：blocked").replace(
+    "本周期未发现符合纳入标准的公开事件", "检索阻塞，不能判定本期事件").replace(
+    "| 采购 | complete | 合成查询：指定窗口采购公告检索完成，仅旧事件，未纳入 |",
+    "| 采购 | blocked | 合成工具不可用，无检索证据 |")
+
+
+@unittest.skipUnless(os.name == "nt", "Windows native ACL publication only")
+class ReportArchiveRadarWindowsTests(unittest.TestCase):
+    def setUp(self):
+        ReportArchiveWindowsTests.setUp(self)
+        self.source.write_text(RADAR_CONTENT, encoding="utf-8")
+        self.target = self.parent / "DHWB-Radar-20000109.md"
+
+    def plan(self, custom_filename=False, custom_period=False):
+        return archive.validate(self.source, self.target, self.target, "hit-industry-radar",
+                                custom_filename, custom_period)
+
+    def run_cli(self, *args):
+        return subprocess.run([sys.executable, "-B", "-X", "utf8", archive.__file__, *map(str, args)],
+            capture_output=True, text=True, encoding="utf-8", timeout=20)
+
+    def tree_snapshot(self):
+        # Rejections must preserve all fixture bytes and security, with no candidate/lock left.
+        return {str(p.relative_to(self.root)): (p.read_bytes() if p.is_file() else None,
+                self.security.descriptor(p)) for p in [self.root, *self.root.rglob("*")]}
+
+    def assert_rejected_unchanged(self, code="INPUT", **options):
+        before = self.tree_snapshot()
+        with self.assertRaises(archive.Blocked) as caught:
+            self.plan(**options)
+        self.assertEqual(code, caught.exception.code)
+        self.assertEqual(before, self.tree_snapshot())
+
+    def test_radar_fresh_cli_new_replace_partial_readback_hash_and_acl(self):
+        policies = []
+        for content in (RADAR_CONTENT, RADAR_PARTIAL):
+            self.source.write_text(content, encoding="utf-8")
+            before = self.tree_snapshot()
+            checked = self.run_cli("validate", "--source", self.source, "--target", self.target,
+                "--allow-target", self.target, "--skill", "hit-industry-radar")
+            self.assertEqual(0, checked.returncode, checked.stdout + checked.stderr)
+            self.assertEqual(before, self.tree_snapshot())
+            plan = json.loads(checked.stdout)
+            self.assertEqual({"skill": "hit-industry-radar", "period_start": "2000-01-03",
+                "period_end": "2000-01-09", "issue_date": "2000-01-09", "window_mode": "explicit",
+                "scope": "中国医疗 IT；合成采购", "report_timezone": "Asia/Shanghai"}, plan["identity"])
+            plan_file = self.draft_dir / "radar-plan.json"
+            plan_file.write_text(checked.stdout, encoding="utf-8")
+            committed = self.run_cli("commit", "--plan", plan_file, "--allow-target", self.target)
+            self.assertEqual(0, committed.returncode, committed.stdout + committed.stderr)
+            receipt = json.loads(committed.stdout)
+            self.assertEqual("COMMITTED", receipt["status"], receipt)
+            self.assertEqual(self.source.read_bytes(), self.target.read_bytes())
+            self.assertEqual(archive.digest(self.source.read_bytes()), receipt["sha256"])
+            self.assertEqual("read/write/modify", receipt["security"]["limited_token_accesscheck"])
+            self.assertTrue(receipt["security"]["host_token_content_read"])
+            self.assertIsInstance(receipt["security"]["actual_non_elevated_open"], bool)
+            token, host_is_limited = self.security.limited_token()
+            try:
+                self.assertEqual(host_is_limited, receipt["security"]["actual_non_elevated_open"])
+            finally:
+                token.Close()
+            policies.append(self.security.descriptor(self.target))
+            self.assertEqual(policies[-1], receipt["security"]["descriptor"])
+            if content == RADAR_PARTIAL:
+                backup = Path(receipt["recovery_directory"]) / "original.md"
+                self.assertEqual(RADAR_CONTENT, backup.read_text(encoding="utf-8"))
+                self.assertEqual(policies[0], self.security.descriptor(backup))
+            readback = subprocess.run([sys.executable, "-B", "-X", "utf8", "-c",
+                "import sys,pathlib,hashlib,json;sys.path.insert(0,sys.argv[1]);"
+                "import report_archive_windows as w;p=pathlib.Path(sys.argv[2]);d=p.read_bytes();"
+                "print(json.dumps(dict(sha256=hashlib.sha256(d).hexdigest(),"
+                "title=d.decode('utf-8').splitlines()[0],descriptor=w.descriptor(p),"
+                "access=w.effective_access(p,d)),ensure_ascii=False))",
+                str(Path(archive.__file__).parent), str(self.target)], capture_output=True,
+                text=True, encoding="utf-8", timeout=20)
+            self.assertEqual(0, readback.returncode, readback.stdout + readback.stderr)
+            evidence = json.loads(readback.stdout)
+            self.assertEqual(receipt["sha256"], evidence["sha256"])
+            self.assertEqual("# 医疗行业雷达｜2000-01-03 至 2000-01-09", evidence["title"])
+            self.assertEqual(policies[-1], evidence["descriptor"])
+            self.assertEqual("read/write/modify", evidence["access"]["limited_token_accesscheck"])
+        self.assertEqual(policies[0], policies[1])
+        s = self.security.security
+        parent = s.ConvertStringSecurityDescriptorToSecurityDescriptor(self.security.descriptor(self.parent), 1)
+        final = s.ConvertStringSecurityDescriptorToSecurityDescriptor(policies[0], 1)
+        self.assertEqual(parent.GetSecurityDescriptorOwner(), final.GetSecurityDescriptorOwner())
+        self.assertEqual(parent.GetSecurityDescriptorGroup(), final.GetSecurityDescriptorGroup())
+        self.assertFalse(final.GetSecurityDescriptorControl()[0] & s.SE_DACL_PROTECTED)
+
+    def test_radar_all_window_modes_use_radar_interface_and_period_end_name(self):
+        for mode in ("rolling7", "natural_week", "explicit"):
+            with self.subTest(mode=mode):
+                self.source.write_text(RADAR_CONTENT.replace("窗口模式：explicit", "窗口模式：" + mode), encoding="utf-8")
+                before = self.tree_snapshot()
+                self.assertEqual(mode, self.plan()["identity"]["window_mode"])
+                self.assertEqual(before, self.tree_snapshot())
+        self.target = self.parent / "DHWB-Radar-20000110.md"
+        self.assert_rejected_unchanged()
+        self.assertEqual("2000-01-09", self.plan(custom_filename=True)["identity"]["issue_date"])
+
+    def test_radar_scope_whitespace_canonicalized_for_replacement(self):
+        self.target.write_text(RADAR_CONTENT, encoding="utf-8")
+        self.source.write_text(RADAR_CONTENT.replace("报告范围：中国医疗 IT；合成采购",
+            "报告范围： \t\u3000中国医疗 IT；合成采购\u3000\t "), encoding="utf-8")
+        result = archive.commit(self.plan(), self.target)
+        self.assertEqual("COMMITTED", result["status"], result)
+        self.assertEqual(self.source.read_bytes(), self.target.read_bytes())
+
+    def test_radar_identity_collisions_even_with_custom_filename(self):
+        variants = {
+            "scope": RADAR_CONTENT.replace("中国医疗 IT；合成采购", "全球医疗 AI"),
+            "period_start": RADAR_CONTENT.replace("2000-01-03", "2000-01-02"),
+            "period_end": RADAR_CONTENT.replace("2000-01-09", "2000-01-08"),
+            "mode": RADAR_CONTENT.replace("窗口模式：explicit", "窗口模式：rolling7"),
+            "natural_mode": RADAR_CONTENT.replace("窗口模式：explicit", "窗口模式：natural_week"),
+            "timezone": RADAR_CONTENT.replace("报告时区：Asia/Shanghai", "报告时区：UTC"),
+            "weekly": CONTENT,
+            "scout": CONTENT.replace("# 数字健康周报｜2000年1月3日—9日", "# 医疗数字化文献侦察报告 - 2000-01-09").replace(
+                "报告时区：Asia/Shanghai", "报告时区：Asia/Shanghai\n命名依据：explicit"),
+        }
+        for custom in (False, True):
+            self.target = self.parent / ("custom.md" if custom else "DHWB-Radar-20000109.md")
+            for name, content in variants.items():
+                with self.subTest(custom=custom, conflict=name):
+                    self.target.write_text(content, encoding="utf-8")
+                    self.assert_rejected_unchanged("COLLISION", custom_filename=custom)
+            self.target.unlink()
+
+    def test_radar_legacy_ambiguous_or_invalid_target_metadata_fails_closed(self):
+        headers = RADAR_CONTENT.splitlines()[1:8]
+        variants = [RADAR_CONTENT.replace(line + "\n", "", 1) for line in headers]
+        variants += [RADAR_CONTENT.replace(line, line + "\n" + line, 1) for line in headers]
+        variants += [RADAR_CONTENT.replace("检索状态：complete", "检索状态：success"),
+                     RADAR_CONTENT.replace("窗口模式：explicit", "窗口模式：generated"),
+                     RADAR_CONTENT.replace("报告时区：Asia/Shanghai", "报告时区：Not/AZone"),
+                     RADAR_CONTENT.replace("出刊日期：2000-01-09", "出刊日期：2000-01-08"),
+                     RADAR_CONTENT.replace("报告范围：中国医疗 IT；合成采购", "报告范围：\u3000\t "),
+                     RADAR_CONTENT.replace("# 医疗行业雷达｜2000-01-03 至 2000-01-09", "# 旧标题"),
+                     RADAR_CONTENT.replace("窗口模式：explicit", "窗口模式：explicit\n命名依据：explicit")]
+        self.target = self.parent / "custom.md"
+        for index, content in enumerate(variants):
+            with self.subTest(variant=index):
+                self.target.write_text(content, encoding="utf-8")
+                self.assert_rejected_unchanged("COLLISION", custom_filename=True)
+
+    def test_radar_empty_duplicate_source_metadata_rejected_unchanged(self):
+        for custom in (False, True):
+            self.target = self.parent / ("custom.md" if custom else "DHWB-Radar-20000109.md")
+            self.target.write_bytes(RADAR_CONTENT.encode("utf-8"))
+            for line in RADAR_CONTENT.splitlines()[1:8]:
+                label = line.split("：", 1)[0]
+                for blank in ("", " \t\u3000"):
+                    duplicate = label + "：" + blank
+                    for first in (True, False):
+                        replacement = duplicate + "\n" + line if first else line + "\n" + duplicate
+                        for newline in ("\n", "\r\n"):
+                            with self.subTest(custom=custom, label=label, blank=repr(blank),
+                                              first=first, newline=repr(newline)):
+                                content = RADAR_CONTENT.replace(line, replacement, 1).replace("\n", newline)
+                                self.source.write_bytes(content.encode("utf-8"))
+                                self.assert_rejected_unchanged("INPUT", custom_filename=custom)
+            self.target.unlink()
+
+    def test_radar_empty_duplicate_target_metadata_collision_unchanged(self):
+        for custom in (False, True):
+            self.target = self.parent / ("custom.md" if custom else "DHWB-Radar-20000109.md")
+            for line in RADAR_CONTENT.splitlines()[1:8]:
+                label = line.split("：", 1)[0]
+                for blank in ("", " \t\u3000"):
+                    duplicate = label + "：" + blank
+                    for first in (True, False):
+                        replacement = duplicate + "\n" + line if first else line + "\n" + duplicate
+                        for newline in ("\n", "\r\n"):
+                            with self.subTest(custom=custom, label=label, blank=repr(blank),
+                                              first=first, newline=repr(newline)):
+                                content = RADAR_CONTENT.replace(line, replacement, 1).replace("\n", newline)
+                                self.source.write_bytes(RADAR_CONTENT.replace("\n", newline).encode("utf-8"))
+                                self.target.write_bytes(content.encode("utf-8"))
+                                self.assert_rejected_unchanged("COLLISION", custom_filename=custom)
+            self.target.unlink()
+
+    def test_radar_diagnostic_target_status_is_not_source_success_or_skill_identity(self):
+        # Existing body is not migrated/revalidated; valid blocked metadata is
+        # distinguishable from unknown status, and never makes a source publishable.
+        self.target.write_text(RADAR_BLOCKED, encoding="utf-8")
+        self.assertEqual("hit-industry-radar", self.plan()["identity"]["skill"])
+        self.source.write_text(RADAR_BLOCKED, encoding="utf-8")
+        self.assert_rejected_unchanged()
+        self.target.write_text(RADAR_BLOCKED.replace("# 医疗行业雷达｜2000-01-03 至 2000-01-09",
+            "# 数字健康周报｜2000年1月3日—9日"), encoding="utf-8")
+        self.source.write_text(RADAR_CONTENT, encoding="utf-8")
+        self.assert_rejected_unchanged("COLLISION")
+
+    def test_radar_blocked_and_partial_without_disclosed_gaps_rejected(self):
+        variants = [RADAR_BLOCKED,
+            RADAR_CONTENT.replace("检索状态：complete", "检索状态：partial"),
+            RADAR_PARTIAL.replace("政策面超时，不能判断政策事件；仅采购面检索完成。", ""),
+            RADAR_PARTIAL.replace("## 信息缺口", "## 其他")]
+        for content in variants:
+            with self.subTest(content=content.splitlines()[7]):
+                self.source.write_text(content, encoding="utf-8")
+                self.assert_rejected_unchanged()
+        # Structural validator still allows the honest blocked diagnostic.
+        self.source.write_text(RADAR_BLOCKED, encoding="utf-8")
+        script = Path(archive.__file__).resolve().parents[2] / "hit-industry-radar/scripts/validate_industry_radar.py"
+        checked = subprocess.run([sys.executable, "-B", "-X", "utf8", str(script), "--file", str(self.source),
+            "--period-start", "2000-01-03", "--period-end", "2000-01-09", "--issue-date", "2000-01-09",
+            "--cutoff", "2000-01-09T09:00:00+08:00", "--window-mode", "explicit", "--allow-custom-filename"],
+            capture_output=True, text=True, encoding="utf-8", timeout=20)
+        self.assertEqual(0, checked.returncode, checked.stdout + checked.stderr)
+
+    def test_radar_cli_rejects_custom_period_blocked_and_legacy_without_writes(self):
+        for content, old, flags, code in ((RADAR_CONTENT, None, ["--allow-custom-period"], "INPUT"),
+                (RADAR_BLOCKED, None, [], "INPUT"), (RADAR_CONTENT, "# legacy", [], "COLLISION")):
+            self.source.write_text(content, encoding="utf-8")
+            if old:
+                self.target.write_text(old, encoding="utf-8")
+            before = self.tree_snapshot()
+            result = self.run_cli("validate", "--source", self.source, "--target", self.target,
+                "--allow-target", self.target, "--skill", "hit-industry-radar", *flags)
+            self.assertEqual(1, result.returncode, result.stdout + result.stderr)
+            self.assertEqual("BLOCKED", json.loads(result.stdout)["status"])
+            self.assertEqual(code, json.loads(result.stdout)["code"])
+            self.assertEqual(before, self.tree_snapshot())
+
+    def test_radar_commit_rejects_custom_period_plan_misuse(self):
+        plan = self.plan()
+        plan["custom_period"] = True
+        before = self.tree_snapshot()
+        result = archive.commit(plan, self.target)
+        self.assertEqual("BLOCKED", result["status"], result)
+        self.assertEqual("INPUT", result["code"])
+        self.assertEqual(before, self.tree_snapshot())
+
+    def test_radar_source_target_and_semantic_plan_drift_no_unsafe_write(self):
+        for drift in ("source", "target", "identity"):
+            with self.subTest(drift=drift):
+                self.source.write_text(RADAR_CONTENT, encoding="utf-8")
+                self.target.write_text(RADAR_CONTENT, encoding="utf-8")
+                plan = self.plan()
+                if drift == "identity":
+                    plan["identity"]["scope"] = "another scope"
+                else:
+                    path = self.source if drift == "source" else self.target
+                    path.write_text(RADAR_CONTENT + "\n修订：另一写者。\n", encoding="utf-8")
+                before = self.tree_snapshot()
+                result = archive.commit(plan, self.target)
+                self.assertEqual("BLOCKED", result["status"], result)
+                self.assertEqual("COLLISION", result["code"])
+                self.assertEqual(before, self.tree_snapshot())
+
+    def test_radar_missing_validator_or_backend_blocks_without_fallback(self):
+        with patch.object(archive.importlib.util, "spec_from_file_location", return_value=None):
+            self.assert_rejected_unchanged("CAPABILITY")
+        spec = archive.importlib.util.spec_from_file_location("missing_radar_validator", self.root / "missing.py")
+        with patch.object(archive.importlib.util, "spec_from_file_location", return_value=spec):
+            self.assert_rejected_unchanged("CAPABILITY")
+        with patch.object(archive, "backend", side_effect=archive.Blocked("CAPABILITY", "injected missing backend")):
+            self.assert_rejected_unchanged("CAPABILITY")
+
+    def test_radar_missing_target_parent_not_created(self):
+        self.target = self.parent / "missing" / self.target.name
+        self.assert_rejected_unchanged()
+
+    def test_radar_cannot_overwrite_weekly_or_scout_in_reverse(self):
+        self.target = self.parent / "custom.md"
+        self.target.write_text(RADAR_CONTENT, encoding="utf-8")
+        scout = CONTENT.replace("# 数字健康周报｜2000年1月3日—9日", "# 医疗数字化文献侦察报告 - 2000-01-09").replace(
+            "报告时区：Asia/Shanghai", "报告时区：Asia/Shanghai\n命名依据：explicit").replace(
+            "## 关键事件与来源", "## 本期研究").replace("本周期未发现符合纳入标准的事件", "本周期未发现符合纳入标准的研究\n\n## 来源")
+        for skill, content in (("hit-weekly-brief", CONTENT), ("hit-lectures-scout", scout)):
+            with self.subTest(skill=skill):
+                self.source.write_text(content, encoding="utf-8")
+                before = self.tree_snapshot()
+                with self.assertRaises(archive.Blocked) as caught:
+                    archive.validate(self.source, self.target, self.target, skill, custom_filename=True)
+                self.assertEqual("COLLISION", caught.exception.code)
+                self.assertEqual(before, self.tree_snapshot())
 
 
 if __name__ == "__main__":

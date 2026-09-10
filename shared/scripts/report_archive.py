@@ -17,7 +17,8 @@ import uuid
 from datetime import date, datetime
 from pathlib import Path
 
-SKILLS = {"hit-weekly-brief": "validate_weekly_brief", "hit-lectures-scout": "validate_lectures_scout"}
+SKILLS = {"hit-weekly-brief": "validate_weekly_brief", "hit-lectures-scout": "validate_lectures_scout",
+          "hit-industry-radar": "validate_industry_radar"}
 MAX_BYTES = 8 * 1024 * 1024
 
 
@@ -78,12 +79,22 @@ def identity(path: Path, skill: str, *, validate: bool, custom_filename: bool,
              custom_period: bool, target_name: str) -> dict:
     if skill not in SKILLS:
         raise Blocked("INPUT", "skill not whitelisted")
+    if skill == "hit-industry-radar" and custom_period:
+        raise Blocked("INPUT", "--allow-custom-period is weekly-only; radar uses 窗口模式")
     script = Path(__file__).resolve().parents[2] / skill / "scripts" / (SKILLS[skill] + ".py")
     spec = importlib.util.spec_from_file_location(SKILLS[skill], script)
     if spec is None or spec.loader is None:
         raise Blocked("CAPABILITY", "validator unavailable")
     module = importlib.util.module_from_spec(spec)
-    spec.loader.exec_module(module)
+    try:
+        spec.loader.exec_module(module)
+        if skill == "hit-industry-radar" and not all(callable(getattr(module, name, None))
+                for name in ("metadata", "canonical_title", "validate_report", "parse_date", "ZoneInfo")):
+            raise Blocked("CAPABILITY", "radar validator interface unavailable")
+    except (OSError, ImportError, SyntaxError) as exc:
+        if skill != "hit-industry-radar":
+            raise
+        raise Blocked("CAPABILITY", f"radar validator unavailable: {exc}") from exc
     text = read_source(path).decode("utf-8").replace("\r\n", "\n").replace("\r", "\n")
     try:
         start, end = module.metadata(text, "报告周期").split(" 至 ")
@@ -93,7 +104,10 @@ def identity(path: Path, skill: str, *, validate: bool, custom_filename: bool,
         arguments = dict(file_path=path, period_start=date.fromisoformat(start),
             period_end=date.fromisoformat(end), issue_date=date.fromisoformat(issue), cutoff=cutoff,
             report_timezone=zone, allow_custom_filename=True)
-        window_mode = module.metadata(text, "命名依据") if skill == "hit-lectures-scout" else None
+        if skill == "hit-industry-radar":
+            window_mode = module.metadata(text, "窗口模式")
+        else:
+            window_mode = module.metadata(text, "命名依据") if skill == "hit-lectures-scout" else None
         if window_mode is not None:
             arguments["window_mode"] = window_mode
         else:
@@ -107,6 +121,25 @@ def identity(path: Path, skill: str, *, validate: bool, custom_filename: bool,
                 raise ValueError("weekly identity must not contain scout naming metadata")
             if arguments["issue_date"] != arguments["period_end"]:
                 raise ValueError("weekly issue identity must equal period end")
+        elif skill == "hit-industry-radar":
+            expected_title = module.canonical_title(arguments["period_start"], arguments["period_end"])
+            scope = module.metadata(text, "报告范围").strip()
+            status = module.metadata(text, "检索状态")
+            if not scope or status not in {"complete", "partial", "blocked"}:
+                raise ValueError("invalid radar scope/search status")
+            if validate and status == "blocked":
+                raise ValueError("blocked retrieval is diagnostic only, not an archive source")
+            if re.search(r"^命名依据：", text.split("\n## ", 1)[0], re.M):
+                raise ValueError("radar identity must not contain scout naming metadata")
+            if window_mode not in {"rolling7", "natural_week", "explicit"} or cutoff.utcoffset() is None:
+                raise ValueError("invalid radar window identity")
+            try:
+                module.ZoneInfo(zone)
+            except (KeyError, ValueError) as exc:
+                raise ValueError("radar report timezone unavailable or invalid") from exc
+            if (module.parse_date(start) > module.parse_date(end)
+                    or module.parse_date(issue) != arguments["period_end"]):
+                raise ValueError("radar issue identity must equal valid period end")
         else:
             expected_title = f"# 医疗数字化文献侦察报告 - {issue}"
             if window_mode not in {"explicit", "generated"} or cutoff.utcoffset() is None:
@@ -117,7 +150,8 @@ def identity(path: Path, skill: str, *, validate: bool, custom_filename: bool,
                 raise ValueError("scout issue identity does not match naming mode")
         if heading != expected_title:
             raise ValueError("skill-specific canonical title identity mismatch; review legacy metadata manually")
-        prefix = "DHWB" if skill == "hit-weekly-brief" else "DHLS"
+        prefix = {"hit-weekly-brief": "DHWB", "hit-lectures-scout": "DHLS",
+                  "hit-industry-radar": "DHWB-Radar"}[skill]
         expected_name = f"{prefix}-{date.fromisoformat(issue):%Y%m%d}.md"
         if not custom_filename and target_name != expected_name:
             raise ValueError(f"target filename must be {expected_name}")
@@ -127,7 +161,11 @@ def identity(path: Path, skill: str, *, validate: bool, custom_filename: bool,
                 raise ValueError("; ".join(errors))
     except (ValueError, TypeError, KeyError) as exc:
         raise Blocked("INPUT", f"report identity/validation: {exc}") from exc
-    return dict(skill=skill, period_start=start, period_end=end, issue_date=issue, window_mode=window_mode)
+    result = dict(skill=skill, period_start=start, period_end=end, issue_date=issue, window_mode=window_mode)
+    if skill == "hit-industry-radar":
+        # Timezone affects cutoff calendar dates; even custom names cannot merge it.
+        result.update(scope=scope, report_timezone=zone)
+    return result
 
 
 def snapshot(path: Path, security) -> dict | None:

@@ -1,29 +1,34 @@
 {
   "schema_version": 3,
   "skill": "hit-industry-radar",
-  "generated_at": "2026-09-09T20:46:30+08:00",
+  "generated_at": "2026-09-10T21:52:18+08:00",
   "hash_algorithm": "SHA-256",
   "text_hash_normalization": "LF",
   "skill_md": "SKILL.md",
-  "skill_md_sha256": "0ee2ec760d560fe0a8e1c2d26f5e5f93201aef62b432e28ec9c88c66067b79c1",
+  "skill_md_sha256": "cf7cf4521dbcf9198ad0ab8e9c636d53b78cd6488d9ddf8f582b4de8012b5cbd",
   "top_level_files": [
     "SKILL.md"
   ],
   "top_level_file_hashes": [
     {
       "path": "SKILL.md",
-      "sha256": "0ee2ec760d560fe0a8e1c2d26f5e5f93201aef62b432e28ec9c88c66067b79c1"
+      "sha256": "cf7cf4521dbcf9198ad0ab8e9c636d53b78cd6488d9ddf8f582b4de8012b5cbd"
     }
   ],
   "top_level_directories": [
     "assets",
     "evals",
-    "references"
+    "references",
+    "scripts"
   ],
   "resource_directories": [
     {
+      "name": "scripts",
+      "file_count": 2
+    },
+    {
       "name": "references",
-      "file_count": 1
+      "file_count": 3
     },
     {
       "name": "assets",
@@ -33,39 +38,103 @@
   "resource_file_hashes": [
     {
       "path": "assets/intelligence_targets.json",
-      "sha256": "f86c1803d242e49a02f21f951bb34f9e7a9f70ab9bccd388257d9d5630ae0c53"
+      "sha256": "67e3558b00cf4e9ba80803542afbf1b8a5b9e4431a7ff422ed22353b444b3332"
     },
     {
       "path": "assets/Task_china_hit.md",
-      "sha256": "0364432377eb45058a932cdcde7255373c8a1ddd5e24755cdef5fe303e489898"
+      "sha256": "e7b9a1a56160aeacd62e10fdd1e48f27990cbbe39e0f215317443768513c6c07"
     },
     {
       "path": "assets/Task_global_hit.md",
-      "sha256": "3b282c84ff215a8d5ca0466b81421cd809e8373fdd92fa851752d078a468e13a"
+      "sha256": "cc2c28e65dd4c34c94eb5533948982ddcc837d452d92e695a341b24ee84c2a31"
     },
     {
       "path": "assets/Task_winning_baseline.md",
-      "sha256": "dfa969a4332f396502c3227d8206cb18121df133658ab68f14a00a2b2d1f86e9"
+      "sha256": "fc6068118a052d21702be6b3b6a77f5bc077616c1ac5144dd3f2bac0ec9e748d"
     },
     {
       "path": "evals/benchmark.json",
-      "sha256": "56694ece3a6d108c0c27da465a11fac6c5683d500cc7ff465122b4846eaba88c"
+      "sha256": "11bbc3018c5d8ed4e292a0781afda42b74f75daf38d306c200c48f073a50496f"
     },
     {
       "path": "evals/evals.json",
-      "sha256": "edff9a06fe67049f9c24788312388914431965d2a099a04578dc8ea838606736"
+      "sha256": "c3d92c69fdaa52e63ae8d15f2fb8978560921ee1e8abd837d4ec6ece3287a4c9"
+    },
+    {
+      "path": "references/report_schema.md",
+      "sha256": "d765a3094576f8b65ce1cdebe8b3a3be47daaf09ce80eeb3775e3a4111b2b522"
+    },
+    {
+      "path": "references/research_contract.md",
+      "sha256": "be29b90e70658460376945b0c085cb56cea6dbf4a8cec0a96aef2032afa4f105"
     },
     {
       "path": "references/stc_framework.md",
-      "sha256": "d0708c1ce92c84e1fc3d94158ec1f10df0cdf315f494f1ca804bc3e1c84e9669"
+      "sha256": "d1c17304f51e3bb856641b8ce654c1cc9e48d0c0d341c9c2942b8deacaca30d2"
+    },
+    {
+      "path": "scripts/test_validate_industry_radar.py",
+      "sha256": "57e9b93be87c9453f2c4d383e2066c7f3a0d9a2e1acc3d909f3748ce828d8707"
+    },
+    {
+      "path": "scripts/validate_industry_radar.py",
+      "sha256": "39aa40d9809b1b07a79fc2747e405adb534904330f0dedea6ebaccf0e808b99b"
     }
   ],
   "declared_local_dependencies": [
     {
+      "path": "references/report_schema.md",
+      "exists": true,
+      "resolved_path": "hit-industry-radar/references/report_schema.md",
+      "sha256": "d765a3094576f8b65ce1cdebe8b3a3be47daaf09ce80eeb3775e3a4111b2b522"
+    },
+    {
+      "path": "references/research_contract.md",
+      "exists": true,
+      "resolved_path": "hit-industry-radar/references/research_contract.md",
+      "sha256": "be29b90e70658460376945b0c085cb56cea6dbf4a8cec0a96aef2032afa4f105"
+    },
+    {
       "path": "references/stc_framework.md",
       "exists": true,
       "resolved_path": "hit-industry-radar/references/stc_framework.md",
-      "sha256": "d0708c1ce92c84e1fc3d94158ec1f10df0cdf315f494f1ca804bc3e1c84e9669"
+      "sha256": "d1c17304f51e3bb856641b8ce654c1cc9e48d0c0d341c9c2942b8deacaca30d2"
+    },
+    {
+      "path": "scripts/test_validate_industry_radar.py",
+      "exists": true,
+      "resolved_path": "hit-industry-radar/scripts/test_validate_industry_radar.py",
+      "sha256": "57e9b93be87c9453f2c4d383e2066c7f3a0d9a2e1acc3d909f3748ce828d8707"
+    },
+    {
+      "path": "scripts/validate_industry_radar.py",
+      "exists": true,
+      "resolved_path": "hit-industry-radar/scripts/validate_industry_radar.py",
+      "sha256": "39aa40d9809b1b07a79fc2747e405adb534904330f0dedea6ebaccf0e808b99b"
+    },
+    {
+      "path": "shared/references/report_archive.md",
+      "exists": true,
+      "resolved_path": "shared/references/report_archive.md",
+      "sha256": "fd99761eab41ec23a56877635b269544558baad61dfe07a2d9df8e273d6be0a4"
+    },
+    {
+      "path": "shared/scripts/report_archive.py",
+      "exists": true,
+      "resolved_path": "shared/scripts/report_archive.py",
+      "sha256": "396e6cee27f6bc09e99ae21dab1b308ac750235fb8ef98a1adab3249b271df71"
+    },
+    {
+      "path": "shared/scripts/report_archive_windows.py",
+      "exists": true,
+      "resolved_path": "shared/scripts/report_archive_windows.py",
+      "sha256": "faf123a4468b4eb275cefd3e67f2d3911b9bd0b1097667008474050d9b0d8f8e"
+    },
+    {
+      "path": "shared/scripts/test_report_archive.py",
+      "exists": true,
+      "resolved_path": "shared/scripts/test_report_archive.py",
+      "sha256": "09ad138c9af2a7d19f011d8cdabe3f78b5c97b5d15b5055bd3138456e4ef5a83"
     }
   ],
   "missing_declared_dependencies": []

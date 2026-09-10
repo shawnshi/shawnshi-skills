@@ -55,11 +55,25 @@
 - 访问核验：{{ item.access_check.status }} / {{ item.access_check.method }} / HTTP {{ item.access_check.http_status }}
 - 等级：{{ item.intelligence_level }}｜条目置信度：{{ item.confidence }}{% if item.major_signal %}｜重大资讯：{{ item.major_signal_reason }}{% endif %}
 
-- 事实：{{ item.fact }}
-- 连接：{{ item.connection }}
-- 推断：{{ item.deduction }}
-- 动作：{{ item.actionability }}
-- 摘要：{{ item.summary_zh }}
+**事实**
+
+{{ item.fact }}
+
+**连接**
+
+{{ item.connection }}
+
+**推断**
+
+{{ item.deduction }}
+
+**动作**
+
+{{ item.actionability }}
+
+**摘要**
+
+{{ item.summary_zh }}
 
 {% endfor %}
 {% if not technology_items %}- 当前窗口没有通过质量门的技术资讯。{% endif %}
@@ -77,11 +91,25 @@
 - 访问核验：{{ item.access_check.status }} / {{ item.access_check.method }} / HTTP {{ item.access_check.http_status }}
 - 等级：{{ item.intelligence_level }}｜条目置信度：{{ item.confidence }}{% if item.major_signal %}｜重大资讯：{{ item.major_signal_reason }}{% endif %}
 
-- 事实：{{ item.fact }}
-- 连接：{{ item.connection }}
-- 推断：{{ item.deduction }}
-- 动作：{{ item.actionability }}
-- 摘要：{{ item.summary_zh }}
+**事实**
+
+{{ item.fact }}
+
+**连接**
+
+{{ item.connection }}
+
+**推断**
+
+{{ item.deduction }}
+
+**动作**
+
+{{ item.actionability }}
+
+**摘要**
+
+{{ item.summary_zh }}
 
 {% endfor %}
 {% if not healthcare_items %}- 当前窗口没有通过质量门的医疗数字化资讯。{% endif %}
