@@ -1784,7 +1784,7 @@ class RunContractTests(unittest.TestCase):
             manifest_path,
             items=[
                 {
-                    "title": "Agent release",
+                    "title": "AI agent release",
                     "url": "https://example.org/agent",
                     "provisional_domain": "technology",
                     "summary": "A new agent runtime.",
@@ -1814,6 +1814,18 @@ class RunContractTests(unittest.TestCase):
                     ],
                     now=self.now,
                 )
+        focus_config = self.runtime_dir / "focus.json"
+        focus_config.write_text(
+            (
+                Path(__file__).resolve().parents[1]
+                / "references"
+                / "strategic_focus.json"
+            ).read_text(encoding="utf-8"),
+            encoding="utf-8",
+        )
+        record_run_artifact(
+            manifest_path, "focus_config", focus_config, now=self.now
+        )
         request_path, request = build_supplement_request(
             manifest_path,
             [
@@ -1886,7 +1898,7 @@ class RunContractTests(unittest.TestCase):
         lane_slice_path = Path(packet["lane_slice"]["path"])
         lane_slice = json.loads(lane_slice_path.read_text(encoding="utf-8"))
         self.assertEqual(lane_slice["gap"]["gap_id"], "technology")
-        self.assertEqual(len(lane_slice["candidates"]), 1)
+        self.assertEqual(len(lane_slice["candidates"]), 2)
         self.assertEqual(
             lane_slice["candidates"][0]["url"], "https://example.org/agent"
         )

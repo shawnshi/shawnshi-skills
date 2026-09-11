@@ -36,13 +36,21 @@ def test_verify_bound_exact_access_survives_parent_registration(tmp_path, mode):
     rc.record_stage(manifest_path, "baseline", "completed", artifact_path=baseline, now=started)
     pool_path = root / "candidate_pool.json"
     items = [{
-        "url": f"https://example.org/release-{index}", "title": f"Registered release {index}",
+        "url": f"https://example.org/release-{index}", "title": f"Multimodal release {index}",
         "source": "Example", "source_type": "primary", "published_at": now.date().isoformat(),
         "published_at_source": "rss_published", "provisional_domain": "technology",
         "summary_hint": "Complete registered source metadata for an accessed publication.",
     } for index in range(3)]
     dump(pool_path, {"items": items})
     rc.record_run_artifact(manifest_path, "candidate_pool", pool_path, now=started)
+    focus_path = root / "focus.json"
+    dump(
+        focus_path,
+        rc.load_json(
+            Path(__file__).resolve().parents[1] / "references" / "strategic_focus.json", {}
+        ),
+    )
+    rc.record_run_artifact(manifest_path, "focus_config", focus_path, now=started)
     gaps = [{"gap_id": "technology", "lane": "TechRadar", "query_scope": "release",
              "verify_bound_candidates": True, "max_urls": 4}]
     if mode == "reconcile":
@@ -74,15 +82,18 @@ def test_verify_bound_exact_access_survives_parent_registration(tmp_path, mode):
     assert verified.returncode == 0, verified.stderr
     helper_output = json.loads(verified.stdout)
     dynamic = json.loads(draft.read_text(encoding="utf8"))
+    lane = rc.load_json(Path(packet["lane_slice"]["path"]), {})
+    required_count = len(lane.get("required_bound_candidate_ids", []))
+    assert required_count > 0, "the technology lane must bind at least one required candidate"
     assert "body_evidence" not in dynamic
-    assert helper_output["access_log_count"] == 3
-    assert len(helper_output["body_evidence"]) == 3
+    assert helper_output["access_log_count"] == required_count
+    assert len(helper_output["body_evidence"]) == required_count
     for index, body in enumerate(helper_output["body_evidence"]):
         assert "Initial publication body evidence." in body["text"]
         assert body["access_log_index"] == index
         assert body["access_check"] == dynamic["access_log"][index]
         assert body["text_sha256"] == hashlib.sha256(body["text"].encode()).hexdigest()
-    assert len(dynamic["candidates"]) == 3
+    assert len(dynamic["candidates"]) == required_count
     assert all(c["published_at"] == now.date().isoformat() for c in dynamic["candidates"])
     ordinary = cli(snapshot, "supplement_agent.py", "finalize", "--request", request_path,
                    "--gap-id", "technology")
@@ -129,7 +140,11 @@ def test_verify_bound_exact_access_survives_parent_registration(tmp_path, mode):
     aggregate = json.loads((root / "supplement_results.json").read_text(encoding="utf8"))
     result = next(r for r in aggregate["results"] if r["gap_id"] == "technology")
     assert result == assembled
-    assert aggregate["coverage"] == {"attempted": 3, "succeeded": 3, "failed": 0}
+    assert aggregate["coverage"] == {
+        "attempted": required_count,
+        "succeeded": required_count,
+        "failed": 0,
+    }
     assert aggregate["status"] == ("degraded" if mode == "reconcile" else "completed")
     if mode == "reconcile":
         failures = [r for r in aggregate["results"] if r["gap_id"] != "technology"]

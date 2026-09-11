@@ -986,6 +986,131 @@ def _validate_v12_data(
         if item.get("intelligence_level") == "L4":
             l4_hashes.add(current_hash)
 
+    _validate_identity_uniqueness(
+        dedupe_records=dedupe_records,
+        errors=errors,
+        event_ids=event_ids,
+        is_v14=is_v14,
+        semantic_identity_ids=semantic_identity_ids,
+        urls=urls,
+    )
+    _validate_review_lineage(
+        covered_hashes=covered_hashes,
+        errors=errors,
+        final_item_hashes=final_item_hashes,
+        is_contract_integer=is_contract_integer,
+        is_v14=is_v14,
+        items=items,
+        l4_hashes=l4_hashes,
+        red_team=red_team,
+        semantic_review=semantic_review,
+        warnings=warnings,
+    )
+    _validate_mix(
+        data=data,
+        eligible_major_urls_by_domain=eligible_major_urls_by_domain,
+        errors=errors,
+        is_contract_integer=is_contract_integer,
+        items=items,
+        observed_domain_counts=observed_domain_counts,
+        schema=schema,
+    )
+    _validate_coverage(
+        data=data,
+        errors=errors,
+        is_contract_integer=is_contract_integer,
+        items=items,
+        schema=schema,
+    )
+    _validate_candidate_funnel(
+        data=data,
+        errors=errors,
+        is_contract_integer=is_contract_integer,
+        is_v14=is_v14,
+        items=items,
+    )
+    _validate_v14_data_gaps(
+        data=data,
+        errors=errors,
+        schema=schema,
+    )
+    unresolved = _find_unresolved(data)
+    if unresolved:
+        errors.append("unresolved template value at: " + ", ".join(unresolved[:10]))
+    if len(items) < 3:
+        warnings.append(
+            "fewer than three verified signals; confirm that the scan scope was sufficient"
+        )
+    source_counts: dict[str, int] = {}
+    for item in items:
+        source = str(item.get("source") or "")
+        source_counts[source] = source_counts.get(source, 0) + 1
+    if items and max(source_counts.values(), default=0) / len(items) > 0.5:
+        warnings.append("one source supplies more than half of retained items")
+    if not levers:
+        warnings.append(
+            "no action levers; acceptable when evidence does not justify an action"
+        )
+    return errors, warnings
+
+
+def validate_briefing_data(
+    data: dict[str, Any], schema: dict[str, Any] | None = None
+) -> tuple[list[str], list[str]]:
+    if not isinstance(data, dict):
+        return ["root must be a JSON object"], []
+    version = str((schema or {}).get("version") or data.get("schema_version") or "")
+    if version == "1.0":
+        return _validate_v10_data(data)
+    if version == "1.1":
+        selected_schema = schema or json.loads(V11_SCHEMA_PATH.read_text(encoding="utf-8"))
+        return _validate_v11_data(data, selected_schema)
+    if version == "1.2":
+        selected_schema = schema or json.loads(V12_SCHEMA_PATH.read_text(encoding="utf-8"))
+        return _validate_v12_data(data, selected_schema)
+    if version == "1.3":
+        selected_schema = schema or json.loads(V13_SCHEMA_PATH.read_text(encoding="utf-8"))
+        return _validate_v12_data(data, selected_schema)
+    if version == "1.4":
+        selected_schema = schema or json.loads(SCHEMA_PATH.read_text(encoding="utf-8"))
+        return _validate_v12_data(data, selected_schema)
+    return [f"unsupported schema_version: {version or 'missing'}"], []
+
+
+def main() -> int:
+    parser = argparse.ArgumentParser(description="Read-only briefing schema validator.")
+    parser.add_argument("json_path")
+    args = parser.parse_args()
+    try:
+        data = json.loads(Path(args.json_path).read_text(encoding="utf-8"))
+    except (OSError, json.JSONDecodeError) as exc:
+        print(f"[FAIL] could not read JSON: {exc}")
+        return 2
+    errors, warnings = validate_briefing_data(data)
+    for warning in warnings:
+        print(f"[WARN] {warning}")
+    if errors:
+        print("[FAIL] briefing schema validation failed")
+        for error in errors:
+            print(f"- {error}")
+        return 1
+    print("[PASS] briefing schema validation passed")
+    return 0
+
+
+if __name__ == "__main__":
+    raise SystemExit(main())
+
+
+def _validate_identity_uniqueness(
+    dedupe_records: Any,
+    errors: Any,
+    event_ids: Any,
+    is_v14: Any,
+    semantic_identity_ids: Any,
+    urls: Any,
+
+) -> None:
     if not is_v14 and len(urls) != len(set(urls)):
         errors.append("top_10 contains duplicate urls")
     if len(event_ids) != len(set(event_ids)):
@@ -1011,6 +1136,21 @@ def _validate_v12_data(
             errors.append("top_10 contains duplicate urls")
         if duplicate_title:
             errors.append("top_10 contains duplicate normalized titles")
+
+
+def _validate_review_lineage(
+    covered_hashes: Any,
+    errors: Any,
+    final_item_hashes: Any,
+    is_contract_integer: Any,
+    is_v14: Any,
+    items: Any,
+    l4_hashes: Any,
+    red_team: Any,
+    semantic_review: Any,
+    warnings: Any,
+
+) -> None:
     reviewed_hashes = sorted(
         str(value) for value in semantic_review.get("reviewed_item_hashes", [])
     )
@@ -1085,6 +1225,18 @@ def _validate_v12_data(
     elif not l4_hashes and red_team.get("status") == "passed" and not covered_hashes:
         warnings.append("red-team status is passed but no item hashes are recorded")
 
+
+
+def _validate_mix(
+    data: Any,
+    eligible_major_urls_by_domain: Any,
+    errors: Any,
+    is_contract_integer: Any,
+    items: Any,
+    observed_domain_counts: Any,
+    schema: Any,
+
+) -> None:
     mix = data.get("mix")
     domains = schema["domain_mix"]["domains"]
     if not isinstance(mix, dict):
@@ -1287,6 +1439,16 @@ def _validate_v12_data(
                         "mix.supply_exception.reason is required when applied"
                     )
 
+
+
+def _validate_coverage(
+    data: Any,
+    errors: Any,
+    is_contract_integer: Any,
+    items: Any,
+    schema: Any,
+
+) -> None:
     coverage = data.get("coverage")
     if not isinstance(coverage, dict):
         errors.append("coverage must be an object")
@@ -1359,6 +1521,16 @@ def _validate_v12_data(
         if coverage.get("run_status") == "failed" and items:
             errors.append("failed coverage cannot retain formal top items")
 
+
+
+def _validate_candidate_funnel(
+    data: Any,
+    errors: Any,
+    is_contract_integer: Any,
+    is_v14: Any,
+    items: Any,
+
+) -> None:
     funnel = data.get("candidate_funnel")
     if not isinstance(funnel, dict):
         errors.append("candidate_funnel must be an object")
@@ -1455,6 +1627,14 @@ def _validate_v12_data(
                         "candidate_funnel below-quality dispositions do not reconcile"
                     )
 
+
+
+def _validate_v14_data_gaps(
+    data: Any,
+    errors: Any,
+    schema: Any,
+
+) -> None:
     gaps = data.get("data_gaps")
     if not isinstance(gaps, list):
         errors.append("data_gaps must be a list")
@@ -1467,69 +1647,3 @@ def _validate_v12_data(
                 if not _non_empty(gap.get(field)):
                     errors.append(f"missing data_gaps[{index}].{field}")
 
-    unresolved = _find_unresolved(data)
-    if unresolved:
-        errors.append("unresolved template value at: " + ", ".join(unresolved[:10]))
-    if len(items) < 3:
-        warnings.append(
-            "fewer than three verified signals; confirm that the scan scope was sufficient"
-        )
-    source_counts: dict[str, int] = {}
-    for item in items:
-        source = str(item.get("source") or "")
-        source_counts[source] = source_counts.get(source, 0) + 1
-    if items and max(source_counts.values(), default=0) / len(items) > 0.5:
-        warnings.append("one source supplies more than half of retained items")
-    if not levers:
-        warnings.append(
-            "no action levers; acceptable when evidence does not justify an action"
-        )
-    return errors, warnings
-
-
-def validate_briefing_data(
-    data: dict[str, Any], schema: dict[str, Any] | None = None
-) -> tuple[list[str], list[str]]:
-    if not isinstance(data, dict):
-        return ["root must be a JSON object"], []
-    version = str((schema or {}).get("version") or data.get("schema_version") or "")
-    if version == "1.0":
-        return _validate_v10_data(data)
-    if version == "1.1":
-        selected_schema = schema or json.loads(V11_SCHEMA_PATH.read_text(encoding="utf-8"))
-        return _validate_v11_data(data, selected_schema)
-    if version == "1.2":
-        selected_schema = schema or json.loads(V12_SCHEMA_PATH.read_text(encoding="utf-8"))
-        return _validate_v12_data(data, selected_schema)
-    if version == "1.3":
-        selected_schema = schema or json.loads(V13_SCHEMA_PATH.read_text(encoding="utf-8"))
-        return _validate_v12_data(data, selected_schema)
-    if version == "1.4":
-        selected_schema = schema or json.loads(SCHEMA_PATH.read_text(encoding="utf-8"))
-        return _validate_v12_data(data, selected_schema)
-    return [f"unsupported schema_version: {version or 'missing'}"], []
-
-
-def main() -> int:
-    parser = argparse.ArgumentParser(description="Read-only briefing schema validator.")
-    parser.add_argument("json_path")
-    args = parser.parse_args()
-    try:
-        data = json.loads(Path(args.json_path).read_text(encoding="utf-8"))
-    except (OSError, json.JSONDecodeError) as exc:
-        print(f"[FAIL] could not read JSON: {exc}")
-        return 2
-    errors, warnings = validate_briefing_data(data)
-    for warning in warnings:
-        print(f"[WARN] {warning}")
-    if errors:
-        print("[FAIL] briefing schema validation failed")
-        for error in errors:
-            print(f"- {error}")
-        return 1
-    print("[PASS] briefing schema validation passed")
-    return 0
-
-
-if __name__ == "__main__":
-    raise SystemExit(main())

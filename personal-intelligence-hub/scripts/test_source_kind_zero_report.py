@@ -94,9 +94,10 @@ def test_zero_report_gaps_bound_to_registered_success_and_failure_evidence():
             supplement = {"coverage": {"attempted": 1, "succeeded": 1 - failed, "failed": failed}, "results": [{"gap_id": "actual-lane", "lane": "TechRadar", "status": "degraded" if failed else "no_increment", "coverage": {"failed": failed}, "candidates": []}]}
             baseline = {"source_attempted": 1, "source_succeeded": 1, "source_failed": 0, "raw_candidates": 0, "dated_candidates": 0, "reasons": ["registered date gap"] if failed else []}
             pool = {"items": [], "candidate_funnel": {"observed": 0, "retained_for_review": 0, "terminal_dispositions": {"retained_for_review": 0}}}
-            for name, value in {"supplement": supplement, "pool": pool}.items():
+            history = {"entries": [], "metadata": {"dedupe_days": 7}}
+            for name, value in {"supplement": supplement, "pool": pool, "history": history}.items():
                 atomic_dump_json(root / f"{name}.json", value)
-            manifest = {"stages": {"baseline": {"status": "completed", "metadata": {"coverage": baseline}}, "supplemental": {"status": "degraded" if failed else "completed", "artifact_path": str(root / "supplement.json"), "artifact_sha256": file_sha256(root / "supplement.json")}}, "artifacts": {"candidate_pool": {"artifact_path": str(root / "pool.json"), "artifact_sha256": file_sha256(root / "pool.json")}}}
+            manifest = {"report_date": "2026-08-31", "timezone": "Asia/Shanghai", "stages": {"baseline": {"status": "completed", "metadata": {"coverage": baseline}}, "supplemental": {"status": "degraded" if failed else "completed", "artifact_path": str(root / "supplement.json"), "artifact_sha256": file_sha256(root / "supplement.json")}}, "artifacts": {"candidate_pool": {"artifact_path": str(root / "pool.json"), "artifact_sha256": file_sha256(root / "pool.json")}, "history_snapshot": {"artifact_path": str(root / "history.json"), "artifact_sha256": file_sha256(root / "history.json"), "metadata": {"dedupe_days": 7}}}}
             core = {"schema_version": "1.4", "top_10": [], "mix": {}, "coverage": _coverage(manifest, supplement), "candidate_funnel": {"observed": 0, "terminal_dispositions": {"retained": 0}}}
             core["data_gaps"] = zero_report_data_gaps(supplement, {}, baseline)
             validate_registered_pipeline_summary(core, manifest)

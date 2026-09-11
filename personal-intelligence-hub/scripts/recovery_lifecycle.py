@@ -194,7 +194,7 @@ def apply(source_path, expected_closure, runtime_dir, *, skill_path=None):
     require(not runtime.exists(), "new isolated runtime root required; adoption replay refused")
     require(not runtime.is_relative_to(source_root), "adoption cannot write inside original run")
     identifier = uuid.uuid4().hex
-    # A dedicated runtime also confines create_run's active_run.json pointer.
+    # A dedicated runtime also confines every run artifact of the adopted run.
     path, manifest = create_run(report_date=source["report_date"], timezone_name=source["timezone"],
         window_days=source["window"]["days"], explicit_window_days=source["explicit_window"],
         topic=source["topic"], region=source["region"], requested_ratio=source["mix_request"]["requested_ratio"],

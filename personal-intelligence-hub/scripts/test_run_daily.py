@@ -181,6 +181,7 @@ class RunDailyTests(unittest.IsolatedAsyncioTestCase):
             items.append(
                 {
                     "provisional_domain": "technology",
+                    "url": f"https://example.org/technology-{index}",
                     "title": "policy model release"
                     if index == 0
                     else f"technology {index}",
@@ -192,6 +193,7 @@ class RunDailyTests(unittest.IsolatedAsyncioTestCase):
             items.append(
                 {
                     "provisional_domain": "healthcare_digital",
+                    "url": f"https://example.org/healthcare-{index}",
                     "title": "risk incident" if index == 0 else f"healthcare {index}",
                     "summary_hint": "primary source",
                     "keyword_connection_hint": "risk" if index == 0 else "healthcare",

@@ -25,13 +25,21 @@ def bound_run(tmp_path):
     dump(baseline, {"items": []})
     rc.record_stage(manifest_path, "baseline", "completed", artifact_path=baseline, now=started)
     pool_path = root / "pool.json"
-    pool = {"items": [{"url": "https://example.org/B", "title": "Release", "source": "Example",
+    pool = {"items": [{"url": "https://example.org/B", "title": "Multimodal release", "source": "Example",
         "source_type": "primary", "published_at": now.date().isoformat(),
         "published_at_source": "rss_published", "provisional_domain": "technology", "lane": "Ranger"}]}
     pool["items"][0]["candidate_id"] = rc.candidate_ref(pool["items"][0]["url"])
     pool["items"][0]["candidate_object_sha256"] = rc.candidate_object_hash(pool["items"][0])
     dump(pool_path, pool)
     rc.record_run_artifact(manifest_path, "candidate_pool", pool_path, now=started)
+    focus_path = root / "focus.json"
+    dump(
+        focus_path,
+        rc.load_json(
+            Path(__file__).resolve().parents[1] / "references" / "strategic_focus.json", {}
+        ),
+    )
+    rc.record_run_artifact(manifest_path, "focus_config", focus_path, now=started)
     request_path, request = rc.build_supplement_request(manifest_path, [
         {"gap_id": gap, "lane": lane, "query_scope": "release", "verify_bound_candidates": True}
         for gap, lane in [("tech", "TechRadar"), ("ranger", "Ranger")]], now=started)

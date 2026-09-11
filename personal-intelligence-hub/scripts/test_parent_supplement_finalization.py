@@ -38,10 +38,18 @@ class ParentSupplementFinalizationTests(unittest.TestCase):
                      metadata={"source_total": 1, "source_ok": 1, "source_failed": 0}, now=created)
         pool = self.run_dir / "candidate_pool.json"
         self.url = "https://example.org/agent"
-        pool.write_text(json.dumps({"items": [{"title": "Agent release", "url": self.url,
+        pool.write_text(json.dumps({"items": [{"title": "Multimodal agent release", "url": self.url,
             "published_at": self.now.date().isoformat(), "published_at_source": "rss_published",
             "source": "Example", "source_type": "primary", "provisional_domain": "technology"}]}), encoding="utf8")
         record_run_artifact(self.manifest_path, "candidate_pool", pool, now=created)
+        focus = self.run_dir / "focus.json"
+        focus.write_text(
+            (Path(__file__).resolve().parents[1] / "references/strategic_focus.json").read_text(
+                encoding="utf8"
+            ),
+            encoding="utf8",
+        )
+        record_run_artifact(self.manifest_path, "focus_config", focus, now=created)
         self.request_path, self.request = build_supplement_request(self.manifest_path, [{
             "gap_id": "technology", "lane": "TechRadar", "query_scope": "AI agents",
             "max_turns": 3, "max_urls": 4, "verify_bound_candidates": True}], now=created)

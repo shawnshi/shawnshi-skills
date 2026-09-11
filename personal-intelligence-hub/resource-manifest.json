@@ -1,11 +1,11 @@
 {
   "schema_version": 3,
   "skill": "personal-intelligence-hub",
-  "generated_at": "2026-09-11T06:38:49.799890+00:00",
+  "generated_at": "2026-09-12T07:06:45+08:00",
   "hash_algorithm": "SHA-256",
   "text_hash_normalization": "LF",
   "skill_md": "SKILL.md",
-  "skill_md_sha256": "c750f2c509f4e4f56c3bcf496b76876b964d753721e8ba4cdc41f8e4157f2cce",
+  "skill_md_sha256": "80a907559d73653c525c0412f2a1fd9a8dc0ea2792a65a428ebca0a92a4dae01",
   "top_level_files": [
     "SKILL.md",
     "requirements.txt"
@@ -13,7 +13,7 @@
   "top_level_file_hashes": [
     {
       "path": "SKILL.md",
-      "sha256": "c750f2c509f4e4f56c3bcf496b76876b964d753721e8ba4cdc41f8e4157f2cce"
+      "sha256": "80a907559d73653c525c0412f2a1fd9a8dc0ea2792a65a428ebca0a92a4dae01"
     },
     {
       "path": "requirements.txt",
@@ -28,7 +28,7 @@
   "resource_directories": [
     {
       "name": "scripts",
-      "file_count": 64
+      "file_count": 67
     },
     {
       "name": "references",
@@ -98,7 +98,7 @@
     },
     {
       "path": "references/workflow_protocols.md",
-      "sha256": "1c60a0dbd11109f19ec935e8e59c89c2025b0adffee5ed81f9d664e45a185922"
+      "sha256": "470cd925dc28a6596ff2f9db448982cb4d488ae414fac8006dc541c0d155f975"
     },
     {
       "path": "scripts/adversarial_audit.py",
@@ -110,7 +110,7 @@
     },
     {
       "path": "scripts/article_broker.py",
-      "sha256": "8a98dcb08e061908c5e167ff8a801d30d173615f953af316f1ab01b007dedeae"
+      "sha256": "c5b23a826406c76aec96405811b71ae9702097068367ca6133ae6b8265212896"
     },
     {
       "path": "scripts/await_artifacts.py",
@@ -122,7 +122,11 @@
     },
     {
       "path": "scripts/briefing_gate.py",
-      "sha256": "69f0b2bd79998b06496f2820367c97372e18910a34d8483f4b39ef428604ffc1"
+      "sha256": "279a9f2b1f213009385c29f3562919315970c2a5b74411b68157c7b8fb0a287c"
+    },
+    {
+      "path": "scripts/contract_core.py",
+      "sha256": "4edb6313fe5c024f86df4ce3a737da4cbba397d1edaabec4d9c424e945e72996"
     },
     {
       "path": "scripts/expansion_test_fixture.py",
@@ -145,8 +149,12 @@
       "sha256": "5a811ee089f33791c826a045f257b004697a0114d7d1029e989d6253010dfc9f"
     },
     {
+      "path": "scripts/lane_selection.py",
+      "sha256": "c86262e0b6caf92987a2c74ee479cfbccfcc5131a12a56a9c0f8817bce736040"
+    },
+    {
       "path": "scripts/late_telemetry.py",
-      "sha256": "7428561508cd81d3dec3e7c4a8982bae863c4bdd9063f623c1eeb4f2ffd49904"
+      "sha256": "079bf376524de500528b77f1acf301ed0747d415795600c556a04805847326dc"
     },
     {
       "path": "scripts/mix_policy.py",
@@ -154,7 +162,7 @@
     },
     {
       "path": "scripts/recovery_lifecycle.py",
-      "sha256": "6d8a87b8dd27870c3256af232c5cb8f060e850c8aea67fb330365a187c167c5b"
+      "sha256": "9019c4e404e2d47ffbf48a6a2258a484eadd9a48e632b26ed47cf0ecad6726de"
     },
     {
       "path": "scripts/refine.py",
@@ -174,15 +182,15 @@
     },
     {
       "path": "scripts/run_contract.py",
-      "sha256": "37fb2f2b62b8f02a2ef92a9e3971ddba10509b768d5c33930b66adcc6ef40869"
+      "sha256": "902ef75c63d1443986ee62eef704846185a5984c01a17b893194c9175782e761"
     },
     {
       "path": "scripts/run_daily.py",
-      "sha256": "3c34f75006c07ed25e814570880b5e6c45f8ab14f667f1f2b4e176da2d893f9d"
+      "sha256": "4d985e0efa684ad88e84b52c4c129c17e57c252a0dcae0bdbd0f6df346fb095a"
     },
     {
       "path": "scripts/semantic_agent.py",
-      "sha256": "7f8c27ae666d4219b655f6c80c5c6bc55e0d48b358dde7a392152b2581d4cc04"
+      "sha256": "8a8a541f03b705e778322f6e3ae2a90490169b62f8382514ea3f06c25bbb40f7"
     },
     {
       "path": "scripts/session_telemetry.py",
@@ -206,7 +214,7 @@
     },
     {
       "path": "scripts/test_article_broker_contract.py",
-      "sha256": "cabf0b41eacf3f33c2b392c8e307d0d5e9fe262d7cf8d03a6f43967af1785c62"
+      "sha256": "2e99cf2ec6cb5511a6ca360304a6c593d0a39c314b72df80f8335dc747b4f04c"
     },
     {
       "path": "scripts/test_article_broker_evidence.py",
@@ -215,6 +223,10 @@
     {
       "path": "scripts/test_article_broker_review_fixes.py",
       "sha256": "36aca6e00855aa6d4aea6393719c301fcc22d810874abffa7ec47fdca6d71692"
+    },
+    {
+      "path": "scripts/test_article_broker_wire_dateline.py",
+      "sha256": "8e3a0f29168af6a060c171fb7075dc5763877fbaf5217ca3954be41e534267fd"
     },
     {
       "path": "scripts/test_await_artifacts.py",
@@ -246,7 +258,7 @@
     },
     {
       "path": "scripts/test_date_ownership_registration.py",
-      "sha256": "93298fc7306f2fe917a17a554890fc6a70ba84fe38845dfa8680643fd932f84c"
+      "sha256": "a632a5cbfaee56c1c2339d0afeba431aaf11ce93f4b03931d4de0c60e82ab35f"
     },
     {
       "path": "scripts/test_feed_endpoints.py",
@@ -266,7 +278,7 @@
     },
     {
       "path": "scripts/test_live_access_proof.py",
-      "sha256": "4e06aa58e51827f9bab84c681e9d541f10e5cf4c85adfab524d6e6ac49127291"
+      "sha256": "0e4cd980c0347d2a8df8aff71d554aaa7bdc488b5fc6cb79ef207f48273df582"
     },
     {
       "path": "scripts/test_mix_policy.py",
@@ -274,7 +286,7 @@
     },
     {
       "path": "scripts/test_native_article_evidence.py",
-      "sha256": "90c3b269c8301f90415fd1445d622b3c845e94b5cbef89caf3224ccdb6d75bd7"
+      "sha256": "ee808bf1380b273a4771841c2834b34c8b24c12d91ce4bc5721c2c744dd5f46f"
     },
     {
       "path": "scripts/test_native_readable_dates.py",
@@ -286,7 +298,7 @@
     },
     {
       "path": "scripts/test_parent_supplement_finalization.py",
-      "sha256": "02f2de460b9a3ae25c5354a931a1d083e29ef12e7db9d3fecd55089dbbd2e5d9"
+      "sha256": "7d035450393d0df456e242a4242f8437a0ef3ece19db10ec2521510c34a69bc1"
     },
     {
       "path": "scripts/test_pipeline_contract.py",
@@ -306,11 +318,11 @@
     },
     {
       "path": "scripts/test_run_contract.py",
-      "sha256": "d0c523d06d237a0a4db8d8f432fd344471954fbf747a0d2e8011634cbc3cb268"
+      "sha256": "246eb895135ed7279bd37fe3745eda31f190a7f22a4426f8ea6d0083553a418c"
     },
     {
       "path": "scripts/test_run_daily.py",
-      "sha256": "741551f1c48e3d3935ed76cfd8eef7c71e6163aafdebada69a45da0806fb48f9"
+      "sha256": "e3f4e87f9de0f655442736ead19cfab99cc6ec8f735e8da4fbb60741b2e4b9bf"
     },
     {
       "path": "scripts/test_run_daily_broker_entry.py",
@@ -330,11 +342,11 @@
     },
     {
       "path": "scripts/test_source_kind_zero_report.py",
-      "sha256": "e0990c9a5960c0cf90d9d810e61ede3768543dc84ea0c60f0d152d51957438dc"
+      "sha256": "e22ef14b6a58eee885670a48edf342a881414b3fe6e0a946d29ea19b1ae46bcc"
     },
     {
       "path": "scripts/test_supplement_agent.py",
-      "sha256": "4ffc1d125655c19b025ba0bc11bd72f201a57b55b521f8ee42a58f2944a18380"
+      "sha256": "a8f7f3327682f5d5c6e9a80592644bb3fa743892335026e0bec4aebc9fabd26a"
     },
     {
       "path": "scripts/test_technical_bound_selection.py",
@@ -410,13 +422,31 @@
       "path": "references/workflow_protocols.md",
       "exists": true,
       "resolved_path": "personal-intelligence-hub/references/workflow_protocols.md",
-      "sha256": "1c60a0dbd11109f19ec935e8e59c89c2025b0adffee5ed81f9d664e45a185922"
+      "sha256": "470cd925dc28a6596ff2f9db448982cb4d488ae414fac8006dc541c0d155f975"
+    },
+    {
+      "path": "scripts/late_telemetry.py",
+      "exists": true,
+      "resolved_path": "personal-intelligence-hub/scripts/late_telemetry.py",
+      "sha256": "079bf376524de500528b77f1acf301ed0747d415795600c556a04805847326dc"
+    },
+    {
+      "path": "scripts/recovery_lifecycle.py",
+      "exists": true,
+      "resolved_path": "personal-intelligence-hub/scripts/recovery_lifecycle.py",
+      "sha256": "9019c4e404e2d47ffbf48a6a2258a484eadd9a48e632b26ed47cf0ecad6726de"
+    },
+    {
+      "path": "scripts/review_handoff.py",
+      "exists": true,
+      "resolved_path": "personal-intelligence-hub/scripts/review_handoff.py",
+      "sha256": "4477e5bc91ad7b74463ec8bb86696ed419fb8e22a8b1735ce23b8990b1c90e4c"
     },
     {
       "path": "scripts/run_daily.py",
       "exists": true,
       "resolved_path": "personal-intelligence-hub/scripts/run_daily.py",
-      "sha256": "3c34f75006c07ed25e814570880b5e6c45f8ab14f667f1f2b4e176da2d893f9d"
+      "sha256": "4d985e0efa684ad88e84b52c4c129c17e57c252a0dcae0bdbd0f6df346fb095a"
     }
   ],
   "missing_declared_dependencies": []

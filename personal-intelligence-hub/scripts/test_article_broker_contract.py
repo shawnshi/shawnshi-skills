@@ -21,14 +21,26 @@ def new_run(tmp_path, request):
     rc.record_stage(path, "baseline", "completed", artifact_path=baseline, now=now)
     pool = root / "pool.json"
     atomic_dump_json(pool, {"items": [{"url": f"https://example.org/article-{n}",
-        "title": f"Original {n}", "source_type": "primary", "provisional_domain": "technology"}
+        "title": f"Multimodal original {n}", "source_type": "primary", "provisional_domain": "technology"}
         for n in range(getattr(request, "param", 0))]})
     rc.record_run_artifact(path, "candidate_pool", pool, now=now)
     return path, root, now
 
 
 def request(new_run, broker=True, **extra):
-    path, _, now = new_run
+    path, root, now = new_run
+    # v3 TechRadar selection needs the real domain keywords; register them here rather
+    # than in the shared new_run fixture, which native/evidence tests also consume.
+    if "focus_config" not in rc.load_manifest(path)["artifacts"]:
+        focus = root / "focus-request.json"
+        atomic_dump_json(
+            focus,
+            rc.load_json(
+                Path(__file__).resolve().parents[1] / "references" / "strategic_focus.json",
+                {},
+            ),
+        )
+        rc.record_run_artifact(path, "focus_config", focus, now=now)
     return rc.build_supplement_request(path, [{"gap_id": "tech", "lane": "TechRadar",
         "query_scope": "original release", "max_urls": 4, "article_broker": broker, **extra}], now=now)
 
@@ -151,20 +163,33 @@ def test_no_setter_or_old_request_upgrade(new_run):
 @pytest.mark.parametrize("new_run", [4], indirect=True)
 def test_exhausted_required_attempts_reject_opt_in_before_helper(new_run):
     _, root, _ = new_run
-    with pytest.raises(rc.RunContractError, match="broker.*URL"):
-        request(new_run, verify_bound_candidates=True)
-    assert not (root / "supplement_request.json").exists()
+    # article-broker/3 replaced the v2 build-time "no remaining URL attempt budget"
+    # rejection with the sealed bound_budget_exhausted closure, so the same opt-in
+    # must build and cap required bound candidates at min(max_urls, 2).
+    request_path, payload = request(new_run, verify_bound_candidates=True)
+    assert request_path.exists()
+    assert (root / "supplement_request.json").exists()
+    lane = rc.load_json(
+        Path(payload["execution_packets"][0]["lane_slice"]["path"]), {}
+    )
+    assert len(lane["required_bound_candidate_ids"]) == 2
+    assert len(lane["candidates"]) == 4
 
 
 def test_capability_explicitly_blocks_unimplemented_public_integration(new_run):
     request_path, payload = request(new_run)
     context = build_agent_context(request_path, "tech")
     capability = context["article_broker"]
-    assert capability["state"] == "blocked_pending_evidence_contract"
+    # article-broker/3 puts the public fetch on the trusted parent, so the worker keeps
+    # only the supervisor channel and never a verify-bound helper. This is not the v1
+    # blocked_pending_evidence_contract state.
+    assert capability["state"] == "parent_evidence"
+    assert capability["public_calls_allowed"] is True
     assert capability["worker_tools"] == ["contact_supervisor"]
-    assert capability["public_calls_allowed"] is False
+    assert "verify_bound_command" not in context
+    assert context["broker_handoff"]["parent_only"] is True
     packet = payload["execution_packets"][0]
-    assert "BLOCKED" in packet["task_message"]
+    assert "BLOCKED" not in packet["task_message"]
     snapshot = Path(rc.load_manifest(new_run[0])["skill_path"]).parent
     result = subprocess.run([sys.executable, "-B", "-X", "utf8",
         str(snapshot / "scripts/supplement_agent.py"), "verify-bound", "--request",
@@ -197,7 +222,9 @@ def test_frozen_cli_terminal_reconcile_and_expiry_preserve_hold(new_run):
 
 def test_broker_bypass_registration_is_blocked_before_draft_acceptance(new_run):
     request_path, _ = request(new_run)
-    with pytest.raises(rc.RunContractError, match="broker.*BLOCKED"):
+    # v3 blocks the bypass at registration through the bound-candidate closure check;
+    # the v1 wording (broker.*BLOCKED) only applies to unversioned requests.
+    with pytest.raises(rc.RunContractError, match="candidate date evidence"):
         rc.register_supplement_results(new_run[0], request_path, [])
 
 

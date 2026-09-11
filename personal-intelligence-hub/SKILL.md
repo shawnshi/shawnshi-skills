@@ -59,6 +59,10 @@ python -X utf8 scripts/run_daily.py prepare --report-date YYYY-MM-DD --timezone 
 
 新 run 默认 article-broker/3.0（也可显式 prepare --article-broker-version 3）。所有 lane 包括四个 required URL 占满预算者都走父级 native fetch_content(mode=readable)，CLI 只 reserve/record；禁止 v3 broker-http、verify-bound 或 portal fallback。先访问 required URLs，再在剩余预算 web_search(includeContent=false) 发现文章。读取 references/workflow_protocols.md 的 v3 receipt/date 合同；旧 run/v2 冻结回放不改写。
 
+车道分两轴，命名不可互换、也不互为别名：域供应车道为 `TechRadar`（技术）与 `HealthcareRadar`（医疗数字化），由域目标缺口触发，按域映射选绑候选，不读取 `coverage_policy.lanes` 配置；政策与风险车道为 `Sentinel` 与 `Ranger`，由 `references/strategic_focus.json` 的 `coverage_policy.lanes` 关键词与 `min_candidates` 驱动。
+
+v3 前置条件：`TechRadar` 的绑定候选先按 `references/strategic_focus.json` 的 `domains.technology.keywords` 做技术线索筛选（`domains.healthcare_digital` 同理服务 `HealthcareRadar`）。focus 工件缺失或候选文本不命中域关键词时，该车道绑定候选为空，缺陷会在下游以无关报错暴露。因此测试夹具必须把真实 `strategic_focus.json` 登记为 `focus_config` 工件，并让候选文本含真实域关键词，否则 v3 语义不成立。
+
 prepare 未返回 request 时，脚本已登记结构化 `no_increment`，不要伪造补检结果。
 
 所有代理异步启动，交互会话禁止阻塞等待或轮询；完成/进度事件后按 `runtime` 节状态机恢复。只凭 running、文件存在或聊天消息不等于进展或完成；正式校验通过后不再等待额外聊天。失败请求封闭，不得复用 request/invocation/输出路径重启；重试创建全新 run。

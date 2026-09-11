@@ -206,6 +206,130 @@ _READABLE_DATE = (
 )
 _READABLE_LABEL = r"(?:Published(?: on)?|Publication date|发布日期|发布时间|发表日期)"
 _READABLE_DECLARATION = _READABLE_LABEL + r"(?:[ \t]*[:：][ \t]*|[ \t]+)"
+_READABLE_MONTH_TOKENS = "|".join(
+    sorted(
+        set(
+            _READABLE_MONTHS
+            + [month[:3] for month in _READABLE_MONTHS]
+            # 'Sept' is a 4-letter wire abbreviation; it is normalized only on the
+            # wire path so the primary label/leading rules keep their month scope.
+            + ["Sept"]
+        ),
+        key=len,
+        reverse=True,
+    )
+)
+# Wire/press-release date forms: optional month period and day-first order.
+_READABLE_WIRE_DATE = (
+    r"(?:"
+    + _READABLE_DATE
+    + r"|(?:"
+    + _READABLE_MONTH_TOKENS
+    + r")\.?[ \t]+[0-9]{1,2}(?:st|nd|rd|th)?,[ \t]+[0-9]{4}"
+    + r"|[0-9]{1,2}(?:st|nd|rd|th)?[ \t]+(?:"
+    + _READABLE_MONTH_TOKENS
+    + r")\.?,?[ \t]+[0-9]{4}"
+    + r")"
+)
+# Case-insensitivity is scoped to the date only, so place tokens stay case-sensitive.
+_READABLE_WIRE_DATE_CI = "(?i:" + _READABLE_WIRE_DATE + r")"
+_READABLE_PLACE_TOKEN = (
+    r"(?:[A-Z][A-Za-z\u00c0-\u024f'\-]{1,20}\.?|"
+    r"(?:and|of|de|la|le|du|des|del|van|von|da|do|di|the))"
+)
+_READABLE_PLACE_ZONE = (
+    _READABLE_PLACE_TOKEN + r"(?:[,\s]+" + _READABLE_PLACE_TOKEN + r"){0,12}"
+)
+# Publication-status words can never head a dateline place zone. Hyphen/underscore forms
+# such as `Last-Updated` are separated too, so their components are checked individually.
+_READABLE_WIRE_STATUS_WORD = re.compile(
+    r"(?i)(?:updated|modified|revised|last|posted|current|version|published|"
+    r"release|press|news|media|source|note|read|more|share|subscribe|author|by|editor)"
+)
+# Every supported same-line publication declaration label, with tolerant internal spacing.
+_READABLE_WIRE_DECLARATION_LABEL = (
+    r"(?:Published(?:[ \t]+on)?|Publication[ \t]+date|"
+    r"发布日期|发布时间|发表日期|"
+    r"Updated(?:[ \t]+on)?|Modified(?:[ \t]+on)?|Last[ \t]+updated|"
+    r"更新时间|修改时间|"
+    r"(?i:PRESS|NEWS|MEDIA)[ \t]+(?i:RELEASE))"
+)
+_READABLE_WIRE_REMAINDER_DECLARATION = re.compile(
+    _READABLE_WIRE_DECLARATION_LABEL
+    + r"[ \t]*[.:：]?[ \t]*"
+    + _READABLE_WIRE_DATE_CI,
+    # Declaration labels are case-insensitive in real headers; the place grammar is not.
+    re.I,
+)
+_READABLE_WIRE_PREFIX = r"(?i:PRESS|NEWS|MEDIA)[ \t]+(?i:RELEASE)"
+_READABLE_NAV_RESIDUE = re.compile(
+    r"(?:opens? in (?:a )?new (?:window|tab)|back to top|jump to (?:main )?content|"
+    r"skip to (?:main )?content|main menu|menu|navigation|share(?: this)?|loading\.{0,3})",
+    re.I,
+)
+_READABLE_WIRE_LABEL_DATE = re.compile(
+    r"^"
+    + _READABLE_WIRE_PREFIX
+    + r"[ \t]*[:：]?[ \t]*(?P<date>"
+    + _READABLE_WIRE_DATE_CI
+    + r")(?P<tail>[ \t]*(?:[|;][ \t]*(?i:Updated(?: on)?|Modified(?: on)?|Author|By)[ \t]*[:：][^\n]*)?)$"
+)
+_READABLE_WIRE_DATELINE = re.compile(
+    r"^(?P<place>"
+    + _READABLE_PLACE_ZONE
+    + r")(?P<prefix>[ \t]*[\u2014\u2013-]{1,2}[ \t]*|[ \t]*,[ \t]*|[ \t]+(?=[A-Z]))"
+    + r"(?P<date>"
+    + _READABLE_WIRE_DATE_CI
+    + r")"
+    + r"(?P<tail>[ \t]*(?:\([A-Z][A-Za-z \t]{2,30}\))?[ \t]*(?:[\u2014\u2013-]{1,2})?)"
+)
+
+
+def _readable_wire_declaration(line):
+    """Strict wire predicate shared by header admission, title exclusion and extraction.
+
+    A line counts as a wire declaration only when it carries a real wire terminator and
+    ends at a date boundary. Residual emphasis, publication-status prefixes, datelines
+    without a date terminator and five-digit-year run-ons are refused here, so the bound
+    header region can never be extended by a line that extraction would reject.
+    """
+    if re.search(r"[*_]", line):
+        return None
+    label = _READABLE_WIRE_LABEL_DATE.match(line)
+    if label is not None:
+        tail = label["tail"]
+        if _READABLE_WIRE_REMAINDER_DECLARATION.search(tail):
+            return None
+        if re.search(r"(?<!\w)" + _READABLE_DECLARATION, tail, re.I):
+            return None
+        return "wire-label/1", label
+    dateline = _READABLE_WIRE_DATELINE.match(line)
+    if dateline is None or len(dateline["place"]) > 120:
+        return None
+    head = dateline["place"].strip(" \t,.\u3001")
+    # Any status word anywhere in the place zone disqualifies it, whatever the separator.
+    # A permitted token-final period is stripped first, or `Updated.` would slip through;
+    # hyphen and underscore components are checked separately, or `Last-Updated` would.
+    if any(
+        _READABLE_WIRE_STATUS_WORD.fullmatch(part.strip(".,;:\u3001\u3002"))
+        for part in re.split(r"[,\s\-_]+", head)
+        if part.strip(".,;:\u3001\u3002")
+    ):
+        return None
+    # A second, contradictory publication declaration of any supported form anywhere after
+    # the accepted dateline is refused, mirroring the primary path's same-line conflict rule.
+    if _READABLE_WIRE_REMAINDER_DECLARATION.search(line[dateline.end() :]):
+        return None
+    if not (
+        re.search(r"[\u2014\u2013-]", dateline["prefix"])
+        or re.search(r"[\u2014\u2013-]", dateline["tail"])
+        or "(" in dateline["tail"]
+    ):
+        return None
+    following = line[dateline.end("date") : dateline.end("date") + 1]
+    if following and following.isalnum():
+        return None
+    return "wire-dateline/1", dateline
 
 
 def _readable_line(line, offset):
@@ -242,6 +366,26 @@ def _readable_day(raw):
         )
         year, day = int(match[3]), int(match[2])
     return datetime(year, month, day).date().isoformat()
+
+
+def _readable_wire_day(raw):
+    """Wire date forms reuse the primary calendar validator, never a new one."""
+    text = re.sub(r"[ \t]+", " ", str(raw).strip()).strip(".,;:—-– ")
+
+    def month_name(value):
+        return "Sep" if value.lower() == "sept" else value
+
+    match = re.fullmatch(
+        r"(?i)([A-Za-z]+)\.? ([0-9]{1,2})(?:st|nd|rd|th)?,? ([0-9]{4})", text
+    )
+    if match:
+        return _readable_day(f"{month_name(match[1])} {match[2]}, {match[3]}")
+    match = re.fullmatch(
+        r"(?i)([0-9]{1,2})(?:st|nd|rd|th)? ([A-Za-z]+)\.?,? ([0-9]{4})", text
+    )
+    if match:
+        return _readable_day(f"{month_name(match[2])} {match[1]}, {match[3]}")
+    return _readable_day(text)
 
 
 def _readable_header(text):
@@ -282,8 +426,10 @@ def _readable_header(text):
             line,
             re.I,
         )
+        wire = _readable_wire_declaration(line) is not None
         navigation = title is None and (
-            line in {"首页", "Home", "Menu", "Navigation"}
+            _READABLE_NAV_RESIDUE.fullmatch(line)
+            or line in {"首页", "Home", "Menu", "Navigation"}
             or re.fullmatch(r"(?:\[[^\[\]\n]+\]\([^\s)]+\)[ \t|>/]*)+", line)
             or re.match(r"^当前位置[ \t]*[:：]", line)
         )
@@ -300,6 +446,7 @@ def _readable_header(text):
         elif not (
             metadata
             or navigation
+            or wire
             or (not lines and re.fullmatch(_READABLE_DATE, line, re.I))
         ):
             if literal_title and (title is None or value == title):
@@ -311,6 +458,45 @@ def _readable_header(text):
                 break
         lines.append((line, positions))
     return lines, first_body
+
+
+def _readable_wire_dates(text, lines, text_sha):
+    """Wire declarations, only when no explicit label/leading date was found.
+
+    Requires a wire shape (PRESS RELEASE payload or `PLACE — date —` dateline) with
+    exact contiguity in the retained text, a valid calendar day and consistent
+    repeats. Ambiguous or emphasis-damaged lines are skipped, never repaired.
+    """
+    found = []
+    for line, positions in lines:
+        declaration = _readable_wire_declaration(line)
+        if declaration is None:
+            continue
+        rule, match = declaration
+        begin, end_at = match.span("date")
+        start, end = positions[begin], positions[end_at - 1] + 1
+        raw = text[start:end]
+        if raw != match["date"]:
+            return []
+        try:
+            day = _readable_wire_day(raw)
+        except (ValueError, StopIteration):
+            return []
+        found.append(
+            {
+                "field": "readable_publication",
+                "raw": raw,
+                "published_at": day,
+                "published_at_source": "native_readable:" + rule,
+                "parser_rule": rule,
+                "start": start,
+                "end": end,
+                "text_sha256": text_sha,
+            }
+        )
+    if len({entry["published_at"] for entry in found}) > 1:
+        return []
+    return found
 
 
 def _readable_publication(text, url, text_sha):
@@ -403,8 +589,11 @@ def _readable_publication(text, url, text_sha):
                 "text_sha256": text_sha,
             }
         )
-    if invalid or len({d["published_at"] for d in dates}) > 1:
+    primary_conflict = len({d["published_at"] for d in dates}) > 1
+    if invalid or primary_conflict:
         dates = []
+    if not dates and not invalid and not primary_conflict:
+        dates = _readable_wire_dates(text, lines, text_sha)
     return dates, lines + ([first_body] if first_body else []), nhsa_content
 
 
@@ -425,6 +614,8 @@ def _readable_title(text, lines, dates):
             or value.startswith(("[", "!", ">"))
             or re.search(r"/col/|javascript:", value)
             or value in {"首页", "Home", "Menu", "Navigation", "Loading..."}
+            or _READABLE_NAV_RESIDUE.fullmatch(value)
+            or _readable_wire_declaration(value) is not None
         ):
             continue
         start = explicit.end() if explicit else 0

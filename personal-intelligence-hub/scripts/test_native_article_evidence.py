@@ -55,11 +55,31 @@ def test_native_builder_defaults_and_over_limit(new_run, duration):
     }
 
 
-def setup(run, **gap):
+def setup(run, *, bound=True, **gap):
+    """Register the run focus.
+
+    bound=True keeps the real domain keywords so the lane yields bound candidates;
+    bound=False models a v3 lane with none, where every URL must be discovered by a
+    recorded public search. Receipt/proof-integrity cases use the latter so they do
+    not have to drain an unrelated bound-candidate budget before sealing.
+    """
     path, root, now = run
-    focus = root / "focus-native.json"
-    atomic_dump_json(focus, {"filters": {"max_top10": 2}})
-    rc.record_run_artifact(path, "focus_config", focus, now=now)
+    if "focus_config" not in rc.load_manifest(path)["artifacts"]:
+        focus = root / "focus-native.json"
+        atomic_dump_json(
+            focus,
+            (
+                rc.load_json(
+                    Path(__file__).resolve().parents[1]
+                    / "references"
+                    / "strategic_focus.json",
+                    {},
+                )
+                if bound
+                else {"filters": {"max_top10": 2}}
+            ),
+        )
+        rc.record_run_artifact(path, "focus_config", focus, now=now)
     request, value = rc.build_supplement_request(
         path,
         [
@@ -335,7 +355,18 @@ def test_native_partial_bound_closure_guards(new_run, monkeypatch, all_failed):
 
     from supplement_agent import finalize_parent_draft
 
-    request, packet = setup(new_run, verify_bound_candidates=True)
+    # Freeze the v2 required-bound rule: this case exercises the full 4-URL budget
+    # exhaustion path, while v3 caps required bound candidates at min(max_urls, 2).
+    selector = rc.select_supplement_bound_candidates
+    with monkeypatch.context() as frozen:
+        frozen.setattr(
+            rc,
+            "select_supplement_bound_candidates",
+            lambda pool, gap, focus, **kw: selector(
+                pool, gap, focus, article_broker_version=2
+            ),
+        )
+        request, packet = setup(new_run, verify_bound_candidates=True)
     monkeypatch.setattr(broker, "_transport", forbid)
     lane = rc.load_json(Path(packet["lane_slice"]["path"]), {})
     for index, bound in enumerate(lane["candidates"]):
@@ -444,14 +475,31 @@ def forbid(*args, **kwargs):
     raise AssertionError("v3 called custom transport")
 
 
+def window_relative_arxiv_text(manifest_path):
+    """Same synthetic arXiv layout, dated inside this run window.
+
+    ARXIV_V1 pins 2026-09-08, which falls outside a run whose window is derived from
+    the current report date; the submission-history weekday must stay consistent with
+    the date or the readable-date gate rejects the body.
+    """
+    window = rc.load_manifest(manifest_path)["window"]
+    end = datetime.fromisoformat(str(window["end"])).date()
+    stamp = f"{end:%a}, {end.day} {end:%b %Y} 18:45:01 UTC"
+    return arxiv_text(history=ARXIV_V1.replace("Tue, 8 Sep 2026 18:45:01 UTC", stamp))
+
+
 @pytest.mark.parametrize("arxiv", [False, True])
 def test_native_receipt_seal_exact_proof_and_mutation(new_run, monkeypatch, arxiv):
     monkeypatch.setattr(broker, "_transport", forbid)
     monkeypatch.setattr("supplement_agent._fetch_url", forbid)
-    request, _ = setup(new_run)
+    request, _ = setup(new_run, bound=False)
     url = ARXIV_URL if arxiv else URL
     search(request, url=url)
-    data, receipt = reserve(request, url=url, text=arxiv_text() if arxiv else text())
+    data, receipt = reserve(
+        request,
+        url=url,
+        text=window_relative_arxiv_text(new_run[0]) if arxiv else text(),
+    )
     compact = _compact_broker_cli_evidence(request, "tech", data)
     assert compact["fetch_reservations"][-1]["arguments"] == {
         "url": url,
@@ -673,7 +721,21 @@ def test_native_mocked_end_to_end_temporary_forge(tmp_path, monkeypatch, arxiv):
             return scan
 
         monkeypatch.setattr(entry, "scan_fixture", mixed_scan)
-    prepared = prepare_fixture(tmp_path, 4 if mixed else 0, 3)
+    if mixed:
+        # This case asserts the v2 four-URL bound model (full URL budget consumed by
+        # required candidates); v3 caps required candidates at min(max_urls, 2).
+        selector = rc.select_supplement_bound_candidates
+        with monkeypatch.context() as frozen:
+            frozen.setattr(
+                rc,
+                "select_supplement_bound_candidates",
+                lambda pool, gap, focus, **kw: selector(
+                    pool, gap, focus, article_broker_version=2
+                ),
+            )
+            prepared = prepare_fixture(tmp_path, 4, 3)
+    else:
+        prepared = prepare_fixture(tmp_path, 0, 3)
     request = prepared.supplement_request_path
     assert request is not None
     packets = rc.load_json(request, {})["execution_packets"]

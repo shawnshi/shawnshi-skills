@@ -422,7 +422,8 @@ async def prepare_run(
         now=now,
     )
     baseline_path = run_dir / "baseline_scan.json"
-    current_path = run_dir / "current_scan.json"
+    # current_scan.json duplicated baseline_scan.json byte-for-byte and had no reader;
+    # alias it to the registered artifact so each run writes one scan payload.
     cache_path = run_dir / "fetch_cache.json"
     candidates_path = run_dir / "intelligence_candidates.json"
     blackboard_path = run_dir / "intelligence_blackboard.json"
@@ -437,7 +438,7 @@ async def prepare_run(
             max_concurrency=max_concurrency,
             scan_deadline_seconds=scan_deadline_seconds,
             output_path=baseline_path,
-            current_output_path=current_path,
+            current_output_path=baseline_path,
             cache_path=cache_path,
             blackboard_path=blackboard_path,
         )

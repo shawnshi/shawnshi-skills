@@ -91,7 +91,7 @@ class SupplementAgentTests(unittest.TestCase):
                 {
                     "items": [
                         {
-                            "title": "Agent release",
+                            "title": "Multimodal agent release",
                             "url": "https://example.org/agent",
                             "published_at": "2026-08-31T00:00:00+00:00",
                             "published_at_source": "rss_published",
@@ -108,6 +108,21 @@ class SupplementAgentTests(unittest.TestCase):
             self.manifest_path,
             "candidate_pool",
             candidate_pool,
+            now=self.now,
+        )
+        focus_config = self.root / "focus.json"
+        focus_config.write_text(
+            (
+                Path(__file__).resolve().parents[1]
+                / "references"
+                / "strategic_focus.json"
+            ).read_text(encoding="utf-8"),
+            encoding="utf-8",
+        )
+        record_run_artifact(
+            self.manifest_path,
+            "focus_config",
+            focus_config,
             now=self.now,
         )
         self.request_path, self.request = build_supplement_request(

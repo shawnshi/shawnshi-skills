@@ -642,14 +642,23 @@ def _coverage_diagnostics(
 
 
 def registered_coverage_diagnostics(manifest: dict[str, Any]) -> list[str]:
+    """Recompute for semantic validation and forge from the same hash-bound inputs."""
     if "source_adoption" in manifest:
         from recovery_lifecycle import validated_source
         manifest = validated_source(manifest)
-    """Recompute for semantic validation and forge from the same hash-bound inputs."""
+    artifacts = manifest.get("artifacts")
+    if not isinstance(artifacts, dict) or "candidate_pool" not in artifacts:
+        raise RunContractError(
+            "coverage diagnostics require a registered candidate_pool artifact"
+        )
+    if "history_snapshot" not in artifacts:
+        raise RunContractError(
+            "coverage diagnostics require a registered history_snapshot artifact"
+        )
     records = {
-        "candidate_pool": manifest["artifacts"]["candidate_pool"],
+        "candidate_pool": artifacts["candidate_pool"],
         "supplement": manifest["stages"]["supplemental"],
-        "history_snapshot": manifest["artifacts"]["history_snapshot"],
+        "history_snapshot": artifacts["history_snapshot"],
     }
     request = {"bound_artifacts": {name: {
         "path": record["artifact_path"], "sha256": record["artifact_sha256"]
