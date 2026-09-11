@@ -14,10 +14,11 @@ import sys
 from collections import defaultdict
 from pathlib import Path
 
-
 SUPPORTED_SUFFIXES = {".txt", ".md", ".markdown"}
 URL_RE = re.compile(r"https?://[^\s<>{}\[\]\"']+", re.I)
-NUMBER_RE = re.compile(r"(?<![\d.])[-+]?(?:\d{1,3}(?:,\d{3})+|\d+)(?:\.\d+)?[%％]?(?![\d.])")
+NUMBER_RE = re.compile(
+    r"(?<![\d.])[-+]?(?:\d{1,3}(?:,\d{3})+|\d+)(?:\.\d+)?[%％]?(?![\d.])"
+)
 PLACEHOLDER_RE = re.compile(
     r"\{\{[^{}\n]{1,100}\}\}|\$\{[^{}\n]{1,100}\}|"
     r"(?<![A-Za-z0-9])(?:TODO|FIXME|TBD|TBC|PLACEHOLDER|XXX)(?![A-Za-z0-9])|"
@@ -30,9 +31,18 @@ PENDING_RE = re.compile(
     r"有待(?:核实|核验|确认)|未经(?:核实|核验|确认)|未核实|无法核实|"
     r"(?:来源|证据)待补|数据待确认"
 )
+# Only visible editorial markers are deterministic pending-work blockers.
+PENDING_MARKER = r"待(?:核实|核验|确认|查证|求证)|(?:来源|证据)待补|数据待确认"
+EXPLICIT_PENDING_RE = re.compile(
+    rf"(?:\[|【|<)\s*(?:{PENDING_MARKER})[^\]】>\n]{{0,50}}(?:\]|】|>)|"
+    rf"(?m:^\s*(?:(?:[-*+]|\d+[.)])\s+)?(?:{PENDING_MARKER})\s*[:：])|"
+    rf"(?m:^\s*(?:[-*+]|\d+[.)])\s+\[ \]\s*(?:{PENDING_MARKER})[^\n]*)"
+)
 AI_CLICHE_PATTERNS = {
     "时代背景套话": re.compile(r"在当今.{0,20}(?:时代|背景下)"),
-    "发展背景套话": re.compile(r"随着.{0,40}?(?:不断|快速|日益).{0,20}?(?:发展|推进|演进|深入)"),
+    "发展背景套话": re.compile(
+        r"随着.{0,40}?(?:不断|快速|日益).{0,20}?(?:发展|推进|演进|深入)"
+    ),
     "泛化共识": re.compile(r"众所周知|不难(?:看出|发现)"),
     "空泛强调": re.compile(r"值得(?:注意|关注|强调|一提)的是"),
     "空泛结论": re.compile(r"综上所述|总而言之"),
@@ -45,7 +55,9 @@ OVER_CERTAINTY_PATTERNS = {
     "绝对保证": re.compile(r"(?:百分之百|100\s*[%％])\s*(?:保证|确保|能够|实现|准确)"),
     "彻底消除": re.compile(r"(?:彻底|根本)(?:解决|消除|杜绝|避免)"),
     "零风险承诺": re.compile(r"零风险|无任何风险|万无一失"),
-    "排他性领先": re.compile(r"(?:全球|全国|全行业|业内)\s*(?:唯一|首个|第一|最先进|绝对领先)"),
+    "排他性领先": re.compile(
+        r"(?:全球|全国|全行业|业内)\s*(?:唯一|首个|第一|最先进|绝对领先)"
+    ),
 }
 
 
@@ -60,56 +72,140 @@ def non_negative_int(value: str) -> int:
 
 
 def parse_args() -> argparse.Namespace:
-    parser = argparse.ArgumentParser(description="检查 TXT/Markdown 稿件的机械质量风险。")
+    parser = argparse.ArgumentParser(
+        description="检查 TXT/Markdown 稿件的机械质量风险。"
+    )
     parser.add_argument("file", type=Path)
-    parser.add_argument("--mode", choices=("light", "research", "publish"), default="light")
+    parser.add_argument(
+        "--mode", choices=("light", "research", "publish"), default="light"
+    )
     parser.add_argument("--min-chars", type=non_negative_int)
     parser.add_argument("--max-chars", type=non_negative_int)
     parser.add_argument("--require-links", action="store_true")
     parser.add_argument("--json", action="store_true", dest="json_output")
     args = parser.parse_args()
-    if args.min_chars is not None and args.max_chars is not None and args.min_chars > args.max_chars:
+    if (
+        args.min_chars is not None
+        and args.max_chars is not None
+        and args.min_chars > args.max_chars
+    ):
         parser.error("--min-chars 不能大于 --max-chars")
     return args
 
 
-def mask_code(text: str) -> str:
-    """遮蔽围栏和行内代码，保留行号。"""
-    output: list[str] = []
-    in_fence = False
-    marker = ""
-    for line in text.splitlines(keepends=True):
-        stripped = line.lstrip()
-        opening = re.match(r"([\x60~]{3,})", stripped)
-        if opening:
-            token = opening.group(1)
-            if not in_fence:
-                in_fence = True
-                marker = token[0]
-            elif token[0] == marker:
-                in_fence = False
-                marker = ""
-            output.append("".join(ch if ch in "\r\n" else " " for ch in line))
+def blank_code(text: str) -> str:
+    return "".join(ch if ch in "\r\n" else " " for ch in text)
+
+
+def mask_inline_code(text: str) -> str:
+    """Match entire, equal-length backtick runs within one prose block."""
+    runs = list(re.finditer(r"`+", text))
+    output = list(text)
+    index = 0
+    while index < len(runs):
+        opening = runs[index]
+        prefix = text[: opening.start()]
+        if (len(prefix) - len(prefix.rstrip("\\"))) % 2:
+            index += 1
             continue
-        if in_fence:
-            output.append("".join(ch if ch in "\r\n" else " " for ch in line))
+        closing = index + 1
+        while closing < len(runs) and len(runs[closing].group()) != len(
+            opening.group()
+        ):
+            closing += 1
+        if closing == len(runs):
+            index += 1
             continue
-        output.append(re.sub(r"\x60+[^\x60\n]*\x60+", lambda m: " " * len(m.group(0)), line))
+        end = runs[closing].end()
+        output[opening.start() : end] = blank_code(text[opening.start() : end])
+        index = closing + 1
     return "".join(output)
 
 
-def examples_for(pattern: re.Pattern[str], text: str, limit: int = 5) -> tuple[int, list[dict[str, object]]]:
+def mask_code(text: str) -> str:
+    """Mask fences and inline spans, preserving positions and list-container exits.
+
+    This is a bounded scanner, not a full Markdown renderer. Indented code,
+    block quotes and HTML remain visible rather than hiding uncertain content.
+    """
+    output: list[str] = []
+    prose: list[str] = []
+    fence = ""
+    fence_length = 0
+    fence_list_depth = 0
+    list_indents: list[int] = []
+
+    def flush() -> None:
+        output.append(mask_inline_code("".join(prose)))
+        prose.clear()
+
+    for raw_line in text.splitlines(keepends=True):
+        line = raw_line.expandtabs(4).rstrip("\r\n")
+        if line.strip():
+            indent = len(line) - len(line.lstrip(" "))
+            old_depth = len(list_indents)
+            while list_indents and indent < list_indents[-1]:
+                list_indents.pop()
+            if len(list_indents) < old_depth:
+                flush()
+            if fence and len(list_indents) < fence_list_depth:
+                # A list-owned fence cannot swallow the dedented body.
+                fence = ""
+        base = list_indents[-1] if list_indents else 0
+        line = line[base:]
+        if not fence:
+            item = re.match(r"^ {0,3}(?:[-*+]|\d{1,9}[.)])( +)", line)
+            if item:
+                flush()
+                padding = len(item.group(1))
+                content_start = item.end() if padding <= 4 else item.end() - padding + 1
+                list_indents.append(base + content_start)
+                line = line[content_start:]
+        marker = re.match(r"^ {0,3}(`{3,}|~{3,})(.*)$", line)
+        if fence:
+            if (
+                marker
+                and marker.group(1)[0] == fence
+                and len(marker.group(1)) >= fence_length
+                and not marker.group(2).strip()
+            ):
+                fence = ""
+            output.append(blank_code(raw_line))
+            continue
+        if marker and (marker.group(1)[0] == "~" or "`" not in marker.group(2)):
+            flush()
+            fence, fence_length = marker.group(1)[0], len(marker.group(1))
+            fence_list_depth = len(list_indents)
+            output.append(blank_code(raw_line))
+            continue
+        # Inline spans cannot cross blank lines or block boundaries, including Setext.
+        if not line.strip() or re.match(
+            r"^ {0,3}(?:#{1,6}\s|>|(?:=+|-+|[-*_]{3,})\s*$)|^ {4}", line
+        ):
+            flush()
+            output.append(mask_inline_code(raw_line))
+        else:
+            prose.append(raw_line)
+    flush()
+    return "".join(output)
+
+
+def examples_for(
+    pattern: re.Pattern[str], text: str, limit: int = 5
+) -> tuple[int, list[dict[str, object]]]:
     count = 0
     examples: list[dict[str, object]] = []
     for line_number, line in enumerate(text.splitlines(), 1):
         for match in pattern.finditer(line):
             count += 1
             if len(examples) < limit:
-                examples.append({
-                    "line": line_number,
-                    "match": match.group(0),
-                    "excerpt": re.sub(r"\s+", " ", line.strip())[:140],
-                })
+                examples.append(
+                    {
+                        "line": line_number,
+                        "match": match.group(0),
+                        "excerpt": re.sub(r"\s+", " ", line.strip())[:140],
+                    }
+                )
     return count, examples
 
 
@@ -123,13 +219,15 @@ def add_pattern_finding(
 ) -> None:
     count, examples = examples_for(pattern, text)
     if count:
-        findings.append({
-            "code": code,
-            "severity": severity,
-            "message": message,
-            "count": count,
-            "examples": examples,
-        })
+        findings.append(
+            {
+                "code": code,
+                "severity": severity,
+                "message": message,
+                "count": count,
+                "examples": examples,
+            }
+        )
 
 
 def split_paragraphs(text: str) -> list[tuple[int, str]]:
@@ -180,37 +278,75 @@ def duplicate_finding(paragraphs: list[tuple[int, str]]) -> dict[str, object] | 
 
 
 def analyze(path: Path, text: str, args: argparse.Namespace) -> dict[str, object]:
-    masked = mask_code(text)
+    masked = text if path.suffix.lower() == ".txt" else mask_code(text)
     paragraphs = split_paragraphs(masked)
     urls = URL_RE.findall(masked)
     content_chars = sum(not char.isspace() for char in text)
     findings: list[dict[str, object]] = []
 
     def blocker(code: str, message: str) -> None:
-        findings.append({"code": code, "severity": "blocker", "message": message, "count": 1})
+        findings.append(
+            {"code": code, "severity": "blocker", "message": message, "count": 1}
+        )
 
     if not text.strip():
         blocker("EMPTY_DOCUMENT", "文档为空。")
     if args.min_chars is not None and content_chars < args.min_chars:
-        blocker("BELOW_MIN_CHARS", f"非空白字符数 {content_chars} 低于要求 {args.min_chars}。")
+        blocker(
+            "BELOW_MIN_CHARS",
+            f"非空白字符数 {content_chars} 低于要求 {args.min_chars}。",
+        )
     if args.max_chars is not None and content_chars > args.max_chars:
-        blocker("ABOVE_MAX_CHARS", f"非空白字符数 {content_chars} 高于要求 {args.max_chars}。")
+        blocker(
+            "ABOVE_MAX_CHARS",
+            f"非空白字符数 {content_chars} 高于要求 {args.max_chars}。",
+        )
     if args.require_links and not urls:
         blocker("REQUIRED_LINKS_MISSING", "已要求链接，但正文没有 HTTP(S) 链接。")
 
-    add_pattern_finding(findings, "UNRESOLVED_PLACEHOLDER", "blocker", "正文仍有未解决占位符。", PLACEHOLDER_RE, masked)
+    add_pattern_finding(
+        findings,
+        "UNRESOLVED_PLACEHOLDER",
+        "blocker",
+        "正文仍有未解决占位符。",
+        PLACEHOLDER_RE,
+        masked,
+    )
+    add_pattern_finding(
+        findings,
+        "EXPLICIT_PENDING_VERIFICATION",
+        "blocker" if args.mode == "publish" else "warning",
+        "正文仍有显式待核实标记。"
+        + ("发布模式下属于阻断项。" if args.mode == "publish" else ""),
+        EXPLICIT_PENDING_RE,
+        masked,
+    )
     add_pattern_finding(
         findings,
         "PENDING_VERIFICATION",
-        "blocker" if args.mode == "publish" else "warning",
-        "正文仍有待核实或待确认内容。" + ("发布模式下属于阻断项。" if args.mode == "publish" else ""),
+        "warning",
+        "发现核验相关措辞，请逐项复核上下文；风险禁止语句不等于存在证据缺口。",
         PENDING_RE,
         masked,
     )
     for label, pattern in AI_CLICHE_PATTERNS.items():
-        add_pattern_finding(findings, "AI_CLICHE", "warning", f"发现可能的 AI 套话：{label}。", pattern, masked)
+        add_pattern_finding(
+            findings,
+            "AI_CLICHE",
+            "warning",
+            f"发现可能的 AI 套话：{label}。",
+            pattern,
+            masked,
+        )
     for label, pattern in OVER_CERTAINTY_PATTERNS.items():
-        add_pattern_finding(findings, "OVER_CERTAINTY", "warning", f"发现过度确定性表达：{label}。", pattern, masked)
+        add_pattern_finding(
+            findings,
+            "OVER_CERTAINTY",
+            "warning",
+            f"发现过度确定性表达：{label}。",
+            pattern,
+            masked,
+        )
     duplicate = duplicate_finding(paragraphs)
     if duplicate:
         findings.append(duplicate)
@@ -229,7 +365,10 @@ def analyze(path: Path, text: str, args: argparse.Namespace) -> dict[str, object
             "content_characters": content_chars,
             "lines": len(text.splitlines()),
             "paragraphs": len(paragraphs),
-            "headings": sum(bool(re.match(r"^\s{0,3}#{1,6}\s+", line)) for line in masked.splitlines()),
+            "headings": sum(
+                bool(re.match(r"^\s{0,3}#{1,6}\s+", line))
+                for line in masked.splitlines()
+            ),
             "links": len(urls),
             "unique_links": len(set(urls)),
             "numbers": len(NUMBER_RE.findall(masked)),
@@ -253,8 +392,15 @@ def fatal(path: Path, mode: str, code: str, message: str) -> dict[str, object]:
         "status": "blocked",
         "exit_code": 2,
         "stats": None,
-        "summary": {"blocker_categories": 1, "warning_categories": 0, "blocker_occurrences": 1, "warning_occurrences": 0},
-        "findings": [{"code": code, "severity": "blocker", "message": message, "count": 1}],
+        "summary": {
+            "blocker_categories": 1,
+            "warning_categories": 0,
+            "blocker_occurrences": 1,
+            "warning_occurrences": 0,
+        },
+        "findings": [
+            {"code": code, "severity": "blocker", "message": message, "count": 1}
+        ],
     }
 
 
@@ -269,10 +415,12 @@ def render_human(report: dict[str, object]) -> str:
     ]
     stats = report.get("stats")
     if isinstance(stats, dict):
-        lines.extend([
-            "",
-            f"统计：非空白字符 {stats['content_characters']}；行 {stats['lines']}；段落 {stats['paragraphs']}；标题 {stats['headings']}；链接 {stats['links']}；数字 {stats['numbers']}",
-        ])
+        lines.extend(
+            [
+                "",
+                f"统计：非空白字符 {stats['content_characters']}；行 {stats['lines']}；段落 {stats['paragraphs']}；标题 {stats['headings']}；链接 {stats['links']}；数字 {stats['numbers']}",
+            ]
+        )
     findings = report["findings"]
     assert isinstance(findings, list)
     for severity, title in (("blocker", "阻断项"), ("warning", "警告")):
@@ -284,10 +432,18 @@ def render_human(report: dict[str, object]) -> str:
                 locations: list[int] = []
                 if isinstance(examples, list):
                     for example in examples:
-                        if isinstance(example, dict) and isinstance(example.get("line"), int):
+                        if isinstance(example, dict) and isinstance(
+                            example.get("line"), int
+                        ):
                             locations.append(example["line"])
-                suffix = f"（行 {', '.join(map(str, sorted(set(locations))))}）" if locations else ""
-                lines.append(f"- {item['code']} ×{item['count']}：{item['message']}{suffix}")
+                suffix = (
+                    f"（行 {', '.join(map(str, sorted(set(locations))))}）"
+                    if locations
+                    else ""
+                )
+                lines.append(
+                    f"- {item['code']} ×{item['count']}：{item['message']}{suffix}"
+                )
     lines.extend(["", f"结果：退出码 {report['exit_code']}。"])
     return "\n".join(lines)
 
@@ -296,7 +452,12 @@ def main() -> int:
     args = parse_args()
     path: Path = args.file
     if path.suffix.lower() not in SUPPORTED_SUFFIXES:
-        report = fatal(path, args.mode, "UNSUPPORTED_FILE_TYPE", "仅支持 .txt、.md 和 .markdown 文件。")
+        report = fatal(
+            path,
+            args.mode,
+            "UNSUPPORTED_FILE_TYPE",
+            "仅支持 .txt、.md 和 .markdown 文件。",
+        )
     elif not path.exists():
         report = fatal(path, args.mode, "FILE_NOT_FOUND", "文件不存在。")
     elif not path.is_file():
@@ -305,7 +466,9 @@ def main() -> int:
         try:
             text = path.read_text(encoding="utf-8-sig")
         except UnicodeDecodeError:
-            report = fatal(path, args.mode, "INVALID_ENCODING", "无法按 UTF-8 解码文件。")
+            report = fatal(
+                path, args.mode, "INVALID_ENCODING", "无法按 UTF-8 解码文件。"
+            )
         except OSError as exc:
             report = fatal(path, args.mode, "READ_ERROR", f"读取文件失败：{exc}")
         else:

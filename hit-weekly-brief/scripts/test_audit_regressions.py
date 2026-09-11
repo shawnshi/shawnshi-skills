@@ -151,6 +151,38 @@ class AuditRegressions(unittest.TestCase):
             self.assertEqual(1, proc.returncode, proc.stdout + proc.stderr)
             self.assertIn("six nonempty", proc.stdout)
 
+    def test_rw002_duplicate_and_blank_metadata(self):
+        dup_empty = HEAD.replace("出刊日期：2000-01-09", "出刊日期：\n出刊日期：2000-01-09")
+        errors = self.check_content(dup_empty + SECTION + TABLE + ROW)
+        self.assertTrue(any("exactly once" in e for e in errors), errors)
+
+        blank_val = HEAD.replace("出刊日期：2000-01-09", "出刊日期：   ")
+        errors_blank = self.check_content(blank_val + SECTION + TABLE + ROW)
+        self.assertTrue(any("must not be blank" in e for e in errors_blank), errors_blank)
+
+    def test_rw003_event_table_requires_header_and_separator(self):
+        no_header = HEAD + SECTION + ROW
+        errors = self.check_content(no_header)
+        self.assertTrue(any("event table header required" in e or "must follow table header" in e for e in errors), errors)
+
+        no_sep = HEAD + SECTION + "| 事件日期 | 主体与已核实动作 | 事实或来源主张 | 分析判断 | 证据强度 | 直接来源 |\n" + ROW
+        errors_no_sep = self.check_content(no_sep)
+        self.assertTrue(any("separator" in e for e in errors_no_sep), errors_no_sep)
+
+        detached_sep = HEAD + SECTION + "| 事件日期 | 主体与已核实动作 | 事实或来源主张 | 分析判断 | 证据强度 | 直接来源 |\n\n|---|---|---|---|---|---|\n" + ROW
+        errors_detached = self.check_content(detached_sep)
+        self.assertTrue(any("separator" in e or "must follow" in e for e in errors_detached), errors_detached)
+
+        parts = TABLE.split("\n", 1)
+        text_before_sep = HEAD + SECTION + parts[0] + "\n说明文字\n" + parts[1] + ROW
+        self.assertTrue(any("separator" in e for e in self.check_content(text_before_sep)))
+
+        heading_before_sep = HEAD + SECTION + parts[0] + "\n### 说明\n" + parts[1] + ROW
+        self.assertTrue(any("separator" in e for e in self.check_content(heading_before_sep)))
+
+        text_before_row = HEAD + SECTION + TABLE + "说明文字\n" + ROW
+        self.assertTrue(any("must follow table header and separator" in e for e in self.check_content(text_before_row)))
+
 
 if __name__ == "__main__":
     unittest.main()

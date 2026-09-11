@@ -102,6 +102,11 @@ def _assert_core_identity(
         raise ForgeContractError("refined generated_at cannot precede run creation")
     if generated_at > current.astimezone(generated_at.tzinfo) + timedelta(minutes=5):
         raise ForgeContractError("refined generated_at is unreasonably in the future")
+    evidence_created_at = created_at
+    if "source_adoption" in manifest:
+        from recovery_lifecycle import validated_source
+        source = validated_source(manifest)
+        evidence_created_at = datetime.fromisoformat(source["created_at"])
     for index, item in enumerate(core.get("top_10", [])):
         for field in ("observed_at", "retrieved_at"):
             try:
@@ -110,7 +115,7 @@ def _assert_core_identity(
                 raise ForgeContractError(f"top_10[{index}].{field} is invalid") from exc
             if value.tzinfo is None or value.utcoffset() is None:
                 raise ForgeContractError(f"top_10[{index}].{field} must be timezone-aware")
-            if value < created_at.astimezone(value.tzinfo) or value > generated_at.astimezone(value.tzinfo):
+            if value < evidence_created_at.astimezone(value.tzinfo) or value > generated_at.astimezone(value.tzinfo):
                 raise ForgeContractError(
                     f"top_10[{index}].{field} is outside the run chronology"
                 )
@@ -124,7 +129,7 @@ def _assert_core_identity(
         if (
             checked_at.tzinfo is None
             or checked_at.utcoffset() is None
-            or checked_at < created_at.astimezone(checked_at.tzinfo)
+            or checked_at < evidence_created_at.astimezone(checked_at.tzinfo)
             or checked_at > generated_at.astimezone(checked_at.tzinfo)
         ):
             raise ForgeContractError(

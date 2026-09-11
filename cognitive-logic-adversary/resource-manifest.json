@@ -1,7 +1,7 @@
 {
   "schema_version": 3,
   "skill": "cognitive-logic-adversary",
-  "generated_at": "2026-09-10T21:52:17+08:00",
+  "generated_at": "2026-09-07T06:17:23+08:00",
   "hash_algorithm": "SHA-256",
   "text_hash_normalization": "LF",
   "skill_md": "SKILL.md",
@@ -16,6 +16,7 @@
     }
   ],
   "top_level_directories": [
+    "Workflows",
     "references",
     "scripts"
   ],

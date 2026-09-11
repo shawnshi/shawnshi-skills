@@ -2,12 +2,15 @@ import argparse
 import json
 import re
 import sys
+from decimal import Decimal
 from pathlib import Path
 from typing import Any, NoReturn
 
 try:
+    import blackboard as blackboard_validator
     from blackboard import validate_state
 except Exception as exc:  # pragma: no cover - only when the local module is broken
+    blackboard_validator = None
     validate_state = None
     BLACKBOARD_IMPORT_ERROR = f"cannot import blackboard validator: {exc}"
 else:
@@ -582,16 +585,227 @@ def blackboard_maturity(blackboard: dict) -> tuple[str, list[str]]:
     return recorded[0][1], errors
 
 
+def report_declaration_text(text: str) -> str:
+    """Exclude Markdown example fences, block quotes, and indented code.
+
+    Inline code remains visible: report IDs and metadata commonly use backticks.
+    This is declaration extraction, not a claim that quoted content is verified.
+    """
+    lines: list[str] = []
+    fence = ""
+    fence_length = 0
+    fence_list_depth = 0
+    list_content_indents: list[int] = []
+    for raw_line in text.splitlines():
+        line = raw_line.expandtabs(4)
+        if line.strip():
+            indent = len(line) - len(line.lstrip(" "))
+            while list_content_indents and indent < list_content_indents[-1]:
+                list_content_indents.pop()
+            if fence and len(list_content_indents) < fence_list_depth:
+                # A list-owned fence ends with its container; process this
+                # dedented line again as body, not as part of the example.
+                fence = ""
+        # Four spaces are code only relative to the enclosing list content,
+        # not relative to the page. Keep blank lines inside the list context.
+        base = list_content_indents[-1] if list_content_indents else 0
+        line = line[base:]
+        if not fence:
+            item = re.match(r"^ {0,3}(?:[-*+]|\d{1,9}[.)])( +)", line)
+            if item:
+                # Five or more spaces after a marker begin indented code;
+                # only the first space belongs to the list's content prefix.
+                content_start = (
+                    item.end() if len(item.group(1)) <= 4 else item.start(1) + 1
+                )
+                list_content_indents.append(base + content_start)
+                line = line[content_start:]
+        marker = re.match(r"^ {0,3}(`{3,}|~{3,})(.*)$", line)
+        if fence:
+            if (
+                marker
+                and marker.group(1)[0] == fence
+                and len(marker.group(1)) >= fence_length
+                and not marker.group(2).strip()
+            ):
+                fence = ""
+            lines.append("")
+            continue
+        if marker:
+            fence, fence_length = marker.group(1)[0], len(marker.group(1))
+            fence_list_depth = len(list_content_indents)
+            lines.append("")
+        elif re.match(r"^(?: {4}|\t| {0,3}>)", line):
+            lines.append("")
+        else:
+            lines.append(line)
+    return "\n".join(lines)
+
+
+def report_maturities(text: str) -> list[str]:
+    declarations = report_declaration_text(text)
+    values: list[str] = []
+    for line in declarations.splitlines():
+        match = re.match(
+            r"^\s*(?:[-*+]\s+|#{1,6}\s+)?(?:\*\*|__)?"
+            r"(?:成果成熟度|成熟度|maturity)(?:\*\*|__)?\s*[:：]\s*(.*?)\s*$",
+            line,
+            re.IGNORECASE,
+        )
+        table = re.match(
+            r"^\s*\|\s*(?:\*\*|__)?(?:成果成熟度|成熟度|maturity)"
+            r"(?:\*\*|__)?\s*\|\s*([^|]*)\|\s*$",
+            line,
+            re.IGNORECASE,
+        )
+        declaration = match or table
+        if declaration is not None:
+            value = declaration.group(1).strip()
+            for wrapper in ("**", "__", "`", '"', "'"):
+                if (
+                    value.startswith(wrapper)
+                    and value.endswith(wrapper)
+                    and len(value) >= 2 * len(wrapper)
+                ):
+                    value = value[len(wrapper) : -len(wrapper)].strip()
+            values.append(normalize_maturity(value))
+    return values
+
+
 def report_maturity(text: str) -> str:
-    match = re.search(
-        r"(?mi)^\s*(?:[-*+]\s+)?(?:\*\*|__)?"
-        r"(?:成果成熟度|成熟度|maturity)(?:\*\*|__)?\s*[:：]\s*`?"
-        r"(working[-_ ]draft|review[-_ ]ready|decision[-_ ]ready|"
-        r"approved[-_ ]for[-_ ]execution|blocked)\b",
-        text,
-        re.IGNORECASE,
-    )
-    return normalize_maturity(match.group(1)) if match else ""
+    """Return the first declaration for existing callers; gates check them all."""
+    values = report_maturities(text)
+    return values[0] if values else ""
+
+
+def report_reference_checks(
+    text: str, blackboard: dict, *, state_ready: bool
+) -> tuple[list[str], list[dict[str, Any]]]:
+    """Check explicit IDs and bind structured values to validated state outputs.
+
+    Prose quantities and the strength of source support remain human checks.
+    A binding never certifies an invalid or incompletely verified Blackboard.
+    """
+    errors: list[str] = []
+    verified: list[dict[str, Any]] = []
+    quantitative = nested_dict(blackboard.get("quantitative_model"))
+    evidence = nested_dict(blackboard.get("evidence"))
+
+    def index_records(items: Any, *keys: str) -> dict[str, dict]:
+        if not isinstance(items, list):
+            return {}
+        indexed: dict[str, dict] = {}
+        for item in items:
+            if isinstance(item, dict):
+                for key in keys:
+                    if isinstance(item.get(key), str) and item[key]:
+                        indexed[item[key]] = item
+                        break
+        return indexed
+
+    evidence_ids = {
+        identifier.strip(): record
+        for identifier, record in index_records(
+            evidence.get("records"), "evidence_id", "id"
+        ).items()
+    }
+    assumptions = index_records(quantitative.get("assumptions"), "id", "assumption_id")
+    outputs = index_records(quantitative.get("outputs"), "id")
+    known_ids = set(evidence_ids) | set(assumptions) | set(outputs)
+    declarations = report_declaration_text(text)
+    for reference in re.findall(
+        r"(?<![A-Za-z0-9_-])(?:EV|AS|OUT)-[A-Za-z0-9_-]+", declarations
+    ):
+        if reference not in known_ids:
+            errors.append(f"unknown report reference: {reference}")
+
+    # Fixed token grammar keeps metric/value/unit adjacent to the exact output ID.
+    # It intentionally does not infer financial assertions from nearby keywords.
+    for match in re.finditer(
+        r"\[\[output:([^\n]*?)(?:\]\]|$)", declarations, re.MULTILINE
+    ):
+        token = match.group(0)
+        binding = re.fullmatch(
+            r"\[\[output:([^\s\[\]]+) metric=([^\s\[\]]+) "
+            r"value=([^\s\[\]]+) unit=([^\s\[\]]+)\]\]",
+            token,
+        )
+        if binding is None:
+            errors.append(f"malformed report output reference: {token}")
+            continue
+        output_id, metric_raw, value_raw, unit = binding.groups()
+        output = outputs.get(output_id)
+        if output is None:
+            errors.append(f"unknown report reference: {output_id}")
+            continue
+        # Do not call calculation helpers when the validator import failed.
+        if blackboard_validator is None:
+            continue
+        metric = blackboard_validator.OUTPUT_METRIC_ALIASES.get(metric_raw.lower())
+        expected_metric = blackboard_validator.OUTPUT_METRIC_ALIASES.get(
+            str(output.get("metric", "")).lower()
+        )
+        if metric is None or metric != expected_metric:
+            errors.append(
+                f"report output {output_id}: metric mismatch or unsupported metric"
+            )
+            continue
+        value = blackboard_validator._decimal_number(value_raw)
+        expected = blackboard_validator._decimal_number(output.get("value"))
+        if value is None or expected is None:
+            errors.append(f"report output {output_id}: value must be a finite number")
+            continue
+        expected_unit = str(output.get("unit", "")).strip().lower()
+        report_unit = unit.lower()
+        percent_units = {"%", "percent", "percentage", "pct", "百分比"}
+        ratio_units = {"ratio", "decimal", "fraction"}
+        if metric == "roi":
+            if (
+                report_unit not in percent_units | ratio_units
+                or expected_unit not in percent_units | ratio_units
+            ):
+                errors.append(f"report output {output_id}: unit mismatch")
+                continue
+            if expected_unit in percent_units:
+                expected /= Decimal("100")
+            if report_unit in percent_units:
+                expected *= Decimal("100")
+        elif report_unit != expected_unit:
+            errors.append(f"report output {output_id}: unit mismatch")
+            continue
+        tolerance_errors: list[str] = []
+        amount, ratio, percentage, relative = (
+            blackboard_validator._quantitative_tolerances(
+                quantitative,
+                lambda code, path, message, issues=tolerance_errors: issues.append(
+                    f"{path}: {message}"
+                ),
+            )
+        )
+        absolute = (
+            percentage
+            if metric == "roi" and report_unit in percent_units
+            else ratio
+            if metric == "roi"
+            else amount
+        )
+        if not blackboard_validator._numbers_match(
+            value, expected, absolute=absolute, relative=relative
+        ):
+            errors.append(
+                f"report output {output_id}: value mismatch with validated output"
+            )
+        elif state_ready and not tolerance_errors:
+            verified.append(
+                {
+                    "id": output_id,
+                    "metric": metric,
+                    "value": value_raw,
+                    "unit": unit,
+                    "scenario_id": output.get("scenario_id"),
+                }
+            )
+    return unique_strings(errors), verified
 
 
 def maturity_checks(
@@ -604,14 +818,17 @@ def maturity_checks(
     if not maturity or maturity not in MATURITY_VALUES:
         return errors, warnings, maturity
 
-    stated_maturity = report_maturity(text)
-    if not stated_maturity:
+    stated_maturities = report_maturities(text)
+    if not stated_maturities:
         warnings.append("report does not state the blackboard maturity")
-    elif stated_maturity != maturity:
-        errors.append(
-            f"maturity mismatch: report states {stated_maturity}, "
-            f"blackboard records {maturity}"
-        )
+    for stated_maturity in stated_maturities:
+        if stated_maturity not in MATURITY_VALUES:
+            errors.append(f"unsupported report maturity: {stated_maturity!r}")
+        elif stated_maturity != maturity:
+            errors.append(
+                f"maturity mismatch: report states {stated_maturity}, "
+                f"blackboard records {maturity}"
+            )
 
     if maturity == "working_draft":
         warnings.append(
@@ -673,6 +890,8 @@ def evaluate(
     errors.extend(configuration_errors or [])
     warnings: list[str] = []
     compliance_topics: list[str] = []
+    advisories: list[str] = []
+    verified_output_references: list[dict[str, Any]] = []
     maturity = ""
     blackboard_ready: bool | None = None
 
@@ -692,10 +911,14 @@ def evaluate(
             errors.append("--textual-only requires brief mode without a blackboard")
         if strict:
             errors.append("--textual-only cannot be used with --strict")
-        if maturity not in {"working_draft", "review_ready"} or re.search(
-            r"\b(?:decision[-_ ]ready|approved[-_ ]for[-_ ]execution|blocked)\b",
-            text,
-            re.IGNORECASE,
+        stated_maturities = report_maturities(text)
+        if (
+            not stated_maturities
+            or len(set(stated_maturities)) != 1
+            or any(
+                value not in {"working_draft", "review_ready"}
+                for value in stated_maturities
+            )
         ):
             errors.append(
                 "textual-only requires explicit draft maturity and no formal or blocked status"
@@ -745,6 +968,10 @@ def evaluate(
         )
         errors.extend(maturity_errors)
         warnings.extend(maturity_warnings)
+        reference_errors, verified_output_references = report_reference_checks(
+            text, blackboard, state_ready=blackboard_ready is True
+        )
+        errors.extend(reference_errors)
 
         logic_mesh = nested_dict(blackboard.get("logic_mesh"))
         decisions = nested_dict(blackboard.get("decisions"))
@@ -770,7 +997,7 @@ def evaluate(
         )
         errors.extend(term_errors)
     if medical_terms:
-        warnings.extend(find_terminology_warnings(text, medical_terms))
+        advisories.extend(find_terminology_warnings(text, medical_terms))
 
     if compliance_rules is None:
         compliance_rules, rule_errors = load_json_object(
@@ -789,8 +1016,10 @@ def evaluate(
         warnings.extend(find_quantitative_claim_warnings(text))
 
     errors = unique_strings(errors)
-    warnings = unique_strings(warnings)
-    blocking = bool(errors or (strict and warnings))
+    blocking_warnings = unique_strings(warnings)
+    advisories = unique_strings(advisories)
+    warnings = unique_strings([*blocking_warnings, *advisories])
+    blocking = bool(errors or (strict and blocking_warnings))
     status = "fail" if blocking else ("pass_with_warnings" if warnings else "pass")
     return {
         "status": status,
@@ -798,6 +1027,9 @@ def evaluate(
         "strict": strict,
         "errors": errors,
         "warnings": warnings,
+        "blocking_warnings": blocking_warnings,
+        "advisories": advisories,
+        "verified_output_references": verified_output_references,
         "word_count": word_count,
         "mode": mode,
         "maturity": maturity or None,
@@ -805,7 +1037,12 @@ def evaluate(
         "scope": "textual_only" if textual_only else "report_and_blackboard",
         "unchecked": ["evidence", "financial", "compliance", "decision_readiness"]
         if textual_only
-        else [],
+        else [
+            "prose_numbers",
+            "source_support",
+            "approval_authenticity",
+            *(["financial_output_references"] if blackboard_ready is not True else []),
+        ],
         "compliance_review_topics": compliance_topics,
     }
 
@@ -825,7 +1062,7 @@ def build_parser() -> argparse.ArgumentParser:
     parser.add_argument(
         "--strict",
         action="store_true",
-        help="Return non-zero for deterministic errors and quality warnings.",
+        help="Return non-zero for deterministic errors and decision/data/compliance warnings, not editorial advisories.",
     )
     return parser
 

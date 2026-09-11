@@ -221,6 +221,7 @@ def new_receipt(include_trending, queries=None):
             "failed": 0,
         },
         "brief": {"planned": 0, "attempted": 0, "succeeded": 0, "failed": 0},
+        "query_coverage": [],
         "pool_count": 0,
         "rendered_count": 0,
         "errors": [],
@@ -511,20 +512,30 @@ def search_phase(
             break
         receipt["search"]["attempted"] += 1
         try:
-            rows = candidate_rows(
-                reader.search(
-                    query=q,
-                    size=MAX_PER_QUERY,
-                    source="arxiv",
-                    categories=CATEGORIES,
-                    date_from=date_from,
-                    date_to=date_to,
-                ),
-                "search",
-                MAX_PER_QUERY,
+            raw = reader.search(
+                query=q,
+                size=MAX_PER_QUERY,
+                source="arxiv",
+                categories=CATEGORIES,
+                date_from=date_from,
+                date_to=date_to,
             )
+            rows = candidate_rows(raw, "search", MAX_PER_QUERY)
             add_candidates(pool, rows, q, receipt)
             receipt["search"]["succeeded"] += 1
+            total_count = raw.get("total_count") if isinstance(raw, dict) else None
+            receipt.setdefault("query_coverage", []).append(
+                {
+                    "query": q,
+                    "limit": MAX_PER_QUERY,
+                    "returned": len(rows),
+                    "total_count": total_count,
+                    "truncated": bool(
+                        isinstance(total_count, int) and total_count > len(rows)
+                    ),
+                    "note": "总数字段由服务提供，未经独立核验；不保证全部相关或穷尽",
+                }
+            )
         except Exception as exc:
             # Terminal failure receipt, not a fallback or an empty-result conversion.
             record_failure(receipt, "search", exc)

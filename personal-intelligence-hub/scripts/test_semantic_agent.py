@@ -177,6 +177,73 @@ class SemanticAgentCandidateTests(unittest.TestCase):
         )
         self.assertEqual({item["reason"] for item in dispositions}, {"eligible"})
 
+    def test_ih002_semantic_identity_preserved_in_history_dedupe(self) -> None:
+        from history_manager import generate_event_id
+
+        url = "https://example.org/releases/latest"
+        identity_v1 = {
+            "key_version": "1",
+            "primary_domain": "technology",
+            "actor": "Company",
+            "action": "released",
+            "object": "v1.0",
+            "event_date": "2026-08-28",
+        }
+        identity_v2 = {
+            "key_version": "1",
+            "primary_domain": "technology",
+            "actor": "Company",
+            "action": "released",
+            "object": "v2.0",
+            "event_date": "2026-08-31",
+        }
+        event_id_v1 = generate_event_id(identity_v1)
+        event_id_v2 = generate_event_id(identity_v2)
+
+        history_entry = {
+            "event_id": event_id_v1,
+            "canonical_url": url,
+            "title": "Company release v1.0",
+            "source": "Company",
+        }
+
+        candidate = _candidate(
+            url,
+            source="Company",
+            source_type="primary",
+            event_identity=identity_v2,
+        )
+        candidate["event_id"] = event_id_v2
+        candidate["access_check"] = _access(url)
+        candidate["candidate_object_sha256"] = candidate_object_hash(candidate)
+
+        supplement = {
+            "results": [
+                {
+                    "failure_kind": None,
+                    "access_log": [candidate["access_check"]],
+                    "candidates": [candidate],
+                }
+            ]
+        }
+
+        artifacts = {
+            "candidate_pool": (Path("candidate_pool.json"), {"items": []}),
+            "supplement": (Path("supplement.json"), supplement),
+            "history_snapshot": (Path("history.json"), {}),
+        }
+        with (
+            patch(
+                "semantic_agent._bound_artifact",
+                side_effect=lambda _req, name: artifacts[name],
+            ),
+            patch("semantic_agent.load_recent_history", return_value=[history_entry]),
+        ):
+            eligible, dispositions = _candidate_assessment({}, self.manifest)
+
+        self.assertEqual(len(eligible), 1)
+        self.assertEqual(dispositions[0]["reason"], "eligible")
+
     def test_funnel_preserves_per_candidate_terminal_reasons(self) -> None:
         eligible = [
             {

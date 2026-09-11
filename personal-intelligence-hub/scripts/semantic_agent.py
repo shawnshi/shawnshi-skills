@@ -126,6 +126,13 @@ def _load_packet(
         raise RunContractError("semantic prompt binding changed")
     for name in request.get("bound_artifacts", {}):
         _bound_artifact(request, str(name))
+    # Context and assembly share the original registered deadline, not child start.
+    if packet.get("handoff_contract_version") == "review-handoff/1.0":
+        from review_handoff import preflight, Refusal
+        try:
+            preflight(request_file)
+        except Refusal as exc:
+            raise RunContractError(str(exc)) from exc
     return request_file, request, packet, manifest
 
 
@@ -316,6 +323,8 @@ def _candidate_assessment(
             "title": candidate.get("title"),
             "source": candidate.get("source"),
             "published_at": candidate.get("published_at"),
+            "event_id": candidate.get("event_id"),
+            "event_identity": candidate.get("event_identity"),
         }
         if match_history(history_probe, entries=recent_history, now=report_clock).get("redundant"):
             disposition["reason"] = "historical_duplicate"
@@ -385,6 +394,9 @@ def _registered_evidence_excerpt(
     candidate: dict[str, Any], manifest: dict[str, Any],
 ) -> dict[str, Any]:
     """Read only the proof authorized by the already validated manifest ledger."""
+    if "source_adoption" in manifest:
+        from recovery_lifecycle import validated_source
+        manifest = validated_source(manifest)
     access = candidate["access_check"]
     if access.get("method") != "native_readable":
         return {"status": "unavailable", "reason": "legacy_access_without_registered_readable_body"}
@@ -517,7 +529,11 @@ def build_agent_context(request_path: str | Path) -> dict[str, Any]:
             "Use one semantic event_identity per selected candidate; event_date and primary_domain must match its registered evidence.",
             "After writing, stop analysis and run finalize_command exactly.",
         ],
-        "finalize_command": " ".join(str(value) for value in (packet["agent_helper"]["finalize_command"])),
+        "finalize_command": deepcopy(packet["agent_helper"]["finalize_command"]),
+        "command_consumption": "argv array; subprocess.run(argv, shell=False); never paste joined shell text",
+        "completion_contract": "Return immediately on canonical publication; no next_launch_json or downstream wait.",
+        "source_adoption": deepcopy(manifest.get("source_adoption")),
+        "evidence_age_rule": "Evidence retains original source ownership and checked/retrieved/published dates. Admission and this fresh review do not refresh evidence; judge only the preserved report window.",
     }
 
 
@@ -626,6 +642,9 @@ def _coverage_diagnostics(
 
 
 def registered_coverage_diagnostics(manifest: dict[str, Any]) -> list[str]:
+    if "source_adoption" in manifest:
+        from recovery_lifecycle import validated_source
+        manifest = validated_source(manifest)
     """Recompute for semantic validation and forge from the same hash-bound inputs."""
     records = {
         "candidate_pool": manifest["artifacts"]["candidate_pool"],

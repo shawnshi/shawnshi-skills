@@ -10,7 +10,7 @@ description: 基线优先生成技术与医疗数字化资讯简报，按缺口�
 1. 当前正式产物使用 `references/briefing_schema.json` 1.4；历史 v1.0/v1.1、`references/briefing_schema_v1.2.json` 及 `references/briefing_schema_v1.3.json` 由冻结 validator 只读回放，不改写旧档。
 2. 用户只说“今日资讯简报”时：报告日为 Asia/Shanghai 当日，默认窗口为报告日及之前 2 日，共 3 个日历日；如审核去重后条目不足 10 条，且非用户显式指定，则新起一轮扩充至 7 个日历日，不再兜底补充；地域为中国、美国与全球。
 3. 默认领域请求比例为技术 60%、医疗数字化 40%。用户指定主题或比例时覆盖默认值并记录来源与理由。
-4. 正式日简报默认自动保存。用户明确要求不保存时，在两份回执登记后运行 `python -X utf8 scripts/run_daily.py preview --manifest <run_manifest.json> --refined <refined_core.json>`；只返回通过门禁的确定性 Markdown，不调用归档步骤。
+4. 正式日简报默认自动保存。用户明确要求不保存时，在两份回执登记后运行 `python -X utf8 scripts/run_daily.py preview --manifest <run_manifest.json> --refined <refined_core.json>`；只返回通过门禁的确定性 Markdown，不调用归档步骤。注意：preview 不保存仅保证不向新闻目录写入正式三件套与历史索引，但运行前置步骤仍会在 runtime 目录产生必要中间态文件；若用户要求全程物理零磁盘写入，不得启动生产前置流程。
 5. 临时探针和测试只写当前任务隔离 scratch；正式新闻产物只写授权新闻目录。运行中间态默认写入 `~/MEMORY/brain/personal-intelligence-hub/runtime`，只有显式设置 `PIH_RUNTIME_DIR` 才可覆盖，不得回退到系统临时目录。
 
 ## 开始前读取
@@ -100,6 +100,16 @@ python -X utf8 scripts/run_daily.py forge --manifest <run_manifest.json> --refin
 操作系统排他守卫覆盖恢复、历史重检和提交，锁不得越权接管；三件套事务提交，history v2 是同守卫内独立可恢复更新，不得宣称四者单一原子写。失败回滚或明确未完成，恢复及登记成功前不得宣称完成。Windows Global mutex、owner token、哈希前置条件、后置动作复验与恢复详见 `archive` 节。
 
 不得单独手写正式 Markdown、直接运行旧 `forge.py` 无参入口，或在回执未通过时写入新闻目录。
+
+## 显式授权恢复（新生命周期，不改写旧运行）
+
+仅在用户授权保留原窗口、采用完整已结算证据且不重扫时使用 `scripts/recovery_lifecycle.py preview --source-manifest <old/run_manifest.json>`。预览只读，调用旧运行冻结 validator 完整回放；原哈希、路径归属、未结算调用、历史变化或已有正式文件任一不通过即停止。不得把失败语义草稿当作回执。
+
+父任务核准预览后运行 `scripts/recovery_lifecycle.py apply --source-manifest <old/run_manifest.json> --expected-closure-sha256 <preview SHA> --new-runtime-dir <NEW isolated directory>`。`pih-source-adoption/1.0` 创建新 run、新 bundle/CLI 和 admission；只引用原证据闭包，不复制或改写原 run/request/proof 身份与时间。新 run 独立使用原有 1,000,000 Token/$3 上限，不转移旧额度。必须重新调用独立 SemanticEvaluator，并按既有门执行红队；只在新 run 的 CLI 完成 preview/forge。旧 v1.4 validator 和旧时钟不变。
+
+过期语义调用的实际遥测另用 `scripts/late_telemetry.py preview|apply --manifest <old manifest> --association <parent declaration> --expected-association-sha256 <SHA>`。`pih-late-telemetry/1.0` 只追加 `<old run>/late-telemetry/<invocation>.json`；不改 manifest、expired、degraded_timeout 或运行时 timed_out。声明必须绑定原 request、manifest、真实 runtime status、精确 session 路径与 header ID 的哈希；它是有来源的父级关联，不是运行时加密签名。只汇总 usage 元数据，assistant stopReason 与 runtime outcome 分列；未知 usage 保守计入原预留，native broker holds 永久保留。Windows apply 使用现有机器级进程 mutex，不创建额外持久锁文件。
+
+评审准备应在 request 登记前完成。登记完成后，父任务立即用新 run 内 `scripts/review_handoff.py preflight --request <request>`，再按真实运行时能力分派，禁止虚构启动工具。所有 command 为精确 argv 数组，以 `subprocess.run(argv, shell=False)` 消费；上下文与 finalize 使用原登记时限，不能从子任务启动时重置。语义 canonical pair 发布后代理立即结束；父任务 `review_handoff.py consume` 独立验收，不让代理等待扩窗、红队或 forge。补检 broker 请求与评审完成使用不同合同；真实 blocker 才需要升级。
 
 ## 日期、覆盖与事件规则
 

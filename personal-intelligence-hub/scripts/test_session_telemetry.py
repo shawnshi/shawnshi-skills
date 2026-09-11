@@ -172,10 +172,116 @@ class SessionTelemetryTests(unittest.TestCase):
                 now=self.now,
             )
 
+    def test_ih001_unmeasured_assistant_usage_retains_budget_reservation(self):
+        session_missing = self.root / "session_missing.jsonl"
+        session_missing.write_text(
+            json.dumps({
+                "timestamp": "2026-08-31T01:00:00Z",
+                "message": {"role": "assistant", "content": "hello without usage"},
+            }) + "\n",
+            encoding="utf-8",
+        )
+        summary = summarize_sessions([session_missing])
+        self.assertEqual(summary["usage"]["unmeasured_assistant_messages"], 1)
+        self.assertEqual(summary["usage"]["measurement_status"], "unmeasured")
+
+        session_invalid = self.root / "session_invalid.jsonl"
+        session_invalid.write_text(
+            json.dumps({
+                "timestamp": "2026-08-31T01:00:00Z",
+                "message": {
+                    "role": "assistant",
+                    "content": "hello",
+                    "usage": {"input": 10, "output": 5, "totalTokens": "15"},
+                },
+            }) + "\n",
+            encoding="utf-8",
+        )
+        summary_inv = summarize_sessions([session_invalid])
+        self.assertEqual(summary_inv["usage"]["unmeasured_assistant_messages"], 1)
+        self.assertEqual(summary_inv["usage"]["measurement_status"], "unmeasured")
+
+        # Invalid cost: string cost or empty dict cost
+        session_cost_invalid = self.root / "session_cost_invalid.jsonl"
+        session_cost_invalid.write_text(
+            json.dumps({
+                "timestamp": "2026-08-31T01:00:00Z",
+                "message": {
+                    "role": "assistant",
+                    "content": "hello",
+                    "usage": {"input": 10, "output": 5, "totalTokens": 15, "cost": "invalid"},
+                },
+            }) + "\n",
+            encoding="utf-8",
+        )
+        summary_cost_inv = summarize_sessions([session_cost_invalid])
+        self.assertEqual(summary_cost_inv["usage"]["unmeasured_assistant_messages"], 1)
+        self.assertEqual(summary_cost_inv["usage"]["measurement_status"], "unmeasured")
+
+        # Valid known zero cost is measured
+        session_zero_cost = self.root / "session_zero_cost.jsonl"
+        session_zero_cost.write_text(
+            json.dumps({
+                "timestamp": "2026-08-31T01:00:00Z",
+                "message": {
+                    "role": "assistant",
+                    "content": "hello",
+                    "usage": {"input": 10, "output": 5, "totalTokens": 15, "cost": {"total": 0.0}},
+                },
+            }) + "\n",
+            encoding="utf-8",
+        )
+        summary_zero_cost = summarize_sessions([session_zero_cost])
+        self.assertEqual(summary_zero_cost["usage"]["unmeasured_assistant_messages"], 0)
+        self.assertEqual(summary_zero_cost["usage"]["measurement_status"], "measured")
+        self.assertEqual(summary_zero_cost["usage"]["cost_usd"], 0.0)
+
+        run_dir = Path(self.manifest["run_dir"])
+        artifact = run_dir / "execution_telemetry_semantic_invocation-unmeasured.json"
+        payload = {
+            "contract_version": "pih-execution-telemetry/1.0",
+            "run_id": self.manifest["run_id"],
+            "stage": "semantic_review",
+            "invocation_id": "invocation-unmeasured",
+            "status": "completed",
+            "usage": summary["usage"],
+            "duration_seconds": 1.0,
+            "sources": [{"path": "session_missing.jsonl", "sha256": "5" * 64}],
+        }
+        artifact.write_text(json.dumps(payload), encoding="utf-8")
+        manifest = load_manifest(self.manifest_path)
+        _reserve_execution_budget(
+            manifest,
+            [{
+                "stage": "semantic_review",
+                "invocation_id": "invocation-unmeasured",
+                "tokens": 50000,
+                "cost_usd": 0.5,
+            }],
+            request_sha256="6" * 64,
+            current=self.now,
+        )
+        atomic_dump_json(self.manifest_path, manifest)
+
+        record_execution_telemetry(self.manifest_path, artifact, now=self.now)
+        manifest_after = load_manifest(self.manifest_path)
+        reservation = manifest_after["telemetry"]["reservations"]["semantic_review:invocation-unmeasured"]
+        self.assertEqual(reservation["status"], "held_unmetered")
+        self.assertEqual(reservation["telemetry_status"], "unmeasured")
+        self.assertEqual(manifest_after["telemetry"]["summary"]["reserved_tokens"], 50000)
+
+        # Verify late_telemetry.budget_view reflects held_unmetered reservations
+        from late_telemetry import budget_view
+        view = budget_view(manifest_after, {})
+        self.assertEqual(view["accounted_tokens"], 50000)
+        self.assertEqual(view["accounted_cost_usd"], 0.5)
+        self.assertIn("semantic_review:invocation-unmeasured", view["unknown_usage_reservations"])
+
         payload["invocation_id"] = "invocation-2"
         payload["usage"]["total_tokens"] = 1000001
+        payload["usage"]["budget_tokens"] = 1000001
         payload["usage"]["cost_usd"] = 3.5
-        payload["sources"] = [{"path": "overrun.jsonl", "sha256": "5" * 64}]
+        payload["sources"] = [{"path": "overrun.jsonl", "sha256": "7" * 64}]
         manifest = load_manifest(self.manifest_path)
         _reserve_execution_budget(
             manifest,

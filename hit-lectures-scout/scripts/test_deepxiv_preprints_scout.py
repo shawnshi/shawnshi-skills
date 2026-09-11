@@ -1243,6 +1243,36 @@ class DeepxivPreprintsScoutTests(unittest.TestCase):
         ):
             scout._load_deepxiv_sdk()
 
+    def test_ls03_query_coverage_retains_total_count_and_truncation(self):
+        reader = Mock()
+        raw = {
+            "status": "success",
+            "total_count": 999,
+            "result": [
+                {
+                    "arxiv_id": "2609.00001",
+                    "publish_at": "2026-09-08",
+                    "title": "Medical AI",
+                    "authors": ["Author"],
+                }
+            ],
+        }
+        reader.search.return_value = raw
+        code, text, _, stderr = self.run_candidate(
+            reader, ["--max-enrich", "0", "--query", "medical ai"]
+        )
+        self.assertEqual(code, 0)
+        receipt = json.loads(stderr.splitlines()[-1])
+        coverage = receipt.get("query_coverage", [])
+        self.assertEqual(len(coverage), 1)
+        record = coverage[0]
+        self.assertEqual(record["query"], "medical ai")
+        self.assertEqual(record["limit"], 15)
+        self.assertEqual(record["returned"], 1)
+        self.assertEqual(record["total_count"], 999)
+        self.assertTrue(record["truncated"])
+        self.assertIn("总数字段由服务提供", record["note"])
+
 
 if __name__ == "__main__":
     unittest.main()

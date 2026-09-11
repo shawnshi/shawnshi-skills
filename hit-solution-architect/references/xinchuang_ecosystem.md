@@ -14,15 +14,11 @@
 
 按项目需要记录 CPU、操作系统、数据库、中间件、办公软件和安全产品；没有证据时保持未知。
 
-| candidate_id | 类别 | 厂商与产品 | 精确版本 | 架构或部署条件 | 官方兼容证据 | 验证日期 | 证据强度 |
-| :--- | :--- | :--- | :--- | :--- | :--- | :--- | :--- |
-| `{{CANDIDATE_ID}}` | `{{CATEGORY}}` | `{{PRODUCT}}` | `{{VERSION}}` | `{{CONDITIONS}}` | `{{URL_OR_REPORT}}` | `{{DATE}}` | `A / B / C` |
+| candidate_id | 类别 | 厂商与产品 | 精确版本 | 架构或部署条件 | 证据 ID 与来源定位 | 验证日期 | 证据类型 | 版本适用性与环境匹配 | 证据强度 |
+| :--- | :--- | :--- | :--- | :--- | :--- | :--- | :--- | :--- | :--- |
+| `{{CANDIDATE_ID}}` | `{{CATEGORY}}` | `{{PRODUCT}}` | `{{VERSION}}` | `{{CONDITIONS}}` | `{{EVIDENCE_ID_AND_SOURCE}}` | `{{DATE}}` | `{{OFFICIAL_RECORD/VENDOR_STATEMENT/PROJECT_TEST/SECONDARY}}` | `{{VERSION_AND_ENVIRONMENT_MATCH}}` | `{{A/B/C}}` |
 
-证据强度：
-
-- A：双方当前有效的官方兼容清单、认证或联合测试报告。
-- B：项目环境中的可重复测试结果。
-- C：厂商宣介、历史案例或二手材料；仅用于形成待验证候选项。
+证据强度统一使用 [evidence_governance.md](evidence_governance.md) 的 A/B/C 定义，不在本表重新分级。同一证据 ID 在主张台账与本表保持相同等级；可重复的项目测试为 A，条件清晰的厂商技术材料为 B。证据类型另记厂商声明或项目实测；版本适用性和环境匹配不由等级推断，厂商声明不等于项目实测。
 
 ## 3. 项目环境验证
 

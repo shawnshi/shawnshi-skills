@@ -24,7 +24,7 @@
 在通过或有条件通过门禁的方案中，可按 0—5 分比较以下七项。权重由决策主体在看到结果前确认；若未确认，使用等权或只展示维度，不生成“客观总分”。
 
 | 维度 | 0 分 | 3 分 | 5 分 |
-|---|---|---|---|
+| --- | --- | --- | --- |
 | 强制项 `M` | 无适用义务 | 有明确政策/合同驱动但时限宽松 | 有约束性义务、明确责任和近期截止日 |
 | 临床安全 `S` | 无可识别影响 | 可降低中等风险，有基线待验证 | 处理有证据的高严重度当前风险 |
 | 战略一致性 `G` | 与批准战略无关 | 支持一个重要目标 | 直接支撑核心业务目标且有管理层责任人 |
@@ -68,7 +68,7 @@ PV_TCO = Σ cost_t / (1 + discount_rate)^t
 收益先分类，再决定是否货币化：
 
 | 类型 | 处理方式 |
-|---|---|
+| --- | --- |
 | 患者安全、临床质量、公共服务、体验和能力建设 | 单列指标；除非有透明且获认可的方法，不强行折算现金 |
 | 成本避免 | 说明若不投资是否真的会发生支出，以及避免支出的预算科目 |
 | 生产率/节省时间 | 只有排班、加班、外包、编制或可交付产能发生可验证变化时才计入现金收益 |
@@ -111,14 +111,16 @@ ROI_nominal = (Σ attributable_cash_benefit_t - nominal_TCO) / nominal_TCO
 
 ### 机器可复核的计算契约
 
-需要自动门禁时，不要只保存自然语言公式或汇总数字。Blackboard 中的假设、成本、收益、现金流、公式、情景和输出都使用全局唯一且大小写敏感的稳定 ID；所有引用必须精确指向已存在记录。
+需要自动门禁时，不要只保存自然语言公式或汇总数字。Blackboard 中的假设、成本、收益、现金流、公式、情景和输出都使用全局唯一且大小写敏感的稳定 ID；所有引用必须精确指向已存在记录。财务一致性按模型已启用或机器记录已存在触发，不因报告切换为 brief、board-memo 或 deep-dive 而跳过；合法无财务备忘录不要求建立投资模型。投资组合和预算完整性仍按模式适用。
 
-- Schema v2 的 `quantitative_model.cash_flows` 必须保留 `id`、`period`、`cost`、`benefit`、`net`；`period` 是期间标识，同一 `scenario_id` 内不得重复，不能用 `period_index` 替代。`net` 必须等于 `benefit - cost`。模型的 `currency` 声明币种，现金流建议同时写 `unit` 以免脱离模型时混用单位。
+- Schema v2 的 `quantitative_model.cash_flows` 必须保留 `id`、`period`、`cost`、`benefit`、`net`；`period` 是期间标识，同一 `scenario_id` 内不得重复，不能用 `period_index` 替代。`net` 必须等于 `benefit - cost`。模型的 `currency` 声明币种；现金流省略行级币种时继承模型，显式 `unit` 或 `currency` 必须与模型一致，不得填空或混用币种。顶层与情景内嵌现金流共用字段、ID、期间唯一性、情景归属和数值检查，内嵌行省略 `scenario_id` 时继承所属情景。
 - `period_index` 是可选的 NPV 折现指数：若提供非 null 值则优先使用，须为非负整数且不超过 `horizon_years`；省略或 null 时回退到 `period`，此时 `period` 也须可解析为非负整数。期间标签如 `2026` 或 `2026Q1` 不是从零起算的折现指数，应另给 `period_index`。现有自动 NPV 按 `horizon_years` 检查指数，月度现金流须另行明确可验证的折现口径，不可直接将月份编号配年度折现率。
 - 折现率作为有 ID 的假设保存，使用小数比率而不是百分数字符串。NPV 公式或情景通过 `discount_rate_assumption_id` 引用它。
 - 公式至少包含 `id`、`formula_type` 和 `input_ids`。核心白名单类型为 `tco`、`total_benefit`、`net_benefit`、`roi` 和 `npv`；`expression` 只供人阅读，不会被解析或执行。
 - 情景至少包含 `id`、`scenario_type`、`assumption_ids`，并通过 `cash_flow_ids` 或内嵌 `cash_flows` 提供可复算输入。至少保留下行和基准情景；不能只写“收益下降20%”再填一个未经复算的输出。
-- 输出至少包含 `id`、`metric`、`value`、`unit`，并按需引用 `formula_id` 和 `scenario_id`。现金流恒等式、TCO、总收益、净收益、ROI 和 NPV 的申报值会与独立复算值比较。
+- 成本/收益条目同时声明 `amount` 或 `value` 与其 `formula` 引用时，条目金额必须与白名单公式复算结果一致；不同会计口径不能挂在同一金额—公式声明下。仅公式输入仍可保存，不把未建立关联的成本台账强行等同于现金流。
+- 输出至少包含 `id`、`metric`、`value`、`unit`，并按需引用 `formula_id` 和 `scenario_id`。现金流恒等式、TCO、总收益、净收益、ROI 和 NPV 的申报值会与独立复算值比较。报告采用 [editor.md](editor.md) 的结构化输出引用绑定已验证结果；散文数字不属于自动对账范围。
+- 显式 `compliance_context.status: blocked` 阻断 ready，不受 `review_required: false` 影响；允许保存如实披露阻塞的草稿。某一备选方案的 fail 不自动等于全局阻塞。
 
 自定义公式、缺少机器可读现金流或只有自然语言情景时，只能标为“未自动验证”并产生警告；严格门禁下不能据此达到 `decision_ready`。默认计算容差为金额绝对值0.01、比率绝对值0.000001、百分比0.05个百分点和相对值0.000001；只有在币种单位或披露精度确有需要时才显式调整 `validation_tolerance`，不得用宽容差掩盖模型错误。
 

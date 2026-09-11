@@ -32,7 +32,8 @@
       "limitations": "",
       "independence_group": "",
       "strength": "medium",
-      "status": "active"
+      "status": "active",
+      "supersedes": null
     }
   ],
   "conflicts": [],

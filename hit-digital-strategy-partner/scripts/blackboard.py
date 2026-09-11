@@ -8,18 +8,20 @@ evidence, financial model, roadmap, compliance context and portfolio explicit.
 from __future__ import annotations
 
 import argparse
+import errno
+import json
+import os
+import re
+import sys
+import tempfile
+import time
+from collections.abc import Iterator
 from contextlib import contextmanager
 from copy import deepcopy
 from datetime import datetime, timezone
 from decimal import Decimal, InvalidOperation
-import json
-import os
 from pathlib import Path
-import re
-import tempfile
-import sys
-from typing import Any, Iterator
-
+from typing import Any
 
 BLACKBOARD_RELATIVE = Path("tmp") / "strategy_blackboard.json"
 SCHEMA_VERSION = 2
@@ -170,8 +172,22 @@ def _file_lock(path: Path, *, exclusive: bool) -> Iterator[None]:
                 handle.write(b"\0")
                 handle.flush()
             handle.seek(0)
-            mode = msvcrt.LK_LOCK if exclusive else msvcrt.LK_RLCK
-            msvcrt.locking(handle.fileno(), mode, 1)
+            # CRT blocking locks give up after ten one-second retries. Under a
+            # process burst that can reject a healthy waiter. Poll nonblocking
+            # locks on a bounded deadline instead; never enter without a lock.
+            mode = msvcrt.LK_NBLCK if exclusive else msvcrt.LK_NBRLCK
+            deadline = time.monotonic() + 30.0
+            while True:
+                try:
+                    msvcrt.locking(handle.fileno(), mode, 1)
+                    break
+                except OSError as exc:
+                    if exc.errno not in {errno.EACCES, errno.EAGAIN, errno.EDEADLK}:
+                        raise
+                    remaining = deadline - time.monotonic()
+                    if remaining <= 0:
+                        raise
+                    time.sleep(min(0.05, remaining))
         else:
             import fcntl
 
@@ -460,12 +476,16 @@ def _legacy_evidence_records(evidence: Any) -> list[dict[str, Any]]:
         for index, value in enumerate(values, start=1):
             if isinstance(value, dict):
                 record = deepcopy(value)
-                claim = record.pop("claim", record.pop("text", record.pop("content", "")))
+                claim = record.pop(
+                    "claim", record.pop("text", record.pop("content", ""))
+                )
                 source = record.pop("source", None)
                 if isinstance(source, dict):
                     source_title = source.get("title")
                     publisher = source.get("publisher")
-                    locator = source.get("locator") or source.get("url") or source.get("path")
+                    locator = (
+                        source.get("locator") or source.get("url") or source.get("path")
+                    )
                 else:
                     source_title = None
                     publisher = None
@@ -575,8 +595,10 @@ def migrate_v1(state: dict[str, Any]) -> dict[str, Any]:
             "revision": metadata.get("revision", 0)
             if isinstance(metadata.get("revision", 0), int)
             else 0,
-            "created_at": metadata.get("created_at") or migrated["metadata"]["created_at"],
-            "updated_at": metadata.get("updated_at") or migrated["metadata"]["updated_at"],
+            "created_at": metadata.get("created_at")
+            or migrated["metadata"]["created_at"],
+            "updated_at": metadata.get("updated_at")
+            or migrated["metadata"]["updated_at"],
             "maturity": {
                 "ready": "decision_ready",
                 "complete": "decision_ready",
@@ -588,7 +610,9 @@ def migrate_v1(state: dict[str, Any]) -> dict[str, Any]:
     if isinstance(metadata.get("approval"), dict):
         migrated["metadata"]["approval"].update(deepcopy(metadata["approval"]))
 
-    alignment = state.get("alignment") if isinstance(state.get("alignment"), dict) else {}
+    alignment = (
+        state.get("alignment") if isinstance(state.get("alignment"), dict) else {}
+    )
     migrated_alignment = migrated["alignment"]
     migrated_alignment["decision"] = alignment.get("decision", "")
     migrated_alignment["questions_to_decide"] = _string_list(
@@ -627,8 +651,15 @@ def migrate_v1(state: dict[str, Any]) -> dict[str, Any]:
     if isinstance(logic_mesh, dict):
         migrated["logic_mesh"].update(deepcopy(logic_mesh))
 
-    decisions = state.get("decisions") if isinstance(state.get("decisions"), dict) else {}
-    for key in ("recommendation", "action_levers", "management_decisions", "residual_risks"):
+    decisions = (
+        state.get("decisions") if isinstance(state.get("decisions"), dict) else {}
+    )
+    for key in (
+        "recommendation",
+        "action_levers",
+        "management_decisions",
+        "residual_risks",
+    ):
         if key in decisions:
             migrated["decisions"][key] = deepcopy(decisions[key])
     legacy_quant = decisions.get("quantitative_model")
@@ -723,8 +754,12 @@ def save_state(
         candidate = deepcopy(state)
         metadata = candidate.setdefault("metadata", {})
         metadata["schema_version"] = SCHEMA_VERSION
-        metadata["revision"] = (current_revision if isinstance(current_revision, int) else 0) + 1
-        metadata.setdefault("created_at", current.get("metadata", {}).get("created_at", _now()))
+        metadata["revision"] = (
+            current_revision if isinstance(current_revision, int) else 0
+        ) + 1
+        metadata.setdefault(
+            "created_at", current.get("metadata", {}).get("created_at", _now())
+        )
         metadata["updated_at"] = _now()
         report = validate_state(candidate)
         if report["errors"]:
@@ -747,7 +782,7 @@ def _looks_like_json(text: str) -> bool:
     stripped = text.lstrip()
     if not stripped:
         return False
-    if stripped[0] in "{[\"" or stripped[0].isdigit() or stripped[0] == "-":
+    if stripped[0] in '{["' or stripped[0].isdigit() or stripped[0] == "-":
         return True
     return stripped.startswith(("true", "false", "null"))
 
@@ -960,7 +995,15 @@ def _validate_investment_consistency(
     quantitative = state["quantitative_model"]
     machine_readable_started = any(
         _present(quantitative.get(collection))
-        for collection in ("cash_flows", "formulas", "scenarios", "outputs")
+        for collection in (
+            "assumptions",
+            "cost_items",
+            "benefit_items",
+            "cash_flows",
+            "formulas",
+            "scenarios",
+            "outputs",
+        )
     )
     # A newly initialized investment case is an editable draft. Completeness is
     # already represented by readiness warnings; arithmetic becomes a hard gate
@@ -975,15 +1018,11 @@ def _validate_investment_consistency(
         relative_tolerance,
     ) = _quantitative_tolerances(quantitative, error)
     horizon = _decimal_number(quantitative.get("horizon_years"))
-    if (
-        horizon is None
-        or horizon != horizon.to_integral_value()
-        or horizon <= 0
-    ):
+    if horizon is None or horizon != horizon.to_integral_value() or horizon <= 0:
         error(
             "INVALID_NUMBER",
             "quantitative_model.horizon_years",
-            "must be a positive integer for investment-case mode",
+            "must be a positive integer for an enabled quantitative model",
         )
 
     collection_names = (
@@ -1007,6 +1046,7 @@ def _validate_investment_consistency(
         for index, item in enumerate(items):
             path = f"quantitative_model.{collection}[{index}]"
             if not isinstance(item, dict):
+                error("TYPE", path, "must be a JSON object")
                 continue
             item_id = item.get("id")
             if collection == "assumptions" and not _present(item_id):
@@ -1043,12 +1083,13 @@ def _validate_investment_consistency(
     formula_ids = set(id_maps["formulas"])
     scenario_ids = set(id_maps["scenarios"])
     output_ids = set(id_maps["outputs"])
-    formula_input_ids = assumption_ids | cost_ids | benefit_ids | cash_flow_ids | formula_ids
+    formula_input_ids = (
+        assumption_ids | cost_ids | benefit_ids | cash_flow_ids | formula_ids
+    )
     evidence_ids = {
-        str(record.get("evidence_id") or record.get("id"))
+        evidence_record_id(record)
         for record in evidence_records
-        if isinstance(record, dict)
-        and _present(record.get("evidence_id") or record.get("id"))
+        if isinstance(record, dict) and evidence_record_id(record)
     }
     scenario_types: set[str] = set()
     for scenario_id, scenario in id_maps["scenarios"].items():
@@ -1078,6 +1119,8 @@ def _validate_investment_consistency(
     ) -> None:
         if not _present(reference):
             return
+        if target == "evidence" and isinstance(reference, str):
+            reference = reference.strip()
         if not isinstance(reference, str) or reference not in allowed:
             error(
                 "UNKNOWN_REFERENCE",
@@ -1095,7 +1138,9 @@ def _validate_investment_consistency(
     for item_id, item in id_maps["cost_items"].items():
         index = items_by_collection["cost_items"].index(item)
         path = f"quantitative_model.cost_items[{index}]"
-        exact_reference(item.get("evidence_id"), evidence_ids, f"{path}.evidence_id", "evidence")
+        exact_reference(
+            item.get("evidence_id"), evidence_ids, f"{path}.evidence_id", "evidence"
+        )
         exact_reference(
             item.get("assumption_id"),
             assumption_ids,
@@ -1104,7 +1149,9 @@ def _validate_investment_consistency(
         )
         formula_reference = item.get("formula")
         if _present(formula_reference):
-            exact_reference(formula_reference, formula_ids, f"{path}.formula", "formula")
+            exact_reference(
+                formula_reference, formula_ids, f"{path}.formula", "formula"
+            )
 
     for item_id, item in id_maps["benefit_items"].items():
         index = items_by_collection["benefit_items"].index(item)
@@ -1179,9 +1226,7 @@ def _validate_investment_consistency(
             f"{path}.scenario_id",
             "scenario",
         )
-        if isinstance(formula.get("scenario_id"), str) and isinstance(
-            input_ids, list
-        ):
+        if isinstance(formula.get("scenario_id"), str) and isinstance(input_ids, list):
             for input_index, input_id in enumerate(input_ids):
                 if isinstance(input_id, str) and input_id in id_maps["cash_flows"]:
                     row_scenario = id_maps["cash_flows"][input_id].get("scenario_id")
@@ -1315,16 +1360,20 @@ def _validate_investment_consistency(
                     "formula.output_id and output.formula_id must point to each other",
                 )
             formula_type = formula.get("formula_type") or formula.get("type")
-            formula_metric = {
-                "tco": "total_tco",
-                "sum_costs": "total_tco",
-                "total_benefit": "total_benefit",
-                "sum_benefits": "total_benefit",
-                "net_benefit": "net_benefit",
-                "sum_net": "net_benefit",
-                "roi": "roi",
-                "npv": "npv",
-            }.get(formula_type) if isinstance(formula_type, str) else None
+            formula_metric = (
+                {
+                    "tco": "total_tco",
+                    "sum_costs": "total_tco",
+                    "total_benefit": "total_benefit",
+                    "sum_benefits": "total_benefit",
+                    "net_benefit": "net_benefit",
+                    "sum_net": "net_benefit",
+                    "roi": "roi",
+                    "npv": "npv",
+                }.get(formula_type)
+                if isinstance(formula_type, str)
+                else None
+            )
             output_metric = OUTPUT_METRIC_ALIASES.get(
                 str(output.get("metric", "")).strip().lower()
             )
@@ -1358,6 +1407,85 @@ def _validate_investment_consistency(
                             "scenario output must reference an output for the same scenario",
                         )
 
+    def validate_cash_rows(
+        rows: Any, path_prefix: str, scenario_id: str | None = None
+    ) -> None:
+        if not isinstance(rows, list):
+            error("TYPE", path_prefix, "must be a list of JSON objects")
+            return
+        seen_periods: set[tuple[str, str]] = set()
+        for index, row in enumerate(rows):
+            path = f"{path_prefix}[{index}]"
+            if not isinstance(row, dict):
+                error("TYPE", path, "must be a JSON object")
+                continue
+            for field in ("id", "period", "cost", "benefit", "net"):
+                if field not in row or not _present(row.get(field)):
+                    error(
+                        "REQUIRED",
+                        f"{path}.{field}",
+                        "is required for every cash-flow row",
+                    )
+            row_id = row.get("id")
+            if _present(row_id) and scenario_id is not None:
+                row_id = str(row_id)
+                if row_id in all_ids:
+                    error(
+                        "DUPLICATE_ID",
+                        f"{path}.id",
+                        f"ID {row_id} is already used by {all_ids[row_id]}",
+                    )
+                else:
+                    all_ids[row_id] = path
+            row_scenario = row.get("scenario_id")
+            exact_reference(
+                row_scenario, scenario_ids, f"{path}.scenario_id", "scenario"
+            )
+            if (
+                scenario_id is not None
+                and _present(row_scenario)
+                and row_scenario != scenario_id
+            ):
+                error(
+                    "REFERENCE_MISMATCH",
+                    f"{path}.scenario_id",
+                    "cash-flow row belongs to a different scenario",
+                )
+            key = (
+                str(row_scenario or scenario_id or "__base__"),
+                json.dumps(row.get("period"), ensure_ascii=False, sort_keys=True),
+            )
+            if key in seen_periods:
+                error(
+                    "DUPLICATE_PERIOD",
+                    f"{path}.period",
+                    "cash-flow period is duplicated within the same scenario",
+                )
+            seen_periods.add(key)
+            for field in ("unit", "currency"):
+                if field in row and (
+                    not isinstance(row[field], str)
+                    or not row[field].strip()
+                    or row[field].strip().casefold()
+                    != str(quantitative.get("currency", "")).strip().casefold()
+                ):
+                    error(
+                        "UNIT",
+                        f"{path}.{field}",
+                        "explicit cash-flow currency must match quantitative_model.currency",
+                    )
+
+    validate_cash_rows(
+        items_by_collection["cash_flows"], "quantitative_model.cash_flows"
+    )
+    for scenario_id, scenario in id_maps["scenarios"].items():
+        if "cash_flows" in scenario:
+            validate_cash_rows(
+                scenario["cash_flows"],
+                f"{all_ids[scenario_id]}.cash_flows",
+                scenario_id,
+            )
+
     def cash_flow_values(
         rows: list[dict[str, Any]],
         path_prefix: str,
@@ -1370,8 +1498,8 @@ def _validate_investment_consistency(
             benefit = _decimal_number(row.get("benefit"))
             net = _decimal_number(row.get("net"))
             if cost is None or benefit is None or net is None:
-                warn(
-                    "UNVERIFIABLE_CALCULATION",
+                error(
+                    "INVALID_NUMBER",
                     path,
                     "cost, benefit, and net must be finite numbers for arithmetic verification",
                 )
@@ -1403,22 +1531,8 @@ def _validate_investment_consistency(
         return validated, complete and len(validated) == len(rows)
 
     global_cash_rows = [
-        row
-        for row in items_by_collection["cash_flows"]
-        if isinstance(row, dict)
+        row for row in items_by_collection["cash_flows"] if isinstance(row, dict)
     ]
-    seen_periods: set[tuple[str, str]] = set()
-    for index, row in enumerate(global_cash_rows):
-        scenario_key = str(row.get("scenario_id") or "__base__")
-        period_key = json.dumps(row.get("period"), ensure_ascii=False, sort_keys=True)
-        key = (scenario_key, period_key)
-        if key in seen_periods:
-            error(
-                "DUPLICATE_PERIOD",
-                f"quantitative_model.cash_flows[{index}].period",
-                "cash-flow period is duplicated within the same scenario",
-            )
-        seen_periods.add(key)
     validated_global, global_complete = cash_flow_values(
         global_cash_rows, "quantitative_model.cash_flows"
     )
@@ -1475,7 +1589,11 @@ def _validate_investment_consistency(
             )
             return None
         if rate < 0 or rate >= 1:
-            error("INVALID_DISCOUNT_RATE", path, "discount rate must satisfy 0 <= rate < 1")
+            error(
+                "INVALID_DISCOUNT_RATE",
+                path,
+                "discount rate must satisfy 0 <= rate < 1",
+            )
             return None
         return rate
 
@@ -1545,7 +1663,11 @@ def _validate_investment_consistency(
         formula_index = items_by_collection["formulas"].index(formula)
         path = f"quantitative_model.formulas[{formula_index}]"
         if formula_id in evaluating:
-            error("CIRCULAR_REFERENCE", f"{path}.input_ids", "formula dependency cycle detected")
+            error(
+                "CIRCULAR_REFERENCE",
+                f"{path}.input_ids",
+                "formula dependency cycle detected",
+            )
             formula_cache[formula_id] = None
             return None
         evaluating.add(formula_id)
@@ -1583,13 +1705,17 @@ def _validate_investment_consistency(
                     "NPV inputs must all reference cash-flow rows",
                 )
             else:
-                rate_id = formula.get("discount_rate_assumption_id") or quantitative.get(
+                rate_id = formula.get(
                     "discount_rate_assumption_id"
-                )
+                ) or quantitative.get("discount_rate_assumption_id")
                 result = npv_from_rows(rows, rate_id, path)
-        elif formula_type == "roi" and input_ids and all(
-            isinstance(reference, str) and reference in id_maps["cash_flows"]
-            for reference in input_ids
+        elif (
+            formula_type == "roi"
+            and input_ids
+            and all(
+                isinstance(reference, str) and reference in id_maps["cash_flows"]
+                for reference in input_ids
+            )
         ):
             rows = [id_maps["cash_flows"][reference] for reference in input_ids]
             costs = [_decimal_number(row.get("cost")) for row in rows]
@@ -1601,7 +1727,9 @@ def _validate_investment_consistency(
                     "ROI cash-flow inputs must contain finite cost and benefit values",
                 )
             else:
-                total_cost = sum((value for value in costs if value is not None), Decimal("0"))
+                total_cost = sum(
+                    (value for value in costs if value is not None), Decimal("0")
+                )
                 total_benefit = sum(
                     (value for value in benefits if value is not None), Decimal("0")
                 )
@@ -1639,7 +1767,9 @@ def _validate_investment_consistency(
                     and isinstance(reference, str)
                     and reference in id_maps["cost_items"]
                 ):
-                    value = _decimal_number(id_maps["cost_items"][reference].get("amount"))
+                    value = _decimal_number(
+                        id_maps["cost_items"][reference].get("amount")
+                    )
                 elif (
                     formula_type in {"total_benefit", "sum_benefits"}
                     and isinstance(reference, str)
@@ -1710,7 +1840,11 @@ def _validate_investment_consistency(
             if declared is None:
                 declared = _decimal_number(formula.get("value"))
             if declared is not None:
-                absolute = ratio_tolerance if formula_type in {"ratio", "roi"} else amount_tolerance
+                absolute = (
+                    ratio_tolerance
+                    if formula_type in {"ratio", "roi"}
+                    else amount_tolerance
+                )
                 if not _numbers_match(
                     declared,
                     result,
@@ -1728,14 +1862,42 @@ def _validate_investment_consistency(
     for formula_id in formula_ids:
         evaluate_formula(formula_id)
 
+    for collection, fields in (
+        ("cost_items", ("amount",)),
+        ("benefit_items", ("value", "amount")),
+    ):
+        for item_id, item in id_maps[collection].items():
+            formula_id = item.get("formula")
+            if not isinstance(formula_id, str) or formula_id not in formula_ids:
+                continue
+            expected = evaluate_formula(formula_id)
+            for field in fields:
+                if field not in item:
+                    continue
+                declared = _decimal_number(item[field])
+                path = f"{all_ids[item_id]}.{field}"
+                if declared is None:
+                    error(
+                        "INVALID_NUMBER", path, "must be a finite number when declared"
+                    )
+                elif expected is not None and not _numbers_match(
+                    declared,
+                    expected,
+                    absolute=amount_tolerance,
+                    relative=relative_tolerance,
+                ):
+                    error(
+                        "ARITHMETIC_MISMATCH",
+                        path,
+                        f"declared {_decimal_text(declared)} does not match item formula {formula_id}: {_decimal_text(expected)}",
+                    )
+
     def direct_metrics(rows: list[dict[str, Any]], path: str) -> dict[str, Decimal]:
         validated, complete = cash_flow_values(rows, path)
         if not complete or not rows:
             return {}
         total_cost = sum((cost for _, cost, _, _ in validated), Decimal("0"))
-        total_benefit = sum(
-            (benefit for _, _, benefit, _ in validated), Decimal("0")
-        )
+        total_benefit = sum((benefit for _, _, benefit, _ in validated), Decimal("0"))
         metrics = {
             "total_tco": total_cost,
             "total_benefit": total_benefit,
@@ -1745,7 +1907,9 @@ def _validate_investment_consistency(
             metrics["roi"] = (total_benefit - total_cost) / total_cost
         return metrics
 
-    base_rows = [row for row in global_cash_rows if not _present(row.get("scenario_id"))]
+    base_rows = [
+        row for row in global_cash_rows if not _present(row.get("scenario_id"))
+    ]
     base_metrics = direct_metrics(base_rows, "quantitative_model.base_cash_flows")
     rate_id = quantitative.get("discount_rate_assumption_id")
     if base_rows and _present(rate_id):
@@ -1753,9 +1917,13 @@ def _validate_investment_consistency(
         if base_npv is not None:
             base_metrics["npv"] = base_npv
 
-    def select_scenario_rows(scenario_id: str, scenario: dict[str, Any]) -> list[dict[str, Any]]:
+    def select_scenario_rows(
+        scenario_id: str, scenario: dict[str, Any]
+    ) -> list[dict[str, Any]]:
         embedded = scenario.get("cash_flows")
-        if isinstance(embedded, list) and all(isinstance(row, dict) for row in embedded):
+        if isinstance(embedded, list) and all(
+            isinstance(row, dict) for row in embedded
+        ):
             return embedded
         references = scenario.get("cash_flow_ids")
         if isinstance(references, list):
@@ -1793,7 +1961,11 @@ def _validate_investment_consistency(
         currency = str(quantitative.get("currency", "")).strip()
         if metric in {"total_tco", "total_benefit", "net_benefit", "npv"}:
             if not unit:
-                warn("UNIT", f"{path}.unit", "monetary output should declare its currency")
+                warn(
+                    "UNIT",
+                    f"{path}.unit",
+                    "monetary output should declare its currency",
+                )
             elif currency and unit.lower() != currency.lower():
                 error(
                     "UNIT",
@@ -1820,11 +1992,15 @@ def _validate_investment_consistency(
         if isinstance(formula_id, str) and formula_id in formula_ids:
             expected = evaluate_formula(formula_id)
         direct = metrics.get(metric) if metric else None
-        if expected is not None and direct is not None and not _numbers_match(
-            expected,
-            direct,
-            absolute=ratio_tolerance if metric == "roi" else amount_tolerance,
-            relative=relative_tolerance,
+        if (
+            expected is not None
+            and direct is not None
+            and not _numbers_match(
+                expected,
+                direct,
+                absolute=ratio_tolerance if metric == "roi" else amount_tolerance,
+                relative=relative_tolerance,
+            )
         ):
             error(
                 "ARITHMETIC_MISMATCH",
@@ -1953,6 +2129,32 @@ def _validate_investment_consistency(
             )
 
 
+def evidence_record_id(record: dict[str, Any]) -> str:
+    """Compare accepted IDs after trimming, without changing stored records."""
+    return str(record.get("evidence_id", record.get("id")) or "").strip()
+
+
+def effective_evidence_ids(records: list[Any]) -> set[str]:
+    """Derive current active leaves without rewriting immutable source records.
+
+    Callers must also validate the supersession graph; this function does not
+    certify provenance or resolve competing claims.
+    """
+    replaced = {
+        record["supersedes"].strip()
+        for record in records
+        if isinstance(record, dict) and isinstance(record.get("supersedes"), str)
+    }
+    return {
+        evidence_record_id(record)
+        for record in records
+        if isinstance(record, dict)
+        and record.get("status") == "active"
+        and evidence_record_id(record)
+        and evidence_record_id(record) not in replaced
+    }
+
+
 def validate_state(state: dict[str, Any]) -> dict[str, Any]:
     """Validate schema and mode-specific decision readiness.
 
@@ -2017,7 +2219,9 @@ def validate_state(state: dict[str, Any]) -> dict[str, Any]:
         )
 
     if metadata.get("schema_version") != SCHEMA_VERSION:
-        error("SCHEMA_VERSION", "metadata.schema_version", f"must equal {SCHEMA_VERSION}")
+        error(
+            "SCHEMA_VERSION", "metadata.schema_version", f"must equal {SCHEMA_VERSION}"
+        )
     revision = metadata.get("revision")
     if not isinstance(revision, int) or isinstance(revision, bool) or revision < 0:
         error("REVISION", "metadata.revision", "must be a non-negative integer")
@@ -2047,7 +2251,13 @@ def validate_state(state: dict[str, Any]) -> dict[str, Any]:
                     "is required to record an external authorized approval",
                 )
 
-    for key in ("questions_to_decide", "audience", "success_metrics", "constraints", "unacceptable_risks"):
+    for key in (
+        "questions_to_decide",
+        "audience",
+        "success_metrics",
+        "constraints",
+        "unacceptable_risks",
+    ):
         if not isinstance(alignment.get(key), list):
             error("TYPE", f"alignment.{key}", "must be a list")
     for key in ("organization", "time_horizon", "budget"):
@@ -2068,7 +2278,7 @@ def validate_state(state: dict[str, Any]) -> dict[str, Any]:
             error("TYPE", path, "must be a JSON object")
             continue
         legacy_id = record.get("id") if "evidence_id" not in record else None
-        record_id = str(record.get("evidence_id") or legacy_id or "").strip()
+        record_id = evidence_record_id(record)
         if not record_id:
             error("REQUIRED", f"{path}.evidence_id", "is required")
         elif record_id in record_ids:
@@ -2159,6 +2369,42 @@ def validate_state(state: dict[str, Any]) -> dict[str, Any]:
                 "must explain why the evidence is disputed",
             )
 
+    supersession_edges: dict[str, str] = {}
+    for index, record in enumerate(records):
+        if not isinstance(record, dict):
+            continue
+        target = record.get("supersedes")
+        if target is None:
+            continue
+        path = f"evidence.records[{index}].supersedes"
+        record_id = evidence_record_id(record)
+        if isinstance(target, str):
+            target = target.strip()
+        if (
+            not isinstance(target, str)
+            or target not in record_ids
+            or target == record_id
+        ):
+            error(
+                "SUPERSESSION",
+                path,
+                "must reference a different existing evidence ID or be null",
+            )
+        else:
+            supersession_edges[record_id] = target
+    checked: set[str] = set()
+    for record_id in supersession_edges:
+        chain: set[str] = set()
+        current = record_id
+        while current in supersession_edges and current not in checked:
+            if current in chain:
+                error("SUPERSESSION", "evidence.records", "supersession cycle detected")
+                break
+            chain.add(current)
+            current = supersession_edges[current]
+        checked.update(chain)
+    effective_ids = effective_evidence_ids(records)
+
     for key in ("alternatives", "conflicts", "counter_evidence"):
         if not isinstance(logic_mesh.get(key), list):
             error("TYPE", f"logic_mesh.{key}", "must be a list")
@@ -2212,7 +2458,9 @@ def validate_state(state: dict[str, Any]) -> dict[str, Any]:
                 )
             if status == "needs_input":
                 if assumption.get("value") not in (None, ""):
-                    error("VALUE", f"{path}.value", "must be null when status=needs_input")
+                    error(
+                        "VALUE", f"{path}.value", "must be null when status=needs_input"
+                    )
                 continue
             if status == "not_applicable":
                 continue
@@ -2229,9 +2477,13 @@ def validate_state(state: dict[str, Any]) -> dict[str, Any]:
             elif status == "client_provided" and not _source_present(
                 assumption.get("source")
             ):
-                error("PROVENANCE", f"{path}.source", "must identify the client material")
+                error(
+                    "PROVENANCE", f"{path}.source", "must identify the client material"
+                )
             elif status == "calculated" and not _present(assumption.get("formula")):
-                error("FORMULA", f"{path}.formula", "is required when status=calculated")
+                error(
+                    "FORMULA", f"{path}.formula", "is required when status=calculated"
+                )
             elif status in {"scenario_assumption", "analyst_judgment"} and not _present(
                 assumption.get("rationale")
             ):
@@ -2312,22 +2564,46 @@ def validate_state(state: dict[str, Any]) -> dict[str, Any]:
     if not _meaningful_horizon(alignment.get("time_horizon")):
         warn("MISSING_INPUT", "alignment.time_horizon", "time horizon is not filled")
     if not _present(alignment.get("success_metrics")):
-        warn("MISSING_INPUT", "alignment.success_metrics", "success metrics are not filled")
+        warn(
+            "MISSING_INPUT",
+            "alignment.success_metrics",
+            "success metrics are not filled",
+        )
 
     usable_records = [
         record
         for record in records
-        if isinstance(record, dict)
-        and record.get("status") == "active"
+        if isinstance(record, dict) and evidence_record_id(record) in effective_ids
     ]
     if not usable_records:
-        warn("MISSING_EVIDENCE", "evidence.records", "no usable evidence record is present")
+        warn(
+            "MISSING_EVIDENCE",
+            "evidence.records",
+            "no usable evidence record is present",
+        )
     if not _present(logic_mesh.get("core_judgment")):
-        warn("MISSING_JUDGMENT", "logic_mesh.core_judgment", "core judgment is not filled")
+        warn(
+            "MISSING_JUDGMENT",
+            "logic_mesh.core_judgment",
+            "core judgment is not filled",
+        )
     if not _present(decisions.get("recommendation")):
-        warn("MISSING_DECISION", "decisions.recommendation", "recommendation is not filled")
+        warn(
+            "MISSING_DECISION",
+            "decisions.recommendation",
+            "recommendation is not filled",
+        )
     if not _present(decisions.get("residual_risks")):
-        warn("MISSING_RISK", "decisions.residual_risks", "residual risks are not filled")
+        warn(
+            "MISSING_RISK", "decisions.residual_risks", "residual risks are not filled"
+        )
+
+    if compliance.get("status") == "blocked":
+        warn(
+            "COMPLIANCE_BLOCKED",
+            "compliance_context.status",
+            "explicit compliance blockage prevents decision readiness regardless of review_required",
+        )
 
     if compliance_applicability == "undetermined":
         warn(
@@ -2480,7 +2756,9 @@ def validate_state(state: dict[str, Any]) -> dict[str, Any]:
                 "calculation formulas are not documented",
             )
 
-    if portfolio_applicable is False and not _present(portfolio.get("not_applicable_reason")):
+    if portfolio_applicable is False and not _present(
+        portfolio.get("not_applicable_reason")
+    ):
         warn(
             "MISSING_RATIONALE",
             "portfolio.not_applicable_reason",
@@ -2513,9 +2791,17 @@ def validate_state(state: dict[str, Any]) -> dict[str, Any]:
                 "management questions are not filled",
             )
         if not _present(alignment.get("constraints")):
-            warn("MISSING_ALIGNMENT", "alignment.constraints", "constraints are not filled")
+            warn(
+                "MISSING_ALIGNMENT",
+                "alignment.constraints",
+                "constraints are not filled",
+            )
         if not _present(decisions.get("action_levers")):
-            warn("MISSING_ACTION", "decisions.action_levers", "action levers are not filled")
+            warn(
+                "MISSING_ACTION",
+                "decisions.action_levers",
+                "action levers are not filled",
+            )
         if not _present(decisions.get("management_decisions")):
             warn(
                 "MISSING_DECISION",
@@ -2523,7 +2809,11 @@ def validate_state(state: dict[str, Any]) -> dict[str, Any]:
                 "items requiring management approval are not filled",
             )
         if not phases:
-            warn("MISSING_ROADMAP", "roadmap.phases", "at least one roadmap phase is required")
+            warn(
+                "MISSING_ROADMAP",
+                "roadmap.phases",
+                "at least one roadmap phase is required",
+            )
         if applicable is None:
             warn(
                 "MODEL_UNDECIDED",
@@ -2546,7 +2836,7 @@ def validate_state(state: dict[str, Any]) -> dict[str, Any]:
             )
         if not any(
             isinstance(record, dict)
-            and record.get("status") == "active"
+            and evidence_record_id(record) in effective_ids
             and record.get("source_type") in EVIDENCE_SOURCE_TYPES
             and _present(record.get("locator"))
             for record in records
@@ -2692,8 +2982,14 @@ def validate_state(state: dict[str, Any]) -> dict[str, Any]:
                                 "requires one of: " + ", ".join(group),
                             )
                     if collection in {"formulas", "scenarios"}:
-                        list_field = "input_ids" if collection == "formulas" else "assumption_ids"
-                        if list_field in item and not isinstance(item.get(list_field), list):
+                        list_field = (
+                            "input_ids"
+                            if collection == "formulas"
+                            else "assumption_ids"
+                        )
+                        if list_field in item and not isinstance(
+                            item.get(list_field), list
+                        ):
                             error(
                                 "TYPE",
                                 f"{item_path}.{list_field}",
@@ -2746,7 +3042,13 @@ def validate_state(state: dict[str, Any]) -> dict[str, Any]:
                     if not isinstance(result, dict):
                         error("TYPE", item_path, "must be a JSON object")
                         continue
-                    for field in ("candidate_id", "gate", "result", "rationale", "owner"):
+                    for field in (
+                        "candidate_id",
+                        "gate",
+                        "result",
+                        "rationale",
+                        "owner",
+                    ):
                         if not _present(result.get(field)):
                             error("REQUIRED", f"{item_path}.{field}", "is required")
                     if _present(result.get("candidate_id")):
@@ -2777,7 +3079,8 @@ def validate_state(state: dict[str, Any]) -> dict[str, Any]:
                     "missing gate result for: " + ", ".join(uncovered),
                 )
 
-        _validate_investment_consistency(state, error, warn)
+    # Financial correctness follows the data, not the report presentation mode.
+    _validate_investment_consistency(state, error, warn)
 
     return _validation_report(issues, mode)
 
@@ -2894,9 +3197,7 @@ def update_section(
     return state
 
 
-def _assert_evidence_immutable(
-    before: dict[str, Any], after: dict[str, Any]
-) -> None:
+def _assert_evidence_immutable(before: dict[str, Any], after: dict[str, Any]) -> None:
     """Require corrections to supersede frozen evidence instead of rewriting it."""
 
     def index_records(state: dict[str, Any]) -> dict[str, dict[str, Any]]:
@@ -2907,9 +3208,9 @@ def _assert_evidence_immutable(
         for record in records:
             if not isinstance(record, dict):
                 continue
-            evidence_id = record.get("evidence_id") or record.get("id")
-            if _present(evidence_id):
-                indexed[str(evidence_id)] = record
+            evidence_id = evidence_record_id(record)
+            if evidence_id:
+                indexed[evidence_id] = record
         return indexed
 
     existing = index_records(before)
@@ -3147,7 +3448,10 @@ def main() -> int:
             json.dumps(
                 {
                     "status": "error",
-                    "error": {"code": "INTERRUPTED", "message": "operation interrupted"},
+                    "error": {
+                        "code": "INTERRUPTED",
+                        "message": "operation interrupted",
+                    },
                 },
                 ensure_ascii=False,
             ),

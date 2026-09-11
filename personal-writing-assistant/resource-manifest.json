@@ -1,25 +1,26 @@
 {
   "schema_version": 3,
   "skill": "personal-writing-assistant",
-  "generated_at": "2026-09-05T17:15:44+08:00",
+  "generated_at": "2026-09-11T11:33:54+08:00",
   "hash_algorithm": "SHA-256",
   "text_hash_normalization": "LF",
   "skill_md": "SKILL.md",
-  "skill_md_sha256": "bf26bb3e45b5dd294ea082137a0347c1aa42128f7f81c6e72806609e9e0cb8d5",
+  "skill_md_sha256": "ed00b0950dfd7b39b6913228ef420e5545cf7d5b1d8f4c9e276dba8169625281",
   "top_level_files": [
     "SKILL.md"
   ],
   "top_level_file_hashes": [
     {
       "path": "SKILL.md",
-      "sha256": "bf26bb3e45b5dd294ea082137a0347c1aa42128f7f81c6e72806609e9e0cb8d5"
+      "sha256": "ed00b0950dfd7b39b6913228ef420e5545cf7d5b1d8f4c9e276dba8169625281"
     }
   ],
   "top_level_directories": [
     "agents",
     "assets",
     "references",
-    "scripts"
+    "scripts",
+    "tests"
   ],
   "resource_directories": [
     {
@@ -36,6 +37,10 @@
     },
     {
       "name": "agents",
+      "file_count": 1
+    },
+    {
+      "name": "tests",
       "file_count": 1
     }
   ],
@@ -58,11 +63,15 @@
     },
     {
       "path": "references/my_voice_samples.md",
-      "sha256": "6b181f26a909941ebe7c7251fbed2a6fa81b636bf652f7332e36b4c9fb4431ee"
+      "sha256": "d1b211582a5f9a38f3a1a474218f1224247d9d3ebb7d2d77b12f2af9eab6e7ce"
     },
     {
       "path": "scripts/text_qa.py",
-      "sha256": "7ef56ce03000d193ed3853759cef7c1ea94621a0aff93f09f837c971e90e16cc"
+      "sha256": "c3ebd8273988bacdbae94d94e0601b2c810e1aba567bab55e018888ae3abc822"
+    },
+    {
+      "path": "tests/test_text_qa.py",
+      "sha256": "40944d6ef245b53ea5bce0e9d29b4bd6f29cd6cca9ea2730dde387d8573288f1"
     }
   ],
   "declared_local_dependencies": [
@@ -82,13 +91,19 @@
       "path": "references/my_voice_samples.md",
       "exists": true,
       "resolved_path": "personal-writing-assistant/references/my_voice_samples.md",
-      "sha256": "6b181f26a909941ebe7c7251fbed2a6fa81b636bf652f7332e36b4c9fb4431ee"
+      "sha256": "d1b211582a5f9a38f3a1a474218f1224247d9d3ebb7d2d77b12f2af9eab6e7ce"
     },
     {
       "path": "scripts/text_qa.py",
       "exists": true,
       "resolved_path": "personal-writing-assistant/scripts/text_qa.py",
-      "sha256": "7ef56ce03000d193ed3853759cef7c1ea94621a0aff93f09f837c971e90e16cc"
+      "sha256": "c3ebd8273988bacdbae94d94e0601b2c810e1aba567bab55e018888ae3abc822"
+    },
+    {
+      "path": "tests/test_text_qa.py",
+      "exists": true,
+      "resolved_path": "personal-writing-assistant/tests/test_text_qa.py",
+      "sha256": "40944d6ef245b53ea5bce0e9d29b4bd6f29cd6cca9ea2730dde387d8573288f1"
     }
   ],
   "missing_declared_dependencies": []

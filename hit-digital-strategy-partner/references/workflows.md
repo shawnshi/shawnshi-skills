@@ -41,6 +41,17 @@
 4. 对中心建议保留最强反证、替代解释和证伪条件。
 5. 把建议转换为带责任、验收、资源、回退和退出条件的阶段门。
 
+## 跨技能交接
+
+交给 `hit-solution-architect` 或 `personal-writing-assistant` 时，只传递本任务获准使用的最小材料，并保留以下字段；不复制另一套财务 Schema。
+
+- ID：原决策、范围、证据、假设和输出 ID 及来源版本；不得因换技能重编号。
+- 证据：主张与来源定位、日期、地区、支持限制和当前有效/争议/撤回状态。
+- 假设：假设 ID、值、责任人、敏感性和未验证边界；不得改写为事实。
+- 数字口径：期间、币种、单位、税费、折现、基线/不实施情景与输出引用；技术 TCO 回传原模型，ROI 与预算取舍仍由战略侧负责。
+- 未决：缺口、冲突、补证责任人与解除条件。
+- 批准边界：实际成熟度、批准人、范围、条件与凭据定位；战略就绪/批准不自动成为架构发布、生产实施或文章对外发布授权。
+
 ## 并行研究
 
 按预计净节省而不是研究面数量决定是否并行。两个大型独立研究面可以并行；三个微小或强依赖研究面不应拆分。
@@ -59,7 +70,7 @@
 
 ## 文件交付
 
-需要文件时才创建章节并装配。默认必须至少有一个清理前置 frontmatter 后仍非空白的章节；全空时返回 `empty_chapters`，不创建或覆盖输出（即使带 `--force`）。混合输入跳过空章节并在 warnings 列出文件，`chapters_merged`、`chapter_order` 和 `audit` 只记录实际合并章节。只把文件开头、有闭合分隔符且首个有效行是映射键的块视为 frontmatter；普通 Markdown 水平分隔线及有歧义的非映射块保留。显式 `--allow-empty` 仅允许标题草稿，返回警告；无正文且 Blackboard 为 `decision_ready/approved_for_execution` 时仍拒绝，不能通过空草稿声明正式成熟度。装配后运行统一质量门禁。`working_draft` 和 `review_ready` 可以带着明确披露的警告供复核；`decision_ready` 必须通过严格门禁。文件头的成熟度必须与Blackboard一致，不能用脚本成功状态替代管理结论。
+需要文件时才创建章节并装配。默认必须至少有一个清理前置 frontmatter 后仍非空白的章节；全空时返回 `empty_chapters`，不创建或覆盖输出（即使带 `--force`）。混合输入跳过空章节并在 warnings 列出文件，`chapters_merged`、`chapter_order` 和 `audit` 只记录实际合并章节。只把文件开头、有闭合分隔符且首个有效行是映射键的块视为 frontmatter；普通 Markdown 水平分隔线及有歧义的非映射块保留。显式 `--allow-empty` 仅允许标题草稿，返回警告；无正文且 Blackboard 为 `decision_ready/approved_for_execution` 时仍拒绝，不能通过空草稿声明正式成熟度。装配后运行统一质量门禁。`working_draft` 和 `review_ready` 可以带着明确披露的警告供复核；`decision_ready` 必须通过严格门禁。文件头与正文所有权威成熟度声明必须与 Blackboard 一致；示例代码和引文不作为实际批准。不能用脚本成功状态替代管理结论。正式财务输出采用 [editor.md](editor.md) 的 `[[output:ID metric=roi value=50 unit=%]]` 绑定语法；普通散文数字、来源支持力度和批准真实性仍须人工核对。
 
 ## 最短工具路径
 
@@ -94,6 +105,6 @@ python scripts/strategy_gate.py \
   --strict
 ```
 
-`--strict` 只用于要求无警告的正式交付；草稿和复核稿应保留并披露警告，而不是通过放宽字段或改写成熟度来消除警告。
+`--strict` 用于正式交付，阻断确定性错误与决策、数据、合规警告（`blocking_warnings`）；非阻断编辑建议保留在 `advisories` 和兼容字段 `warnings` 中。草稿和复核稿应保留并披露警告，而不是通过放宽字段或改写成熟度来消除警告。即使严格门通过，也必须交付 `unchecked` 所列的人工复核范围。
 
 纯对话且不生成文件、不使用 Blackboard 的 `brief` 不运行文件门禁；无 Blackboard 的 `brief` 文件仅可显式使用 `strategy_gate.py --path REPORT --mode brief --textual-only` 检查文本草稿；报告须声明 `working_draft` 或 `review_ready`。输出 `scope: textual_only`，不验证证据、财务、合规或决策就绪度，不得据此放行正式财务交付。该路径拒绝 `--strict`、正式成熟度及其他模式；已有 Blackboard 时仍走原统一门禁，正式交付仍必须严格检查。装配成功不代表门禁通过。

@@ -1,21 +1,22 @@
 {
   "schema_version": 3,
   "skill": "hit-industry-radar",
-  "generated_at": "2026-09-10T21:52:18+08:00",
+  "generated_at": "2026-09-11T06:34:57.014737+00:00",
   "hash_algorithm": "SHA-256",
   "text_hash_normalization": "LF",
   "skill_md": "SKILL.md",
-  "skill_md_sha256": "cf7cf4521dbcf9198ad0ab8e9c636d53b78cd6488d9ddf8f582b4de8012b5cbd",
+  "skill_md_sha256": "5f8e874b3085208c26ba2de5dd1839c3ec5356b271073b335f0c9528c68ae743",
   "top_level_files": [
     "SKILL.md"
   ],
   "top_level_file_hashes": [
     {
       "path": "SKILL.md",
-      "sha256": "cf7cf4521dbcf9198ad0ab8e9c636d53b78cd6488d9ddf8f582b4de8012b5cbd"
+      "sha256": "5f8e874b3085208c26ba2de5dd1839c3ec5356b271073b335f0c9528c68ae743"
     }
   ],
   "top_level_directories": [
+    ".skill_state",
     "assets",
     "evals",
     "references",
@@ -36,6 +37,10 @@
     }
   ],
   "resource_file_hashes": [
+    {
+      "path": ".skill_state/rejected_edits.jsonl",
+      "sha256": "727719a2e3af1795c42b0a6de97ee8256b55c1617a52f514f7d44ddde993420e"
+    },
     {
       "path": "assets/intelligence_targets.json",
       "sha256": "67e3558b00cf4e9ba80803542afbf1b8a5b9e4431a7ff422ed22353b444b3332"
@@ -62,11 +67,11 @@
     },
     {
       "path": "references/report_schema.md",
-      "sha256": "d765a3094576f8b65ce1cdebe8b3a3be47daaf09ce80eeb3775e3a4111b2b522"
+      "sha256": "6b72787446d4cfa57825d58ff6c5acfe55fa5169f001e50b4fb565bcebe5f2cd"
     },
     {
       "path": "references/research_contract.md",
-      "sha256": "be29b90e70658460376945b0c085cb56cea6dbf4a8cec0a96aef2032afa4f105"
+      "sha256": "77efa0ab8a84b67b68147f59898bf46201e964fb98074dfe183985587aef6068"
     },
     {
       "path": "references/stc_framework.md",
@@ -74,11 +79,11 @@
     },
     {
       "path": "scripts/test_validate_industry_radar.py",
-      "sha256": "57e9b93be87c9453f2c4d383e2066c7f3a0d9a2e1acc3d909f3748ce828d8707"
+      "sha256": "f4ea6c2d8cfdcc2448e0592dcaf3af038bad31ca058fed162586f4c7e9bee8a1"
     },
     {
       "path": "scripts/validate_industry_radar.py",
-      "sha256": "39aa40d9809b1b07a79fc2747e405adb534904330f0dedea6ebaccf0e808b99b"
+      "sha256": "22fa2c1dd1b03cb3b98a45525e33baa66ec3c250b754495c874f60d8fe6eac77"
     }
   ],
   "declared_local_dependencies": [
@@ -86,13 +91,13 @@
       "path": "references/report_schema.md",
       "exists": true,
       "resolved_path": "hit-industry-radar/references/report_schema.md",
-      "sha256": "d765a3094576f8b65ce1cdebe8b3a3be47daaf09ce80eeb3775e3a4111b2b522"
+      "sha256": "6b72787446d4cfa57825d58ff6c5acfe55fa5169f001e50b4fb565bcebe5f2cd"
     },
     {
       "path": "references/research_contract.md",
       "exists": true,
       "resolved_path": "hit-industry-radar/references/research_contract.md",
-      "sha256": "be29b90e70658460376945b0c085cb56cea6dbf4a8cec0a96aef2032afa4f105"
+      "sha256": "77efa0ab8a84b67b68147f59898bf46201e964fb98074dfe183985587aef6068"
     },
     {
       "path": "references/stc_framework.md",
@@ -104,13 +109,13 @@
       "path": "scripts/test_validate_industry_radar.py",
       "exists": true,
       "resolved_path": "hit-industry-radar/scripts/test_validate_industry_radar.py",
-      "sha256": "57e9b93be87c9453f2c4d383e2066c7f3a0d9a2e1acc3d909f3748ce828d8707"
+      "sha256": "f4ea6c2d8cfdcc2448e0592dcaf3af038bad31ca058fed162586f4c7e9bee8a1"
     },
     {
       "path": "scripts/validate_industry_radar.py",
       "exists": true,
       "resolved_path": "hit-industry-radar/scripts/validate_industry_radar.py",
-      "sha256": "39aa40d9809b1b07a79fc2747e405adb534904330f0dedea6ebaccf0e808b99b"
+      "sha256": "22fa2c1dd1b03cb3b98a45525e33baa66ec3c250b754495c874f60d8fe6eac77"
     },
     {
       "path": "shared/references/report_archive.md",
@@ -134,7 +139,7 @@
       "path": "shared/scripts/test_report_archive.py",
       "exists": true,
       "resolved_path": "shared/scripts/test_report_archive.py",
-      "sha256": "09ad138c9af2a7d19f011d8cdabe3f78b5c97b5d15b5055bd3138456e4ef5a83"
+      "sha256": "8a99d570491c7ea2b995f01952a671e790cf3bd693b37a56cf66338da29069e2"
     }
   ],
   "missing_declared_dependencies": []

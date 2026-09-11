@@ -3,6 +3,7 @@ from __future__ import annotations
 import argparse
 import hashlib
 import json
+import math
 import re
 from datetime import datetime
 from pathlib import Path
@@ -55,6 +56,7 @@ def summarize_sessions(paths: list[Path]) -> dict[str, Any]:
     }
     sources: list[dict[str, Any]] = []
     observed_times: list[datetime] = []
+    unmeasured_assistant_messages = 0
     for path in resolved:
         if not path.is_file():
             raise ValueError(f"session file not found: {path}")
@@ -88,15 +90,50 @@ def summarize_sessions(paths: list[Path]) -> dict[str, Any]:
                 usage["assistant_messages"] += 1
                 raw_usage = message.get("usage")
                 if isinstance(raw_usage, dict):
+                    valid_counters = True
                     for source_field, target_field in USAGE_FIELDS.items():
-                        value = raw_usage.get(source_field, 0)
-                        if isinstance(value, int) and not isinstance(value, bool) and value >= 0:
-                            usage[target_field] += value
-                    cost = raw_usage.get("cost")
-                    if isinstance(cost, dict):
-                        total = cost.get("total", 0)
-                        if isinstance(total, (int, float)) and not isinstance(total, bool):
-                            usage["cost_usd"] += float(total)
+                        if source_field in raw_usage:
+                            value = raw_usage.get(source_field)
+                            if isinstance(value, int) and not isinstance(value, bool) and value >= 0:
+                                usage[target_field] += value
+                            else:
+                                valid_counters = False
+                    if "totalTokens" not in raw_usage:
+                        if "input" in raw_usage and "output" in raw_usage:
+                            inp = raw_usage.get("input")
+                            out = raw_usage.get("output")
+                            if (
+                                isinstance(inp, int)
+                                and not isinstance(inp, bool)
+                                and inp >= 0
+                                and isinstance(out, int)
+                                and not isinstance(out, bool)
+                                and out >= 0
+                            ):
+                                usage["total_tokens"] += inp + out
+                            else:
+                                valid_counters = False
+                        else:
+                            valid_counters = False
+                    if not valid_counters:
+                        unmeasured_assistant_messages += 1
+                    else:
+                        cost = raw_usage.get("cost")
+                        if isinstance(cost, dict) and "total" in cost:
+                            total = cost.get("total")
+                            if (
+                                isinstance(total, (int, float))
+                                and not isinstance(total, bool)
+                                and math.isfinite(float(total))
+                                and float(total) >= 0
+                            ):
+                                usage["cost_usd"] += float(total)
+                            else:
+                                unmeasured_assistant_messages += 1
+                        else:
+                            unmeasured_assistant_messages += 1
+                else:
+                    unmeasured_assistant_messages += 1
             elif role == "toolResult":
                 usage["tool_results"] += 1
                 if message.get("isError") is True:
@@ -117,6 +154,12 @@ def summarize_sessions(paths: list[Path]) -> dict[str, Any]:
     )
     if usage["budget_tokens"] < 0:
         raise ValueError("session token counters are inconsistent")
+    usage["unmeasured_assistant_messages"] = unmeasured_assistant_messages
+    usage["measurement_status"] = (
+        "unmeasured"
+        if unmeasured_assistant_messages > 0
+        else ("measured" if usage["assistant_messages"] > 0 else "zero_assistant_messages")
+    )
     started_at = min(observed_times) if observed_times else None
     ended_at = max(observed_times) if observed_times else None
     return {

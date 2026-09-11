@@ -81,5 +81,5 @@ R01/R02整改期限：下一次扩大范围或正式发布前；尚无实际参�
 - 新执行环境：Windows、Python 3.13.12、默认文件编码 cp1252、utf8_mode=0、PYTHONUTF8 未设置；继承的 PYTHONIOENCODING=utf-8 仅用于标准流。只用合成临时 fixtures，无真实客户、连接器、身份认证、业务审批或发送。
 - 新全量执行：`python -B scripts/run_tests.py --json --verbosity 2`，153/153 通过，100.388357 秒，0 失败、0 错误、0 跳过；外层 timeout=720 秒，测试子进程上限660秒。未复用恢复前 passed 结果。
 - 新重点执行：`python -B scripts/run_tests.py tests.test_build_candidate_history tests.test_candidate_revision tests.test_draft_fields tests.test_metrics_scope --json --verbosity 2`，28/28 通过，18.411539 秒，0 失败、0 错误、0 跳过。覆盖真实初始化后仅填写候选、普通校验和真实 commit、过期 CAS 拒绝、重复 finalize、策略 resume、信件同 run 保持版本及新 run 追加历史、正式文件字节保护、候选身份/授权/ready 拒绝、显式 UTF-8 与计量边界。
-- 本地工程回执与详细日志保存在任务临时目录，不随源码发布；源码验证结果不替代真实业务验收。
+- 新证据保存在任务托管临时目录 `resume-20260911T020905Z/customer/`：`preflight.json`、`drift-analysis.json`、`ast-semantic-detail.json`、`full-environment.json`、`full-stdout.log`、`full-stderr.log`、`full-summary.json`、`directed-summary.json` 及对应详细日志；最终 `semantic.diff`、`final-validation.json` 与快照绑定最终字节。stdout 含诊断及末行 JSON，机器汇总另存，不冒充纯 JSON 日志。
 - 本地脚本和静态 Gate 不等于模型端到端测试、真人独立使用或宿主权限隔离。独立 reviewer 另行判定；上表真人、连接器和业务发布待办仍未关闭，保持 2.6.2 独立候选／限定内部试用。

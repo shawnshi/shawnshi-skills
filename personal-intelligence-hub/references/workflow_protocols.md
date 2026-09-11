@@ -105,9 +105,17 @@ python -X utf8 scripts/session_telemetry.py --manifest <run_manifest.json> --sta
 
 补检遥测的 `invocation-id` 必须使用对应 `gap_id`，语义与红队使用已登记 request 的 `invocation_id`。请求登记时，manifest 会在 `telemetry.reservations` 中持久化每次启动的预算 Token/费用预留；没有完全匹配的活动 reservation 时拒绝遥测。每个 session JSONL SHA-256 只能绑定一个 invocation，重复或交叉登记拒绝。可信遥测登记后以 `total_tokens - cache_read_tokens - cache_write_tokens` 结算预算 Token，同时保留原始总 Token，并释放差额。若运行时没有暴露 session 路径，明确标记遥测不可用，不得估算 Token 或费用，且完整预留继续计入运行总预算，后续阶段不得重复取得该额度。若 prepare 没有返回 request，说明基线已满足配置要求，脚本已登记结构化 `no_increment`，不要伪造补检结果。
 
+## recovery
+
+`pih-source-adoption/1.0` 只支持完整、已结算且未归档的原始证据闭包。preview 校验原目录全文件 SHA、原冻结 bundle/validator、原补检 request/result/proof/date ownership，并只读重建历史以比较原 snapshot。原阶段记录、证据路径、request/proof 哈希和时间原样引用；admission 记录新 run 身份、当前接纳时间及原闭包摘要，不授予旧证据新鲜度。apply 必须消费精确 preview SHA，目标 isolated runtime 必须不存在；失败不自动重扫、刷新历史或替换正式文件。新 run 的 semantic、lineage、正文摘录、coverage、forge 都重验同一 admission/原闭包；新语义和红队回执不能从旧稿生成。
+
+`pih-late-telemetry/1.0` 由父级显式关联原 invocation/request、原 manifest SHA、实际 runtime status SHA 与 session path/header/SHA。实际使用来自 Pi usage 元数据，不复制消息文本；runtime timed_out 与 assistant error 分列。apply 只创建原 run 的 late-telemetry/<invocation>.json，重复、跨调用复用、非 settled runtime 或 hash 变化拒绝。原 manifest/clock/reservation 不变；未知 usage 保留保守额度，已知 usage 不重复计入，所有 native broker holds 永久保留。新 run 预算独立，不能从旧 accounting 获取 headroom。恢复与部署只能在独立审查后由父任务执行。
+
 ## semantic
 
-先登记语义评估请求：
+先完成 bundle、输入和分派上下文的昂贵准备，再登记语义评估请求。`review-handoff/1.0` 的时钟在最终 request publication 前启动；新 packet 不沿用补检 next_launch_json broker 等待。父任务立即运行 run-scoped `review_handoff.py preflight --request <request>` 后再分派。context/finalize 只消费精确 argv 数组，`shell=False`；原 240000ms/200000 Token/$0.50 不变。canonical 发布后立即结束代理，父任务用 consume 独立验收，再另行安排扩窗/红队/forge；不为下游工作发 routine need_decision。真正 blocker 仍升级。
+
+登记命令：
 
 ```powershell
 python -X utf8 scripts/run_daily.py prepare-review --manifest <run_manifest.json> --kind semantic --max-turns 2

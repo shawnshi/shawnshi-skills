@@ -1,7 +1,7 @@
 {
   "schema_version": 3,
   "skill": "hit-customer-analyst",
-  "generated_at": "2026-09-11T12:09:07+08:00",
+  "generated_at": "2026-09-11T10:16:55+08:00",
   "hash_algorithm": "SHA-256",
   "text_hash_normalization": "LF",
   "skill_md": "SKILL.md",
@@ -126,7 +126,7 @@
     },
     {
       "path": "references/release-acceptance.md",
-      "sha256": "83de7ce557d1f282bf3c73d585912f072803a17914d0830bad950db1d506e8ff"
+      "sha256": "44f5f6b6f3c3ff647303134ec5ffba415a2426aeb1e463bc05404241e760ce08"
     },
     {
       "path": "references/research-depth-and-search-matrix.md",
@@ -398,7 +398,7 @@
       "path": "references/release-acceptance.md",
       "exists": true,
       "resolved_path": "hit-customer-analyst/references/release-acceptance.md",
-      "sha256": "83de7ce557d1f282bf3c73d585912f072803a17914d0830bad950db1d506e8ff"
+      "sha256": "44f5f6b6f3c3ff647303134ec5ffba415a2426aeb1e463bc05404241e760ce08"
     },
     {
       "path": "references/research-depth-and-search-matrix.md",

@@ -12,10 +12,10 @@ import argparse
 import itertools
 import json
 import re
+from collections.abc import Iterable, Sequence
 from dataclasses import dataclass, field
 from pathlib import Path
-from typing import Any, Iterable, Sequence
-
+from typing import Any
 
 SCHEMA_VERSION = "2.0"
 EXIT_OK = 0
@@ -43,7 +43,15 @@ MODULE_RULES: dict[str, dict[str, Any]] = {
     },
     "interoperability": {
         "label": "互操作与接口",
-        "keywords": ("互操作", "接口标准", "接口清单", "集成平台", "数据交换"),
+        "keywords": (
+            "互操作",
+            "接口标准",
+            "接口清单",
+            "接口契约",
+            "接口/事件契约",
+            "集成平台",
+            "数据交换",
+        ),
     },
     "security": {
         "label": "安全、隐私与合规",
@@ -86,7 +94,14 @@ MODULE_RULES: dict[str, dict[str, Any]] = {
 PROFILE_MODULES: dict[str, tuple[str, ...]] = {
     "brief": ("context", "risk"),
     "review": ("architecture", "nonfunctional", "evidence", "risk"),
-    "proposal": ("context", "architecture", "security", "nonfunctional", "traceability", "risk"),
+    "proposal": (
+        "context",
+        "architecture",
+        "security",
+        "nonfunctional",
+        "traceability",
+        "risk",
+    ),
     "blueprint": (
         "context",
         "architecture",
@@ -115,7 +130,14 @@ MODULE_ALIASES = {
     "clinical": "clinical-safety",
 }
 
-VAGUE_PATTERNS = ("提升效率", "降低成本", "优化流程", "增强体验", "提高质量", "减少负担")
+VAGUE_PATTERNS = (
+    "提升效率",
+    "降低成本",
+    "优化流程",
+    "增强体验",
+    "提高质量",
+    "减少负担",
+)
 
 # {{FIELD}} is the only recommended placeholder form. The legacy bracketed
 # registry is intentionally finite: [HL7_V2] and [ISO_27001] are not inferred
@@ -208,7 +230,9 @@ LEGACY_PLACEHOLDER_PATTERNS = tuple(
 )
 CURLY_PLACEHOLDER_RE = re.compile(r"\{\{\s*[^{}\n]+?\s*\}\}")
 BRACKET_TOKEN_RE = re.compile(r"\[([^\[\]\n]+)\]")
-CHINESE_PENDING_RE = re.compile(r"^(?:待核验|待确认|待客户确认|待补|待补充)(?:\s|$|[:：].*)")
+CHINESE_PENDING_RE = re.compile(
+    r"^(?:待核验|待确认|待客户确认|待补|待补充)(?:\s|$|[:：].*)"
+)
 CONTROLLED_PLACEHOLDER_SECTION_RE = re.compile(
     r"(?:信息缺口|未知项|取证计划|待决定|假设|排除项)", re.IGNORECASE
 )
@@ -235,11 +259,25 @@ BENEFIT_TERM_RE = re.compile(
     re.IGNORECASE,
 )
 SOURCE_MARKER_RE = re.compile(
-    r"(?:来源|source|客户材料|合同|公开文件|测量记录|测算底表|https?://|\[[\^]?\d+\])",
+    r"(?:客户材料|合同|公开文件|测量记录|测算底表|https?://|\[[\^]?\d+\])",
     re.IGNORECASE,
 )
-DATE_MARKER_RE = re.compile(r"(?:资料日期|测量日期|as[_ -]?of|20\d{2}[-/.年]\d{1,2})", re.IGNORECASE)
-REGION_MARKER_RE = re.compile(r"(?:适用地区|地区|region|全国|中国|澳门|香港|医院|机构范围)", re.IGNORECASE)
+MISSING_SOURCE_RE = re.compile(
+    r"(?:无来源|没有来源|来源(?:缺失|待补充?|待核验|未知|不明)|"
+    r"(?:来源|source)\s*[:：=]\s*(?:无|缺失|待补充?|待核验|未知|不明|未提供|"
+    r"none|null|unknown|n/?a|pending))"
+    r"(?=[ \t]*(?:$|[；;。|\n,，.!！？]))",
+    re.IGNORECASE,
+)
+SOURCE_FIELD_RE = re.compile(
+    r"(?:来源|source)[ \t]*[:：=][ \t]*([^；;。|\n]*)", re.IGNORECASE
+)
+DATE_MARKER_RE = re.compile(
+    r"(?:资料日期|测量日期|as[_ -]?of|20\d{2}[-/.年]\d{1,2})", re.IGNORECASE
+)
+REGION_MARKER_RE = re.compile(
+    r"(?:适用地区|地区|region|全国|中国|澳门|香港|医院|机构范围)", re.IGNORECASE
+)
 
 
 @dataclass
@@ -315,8 +353,19 @@ def classify_review_placeholders(content: str) -> tuple[list[str], list[str]]:
     controlled: list[str] = []
     section_state: dict[int, bool] = {}
     current_controlled = False
-    for _, line in _without_fenced_code_lines(content):
-        heading = HEADING_RE.match(line)
+    fence_character: str | None = None
+    fence_length = 0
+    for line in content.splitlines():
+        fence = FENCE_RE.match(line)
+        in_fence = fence_character is not None
+        if fence:
+            marker = fence.group(1)
+            if fence_character is None:
+                fence_character, fence_length = marker[0], len(marker)
+            elif marker[0] == fence_character and len(marker) >= fence_length:
+                fence_character, fence_length = None, 0
+        # Code inherits its enclosing section, but cannot open a Markdown section.
+        heading = None if in_fence or fence else HEADING_RE.match(line)
         if heading:
             level = len(heading.group(1))
             section_state = {
@@ -324,7 +373,9 @@ def classify_review_placeholders(content: str) -> tuple[list[str], list[str]]:
                 for existing_level, state in section_state.items()
                 if existing_level < level
             }
-            parent_controlled = section_state[max(section_state)] if section_state else False
+            parent_controlled = (
+                section_state[max(section_state)] if section_state else False
+            )
             current_controlled = bool(
                 parent_controlled
                 or CONTROLLED_PLACEHOLDER_SECTION_RE.search(heading.group(2))
@@ -379,7 +430,10 @@ def parse_sections(content: str, profile: str) -> tuple[list[Section], list[Sect
             current.body_lines.append(line)
 
     for index, section in enumerate(all_sections):
-        if index + 1 < len(all_sections) and all_sections[index + 1].level > section.level:
+        if (
+            index + 1 < len(all_sections)
+            and all_sections[index + 1].level > section.level
+        ):
             section.has_child = True
 
     minimum_level = 1 if profile == "brief" else 2
@@ -401,20 +455,38 @@ def _keyword_is_positive(content: str, keyword: str) -> bool:
         index = lowered.find(needle, start)
         if index < 0:
             return False
-        left = max((match.end() for match in CLAUSE_BOUNDARY_RE.finditer(content[:index])), default=0)
+        left = max(
+            (match.end() for match in CLAUSE_BOUNDARY_RE.finditer(content[:index])),
+            default=0,
+        )
         right_match = CLAUSE_BOUNDARY_RE.search(content, index + len(keyword))
         right = right_match.start() if right_match else len(content)
         segment = content[left:right]
         relative_index = max(index - left, 0)
         before = segment[:relative_index]
         after = segment[relative_index + len(keyword) :]
-        if not NEGATION_BEFORE_RE.search(before[-40:]) and not NEGATION_AFTER_RE.search(after[:40]):
+        if not NEGATION_BEFORE_RE.search(before[-40:]) and not NEGATION_AFTER_RE.search(
+            after[:40]
+        ):
             return True
         start = index + len(needle)
 
 
 def _module_is_present(content: str, module: str) -> bool:
-    return any(_keyword_is_positive(content, keyword) for keyword in MODULE_RULES[module]["keywords"])
+    return any(
+        _keyword_is_positive(content, keyword)
+        for keyword in MODULE_RULES[module]["keywords"]
+    )
+
+
+def _source_is_missing(text: str) -> bool:
+    if MISSING_SOURCE_RE.search(text):
+        return True
+    for field_match in SOURCE_FIELD_RE.finditer(text):
+        value = field_match.group(1).strip()
+        if not value or find_placeholders(value):
+            return True
+    return False
 
 
 def _quantified_claims(content: str) -> list[dict[str, Any]]:
@@ -422,14 +494,42 @@ def _quantified_claims(content: str) -> list[dict[str, Any]]:
     claims: list[dict[str, Any]] = []
     for index, (line_number, line) in enumerate(lines):
         has_unit = bool(QUANTIFIED_VALUE_RE.search(line))
-        if not BENEFIT_TERM_RE.search(line) or not (has_unit or DIRECT_ROI_TCO_VALUE_RE.search(line)):
+        if not BENEFIT_TERM_RE.search(line) or not (
+            has_unit or DIRECT_ROI_TCO_VALUE_RE.search(line)
+        ):
             continue
-        nearby = "\n".join(candidate for _, candidate in lines[max(0, index - 2) : index + 3])
+        # A neighboring claim is a boundary, not a line to skip over.
+        nearby_lines = [line]
+        for direction in (-1, 1):
+            for distance in (1, 2):
+                other_index = index + direction * distance
+                if not 0 <= other_index < len(lines):
+                    break
+                candidate = lines[other_index][1]
+                if BENEFIT_TERM_RE.search(candidate) and (
+                    QUANTIFIED_VALUE_RE.search(candidate)
+                    or DIRECT_ROI_TCO_VALUE_RE.search(candidate)
+                ):
+                    break
+                nearby_lines.append(candidate)
+        nearby = "\n".join(nearby_lines)
+        # An explicit source (or gap) on this claim outranks nearby metadata.
+        source_context = (
+            line
+            if SOURCE_FIELD_RE.search(line)
+            or SOURCE_MARKER_RE.search(line)
+            or _source_is_missing(line)
+            else nearby
+        )
         claims.append(
             {
                 "line": line_number,
                 "text": line.strip()[:240],
-                "has_source": bool(SOURCE_MARKER_RE.search(nearby)),
+                "has_source": not _source_is_missing(source_context)
+                and bool(
+                    SOURCE_MARKER_RE.search(source_context)
+                    or SOURCE_FIELD_RE.search(source_context)
+                ),
                 "has_date": bool(DATE_MARKER_RE.search(nearby)),
                 "has_region": bool(REGION_MARKER_RE.search(nearby)),
                 "has_unit": has_unit,
@@ -452,7 +552,9 @@ def status_from_findings(
     return "pass"
 
 
-def runtime_failure_report(tool: str, target_file: str, code: str, message: str) -> dict[str, Any]:
+def runtime_failure_report(
+    tool: str, target_file: str, code: str, message: str
+) -> dict[str, Any]:
     return {
         "schema_version": SCHEMA_VERSION,
         "tool": tool,
@@ -511,7 +613,7 @@ class SolutionLogicChecker:
         self.section_tokens = [tokenize(section.body) for section in self.sections]
 
     @classmethod
-    def from_path(cls, file_path: Path, **kwargs: Any) -> "SolutionLogicChecker":
+    def from_path(cls, file_path: Path, **kwargs: Any) -> SolutionLogicChecker:
         return cls(read_utf8_document(file_path), target_file=str(file_path), **kwargs)
 
     def structural_findings(self) -> list[dict[str, Any]]:
@@ -519,7 +621,9 @@ class SolutionLogicChecker:
         if not self.content.strip():
             return [{"code": "E_EMPTY_FILE", "message": "文档为空。"}]
         if not self.sections:
-            level_description = "一级或更深" if self.profile == "brief" else "二级或更深"
+            level_description = (
+                "一级或更深" if self.profile == "brief" else "二级或更深"
+            )
             errors.append(
                 {
                     "code": "E_MISSING_HEADINGS",
@@ -540,7 +644,10 @@ class SolutionLogicChecker:
                     "code": "E_DUPLICATE_SECTION",
                     "message": "存在重复章节标题；章节不会再被静默覆盖。",
                     "instances": [
-                        {"title": items[0].title, "lines": [item.line for item in items]}
+                        {
+                            "title": items[0].title,
+                            "lines": [item.line for item in items],
+                        }
                         for items in duplicates[:20]
                     ],
                 }
@@ -608,7 +715,9 @@ class SolutionLogicChecker:
     def module_findings(self) -> tuple[list[dict[str, Any]], list[dict[str, Any]]]:
         errors: list[dict[str, Any]] = []
         warnings: list[dict[str, Any]] = []
-        active_modules = tuple(dict.fromkeys(PROFILE_MODULES[self.profile] + self.required_modules))
+        active_modules = tuple(
+            dict.fromkeys(PROFILE_MODULES[self.profile] + self.required_modules)
+        )
         explicitly_required = set(self.required_modules)
         for module in active_modules:
             if _module_is_present(self.content, module):
@@ -616,7 +725,9 @@ class SolutionLogicChecker:
             finding = {
                 "module": module,
                 "dimension": MODULE_RULES[module]["label"],
-                "source": "--require" if module in explicitly_required else f"profile:{self.profile}",
+                "source": "--require"
+                if module in explicitly_required
+                else f"profile:{self.profile}",
             }
             if module in explicitly_required and self.stage in {"review", "release"}:
                 errors.append(
@@ -636,14 +747,20 @@ class SolutionLogicChecker:
                 )
         return errors, warnings
 
-    def quantified_claim_findings(self) -> tuple[list[dict[str, Any]], list[dict[str, Any]]]:
+    def quantified_claim_findings(
+        self,
+    ) -> tuple[list[dict[str, Any]], list[dict[str, Any]]]:
         claims = _quantified_claims(self.content)
         unsourced = [claim for claim in claims if not claim["has_source"]]
         incomplete = [
             claim
             for claim in claims
             if claim["has_source"]
-            and (not claim["has_date"] or not claim["has_region"] or not claim["has_unit"])
+            and (
+                not claim["has_date"]
+                or not claim["has_region"]
+                or not claim["has_unit"]
+            )
         ]
         errors: list[dict[str, Any]] = []
         warnings: list[dict[str, Any]] = []
@@ -678,12 +795,16 @@ class SolutionLogicChecker:
             return []
         warnings: list[dict[str, Any]] = []
         indexed_sections = list(enumerate(self.sections))
-        for (left_index, left), (right_index, right) in itertools.combinations(indexed_sections, 2):
+        for (left_index, left), (right_index, right) in itertools.combinations(
+            indexed_sections, 2
+        ):
             left_tokens = self.section_tokens[left_index]
             right_tokens = self.section_tokens[right_index]
             if len(left_tokens) < 25 or len(right_tokens) < 25:
                 continue
-            overlap = len(left_tokens & right_tokens) / max(len(left_tokens | right_tokens), 1)
+            overlap = len(left_tokens & right_tokens) / max(
+                len(left_tokens | right_tokens), 1
+            )
             if overlap >= 0.55:
                 warnings.append(
                     {
@@ -743,7 +864,13 @@ class SolutionLogicChecker:
             review.append(
                 {
                     "code": "R_RELEASE_APPROVAL_REQUIRED",
-                    "items": ["方案逻辑", "产品适配", "承诺风险", "临床安全", "项目可执行性"],
+                    "items": [
+                        "方案逻辑",
+                        "产品适配",
+                        "承诺风险",
+                        "临床安全",
+                        "项目可执行性",
+                    ],
                     "message": "自动检查已完成，但发布仍需具备授权的负责人确认。",
                 }
             )
@@ -766,21 +893,29 @@ class SolutionLogicChecker:
             "automated_checks": "fail" if errors else "pass",
             "gate": {
                 "human_review": human_review,
-                "release_ready": not errors and self.review_complete if self.stage == "release" else None,
+                "release_ready": not errors and self.review_complete
+                if self.stage == "release"
+                else None,
             },
             "errors": errors,
             "warnings": warnings,
             "review": review,
             "structure": {
                 "sections": [
-                    {"title": section.title, "level": section.level, "line": section.line}
+                    {
+                        "title": section.title,
+                        "level": section.level,
+                        "line": section.line,
+                    }
                     for section in self.sections
                 ]
             },
             "summary": {
                 "error_count": len(errors),
                 "warning_count": len(warnings),
-                "warning_truncated_count": max(warning_total_before_limit - len(warnings), 0),
+                "warning_truncated_count": max(
+                    warning_total_before_limit - len(warnings), 0
+                ),
                 "review_count": len(review),
                 "section_count": len(self.sections),
             },
@@ -801,9 +936,13 @@ def parse_required_modules(values: Sequence[str]) -> tuple[str, ...]:
 def parse_args(argv: Sequence[str] | None = None) -> argparse.Namespace:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("file_path", type=Path)
-    parser.add_argument("legacy_profile", nargs="?", help="Deprecated positional profile.")
+    parser.add_argument(
+        "legacy_profile", nargs="?", help="Deprecated positional profile."
+    )
     parser.add_argument("--profile", metavar="{" + ",".join(PROFILES) + "}")
-    parser.add_argument("--stage", default="review", metavar="{" + ",".join(STAGES) + "}")
+    parser.add_argument(
+        "--stage", default="review", metavar="{" + ",".join(STAGES) + "}"
+    )
     parser.add_argument(
         "--require",
         action="append",
@@ -827,7 +966,11 @@ def parse_args(argv: Sequence[str] | None = None) -> argparse.Namespace:
 
 
 def _configuration_error(target: str, message: str) -> int:
-    print(render_report(runtime_failure_report("logic_checker", target, "E_ARGUMENT", message)))
+    print(
+        render_report(
+            runtime_failure_report("logic_checker", target, "E_ARGUMENT", message)
+        )
+    )
     return EXIT_RUNTIME_FAILURE
 
 
@@ -844,14 +987,22 @@ def main(argv: Sequence[str] | None = None) -> int:
     required_modules = parse_required_modules(args.require)
     unknown_modules = sorted(set(required_modules) - set(MODULE_RULES))
     if unknown_modules:
-        return _configuration_error(target, f"未知 --require 模块：{', '.join(unknown_modules)}。")
+        return _configuration_error(
+            target, f"未知 --require 模块：{', '.join(unknown_modules)}。"
+        )
     if not 0 <= args.max_warnings <= MAX_WARNING_LIMIT:
-        return _configuration_error(target, f"--max-warnings 必须在 0 到 {MAX_WARNING_LIMIT} 之间。")
+        return _configuration_error(
+            target, f"--max-warnings 必须在 0 到 {MAX_WARNING_LIMIT} 之间。"
+        )
     if args.stage == "release" and args.allow_placeholders:
-        return _configuration_error(target, "release 阶段不能使用 --allow-placeholders 绕过占位符门禁。")
+        return _configuration_error(
+            target, "release 阶段不能使用 --allow-placeholders 绕过占位符门禁。"
+        )
     if args.review_complete and args.stage != "release":
         return _configuration_error(target, "--review-complete 只适用于 release 阶段。")
-    if args.output and args.output.resolve(strict=False) == args.file_path.resolve(strict=False):
+    if args.output and args.output.resolve(strict=False) == args.file_path.resolve(
+        strict=False
+    ):
         return _configuration_error(target, "输出报告不能覆盖被检查的输入文档。")
 
     try:
@@ -866,7 +1017,9 @@ def main(argv: Sequence[str] | None = None) -> int:
         )
         report = checker.run()
     except (OSError, UnicodeError) as exc:
-        report = runtime_failure_report("logic_checker", target, "E_FILE_READ", str(exc))
+        report = runtime_failure_report(
+            "logic_checker", target, "E_FILE_READ", str(exc)
+        )
         print(render_report(report))
         return EXIT_RUNTIME_FAILURE
 
@@ -874,7 +1027,9 @@ def main(argv: Sequence[str] | None = None) -> int:
         try:
             write_report(report, args.output)
         except (OSError, UnicodeError) as exc:
-            report = runtime_failure_report("logic_checker", target, "E_FILE_WRITE", str(exc))
+            report = runtime_failure_report(
+                "logic_checker", target, "E_FILE_WRITE", str(exc)
+            )
             report["output_file"] = str(args.output)
             print(render_report(report))
             return EXIT_RUNTIME_FAILURE

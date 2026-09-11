@@ -5,14 +5,14 @@
   "hash_algorithm": "SHA-256",
   "text_hash_normalization": "LF",
   "skill_md": "SKILL.md",
-  "skill_md_sha256": "eefe5be50d34658ba00a0e685f8602bedae8f172887e6cde01a0ea045b9682a0",
+  "skill_md_sha256": "4f29e71d5c0484b4b7d4fe34e133b1c36fade630dafded6f6519f0398b838d73",
   "top_level_files": [
     "SKILL.md"
   ],
   "top_level_file_hashes": [
     {
       "path": "SKILL.md",
-      "sha256": "eefe5be50d34658ba00a0e685f8602bedae8f172887e6cde01a0ea045b9682a0"
+      "sha256": "4f29e71d5c0484b4b7d4fe34e133b1c36fade630dafded6f6519f0398b838d73"
     }
   ],
   "top_level_directories": [
@@ -25,7 +25,7 @@
   "resource_directories": [
     {
       "name": "scripts",
-      "file_count": 5
+      "file_count": 6
     },
     {
       "name": "references",
@@ -63,7 +63,7 @@
     },
     {
       "path": "references/evidence_governance.md",
-      "sha256": "f9402f2195d42eede0b5222b98316d6056bb3fb78cc9ee0178d4dbd44017e7b5"
+      "sha256": "8e8f030a7107159b4b6dd7294c550a1111d880f7b62b568216177bb3d9b04858"
     },
     {
       "path": "references/maturity_model.md",
@@ -75,7 +75,7 @@
     },
     {
       "path": "references/xinchuang_ecosystem.md",
-      "sha256": "0f70810913552e77f73f4eb780154d2b325859af6f799f5cc73cafd203568191"
+      "sha256": "c0dbba7f915c9664f2d1eb479e997cc2268ef38f805cd2e0ab7092c44295ba4c"
     },
     {
       "path": "scripts/buzzword_auditor.py",
@@ -83,7 +83,7 @@
     },
     {
       "path": "scripts/logic_checker.py",
-      "sha256": "6fe8d16ceadfb12fece081d848a2232bde96b6280eaf23dea9d65eb16ba26aa5"
+      "sha256": "13cf01477fd0aa966378dcde716086ef7e1f3818faf550cfc15cdb14b2ed3245"
     },
     {
       "path": "scripts/qa_runner.py",
@@ -91,7 +91,11 @@
     },
     {
       "path": "scripts/resource_validator.py",
-      "sha256": "6d85292f8182a7e8abc0008bc2401515133d7b2bf8b28c0e788a67937a4e06d7"
+      "sha256": "8e55ac7e5c3a7401e0ea281cab542fa77d4cbcc9e0f776f6c1718f05eb549334"
+    },
+    {
+      "path": "scripts/tests/test_architecture_audit_regressions.py",
+      "sha256": "ed63f67531060f16f6c22c586c96c91a5408240825df0e9d36359d7f7f5a785c"
     },
     {
       "path": "scripts/tests/test_quality_gate.py",
@@ -115,7 +119,7 @@
     },
     {
       "path": "templates/input_contract.md",
-      "sha256": "8de56b2169112fc6eae055e408121eeabc57ddcc28a981db8d94719bbfa5f11e"
+      "sha256": "a7ee391dc1de3ade5048823ce336f8e1038d73613ed649843e02d6ea328c9c4a"
     },
     {
       "path": "templates/structure_standard.md",
@@ -149,7 +153,7 @@
       "path": "references/evidence_governance.md",
       "exists": true,
       "resolved_path": "hit-solution-architect/references/evidence_governance.md",
-      "sha256": "f9402f2195d42eede0b5222b98316d6056bb3fb78cc9ee0178d4dbd44017e7b5"
+      "sha256": "8e8f030a7107159b4b6dd7294c550a1111d880f7b62b568216177bb3d9b04858"
     },
     {
       "path": "references/maturity_model.md",
@@ -167,7 +171,7 @@
       "path": "references/xinchuang_ecosystem.md",
       "exists": true,
       "resolved_path": "hit-solution-architect/references/xinchuang_ecosystem.md",
-      "sha256": "0f70810913552e77f73f4eb780154d2b325859af6f799f5cc73cafd203568191"
+      "sha256": "c0dbba7f915c9664f2d1eb479e997cc2268ef38f805cd2e0ab7092c44295ba4c"
     },
     {
       "path": "scripts/qa_runner.py",
@@ -179,7 +183,7 @@
       "path": "scripts/resource_validator.py",
       "exists": true,
       "resolved_path": "hit-solution-architect/scripts/resource_validator.py",
-      "sha256": "6d85292f8182a7e8abc0008bc2401515133d7b2bf8b28c0e788a67937a4e06d7"
+      "sha256": "8e55ac7e5c3a7401e0ea281cab542fa77d4cbcc9e0f776f6c1718f05eb549334"
     }
   ],
   "missing_declared_dependencies": []

@@ -25,6 +25,10 @@
     "infrastructure_failure_rule": "degraded 或 failed 必须写规范化 failure_kind 与非空 failure_reason；status=degraded 只允许 source_access 或 published_at_conflict，status=failed 只允许 infrastructure。只有代理在执行任何查询或访问前初始化失败时，才可返回 status=failed、failure_kind=infrastructure、非空 failure_reason、turns_used=0、halt_condition_met=false，以及空 executed_queries/access_log/candidates、全零 coverage 和全为 infrastructure_unavailable 的 bound decisions。访问成功但因领域/来源质量排除且无 blocked coverage 时保留 no_increment；日期缺失/冲突/超窗用 degraded/published_at_conflict，访问受阻用 degraded/source_access。访问后无合格候选或预算耗尽不是初始化失败，必须保留实际访问及排除理由，不得改报 infrastructure。completed/no_increment 不得包含 failed coverage。"
   },
   "review_common_contract": {
+    "handoff_contract_version": "review-handoff/1.0",
+    "argv_rule": "Command values are exact argv arrays. Consume with subprocess.run(argv, shell=False), never joined PowerShell/POSIX shell text. Parent preflights immediately before dispatch; context and finalize retain original registered deadlines.",
+    "completion_rule": "Semantic canonical core/receipt publication and validated red-team canonical publication end that review immediately. No routine need_decision, next_launch_json broker request, or wait for parent expansion/red-team/forge. Actual blockers still escalate. Runtime telemetry settlement is separate from artifact consumption.",
+    "adoption_rule": "For pih-source-adoption/1.0, judge admitted eligible evidence afresh. Original source ownership and access/publication/retrieval dates are not refreshed by admission. Do not read/reuse failed old semantic drafts or manufacture production reviewer identity.",
     "request_rule": "SemanticEvaluator 必须先运行已登记 execution_packet.agent_helper.context_command，由帮助脚本校验 review_request 及其绑定；不得直接展开 request 正文。RedTeam 在没有语义 helper 时只读取已登记 request 与其明确绑定的 refined core。回执字段由确定性 finalizer 或 validation_command 校验，并遵守 max_turns 与 halt_condition。",
     "turn_rule": "回执必须给出 1..max_turns 的 turns_used；只有达到请求中的可判定停止条件才可令 halt_condition_met=true。",
     "attestation_limit": "本合同提供运行内挑战绑定与防重放，不等同于外部运行时的加密身份签名；调用者仍须实际使用独立代理。"

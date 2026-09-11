@@ -1,18 +1,18 @@
 {
   "schema_version": 3,
   "skill": "hit-digital-strategy-partner",
-  "generated_at": "2026-09-07T06:59:35+08:00",
+  "generated_at": "2026-09-11T10:25:41+08:00",
   "hash_algorithm": "SHA-256",
   "text_hash_normalization": "LF",
   "skill_md": "SKILL.md",
-  "skill_md_sha256": "457824c5def74b6668fabb4ce7154e2a8a17d9c00fb06bebe5f4e17bf06b851c",
+  "skill_md_sha256": "d95962c5b91828c97a7b68eca54d89c9ab6503d127cba59099ff9fbc7ca58ddd",
   "top_level_files": [
     "SKILL.md"
   ],
   "top_level_file_hashes": [
     {
       "path": "SKILL.md",
-      "sha256": "457824c5def74b6668fabb4ce7154e2a8a17d9c00fb06bebe5f4e17bf06b851c"
+      "sha256": "d95962c5b91828c97a7b68eca54d89c9ab6503d127cba59099ff9fbc7ca58ddd"
     }
   ],
   "top_level_directories": [
@@ -48,7 +48,7 @@
   "resource_file_hashes": [
     {
       "path": "agents/hit-commercial-analyst.md",
-      "sha256": "acd3150b446a38d4ed4505b00fe18f2d8e9394a74e03474baf419f44e1c692bf"
+      "sha256": "2b740683a3d32fc381ae675f7d498ca7b95c294945cc9d6b039b6078034a13ac"
     },
     {
       "path": "agents/med-policy-researcher.md",
@@ -84,11 +84,11 @@
     },
     {
       "path": "references/editor.md",
-      "sha256": "60469b7c58802aae8df3699b45770d775a7e7c8f63b3cfb88cbfb6cef0184287"
+      "sha256": "ad2882ed7dddffb092da195d601519dcd6e5159823ce17b55b64144f320f14d4"
     },
     {
       "path": "references/investment_model.md",
-      "sha256": "d69cdaddec7ce8865df5b58dc6e4e766fdf84c6973159e40030a8d9d66e7482f"
+      "sha256": "22fcb7c3556832fab6f9cd0ad2bc62c7fbb5b254787e1d0a07c3bf4d462e5c0a"
     },
     {
       "path": "references/medical_terms.json",
@@ -96,11 +96,11 @@
     },
     {
       "path": "references/retrieval_specialist.md",
-      "sha256": "0336a11ad971afab65dfd7fcfebcba3df8fd91ebb0b68de4ce53d49d8f1cc328"
+      "sha256": "f5ad215c10b558bd0ba56287d3cc1c5f91aff9510622a133c0124c1c3409fc27"
     },
     {
       "path": "references/workflows.md",
-      "sha256": "ede60d18a4d43babb6e9423306a3da4d1139aa503aa6c89e498d89b2decaa01a"
+      "sha256": "cca76e54dd5e92f161562e0292ba301cc24d46f043497710f772ce4b7007d5c8"
     },
     {
       "path": "scripts/assembler.py",
@@ -108,11 +108,15 @@
     },
     {
       "path": "scripts/blackboard.py",
-      "sha256": "2a07acd39fc6d223fe1136e3aaf9ae70a20b4b54c881d0c508d23e961192ab1d"
+      "sha256": "460c21a95a8d8131b630af3ac1e7c3a9c369cf64bdcedbb2500c7c2d6d2ce535"
     },
     {
       "path": "scripts/strategy_gate.py",
-      "sha256": "6db072384b51697cbbb6392c40221921a5e5d35ed860792fc22666d661fb3451"
+      "sha256": "6202894d63956b3af8815bf55aed106c6240da1f135935668ab88e12d208a2d7"
+    },
+    {
+      "path": "tests/test_strategy_audit_regressions.py",
+      "sha256": "2b3509add009ab95c553cdba26381b9f3751548879c4daca0dcff9502c45e304"
     },
     {
       "path": "tests/test_strategy_toolchain.py",
@@ -124,7 +128,7 @@
       "path": "agents/hit-commercial-analyst.md",
       "exists": true,
       "resolved_path": "hit-digital-strategy-partner/agents/hit-commercial-analyst.md",
-      "sha256": "acd3150b446a38d4ed4505b00fe18f2d8e9394a74e03474baf419f44e1c692bf"
+      "sha256": "2b740683a3d32fc381ae675f7d498ca7b95c294945cc9d6b039b6078034a13ac"
     },
     {
       "path": "agents/med-policy-researcher.md",
@@ -160,25 +164,25 @@
       "path": "references/editor.md",
       "exists": true,
       "resolved_path": "hit-digital-strategy-partner/references/editor.md",
-      "sha256": "60469b7c58802aae8df3699b45770d775a7e7c8f63b3cfb88cbfb6cef0184287"
+      "sha256": "ad2882ed7dddffb092da195d601519dcd6e5159823ce17b55b64144f320f14d4"
     },
     {
       "path": "references/investment_model.md",
       "exists": true,
       "resolved_path": "hit-digital-strategy-partner/references/investment_model.md",
-      "sha256": "d69cdaddec7ce8865df5b58dc6e4e766fdf84c6973159e40030a8d9d66e7482f"
+      "sha256": "22fcb7c3556832fab6f9cd0ad2bc62c7fbb5b254787e1d0a07c3bf4d462e5c0a"
     },
     {
       "path": "references/retrieval_specialist.md",
       "exists": true,
       "resolved_path": "hit-digital-strategy-partner/references/retrieval_specialist.md",
-      "sha256": "0336a11ad971afab65dfd7fcfebcba3df8fd91ebb0b68de4ce53d49d8f1cc328"
+      "sha256": "f5ad215c10b558bd0ba56287d3cc1c5f91aff9510622a133c0124c1c3409fc27"
     },
     {
       "path": "references/workflows.md",
       "exists": true,
       "resolved_path": "hit-digital-strategy-partner/references/workflows.md",
-      "sha256": "ede60d18a4d43babb6e9423306a3da4d1139aa503aa6c89e498d89b2decaa01a"
+      "sha256": "cca76e54dd5e92f161562e0292ba301cc24d46f043497710f772ce4b7007d5c8"
     },
     {
       "path": "scripts/assembler.py",
@@ -190,13 +194,13 @@
       "path": "scripts/blackboard.py",
       "exists": true,
       "resolved_path": "hit-digital-strategy-partner/scripts/blackboard.py",
-      "sha256": "2a07acd39fc6d223fe1136e3aaf9ae70a20b4b54c881d0c508d23e961192ab1d"
+      "sha256": "460c21a95a8d8131b630af3ac1e7c3a9c369cf64bdcedbb2500c7c2d6d2ce535"
     },
     {
       "path": "scripts/strategy_gate.py",
       "exists": true,
       "resolved_path": "hit-digital-strategy-partner/scripts/strategy_gate.py",
-      "sha256": "6db072384b51697cbbb6392c40221921a5e5d35ed860792fc22666d661fb3451"
+      "sha256": "6202894d63956b3af8815bf55aed106c6240da1f135935668ab88e12d208a2d7"
     }
   ],
   "missing_declared_dependencies": []

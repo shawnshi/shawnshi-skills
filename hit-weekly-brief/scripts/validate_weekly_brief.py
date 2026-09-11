@@ -41,10 +41,13 @@ def report_header(content: str) -> str:
 def metadata(content: str, label: str) -> str:
     """One exact, unformatted header field before the first level-two section."""
     preamble = report_header(visible_content(content))
-    values = re.findall(rf"^{re.escape(label)}：[ \t]*(.+?)[ \t]*$", preamble, re.M)
+    values = re.findall(rf"^{re.escape(label)}：[ \t]*([^\r\n]*?)[ \t]*$", preamble, re.M)
     if len(values) != 1:
         raise ValueError(f"{label} must occur exactly once in the header")
-    return values[0]
+    value = values[0].strip()
+    if not value:
+        raise ValueError(f"{label} must not be blank")
+    return value
 
 
 CHINESE_EVENT_DATE_RE = re.compile(
@@ -284,26 +287,45 @@ def validate_report(
     in_events = False
     section_count = 0
     empty_markers = 0
+    table_header_count = 0
+    table_separator_count = 0
+    table_state = "none"
     for line_number, line in enumerate(content.splitlines(), start=1):
         line = line.strip()
         if line.startswith("## "):
             in_events = line == "## 关键事件与来源"
             section_count += int(in_events)
+            if in_events:
+                table_state = "none"
         if not in_events:
             continue
         if line == EMPTY_EVENT_MARKER:
             empty_markers += 1
+            continue
         if not line.startswith("|"):
+            if table_state in ("header", "separator", "rows"):
+                table_state = "closed"
             continue
         cells = table_cells(line)
         if cells[0] == "事件日期":
-            if cells != EVENT_HEADER:
+            table_header_count += 1
+            if table_state != "none":
+                errors.append(f"line {line_number}: duplicate or misplaced event table header")
+            elif cells != EVENT_HEADER:
                 errors.append(f"line {line_number}: event header must match the six-column template")
+            table_state = "header"
             continue
         if all(re.fullmatch(r":?-{3,}:?", c) for c in cells):
-            if len(cells) != 6:
+            table_separator_count += 1
+            if table_state != "header":
+                errors.append(f"line {line_number}: event table separator must immediately follow the header")
+            elif len(cells) != 6:
                 errors.append(f"line {line_number}: event separator must have six columns")
+            table_state = "separator"
             continue
+        if table_state not in ("separator", "rows"):
+            errors.append(f"line {line_number}: event row must follow table header and separator")
+        table_state = "rows"
         event_rows += 1
         if len(cells) != 6 or not all(cells):
             errors.append(f"line {line_number}: event row must contain six nonempty columns")
@@ -342,6 +364,11 @@ def validate_report(
         errors.append(
             "no dated event rows found; use the explicit empty-period marker when there are no qualifying events"
         )
+    elif event_rows > 0:
+        if table_header_count != 1:
+            errors.append("exactly one event table header required when event rows are present")
+        if table_separator_count != 1:
+            errors.append("event table separator required when event rows are present")
 
     return errors
 

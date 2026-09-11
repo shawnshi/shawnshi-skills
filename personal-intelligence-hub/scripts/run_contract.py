@@ -299,6 +299,11 @@ def commit_manifest(
     if file_sha256(path) != expected_sha256:
         raise RunContractError("stale manifest writer rejected")
     previous = load_json(path, {})
+    if "source_adoption" in previous:
+        if manifest.get("source_adoption") != previous["source_adoption"]:
+            raise RunContractError("source admission is immutable")
+        from recovery_lifecycle import validated_source
+        validated_source(manifest)
     prior_brokers = _validate_article_broker_contract(previous)
     if prior_brokers:
         if previous.get("artifacts", {}).get("supplement_request") != manifest.get(
@@ -679,6 +684,9 @@ def candidate_date_ownership(
     manifest: dict[str, Any], pool: dict[str, Any], supplement: dict[str, Any]
 ) -> dict[str, Any]:
     """Marked requests never fall back; legacy records require self-owned access."""
+    if "source_adoption" in manifest:
+        from recovery_lifecycle import validated_source
+        manifest = validated_source(manifest)
     record = manifest.get("artifacts", {}).get("supplement_request")
     request = {}
     request_sha = ""
@@ -1305,6 +1313,10 @@ def review_input_bundle_sha256(manifest: dict[str, Any]) -> str:
         "window": manifest.get("window"),
         "mix_request": manifest.get("mix_request"),
     }
+    if "source_adoption" in manifest:
+        from recovery_lifecycle import validated_source
+        validated_source(manifest)
+        values["source_admission_sha256"] = manifest["source_adoption"]["sha256"]
     if history_review:
         values["history_review_slice_sha256"] = history_review.get("artifact_sha256")
     if focus:
@@ -1564,6 +1576,9 @@ def load_manifest(path: str | Path) -> dict[str, Any]:
                     "installed skill changed; continue with the run-scoped CLI: "
                     f"{execution_cli}"
                 )
+    if "source_adoption" in manifest:
+        from recovery_lifecycle import validated_source
+        validated_source(manifest)
     _validate_article_broker_contract(manifest)
     return manifest
 
@@ -1797,7 +1812,7 @@ def _refresh_telemetry_summary(manifest: dict[str, Any]) -> None:
         "active_reservation_count": sum(
             1
             for record in telemetry.get("reservations", {}).values()
-            if record.get("status") in {"reserved", "held_broker_unmetered"}
+            if record.get("status") in {"reserved", "held_broker_unmetered", "held_unmetered"}
         ),
         "failed_invocations": failed_invocations,
         "normal_run_token_ceiling": 1000000,
@@ -1937,16 +1952,26 @@ def record_execution_telemetry(
             )
         executions[key] = record
         if not broker:
-            reservation.update(
-                {
-                    "status": "settled",
-                    "settled_at": _aware_now(manifest["timezone"], now).isoformat(),
-                    "telemetry_artifact_sha256": record["artifact_sha256"],
-                    "actual_tokens": budget_tokens,
-                    "raw_total_tokens": usage["total_tokens"],
-                    "actual_cost_usd": round(float(cost), 6),
-                }
-            )
+            if usage.get("measurement_status") == "unmeasured" or usage.get("unmeasured_assistant_messages", 0) > 0:
+                reservation.update(
+                    {
+                        "status": "held_unmetered",
+                        "telemetry_status": "unmeasured",
+                        "telemetry_artifact_sha256": record["artifact_sha256"],
+                        "retained_reservation_reason": "unmeasured_assistant_telemetry",
+                    }
+                )
+            else:
+                reservation.update(
+                    {
+                        "status": "settled",
+                        "settled_at": _aware_now(manifest["timezone"], now).isoformat(),
+                        "telemetry_artifact_sha256": record["artifact_sha256"],
+                        "actual_tokens": budget_tokens,
+                        "raw_total_tokens": usage["total_tokens"],
+                        "actual_cost_usd": round(float(cost), 6),
+                    }
+                )
         _refresh_telemetry_summary(manifest)
         current = _aware_now(manifest["timezone"], now)
         manifest["events"].append(
@@ -2072,7 +2097,7 @@ def _execution_budget_state(manifest: dict[str, Any]) -> dict[str, float | int]:
             raise RunContractError("execution budget reservation is invalid")
         if record.get("status") in {"settled", "expired"}:
             continue
-        if record.get("status") not in {"reserved", "held_broker_unmetered"}:
+        if record.get("status") not in {"reserved", "held_broker_unmetered", "held_unmetered"}:
             raise RunContractError("execution budget reservation status is invalid")
         reserved_tokens += _integer(
             record.get("tokens"),
@@ -4761,6 +4786,8 @@ def build_review_request(
         "created_at": current.isoformat(),
         "execution_packet": {
             "contract_version": "review-execution-packet/1.0",
+            **({"handoff_contract_version": "review-handoff/1.0"}
+               if isinstance(manifest.get("bundle_snapshot"), dict) else {}),
             "self_contained": True,
             "run_manifest_path": str(Path(manifest_path).resolve()),
             "skill_root": str(bundle_root.resolve()),
@@ -4809,8 +4836,7 @@ def build_review_request(
                 ),
             },
             "artifact_ready_message": (
-                "decision_ready refined_core_draft_path=<path> refined_core_sha256=<sha256> "
-                "decision_path=<path> decision_sha256=<sha256>"
+                "canonical_published refined_core_path=<path> semantic_receipt_path=<path>"
                 if review_kind == "semantic"
                 else "artifact_ready path=<path> sha256=<sha256>"
             ),
@@ -4888,8 +4914,11 @@ def build_review_request(
         request["execution_packet"]["task_message"] = (
             "Run agent_helper.context_command first. Use only its compact eligible_candidates; "
             "do not read the full request, baseline, history, candidate pool, supplement, schema, "
-            "old runs, prompt config, or script source. Send progress via contact_supervisor. "
-            "Write only the semantic dynamic draft, then run agent_helper.finalize_command."
+            "old runs, prompt config, or script source. Consume command arrays with shell=False; "
+            "never join argv into shell text. Write only the semantic dynamic draft, then run "
+            "agent_helper.finalize_command. Return immediately on canonical publication; "
+            "do not request next_launch_json or wait for parent downstream work. "
+            "Escalate only an actual blocker. Parent must preflight immediately before dispatch."
         )
         request["execution_packet"]["finalizer_owned_paths"] = sorted(
             [
@@ -4959,6 +4988,9 @@ def build_review_request(
             request = orphan
             invocation_id = str(request["invocation_id"])
         else:
+            # Start the unchanged deadline only after validation, hashing and lock acquisition.
+            current = _aware_now(manifest["timezone"], now)
+            request["created_at"] = current.isoformat()
             atomic_dump_json(request_path, request)
         request_sha256 = file_sha256(request_path)
         before = {field: deepcopy(locked[field]) for field in IMMUTABLE_FIELDS}
@@ -5534,6 +5566,17 @@ def validate_review_receipt(
     if receipt.get("reviewer_kind") == "heuristic":
         raise RunContractError("heuristic reviewer cannot authorize a formal briefing")
     request, request_sha = _registered_review_request(manifest, str(review_kind))
+    packet = request.get("execution_packet", {})
+    if (packet.get("handoff_contract_version") == "review-handoff/1.0"
+            and review_kind == "red_team" and not request.get("deterministic_fast_path")):
+        started = _parse_aware_datetime(request["created_at"], "review request created_at")
+        completed = _parse_aware_datetime(receipt.get("completed_at"), "red-team completed_at")
+        deadline = started + timedelta(milliseconds=packet["timeout_ms"])
+        if not started <= completed <= deadline:
+            raise RunContractError("red-team receipt outside original deadline")
+        if (manifest["stages"]["red_team"]["status"] not in STAGE_TERMINAL
+                and _aware_now(manifest["timezone"]) > deadline):
+            raise RunContractError("red-team publication outside original deadline")
     allowed_reviewer = {
         "semantic": {"semantic_model"},
         "red_team": {"logic_adversary", "deterministic_gate"},

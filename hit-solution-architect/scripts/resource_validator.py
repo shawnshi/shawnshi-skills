@@ -15,9 +15,9 @@ import argparse
 import hashlib
 import json
 import re
+from collections.abc import Sequence
 from pathlib import Path
-from typing import Any, Sequence
-
+from typing import Any
 
 SCHEMA_VERSION = "2.0"
 SUPPORTED_MANIFEST_VERSIONS = (1, 3)
@@ -26,7 +26,17 @@ EXIT_CONTENT_FAILURE = 1
 EXIT_RUNTIME_FAILURE = 2
 MAX_MANIFEST_BYTES = 5 * 1024 * 1024
 SHA256_RE = re.compile(r"^[0-9a-f]{64}$", re.IGNORECASE)
-TEXT_SUFFIXES = {".md", ".txt", ".py", ".json", ".yaml", ".yml", ".toml", ".csv", ".tsv"}
+TEXT_SUFFIXES = {
+    ".md",
+    ".txt",
+    ".py",
+    ".json",
+    ".yaml",
+    ".yml",
+    ".toml",
+    ".csv",
+    ".tsv",
+}
 PLACEHOLDER_ONLY_RE = re.compile(
     r"^(?:<!--\s*(?:placeholder|todo|tbd)\s*-->|(?:placeholder|todo|tbd))$",
     re.IGNORECASE | re.DOTALL,
@@ -51,9 +61,14 @@ def runtime_failure_report(target_file: str, code: str, message: str) -> dict[st
     }
 
 
-def _safe_path(root: Path, declared_path: Any) -> tuple[Path | None, dict[str, Any] | None]:
+def _safe_path(
+    root: Path, declared_path: Any
+) -> tuple[Path | None, dict[str, Any] | None]:
     if not isinstance(declared_path, str) or not declared_path.strip():
-        return None, {"code": "E_INVALID_RESOURCE_PATH", "message": "资源路径必须是非空字符串。"}
+        return None, {
+            "code": "E_INVALID_RESOURCE_PATH",
+            "message": "资源路径必须是非空字符串。",
+        }
     relative = Path(declared_path)
     if relative.is_absolute():
         return None, {
@@ -114,7 +129,9 @@ def _iter_declared_hashes(manifest: dict[str, Any]) -> list[tuple[str, Any, str]
             continue
         for entry in entries:
             if isinstance(entry, dict):
-                declared.append((collection, entry.get("path"), entry.get("sha256", "")))
+                declared.append(
+                    (collection, entry.get("path"), entry.get("sha256", ""))
+                )
             else:
                 declared.append((collection, None, ""))
     return declared
@@ -131,13 +148,18 @@ def _actual_files(directory: Path) -> list[Path]:
     )
 
 
-def validate_manifest(manifest: dict[str, Any], *, manifest_path: Path, skill_root: Path) -> dict[str, Any]:
+def validate_manifest(
+    manifest: dict[str, Any], *, manifest_path: Path, skill_root: Path
+) -> dict[str, Any]:
     errors: list[dict[str, Any]] = []
     warnings: list[dict[str, Any]] = []
     checked_files = 0
     normalize_lf = manifest.get("text_hash_normalization") == "LF"
     manifest_version = manifest.get("schema_version")
-    if type(manifest_version) is not int or manifest_version not in SUPPORTED_MANIFEST_VERSIONS:
+    if (
+        type(manifest_version) is not int
+        or manifest_version not in SUPPORTED_MANIFEST_VERSIONS
+    ):
         errors.append(
             {
                 "code": "E_UNSUPPORTED_MANIFEST_SCHEMA",
@@ -147,7 +169,16 @@ def validate_manifest(manifest: dict[str, Any], *, manifest_path: Path, skill_ro
             }
         )
 
-    if manifest.get("hash_algorithm", "SHA-256").upper() != "SHA-256":
+    hash_algorithm = manifest.get("hash_algorithm", "SHA-256")
+    if not isinstance(hash_algorithm, str):
+        errors.append(
+            {
+                "code": "E_INVALID_HASH_ALGORITHM_TYPE",
+                "field": "hash_algorithm",
+                "message": "hash_algorithm 必须是字符串。",
+            }
+        )
+    elif hash_algorithm.upper() != "SHA-256":
         errors.append(
             {
                 "code": "E_UNSUPPORTED_HASH_ALGORITHM",
@@ -270,7 +301,9 @@ def validate_manifest(manifest: dict[str, Any], *, manifest_path: Path, skill_ro
             if collection == "top_level_file_hashes" and path is not None
         }
         declared_top_paths = {
-            Path(str(path)).as_posix() for path in top_level_files if isinstance(path, str)
+            Path(str(path)).as_posix()
+            for path in top_level_files
+            if isinstance(path, str)
         }
         if top_hash_paths != declared_top_paths:
             errors.append(
@@ -289,7 +322,11 @@ def validate_manifest(manifest: dict[str, Any], *, manifest_path: Path, skill_ro
             for _, path, expected in declarations
             if path == skill_md and isinstance(expected, str)
         ]
-        if not matching or not isinstance(skill_md_hash, str) or matching[0].lower() != skill_md_hash.lower():
+        if (
+            not matching
+            or not isinstance(skill_md_hash, str)
+            or matching[0].lower() != skill_md_hash.lower()
+        ):
             errors.append(
                 {
                     "code": "E_SKILL_HASH_INCONSISTENT",
@@ -322,7 +359,9 @@ def validate_manifest(manifest: dict[str, Any], *, manifest_path: Path, skill_ro
             )
             continue
         for actual_file in _actual_files(directory):
-            relative = actual_file.relative_to(skill_root.resolve(strict=False)).as_posix()
+            relative = actual_file.relative_to(
+                skill_root.resolve(strict=False)
+            ).as_posix()
             if relative not in resource_paths:
                 errors.append(
                     {
@@ -406,7 +445,9 @@ def validate_manifest(manifest: dict[str, Any], *, manifest_path: Path, skill_ro
                 )
             dependency_hash = dependency.get("sha256")
             if dependency_hash is not None:
-                if not isinstance(dependency_hash, str) or not SHA256_RE.fullmatch(dependency_hash):
+                if not isinstance(dependency_hash, str) or not SHA256_RE.fullmatch(
+                    dependency_hash
+                ):
                     errors.append(
                         {
                             "code": "E_INVALID_DEPENDENCY_HASH",
@@ -426,7 +467,9 @@ def validate_manifest(manifest: dict[str, Any], *, manifest_path: Path, skill_ro
                         }
                     )
                     continue
-                actual_dependency_hash = _hash_bytes(dependency_raw, normalize_lf=normalize_lf)
+                actual_dependency_hash = _hash_bytes(
+                    dependency_raw, normalize_lf=normalize_lf
+                )
                 if actual_dependency_hash.lower() != dependency_hash.lower():
                     errors.append(
                         {
@@ -528,7 +571,9 @@ def main(argv: Sequence[str] | None = None) -> int:
         print(render_report(report))
         return EXIT_RUNTIME_FAILURE
 
-    report = validate_manifest(manifest, manifest_path=manifest_path, skill_root=skill_root)
+    report = validate_manifest(
+        manifest, manifest_path=manifest_path, skill_root=skill_root
+    )
     print(render_report(report))
     return EXIT_CONTENT_FAILURE if report["errors"] else EXIT_OK
 

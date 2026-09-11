@@ -191,6 +191,7 @@ def rebuild_history(
     history_file: Path | None = None,
     now: datetime | None = None,
     exclude_report_date: str | None = None,
+    dry_run: bool = False,
 ) -> dict[str, Any]:
     source_dir = news_dir or NEWS_DIR
     target = history_file or HISTORY_PATH
@@ -245,6 +246,8 @@ def rebuild_history(
             now=_archive_datetime(archive, {}, current),
         )
     payload = builder.payload(now=current)
+    if dry_run:
+        return payload
     target.parent.mkdir(parents=True, exist_ok=True)
     atomic_dump_json(target, payload)
     print(
