@@ -1,18 +1,18 @@
 {
   "schema_version": 3,
   "skill": "industry-strategy-analyst",
-  "generated_at": "2026-09-07T06:17:23+08:00",
+  "generated_at": "2026-09-11T12:09:07+08:00",
   "hash_algorithm": "SHA-256",
   "text_hash_normalization": "LF",
   "skill_md": "SKILL.md",
-  "skill_md_sha256": "91810420ef3fab57b6fd0b16197af6cf3cf712ef04ffeb065eed40ef5942659b",
+  "skill_md_sha256": "8fa47d760f7f5ef97be4a23bc7c44e8684f5e68dfc5d6194678ad5e2414e476d",
   "top_level_files": [
     "SKILL.md"
   ],
   "top_level_file_hashes": [
     {
       "path": "SKILL.md",
-      "sha256": "91810420ef3fab57b6fd0b16197af6cf3cf712ef04ffeb065eed40ef5942659b"
+      "sha256": "8fa47d760f7f5ef97be4a23bc7c44e8684f5e68dfc5d6194678ad5e2414e476d"
     }
   ],
   "top_level_directories": [
@@ -23,7 +23,7 @@
   "resource_directories": [
     {
       "name": "references",
-      "file_count": 4
+      "file_count": 5
     },
     {
       "name": "assets",
@@ -45,19 +45,23 @@
     },
     {
       "path": "references/market-sizing-and-forecasting.md",
-      "sha256": "4e3e84dd13b1fce9a991da2dbb4e5dae88cf7a75670b55a89e1d8d8b11698fba"
+      "sha256": "cf785dbe786c88994173c52e2eb17449671551ce283ad16d335c880930992a68"
     },
     {
       "path": "references/output-patterns.md",
-      "sha256": "9b859abf74646c610dfd5e2391c8c575c1af25fe11c652296823840abaa5a050"
+      "sha256": "e6a91d8afab52483cefacdec67e1fb5b6c7568d2b927d59d10fb17a05f5b63aa"
     },
     {
       "path": "references/research-protocol.md",
-      "sha256": "0be29a03abf7a9babf533d5fa22e91011e9d59b05b5dbe11524a569c465253c9"
+      "sha256": "ae8352c9d36d131dd222f3a03b5df8e497ab15f5008b055a36ecefd7823fbf4a"
+    },
+    {
+      "path": "references/validation-cases.md",
+      "sha256": "fb33961c2fae2e6d901e899408d43b09c75f7cddf350d282e89de00c03800cd5"
     },
     {
       "path": "references/vendor-evaluation.md",
-      "sha256": "ba1c1e3fed5ea15b20b6ad09ff222db252c188a27dee288a8e2a6790498a36ed"
+      "sha256": "649bdb72e64ca1e20a69dba4922698f855050616426e5d3cbe209b13967d4381"
     }
   ],
   "declared_local_dependencies": [
@@ -65,25 +69,31 @@
       "path": "references/market-sizing-and-forecasting.md",
       "exists": true,
       "resolved_path": "industry-strategy-analyst/references/market-sizing-and-forecasting.md",
-      "sha256": "4e3e84dd13b1fce9a991da2dbb4e5dae88cf7a75670b55a89e1d8d8b11698fba"
+      "sha256": "cf785dbe786c88994173c52e2eb17449671551ce283ad16d335c880930992a68"
     },
     {
       "path": "references/output-patterns.md",
       "exists": true,
       "resolved_path": "industry-strategy-analyst/references/output-patterns.md",
-      "sha256": "9b859abf74646c610dfd5e2391c8c575c1af25fe11c652296823840abaa5a050"
+      "sha256": "e6a91d8afab52483cefacdec67e1fb5b6c7568d2b927d59d10fb17a05f5b63aa"
     },
     {
       "path": "references/research-protocol.md",
       "exists": true,
       "resolved_path": "industry-strategy-analyst/references/research-protocol.md",
-      "sha256": "0be29a03abf7a9babf533d5fa22e91011e9d59b05b5dbe11524a569c465253c9"
+      "sha256": "ae8352c9d36d131dd222f3a03b5df8e497ab15f5008b055a36ecefd7823fbf4a"
+    },
+    {
+      "path": "references/validation-cases.md",
+      "exists": true,
+      "resolved_path": "industry-strategy-analyst/references/validation-cases.md",
+      "sha256": "fb33961c2fae2e6d901e899408d43b09c75f7cddf350d282e89de00c03800cd5"
     },
     {
       "path": "references/vendor-evaluation.md",
       "exists": true,
       "resolved_path": "industry-strategy-analyst/references/vendor-evaluation.md",
-      "sha256": "ba1c1e3fed5ea15b20b6ad09ff222db252c188a27dee288a8e2a6790498a36ed"
+      "sha256": "649bdb72e64ca1e20a69dba4922698f855050616426e5d3cbe209b13967d4381"
     }
   ],
   "missing_declared_dependencies": []

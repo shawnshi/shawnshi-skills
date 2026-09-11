@@ -1,11 +1,11 @@
 {
   "schema_version": 3,
   "skill": "hit-customer-analyst",
-  "generated_at": "2026-09-07T15:36:31+08:00",
+  "generated_at": "2026-09-11T12:09:07+08:00",
   "hash_algorithm": "SHA-256",
   "text_hash_normalization": "LF",
   "skill_md": "SKILL.md",
-  "skill_md_sha256": "9b131f588332c27297576c09cd8b780bb9c89e122056e5012514dcc66bdcd0a4",
+  "skill_md_sha256": "532b45439dd945f673d615283458eaee73b69d615bcfdcf18d29a05cb02976dd",
   "top_level_files": [
     "README.md",
     "SKILL.md"
@@ -13,11 +13,11 @@
   "top_level_file_hashes": [
     {
       "path": "README.md",
-      "sha256": "f59d7cbe8a003988460b5052b253adcfd8b1fdd1716f7fba73ca2409ba2bbb3b"
+      "sha256": "1bb539c18447229f09766a74cc28a76c30fe4c525f5ef6055d7a199cda36cb2f"
     },
     {
       "path": "SKILL.md",
-      "sha256": "9b131f588332c27297576c09cd8b780bb9c89e122056e5012514dcc66bdcd0a4"
+      "sha256": "532b45439dd945f673d615283458eaee73b69d615bcfdcf18d29a05cb02976dd"
     }
   ],
   "top_level_directories": [
@@ -98,11 +98,11 @@
     },
     {
       "path": "references/candidate-workflow.md",
-      "sha256": "89d64fc5f07f5a8967216e3ea589163d5c704ae2bc0a7d648a3440cd6d9c153e"
+      "sha256": "97c3749912d0442e3701d23a4a6fb0c45c2f4b1de6c5457925a9343423c959e8"
     },
     {
       "path": "references/customer-research-context.md",
-      "sha256": "0238113d4c1f42fe35683ae56898a3852221f0f04bde80a3bbdc586979a61141"
+      "sha256": "4ba40ca79fee38869f229528dbb56b93a1c13670596e8e655d018903c37babe5"
     },
     {
       "path": "references/decision-intelligence-framework.md",
@@ -126,7 +126,7 @@
     },
     {
       "path": "references/release-acceptance.md",
-      "sha256": "cf180ed5b411731feae3142fe042ad98874ce092dc5a3c686b47fa24b7447d50"
+      "sha256": "83de7ce557d1f282bf3c73d585912f072803a17914d0830bad950db1d506e8ff"
     },
     {
       "path": "references/research-depth-and-search-matrix.md",
@@ -186,7 +186,7 @@
     },
     {
       "path": "scripts/build_candidate.py",
-      "sha256": "d10423ad07a2f2ee8ef48a88cb2c9bde371676dcec7cdb38cf5a7e00f692ca4f"
+      "sha256": "fbb2152511ef4fb068e93f5d25bbaaad08fa71ad706f5225d3c30750dda13e58"
     },
     {
       "path": "scripts/check_briefing_draft.py",
@@ -242,7 +242,7 @@
     },
     {
       "path": "tests/fixture_builder.py",
-      "sha256": "148e10619548cffc7232e175ad8cf8ba5aa34ef41837655e389e9872896d325b"
+      "sha256": "6b9000fc973ec2410400c2e7ab769c51082fb29926ee50fb398823e72d9a6bf3"
     },
     {
       "path": "tests/negative_case_map.json",
@@ -253,12 +253,16 @@
       "sha256": "c945497a43b35ad1361a71b755b817ffc01ec0a6f720686d7efd205896217e8a"
     },
     {
+      "path": "tests/test_build_candidate_history.py",
+      "sha256": "7b75db668b3e8133d531ca84530d80b468bbd6b0c047cf6f481f35ce7f416b4c"
+    },
+    {
       "path": "tests/test_cache_bounds.py",
       "sha256": "7c155483f47f76613a74e7f38e6493428b34d775e834d0be6caf14cddf51604d"
     },
     {
       "path": "tests/test_candidate_revision.py",
-      "sha256": "25875a0db920f0da3298e63f17bbf5e0232e24c770f2b07b426a1c08c07cb4c0"
+      "sha256": "ffe22cf4c17e9f4ea5943d65a2b2b6465440f400e06631f8f15410e987b36de8"
     },
     {
       "path": "tests/test_date_boundary.py",
@@ -270,7 +274,7 @@
     },
     {
       "path": "tests/test_draft_fields.py",
-      "sha256": "7581abb3899af706ca826e433d854852e36d7ca6531ab973c105f215afa6d3fb"
+      "sha256": "eabe14db99c431aa494c749ee9ac4e1f02467e4fabb9e28b6761461574f7afab"
     },
     {
       "path": "tests/test_draft_preflight.py",
@@ -290,7 +294,7 @@
     },
     {
       "path": "tests/test_metrics_scope.py",
-      "sha256": "a94b160a81de07678ca3f6da17334f15c1d5ed28df1f3c140641a62e4fd4f916"
+      "sha256": "9e926c1ba4208579a1b86fa3becb6f2b30cb41c5594b2f9928db07c5c5ea3d81"
     },
     {
       "path": "tests/test_negative_case_map.py",
@@ -352,13 +356,13 @@
       "path": "references/candidate-workflow.md",
       "exists": true,
       "resolved_path": "hit-customer-analyst/references/candidate-workflow.md",
-      "sha256": "89d64fc5f07f5a8967216e3ea589163d5c704ae2bc0a7d648a3440cd6d9c153e"
+      "sha256": "97c3749912d0442e3701d23a4a6fb0c45c2f4b1de6c5457925a9343423c959e8"
     },
     {
       "path": "references/customer-research-context.md",
       "exists": true,
       "resolved_path": "hit-customer-analyst/references/customer-research-context.md",
-      "sha256": "0238113d4c1f42fe35683ae56898a3852221f0f04bde80a3bbdc586979a61141"
+      "sha256": "4ba40ca79fee38869f229528dbb56b93a1c13670596e8e655d018903c37babe5"
     },
     {
       "path": "references/decision-intelligence-framework.md",
@@ -394,7 +398,7 @@
       "path": "references/release-acceptance.md",
       "exists": true,
       "resolved_path": "hit-customer-analyst/references/release-acceptance.md",
-      "sha256": "cf180ed5b411731feae3142fe042ad98874ce092dc5a3c686b47fa24b7447d50"
+      "sha256": "83de7ce557d1f282bf3c73d585912f072803a17914d0830bad950db1d506e8ff"
     },
     {
       "path": "references/research-depth-and-search-matrix.md",
@@ -418,7 +422,7 @@
       "path": "scripts/build_candidate.py",
       "exists": true,
       "resolved_path": "hit-customer-analyst/scripts/build_candidate.py",
-      "sha256": "d10423ad07a2f2ee8ef48a88cb2c9bde371676dcec7cdb38cf5a7e00f692ca4f"
+      "sha256": "fbb2152511ef4fb068e93f5d25bbaaad08fa71ad706f5225d3c30750dda13e58"
     },
     {
       "path": "scripts/check_briefing_draft.py",

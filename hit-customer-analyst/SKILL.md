@@ -5,7 +5,6 @@ description: 医疗客户研究与拜访准备的2.6.2交付候选，用于用�
 
 # 客户研究与拜访准备
 
-
 ## 权威规则与按需读取
 
 本文件只定义触发、核心调度和硬门禁。状态字段仍以[统一上下文契约](references/customer-research-context.md)为权威。
@@ -37,7 +36,7 @@ description: 医疗客户研究与拜访准备的2.6.2交付候选，用于用�
 
 ### 0. 记录与候选规则
 
-读取本入口后立即用 `python3 scripts/run_metrics.py start <独立计量文件.json>` 记录可观测起点；范围为计量启动至验证结束或安全停止，不含启动前读取、最终答复整理及人工审核等待，不称端到端耗时。查询按实际条目记录；原文读取用 `record --event business_source_open=1`，规则读取与哈希字节读取分别用rule_read/hash_bytes_read，不混入原文open。不要回填估计耗时或未知token。完整字段与候选提交说明见 [候选构建与运行记录](references/candidate-workflow.md)。
+仅在已进入获授权的实际运行，且已确定独立计量文件的路径及写入范围后，用 `python3 scripts/run_metrics.py start <独立计量文件.json>` 记录首次可观测起点。只读预览或审计不得启动计量；仅加载本入口不构成运行或写入授权。范围为计量启动至验证结束或安全停止，不含启动前读取、最终答复整理及人工审核等待，不称端到端耗时。查询按实际条目记录；原文读取用 `record --event business_source_open=1`，规则读取与哈希字节读取分别用rule_read/hash_bytes_read，不混入原文open。不要回填估计耗时或未知token。完整字段与候选提交说明见 [候选构建与运行记录](references/candidate-workflow.md)。
 
 ### 1. 锁定主体和业务成果
 
@@ -153,4 +152,3 @@ python3 scripts/validate_outputs.py <workspace> --strict
 ## 发布验收
 
 见 [真实发布验收清单](references/release-acceptance.md)。四模式正向各3次、冲突及高风险各3次、真人独立使用、真实连接器和身份权限验收未齐时，状态保持候选/限定内部试用；本地回归通过不能替代这些证据。
-

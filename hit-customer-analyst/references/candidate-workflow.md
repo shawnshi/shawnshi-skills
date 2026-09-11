@@ -2,10 +2,10 @@
 
 只在主体已锁定后初始化正式工作区。新构建器适用于未批准草稿；已批准成果先由真人按原治理流程开启修订。旧路由及四模式选择以business-modes.md为准。
 
-1. 读取SKILL后调用 `python scripts/run_metrics.py start <独立计量文件.json>`。该文件只记时与计数，不存客户原文；主体冲突停止调用 `finish --reason safe_stop`，不创建客户目录。
+1. 仅在已进入获授权的实际运行，且已确定独立计量文件的路径及写入范围后，调用 `python scripts/run_metrics.py start <独立计量文件.json>`。只读预览或审计不得启动计量；仅加载 SKILL 不构成运行或写入授权。该文件只记时与计数，不存客户原文；已启动的运行若因主体冲突停止，调用 `finish --reason safe_stop`，不创建客户目录。
 2. 初始化后调用 `python scripts/build_candidate.py <workspace> --output-root <候选父目录>`。使用返回路径，不使用任意candidate名称直接校验。
 3. 只填写候选Markdown业务正文及module_status。策略三个上下文字段只填frontmatter；正文保留`{{strategy.target_contact_level}}`、`{{strategy.visit_objective}}`、`{{strategy.minimum_next_step}}`，finalize统一渲染。手写正文不被静默改写；不一致仍报错。保留模板状态表、版本表、刷新表头；策略导航用“序号｜claim_id｜来源成果｜使用位置”，不要把导航当主张定义。partial/blocked须在状态表写具体缺口；未核实不能改completed。
-4. 调用 `python scripts/build_candidate.py <workspace> --finalize <candidate>`。构建器继承身份和授权，固定ready=false，更新版本、状态登记及当前run记录；不补事实、不批准。报错时按具体字段修订后重跑，保留首次日志；最多两轮，不以重写验证器求通过。
+4. 调用 `python scripts/build_candidate.py <workspace> --finalize <candidate>`。构建器继承身份和授权，固定 ready=false，更新状态登记及当前 run 记录；总报告沿用 init/resume 已分配的版本。信件同 run 保留版本并更新候选中的当前草稿行，新 run 在正式信件版本基础上加 1 并追加记录；旧 run 历史从正式信件继承，不改写。重复 finalize 不累计版本或记录；不补事实、不批准。报错时按具体字段修订后重跑，保留首次日志；最多两轮，不以重写验证器求通过。
 5. 若使用规划器，search-plan与run-metrics是正式审计记录，连同evidence-manifest经commit一起提交；source-cache只作可丢弃的临时性能缓存，不证明事实，不纳入交付及审批。candidate-base为本地CAS定位，不是授权证明。
 6. 按实际操作调用 `python scripts/run_metrics.py record <计量文件> --count queries_executed=2 --count sources_opened=3`。查询按查询条目数、open按请求数计；失败open同样计数。重读原文计open，不算新来源；计算指纹的字节读取用`--event hash_bytes_read=1`，读取Skill规则用`--event rule_read=1`，二者均不计sources_opened。推荐原文读取用`--event business_source_open=1`；未知token保持null。
 7. 提交前 `python scripts/run_metrics.py attach <计量文件> --candidate <candidate>` 将计量启动至提交前快照绑定context/run，写入候选run-metrics。该快照不含提交及后续人工审核时间。
@@ -24,4 +24,4 @@
 
 accessed_date只填YYYY-MM-DD，访问方式/存档说明放notes；external_use仅true/false。C级来源支持非H主张时拒绝，不替使用者改类型或提高等级；由执行者重新评估证据和表述。策略渲染同样不推导新业务事实。
 
-计量起止统一为“读取入口后实际启动”至“验证结束或安全停止”；提交快照在此之前。最终答复、此前读取及finish之后的真人等待不在区间内；脚本不会自动暂停，finish之前的等待仍计入。旧记录无范围字段时按legacy披露，不能追认为端到端测量。
+计量起止统一为“获授权运行且路径确定后实际启动”至“验证结束或安全停止”；不回填启动前的起点或估计耗时，提交快照在此之前。最终答复、此前读取及finish之后的真人等待不在区间内；脚本不会自动暂停，finish之前的等待仍计入。旧记录无范围字段时按legacy披露，不能追认为端到端测量。

@@ -1,18 +1,18 @@
 {
   "schema_version": 3,
   "skill": "senior-osint-analyst",
-  "generated_at": "2026-09-07T06:17:23+08:00",
+  "generated_at": "2026-09-11T12:09:07+08:00",
   "hash_algorithm": "SHA-256",
   "text_hash_normalization": "LF",
   "skill_md": "SKILL.md",
-  "skill_md_sha256": "fa90443f0f778de46d6bd932322fac460a72b5525a1912612d72a50b253e3eff",
+  "skill_md_sha256": "c736550454c9e08f9bd9ed3260cac2f4802f10a46c2047ec07e5979c4bcb7b7a",
   "top_level_files": [
     "SKILL.md"
   ],
   "top_level_file_hashes": [
     {
       "path": "SKILL.md",
-      "sha256": "fa90443f0f778de46d6bd932322fac460a72b5525a1912612d72a50b253e3eff"
+      "sha256": "c736550454c9e08f9bd9ed3260cac2f4802f10a46c2047ec07e5979c4bcb7b7a"
     }
   ],
   "top_level_directories": [
@@ -23,7 +23,7 @@
   "resource_directories": [
     {
       "name": "references",
-      "file_count": 2
+      "file_count": 3
     },
     {
       "name": "assets",
@@ -45,11 +45,15 @@
     },
     {
       "path": "references/evidence-standard.md",
-      "sha256": "e1619d1dd545b98518f5acb1ca43aeade5517f0e106233be737c39b3f7716821"
+      "sha256": "618ee2ed59a05398915316cd1a6b30062d2d9ab15e3a1ed09bde46728c09a5ac"
     },
     {
       "path": "references/report-templates.md",
-      "sha256": "e4bf09d9768baa44ff4406a947e3e95cd91875ab6ce0317f010d9335599e9679"
+      "sha256": "6fb58f4a85503b9011dd23001616ae1e9843e78cc6761968c7620570fe4e6733"
+    },
+    {
+      "path": "references/validation-cases.md",
+      "sha256": "0642e49c2ae53396de17d7cd1cf437893e2dbe1e895a17724314f1c613827318"
     }
   ],
   "declared_local_dependencies": [
@@ -57,13 +61,19 @@
       "path": "references/evidence-standard.md",
       "exists": true,
       "resolved_path": "senior-osint-analyst/references/evidence-standard.md",
-      "sha256": "e1619d1dd545b98518f5acb1ca43aeade5517f0e106233be737c39b3f7716821"
+      "sha256": "618ee2ed59a05398915316cd1a6b30062d2d9ab15e3a1ed09bde46728c09a5ac"
     },
     {
       "path": "references/report-templates.md",
       "exists": true,
       "resolved_path": "senior-osint-analyst/references/report-templates.md",
-      "sha256": "e4bf09d9768baa44ff4406a947e3e95cd91875ab6ce0317f010d9335599e9679"
+      "sha256": "6fb58f4a85503b9011dd23001616ae1e9843e78cc6761968c7620570fe4e6733"
+    },
+    {
+      "path": "references/validation-cases.md",
+      "exists": true,
+      "resolved_path": "senior-osint-analyst/references/validation-cases.md",
+      "sha256": "0642e49c2ae53396de17d7cd1cf437893e2dbe1e895a17724314f1c613827318"
     }
   ],
   "missing_declared_dependencies": []

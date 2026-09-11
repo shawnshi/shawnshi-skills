@@ -206,8 +206,13 @@ def build_pending_letter_workspace(output_root: Path) -> Path:
         "not_called=leader,internal,strategy,external_letter; "
         f"target_evidence_cutoff_date={cutoff}"
     )
+    total_banner = next(
+        line for line in total_original.splitlines() if "内部研究档位：" in line
+    )
     total_body = f"""
 # 示例医院客户研究与拜访准备报告
+
+{total_banner}
 
 本次客户信由公开事实 CLM-I-001 支撑。
 
@@ -476,7 +481,9 @@ def build_pending_strategy_workspace(
             "内容/无": "尚待人工审核",
         }
         # Official template renders these slots from the same structured context.
-        values.update({"strategy." + key: value for key, value in strategy_context.items()})
+        values.update(
+            {"strategy." + key: value for key, value in strategy_context.items()}
+        )
         strategy_body = re.sub(
             r"\{\{([^{}]+)\}\}",
             lambda match: (

@@ -1,18 +1,18 @@
 {
   "schema_version": 3,
   "skill": "cognitive-storm-research",
-  "generated_at": "2026-09-07T06:17:23+08:00",
+  "generated_at": "2026-09-11T12:09:07+08:00",
   "hash_algorithm": "SHA-256",
   "text_hash_normalization": "LF",
   "skill_md": "SKILL.md",
-  "skill_md_sha256": "787644d5e45a70e5f7020d37ffe24fdf4a6f0efeeab4be86c7cb293da3cc3d9f",
+  "skill_md_sha256": "bb768187c87d9e87453aac56ae8ed7e377d894d16f51e8d87d67369e7cf79359",
   "top_level_files": [
     "SKILL.md"
   ],
   "top_level_file_hashes": [
     {
       "path": "SKILL.md",
-      "sha256": "787644d5e45a70e5f7020d37ffe24fdf4a6f0efeeab4be86c7cb293da3cc3d9f"
+      "sha256": "bb768187c87d9e87453aac56ae8ed7e377d894d16f51e8d87d67369e7cf79359"
     }
   ],
   "top_level_directories": [
@@ -23,7 +23,7 @@
   "resource_directories": [
     {
       "name": "references",
-      "file_count": 1
+      "file_count": 2
     },
     {
       "name": "assets",
@@ -45,7 +45,11 @@
     },
     {
       "path": "references/storm_report_template.md",
-      "sha256": "2efa1af97b2112c6903d80ae17a7302ab46472a542cd861eeb190e71c579cf44"
+      "sha256": "d86cb47e9057dc7844faf60994282505343e7d75e0020841804b2019a2817a14"
+    },
+    {
+      "path": "references/validation-cases.md",
+      "sha256": "44fec2b748e13df356b28d18bdd516790061273ed2d3fc4f14660fc502e8a23d"
     }
   ],
   "declared_local_dependencies": [
@@ -53,7 +57,13 @@
       "path": "references/storm_report_template.md",
       "exists": true,
       "resolved_path": "cognitive-storm-research/references/storm_report_template.md",
-      "sha256": "2efa1af97b2112c6903d80ae17a7302ab46472a542cd861eeb190e71c579cf44"
+      "sha256": "d86cb47e9057dc7844faf60994282505343e7d75e0020841804b2019a2817a14"
+    },
+    {
+      "path": "references/validation-cases.md",
+      "exists": true,
+      "resolved_path": "cognitive-storm-research/references/validation-cases.md",
+      "sha256": "44fec2b748e13df356b28d18bdd516790061273ed2d3fc4f14660fc502e8a23d"
     }
   ],
   "missing_declared_dependencies": []

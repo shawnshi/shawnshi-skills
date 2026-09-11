@@ -23,7 +23,7 @@ CustomerResearchContext 是 discovery-call 的唯一逻辑状态模型。它服�
 
 每个独立成果继续记录v2.5字段。leader、internal、visit_strategy新增可选通用审核字段`reviewer、reviewed_at、reviewed_content_version、reviewed_body_sha256`；approved时必填并绑定当前正文，非approved时全部清空。交流策略继续记录`target_contact_level/visit_objective/minimum_next_step`；客户信内部稿继续使用既有六项信件上下文和五项审批绑定。中断恢复时先读总报告，再读本轮未完或待刷新的模块文件。
 
-总报告的`artifact_type`固定为`comprehensive_report`；其module_status描述主流程综合，review_status默认`not_required`。新v2.6最终交付还必须通过独立就绪审批：`ready_for_use=true`及四项readiness绑定与当前总报告版本/正文一致。`closed`只表示运行结束，不等于ready或approved。
+总报告的`artifact_type`固定为`comprehensive_report`；其 module_status 描述主流程综合，review_status 默认`not_required`。总报告每 run 恰有一条历史记录，版本由 init/resume 或独立治理事务分配并逐 run 连续递增；finalize 沿用当前 run 版本，只更新该 run 条目，不重写旧 run 历史。新v2.6最终交付还必须通过独立就绪审批：`ready_for_use=true`及四项readiness绑定与当前总报告版本/正文一致。`closed`只表示运行结束，不等于ready或approved。
 
 ## 标识和逻辑字段
 
@@ -253,7 +253,7 @@ connector_status 不得代替 module_status。例：资料库未配置但本地�
 ## 模块与成果登记
 
 | 模块 | 独立成果 | 默认审核 | 连接状态适用 |
-|---|---|---|---|
+| --- | --- | --- | --- |
 | institution | {{safe_name}}机构研究报告.md | not_required | 否 |
 | leader | {{safe_name}}人物研究报告.md | pending | 否 |
 | internal | {{safe_name}}内部信息检索报告.md | pending | 是 |
@@ -267,7 +267,7 @@ connector_status 不得代替 module_status。例：资料库未配置但本地�
 成果登记表至少包含：
 
 | 字段 | 要求 |
-|---|---|
+| --- | --- |
 | artifact_type | 使用固定英文成果类型；总报告固定中文行标签按模板映射 |
 | selected_in_run | 本 run 是否调用 |
 | run_action | not_called、created、reused、updated 或 generated |
@@ -276,7 +276,7 @@ connector_status 不得代替 module_status。例：资料库未配置但本地�
 | connector_status | 使用合法枚举 |
 | freshness_status | 使用合法枚举 |
 | 成果链接（artifact_path/link） | 这是成果登记的唯一物理列：Markdown 链接目标是成果的独立相对`artifact_path`，显示文本是`link`；文件不存在时不能伪造链接或拆出第16列 |
-| content_version | 每次实际更新递增 |
+| content_version | 研究与策略按实际修订递增；信件按独立 run 修订递增，同 run 候选反复编辑或 finalize 不累计版本 |
 | latest_run_id | 最后修改该文件的 run_id |
 | updated_at | 带时区时间；只有该成果实际修改时更新 |
 | summary_sync_status | pending、synced、out_of_sync 或 not_applicable |
@@ -304,7 +304,7 @@ connector_status 不得代替 module_status。例：资料库未配置但本地�
 下表仅保留v2.5 route兼容。用户业务模式和ready门禁以[四种业务模式](business-modes.md)及[审核治理](governance-raci.md)为准。
 
 | route | 可关闭条件 |
-|---|---|
+| --- | --- |
 | research_only | 所选研究达到 partial/completed/blocked 终态且 current；缺口/阻塞透明；completed 人物/内部判断已 pending 或 approved；总报告已同步 |
 | visit_prep | 新建时本轮至少一个研究模块；续建时至少一个 completed/current 历史研究成果可复用，或至少一个既有研究成果同时选中并由`--refresh-modules`在本 run 更新；关闭前研究依赖 completed/current 且审核可用；策略 completed/current 且 pending 或 approved；目标和最小动作明确 |
 | strategy | 新建时本轮至少一个研究模块；续建时至少一个 completed/current 历史研究成果可复用，或至少一个既有研究成果同时选中并由`--refresh-modules`在本 run 更新；关闭前研究依赖 completed/current 且审核可用；策略 completed/current 且 pending 或 approved |
@@ -321,7 +321,7 @@ connector_status 不得代替 module_status。例：资料库未配置但本地�
 
 内部稿的`review_status: approved`不是单独布尔值，必须绑定：`approver`、`approved_at`、`approved_content_version`、`approved_body_sha256`、`approved_context_sha256`。正文哈希规范化固定为：抽取唯一标记对之间的文本，将CRLF/CR转为LF，去除每行尾随空白和首尾空行，以UTF-8（无BOM、无末尾换行）计算小写SHA-256。上下文哈希固定对按字段名排序的六项结构化信件上下文序列化为紧凑 UTF-8 JSON 后计算小写 SHA-256。外发预检时批准版本必须等于当前内部稿版本，两个哈希必须分别匹配当前正文和当前上下文。任一字段缺失、上下文变化或正文漂移都视为未批准。
 
-内部稿正文中的“版本与审核记录”是审批审计链的一部分。每次正文更新、`approve`和`emit_external`都必须追加一行，不得覆盖或改写历史；后两类行的变更摘要须明确动作。最新一行的`updated_at/content_version/latest_run_id/runtime_owner/review_status`必须与 frontmatter 一致，严格校验、批准和外发均须核对。
+内部稿正文中的“版本与审核记录”是审批审计链的一部分。每个独立 run 的正文修订、`approve` 和 `emit_external` 都递增版本并追加一行，不得覆盖或改写旧 run 历史；后两类行的变更摘要须明确动作。同 run 的未批准候选反复编辑或 finalize 不代表新的已提交修订，保留该 run 版本并仅更新候选中的当前草稿行；已批准稿仍须由真人按治理流程开启修订。最新一行的`updated_at/content_version/latest_run_id/runtime_owner/review_status`必须与 frontmatter 一致，严格校验、批准和外发均须核对。
 
 外发生成是独立 run，只做文件生成、不发送；运行记录写`route: letter`、`objective: generate_external`、沿用既有证据截止日作为 target，并把 customer_letter 及至少一个原信件依赖的 current 研究载体列为 selected；动作分别记录研究载体 reused、内部稿 updated、外发版 generated。在写入前拒绝符号链接、重复 frontmatter、HTML 注释、内部审核词和敏感内部词。成功事务同时完成：内部稿登记本次外发、追加审核记录并递增 content_version，在正文与六项信件上下文未变的前提下把 approved_content_version 绑定到递增后的内部稿版本；外发版以 content_version: 1 创建；总报告递增 content_version 并同步登记、运行记录和链接。三者写同一外发 run_id 与同一带时区 updated_at；只做正文抽取时不推进 evidence_cutoff_date。任何校验或写入失败，三者恢复到运行前状态。
 
@@ -352,7 +352,7 @@ connector_status 不得代替 module_status。例：资料库未配置但本地�
 4. 稳定历史事实和仍有效证据复用；现职、分工、项目阶段、金额、供应商状态和近期政策重新核验。
 5. 新来源和主张追加；旧主张标 stale、conflicted 或 invalidated，旧来源继续保留。
 6. 只增加实际更新模块 content_version；其他模块保持版本。
-7. 证据合并完成后，主流程才更新总报告变更摘要、evidence_cutoff_date、freshness_status、latest_run_id、updated_at 和 content_version。
+7. 证据合并完成后，主流程更新总报告变更摘要、evidence_cutoff_date、freshness_status 和 updated_at；latest_run_id 与 content_version 沿用 init/resume 为本 run 分配的值，不在 finalize 再次递增版本。
 8. 在综合报告`## 8.1 刷新结果记录`追加本 run 的六列表格行：`run_id｜新增｜更正｜失效｜未变化｜待确认`。五类结果单元格只允许逗号分隔的 claim/source ID，或精确值`none`；不得留空、写自由文本或占位符。
 9. strict refresh 至少选择一个研究成果；每个所选成果的动作只能是 created/updated，latest_run_id 必须等于本 run，evidence_cutoff_date 必须等于合并后总报告；reused 成果或旧 cutoff 不能满足本轮刷新。
 10. closed 前确认最新刷新记录的 run_id 等于总报告 latest_run_id，且最新运行记录 target_evidence_cutoff_date 等于总报告 evidence_cutoff_date；首次运行或缺少本轮刷新记录不得以 refresh 关闭。
