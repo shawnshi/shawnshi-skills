@@ -14,6 +14,7 @@ from run_contract import (
     record_run_artifact,
     record_stage,
 )
+import supplement_agent as sa
 
 
 class ParentSupplementFinalizationTests(unittest.TestCase):
@@ -209,6 +210,42 @@ class ParentSupplementFinalizationTests(unittest.TestCase):
         workflow = (self.snapshot / "references/workflow_protocols.md").read_text(encoding="utf8")
         self.assertIn("已装配 draft 也必须先通过", workflow)
         self.assertNotIn("直接交现有 `finalize-supplement`", workflow)
+
+    def test_fillable_parent_derived_classification_is_narrow(self):
+        self.assertTrue(sa._fillable_parent_derived("coverage"))
+        self.assertTrue(sa._fillable_parent_derived("data_provenance"))
+        self.assertTrue(
+            sa._fillable_parent_derived("candidates[2].candidate_object_sha256")
+        )
+        self.assertFalse(sa._fillable_parent_derived("candidates[2].title"))
+        self.assertFalse(sa._fillable_parent_derived("data_provenance.request_sha256"))
+        self.assertFalse(sa._fillable_parent_derived("candidates_id"))
+        self.assertFalse(sa._fillable_parent_derived("baseline_sha256s"))
+
+    def test_context_publishes_the_parent_derived_keys(self):
+        context_result = subprocess.run(
+            [
+                sys.executable,
+                "-X",
+                "utf8",
+                str(self.snapshot / "scripts/supplement_agent.py"),
+                "context",
+                "--request",
+                str(self.request_path),
+                "--gap-id",
+                "technology",
+            ],
+            cwd=self.snapshot,
+            capture_output=True,
+            text=True,
+        )
+        self.assertEqual(context_result.returncode, 0, context_result.stderr)
+        derived = json.loads(context_result.stdout)["draft_parent_derived_fields"]
+        self.assertEqual(derived["top_level"], list(sa.PARENT_DERIVED_FIELDS))
+        self.assertEqual(
+            derived["per_candidate"], list(sa.PARENT_DERIVED_CANDIDATE_FIELDS)
+        )
+        self.assertIn("fills them", derived["rule"])
 
     def test_handoff_prioritizes_persistence_before_optional_chatter(self):
         task = self.packet["task_message"]

@@ -344,8 +344,21 @@ class SupplementAgentTests(unittest.TestCase):
         self.assertIn("finalize", context["finalize_command"])
         self.assertEqual(
             context["draft_schema"]["access_method_allowed"],
-            ["http_get", "browser", "api", "document"],
+            ["http_get", "browser", "api", "document", "native_readable"],
         )
+        self.assertIn("native_readable", context["draft_schema"]["access_method_rule"])
+        self.assertEqual(
+            context["required_bound_candidate_ids"],
+            sorted(
+                str(candidate["candidate_ref"])
+                for candidate in context["bound_candidates"]
+                if candidate.get("candidate_ref")
+            ),
+        )
+        self.assertIn(
+            "exactly once", context["draft_schema"]["bound_candidate_decision_coverage"]
+        )
+        self.assertIn("required_bound_candidate_ids", context["draft_coverage_rule"])
         self.assertEqual(
             context["draft_schema"]["candidate_source_type_allowed"],
             ["primary", "secondary"],

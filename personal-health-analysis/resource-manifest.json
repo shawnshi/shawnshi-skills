@@ -1,11 +1,11 @@
 {
   "schema_version": 3,
   "skill": "personal-health-analysis",
-  "generated_at": "2026-09-06T08:08:34+08:00",
+  "generated_at": "2026-09-12T20:08:46+08:00",
   "hash_algorithm": "SHA-256",
   "text_hash_normalization": "LF",
   "skill_md": "SKILL.md",
-  "skill_md_sha256": "4671c2987bc6017304adcc075a1f6e50c6e0995783c58153b66a8450278618ac",
+  "skill_md_sha256": "346943ae64ba8043a45977bb202062d126681cd7b93aa142864ec7d762c2259e",
   "top_level_files": [
     ".gitignore",
     "SKILL.md",
@@ -22,7 +22,7 @@
     },
     {
       "path": "SKILL.md",
-      "sha256": "4671c2987bc6017304adcc075a1f6e50c6e0995783c58153b66a8450278618ac"
+      "sha256": "346943ae64ba8043a45977bb202062d126681cd7b93aa142864ec7d762c2259e"
     },
     {
       "path": "install.ps1",
@@ -42,7 +42,7 @@
     },
     {
       "path": "runtime-authority.json",
-      "sha256": "f746ee43ab4d720cd52878e0ab0d7277eb6a4268dbac3065d82ac2e467ef6446"
+      "sha256": "adfa43e41e23b4270ac2a39438382e9ced909d95f35cfe84f4b97f7bc458ea43"
     }
   ],
   "top_level_directories": [
@@ -105,7 +105,7 @@
     },
     {
       "path": "references/workflow_contract.md",
-      "sha256": "7e5f84d8fd15033bd6f581ffc98251b744beb8869672cbb13ce5a997a471a76f"
+      "sha256": "5f72ea9c17bde73db007d870e391589013e12792b6f74f56aecc66b1115329dd"
     },
     {
       "path": "resources/clinical_guidelines.json",
@@ -209,7 +209,7 @@
     },
     {
       "path": "scripts/sync_health_data.py",
-      "sha256": "9af8f92474726baf9cd9e0b313726bcc17dd4c191fafdaffbbc6c7b9fd5952ff"
+      "sha256": "063725059bac0a1570f38da856853620da6a1a0e7f355c0cf85203d943a5d84c"
     },
     {
       "path": "scripts/test_fhir_external_acceptance.py",
@@ -297,7 +297,7 @@
     },
     {
       "path": "scripts/test_runtime_authority.py",
-      "sha256": "e5ab1a4b982ccdf8f4dabe86a93373a2c299631cfd7325abd785ddc4a79c6ad7"
+      "sha256": "b9bd6aaa8d911ad36d37f1cd62eabd3708fb0503178d17f6964a8aa1f32f65b9"
     },
     {
       "path": "scripts/test_runtime_preflight.py",
@@ -305,11 +305,11 @@
     },
     {
       "path": "scripts/test_skill_contract.py",
-      "sha256": "1c2d15a8fd24ed6c9f2da46543a72d49ae7c15603c5605849bc1aeea589e15ef"
+      "sha256": "4c5811ab89b7c16b02802cc2b845c28b15f672b5a4cc3e1455d4de6670f9c5fd"
     },
     {
       "path": "scripts/test_sync_health_data.py",
-      "sha256": "ff67378e5530e996306994b30c06aa1d2b2b3f78ed2a73471f477c78e9fb533f"
+      "sha256": "9763ef82958e1fc559c2a7eb721b9113aa4dbb36038b744bc81fe98bba81eeb9"
     },
     {
       "path": "scripts/test_wheelhouse_integrity.py",
@@ -355,7 +355,7 @@
       "path": "references/workflow_contract.md",
       "exists": true,
       "resolved_path": "personal-health-analysis/references/workflow_contract.md",
-      "sha256": "7e5f84d8fd15033bd6f581ffc98251b744beb8869672cbb13ce5a997a471a76f"
+      "sha256": "5f72ea9c17bde73db007d870e391589013e12792b6f74f56aecc66b1115329dd"
     },
     {
       "path": "scripts/runtime_authority.py",

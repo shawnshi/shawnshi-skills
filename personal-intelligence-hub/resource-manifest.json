@@ -1,7 +1,7 @@
 {
   "schema_version": 3,
   "skill": "personal-intelligence-hub",
-  "generated_at": "2026-09-12T07:06:45+08:00",
+  "generated_at": "2026-09-13T18:47:03+08:00",
   "hash_algorithm": "SHA-256",
   "text_hash_normalization": "LF",
   "skill_md": "SKILL.md",
@@ -28,7 +28,7 @@
   "resource_directories": [
     {
       "name": "scripts",
-      "file_count": 67
+      "file_count": 70
     },
     {
       "name": "references",
@@ -110,7 +110,7 @@
     },
     {
       "path": "scripts/article_broker.py",
-      "sha256": "c5b23a826406c76aec96405811b71ae9702097068367ca6133ae6b8265212896"
+      "sha256": "ea17b1322ec04af06c94b24e8d0f6da91d1d2e68bd4775db9b1c51bed9f6e28c"
     },
     {
       "path": "scripts/await_artifacts.py",
@@ -161,6 +161,10 @@
       "sha256": "7b4cb66eb07c39a7f4bbbc681165662dd26b9785bdbcc004abc2f060f65207c0"
     },
     {
+      "path": "scripts/receipt_assemble.py",
+      "sha256": "5e957c5bc3c58c20bda9cc34eb24e9e8ad4a79ed9c610a471be342b1ba2f2d30"
+    },
+    {
       "path": "scripts/recovery_lifecycle.py",
       "sha256": "9019c4e404e2d47ffbf48a6a2258a484eadd9a48e632b26ed47cf0ecad6726de"
     },
@@ -182,7 +186,7 @@
     },
     {
       "path": "scripts/run_contract.py",
-      "sha256": "902ef75c63d1443986ee62eef704846185a5984c01a17b893194c9175782e761"
+      "sha256": "7ccb495b805a98a812cadad66aa69e420da8519234a41a41584f594bf9885870"
     },
     {
       "path": "scripts/run_daily.py",
@@ -202,7 +206,7 @@
     },
     {
       "path": "scripts/supplement_agent.py",
-      "sha256": "fd8729b5649b1c8c88a097e5cf2c718f3b88f5b53748170c5985ac7c587c1599"
+      "sha256": "d9502e94fbe037d9429a58448cb358da74866b7627aef44aef29af53ac0a47d7"
     },
     {
       "path": "scripts/test_archive_contract.py",
@@ -222,7 +226,7 @@
     },
     {
       "path": "scripts/test_article_broker_review_fixes.py",
-      "sha256": "36aca6e00855aa6d4aea6393719c301fcc22d810874abffa7ec47fdca6d71692"
+      "sha256": "4d47147f4b3632b97463d8bc08f9b305320c7de3bab0c8114f010d63efa1c808"
     },
     {
       "path": "scripts/test_article_broker_wire_dateline.py",
@@ -247,6 +251,10 @@
     {
       "path": "scripts/test_briefing_v13_contract.py",
       "sha256": "68c9558b03650d4645675f63f174e4c420258f8ec967a24f5e5f697a16afd26f"
+    },
+    {
+      "path": "scripts/test_broker_closure_and_coverage.py",
+      "sha256": "ff6940dadca779eccb6bbe77ee942a9181c372b139a977c194d3071e65d27fcd"
     },
     {
       "path": "scripts/test_contract_fixtures.py",
@@ -286,19 +294,19 @@
     },
     {
       "path": "scripts/test_native_article_evidence.py",
-      "sha256": "ee808bf1380b273a4771841c2834b34c8b24c12d91ce4bc5721c2c744dd5f46f"
+      "sha256": "dd810e8ed55f088564b8360f9e311c1660996c36537a4b722d0624aacb1316f8"
     },
     {
       "path": "scripts/test_native_readable_dates.py",
-      "sha256": "604f6d191eb13e769f5224fd8ce30092ed4fb9f60090604600bc381ceb005909"
+      "sha256": "71a1a401a1d998a8decbc012ce8a25939fd4a696fee64cec5bcbca8c3891fc03"
     },
     {
       "path": "scripts/test_parent_receipt_size.py",
-      "sha256": "d21b168257f1c9b2d3fab866e307fbf0e1fb382a7719550447a5c854eb627d9b"
+      "sha256": "fa2af69e2e71dc96a6d4beb4e16e2de10c5b13f6511467568c1aaed1fb1b5390"
     },
     {
       "path": "scripts/test_parent_supplement_finalization.py",
-      "sha256": "7d035450393d0df456e242a4242f8437a0ef3ece19db10ec2521510c34a69bc1"
+      "sha256": "3ae44da1f88001670304a9f23902ee5879f082649b64abc4b3b0307376ea0248"
     },
     {
       "path": "scripts/test_pipeline_contract.py",
@@ -307,6 +315,10 @@
     {
       "path": "scripts/test_prompt_contract.py",
       "sha256": "8a82965a589647ceff39dd7621d24671e9506dd83453c981d9a5ae25b0ea9c9f"
+    },
+    {
+      "path": "scripts/test_receipt_assemble.py",
+      "sha256": "ab1829b87d83c9584e5703e97c6b1d74f7c157701c7796972964ecae2d34caa6"
     },
     {
       "path": "scripts/test_relevance_scoring.py",
@@ -346,7 +358,7 @@
     },
     {
       "path": "scripts/test_supplement_agent.py",
-      "sha256": "a8f7f3327682f5d5c6e9a80592644bb3fa743892335026e0bec4aebc9fabd26a"
+      "sha256": "8128f5c03039ee48c159d1cefc994ae34507c18ccc25fc51aaab84b7eee95845"
     },
     {
       "path": "scripts/test_technical_bound_selection.py",

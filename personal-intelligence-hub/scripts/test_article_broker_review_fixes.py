@@ -1,5 +1,6 @@
 """AB-SSRF01 / AB-PARENT01 / AB-RETRY01: real gates, frozen runs, offline I/O."""
 import asyncio
+import hashlib
 import json
 import socket
 import subprocess
@@ -120,6 +121,35 @@ def sealed_draft(run, monkeypatch, positive, **gap):
     draft = Path(packet["output_paths"]["draft"])
     atomic_dump_json(draft, dynamic(sealed, positive))
     return request, packet, sealed, draft
+
+
+def assembled_draft_bytes(run, request, draft):
+    """Canonical assembled draft bytes, produced by the frozen parent CLI itself."""
+    ready = frozen_cli(
+        run, request, "finalize", "--parent", "--request", str(request), "--gap-id", "tech"
+    )
+    assert ready.returncode == 0, ready.stderr
+    canonical = draft.read_bytes()
+    payload = json.loads(canonical)
+    assert payload["contract_version"] == "supplement-result/1.0"
+    return canonical, payload
+
+
+def test_tampered_body_proof_is_rejected_before_parent_assembly(run, monkeypatch):
+    """Content anchoring is the broker's job: the parent never fills or overrides evidence."""
+    request, packet, sealed, draft = sealed_draft(run, monkeypatch, True)
+    canonical, payload = assembled_draft_bytes(run, request, draft)
+    payload["candidates"][0]["broker_body_proof_sha256"] = "0" * 64
+    atomic_dump_json(draft, payload)
+    before = draft.read_bytes()
+    rejected = frozen_cli(
+        run, request, "finalize", "--parent", "--request", str(request), "--gap-id", "tech"
+    )
+    assert rejected.returncode != 0, rejected.stdout
+    assert "exact helper attempt/body proof" in rejected.stderr
+    assert draft.read_bytes() == before
+    assert not Path(packet["output_paths"]["result"]).exists()
+    assert "tech" not in rc.load_manifest(run[0]).get("parent_supplement_finalizations", {})
 
 
 @pytest.mark.parametrize("positive", [False, True])

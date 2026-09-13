@@ -427,3 +427,170 @@ def test_readable_existing_size_paragraph_and_portal_gates():
     assert broker.readable_metadata(
         body("Published: 2026-09-04"), "https://anubis.techaro.lol/blog/actual-research"
     )["article"]
+
+# --- regression: a headline ending with a single sentence mark must not close the metadata region ---
+# Defect reproduced on 2026-09-13 against a real nhsa.gov.cn page: when the headline ended with
+# "！" the header region stopped at the preceding line, so the following
+# "日期：… 访问次数：…" line was never parsed, dates stayed empty and article became false.
+
+
+@pytest.mark.parametrize("mark", ["！", "。", "？"])
+def test_readable_title_trailing_sentence_mark_keeps_metadata(mark):
+    # CJK-only by design: an ASCII "?"/"!" headline keeps closing the region (documented residual).
+    headline = "按病种付费3.0版分组方案配置信息 开源啦" + mark
+    text = (
+        "视力保护色：\n\n"
+        + headline
+        + "\n\n日期：2026-09-08 访问次数： 42 字号：大\n\n"
+        + CHINESE
+        + "\n\n"
+        + CHINESE
+    )
+    result = broker.readable_metadata(text, NHSA)
+    assert result["dates"], f"metadata region must survive a headline ending with {mark!r}"
+    assert result["dates"][0]["published_at"] == "2026-09-08"
+    assert result["title"] == headline
+    exact(text, result)
+
+
+@pytest.mark.parametrize("mark", ["！", "。", "？"])
+def test_readable_title_interior_sentence_mark_still_ends_metadata_region(mark):
+    """Only a single trailing mark is exempted: an interior CJK terminator still means prose.
+
+    Note: the ASCII branch of the guard is anchored to a following space or end of line, so
+    an ASCII mark embedded mid-string without a space is not treated as prose; that asymmetry
+    predates this regression test and is out of scope here.
+    """
+    prose_like = "发布说明" + mark + "附加说明与免责声明"
+    text = (
+        "视力保护色：\n\n"
+        + prose_like
+        + "\n\n日期：2026-09-08 访问次数： 42 字号：大\n\n"
+        + CHINESE
+        + "\n\n"
+        + CHINESE
+    )
+    result = broker.readable_metadata(text, NHSA)
+    assert not result["dates"]
+    assert not result["article"]
+
+
+def test_readable_title_trailing_mark_on_generic_host_keeps_metadata():
+    headline = "国家医保局规范基层病种同病同付！"
+    text = (
+        headline
+        + "\n\n发布时间：2026-09-08\n\n"
+        + CHINESE
+        + "\n\n"
+        + CHINESE
+    )
+    result = broker.readable_metadata(text, URL)
+    assert [d["published_at"] for d in result["dates"]] == ["2026-09-08"]
+    assert result["title"] == headline
+    exact(text, result)
+
+
+# --- D7 diagnostic: article_gate_reasons must explain, never change, qualification ---
+
+
+def test_article_gate_reasons_reports_missing_publication_date():
+    text = "视力保护色：\n\n某个足够长的中文标题\n\n" + CHINESE + "\n\n" + CHINESE
+    gates = broker.article_gate_reasons(text, NHSA)
+    assert gates["has_publication_date"] is False
+    assert gates["article"] is False
+    assert gates["arxiv_path"] is False
+    assert broker.readable_metadata(text, NHSA)["article"] is False
+
+
+def test_article_gate_reasons_agrees_with_qualification():
+    headline = "按病种付费3.0版分组方案配置信息 开源啦！"
+    text = (
+        "视力保护色：\n\n"
+        + headline
+        + "\n\n日期：2026-09-08 访问次数： 42 字号：大\n\n"
+        + CHINESE
+        + "\n\n"
+        + CHINESE
+    )
+    gates = broker.article_gate_reasons(text, NHSA)
+    assert gates["article"] is True
+    assert all(
+        gates[key]
+        for key in (
+            "recognizable_body",
+            "not_portal",
+            "has_publication_date",
+            "nhsa_content",
+            "title_length_ok",
+        )
+    )
+    assert broker.readable_metadata(text, NHSA)["article"] is True
+
+
+# --- residual fixes: colon-less byline transparency, short ASCII headline marks ---
+
+
+def test_readable_colonless_byline_does_not_close_metadata_region():
+    headline = "按病种付费3.0版分组方案配置信息 开源啦"
+    text = (
+        "视力保护色：\n\n"
+        + headline
+        + "\n\n记者 张三\n\n日期：2026-09-08 访问次数： 42 字号：大\n\n"
+        + CHINESE
+        + "\n\n"
+        + CHINESE
+    )
+    result = broker.readable_metadata(text, NHSA)
+    assert [d["published_at"] for d in result["dates"]] == ["2026-09-08"]
+    assert result["title"] == headline
+    assert result["article"] is True
+
+
+@pytest.mark.parametrize(
+    "byline", ["记者 张三", "编辑 李四", "通讯员 王五", "By Jane Doe"]
+)
+def test_readable_byline_forms_are_transparent(byline):
+    text = (
+        "视力保护色：\n\n原标题足够长的中文标题\n\n"
+        + byline
+        + "\n\n日期：2026-09-08 访问次数： 42 字号：大\n\n"
+        + CHINESE
+        + "\n\n"
+        + CHINESE
+    )
+    result = broker.readable_metadata(text, NHSA)
+    assert result["dates"], byline
+    assert result["title"] == "原标题足够长的中文标题"
+
+
+def test_readable_short_ascii_headline_question_mark_keeps_metadata():
+    headline = "Will AI replace doctors?"
+    text = headline + "\n\nPublished: 2026-09-08\n\n" + CHINESE + "\n\n" + CHINESE
+    result = broker.readable_metadata(text, URL)
+    assert [d["published_at"] for d in result["dates"]] == ["2026-09-08"]
+    assert result["title"] == headline
+
+
+def test_readable_short_prose_bang_line_still_closes_region_documented_residual():
+    """Residual, deliberately pinned: a <=80 char prose line ending with '!' is treated as a
+    headline, so a later label is parsed. Only the '.' case is guaranteed to close the region."""
+    text = (
+        "We really met them!"
+        + "\n\nPublished: 2026-09-08\n\n"
+        + CHINESE
+        + "\n\n"
+        + CHINESE
+    )
+    result = broker.readable_metadata(text, URL)
+    assert result["dates"], "documented residual: short '!' line is read as a headline"
+
+
+def test_readable_prose_period_line_still_closes_region():
+    text = (
+        "We met on September 9, 2026 — this describes an earlier meeting."
+        + "\n\nPublished: 2026-09-08\n\n"
+        + CHINESE
+        + "\n\n"
+        + CHINESE
+    )
+    assert broker.readable_metadata(text, URL)["dates"] == []

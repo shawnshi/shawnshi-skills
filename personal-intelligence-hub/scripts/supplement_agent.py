@@ -59,6 +59,23 @@ DYNAMIC_FIELDS = {
     "completed_at",
     "broker_evidence_sha256",
 }
+# Keys the parent assembler derives from the sealed operational ledger and the bound packet.
+# A worker cannot compute them, so `finalize --parent` fills them instead of rejecting the
+# draft; every other difference stays a hard, path-reported mismatch.
+PARENT_DERIVED_FIELDS = (
+    "baseline_sha256",
+    "candidate_pool_sha256",
+    "coverage",
+    "data_provenance",
+    "gap_id",
+    "lane",
+    "request_sha256",
+    "run_id",
+)
+PARENT_DERIVED_CANDIDATE_FIELDS = (
+    "candidate_id",
+    "candidate_object_sha256",
+)
 
 
 def _aware_datetime(value: Any, field: str) -> datetime:
@@ -238,8 +255,23 @@ def build_agent_context(
             str(candidate.get("url") or "") for candidate in required_candidates
         ],
         "required_bound_candidate_count": len(required_candidates),
+        "required_bound_candidate_ids": sorted(required_ids),
+        "draft_coverage_rule": (
+            "bound_candidate_decisions must carry exactly one entry per id in "
+            "required_bound_candidate_ids, even when that candidate is not registered "
+            "(a missing or extra entry fails the parent finalizer)"
+        ),
         "draft_path": str(draft_path),
         "draft_dynamic_fields": sorted(DYNAMIC_FIELDS),
+        "draft_parent_derived_fields": {
+            "top_level": list(PARENT_DERIVED_FIELDS),
+            "per_candidate": list(PARENT_DERIVED_CANDIDATE_FIELDS),
+            "rule": (
+                "the parent assembler derives these from the sealed ledger and fills them; "
+                "omit them, or copy them verbatim from the sealed projection — never invent "
+                "values, and never rely on a value you authored for them"
+            ),
+        },
         "draft_schema": {
             "status_allowed": ["completed", "no_increment", "degraded", "failed"],
             "confidence_allowed": ["high", "medium", "low"],
@@ -254,7 +286,17 @@ def build_agent_context(
                 "failure_class",
             ],
             "access_status_allowed": ["verified", "blocked"],
-            "access_method_allowed": ["http_get", "browser", "api", "document"],
+            "access_method_allowed": [
+                "http_get",
+                "browser",
+                "api",
+                "document",
+                "native_readable",
+            ],
+            "access_method_rule": (
+                "copy `method` verbatim from the sealed broker ledger; parent-evidence "
+                "accesses use native_readable"
+            ),
             "verified_access": "failure_class=none; error_code must be null, empty, or omitted",
             "blocked_access": "failure_class=transient|permanent; non-empty error_code required",
             "bound_candidate_decision_allowed": [
@@ -270,6 +312,10 @@ def build_agent_context(
                 "decision",
                 "reason",
             ],
+            "bound_candidate_decision_coverage": (
+                "one entry per required_bound_candidate_id, exactly once, including "
+                "candidates that end up unregistered"
+            ),
             "candidate_source_type_allowed": ["primary", "secondary"],
             "candidate_primary_domain_allowed": ["technology", "healthcare_digital"],
             "candidate_secondary_domains_allowed": ["technology", "healthcare_digital"],
@@ -816,7 +862,12 @@ def _guard_parent_finalization(
         ):
             raise RunContractError("parent finalization receipt draft/time mismatch")
     elif current > completed + timedelta(seconds=grace):
-        raise RunContractError("parent finalization grace expired")
+        raise RunContractError(
+            "parent finalization grace expired; the sealed ledger and the draft are retained — "
+            "close this gap with review_progress_gate.py (--agent-status timed_out "
+            "--review-kind supplement --state <packet progress.state_path>) and register the "
+            "aggregate with run_daily.py reconcile-supplement --progress-state <that state path>"
+        )
     source_path = (
         _registration_source
         if _registration_source is not None
@@ -905,6 +956,52 @@ def _materialize_parent_draft(path, raw):
             temporary.unlink(missing_ok=True)
 
 
+def _draft_differences(draft: Any, result: Any, path: str = "") -> list[dict[str, str]]:
+    """Report exact JSON paths where an assembled draft and the re-assembled result differ."""
+    if isinstance(draft, dict) and isinstance(result, dict):
+        differences: list[dict[str, str]] = []
+        for key in sorted(set(draft) | set(result)):
+            child_path = f"{path}.{key}" if path else key
+            if key not in draft:
+                differences.append({"path": child_path, "reason": "missing in draft"})
+            elif key not in result:
+                differences.append(
+                    {"path": child_path, "reason": "not part of the assembled result"}
+                )
+            else:
+                differences.extend(_draft_differences(draft[key], result[key], child_path))
+        return differences
+    if isinstance(draft, list) and isinstance(result, list):
+        if len(draft) != len(result):
+            return [
+                {
+                    "path": path,
+                    "reason": f"length {len(draft)} != {len(result)}",
+                }
+            ]
+        differences = []
+        for index, (child_value, result_value) in enumerate(zip(draft, result)):
+            differences.extend(
+                _draft_differences(child_value, result_value, f"{path}[{index}]")
+            )
+        return differences
+    if draft != result:
+        return [{"path": path, "reason": "value differs"}]
+    return []
+
+
+def _fillable_parent_derived(path: str) -> bool:
+    """True when a difference is only a parent-derived key the worker cannot compute."""
+    head, _, leaf = path.rpartition(".")
+    if not head:
+        return path in PARENT_DERIVED_FIELDS
+    return (
+        head.startswith("candidates[")
+        and head.endswith("]")
+        and leaf in PARENT_DERIVED_CANDIDATE_FIELDS
+    )
+
+
 def _finalize_with_receipt(request_path, gap_id):
     _, request, packet, _, _, _ = _load_bound_packet(request_path, gap_id)
     if (
@@ -947,11 +1044,25 @@ def _finalize_with_receipt(request_path, gap_id):
             else draft
         )
         _, result = assemble_result(request_path, gap_id, dynamic, _validate_only=True)
-        if assembled and canonical_json_bytes(result) != canonical_json_bytes(draft):
-            raise RunContractError("assembled supplement draft semantic mismatch")
+        differences = _draft_differences(draft, result) if assembled else []
+        blocking = [
+            difference
+            for difference in differences
+            if not _fillable_parent_derived(str(difference["path"]))
+        ]
+        if blocking:
+            detail = "; ".join(
+                f"{item['path']} ({item['reason']})" for item in blocking[:8]
+            )
+            raise RunContractError(
+                f"assembled supplement draft semantic mismatch: {detail}"
+            )
+        # An otherwise valid draft that only omitted parent-derived keys is completed by the
+        # assembler rather than rejected: those keys are computed from the sealed ledger, never
+        # authored, and the source clock cannot be re-minted after its grace window closes.
         final_raw = (
             raw
-            if assembled
+            if assembled and not differences
             else json.dumps(result, ensure_ascii=False, indent=2)
             .replace("\n", os.linesep)
             .encode("utf-8")
@@ -963,7 +1074,12 @@ def _finalize_with_receipt(request_path, gap_id):
         if finalized > _aware_datetime(
             result["completed_at"], "completed_at"
         ) + timedelta(seconds=packet["finalization"]["grace_seconds"]):
-            raise RunContractError("parent finalization grace expired")
+            raise RunContractError(
+                "parent finalization grace expired; the sealed ledger and the draft are retained — "
+                "close this gap with review_progress_gate.py (--agent-status timed_out "
+                "--review-kind supplement --state <packet progress.state_path>) and register the "
+                "aggregate with run_daily.py reconcile-supplement --progress-state <that state path>"
+            )
         receipt = {
             "contract_version": "parent-supplement-finalization/1.0",
             "parent_attestation": "validated_within_source_grace",

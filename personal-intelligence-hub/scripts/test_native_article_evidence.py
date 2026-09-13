@@ -2,6 +2,8 @@
 
 # ruff: noqa: F811 -- pytest fixture dependency
 import hashlib
+import json
+import os
 import subprocess
 import sys
 from copy import deepcopy
@@ -541,6 +543,60 @@ def test_native_receipt_seal_exact_proof_and_mutation(new_run, monkeypatch, arxi
     atomic_dump_json(path, stored)
     with pytest.raises(rc.RunContractError, match="changed"):
         rc.load_manifest(new_run[0])
+
+
+def test_parent_finalize_fills_omitted_parent_derived_keys_on_a_sealed_ledger(new_run, monkeypatch):
+    """D8 end-to-end: a real sealed v3 ledger survives a draft that omits derived keys."""
+    from supplement_agent import (
+        PARENT_DERIVED_CANDIDATE_FIELDS,
+        PARENT_DERIVED_FIELDS,
+        assemble_result,
+        finalize_parent_draft,
+    )
+
+    monkeypatch.setattr(broker, "_transport", forbid)
+    monkeypatch.setattr("supplement_agent._fetch_url", forbid)
+    request, packet = setup(new_run, bound=False)
+    draft = Path(packet["output_paths"]["draft"])
+    search(request, url=URL)
+    data, receipt = reserve(request, url=URL, text=text())
+    broker.operate(request, "tech", "record-fetch", receipt=receipt)
+    sealed = broker.operate(request, "tech", "seal")
+    value = dynamic(sealed)
+    atomic_dump_json(draft, value)
+    _, assembled = assemble_result(request, "tech", value, _validate_only=True)
+    canonical = (
+        json.dumps(assembled, ensure_ascii=False, indent=2)
+        .replace("\n", os.linesep)
+        .encode("utf-8")
+    )
+    payload = json.loads(canonical)
+    assert payload["contract_version"] == "supplement-result/1.0"
+    assert payload["candidates"]
+    for key in PARENT_DERIVED_FIELDS:
+        payload.pop(key, None)
+    for candidate in payload["candidates"]:
+        for key in PARENT_DERIVED_CANDIDATE_FIELDS:
+            candidate.pop(key, None)
+    atomic_dump_json(draft, payload)
+    source = draft.read_bytes()
+    assert source != canonical
+    # Exactly the drafts that used to be rejected now finalise, and the assembler - not the
+    # worker - supplies the derived keys.
+    ready, _ = finalize_parent_draft(request, "tech")
+    assert draft.read_bytes() == canonical
+    record = rc.load_manifest(new_run[0])["parent_supplement_finalizations"]["tech"]
+    assert record["source_draft_sha256"] == hashlib.sha256(source).hexdigest()
+    assert record["final_draft_sha256"] == hashlib.sha256(canonical).hexdigest()
+    assert record["source_draft_sha256"] != record["final_draft_sha256"]
+    assert record["parent_attestation"] == "validated_within_source_grace"
+    _, aggregate = rc.register_supplement_results(
+        new_run[0], request, [ready], publish_drafts=True
+    )
+    result = aggregate["results"][0]
+    assert result == json.loads(canonical)
+    assert result["candidates"][0]["candidate_id"].startswith("cand-")
+    assert result["candidates"][0]["candidate_object_sha256"]
 
 
 @pytest.mark.parametrize(

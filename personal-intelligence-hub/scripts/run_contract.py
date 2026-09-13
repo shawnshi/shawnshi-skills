@@ -4114,12 +4114,22 @@ def reconcile_supplement_progress(
             )
         canary_id = str(plan[0]["workers"][0].get("gap_id") or "")
         canary_state = supplied_states.get(canary_id)
-        if not canary_state or canary_state[1].get("terminal_status") not in {
-            "degraded_timeout",
-            "declare_lost",
-        }:
+        canary_terminal_failure = bool(canary_state) and canary_state[1].get(
+            "terminal_status"
+        ) in {"degraded_timeout", "declare_lost"}
+        # A canary that sealed its broker evidence may also be abandoned: the operator stops the
+        # fanout after a successful but unproductive canary, and the never-started downstream gaps
+        # still have to be closed. The ledgers of the canary are the evidence for that decision.
+        canary_events = (
+            manifest.get("article_broker_evidence", {}).get(canary_id, {}) or {}
+        ).get("events") or []
+        canary_sealed = any(
+            isinstance(event, dict) and event.get("kind") == "sealed"
+            for event in canary_events
+        )
+        if not (canary_terminal_failure or canary_sealed):
             raise RunContractError(
-                "unstarted gaps require a terminal failed canary state"
+                "unstarted gaps require a terminal failed or sealed canary state"
             )
         downstream = {
             str(worker.get("gap_id") or "")

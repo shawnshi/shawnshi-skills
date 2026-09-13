@@ -422,7 +422,7 @@ def _readable_header(text):
         metadata = re.match(
             r"^(?:"
             + _READABLE_DECLARATION
-            + r"|(?:名称|视力保护色|索引号|发文字号|发布机构|来源|日期|访问次数|字号|Updated(?: on)?|Modified(?: on)?|Last updated|更新时间|修改时间)[ \t]*[:：])",
+            + r"|(?:名称|视力保护色|索引号|发文字号|发布机构|来源|供稿|作者单位|作者|记者|编辑|通讯员|日期|访问次数|字号|Author|Authors|By|Source|Credit|Photo|Updated(?: on)?|Modified(?: on)?|Last updated|更新时间|修改时间)[ \t]*[:：])",
             line,
             re.I,
         )
@@ -436,9 +436,31 @@ def _readable_header(text):
         heading = re.match(r"^#[ \t]+", line)
         name = re.match(r"^名称[ \t]*[:：][ \t]*", line)
         value = line[(heading or name).end() :] if heading or name else line
-        literal_title = 8 <= len(value) <= 240 and not re.search(
-            r"[。！？]|[.!?](?:[ \t]|$)|[:：\[\]`*_<>]", value
+        # A CJK headline may legitimately end with one sentence terminator (Chinese
+        # headlines very often end with "！"). Only a single trailing mark is exempted, and
+        # never an ASCII ".": an English prose sentence ending with "." must keep terminating
+        # the bounded metadata region, otherwise later labels would be resurrected out of scope
+        # (regression: test_body_prose_date_is_never_a_wire_declaration). A short ASCII "?"/"!"
+        # line with no earlier terminator is accepted as a headline; a short prose line ending
+        # with "!"/"?" is documented residual behaviour, not a guarantee.
+        trailing_cjk = bool(value) and value[-1] in "。！？"
+        trailing_ascii_headline = (
+            bool(value)
+            and value[-1] in "!?"
+            and len(value) <= 80
+            and not re.search(r"[.!?](?:[ \t]|$)", value[:-1])
         )
+        title_value = (
+            value[:-1].rstrip() if (trailing_cjk or trailing_ascii_headline) else value
+        )
+        literal_title = 8 <= len(value) <= 240 and not re.search(
+            r"[。！？]|[.!?](?:[ \t]|$)|[:：\[\]`*_<>]", title_value
+        )
+        # Colon-less bylines are header residue (e.g. "记者 张三", "By Jane Doe"): skip them
+        # without recording, so a declaration after them still parses and the prior-line
+        # relationships used by the NHSA header rule stay intact.
+        if len(line) <= 60 and re.match(r"^(?:By[ \t]+\S|作者 |记者 |编辑 |通讯员 )", line):
+            continue
         if name or heading:
             if not literal_title or (title is not None and value != title):
                 break
@@ -647,38 +669,80 @@ def _readable_title(text, lines, dates):
     return first, "readable-line"
 
 
+_READABLE_CHALLENGE_RE = re.compile(
+    r"(?i)verify (?:you are|you're) human|captcha|access denied|just a moment|enable javascript|checking your browser|sign in to continue|website has set up Anubis to protect|Anubis requires the use of modern JavaScript"
+)
+_READABLE_PORTAL_PATHS = frozenset({"/search", "/news", "/blog", "/articles"})
+
+
+def _readable_challenge(text):
+    return _READABLE_CHALLENGE_RE.search(text)
+
+
+def _readable_long_paragraphs(text):
+    return [p.strip() for p in re.split(r"\n\s*\n", text) if len(p.strip()) >= 120]
+
+
+def _readable_portal(url):
+    path = urlsplit(url).path.rstrip("/").lower()
+    return not path or path in _READABLE_PORTAL_PATHS or path.startswith("/search/")
+
+
+def _readable_article_gates(text, url, dates, title, nhsa_content, challenge):
+    """Single source of truth for every article predicate (no duplicated literals)."""
+    recognizable = (
+        len(text.encode("utf-8")) >= 400
+        and len(_readable_long_paragraphs(text)) >= 2
+        and not challenge
+    )
+    portal = _readable_portal(url)
+    title_ok = 8 <= len(title) <= 240
+    return {
+        "recognizable_body": bool(recognizable),
+        "not_portal": not portal,
+        "has_publication_date": bool(dates),
+        "nhsa_content": bool(nhsa_content),
+        "title_length_ok": title_ok,
+        "article": bool(
+            recognizable and not portal and dates and nhsa_content and title_ok
+        ),
+    }
+
+
+def article_gate_reasons(text, url):
+    """Diagnostic only: report which article predicates hold for a retained readable body.
+
+    Never changes qualification; `readable_metadata` stays the single gate.
+    """
+    text_sha = hashlib.sha256(text.encode("utf-8")).hexdigest()
+    challenge = _readable_challenge(text)
+    if urlsplit(url).hostname in {"arxiv.org", "www.arxiv.org"}:
+        arxiv = _arxiv_readable_metadata(text, url, text_sha, challenge)
+        return {
+            "article": bool(arxiv.get("article")),
+            "has_publication_date": bool(arxiv.get("dates")),
+            "arxiv_path": True,
+        }
+
+    dates, lines, nhsa_content = _readable_publication(text, url, text_sha)
+    title, _source = _readable_title(text, lines, dates)
+    gates = _readable_article_gates(text, url, dates, title, nhsa_content, challenge)
+    gates["arxiv_path"] = False
+    return gates
+
+
 def readable_metadata(text, url):
     """Publication spans use Unicode character offsets in exact retained text, never LLM dates."""
     text_sha = hashlib.sha256(text.encode("utf-8")).hexdigest()
-    challenge = re.search(
-        r"(?i)verify (?:you are|you're) human|captcha|access denied|just a moment|enable javascript|checking your browser|sign in to continue|website has set up Anubis to protect|Anubis requires the use of modern JavaScript",
-        text,
-    )
+    challenge = _readable_challenge(text)
     if urlsplit(url).hostname in {"arxiv.org", "www.arxiv.org"}:
         return _arxiv_readable_metadata(text, url, text_sha, challenge)
     dates, lines, nhsa_content = _readable_publication(text, url, text_sha)
-    paragraphs = [
-        p.strip() for p in re.split(r"\n\s*\n", text) if len(p.strip()) >= 120
-    ]
-    path = urlsplit(url).path.rstrip("/").lower()
-    portal = (
-        not path
-        or path in {"/search", "/news", "/blog", "/articles"}
-        or path.startswith("/search/")
-    )
-    recognizable = (
-        len(text.encode("utf-8")) >= 400 and len(paragraphs) >= 2 and not challenge
-    )
     title, title_source = _readable_title(text, lines, dates)
+    gates = _readable_article_gates(text, url, dates, title, nhsa_content, challenge)
     result = {
-        "recognizable_body": bool(recognizable),
-        "article": bool(
-            recognizable
-            and not portal
-            and dates
-            and nhsa_content
-            and 8 <= len(title) <= 240
-        ),
+        "recognizable_body": gates["recognizable_body"],
+        "article": gates["article"],
         "title": title[:240],
         "dates": dates,
     }
@@ -703,8 +767,11 @@ def validate_fetch_receipt(receipt, ledger, reservation, recorded_at):
         "truncated",
         "parent_attestation",
     }
-    if not isinstance(receipt, dict) or set(receipt) - {"responseId"} != required:
+    if not isinstance(receipt, dict) or set(receipt) - {"responseId", "text_coverage"} != required:
         _fail("native receipt schema invalid")
+    coverage = receipt.get("text_coverage")
+    if coverage is not None and coverage not in {"full", "bounded_excerpt"}:
+        _fail("native receipt text_coverage invalid")
     if (
         receipt["request_sha256"] != ledger["request_sha256"]
         or receipt["gap_id"] != ledger["gap_id"]
@@ -757,7 +824,11 @@ def native_proof(receipt, ledger, reservation, checked):
     error = receipt["error"]
     if receipt["truncated"] is True:
         error = error or "NATIVE_TOOL_TRUNCATED"
-    if not metadata["recognizable_body"]:
+    coverage = receipt.get("text_coverage") or "full"
+    # A receipt that explicitly declares a bounded excerpt is honest evidence about a bounded
+    # window: record it as verified with disclosed coverage instead of a false access failure.
+    # Qualification is unchanged: `_usable_article` still needs a real date/title in the text.
+    if coverage != "bounded_excerpt" and not metadata["recognizable_body"]:
         error = error or "NATIVE_CONTENT_NOT_VERIFIED"
     binding = {
         "contract_version": "article-broker/3.0",
@@ -778,6 +849,7 @@ def native_proof(receipt, ledger, reservation, checked):
         "http_status": None,
         "failure_class": "transient" if error else "none",
         "error_code": error,
+        "coverage": coverage,
         "native_evidence": binding,
     }
     return {
@@ -810,12 +882,15 @@ def validate_native_access(access):
     }
     if (
         not isinstance(access, dict)
-        or set(access) != required
+        or not required <= set(access) <= required | {"coverage"}
         or access["method"] != "native_readable"
         or access["final_url"] is not None
         or access["http_status"] is not None
     ):
         _fail("native access cannot claim HTTP transport facts")
+    coverage = access.get("coverage")
+    if coverage is not None and coverage not in {"full", "bounded_excerpt"}:
+        _fail("native access coverage invalid")
     validate_url(access["requested_url"])
     _rc()._parse_aware_datetime(access["checked_at"], "native checked_at")
     b = access["native_evidence"]
@@ -1731,6 +1806,13 @@ def next_action(manifest, request, gap, lane, proofs, *, now=None):
             reason, action = "zero_url_requires_true_empty", "terminal_failure"
         else:
             reason, eligible = "no_useful_alternatives", True
+    elif len(receipts) >= 2 and not usable and proofs and remaining_queries == 0:
+        # Owner-approved early closure: two successful searches plus at least one settled native
+        # attempt that produced no usable article is sufficient evidence that this gap is
+        # unproductive, so the remaining URL budget is not spent. It cannot fire without a
+        # settled attempt, and it sits after `no_useful_alternatives` so that stop reason keeps
+        # priority when no unattempted discovered URL is left.
+        reason, eligible = "searches_exhausted_without_qualifying_candidate", True
     if not eligible and action == "search_different":
         if available:
             action = "http_discovered"

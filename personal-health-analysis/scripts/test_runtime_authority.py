@@ -31,16 +31,16 @@ class RuntimeAuthorityTests(unittest.TestCase):
         proxy_meta = {
             "name": "personal-health-analysis",
             "authority_proxy_for": str(canonical),
-            "authority_version": "11.6.2",
+            "authority_version": "11.7.0",
             "authority_sha256": canonical_sha,
         }
         with (
             mock.patch.object(authority, "_locator", side_effect=[canonical, proxy, Path("missing-proxy")]),
-            mock.patch.object(authority, "_frontmatter", side_effect=[{"name": "personal-health-analysis", "version": "11.6.2"}, proxy_meta]),
+            mock.patch.object(authority, "_frontmatter", side_effect=[{"name": "personal-health-analysis", "version": "11.7.0"}, proxy_meta]),
         ):
             result = authority.verify(config)
         self.assertTrue(result["ok"], result)
-        self.assertEqual(result["authority_version"], "11.6.2")
+        self.assertEqual(result["authority_version"], "11.7.0")
         self.assertIn("scripts/garmin_auto_sync.py", result["entrypoints"])
         self.assertRegex(result["task_binding"]["arguments_sha256"], r"^[0-9a-f]{64}$")
 

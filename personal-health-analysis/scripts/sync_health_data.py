@@ -47,9 +47,12 @@ REQUIRED_COVERAGE_COMPONENTS = (
     "body_battery",
     "stress",
 )
-SYNC_DATABASE_NAMES = ("garmin.db", "garmin_monitoring.db")
+SYNC_DATABASE_NAMES = ("garmin.db", "garmin_monitoring.db", "garmin_activities.db")
 SYNC_OPERATION = "garmindb_sync"
-SYNC_PLAN_VERSION = 3
+SYNC_PLAN_VERSION = 4
+SYNC_BASE_GATES = ("network", "sync")
+SYNC_OPTIONAL_GATES = ("download",)
+SYNC_GATE_NAMES = (*SYNC_BASE_GATES, *SYNC_OPTIONAL_GATES)
 DEFAULT_PLAN_TTL_SECONDS = 300
 MAX_PLAN_TTL_SECONDS = 900
 SYNC_PLAN_FIELDS = frozenset(
@@ -61,6 +64,7 @@ SYNC_PLAN_FIELDS = frozenset(
         "expires_at",
         "nonce",
         "bindings",
+        "gates",
         "payload_sha256",
     }
 )
@@ -209,6 +213,14 @@ def build_parser() -> argparse.ArgumentParser:
         help="Explicitly authorize GarminDB synchronization for this invocation",
     )
     sync_parser.add_argument(
+        "--allow-download",
+        action="store_true",
+        help=(
+            "Explicitly authorize activity trace download and import for this "
+            "invocation; without it no activity data is touched"
+        ),
+    )
+    sync_parser.add_argument(
         "--dry-run", action="store_true", help="Validate the request only"
     )
     sync_parser.add_argument(
@@ -296,7 +308,26 @@ def _plan_payload(plan: dict) -> dict:
         "expires_at": plan.get("expires_at"),
         "nonce": plan.get("nonce"),
         "bindings": plan.get("bindings"),
+        "gates": plan.get("gates"),
     }
+
+
+def _normalize_gates(gates: object) -> tuple[str, ...]:
+    """Return the canonical gate ordering declared by a sync plan."""
+    if gates is None:
+        return SYNC_BASE_GATES
+    if isinstance(gates, (str, bytes)) or not isinstance(gates, (list, tuple)):
+        raise SyncPlanError("plan_gates_invalid")
+    normalized = tuple(gates)
+    if any(not isinstance(gate, str) for gate in normalized):
+        raise SyncPlanError("plan_gates_invalid")
+    if len(set(normalized)) != len(normalized):
+        raise SyncPlanError("plan_gates_duplicated")
+    if set(normalized) - set(SYNC_GATE_NAMES):
+        raise SyncPlanError("plan_gates_invalid")
+    if set(SYNC_BASE_GATES) - set(normalized):
+        raise SyncPlanError("plan_gates_missing_required")
+    return tuple(gate for gate in SYNC_GATE_NAMES if gate in normalized)
 
 
 def _payload_sha256(payload: dict) -> str:
@@ -767,6 +798,7 @@ def build_sync_plan(
     ttl_seconds: int = DEFAULT_PLAN_TTL_SECONDS,
     now: datetime | None = None,
     bindings: dict | None = None,
+    gates: object = None,
 ) -> dict:
     """Build a checksum-bound, short-lived plan without performing I/O."""
     if isinstance(ttl_seconds, bool) or not isinstance(ttl_seconds, int):
@@ -774,6 +806,7 @@ def build_sync_plan(
     if not 1 <= ttl_seconds <= MAX_PLAN_TTL_SECONDS:
         raise SyncPlanError("plan_ttl_out_of_range")
     validate_sync_bindings(bindings)
+    normalized_gates = _normalize_gates(gates)
     issued_at = _normalize_now(now)
     payload = {
         "version": SYNC_PLAN_VERSION,
@@ -783,6 +816,7 @@ def build_sync_plan(
         "expires_at": _format_timestamp(issued_at + timedelta(seconds=ttl_seconds)),
         "nonce": uuid4().hex,
         "bindings": copy.deepcopy(bindings),
+        "gates": list(normalized_gates),
     }
     return {**payload, "payload_sha256": _payload_sha256(payload)}
 
@@ -844,6 +878,12 @@ def load_and_validate_sync_plan(
         raise SyncPlanError("plan_version_unsupported")
     if plan.get("operation") != SYNC_OPERATION:
         raise SyncPlanError("plan_operation_mismatch")
+    plan_gates = plan.get("gates")
+    if (
+        not isinstance(plan_gates, list)
+        or _normalize_gates(plan_gates) != tuple(plan_gates)
+    ):
+        raise SyncPlanError("plan_gates_invalid")
     validate_sync_bindings(plan.get("bindings"))
     if expected_bindings is not None:
         validate_sync_bindings(expected_bindings)
@@ -1019,6 +1059,30 @@ def build_garmindb_commands(
     download = [*base, "--download", *stats]
     import_analyze = [*base, "--import", "--analyze", "--latest", *stats]
     return download, import_analyze
+
+
+def build_activities_commands(
+    python_executable: Path,
+    cli_path: Path,
+    config_dir: Path,
+) -> tuple[list[str], list[str]]:
+    """Build the activity download and import commands for the bound runner.
+
+    Activities are selected upstream by count, not by a date window, so these
+    commands invoke the upstream CLI directly and intentionally bypass the
+    date-window adapter that guards the daily-metric statistics.
+    """
+    base = [
+        str(python_executable),
+        "-I",
+        "-B",
+        str(cli_path),
+        "-f",
+        str(config_dir),
+    ]
+    download = [*base, "--download", "--activities", "--latest"]
+    import_activities = [*base, "--import", "--activities"]
+    return download, import_activities
 
 
 def _sanitized_runner_environment() -> dict[str, str]:
@@ -1211,6 +1275,7 @@ def execute_sync(
     *,
     network_capability: object = None,
     sync_capability: object = None,
+    download_capability: object = None,
     plan_file: Path | None = None,
     config_dir: Path | None = None,
     garmindb_python: Path | None = None,
@@ -1251,6 +1316,20 @@ def execute_sync(
             "status": "sync_authorization_required",
             "requested_window": requested_window,
         }
+    if download_capability is not None:
+        try:
+            require_capability(
+                download_capability,
+                scope="download",
+                operation=SYNC_OPERATION,
+                request=capability_request,
+            )
+        except CapabilityError:
+            return EXIT_AUTHORIZATION, {
+                "ok": False,
+                "status": "download_authorization_required",
+                "requested_window": requested_window,
+            }
     if plan_file is None:
         return EXIT_AUTHORIZATION, {
             "ok": False,
@@ -1268,6 +1347,13 @@ def execute_sync(
             "ok": False,
             "status": "sync_plan_invalid",
             "error": str(exc),
+            "requested_window": requested_window,
+        }
+    activities_authorized = "download" in tuple(plan.get("gates") or ())
+    if activities_authorized != (download_capability is not None):
+        return EXIT_AUTHORIZATION, {
+            "ok": False,
+            "status": "download_authorization_mismatch",
             "requested_window": requested_window,
         }
     if timeout_seconds <= 0:
@@ -1377,6 +1463,19 @@ def execute_sync(
                 config_sha256=temporary_config_sha256,
                 expires_at=plan["expires_at"],
             )
+            stages = list(
+                zip(("download", "import_analyze"), commands, strict=True)
+            )
+            if activities_authorized:
+                stages.extend(
+                    zip(
+                        ("activities_download", "activities_import"),
+                        build_activities_commands(
+                            python_executable, cli_path, temp_config_dir
+                        ),
+                        strict=True,
+                    )
+                )
             consume_capability(
                 network_capability,
                 scope="network",
@@ -1389,9 +1488,14 @@ def execute_sync(
                 operation=SYNC_OPERATION,
                 request=capability_request,
             )
-            for current_stage, command in zip(
-                ("download", "import_analyze"), commands, strict=True
-            ):
+            if activities_authorized:
+                consume_capability(
+                    download_capability,
+                    scope="download",
+                    operation=SYNC_OPERATION,
+                    request=capability_request,
+                )
+            for current_stage, command in stages:
                 load_and_validate_sync_plan(
                     Path(plan_file), expected_start=start, expected_end=end,
                     expected_bindings=current_bindings,
@@ -1442,7 +1546,7 @@ def execute_sync(
                     payload = {
                         "ok": False,
                         "status": "sync_incomplete",
-                        "stages": ["download", "import_analyze"],
+                        "stages": [stage for stage, _ in stages],
                         **verification,
                     }
                 else:
@@ -1450,7 +1554,7 @@ def execute_sync(
                     payload = {
                         "ok": True,
                         "status": "sync_completed",
-                        "stages": ["download", "import_analyze"],
+                        "stages": [stage for stage, _ in stages],
                         **verification,
                     }
     except subprocess.TimeoutExpired:
@@ -1500,6 +1604,9 @@ def main(argv: Sequence[str] | None = None) -> int:
         return EXIT_USAGE
 
     requested_window = {"start": start.isoformat(), "end": end.isoformat()}
+    requested_gates = list(SYNC_BASE_GATES)
+    if args.allow_download:
+        requested_gates.append("download")
     if args.dry_run:
         if args.plan_file:
             emit(
@@ -1534,6 +1641,7 @@ def main(argv: Sequence[str] | None = None) -> int:
                     end,
                     ttl_seconds=args.plan_ttl_seconds,
                     bindings=bindings,
+                    gates=requested_gates,
                 )
                 plan_path = write_sync_plan_atomic(Path(args.plan_output), plan)
                 plan_written = True
@@ -1610,11 +1718,21 @@ def main(argv: Sequence[str] | None = None) -> int:
         operation=SYNC_OPERATION,
         request={"window": requested_window},
     )
+    download_capability = (
+        issue_capability(
+            scope="download",
+            operation=SYNC_OPERATION,
+            request={"window": requested_window},
+        )
+        if args.allow_download
+        else None
+    )
     exit_code, payload = execute_sync(
         start,
         end,
         network_capability=network_capability,
         sync_capability=sync_capability,
+        download_capability=download_capability,
         plan_file=Path(args.plan_file).expanduser(),
         config_dir=Path(args.config_dir).expanduser() if args.config_dir else None,
         garmindb_python=(

@@ -2,7 +2,7 @@
 name: personal-health-analysis
 description: 用于本地优先分析 Garmin 睡眠、HRV、心率、压力与多维健康趋势，生成报告或零外联面板，检查数据质量及按显式请求管理同步。仅提供非诊断信息；登录、同步、轨迹下载等动作需独立授权。
 metadata:
-  version: "11.6.2"
+  version: "11.7.0"
 ---
 
 # Garmin 健康数据分析
@@ -14,7 +14,7 @@ metadata:
 - 本目录是唯一健康运行时权威。个人日记或认知复盘调用时，先运行 `<SKILL_PYTHON> scripts/runtime_authority.py --config runtime-authority.json`；仅 `ok=true` 才继续。权威、入口哈希或代理绑定漂移返回 `HEALTH_RUNTIME_AUTHORITY_MISMATCH`，停止读取、同步与回退，禁止运行代理目录脚本。
 - 显式调用仅授权本次请求窗口和用途所需健康指标；默认最近 14 天（`N=14`），用户缩小时从其要求，不为分析资格扩窗。普通面板默认五组件；综合分析默认全面画像。详细指标、最小字段及新鲜度单条记录例外见运行前提与本地分析合同，默认不读位置、活动标识/名称/描述、原始轨迹或认证材料。
 - 本地优先、只读、失败关闭。本地 `no_data` 后、同窗口、同组件仅有一次受限云只读回退；`partial` 继续本地，数据库变化、Schema 或其他 `read_error` 不得当作无数据回退。不得跳过本地、扩大组件或削弱数据库/WAL/SHM 前后全量哈希门。
-- `--allow-health-data` 与回退时的 `--allow-network` 是本次命令能力门，不可删除或跨命令/窗口/用途复用。登录、认证探测、令牌写入、同步、轨迹下载及额外持久化需独立明确授权，保留 `--allow-token-write`、`--allow-sync`、`--allow-download`。日记/复盘新鲜度与持续自动同步只沿已有授权门，不由分析授权推导。
+- `--allow-health-data` 与回退时的 `--allow-network` 是本次命令能力门，不可删除或跨命令/窗口/用途复用。登录、认证探测、令牌写入、同步、轨迹下载及额外持久化需独立明确授权：`--allow-sync` 与 `--allow-download` 已落地，另保留 `--allow-token-write`。`--allow-download` 是活动轨迹（含位置数据）下载与导入的独立门，未显式传入时不接触任何活动数据，也不由自动同步或分析授权推导。日记/复盘新鲜度与持续自动同步只沿已有授权门，不由分析授权推导。
 - 数据命令前按[运行前提](references/workflow_contract.md#运行前提)绑定同一解释器并通过对应模式预检；仅 `RUNTIME_READY` 继续，否则 `RUNTIME_DEPENDENCY_UNAVAILABLE`，不安装、不联网补包、不静默切换解释器。清单不是签名，不能替代权限或内容哈希校验。
 
 ## 按请求逐步披露

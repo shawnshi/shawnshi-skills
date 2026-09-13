@@ -3,6 +3,7 @@ import base64
 import hashlib
 import io
 import json
+import os
 from contextlib import nullcontext
 from datetime import datetime, timezone
 from pathlib import Path
@@ -134,6 +135,66 @@ def test_generated_oversize_before_encode_commit_materialize(tmp_path, monkeypat
     for mock in (encode, commit, materialize):
         mock.assert_not_called()
     assert manifest == {} and path.read_bytes() == b'{}'
+
+
+def test_missing_parent_derived_keys_are_filled_from_the_assembled_result(tmp_path, monkeypatch):
+    """D8: a draft that omits keys the worker cannot compute is completed, not lost."""
+    path, now, _, _, manifest, commit, materialize = bound(monkeypatch, tmp_path)
+    dynamic = {'contract_version': 'supplement-result/1.0', 'completed_at': now,
+               'broker_evidence_sha256': 'proof', 'status': 'completed',
+               'candidates': [{'title': 'Ledger title', 'summary': 'worker judgement'}]}
+    result = {**dynamic, 'gap_id': 'tech', 'run_id': 'size-unit', 'lane': 'TechRadar',
+              'request_sha256': 'request-sha', 'baseline_sha256': 'baseline',
+              'candidate_pool_sha256': 'pool', 'coverage': {'attempted': 1, 'succeeded': 1, 'failed': 0},
+              'data_provenance': {'request_sha256': 'request-sha'},
+              'candidates': [{'title': 'Ledger title', 'summary': 'worker judgement',
+                              'candidate_id': 'cand-1', 'candidate_object_sha256': 'object'}]}
+    path.write_text(json.dumps(dynamic), encoding='utf-8')
+    source = path.read_bytes()
+    monkeypatch.setattr(sa, 'assemble_result', Mock(return_value=(path, result)))
+    assert sa._finalize_with_receipt('request', 'tech') == (path, 'already_assembled')
+    expected = (json.dumps(result, ensure_ascii=False, indent=2)
+                .replace('\n', os.linesep).encode('utf-8'))
+    # Materialisation is mocked in this unit harness: the journal receipt, not the file, proves
+    # which bytes the assembler committed (the frozen-CLI path writes them).
+    assert path.read_bytes() != expected
+    receipt = manifest['parent_supplement_finalizations']['tech']
+    assert receipt['source_draft_sha256'] == hashlib.sha256(source).hexdigest()
+    assert receipt['source_draft_sha256'] != receipt['final_draft_sha256']
+    assert receipt['final_draft_sha256'] == hashlib.sha256(expected).hexdigest()
+    materialize.assert_called_once_with(path, expected)
+    commit.assert_called_once()
+
+
+@pytest.mark.parametrize('tamper', ['candidate-value', 'unknown-top-level-key'])
+def test_non_parent_derived_drift_names_its_path_and_writes_nothing(tmp_path, monkeypatch, tamper):
+    """D8: filling is narrow; every other difference stays a hard, path-named rejection."""
+    path, now, _, _, manifest, commit, materialize = bound(monkeypatch, tmp_path)
+    candidate = {'title': 'Ledger title', 'candidate_id': 'cand-1'}
+    result = {'contract_version': 'supplement-result/1.0', 'completed_at': now,
+              'broker_evidence_sha256': 'proof', 'status': 'completed', 'coverage': {},
+              'candidates': [dict(candidate)]}
+    draft = {'contract_version': 'supplement-result/1.0', 'completed_at': now,
+             'broker_evidence_sha256': 'proof', 'status': 'completed', 'coverage': {},
+             'candidates': [dict(candidate)]}
+    if tamper == 'candidate-value':
+        draft['candidates'][0]['title'] = 'Worker claim'
+        expected_path = 'candidates[0].title'
+    else:
+        draft['unexpected_worker_note'] = 'not part of the assembled result'
+        expected_path = 'unexpected_worker_note'
+    path.write_text(json.dumps(draft), encoding='utf-8')
+    before = path.read_bytes()
+    monkeypatch.setattr(sa, 'assemble_result', Mock(return_value=(path, result)))
+    with pytest.raises(rc.RunContractError) as raised:
+        sa._finalize_with_receipt('request', 'tech')
+    message = str(raised.value)
+    assert message.startswith('assembled supplement draft semantic mismatch: ')
+    assert expected_path in message
+    assert path.read_bytes() == before
+    materialize.assert_not_called()
+    commit.assert_not_called()
+    assert manifest == {}
 
 
 def test_exact_max_assembled_journal_preserves_padding_and_digest(tmp_path, monkeypatch):

@@ -1,7 +1,7 @@
 {
   "schema_version": 1,
   "skill_name": "personal-health-analysis",
-  "authority_version": "11.6.2",
+  "authority_version": "11.7.0",
   "authority_locator": {
     "base": "user_home",
     "segments": [
@@ -12,7 +12,7 @@
       "SKILL.md"
     ]
   },
-  "authority_sha256": "4671c2987bc6017304adcc075a1f6e50c6e0995783c58153b66a8450278618ac",
+  "authority_sha256": "346943ae64ba8043a45977bb202062d126681cd7b93aa142864ec7d762c2259e",
   "entrypoint_sha256": {
     "scripts/garmin_health_profile.py": "4e93cea75f60f43c678d1c4767db134d99648dfd99ff7d3bc822ee764ee778fa",
     "scripts/garmin_auto_sync.py": "78dfc544aa1baa1a2dc0f09268273b3b417244f9ec51fc0f37d9b9adcc13ee5e",
@@ -26,7 +26,7 @@
     "scripts/runtime_preflight.py": "a9f348bc75e83cb207cc947a80aa502c38926f8a80e4a2f2e9cafd1aac64c9c9",
     "scripts/runtime_authority.py": "0625581732df02667e59a85797266b39a6386cfd4d022346cfd4b3a542624949",
     "scripts/scheduled_task_probe.ps1": "1dea36c42b1e1467019925dd7efedc1d8d552468d7e3b77cf537ccf073917e98",
-    "scripts/sync_health_data.py": "9af8f92474726baf9cd9e0b313726bcc17dd4c191fafdaffbbc6c7b9fd5952ff",
+    "scripts/sync_health_data.py": "063725059bac0a1570f38da856853620da6a1a0e7f355c0cf85203d943a5d84c",
     "scripts/garmin_chart.py": "c441cf476623675828a3280a38b4cb3f6a0255cc0ef27e7a67860ee9fd47f428",
     "assets/dashboard_v2.html": "940bcdf22704997a3f4f30a8c7662abb7788ef2784ae345b76b2d8b1a3e8b17a"
   },

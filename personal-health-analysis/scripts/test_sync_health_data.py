@@ -832,6 +832,166 @@ class SyncHealthDataCliTests(unittest.TestCase):
         self.assertEqual(actual, digest.hexdigest())
         self.assertEqual(count, len(files))
 
+    def test_activity_commands_are_adapter_free_and_count_based(self):
+        module = self.module
+        python_exe = Path("C:/py/python.exe")
+        cli = Path("C:/py/Scripts/garmindb_cli.py")
+        config_dir = Path("C:/cfg")
+
+        download, import_activities = module.build_activities_commands(
+            python_exe, cli, config_dir
+        )
+
+        base = [str(python_exe), "-I", "-B", str(cli), "-f", str(config_dir)]
+        self.assertEqual(
+            download, [*base, "--download", "--activities", "--latest"]
+        )
+        self.assertEqual(import_activities, [*base, "--import", "--activities"])
+        for command in (download, import_activities):
+            self.assertNotIn("-c", command)
+            self.assertNotIn(module._DATE_ADAPTER_CODE, command)
+            self.assertNotIn("--monitoring", command)
+        self.assertNotIn("--analyze", import_activities)
+        self.assertIn("garmin_activities.db", module.SYNC_DATABASE_NAMES)
+
+    def test_plan_gates_are_canonical_and_require_the_base_gates(self):
+        module = self.module
+        self.assertEqual(module._normalize_gates(None), ("network", "sync"))
+        self.assertEqual(
+            module._normalize_gates(["download", "sync", "network"]),
+            ("network", "sync", "download"),
+        )
+        for invalid in (
+            ["network"],
+            ["network", "sync", "network"],
+            ["network", "sync", "bogus"],
+            "network",
+            [1, 2],
+        ):
+            with self.subTest(invalid=invalid):
+                with self.assertRaises(module.SyncPlanError):
+                    module._normalize_gates(invalid)
+        plan = module.build_sync_plan(
+            *module.parse_window("2026-08-01", "2026-08-07"),
+            bindings=self.bindings,
+            gates=["download", "network", "sync"],
+        )
+        self.assertEqual(plan["gates"], ["network", "sync", "download"])
+        self.assertEqual(plan["version"], 4)
+
+    def test_activity_gate_adds_two_adapter_free_stages(self):
+        start, end = self.module.parse_window("2026-08-01", "2026-08-07")
+        with tempfile.TemporaryDirectory() as temp_root:
+            config_dir, _, interpreter, _ = self.make_bound_environment(temp_root)
+            bindings = self.module.build_sync_bindings(config_dir, interpreter)
+            plan_path = Path(temp_root) / "sync-plan.json"
+            self.module.write_sync_plan_atomic(
+                plan_path,
+                self.module.build_sync_plan(
+                    start,
+                    end,
+                    bindings=bindings,
+                    gates=["network", "sync", "download"],
+                ),
+            )
+            runner = unittest.mock.Mock(
+                return_value=unittest.mock.Mock(returncode=0, stdout="ok")
+            )
+            exit_code, payload = self.module.execute_sync(
+                start,
+                end,
+                network_capability=issue_capability(
+                    scope="network", operation="garmindb_sync", request=SYNC_REQUEST
+                ),
+                sync_capability=issue_capability(
+                    scope="sync", operation="garmindb_sync", request=SYNC_REQUEST
+                ),
+                download_capability=issue_capability(
+                    scope="download", operation="garmindb_sync", request=SYNC_REQUEST
+                ),
+                plan_file=plan_path,
+                config_dir=config_dir,
+                garmindb_python=interpreter,
+                runner=runner,
+                post_sync_verifier=lambda *_: self.complete_verification(),
+            )
+
+        self.assertEqual(exit_code, self.module.EXIT_OK)
+        self.assertEqual(payload["status"], "sync_completed")
+        self.assertEqual(
+            payload["stages"],
+            [
+                "download",
+                "import_analyze",
+                "activities_download",
+                "activities_import",
+            ],
+        )
+        self.assertEqual(runner.call_count, 4)
+        stages = [call.args[0] for call in runner.call_args_list]
+        self.assertEqual(stages[0][3], "-c")
+        self.assertEqual(stages[1][3], "-c")
+        self.assertNotIn("-c", stages[2])
+        self.assertNotIn("-c", stages[3])
+        self.assertIn("--activities", stages[2])
+        self.assertIn("--latest", stages[2])
+        self.assertIn("--import", stages[3])
+        self.assertIn("--activities", stages[3])
+        self.assertNotIn("--analyze", stages[3])
+
+    def test_download_capability_must_match_plan_gates(self):
+        start, end = self.module.parse_window("2026-08-01", "2026-08-07")
+        cases = (
+            (["network", "sync"], True),
+            (["network", "sync", "download"], False),
+        )
+        for gates, supply_download in cases:
+            with self.subTest(gates=gates, supply_download=supply_download):
+                with tempfile.TemporaryDirectory() as temp_root:
+                    config_dir, _, interpreter, _ = self.make_bound_environment(temp_root)
+                    bindings = self.module.build_sync_bindings(config_dir, interpreter)
+                    plan_path = Path(temp_root) / "sync-plan.json"
+                    self.module.write_sync_plan_atomic(
+                        plan_path,
+                        self.module.build_sync_plan(
+                            start, end, bindings=bindings, gates=gates
+                        ),
+                    )
+                    runner = unittest.mock.Mock()
+                    exit_code, payload = self.module.execute_sync(
+                        start,
+                        end,
+                        network_capability=issue_capability(
+                            scope="network",
+                            operation="garmindb_sync",
+                            request=SYNC_REQUEST,
+                        ),
+                        sync_capability=issue_capability(
+                            scope="sync",
+                            operation="garmindb_sync",
+                            request=SYNC_REQUEST,
+                        ),
+                        download_capability=(
+                            issue_capability(
+                                scope="download",
+                                operation="garmindb_sync",
+                                request=SYNC_REQUEST,
+                            )
+                            if supply_download
+                            else None
+                        ),
+                        plan_file=plan_path,
+                        config_dir=config_dir,
+                        garmindb_python=interpreter,
+                        runner=runner,
+                    )
+
+                self.assertEqual(exit_code, self.module.EXIT_AUTHORIZATION)
+                self.assertEqual(
+                    payload["status"], "download_authorization_mismatch"
+                )
+                runner.assert_not_called()
+
     def test_valid_plan_still_fails_closed_without_a_trusted_runner(self):
         start, end = self.module.parse_window("2026-08-01", "2026-08-07")
         with tempfile.TemporaryDirectory() as temp_root:
@@ -911,6 +1071,7 @@ class SyncHealthDataCliTests(unittest.TestCase):
         self.assertEqual(payload["status"], "sync_completed")
         self.assertTrue(payload["database_changed"])
         self.assertEqual(payload["stale_components"], [])
+        self.assertEqual(payload["stages"], ["download", "import_analyze"])
         self.assertEqual(runner.call_count, 2)
         for call in runner.call_args_list:
             command = call.args[0]
