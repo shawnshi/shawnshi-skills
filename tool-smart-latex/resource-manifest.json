@@ -1,18 +1,18 @@
 {
   "schema_version": 3,
   "skill": "tool-smart-latex",
-  "generated_at": "2026-09-05T17:15:45+08:00",
+  "generated_at": "2026-09-13T21:31:50.787130+00:00",
   "hash_algorithm": "SHA-256",
   "text_hash_normalization": "LF",
   "skill_md": "SKILL.md",
-  "skill_md_sha256": "3c1fd96eea0e5d9cc21031ef977d1f788405e47587819f3b4229d42396146066",
+  "skill_md_sha256": "a5970b28140601d06456a8325e201f2470e37a007c54862650a5de7b9439a766",
   "top_level_files": [
     "SKILL.md"
   ],
   "top_level_file_hashes": [
     {
       "path": "SKILL.md",
-      "sha256": "3c1fd96eea0e5d9cc21031ef977d1f788405e47587819f3b4229d42396146066"
+      "sha256": "a5970b28140601d06456a8325e201f2470e37a007c54862650a5de7b9439a766"
     }
   ],
   "top_level_directories": [

@@ -1,18 +1,18 @@
 {
   "schema_version": 3,
   "skill": "cognitive-storm-research",
-  "generated_at": "2026-09-11T10:40:06+08:00",
+  "generated_at": "2026-09-13T21:31:50.787130+00:00",
   "hash_algorithm": "SHA-256",
   "text_hash_normalization": "LF",
   "skill_md": "SKILL.md",
-  "skill_md_sha256": "bb768187c87d9e87453aac56ae8ed7e377d894d16f51e8d87d67369e7cf79359",
+  "skill_md_sha256": "3a2b552c9be68164367a75238fc2be2c9ee5db4f4f8fe173b011873bd68541ad",
   "top_level_files": [
     "SKILL.md"
   ],
   "top_level_file_hashes": [
     {
       "path": "SKILL.md",
-      "sha256": "bb768187c87d9e87453aac56ae8ed7e377d894d16f51e8d87d67369e7cf79359"
+      "sha256": "3a2b552c9be68164367a75238fc2be2c9ee5db4f4f8fe173b011873bd68541ad"
     }
   ],
   "top_level_directories": [
@@ -23,7 +23,7 @@
   "resource_directories": [
     {
       "name": "references",
-      "file_count": 2
+      "file_count": 3
     },
     {
       "name": "assets",
@@ -44,8 +44,12 @@
       "sha256": "83edb7ff1fcb54461e60f8bab4147bf6e24b4f9bb9e5d29283c614f40b811039"
     },
     {
+      "path": "references/concurrency-handoff.md",
+      "sha256": "4a885ed2434d008447f9a0432801accc18fc72651acfbd96a3229a773ea7d777"
+    },
+    {
       "path": "references/storm_report_template.md",
-      "sha256": "d86cb47e9057dc7844faf60994282505343e7d75e0020841804b2019a2817a14"
+      "sha256": "4d5dbc6f3aa7a408a65b08dc8e4f32bfc9155145b93b3631146b3983c41185f5"
     },
     {
       "path": "references/validation-cases.md",
@@ -54,10 +58,16 @@
   ],
   "declared_local_dependencies": [
     {
+      "path": "references/concurrency-handoff.md",
+      "exists": true,
+      "resolved_path": "cognitive-storm-research/references/concurrency-handoff.md",
+      "sha256": "4a885ed2434d008447f9a0432801accc18fc72651acfbd96a3229a773ea7d777"
+    },
+    {
       "path": "references/storm_report_template.md",
       "exists": true,
       "resolved_path": "cognitive-storm-research/references/storm_report_template.md",
-      "sha256": "d86cb47e9057dc7844faf60994282505343e7d75e0020841804b2019a2817a14"
+      "sha256": "4d5dbc6f3aa7a408a65b08dc8e4f32bfc9155145b93b3631146b3983c41185f5"
     },
     {
       "path": "references/validation-cases.md",

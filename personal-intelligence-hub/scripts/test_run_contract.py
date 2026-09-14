@@ -797,7 +797,7 @@ class RunContractTests(unittest.TestCase):
         self.assertFalse(request["deterministic_fast_path"])
         self.assertEqual(request["reviewer_kind"], "logic_adversary")
         self.assertEqual(request["max_turns"], 1)
-        self.assertEqual(request["execution_packet"]["timeout_ms"], 120000)
+        self.assertEqual(request["execution_packet"]["timeout_ms"], 600000)
         self.register_targeted_red_team_receipt(
             manifest_path,
             refined_path,
@@ -3203,7 +3203,7 @@ class RunContractTests(unittest.TestCase):
             "semantic",
             now=self.now,
         )
-        self.assertEqual(request["execution_packet"]["timeout_ms"], 240000)
+        self.assertEqual(request["execution_packet"]["timeout_ms"], 900000)
         self.assertEqual(request["execution_packet"]["usage_budget"]["cost_usd"], 0.5)
         core_draft = Path(request["execution_packet"]["draft_paths"]["refined_core"])
         decision = Path(request["execution_packet"]["draft_paths"]["decision"])

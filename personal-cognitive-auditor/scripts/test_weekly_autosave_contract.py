@@ -71,7 +71,7 @@ class PeriodicAutoSaveContractTests(unittest.TestCase):
                 self.assertIn(marker, self.skill)
 
     def test_failure_stops_persistence(self):
-        for marker in ("审计门", "权威门", "请求门", "范围门", "写后校验失败"):
+        for marker in ("审计门", "请求门", "范围门", "写后校验失败"):
             with self.subTest(marker=marker):
                 self.assertIn(marker, self.skill)
 

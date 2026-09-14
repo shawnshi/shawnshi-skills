@@ -831,12 +831,24 @@ def _validate_v12_data(
             not in schema["enums"]["corroboration_status"]
         ):
             errors.append(f"invalid {path}.corroboration_status")
+        allowed_secondary_status = {"multi_independent"}
+        if "single_secondary" in (
+            schema.get("enums", {}).get("corroboration_status") or []
+        ):
+            # Owner-authorized 2026-09-14 downgrade, opted in through the run's strategic
+            # focus policy and visible on the item as corroboration_status=single_secondary.
+            allowed_secondary_status.add("single_secondary")
         if (
             item.get("source_type") == "secondary"
-            and item.get("corroboration_status") != "multi_independent"
+            and item.get("corroboration_status") not in allowed_secondary_status
         ):
             errors.append(
                 f"{path} secondary source requires multi_independent corroboration"
+                + (
+                    " or single_secondary"
+                    if "single_secondary" in allowed_secondary_status
+                    else ""
+                )
             )
         if (
             is_v14
@@ -846,6 +858,15 @@ def _validate_v12_data(
         ):
             errors.append(
                 f"{path} multi_independent corroboration requires at least two candidate_refs"
+            )
+        if (
+            is_v14
+            and item.get("corroboration_status") == "single_secondary"
+            and isinstance(candidate_refs, list)
+            and len(candidate_refs) != 1
+        ):
+            errors.append(
+                f"{path} single_secondary corroboration requires exactly one candidate_ref"
             )
 
         access = item.get("access_check")

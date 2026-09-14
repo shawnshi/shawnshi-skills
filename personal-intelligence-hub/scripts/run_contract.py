@@ -654,6 +654,15 @@ def build_candidate_date_evidence(
                 )
             if candidate is not None:
                 indices = [i for i in indices if logs[i] == candidate["access_check"]]
+            declared_proof = (
+                candidate.get("published_at_proof") if candidate is not None else None
+            )
+            date_basis = (
+                "pool_declared_feed_metadata"
+                if isinstance(declared_proof, dict)
+                and declared_proof.get("parser_rule") == "pool-declared/1"
+                else "existing_registered_metadata"
+            )
             for index in indices or [None]:
                 records.append(
                     {
@@ -670,7 +679,7 @@ def build_candidate_date_evidence(
                         )
                         if candidate is not None
                         else None,
-                        "date_basis": "existing_registered_metadata",
+                        "date_basis": date_basis,
                     }
                 )
     return {"contract_version": 1, "records": records}
@@ -4688,6 +4697,65 @@ def build_review_request(
             "--red-team-receipt",
             draft_paths["review_receipt"],
         ]
+        # Owner-authorized clarity fix 2026-09-14: the red-team packet now carries the
+        # receipt contract inline, exactly like the semantic packet's dynamic_contract.
+        # Without it the reviewer had to reverse-engineer validate_review_receipt from
+        # script source, which consumed its whole tool budget and let the short
+        # registered window expire before publication.
+        request["execution_packet"]["receipt_contract"] = {
+            "contract_version": "review-receipt/1.0",
+            "required_fields": [
+                "contract_version",
+                "run_id",
+                "review_kind",
+                "reviewer_kind",
+                "reviewer_id",
+                "invocation_id",
+                "challenge",
+                "request_sha256",
+                "baseline_sha256",
+                "output_sha256",
+                "status",
+                "turns_used",
+                "halt_condition_met",
+                "reviewed_item_hashes",
+                "completed_at",
+            ],
+            "field_values": {
+                "contract_version": "review-receipt/1.0",
+                "run_id": str(request.get("run_id") or ""),
+                "review_kind": "red_team",
+                "reviewer_kind": str(request.get("reviewer_kind") or ""),
+                "reviewer_id": str(request.get("reviewer_id") or ""),
+                "invocation_id": str(request.get("invocation_id") or ""),
+                "challenge": str(request.get("challenge") or ""),
+                "baseline_sha256": str(request.get("baseline_sha256") or ""),
+                "request_sha256": (
+                    "sha256 of this registered request file; compute with "
+                    "python -c \"import hashlib;print(hashlib.sha256(open(r'<request path>','rb').read()).hexdigest())\""
+                ),
+                "output_sha256": "sha256 of the bound refined core (execution_packet.bound_refined_path)",
+                "status": "passed (l4_full_review and targeted_review both require passed)",
+                "turns_used": "integer 1..max_turns",
+                "halt_condition_met": True,
+            },
+            "reviewed_item_hashes": (
+                "l4_full_review must cover every hash in this request's l4_item_hashes, "
+                "exactly and with nothing extra; targeted_review must cover the union of "
+                "major_signal_item_hashes and conflict_item_hashes"
+            ),
+            "completed_at": (
+                "timezone-aware ISO datetime inside [request.created_at, "
+                "request.created_at + execution_packet.timeout_ms]; a later value is rejected "
+                "even if the file is written later"
+            ),
+            "publication_rule": (
+                "Write the draft to draft_paths.review_receipt, run "
+                "execution_packet.validation_command, and promote the byte-identical receipt "
+                "to output_paths.review_receipt only when it reports status=valid. Do not read "
+                "script source to discover this contract: these values are authoritative."
+            ),
+        }
         request.update(scope or {})
         request["deterministic_fast_path"] = deterministic_fast_path
         request["network_policy"] = (

@@ -22,8 +22,8 @@ def args():
         poll_seconds=0.1,
         task_name="Codex-Garmin-Health-Sync",
         python=r"C:\Python\python.exe",
-        runner=r"C:\skill\scripts\garmin_auto_sync.py",
-        authority_config=r"C:\skill\runtime-authority.json",
+        runner=str(MODULE_PATH.with_name("garmin_auto_sync.py").resolve()),
+        expected_arguments_sha256="b" * 64,
         state_output=r"C:\state\status.json",
         allow_direct_sync=False,
         direct_config_dir=None,
@@ -53,7 +53,7 @@ def task(state="Ready"):
         "start_when_available": True,
         "action_count": 1,
         "execute": r"C:\Python\python.exe",
-        "working_directory": r"C:\skill\scripts",
+        "working_directory": str(MODULE_PATH.parent.resolve()),
         "arguments": (
             r"C:\skill\scripts\garmin_auto_sync.py --authority-config "
             r"C:\skill\runtime-authority.json --state-output C:\state\status.json "
@@ -70,7 +70,6 @@ def terminal(run_id="new", status="success", end=None):
         "status": status,
         "run_id": run_id,
         "requested_window": {"start": start, "end": end},
-        "runtime_binding": {"authority_version": "11.6.0", "authority_sha256": "a" * 64},
         "database_fingerprint_changed": True,
         "component_latest_observation_dates": {name: end for name in gate.COMPONENTS},
         "health_values_persisted": False,
@@ -81,21 +80,13 @@ def terminal(run_id="new", status="success", end=None):
 
 
 class FreshnessTaskGateTests(unittest.TestCase):
-    def setUp(self):
-        self.original_verify = gate.runtime_authority.verify
-        gate.runtime_authority.verify = lambda _: {
-            "ok": True,
-            "authority_version": "11.6.0",
-            "authority_sha256": "a" * 64,
-            "task_binding": {"arguments_sha256": "b" * 64},
-            "entrypoints": {"scripts/garmin_auto_sync.py": r"C:\skill\scripts\garmin_auto_sync.py"},
-        }
-        self.original_read = Path.read_text
-        Path.read_text = lambda self, encoding=None: "{}"
-
-    def tearDown(self):
-        gate.runtime_authority.verify = self.original_verify
-        Path.read_text = self.original_read
+    def test_existing_task_requires_independently_supplied_arguments_fingerprint(self):
+        options = args()
+        options.expected_arguments_sha256 = None
+        code, audit = gate.run_gate(options, probe=lambda mode: task(), state_reader=lambda: None, sleeper=lambda seconds: None)
+        self.assertNotEqual(code, 0)
+        self.assertEqual(audit['reason'], 'task_arguments_binding_required')
+        self.assertFalse(audit['sync_eligible'])
 
     def test_started_task_ignores_old_terminal_until_new_run_id(self):
         probes = iter((task("Ready"), {"ok": True}, task("Running"), task("Ready")))

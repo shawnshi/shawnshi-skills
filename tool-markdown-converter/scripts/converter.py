@@ -19,7 +19,7 @@ def check_markitdown():
     try:
         subprocess.run(["markitdown", "--version"], capture_output=True, check=True)
         return True
-    except (subprocess.CalledProcessError, FileNotFoundError):
+    except FileNotFoundError:
         return False
 
 def write_telemetry(status, duration_sec, input_path, output_len):
@@ -53,20 +53,23 @@ def convert_file(input_path, output_path=None, use_azure=False, azure_endpoint=N
     abs_input = os.path.abspath(input_path)
     
     if not os.path.exists(abs_input):
-        return {"status": "error", "message": f"Input file not found: {abs_input}"}
+        return {"status": "error", "completeness": "error", "message": f"Input file not found: {abs_input}"}
 
     ext = os.path.splitext(abs_input)[1].lower()
     
     if ext == '.djvu':
-        return {"status": "error", "message": "The .djvu format is a scanned image format. Please physically convert it to PDF first so it can be processed via Azure OCR."}
+        return {"status": "error", "completeness": "error", "message": "The .djvu format is a scanned image format. Please physically convert it to PDF first so it can be processed via Azure OCR."}
         
     if ext in ['.mobi', '.azw3', '.epub']:
         import tempfile
         # Try using calibre's ebook-convert
         try:
             subprocess.run(["ebook-convert", "--version"], capture_output=True, check=True)
-        except (subprocess.CalledProcessError, FileNotFoundError):
-            return {"status": "error", "message": f"'{ext}' format requires Calibre's 'ebook-convert' tool to be installed globally."}
+        except subprocess.CalledProcessError as e:
+            return {"status": "error", "completeness": "error", "returncode": e.returncode,
+                    "message": f"ebook-convert version check failed: {e}; stderr: {e.stderr}"}
+        except FileNotFoundError as e:
+            return {"status": "error", "completeness": "error", "message": f"Calibre ebook-convert unavailable: {e}"}
             
         with tempfile.NamedTemporaryFile(suffix=".txt", delete=False) as tmp:
             tmp_txt_path = tmp.name
@@ -75,21 +78,23 @@ def convert_file(input_path, output_path=None, use_azure=False, azure_endpoint=N
         try:
             # ebook-convert outputs a lot of logs, we suppress stdout if not debugging
             subprocess.run(["ebook-convert", abs_input, tmp_txt_path], capture_output=True, text=True, check=True)
-            with open(tmp_txt_path, "r", encoding="utf-8", errors="replace") as f:
+            with open(tmp_txt_path, "r", encoding="utf-8") as f:
                 output_content = f.read()
                 
-            if len(output_content.strip()) < 1000:
-                warning_header = (
-                    f"## ⚠️ System Warning: Print Replica / Scanned Image Book Detected\n"
-                    f"The conversion engine only found {len(output_content.strip())} characters of text. "
-                    f"This is typically because the original {ext} file is just a wrapper around scanned images. "
-                    f"Please provide an OCR-processed PDF or a true text-based EPUB instead.\n"
-                )
-                output_content = warning_header
-                
+            if not output_content.strip():
+                return {"status": "error", "completeness": "error",
+                        "message": "Calibre extracted no text; source content type is unverified.",
+                        "warnings": ["OCR may be needed if source inspection confirms image-only content."]}
+
             if output_path:
-                with open(output_path, "w", encoding="utf-8") as f:
-                    f.write(output_content)
+                try:
+                    with open(output_path, "w", encoding="utf-8") as f:
+                        f.write(output_content)
+                except (OSError, UnicodeError) as e:
+                    return {"status": "error", "completeness": "partial",
+                            "message": f"Failed to save ebook-convert output ({type(e).__name__}): {e}",
+                            "output": output_content,
+                            "warnings": ["Saving failed; returning extracted text. The target may be absent or incomplete."]}
                 result_stdout = f"Saved to {output_path}"
                 output_len = len(output_content)
             else:
@@ -98,19 +103,42 @@ def convert_file(input_path, output_path=None, use_azure=False, azure_endpoint=N
                 
             duration = time.time() - start_time
             write_telemetry("success", duration, abs_input, output_len)
-            os.remove(tmp_txt_path)
-            
             return {
                 "status": "success",
+                "completeness": "full",
+                "warnings": [],
                 "message": f"Converted {os.path.basename(abs_input)} to markdown via calibre.",
                 "output": result_stdout
             }
         except subprocess.CalledProcessError as e:
-            os.remove(tmp_txt_path)
-            return {"status": "error", "message": f"ebook-convert failed: {e.stderr}"}
+            failure = {"status": "error", "completeness": "error", "returncode": e.returncode,
+                       "message": f"ebook-convert failed: {e}; stderr: {e.stderr}"}
+            try:
+                with open(tmp_txt_path, "r", encoding="utf-8") as f:
+                    partial_text = f.read()
+                if partial_text.strip():
+                    failure.update(completeness="partial", output=partial_text,
+                                   warnings=["Conversion failed; extracted text is incomplete and was not saved to the requested output."])
+            except (OSError, UnicodeError) as read_error:
+                failure["warnings"] = [f"Partial output unreadable: {read_error}"]
+            return failure
+        except (OSError, UnicodeError) as e:
+            return {"status": "error", "completeness": "error",
+                    "message": f"ebook-convert output error ({type(e).__name__}): {e}"}
+        finally:
+            try:
+                os.remove(tmp_txt_path)
+            except OSError as cleanup_error:
+                print(f"WARNING: temporary output retained at {tmp_txt_path}: {cleanup_error}", file=sys.stderr)
 
-    if not check_markitdown():
-        return {"status": "error", "message": "'markitdown' command not found. Ensure `pip install markitdown[all]` was executed globally."}
+    try:
+        if not check_markitdown():
+            return {"status": "error", "completeness": "error", "message": "'markitdown' command not found; installation requires separate authorization."}
+    except subprocess.CalledProcessError as e:
+        return {"status": "error", "completeness": "error", "returncode": e.returncode,
+                "message": f"markitdown version check failed: {e}; stderr: {e.stderr}"}
+    except OSError as e:
+        return {"status": "error", "completeness": "error", "message": f"markitdown unavailable: {e}"}
 
     # Build command directly hitting native markitdown
     cmd = ["markitdown", abs_input]
@@ -126,12 +154,14 @@ def convert_file(input_path, output_path=None, use_azure=False, azure_endpoint=N
     print(f"Executing: {' '.join(cmd)}", file=sys.stderr)
     
     try:
-        result = subprocess.run(cmd, capture_output=not bool(output_path), text=True, check=True)
+        result = subprocess.run(cmd, capture_output=True, text=True, check=True)
         duration = time.time() - start_time
         
         output_content = result.stdout if not output_path else f"Saved to {output_path}"
         output_len = len(output_content) if result.stdout else 0
         
+        completeness = "full"
+        warnings = []
         # Context overflow protection
         if not output_path and output_len > MAX_CHARS:
             warning_header = (
@@ -139,12 +169,16 @@ def convert_file(input_path, output_path=None, use_azure=False, azure_endpoint=N
                 f"The document is {output_len} chars long. Showing first {MAX_CHARS} chars to prevent agent context overflow.\n"
                 f"Please use standard specific file reading or splitting strategies to read the remainder if absolutely necessary.\n\n"
             )
-            output_content = warning_header + output_content[:MAX_CHARS]
+            output_content = output_content[:MAX_CHARS]
+            completeness = "partial"
+            warnings.append(warning_header.strip())
             
         write_telemetry("success", duration, abs_input, output_len)
         
         return {
             "status": "success",
+            "completeness": completeness,
+            "warnings": warnings,
             "message": f"Converted {os.path.basename(abs_input)} to markdown.",
             "output": output_content
         }
@@ -153,8 +187,13 @@ def convert_file(input_path, output_path=None, use_azure=False, azure_endpoint=N
         write_telemetry("error", duration, abs_input, 0)
         return {
             "status": "error",
-            "message": f"Conversion failed: {e.stderr}"
+            "completeness": "error",
+            "returncode": e.returncode,
+            "message": f"Conversion failed: {e}; stderr: {e.stderr}"
         }
+    except (OSError, UnicodeError) as e:
+        return {"status": "error", "completeness": "error",
+                "message": f"Conversion error ({type(e).__name__}): {e}"}
 
 def main():
     parser = argparse.ArgumentParser(description="Markdown Converter Wrapper")
@@ -167,12 +206,16 @@ def main():
     
     result = convert_file(args.input, args.output, args.azure, args.endpoint)
     
+    for warning in result.get("warnings", []):
+        print(f"WARNING: {warning}", file=sys.stderr)
     if result["status"] == "success":
         if not args.output:
             print(result["output"])
         else:
             print(result["message"])
     else:
+        if result.get("completeness") == "partial":
+            print(result["output"])
         print(f"ERROR: {result['message']}", file=sys.stderr)
         sys.exit(1)
 

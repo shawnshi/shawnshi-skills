@@ -102,11 +102,6 @@ class GarminAutoSyncTests(unittest.TestCase):
             code, state = auto_sync.run_scheduled_sync(
                 args,
                 runner=fake_runner,
-                authority_verifier=lambda _: {
-                    "ok": True,
-                    "authority_version": "11.6.0",
-                    "authority_sha256": "a" * 64,
-                },
                 database_fingerprinter=lambda: next(fingerprints),
                 today=date(2026, 8, 23),
             )
@@ -153,11 +148,6 @@ class GarminAutoSyncTests(unittest.TestCase):
             code, state = auto_sync.run_scheduled_sync(
                 args,
                 runner=fake_runner,
-                authority_verifier=lambda _: {
-                    "ok": True,
-                    "authority_version": "11.6.0",
-                    "authority_sha256": "a" * 64,
-                },
                 database_fingerprinter=lambda: "before",
                 today=date(2026, 8, 23),
             )
@@ -173,7 +163,6 @@ class GarminAutoSyncTests(unittest.TestCase):
             "-StartWhenAvailable",
             "-MultipleInstances IgnoreNew",
             "--allow-network', '--allow-sync', '--allow-health-data",
-            "--authority-config",
             "-ExecutionTimeLimit (New-TimeSpan -Minutes 18)",
         ):
             with self.subTest(marker=marker):

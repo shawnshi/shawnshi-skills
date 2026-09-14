@@ -5,7 +5,7 @@
 ## 1. 来源状态机
 
 1. 将复盘请求窗口原样传给 Garmin 分析，不为满足算法样本量自动扩大窗口。
-2. 使用同一 Python 解释器完成本地预检与读取，不在失败后静默换解释器。先通过 canonical `personal-health-analysis` 的 `runtime-authority.json`；权威、版本、入口哈希或 `.gemini` 代理绑定不一致时失败关闭。
+2. 使用同一 Python 解释器完成本地预检与读取，不在失败后静默换解释器。使用 canonical `personal-health-analysis` 的依赖预检与数据授权检查；不再核对技能源码固定哈希，不静默替换运行时副本。
 3. 当前周期末端数据不新鲜时，按本文件“新鲜度门”直接运行一次两阶段受控同步（`sync_health_data.py sync --dry-run` 后 `--allow-network --allow-sync`）；成功后重新执行本地读取。不得启动、注册或修复计划任务。该动作不是 `partial` 的云端回退。
 4. 同步失败、限流或覆盖验证失败不得在同一次复盘中重试；保留同步前本地证据并披露缺口。历史周期、草稿、预览、只读、不同步或不联网请求不触发同步。
 5. `complete`：使用本地结果。
@@ -16,7 +16,7 @@
 
 ### 新鲜度门
 
-Garmin 读取先通过 canonical `personal-health-analysis` 的 `runtime-authority.json` 与权威门，再遵循其授权和失败关闭合同。先在同一解释器内预检并读取精确复盘窗口。若复盘窗口包含当前自然日、任一必需组件的最近观测早于窗口末日，则本次复盘请求授权在分析前直接运行一次两阶段同步（`sync_health_data.py sync --dry-run` 后 `--allow-network --allow-sync`）：
+Garmin 读取遵循 canonical `personal-health-analysis` 的数据授权、依赖预检和失败关闭合同。先在同一解释器内预检并读取精确复盘窗口。若复盘窗口包含当前自然日、任一必需组件的最近观测早于窗口末日，则本次复盘请求授权在分析前直接运行一次两阶段同步（`sync_health_data.py sync --dry-run` 后 `--allow-network --allow-sync`）：
 
 - 同步命令显式携带 `--allow-network --allow-sync --allow-health-data`；任何授权或绑定漂移都停止触发。
 - 完成后核对计划绑定、`database_fingerprint_changed=true`、请求末日和逐组件末端覆盖，再重新执行本地读取；同步状态文件或退出码本身不证明成功，进程提前终止仍归类 `interrupted_or_terminated`。

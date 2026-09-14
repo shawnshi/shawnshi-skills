@@ -1,11 +1,11 @@
 {
   "schema_version": 3,
   "skill": "mentat-collaboration-audit",
-  "generated_at": "2026-09-06T21:44:05+08:00",
+  "generated_at": "2026-09-13T21:31:50.787130+00:00",
   "hash_algorithm": "SHA-256",
   "text_hash_normalization": "LF",
   "skill_md": "SKILL.md",
-  "skill_md_sha256": "f136ca7890c79d0737dc3c5151b1bbce04ac6eb7120d1e5762497f15fb22c74b",
+  "skill_md_sha256": "2024e1bfd77cda0246502d012d12c99b52903d7b14d9b2c2bdaa6a677bc5449d",
   "top_level_files": [
     "SKILL.md",
     "generate_final_report.py"
@@ -13,7 +13,7 @@
   "top_level_file_hashes": [
     {
       "path": "SKILL.md",
-      "sha256": "f136ca7890c79d0737dc3c5151b1bbce04ac6eb7120d1e5762497f15fb22c74b"
+      "sha256": "2024e1bfd77cda0246502d012d12c99b52903d7b14d9b2c2bdaa6a677bc5449d"
     },
     {
       "path": "generate_final_report.py",
@@ -76,7 +76,7 @@
     },
     {
       "path": "references/WORKFLOW.md",
-      "sha256": "ab3f1504d01d7041ed17fed07a70fe39fa6a50fd77a34820bcec800fb0ae90c5"
+      "sha256": "d0952c2afd4fd386b1300065242aeb59943eb8693045dc2db4b200f54380e721"
     },
     {
       "path": "resources/.gitkeep",
@@ -212,7 +212,7 @@
       "path": "references/WORKFLOW.md",
       "exists": true,
       "resolved_path": "mentat-collaboration-audit/references/WORKFLOW.md",
-      "sha256": "ab3f1504d01d7041ed17fed07a70fe39fa6a50fd77a34820bcec800fb0ae90c5"
+      "sha256": "d0952c2afd4fd386b1300065242aeb59943eb8693045dc2db4b200f54380e721"
     },
     {
       "path": "scripts/validate_agent_audit.py",

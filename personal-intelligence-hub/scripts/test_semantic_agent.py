@@ -65,6 +65,9 @@ class SemanticAgentCandidateTests(unittest.TestCase):
     }
 
     def _assess(self, pool: dict, supplement: dict):
+        return self._assess_with_manifest(self.manifest, pool, supplement)
+
+    def _assess_with_manifest(self, manifest: dict, pool: dict, supplement: dict):
         artifacts = {
             "candidate_pool": (Path("candidate_pool.json"), pool),
             "supplement": (Path("supplement.json"), supplement),
@@ -78,7 +81,7 @@ class SemanticAgentCandidateTests(unittest.TestCase):
             patch("semantic_agent.load_recent_history", return_value=[]),
             patch("semantic_agent.match_history", return_value={"redundant": False}),
         ):
-            return _candidate_assessment({}, self.manifest)
+            return _candidate_assessment({}, manifest)
 
     def test_legacy_URL_access_does_not_authorize_bare_pool(self) -> None:
         verified = _candidate("https://example.org/verified")
@@ -175,6 +178,67 @@ class SemanticAgentCandidateTests(unittest.TestCase):
             eligible[0]["candidate_refs"],
             [first["candidate_id"], second["candidate_id"]],
         )
+        self.assertEqual({item["reason"] for item in dispositions}, {"eligible"})
+
+    def test_single_secondary_downgrade_requires_explicit_policy(self) -> None:
+        """Owner-authorized 2026-09-14 downgrade is opt-in only."""
+        identity = {
+            "key_version": "1",
+            "primary_domain": "healthcare_digital",
+            "actor": "Vendor",
+            "action": "reported",
+            "object": "clinical evidence update",
+            "event_date": "2026-08-31",
+        }
+        only = _candidate(
+            "https://news-a.example/report",
+            source="News A",
+            source_type="secondary",
+            event_identity=identity,
+        )
+        only["access_check"] = _access(only["url"])
+        only["candidate_object_sha256"] = candidate_object_hash(only)
+        supplement = {
+            "results": [
+                {
+                    "failure_kind": None,
+                    "access_log": [only["access_check"]],
+                    "candidates": [only],
+                }
+            ]
+        }
+
+        # policy absent -> strict behaviour is unchanged
+        eligible, dispositions = self._assess({"items": []}, supplement)
+        self.assertEqual(eligible, [])
+        self.assertEqual(
+            {item["reason"] for item in dispositions},
+            {"secondary_without_independent_corroboration"},
+        )
+
+        # policy enabled through the run's bound focus config -> explicit downgrade
+        with TemporaryDirectory() as tmp:
+            focus_path = Path(tmp) / "focus.json"
+            focus_path.write_text(
+                json.dumps({"corroboration_policy": {"single_secondary_allowed": True}}),
+                encoding="utf-8",
+            )
+            manifest = {
+                "report_date": self.manifest["report_date"],
+                "timezone": self.manifest["timezone"],
+                "artifacts": {
+                    "history_snapshot": {"metadata": {"dedupe_days": 7}},
+                    "focus_config": {"artifact_path": str(focus_path)},
+                },
+            }
+            eligible, dispositions = self._assess_with_manifest(
+                manifest, {"items": []}, supplement
+            )
+
+        self.assertEqual(len(eligible), 1)
+        self.assertEqual(eligible[0]["source_type"], "secondary")
+        self.assertEqual(eligible[0]["corroboration_status"], "single_secondary")
+        self.assertEqual(eligible[0]["candidate_refs"], [only["candidate_id"]])
         self.assertEqual({item["reason"] for item in dispositions}, {"eligible"})
 
     def test_ih002_semantic_identity_preserved_in_history_dedupe(self) -> None:

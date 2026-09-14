@@ -86,7 +86,7 @@ description: 说明技能做什么，以及用户在什么场景下应使用它�
 - 外部命令、操作系统、浏览器、桌面应用、Python/Node 包和凭据要求必须在正文的依赖或边界部分写明。
 - 不提交 `node_modules`、缓存、日志、临时下载、测试输出或生成音频。
 - 不把同一说明同时复制到 `SKILL.md` 和 `references/`。
-- `resource-manifest.json` 只记录资源与引用状态，不定义技能语义。当前 schema v3 使用 LF 规范化 SHA-256 校验 `SKILL.md`、顶层文件、全部受管资源文件和明确引用，并拒绝绝对路径、根外路径与磁盘不一致。
+- `resource-manifest.json` 只记录资源与引用状态，不定义技能语义。
 
 ## 5. Skill inventory
 
@@ -172,21 +172,31 @@ description: 说明技能做什么，以及用户在什么场景下应使用它�
 
 相近技能按产物区分：
 
-- 原创长文：`personal-writing-assistant`
-- 忠实润色：`tool-text-forger`
-- 去机器腔：`personal-write-humanizer`
+- 医疗领域新稿、主张变更、证据/政策判断与发布审校：`personal-writing-assistant`
+- 事实定稿后的忠实校对、轻润色、受控重组与压缩：`tool-text-forger`
+- 明确去 AI 味/更自然且无需领域判断：`personal-write-humanizer`
 - 演示文稿蓝图：`tool-slide-architect`
 - 单页网页演示：`tool-web-slide`
 - 位图提示词：`image-prompt-gen`
 - 位图生成或编辑：`image-studio-architect`
 - 系统结构图：`technical-diagram-renderer`
-- 单篇论文：`academic-paper-reader`
-- 多源横纵研究：`cognitive-hv-analysis`
-- 多视角证据研究：`cognitive-storm-research`
+- 单篇论文身份、方法与结果（快速问答按需核验）：`academic-paper-reader`
+- 非论文长文论证拆解（非普通摘要/压缩）：`cognitive-deep-reader`
+- 视频、字幕与转录内容：`tool-youtube-summary`
+- 纵向演化＋横向同期对照：`cognitive-hv-analysis`
+- 市场、行业、供应商决策：`industry-strategy-analyst`
+- 实体身份、事实、时序与公开材料核查：`senior-osint-analyst`
+- 跨证据域、真实争议或冲突的综合研究：`cognitive-storm-research`
 - 医疗文档摘要：`tool-document-summarizer`
 - 通用文件转 Markdown：`tool-markdown-converter`
 
 详细所有权由 `shared/trigger-ownership-matrix.json` 维护；其中引用的技能必须真实存在。
+
+写作按主任务而非医疗名词分流：纯语言请求不启动完整医疗写作项目；混合请求仅按需组合，不强制串联三个入口。矩阵新增 `faithful_controlled_editing` 表达 S46 的忠实编辑所有权，保留既有类 ID；`secondary_skills` 只表示可选协作，不要求加载。研究入口收窄自动触发，不禁止用户显式要求的合法深研。
+
+Pi 手动入口：`hit-customer-analyst`（仍为候选，正式交接入口须核验可用性）和 `mentat-skill-creator`（显式治理）使用 `disable-model-invocation: true`；`image-studio-architect` 原有手动属性不变。其余本轮目标保持原自动/手动属性。
+
+本次 P2 静态修订同步上述路由与手动说明；合成场景和文档检查不代表真实模型选路、图片生成、编译或业务验收。下列历史 Gate/测试记录保持原样，本次不据此声称重跑通过。
 
 ## 7. Gate
 
@@ -219,7 +229,6 @@ pwsh -NoProfile -ExecutionPolicy Bypass -File scripts/repair_skills.ps1 -Mode Ga
 - 名称、描述、行数和本地引用有效。
 - 每个用户技能存在 schema v3 `resource-manifest.json`；清单字段、规范化哈希、全部受管资源、声明依赖和可移植路径与磁盘一致。
 - 可选 `agents/openai.yaml` 必须能安全解析，界面字段、精确 `$skill-name` 默认提示、图标路径、颜色、调用策略和 MCP 依赖类型有效。
-- 不存在 `skill.json`。
 - 对 `SKILL.md`、脚本、参考资料、配置和界面元数据执行一致检查；不存在旧运行时工具令牌、外部运行时路径、思维稿指令、硬编码模型版本、强制子代理或强制持久化。
 - `_runtime` 目录属于用户运行产物，不进入源码一致性扫描，也不得被当作技能资源或业务事实。
 - 触发所有权矩阵不存在未知技能和重复信号。
@@ -231,12 +240,11 @@ pwsh -NoProfile -ExecutionPolicy Bypass -File scripts/repair_skills.ps1 -Mode Ga
 1. 读取目标技能及其直接引用资源。
 2. 以小批次修改 `SKILL.md` 和必要资源。
 3. 运行代表性脚本或静态验证。
-4. 先用 `scripts/generate_resource_manifests.ps1 -Check` 检查资源索引；在授权范围内仅刷新真实过期的技能，再复检无时间戳漂移。
-5. 先运行选中技能 Gate；涉及根治理、共享资源或批量迁移时再运行全库 Gate。
-6. 对修改过的脚本运行语法检查、代表性正向测试和相关单元测试。
-7. 只有验证结果真实变化时，才同步本 README 的库存和基线数字。
+4. 先用 `scripts/generate_resource_manifests.ps1 -Check` 检查资源索引。
+5. 对修改过的脚本运行语法检查、代表性正向测试和相关单元测试。
+6. 只有验证结果真实变化时，才同步本 README 的库存和基线数字。
 
-禁止在维护流程中重新生成 `skill.json`。旧工具如果仍依赖该文件，应修订或移除该工具，不得恢复双重真相源。
+
 
 ### 8.1 Current validation (2026-09-09)
 

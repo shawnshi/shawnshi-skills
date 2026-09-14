@@ -1,31 +1,26 @@
 {
   "schema_version": 3,
   "skill": "cognitive-personal-roundtable",
-  "generated_at": "2026-09-07T06:17:23+08:00",
+  "generated_at": "2026-09-14T10:55:36+08:00",
   "hash_algorithm": "SHA-256",
   "text_hash_normalization": "LF",
   "skill_md": "SKILL.md",
-  "skill_md_sha256": "a8bba4c44cd6225f57e7fbcd7f2250dcb98c3ccaff068d5fd9a46b8088fe2f22",
+  "skill_md_sha256": "283d322383b35e0c54c7ca3659e24d4bf27390afaae92c094ca97221342e6b35",
   "top_level_files": [
     "SKILL.md"
   ],
   "top_level_file_hashes": [
     {
       "path": "SKILL.md",
-      "sha256": "a8bba4c44cd6225f57e7fbcd7f2250dcb98c3ccaff068d5fd9a46b8088fe2f22"
+      "sha256": "283d322383b35e0c54c7ca3659e24d4bf27390afaae92c094ca97221342e6b35"
     }
   ],
   "top_level_directories": [
     "agents",
     "assets",
-    "references",
-    "scripts"
+    "references"
   ],
   "resource_directories": [
-    {
-      "name": "scripts",
-      "file_count": 0
-    },
     {
       "name": "references",
       "file_count": 2
@@ -54,7 +49,7 @@
     },
     {
       "path": "references/validation-cases.md",
-      "sha256": "f1f2cd3227944c5a1f2e9b708c29557d107bd20e1e1cc99ce384f024f438224b"
+      "sha256": "64f1c88de3221dd9e321b9be452e8e55bc47508fb3145cbd3d68ca08340c5d61"
     }
   ],
   "declared_local_dependencies": [
@@ -68,7 +63,7 @@
       "path": "references/validation-cases.md",
       "exists": true,
       "resolved_path": "cognitive-personal-roundtable/references/validation-cases.md",
-      "sha256": "f1f2cd3227944c5a1f2e9b708c29557d107bd20e1e1cc99ce384f024f438224b"
+      "sha256": "64f1c88de3221dd9e321b9be452e8e55bc47508fb3145cbd3d68ca08340c5d61"
     }
   ],
   "missing_declared_dependencies": []

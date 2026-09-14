@@ -59,15 +59,15 @@ Spawns parallel Jules sessions using `jules.all()`:
 
 **Script:** `fleet-merge.ts` *(local)* / `fleet-merge.yml` *(GitHub Action)*
 
-Processes fleet PRs sequentially in risk order (lowest first):
+Both entries call the same script for one explicitly approved repository/base/task/PR/head SHA:
 
-1. Find open PRs matching session IDs (local) or Jules author (GitHub Action)
-2. For each PR: update branch from base
-3. Wait for CI to pass (polling every 30s, timeout after 10min)
-4. Squash-merge
-5. Move to the next PR
+1. Require the selected trusted `.fleet/YYYY_MM_DD/issue_tasks.json` and unique `sessions.json` entry binding `taskId`, `sessionId`, `repo` and numeric `prNumber`; repository and PR must match the separate approval. The dispatcher records only task/session, so an authorized operator must independently verify and provide the PR binding (see README). Candidate text, branch tokens and bot-author discovery cannot establish it; missing or mismatched bindings stop before GitHub calls.
+2. Check the approved PR/base/head, complete session token, open non-draft same-repository status and clean mergeability
+3. Require a nonempty `gh pr checks --required` result with every state `SUCCESS`
+4. Recheck the PR/head; in dry-run mode report validation without mutation
+5. Otherwise squash-merge with the approved SHA and require `merged: true`
 
-If a merge conflict is detected during branch update, the process stops and reports the PR URL for human intervention.
+Missing records, pending/skipped/missing CI, conflicts, unknown state or API errors stop without updating, closing or re-dispatching. Each gh call has a 30-second timeout. Human intervention and fresh approval are required after a head change; independent explicit dispatch remains available under its own authorization. See README for inputs and trusted-record provisioning. The Action checks out only the trusted default branch and does not grant new write permissions.
 
 ## File Structure (after setup)
 
@@ -76,7 +76,7 @@ scripts/fleet/
 ├── fleet-analyze.ts             # Fetches open issues as markdown
 ├── fleet-plan.ts                # Creates the planning session
 ├── fleet-dispatch.ts            # Validates ownership + dispatches Jules sessions
-├── fleet-merge.ts               # Sequential PR merge with CI wait (local use)
+├── fleet-merge.ts               # One approved PR/head with required CI (shared entry)
 ├── types.ts                     # Shared TypeScript types
 ├── package.json                 # Fleet script dependencies
 ├── prompts/
@@ -89,12 +89,12 @@ scripts/fleet/
     └── cache-plugin.ts          # Octokit ETag cache plugin
 ```
 
-## Scheduled Automation
+## Manual Automation
 
-The `fleet-dispatch.yml` workflow runs the planning phase on a cron schedule:
+The `fleet-dispatch.yml` workflow runs the planning phase only on manual dispatch by default. Adding a schedule requires explicit frequency and scope authorization:
 
 1. Installs dependencies from `scripts/fleet/package.json`
 2. Runs `fleet-plan.ts` to create a Jules planning session
 3. The session fetches issues, analyzes them, and dispatches N parallel agents
 4. Each agent produces a PR
-5. The `fleet-merge.yml` workflow triggers on PR open events and merges them sequentially using `gh` CLI
+5. After review, manually invoke `fleet-merge.yml` with exact approved inputs and trusted records; it defaults to dry run and calls the shared merge script using `gh` CLI

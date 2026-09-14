@@ -18,7 +18,13 @@ description: 设计、生成、重构和严格审查科研论文图表，覆盖�
 
 读取 [references/task_contracts.md](references/task_contracts.md) 获取该模式的最小输入契约。只询问会改变设计或认证结果的缺失项。目标期刊未定时使用 generic-draft，并明确它不能获得 journal_verified。
 
-## 2. 在绘图前设置门禁
+### 成品审查分支（visual_audit）
+
+先读取 [成品审查输入与认证边界](references/task_contracts.md#成品审查输入与认证边界)，从用户提供的成品、图注与用途核验可得属性。有限审查不要求先重建生成 Job、补齐全部展示文本或字体；缺失项逐项列为 NOT_CHECKED，不猜测数据。仍须在可用能力内生成或渲染成品预览并真实视觉复核；无法预览或检查时明确停止相应结论，不以文件属性代替视觉检查。
+
+有限审查不调用严格流水线来规避输入校验，也不宣称完整认证；只交付可核验项、证据和限制，状态保持 draft。要求完整 visual_audit / journal_verified 时，必须满足现有严格 Job Schema、预检、统计及成品门，并执行第 4 节的 preview → 视觉复核 → final；缺项则保留有限结果与认证缺口。隐私与图像完整性规则对两路同样适用。
+
+## 2. 生成/重构与完整认证的绘图前门禁
 
 ### 数据与统计
 
@@ -44,7 +50,7 @@ description: 设计、生成、重构和严格审查科研论文图表，覆盖�
 
 运行 [scripts/font_preflight.py](scripts/font_preflight.py) 检查依赖、外部工具、字体解析和已声明字形。流水线构图后还会从实际 Figure 重新提取标题、轴标签、分类刻度、图例和注释；未在 target.labels 声明的文字或缺字形均为 FAIL。存在中文、日文或韩文时读取 [references/fonts_and_cjk.md](references/fonts_and_cjk.md)。静默字体回退不是通过。缺包、字体、TeX 或系统工具时只报告缺口；未经授权不要安装。
 
-## 3. 设计信息编码
+## 3. 生成/重构时设计信息编码
 
 读取 [references/design_and_statistics.md](references/design_and_statistics.md) 选择与科学问题匹配的图型。优先展示原始点、效应量和区间；柱形图不能替代分布。
 
@@ -114,7 +120,7 @@ PDF 字体或内嵌图像检查工具不可用时返回 NOT_CHECKED。EPS/SVG �
 
 ## 7. 交付
 
-按 [references/task_contracts.md](references/task_contracts.md) 输出标准目录：
+生成/重构及完整流水线交付按 [references/task_contracts.md](references/task_contracts.md) 输出标准目录；有限成品审查只交付上述审查结果，不要求重建 source/Job 或假造清单：
 
 - final：终稿；
 - preview：原色、灰度、色觉缺陷预览和图组联系表；

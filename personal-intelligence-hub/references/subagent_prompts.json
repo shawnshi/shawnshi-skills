@@ -103,16 +103,17 @@
       "downstream_headroom_cost_usd": 1.0,
       "semantic_token_budget": 200000,
       "semantic_cost_budget_usd": 0.5,
-      "semantic_timeout_ms": 240000,
+      "semantic_timeout_ms": 900000,
       "semantic_tool_budget_soft": 6,
       "semantic_tool_budget_hard": 10,
       "red_team_token_budget": 100000,
       "red_team_cost_budget_usd": 0.5,
-      "red_team_timeout_ms": 120000,
+      "red_team_timeout_ms": 600000,
       "normal_run_token_ceiling": 1000000,
       "normal_run_token_meter": "total_tokens - cache_read_tokens - cache_write_tokens",
       "normal_run_cost_usd_ceiling": 3.0,
-      "telemetry_command": "python -X utf8 scripts/session_telemetry.py --manifest <manifest> --stage <stage> --invocation-id <id> --status <status> --session <session.jsonl>"
+      "telemetry_command": "python -X utf8 scripts/session_telemetry.py --manifest <manifest> --stage <stage> --invocation-id <id> --status <status> --session <session.jsonl>",
+      "review_window_rationale": "Owner-authorized 2026-09-14: the registered review windows are wall-clock limits only - token and cost budgets are unchanged. Three consecutive observed failures showed that a 240s semantic window and a 120s red-team window are shorter than the time an agent needs to write a 20-30 KB Chinese semantic draft plus publish it, so the clock expired after the draft was written but before finalize, twice forcing an honest degraded_timeout/failed closure. Realistic windows: semantic 900s, red team 600s."
     },
     "publication": {
       "mode": "supplement_dynamic_draft_then_agent_helper_then_deterministic_parent_finalizer",

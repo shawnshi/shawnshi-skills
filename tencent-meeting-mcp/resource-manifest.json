@@ -1,11 +1,11 @@
 {
   "schema_version": 3,
   "skill": "tencent-meeting-mcp",
-  "generated_at": "2026-09-05T17:15:45+08:00",
+  "generated_at": "2026-09-13T20:21:45.822840+00:00",
   "hash_algorithm": "SHA-256",
   "text_hash_normalization": "LF",
   "skill_md": "SKILL.md",
-  "skill_md_sha256": "e4f0f2fd56fe8605a8468360af9847ea035b4deb48bed18f3a8af5e06654b443",
+  "skill_md_sha256": "3d6e0fa92ee3718c3f85f4085ab871631a94a32ee9f00de1191900aae06faaab",
   "top_level_files": [
     "SKILL.md",
     "config.json"
@@ -13,7 +13,7 @@
   "top_level_file_hashes": [
     {
       "path": "SKILL.md",
-      "sha256": "e4f0f2fd56fe8605a8468360af9847ea035b4deb48bed18f3a8af5e06654b443"
+      "sha256": "3d6e0fa92ee3718c3f85f4085ab871631a94a32ee9f00de1191900aae06faaab"
     },
     {
       "path": "config.json",
@@ -22,7 +22,8 @@
   ],
   "top_level_directories": [
     "references",
-    "scripts"
+    "scripts",
+    "tests"
   ],
   "resource_directories": [
     {
@@ -49,15 +50,19 @@
     },
     {
       "path": "scripts/mcp_proxy.py",
-      "sha256": "f7513dbac547a63346b4c7515057da8deff7ebafd09813424aec6a5a45dc8134"
+      "sha256": "52aad1016fa9a09f8946b4f67fc2c4ec2570d5e2c878ddc8fa1901e7f5c6bbd5"
     },
     {
       "path": "scripts/tencent_meeting.py",
-      "sha256": "97d6f9333b7212f1135b330105b25aad0f5c6eb6a8b5fc5ec166667a6677ef29"
+      "sha256": "190f7e8fcb66301fe461da0c403a47c87d293eb516d386dadfda76b35a3e1502"
     },
     {
       "path": "scripts/utils.py",
       "sha256": "d23fa6098f9e1046ab9f514d6f67b498f37f5f194ebd8fb099f7bfb1375580ad"
+    },
+    {
+      "path": "tests/test_error_protocol.py",
+      "sha256": "cf7c526f24ecf21259f500da16d41447b387db5cb36cf78eb1bc225a3df6d662"
     }
   ],
   "declared_local_dependencies": [
@@ -83,13 +88,13 @@
       "path": "scripts/mcp_proxy.py",
       "exists": true,
       "resolved_path": "tencent-meeting-mcp/scripts/mcp_proxy.py",
-      "sha256": "f7513dbac547a63346b4c7515057da8deff7ebafd09813424aec6a5a45dc8134"
+      "sha256": "52aad1016fa9a09f8946b4f67fc2c4ec2570d5e2c878ddc8fa1901e7f5c6bbd5"
     },
     {
       "path": "scripts/tencent_meeting.py",
       "exists": true,
       "resolved_path": "tencent-meeting-mcp/scripts/tencent_meeting.py",
-      "sha256": "97d6f9333b7212f1135b330105b25aad0f5c6eb6a8b5fc5ec166667a6677ef29"
+      "sha256": "190f7e8fcb66301fe461da0c403a47c87d293eb516d386dadfda76b35a3e1502"
     }
   ],
   "missing_declared_dependencies": []

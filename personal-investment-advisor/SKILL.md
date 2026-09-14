@@ -1,6 +1,6 @@
 ---
 name: personal-investment-advisor
-description: 面向个人投资者，默认使用 SEC EDGAR、交易所与发行人披露、Yahoo Finance、Akshare 等免费公开来源，结合用户明确提供的持仓，执行证券身份核验、财报研究、估值情景、组合风险审计、主动机会验证和研究复盘。用于“股票调研”“分析财报”“持仓审计”“批量筛选”“情景压力测试”“主动收益研究”“Rank & Yank”“复盘投资判断”等请求；仅输出 research_only 研究支持，不生成交易指令，也不替代持牌投资、税务或法律意见。
+description: 用于证券财报与估值研究、已授权持仓的风险审计、Daily Sync 行情及观察边界核验、主动研究（含 Rank & Yank）和判断复盘；默认免费公开来源，仅提供 research_only 支持，不生成交易指令。
 ---
 
 # 投资研究与组合分析

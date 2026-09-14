@@ -1,6 +1,6 @@
 ---
 name: personal-intelligence-hub
-description: 基线优先生成技术与医疗数字化资讯简报，按缺口补检、事件去重、语义评估和独立红队核验来源；正式日简报自动保存。用于今日/昨日资讯简报、情报扫描、战略简报、过去一周动态和竞争信号。
+description: 用于生成基线优先、跨技术与医疗数字化并带历史去重的日资讯简报；区别管理周刊、事件雷达和论文综述。正式简报自动保存，生产预览仍产生运行中间态。
 ---
 
 # 技术与医疗数字化资讯简报
@@ -28,7 +28,7 @@ description: 基线优先生成技术与医疗数字化资讯简报，按缺口�
 
 ### 1. 建立运行并先完成基线
 
-使用统一入口：
+运行 prepare 前必须读取 `references/workflow_protocols.md` 的 `baseline` 节，核对冻结、网络/超时与覆盖保留合同，再使用统一入口：
 
 ```powershell
 python -X utf8 scripts/run_daily.py prepare --report-date YYYY-MM-DD --timezone Asia/Shanghai --article-broker-version 3
@@ -36,18 +36,7 @@ python -X utf8 scripts/run_daily.py prepare --report-date YYYY-MM-DD --timezone 
 
 记录返回的 `execution_cli_path`。下文所有 `python -X utf8 scripts/run_daily.py ...` 在生产 run 中均表示 `python -X utf8 <execution_cli_path> ...`；不得在 prepare 后改回安装目录脚本。
 
-该命令必须依次完成：
-
-1. 创建不可变 `run_manifest.json`，锁定 `run_id`、报告日、时区、窗口、主题、地域和请求比例；同时把资源清单声明的完整技能 bundle 复制到 run 内只读语义快照，并返回 `execution_cli_path`。prepare 之后所有命令和代理 helper 必须使用该 run-scoped CLI/bundle；安装目录后续变化不得使在途 run 漂移，也不得继续用已变化的安装目录 CLI 操作旧 run；
-2. 从正式新闻 JSON 确定性重建并登记完整 history v2 快照，同时按 `dedupe_days` 生成并登记紧凑评审切片；完整快照用于归档一致性，语义代理只读取切片；目标报告日的旧档只进入替换哈希前置条件，不进入本次去重池；
-3. 先使用 `references/karpathy_feeds.json` 执行基线扫描；
-4. 将未知或无效发布日期放入 quarantine，记录来源覆盖和守恒候选漏斗；
-5. 将基线制成带 `candidate_id` 与 `candidate_object_sha256` 的 `candidates_only` 启发式候选池；
-6. 根据已经完成文章级访问核验的一手候选供给、低于阈值的来源成功率、政策竞对和风险反证缺口生成 `supplement_request.json`；未核验的启发式候选不得冒充可入选供给。日期有效率不足继续作为 coverage/data gap 披露，不为无法通过少量联网补检修复的全局日期指标额外启动 integrity 代理。
-
-基线阶段未达到 `completed` 或 `degraded` 前，不得启动补充检索。启发式候选只用于排序和发现缺口，不得直接成为最终事实、等级、推断、置信度或归档内容。
-
-基线抓取对网络异常、408、425、429 与 5xx 保留退避重试；对 4xx 永久响应及确定性的本地 TLS、证书或协议配置错误不做同参数重复请求，立即计入失败覆盖并交由缺口补检处理。全局并发限制为 1..32，同一主机最多占用 4 个连接，避免单一来源挤占全部扫描槽位。全扫描默认以 300 秒为总时限，可用 `--scan-deadline-seconds` 在 `0 < 秒数 ≤ 3600` 范围内调整；到期只取消未完成来源，并把每个来源记为结构化 `TIMEOUT` 覆盖失败，已完成来源与候选必须保留。取消清理默认只等待 2 秒，仍未退出的异常任务计入 `cancellation_pending_sources`，不得阻塞本阶段产物。基线元数据记录实际 `elapsed_seconds`、配置时限和超时来源数。不得通过删源、缩小扫描面或隐去超时换取耗时下降。
+prepare 必须冻结 run/bundle/历史与候选血缘，再完成基线扫描和缺口登记；基线未达 completed/degraded 前不启动补检，启发式候选不得直接成为最终事实或归档内容。完整网络、超时、覆盖与失败保护见执行前必读的 baseline 节。
 
 “昨日资讯简报”显式传入昨日日期。不得用运行时滚动窗口或当前日期命名昨日文件。
 
@@ -56,12 +45,6 @@ python -X utf8 scripts/run_daily.py prepare --report-date YYYY-MM-DD --timezone 
 进入本阶段前，父任务读取 `references/workflow_protocols.md` 的 `supplement` 节；有补检请求时，再读 `runtime` 节，完成预算预留后才可启动。代理只接收已登记最小 packet，不得加载本参考文档或主会话历史。
 
 仅在基线 `completed`/`degraded` 后，按已登记 gap/lane 先核验绑定候选，再补缺口；根任务不重复已分派检索。canary 基础设施失败即停止 fanout；成功后最多 3 个 worker 并行。保留真实日期、访问日志与失败，禁止弱资讯补数。代理只写授权 draft，父任务确定性校验后原子发布；timeout/失联按持久化逐 gap 状态 reconciler 收口，不得只依赖 stdout。
-
-新 run 默认 article-broker/3.0（也可显式 prepare --article-broker-version 3）。所有 lane 包括四个 required URL 占满预算者都走父级 native fetch_content(mode=readable)，CLI 只 reserve/record；禁止 v3 broker-http、verify-bound 或 portal fallback。先访问 required URLs，再在剩余预算 web_search(includeContent=false) 发现文章。读取 references/workflow_protocols.md 的 v3 receipt/date 合同；旧 run/v2 冻结回放不改写。
-
-车道分两轴，命名不可互换、也不互为别名：域供应车道为 `TechRadar`（技术）与 `HealthcareRadar`（医疗数字化），由域目标缺口触发，按域映射选绑候选，不读取 `coverage_policy.lanes` 配置；政策与风险车道为 `Sentinel` 与 `Ranger`，由 `references/strategic_focus.json` 的 `coverage_policy.lanes` 关键词与 `min_candidates` 驱动。
-
-v3 前置条件：`TechRadar` 的绑定候选先按 `references/strategic_focus.json` 的 `domains.technology.keywords` 做技术线索筛选（`domains.healthcare_digital` 同理服务 `HealthcareRadar`）。focus 工件缺失或候选文本不命中域关键词时，该车道绑定候选为空，缺陷会在下游以无关报错暴露。因此测试夹具必须把真实 `strategic_focus.json` 登记为 `focus_config` 工件，并让候选文本含真实域关键词，否则 v3 语义不成立。
 
 prepare 未返回 request 时，脚本已登记结构化 `no_increment`，不要伪造补检结果。
 
@@ -85,8 +68,6 @@ python -X utf8 <execution_cli_path> check-expansion --manifest <run_manifest.jso
 
 该命令重跑语义证据、历史去重及血缘校验，再按 `top_10` 中的独立事件计数（不是来源候选数）。无效 core/回执返回非零退出码，不扩大窗口。默认 3 日运行少于 10 条时返回 `action=expand` 和 `next_argv`；按该参数数组启动一次新 7 日运行，保留旧运行且不提前归档 3 日结果。`next_command` 仅为 POSIX Shell 展示，不直接粘贴到 PowerShell。显式窗口、已有扩窗链接或 7 日运行不再次扩窗；不足仍少报。只有最终选定运行进入红队与归档。
 
-新运行 Token 总上限为 1,000,000；每条补检预留 150,000，语义评审 200,000，红队 100,000，下游 headroom 合计 300,000。费用总上限仍为 3 美元；原有访问、工具、超时与结算门保留。旧快照及遥测不得按新上限改写。
-
 ### 4. 逻辑红队
 
 进入本阶段前，父任务读取 `references/workflow_protocols.md` 的 `red-team` 节；需要独立代理时同时读取 `runtime` 节。创建请求前同进程重跑 semantic draft gate，失败不得留下红队请求。
@@ -107,18 +88,15 @@ python -X utf8 scripts/run_daily.py forge --manifest <run_manifest.json> --refin
 
 ## 显式授权恢复（新生命周期，不改写旧运行）
 
-仅在用户授权保留原窗口、采用完整已结算证据且不重扫时使用 `scripts/recovery_lifecycle.py preview --source-manifest <old/run_manifest.json>`。预览只读，调用旧运行冻结 validator 完整回放；原哈希、路径归属、未结算调用、历史变化或已有正式文件任一不通过即停止。不得把失败语义草稿当作回执。
-
-父任务核准预览后运行 `scripts/recovery_lifecycle.py apply --source-manifest <old/run_manifest.json> --expected-closure-sha256 <preview SHA> --new-runtime-dir <NEW isolated directory>`。`pih-source-adoption/1.0` 创建新 run、新 bundle/CLI 和 admission；只引用原证据闭包，不复制或改写原 run/request/proof 身份与时间。新 run 独立使用原有 1,000,000 Token/$3 上限，不转移旧额度。必须重新调用独立 SemanticEvaluator，并按既有门执行红队；只在新 run 的 CLI 完成 preview/forge。旧 v1.4 validator 和旧时钟不变。
-
-过期语义调用的实际遥测另用 `scripts/late_telemetry.py preview|apply --manifest <old manifest> --association <parent declaration> --expected-association-sha256 <SHA>`。`pih-late-telemetry/1.0` 只追加 `<old run>/late-telemetry/<invocation>.json`；不改 manifest、expired、degraded_timeout 或运行时 timed_out。声明必须绑定原 request、manifest、真实 runtime status、精确 session 路径与 header ID 的哈希；它是有来源的父级关联，不是运行时加密签名。只汇总 usage 元数据，assistant stopReason 与 runtime outcome 分列；未知 usage 保守计入原预留，native broker holds 永久保留。Windows apply 使用现有机器级进程 mutex，不创建额外持久锁文件。
-
-评审准备应在 request 登记前完成。登记完成后，父任务立即用新 run 内 `scripts/review_handoff.py preflight --request <request>`，再按真实运行时能力分派，禁止虚构启动工具。所有 command 为精确 argv 数组，以 `subprocess.run(argv, shell=False)` 消费；上下文与 finalize 使用原登记时限，不能从子任务启动时重置。语义 canonical pair 发布后代理立即结束；父任务 `review_handoff.py consume` 独立验收，不让代理等待扩窗、红队或 forge。补检 broker 请求与评审完成使用不同合同；真实 blocker 才需要升级。
+仅在已有明确恢复授权覆盖原窗口、完整已结算证据且不重扫时，才进入新生命周期恢复；调用任何 recovery_lifecycle 或 late_telemetry 命令前必须完整读取 `references/workflow_protocols.md` 的 `recovery` 节。启动、恢复或结算代理前另读 `runtime` 节；重新独立语义评审及条件红队、旧运行不可改写和原预算门不变。
 
 ## 日期、覆盖与事件规则
 
 - 默认 3 日或扩展 7 日窗口为 `report_date-(days-1)` 至 `report_date`，两端包含。
 - `published_at` 必须为窗口内 `YYYY-MM-DD` 已知日期；候选为 ISO datetime 时按其自带时区取日期后规范化。`event_date` 可未知，但不得晚于发布日期。
+- 发布日期基准（2026-09-14 授权）：正文未产出可识别发布日期、但 `article_core`（除正文日期外的全部文章判据）成立时，登记可改用绑定 lane 已登记的 feed 发布日期，`published_at_proof.parser_rule` 记为 `pool-declared/1`；正文自带日期永不被覆盖，`published_at_source` 仍不得为 unknown/retrieved_at，窗口门不变。
+- 标题基准（2026-09-14 授权）：正文抽取标题为空或不落在 8..240 时，`article_core`/`article` 判据可回退使用绑定 lane 已登记的 feed 标题，metadata 记 `title_source=lane-declared/1`；正文标题合法时永不回退。
+- 二手佐证降级（2026-09-14 授权）：focus config 的 `corroboration_policy.single_secondary_allowed=true` 时，单一独立二手来源（已验证访问 + 完整事件身份）可作为 `corroboration_status=single_secondary` 入选；`multi_independent` 仍是首选，同一事件不得重复计数，置 false 即恢复严格行为。二手来源仍需 ≥2 个独立来源佐证，门槛不变。
 - GitHub/V2EX 观察时间不得冒充发布日期；Hacker News 时间使用带时区 UTC；所有候选记录 `retrieved_at`。
 - 每条正式资讯只能有一个 `primary_domain`；混合事件可填 `secondary_domains`，但只按主领域计数。
 - 条目 `confidence`、`corroboration_status` 与运行 `coverage_confidence` 含义不同，不得互相替代。
@@ -148,8 +126,3 @@ python -X utf8 scripts/run_daily.py forge --manifest <run_manifest.json> --refin
 
 自动保存只授权正式新闻文件及新闻目录内的 `.pih_history_v2.json` 去重索引，不授权写入个人长期记忆、知识图谱、邮件、外部发布或其他系统。review challenge 只提供运行内绑定与防重放，不是外部运行时的加密身份签名；执行者必须真实调用独立 SemanticEvaluator；仅在 `deterministic_fast_path=false` 时另行调用独立 RedTeam。确定性快速路径以已登记的 NoL4Gate 回执满足红队阶段，不启动第二个代理；L4、重大资讯及冲突的红队要求不变。
 
-Stage-C broker v2 continuation: parent must consume `next_action` on each operation; first 403 means choose an alternative original-source URL or purposeful different search, not silent closure. `broker-seal` requires ledger-grounded stop eligibility. Exact all-good bound-only evidence, or v3-only fully settled exact-required `bound_budget_exhausted` evidence, may close without artificial search; the latter preserves failures/successes and requires degraded coverage for exclusions (zero eligible: degraded/low). Date/source/lineage/semantic gates remain unchanged. Expired/error/pending evidence is retained for failed reconciliation, never backdated. See workflow_protocols.md Stage-C; New v3 runs use source600/grace300 (launch timeout 900000ms); 1.4, other budgets and old frozen runs remain unchanged.
-
-### Timely parent finalization receipt (new native v3 only)
-
-New native-v3 requests carry finalization.parent_receipt_version=1. The bound finalize --parent validates within the unchanged 300s grace and atomically journals parent-supplement-finalization/1.0 in run_manifest.parent_supplement_finalizations[gap_id], binding run/request/packet SHA, sealed broker evidence and completed_at, actual finalized_at, original/final draft SHA and exact final bytes. Retry the same CLI after interruption: only the journaled source/final bytes recover, without a new clock. Later finalize-supplement accepts unchanged timely-attested bytes while revalidating semantic/proof/terminal gates. Missing receipts retain strict grace; v2 and old frozen requests are unchanged. Never synthesize receipts for old events or use mtime; no budgets increase.

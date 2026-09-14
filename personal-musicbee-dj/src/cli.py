@@ -49,7 +49,7 @@ def validate_config(config: Dict, request_type: str) -> List[str]:
     scenes = config.get('scenes', {})
 
     exe_path = Path(str(musicbee.get('exe_path', '')).strip())
-    if not exe_path.exists():
+    if not exe_path.is_file():
         errors.append(f"musicbee.exe_path is missing or invalid: {exe_path}")
 
     if request_type in {'genre', 'scene'}:
@@ -127,16 +127,11 @@ def main():
 
     log.info(f"Triggering MusicBee with target: {play_target}")
     try:
-        if musicbee_exe and musicbee_exe.exists():
-            # Security: Sanitize user input for PowerShell command injection
-            safe_play_target = str(play_target).replace("'", "''").replace('"', '""')
-            wmi_cmd = f"Invoke-WmiMethod -Class Win32_Process -Name Create -ArgumentList '{musicbee_exe} \"{safe_play_target}\"'"
-            subprocess.run(["powershell", "-Command", wmi_cmd])
-            log.info("Playback sequence initiated successfully via WMI Process Create (Sandbox Escape).")
-        else:
-            import os
-            os.startfile(play_target)
-            log.info("Playback sequence initiated successfully via os.startfile.")
+        process = subprocess.Popen([str(musicbee_exe), str(play_target)], shell=False)
+        returncode = process.poll()
+        if returncode not in (None, 0):
+            raise subprocess.CalledProcessError(returncode, [str(musicbee_exe), str(play_target)])
+        log.info(f"MusicBee launch request submitted (pid={process.pid}); playback not confirmed.")
     except Exception as exc:
         log.error(f"Failed to execute MusicBee process: {exc}")
         sys.exit(1)

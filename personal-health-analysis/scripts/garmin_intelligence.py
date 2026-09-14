@@ -26,6 +26,7 @@ try:
         GARMIN_DB,
         LocalDatabaseChangedError,
         get_activities_data as sqlite_activities,
+        get_training_load_data as sqlite_training_load,
         get_biomechanics_data as sqlite_biomechanics,
         get_body_composition_detailed,
         get_daily_friction_matrix,
@@ -318,6 +319,7 @@ def _fetch_local_summary_unverified(
     *,
     components: tuple[str, ...] | list[str] | None = None,
     metadata_components: tuple[str, ...] | list[str] | None = None,
+    minimal_summary: bool = False,
 ) -> dict[str, Any]:
     if not HAS_SQLITE:
         raise DataStaleError("Local Garmin database is unavailable.")
@@ -360,7 +362,9 @@ def _fetch_local_summary_unverified(
         for column in columns
     }
     summary_df = (
-        sqlite_summary(fetch_days) if requested_summary_columns else empty.copy()
+        sqlite_summary(fetch_days, columns=sorted(requested_summary_columns))
+        if requested_summary_columns and minimal_summary
+        else sqlite_summary(fetch_days) if requested_summary_columns else empty.copy()
     )
 
     summary_observation_columns = [
@@ -377,7 +381,9 @@ def _fetch_local_summary_unverified(
     hrv_df = sqlite_hrv(fetch_days) if "hrv" in requested_set else empty.copy()
     activities_df = (
         sqlite_activities(fetch_days)
-        if requested_set & {"activities", "training_load_series"}
+        if "activities" in requested_set
+        else sqlite_training_load(fetch_days)
+        if "training_load_series" in requested_set
         else empty.copy()
     )
     biomechanics_df = (
@@ -724,6 +730,40 @@ def fetch_local_summary(
     return summary
 
 
+def dashboard_analysis_plan(days: int, components, policy: str = "required") -> dict[str, Any]:
+    """Bound local lookbacks to active algorithm requirements, not display days."""
+    if policy not in {"required", "requested"}:
+        raise ValueError("INVALID_ANALYSIS_WINDOW_POLICY")
+    requested = set(components)
+    outcomes = requested & {"sleep", "hrv", "heart_rate"}
+    analysis_components = tuple(c for c in components if c in outcomes or c == "training_load_series")
+    required_days = 28 if outcomes else days
+    if outcomes and "training_load_series" in requested:
+        required_days = 29  # 28 next-day pairs require 29 calendar dates.
+    horizon = max(days, required_days) if policy == "required" else days
+    return {"policy": policy, "display_days": days, "analysis_days": horizon,
+            "components": list(analysis_components),
+            "sleep_regularity_days": 14 if "sleep" in requested else None,
+            "trend_days": 28 if outcomes else None,
+            "association_pairs": 28 if outcomes and "training_load_series" in requested else None}
+
+
+def fetch_dashboard_summary(days: int, *, components, policy: str = "required") -> dict[str, Any]:
+    """Keep display and analytical reads in one unchanged-database boundary."""
+    plan = dashboard_analysis_plan(days, components, policy)
+    window = _verified_local_read_window(components=components)
+    with window:
+        display = _fetch_local_summary_unverified(days, components=components)
+        if plan["analysis_days"] > days and plan["components"] and display.get("status") != "no_data":
+            analysis = _fetch_local_summary_unverified(plan["analysis_days"], components=plan["components"], minimal_summary=True)
+            if display.get("summary", {}).get("period", "").split(" to ")[-1] != analysis.get("summary", {}).get("period", "").split(" to ")[-1]:
+                raise ValueError("ANALYSIS_WINDOW_END_CHANGED")
+            display["_analysis_source"] = analysis
+    display["data_integrity"] = window.public_summary()
+    display["_analysis_plan"] = plan
+    return display
+
+
 def parse_period(period_str: str | None, days_int: int) -> int:
     if period_str is not None:
         if period_str == "YTD":
@@ -1016,7 +1056,7 @@ def _pattern_reason(result: dict[str, Any]) -> str:
         if result.get("epoch_status") in epoch_reasons:
             return epoch_reasons[result["epoch_status"]]
     reasons = {
-        "not_requested": "本次授权范围未包含该数据组件。",
+        "not_requested": "本次未请求该数据组件，不代表用户拒绝授权。",
         "duplicate_conflict": "同一日期存在冲突值，衍生比较已停用。",
         "epoch_unknown": "设备或固件时期证据不足，衍生比较已停用。",
         "cross_epoch": "观测跨设备或固件时期，衍生比较已停用。",

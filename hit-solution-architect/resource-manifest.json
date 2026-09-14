@@ -1,18 +1,18 @@
 {
   "schema_version": 3,
   "skill": "hit-solution-architect",
-  "generated_at": "2026-09-07T06:17:23+08:00",
+  "generated_at": "2026-09-13T21:49:03.483138+00:00",
   "hash_algorithm": "SHA-256",
   "text_hash_normalization": "LF",
   "skill_md": "SKILL.md",
-  "skill_md_sha256": "4f29e71d5c0484b4b7d4fe34e133b1c36fade630dafded6f6519f0398b838d73",
+  "skill_md_sha256": "24d1bc9c00d709ce2aac3d274f6f24f7b3b7df99d06b9ec287e54c6896feed0e",
   "top_level_files": [
     "SKILL.md"
   ],
   "top_level_file_hashes": [
     {
       "path": "SKILL.md",
-      "sha256": "4f29e71d5c0484b4b7d4fe34e133b1c36fade630dafded6f6519f0398b838d73"
+      "sha256": "24d1bc9c00d709ce2aac3d274f6f24f7b3b7df99d06b9ec287e54c6896feed0e"
     }
   ],
   "top_level_directories": [

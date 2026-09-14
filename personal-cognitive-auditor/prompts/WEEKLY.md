@@ -4,7 +4,7 @@
 
 ## 自动保存契约
 
-- 明确生成个人日志周审计时，允许经 `personal-diary-writer` 权威门读取当前自然周的 canonical 个人日志日期块；不得扩展到其他周。
+- 明确生成个人日志周审计时，允许按 `personal-diary-writer` 用户授权与范围合同读取当前自然周的 canonical 个人日志日期块；不得扩展到其他周。
 - 周审计通过内容门、周期拓扑门和受保护请求门后默认保存。只有精确 canonical 请求或 `AUDIT_AUTOSAVE` 结构化命令可触发；草稿、预览、只读、不保存及其他修饰请求保持只读。
 - payload 的第一个非空行且唯一 H2 必须是 `## [YYYY-Www] Weekly Cognitive Audit｜起始日期 至 结束日期`；其余标题只能是 H3 或更深，不得携带日期 H1 或其他 H2。
 - 先运行 `audit_gate.py --period-type weekly --period-id YYYY-Www --enforce-template-fields`，再用同一字节 payload、`periodic-audit-request-v1` artifact 和范围回执执行 `diary_ops.py scope/replace --action replace-weekly-audit --week YYYY-Www`。完整保留周期结束日既有日记及其他周期审计；日期块不存在时只创建日期标题与本周审计。写后要求日期标题与目标周审计标题各恰好出现一次。

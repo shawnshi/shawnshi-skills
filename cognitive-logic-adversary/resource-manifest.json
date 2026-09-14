@@ -1,24 +1,24 @@
 {
   "schema_version": 3,
   "skill": "cognitive-logic-adversary",
-  "generated_at": "2026-09-07T06:17:23+08:00",
+  "generated_at": "2026-09-14T10:55:36+08:00",
   "hash_algorithm": "SHA-256",
   "text_hash_normalization": "LF",
   "skill_md": "SKILL.md",
-  "skill_md_sha256": "bc79e8fcd16db5642d1513635ee636dac7d3e3d0f80f95b2d5fdaddec0b8238f",
+  "skill_md_sha256": "320227042563d376cb86855a0ec23d939e2df53932e50da7cab92fe1adb802b9",
   "top_level_files": [
     "SKILL.md"
   ],
   "top_level_file_hashes": [
     {
       "path": "SKILL.md",
-      "sha256": "bc79e8fcd16db5642d1513635ee636dac7d3e3d0f80f95b2d5fdaddec0b8238f"
+      "sha256": "320227042563d376cb86855a0ec23d939e2df53932e50da7cab92fe1adb802b9"
     }
   ],
   "top_level_directories": [
-    "Workflows",
     "references",
-    "scripts"
+    "scripts",
+    "tests"
   ],
   "resource_directories": [
     {
@@ -33,7 +33,7 @@
   "resource_file_hashes": [
     {
       "path": "references/output_format.md",
-      "sha256": "76e7f03859787223e4cfbff4201d4b8ce6eb96501d31a4cf9d55d0786fbb6fc2"
+      "sha256": "ad002eb6c9c3bdcdab0f541e29c2b0c504c1bca68d6af86c26ffe2a601554625"
     },
     {
       "path": "references/philosophy.md",
@@ -46,6 +46,10 @@
     {
       "path": "scripts/test_game_resolver.py",
       "sha256": "4b279feb396775db3024b57295910b990f0b31c11dd0f8e096771e3d2d0002d9"
+    },
+    {
+      "path": "tests/test_skill_boundaries.py",
+      "sha256": "ca2bce1a82c92a21db3277b0e9ae557fce3b735c1d8aeb7ef71c7cdd60a7f0ed"
     }
   ],
   "declared_local_dependencies": [
@@ -53,7 +57,7 @@
       "path": "references/output_format.md",
       "exists": true,
       "resolved_path": "cognitive-logic-adversary/references/output_format.md",
-      "sha256": "76e7f03859787223e4cfbff4201d4b8ce6eb96501d31a4cf9d55d0786fbb6fc2"
+      "sha256": "ad002eb6c9c3bdcdab0f541e29c2b0c504c1bca68d6af86c26ffe2a601554625"
     },
     {
       "path": "scripts/game_resolver.py",

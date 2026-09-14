@@ -819,7 +819,13 @@ def _verify_periodic_request(
     event, text = _protected_user_event(value.get("request_event_id"))
     if value.get("request_event_sha256") != _sha256(text.encode("utf-8")):
         raise DiaryError("periodic request artifact is not bound to the user event")
+    # Match one transport marker without changing the protected event/hash.
+    # No recursive stripping, prose extraction, or substring authorization.
     normalized = text
+    for marker in ("【微信消息】\r\n", "【微信消息】\n"):
+        if normalized.startswith(marker):
+            normalized = normalized[len(marker):]
+            break
     for prefix in ("[OVERRIDE]", "[WARROOM]"):
         if normalized.startswith(prefix):
             normalized = normalized[len(prefix) :].strip()

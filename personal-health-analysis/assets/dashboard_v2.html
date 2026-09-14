@@ -253,7 +253,8 @@
     <section id="trust-bar" class="panel trust" aria-labelledby="trust-title">
       <h2 id="trust-title">数据可信度</h2>
       <dl class="trust-grid">
-        <div><dt>请求范围</dt><dd id="trust-requested-range">未知</dd></div>
+        <div><dt>展示范围</dt><dd id="trust-requested-range">未知</dd></div>
+        <div><dt>分析回看范围</dt><dd id="trust-analysis-range">与展示范围一致</dd></div>
         <div><dt>实际观测范围</dt><dd id="trust-observation-range">未知</dd></div>
         <div><dt>来源与组件</dt><dd id="trust-source">未知</dd></div>
         <div><dt>数据截至与新鲜度</dt><dd id="trust-freshness">未知</dd></div>
@@ -469,6 +470,8 @@
   function renderTrust(data){
     const meta=data.meta||{},requested=meta.requested_range||{},observed=meta.observation_range||{},source=meta.source||{},fresh=meta.freshness||{},epoch=meta.device_epoch||{},integrity=meta.integrity||{};
     text('trust-requested-range',requested.start&&requested.end?`${requested.start} 至 ${requested.end}（${requested.days} 天）`:'未知');
+    const analysis=meta.analysis_range||requested;
+    text('trust-analysis-range',analysis.start&&analysis.end?`${analysis.start} 至 ${analysis.end}（${analysis.days} 天）；仅用于指标计算，缺失不补零`:'与展示范围一致');
     text('trust-observation-range',observed.start&&observed.end?`${observed.start} 至 ${observed.end}`:'无有效观测');
     text('trust-source',`${sourceLabel(source.effective)} · ${(source.components||[]).length} 个绑定组件${source.fallback_attempted?' · 已尝试回退':''}`);
     text('trust-freshness',fresh.latest_observation_date?`${fresh.latest_observation_date} · 距请求结束 ${fresh.lag_days??'未知'} 天${fresh.source_marked_stale===true?' · 源标记陈旧':''}`:'无有效观测');

@@ -890,6 +890,55 @@ class DiaryOpsTests(unittest.TestCase):
                         ],
                     )
 
+    def test_wechat_periodic_marker_preserves_raw_evidence_and_strict_intent(self):
+        structured = "【微信消息】\nAUDIT_AUTOSAVE " + json.dumps({"period_id": "2026-W37", "period_type": "weekly", "save_policy": "canonical_autosave"}, sort_keys=True, separators=(",", ":"))
+        cases = [
+            (structured, True, "user", False, "2026-09-13T12:00:00+08:00"),
+            (structured + " 不保存", False, "user", False, "2026-09-13T12:00:00+08:00"),
+            ("【微信消息】\n本周个人日志审计", True, "user", False, "2026-09-13T12:00:00+08:00"),
+            ("【微信消息】\r\n本周个人日志审计", True, "user", False, "2026-09-13T12:00:00+08:00"),
+            ("【微信消息】\n[OVERRIDE]本周个人日志审计", True, "user", False, "2026-09-13T12:00:00+08:00"),
+            ("【微信消息】\n本周个人日志审计，草稿", False, "user", False, "2026-09-13T12:00:00+08:00"),
+            ("【微信消息】\n本周个人日志审计，不保存", False, "user", False, "2026-09-13T12:00:00+08:00"),
+            ("【微信消息】\n本周个人日志审计。下周：其他事项", False, "user", False, "2026-09-13T12:00:00+08:00"),
+            ("【微信消息】\n【微信消息】\n本周个人日志审计", False, "user", False, "2026-09-13T12:00:00+08:00"),
+            ("引用：本周个人日志审计", False, "user", False, "2026-09-13T12:00:00+08:00"),
+            ("【微信消息】\n本周个人日志审计", False, "assistant", False, "2026-09-13T12:00:00+08:00"),
+            ("【微信消息】\n本周个人日志审计", False, "user", True, "2026-09-13T12:00:00+08:00"),
+            ("【微信消息】\n本周个人日志审计", False, "user", False, "2026-09-14T12:00:00+08:00"),
+        ]
+        for text, allowed, role, forged_hash, timestamp in cases:
+            with self.subTest(text=text, role=role, forged_hash=forged_hash, timestamp=timestamp), tempfile.TemporaryDirectory() as tmp, self._runtime(tmp):
+                root = Path(tmp)
+                target = root / "2026-Q3.md"
+                before = "# 2026-09-13\n\n当日日记保留\n\n# 2026-09-12\n\n其他日期保留\n"
+                target.write_text(before, encoding="utf-8")
+                payload = root / "weekly.md"
+                payload.write_text("## [2026-W37] Weekly Cognitive Audit\n\n### 关键事实\n\n合成测试，不是真实日志。\n", encoding="utf-8")
+                args = self._args(target, payload, action="replace-weekly-audit", week="2026-W37", day="2026-09-13")
+                scope = diary_ops.build_scope(args)
+                receipt, approval = self._artifacts(root, scope, "weekly_audit_gate")
+                session = diary_ops.SESSION_ROOT / "session.jsonl"
+                event = {"id": "request-message-1", "type": "message", "timestamp": timestamp, "message": {"role": role, "content": text}}
+                session.write_text(json.dumps(event, ensure_ascii=False) + "\n", encoding="utf-8")
+                raw_session = session.read_bytes()
+                value = json.loads(approval.read_text(encoding="utf-8"))
+                value["request_event_sha256"] = hashlib.sha256(("本周个人日志审计" if forged_hash else text).encode()).hexdigest()
+                approval.write_text(json.dumps(value), encoding="utf-8")
+                write_args = self._args(target, payload, receipt, approval, action="replace-weekly-audit", week="2026-W37", day="2026-09-13")
+                if allowed:
+                    result = diary_ops.replace_operation(write_args)
+                    self.assertEqual(result["status"], "success")
+                    saved = target.read_text(encoding="utf-8")
+                    self.assertIn("当日日记保留", saved)
+                    self.assertIn("其他日期保留", saved)
+                    self.assertEqual(saved.count("## [2026-W37]"), 1)
+                else:
+                    with self.assertRaises(diary_ops.DiaryError):
+                        diary_ops.replace_operation(write_args)
+                    self.assertEqual(target.read_text(encoding="utf-8"), before)
+                self.assertEqual(session.read_bytes(), raw_session)
+
     def test_exact_current_period_alias_is_accepted_from_protected_user_event(self):
         with tempfile.TemporaryDirectory() as tmp, self._runtime(tmp):
             root = Path(tmp)

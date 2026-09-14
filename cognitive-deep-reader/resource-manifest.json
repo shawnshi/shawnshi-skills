@@ -1,18 +1,18 @@
 {
   "schema_version": 3,
   "skill": "cognitive-deep-reader",
-  "generated_at": "2026-09-06T20:31:57+08:00",
+  "generated_at": "2026-09-13T21:31:50.787130+00:00",
   "hash_algorithm": "SHA-256",
   "text_hash_normalization": "LF",
   "skill_md": "SKILL.md",
-  "skill_md_sha256": "3b6ea6d96b86bad5b3eeac6c85934de6dd9a835ddf7a23bce939077a26a2fd6e",
+  "skill_md_sha256": "781741bba8bf31284ca91ad845e488914d37f5171d2fd1c557627a0bfa860629",
   "top_level_files": [
     "SKILL.md"
   ],
   "top_level_file_hashes": [
     {
       "path": "SKILL.md",
-      "sha256": "3b6ea6d96b86bad5b3eeac6c85934de6dd9a835ddf7a23bce939077a26a2fd6e"
+      "sha256": "781741bba8bf31284ca91ad845e488914d37f5171d2fd1c557627a0bfa860629"
     }
   ],
   "top_level_directories": [],

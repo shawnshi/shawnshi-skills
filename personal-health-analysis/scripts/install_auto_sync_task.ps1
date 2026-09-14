@@ -19,9 +19,8 @@ $config = [IO.Path]::GetFullPath($ConfigDir)
 $state = [IO.Path]::GetFullPath($StateRoot)
 $scratch = [IO.Path]::GetFullPath($ScratchRoot)
 $runner = [IO.Path]::GetFullPath((Join-Path $PSScriptRoot 'garmin_auto_sync.py'))
-$authorityConfig = [IO.Path]::GetFullPath((Join-Path (Split-Path -Parent $PSScriptRoot) 'runtime-authority.json'))
 
-foreach ($required in @($python, $config, $runner, $authorityConfig)) {
+foreach ($required in @($python, $config, $runner)) {
     if (-not (Test-Path -LiteralPath $required)) {
         throw "Required path is missing: $required"
     }
@@ -37,7 +36,6 @@ $arguments = @(
     '--garmindb-python', ('"{0}"' -f $python),
     '--scratch-dir', ('"{0}"' -f $scratch),
     '--state-output', ('"{0}"' -f $stateFile),
-    '--authority-config', ('"{0}"' -f $authorityConfig),
     '--timeout-seconds', '480',
     '--total-timeout-seconds', '900',
     '--allow-network', '--allow-sync', '--allow-health-data'

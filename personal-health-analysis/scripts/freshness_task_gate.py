@@ -13,7 +13,6 @@ from datetime import date, timedelta
 from pathlib import Path
 from typing import Callable
 
-import runtime_authority
 
 
 COMPONENTS = ("sleep", "hrv", "body_battery", "heart_rate", "stress")
@@ -83,6 +82,8 @@ def validate_task(snapshot: dict, expected: dict) -> str | None:
     for passed, reason in checks:
         if not passed:
             return reason
+    if not expected.get("arguments_sha256"):
+        return "task_arguments_binding_required"
     if snapshot.get("arguments_sha256") != expected["arguments_sha256"]:
         return "task_arguments_drift"
     if snapshot.get("state") not in {"Ready", "Running"}:
@@ -93,7 +94,7 @@ def validate_task(snapshot: dict, expected: dict) -> str | None:
 def validate_terminal_state(
     state: dict | None,
     end: str,
-    authority: dict,
+    legacy_source_binding: dict | None,
     expected_run_id: str | None,
     expected_start: str | None = None,
 ) -> str | None:
@@ -111,9 +112,6 @@ def validate_terminal_state(
         return "terminal_window_mismatch"
     if expected_start is not None and (state.get("requested_window") or {}).get("start") != expected_start:
         return "terminal_window_mismatch"
-    binding = state.get("runtime_binding") or {}
-    if binding.get("authority_version") != authority.get("authority_version") or binding.get("authority_sha256") != authority.get("authority_sha256"):
-        return "terminal_runtime_binding_mismatch"
     if state.get("database_fingerprint_changed") is not True:
         return "terminal_database_unchanged"
     dates = state.get("component_latest_observation_dates") or {}
@@ -161,18 +159,13 @@ def run_gate(
     if not 1 <= args.max_polls <= 240 or not 0.1 <= args.poll_seconds <= 10:
         audit["reason"] = "poll_budget_invalid"
         return 2, audit
-    authority = runtime_authority.verify(json.loads(Path(args.authority_config).read_text(encoding="utf-8")))
-    if not authority.get("ok"):
-        audit.update({"task_status": "invalid", "reason": "runtime_authority_mismatch"})
-        return 2, audit
     expected = {
         "task_name": args.task_name,
         "python": args.python,
         "runner": args.runner,
-        "authority_config": args.authority_config,
         "state_output": args.state_output,
         "working_directory": str(Path(args.runner).resolve().parent),
-        "arguments_sha256": (authority.get("task_binding") or {}).get("arguments_sha256"),
+        "arguments_sha256": getattr(args, "expected_arguments_sha256", None),
     }
     snapshot = probe("Inspect")
     task_error = validate_task(snapshot, expected)
@@ -190,7 +183,7 @@ def run_gate(
             if direct_runner is None:
                 audit.update({"task_status": "invalid", "reason": "direct_sync_config_missing"})
                 return 2, audit
-            bound_runner = (authority.get("entrypoints") or {}).get("scripts/garmin_auto_sync.py")
+            bound_runner = str(Path(__file__).with_name("garmin_auto_sync.py").resolve())
             if not bound_runner or _norm(args.runner) != _norm(bound_runner):
                 audit.update({"task_status": "invalid", "reason": "direct_sync_runner_drift"})
                 return 2, audit
@@ -210,7 +203,7 @@ def run_gate(
                 else validate_terminal_state(
                     current_state,
                     args.end,
-                    authority,
+                    None,
                     expected_run_id,
                     (date.fromisoformat(args.end) - timedelta(days=args.direct_days - 1)).isoformat(),
                 )
@@ -259,7 +252,7 @@ def run_gate(
         ):
             continue
         if isinstance(current_state, dict) and current_state.get("status") in TERMINAL_STATUSES:
-            error = validate_terminal_state(current_state, args.end, authority, expected_run_id)
+            error = validate_terminal_state(current_state, args.end, None, expected_run_id)
             if error:
                 audit.update({"task_status": str(current_state.get("status")), "reason": error})
                 return 1, audit
@@ -274,7 +267,8 @@ def build_parser() -> argparse.ArgumentParser:
     parser.add_argument("--task-name", default="Codex-Garmin-Health-Sync")
     parser.add_argument("--python", required=True)
     parser.add_argument("--runner", required=True)
-    parser.add_argument("--authority-config", required=True)
+    parser.add_argument("--authority-config", help=argparse.SUPPRESS)  # accepted for old callers only
+    parser.add_argument("--expected-arguments-sha256", help="Approved scheduled-task command fingerprint; required when an existing task is inspected")
     parser.add_argument("--state-output", required=True)
     parser.add_argument("--end", required=True)
     parser.add_argument("--max-polls", type=int, default=204)
@@ -299,7 +293,6 @@ def _run_direct_sync(args: argparse.Namespace) -> int:
     paths = (
         args.python,
         args.runner,
-        args.authority_config,
         args.state_output,
         args.direct_config_dir,
         args.direct_garmindb_python,
@@ -327,8 +320,6 @@ def _run_direct_sync(args: argparse.Namespace) -> int:
         args.direct_scratch_dir,
         "--state-output",
         args.state_output,
-        "--authority-config",
-        args.authority_config,
         "--timeout-seconds",
         str(args.direct_timeout_seconds),
         "--total-timeout-seconds",

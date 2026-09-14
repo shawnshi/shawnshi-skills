@@ -8,10 +8,14 @@
                     "primary_skill": "academic-paper-reader",
                     "secondary_skills": [],
                     "request_signals": [
-                        "read one paper",
-                        "paper dissection",
-                        "paper lineage tracing",
-                        "feynman paper explanation"
+                        "read one paper with evidence needed for the question",
+                        "review one paper identity methods and results",
+                        "trace one paper lineage"
+                    ],
+                    "should_not_trigger_signals": [
+                        "non-paper longform argument analysis",
+                        "video subtitles or transcript analysis",
+                        "simple non-paper summary or compression"
                     ]
                 },
                 {
@@ -19,10 +23,15 @@
                     "primary_skill": "cognitive-hv-analysis",
                     "secondary_skills": [],
                     "request_signals": [
-                        "horizontal vertical analysis",
-                        "company life trajectory",
-                        "product deep dive with competitors",
-                        "concept longitudinal comparison"
+                        "entity evolution with contemporaneous peer comparison",
+                        "company life trajectory and same-period competitors",
+                        "product evolution and horizontal alternatives",
+                        "concept longitudinal and horizontal comparison"
+                    ],
+                    "should_not_trigger_signals": [
+                        "market or vendor decision without longitudinal comparison",
+                        "entity identity timeline or disputed fact verification",
+                        "cross-domain conflicting-evidence synthesis without horizontal vertical focus"
                     ]
                 },
                 {
@@ -48,23 +57,47 @@
                         "personal-write-humanizer"
                     ],
                     "request_signals": [
-                        "write original longform article",
-                        "thought leadership essay",
-                        "column draft from scratch",
-                        "opinion article generation"
+                        "draft healthcare or medical digitalization article",
+                        "add or change healthcare claims with evidence",
+                        "interpret healthcare policy in an article",
+                        "review healthcare article evidence and publication risk"
+                    ],
+                    "should_not_trigger_signals": [
+                        "language-only humanization even with medical terms",
+                        "faithful proofreading restructuring or compression of settled facts",
+                        "generic non-healthcare article writing"
                     ]
                 },
                 {
                     "id": "humanize_existing_draft",
                     "primary_skill": "personal-write-humanizer",
-                    "secondary_skills": [
-                        "personal-writing-assistant"
-                    ],
+                    "secondary_skills": [],
                     "request_signals": [
-                        "humanize chinese draft",
-                        "remove ai tone",
-                        "rewrite translationese",
-                        "say it like a human"
+                        "humanize existing chinese draft without changing facts or stance",
+                        "remove ai tone without domain judgment",
+                        "rewrite translationese naturally",
+                        "say it like a human without new claims"
+                    ],
+                    "should_not_trigger_signals": [
+                        "faithful controlled editing without explicit naturalization request",
+                        "medical evidence or policy judgment",
+                        "healthcare publication review"
+                    ]
+                },
+                {
+                    "id": "faithful_controlled_editing",
+                    "primary_skill": "tool-text-forger",
+                    "secondary_skills": [],
+                    "request_signals": [
+                        "proofread settled facts without changing stance",
+                        "lightly polish a final-fact email preserving dates and responsibilities",
+                        "restructure existing text within frozen claims and conditions",
+                        "compress draft without dropping exceptions or references"
+                    ],
+                    "should_not_trigger_signals": [
+                        "explicit remove ai tone or naturalization request",
+                        "add or verify healthcare claims or policy meaning",
+                        "healthcare publication review"
                     ]
                 },
                 {

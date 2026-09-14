@@ -10,7 +10,7 @@ import math
 import os
 import sys
 import tempfile
-from datetime import datetime, timedelta
+from datetime import date, datetime, timedelta
 from pathlib import Path
 from typing import Any
 
@@ -38,6 +38,7 @@ from garmin_intelligence import (
     analyze_baseline_change,
     analyze_health_patterns,
     fetch_local_summary,
+    fetch_dashboard_summary,
     generate_chinese_insight,
     parse_period,
 )
@@ -53,6 +54,7 @@ DASHBOARD_DEFAULT_COMPONENTS = (
     "body_battery",
     "heart_rate",
     "stress",
+    "training_load_series",
 )
 DASHBOARD_SERIES_FIELDS = (
     "dates",
@@ -924,6 +926,8 @@ def build_dashboard_payload(
     if not isinstance(days, int) or isinstance(days, bool) or days < 1:
         raise ValueError("INVALID_PERIOD_SCOPE")
     components = _normalize_dashboard_components(selected_components)
+    analysis_source = summary_data.get("_analysis_source")
+    analysis_plan = summary_data.get("_analysis_plan") or {}
     summary_data = _scope_dashboard_source(summary_data, components)
     if requested_start is None or requested_end is None:
         requested_start, requested_end = get_date_range(days)
@@ -1050,9 +1054,22 @@ def build_dashboard_payload(
         if {"heart_rate", "hrv"}.issubset(components)
         else _unrequested_baseline()
     )
+    analysis_days = days
+    analysis_start = requested_start
+    pattern_source = summary_data
+    analysis_components = components
+    if isinstance(analysis_source, dict):
+        analysis_days = analysis_plan.get("analysis_days")
+        if not isinstance(analysis_days, int) or not days <= analysis_days <= max(days, 29):
+            raise ValueError("INVALID_ANALYSIS_WINDOW")
+        analysis_start = (date.fromisoformat(requested_end) - timedelta(days=analysis_days - 1)).isoformat()
+        analysis_components = tuple(c for c in components if c in {"sleep", "hrv", "heart_rate", "training_load_series"})
+        pattern_source = _scope_dashboard_source(analysis_source, analysis_components)
+        if {"heart_rate", "hrv"}.issubset(analysis_components):
+            baseline = _baseline_view(pattern_source)
     patterns = analyze_health_patterns(
-        summary_data,
-        requested_start=requested_start,
+        pattern_source,
+        requested_start=analysis_start,
         requested_end=requested_end,
     )
     observed_ranges = [
@@ -1117,6 +1134,11 @@ def build_dashboard_payload(
                 "date_semantics": "inclusive_source_calendar_days",
                 "timezone": None,
                 "timezone_status": "not_available_in_source",
+            },
+            "analysis_range": {
+                "start": analysis_start, "end": requested_end, "days": analysis_days,
+                "components": list(analysis_components),
+                "policy": analysis_plan.get("policy", "requested"),
             },
             "observation_range": {
                 "start": first_observation,
@@ -1585,6 +1607,10 @@ def _project_dashboard_payload(payload: dict[str, Any]) -> dict[str, Any]:
                     "timezone_status",
                 )
             },
+            "analysis_range": {
+                key: (meta.get("analysis_range") or {}).get(key)
+                for key in ("start", "end", "days", "components", "policy")
+            },
             "observation_range": {
                 "start": observed.get("start"),
                 "end": observed.get("end"),
@@ -1923,11 +1949,13 @@ def _load_summary(
     network_capability: object = None,
     health_data_capability: object = None,
     request: dict[str, object] | None = None,
+    analysis_window: str = "requested",
 ) -> dict[str, Any]:
     if source == "local":
         if not HAS_SQLITE:
             raise RuntimeError("LOCAL_DATA_UNAVAILABLE")
-        result = fetch_local_summary(days, components=components)
+        result = (fetch_dashboard_summary(days, components=components, policy=analysis_window)
+                  if analysis_window == "required" else fetch_local_summary(days, components=components))
     else:
         try:
             require_capability(
@@ -2015,6 +2043,8 @@ def main(argv: list[str] | None = None) -> int:
     parser.add_argument("--days", type=int)
     parser.add_argument("--period")
     parser.add_argument("--output")
+    parser.add_argument("--analysis-window", choices=("required", "requested"), default="required",
+                        help="Local dashboard: bounded algorithm lookbacks (up to 29 days minimum), or strictly the display window.")
     parser.add_argument("--context-file", help="Explicit local user-context JSON; requires sleep component")
     parser.add_argument(
         "--source",
@@ -2077,6 +2107,8 @@ def main(argv: list[str] | None = None) -> int:
             _normalize_dashboard_components(args.components)
             if args.components is not None
             else DASHBOARD_DEFAULT_COMPONENTS
+            if args.source == "local" and not args.fallback_live and args.chart == "dashboard"
+            else tuple(c for c in DASHBOARD_DEFAULT_COMPONENTS if c != "training_load_series")
         )
     except ValueError:
         print(json.dumps({"status": "INVALID_COMPONENT_SCOPE"}), file=sys.stderr)
@@ -2139,6 +2171,7 @@ def main(argv: list[str] | None = None) -> int:
             network_capability=network_capability,
             health_data_capability=health_data_capability,
             request=request,
+            analysis_window=(args.analysis_window if args.source == "local" and not args.fallback_live and args.chart == "dashboard" else "requested"),
         )
         if (
             args.source == "local"

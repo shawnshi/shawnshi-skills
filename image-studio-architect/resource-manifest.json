@@ -1,18 +1,18 @@
 {
   "schema_version": 3,
   "skill": "image-studio-architect",
-  "generated_at": "2026-09-05T17:15:44+08:00",
+  "generated_at": "2026-09-13T21:31:50.787130+00:00",
   "hash_algorithm": "SHA-256",
   "text_hash_normalization": "LF",
   "skill_md": "SKILL.md",
-  "skill_md_sha256": "2aaeffa0b97576536a80a71743e8d7d86e20a903882f5236ff342045da373ea1",
+  "skill_md_sha256": "6aaf18b1db80039991fbf6ec4597404e9436dfe26a7ccdb36ea25aeda33bf08f",
   "top_level_files": [
     "SKILL.md"
   ],
   "top_level_file_hashes": [
     {
       "path": "SKILL.md",
-      "sha256": "2aaeffa0b97576536a80a71743e8d7d86e20a903882f5236ff342045da373ea1"
+      "sha256": "6aaf18b1db80039991fbf6ec4597404e9436dfe26a7ccdb36ea25aeda33bf08f"
     }
   ],
   "top_level_directories": [],

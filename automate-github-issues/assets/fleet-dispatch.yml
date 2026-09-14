@@ -19,9 +19,7 @@
 name: Fleet Dispatch
 
 on:
-  schedule:
-    # Runs daily at 6am UTC (customize as needed)
-    - cron: "0 6 * * *"
+  # Manual only. Add a schedule only after explicit frequency authorization.
   workflow_dispatch:
     inputs:
       base_branch:

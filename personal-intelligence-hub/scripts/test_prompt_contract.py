@@ -114,8 +114,8 @@ class PromptContractTests(unittest.TestCase):
             policy["observability"]["normal_run_token_meter"],
             "total_tokens - cache_read_tokens - cache_write_tokens",
         )
-        self.assertEqual(policy["observability"]["semantic_timeout_ms"], 240000)
-        self.assertEqual(policy["observability"]["red_team_timeout_ms"], 120000)
+        self.assertEqual(policy["observability"]["semantic_timeout_ms"], 900000)  # owner-authorized 2026-09-14: wall-clock only
+        self.assertEqual(policy["observability"]["red_team_timeout_ms"], 600000)  # owner-authorized 2026-09-14: wall-clock only
         self.assertEqual(
             policy["observability"]["supplement_finalization_grace_seconds"],
             300,

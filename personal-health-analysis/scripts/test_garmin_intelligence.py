@@ -901,7 +901,8 @@ class SafetyBoundaryTests(unittest.TestCase):
         }
         with (
             patch.object(module, "HAS_SQLITE", True),
-            patch.object(module, "sqlite_activities", return_value=activities),
+            patch.object(module, "sqlite_training_load", return_value=activities),
+            patch.object(module, "sqlite_activities", side_effect=AssertionError("aggregate request must not read activity details")),
             patch.object(module, "usable_method_config", return_value=config),
             patch.object(
                 module, "get_daily_friction_matrix", return_value=empty

@@ -1,18 +1,18 @@
 {
   "schema_version": 3,
   "skill": "industry-strategy-analyst",
-  "generated_at": "2026-09-11T11:23:01+08:00",
+  "generated_at": "2026-09-13T21:31:50.787130+00:00",
   "hash_algorithm": "SHA-256",
   "text_hash_normalization": "LF",
   "skill_md": "SKILL.md",
-  "skill_md_sha256": "8fa47d760f7f5ef97be4a23bc7c44e8684f5e68dfc5d6194678ad5e2414e476d",
+  "skill_md_sha256": "2c9931b2760097287a044e04c436b5f4d6dbfd3fd79b4f0d203515a68951dcf8",
   "top_level_files": [
     "SKILL.md"
   ],
   "top_level_file_hashes": [
     {
       "path": "SKILL.md",
-      "sha256": "8fa47d760f7f5ef97be4a23bc7c44e8684f5e68dfc5d6194678ad5e2414e476d"
+      "sha256": "2c9931b2760097287a044e04c436b5f4d6dbfd3fd79b4f0d203515a68951dcf8"
     }
   ],
   "top_level_directories": [
@@ -49,11 +49,11 @@
     },
     {
       "path": "references/output-patterns.md",
-      "sha256": "e6a91d8afab52483cefacdec67e1fb5b6c7568d2b927d59d10fb17a05f5b63aa"
+      "sha256": "63ee277c9ebaf965b20d5fe31b583f7292ee87428e79dc7a4b78765e8c492156"
     },
     {
       "path": "references/research-protocol.md",
-      "sha256": "ae8352c9d36d131dd222f3a03b5df8e497ab15f5008b055a36ecefd7823fbf4a"
+      "sha256": "87531f8c624b4ac5c964ad6a23d106a48bafb7a7456a87aee2d0404d0cf6a3c1"
     },
     {
       "path": "references/validation-cases.md",
@@ -75,13 +75,13 @@
       "path": "references/output-patterns.md",
       "exists": true,
       "resolved_path": "industry-strategy-analyst/references/output-patterns.md",
-      "sha256": "e6a91d8afab52483cefacdec67e1fb5b6c7568d2b927d59d10fb17a05f5b63aa"
+      "sha256": "63ee277c9ebaf965b20d5fe31b583f7292ee87428e79dc7a4b78765e8c492156"
     },
     {
       "path": "references/research-protocol.md",
       "exists": true,
       "resolved_path": "industry-strategy-analyst/references/research-protocol.md",
-      "sha256": "ae8352c9d36d131dd222f3a03b5df8e497ab15f5008b055a36ecefd7823fbf4a"
+      "sha256": "87531f8c624b4ac5c964ad6a23d106a48bafb7a7456a87aee2d0404d0cf6a3c1"
     },
     {
       "path": "references/validation-cases.md",

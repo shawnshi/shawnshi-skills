@@ -1,260 +1,165 @@
-/**
- * <!-- Input: URL, Output Path (Optional), Wait Flag -->
- * <!-- Output: Markdown File, Metadata (YAML Frontmatter) -->
- * <!-- Pos: scripts/main.ts. CLI Entry Point for CDP Capturer. -->
- *
- * !!! Maintenance Protocol: This script orchestrates Chrome launch and page evaluation.
- * !!! Dependency: Requires 'bun' runtime and local Chrome installation.
- */
-
+/** CLI capture: one newly created target, temporary profile, stdout unless -o is explicit. */
 import { createInterface } from "node:readline";
-import { writeFile, mkdir, access } from "node:fs/promises";
+import { writeFile, mkdir } from "node:fs/promises";
 import path from "node:path";
 import process from "node:process";
+import { pathToFileURL } from "node:url";
 
-import { CdpConnection, getFreePort, launchChrome, waitForChromeDebugPort, waitForNetworkIdle, waitForPageLoad, autoScroll, evaluateScript, killChrome } from "./cdp.js";
+import { CdpConnection, getFreePort, launchChrome, waitForChromeDebugPort, waitForNetworkIdle, waitForPageLoad, autoScroll, evaluateScript, killChrome, createTargetAndAttach } from "./cdp.js";
 import { cleanupAndExtractScript, htmlToMarkdown, createMarkdownDocument, type PageMetadata, type ConversionResult } from "./html-to-markdown.js";
-import { resolveUrlToMarkdownDataDir } from "./paths.js";
+import { createChromeProfile } from "./paths.js";
 import { DEFAULT_TIMEOUT_MS, CDP_CONNECT_TIMEOUT_MS, NETWORK_IDLE_TIMEOUT_MS, POST_LOAD_DELAY_MS, SCROLL_STEP_WAIT_MS, SCROLL_MAX_STEPS } from "./constants.js";
 
 function sleep(ms: number): Promise<void> {
   return new Promise((resolve) => setTimeout(resolve, ms));
 }
 
-async function fileExists(filePath: string): Promise<boolean> {
-  try {
-    await access(filePath);
-    return true;
-  } catch {
-    return false;
-  }
-}
-
-interface Args {
+export interface Args {
   url: string;
   output?: string;
+  profile?: string;
   wait: boolean;
   timeout: number;
 }
 
-function parseArgs(argv: string[]): Args {
+export function parseArgs(argv: string[]): Args {
   const args: Args = { url: "", wait: false, timeout: DEFAULT_TIMEOUT_MS };
   for (let i = 2; i < argv.length; i++) {
-    const arg = argv[i];
+    const arg = argv[i]!;
     if (arg === "--wait" || arg === "-w") {
       args.wait = true;
-    } else if (arg === "-o" || arg === "--output") {
-      args.output = argv[++i];
-    } else if (arg === "--timeout" || arg === "-t") {
-      args.timeout = parseInt(argv[++i], 10) || DEFAULT_TIMEOUT_MS;
+    } else if (["-o", "--output", "--profile", "--timeout", "-t"].includes(arg)) {
+      const value = argv[++i];
+      if (!value || value.startsWith("-")) throw new Error(`Missing value for ${arg}`);
+      if (arg === "--profile") args.profile = value;
+      else if (arg === "-o" || arg === "--output") args.output = value;
+      else {
+        args.timeout = Number(value);
+        if (!Number.isSafeInteger(args.timeout) || args.timeout <= 0) throw new Error("Timeout must be a positive integer (ms)");
+      }
     } else if (!arg.startsWith("-") && !args.url) {
       args.url = arg;
-    }
+    } else throw new Error(`Unexpected argument: ${arg}`);
   }
+  if (!args.url) throw new Error("Usage: bun scripts/main.ts <url> [-o output.md] [--wait] [--timeout ms] [--profile directory]");
+  if (!["http:", "https:"].includes(new URL(args.url).protocol)) throw new Error("Only HTTP(S) URLs are supported");
   return args;
 }
 
-function generateSlug(title: string, url: string): string {
-  const text = title || new URL(url).pathname.replace(/\//g, "-");
-  return text
-    .replace(/[\\\/:*?"<>|]/g, "") // Remove illegal filename characters
-    .trim()
-    .replace(/\s+/g, "-")
-    .replace(/-+/g, "-")
-    .replace(/^-|-$/g, "")
-    .slice(0, 150) || "page";
-}
-
-function formatTimestamp(): string {
-  const now = new Date();
-  const pad = (n: number) => n.toString().padStart(2, "0");
-  return `${now.getFullYear()}${pad(now.getMonth() + 1)}${pad(now.getDate())}-${pad(now.getHours())}${pad(now.getMinutes())}${pad(now.getSeconds())}`;
-}
-
-async function generateOutputPath(url: string, title: string): Promise<string> {
-  const slug = generateSlug(title, url);
-  const dataDir = process.cwd(); // Save to current directory
-  const basePath = path.join(dataDir, `${slug}.md`);
-
-  if (!(await fileExists(basePath))) {
-    return basePath;
-  }
-
-  const timestampSlug = `${slug}-${formatTimestamp()}`;
-  return path.join(dataDir, `${timestampSlug}.md`);
-}
-
-async function waitForPageReady(cdp: CdpConnection, sessionId: string, targetUrl: string): Promise<void> {
-  console.log("Page opened. Please log in if necessary.");
-  console.log("Waiting for target page to load... (Or press Enter to force capture)");
-
-  const rl = createInterface({ input: process.stdin, output: process.stdout });
-  let resolved = false;
-
-  const manualSignal = new Promise<void>((resolve) => {
-    rl.once("line", () => {
-      if (!resolved) {
-        console.log("Manual capture triggered.");
-        resolved = true;
-        rl.close();
-        resolve();
-      }
-    });
-  });
-
-  const autoCheck = new Promise<void>(async (resolve) => {
-    const targetHostname = new URL(targetUrl).hostname;
-    
-    while (!resolved) {
-      try {
-        const expr = `({ url: window.location.href, title: document.title, ready: document.readyState })`;
-        // Use a short timeout for the check to avoid blocking
-        const state = await evaluateScript<{url: string, title: string, ready: string}>(cdp, sessionId, expr, 1000);
-        
-        // Logic: We are back on the target domain (e.g. draft.blogger.com) AND title doesn't look like a login page
-        if (state && state.url && state.url.includes(targetHostname)) {
-           const isLoginPage = state.title.toLowerCase().includes("sign in") || state.url.includes("accounts.google.com") || state.title.toLowerCase().includes("happening now") || state.title.toLowerCase().includes("the everything app") || state.title.toLowerCase().includes("log in");
-           
-           if (!isLoginPage && state.ready === 'complete') {
-             console.log(`\nAuto-detected target page: "${state.title}"`);
-             console.log("Giving it 5 seconds to finish rendering and load iframes...");
-             await sleep(5000); // Wait for client-side hydration and iframes
-             resolved = true;
-             rl.close();
-             resolve();
-             return;
-           }
-        }
-      } catch (e) {
-        // Ignore evaluation errors during navigation/reloads
-      }
-      await sleep(1000);
-    }
-  });
-
-  await Promise.race([manualSignal, autoCheck]);
-}
-
-async function captureUrl(args: Args): Promise<ConversionResult> {
-  const port = await getFreePort();
-  const chrome = await launchChrome(args.url, port, false);
-
-  let cdp: CdpConnection | null = null;
+export async function waitForPageReady(cdp: CdpConnection, sessionId: string, targetUrl: string, timeoutMs: number): Promise<void> {
+  console.error("Page opened. Log in if necessary; press Enter to capture the bound page.");
+  const rl = createInterface({ input: process.stdin, output: process.stderr });
+  let manual = false;
+  rl.once("line", () => { manual = true; });
+  const deadline = Date.now() + timeoutMs;
   try {
-    const wsUrl = await waitForChromeDebugPort(port, 30_000);
-    cdp = await CdpConnection.connect(wsUrl, CDP_CONNECT_TIMEOUT_MS);
+    while (Date.now() < deadline) {
+      if (manual) return;
+      const state = await evaluateScript<{ url: string; title: string; ready: string }>(
+        cdp, sessionId, "({ url: window.location.href, title: document.title, ready: document.readyState })", Math.max(1, Math.min(1000, deadline - Date.now()))
+      );
+      // Hostname equality, never substring matching against a URL or query string.
+      if (state && new URL(state.url).hostname === new URL(targetUrl).hostname && state.ready === "complete" && !/sign in|log in|happening now|the everything app/i.test(state.title)) return;
+      await sleep(Math.min(200, Math.max(0, deadline - Date.now())));
+    }
+    throw new Error("Timed out waiting for target page or manual capture");
+  } finally {
+    rl.close();
+  }
+}
 
-    const targets = await cdp.send<{ targetInfos: Array<{ targetId: string; type: string; url: string }> }>("Target.getTargets");
-    const pageTarget = targets.targetInfos.find(t => t.type === "page" && t.url.startsWith("http"));
-    if (!pageTarget) throw new Error("No page target found");
-
-    const { sessionId } = await cdp.send<{ sessionId: string }>("Target.attachToTarget", { targetId: pageTarget.targetId, flatten: true });
-    await cdp.send("Network.enable", {}, { sessionId });
-    await cdp.send("Page.enable", {}, { sessionId });
-
+export async function captureUrl(args: Args): Promise<ConversionResult> {
+  const profile = await createChromeProfile(args.profile);
+  let chrome: Awaited<ReturnType<typeof launchChrome>> | null = null;
+  let cdp: CdpConnection | null = null;
+  let failed = false;
+  let interrupted = false;
+  const debugRequest = new AbortController();
+  const onInterrupt = () => {
+    interrupted = true;
+    debugRequest.abort(new Error("Capture interrupted"));
+    try { cdp?.close(); } catch (error) { console.error("Interrupt cleanup error:", error); }
+  };
+  process.once("SIGINT", onInterrupt);
+  process.once("SIGTERM", onInterrupt);
+  try {
+    const port = await getFreePort();
+    chrome = await launchChrome("about:blank", port, false, profile.directory);
+    const wsUrl = await waitForChromeDebugPort(port, Math.min(args.timeout, 30_000), debugRequest.signal);
+    cdp = await CdpConnection.connect(wsUrl, Math.min(args.timeout, CDP_CONNECT_TIMEOUT_MS));
+    if (interrupted) throw new Error("Capture interrupted");
+    // Creation gives an unambiguous identity even when navigation redirects or other tabs exist.
+    const { sessionId } = await createTargetAndAttach(cdp, "about:blank");
+    const navigation = await cdp.send<{ errorText?: string }>("Page.navigate", { url: args.url }, { sessionId, timeoutMs: args.timeout });
+    if (navigation.errorText) throw new Error(`Navigation failed: ${navigation.errorText}`);
     if (args.wait) {
-      await waitForPageReady(cdp, sessionId, args.url);
+      await waitForPageReady(cdp, sessionId, args.url, args.timeout);
     } else {
-      console.log("Waiting for page to load...");
-      await Promise.race([
-        waitForPageLoad(cdp, sessionId, 15_000),
-        sleep(8_000)
-      ]);
-      await waitForNetworkIdle(cdp, sessionId, NETWORK_IDLE_TIMEOUT_MS);
+      console.error("Waiting for bound page to load...");
+      await waitForPageLoad(cdp, sessionId, args.timeout);
+      await waitForNetworkIdle(cdp, sessionId, NETWORK_IDLE_TIMEOUT_MS, args.timeout);
       await sleep(POST_LOAD_DELAY_MS);
-      console.log("Scrolling to trigger lazy load...");
       await autoScroll(cdp, sessionId, SCROLL_MAX_STEPS, SCROLL_STEP_WAIT_MS);
       await sleep(POST_LOAD_DELAY_MS);
     }
 
-    console.log("Capturing page content...");
+    if (interrupted) throw new Error("Capture interrupted");
+    console.error("Capturing bound main page (frames and other tabs excluded)...");
     const extracted = await evaluateScript<{ title: string; description?: string; author?: string; published?: string; html: string }>(
       cdp, sessionId, cleanupAndExtractScript, args.timeout
     );
-
-    let combinedHtml = extracted.html;
-    let combinedTitle = extracted.title || "";
-
-    // Try to find content in other targets (iframes that might be separate targets)
-    try {
-      for (const target of targets.targetInfos) {
-        if (target.type === "iframe" || (target.type === "page" && target.targetId !== pageTarget.targetId)) {
-          try {
-            const { sessionId: frameSessionId } = await cdp.send<{ sessionId: string }>("Target.attachToTarget", { targetId: target.targetId, flatten: true });
-            await cdp.send("Runtime.enable", {}, { sessionId: frameSessionId });
-            const frameContent = await evaluateScript<{ title: string; html: string }>(
-              cdp, frameSessionId, "({ title: document.title, html: document.body ? document.body.innerHTML : '' })", 5000
-            );
-            if (frameContent.html && frameContent.html.length > 200) {
-              console.log(`Captured additional content from target: ${target.url || frameContent.title}`);
-              combinedHtml += `\n<!-- Target Content Start: ${target.url} -->\n${frameContent.html}\n<!-- Target Content End -->\n`;
-              if (!combinedTitle || combinedTitle === "Post: Preview") {
-                combinedTitle = frameContent.title || combinedTitle;
-              }
-            }
-            await cdp.send("Target.detachFromTarget", { sessionId: frameSessionId });
-          } catch (e) {
-            // Skip frames that fail to attach or evaluate
-          }
-        }
-      }
-    } catch (e) {}
-
+    if (!extracted || typeof extracted.html !== "string" || !extracted.html.trim()) throw new Error("No main-page content extracted");
+    const capturedUrl = await evaluateScript<string>(cdp, sessionId, "window.location.href", args.timeout);
     const metadata: PageMetadata = {
-      url: args.url,
-      title: combinedTitle,
+      url: capturedUrl,
+      title: extracted.title || "",
       description: extracted.description,
       author: extracted.author,
       published: extracted.published,
       captured_at: new Date().toISOString()
     };
-
-    const markdown = htmlToMarkdown(combinedHtml);
+    const markdown = htmlToMarkdown(extracted.html);
+    if (!markdown.trim()) throw new Error("No Markdown content extracted");
     return { metadata, markdown };
+  } catch (error) {
+    failed = true;
+    throw error;
   } finally {
-    if (cdp) {
-      try { await cdp.send("Browser.close", {}, { timeoutMs: 5_000 }); } catch {}
-      cdp.close();
+    const cleanupErrors: unknown[] = [];
+    try { cdp?.close(); } catch (error) { cleanupErrors.push(error); }
+    let stopped = !chrome;
+    if (chrome) {
+      try { await killChrome(chrome); stopped = true; } catch (error) { cleanupErrors.push(error); }
     }
-    killChrome(chrome);
+    if (stopped) {
+      try { await profile.cleanup(); } catch (error) { cleanupErrors.push(error); }
+    } else console.error(`Chrome exit unconfirmed; profile retained for recovery: ${profile.directory}`);
+    for (const error of cleanupErrors) console.error("Cleanup error:", error);
+    process.off("SIGINT", onInterrupt);
+    process.off("SIGTERM", onInterrupt);
+    if (interrupted) throw new Error("Capture interrupted");
+    if (!failed && cleanupErrors.length) throw new AggregateError(cleanupErrors, "Capture cleanup failed");
   }
 }
 
-async function main(): Promise<void> {
-  const args = parseArgs(process.argv);
-  if (!args.url) {
-    console.error("Usage: bun main.ts <url> [-o output.md] [--wait] [--timeout ms]");
-    process.exit(1);
-  }
-
-  try {
-    new URL(args.url);
-  } catch {
-    console.error(`Invalid URL: ${args.url}`);
-    process.exit(1);
-  }
-
-  console.log(`Fetching: ${args.url}`);
-  console.log(`Mode: ${args.wait ? "wait" : "auto"}`);
-
+export async function main(argv = process.argv): Promise<void> {
+  const args = parseArgs(argv);
+  console.error(`Fetching: ${args.url}`);
   const result = await captureUrl(args);
-  const outputPath = path.resolve(args.output || await generateOutputPath(args.url, result.metadata.title));
-  const outputDir = path.dirname(outputPath);
-  
-  try {
-    await mkdir(outputDir, { recursive: true });
-  } catch (e: any) {
-    if (e.code !== 'EEXIST') throw e;
-  }
-
   const document = createMarkdownDocument(result);
-  await writeFile(outputPath, document, "utf-8");
-
-  console.log(`Saved: ${outputPath}`);
-  console.log(`Title: ${result.metadata.title || "(no title)"}`);
+  if (args.output) {
+    const outputPath = path.resolve(args.output);
+    await mkdir(path.dirname(outputPath), { recursive: true });
+    await writeFile(outputPath, document, "utf-8");
+    console.error(`Saved: ${outputPath}`);
+  } else {
+    process.stdout.write(document + "\n");
+  }
 }
 
-main().catch((err) => {
-  console.error("Error:", err instanceof Error ? err.message : String(err));
-  process.exit(1);
-});
+if (process.argv[1] && import.meta.url === pathToFileURL(path.resolve(process.argv[1])).href) {
+  main().catch((err) => {
+    console.error("Error:", err instanceof Error ? err.message : String(err));
+    process.exitCode = 1;
+  });
+}

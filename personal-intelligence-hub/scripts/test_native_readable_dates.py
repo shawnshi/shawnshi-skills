@@ -494,12 +494,19 @@ def test_readable_title_trailing_mark_on_generic_host_keeps_metadata():
 
 
 def test_article_gate_reasons_reports_missing_publication_date():
+    # Date basis C (owner-authorized 2026-09-14): `article` keeps its dated meaning, and the
+    # new `article_core` predicate reports every article condition except the body date.
+    # Registration may pair `article_core` with the bound lane's registered feed declaration.
     text = "视力保护色：\n\n某个足够长的中文标题\n\n" + CHINESE + "\n\n" + CHINESE
     gates = broker.article_gate_reasons(text, NHSA)
     assert gates["has_publication_date"] is False
     assert gates["article"] is False
+    assert gates["article_core"] is True
     assert gates["arxiv_path"] is False
-    assert broker.readable_metadata(text, NHSA)["article"] is False
+    metadata = broker.readable_metadata(text, NHSA)
+    assert metadata["article"] is False
+    assert metadata["article_core"] is True
+    assert metadata["dates"] == []
 
 
 def test_article_gate_reasons_agrees_with_qualification():

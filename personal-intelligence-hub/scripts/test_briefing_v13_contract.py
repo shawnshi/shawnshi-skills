@@ -302,6 +302,39 @@ class BriefingV14ContractTests(unittest.TestCase):
 
         self.assertTrue(any("at least two candidate_refs" in error for error in errors))
 
+    def _single_secondary_payload(self, extra_ref: bool = False):
+        payload = cloned_v14_payload()
+        item = payload["top_10"][0]
+        item["source_type"] = "secondary"
+        item["corroboration_status"] = "single_secondary"
+        if extra_ref:
+            item["candidate_refs"] = [
+                *item["candidate_refs"],
+                candidate_ref("https://second.example.org/report"),
+            ]
+        digest = item_hash(item)
+        payload["pipeline"]["semantic_review"]["reviewed_item_hashes"] = [digest]
+        payload["pipeline"]["semantic_review"]["lineage_bindings"][0][
+            "output_item_sha256"
+        ] = digest
+        return payload
+
+    def test_v14_single_secondary_corroboration_is_accepted(self):
+        # Owner-authorized 2026-09-14 downgrade: the new status is part of schema 1.4 and
+        # satisfies the secondary-source rule with exactly one registered reference.
+        errors, _ = validate_briefing_data(self._single_secondary_payload())
+
+        self.assertFalse(
+            any("secondary source requires" in error for error in errors), errors
+        )
+
+    def test_v14_single_secondary_requires_exactly_one_candidate_reference(self):
+        errors, _ = validate_briefing_data(self._single_secondary_payload(extra_ref=True))
+
+        self.assertTrue(
+            any("exactly one candidate_ref" in error for error in errors), errors
+        )
+
     def test_v14_rejects_same_event_with_provisional_identity(self):
         payload = cloned_v14_payload()
         first = payload["top_10"][0]

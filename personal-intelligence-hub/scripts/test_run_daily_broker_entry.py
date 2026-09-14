@@ -177,8 +177,8 @@ def test_prepare_production_source_window_budget_propagation(tmp_path):
     assert observability["normal_run_cost_usd_ceiling"] == 3.0
     assert observability["downstream_headroom_tokens"] == 300000
     assert observability["downstream_headroom_cost_usd"] == 1.0
-    assert observability["semantic_timeout_ms"] == 240000
-    assert observability["red_team_timeout_ms"] == 120000
+    assert observability["semantic_timeout_ms"] == 900000
+    assert observability["red_team_timeout_ms"] == 600000
 
 
 @pytest.mark.parametrize("version", [0, 4, True, "2"])

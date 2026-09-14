@@ -5,8 +5,11 @@
 | Variable | Description |
 |----------|-------------|
 | `URL_CHROME_PATH` | Custom Chrome executable path |
-| `URL_DATA_DIR` | Custom data directory |
-| `URL_CHROME_PROFILE_DIR` | Custom Chrome profile directory |
+
+Output is stdout unless `-o/--output` is explicitly supplied. `URL_DATA_DIR` and
+`URL_CHROME_PROFILE_DIR` are not used. Profiles are task-temporary by default.
+Only `--profile <directory>` opts into persistent cookies/cache, under current user
+authorization; that directory is not cleaned. Do not reuse an active daily profile.
 
 ## Common Issues
 
@@ -20,3 +23,8 @@
 
 ### 3. Login Pages
 **Fix**: Use `--wait` mode. The browser will open, allow you to log in manually, then capture upon pressing Enter in the terminal.
+
+Only the newly created main-page target is extracted, including its redirects. Other
+tabs and frames are excluded, even on the same domain. Timeouts and cleanup errors
+are failures, not saved results. If browser exit cannot be confirmed, the retained
+profile path is reported for manual recovery; forced termination may also leave it.
