@@ -40,7 +40,13 @@ NATIVE_VISIBILITY = {
 
 def _arxiv_readable_metadata(text, url, text_sha, challenge):
     """Narrow abs-page grammar; the explicit 'for this version' citation owns the date."""
-    rejected = {"recognizable_body": False, "article": False, "title": "", "dates": []}
+    rejected = {
+        "recognizable_body": False,
+        "article": False,
+        "article_core": False,
+        "title": "",
+        "dates": [],
+    }
     modern_id = r"[0-9]{2}(?:0[1-9]|1[0-2])\.[0-9]{4,5}"
     page = re.fullmatch(
         r"https?://(?:www\.)?arxiv\.org/abs/(" + modern_id + r")(v[1-9][0-9]*)?", url
@@ -176,7 +182,13 @@ def _arxiv_readable_metadata(text, url, text_sha, challenge):
     }
     # No extracted paper title is inferred from the abstract, links, or search metadata.
     title = "arXiv:" + paper_id + version
-    return {"recognizable_body": True, "article": True, "title": title, "dates": [date]}
+    return {
+        "recognizable_body": True,
+        "article": True,
+        "article_core": True,
+        "title": title,
+        "dates": [date],
+    }
 
 
 _READABLE_MONTHS = [
@@ -703,13 +715,17 @@ def _readable_article_gates(text, url, dates, title, nhsa_content, challenge):
         "has_publication_date": bool(dates),
         "nhsa_content": bool(nhsa_content),
         "title_length_ok": title_ok,
+        # Date basis C (owner-authorized 2026-09-14): every article predicate except the
+        # body publication date. Registration may pair this core with the bound lane's
+        # registered feed declaration, while the dated `article` predicate is unchanged.
+        "article_core": bool(recognizable and not portal and nhsa_content and title_ok),
         "article": bool(
             recognizable and not portal and dates and nhsa_content and title_ok
         ),
     }
 
 
-def article_gate_reasons(text, url):
+def article_gate_reasons(text, url, *, declared_title=None):
     """Diagnostic only: report which article predicates hold for a retained readable body.
 
     Never changes qualification; `readable_metadata` stays the single gate.
@@ -726,12 +742,13 @@ def article_gate_reasons(text, url):
 
     dates, lines, nhsa_content = _readable_publication(text, url, text_sha)
     title, _source = _readable_title(text, lines, dates)
+    title, _source = _apply_declared_title(title, _source, declared_title)
     gates = _readable_article_gates(text, url, dates, title, nhsa_content, challenge)
     gates["arxiv_path"] = False
     return gates
 
 
-def readable_metadata(text, url):
+def readable_metadata(text, url, *, declared_title=None):
     """Publication spans use Unicode character offsets in exact retained text, never LLM dates."""
     text_sha = hashlib.sha256(text.encode("utf-8")).hexdigest()
     challenge = _readable_challenge(text)
@@ -739,14 +756,16 @@ def readable_metadata(text, url):
         return _arxiv_readable_metadata(text, url, text_sha, challenge)
     dates, lines, nhsa_content = _readable_publication(text, url, text_sha)
     title, title_source = _readable_title(text, lines, dates)
+    title, title_source = _apply_declared_title(title, title_source, declared_title)
     gates = _readable_article_gates(text, url, dates, title, nhsa_content, challenge)
     result = {
         "recognizable_body": gates["recognizable_body"],
         "article": gates["article"],
+        "article_core": gates["article_core"],
         "title": title[:240],
         "dates": dates,
     }
-    if title_source == "introductory-document-link":
+    if title_source in {"introductory-document-link", "lane-declared/1"}:
         result["title_source"] = title_source
     return result
 
@@ -816,11 +835,27 @@ def validate_fetch_receipt(receipt, ledger, reservation, recorded_at):
         _fail("native outcome invalid")
 
 
-def native_proof(receipt, ledger, reservation, checked):
+def _apply_declared_title(title, title_source, declared_title):
+    """Title basis C (owner-authorized 2026-09-14): a body title that is absent or outside
+    the 8..240 window may fall back to the bound lane's already-registered feed title.
+    A body title that already satisfies the window is never overridden.
+    """
+    if 8 <= len(title) <= 240:
+        return title, title_source
+    candidate = str(declared_title or "").strip()
+    if not (8 <= len(candidate) <= 240):
+        return title, title_source
+    return candidate, "lane-declared/1"
+
+
+def native_proof(receipt, ledger, reservation, checked, *, lane=None):
     validate_fetch_receipt(receipt, ledger, reservation, checked)
     text = receipt["text"]
     sha = hashlib.sha256(text.encode("utf-8")).hexdigest()
-    metadata = readable_metadata(text, reservation["url"])
+    declared_title = (
+        (_lane_declared_title(lane, reservation["url"]) or "") if lane else ""
+    )
+    metadata = readable_metadata(text, reservation["url"], declared_title=declared_title)
     error = receipt["error"]
     if receipt["truncated"] is True:
         error = error or "NATIVE_TOOL_TRUNCATED"
@@ -1134,7 +1169,11 @@ def validate_ledgers(manifest, request):
                     )
                     if kind == "fetch_recorded":
                         if proof != native_proof(
-                            proof.get("receipt"), ledger, pending, event["at"]
+                            proof.get("receipt"),
+                            ledger,
+                            pending,
+                            event["at"],
+                            lane=_lane_slice_for_gap(request, gap_id),
                         ):
                             _fail("native proof changed")
                         pending = None
@@ -1653,16 +1692,99 @@ def _ledger_proofs(ledger):
     ]
 
 
-def _usable_article(proof, window):
-    return (
+def _lane_declared_title(lane, url):
+    """Registered feed title for one bound URL, used only as the title basis C fallback."""
+    from history_manager import normalize_url
+
+    target = normalize_url(url)
+    for candidate in lane.get("candidates", []):
+        if not isinstance(candidate, dict):
+            continue
+        if normalize_url(str(candidate.get("url") or "")) != target:
+            continue
+        title = str(candidate.get("title") or "").strip()
+        if 8 <= len(title) <= 240:
+            return title
+    return ""
+
+
+def _lane_declared_dates(lane):
+    """Registered feed declarations per URL, used only as the date basis C fallback."""
+    from history_manager import normalize_url
+
+    declared: dict[str, str] = {}
+    for candidate in lane.get("candidates", []):
+        if not isinstance(candidate, dict):
+            continue
+        url = normalize_url(str(candidate.get("url") or ""))
+        raw = str(candidate.get("published_at") or "")
+        source = str(candidate.get("published_at_source") or "").strip().casefold()
+        if not url or not raw or source in {"", "unknown", "retrieved_at"}:
+            continue
+        try:
+            declared.setdefault(url, _rc().normalize_published_at(raw))
+        except _rc().RunContractError:
+            continue
+    return declared
+
+
+def _lane_declared_date(lane, url):
+    """Full registered feed declaration (date + source) for one bound URL, if any."""
+    from history_manager import normalize_url
+
+    target = normalize_url(url)
+    for candidate in lane.get("candidates", []):
+        if not isinstance(candidate, dict):
+            continue
+        if normalize_url(str(candidate.get("url") or "")) != target:
+            continue
+        source = str(candidate.get("published_at_source") or "")
+        raw = str(candidate.get("published_at") or "")
+        if raw and source.strip().casefold() not in {"", "unknown", "retrieved_at"}:
+            return {
+                "candidate_ref": str(candidate.get("candidate_ref") or ""),
+                "source_object_sha256": str(
+                    candidate.get("source_object_sha256") or ""
+                ),
+                "published_at": raw,
+                "published_at_source": source,
+            }
+    return None
+
+
+def _lane_slice_for_gap(request, gap_id):
+    """Registered lane slice for a gap, read from the bound artifact reference."""
+    for packet in request.get("execution_packets", []):
+        if not isinstance(packet, dict) or packet.get("assigned_gap_ids") != [gap_id]:
+            continue
+        reference = packet.get("lane_slice") or (
+            packet.get("bound_input_paths") or {}
+        ).get("lane_slice")
+        path = Path(str((reference or {}).get("path") or ""))
+        if not path.is_file():
+            return {}
+        return _rc().load_json(path, {})
+    return {}
+
+
+def _usable_article(proof, window, declared_day=None):
+    meta = proof["metadata"]
+    if not (
         proof["access"]["status"] == "verified"
-        and proof["metadata"]["recognizable_body"]
-        and proof["metadata"]["article"]
-        and any(
-            window["start"] <= d["published_at"] <= window["end"]
-            for d in proof["metadata"]["dates"]
-        )
-    )
+        and meta["recognizable_body"]
+        and (meta["article"] or meta.get("article_core"))
+    ):
+        return False
+    if any(
+        window["start"] <= d["published_at"] <= window["end"]
+        for d in meta["dates"]
+    ):
+        return True
+    # Date basis C: an undated body is usable only through the bound lane's own
+    # registered feed declaration; a body that does carry dates never falls back.
+    if meta["dates"] or not declared_day:
+        return False
+    return window["start"] <= declared_day <= window["end"]
 
 
 def next_action(manifest, request, gap, lane, proofs, *, now=None):
@@ -1735,10 +1857,15 @@ def next_action(manifest, request, gap, lane, proofs, *, now=None):
         url for url in discovered if normalize_url(url) not in attempted | permanent
     ]
     skipped = [url for url in discovered if normalize_url(url) in permanent]
+    declared_dates = _lane_declared_dates(lane)
     usable = {
         normalize_url(p["access"]["requested_url"])
         for p in proofs
-        if _usable_article(p, lane["window"])
+        if _usable_article(
+            p,
+            lane["window"],
+            declared_dates.get(normalize_url(p["access"]["requested_url"])),
+        )
     }
     threshold, requested_target = _supply_target(manifest, gap)
     remaining_urls = gap["max_urls"] - len(attempts)
@@ -1998,7 +2125,7 @@ def operate(
             ):
                 _fail("native fetch must be reserved; duplicate receipt denied")
             reserved = events[-1]
-            proof = native_proof(receipt, ledger, reserved, now)
+            proof = native_proof(receipt, ledger, reserved, now, lane=lane)
             assert isinstance(receipt, dict)
             if receipt.get("responseId") and any(
                 rc.load_json(Path(e["proof_path"]), {})
@@ -2232,25 +2359,55 @@ def validate_result(request_path, gap_id, result):
         if len(matches) != 1:
             _fail("candidate lacks exact helper attempt/body proof")
         proof = matches[0]
+        proof_meta = proof["metadata"]
         if (
             proof["access"]["status"] != "verified"
-            or not proof["metadata"]["recognizable_body"]
-            or not proof["metadata"]["article"]
+            or not proof_meta["recognizable_body"]
+            or not (proof_meta["article"] or proof_meta.get("article_core"))
             or candidate.get("url") != proof["access"]["requested_url"]
             or candidate.get("retrieved_at") != proof["access"]["checked_at"]
         ):
             _fail("candidate is not a fetched article")
-        if candidate.get("published_at_proof") not in proof["metadata"][
-            "dates"
-        ] or not candidate.get("published_at_proof"):
+        date = candidate.get("published_at_proof")
+        if not isinstance(date, dict) or not date:
             _fail("candidate publication field lacks body evidence")
-        date = candidate["published_at_proof"]
-        if (
-            _rc().normalize_published_at(candidate.get("published_at"))
-            != date["published_at"]
-            or candidate.get("published_at_source") != date["published_at_source"]
-        ):
-            _fail("candidate publication metadata differs from proof")
+        if date in proof_meta["dates"]:
+            if (
+                _rc().normalize_published_at(candidate.get("published_at"))
+                != date["published_at"]
+                or candidate.get("published_at_source") != date["published_at_source"]
+            ):
+                _fail("candidate publication metadata differs from proof")
+        else:
+            # Date basis C: only an undated body may borrow the date from the bound lane's
+            # already-registered feed declaration for the same URL. A body that does carry a
+            # date can never be overridden, and the declared source must itself be a real
+            # registration (never unknown/retrieved_at).
+            if (
+                proof_meta["dates"]
+                or not proof_meta.get("article_core")
+                or date.get("parser_rule") != "pool-declared/1"
+            ):
+                _fail("candidate publication field lacks body evidence")
+            declared = _lane_declared_date(
+                _bound(request_path, gap_id)[4], proof["access"]["requested_url"]
+            )
+            declared_day = (
+                _rc().normalize_published_at(declared["published_at"])
+                if declared
+                else ""
+            )
+            if (
+                not declared
+                or not declared_day
+                or date.get("published_at_source") != declared["published_at_source"]
+                or date.get("published_at") != declared_day
+                or _rc().normalize_published_at(candidate.get("published_at"))
+                != declared_day
+                or candidate.get("published_at_source")
+                != declared["published_at_source"]
+            ):
+                _fail("candidate publication field lacks pool declaration evidence")
     empty = not data["access_log"] and not result.get("candidates")
     if empty and (
         not all(r["outcome"] == "empty" for r in data["query_receipts"])

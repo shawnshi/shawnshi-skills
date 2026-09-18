@@ -30,7 +30,7 @@
 
 ## 3. 来源与事件卫生
 
-1. 原始来源优先；二手来源只有在存在多个独立佐证时才可作为正式条目。
+1. 原始来源优先；二手来源只在存在多个独立佐证时才可作为正式条目；当本轮 focus config 的 `corroboration_policy.single_secondary_allowed` 为 true 时（2026-09-14 授权，可在配置中关闭），单一独立二手来源可作为 `corroboration_status=single_secondary` 入选，但其可信度不得高于 `single_primary` 或 `multi_independent`，且同一事件不得重复计数。
 2. 先按结构化 `event_id` 合并同一事件，再按规范化 URL 和标题指纹兜底。
 3. 同一事件的多个来源作为佐证合并，不得重复计数。
 4. 来源无法访问、发布日期不明、候选不足、车道失败和来源集中均写入结构化缺口。
@@ -85,4 +85,4 @@ challenge 只证明回执读取了本次预登记请求并防止旧回执重放�
 
 ## Native readable evidence (article-broker/3.0)
 
-NEW runs use parent web_search discovery plus reserved native fetch_content(mode=readable), never custom article HTTP. RSS aiohttp is unchanged. Unknown final URL/status remain null only in the strict native evidence union; DNS/redirect visibility is unknown, and readable UTF-8 SHA-256 is not raw-byte proof. Exact parent receipt attestation is not provider authentication. Full receipt/proof, deterministic publication offsets/parser/text digest and exact candidate/semantic lineage must survive finalization and forge. Publication/update/event dates are not interchangeable; missing/conflicting/out-of-window/truncated/challenge/portal evidence cannot qualify an article. New v3 runs use source600/grace300 (launch timeout 900000ms); query2/fetch4 accounting is unchanged and old frozen v2 replay remains strict.
+NEW runs use parent web_search discovery plus reserved native fetch_content(mode=readable), never custom article HTTP. RSS aiohttp is unchanged. Unknown final URL/status remain null only in the strict native evidence union; DNS/redirect visibility is unknown, and readable UTF-8 SHA-256 is not raw-byte proof. Exact parent receipt attestation is not provider authentication. Full receipt/proof, deterministic publication offsets/parser/text digest and exact candidate/semantic lineage must survive finalization and forge. Publication/update/event dates are not interchangeable; conflicting/out-of-window/truncated/challenge/portal evidence cannot qualify an article, and a body with no machine-readable publication date qualifies only through the bound lane's already-registered feed date (`published_at_proof.parser_rule=pool-declared/1`, owner-authorized 2026-09-14) with every other article predicate satisfied and the window unchanged; a body that does carry a date can never use that basis. New v3 runs use source600/grace300 (launch timeout 900000ms); query2/fetch4 accounting is unchanged and old frozen v2 replay remains strict.

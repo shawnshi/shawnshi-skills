@@ -173,12 +173,13 @@ def test_prepare_production_source_window_budget_propagation(tmp_path):
     observability = json.loads(
         (root / "references/subagent_prompts.json").read_text(encoding="utf-8")
     )["execution_policy"]["observability"]
-    assert observability["normal_run_token_ceiling"] == 1000000
-    assert observability["normal_run_cost_usd_ceiling"] == 3.0
+    assert observability["normal_run_token_ceiling"] is None
+    assert observability["normal_run_cost_usd_ceiling"] is None
+    assert observability["budget_ceiling_enabled"] is False
     assert observability["downstream_headroom_tokens"] == 300000
     assert observability["downstream_headroom_cost_usd"] == 1.0
-    assert observability["semantic_timeout_ms"] == 240000
-    assert observability["red_team_timeout_ms"] == 120000
+    assert observability["semantic_timeout_ms"] == 900000
+    assert observability["red_team_timeout_ms"] == 600000
 
 
 @pytest.mark.parametrize("version", [0, 4, True, "2"])

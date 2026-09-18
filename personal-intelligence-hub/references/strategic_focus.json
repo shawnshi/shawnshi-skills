@@ -3,7 +3,7 @@
   "_meta": {
     "purpose": "Daily technology and healthcare-digital intelligence profile. Weights and mix are method parameters, not business facts.",
     "override": "User instructions override the default mix via --technology-ratio plus --ratio-reason. --focus-config changes scan weights, lanes, thresholds and dedupe settings; it does not override the run mix.",
-    "last_updated": "2026-09-10",
+    "last_updated": "2026-09-14",
     "scoring_version": "content-relevance/2.0",
     "scoring_policy": "Presence once per configured concept including aliases; existing weights unchanged. WebAssembly, JIT, local variables, DeepSeek and security patch use provisional uncalibrated weight 4, not probability or optimized calibration. Source preferences only break content-score ties. Explicit primary_domain remains an input override."
   },
@@ -22,6 +22,11 @@
       ],
       "reason_required": true
     }
+  },
+  "corroboration_policy": {
+    "single_secondary_allowed": true,
+    "authorized_at": "2026-09-14",
+    "reason": "Owner-accepted downgrade: one independent secondary source with registered verified access may be selected and archived as corroboration_status=single_secondary. multi_independent remains preferred whenever two independent sources share the same structured event identity; a single primary source still uses single_primary. Setting this flag to false restores the previous behaviour, where a single secondary source terminates as secondary_without_independent_corroboration."
   },
   "domains": {
     "technology": {

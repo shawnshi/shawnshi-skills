@@ -68,6 +68,13 @@ SUPPLEMENT_FAILURE_KIND_STATUS = {
     "source_access": "degraded",
     "published_at_conflict": "degraded",
 }
+# Owner-authorized 2026-09-16: the run-level Token/cost ceilings are removed.
+# Usage is still metered, reserved, settled and reported for observability, but
+# consuming 1,000,000 budget Token or 3.00 USD no longer blocks an agent launch.
+NORMAL_RUN_TOKEN_CEILING: int | None = None
+NORMAL_RUN_COST_USD_CEILING: float | None = None
+# Per-gap cost reservation used when no run-level cost ceiling exists.
+SUPPLEMENT_COST_BUDGET_PER_GAP_USD = 0.5
 IMMUTABLE_FIELDS = (
     "run_id",
     "skill_sha256",
@@ -654,6 +661,15 @@ def build_candidate_date_evidence(
                 )
             if candidate is not None:
                 indices = [i for i in indices if logs[i] == candidate["access_check"]]
+            declared_proof = (
+                candidate.get("published_at_proof") if candidate is not None else None
+            )
+            date_basis = (
+                "pool_declared_feed_metadata"
+                if isinstance(declared_proof, dict)
+                and declared_proof.get("parser_rule") == "pool-declared/1"
+                else "existing_registered_metadata"
+            )
             for index in indices or [None]:
                 records.append(
                     {
@@ -670,7 +686,7 @@ def build_candidate_date_evidence(
                         )
                         if candidate is not None
                         else None,
-                        "date_basis": "existing_registered_metadata",
+                        "date_basis": date_basis,
                     }
                 )
     return {"contract_version": 1, "records": records}
@@ -1789,10 +1805,19 @@ def _refresh_telemetry_summary(manifest: dict[str, Any]) -> None:
         if item["status"] in {"degraded_timeout", "failed", "cancelled"}
     )
     exceeded_dimensions: list[str] = []
-    if int(state["accounted_tokens"]) > 1000000:
+    if (
+        NORMAL_RUN_TOKEN_CEILING is not None
+        and int(state["accounted_tokens"]) > NORMAL_RUN_TOKEN_CEILING
+    ):
         exceeded_dimensions.append("tokens")
-    if float(state["accounted_cost_usd"]) > 3.0:
+    if (
+        NORMAL_RUN_COST_USD_CEILING is not None
+        and float(state["accounted_cost_usd"]) > NORMAL_RUN_COST_USD_CEILING
+    ):
         exceeded_dimensions.append("cost_usd")
+    ceiling_enabled = (
+        NORMAL_RUN_TOKEN_CEILING is not None or NORMAL_RUN_COST_USD_CEILING is not None
+    )
     telemetry["summary"] = {
         "total_tokens": int(state["raw_total_tokens"]),
         "budget_tokens": int(state["actual_tokens"]),
@@ -1810,9 +1835,14 @@ def _refresh_telemetry_summary(manifest: dict[str, Any]) -> None:
             if record.get("status") in {"reserved", "held_broker_unmetered", "held_unmetered"}
         ),
         "failed_invocations": failed_invocations,
-        "normal_run_token_ceiling": 1000000,
-        "normal_run_cost_usd_ceiling": 3.0,
-        "budget_status": "exceeded" if exceeded_dimensions else "within_budget",
+        "normal_run_token_ceiling": NORMAL_RUN_TOKEN_CEILING,
+        "normal_run_cost_usd_ceiling": NORMAL_RUN_COST_USD_CEILING,
+        "budget_ceiling_enabled": ceiling_enabled,
+        "budget_status": (
+            "exceeded"
+            if exceeded_dimensions
+            else ("within_budget" if ceiling_enabled else "unlimited_no_ceiling")
+        ),
         "exceeded_dimensions": exceeded_dimensions,
     }
     if _validate_article_broker_contract(manifest):
@@ -1822,7 +1852,7 @@ def _refresh_telemetry_summary(manifest: dict[str, Any]) -> None:
         telemetry["summary"]["known_usage_scope"] = (
             "registered_execution_telemetry_only"
         )
-        if not exceeded_dimensions:
+        if not exceeded_dimensions and ceiling_enabled:
             telemetry["summary"]["budget_status"] = "incomplete_combined_telemetry"
 
 
@@ -2141,11 +2171,16 @@ def _assert_execution_budget_allows_launch(
     state = _execution_budget_state(manifest)
     accounted_tokens = int(state["accounted_tokens"])
     accounted_cost_usd = float(state["accounted_cost_usd"])
-    if (
-        accounted_tokens >= 1000000
-        or accounted_cost_usd >= 3.0
-        or accounted_tokens + reserved_tokens > 1000000
-        or accounted_cost_usd + float(reserved_cost_usd) > 3.0
+    if NORMAL_RUN_TOKEN_CEILING is not None and (
+        accounted_tokens >= NORMAL_RUN_TOKEN_CEILING
+        or accounted_tokens + reserved_tokens > NORMAL_RUN_TOKEN_CEILING
+    ):
+        raise RunContractError(
+            "execution budget exceeded or reservation unavailable; new agent launch is forbidden"
+        )
+    if NORMAL_RUN_COST_USD_CEILING is not None and (
+        accounted_cost_usd >= NORMAL_RUN_COST_USD_CEILING
+        or accounted_cost_usd + float(reserved_cost_usd) > NORMAL_RUN_COST_USD_CEILING
     ):
         raise RunContractError(
             "execution budget exceeded or reservation unavailable; new agent launch is forbidden"
@@ -2154,7 +2189,13 @@ def _assert_execution_budget_allows_launch(
         **state,
         "requested_tokens": reserved_tokens,
         "requested_cost_usd": round(float(reserved_cost_usd), 6),
-        "remaining_cost_usd": round(3.0 - accounted_cost_usd, 6),
+        "token_ceiling": NORMAL_RUN_TOKEN_CEILING,
+        "cost_usd_ceiling": NORMAL_RUN_COST_USD_CEILING,
+        "remaining_cost_usd": (
+            None
+            if NORMAL_RUN_COST_USD_CEILING is None
+            else round(NORMAL_RUN_COST_USD_CEILING - accounted_cost_usd, 6)
+        ),
     }
 
 
@@ -2441,29 +2482,42 @@ def build_supplement_request(
     helper_path = bundle_root / "scripts" / "supplement_agent.py"
     if not helper_path.is_file():
         raise RunContractError("supplement agent helper is missing")
-    current_budget = _execution_budget_state(manifest)
-    available_cost_usd = round(
-        3.0 - float(current_budget["accounted_cost_usd"]),
-        6,
-    )
-    if available_cost_usd <= 0:
-        raise RunContractError(
-            "execution budget exceeded or reservation unavailable; new agent launch is forbidden"
+    if NORMAL_RUN_COST_USD_CEILING is None:
+        # No run-level cost ceiling: keep the established per-gap cost reservation and
+        # reserve the actual total instead of a ceiling-derived remaining pool.
+        supplement_cost_pool = round(
+            SUPPLEMENT_COST_BUDGET_PER_GAP_USD * len(normalized_gaps),
+            6,
         )
-    supplement_cost_pool = round(
-        available_cost_usd - downstream_headroom_cost_usd,
-        6,
-    )
-    if supplement_cost_pool <= 0:
-        raise RunContractError(
-            "execution budget cannot preserve downstream review cost headroom"
+        supplement_cost_reservation_usd = round(
+            supplement_cost_pool + downstream_headroom_cost_usd,
+            6,
         )
+    else:
+        current_budget = _execution_budget_state(manifest)
+        available_cost_usd = round(
+            NORMAL_RUN_COST_USD_CEILING - float(current_budget["accounted_cost_usd"]),
+            6,
+        )
+        if available_cost_usd <= 0:
+            raise RunContractError(
+                "execution budget exceeded or reservation unavailable; new agent launch is forbidden"
+            )
+        supplement_cost_pool = round(
+            available_cost_usd - downstream_headroom_cost_usd,
+            6,
+        )
+        if supplement_cost_pool <= 0:
+            raise RunContractError(
+                "execution budget cannot preserve downstream review cost headroom"
+            )
+        supplement_cost_reservation_usd = available_cost_usd
     _assert_execution_budget_allows_launch(
         manifest,
         reserved_tokens=(
             supplement_token_budget * len(normalized_gaps) + downstream_headroom_tokens
         ),
-        reserved_cost_usd=available_cost_usd,
+        reserved_cost_usd=supplement_cost_reservation_usd,
     )
     cost_units = int(round(supplement_cost_pool * 1_000_000))
     base_cost_units, extra_cost_units = divmod(cost_units, len(normalized_gaps))
@@ -2670,6 +2724,16 @@ def build_supplement_request(
             packet["task_message"] = (
                 f"Execute only gap {gap['gap_id']} as the assigned delegate. Work in {bundle_root}. "
                 f'First run: python -B -X utf8 scripts/supplement_agent.py context --request "{request_path.resolve()}" --gap-id "{gap["gap_id"]}". '
+                "MANDATORY FIRST ACTION: immediately after that one context command, and before reading or running anything "
+                "else, call contact_supervisor once with reason=need_decision and ask the parent to run the whole broker "
+                "sequence for this gap (broker-checkpoint, then broker-reserve-fetch / native fetch_content(mode=readable) / "
+                "broker-record-fetch for every required bound URL, then broker-reserve-query / native web_search / "
+                "broker-record-query, then broker-seal). Do not open the request, lane slice, baseline, candidate pool, "
+                "schema, script source, or git state to \"prepare\": the context command already returned everything you need, "
+                "and only the parent can hold a public tool. The tool budget is small and the per-gap source clock is short; "
+                "every turn spent before the handoff risks losing the gap. If no supervisor reply arrives, end the turn by "
+                "reporting the exact next parent command on the supervisor channel; never invent receipts or a draft without "
+                "them, and never close the gap yourself. "
                 "Worker may write only its dynamic draft. No worker public web or HTTP calls. Via contact_supervisor ask the parent "
                 "to run broker-checkpoint, broker-http for every required bound URL, then broker-reserve-query BEFORE each native "
                 "web_search call using exactly its arguments (workflow=none/includeContent=false), and broker-record-query with "
@@ -4688,6 +4752,79 @@ def build_review_request(
             "--red-team-receipt",
             draft_paths["review_receipt"],
         ]
+        # Owner-authorized clarity fix 2026-09-14: the red-team packet now carries the
+        # receipt contract inline, exactly like the semantic packet's dynamic_contract.
+        # Without it the reviewer had to reverse-engineer validate_review_receipt from
+        # script source, which consumed its whole tool budget and let the short
+        # registered window expire before publication.
+        request["execution_packet"]["receipt_contract"] = {
+            "contract_version": "review-receipt/1.0",
+            "required_fields": [
+                "contract_version",
+                "run_id",
+                "review_kind",
+                "reviewer_kind",
+                "reviewer_id",
+                "invocation_id",
+                "challenge",
+                "request_sha256",
+                "baseline_sha256",
+                "output_sha256",
+                "status",
+                "turns_used",
+                "halt_condition_met",
+                "reviewed_item_hashes",
+                "completed_at",
+            ],
+            "field_values": {
+                "contract_version": "review-receipt/1.0",
+                "run_id": str(request.get("run_id") or ""),
+                "review_kind": "red_team",
+                "reviewer_kind": str(request.get("reviewer_kind") or ""),
+                "reviewer_id": str(request.get("reviewer_id") or ""),
+                "invocation_id": str(request.get("invocation_id") or ""),
+                "challenge": str(request.get("challenge") or ""),
+                "baseline_sha256": str(request.get("baseline_sha256") or ""),
+                "request_sha256": (
+                    "sha256 of this registered request file; compute with "
+                    "python -c \"import hashlib;print(hashlib.sha256(open(r'<request path>','rb').read()).hexdigest())\""
+                ),
+                "output_sha256": "sha256 of the bound refined core (execution_packet.bound_refined_path)",
+                "status": (
+                    "not_required for the deterministic no-L4 gate (reviewer_kind=deterministic_gate); "
+                    "l4_full_review and targeted_review both require passed"
+                ),
+                "turns_used": (
+                    "0 for the deterministic no-L4 gate; otherwise an integer in 1..max_turns"
+                ),
+                "halt_condition_met": True,
+            },
+            "reviewed_item_hashes": (
+                "the deterministic no-L4 gate publishes [] and no other value is accepted; "
+                "l4_full_review must cover every hash in this request's l4_item_hashes, "
+                "exactly and with nothing extra; targeted_review must cover the union of "
+                "major_signal_item_hashes and conflict_item_hashes"
+            ),
+            "completed_at": (
+                "timezone-aware ISO datetime inside [request.created_at, "
+                "request.created_at + execution_packet.timeout_ms]; a later value is rejected "
+                "even if the file is written later"
+            ),
+            "publication_rule": (
+                "Write the draft to draft_paths.review_receipt, run "
+                "execution_packet.validation_command, and promote the byte-identical receipt "
+                "to output_paths.review_receipt only when it reports status=valid. Do not read "
+                "script source to discover this contract: these values are authoritative."
+                + (
+                    " DETERMINISTIC FAST PATH: prepare-review already wrote and registered "
+                    "output_paths.review_receipt itself. Never rewrite, reformat, or re-save that "
+                    "file, and do not hand-author it: any byte change makes forge fail permanently "
+                    "with 'red_team receipt bytes changed after registration'. Read it only."
+                    if deterministic_fast_path
+                    else ""
+                )
+            ),
+        }
         request.update(scope or {})
         request["deterministic_fast_path"] = deterministic_fast_path
         request["network_policy"] = (

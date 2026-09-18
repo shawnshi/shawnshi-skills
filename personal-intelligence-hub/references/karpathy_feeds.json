@@ -109,7 +109,7 @@
   },
   {
     "name": "derekthompson.org",
-    "url": "https://www.theatlantic.com/feed/author/derek-thompson/"
+    "url": "https://www.derekthompson.org/feed"
   },
   {
     "name": "evanhahn.com",
@@ -125,7 +125,7 @@
   },
   {
     "name": "joanwestenberg.com",
-    "url": "https://joanwestenberg.com/rss"
+    "url": "https://joanwestenberg.com/feed"
   },
   {
     "name": "xania.org",
@@ -381,7 +381,7 @@
   },
   {
     "name": "beckershospitalreview.com",
-    "url": "https://www.beckershospitalreview.com/feed"
+    "url": "https://www.beckershospitalreview.com/feed/"
   },
   {
     "name": "mobihealthnews.com",
@@ -389,7 +389,7 @@
   },
   {
     "name": "HealthIT.gov Blog",
-    "url": "https://feeds.feedburner.com/healthit-buzz-blog"
+    "url": "https://www.healthit.gov/buzz-blog/feed/"
   },
   {
     "name": "HIMSS News",
@@ -428,8 +428,8 @@
     "url": "http://export.arxiv.org/rss/cs.AI"
   },
   {
-    "name": "Hugging Face Daily Papers",
-    "url": "https://rsshub.app/huggingface/daily-papers"
+    "name": "Hugging Face Blog",
+    "url": "https://huggingface.co/blog/feed.xml"
   },
   {
     "name": "动脉网 (VB100)",
@@ -449,7 +449,7 @@
   },
   {
     "name": "OpenAI News",
-    "url": "https://rsshub.app/openai/news"
+    "url": "https://openai.com/news/rss.xml"
   },
   {
     "name": "Anthropic News",
@@ -478,5 +478,17 @@
   {
     "name": "Product Hunt",
     "url": "https://www.producthunt.com/feed"
+  },
+  {
+    "name": "FDA Press Releases",
+    "url": "https://www.fda.gov/about-fda/contact-fda/stay-informed/rss-feeds/press-releases/rss.xml"
+  },
+  {
+    "name": "MedCity News",
+    "url": "https://medcitynews.com/feed/"
+  },
+  {
+    "name": "Healthcare Dive",
+    "url": "https://www.healthcaredive.com/feeds/news/"
   }
 ]

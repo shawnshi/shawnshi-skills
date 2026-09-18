@@ -151,7 +151,7 @@ class SessionTelemetryTests(unittest.TestCase):
         self.assertEqual(record["artifact_sha256"], hashlib.sha256(artifact.read_bytes()).hexdigest())
         self.assertEqual(
             manifest["telemetry"]["summary"]["budget_status"],
-            "within_budget",
+            "unlimited_no_ceiling",
         )
         self.assertEqual(
             manifest["telemetry"]["summary"]["failed_invocations"],
@@ -299,8 +299,12 @@ class SessionTelemetryTests(unittest.TestCase):
         second.write_text(json.dumps(payload), encoding="utf-8")
         record_execution_telemetry(self.manifest_path, second, now=self.now)
         summary = load_manifest(self.manifest_path)["telemetry"]["summary"]
-        self.assertEqual(summary["budget_status"], "exceeded")
-        self.assertEqual(summary["exceeded_dimensions"], ["tokens", "cost_usd"])
+        # No run-level ceiling remains (owner-authorized 2026-09-16): usage above the
+        # former 1,000,000 Token / 3.00 USD limits is recorded, not flagged or blocked.
+        self.assertEqual(summary["budget_status"], "unlimited_no_ceiling")
+        self.assertEqual(summary["exceeded_dimensions"], [])
+        self.assertIsNone(summary["normal_run_token_ceiling"])
+        self.assertIsNone(summary["normal_run_cost_usd_ceiling"])
         self.assertEqual(summary["invocation_count"], 2)
 
 

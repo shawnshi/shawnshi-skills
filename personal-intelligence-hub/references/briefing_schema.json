@@ -98,7 +98,7 @@
     "confidence": ["low", "medium", "high"],
     "primary_domain": ["technology", "healthcare_digital"],
     "source_type": ["primary", "secondary"],
-    "corroboration_status": ["single_primary", "multi_independent", "contradicted", "unverified"],
+    "corroboration_status": ["single_primary", "multi_independent", "single_secondary", "contradicted", "unverified"],
     "identity_quality": ["semantic", "provisional"],
     "run_status": ["complete", "degraded", "failed"],
     "coverage_confidence": ["low", "medium", "high"]

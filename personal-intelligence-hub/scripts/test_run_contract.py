@@ -797,7 +797,7 @@ class RunContractTests(unittest.TestCase):
         self.assertFalse(request["deterministic_fast_path"])
         self.assertEqual(request["reviewer_kind"], "logic_adversary")
         self.assertEqual(request["max_turns"], 1)
-        self.assertEqual(request["execution_packet"]["timeout_ms"], 120000)
+        self.assertEqual(request["execution_packet"]["timeout_ms"], 600000)
         self.register_targeted_red_team_receipt(
             manifest_path,
             refined_path,
@@ -848,7 +848,11 @@ class RunContractTests(unittest.TestCase):
             reserved_tokens=80000,
             reserved_cost_usd=1.0,
         )
-        self.assertEqual(budget["remaining_cost_usd"], 1.0)
+        # Owner-authorized 2026-09-16: the run-level Token/cost ceilings are removed,
+        # so no ceiling-derived remaining amount exists and nothing blocks the launch.
+        self.assertIsNone(budget["remaining_cost_usd"])
+        self.assertIsNone(budget["token_ceiling"])
+        self.assertIsNone(budget["cost_usd_ceiling"])
         cached_usage = {
             "telemetry": {
                 "executions": {
@@ -870,27 +874,18 @@ class RunContractTests(unittest.TestCase):
         )
         self.assertEqual(cached_budget["actual_tokens"], 50000)
         self.assertEqual(cached_budget["raw_total_tokens"], 500000)
-        no_reservation_headroom = deepcopy(within)
-        no_reservation_headroom["telemetry"]["executions"]["semantic:one"][
-            "usage"
-        ]["total_tokens"] = 920001
-        with self.assertRaisesRegex(RunContractError, "reservation unavailable"):
-            _assert_execution_budget_allows_launch(
-                no_reservation_headroom,
-                reserved_tokens=80000,
-                reserved_cost_usd=1.0,
-            )
-        ceiling_reached = deepcopy(within)
-        ceiling_reached["telemetry"]["executions"]["semantic:one"]["usage"] = {
-            "total_tokens": 1000000,
-            "cost_usd": 3.0,
+        over_former_ceiling = deepcopy(within)
+        over_former_ceiling["telemetry"]["executions"]["semantic:one"]["usage"] = {
+            "total_tokens": 4000000,
+            "cost_usd": 12.0,
         }
-        with self.assertRaisesRegex(RunContractError, "budget exceeded"):
-            _assert_execution_budget_allows_launch(
-                ceiling_reached,
-                reserved_tokens=1,
-                reserved_cost_usd=0.01,
-            )
+        previous_ceiling_payload = _assert_execution_budget_allows_launch(
+            over_former_ceiling,
+            reserved_tokens=80000,
+            reserved_cost_usd=1.0,
+        )
+        self.assertEqual(previous_ceiling_payload["accounted_tokens"], 4000000)
+        self.assertIsNone(previous_ceiling_payload["remaining_cost_usd"])
 
     def test_unavailable_supplement_telemetry_keeps_cost_reservation(self):
         manifest_path, _, request = self.prepare_supplement_run(
@@ -900,20 +895,22 @@ class RunContractTests(unittest.TestCase):
         manifest = load_manifest(manifest_path)
         reservation = manifest["telemetry"]["reservations"]["supplemental:gap-a"]
         self.assertEqual(reservation["status"], "reserved")
-        self.assertEqual(reservation["cost_usd"], 2.0)
+        # No run-level cost ceiling (owner-authorized 2026-09-16): the supplement
+        # reservation is the flat per-gap cost, not a slice of a ceiling pool.
+        self.assertEqual(reservation["cost_usd"], 0.5)
         self.assertEqual(
             manifest["telemetry"]["summary"]["accounted_total_cost_usd"],
-            2.0,
+            0.5,
         )
         semantic_headroom = _assert_execution_budget_allows_launch(
             manifest,
             reserved_tokens=40000,
             reserved_cost_usd=0.75,
         )
-        self.assertEqual(semantic_headroom["remaining_cost_usd"], 1.0)
+        self.assertIsNone(semantic_headroom["remaining_cost_usd"])
         self.assertEqual(
             request["execution_packets"][0]["usage_budget"]["cost_usd"],
-            2.0,
+            0.5,
         )
         missing_review_telemetry = deepcopy(manifest)
         semantic_reservation = deepcopy(reservation)
@@ -933,7 +930,7 @@ class RunContractTests(unittest.TestCase):
             reserved_tokens=30000,
             reserved_cost_usd=0.5,
         )
-        self.assertEqual(red_team_headroom["accounted_cost_usd"], 2.5)
+        self.assertEqual(red_team_headroom["accounted_cost_usd"], 1.0)
 
     def test_execution_telemetry_settles_reservation_to_actual_usage(self):
         manifest_path, _, _ = self.prepare_supplement_run(
@@ -3203,7 +3200,7 @@ class RunContractTests(unittest.TestCase):
             "semantic",
             now=self.now,
         )
-        self.assertEqual(request["execution_packet"]["timeout_ms"], 240000)
+        self.assertEqual(request["execution_packet"]["timeout_ms"], 900000)
         self.assertEqual(request["execution_packet"]["usage_budget"]["cost_usd"], 0.5)
         core_draft = Path(request["execution_packet"]["draft_paths"]["refined_core"])
         decision = Path(request["execution_packet"]["draft_paths"]["decision"])

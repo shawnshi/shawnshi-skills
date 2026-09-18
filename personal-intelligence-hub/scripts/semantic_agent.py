@@ -183,6 +183,21 @@ def _source_identity(candidate: dict[str, Any]) -> str:
     return f"source:{source}"
 
 
+def _single_secondary_allowed(manifest: dict[str, Any]) -> bool:
+    """Owner-authorized 2026-09-14 downgrade. Explicit opt-in only: a missing policy,
+    a missing key or any value other than true keeps the strict behaviour, so evidence
+    standards can never be lowered by an absent configuration.
+    """
+    record = manifest.get("artifacts", {}).get("focus_config")
+    if not isinstance(record, dict) or not record.get("artifact_path"):
+        return False
+    focus = load_json(Path(str(record["artifact_path"])), {})
+    policy = focus.get("corroboration_policy")
+    return bool(
+        isinstance(policy, dict) and policy.get("single_secondary_allowed") is True
+    )
+
+
 def _candidate_projection(
     entry: dict[str, Any],
     *,
@@ -359,12 +374,36 @@ def _candidate_assessment(
             {"entry": entry, "disposition": disposition}
         )
 
+    allow_single_secondary = _single_secondary_allowed(manifest)
     for group in pending_secondary.values():
         independent = {_source_identity(value["entry"]["candidate"]) for value in group}
         if len(group) < 2 or len(independent) < 2:
+            if not allow_single_secondary:
+                for value in group:
+                    value["disposition"]["reason"] = (
+                        "secondary_without_independent_corroboration"
+                    )
+                continue
+            # Explicit downgrade: one independent secondary source with registered verified
+            # access may be selected as `single_secondary`. The group cannot hold two
+            # independent sources here, so only the first entry is emitted; the remaining
+            # same-event entries stay rejected for lack of independent corroboration.
+            emitted = False
             for value in group:
-                value["disposition"]["reason"] = (
-                    "secondary_without_independent_corroboration"
+                if emitted:
+                    value["disposition"]["reason"] = (
+                        "secondary_without_independent_corroboration"
+                    )
+                    continue
+                emitted = True
+                eligible.append(
+                    _candidate_projection(
+                        value["entry"],
+                        candidate_refs=[
+                            str(value["entry"]["candidate"].get("candidate_id") or "")
+                        ],
+                        corroboration_status="single_secondary",
+                    )
                 )
             continue
         canonical = group[0]["entry"]
@@ -515,12 +554,30 @@ def build_agent_context(request_path: str | Path) -> dict[str, Any]:
             "halt_condition_met": True,
             "action_lever_required_fields": sorted(ACTION_FIELDS),
             "selected_item_required_fields": sorted(ITEM_FIELDS),
+            # Field types are declared explicitly: a prose value in a boolean field is the
+            # single most common draft rejection (owner-authorized clarity fix 2026-09-14).
+            "selected_item_field_types": {
+                "candidate_id": "string; must equal one eligible_candidates[].candidate_id",
+                "title_zh": "non-empty string",
+                "event_identity": "object with exactly event_identity_exact_fields",
+                "fact": "non-empty string",
+                "connection": "non-empty string",
+                "deduction": "non-empty string",
+                "actionability": "non-empty string describing an action",
+                "intelligence_level": "one of intelligence_level_allowed",
+                "confidence": "one of confidence_allowed",
+                "summary_zh": "non-empty string",
+                "major_signal": "JSON boolean true/false only; never a string, never null",
+                "major_signal_reason": "non-empty string",
+                "near_term_decision_impact": "JSON boolean true/false only; never a string, never null. Put the near-term impact prose in decision_impact_reason instead.",
+                "decision_impact_reason": "non-empty string carrying the near-term impact description",
+            },
             "event_identity_exact_fields": sorted(IDENTITY_FIELDS),
             "intelligence_level_allowed": ["L1", "L2", "L3", "L4"],
             "confidence_allowed": ["high", "medium", "low"],
             "selection_rule": "Select only candidate_id values from eligible_candidates; every exposed item is either a registered primary source or a secondary-source event group with at least two independent candidate_refs. Weak supply may yield fewer than 10 items.",
             "top_level_text_fields": ["punchline", "insights", "digest", "market"],
-            "text_rule": "Every text field must be one non-empty natural-language string; insights is not a list, and actionability must describe an action rather than a rating word.",
+            "text_rule": "Every text field must be one non-empty natural-language string; insights is not a list, and actionability must describe an action rather than a rating word. major_signal and near_term_decision_impact are booleans: their explanations belong in major_signal_reason and decision_impact_reason.",
         },
         "instructions": [
             "Review only eligible_candidates; do not read baseline, history, candidate pool, supplement, schema, old runs, or script source.",
@@ -528,6 +585,7 @@ def build_agent_context(request_path: str | Path) -> dict[str, Any]:
             "Write only the semantic-dynamic object to dynamic_draft_path.",
             "Use one semantic event_identity per selected candidate; event_date and primary_domain must match its registered evidence.",
             "After writing, stop analysis and run finalize_command exactly.",
+            "major_signal and near_term_decision_impact must be JSON booleans (true/false); their explanations go in major_signal_reason and decision_impact_reason. A string in either boolean field makes finalize reject the whole draft.",
         ],
         "finalize_command": deepcopy(packet["agent_helper"]["finalize_command"]),
         "command_consumption": "argv array; subprocess.run(argv, shell=False); never paste joined shell text",

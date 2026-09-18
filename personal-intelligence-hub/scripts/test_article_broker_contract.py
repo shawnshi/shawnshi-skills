@@ -80,7 +80,9 @@ def test_worker_only_settlement_and_expiry_hold_original_reservation(new_run):
     assert summary["combined_usage_status"] == "unmeasured_broker"
     assert summary["combined_tokens"] is None
     assert summary["combined_cost_usd"] is None
-    assert summary["budget_status"] == "incomplete_combined_telemetry"
+    # No run-level ceiling remains (owner-authorized 2026-09-16).
+    assert summary["budget_status"] == "unlimited_no_ceiling"
+    assert summary["budget_ceiling_enabled"] is False
     assert summary["reserved_cost_usd"] == before["cost_usd"]
     rc.record_execution_telemetry(path, artifact, now=now)  # idempotent observation
     rc.expire_execution_reservation(path, "supplemental", "tech", reason="terminal", now=now)
@@ -104,7 +106,8 @@ def test_normal_settlement_unchanged(new_run):
     manifest = rc.load_manifest(path)
     assert manifest["telemetry"]["reservations"]["supplemental:tech"]["status"] == "settled"
     assert manifest["telemetry"]["summary"]["reserved_tokens"] == 0
-    assert manifest["telemetry"]["summary"]["budget_status"] == "within_budget"
+    # No run-level ceiling remains (owner-authorized 2026-09-16).
+    assert manifest["telemetry"]["summary"]["budget_status"] == "unlimited_no_ceiling"
     assert "combined_usage_status" not in manifest["telemetry"]["summary"]
 
 
@@ -254,14 +257,23 @@ def test_malformed_broker_request_never_falls_back(new_run, mutation):
         rc._execution_budget_state(manifest)
 
 
-def test_held_amount_still_blocks_new_launch_after_worker_settlement(new_run):
+def test_held_amount_keeps_reserving_without_blocking_new_launch(new_run):
     request(new_run)
     path, _, now = new_run
     rc.record_execution_telemetry(path, telemetry(new_run), now=now)
     manifest = rc.load_manifest(path)
-    with pytest.raises(rc.RunContractError, match="budget exceeded"):
-        rc._assert_execution_budget_allows_launch(manifest, reserved_tokens=1, reserved_cost_usd=1.0)
-    assert manifest["telemetry"]["summary"]["reserved_cost_usd"] == 2.0
+    # Owner-authorized 2026-09-16: the permanently held broker reservation is still
+    # accounted for, but it no longer blocks a subsequent agent launch.
+    state = rc._assert_execution_budget_allows_launch(
+        manifest, reserved_tokens=1, reserved_cost_usd=1.0
+    )
+    # With no ceiling the supplement reservation is the flat per-gap cost plus the
+    # configured downstream headroom, no longer a slice of a ceiling-derived pool.
+    assert state["reserved_cost_usd"] == 0.5
+    assert state["cost_usd_ceiling"] is None
+    assert state["remaining_cost_usd"] is None
+    assert manifest["telemetry"]["summary"]["reserved_cost_usd"] == 0.5
+    assert manifest["telemetry"]["summary"]["active_reservation_count"] == 1
 
 
 def test_normal_gap_cannot_claim_broker_result(new_run):

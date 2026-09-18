@@ -107,24 +107,20 @@ class PromptContractTests(unittest.TestCase):
             "canary_first_then_bounded_fanout",
         )
         self.assertTrue(policy["parallelism"]["one_gap_per_worker"])
-        self.assertEqual(
-            policy["observability"]["normal_run_token_ceiling"], 1000000
-        )
+        self.assertIsNone(policy["observability"]["normal_run_token_ceiling"])
         self.assertEqual(
             policy["observability"]["normal_run_token_meter"],
             "total_tokens - cache_read_tokens - cache_write_tokens",
         )
-        self.assertEqual(policy["observability"]["semantic_timeout_ms"], 240000)
-        self.assertEqual(policy["observability"]["red_team_timeout_ms"], 120000)
+        self.assertEqual(policy["observability"]["semantic_timeout_ms"], 900000)  # owner-authorized 2026-09-14: wall-clock only
+        self.assertEqual(policy["observability"]["red_team_timeout_ms"], 600000)  # owner-authorized 2026-09-14: wall-clock only
         self.assertEqual(
             policy["observability"]["supplement_finalization_grace_seconds"],
             300,
         )
         self.assertEqual(policy["observability"]["supplement_tool_budget_soft"], 8)
         self.assertEqual(policy["observability"]["supplement_tool_budget_hard"], 12)
-        self.assertEqual(
-            policy["observability"]["normal_run_cost_usd_ceiling"], 3.0
-        )
+        self.assertIsNone(policy["observability"]["normal_run_cost_usd_ceiling"])
         self.assertIn(
             "session_telemetry.py",
             policy["observability"]["telemetry_command"],
@@ -241,14 +237,14 @@ class PromptContractTests(unittest.TestCase):
         self.assertEqual(telemetry["version"], "pih-execution-telemetry/1.0")
         self.assertEqual(telemetry["content_policy"], "aggregate_only_no_message_content")
         self.assertTrue(telemetry["failure_usage_included"])
-        self.assertEqual(telemetry["normal_run_token_ceiling"], 1000000)
+        self.assertIsNone(telemetry["normal_run_token_ceiling"])
         self.assertEqual(
             telemetry["token_meter"],
             "total_tokens - cache_read_tokens - cache_write_tokens",
         )
         self.assertTrue(telemetry["raw_total_tokens_retained_for_observability"])
-        self.assertEqual(telemetry["normal_run_cost_usd_ceiling"], 3.0)
-        self.assertTrue(telemetry["new_launches_blocked_at_ceiling"])
+        self.assertIsNone(telemetry["normal_run_cost_usd_ceiling"])
+        self.assertFalse(telemetry["new_launches_blocked_at_ceiling"])
         self.assertTrue(telemetry["token_reservation_required_before_launch"])
         self.assertTrue(telemetry["cost_reservation_required_before_launch"])
         self.assertEqual(

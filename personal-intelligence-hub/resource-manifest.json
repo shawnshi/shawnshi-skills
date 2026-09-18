@@ -1,11 +1,11 @@
 {
   "schema_version": 3,
   "skill": "personal-intelligence-hub",
-  "generated_at": "2026-09-13T18:47:03+08:00",
+  "generated_at": "2026-09-18T10:12:59+08:00",
   "hash_algorithm": "SHA-256",
   "text_hash_normalization": "LF",
   "skill_md": "SKILL.md",
-  "skill_md_sha256": "80a907559d73653c525c0412f2a1fd9a8dc0ea2792a65a428ebca0a92a4dae01",
+  "skill_md_sha256": "17f3a951d058f0b9d44faba165bdda5f85623b1c34a96556efca34c785ac86bf",
   "top_level_files": [
     "SKILL.md",
     "requirements.txt"
@@ -13,7 +13,7 @@
   "top_level_file_hashes": [
     {
       "path": "SKILL.md",
-      "sha256": "80a907559d73653c525c0412f2a1fd9a8dc0ea2792a65a428ebca0a92a4dae01"
+      "sha256": "17f3a951d058f0b9d44faba165bdda5f85623b1c34a96556efca34c785ac86bf"
     },
     {
       "path": "requirements.txt",
@@ -28,7 +28,7 @@
   "resource_directories": [
     {
       "name": "scripts",
-      "file_count": 70
+      "file_count": 71
     },
     {
       "name": "references",
@@ -46,7 +46,7 @@
     },
     {
       "path": "references/briefing_schema.json",
-      "sha256": "89111bc33e6a6450027762121dc9a640b6c29b2dd4cd887ed7c45df2d73f99c7"
+      "sha256": "a3ec078fb075bc8e3e08ab7f08724da0fdf3c4788f69c28c50b2492797af8c7e"
     },
     {
       "path": "references/briefing_schema_v1.0.json",
@@ -70,7 +70,7 @@
     },
     {
       "path": "references/karpathy_feeds.json",
-      "sha256": "84991da2ec059da9a33f6fd1db2e6139114f6fc32af7c6e2c88cf86a736c00ad"
+      "sha256": "2bbca8d3de1e8ccfe86cea67dd8c51f33228c1e171c5507aad4ae280c0d333e5"
     },
     {
       "path": "references/prompts/v1_refine_system.md",
@@ -78,7 +78,7 @@
     },
     {
       "path": "references/quality_standard.md",
-      "sha256": "46d04381229e05ad305a76e77c2ddf590502553afb12a4b8d5033a422eb745b5"
+      "sha256": "110b9e8e67dc47bd95e0e0db627cbc33994ce5ba3143f6de48c8deab2e69e0f6"
     },
     {
       "path": "references/responses.md",
@@ -86,19 +86,19 @@
     },
     {
       "path": "references/run_manifest_schema.json",
-      "sha256": "a9151a0fa61c83ef9f037513265d881334fd2d5eb2ee12cff55b57e7589af272"
+      "sha256": "95eb360a758e79c6ecda1a546786c546784c1e58fc5f01ce61d1393397c389de"
     },
     {
       "path": "references/strategic_focus.json",
-      "sha256": "cc3dc67547dd7852bacf824d73a6b8a39d7b3d63d987a3914ca96095576bf8f7"
+      "sha256": "5f8697919bafc2f24ef815e15dd67b607d2c7204c14f96895790816cfa2dadb9"
     },
     {
       "path": "references/subagent_prompts.json",
-      "sha256": "72e3d326e52ab1dd260df5c9a32068a0223a3ac2e5353ff28cc1a338904ca405"
+      "sha256": "41d56e99195c4562ddf3b29aa6ce5887a6f89010a2d7b3def8d3897e061544cf"
     },
     {
       "path": "references/workflow_protocols.md",
-      "sha256": "470cd925dc28a6596ff2f9db448982cb4d488ae414fac8006dc541c0d155f975"
+      "sha256": "aee5735f6a3b9c7af5705554c72cc2bb0deaa0305413681259d1e1a8b00142a4"
     },
     {
       "path": "scripts/adversarial_audit.py",
@@ -110,7 +110,7 @@
     },
     {
       "path": "scripts/article_broker.py",
-      "sha256": "ea17b1322ec04af06c94b24e8d0f6da91d1d2e68bd4775db9b1c51bed9f6e28c"
+      "sha256": "522095473b386b009635453cf2fbebb2619cc3682ef17106b968a5a6d0312617"
     },
     {
       "path": "scripts/await_artifacts.py",
@@ -122,7 +122,7 @@
     },
     {
       "path": "scripts/briefing_gate.py",
-      "sha256": "279a9f2b1f213009385c29f3562919315970c2a5b74411b68157c7b8fb0a287c"
+      "sha256": "7a7642a52aa7007f1313486eeb45c3e12ea45b4f018032e30f8f90a1c753625a"
     },
     {
       "path": "scripts/contract_core.py",
@@ -186,7 +186,7 @@
     },
     {
       "path": "scripts/run_contract.py",
-      "sha256": "7ccb495b805a98a812cadad66aa69e420da8519234a41a41584f594bf9885870"
+      "sha256": "54d49fe18756424f89ddff752f9ad3e030224235d44f204feb6fe66e82fe09b2"
     },
     {
       "path": "scripts/run_daily.py",
@@ -194,7 +194,7 @@
     },
     {
       "path": "scripts/semantic_agent.py",
-      "sha256": "8a8a541f03b705e778322f6e3ae2a90490169b62f8382514ea3f06c25bbb40f7"
+      "sha256": "7aff1709c0b8cc4692678ea4d5bb8fa3c376e768df97db189a1ed29c028066dc"
     },
     {
       "path": "scripts/session_telemetry.py",
@@ -209,6 +209,10 @@
       "sha256": "d9502e94fbe037d9429a58448cb358da74866b7627aef44aef29af53ac0a47d7"
     },
     {
+      "path": "scripts/supplement_seal.py",
+      "sha256": "c5d6db086bcc71c7030ec85dc90c176e537e88de1f50677e644b9a6b4b1cbe97"
+    },
+    {
       "path": "scripts/test_archive_contract.py",
       "sha256": "8bde528d3924ec4a6e632c16699f7ad8116f4d1085ad0ff134c7d9074fd886c9"
     },
@@ -218,7 +222,7 @@
     },
     {
       "path": "scripts/test_article_broker_contract.py",
-      "sha256": "2e99cf2ec6cb5511a6ca360304a6c593d0a39c314b72df80f8335dc747b4f04c"
+      "sha256": "b43ce86843b48de643be092d42d069cf1524cc09058eedff0126a576b21aaba2"
     },
     {
       "path": "scripts/test_article_broker_evidence.py",
@@ -250,7 +254,7 @@
     },
     {
       "path": "scripts/test_briefing_v13_contract.py",
-      "sha256": "68c9558b03650d4645675f63f174e4c420258f8ec967a24f5e5f697a16afd26f"
+      "sha256": "a43efacfd7ee6bc3773283afe07fd1fffe6e8b562b0753e4e2d1778ca1e53c44"
     },
     {
       "path": "scripts/test_broker_closure_and_coverage.py",
@@ -298,7 +302,7 @@
     },
     {
       "path": "scripts/test_native_readable_dates.py",
-      "sha256": "71a1a401a1d998a8decbc012ce8a25939fd4a696fee64cec5bcbca8c3891fc03"
+      "sha256": "9fd402cb531d6cb1adcaa2a3b892bcfacdd77533a4c8ef8267f51a320243f6b5"
     },
     {
       "path": "scripts/test_parent_receipt_size.py",
@@ -306,7 +310,7 @@
     },
     {
       "path": "scripts/test_parent_supplement_finalization.py",
-      "sha256": "3ae44da1f88001670304a9f23902ee5879f082649b64abc4b3b0307376ea0248"
+      "sha256": "47271b8e0860a2b7fdc9d454c37a2ea1242401af8c757def6fa3e01482308cb4"
     },
     {
       "path": "scripts/test_pipeline_contract.py",
@@ -314,7 +318,7 @@
     },
     {
       "path": "scripts/test_prompt_contract.py",
-      "sha256": "8a82965a589647ceff39dd7621d24671e9506dd83453c981d9a5ae25b0ea9c9f"
+      "sha256": "c2a93c126cf70634025c5a937c7f7677882e6d469bf1b7b44a419fca6bc2b676"
     },
     {
       "path": "scripts/test_receipt_assemble.py",
@@ -330,7 +334,7 @@
     },
     {
       "path": "scripts/test_run_contract.py",
-      "sha256": "246eb895135ed7279bd37fe3745eda31f190a7f22a4426f8ea6d0083553a418c"
+      "sha256": "992f2c50035a5352a5f1a44e342a78ec9922e8430934900e6247c235a55a51c7"
     },
     {
       "path": "scripts/test_run_daily.py",
@@ -338,11 +342,11 @@
     },
     {
       "path": "scripts/test_run_daily_broker_entry.py",
-      "sha256": "c0b02970cf20146830e20fa23f98c04eafa5e671cc5251027187dd42ee32bd35"
+      "sha256": "f18422a887eb495e3ac42fa58767027bfc7c6300a6246de1636aa01612875173"
     },
     {
       "path": "scripts/test_semantic_agent.py",
-      "sha256": "bb7fea47655a83312ce868356d7bc819c9bb45c0e4b86f8789eb86e9105d8331"
+      "sha256": "c3ff98e29e9a4b72afa34b38b66c86898f64a97e30acb54c489ff1aeecc904c3"
     },
     {
       "path": "scripts/test_semantic_readability.py",
@@ -350,7 +354,7 @@
     },
     {
       "path": "scripts/test_session_telemetry.py",
-      "sha256": "f47c61d77b2b32a6feaa628940ade5fa92812c0cd84c1fac19fbcb4c1ce69f87"
+      "sha256": "7a1bd5adcca5d47e6169a9fa148eeedcf64616f0a9d4147da31269a1d3cb9d99"
     },
     {
       "path": "scripts/test_source_kind_zero_report.py",
@@ -386,7 +390,7 @@
       "path": "references/briefing_schema.json",
       "exists": true,
       "resolved_path": "personal-intelligence-hub/references/briefing_schema.json",
-      "sha256": "89111bc33e6a6450027762121dc9a640b6c29b2dd4cd887ed7c45df2d73f99c7"
+      "sha256": "a3ec078fb075bc8e3e08ab7f08724da0fdf3c4788f69c28c50b2492797af8c7e"
     },
     {
       "path": "references/briefing_schema_v1.2.json",
@@ -407,58 +411,40 @@
       "sha256": "912722246ad336cc5d96cdb93ceeeb693a0c3af19d5d3a92ffaa3f45a7b57b35"
     },
     {
-      "path": "references/karpathy_feeds.json",
-      "exists": true,
-      "resolved_path": "personal-intelligence-hub/references/karpathy_feeds.json",
-      "sha256": "84991da2ec059da9a33f6fd1db2e6139114f6fc32af7c6e2c88cf86a736c00ad"
-    },
-    {
       "path": "references/quality_standard.md",
       "exists": true,
       "resolved_path": "personal-intelligence-hub/references/quality_standard.md",
-      "sha256": "46d04381229e05ad305a76e77c2ddf590502553afb12a4b8d5033a422eb745b5"
+      "sha256": "110b9e8e67dc47bd95e0e0db627cbc33994ce5ba3143f6de48c8deab2e69e0f6"
     },
     {
       "path": "references/strategic_focus.json",
       "exists": true,
       "resolved_path": "personal-intelligence-hub/references/strategic_focus.json",
-      "sha256": "cc3dc67547dd7852bacf824d73a6b8a39d7b3d63d987a3914ca96095576bf8f7"
+      "sha256": "5f8697919bafc2f24ef815e15dd67b607d2c7204c14f96895790816cfa2dadb9"
     },
     {
       "path": "references/subagent_prompts.json",
       "exists": true,
       "resolved_path": "personal-intelligence-hub/references/subagent_prompts.json",
-      "sha256": "72e3d326e52ab1dd260df5c9a32068a0223a3ac2e5353ff28cc1a338904ca405"
+      "sha256": "41d56e99195c4562ddf3b29aa6ce5887a6f89010a2d7b3def8d3897e061544cf"
     },
     {
       "path": "references/workflow_protocols.md",
       "exists": true,
       "resolved_path": "personal-intelligence-hub/references/workflow_protocols.md",
-      "sha256": "470cd925dc28a6596ff2f9db448982cb4d488ae414fac8006dc541c0d155f975"
-    },
-    {
-      "path": "scripts/late_telemetry.py",
-      "exists": true,
-      "resolved_path": "personal-intelligence-hub/scripts/late_telemetry.py",
-      "sha256": "079bf376524de500528b77f1acf301ed0747d415795600c556a04805847326dc"
-    },
-    {
-      "path": "scripts/recovery_lifecycle.py",
-      "exists": true,
-      "resolved_path": "personal-intelligence-hub/scripts/recovery_lifecycle.py",
-      "sha256": "9019c4e404e2d47ffbf48a6a2258a484eadd9a48e632b26ed47cf0ecad6726de"
-    },
-    {
-      "path": "scripts/review_handoff.py",
-      "exists": true,
-      "resolved_path": "personal-intelligence-hub/scripts/review_handoff.py",
-      "sha256": "4477e5bc91ad7b74463ec8bb86696ed419fb8e22a8b1735ce23b8990b1c90e4c"
+      "sha256": "aee5735f6a3b9c7af5705554c72cc2bb0deaa0305413681259d1e1a8b00142a4"
     },
     {
       "path": "scripts/run_daily.py",
       "exists": true,
       "resolved_path": "personal-intelligence-hub/scripts/run_daily.py",
       "sha256": "4d985e0efa684ad88e84b52c4c129c17e57c252a0dcae0bdbd0f6df346fb095a"
+    },
+    {
+      "path": "scripts/supplement_seal.py",
+      "exists": true,
+      "resolved_path": "personal-intelligence-hub/scripts/supplement_seal.py",
+      "sha256": "c5d6db086bcc71c7030ec85dc90c176e537e88de1f50677e644b9a6b4b1cbe97"
     }
   ],
   "missing_declared_dependencies": []

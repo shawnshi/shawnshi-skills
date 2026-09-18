@@ -86,7 +86,7 @@ class ParentSupplementFinalizationTests(unittest.TestCase):
     def helper(self, parent=True):
         return subprocess.run([sys.executable, "-X", "utf8", str(self.snapshot / "scripts/supplement_agent.py"),
             "finalize", "--request", str(self.request_path), "--gap-id", "technology",
-            *(["--parent"] if parent else [])], cwd=self.snapshot, capture_output=True, text=True)
+            *(["--parent"] if parent else [])], cwd=self.snapshot, capture_output=True, text=True, encoding="utf8")
 
     def test_exhausted_worker_parent_finalizes_same_payload_and_registers(self):
         self.assertEqual(self.packet["tool_budget"], {"soft": 8, "hard": 12, "block": "*"})
@@ -105,7 +105,7 @@ class ParentSupplementFinalizationTests(unittest.TestCase):
         self.assertEqual(json.loads(again.stdout)["assembly"], "already_assembled")
         registration = subprocess.run([sys.executable, "-X", "utf8", str(self.snapshot / "scripts/run_daily.py"),
             "finalize-supplement", "--manifest", str(self.manifest_path), "--request", str(self.request_path),
-            "--draft", str(self.draft)], cwd=self.snapshot, capture_output=True, text=True)
+            "--draft", str(self.draft)], cwd=self.snapshot, capture_output=True, text=True, encoding="utf8")
         self.assertEqual(registration.returncode, 0, registration.stderr)
         self.assertEqual(self.final.read_bytes(), expected)
         aggregate = json.loads((self.run_dir / "supplement_results.json").read_text(encoding="utf8"))
@@ -238,6 +238,7 @@ class ParentSupplementFinalizationTests(unittest.TestCase):
             cwd=self.snapshot,
             capture_output=True,
             text=True,
+            encoding="utf8",
         )
         self.assertEqual(context_result.returncode, 0, context_result.stderr)
         derived = json.loads(context_result.stdout)["draft_parent_derived_fields"]
