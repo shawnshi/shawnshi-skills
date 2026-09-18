@@ -1041,6 +1041,52 @@ class RunContractTests(unittest.TestCase):
         with self.assertRaisesRegex(RunContractError, "hash mismatch"):
             validate_resource_manifest(manifest, self.skill_file)
 
+    def test_resource_manifest_accepts_library_root_dependency(self):
+        with tempfile.TemporaryDirectory() as directory:
+            library_root = Path(directory) / "skills"
+            skill_dir = library_root / "example-skill"
+            (skill_dir / "references").mkdir(parents=True)
+            resource = skill_dir / "references" / "note.md"
+            resource.write_text("note\n", encoding="utf-8")
+            shared = library_root / "scripts" / "shared_tool.py"
+            shared.parent.mkdir()
+            shared.write_text("VALUE = 1\n", encoding="utf-8")
+            skill_file = skill_dir / "SKILL.md"
+            skill_file.write_text("skill contract", encoding="utf-8")
+            payload = {
+                "schema_version": 3,
+                "hash_algorithm": "SHA-256",
+                "text_hash_normalization": "LF",
+                "skill": "example-skill",
+                "skill_md": "SKILL.md",
+                "skill_md_sha256": hashlib.sha256(b"skill contract").hexdigest(),
+                "top_level_files": [],
+                "top_level_file_hashes": [],
+                "resource_file_hashes": [
+                    {
+                        "path": "references/note.md",
+                        "sha256": hashlib.sha256(b"note\n").hexdigest(),
+                    }
+                ],
+                "declared_local_dependencies": [
+                    {
+                        "path": "scripts/shared_tool.py",
+                        "exists": True,
+                        "resolved_path": "scripts/shared_tool.py",
+                        "sha256": hashlib.sha256(b"VALUE = 1\n").hexdigest(),
+                    }
+                ],
+                "missing_declared_dependencies": [],
+            }
+            manifest = skill_dir / "resource-manifest.json"
+            manifest.write_text(json.dumps(payload), encoding="utf-8")
+
+            validate_resource_manifest(manifest, skill_file)
+
+            shared.write_text("VALUE = 2\n", encoding="utf-8")
+            with self.assertRaisesRegex(RunContractError, "hash mismatch"):
+                validate_resource_manifest(manifest, skill_file)
+
     def test_resource_manifest_v3_requires_resource_hash_inventory(self):
         payload = json.loads(
             (self.runtime_dir / "resource-manifest.json").read_text(encoding="utf-8")

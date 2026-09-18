@@ -1273,8 +1273,19 @@ def validate_resource_manifest(
             continue
         seen[normalized] = expected
         dependency = (root / Path(normalized)).resolve()
+        allowed_base = root
+        if not dependency.is_file():
+            # The manifest generator resolves a declared path against the skill directory
+            # first and then against the skills-library root, so a fully-qualified or
+            # shared-root reference is recorded as exists=true. Mirror that resolution
+            # here, still bounded by the library root and still hash-checked, instead of
+            # reporting a hash mismatch that no regeneration can clear.
+            library_candidate = (root.parent / Path(normalized)).resolve()
+            if library_candidate.is_file():
+                dependency = library_candidate
+                allowed_base = root.parent
         try:
-            dependency.relative_to(root)
+            dependency.relative_to(allowed_base)
         except ValueError as exc:
             raise RunContractError(
                 "resource manifest dependency escapes skill root"
