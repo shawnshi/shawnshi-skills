@@ -30,7 +30,7 @@ class GarminChartFailureContractTests(unittest.TestCase):
             with (
                 patch.object(
                     garmin_chart,
-                    "fetch_local_summary",
+                    "fetch_dashboard_summary",
                     return_value={"status": "no_data"},
                 ) as fetch_local,
                 patch.object(
@@ -53,10 +53,10 @@ class GarminChartFailureContractTests(unittest.TestCase):
 
         self.assertEqual(rc, 0)
         fetch_local.assert_called_once_with(
-            7, components=garmin_chart.DASHBOARD_DEFAULT_COMPONENTS
+            7, components=garmin_chart.DASHBOARD_DEFAULT_COMPONENTS, policy="required"
         )
         self.assertNotIn("activities", garmin_chart.DASHBOARD_DEFAULT_COMPONENTS)
-        self.assertNotIn("training_load_series", garmin_chart.DASHBOARD_DEFAULT_COMPONENTS)
+        self.assertIn("training_load_series", garmin_chart.DASHBOARD_DEFAULT_COMPONENTS)
 
     def test_local_dashboard_requires_health_data_permission_before_read(self):
         stderr = io.StringIO()
@@ -186,7 +186,7 @@ class GarminChartFailureContractTests(unittest.TestCase):
                 patch.object(garmin_chart, "HAS_SQLITE", True),
                 patch.object(
                     garmin_chart,
-                    "fetch_local_summary",
+                    "fetch_dashboard_summary",
                     side_effect=RuntimeError("database_changed_during_read"),
                 ),
                 patch("sys.stderr", stderr),

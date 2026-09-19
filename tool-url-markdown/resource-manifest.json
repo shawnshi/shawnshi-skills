@@ -1,11 +1,11 @@
 {
   "schema_version": 3,
   "skill": "tool-url-markdown",
-  "generated_at": "2026-08-16T22:02:19",
+  "generated_at": "2026-09-19T16:43:13+08:00",
   "hash_algorithm": "SHA-256",
   "text_hash_normalization": "LF",
   "skill_md": "SKILL.md",
-  "skill_md_sha256": "f0f68d8b9324c2dadf448ab1e673db97a099367136c5cb78483f3bc71dd7c268",
+  "skill_md_sha256": "d364ffb439a9cd5d2341e5b5abe754dd151d987496e2eaeb31cc01cacc9d7d95",
   "top_level_files": [
     "SKILL.md",
     "bun.lock",
@@ -17,11 +17,11 @@
   "top_level_file_hashes": [
     {
       "path": "SKILL.md",
-      "sha256": "f0f68d8b9324c2dadf448ab1e673db97a099367136c5cb78483f3bc71dd7c268"
+      "sha256": "d364ffb439a9cd5d2341e5b5abe754dd151d987496e2eaeb31cc01cacc9d7d95"
     },
     {
       "path": "bun.lock",
-      "sha256": "5d9a7ad0b238a7db97670ac22c8fa14920236b3784410b7fdc45237cc11feea3"
+      "sha256": "9da35e14d9feec0ebc5ce3e9090b59d40a9dd011585a3f03c66f53b99690850e"
     },
     {
       "path": "index.ts",
@@ -42,7 +42,8 @@
   ],
   "top_level_directories": [
     "references",
-    "scripts"
+    "scripts",
+    "tests"
   ],
   "resource_directories": [
     {
@@ -57,27 +58,31 @@
   "resource_file_hashes": [
     {
       "path": "references/troubleshooting.md",
-      "sha256": "eb47fbfa506948a2541a3f58f8fe57f7dfddb798a0450519b8fc3c09bdd1fdf9"
+      "sha256": "b8f9acac9a7a6da5cb4aae6882d8bf1dc6b486a5bc1cca48ddc35c67b24aa587"
     },
     {
       "path": "scripts/cdp.ts",
-      "sha256": "bb4eb6a3e28b317816a717dcdf8e1bcf71f32e4e889bb8587382f959bc8fd979"
+      "sha256": "2d9aba55a64dadcd7a9c31b5c748b692a752f9a4979fb6f25b8922461ba32465"
     },
     {
       "path": "scripts/constants.ts",
-      "sha256": "7746d7dc54ec94f658f9fd1c553eae57d304ede4e0d505707432c8340022d334"
+      "sha256": "81dffa3c05d8768da2cf39a66ff645d8f3ffcb270805efd99830dde9186791ce"
     },
     {
       "path": "scripts/html-to-markdown.ts",
-      "sha256": "33d584de1d2f7793443fed494d5032b4a2df547d6dff1d85a68b96055a19d667"
+      "sha256": "e6bcfcc3f046bfc323a8daa82fdee13048b331fad114a2daecd6355d2d8ea4fb"
     },
     {
       "path": "scripts/main.ts",
-      "sha256": "c350dcae5fcc695fd2f2307e90d3ddb6f3e126d3d884fea22d64130cb6b95a1c"
+      "sha256": "43cf3a1407b079a761e6fa71bfb80b230433f2c63e4efe9352a523df0747c315"
     },
     {
       "path": "scripts/paths.ts",
-      "sha256": "65b4b472b576b6c8519915ff3eb21e9ba21b1d64e6a787e72ff30b0f765a8b16"
+      "sha256": "6517e05adcdbff1ae66c6d1731aaa8b21f7f76894b05531cea2e21586b3f65cb"
+    },
+    {
+      "path": "tests/main.test.mjs",
+      "sha256": "dd661b8eff284829261225c9d05817be86831d50d19db1f07c9ea841627dea94"
     }
   ],
   "declared_local_dependencies": [
@@ -85,7 +90,7 @@
       "path": "scripts/main.ts",
       "exists": true,
       "resolved_path": "tool-url-markdown/scripts/main.ts",
-      "sha256": "c350dcae5fcc695fd2f2307e90d3ddb6f3e126d3d884fea22d64130cb6b95a1c"
+      "sha256": "43cf3a1407b079a761e6fa71bfb80b230433f2c63e4efe9352a523df0747c315"
     }
   ],
   "missing_declared_dependencies": []

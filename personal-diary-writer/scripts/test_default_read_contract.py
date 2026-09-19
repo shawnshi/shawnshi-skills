@@ -1,5 +1,3 @@
-import hashlib
-import json
 import re
 import unittest
 from pathlib import Path
@@ -24,20 +22,11 @@ class DefaultReadContractTests(unittest.TestCase):
             (cls.entry_text, cls.read_contract, cls.write_contract)
         )
         cls.proxy_text = cls.authority_text
-        cls.config = json.loads(AUTHORITY_CONFIG.read_text(encoding="utf-8"))
-        locator = cls.config["authority_locator"]
-        if locator.get("base") != "user_home":
-            raise ValueError("production authority must use a user_home locator")
-        cls.authority_path = Path.home().joinpath(*locator["segments"])
-        if cls.authority_path.resolve() != AUTHORITY_SKILL.resolve():
-            raise ValueError(
-                "production authority must bind to the Pi standalone skill"
-            )
 
     def test_entry_routes_before_authority_gate_and_discloses_only_two_contracts(self):
         self.assertLess(
             self.entry_text.index("## 先选分支"),
-            self.entry_text.index("## 启动门"),
+            self.entry_text.index("## 执行前检查"),
         )
         self.assertEqual(
             set(re.findall(r"references/[a-z-]+\.md", self.entry_text)),
@@ -55,7 +44,7 @@ class DefaultReadContractTests(unittest.TestCase):
             "仅使用当次用户提供文本",
             "直接在回复中起草",
             "不读取个人历史、日历、健康库、私人会话或凭证",
-            "不运行 authority 启动遥测",
+            "不运行启动遥测",
             "不调用 `diary_ops.py scope`/`replace`",
             "不生成 scope/approval",
             "不要求 scope/hash 确认",
@@ -70,7 +59,7 @@ class DefaultReadContractTests(unittest.TestCase):
             0
         ]
         for marker in (
-            "先通过下方启动门",
+            "先完成下方执行前检查",
             "再完整读取 `references/private-data-read.md`",
             "草稿身份不豁免读取门",
             "用户明确排除的来源不得读取",
@@ -83,7 +72,7 @@ class DefaultReadContractTests(unittest.TestCase):
     def test_save_requires_fresh_authorization_and_full_protocol(self):
         branch = self.entry_text.split("- **保存**：", 1)[1].split("\n\n", 1)[0]
         for marker in (
-            "先通过启动门",
+            "先完成执行前检查",
             "再完整读取 `references/write-protocol.md`",
             "从草稿转为保存必须重新判定请求与目标",
             "不能复用草稿阶段同意",
@@ -155,15 +144,11 @@ class DefaultReadContractTests(unittest.TestCase):
         self.assertNotIn("没有健康读取需求时不得为填模板强行采集", self.read_contract)
         self.assertNotIn("个人日记可只读获取", self.read_contract)
 
-    def test_standalone_authority_hash_still_binds_exact_entry_bytes(self):
-        self.assertEqual(
-            self.config["authority_sha256"],
-            hashlib.sha256(AUTHORITY_SKILL.read_bytes()).hexdigest(),
-        )
-        self.assertEqual(self.config["allowed_proxy_locators"], [])
-        self.assertEqual(
-            self.config["candidate_locators"], [self.config["authority_locator"]]
-        )
+    def test_source_hash_startup_gate_is_absent_but_write_gates_remain(self):
+        self.assertFalse(AUTHORITY_CONFIG.exists())
+        self.assertNotIn('authority_gate.py', self.entry_text)
+        self.assertIn('独立 approval', self.entry_text)
+        self.assertIn('写前 hash 复核', self.entry_text)
 
     def test_personal_diary_grants_bounded_default_reads(self):
         self.assertIn("最近 3 天 Garmin 健康摘要", self.proxy_text)
@@ -212,7 +197,8 @@ class DefaultReadContractTests(unittest.TestCase):
 
     def test_authority_routes_to_active_health_skill(self):
         self.assertIn("canonical `personal-health-analysis`", self.authority_text)
-        self.assertIn("runtime-authority.json", self.authority_text)
+        self.assertNotIn("runtime-authority.json", self.authority_text)
+        self.assertIn("依赖预检", self.authority_text)
         legacy_runtime = (
             Path.home() / ".gemini" / "config" / "skills" / "personal-health-analysis"
         )

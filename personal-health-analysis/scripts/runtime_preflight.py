@@ -12,10 +12,10 @@ from importlib import metadata
 
 MIN_PYTHON = (3, 11)
 MODE_REQUIREMENTS = {
-    "local": {"pandas": ("pandas", "3.0.3")},
+    "local": {"pandas": ("pandas", "3.0.6")},
     "live": {
-        "pandas": ("pandas", "3.0.3"),
-        "garminconnect": ("garminconnect", "0.3.9"),
+        "pandas": ("pandas", "3.0.6"),
+        "garminconnect": ("garminconnect", "0.3.16"),
     },
     "activity": {
         "fitparse": ("fitparse", "1.2.0"),

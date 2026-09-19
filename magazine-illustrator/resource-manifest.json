@@ -1,18 +1,18 @@
 {
   "schema_version": 3,
   "skill": "magazine-illustrator",
-  "generated_at": "2026-09-06T20:31:58+08:00",
+  "generated_at": "2026-09-19T16:38:57+08:00",
   "hash_algorithm": "SHA-256",
   "text_hash_normalization": "LF",
   "skill_md": "SKILL.md",
-  "skill_md_sha256": "2abd6cf1f469ebbda637bb34856bb9cad0e907962293427ed36e1615ca7ea589",
+  "skill_md_sha256": "f387eb5827dc445a99e6bd8a1d216b1803a1241099d4920eaffc94899599068a",
   "top_level_files": [
     "SKILL.md"
   ],
   "top_level_file_hashes": [
     {
       "path": "SKILL.md",
-      "sha256": "2abd6cf1f469ebbda637bb34856bb9cad0e907962293427ed36e1615ca7ea589"
+      "sha256": "f387eb5827dc445a99e6bd8a1d216b1803a1241099d4920eaffc94899599068a"
     }
   ],
   "top_level_directories": [
@@ -24,7 +24,7 @@
   "resource_directories": [
     {
       "name": "references",
-      "file_count": 3
+      "file_count": 4
     },
     {
       "name": "assets",
@@ -58,7 +58,11 @@
     },
     {
       "path": "references/qa-and-safety.md",
-      "sha256": "51d99179b4354853a9ff2b62a36036725283f362c935ee27d1668a02673fc028"
+      "sha256": "eb889c6e84a1c02f873a0b412d34ccd982b9e496f648552d5e2de01519784499"
+    },
+    {
+      "path": "references/series-workflow.md",
+      "sha256": "a3897c644009b00bdb93a092197f154ec55df612554143b5b1d4b07b147855d7"
     }
   ],
   "declared_local_dependencies": [
@@ -78,7 +82,13 @@
       "path": "references/qa-and-safety.md",
       "exists": true,
       "resolved_path": "magazine-illustrator/references/qa-and-safety.md",
-      "sha256": "51d99179b4354853a9ff2b62a36036725283f362c935ee27d1668a02673fc028"
+      "sha256": "eb889c6e84a1c02f873a0b412d34ccd982b9e496f648552d5e2de01519784499"
+    },
+    {
+      "path": "references/series-workflow.md",
+      "exists": true,
+      "resolved_path": "magazine-illustrator/references/series-workflow.md",
+      "sha256": "a3897c644009b00bdb93a092197f154ec55df612554143b5b1d4b07b147855d7"
     }
   ],
   "missing_declared_dependencies": []

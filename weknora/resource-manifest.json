@@ -1,0 +1,38 @@
+{
+  "schema_version": 3,
+  "skill": "weknora",
+  "generated_at": "2026-09-16T17:59:02+08:00",
+  "hash_algorithm": "SHA-256",
+  "text_hash_normalization": "LF",
+  "skill_md": "SKILL.md",
+  "skill_md_sha256": "b5c9fadaa25f7afe0f4a6a7c9291710753f9ad9ab0dd43bc56e3e27e5b7517bd",
+  "top_level_files": [
+    "SKILL.md",
+    "UPSTREAM.md",
+    "_meta.json",
+    "skill-card.md"
+  ],
+  "top_level_file_hashes": [
+    {
+      "path": "SKILL.md",
+      "sha256": "b5c9fadaa25f7afe0f4a6a7c9291710753f9ad9ab0dd43bc56e3e27e5b7517bd"
+    },
+    {
+      "path": "UPSTREAM.md",
+      "sha256": "afdb17a69799b7a7fce73fe3aedd8460231e72de32364efddd86243fbff29718"
+    },
+    {
+      "path": "_meta.json",
+      "sha256": "e3a4e7862a725dc7bc057750f9a6036a37f81bb4851a41b7907519f6397c1a4e"
+    },
+    {
+      "path": "skill-card.md",
+      "sha256": "6d3b233e4c1f024316f7a3c4017a47fa1c60d08e789cd2757cec4da1ab734705"
+    }
+  ],
+  "top_level_directories": [],
+  "resource_directories": [],
+  "resource_file_hashes": [],
+  "declared_local_dependencies": [],
+  "missing_declared_dependencies": []
+}

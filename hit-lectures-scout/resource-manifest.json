@@ -1,28 +1,33 @@
 {
   "schema_version": 3,
   "skill": "hit-lectures-scout",
-  "generated_at": "2026-09-11T06:34:57.019516+00:00",
+  "generated_at": "2026-09-19T16:38:57+08:00",
   "hash_algorithm": "SHA-256",
   "text_hash_normalization": "LF",
   "skill_md": "SKILL.md",
-  "skill_md_sha256": "65a96122e8a3e00aafd3b506bf0904d5f6c3f6137b1ddc9267bb1fb5acebe2c4",
+  "skill_md_sha256": "57484bdb0796610b3da9858ca21240400646201def0a96299f5ac94b6f196137",
   "top_level_files": [
     "SKILL.md"
   ],
   "top_level_file_hashes": [
     {
       "path": "SKILL.md",
-      "sha256": "65a96122e8a3e00aafd3b506bf0904d5f6c3f6137b1ddc9267bb1fb5acebe2c4"
+      "sha256": "57484bdb0796610b3da9858ca21240400646201def0a96299f5ac94b6f196137"
     }
   ],
   "top_level_directories": [
     "assets",
+    "references",
     "scripts"
   ],
   "resource_directories": [
     {
       "name": "scripts",
       "file_count": 3
+    },
+    {
+      "name": "references",
+      "file_count": 1
     },
     {
       "name": "assets",
@@ -53,6 +58,10 @@
     {
       "path": "assets/task_preprints_fallback.md",
       "sha256": "d5c202bf7c6249604a19c1eb7bc90a33ba9020b790c94858619d7a8f21395533"
+    },
+    {
+      "path": "references/formal-report.md",
+      "sha256": "c7f43817d75987763f1a1b574eccdde47fd4db049ca20d7f7abad2036433fef5"
     },
     {
       "path": "scripts/test_deepxiv_preprints_scout.py",
@@ -99,40 +108,16 @@
       "sha256": "a1abbde90a9396fd0606c1c88d4c3535c7d4dbc4cb272344e7414ac805c48fc0"
     },
     {
-      "path": "scripts/test_validate_lectures_scout.py",
+      "path": "references/formal-report.md",
       "exists": true,
-      "resolved_path": "hit-lectures-scout/scripts/test_validate_lectures_scout.py",
-      "sha256": "0287897b05f13ddd7f53d3ecc75e7294e30077b8493cb99b3126e14cc6dcda55"
-    },
-    {
-      "path": "scripts/validate_lectures_scout.py",
-      "exists": true,
-      "resolved_path": "hit-lectures-scout/scripts/validate_lectures_scout.py",
-      "sha256": "7c083ad663471defa01ea2247a79a44a83fc18ddc71a7ce7481253370ede132d"
+      "resolved_path": "hit-lectures-scout/references/formal-report.md",
+      "sha256": "c7f43817d75987763f1a1b574eccdde47fd4db049ca20d7f7abad2036433fef5"
     },
     {
       "path": "shared/references/report_archive.md",
       "exists": true,
       "resolved_path": "shared/references/report_archive.md",
       "sha256": "fd99761eab41ec23a56877635b269544558baad61dfe07a2d9df8e273d6be0a4"
-    },
-    {
-      "path": "shared/scripts/report_archive.py",
-      "exists": true,
-      "resolved_path": "shared/scripts/report_archive.py",
-      "sha256": "396e6cee27f6bc09e99ae21dab1b308ac750235fb8ef98a1adab3249b271df71"
-    },
-    {
-      "path": "shared/scripts/report_archive_windows.py",
-      "exists": true,
-      "resolved_path": "shared/scripts/report_archive_windows.py",
-      "sha256": "faf123a4468b4eb275cefd3e67f2d3911b9bd0b1097667008474050d9b0d8f8e"
-    },
-    {
-      "path": "shared/scripts/test_report_archive.py",
-      "exists": true,
-      "resolved_path": "shared/scripts/test_report_archive.py",
-      "sha256": "8a99d570491c7ea2b995f01952a671e790cf3bd693b37a56cf66338da29069e2"
     }
   ],
   "missing_declared_dependencies": []

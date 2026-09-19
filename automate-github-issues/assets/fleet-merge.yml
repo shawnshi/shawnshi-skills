@@ -13,185 +13,71 @@
 # limitations under the License.
 
 # .github/workflows/fleet-merge.yml
-#
-# Sequentially merges Jules-authored PRs: update branch → wait for CI → squash merge.
-# On merge conflict, re-dispatches the task as a new Jules session against current base.
-name: Fleet Sequential Merge
+# Manual approval of one fleet PR/head only. No branch update, close or re-dispatch.
+name: Fleet Approved Merge
 
 on:
-  # Allow manual trigger (recommended: review PRs first, then trigger)
   workflow_dispatch:
     inputs:
       base_branch:
-        description: "Base branch for merge"
+        description: "Approved base branch"
         type: string
+        required: true
         default: "main"
+      pr_number:
+        description: "Reviewed and approved fleet PR number"
+        type: string
+        required: true
+      head_sha:
+        description: "Approved full 40-character lowercase head SHA"
+        type: string
+        required: true
+      task_id:
+        description: "Approved task ID in trusted .fleet records"
+        type: string
+        required: true
+      fleet_date:
+        description: "Trusted .fleet/YYYY_MM_DD record directory (must exist on default branch)"
+        type: string
+        required: true
+      approved:
+        description: "I am authorized to approve this exact repository/base/task/PR/head merge"
+        type: boolean
+        required: true
+        default: false
+      dry_run:
+        description: "Validate only; do not merge"
+        type: boolean
+        default: true
 
+# No new write permission is granted by this template. Repository owners must
+# separately authorize/configure token merge permissions and protection rules.
 concurrency:
   group: fleet-merge
   cancel-in-progress: false
 
 jobs:
-  sequential-merge:
+  approved-merge:
     runs-on: ubuntu-latest
-    env:
-      GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-      JULES_API_KEY: ${{ secrets.JULES_API_KEY }}
     steps:
-      - name: Checkout code
+      - name: Checkout trusted default branch (never candidate PR content)
         uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.repository.default_branch }}
+          persist-credentials: false
 
       - name: Setup Bun
         uses: oven-sh/setup-bun@v2
 
-      - name: Install fleet dependencies
-        run: cd scripts/fleet && bun install
-
-      - name: Find and merge fleet PRs sequentially
-        run: |
-          set -euo pipefail
-
-          BASE_BRANCH="${{ inputs.base_branch || 'main' }}"
-          MAX_CI_WAIT=600   # 10 minutes per PR
-          MAX_RETRIES=2     # Max re-dispatch attempts per PR
-          PR_POLL_TIMEOUT=900  # 15 minutes to wait for re-dispatched PR
-
-          echo "🔍 Finding open Jules-authored PRs targeting ${BASE_BRANCH}..."
-
-          # Get all open PRs authored by Jules, sorted by creation date (oldest first)
-          PRS=$(gh pr list \
-            --state open \
-            --base "$BASE_BRANCH" \
-            --json number,headRefName,author \
-            --jq '[.[] | select(.author.login == "google-labs-jules" or (.author.login | endswith("[bot]")))] | sort_by(.number) | .[].number')
-
-          if [ -z "$PRS" ]; then
-            echo "ℹ️  No Jules-authored PRs found. Nothing to merge."
-            exit 0
-          fi
-
-          PR_COUNT=$(echo "$PRS" | wc -l | tr -d ' ')
-          echo "Found ${PR_COUNT} Jules PR(s) to merge."
-
-          for PR_NUM in $PRS; do
-            echo ""
-            echo "📦 Processing PR #${PR_NUM}..."
-            RETRY_COUNT=0
-
-            while true; do
-              # Update branch from base
-              echo "  🔄 Updating branch from ${BASE_BRANCH}..."
-              UPDATE_OUTPUT=$(gh pr update-branch "$PR_NUM" --rebase 2>&1) || true
-
-              # Check for merge conflict
-              if echo "$UPDATE_OUTPUT" | grep -qi "conflict\|cannot be rebased"; then
-                if [ $RETRY_COUNT -ge $MAX_RETRIES ]; then
-                  echo "  ❌ Conflict persists after ${MAX_RETRIES} retries. Human intervention required."
-                  echo "  PR: $(gh pr view "$PR_NUM" --json url --jq '.url')"
-                  exit 1
-                fi
-
-                echo "  ⚠️ Merge conflict detected. Re-dispatching task..."
-
-                # Get the PR's task prompt from the fleet data
-                TASK_PROMPT=$(gh pr view "$PR_NUM" --json body --jq '.body')
-
-                # Close the conflicting PR
-                echo "  🔒 Closing conflicting PR #${PR_NUM}..."
-                gh pr close "$PR_NUM" --comment "⚠️ Closed by fleet-merge: merge conflict detected. Task re-dispatched as a new session."
-
-                # Re-dispatch via Jules SDK
-                echo "  🚀 Re-dispatching against current ${BASE_BRANCH}..."
-                REPO_FULL="${{ github.repository }}"
-                NEW_SESSION_ID=$(bun -e "
-                  import { jules } from '@google/jules-sdk';
-                  const session = await jules.createSession({
-                    prompt: process.env.TASK_PROMPT,
-                    source: { github: '${REPO_FULL}', baseBranch: '${BASE_BRANCH}' },
-                  });
-                  console.log(session.id);
-                " 2>/dev/null)
-                echo "  📝 New session: ${NEW_SESSION_ID}"
-
-                # Poll for new PR
-                echo "  ⏳ Waiting for new PR from session ${NEW_SESSION_ID}..."
-                POLL_ELAPSED=0
-                NEW_PR_NUM=""
-                while [ $POLL_ELAPSED -lt $PR_POLL_TIMEOUT ]; do
-                  sleep 30
-                  POLL_ELAPSED=$((POLL_ELAPSED + 30))
-                  NEW_PR_NUM=$(gh pr list --state open --base "$BASE_BRANCH" --json number,headRefName,body \
-                    --jq "[.[] | select(.headRefName | contains(\"${NEW_SESSION_ID}\")) // select(.body | contains(\"${NEW_SESSION_ID}\"))] | .[0].number // empty")
-                  if [ -n "$NEW_PR_NUM" ]; then
-                    echo "  ✅ New PR #${NEW_PR_NUM} found."
-                    break
-                  fi
-                  echo "  ⏳ No PR yet... (${POLL_ELAPSED}s/${PR_POLL_TIMEOUT}s)"
-                done
-
-                if [ -z "$NEW_PR_NUM" ]; then
-                  echo "  ❌ Timed out waiting for re-dispatched PR. Human intervention required."
-                  exit 1
-                fi
-
-                PR_NUM="$NEW_PR_NUM"
-                RETRY_COUNT=$((RETRY_COUNT + 1))
-                continue
-              fi
-
-              # Wait for branch update to propagate
-              sleep 5
-
-              # Wait for CI checks to pass
-              echo "  🧪 Waiting for CI checks..."
-              ELAPSED=0
-              CI_PASSED=false
-
-              while [ $ELAPSED -lt $MAX_CI_WAIT ]; do
-                STATUS=$(gh pr checks "$PR_NUM" --json name,state --jq '[.[].state] | if length == 0 then "none" elif all(. == "SUCCESS" or . == "SKIPPED") then "pass" elif any(. == "FAILURE") then "fail" else "pending" end')
-
-                case "$STATUS" in
-                  "pass")
-                    CI_PASSED=true
-                    break
-                    ;;
-                  "none")
-                    echo "  ℹ️  No CI checks configured. Proceeding."
-                    CI_PASSED=true
-                    break
-                    ;;
-                  "fail")
-                    echo "  ❌ CI failed for PR #${PR_NUM}. Skipping."
-                    break
-                    ;;
-                  *)
-                    echo "  ⏳ CI pending... (${ELAPSED}s/${MAX_CI_WAIT}s)"
-                    sleep 30
-                    ELAPSED=$((ELAPSED + 30))
-                    ;;
-                esac
-              done
-
-              if [ "$CI_PASSED" = false ]; then
-                echo "  ⏭️  Skipping PR #${PR_NUM} (CI did not pass)"
-              else
-                # Squash merge
-                echo "  ✅ CI passed. Merging PR #${PR_NUM}..."
-                if gh pr merge "$PR_NUM" --squash; then
-                  echo "  🎉 PR #${PR_NUM} merged successfully."
-                else
-                  echo "  ❌ Failed to merge PR #${PR_NUM}. Stopping sequential merge."
-                  exit 1
-                fi
-              fi
-
-              # Exit the retry loop for this PR
-              break
-            done
-
-            # Brief pause for merge to propagate before next PR
-            sleep 5
-          done
-
-          echo ""
-          echo "✅ Sequential merge complete."
+      - name: Validate and merge the approved fleet PR
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          FLEET_REPO: ${{ github.repository }}
+          FLEET_BASE_BRANCH: ${{ inputs.base_branch }}
+          FLEET_PR_NUMBER: ${{ inputs.pr_number }}
+          FLEET_HEAD_SHA: ${{ inputs.head_sha }}
+          FLEET_TASK_ID: ${{ inputs.task_id }}
+          FLEET_DATE: ${{ inputs.fleet_date }}
+          FLEET_APPROVED: ${{ inputs.approved }}
+          FLEET_DRY_RUN: ${{ inputs.dry_run }}
+        run: bun scripts/fleet/fleet-merge.ts

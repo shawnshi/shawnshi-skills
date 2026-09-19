@@ -256,6 +256,169 @@ class GarminAuthCliTests(unittest.TestCase):
                 )
             )
 
+    def test_direct_egress_adds_garmin_hosts_and_keeps_existing_bypass_entries(self):
+        environment = {"NO_PROXY": "internal.example", "no_proxy": "localhost"}
+        self.assertTrue(self.module._force_direct_garmin_egress(environment))
+        self.assertEqual(
+            environment["NO_PROXY"], "internal.example,garmin.com,.garmin.com"
+        )
+        self.assertEqual(
+            environment["no_proxy"], "localhost,garmin.com,.garmin.com"
+        )
+        self.assertFalse(self.module._force_direct_garmin_egress(environment))
+
+    def test_direct_egress_opt_out_keeps_the_configured_proxy(self):
+        environment = {"GARMIN_EGRESS_ALLOW_PROXY": "1", "NO_PROXY": ""}
+        self.assertFalse(self.module._force_direct_garmin_egress(environment))
+        self.assertEqual(environment["NO_PROXY"], "")
+
+    def test_login_routes_garmin_hosts_around_the_configured_proxy(self):
+        class FakeGarmin:
+            def __init__(self, *_args, **_kwargs):
+                pass
+
+            def login(self, **_kwargs):
+                return None
+
+        with (
+            tempfile.TemporaryDirectory() as temp_root,
+            patch.object(self.module, "_load_garmin_api", return_value=FakeGarmin),
+            patch.object(self.module, "TOKEN_DIR", Path(temp_root) / "tokens"),
+            patch.dict(os.environ, {"NO_PROXY": "corp.example"}, clear=False),
+        ):
+            self.assertTrue(
+                self.module.login(
+                    "private@example.com",
+                    "secret",
+                    network_capability=issue_capability(
+                        scope="network", operation="garmin_auth"
+                    ),
+                    token_write_capability=issue_capability(
+                        scope="token_store", operation="garmin_token_store_write"
+                    ),
+                )
+            )
+            self.assertEqual(
+                os.environ["NO_PROXY"], "corp.example,garmin.com,.garmin.com"
+            )
+
+    def test_failure_classifier_separates_infrastructure_from_credentials(self):
+        cases = (
+            (
+                "rate_limited",
+                "GarminConnectTooManyRequestsError",
+                "429 Client Error: Too Many Requests for url",
+            ),
+            (
+                "tls_error",
+                "CurlError",
+                "Failed to perform, curl: (35) TLS connect error: "
+                "OPENSSL_internal:invalid library (0)",
+            ),
+            (
+                "connection_error",
+                "GarminConnectConnectionError",
+                "connection reset by peer",
+            ),
+            ("mfa_required", "EOFError", "Garmin MFA code: "),
+            ("token_store_error", "RuntimeError", "token_store_security_setup_failed"),
+            ("dependency_error", "RuntimeError", "garminconnect_version_mismatch"),
+            (
+                "authentication_failed",
+                "GarminConnectAuthenticationError",
+                "Invalid credentials",
+            ),
+            ("auth_unclassified", "RuntimeError", "unexpected state"),
+        )
+        shared_types = {
+            "EOFError": EOFError,
+            "RuntimeError": RuntimeError,
+        }
+        for expected, type_name, message in cases:
+            exception_type = shared_types.get(type_name) or type(
+                type_name, (Exception,), {}
+            )
+            with self.subTest(expected=expected):
+                self.assertIn(expected, self.module.AUTH_FAILURE_STATUSES)
+                self.assertEqual(
+                    self.module._classify_auth_failure(exception_type(message)),
+                    expected,
+                )
+
+    def test_login_failure_reports_category_beside_legacy_status(self):
+        rate_limited = type("GarminConnectTooManyRequestsError", (Exception,), {})(
+            "429 Client Error: Too Many Requests for url"
+        )
+
+        def failing_login(*_args, **_kwargs):
+            self.module._emit_safe_failure("authentication_failed", rate_limited)
+            return False
+
+        stdout = io.StringIO()
+        with (
+            patch.object(self.module, "login", side_effect=failing_login),
+            patch.dict(os.environ, {"GARMIN_PASSWORD": "secret"}, clear=False),
+            contextlib.redirect_stdout(stdout),
+            contextlib.redirect_stderr(io.StringIO()),
+        ):
+            exit_code = self.module.main(
+                [
+                    "login",
+                    "--email",
+                    "private@example.com",
+                    "--allow-network",
+                    "--allow-token-write",
+                ]
+            )
+        payload = json.loads(stdout.getvalue())
+        self.assertEqual(exit_code, self.module.EXIT_AUTH_FAILURE)
+        self.assertFalse(payload["ok"])
+        self.assertEqual(payload["status"], "rate_limited")
+        self.assertEqual(payload["base_status"], "authentication_failed")
+        self.assertEqual(payload["error_type"], "GarminConnectTooManyRequestsError")
+
+    def test_status_failure_reports_transport_category(self):
+        tls_failure = type("CurlError", (Exception,), {})(
+            "Failed to perform, curl: (35) TLS connect error"
+        )
+
+        def failing_status(*_args, **_kwargs):
+            self.module._emit_safe_failure("saved_session_invalid", tls_failure)
+            return False
+
+        stdout = io.StringIO()
+        with (
+            patch.object(self.module, "check_status", side_effect=failing_status),
+            contextlib.redirect_stdout(stdout),
+            contextlib.redirect_stderr(io.StringIO()),
+        ):
+            exit_code = self.module.main(["status", "--allow-network"])
+        payload = json.loads(stdout.getvalue())
+        self.assertEqual(exit_code, self.module.EXIT_AUTH_FAILURE)
+        self.assertEqual(payload["status"], "tls_error")
+        self.assertEqual(payload["base_status"], "saved_session_invalid")
+        self.assertEqual(payload["error_type"], "CurlError")
+
+    def test_success_paths_keep_legacy_status_strings(self):
+        stdout = io.StringIO()
+        with (
+            patch.object(self.module, "login", return_value=True),
+            patch.dict(os.environ, {"GARMIN_PASSWORD": "secret"}, clear=False),
+            contextlib.redirect_stdout(stdout),
+        ):
+            self.module.main(
+                [
+                    "login",
+                    "--email",
+                    "private@example.com",
+                    "--allow-network",
+                    "--allow-token-write",
+                ]
+            )
+        payload = json.loads(stdout.getvalue())
+        self.assertEqual(payload["status"], "authenticated")
+        self.assertNotIn("base_status", payload)
+
 
 if __name__ == "__main__":
     unittest.main()

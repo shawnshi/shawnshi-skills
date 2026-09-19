@@ -11,6 +11,7 @@ import hashlib
 import hmac
 import json
 import os
+import re
 import sqlite3
 import subprocess
 import tempfile
@@ -96,12 +97,12 @@ RUNNER_ENVIRONMENT_FIELDS = frozenset(
 )
 PACKAGE_EVIDENCE_FIELDS = frozenset({"name", "version", "metadata_sha256"})
 PACKAGE_EVIDENCE_NAMES = ("garmindb", "garminconnect")
-SUPPORTED_PACKAGE_VERSIONS = {"garmindb": "3.8.0", "garminconnect": "0.3.9"}
+SUPPORTED_PACKAGE_VERSIONS = {"garmindb": "3.9.0", "garminconnect": "0.3.16"}
 MAX_METADATA_BYTES = 1024 * 1024
 MAX_TOKEN_STORE_BYTES = 1024 * 1024
 TREE_HASH_WORKERS = min(16, max(4, (os.cpu_count() or 1) * 2))
 
-# GarminDB 3.8.0 GarminDbMain.__get_date_and_days, AST without locations.
+# GarminDB 3.9.0 GarminDbMain.__get_date_and_days, AST without locations.
 # Origin: installed garmindb_cli.py; full original CLI stays hash-bound in the plan.
 UPSTREAM_DATE_METHOD_SHA256 = "0969e144a693559faae318a15a6d0b05493d9031e6a7c6b85a89fe5d35bf71ae"
 # Internal child bootstrap, not a second runner. Executed only by execute_sync
@@ -1242,6 +1243,21 @@ def _verify_post_sync_state(
     }
 
 
+_RATE_LIMIT_PATTERNS = (
+    re.compile(r"too many requests", re.IGNORECASE),
+    re.compile(r"\bhttp\b[^\n]{0,24}\b429\b", re.IGNORECASE),
+    re.compile(r"\b429\b[^\n]{0,24}\btoo many requests\b", re.IGNORECASE),
+    re.compile(r"\bclient error\b[^\n]{0,24}\b429\b", re.IGNORECASE),
+    re.compile(r"\bstatus(?:_code)?\s*[:=]\s*429\b", re.IGNORECASE),
+    re.compile(r"\brate limit(?:ed|s| exceeded)?\b", re.IGNORECASE),
+)
+
+
+def _is_rate_limited(normalized_output: str) -> bool:
+    """Detect a real HTTP 429 without matching progress counters like "429/800"."""
+    return any(pattern.search(normalized_output) for pattern in _RATE_LIMIT_PATTERNS)
+
+
 def classify_process_result(returncode: int, output: str) -> tuple[int, dict]:
     if returncode == EXIT_CONFIGURATION:
         try:
@@ -1254,7 +1270,7 @@ def classify_process_result(returncode: int, output: str) -> tuple[int, dict]:
                 "error": "date_adapter_rejected",
             }
     normalized = (output or "").casefold()
-    if "429" in normalized or "too many requests" in normalized:
+    if _is_rate_limited(normalized):
         return EXIT_RATE_LIMIT, {"ok": False, "status": "rate_limited"}
     if "failed to login" in normalized or "authentication failed" in normalized:
         return EXIT_SYNC_FAILURE, {"ok": False, "status": "authentication_failed"}

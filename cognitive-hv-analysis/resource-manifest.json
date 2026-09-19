@@ -1,18 +1,18 @@
 {
   "schema_version": 3,
   "skill": "cognitive-hv-analysis",
-  "generated_at": "2026-09-05T17:15:44+08:00",
+  "generated_at": "2026-09-19T16:38:56+08:00",
   "hash_algorithm": "SHA-256",
   "text_hash_normalization": "LF",
   "skill_md": "SKILL.md",
-  "skill_md_sha256": "8c7fb409631aabd027c34abe6f343bc44afd7bc40187da3112a6a8e969841aa2",
+  "skill_md_sha256": "856468ea23487f4166ed4f7c710a4fda8213b5229b0571bceec211d9b2ec1eae",
   "top_level_files": [
     "SKILL.md"
   ],
   "top_level_file_hashes": [
     {
       "path": "SKILL.md",
-      "sha256": "8c7fb409631aabd027c34abe6f343bc44afd7bc40187da3112a6a8e969841aa2"
+      "sha256": "856468ea23487f4166ed4f7c710a4fda8213b5229b0571bceec211d9b2ec1eae"
     }
   ],
   "top_level_directories": [

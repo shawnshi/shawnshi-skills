@@ -124,10 +124,16 @@ class _CappedWriter:
         self.remaining = limit
 
     def write(self, data):
-        if len(data) > self.remaining:
-            raise ValueError('provider_ipc_size_limit')
-        self.remaining -= len(data)
-        return self.stream.write(data)
+        # Protocol 5 can pass PickleBuffer; count bytes, not buffer elements.
+        view = data.raw() if isinstance(data, pickle.PickleBuffer) else memoryview(data)
+        try:
+            size = view.nbytes
+            if size > self.remaining:
+                raise ValueError('provider_ipc_size_limit')
+            self.remaining -= size
+            return self.stream.write(view)
+        finally:
+            view.release()
 
 
 def _child_call(function, args, kwargs, directory, limit):

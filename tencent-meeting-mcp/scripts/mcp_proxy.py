@@ -74,9 +74,10 @@ class McpProxy:
             method="POST"
         )
 
-        try:
-            with urllib.request.urlopen(req) as response:
-                response_data = response.read().decode("utf-8")
-                return json.loads(response_data)
-        except urllib.error.URLError as e:
-            raise urllib.error.URLError(f"MCP请求失败: {e}")
+        # Let native HTTP/transport and JSON decoding errors reach the caller.
+        with urllib.request.urlopen(req) as response:
+            response_data = response.read().decode("utf-8")
+            result = json.loads(response_data)
+            if not isinstance(result, dict):
+                raise ValueError("MCP响应必须是JSON对象")
+            return result

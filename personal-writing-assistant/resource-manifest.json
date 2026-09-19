@@ -1,18 +1,18 @@
 {
   "schema_version": 3,
   "skill": "personal-writing-assistant",
-  "generated_at": "2026-09-11T11:33:54+08:00",
+  "generated_at": "2026-09-19T16:38:58+08:00",
   "hash_algorithm": "SHA-256",
   "text_hash_normalization": "LF",
   "skill_md": "SKILL.md",
-  "skill_md_sha256": "ed00b0950dfd7b39b6913228ef420e5545cf7d5b1d8f4c9e276dba8169625281",
+  "skill_md_sha256": "0d5d72cebd59cc88fdf0e1287ee32850016e7b936aad619b52f53c3529e66c7c",
   "top_level_files": [
     "SKILL.md"
   ],
   "top_level_file_hashes": [
     {
       "path": "SKILL.md",
-      "sha256": "ed00b0950dfd7b39b6913228ef420e5545cf7d5b1d8f4c9e276dba8169625281"
+      "sha256": "0d5d72cebd59cc88fdf0e1287ee32850016e7b936aad619b52f53c3529e66c7c"
     }
   ],
   "top_level_directories": [
@@ -38,10 +38,6 @@
     {
       "name": "agents",
       "file_count": 1
-    },
-    {
-      "name": "tests",
-      "file_count": 1
     }
   ],
   "resource_file_hashes": [
@@ -55,11 +51,11 @@
     },
     {
       "path": "references/deliverable-patterns.md",
-      "sha256": "767888b6df956df76b4361439fa127bdee1f45ef1b143f02b2a7f641c043c096"
+      "sha256": "6414de14b62184f5468fae2528a8d5988bcd9cbbd9d22f5496fca7bf445d71e3"
     },
     {
       "path": "references/evidence-and-risk.md",
-      "sha256": "a7f598e130d9ecfc7a996575db88ec89910982f8416a7e932873dde1c9550136"
+      "sha256": "5e07c88f28f7b9121e82ff7b86712e4521dde93b72929576c1b8bb9af3408e9e"
     },
     {
       "path": "references/my_voice_samples.md",
@@ -79,13 +75,13 @@
       "path": "references/deliverable-patterns.md",
       "exists": true,
       "resolved_path": "personal-writing-assistant/references/deliverable-patterns.md",
-      "sha256": "767888b6df956df76b4361439fa127bdee1f45ef1b143f02b2a7f641c043c096"
+      "sha256": "6414de14b62184f5468fae2528a8d5988bcd9cbbd9d22f5496fca7bf445d71e3"
     },
     {
       "path": "references/evidence-and-risk.md",
       "exists": true,
       "resolved_path": "personal-writing-assistant/references/evidence-and-risk.md",
-      "sha256": "a7f598e130d9ecfc7a996575db88ec89910982f8416a7e932873dde1c9550136"
+      "sha256": "5e07c88f28f7b9121e82ff7b86712e4521dde93b72929576c1b8bb9af3408e9e"
     },
     {
       "path": "references/my_voice_samples.md",
@@ -98,12 +94,6 @@
       "exists": true,
       "resolved_path": "personal-writing-assistant/scripts/text_qa.py",
       "sha256": "c3ebd8273988bacdbae94d94e0601b2c810e1aba567bab55e018888ae3abc822"
-    },
-    {
-      "path": "tests/test_text_qa.py",
-      "exists": true,
-      "resolved_path": "personal-writing-assistant/tests/test_text_qa.py",
-      "sha256": "40944d6ef245b53ea5bce0e9d29b4bd6f29cd6cca9ea2730dde387d8573288f1"
     }
   ],
   "missing_declared_dependencies": []

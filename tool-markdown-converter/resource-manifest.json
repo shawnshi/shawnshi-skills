@@ -1,22 +1,23 @@
 {
   "schema_version": 3,
   "skill": "tool-markdown-converter",
-  "generated_at": "2026-09-06T20:31:58+08:00",
+  "generated_at": "2026-09-19T16:38:59+08:00",
   "hash_algorithm": "SHA-256",
   "text_hash_normalization": "LF",
   "skill_md": "SKILL.md",
-  "skill_md_sha256": "3990a593d2fa3cfbd883c50c64c28b266c225ce9e511851be66cfedae0fd96b8",
+  "skill_md_sha256": "497ff840a94321404c9268263b1d9425fd9c61dba7b34975283f75369f3dad12",
   "top_level_files": [
     "SKILL.md"
   ],
   "top_level_file_hashes": [
     {
       "path": "SKILL.md",
-      "sha256": "3990a593d2fa3cfbd883c50c64c28b266c225ce9e511851be66cfedae0fd96b8"
+      "sha256": "497ff840a94321404c9268263b1d9425fd9c61dba7b34975283f75369f3dad12"
     }
   ],
   "top_level_directories": [
-    "scripts"
+    "scripts",
+    "tests"
   ],
   "resource_directories": [
     {
@@ -27,7 +28,11 @@
   "resource_file_hashes": [
     {
       "path": "scripts/converter.py",
-      "sha256": "cb0b7664caab0df059c9735bc249dc6194784961bd38a8da3ae5ed6c919b688c"
+      "sha256": "f26fd5f5f66d6c1822cf5ed89fe5bc3632f05c44ea6c04b684c5493e3744e1f7"
+    },
+    {
+      "path": "tests/test_converter_results.py",
+      "sha256": "2939b7d9608ed4c45585707c2acbce081c2bdec085089b3784c6172b658c59b1"
     }
   ],
   "declared_local_dependencies": [
@@ -35,7 +40,7 @@
       "path": "scripts/converter.py",
       "exists": true,
       "resolved_path": "tool-markdown-converter/scripts/converter.py",
-      "sha256": "cb0b7664caab0df059c9735bc249dc6194784961bd38a8da3ae5ed6c919b688c"
+      "sha256": "f26fd5f5f66d6c1822cf5ed89fe5bc3632f05c44ea6c04b684c5493e3744e1f7"
     }
   ],
   "missing_declared_dependencies": []

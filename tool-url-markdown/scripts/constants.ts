@@ -1,9 +1,5 @@
-import { resolveUrlToMarkdownChromeProfileDir } from "./paths.js";
-
 export const DEFAULT_USER_AGENT =
   "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/130.0.0.0 Safari/537.36";
-
-export const USER_DATA_DIR = resolveUrlToMarkdownChromeProfileDir();
 
 export const DEFAULT_TIMEOUT_MS = 30_000;
 export const CDP_CONNECT_TIMEOUT_MS = 15_000;

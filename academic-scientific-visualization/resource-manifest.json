@@ -1,11 +1,11 @@
 {
   "schema_version": 3,
   "skill": "academic-scientific-visualization",
-  "generated_at": "2026-09-05T17:15:44+08:00",
+  "generated_at": "2026-09-19T16:38:56+08:00",
   "hash_algorithm": "SHA-256",
   "text_hash_normalization": "LF",
   "skill_md": "SKILL.md",
-  "skill_md_sha256": "4486ed858052d41adf2f8cdb5408915dbda687d944c93e3e61bff957bbc3d676",
+  "skill_md_sha256": "4bb375fc4de517f362c154fcf63bc280757b8f5d23b117ffc3d7d0de3d980423",
   "top_level_files": [
     "SKILL.md",
     "requirements.txt"
@@ -13,7 +13,7 @@
   "top_level_file_hashes": [
     {
       "path": "SKILL.md",
-      "sha256": "4486ed858052d41adf2f8cdb5408915dbda687d944c93e3e61bff957bbc3d676"
+      "sha256": "4bb375fc4de517f362c154fcf63bc280757b8f5d23b117ffc3d7d0de3d980423"
     },
     {
       "path": "requirements.txt",
@@ -79,7 +79,7 @@
     },
     {
       "path": "references/task_contracts.md",
-      "sha256": "deb017c95e3d5028d8ea7881dffc7b04d39db5b25461987ac8b0ab3a67022028"
+      "sha256": "2dd74cb810f8e664927fa13cd8e4e5204ac4b280a10f0bae157d790069ff7e39"
     },
     {
       "path": "scripts/figure_export.py",
@@ -147,7 +147,7 @@
       "path": "references/task_contracts.md",
       "exists": true,
       "resolved_path": "academic-scientific-visualization/references/task_contracts.md",
-      "sha256": "deb017c95e3d5028d8ea7881dffc7b04d39db5b25461987ac8b0ab3a67022028"
+      "sha256": "2dd74cb810f8e664927fa13cd8e4e5204ac4b280a10f0bae157d790069ff7e39"
     },
     {
       "path": "scripts/figure_export.py",

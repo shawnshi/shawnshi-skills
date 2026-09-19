@@ -1,18 +1,18 @@
 {
   "schema_version": 3,
   "skill": "senior-osint-analyst",
-  "generated_at": "2026-09-11T11:13:55+08:00",
+  "generated_at": "2026-09-19T16:38:58+08:00",
   "hash_algorithm": "SHA-256",
   "text_hash_normalization": "LF",
   "skill_md": "SKILL.md",
-  "skill_md_sha256": "c736550454c9e08f9bd9ed3260cac2f4802f10a46c2047ec07e5979c4bcb7b7a",
+  "skill_md_sha256": "f82aa5124953d9ccdb8bc472031b471602b7e8a378ddceb33e3daa674c3cce84",
   "top_level_files": [
     "SKILL.md"
   ],
   "top_level_file_hashes": [
     {
       "path": "SKILL.md",
-      "sha256": "c736550454c9e08f9bd9ed3260cac2f4802f10a46c2047ec07e5979c4bcb7b7a"
+      "sha256": "f82aa5124953d9ccdb8bc472031b471602b7e8a378ddceb33e3daa674c3cce84"
     }
   ],
   "top_level_directories": [

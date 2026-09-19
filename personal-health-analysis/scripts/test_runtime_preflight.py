@@ -9,7 +9,7 @@ import runtime_preflight as gate
 class RuntimePreflightTests(unittest.TestCase):
     def test_local_mode_accepts_current_interpreter_without_virtual_environment(self):
         with (
-            patch.object(gate.metadata, "version", return_value="3.0.3"),
+            patch.object(gate.metadata, "version", return_value="3.0.6"),
             patch.object(gate.importlib.util, "find_spec", return_value=object()),
         ):
             result = gate.verify_runtime("local")
@@ -23,7 +23,7 @@ class RuntimePreflightTests(unittest.TestCase):
         cases = (
             (gate.metadata.PackageNotFoundError(), None, "missing"),
             ("2.0.0", object(), "version_mismatch"),
-            ("3.0.3", None, "not_importable"),
+            ("3.0.6", None, "not_importable"),
         )
         for version_result, spec, reason in cases:
             with self.subTest(reason=reason):
@@ -49,8 +49,8 @@ class RuntimePreflightTests(unittest.TestCase):
 
     def test_live_and_activity_modes_require_only_their_declared_packages(self):
         versions = {
-            "pandas": "3.0.3",
-            "garminconnect": "0.3.9",
+            "pandas": "3.0.6",
+            "garminconnect": "0.3.16",
             "fitparse": "1.2.0",
             "gpxpy": "1.6.2",
         }

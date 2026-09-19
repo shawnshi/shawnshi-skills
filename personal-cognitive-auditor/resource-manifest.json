@@ -1,18 +1,18 @@
 {
   "schema_version": 3,
   "skill": "personal-cognitive-auditor",
-  "generated_at": "2026-09-06T20:31:58+08:00",
+  "generated_at": "2026-09-19T16:38:57+08:00",
   "hash_algorithm": "SHA-256",
   "text_hash_normalization": "LF",
   "skill_md": "SKILL.md",
-  "skill_md_sha256": "126fc29c126e77c301ca7369133c92b44ef72e8304bde5ce2acb81602f3168b3",
+  "skill_md_sha256": "6571b7f601160da91b4e0e245647f16848a56db8b8eaf19ed6cfae743f65ca03",
   "top_level_files": [
     "SKILL.md"
   ],
   "top_level_file_hashes": [
     {
       "path": "SKILL.md",
-      "sha256": "126fc29c126e77c301ca7369133c92b44ef72e8304bde5ce2acb81602f3168b3"
+      "sha256": "6571b7f601160da91b4e0e245647f16848a56db8b8eaf19ed6cfae743f65ca03"
     }
   ],
   "top_level_directories": [
@@ -53,7 +53,7 @@
     },
     {
       "path": "prompts/WEEKLY.md",
-      "sha256": "2c94d3d14aaab1b76c19a1a2de83b299acec2c0769e6f678552fe84bf56a738d"
+      "sha256": "c1255585437318bbf9db39e29d5bb8f3f3e9da707cc3b89d7a53792bafcdeea1"
     },
     {
       "path": "references/config.md",
@@ -61,7 +61,7 @@
     },
     {
       "path": "references/energy_management.md",
-      "sha256": "83245db5bac58ec046ec4b1977c33b26b0dec3c19265190a5d52ccd313b8cf50"
+      "sha256": "b1857c6237542a0b5cab384cedc139e8723a47d3d21a120af11ff7f2ced19ba3"
     },
     {
       "path": "references/handoff_contract.md",
@@ -69,7 +69,7 @@
     },
     {
       "path": "references/periodic_save.md",
-      "sha256": "c720c201cfdf7e7ffc2dbfbdc8c31e49f3401957af6e868997a4074d883c76c4"
+      "sha256": "64ece51d04e751dce3c42327124c59554bd1607a0827460a2ecfe123c757e56f"
     },
     {
       "path": "references/semantic_layer.md",
@@ -101,7 +101,7 @@
     },
     {
       "path": "scripts/test_weekly_autosave_contract.py",
-      "sha256": "589289d50eef9bc79e29509a16813c4480241cc53e3c0c4dd32500326ad8560f"
+      "sha256": "7c066a8f8a74dfa565e98c1473ef89918745cefce7bf19fd80bc972b046b8348"
     }
   ],
   "declared_local_dependencies": [
@@ -133,13 +133,13 @@
       "path": "prompts/WEEKLY.md",
       "exists": true,
       "resolved_path": "personal-cognitive-auditor/prompts/WEEKLY.md",
-      "sha256": "2c94d3d14aaab1b76c19a1a2de83b299acec2c0769e6f678552fe84bf56a738d"
+      "sha256": "c1255585437318bbf9db39e29d5bb8f3f3e9da707cc3b89d7a53792bafcdeea1"
     },
     {
       "path": "references/energy_management.md",
       "exists": true,
       "resolved_path": "personal-cognitive-auditor/references/energy_management.md",
-      "sha256": "83245db5bac58ec046ec4b1977c33b26b0dec3c19265190a5d52ccd313b8cf50"
+      "sha256": "b1857c6237542a0b5cab384cedc139e8723a47d3d21a120af11ff7f2ced19ba3"
     },
     {
       "path": "references/handoff_contract.md",
@@ -151,7 +151,7 @@
       "path": "references/periodic_save.md",
       "exists": true,
       "resolved_path": "personal-cognitive-auditor/references/periodic_save.md",
-      "sha256": "c720c201cfdf7e7ffc2dbfbdc8c31e49f3401957af6e868997a4074d883c76c4"
+      "sha256": "64ece51d04e751dce3c42327124c59554bd1607a0827460a2ecfe123c757e56f"
     },
     {
       "path": "references/semantic_layer.md",

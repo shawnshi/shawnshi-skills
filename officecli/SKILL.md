@@ -9,7 +9,9 @@ AI-friendly CLI for .docx, .xlsx, .pptx. Single binary, no dependencies, no Offi
 
 ## Install
 
-If `officecli` is not installed:
+If `officecli` is not installed, report the missing CLI and installation requirement first; stop the CLI-dependent document operation. Permission to process Office documents is not permission to install software or execute remote code.
+
+Only when current explicit authorization covers installation on this target and execution of the selected remote installer may you use the commands below. Otherwise, report the requirement without running an installer. Do not request approval again when the current authorization already covers this exact installation scope.
 
 ```bash
 # macOS / Linux

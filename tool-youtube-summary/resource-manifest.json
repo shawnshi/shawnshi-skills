@@ -1,18 +1,18 @@
 {
   "schema_version": 3,
   "skill": "tool-youtube-summary",
-  "generated_at": "2026-08-16T22:02:19",
+  "generated_at": "2026-09-19T16:38:59+08:00",
   "hash_algorithm": "SHA-256",
   "text_hash_normalization": "LF",
   "skill_md": "SKILL.md",
-  "skill_md_sha256": "11ff446b5a62e852a6ec14735e6784139dc89ea6d69c28643c6bdea7af9b34bb",
+  "skill_md_sha256": "5ead2d83d3e140f77343c5887f33248eb95330d40072f48e55a45d4b74bc364d",
   "top_level_files": [
     "SKILL.md"
   ],
   "top_level_file_hashes": [
     {
       "path": "SKILL.md",
-      "sha256": "11ff446b5a62e852a6ec14735e6784139dc89ea6d69c28643c6bdea7af9b34bb"
+      "sha256": "5ead2d83d3e140f77343c5887f33248eb95330d40072f48e55a45d4b74bc364d"
     }
   ],
   "top_level_directories": [
@@ -27,7 +27,7 @@
   "resource_file_hashes": [
     {
       "path": "resources/synthesis_prompt.md",
-      "sha256": "bee43a6458411015f6173d70fe4259114bbdb75b7b4b8c52aaab325b5cd28e7e"
+      "sha256": "08a014205ebdbdc5f519d229d5566055235ab4e6fe051350c46bcf32267af05b"
     }
   ],
   "declared_local_dependencies": [
@@ -35,7 +35,7 @@
       "path": "resources/synthesis_prompt.md",
       "exists": true,
       "resolved_path": "tool-youtube-summary/resources/synthesis_prompt.md",
-      "sha256": "bee43a6458411015f6173d70fe4259114bbdb75b7b4b8c52aaab325b5cd28e7e"
+      "sha256": "08a014205ebdbdc5f519d229d5566055235ab4e6fe051350c46bcf32267af05b"
     }
   ],
   "missing_declared_dependencies": []

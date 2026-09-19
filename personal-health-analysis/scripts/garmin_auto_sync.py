@@ -18,7 +18,6 @@ from datetime import date, datetime, timedelta, timezone
 from pathlib import Path
 from typing import Callable
 
-import runtime_authority
 from garmin_sqlite_adapter import GARMIN_DB, MONITORING_DB, fingerprint_database
 
 
@@ -93,11 +92,6 @@ def _run_bounded(
     if remaining <= 0:
         raise subprocess.TimeoutExpired(command, 0)
     return runner(command, min(requested_timeout, remaining))
-
-
-def _verify_authority(config_path: Path) -> dict:
-    config = json.loads(config_path.read_text(encoding="utf-8"))
-    return runtime_authority.verify(config)
 
 
 def _database_fingerprint() -> str:
@@ -231,7 +225,6 @@ def run_scheduled_sync(
     args: argparse.Namespace,
     *,
     runner: Callable[[list[str], int], dict] = _run_json,
-    authority_verifier: Callable[[Path], dict] = _verify_authority,
     database_fingerprinter: Callable[[], str] = _database_fingerprint,
     today: date | None = None,
 ) -> tuple[int, dict]:
@@ -245,8 +238,7 @@ def run_scheduled_sync(
     config_dir = Path(args.config_dir).resolve()
     scratch_dir = Path(args.scratch_dir).resolve()
     state_output = Path(args.state_output).resolve()
-    authority_config = Path(args.authority_config).resolve()
-    for required in (python, garmindb_python, config_dir, authority_config):
+    for required in (python, garmindb_python, config_dir):
         if not required.exists():
             return 2, {"schema": SCHEMA, "status": "invalid_runtime_path"}
     if not all(path.is_absolute() for path in (scratch_dir, state_output)):
@@ -267,13 +259,6 @@ def run_scheduled_sync(
     stage = "initialization"
     try:
         with _singleton(scratch_dir / "garmin-auto-sync.lock"):
-            authority_result = authority_verifier(authority_config)
-            if not authority_result.get("ok"):
-                raise RuntimeError("runtime_authority_mismatch")
-            state["runtime_binding"] = {
-                "authority_version": authority_result.get("authority_version"),
-                "authority_sha256": authority_result.get("authority_sha256"),
-            }
             state["updated_at"] = datetime.now(timezone.utc).isoformat()
             _atomic_json(state_output, state)
 
@@ -402,7 +387,7 @@ def build_parser() -> argparse.ArgumentParser:
     parser.add_argument("--garmindb-python", required=True)
     parser.add_argument("--scratch-dir", required=True)
     parser.add_argument("--state-output", required=True)
-    parser.add_argument("--authority-config", required=True)
+    parser.add_argument("--authority-config", help=argparse.SUPPRESS)  # legacy option; no source-hash gate
     parser.add_argument("--timeout-seconds", type=int, default=600)
     parser.add_argument("--total-timeout-seconds", type=int, default=900)
     parser.add_argument("--allow-network", action="store_true")

@@ -175,15 +175,22 @@ def main():
         proxy = McpProxy(user_token, base_url, skill_version)
         result = proxy.request(method, params)
         
-        # 打印结果
-        # 当method为tools/call时，打印result结果content数组里面对应type=text的text字段
-        if method == "tools/call" and "result" in result:
-            inner = result["result"]
-            # 服务端返回业务错误时，结构为 {"error": {"code": ..., "message": ...}}，无 content 字段
-            if "error" in inner:
-                error = inner["error"]
-                print(f"[错误] {error.get('message', json.dumps(error, ensure_ascii=False))}")
-            elif "content" in inner:
+        if not isinstance(result, dict) or not ("result" in result or "error" in result):
+            raise ValueError("MCP响应缺少result/error对象")
+        inner = result.get("result")
+        if "error" in result or (isinstance(inner, dict) and (
+            "error" in inner or inner.get("isError") is True
+        )):
+            # Preserve the complete native error envelope, including code/message.
+            print(json.dumps(result, ensure_ascii=False, indent=2), file=sys.stderr)
+            sys.exit(1)
+
+        if method == "tools/call":
+            if not isinstance(inner, dict):
+                raise ValueError("tools/call响应result必须是JSON对象")
+            if "content" in inner:
+                if not isinstance(inner["content"], list):
+                    raise ValueError("tools/call响应content必须是数组")
                 for item in inner["content"]:
                     if item.get("type") == "text":
                         print(item.get("text", ""))
@@ -191,12 +198,12 @@ def main():
                 print(json.dumps(result, ensure_ascii=False, indent=2))
         else:
             print(json.dumps(result, ensure_ascii=False, indent=2))
-        
+
     except FileNotFoundError as e:
         print(f"[错误] 配置错误: {e}")
         sys.exit(1)
     except ValueError as e:
-        print(f"[错误] 配置错误: {e}")
+        print(f"[错误] JSON/响应错误 ({type(e).__name__}): {e}", file=sys.stderr)
         sys.exit(1)
     except Exception as e:
         print(f"[错误] 请求失败: {e}")

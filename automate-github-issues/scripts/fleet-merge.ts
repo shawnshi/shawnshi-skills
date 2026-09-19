@@ -13,244 +13,111 @@
 // limitations under the License.
 
 import path from "node:path";
-import { findUpSync } from "find-up";
-import type { IssueAnalysis, Task } from "./types.js";
-import { getGitRepoInfo, getCurrentBranch } from "./github/git.js";
-import { jules } from "@google/jules-sdk";
+import { readFileSync, realpathSync } from "node:fs";
+import { execFileSync } from "node:child_process";
+import { pathToFileURL } from "node:url";
 
-const repoInfo = await getGitRepoInfo();
-const OWNER = repoInfo.owner;
-const REPO = repoInfo.repo;
-const BASE_BRANCH = process.env.FLEET_BASE_BRANCH ?? "main";
-const GITHUB_TOKEN = process.env.GITHUB_TOKEN;
+type Environment = Record<string, string | undefined>;
+type Gh = (args: string[]) => string;
 
-// Re-dispatch configuration
-const MAX_RETRIES = Number(process.env.FLEET_MAX_RETRIES ?? 2);
-const PR_POLL_INTERVAL_MS = 30_000;
-const PR_POLL_TIMEOUT_MS = 15 * 60 * 1000;
+const runGh: Gh = args => execFileSync("gh", args, {
+  encoding: "utf8", timeout: 30_000, stdio: ["ignore", "pipe", "pipe"],
+});
 
-if (!GITHUB_TOKEN) {
-  console.error("❌ GITHUB_TOKEN environment variable is required.");
-  process.exit(1);
-}
-
-const headers = {
-  Authorization: `Bearer ${GITHUB_TOKEN}`,
-  Accept: "application/vnd.github+json",
-  "X-GitHub-Api-Version": "2022-11-28",
-} as const;
-
-const API = `https://api.github.com/repos/${OWNER}/${REPO}`;
-
-const date = new Intl.DateTimeFormat("en-CA", { year: "numeric", month: "2-digit", day: "2-digit" })
-  .format(new Date())
-  .replaceAll("-", "_");
-
-const root = path.dirname(findUpSync(".git")!);
-const fleetDir = path.join(root, ".fleet", date);
-
-// Load task ordering (already sorted by risk in the analysis phase)
-const analysis = await Bun.file(path.join(fleetDir, "issue_tasks.json")).json() as IssueAnalysis;
-
-// Load session mapping written by fleet-dispatch.ts
-const sessions = await Bun.file(path.join(fleetDir, "sessions.json")).json() as Array<{
-  taskId: string;
-  sessionId: string;
-}>;
-
-interface GitHubPR {
-  number: number;
-  head: { ref: string };
-  body: string | null;
-}
-
-// Find open PRs created by fleet sessions
-async function findFleetPRs() {
-  const res = await fetch(`${API}/pulls?state=open&per_page=100`, { headers });
-  const pulls = (await res.json()) as GitHubPR[];
-
-  const prMap = new Map<string, GitHubPR>();
-  for (const session of sessions) {
-    const matchingPR = pulls.find((pr: GitHubPR) =>
-      pr.head.ref.includes(session.sessionId) ||
-      pr.body?.includes(session.sessionId)
-    );
-    if (matchingPR) {
-      prMap.set(session.taskId, matchingPR);
-    }
+// Both manual workflow and local CLI use this one SHA-bound merge path.
+// Inputs express an existing approval; PR text or session mappings cannot grant it.
+export function mergeApprovedPR(env: Environment, root: string, gh: Gh = runGh): void {
+  function required(name: string, pattern?: RegExp): string {
+    const value = env[name];
+    if (!value || (pattern && !pattern.test(value))) throw new Error(`Missing or invalid approval input: ${name}`);
+    return value;
   }
-  return prMap;
-}
-
-interface CheckRun {
-  status: string;
-  conclusion: string | null;
-}
-
-async function waitForCI(prNumber: number, maxWaitMs = 10 * 60 * 1000): Promise<boolean> {
-  const start = Date.now();
-
-  // First, get the head SHA for this PR
-  const prRes = await fetch(`${API}/pulls/${prNumber}`, { headers });
-  const prData = (await prRes.json()) as { head: { sha: string } };
-  const headSha = prData.head.sha;
-
-  while (Date.now() - start < maxWaitMs) {
-    const res = await fetch(`${API}/commits/${headSha}/check-runs`, { headers });
-    const data = (await res.json()) as { check_runs: CheckRun[] };
-
-    // No CI configured — skip validation
-    if (data.check_runs.length === 0) {
-      console.log(`  ℹ️  No check runs found for PR #${prNumber}. Proceeding without CI.`);
-      return true;
-    }
-
-    const allComplete = data.check_runs.every((run: CheckRun) => run.status === "completed");
-    const allPassed = data.check_runs.every((run: CheckRun) =>
-      run.conclusion === "success" || run.conclusion === "skipped"
-    );
-
-    if (allComplete && allPassed) return true;
-    if (allComplete && !allPassed) return false;
-
-    console.log(`  ⏳ CI still running for PR #${prNumber}... waiting 30s`);
-    await new Promise(r => setTimeout(r, 30_000));
-  }
-  console.log(`  ⏰ CI timeout for PR #${prNumber}`);
-  return false;
-}
-
-// Re-dispatch a task as a new Jules session against current main
-async function redispatchTask(
-  task: Task,
-  oldPr: GitHubPR,
-): Promise<GitHubPR> {
-  // Close the conflicting PR
-  console.log(`  🔒 Closing conflicting PR #${oldPr.number}...`);
-  await fetch(`${API}/pulls/${oldPr.number}`, {
-    method: "PATCH",
-    headers: { ...headers, "Content-Type": "application/json" },
-    body: JSON.stringify({
-      state: "closed",
-      body: `${oldPr.body ?? ""}\n\n---\n⚠️ Closed by fleet-merge: merge conflict detected. Task re-dispatched as a new session.`,
-    }),
-  });
-
-  // Create a new Jules session with the same prompt
-  console.log(`  🚀 Re-dispatching task "${task.id}" against current ${BASE_BRANCH}...`);
-  const session = await jules.createSession({
-    prompt: task.prompt,
-    source: {
-      github: `${OWNER}/${REPO}`,
-      baseBranch: BASE_BRANCH,
-    },
-  });
-  console.log(`  📝 New session: ${session.id}`);
-
-  // Update sessions.json with new session ID
-  const sessionEntry = sessions.find(s => s.taskId === task.id);
-  if (sessionEntry) {
-    sessionEntry.sessionId = session.id;
-    const sessionsPath = path.join(fleetDir, "sessions.json");
-    await Bun.write(sessionsPath, JSON.stringify(sessions, null, 2));
+  const repo = required("FLEET_REPO", /^[A-Za-z0-9_.-]+\/[A-Za-z0-9_.-]+$/);
+  const base = required("FLEET_BASE_BRANCH");
+  const pr = required("FLEET_PR_NUMBER", /^[1-9][0-9]*$/);
+  const sha = required("FLEET_HEAD_SHA", /^[0-9a-f]{40}$/);
+  const taskId = required("FLEET_TASK_ID", /^[A-Za-z0-9][A-Za-z0-9._-]*$/);
+  const date = required("FLEET_DATE", /^[0-9]{4}_[0-9]{2}_[0-9]{2}$/);
+  if (env.FLEET_APPROVED !== "true") throw new Error("Explicit approval is required (FLEET_APPROVED=true).");
+  if (env.FLEET_DRY_RUN !== undefined && !["true", "false"].includes(env.FLEET_DRY_RUN)) {
+    throw new Error("FLEET_DRY_RUN must be true or false.");
   }
 
-  // Poll for the new PR
-  console.log(`  ⏳ Waiting for new PR from session ${session.id}...`);
-  const start = Date.now();
-  while (Date.now() - start < PR_POLL_TIMEOUT_MS) {
-    await new Promise(r => setTimeout(r, PR_POLL_INTERVAL_MS));
-    const res = await fetch(`${API}/pulls?state=open&per_page=100`, { headers });
-    const pulls = (await res.json()) as GitHubPR[];
-    const newPr = pulls.find(
-      (pr: GitHubPR) =>
-        pr.head.ref.includes(session.id) ||
-        pr.body?.includes(session.id)
-    );
-    if (newPr) {
-      console.log(`  ✅ New PR #${newPr.number} found (${newPr.head.ref})`);
-      return newPr;
-    }
-    console.log(`  ⏳ No PR yet... polling again in 30s`);
-  }
-  throw new Error(`Timed out waiting for new PR from re-dispatched session ${session.id}`);
-}
-
-// Main: sequential merge in task order
-const prMap = await findFleetPRs();
-
-console.log(`Found ${prMap.size}/${analysis.tasks.length} fleet PRs`);
-for (const [taskId, pr] of prMap) {
-  console.log(`  ${taskId} → PR #${pr.number} (${pr.head.ref})`);
-}
-
-if (prMap.size !== analysis.tasks.length) {
-  console.error(`❌ Expected ${analysis.tasks.length} PRs but found ${prMap.size}. Waiting for all PRs before merging.`);
-  process.exit(1);
-}
-
-for (const task of analysis.tasks) {
-  let pr = prMap.get(task.id);
-  if (!pr) {
-    console.error(`❌ No PR found for task "${task.id}". Aborting.`);
-    process.exit(1);
-  }
-
-  let retryCount = 0;
-  let merged = false;
-
-  while (!merged) {
-    console.log(`\n📦 Processing Task "${task.id}" → PR #${pr!.number}${retryCount > 0 ? ` (retry ${retryCount})` : ""}`);
-
-    // Update branch from base before merging (skip for first PR on first attempt)
-    if (analysis.tasks.indexOf(task) > 0 || retryCount > 0) {
-      console.log(`  🔄 Updating PR #${pr!.number} branch from ${BASE_BRANCH}...`);
-      const updateRes = await fetch(`${API}/pulls/${pr!.number}/update-branch`, {
-        method: "PUT",
-        headers: { ...headers, "Content-Type": "application/json" },
-      });
-      if (!updateRes.ok) {
-        const body = await updateRes.text();
-        if (updateRes.status === 422) {
-          if (retryCount >= MAX_RETRIES) {
-            console.error(`  ❌ Conflict persists after ${MAX_RETRIES} retries. Human intervention required.`);
-            console.error(`  PR: https://github.com/${OWNER}/${REPO}/pull/${pr!.number}`);
-            process.exit(1);
-          }
-          console.log(`  ⚠️ Merge conflict detected. Re-dispatching task "${task.id}"...`);
-          pr = await redispatchTask(task, pr!);
-          retryCount++;
-          continue;
-        }
-        throw new Error(`Update branch failed (${updateRes.status}): ${body}`);
+  // Read operator-provided records from the trusted baseline, never a PR checkout.
+  const trustedRoot = realpathSync(root);
+  function fleetRecord(name: string): any {
+    const file = path.join(trustedRoot, ".fleet", date, name);
+    try {
+      const relative = path.relative(trustedRoot, realpathSync(file));
+      if (relative.startsWith(`..${path.sep}`) || relative === ".." || path.isAbsolute(relative)) {
+        throw new Error("Fleet record resolves outside the trusted repository.");
       }
-      // Wait for the update to propagate
-      await new Promise(r => setTimeout(r, 5_000));
+      return JSON.parse(readFileSync(file, "utf8"));
+    } catch (error) {
+      throw new Error(`Trusted fleet record prerequisite not satisfied: ${file}`, { cause: error });
     }
-
-    // Wait for CI to pass
-    console.log(`  🧪 Waiting for CI on PR #${pr!.number}...`);
-    const ciPassed = await waitForCI(pr!.number);
-    if (!ciPassed) {
-      console.error(`  ❌ CI failed for PR #${pr!.number}. Aborting sequential merge.`);
-      process.exit(1);
-    }
-
-    // Merge
-    console.log(`  ✅ CI passed. Merging PR #${pr!.number}...`);
-    const mergeRes = await fetch(`${API}/pulls/${pr!.number}/merge`, {
-      method: "PUT",
-      headers: { ...headers, "Content-Type": "application/json" },
-      body: JSON.stringify({ merge_method: "squash" }),
-    });
-    if (!mergeRes.ok) {
-      const body = await mergeRes.text();
-      console.error(`  ❌ Failed to merge PR #${pr!.number}: ${body}`);
-      process.exit(1);
-    }
-    console.log(`  🎉 PR #${pr!.number} merged successfully.`);
-    merged = true;
   }
+  const analysis = fleetRecord("issue_tasks.json");
+  const sessions = fleetRecord("sessions.json");
+  if (!Array.isArray(analysis?.tasks) || analysis.tasks.filter((t: any) => t?.id === taskId).length !== 1 ||
+      !Array.isArray(sessions) || sessions.filter((s: any) => s?.taskId === taskId).length !== 1) {
+    throw new Error("Approved task must have exactly one trusted fleet task and session mapping.");
+  }
+  const session = sessions.find((s: any) => s?.taskId === taskId);
+  const sessionId = session.sessionId;
+  if (typeof sessionId !== "string" || !/^[A-Za-z0-9_-]+$/.test(sessionId) ||
+      sessions.filter((s: any) => s?.sessionId === sessionId).length !== 1) {
+    throw new Error("Invalid or ambiguous trusted fleet session ID.");
+  }
+  // Provenance is supplied independently in trusted records, not copied from PR text.
+  if (session.repo !== repo || !Number.isSafeInteger(session.prNumber) ||
+      session.prNumber <= 0 || String(session.prNumber) !== pr) {
+    throw new Error("Missing or mismatched trusted fleet PR binding (repo/task/session/PR).");
+  }
+  const sessionToken = new RegExp(`(^|[^A-Za-z0-9_-])${sessionId}($|[^A-Za-z0-9_-])`);
+  const repository = ["--repo", `https://github.com/${repo}`];
+  function verifyPR(): void {
+    const data = JSON.parse(gh(["pr", "view", pr, ...repository, "--json",
+      "number,url,state,isDraft,isCrossRepository,baseRefName,headRefOid,headRefName,body,mergeable,mergeStateStatus"]));
+    if (String(data.number) !== pr || data.url !== `https://github.com/${repo}/pull/${pr}` ||
+        data.baseRefName !== base || data.headRefOid !== sha || data.isCrossRepository !== false ||
+        data.state !== "OPEN" || data.isDraft !== false) {
+      throw new Error("PR does not match the approved repository/base/PR/head or is not an open non-draft same-repository PR.");
+    }
+    if (![data.headRefName, data.body].some(value => typeof value === "string" && sessionToken.test(value))) {
+      throw new Error("PR is not associated with the approved trusted fleet session.");
+    }
+    if (data.mergeable !== "MERGEABLE" || data.mergeStateStatus !== "CLEAN") {
+      throw new Error("PR is conflicting, blocked, behind or unknown; stop for human action and fresh approval after any head change.");
+    }
+  }
+
+  verifyPR();
+  // Required checks come from repository rules, not an arbitrary list of CI jobs.
+  // Native gh errors (including pending checks) stop here without mutating the head.
+  const checks = JSON.parse(gh(["pr", "checks", pr, ...repository, "--required", "--json", "name,state"]));
+  if (!Array.isArray(checks) || checks.length === 0 ||
+      !checks.every(check => typeof check?.name === "string" && check.name.length > 0 && check.state === "SUCCESS")) {
+    throw new Error("Nonempty required CI checks must all report SUCCESS; missing, skipped or pending checks stop the merge.");
+  }
+  verifyPR();
+  if (env.FLEET_DRY_RUN !== "false") {
+    console.log(`Dry run: approved fleet PR #${pr} at ${sha} passed checks; no merge requested.`);
+    return;
+  }
+  // GitHub atomically rejects a changed head and still enforces server-side protection.
+  const result = JSON.parse(gh(["api", "--hostname", "github.com", `repos/${repo}/pulls/${pr}/merge`,
+    "--method", "PUT", "-f", "merge_method=squash", "-f", `sha=${sha}`]));
+  if (result?.merged !== true) throw new Error(`Merge not confirmed: ${JSON.stringify(result)}`);
+  console.log(`Merged approved fleet PR #${pr} at ${sha}.`);
 }
 
-console.log(`\n✅ All ${analysis.tasks.length} PRs merged sequentially. No conflicts.`);
+if (process.argv[1] && import.meta.url === pathToFileURL(path.resolve(process.argv[1])).href) {
+  try {
+    const root = execFileSync("git", ["rev-parse", "--show-toplevel"], { encoding: "utf8", timeout: 30_000 }).trim();
+    mergeApprovedPR(process.env, root);
+  } catch (error) {
+    console.error(error);
+    process.exitCode = 1;
+  }
+}

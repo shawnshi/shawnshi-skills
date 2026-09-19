@@ -1,5 +1,6 @@
 import argparse
 import copy
+import hashlib
 import json
 import math
 import os
@@ -38,6 +39,16 @@ def is_cash_position(position: Dict[str, Any]) -> bool:
 
 
 _positions_cache: Dict[str, Dict[str, Any]] = {}
+MAX_WEIGHT_REPORT_AGE_SECONDS = 15 * 60
+
+
+def _quotes_report_cache_component(quotes_report: str) -> str:
+    """Cache discriminator for a loader result derived from one report revision."""
+    try:
+        stat = Path(quotes_report).expanduser().stat()
+    except OSError:
+        return f"{quotes_report}:missing"
+    return f"{quotes_report}:{stat.st_mtime_ns}:{stat.st_size}"
 
 
 def _strict_number(value: Any) -> Optional[float]:
@@ -308,7 +319,19 @@ def validate_portfolio_payload(payload: Dict[str, Any]) -> list[str]:
     return errors
 
 
-def load_positions(path: Optional[str] = None) -> Dict[str, Any]:
+def load_positions(
+    path: Optional[str] = None,
+    *,
+    quotes_report: Optional[str] = None,
+    max_report_age_seconds: float = MAX_WEIGHT_REPORT_AGE_SECONDS,
+) -> Dict[str, Any]:
+    """Load the portfolio contract.
+
+    When ``quotes_report`` names a validated Daily Sync report, current weights are
+    derived in memory from that report and ``_weight_snapshot_status`` becomes
+    ``verified``. The positions file is still never trusted for weights, and no
+    derived weight is written back to disk.
+    """
     positions_path = resolve_positions_file(path)
     if positions_path is None:
         return {"positions": [], "_status": "not_configured", "_path": None}
@@ -317,8 +340,13 @@ def load_positions(path: Optional[str] = None) -> Dict[str, Any]:
 
     path_str = str(positions_path)
     mtime = positions_path.stat().st_mtime
-    if path_str in _positions_cache and _positions_cache[path_str]['mtime'] == mtime:
-        return copy.deepcopy(_positions_cache[path_str]['payload'])
+    cache_key = (
+        path_str
+        if not quotes_report
+        else f"{path_str}#{_quotes_report_cache_component(quotes_report)}"
+    )
+    if cache_key in _positions_cache and _positions_cache[cache_key]['mtime'] == mtime:
+        return copy.deepcopy(_positions_cache[cache_key]['payload'])
 
     payload = json.loads(positions_path.read_text(encoding="utf-8"))
     validation_errors = validate_portfolio_payload(payload)
@@ -373,8 +401,95 @@ def load_positions(path: Optional[str] = None) -> Dict[str, Any]:
         if isinstance(currency, str) and currency.strip()
     }
 
-    _positions_cache[path_str] = {'mtime': mtime, 'payload': result}
+    if quotes_report:
+        _apply_validated_weight_snapshot(
+            result, path_str, quotes_report, max_report_age_seconds
+        )
+
+    _positions_cache[cache_key] = {'mtime': mtime, 'payload': result}
     return copy.deepcopy(result)
+
+
+def _apply_validated_weight_snapshot(
+    result: Dict[str, Any],
+    positions_path: str,
+    quotes_report: str,
+    max_report_age_seconds: float,
+) -> None:
+    """Derive in-memory current weights from an explicitly supplied validated report.
+
+    The report must pass the same gates ``rebalance_weights.recalculate_all_weights``
+    enforces for current-weight calculation (portfolio/quote snapshot binding, quote
+    identity, currency, market-state freshness and dated FX). Those gates are reused
+    rather than re-implemented so the two entry points cannot diverge; a failure keeps
+    ``requires_validated_quote_refresh`` and is reported under ``_weight_snapshot_errors``.
+    """
+    if (
+        isinstance(max_report_age_seconds, bool)
+        or not isinstance(max_report_age_seconds, (int, float))
+        or not math.isfinite(float(max_report_age_seconds))
+        or float(max_report_age_seconds) <= 0
+    ):
+        result["_weight_snapshot_errors"] = ["report_age_policy_invalid"]
+        return
+    report_path = Path(quotes_report).expanduser()
+    try:
+        report_bytes = report_path.read_bytes()
+    except OSError as exc:
+        result["_weight_snapshot_errors"] = [f"quotes_report_unreadable: {exc}"]
+        return
+    try:
+        from rebalance_weights import recalculate_all_weights  # deferred: avoids an import cycle
+
+        report = recalculate_all_weights(
+            positions_path,
+            quotes_file=str(report_path),
+            max_report_age_seconds=float(max_report_age_seconds),
+        )
+    except (OSError, ValueError, TypeError, json.JSONDecodeError) as exc:
+        result["_weight_snapshot_errors"] = [f"quotes_report_invalid: {exc}"]
+        return
+    if not isinstance(report, dict):
+        result["_weight_snapshot_errors"] = ["quotes_report_unusable"]
+        return
+    errors = list(report.get("errors") or [])
+    if report.get("status") != "complete" or errors:
+        result["_weight_snapshot_errors"] = errors or [
+            str(report.get("detail_status") or "quotes_report_not_complete")
+        ]
+        return
+    weights: Dict[str, float] = {}
+    for row in report.get("current_weights") or []:
+        if not isinstance(row, dict):
+            continue
+        symbol = normalize_symbol(row.get("symbol") or "")
+        weight = _to_float(row.get("current_weight"))
+        if symbol and weight is not None:
+            weights[symbol] = weight
+    covered = [
+        position
+        for position in result["positions"]
+        if normalize_symbol(position.get("symbol") or "") in weights
+    ]
+    if not weights or len(covered) != len(weights):
+        result["_weight_snapshot_errors"] = [
+            "validated_report_did_not_cover_every_active_position"
+        ]
+        return
+    for position in result["positions"]:
+        symbol = normalize_symbol(position.get("symbol") or "")
+        if symbol in weights:
+            position["current_weight"] = weights[symbol]
+    result["_weight_snapshot_status"] = "verified"
+    result["_weight_snapshot_source"] = {
+        "quotes_report": str(report_path),
+        "quotes_report_sha256": hashlib.sha256(report_bytes).hexdigest(),
+        "evaluation_epoch": report.get("evaluation_epoch"),
+        "detail_status": report.get("detail_status"),
+        "max_report_age_seconds": float(max_report_age_seconds),
+        "gate_owner": "rebalance_weights.recalculate_all_weights",
+        "persisted": False,
+    }
 
 
 def _to_float(value: Any) -> Optional[float]:
@@ -794,8 +909,18 @@ def build_portfolio_package(
     current_price: Any = None,
     positions_file: Optional[str] = None,
     payload: Optional[Dict[str, Any]] = None,
+    quotes_report: Optional[str] = None,
+    max_report_age_seconds: float = MAX_WEIGHT_REPORT_AGE_SECONDS,
 ) -> Dict[str, Any]:
-    payload = payload if payload is not None else load_positions(positions_file)
+    payload = (
+        payload
+        if payload is not None
+        else load_positions(
+            positions_file,
+            quotes_report=quotes_report,
+            max_report_age_seconds=max_report_age_seconds,
+        )
+    )
     positions = payload["positions"]
     position_context = build_position_context(symbol, current_price=current_price, payload=payload)
 
@@ -825,12 +950,27 @@ if __name__ == "__main__":
     parser.add_argument("symbol")
     parser.add_argument("--current-price", type=float)
     parser.add_argument("--positions-file", help="Portfolio JSON path; alternatively set PIA_POSITIONS_FILE.")
+    parser.add_argument(
+        "--quotes-file",
+        help=(
+            "Validated Daily Sync JSON report used to derive in-memory current weights. "
+            "Weights are never persisted to the positions file."
+        ),
+    )
+    parser.add_argument(
+        "--max-report-age-seconds",
+        type=float,
+        default=MAX_WEIGHT_REPORT_AGE_SECONDS,
+        help="Maximum accepted Daily Sync report age when --quotes-file is used.",
+    )
     args = parser.parse_args()
 
     package = build_portfolio_package(
         args.symbol,
         current_price=args.current_price,
         positions_file=args.positions_file,
+        quotes_report=args.quotes_file,
+        max_report_age_seconds=args.max_report_age_seconds,
     )
     encoding = getattr(sys.stdout, "encoding", None) or "utf-8"
     message = json.dumps(package, ensure_ascii=False, indent=2)

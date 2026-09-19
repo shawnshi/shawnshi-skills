@@ -1,18 +1,18 @@
 {
   "schema_version": 3,
   "skill": "tool-text-forger",
-  "generated_at": "2026-09-05T17:15:45+08:00",
+  "generated_at": "2026-09-19T16:43:12+08:00",
   "hash_algorithm": "SHA-256",
   "text_hash_normalization": "LF",
   "skill_md": "SKILL.md",
-  "skill_md_sha256": "af50928f8f020c81dc0b68f23aff3f1cec1ce19c08dc336188a4630429023e75",
+  "skill_md_sha256": "f844ff70e3381d481f5287dd3f4f7839c86cd048f9b3ae8269d0edc2b6a12997",
   "top_level_files": [
     "SKILL.md"
   ],
   "top_level_file_hashes": [
     {
       "path": "SKILL.md",
-      "sha256": "af50928f8f020c81dc0b68f23aff3f1cec1ce19c08dc336188a4630429023e75"
+      "sha256": "f844ff70e3381d481f5287dd3f4f7839c86cd048f9b3ae8269d0edc2b6a12997"
     }
   ],
   "top_level_directories": [

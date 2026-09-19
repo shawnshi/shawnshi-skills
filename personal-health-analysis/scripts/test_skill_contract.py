@@ -56,7 +56,7 @@ def skill_contract_text() -> str:
 class SkillContractTests(unittest.TestCase):
     def test_default_dependencies_are_isolated_and_exclude_unsafe_sync_pair(self):
         requirements = (SKILL_ROOT / "requirements.txt").read_text(encoding="utf-8")
-        self.assertIn("garminconnect==0.3.9", requirements)
+        self.assertIn("garminconnect==0.3.16", requirements)
         self.assertNotRegex(requirements, r"(?m)^garmindb(?:[<=> @]|$)")
 
         locked = {
@@ -71,21 +71,21 @@ class SkillContractTests(unittest.TestCase):
             {
                 "certifi==2026.7.22",
                 "cffi==2.1.1",
-                "charset-normalizer==3.4.9",
-                "curl-cffi==0.16.0",
+                "charset-normalizer==3.5.1",
+                "curl-cffi==0.16.3",
                 "fitparse==1.2.0",
-                "garminconnect==0.3.9",
+                "garminconnect==0.3.16",
                 "gpxpy==1.6.2",
-                "idna==3.18",
-                "numpy==2.5.1",
-                "pandas==3.0.3",
+                "idna==3.20",
+                "numpy==2.5.3",
+                "pandas==3.0.6",
                 "pycparser==3.0",
                 "python-dateutil==2.9.0.post0",
                 "requests==2.34.2",
                 "six==1.17.0",
-                "tzdata==2026.3",
-                "ua-generator==2.1.3",
-                "urllib3==2.7.0",
+                "tzdata==2026.4",
+                "ua-generator==2.1.5",
+                "urllib3==2.8.0",
             },
         )
         self.assertFalse(any(item.startswith("garmindb==") for item in locked))
@@ -221,8 +221,8 @@ class SkillContractTests(unittest.TestCase):
         self.assertIn("download_authorization_required", sync_source)
         self.assertIn("download_authorization_mismatch", sync_source)
         self.assertIn("build_activities_commands", sync_source)
-        self.assertIn('"garmindb": "3.8.0"', sync_source)
-        self.assertIn('"garminconnect": "0.3.9"', sync_source)
+        self.assertIn('"garmindb": "3.9.0"', sync_source)
+        self.assertIn('"garminconnect": "0.3.16"', sync_source)
         self.assertIn("site_packages_tree_sha256", sync_source)
         self.assertIn("plan_bindings_mismatch", sync_source)
 

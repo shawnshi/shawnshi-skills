@@ -1,18 +1,18 @@
 {
   "schema_version": 3,
   "skill": "mentat-skill-creator",
-  "generated_at": "2026-09-06T20:31:58+08:00",
+  "generated_at": "2026-09-19T16:38:57+08:00",
   "hash_algorithm": "SHA-256",
   "text_hash_normalization": "LF",
   "skill_md": "SKILL.md",
-  "skill_md_sha256": "bc55d20fc39dd97018662819b356528ed2acd95734747073a9af30c7a4192fcd",
+  "skill_md_sha256": "99dd727912a87c0e2cf019d6a29f8af55d1f1da917ada534dcb4c158083f8987",
   "top_level_files": [
     "SKILL.md"
   ],
   "top_level_file_hashes": [
     {
       "path": "SKILL.md",
-      "sha256": "bc55d20fc39dd97018662819b356528ed2acd95734747073a9af30c7a4192fcd"
+      "sha256": "99dd727912a87c0e2cf019d6a29f8af55d1f1da917ada534dcb4c158083f8987"
     }
   ],
   "top_level_directories": [

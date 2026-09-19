@@ -392,7 +392,7 @@ def _get_summary_table_name(conn):
         return 'days_summary'
     return None
 
-def get_summary(days=7, fill_missing=True):
+def get_summary(days=7, fill_missing=True, *, columns=None):
     """
     Extract macro physiological metrics from the summary table.
     Equivalent to the old garmin_data.py summary command.
@@ -406,10 +406,19 @@ def get_summary(days=7, fill_missing=True):
         table_name = _get_summary_table_name(conn)
         if not table_name:
             raise ValueError("summary_table_missing")
+        expressions = {
+            'resting_heart_rate': 'rhr as resting_heart_rate', 'max_hr': 'hr_max as max_hr',
+            'stress_avg': 'stress_avg', 'body_battery_highest': 'bb_max as body_battery_highest',
+            'body_battery_charged': 'bb_charged as body_battery_charged',
+            'body_battery_lowest': 'bb_min as body_battery_lowest',
+            'sweat_loss': 'sweat_loss', 'rr_waking_avg': 'rr_waking_avg', 'steps': 'steps',
+        }
+        selected = list(expressions) if columns is None else list(columns)
+        if not selected or set(selected) - set(expressions):
+            raise ValueError('invalid_summary_columns')
+        projection = ', '.join(expressions[key] for key in selected)
         query = f"""
-            SELECT day, rhr as resting_heart_rate, hr_max as max_hr, stress_avg, bb_max as body_battery_highest,
-                   bb_charged as body_battery_charged, bb_min as body_battery_lowest,
-                   sweat_loss, rr_waking_avg, steps
+            SELECT day, {projection}
             FROM {table_name}
             WHERE day >= '{start_date}'
               AND day < '{end_exclusive}'
@@ -536,6 +545,25 @@ def get_daily_friction_matrix(days=90, derivation_config=None):
     return df
 
 
+def get_training_load_data(days=14):
+    """Read non-positioned daily load only; missing days are not rest days."""
+    start = _window_start(days)
+    end = (datetime.now() + timedelta(days=1)).strftime('%Y-%m-%d')
+    conn = get_connection(ACTIVITIES_DB)
+    try:
+        frame = pd.read_sql_query(
+            "SELECT substr(start_time, 1, 10) AS date, SUM(training_load) AS training_load "
+            "FROM activities WHERE start_time >= ? AND start_time < ? "
+            "AND training_load IS NOT NULL GROUP BY substr(start_time, 1, 10) ORDER BY date",
+            conn, params=(start, end),
+        )
+    except Exception as exc:
+        raise LocalDatabaseReadError("training_load_query_failed") from exc
+    finally:
+        conn.close()
+    return frame
+
+
 def get_sleep_data(days=14, fill_missing=True):
     """Extract detailed sleep metrics."""
     start_date = _window_start(days)
@@ -543,10 +571,25 @@ def get_sleep_data(days=14, fill_missing=True):
     end_exclusive = (datetime.fromisoformat(end_date) + timedelta(days=1)).strftime('%Y-%m-%d')
     conn = get_connection(GARMIN_DB)
 
+    # Forward source timestamps without inventing offsets for naive values.
+    try:
+        columns = {row[1] for row in conn.execute('PRAGMA table_info(sleep)')}
+    except Exception as exc:
+        conn.close()
+        raise LocalDatabaseReadError("sleep_schema_query_failed") from exc
+    time_fields = []
+    for alias, candidates in (
+        ('sleep_start', ('sleep_start', 'sleep_start_time', 'start')),
+        ('sleep_end', ('sleep_end', 'sleep_end_time', 'end')),
+    ):
+        column = next((name for name in candidates if name in columns), None)
+        if column:
+            time_fields.append(f'"{column}" AS {alias}')
+    timestamp_sql = ', ' + ', '.join(time_fields) if time_fields else ''
     query = f"""
-        SELECT day, total_sleep, deep_sleep, light_sleep, rem_sleep, 
-               awake as awake_time, score as sleep_score, avg_rr as avg_respiration, 
-               avg_spo2, avg_stress
+        SELECT day, total_sleep, deep_sleep, light_sleep, rem_sleep,
+               awake as awake_time, score as sleep_score, avg_rr as avg_respiration,
+               avg_spo2, avg_stress {timestamp_sql}
         FROM sleep
         WHERE day >= '{start_date}'
           AND day < '{end_exclusive}'

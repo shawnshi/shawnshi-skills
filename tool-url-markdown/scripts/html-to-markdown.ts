@@ -151,6 +151,7 @@ const cleanupAndExtractScriptBody = String.raw`
   absolutizeSrcset("img[srcset], source[srcset]");
 
   const removeSelectors = [
+    "iframe", // Main-page-only capture also excludes inline srcdoc content.
     "noscript",
     "template",
     ".cookie-banner",
@@ -166,22 +167,6 @@ const cleanupAndExtractScriptBody = String.raw`
       document.querySelectorAll(sel).forEach((el) => el.remove());
     } catch {}
   }
-
-  // Attempt to extract content from iframes (common in preview pages)
-  let iframeHtml = "";
-  try {
-    const iframes = document.querySelectorAll("iframe");
-    iframes.forEach((iframe) => {
-      try {
-        const doc = iframe.contentDocument || iframe.contentWindow.document;
-        if (doc && doc.body) {
-          iframeHtml += "\n<!-- Iframe Content Start -->\n" + doc.body.innerHTML + "\n<!-- Iframe Content End -->\n";
-        }
-      } catch (e) {
-        // Cross-origin iframe or inaccessible
-      }
-    });
-  } catch (e) {}
 
   function getMeta(names) {
     for (const name of names) {
@@ -269,7 +254,7 @@ const cleanupAndExtractScriptBody = String.raw`
     description,
     author,
     published,
-    html: document.documentElement.outerHTML + iframeHtml,
+    html: document.documentElement.outerHTML,
   };
 })()
 `;

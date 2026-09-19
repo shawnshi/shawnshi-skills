@@ -1,18 +1,18 @@
 {
   "schema_version": 3,
   "skill": "academic-paper-reader",
-  "generated_at": "2026-09-05T17:15:44+08:00",
+  "generated_at": "2026-09-19T16:38:56+08:00",
   "hash_algorithm": "SHA-256",
   "text_hash_normalization": "LF",
   "skill_md": "SKILL.md",
-  "skill_md_sha256": "4ec9da5fdcbf9131f6b04bf8b40fc5ca3970a6f2f254982df79712562303b746",
+  "skill_md_sha256": "7a49ff0dc212cb23d1f461cdc909c56780cfd2b37fa876eb21bf4d88f49c1fea",
   "top_level_files": [
     "SKILL.md"
   ],
   "top_level_file_hashes": [
     {
       "path": "SKILL.md",
-      "sha256": "4ec9da5fdcbf9131f6b04bf8b40fc5ca3970a6f2f254982df79712562303b746"
+      "sha256": "7a49ff0dc212cb23d1f461cdc909c56780cfd2b37fa876eb21bf4d88f49c1fea"
     }
   ],
   "top_level_directories": [

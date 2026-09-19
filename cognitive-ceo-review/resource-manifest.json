@@ -1,18 +1,18 @@
 {
   "schema_version": 3,
   "skill": "cognitive-ceo-review",
-  "generated_at": "2026-08-16T22:02:19",
+  "generated_at": "2026-09-19T16:38:56+08:00",
   "hash_algorithm": "SHA-256",
   "text_hash_normalization": "LF",
   "skill_md": "SKILL.md",
-  "skill_md_sha256": "9925a3b3221b02cac5732561ef138d4e5a91dce8b76f791fb4e54bbae7b96d8c",
+  "skill_md_sha256": "361f0ccdcf2aa9a005430ff55d34476a370d5426894a4a487ff75a77f9d6e4d2",
   "top_level_files": [
     "SKILL.md"
   ],
   "top_level_file_hashes": [
     {
       "path": "SKILL.md",
-      "sha256": "9925a3b3221b02cac5732561ef138d4e5a91dce8b76f791fb4e54bbae7b96d8c"
+      "sha256": "361f0ccdcf2aa9a005430ff55d34476a370d5426894a4a487ff75a77f9d6e4d2"
     }
   ],
   "top_level_directories": [],

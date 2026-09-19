@@ -29,7 +29,7 @@ description: 为医疗机构或医疗信息化企业开展数字化战略、方�
 
 1. 建立决策契约：受众、组织类型、适用地区、时间范围、预算状态、决策阶段、成功指标、不可接受风险和需要拍板的问题。高影响字段缺失时先追问，或明确降级为 `working_draft` 或 `blocked`。
 2. 区分医疗机构侧与医疗IT厂商侧。复杂任务读取 [references/analyst.md](references/analyst.md)；需要结构化责任、证据和成熟度字段时读取 [references/decision_schema.md](references/decision_schema.md)。
-3. 只收集支持当前决策的最小充分证据。需要当前政策、市场、价格、厂商或临床信息时读取 [references/retrieval_specialist.md](references/retrieval_specialist.md)，核验原始来源、地区、发布日期、事件日期和访问日期。
+3. 只收集支持当前决策的最小充分证据。需要当前政策、市场、价格、厂商或临床信息时读取 [references/retrieval_specialist.md](references/retrieval_specialist.md)，核验原始来源、地区、发布日期、事件日期和访问日期。检索前先确认内部已有证据（机构评级与客户归属、我方既往方案与已登记判断），规则见同文件的内部知识源一节。
 4. 比较少量互斥或可组合方案，说明适用条件、收益、成本、依赖、失败模式、最强反证和会改变结论的新证据。
 5. 涉及投资排序或量化论证时读取 [references/investment_model.md](references/investment_model.md)，分别处理医院买方价值与厂商卖方经济性；公开公式、现金流口径、归因、时间范围和敏感性。
 6. 形成带责任人、批准人、验证指标、验收阈值、观察期、付款或资源门槛、回退和退出条件的分阶段路径。

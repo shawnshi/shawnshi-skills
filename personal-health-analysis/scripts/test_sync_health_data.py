@@ -26,7 +26,7 @@ SYNC_REQUEST: dict[str, object] = {
 
 SCRIPT_PATH = Path(__file__).with_name("sync_health_data.py")
 
-# AST-equivalent to the installed GarminDB 3.8.0 method, not a corrected mock.
+# AST-equivalent to the installed GarminDB 3.9.0 method, not a corrected mock.
 UPSTREAM_DATE_METHOD = '''\
 def __get_date_and_days(self, db, latest, table, col, stat_name):
     if latest:
@@ -123,12 +123,12 @@ def synthetic_bindings(seed="a"):
                 "packages": [
                     {
                         "name": "garmindb",
-                        "version": "3.8.0",
+                        "version": "3.9.0",
                         "metadata_sha256": "3" * 64,
                     },
                     {
                         "name": "garminconnect",
-                        "version": "0.3.9",
+                        "version": "0.3.16",
                         "metadata_sha256": "4" * 64,
                     },
                 ],
@@ -202,8 +202,8 @@ class SyncHealthDataCliTests(unittest.TestCase):
         interpreter.write_bytes(b"synthetic isolated interpreter")
         cli.write_text(SYNTHETIC_CLI, encoding="utf-8")
         for directory, name, version in (
-            ("GarminDB-3.8.0.dist-info", "garmindb", "3.8.0"),
-            ("garminconnect-0.3.9.dist-info", "garminconnect", "0.3.9"),
+            ("GarminDB-3.9.0.dist-info", "garmindb", "3.9.0"),
+            ("garminconnect-0.3.16.dist-info", "garminconnect", "0.3.16"),
         ):
             metadata_dir = site_packages / directory
             metadata_dir.mkdir()
@@ -249,8 +249,8 @@ class SyncHealthDataCliTests(unittest.TestCase):
         interpreter.write_bytes(b"synthetic global interpreter")
         cli.write_text(SYNTHETIC_CLI, encoding="utf-8")
         for directory, name, version in (
-            ("GarminDB-3.8.0.dist-info", "garmindb", "3.8.0"),
-            ("garminconnect-0.3.9.dist-info", "garminconnect", "0.3.9"),
+            ("GarminDB-3.9.0.dist-info", "garmindb", "3.9.0"),
+            ("garminconnect-0.3.16.dist-info", "garminconnect", "0.3.16"),
         ):
             metadata_dir = site_packages / directory
             metadata_dir.mkdir()
@@ -391,7 +391,7 @@ class SyncHealthDataCliTests(unittest.TestCase):
                 for package in plan["bindings"]["runner"]["environment"]["packages"]
             }
             self.assertEqual(
-                package_versions, {"garmindb": "3.8.0", "garminconnect": "0.3.9"}
+                package_versions, {"garmindb": "3.9.0", "garminconnect": "0.3.16"}
             )
             self.assertEqual(len(plan["payload_sha256"]), 64)
             self.module.load_and_validate_sync_plan(
@@ -771,9 +771,7 @@ class SyncHealthDataCliTests(unittest.TestCase):
             with self.subTest(mutation=mutation), tempfile.TemporaryDirectory() as root:
                 config_dir, _, interpreter, _ = self.make_bound_environment(root)
                 site_packages = Path(root) / "runner-venv" / "Lib" / "site-packages"
-                metadata = (
-                    site_packages / "GarminDB-3.8.0.dist-info" / "METADATA"
-                )
+                metadata = site_packages / "GarminDB-3.9.0.dist-info" / "METADATA"
                 if mutation == "missing":
                     metadata.unlink()
                 else:
@@ -1029,6 +1027,11 @@ class SyncHealthDataCliTests(unittest.TestCase):
             "SSL_CERT_FILE": r"C:\untrusted-cert.pem",
             "SSL_CERT_DIR": r"C:\untrusted-certs",
             "REQUESTS_CA_BUNDLE": r"C:\untrusted-ca.pem",
+            "HTTP_PROXY": "http://127.0.0.1:7897",
+            "HTTPS_PROXY": "http://127.0.0.1:7897",
+            "NO_PROXY": "corp.example",
+            "no_proxy": "corp.example",
+            "ALL_PROXY": "socks5://127.0.0.1:1080",
         }
         with patch.dict(os.environ, inherited, clear=True):
             environment = self.module._sanitized_runner_environment()
@@ -1406,6 +1409,24 @@ class SyncHealthDataCliTests(unittest.TestCase):
         )
         self.assertEqual(status[0], self.module.EXIT_RATE_LIMIT)
         self.assertEqual(status[1]["status"], "rate_limited")
+
+    def test_progress_counters_are_not_mistaken_for_rate_limits(self):
+        progress = "54%|#####3    | 429/800 [00:58<00:52,  7.11files/s]"
+        status = self.module.classify_process_result(returncode=0, output=progress)
+        self.assertEqual(status[0], self.module.EXIT_OK)
+        self.assertEqual(status[1]["status"], "sync_completed")
+        for real_limit in (
+            "429 Client Error: Too Many Requests for url: https://example.invalid",
+            "HTTP 429",
+            "status_code: 429",
+            "rate limit exceeded",
+        ):
+            with self.subTest(real_limit=real_limit):
+                limited = self.module.classify_process_result(
+                    returncode=1, output=real_limit
+                )
+                self.assertEqual(limited[0], self.module.EXIT_RATE_LIMIT)
+                self.assertEqual(limited[1]["status"], "rate_limited")
 
     def run_synthetic_child(self, root, start, end, *, cli_text=SYNTHETIC_CLI,
                             config_start=None, config_end=None, mutate_command=None):

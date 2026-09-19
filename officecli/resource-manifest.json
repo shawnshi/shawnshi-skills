@@ -1,11 +1,11 @@
 {
   "schema_version": 3,
   "skill": "officecli",
-  "generated_at": "2026-08-16T22:02:19",
+  "generated_at": "2026-09-19T16:38:57+08:00",
   "hash_algorithm": "SHA-256",
   "text_hash_normalization": "LF",
   "skill_md": "SKILL.md",
-  "skill_md_sha256": "c950d285ce60021712b4753fb2d9f592308d5622bab776229061dfecb1ce55d4",
+  "skill_md_sha256": "8e9477ff056d2915796d2cf02532ad954fc70727e48597fef79ea52247f968ac",
   "top_level_files": [
     "LICENSE",
     "NOTICE",
@@ -15,24 +15,31 @@
   "top_level_file_hashes": [
     {
       "path": "LICENSE",
-      "sha256": "7e282402a5a6db33995fe638bb3fe79013f9884d8f7d15a42e481c1e86aadda1"
+      "sha256": "0ef10002c77f6f3672795877e8a276f5a2840105474c87aa6c0bcd8904b12fc7"
     },
     {
       "path": "NOTICE",
-      "sha256": "3a4715b268e148a8e9566f5e835f766f5c95c3da4d6e5ddd908806a258a2f07b"
+      "sha256": "762d2098c370da58737a2f235ddf962f041762b803e5bf6f10cd921894836586"
     },
     {
       "path": "SKILL.md",
-      "sha256": "c950d285ce60021712b4753fb2d9f592308d5622bab776229061dfecb1ce55d4"
+      "sha256": "8e9477ff056d2915796d2cf02532ad954fc70727e48597fef79ea52247f968ac"
     },
     {
       "path": "UPSTREAM.md",
-      "sha256": "22fc3e879c049fa08c1ea33a41ac944caa7ee03bfd3eb8ba1be5857099303227"
+      "sha256": "e22dab6d39a906ca867cb36545cb9b84b917c590bd0d6c0c8348367a3e277e61"
     }
   ],
-  "top_level_directories": [],
+  "top_level_directories": [
+    "tests"
+  ],
   "resource_directories": [],
-  "resource_file_hashes": [],
+  "resource_file_hashes": [
+    {
+      "path": "tests/test_skill_boundaries.py",
+      "sha256": "dfd6451c8016315661b580efbba376deb425eaedd6fa2eef7cb374b1201bb57c"
+    }
+  ],
   "declared_local_dependencies": [],
   "missing_declared_dependencies": []
 }

@@ -1,11 +1,11 @@
 {
   "schema_version": 3,
   "skill": "tool-tts",
-  "generated_at": "2026-09-05T17:15:45+08:00",
+  "generated_at": "2026-09-19T16:38:59+08:00",
   "hash_algorithm": "SHA-256",
   "text_hash_normalization": "LF",
   "skill_md": "SKILL.md",
-  "skill_md_sha256": "4effbfb325d998c697bd18774f6792739588ca02a298916dc67d4525a09fcfd2",
+  "skill_md_sha256": "88f7bc8e1a7cee3ee65ccad9bba698bb535b3381ae92bd508af7c3b51bef2b00",
   "top_level_files": [
     "SKILL.md",
     "install.ps1"
@@ -13,7 +13,7 @@
   "top_level_file_hashes": [
     {
       "path": "SKILL.md",
-      "sha256": "4effbfb325d998c697bd18774f6792739588ca02a298916dc67d4525a09fcfd2"
+      "sha256": "88f7bc8e1a7cee3ee65ccad9bba698bb535b3381ae92bd508af7c3b51bef2b00"
     },
     {
       "path": "install.ps1",
@@ -21,7 +21,8 @@
     }
   ],
   "top_level_directories": [
-    "scripts"
+    "scripts",
+    "tests"
   ],
   "resource_directories": [
     {
@@ -32,7 +33,11 @@
   "resource_file_hashes": [
     {
       "path": "scripts/tts_engine.py",
-      "sha256": "66b0dc7f1fc6a260fa30aa17658ef7d3ba43268d8458fa91f9f7ca539a069f53"
+      "sha256": "c29d3d9625c444167acc5474c6abbaf9e4f4c965d04b60c1dbffa8b78d9bddf9"
+    },
+    {
+      "path": "tests/test_tts_results.py",
+      "sha256": "abc6156c6c80cc5b59944ee3325af70c8e39a25fee77888f945814427025fd3d"
     }
   ],
   "declared_local_dependencies": [
@@ -40,7 +45,7 @@
       "path": "scripts/tts_engine.py",
       "exists": true,
       "resolved_path": "tool-tts/scripts/tts_engine.py",
-      "sha256": "66b0dc7f1fc6a260fa30aa17658ef7d3ba43268d8458fa91f9f7ca539a069f53"
+      "sha256": "c29d3d9625c444167acc5474c6abbaf9e4f4c965d04b60c1dbffa8b78d9bddf9"
     }
   ],
   "missing_declared_dependencies": []

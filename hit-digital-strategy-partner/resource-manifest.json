@@ -1,18 +1,18 @@
 {
   "schema_version": 3,
   "skill": "hit-digital-strategy-partner",
-  "generated_at": "2026-09-11T10:25:41+08:00",
+  "generated_at": "2026-09-19T16:38:57+08:00",
   "hash_algorithm": "SHA-256",
   "text_hash_normalization": "LF",
   "skill_md": "SKILL.md",
-  "skill_md_sha256": "d95962c5b91828c97a7b68eca54d89c9ab6503d127cba59099ff9fbc7ca58ddd",
+  "skill_md_sha256": "2aed61ed1b1649c1bb742bbfca8e31fd61d14007661694e6fd384badb485f415",
   "top_level_files": [
     "SKILL.md"
   ],
   "top_level_file_hashes": [
     {
       "path": "SKILL.md",
-      "sha256": "d95962c5b91828c97a7b68eca54d89c9ab6503d127cba59099ff9fbc7ca58ddd"
+      "sha256": "2aed61ed1b1649c1bb742bbfca8e31fd61d14007661694e6fd384badb485f415"
     }
   ],
   "top_level_directories": [
@@ -96,7 +96,7 @@
     },
     {
       "path": "references/retrieval_specialist.md",
-      "sha256": "f5ad215c10b558bd0ba56287d3cc1c5f91aff9510622a133c0124c1c3409fc27"
+      "sha256": "eb7adf79a2079c1178af17c6e33e25835cccd69900e12466cf33fa11dfd6d5a2"
     },
     {
       "path": "references/workflows.md",
@@ -176,7 +176,7 @@
       "path": "references/retrieval_specialist.md",
       "exists": true,
       "resolved_path": "hit-digital-strategy-partner/references/retrieval_specialist.md",
-      "sha256": "f5ad215c10b558bd0ba56287d3cc1c5f91aff9510622a133c0124c1c3409fc27"
+      "sha256": "eb7adf79a2079c1178af17c6e33e25835cccd69900e12466cf33fa11dfd6d5a2"
     },
     {
       "path": "references/workflows.md",

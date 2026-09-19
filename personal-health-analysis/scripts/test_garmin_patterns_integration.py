@@ -409,7 +409,7 @@ class HealthPatternIntegrationTests(unittest.TestCase):
             days=28,
             requested_source="local",
             effective_source="local",
-            selected_components=garmin_chart.DASHBOARD_DEFAULT_COMPONENTS,
+            selected_components=tuple(c for c in garmin_chart.DASHBOARD_DEFAULT_COMPONENTS if c != "training_load_series"),
             live_fallback_attempted=False,
             requested_start="2026-07-01",
             requested_end="2026-07-28",

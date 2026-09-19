@@ -7,7 +7,9 @@ import argparse
 import getpass
 import json
 import os
+import re
 import sys
+from collections.abc import Mapping, MutableMapping
 from importlib.metadata import PackageNotFoundError, version as package_version
 from pathlib import Path
 from tempfile import TemporaryDirectory
@@ -38,7 +40,34 @@ class NetworkAuthorizationError(PermissionError):
 
 AUTH_OPERATION = "garmin_auth"
 TOKEN_WRITE_OPERATION = "garmin_token_store_write"
-SUPPORTED_GARMINCONNECT_VERSION = "0.3.9"
+SUPPORTED_GARMINCONNECT_VERSION = "0.3.16"
+
+# Garmin's edge rejects some proxy exit paths outright (TLS reset or 429 across
+# every login strategy), so Garmin hosts are routed around a configured HTTP
+# proxy by default. Set GARMIN_EGRESS_ALLOW_PROXY=1 to keep the proxy for them.
+GARMIN_DIRECT_EGRESS_HOSTS = ("garmin.com", ".garmin.com")
+ALLOW_PROXY_ENV_VAR = "GARMIN_EGRESS_ALLOW_PROXY"
+PROXY_BYPASS_ENV_VARS = ("NO_PROXY", "no_proxy")
+_TRUE_VALUES = frozenset({"1", "true", "yes"})
+
+
+def _direct_egress_requested(env: Mapping[str, str]) -> bool:
+    return env.get(ALLOW_PROXY_ENV_VAR, "").strip().casefold() not in _TRUE_VALUES
+
+
+def _force_direct_garmin_egress(env: MutableMapping[str, str]) -> bool:
+    """Add Garmin hosts to NO_PROXY while keeping existing bypass entries."""
+    if not _direct_egress_requested(env):
+        return False
+    changed = False
+    for key in PROXY_BYPASS_ENV_VARS:
+        entries = [item.strip() for item in env.get(key, "").split(",") if item.strip()]
+        missing = [host for host in GARMIN_DIRECT_EGRESS_HOSTS if host not in entries]
+        if not missing:
+            continue
+        env[key] = ",".join(entries + missing)
+        changed = True
+    return changed
 
 
 def _require_network_authorization(
@@ -67,11 +96,108 @@ def _emit(payload: dict, *, stream=None) -> None:
     )
 
 
+# Stable, secret-free failure categories. ``base_status`` keeps the legacy label
+# so existing callers keep their meaning while the category tells 429, TLS,
+# dependency and credential failures apart.
+AUTH_FAILURE_STATUSES = (
+    "rate_limited",
+    "tls_error",
+    "connection_error",
+    "mfa_required",
+    "token_store_error",
+    "dependency_error",
+    "authentication_failed",
+    "auth_unclassified",
+)
+
+_CURL_CODE_STATUSES = {
+    "35": "tls_error",
+    "51": "tls_error",
+    "58": "tls_error",
+    "60": "tls_error",
+    "77": "tls_error",
+    "7": "connection_error",
+    "28": "connection_error",
+    "52": "connection_error",
+    "55": "connection_error",
+    "56": "connection_error",
+}
+_CURL_CODE_PATTERN = re.compile(r"curl:\s*\((\d+)\)")
+_RATE_LIMIT_MARKERS = ("429", "too many requests", "ratelimit", "rate limit")
+_TLS_MARKERS = ("tls", "ssl", "openssl", "certificate", "handshake")
+_TOKEN_STORE_MARKERS = ("token_store", "temporary_token", "token store")
+_DEPENDENCY_MARKERS = (
+    "garminconnect_not_installed",
+    "garminconnect_version_mismatch",
+    "no module named",
+)
+_CONNECTION_MARKERS = (
+    "connection",
+    "timed out",
+    "timeout",
+    "name resolution",
+    "failed to perform",
+    "proxy",
+    "network",
+)
+_AUTH_MARKERS = (
+    "authentication",
+    "credential",
+    "invalid",
+    "incorrect",
+    "locked",
+    "account error",
+)
+_LAST_FAILURE: dict[str, str] = {}
+
+
+def _classify_auth_failure(exc: BaseException) -> str:
+    """Map an upstream exception onto one stable failure category.
+
+    Only the category and the exception type name are ever emitted; the
+    upstream message is inspected in memory and never echoed.
+    """
+    name = type(exc).__name__.casefold()
+    compact_name = name.replace(" ", "")
+    message = str(exc).casefold()
+    haystack = f"{name} {message}"
+    if isinstance(exc, EOFError) or "mfarequired" in compact_name:
+        return "mfa_required"
+    curl_code = _CURL_CODE_PATTERN.search(message)
+    if curl_code and curl_code.group(1) in _CURL_CODE_STATUSES:
+        return _CURL_CODE_STATUSES[curl_code.group(1)]
+    if "toomanyrequests" in compact_name or any(
+        marker in haystack for marker in _RATE_LIMIT_MARKERS
+    ):
+        return "rate_limited"
+    if any(marker in haystack for marker in _TLS_MARKERS):
+        return "tls_error"
+    if any(marker in haystack for marker in _TOKEN_STORE_MARKERS):
+        return "token_store_error"
+    if any(marker in haystack for marker in _DEPENDENCY_MARKERS):
+        return "dependency_error"
+    if any(marker in haystack for marker in _CONNECTION_MARKERS):
+        return "connection_error"
+    if any(marker in haystack for marker in _AUTH_MARKERS):
+        return "authentication_failed"
+    return "auth_unclassified"
+
+
 def _emit_safe_failure(status: str, exc: BaseException) -> None:
+    category = _classify_auth_failure(exc)
+    _LAST_FAILURE.clear()
+    _LAST_FAILURE.update(
+        {
+            "status": category,
+            "base_status": status,
+            "error_type": type(exc).__name__,
+        }
+    )
     _emit(
         {
             "ok": False,
-            "status": status,
+            "status": category,
+            "base_status": status,
             "error_type": type(exc).__name__,
         },
         stream=sys.stderr,
@@ -177,6 +303,7 @@ def login(
         )
         Garmin = _load_garmin_api()
         _prepare_token_dir()
+        _force_direct_garmin_egress(os.environ)
 
         def get_mfa() -> str:
             return input("Garmin MFA code: ")
@@ -205,6 +332,7 @@ def get_client(
         return None
     try:
         Garmin = _load_garmin_api()
+        _force_direct_garmin_egress(os.environ)
         return _restore_client_without_persistent_token_write(Garmin)
     except Exception as exc:
         _emit_safe_failure("saved_session_invalid", exc)
@@ -265,6 +393,7 @@ def build_parser() -> argparse.ArgumentParser:
 
 def main(argv: Sequence[str] | None = None) -> int:
     args = build_parser().parse_args(argv)
+    _LAST_FAILURE.clear()
     if args.command is None:
         _emit(
             {
@@ -339,12 +468,19 @@ def main(argv: Sequence[str] | None = None) -> int:
             request=request,
         )
         password = ""
-        _emit(
-            {
-                "ok": success,
-                "status": "authenticated" if success else "authentication_failed",
-            }
-        )
+        failure = dict(_LAST_FAILURE)
+        payload = {
+            "ok": success,
+            "status": (
+                "authenticated"
+                if success
+                else failure.get("status", "authentication_failed")
+            ),
+        }
+        if not success:
+            payload["base_status"] = failure.get("base_status", "authentication_failed")
+            payload["error_type"] = failure.get("error_type", "unknown")
+        _emit(payload)
         return EXIT_OK if success else EXIT_AUTH_FAILURE
 
     request = {"command": "status"}
@@ -357,12 +493,17 @@ def main(argv: Sequence[str] | None = None) -> int:
         network_capability=network_capability,
         request=request,
     )
-    _emit(
-        {
-            "ok": success,
-            "status": "session_valid" if success else "session_invalid",
-        }
-    )
+    failure = dict(_LAST_FAILURE)
+    payload = {
+        "ok": success,
+        "status": (
+            "session_valid" if success else failure.get("status", "session_invalid")
+        ),
+    }
+    if not success:
+        payload["base_status"] = failure.get("base_status", "saved_session_invalid")
+        payload["error_type"] = failure.get("error_type", "unknown")
+    _emit(payload)
     return EXIT_OK if success else EXIT_AUTH_FAILURE
 
 

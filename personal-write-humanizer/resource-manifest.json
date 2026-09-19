@@ -1,18 +1,18 @@
 {
   "schema_version": 3,
   "skill": "personal-write-humanizer",
-  "generated_at": "2026-09-05T17:15:44+08:00",
+  "generated_at": "2026-09-19T16:38:58+08:00",
   "hash_algorithm": "SHA-256",
   "text_hash_normalization": "LF",
   "skill_md": "SKILL.md",
-  "skill_md_sha256": "8ff21c29726dfe5f3a2eb76e28ccdbf1be18cb09308f71480e6f4e027be3381a",
+  "skill_md_sha256": "e6fcf97b4832a095f91f51bfd8b6d1d3a31f8831521526af39d280941dc9c7af",
   "top_level_files": [
     "SKILL.md"
   ],
   "top_level_file_hashes": [
     {
       "path": "SKILL.md",
-      "sha256": "8ff21c29726dfe5f3a2eb76e28ccdbf1be18cb09308f71480e6f4e027be3381a"
+      "sha256": "e6fcf97b4832a095f91f51bfd8b6d1d3a31f8831521526af39d280941dc9c7af"
     }
   ],
   "top_level_directories": [

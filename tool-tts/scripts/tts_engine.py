@@ -6,6 +6,8 @@ import json
 import asyncio
 import re
 import wave
+import tempfile
+from uuid import uuid4
 from pathlib import Path
 
 genai = None
@@ -67,7 +69,7 @@ class FastTTSEngine:
         """合成单句音频 (支持 Director Mode & 动态音色映射)"""
         if not self.client: return None
         
-        output_path = self.output_dir / f"part_{index}.wav"
+        output_path = self.output_dir / f"part_{index}_{uuid4().hex}.wav"
         
         # 1. 提取并剥离 Speaker 标签
         speaker_match = re.match(r'^(\w+):\s*(.*)', text, re.DOTALL)
@@ -110,20 +112,46 @@ class FastTTSEngine:
                         audio_bytes = part.inline_data.data
                         break
             
-            if audio_bytes:
-                self._save_as_wav(output_path, audio_bytes)
+            if audio_bytes and self._save_as_wav(output_path, audio_bytes):
                 return output_path
+            print(f"SYNTH_ERROR_{index}: no usable audio returned")
         except Exception as e:
             print(f"SYNTH_ERROR_{index}: {e}")
         return None
 
     async def _play_audio(self, file_path):
-        """后台静默播放音频"""
-        if not file_path or not Path(file_path).exists(): return
-        
-        cmd = ["ffplay", "-nodisp", "-autoexit", "-loglevel", "quiet", str(file_path)]
-        proc = await asyncio.create_subprocess_exec(*cmd)
-        await proc.wait()
+        """Report the player process result, not an unverified audible state."""
+        try:
+            if not file_path or not Path(file_path).is_file():
+                raise FileNotFoundError(f"Playback audio missing: {file_path}")
+            cmd = ["ffplay", "-nodisp", "-autoexit", "-loglevel", "error", str(file_path)]
+            proc = await asyncio.create_subprocess_exec(*cmd)
+            returncode = await proc.wait()
+            if returncode != 0:
+                raise RuntimeError(f"ffplay exited with code {returncode}")
+            return True
+        except Exception as exc:
+            print(f"PLAY_ERROR ({type(exc).__name__}): {exc}")
+            return False
+
+    def _valid_wav(self, file_path):
+        try:
+            with wave.open(str(file_path), "rb") as source:
+                params = source.getparams()
+                data = source.readframes(params.nframes)
+                if not params.nframes or len(data) != params.nframes * params.nchannels * params.sampwidth:
+                    raise ValueError("Empty or truncated WAV audio")
+            return True
+        except (OSError, EOFError, wave.Error, ValueError) as exc:
+            print(f"WAV_VALIDATE_ERROR: {file_path}: {exc}")
+            return False
+
+    def _temporary_output(self, output_path):
+        output = Path(output_path)
+        output.parent.mkdir(parents=True, exist_ok=True)
+        with tempfile.NamedTemporaryFile(prefix=f".{output.stem}_", suffix=".wav",
+                                         dir=output.parent, delete=False) as handle:
+            return Path(handle.name)
 
     def _merge_wav(self, files, output_path):
         """Merge compatible WAV fragments in source order."""
@@ -138,12 +166,15 @@ class FastTTSEngine:
             for file_path in files:
                 with wave.open(str(file_path), "rb") as source:
                     current = source.getparams()
-                    comparable = current[:4]
+                    comparable = (current.nchannels, current.sampwidth, current.framerate, current.comptype)
                     if params is None:
                         params = comparable
                     elif comparable != params:
                         raise ValueError("WAV fragments use incompatible audio parameters")
-                    frames.append(source.readframes(source.getnframes()))
+                    data = source.readframes(current.nframes)
+                    if not current.nframes or len(data) != current.nframes * current.nchannels * current.sampwidth:
+                        raise ValueError(f"Empty or truncated WAV fragment: {file_path}")
+                    frames.append(data)
 
             with wave.open(str(output_path), "wb") as target:
                 target.setnchannels(params[0])
@@ -194,38 +225,71 @@ class FastTTSEngine:
         play_count = 0
         first_audio_ready = False
         
+        playback_ok = True
         for i, task in enumerate(pending_synth):
-            audio_path = await task
-            if audio_path:
+            try:
+                audio_path = await task
+            except Exception as exc:
+                print(f"SYNTH_ERROR_{i} ({type(exc).__name__}): {exc}")
+                audio_path = None
+            if audio_path and self._valid_wav(audio_path):
                 generated_files.append(audio_path)
                 if not first_audio_ready:
                     ttfs = time.time() - start_time
-                    print(f"[+] 首句准备就绪 (TTFS: {ttfs:.2f}s)，开始播放...")
+                    print(f"[+] 首句准备就绪 (TTFS: {ttfs:.2f}s)")
                     first_audio_ready = True
-                
                 if args.play:
-                    await self._play_audio(audio_path)
-                    play_count += 1
+                    if await self._play_audio(audio_path):
+                        play_count += 1
+                    else:
+                        playback_ok = False
+            else:
+                print(f"SYNTH_ERROR_{i}: audio missing or invalid")
+
+        if not generated_files:
+            print("[!] Cloud synthesis unavailable; trying local fallback.")
+            if not self._speak_local(text, 180, 1.0, output_path=args.output, play=args.play):
+                print("ERROR: local fallback failed")
+                return False
+            print(f"[+] SUCCESS: backend=local, output={bool(args.output)}, playback_requested={args.play}")
+            return True
+        if len(generated_files) != len(sentences):
+            print(f"ERROR: incomplete synthesis {len(generated_files)}/{len(sentences)}; retaining fragments: {generated_files}")
+            return False
 
         output_written = False
-        if generated_files and args.output:
-            output_written = self._merge_wav(generated_files, args.output)
+        if args.output:
+            staged_output = None
+            try:
+                # A fresh sibling file prevents an old output from passing this run's gate.
+                staged_output = self._temporary_output(args.output)
+                if not self._merge_wav(generated_files, staged_output) or not self._valid_wav(staged_output):
+                    print(f"ERROR: output failed; retaining fragments: {generated_files}; staged={staged_output}")
+                    return False
+                os.replace(staged_output, args.output)
+                output_written = True
+            except Exception as exc:
+                print(f"OUTPUT_ERROR ({type(exc).__name__}): {exc}; retaining fragments: {generated_files}; staged={staged_output}")
+                return False
 
+        if not playback_ok or (not args.output and not args.play):
+            print(f"ERROR: playback or output incomplete; output={output_written}; retaining fragments: {generated_files}")
+            return False
         for audio_path in generated_files:
             try:
                 os.remove(audio_path)
-            except OSError:
-                pass
-        
-        if generated_files:
-            total_duration = time.time() - start_time
-            print(f"[+] SUCCESS: generated={len(generated_files)}, played={play_count}, output={output_written}, elapsed={total_duration:.2f}s")
-        else:
-            print(f"[!] 云端引擎调用失败。正在激活【优雅降级】方案...")
-            self._speak_local(text, 180, 1.0, output_path=args.output, play=args.play)
+            except OSError as exc:
+                print(f"CLEANUP_WARNING: retained {audio_path}: {exc}")
+
+        total_duration = time.time() - start_time
+        print(f"[+] SUCCESS: generated={len(generated_files)}, played={play_count}, output={output_written}, elapsed={total_duration:.2f}s")
+        return True
 
     def _speak_local(self, text, rate, volume, output_path=None, play=False):
+        staged_output = None
         try:
+            if not output_path and not play:
+                raise ValueError("Local synthesis requires output or playback")
             import pyttsx3
             engine = pyttsx3.init()
             voices = engine.getProperty('voices')
@@ -236,14 +300,19 @@ class FastTTSEngine:
             engine.setProperty('rate', rate)
             engine.setProperty('volume', volume)
             if output_path:
-                output = Path(output_path)
-                output.parent.mkdir(parents=True, exist_ok=True)
-                engine.save_to_file(text, str(output))
+                staged_output = self._temporary_output(output_path)
+                engine.save_to_file(text, str(staged_output))
             if play:
                 engine.say(text)
             engine.runAndWait()
+            if output_path:
+                if not self._valid_wav(staged_output):
+                    raise ValueError("Local backend did not produce valid fresh audio")
+                os.replace(staged_output, output_path)
             return True
-        except: return False
+        except Exception as exc:
+            print(f"LOCAL_TTS_ERROR ({type(exc).__name__}): {exc}; recovery={staged_output}")
+            return False
 
 async def main():
     parser = argparse.ArgumentParser(description="TTS engine with optional cloud synthesis and local fallback")
@@ -264,7 +333,8 @@ async def main():
         args.output = str(Path(args.output_dir) / "tts_output.wav")
 
     engine = FastTTSEngine(output_dir=args.output_dir)
-    await engine.process(args.text, args)
+    if not await engine.process(args.text, args):
+        sys.exit(1)
 
 if __name__ == "__main__":
     asyncio.run(main())

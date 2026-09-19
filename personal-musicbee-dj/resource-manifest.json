@@ -1,11 +1,11 @@
 {
   "schema_version": 3,
   "skill": "personal-musicbee-dj",
-  "generated_at": "2026-09-05T17:15:44+08:00",
+  "generated_at": "2026-09-19T16:38:58+08:00",
   "hash_algorithm": "SHA-256",
   "text_hash_normalization": "LF",
   "skill_md": "SKILL.md",
-  "skill_md_sha256": "bd8c42fbefb669a8afbcb5a9e21d458d10d7bcdfbbff1e471b1a3907d014923a",
+  "skill_md_sha256": "617300b961a0a4512f98058bcf6a2be16da91e528f2bf36e70c92ff068240637",
   "top_level_files": [
     "SKILL.md",
     "config.yaml"
@@ -13,7 +13,7 @@
   "top_level_file_hashes": [
     {
       "path": "SKILL.md",
-      "sha256": "bd8c42fbefb669a8afbcb5a9e21d458d10d7bcdfbbff1e471b1a3907d014923a"
+      "sha256": "617300b961a0a4512f98058bcf6a2be16da91e528f2bf36e70c92ff068240637"
     },
     {
       "path": "config.yaml",
@@ -21,7 +21,8 @@
     }
   ],
   "top_level_directories": [
-    "src"
+    "src",
+    "tests"
   ],
   "resource_directories": [],
   "resource_file_hashes": [
@@ -31,7 +32,7 @@
     },
     {
       "path": "src/cli.py",
-      "sha256": "cc8ed9a1f06cfa3898e0167f95f4894f3886382b62b842ca626e9877acb65fb1"
+      "sha256": "349b305087ad3bb475a019be83a155cd817858bfacaa9b2417e3ae360db6f4dc"
     },
     {
       "path": "src/core/__init__.py",
@@ -52,6 +53,10 @@
     {
       "path": "src/utils/logger.py",
       "sha256": "7eea26e90c8701777c47e342dbf529f44dada7e4551b8b1745541bf276438d37"
+    },
+    {
+      "path": "tests/test_cli_launch.py",
+      "sha256": "63f645b661f5b347b7852ef92702ea3e35bc92c217e72a6ddcc2743765657a38"
     }
   ],
   "declared_local_dependencies": [],

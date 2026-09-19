@@ -1,11 +1,11 @@
 {
   "schema_version": 3,
   "skill": "personal-intelligence-hub",
-  "generated_at": "2026-09-18T11:26:11+08:00",
+  "generated_at": "2026-09-19T16:43:12+08:00",
   "hash_algorithm": "SHA-256",
   "text_hash_normalization": "LF",
   "skill_md": "SKILL.md",
-  "skill_md_sha256": "17f3a951d058f0b9d44faba165bdda5f85623b1c34a96556efca34c785ac86bf",
+  "skill_md_sha256": "1c319b8bf25451b423d67a1fa597e78b764eed91f7186626a0c5a9e8712bebc9",
   "top_level_files": [
     "SKILL.md",
     "requirements.txt"
@@ -13,7 +13,7 @@
   "top_level_file_hashes": [
     {
       "path": "SKILL.md",
-      "sha256": "17f3a951d058f0b9d44faba165bdda5f85623b1c34a96556efca34c785ac86bf"
+      "sha256": "1c319b8bf25451b423d67a1fa597e78b764eed91f7186626a0c5a9e8712bebc9"
     },
     {
       "path": "requirements.txt",

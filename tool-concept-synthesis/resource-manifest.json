@@ -1,23 +1,30 @@
 {
   "schema_version": 3,
   "skill": "tool-concept-synthesis",
-  "generated_at": "2026-08-16T22:02:19",
+  "generated_at": "2026-09-19T16:38:58+08:00",
   "hash_algorithm": "SHA-256",
   "text_hash_normalization": "LF",
   "skill_md": "SKILL.md",
-  "skill_md_sha256": "e863a3935338bd354d5d598224efd47dab0886ec25defc593c180d9a426f043e",
+  "skill_md_sha256": "e4a892fcc6b17981326d516fdb2f49a8360742d923db72945cf4a0b646fae517",
   "top_level_files": [
     "SKILL.md"
   ],
   "top_level_file_hashes": [
     {
       "path": "SKILL.md",
-      "sha256": "e863a3935338bd354d5d598224efd47dab0886ec25defc593c180d9a426f043e"
+      "sha256": "e4a892fcc6b17981326d516fdb2f49a8360742d923db72945cf4a0b646fae517"
     }
   ],
-  "top_level_directories": [],
+  "top_level_directories": [
+    "tests"
+  ],
   "resource_directories": [],
-  "resource_file_hashes": [],
+  "resource_file_hashes": [
+    {
+      "path": "tests/test_skill_boundaries.py",
+      "sha256": "838e15dbc2cbbf5892d5a80d6cf5deaf3429f1920304452dcc967dd9cff235c3"
+    }
+  ],
   "declared_local_dependencies": [],
   "missing_declared_dependencies": []
 }
