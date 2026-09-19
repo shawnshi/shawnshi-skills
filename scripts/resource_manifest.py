@@ -19,6 +19,9 @@ TEXT_HASH_EXTENSIONS = frozenset(
         ".md", ".txt", ".py", ".ps1", ".sh", ".csx", ".cs", ".svg",
         ".xml", ".json", ".yaml", ".yml", ".toml", ".csv", ".tsv",
         ".html", ".css", ".js", ".mjs", ".cjs", ".ts", ".tsx", ".jsx",
+        # Lua resources (skill filters) must hash newline-normalised as well,
+        # otherwise the recorded hash depends on the checkout's CRLF settings.
+        ".lua",
     }
 )
 TEXT_HASH_NAMES = frozenset({".gitignore", ".gitattributes", ".editorconfig", ".env"})

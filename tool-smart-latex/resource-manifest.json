@@ -1,18 +1,18 @@
 {
   "schema_version": 3,
   "skill": "tool-smart-latex",
-  "generated_at": "2026-09-19T16:38:59+08:00",
+  "generated_at": "2026-09-19T18:28:58+08:00",
   "hash_algorithm": "SHA-256",
   "text_hash_normalization": "LF",
   "skill_md": "SKILL.md",
-  "skill_md_sha256": "a5970b28140601d06456a8325e201f2470e37a007c54862650a5de7b9439a766",
+  "skill_md_sha256": "100a3e194e059f93d8327349942011846848702c7f04183b7b9a13da0815a0dc",
   "top_level_files": [
     "SKILL.md"
   ],
   "top_level_file_hashes": [
     {
       "path": "SKILL.md",
-      "sha256": "a5970b28140601d06456a8325e201f2470e37a007c54862650a5de7b9439a766"
+      "sha256": "100a3e194e059f93d8327349942011846848702c7f04183b7b9a13da0815a0dc"
     }
   ],
   "top_level_directories": [
@@ -23,7 +23,7 @@
   "resource_directories": [
     {
       "name": "scripts",
-      "file_count": 4
+      "file_count": 6
     },
     {
       "name": "references",
@@ -33,43 +33,51 @@
   "resource_file_hashes": [
     {
       "path": "references/styles.md",
-      "sha256": "277cae26f69218a897ef405535f0d61f24311885d758f81838321f19b5d09cbe"
+      "sha256": "500e391623f2bec702d17f5faadcfb1779cc61b6a4cd0378d5be59e92491347a"
+    },
+    {
+      "path": "scripts/div_boxes.lua",
+      "sha256": "64f3508ccf6a11d14b7d85c8f16e57ebd22df80e1eef2efb8b58d23be4bfbea5"
     },
     {
       "path": "scripts/process_idioms.py",
-      "sha256": "81cd34db9410ef71d8acc43c609c13969a6f69d0c9cb3a3e381ca692b24f0929"
+      "sha256": "cba9c2241a774db76af810995a06d2a2d629c1a83feb1af26b533e378cc72611"
     },
     {
       "path": "scripts/smart_engine.py",
-      "sha256": "569b2f730f7a92eebd272cbc52508dec18b54e88a9665a718aef107507f54687"
+      "sha256": "924e01b9a13621ae9653fa7d8a75bbc4368f093c498af573738db990eebedeb4"
     },
     {
       "path": "scripts/test_skill_contract.py",
-      "sha256": "8292212299d8c4400862dd42814569556692b67893c1e27a796ca15775523287"
+      "sha256": "35af65238267f93f56970863889015b68e360e7c895d84a44d406cb17cfbf68d"
     },
     {
       "path": "scripts/test_smart_engine.py",
-      "sha256": "7665c1da963dc8326a5ddad788c3d87414b6d31ea56904bd3bfc12c74d82581b"
+      "sha256": "d7f2a85893ac0153825ca5af0b3ea6ce0388e3052785f50cbc92bfd14b16045c"
+    },
+    {
+      "path": "scripts/twocol_table.lua",
+      "sha256": "e8f9bdd63ece80e062c8dc00e4b77f53fb55b7399cf7529a5eaab3dfc9f72957"
     },
     {
       "path": "templates/academic.tex",
-      "sha256": "6478dcce318afddc618d7293b65bdfb65eba3219e1b6f0d9a764dac6e5cb75ea"
+      "sha256": "a9c489dcb899985a47240e15465b56c6ddd31b81980b402d404ac83bda22a6e5"
     },
     {
       "path": "templates/book.tex",
-      "sha256": "045c3627aed7fdfcc40e288accf84bbcd774efc5422321652308033600d637d7"
+      "sha256": "286c212ea304619074cdf5ecefc03e9612c6396df3dadc95f352c8043e8d121c"
     },
     {
       "path": "templates/cv.tex",
-      "sha256": "75c49a9fbc763037b681301cff9cc65a0ad3e8cacb8a33fd6688dfa7454aa125"
+      "sha256": "25f1d45d9b43437a12aff420525733b090dd999137b37539c4bb0389882edf26"
     },
     {
       "path": "templates/tech_book.tex",
-      "sha256": "a1ba33c009caf210ad425aad93d480a58be03c9d87a7106d2cb389d6bb9f501d"
+      "sha256": "52c9b0d40209ae38781564f93e96aec3a7e5ebf8509f852b053c0446b83747ae"
     },
     {
       "path": "templates/tech_report.tex",
-      "sha256": "a97e0c5837d7395726780841e745b03c154c209295767e2cd9c24cf510dee484"
+      "sha256": "0bfd76447f60cb0d4b5325bd16647e521b6ca8f07c4af54f7012d1e3a9189374"
     }
   ],
   "declared_local_dependencies": [
@@ -77,19 +85,19 @@
       "path": "references/styles.md",
       "exists": true,
       "resolved_path": "tool-smart-latex/references/styles.md",
-      "sha256": "277cae26f69218a897ef405535f0d61f24311885d758f81838321f19b5d09cbe"
+      "sha256": "500e391623f2bec702d17f5faadcfb1779cc61b6a4cd0378d5be59e92491347a"
     },
     {
       "path": "scripts/process_idioms.py",
       "exists": true,
       "resolved_path": "tool-smart-latex/scripts/process_idioms.py",
-      "sha256": "81cd34db9410ef71d8acc43c609c13969a6f69d0c9cb3a3e381ca692b24f0929"
+      "sha256": "cba9c2241a774db76af810995a06d2a2d629c1a83feb1af26b533e378cc72611"
     },
     {
       "path": "scripts/smart_engine.py",
       "exists": true,
       "resolved_path": "tool-smart-latex/scripts/smart_engine.py",
-      "sha256": "569b2f730f7a92eebd272cbc52508dec18b54e88a9665a718aef107507f54687"
+      "sha256": "924e01b9a13621ae9653fa7d8a75bbc4368f093c498af573738db990eebedeb4"
     }
   ],
   "missing_declared_dependencies": []

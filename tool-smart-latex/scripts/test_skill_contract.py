@@ -20,7 +20,6 @@ class WritingContractTests(unittest.TestCase):
         self.assertIn("无法读取", self.skill)
         self.assertIn("只覆盖冲突条款", self.skill)
         self.assertIn("预置模板本身不构成覆盖理由", self.skill)
-
     def test_scopes_typography_to_language_and_protects_literals(self):
         for literal in ("中文与混排", "英文正文", "10–12 pt", "120–145%", "45–90"):
             with self.subTest(literal=literal):
@@ -44,6 +43,27 @@ class WritingContractTests(unittest.TestCase):
         self.assertIn("WRITING.md", self.styles)
         self.assertIn("not a publisher-approved exception", self.styles)
         self.assertIn("actual baseline", self.styles)
+
+    def test_discloses_measured_values_and_limitations(self):
+        for literal in ("120.0%", "124.2%", "Chinese chars/line", "Language routing"):
+            with self.subTest(literal=literal):
+                self.assertIn(literal, self.styles)
+        # The two-column table filter cannot split a table across pages.
+        flat = " ".join(self.styles.split())
+        self.assertIn("cannot break across pages", flat)
+        self.assertIn("twocol_table.lua", self.styles)
+        self.assertIn("div_boxes.lua", self.styles)
+
+    def test_records_the_real_state_of_engine_behaviour(self):
+        for literal in (
+            "--citeproc",
+            "--top-level-division=chapter",
+            "INCOMPLETE.pdf",
+            "最多三遍",
+            "`--lang {auto,zh,en}`",
+        ):
+            with self.subTest(literal=literal):
+                self.assertIn(literal, self.skill)
 
     def test_requires_pdf_visual_gate_and_exception_disclosure(self):
         for literal in ("首末页", "分页", "密集表格", "例外来源", "不能仅凭"):

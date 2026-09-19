@@ -1,9 +1,11 @@
-\documentclass[11pt, openany, a4paper]{ctexbook}
+\documentclass[$if(cjk)$scheme=chinese,$else$scheme=plain,$endif$11pt, openany, a4paper]{ctexbook}
 
 % ---------------------------------------------------------
 % O'Reilly-Style Tech Book Template
 % ---------------------------------------------------------
-\usepackage[top=2.5cm, bottom=2.5cm, left=2.5cm, right=2.5cm, headheight=15pt, marginparsep=10pt]{geometry}
+% inner/outer margins give the wide outer margin a technical book expects and
+% keep the measure near 88 characters per line at 11pt.
+\usepackage[top=2.5cm, bottom=2.5cm, inner=2.5cm, outer=3cm, headheight=15pt, marginparsep=10pt]{geometry}
 \usepackage{amsmath, amssymb, amsfonts}
 \usepackage{graphicx}
 \usepackage{booktabs}
@@ -17,19 +19,82 @@
 \usepackage{fancyhdr}
 \usepackage[most]{tcolorbox}
 \usepackage{enumitem}
-\usepackage{parskip}
 \usepackage{newunicodechar}
 \usepackage{tikz}
+$if(cjk)$$else$
+\usepackage{parskip}            % English paragraphs are spaced, not indented
+\usepackage[document]{ragged2e} % English body text is left-aligned
+$endif$
 
 % ---------------------------------------------------------
-% Fixes for Pandoc
+% Language routing & Pandoc compatibility
 % ---------------------------------------------------------
+% Chinese documents keep CTeX's 2-character first-line indent and leading;
+% English documents use the class baseline plus paragraph spacing.
+$if(linespread)$
+\linespread{$linespread$}\selectfont
+$endif$
+
+% Fix common missing chars.  A Pandoc template reads two adjacent dollar
+% signs as one literal dollar, so each pair below emits a single inline-math
+% delimiter (never display math, which would break the baseline grid).
 \newunicodechar{≈}{$$\approx$$}
 \newunicodechar{≤}{$$\le$$}
 \newunicodechar{≥}{$$\ge$$}
 \providecommand{\tightlist}{%
   \setlength{\itemsep}{0pt}\setlength{\parskip}{0pt}}
-
+\providecommand{\passthrough}[1]{#1}
+% Mirrors the parts of Pandoc's own LaTeX prelude these presets need.
+% Pandoc >= 3 wraps images in \pandocbounded so they fit the text block.
+\makeatletter
+\@ifundefined{pandoc@box}{\newsavebox\pandoc@box}{}
+\providecommand*\pandocbounded[1]{%
+  \sbox\pandoc@box{#1}%
+  \Gscale@div\@tempa{\textheight}{\dimexpr\ht\pandoc@box+\dp\pandoc@box\relax}%
+  \Gscale@div\@tempb{\linewidth}{\wd\pandoc@box}%
+  \ifdim\@tempb\p@<\@tempa\p@\let\@tempa\@tempb\fi
+  \ifdim\@tempa\p@<\p@\scalebox{\@tempa}{\usebox\pandoc@box}%
+  \else\usebox{\pandoc@box}%
+  \fi}
+\def\fps@figure{htbp}
+% --citeproc citation commands and reference list
+\@ifundefined{citeproc}{%
+  \NewDocumentCommand\citeproctext{}{}
+  \NewDocumentCommand\citeproc{mm}{%
+    \begingroup\def\citeproctext{#2}\cite{#1}\endgroup}
+  \let\@cite@ofmt\@firstofone
+  \def\@biblabel#1{}
+  \def\@cite#1#2{{#1\if@tempswa , #2\fi}}}{}
+\@ifundefined{CSLReferences}{%
+  \newlength{\cslhangindent}
+  \setlength{\cslhangindent}{1.5em}
+  \newlength{\csllabelwidth}
+  \setlength{\csllabelwidth}{3em}
+  \newenvironment{CSLReferences}[2]{%
+    \begin{list}{}{%
+      \setlength{\itemindent}{0pt}%
+      \setlength{\leftmargin}{0pt}%
+      \setlength{\parsep}{0pt}%
+      \ifodd #1
+        \setlength{\leftmargin}{\cslhangindent}%
+        \setlength{\itemindent}{-1\cslhangindent}%
+      \fi
+      \setlength{\itemsep}{#2\baselineskip}}}{%
+    \end{list}}
+  \newcommand{\CSLBlock}[1]{\hfill\break\parbox[t]{\linewidth}{\strut\ignorespaces#1\strut}}
+  \newcommand{\CSLLeftMargin}[1]{\parbox[t]{\csllabelwidth}{\strut#1\strut}}
+  \newcommand{\CSLRightInline}[1]{\parbox[t]{\linewidth - \csllabelwidth}{\strut#1\strut}}
+  \newcommand{\CSLIndent}[1]{\hspace{\cslhangindent}#1}}{}
+\makeatother
+\setlength{\emergencystretch}{3em} % prevent overfull lines
+\makeatletter
+\@ifundefined{c@none}{\newcounter{none}}{}
+\makeatother
+$if(numbersections)$
+\setcounter{secnumdepth}{$if(secnumdepth)$$secnumdepth$$else$2$endif$}
+$else$
+\setcounter{secnumdepth}{-\maxdimen}
+$endif$
 $if(highlighting-macros)$
 $highlighting-macros$
 $endif$
@@ -88,7 +153,7 @@ $endif$
     borderline west={4pt}{0pt}{oreillyRed},
     sharp corners,
     fonttitle=\sffamily\bfseries, coltitle=black,
-    title=Note, #1
+    title={$if(cjk)$提示$else$Note$endif$}, #1
 }
 
 % ---------------------------------------------------------
@@ -129,8 +194,6 @@ $if(title)$
         {\Large\color{gray} \textbf{TECHNICAL SERIES} \par} 
         \vspace{2cm}
         {\Huge\bfseries\color{black} $title$ \par}
-        \vspace{0.5cm}
-        {\Large\bfseries $title$ \par}
         \vspace{1.5cm}
         \noindent\rule{0.6\textwidth}{1pt}
         \vspace{1.5cm}

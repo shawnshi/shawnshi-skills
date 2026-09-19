@@ -66,6 +66,29 @@ class ResourceManifestTests(unittest.TestCase):
             ],
         )
 
+    def test_lua_resource_hash_is_newline_stable(self):
+        skill_dir = self.create_skill("lua-skill")
+        scripts_dir = skill_dir / "scripts"
+        scripts_dir.mkdir()
+        lua = scripts_dir / "filter.lua"
+        lua.write_bytes(b"return function()\n  return 1\nend\n")
+
+        manifest.generate_manifests(self.root)
+        lf_hash = manifest.canonical_sha256(lua)
+        lua.write_bytes(lua.read_bytes().replace(b"\n", b"\r\n"))
+
+        self.assertEqual(lf_hash, manifest.canonical_sha256(lua))
+        document = json.loads(
+            (skill_dir / "resource-manifest.json").read_text(encoding="utf-8")
+        )
+        stored = {
+            entry["path"]: entry["sha256"]
+            for entry in document["resource_file_hashes"]
+        }
+        self.assertEqual(stored["scripts/filter.lua"], lf_hash)
+        # A CRLF working copy must not make the published manifest stale.
+        self.assertEqual(manifest.check_manifests(self.root)["stale"], 0)
+
     def test_timestamped_backup_file_is_ignored(self):
         skill_dir = self.create_skill("example-skill")
         (skill_dir / "SKILL.md.bak_20260829_193004").write_text(

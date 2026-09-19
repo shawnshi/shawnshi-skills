@@ -1,4 +1,4 @@
-\documentclass[12pt, openany, a4paper]{ctexbook}
+\documentclass[$if(cjk)$scheme=chinese,$else$scheme=plain,$endif$12pt, openany, a4paper]{ctexbook}
 
 % ---------------------------------------------------------
 % 1. Page Layout & Geometry
@@ -19,24 +19,86 @@
 \usepackage{enumitem}
 \usepackage{xcolor}
 \usepackage{titlesec}
-\usepackage{setspace}
 \usepackage{fancyhdr}
 \usepackage[most]{tcolorbox}
 \usepackage{newunicodechar} % Handle missing unicode chars
-
-% ---------------------------------------------------------
-% 3. Fixes & Patches
-% ---------------------------------------------------------
-$if(highlighting-macros)$
-$highlighting-macros$
+$if(cjk)$$else$
+\usepackage[document]{ragged2e} % English body text is left-aligned
 $endif$
 
-% Fix common missing chars
+% ---------------------------------------------------------
+% 3. Language routing & Pandoc compatibility
+% ---------------------------------------------------------
+% scheme=chinese keeps the Chinese heading/caption names and CTeX's own
+% leading; scheme=plain switches to the class's English names and baseline,
+% which keeps English body text inside the 120-145% leading target.
+$if(linespread)$
+\linespread{$linespread$}\selectfont
+$endif$
+
+% Fix common missing chars.  A Pandoc template reads two adjacent dollar
+% signs as one literal dollar, so each pair below emits a single inline-math
+% delimiter (never display math, which would break the baseline grid).
 \newunicodechar{≈}{$$\approx$$}
 \newunicodechar{≤}{$$\le$$}
 \newunicodechar{≥}{$$\ge$$}
 \providecommand{\tightlist}{%
   \setlength{\itemsep}{0pt}\setlength{\parskip}{0pt}}
+\providecommand{\passthrough}[1]{#1}
+% Mirrors the parts of Pandoc's own LaTeX prelude these presets need.
+% Pandoc >= 3 wraps images in \pandocbounded so they fit the text block.
+\makeatletter
+\@ifundefined{pandoc@box}{\newsavebox\pandoc@box}{}
+\providecommand*\pandocbounded[1]{%
+  \sbox\pandoc@box{#1}%
+  \Gscale@div\@tempa{\textheight}{\dimexpr\ht\pandoc@box+\dp\pandoc@box\relax}%
+  \Gscale@div\@tempb{\linewidth}{\wd\pandoc@box}%
+  \ifdim\@tempb\p@<\@tempa\p@\let\@tempa\@tempb\fi
+  \ifdim\@tempa\p@<\p@\scalebox{\@tempa}{\usebox\pandoc@box}%
+  \else\usebox{\pandoc@box}%
+  \fi}
+\def\fps@figure{htbp}
+% --citeproc citation commands and reference list
+\@ifundefined{citeproc}{%
+  \NewDocumentCommand\citeproctext{}{}
+  \NewDocumentCommand\citeproc{mm}{%
+    \begingroup\def\citeproctext{#2}\cite{#1}\endgroup}
+  \let\@cite@ofmt\@firstofone
+  \def\@biblabel#1{}
+  \def\@cite#1#2{{#1\if@tempswa , #2\fi}}}{}
+\@ifundefined{CSLReferences}{%
+  \newlength{\cslhangindent}
+  \setlength{\cslhangindent}{1.5em}
+  \newlength{\csllabelwidth}
+  \setlength{\csllabelwidth}{3em}
+  \newenvironment{CSLReferences}[2]{%
+    \begin{list}{}{%
+      \setlength{\itemindent}{0pt}%
+      \setlength{\leftmargin}{0pt}%
+      \setlength{\parsep}{0pt}%
+      \ifodd #1
+        \setlength{\leftmargin}{\cslhangindent}%
+        \setlength{\itemindent}{-1\cslhangindent}%
+      \fi
+      \setlength{\itemsep}{#2\baselineskip}}}{%
+    \end{list}}
+  \newcommand{\CSLBlock}[1]{\hfill\break\parbox[t]{\linewidth}{\strut\ignorespaces#1\strut}}
+  \newcommand{\CSLLeftMargin}[1]{\parbox[t]{\csllabelwidth}{\strut#1\strut}}
+  \newcommand{\CSLRightInline}[1]{\parbox[t]{\linewidth - \csllabelwidth}{\strut#1\strut}}
+  \newcommand{\CSLIndent}[1]{\hspace{\cslhangindent}#1}}{}
+\makeatother
+\setlength{\emergencystretch}{3em} % prevent overfull lines
+\makeatletter
+\@ifundefined{c@none}{\newcounter{none}}{}
+\makeatother
+$if(numbersections)$
+\setcounter{secnumdepth}{$if(secnumdepth)$$secnumdepth$$else$2$endif$}
+$else$
+\setcounter{secnumdepth}{-\maxdimen}
+$endif$
+$if(highlighting-macros)$
+$highlighting-macros$
+$endif$
 
 % ---------------------------------------------------------
 % 4. Visual Styling
@@ -61,21 +123,21 @@ $endif$
 % ---------------------------------------------------------
 \newtcolorbox{definitionBox}[1][]{% 
     enhanced, colback=blue!5!white, colframe=primaryColor,
-    fonttitle=\bfseries, title={定义},
+    fonttitle=\bfseries, title={$if(cjk)$定义$else$Definition$endif$},
     attach boxed title to top left={yshift=-2mm, xshift=2mm},
     boxed title style={boxrule=0pt, colframe=white}, #1
 }
 
 \newtcolorbox{alertBox}[1][]{% 
     enhanced, colback=red!5!white, colframe=accentColor,
-    fonttitle=\bfseries, title={注意},
+    fonttitle=\bfseries, title={$if(cjk)$注意$else$Caution$endif$},
     attach boxed title to top left={yshift=-2mm, xshift=2mm},
     boxed title style={boxrule=0pt, colframe=white}, #1
 }
 
 \newtcolorbox{theoremBox}[1][]{% 
     enhanced, colback=gray!5!white, colframe=gray!60!black,
-    fonttitle=\bfseries, title={定理},
+    fonttitle=\bfseries, title={$if(cjk)$定理$else$Theorem$endif$},
     attach boxed title to top left={yshift=-2mm, xshift=2mm},
     boxed title style={boxrule=0pt, colframe=white}, #1
 }
@@ -99,8 +161,6 @@ $if(date)$
 $else$
 \date{\today}
 $endif$
-
-\onehalfspacing
 
 \begin{document}
 
