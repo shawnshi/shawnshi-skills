@@ -1,11 +1,11 @@
 {
   "schema_version": 3,
   "skill": "hit-customer-analyst",
-  "generated_at": "2026-09-19T16:43:11+08:00",
+  "generated_at": "2026-09-19T19:54:46+08:00",
   "hash_algorithm": "SHA-256",
   "text_hash_normalization": "LF",
   "skill_md": "SKILL.md",
-  "skill_md_sha256": "dc1d8c1f100874d599fc1023fa83c5bc0509dfe65de3df7f8c770da832d9cd06",
+  "skill_md_sha256": "0d655e5c3dfe6fc5a299534150d03bb110c6efd7d5bc283c61fcab09591eb65a",
   "top_level_files": [
     "README.md",
     "SKILL.md"
@@ -17,7 +17,7 @@
     },
     {
       "path": "SKILL.md",
-      "sha256": "dc1d8c1f100874d599fc1023fa83c5bc0509dfe65de3df7f8c770da832d9cd06"
+      "sha256": "0d655e5c3dfe6fc5a299534150d03bb110c6efd7d5bc283c61fcab09591eb65a"
     }
   ],
   "top_level_directories": [

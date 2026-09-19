@@ -1,14 +1,22 @@
 ---
 name: hit-customer-analyst
-description: 仅供显式指定的 2.6.2 候选内部试用、验证或修订；交付医疗客户会前速览、拜访包、战略客户包或待审核客户信，不承接常规正式业务。当用户明确要求对该候选版本开展内部试用、验证或修订，或准备医疗客户会前研判材料时使用。
-disable-model-invocation: true
+description: 为医疗机构或医疗数字化企业开展客户研究与拜访准备，交付会前速览、标准拜访包、战略客户包与待审核客户信，覆盖主体研究、关键人物研究、内部信息核验、机会资格与交流策略。当用户明确要求研究某个医院、卫健或医保机构，准备客户拜访、会前研判、客户全景或决策结构分析时使用。本技能为 2.6.2 交付候选：自动触发后仅在具备实名 RACI 与必要授权时进入完整流程，否则降级交付事实简报与阻塞项。不用于单一事实查询、通用写作、法律尽调、私人背景调查、招投标合规审查或单纯 CRM 记录整理。
 ---
 
 # 客户研究与拜访准备
 
 ## 候选与正式入口
 
-本候选仅接受显式调用，不因机构名称、普通医院介绍或常规业务请求自动启动。候选状态不等于正式可用；内部旧路由映射仍见四种业务模式。常规业务须先核验当前宿主实际可用的正式入口；原 `discovery-call` 在本库未发现，不能据此假定其他宿主也不存在。未核验到可用入口时，明确交接缺口并停止正式业务交接，不凭空新增入口、不自动晋升候选、不扫描其他私人目录。
+本技能可被自动触发：当用户明确要求对某医疗机构（含卫健、医保、医疗集团）开展客户研究或拜访准备时启动。触发范围仅限客户研究与拜访准备，不承接常规正式业务咨询、单一事实查询或通用写作；超出范围时不启动。
+
+自动触发时的强制边界：
+
+- **必须先解析 runtime_owner**：按[运行适配](references/workbuddy-runtime.md)的顺序取用户明确负责人 → 项目元数据负责人 → 当前执行用户，三者都不可用时才写“待确认”。初始化时不得直接传“待确认”。
+- **缺实名 RACI 时降级而不空转**：缺少可归因的 `account_owner` 或 `runtime_owner` 时，交付“事实简报＋阻塞项”（`module_status: partial`、`ready_for_use: false`），并列出最小补证动作；不得因此进入 `paused`、反复重试或只留占位文件。
+- **内部检索仍须三重授权**：缺 `tenant_id/customer_id/project_id` 或实名 `authorization_owner` 时，internal 模块记 `not_called`，不得访问连接器，也不得把接口说明当作已连接。
+- **不得自动晋升或外发**：自动触发不改变候选状态、不生成客户信外发版、不发送任何材料、不写回 CRM/PIMS。
+- 候选状态不等于正式可用；完整流程与 `ready_for_use=true` 仍以[审核治理](references/governance-raci.md)的门禁为准。
+- 常规业务须先核验当前宿主实际可用的正式入口；原 `discovery-call` 在本库未发现，不能据此假定其他宿主也不存在。未核验到可用入口时，明确交接缺口并停止正式业务交接，不凭空新增入口、不扫描其他私人目录。
 
 不要因仅出现机构名称而触发；不要用于单一事实查询、不涉及售前或决策用途的一般医院介绍、普通感谢或通知、材料转发、通用写作、法律尽调、私人背景调查、招投标合规审查或单纯 CRM 记录整理。
 
@@ -63,6 +71,8 @@ disable-model-invocation: true
 python3 scripts/init_workspace.py "<客户规范名称>" --output-root "<父目录>" --runtime-owner "<负责人>" --business-mode <briefing|standard_visit|strategic_account|letter> --task-timezone <IANA时区>
 python3 scripts/init_workspace.py "<客户规范名称>" --output-root "<父目录>" --context-id <context_id> --resume --business-mode <业务模式>
 ```
+
+`<负责人>` 必须先按[运行适配](references/workbuddy-runtime.md)的解析顺序取值，不得直接写“待确认”。
 
 内部检索时在初始化命令同时传稳定`tenant_id/customer_id/project_id`、项目白名单、`authorization_owner`和`authorization_expires_at`。输出`schema`继续使用`discovery-call-output/v2.5`，不得破坏v2.5.1历史成果。读取旧成果时允许缺少新增字段；一旦实际更新该成果，应按当前可得信息回填，未知项留空并保持相应门禁未通过。
 
