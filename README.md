@@ -160,7 +160,7 @@ description: 说明技能做什么，以及用户在什么场景下应使用它�
 | `technical-diagram-renderer` | 将已确认的系统关系或流程描述规范化为结构化 JSON，并生成经过结构与安全校验的静态 SVG 技术图，按需单向导出基础 `.drawio`/mxGraph 文件 |
 | `tool-markdown-converter` | 将 PDF、Office、HTML、富文本和杂乱笔记转换为结构清晰的 Markdown |
 | `tool-slide-architect` | 设计高管汇报、咨询路演和决策型演示文稿的叙事结构、逐页蓝图与讲稿 |
-| `tool-smart-latex` | 将 Markdown 或结构化内容转换为 LaTeX，并在环境允许时编译为 PDF |
+| `tool-smart-latex` | 将 Markdown 或结构化内容排版为 LaTeX，并在依赖可用时编译和视觉验收 PDF；适用于明确要求 TeX、期刊模板或公式密集文档的任务，不因一般论文、简历或报告编辑请求强制转 TeX |
 | `tool-text-forger` | 在不改变事实和原意的前提下润色、校对和重组现有文本 |
 | `tool-tts` | 将用户提供的文本合成为语音并在明确要求时播放 |
 | `tool-tuanbiao-downloader` | 仅下载全国团体标准信息平台公开可访问的 kkfileview 图片型标准并合并为 PDF；需显式调用并提供图片查看链接或已核实的路径 ID，不支持其他站点或普通 PDF 链接 |
@@ -247,7 +247,17 @@ pwsh -NoProfile -ExecutionPolicy Bypass -File scripts/repair_skills.ps1 -Mode Ga
 
 
 
-### 8.1 Current validation (2026-09-09)
+### 8.1 Current validation (2026-09-19)
+
+- 本次同步 `tool-smart-latex`（P0–P2 修复）。模板改为按单一 `cjk` 开关分流语言：中文用 CTeX 方案与中文标签，英文用 `scheme=plain`、类基线行距与左对齐。补齐 Pandoc 前置（`\passthrough`、`\newcounter{none}`、`secnumdepth`、`\pandocbounded`、`CSLReferences`），修复此前已存在的结构性失败：Markdown 表格在 5 个预设中的 4 个必然编译失败、`tech_report` 行内代码失败、任意图片在所有预设失败；`academic` 清除 `newtxtext` 向 xeCJK 泄漏的 `Extension=.otf`；新增 `twocol_table.lua`（双栏表格）与 `div_boxes.lua`（fenced div 到 tcolorbox）两个过滤器。
+- 修复副本与本地运行副本同源：13 个技能文件的 Git blob 哈希与运行时副本逐字节一致；两个新过滤器在索引与工作区均为 LF。
+- 本地验证（TeX Live 2026、Pandoc 3.8.3、Windows CTeX 字体）：`tool-smart-latex` 42 项测试 / 94 个子测试通过（含 5 个样式的端到端真实编译）；引擎矩阵 30/30 组合退出码 0、有 PDF、无 LaTeX 错误；编译后实测英文正文行距 120.0–124.2%（合同 120–145%）、行长 60–90 字符（合同 45–90）。发布副本内重跑同一套件同为 42 项 / 94 子测试通过。
+- 仓库工具：清单生成器增加 `.lua` 换行归一化覆盖并附回归测试（`scripts/test_resource_manifest.py` 29 项 / 24 子测试通过）；用 CRLF/LF 往返验证 `.lua` 哈希不再随检出的换行设置变化。
+- 全库资源清单刷新：检查 52 个技能，重写 6 个、未变 46 个。重写的 6 个为 `cognitive-morphism-mapper`（`examples/.gitkeep`）、`mentat-collaboration-audit`（`resources/.gitkeep`）、`officecli`（`LICENSE`、`NOTICE`）、`personal-investment-advisor`（`resources/.gitkeep`）、`technical-diagram-renderer`（`LICENSE`）、`tool-url-markdown`（`bun.lock`）：这 6 项是更早提交改动文件后未刷新清单造成的记录滞后，记录哈希与磁盘既非原始字节也不匹配 LF 归一化，且工作区无换行差异，不是换行伪影；文件本身未在本轮修改。刷新后全库清单检查过期数为 0。
+- 全库 `repair_skills.ps1 -Mode Gate` 通过：52 个技能、7 项自动持久化例外、19 类触发所有权，阻断项为 0。
+- 上述结果只证明静态合同、资源一致性与已记录的编译行为，不代表面向真实模型选路的端到端验收，也不代替逐页视觉验收：本轮未对最终 PDF 做逐页人工/多模态版面检查。
+
+### 8.2 Historical validation (2026-09-09)
 
 - 按本地一级 `SKILL.md` 盘点为 51 个技能；`mentat-dream-cycle`、`mentat-insight-diary` 当前不在本目录，已从库存表移除。
 - 自动持久化例外表保留 7 项现存技能合同；移除缺失技能的独立条目，不改变其他技能入口中已有的受保护写入边界。
@@ -257,7 +267,7 @@ pwsh -NoProfile -ExecutionPolicy Bypass -File scripts/repair_skills.ps1 -Mode Ga
 - 发布副本全库 Gate 通过。测试分别在适用环境运行：本地安装目录根测试 94 项通过；日记测试运行 63 项，跳过 4 项缺少已移除 Mentat 技能的可选集成，其余通过；发布副本资讯测试运行 337 项，跳过 1 项，其余通过。发布副本单独复验日记写入器 36 项，跳过相同 4 项，其余通过。
 - 新增缺失 Mentat 证据门时拒绝写入且不创建目标目录的回归测试，未放宽生产写入门。依赖宿主目录布局的根合同及日记入口测试在本地安装目录验证，不将独立克隆中的路径不匹配写成代码通过。
 
-### 8.2 Historical validation (2026-09-07)
+### 8.3 Historical validation (2026-09-07)
 
 - 本次全库 `repair_skills.ps1 -Mode Gate` 通过：53 个技能，8 项自动持久化例外，19 类触发所有权，阻断项为 0。
 - 资源索引独立检查：53 个技能，过期或缺失清单为 0；界面元数据独立检查：19 份配置，错误为 0。
@@ -265,9 +275,9 @@ pwsh -NoProfile -ExecutionPolicy Bypass -File scripts/repair_skills.ps1 -Mode Ga
 - `hit-customer-analyst` 仍为交付候选；静态门禁通过不改变其限定内部试用状态，真实发布验收以该技能的 `references/release-acceptance.md` 为准。
 - Gate 只证明其覆盖的静态合同与资源一致性，不代表所有技能已在新会话中端到端验证，也不代替发布前的敏感信息检查。
 
-### 8.3 Historical baseline (2026-09-05)
+### 8.4 Historical baseline (2026-09-05)
 
 - 此前记录：全库 Gate 通过，53 个技能、8 项自动持久化例外、19 类触发所有权，阻断项为 0。
 - 此前记录：`mentat-insight-diary/scripts/test_skill_contract.py` 的 14 项测试通过；本次未重跑该回归。
 
-Last updated: 2026-09-09
+Last updated: 2026-09-19
