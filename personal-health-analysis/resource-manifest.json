@@ -1,7 +1,7 @@
 {
   "schema_version": 3,
   "skill": "personal-health-analysis",
-  "generated_at": "2026-09-19T16:43:11+08:00",
+  "generated_at": "2026-09-19T16:46:57+08:00",
   "hash_algorithm": "SHA-256",
   "text_hash_normalization": "LF",
   "skill_md": "SKILL.md",
@@ -12,8 +12,7 @@
     "install.ps1",
     "install.sh",
     "requirements.lock.txt",
-    "requirements.txt",
-    "runtime-authority.json"
+    "requirements.txt"
   ],
   "top_level_file_hashes": [
     {
@@ -39,10 +38,6 @@
     {
       "path": "requirements.txt",
       "sha256": "a44093d4a215de20623f5ff21da87dd9560b6a8fe353a091f01fcf4906198164"
-    },
-    {
-      "path": "runtime-authority.json",
-      "sha256": "adfa43e41e23b4270ac2a39438382e9ced909d95f35cfe84f4b97f7bc458ea43"
     }
   ],
   "top_level_directories": [
@@ -55,7 +50,7 @@
   "resource_directories": [
     {
       "name": "scripts",
-      "file_count": 54
+      "file_count": 51
     },
     {
       "name": "references",
@@ -196,10 +191,6 @@
       "sha256": "1ba46e946d14d99c3fdfb2308ff44f41050187a9be3cf12ce10afc6f7e2d162d"
     },
     {
-      "path": "scripts/runtime_authority.py",
-      "sha256": "0625581732df02667e59a85797266b39a6386cfd4d022346cfd4b3a542624949"
-    },
-    {
       "path": "scripts/runtime_preflight.py",
       "sha256": "c709883d5e2d6f629ae635d42e9b351ac9173b7a42effa5357109208df3a62b8"
     },
@@ -218,10 +209,6 @@
     {
       "path": "scripts/test_fhir_external_acceptance.py",
       "sha256": "e7c8ee8c19d6ea3a9d5160a765875092d572e769dc7dfee631f10ef19081ccfb"
-    },
-    {
-      "path": "scripts/test_freshness_task_gate.py",
-      "sha256": "99cbbdaa3c34b2ad868e134858125067b5188e671ec28772703eb40878e1b268"
     },
     {
       "path": "scripts/test_garmin_activity_files_cli.py",
@@ -298,10 +285,6 @@
     {
       "path": "scripts/test_report_output.py",
       "sha256": "98fad0e1518ed3141e067b940692f96dafd1440b36bd501a11609d98d8e99155"
-    },
-    {
-      "path": "scripts/test_runtime_authority.py",
-      "sha256": "b9bd6aaa8d911ad36d37f1cd62eabd3708fb0503178d17f6964a8aa1f32f65b9"
     },
     {
       "path": "scripts/test_runtime_preflight.py",
