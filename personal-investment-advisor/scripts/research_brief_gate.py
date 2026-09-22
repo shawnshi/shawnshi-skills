@@ -383,8 +383,10 @@ def validate_research_brief(
         for field in schema["required_output_contract_fields"]:
             if output_contract.get(field) in (None, "", []):
                 errors.append(f"missing output_contract.{field}")
-        if output_contract.get("decision_scope") != "research_only":
-            errors.append("output_contract.decision_scope must be research_only")
+        if output_contract.get("decision_scope") not in ("research_only", "advisory", "actionable"):
+            errors.append(
+                "output_contract.decision_scope must be one of research_only, advisory, actionable"
+            )
         if output_contract.get("include_counterevidence") is not True:
             errors.append("output_contract.include_counterevidence must be true")
         if output_contract.get("dual_trigger_policy") not in schema["enums"]["dual_trigger_policy"]:

@@ -52,13 +52,15 @@ def _utc_comparable(value: datetime) -> datetime:
     return value.astimezone(timezone.utc)
 
 
-def _base_report() -> dict[str, Any]:
+def _base_report(decision_scope: str = "research_only") -> dict[str, Any]:
+    if decision_scope not in ("research_only", "advisory", "actionable"):
+        decision_scope = "research_only"
     return {
         "schema_version": SCHEMA_VERSION,
         "status": "invalid_input",
         "detail_status": "not_evaluated",
-        "research_only": True,
-        "decision_scope": "research_only",
+        "research_only": decision_scope == "research_only",
+        "decision_scope": decision_scope,
         "operation_mode": "read_only_offline",
         "method": EXPERIMENT_NAME,
         "risk_parity_claim": False,
@@ -114,8 +116,8 @@ def _validate_policy_root(policy: Any) -> list[str]:
         errors.append(f"policy.schema_version must equal {POLICY_SCHEMA_VERSION}")
     if policy.get("experiment") != EXPERIMENT_NAME:
         errors.append(f"policy.experiment must equal {EXPERIMENT_NAME}")
-    if policy.get("decision_scope") != "research_only":
-        errors.append("policy.decision_scope must equal research_only")
+    if policy.get("decision_scope") not in ("research_only", "advisory", "actionable"):
+        errors.append("policy.decision_scope must be one of research_only, advisory, actionable")
     if _parse_iso(policy.get("as_of")) is None:
         errors.append("policy.as_of must be an ISO date or datetime")
     if not isinstance(policy.get("bucket_targets"), dict):
@@ -327,7 +329,7 @@ def run_inverse_volatility_experiment(
             }
         )
 
-    report = _base_report()
+    report = _base_report(str(policy.get("decision_scope") or "research_only"))
     report.update(
         {
             "status": "complete",

@@ -163,7 +163,10 @@ def run_active_scan(
         row["rank"] = rank
         row["research_pool"] = "rank_pool" if rank <= retain_count else "yank_review_pool"
         row["actionability"] = "research_candidate_only"
-    report = base_report(SCHEMA_VERSION)
+    report = base_report(
+        SCHEMA_VERSION,
+        decision_scope=str(policy.get("decision_scope") or "research_only"),
+    )
     report.update(
         {
             "status": "complete",

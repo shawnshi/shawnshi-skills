@@ -132,13 +132,22 @@ def validate_evidence_stamp(
     return errors
 
 
-def base_report(schema_version: str, detail_status: str = "not_evaluated") -> dict[str, Any]:
+DECISION_SCOPES = ("research_only", "advisory", "actionable")
+
+
+def base_report(
+    schema_version: str,
+    detail_status: str = "not_evaluated",
+    decision_scope: str = "research_only",
+) -> dict[str, Any]:
+    if decision_scope not in DECISION_SCOPES:
+        decision_scope = "research_only"
     return {
         "schema_version": schema_version,
         "status": "invalid_input",
         "detail_status": detail_status,
-        "decision_scope": "research_only",
-        "research_only": True,
+        "decision_scope": decision_scope,
+        "research_only": decision_scope == "research_only",
         "operation_mode": "read_only_offline",
         "mutation_performed": False,
         "formal_use_allowed": False,
@@ -154,8 +163,9 @@ def fail_report(
     errors: list[str],
     *,
     status: str = "invalid_input",
+    decision_scope: str = "research_only",
 ) -> dict[str, Any]:
-    report = base_report(schema_version, detail_status)
+    report = base_report(schema_version, detail_status, decision_scope)
     report["status"] = status
     report["errors"] = errors
     return report

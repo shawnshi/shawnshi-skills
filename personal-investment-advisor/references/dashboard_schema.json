@@ -342,7 +342,9 @@
       "其他"
     ],
     "research_mode": [
-      "research_only"
+      "research_only",
+      "advisory",
+      "actionable"
     ],
     "confidence_level": [
       "高",

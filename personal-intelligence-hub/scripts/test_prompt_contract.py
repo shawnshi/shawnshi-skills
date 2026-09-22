@@ -116,7 +116,7 @@ class PromptContractTests(unittest.TestCase):
         self.assertEqual(policy["observability"]["red_team_timeout_ms"], 600000)  # owner-authorized 2026-09-14: wall-clock only
         self.assertEqual(
             policy["observability"]["supplement_finalization_grace_seconds"],
-            300,
+            900,  # owner-authorized 2026-09-22: wall-clock grace raised from 300s
         )
         self.assertEqual(policy["observability"]["supplement_tool_budget_soft"], 8)
         self.assertEqual(policy["observability"]["supplement_tool_budget_hard"], 12)

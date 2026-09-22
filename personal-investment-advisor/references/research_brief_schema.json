@@ -70,7 +70,7 @@
   "enums": {
     "market": ["CN", "HK", "US"],
     "asset_type": ["stock", "etf", "fund", "index", "other"],
-    "decision_scope": ["research_only"],
+    "decision_scope": ["research_only", "advisory", "actionable"],
     "industry_type": ["operating_company", "bank", "insurance", "other", "unknown"],
     "dual_trigger_policy": ["exclude"],
     "hypothesis_operator": [">=", ">", "<=", "<", "=="],

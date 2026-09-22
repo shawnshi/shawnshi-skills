@@ -1376,9 +1376,10 @@ def validate_dashboard(data: dict, *, require_scenarios: bool = False) -> list[s
         decision_scope = _get_nested(
             research_brief, ["output_contract", "decision_scope"]
         )
-        if decision_scope != "research_only":
+        if decision_scope not in ("research_only", "advisory", "actionable"):
             errors.append(
-                "research_brief.output_contract.decision_scope must be research_only"
+                "research_brief.output_contract.decision_scope must be one of "
+                "research_only, advisory, actionable"
             )
         raw_dashboard_symbol = data.get("stock_code")
         raw_brief_symbol = _get_nested(

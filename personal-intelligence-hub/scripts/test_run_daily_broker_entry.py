@@ -102,7 +102,16 @@ def test_prepare_broker_version_real_registered_packets(tmp_path, count, version
     assert len(request["gaps"]) == 4
     assert request.get("article_broker_version") == version
     assert all(
-        worker["timeout_ms"] == 900_000
+        worker["timeout_ms"]
+        == 1000
+        * (
+            request["execution_packets"][worker["packet_index"]]["execution_budget"][
+                "max_duration_seconds"
+            ]
+            + request["execution_packets"][worker["packet_index"]]["finalization"][
+                "grace_seconds"
+            ]
+        )
         for wave in request["launch_plan"]
         for worker in wave["workers"]
     )
@@ -125,7 +134,7 @@ def test_prepare_broker_version_real_registered_packets(tmp_path, count, version
             == packet["execution_budget"]["max_duration_seconds"]
             == 600
         )
-        assert packet["finalization"]["grace_seconds"] == 300
+        assert packet["finalization"]["grace_seconds"] == 900
         assert packet["usage_budget"] == {"tokens": 150000, "cost_usd": 0.5}
         assert packet["tool_budget"]["hard"] == 12
         assert bool(gap.get("article_broker")) == (
@@ -161,12 +170,19 @@ def test_prepare_production_source_window_budget_propagation(tmp_path):
             "max_urls": 4,
             "max_duration_seconds": 600,
         }
-        assert packet["finalization"]["grace_seconds"] == 300
+        assert packet["finalization"]["grace_seconds"] == 900
         assert packet["tool_budget"] == {"soft": 8, "hard": 12, "block": "*"}
         assert packet["usage_budget"] == {"tokens": 150000, "cost_usd": 0.5}
     for wave in request["launch_plan"]:
         for worker in wave["workers"]:
-            assert worker["timeout_ms"] == 900000
+            assert worker["timeout_ms"] == (
+                request["execution_packets"][worker["packet_index"]][
+                    "execution_budget"
+                ]["max_duration_seconds"]
+                + request["execution_packets"][worker["packet_index"]][
+                    "finalization"
+                ]["grace_seconds"]
+            ) * 1000
             assert worker["token_budget"] == 150000
             assert worker["cost_budget_usd"] == 0.5
             assert worker["tool_budget"] == {"soft": 8, "hard": 12, "block": "*"}

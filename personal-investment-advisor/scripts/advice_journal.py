@@ -170,7 +170,11 @@ def build_journal_entry(data: Dict[str, Any], archive_path: str | None = None) -
         "research_mode": data.get("research_mode"),
         "research_scope": output_contract.get("decision_scope"),
         "calibration_sample_type": (
-            "research" if output_contract.get("decision_scope") == "research_only" else None
+            {
+                "research_only": "research",
+                "advisory": "research",
+                "actionable": "execution",
+            }.get(output_contract.get("decision_scope"))
         ),
         "research_anchor_date": research_brief.get("as_of_date"),
         "confidence_level": data.get("confidence_level"),

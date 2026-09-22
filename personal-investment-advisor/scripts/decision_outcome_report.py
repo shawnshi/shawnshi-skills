@@ -359,7 +359,19 @@ def build_report(journal_path: str | None = None) -> str:
         "",
         f"- 生成时间: {datetime.now().strftime('%Y-%m-%d %H:%M')}",
         f"- 日志文件: {resolve_journal_path(journal_path)}",
-        "- 决策范围: research_only",
+        "- 决策范围: "
+        + (
+            ", ".join(
+                sorted(
+                    {
+                        str(entry.get("research_scope"))
+                        for entry in entries
+                        if entry.get("research_scope")
+                    }
+                )
+            )
+            or "research_only"
+        ),
         f"- 总样本数: {len(entries)}",
         f"- 所有正式合格样本数: {calibration['eligible_count']}",
         f"- 正式研究样本数: {calibration['research_sample_count']}",

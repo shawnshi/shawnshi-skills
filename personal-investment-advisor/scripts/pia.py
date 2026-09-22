@@ -446,6 +446,10 @@ def _build_parser() -> JsonArgumentParser:
     edgar.add_argument("--as-of", required=True)
     edgar.add_argument("--user-agent")
     edgar.add_argument("--timeout", type=float)
+    edgar.add_argument(
+        "--decision-scope",
+        choices=("research_only", "advisory", "actionable"),
+    )
 
     portfolio = subparsers.add_parser(
         "portfolio-audit",
@@ -463,6 +467,10 @@ def _build_parser() -> JsonArgumentParser:
     daily.add_argument("--thesis-evidence-file", type=_path_argument)
     daily.add_argument("--now-epoch", type=float)
     daily.add_argument("--max-quote-age-seconds", type=int)
+    daily.add_argument(
+        "--decision-scope",
+        choices=("research_only", "advisory", "actionable"),
+    )
 
     scenario = subparsers.add_parser(
         "scenario", help="Run the explicit-input portfolio scenario analyzer."
@@ -551,6 +559,7 @@ def _dispatch(args: argparse.Namespace) -> tuple[dict[str, Any], int]:
         child = [*args.symbols, "--as-of", args.as_of]
         _append_option(child, "--user-agent", args.user_agent)
         _append_option(child, "--timeout", args.timeout)
+        _append_option(child, "--decision-scope", args.decision_scope)
         return _run_child(
             public_command=args.command,
             script_name="sec_edgar_fundamentals.py",
@@ -585,6 +594,7 @@ def _dispatch(args: argparse.Namespace) -> tuple[dict[str, Any], int]:
         _append_option(child, "--now-epoch", args.now_epoch)
         _append_option(child, "--max-quote-age-seconds", args.max_quote_age_seconds)
         _append_option(child, "--thesis-evidence-file", args.thesis_evidence_file)
+        _append_option(child, "--decision-scope", args.decision_scope)
         return _run_child(
             public_command=args.command,
             script_name="daily_sync.py",

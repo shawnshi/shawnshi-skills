@@ -62,13 +62,20 @@ def _parse_aware_iso(value: Any) -> datetime | None:
     return parsed
 
 
-def _base_report(filepath: str | None, quotes_file: str | None) -> dict[str, Any]:
+def _base_report(
+    filepath: str | None,
+    quotes_file: str | None,
+    decision_scope: str = "research_only",
+) -> dict[str, Any]:
+    if decision_scope not in ("research_only", "advisory", "actionable"):
+        decision_scope = "research_only"
+    research_only = decision_scope == "research_only"
     return {
         "schema_version": SCHEMA_VERSION,
         "status": "invalid_input",
         "detail_status": "not_evaluated",
-        "research_only": True,
-        "decision_scope": "research_only",
+        "research_only": research_only,
+        "decision_scope": decision_scope,
         "operation_mode": "read_only_offline",
         "mutation_performed": False,
         "inputs": {
@@ -79,7 +86,7 @@ def _base_report(filepath: str | None, quotes_file: str | None) -> dict[str, Any
         "current_weights": [],
         "allocation_experiment": {
             "status": "not_requested",
-            "research_only": True,
+            "research_only": research_only,
         },
         "inactive_zero_quantity_symbols": [],
         "errors": [],
@@ -157,8 +164,10 @@ def _validate_daily_sync_report(
         errors.append(
             f"daily_sync_report.schema_version must equal {DAILY_SYNC_SCHEMA_VERSION}"
         )
-    if payload.get("decision_scope") != "research_only":
-        errors.append("daily_sync_report.decision_scope must equal research_only")
+    if payload.get("decision_scope") not in ("research_only", "advisory", "actionable"):
+        errors.append(
+            "daily_sync_report.decision_scope must be one of research_only, advisory, actionable"
+        )
     if payload.get("operation_mode") != "read_only_offline":
         errors.append("daily_sync_report.operation_mode must equal read_only_offline")
     report_positions_path = _normalized_path(
@@ -540,6 +549,17 @@ def recalculate_all_weights(
                 [str(exc)],
                 status="invalid_input",
             )
+        upstream_scope = (
+            quote_payload.get("decision_scope")
+            if isinstance(quote_payload, dict)
+            else None
+        )
+        if upstream_scope in ("research_only", "advisory", "actionable"):
+            report["decision_scope"] = upstream_scope
+            report["research_only"] = upstream_scope == "research_only"
+            experiment = report.get("allocation_experiment")
+            if isinstance(experiment, dict):
+                experiment["research_only"] = upstream_scope == "research_only"
         quotes, quote_errors = _validate_daily_sync_report(
             quote_payload,
             positions_path=filepath,

@@ -45,9 +45,10 @@ def test_native_builder_defaults_and_over_limit(new_run, duration):
     assert {key: request["gaps"][0][key] for key in limits} == expected
     packet = request["execution_packets"][0]
     assert packet["execution_budget"] == expected
-    assert packet["finalization"]["grace_seconds"] == 300
+    grace = packet["finalization"]["grace_seconds"]
+    assert grace == 900
     worker = request["launch_plan"][0]["workers"][0]
-    assert worker["timeout_ms"] == (expected["max_duration_seconds"] + 300) * 1000
+    assert worker["timeout_ms"] == (expected["max_duration_seconds"] + grace) * 1000
     assert packet["tool_budget"]["hard"] == worker["tool_budget"]["hard"] == 12
     assert packet["usage_budget"]["tokens"] == worker["token_budget"] == 150000
     assert rc._normalized_supplement_budget({}) == {
@@ -993,7 +994,7 @@ def test_timely_two_lane_staggered_registration_and_replay(timely_lanes):
     receipt = deepcopy(
         rc.load_manifest(path)["parent_supplement_finalizations"]["tech"]
     )
-    clock.value += timedelta(seconds=310)
+    clock.value += timedelta(seconds=packets[0]["finalization"]["grace_seconds"] + 10)
     b = seal("risk")
     sa.finalize_parent_draft(request, "risk")
     sa.finalize_parent_draft(request, "tech")
@@ -1043,7 +1044,7 @@ def test_timely_negative_cases_preserve_evidence(timely_lanes, case):
         manifest["parent_supplement_finalizations"]["tech"]["gap_id"] = "risk"
     if case == "deadline":
         manifest["parent_supplement_finalizations"]["tech"]["finalized_at"] = (
-            clock.value + timedelta(seconds=301)
+            clock.value + timedelta(seconds=packets[0]["finalization"]["grace_seconds"] + 1)
         ).isoformat()
     if case == "failed":
         manifest["stages"]["supplemental"]["status"] = "failed"
@@ -1064,7 +1065,7 @@ def test_timely_negative_cases_preserve_evidence(timely_lanes, case):
             Path(packets[0]["output_paths"]["result"]).with_suffix(".failure.json"),
             {"failed": True},
         )
-    clock.value += timedelta(seconds=310)
+    clock.value += timedelta(seconds=packets[0]["finalization"]["grace_seconds"] + 10)
     before = a.read_bytes(), path.read_bytes()
     with pytest.raises(rc.RunContractError):
         sa.finalize_parent_draft(request, "tech")
@@ -1094,7 +1095,7 @@ def test_timely_journal_crash_recovery_and_append_immutability(
         rc.load_manifest(path)["parent_supplement_finalizations"]["tech"]
     )
     assert a.read_bytes() == original
-    clock.value += timedelta(seconds=310)
+    clock.value += timedelta(seconds=packets[0]["finalization"]["grace_seconds"] + 10)
     monkeypatch.setattr(sa, "_materialize_parent_draft", materialize)
     sa.finalize_parent_draft(request, "tech")
     assert rc.file_sha256(a) == receipt["final_draft_sha256"]

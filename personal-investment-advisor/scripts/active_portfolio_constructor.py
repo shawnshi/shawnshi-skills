@@ -48,8 +48,8 @@ def _validate_policy(policy: Any, symbols: list[str], as_of: Any) -> list[str]:
     errors: list[str] = []
     if policy.get("schema_version") != POLICY_SCHEMA_VERSION:
         errors.append(f"policy.schema_version must equal {POLICY_SCHEMA_VERSION}")
-    if policy.get("decision_scope") != "research_only":
-        errors.append("policy.decision_scope must equal research_only")
+    if policy.get("decision_scope") not in ("research_only", "advisory", "actionable"):
+        errors.append("policy.decision_scope must be one of research_only, advisory, actionable")
     policy_as_of = parse_aware_iso(policy.get("as_of"))
     scan_as_of = parse_aware_iso(as_of)
     if policy_as_of is None:
@@ -337,7 +337,10 @@ def run_construction(
     expected_net = expected_gross - estimated_cost
     formal = bool(erc_converged and active_converged)
 
-    report = base_report(SCHEMA_VERSION)
+    report = base_report(
+        SCHEMA_VERSION,
+        decision_scope=str(policy.get("decision_scope") or "research_only"),
+    )
     report.update(
         {
             "status": "complete" if formal else "incomplete",

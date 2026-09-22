@@ -1922,7 +1922,7 @@ class RunContractTests(unittest.TestCase):
         self.assertEqual(
             packet["finalization"],
             {
-                "grace_seconds": 300,
+                "grace_seconds": 900,
                 "result_completed_at_semantics": "source_check_completed",
             },
         )
@@ -2001,7 +2001,16 @@ class RunContractTests(unittest.TestCase):
         self.assertTrue(
             all(
                 "supplement_agent.py context" in worker["task_message"]
-                and worker["timeout_ms"] == 480_000
+                and worker["timeout_ms"]
+                == 1000
+                * (
+                    request["execution_packets"][worker["packet_index"]][
+                        "execution_budget"
+                    ]["max_duration_seconds"]
+                    + request["execution_packets"][worker["packet_index"]][
+                        "finalization"
+                    ]["grace_seconds"]
+                )
                 and worker["tool_budget"]
                 == {"soft": 8, "hard": 12, "block": "*"}
                 and worker["token_budget"] == 150_000

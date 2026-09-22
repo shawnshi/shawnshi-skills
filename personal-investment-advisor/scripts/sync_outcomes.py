@@ -239,7 +239,7 @@ def _missing_calibration_fields(entry: dict[str, Any]) -> list[str]:
 def _is_research_sample(entry: dict[str, Any]) -> bool:
     return (
         entry.get("calibration_sample_type") == "research"
-        or entry.get("research_scope") == "research_only"
+        or entry.get("research_scope") in ("research_only", "advisory")
     )
 
 

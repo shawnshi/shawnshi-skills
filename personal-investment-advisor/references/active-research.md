@@ -19,8 +19,8 @@ SEC EDGAR solves filing availability for US fundamentals but does not itself sup
 
 ## Non-negotiable boundary
 
-- Every artifact is `research_only`, read-only, and non-executable.
-- Candidate weights and allocation gaps are permitted only after the P0 validation gate passes. They must be labelled `candidate_weight` or `allocation_gap`; never `target_weight`.
+- Every artifact declares its own `decision_scope` (`research_only` / `advisory` / `actionable`); the pipeline itself stays read-only and executes nothing.
+- Candidate weights and allocation gaps are permitted only after the P0 validation gate passes. They must be labelled `candidate_weight` or `allocation_gap`. `target_weight` requires `decision_scope=actionable` and the same gate.
 - No active-research calculation command may place, schedule, route, or simulate an order; infer missing holdings; fetch mutable live data; or overwrite an input. Free-source acquisition occurs beforehand through a separate evidence command and its immutable output hash is then bound offline.
 - A failed contract, stale component, unbound upstream hash, non-PSD covariance matrix, infeasible constraint set, or optimizer non-convergence fails closed.
 - Expected alpha, covariance, costs, and horizons are assumptions. Passing a statistical gate does not establish future profitability.

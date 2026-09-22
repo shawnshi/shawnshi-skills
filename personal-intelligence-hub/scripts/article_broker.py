@@ -26,6 +26,11 @@ from yarl import URL
 
 VERSION = 3
 MAX_BODY = 1048576
+# Parent-side finalization grace after a broker seal. The clock is wall time from the
+# seal, and a slow or serialized parent loses a gap's evidence when it expires, so the
+# bound is generous while still closed. Contract constant: the packet validator, the
+# guarded parent finalizer and the docs must agree on this number.
+MAX_FINALIZATION_GRACE_SECONDS = 3600
 CLASH_FAKE_IP_NETWORK = ipaddress.ip_network("198.18.0.0/15")
 
 
@@ -148,6 +153,11 @@ def _arxiv_readable_metadata(text, url, text_sha, challenge):
             return rejected
         if stamp.strftime("%a") != raw[:3] or number in parsed:
             return rejected
+        # An arXiv id month is the announcement month and must match the v1 submission
+        # month of the same page: an observed page whose history disagrees with its id is
+        # conflicting evidence, not a date to be repaired (see
+        # test_native_arxiv_rejects_conflicting_or_missing_evidence, which pins the real
+        # mismatch shape).
         if number == 1 and (
             stamp.year != 2000 + int(paper_id[:2]) or stamp.month != int(paper_id[2:4])
         ):
@@ -533,6 +543,182 @@ def _readable_wire_dates(text, lines, text_sha):
     return found
 
 
+# A header line that is nothing but a date. Chinese government notices print the
+# issuing agency and the date on their own consecutive lines, and some sites wrap the
+# dateline in symmetric emphasis, so those shapes are unwrapped and read as a whole
+# line. The date must still be a complete calendar date: a year-less form would need
+# the report window to resolve it, which stays forbidden.
+_STANDALONE_TIME = (
+    r"(?:[ \t]*,[ \t]*[0-9]{1,2}:[0-9]{2}(?:[ \t]*(?:AM|PM))?"
+    r"(?:[ \t]+(?:UTC|GMT))?"
+    r"|[ \t]+[0-9]{1,2}:[0-9]{2}(?:[ \t]*(?:AM|PM))?(?:[ \t]+(?:UTC|GMT))?)?"
+)
+_STANDALONE_DATE = r"(" + _READABLE_DATE + r")" + _STANDALONE_TIME
+_STANDALONE_EMPHASIS = ("___", "***", "__", "**", "_", "*")
+_STANDALONE_HEAD_BYTES = 1500
+_STANDALONE_PRIOR_MAX = 60
+_STANDALONE_PARAGRAPH_MIN = 120
+
+
+def _standalone_emphasis_strip(value):
+    """Unwrap one symmetric emphasis pair; return (inner, leading_offset)."""
+    for marker in _STANDALONE_EMPHASIS:
+        size = len(marker)
+        if (
+            len(value) > 2 * size
+            and value.startswith(marker)
+            and value.endswith(marker)
+            and value[size] not in marker
+            and value[-size - 1] not in marker
+        ):
+            return value[size:-size], size
+    return value, 0
+
+
+def _standalone_dateline(text, start, line, previous, text_sha):
+    """Retained line that consists only of a publication date, or None.
+
+    ``previous`` is the last non-empty line before it: a short label-like line is
+    required so an arbitrary date quoted inside prose can never be promoted.
+    """
+    if previous is None:
+        return None
+    if len(previous) > _STANDALONE_PRIOR_MAX or previous[-1] in "。！？.!?":
+        return None
+    if any(
+        len(block) >= _STANDALONE_PARAGRAPH_MIN
+        for block in re.split(r"\n[ \t]*\n", text[:start])
+    ):
+        return None
+    stripped = line.strip()
+    body, padding = _standalone_emphasis_strip(stripped)
+    match = re.fullmatch(_STANDALONE_DATE, body, re.I)
+    if not match:
+        return None
+    token = match.group(1)
+    begin = start + line.index(stripped) + padding + body.index(token)
+    raw = text[begin : begin + len(token)]
+    if raw != token:
+        return None
+    try:
+        day = _readable_day(raw)
+    except (ValueError, StopIteration):
+        return None
+    return {
+        "field": "readable_publication",
+        "raw": raw,
+        "published_at": day,
+        "published_at_source": "native_readable:standalone-dateline/1",
+        "parser_rule": "standalone-dateline/1",
+        "start": begin,
+        "end": begin + len(token),
+        "text_sha256": text_sha,
+    }
+
+
+def _readable_standalone_dates(text, text_sha):
+    """Standalone header date lines, only when no explicit rule matched.
+
+    Conflicting standalone dates fail closed, like every other date rule.
+    """
+    found = []
+    previous = None
+    offset = 0
+    for raw_line in text.splitlines(keepends=True):
+        start = offset
+        offset += len(raw_line)
+        if start >= _STANDALONE_HEAD_BYTES:
+            break
+        line = raw_line.rstrip("\r\n")
+        if not line.strip():
+            continue
+        entry = _standalone_dateline(text, start, line, previous, text_sha)
+        previous = line.strip()
+        if entry is not None:
+            found.append(entry)
+    if len({entry["published_at"] for entry in found}) > 1:
+        return []
+    return found
+
+
+# Chinese wire copy prints the dispatch day without a year: "央广网北京9月17日消息",
+# "新华社北京9月17日电", "本报9月17日讯". The year is genuinely absent from the body,
+# so it is taken from exactly one complete date embedded in the requested URL path and
+# the two must agree on month and day. The report window is never used to supply or
+# shift the year, and a URL that carries no date, or more than one distinct date,
+# yields no date at all.
+_CN_WIRE_DATELINE = re.compile(
+    r"^(?P<prefix>[^0-9。！？\n]{0,20}?)"
+    r"(?P<date>(?:[1-9]|1[0-2])月(?:[0-9]{1,2})日)"
+    r"(?:消息|讯|电)(?=[（(：:，,\s]|$)"
+)
+_URL_DATE_ANCHOR = re.compile(
+    r"(?<![0-9])(?P<year>20[0-9]{2})[-/.]?(?P<month>0[1-9]|1[0-2])[-/.]?"
+    r"(?P<day>0[1-9]|[12][0-9]|3[01])(?![0-9])"
+)
+_CN_WIRE_HEAD_BYTES = 1500
+
+
+def _url_date_anchor(url):
+    """The single complete date embedded in the URL path, or None."""
+    found = {
+        (match.group("year"), match.group("month"), match.group("day"))
+        for match in _URL_DATE_ANCHOR.finditer(urlsplit(url).path)
+    }
+    if len(found) != 1:
+        return None
+    year, month, day = found.pop()
+    return f"{year}-{month}-{day}"
+
+
+def _readable_url_anchored_dates(text, url, text_sha):
+    """Year-less Chinese wire datelines, dated only by the URL path anchor."""
+    anchor = _url_date_anchor(url)
+    if anchor is None:
+        return []
+    _, month, day = anchor.split("-")
+    found = []
+    offset = 0
+    for raw_line in text.splitlines(keepends=True):
+        start = offset
+        offset += len(raw_line)
+        if start >= _CN_WIRE_HEAD_BYTES:
+            break
+        content = raw_line.rstrip("\r\n")
+        stripped = content.strip()
+        if not stripped:
+            continue
+        match = _CN_WIRE_DATELINE.match(stripped)
+        if not match:
+            continue
+        token = match.group("date")
+        numbers = re.fullmatch(r"([0-9]{1,2})月([0-9]{1,2})日", token)
+        if not numbers:
+            continue
+        if int(numbers.group(1)) != int(month) or int(numbers.group(2)) != int(day):
+            continue
+        begin = start + (len(content) - len(content.lstrip())) + stripped.index(token)
+        raw = text[begin : begin + len(token)]
+        if raw != token:
+            continue
+        found.append(
+            {
+                "field": "readable_publication",
+                "raw": raw,
+                "published_at": anchor,
+                "published_at_source": "native_readable:cn-wire-dateline/1",
+                "parser_rule": "cn-wire-dateline/1",
+                "year_anchor": {"source": "requested_url_path", "value": anchor},
+                "start": begin,
+                "end": begin + len(token),
+                "text_sha256": text_sha,
+            }
+        )
+    if len({entry["published_at"] for entry in found}) > 1:
+        return []
+    return found
+
+
 def _readable_publication(text, url, text_sha):
     lines, first_body = _readable_header(text)
     dates, invalid, nhsa_content = [], False, True
@@ -628,6 +814,10 @@ def _readable_publication(text, url, text_sha):
         dates = []
     if not dates and not invalid and not primary_conflict:
         dates = _readable_wire_dates(text, lines, text_sha)
+    if not dates and not invalid and not primary_conflict:
+        dates = _readable_standalone_dates(text, text_sha)
+    if not dates and not invalid and not primary_conflict:
+        dates = _readable_url_anchored_dates(text, url, text_sha)
     return dates, lines + ([first_body] if first_body else []), nhsa_content
 
 

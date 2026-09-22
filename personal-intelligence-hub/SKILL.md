@@ -42,7 +42,7 @@ prepare 必须冻结 run/bundle/历史与候选血缘，再完成基线扫描和
 
 ### 2. 只针对缺口调用补检代理
 
-进入本阶段前，父任务读取 `references/workflow_protocols.md` 的 `supplement` 节；有补检请求时，再读 `runtime` 节，完成预算预留后才可启动。代理只接收已登记最小 packet，不得加载本参考文档或主会话历史。seal 会启动 300 秒 finalization grace：父任务必须在 seal 后立即完成该 gap 的 `finalize --parent`，不得先用其他 gap 的 broker 操作；同一命令内完成两步用 `python -X utf8 scripts/supplement_seal.py --request <supplement_request.json> --gap-id <gap_id>`（draft 未就绪时它只报告 grace 截止时间）。reserve-fetch 只接受 required bound URL 或已记录 search receipt 发现的 URL；未尝试但非 required 的 bound 候选不可抓取。600 秒 source 时钟自 `broker-checkpoint` 起算，不得先批量 checkpoint 多条 gap 再逐条收尾，否则未开跑的车道会提前到期。父任务 fallback 的顺序必须是 seal → 写 draft → finalize；先写 draft 会让 seal 被 guard 拒绝（draft/result 已存在）。
+进入本阶段前，父任务读取 `references/workflow_protocols.md` 的 `supplement` 节；有补检请求时，再读 `runtime` 节，完成预算预留后才可启动。代理只接收已登记最小 packet，不得加载本参考文档或主会话历史。seal 会启动 900 秒 finalization grace：父任务必须在 seal 后立即完成该 gap 的 `finalize --parent`，不得先用其他 gap 的 broker 操作；同一命令内完成两步用 `python -X utf8 scripts/supplement_seal.py --request <supplement_request.json> --gap-id <gap_id>`（draft 未就绪时它只报告 grace 截止时间）。reserve-fetch 只接受 required bound URL 或已记录 search receipt 发现的 URL；未尝试但非 required 的 bound 候选不可抓取。600 秒 source 时钟自 `broker-checkpoint` 起算，不得先批量 checkpoint 多条 gap 再逐条收尾，否则未开跑的车道会提前到期。父任务 fallback 的顺序必须是 seal → 写 draft → finalize；先写 draft 会让 seal 被 guard 拒绝（draft/result 已存在）。
 
 仅在基线 `completed`/`degraded` 后，按已登记 gap/lane 先核验绑定候选，再补缺口；根任务不重复已分派检索。canary 基础设施失败即停止 fanout；成功后最多 3 个 worker 并行。保留真实日期、访问日志与失败，禁止弱资讯补数。代理只写授权 draft，父任务确定性校验后原子发布；timeout/失联按持久化逐 gap 状态 reconciler 收口，不得只依赖 stdout。
 

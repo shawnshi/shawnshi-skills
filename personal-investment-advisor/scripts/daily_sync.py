@@ -48,11 +48,14 @@ def _base_report(
     quotes_file: Optional[str],
     thesis_evidence_file: Optional[str],
     now_epoch: Optional[float],
+    decision_scope: str = "research_only",
 ) -> Dict[str, Any]:
+    if decision_scope not in ("research_only", "advisory", "actionable"):
+        decision_scope = "research_only"
     return {
         "schema_version": SCHEMA_VERSION,
         "status": "incomplete",
-        "decision_scope": "research_only",
+        "decision_scope": decision_scope,
         "operation_mode": "read_only_offline",
         "evaluation_epoch": now_epoch,
         "inputs": {
@@ -341,6 +344,7 @@ def evaluate_daily_sync(
     thesis_evidence_file: Optional[str] = None,
     now_epoch: Optional[float] = None,
     max_quote_age_seconds: int = MAX_QUOTE_AGE_SECONDS,
+    decision_scope: str = "research_only",
 ) -> Dict[str, Any]:
     evaluation_epoch = time.time() if now_epoch is None else now_epoch
     report = _base_report(
@@ -348,6 +352,7 @@ def evaluate_daily_sync(
         quotes_file,
         thesis_evidence_file,
         evaluation_epoch,
+        decision_scope,
     )
 
     if (
@@ -671,6 +676,15 @@ def main() -> None:
         type=int,
         default=MAX_QUOTE_AGE_SECONDS,
     )
+    parser.add_argument(
+        "--decision-scope",
+        choices=("research_only", "advisory", "actionable"),
+        default="research_only",
+        help=(
+            "Declared decision scope recorded in the report and propagated to "
+            "downstream consumers; defaults to research_only."
+        ),
+    )
     args = parser.parse_args()
     report = evaluate_daily_sync(
         positions_file=args.positions_file,
@@ -678,6 +692,7 @@ def main() -> None:
         thesis_evidence_file=args.thesis_evidence_file,
         now_epoch=args.now_epoch,
         max_quote_age_seconds=args.max_quote_age_seconds,
+        decision_scope=args.decision_scope,
     )
     print(json.dumps(report, ensure_ascii=False, indent=2, sort_keys=True))
     if report["status"] == "complete":

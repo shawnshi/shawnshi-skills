@@ -76,7 +76,7 @@ ETF 三情景方法固定 `nav_index_currency_stress`，币种等于 Brief；`en
 
 ### 双门与保存
 
-按 `dashboard_schema.json` 生成 `research_only` Dashboard，并依次运行：
+按 `dashboard_schema.json` 生成带显式 `decision_scope` 标注的 Dashboard（未声明时默认 `research_only`），并依次运行：
 
 1. `dashboard_gate.py <dashboard.json> --strict-current-contract`
 2. `dashboard_math_gate.py <dashboard.json>`

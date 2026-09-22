@@ -166,13 +166,24 @@ class ResearchBriefStrongTypeTests(unittest.TestCase):
                     )
                 )
 
-    def test_decision_scope_is_fixed_to_research_only(self):
+    def test_decision_scope_is_restricted_to_declared_levels(self):
         brief = copy.deepcopy(fixtures.valid_brief())
         brief["output_contract"]["decision_scope"] = "portfolio_context"
         self.assertIn(
-            "output_contract.decision_scope must be research_only",
+            "output_contract.decision_scope must be one of "
+            "research_only, advisory, actionable",
             validate_research_brief(brief),
         )
+
+    def test_advisory_and_actionable_decision_scopes_are_accepted(self):
+        for scope in ("research_only", "advisory", "actionable"):
+            brief = copy.deepcopy(fixtures.valid_brief())
+            brief["output_contract"]["decision_scope"] = scope
+            self.assertNotIn(
+                "output_contract.decision_scope must be one of "
+                "research_only, advisory, actionable",
+                validate_research_brief(brief),
+            )
 
     def test_market_currency_and_profile_market_are_closed(self):
         brief = copy.deepcopy(fixtures.valid_brief())

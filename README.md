@@ -247,7 +247,15 @@ pwsh -NoProfile -ExecutionPolicy Bypass -File scripts/repair_skills.ps1 -Mode Ga
 
 
 
-### 8.1 Current validation (2026-09-19)
+### 8.1 Current validation (2026-09-22)
+
+- 本次同步 `personal-intelligence-hub`、`hit-industry-radar`、`personal-investment-advisor` 三个技能的本地安装副本漂移，共 48 个文件（+661/−193 行）。同步排除缓存、虚拟环境、运行产物、草稿与 `.skill_state`，并排除 `resource-manifest.json`（由发布副本重新生成）；文件按 LF 字节表示写入，未引入换行改写，也未删除发布副本独有文件。
+- `personal-intelligence-hub`：日期证据层新增两条确定性规则。`standalone-dateline/1` 读取整行完整日期（`YYYY年M月D日`、`YYYY-MM-DD`、`Month D, YYYY`，可带 `, H:MM AM/PM` 与 UTC/GMT 后缀，容忍对称强调包裹），仅扫描正文前 1500 字节，且要求上一非空行是短标签行、之前不出现 ≥120 字符段落；`cn-wire-dateline/1` 读取无年份中文电讯日期（如`央广网北京9月17日消息`），年份只取自 URL 路径中唯一一个完整日期，并与正文月、日逐项比对，报告窗口不参与年份推断，无锚点或多锚点冲突时整条作废。补检父级收口 `supplement_finalization_grace_seconds` 由 300 秒提高到 900 秒，上限常量化 `article_broker.MAX_FINALIZATION_GRACE_SECONDS = 3600`，worker `timeout_ms` 仍按 `max_duration_seconds + grace_seconds` 推导。arXiv 提交历史一致性守卫保持严格：v1 提交月必须等于编号月，与编号或年份不一致的页面继续判为冲突证据，不修补日期。
+- 本地安装副本验证：改动影响面 796 项测试 / 100 子测试通过（含 8 条新增日期规则回归，以及把 grace 相关断言改为按 packet 推导）；真实封存正文回放（同一 run 的 14 份 body proof，只读）中可解析日期由 3 份增至 7 份，窗口内由 1 份增至 5 份。
+- 发布副本验证：`scripts/resource_manifest.py generate/check` → 检查 52 个技能、重写 3 个、过期 0；受影响技能快速子集 537 项测试 / 29 子测试通过；`personal-investment-advisor` 技能级测试 48 项通过；全部改动 Python 文件字节编译通过；全库 `scripts/` 测试 85 项通过、13 项失败，同一失败集合在 HEAD 的清洁工作树内复现，属既有失败，本次同步未新增失败。
+- 限制：发布副本未重跑 `personal-intelligence-hub` 的耗时用例（`test_native_article_evidence.py` 两处内容一致，仅在本地安装副本运行 107 项）；`hit-industry-radar` 无技能级测试。上述结果只证明静态合同、资源一致性与单元测试行为，不代表真实模型选路的端到端验收。
+
+### 8.2 Historical validation (2026-09-19)
 
 - 本次同步 `tool-smart-latex`（P0–P2 修复）。模板改为按单一 `cjk` 开关分流语言：中文用 CTeX 方案与中文标签，英文用 `scheme=plain`、类基线行距与左对齐。补齐 Pandoc 前置（`\passthrough`、`\newcounter{none}`、`secnumdepth`、`\pandocbounded`、`CSLReferences`），修复此前已存在的结构性失败：Markdown 表格在 5 个预设中的 4 个必然编译失败、`tech_report` 行内代码失败、任意图片在所有预设失败；`academic` 清除 `newtxtext` 向 xeCJK 泄漏的 `Extension=.otf`；新增 `twocol_table.lua`（双栏表格）与 `div_boxes.lua`（fenced div 到 tcolorbox）两个过滤器。
 - 修复副本与本地运行副本同源：13 个技能文件的 Git blob 哈希与运行时副本逐字节一致；两个新过滤器在索引与工作区均为 LF。
@@ -257,7 +265,7 @@ pwsh -NoProfile -ExecutionPolicy Bypass -File scripts/repair_skills.ps1 -Mode Ga
 - 全库 `repair_skills.ps1 -Mode Gate` 通过：52 个技能、7 项自动持久化例外、19 类触发所有权，阻断项为 0。
 - 上述结果只证明静态合同、资源一致性与已记录的编译行为，不代表面向真实模型选路的端到端验收，也不代替逐页视觉验收：本轮未对最终 PDF 做逐页人工/多模态版面检查。
 
-### 8.2 Historical validation (2026-09-09)
+### 8.3 Historical validation (2026-09-09)
 
 - 按本地一级 `SKILL.md` 盘点为 51 个技能；`mentat-dream-cycle`、`mentat-insight-diary` 当前不在本目录，已从库存表移除。
 - 自动持久化例外表保留 7 项现存技能合同；移除缺失技能的独立条目，不改变其他技能入口中已有的受保护写入边界。
@@ -267,7 +275,7 @@ pwsh -NoProfile -ExecutionPolicy Bypass -File scripts/repair_skills.ps1 -Mode Ga
 - 发布副本全库 Gate 通过。测试分别在适用环境运行：本地安装目录根测试 94 项通过；日记测试运行 63 项，跳过 4 项缺少已移除 Mentat 技能的可选集成，其余通过；发布副本资讯测试运行 337 项，跳过 1 项，其余通过。发布副本单独复验日记写入器 36 项，跳过相同 4 项，其余通过。
 - 新增缺失 Mentat 证据门时拒绝写入且不创建目标目录的回归测试，未放宽生产写入门。依赖宿主目录布局的根合同及日记入口测试在本地安装目录验证，不将独立克隆中的路径不匹配写成代码通过。
 
-### 8.3 Historical validation (2026-09-07)
+### 8.4 Historical validation (2026-09-07)
 
 - 本次全库 `repair_skills.ps1 -Mode Gate` 通过：53 个技能，8 项自动持久化例外，19 类触发所有权，阻断项为 0。
 - 资源索引独立检查：53 个技能，过期或缺失清单为 0；界面元数据独立检查：19 份配置，错误为 0。
@@ -275,9 +283,9 @@ pwsh -NoProfile -ExecutionPolicy Bypass -File scripts/repair_skills.ps1 -Mode Ga
 - `hit-customer-analyst` 仍为交付候选；静态门禁通过不改变其限定内部试用状态，真实发布验收以该技能的 `references/release-acceptance.md` 为准。
 - Gate 只证明其覆盖的静态合同与资源一致性，不代表所有技能已在新会话中端到端验证，也不代替发布前的敏感信息检查。
 
-### 8.4 Historical baseline (2026-09-05)
+### 8.5 Historical baseline (2026-09-05)
 
 - 此前记录：全库 Gate 通过，53 个技能、8 项自动持久化例外、19 类触发所有权，阻断项为 0。
 - 此前记录：`mentat-insight-diary/scripts/test_skill_contract.py` 的 14 项测试通过；本次未重跑该回归。
 
-Last updated: 2026-09-19
+Last updated: 2026-09-22

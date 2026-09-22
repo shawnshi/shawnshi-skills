@@ -1,7 +1,7 @@
 {
   "resource_kind": "inverse_volatility_allocation_research_policy",
   "schema_version": "pia_inverse_volatility_policy_v1",
-  "decision_scope": "research_only",
+  "decision_scope_default": "research_only",
   "required_top_level": [
     "schema_version",
     "experiment",
@@ -13,7 +13,7 @@
   ],
   "fixed_values": {
     "experiment": "inverse_volatility_allocation",
-    "decision_scope": "research_only"
+    "decision_scope_one_of": ["research_only", "advisory", "actionable"]
   },
   "bucket_contract": {
     "bucket_targets": "non-negative JSON numbers summing to 1.0",

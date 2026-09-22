@@ -26,8 +26,8 @@ def _validate_policy(policy: Any) -> list[str]:
     errors: list[str] = []
     if policy.get("schema_version") != POLICY_SCHEMA_VERSION:
         errors.append(f"policy.schema_version must equal {POLICY_SCHEMA_VERSION}")
-    if policy.get("decision_scope") != "research_only":
-        errors.append("policy.decision_scope must equal research_only")
+    if policy.get("decision_scope") not in ("research_only", "advisory", "actionable"):
+        errors.append("policy.decision_scope must be one of research_only, advisory, actionable")
     no_trade_band = finite_number(policy.get("no_trade_band"))
     if no_trade_band is None or not 0 <= no_trade_band <= 1:
         errors.append("policy.no_trade_band must be between 0 and 1")
@@ -104,7 +104,10 @@ def run_proposal(
         if outside_band > 0 and horizon_net >= minimum_benefit
         else "no_active_research_case"
     )
-    report = base_report(SCHEMA_VERSION)
+    report = base_report(
+        SCHEMA_VERSION,
+        decision_scope=str(policy.get("decision_scope") or "research_only"),
+    )
     report.update(
         {
             "status": "complete",

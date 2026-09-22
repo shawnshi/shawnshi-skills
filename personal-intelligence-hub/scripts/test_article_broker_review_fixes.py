@@ -154,15 +154,15 @@ def test_tampered_body_proof_is_rejected_before_parent_assembly(run, monkeypatch
 
 @pytest.mark.parametrize("positive", [False, True])
 @pytest.mark.parametrize("assembled", [False, True])
-@pytest.mark.parametrize("elapsed_seconds", [110, 300, 301])
+@pytest.mark.parametrize("elapsed_seconds", [110, 900, 901])
 def test_configured_handoff_grace_frozen_cli(run, monkeypatch, positive, assembled, elapsed_seconds):
     request, packet, sealed, draft = sealed_draft(
         run, monkeypatch, positive, max_duration_seconds=150)
     payload = json.loads(request.read_bytes())
     worker = payload["launch_plan"][0]["workers"][0]
-    assert packet["finalization"]["grace_seconds"] == 300
+    assert packet["finalization"]["grace_seconds"] == 900
     assert packet["execution_budget"] == {"max_queries": 3, "max_urls": 4, "max_duration_seconds": 150}
-    assert worker["timeout_ms"] == 450000
+    assert worker["timeout_ms"] == (150 + packet["finalization"]["grace_seconds"]) * 1000
     assert worker["tool_budget"] == packet["tool_budget"] == {"soft": 8, "hard": 12, "block": "*"}
     assert worker["token_budget"] == packet["usage_budget"]["tokens"] == 150000
     assert worker["cost_budget_usd"] == packet["usage_budget"]["cost_usd"]
@@ -176,7 +176,7 @@ def test_configured_handoff_grace_frozen_cli(run, monkeypatch, positive, assembl
     finalized = frozen_cli(run, request, "finalize", "--parent", "--request", str(request),
         "--gap-id", "tech", elapsed_seconds=elapsed_seconds)
     final = Path(packet["output_paths"]["result"])
-    if elapsed_seconds > 300:
+    if elapsed_seconds > 900:
         assert finalized.returncode != 0 and "grace expired" in finalized.stderr
         assert (draft.read_bytes(), run[0].read_bytes()) == before
         assert not final.exists() and not (run[1] / "supplement_results.json").exists()

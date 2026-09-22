@@ -20,6 +20,7 @@ from pathlib import Path
 from typing import Any
 
 from article_broker import MAX_BODY as MAX_FETCH_BODY_BYTES
+from article_broker import MAX_FINALIZATION_GRACE_SECONDS
 from history_manager import generate_event_id, normalize_url
 from hub_utils import _replace_with_retry, atomic_dump_json, load_json
 from run_contract import (
@@ -838,7 +839,11 @@ def _guard_parent_finalization(
     completed = _aware_datetime(draft.get("completed_at"), "completed_at")
     started = _aware_datetime(draft.get("started_at"), "started_at")
     grace = packet["finalization"]["grace_seconds"]
-    if not isinstance(grace, int) or isinstance(grace, bool) or not 1 <= grace <= 300:
+    if (
+        not isinstance(grace, int)
+        or isinstance(grace, bool)
+        or not 1 <= grace <= MAX_FINALIZATION_GRACE_SECONDS
+    ):
         raise RunContractError("supplement finalization grace is invalid")
     current = datetime.now(timezone.utc)
     if (

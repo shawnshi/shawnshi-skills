@@ -6,7 +6,7 @@
   "required": ["schema_version", "decision_scope", "as_of", "annualization_factor", "universe", "model", "cost_model", "observations", "trial_net_excess_returns", "signals"],
   "properties": {
     "schema_version": {"const": "pia_alpha_evidence_v1"},
-    "decision_scope": {"const": "research_only"},
+    "decision_scope": {"enum": ["research_only", "advisory", "actionable"]},
     "as_of": {"type": "string", "format": "date-time"},
     "annualization_factor": {"type": "integer", "minimum": 2},
     "universe": {

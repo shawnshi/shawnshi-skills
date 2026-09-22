@@ -5,7 +5,7 @@
   "required": ["schema_version", "decision_scope", "as_of", "symbols", "current_weights", "risk_budgets", "minimum_weights", "maximum_weights", "covariance", "risk_aversion", "transaction_cost_bps", "cost_evidence", "step_size", "tolerance", "max_iterations", "max_one_way_turnover", "max_trade_weight"],
   "properties": {
     "schema_version": {"const": "pia_active_construction_policy_v1"},
-    "decision_scope": {"const": "research_only"},
+    "decision_scope": {"enum": ["research_only", "advisory", "actionable"]},
     "as_of": {"type": "string", "format": "date-time"},
     "symbols": {"type": "array", "minItems": 1, "maxItems": 250, "uniqueItems": true, "items": {"type": "string", "minLength": 1}},
     "current_weights": {"$ref": "#/$defs/weights"},

@@ -174,5 +174,5 @@ def test_new_scoring_prepare_to_frozen_request(tmp_path):
         "max_urls": 4,
         "max_duration_seconds": 600,
     }
-    assert packet["finalization"]["grace_seconds"] == 300
+    assert packet["finalization"]["grace_seconds"] == 900
     assert packet["usage_budget"] == {"tokens": 150000, "cost_usd": 0.5}

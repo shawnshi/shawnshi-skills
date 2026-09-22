@@ -6,6 +6,7 @@ Synthetic retained text only; no network, no fetch receipts, no frozen run write
 import hashlib
 
 import article_broker as broker
+import pytest
 
 
 def paragraph(repeats=3):
@@ -414,3 +415,134 @@ def test_each_wire_declaration_is_accepted_independently():
         text = document(line, paragraph(), paragraph())
         found = dates(text)
         assert [entry["published_at"] for entry in found] == [expected], line
+
+
+def test_standalone_agency_date_line_cjk():
+    """A Chinese notice prints the agency and the date on their own consecutive lines."""
+    text = document(
+        "根据工作安排，现将《示例工作方案》发布。",
+        "国家医疗保障局",
+        "2026年9月16日",
+        paragraph(),
+        paragraph(),
+    )
+    found = dates(text)
+    assert [(entry["published_at"], entry["parser_rule"], entry["raw"]) for entry in found] == [
+        ("2026-09-16", "standalone-dateline/1", "2026年9月16日")
+    ]
+    assert found[0]["published_at_source"] == "native_readable:standalone-dateline/1"
+
+
+def test_standalone_emphasised_dateline_with_time():
+    text = document(
+        "## Example Health Cybersecurity Incident Update",
+        "_September 18, 2026, 12:00 PM_",
+        paragraph(),
+        paragraph(),
+    )
+    found = dates(text)
+    assert [(entry["published_at"], entry["parser_rule"], entry["raw"]) for entry in found] == [
+        ("2026-09-18", "standalone-dateline/1", "September 18, 2026")
+    ]
+
+
+def test_standalone_iso_date_line():
+    text = document("Notice of changes", "2026-09-17", paragraph(), paragraph())
+    found = dates(text)
+    assert [(entry["published_at"], entry["parser_rule"]) for entry in found] == [
+        ("2026-09-17", "standalone-dateline/1")
+    ]
+
+
+def test_standalone_date_after_prose_line_is_refused():
+    # A quoted date line directly under a prose sentence is never the publication date.
+    text = document(
+        "The committee met and agreed on the following schedule for the coming quarter.",
+        "2026年9月16日",
+        paragraph(),
+        paragraph(),
+    )
+    assert dates(text) == []
+
+
+def test_standalone_date_after_long_paragraph_is_refused():
+    text = document("Short notice", paragraph(), "2026-09-17", paragraph())
+    assert dates(text) == []
+
+
+def test_conflicting_standalone_dates_fail_closed():
+    text = document(
+        "国家医疗保障局",
+        "2026年9月16日",
+        "国家卫生健康委员会",
+        "2026年9月17日",
+        paragraph(),
+        paragraph(),
+    )
+    assert dates(text) == []
+
+
+def test_standalone_rule_never_overrides_a_label():
+    text = document(
+        "发布日期：2026-09-10",
+        "2026年9月16日",
+        paragraph(),
+        paragraph(),
+    )
+    found = dates(text)
+    assert [(entry["published_at"], entry["parser_rule"]) for entry in found] == [
+        ("2026-09-10", "published-label/1")
+    ]
+
+
+CNR_URL = "https://news.cnr.cn/dj/20260917/t20260917_527816462.shtml"
+CN_WIRE_LINE = "央广网北京9月17日消息（记者郭佳丽）今年以来，全国公安机关网安部门持续深化专项行动。"
+
+
+def test_cn_wire_dateline_year_from_url_anchor():
+    """A year-less Chinese dispatch line is dated only by the URL path anchor."""
+    found = dates(document(CN_WIRE_LINE, paragraph(), paragraph()), url=CNR_URL)
+    assert [(entry["published_at"], entry["parser_rule"], entry["raw"]) for entry in found] == [
+        ("2026-09-17", "cn-wire-dateline/1", "9月17日")
+    ]
+    assert found[0]["published_at_source"] == "native_readable:cn-wire-dateline/1"
+    assert found[0]["year_anchor"] == {
+        "source": "requested_url_path",
+        "value": "2026-09-17",
+    }
+
+
+def test_cn_wire_dateline_requires_url_anchor():
+    # The default fixture URL carries no date, and the window is never used instead.
+    assert dates(document(CN_WIRE_LINE, paragraph(), paragraph())) == []
+    assert (
+        dates(document(CN_WIRE_LINE, paragraph(), paragraph()), url="https://example.org/news")
+        == []
+    )
+
+
+def test_cn_wire_dateline_day_must_match_url_anchor():
+    day_off = "https://news.cnr.cn/dj/20260916/t20260916_527816462.shtml"
+    assert dates(document(CN_WIRE_LINE, paragraph(), paragraph()), url=day_off) == []
+
+
+@pytest.mark.parametrize(
+    "line",
+    [
+        "央广网北京9月17日（记者郭佳丽）今年以来，全国公安机关网安部门持续深化专项行动。",
+        "本报评论员文章认为9月17日发布的消息值得关注。",
+    ],
+)
+def test_cn_wire_dateline_requires_dispatch_marker(line):
+    assert dates(document(line, paragraph(), paragraph()), url=CNR_URL) == []
+
+
+def test_cn_wire_dateline_only_in_bounded_header_region():
+    text = document(*([paragraph()] * 8), CN_WIRE_LINE)
+    assert len(text) > 1500
+    assert dates(text, url=CNR_URL) == []
+
+
+def test_conflicting_url_date_anchors_fail_closed():
+    ambiguous = "https://news.cnr.cn/dj/20260917/t20260916_527816462.shtml"
+    assert dates(document(CN_WIRE_LINE, paragraph(), paragraph()), url=ambiguous) == []

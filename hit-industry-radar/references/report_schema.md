@@ -6,7 +6,8 @@
 
 - 无 BOM 的严格 UTF-8，无替换字符；首行为 `# 医疗行业雷达｜YYYY-MM-DD 至 YYYY-MM-DD`。
 - 第一个二级标题前恰有一份未加粗的元数据：报告周期、出刊日期、生成时点、报告时区、窗口模式、报告范围、检索状态。字段以中文冒号分隔；值去除首尾空白后必须非空（包括空格、制表符和全角空格）。
-- 出刊日期恒等于窗口结束日；默认文件名 `DHWB-Radar-YYYYMMDD.md`。窗口模式为 rolling7 / natural_week / explicit，算法见 research_contract.md。报告范围写地区、主题/对象，去首尾空白后作为归档身份；同名、同日期但范围、窗口模式或报告时区不同也不能覆盖。时区影响 cutoff 当地日历，即使自定义文件名也绑定时区原值，不自动合并时区别名。
+- 出刊日期恒等于窗口结束日；默认文件名 `DHWB-Radar-YYYYMMDD.md`。`DHWB` 是数字健康周报前缀，radar 沿用它是既有归档与共享身份表（`report_archive.py`）的稳定契约，不因标题措辞改名。窗口模式为 rolling7 / natural_week / explicit，算法见 research_contract.md。报告范围写地区、主题/对象，去首尾空白后作为归档身份；同名、同日期但范围、窗口模式或报告时区不同也不能覆盖。时区影响 cutoff 当地日历，即使自定义文件名也绑定时区原值，不自动合并时区别名。
+- 归档存在两代格式：2026-09-13 起的报告使用当前结构；此前的归档缺少当前七项元数据与规范标题，当前结构门对这类目标 fail closed。这类文件只读保留，修正须人工身份规范化/复核后按共享契约处理，不自动迁移、改写或改名。
 - CLI 保留 weekly/scout 的五个必需参数、`--report-timezone`、`--allow-custom-filename`；函数 `validate_report(...) -> list[str]`，错误非空、CLI 退出 1，成功退出 0，参数语法错误退出 2。`--window-mode` 默认 rolling7；不使用 weekly 专属的 `--allow-custom-period`。自定义文件名仅用户明确指定时允许，不豁免身份、日期或来源校验。
 
 从技能目录运行（这是合成示例，不是实际报告命令）：
@@ -73,14 +74,14 @@ python -B -m unittest discover -s scripts -p 'test_validate_industry_radar.py' -
 
 结构通过不证明新闻真实、URL 可访问、主张有证据、血缘独立、采购归一正确或同日事件早于 cutoff；须逐项人工复核。无强制金额、条数、双链、临床/经营指标或 ROI。
 
-共享入口已接入 radar 自有 `metadata` / `canonical_title` / `validate_report`；从 `窗口模式` 传 `window_mode`，不传 weekly 的 `allow_custom_period`。源须 complete 或披露实际失败面、影响和恢复条件的 partial；partial 的覆盖表与信息缺口必须一致，人工核验不得省略。blocked 诊断可通过结构校验，但共享归档源硬性拒绝。旧目标要求全部七个唯一非空元数据、对应规范标题、合法状态和命名身份；不全量迁移旧正文。状态不作为替换身份：旧 blocked 诊断只有合法同身份时可被新的合格定稿替换，未知状态/跨技能伪装拒绝。新源仍须完整通过当前结构校验。
+共享入口已接入 radar 自有 `metadata` / `canonical_title` / `validate_report`；从 `窗口模式` 传 `window_mode`，不传 weekly 的 `allow_custom_period`。源须 complete 或披露实际失败面、影响和恢复条件的 partial；partial 的覆盖表与信息缺口必须一致，人工核验不得省略。blocked 诊断可通过结构校验，但共享归档源硬性拒绝。既有目标的身份、状态与 fail-closed 边界以共享契约「新版身份与既有报告」为准，本节不重复；新源仍须完整通过当前结构校验。
 
 ### 正式定稿 validate → commit（非预览）
 
-执行前读 skills root 下的 `shared/references/report_archive.md`（本机绝对路径 `C:/Users/shich/.pi/agent/skills/shared/references/report_archive.md`）。共享脚本为 `C:/Users/shich/.pi/agent/skills/shared/scripts/report_archive.py`，后端为 `C:/Users/shich/.pi/agent/skills/shared/scripts/report_archive_windows.py`。下列 PowerShell 骨架仅用于已获正式自动归档意图的任务；`$draft`、`$target`、`$planFile` 必须事先解析为本次实际绝对路径，不把示例当生产目标。`$draft` 与 `$planFile` 在会话隔离临时目录，`$target` 的父目录必须存在；不自动创建缺失归档目录。目录优先级与默认既有 MEMORY 下 `raw/HealthcareIndustryRadar` 不变，不能静默另建平行路径。
+执行前完整读取 skills root 下的 `shared/references/report_archive.md`（路径、身份、事务、权限与恢复的唯一权威，本节不重复其细则）。共享资源以本技能目录 `skill_dir` 为基准解析：`skill_dir.parent` 即 skills root，`shared/scripts/report_archive.py` 是唯一 validate/commit 入口，`shared/scripts/report_archive_windows.py` 是原生后端；不缓存、不写死本机绝对路径。下列 PowerShell 骨架仅用于已获正式自动归档意图的任务；`$draft`、`$target`、`$planFile` 必须事先解析为本次实际绝对路径，不把示例当生产目标。`$draft` 与 `$planFile` 在会话隔离临时目录，`$target` 的父目录必须存在；不自动创建缺失归档目录。目录优先级与默认既有 MEMORY 下 `raw/HealthcareIndustryRadar` 不变，不能静默另建平行路径。
 
 ```powershell
-$skillDir = 'C:/Users/shich/.pi/agent/skills/hit-industry-radar'
+$skillDir = (Resolve-Path -LiteralPath '<本技能目录>').Path   # 由运行时解析为本次实际绝对路径，不写死机器路径
 $skillsRoot = Split-Path -Parent $skillDir
 $archiveScript = Join-Path $skillsRoot 'shared/scripts/report_archive.py'
 # 先按上文用真实日期、截止、时区和窗口模式运行本技能结构校验并人工复核。
@@ -97,6 +98,4 @@ if (($receiptJson -join "`n" | ConvertFrom-Json).status -ne 'COMMITTED') { throw
 
 仅用户明确指定自定义文件名时给 validate 加 `--allow-custom-filename`；`--allow-custom-period` 传给 radar 会拒绝。默认目标恒为 `DHWB-Radar-YYYYMMDD.md`（周期结束日）。替换比较技能、周期起止、出刊日、窗口模式、去首尾空白后的报告范围及报告时区。旧目标缺少身份字段或不同身份一律 fail closed，不自动改写、迁移、改名或清锁。
 
-发布后以 UTF-8 回读正式文件，核对标题、周期、文件名、来源和非空正文及 SHA-256；只有退出 0 且 COMMITTED 才报告成功。缺 Python/校验器/时区/原生 Windows 能力或权限则停止，不安装、不普通复制、不放宽 ACL。共享门保留 owner/group/DACL/protection，不保证完整 SACL；limited-token AccessCheck 与 `actual_non_elevated_open` 分别记录，不能将提升宿主的实际打开称为非提升打开。非合作写者仍存在最后检查到 replace 的竞争窗口；POSTCOMMIT/BLOCKED 可能已改目标，保留 journal/original/candidate，不自动回滚。恢复必须明确确认并排除较新版本，重新 validate 当前目标后 commit，不能复用旧计划。
-
-历史 hit_audit_gate.py 的 radar 分支不是当前 gate，也不是本技能依赖。
+发布后以 UTF-8 回读正式文件，核对标题、周期、文件名、来源和非空正文及 SHA-256；只有退出 0 且回执 `status=COMMITTED` 才报告成功。缺 Python、校验器、时区数据、原生 Windows 能力或权限则停止，不安装、不普通复制、不放宽 ACL。owner/group/DACL、访问证据分类、并发窗口、POSTCOMMIT 残留与恢复步骤以共享契约为准，本节不复述。

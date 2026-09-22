@@ -220,8 +220,8 @@ def _validate_package(package: Any) -> tuple[list[str], dict[str, Any]]:
     errors: list[str] = []
     if package.get("schema_version") != PACKAGE_SCHEMA_VERSION:
         errors.append(f"package.schema_version must equal {PACKAGE_SCHEMA_VERSION}")
-    if package.get("decision_scope") != "research_only":
-        errors.append("package.decision_scope must equal research_only")
+    if package.get("decision_scope") not in ("research_only", "advisory", "actionable"):
+        errors.append("package.decision_scope must be one of research_only, advisory, actionable")
     as_of = parse_aware_iso(package.get("as_of"))
     if as_of is None:
         errors.append("package.as_of must be a timezone-aware ISO datetime")
@@ -557,7 +557,10 @@ def evaluate_alpha_package(
         "annual_turnover": annual_turnover <= float(policy["max_annual_turnover"]),
     }
     eligible = all(checks.values())
-    report = base_report(SCHEMA_VERSION)
+    report = base_report(
+        SCHEMA_VERSION,
+        decision_scope=str(package.get("decision_scope") or "research_only"),
+    )
     report.update(
         {
             "status": "complete" if eligible else "incomplete",

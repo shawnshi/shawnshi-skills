@@ -319,7 +319,10 @@ def build_report(
     user_agent: str,
     timeout: float = 30.0,
     session: requests.Session | None = None,
+    decision_scope: str = "research_only",
 ) -> dict[str, Any]:
+    if decision_scope not in ("research_only", "advisory", "actionable"):
+        decision_scope = "research_only"
     _validate_as_of(as_of, datetime.now(timezone.utc))
     normalized = [symbol.strip().upper().replace(".", "-") for symbol in symbols]
     if not normalized or any(not symbol for symbol in normalized) or len(normalized) != len(set(normalized)):
@@ -370,7 +373,7 @@ def build_report(
         "schema_version": SCHEMA_VERSION,
         "status": "complete" if complete else "insufficient_evidence",
         "detail_status": "all_snapshots_complete" if complete else "one_or_more_snapshots_incomplete",
-        "decision_scope": "research_only",
+        "decision_scope": decision_scope,
         "data_access_mode": "free_public",
         "as_of": as_of.isoformat(),
         "retrieved_at": retrieved_at.isoformat(),
@@ -389,6 +392,11 @@ def main() -> int:
     parser.add_argument("--as-of", required=True)
     parser.add_argument("--user-agent", help="Defaults to PIA_SEC_USER_AGENT.")
     parser.add_argument("--timeout", type=float, default=30.0)
+    parser.add_argument(
+        "--decision-scope",
+        choices=("research_only", "advisory", "actionable"),
+        default="research_only",
+    )
     args = parser.parse_args()
     try:
         user_agent = validate_user_agent(args.user_agent or os.environ.get("PIA_SEC_USER_AGENT"))
@@ -401,13 +409,14 @@ def main() -> int:
             as_of=as_of,
             user_agent=user_agent,
             timeout=args.timeout,
+            decision_scope=args.decision_scope,
         )
     except (OSError, ValueError, requests.RequestException, json.JSONDecodeError) as exc:
         report = {
             "schema_version": SCHEMA_VERSION,
             "status": "invalid_input",
             "detail_status": "sec_edgar_snapshot_failed",
-            "decision_scope": "research_only",
+            "decision_scope": args.decision_scope,
             "errors": [str(exc)],
         }
     print(json.dumps(report, ensure_ascii=False, indent=2, sort_keys=True))
