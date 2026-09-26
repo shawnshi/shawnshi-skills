@@ -90,7 +90,7 @@ description: 说明技能做什么，以及用户在什么场景下应使用它�
 
 ## 5. Skill inventory
 
-当前库存为 52 个用户技能，不包含 `.system`、`scripts`、`shared` 和 `reports`。以下为功能摘要，完整触发条件、授权范围和退出边界以对应 `SKILL.md` 为准。
+当前库存为 51 个用户技能，不包含 `.system`、`scripts`、`shared` 和 `reports`。以下为功能摘要，完整触发条件、授权范围和退出边界以对应 `SKILL.md` 为准。
 
 ### Academic and cognitive research
 
@@ -167,7 +167,6 @@ description: 说明技能做什么，以及用户在什么场景下应使用它�
 | `tool-url-markdown` | 从公开或用户有权访问的网页提取正文并保存为结构清晰的 Markdown |
 | `tool-web-slide` | 将演示内容构建为可在浏览器运行、验证和交付的 HTML 幻灯片、离线演示包或单文件 HTML；不用于原生 PPTX 或仅需故事线的任务 |
 | `tool-youtube-summary` | 从 YouTube 视频、字幕、转录稿或长文中提取论点、证据和结构，并生成摘要、观点矩阵或长文 |
-| `weknora` | 通过 WeKnora REST API 列出知识库、导入文件或 URL、写入 Markdown、跟踪解析状态、浏览与检索知识条目；删除或编辑条目前须逐条确认，凭据由环境提供。本技能为 2026-09-16 从 ClawHub 安装的第三方技能，来源与本地差异见 `weknora/UPSTREAM.md` |
 
 ## 6. Trigger ownership
 
@@ -257,15 +256,21 @@ pwsh -NoProfile -ExecutionPolicy Bypass -File scripts/repair_skills.ps1 -Mode Ga
 
 环境：Windows 主机；`pwsh`（PowerShell Core）；Python 3.13 + PyYAML。
 
-- 全库 `sh scripts/gate.sh` 通过。`repair_skills.ps1 -Mode Gate` 的 28 类阻断项全为 0，退出码 0：`InventoryMismatch=False`（声明 52、实际 52）、`FrontmatterFailures=0`、`OversizedSkills=0`、`OversizedByEstimatedTokens=0`（最大估算 6600）、`MissingResourceManifests=0`、`InvalidResourceManifests=0`、`ManifestDependencyIssues=0`、`OpenAiMetadataFailures=0`、`ValidatorIntegrationFailures=0`、`DeprecatedToolSkills=0`、`ForeignRuntimeSkills=0`、`ReasoningDirectiveSkills=0`、`HardcodedModelSkills=0`、`SkillJsonFiles=0`、`NodeModulesDirectories=0`、`TriggerOwnershipClasses=19`、`TriggerOwnershipConflicts=0`。
+- 全库 `sh scripts/gate.sh` 通过。`repair_skills.ps1 -Mode Gate` 的 28 类阻断项全为 0，退出码 0：`InventoryMismatch=False`（本轮先为声明 52 / 实际 52；删除两个技能后为 51 / 51，见下条）、`FrontmatterFailures=0`、`OversizedSkills=0`、`OversizedByEstimatedTokens=0`（最大估算 6600）、`MissingResourceManifests=0`、`InvalidResourceManifests=0`、`ManifestDependencyIssues=0`、`OpenAiMetadataFailures=0`、`ValidatorIntegrationFailures=0`、`DeprecatedToolSkills=0`、`ForeignRuntimeSkills=0`、`ReasoningDirectiveSkills=0`、`HardcodedModelSkills=0`、`SkillJsonFiles=0`、`NodeModulesDirectories=0`、`TriggerOwnershipClasses=19`、`TriggerOwnershipConflicts=0`。
 - 非阻断项：`OpenAiPolicyWarnings=3`（`industry-strategy-analyst`、`personal-health-analysis`、`senior-osint-analyst` 的 `agents/openai.yaml` 关闭隐式调用，但 `SKILL.md` 未声明 `disable-model-invocation`，因此本宿主仍会自动触发）。属路由决策，待技能所有者确认后再改任一侧。
 - 测试：`python -m pytest scripts -q` 在**本地安装目录**运行 102 项通过、67 项子测试通过。同一命令在**独立克隆**中为 90 项通过、13 项失败，且这 13 项在同步前的 `HEAD` 清洁工作树上以完全相同的集合复现：`scripts/test_autonomy_contracts.py` 从 `AGENT = SKILLS.parent` 读 `pai/*` 契约文件，而该路径只在安装库旁边存在，故发布副本内不可能通过。“发布副本 Gate 通过”因此仅在 `repair_skills.ps1 -Mode Gate` 与资源清单两层成立，不含该测试层；本节旧文句中的无限定“102 项通过”仅在安装目录可复现。
 - 本轮同步（2026-09-26，`fca6940e`）：从安装库同步 118 个文件的内容变更并新增 `scripts/gate.sh`、`mentat-skill-creator/references/host-routing-eval.md`；`resource-manifest.json` 由发布副本按自身实际文件重新生成，不沿用安装库版本。同步不删除发布副本独有文件。
   - `academic-paper-reader`：复现就绪度卡片成为门禁强制槽位（标题 + 四个维度，缺一则具名报错），模板补 YAML frontmatter、数字并入带 E-ID 的证据索引、新增消融归因与负向边界，参考示例重写为新结构，避免样例继续教旧结构。
   - 刻意未发布：`gws-auth-keeper`（安装库独有的新技能，未进库存表，且正文写死 `C:/Users/shich`，违反本 README 第 3 节“不硬编码用户目录”）。发布它属另一项治理决定。
-  - 刻意不删除：`weknora`（发布副本存在且本 README 已声明，安装库缺失——按安装缺口处理，不按退役处理；“同步”不蕴含删除已发布的第三方内容）。
+  - 同步当时保留：`weknora`（发布副本存在且本 README 已声明，安装库缺失——当时按安装缺口而非退役处理）。**此保留决定已被所有者推翻**，见下一条。
   - 排除项：`.ruff_cache`、`__pycache__`、`.pytest_cache`、`.skill_state`、`.deepxiv-draft-*`、`output/`、`garmin-output/`、`scripts/tmp/`、`NUL`。
-- 资源清单：52 个技能各一份 schema v3 manifest，`-Check` 报过期 0。
+- 技能删除（2026-09-26，所有者指示）：移除 `gws-auth-keeper` 与 `weknora`，库存由 52 降为 51（声明 51、实际 51）。
+  - `gws-auth-keeper`：仅存在于此前的安装库，安装库不是 git 仓库，因此这次删除没有历史可恢复；删除前已整树归档。
+  - `weknora`：从发布副本 `git rm -r` 移除，同时删除其库存行（删除目录而不删行，或反之，都会使数量门禁失衡）。它的恢复路径是此前的提交历史。
+  - 两份清单声明与磁盘目录同步调整为 51，未触碰第 8 节历史记录中的“52 个技能”字样：那是当时的事实，不是当前状态。
+  - 归档（含逐文件 SHA-256）：`C:/Users/shich/removed-skills-20260926/`；`gws-auth-keeper` 5 个文件、`weknora` 5 个文件。
+  - `shared/trigger-ownership-matrix.json` 无需改动：两个技能在其中都没有引用（已全库检索确认）。
+- 资源清单：51 个技能各一份 schema v3 manifest，`-Check` 报过期 0。
 - 修复项（本轮）：
   - 恢复丢失的 `scripts/validate_openai_yaml.py` 及其测试；同步 `scripts/resource_manifest.py` 与 `scripts/test_resource_manifest.py` 的 Lua 换行归一化修复。修复前 `repair_skills.ps1` 会在 `validator_integration_failures` 上恒失败，19 份 `agents/openai.yaml` 处于无校验状态。
   - 为 52 个技能补齐 `resource-manifest.json`（此前仅 2 份，缺失 39 份）。
