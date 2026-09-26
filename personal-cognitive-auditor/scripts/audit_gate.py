@@ -293,6 +293,16 @@ def semantic_clauses(text: str) -> list[str]:
     return [clause.strip() for clause in CLAUSE_SPLIT.split(text) if clause.strip()]
 
 
+# The acquisition-audit token `live_fallback=not_used` is the machine-readable
+# statement that the action did not happen. Reading the token itself as an
+# affirmative action claim makes the canonical token line unpassable whenever
+# `local_status=partial` is present, so the declaration is removed before the
+# action test. `live_fallback=used` and ordinary prose keep tripping the guard.
+NON_ACTION_FALLBACK_DECLARATION = re.compile(
+    r"(?i)\blive_fallback\s*[:=]\s*not_used\b"
+)
+
+
 def has_partial_cloud_fallback(text: str) -> bool:
     clauses = semantic_clauses(text)
     partial_indexes = [
@@ -303,6 +313,7 @@ def has_partial_cloud_fallback(text: str) -> bool:
 
     for index, clause in enumerate(clauses):
         candidate = FALLBACK_NEGATION.sub("", clause)
+        candidate = NON_ACTION_FALLBACK_DECLARATION.sub(" ", candidate)
         if ALLOWED_NO_DATA_FALLBACK.search(candidate) or UNRELATED_DOMAIN.search(candidate):
             continue
         if not CLOUD_FALLBACK_ACTION.search(candidate):

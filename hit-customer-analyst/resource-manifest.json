@@ -1,8 +1,7 @@
 {
   "schema_version": 3,
   "skill": "hit-customer-analyst",
-  "generated_at": "2026-09-19T19:54:46+08:00",
-  "hash_algorithm": "SHA-256",
+  "generated_at": "2026-09-24T09:41:50+08:00",  "hash_algorithm": "SHA-256",
   "text_hash_normalization": "LF",
   "skill_md": "SKILL.md",
   "skill_md_sha256": "0d655e5c3dfe6fc5a299534150d03bb110c6efd7d5bc283c61fcab09591eb65a",

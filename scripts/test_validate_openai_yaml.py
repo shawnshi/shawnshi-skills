@@ -109,6 +109,71 @@ class OpenAiYamlValidationTests(unittest.TestCase):
 
         self.assertIn("openai_icon_invalid", codes)
 
+    def test_contradictory_invocation_policy_fails(self):
+        for frontmatter_flag, policy_flag in ((True, True), (False, False)):
+            with self.subTest(frontmatter=frontmatter_flag, policy=policy_flag):
+                (self.skill_dir / "SKILL.md").write_text(
+                    "---\nname: example-skill\ndescription: 用于测试界面元数据的示例技能。\n"
+                    f"disable-model-invocation: {'true' if frontmatter_flag else 'false'}\n---\n",
+                    encoding="utf-8",
+                )
+                self.write_yaml(
+                    'interface:\n'
+                    '  display_name: "Example Skill"\n'
+                    '  short_description: "Validate deterministic local skill metadata"\n'
+                    '  default_prompt: "Use $example-skill to validate this skill."\n'
+                    'policy:\n'
+                    f'  allow_implicit_invocation: {"true" if policy_flag else "false"}\n'
+                )
+
+                result = validator.validate_root(self.root)
+
+                codes = {issue["code"] for issue in result["issues"]}
+                self.assertIn("openai_policy_contradiction", codes)
+
+    def test_inverse_invocation_policy_passes(self):
+        (self.skill_dir / "SKILL.md").write_text(
+            "---\nname: example-skill\ndescription: 用于测试界面元数据的示例技能。\n"
+            "disable-model-invocation: true\n---\n",
+            encoding="utf-8",
+        )
+        self.write_yaml(
+            'interface:\n'
+            '  display_name: "Example Skill"\n'
+            '  short_description: "Validate deterministic local skill metadata"\n'
+            '  default_prompt: "Use $example-skill to validate this skill."\n'
+            'policy:\n'
+            '  allow_implicit_invocation: false\n'
+        )
+
+        result = validator.validate_root(self.root)
+
+        self.assertEqual(result["failures"], 0, result["issues"])
+        self.assertEqual(result["warnings"], [])
+
+    def test_unpaired_invocation_policy_warns_without_failing(self):
+        self.write_yaml(
+            'interface:\n'
+            '  display_name: "Example Skill"\n'
+            '  short_description: "Validate deterministic local skill metadata"\n'
+            '  default_prompt: "Use $example-skill to validate this skill."\n'
+            'policy:\n'
+            '  allow_implicit_invocation: false\n'
+        )
+
+        result = validator.validate_root(self.root)
+
+        self.assertEqual(result["failures"], 0, result["issues"])
+        self.assertEqual(
+            [warning["code"] for warning in result["warnings"]],
+            ["openai_policy_unpaired"],
+        )
+
+    def test_skill_without_openai_yaml_reports_no_warnings(self):
+        result = validator.validate_root(self.root)
+
+        self.assertEqual(result, {"checked": 0, "failures": 0, "issues": [], "warnings": []})
+
 
 if __name__ == "__main__":
     unittest.main()

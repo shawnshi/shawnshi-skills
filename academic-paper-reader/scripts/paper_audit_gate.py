@@ -45,6 +45,26 @@ NO_NETWORK_RE = re.compile(
     r"not[ \t]+(?:connected[ \t]+to|using|searched?)[ \t]+(?:the[ \t]+)?(?:web|internet)|"
     r"offline[ \t]+only"
 )
+SCORECARD_HEADING_RE = re.compile(
+    r"(?im)^[ \t]{0,3}(#{1,6})[ \t]*"
+    r"(?:\d+(?:\.\d+)*[.)、]?[ \t]*)?"
+    r"(?:工程复现就绪度评估|复现就绪度评估|复现就绪度|"
+    r"Reproducibility[ \t]+Scorecard|Reproducibility[ \t]+Assessment)"
+    r"(?:[ \t:：(（]|$)"
+)
+#: The four questions the scorecard exists to answer, matching the template's four rows.
+#:
+#: Matching is tolerant on wording and strict on coverage.  The slot is the analyst's answer to
+#: "can this be rerun, at what cost, with which data, and how fragile is the environment"; a
+#: section that names the heading and then answers three of the four has not answered the
+#: fourth, and the reader who has to budget the reproduction is the one who loses.  ``未核验``
+#: is a valid answer -- this checks that the question was faced, not what the verdict was.
+SCORECARD_DIMENSIONS = (
+    ("代码完备度 (code)", r"代码|源码|仓库|repository|code\b"),
+    ("算力与成本 (compute)", r"算力|硬件|成本|代价|GPU|compute|cost"),
+    ("数据与权重 (data)", r"数据|权重|checkpoint|dataset|weights"),
+    ("环境脆弱性 (environment)", r"环境|依赖|容器|environment|dependenc"),
+)
 
 
 class TemplateError(RuntimeError):
@@ -177,6 +197,22 @@ def known_template_placeholders(template_path: Path | None = None) -> set[str]:
     return _load_template_placeholders(template_path)
 
 
+def _section_body(prose: str, heading: re.Match[str]) -> str:
+    """The text under ``heading``, up to the next heading at the same or higher level.
+
+    Level-aware rather than "stop at the next heading": that shorter rule is right for
+    ``_source_scope_declared``, whose section is one declaration line, but wrong for the
+    scorecard -- a report may name the section and then break out its reasoning under
+    subheadings, and truncating at the first ``###`` would report every dimension as missing.
+    """
+    level = len(heading.group(1))
+    remainder = prose[heading.end() :]
+    for match in re.finditer(r"(?m)^[ \t]{0,3}(#{1,6})[ \t]+", remainder):
+        if len(match.group(1)) <= level:
+            return remainder[: match.start()]
+    return remainder
+
+
 def _source_scope_declared(prose: str) -> bool:
     if SOURCE_SCOPE_LABEL_RE.search(prose) or NO_NETWORK_RE.search(prose):
         return True
@@ -231,6 +267,26 @@ def validate_paper_draft(
 
     if mode in ("standard", "deep") and not EVIDENCE_INDEX_HEADING_RE.search(prose):
         errors.append(f"{mode} mode requires an evidence index section")
+
+    if mode in ("standard", "deep"):
+        scorecard = SCORECARD_HEADING_RE.search(prose)
+        if not scorecard:
+            errors.append(
+                f"{mode} mode requires a reproducibility scorecard section "
+                "(工程复现就绪度评估 / Reproducibility Scorecard)"
+            )
+        else:
+            body = _section_body(prose, scorecard)
+            missing = [
+                label
+                for label, pattern in SCORECARD_DIMENSIONS
+                if not re.search(pattern, body, re.IGNORECASE)
+            ]
+            if missing:
+                errors.append(
+                    "reproducibility scorecard must cover every dimension; missing: "
+                    + ", ".join(missing)
+                )
 
     if mode == "deep" and not _source_scope_declared(prose):
         errors.append(

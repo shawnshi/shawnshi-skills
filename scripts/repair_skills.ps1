@@ -11,6 +11,12 @@ param(
 
     [int]$LineThreshold = 500,
 
+    # Estimated-token ceiling for SKILL.md. Line count alone lets a dense
+    # Chinese body stay invisible: 85 lines at 118 bytes/line is far more
+    # context than 85 lines of short English. Calibrated so the current
+    # library keeps its headroom (max ~6600 tokens); tighten deliberately.
+    [int]$TokenThreshold = 8000,
+
     [string]$ReportDir = ''
 )
 
@@ -226,6 +232,37 @@ function Test-AutomaticPersistenceOptOut {
     return $false
 }
 
+# Vendored trees and build output are not skill content. Keep this list aligned
+# with resource_manifest.py IGNORED_DIRECTORIES, otherwise a dependency dump
+# inside a skill produces findings about libraries the skill never authored.
+$IgnoredCorpusDirectories = [System.Collections.Generic.HashSet[string]]::new(
+    [string[]]@(
+        '__pycache__', '.ruff_cache', '.pytest_cache', '.jules', '.venv',
+        '.venv_test', 'node_modules', '_runtime', 'garmin-output', 'output',
+        'outputs', 'scratch', 'tmp', 'temp', 'dist', 'build'
+    ),
+    [System.StringComparer]::OrdinalIgnoreCase
+)
+
+function Get-EstimatedTokenCount {
+    param([string]$Text)
+
+    if ([string]::IsNullOrEmpty($Text)) {
+        return 0
+    }
+    $wide = 0
+    foreach ($character in $Text.ToCharArray()) {
+        $code = [int]$character
+        if (($code -ge 0x4E00 -and $code -le 0x9FFF) -or
+            ($code -ge 0x3000 -and $code -le 0x303F) -or
+            ($code -ge 0xFF00 -and $code -le 0xFFEF)) {
+            $wide++
+        }
+    }
+    # Wide characters cost about one token each; the rest about a quarter.
+    return [int][math]::Ceiling($wide + (($Text.Length - $wide) / 4))
+}
+
 function Get-SkillTextCorpus {
     param([string]$SkillDirectory)
 
@@ -233,7 +270,7 @@ function Get-SkillTextCorpus {
     $parts = foreach ($file in Get-ChildItem -LiteralPath $SkillDirectory -Recurse -File -ErrorAction SilentlyContinue) {
         $relativePath = [IO.Path]::GetRelativePath($SkillDirectory, $file.FullName)
         $pathSegments = $relativePath -split '[\\/]'
-        if ($pathSegments -contains '_runtime') {
+        if (@($pathSegments | Where-Object { $IgnoredCorpusDirectories.Contains($_) }).Count -gt 0) {
             continue
         }
         if ($file.Name -eq 'resource-manifest.json' -or $file.Name -match '^(?:package-lock|pnpm-lock|yarn\.lock)') {
@@ -445,6 +482,8 @@ $records = @(foreach ($directory in $skillDirectories) {
         Skill = $directory.Name
         Path = $skillPath
         LineCount = $lines.Count
+        CharCount = $text.Length
+        EstimatedTokens = Get-EstimatedTokenCount -Text $text
         FrontmatterValid = (
             $frontmatter.Starts -and
             $frontmatter.Ends -and
@@ -653,6 +692,11 @@ $expectedMetadataChecks = @(
 ).Count
 $metadataChecked = Get-NonNegativeIntegerProperty -Object $openAiMetadataValidation.Payload -Name 'checked'
 $metadataFailures = Get-NonNegativeIntegerProperty -Object $openAiMetadataValidation.Payload -Name 'failures'
+$metadataWarnings = @()
+if ($openAiMetadataValidation.Parsed -and
+    $null -ne $openAiMetadataValidation.Payload.PSObject.Properties['warnings']) {
+    $metadataWarnings = @($openAiMetadataValidation.Payload.warnings)
+}
 $metadataExitConsistent = (
     ($openAiMetadataValidation.ExitCode -eq 0 -and $metadataFailures -eq 0) -or
     ($openAiMetadataValidation.ExitCode -eq 1 -and $null -ne $metadataFailures -and $metadataFailures -gt 0)
@@ -681,10 +725,13 @@ $summary = [PSCustomObject]@{
     InventoryMismatch = -not $isScoped -and $declaredInventory -ne $allSkillDirectories.Count
     FrontmatterFailures = @($records | Where-Object { -not $_.FrontmatterValid }).Count
     OversizedSkills = @($records | Where-Object LineCount -gt $LineThreshold).Count
+    OversizedByEstimatedTokens = @($records | Where-Object EstimatedTokens -gt $TokenThreshold).Count
+    MaxEstimatedTokens = if ($records.Count -gt 0) { ($records | Measure-Object -Property EstimatedTokens -Maximum).Maximum } else { 0 }
     MissingResourceManifests = @($records | Where-Object { -not $_.HasResourceManifest }).Count
     ManifestDependencyIssues = @($records | Where-Object { $_.ManifestIssues.Count -gt 0 }).Count
     InvalidResourceManifests = $invalidResourceManifests
     OpenAiMetadataFailures = $openAiMetadataFailures
+    OpenAiPolicyWarnings = $metadataWarnings.Count
     ValidatorIntegrationFailures = $validatorIntegrationFailures
     DeprecatedToolSkills = @($records | Where-Object { $_.DeprecatedTokens.Count -gt 0 }).Count
     ForeignRuntimeSkills = @($records | Where-Object { $_.ForeignRuntime.Count -gt 0 }).Count
@@ -716,6 +763,7 @@ foreach ($entry in @(
     @{ Name = 'empty_selection'; Value = [int]$summary.EmptySelection },
     @{ Name = 'frontmatter_failures'; Value = $summary.FrontmatterFailures },
     @{ Name = 'oversized_skills'; Value = $summary.OversizedSkills },
+    @{ Name = 'oversized_by_estimated_tokens'; Value = $summary.OversizedByEstimatedTokens },
     @{ Name = 'missing_resource_manifests'; Value = $summary.MissingResourceManifests },
     @{ Name = 'manifest_dependency_issues'; Value = $summary.ManifestDependencyIssues },
     @{ Name = 'invalid_resource_manifests'; Value = $summary.InvalidResourceManifests },
@@ -744,8 +792,13 @@ foreach ($entry in @(
 }
 
 $summary | Format-List
+# Invocation-policy warnings are surfaced but never block: choosing the missing
+# side changes which hosts may auto-trigger a skill, so it stays a decision.
+foreach ($warning in $metadataWarnings) {
+    Write-Warning "$($warning.skill): $($warning.detail)"
+}
 $records |
-    Select-Object Skill, LineCount, FrontmatterValid, HasResourceManifest, MandatorySubagent, MandatoryPersistence, AutomaticPersistence, AutomaticPersistenceHasOptOut |
+    Select-Object Skill, LineCount, CharCount, EstimatedTokens, FrontmatterValid, HasResourceManifest, MandatorySubagent, MandatoryPersistence, AutomaticPersistence, AutomaticPersistenceHasOptOut |
     Format-Table -AutoSize
 
 if ($Mode -eq 'Report') {

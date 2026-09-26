@@ -17,7 +17,22 @@ from paper_audit_gate import audit_file, validate_paper_draft
 
 
 VALID_QUICK = "# 论文拆解\n\n这是已完成的正文。\n"
-VALID_STANDARD = VALID_QUICK + "\n## 证据索引\n\n- 论文正文，第 3 页。\n"
+#: The four scorecard dimensions, as the template asks them.  Kept as one constant because
+#: every fixture that must satisfy the gate needs all four, and a second copy is how a fixture
+#: stops matching the rule it is meant to satisfy.
+VALID_SCORECARD = (
+    "\n## 5. 工程复现就绪度评估 (Reproducibility Scorecard)\n\n"
+    "| 维度 | 等级 | 依据 |\n|---|---|---|\n"
+    "| 代码完备度 | 未核验 | 未纳入外部代码仓库 |\n"
+    "| 算力与成本 | 高 | 需多卡训练 |\n"
+    "| 数据与权重 | 受限 | 权重未发布 |\n"
+    "| 环境脆弱性 | 未核验 | 未核验依赖要求 |\n"
+)
+VALID_STANDARD = (
+    VALID_QUICK
+    + "\n## 证据索引\n\n- 论文正文，第 3 页。\n"
+    + VALID_SCORECARD
+)
 VALID_DEEP = VALID_STANDARD + "\n## 来源范围\n\n仅使用用户提供的论文全文。\n"
 
 
@@ -119,6 +134,70 @@ TBD: example
         content = EXAMPLE_PATH.read_text(encoding="utf-8")
         errors, _ = validate_paper_draft(content, mode="standard")
         self.assertEqual(errors, [])
+
+    def test_standard_mode_requires_the_reproducibility_scorecard(self):
+        """The scorecard is a mandatory slot, not a suggestion the model may skip."""
+        without = VALID_QUICK + "\n## 证据索引\n\n- 论文正文，第 3 页。\n"
+        errors, _ = validate_paper_draft(without, mode="standard")
+        self.assertTrue(
+            any("reproducibility scorecard" in item for item in errors), errors
+        )
+        self.assertEqual(validate_paper_draft(VALID_STANDARD, mode="standard")[0], [])
+
+    def test_quick_mode_is_exempt_from_the_scorecard(self):
+        """Quick triage does not load the template and produces no file."""
+        self.assertEqual(validate_paper_draft(VALID_QUICK, mode="quick")[0], [])
+
+    def test_scorecard_must_answer_every_dimension(self):
+        """A heading with three of four answers is an unasked question, and it is named."""
+        partial = (
+            VALID_QUICK
+            + "\n## 证据索引\n\n- 论文正文，第 3 页。\n"
+            + "\n## 复现就绪度评估\n\n| 维度 | 等级 |\n|---|---|\n"
+            + "| 代码完备度 | 未核验 |\n"
+        )
+        errors, _ = validate_paper_draft(partial, mode="standard")
+        message = next(item for item in errors if "missing:" in item)
+        self.assertIn("算力与成本 (compute)", message)
+        self.assertIn("数据与权重 (data)", message)
+        self.assertIn("环境脆弱性 (environment)", message)
+        self.assertNotIn("代码完备度 (code)", message)
+
+    def test_scoring_card_dimensions_are_read_from_its_own_section(self):
+        """A dimension word appearing outside the section must not satisfy the slot.
+
+        Otherwise a paper *about* code reproducibility would pass on its body prose alone,
+        which is the failure mode the section requirement exists to prevent.
+        """
+        decoy = (
+            VALID_QUICK
+            + "\n本文讨论代码、算力、数据与环境，但报告并未给出评分卡。\n"
+            + "\n## 证据索引\n\n- 论文正文，第 3 页。\n"
+            + "\n## 复现就绪度评估\n\n见上文。\n"
+            + "\n## 来源范围\n\n正文讨论代码与算力，数据与环境另见附录。\n"
+        )
+        errors, _ = validate_paper_draft(decoy, mode="standard")
+        message = next(item for item in errors if "missing:" in item)
+        for label in ("代码完备度 (code)", "算力与成本 (compute)", "数据与权重 (data)", "环境脆弱性 (environment)"):
+            self.assertIn(label, message)
+
+    def test_scorecard_heading_variants_are_accepted(self):
+        rows = VALID_SCORECARD.split("\n", 2)[2]
+        for heading in (
+            "## 5. 复现就绪度评估",
+            "## Reproducibility Scorecard",
+            "### 5. 工程复现就绪度评估（Reproducibility Scorecard）",
+            "## 6. 复现就绪度评估 (Reproducibility Assessment)",
+        ):
+            with self.subTest(heading=heading):
+                content = (
+                    VALID_QUICK
+                    + "\n## 证据索引\n\n- 论文正文，第 3 页。\n\n"
+                    + heading
+                    + "\n"
+                    + rows
+                )
+                self.assertEqual(validate_paper_draft(content, mode="standard")[0], [])
 
     def test_deep_mode_accepts_explicit_no_network_statement(self):
         content = VALID_STANDARD + "\n本次分析未联网，仅依据用户提供的 PDF。\n"

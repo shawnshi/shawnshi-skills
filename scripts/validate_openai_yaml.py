@@ -50,6 +50,38 @@ def _issue(skill: str, code: str, detail: str) -> dict[str, str]:
     return {"skill": skill, "code": code, "detail": detail}
 
 
+def frontmatter_disable_model_invocation(skill_dir: Path) -> bool | None:
+    """Return the declared SKILL.md `disable-model-invocation` flag, or None.
+
+    The Pi host hides a skill from the system prompt when this flag is true and
+    requires an explicit `/skill:<name>` invocation. The OpenAI/plugin surface
+    expresses the same intent as `policy.allow_implicit_invocation`. A skill that
+    declares one side and leaves the other implicit can silently auto-trigger on
+    one host and stay manual on another, so the two must not disagree.
+    """
+    path = skill_dir / "SKILL.md"
+    try:
+        text = path.read_text(encoding="utf-8")
+    except (OSError, UnicodeError):
+        return None
+    if not text.startswith("---"):
+        return None
+    end = text.find("\n---", 3)
+    if end == -1:
+        return None
+    for line in text[3:end].splitlines():
+        key, separator, value = line.partition(":")
+        if not separator or key.strip().lower() != "disable-model-invocation":
+            continue
+        raw = value.strip().strip("'\"").lower()
+        if raw in {"true", "yes", "on"}:
+            return True
+        if raw in {"false", "no", "off"}:
+            return False
+        return None
+    return None
+
+
 def _safe_relative_asset(skill_dir: Path, value: object) -> bool:
     if not isinstance(value, str) or not value.strip():
         return False
@@ -65,26 +97,38 @@ def _safe_relative_asset(skill_dir: Path, value: object) -> bool:
 
 
 def validate_skill(skill_dir: Path) -> list[dict[str, str]]:
+    issues, _ = validate_skill_detailed(skill_dir)
+    return issues
+
+
+def validate_skill_detailed(skill_dir: Path) -> tuple[list[dict[str, str]], list[dict[str, str]]]:
+    """Return (blocking issues, non-blocking warnings) for one skill.
+
+    A missing manifest field is a warning, not a failure: deciding the missing
+    side changes which host may auto-trigger the skill, and that routing choice
+    belongs to the skill owner rather than to this validator.
+    """
     path = skill_dir / "agents" / "openai.yaml"
     if not path.is_file():
-        return []
+        return [], []
     skill = skill_dir.name
     try:
         document = yaml.load(
             path.read_text(encoding="utf-8"), Loader=UniqueKeyLoader
         )
     except (OSError, UnicodeError, yaml.YAMLError) as exc:
-        return [_issue(skill, "openai_yaml_parse_error", str(exc))]
+        return [_issue(skill, "openai_yaml_parse_error", str(exc))], []
     if not isinstance(document, dict):
-        return [_issue(skill, "openai_yaml_root_invalid", "root must be a mapping")]
+        return [_issue(skill, "openai_yaml_root_invalid", "root must be a mapping")], []
     issues: list[dict[str, str]] = []
+    warnings: list[dict[str, str]] = []
     extra_top = sorted(set(document) - ALLOWED_TOP_LEVEL_KEYS)
     if extra_top:
         issues.append(_issue(skill, "openai_yaml_unknown_top_level", ", ".join(extra_top)))
 
     interface = document.get("interface")
     if not isinstance(interface, dict):
-        return issues + [_issue(skill, "openai_interface_invalid", "interface must be a mapping")]
+        return issues + [_issue(skill, "openai_interface_invalid", "interface must be a mapping")], warnings
     extra_interface = sorted(set(interface) - ALLOWED_INTERFACE_KEYS)
     if extra_interface:
         issues.append(_issue(skill, "openai_interface_unknown_field", ", ".join(extra_interface)))
@@ -118,6 +162,41 @@ def validate_skill(skill_dir: Path) -> list[dict[str, str]]:
             if "allow_implicit_invocation" in policy and not isinstance(policy["allow_implicit_invocation"], bool):
                 issues.append(_issue(skill, "openai_policy_invalid", "allow_implicit_invocation must be boolean"))
 
+    declared_disable = frontmatter_disable_model_invocation(skill_dir)
+    declared_implicit = (
+        policy.get("allow_implicit_invocation")
+        if isinstance(policy, dict) and isinstance(policy.get("allow_implicit_invocation"), bool)
+        else None
+    )
+    if declared_disable is not None and declared_implicit is not None:
+        if declared_disable is declared_implicit:
+            issues.append(
+                _issue(
+                    skill,
+                    "openai_policy_contradiction",
+                    "SKILL.md disable-model-invocation and agents/openai.yaml "
+                    "allow_implicit_invocation declare the same intent; they must be inverse",
+                )
+            )
+    elif declared_disable is True:
+        warnings.append(
+            _issue(
+                skill,
+                "openai_policy_unpaired",
+                "SKILL.md disables model invocation but agents/openai.yaml does not "
+                "declare policy.allow_implicit_invocation",
+            )
+        )
+    elif declared_implicit is False:
+        warnings.append(
+            _issue(
+                skill,
+                "openai_policy_unpaired",
+                "agents/openai.yaml disables implicit invocation but SKILL.md does not "
+                "declare disable-model-invocation; this host can still auto-trigger it",
+            )
+        )
+
     dependencies = document.get("dependencies")
     if dependencies is not None:
         if not isinstance(dependencies, dict):
@@ -142,7 +221,7 @@ def validate_skill(skill_dir: Path) -> list[dict[str, str]]:
                     for field in ("description", "transport", "url"):
                         if field in tool and (not isinstance(tool[field], str) or not tool[field].strip()):
                             issues.append(_issue(skill, "openai_dependency_tool_invalid", f"tools[{index}].{field} must be non-empty text"))
-    return issues
+    return issues, warnings
 
 
 def _skill_dirs(root: Path, include: Iterable[str], exclude: Iterable[str]) -> tuple[list[Path], list[str]]:
@@ -168,12 +247,20 @@ def _skill_dirs(root: Path, include: Iterable[str], exclude: Iterable[str]) -> t
 def validate_root(root: Path, include: Iterable[str] = (), exclude: Iterable[str] = ()) -> dict[str, object]:
     skill_dirs, scope_problems = _skill_dirs(root.resolve(), include, exclude)
     issues = [_issue("", "scope_error", problem) for problem in scope_problems]
+    warnings: list[dict[str, str]] = []
     checked = 0
     for skill_dir in skill_dirs:
         if (skill_dir / "agents" / "openai.yaml").is_file():
             checked += 1
-        issues.extend(validate_skill(skill_dir))
-    return {"checked": checked, "failures": len(issues), "issues": issues}
+        skill_issues, skill_warnings = validate_skill_detailed(skill_dir)
+        issues.extend(skill_issues)
+        warnings.extend(skill_warnings)
+    return {
+        "checked": checked,
+        "failures": len(issues),
+        "issues": issues,
+        "warnings": warnings,
+    }
 
 
 def main() -> int:

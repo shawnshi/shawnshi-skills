@@ -1,18 +1,18 @@
 {
   "schema_version": 3,
   "skill": "academic-paper-reader",
-  "generated_at": "2026-09-19T16:38:56+08:00",
+  "generated_at": "2026-09-24T09:41:50+08:00",
   "hash_algorithm": "SHA-256",
   "text_hash_normalization": "LF",
   "skill_md": "SKILL.md",
-  "skill_md_sha256": "7a49ff0dc212cb23d1f461cdc909c56780cfd2b37fa876eb21bf4d88f49c1fea",
+  "skill_md_sha256": "e4a2ace52e802b4c31d90a69867cbd1a4766dc71698ac51b877f3aba5599fe9e",
   "top_level_files": [
     "SKILL.md"
   ],
   "top_level_file_hashes": [
     {
       "path": "SKILL.md",
-      "sha256": "7a49ff0dc212cb23d1f461cdc909c56780cfd2b37fa876eb21bf4d88f49c1fea"
+      "sha256": "e4a2ace52e802b4c31d90a69867cbd1a4766dc71698ac51b877f3aba5599fe9e"
     }
   ],
   "top_level_directories": [
@@ -55,7 +55,7 @@
     },
     {
       "path": "examples/APR-Reference.md",
-      "sha256": "646dfe660d36f7baf3a67a015c746eedc2a49187556943f8bee16aab0243f5ef"
+      "sha256": "c29102089913ead41dfcf5e68e8c06940cf2a289bd3a02852182c113efa153af"
     },
     {
       "path": "resources/source_evidence_protocol.md",
@@ -71,15 +71,15 @@
     },
     {
       "path": "resources/template.md",
-      "sha256": "83d9a1d9cee307fd794194788d752bc793d34ccfcb5a6907c22b8913385473ec"
+      "sha256": "7907fa3de5f81551e843802b07efc055507a335b290c1b16d7a93bfe90fc1075"
     },
     {
       "path": "scripts/paper_audit_gate.py",
-      "sha256": "2dc7ddebd41f7a8c834a017d22c7e84712b14d9cdaf004d36a893e2add441fe7"
+      "sha256": "6b055ed98d2422fc7686daae7fe772098bab3428e61d796342c81fd3063742b3"
     },
     {
       "path": "scripts/test_paper_audit_gate.py",
-      "sha256": "2c5b629c0292ab13bdc7d4a91047d2b1c2b3faee6cd7f2276df2761f9d6fc673"
+      "sha256": "c14528584ba382c5a1312fff665af15cdb99c395d8babf53e6034f87a85757ed"
     }
   ],
   "declared_local_dependencies": [
@@ -105,13 +105,13 @@
       "path": "resources/template.md",
       "exists": true,
       "resolved_path": "academic-paper-reader/resources/template.md",
-      "sha256": "83d9a1d9cee307fd794194788d752bc793d34ccfcb5a6907c22b8913385473ec"
+      "sha256": "7907fa3de5f81551e843802b07efc055507a335b290c1b16d7a93bfe90fc1075"
     },
     {
       "path": "scripts/paper_audit_gate.py",
       "exists": true,
       "resolved_path": "academic-paper-reader/scripts/paper_audit_gate.py",
-      "sha256": "2dc7ddebd41f7a8c834a017d22c7e84712b14d9cdaf004d36a893e2add441fe7"
+      "sha256": "6b055ed98d2422fc7686daae7fe772098bab3428e61d796342c81fd3063742b3"
     }
   ],
   "missing_declared_dependencies": []

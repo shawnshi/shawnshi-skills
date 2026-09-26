@@ -108,6 +108,62 @@ def test_undeclared_short_body_still_blocks():
     assert access["coverage"] == "full"
 
 
+def _article_body():
+    """Article-shaped retained window with no publication label anywhere."""
+    return (
+        "# Original product research release\n\n"
+        + "Example released an original product and described its research methods and "
+        "documented limitations for reviewers. " * 3
+        + "\n\n"
+        + "The release provides deployment details, measured evaluation results and "
+        "documented constraints for operators. " * 3
+    )
+
+
+def test_truncated_article_window_is_verified_as_disclosed_bounded_coverage():
+    # Owner-authorized 2026-09-25: a tool-truncated delivery whose retained window itself
+    # satisfies every article predicate is honest bounded evidence, not an access failure.
+    access = broker.native_proof(
+        dict(RECEIPT, text=_article_body(), truncated=True),
+        LEDGER,
+        RESERVATION,
+        CHECKED,
+    )["access"]
+    assert access["status"] == "verified"
+    assert access["error_code"] is None
+    assert access["coverage"] == "bounded_excerpt"
+
+
+def test_truncated_undeclared_short_body_still_blocks():
+    access = broker.native_proof(
+        dict(RECEIPT, truncated=True), LEDGER, RESERVATION, CHECKED
+    )["access"]
+    assert access["status"] == "blocked"
+    assert access["error_code"] == "NATIVE_TOOL_TRUNCATED"
+    assert access["coverage"] == "full"
+
+
+@pytest.mark.parametrize(
+    ("url", "expected"),
+    [
+        ("https://example.org/2026/09/24/release", "2026-09-24"),
+        (
+            "https://www.theguardian.com/technology/2026/sep/24/openai-agent",
+            "2026-09-24",
+        ),
+        ("https://news.example.org/article/2026/9/4/x", "2026-09-04"),
+        ("https://example.org/2026/09/24", "2026-09-24"),
+        ("https://example.org/releases/original", ""),
+        ("https://example.org/2026/09/x", ""),
+        ("https://example.org/2026/02/31/release", ""),
+        ("https://example.org/2026/13/01/release", ""),
+        ("https://example.org/t12026/09/24/release", ""),
+    ],
+)
+def test_url_path_declared_day_extracts_only_real_calendar_days(url, expected):
+    assert broker._url_path_declared_day(url) == expected
+
+
 def test_truncated_flag_still_blocks_a_bounded_excerpt():
     access = broker.native_proof(
         dict(RECEIPT, text_coverage="bounded_excerpt", truncated=True),

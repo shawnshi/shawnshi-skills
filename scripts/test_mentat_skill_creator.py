@@ -57,6 +57,14 @@ class GovernancePathTests(unittest.TestCase):
                 governance_path(root)
 
 
+# Contract-text regression for the mentat-skill-creator governance skill.
+#
+# These tests assert that SKILL.md, agents/openai.yaml and the trigger fixtures
+# stay mutually consistent. They do NOT prove model behaviour: passing here says
+# nothing about whether an agent honours the declared boundaries. Host routing and
+# tier behaviour are defined in mentat-skill-creator/references/host-routing-eval.md
+# and are executed by the operator. Read a green run here as "the contract is
+# intact", never as "the skill was validated".
 class MentatSkillCreatorContractTests(unittest.TestCase):
     @classmethod
     def setUpClass(cls):
@@ -153,6 +161,20 @@ class MentatSkillCreatorContractTests(unittest.TestCase):
                 True,
                 "handoff",
             ),
+            "pi_explicit_audit_only": (
+                "mentat-skill-creator", None, "read_only", False, "none"
+            ),
+            "pi_plan_is_not_implementation": (
+                "mentat-skill-creator", None, "read_only", False, "none"
+            ),
+            "pi_repository_update": (
+                "mentat-skill-creator", None, "scoped_edit", False,
+                "mentat-skill-creator",
+            ),
+            "pi_unrelated_request_does_not_load_governance_skill": (
+                "personal-health-analysis-or-domain-skill", None, "domain_edit",
+                False, "domain-skill",
+            ),
         }
         expected_prompts = {
             "explicit_audit_only": "使用 $mentat-skill-creator 只读审计当前 skills 库的触发边界，不要修改文件。",
@@ -163,6 +185,10 @@ class MentatSkillCreatorContractTests(unittest.TestCase):
             "installable_plugin_distribution": "把两个技能打包成其他人可安装的 Codex 插件，本轮只生成本地插件包。",
             "local_skill_installation": "从已指定的仓库安装一个 Codex skill 到本地技能目录。",
             "github_source_publication": "使用 $mentat-skill-creator 完成本库发布前验证，然后同步到 GitHub main。",
+            "pi_explicit_audit_only": "/skill:mentat-skill-creator 只读审计当前技能库的触发边界，不要修改文件。",
+            "pi_plan_is_not_implementation": "/skill:mentat-skill-creator 分析资源清单问题并编制修改方案和计划。",
+            "pi_repository_update": "/skill:mentat-skill-creator 修复技能库根 Gate 的局部校验；只修改 scripts/repair_skills.ps1 和 scripts/test_repair_skills.py，不要修改 manifest、README、AGENTS 或 shared 文件，并运行只读验证。",
+            "pi_unrelated_request_does_not_load_governance_skill": "把 personal-health-analysis 的说明文字写得更清楚。",
         }
         expected_handoff_mutations = {
             "explicit_audit_only": [],
@@ -173,6 +199,10 @@ class MentatSkillCreatorContractTests(unittest.TestCase):
             "installable_plugin_distribution": ["user_selected_plugin_directory"],
             "local_skill_installation": ["approved_local_skill_install_target"],
             "github_source_publication": ["git_commit", "git_push:explicit-remote/main"],
+            "pi_explicit_audit_only": [],
+            "pi_plan_is_not_implementation": [],
+            "pi_repository_update": [],
+            "pi_unrelated_request_does_not_load_governance_skill": ["personal-health-analysis/SKILL.md"],
         }
         expected_stops = {
             "explicit_audit_only": ["any_file_write", "any_external_action"],
@@ -183,6 +213,10 @@ class MentatSkillCreatorContractTests(unittest.TestCase):
             "installable_plugin_distribution": ["mentat_source_edit", "plugin_publication"],
             "local_skill_installation": ["mentat_repository_edit", "install_without_explicit_request"],
             "github_source_publication": ["local_file_repair", "unscoped_stage", "push_to_unconfirmed_remote_or_branch"],
+            "pi_explicit_audit_only": ["any_file_write", "any_external_action"],
+            "pi_plan_is_not_implementation": ["any_file_write", "any_external_action"],
+            "pi_repository_update": ["manifest_refresh", "root_governance_edit", "any_external_action"],
+            "pi_unrelated_request_does_not_load_governance_skill": ["mentat_repository_edit"],
         }
         expected_preconditions = {
             "github_source_publication": [
@@ -192,6 +226,26 @@ class MentatSkillCreatorContractTests(unittest.TestCase):
                 "scoped_staged_diff",
                 "clean_checkout_validation",
             ]
+        }
+        # A fixture only evidences the interface whose syntax it uses, so the
+        # surface label is enforced rather than decorative.
+        expected_surfaces = {
+            "codex-openai": {
+                "explicit_audit_only",
+                "plan_is_not_implementation",
+                "explicit_repository_update",
+                "generic_new_skill",
+                "unrelated_single_skill_copy_edit",
+                "installable_plugin_distribution",
+                "local_skill_installation",
+                "github_source_publication",
+            },
+            "pi": {
+                "pi_explicit_audit_only",
+                "pi_plan_is_not_implementation",
+                "pi_repository_update",
+                "pi_unrelated_request_does_not_load_governance_skill",
+            },
         }
         self.assertEqual(set(by_id), set(expected))
         for case in cases:
@@ -218,6 +272,42 @@ class MentatSkillCreatorContractTests(unittest.TestCase):
                 case.get("required_preconditions", []),
                 expected_preconditions.get(case["id"], []),
             )
+            surface = case.get("host_surface")
+            self.assertIn(surface, expected_surfaces, case["id"])
+            self.assertIn(case["id"], expected_surfaces[surface])
+            addresses_governance_skill = (
+                case["expected_route"] == "mentat-skill-creator"
+            )
+            if surface == "pi":
+                self.assertNotIn("$mentat-skill-creator", case["prompt"], case["id"])
+                if addresses_governance_skill:
+                    self.assertTrue(
+                        case["prompt"].startswith("/skill:mentat-skill-creator"),
+                        f"pi fixture must use this host's entry: {case['id']}",
+                    )
+            else:
+                self.assertNotIn("/skill:", case["prompt"], case["id"])
+                if addresses_governance_skill:
+                    self.assertIn("$mentat-skill-creator", case["prompt"], case["id"])
+
+    def test_skill_points_to_host_routing_protocol(self):
+        # The protocol carries the only statement of who runs the behavioural
+        # eval; dropping the pointer would silently turn static fixtures into
+        # the whole verification story again.
+        self.assertIn("references/host-routing-eval.md", self.skill_text)
+        self.assertIn("references/host-routing-eval.md", self.evals["note"])
+        protocol = (SKILL_DIR / "references" / "host-routing-eval.md").read_text(
+            encoding="utf-8"
+        )
+        for marker in (
+            "pass|fail",
+            "host_surface",
+            "weakest",
+            "strongest",
+            "操作者",
+            "test_mentat_skill_creator.py",
+        ):
+            self.assertIn(marker, protocol)
 
     def test_trigger_ownership_declares_handoffs_and_negative_signals(self):
         classes = [

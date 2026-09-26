@@ -546,6 +546,126 @@ def test_native_receipt_seal_exact_proof_and_mutation(new_run, monkeypatch, arxi
         rc.load_manifest(new_run[0])
 
 
+def _undated_article_text():
+    """Article-shaped body without any publication label (date basis D input)."""
+    return (
+        "Original product research release\n\n"
+        + "Example released an original product and described its research methods and "
+        "documented limitations for reviewers. " * 4
+        + "\n\n"
+        + "The release provides deployment details, measured evaluation results and "
+        "documented constraints for operators. " * 4
+    )
+
+
+def _url_path_dynamic(sealed, url, day, source_type="secondary"):
+    proof = sealed["proofs"][-1]
+    return {
+        **{
+            key: deepcopy(sealed[key])
+            for key in (
+                "started_at",
+                "completed_at",
+                "executed_queries",
+                "access_log",
+                "broker_evidence_sha256",
+            )
+        },
+        "status": "completed",
+        "confidence": "medium",
+        "turns_used": 1,
+        "halt_condition_met": True,
+        "bound_candidate_decisions": [],
+        "candidates": [
+            {
+                "title": "Original product research release",
+                "url": url,
+                "source": "Example",
+                "published_at": day,
+                "published_at_source": "url_path",
+                "published_at_proof": {
+                    "parser_rule": "url-path/1",
+                    "published_at": day,
+                    "published_at_source": "url_path",
+                },
+                "broker_body_proof_sha256": proof["proof_sha256"],
+                "retrieved_at": proof["access"]["checked_at"],
+                "primary_domain": "technology",
+                "secondary_domains": [],
+                "source_type": source_type,
+                "identity_quality": "semantic",
+                "event_identity": {
+                    "key_version": "1",
+                    "primary_domain": "technology",
+                    "actor": "Example",
+                    "action": "released",
+                    "object": "Original product",
+                    "event_date": day,
+                },
+                "access_check": proof["access"],
+                "summary": "Example released an original product with documented results.",
+            }
+        ],
+    }
+
+
+def test_url_path_declaration_registers_an_undated_discovered_article(
+    new_run, monkeypatch
+):
+    """Date basis D (owner-authorized 2026-09-25) on a real sealed v3 ledger."""
+    monkeypatch.setattr(broker, "_transport", forbid)
+    monkeypatch.setattr("supplement_agent._fetch_url", forbid)
+    request, _ = setup(new_run, bound=False)
+    day = rc.load_manifest(new_run[0])["window"]["end"]
+    url = "https://example.org/news/" + day.replace("-", "/") + "/original-release"
+    search(request, url=url)
+    _, receipt = reserve(request, url=url, text=_undated_article_text())
+    broker.operate(request, "tech", "record-fetch", receipt=receipt)
+    # An undated body is not a usable article, so closure comes from the second successful
+    # search instead of the supply threshold.
+    search(request, url="https://other.example/never-attempted", query="second angle")
+    sealed = broker.operate(request, "tech", "seal")
+    assert sealed["proofs"][-1]["metadata"]["dates"] == []
+    value = _url_path_dynamic(sealed, url, day)
+    assert broker.validate_result(request, "tech", value) is False
+    wrong_day = deepcopy(value)
+    wrong_day["candidates"][0]["published_at"] = "2026-09-23"
+    with pytest.raises(rc.RunContractError, match="URL path"):
+        broker.validate_result(request, "tech", wrong_day)
+
+
+def test_url_path_declaration_requires_a_dated_path(new_run, monkeypatch):
+    monkeypatch.setattr(broker, "_transport", forbid)
+    monkeypatch.setattr("supplement_agent._fetch_url", forbid)
+    request, _ = setup(new_run, bound=False)
+    day = rc.load_manifest(new_run[0])["window"]["end"]
+    url = "https://example.org/original-release"
+    search(request, url=url)
+    _, receipt = reserve(request, url=url, text=_undated_article_text())
+    broker.operate(request, "tech", "record-fetch", receipt=receipt)
+    search(request, url="https://other.example/never-attempted", query="second angle")
+    sealed = broker.operate(request, "tech", "seal")
+    value = _url_path_dynamic(sealed, url, day)
+    with pytest.raises(rc.RunContractError, match="URL path"):
+        broker.validate_result(request, "tech", value)
+
+
+def test_bounded_excerpt_candidate_cannot_be_primary(new_run, monkeypatch):
+    """A truncated delivery is bounded coverage and can never be the primary source."""
+    monkeypatch.setattr(broker, "_transport", forbid)
+    monkeypatch.setattr("supplement_agent._fetch_url", forbid)
+    request, _ = setup(new_run, bound=False)
+    search(request, url=URL)
+    _, receipt = reserve(request, url=URL, text=text(), truncated=True)
+    broker.operate(request, "tech", "record-fetch", receipt=receipt)
+    sealed = broker.operate(request, "tech", "seal")
+    assert sealed["proofs"][-1]["access"]["coverage"] == "bounded_excerpt"
+    value = dynamic(sealed)
+    assert value["candidates"][0]["source_type"] == "primary"
+    with pytest.raises(rc.RunContractError, match="bounded excerpt"):
+        broker.validate_result(request, "tech", value)
+
+
 def test_parent_finalize_fills_omitted_parent_derived_keys_on_a_sealed_ledger(new_run, monkeypatch):
     """D8 end-to-end: a real sealed v3 ledger survives a draft that omits derived keys."""
     from supplement_agent import (
@@ -646,7 +766,11 @@ def test_native_unsafe_url_before_reservation(new_run, url):
 @pytest.mark.parametrize(
     "changes",
     [
-        {"truncated": True},
+        # Owner-authorized 2026-09-25: a tool-reported truncation whose retained window is a
+        # complete article is now verified as bounded coverage (see
+        # test_truncated_article_window_is_verified_as_disclosed_bounded_coverage). A
+        # truncated body that is not an article at all is still unusable.
+        {"truncated": True, "text": "tiny body"},
         {"text": text().replace("Original product", "Access denied Original product")},
         {"outcome": "error", "error": "fetch failed", "text": ""},
         {"outcome": "partial", "error": "tool output incomplete"},

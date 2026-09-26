@@ -522,6 +522,20 @@ class AuditGateTests(unittest.TestCase):
 
         self.assertEqual(errors, [])
 
+    def test_allows_structured_not_used_declaration_next_to_partial_status(self):
+        errors, _ = validate(
+            "本地状态 partial；采集审计：local_status=partial; live_fallback=not_used; reason=x"
+        )
+
+        self.assertFalse(any("partial local Garmin" in item for item in errors))
+
+    def test_blocks_structured_used_declaration_next_to_partial_status(self):
+        errors, _ = validate(
+            "本地状态 partial；采集审计：local_status=partial; live_fallback=used; reason=x"
+        )
+
+        self.assertTrue(any("partial local Garmin" in item for item in errors))
+
     def test_blocks_affirmative_fallback_after_a_negated_fallback_clause(self):
         errors, _ = validate(
             "证据：本地状态 partial，未执行云端回退，随后执行云端查询。"

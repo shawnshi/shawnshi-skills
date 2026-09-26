@@ -99,6 +99,8 @@ python -X utf8 scripts/run_daily.py forge --manifest <run_manifest.json> --refin
 - 默认 3 日或扩展 7 日窗口为 `report_date-(days-1)` 至 `report_date`，两端包含。
 - `published_at` 必须为窗口内 `YYYY-MM-DD` 已知日期；候选为 ISO datetime 时按其自带时区取日期后规范化。`event_date` 可未知，但不得晚于发布日期。
 - 发布日期基准（2026-09-14 授权）：正文未产出可识别发布日期、但 `article_core`（除正文日期外的全部文章判据）成立时，登记可改用绑定 lane 已登记的 feed 发布日期，`published_at_proof.parser_rule` 记为 `pool-declared/1`；正文自带日期永不被覆盖，`published_at_source` 仍不得为 unknown/retrieved_at，窗口门不变。
+- 发布日期基准 D（2026-09-25 授权）：搜索发现 URL 的正文无日期、且 `article_core`（除正文日期外的全部文章判据）成立时，可用 URL 自身路径声明的日期（`/YYYY/MM/DD/` 或 `/YYYY/mon/DD/`），`published_at_proof.parser_rule` 记为 `url-path/1`、`published_at_source` 记为 `url_path`；正文自带日期永不被覆盖，窗口门不变。
+- 截断交付（2026-09-25 授权）：原生工具报告截断时，若保留窗口本身满足全部文章判据，记 `coverage=bounded_excerpt` 并置 verified，不再使该车道降级；该访问不得登记为 `primary`，保留窗口不足文章判据或另有错误仍封闭失败。
 - 标题基准（2026-09-14 授权）：正文抽取标题为空或不落在 8..240 时，`article_core`/`article` 判据可回退使用绑定 lane 已登记的 feed 标题，metadata 记 `title_source=lane-declared/1`；正文标题合法时永不回退。
 - 二手佐证降级（2026-09-14 授权）：focus config 的 `corroboration_policy.single_secondary_allowed=true` 时，单一独立二手来源（已验证访问 + 完整事件身份）可作为 `corroboration_status=single_secondary` 入选；`multi_independent` 仍是首选，同一事件不得重复计数，置 false 即恢复严格行为。二手来源仍需 ≥2 个独立来源佐证，门槛不变。
 - GitHub/V2EX 观察时间不得冒充发布日期；Hacker News 时间使用带时区 UTC；所有候选记录 `retrieved_at`。

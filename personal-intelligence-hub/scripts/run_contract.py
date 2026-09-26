@@ -668,6 +668,9 @@ def build_candidate_date_evidence(
                 "pool_declared_feed_metadata"
                 if isinstance(declared_proof, dict)
                 and declared_proof.get("parser_rule") == "pool-declared/1"
+                else "url_path_declared_metadata"
+                if isinstance(declared_proof, dict)
+                and declared_proof.get("parser_rule") == "url-path/1"
                 else "existing_registered_metadata"
             )
             for index in indices or [None]:

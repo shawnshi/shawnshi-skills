@@ -31,7 +31,10 @@ class AutonomyContractTests(unittest.TestCase):
             "无法证明无关的失败仍属于阻塞", "用户明确要求全库通过时除外",
             "不阻止继续完成不依赖该步骤且已获授权的工作",
             "PARTIAL 的非关键证据延期批准要求保持不变",
-            "验收集合内存在失败测试",
+            # The BLOCKED row was reworded when the contract started separating
+            # attributable pre-existing failures; the clause below is its current
+            # form. Keep this literal in sync with pai/coding.md.
+            "验收集合内存在不可归因的失败测试",
         ):
             with self.subTest(clause=clause):
                 self.assertIn(clause, contract)

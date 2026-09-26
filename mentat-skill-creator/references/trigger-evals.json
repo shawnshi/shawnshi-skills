@@ -1,10 +1,11 @@
 {
   "schema_version": 1,
   "skill": "mentat-skill-creator",
-  "note": "These fixtures validate the declared route and permission contract. They do not prove model-host routing by themselves. Named external handoffs and their mutation allowances apply only when that capability is actually available and the action is authorized; they are not guaranteed tools. Codex in example requests denotes an explicitly requested external format, not the current Pi host. If a creator is absent, authorized local copy edits may proceed narrowly using the existing README and local validators without loading this skill. Missing capabilities genuinely required for creation, packaging or installation must be reported, not fabricated.",
+  "note": "These fixtures validate the declared route and permission contract. They do not prove model-host routing by themselves. Named external handoffs and their mutation allowances apply only when that capability is actually available and the action is authorized; they are not guaranteed tools. Codex in example requests denotes an explicitly requested external format, not the current Pi host. The host_surface field labels the interface whose invocation syntax a prompt uses: codex-openai prompts address the skill as $mentat-skill-creator, while pi prompts use this host's /skill:mentat-skill-creator entry. A fixture only evidences the surface it names. See references/host-routing-eval.md for the tier map, pass criteria and run-log format. If a creator is absent, authorized local copy edits may proceed narrowly using the existing README and local validators without loading this skill. Missing capabilities genuinely required for creation, packaging or installation must be reported, not fabricated.",
   "cases": [
     {
       "id": "explicit_audit_only",
+      "host_surface": "codex-openai",
       "prompt": "使用 $mentat-skill-creator 只读审计当前 skills 库的触发边界，不要修改文件。",
       "expected_route": "mentat-skill-creator",
       "expected_handoff": null,
@@ -17,6 +18,7 @@
     },
     {
       "id": "plan_is_not_implementation",
+      "host_surface": "codex-openai",
       "prompt": "使用 $mentat-skill-creator 分析资源清单问题并编制修改方案和计划。",
       "expected_route": "mentat-skill-creator",
       "expected_handoff": null,
@@ -29,6 +31,7 @@
     },
     {
       "id": "explicit_repository_update",
+      "host_surface": "codex-openai",
       "prompt": "使用 $mentat-skill-creator 修复 skills 根 Gate 的局部校验；只修改 scripts/repair_skills.ps1 和 scripts/test_repair_skills.py，不要修改 manifest、README、AGENTS 或 shared 文件，并运行只读验证。",
       "expected_route": "mentat-skill-creator",
       "expected_handoff": null,
@@ -44,6 +47,7 @@
     },
     {
       "id": "generic_new_skill",
+      "host_surface": "codex-openai",
       "prompt": "创建一个用于 CSV 清洗的新技能。",
       "expected_route": "skill-creator",
       "expected_handoff": "skill-creator",
@@ -56,6 +60,7 @@
     },
     {
       "id": "unrelated_single_skill_copy_edit",
+      "host_surface": "codex-openai",
       "prompt": "把 personal-health-analysis 的说明文字写得更清楚。",
       "expected_route": "skill-creator-or-domain-skill",
       "expected_handoff": "skill-creator-or-domain-skill",
@@ -68,6 +73,7 @@
     },
     {
       "id": "installable_plugin_distribution",
+      "host_surface": "codex-openai",
       "prompt": "把两个技能打包成其他人可安装的 Codex 插件，本轮只生成本地插件包。",
       "expected_route": "plugin-creator",
       "expected_handoff": "plugin-creator",
@@ -80,6 +86,7 @@
     },
     {
       "id": "local_skill_installation",
+      "host_surface": "codex-openai",
       "prompt": "从已指定的仓库安装一个 Codex skill 到本地技能目录。",
       "expected_route": "skill-installer",
       "expected_handoff": "skill-installer",
@@ -92,6 +99,7 @@
     },
     {
       "id": "github_source_publication",
+      "host_surface": "codex-openai",
       "prompt": "使用 $mentat-skill-creator 完成本库发布前验证，然后同步到 GitHub main。",
       "expected_route": "mentat-skill-creator",
       "expected_handoff": "github:yeet",
@@ -102,6 +110,58 @@
       "external_action": true,
       "required_preconditions": ["git_worktree", "explicit_remote", "explicit_branch", "scoped_staged_diff", "clean_checkout_validation"],
       "required_stop_before": ["local_file_repair", "unscoped_stage", "push_to_unconfirmed_remote_or_branch"]
+    },
+    {
+      "id": "pi_explicit_audit_only",
+      "host_surface": "pi",
+      "prompt": "/skill:mentat-skill-creator 只读审计当前技能库的触发边界，不要修改文件。",
+      "expected_route": "mentat-skill-creator",
+      "expected_handoff": null,
+      "expected_mode": "read_only",
+      "mutation_actor": "none",
+      "mentat_allowed_mutations": [],
+      "handoff_allowed_mutations": [],
+      "external_action": false,
+      "required_stop_before": ["any_file_write", "any_external_action"]
+    },
+    {
+      "id": "pi_plan_is_not_implementation",
+      "host_surface": "pi",
+      "prompt": "/skill:mentat-skill-creator 分析资源清单问题并编制修改方案和计划。",
+      "expected_route": "mentat-skill-creator",
+      "expected_handoff": null,
+      "expected_mode": "read_only",
+      "mutation_actor": "none",
+      "mentat_allowed_mutations": [],
+      "handoff_allowed_mutations": [],
+      "external_action": false,
+      "required_stop_before": ["any_file_write", "any_external_action"]
+    },
+    {
+      "id": "pi_repository_update",
+      "host_surface": "pi",
+      "prompt": "/skill:mentat-skill-creator 修复技能库根 Gate 的局部校验；只修改 scripts/repair_skills.ps1 和 scripts/test_repair_skills.py，不要修改 manifest、README、AGENTS 或 shared 文件，并运行只读验证。",
+      "expected_route": "mentat-skill-creator",
+      "expected_handoff": null,
+      "expected_mode": "scoped_edit",
+      "mutation_actor": "mentat-skill-creator",
+      "mentat_allowed_mutations": ["scripts/repair_skills.ps1", "scripts/test_repair_skills.py"],
+      "handoff_allowed_mutations": [],
+      "external_action": false,
+      "required_stop_before": ["manifest_refresh", "root_governance_edit", "any_external_action"]
+    },
+    {
+      "id": "pi_unrelated_request_does_not_load_governance_skill",
+      "host_surface": "pi",
+      "prompt": "把 personal-health-analysis 的说明文字写得更清楚。",
+      "expected_route": "personal-health-analysis-or-domain-skill",
+      "expected_handoff": null,
+      "expected_mode": "domain_edit",
+      "mutation_actor": "domain-skill",
+      "mentat_allowed_mutations": [],
+      "handoff_allowed_mutations": ["personal-health-analysis/SKILL.md"],
+      "external_action": false,
+      "required_stop_before": ["mentat_repository_edit"]
     }
   ]
 }

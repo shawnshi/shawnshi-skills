@@ -1,11 +1,11 @@
 {
   "schema_version": 3,
   "skill": "personal-intelligence-hub",
-  "generated_at": "2026-09-22T14:15:50+08:00",
+  "generated_at": "2026-09-26T17:41:29+08:00",
   "hash_algorithm": "SHA-256",
   "text_hash_normalization": "LF",
   "skill_md": "SKILL.md",
-  "skill_md_sha256": "3f15446834c630de6dba57432bebf4a7fc31d11ff32cbf6dbcab6407b156262c",
+  "skill_md_sha256": "8a9bf326401b04171c76cb74235eec4fe499e2d81d20ab56651622c6aa55b402",
   "top_level_files": [
     "SKILL.md",
     "requirements.txt"
@@ -13,7 +13,7 @@
   "top_level_file_hashes": [
     {
       "path": "SKILL.md",
-      "sha256": "3f15446834c630de6dba57432bebf4a7fc31d11ff32cbf6dbcab6407b156262c"
+      "sha256": "8a9bf326401b04171c76cb74235eec4fe499e2d81d20ab56651622c6aa55b402"
     },
     {
       "path": "requirements.txt",
@@ -78,7 +78,7 @@
     },
     {
       "path": "references/quality_standard.md",
-      "sha256": "ecc757cbdac76159b80cdf22c4b2b7f49c44a0b1508a0f9595bf40ab5d8d2e23"
+      "sha256": "4d7aaf40ede86b1070aa31870b9973214ac8e3b18b3b5052180ad5434b202c6d"
     },
     {
       "path": "references/responses.md",
@@ -98,7 +98,7 @@
     },
     {
       "path": "references/workflow_protocols.md",
-      "sha256": "8fff970de5015f431bacdcfbbdf32191e8e24428a3448e390e0b0b8275de28e8"
+      "sha256": "f99e8fd8a084962341d5d8121df1ff1a82a28af2dddb3df0e28f937b39d7ae02"
     },
     {
       "path": "scripts/adversarial_audit.py",
@@ -110,7 +110,7 @@
     },
     {
       "path": "scripts/article_broker.py",
-      "sha256": "6da88f5b5f73c305cbf9c4c44b4f6dec45f9e4bcfd1fc2b44a32d348c2a8a488"
+      "sha256": "48c48a75ce092f4c98c95514af2a700b4839f64be517815e1c091bb4e47dd413"
     },
     {
       "path": "scripts/await_artifacts.py",
@@ -186,7 +186,7 @@
     },
     {
       "path": "scripts/run_contract.py",
-      "sha256": "2924268ef15f4d2f0d6a943099556da028a6cdd5c7de3aa0c0cd0604a274ab25"
+      "sha256": "8c5585cb25b5aa782bd25574bd64555bfc48a738abfd9c441aec6d1b10959801"
     },
     {
       "path": "scripts/run_daily.py",
@@ -258,7 +258,7 @@
     },
     {
       "path": "scripts/test_broker_closure_and_coverage.py",
-      "sha256": "ff6940dadca779eccb6bbe77ee942a9181c372b139a977c194d3071e65d27fcd"
+      "sha256": "0a97712b4d2a0a70972a644730bbb7982bd176c4b9be3acd857e32b60a6a4349"
     },
     {
       "path": "scripts/test_contract_fixtures.py",
@@ -298,7 +298,7 @@
     },
     {
       "path": "scripts/test_native_article_evidence.py",
-      "sha256": "8175c6c2b44c3ed27ee115b801633a0b5771a6337baa342ad6a11355e66b7717"
+      "sha256": "86728cbdef2b4bca5d119f1198393d50e4dcf7d241062692371f9ef18486ae8b"
     },
     {
       "path": "scripts/test_native_readable_dates.py",
@@ -414,7 +414,7 @@
       "path": "references/quality_standard.md",
       "exists": true,
       "resolved_path": "personal-intelligence-hub/references/quality_standard.md",
-      "sha256": "ecc757cbdac76159b80cdf22c4b2b7f49c44a0b1508a0f9595bf40ab5d8d2e23"
+      "sha256": "4d7aaf40ede86b1070aa31870b9973214ac8e3b18b3b5052180ad5434b202c6d"
     },
     {
       "path": "references/strategic_focus.json",
@@ -432,7 +432,7 @@
       "path": "references/workflow_protocols.md",
       "exists": true,
       "resolved_path": "personal-intelligence-hub/references/workflow_protocols.md",
-      "sha256": "8fff970de5015f431bacdcfbbdf32191e8e24428a3448e390e0b0b8275de28e8"
+      "sha256": "f99e8fd8a084962341d5d8121df1ff1a82a28af2dddb3df0e28f937b39d7ae02"
     },
     {
       "path": "scripts/run_daily.py",

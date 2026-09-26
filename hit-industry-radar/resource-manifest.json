@@ -1,8 +1,7 @@
 {
   "schema_version": 3,
   "skill": "hit-industry-radar",
-  "generated_at": "2026-09-22T14:15:50+08:00",
-  "hash_algorithm": "SHA-256",
+  "generated_at": "2026-09-26T17:37:42+08:00",  "hash_algorithm": "SHA-256",
   "text_hash_normalization": "LF",
   "skill_md": "SKILL.md",
   "skill_md_sha256": "17206697fbaad4abdf959282899b9e12a9115919f1cab93e0b7eaee601085602",

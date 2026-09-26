@@ -295,6 +295,28 @@ class DiaryOpsTests(unittest.TestCase):
                     "# 2024-03-31\n\n" + audits, payload, day, "\n"
                 )
 
+    def test_daily_log_phrasings_are_bound_and_meta_requests_stay_rejected(self):
+        for request_text in (
+            "更新今日日志",
+            "更新今日日志。今日：澳门協和医院后续商务推进沟通。",
+            "写今日日志",
+            "记录今日日志",
+        ):
+            with self.subTest(request=request_text):
+                self.assertTrue(
+                    diary_ops._is_personal_diary_autosave_authorized(request_text)
+                )
+        for rejected in (
+            "更新今日日志草稿",
+            "只读：更新今日日志",
+            "修改技能 更新今日日志",
+            "分析更新今日日志的写法",
+        ):
+            with self.subTest(rejected=rejected):
+                self.assertFalse(
+                    diary_ops._is_personal_diary_autosave_authorized(rejected)
+                )
+
     def test_exact_personal_diary_request_autosaves_after_generation(self):
         requests = (
             "更新个人日志",
@@ -303,6 +325,8 @@ class DiaryOpsTests(unittest.TestCase):
             " 更新个人日志 ",
             "[OVERRIDE] 更新个人日志",
             "更新个人日志\n",
+            "更新今日日志。今日：澳门協和医院后续商务推进沟通，祁典项目工作安排沟通。",
+            "写今日日志",
         )
         for request_text in requests:
             with (

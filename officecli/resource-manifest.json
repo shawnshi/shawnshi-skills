@@ -1,7 +1,7 @@
 {
   "schema_version": 3,
   "skill": "officecli",
-  "generated_at": "2026-09-19T18:41:48+08:00",
+  "generated_at": "2026-09-24T09:41:50+08:00",
   "hash_algorithm": "SHA-256",
   "text_hash_normalization": "LF",
   "skill_md": "SKILL.md",
