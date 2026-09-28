@@ -15,10 +15,16 @@
     "experiment": "inverse_volatility_allocation",
     "decision_scope_one_of": ["research_only", "advisory", "actionable"]
   },
+  "optional_top_level": [
+    "denominator",
+    "excluded_policy_symbols",
+    "source_bindings"
+  ],
   "bucket_contract": {
-    "bucket_targets": "non-negative JSON numbers summing to 1.0",
-    "bucket_members": "keys exactly match bucket_targets and every active symbol appears exactly once",
-    "cash_rule": "a cash bucket must contain exactly one cash position and may not mix cash and non-cash positions"
+    "bucket_targets": "non-negative JSON numbers summing to 1.0 over the declared scope",
+    "bucket_members": "keys exactly match bucket_targets; every active symbol appears exactly once, or — when denominator is declared — every active NON-CASH symbol appears exactly once",
+    "cash_rule": "a cash bucket must contain exactly one cash position and may not mix cash and non-cash positions (legacy form only)",
+    "denominator_rule": "optional; the only accepted value is active_non_cash_market_value. When declared, excluded_policy_symbols must list every active cash position with a non-empty reason, non-cash symbols may not be excluded, and bucket_targets apply to the non-cash scope. This mirrors the user-confirmed 80/20 denominator and avoids inventing a cash target or a fake zero variance for cash."
   },
   "volatility_observation_required_fields": [
     "annualized_volatility",

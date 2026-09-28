@@ -1,7 +1,7 @@
 """Validate an offline primary-source Thesis red-team evidence package."""
 
 import re
-from datetime import datetime
+from datetime import date, datetime, timezone
 from typing import Any, Dict, List
 from urllib.parse import urlparse
 
@@ -9,8 +9,13 @@ from portfolio_loader import normalize_symbol
 
 
 SCHEMA_VERSION = "pia_thesis_red_team_v1"
-COMPLETE_CONCLUSIONS = {"fatal_breach", "no_fatal_breach_verified"}
+# ``condition_not_due`` expresses "the condition exists, is bound to a future date and
+# has not come due yet" — it is a complete judgement, not a claim that nothing was
+# breached.  It must carry the due date so the claim stays machine-checkable.
+COMPLETE_CONCLUSIONS = {"fatal_breach", "no_fatal_breach_verified", "condition_not_due"}
 ALLOWED_CONCLUSIONS = COMPLETE_CONCLUSIONS | {"insufficient_evidence"}
+NOT_DUE_CONCLUSION = "condition_not_due"
+NOT_DUE_STATUS = "no_condition_due_yet"
 ALLOWED_SOURCE_TIERS = {
     "issuer",
     "exchange",
@@ -93,6 +98,9 @@ def evaluate_thesis_evidence(
     window_start = _timestamp(payload.get("window_start"), "window_start", errors)
     window_end = _timestamp(payload.get("window_end"), "window_end", errors)
     generated_at = _timestamp(payload.get("generated_at"), "generated_at", errors)
+    # A "not due" claim is only meaningful relative to the evaluation date, so the
+    # date is derived once here and reused by the assessment checks below.
+    evaluation_date = datetime.fromtimestamp(evaluation_epoch, timezone.utc).date()
     result["window_start"] = payload.get("window_start")
     result["window_end"] = payload.get("window_end")
     if window_start is not None and window_end is not None and window_start >= window_end:
@@ -203,6 +211,31 @@ def evaluate_thesis_evidence(
             assessments_complete = False
         if not isinstance(assessment.get("rationale"), str) or not assessment["rationale"].strip():
             errors.append(f"{prefix}.rationale_required")
+        if conclusion == NOT_DUE_CONCLUSION:
+            condition_ids = assessment.get("condition_ids")
+            if (not isinstance(condition_ids, list) or not condition_ids
+                    or not all(isinstance(item, str) and item.strip() for item in condition_ids)):
+                errors.append(
+                    f"{prefix}.condition_ids_required: condition_not_due must name the conditions")
+                assessments_complete = False
+            due_date = assessment.get("due_date")
+            parsed_due = None
+            if not isinstance(due_date, str) or not re.fullmatch(r"\d{4}-\d{2}-\d{2}",
+                                                                 due_date.strip()):
+                errors.append(
+                    f"{prefix}.due_date_required: condition_not_due must state an ISO due date")
+                assessments_complete = False
+            else:
+                try:
+                    parsed_due = date.fromisoformat(due_date.strip())
+                except ValueError:
+                    errors.append(f"{prefix}.due_date_invalid")
+                    assessments_complete = False
+            if parsed_due is not None and evaluation_date is not None and parsed_due <= evaluation_date:
+                errors.append(
+                    f"{prefix}.due_date_not_in_the_future: a condition whose date has arrived "
+                    "cannot be reported as not due")
+                assessments_complete = False
         validate_evidence_ids(assessment.get("evidence_ids"), f"{prefix}.evidence_ids")
 
     returned = set(assessment_by_symbol)
@@ -228,14 +261,31 @@ def evaluate_thesis_evidence(
         for symbol in normalized_expected
         if assessment_by_symbol[symbol].get("conclusion") == "fatal_breach"
     ]
+    verified_symbols = [
+        symbol
+        for symbol in normalized_expected
+        if assessment_by_symbol[symbol].get("conclusion") == "no_fatal_breach_verified"
+    ]
+    not_due_symbols = [
+        symbol
+        for symbol in normalized_expected
+        if assessment_by_symbol[symbol].get("conclusion") == NOT_DUE_CONCLUSION
+    ]
+    due_dates = [assessment_by_symbol[symbol].get("due_date") for symbol in not_due_symbols]
+    if fatal_symbols:
+        aggregate = "fatal_breach_detected"
+    elif verified_symbols:
+        aggregate = "no_fatal_breach_verified"
+    else:
+        aggregate = NOT_DUE_STATUS
     result.update(
         {
             "status": "complete",
             "evidence_status": "ok",
-            "fatal_event_status": (
-                "fatal_breach_detected" if fatal_symbols else "no_fatal_breach_verified"
-            ),
+            "fatal_event_status": aggregate,
             "fatal_symbols": fatal_symbols,
+            "not_due_symbols": not_due_symbols,
+            "earliest_due_date": min(due_dates) if due_dates else None,
         }
     )
     return result

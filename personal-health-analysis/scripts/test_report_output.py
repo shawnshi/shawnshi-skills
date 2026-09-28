@@ -752,21 +752,27 @@ console.log(JSON.stringify({{
     def test_default_local_failure_never_falls_back_live(self):
         client = Mock(side_effect=AssertionError("client must not be initialized"))
         live_fetch = Mock(side_effect=AssertionError("live fetch must not run"))
-        with (
-            patch.object(garmin_chart, "HAS_SQLITE", True),
-            patch.object(
-                garmin_chart,
-                "fetch_local_summary",
-                side_effect=RuntimeError("synthetic local failure"),
-            ),
-            patch.object(garmin_chart, "get_client", client),
-            patch.object(garmin_chart, "fetch_summary", live_fetch),
-        ):
-            result = garmin_chart.main(
-                ["dashboard", "--days", "7", "--allow-health-data"]
-            )
+        legacy_local = Mock(side_effect=AssertionError("legacy local fetch must not run"))
+        with tempfile.TemporaryDirectory() as tmp:
+            output = Path(tmp) / "report.html"
+            with (
+                patch.object(garmin_chart, "HAS_SQLITE", True),
+                patch.object(
+                    garmin_chart,
+                    "fetch_dashboard_summary",
+                    side_effect=RuntimeError("synthetic local failure"),
+                ),
+                patch.object(garmin_chart, "fetch_local_summary", legacy_local),
+                patch.object(garmin_chart, "get_client", client),
+                patch.object(garmin_chart, "fetch_summary", live_fetch),
+            ):
+                result = garmin_chart.main(
+                    ["dashboard", "--days", "7", "--allow-health-data", "--output", str(output)]
+                )
+            self.assertFalse(output.exists())
 
         self.assertEqual(result, 1)
+        legacy_local.assert_not_called()
         client.assert_not_called()
         live_fetch.assert_not_called()
 

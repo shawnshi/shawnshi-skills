@@ -1,0 +1,66 @@
+{
+  "schema_version": "pia_interpretive_labels_v1",
+  "note": "解释性判断词表。标签是研究输出，不改写机器门禁状态；每个标签必须带 as_of 与理由，强判断需要更强证据。",
+  "axes": {
+    "financial_product": {
+      "description": "财务或产品质量变化（不看价格、不看持仓成本）",
+      "machine_relation": "与 quality_screener 的 status 并列呈现，不替代也不改写它",
+      "labels": {
+        "deteriorating": {
+          "definition": "已披露的财务或产品质量指标出现实质性恶化，且有直接材料支撑",
+          "requires_evidence_ids": true,
+          "requires_trigger_evidence": false,
+          "must_not_imply": ["卖出信号", "门禁结果"]
+        },
+        "watch": {
+          "definition": "出现需要跟踪的变化或关注点，但尚未构成实质性恶化",
+          "requires_evidence_ids": true,
+          "requires_trigger_evidence": false,
+          "must_not_imply": ["卖出信号", "门禁结果"]
+        },
+        "stable": {
+          "definition": "已披露维度未见实质变化，且未发现需要升级的关注点",
+          "requires_evidence_ids": true,
+          "requires_trigger_evidence": false,
+          "must_not_imply": ["未来不会恶化", "门禁结果"]
+        },
+        "insufficient_evidence": {
+          "definition": "缺少可用的一手材料，无法对财务或产品质量变化作出判断",
+          "requires_evidence_ids": false,
+          "requires_trigger_evidence": false,
+          "must_not_imply": ["无风险", "门禁结果"]
+        }
+      }
+    },
+    "thesis": {
+      "description": "既有投资逻辑相对用户确认条件的状态",
+      "machine_relation": "与 thesis_red_team 的 fatal_event_status 并列呈现；fatal_breach 只有机器门禁才能断言",
+      "labels": {
+        "fatal_breach": {
+          "definition": "用户确认的致命条件已被一手证据击中（该断言只允许由机器门禁给出）",
+          "requires_evidence_ids": true,
+          "requires_trigger_evidence": true,
+          "must_not_imply": ["自动卖出"]
+        },
+        "materially_weakened": {
+          "definition": "未击中致命条件，但承载 Thesis 的关键前提出现实质削弱",
+          "requires_evidence_ids": true,
+          "requires_trigger_evidence": true,
+          "must_not_imply": ["已证伪", "自动卖出"]
+        },
+        "intact_with_risks": {
+          "definition": "致命条件未触发，但存在已记录的、需要持续跟踪的风险",
+          "requires_evidence_ids": true,
+          "requires_trigger_evidence": false,
+          "must_not_imply": ["安全", "无需复核"]
+        },
+        "insufficient_evidence": {
+          "definition": "缺少可判定的用户确认条件或一手材料，无法对 Thesis 状态作出判断",
+          "requires_evidence_ids": false,
+          "requires_trigger_evidence": false,
+          "must_not_imply": ["无风险", "已评估"]
+        }
+      }
+    }
+  }
+}

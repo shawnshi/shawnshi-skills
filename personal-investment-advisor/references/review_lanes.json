@@ -1,0 +1,80 @@
+{
+  "schema_version": "pia_review_lanes_v1",
+  "note": "独立复核泳道的工具与输入声明。泳道必须由未参与该次生成的执行者运行；声明不是权限，实际可用工具以运行时为准。",
+  "lanes": {
+    "numbers-auditor": {
+      "purpose": "复算机器回执中的数字（权重、情景收益、边界阈值、覆盖率），不评价语义",
+      "required_tools": ["read", "bash"],
+      "required_inputs": [
+        "out/daily_run_summary.json",
+        "out/weights.json",
+        "out/quotes.json",
+        "out/watchlist_results.json"
+      ],
+      "forbidden": [
+        "写入或修改任何文件",
+        "下单或路由订单",
+        "修改持仓、策略或技能"
+      ],
+      "questions": [
+        "每个关键数字能否由原始制品重算（给出命令与文件）？",
+        "哪些数字无法重算，原因是什么（须标 UNVERIFIED）？",
+        "缺失制品是否被当作零、空值或不存在的证据使用？",
+        "时效与覆盖率断言是否与制品一致（含阈值与实测年龄）？"
+      ],
+      "output_contract": [
+        "逐项 PASS / PASS WITH NOTES / FAIL，附命令、文件与字段",
+        "无法验证项写 UNVERIFIED 与原因",
+        "先列阻断性发现，再列非阻断备注"
+      ]
+    },
+    "evidence-auditor": {
+      "purpose": "核查证据层级、时间窗、绑定与结论强度是否被证据支持",
+      "required_tools": ["read", "web_search", "fetch_content"],
+      "required_inputs": [
+        "out/daily_run_summary.json",
+        "out/scenario_result.json"
+      ],
+      "forbidden": [
+        "写入或修改任何文件",
+        "把厂商材料当作独立证据",
+        "用新闻数量或价格变化替代证据强度判断"
+      ],
+      "questions": [
+        "每条来源是否支撑其被声明的一级/二级/营销层级？",
+        "published_at / retrieved_at / window_end 的时序是否自洽？",
+        "结论强度是否超出其证据？是否存在把未评估写成安全的地方？",
+        "有无窗口内的一手事实被遗漏（须给出可核验线索）？"
+      ],
+      "output_contract": [
+        "逐问 PASS / PASS WITH NOTES / FAIL，附文件与字段",
+        "列出 UNVERIFIED 项与原因",
+        "不改写制品，不提供买卖建议"
+      ]
+    },
+    "contract-reviewer": {
+      "purpose": "核查门禁契约是否被绕过：身份、绑定、原子性、失败关闭与权限边界",
+      "required_tools": ["read", "bash"],
+      "required_inputs": [
+        "out/daily_run_summary.json",
+        "out/refresh_receipt.json"
+      ],
+      "forbidden": [
+        "写入或修改任何文件",
+        "放宽 ACL 或提权探测",
+        "把结构通过当作事实通过"
+      ],
+      "questions": [
+        "输入是否被改写（原文件哈希是否前后一致）？",
+        "失败路径是否失败关闭，而非静默成功或降级为空格？",
+        "写入是否原子、是否可能覆盖既有制品？",
+        "是否有契约声明与实现不一致之处？"
+      ],
+      "output_contract": [
+        "逐问 PASS / PASS WITH NOTES / FAIL，附命令与回执字段",
+        "标出所有 fail-open 风险",
+        "UNVERIFIED 项须给出无法验证的原因"
+      ]
+    }
+  }
+}

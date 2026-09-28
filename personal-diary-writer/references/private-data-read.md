@@ -21,7 +21,7 @@
    3. `gws` 不存在、权限检查失败、Calendar scope 缺失、认证失效或查询失败时，立即报告日历证据缺口与稳定原因码；不得自动登录、刷新或修改凭据。
    4. 禁止自动改用 Outlook COM、Microsoft Graph、Windows 日历或其他日历源。只有用户在当前请求中明确指定并授权其他来源时，才可改用该来源。
 2. Garmin 先通过 canonical `personal-health-analysis` 的依赖预检与数据授权检查，再执行本地读取命令中的 `--source local --allow-health-data`。返回 `partial` 时保留已有证据并披露缺口；返回 `no_data` 时不得伪造观测。
-3. Current-date freshness gate：只有未命中上述同步退出条件、窗口含当前日且必需组件末端陈旧时，允许一次 `sync_health_data.py sync --dry-run`，通过后再执行一次带 `--allow-network --allow-sync --allow-health-data` 的同步并本地重读；without retry。同步失败后不得改走实时接口。
+3. Current-date freshness gate：只有未命中上述同步退出条件、窗口含当前日且必需组件末端陈旧时，允许一次两阶段受控同步（先 `sync_health_data.py sync --dry-run --auto-env` 生成短期计划，通过后再带 `--allow-network --allow-sync --auto-env` 执行）并本地重读；without retry。环境未显式指定时可通过 `--auto-env` 自动回退到 `~/.GarminDb` 与 `personal-health-sync-390` 解释器。同步失败后不得改走实时接口。
 4. 仅当本次没有尝试同步、本地明确为 `no_data`、用户已授权联网且 `runtime_preflight.py --mode live` 通过时，才允许一次同窗口 `--source live --allow-network --allow-health-data`。`authentication_required`、`RUNTIME_CONTRACT_MISMATCH`、Schema 或完整性错误立即失败关闭。
 5. 不注册、更新或修复计划任务，不调用 `Codex-Garmin-Health-Sync`，不执行 Garmin 登录、令牌写入或原始活动下载。
 

@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import argparse
 import json
+import math
 from datetime import date, datetime
 from pathlib import Path
 from typing import Any
@@ -33,6 +34,72 @@ def _iso_date(value: Any) -> bool:
 
 def _strict_nonnegative_int(value: Any) -> bool:
     return isinstance(value, int) and not isinstance(value, bool) and value >= 0
+
+
+def _factor_numeric(value: str) -> float | None:
+    """Parse a factor as a number: ``1:1.054712`` ratios and plain decimals."""
+
+    text = str(value or "").replace(" ", "")
+    if ":" in text:
+        parts = text.split(":")
+        if len(parts) != 2:
+            return None
+        try:
+            left, right = float(parts[0]), float(parts[1])
+        except ValueError:
+            return None
+        return left / right if right else None
+    try:
+        return float(text)
+    except ValueError:
+        return None
+
+
+def _factor_tolerance(payload: dict, errors: list[str]) -> dict[str, Any] | None:
+    """Validate the optional, self-documenting factor tolerance.
+
+    Exact equality stays the default.  A tolerance is only accepted when the caller
+    states its basis, magnitude, justification and source locator — an unexplained
+    tolerance would silently widen every comparison in the packet.
+    """
+
+    raw = payload.get("factor_tolerance")
+    if raw is None:
+        return None
+    if not isinstance(raw, dict):
+        errors.append("factor_tolerance_must_be_an_object")
+        return None
+    local: list[str] = []
+    basis = str(raw.get("basis") or "").strip().lower()
+    if basis not in {"relative", "absolute"}:
+        local.append("factor_tolerance.basis must be relative or absolute")
+    value = raw.get("value")
+    if (isinstance(value, bool) or not isinstance(value, (int, float))
+            or not math.isfinite(float(value)) or float(value) <= 0):
+        local.append("factor_tolerance.value must be a positive finite number")
+    for field in ("justification", "source_locator"):
+        if not _non_empty_string(raw.get(field)):
+            local.append(f"factor_tolerance.{field} must be a non-empty string")
+    if local:
+        errors.extend(local)
+        return None
+    return {"basis": basis, "value": float(value),
+            "justification": str(raw["justification"]).strip(),
+            "source_locator": str(raw["source_locator"]).strip()}
+
+
+def _factors_match(official: tuple, provider: tuple, tolerance: dict[str, Any]) -> bool:
+    """Match two events: type and date must agree exactly, factors within tolerance."""
+
+    if (official[0], official[1]) != (provider[0], provider[1]):
+        return False
+    left, right = _factor_numeric(official[2]), _factor_numeric(provider[2])
+    if left is None or right is None:
+        return False
+    difference = abs(left - right)
+    if tolerance["basis"] == "absolute":
+        return difference <= tolerance["value"]
+    return difference <= tolerance["value"] * max(abs(left), abs(right))
 
 
 def _normalize_event(
@@ -180,9 +247,34 @@ def evaluate_history_integrity(payload: Any) -> dict[str, Any]:
 
     missing_from_provider = sorted(normalized_official - normalized_provider)
     extra_in_provider = sorted(normalized_provider - normalized_official)
+    tolerance = _factor_tolerance(payload, errors)
+    if errors:
+        return {
+            "status": "insufficient_data",
+            "detail_status": "coverage_incomplete",
+            "packet_verified": False,
+            "technical_metrics_allowed": False,
+            "symbol": normalized_symbol,
+            "errors": list(dict.fromkeys(errors)),
+            "event_mismatches": {},
+        }
+    within_tolerance: list[dict[str, Any]] = []
+    if tolerance is not None and (missing_from_provider or extra_in_provider):
+        remaining_missing = list(missing_from_provider)
+        remaining_extra = list(extra_in_provider)
+        for official in list(remaining_missing):
+            for provider in list(remaining_extra):
+                if _factors_match(official, provider, tolerance):
+                    within_tolerance.append({"official": list(official),
+                                             "provider": list(provider)})
+                    remaining_missing.remove(official)
+                    remaining_extra.remove(provider)
+                    break
+        missing_from_provider, extra_in_provider = remaining_missing, remaining_extra
     mismatches = {
         "missing_from_provider": missing_from_provider,
         "extra_in_provider": extra_in_provider,
+        "within_tolerance": within_tolerance,
     }
     if missing_from_provider or extra_in_provider:
         return {
@@ -193,6 +285,7 @@ def evaluate_history_integrity(payload: Any) -> dict[str, Any]:
             "symbol": normalized_symbol,
             "errors": [],
             "event_mismatches": mismatches,
+            "factor_tolerance": tolerance,
         }
     return {
         "status": "ok",
@@ -206,6 +299,8 @@ def evaluate_history_integrity(payload: Any) -> dict[str, Any]:
         "symbol": normalized_symbol,
         "errors": [],
         "event_mismatches": mismatches,
+        "factor_tolerance": tolerance,
+        "tolerance_used": bool(within_tolerance),
     }
 
 

@@ -252,7 +252,13 @@ pwsh -NoProfile -ExecutionPolicy Bypass -File scripts/repair_skills.ps1 -Mode Ga
 5. 对修改过的脚本运行语法检查、代表性正向测试和相关单元测试。改动 `scripts/` 下门禁脚本本身会使 `mentat-skill-creator/resource-manifest.json` 过期（它记录了所声明依赖的脚本哈希），所以顺序是先改脚本、最后重新生成该 manifest、再跑门禁。
 6. 只有验证结果真实变化时，才同步本 README 的库存和基线数字。
 
-### 8.1 Current validation (2026-09-24)
+### Latest publication validation (2026-09-28)
+
+- 从本地安装库同步 5 个技能的实质变更和新资源；保留发布仓既有 README 与独有文件，不发布 `.skill_state`、缓存或运行产物。51 份资源清单在发布仓重新生成并通过 `-Check`；全库 `repair_skills.ps1 -Mode Gate` 与 5 个受影响技能的 scoped gate 通过。
+- 发布仓测试：库级脚本 89 passed、1 skipped；日记 57 passed、4 skipped；健康 408 passed；变更的资讯测试 162 passed；新增/变更的投资测试分组共 332 passed。跨技能整批测试与完整 `scripts/gate.sh` 未宣称通过：前者超时，后者仍含下述依赖安装目录旁 `pai/*` 的非可移植用例。
+- 周/月/季审计新增精确别名会扩大自动保存请求匹配面，但仍要求受保护用户事件、周期一致和原有审批门；已覆盖所有新增别名。交易所公告原始 HTML 使用 `.gitattributes` 禁止 Git 换行转换，发布前核对暂存字节的 SHA-256 与日历表记录一致。
+
+### 8.1 Previous validation (2026-09-24—26)
 
 环境：Windows 主机；`pwsh`（PowerShell Core）；Python 3.13 + PyYAML。
 

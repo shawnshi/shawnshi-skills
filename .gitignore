@@ -21,3 +21,7 @@ _runtime/
 .venv/
 node_modules/
 .venv_test
+.skill_state/
+.deepxiv-draft-*/
+output/
+garmin-output/

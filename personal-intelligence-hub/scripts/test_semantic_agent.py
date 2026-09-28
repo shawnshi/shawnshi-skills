@@ -8,6 +8,8 @@ from tempfile import TemporaryDirectory
 from typing import Any
 from unittest.mock import patch
 
+import semantic_agent as agent  # pyright: ignore[reportMissingImports]
+from mix_policy import major_signal_eligible  # pyright: ignore[reportMissingImports]
 from run_contract import (  # pyright: ignore[reportMissingImports]
     RunContractError,
     candidate_object_hash,
@@ -544,7 +546,42 @@ class SemanticAgentFinalizeTests(unittest.TestCase):
         candidate.pop("event_identity")
         item = self._assemble(candidate, identity)["top_10"][0]
         self.assertEqual(item["event_date"], "2026-09-02")
-        self.assertEqual(item["event_date_source"], "published_at")
+        # F-05: the fallback is labelled as a publication base, not as an event date.
+        self.assertEqual(item["event_date_source"], agent.PUBLICATION_BASE_EVENT_DATE)
+        self.assertNotEqual(item["event_date_source"], "published_at")
+
+    def test_publication_base_event_date_cannot_carry_a_major_signal(self) -> None:
+        """F-05: major_signal asserts a verified event, so a date fallback cannot justify it."""
+        candidate, identity = self._dated_candidate("2026-09-02")
+        candidate.pop("event_identity")
+        item = {
+            "candidate_id": candidate["candidate_id"],
+            "event_identity": identity,
+            "title_zh": "已核验技术通告",
+            "fact": "厂商披露了事故范围。",
+            "connection": "与同一批次的智能体能力相关。",
+            "deduction": "核对本地沙箱边界。",
+            "actionability": "由平台团队核对隔离策略。",
+            "intelligence_level": "L3",
+            "confidence": "high",
+            "summary_zh": "无事件日期，仅能回退到发布日期。",
+            "major_signal": True,
+            "major_signal_reason": "来源自述范围较大",
+            "near_term_decision_impact": True,
+            "decision_impact_reason": "近期需要复核隔离策略",
+        }
+        core = self._assemble(
+            candidate, identity, dynamic_overrides={"selected_items": [item]}
+        )
+        assembled = core["top_10"][0]
+        self.assertEqual(
+            assembled["event_date_source"], agent.PUBLICATION_BASE_EVENT_DATE
+        )
+        # Otherwise eligible (L3 + high + primary + verified access + near-term impact),
+        # so only the F-05 publication-base rule can have demoted it.
+        assert major_signal_eligible({**assembled, "major_signal": True, "near_term_decision_impact": True}) is True
+        self.assertIs(assembled["major_signal"], False)
+        self.assertEqual(assembled["major_signal_reason"], "none")
 
     def test_model_cannot_replace_registered_event_date_with_publication(self) -> None:
         candidate, identity = self._dated_candidate()

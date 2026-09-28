@@ -43,7 +43,7 @@
 
 微信兼容（11.10.4）：仅在周期请求意图精确匹配时，允许剥离开头一层 `【微信消息】` 加 LF/CRLF；然后应用既有单一 OVERRIDE/WARROOM 前缀与精确别名/结构化指令规则。原始受保护用户事件及其文本哈希不变，用户角色和周期校验不变。重复消息标记、追加事项、引用中的命令和否定保存仍不能授权。该规则不修改通用确认或个人日记授权，也不允许篡改会话记录。
 
-通过 `personal-cognitive-auditor` 生成周、月、季度 personal-log audit 且内容门通过时，只有以下两类受保护用户事件可继续：一是精确文本 `本周个人日志审计`/`个人日志周审计`、`本月个人日志审计`/`个人日志月度审计`、`本季度个人日志审计`/`个人日志季度审计`，允许单一 `[OVERRIDE]` 或 `[WARROOM]` 前缀，并要求事件时间对应同一周期；二是精确 `AUDIT_AUTOSAVE {canonical-json}` 命令，其中 period type、period ID 和 `canonical_autosave` 策略必须匹配。任何额外修饰都拒绝，因此草稿、预览、只读或不保存请求保持只读。调用层生成的 approval 必须包含 `periodic-audit-request-v1` artifact 字段；写入器绑定事件、周期、动作、目标、scope 和 payload 后，只接受对应 `replace-*-audit` 动作。
+通过 `personal-cognitive-auditor` 生成周、月、季度 personal-log audit 且内容门通过时，只有以下两类受保护用户事件可继续：一是精确文本 周审计（`本周个人日志审计`/`个人日志周审计`/`本周日志审计`/`周度日志审计`/`日志周审计`）、月度审计（`本月个人日志审计`/`个人日志月度审计`/`本月日志审计`/`月度日志审计`/`日志月度审计`）、季度审计（`本季度个人日志审计`/`个人日志季度审计`/`本季度日志审计`/`本季日志审计`/`季度日志审计`/`日志季度审计`），允许单一 `[OVERRIDE]` 或 `[WARROOM]` 前缀，并要求事件时间对应同一周期；二是精确 `AUDIT_AUTOSAVE {canonical-json}` 命令，其中 period type、period ID 和 `canonical_autosave` 策略必须匹配。任何额外修饰都拒绝，因此草稿、预览、只读或不保存请求保持只读。调用层生成的 approval 必须包含 `periodic-audit-request-v1` artifact 字段；写入器绑定事件、周期、动作、目标、scope 和 payload 后，只接受对应 `replace-*-audit` 动作。
 
 ## 写入执行与复读
 

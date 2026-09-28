@@ -288,9 +288,34 @@ def fetch_yf_data(ticker_symbol: str):
     return require_data(run_provider(_yf_financial_provider, ticker_symbol, os.environ.get("PIA_YFINANCE_CACHE_DIR")))
 
 
-def _a_share_financial_provider(code):
+def _a_share_start_year(as_of_date: str | None) -> int:
+    """Return the provider window start year for the A-share indicator endpoint.
+
+    akshare's default ``start_year='1900'`` currently yields an empty frame for
+    these symbols, which the screen then reports as "A-share financial
+    indicators unavailable" even though the endpoint answers for a sane window.
+    A six-year window keeps at least three annual periods available while the
+    as-of cutoff keeps point-in-time filtering in charge.
+    """
+
+    reference = date.today()
+    if as_of_date:
+        parsed = _parse_iso_date(as_of_date)
+        if parsed is not None:
+            reference = parsed
+    return max(1991, reference.year - 5)
+
+
+def _a_share_financial_provider(code, start_year):
     import akshare as ak
-    frame = ak.stock_financial_analysis_indicator(symbol=code)
+
+    try:
+        frame = ak.stock_financial_analysis_indicator(symbol=code, start_year=str(start_year))
+    except TypeError as exc:  # signature drift is a channel error, not missing data
+        raise TypeError(
+            "A-share indicator provider signature mismatch "
+            f"({exc}); expected stock_financial_analysis_indicator(symbol, start_year)"
+        ) from exc
     if not isinstance(frame, pd.DataFrame):
         raise TypeError("financial provider returned non-DataFrame")
     return frame
@@ -365,19 +390,76 @@ def extract_yf_metrics(
     return (metrics, observations) if include_observations else metrics
 
 
+def _a_share_abstract_provider(code):
+    """Second verified free channel: the dated 财务摘要 table.
+
+    The indicator endpoint leaves some columns present but empty (for example
+    销售毛利率 for 601899 in akshare 1.18.64), while the abstract table carries
+    the same metric under its own row label.  This channel is used only as a
+    fallback and every value records which channel produced it.
+    """
+
+    import akshare as ak
+
+    frame = ak.stock_financial_abstract(symbol=code)
+    if not isinstance(frame, pd.DataFrame):
+        raise TypeError("financial abstract provider returned non-DataFrame")
+    return frame
+
+
+def _abstract_annual_series(
+    frame: pd.DataFrame,
+    metric_label: str,
+    as_of_date: str | None,
+    limit: int = 5,
+) -> pd.Series:
+    """Return annual (Dec-31) values of one abstract-table row, newest first."""
+
+    if frame is None or "指标" not in frame.columns:
+        return pd.Series(dtype=float)
+    labels = frame["指标"].astype(str).str.strip()
+    rows = frame[labels == metric_label]
+    if rows.empty:
+        return pd.Series(dtype=float)
+    cutoff = _parse_iso_date(as_of_date)
+    observations: list[tuple[date, float]] = []
+    for column in frame.columns:
+        token = str(column).strip()
+        if not token.isdigit() or len(token) != 8:
+            continue
+        try:
+            day = date(int(token[:4]), int(token[4:6]), int(token[6:]))
+        except ValueError:
+            continue
+        if day.month != 12 or day.day != 31:
+            continue
+        if cutoff is not None and day > cutoff:
+            continue
+        value = pd.to_numeric(pd.Series([rows.iloc[0][column]]), errors="coerce").iloc[0]
+        if pd.notna(value):
+            observations.append((day, float(value)))
+    observations.sort(key=lambda item: item[0], reverse=True)
+    return pd.Series([value for _, value in observations[:limit]], dtype=float)
+
+
 def extract_a_share_metrics(
     ticker_symbol: str,
     as_of_date: str | None = None,
     *,
     include_period: bool = False,
+    abstract_frame: pd.DataFrame | None = None,
 ) -> (
     dict[str, Any]
-    | tuple[dict[str, Any], dict[str, Any] | None, dict[str, int]]
+    | tuple[dict[str, Any], dict[str, Any] | None, dict[str, int], dict[str, Any]]
 ):
     code = ticker_symbol.split(".")[0]
-    frame = require_data(run_provider(_a_share_financial_provider, code))
+    start_year = _a_share_start_year(as_of_date)
+    frame = require_data(run_provider(_a_share_financial_provider, code, start_year))
     if frame.empty:
-        raise FinancialDataUnavailable("A-share financial indicators unavailable")
+        raise FinancialDataUnavailable(
+            "A-share financial indicators unavailable "
+            f"(provider window start_year={start_year}, empty response)"
+        )
     if "日期" in frame.columns:
         frame["日期"] = pd.to_datetime(frame["日期"], errors="coerce")
         cutoff = _parse_iso_date(as_of_date)
@@ -387,7 +469,10 @@ def extract_a_share_metrics(
             (frame["日期"].dt.month == 12) & (frame["日期"].dt.day == 31)
         ].sort_values("日期", ascending=False)
     if frame.empty:
-        raise FinancialDataUnavailable("A-share financial indicators unavailable at or before as_of_date")
+        raise FinancialDataUnavailable(
+            "A-share financial indicators unavailable at or before as_of_date "
+            f"(provider window start_year={start_year})"
+        )
 
     def column(names: list[str]) -> pd.Series:
         for name in names:
@@ -402,6 +487,39 @@ def extract_a_share_metrics(
     dilution = None
     if len(shares) > 1 and shares.iloc[-1] > 0:
         dilution = float((shares.iloc[0] - shares.iloc[-1]) / shares.iloc[-1])
+
+    metric_channels = {"roe_avg": "akshare_financial_analysis_indicator",
+                       "net_margin_avg": "akshare_financial_analysis_indicator"}
+    unavailable_metrics: dict[str, str] = {}
+    if gross_margin.empty:
+        fallback = pd.Series(dtype=float)
+        try:
+            abstract = abstract_frame
+            if abstract is None:
+                abstract = require_data(run_provider(_a_share_abstract_provider, code))
+            fallback = _abstract_annual_series(abstract, "毛利率", as_of_date)
+            if fallback.empty:
+                fallback = _abstract_annual_series(abstract, "销售毛利率", as_of_date)
+        except Exception as exc:  # noqa: BLE001 - recorded as an explicit channel gap
+            unavailable_metrics["gross_margin_avg"] = (
+                "indicator channel returned an empty column and the abstract channel failed: "
+                f"{type(exc).__name__}: {exc}"[:200])
+        if not fallback.empty:
+            gross_margin = fallback
+            metric_channels["gross_margin_avg"] = "akshare_financial_abstract:毛利率"
+        else:
+            unavailable_metrics.setdefault(
+                "gross_margin_avg",
+                "indicator channel returned an empty 销售毛利率 column and the abstract channel "
+                "had no 毛利率 row")
+    else:
+        metric_channels["gross_margin_avg"] = "akshare_financial_analysis_indicator"
+    if dilution is not None:
+        metric_channels["dilution"] = "akshare_financial_analysis_indicator:总股本"
+    else:
+        unavailable_metrics["dilution"] = (
+            "no share-count column in either verified free channel; the eastmoney push2 endpoint "
+            "used by stock_individual_info_em is unreachable from this environment (ProxyError)")
     metrics = {
         "roe_avg": float(roe.head(5).mean() / 100) if not roe.empty else None,
         "gross_margin_avg": float(gross_margin.head(5).mean() / 100) if not gross_margin.empty else None,
@@ -425,9 +543,14 @@ def extract_a_share_metrics(
         "net_margin_avg": min(len(net_margin.head(5)), 5),
         "dilution": len(shares),
     }
+    channel_evidence = {
+        "metric_channels": metric_channels,
+        "unavailable_metrics": unavailable_metrics,
+        "start_year": start_year,
+    }
     if include_period:
-        return metrics, data_period, observations
-    return metrics
+        return metrics, data_period, observations, channel_evidence
+    return metrics, channel_evidence
 
 
 def evaluate_ticker(
@@ -497,7 +620,7 @@ def evaluate_ticker(
         normalized_market = market.strip().upper() if isinstance(market, str) else None
         cutoff = cutoff or retrieved_at.date()
         if normalized_market == "CN" or ticker_symbol.endswith((".SS", ".SZ", ".BJ")):
-            metrics, data_period, metric_observations = extract_a_share_metrics(
+            metrics, data_period, metric_observations, channel_evidence = extract_a_share_metrics(
                 ticker_symbol,
                 as_of_date,
                 include_period=True,
@@ -521,6 +644,7 @@ def evaluate_ticker(
             metrics, metric_observations = extract_yf_metrics(
                 income, cashflow, balance, include_observations=True
             )
+            channel_evidence = None
             data_period = _statement_period(income, cashflow, balance)
             source = "yfinance"
             source_locator = (
@@ -532,7 +656,7 @@ def evaluate_ticker(
         outcome = exc.outcome if isinstance(exc, ProviderError) else error_outcome(exc)
         return {**base, "status": "data_error", "reason": outcome["error"], "provider_outcome": outcome}
     result = evaluate_metrics(metrics, profile, metric_observations)
-    return {
+    output = {
         **base,
         "source": source,
         "source_locator": source_locator,
@@ -545,6 +669,11 @@ def evaluate_ticker(
         "alpha_validation_status": profile.get("alpha_validation_status", "not_validated"),
         **result,
     }
+    if channel_evidence:
+        # Which free channel produced each metric, and why a metric is absent.  A
+        # missing metric is a channel capability statement, not a failed threshold.
+        output["a_share_channel_evidence"] = channel_evidence
+    return output
 
 
 def main() -> int:

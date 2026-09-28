@@ -158,10 +158,38 @@ def test_truncated_undeclared_short_body_still_blocks():
         ("https://example.org/2026/02/31/release", ""),
         ("https://example.org/2026/13/01/release", ""),
         ("https://example.org/t12026/09/24/release", ""),
+        # F-01: the shared grammar also resolves the separator and padding shapes the two
+        # consumers used to disagree about, and refuses a path with two different days.
+        ("https://www.news.cn/legal/20260915/3f7196f5/c.html", "2026-09-15"),
+        ("https://example.org/2026-09-28/report", "2026-09-28"),
+        ("https://example.org/2026.09.28/report", "2026-09-28"),
+        ("https://example.org/2026/09/24/a/2026/09/25", ""),
     ],
 )
 def test_url_path_declared_day_extracts_only_real_calendar_days(url, expected):
     assert broker._url_path_declared_day(url) == expected
+
+
+def test_url_date_anchor_and_path_basis_agree_on_the_same_urls():
+    """F-01: one grammar feeds both consumers, so they can never disagree again."""
+    for url in (
+        "https://www.news.cn/legal/20260915/3f7196f5/c.html",
+        "https://example.org/2026-09-28/report",
+        "https://example.org/2026/9/28/report",
+        "https://www.theguardian.com/technology/2026/sep/24/openai-agent",
+    ):
+        anchor = broker._url_date_anchor(url)
+        basis = broker._url_path_declared_day(url)
+        assert anchor is not None
+        assert anchor == basis
+    for url in (
+        "https://example.org/releases/original",
+        "https://example.org/2026/13/01/release",
+        "https://example.org/2026/02/31/release",
+        "https://example.org/t12026/09/24/release",
+    ):
+        assert broker._url_date_anchor(url) is None
+        assert broker._url_path_declared_day(url) == ""
 
 
 def test_truncated_flag_still_blocks_a_bounded_excerpt():

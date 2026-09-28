@@ -162,6 +162,8 @@ def test_context_delivers_registered_frozen_contract_and_distinct_evidence(tmp_p
         context = agent.build_agent_context(request_path)
     assert context["agent_contract"] == frozen
     assert context["agent_contract"]["readability_contract"]["contract_version"] == "semantic-readability/1.0"
+    assert "corroboration_policy" in context
+    assert "selection_rule" in context["dynamic_contract"]
     assert context["eligible_candidates"][0]["summary"] == candidate["summary"]
     assert context["eligible_candidates"][0]["evidence_excerpt"]["text"] != candidate["summary"]
     assert context["dynamic_draft_path"] == str(dynamic_path.resolve())

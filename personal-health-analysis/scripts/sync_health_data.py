@@ -246,6 +246,15 @@ def build_parser() -> argparse.ArgumentParser:
         ),
     )
     sync_parser.add_argument(
+        "--auto-env",
+        action="store_true",
+        help=(
+            "Automatically fallback to default verified GarminDB config and runner "
+            "environments (~/.GarminDb and ~/.pi/agent/venvs/personal-health-sync-390) "
+            "when --config-dir or --garmindb-python are omitted"
+        ),
+    )
+    sync_parser.add_argument(
         "--garmindb-python",
         help=(
             "Explicit Python executable from a separately verified GarminDB "
@@ -256,6 +265,23 @@ def build_parser() -> argparse.ArgumentParser:
         "--timeout-seconds", type=int, default=900, help="Maximum runner duration"
     )
     return parser
+
+
+def default_config_dir() -> Path | None:
+    candidate = Path.home() / ".GarminDb"
+    if candidate.is_dir() and (candidate / "GarminConnectConfig.json").is_file():
+        return candidate
+    return None
+
+
+def default_garmindb_python() -> Path | None:
+    for candidate in (
+        Path.home() / ".pi/agent/venvs/personal-health-sync-390/Scripts/python.exe",
+        Path.home() / ".pi/agent/venvs/personal-health-sync-390/bin/python",
+    ):
+        if candidate.is_file():
+            return candidate
+    return None
 
 
 def parse_window(start_raw: str | None, end_raw: str | None) -> tuple[date, date]:
@@ -1623,6 +1649,19 @@ def main(argv: Sequence[str] | None = None) -> int:
     requested_gates = list(SYNC_BASE_GATES)
     if args.allow_download:
         requested_gates.append("download")
+
+    config_dir_val = args.config_dir
+    garmindb_python_val = args.garmindb_python
+    if getattr(args, "auto_env", False) or os.environ.get("GARMINDB_AUTO_ENV") == "1":
+        if not config_dir_val:
+            def_cfg = default_config_dir()
+            if def_cfg:
+                config_dir_val = str(def_cfg)
+        if not garmindb_python_val:
+            def_py = default_garmindb_python()
+            if def_py:
+                garmindb_python_val = str(def_py)
+
     if args.dry_run:
         if args.plan_file:
             emit(
@@ -1637,7 +1676,7 @@ def main(argv: Sequence[str] | None = None) -> int:
         plan_written = False
         plan_path = None
         if args.plan_output:
-            if not args.config_dir or not args.garmindb_python:
+            if not config_dir_val or not garmindb_python_val:
                 emit(
                     {
                         "ok": False,
@@ -1649,8 +1688,8 @@ def main(argv: Sequence[str] | None = None) -> int:
                 return EXIT_USAGE
             try:
                 bindings = build_sync_bindings(
-                    Path(args.config_dir).expanduser(),
-                    Path(args.garmindb_python).expanduser(),
+                    Path(config_dir_val).expanduser(),
+                    Path(garmindb_python_val).expanduser(),
                 )
                 plan = build_sync_plan(
                     start,
@@ -1750,10 +1789,10 @@ def main(argv: Sequence[str] | None = None) -> int:
         sync_capability=sync_capability,
         download_capability=download_capability,
         plan_file=Path(args.plan_file).expanduser(),
-        config_dir=Path(args.config_dir).expanduser() if args.config_dir else None,
+        config_dir=Path(config_dir_val).expanduser() if config_dir_val else None,
         garmindb_python=(
-            Path(args.garmindb_python).expanduser()
-            if args.garmindb_python
+            Path(garmindb_python_val).expanduser()
+            if garmindb_python_val
             else None
         ),
         timeout_seconds=args.timeout_seconds,

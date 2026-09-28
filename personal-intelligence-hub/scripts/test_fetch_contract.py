@@ -447,6 +447,66 @@ class FetchContractTests(unittest.IsolatedAsyncioTestCase):
         self.assertEqual(coverage["coverage_confidence"], "medium")
         self.assertIn("no candidates", " ".join(coverage["reasons"]))
 
+    def test_coverage_separates_unknown_from_unparsable_dates(self):
+        """F-06: a source that declares no date is not the same defect as an unparsable one."""
+        funnel = {
+            "raw": 8,
+            "dated": 5,
+            "quarantined": 3,
+            "within_window": 5,
+            "outside_window": 0,
+            "excluded": 0,
+            "retained": 5,
+            "quarantine_reasons": {"unknown_published_at": 2, "invalid_published_at": 1},
+        }
+
+        coverage = fetch_news.build_coverage({"one": "OK"}, funnel)
+
+        self.assertEqual(coverage["unknown_published_at_candidates"], 2)
+        self.assertEqual(coverage["invalid_published_at_candidates"], 1)
+        self.assertAlmostEqual(coverage["unknown_date_rate"], 0.25)
+        self.assertAlmostEqual(coverage["invalid_date_rate"], 0.125)
+        # The legacy merged rate is unchanged and still ignores outside-window items.
+        self.assertAlmostEqual(coverage["dated_candidate_rate"], 0.625)
+
+    def test_rss_publication_timestamp_keeps_the_publishers_own_offset(self):
+        """F-02: normalising to UTC at ingestion moved a US-evening item to the next day."""
+        self.assertEqual(
+            fetch_news._rss_published_at("Sat, 26 Sep 2026 20:30:00 -0700"),
+            "2026-09-26T20:30:00-07:00",
+        )
+        self.assertEqual(
+            fetch_news._rss_published_at("Sun, 27 Sep 2026 08:00:00 +0800"),
+            "2026-09-27T08:00:00+08:00",
+        )
+        # An offset-less timestamp stays unusable, exactly as before.
+        self.assertIsNone(fetch_news._rss_published_at("Sun, 27 Sep 2026 08:00:00"))
+        self.assertIsNone(fetch_news._rss_published_at(None))
+        self.assertIsNone(fetch_news._rss_published_at("not-a-timestamp"))
+
+    def test_rss_offset_is_what_the_window_gate_reads(self):
+        """F-02 end-to-end: the retained offset and the window gate agree on the local day."""
+        window = fetch_news.build_calendar_window(
+            report_date=date(2026, 9, 26),
+            window_days=1,
+            timezone_name="Asia/Shanghai",
+        )
+        kept, quarantine, funnel = fetch_news.apply_window_contract(
+            [
+                {
+                    "title": "us evening release",
+                    "published_at": fetch_news._rss_published_at(
+                        "Sat, 26 Sep 2026 20:30:00 -0700"
+                    ),
+                }
+            ],
+            window=window,
+            exclude_terms=[],
+        )
+        self.assertEqual([item["title"] for item in kept], ["us evening release"])
+        self.assertEqual(quarantine, [])
+        self.assertEqual(funnel["within_window"], 1)
+
 
 class BoundedConcurrencyTests(unittest.IsolatedAsyncioTestCase):
     async def test_html_200_body_is_not_counted_as_successful_rss(self):

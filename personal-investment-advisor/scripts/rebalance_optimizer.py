@@ -21,6 +21,11 @@ from portfolio_loader import is_cash_position, load_positions, normalize_symbol
 SCHEMA_VERSION = "pia_inverse_volatility_allocation_v1"
 POLICY_SCHEMA_VERSION = "pia_inverse_volatility_policy_v1"
 EXPERIMENT_NAME = "inverse_volatility_allocation"
+# Opt-in denominator: bucket targets apply to the non-cash scope and the cash
+# positions are listed as explicitly excluded with a reason.  This mirrors the
+# user-confirmed 80/20 policy (denominator = active non-cash market value) without
+# inventing a cash target or a fake zero variance for cash.
+NON_CASH_DENOMINATOR = "active_non_cash_market_value"
 RESERVED_SOURCE_LOCATORS = ("example.com", "example.test", ".invalid", "localhost")
 
 
@@ -164,6 +169,42 @@ def _validate_policy(
         for position in active_positions
     }
     active_symbols = set(active_by_symbol)
+    non_cash_symbols = {symbol for symbol, position in active_by_symbol.items()
+                        if not is_cash_position(position)}
+    cash_symbols = active_symbols - non_cash_symbols
+    scope_symbols = active_symbols
+    denominator = str(policy.get("denominator") or "").strip()
+    excluded = policy.get("excluded_policy_symbols")
+    if denominator:
+        if denominator != NON_CASH_DENOMINATOR:
+            errors.append(f"policy.denominator must equal {NON_CASH_DENOMINATOR} when provided")
+        if not isinstance(excluded, dict) or not excluded:
+            errors.append(
+                "policy.excluded_policy_symbols must list the excluded cash positions "
+                "with a reason when policy.denominator is set")
+        else:
+            normalized_excluded: dict[str, str] = {}
+            for raw_symbol, reason in excluded.items():
+                symbol = normalize_symbol(raw_symbol)
+                if not symbol:
+                    errors.append(
+                        "policy.excluded_policy_symbols keys must be non-empty symbols")
+                    continue
+                if not isinstance(reason, str) or not reason.strip():
+                    errors.append(
+                        f"policy.excluded_policy_symbols.{symbol} must state a non-empty reason")
+                normalized_excluded[symbol] = str(reason)
+            non_cash_excluded = sorted(set(normalized_excluded) & non_cash_symbols)
+            if non_cash_excluded:
+                errors.append(
+                    "policy.excluded_policy_symbols may only exclude cash positions: "
+                    + ", ".join(non_cash_excluded))
+            missing_cash = sorted(cash_symbols - set(normalized_excluded))
+            if missing_cash:
+                errors.append(
+                    "policy.excluded_policy_symbols must list every active cash position: "
+                    + ", ".join(missing_cash))
+        scope_symbols = non_cash_symbols
     listed_symbols: list[str] = []
     for bucket, raw_symbols in members.items():
         if not isinstance(raw_symbols, list) or not raw_symbols:
@@ -183,19 +224,20 @@ def _validate_policy(
             errors.append(f"policy.bucket_members.{bucket} contains duplicate symbols")
         positions = [active_by_symbol[symbol] for symbol in normalized if symbol in active_by_symbol]
         cash_count = sum(is_cash_position(position) for position in positions)
-        if cash_count and cash_count != len(positions):
-            errors.append(
-                f"policy bucket {bucket} cannot mix cash and non-cash positions"
-            )
-        if cash_count > 1:
-            errors.append(
-                f"policy bucket {bucket} contains multiple cash positions; use one explicit bucket per cash position"
-            )
+        if not denominator:
+            if cash_count and cash_count != len(positions):
+                errors.append(
+                    f"policy bucket {bucket} cannot mix cash and non-cash positions"
+                )
+            if cash_count > 1:
+                errors.append(
+                    f"policy bucket {bucket} contains multiple cash positions; use one explicit bucket per cash position"
+                )
     if len(listed_symbols) != len(set(listed_symbols)):
         errors.append("a symbol may appear in only one policy bucket")
-    if set(listed_symbols) != active_symbols:
-        missing = sorted(active_symbols - set(listed_symbols))
-        extra = sorted(set(listed_symbols) - active_symbols)
+    if set(listed_symbols) != scope_symbols:
+        missing = sorted(scope_symbols - set(listed_symbols))
+        extra = sorted(set(listed_symbols) - scope_symbols)
         if missing:
             errors.append("policy bucket membership missing active symbols: " + ", ".join(missing))
         if extra:
@@ -336,6 +378,12 @@ def run_inverse_volatility_experiment(
             "detail_status": "research_experiment_computed",
             "policy_schema_version": policy["schema_version"],
             "policy_as_of": policy["as_of"],
+            "denominator": policy.get("denominator") or "all_active_positions",
+            "excluded_policy_symbols": policy.get("excluded_policy_symbols") or {},
+            "scope_symbols": sorted(
+                normalize_symbol(symbol)
+                for bucket in policy["bucket_members"]
+                for symbol in policy["bucket_members"][bucket]),
             "experimental_weights": [
                 {
                     "symbol": symbol,

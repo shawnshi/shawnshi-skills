@@ -197,6 +197,10 @@ class AlphaValidationTests(unittest.TestCase):
         self.assertEqual(report["status"], "complete")
         self.assertEqual(report["promotion_status"], "eligible_for_active_research")
         self.assertTrue(report["formal_use_allowed"])
+        self.assertEqual(report["validation_scope"], "submitted_package_consistency_only")
+        self.assertEqual(report["control_evidence_status"], "declared_not_independently_reconstructed")
+        self.assertIs(report["capital_deployment_approved"], False)
+        self.assertTrue(any("fewer than 60 observations" in warning for warning in report["warnings"]))
         self.assertIsNotNone(report["metrics"]["deflated_sharpe_probability"])
         self.assertIsNotNone(report["metrics"]["probability_backtest_overfitting"])
         self.assertEqual(report["metrics"]["cost_bps_per_unit_turnover"], 5.0)
@@ -243,7 +247,8 @@ class AlphaValidationTests(unittest.TestCase):
         self.assertFalse(report["promotion_checks"]["corporate_action_adjusted"])
         self.assertFalse(report["formal_use_allowed"])
         self.assertEqual(report["errors"], [])
-        self.assertEqual(len(report["warnings"]), 2)
+        self.assertTrue(any("Survivorship bias" in warning for warning in report["warnings"]))
+        self.assertTrue(any("Corporate-action adjustment" in warning for warning in report["warnings"]))
 
     def test_data_quality_flags_must_be_boolean(self):
         package = alpha_package()

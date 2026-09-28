@@ -401,6 +401,29 @@ class SyncHealthDataCliTests(unittest.TestCase):
             )
             self.assertEqual(list(plan_path.parent.glob(".sync-plan.json.*.tmp")), [])
 
+    def test_dry_run_auto_env_resolves_default_paths(self):
+        with tempfile.TemporaryDirectory() as temp_root:
+            plan_path = Path(temp_root) / "sync-plan.json"
+            config_dir, _, interpreter, _ = self.make_bound_environment(temp_root)
+            with patch.object(self.module, "default_config_dir", return_value=config_dir), \
+                 patch.object(self.module, "default_garmindb_python", return_value=interpreter):
+                exit_code, payload = self.run_main(
+                    [
+                        "sync",
+                        "--start",
+                        "2026-08-01",
+                        "--end",
+                        "2026-08-07",
+                        "--dry-run",
+                        "--plan-output",
+                        str(plan_path),
+                        "--auto-env",
+                    ]
+                )
+                self.assertEqual(exit_code, self.module.EXIT_OK)
+                self.assertTrue(payload["plan_written"])
+                self.assertTrue(plan_path.exists())
+
     def test_plan_tampering_expiry_and_window_mismatch_fail_closed(self):
         start, end = self.module.parse_window("2026-08-01", "2026-08-07")
         fixed_now = datetime(2026, 8, 8, 12, 0, tzinfo=timezone.utc)

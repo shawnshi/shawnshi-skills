@@ -52,4 +52,6 @@ Bounded simplex bisection stops when the clipped sum differs from one by at most
 
 ## Interpretation
 
+`alpha-validate` now exposes `validation_scope=submitted_package_consistency_only`, `control_evidence_status=declared_not_independently_reconstructed` and `capital_deployment_approved=false`. Fewer than 60 out-of-sample observations produces an additional fragility warning; 60 is a diagnostic threshold, **not** a sufficient sample size or a new promotion rule. Before any real-capital decision, independently reconstruct historical constituents and delisted returns, corporate actions, filing availability, trial ledger completeness, embargoed out-of-sample splits and buy/sell-side cost assumptions. If those cannot be verified, retain experimental interpretation even if the supplied package passes its numerical policy. This review does not grant a skill permission to trade.
+
 `eligible_for_active_research` means that the submitted experiment cleared the supplied promotion thresholds. It does not mean approved for capital deployment. Rank/Yank is an attention-allocation device; the Yank pool is a review list, not a sell list. The final proposal becomes actionable only through a separate human governance and execution process outside this skill.

@@ -267,6 +267,19 @@ async def prepare_run(
         or effective_now.astimezone(ZoneInfo(timezone_name)).date().isoformat()
     )
     compact_date = effective_report_date.replace("-", "")
+    # F-03: a future report day produces a window whose last day cannot hold content, and
+    # the run would still forge and archive that day's canonical triple - which then blocks
+    # the legitimate run for that date through the existing-archive guard below.
+    try:
+        report_day = date.fromisoformat(effective_report_date)
+    except ValueError as exc:
+        raise RunContractError("report_date must be an ISO date") from exc
+    local_day = effective_now.astimezone(ZoneInfo(timezone_name)).date()
+    if report_day > local_day:
+        raise RunContractError(
+            f"report_date {report_day.isoformat()} is in the future for "
+            f"{timezone_name} (today is {local_day.isoformat()})"
+        )
 
     import fetch_news
     import refine

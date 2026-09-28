@@ -1,0 +1,2 @@
+# Official exchange captures are verified against SHA-256 of their original bytes.
+personal-investment-advisor/references/official_sources/*.html -text

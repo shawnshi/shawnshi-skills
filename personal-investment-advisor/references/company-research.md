@@ -28,7 +28,7 @@
 
 `quality_screener.py` 是描述性财务筛选，不是已验证 Alpha 模型。当前历史质量分析至少需要三个年度期间；现金流、利息保障和平均权益口径必须保留原始观测。银行和保险采用专用证据配置；ETF 的财务质量筛选为不适用，转而核验指数、方法、费率、复制方式、规模、流动性、NAV 折溢价、跟踪差异、集中度和份额变化。
 
-历史 `as_of_date` 请求只有在能够取得点时快照时才可运行。美股年度财务优先使用 `pia.py edgar-fundamentals <代码...> --as-of <日期>`，按 SEC `companyfacts` 的真实 `filed` 日期选择当时已披露值；当前 Yahoo 基本面快照不得回填为历史事实。A/H 股历史点时研究须绑定官方公告日期及原文，Akshare 当前或重述后字段不能单独证明历史可得性。无法取得时返回 `point_in_time_snapshot_unavailable`。
+历史 `as_of_date` 请求只有在能够取得点时快照时才可运行。美股年度财务优先使用 `pia.py edgar-fundamentals <代码...> --as-of <日期>`，按 SEC `companyfacts` 的真实 `filed` 日期选择当时已披露值；当前 Yahoo 基本面快照不得回填为历史事实。A/H 股历史点时研究须绑定官方公告日期及原文，Akshare 当前或重述后字段不能单独证明历史可得性。A 股原始值／更正值可按 [cn-equity-evidence.md](cn-equity-evidence.md) 使用独立离线门追踪，但其结构 `complete` 不代表公告语义、实际历史可得时间或更正覆盖已经核实；原文页表、主体与合并口径仍须独立复核。无法取得时返回 `point_in_time_snapshot_unavailable`。
 
 数据入口：
 
@@ -50,7 +50,7 @@ ETF 技术指标仅在 `history_integrity.detail_status=series_bound_verified` �
 
 ## 5. 估值与 Dashboard
 
-新建深度公司 Dashboard 使用结构化基础、乐观和悲观三种估值情景。每个情景记录方法、日期、币种、显式假设、企业价值、净债务、股权价值、稀释股数、每股结果和证伪条件；敏感性区间必须包围基础情景。`dashboard_math_gate.py` 重算企业价值到股权价值、每股价值、情景排序和敏感性排序；它不从 DCF、倍数或其他方法假设重新推导企业价值，因此该上游估值仍需单独复核。
+新建深度公司 Dashboard 使用结构化基础、乐观和悲观三种估值情景。每个情景记录方法、日期、币种、显式假设、企业价值、净债务、股权价值、稀释股数、每股结果和证伪条件；敏感性区间必须包围基础情景。`dashboard_math_gate.py` 重算企业价值到股权价值、每股价值、情景排序和敏感性排序；它不从 DCF、倍数或其他方法假设重新推导企业价值，因此该上游估值仍需单独复核。A 股非金融经营公司若采用 DCF 企业价值桥，还须按 [cn-equity-valuation.md](cn-equity-valuation.md) 复算经营驱动到 EV；缺少有效锚点、情景假设或估值桥时不称深度估值完成。银行、保险、周期错配或其他方法不得硬套该模型，维持独立方法审查。
 
 ### ETF：NAV 证据与压力情景
 

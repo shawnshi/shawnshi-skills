@@ -74,6 +74,11 @@ ITEM_FIELDS = {
     "decision_impact_reason",
 }
 ACTION_FIELDS = {"domain", "task", "owner_type", "trigger", "indicator"}
+# F-05: the label used when an item's only event date is the publication date. It is a
+# distinct marker rather than the bare string "published_at", so a publication base can
+# never be mistaken for event evidence, and `major_signal` (which asserts a verified event)
+# is demoted below whenever this marker is the item's sole date basis.
+PUBLICATION_BASE_EVENT_DATE = "publication_base/1"
 
 
 def _bound_artifact(
@@ -215,7 +220,7 @@ def _candidate_projection(
     event_date = identity_date if identity_date is not None else explicit_date
     if event_date is None:
         event_date = published_at
-        event_date_source = "published_at"
+        event_date_source = PUBLICATION_BASE_EVENT_DATE
     else:
         event_date_source = candidate.get("event_date_source") or (
             "event_identity.event_date" if identity_date is not None else "candidate.event_date"
@@ -543,6 +548,9 @@ def build_agent_context(request_path: str | Path) -> dict[str, Any]:
         "halt_condition": request["halt_condition"],
         "eligible_candidates": eligible,
         "eligible_candidate_count": len(eligible),
+        "corroboration_policy": {
+            "single_secondary_allowed": _single_secondary_allowed(manifest),
+        },
         "dynamic_draft_path": str(dynamic_path),
         # This is the registered request's frozen contract, never installed config.
         "agent_contract": deepcopy(packet["agent_contract"]),
@@ -575,7 +583,11 @@ def build_agent_context(request_path: str | Path) -> dict[str, Any]:
             "event_identity_exact_fields": sorted(IDENTITY_FIELDS),
             "intelligence_level_allowed": ["L1", "L2", "L3", "L4"],
             "confidence_allowed": ["high", "medium", "low"],
-            "selection_rule": "Select only candidate_id values from eligible_candidates; every exposed item is either a registered primary source or a secondary-source event group with at least two independent candidate_refs. Weak supply may yield fewer than 10 items.",
+            "selection_rule": (
+                "Select only candidate_id values from eligible_candidates; every exposed item is either a registered primary source, a multi-source secondary event group with at least two independent candidate_refs, or an authorized single_secondary candidate (single_secondary_allowed=true). All items in eligible_candidates are pre-screened as eligible; do not reject single_secondary candidates for having only one candidate_ref. Weak supply may yield fewer than 10 items."
+                if _single_secondary_allowed(manifest)
+                else "Select only candidate_id values from eligible_candidates; every exposed item is either a registered primary source or a secondary-source event group with at least two independent candidate_refs. Weak supply may yield fewer than 10 items."
+            ),
             "top_level_text_fields": ["punchline", "insights", "digest", "market"],
             "text_rule": "Every text field must be one non-empty natural-language string; insights is not a list, and actionability must describe an action rather than a rating word. major_signal and near_term_decision_impact are booleans: their explanations belong in major_signal_reason and decision_impact_reason.",
         },
@@ -786,6 +798,17 @@ def _coverage(manifest: dict[str, Any], supplement: dict[str, Any]) -> dict[str,
             if denominator
             else 0.0
         ),
+        # F-06: carry the baseline quarantine split forward so the published coverage can
+        # distinguish "source declared no date" from "declared date was unparsable".
+        # Supplemental candidates are dated by construction, so they add nothing here.
+        "unknown_published_at_candidates": int(
+            baseline.get("unknown_published_at_candidates") or 0
+        ),
+        "invalid_published_at_candidates": int(
+            baseline.get("invalid_published_at_candidates") or 0
+        ),
+        "unknown_date_rate": float(baseline.get("unknown_date_rate") or 0.0),
+        "invalid_date_rate": float(baseline.get("invalid_date_rate") or 0.0),
         "required_lane_failures": sorted(failures),
         "reasons": reasons,
     }
@@ -955,6 +978,15 @@ def assemble_and_finalize(
             "corroboration_status": candidate["corroboration_status"],
             "summary_zh": _nonempty(review.get("summary_zh"), f"selected_items[{index}].summary_zh"),
         }
+        if (
+            item["major_signal"] is True
+            and candidate["event_date_source"] == PUBLICATION_BASE_EVENT_DATE
+        ):
+            # F-05: `major_signal` asserts a verified event. When the only event date is the
+            # publication date there is no event evidence, so the flag is demoted even when
+            # level, confidence and source type would otherwise qualify it.
+            item["major_signal"] = False
+            item["major_signal_reason"] = "none"
         if item["major_signal"] is True and not major_signal_eligible(item):
             item["major_signal"] = False
             item["major_signal_reason"] = "none"

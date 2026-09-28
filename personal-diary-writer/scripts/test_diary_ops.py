@@ -1016,6 +1016,61 @@ class DiaryOpsTests(unittest.TestCase):
             )
             self.assertEqual(result["status"], "success")
 
+    def test_expanded_periodic_aliases_are_accepted_from_protected_user_event(self):
+        cases = [
+            ("weekly", "replace-weekly-audit", "week", "2026-W37", "2026-09-13", "本周日志审计"),
+            ("weekly", "replace-weekly-audit", "week", "2026-W37", "2026-09-13", "周度日志审计"),
+            ("weekly", "replace-weekly-audit", "week", "2026-W37", "2026-09-13", "日志周审计"),
+            ("monthly", "replace-monthly-audit", "month", "2026-08", "2026-08-31", "本月日志审计"),
+            ("monthly", "replace-monthly-audit", "month", "2026-08", "2026-08-31", "月度日志审计"),
+            ("monthly", "replace-monthly-audit", "month", "2026-08", "2026-08-31", "日志月度审计"),
+            ("quarterly", "replace-quarterly-audit", "quarter", "2026-Q3", "2026-09-30", "本季日志审计"),
+            ("quarterly", "replace-quarterly-audit", "quarter", "2026-Q3", "2026-09-30", "本季度日志审计"),
+            ("quarterly", "replace-quarterly-audit", "quarter", "2026-Q3", "2026-09-30", "季度日志审计"),
+            ("quarterly", "replace-quarterly-audit", "quarter", "2026-Q3", "2026-09-30", "日志季度审计"),
+        ]
+        for label, action, key, period_id, day, phrase in cases:
+            with self.subTest(phrase=phrase):
+                with tempfile.TemporaryDirectory() as tmp, self._runtime(tmp):
+                    root = Path(tmp)
+                    target = root / "2026-Q3.md"
+                    target.write_text("# 2026-07-01\n\n历史\n", encoding="utf-8")
+                    payload = root / "audit.md"
+                    title = {
+                        "weekly": f"## [{period_id}] Weekly Cognitive Audit\n\n### 关键事实\n\n内容\n",
+                        "monthly": f"## [{period_id}] Monthly Cognitive Audit\n\n### 关键事实\n\n内容\n",
+                        "quarterly": f"## [{period_id}] Quarterly Cognitive Audit\n\n### 关键事实\n\n内容\n",
+                    }[label]
+                    payload.write_text(title, encoding="utf-8")
+                    kwargs = {key: period_id, "day": day}
+                    args = self._args(target, payload, action=action, **kwargs)
+                    scope = diary_ops.build_scope(args)
+                    receipt, approval = self._artifacts(root, scope, f"{label}_audit_gate")
+                    session = diary_ops.SESSION_ROOT / "session.jsonl"
+                    session.write_text(
+                        json.dumps(
+                            {
+                                "id": "request-message-1",
+                                "type": "message",
+                                "timestamp": f"{day}T12:00:00+08:00",
+                                "message": {"role": "user", "content": phrase},
+                            },
+                            ensure_ascii=False,
+                        )
+                        + "\n",
+                        encoding="utf-8",
+                    )
+                    approval_value = json.loads(approval.read_text(encoding="utf-8"))
+                    approval_value["request_event_sha256"] = hashlib.sha256(
+                        phrase.encode("utf-8")
+                    ).hexdigest()
+                    approval.write_text(json.dumps(approval_value), encoding="utf-8")
+
+                    result = diary_ops.replace_operation(
+                        self._args(target, payload, receipt, approval, action=action, **kwargs)
+                    )
+                    self.assertEqual(result["status"], "success")
+
     def test_current_period_alias_cannot_authorize_a_different_period(self):
         with tempfile.TemporaryDirectory() as tmp, self._runtime(tmp):
             root = Path(tmp)

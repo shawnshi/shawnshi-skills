@@ -558,6 +558,14 @@ _STANDALONE_EMPHASIS = ("___", "***", "__", "**", "_", "*")
 _STANDALONE_HEAD_BYTES = 1500
 _STANDALONE_PRIOR_MAX = 60
 _STANDALONE_PARAGRAPH_MIN = 120
+# F-04: an explicit attribution label directly above the date is a metadata line, so the
+# large-block suppression below must not veto it. Without that label the suppression
+# stands, which is what still keeps a date quoted inside body prose from being promoted.
+_STANDALONE_LABEL_PREFIX = re.compile(
+    r"^(?:来源|供稿|发布机构|作者|作者单位|编辑|记者|通讯员|"
+    r"Source|Credit|Author|Editor|By)[ \t]*[:：]",
+    re.IGNORECASE,
+)
 
 
 def _standalone_emphasis_strip(value):
@@ -585,7 +593,7 @@ def _standalone_dateline(text, start, line, previous, text_sha):
         return None
     if len(previous) > _STANDALONE_PRIOR_MAX or previous[-1] in "。！？.!?":
         return None
-    if any(
+    if not _STANDALONE_LABEL_PREFIX.match(previous) and any(
         len(block) >= _STANDALONE_PARAGRAPH_MIN
         for block in re.split(r"\n[ \t]*\n", text[:start])
     ):
@@ -652,23 +660,59 @@ _CN_WIRE_DATELINE = re.compile(
     r"(?P<date>(?:[1-9]|1[0-2])月(?:[0-9]{1,2})日)"
     r"(?:消息|讯|电)(?=[（(：:，,\s]|$)"
 )
-_URL_DATE_ANCHOR = re.compile(
-    r"(?<![0-9])(?P<year>20[0-9]{2})[-/.]?(?P<month>0[1-9]|1[0-2])[-/.]?"
-    r"(?P<day>0[1-9]|[12][0-9]|3[01])(?![0-9])"
+# One URL-path date grammar shared by both consumers (F-01). Two branches keep the
+# separator mandatory whenever a component is not zero-padded, so `/2026/13/01/` can
+# never re-read as month 1 / day 3, while `/2026/9/4/`, `/2026-09-24/` and the compact
+# `/20260915/` all resolve. A path declaring two different days yields no date at all:
+# callers fail closed instead of silently taking the first one.
+_URL_MONTH_NAMES = (
+    "jan",
+    "feb",
+    "mar",
+    "apr",
+    "may",
+    "jun",
+    "jul",
+    "aug",
+    "sep",
+    "oct",
+    "nov",
+    "dec",
+)
+_URL_PATH_DATE = re.compile(
+    r"(?<!\d)(?P<year>(?:19|20)\d{2})[-/.](?P<month>0?[1-9]|1[0-2]|"
+    + "|".join(_URL_MONTH_NAMES)
+    + r")[-/.](?P<day>0?[1-9]|[12]\d|3[01])(?!\d)"
+    r"|(?<!\d)(?P<compact_year>(?:19|20)\d{2})(?P<compact_month>0[1-9]|1[0-2])"
+    r"(?P<compact_day>0[1-9]|[12]\d|3[01])(?!\d)",
+    re.IGNORECASE,
 )
 _CN_WIRE_HEAD_BYTES = 1500
 
 
+def _url_declared_days(url):
+    """Every distinct complete calendar day declared by the URL path."""
+    found: set[str] = set()
+    for match in _URL_PATH_DATE.finditer(urlsplit(url).path):
+        group = match.groupdict()
+        year = group["year"] or group["compact_year"]
+        month = group["month"] or group["compact_month"]
+        day = group["day"] or group["compact_day"]
+        if not month.isdigit():
+            month = str(_URL_MONTH_NAMES.index(month.lower()) + 1)
+        try:
+            found.add(datetime(int(year), int(month), int(day)).date().isoformat())
+        except ValueError:
+            continue
+    return found
+
+
 def _url_date_anchor(url):
     """The single complete date embedded in the URL path, or None."""
-    found = {
-        (match.group("year"), match.group("month"), match.group("day"))
-        for match in _URL_DATE_ANCHOR.finditer(urlsplit(url).path)
-    }
+    found = _url_declared_days(url)
     if len(found) != 1:
         return None
-    year, month, day = found.pop()
-    return f"{year}-{month}-{day}"
+    return found.pop()
 
 
 def _readable_url_anchored_dates(text, url, text_sha):
@@ -1952,38 +1996,15 @@ def _lane_declared_date(lane, url):
 
 
 def _url_path_declared_day(url):
-    """Publication day declared by a URL path, used only as the date basis D fallback."""
-    path = urlsplit(url).path
-    match = re.search(
-        r"(?<!\d)((?:19|20)\d{2})/"
-        r"(0?[1-9]|1[0-2]|jan|feb|mar|apr|may|jun|jul|aug|sep|oct|nov|dec)/"
-        r"(0?[1-9]|[12]\d|3[01])(?!\d)",
-        path,
-        re.IGNORECASE,
-    )
-    if not match:
+    """Publication day declared by a URL path, used only as the date basis D fallback.
+
+    Shares `_url_declared_days` with the L3 year anchor (F-01), so the two consumers can
+    no longer disagree about which URL paths carry a usable date.
+    """
+    found = _url_declared_days(url)
+    if len(found) != 1:
         return ""
-    months = [
-        "jan",
-        "feb",
-        "mar",
-        "apr",
-        "may",
-        "jun",
-        "jul",
-        "aug",
-        "sep",
-        "oct",
-        "nov",
-        "dec",
-    ]
-    year, month, day = match.group(1), match.group(2).lower(), match.group(3)
-    if not month.isdigit():
-        month = str(months.index(month) + 1)
-    try:
-        return datetime(int(year), int(month), int(day)).date().isoformat()
-    except ValueError:
-        return ""
+    return found.pop()
 
 
 def _lane_slice_for_gap(request, gap_id):

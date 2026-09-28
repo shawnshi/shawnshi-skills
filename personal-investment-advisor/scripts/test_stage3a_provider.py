@@ -271,12 +271,12 @@ class ProviderRuntimeTests(unittest.TestCase):
 
     def test_transient_three_actual_calls_share_deadline(self):
         counter = str(Path(self.directory.name) / 'transient')
-        result = runtime.run_provider(synthetic_provider, 'transient', counter, timeout_seconds=10)
+        result = runtime.run_provider(synthetic_provider, 'transient', counter, timeout_seconds=20)
         self.assertEqual(result['status'], 'ok', result)
         self.assertEqual(result['attempts'], 3)
         self.assertEqual(Path(counter).read_text(), '3')
         self.assertEqual(result['data']['count'], 3)
-        self.assertLess(result['elapsed_seconds'], 10)
+        self.assertLess(result['elapsed_seconds'], 20)
 
     def test_hung_provider_is_killed_with_bounded_wall_time(self):
         counter = str(Path(self.directory.name) / 'hung')

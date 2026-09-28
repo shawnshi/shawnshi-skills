@@ -30,8 +30,15 @@ def quote_freshness_policy(
     market_state: Any,
     *,
     upper_bound_cap_seconds: int = MAX_QUOTE_AGE_SECONDS,
+    holiday_extension_seconds: int = 0,
 ) -> dict[str, Any]:
-    """Return the deterministic fail-closed quote-age rule for one market state."""
+    """Return the deterministic fail-closed quote-age rule for one market state.
+
+    ``holiday_extension_seconds`` is an opt-in, caller-supplied widening for verified
+    exchange closures (a long holiday otherwise makes a healthy run fail closed).  A
+    zero extension reproduces the original policy exactly; a positive one is recorded
+    explicitly so a consumer never has to infer why the ceiling moved.
+    """
     normalized = str(market_state or "").strip().upper()
     state_threshold = QUOTE_MAX_AGE_SECONDS_BY_MARKET_STATE.get(normalized)
     cap_is_valid = (
@@ -40,8 +47,16 @@ def quote_freshness_policy(
         and math.isfinite(float(upper_bound_cap_seconds))
         and float(upper_bound_cap_seconds) > 0
     )
+    extension = (
+        int(float(holiday_extension_seconds))
+        if isinstance(holiday_extension_seconds, (int, float))
+        and not isinstance(holiday_extension_seconds, bool)
+        and math.isfinite(float(holiday_extension_seconds))
+        and float(holiday_extension_seconds) > 0
+        else 0
+    )
     applied_threshold = (
-        min(float(state_threshold), float(upper_bound_cap_seconds))
+        min(float(state_threshold) + extension, float(upper_bound_cap_seconds) + extension)
         if state_threshold is not None and cap_is_valid
         else None
     )
@@ -53,8 +68,13 @@ def quote_freshness_policy(
             float(upper_bound_cap_seconds) if cap_is_valid else None
         ),
         "applied_max_age_seconds": applied_threshold,
-        "calendar_aware": False,
-        "long_holiday_behavior": "fail_closed_after_state_threshold",
+        "calendar_aware": extension > 0,
+        "holiday_extension_seconds": extension,
+        "extension_basis": "verified_exchange_closures" if extension else None,
+        "long_holiday_behavior": (
+            "fail_closed_after_state_threshold_plus_verified_closures"
+            if extension else "fail_closed_after_state_threshold"
+        ),
     }
 
 

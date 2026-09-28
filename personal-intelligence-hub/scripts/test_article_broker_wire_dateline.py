@@ -470,6 +470,32 @@ def test_standalone_date_after_long_paragraph_is_refused():
     assert dates(text) == []
 
 
+def test_standalone_date_after_label_and_long_paragraph_is_accepted():
+    """F-04: an attribution label directly above the date is a metadata line."""
+    text = document(
+        "## Example Health Cybersecurity Notice",
+        paragraph(),
+        "来源：示例医院信息科",
+        "2026-09-28",
+        paragraph(),
+    )
+    assert [(entry["published_at"], entry["parser_rule"]) for entry in dates(text)] == [
+        ("2026-09-28", "standalone-dateline/1")
+    ]
+
+
+def test_long_paragraph_without_label_still_refuses_the_date():
+    """F-04 negative control: without the label the suppression must stand."""
+    text = document(
+        "## Example Health Cybersecurity Notice",
+        paragraph(),
+        "Example Hospital Information Office",
+        "2026-09-28",
+        paragraph(),
+    )
+    assert dates(text) == []
+
+
 def test_conflicting_standalone_dates_fail_closed():
     text = document(
         "国家医疗保障局",

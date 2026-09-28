@@ -564,7 +564,27 @@ class RunDailyTests(unittest.IsolatedAsyncioTestCase):
                 )
             self.assertFalse(runtime.exists())
 
-    async def test_missing_or_malformed_focus_is_rejected_before_run_creation(self):
+    async def test_future_report_date_is_rejected_before_run_creation(self):
+        """F-03: a future report day would forge an archive that then blocks its own run."""
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            news = root / "news"
+            news.mkdir()
+            focus = root / "focus.json"
+            focus.write_text("{}", encoding="utf-8")
+            runtime = root / "runtime"
+            with self.assertRaisesRegex(RunContractError, "is in the future"):
+                await run_daily.prepare_run(
+                    report_date="2099-12-31",
+                    runtime_dir=runtime,
+                    news_dir=news,
+                    focus_path=focus,
+                )
+            self.assertFalse(runtime.exists())
+
+    async def test_missing_or_malformed_focus_is_rejected_before_run_creation(
+        self,
+    ):
         with tempfile.TemporaryDirectory() as directory:
             root = Path(directory)
             skill = root / "SKILL.md"

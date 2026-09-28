@@ -25,6 +25,7 @@ from quote_evidence_contract import (
     canonical_json_binding,
 )
 from thesis_evidence_gate import evaluate_thesis_evidence
+from market_calendar import CalendarError, load_table
 
 
 SCHEMA_VERSION = "pia_daily_sync_offline_v3"
@@ -342,6 +343,7 @@ def evaluate_daily_sync(
     positions_file: str,
     quotes_file: str,
     thesis_evidence_file: Optional[str] = None,
+    holiday_calendar_file: Optional[str] = None,
     now_epoch: Optional[float] = None,
     max_quote_age_seconds: int = MAX_QUOTE_AGE_SECONDS,
     decision_scope: str = "research_only",
@@ -368,6 +370,17 @@ def evaluate_daily_sync(
         return report
     evaluation_epoch = float(evaluation_epoch)
     report["evaluation_epoch"] = evaluation_epoch
+    holiday_table = None
+    if holiday_calendar_file:
+        report["inputs"]["holiday_calendar_file"] = str(Path(holiday_calendar_file).expanduser().resolve())
+        try:
+            holiday_table = load_table(Path(holiday_calendar_file).expanduser().resolve())
+        except (CalendarError, OSError, ValueError) as exc:
+            report["status"] = "invalid_input"
+            report["errors"] = [f"holiday_calendar_source_invalid: {exc}"]
+            report["stages"][0]["status"] = "failed"
+            report["stages"][0]["errors"] = list(report["errors"])
+            return report
     if (
         isinstance(max_quote_age_seconds, bool)
         or not isinstance(max_quote_age_seconds, (int, float))
@@ -524,6 +537,7 @@ def evaluate_daily_sync(
         now_epoch=evaluation_epoch,
         max_quote_age_seconds=int(max_quote_age_seconds),
         portfolio_snapshot_binding=portfolio_binding,
+        holiday_table=holiday_table,
     )
     report["recomputed_portfolio_batch_audit"] = recomputed_audit
     supplied_audit_errors = _audit_claim_errors(
@@ -671,6 +685,7 @@ def main() -> None:
         ),
     )
     parser.add_argument("--now-epoch", type=float)
+    parser.add_argument("--holiday-calendar-file", help="Reverify the same exchange holiday source used for quote acquisition")
     parser.add_argument(
         "--max-quote-age-seconds",
         type=int,
@@ -690,6 +705,7 @@ def main() -> None:
         positions_file=args.positions_file,
         quotes_file=args.quotes_file,
         thesis_evidence_file=args.thesis_evidence_file,
+        holiday_calendar_file=args.holiday_calendar_file,
         now_epoch=args.now_epoch,
         max_quote_age_seconds=args.max_quote_age_seconds,
         decision_scope=args.decision_scope,

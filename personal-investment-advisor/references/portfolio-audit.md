@@ -26,7 +26,7 @@
 
 需要刷新 USD/CNY 即期证据时，使用 `yf.py CNY=X --price-only --period 5d --lean --json --cache-dir <task-cache>`，从最后一个有效观测读取汇率和日期。外汇代码的 `=X` 身份可闭合为非 ETF 历史，不得套用 ETF 公司行动缺口文案。行情命令本身不授权改写持仓，当前权重实验应使用绑定同一持仓内容的隔离快照，并保留原文件哈希。
 
-组合模块只报告原始权重、集中度、流动性数据缺口和约束状态。没有显式 `risk_profile` 时风险等级保持未知；不得把约束状态改写为组合动作。
+组合模块只报告原始权重、集中度、流动性数据缺口和约束状态。没有显式 `risk_profile` 时风险等级保持未知；不得把约束状态改写为组合动作。个人决策预算是**另一个由用户提供的研究输入**：仅在用户明确授权并给出投资期限、可承受损失、必要现金需求、单一行业／风格上限和情景假设时，才比较候选方案与其约束。资料不足时列出未知、保留部分风险诊断，不能把短窗口相关矩阵、已覆盖子集的归一权重或不含未测量资产的风险贡献写成全组合风险。不得为了风险预算自动读取账户号、完整净资产、其他目录或无关私人历史。仅在用户确认的上述比例预算与完整 v2 成本后情景报告均可用时，按 [personal-risk-budget.md](personal-risk-budget.md) 执行独立离线比较；只称已给场景的约束结果，不称全组合风险覆盖。
 
 ## 情景压力测试
 
@@ -47,6 +47,10 @@
 分配计算按声明的 `decision_scope` 产出，可给出方向、目标仓位或止损止盈参数；但不得把实验结果写回持仓，也不得代客下单或路由订单。策略遵循 `inverse_volatility_policy_schema.json`，结构参考 `inverse_volatility_policy.example.json`；具体离线参数和失败条件以 `rebalance_weights.py --help` 及专属测试为准。没有显式策略、已验证行情包、完整分桶和必要汇率时不计算。
 
 当前方法名为 `inverse_volatility_allocation`。它忽略相关性，不能称为风险平价；波动率观测必须带期间、样本数、日期、来源和定位。实验输出使用 `experimental_weight`，不等于目标权重；提升为 `candidate_weight`/`target_weight` 必须按 `decision_scope` 声明并另行过对应门禁。免费数据无法通过主动 Alpha 门禁时，这一风险型实验仍可独立运行，不得把结果升级为 Rank/Yank、`candidate_weight` 或 `allocation_gap`。
+
+### 现金与政策分母
+
+默认口径要求桶成员覆盖每个活动标的（含现金），且一个现金桶恰含一个现金头寸。当已确认策略把一个以上现金头寸排除在分母外（例如用户确认的 80/20 非现金分母口径）时，可在 policy 中显式声明 `denominator: "active_non_cash_market_value"` 与 `excluded_policy_symbols`（每条必须给出非空原因）：此时 `bucket_targets` 只对非现金范围求和为 1.0、桶成员只需覆盖全部活动非现金标的，现金保留在全组合压力损益中但不出现在实验结果里；不得给现金造零波动率，也不得以事后缩放掩盖分母差异。`rebalance_weights.py --policy-file` 消费该 policy 时会把 `denominator`、`excluded_policy_symbols` 与 `scope_symbols` 原样回声，便于下游明确分母口径。
 
 ## 主动组合研究的额外门禁
 

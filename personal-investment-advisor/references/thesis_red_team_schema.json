@@ -65,8 +65,20 @@
           "enum": [
             "fatal_breach",
             "no_fatal_breach_verified",
+            "condition_not_due",
             "insufficient_evidence"
           ]
+        },
+        "condition_ids": {
+          "type": "array",
+          "minItems": 1,
+          "uniqueItems": true,
+          "items": {"type": "string", "minLength": 1}
+        },
+        "due_date": {
+          "type": "string",
+          "format": "date",
+          "description": "Required for condition_not_due: the future date the condition comes due."
         },
         "rationale": {"type": "string", "minLength": 1},
         "evidence_ids": {

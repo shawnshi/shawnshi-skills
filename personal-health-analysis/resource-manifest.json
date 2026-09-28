@@ -1,7 +1,7 @@
 {
   "schema_version": 3,
   "skill": "personal-health-analysis",
-  "generated_at": "2026-09-24T09:41:50+08:00",
+  "generated_at": "2026-09-28T12:58:49+08:00",
   "hash_algorithm": "SHA-256",
   "text_hash_normalization": "LF",
   "skill_md": "SKILL.md",
@@ -200,7 +200,7 @@
     },
     {
       "path": "scripts/sync_health_data.py",
-      "sha256": "b787ba27aed7d75bed0be41fd7e8c6ac7b7edee6078f68a32f4147e75ea71bcb"
+      "sha256": "bd86ef385a60c714e425c9a3b3833b2e70a6262094681adb287dcbd1c0050674"
     },
     {
       "path": "scripts/test_dashboard_analysis_scope.py",
@@ -284,7 +284,7 @@
     },
     {
       "path": "scripts/test_report_output.py",
-      "sha256": "98fad0e1518ed3141e067b940692f96dafd1440b36bd501a11609d98d8e99155"
+      "sha256": "42642ae44714074b7a7b3ee48321cccd199d8648aa7c6189c3c2a6d8a54e35dd"
     },
     {
       "path": "scripts/test_runtime_preflight.py",
@@ -296,7 +296,7 @@
     },
     {
       "path": "scripts/test_sync_health_data.py",
-      "sha256": "0ed5761625b64564ba19371170fa776c470d72bbfb2f25ad660f910fe27f35cd"
+      "sha256": "7b07de1e692c08ea9e1c5683a291a8a706dcb22985366997fa36b7fbf120c985"
     },
     {
       "path": "scripts/test_sync_task_policy.py",

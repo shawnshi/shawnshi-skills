@@ -233,6 +233,14 @@ def _published_raw(item: dict):
 
 
 def _parse_published_date(value, zone: tzinfo) -> date:
+    """Publication date in the timestamp's OWN timezone, never the report window's.
+
+    ``zone`` is the report window timezone. It is deliberately NOT applied here: the
+    registered contract compares the window bounds against the source-local calendar day,
+    so shifting a timestamp into the window timezone would move items across boundaries.
+    The parameter stays because the caller already resolves and validates it.
+    """
+    zone  # validated by the caller; intentionally never applied to the publication day
     if isinstance(value, datetime):
         if value.tzinfo is None:
             raise ValueError("published datetime must be timezone-aware")
@@ -322,6 +330,18 @@ def build_coverage(source_meta: dict[str, object], funnel: dict) -> dict:
     source_failed = attempted - source_succeeded
     raw = int(funnel.get("raw", 0))
     dated_rate = (int(funnel.get("dated", 0)) / raw) if raw else 0.0
+    quarantine_reasons = {
+        str(key): int(value)
+        for key, value in (funnel.get("quarantine_reasons") or {}).items()
+    }
+    unknown_dates = quarantine_reasons.get("unknown_published_at", 0)
+    invalid_dates = quarantine_reasons.get("invalid_published_at", 0)
+    # F-06: `dated_candidate_rate` merges "the source published no date" with "the date
+    # could not be parsed", and ignores the benign outside-window disposition entirely.
+    # Report both quarantine causes separately so the headline rate is read as source
+    # hygiene rather than as date quality.
+    unknown_date_rate = (unknown_dates / raw) if raw else 0.0
+    invalid_date_rate = (invalid_dates / raw) if raw else 0.0
     reasons: list[str] = []
     if attempted == 0 or source_succeeded == 0:
         run_status = "failed"
@@ -351,6 +371,10 @@ def build_coverage(source_meta: dict[str, object], funnel: dict) -> dict:
         "dated_candidates": int(funnel.get("dated", 0)),
         "quarantined_candidates": int(funnel.get("quarantined", 0)),
         "dated_candidate_rate": dated_rate,
+        "unknown_published_at_candidates": unknown_dates,
+        "invalid_published_at_candidates": invalid_dates,
+        "unknown_date_rate": unknown_date_rate,
+        "invalid_date_rate": invalid_date_rate,
         "required_lane_failures": [],
         "reasons": reasons,
     }
@@ -410,6 +434,23 @@ async def fetch_with_retry(
     if last_error is None:  # pragma: no cover - the loop always executes
         raise RuntimeError("request failed without an exception")
     raise last_error
+
+
+def _rss_published_at(published: str | None) -> str | None:
+    """RSS/Atom publication timestamp, keeping the publisher's own UTC offset.
+
+    F-02: never normalise to UTC here. Doing so (the historical behaviour) destroyed the
+    source-local calendar day before `_parse_published_date` could read it, so a
+    US-evening item was attributed to the next UTC day and could cross a window boundary.
+    A timestamp without an offset is unusable and yields None, exactly as before.
+    """
+    try:
+        parsed = parsedate_to_datetime(published) if published else None
+    except (TypeError, ValueError, OverflowError):
+        return None
+    if parsed is None or parsed.tzinfo is None:
+        return None
+    return parsed.isoformat()
 
 
 def _publication_fields(
@@ -495,13 +536,7 @@ async def parse_rss(
             desc = BeautifulSoup(desc_raw, "html.parser").get_text().strip() if desc_raw else ""
             published = entry.get("published")
             published_source = "rss_published"
-            published_at = None
-            try:
-                parsed = parsedate_to_datetime(published) if published else None
-                if parsed is not None and parsed.tzinfo is not None:
-                    published_at = parsed.astimezone(timezone.utc).isoformat()
-            except (TypeError, ValueError, OverflowError):
-                published_at = None
+            published_at = _rss_published_at(published)
             retrieved_at = _utc_now().isoformat()
             items.append(
                 {

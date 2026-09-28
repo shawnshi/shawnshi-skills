@@ -17,9 +17,12 @@ class DefaultReadContractTests(unittest.TestCase):
         cls.write_contract = (SKILL_ROOT / "references/write-protocol.md").read_text(
             encoding="utf-8"
         )
-        # Existing safety assertions cover the entry plus its required branch contracts.
+        cls.template_text = (SKILL_ROOT / "references/personal-diary-template.md").read_text(
+            encoding="utf-8"
+        )
+        # Safety assertions cover the entry and every required branch/template reference.
         cls.authority_text = "\n".join(
-            (cls.entry_text, cls.read_contract, cls.write_contract)
+            (cls.entry_text, cls.read_contract, cls.write_contract, cls.template_text)
         )
         cls.proxy_text = cls.authority_text
 
@@ -30,7 +33,7 @@ class DefaultReadContractTests(unittest.TestCase):
         )
         self.assertEqual(
             set(re.findall(r"references/[a-z-]+\.md", self.entry_text)),
-            {"references/private-data-read.md", "references/write-protocol.md"},
+            {"references/private-data-read.md", "references/write-protocol.md", "references/personal-diary-template.md"},
         )
         self.assertLess(len(self.entry_text), 6000)
         self.assertNotIn("sync_eligible=<true|false>", self.entry_text)
@@ -108,7 +111,8 @@ class DefaultReadContractTests(unittest.TestCase):
         )
 
     def test_eight_sections_preserve_explicit_read_exclusions(self):
-        headings = re.findall(r"^\d+\. `## (.+)`$", self.entry_text, re.MULTILINE)
+        self.assertIn("起草前只读取 [八章模板](references/personal-diary-template.md)", self.entry_text)
+        headings = re.findall(r"^\d+\. `## (.+)`$", self.template_text, re.MULTILINE)
         self.assertEqual(
             headings,
             [
@@ -134,10 +138,10 @@ class DefaultReadContractTests(unittest.TestCase):
             "用户仅提供今日/明日事项不构成免采集指令",
             "只有用户明确要求仅用当次文本或排除相应来源时才跳过对应读取",
             "Mentat 与周期审计不继承此默认",
-            "最终交付须分别说明日历和健康数据的读取结果",
         ):
             with self.subTest(marker=marker):
                 self.assertIn(marker, self.entry_text)
+        self.assertIn("最终交付须分别说明日历和健康数据的读取结果", self.write_contract)
         self.assertIn("D-2 至 D，含当日共 3 个自然日", self.read_contract)
         self.assertIn("某一来源失败不阻止另一来源", self.read_contract)
         self.assertIn("不得用 `not_requested_for_task` 跳过默认采集", self.write_contract)
@@ -210,8 +214,8 @@ class DefaultReadContractTests(unittest.TestCase):
     def test_current_date_staleness_uses_one_direct_two_stage_sync(self):
         for marker in (
             "Current-date freshness gate",
-            "sync_health_data.py sync --dry-run",
-            "--allow-network --allow-sync --allow-health-data",
+            "sync_health_data.py sync --dry-run --auto-env",
+            "--allow-network --allow-sync --auto-env",
             "without retry",
         ):
             with self.subTest(marker=marker):

@@ -19,11 +19,11 @@ description: 开展证券财报与估值研究、已授权持仓的风险审计�
 
 ## 任务路由
 
-- 单一公司、财报、估值、股票筛选或 Thesis 证伪：读取 [company-research.md](references/company-research.md)。
-- 持仓审计、集中度、情景压力测试或分配实验：读取 [portfolio-audit.md](references/portfolio-audit.md)。
+- 单一公司、财报、估值、股票筛选或 Thesis 证伪：读取 [company-research.md](references/company-research.md)；A 股深度研究另读 [cn-equity-research.md](references/cn-equity-research.md)，公告数字或更正链另读 [cn-equity-evidence.md](references/cn-equity-evidence.md)，非金融经营公司采用 DCF 企业价值桥时另读 [cn-equity-valuation.md](references/cn-equity-valuation.md)。
+- 持仓审计、集中度、情景压力测试或分配实验：读取 [portfolio-audit.md](references/portfolio-audit.md)；仅当用户明确提供个人损失、期限与现金预算时另读 [personal-risk-budget.md](references/personal-risk-budget.md)。
 - 日常行情刷新、观察边界或事件红队：读取 [daily-sync.md](references/daily-sync.md)。
 - 研究日记、结果同步或方法校准：读取 [calibration.md](references/calibration.md)。
-- 主动 Alpha 验证、Rank & Yank、风险平价候选组合或再平衡研究提案：读取 [active-research.md](references/active-research.md)。
+- 主动 Alpha 验证、Rank & Yank、风险平价候选组合或再平衡研究提案：读取 [active-research.md](references/active-research.md)。A 股带价格与数量的行动级产出另读 [cn-actionability.md](references/cn-actionability.md)；来源或规则无法核实时只交付研究／咨询判断。
 - 涉及数据选择、免费来源能力或降级边界：读取 [free-data-policy.md](references/free-data-policy.md)。
 - 需要选择脚本或稳定子命令：读取 [command-catalog.md](references/command-catalog.md)。
 
@@ -54,7 +54,7 @@ description: 开展证券财报与估值研究、已授权持仓的风险审计�
 1. **核验输入与身份**：真实证券代码、市场和资产类型必须闭合；真实持仓组合必须通过 `portfolio_schema.json`。明确假设标签的给定权重算术与所供文档限定摘要按上述适用范围执行，不替代真实持仓或当前研究门禁。
 2. **深度研究锁定契约**：按 `research_brief_schema.json` 建立 Brief，并通过 `research_brief_gate.py`。市场共识、独立估计、数值预期差、核心假设、证伪阈值和关键变量必须可计算。
 3. **选择方法**：从 `method_profiles.json` 选择匹配配置并记录版本、适用范围和截止日。筛选是描述性初筛，不等于预测能力；`insufficient_data` 不能视为通过。
-4. **采集点时证据**：默认先用免费一手来源；美股历史财务优先 SEC EDGAR `companyfacts` 的真实 `filed` 日期，A/H 股优先交易所、巨潮与发行人公告。保存来源定位、发布日期、获取时间、单位、币种、会计期间、复权方式与数据缺口；Yahoo/Akshare 当前基本面不得用于历史重放。
+4. **采集点时证据**：默认先用免费一手来源；美股历史财务优先 SEC EDGAR `companyfacts` 的真实 `filed` 日期，A/H 股优先交易所、巨潮与发行人公告。A 股公告数字可用独立离线门闭合原件字节与更正链，但结构通过不证明摘录语义、历史可得性或更正覆盖完整；未独立核对原文时不得升级为估值输入。保存来源定位、发布日期、获取时间、单位、币种、会计期间、复权方式与数据缺口；Yahoo/Akshare 当前基本面不得用于历史重放。
 5. **深度研究建立预期差账本**：逐变量对照市场共识、公司指引或事实、独立估计、估值影响和证伪证据。
 6. **双层验证**：机器层重算数字并核对来源、日期、单位、币种和字段；判断层检查最强反方、历史基准率、已定价程度、敏感性和 Thesis 失效条件。多代理结果必须保留冲突，不以多数票替代证据。
 7. **验证输出**：新 Dashboard 必须通过 `dashboard_gate.py --strict-current-contract` 和 `dashboard_math_gate.py`。旧归档兼容通过不能升级为当前新建契约完成。
@@ -68,9 +68,9 @@ description: 开展证券财报与估值研究、已授权持仓的风险审计�
 - 深度公司研究：市场共识或公开参考、核心假设、数值预期差、反证与结论强度，以及适用的财务质量、估值方法、三情景和敏感性；
 - ETF Dashboard：来源绑定的 NAV、费率、跟踪证据、覆盖缺口与 NAV 压力情景；企业估值明确不适用；
 - 风险、催化剂、需继续核验的问题和观察指标；
-- 涉及持仓时的原始权重、集中度、相关性与流动性证据或缺口、下行情景和约束状态。
+- 涉及持仓时的原始权重、集中度、相关性与流动性证据或缺口、下行情景和约束状态；只有用户明确提供目标、期限与损失预算时，才给出相对于其个人风险预算的判断，不能从净值和风险等级猜测。
 
-方向、价格、仓位与订单类内容按 `decision_scope` 标注后可输出；`actionable` 产出必须同时给出触发条件、失效条件与下行情景，并明示执行与否由用户自行决定。Schema、字段类型、日期、单位、币种、公式和用户显式约束可作为硬门禁；关键词、标题措辞或是否出现数字只能产生警告，不能单独阻断研究。
+方向、价格、仓位与订单类内容按 `decision_scope` 标注后可输出；A 股拟给出可执行方向、数量和价格时须先完成当日交易可行性探针，并独立核对所供规则与可卖／可用资金；缺口不得以标注 `actionable` 绕过。`actionable` 产出必须同时给出触发条件、失效条件与下行情景，并明示执行与否由用户自行决定。Schema、字段类型、日期、单位、币种、公式和用户显式约束可作为硬门禁；关键词、标题措辞或是否出现数字只能产生警告，不能单独阻断研究。
 
 涉及税务、法律、杠杆、衍生品、退休资金或重大资产配置时，说明专业风险，并建议用户行动前咨询具备相应资质的专业人士。
 

@@ -573,6 +573,9 @@ def evaluate_alpha_package(
                 "eligible_for_active_research" if eligible else "experimental_only"
             ),
             "formal_use_allowed": eligible,
+            "validation_scope": "submitted_package_consistency_only",
+            "control_evidence_status": "declared_not_independently_reconstructed",
+            "capital_deployment_approved": False,
             "alpha_package_sha256": package_sha256,
             "promotion_policy_sha256": policy_sha256,
             "model_id": package["model"]["model_id"],
@@ -586,6 +589,10 @@ def evaluate_alpha_package(
                 warning
                 for warning, present in (
                     (
+                        "Out-of-sample evidence contains fewer than 60 observations; treat statistical promotion as fragile even if the supplied policy passes.",
+                        len(oos) < 60,
+                    ),
+                    (
                         "Survivorship bias is not controlled; results remain experimental.",
                         not context["survivorship_bias_control"],
                     ),
@@ -597,6 +604,7 @@ def evaluate_alpha_package(
                 if present
             ],
             "limitations": [
+                "Eligibility checks the supplied package and policy; universe membership, delisted returns, corporate actions and trial completeness are not independently reconstructed here.",
                 "Eligibility is an active-research gate, not evidence that future excess returns will occur.",
                 "The report does not authorize target weights, orders, leverage, or execution.",
             ],

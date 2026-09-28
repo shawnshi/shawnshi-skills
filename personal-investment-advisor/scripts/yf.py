@@ -36,6 +36,7 @@ from concurrent.futures import FIRST_COMPLETED, ThreadPoolExecutor, wait
 from datetime import date, datetime
 from pathlib import Path
 from typing import Any
+from zoneinfo import ZoneInfo, ZoneInfoNotFoundError
 
 import dateparser
 import pandas as pd
@@ -46,6 +47,7 @@ from rich.panel import Panel
 from rich.table import Table
 
 from history_integrity_gate import evaluate_history_integrity
+from market_calendar import CalendarError, closed_days_between, load_table
 from portfolio_loader import (
     build_portfolio_package,
     is_cash_position,
@@ -67,6 +69,9 @@ from quote_evidence_contract import (
     build_portfolio_snapshot_binding,
     quote_freshness_policy,
 )
+
+# A verified holiday table may widen the CLOSED ceiling, but never without bound.
+MAX_HOLIDAY_EXTENSION_DAYS = 10
 
 console = Console(stderr=True)
 
@@ -822,7 +827,10 @@ def _history_suppression_gap(report: dict[str, Any]) -> str:
         "provider_asset_identity_unknown",
         "asset_identity_conflict",
     }:
-        return "证券资产身份未闭合，已停止输出历史衍生技术指标"
+        return (
+            "证券资产身份未闭合，已停止输出历史衍生技术指标；"
+            "请以 --market 与 --asset-type 声明身份，或用 --with-portfolio 绑定已校验持仓后重试"
+        )
     if detail in {
         "history_integrity_packet_missing",
         "corporate_action_conflict",
@@ -832,7 +840,11 @@ def _history_suppression_gap(report: dict[str, Any]) -> str:
         "history_integrity_symbol_mismatch",
         "coverage_incomplete",
     }:
-        return "ETF复权/公司行动一致性未验证，已停止输出历史衍生技术指标"
+        return (
+            "ETF复权/公司行动一致性未验证，已停止输出历史衍生技术指标；"
+            "需先用 history_integrity_gate 产出该标的的官方公司行动覆盖包，"
+            "再以 --history-integrity-file 绑定同一历史序列"
+        )
     return "历史完整性门未通过，已停止输出历史衍生技术指标"
 
 
@@ -842,8 +854,16 @@ def _quote_contract_report(
     *,
     now_epoch: float,
     max_quote_age_seconds: int,
+    holiday_table: dict[str, Any] | None = None,
 ) -> dict[str, Any]:
-    """Validate quote identity and freshness against one portfolio position."""
+    """Validate quote identity and freshness against one portfolio position.
+
+    ``holiday_table`` is optional and opt-in: when supplied for a CN/US position it
+    widens the CLOSED ceiling by the verified exchange closures between the quote date
+    and now, and the widening is recorded in the freshness policy so nothing has to
+    infer it.  A table that cannot be applied (unknown market, missing exchange
+    timezone, uncovered year) changes nothing and adds an explicit warning.
+    """
     errors: list[str] = []
     warnings: list[str] = []
     info = result.get("info") if isinstance(result.get("info"), dict) else {}
@@ -919,12 +939,6 @@ def _quote_contract_report(
         errors.append("identity_mismatch.quoteType")
 
     market_state = info.get("marketState")
-    freshness_policy = quote_freshness_policy(
-        market_state,
-        upper_bound_cap_seconds=max_quote_age_seconds,
-    )
-    if freshness_policy["upper_bound_cap_seconds"] is None:
-        errors.append("invalid_quote_age_upper_bound_cap")
     if not isinstance(market_state, str) or not market_state.strip():
         errors.append("missing_info.marketState")
     elif market_state.strip().upper() not in {
@@ -934,6 +948,22 @@ def _quote_contract_report(
 
     quote_epoch = info.get("regularMarketTime")
     quote_age_seconds = None
+    holiday_extension: dict[str, Any] = {"applied": False}
+    holiday_extension_seconds = 0
+    if holiday_table is not None:
+        holiday_extension, holiday_extension_seconds = _holiday_extension(
+            holiday_table, expected_position, info, now_epoch)
+        if not holiday_extension["applied"] and holiday_extension.get("reason"):
+            warnings.append(f"holiday_calendar_not_applied.{holiday_extension['reason']}")
+
+    freshness_policy = quote_freshness_policy(
+        market_state,
+        upper_bound_cap_seconds=max_quote_age_seconds,
+        holiday_extension_seconds=holiday_extension_seconds,
+    )
+    if freshness_policy["upper_bound_cap_seconds"] is None:
+        errors.append("invalid_quote_age_upper_bound_cap")
+
     if isinstance(quote_epoch, bool):
         errors.append("invalid_info.regularMarketTime")
     else:
@@ -962,7 +992,72 @@ def _quote_contract_report(
             else None
         ),
         "freshness_policy": freshness_policy,
+        "holiday_extension": holiday_extension,
     }
+
+
+def _holiday_extension(
+    table: dict[str, Any],
+    expected_position: dict[str, Any] | None,
+    info: dict[str, Any],
+    now_epoch: float,
+) -> tuple[dict[str, Any], int]:
+    """Return (report, extension seconds) for the verified-closure widening."""
+
+    market = str((expected_position or {}).get("market") or "").strip().upper()
+    if market not in {"CN", "US"}:
+        return {"applied": False, "reason": "market_not_covered"}, 0
+    calendar_market = market
+    if market == "CN":
+        symbol = str((expected_position or {}).get("symbol") or "").upper()
+        exchange = str(info.get("exchange") or "").upper()
+        sources = table.get("sources") if isinstance(table.get("sources"), list) else []
+        if symbol.endswith(".SS") and exchange in {"SHH", "SHG"}:
+            calendar_market = "SSE"
+        elif symbol.endswith(".SZ") and exchange in {"SHZ", "SZSE"}:
+            calendar_market = "SZSE"
+        else:
+            return {"applied": False, "reason": "cn_exchange_closure_source_unverified"}, 0
+        prefix = "https://www.sse.com.cn/disclosure/announcement/" if calendar_market == "SSE" else "https://www.szse.cn/disclosure/notice/"
+        official = [entry for entry in sources if isinstance(entry, dict)
+                    and entry.get("market") == calendar_market
+                    and entry.get("kind") == "official_exchange_closure_notice"
+                    and str(entry.get("locator") or "").startswith(prefix)
+                    and isinstance(entry.get("content_sha256"), str)
+                    and re.fullmatch(r"[0-9a-f]{64}", entry["content_sha256"])]
+        if len(official) != 1:
+            return {"applied": False, "reason": "cn_exchange_closure_source_unverified"}, 0
+    timezone_name = str(info.get("exchangeTimezoneName") or "").strip()
+    quote_epoch = info.get("regularMarketTime")
+    if not timezone_name or isinstance(quote_epoch, bool) or not isinstance(
+            quote_epoch, (int, float)):
+        return {"applied": False, "reason": "quote_time_or_timezone_missing"}, 0
+    try:
+        zone = ZoneInfo(timezone_name)
+    except (ZoneInfoNotFoundError, ValueError):
+        return {"applied": False, "reason": "unknown_exchange_timezone"}, 0
+    quote_date = datetime.fromtimestamp(float(quote_epoch), zone).date()
+    now_date = datetime.fromtimestamp(now_epoch, zone).date()
+    try:
+        closed_days, closed_dates = closed_days_between(table, calendar_market, quote_date, now_date)
+    except CalendarError as exc:
+        return {"applied": False, "reason": f"calendar_coverage_missing: {exc}"}, 0
+    if (now_date - quote_date).days != closed_days:
+        return {"applied": False, "reason": "intervening_open_day"}, 0
+    applied_days = min(closed_days, MAX_HOLIDAY_EXTENSION_DAYS)
+    report = {
+        "applied": applied_days > 0,
+        "market": market,
+        "calendar_market": calendar_market,
+        "quote_date": quote_date.isoformat(),
+        "now_date": now_date.isoformat(),
+        "closed_days": closed_days,
+        "closed_dates": closed_dates,
+        "applied_days": applied_days,
+        "cap_days": MAX_HOLIDAY_EXTENSION_DAYS,
+        "table_sources": [source.get("locator") for source in table.get("sources") or []],
+    }
+    return report, applied_days * 86400
 
 
 def list_active_non_cash_symbols(portfolio_payload: dict[str, Any]) -> list[str]:
@@ -985,6 +1080,7 @@ def build_portfolio_batch_audit(
     now_epoch: float | None = None,
     max_quote_age_seconds: int = MAX_QUOTE_AGE_SECONDS,
     portfolio_snapshot_binding: dict[str, Any] | None = None,
+    holiday_table: dict[str, Any] | None = None,
 ) -> dict[str, Any]:
     """Audit quote coverage and strict identity for one validated portfolio."""
     portfolio_status_counts: dict[str, int] = {}
@@ -1025,6 +1121,7 @@ def build_portfolio_batch_audit(
             position_metadata.get(symbol),
             now_epoch=audit_epoch,
             max_quote_age_seconds=max_quote_age_seconds,
+            holiday_table=holiday_table,
         )
         quote_freshness_contracts[display_symbol] = {
             **contract["freshness_policy"],
@@ -1409,6 +1506,15 @@ def main():
 
     parser.add_argument("--version", action="version", version=f"%(prog)s {__version__}")
 
+    parser.add_argument(
+        "--holiday-calendar-file",
+        help=(
+            "Opt-in exchange-sourced holiday table (for 2026 CN use "
+            "references/market_holidays_sse_szse_2026.json). "
+            "Only covered exchange/year closures widen the CLOSED quote-age ceiling, capped at "
+            f"{MAX_HOLIDAY_EXTENSION_DAYS} days and recorded in the freshness contract."
+        ),
+    )
     args = parser.parse_args()
 
     if bool(args.market) != bool(args.asset_type):
@@ -1420,6 +1526,16 @@ def main():
         args.lean = True
         if not 1 <= args.daily_sync_workers <= 4:
             parser.error("--daily-sync-workers must be between 1 and 4")
+
+    holiday_table: dict[str, Any] | None = None
+    if args.holiday_calendar_file:
+        try:
+            holiday_table = load_table(Path(args.holiday_calendar_file).expanduser().resolve())
+        except (CalendarError, OSError) as exc:
+            print(json.dumps({"status": "failed", "records": [],
+                              "errors": [f"holiday_calendar_unusable: {exc}"]},
+                             ensure_ascii=False))
+            return 3
 
     try:
         configure_yfinance_cache(
@@ -1860,6 +1976,7 @@ def main():
                     if portfolio_load_status == "ok" and portfolio_payload
                     else None
                 ),
+                holiday_table=holiday_table,
             )
             if not batch_audit["complete"]:
                 has_failure = True

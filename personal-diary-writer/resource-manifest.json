@@ -1,7 +1,7 @@
 {
   "schema_version": 3,
   "skill": "personal-diary-writer",
-  "generated_at": "2026-09-24T19:20:50+08:00",
+  "generated_at": "2026-09-28T13:15:44+08:00",
   "hash_algorithm": "SHA-256",
   "text_hash_normalization": "LF",
   "skill_md": "SKILL.md",
@@ -36,23 +36,23 @@
     },
     {
       "path": "references/private-data-read.md",
-      "sha256": "c88e262f98f32db9ad2c5a2fc27e0071d164a38625a653a234979543937bb52b"
+      "sha256": "bb770449a9b54869d3d4006c9d596e3f2043f94cd7451ecb8fe40a0378deb867"
     },
     {
       "path": "references/write-protocol.md",
-      "sha256": "613d677f3e25570149c7bc05dc5c131b1771945dedc0531a95c162af3595fc6d"
+      "sha256": "495efcd98653649cb6a201e7db366def0500d2c32324c2260410f2ba1063fc79"
     },
     {
       "path": "scripts/diary_ops.py",
-      "sha256": "2553861c39833e9055bd25709a9bc68be17b97f3f68c07baf5c44e375ff087db"
+      "sha256": "75470d8eb516076a8b1667ec714f1c8361ccfd9d43c3aecb790e2dd4adf6e211"
     },
     {
       "path": "scripts/test_default_read_contract.py",
-      "sha256": "df65c3c1f0480cb381d7b3638bac24a014bdc2770f468d334ad20dfdc81993b4"
+      "sha256": "98d53a338b1579f685ec5c41bcc2c2510c13d4dab7b6650567292c0cf15c914c"
     },
     {
       "path": "scripts/test_diary_ops.py",
-      "sha256": "2a984d0a563bbbff879b20ff29fee087baa5b2b090a37c17b6175fdc88157055"
+      "sha256": "734c7df95fdcc75608e5d22934115ddbc8948c897a974ba0b523c4807f5e88f7"
     }
   ],
   "declared_local_dependencies": [
@@ -66,19 +66,19 @@
       "path": "references/private-data-read.md",
       "exists": true,
       "resolved_path": "personal-diary-writer/references/private-data-read.md",
-      "sha256": "c88e262f98f32db9ad2c5a2fc27e0071d164a38625a653a234979543937bb52b"
+      "sha256": "bb770449a9b54869d3d4006c9d596e3f2043f94cd7451ecb8fe40a0378deb867"
     },
     {
       "path": "references/write-protocol.md",
       "exists": true,
       "resolved_path": "personal-diary-writer/references/write-protocol.md",
-      "sha256": "613d677f3e25570149c7bc05dc5c131b1771945dedc0531a95c162af3595fc6d"
+      "sha256": "495efcd98653649cb6a201e7db366def0500d2c32324c2260410f2ba1063fc79"
     },
     {
       "path": "scripts/diary_ops.py",
       "exists": true,
       "resolved_path": "personal-diary-writer/scripts/diary_ops.py",
-      "sha256": "2553861c39833e9055bd25709a9bc68be17b97f3f68c07baf5c44e375ff087db"
+      "sha256": "75470d8eb516076a8b1667ec714f1c8361ccfd9d43c3aecb790e2dd4adf6e211"
     }
   ],
   "missing_declared_dependencies": []

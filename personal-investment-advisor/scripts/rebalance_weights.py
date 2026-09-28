@@ -708,7 +708,16 @@ def main() -> int:
             "run an offline inverse-volatility research experiment."
         )
     )
-    parser.add_argument("--filepath", required=True)
+    parser.add_argument(
+        "--filepath",
+        "--positions-file",
+        dest="filepath",
+        required=True,
+        help=(
+            "Path to the validated positions file (--positions-file is an alias; "
+            "--quotes-file carries the daily_sync report)."
+        ),
+    )
     parser.add_argument(
         "--quotes-file",
         help="Path to the validated JSON report emitted by daily_sync.py.",

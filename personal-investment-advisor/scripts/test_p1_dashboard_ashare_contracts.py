@@ -4,7 +4,7 @@ import json
 import os
 import sys
 import unittest
-from datetime import date
+from datetime import datetime, timezone
 from pathlib import Path
 from unittest.mock import patch
 
@@ -177,6 +177,7 @@ class AShareFetcherContractTests(unittest.TestCase):
         argv = ["akshare_fetcher.py", "--symbol", "600519", "--mode", "enhanced"]
         with (
             patch.object(sys, "argv", argv),
+            patch.object(akshare_fetcher, "_utc_now", return_value=datetime(2026, 9, 27, 23, 30, tzinfo=timezone.utc)),
             patch.object(
                 akshare_fetcher.StandaloneDataFetcher,
                 "get_enhanced_metrics",
@@ -190,7 +191,7 @@ class AShareFetcherContractTests(unittest.TestCase):
         self.assertEqual(exit_code, 1)
         self.assertEqual(payload["status"], "insufficient_data")
         self.assertEqual(payload["symbol"], "600519")
-        self.assertEqual(payload["as_of_date"], date.today().isoformat())
+        self.assertEqual(payload["as_of_date"], "2026-09-27")
         self.assertTrue(payload["source_locator"])
         self.assertTrue(payload["retrieved_at"].endswith("+00:00"))
         self.assertIn("sector_info_unavailable", payload["data_gaps"])
