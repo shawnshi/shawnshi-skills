@@ -1,7 +1,7 @@
 {
   "schema_version": 3,
   "skill": "personal-writing-assistant",
-  "generated_at": "2026-09-24T09:41:51+08:00",
+  "generated_at": "2026-10-07T10:34:36+08:00",
   "hash_algorithm": "SHA-256",
   "text_hash_normalization": "LF",
   "skill_md": "SKILL.md",
@@ -55,7 +55,7 @@
     },
     {
       "path": "references/evidence-and-risk.md",
-      "sha256": "5e07c88f28f7b9121e82ff7b86712e4521dde93b72929576c1b8bb9af3408e9e"
+      "sha256": "b0825fdf163ef513b86528db7e3723d0f1352747ff29744ed4e00fdbe2b3a03b"
     },
     {
       "path": "references/my_voice_samples.md",
@@ -81,7 +81,7 @@
       "path": "references/evidence-and-risk.md",
       "exists": true,
       "resolved_path": "personal-writing-assistant/references/evidence-and-risk.md",
-      "sha256": "5e07c88f28f7b9121e82ff7b86712e4521dde93b72929576c1b8bb9af3408e9e"
+      "sha256": "b0825fdf163ef513b86528db7e3723d0f1352747ff29744ed4e00fdbe2b3a03b"
     },
     {
       "path": "references/my_voice_samples.md",

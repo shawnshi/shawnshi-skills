@@ -521,6 +521,83 @@ def test_standalone_rule_never_overrides_a_label():
     ]
 
 
+# AUD-F04: a blog header prints a metadata description, then the date on its own line, then
+# a lone separator and a reading-time line. The date is bounded by metadata on both sides, so
+# it is a dateline even though the line above it is long prose. The marker gets its own rule id
+# instead of silently changing what standalone-dateline/1 already meant.
+def test_standalone_date_below_metadata_description_and_above_separator():
+    text = document(
+        "A look at the targeted AI taskflows behind these findings, the critical Android "
+        "bugs they uncovered, and how to run the same open-source agent on your own app.",
+        "September 28, 2026",
+        "|",
+        "10 minutes",
+        paragraph(),
+        paragraph(),
+    )
+    found = dates(text)
+    assert [(entry["published_at"], entry["parser_rule"], entry["raw"]) for entry in found] == [
+        ("2026-09-28", "standalone-dateline/2", "September 28, 2026")
+    ]
+    assert found[0]["published_at_source"] == "native_readable:standalone-dateline/2"
+
+
+@pytest.mark.parametrize("marker", ["10 minutes", "5 min read", "3 分钟阅读", "Read time: 4 minutes"])
+def test_standalone_date_above_bare_reading_time_marker(marker):
+    text = document(
+        "An announcement summary line long enough to read as metadata prose rather than "
+        "as a short label.",
+        "2026-09-28",
+        marker,
+        paragraph(),
+        paragraph(),
+    )
+    found = dates(text)
+    assert [(entry["published_at"], entry["parser_rule"]) for entry in found] == [
+        ("2026-09-28", "standalone-dateline/2")
+    ]
+
+
+def test_standalone_short_label_keeps_the_original_rule_id():
+    """The marker path must not relabel a header that rule /1 already accepted."""
+    text = document(
+        "Notice of changes",
+        "2026-09-17",
+        "|",
+        "2 minutes",
+        paragraph(),
+        paragraph(),
+    )
+    found = dates(text)
+    assert [(entry["published_at"], entry["parser_rule"]) for entry in found] == [
+        ("2026-09-17", "standalone-dateline/1")
+    ]
+
+
+def test_standalone_date_above_prose_is_still_refused_without_a_marker():
+    """AUD-F04 negative control: the marker is what unlocks the long-description header."""
+    text = document(
+        "A look at the targeted AI taskflows behind these findings, the critical Android "
+        "bugs they uncovered, and how to run the same open-source agent on your own app.",
+        "September 28, 2026",
+        paragraph(),
+        paragraph(),
+    )
+    assert dates(text) == []
+
+
+def test_reading_time_words_inside_a_sentence_are_not_a_marker():
+    text = document(
+        "A look at the targeted AI taskflows behind these findings, the critical Android "
+        "bugs they uncovered, and how to run the same open-source agent on your own app.",
+        "September 28, 2026",
+        "It took our team about 10 minutes to reproduce the issue on a clean checkout.",
+        paragraph(),
+        paragraph(),
+    )
+    assert dates(text) == []
+
+
 CNR_URL = "https://news.cnr.cn/dj/20260917/t20260917_527816462.shtml"
 CN_WIRE_LINE = "央广网北京9月17日消息（记者郭佳丽）今年以来，全国公安机关网安部门持续深化专项行动。"
 

@@ -528,7 +528,7 @@ class CalibrationReportCohortTests(unittest.TestCase):
 
             report = build_report(str(journal_path))
 
-        self.assertIn("决策范围: research_only", report)
+        self.assertIn("决策范围: advisory", report)
         self.assertIn("正式研究样本数: 1", report)
         self.assertIn("未执行或未披露子集: 1", report)
         self.assertNotIn("| 方向 |", report)

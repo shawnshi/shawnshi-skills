@@ -7,6 +7,7 @@ instead of reporting a silent success.
 from __future__ import annotations
 
 import contextlib
+import hashlib
 import io
 import json
 import sys
@@ -19,8 +20,12 @@ SCRIPT_DIR = Path(__file__).resolve().parent
 if str(SCRIPT_DIR) not in sys.path:
     sys.path.insert(0, str(SCRIPT_DIR))
 
+import pia  # noqa: E402
 import pia_daily  # noqa: E402
+from status_contract import status_rank  # noqa: E402
 import pia_refresh  # noqa: E402
+import pia_trigger_ledger  # noqa: E402
+import quote_evidence_contract  # noqa: E402
 import pia_risk_diagnostic  # noqa: E402
 
 
@@ -62,6 +67,60 @@ class DailyRunTests(unittest.TestCase):
         self.assertEqual(code, 0)
         self.assertEqual(payload["plan"][:4], ["refresh", "quotes", "daily_sync", "weights"])
         self.assertTrue(payload["evaluation_epoch"])
+        self.assertEqual(payload["decision_scope"], "advisory")
+
+    def test_refresh_force_is_opt_in_and_forwarded(self):
+        captured: dict = {}
+
+        def fake_module(main, argv):
+            if "--task-dir" in argv:
+                captured["refresh_argv"] = list(argv)
+                snapshot = self.task_dir / "inputs" / pia_refresh.DERIVED_FILENAME
+                snapshot.parent.mkdir(parents=True, exist_ok=True)
+                snapshot.write_bytes(self.positions.read_bytes())
+                return 3, {"status": "failed", "detail_status": "derived_snapshot_exists",
+                           "errors": ["already exists; pass --force to overwrite"]}
+            return 0, {"status": "complete", "detail_status": "current_weights_computed",
+                       "current_weights": []}
+
+        with mock.patch.object(pia_daily, "run_module", side_effect=fake_module):
+            code, payload = self.run_pipeline()
+        self.assertEqual(code, 3)
+        self.assertEqual(payload["status"], "failed")
+        self.assertEqual(payload["detail_status"], "refresh_stage_failed")
+        self.assertNotIn("--force", captured["refresh_argv"])
+
+        with mock.patch.object(pia_daily, "run_module", side_effect=fake_module):
+            self.run_pipeline("--force")
+        self.assertIn("--force", captured["refresh_argv"])
+
+    def test_stable_router_forwards_daily_run_force(self):
+        captured: dict = {}
+
+        def fake_child(**kwargs):
+            captured["arguments"] = list(kwargs["child_arguments"])
+            return {"status": "complete", "detail_status": "daily_run_complete"}, 0
+
+        with mock.patch.object(pia, "_run_child", side_effect=fake_child):
+            pia._dispatch(pia._build_parser().parse_args(
+                ["daily-run", "--positions-file", "positions.json", "--task-dir", "task",
+                 "--plan-only", "--force"]))
+        self.assertIn("--force", captured["arguments"])
+
+    def test_explicit_research_only_remains_available(self):
+        code, payload = self.run_pipeline("--decision-scope", "research_only", "--plan-only")
+        self.assertEqual(code, 0)
+        self.assertEqual(payload["decision_scope"], "research_only")
+
+    def test_stable_router_defaults_to_advisory(self):
+        buffer = io.StringIO()
+        with contextlib.redirect_stdout(buffer):
+            code = pia.main(["daily-run", "--positions-file", str(self.positions),
+                             "--task-dir", str(self.task_dir), "--plan-only"])
+        payload = json.loads(buffer.getvalue())
+        self.assertEqual(code, 0)
+        self.assertEqual(payload["decision_scope"], "advisory")
+        self.assertEqual(payload["result"]["decision_scope"], "advisory")
 
     def test_missing_positions_file_fails_before_any_stage(self):
         argv = ["--positions-file", str(self.root / "absent.json"),
@@ -79,8 +138,8 @@ class DailyRunTests(unittest.TestCase):
         broken["positions"][0].pop("avg_cost")
         self.positions.write_text(json.dumps(broken), encoding="utf-8")
         code, payload = self.run_pipeline()
-        self.assertEqual(code, 2)
-        self.assertEqual(payload["status"], "insufficient_evidence")
+        self.assertEqual(code, 3)
+        self.assertEqual(payload["status"], "failed")
         self.assertEqual(payload["detail_status"], "refresh_stage_failed")
         self.assertEqual([stage["stage"] for stage in payload["stages"]], ["refresh"])
 
@@ -125,13 +184,156 @@ class DailyRunTests(unittest.TestCase):
             with mock.patch.object(pia_daily, "run_module", side_effect=fake_module):
                 code, payload = self.run_pipeline()
         self.assertEqual(captured["symbols"], ["600000.SS"])
-        self.assertIn(code, (0, 2))
+        self.assertEqual(code, 1)
+        self.assertEqual(payload["status"], "incomplete")
+        self.assertEqual(payload["detail_status"], "thesis_not_assessed")
+        self.assertEqual(payload["stages"][2]["status"], "incomplete")
+        self.assertEqual(payload["stages"][2]["exit_code"], 1)
+        self.assertEqual(payload["stages"][3]["status"], "complete")
         summary = json.loads((self.task_dir / "out" / "daily_run_summary.json")
                              .read_text(encoding="utf-8"))
         self.assertEqual([stage["stage"] for stage in summary["stages"]],
                          ["refresh", "quotes", "daily_sync", "weights"])
         self.assertEqual(summary["positions_input_sha256"],
                          pia_daily.sha256_file(self.positions))
+
+    def test_summary_reports_scope_validity_and_unrun_stages(self):
+        def fake_quotes(positions_file, cache_dir, symbols, task_dir, holiday_calendar=None):
+            quotes = task_dir / "out" / "quotes.json"
+            quotes.parent.mkdir(parents=True, exist_ok=True)
+            quotes.write_text(json.dumps({"records": [], "portfolio_batch_audit": {}}),
+                              encoding="utf-8")
+            return 0, {"status": "complete", "detail_status": "quote_batch_captured"}, quotes
+
+        captured: dict = {}
+
+        def fake_module(main, argv):
+            if "--task-dir" in argv:
+                snapshot = self.task_dir / "inputs" / pia_refresh.DERIVED_FILENAME
+                snapshot.parent.mkdir(parents=True, exist_ok=True)
+                snapshot.write_bytes(self.positions.read_bytes())
+                return 0, {"status": "complete", "detail_status": "fx_snapshot_written"}
+            captured["argv"] = argv
+            return 0, {"status": "complete", "detail_status": "current_weights_computed",
+                       "current_weights": []}
+
+        with mock.patch.object(pia_daily, "run_quotes", side_effect=fake_quotes),                 mock.patch.object(pia_daily, "run_module", side_effect=fake_module):
+            _code, payload = self.run_pipeline()
+
+        inventory = payload["run_inventory"]
+        self.assertEqual(inventory["decision_scope"], "advisory")
+        self.assertEqual(inventory["stage_scopes"]["refresh"], "advisory")
+        # The abort path still reports both the stages that never ran and the
+        # stage the caller switched off: neither may look like an empty result.
+        self.assertEqual(sorted(inventory["stages_run"]), ["daily_sync", "quotes", "refresh"])
+        self.assertEqual(
+            inventory["stages_not_run"],
+            [{"stage": "weights", "reason": "not_reached_due_to_upstream_incomplete"},
+             {"stage": "watchlist", "reason": "skipped_by_flag:--skip-watchlist"}],
+        )
+        self.assertEqual(inventory["valid_until_basis"], "conservative_shortest_quote_window")
+        self.assertTrue(inventory["valid_until"].endswith("+00:00"))
+        consistency = payload["status_consistency"]
+        self.assertEqual(consistency["top_level_status"], payload["status"])
+        # A parent may be stricter than its stages; it may never be softer.
+        self.assertGreaterEqual(status_rank(consistency["top_level_status"]),
+                                status_rank(consistency["stage_derived_status"]))
+        self.assertTrue(consistency["consistent"])
+        kinds = [item["kind"] for item in payload["residual_unknowns"]]
+        self.assertIn("account_rules_not_verified", kinds)
+        self.assertIn("run_not_complete", kinds)
+        for stage in payload["stages"]:
+            self.assertEqual(stage["decision_scope"], "advisory")
+
+
+    def test_thesis_pack_replays_once_and_preserves_compatibility_artifact(self):
+        pack = self.root / "evidence.json"
+        pack.write_text("{}", encoding="utf-8")
+        replay_calls = []
+
+        def fake_quotes(positions_file, cache_dir, symbols, task_dir, holiday_calendar=None):
+            quotes = task_dir / "out" / "quotes.json"
+            quotes.parent.mkdir(parents=True, exist_ok=True)
+            quotes.write_text("{}", encoding="utf-8")
+            return 0, {"status": "complete"}, quotes
+
+        def fake_module(main, argv):
+            if "--task-dir" in argv:
+                snapshot = self.task_dir / "inputs" / pia_refresh.DERIVED_FILENAME
+                snapshot.parent.mkdir(parents=True, exist_ok=True)
+                snapshot.write_bytes(self.positions.read_bytes())
+                return 0, {"status": "complete"}
+            if "--quotes-file" in argv and "--filepath" not in argv:
+                replay_calls.append(argv)
+                return 0, {"status": "complete", "completeness": {"complete": True},
+                           "thesis_red_team": {"status": "complete"}}
+            return 0, {"status": "complete", "current_weights": []}
+
+        with mock.patch.object(pia_daily, "run_quotes", side_effect=fake_quotes), \
+                mock.patch.object(pia_daily, "run_module", side_effect=fake_module):
+            code, payload = self.run_pipeline("--thesis-evidence-file", str(pack))
+        self.assertEqual(code, 0)
+        self.assertEqual(payload["status"], "complete")
+        self.assertEqual(len(replay_calls), 1)
+        self.assertEqual(replay_calls[0][-2:], ["--thesis-evidence-file", str(pack)])
+        out = self.task_dir / "out"
+        self.assertEqual((out / "daily_sync.json").read_bytes(),
+                         (out / "daily_sync_with_thesis.json").read_bytes())
+
+    def test_requested_missing_thesis_pack_is_not_success(self):
+        missing = self.root / "missing-evidence.json"
+
+        def fake_quotes(positions_file, cache_dir, symbols, task_dir, holiday_calendar=None):
+            quotes = task_dir / "out" / "quotes.json"
+            quotes.parent.mkdir(parents=True, exist_ok=True)
+            quotes.write_text("{}", encoding="utf-8")
+            return 0, {"status": "complete"}, quotes
+
+        def fake_module(main, argv):
+            if "--task-dir" in argv:
+                snapshot = self.task_dir / "inputs" / pia_refresh.DERIVED_FILENAME
+                snapshot.parent.mkdir(parents=True, exist_ok=True)
+                snapshot.write_bytes(self.positions.read_bytes())
+                return 0, {"status": "complete"}
+            if "--quotes-file" in argv and "--filepath" not in argv:
+                return 1, {"status": "incomplete", "completeness": {"complete": True}}
+            return 0, {"status": "complete", "current_weights": []}
+
+        with mock.patch.object(pia_daily, "run_quotes", side_effect=fake_quotes), \
+                mock.patch.object(pia_daily, "run_module", side_effect=fake_module):
+            code, payload = self.run_pipeline("--thesis-evidence-file", str(missing))
+        self.assertEqual((code, payload["status"]), (2, "insufficient_evidence"))
+        self.assertEqual(payload["stages"][-1]["detail_status"], "thesis_pack_missing")
+        self.assertTrue((self.task_dir / "out" / "weights.json").is_file())
+
+    def test_thesis_pack_with_unclosed_evidence_stays_incomplete(self):
+        pack = self.root / "evidence.json"
+        pack.write_text("{}", encoding="utf-8")
+
+        def fake_quotes(positions_file, cache_dir, symbols, task_dir, holiday_calendar=None):
+            quotes = task_dir / "out" / "quotes.json"
+            quotes.parent.mkdir(parents=True, exist_ok=True)
+            quotes.write_text("{}", encoding="utf-8")
+            return 0, {"status": "complete"}, quotes
+
+        def fake_module(main, argv):
+            if "--task-dir" in argv:
+                snapshot = self.task_dir / "inputs" / pia_refresh.DERIVED_FILENAME
+                snapshot.parent.mkdir(parents=True, exist_ok=True)
+                snapshot.write_bytes(self.positions.read_bytes())
+                return 0, {"status": "complete"}
+            if "--quotes-file" in argv and "--filepath" not in argv:
+                return 1, {"status": "incomplete", "completeness": {"complete": True},
+                           "thesis_red_team": {"status": "not_assessed"}}
+            return 0, {"status": "complete", "current_weights": []}
+
+        with mock.patch.object(pia_daily, "run_quotes", side_effect=fake_quotes), \
+                mock.patch.object(pia_daily, "run_module", side_effect=fake_module):
+            code, payload = self.run_pipeline("--thesis-evidence-file", str(pack))
+        self.assertEqual((code, payload["status"]), (1, "incomplete"))
+        self.assertEqual(payload["detail_status"], "thesis_evidence_incomplete")
+        self.assertEqual([stage["status"] for stage in payload["stages"][-2:]],
+                         ["complete", "incomplete"])
 
 
 class StageRunnerTests(unittest.TestCase):
@@ -150,7 +352,7 @@ class StageRunnerTests(unittest.TestCase):
                                            "--task-dir", str(root / "task"),
                                            "--skip-watchlist"])
             payload = json.loads(buffer.getvalue())
-        self.assertEqual(code, 2)
+        self.assertEqual(code, 3)
         self.assertEqual(payload["stages"][0]["detail_status"], "derived_snapshot_missing")
     def test_argparse_style_main_is_driven_through_sys_argv(self):
         def main() -> None:
@@ -182,9 +384,6 @@ class StageRunnerTests(unittest.TestCase):
         self.assertEqual(payload["detail_status"], "stage_crashed")
         self.assertIn("boom", payload["errors"][0])
 
-
-if __name__ == "__main__":
-    unittest.main()
 
 class CoverageProbeStageTests(unittest.TestCase):
     """The coverage stage is optional, must never gate the critical path, and must
@@ -292,8 +491,8 @@ class CoverageProbeStageTests(unittest.TestCase):
                                        "--skip-watchlist",
                                        "--coverage-probe-file", str(self.spec)])
         payload = json.loads(buffer.getvalue())
-        self.assertEqual(payload["status"], "complete")
-        self.assertEqual(code, 0)
+        self.assertEqual(payload["status"], "incomplete")
+        self.assertEqual(code, 1)
         stage = next(item for item in payload["stages"] if item["stage"] == "coverage-probe")
         # the stage completes (it produced a verdict); the verdict itself is data
         self.assertEqual(stage["status"], "complete")
@@ -303,9 +502,6 @@ class CoverageProbeStageTests(unittest.TestCase):
         self.assertTrue(stage["unproven_probes"])
         self.assertTrue(Path(stage["artifacts"][0]).is_file())
 
-
-if __name__ == "__main__":
-    unittest.main()
 
 class RiskDiagnosticStageTests(unittest.TestCase):
     """The optional risk stage must validate its history syntax up front, sit after the
@@ -410,8 +606,8 @@ class RiskDiagnosticStageTests(unittest.TestCase):
                    "risk_contribution_within_subset": {"A": 0.6, "B": 0.3, "C": 0.1},
                    "method": {"labels": list(pia_risk_diagnostic.METHOD_LABELS)}}
         code, run = self._run_with_mock(payload)
-        self.assertEqual(run["status"], "complete")
-        self.assertEqual(code, 0)
+        self.assertEqual(run["status"], "incomplete")
+        self.assertEqual(code, 1)
         stage = next(item for item in run["stages"] if item["stage"] == "risk-diagnostic")
         self.assertEqual(stage["status"], "complete")
         self.assertEqual(stage["coverage"]["covered_count"], 9)
@@ -423,11 +619,405 @@ class RiskDiagnosticStageTests(unittest.TestCase):
         payload = {"status": "failed", "detail_status": "risk_diagnostic_input_invalid",
                    "errors": ["history file not found for 600000.SS"]}
         code, run = self._run_with_mock(payload, risk_code=3)
-        self.assertEqual(code, 2)
+        self.assertEqual(code, 3)
+        self.assertEqual(run["status"], "failed")
         stage = next(item for item in run["stages"] if item["stage"] == "risk-diagnostic")
-        self.assertEqual(stage["status"], "insufficient_data")
+        self.assertEqual(stage["status"], "failed")
         self.assertEqual(stage["artifacts"], [])
         self.assertIn("history file not found", stage["errors"][0])
+
+
+class GateSnapshotCompositionTests(unittest.TestCase):
+    """One command must deliver the readiness verdict when terms are supplied."""
+
+    def setUp(self):
+        self._tmp = tempfile.TemporaryDirectory()
+        self.root = Path(self._tmp.name)
+        self.positions = self.root / "portfolio.json"
+        self.positions.write_text(json.dumps(positions_payload()), encoding="utf-8")
+        self.task_dir = self.root / "task"
+        self.snapshot = self.root / "terms.json"
+        self.snapshot.write_text(json.dumps({"schema_version": "pia_cn_actionability_v1"}),
+                                 encoding="utf-8")
+        self._real_run_module = pia_daily.run_module
+
+    def tearDown(self):
+        self._tmp.cleanup()
+
+    def fake_quotes(self, positions_file, cache_dir, symbols, task_dir, holiday_calendar=None):
+        quotes = task_dir / "out" / "quotes.json"
+        quotes.parent.mkdir(parents=True, exist_ok=True)
+        quotes.write_text(json.dumps({
+            "records": [{"symbol": "600000.SS"}],
+            "provider_receipt": {"provider": "yfinance", "outcomes": {"600000.SS": "ok"},
+                                 "outcome_counts": {"ok": 1}},
+            "portfolio_batch_audit": {
+                "complete": True, "coverage_complete": True,
+                "portfolio_matched_count": 1, "expected_active_symbols": ["600000.SS"],
+                "quote_freshness_contracts": {"600000.SS": {"market_state": "REGULAR"}},
+            },
+        }), encoding="utf-8")
+        return 0, {"status": "complete", "detail_status": "quote_batch_captured"}, quotes
+
+    def fake_module(self, gate_payload, gate_code, capture):
+        def fake(main, argv):
+            if getattr(main, "__module__", "") == "cn_actionability_gate":
+                capture["gate_argv"] = list(argv)
+                return gate_code, gate_payload
+            if "--task-dir" in argv:
+                snapshot = self.task_dir / "inputs" / pia_refresh.DERIVED_FILENAME
+                snapshot.parent.mkdir(parents=True, exist_ok=True)
+                snapshot.write_bytes(self.positions.read_bytes())
+                return 0, {"status": "complete", "detail_status": "fx_snapshot_written"}
+            if "--decision-scope" in argv:  # the offline replay; weights carries no scope
+                return 0, {
+                    "status": "complete", "detail_status": "daily_sync_complete",
+                    "decision_scope": "advisory",
+                    "completeness": {"complete": True},
+                    "thesis_red_team": {"status": "complete", "evidence_status": "ok",
+                                        "fatal_event_status": "no_condition_due_yet"},
+                }
+            return 0, {"status": "complete", "decision_scope": "advisory",
+                       "detail_status": "current_weights_computed", "current_weights": []}
+        return fake
+
+    def run_pipeline(self, *extra: str) -> tuple[int, dict]:
+        argv = ["--positions-file", str(self.positions), "--task-dir", str(self.task_dir),
+                "--skip-watchlist", *extra]
+        buffer = io.StringIO()
+        with contextlib.redirect_stdout(buffer):
+            code = pia_daily.main(argv)
+        return code, json.loads(buffer.getvalue())
+
+    def _gate_passthrough(self):
+        capture: dict = {}
+        inner = self.fake_module({"status": "complete"}, 0, capture)
+
+        def fake(main, argv):
+            if getattr(main, "__module__", "") == "cn_actionability_gate":
+                return self._real_run_module(main, argv)
+            return inner(main, argv)
+        return fake
+
+    def test_supplied_snapshot_yields_one_command_readiness_verdict(self):
+        capture: dict = {}
+        gate_payload = {"status": "complete",
+                        "detail_status": "input_terms_feasible_under_supplied_snapshots",
+                        "actionability": "human_review_required_no_order"}
+        with mock.patch.object(pia_daily, "run_quotes", side_effect=self.fake_quotes), \
+                mock.patch.object(pia_daily, "run_module",
+                                  side_effect=self.fake_module(gate_payload, 0, capture)):
+            code, payload = self.run_pipeline("--actionability-assessment", str(self.snapshot))
+
+        self.assertEqual(code, 0)
+        self.assertEqual(payload["status"], "complete")
+        self.assertEqual(capture["gate_argv"][0], str(self.snapshot))
+        self.assertIn("actionability-gate", payload["run_inventory"]["requested_stages"])
+        gate_stage = next(item for item in payload["stages"]
+                          if item["stage"] == "actionability-gate")
+        self.assertEqual(gate_stage["status"], "complete")
+        self.assertEqual(Path(gate_stage["artifacts"][0]).read_text(encoding="utf-8"),
+                         json.dumps(gate_payload, ensure_ascii=False, indent=2))
+        readiness = payload["readiness"]
+        self.assertEqual(readiness["status"], "ready_for_human_review")
+        self.assertEqual(readiness["detail_status"],
+                         "machine_prerequisites_verified_human_gates_pending")
+        self.assertEqual(readiness["human_gates"], ["账户规则与成本模型已由一手来源核验"])
+        self.assertTrue(all(row["verified"] is True
+                            for row in readiness["machine_prerequisites"]))
+        self.assertEqual(readiness["blockers"], [])
+        disk = json.loads((self.task_dir / "out" / "readiness_rollup.json")
+                          .read_text(encoding="utf-8"))
+        self.assertEqual(disk, readiness)
+        self.assertEqual(json.loads((self.task_dir / "out" / "daily_run_summary.json")
+                                    .read_text(encoding="utf-8")), payload)
+
+    def test_a_closed_market_verdict_is_insufficient_evidence_not_failure(self):
+        capture: dict = {}
+        gate_payload = {"status": "market_closed",
+                        "detail_status": "verified_exchange_calendar_closed",
+                        "actionability": "not_actionable"}
+        with mock.patch.object(pia_daily, "run_quotes", side_effect=self.fake_quotes), \
+                mock.patch.object(pia_daily, "run_module",
+                                  side_effect=self.fake_module(gate_payload, 2, capture)):
+            code, payload = self.run_pipeline("--actionability-assessment", str(self.snapshot))
+        self.assertEqual(code, 2)
+        self.assertEqual(payload["status"], "insufficient_evidence")
+        self.assertEqual(payload["detail_status"], "actionability_gate_market_closed")
+        self.assertEqual(payload["readiness"]["status"], "not_ready")
+
+    def test_the_real_gate_rejects_a_snapshot_it_cannot_verify(self):
+        with mock.patch.object(pia_daily, "run_quotes", side_effect=self.fake_quotes), \
+                mock.patch.object(pia_daily, "run_module",
+                                  side_effect=self._gate_passthrough()):
+            code, payload = self.run_pipeline("--actionability-assessment", str(self.snapshot))
+        self.assertEqual(code, 3)
+        self.assertEqual(payload["status"], "failed")
+        self.assertEqual(payload["detail_status"], "actionability_gate_invalid_input")
+        written = json.loads((self.task_dir / "out" / "actionability_assessment.json")
+                             .read_text(encoding="utf-8"))
+        self.assertEqual(written["status"], "invalid_input")
+        self.assertEqual(payload["readiness"]["status"], "not_ready")
+        self.assertIn("actionability gate", " ".join(payload["readiness"]["blockers"]))
+
+    def test_plan_only_names_the_gate_stage_without_running_it(self):
+        code, payload = self.run_pipeline("--actionability-assessment", str(self.snapshot),
+                                          "--plan-only")
+        self.assertEqual(code, 0)
+        self.assertIn("actionability-gate", payload["plan"])
+        self.assertFalse((self.task_dir / "out" / "actionability_assessment.json").exists())
+
+    def test_stable_router_forwards_the_gate_snapshot(self):
+        captured: dict = {}
+
+        def fake_child(**kwargs):
+            captured["arguments"] = list(kwargs["child_arguments"])
+            return {"status": "complete", "detail_status": "daily_run_complete"}, 0
+
+        with mock.patch.object(pia, "_run_child", side_effect=fake_child):
+            pia._dispatch(pia._build_parser().parse_args(
+                ["daily-run", "--positions-file", "positions.json", "--task-dir", "task",
+                 "--actionability-assessment", "terms.json"]))
+        index = captured["arguments"].index("--actionability-assessment")
+        self.assertEqual(Path(captured["arguments"][index + 1]).name, "terms.json")
+
+
+class ArtifactReuseAndLedgerTests(unittest.TestCase):
+    """Continuity: reusing a run's own artifacts must be explicit, and recorded."""
+
+    def setUp(self):
+        self._tmp = tempfile.TemporaryDirectory()
+        self.root = Path(self._tmp.name)
+        self.positions = self.root / "portfolio.json"
+        self.positions.write_text(json.dumps(positions_payload()), encoding="utf-8")
+        self.task_dir = self.root / "task"
+
+    def tearDown(self):
+        self._tmp.cleanup()
+
+    def seed_derived_snapshot(self) -> dict:
+        snapshot = self.task_dir / "inputs" / pia_refresh.DERIVED_FILENAME
+        snapshot.parent.mkdir(parents=True, exist_ok=True)
+        snapshot.write_bytes(self.positions.read_bytes())
+        return json.loads(snapshot.read_text(encoding="utf-8"))
+
+    def seed_quotes(self, positions: dict, *, coverage: bool = True,
+                    binding: dict | None = None) -> None:
+        quotes = self.task_dir / "out" / "quotes.json"
+        quotes.parent.mkdir(parents=True, exist_ok=True)
+        quotes.write_text(json.dumps({
+            "records": [{"symbol": "600000.SS"}],
+            "portfolio_batch_audit": {
+                "coverage_complete": coverage,
+                "portfolio_snapshot_binding": (
+                    binding if binding is not None
+                    else quote_evidence_contract.build_portfolio_snapshot_binding(positions)),
+            },
+        }), encoding="utf-8")
+
+    def fake_module(self, capture: dict):
+        real = pia_daily.run_module
+
+        def fake(main, argv):
+            if getattr(main, "__module__", "") == "pia_trigger_ledger":
+                # The ledger must actually run: a stubbed append would prove nothing
+                # about whether this run reaches the append-only ledger.
+                return real(main, argv)
+            if "--task-dir" in argv:
+                capture["refresh_calls"] = capture.get("refresh_calls", 0) + 1
+                snapshot = self.task_dir / "inputs" / pia_refresh.DERIVED_FILENAME
+                snapshot.parent.mkdir(parents=True, exist_ok=True)
+                snapshot.write_bytes(self.positions.read_bytes())
+                return 0, {"status": "complete", "detail_status": "fx_snapshot_written"}
+            if "--decision-scope" in argv:
+                return 0, {"status": "complete", "detail_status": "daily_sync_complete",
+                           "completeness": {"complete": True}}
+            return 0, {"status": "complete", "detail_status": "current_weights_computed",
+                       "current_weights": [{"symbol": "600000.SS", "current_weight": 1.0,
+                                            "current_price": 10.0}]}
+        return fake
+
+    def run_pipeline(self, *extra: str) -> tuple[int, dict]:
+        argv = ["--positions-file", str(self.positions), "--task-dir", str(self.task_dir),
+                "--skip-watchlist", *extra]
+        buffer = io.StringIO()
+        with contextlib.redirect_stdout(buffer):
+            code = pia_daily.main(argv)
+        return code, json.loads(buffer.getvalue())
+
+    def test_reused_artifacts_skip_fetching_and_say_so(self):
+        positions = self.seed_derived_snapshot()
+        self.seed_quotes(positions)
+        capture: dict = {}
+        fetch = mock.Mock(side_effect=AssertionError("reuse must not refetch"))
+        with mock.patch.object(pia_daily, "run_quotes", fetch), \
+                mock.patch.object(pia_daily, "run_module",
+                                  side_effect=self.fake_module(capture)):
+            code, payload = self.run_pipeline("--reuse-artifacts")
+        self.assertEqual(code, 0)
+        fetch.assert_not_called()
+        self.assertNotIn("refresh_calls", capture)
+        self.assertEqual([row["stage"] for row in payload["reused_artifacts"]],
+                         ["refresh", "quotes"])
+        stages = {stage["stage"]: stage for stage in payload["stages"]}
+        self.assertIs(stages["refresh"]["reused"], True)
+        self.assertEqual(stages["refresh"]["detail_status"], "reused_derived_snapshot")
+        self.assertIs(stages["quotes"]["reused"], True)
+        self.assertIs(stages["quotes"]["reuse_checks"]["snapshot_binding_matches"], True)
+        self.assertEqual(payload["status"], "complete")
+
+    def test_an_unverifiable_batch_is_refused_instead_of_reused(self):
+        positions = self.seed_derived_snapshot()
+        self.seed_quotes(positions, binding={"schema_version": "pia_portfolio_snapshot_v1",
+                                             "active_positions": []})
+        fetch = mock.Mock(side_effect=AssertionError("a refused reuse must not fetch either"))
+        with mock.patch.object(pia_daily, "run_quotes", fetch), \
+                mock.patch.object(pia_daily, "run_module",
+                                  side_effect=self.fake_module({})):
+            code, payload = self.run_pipeline("--reuse-artifacts")
+        self.assertEqual(code, 3)
+        self.assertEqual(payload["detail_status"], "reuse_artifacts_unusable")
+        fetch.assert_not_called()
+        self.assertEqual([stage["stage"] for stage in payload["stages"]],
+                         ["refresh", "quotes"])
+        self.assertEqual(payload["stages"][-1]["detail_status"], "reuse_artifacts_unusable")
+        self.assertIn("snapshot_binding_matches", str(payload["stages"][-1]["errors"]))
+
+    def test_a_missing_batch_is_refused_rather_than_silently_refetched(self):
+        self.seed_derived_snapshot()
+        with mock.patch.object(pia_daily, "run_module",
+                               side_effect=self.fake_module({})):
+            code, payload = self.run_pipeline("--reuse-artifacts")
+        self.assertEqual(code, 3)
+        self.assertIn("quotes_file_missing", str(payload["stages"][-1]["errors"]))
+
+    def test_without_the_flag_the_pipeline_still_fetches(self):
+        self.seed_derived_snapshot()
+        positions = json.loads(self.positions.read_text(encoding="utf-8"))
+        calls: list[str] = []
+
+        def fake_quotes(positions_file, cache_dir, symbols, task_dir, holiday_calendar=None):
+            calls.append("quotes")
+            self.seed_quotes(positions)
+            return 0, {"status": "complete", "detail_status": "quote_batch_captured"}, \
+                task_dir / "out" / "quotes.json"
+
+        with mock.patch.object(pia_daily, "run_quotes", side_effect=fake_quotes), \
+                mock.patch.object(pia_daily, "run_module",
+                                  side_effect=self.fake_module({})):
+            code, payload = self.run_pipeline()
+        self.assertEqual(calls, ["quotes"])
+        self.assertNotIn("reused_artifacts", payload)
+
+    def test_a_repeat_run_names_the_run_it_replaced(self):
+        positions = json.loads(self.positions.read_text(encoding="utf-8"))
+
+        def fake_quotes(positions_file, cache_dir, symbols, task_dir, holiday_calendar=None):
+            self.seed_quotes(positions, coverage=False)
+            return 0, {"status": "complete", "detail_status": "quote_batch_captured"}, \
+                task_dir / "out" / "quotes.json"
+
+        summary_path = self.task_dir / "out" / "daily_run_summary.json"
+        history = self.task_dir / "out" / pia_daily.REPLAY_HISTORY_FILENAME
+        with mock.patch.object(pia_daily, "run_quotes", side_effect=fake_quotes), \
+                mock.patch.object(pia_daily, "run_module",
+                                  side_effect=self.fake_module({})):
+            first_code, first = self.run_pipeline()
+            self.assertEqual(first_code, 0)
+            # A first run replaces nothing and must not claim otherwise.
+            self.assertNotIn("previous_run", first)
+            self.assertFalse(history.exists())
+            first_sha = hashlib.sha256(summary_path.read_bytes()).hexdigest()
+            second_code, second = self.run_pipeline()
+        self.assertEqual(second_code, 0)
+        self.assertEqual(second["previous_run"]["summary_sha256"], first_sha)
+        self.assertEqual(second["previous_run"]["status"], first["status"])
+        lines = [json.loads(line) for line in
+                 history.read_text(encoding="utf-8").splitlines() if line.strip()]
+        self.assertEqual(len(lines), 1)
+        self.assertEqual(lines[0]["overwrote_summary_sha256"], first_sha)
+        self.assertEqual(lines[0]["overwrote_status"], first["status"])
+        # A later repeat chains to the run it replaced, so the sequence stays readable.
+        second_sha = hashlib.sha256(summary_path.read_bytes()).hexdigest()
+        with mock.patch.object(pia_daily, "run_quotes", side_effect=fake_quotes), \
+                mock.patch.object(pia_daily, "run_module",
+                                  side_effect=self.fake_module({})):
+            _third_code, third = self.run_pipeline()
+        self.assertEqual(third["previous_run"]["summary_sha256"], second_sha)
+        lines = [json.loads(line) for line in
+                 history.read_text(encoding="utf-8").splitlines() if line.strip()]
+        self.assertEqual([line["overwrote_summary_sha256"] for line in lines],
+                         [first_sha, second_sha])
+
+    def test_an_aborted_repeat_is_recorded_too(self):
+        self.seed_derived_snapshot()
+        summary_path = self.task_dir / "out" / "daily_run_summary.json"
+        prior = {"schema_version": "pia_daily_run_v1", "status": "complete",
+                 "detail_status": "daily_run_complete", "generated_at": "2026-09-29T12:00:00+00:00"}
+        summary_path.parent.mkdir(parents=True, exist_ok=True)
+        summary_path.write_text(json.dumps(prior), encoding="utf-8")
+        prior_sha = hashlib.sha256(summary_path.read_bytes()).hexdigest()
+        # No usable quote batch: the run must refuse, yet still say what it replaced.
+        with mock.patch.object(pia_daily, "run_module", side_effect=self.fake_module({})):
+            code, payload = self.run_pipeline("--reuse-artifacts")
+        self.assertEqual(code, 3)
+        self.assertEqual(payload["detail_status"], "reuse_artifacts_unusable")
+        self.assertEqual(payload["previous_run"]["summary_sha256"], prior_sha)
+        history = self.task_dir / "out" / pia_daily.REPLAY_HISTORY_FILENAME
+        lines = [json.loads(line) for line in
+                 history.read_text(encoding="utf-8").splitlines() if line.strip()]
+        self.assertEqual(len(lines), 1)
+        self.assertEqual(lines[0]["overwrote_summary_sha256"], prior_sha)
+
+    def test_recording_appends_this_run_to_the_ledger_once(self):
+        self.seed_derived_snapshot()
+        positions = json.loads(self.positions.read_text(encoding="utf-8"))
+
+        def fake_quotes(positions_file, cache_dir, symbols, task_dir, holiday_calendar=None):
+            self.seed_quotes(positions, coverage=False)
+            return 0, {"status": "complete", "detail_status": "quote_batch_captured"}, \
+                task_dir / "out" / "quotes.json"
+
+        (self.root / "ledger").mkdir(parents=True, exist_ok=True)
+        ledger = self.root / "ledger" / pia_trigger_ledger.DEFAULT_LEDGER_NAME
+        with mock.patch.object(pia_daily, "run_quotes", side_effect=fake_quotes), \
+                mock.patch.object(pia_daily, "run_module",
+                                  side_effect=self.fake_module({})):
+            code, payload = self.run_pipeline("--record", "--ledger", str(ledger))
+        self.assertEqual(code, 0)
+        self.assertIs(payload["ledger"]["appended"], True)
+        self.assertEqual(payload["ledger"]["status"], "complete")
+        entries = [json.loads(line) for line in
+                   ledger.read_text(encoding="utf-8").splitlines() if line.strip()]
+        self.assertEqual(len(entries), 1)
+        self.assertEqual(entries[0]["run_id"], self.task_dir.name)
+        self.assertIn("600000.SS", entries[0]["weights"])
+        # Re-appending the same run (same summary, same entry id) is refused, so a
+        # repeated invocation cannot inflate the ledger.
+        buffer = io.StringIO()
+        with contextlib.redirect_stdout(buffer):
+            again = pia_trigger_ledger.main(["append", "--run-dir", str(self.task_dir),
+                                             "--ledger", str(ledger)])
+        self.assertEqual(again, 0)
+        self.assertIs(json.loads(buffer.getvalue())["appended"], False)
+        self.assertEqual(len(ledger.read_text(encoding="utf-8").splitlines()), 1)
+
+    def test_stable_router_forwards_reuse_record_and_ledger(self):
+        captured: dict = {}
+
+        def fake_child(**kwargs):
+            captured["arguments"] = list(kwargs["child_arguments"])
+            return {"status": "complete", "detail_status": "daily_run_complete"}, 0
+
+        with mock.patch.object(pia, "_run_child", side_effect=fake_child):
+            pia._dispatch(pia._build_parser().parse_args(
+                ["daily-run", "--positions-file", "positions.json", "--task-dir", "task",
+                 "--reuse-artifacts", "--record", "--ledger", "ledger.jsonl"]))
+        arguments = captured["arguments"]
+        self.assertIn("--reuse-artifacts", arguments)
+        self.assertIn("--record", arguments)
+        self.assertEqual(Path(arguments[arguments.index("--ledger") + 1]).name,
+                         "ledger.jsonl")
 
 
 if __name__ == "__main__":

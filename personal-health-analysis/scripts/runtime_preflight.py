@@ -15,7 +15,7 @@ MODE_REQUIREMENTS = {
     "local": {"pandas": ("pandas", "3.0.6")},
     "live": {
         "pandas": ("pandas", "3.0.6"),
-        "garminconnect": ("garminconnect", "0.3.16"),
+        "garminconnect": ("garminconnect", "0.3.17"),
     },
     "activity": {
         "fitparse": ("fitparse", "1.2.0"),
@@ -31,12 +31,13 @@ def verify_runtime(mode: str) -> dict[str, object]:
 
     failures: list[dict[str, object]] = []
     requirements: dict[str, dict[str, object]] = {}
-    if sys.version_info < MIN_PYTHON:
+    minimum_python = (3, 12) if mode == "live" else MIN_PYTHON
+    if sys.version_info < minimum_python:
         failures.append(
             {
                 "package": "python",
                 "reason": "version_mismatch",
-                "expected": f">={MIN_PYTHON[0]}.{MIN_PYTHON[1]}",
+                "expected": f">={minimum_python[0]}.{minimum_python[1]}",
                 "actual": ".".join(str(part) for part in sys.version_info[:3]),
             }
         )

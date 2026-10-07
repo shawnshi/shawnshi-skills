@@ -552,6 +552,7 @@ class FailClosedOfflineSyncTests(DailySyncTestCase):
         self.assertNotEqual(exit_context.exception.code, 0)
         self.assertEqual(report["status"], "incomplete")
         self.assertEqual(report["thesis_red_team"]["status"], "not_assessed")
+        self.assertEqual(report["decision_scope"], "advisory")
 
     def test_cli_invalid_json_is_structured_and_uses_input_error_exit(self):
         with tempfile.TemporaryDirectory() as tmpdir:
@@ -592,6 +593,148 @@ class FailClosedOfflineSyncTests(DailySyncTestCase):
         self.assertEqual(exit_context.exception.code, 2)
         self.assertEqual(report["status"], "invalid_input")
         self.assertTrue(report["errors"][0].startswith("argument_error:"))
+
+
+    def test_provider_receipt_travels_with_the_replay(self):
+        with tempfile.TemporaryDirectory() as tmpdir:
+            positions_path, quotes_path = self.write_inputs(tmpdir)
+            payload = json.loads(quotes_path.read_text(encoding="utf-8"))
+            payload["provider_receipt"] = {
+                "provider": "yfinance",
+                "operation": "daily_sync_quote_metadata",
+                "outcomes": {"AAPL": "ok", "159516.SZ": "skipped_circuit_open"},
+                "circuit_breaker_signature": "connection_refused",
+            }
+            quotes_path.write_text(json.dumps(payload), encoding="utf-8")
+            report = self.evaluate(positions_path, quotes_path)
+
+        self.assertEqual(
+            report["supplied_provider_receipt"]["outcomes"],
+            {"AAPL": "ok", "159516.SZ": "skipped_circuit_open"},
+        )
+        self.assertEqual(
+            report["supplied_provider_receipt"]["circuit_breaker_signature"],
+            "connection_refused",
+        )
+
+    def test_malformed_provider_receipt_warns_without_inventing_one(self):
+        with tempfile.TemporaryDirectory() as tmpdir:
+            positions_path, quotes_path = self.write_inputs(tmpdir)
+            payload = json.loads(quotes_path.read_text(encoding="utf-8"))
+            payload["provider_receipt"] = "not-an-object"
+            quotes_path.write_text(json.dumps(payload), encoding="utf-8")
+            report = self.evaluate(positions_path, quotes_path)
+
+        self.assertIsNone(report["supplied_provider_receipt"])
+        self.assertIn("provider_receipt_must_be_an_object", report["warnings"])
+
+    def test_missing_provider_receipt_stays_null(self):
+        with tempfile.TemporaryDirectory() as tmpdir:
+            positions_path, quotes_path = self.write_inputs(tmpdir)
+            report = self.evaluate(positions_path, quotes_path)
+
+        self.assertIsNone(report["supplied_provider_receipt"])
+
+
+def secondary_record(symbol="AAPL", *, price=110.1234, currency="USD", exchange="NASDAQ",
+                     tier="secondary", source="Tencent Finance (secondary)",
+                     locator=None, locator_override=None, symbol_override=None,
+                     unverifiable=None, sources_price=None):
+    record = quote_record(symbol, price=price, currency=currency, exchange=None,
+                          quote_type=None)
+    record["info"]["marketState"] = "REGULAR"
+    record["info"]["exchange"] = exchange
+    record["info"]["quoteType"] = None
+    record["data_sources"] = {
+        "price": sources_price if sources_price is not None else source,
+        "price_locator": locator_override or locator or f"fallback:tencent:{symbol}",
+    }
+    record["quote_provenance"] = {
+        "tier": tier,
+        "symbol": symbol_override or symbol,
+        "source": source,
+        "source_locator": locator or f"fallback:tencent:{symbol}",
+        "price": price,
+        "currency": currency,
+        "market_state": "REGULAR",
+        "observed_at": "2026-09-29T10:16:20-04:00",
+        "primary_outcome": "error",
+        "unverifiable": list(unverifiable if unverifiable is not None
+                             else ["quoteType", "timeliness"]),
+    }
+    return record
+
+
+class SecondaryQuoteSourceTests(DailySyncTestCase):
+    """A declared secondary quote is usable but never counted as a primary match."""
+
+    def test_declared_secondary_record_is_accepted_and_listed(self):
+        records = [secondary_record("AAPL"), quote_records()[1]]
+        with tempfile.TemporaryDirectory() as tmpdir:
+            positions_path, quotes_path = self.write_inputs(
+                tmpdir, quotes={"records": records, "portfolio_batch_audit": supplied_audit()}
+            )
+            report = self.evaluate(positions_path, quotes_path)
+        self.assertEqual(report["secondary_quote_symbols"], ["AAPL"])
+        contract_stage = report["stages"][2]
+        self.assertTrue(any("labelled_secondary_quote_source" in warning
+                            for warning in contract_stage["warnings"]))
+        snapshot = {item["symbol"]: item for item in report["quote_snapshot"]}
+        self.assertEqual(snapshot["AAPL"]["quote_tier"], "secondary")
+        self.assertEqual(snapshot["AAPL"]["quote_source"],
+                         "Tencent Finance (secondary)")
+        self.assertEqual(snapshot["AAPL"]["quote_primary_outcome"], "error")
+        self.assertIn("timeliness", snapshot["AAPL"]["quote_unverifiable"])
+        # The primary symbol is still reported as primary.
+        self.assertEqual(snapshot["159516.SZ"]["quote_tier"], "primary")
+        self.assertEqual(snapshot["159516.SZ"]["source"], "Yahoo Finance")
+
+    def test_secondary_record_whose_source_disagrees_with_provenance_fails(self):
+        broken = secondary_record("AAPL", sources_price="Yahoo Finance")
+        records = [broken, quote_records()[1]]
+        with tempfile.TemporaryDirectory() as tmpdir:
+            positions_path, quotes_path = self.write_inputs(
+                tmpdir, quotes={"records": records, "portfolio_batch_audit": supplied_audit()}
+            )
+            report = self.evaluate(positions_path, quotes_path)
+        self.assertEqual(report["secondary_quote_symbols"], [])
+        self.assertIn("identity_mismatch.data_sources.price",
+                      report["stages"][2]["errors"][0])
+
+    def test_secondary_record_with_wrong_locator_fails(self):
+        record = secondary_record("AAPL", locator_override="yfinance:AAPL:quote")
+        records = [record, quote_records()[1]]
+        with tempfile.TemporaryDirectory() as tmpdir:
+            positions_path, quotes_path = self.write_inputs(
+                tmpdir, quotes={"records": records, "portfolio_batch_audit": supplied_audit()}
+            )
+            report = self.evaluate(positions_path, quotes_path)
+        self.assertIn("identity_mismatch.data_sources.price_locator",
+                      report["stages"][2]["errors"][0])
+
+    def test_secondary_record_for_another_symbol_fails(self):
+        record = secondary_record("AAPL", symbol_override="MSFT")
+        records = [record, quote_records()[1]]
+        with tempfile.TemporaryDirectory() as tmpdir:
+            positions_path, quotes_path = self.write_inputs(
+                tmpdir, quotes={"records": records, "portfolio_batch_audit": supplied_audit()}
+            )
+            report = self.evaluate(positions_path, quotes_path)
+        self.assertIn("identity_mismatch.quote_provenance.symbol",
+                      report["stages"][2]["errors"][0])
+
+    def test_undeclared_non_yahoo_source_still_fails_closed(self):
+        record = quote_records()[0]
+        record["data_sources"]["price"] = "Some Other Feed"
+        records = [record, quote_records()[1]]
+        with tempfile.TemporaryDirectory() as tmpdir:
+            positions_path, quotes_path = self.write_inputs(
+                tmpdir, quotes={"records": records, "portfolio_batch_audit": supplied_audit()}
+            )
+            report = self.evaluate(positions_path, quotes_path)
+        self.assertEqual(report["secondary_quote_symbols"], [])
+        self.assertIn("identity_mismatch.data_sources.price",
+                      report["stages"][2]["errors"][0])
 
 
 if __name__ == "__main__":

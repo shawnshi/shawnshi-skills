@@ -89,7 +89,8 @@ class ParentSupplementFinalizationTests(unittest.TestCase):
             *(["--parent"] if parent else [])], cwd=self.snapshot, capture_output=True, text=True, encoding="utf8")
 
     def test_exhausted_worker_parent_finalizes_same_payload_and_registers(self):
-        self.assertEqual(self.packet["tool_budget"], {"soft": 8, "hard": 12, "block": "*"})
+        self.assertEqual(self.packet["tool_budget"], {"soft": 20, "hard": 28, "block": "*"})
+
         # Expected bytes come from the existing deterministic worker helper, not invented receipts.
         ordinary = self.helper(parent=False)
         self.assertEqual(ordinary.returncode, 0, ordinary.stderr)

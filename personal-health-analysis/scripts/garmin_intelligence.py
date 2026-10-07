@@ -39,7 +39,7 @@ try:
         verified_database_read_window,
     )
 
-    HAS_SQLITE = DB_DIR.exists()
+    HAS_SQLITE = True
 except ImportError:
     HAS_SQLITE = False
 

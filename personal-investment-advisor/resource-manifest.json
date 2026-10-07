@@ -1,18 +1,18 @@
 {
   "schema_version": 3,
   "skill": "personal-investment-advisor",
-  "generated_at": "2026-09-28T12:26:26+08:00",
+  "generated_at": "2026-10-07T10:34:35+08:00",
   "hash_algorithm": "SHA-256",
   "text_hash_normalization": "LF",
   "skill_md": "SKILL.md",
-  "skill_md_sha256": "55800ced878acbe4cc6e7a91a57fa95b70d7bdd2d206b0bb31891ac3fc4c07c6",
+  "skill_md_sha256": "5b95ffeebe270247c910077bdf293af1f8d5226de9b0bff2d59ac2af295469e3",
   "top_level_files": [
     "SKILL.md"
   ],
   "top_level_file_hashes": [
     {
       "path": "SKILL.md",
-      "sha256": "55800ced878acbe4cc6e7a91a57fa95b70d7bdd2d206b0bb31891ac3fc4c07c6"
+      "sha256": "5b95ffeebe270247c910077bdf293af1f8d5226de9b0bff2d59ac2af295469e3"
     }
   ],
   "top_level_directories": [
@@ -24,11 +24,11 @@
   "resource_directories": [
     {
       "name": "scripts",
-      "file_count": 109
+      "file_count": 125
     },
     {
       "name": "references",
-      "file_count": 34
+      "file_count": 36
     },
     {
       "name": "resources",
@@ -42,11 +42,11 @@
   "resource_file_hashes": [
     {
       "path": "agents/openai.yaml",
-      "sha256": "f8f91bbd94100f5b5c9c919aee7c2c695038e6d94b7d9c7753eeb9b5aa45baf1"
+      "sha256": "bfd139e07defb44ac99a7ea363d832f2bdaf5b4c2c552d006e72541282629719"
     },
     {
       "path": "references/active-research.md",
-      "sha256": "d48acbbea1b92110becd32c1b74a515ca393aaa0f48c881c3fb2de9b83b18ef7"
+      "sha256": "ecee198ac36b2775a88659e298773f33cab4038c80614ea2ada7ed23d822e9e6"
     },
     {
       "path": "references/active_construction_policy_schema.json",
@@ -70,11 +70,11 @@
     },
     {
       "path": "references/cn-actionability.md",
-      "sha256": "63bcc31655444acad4af94b996d6732fc7790ff11e4ee950293ddda1416394c8"
+      "sha256": "f96ddd9d469d62d6312a0013e52101a4fde92bcb576c21fd8917a9e821f0a1cc"
     },
     {
       "path": "references/cn-equity-evidence.md",
-      "sha256": "49e7ff715e970a0839a9f62ae97ec5d0277e17ad81997c7c0a06a8662f028beb"
+      "sha256": "6f75e02b13d0c112a70d2fbea68e736bd26ca6398e6d375ab4338e06546ba534"
     },
     {
       "path": "references/cn-equity-research.md",
@@ -85,20 +85,24 @@
       "sha256": "a01b385343c554aae6be468212333bcf62fed11472b70f208a85ff1bb8ce8a0d"
     },
     {
+      "path": "references/cn_disclosure_channels.md",
+      "sha256": "fc816cfddb73d10ae664785d39baa7ac310927c0aee760406c0123a79371ccb3"
+    },
+    {
       "path": "references/command-catalog.md",
-      "sha256": "9f74da47f1c3bb14dec91fb6a0303de89a4622e04fa0e381b06f2ffe47003e05"
+      "sha256": "c3fa1000615ecf42f04d23c021eae104431bfcae6e5ecc5248fdeed5d3237bbc"
     },
     {
       "path": "references/company-research.md",
-      "sha256": "3ac8b09ca839304caea9e53cafef2a8fe51f722d499019fd116e0e5bbb65510e"
+      "sha256": "69298d2ed8707863ad028ea8cf8cbff6005564c6fcb4c61b58ffa0ec048e65d2"
     },
     {
       "path": "references/daily-sync.md",
-      "sha256": "4346e4658f9505011a0e9ae482fc827cf4045aeb0e2e79610db9fa614b3211a9"
+      "sha256": "fbfe611f48b0bb2f74b1d3485e773ef2988d236ad8b789a175d24f44ed69e3df"
     },
     {
       "path": "references/dashboard_schema.json",
-      "sha256": "7c5805337302edd32980a3a973e55cb15abb5d25cc3b99c38678f6d38ee75a30"
+      "sha256": "583eaa132efc5000cd9360283686eea93c3a709db9e832347c69e3ec59a230f1"
     },
     {
       "path": "references/etf_official_channels.md",
@@ -106,7 +110,7 @@
     },
     {
       "path": "references/free-data-policy.md",
-      "sha256": "579b240a89f256bafb4dea3e1644c4089adbd1c6325ddd96755cbb15cb8fda37"
+      "sha256": "9a62f409e15e2b4a0260afb257501cc73efc1e99e12bdfc2a17ad6ddbce5693d"
     },
     {
       "path": "references/interpretive_labels.json",
@@ -114,11 +118,11 @@
     },
     {
       "path": "references/inverse_volatility_policy.example.json",
-      "sha256": "3df58479800ce12f2e1d905705c7864d81d57c53a2f5be7f393a218935e4ea57"
+      "sha256": "f79be16265c7cc190170fccbb11f25220ea795c3a0df8551e628ce9b05658825"
     },
     {
       "path": "references/inverse_volatility_policy_schema.json",
-      "sha256": "f75b7b2abe1c09abe847bd60ea9481da42942fc5139b3c6e45ca9f36224bad07"
+      "sha256": "65d4705a2c9a4ce47005d6f91099894f4a9707014e2e1e2e27cbb6e82085417d"
     },
     {
       "path": "references/market_holidays.json",
@@ -150,7 +154,7 @@
     },
     {
       "path": "references/portfolio-audit.md",
-      "sha256": "0d664638ee7bf82781f8e28f3eeb45b558e72e00396ef54835f693f71faec7d2"
+      "sha256": "491ce59ef59ca48cb6b8ba6f61e9c55893256611d405ece5e81c0d26fb3cb723"
     },
     {
       "path": "references/portfolio_positions.example.json",
@@ -173,8 +177,12 @@
       "sha256": "cfc8149c55eb825e1188a6d16355fbafee1142a895ebd1dec9ee337e21eca727"
     },
     {
+      "path": "references/runtime-operation.md",
+      "sha256": "6b629cabf5c23d4320e7e0d668493dca9cd0408cb9ea1abf6f3b15b2d732e793"
+    },
+    {
       "path": "references/status-contract.md",
-      "sha256": "483a98534ddd7e475636903c5813acfbde66b3cf43fa172e23cfa68881b9e640"
+      "sha256": "eea5d125d206d0e9cac9e3724a91802c3eb9b4556c64e24dfa6d0e2f2abf7615"
     },
     {
       "path": "references/thesis_red_team_schema.json",
@@ -186,15 +194,15 @@
     },
     {
       "path": "scripts/active_alpha_scan.py",
-      "sha256": "55984bc7ce431729468df5d86c77dbd062fd24b70ef6bcf0baab2741e2192fbe"
+      "sha256": "8d64e982d7235446c3ac09bec98264495d623a8b1d78db650d6b5fed65650f52"
     },
     {
       "path": "scripts/active_portfolio_constructor.py",
-      "sha256": "6104888a718c050e4fc7b1c10162f912be57c789fe40f224fe2da4c92915efd6"
+      "sha256": "4bf0b73df5394309407f0e26b8c50eadb92c1b61b94b5025b736368a5b38ff12"
     },
     {
       "path": "scripts/active_research_contract.py",
-      "sha256": "b5443720902714a08c492500ca8425414a59d611c247f1125ad9a4b13e73196a"
+      "sha256": "84c025d762b27826edc4d6b40edeeaf5f1f066771ee55952440d61aed4fac2bf"
     },
     {
       "path": "scripts/advice_journal.py",
@@ -206,7 +214,7 @@
     },
     {
       "path": "scripts/alpha_validation.py",
-      "sha256": "4f26b49ddde129ec40c43a3afe76ba65e85dffa9d8cf8b71c28d2fede772c184"
+      "sha256": "b69a58423e7f9e1908c7177475f2c56aeafeb05c067a1819605af95c83bfe50c"
     },
     {
       "path": "scripts/broker_sync.py",
@@ -226,7 +234,7 @@
     },
     {
       "path": "scripts/daily_sync.py",
-      "sha256": "70aad13f32b6a815822b11a412bf02579736f971ab7725df6ef1e3042c55e3e4"
+      "sha256": "936bb788cb64e8b27456deb15a5e990d50574692659a51fdb55352be859d5640"
     },
     {
       "path": "scripts/dashboard_catalog.py",
@@ -234,7 +242,7 @@
     },
     {
       "path": "scripts/dashboard_gate.py",
-      "sha256": "5ddf37b342857966f1fd621dd9feac843ef5880a29cc761a9ac23d6d64be7ea0"
+      "sha256": "830a49f507d72dba72900e3c282a8ea285e54450f2bee00ee1f33585e866a352"
     },
     {
       "path": "scripts/dashboard_math_gate.py",
@@ -242,7 +250,15 @@
     },
     {
       "path": "scripts/decision_outcome_report.py",
-      "sha256": "e7a8f778ea04453e90e8257119bcdeef7deebab2a60f190dd74bb0377963cd46"
+      "sha256": "7026c3f06b9297e263bdcbf46eacc5975396aa4f75c087c834ac5077992fd36b"
+    },
+    {
+      "path": "scripts/evidence_channels.py",
+      "sha256": "eff324b9425d5c4317f752e7c5841437c36603f85d3dfa600d27eb7ef8991ea5"
+    },
+    {
+      "path": "scripts/fund_nav_ledger.py",
+      "sha256": "7c57c0c6cafb42d34a8f452af472b4c4048c7a52760ce186368ce4e19d919e50"
     },
     {
       "path": "scripts/history_integrity_gate.py",
@@ -253,16 +269,24 @@
       "sha256": "737fa9a6d600b594dea66bff0cb127f8bef5d05549eda6e832a669c299b3216b"
     },
     {
+      "path": "scripts/instrument_labels.py",
+      "sha256": "e0bde46a4ae2b6cd37ab18bab4aa22809d67ce5a0a052d088f8a8417d898d8ff"
+    },
+    {
       "path": "scripts/live_evidence_probe.py",
-      "sha256": "3ebec7e470153ad2643458d3c79a7d3fdb64405c6b73f9898cc9f2b66941d523"
+      "sha256": "06d7cc40973d6e8a032f2fee9f30edaccc47f9214a25410a5849558392bf4a23"
     },
     {
       "path": "scripts/management_claim_tracker.py",
       "sha256": "79e27dbe8a0760f12cdaa2f152f849d51b7c9af2dda76d071b5ac7419d6b1b13"
     },
     {
+      "path": "scripts/manual_boundary_audit.py",
+      "sha256": "c643d1cffc3a03c56eb7114bb9a7f8492d7f5ee05dc1ccd4d04bc7bea93d841a"
+    },
+    {
       "path": "scripts/market_calendar.py",
-      "sha256": "7e2b15d4bee74649563ab24bd685788e3e7b02751c94b09a2428142bb3c5c583"
+      "sha256": "06faebb6e6435973543d9940f059d14ede4ffa42c92eae9d62d27e2fc1203ddc"
     },
     {
       "path": "scripts/ordinary_equity_contract.py",
@@ -274,55 +298,63 @@
     },
     {
       "path": "scripts/pia.py",
-      "sha256": "e6d5fca09a9e96dfb2234e76adf806252c886267ea394711e2988caab7ac49c9"
+      "sha256": "3f8efddc839b16fca1800e1e7be3b09308e8fa52dd433750112a0c277415979b"
     },
     {
       "path": "scripts/pia_build.py",
-      "sha256": "ff16a9c0d7487df3516937ea7d1c055eb26f6284913bfaa894ce1098e8857dd8"
+      "sha256": "23360dacae9e6ea7f0c10d86378f38881792758f9ecb514d04ab9cb8058a06e1"
     },
     {
       "path": "scripts/pia_daily.py",
-      "sha256": "cb3e57f6fdddd6b90882f911e0aedaf65c5f2aa5f850a8d15919911818f10f02"
+      "sha256": "3f212f9987c780e1e9d7ed40a6df427ccfb6c58d184f3f169933a09ff1aa421c"
     },
     {
       "path": "scripts/pia_dilution.py",
-      "sha256": "47f257596f6232592258c55392c9921a6a46036a4f04582cd0d35cf8ffcc79a2"
+      "sha256": "9a4daeb97eb32798ce13845756fe56183986b903e40b66e22a4cd290cc63d0a6"
     },
     {
       "path": "scripts/pia_etf_packet.py",
-      "sha256": "4f85ca9bdebfda232f8b9f9b17d55cdf7c6532188b9f58c4050562f3d82f9765"
+      "sha256": "cf2770b9ac6d05af6a93142020a00b3b7d03f5b8b8a001eb3a58da9b7c538185"
+    },
+    {
+      "path": "scripts/pia_evidence.py",
+      "sha256": "eaf9ee3a273b82a93dab7af0a1804f813b988b0d8011fafc26c910d02ec051e2"
     },
     {
       "path": "scripts/pia_history.py",
-      "sha256": "40bea396d751d02d207859cf156feb44a7f2c0054b5c1d0aac7be97f27e4f6bd"
+      "sha256": "b0b072a572d4392a2fac2d9f985566e0af3198a5bdb6865a099822c91a97b6d2"
     },
     {
       "path": "scripts/pia_labels.py",
-      "sha256": "f9c4eb712bdc30855769872c4bc8da8bb1296e657a1f5dc5ffafc0849be1aeb5"
+      "sha256": "37644d3140dce22f68a4c8a7f2f2b2b596dbcf14a171b80bf09bfcf8d0ddce39"
+    },
+    {
+      "path": "scripts/pia_readiness.py",
+      "sha256": "dbdd815fb65572c8279308da70a18c973806be26facd93a0d0f45b2aa2b43446"
     },
     {
       "path": "scripts/pia_refresh.py",
-      "sha256": "3b0114d917fe5d9237af9e19c3890c0195159c0cb4225a201adc0a2e3b3d518d"
+      "sha256": "0241cf5188fadecf14d131f30bd56c91e3ed8caed08d398fafa3bc656ac59580"
     },
     {
       "path": "scripts/pia_report.py",
-      "sha256": "dff9a5732aab758aa556c19a56a0ce72f3a4f575706f59143a6007d7540c57e4"
+      "sha256": "5ad9645c72d6d6cdaf16d9612b62ea8fcb629a5de479e7ae2d58a43469a1964f"
     },
     {
       "path": "scripts/pia_review_pack.py",
-      "sha256": "790dd8117043163f3662f3fbb707a2201ba639013bbe53c1aad48f408209ac46"
+      "sha256": "9844f9889abe133a3a2ce349ab7e8ef353c5f581a5d163bf17924831b3d47b2d"
     },
     {
       "path": "scripts/pia_risk_diagnostic.py",
-      "sha256": "3ddebaa7c81b4ce6c52f085b078c270239168f0e91bf509956f44fdd2b30ca0d"
+      "sha256": "3851a0420b4d9b47c0c1f0cc03d404783b851d4434763deaf4ff3c5416eef629"
     },
     {
       "path": "scripts/pia_thesis_ledger.py",
-      "sha256": "eb04d19aee30161cbe0600e852ed10c0cbe88d015f5d812faeb2b137e052fd8b"
+      "sha256": "ff596d0a524cf8acd08e824cab4e9759a3aa93f63031beb291550811889c31ee"
     },
     {
       "path": "scripts/pia_trigger_ledger.py",
-      "sha256": "588781489ec9ed422b8cf9214773aaec5a826ec020aa12904b3b1b5999f128d1"
+      "sha256": "490a73d6f3515277d4dbcc90f0ab20734260acc9271d8106eb6711be84283a0c"
     },
     {
       "path": "scripts/portfolio_loader.py",
@@ -331,6 +363,10 @@
     {
       "path": "scripts/portfolio_scenario_analyzer.py",
       "sha256": "b5c028c1383914e374d2fd53ad5022126ca2b49aa614ee15215abfa5bd76f810"
+    },
+    {
+      "path": "scripts/position_limits.py",
+      "sha256": "4a184d997393f06ed643609036dd6627c77a4a0319fd2eb043d1216ca7a82182"
     },
     {
       "path": "scripts/provider_runtime.py",
@@ -342,19 +378,23 @@
     },
     {
       "path": "scripts/quote_evidence_contract.py",
-      "sha256": "78023b59e802578e5872ee6d162223fe182fc31682335a40cfaf2c53f2238e41"
+      "sha256": "3b297f4fb8ec083a42b173679ed51f532c530d1b7526e67b60b5467478a09a25"
+    },
+    {
+      "path": "scripts/quote_fallback.py",
+      "sha256": "285781c5453eb8ecb9f4d295a7d884677600ff87800e6ae39e8a3b4bb0e7af0e"
     },
     {
       "path": "scripts/rebalance_optimizer.py",
-      "sha256": "9010acef1c90047aa0996277946b23274e19342c4479307986847dc2ca9e0c55"
+      "sha256": "f4bc28e637ffcfc39f1ce93627af8fc27fe7663b26ee695fdbbfc21f9c036b8f"
     },
     {
       "path": "scripts/rebalance_proposal.py",
-      "sha256": "3210e85cd083894d7e913ebb55a27715892519ecfb3434f2b46998b0eec9f646"
+      "sha256": "9360beef2821d08f863b735bf2c52be2f11e34ed456a3b454e39ab831dc891bf"
     },
     {
       "path": "scripts/rebalance_weights.py",
-      "sha256": "2c74626c004c1cd2b47444ca794518c7a9bcb1416dca287033329e3cfa38539a"
+      "sha256": "37fe1252ed4a5e365c42e3b393b83d6d7ed1ef99dfb5cc4cd8edbff64afc9c4f"
     },
     {
       "path": "scripts/requirements.txt",
@@ -366,11 +406,11 @@
     },
     {
       "path": "scripts/save_dashboard.py",
-      "sha256": "77e5c6e6521bda64dfdc1a4c0527b113e8b92396397d1b44488d9dd5ec1ce90e"
+      "sha256": "caea4f2ddbf7404a20650d43ab03f10d2f54070bff000d49f0db88fc8a0cee54"
     },
     {
       "path": "scripts/sec_edgar_fundamentals.py",
-      "sha256": "1fbd1e5a9fd55310464a2886bc4657bf2e241717527edc23e3ea097e5bf278cc"
+      "sha256": "07ab5146b2339463d4419c6559da2590f57adf75b286002962c6602d451a1f9e"
     },
     {
       "path": "scripts/source_timing_contract.py",
@@ -378,7 +418,7 @@
     },
     {
       "path": "scripts/status_contract.py",
-      "sha256": "c2ccbe4ff8e9dd6157c9b30f4dbdb2d184d72f189ef8c2df7ac1e8fc0a039bc9"
+      "sha256": "ed6c0e0dfe43f659f95e27edb7b3764a4db9e4775eb897c8006bfd9dae9af5fa"
     },
     {
       "path": "scripts/sync_outcomes.py",
@@ -401,12 +441,16 @@
       "sha256": "2676241fe5a230ad3a4594f61e8e34ba99a31196b586c4056260feee59dc78aa"
     },
     {
+      "path": "scripts/test_extended_quotes.py",
+      "sha256": "42d6e9a10cf86f17d640ea6821e65aea3d68fdd547f78ecfc43a2638bc02b319"
+    },
+    {
       "path": "scripts/test_investment_controls.py",
-      "sha256": "1ff609073219fe363d5fd305e12d48b946f0dcfa9fa47def3733d66f288ec308"
+      "sha256": "866558b0bcddd5267747af11e37b6ccee64065cbad9a02e01b8d0746f73c29cc"
     },
     {
       "path": "scripts/test_p0_calibration.py",
-      "sha256": "053f501162b910bf5513a852346b537c4dea463d73d0750a9f61365c8ee39b72"
+      "sha256": "0dfb69c625296aadb8dac2e536fc7d338a9045f3a3dab135c11a3821b79cc17a"
     },
     {
       "path": "scripts/test_p0_dashboard_point_in_time.py",
@@ -426,7 +470,7 @@
     },
     {
       "path": "scripts/test_p0_rebalance_boundary.py",
-      "sha256": "b618ead217750a2985cebb621e48d6f556dc425785767db7cb1a82664eeaa885"
+      "sha256": "3b27fd323aaeaba91512839a8595c3f40acc14ef4dc28178ec1a3617071bd489"
     },
     {
       "path": "scripts/test_p0_research_contract.py",
@@ -497,6 +541,10 @@
       "sha256": "561650bbd07a3d70a447bde7e55eefce5c91f61e98608b701376f60de7ceafc5"
     },
     {
+      "path": "scripts/test_p1_readiness_rollup.py",
+      "sha256": "8e1539c0a8f87ca468b602c16be9a3b34d0bd6b19f67c6b3bac6742118ecb253"
+    },
+    {
       "path": "scripts/test_p1_research_evidence_contracts.py",
       "sha256": "c841760eff39a896963ac1a4b2756db0e1eba6a297babac86c18074a31c51714"
     },
@@ -510,7 +558,7 @@
     },
     {
       "path": "scripts/test_p1_sec_edgar_fundamentals.py",
-      "sha256": "a88ac87c7dd7f012ba7fd76fcd601b0e0e3fe0e079115383b22151f0361502b0"
+      "sha256": "04c57cff2fc7e9de475b45c67e37329f40fa4b49c43fdf448879e06b9ffe99c5"
     },
     {
       "path": "scripts/test_p1_share_change.py",
@@ -518,7 +566,7 @@
     },
     {
       "path": "scripts/test_p1_status_cli.py",
-      "sha256": "75dc0aec27a757759a6f841a77d31f6c07586b33a1905130ec4c5036276f6010"
+      "sha256": "171de7f108b8896a5a642d4a425b7383b9636d937e9dc08d7a227b2b339bdf0a"
     },
     {
       "path": "scripts/test_p1_thesis_condition_not_due.py",
@@ -538,27 +586,47 @@
     },
     {
       "path": "scripts/test_p2_daily_run_pipeline.py",
-      "sha256": "1b709ba75a6e7666feb25ad8fc5784d5bff25917348e64aacb9d51d639177902"
+      "sha256": "e6dcbdef0360d63a0bb77ddf54295817f01107323ebb4e8dcfd5c670e5d830da"
     },
     {
       "path": "scripts/test_p2_daily_sync.py",
-      "sha256": "8080e97790b5688a687f9602985b2e92c143e637d0afc30fda77137fcb0c4082"
+      "sha256": "1d7b907c455252f32d54117b515a3ee2fdcaf71ec9fadb766a71021a3ba99b1d"
     },
     {
       "path": "scripts/test_p2_etf_packet_builder.py",
       "sha256": "29a24f724b0e8607eb11397b110f4b07b8fbb9907be020d5b8e8815bf3f170e8"
     },
     {
+      "path": "scripts/test_p2_evidence_channels.py",
+      "sha256": "1d56e00287ba2fbf80bb14f8e623bb770ea6cd2b682ff7289f8c8acd96dce860"
+    },
+    {
+      "path": "scripts/test_p2_evidence_collector.py",
+      "sha256": "5014c9be0120014602bcb1933052aa177f5ce1fa96ed05aaa5666a96a4287d53"
+    },
+    {
+      "path": "scripts/test_p2_fund_nav_ledger.py",
+      "sha256": "e74257e88b19c79dbca715909ab232f3776b395ea504a203cb2c5e1aa641e348"
+    },
+    {
       "path": "scripts/test_p2_interpretive_labels.py",
       "sha256": "3ace53aa341b49f1f5ef1e2b96abc4423ea3504d5f2efb7d6351ae3855ecff0a"
     },
     {
+      "path": "scripts/test_p2_manual_boundary_audit.py",
+      "sha256": "8d240e1b9ee3bb740179eeb24d97b77f4d3ed584d7b5f52accfe5f8720c2a366"
+    },
+    {
+      "path": "scripts/test_p2_quote_fallback.py",
+      "sha256": "84606381ce43c0df80c9407df456623ff8b85a74b868dc94a62ef3366ce5fe72"
+    },
+    {
       "path": "scripts/test_p2_refresh_snapshot.py",
-      "sha256": "90bed8c433339209eeb8c4482c5d7a825ed4dc83661ed37b9816cadf6ec4b63c"
+      "sha256": "859dd52bd338af6858cbfea6c8563858ba87a77971a4cdc1aba01ecf39d512dc"
     },
     {
       "path": "scripts/test_p2_report_renderer.py",
-      "sha256": "3167406e0e404e055b1b7fa0ac4f96a2e561ecc2ab83933d5a59a2b3db80f291"
+      "sha256": "44a735a3df672126fe905ae790c7c36023680e04113b9a9834bf5408385badd4"
     },
     {
       "path": "scripts/test_p2_review_pack.py",
@@ -570,7 +638,11 @@
     },
     {
       "path": "scripts/test_p2_run_history_diff.py",
-      "sha256": "edb466151c6934ccafe28aa418baa15493e6df63eda2f19dfab8edb9ee9a1e88"
+      "sha256": "66dedd0d83fbbd8bdedf34302dd420fc442c84abf76c90c9aea3e475ded88d00"
+    },
+    {
+      "path": "scripts/test_p2_run_inventory.py",
+      "sha256": "b382f5e8efac6dc5908b20eb46d26187e498329a14fe01fb5db22319806ca343"
     },
     {
       "path": "scripts/test_p2_thesis_ledger.py",
@@ -582,7 +654,7 @@
     },
     {
       "path": "scripts/test_p2_yf_daily_sync.py",
-      "sha256": "a5e4017639da40010384ef5bf244e5e68da287aa791cafe5bb4e4e25dfc2dad1"
+      "sha256": "be2d3b1be036b29dad94dccbd0ea9767185fe63c2de07e99437bcf721fc96468"
     },
     {
       "path": "scripts/test_personal_risk_budget.py",
@@ -594,7 +666,7 @@
     },
     {
       "path": "scripts/test_stage2_contracts.py",
-      "sha256": "b36759d33b91fb9f15e1d7aef0beb537d935bc4939bb14e04c367c676d2b5210"
+      "sha256": "2afa76c0da41189d93e224d89b1e6c4ffb59fc924e9a8ce76cdde55801985324"
     },
     {
       "path": "scripts/test_stage3a_provider.py",
@@ -614,11 +686,11 @@
     },
     {
       "path": "scripts/watchlist_gate.py",
-      "sha256": "d411321f62910d00a4198ef0eebfacd593f838b007b6411956b339e2e70177aa"
+      "sha256": "6281d56f6a44e32fd2641cdd498d4fe1a0509d7ddd8db1760438e13300e5f3fa"
     },
     {
       "path": "scripts/yf.py",
-      "sha256": "ea9aa547efdb3d18fa9b765d84c72e6696829e5a3c421267c0442a66d1a14087"
+      "sha256": "9db1a24dc3a9d5cb5e2cf0615913b730cf9d3c40c0325f92e42ee4743fb01bf6"
     }
   ],
   "declared_local_dependencies": [
@@ -626,13 +698,13 @@
       "path": "agents/openai.yaml",
       "exists": true,
       "resolved_path": "personal-investment-advisor/agents/openai.yaml",
-      "sha256": "f8f91bbd94100f5b5c9c919aee7c2c695038e6d94b7d9c7753eeb9b5aa45baf1"
+      "sha256": "bfd139e07defb44ac99a7ea363d832f2bdaf5b4c2c552d006e72541282629719"
     },
     {
       "path": "references/active-research.md",
       "exists": true,
       "resolved_path": "personal-investment-advisor/references/active-research.md",
-      "sha256": "d48acbbea1b92110becd32c1b74a515ca393aaa0f48c881c3fb2de9b83b18ef7"
+      "sha256": "ecee198ac36b2775a88659e298773f33cab4038c80614ea2ada7ed23d822e9e6"
     },
     {
       "path": "references/active_construction_policy_schema.json",
@@ -668,13 +740,13 @@
       "path": "references/cn-actionability.md",
       "exists": true,
       "resolved_path": "personal-investment-advisor/references/cn-actionability.md",
-      "sha256": "63bcc31655444acad4af94b996d6732fc7790ff11e4ee950293ddda1416394c8"
+      "sha256": "f96ddd9d469d62d6312a0013e52101a4fde92bcb576c21fd8917a9e821f0a1cc"
     },
     {
       "path": "references/cn-equity-evidence.md",
       "exists": true,
       "resolved_path": "personal-investment-advisor/references/cn-equity-evidence.md",
-      "sha256": "49e7ff715e970a0839a9f62ae97ec5d0277e17ad81997c7c0a06a8662f028beb"
+      "sha256": "6f75e02b13d0c112a70d2fbea68e736bd26ca6398e6d375ab4338e06546ba534"
     },
     {
       "path": "references/cn-equity-research.md",
@@ -692,37 +764,37 @@
       "path": "references/command-catalog.md",
       "exists": true,
       "resolved_path": "personal-investment-advisor/references/command-catalog.md",
-      "sha256": "9f74da47f1c3bb14dec91fb6a0303de89a4622e04fa0e381b06f2ffe47003e05"
+      "sha256": "c3fa1000615ecf42f04d23c021eae104431bfcae6e5ecc5248fdeed5d3237bbc"
     },
     {
       "path": "references/company-research.md",
       "exists": true,
       "resolved_path": "personal-investment-advisor/references/company-research.md",
-      "sha256": "3ac8b09ca839304caea9e53cafef2a8fe51f722d499019fd116e0e5bbb65510e"
+      "sha256": "69298d2ed8707863ad028ea8cf8cbff6005564c6fcb4c61b58ffa0ec048e65d2"
     },
     {
       "path": "references/daily-sync.md",
       "exists": true,
       "resolved_path": "personal-investment-advisor/references/daily-sync.md",
-      "sha256": "4346e4658f9505011a0e9ae482fc827cf4045aeb0e2e79610db9fa614b3211a9"
+      "sha256": "fbfe611f48b0bb2f74b1d3485e773ef2988d236ad8b789a175d24f44ed69e3df"
     },
     {
       "path": "references/dashboard_schema.json",
       "exists": true,
       "resolved_path": "personal-investment-advisor/references/dashboard_schema.json",
-      "sha256": "7c5805337302edd32980a3a973e55cb15abb5d25cc3b99c38678f6d38ee75a30"
+      "sha256": "583eaa132efc5000cd9360283686eea93c3a709db9e832347c69e3ec59a230f1"
     },
     {
       "path": "references/free-data-policy.md",
       "exists": true,
       "resolved_path": "personal-investment-advisor/references/free-data-policy.md",
-      "sha256": "579b240a89f256bafb4dea3e1644c4089adbd1c6325ddd96755cbb15cb8fda37"
+      "sha256": "9a62f409e15e2b4a0260afb257501cc73efc1e99e12bdfc2a17ad6ddbce5693d"
     },
     {
       "path": "references/inverse_volatility_policy_schema.json",
       "exists": true,
       "resolved_path": "personal-investment-advisor/references/inverse_volatility_policy_schema.json",
-      "sha256": "f75b7b2abe1c09abe847bd60ea9481da42942fc5139b3c6e45ca9f36224bad07"
+      "sha256": "65d4705a2c9a4ce47005d6f91099894f4a9707014e2e1e2e27cbb6e82085417d"
     },
     {
       "path": "references/method_profiles.json",
@@ -740,7 +812,7 @@
       "path": "references/portfolio-audit.md",
       "exists": true,
       "resolved_path": "personal-investment-advisor/references/portfolio-audit.md",
-      "sha256": "0d664638ee7bf82781f8e28f3eeb45b558e72e00396ef54835f693f71faec7d2"
+      "sha256": "491ce59ef59ca48cb6b8ba6f61e9c55893256611d405ece5e81c0d26fb3cb723"
     },
     {
       "path": "references/portfolio_schema.json",
@@ -761,10 +833,16 @@
       "sha256": "0286c6d94aa9ab041418780f5a05b86dc3b796d31282ce5ebf2931c54efe76e1"
     },
     {
+      "path": "references/runtime-operation.md",
+      "exists": true,
+      "resolved_path": "personal-investment-advisor/references/runtime-operation.md",
+      "sha256": "6b629cabf5c23d4320e7e0d668493dca9cd0408cb9ea1abf6f3b15b2d732e793"
+    },
+    {
       "path": "references/status-contract.md",
       "exists": true,
       "resolved_path": "personal-investment-advisor/references/status-contract.md",
-      "sha256": "483a98534ddd7e475636903c5813acfbde66b3cf43fa172e23cfa68881b9e640"
+      "sha256": "eea5d125d206d0e9cac9e3724a91802c3eb9b4556c64e24dfa6d0e2f2abf7615"
     },
     {
       "path": "references/thesis_red_team_schema.json",
@@ -776,7 +854,7 @@
       "path": "scripts/pia.py",
       "exists": true,
       "resolved_path": "personal-investment-advisor/scripts/pia.py",
-      "sha256": "e6d5fca09a9e96dfb2234e76adf806252c886267ea394711e2988caab7ac49c9"
+      "sha256": "3f8efddc839b16fca1800e1e7be3b09308e8fa52dd433750112a0c277415979b"
     },
     {
       "path": "scripts/requirements.txt",
@@ -788,13 +866,13 @@
       "path": "scripts/sec_edgar_fundamentals.py",
       "exists": true,
       "resolved_path": "personal-investment-advisor/scripts/sec_edgar_fundamentals.py",
-      "sha256": "1fbd1e5a9fd55310464a2886bc4657bf2e241717527edc23e3ea097e5bf278cc"
+      "sha256": "07ab5146b2339463d4419c6559da2590f57adf75b286002962c6602d451a1f9e"
     },
     {
       "path": "scripts/status_contract.py",
       "exists": true,
       "resolved_path": "personal-investment-advisor/scripts/status_contract.py",
-      "sha256": "c2ccbe4ff8e9dd6157c9b30f4dbdb2d184d72f189ef8c2df7ac1e8fc0a039bc9"
+      "sha256": "ed6c0e0dfe43f659f95e27edb7b3764a4db9e4775eb897c8006bfd9dae9af5fa"
     }
   ],
   "missing_declared_dependencies": []

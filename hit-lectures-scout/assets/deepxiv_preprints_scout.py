@@ -819,6 +819,28 @@ def write_complete(path, data):
         raise OSError("staged readback mismatch")
 
 
+def discard_empty_stage(publication):
+    """Reclaim a stage that holds no recovery evidence.
+
+    Draft retention is deliberate: candidate.draft.md (and a failed rename's
+    publish.tmp) stays as recovery evidence and is never auto-deleted. A run
+    stopped before any write leaves an empty private directory, which is not
+    evidence and would otherwise accumulate in a persistent output parent.
+    """
+    directory = publication.get("draft_directory")
+    if not directory or publication.get("draft"):
+        return
+    stage = Path(directory)
+    try:
+        if not stage.is_dir() or any(stage.iterdir()):
+            return
+        stage.rmdir()
+    except OSError as exc:
+        publication["draft_cleanup_error"] = error_detail(exc)
+        return
+    publication["draft_directory"] = None
+
+
 def publish_candidate(path, stage, data, publication):
     """Windows rename is no-replace; never delete/roll back a competing target."""
     publication["state"] = "error"
@@ -959,6 +981,7 @@ def main(argv=None):
         else:
             receipt["status"] = "error"
             receipt["errors"].append(failure)
+    discard_empty_stage(publication)
     terminal = {"retrieval": receipt, "publication": publication}
     print(receipt_json(terminal), file=sys.stderr)
     if publication["state"] != "verified":

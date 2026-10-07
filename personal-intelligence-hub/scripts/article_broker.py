@@ -224,7 +224,7 @@ _READABLE_DATE = (
             reverse=True,
         )
     )
-    + r")[ \t]+[0-9]{1,2},[ \t]+[0-9]{4})"
+    + r")[ \t]+[0-9]{1,2}(?:st|nd|rd|th)?,[ \t]+[0-9]{4})"
 )
 _READABLE_LABEL = r"(?:Published(?: on)?|Publication date|发布日期|发布时间|发表日期)"
 _READABLE_DECLARATION = _READABLE_LABEL + r"(?:[ \t]*[:：][ \t]*|[ \t]+)"
@@ -378,7 +378,11 @@ def _readable_day(raw):
     elif match := re.fullmatch(r"([0-9]{4})年([0-9]{1,2})月([0-9]{1,2})日", raw):
         year, month, day = map(int, match.groups())
     else:
-        match = re.fullmatch(r"([A-Za-z]+)[ \t]+([0-9]{1,2}),[ \t]+([0-9]{4})", raw)
+        match = re.fullmatch(
+            r"([A-Za-z]+)[ \t]+([0-9]{1,2})(?P<ordinal>st|nd|rd|th)?,[ \t]+(?P<year>[0-9]{4})",
+            raw,
+            re.I,
+        )
         if not match:
             raise ValueError("unsupported readable date")
         month = next(
@@ -386,7 +390,11 @@ def _readable_day(raw):
             for i, name in enumerate(_READABLE_MONTHS, 1)
             if match[1].lower() in {name.lower(), name[:3].lower()}
         )
-        year, day = int(match[3]), int(match[2])
+        year, day = int(match["year"]), int(match[2])
+        suffix = match["ordinal"]
+        expected = "th" if 10 <= day % 100 <= 20 else {1: "st", 2: "nd", 3: "rd"}.get(day % 10, "th")
+        if suffix is not None and suffix.lower() != expected:
+            raise ValueError("invalid readable ordinal date")
     return datetime(year, month, day).date().isoformat()
 
 
@@ -410,7 +418,7 @@ def _readable_wire_day(raw):
     return _readable_day(text)
 
 
-def _readable_header(text):
+def _readable_header(text, *, publisher_header=False):
     """Bounded metadata prefix, never reopened after body/unsupported structure.
 
     A code opener (either fence, any length/info string, or 4-space/tab indent)
@@ -447,6 +455,9 @@ def _readable_header(text):
             + r"|(?:名称|视力保护色|索引号|发文字号|发布机构|来源|供稿|作者单位|作者|记者|编辑|通讯员|日期|访问次数|字号|Author|Authors|By|Source|Credit|Photo|Updated(?: on)?|Modified(?: on)?|Last updated|更新时间|修改时间)[ \t]*[:：])",
             line,
             re.I,
+        )
+        metadata = metadata or (
+            publisher_header and re.match(r"^(?:Date|Category)[ \t]*[:：]", line)
         )
         wire = _readable_wire_declaration(line) is not None
         navigation = title is None and (
@@ -566,6 +577,18 @@ _STANDALONE_LABEL_PREFIX = re.compile(
     r"Source|Credit|Author|Editor|By)[ \t]*[:：]",
     re.IGNORECASE,
 )
+# AUD-F04: blog and announcement headers print the date on its own line directly above a
+# lone reading-time or separator marker. That marker is metadata rather than prose, so it
+# is the structural counterpart of the label above and lets such a header be read without
+# weakening the refusal for a date quoted inside body prose. Only a line that is nothing
+# but the marker qualifies; a prose sentence that merely contains these words does not.
+_STANDALONE_TRAILING_MARKER = re.compile(
+    r"(?:[|·•—–]|"
+    r"(?:reading|read)[ \t]+time[ \t]*[:：]?[ \t]*"
+    r"[0-9]{1,3}[ \t]*(?:min|mins|minute|minutes|分钟)?|"
+    r"[0-9]{1,3}[ \t]*(?:min|mins|minute|minutes|分钟)[ \t]*(?:read|阅读)?)",
+    re.IGNORECASE,
+)
 
 
 def _standalone_emphasis_strip(value):
@@ -583,20 +606,30 @@ def _standalone_emphasis_strip(value):
     return value, 0
 
 
-def _standalone_dateline(text, start, line, previous, text_sha):
+def _standalone_dateline(text, start, line, previous, following, text_sha):
     """Retained line that consists only of a publication date, or None.
 
-    ``previous`` is the last non-empty line before it: a short label-like line is
-    required so an arbitrary date quoted inside prose can never be promoted.
+    ``previous`` is the last non-empty line before it and ``following`` the next
+    non-empty line. A short label-like line above the date, or a lone reading-time /
+    separator marker below it, is required so an arbitrary date quoted inside prose
+    can never be promoted.
     """
     if previous is None:
         return None
-    if len(previous) > _STANDALONE_PRIOR_MAX or previous[-1] in "。！？.!?":
-        return None
-    if not _STANDALONE_LABEL_PREFIX.match(previous) and any(
+    short_label = (
+        len(previous) <= _STANDALONE_PRIOR_MAX and previous[-1] not in "。！？.!?"
+    )
+    labelled = bool(_STANDALONE_LABEL_PREFIX.match(previous))
+    big_block = any(
         len(block) >= _STANDALONE_PARAGRAPH_MIN
         for block in re.split(r"\n[ \t]*\n", text[:start])
-    ):
+    )
+    marker_anchored = bool(following) and bool(
+        _STANDALONE_TRAILING_MARKER.fullmatch(following)
+    )
+    if not marker_anchored and not short_label:
+        return None
+    if not marker_anchored and not labelled and big_block:
         return None
     stripped = line.strip()
     body, padding = _standalone_emphasis_strip(stripped)
@@ -612,12 +645,19 @@ def _standalone_dateline(text, start, line, previous, text_sha):
         day = _readable_day(raw)
     except (ValueError, StopIteration):
         return None
+    # Marker-anchored acceptance is a distinct grammar, so it keeps its own rule id
+    # instead of silently changing what standalone-dateline/1 already meant.
+    rule = (
+        "standalone-dateline/1"
+        if short_label and (labelled or not big_block)
+        else "standalone-dateline/2"
+    )
     return {
         "field": "readable_publication",
         "raw": raw,
         "published_at": day,
-        "published_at_source": "native_readable:standalone-dateline/1",
-        "parser_rule": "standalone-dateline/1",
+        "published_at_source": "native_readable:" + rule,
+        "parser_rule": rule,
         "start": begin,
         "end": begin + len(token),
         "text_sha256": text_sha,
@@ -629,8 +669,7 @@ def _readable_standalone_dates(text, text_sha):
 
     Conflicting standalone dates fail closed, like every other date rule.
     """
-    found = []
-    previous = None
+    retained = []
     offset = 0
     for raw_line in text.splitlines(keepends=True):
         start = offset
@@ -640,8 +679,14 @@ def _readable_standalone_dates(text, text_sha):
         line = raw_line.rstrip("\r\n")
         if not line.strip():
             continue
-        entry = _standalone_dateline(text, start, line, previous, text_sha)
-        previous = line.strip()
+        retained.append((start, line))
+    found = []
+    for index, (start, line) in enumerate(retained):
+        previous = retained[index - 1][1].strip() if index else None
+        following = (
+            retained[index + 1][1].strip() if index + 1 < len(retained) else None
+        )
+        entry = _standalone_dateline(text, start, line, previous, following, text_sha)
         if entry is not None:
             found.append(entry)
     if len({entry["published_at"] for entry in found}) > 1:
@@ -763,10 +808,41 @@ def _readable_url_anchored_dates(text, url, text_sha):
     return found
 
 
+def _publisher_header_shape(text):
+    """Do not extend the header grammar unless the entire publisher layout exists."""
+    head, offset = [], 0
+    for number, raw in enumerate(text.splitlines(keepends=True)):
+        if number >= 64 or offset + len(raw) > 8192:
+            return False
+        start, offset = offset, offset + len(raw)
+        if not raw.strip():
+            continue
+        if re.match(r"^(?: {4}| {0,3}\t| {0,3}(?:`{3,}|~{3,}|>|#{2,}(?:[ \t]|$)))", raw):
+            return False
+        line, _ = _readable_line(raw, start)
+        head.append(line)
+        if len(head) == 3:
+            return bool(
+                head[0].startswith("# ")
+                and re.match(r"^Date[ \t]*[:：][ \t]*", head[1])
+                and re.fullmatch(
+                    r"Category[ \t]*[:：][ \t]*((?:Company|Product|Research|Safety|Engineering)(?:,[ \t]*(?:Company|Product|Research|Safety|Engineering))*)",
+                    head[2],
+                )
+            )
+    return False
+
+
 def _readable_publication(text, url, text_sha):
-    lines, first_body = _readable_header(text)
-    dates, invalid, nhsa_content = [], False, True
     page = urlsplit(url)
+    publisher_header = bool(
+        page.scheme in {"http", "https"}
+        and page.netloc == "openai.com"
+        and re.fullmatch(r"/index/[a-z0-9]+(?:-[a-z0-9]+)*/?", page.path)
+        and _publisher_header_shape(text)
+    )
+    lines, first_body = _readable_header(text, publisher_header=publisher_header)
+    dates, invalid, nhsa_content = [], False, True
     nhsa = re.fullmatch(r"/art/([0-9]{4})/([0-9]{1,2})/([0-9]{1,2})/[^/]+", page.path)
     nhsa = (
         nhsa
@@ -783,6 +859,14 @@ def _readable_publication(text, url, text_sha):
             rule, begin = "published-label/1", explicit.end()
         elif index == 0 and token.fullmatch(line):
             rule = "leading-dateline/1"
+        elif publisher_header and index == 1 and len(lines) >= 3:
+            date_label = re.match(r"^Date[ \t]*[:：][ \t]*", line)
+            categories = re.fullmatch(
+                r"Category[ \t]*[:：][ \t]*((?:Company|Product|Research|Safety|Engineering)(?:,[ \t]*(?:Company|Product|Research|Safety|Engineering))*)",
+                lines[index + 1][0],
+            )
+            if date_label and lines[0][0].startswith("# ") and categories:
+                rule, begin = "openai-article-header-date/1", date_label.end()
         elif generic and re.search(r"[ \t]+访问次数[ \t]*[:：]", line):
             # Header must follow a literal title, before prose; URL only corroborates it.
             prior = lines[index - 1][0] if index else ""
@@ -1284,14 +1368,27 @@ def validate_ledgers(manifest, request):
     sha = manifest["artifacts"]["supplement_request"]["artifact_sha256"]
     for gap_id in expected:
         ledger = ledgers[gap_id]
-        if not isinstance(ledger, dict) or set(ledger) != {
-            "request_sha256",
-            "gap_id",
-            "gap_ledger_sha256",
-            "events",
-        }:
+        # AUD-F02: `terminal` is optional and only ever holds the deterministic
+        # abandoned-gap decision; every other key is the frozen ledger identity.
+        if not isinstance(ledger, dict) or set(ledger) not in (
+            {"request_sha256", "gap_id", "gap_ledger_sha256", "events"},
+            {"request_sha256", "gap_id", "gap_ledger_sha256", "events", "terminal"},
+        ):
             _fail("ledger schema invalid")
-        if {k: v for k, v in ledger.items() if k != "events"} != {
+        if isinstance(ledger.get("terminal"), dict):
+            terminal = ledger["terminal"]
+            if set(terminal) != {
+                "at",
+                "action",
+                "stop_reason",
+                "remaining_urls",
+                "remaining_queries",
+            } or terminal["action"] != "terminal_failure":
+                _fail("ledger terminal decision invalid")
+            _rc()._parse_aware_datetime(terminal["at"], "terminal at")
+        elif "terminal" in ledger:
+            _fail("ledger terminal decision invalid")
+        if {k: v for k, v in ledger.items() if k not in {"events", "terminal"}} != {
             k: v
             for k, v in initial_ledger(request, sha, gap_id).items()
             if k != "events"
@@ -1347,16 +1444,28 @@ def validate_ledgers(manifest, request):
                 if category == "query":
                     arguments = event.get("arguments", {})
                     number = arguments.get("numResults")
+                    # AUD-03: the answering provider is declarable metadata, not a capability
+                    # switch; the public-tool capability keys stay pinned exactly, and the
+                    # optional key stays optional so frozen reservations still validate.
+                    provider = arguments.get("provider")
+                    if provider is not None and (
+                        not isinstance(provider, str)
+                        or not provider.strip()
+                        or len(provider) > 64
+                    ):
+                        _fail("query reservation provider invalid")
+                    expected = {
+                        "query": event.get("query"),
+                        "numResults": number,
+                        "workflow": "none",
+                        "includeContent": False,
+                    }
+                    if provider is not None:
+                        expected["provider"] = provider
                     if (
                         type(number) is not int
                         or not 1 <= number <= 5
-                        or arguments
-                        != {
-                            "query": event.get("query"),
-                            "numResults": number,
-                            "workflow": "none",
-                            "includeContent": False,
-                        }
+                        or arguments != expected
                     ):
                         _fail("query capability arguments changed")
                     query = event.get("query")
@@ -1445,10 +1554,16 @@ def validate_append(previous, current):
     new = current.get("article_broker_evidence", {})
     for key, ledger in old.items():
         other = new.get(key, {})
-        if {k: v for k, v in ledger.items() if k != "events"} != {
-            k: v for k, v in other.items() if k != "events"
+        if {k: v for k, v in ledger.items() if k not in {"events", "terminal"}} != {
+            k: v for k, v in other.items() if k not in {"events", "terminal"}
         } or other.get("events", [])[: len(ledger["events"])] != ledger["events"]:
             _fail("ledger is append-only")
+        # AUD-F02: the terminal decision is write-once. It may be added to an abandoned
+        # ledger, but a later replay or re-derivation can never replace what was journaled,
+        # so an expired clock cannot be rewritten into a success.
+        prior_terminal = ledger.get("terminal")
+        if prior_terminal is not None and other.get("terminal") != prior_terminal:
+            _fail("ledger terminal decision is write-once")
 
 
 def validate_receipt(receipt, ledger, reservation):
@@ -1467,8 +1582,10 @@ def validate_receipt(receipt, ledger, reservation):
         "proof_subset",
         "parent_attestation",
     }
+    declared_provider = (reservation.get("arguments") or {}).get("provider")
     if (
-        set(receipt) != required
+        set(receipt) - {"provider"} != required
+        or receipt.get("provider") != declared_provider
         or receipt["request_sha256"] != ledger["request_sha256"]
         or receipt["gap_id"] != ledger["gap_id"]
         or receipt["reservation_id"] != reservation["id"]
@@ -1483,6 +1600,14 @@ def validate_receipt(receipt, ledger, reservation):
         or len(json.dumps(receipt)) > 65536
     ):
         _fail("public proof subset required and bounded")
+    # Provider-bound reservations use the literal evidence contract. Legacy frozen
+    # reservations remain replayable; a hash alone is never origin authentication.
+    if declared_provider is not None:
+        from query_proof import validate_query_proof
+        try:
+            validate_query_proof(receipt["proof_subset"])
+        except ValueError as exc:
+            _fail(str(exc))
     results = receipt["results"]
     if not isinstance(results, list):
         _fail("query results invalid")
@@ -1790,10 +1915,10 @@ async def _transport(url, timeout_seconds):
         return current, status, body, content_type, hops, str(exc) or type(exc).__name__
 
 
-def _bound(request_path, gap_id):
+def _bound(request_path, gap_id, *, include_manifest=False):
     from supplement_agent import _load_bound_packet
 
-    bound = _load_bound_packet(request_path, gap_id)
+    bound = _load_bound_packet(request_path, gap_id, include_manifest=include_manifest)
     if bound[1].get("article_broker_version") not in {2, 3} or not bound[3].get(
         "article_broker"
     ):
@@ -2197,7 +2322,19 @@ def next_action(manifest, request, gap, lane, proofs, *, now=None):
         reason, eligible = "searches_exhausted_without_qualifying_candidate", True
     if not eligible and action == "search_different":
         if available:
-            action = "http_discovered"
+            # New provider-bound lanes retain their final URL slot for the second
+            # query angle; do not reinterpret legacy frozen ledgers on replay.
+            retain_second_angle = (
+                not required
+                and remaining_urls == 1
+                and remaining_queries > 0
+                and len(queries) < min(2, gap["max_queries"])
+                and any("provider" in q.get("arguments", {}) for q in queries)
+            )
+            if retain_second_angle:
+                reason = "retain_url_for_second_query"
+            else:
+                action = "http_discovered"
         elif remaining_queries == 0:
             action, reason = "terminal_failure", "query_budget_without_grounded_stop"
     if eligible:
@@ -2246,6 +2383,7 @@ def operate(
     receipt=None,
     url=None,
     num_results=5,
+    provider=None,
 ):
     rc = _rc()
     _, request, packet, gap, lane, _ = _bound(request_path, gap_id)
@@ -2257,7 +2395,9 @@ def operate(
             packet,
             gap,
             ledger,
-            settling=operation in {"record-query", "record-fetch"},
+            # Terminal registration settles an already expired source clock instead of
+            # opening a new attempt, so it is a settling operation like record-query.
+            settling=operation in {"record-query", "record-fetch", "terminal"},
         )
         events = ledger["events"]
         now = datetime.now(timezone.utc).isoformat()
@@ -2297,18 +2437,30 @@ def operate(
                 or not 1 <= num_results <= 5
             ):
                 _fail("bounded single query/results required")
+            if provider is not None and (
+                not isinstance(provider, str)
+                or not provider.strip()
+                or len(provider) > 64
+            ):
+                _fail("query provider must be a short non-empty string")
+            # AUD-03: the provider that actually answered the public search belongs in the
+            # reservation, otherwise a prose-only provider answer is indistinguishable in the
+            # ledger from a genuinely empty search. Omitted entirely for frozen v2 callers.
+            query_arguments = {
+                "query": query,
+                "numResults": num_results,
+                "workflow": "none",
+                "includeContent": False,
+            }
+            if provider is not None:
+                query_arguments["provider"] = provider
             events.append(
                 {
                     "kind": "query_reserved",
                     "at": now,
                     "id": f"query-{len(queries) + 1}",
                     "query": query,
-                    "arguments": {
-                        "query": query,
-                        "numResults": num_results,
-                        "workflow": "none",
-                        "includeContent": False,
-                    },
+                    "arguments": query_arguments,
                 }
             )
         elif operation == "record-query":
@@ -2423,6 +2575,32 @@ def operate(
                     + str(advice["stop_reason"] or advice["action"]).replace("_", " ")
                 )
             events.append({"kind": "sealed", "at": now})
+        elif operation == "terminal":
+            # AUD-F02: persist the deterministic terminal decision on the ledger so an
+            # abandoned gap is self-documenting even when no worker or parent ever
+            # finalizes it. Only the advice the CLI already returns may be recorded, and
+            # a second call is a no-op rather than a new clock or a new attempt.
+            advice = next_action(
+                manifest,
+                request,
+                gap,
+                lane,
+                _ledger_proofs(ledger),
+                now=rc._parse_aware_datetime(now, "terminal"),
+            )
+            if advice["action"] != "terminal_failure":
+                _fail(
+                    "terminal registration requires a deterministic terminal decision: "
+                    + str(advice["stop_reason"] or advice["action"]).replace("_", " ")
+                )
+            if not isinstance(ledger.get("terminal"), dict):
+                ledger["terminal"] = {
+                    "at": now,
+                    "action": advice["action"],
+                    "stop_reason": advice["stop_reason"],
+                    "remaining_urls": advice["remaining_urls"],
+                    "remaining_queries": advice["remaining_queries"],
+                }
         else:
             _fail("operation invalid")
         rc.commit_manifest(manifest_path, manifest, sha)
@@ -2497,8 +2675,10 @@ def operate(
 
 
 def evidence(request_path, gap_id):
-    _, request, packet, gap, lane, _ = _bound(request_path, gap_id)
-    manifest = _rc().load_manifest(packet["run_manifest_path"])
+    # Reuse this call's validated snapshot, never a cross-call metadata cache.
+    _, request, packet, gap, lane, _, manifest = _bound(
+        request_path, gap_id, include_manifest=True
+    )
     ledger = manifest["article_broker_evidence"][gap_id]
     events = ledger["events"]
     attempts = [e for e in events if e["kind"] in {"http_reserved", "fetch_reserved"}]

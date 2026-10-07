@@ -50,7 +50,7 @@ class RuntimePreflightTests(unittest.TestCase):
     def test_live_and_activity_modes_require_only_their_declared_packages(self):
         versions = {
             "pandas": "3.0.6",
-            "garminconnect": "0.3.16",
+            "garminconnect": "0.3.17",
             "fitparse": "1.2.0",
             "gpxpy": "1.6.2",
         }

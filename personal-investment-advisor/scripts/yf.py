@@ -48,6 +48,8 @@ from rich.table import Table
 
 from history_integrity_gate import evaluate_history_integrity
 from market_calendar import CalendarError, closed_days_between, load_table
+from quote_fallback import (FallbackFetcher, HEALTH_OK as FALLBACK_HEALTH_OK,
+                            SOURCE_TENCENT)
 from portfolio_loader import (
     build_portfolio_package,
     is_cash_position,
@@ -68,6 +70,7 @@ from quote_evidence_contract import (
     QUOTE_MAX_AGE_SECONDS_BY_MARKET_STATE,
     build_portfolio_snapshot_binding,
     quote_freshness_policy,
+    select_quote_observation,
 )
 
 # A verified holiday table may widen the CLOSED ceiling, but never without bound.
@@ -82,7 +85,8 @@ console = Console(stderr=True)
 INFO_KEYS_DEFAULT = [
     "longName", "shortName", "symbol", "exchange", "exchangeName",
     "currency", "currentPrice", "regularMarketPrice", "previousClose",
-    "regularMarketTime", "quoteType", "exchangeTimezoneName",
+    "regularMarketTime", "preMarketPrice", "preMarketTime", "postMarketPrice", "postMarketTime",
+    "quoteType", "exchangeTimezoneName",
     "marketState", "tradeable",
     "marketCap", "sector", "industry",
     "trailingPE", "forwardPE", "dividendYield",
@@ -332,11 +336,20 @@ def get_stock_data(
 def fetch_daily_sync_batch(
     symbols: list[str],
     *,
-    max_workers: int = 2,
+    max_workers: int = 1,
+    receipt: dict[str, Any] | None = None,
 ) -> dict[str, tuple[Any, dict, list, list[str]]]:
-    """Fetch independent quote-only metadata concurrently, preserving fail-closed results."""
+    """Fetch independent quote-only metadata concurrently, preserving fail-closed results.
+
+    ``receipt`` is an optional out-parameter populated with a provider-level health
+    receipt.  It exists so a caller can tell a provider outage apart from a security
+    that genuinely has no quote: the receipt is provider evidence, not an
+    investment result, and it never converts a failure into an empty quote.
+    """
     unique_symbols = list(dict.fromkeys(symbols))
     if not unique_symbols:
+        if receipt is not None:
+            receipt.update(_daily_sync_receipt([], 1, {}, None, {}, set()))
         return {}
     workers = max(1, min(int(max_workers), len(unique_symbols), 4))
     results: dict[str, tuple[Any, dict, list, list[str]]] = {}
@@ -350,10 +363,12 @@ def fetch_daily_sync_batch(
         )
 
     queued = deque(unique_symbols)
+    breaker_skipped: set[str] = set()
     systemic_failures: dict[str, int] = {}
     successful_results = 0
     circuit_breaker: str | None = None
-    circuit_threshold = min(2, workers, len(unique_symbols))
+    # Confirm a provider-wide outage on two symbols even in serial cache-safe mode.
+    circuit_threshold = min(2, len(unique_symbols))
 
     with ThreadPoolExecutor(max_workers=workers) as executor:
         in_flight = {}
@@ -410,6 +425,7 @@ def fetch_daily_sync_batch(
     if circuit_breaker is not None:
         while queued:
             symbol = queued.popleft()
+            breaker_skipped.add(symbol)
             results[symbol] = (
                 None,
                 {},
@@ -419,7 +435,147 @@ def fetch_daily_sync_batch(
                     f"systemic transport failure: {circuit_breaker}"
                 ],
             )
-    return {symbol: results[symbol] for symbol in unique_symbols}
+    ordered = {symbol: results[symbol] for symbol in unique_symbols}
+    if receipt is not None:
+        receipt.update(_daily_sync_receipt(unique_symbols, workers, systemic_failures,
+                                          circuit_breaker, ordered, breaker_skipped))
+    return ordered
+
+
+def _daily_sync_receipt(
+    symbols: list[str],
+    workers: int,
+    systemic_failures: dict[str, int],
+    circuit_breaker: str | None,
+    results: dict[str, tuple[Any, dict, list, list[str]]],
+    breaker_skipped: set[str] | None = None,
+) -> dict[str, Any]:
+    """Summarise who failed at the provider layer and why."""
+    skipped = breaker_skipped or set()
+    outcomes: dict[str, str] = {}
+    for symbol in symbols:
+        result = results.get(symbol)
+        if result is None or symbol in skipped:
+            outcomes[symbol] = "skipped_circuit_open"
+            continue
+        _history, info, _news, errors = result
+        if info:
+            outcomes[symbol] = "ok"
+        elif errors:
+            outcomes[symbol] = "error"
+        else:
+            outcomes[symbol] = "no_data"
+    counts: dict[str, int] = {}
+    for outcome in outcomes.values():
+        counts[outcome] = counts.get(outcome, 0) + 1
+    return {
+        "provider": "yfinance",
+        "operation": "daily_sync_quote_metadata",
+        "requested_symbols": list(symbols),
+        "requested_count": len(symbols),
+        "workers": workers,
+        "outcomes": outcomes,
+        "outcome_counts": counts,
+        "transport_failures": dict(sorted(systemic_failures.items())),
+        "circuit_breaker_signature": circuit_breaker,
+        "statement": (
+            "provider-level receipt only: skipped_circuit_open and error mean the "
+            "provider transport failed, not that the security has no quote"
+        ),
+    }
+
+
+#: Primary outcomes that mean "the provider transport failed for this symbol".
+#: A primary ``no_data`` answer is deliberately NOT a fallback trigger: the primary
+#: provider answered, and replacing that answer would fabricate evidence.
+FALLBACK_TRIGGER_OUTCOMES = ("error", "skipped_circuit_open")
+
+FALLBACK_POLICY = "secondary_source_only_after_primary_transport_failure"
+
+_SECONDARY_TIMEZONE = {"CNY": "Asia/Shanghai", "USD": "America/New_York"}
+
+
+def _secondary_info(symbol: str, record: dict[str, Any]) -> dict[str, Any]:
+    """Build provider-shaped metadata from the fields the source actually printed.
+
+    Only evidenced values are copied.  Anything the source does not print stays
+    ``None`` so the quote contract reports it as unverifiable rather than as a
+    verified identity.
+    """
+    return {
+        "symbol": symbol,
+        "shortName": record.get("instrument_name") or symbol,
+        "longName": record.get("instrument_name") or symbol,
+        "regularMarketPrice": record.get("price"),
+        "previousClose": record.get("previous_close"),
+        "currency": record.get("currency"),
+        "exchange": record.get("exchange"),
+        "exchangeTimezoneName": _SECONDARY_TIMEZONE.get(str(record.get("currency")), None),
+        "marketState": record.get("market_state"),
+        "regularMarketTime": record.get("observed_epoch"),
+        "quoteType": None,
+        "tradeable": None,
+    }
+
+
+def apply_quote_fallbacks(
+    prefetch: dict[str, tuple[Any, dict, list, list[str]]],
+    receipt: dict[str, Any] | None,
+    expected_position_metadata: dict[str, dict[str, Any]] | None = None,
+    *,
+    cache_dir: str | Path | None = None,
+    fetcher: Any | None = None,
+) -> dict[str, dict[str, Any]]:
+    """Try the labelled secondary source for symbols whose primary transport failed.
+
+    Returns ``symbol -> quote_provenance`` for successes and injects the synthesized
+    metadata into ``prefetch`` so the rest of the pipeline sees a real quote.  The
+    receipt records the attempt for every triggered symbol, including the failures:
+    a fallback that did not answer is evidence about the fallback, not silence.
+    """
+    outcomes = dict((receipt or {}).get("outcomes") or {})
+    targets = [symbol for symbol, outcome in outcomes.items()
+               if outcome in FALLBACK_TRIGGER_OUTCOMES]
+    tier_report: dict[str, Any] = {
+        "policy": FALLBACK_POLICY,
+        "trigger_outcomes": list(FALLBACK_TRIGGER_OUTCOMES),
+        "attempted": targets,
+        "used": [],
+        "outcomes": {},
+        "sources": {},
+        "coverage_tier": "primary" if not targets else "primary_incomplete",
+        "statement": (
+            "secondary quotes are labelled per symbol and never presented as primary "
+            "quotes; the primary transport failure that triggered them stays recorded "
+            "in outcomes"
+        ),
+    }
+    if receipt is not None:
+        receipt["fallback"] = tier_report
+    if not targets:
+        return {}
+
+    metadata = expected_position_metadata or {}
+    fetcher = fetcher or FallbackFetcher(cache_dir=cache_dir)
+    results = fetcher.fetch_many(
+        targets,
+        primary_outcomes={symbol: outcomes[symbol] for symbol in targets},
+        markets={symbol: (metadata.get(symbol) or {}).get("market") for symbol in targets},
+    )
+    tiers: dict[str, dict[str, Any]] = {}
+    for symbol in targets:
+        result = results.get(symbol) or {}
+        tier_report["outcomes"][symbol] = str(result.get("health") or "broken")
+        record = result.get("record")
+        if result.get("health") != FALLBACK_HEALTH_OK or not isinstance(record, dict):
+            tier_report["sources"][symbol] = str(result.get("error") or "no_secondary_record")
+            continue
+        tiers[symbol] = record
+        tier_report["sources"][symbol] = record.get("source")
+        prefetch[symbol] = (None, _secondary_info(symbol, record), [], [])
+    tier_report["used"] = sorted(tiers)
+    tier_report["coverage_tier"] = "mixed" if tiers else "primary_incomplete"
+    return tiers
 
 
 def filter_info(info: dict[str, Any], full: bool = False) -> dict[str, Any]:
@@ -479,6 +635,7 @@ def extract_catalyst_map(news_items: list[dict[str, Any]], earnings_snapshot: di
 
 def _has_quote_result(result: dict[str, Any]) -> bool:
     candidates = [
+        select_quote_observation(result.get("info") or {}).get("price"),
         (result.get("summary") or {}).get("last_close"),
         (result.get("info") or {}).get("currentPrice"),
         (result.get("info") or {}).get("regularMarketPrice"),
@@ -518,10 +675,12 @@ def select_portfolio_current_price(history: Any, info: dict[str, Any]) -> float 
     Summary values are intentionally presentation-oriented and rounded. They must
     never flow back into position market value or unrealized P/L calculations.
     """
-    for key in ("regularMarketPrice", "currentPrice"):
-        price = _positive_finite_number((info or {}).get(key))
-        if price is not None:
-            return price
+    observation = select_quote_observation(info or {})
+    price = _positive_finite_number(observation["price"])
+    if price is not None:
+        return price
+    if observation["session"] != "REGULAR":
+        return None
 
     if history is not None and not getattr(history, "empty", True):
         try:
@@ -871,16 +1030,24 @@ def _quote_contract_report(
     expected_symbol = normalize_symbol(
         (expected_position or {}).get("symbol") or result_symbol
     )
+    provenance = (
+        result.get("quote_provenance")
+        if isinstance(result.get("quote_provenance"), dict)
+        else {}
+    )
+    # A declared secondary quote is checked on everything the source actually
+    # evidenced; the rest is reported as unverifiable instead of being invented.
+    secondary = str(provenance.get("tier") or "") == "secondary"
+    if secondary:
+        warnings.append("secondary_quote_source")
 
     if result.get("error") or result.get("errors"):
         errors.append("result_errors_present")
 
-    raw_price_fields = ("regularMarketPrice", "currentPrice")
-    if not any(
-        _positive_finite_number(info.get(field)) is not None
-        for field in raw_price_fields
-    ):
-        if any(field in info for field in raw_price_fields):
+    observation = select_quote_observation(info)
+    warnings.extend(observation["warnings"])
+    if _positive_finite_number(observation["price"]) is None:
+        if observation["price_field"] in info:
             errors.append("invalid_info.current_market_price")
         else:
             errors.append("missing_info.current_market_price")
@@ -901,7 +1068,10 @@ def _quote_contract_report(
         if value not in (None, "")
     ]
     if not exchanges:
-        errors.append("missing_info.exchange_or_exchangeName")
+        if secondary:
+            warnings.append("unverifiable.secondary_source.exchange")
+        else:
+            errors.append("missing_info.exchange_or_exchangeName")
     else:
         if expected_market is not None and not any(
             _markets_compatible(expected_market, _provider_market(exchange))
@@ -927,7 +1097,12 @@ def _quote_contract_report(
     if expected_kind is None:
         errors.append("missing_position.asset_type")
     if not quote_type:
-        errors.append("missing_info.quoteType")
+        if secondary:
+            # The secondary source prints no instrument type: a named gap, never a
+            # silently satisfied kind contract.
+            warnings.append("unverifiable.secondary_source.quoteType")
+        else:
+            errors.append("missing_info.quoteType")
     elif expected_kind == "ETF" and provider_kind == "EQUITY" and (
         _expected_market(expected_symbol, expected_position) or ""
     ).startswith("CN"):
@@ -935,6 +1110,10 @@ def _quote_contract_report(
         # known provider alias only when the portfolio explicitly identifies a
         # Chinese ETF and the exchange/currency/symbol checks also close.
         warnings.append("provider_quote_type_alias.cn_etf_as_equity")
+    elif secondary and provider_kind is None:
+        # The secondary source prints no instrument type; that is a named gap, not
+        # a mismatch, and it never silently satisfies the kind contract.
+        warnings.append("unverifiable.secondary_source.quoteType")
     elif expected_kind is not None and provider_kind != expected_kind:
         errors.append("identity_mismatch.quoteType")
 
@@ -946,7 +1125,8 @@ def _quote_contract_report(
     }:
         errors.append("invalid_info.marketState")
 
-    quote_epoch = info.get("regularMarketTime")
+    quote_epoch = observation["epoch"]
+    time_field = observation["timestamp_field"]
     quote_age_seconds = None
     holiday_extension: dict[str, Any] = {"applied": False}
     holiday_extension_seconds = 0
@@ -965,7 +1145,7 @@ def _quote_contract_report(
         errors.append("invalid_quote_age_upper_bound_cap")
 
     if isinstance(quote_epoch, bool):
-        errors.append("invalid_info.regularMarketTime")
+        errors.append(f"invalid_info.{time_field}")
     else:
         try:
             quote_epoch_number = float(quote_epoch)
@@ -973,14 +1153,14 @@ def _quote_contract_report(
                 raise ValueError
             quote_age_seconds = now_epoch - quote_epoch_number
             if quote_age_seconds < -MAX_QUOTE_FUTURE_SKEW_SECONDS:
-                errors.append("future_info.regularMarketTime")
+                errors.append(f"future_info.{time_field}")
             elif (
                 freshness_policy["applied_max_age_seconds"] is not None
                 and quote_age_seconds > freshness_policy["applied_max_age_seconds"]
             ):
-                errors.append("stale_info.regularMarketTime")
-        except (TypeError, ValueError):
-            errors.append("invalid_info.regularMarketTime")
+                errors.append(f"stale_info.{time_field}")
+        except (TypeError, ValueError, OverflowError):
+            errors.append(f"invalid_info.{time_field}")
 
     return {
         "status": "matched" if not errors else "failed",
@@ -993,6 +1173,7 @@ def _quote_contract_report(
         ),
         "freshness_policy": freshness_policy,
         "holiday_extension": holiday_extension,
+        "quote_observation": observation,
     }
 
 
@@ -1001,6 +1182,7 @@ def _holiday_extension(
     expected_position: dict[str, Any] | None,
     info: dict[str, Any],
     now_epoch: float,
+    *, legacy_regular: bool = False,
 ) -> tuple[dict[str, Any], int]:
     """Return (report, extension seconds) for the verified-closure widening."""
 
@@ -1028,7 +1210,7 @@ def _holiday_extension(
         if len(official) != 1:
             return {"applied": False, "reason": "cn_exchange_closure_source_unverified"}, 0
     timezone_name = str(info.get("exchangeTimezoneName") or "").strip()
-    quote_epoch = info.get("regularMarketTime")
+    quote_epoch = select_quote_observation(info, legacy_regular=legacy_regular)["epoch"]
     if not timezone_name or isinstance(quote_epoch, bool) or not isinstance(
             quote_epoch, (int, float)):
         return {"applied": False, "reason": "quote_time_or_timezone_missing"}, 0
@@ -1036,8 +1218,11 @@ def _holiday_extension(
         zone = ZoneInfo(timezone_name)
     except (ZoneInfoNotFoundError, ValueError):
         return {"applied": False, "reason": "unknown_exchange_timezone"}, 0
-    quote_date = datetime.fromtimestamp(float(quote_epoch), zone).date()
-    now_date = datetime.fromtimestamp(now_epoch, zone).date()
+    try:
+        quote_date = datetime.fromtimestamp(float(quote_epoch), zone).date()
+        now_date = datetime.fromtimestamp(now_epoch, zone).date()
+    except (OverflowError, OSError, ValueError) as exc:
+        return {"applied": False, "reason": "quote_datetime_unrepresentable", "exception_type": type(exc).__name__}, 0
     try:
         closed_days, closed_dates = closed_days_between(table, calendar_market, quote_date, now_date)
     except CalendarError as exc:
@@ -1127,12 +1312,13 @@ def build_portfolio_batch_audit(
             **contract["freshness_policy"],
             "quote_age_seconds": contract["quote_age_seconds"],
             "status": contract["status"],
+            "quote_observation": contract["quote_observation"],
         }
         if contract["status"] == "matched":
             quote_contract_matched_count += 1
         else:
             quote_contract_failures[display_symbol] = contract["errors"]
-            if "stale_info.regularMarketTime" in contract["errors"]:
+            if any(error.startswith("stale_info.") for error in contract["errors"]):
                 stale_quote_symbols.append(display_symbol)
         if contract["warnings"]:
             quote_contract_warnings[display_symbol] = contract["warnings"]
@@ -1500,8 +1686,27 @@ def main():
     parser.add_argument(
         "--daily-sync-workers",
         type=int,
-        default=2,
-        help="Concurrent quote-only workers for Daily Sync (default 2, maximum 4).",
+        default=1,
+        help="Quote-only workers for Daily Sync (cache-safe default 1, maximum 4).", 
+    )
+    parser.add_argument(
+        "--allow-fallback-source",
+        dest="allow_fallback_source",
+        action="store_true",
+        default=True,
+        help=(
+            "After a primary transport failure, try the labelled secondary quote "
+            "source (default). It is never used for a symbol the primary answered."
+        ),
+    )
+    parser.add_argument(
+        "--no-fallback-source",
+        dest="allow_fallback_source",
+        action="store_false",
+        help=(
+            "Disable the secondary quote source: a provider transport failure stays "
+            "a failure with no substitute price."
+        ),
     )
 
     parser.add_argument("--version", action="version", version=f"%(prog)s {__version__}")
@@ -1623,6 +1828,8 @@ def main():
     has_failure = bool(history_integrity_load_error)
     all_failed = True
     daily_sync_prefetch: dict[str, tuple[Any, dict, list, list[str]]] = {}
+    daily_sync_receipt: dict[str, Any] = {}
+    daily_sync_tiers: dict[str, dict[str, Any]] = {}
     if args.daily_sync and expected_position_metadata:
         batch_symbols = [
             normalized
@@ -1632,7 +1839,15 @@ def main():
         daily_sync_prefetch = fetch_daily_sync_batch(
             batch_symbols,
             max_workers=args.daily_sync_workers,
+            receipt=daily_sync_receipt,
         )
+        if args.allow_fallback_source:
+            daily_sync_tiers = apply_quote_fallbacks(
+                daily_sync_prefetch,
+                daily_sync_receipt,
+                expected_position_metadata,
+                cache_dir=args.cache_dir,
+            )
 
     for query in args.queries:
         if not args.json:
@@ -1752,20 +1967,28 @@ def main():
                 "data_sources": {
                     "price": (
                         "Yahoo Finance"
-                        if args.daily_sync
+                        if args.daily_sync and symbol not in daily_sync_tiers
                         else (
-                            history.attrs.get("pia_source", "Yahoo Finance")
-                            if history is not None
-                            else None
+                            daily_sync_tiers[symbol]["source"]
+                            if symbol in daily_sync_tiers
+                            else (
+                                history.attrs.get("pia_source", "Yahoo Finance")
+                                if history is not None
+                                else None
+                            )
                         )
                     ),
                     "price_locator": (
                         f"yfinance:{symbol}:quote"
-                        if args.daily_sync
+                        if args.daily_sync and symbol not in daily_sync_tiers
                         else (
-                            history.attrs.get("pia_source_locator")
-                            if history is not None
-                            else None
+                            daily_sync_tiers[symbol]["source_locator"]
+                            if symbol in daily_sync_tiers
+                            else (
+                                history.attrs.get("pia_source_locator")
+                                if history is not None
+                                else None
+                            )
                         )
                     ),
                     "price_adjustment": (
@@ -1780,6 +2003,9 @@ def main():
                 "data_gaps": [],
                 "history_integrity": history_integrity,
             }
+            if symbol in daily_sync_tiers:
+                # Additive and explicit: a secondary quote never looks primary.
+                result_entry["quote_provenance"] = daily_sync_tiers[symbol]
             if fetch_price and history is not None and history.empty and not fetch_errors:
                 result_entry["status"] = "insufficient_data"
             if history_integrity_load_error:
@@ -1981,19 +2207,16 @@ def main():
             if not batch_audit["complete"]:
                 has_failure = True
             if args.daily_sync:
-                print(
-                    json.dumps(
-                        {
-                            "status": (
-                                "complete" if batch_audit["complete"] and not has_failure else "incomplete"
-                            ),
-                            "records": results,
-                            "portfolio_batch_audit": batch_audit,
-                        },
-                        indent=2,
-                        default=str,
-                    )
-                )
+                payload = {
+                    "status": (
+                        "complete" if batch_audit["complete"] and not has_failure else "incomplete"
+                    ),
+                    "records": results,
+                    "portfolio_batch_audit": batch_audit,
+                }
+                if daily_sync_receipt:
+                    payload["provider_receipt"] = daily_sync_receipt
+                print(json.dumps(payload, indent=2, default=str))
             else:
                 for result_entry in results:
                     result_entry["portfolio_batch_audit"] = batch_audit

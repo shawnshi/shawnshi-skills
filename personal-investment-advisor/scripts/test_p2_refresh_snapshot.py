@@ -177,17 +177,64 @@ class RefreshSnapshotTests(unittest.TestCase):
         self.assertTrue(any("overwrite" in error for error in payload["errors"]))
         self.assertEqual(hashlib.sha256(collision.read_bytes()).hexdigest(), before)
 
+    def test_spot_quote_wins_over_future_daily_bar_and_keeps_actual_timestamp(self):
+        record = json.loads(fx_capture())[0]
+        epoch = datetime.datetime.now(datetime.timezone.utc).timestamp() - 60
+        record['info'].update(regularMarketPrice=6.704, regularMarketTime=epoch)
+        record['history'] = [{'Date': (TODAY + datetime.timedelta(days=1)).isoformat(), 'Close': 9.9}]
+        self.capture.write_bytes(json.dumps([record]).encode('utf-8'))
+        code, result = self.run_refresh()
+        self.assertEqual(code, 0, result)
+        snapshot = json.loads(self.derived.read_bytes())
+        self.assertEqual(snapshot['exchange_rates']['USD'], 6.704)
+        meta = snapshot['exchange_rate_metadata']['USD']
+        self.assertEqual(meta['observation_field'], 'info.regularMarketPrice')
+        self.assertEqual(datetime.datetime.fromisoformat(meta['as_of']).timestamp(), epoch)
+
+    def test_future_history_is_rejected_before_snapshot_write(self):
+        self.capture.write_bytes(fx_capture(days_old=-1))
+        code, result = self.run_refresh()
+        self.assertEqual(code, 2)
+        self.assertIn('future FX observation', str(result['errors']))
+        self.assertFalse(self.derived.exists())
+
+    def test_future_spot_quote_does_not_fall_back_to_history(self):
+        record = json.loads(fx_capture())[0]
+        record['info'].update(regularMarketPrice=6.7, regularMarketTime=datetime.datetime.now(datetime.timezone.utc).timestamp()+3600)
+        self.capture.write_bytes(json.dumps([record]).encode('utf-8'))
+        code, result = self.run_refresh()
+        self.assertEqual(code, 2)
+        self.assertIn('future FX observation', str(result['errors']))
+        self.assertFalse(self.derived.exists())
+
+    def test_nonfinite_and_boolean_spot_quotes_fail_closed(self):
+        for price in (float('inf'), float('nan'), True):
+            with self.subTest(price=price):
+                record = json.loads(fx_capture())[0]
+                record['info'].update(regularMarketPrice=price, regularMarketTime=datetime.datetime.now(datetime.timezone.utc).timestamp()-60)
+                self.capture.write_bytes(json.dumps([record]).encode('utf-8'))
+                code, result = self.run_refresh()
+                self.assertEqual(code, 2)
+                self.assertIn('invalid spot observation', str(result['errors']))
+                self.assertFalse(self.derived.exists())
+
+    def test_malformed_history_date_has_structured_failure_and_no_snapshot(self):
+        record = json.loads(fx_capture())[0]
+        record['history'][0]['Date'] = 'not-a-date'
+        self.capture.write_bytes(json.dumps([record]).encode('utf-8'))
+        code, result = self.run_refresh()
+        self.assertEqual(code, 2)
+        self.assertIn('ValueError', str(result['errors']))
+        self.assertFalse(self.derived.exists())
+
     def test_currency_mapping_matches_existing_snapshot_convention(self):
         self.assertEqual(pia_refresh.yahoo_fx_symbol("USD", "CNY"), "CNY=X")
         self.assertEqual(pia_refresh.yahoo_fx_symbol("HKD", "CNY"), "HKDCNY=X")
         self.assertEqual(pia_refresh.yahoo_fx_symbol("CNY", "CNY"), "")
 
 
-if __name__ == "__main__":
-    unittest.main()
-
 class FxProbeResilienceTests(unittest.TestCase):
-    """A transient provider hiccup must be retried once, but never silently."""
+    """The FX wrapper must preserve errors without stacking provider retries."""
 
     def _completed(self, returncode, stdout=b"", stderr=b""):
         import subprocess
@@ -214,7 +261,7 @@ class FxProbeResilienceTests(unittest.TestCase):
         self.assertIn("no structured reason", reason)
         self.assertTrue(is_transient)
 
-    def test_transient_failure_is_retried_once_then_succeeds(self):
+    def test_transient_failure_is_not_retried_outside_provider(self):
         calls = {"count": 0}
 
         def fake_run(command, capture_output=True, timeout=None, check=False):
@@ -224,10 +271,15 @@ class FxProbeResilienceTests(unittest.TestCase):
             return self._completed(0, fx_capture(), b"")
 
         with mock.patch.object(pia_refresh.subprocess, "run", side_effect=fake_run):
-            raw, source = pia_refresh.fetch_fx_capture("CNY=X", None)
-        self.assertEqual(calls["count"], 2)
-        self.assertIn("attempts=2", source)
-        self.assertIn(b"CNY=X", raw)
+            with self.assertRaisesRegex(RuntimeError, 'FX probe failed'):
+                pia_refresh.fetch_fx_capture("CNY=X", None)
+        self.assertEqual(calls["count"], 1)
+
+    def test_explicit_outer_retry_is_rejected_before_child_launch(self):
+        with mock.patch.object(pia_refresh.subprocess, 'run') as child:
+            with self.assertRaisesRegex(ValueError, 'outer attempts must be 1'):
+                pia_refresh.fetch_fx_capture('CNY=X', None, attempts=2)
+        child.assert_not_called()
 
     def test_contract_failure_is_not_retried(self):
         calls = {"count": 0}

@@ -63,6 +63,17 @@
     "summary_zh"
   ],
   "max_top_items": 10,
+  "optional_item_fields": ["claim_grounding"],
+  "claim_grounding": {
+    "audit_id": "AUD-F05",
+    "required_fields": ["basis", "claims"],
+    "basis": "Which registered evidence excerpt(s) the claims were read from.",
+    "required_claim_fields": ["kind", "statement"],
+    "kinds": ["number", "policy_status", "causal"],
+    "statuses": ["grounded", "unverified", "hypothesis"],
+    "number_claim_required_fields": ["value"],
+    "rule": "Only a claim readable from the visible excerpt may be grounded, and a grounded claim must carry the supporting evidence span. A number claim's value must appear in the item's own fact. A cross-item causal sentence or an unconfirmed policy status may only be hypothesis or unverified. A missing ledger on an L3/L4 or near-term-impact item is a gate warning, not yet a hard error, so the change stays additive to schema 1.4."
+  },
   "domain_mix": {
     "domains": ["technology", "healthcare_digital"],
     "default_ratio": {

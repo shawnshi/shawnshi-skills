@@ -10,7 +10,7 @@ from datetime import date, datetime
 from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
-from validate_weekly_brief import EMPTY_EVENT_MARKER, validate_report
+from validate_weekly_brief import EMPTY_EVENT_MARKER, event_dates_from_row, validate_report
 
 HEAD = """# 数字健康周报｜2000年1月3日—9日
 
@@ -126,6 +126,60 @@ class AuditRegressions(unittest.TestCase):
     def test_cross_year_natural_week(self):
         content = HEAD.replace("2000年1月3日—9日", "1999年12月27日—2000年1月2日").replace("2000-01-03", "1999-12-27").replace("2000-01-09", "2000-01-02") + SECTION + TABLE + ROW.replace("2000-01-05", "2000-01-01")
         self.assertEqual([], self.check_content(content, period_start=date(1999, 12, 27), period_end=date(2000, 1, 2), issue_date=date(2000, 1, 2), allow_custom_filename=True))
+
+    def test_chinese_event_ranges_cross_month_and_cross_year(self):
+        # Cross-year Chinese range, inferred years from the reporting period.
+        self.assertEqual(
+            [date(1999, 12, 30), date(2000, 1, 2)],
+            event_dates_from_row("| 12月30日—1月2日 | x |", date(1999, 12, 27), date(2000, 1, 2)),
+        )
+        # Cross-month Chinese range within one year.
+        self.assertEqual(
+            [date(2000, 1, 31), date(2000, 2, 1)],
+            event_dates_from_row("| 1月31日—2月1日 | x |", date(2000, 1, 31), date(2000, 2, 6)),
+        )
+        # Single day and same-month range output is unchanged.
+        self.assertEqual(
+            [date(2000, 1, 5), date(2000, 1, 6)],
+            event_dates_from_row("| 1月5—6日 | x |", date(2000, 1, 3), date(2000, 1, 9)),
+        )
+        # Repeating the same month and day on both ends stays a single date.
+        self.assertEqual(
+            [date(2000, 1, 5)],
+            event_dates_from_row("| 1月5日—1月5日 | x |", date(2000, 1, 3), date(2000, 1, 9)),
+        )
+        # Explicit ISO cross-year range is unaffected; mixing formats is malformed.
+        self.assertEqual(
+            [date(1999, 12, 30), date(2000, 1, 2)],
+            event_dates_from_row("| 1999-12-30—2000-01-02 | x |", date(1999, 12, 27), date(2000, 1, 2)),
+        )
+        self.assertEqual(
+            [],
+            event_dates_from_row("| 12月30日—2000-01-02 | x |", date(1999, 12, 27), date(2000, 1, 2)),
+        )
+
+    def test_cross_month_chinese_range_reports_period_violation_not_malformed(self):
+        head = HEAD.replace("2000年1月3日—9日", "1999年12月27日—2000年1月2日").replace("2000-01-03", "1999-12-27").replace("2000-01-09", "2000-01-02")
+        base = dict(period_start=date(1999, 12, 27), period_end=date(2000, 1, 2), issue_date=date(2000, 1, 2), allow_custom_filename=True)
+        accepted = head + SECTION + TABLE + ROW.replace("2000-01-05", "12月30日—1月2日")
+        self.assertEqual([], self.check_content(accepted, **base))
+        outside = head + SECTION + TABLE + ROW.replace("2000-01-05", "12月30日—1月5日")
+        errors = self.check_content(outside, **base)
+        self.assertTrue(any("outside the reporting period" in e for e in errors), errors)
+        self.assertFalse(any("malformed" in e for e in errors), errors)
+
+    def test_cross_month_chinese_range_inversion_is_rejected(self):
+        head = HEAD.replace("2000年1月3日—9日", "2000年1月31日—2月6日").replace("2000-01-03", "2000-01-31").replace("2000-01-09", "2000-02-06").replace("2000-01-10T00:00:00+08:00", "2000-02-07T00:00:00+08:00")
+        content = head + SECTION + TABLE + ROW.replace("2000-01-05", "2月1日—1月31日")
+        errors = self.check_content(
+            content,
+            period_start=date(2000, 1, 31),
+            period_end=date(2000, 2, 6),
+            issue_date=date(2000, 2, 6),
+            cutoff=datetime.fromisoformat("2000-02-07T00:00:00+08:00"),
+            allow_custom_filename=True,
+        )
+        self.assertTrue(any("inverted event range" in e for e in errors), errors)
 
     def test_read_only_shared_identity_revalidates_new_source(self):
         shared = Path(__file__).resolve().parents[2] / "shared/scripts"

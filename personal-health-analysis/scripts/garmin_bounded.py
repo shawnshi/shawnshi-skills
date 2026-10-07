@@ -171,11 +171,18 @@ def fetch_local_summary(days):
     so the exact caller value is forwarded unchanged. Advanced all-time/device/
     baseline reads are deliberately excluded from this bounded summary.
     """
-    if not isinstance(days, int) or days < 1:
+    if not isinstance(days, int) or isinstance(days, bool) or days < 1:
         raise ValueError("days must be a positive integer")
 
     _load_pandas()
     adapter = _load_local_adapter()
+    with adapter.verified_database_read_window([adapter.GARMIN_DB]) as window:
+        result = _fetch_local_summary_unverified(days, adapter)
+    result["data_integrity"] = window.public_summary()
+    return result
+
+
+def _fetch_local_summary_unverified(days, adapter):
     provider_days = days
     print(f"📂 Loading bounded local SQLite data ({days} calendar days)...", file=sys.stderr)
     try:
@@ -194,16 +201,8 @@ def fetch_local_summary(days):
         data_gaps.append("long_horizon_baseline_not_authorized")
 
     def load_optional(name, loader, **kwargs):
-        try:
-            with contextlib.redirect_stdout(sys.stderr):
-                return loader(provider_days, **kwargs)
-        except Exception as exc:
-            data_gaps.append(name)
-            print(
-                f"⚠️ Optional local lane '{name}' unavailable ({type(exc).__name__}).",
-                file=sys.stderr,
-            )
-            return pd.DataFrame()
+        with contextlib.redirect_stdout(sys.stderr):
+            return loader(provider_days, **kwargs)
 
     # --- Check Data Freshness ---
     is_stale = False
@@ -1881,6 +1880,8 @@ def main(argv=None):
     data_status = "partial" if data_gaps or summary_data.get("is_stale") else "ok"
     result.setdefault("status", data_status)
     result["data_status"] = data_status
+    if "data_integrity" in summary_data:
+        result["data_integrity"] = summary_data["data_integrity"]
     if data_gaps:
         result["data_gaps"] = data_gaps
     result["provenance"] = {

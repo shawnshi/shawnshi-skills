@@ -26,7 +26,7 @@ description: 基于日志、日历与 Garmin 数据进行日/周/月/季/年事�
 
 - 需要日、周、月、季度或年度模板时，读取 `prompts/` 下对应文件；模板继承日历与 Garmin 的默认只读授权，但不扩大到其他私人数据源。周、月、季度模板同时定义 canonical 自动保存封套，必须完整遵循。
 - 出现 Garmin、能量管理、健康背景或趋势判断时，必须读取 `references/energy_management.md`；需要通用字段含义或交接格式时，再按需读取 `references/templates.md`、`references/semantic_layer.md` 或 `references/handoff_contract.md`。
-- 组织复盘输出时按需读取 [输出与验证](references/templates.md) 的结构；生成文件草稿后必须读取其验证分层，运行 `python scripts/audit_gate.py <draft_file>`；来自模板时加 `--enforce-template-fields`。脚本不可用时人工检查仅支持草稿，不替代保存门。
+- 组织复盘输出时按需读取 [输出与验证](references/templates.md) 的结构；生成文件草稿后必须读取其验证分层，运行 `python scripts/audit_gate.py <draft_file>`；来自模板时加 `--enforce-template-fields`。输入须为 UTF-8，单文件上限 2 MiB；超限先按既定周期缩小材料，不静默截断。重复采集审计键与非法 Handoff 周期类型均阻断交付。脚本不可用时人工检查仅支持草稿，不替代保存门。
 
 ## 边界
 

@@ -111,10 +111,17 @@ class SecEdgarFundamentalTests(unittest.TestCase):
         with mock.patch.object(sec, "validate_user_agent", return_value="synthetic-contact"), mock.patch.object(sec, "build_report", return_value={"status": "complete"}) as build, mock.patch.object(sys, "argv", ["sec", "FREE", "--as-of", today.isoformat()]), mock.patch("builtins.print"):
             self.assertEqual(sec.main(), 0)
         self.assertEqual(build.call_args.kwargs["as_of"], today)
+        self.assertEqual(build.call_args.kwargs["decision_scope"], "advisory")
         result = self.snapshot(as_of=cutoff)
         self.assertEqual(result["as_of"], today.isoformat())
         self.assertEqual(result["availability_granularity"], "filed_date")
         self.assertFalse(result["cutoff_day_complete"])
+
+    def test_explicit_research_only_scope_remains_available(self):
+        today = datetime.now(timezone.utc).date().isoformat()
+        with mock.patch.object(sec, "validate_user_agent", return_value="synthetic-contact"), mock.patch.object(sec, "build_report", return_value={"status": "complete"}) as build, mock.patch.object(sys, "argv", ["sec", "FREE", "--as-of", today, "--decision-scope", "research_only"]), mock.patch("builtins.print"):
+            self.assertEqual(sec.main(), 0)
+        self.assertEqual(build.call_args.kwargs["decision_scope"], "research_only")
 
     def test_future_date_and_datetime_rejected_before_fetch(self):
         now = datetime.now(timezone.utc)
@@ -234,6 +241,8 @@ class SecEdgarFundamentalTests(unittest.TestCase):
                 "2023-06-30",
                 "--user-agent",
                 "PIA research investor@domain.cn",
+                "--decision-scope",
+                "advisory",
             ],
         )
 

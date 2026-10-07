@@ -83,6 +83,22 @@ def render_markdown(data, raw_json):
     md += f"- **研究模式**: {data.get('research_mode', '无')}\n"
     md += f"- **研究边界**: {cc.get('research_boundary', '无')}\n\n"
 
+    lineage = (data.get("scenario_analysis") or {}).get("valuation_lineage")
+    if isinstance(lineage, dict):
+        carried = lineage.get("carried_over")
+        md += (
+            "> **估值谱系**：推导日 "
+            f"`{lineage.get('valuation_derived_at')}`；本档绑定口径 "
+            f"`{lineage.get('valuation_bound_as_of')}`"
+        )
+        if lineage.get("input_anchor_as_of"):
+            md += f"；输入锚点 `{lineage['input_anchor_as_of']}`"
+        md += ("；**结论沿用旧档、本档未重新推导**"
+               if carried is True else "；本档为当期推导")
+        if lineage.get("carried_from_generation"):
+            md += f"（源自 generation `{lineage['carried_from_generation']}`）"
+        md += "。\n\n"
+
     md += "## 🧮 置信度与新鲜度\n"
     md += f"- **综合置信分**: {confidence_details.get('score', '--')}/100\n"
     md += f"- **数据质量**: {confidence_details.get('data_quality', '--')}\n"

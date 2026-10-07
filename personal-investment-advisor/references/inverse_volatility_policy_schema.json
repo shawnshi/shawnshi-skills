@@ -1,7 +1,7 @@
 {
   "resource_kind": "inverse_volatility_allocation_research_policy",
   "schema_version": "pia_inverse_volatility_policy_v1",
-  "decision_scope_default": "research_only",
+  "decision_scope_default": "advisory",
   "required_top_level": [
     "schema_version",
     "experiment",

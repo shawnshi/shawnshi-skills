@@ -23,7 +23,7 @@ from typing import Any
 SCRIPT_DIR = Path(__file__).resolve().parent
 SKILL_DIR = SCRIPT_DIR.parent
 VOCAB_PATH = SKILL_DIR / "references" / "interpretive_labels.json"
-DECISION_SCOPE = "research_only"
+DECISION_SCOPE = "advisory"
 ASSIGNMENT_SCHEMA = "pia_label_assignment_v1"
 
 

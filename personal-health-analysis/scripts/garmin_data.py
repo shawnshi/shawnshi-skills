@@ -820,8 +820,11 @@ def _local_metric_result(name, records, requested_days):
 
 def _fetch_local_metric(metric, days=7, start=None, end=None, *, _verified=False):
     """Fetch supported metrics from the local read-only Garmin SQLite adapter."""
+    read_options = {}
     if start or end:
-        raise ValueError("Explicit --start/--end ranges are not supported by the local adapter")
+        range_start, range_end = get_date_range(start=start, end=end)
+        days = (datetime.fromisoformat(range_end) - datetime.fromisoformat(range_start)).days + 1
+        read_options["end_date"] = range_end
     from garmin_sqlite_adapter import (
         ACTIVITIES_DB,
         GARMIN_DB,
@@ -855,16 +858,16 @@ def _fetch_local_metric(metric, days=7, start=None, end=None, *, _verified=False
     if metric == "profile":
         raise ValueError("profile is available only from explicitly authorized live access")
     if metric == "sleep":
-        return _local_metric_result("sleep", _frame_records(get_sleep_data(days)), days)
+        return _local_metric_result("sleep", _frame_records(get_sleep_data(days, **read_options)), days)
     if metric == "hrv":
-        frame = get_hrv_data(days).rename(columns={"hrv_avg": "last_night_avg"})
+        frame = get_hrv_data(days, **read_options).rename(columns={"hrv_avg": "last_night_avg"})
         return _local_metric_result("hrv", _frame_records(frame), days)
     if metric == "activities":
         return _local_metric_result(
-            "activities", _frame_records(get_activities_data(days)), days
+            "activities", _frame_records(get_activities_data(days, **read_options)), days
         )
 
-    summary_frame = get_summary(days)
+    summary_frame = get_summary(days, **read_options)
     mappings = {
         "heart_rate": {
             "resting_heart_rate": "resting_hr",
@@ -882,12 +885,12 @@ def _fetch_local_metric(metric, days=7, start=None, end=None, *, _verified=False
     if metric != "summary":
         raise ValueError(f"Metric '{metric}' is not supported by the local adapter")
 
-    sleep = _fetch_local_metric("sleep", days, _verified=True)["sleep"]
-    hrv = _fetch_local_metric("hrv", days, _verified=True)["hrv"]
-    heart_rate = _fetch_local_metric("heart_rate", days, _verified=True)["heart_rate"]
-    body_battery = _fetch_local_metric("body_battery", days, _verified=True)["body_battery"]
-    stress = _fetch_local_metric("stress", days, _verified=True)["stress"]
-    activities = _fetch_local_metric("activities", days, _verified=True)["activities"]
+    sleep = _fetch_local_metric("sleep", days, start, end, _verified=True)["sleep"]
+    hrv = _fetch_local_metric("hrv", days, start, end, _verified=True)["hrv"]
+    heart_rate = _fetch_local_metric("heart_rate", days, start, end, _verified=True)["heart_rate"]
+    body_battery = _fetch_local_metric("body_battery", days, start, end, _verified=True)["body_battery"]
+    stress = _fetch_local_metric("stress", days, start, end, _verified=True)["stress"]
+    activities = _fetch_local_metric("activities", days, start, end, _verified=True)["activities"]
     components = {
         "sleep": sleep,
         "hrv": hrv,
@@ -944,7 +947,7 @@ def main():
         effective_days = 7 if args.source == "local" and args.days is None else args.days
         start_date, end_date = get_date_range(effective_days, args.start, args.end)
     except ValueError as exc:
-        print(json.dumps({"error": str(exc)}, ensure_ascii=False))
+        print(json.dumps({"status": "invalid_request", "error_code": "invalid_date_window", "error": str(exc)}, ensure_ascii=False))
         return 2
 
     if args.source == "local" and not args.allow_health_data:
@@ -956,15 +959,18 @@ def main():
             result = _fetch_local_metric(
                 args.metric, effective_days, args.start, args.end
             )
+        except ValueError:
+            print(json.dumps({"status": "invalid_request", "error_code": "invalid_local_request"}))
+            return 2
         except Exception as exc:
             error_code = "local_data_unavailable"
             if type(exc).__name__ == "LocalDatabaseChangedError":
                 error_code = "database_changed_during_read"
             elif (
                 type(exc).__name__ == "LocalDatabaseReadError"
-                and re.fullmatch(r"[a-z0-9_]+", str(exc) or "")
+                and re.fullmatch(r"[a-z0-9_]+", str(exc).split(":", 1)[0] or "")
             ):
-                error_code = str(exc)
+                error_code = str(exc).split(":", 1)[0]
             print(
                 json.dumps(
                     {"status": "read_error", "error_code": error_code},

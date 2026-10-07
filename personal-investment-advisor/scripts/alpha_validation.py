@@ -559,7 +559,7 @@ def evaluate_alpha_package(
     eligible = all(checks.values())
     report = base_report(
         SCHEMA_VERSION,
-        decision_scope=str(package.get("decision_scope") or "research_only"),
+        decision_scope=str(package.get("decision_scope") or "advisory"),
     )
     report.update(
         {

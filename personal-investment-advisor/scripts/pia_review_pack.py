@@ -25,7 +25,7 @@ from typing import Any
 SCRIPT_DIR = Path(__file__).resolve().parent
 SKILL_DIR = SCRIPT_DIR.parent
 LANES_PATH = SKILL_DIR / "references" / "review_lanes.json"
-DECISION_SCOPE = "research_only"
+DECISION_SCOPE = "advisory"
 SCHEMA_VERSION = "pia_review_brief_v1"
 
 

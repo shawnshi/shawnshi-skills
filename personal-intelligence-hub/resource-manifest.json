@@ -1,11 +1,11 @@
 {
   "schema_version": 3,
   "skill": "personal-intelligence-hub",
-  "generated_at": "2026-09-28T12:26:26+08:00",
+  "generated_at": "2026-10-05T21:31:30+08:00",
   "hash_algorithm": "SHA-256",
   "text_hash_normalization": "LF",
   "skill_md": "SKILL.md",
-  "skill_md_sha256": "8a9bf326401b04171c76cb74235eec4fe499e2d81d20ab56651622c6aa55b402",
+  "skill_md_sha256": "f222bfc47763f260faf620d84a23a2b24a9617076871af9c16cc7ff51149346f",
   "top_level_files": [
     "SKILL.md",
     "requirements.txt"
@@ -13,7 +13,7 @@
   "top_level_file_hashes": [
     {
       "path": "SKILL.md",
-      "sha256": "8a9bf326401b04171c76cb74235eec4fe499e2d81d20ab56651622c6aa55b402"
+      "sha256": "f222bfc47763f260faf620d84a23a2b24a9617076871af9c16cc7ff51149346f"
     },
     {
       "path": "requirements.txt",
@@ -28,7 +28,7 @@
   "resource_directories": [
     {
       "name": "scripts",
-      "file_count": 71
+      "file_count": 81
     },
     {
       "name": "references",
@@ -46,7 +46,7 @@
     },
     {
       "path": "references/briefing_schema.json",
-      "sha256": "a3ec078fb075bc8e3e08ab7f08724da0fdf3c4788f69c28c50b2492797af8c7e"
+      "sha256": "45d8533e4d7287c08f8ffc2c63f826327fc52a2454fbb41b91ba5c38bbe30cd7"
     },
     {
       "path": "references/briefing_schema_v1.0.json",
@@ -74,7 +74,7 @@
     },
     {
       "path": "references/prompts/v1_refine_system.md",
-      "sha256": "1dbd3f5fc8a39740d08e428bf1521c74d040baab9c6967a50af36c7df71d5f1c"
+      "sha256": "ff94a53e04ac1171190137ccd952c96f853094fd4416fdb08b1d87857c7cda47"
     },
     {
       "path": "references/quality_standard.md",
@@ -94,11 +94,11 @@
     },
     {
       "path": "references/subagent_prompts.json",
-      "sha256": "61cba86c2828ab8ce9d19c9baa32c4224f39989c4bfdb2e3bc2c3af684668a5e"
+      "sha256": "a5e5cb9fa1d32632a2a3af21a3dd27b8cd9262ef8be9519c3555896732156c32"
     },
     {
       "path": "references/workflow_protocols.md",
-      "sha256": "f99e8fd8a084962341d5d8121df1ff1a82a28af2dddb3df0e28f937b39d7ae02"
+      "sha256": "f38c2167589d7537db3243344ede211a23b4f41e152d1cf47ef5db7a21807f31"
     },
     {
       "path": "scripts/adversarial_audit.py",
@@ -110,11 +110,15 @@
     },
     {
       "path": "scripts/article_broker.py",
-      "sha256": "1ab0abdddbbf9c79a9a3c14578855c1a8a1adfa428f22fe569f99cc2bc3679dd"
+      "sha256": "f5b869f504661a2f94f98bf66533e7a4128ac3843cdc9170d270d1a51ea63397"
     },
     {
       "path": "scripts/await_artifacts.py",
       "sha256": "bf0a09280f2125301096a9b4c6bc96887c8ad57cd27866f772f0708f3126c779"
+    },
+    {
+      "path": "scripts/benchmark_runtime.py",
+      "sha256": "98900bf39fa2dae5373494846121930e048673ad0d39cac6f0ea7c2bb4b7b09d"
     },
     {
       "path": "scripts/blackboard.py",
@@ -122,7 +126,11 @@
     },
     {
       "path": "scripts/briefing_gate.py",
-      "sha256": "7a7642a52aa7007f1313486eeb45c3e12ea45b4f018032e30f8f90a1c753625a"
+      "sha256": "78a4434090b03edb370be9dad21294e25373c858a2fc8e669ecc02baf14bb991"
+    },
+    {
+      "path": "scripts/broker_handoff.py",
+      "sha256": "0901b048da6795f61ae24a199c181c1c0bc737c2e51b338966cfbbaf3cdb356d"
     },
     {
       "path": "scripts/contract_core.py",
@@ -146,7 +154,7 @@
     },
     {
       "path": "scripts/hub_utils.py",
-      "sha256": "5a811ee089f33791c826a045f257b004697a0114d7d1029e989d6253010dfc9f"
+      "sha256": "3c4fbc8f6279ed87faedb288ec6c3531b0d7b292412fc79876fdf76e67888a9b"
     },
     {
       "path": "scripts/lane_selection.py",
@@ -161,8 +169,12 @@
       "sha256": "7b4cb66eb07c39a7f4bbbc681165662dd26b9785bdbcc004abc2f060f65207c0"
     },
     {
+      "path": "scripts/query_proof.py",
+      "sha256": "88b40ad809502f48faac8a1b9a0fb27bbc5f98bce59967474e183e950f34c4be"
+    },
+    {
       "path": "scripts/receipt_assemble.py",
-      "sha256": "5e957c5bc3c58c20bda9cc34eb24e9e8ad4a79ed9c610a471be342b1ba2f2d30"
+      "sha256": "fd40dbfab68fade69893ba4590c3d4c0ed4798fc209070fd255fec01e34c4386"
     },
     {
       "path": "scripts/recovery_lifecycle.py",
@@ -178,7 +190,7 @@
     },
     {
       "path": "scripts/review_handoff.py",
-      "sha256": "4477e5bc91ad7b74463ec8bb86696ed419fb8e22a8b1735ce23b8990b1c90e4c"
+      "sha256": "2e9c9daa4afb2f4e783a075561aa7478de343744ff4fd42edde189d8106dfce7"
     },
     {
       "path": "scripts/review_progress_gate.py",
@@ -186,7 +198,7 @@
     },
     {
       "path": "scripts/run_contract.py",
-      "sha256": "8c5585cb25b5aa782bd25574bd64555bfc48a738abfd9c441aec6d1b10959801"
+      "sha256": "142da8b83051e0399e34bceb468e44d48cf7a84490fe3899f466c5696d498b42"
     },
     {
       "path": "scripts/run_daily.py",
@@ -194,7 +206,7 @@
     },
     {
       "path": "scripts/semantic_agent.py",
-      "sha256": "50145190619dc71e11cb78a0468640eb2f438b7eeb4d28621988939801b89518"
+      "sha256": "a49b5ce68728e23012c5f925f6ec7466bf6ab81426268be3d5d98081cb8b2c0b"
     },
     {
       "path": "scripts/session_telemetry.py",
@@ -206,7 +218,7 @@
     },
     {
       "path": "scripts/supplement_agent.py",
-      "sha256": "f4e5236deda9a667f10e7efd52fbe7107b5df0c5bd504826417bd277706fffab"
+      "sha256": "60701cd9725030d4b79158901e59b0f38958d6d314513bfb03960a71549166d0"
     },
     {
       "path": "scripts/supplement_seal.py",
@@ -222,19 +234,23 @@
     },
     {
       "path": "scripts/test_article_broker_contract.py",
-      "sha256": "b43ce86843b48de643be092d42d069cf1524cc09058eedff0126a576b21aaba2"
+      "sha256": "7e58ca9c35e525548448080f8225b1cb4e811686d1c1d55539860b18d1892759"
     },
     {
       "path": "scripts/test_article_broker_evidence.py",
-      "sha256": "997533b18e915bc0222a8bfc48db44b033a9997ee46cfa90448afe0ddc60bb62"
+      "sha256": "cd97c27d456f3f85c819e124d2929daebba10b21ec22f9decf8b99839112a106"
+    },
+    {
+      "path": "scripts/test_article_broker_native_headers.py",
+      "sha256": "12a9f500d4b2477644046ad1f788323ecefb6577d1678c42ce635320afdfbbdd"
     },
     {
       "path": "scripts/test_article_broker_review_fixes.py",
-      "sha256": "59a2b668305dbc89c063100dd42826046456decd0a448456eb916473b28862a1"
+      "sha256": "68f3f79e0026a74f56c677b634a867dad4db5b3e2960f5ae1938eb926492217c"
     },
     {
       "path": "scripts/test_article_broker_wire_dateline.py",
-      "sha256": "a0c29d741b35ed54c12a086bdb4afb334ae047f041b1d50ee14e3793e3581527"
+      "sha256": "1b648f6c06e829176f0fa1d664af2470e3b537e21c8951c023d0b7b388c83ced"
     },
     {
       "path": "scripts/test_await_artifacts.py",
@@ -254,11 +270,19 @@
     },
     {
       "path": "scripts/test_briefing_v13_contract.py",
-      "sha256": "a43efacfd7ee6bc3773283afe07fd1fffe6e8b562b0753e4e2d1778ca1e53c44"
+      "sha256": "5135cbf39ad8e3306b76ae0bda7f952c4eb97bce818be32b714fcc9915f8c65d"
     },
     {
       "path": "scripts/test_broker_closure_and_coverage.py",
       "sha256": "bbc8c03f7d975a1671e121764c47d1d01f7d0be19b99f7e61805288e4841852e"
+    },
+    {
+      "path": "scripts/test_broker_handoff.py",
+      "sha256": "cab7f0d7063801f6cad626835ea371315e712736721a73b9689fefca827ae9ab"
+    },
+    {
+      "path": "scripts/test_broker_handoff_paths.py",
+      "sha256": "5136aec3155b732557ae7ff018eafc0954eba28b7287cced1c52b0f74d51db6d"
     },
     {
       "path": "scripts/test_contract_fixtures.py",
@@ -298,7 +322,7 @@
     },
     {
       "path": "scripts/test_native_article_evidence.py",
-      "sha256": "86728cbdef2b4bca5d119f1198393d50e4dcf7d241062692371f9ef18486ae8b"
+      "sha256": "f5b03010bcd14ea977d4dee4448531171b0732bd59a2d298322b0b0d65030198"
     },
     {
       "path": "scripts/test_native_readable_dates.py",
@@ -310,7 +334,7 @@
     },
     {
       "path": "scripts/test_parent_supplement_finalization.py",
-      "sha256": "47271b8e0860a2b7fdc9d454c37a2ea1242401af8c757def6fa3e01482308cb4"
+      "sha256": "e8a35eeaf8782a5debbc55eed467d3cb14d5bda1d1bd1d8073559f2fb0861752"
     },
     {
       "path": "scripts/test_pipeline_contract.py",
@@ -318,7 +342,11 @@
     },
     {
       "path": "scripts/test_prompt_contract.py",
-      "sha256": "1bf5a4bb08946e33a8e0dc27b6fa5527e996be9e3c9e41e9862c7de6a770c6df"
+      "sha256": "46fe0836839ccf0c8bf17b33a8d451f1a39eea263c8f1c3852eba2a71b8cb388"
+    },
+    {
+      "path": "scripts/test_query_proof.py",
+      "sha256": "830eef56efaebe2c4b52cc94f537e222abe2625010a347cf46dc6d1785a349cd"
     },
     {
       "path": "scripts/test_receipt_assemble.py",
@@ -329,12 +357,16 @@
       "sha256": "f5e6a420c77f3c0ae140592190526f6d64100e7af5e7dae4ac2712f3132f6414"
     },
     {
+      "path": "scripts/test_residual_regressions.py",
+      "sha256": "6a329559ce34e47b968b5d9a02c283fecfa9b6ba7ca9271692786fff5ff1c801"
+    },
+    {
       "path": "scripts/test_review_progress_gate.py",
       "sha256": "00c4907e56fcebd23483334bc8e9ebb047d2168db8fa7d2c4055950aece38984"
     },
     {
       "path": "scripts/test_run_contract.py",
-      "sha256": "11df088e5699ad28eb69adc6e323594d79bf2a3d5425fa8afdb2cc6b68ed9392"
+      "sha256": "2f5fcaf1c11e9d4b72a37809218b79cda7afd7af7371aac7d4ababf02bad5399"
     },
     {
       "path": "scripts/test_run_daily.py",
@@ -342,7 +374,11 @@
     },
     {
       "path": "scripts/test_run_daily_broker_entry.py",
-      "sha256": "331a563c0a9f844c0ec313d0852847f3ffaf26d7de83f2b87ecb743cc2fabcce"
+      "sha256": "62ec8a1b641e64bad3d85e0615dc25c1d97b4d6db588703817f59cff8265fb08"
+    },
+    {
+      "path": "scripts/test_runtime_stability.py",
+      "sha256": "1fabfbd29bb253d34f9d6b274a0d8358aa77f68129d37d53d66a4547c61c6d43"
     },
     {
       "path": "scripts/test_semantic_agent.py",
@@ -361,8 +397,12 @@
       "sha256": "e22ef14b6a58eee885670a48edf342a881414b3fe6e0a946d29ea19b1ae46bcc"
     },
     {
+      "path": "scripts/test_subagent_output_binding.py",
+      "sha256": "6745de7750cb9ad6cc436a78be61ab4cc9b07450893e112c0e17e208ebd7fbc5"
+    },
+    {
       "path": "scripts/test_supplement_agent.py",
-      "sha256": "8128f5c03039ee48c159d1cefc994ae34507c18ccc25fc51aaab84b7eee95845"
+      "sha256": "f92454e0c5707fe63aef91227a2e0ed0d95a4effafda82d3918501c1bcd23a55"
     },
     {
       "path": "scripts/test_technical_bound_selection.py",
@@ -390,7 +430,7 @@
       "path": "references/briefing_schema.json",
       "exists": true,
       "resolved_path": "personal-intelligence-hub/references/briefing_schema.json",
-      "sha256": "a3ec078fb075bc8e3e08ab7f08724da0fdf3c4788f69c28c50b2492797af8c7e"
+      "sha256": "45d8533e4d7287c08f8ffc2c63f826327fc52a2454fbb41b91ba5c38bbe30cd7"
     },
     {
       "path": "references/briefing_schema_v1.2.json",
@@ -426,13 +466,13 @@
       "path": "references/subagent_prompts.json",
       "exists": true,
       "resolved_path": "personal-intelligence-hub/references/subagent_prompts.json",
-      "sha256": "61cba86c2828ab8ce9d19c9baa32c4224f39989c4bfdb2e3bc2c3af684668a5e"
+      "sha256": "a5e5cb9fa1d32632a2a3af21a3dd27b8cd9262ef8be9519c3555896732156c32"
     },
     {
       "path": "references/workflow_protocols.md",
       "exists": true,
       "resolved_path": "personal-intelligence-hub/references/workflow_protocols.md",
-      "sha256": "f99e8fd8a084962341d5d8121df1ff1a82a28af2dddb3df0e28f937b39d7ae02"
+      "sha256": "f38c2167589d7537db3243344ede211a23b4f41e152d1cf47ef5db7a21807f31"
     },
     {
       "path": "scripts/run_daily.py",

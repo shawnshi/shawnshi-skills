@@ -27,7 +27,7 @@ from pathlib import Path
 from typing import Any
 
 SCHEMA_VERSION = "pia_trigger_ledger_v1"
-DECISION_SCOPE = "research_only"
+DECISION_SCOPE = "advisory"
 DEFAULT_LEDGER_NAME = "pia_trigger_ledger.jsonl"
 DEFAULT_REVIEW_DAYS = 90
 LOCK_TIMEOUT_SECONDS = 5.0

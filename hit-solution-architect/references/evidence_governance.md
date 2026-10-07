@@ -47,6 +47,6 @@ A 级“客户授权原始记录”与 B 级“厂商技术材料”的常见取
 - **迁移与回退**：历史割接先例取自既往方案原件，注明其适用的系统规模、年份与地区。
 - **评审一致性**：与已登记决策节点比对；发现与既往判断冲突时并列记录，不单方择边。
 - 台账 `EVIDENCE_ID` / `来源定位` 记录原件引用或节点标识；`as_of` 用材料自身日期，历史材料不当作当前事实。
-- 取证工具：原件与评级用 `lan-mcp-1441_search_knowledge` / `get_source_excerpt` 与 `lan-mcp-1441_query_ratings`；既往方案与已登记决策节点用 `vector-lake-mcp_search_vector_lake`。
+- 取证工具：原件与评级用 `premind-winning-mcp_search_knowledge` / `get_source_excerpt` 与 `premind-winning-mcp_query_ratings`；既往方案与已登记决策节点用 `mentat-mind-mcp_search_vector_lake`。
 - 患者数据不得作为检索输入；密级与外部使用授权仍按输入合同四轴判定，不因来源是内部而放宽。
 - 内部来源不可用时报告缺口，不得写成“无数据”。

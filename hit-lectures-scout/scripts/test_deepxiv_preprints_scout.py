@@ -385,6 +385,85 @@ class DeepxivPreprintsScoutTests(unittest.TestCase):
         self.assertEqual(logger.disabled, previous)
         self.assertEqual(json.loads(stderr.getvalue())["retrieval"]["status"], "error")
 
+    def test_failed_run_before_draft_reclaims_empty_stage(self):
+        with tempfile.TemporaryDirectory(prefix="dhls-reclaim-") as tmp:
+            stderr = io.StringIO()
+            with (
+                patch.object(scout, "build_reader", side_effect=ImportError("private")),
+                contextlib.redirect_stderr(stderr),
+            ):
+                code = scout.main(["--output", str(Path(tmp) / "c.md"), "--max-enrich", "0"])
+            self.assertEqual(code, 1)
+            publication = json.loads(stderr.getvalue())["publication"]
+            self.assertEqual(publication["state"], "not_attempted")
+            self.assertIsNone(publication.get("draft_directory"))
+            self.assertNotIn("draft_cleanup_error", publication)
+            self.assertEqual(list(Path(tmp).glob(".deepxiv-draft-*")), [])
+
+    def test_failed_run_reports_cleanup_error_without_masking_retrieval(self):
+        with tempfile.TemporaryDirectory(prefix="dhls-cleanup-error-") as tmp:
+            stderr = io.StringIO()
+            with (
+                patch.object(scout, "build_reader", side_effect=ImportError("private")),
+                patch.object(Path, "rmdir", side_effect=PermissionError("private cleanup detail")),
+                contextlib.redirect_stderr(stderr),
+            ):
+                code = scout.main(["--output", str(Path(tmp) / "c.md"), "--max-enrich", "0"])
+            self.assertEqual(code, 1)
+            receipt = json.loads(stderr.getvalue())
+            self.assertEqual(receipt["retrieval"]["status"], "error")
+            publication = receipt["publication"]
+            self.assertEqual(publication["state"], "not_attempted")
+            self.assertTrue(Path(publication["draft_directory"]).is_dir())
+            self.assertEqual(
+                publication["draft_cleanup_error"][0]["type"],
+                "builtins.PermissionError",
+            )
+            self.assertNotIn("private cleanup detail", stderr.getvalue())
+            self.assertFalse((Path(tmp) / "c.md").exists())
+
+    def test_cleanup_preserves_nonempty_recovery_stage(self):
+        with tempfile.TemporaryDirectory(prefix="dhls-nonempty-stage-") as tmp:
+            stage = Path(tmp) / "stage"
+            stage.mkdir()
+            evidence = stage / "publish.tmp"
+            evidence.write_text("synthetic recovery evidence", encoding="utf-8")
+            publication = {"draft_directory": str(stage), "draft": None}
+            scout.discard_empty_stage(publication)
+            self.assertEqual(publication["draft_directory"], str(stage))
+            self.assertEqual(evidence.read_text(encoding="utf-8"), "synthetic recovery evidence")
+            self.assertNotIn("draft_cleanup_error", publication)
+
+    def test_cleanup_does_not_remove_nondirectory_path(self):
+        with tempfile.TemporaryDirectory(prefix="dhls-nondirectory-stage-") as tmp:
+            stage = Path(tmp) / "not-a-directory"
+            stage.write_text("synthetic evidence", encoding="utf-8")
+            publication = {"draft_directory": str(stage), "draft": None}
+            with patch.object(Path, "rmdir") as remove:
+                scout.discard_empty_stage(publication)
+            remove.assert_not_called()
+            self.assertEqual(stage.read_text(encoding="utf-8"), "synthetic evidence")
+            self.assertEqual(publication["draft_directory"], str(stage))
+
+    def test_verified_publication_retains_draft_recovery_directory(self):
+        reader = Mock()
+        reader.search.return_value = response()
+        with tempfile.TemporaryDirectory(prefix="dhls-retain-") as tmp:
+            stderr = io.StringIO()
+            with (
+                patch.object(scout, "build_reader", return_value=reader),
+                contextlib.redirect_stderr(stderr),
+            ):
+                code = scout.main(["--output", str(Path(tmp) / "c.md"), "--max-enrich", "0"])
+            self.assertEqual(code, 0)
+            publication = json.loads(stderr.getvalue())["publication"]
+            self.assertEqual(publication["state"], "verified")
+            self.assertEqual(
+                Path(publication["draft_directory"]),
+                Path(publication["draft"]).parent,
+            )
+            self.assertTrue(Path(publication["draft"]).exists())
+
     def test_help_fresh_process_forbids_sdk_import(self):
         code = "import runpy,sys; sys.modules['deepxiv_sdk']=None; sys.argv=[sys.argv[1],'--help']; runpy.run_path(sys.argv[0],run_name='__main__')"
         result = subprocess.run(
@@ -721,6 +800,44 @@ class DeepxivPreprintsScoutTests(unittest.TestCase):
             self.assertEqual(reader.search.call_count, 2)
             self.assertTrue(receipt["cutoff"].endswith("+08:00"))
             self.assertEqual(reader.search.call_args.kwargs["date_from"], start)
+
+    def test_cross_month_cross_year_and_explicit_window_constraints(self):
+        response_raw = response()
+        cases = [
+            ("2026-09-10T10:00:00+08:00", ["--date-from", "2026-08-25", "--date-to", "2026-09-05"], "2026-08-25", "2026-09-05"),
+            ("2027-01-02T10:00:00+08:00", ["--date-from", "2026-12-30", "--date-to", "2027-01-02"], "2026-12-30", "2027-01-02"),
+            ("2027-01-02T10:00:00+08:00", ["--window", "7"], "2026-12-27", "2027-01-02"),
+            ("2027-01-02T10:00:00+08:00", ["--window", "1"], "2027-01-02", "2027-01-02"),
+        ]
+        for frozen, args, start, end in cases:
+            reader = Mock()
+            reader.search.return_value = response_raw
+            with (
+                self.subTest(args=args),
+                patch.object(scout, "current_time", return_value=datetime.fromisoformat(frozen)),
+            ):
+                code, _, _, raw = self.run_candidate(reader, ["--max-enrich", "0", *args])
+                receipt = json.loads(raw)
+                self.assertEqual(code, 0)
+                self.assertEqual((receipt["date_from"], receipt["date_to"]), (start, end))
+                self.assertEqual(reader.search.call_args.kwargs["date_from"], start)
+                self.assertEqual(reader.search.call_args.kwargs["date_to"], end)
+        for invalid in (
+            ["--date-from", "2026-12-30"],
+            ["--date-to", "2027-01-02"],
+            ["--date-from", "2026-12-30", "--date-to", "2027-01-02", "--window", "3"],
+            ["--date-from", "2027-01-03", "--date-to", "2027-01-02"],
+        ):
+            with (
+                self.subTest(args=invalid),
+                patch.object(scout, "current_time", return_value=datetime.fromisoformat("2027-01-02T10:00:00+08:00")),
+                patch.object(scout, "build_reader") as build,
+                contextlib.redirect_stderr(io.StringIO()),
+            ):
+                with self.assertRaises(SystemExit) as caught:
+                    scout.main(invalid)
+                self.assertEqual(caught.exception.code, 2)
+                build.assert_not_called()
 
     def test_scope_and_budget_argument_limits_before_reader(self):
         invalid = [

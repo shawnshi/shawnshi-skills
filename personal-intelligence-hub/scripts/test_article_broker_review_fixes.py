@@ -163,7 +163,8 @@ def test_configured_handoff_grace_frozen_cli(run, monkeypatch, positive, assembl
     assert packet["finalization"]["grace_seconds"] == 900
     assert packet["execution_budget"] == {"max_queries": 3, "max_urls": 4, "max_duration_seconds": 150}
     assert worker["timeout_ms"] == (150 + packet["finalization"]["grace_seconds"]) * 1000
-    assert worker["tool_budget"] == packet["tool_budget"] == {"soft": 8, "hard": 12, "block": "*"}
+    assert worker["tool_budget"] == packet["tool_budget"] == {"soft": 20, "hard": 28, "block": "*"}
+
     assert worker["token_budget"] == packet["usage_budget"]["tokens"] == 150000
     assert worker["cost_budget_usd"] == packet["usage_budget"]["cost_usd"]
     context = frozen_cli(run, request, "context", "--request", str(request), "--gap-id", "tech")

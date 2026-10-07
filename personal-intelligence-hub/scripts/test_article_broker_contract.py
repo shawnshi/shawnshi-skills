@@ -1,4 +1,5 @@
 """Offline protected broker slice: real new frozen runs, no public/network mocks."""
+import json
 import subprocess
 import sys
 from datetime import datetime, timedelta, timezone
@@ -221,6 +222,88 @@ def test_frozen_cli_terminal_reconcile_and_expiry_preserve_hold(new_run):
     manifest = rc.load_manifest(path)
     assert manifest["telemetry"]["reservations"]["supplemental:tech"]["status"] == "held_broker_unmetered"
     assert manifest["telemetry"]["summary"]["reserved_tokens"] == 150000
+
+
+def test_frozen_cli_terminal_decision_closes_a_run_without_any_progress_state(new_run):
+    """AUD-F02 end to end: the broker terminal decision alone settles its gap.
+
+    Every step runs through the run-scoped frozen CLI. No progress-state file is written,
+    because no v3 CLI ever writes one: before this change the run stayed at
+    ``supplemental=running`` with a false running stage and no recovery path.
+    """
+    request_path, _ = request(new_run)
+    path, root, now = new_run
+    snapshot = Path(rc.load_manifest(path)["skill_path"]).parent
+    agent = snapshot / "scripts" / "supplement_agent.py"
+    daily = snapshot / "scripts" / "run_daily.py"
+
+    def cli(script, *argv):
+        return subprocess.run(
+            [sys.executable, "-B", "-X", "utf8", str(script), *argv],
+            cwd=snapshot,
+            capture_output=True,
+            text=True,
+        )
+
+    reserved = cli(
+        agent, "broker-reserve-query", "--request", str(request_path),
+        "--gap-id", "tech", "--parent", "--query", "original release",
+    )
+    assert reserved.returncode == 0, reserved.stderr
+    ledger = rc.load_manifest(path)["article_broker_evidence"]["tech"]
+    reservation_id = ledger["events"][-1]["id"]
+    receipt = root / "error-receipt.json"
+    atomic_dump_json(
+        receipt,
+        {
+            "request_sha256": rc.file_sha256(request_path),
+            "gap_id": "tech",
+            "reservation_id": reservation_id,
+            "tool": "web_search",
+            "query": "original release",
+            "responseId": "response-original-release",
+            "outcome": "error",
+            "error": "provider failed",
+            "results": [],
+            "proof_subset": {"text": "offline public tool response fixture"},
+            "parent_attestation": "actual_public_tool_receipt",
+        },
+    )
+    recorded = cli(
+        agent, "broker-record-query", "--request", str(request_path),
+        "--gap-id", "tech", "--parent", "--receipt", str(receipt),
+    )
+    assert recorded.returncode == 0, recorded.stderr
+    terminal = cli(
+        agent, "broker-terminal", "--request", str(request_path),
+        "--gap-id", "tech", "--parent",
+    )
+    assert terminal.returncode == 0, terminal.stderr
+    ledger = rc.load_manifest(path)["article_broker_evidence"]["tech"]
+    assert ledger["terminal"]["action"] == "terminal_failure"
+    assert ledger["terminal"]["stop_reason"] == "error_search_proof"
+    assert [event["kind"] for event in ledger["events"]] == [
+        "query_reserved",
+        "query_recorded",
+    ]
+
+    # No --progress-state and no drafts exist: the registered decision must be enough.
+    assert not list(root.glob("supplement_tech_progress_state.json"))
+    result = cli(
+        daily, "reconcile-supplement", "--manifest", str(path),
+        "--request", str(request_path),
+    )
+    assert result.returncode == 0, result.stderr
+    aggregate = rc.load_json(root / "supplement_results.json", {})
+    assert aggregate["status"] == "degraded"
+    assert aggregate["results"][0]["status"] == "failed"
+    assert aggregate["results"][0]["failure_kind"] == "infrastructure"
+    assert "broker_terminal:error_search_proof" in aggregate["results"][0]["failure_reason"]
+    assert aggregate["coverage"] == {"attempted": 0, "succeeded": 0, "failed": 0}
+    registered = rc.load_manifest(path)
+    assert registered["stages"]["supplemental"]["status"] == "degraded"
+    held = registered["telemetry"]["reservations"]["supplemental:tech"]
+    assert held["status"] == "held_broker_unmetered"
 
 
 def test_broker_bypass_registration_is_blocked_before_draft_acceptance(new_run):

@@ -8,6 +8,7 @@ from typing import Any
 from periodic_topology import PERIODIC_HEADING_PATTERNS, validate_periodic_topology
 
 
+MAX_AUDIT_BYTES = 2 * 1024 * 1024
 ALLOWED_PERIOD_TYPES = {"daily", "weekly", "monthly", "quarterly", "annual"}
 REQUIRED_HANDOFF_FIELDS = {
     "period_type",
@@ -111,10 +112,15 @@ TASK_REASON_BINDINGS = {
 
 
 def acquisition_semantic_errors(value: str) -> list[str]:
-    fields = {key.casefold(): item.casefold() for key, item in ACQUISITION_VALUE.findall(value)}
-    if len(fields) < len(ACQUISITION_AUDIT_PATTERNS):
-        return []
-    errors = []
+    fields: dict[str, str] = {}
+    errors: list[str] = []
+    for key, item in ACQUISITION_VALUE.findall(value):
+        key = key.casefold()
+        if key in fields:
+            errors.append(f"duplicate acquisition key: {key}")
+        fields[key] = item.casefold()
+    if errors or len(fields) < len(ACQUISITION_AUDIT_PATTERNS):
+        return errors
     eligible = fields["sync_eligible"] == "true"
     attempted = fields["sync_attempted"]
     task_status = fields["task_status"]
@@ -233,7 +239,7 @@ HEALTH_CAUSALITY = re.compile(
     r"(?:疾病|感染|炎症|免疫|认知能力|工作表现|职业表现)"
 )
 SHARED_UPSTREAM_OVERCLAIM = re.compile(
-    r"(?is)(?=.*Body Battery)(?=.*睡眠评分)(?=.*(?:独立证据|双重证据|相互印证|叠加))"
+    r"(?is)\A(?=.*Body Battery)(?=.*睡眠评分)(?=.*(?:独立证据|双重证据|相互印证|叠加))"
 )
 
 HANDOFF_HEADING = re.compile(r"(?im)^#{1,6}\s+Handoff Payload\s*$")
@@ -245,7 +251,11 @@ HANDOFF_JSON_BLOCK = re.compile(
 
 
 def load_text(path: Path) -> str:
-    return path.read_text(encoding="utf-8")
+    with path.open("rb") as handle:
+        raw = handle.read(MAX_AUDIT_BYTES + 1)
+    if len(raw) > MAX_AUDIT_BYTES:
+        raise ValueError(f"Audit file exceeds the {MAX_AUDIT_BYTES}-byte limit")
+    return raw.decode("utf-8")
 
 
 def find_placeholders(text: str) -> list[str]:
@@ -305,9 +315,9 @@ NON_ACTION_FALLBACK_DECLARATION = re.compile(
 
 def has_partial_cloud_fallback(text: str) -> bool:
     clauses = semantic_clauses(text)
-    partial_indexes = [
+    partial_indexes = {
         index for index, clause in enumerate(clauses) if PARTIAL_STATUS.search(clause)
-    ]
+    }
     if not partial_indexes:
         return False
 
@@ -318,7 +328,7 @@ def has_partial_cloud_fallback(text: str) -> bool:
             continue
         if not CLOUD_FALLBACK_ACTION.search(candidate):
             continue
-        if any(abs(index - partial_index) <= 2 for partial_index in partial_indexes):
+        if any(nearby in partial_indexes for nearby in range(index - 2, index + 3)):
             return True
     return False
 
@@ -599,6 +609,8 @@ def extract_handoff_payload(text: str) -> tuple[dict[str, Any] | None, list[str]
         return None, [
             f"Handoff Payload is not valid JSON at line {exc.lineno}, column {exc.colno}"
         ]
+    except RecursionError:
+        return None, ["Handoff Payload exceeds the JSON nesting limit"]
 
     if not isinstance(payload, dict):
         return None, ["Handoff Payload must be a JSON object"]
@@ -612,7 +624,7 @@ def validate_handoff_payload(payload: dict[str, Any]) -> list[str]:
         errors.append("Handoff Payload missing fields: " + ", ".join(missing))
 
     period_type = payload.get("period_type")
-    if period_type not in ALLOWED_PERIOD_TYPES:
+    if not isinstance(period_type, str) or period_type not in ALLOWED_PERIOD_TYPES:
         errors.append(
             "period_type must be one of: " + ", ".join(sorted(ALLOWED_PERIOD_TYPES))
         )
@@ -738,7 +750,7 @@ def main() -> int:
 
     try:
         text = load_text(path)
-    except (OSError, UnicodeError) as exc:
+    except (OSError, ValueError) as exc:
         print(f"[FAIL] unable to read UTF-8 audit: {exc}")
         return 1
 

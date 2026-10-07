@@ -45,7 +45,7 @@
 - 最终报告必须回到原始摘要页或全文核验，不把脚本自动摘要作为论文证据。
 - 输出路径默认当前目录 `Response_Preprints.md`，可用裸文件名或绝对路径；Reader 前解析绝对路径，拒绝已有目标、缺父目录、非法 Windows 路径、UNC/重解析父目录及 `DHLS-*`/`DigitalHealthLecturesScout` 正式目标。候选只能放任务隔离目录，不能指定自定义正式报告路径绕过门禁，无覆盖模式。
 - 文件输出仅 Windows + Python >=3.13 + 已安装 pywin32；其他平台/能力缺失 fail closed，不安装。同父 `mkdtemp` 原生 0700 私有目录，检查 DACL；完整写入/fsync/读回草稿及待发布副本，再用 Windows 原生 no-replace rename，回读内容并校验私有 ACL。不使用共享正式归档器，不把候选私有权限用于正式归档。
-- 私有 `.deepxiv-draft-*` 恢复目录保留，终端给出精确路径；写失败只留草稿/暂存，不写半成品目标；rename 后读回失败可能已有完整候选，终端 error 标明失败范围，不自动删除或回滚竞争目标。文件固定警示 CANDIDATE DRAFT ONLY，内嵌检索状态不代表写入成功；只认终端 publication.state=verified 及匹配 SHA-256。父目录仍须由可信本地用户控制；不承诺抵抗同用户/管理员非合作替换或崩溃后持久性。
+- 私有 `.deepxiv-draft-*` 恢复目录保留，终端给出精确路径；写失败只留草稿/暂存，不写半成品目标；rename 后读回失败可能已有完整候选，终端 error 标明失败范围，不自动删除或回滚竞争目标。在写入任何草稿前即停止的运行会回收自己未写入的空暂存目录（不删草稿），不在输出父目录遗留空 `.deepxiv-draft-*`。文件固定警示 CANDIDATE DRAFT ONLY，内嵌检索状态不代表写入成功；只认终端 publication.state=verified 及匹配 SHA-256。父目录仍须由可信本地用户控制；不承诺抵抗同用户/管理员非合作替换或崩溃后持久性。
 
 ## 回执与失败语义
 

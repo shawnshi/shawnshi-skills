@@ -22,12 +22,13 @@ PLACEHOLDER_RE = re.compile(
 )
 
 
-def structural_lines(content: str) -> list[str]:
+def structural_lines(content: str, errors: list[str] | None = None) -> list[str]:
     """Top-level Markdown subset; preserve line numbers, hide code and comments.
 
     Fences use >=3 backticks/tildes with <=3 spaces indentation; only the same
     character and at least the opening length closes them. Indented code is not
-    structural. This is deliberately not a general Markdown renderer.
+    structural. This is deliberately not a general Markdown renderer. Passing
+    ``errors`` surfaces an unclosed fence instead of only hiding the tail.
     """
     lines = []
     fence = ""
@@ -62,6 +63,8 @@ def structural_lines(content: str) -> list[str]:
             if indent >= 4:
                 break
         lines.append("" if indent >= 4 else line)
+    if fence and errors is not None:
+        errors.append("unclosed fenced code block")
     return lines
 
 
@@ -121,10 +124,14 @@ def validate_report(file_path: Path, period_start: date, period_end: date,
         content = file_path.read_text(encoding="utf-8", errors="strict")
     except (OSError, UnicodeError) as exc:
         return [f"source IO: {exc}"]
+    # Compute visible structure first so an unclosed fence is named even when it
+    # swallows the metadata that would otherwise fail first.
+    lines = structural_lines(content, errors)
     try:
         zone = ZoneInfo(report_timezone)
         if cutoff.utcoffset() is None:
-            return ["cutoff must include timezone"]
+            errors.append("cutoff must include timezone")
+            return errors
         cutoff_date = cutoff.astimezone(zone).date()
         if cutoff > (now or datetime.now(timezone.utc)):
             errors.append("future cutoff")
@@ -147,7 +154,6 @@ def validate_report(file_path: Path, period_start: date, period_end: date,
         return errors + [f"invalid metadata: {exc}"]
     if not allow_custom_filename and file_path.name != f"DHLS-{issue_date:%Y%m%d}.md":
         errors.append("issue filename mismatch")
-    lines = structural_lines(content)
     heading = next((s for s in lines if s.startswith("# ")), "")
     if heading != f"# 医疗数字化文献侦察报告 - {issue_date}":
         errors.append("title issue date mismatch")

@@ -9,6 +9,8 @@ from dashboard_gate import validate_dashboard
 
 
 DEFAULT_MAX_QUOTE_AGE_SECONDS = 72 * 60 * 60
+DERIVED_AUTHORITY = "derived_from_user_policy"
+DERIVED_SCHEMA_VERSION = "pia_position_limits_v1"
 _HALTED_MARKET_STATES = {"HALTED", "SUSPENDED", "DELISTED"}
 _UNKNOWN_MARKET_STATES = {"UNKNOWN", "N/A", "NONE", "NULL"}
 _OBSERVABLE_MARKET_STATES = {
@@ -172,12 +174,80 @@ def _validate_runtime_quote(
     }
 
 
+def load_derived_limits(path: str) -> tuple[dict | None, list[str]]:
+    """Validate a policy-derived position-limits payload.
+
+    The derived class is accepted only from this explicitly supplied file, never
+    from a Dashboard payload, so a Dashboard cannot self-declare a derived bound.
+    Every bound must carry the policy locator and its content SHA-256 plus the
+    arithmetic that produced it.
+    """
+    errors: list[str] = []
+    try:
+        payload = json.loads(Path(path).read_text(encoding="utf-8"))
+    except (OSError, json.JSONDecodeError) as exc:
+        return None, [f"derived limits unreadable: {exc}"]
+    if not isinstance(payload, dict):
+        return None, ["derived limits must be a JSON object"]
+    if payload.get("schema_version") != DERIVED_SCHEMA_VERSION:
+        errors.append(f"derived limits schema_version must be {DERIVED_SCHEMA_VERSION}")
+    if payload.get("decision_scope") != "observation_only":
+        errors.append("derived limits decision_scope must be observation_only")
+    rows = payload.get("positions")
+    if not isinstance(rows, list) or not rows:
+        return payload, errors + ["derived limits requires a non-empty positions list"]
+    for row in rows:
+        if not isinstance(row, dict) or not isinstance(row.get("symbol"), str):
+            errors.append("derived limits position rows require symbol")
+            continue
+        boundaries = row.get("boundaries")
+        if not isinstance(boundaries, list) or not boundaries:
+            errors.append(f"derived limits {row.get('symbol')} requires boundaries")
+            continue
+        for boundary in boundaries:
+            label = f"derived limits {row.get('symbol')}"
+            if not isinstance(boundary, dict):
+                errors.append(f"{label} boundary must be an object")
+                continue
+            boundary_id = boundary.get("boundary_id")
+            label = f"derived limits {row.get('symbol')} {boundary_id}"
+            if boundary.get("authority_status") != DERIVED_AUTHORITY:
+                errors.append(f"{label} authority_status must be {DERIVED_AUTHORITY}")
+            if boundary.get("role") not in {"downside_boundary", "upside_boundary"}:
+                errors.append(f"{label} role must be a boundary role")
+            if boundary.get("operator") not in {"lte", "gte"}:
+                errors.append(f"{label} operator must be lte or gte")
+            value = boundary.get("value")
+            if isinstance(value, bool) or not isinstance(value, (int, float)) or value <= 0:
+                errors.append(f"{label} requires a positive numeric value")
+            locator = boundary.get("source_locator")
+            if not isinstance(locator, str) or not locator.strip():
+                errors.append(f"{label} requires a policy source_locator")
+            digest = boundary.get("content_sha256")
+            if not isinstance(digest, str) or len(digest) != 64:
+                errors.append(f"{label} requires the policy content_sha256")
+            if not isinstance(boundary.get("derivation"), str) or not boundary["derivation"].strip():
+                errors.append(f"{label} requires a derivation string")
+    return payload, errors
+
+
+def _derived_rows_for_symbol(payload: dict | None, symbol: object) -> list[dict]:
+    if not isinstance(payload, dict) or not isinstance(symbol, str):
+        return []
+    wanted = symbol.strip().upper()
+    for row in payload.get("positions") or []:
+        if isinstance(row, dict) and str(row.get("symbol") or "").strip().upper() == wanted:
+            return [b for b in row.get("boundaries") or [] if isinstance(b, dict)]
+    return []
+
+
 def evaluate_watchlist(
     data: dict,
     quote_snapshot: dict | None = None,
     *,
     now: datetime | None = None,
     max_age_seconds: float = DEFAULT_MAX_QUOTE_AGE_SECONDS,
+    derived_limits: dict | None = None,
 ) -> dict:
     """Evaluate user-authorized observation boundaries and fail closed."""
     categories = _empty_categories()
@@ -212,11 +282,30 @@ def evaluate_watchlist(
 
     contract = data.get("monitoring_boundaries")
     if not isinstance(contract, dict):
-        report["status"] = "insufficient_evidence"
-        report["detail_status"] = "thresholds_undefined"
-        report["evaluation_status"] = "thresholds_undefined"
-        categories["thresholds_undefined"].append("monitoring_boundaries")
-        return report
+        if not _derived_rows_for_symbol(derived_limits, data.get("stock_code")):
+            report["status"] = "insufficient_evidence"
+            report["detail_status"] = "thresholds_undefined"
+            report["evaluation_status"] = "thresholds_undefined"
+            categories["thresholds_undefined"].append("monitoring_boundaries")
+            return report
+        # The Dashboard carries no user-confirmed price boundary, but the user's
+        # portfolio policy derives one for this symbol: evaluate that class alone.
+        contract = {
+            "decision_scope": "observation_only",
+            "metric": "regular_market_price",
+            "boundaries": [],
+            "proximity_policy": None,
+        }
+
+    # 接近规则的来源显式化：Dashboard 自带的 user_confirmed proximity_policy 优先；
+    # 缺位时回退到用户风险政策里的显式 ±2%（非默认值）；两者均无时保持 near_rule_undefined。
+    proximity_source = "dashboard" if isinstance(contract.get("proximity_policy"), dict) else None
+    if proximity_source is None and isinstance(derived_limits, dict):
+        policy_proximity = derived_limits.get("proximity_policy")
+        if isinstance(policy_proximity, dict) and isinstance(policy_proximity.get("value"), (int, float)):
+            contract = {**contract, "proximity_policy": policy_proximity}
+            proximity_source = "user_policy"
+    report["proximity_policy_source"] = proximity_source
 
     if (
         not isinstance(max_age_seconds, (int, float))
@@ -239,10 +328,18 @@ def evaluate_watchlist(
         return report
     evaluation_now = evaluation_now.astimezone(timezone.utc)
 
+    derived_rows = _derived_rows_for_symbol(derived_limits, data.get("stock_code"))
+    expected_currency = _expected_quote_currency(contract)
+    if expected_currency is None and derived_rows:
+        currencies = {str(row.get("currency") or "").strip().upper() for row in derived_rows}
+        currencies.discard("")
+        if len(currencies) == 1:
+            expected_currency = next(iter(currencies))
+
     quote_errors, runtime_quote = _validate_runtime_quote(
         quote_snapshot,
         expected_symbol=data["stock_code"],
-        expected_currency=_expected_quote_currency(contract),
+        expected_currency=expected_currency,
         now=evaluation_now,
         max_age_seconds=float(max_age_seconds),
     )
@@ -257,6 +354,16 @@ def evaluate_watchlist(
 
     report["runtime_quote"] = runtime_quote
     current_price = runtime_quote["current_price"]
+    # Code and name travel together: the gate is asked about one instrument, and a
+    # reader must not have to resolve the code elsewhere.
+    instrument_name = data.get("stock_name") if isinstance(data.get("stock_name"), str) else None
+    if instrument_name:
+        report["display_label"] = f"{data.get('stock_code')} {instrument_name.strip()}"
+    report["derived_limits"] = {
+        "status": "not_supplied" if derived_limits is None else "applied",
+        "policy_sha256": None,
+        "evaluations": [],
+    }
 
     proximity = contract.get("proximity_policy")
     proximity_pct = None
@@ -297,6 +404,8 @@ def evaluate_watchlist(
         report["evaluations"].append(
             {
                 "boundary_id": boundary_id,
+                "symbol_name": instrument_name,
+                "display_label": report.get("display_label"),
                 "role": boundary["role"],
                 "status": status,
                 "current_price": current_price,
@@ -311,10 +420,70 @@ def evaluate_watchlist(
             }
         )
 
+    if derived_limits is not None:
+        report["derived_limits"]["policy_sha256"] = (
+            (derived_limits.get("generated_from") or {}).get("policy_sha256"))
+    for boundary in derived_rows:
+        boundary_id = boundary["boundary_id"]
+        boundary_value = float(boundary["value"])
+        operator = boundary["operator"]
+        crossed = (
+            current_price <= boundary_value
+            if operator == "lte"
+            else current_price >= boundary_value
+        )
+        relative_gap = abs(float(current_price) - boundary_value) / boundary_value
+        if crossed:
+            status = "crossed"
+            category = (
+                "downside_boundary_crossed"
+                if boundary["role"] == "downside_boundary"
+                else "upside_boundary_crossed"
+            )
+        elif proximity_pct is not None and relative_gap <= proximity_pct:
+            status = "near"
+            category = "near_boundary"
+        else:
+            status = "not_crossed"
+            category = "not_crossed"
+            if proximity_pct is None:
+                categories["near_rule_undefined"].append(boundary_id)
+        categories[category].append(boundary_id)
+        evaluation = {
+            "boundary_id": boundary_id,
+            "symbol_name": instrument_name,
+            "display_label": report.get("display_label"),
+            "role": boundary["role"],
+            "status": status,
+            "current_price": current_price,
+            "price_as_of": runtime_quote["as_of"],
+            "price_source": runtime_quote["source"],
+            "market_state": runtime_quote["market_state"],
+            "boundary_value": boundary_value,
+            "currency": boundary["currency"],
+            "relative_gap": relative_gap,
+            "source_locator": boundary["source_locator"],
+            "content_sha256": boundary["content_sha256"],
+            "authority_status": DERIVED_AUTHORITY,
+            "basis": boundary.get("basis"),
+            "derivation": boundary["derivation"],
+        }
+        report["evaluations"].append(evaluation)
+        report["derived_limits"]["evaluations"].append({
+            "boundary_id": boundary_id,
+            "status": status,
+            "boundary_value": boundary_value,
+            "basis": boundary.get("basis"),
+            "derivation": boundary["derivation"],
+        })
+
     if categories["insufficient_data"]:
         report["status"] = "insufficient_data"
         report["detail_status"] = "monitoring_boundary_insufficient_data"
         return report
+
+    if not contract.get("boundaries"):
+        report["detail_status"] = "derived_limits_only"
 
     report["status"] = "ok"
     report["detail_status"] = "complete"
@@ -351,6 +520,14 @@ def main() -> int:
         help=(
             "Path to the runtime quote JSON object containing symbol, current_price, "
             "currency, as_of, source, and market_state. Required when boundaries exist."
+        ),
+    )
+    parser.add_argument(
+        "--derived-limits",
+        help=(
+            "Path to a policy-derived position-limits payload "
+            "(authority_status derived_from_user_policy). Evaluated alongside the "
+            "Dashboard's own user-confirmed price boundaries."
         ),
     )
     parser.add_argument(
@@ -398,12 +575,27 @@ def main() -> int:
                     quote_failure=True,
                 )
             else:
-                report = evaluate_watchlist(
-                    payload,
-                    quote_snapshot,
-                    now=evaluation_now,
-                    max_age_seconds=args.max_age_seconds,
-                )
+                derived_payload = None
+                derived_block = {"status": "not_supplied"}
+                if args.derived_limits:
+                    derived_payload, derived_errors = load_derived_limits(args.derived_limits)
+                    if derived_errors:
+                        report = _cli_failure_report(
+                            "derived_limits_invalid",
+                            "; ".join(derived_errors),
+                            quote_failure=False,
+                        )
+                        derived_block = {"status": "invalid"}
+                    else:
+                        derived_block = {"status": "applied"}
+                if derived_block.get("status") != "invalid":
+                    report = evaluate_watchlist(
+                        payload,
+                        quote_snapshot,
+                        now=evaluation_now,
+                        max_age_seconds=args.max_age_seconds,
+                        derived_limits=derived_payload,
+                    )
 
     encoding = getattr(sys.stdout, "encoding", None) or "utf-8"
     message = json.dumps(report, ensure_ascii=False, indent=2)

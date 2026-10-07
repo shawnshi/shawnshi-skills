@@ -1,7 +1,7 @@
 {
   "schema_version": 3,
   "skill": "hit-weekly-brief",
-  "generated_at": "2026-09-24T09:41:50+08:00",
+  "generated_at": "2026-10-02T12:15:35+08:00",
   "hash_algorithm": "SHA-256",
   "text_hash_normalization": "LF",
   "skill_md": "SKILL.md",
@@ -66,7 +66,7 @@
     },
     {
       "path": "references/research-workflow.md",
-      "sha256": "4ea86c9048afe5c99ef526a2a39f7fb1423174f0249e155d1299148019dbb4d8"
+      "sha256": "d7c66b9707b5d887b8375d6dceaed080ca4dc41efd85e25f6e747c33d5076da4"
     },
     {
       "path": "references/template.md",
@@ -74,7 +74,7 @@
     },
     {
       "path": "scripts/test_audit_regressions.py",
-      "sha256": "6bb13a434ea6d01bdbc29a65ff4bbcec4048d656cde6ed934f0e464311bac5ed"
+      "sha256": "56706c8183f7018c8ee972c4445cfbeace366ef78c82d8db24b992e7da131812"
     },
     {
       "path": "scripts/test_validate_weekly_brief.py",
@@ -82,7 +82,7 @@
     },
     {
       "path": "scripts/validate_weekly_brief.py",
-      "sha256": "c5273e76e91e1aef1ff8af600c1df260cf4047eb4bd543b0cedf9c235b2cebff"
+      "sha256": "5fed0882f1a032b5b34587460e6768cc81057055c92f51b2e755f6159f576640"
     }
   ],
   "declared_local_dependencies": [
@@ -96,7 +96,7 @@
       "path": "references/research-workflow.md",
       "exists": true,
       "resolved_path": "hit-weekly-brief/references/research-workflow.md",
-      "sha256": "4ea86c9048afe5c99ef526a2a39f7fb1423174f0249e155d1299148019dbb4d8"
+      "sha256": "d7c66b9707b5d887b8375d6dceaed080ca4dc41efd85e25f6e747c33d5076da4"
     },
     {
       "path": "shared/references/report_archive.md",

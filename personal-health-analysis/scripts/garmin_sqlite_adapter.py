@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """
-@Input:  SQLite database path (default: ~/HealthData/DBs/garmin.db)
+@Input:  SQLite database path (default: ~/.GarminDb/HealthData/DBs/garmin.db)
 @Output: Pandas DataFrame or Standardized JSON for health analysis
 @Pos:    Data Layer. Replaces garmin_data.py with local SQLite access.
 
@@ -17,8 +17,9 @@ from pathlib import Path
 
 import pandas as pd
 
-# Default path for GarminDB SQLite files (Nested within .GarminDb)
-DB_DIR = Path.home() / ".GarminDb"
+# GarminDB 3.9 databases live in the data root, not beside credentials/config.
+# Empty legacy files in the config directory must not shadow populated DBs.
+DB_DIR = Path.home() / ".GarminDb" / "HealthData" / "DBs"
 GARMIN_DB = DB_DIR / "garmin.db"
 MONITORING_DB = DB_DIR / "garmin_monitoring.db"
 ACTIVITIES_DB = DB_DIR / "garmin_activities.db"
@@ -54,6 +55,7 @@ def _candidate_paths(db_path):
         requested,
         Path.home() / ".GarminDb" / "HealthData" / "DBs" / db_name,
         Path.home() / "HealthData" / "DBs" / db_name,
+        Path.home() / ".GarminDb" / db_name,
     ]
 
 
@@ -63,8 +65,12 @@ def resolve_database_path(db_path):
     for candidate in search_paths:
         candidate = Path(candidate).expanduser()
         try:
-            if not candidate.is_file() or candidate.stat().st_size <= 0:
+            try:
+                info = candidate.stat()
+            except FileNotFoundError:
                 continue
+            if not candidate.is_file() or info.st_size <= 0:
+                raise LocalDatabaseReadError("database_probe_failed: invalid database file")
             uri = f"{candidate.resolve().as_uri()}?mode=ro"
             connection = sqlite3.connect(uri, uri=True)
             try:
@@ -73,10 +79,11 @@ def resolve_database_path(db_path):
                 ).fetchall()
             finally:
                 connection.close()
-            if tables:
-                return candidate.resolve()
-        except (OSError, sqlite3.Error):
-            continue
+            if not tables:
+                raise LocalDatabaseReadError("database_probe_failed: database has no tables")
+            return candidate.resolve()
+        except (OSError, sqlite3.Error) as exc:
+            raise LocalDatabaseReadError("database_probe_failed") from exc
     raise FileNotFoundError(
         f"Valid database '{Path(db_path).name}' not found. "
         f"Searched {len(search_paths)} read-only paths."
@@ -223,15 +230,25 @@ def _validated_days(days):
     return days
 
 
-def _window_start(days, include_time=False):
+def _window_end_date(end_date=None):
+    if end_date is None:
+        return datetime.now().date().isoformat()
+    return datetime.strptime(end_date, "%Y-%m-%d").date().isoformat()
+
+
+def _window_start(days, include_time=False, *, end_date=None):
     days = _validated_days(days)
-    start = datetime.now().date() - timedelta(days=days - 1)
+    end = datetime.fromisoformat(_window_end_date(end_date)).date()
+    start = end - timedelta(days=days - 1)
     return f"{start.isoformat()} 00:00:00" if include_time else start.isoformat()
 
 
 def get_connection(db_path):
     """Open the resolved database read-only, honoring an active pinned window."""
-    candidate = resolve_database_path(db_path)
+    pinned = _PINNED_DATABASES.get()
+    name = Path(db_path).name
+    # The window already resolved this path; its exit rechecks all file hashes.
+    candidate = pinned[name] if pinned is not None and name in pinned else resolve_database_path(db_path)
     uri = f"{candidate.as_uri()}?mode=ro"
     return sqlite3.connect(uri, uri=True)
 
@@ -355,10 +372,11 @@ def get_monitoring_hr(days=1):
     finally:
         conn.close()
 
-def get_activities_data(days=30):
+def get_activities_data(days=30, *, end_date=None):
     """Extract activity metrics from the activities table."""
-    start_date = _window_start(days)
-    end_exclusive = (datetime.now() + timedelta(days=1)).strftime('%Y-%m-%d')
+    end_date = _window_end_date(end_date)
+    start_date = _window_start(days, end_date=end_date)
+    end_exclusive = (datetime.fromisoformat(end_date) + timedelta(days=1)).strftime('%Y-%m-%d')
     conn = get_connection(ACTIVITIES_DB)
 
     query = f"""
@@ -392,13 +410,13 @@ def _get_summary_table_name(conn):
         return 'days_summary'
     return None
 
-def get_summary(days=7, fill_missing=True, *, columns=None):
+def get_summary(days=7, fill_missing=True, *, columns=None, end_date=None):
     """
     Extract macro physiological metrics from the summary table.
     Equivalent to the old garmin_data.py summary command.
     """
-    start_date = _window_start(days)
-    end_date = datetime.now().strftime('%Y-%m-%d')
+    end_date = _window_end_date(end_date)
+    start_date = _window_start(days, end_date=end_date)
     end_exclusive = (datetime.fromisoformat(end_date) + timedelta(days=1)).strftime('%Y-%m-%d')
     conn = get_connection(GARMIN_DB)
 
@@ -564,10 +582,10 @@ def get_training_load_data(days=14):
     return frame
 
 
-def get_sleep_data(days=14, fill_missing=True):
+def get_sleep_data(days=14, fill_missing=True, *, end_date=None):
     """Extract detailed sleep metrics."""
-    start_date = _window_start(days)
-    end_date = datetime.now().strftime('%Y-%m-%d')
+    end_date = _window_end_date(end_date)
+    start_date = _window_start(days, end_date=end_date)
     end_exclusive = (datetime.fromisoformat(end_date) + timedelta(days=1)).strftime('%Y-%m-%d')
     conn = get_connection(GARMIN_DB)
 
@@ -686,10 +704,10 @@ def get_biomechanics_data(days=30):
         df = df.where(pd.notnull(df), None)
     return df
 
-def get_hrv_data(days=7, fill_missing=True):
+def get_hrv_data(days=7, fill_missing=True, *, end_date=None):
     """Extract HRV data."""
-    start_date = _window_start(days)
-    end_date = datetime.now().strftime('%Y-%m-%d')
+    end_date = _window_end_date(end_date)
+    start_date = _window_start(days, end_date=end_date)
     end_exclusive = (datetime.fromisoformat(end_date) + timedelta(days=1)).strftime('%Y-%m-%d')
     conn = get_connection(GARMIN_DB)
 

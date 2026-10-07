@@ -416,7 +416,7 @@ def main(argv: list[str] | None = None) -> int:
             rendered = json.dumps(table, ensure_ascii=False, indent=2).encode("utf-8")
             target.write_bytes(rendered)
             print(json.dumps({"status": "complete", "detail_status": "holiday_table_built",
-                              "decision_scope": "research_only", "table": str(target),
+                              "decision_scope": "advisory", "table": str(target),
                               "table_sha256": hashlib.sha256(rendered).hexdigest(),
                               "markets": {market: {year: len(days) for year, days in years.items()}
                                           for market, years in table["markets"].items()},
@@ -448,14 +448,14 @@ def main(argv: list[str] | None = None) -> int:
             table, args.market, datetime.date.fromisoformat(args.start),
             datetime.date.fromisoformat(args.end))
         print(json.dumps({"status": "complete", "detail_status": "closed_days_counted",
-                          "decision_scope": "research_only", "market": args.market.upper(),
+                          "decision_scope": "advisory", "market": args.market.upper(),
                           "start": args.start, "end": args.end,
                           "closed_day_count": count, "closed_days": days},
                          ensure_ascii=False, indent=2))
         return 0
     except (CalendarError, OSError, ValueError) as exc:
         print(json.dumps({"status": "failed", "detail_status": "holiday_calendar_input_invalid",
-                          "decision_scope": "research_only", "errors": [str(exc)]},
+                          "decision_scope": "advisory", "errors": [str(exc)]},
                          ensure_ascii=False, indent=2))
         return 3
 

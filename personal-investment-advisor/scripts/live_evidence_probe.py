@@ -1,5 +1,6 @@
 import argparse
 import json
+import math
 import os
 import re
 import sys
@@ -10,6 +11,7 @@ from urllib.parse import quote
 import requests
 
 from instrument_gate import validate_instrument
+from quote_evidence_contract import select_quote_observation
 
 
 YAHOO_CHART_URL = "https://query1.finance.yahoo.com/v8/finance/chart/{symbol}?range=5d&interval=1d"
@@ -100,11 +102,15 @@ def _exchange_family(value: Any) -> str | None:
 
 
 def _iso_utc(epoch: Any) -> str | None:
+    if isinstance(epoch, bool):
+        return None
     try:
         value = float(epoch)
-    except (TypeError, ValueError):
+        if not math.isfinite(value) or value <= 0:
+            return None
+        return datetime.fromtimestamp(value, tz=timezone.utc).isoformat()
+    except (TypeError, ValueError, OverflowError, OSError):
         return None
-    return datetime.fromtimestamp(value, tz=timezone.utc).isoformat()
 
 
 def _quote_freshness_policy(market_state: Any) -> dict[str, Any]:
@@ -291,18 +297,19 @@ def probe_us_stock(
     chart = chart_results[0]
     quote_meta = chart.get("meta", {})
     quote_symbol = str(quote_meta.get("symbol") or "").upper()
-    quote_time = _iso_utc(quote_meta.get("regularMarketTime"))
     market_state, market_state_source = _resolve_market_state(
         quote_meta, retrieved_at
     )
     freshness_policy = _quote_freshness_policy(market_state)
-    quote_price = quote_meta.get("regularMarketPrice")
+    quote_observation = select_quote_observation({**quote_meta, "marketState": market_state})
+    quote_time = _iso_utc(quote_observation["epoch"])
+    quote_price = quote_observation["price"]
     try:
         quote_price = float(quote_price)
     except (TypeError, ValueError) as exc:
         raise LiveProbeError("Yahoo quote price is missing or non-numeric") from exc
-    if quote_price <= 0:
-        data_errors.append("market price must be positive")
+    if isinstance(quote_observation["price"], bool) or not math.isfinite(quote_price) or quote_price <= 0:
+        data_errors.append("market price must be positive and finite")
     if not quote_time:
         data_errors.append("market price timestamp is missing")
     else:
@@ -487,6 +494,7 @@ def probe_us_stock(
                 "market_state": freshness_policy["market_state"],
                 "market_state_source": market_state_source,
                 "data_timestamp": quote_time,
+                "quote_observation": quote_observation,
                 "freshness_policy": freshness_policy,
             },
             "exchange_identity": {

@@ -4,6 +4,7 @@ import argparse
 import hashlib
 import json
 import os
+import re
 from collections import Counter
 from copy import deepcopy
 from datetime import date, datetime, time
@@ -72,8 +73,21 @@ ITEM_FIELDS = {
     "major_signal_reason",
     "near_term_decision_impact",
     "decision_impact_reason",
+    # AUD-01: accepted here (see OPTIONAL_ITEM_FIELDS) so the frozen readability contract,
+    # which requires this ledger on L3/L4 and near-term-impact items, is satisfiable.
+    "claim_grounding",
 }
 ACTION_FIELDS = {"domain", "task", "owner_type", "trigger", "indicator"}
+# AUD-01 (2026-10-02): the frozen readability contract requires a `claim_grounding`
+# ledger on every L3/L4 or near-term-impact item, and briefing_gate.py binds it at
+# publication, but this whitelist never accepted the field. A conforming agent could
+# therefore only reach the contract by flattening every item to L2, which also removed
+# the major_signal path and with it the independent RedTeam gate. The ledger is now an
+# accepted optional field here and is passed through to the published item.
+OPTIONAL_ITEM_FIELDS = {"claim_grounding"}
+CLAIM_GROUNDING_KINDS = {"number", "policy_status", "causal"}
+CLAIM_GROUNDING_STATUSES = {"grounded", "unverified", "hypothesis"}
+CLAIM_GROUNDING_DIGITS = re.compile(r"[0-9]+(?:[.,][0-9]+)*")
 # F-05: the label used when an item's only event date is the publication date. It is a
 # distinct marker rather than the bare string "published_at", so a publication base can
 # never be mistaken for event evidence, and `major_signal` (which asserts a verified event)
@@ -100,7 +114,8 @@ def _load_packet(
     request_file = Path(request_path).resolve()
     request = load_json(request_file, {})
     if (
-        request.get("contract_version") != "review-request/1.1"
+        not isinstance(request, dict)
+        or request.get("contract_version") != "review-request/1.1"
         or request.get("review_kind") != "semantic"
     ):
         raise RunContractError("semantic review request is invalid")
@@ -561,7 +576,19 @@ def build_agent_context(request_path: str | Path) -> dict[str, Any]:
             "turns_used": f"integer 1..{request['max_turns']}",
             "halt_condition_met": True,
             "action_lever_required_fields": sorted(ACTION_FIELDS),
-            "selected_item_required_fields": sorted(ITEM_FIELDS),
+            "selected_item_required_fields": sorted(ITEM_FIELDS - OPTIONAL_ITEM_FIELDS),
+            "selected_item_optional_fields": sorted(OPTIONAL_ITEM_FIELDS),
+            "claim_grounding_rule": (
+                "Required on every item with intelligence_level L3/L4 or "
+                "near_term_decision_impact=true; omit it on L1/L2 items. Shape: "
+                "{basis: non-empty string naming the registered excerpts used, claims: "
+                "non-empty list of {kind: number|policy_status|causal, statement: "
+                "non-empty string, status: grounded|unverified|hypothesis, value: string "
+                "required for kind=number whose digits must appear in this item's own fact, "
+                "evidence: non-empty string required when status=grounded}}. Only a claim "
+                "readable from the visible excerpt may be grounded; an unconfirmed policy "
+                "status or a cross-item causal sentence must be unverified or hypothesis."
+            ),
             # Field types are declared explicitly: a prose value in a boolean field is the
             # single most common draft rejection (owner-authorized clarity fix 2026-09-14).
             "selected_item_field_types": {
@@ -579,6 +606,7 @@ def build_agent_context(request_path: str | Path) -> dict[str, Any]:
                 "major_signal_reason": "non-empty string",
                 "near_term_decision_impact": "JSON boolean true/false only; never a string, never null. Put the near-term impact prose in decision_impact_reason instead.",
                 "decision_impact_reason": "non-empty string carrying the near-term impact description",
+                "claim_grounding": "optional object; required when intelligence_level is L3/L4 or near_term_decision_impact is true; see claim_grounding_rule",
             },
             "event_identity_exact_fields": sorted(IDENTITY_FIELDS),
             "intelligence_level_allowed": ["L1", "L2", "L3", "L4"],
@@ -598,6 +626,7 @@ def build_agent_context(request_path: str | Path) -> dict[str, Any]:
             "Use one semantic event_identity per selected candidate; event_date and primary_domain must match its registered evidence.",
             "After writing, stop analysis and run finalize_command exactly.",
             "major_signal and near_term_decision_impact must be JSON booleans (true/false); their explanations go in major_signal_reason and decision_impact_reason. A string in either boolean field makes finalize reject the whole draft.",
+            "Every L3/L4 item and every item with near_term_decision_impact=true must also carry claim_grounding as described in dynamic_contract.claim_grounding_rule; omit that key entirely on L1/L2 items.",
         ],
         "finalize_command": deepcopy(packet["agent_helper"]["finalize_command"]),
         "command_consumption": "argv array; subprocess.run(argv, shell=False); never paste joined shell text",
@@ -708,7 +737,41 @@ def _coverage_diagnostics(
         f"missing_access_evidence={reasons['missing_verified_access'] - ownership_excluded}; "
         f"ownership_excluded={ownership_excluded} "
         "(eligibility exclusions, not source-quality rejections)",
-    ] + budget_reasons
+    ] + budget_reasons + _delivery_diagnostics(manifest, ledgers)
+
+
+def _delivery_diagnostics(
+    manifest: dict[str, Any], ledgers: dict[str, Any]
+) -> list[str]:
+    """Disclose parent-authored drafts and registered terminal broker decisions.
+
+    AUD-F01/AUD-F02: both conditions make a degraded run look like an ordinary lane
+    failure, and neither is reconstructible from the lane results alone, so they are
+    recomputed here from the same hash-bound manifest that forge validates against.
+    """
+    reasons: list[str] = []
+    parent_authored = sorted(
+        str(gap_id)
+        for gap_id, receipt in (
+            manifest.get("parent_supplement_finalizations") or {}
+        ).items()
+        if isinstance(receipt, dict)
+    )
+    if parent_authored:
+        reasons.append(
+            "diagnostic/parent-finalized-drafts: "
+            + ", ".join(parent_authored)
+            + " (worker did not deliver a registrable draft; parent authored the final bytes)"
+        )
+    for gap_id in sorted(str(value) for value in ledgers):
+        ledger = ledgers[gap_id]
+        terminal = ledger.get("terminal") if isinstance(ledger, dict) else None
+        if isinstance(terminal, dict):
+            reasons.append(
+                f"diagnostic/broker-terminal {gap_id}: {terminal.get('stop_reason')} "
+                f"({terminal.get('action')}; registered, no retry in this run)"
+            )
+    return reasons
 
 
 def registered_coverage_diagnostics(manifest: dict[str, Any]) -> list[str]:
@@ -893,6 +956,66 @@ def _mix(manifest: dict[str, Any], items: list[dict[str, Any]]) -> dict[str, Any
     return mix
 
 
+def _validate_claim_grounding(review: dict[str, Any], fact: str, index: int) -> None:
+    """Validate the optional AUD-F05 ledger that briefing_gate.py binds at publication.
+
+    The gate remains the final control and keeps its documented behaviour: a missing
+    ledger on an L3/L4 or near-term-impact item is a gate warning, not a hard error, so
+    schema 1.4 stays additive. This mirror only makes a malformed ledger fail here with a
+    fixable message instead of at publish time, and it never adds a requirement the gate
+    does not have.
+    """
+    ledger = review.get("claim_grounding")
+    if ledger is None:
+        return
+    label = f"selected_items[{index}].claim_grounding"
+    if not isinstance(ledger, dict):
+        raise RunContractError(label + " must be an object")
+    unknown = set(ledger) - {"basis", "claims"}
+    if unknown:
+        raise RunContractError(label + " has unsupported keys: " + ", ".join(sorted(unknown)))
+    basis = ledger.get("basis")
+    if not isinstance(basis, str) or not basis.strip():
+        raise RunContractError(label + ".basis is required")
+    claims = ledger.get("claims")
+    if not isinstance(claims, list) or not claims:
+        raise RunContractError(label + ".claims must be a non-empty list")
+    for claim_index, claim in enumerate(claims):
+        path = f"{label}.claims[{claim_index}]"
+        if not isinstance(claim, dict):
+            raise RunContractError(path + " must be an object")
+        unknown = set(claim) - {"kind", "statement", "status", "value", "evidence"}
+        if unknown:
+            raise RunContractError(path + " has unsupported keys: " + ", ".join(sorted(unknown)))
+        kind = claim.get("kind")
+        status = claim.get("status")
+        if kind not in CLAIM_GROUNDING_KINDS:
+            raise RunContractError(path + ".kind is invalid")
+        if status not in CLAIM_GROUNDING_STATUSES:
+            raise RunContractError(path + ".status is invalid")
+        statement = claim.get("statement")
+        if not isinstance(statement, str) or not statement.strip():
+            raise RunContractError(path + ".statement is required")
+        if status == "grounded":
+            evidence = claim.get("evidence")
+            if not isinstance(evidence, str) or not evidence.strip():
+                raise RunContractError(
+                    path
+                    + ".evidence is required; a grounded claim must point at the visible "
+                    "excerpt that supports it"
+                )
+        if kind != "number":
+            continue
+        value = str(claim.get("value") or "").strip()
+        digits = CLAIM_GROUNDING_DIGITS.search(value)
+        if not value or digits is None:
+            raise RunContractError(path + ".value is required")
+        if digits.group() not in fact:
+            raise RunContractError(
+                path + f".value {value!r} is not asserted in this item's fact"
+            )
+
+
 def assemble_and_finalize(
     request_path: str | Path,
     dynamic: dict[str, Any],
@@ -915,8 +1038,14 @@ def assemble_and_finalize(
     seen: set[str] = set()
     final_items: list[dict[str, Any]] = []
     for index, review in enumerate(selected):
-        if not isinstance(review, dict) or set(review) != ITEM_FIELDS:
-            raise RunContractError(f"semantic selected_items[{index}] fields are invalid")
+        if not isinstance(review, dict) or set(review) not in (
+            ITEM_FIELDS,
+            ITEM_FIELDS - OPTIONAL_ITEM_FIELDS,
+        ):
+            raise RunContractError(
+                f"semantic selected_items[{index}] fields are invalid; allowed keys are "
+                f"{sorted(ITEM_FIELDS)} with optional {sorted(OPTIONAL_ITEM_FIELDS)}"
+            )
         candidate_id = str(review.get("candidate_id") or "")
         if candidate_id in seen or candidate_id not in eligible:
             raise RunContractError(f"semantic selected_items[{index}] candidate_id is invalid")
@@ -946,6 +1075,8 @@ def assemble_and_finalize(
             raise RunContractError(f"semantic selected_items[{index}] signal flags must be boolean")
         major_reason = _nonempty(review.get("major_signal_reason"), f"selected_items[{index}].major_signal_reason")
         decision_reason = _nonempty(review.get("decision_impact_reason"), f"selected_items[{index}].decision_impact_reason")
+        fact = _nonempty(review.get("fact"), f"selected_items[{index}].fact")
+        _validate_claim_grounding(review, fact, index)
         item = {
             "event_id": event_id,
             "event_identity": deepcopy(identity),
@@ -969,7 +1100,7 @@ def assemble_and_finalize(
             "major_signal_reason": major_reason,
             "near_term_decision_impact": near_term,
             "decision_impact_reason": decision_reason,
-            "fact": _nonempty(review.get("fact"), f"selected_items[{index}].fact"),
+            "fact": fact,
             "connection": _nonempty(review.get("connection"), f"selected_items[{index}].connection"),
             "deduction": _nonempty(review.get("deduction"), f"selected_items[{index}].deduction"),
             "actionability": _nonempty(review.get("actionability"), f"selected_items[{index}].actionability"),
@@ -978,6 +1109,10 @@ def assemble_and_finalize(
             "corroboration_status": candidate["corroboration_status"],
             "summary_zh": _nonempty(review.get("summary_zh"), f"selected_items[{index}].summary_zh"),
         }
+        if isinstance(review.get("claim_grounding"), dict):
+            # AUD-01: pass the validated ledger through to the published item so
+            # briefing_gate.py can bind it exactly as the frozen contract requires.
+            item["claim_grounding"] = deepcopy(review["claim_grounding"])
         if (
             item["major_signal"] is True
             and candidate["event_date_source"] == PUBLICATION_BASE_EVENT_DATE

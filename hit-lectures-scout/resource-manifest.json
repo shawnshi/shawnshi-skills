@@ -1,7 +1,7 @@
 {
   "schema_version": 3,
   "skill": "hit-lectures-scout",
-  "generated_at": "2026-09-26T17:37:42+08:00",
+  "generated_at": "2026-10-02T12:33:39+08:00",
   "hash_algorithm": "SHA-256",
   "text_hash_normalization": "LF",
   "skill_md": "SKILL.md",
@@ -37,7 +37,7 @@
   "resource_file_hashes": [
     {
       "path": "assets/deepxiv_preprints_scout.py",
-      "sha256": "0135547cf6c186402af5912df7454cba1f0ff44426e9d8bcaf0cea2b1c83a212"
+      "sha256": "b8e99a87d04971f99147a7ed0e30f58cac8e41282766f6ed045c18d1cb2cfe5b"
     },
     {
       "path": "assets/report_template.md",
@@ -53,7 +53,7 @@
     },
     {
       "path": "assets/task_preprints.md",
-      "sha256": "a1abbde90a9396fd0606c1c88d4c3535c7d4dbc4cb272344e7414ac805c48fc0"
+      "sha256": "64027d8fbf72ff7ae7c15844dca72d1e0a54c1e3479374aa3e0550e6c54df3c3"
     },
     {
       "path": "assets/task_preprints_fallback.md",
@@ -61,19 +61,19 @@
     },
     {
       "path": "references/formal-report.md",
-      "sha256": "c7f43817d75987763f1a1b574eccdde47fd4db049ca20d7f7abad2036433fef5"
+      "sha256": "8951cd261bdc3fc50f0d5c9455d88fab87e5695fb0ecd8ac7ec4fd2c3f39bf69"
     },
     {
       "path": "scripts/test_deepxiv_preprints_scout.py",
-      "sha256": "3928a5a4ab552febad629878b50d348575bf4a74c4702c3f0e34f1a934fd11b0"
+      "sha256": "3d5038b666da5f189ea84bba00fc082148a1d1d6f7c24cc9ef9898c4ed6bb571"
     },
     {
       "path": "scripts/test_validate_lectures_scout.py",
-      "sha256": "0287897b05f13ddd7f53d3ecc75e7294e30077b8493cb99b3126e14cc6dcda55"
+      "sha256": "a44433188d7f93c024524e27574fe1480bebbfc2993d973e7d72982d65ea707c"
     },
     {
       "path": "scripts/validate_lectures_scout.py",
-      "sha256": "7c083ad663471defa01ea2247a79a44a83fc18ddc71a7ce7481253370ede132d"
+      "sha256": "08f9d66327206bceece83d41c7d0dfd58a46d2b2d59e35a3e2dd1753dadf1ad6"
     }
   ],
   "declared_local_dependencies": [
@@ -81,7 +81,7 @@
       "path": "assets/deepxiv_preprints_scout.py",
       "exists": true,
       "resolved_path": "hit-lectures-scout/assets/deepxiv_preprints_scout.py",
-      "sha256": "0135547cf6c186402af5912df7454cba1f0ff44426e9d8bcaf0cea2b1c83a212"
+      "sha256": "b8e99a87d04971f99147a7ed0e30f58cac8e41282766f6ed045c18d1cb2cfe5b"
     },
     {
       "path": "assets/report_template.md",
@@ -105,13 +105,13 @@
       "path": "assets/task_preprints.md",
       "exists": true,
       "resolved_path": "hit-lectures-scout/assets/task_preprints.md",
-      "sha256": "a1abbde90a9396fd0606c1c88d4c3535c7d4dbc4cb272344e7414ac805c48fc0"
+      "sha256": "64027d8fbf72ff7ae7c15844dca72d1e0a54c1e3479374aa3e0550e6c54df3c3"
     },
     {
       "path": "references/formal-report.md",
       "exists": true,
       "resolved_path": "hit-lectures-scout/references/formal-report.md",
-      "sha256": "c7f43817d75987763f1a1b574eccdde47fd4db049ca20d7f7abad2036433fef5"
+      "sha256": "8951cd261bdc3fc50f0d5c9455d88fab87e5695fb0ecd8ac7ec4fd2c3f39bf69"
     },
     {
       "path": "shared/references/report_archive.md",

@@ -452,6 +452,108 @@ def _validate_v11_data(
     return errors, warnings
 
 
+# AUD-F05: proportion and money amounts are the claims that carried the unverified
+# inference in the audited run, so those are the ones the ledger has to bind or label;
+# a bare year or list index is not a factual assertion that needs its own evidence row.
+_CLAIM_GROUNDING_MONEY = re.compile(
+    r"(?<![0-9])(?:[0-9]+(?:[.,][0-9]+)*)[ \t]*"
+    r"(?:%|％|个百分点|亿美元|万美元|亿元|万元|billion|million|bn|mn)"
+    r"|\$[ \t]*[0-9]+(?:[.,][0-9]+)*",
+    re.IGNORECASE,
+)
+_CLAIM_GROUNDING_DIGITS = re.compile(r"[0-9]+(?:[.,][0-9]+)*")
+_CLAIM_GROUNDING_KINDS = {"number", "policy_status", "causal"}
+_CLAIM_GROUNDING_STATUSES = {"grounded", "unverified", "hypothesis"}
+_CLAIM_GROUNDING_BINDING_REQUIRED = {"L3", "L4"}
+
+
+def _claim_grounding_digit_tokens(text: str) -> set[str]:
+    tokens: set[str] = set()
+    for match in _CLAIM_GROUNDING_MONEY.finditer(text):
+        digits = _CLAIM_GROUNDING_DIGITS.search(match.group())
+        if digits:
+            tokens.add(digits.group())
+    return tokens
+
+
+def _validate_claim_grounding(
+    items: list[Any], errors: list[str], warnings: list[str], is_v14: bool
+) -> None:
+    """Bind asserted numbers, policy status and causal claims to visible evidence.
+
+    The ledger is deliberately not a quality score or a self-reported pass flag. The gate
+    recomputes two things it can decide deterministically: a ledger entry may not name a
+    number the item does not assert, and a number the item does assert must either carry a
+    binding or be labelled unverified. An item that asserts a proportion or an amount and
+    carries no ledger at all is disclosed as a warning rather than silently accepted.
+    """
+    if not is_v14:
+        return
+    for index, item in enumerate(items):
+        if not isinstance(item, dict):
+            continue
+        path = f"$.top_10[{index}]"
+        ledger = item.get("claim_grounding")
+        fact = str(item.get("fact") or "")
+        if ledger is None:
+            if (
+                item.get("intelligence_level") in _CLAIM_GROUNDING_BINDING_REQUIRED
+                or item.get("near_term_decision_impact") is True
+            ):
+                warnings.append(
+                    f"{path}.claim_grounding is missing; asserted numbers, policy status "
+                    "and cross-item causal claims are not bound to the visible evidence"
+                )
+            continue
+        if not isinstance(ledger, dict) or not _non_empty(ledger.get("basis")):
+            errors.append(f"{path}.claim_grounding.basis is required")
+            continue
+        claims = ledger.get("claims")
+        if not isinstance(claims, list) or not claims:
+            errors.append(f"{path}.claim_grounding.claims must be a non-empty list")
+            continue
+        bound: set[str] = set()
+        for claim_index, claim in enumerate(claims):
+            claim_path = f"{path}.claim_grounding.claims[{claim_index}]"
+            if not isinstance(claim, dict):
+                errors.append(f"{claim_path} must be an object")
+                continue
+            kind = claim.get("kind")
+            status = claim.get("status")
+            if kind not in _CLAIM_GROUNDING_KINDS:
+                errors.append(f"{claim_path}.kind is invalid")
+                continue
+            if status not in _CLAIM_GROUNDING_STATUSES:
+                errors.append(f"{claim_path}.status is invalid")
+                continue
+            if not _non_empty(claim.get("statement")):
+                errors.append(f"{claim_path}.statement is required")
+            # Only an explicitly grounded claim carries the weight of settled evidence, so
+            # only that status has to show the excerpt span that supports it.
+            if status == "grounded" and not _non_empty(claim.get("evidence")):
+                errors.append(
+                    f"{claim_path}.evidence is required; a grounded claim must point at "
+                    "the visible excerpt that supports it"
+                )
+            if kind != "number":
+                continue
+            value = str(claim.get("value") or "").strip()
+            digits = _CLAIM_GROUNDING_DIGITS.search(value)
+            if not value or not digits:
+                errors.append(f"{claim_path}.value is required")
+                continue
+            if digits.group() not in fact:
+                errors.append(
+                    f"{claim_path}.value {value!r} is not asserted in this item's fact"
+                )
+                continue
+            bound.add(digits.group())
+        for token in sorted(_claim_grounding_digit_tokens(fact) - bound):
+            warnings.append(
+                f"{path}.claim_grounding does not bind asserted number {token!r} in fact"
+            )
+
+
 def _aware_datetime(value: Any) -> datetime | None:
     try:
         parsed = datetime.fromisoformat(str(value).replace("Z", "+00:00"))
@@ -1055,6 +1157,7 @@ def _validate_v12_data(
         errors=errors,
         schema=schema,
     )
+    _validate_claim_grounding(items, errors, warnings, is_v14)
     unresolved = _find_unresolved(data)
     if unresolved:
         errors.append("unresolved template value at: " + ", ".join(unresolved[:10]))
@@ -1117,10 +1220,6 @@ def main() -> int:
         return 1
     print("[PASS] briefing schema validation passed")
     return 0
-
-
-if __name__ == "__main__":
-    raise SystemExit(main())
 
 
 def _validate_identity_uniqueness(
@@ -1667,4 +1766,10 @@ def _validate_v14_data_gaps(
             for field in schema["required_gap_fields"]:
                 if not _non_empty(gap.get(field)):
                     errors.append(f"missing data_gaps[{index}].{field}")
+
+
+# The entrypoint stays last: several validators below are defined after this point, so a guard
+# placed mid-file made `python briefing_gate.py <file>` raise NameError on the first call.
+if __name__ == "__main__":
+    raise SystemExit(main())
 

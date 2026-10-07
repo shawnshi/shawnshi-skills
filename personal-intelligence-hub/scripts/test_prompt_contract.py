@@ -118,8 +118,10 @@ class PromptContractTests(unittest.TestCase):
             policy["observability"]["supplement_finalization_grace_seconds"],
             900,  # owner-authorized 2026-09-22: wall-clock grace raised from 300s
         )
-        self.assertEqual(policy["observability"]["supplement_tool_budget_soft"], 8)
-        self.assertEqual(policy["observability"]["supplement_tool_budget_hard"], 12)
+        self.assertEqual(policy["observability"]["supplement_tool_budget_soft"], 20)
+
+        self.assertEqual(policy["observability"]["supplement_tool_budget_hard"], 28)
+
         self.assertIsNone(policy["observability"]["normal_run_cost_usd_ceiling"])
         self.assertIn(
             "session_telemetry.py",
@@ -362,6 +364,75 @@ class PromptContractTests(unittest.TestCase):
             "failure_kind=infrastructure",
             config["common_contract"]["infrastructure_failure_rule"],
         )
+
+    def test_dynamic_draft_ownership_and_optional_progress_are_unambiguous(self):
+        config = json.loads((ROOT / "references" / "subagent_prompts.json").read_text(encoding="utf-8"))
+        self.assertIn("event_id 由确定性 assembler", config["common_contract"]["identity_rule"])
+        delivery = config["common_contract"]["delivery_rule"]
+        self.assertIn("零 query/access/candidate 证据", delivery)
+        self.assertIn("不替代草稿", delivery)
+        for role in config["supplement_agents"].values():
+            self.assertIn("event_id 由确定性 helper 生成", role["system_prompt"])
+        prompt = config["review_agents"]["SemanticEvaluator"]["system_prompt"]
+        self.assertIn("可选、非阻塞", prompt)
+        self.assertIn("立即运行 agent_helper.finalize_command", prompt)
+        self.assertNotIn("通过 contact_supervisor 发送 review_progress", prompt)
+
+    def test_audit_f01_f03_delivery_and_waiting_rules_are_declared(self):
+        """AUD-F01/AUD-F03: process exit is not delivery, and children must not poll."""
+        config = json.loads(
+            (ROOT / "references" / "subagent_prompts.json").read_text(encoding="utf-8")
+        )
+        delivery = config["common_contract"]["delivery_rule"]
+        self.assertIn("不等于业务完成", delivery)
+        self.assertIn("draft_ready", delivery)
+        self.assertIn("基础设施失败", delivery)
+        waiting = config["common_contract"]["waiting_rule"]
+        self.assertIn("禁止轮询", waiting)
+        self.assertIn("contact_supervisor", waiting)
+        # The parent must own the broker sequence, so the status rule keeps the platform
+        # parallel capacity without turning it into a delivery target.
+        self.assertEqual(
+            config["execution_policy"]["parallelism"]["canary_workers"], 1
+        )
+        self.assertTrue(
+            config["execution_policy"]["parallelism"][
+                "stop_fanout_on_canary_infrastructure_failure"
+            ]
+        )
+
+    def test_audit_f05_claim_grounding_is_declared_and_registered(self):
+        """AUD-F05: numbers, policy status and causal claims need a visible-evidence ledger."""
+        config = json.loads(
+            (ROOT / "references" / "subagent_prompts.json").read_text(encoding="utf-8")
+        )
+        grounding = config["review_agents"]["SemanticEvaluator"][
+            "readability_contract"
+        ]["claim_grounding"]
+        for token in ("claim_grounding", "hypothesis", "unverified"):
+            self.assertIn(token, grounding)
+        schema = json.loads(
+            (ROOT / "references" / "briefing_schema.json").read_text(encoding="utf-8")
+        )
+        self.assertIn("claim_grounding", schema["optional_item_fields"])
+        self.assertEqual(
+            schema["claim_grounding"]["statuses"],
+            ["grounded", "unverified", "hypothesis"],
+        )
+        refine = (ROOT / "references" / "prompts" / "v1_refine_system.md").read_text(
+            encoding="utf-8"
+        )
+        self.assertIn("claim_grounding", refine)
+
+    def test_audit_f02_terminal_registration_is_protocolled(self):
+        """AUD-F02: the terminal decision is registered and settled in the same turn."""
+        protocol = (ROOT / "references" / "workflow_protocols.md").read_text(
+            encoding="utf-8"
+        )
+        self.assertIn("broker-terminal", protocol)
+        self.assertIn("supplemental=running", protocol)
+        self.assertIn("diagnostic/broker-terminal", protocol)
+        self.assertIn("diagnostic/parent-finalized-drafts", protocol)
 
 
 if __name__ == "__main__":

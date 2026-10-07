@@ -24,11 +24,13 @@ from portfolio_loader import (
     normalize_symbol,
 )
 from rebalance_optimizer import run_inverse_volatility_experiment
+from market_calendar import CalendarError, load_table
 from quote_evidence_contract import (
     MAX_QUOTE_FUTURE_SKEW_SECONDS,
     build_portfolio_snapshot_binding,
     canonical_json_binding,
     quote_freshness_policy,
+    select_quote_observation,
 )
 
 
@@ -65,7 +67,7 @@ def _parse_aware_iso(value: Any) -> datetime | None:
 def _base_report(
     filepath: str | None,
     quotes_file: str | None,
-    decision_scope: str = "research_only",
+    decision_scope: str = "advisory",
 ) -> dict[str, Any]:
     if decision_scope not in ("research_only", "advisory", "actionable"):
         decision_scope = "research_only"
@@ -141,6 +143,29 @@ def _stage_status(report: dict[str, Any], stage_name: str) -> str | None:
     return status if isinstance(status, str) else None
 
 
+def _consumer_quote_freshness(snapshot, position, quote_package, consumer_epoch, holiday_table):
+    """Recompute an opt-in extension from verified calendar and bound source data."""
+    extension = {"applied": False}
+    seconds = 0
+    if holiday_table is not None and str(snapshot.get("market_state") or "").upper() == "CLOSED":
+        from yf import _holiday_extension
+        records = quote_package.get("records", []) if isinstance(quote_package, dict) else []
+        records = records if isinstance(records, list) else []
+        matches = [row for row in records if isinstance(row, dict)
+                   and normalize_symbol(row.get("symbol") or "") == snapshot.get("symbol")]
+        source_info = matches[0].get("info", {}) if len(matches) == 1 else {}
+        as_of = _parse_aware_iso(snapshot.get("as_of"))
+        legacy_regular = snapshot.get("quote_observation") is None
+        source_epoch = _finite_number(select_quote_observation(source_info, legacy_regular=legacy_regular)["epoch"]) if isinstance(source_info, dict) else None
+        if (as_of is not None and source_epoch is not None
+                and abs(as_of.timestamp() - source_epoch) <= 1.0
+                and str(source_info.get("marketState") or "").upper() == "CLOSED"):
+            extension, seconds = _holiday_extension(holiday_table, position, source_info, consumer_epoch, legacy_regular=legacy_regular)
+        else:
+            extension = {"applied": False, "reason": "calendar_source_quote_not_bound"}
+    return quote_freshness_policy(snapshot.get("market_state"), holiday_extension_seconds=seconds), extension
+
+
 def _validate_daily_sync_report(
     payload: Any,
     *,
@@ -149,6 +174,7 @@ def _validate_daily_sync_report(
     consumer_epoch: float,
     max_report_age_seconds: int,
     current_portfolio_binding: dict[str, Any],
+    holiday_table: dict[str, Any] | None = None,
 ) -> tuple[dict[str, dict[str, Any]], list[str]]:
     """Validate the offline Daily Sync result without trusting its top status.
 
@@ -185,6 +211,7 @@ def _validate_daily_sync_report(
     if bindings.get("portfolio_snapshot") != current_portfolio_binding:
         errors.append("daily_sync_report portfolio snapshot binding does not match current holdings")
 
+    current_quote_package = None
     report_quote_path = (
         (payload.get("inputs") or {}).get("quotes_file")
         if isinstance(payload.get("inputs"), dict)
@@ -273,7 +300,7 @@ def _validate_daily_sync_report(
         if symbol in by_symbol:
             errors.append(f"daily_sync_report contains duplicate quote for {symbol}")
             continue
-        by_symbol[symbol] = snapshot
+        by_symbol[symbol] = dict(snapshot)
     if set(by_symbol) != expected_symbols:
         missing = sorted(expected_symbols - set(by_symbol))
         extra = sorted(set(by_symbol) - expected_symbols)
@@ -294,6 +321,43 @@ def _validate_daily_sync_report(
     for symbol, snapshot in by_symbol.items():
         position = expected_positions.get(symbol, {})
         price = _finite_number(snapshot.get("current_price"))
+        if isinstance(current_quote_package, list):
+            raw_records = current_quote_package
+        elif isinstance(current_quote_package, dict):
+            raw_records = current_quote_package.get("records", [])
+        else:
+            raw_records = []
+        if not isinstance(raw_records, list):
+            raw_records = []
+        matches = [row for row in raw_records if isinstance(row, dict) and normalize_symbol(row.get("symbol") or "") == symbol]
+        source_info = matches[0].get("info") if len(matches) == 1 else None
+        legacy_regular = snapshot.get("quote_observation") is None
+        selected = select_quote_observation(source_info, legacy_regular=legacy_regular) if isinstance(source_info, dict) else None
+        if selected is None:
+            errors.append(f"{symbol}: source observation is missing or ambiguous")
+        else:
+            if not legacy_regular:
+                if snapshot.get("quote_observation") != selected:
+                    errors.append(f"{symbol}: quote observation is not bound to source fields")
+                from yf import MAX_QUOTE_AGE_SECONDS, _quote_contract_report
+                source_contract = _quote_contract_report(
+                    matches[0], position, now_epoch=consumer_epoch,
+                    max_quote_age_seconds=MAX_QUOTE_AGE_SECONDS,
+                    holiday_table=holiday_table,
+                )
+                if source_contract["status"] != "matched":
+                    errors.extend(f"{symbol}: source quote {error}" for error in source_contract["errors"])
+            if snapshot.get("market_state") != source_info.get("marketState"):
+                errors.append(f"{symbol}: market state does not match source observation")
+            if str(source_info.get("currency") or "").upper() != str(snapshot.get("currency") or "").upper():
+                errors.append(f"{symbol}: quote currency does not match source observation")
+            source_price = _finite_number(selected.get("price"))
+            source_epoch = _finite_number(selected.get("epoch"))
+            as_of = _parse_aware_iso(snapshot.get("as_of"))
+            if source_price is None or price != source_price:
+                errors.append(f"{symbol}: selected price does not match source observation")
+            if source_epoch is None or as_of is None or abs(as_of.timestamp()-source_epoch) > 0.000001:
+                errors.append(f"{symbol}: selected timestamp does not match source observation")
         if price is None or price <= 0:
             errors.append(f"{symbol}: current_price must be positive and finite")
         if snapshot.get("identity_status") != "matched":
@@ -331,7 +395,10 @@ def _validate_daily_sync_report(
             if abs(recomputed_age - quote_age) > 1.0:
                 errors.append(f"{symbol}: quote age is not bound to evaluation_epoch")
         market_state = snapshot.get("market_state")
-        freshness = quote_freshness_policy(market_state)
+        freshness, extension = _consumer_quote_freshness(
+            snapshot, position, current_quote_package, consumer_epoch, holiday_table)
+        snapshot["consumer_freshness_policy"] = freshness
+        snapshot["consumer_holiday_extension"] = extension
         if not isinstance(market_state, str) or not market_state.strip():
             errors.append(f"{symbol}: quote market_state is missing")
         elif freshness.get("applied_max_age_seconds") is None:
@@ -434,6 +501,7 @@ def recalculate_all_weights(
     policy_file: str | None = None,
     now_epoch: float | None = None,
     max_report_age_seconds: int = MAX_DAILY_SYNC_REPORT_AGE_SECONDS,
+    holiday_calendar_file: str | None = None,
 ) -> dict[str, Any]:
     """Calculate current weights without fetching data or mutating holdings."""
 
@@ -464,6 +532,15 @@ def recalculate_all_weights(
         "explicit_point_in_time_replay" if explicit_replay else "current_runtime"
     )
     report["max_daily_sync_report_age_seconds"] = float(max_report_age_seconds)
+    holiday_table = None
+    if holiday_calendar_file:
+        try:
+            calendar_path = Path(holiday_calendar_file).expanduser().resolve()
+            holiday_table = load_table(calendar_path)
+        except (CalendarError, OSError, ValueError) as exc:
+            return _fail(report, "holiday_calendar_invalid", [str(exc)], status="invalid_input")
+        report["inputs"]["holiday_calendar_file"] = str(calendar_path)
+        report["holiday_calendar_binding"] = canonical_json_binding(holiday_table)
     if not filepath:
         return _fail(
             report,
@@ -567,6 +644,7 @@ def recalculate_all_weights(
             consumer_epoch=consumer_epoch,
             max_report_age_seconds=int(max_report_age_seconds),
             current_portfolio_binding=current_portfolio_binding,
+            holiday_table=holiday_table,
         )
         if quote_errors:
             return _fail(
@@ -607,6 +685,9 @@ def recalculate_all_weights(
                 "source": snapshot.get("source"),
                 "source_locator": snapshot.get("source_locator"),
                 "market_state": snapshot.get("market_state"),
+                "quote_observation": snapshot.get("quote_observation"),
+                "freshness_policy": snapshot.get("consumer_freshness_policy"),
+                "holiday_extension": snapshot.get("consumer_holiday_extension"),
             }
         market_value = quantity * price * float(fx["rate"])
         rows.append(
@@ -723,6 +804,7 @@ def main() -> int:
         help="Path to the validated JSON report emitted by daily_sync.py.",
     )
     parser.add_argument("--policy-file")
+    parser.add_argument("--holiday-calendar-file", help="Opt-in exchange-sourced calendar, independently verified at consumption.")
     parser.add_argument(
         "--as-of-epoch",
         type=float,
@@ -737,6 +819,7 @@ def main() -> int:
         quotes_file=args.quotes_file,
         policy_file=args.policy_file,
         now_epoch=args.as_of_epoch,
+        holiday_calendar_file=args.holiday_calendar_file,
     )
     print(json.dumps(report, ensure_ascii=False, indent=2, sort_keys=True))
     return 0 if report["status"] == "complete" else 1

@@ -14,6 +14,7 @@ from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any, Dict, List, Optional, Tuple
 
+import instrument_labels
 from portfolio_loader import is_cash_position, load_positions, normalize_symbol
 from yf import (
     MAX_QUOTE_AGE_SECONDS,
@@ -23,6 +24,7 @@ from yf import (
 from quote_evidence_contract import (
     build_portfolio_snapshot_binding,
     canonical_json_binding,
+    select_quote_observation,
 )
 from thesis_evidence_gate import evaluate_thesis_evidence
 from market_calendar import CalendarError, load_table
@@ -49,7 +51,7 @@ def _base_report(
     quotes_file: Optional[str],
     thesis_evidence_file: Optional[str],
     now_epoch: Optional[float],
-    decision_scope: str = "research_only",
+    decision_scope: str = "advisory",
 ) -> Dict[str, Any]:
     if decision_scope not in ("research_only", "advisory", "actionable"):
         decision_scope = "research_only"
@@ -108,6 +110,7 @@ def _base_report(
             "thesis_evidence": None,
         },
         "supplied_portfolio_batch_audit": None,
+        "supplied_provider_receipt": None,
         "recomputed_portfolio_batch_audit": None,
         "thesis_red_team": _thesis_not_assessed(),
         "errors": [],
@@ -129,15 +132,17 @@ def _read_json(path: str, label: str) -> Any:
         ) from exc
 
 
-def _normalize_quote_package(payload: Any) -> Tuple[List[Dict[str, Any]], Optional[Dict[str, Any]], List[str], List[str]]:
+def _normalize_quote_package(payload: Any) -> Tuple[List[Dict[str, Any]], Optional[Dict[str, Any]], Optional[Dict[str, Any]], List[str], List[str]]:
     warnings: List[str] = []
     errors: List[str] = []
     records: Any = None
     audit: Any = None
+    provider_receipt: Any = None
 
     if isinstance(payload, dict):
         records = payload.get("records")
         audit = payload.get("portfolio_batch_audit")
+        provider_receipt = payload.get("provider_receipt")
         has_inline_audit = any(
             "portfolio_batch_audit" in record
             for record in records or []
@@ -158,7 +163,10 @@ def _normalize_quote_package(payload: Any) -> Tuple[List[Dict[str, Any]], Option
         if "missing_portfolio_batch_audit" not in errors:
             errors.append("missing_portfolio_batch_audit")
         audit = None
-    return records, audit, warnings, errors
+    if provider_receipt is not None and not isinstance(provider_receipt, dict):
+        warnings.append("provider_receipt_must_be_an_object")
+        provider_receipt = None
+    return records, audit, provider_receipt, warnings, errors
 
 
 def _positive_number(value: Any) -> Optional[float]:
@@ -181,9 +189,11 @@ def _record_price(record: Dict[str, Any]) -> Optional[float]:
         else {}
     )
     summary = record.get("summary") if isinstance(record.get("summary"), dict) else {}
+    observation = select_quote_observation(info)
+    if observation["session"] != "REGULAR":
+        return _positive_number(observation["price"])
     for value in (
-        info.get("regularMarketPrice"),
-        info.get("currentPrice"),
+        observation["price"],
         context.get("current_price"),
         summary.get("last_close"),
     ):
@@ -294,6 +304,7 @@ def _build_quote_snapshot(
             item[0],
         )
     )
+    symbol_name_map = instrument_labels.symbol_name_map(expected_positions)
     snapshots: List[Dict[str, Any]] = []
     for _, record in indexed_records:
         symbol = normalize_symbol(record.get("symbol") or "")
@@ -304,11 +315,20 @@ def _build_quote_snapshot(
             else {}
         )
         position = expected_positions.get(symbol, {})
-        quote_epoch = _positive_number(info.get("regularMarketTime"))
+        observation = select_quote_observation(info)
+        quote_epoch = _positive_number(observation["epoch"])
         failures = list(contract_failures.get(symbol, []))
+        provenance = (
+            record.get("quote_provenance")
+            if isinstance(record.get("quote_provenance"), dict)
+            else {}
+        )
         snapshots.append(
             {
                 "symbol": symbol or str(record.get("query") or "UNKNOWN"),
+                instrument_labels.NAME_FIELD: position.get("name"),
+                instrument_labels.LABEL_FIELD: instrument_labels.label(
+                    symbol or record.get("query"), symbol_name_map),
                 "current_price": _record_price(record),
                 "currency": info.get("currency"),
                 "position_currency": position.get("currency"),
@@ -317,6 +337,7 @@ def _build_quote_snapshot(
                 "position_market": position.get("market"),
                 "position_asset_type": position.get("asset_type"),
                 "market_state": info.get("marketState"),
+                "quote_observation": observation,
                 "as_of": _iso_utc(quote_epoch),
                 "quote_age_seconds": round(now_epoch - quote_epoch, 3)
                 if quote_epoch is not None
@@ -333,6 +354,11 @@ def _build_quote_snapshot(
                 "identity_status": "matched" if not failures else "failed",
                 "identity_errors": failures,
                 "record_status": "success" if _successful_record(record) else "failed",
+                "quote_tier": str(provenance.get("tier") or "primary"),
+                "quote_source": provenance.get("source"),
+                "quote_unverifiable": list(provenance.get("unverifiable") or []),
+                "quote_primary_outcome": provenance.get("primary_outcome"),
+                "quote_observed_at": provenance.get("observed_at"),
             }
         )
     return snapshots
@@ -346,7 +372,7 @@ def evaluate_daily_sync(
     holiday_calendar_file: Optional[str] = None,
     now_epoch: Optional[float] = None,
     max_quote_age_seconds: int = MAX_QUOTE_AGE_SECONDS,
-    decision_scope: str = "research_only",
+    decision_scope: str = "advisory",
 ) -> Dict[str, Any]:
     evaluation_epoch = time.time() if now_epoch is None else now_epoch
     report = _base_report(
@@ -495,7 +521,7 @@ def evaluate_daily_sync(
         report["stages"][1]["errors"] = [error]
         return report
 
-    records, supplied_audit, package_warnings, package_errors = _normalize_quote_package(
+    records, supplied_audit, provider_receipt, package_warnings, package_errors = _normalize_quote_package(
         quotes_payload
     )
     package_stage = report["stages"][1]
@@ -505,6 +531,9 @@ def evaluate_daily_sync(
     package_stage["status"] = "complete" if not package_errors else "incomplete"
     report["warnings"].extend(package_warnings)
     report["supplied_portfolio_batch_audit"] = supplied_audit
+    # Provider-level evidence travels with the replay so a skipped or errored
+    # provider leg is never read downstream as "this security has no quote".
+    report["supplied_provider_receipt"] = provider_receipt
 
     returned_symbols = [
         normalize_symbol(record.get("symbol") or "")
@@ -550,6 +579,7 @@ def evaluate_daily_sync(
             "quote_contract_failures", {}
         ).items()
     }
+    secondary_quote_symbols: List[str] = []
     for record in records:
         symbol = normalize_symbol(record.get("symbol") or "") or str(
             record.get("query") or "UNKNOWN"
@@ -560,6 +590,34 @@ def evaluate_daily_sync(
             else {}
         )
         price_source = sources.get("price")
+        provenance = (
+            record.get("quote_provenance")
+            if isinstance(record.get("quote_provenance"), dict)
+            else {}
+        )
+        declared_tier = str(provenance.get("tier") or "primary")
+        if declared_tier == "secondary":
+            # A secondary quote is accepted only when the record declares exactly
+            # where it came from; the primary identity contract stays unclaimed and
+            # the symbol is listed separately instead of counting as a primary match.
+            declared_source = provenance.get("source")
+            declared_locator = provenance.get("source_locator")
+            declared_symbol = provenance.get("symbol")
+            if not isinstance(declared_source, str) or not declared_source or price_source != declared_source:
+                contract_failures.setdefault(symbol, []).append(
+                    "identity_mismatch.data_sources.price"
+                )
+            elif sources.get("price_locator") != declared_locator or not declared_locator:
+                contract_failures.setdefault(symbol, []).append(
+                    "identity_mismatch.data_sources.price_locator"
+                )
+            elif normalize_symbol(declared_symbol or "") != symbol:
+                contract_failures.setdefault(symbol, []).append(
+                    "identity_mismatch.quote_provenance.symbol"
+                )
+            else:
+                secondary_quote_symbols.append(symbol)
+            continue
         expected_locator = f"yfinance:{symbol}:quote"
         if price_source != "Yahoo Finance":
             contract_failures.setdefault(symbol, []).append(
@@ -597,6 +655,11 @@ def evaluate_daily_sync(
         for symbol in sorted(recomputed_audit.get("quote_contract_warnings", {}))
         for warning in recomputed_audit["quote_contract_warnings"][symbol]
     ]
+    if secondary_quote_symbols:
+        contract_stage["warnings"].append(
+            "labelled_secondary_quote_source: " + ", ".join(sorted(secondary_quote_symbols))
+        )
+    report["secondary_quote_symbols"] = sorted(secondary_quote_symbols)
     contract_stage["supplied_audit_errors"] = supplied_audit_errors
 
     report["quote_snapshot"] = _build_quote_snapshot(
@@ -694,10 +757,10 @@ def main() -> None:
     parser.add_argument(
         "--decision-scope",
         choices=("research_only", "advisory", "actionable"),
-        default="research_only",
+        default="advisory",
         help=(
             "Declared decision scope recorded in the report and propagated to "
-            "downstream consumers; defaults to research_only."
+            "downstream consumers; defaults to advisory."
         ),
     )
     args = parser.parse_args()

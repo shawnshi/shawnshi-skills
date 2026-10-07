@@ -55,6 +55,25 @@ def bounded_summary(gaps=None):
     }
 
 
+class _VerifiedAdapterStub:
+    GARMIN_DB = Path("synthetic-only.db")
+
+    @classmethod
+    def verified_database_read_window(cls, paths):
+        if paths != [cls.GARMIN_DB]:
+            raise AssertionError("bounded insight may read only the summary database")
+        return cls()
+
+    def __enter__(self):
+        return self
+
+    def __exit__(self, exc_type, exc, traceback):
+        return False
+
+    def public_summary(self):
+        return {"status": "verified_unchanged", "databases": []}
+
+
 class GarminRuntimeContractTests(unittest.TestCase):
     def test_live_token_fallback_prefers_validated_garmindb_root(self):
         fake_stat = types.SimpleNamespace(st_size=1)
@@ -479,7 +498,7 @@ class GarminRuntimeContractTests(unittest.TestCase):
     def test_local_adapter_window_is_exactly_three_calendar_days(self):
         calls = []
 
-        class FakeAdapter:
+        class FakeAdapter(_VerifiedAdapterStub):
             @staticmethod
             def get_summary(days, fill_missing=True):
                 calls.append(("summary", days, fill_missing))
@@ -539,7 +558,7 @@ class GarminRuntimeContractTests(unittest.TestCase):
         self.assertIn("activities_not_requested", result["_data_gaps"])
 
     def test_bounded_fetch_preserves_missing_values_and_records_gaps(self):
-        class MissingAdapter:
+        class MissingAdapter(_VerifiedAdapterStub):
             @staticmethod
             def get_summary(days, fill_missing=True):
                 self.assertFalse(fill_missing)

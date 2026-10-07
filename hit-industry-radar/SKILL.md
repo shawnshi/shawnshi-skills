@@ -34,7 +34,7 @@ description: 检索指定周期的医疗IT政策、厂商及采购项目阶段�
 - S-T-C 分析按需读 [references/stc_framework.md](references/stc_framework.md)，保持厂商中立。
 - `assets/` 是子模式检索提示与建议返回结构，不是事实来源，也不改变本技能窗口、预算与保存边界。只在需要时按对象读取一份：国内厂商 `Task_china_hit.md`，全球厂商 `Task_global_hit.md`，用户明确指定的厂商 `Task_winning_baseline.md`；不全量加载资产。
 - 不盲扫既往归档或个人历史。共享资源以本技能目录（`skill_dir`）为基准解析到 skills root 的 `shared/`，不使用记忆化的本机绝对路径；解析不到或路径歧义即停止。
-- 行为验收见 [evals/benchmark.json](evals/benchmark.json) 和 [evals/evals.json](evals/evals.json)；确定性测试见 [scripts/test_validate_industry_radar.py](scripts/test_validate_industry_radar.py) 与共享的 `../shared/scripts/test_report_archive.py`（仅临时夹具）。历史 `scripts/hit_audit_gate.py` 的 radar 分支已无调用方，不是本技能的验收入口。
+- 行为验收见 [evals/benchmark.json](evals/benchmark.json) 和 [evals/evals.json](evals/evals.json)；确定性测试见 [scripts/test_validate_industry_radar.py](scripts/test_validate_industry_radar.py) 与共享的 `../shared/scripts/test_report_archive.py`（仅临时夹具）。历史共享审计工具 `hit_audit_gate.py`（位于 skills 根部 `scripts/` 目录，不在本技能目录内）的 radar 分支已无调用方，不是本技能的验收入口，本技能不声明对其的运行时依赖。
 
 ## 完成检查
 

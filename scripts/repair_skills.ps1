@@ -42,6 +42,7 @@ $DeprecatedPatterns = [ordered]@{
     generate_image = '(?i)\bgenerate_image\b'
     mcp_vector_lake = '(?i)\bmcp_vector-lake\b'
     vector_lake_mcp = '(?i)\bvector-lake-mcp\b'
+    mentat_mind_mcp = '(?i)\bmentat-mind-mcp\b'
     request_feedback = '(?i)RequestFeedback\s*='
 }
 

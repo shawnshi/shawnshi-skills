@@ -24,7 +24,7 @@ from pathlib import Path
 from typing import Any
 
 SCHEMA_VERSION = "pia_thesis_ledger_v1"
-DECISION_SCOPE = "research_only"
+DECISION_SCOPE = "advisory"
 OPERATORS = {"lt", "lte", "gt", "gte", "eq", "qualitative"}
 THRESHOLD_FREE_OPERATORS = {"eq", "qualitative"}
 RESERVED_LOCATORS = ("example.com", "example.test", ".invalid", "localhost")

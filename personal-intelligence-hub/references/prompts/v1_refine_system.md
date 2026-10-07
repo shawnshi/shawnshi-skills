@@ -32,6 +32,7 @@
 - `pipeline` 可暂留占位对象；归档器会从已验证回执覆盖该字段。除 `pipeline` 外，归档器不得改写最终条目。
 - 保留原始 `title`；中文显示名写入 `title_zh`。
 - `data_gaps` 使用结构化对象：`gap_id`、`lane`、`status`、`description`、`impact`。
+- L3/L4 或 `near_term_decision_impact=true` 的条目必须附带 `claim_grounding`（可选字段，见 `briefing_schema.json`）：`basis` + `claims`。逐条列出条目中的比例与金额（`kind=number`，`value` 必须是 `fact` 中出现的字面数值）、政策状态（`kind=policy_status`）与跨事件因果句（`kind=causal`）。只有能从可见 `evidence_excerpt` 直接读到的才写 `status=grounded` 并附 `evidence`；跨条目数字拼出的机制结论写 `hypothesis`，未在可见证据中确认的政策状态写 `unverified`。不得把已登记摘要或 RSS 数字当作已验证事实，也不得声称某项政策口径尚未发布而不核对本次运行内的证据。
 - 只输出裸 JSON，不使用 Markdown 代码块。
 
 ## 发布前 draft gate

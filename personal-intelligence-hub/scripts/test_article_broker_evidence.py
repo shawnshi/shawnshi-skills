@@ -504,6 +504,26 @@ def test_snippet_and_portal_not_article(new_run, monkeypatch):
     assert not data["proofs"][0]["metadata"]["article"]
 
 
+def test_evidence_validates_one_snapshot_per_call_without_cross_call_cache(new_run, monkeypatch):
+    request, _ = setup(new_run)
+    original = rc.load_manifest
+    calls = []
+
+    def counted(path):
+        calls.append(path)
+        return original(path)
+
+    monkeypatch.setattr(rc, "load_manifest", counted)
+    monkeypatch.setattr("supplement_agent.load_manifest", counted)
+    first = broker.evidence(request, "tech")
+    assert len(calls) == 1
+    assert broker.evidence(request, "tech") == first
+    assert len(calls) == 2
+    request.write_bytes(request.read_bytes() + b" ")
+    with pytest.raises(rc.RunContractError):
+        broker.evidence(request, "tech")
+
+
 @pytest.mark.parametrize("frozen_run", [1], indirect=True)
 def test_bound_before_query_retains_clock(new_run, monkeypatch):
     request, _ = setup(new_run, verify_bound_candidates=True)
@@ -1270,6 +1290,41 @@ def test_stage_c_pending_zero_work_and_expired_advice_no_io(new_run, monkeypatch
     with pytest.raises(rc.RunContractError, match="expired"):
         broker.operate(request, "tech", "seal")
     assert calls == [] and new_run[0].read_bytes() == before
+
+
+def test_terminal_decision_registered_only_when_terminal_and_only_once(new_run, monkeypatch):
+    """AUD-F02: the deterministic terminal decision is persisted on the ledger.
+
+    An abandoned gap must be self-documenting even when no worker or parent ever
+    finalizes it, and registering the decision may not open a new clock or attempt.
+    """
+    request, _ = setup(new_run, max_queries=2)
+    network(monkeypatch)
+    broker.operate(request, "tech", "checkpoint")
+    # Not terminal yet: the source clock is still open and budget remains.
+    with pytest.raises(rc.RunContractError, match="terminal registration requires"):
+        broker.operate(request, "tech", "terminal")
+    ledger = rc.load_manifest(new_run[0])["article_broker_evidence"]["tech"]
+    assert "terminal" not in ledger
+
+    class LateClock(datetime):
+        @classmethod
+        def now(cls, tz=None):
+            return datetime.now(timezone.utc) + timedelta(seconds=500)
+
+    monkeypatch.setattr(broker, "datetime", LateClock)
+    broker.operate(request, "tech", "terminal")
+    ledger = rc.load_manifest(new_run[0])["article_broker_evidence"]["tech"]
+    assert ledger["terminal"]["stop_reason"] == "source_clock_expired"
+    assert ledger["terminal"]["action"] == "terminal_failure"
+    registered = deepcopy(ledger["terminal"])
+    assert [event["kind"] for event in ledger["events"]] == ["checkpoint"]
+
+    # A second call is a no-op: the journaled decision is not rewritten with a new clock.
+    broker.operate(request, "tech", "terminal")
+    ledger = rc.load_manifest(new_run[0])["article_broker_evidence"]["tech"]
+    assert ledger["terminal"] == registered
+    assert len(ledger["events"]) == 1
 
 
 def test_stage_c_budget_stop_and_postseal_reject(new_run, monkeypatch):

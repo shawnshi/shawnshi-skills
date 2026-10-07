@@ -78,7 +78,7 @@ if __name__ == "__main__":
         for stat in ("monitoring", "sleep", "rhr", "hrv", "weight"):
             start, days = main._GarminDbMain__get_date_and_days(None, False, None, None, stat)
             dates[stat] = [(start + datetime.timedelta(days=day)).isoformat() for day in range(0, days)]
-    print(json.dumps({"dates": dates, "stage": "download" if "--download" in sys.argv else "import_analyze"}))
+    print(json.dumps({"dates": dates, "stage": "download" if "--download" in sys.argv else "import"}))
 '''
 
 
@@ -128,7 +128,7 @@ def synthetic_bindings(seed="a"):
                     },
                     {
                         "name": "garminconnect",
-                        "version": "0.3.16",
+                        "version": "0.3.17",
                         "metadata_sha256": "4" * 64,
                     },
                 ],
@@ -203,7 +203,7 @@ class SyncHealthDataCliTests(unittest.TestCase):
         cli.write_text(SYNTHETIC_CLI, encoding="utf-8")
         for directory, name, version in (
             ("GarminDB-3.9.0.dist-info", "garmindb", "3.9.0"),
-            ("garminconnect-0.3.16.dist-info", "garminconnect", "0.3.16"),
+            ("garminconnect-0.3.17.dist-info", "garminconnect", "0.3.17"),
         ):
             metadata_dir = site_packages / directory
             metadata_dir.mkdir()
@@ -250,7 +250,7 @@ class SyncHealthDataCliTests(unittest.TestCase):
         cli.write_text(SYNTHETIC_CLI, encoding="utf-8")
         for directory, name, version in (
             ("GarminDB-3.9.0.dist-info", "garmindb", "3.9.0"),
-            ("garminconnect-0.3.16.dist-info", "garminconnect", "0.3.16"),
+            ("garminconnect-0.3.17.dist-info", "garminconnect", "0.3.17"),
         ):
             metadata_dir = site_packages / directory
             metadata_dir.mkdir()
@@ -391,7 +391,7 @@ class SyncHealthDataCliTests(unittest.TestCase):
                 for package in plan["bindings"]["runner"]["environment"]["packages"]
             }
             self.assertEqual(
-                package_versions, {"garmindb": "3.9.0", "garminconnect": "0.3.16"}
+                package_versions, {"garmindb": "3.9.0", "garminconnect": "0.3.17"}
             )
             self.assertEqual(len(plan["payload_sha256"]), 64)
             self.module.load_and_validate_sync_plan(
@@ -943,7 +943,7 @@ class SyncHealthDataCliTests(unittest.TestCase):
             payload["stages"],
             [
                 "download",
-                "import_analyze",
+                "import",
                 "activities_download",
                 "activities_import",
             ],
@@ -1097,7 +1097,8 @@ class SyncHealthDataCliTests(unittest.TestCase):
         self.assertEqual(payload["status"], "sync_completed")
         self.assertTrue(payload["database_changed"])
         self.assertEqual(payload["stale_components"], [])
-        self.assertEqual(payload["stages"], ["download", "import_analyze"])
+        self.assertEqual(payload["stages"], ["download", "import"])
+        self.assertEqual(payload["summary_analysis"], "not_requested")
         self.assertEqual(runner.call_count, 2)
         for call in runner.call_args_list:
             command = call.args[0]
@@ -1111,7 +1112,7 @@ class SyncHealthDataCliTests(unittest.TestCase):
         self.assertIn("--download", runner.call_args_list[0].args[0])
         self.assertNotIn("--latest", runner.call_args_list[0].args[0])
         self.assertIn("--import", runner.call_args_list[1].args[0])
-        self.assertIn("--analyze", runner.call_args_list[1].args[0])
+        self.assertNotIn("--analyze", runner.call_args_list[1].args[0])
         self.assertIn("--latest", runner.call_args_list[1].args[0])
 
     def test_successful_runner_fails_when_post_sync_coverage_is_stale(self):
@@ -1626,7 +1627,7 @@ class SyncHealthDataCliTests(unittest.TestCase):
             self.assertTrue(temporary_dirs)
             self.assertTrue(all(not path.exists() for path in temporary_dirs))
         self.assertEqual(code, 0, payload)
-        self.assertEqual([item["stage"] for item in observed], ["download", "import_analyze"])
+        self.assertEqual([item["stage"] for item in observed], ["download", "import"])
         self.assertEqual(observed[0]["dates"]["sleep"], [(start + timedelta(days=i)).isoformat() for i in range(3)])
         self.assertEqual(observed[1]["dates"], {})
 
@@ -1725,7 +1726,7 @@ class SyncHealthDataCliTests(unittest.TestCase):
         self.assertIn("--latest", import_analyze)
         self.assertNotIn("--download", import_analyze)
         self.assertIn("--import", import_analyze)
-        self.assertIn("--analyze", import_analyze)
+        self.assertNotIn("--analyze", import_analyze)
         for command in (download, import_analyze):
             self.assertEqual(command[1:3], ["-I", "-B"])
             self.assertIn("--monitoring", command)
@@ -1733,6 +1734,24 @@ class SyncHealthDataCliTests(unittest.TestCase):
             self.assertIn("--rhr", command)
             self.assertIn("--hrv", command)
             self.assertIn("--weight", command)
+
+
+    def test_child_rejects_full_history_analysis_before_any_cli_execution(self):
+        today = self.module.date.today().isoformat()
+        command = [
+            sys.executable, "-I", "-B", "-c", self.module._DATE_ADAPTER_CODE,
+            "nonexistent-cli.py", "a" * 64,
+            self.module.UPSTREAM_DATE_METHOD_SHA256, today, today,
+            "b" * 64,
+            (datetime.now(timezone.utc) + timedelta(minutes=5)).isoformat(),
+            "--config", "nonexistent-config", "--import", "--analyze", "--latest",
+            "--monitoring", "--sleep", "--rhr", "--hrv", "--weight",
+        ]
+        completed = subprocess.run(
+            command, capture_output=True, text=True, timeout=10, check=False,
+        )
+        self.assertEqual(completed.returncode, self.module.EXIT_CONFIGURATION)
+        self.assertEqual(json.loads(completed.stdout)["error"], "adapter_arguments_invalid")
 
 
 if __name__ == "__main__":

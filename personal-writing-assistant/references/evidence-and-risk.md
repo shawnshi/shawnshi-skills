@@ -63,7 +63,7 @@
 - 内部客户商业信息进入对外稿件前必须确认授权；患者相关数据不得作为检索输入。
 - 只取当前主张所需的域；个人域（健康、持仓、个人洞察、隐私）不得进入写作任务。
 - 内部来源不可用时标记“未核对原文”并降级为工作稿，不得写成“无数据”，也不得用公开结论冒充内部事实。
-- 取证工具：等级与客户归属用 `lan-mcp-1441_query_ratings`；我方案例原件用 `lan-mcp-1441_search_knowledge`，对外引用的可核验链接用 `get_premind_link`；既往表态一致性用 `vector-lake-mcp_search_vector_lake`。
+- 取证工具：等级与客户归属用 `premind-winning-mcp_query_ratings`；我方案例原件用 `premind-winning-mcp_search_knowledge`，对外引用的可核验链接用 `get_premind_link`；既往表态一致性用 `mentat-mind-mcp_search_vector_lake`。
 
 遇到“目前、最新、近期、现任、现行”等表述时联网核验并注明资料截止日。对政策记录全称、文号、发布机关、发布日期、生效日期以及修订、替代或废止状态。
 

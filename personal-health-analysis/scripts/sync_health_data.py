@@ -97,7 +97,7 @@ RUNNER_ENVIRONMENT_FIELDS = frozenset(
 )
 PACKAGE_EVIDENCE_FIELDS = frozenset({"name", "version", "metadata_sha256"})
 PACKAGE_EVIDENCE_NAMES = ("garmindb", "garminconnect")
-SUPPORTED_PACKAGE_VERSIONS = {"garmindb": "3.9.0", "garminconnect": "0.3.16"}
+SUPPORTED_PACKAGE_VERSIONS = {"garmindb": "3.9.0", "garminconnect": "0.3.17"}
 MAX_METADATA_BYTES = 1024 * 1024
 MAX_TOKEN_STORE_BYTES = 1024 * 1024
 TREE_HASH_WORKERS = min(16, max(4, (os.cpu_count() or 1) * 2))
@@ -125,7 +125,7 @@ try:
     args = sys.argv[8:]
     stats = ["--monitoring", "--sleep", "--rhr", "--hrv", "--weight"]
     if len(args) < 2 or args[0] != "--config" or args[2:] not in (
-        ["--download", *stats], ["--import", "--analyze", "--latest", *stats]
+        ["--download", *stats], ["--import", "--latest", *stats]
     ):
         fail("adapter_arguments_invalid")
     start = datetime.date.fromisoformat(start_text)
@@ -1084,8 +1084,10 @@ def build_garmindb_commands(
         "--weight",
     ]
     download = [*base, "--download", *stats]
-    import_analyze = [*base, "--import", "--analyze", "--latest", *stats]
-    return download, import_analyze
+    # Full-history summary analysis is not required to populate this window.
+    # Analyze.summary() scans every stored year, even for a one-day sync.
+    import_window = [*base, "--import", "--latest", *stats]
+    return download, import_window
 
 
 def build_activities_commands(
@@ -1506,7 +1508,7 @@ def execute_sync(
                 expires_at=plan["expires_at"],
             )
             stages = list(
-                zip(("download", "import_analyze"), commands, strict=True)
+                zip(("download", "import"), commands, strict=True)
             )
             if activities_authorized:
                 stages.extend(
@@ -1589,6 +1591,7 @@ def execute_sync(
                         "ok": False,
                         "status": "sync_incomplete",
                         "stages": [stage for stage, _ in stages],
+                        "summary_analysis": "not_requested",
                         **verification,
                     }
                 else:
@@ -1597,6 +1600,7 @@ def execute_sync(
                         "ok": True,
                         "status": "sync_completed",
                         "stages": [stage for stage, _ in stages],
+                        "summary_analysis": "not_requested",
                         **verification,
                     }
     except subprocess.TimeoutExpired:

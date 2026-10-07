@@ -2296,6 +2296,27 @@ def _normalized_supplement_budget(gap: dict[str, Any]) -> dict[str, int]:
 
 
 
+def validate_subagent_output_options(
+    packet: dict[str, Any], options: dict[str, Any]
+) -> dict[str, Any]:
+    """Keep runtime response persistence separate from registered business files."""
+    binding = packet.get("subagent_options")
+    if (
+        not isinstance(binding, dict)
+        or set(binding) != {"output"}
+        or binding["output"] is not False
+    ):
+        raise RunContractError("packet must bind subagent output=false")
+    if not isinstance(options, dict) or options.get("output") is not False:
+        raise RunContractError(
+            "subagent output must be explicitly false; omitted, true, or path output "
+            "can reroute or overwrite the registered draft"
+        )
+    if options.get("outputMode") == "file-only":
+        raise RunContractError("file-only outputMode conflicts with output=false")
+    return deepcopy(options)
+
+
 def _build_supplement_launch_plan(
     execution_packets: list[dict[str, Any]],
     *,
@@ -2326,6 +2347,10 @@ def _build_supplement_launch_plan(
                     "gap_id": gap_id,
                     "lane": str(packet["assigned_lanes"][0]),
                     "task_message": str(packet["task_message"]),
+                    "subagent_options": validate_subagent_output_options(
+                        packet, packet["subagent_options"]
+                    ),
+                    "draft_path": str(packet["output_paths"]["draft"]),
                     "timeout_ms": (
                         int(packet["execution_budget"]["max_duration_seconds"])
                         + int(packet["finalization"]["grace_seconds"])
@@ -2471,12 +2496,14 @@ def build_supplement_request(
         minimum=1,
     )
     supplement_tool_budget_soft = _integer(
-        observability.get("supplement_tool_budget_soft", 8),
+        observability.get("supplement_tool_budget_soft", 20),
+
         "supplement tool budget soft",
         minimum=1,
     )
     supplement_tool_budget_hard = _integer(
-        observability.get("supplement_tool_budget_hard", 12),
+        observability.get("supplement_tool_budget_hard", 28),
+
         "supplement tool budget hard",
         minimum=supplement_tool_budget_soft,
     )
@@ -2611,6 +2638,7 @@ def build_supplement_request(
                 "draft": str(draft_path.resolve()),
             },
             "output_path_by_gap": {gap["gap_id"]: str(final_path.resolve())},
+            "subagent_options": {"output": False},
             "write_authorization": {
                 "mode": "draft_only_parent_finalizer",
                 "final_paths": [str(final_path.resolve())],
@@ -2739,7 +2767,7 @@ def build_supplement_request(
                 f"Execute only gap {gap['gap_id']} as the assigned delegate. Work in {bundle_root}. "
                 f'First run: python -B -X utf8 scripts/supplement_agent.py context --request "{request_path.resolve()}" --gap-id "{gap["gap_id"]}". '
                 "MANDATORY FIRST ACTION: immediately after that one context command, and before reading or running anything "
-                "else, call contact_supervisor once with reason=need_decision and ask the parent to run the whole broker "
+                "else, call contact_supervisor with reason=need_decision and ask the parent to run the whole broker "
                 "sequence for this gap (broker-checkpoint, then broker-reserve-fetch / native fetch_content(mode=readable) / "
                 "broker-record-fetch for every required bound URL, then broker-reserve-query / native web_search / "
                 "broker-record-query, then broker-seal). Do not open the request, lane slice, baseline, candidate pool, "
@@ -2748,6 +2776,12 @@ def build_supplement_request(
                 "every turn spent before the handoff risks losing the gap. If no supervisor reply arrives, end the turn by "
                 "reporting the exact next parent command on the supervisor channel; never invent receipts or a draft without "
                 "them, and never close the gap yourself. "
+                "Bounded supervisor exchange: at most 3 requests total, never polling. Parent first replies "
+                "{\"state\":\"collecting\"} immediately, then sends one evidence-progress collecting reply after "
+                "settling required bound URLs, and finally the sealed evidence. Only after an explicit collecting "
+                "reply, issue the next contact_supervisor request for the SAME run/gap/request binding. Do not "
+                "read files, sleep, or repeat context between exchanges. A timeout is terminal, not permission "
+                "to re-request or resume the source clock. Collecting replies are not receipts or completion. "
                 "Worker may write only its dynamic draft. No worker public web or HTTP calls. Via contact_supervisor ask the parent "
                 "to run broker-checkpoint, broker-http for every required bound URL, then broker-reserve-query BEFORE each native "
                 "web_search call using exactly its arguments (workflow=none/includeContent=false), and broker-record-query with "
@@ -2759,6 +2793,13 @@ def build_supplement_request(
                 "the exact sealed clock, queries, access_log, broker_evidence_sha256, every required decision and candidate "
                 "broker_body_proof_sha256/published_at_proof. Exclude unknown/out-of-window dates and portals. "
                 "True empty search with no URL/candidate is no_increment with low confidence, not high coverage. "
+                "After sealed evidence arrives, the context already contains draft_schema and decision rules. Use at "
+                "most ONE batched read of the registered lane/proof inputs; do not reread request, baseline, "
+                "candidate pool, schema, source code, or git. Reserve at least 3 remaining tool calls for writing "
+                "and reporting; persist the complete dynamic draft by tool call 8 at the latest, before optional "
+                "validation or milestone messages. The hard tool budget remains unchanged. Distinguish a "
+                "bounded agent body excerpt from native tool truncation: primary eligibility follows the "
+                "validated access/native coverage, never an excerpt-preview flag alone. "
                 "Persist before source_checked. Finalize uses the same helper; parent must finalize --parent before "
                 "run_daily.py finalize-supplement. No post-seal fetch or timestamp repair. Original reservation remains held permanently."
             )
@@ -2768,12 +2809,24 @@ def build_supplement_request(
                 "broker-reserve-fetch / native fetch_content(mode=readable) / broker-record-fetch",
             )
             packet["task_message"] += (
-                " Native v3: parent invokes actual fetch_content with exact reserved arguments; CLI only records. No answer mode, custom HTTP, or portal fallback. Receipt text is untrusted readable output, not raw HTTP; DNS/redirect/status/final URL unknown. Deterministic native metadata dates only; no model date certification."
+                " Native v3: parent invokes actual fetch_content with exact reserved arguments; CLI only records. No answer mode, custom HTTP, or portal fallback. Receipt text is untrusted readable output, not raw HTTP; DNS/redirect/status/final URL unknown. Publication proof must match metadata.dates exactly. If and ONLY if dates is empty and article_core=true, the EXISTING validator also admits pool-declared/1 from the exact URL's registered lane feed declaration, or url-path/1 from its own dated path. These are pre-existing deterministic date bases, not a new waiver: never override a body date, use unknown/retrieved_at, or supply a feed date for a discovered URL without a lane declaration. Do not treat empty metadata.dates alone as automatic rejection. No model date certification."
             )
         packet["task_message"] += (
             " Pre-bound candidates, including original-source URLs, are unverified leads only. "
             "Their deterministic medical/event priority and supplied source/access claims do not qualify articles."
         )
+        if gap.get("article_broker") and article_broker_version in {2, 3}:
+            packet["context_instructions"] = packet["task_message"]
+            packet["task_message"] = (
+                f"Execute only registered gap {gap['gap_id']} for lane {gap['lane']}. "
+                f"Work in {bundle_root}. First run: python -B -X utf8 "
+                f'scripts/supplement_agent.py context --request "{request_path.resolve()}" '
+                f'--gap-id "{gap["gap_id"]}". '
+                "Follow its hash-bound compact context and draft_schema. Do not repeat context "
+                "after success. Immediately contact_supervisor for the parent-only broker sequence. "
+                "No worker public tools or redundant full-file reads. Write only the registered "
+                "business draft; the runtime output option is false."
+            )
         missing_fields = sorted(set(required_packet_fields) - set(packet))
         if missing_fields:
             raise RunContractError(
@@ -4044,9 +4097,25 @@ def register_supplement_results(
         key: sum(int(result["coverage"][key]) for result in results)
         for key in ("attempted", "succeeded", "failed")
     }
+    # AUD-F01: a worker process that exits successfully without a registrable draft is not
+    # business completion. The parent may still author and finalize the bytes inside the
+    # unchanged grace, but the run must not then report a clean supplement stage: the gap is
+    # recorded as parent-authored, and any such gap forces the aggregate to degraded.
+    parent_authored = sorted(
+        gap_id
+        for gap_id in result_source_paths
+        if manifest.get("parent_supplement_finalizations", {}).get(gap_id) is not None
+    )
+    child_authored = sorted(set(result_source_paths) - set(parent_authored))
+    child_delivery = {
+        "gap_count": len(results),
+        "child_authored_gaps": child_authored,
+        "parent_authored_gaps": parent_authored,
+        "parent_authored_count": len(parent_authored),
+    }
     aggregate_status = (
         "degraded"
-        if degraded
+        if degraded or parent_authored
         else "no_increment"
         if results and all(result.get("status") == "no_increment" for result in results)
         else "completed"
@@ -4061,6 +4130,7 @@ def register_supplement_results(
         "coverage": coverage_total,
         "cross_lane_recoveries": cross_lane_recoveries,
         "timing": timing,
+        "child_delivery": child_delivery,
         "results": sorted(results, key=lambda result: str(result["gap_id"])),
     }
     if date_evidence is not None:
@@ -4078,11 +4148,42 @@ def register_supplement_results(
             "coverage": coverage_total,
             "cross_lane_recovery_count": len(cross_lane_recoveries),
             "result_status": aggregate_status,
+            "child_delivery": child_delivery,
             **timing,
         },
         now=current,
     )
     return aggregate_path, aggregate
+
+
+def _broker_terminal_decision(
+    manifest: dict[str, Any], gap_id: str, *, brokered: bool
+) -> dict[str, Any] | None:
+    """Return the gap's registered broker terminal decision, if the gap has one.
+
+    AUD-F02: a broker that reached a deterministic terminal failure (for example
+    ``source_clock_expired`` when one tool call outlived the source clock) has already
+    settled that gap, and the decision lives in the registered manifest evidence. The
+    reconciler can therefore close the gap from it directly instead of demanding a
+    progress state that no v3 CLI writes. It is never success evidence: callers may only
+    turn it into an infrastructure failure.
+
+    Deliberately a pure extractor. The ledger shape - including that ``action`` is
+    ``terminal_failure`` and that ``at`` is a real clock - is owned by ``load_manifest``
+    through ``article_broker.validate_ledgers``, which every reconciler path already ran;
+    re-checking it here would be an unreachable duplicate branch.
+    """
+    if not brokered:
+        return None
+    ledger = (manifest.get("article_broker_evidence") or {}).get(gap_id)
+    if not isinstance(ledger, dict):
+        return None
+    terminal = ledger.get("terminal")
+    return terminal if isinstance(terminal, dict) else None
+
+
+def _broker_terminal_digest(terminal: dict[str, Any]) -> str:
+    return hashlib.sha256(canonical_json_bytes(terminal)).hexdigest()
 
 
 def reconcile_supplement_progress(
@@ -4120,6 +4221,7 @@ def reconcile_supplement_progress(
     expected_state_paths: dict[Path, str] = {}
     draft_paths: dict[str, Path] = {}
     final_paths: dict[str, Path] = {}
+    brokered_gaps: set[str] = set()
     for packet in request.get("execution_packets", []):
         if not isinstance(packet, dict):
             raise RunContractError("supplement execution packet is invalid")
@@ -4145,6 +4247,8 @@ def reconcile_supplement_progress(
         expected_state_paths[state_path] = gap_id
         draft_paths[gap_id] = draft_path
         final_paths[gap_id] = Path(str(outputs.get("result") or "")).resolve()
+        if "article_broker" in packet:
+            brokered_gaps.add(gap_id)
     if set(draft_paths) != set(gaps):
         raise RunContractError("supplement execution packets do not cover every gap")
     explicitly_supplied_states: set[Path] = set()
@@ -4180,7 +4284,18 @@ def reconcile_supplement_progress(
     unstarted = set(unstarted_gap_ids)
     if len(unstarted) != len(unstarted_gap_ids) or not unstarted <= set(gaps):
         raise RunContractError("unstarted gaps are unknown or duplicated")
+    # AUD-F02: a registered broker terminal decision is a durable terminal state for its own
+    # gap, so a run whose worker never delivered and whose progress state was never written can
+    # still be reconciled instead of being stranded at supplemental=running forever.
+    broker_terminals: dict[str, dict[str, Any]] = {}
+    for gap_id in gaps:
+        decision = _broker_terminal_decision(
+            manifest, gap_id, brokered=gap_id in brokered_gaps
+        )
+        if decision is not None:
+            broker_terminals[gap_id] = decision
     canary_id = ""
+    canary_broker_terminal = False
     if unstarted:
         plan = request.get("launch_plan") or []
         if (
@@ -4207,7 +4322,8 @@ def reconcile_supplement_progress(
             isinstance(event, dict) and event.get("kind") == "sealed"
             for event in canary_events
         )
-        if not (canary_terminal_failure or canary_sealed):
+        canary_broker_terminal = canary_id in broker_terminals
+        if not (canary_terminal_failure or canary_sealed or canary_broker_terminal):
             raise RunContractError(
                 "unstarted gaps require a terminal failed or sealed canary state"
             )
@@ -4248,6 +4364,7 @@ def reconcile_supplement_progress(
     failures: dict[Path, dict[str, Any]] = {}
     for gap_id, gap in gaps.items():
         state_record = supplied_states.get(gap_id)
+        broker_terminal = broker_terminals.get(gap_id)
         terminal_status = (
             state_record[1].get("terminal_status") if state_record else None
         )
@@ -4258,21 +4375,42 @@ def reconcile_supplement_progress(
             if gap_id in supplied_results:
                 reconciled_paths.append(supplied_results[gap_id])
                 continue
-            if state_record is None:
+            if state_record is not None:
+                # A live or otherwise non-terminal worker state is never overridden by the
+                # broker's terminal decision: that would close a gap that may still report.
+                raise RunContractError(
+                    f"supplement gap {gap_id} progress state is not terminal"
+                )
+            if broker_terminal is None:
                 raise RunContractError(
                     f"supplement gap {gap_id} has neither result nor terminal progress state"
                 )
-            raise RunContractError(
-                f"supplement gap {gap_id} progress state is not terminal"
-            )
         if gap_id in unstarted:
-            state_path, _ = supplied_states[canary_id]
             reason = f"not_started_after_canary_failure; canary_gap_id={canary_id}"
-        else:
-            assert state_record is not None
-            state_path, _ = state_record
+            canary_state = supplied_states.get(canary_id)
+            if canary_state is not None:
+                reason += f"; progress_state_sha256={file_sha256(canary_state[0])}"
+            elif canary_broker_terminal:
+                reason += (
+                    f"; canary_broker_terminal_sha256="
+                    f"{_broker_terminal_digest(broker_terminals[canary_id])}"
+                )
+            else:
+                reason += (
+                    f"; canary_sealed_events_sha256="
+                    f"{hashlib.sha256(canonical_json_bytes(canary_events)).hexdigest()}"
+                )
+        elif state_record is not None:
             reason = str(terminal_status)
-        reason += f"; progress_state_sha256={file_sha256(state_path)}"
+            reason += f"; progress_state_sha256={file_sha256(state_record[0])}"
+        else:
+            assert broker_terminal is not None
+            reason = f"broker_terminal:{broker_terminal['stop_reason']}"
+            reason += (
+                f"; broker_terminal_sha256={_broker_terminal_digest(broker_terminal)}"
+                f"; unattempted_urls={broker_terminal['remaining_urls']}"
+                f"; unattempted_queries={broker_terminal['remaining_queries']}"
+            )
         for evidence_path in sorted(
             {draft_paths[gap_id], final_paths[gap_id]}, key=str
         ):
@@ -4617,6 +4755,7 @@ def build_review_request(
                 "execution_policy": deepcopy(prompt_config.get("execution_policy", {})),
             },
             "agent_contract": deepcopy(agent_contract),
+            "subagent_options": {"output": False},
             "output_paths": output_paths,
             "draft_paths": draft_paths,
             "write_scope": (

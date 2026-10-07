@@ -26,7 +26,7 @@ import sys
 from pathlib import Path
 from typing import Any
 
-DECISION_SCOPE = "research_only"
+DECISION_SCOPE = "advisory"
 SCHEMA_VERSION = "pia_share_change_v1"
 CHANNEL = "cninfo 股本变动 (akshare stock_share_change_cninfo)"
 SHARE_UNIT_MULTIPLIER = 10_000  # the channel reports thousands of shares (万股)

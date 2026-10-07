@@ -26,6 +26,12 @@ GENERATOR = SCRIPT_DIR / "generate-from-template.py"
 VALIDATOR = SCRIPT_DIR / "validate-svg.py"
 DRAWIO_EXPORTER = SCRIPT_DIR / "export_drawio.py"
 FORMATS = ("svg", "json", "png", "drawio")
+MAX_INPUT_BYTES = 2 * 1024 * 1024
+MAX_JSON_DEPTH = 64
+MAX_NODES = 500
+MAX_ARROWS = 2000
+PROCESS_TIMEOUT_SECONDS = 60
+FONT_TIMEOUT_SECONDS = 10
 TYPE_ALIASES = {
     "architecture": "architecture",
     "system-architecture": "architecture",
@@ -114,13 +120,32 @@ def _prevalidate_raw_input(template_type: str, data: Mapping[str, object]) -> No
 
 def _load_json(path: Path) -> dict[str, object]:
     try:
-        data = json.loads(path.read_text(encoding="utf-8"))
+        with path.open("rb") as handle:
+            raw = handle.read(MAX_INPUT_BYTES + 1)
+        if len(raw) > MAX_INPUT_BYTES:
+            raise RenderError(f"Input JSON exceeds the {MAX_INPUT_BYTES}-byte limit.")
+        data = json.loads(raw.decode("utf-8"))
+    except UnicodeError as exc:
+        raise RenderError("Input JSON must be valid UTF-8.") from exc
+    except RecursionError as exc:
+        raise RenderError("Input JSON exceeds the nesting limit.") from exc
     except OSError as exc:
         raise RenderError(f"Cannot read input JSON: {exc}") from exc
     except json.JSONDecodeError as exc:
         raise RenderError(f"Invalid JSON at line {exc.lineno}, column {exc.colno}: {exc.msg}") from exc
     if not isinstance(data, dict):
         raise RenderError("Input JSON must be an object.")
+    pending = [(data, 0)]
+    while pending:
+        value, depth = pending.pop()
+        if depth > MAX_JSON_DEPTH:
+            raise RenderError(f"Input JSON exceeds the {MAX_JSON_DEPTH}-level nesting limit.")
+        if isinstance(value, dict):
+            pending.extend((item, depth + 1) for item in value.values())
+        elif isinstance(value, list):
+            if len(value) > MAX_ARROWS:
+                raise RenderError(f"Input JSON collection exceeds the {MAX_ARROWS}-item limit.")
+            pending.extend((item, depth + 1) for item in value)
     return data
 
 
@@ -166,6 +191,11 @@ def normalize_diagram(template_type: str, data: Mapping[str, object]) -> tuple[d
     if not isinstance(canonical_type, str) or not canonical_type.strip():
         raise RenderError("Semantic normalization did not return a canonical template_type.")
 
+    for field, limit in (("nodes", MAX_NODES), ("arrows", MAX_ARROWS)):
+        items = normalized.get(field, [])
+        if isinstance(items, list) and len(items) > limit:
+            raise RenderError(f"{field} exceeds the {limit}-item layout limit.")
+
     apply_auto_layout, warning = _load_optional_function("layout_engine", "apply_auto_layout")
     if warning:
         warnings.append(warning)
@@ -202,7 +232,12 @@ def _write_json(path: Path, payload: Mapping[str, object]) -> None:
 
 def _run(command: Sequence[str], *, purpose: str) -> subprocess.CompletedProcess[str]:
     try:
-        result = subprocess.run(command, capture_output=True, text=True, encoding="utf-8", errors="replace")
+        result = subprocess.run(
+            command, capture_output=True, text=True, encoding="utf-8", errors="replace",
+            timeout=PROCESS_TIMEOUT_SECONDS,
+        )
+    except subprocess.TimeoutExpired as exc:
+        raise RenderError(f"{purpose} timed out after {PROCESS_TIMEOUT_SECONDS} seconds.") from exc
     except OSError as exc:
         raise RenderError(f"{purpose} could not start: {exc}") from exc
     if result.returncode:
@@ -247,13 +282,17 @@ def _has_cjk_font(text: str) -> tuple[bool, str]:
     if fc_list:
         missing: list[str] = []
         for language in sorted(languages):
-            result = subprocess.run(
-                [fc_list, f":lang={language}", "family"],
-                capture_output=True,
-                text=True,
-                encoding="utf-8",
-                errors="replace",
-            )
+            try:
+                result = subprocess.run(
+                    [fc_list, f":lang={language}", "family"],
+                    capture_output=True,
+                    text=True,
+                    encoding="utf-8",
+                    errors="replace",
+                    timeout=FONT_TIMEOUT_SECONDS,
+                )
+            except (OSError, subprocess.TimeoutExpired) as exc:
+                raise RenderError("CJK font discovery failed or timed out.") from exc
             if result.returncode or not result.stdout.strip():
                 missing.append(language)
         if not missing:
@@ -317,7 +356,8 @@ def _export_png(svg_path: Path, png_path: Path, *, width: int | None, source_tex
         engine = "inkscape"
 
     try:
-        signature = png_path.read_bytes()[:8]
+        with png_path.open("rb") as handle:
+            signature = handle.read(8)
     except OSError as exc:
         raise RenderError(f"PNG exporter did not create a readable file: {exc}") from exc
     if signature != b"\x89PNG\r\n\x1a\n":
@@ -403,7 +443,8 @@ def _atomic_publish(staged: Mapping[str, Path], destinations: Mapping[str, Path]
         for file_format, destination in destinations.items():
             os.replace(staged[file_format], destination)
             committed.append(file_format)
-    except Exception:
+    except BaseException:
+        # Interrupts must restore already-published files, then propagate unchanged.
         for file_format in reversed(committed):
             destination = destinations[file_format]
             backup = backups.get(file_format)

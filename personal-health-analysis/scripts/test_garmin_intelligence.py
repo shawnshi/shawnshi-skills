@@ -765,6 +765,7 @@ class SafetyBoundaryTests(unittest.TestCase):
             patch.object(module, "sqlite_activities", return_value=empty_frame),
             patch.object(module, "sqlite_biomechanics", return_value=empty_frame),
             patch.object(module, "get_devices_info", return_value=empty_frame),
+            patch.object(module, "get_device_firmware_history", return_value=empty_frame),
             patch.object(
                 module, "get_body_composition_detailed", return_value=empty_frame
             ),

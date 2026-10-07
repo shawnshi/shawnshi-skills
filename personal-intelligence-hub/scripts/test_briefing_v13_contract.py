@@ -1,5 +1,10 @@
+import json
+import subprocess
+import sys
+import tempfile
 import unittest
 from copy import deepcopy
+from pathlib import Path
 from typing import Any
 
 from briefing_gate import validate_briefing_data
@@ -318,6 +323,137 @@ class BriefingV14ContractTests(unittest.TestCase):
             "output_item_sha256"
         ] = digest
         return payload
+
+    # AUD-F05: the audited run connected an unverified premium figure into a payer-behaviour
+    # mechanism and asserted a policy status that was already published. The claim ledger
+    # forces each asserted amount to carry a binding or be labelled unverified, and the gate
+    # recomputes that the ledger cannot name a number the item does not assert.
+    def _grounded_payload(self, ledger):
+        payload = cloned_v14_payload()
+        item = payload["top_10"][0]
+        item["fact"] = (
+            "The registered excerpt reports a 73% increase in payer denials and a 686 "
+            "million dollar revenue impact for the coming year."
+        )
+        item["claim_grounding"] = ledger
+        digest = item_hash(item)
+        payload["pipeline"]["semantic_review"]["reviewed_item_hashes"] = [digest]
+        payload["pipeline"]["semantic_review"]["lineage_bindings"][0][
+            "output_item_sha256"
+        ] = digest
+        return payload
+
+    def test_AUD_F05_missing_ledger_is_disclosed_for_l3(self):
+        payload = cloned_v14_payload()
+        payload["top_10"][0]["intelligence_level"] = "L3"
+        _, warnings = validate_briefing_data(payload)
+
+        self.assertTrue(
+            any("claim_grounding is missing" in warning for warning in warnings),
+            warnings,
+        )
+
+    def test_AUD_F05_ledger_without_evidence_for_a_grounded_claim_is_rejected(self):
+        payload = self._grounded_payload(
+            {
+                "basis": "registered_readable_excerpt",
+                "claims": [
+                    {
+                        "kind": "number",
+                        "value": "73%",
+                        "statement": "payer denials rose 73%",
+                        "status": "grounded",
+                    }
+                ],
+            }
+        )
+        errors, _ = validate_briefing_data(payload)
+
+        self.assertTrue(any("evidence is required" in error for error in errors), errors)
+
+    def test_AUD_F05_ledger_cannot_assert_an_unstated_number(self):
+        payload = self._grounded_payload(
+            {
+                "basis": "registered_readable_excerpt",
+                "claims": [
+                    {
+                        "kind": "number",
+                        "value": "12%",
+                        "statement": "premiums fell 12%",
+                        "status": "grounded",
+                        "evidence": "excerpt span",
+                    }
+                ],
+            }
+        )
+        errors, _ = validate_briefing_data(payload)
+
+        self.assertTrue(
+            any("is not asserted in this item's fact" in error for error in errors),
+            errors,
+        )
+
+    def test_AUD_F05_unbound_asserted_number_is_disclosed(self):
+        payload = self._grounded_payload(
+            {
+                "basis": "registered_readable_excerpt",
+                "claims": [
+                    {
+                        "kind": "number",
+                        "value": "73%",
+                        "statement": "payer denials rose 73%",
+                        "status": "grounded",
+                        "evidence": "excerpt span",
+                    }
+                ],
+            }
+        )
+        errors, warnings = validate_briefing_data(payload)
+
+        self.assertFalse(errors, errors)
+        self.assertTrue(
+            any("does not bind asserted number '686'" in warning for warning in warnings),
+            warnings,
+        )
+
+    def test_AUD_F05_causal_claim_may_be_declared_as_hypothesis(self):
+        payload = self._grounded_payload(
+            {
+                "basis": "registered_readable_excerpt",
+                "claims": [
+                    {
+                        "kind": "number",
+                        "value": "73%",
+                        "statement": "payer denials rose 73%",
+                        "status": "grounded",
+                        "evidence": "excerpt span",
+                    },
+                    {
+                        "kind": "number",
+                        "value": "686",
+                        "statement": "projected revenue impact",
+                        "status": "grounded",
+                        "evidence": "excerpt span",
+                    },
+                    {
+                        "kind": "causal",
+                        "statement": "premium declines push payers to tighten review",
+                        "status": "hypothesis",
+                    },
+                    {
+                        "kind": "policy_status",
+                        "statement": "the rate notice is not yet published",
+                        "status": "unverified",
+                    },
+                ],
+            }
+        )
+        errors, warnings = validate_briefing_data(payload)
+
+        self.assertFalse(errors, errors)
+        self.assertFalse(
+            any("claim_grounding" in warning for warning in warnings), warnings
+        )
 
     def test_v14_single_secondary_corroboration_is_accepted(self):
         # Owner-authorized 2026-09-14 downgrade: the new status is part of schema 1.4 and
@@ -714,6 +850,28 @@ class BriefingV14ContractTests(unittest.TestCase):
             "两个领域均有高影响资讯，维持请求比例",
         )
         self.assertEqual(errors, [])
+
+
+    def test_gate_entrypoint_is_last_so_the_cli_reaches_every_validator(self):
+        """Regressed once: the module guard sat above later validators, so the documented
+        `python briefing_gate.py <file>` invocation died with NameError before validating."""
+        gate = Path(__file__).resolve().parent / "briefing_gate.py"
+        source = gate.read_text(encoding="utf-8")
+        guard = source.index('if __name__ == "__main__":')
+        self.assertNotIn(chr(10) + "def ", source[guard:])
+        with tempfile.TemporaryDirectory() as tmp:
+            target = Path(tmp) / "briefing.json"
+            target.write_text(json.dumps({"schema_version": "1.4"}), encoding="utf-8")
+            proc = subprocess.run(
+                [sys.executable, "-B", "-X", "utf8", str(gate), str(target)],
+                capture_output=True,
+                text=True,
+                encoding="utf-8",
+            )
+        self.assertNotIn("NameError", proc.stderr)
+        self.assertNotIn("Traceback", proc.stderr)
+        self.assertIn("briefing schema validation", proc.stdout)
+
 
 
 if __name__ == "__main__":

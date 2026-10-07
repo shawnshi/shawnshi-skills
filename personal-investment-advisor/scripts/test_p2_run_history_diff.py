@@ -140,8 +140,12 @@ class DiffTests(HistoryTestCase):
         code, report = self.run_cli(["diff", "--task-root", str(self.root)])
         self.assertEqual(code, 2)
         self.assertEqual(report["status"], "insufficient_data")
-        self.assertTrue(any("weight delta not computed" in gap for gap in report["gaps"]))
-        self.assertEqual(report["weight_delta_pp"], {})
+        self.assertTrue(any("weights section not comparable" in gap for gap in report["gaps"]))
+        # An empty map would read as "no change"; a comparison that could not be made
+        # must say so, so the whole section is null rather than empty.
+        self.assertIsNone(report["weight_delta_pp"])
+        self.assertIsNone(report["symbols_removed"])
+        self.assertEqual(report["sections"]["weights"]["state"], "not_comparable")
 
     def test_missing_watchlist_does_not_report_a_cleared_boundary(self):
         self.make_run("run-a", epoch=100.0, weights={"X": 1.0},
@@ -152,7 +156,10 @@ class DiffTests(HistoryTestCase):
         self.assertEqual(code, 2)
         self.assertIsNone(report["boundary_crossed_cleared"])
         self.assertIsNone(report["boundary_crossed_added"])
-        self.assertTrue(any("boundary crossing comparison skipped" in gap for gap in report["gaps"]))
+        self.assertIsNone(report["boundary_transitions"])
+        self.assertTrue(any("boundaries section not comparable" in gap
+                            for gap in report["gaps"]))
+        self.assertEqual(report["sections"]["boundaries"]["state"], "not_comparable")
 
     def test_fewer_than_two_runs_is_explicit(self):
         self.make_run("run-a", epoch=100.0, weights={"X": 1.0})
@@ -184,6 +191,162 @@ class DiffTests(HistoryTestCase):
                                       "--from", "run-a", "--to", "run-c"])
         self.assertEqual(report["to_run"]["run_id"], "run-c")
         self.assertEqual(report["weight_delta_pp"]["X"]["delta_pp"], 50.0)
+
+
+class ToleranceTests(HistoryTestCase):
+    """Tolerance comes from the run's own declarations, never from a lax default."""
+
+    def make_run(self, run_id: str, *, epoch: float, status: str = "complete",
+                 weights=None, watchlist=None, with_weights=True,
+                 stages=None, unrun=None, with_summary=True) -> Path:
+        run_dir = self.root / run_id
+        if with_summary:
+            summary: dict = {"status": status, "detail_status": "daily_run_complete",
+                             "evaluation_epoch": epoch,
+                             "generated_at": f"2026-09-27T0{int(epoch) % 10}:00:00+00:00",
+                             "positions_input_sha256": "f" * 64,
+                             "stages": stages or [{"stage": "weights", "status": "complete"},
+                                                  {"stage": "watchlist", "status": "complete"}]}
+            if unrun is not None:
+                summary["run_inventory"] = {"stages_not_run": unrun}
+            write_json(run_dir / "out" / "daily_run_summary.json", summary)
+        if with_weights:
+            write_json(run_dir / "out" / "weights.json", {
+                "status": "complete", "detail_status": "current_weights_computed",
+                "evaluation_epoch": epoch,
+                "current_weights": [
+                    {"symbol": symbol, "current_weight": value,
+                     "quote": {"as_of": "2026-09-24T07:00:00Z"}}
+                    for symbol, value in (weights or {}).items()],
+            })
+        if watchlist is not None:
+            write_json(run_dir / "out" / "watchlist_results.json", watchlist)
+        return run_dir
+
+    DECLARED_SKIP = [{"stage": "watchlist", "reason": "skipped_by_flag:--skip-watchlist"}]
+
+    def test_a_declared_absent_section_is_a_warning_not_a_failure(self):
+        self.make_run("run-a", epoch=100.0, weights={"X": 1.0},
+                      watchlist={"X": {"status": "ok", "categories": {}}})
+        self.make_run("run-b", epoch=200.0, weights={"X": 1.0}, unrun=self.DECLARED_SKIP)
+        code, report = self.run_cli(["diff", "--task-root", str(self.root), "--summary"])
+        self.assertEqual(code, 0)
+        self.assertEqual(report["status"], "complete_with_warnings")
+        self.assertEqual(report["detail_status"], "diff_computed_with_warnings")
+        self.assertEqual(report["gaps"], [])
+        self.assertEqual(report["sections"]["boundaries"]["severity"], "warning")
+        self.assertIs(report["sections"]["boundaries"]["declared_by_run"], True)
+        # The boundary answers stay unknown rather than becoming "nothing crossed".
+        self.assertIsNone(report["boundary_crossed_cleared"])
+        self.assertIsNone(report["boundary_transitions"])
+        self.assertIn("warn:", "\n".join(report["summary_lines"]))
+        self.assertNotIn("gap:", "\n".join(report["summary_lines"]))
+
+    def test_an_undeclared_absent_section_still_fails_closed(self):
+        self.make_run("run-a", epoch=100.0, weights={"X": 1.0},
+                      watchlist={"X": {"status": "ok", "categories": {}}})
+        self.make_run("run-b", epoch=200.0, weights={"X": 1.0})
+        code, report = self.run_cli(["diff", "--task-root", str(self.root)])
+        self.assertEqual(code, 2)
+        self.assertEqual(report["detail_status"], "diff_partial")
+        self.assertIs(report["sections"]["boundaries"]["declared_by_run"], False)
+        self.assertTrue(any("run-a / run-b" in gap for gap in report["gaps"]))
+
+    def test_strict_keeps_a_declared_absence_blocking(self):
+        self.make_run("run-a", epoch=100.0, weights={"X": 1.0},
+                      watchlist={"X": {"status": "ok", "categories": {}}})
+        self.make_run("run-b", epoch=200.0, weights={"X": 1.0}, unrun=self.DECLARED_SKIP)
+        code, report = self.run_cli(["diff", "--task-root", str(self.root), "--strict"])
+        self.assertEqual(code, 2)
+        self.assertEqual(report["detail_status"], "diff_partial")
+        self.assertIs(report["strict"], True)
+
+    def test_requested_sections_decide_what_may_block(self):
+        self.make_run("run-a", epoch=100.0, with_weights=False,
+                      watchlist={"X": {"status": "ok", "categories": {}}})
+        self.make_run("run-b", epoch=200.0, weights={"X": 1.0},
+                      watchlist={"X": {"status": "insufficient_evidence",
+                                       "categories": {}}})
+        blocked = self.run_cli(["diff", "--task-root", str(self.root)])
+        self.assertEqual(blocked[0], 2)
+        narrow, report = self.run_cli(["diff", "--task-root", str(self.root),
+                                       "--sections", "boundaries"])
+        self.assertEqual(narrow, 0)
+        self.assertEqual(report["requested_sections"], ["boundaries"])
+        self.assertEqual(report["comparable_section_count"], 1)
+        # Not requested means not compared, so the payload stays null rather than
+        # claiming a weight delta was computed.
+        self.assertEqual(report["sections"]["weights"]["state"], "not_requested")
+        self.assertIsNone(report["weight_delta_pp"])
+        self.assertEqual(report["boundary_transitions"]["X"],
+                         {"from_status": "ok", "to_status": "insufficient_evidence"})
+
+    def test_an_unknown_section_is_refused(self):
+        self.make_run("run-a", epoch=100.0, weights={"X": 1.0})
+        self.make_run("run-b", epoch=200.0, weights={"X": 1.0})
+        code, report = self.run_cli(["diff", "--task-root", str(self.root),
+                                     "--sections", "weights,bogus"])
+        self.assertEqual(code, 3)
+        self.assertEqual(report["detail_status"], "unknown_section")
+        self.assertIn("bogus", " ".join(report["errors"]))
+
+    def test_an_empty_section_list_is_not_treated_as_every_section(self):
+        self.make_run("run-a", epoch=100.0, weights={"X": 1.0})
+        self.make_run("run-b", epoch=200.0, weights={"X": 1.0})
+        code, report = self.run_cli(["diff", "--task-root", str(self.root),
+                                     "--sections", " , "])
+        self.assertEqual(code, 3)
+        self.assertEqual(report["detail_status"], "no_sections_requested")
+
+    def test_nothing_comparable_is_not_a_clean_diff(self):
+        self.make_run("run-a", epoch=100.0, weights={"X": 1.0}, unrun=self.DECLARED_SKIP)
+        self.make_run("run-b", epoch=200.0, weights={"X": 1.0}, unrun=self.DECLARED_SKIP)
+        code, report = self.run_cli(["diff", "--task-root", str(self.root),
+                                     "--sections", "boundaries"])
+        self.assertEqual(code, 2)
+        self.assertEqual(report["detail_status"], "nothing_comparable")
+        self.assertIsNone(report["boundary_transitions"])
+
+    def test_a_missing_weights_artifact_does_not_claim_symbols_were_removed(self):
+        self.make_run("run-a", epoch=100.0, weights={"X": 0.4, "Y": 0.6})
+        self.make_run("run-b", epoch=200.0, with_weights=False)
+        _code, report = self.run_cli(["diff", "--task-root", str(self.root)])
+        self.assertIsNone(report["symbols_removed"])
+        self.assertIsNone(report["symbols_added"])
+        self.assertIsNone(report["weight_delta_pp"])
+
+    def test_a_blocked_weights_section_does_not_double_count_the_quotes_section(self):
+        self.make_run("run-a", epoch=100.0, weights={"X": 1.0})
+        self.make_run("run-b", epoch=200.0, with_weights=False)
+        _code, report = self.run_cli(["diff", "--task-root", str(self.root)])
+        self.assertEqual(report["sections"]["quotes"]["state"], "not_comparable")
+        # One missing file must not produce two gaps.
+        self.assertEqual(report["sections"]["quotes"]["severity"], "none")
+        self.assertEqual([gap for gap in report["gaps"] if "quotes" in gap], [])
+        self.assertIsNone(report["quote_as_of_changes"])
+
+    def test_a_run_without_a_summary_is_a_warning_not_a_failure(self):
+        self.make_run("run-a", epoch=100.0, weights={"X": 0.4})
+        self.make_run("run-b", epoch=200.0, weights={"X": 0.5}, with_summary=False)
+        code, report = self.run_cli(["diff", "--task-root", str(self.root),
+                                     "--sections", "weights"])
+        self.assertEqual(code, 0)
+        self.assertEqual(report["weight_delta_pp"]["X"]["delta_pp"], 10.0)
+        self.assertTrue(any("run summary missing on to" in warning
+                            for warning in report["warnings"]))
+
+    def test_a_declared_absence_is_only_honoured_when_the_run_declared_it(self):
+        # The same absent artifact, with and without the run's own declaration.
+        self.make_run("run-a", epoch=100.0, weights={"X": 1.0},
+                      watchlist={"X": {"status": "ok", "categories": {}}})
+        self.make_run("run-b", epoch=200.0, weights={"X": 1.0}, unrun=self.DECLARED_SKIP)
+        self.make_run("run-c", epoch=300.0, weights={"X": 1.0})
+        declared = self.run_cli(["diff", "--task-root", str(self.root),
+                                 "--from", "run-a", "--to", "run-b"])
+        undeclared = self.run_cli(["diff", "--task-root", str(self.root),
+                                   "--from", "run-a", "--to", "run-c"])
+        self.assertEqual(declared[0], 0)
+        self.assertEqual(undeclared[0], 2)
 
 
 if __name__ == "__main__":

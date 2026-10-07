@@ -40,6 +40,7 @@ from run_contract import (
     locked_manifest,
     normalize_published_at,
     validate_supplement_failure_kind,
+    validate_subagent_output_options,
 )
 from source_kind import classify_source_type
 
@@ -92,12 +93,15 @@ def _aware_datetime(value: Any, field: str) -> datetime:
 def _load_bound_packet(
     request_path: str | Path,
     gap_id: str,
-) -> tuple[
-    Path, dict[str, Any], dict[str, Any], dict[str, Any], dict[str, Any], dict[str, Any]
-]:
+    *,
+    include_manifest: bool = False,
+) -> (
+    tuple[Path, dict[str, Any], dict[str, Any], dict[str, Any], dict[str, Any], dict[str, Any]]
+    | tuple[Path, dict[str, Any], dict[str, Any], dict[str, Any], dict[str, Any], dict[str, Any], dict[str, Any]]
+):
     request_file = Path(request_path).resolve()
     request = load_json(request_file, {})
-    if request.get("contract_version") != "supplement-request/1.1":
+    if not isinstance(request, dict) or request.get("contract_version") != "supplement-request/1.1":
         raise RunContractError("supplement agent requires request 1.1")
     if not gap_id:
         raise RunContractError("gap_id is required")
@@ -174,7 +178,24 @@ def _load_bound_packet(
     ]
     if authorization.get("forbid_other_writes") is not True or allowed != [draft_path]:
         raise RunContractError("supplement draft authorization mismatch")
-    return request_file, request, packet, gap, lane_slice, prompt_config
+    result = (request_file, request, packet, gap, lane_slice, prompt_config)
+    return (*result, manifest) if include_manifest else result
+
+
+def preflight_launch(
+    request_path: str | Path, gap_id: str, launch_options: dict[str, Any]
+) -> dict[str, Any]:
+    request_file, request, packet, _, _, _ = _load_bound_packet(request_path, gap_id)
+    options = validate_subagent_output_options(packet, launch_options)
+    return {
+        "status": "launch_binding_valid",
+        "run_id": request["run_id"],
+        "gap_id": gap_id,
+        "request_sha256": file_sha256(request_file),
+        "launch_options": options,
+        "draft_path": packet["output_paths"]["draft"],
+        "launch_performed": False,
+    }
 
 
 def build_agent_context(
@@ -367,7 +388,9 @@ def build_agent_context(
     }
 
     if request.get("article_broker_version") in {2, 3} and "article_broker" in packet:
-        context["draft_instructions"] = [packet["task_message"]]
+        context["draft_instructions"] = [
+            packet.get("context_instructions", packet["task_message"])
+        ]
         context.pop("verify_bound_command", None)
         context["broker_handoff"] = {
             "parent_only": True,
@@ -402,6 +425,8 @@ def assemble_result(
     _parent_raw_bytes: bytes | None = None,
     _validate_only: bool = False,
 ) -> tuple[Path, dict[str, Any]]:
+    if not isinstance(dynamic, dict):
+        raise RunContractError("supplement dynamic draft must be an object")
     request_file, request, packet, gap, lane_slice, _ = _load_bound_packet(
         request_path, gap_id
     )
@@ -420,8 +445,6 @@ def assemble_result(
         raise RunContractError(
             "article broker proof requires bound operational request"
         )
-    if not isinstance(dynamic, dict):
-        raise RunContractError("supplement dynamic draft must be an object")
     extra = sorted(set(dynamic) - DYNAMIC_FIELDS)
     if extra:
         raise RunContractError(
@@ -1769,6 +1792,9 @@ def _compact_broker_cli_evidence(
                 "responseId": receipt.get("responseId"),
                 "outcome": receipt.get("outcome"),
                 "error": receipt.get("error"),
+                # AUD-03: without the answering provider in the delivered view, a prose-only
+                # provider answer is indistinguishable from a genuinely empty search.
+                "provider": receipt.get("provider"),
                 "results": deepcopy(receipt.get("results", [])),
             }
         )
@@ -1860,6 +1886,10 @@ def main() -> int:
         description="Validate a supplement packet, emit compact agent context, and deterministically assemble its draft."
     )
     subparsers = parser.add_subparsers(dest="command", required=True)
+    preflight_parser = subparsers.add_parser("preflight")
+    preflight_parser.add_argument("--request", type=Path, required=True)
+    preflight_parser.add_argument("--gap-id", required=True)
+    preflight_parser.add_argument("--launch-options", type=Path, required=True)
     context_parser = subparsers.add_parser("context")
     context_parser.add_argument("--request", type=Path, required=True)
     context_parser.add_argument("--gap-id", required=True)
@@ -1886,6 +1916,7 @@ def main() -> int:
         "reserve-fetch",
         "record-fetch",
         "seal",
+        "terminal",
         "evidence",
     ):
         broker = subparsers.add_parser(
@@ -1898,6 +1929,15 @@ def main() -> int:
         if command == "reserve-query":
             broker.add_argument("--query", required=True)
             broker.add_argument("--num-results", type=int, default=5)
+            broker.add_argument(
+                "--provider",
+                default=None,
+                help=(
+                    "Provider that will answer the public web_search call. Recorded in the "
+                    "reservation and required back on the receipt so the ledger can bind the "
+                    "answer to its provider (AUD-03)."
+                ),
+            )
         if command in {"record-query", "record-fetch"}:
             broker.add_argument("--receipt", type=Path, required=True)
         if command in {"http", "reserve-fetch"}:
@@ -1910,7 +1950,11 @@ def main() -> int:
             operation = args.command.removeprefix("broker-")
             kwargs = {}
             if operation == "reserve-query":
-                kwargs = {"query": args.query, "num_results": args.num_results}
+                kwargs = {
+                    "query": args.query,
+                    "num_results": args.num_results,
+                    "provider": args.provider,
+                }
             elif operation in {"record-query", "record-fetch"}:
                 kwargs = {"receipt": load_json(args.receipt, {})}
             elif operation in {"http", "reserve-fetch"}:
@@ -1921,6 +1965,11 @@ def main() -> int:
                 else operate(args.request, args.gap_id, operation, **kwargs)
             )
             payload = _compact_broker_cli_evidence(args.request, args.gap_id, payload)
+            print(json.dumps(payload, ensure_ascii=False, indent=2))
+            return 0
+        if args.command == "preflight":
+            options = json.loads(args.launch_options.read_text(encoding="utf-8"))
+            payload = preflight_launch(args.request, args.gap_id, options)
             print(json.dumps(payload, ensure_ascii=False, indent=2))
             return 0
         if args.command == "context":

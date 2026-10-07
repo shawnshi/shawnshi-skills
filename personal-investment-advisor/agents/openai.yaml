@@ -1,12 +1,18 @@
 interface:
   display_name: "Personal Investment Advisor"
-  short_description: "面向个人投资者，以免费公开数据开展可追溯的只读投资研究"
+  short_description: "以免费公开数据开展投资研究、具体参数建议与受控本地维护"
   brand_color: "#1F6F5B"
   default_prompt: >-
-    使用 $personal-investment-advisor 对我的持仓或候选股票开展只读、证据可追溯的研究。
+    使用 $personal-investment-advisor 对我的持仓或候选股票开展证据可追溯的研究。
     默认只用 SEC EDGAR、交易所与发行人披露、Yahoo Finance、Akshare 等免费公开来源；
-    明确数据缺口，不要求购买专业数据库。主动收益研究仍须依次通过 Alpha 验证、
-    Rank & Yank、候选构造和非执行提案门禁。
+    明确数据缺口，不要求购买专业数据库。未声明决策范围时默认按 `advisory` 产出，
+    仅研究结论可用 `research_only` 显式指定。`advisory` 可给出买卖倾向及供我手动执行的
+    具体价格、数量或目标仓位指令；参数包含有效期、触发与失效条件、下行情景及待复核项。
+    不修改实际持仓或真实账户，不下单、不调度或路由订单、不登录券商。可执行参数仍须
+    满足适用的行情、规则、资源和成本门；缺口或休市时明确待核验／待触发，不称立即可执行。
+    已授权的 Dashboard、Thesis、独立风险政策或技能维护可直接执行，不因模式自动获得写权限。
+    主动收益候选或目标权重仍须通过 Alpha 验证、Rank & Yank、候选构造与提案门禁；
+    不把原生非执行研究候选或实验权重自动升级为就绪交易。
 
 policy:
   allow_implicit_invocation: true

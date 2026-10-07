@@ -80,7 +80,7 @@
 | 内部 Wiki 结论 | 否 | 二级加工品；不得作为来源引用，也不得暗示第三方背书 |
 
 - 公开可追溯性由本技能自负：内部来源只负责发现与去重，最终 locator 必须是公开出处。
-- 取证工具：历史语料与去重用 `vector-lake-mcp_search_vector_lake`；公共评级用 `lan-mcp-1441_query_ratings`，但其结果仅供发现与交叉，台账来源仍写公开出处。
+- 取证工具：历史语料与去重用 `mentat-mind-mcp_search_vector_lake`；公共评级用 `premind-winning-mcp_query_ratings`，但其结果仅供发现与交叉，台账来源仍写公开出处。
 - 只取当前市场定义所需的域，个人域不得进入行业研究。
 - 内部来源不可用时声明缺口；不得用外部结论填补内部事实，反之亦然。
 

@@ -138,7 +138,7 @@ DECISION_SCOPES = ("research_only", "advisory", "actionable")
 def base_report(
     schema_version: str,
     detail_status: str = "not_evaluated",
-    decision_scope: str = "research_only",
+    decision_scope: str = "advisory",
 ) -> dict[str, Any]:
     if decision_scope not in DECISION_SCOPES:
         decision_scope = "research_only"
@@ -163,7 +163,7 @@ def fail_report(
     errors: list[str],
     *,
     status: str = "invalid_input",
-    decision_scope: str = "research_only",
+    decision_scope: str = "advisory",
 ) -> dict[str, Any]:
     report = base_report(schema_version, detail_status, decision_scope)
     report["status"] = status

@@ -57,7 +57,7 @@ def _utc_comparable(value: datetime) -> datetime:
     return value.astimezone(timezone.utc)
 
 
-def _base_report(decision_scope: str = "research_only") -> dict[str, Any]:
+def _base_report(decision_scope: str = "advisory") -> dict[str, Any]:
     if decision_scope not in ("research_only", "advisory", "actionable"):
         decision_scope = "research_only"
     return {
@@ -371,7 +371,7 @@ def run_inverse_volatility_experiment(
             }
         )
 
-    report = _base_report(str(policy.get("decision_scope") or "research_only"))
+    report = _base_report(str(policy.get("decision_scope") or "advisory"))
     report.update(
         {
             "status": "complete",

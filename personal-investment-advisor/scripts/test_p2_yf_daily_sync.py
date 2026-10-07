@@ -107,6 +107,39 @@ class YfDailySyncContractTests(unittest.TestCase):
         self.assertTrue(kwargs["fetch_info"])
         cache.assert_called_once_with(None, task_local_default=True)
 
+    def test_default_daily_batch_is_serial_for_shared_cache_safety(self):
+        active = 0
+        peak = 0
+        lock = threading.Lock()
+
+        def fetch(symbol, **kwargs):
+            nonlocal active, peak
+            with lock:
+                active += 1
+                peak = max(peak, active)
+            time.sleep(0.01)
+            with lock:
+                active -= 1
+            return None, {'symbol': symbol}, [], []
+
+        receipt = {}
+        with patch('yf.get_stock_data', side_effect=fetch):
+            results = yf.fetch_daily_sync_batch(['AAPL', 'MSFT', 'GOOG'], receipt=receipt)
+        self.assertEqual(peak, 1)
+        self.assertEqual(receipt['workers'], 1)
+        self.assertEqual(len(results), 3)
+
+    def test_serial_batch_does_not_declare_outage_from_one_symbol(self):
+        def fetch(symbol, **kwargs):
+            if symbol == 'AAPL':
+                return None, {}, [], ['Info fetch failed: HTTP 503 Service Unavailable']
+            return None, {'symbol': symbol}, [], []
+
+        with patch('yf.get_stock_data', side_effect=fetch) as calls:
+            results = yf.fetch_daily_sync_batch(['AAPL', 'MSFT', 'GOOG'])
+        self.assertEqual(calls.call_count, 3)
+        self.assertEqual(results['MSFT'][1]['symbol'], 'MSFT')
+
     def test_daily_sync_batch_fetches_independent_symbols_concurrently(self):
         lock = threading.Lock()
         active = 0
@@ -322,6 +355,216 @@ class YfDailySyncContractTests(unittest.TestCase):
             "Info fetch failed: provider returned empty metadata",
             payload[0]["errors"],
         )
+
+
+    def test_batch_receipt_separates_a_provider_outage_from_missing_data(self):
+        def fake_get_stock_data(symbol, **_kwargs):
+            if symbol == "HANG":
+                raise RuntimeError("curl: (35) connection refused")
+            if symbol == "EMPTY":
+                return None, {}, [], []
+            return None, {"symbol": symbol}, [], []
+
+        receipt: dict = {}
+        with patch("yf.get_stock_data", side_effect=fake_get_stock_data):
+            results = yf.fetch_daily_sync_batch(
+                ["OK", "HANG", "HANG", "EMPTY"], max_workers=1, receipt=receipt
+            )
+
+        self.assertEqual(len(results), 3)
+        self.assertEqual(receipt["provider"], "yfinance")
+        self.assertEqual(receipt["requested_count"], 3)
+        self.assertEqual(receipt["outcomes"],
+                         {"OK": "ok", "HANG": "error", "EMPTY": "no_data"})
+        self.assertEqual(receipt["outcome_counts"]["error"], 1)
+        self.assertIn("not that the security has no quote", receipt["statement"])
+
+    def test_batch_receipt_records_the_circuit_breaker_skip_reason(self):
+        def fake_get_stock_data(_symbol, **_kwargs):
+            raise RuntimeError("curl: (35) connection refused")
+
+        receipt: dict = {}
+        with patch("yf.get_stock_data", side_effect=fake_get_stock_data):
+            results = yf.fetch_daily_sync_batch(
+                ["A", "B", "C", "D"], max_workers=1, receipt=receipt
+            )
+
+        self.assertEqual(len(results), 4)
+        # Serial execution still requires two independent symbols to confirm an outage.
+        self.assertEqual(receipt["outcome_counts"].get("error"), 2)
+        self.assertEqual(receipt["outcome_counts"].get("skipped_circuit_open"), 2)
+        self.assertEqual(receipt["circuit_breaker_signature"], "curl: (35)")
+        self.assertEqual(receipt["transport_failures"]["curl: (35)"], 2)
+
+    def test_batch_receipt_is_absent_unless_requested(self):
+        with patch("yf.get_stock_data", return_value=(None, {"symbol": "OK"}, [], [])):
+            results = yf.fetch_daily_sync_batch(["OK"], max_workers=1)
+
+        self.assertEqual(results["OK"][1], {"symbol": "OK"})
+
+
+def secondary_quote_record(symbol="GOOG", *, price=336.15, currency="USD",
+                           exchange="NASDAQ", market_state="REGULAR",
+                           observed_epoch=None, unverifiable=("quoteType", "timeliness")):
+    import quote_fallback as qf
+    observed = observed_epoch if observed_epoch is not None else time.time() - 60
+    return {
+        "tier": "secondary",
+        "symbol": symbol,
+        "source": qf.SOURCE_TENCENT,
+        "source_url": qf.source_url(symbol),
+        "source_locator": qf.source_locator(symbol),
+        "price": price,
+        "previous_close": 339.0,
+        "currency": currency,
+        "observed_at": "2026-09-29T10:16:20-04:00",
+        "observed_epoch": observed,
+        "retrieved_at": "2026-09-29T14:16:30+00:00",
+        "market_state": market_state,
+        "identity_verification": "echoed_venue_code_and_currency",
+        "exchange": exchange,
+        "exchange_evidence": "venue_suffix_echo" if exchange else None,
+        "unverifiable": list(unverifiable),
+        "echoed_symbol": f"{symbol}.OQ",
+        "instrument_name": None,
+        "primary_outcome": "error",
+    }
+
+
+class FakeFetcher:
+    def __init__(self, results=None):
+        self.results = results or {}
+        self.requested = []
+
+    def fetch_many(self, symbols, *, primary_outcomes=None, markets=None):
+        self.requested = list(symbols)
+        return {
+            symbol: self.results.get(symbol, {"health": "broken", "record": None,
+                                              "error": "no_secondary_record"})
+            for symbol in symbols
+        }
+
+
+class QuoteFallbackTests(unittest.TestCase):
+    """A secondary source may only replace a failed primary transport."""
+
+    def receipt(self, outcomes):
+        return {"provider": "yfinance", "operation": "daily_sync_quote_metadata",
+                "outcomes": dict(outcomes),
+                "outcome_counts": {value: list(outcomes.values()).count(value)
+                                   for value in set(outcomes.values())}}
+
+    def prefetch(self, symbols):
+        return {symbol: (None, {}, [], []) for symbol in symbols}
+
+    def test_only_transport_failures_trigger_the_secondary_source(self):
+        outcomes = {"OK": "ok", "ERR": "error", "NODATA": "no_data",
+                    "SKIPPED": "skipped_circuit_open"}
+        receipt = self.receipt(outcomes)
+        fetcher = FakeFetcher({"ERR": {"health": "ok", "record": secondary_quote_record("ERR")},
+                               "SKIPPED": {"health": "ok", "record": secondary_quote_record("SKIPPED")}})
+        tiers = yf.apply_quote_fallbacks(self.prefetch(outcomes), receipt, {}, fetcher=fetcher)
+        self.assertEqual(fetcher.requested, ["ERR", "SKIPPED"])
+        self.assertEqual(sorted(tiers), ["ERR", "SKIPPED"])
+        fallback = receipt["fallback"]
+        self.assertEqual(fallback["policy"], yf.FALLBACK_POLICY)
+        self.assertEqual(fallback["attempted"], ["ERR", "SKIPPED"])
+        self.assertEqual(fallback["used"], ["ERR", "SKIPPED"])
+        self.assertEqual(fallback["coverage_tier"], "mixed")
+        self.assertEqual(set(fallback["sources"].values()), {"Tencent Finance (secondary)"})
+
+    def test_a_primary_no_data_answer_is_never_replaced(self):
+        receipt = self.receipt({"A": "no_data", "B": "ok"})
+        fetcher = FakeFetcher()
+        tiers = yf.apply_quote_fallbacks(self.prefetch({"A": None, "B": None}), receipt, {},
+                                         fetcher=fetcher)
+        self.assertEqual(fetcher.requested, [])
+        self.assertEqual(tiers, {})
+        self.assertEqual(receipt["fallback"]["attempted"], [])
+        self.assertEqual(receipt["fallback"]["coverage_tier"], "primary")
+
+    def test_successful_fallback_injects_only_source_evidenced_metadata(self):
+        receipt = self.receipt({"ERR": "error"})
+        prefetch = self.prefetch({"ERR": None})
+        record = secondary_quote_record("ERR")
+        yf.apply_quote_fallbacks(prefetch, receipt, {},
+                                 fetcher=FakeFetcher({"ERR": {"health": "ok", "record": record}}))
+        history, info, news, errors = prefetch["ERR"]
+        self.assertIsNone(history)
+        self.assertEqual(errors, [])
+        self.assertEqual(info["regularMarketPrice"], 336.15)
+        self.assertEqual(info["currency"], "USD")
+        self.assertEqual(info["exchange"], "NASDAQ")
+        self.assertEqual(info["marketState"], "REGULAR")
+        self.assertEqual(info["regularMarketTime"], record["observed_epoch"])
+        # Not printed by the source, so it must not be invented.
+        self.assertIsNone(info["quoteType"])
+        self.assertEqual(info["exchangeTimezoneName"], "America/New_York")
+
+    def test_failed_fallback_keeps_the_primary_failure_and_records_it(self):
+        receipt = self.receipt({"ERR": "error"})
+        prefetch = {"ERR": (None, {}, [], ["provider transport failed"])}
+        tiers = yf.apply_quote_fallbacks(prefetch, receipt, {}, fetcher=FakeFetcher())
+        self.assertEqual(tiers, {})
+        self.assertEqual(prefetch["ERR"][3], ["provider transport failed"])
+        self.assertEqual(receipt["fallback"]["outcomes"]["ERR"], "broken")
+        self.assertEqual(receipt["fallback"]["used"], [])
+        self.assertEqual(receipt["fallback"]["coverage_tier"], "primary_incomplete")
+
+
+class SecondaryQuoteContractTests(unittest.TestCase):
+    """A declared secondary quote is judged on what it evidenced, and nothing else."""
+
+    def position(self, **overrides):
+        payload = {"symbol": "GOOG", "currency": "USD", "market": "US",
+                   "asset_type": "stock"}
+        payload.update(overrides)
+        return payload
+
+    def result(self, record):
+        record = dict(record)
+        record["query"] = record["symbol"]
+        record["info"] = yf._secondary_info(record["symbol"], record)
+        record["quote_provenance"] = record
+        return record
+
+    def contract(self, record, position=None, *, now=None):
+        return yf._quote_contract_report(
+            self.result(record), position or self.position(),
+            now_epoch=now if now is not None else time.time(),
+            max_quote_age_seconds=yf.MAX_QUOTE_AGE_SECONDS,
+        )
+
+    def test_unprinted_type_is_a_named_gap_not_a_mismatch(self):
+        contract = self.contract(secondary_quote_record())
+        self.assertEqual(contract["status"], "matched")
+        self.assertIn("secondary_quote_source", contract["warnings"])
+        self.assertIn("unverifiable.secondary_source.quoteType", contract["warnings"])
+
+    def test_missing_exchange_for_a_secondary_quote_is_a_named_gap(self):
+        contract = self.contract(secondary_quote_record(exchange=None))
+        self.assertEqual(contract["status"], "matched")
+        self.assertIn("unverifiable.secondary_source.exchange", contract["warnings"])
+
+    def test_a_primary_quote_still_needs_its_exchange_and_type(self):
+        record = secondary_quote_record()
+        record["tier"] = "primary"
+        record["exchange"] = None
+        contract = self.contract(record)
+        self.assertEqual(contract["status"], "failed")
+        self.assertIn("missing_info.exchange_or_exchangeName", contract["errors"])
+        self.assertIn("missing_info.quoteType", contract["errors"])
+
+    def test_secondary_currency_conflict_still_fails(self):
+        contract = self.contract(secondary_quote_record(currency="HKD"))
+        self.assertEqual(contract["status"], "failed")
+        self.assertIn("identity_mismatch.currency", contract["errors"])
+
+    def test_secondary_stale_timestamp_still_fails(self):
+        stale = time.time() - 30 * 24 * 3600
+        contract = self.contract(secondary_quote_record(observed_epoch=stale))
+        self.assertEqual(contract["status"], "failed")
+        self.assertIn("stale_info.regularMarketTime", contract["errors"])
 
 
 if __name__ == "__main__":

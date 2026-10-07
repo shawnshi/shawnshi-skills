@@ -63,9 +63,9 @@ try {
 } catch {
     Stop-Install 'Python 3 is required and was not found on PATH.' 1
 }
-& $pythonExe -I -c "import sys; raise SystemExit(0 if sys.version_info >= (3, 11) else 1)"
+& $pythonExe -I -c "import sys; raise SystemExit(0 if sys.version_info >= (3, 12) else 1)"
 if ($LASTEXITCODE -ne 0) {
-    Stop-Install 'Python 3.11 or newer is required.' 1
+    Stop-Install 'Python 3.12 or newer is required.' 1
 }
 
 $requirements = Join-Path $PSScriptRoot 'requirements.lock.txt'

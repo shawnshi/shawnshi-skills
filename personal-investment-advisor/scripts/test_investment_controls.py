@@ -1873,6 +1873,58 @@ class EvidenceAndScreenTests(unittest.TestCase):
         )
         self.assertEqual(report["categories"]["near_boundary"], [])
 
+    def test_watchlist_gate_uses_user_policy_proximity_when_dashboard_lacks_it(self):
+        dashboard = valid_dashboard()
+        dashboard["monitoring_boundaries"] = valid_monitoring_boundaries()
+        dashboard["monitoring_boundaries"].pop("proximity_policy")
+        derived = {
+            "schema_version": "pia_position_limits_v1",
+            "positions": [],
+            "proximity_policy": {
+                "mode": "explicit_relative_pct",
+                "value": 0.02,
+                "source_tier": "user_authorized",
+                "source_locator": "dataset://pia/user-policy/portfolio-risk-bounds/20261002-proximity",
+                "as_of_date": "2026-10-02",
+                "authority_status": "user_confirmed",
+            },
+        }
+        report = evaluate_watchlist(
+            dashboard,
+            valid_runtime_quote(current_price=91.5),
+            now=datetime(2026, 7, 30, 21, 0, tzinfo=timezone.utc),
+            derived_limits=derived,
+        )
+        self.assertEqual(report["proximity_policy_source"], "user_policy")
+        self.assertEqual(report["categories"]["near_boundary"], ["lower-001"])
+        self.assertEqual(report["categories"]["near_rule_undefined"], [])
+        self.assertEqual(report["categories"]["not_crossed"], ["upper-001"])
+
+    def test_watchlist_gate_prefers_dashboard_proximity_over_user_policy(self):
+        dashboard = valid_dashboard()
+        dashboard["monitoring_boundaries"] = valid_monitoring_boundaries()
+        derived = {
+            "schema_version": "pia_position_limits_v1",
+            "positions": [],
+            "proximity_policy": {
+                "mode": "explicit_relative_pct",
+                "value": 0.02,
+                "source_tier": "user_authorized",
+                "source_locator": "dataset://pia/user-policy/portfolio-risk-bounds/20261002-proximity",
+                "as_of_date": "2026-10-02",
+                "authority_status": "user_confirmed",
+            },
+        }
+        report = evaluate_watchlist(
+            dashboard,
+            valid_runtime_quote(current_price=91.5),
+            now=datetime(2026, 7, 30, 21, 0, tzinfo=timezone.utc),
+            derived_limits=derived,
+        )
+        # 本用例 Dashboard 自带 3% 接近规则，应优先于政策里的 2%
+        self.assertEqual(report["proximity_policy_source"], "dashboard")
+        self.assertEqual(report["categories"]["near_boundary"], ["lower-001"])
+
     def test_watchlist_cli_returns_structured_observation_report(self):
         dashboard = valid_dashboard()
         dashboard["monitoring_boundaries"] = valid_monitoring_boundaries()

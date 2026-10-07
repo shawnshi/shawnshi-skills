@@ -40,7 +40,7 @@ class NetworkAuthorizationError(PermissionError):
 
 AUTH_OPERATION = "garmin_auth"
 TOKEN_WRITE_OPERATION = "garmin_token_store_write"
-SUPPORTED_GARMINCONNECT_VERSION = "0.3.16"
+SUPPORTED_GARMINCONNECT_VERSION = "0.3.17"
 
 # Garmin's edge rejects some proxy exit paths outright (TLS reset or 429 across
 # every login strategy), so Garmin hosts are routed around a configured HTTP

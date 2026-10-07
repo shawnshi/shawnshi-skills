@@ -208,6 +208,20 @@ class ValidateLecturesScoutTests(unittest.TestCase):
                 with self.subTest(table=header, replacement=replacement):
                     self.assertTrue(self.check(CONTENT.replace(table, replacement)))
 
+    def test_unclosed_fence_is_reported_explicitly(self):
+        for opener in ("```", "~~~", "   ```md"):
+            with self.subTest(opener=opener):
+                self.rejects(opener + "\n" + CONTENT, "unclosed fenced code block")
+        # An invalid cutoff must not replace structural diagnostics collected earlier.
+        naive_cutoff = datetime(2000, 1, 8)
+        errors = self.check("```\n" + CONTENT, cutoff=naive_cutoff)
+        self.assertTrue(any("unclosed fenced code block" in error for error in errors))
+        self.assertTrue(any("cutoff must include timezone" in error for error in errors))
+        # Metadata stays visible; only the hidden tail closes the section set.
+        self.rejects(CONTENT.replace("## 本期研究", "```\n## 本期研究"), "unclosed fenced code block")
+        self.assertFalse(any("unclosed" in error for error in self.check()))
+        self.assertFalse(any("unclosed" in error for error in self.check(CONTENT + "\n```\nnot structure\n```")))
+
     def test_fenced_tables_do_not_count_as_research_or_sources(self):
         for fence in ("```", "~~~", "````", "   ~~~python"):
             close = fence.strip().rstrip("python")

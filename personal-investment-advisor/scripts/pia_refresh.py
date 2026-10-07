@@ -22,6 +22,7 @@ import copy
 import datetime
 import hashlib
 import json
+import math
 import os
 import subprocess
 import sys
@@ -38,7 +39,7 @@ SCHEMA_VERSION = "pia_refresh_receipt_v1"
 DERIVED_FILENAME = "positions_fx_snapshot.json"
 DEFAULT_MAX_FX_AGE_HOURS = 72.0
 FX_PROBE_TIMEOUT_SECONDS = 240
-DECISION_SCOPE = "research_only"
+DECISION_SCOPE = "advisory"
 
 
 def now_iso() -> str:
@@ -88,7 +89,7 @@ def _is_cash(position: dict[str, Any]) -> bool:
 
 
 def parse_fx_capture(raw: bytes, symbol: str) -> dict[str, Any]:
-    """Extract the last valid dated observation from a ``yf.py`` FX capture."""
+    """Prefer an actual timestamped spot quote, otherwise use a dated Close."""
 
     payload = json.loads(raw.decode("utf-8"))
     records = payload if isinstance(payload, list) else [payload]
@@ -99,11 +100,27 @@ def parse_fx_capture(raw: bytes, symbol: str) -> dict[str, Any]:
     )
     if record is None:
         raise ValueError(f"capture does not contain symbol {symbol}")
+    info = record.get("info") or {}
+    if info.get("regularMarketPrice") is not None and info.get("regularMarketTime") is not None:
+        price, epoch = info["regularMarketPrice"], info["regularMarketTime"]
+        if (type(price) not in (int, float) or not math.isfinite(price) or price <= 0
+                or type(epoch) not in (int, float) or not math.isfinite(epoch) or epoch <= 0):
+            raise ValueError(f"capture contains invalid spot observation for {symbol}")
+        try:
+            observed = datetime.datetime.fromtimestamp(epoch, datetime.timezone.utc)
+        except (OverflowError, OSError, ValueError) as exc:
+            raise ValueError(f"capture contains invalid spot timestamp for {symbol}") from exc
+        return {
+            "rate": float(price), "observation_date": observed.date().isoformat(),
+            "as_of": observed.isoformat(), "observation_field": "info.regularMarketPrice",
+            "timestamp_field": "info.regularMarketTime", "market_state": info.get("marketState"),
+            "regular_market_time": epoch,
+        }
     history = record.get("history") or []
     usable = [
         row for row in history
-        if isinstance(row, dict) and isinstance(row.get("Close"), (int, float))
-        and float(row["Close"]) > 0 and row.get("Date")
+        if isinstance(row, dict) and type(row.get("Close")) in (int, float)
+        and math.isfinite(row["Close"]) and float(row["Close"]) > 0 and row.get("Date")
     ]
     if not usable:
         raise ValueError(f"capture contains no usable Close observation for {symbol}")
@@ -112,6 +129,7 @@ def parse_fx_capture(raw: bytes, symbol: str) -> dict[str, Any]:
     return {
         "rate": float(last["Close"]),
         "observation_date": str(last["Date"])[:10],
+        "observation_field": "history[-1].Close",
         "market_state": info.get("marketState"),
         "regular_market_time": info.get("regularMarketTime"),
     }
@@ -147,13 +165,10 @@ def _failure_reason(stdout: bytes, stderr: bytes, exit_code: int) -> tuple[str, 
     return detail, is_transient
 
 
-def fetch_fx_capture(symbol: str, cache_dir: Path | None, *, attempts: int = 2) -> tuple[bytes, str]:
-    """Run the documented FX probe, bounded-retrying transient failures once.
-
-    A deterministic contract failure is not retried; the reported reason always
-    includes the child's structured error so a failure is diagnosable without a
-    second manual run.
-    """
+def fetch_fx_capture(symbol: str, cache_dir: Path | None, *, attempts: int = 1) -> tuple[bytes, str]:
+    """Run one FX child; the provider owns transport retries and its deadline."""
+    if type(attempts) is not int or attempts != 1:
+        raise ValueError("FX retries are owned by yf.py; outer attempts must be 1")
 
     command = [
         sys.executable, "-B", str(SCRIPT_DIR / "yf.py"), symbol,
@@ -161,18 +176,13 @@ def fetch_fx_capture(symbol: str, cache_dir: Path | None, *, attempts: int = 2) 
     ]
     if cache_dir is not None:
         command.extend(["--cache-dir", str(cache_dir)])
-    last_reason = ""
-    for attempt in range(1, max(1, attempts) + 1):
-        completed = subprocess.run(
-            command, capture_output=True, timeout=FX_PROBE_TIMEOUT_SECONDS, check=False,
-        )
-        if completed.returncode == 0 and completed.stdout.strip():
-            return completed.stdout, " ".join(command) + (f" [attempts={attempt}]" if attempt > 1 else "")
-        reason, is_transient = _failure_reason(completed.stdout, completed.stderr, completed.returncode)
-        last_reason = reason
-        if not is_transient or attempt == max(1, attempts):
-            break
-    raise RuntimeError(f"FX probe failed for {symbol}: {last_reason}")
+    completed = subprocess.run(
+        command, capture_output=True, timeout=FX_PROBE_TIMEOUT_SECONDS, check=False,
+    )
+    if completed.returncode == 0 and completed.stdout.strip():
+        return completed.stdout, " ".join(command)
+    reason, _ = _failure_reason(completed.stdout, completed.stderr, completed.returncode)
+    raise RuntimeError(f"FX probe failed for {symbol}: {reason}")
 
 
 def build_snapshot(
@@ -194,7 +204,7 @@ def build_snapshot(
             "retrieved_at": record["retrieved_at"],
             "content_sha256": record["content_sha256"],
             "price_convention": f"{base_currency}_per_{currency}",
-            "observation_field": "history[-1].Close",
+            "observation_field": record.get("observation_field", "history[-1].Close"),
             "market_state": record.get("market_state"),
         }
     return derived
@@ -331,11 +341,15 @@ def main(argv: list[str] | None = None) -> int:
         try:
             raw = capture_bytes if capture_bytes is not None else fetch_fx_capture(symbol, cache_dir)[0]
             observation = parse_fx_capture(raw, symbol)
+            observed_at = datetime.datetime.fromisoformat(
+                observation.get("as_of") or f"{observation['observation_date']}T00:00:00+00:00")
         except (OSError, ValueError, RuntimeError, subprocess.SubprocessError) as exc:
             unresolved.append(f"{currency}: {type(exc).__name__}: {exc}")
             continue
-        observed_at = datetime.datetime.fromisoformat(f"{observation['observation_date']}T00:00:00+00:00")
         age_seconds = (now - observed_at).total_seconds()
+        if age_seconds < 0:
+            unresolved.append(f"{currency}: future FX observation {observed_at.isoformat()}")
+            continue
         if age_seconds > max_age_seconds:
             unresolved.append(
                 f"{currency}: observation {observation['observation_date']} is "
@@ -345,7 +359,8 @@ def main(argv: list[str] | None = None) -> int:
         resolved[currency] = {
             "pair": f"{currency}/{base_currency}",
             "rate": observation["rate"],
-            "as_of": observation["observation_date"],
+            "as_of": observation.get("as_of") or observation["observation_date"],
+            "observation_field": observation["observation_field"],
             "age_seconds": round(age_seconds, 3),
             "max_age_seconds": max_age_seconds,
             "market_state": observation.get("market_state"),

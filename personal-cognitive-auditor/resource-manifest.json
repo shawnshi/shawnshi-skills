@@ -1,18 +1,18 @@
 {
   "schema_version": 3,
   "skill": "personal-cognitive-auditor",
-  "generated_at": "2026-09-28T12:26:26+08:00",
+  "generated_at": "2026-10-02T11:52:35+08:00",
   "hash_algorithm": "SHA-256",
   "text_hash_normalization": "LF",
   "skill_md": "SKILL.md",
-  "skill_md_sha256": "243065e8b9d6426b84f2762841092d9a53cdb7fe31efba1e04d3400ed1d9dfc8",
+  "skill_md_sha256": "9dab2de5532d6296a5758e9d9a1f7e1b9e78cd1e8da6661527dd5b3e314f5fb9",
   "top_level_files": [
     "SKILL.md"
   ],
   "top_level_file_hashes": [
     {
       "path": "SKILL.md",
-      "sha256": "243065e8b9d6426b84f2762841092d9a53cdb7fe31efba1e04d3400ed1d9dfc8"
+      "sha256": "9dab2de5532d6296a5758e9d9a1f7e1b9e78cd1e8da6661527dd5b3e314f5fb9"
     }
   ],
   "top_level_directories": [
@@ -23,7 +23,7 @@
   "resource_directories": [
     {
       "name": "scripts",
-      "file_count": 5
+      "file_count": 6
     },
     {
       "name": "references",
@@ -85,7 +85,7 @@
     },
     {
       "path": "scripts/audit_gate.py",
-      "sha256": "0a6340f961cc8bd786a0d7eeb276b8b3ba36cf2e994b010b1156904a227055fa"
+      "sha256": "499b8311da19cf5f0d9cd5a4c9b07ed07cd97e85a2ea07bea121ee08d5588722"
     },
     {
       "path": "scripts/periodic_counterexamples.py",
@@ -98,6 +98,10 @@
     {
       "path": "scripts/test_audit_gate.py",
       "sha256": "7bbc2cacff01e48ad364b58917f16b7af12d1c80121d58ad17c38680799cb435"
+    },
+    {
+      "path": "scripts/test_runtime_stability.py",
+      "sha256": "d98bbf1be13b77e6d3767b4509fb7b3fa81dba70b606b2cfd6dcd8f9080eebd0"
     },
     {
       "path": "scripts/test_weekly_autosave_contract.py",
@@ -169,7 +173,7 @@
       "path": "scripts/audit_gate.py",
       "exists": true,
       "resolved_path": "personal-cognitive-auditor/scripts/audit_gate.py",
-      "sha256": "0a6340f961cc8bd786a0d7eeb276b8b3ba36cf2e994b010b1156904a227055fa"
+      "sha256": "499b8311da19cf5f0d9cd5a4c9b07ed07cd97e85a2ea07bea121ee08d5588722"
     }
   ],
   "missing_declared_dependencies": []

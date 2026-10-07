@@ -1048,6 +1048,71 @@ def _is_positive_json_number(value) -> bool:
     )
 
 
+
+def _validate_valuation_lineage(scenarios, *, research_brief=None):
+    """Separate "when the valuation was derived" from "which as-of it is bound to".
+
+    ``as_of_date`` stays the current research cutoff (the strict contract already
+    forces it to equal the brief's date). A carried-over valuation must not hide
+    behind that date: the optional ``valuation_lineage`` block records the real
+    derivation date, the bound as-of date and the generation it was carried from.
+    """
+    if not isinstance(scenarios, dict):
+        return []
+    lineage = scenarios.get("valuation_lineage")
+    if lineage is None:
+        return []
+    prefix = "scenario_analysis.valuation_lineage"
+    if not isinstance(lineage, dict):
+        return [f"{prefix} must be an object"]
+
+    def as_day(value):
+        if not isinstance(value, str) or not value.strip():
+            raise ValueError("missing date")
+        return date.fromisoformat(value.strip())
+
+    errors: list[str] = []
+    try:
+        derived_at = as_day(lineage.get("valuation_derived_at"))
+        bound_as_of = as_day(lineage.get("valuation_bound_as_of"))
+    except (TypeError, ValueError):
+        return [f"{prefix} requires ISO valuation_derived_at and valuation_bound_as_of"]
+    carried = lineage.get("carried_over")
+    if not isinstance(carried, bool):
+        errors.append(f"{prefix}.carried_over must be a boolean")
+    if derived_at > bound_as_of:
+        errors.append(f"{prefix}.valuation_derived_at cannot be after valuation_bound_as_of")
+    anchor = lineage.get("input_anchor_as_of")
+    if anchor is not None:
+        try:
+            anchor_day = as_day(anchor)
+        except (TypeError, ValueError):
+            errors.append(f"{prefix}.input_anchor_as_of must be an ISO date when provided")
+        else:
+            if anchor_day > bound_as_of:
+                errors.append(f"{prefix}.input_anchor_as_of cannot be after valuation_bound_as_of")
+
+    scenario_date = scenarios.get("as_of_date")
+    try:
+        research_date = as_day(scenario_date)
+    except (TypeError, ValueError):
+        research_date = None
+    if research_date is not None:
+        if bound_as_of > research_date:
+            errors.append(f"{prefix}.valuation_bound_as_of cannot be after scenario_analysis.as_of_date")
+        if isinstance(carried, bool) and carried != (derived_at < research_date):
+            errors.append(
+                f"{prefix}.carried_over must be true exactly when valuation_derived_at < as_of_date"
+            )
+    if carried is True:
+        source = lineage.get("carried_from_generation")
+        if not isinstance(source, str) or not re.fullmatch(r"\d{8}T\d{12}Z-[0-9a-f]{16,32}", source.strip()):
+            errors.append(f"{prefix}.carried_from_generation must be an archived generation id when carried_over")
+    elif "carried_from_generation" in lineage and lineage.get("carried_from_generation") is not None:
+        errors.append(f"{prefix}.carried_from_generation is only meaningful when carried_over is true")
+    return errors
+
+
 def _validate_monitoring_boundaries(data, *, strict_current_contract=False):
     config = data.get("monitoring_boundaries")
     if config is None:
@@ -1461,6 +1526,12 @@ def validate_dashboard(data: dict, *, require_scenarios: bool = False) -> list[s
             data,
             required=require_scenarios,
             research_brief=research_brief,
+        )
+    )
+
+    errors.extend(
+        _validate_valuation_lineage(
+            data.get("scenario_analysis"), research_brief=research_brief
         )
     )
 

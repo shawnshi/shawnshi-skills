@@ -52,7 +52,8 @@ def metadata(content: str, label: str) -> str:
 
 CHINESE_EVENT_DATE_RE = re.compile(
     r"^\|\s*(?P<month>\d{1,2})月(?P<day>\d{1,2})(?:日)?"
-    r"(?:[—-](?P<end_day>\d{1,2})日)?(?:发布)?\s*\|"
+    r"(?:[—-](?:(?P<end_month>\d{1,2})月)?(?P<end_day>\d{1,2})日)?"
+    r"(?:发布)?\s*\|"
 )
 ISO_EVENT_DATE_RE = re.compile(
     r"^\|\s*(?P<start>\d{4}-\d{2}-\d{2})"
@@ -159,11 +160,16 @@ def event_dates_from_row(
         return []
     month = int(chinese_match.group("month"))
     start_day = int(chinese_match.group("day"))
+    end_month = int(chinese_match.group("end_month") or month)
     end_day = int(chinese_match.group("end_day") or start_day)
-    days = [start_day] if start_day == end_day else [start_day, end_day]
+    # A range may cross a month or year boundary, so both ends carry a month;
+    # each end is resolved independently against the reporting period.
+    pairs = [(month, start_day)]
+    if (end_month, end_day) != (month, start_day):
+        pairs.append((end_month, end_day))
     return [
-        resolve_event_date(month, day_value, period_start, period_end)
-        for day_value in days
+        resolve_event_date(event_month, day_value, period_start, period_end)
+        for event_month, day_value in pairs
     ]
 
 

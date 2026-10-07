@@ -612,5 +612,36 @@
       "boundary": "structural receipt pass does not authenticate primary origin or historical availability; new construction/publication must reverify actual raw bytes plus capture records externally"
     },
     "compatibility": "7.0/7.1 archives keep original bytes/versions; stock2.0 EV-net_debt and ETF1.0 semantics unchanged; no auto migration"
+  },
+  "valuation_lineage_contract": {
+    "location": "scenario_analysis.valuation_lineage",
+    "status": "optional",
+    "purpose": "把「估值实际推导日」与「本档声明绑定的口径日」分开记录，使沿用旧档的估值不能靠 as_of_date 伪装成当期推导。",
+    "required_fields": [
+      "valuation_derived_at",
+      "valuation_bound_as_of",
+      "carried_over"
+    ],
+    "optional_fields": [
+      "input_anchor_as_of",
+      "carried_from_generation",
+      "note"
+    ],
+    "semantics": {
+      "valuation_derived_at": "模型实际推导/刷新的日期（ISO date）",
+      "valuation_bound_as_of": "本档声明的估值绑定口径日（ISO date），即读者应据以理解结论时效的日期",
+      "input_anchor_as_of": "可选的输入锚点日（如最近一期财报期末），须 <= valuation_bound_as_of",
+      "carried_over": "布尔；必须等于 (valuation_derived_at < scenario_analysis.as_of_date)",
+      "carried_from_generation": "carried_over 为 true 时必填，须为已归档 generation id 格式 ^\\d{8}T\\d{12}Z-[0-9a-f]{32}$；为 false 时不得携带"
+    },
+    "rules": [
+      "valuation_derived_at <= valuation_bound_as_of",
+      "valuation_bound_as_of <= scenario_analysis.as_of_date",
+      "input_anchor_as_of <= valuation_bound_as_of（提供时）",
+      "carried_over 必须与 valuation_derived_at < as_of_date 一致",
+      "carried_over 为 true 时 carried_from_generation 必填且格式合法",
+      "carried_over 为 false 时不得携带 carried_from_generation"
+    ],
+    "rendering": "save_dashboard.render_markdown 在报告头部渲染该块，读者无需翻到 data_gaps 即可看到"
   }
 }

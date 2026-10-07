@@ -29,7 +29,7 @@ import sys
 from pathlib import Path
 from typing import Any
 
-DECISION_SCOPE = "research_only"
+DECISION_SCOPE = "advisory"
 SCHEMA_VERSION = "pia_partial_risk_diagnostic_v1"
 ANNUALIZATION_FACTOR = 252
 METHOD_LABELS = ("limited_diagnostic", "not_risk_parity",

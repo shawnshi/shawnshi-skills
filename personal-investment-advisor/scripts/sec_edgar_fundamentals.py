@@ -319,7 +319,7 @@ def build_report(
     user_agent: str,
     timeout: float = 30.0,
     session: requests.Session | None = None,
-    decision_scope: str = "research_only",
+    decision_scope: str = "advisory",
 ) -> dict[str, Any]:
     if decision_scope not in ("research_only", "advisory", "actionable"):
         decision_scope = "research_only"
@@ -395,7 +395,7 @@ def main() -> int:
     parser.add_argument(
         "--decision-scope",
         choices=("research_only", "advisory", "actionable"),
-        default="research_only",
+        default="advisory",
     )
     args = parser.parse_args()
     try:

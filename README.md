@@ -252,31 +252,16 @@ pwsh -NoProfile -ExecutionPolicy Bypass -File scripts/repair_skills.ps1 -Mode Ga
 5. 对修改过的脚本运行语法检查、代表性正向测试和相关单元测试。改动 `scripts/` 下门禁脚本本身会使 `mentat-skill-creator/resource-manifest.json` 过期（它记录了所声明依赖的脚本哈希），所以顺序是先改脚本、最后重新生成该 manifest、再跑门禁。
 6. 只有验证结果真实变化时，才同步本 README 的库存和基线数字。
 
-### Latest publication validation (2026-09-28)
 
-- 从本地安装库同步 5 个技能的实质变更和新资源；保留发布仓既有 README 与独有文件，不发布 `.skill_state`、缓存或运行产物。51 份资源清单在发布仓重新生成并通过 `-Check`；全库 `repair_skills.ps1 -Mode Gate` 与 5 个受影响技能的 scoped gate 通过。
-- 发布仓测试：库级脚本 89 passed、1 skipped；日记 57 passed、4 skipped；健康 408 passed；变更的资讯测试 162 passed；新增/变更的投资测试分组共 332 passed。跨技能整批测试与完整 `scripts/gate.sh` 未宣称通过：前者超时，后者仍含下述依赖安装目录旁 `pai/*` 的非可移植用例。
-- 周/月/季审计新增精确别名会扩大自动保存请求匹配面，但仍要求受保护用户事件、周期一致和原有审批门；已覆盖所有新增别名。交易所公告原始 HTML 使用 `.gitattributes` 禁止 Git 换行转换，发布前核对暂存字节的 SHA-256 与日历表记录一致。
 
-### 8.1 Previous validation (2026-09-24—26)
+### 8.1 Current validation (2026-09-24)
 
 环境：Windows 主机；`pwsh`（PowerShell Core）；Python 3.13 + PyYAML。
 
-- 全库 `sh scripts/gate.sh` 通过。`repair_skills.ps1 -Mode Gate` 的 28 类阻断项全为 0，退出码 0：`InventoryMismatch=False`（本轮先为声明 52 / 实际 52；删除两个技能后为 51 / 51，见下条）、`FrontmatterFailures=0`、`OversizedSkills=0`、`OversizedByEstimatedTokens=0`（最大估算 6600）、`MissingResourceManifests=0`、`InvalidResourceManifests=0`、`ManifestDependencyIssues=0`、`OpenAiMetadataFailures=0`、`ValidatorIntegrationFailures=0`、`DeprecatedToolSkills=0`、`ForeignRuntimeSkills=0`、`ReasoningDirectiveSkills=0`、`HardcodedModelSkills=0`、`SkillJsonFiles=0`、`NodeModulesDirectories=0`、`TriggerOwnershipClasses=19`、`TriggerOwnershipConflicts=0`。
+- 全库 `sh scripts/gate.sh` 通过。`repair_skills.ps1 -Mode Gate` 的 28 类阻断项全为 0，退出码 0：`InventoryMismatch=False`（声明 52、实际 52）、`FrontmatterFailures=0`、`OversizedSkills=0`、`OversizedByEstimatedTokens=0`（最大估算 6600）、`MissingResourceManifests=0`、`InvalidResourceManifests=0`、`ManifestDependencyIssues=0`、`OpenAiMetadataFailures=0`、`ValidatorIntegrationFailures=0`、`DeprecatedToolSkills=0`、`ForeignRuntimeSkills=0`、`ReasoningDirectiveSkills=0`、`HardcodedModelSkills=0`、`SkillJsonFiles=0`、`NodeModulesDirectories=0`、`TriggerOwnershipClasses=19`、`TriggerOwnershipConflicts=0`。
 - 非阻断项：`OpenAiPolicyWarnings=3`（`industry-strategy-analyst`、`personal-health-analysis`、`senior-osint-analyst` 的 `agents/openai.yaml` 关闭隐式调用，但 `SKILL.md` 未声明 `disable-model-invocation`，因此本宿主仍会自动触发）。属路由决策，待技能所有者确认后再改任一侧。
-- 测试：`python -m pytest scripts -q` 在**本地安装目录**运行 102 项通过、67 项子测试通过。同一命令在**独立克隆**中为 90 项通过、13 项失败，且这 13 项在同步前的 `HEAD` 清洁工作树上以完全相同的集合复现：`scripts/test_autonomy_contracts.py` 从 `AGENT = SKILLS.parent` 读 `pai/*` 契约文件，而该路径只在安装库旁边存在，故发布副本内不可能通过。“发布副本 Gate 通过”因此仅在 `repair_skills.ps1 -Mode Gate` 与资源清单两层成立，不含该测试层；本节旧文句中的无限定“102 项通过”仅在安装目录可复现。
-- 本轮同步（2026-09-26，`fca6940e`）：从安装库同步 118 个文件的内容变更并新增 `scripts/gate.sh`、`mentat-skill-creator/references/host-routing-eval.md`；`resource-manifest.json` 由发布副本按自身实际文件重新生成，不沿用安装库版本。同步不删除发布副本独有文件。
-  - `academic-paper-reader`：复现就绪度卡片成为门禁强制槽位（标题 + 四个维度，缺一则具名报错），模板补 YAML frontmatter、数字并入带 E-ID 的证据索引、新增消融归因与负向边界，参考示例重写为新结构，避免样例继续教旧结构。
-  - 刻意未发布：`gws-auth-keeper`（安装库独有的新技能，未进库存表，且正文写死 `C:/Users/shich`，违反本 README 第 3 节“不硬编码用户目录”）。发布它属另一项治理决定。
-  - 同步当时保留：`weknora`（发布副本存在且本 README 已声明，安装库缺失——当时按安装缺口而非退役处理）。**此保留决定已被所有者推翻**，见下一条。
-  - 排除项：`.ruff_cache`、`__pycache__`、`.pytest_cache`、`.skill_state`、`.deepxiv-draft-*`、`output/`、`garmin-output/`、`scripts/tmp/`、`NUL`。
-- 技能删除（2026-09-26，所有者指示）：移除 `gws-auth-keeper` 与 `weknora`，库存由 52 降为 51（声明 51、实际 51）。
-  - `gws-auth-keeper`：仅存在于此前的安装库，安装库不是 git 仓库，因此这次删除没有历史可恢复；删除前已整树归档。
-  - `weknora`：从发布副本 `git rm -r` 移除，同时删除其库存行（删除目录而不删行，或反之，都会使数量门禁失衡）。它的恢复路径是此前的提交历史。
-  - 两份清单声明与磁盘目录同步调整为 51，未触碰第 8 节历史记录中的“52 个技能”字样：那是当时的事实，不是当前状态。
-  - 归档（含逐文件 SHA-256）：`C:/Users/shich/removed-skills-20260926/`；`gws-auth-keeper` 5 个文件、`weknora` 5 个文件。
-  - `shared/trigger-ownership-matrix.json` 无需改动：两个技能在其中都没有引用（已全库检索确认）。
-- 资源清单：51 个技能各一份 schema v3 manifest，`-Check` 报过期 0。
+- 测试：`python -m pytest scripts -q` 运行 102 项，通过，67 项子测试通过。
+- 资源清单：52 个技能各一份 schema v3 manifest，`-Check` 报过期 0。
 - 修复项（本轮）：
   - 恢复丢失的 `scripts/validate_openai_yaml.py` 及其测试；同步 `scripts/resource_manifest.py` 与 `scripts/test_resource_manifest.py` 的 Lua 换行归一化修复。修复前 `repair_skills.ps1` 会在 `validator_integration_failures` 上恒失败，19 份 `agents/openai.yaml` 处于无校验状态。
   - 为 52 个技能补齐 `resource-manifest.json`（此前仅 2 份，缺失 39 份）。
@@ -289,25 +274,7 @@ pwsh -NoProfile -ExecutionPolicy Bypass -File scripts/repair_skills.ps1 -Mode Ga
 - 未运行：宿主级路由与档位评测（本宿主未配置上游档位，夹具只证明合同完整）；`scripts/gate.sh` 的 POSIX 分支仅在 Windows Git Bash 下验证，未在 Linux/macOS 实测。
 - 声明：上述结果只证明静态合同、资源一致性与单元测试通过，不代表所有技能已在新会话中端到端验证。
 
-### 8.2 Historical validation (2026-09-22)
-
-- 本次同步 `personal-intelligence-hub`、`hit-industry-radar`、`personal-investment-advisor` 三个技能的本地安装副本漂移，共 48 个文件（+661/−193 行）。同步排除缓存、虚拟环境、运行产物、草稿与 `.skill_state`，并排除 `resource-manifest.json`（由发布副本重新生成）；文件按 LF 字节表示写入，未引入换行改写，也未删除发布副本独有文件。
-- `personal-intelligence-hub`：日期证据层新增两条确定性规则。`standalone-dateline/1` 读取整行完整日期（`YYYY年M月D日`、`YYYY-MM-DD`、`Month D, YYYY`，可带 `, H:MM AM/PM` 与 UTC/GMT 后缀，容忍对称强调包裹），仅扫描正文前 1500 字节，且要求上一非空行是短标签行、之前不出现 ≥120 字符段落；`cn-wire-dateline/1` 读取无年份中文电讯日期（如`央广网北京9月17日消息`），年份只取自 URL 路径中唯一一个完整日期，并与正文月、日逐项比对，报告窗口不参与年份推断，无锚点或多锚点冲突时整条作废。补检父级收口 `supplement_finalization_grace_seconds` 由 300 秒提高到 900 秒，上限常量化 `article_broker.MAX_FINALIZATION_GRACE_SECONDS = 3600`，worker `timeout_ms` 仍按 `max_duration_seconds + grace_seconds` 推导。arXiv 提交历史一致性守卫保持严格：v1 提交月必须等于编号月，与编号或年份不一致的页面继续判为冲突证据，不修补日期。
-- 本地安装副本验证：改动影响面 796 项测试 / 100 子测试通过（含 8 条新增日期规则回归，以及把 grace 相关断言改为按 packet 推导）；真实封存正文回放（同一 run 的 14 份 body proof，只读）中可解析日期由 3 份增至 7 份，窗口内由 1 份增至 5 份。
-- 发布副本验证：`scripts/resource_manifest.py generate/check` → 检查 52 个技能、重写 3 个、过期 0；受影响技能快速子集 537 项测试 / 29 子测试通过；`personal-investment-advisor` 技能级测试 48 项通过；全部改动 Python 文件字节编译通过；全库 `scripts/` 测试 85 项通过、13 项失败，同一失败集合在 HEAD 的清洁工作树内复现，属既有失败，本次同步未新增失败。
-- 限制：发布副本未重跑 `personal-intelligence-hub` 的耗时用例（`test_native_article_evidence.py` 两处内容一致，仅在本地安装副本运行 107 项）；`hit-industry-radar` 无技能级测试。上述结果只证明静态合同、资源一致性与单元测试行为，不代表真实模型选路的端到端验收。
-
-### 8.3 Historical validation (2026-09-19)
-
-- 本次同步 `tool-smart-latex`（P0–P2 修复）。模板改为按单一 `cjk` 开关分流语言：中文用 CTeX 方案与中文标签，英文用 `scheme=plain`、类基线行距与左对齐。补齐 Pandoc 前置（`\passthrough`、`\newcounter{none}`、`secnumdepth`、`\pandocbounded`、`CSLReferences`），修复此前已存在的结构性失败：Markdown 表格在 5 个预设中的 4 个必然编译失败、`tech_report` 行内代码失败、任意图片在所有预设失败；`academic` 清除 `newtxtext` 向 xeCJK 泄漏的 `Extension=.otf`；新增 `twocol_table.lua`（双栏表格）与 `div_boxes.lua`（fenced div 到 tcolorbox）两个过滤器。
-- 修复副本与本地运行副本同源：13 个技能文件的 Git blob 哈希与运行时副本逐字节一致；两个新过滤器在索引与工作区均为 LF。
-- 本地验证（TeX Live 2026、Pandoc 3.8.3、Windows CTeX 字体）：`tool-smart-latex` 42 项测试 / 94 个子测试通过（含 5 个样式的端到端真实编译）；引擎矩阵 30/30 组合退出码 0、有 PDF、无 LaTeX 错误；编译后实测英文正文行距 120.0–124.2%（合同 120–145%）、行长 60–90 字符（合同 45–90）。发布副本内重跑同一套件同为 42 项 / 94 子测试通过。
-- 仓库工具：清单生成器增加 `.lua` 换行归一化覆盖并附回归测试（`scripts/test_resource_manifest.py` 29 项 / 24 子测试通过）；用 CRLF/LF 往返验证 `.lua` 哈希不再随检出的换行设置变化。
-- 全库资源清单刷新：检查 52 个技能，重写 6 个、未变 46 个。重写的 6 个为 `cognitive-morphism-mapper`（`examples/.gitkeep`）、`mentat-collaboration-audit`（`resources/.gitkeep`）、`officecli`（`LICENSE`、`NOTICE`）、`personal-investment-advisor`（`resources/.gitkeep`）、`technical-diagram-renderer`（`LICENSE`）、`tool-url-markdown`（`bun.lock`）：这 6 项是更早提交改动文件后未刷新清单造成的记录滞后，记录哈希与磁盘既非原始字节也不匹配 LF 归一化，且工作区无换行差异，不是换行伪影；文件本身未在本轮修改。刷新后全库清单检查过期数为 0。
-- 全库 `repair_skills.ps1 -Mode Gate` 通过：52 个技能、7 项自动持久化例外、19 类触发所有权，阻断项为 0。
-- 上述结果只证明静态合同、资源一致性与已记录的编译行为，不代表面向真实模型选路的端到端验收，也不代替逐页视觉验收：本轮未对最终 PDF 做逐页人工/多模态版面检查。
-
-### 8.4 Historical validation (2026-09-09)
+### 8.2 Historical validation (2026-09-09)
 
 - 按本地一级 `SKILL.md` 盘点为 51 个技能；`mentat-dream-cycle`、`mentat-insight-diary` 当前不在本目录，已从库存表移除。
 - 自动持久化例外表保留 7 项现存技能合同；移除缺失技能的独立条目，不改变其他技能入口中已有的受保护写入边界。
@@ -317,7 +284,7 @@ pwsh -NoProfile -ExecutionPolicy Bypass -File scripts/repair_skills.ps1 -Mode Ga
 - 发布副本全库 Gate 通过。测试分别在适用环境运行：本地安装目录根测试 94 项通过；日记测试运行 63 项，跳过 4 项缺少已移除 Mentat 技能的可选集成，其余通过；发布副本资讯测试运行 337 项，跳过 1 项，其余通过。发布副本单独复验日记写入器 36 项，跳过相同 4 项，其余通过。
 - 新增缺失 Mentat 证据门时拒绝写入且不创建目标目录的回归测试，未放宽生产写入门。依赖宿主目录布局的根合同及日记入口测试在本地安装目录验证，不将独立克隆中的路径不匹配写成代码通过。
 
-### 8.5 Historical validation (2026-09-07)
+### 8.3 Historical validation (2026-09-07)
 
 - 本次全库 `repair_skills.ps1 -Mode Gate` 通过：53 个技能，8 项自动持久化例外，19 类触发所有权，阻断项为 0。
 - 资源索引独立检查：53 个技能，过期或缺失清单为 0；界面元数据独立检查：19 份配置，错误为 0。
@@ -325,7 +292,7 @@ pwsh -NoProfile -ExecutionPolicy Bypass -File scripts/repair_skills.ps1 -Mode Ga
 - `hit-customer-analyst` 仍为交付候选；静态门禁通过不改变其限定内部试用状态，真实发布验收以该技能的 `references/release-acceptance.md` 为准。
 - Gate 只证明其覆盖的静态合同与资源一致性，不代表所有技能已在新会话中端到端验证，也不代替发布前的敏感信息检查。
 
-### 8.6 Historical baseline (2026-09-05)
+### 8.4 Historical baseline (2026-09-05)
 
 - 此前记录：全库 Gate 通过，53 个技能、8 项自动持久化例外、19 类触发所有权，阻断项为 0。
 - 此前记录：`mentat-insight-diary/scripts/test_skill_contract.py` 的 14 项测试通过；本次未重跑该回归。

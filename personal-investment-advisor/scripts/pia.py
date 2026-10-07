@@ -439,6 +439,49 @@ def _run_child(
         else:
             status = STATUS_FAILED
             detail = "portfolio_context_contract_unknown"
+    elif public_command == "actionability-gate":
+        # The gate has three legitimate verdicts plus an invalid-input failure.  An
+        # unknown native status still fails closed, and a closed market is reported as
+        # insufficient evidence rather than as success: "not actionable now" is not
+        # "the terms are feasible".
+        native = payload.get("status") if isinstance(payload, dict) else None
+        native_detail = payload.get("detail_status") if isinstance(payload, dict) else None
+        status = {
+            "complete": STATUS_COMPLETE,
+            "insufficient_evidence": STATUS_INSUFFICIENT_EVIDENCE,
+            "market_closed": STATUS_INSUFFICIENT_EVIDENCE,
+        }.get(native, STATUS_FAILED)
+        # Keep the native failure verdict (``market_closed`` must survive), but a
+        # feasible snapshot keeps its more specific native detail.
+        detail = (str(native_detail) if status == STATUS_COMPLETE and native_detail
+                  else str(native or "child_status_normalized"))
+    elif public_command == "readiness":
+        # A ready roll-up means the machine-checkable prerequisites hold; the standing
+        # human gates stay named and the verdict is never an order.  An unknown native
+        # status fails closed rather than being read as ready.
+        native = payload.get("status") if isinstance(payload, dict) else None
+        native_detail = payload.get("detail_status") if isinstance(payload, dict) else None
+        status = {
+            "ready_for_human_review": STATUS_COMPLETE,
+            "not_ready": STATUS_INSUFFICIENT_EVIDENCE,
+        }.get(native, STATUS_FAILED)
+        detail = str(native_detail or native or "child_status_normalized")
+    elif public_command == "history":
+        # A partial diff is real success only when the run itself declared the absent
+        # section; that arrives as ``complete_with_warnings`` and must neither be
+        # flattened into a failure nor read as an unqualified clean diff.  An unknown
+        # native status still fails closed.
+        native = payload.get("status") if isinstance(payload, dict) else None
+        native_detail = payload.get("detail_status") if isinstance(payload, dict) else None
+        status = {
+            "complete": STATUS_COMPLETE,
+            "complete_with_warnings": STATUS_COMPLETE,
+            "insufficient_data": STATUS_INSUFFICIENT_EVIDENCE,
+            "failed": STATUS_FAILED,
+        }.get(native, STATUS_FAILED)
+        if status == STATUS_COMPLETE and completed.returncode != 0:
+            status = STATUS_FAILED
+        detail = str(native_detail or native or "child_status_normalized")
     elif public_command == "screen":
         status = _screen_status(payload, completed.returncode)
         detail = (
@@ -501,6 +544,7 @@ def _build_parser() -> JsonArgumentParser:
     edgar.add_argument(
         "--decision-scope",
         choices=("research_only", "advisory", "actionable"),
+        default="advisory",
     )
 
     portfolio = subparsers.add_parser(
@@ -523,6 +567,7 @@ def _build_parser() -> JsonArgumentParser:
     daily.add_argument(
         "--decision-scope",
         choices=("research_only", "advisory", "actionable"),
+        default="advisory",
     )
 
     scenario = subparsers.add_parser(
@@ -601,6 +646,23 @@ def _build_parser() -> JsonArgumentParser:
     refresh.add_argument("--max-fx-age-hours", type=float)
     refresh.add_argument("--force", action="store_true")
 
+    collect = subparsers.add_parser(
+        "collect-evidence",
+        help="Collect primary-source Thesis evidence from disclosure channels.",
+    )
+    collect.add_argument("--task-dir", required=True, type=_path_argument)
+    collect.add_argument("--symbols", nargs="+", required=True)
+    collect.add_argument("--window-start", required=True)
+    collect.add_argument("--window-end", required=True)
+    collect.add_argument(
+        "--scope-source", action="append", default=[],
+        help="<macro|sector|regulatory>=<url>@<published_at>, repeatable",
+    )
+    collect.add_argument("--cache-dir", type=_path_argument)
+    collect.add_argument("--max-cache-age-seconds", type=float)
+    collect.add_argument("--timeout", type=float)
+    collect.add_argument("--user-agent")
+
     daily_run = subparsers.add_parser(
         "daily-run",
         help="Run the pinned-epoch Daily Sync pipeline (refresh, quotes, replay, weights).",
@@ -612,6 +674,11 @@ def _build_parser() -> JsonArgumentParser:
     daily_run.add_argument("--scenario-assumptions", type=_path_argument)
     daily_run.add_argument("--scenario-portfolio", type=_path_argument)
     daily_run.add_argument("--dashboard-root", type=_path_argument)
+    daily_run.add_argument(
+        "--decision-scope",
+        choices=("research_only", "advisory", "actionable"),
+        default="advisory",
+    )
     daily_run.add_argument("--skip-watchlist", action="store_true")
     daily_run.add_argument("--holiday-calendar-file", type=_path_argument)
     daily_run.add_argument("--coverage-probe-file", type=_path_argument)
@@ -622,6 +689,27 @@ def _build_parser() -> JsonArgumentParser:
     daily_run.add_argument("--risk-base-currency")
     daily_run.add_argument("--risk-diagnostic-out", type=_path_argument)
     daily_run.add_argument("--plan-only", action="store_true")
+    daily_run.add_argument(
+        "--reuse-artifacts", action="store_true",
+        help=("Reuse this run directory's own refresh/quotes artifacts instead of "
+              "re-fetching, when they still prove they belong to this positions snapshot."),
+    )
+    daily_run.add_argument(
+        "--record", action="store_true",
+        help="Append this run to the append-only trigger ledger (idempotent per entry id).",
+    )
+    daily_run.add_argument("--ledger", type=_path_argument)
+    daily_run.add_argument(
+        "--actionability-assessment", type=_path_argument,
+        help=("Optional A-share terms snapshot (pia_cn_actionability_v1); supplying it "
+              "makes this one command deliver the actionable-readiness verdict."),
+    )
+    daily_run.add_argument(
+        "--force",
+        action="store_true",
+        help=("Allow the refresh stage to overwrite an existing derived FX snapshot when "
+              "re-running the pinned workflow in the same task directory."),
+    )
     daily_run.add_argument("--now-epoch", type=float)
 
     build = subparsers.add_parser(
@@ -675,12 +763,41 @@ def _build_parser() -> JsonArgumentParser:
     history.add_argument("--from", dest="run_from")
     history.add_argument("--to", dest="run_to")
     history.add_argument("--summary", action="store_true")
+    history.add_argument(
+        "--sections",
+        help=("Comma-separated comparison sections that must be comparable "
+              "(weights,boundaries,quotes); an unrequested section cannot block."),
+    )
+    history.add_argument(
+        "--strict", action="store_true",
+        help="Keep every missing comparison section blocking, even a declared not-run one.",
+    )
 
     report = subparsers.add_parser(
         "report", help="Render one run directory to a deterministic Markdown report.",
     )
     report.add_argument("--run-dir", required=True, type=_path_argument)
     report.add_argument("--out", type=_path_argument)
+    report.add_argument("--expect-scope",
+                        choices=("research_only", "advisory", "actionable"))
+
+    actionability = subparsers.add_parser(
+        "actionability-gate",
+        help="Offline feasibility check for user-supplied A-share terms; never orders.",
+    )
+    actionability.add_argument("--assessment", required=True, type=_path_argument,
+                               help="assessment snapshot consumed by cn_actionability_gate.py")
+    actionability.add_argument("--holiday-calendar-file", type=_path_argument,
+                               help="official exchange closure table, needed for same-day terms")
+
+    readiness = subparsers.add_parser(
+        "readiness",
+        help="Roll one existing run into a single actionable-readiness verdict; read-only.",
+    )
+    readiness.add_argument("--run-dir", required=True, type=_path_argument,
+                           help="task directory whose out/ artifacts are rolled up")
+    readiness.add_argument("--out", type=_path_argument,
+                           help="optional path for the JSON roll-up (the run itself is not modified)")
 
     trigger = subparsers.add_parser(
         "trigger-ledger",
@@ -823,6 +940,44 @@ def _run_active_stage(
 
 
 def _dispatch(args: argparse.Namespace) -> tuple[dict[str, Any], int]:
+    if args.command == "actionability-gate":
+        child = [str(args.assessment)]
+        _append_option(child, "--holiday-calendar-file", args.holiday_calendar_file)
+        return _run_child(
+            public_command=args.command,
+            script_name="cn_actionability_gate.py",
+            child_arguments=child,
+            completion_scope="cn_terms_feasibility_snapshot",
+            limitations=[
+                "offline snapshot only: the gate never connects to a broker and never submits an order",
+                "human_review_required_no_order is a research verdict, not an authorization to trade",
+                "a closed-market verdict requires the official exchange calendar, not a calendar guess",
+            ],
+        )
+
+    if args.command == "collect-evidence":
+        child = ["--task-dir", args.task_dir, "--symbols", *args.symbols,
+                 "--window-start", args.window_start, "--window-end", args.window_end]
+        for spec in args.scope_source:
+            child.extend(["--scope-source", spec])
+        for flag, value in (
+            ("--cache-dir", args.cache_dir),
+            ("--max-cache-age-seconds", args.max_cache_age_seconds),
+            ("--timeout", args.timeout),
+            ("--user-agent", args.user_agent),
+        ):
+            _append_option(child, flag, value)
+        return _run_child(
+            public_command=args.command,
+            script_name="pia_evidence.py",
+            child_arguments=child,
+            completion_scope="primary_source_evidence_collection",
+            limitations=[
+                "the collector reads public disclosure channels only and never trades",
+                "a channel that answers HTTP 200 without usable data is reported broken, not empty",
+            ],
+        )
+
     if args.command == "daily-run":
         child = [
             "--positions-file", args.positions_file,
@@ -837,6 +992,8 @@ def _dispatch(args: argparse.Namespace) -> tuple[dict[str, Any], int]:
             ("--holiday-calendar-file", args.holiday_calendar_file),
             ("--coverage-probe-file", args.coverage_probe_file),
             ("--now-epoch", args.now_epoch),
+            ("--actionability-assessment", args.actionability_assessment),
+            ("--decision-scope", args.decision_scope),
         ):
             _append_option(child, flag, value)
         if args.skip_watchlist:
@@ -849,7 +1006,14 @@ def _dispatch(args: argparse.Namespace) -> tuple[dict[str, Any], int]:
         _append_option(child, "--risk-diagnostic-out", args.risk_diagnostic_out)
         if args.plan_only:
             child.append("--plan-only")
-        return _run_child(
+        for flag, enabled in (("--reuse-artifacts", args.reuse_artifacts),
+                              ("--record", args.record)):
+            if enabled:
+                child.append(flag)
+        _append_option(child, "--ledger", args.ledger)
+        if args.force:
+            child.append("--force")
+        envelope, code = _run_child(
             public_command=args.command,
             script_name="pia_daily.py",
             child_arguments=child,
@@ -859,6 +1023,10 @@ def _dispatch(args: argparse.Namespace) -> tuple[dict[str, Any], int]:
                 "dependent stages do not run from an incomplete upstream stage",
             ],
         )
+        # The output contract of this run travels with the envelope, not only with
+        # the child receipts.
+        envelope["decision_scope"] = args.decision_scope
+        return envelope, code
 
     if args.command == "calendar":
         child = [args.kind]
@@ -954,6 +1122,21 @@ def _dispatch(args: argparse.Namespace) -> tuple[dict[str, Any], int]:
             ],
         )
 
+    if args.command == "readiness":
+        child = ["--run-dir", args.run_dir]
+        _append_option(child, "--out", args.out)
+        return _run_child(
+            public_command=args.command,
+            script_name="pia_readiness.py",
+            child_arguments=child,
+            completion_scope="actionable_readiness_rollup",
+            limitations=[
+                "the roll-up is read-only: it consumes existing artifacts and never re-fetches data",
+                "machine prerequisites and human gates are reported separately",
+                "a satisfied prerequisite list is not an order; execution stays human_review_required_no_order",
+            ],
+        )
+
     if args.command == "trigger-ledger":
         child = [args.kind]
         for flag, value in (
@@ -1000,6 +1183,7 @@ def _dispatch(args: argparse.Namespace) -> tuple[dict[str, Any], int]:
     if args.command == "report":
         child = ["--run-dir", args.run_dir]
         _append_option(child, "--out", args.out)
+        _append_option(child, "--expect-scope", args.expect_scope)
         return _run_child(
             public_command=args.command,
             script_name="pia_report.py",
@@ -1008,6 +1192,7 @@ def _dispatch(args: argparse.Namespace) -> tuple[dict[str, Any], int]:
             limitations=[
                 "the renderer formats existing artifacts only and adds no judgement",
                 "missing artifacts are rendered as gaps, never as empty results",
+                "the declared decision scope comes from the run's artifacts; a conflict fails closed",
             ],
         )
 
@@ -1015,9 +1200,10 @@ def _dispatch(args: argparse.Namespace) -> tuple[dict[str, Any], int]:
         child = [args.kind, "--task-root", args.task_root]
         _append_option(child, "--depth", args.depth)
         for flag, value in (("--registry", args.registry), ("--output", args.output),
-                            ("--from", args.run_from), ("--to", args.run_to)):
+                            ("--from", args.run_from), ("--to", args.run_to),
+                            ("--sections", args.sections)):
             _append_option(child, flag, value)
-        for flag in ("--write", "--summary"):
+        for flag in ("--write", "--summary", "--strict"):
             if getattr(args, flag.strip("-").replace("-", "_")):
                 child.append(flag)
         return _run_child(
@@ -1027,7 +1213,8 @@ def _dispatch(args: argparse.Namespace) -> tuple[dict[str, Any], int]:
             completion_scope="cross_run_registry_and_delta",
             limitations=[
                 "the index is read-only unless --write is given; the diff never writes",
-                "missing artifacts are reported as gaps, never as 'no change'",
+                "a comparison section that could not be compared is null, never empty",
+                "a missing section is only softened when the run itself declared it not run",
             ],
         )
 

@@ -313,7 +313,17 @@ class DocumentedHandoffTests(unittest.TestCase):
                 self.assertEqual(reports["proposal"]["construction_report_sha256"], digest(reports["construction"]))
                 for report in reports.values():
                     self.assertEqual(report["status"], "complete")
-                    self.assertTrue(report["research_only"])
+                    self.assertIn(report["decision_scope"], ("research_only", "advisory"))
+                    self.assertEqual(report["research_only"],
+                                     report["decision_scope"] == "research_only")
+                # Only the scan policy leaves its scope undeclared, so it takes the
+                # skill-wide advisory default; the other three declare research_only.
+                self.assertEqual(reports["scan"]["decision_scope"], "advisory")
+                self.assertEqual(
+                    {reports[name]["decision_scope"]
+                     for name in ("validation", "construction", "proposal")},
+                    {"research_only"},
+                )
                 self.assertEqual(reports["proposal"]["actionability"], "prohibited")
                 # Exclusive publication must not overwrite even an existing valid result.
                 original = (root / "validation.json").read_bytes()

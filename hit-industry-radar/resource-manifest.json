@@ -1,17 +1,18 @@
 {
   "schema_version": 3,
   "skill": "hit-industry-radar",
-  "generated_at": "2026-09-26T17:37:42+08:00",  "hash_algorithm": "SHA-256",
+  "generated_at": "2026-10-07T10:34:35+08:00",
+  "hash_algorithm": "SHA-256",
   "text_hash_normalization": "LF",
   "skill_md": "SKILL.md",
-  "skill_md_sha256": "17206697fbaad4abdf959282899b9e12a9115919f1cab93e0b7eaee601085602",
+  "skill_md_sha256": "2d5f32fa9c41887265e228816ff88f2bbfca8058860961979aee52fae1c6d5d3",
   "top_level_files": [
     "SKILL.md"
   ],
   "top_level_file_hashes": [
     {
       "path": "SKILL.md",
-      "sha256": "17206697fbaad4abdf959282899b9e12a9115919f1cab93e0b7eaee601085602"
+      "sha256": "2d5f32fa9c41887265e228816ff88f2bbfca8058860961979aee52fae1c6d5d3"
     }
   ],
   "top_level_directories": [
@@ -98,12 +99,6 @@
       "exists": true,
       "resolved_path": "hit-industry-radar/references/stc_framework.md",
       "sha256": "acdf82745e147f554e5d47d1aa4971dd801be1967a2a015791b818654b2e4d15"
-    },
-    {
-      "path": "scripts/hit_audit_gate.py",
-      "exists": true,
-      "resolved_path": "scripts/hit_audit_gate.py",
-      "sha256": "4be83886cf8463afd01ec6f7f1a1467f4e14c3fe8cacd31e380adec5f2cf97df"
     },
     {
       "path": "scripts/test_validate_industry_radar.py",

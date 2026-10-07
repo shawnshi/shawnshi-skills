@@ -354,7 +354,7 @@ def run_scheduled_sync(
                     "status": "success",
                     "stage": "completed",
                     "finished_at": datetime.now(timezone.utc).isoformat(),
-                    "stages": ["preflight_live", "plan", "download", "import_analyze", "verify_local"],
+                    "stages": ["preflight_live", "plan", "download", "import", "verify_local"],
                     **coverage,
                 }
             )

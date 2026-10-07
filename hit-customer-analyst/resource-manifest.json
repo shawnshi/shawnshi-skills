@@ -1,10 +1,11 @@
 {
   "schema_version": 3,
   "skill": "hit-customer-analyst",
-  "generated_at": "2026-09-24T09:41:50+08:00",  "hash_algorithm": "SHA-256",
+  "generated_at": "2026-10-02T12:45:27+08:00",
+  "hash_algorithm": "SHA-256",
   "text_hash_normalization": "LF",
   "skill_md": "SKILL.md",
-  "skill_md_sha256": "0d655e5c3dfe6fc5a299534150d03bb110c6efd7d5bc283c61fcab09591eb65a",
+  "skill_md_sha256": "c7d9be481ff759e7196bed0d767e91d6696ae1a8ddb1bc49303da4cb0347054a",
   "top_level_files": [
     "README.md",
     "SKILL.md"
@@ -12,11 +13,11 @@
   "top_level_file_hashes": [
     {
       "path": "README.md",
-      "sha256": "1bb539c18447229f09766a74cc28a76c30fe4c525f5ef6055d7a199cda36cb2f"
+      "sha256": "0426a333416014c0ac012b9f989ab826fe9bb9ab900467fcbf67806142f4b4ee"
     },
     {
       "path": "SKILL.md",
-      "sha256": "0d655e5c3dfe6fc5a299534150d03bb110c6efd7d5bc283c61fcab09591eb65a"
+      "sha256": "c7d9be481ff759e7196bed0d767e91d6696ae1a8ddb1bc49303da4cb0347054a"
     }
   ],
   "top_level_directories": [
@@ -125,7 +126,7 @@
     },
     {
       "path": "references/release-acceptance.md",
-      "sha256": "44f5f6b6f3c3ff647303134ec5ffba415a2426aeb1e463bc05404241e760ce08"
+      "sha256": "8e403f76aad39d5da8d4b890044fe46edcf978f030ac08c58e6c2ddb84bb0685"
     },
     {
       "path": "references/research-depth-and-search-matrix.md",
@@ -237,7 +238,7 @@
     },
     {
       "path": "tests/common.py",
-      "sha256": "aaf7b7b92ccc30337a3ac9111ee9ff500ae3839dcabdd2cf40bca4c37e1492e8"
+      "sha256": "8df08fa989a434294ad795e2e39a4370d8570c3c0c4562610683033d30b55004"
     },
     {
       "path": "tests/fixture_builder.py",
@@ -282,6 +283,10 @@
     {
       "path": "tests/test_generic_approval_ready.py",
       "sha256": "170061658b0183bb42d87f71423e7785bacc1402bbf9cf5f92000ed0244d8d47"
+    },
+    {
+      "path": "tests/test_import_path_registration.py",
+      "sha256": "8b9d14609262907ef6ff17757aa1b18b50c646096d31850f8abe9290f37b4ebe"
     },
     {
       "path": "tests/test_initializer_cli.py",
@@ -397,7 +402,7 @@
       "path": "references/release-acceptance.md",
       "exists": true,
       "resolved_path": "hit-customer-analyst/references/release-acceptance.md",
-      "sha256": "44f5f6b6f3c3ff647303134ec5ffba415a2426aeb1e463bc05404241e760ce08"
+      "sha256": "8e403f76aad39d5da8d4b890044fe46edcf978f030ac08c58e6c2ddb84bb0685"
     },
     {
       "path": "references/research-depth-and-search-matrix.md",

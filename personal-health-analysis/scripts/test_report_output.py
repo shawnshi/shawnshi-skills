@@ -652,7 +652,7 @@ console.log(JSON.stringify({{
             live_fetch = Mock(side_effect=AssertionError("local mode must not fetch live data"))
             with (
                 patch.object(garmin_chart, "HAS_SQLITE", True),
-                patch.object(garmin_chart, "fetch_local_summary", return_value=summary),
+                patch.object(garmin_chart, "fetch_dashboard_summary", return_value=summary),
                 patch.object(garmin_chart, "get_client", client),
                 patch.object(garmin_chart, "fetch_summary", live_fetch),
                 patch.object(

@@ -1,6 +1,6 @@
 # 真实发布验收
 
-状态：pending。2.6.2仅为独立候选；修复代码不等于真实发布通过。
+状态：pending。2.6.3仅为独立候选；修复代码不等于真实发布通过。
 
 | 验收 | 次数 | 原始记录要求 | 当前状态 |
 | --- | ---: | --- | --- |
@@ -83,3 +83,13 @@ R01/R02整改期限：下一次扩大范围或正式发布前；尚无实际参�
 - 新重点执行：`python -B scripts/run_tests.py tests.test_build_candidate_history tests.test_candidate_revision tests.test_draft_fields tests.test_metrics_scope --json --verbosity 2`，28/28 通过，18.411539 秒，0 失败、0 错误、0 跳过。覆盖真实初始化后仅填写候选、普通校验和真实 commit、过期 CAS 拒绝、重复 finalize、策略 resume、信件同 run 保持版本及新 run 追加历史、正式文件字节保护、候选身份/授权/ready 拒绝、显式 UTF-8 与计量边界。
 - 新证据保存在任务托管临时目录 `resume-20260911T020905Z/customer/`：`preflight.json`、`drift-analysis.json`、`ast-semantic-detail.json`、`full-environment.json`、`full-stdout.log`、`full-stderr.log`、`full-summary.json`、`directed-summary.json` 及对应详细日志；最终 `semantic.diff`、`final-validation.json` 与快照绑定最终字节。stdout 含诊断及末行 JSON，机器汇总另存，不冒充纯 JSON 日志。
 - 本地脚本和静态 Gate 不等于模型端到端测试、真人独立使用或宿主权限隔离。独立 reviewer 另行判定；上表真人、连接器和业务发布待办仍未关闭，保持 2.6.2 独立候选／限定内部试用。
+
+### 2.6.3 本地稳定性修订（2026-10-02，本地技能维护例外）
+
+仅修订本技能及本次审计制品，未改全局治理、共享业务数据或其他技能；无联网、无真实连接器、无归档写入、无依赖安装。
+
+- CA-1：`tests/common.py` 现于导入期将 `scripts/` 注册进 `sys.path`，使测试套件可由 pytest 或任意导入型收集器从任意 cwd 收集，不再依赖“必须由 `python scripts/run_tests.py` 启动”的隐式耦合。仅改测试加载路径，未改脚本语义、权限、RACI、审批、哈希 CAS、归档或恢复门。
+- 新增 `tests/test_import_path_registration.py` 作为负向回归：最终验收将两条新断言放入冻结基线的隔离副本执行，2 failed（`ModuleNotFoundError: No module named 'init_workspace'`，退出码 1）；当前版定向测试 2 passed。完整负向日志保存于 `C:/Users/shich/MEMORY/scratch/hit-skills-audit-20261002-110840/REV-CA-2-new-tests-negative.log`，这是基线重放证据，不冒充未归档的原始修复前日志。
+- 本地回归：`cd skills && python -m pytest hit-customer-analyst/tests -q` 修复前退出码 2（3 个收集错误），修复后退出码 0（155 passed，554 subtests）；官方入口 `python -B scripts/run_tests.py --json` 修复后退出码 0（155 passed，约 200 秒）。2026-10-02 另对冻结基线执行 `python -B -m pytest <baseline>/hit-customer-analyst/tests --collect-only -q -p no:cacheprovider`，退出码 2，同样复现 3 个收集错误；原始命令及 stdout/stderr 保存在 `C:/Users/shich/MEMORY/scratch/hit-skills-audit-20261002-110840/REV-CA-1-frozen-baseline-collection.log`。
+- 效率：本机记录的单条测试墙钟最长约 16.94 秒；这是测试粒度测量，不是各 `run_python` 或验证器子进程的耗时分布，不能据此推断 30/60 秒子进程上限的裕度。缺少对应子进程测量，本轮不改算法或超时预算，也不声称提速。
+- 未执行真实联网、真实连接器、真人独立审批与外发；上表真人、连接器及四模式发布待办仍未关闭，保持 2.6.3 独立候选／限定内部试用。

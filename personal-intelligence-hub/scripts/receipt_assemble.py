@@ -59,6 +59,7 @@ QUERY_REQUIRED = {
     "parent_attestation",
 }
 OPTIONAL = {"responseId", "text_coverage"}
+QUERY_OPTIONAL = {"provider"}
 
 
 class AssembleError(ValueError):
@@ -79,7 +80,8 @@ def _load_json(path: Path, label: str) -> dict:
 
 def _check_keys(payload: dict, required: set[str], label: str) -> None:
     missing = sorted(required - set(payload))
-    extra = sorted(set(payload) - required - OPTIONAL)
+    optional = QUERY_OPTIONAL if label == "query header" else OPTIONAL
+    extra = sorted(set(payload) - required - optional)
     if missing:
         raise AssembleError(f"{label} is missing keys: {', '.join(missing)}")
     if extra:
@@ -147,6 +149,15 @@ def assemble_query(header: dict) -> dict:
     for result in results:
         if not isinstance(result, dict) or set(result) != {"url", "title"}:
             raise AssembleError("query results must each be {url, title} only")
+    if "provider" in header:
+        provider = header["provider"]
+        if not isinstance(provider, str) or not provider.strip() or len(provider) > 64:
+            raise AssembleError("query provider must be a non-empty bounded string")
+        from query_proof import validate_query_proof
+        try:
+            validate_query_proof(proof)
+        except ValueError as exc:
+            raise AssembleError(str(exc)) from exc
     if len(json.dumps(header, ensure_ascii=False)) > 65536:
         raise AssembleError("query receipt exceeds the bounded public proof size")
     return dict(header)
@@ -158,11 +169,15 @@ def main(argv: list[str] | None = None) -> int:
     parser.add_argument("--header", type=Path, required=True)
     parser.add_argument("--body", type=Path)
     parser.add_argument("--out", type=Path, required=True)
+    parser.add_argument("--query-response", type=Path,
+                        help="File containing the exact returned public search text; no paraphrase")
     args = parser.parse_args(argv)
 
     try:
         header = _load_json(args.header, "header")
         if args.kind == "fetch":
+            if args.query_response is not None:
+                raise AssembleError("fetch assembly must not receive --query-response")
             if args.body is None:
                 raise AssembleError("fetch assembly requires --body")
             try:
@@ -175,6 +190,14 @@ def main(argv: list[str] | None = None) -> int:
         else:
             if args.body is not None:
                 raise AssembleError("query assembly must not receive --body")
+            if args.query_response is not None:
+                from query_proof import build_query_proof
+                try:
+                    # read_bytes preserves CRLF: text-mode IO would normalize the source.
+                    raw = args.query_response.read_bytes().decode("utf-8", errors="strict")
+                    header["proof_subset"] = build_query_proof(raw)
+                except (OSError, UnicodeError, ValueError) as exc:
+                    raise AssembleError(f"query response cannot be sealed: {exc}") from exc
             receipt = assemble_query(header)
     except AssembleError as exc:
         print(f"ERROR: {exc}", file=sys.stderr)

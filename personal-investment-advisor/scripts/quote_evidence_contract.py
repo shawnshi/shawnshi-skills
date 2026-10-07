@@ -78,6 +78,63 @@ def quote_freshness_policy(
     }
 
 
+QUOTE_OBSERVATION_VERSION = "pia_quote_observation_v1"
+
+
+def select_quote_observation(info: dict[str, Any], *, legacy_regular: bool = False) -> dict[str, Any]:
+    """Bind a provider price to its own timestamp and trading session.
+
+    Active extended sessions prefer their own pair. A partially present pair
+    stays invalid rather than falling back. CLOSED uses the latest timestamped
+    pair; callers still enforce identity, market-state age and future limits.
+    Original provider fields are never renamed or overwritten.
+    """
+    def positive(value: Any) -> float | None:
+        if isinstance(value, bool):
+            return None
+        try:
+            number = float(value)
+        except (TypeError, ValueError, OverflowError):
+            return None
+        return number if math.isfinite(number) and number > 0 else None
+
+    pairs = {
+        "REGULAR": ("regularMarketPrice", "regularMarketTime"),
+        "PRE": ("preMarketPrice", "preMarketTime"),
+        "POST": ("postMarketPrice", "postMarketTime"),
+    }
+    state = str(info.get("marketState") or "").strip().upper()
+    session = "REGULAR"
+    warnings = []
+    wanted = "PRE" if state in {"PRE", "PREPRE"} else "POST" if state in {"POST", "POSTPOST"} else None
+    if wanted is not None and not legacy_regular:
+        price_field, time_field = pairs[wanted]
+        if info.get(price_field) is not None or info.get(time_field) is not None:
+            session = wanted
+        else:
+            warnings.append("extended_quote_unavailable.regular_pair_used")
+    elif state == "CLOSED" and not legacy_regular:
+        candidates = [
+            (positive(info.get(time_field)), name)
+            for name, (_, time_field) in pairs.items()
+            if positive(info.get(time_field)) is not None
+        ]
+        if candidates:
+            session = max(candidates, key=lambda item: (item[0], item[1] == "REGULAR"))[1]
+    price_field, time_field = pairs[session]
+    if session == "REGULAR" and positive(info.get(price_field)) is None and positive(info.get("currentPrice")) is not None:
+        price_field = "currentPrice"
+    return {
+        "version": QUOTE_OBSERVATION_VERSION,
+        "session": session,
+        "price_field": price_field,
+        "timestamp_field": time_field,
+        "price": positive(info.get(price_field)),
+        "epoch": positive(info.get(time_field)),
+        "warnings": warnings,
+    }
+
+
 def canonical_json_binding(payload: Any) -> dict[str, Any]:
     """Return a deterministic semantic JSON digest for one captured input."""
     canonical = json.dumps(

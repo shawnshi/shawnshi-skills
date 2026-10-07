@@ -1,11 +1,11 @@
 {
   "schema_version": 3,
   "skill": "technical-diagram-renderer",
-  "generated_at": "2026-09-24T09:41:51+08:00",
+  "generated_at": "2026-10-02T11:52:35+08:00",
   "hash_algorithm": "SHA-256",
   "text_hash_normalization": "LF",
   "skill_md": "SKILL.md",
-  "skill_md_sha256": "413f673f2d80ed3981b444c5c31b0aece3ce89ac0db8c7fe8fcc7586fc1820bb",
+  "skill_md_sha256": "d34847c5a0a593f0642cbdc26f68fa1f8d51c5ddf40838aad52a6473260a29bc",
   "top_level_files": [
     "LICENSE",
     "SKILL.md",
@@ -19,7 +19,7 @@
     },
     {
       "path": "SKILL.md",
-      "sha256": "413f673f2d80ed3981b444c5c31b0aece3ce89ac0db8c7fe8fcc7586fc1820bb"
+      "sha256": "d34847c5a0a593f0642cbdc26f68fa1f8d51c5ddf40838aad52a6473260a29bc"
     },
     {
       "path": "agentloop-core.svg",
@@ -160,7 +160,7 @@
     },
     {
       "path": "references/input-schema.md",
-      "sha256": "21c56c374fcf9864ae82b7a014d54893df0ab99089fa9bcd16b429651b6de01c"
+      "sha256": "eb88e5b5da6e6e788cf2d109ea74737b531421e0990ae47d418245c9639bcffa"
     },
     {
       "path": "references/output-qa.md",
@@ -224,7 +224,7 @@
     },
     {
       "path": "scripts/render-diagram.py",
-      "sha256": "f14f5463d97b38acf1c591fbbab6d0024972eb6266896d2aa65a7489cb1583f9"
+      "sha256": "4ab454d8f562fea86a26ce411c8432f2ae59787db52d56b20b54aaab24bbc5d6"
     },
     {
       "path": "scripts/semantic_diagrams.py",
@@ -315,6 +315,10 @@
       "sha256": "3e694afdebcfa76f4383e8dbe3d154bfdb56ceff5c4ccfe51373a2c2833d1cc2"
     },
     {
+      "path": "tests/test_runtime_stability.py",
+      "sha256": "c7c72765f4a995a4d763ba63d7377c80f1b7e0be759f44f85b8bc0e4031dcca6"
+    },
+    {
       "path": "tests/test_validate_svg.py",
       "sha256": "9fd7f3c5767b3800110b96e047ba47b4e56b3900bbc2ba83d137f1bd368f945a"
     }
@@ -330,7 +334,7 @@
       "path": "references/input-schema.md",
       "exists": true,
       "resolved_path": "technical-diagram-renderer/references/input-schema.md",
-      "sha256": "21c56c374fcf9864ae82b7a014d54893df0ab99089fa9bcd16b429651b6de01c"
+      "sha256": "eb88e5b5da6e6e788cf2d109ea74737b531421e0990ae47d418245c9639bcffa"
     },
     {
       "path": "references/output-qa.md",
@@ -348,7 +352,7 @@
       "path": "scripts/render-diagram.py",
       "exists": true,
       "resolved_path": "technical-diagram-renderer/scripts/render-diagram.py",
-      "sha256": "f14f5463d97b38acf1c591fbbab6d0024972eb6266896d2aa65a7489cb1583f9"
+      "sha256": "4ab454d8f562fea86a26ce411c8432f2ae59787db52d56b20b54aaab24bbc5d6"
     }
   ],
   "missing_declared_dependencies": []

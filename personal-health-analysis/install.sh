@@ -60,14 +60,14 @@ fi
 PYTHON=''
 for candidate in python3 python; do
     if command -v "$candidate" >/dev/null 2>&1 &&
-        "$candidate" -I -c 'import sys; raise SystemExit(0 if sys.version_info >= (3, 11) else 1)' \
+        "$candidate" -I -c 'import sys; raise SystemExit(0 if sys.version_info >= (3, 12) else 1)' \
             >/dev/null 2>&1; then
         PYTHON="$candidate"
         break
     fi
 done
 if [[ -z "$PYTHON" ]]; then
-    echo 'Python 3 is required and was not found on PATH.' >&2
+    echo 'Python 3.12 or newer is required and was not found on PATH.' >&2
     exit 1
 fi
 

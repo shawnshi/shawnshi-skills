@@ -3,7 +3,7 @@ import subprocess
 import sys
 import tempfile
 import unittest
-from datetime import date
+from datetime import date, datetime, timezone
 from pathlib import Path
 from unittest.mock import patch
 
@@ -45,7 +45,20 @@ def cash(*, quantity=100, currency="USD"):
 def daily_sync_report(positions_path, snapshots):
     symbols = sorted(snapshot["symbol"] for snapshot in snapshots)
     raw_quotes_path = Path(positions_path).with_name("raw-quotes.json").resolve()
-    raw_quotes = {"records": [], "portfolio_batch_audit": {}}
+    records = []
+    for snapshot in snapshots:
+        try:
+            observed = datetime.fromisoformat(str(snapshot.get("as_of") or "").replace("Z", "+00:00"))
+            observed_epoch = observed.replace(tzinfo=observed.tzinfo or timezone.utc).timestamp()
+        except (ValueError, OverflowError, OSError):
+            observed_epoch = None
+        records.append({"symbol": snapshot.get("symbol"), "info": {
+            "symbol": snapshot.get("symbol"), "currency": snapshot.get("currency"),
+            "marketState": snapshot.get("market_state"),
+            "regularMarketPrice": snapshot.get("current_price"),
+            "regularMarketTime": observed_epoch,
+        }})
+    raw_quotes = {"records": records, "portfolio_batch_audit": {}}
     raw_quotes_path.write_text(json.dumps(raw_quotes), encoding="utf-8")
     portfolio_binding = build_portfolio_snapshot_binding(
         load_positions(str(positions_path))

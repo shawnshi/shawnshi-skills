@@ -48,6 +48,8 @@ prepare 必须冻结 run/bundle/历史与候选血缘，再完成基线扫描和
 
 prepare 未返回 request 时，脚本已登记结构化 `no_increment`，不要伪造补检结果。
 
+每次补检、语义或非确定性红队分派前，按 `runtime` 节的「登记路径与运行时输出分离」检查实际 child options；通过后原样分派，禁止把业务 draft 作为运行时自动保存路径。
+
 所有代理异步启动，交互会话禁止阻塞等待或轮询；完成/进度事件后按 `runtime` 节状态机恢复。只凭 running、文件存在或聊天消息不等于进展或完成；正式校验通过后不再等待额外聊天。失败请求封闭，不得复用 request/invocation/输出路径重启；重试创建全新 run。
 
 worker 席位没有公网工具，只有 `contact_supervisor`。分派的 packet 已强制「context 之后第一步就是联系父级要 broker 序列」；父任务收到该请求后应立刻代跑整条 broker 链并回传 sealed 证据，不要让 worker 自行探索。worker 因工具预算耗尽而以 BLOCKED 结束、未交付 draft 时，**不算基础设施失败**，也不触发 `stop_fanout_on_canary_infrastructure_failure` 之外的停滞：按 `workflow_protocols.md` 的父级 fallback 顺序（seal → 写 draft → finalize）接管该 gap，并在最终交付中披露 draft 由父级撰写。
@@ -136,7 +138,7 @@ python -X utf8 scripts/run_daily.py forge --manifest <run_manifest.json> --refin
 
 `resource-manifest.json` 为 `SKILL.md`、`references/**`、`scripts/**` 等声明文件登记了内容哈希，未同步时任何调用都会以 `skill resource manifest hash mismatch` 失败。改动本技能任何声明文件后，在技能库根目录运行资源清单生成器（该工具的 `generate` / `check` 子命令，参数 `--root . --include-skill personal-intelligence-hub`），再用它的 `check` 子命令确认 `stale=0`。
 
-不要在本文件里写技能根目录以外的相对路径：生成器会把 `scripts/...` 这类 token 记入 `declared_local_dependencies`，而校验器只在技能根内解析，两边基准不一致时同一文件会被同时记为“存在于库根”和“技能根内缺失”，从而报上述哈希不符。
+资源清单生成器与校验器均先按技能根解析本地依赖，再核验技能库根内的声明依赖；不存在、哈希不匹配或逃逸库根仍拒绝。只声明实际依赖，不因路径排查改动全局配置或改回安装目录 CLI。
 
 同类陷阱：`atomic_dump_json` 使用文本模式写入，Windows 下落盘为 CRLF。用 Python 重写已登记的 JSON 回执时必须保持同样的换行与缩进，否则哈希不一致，`forge` 会以 `receipt bytes changed after registration` 永久失败。诊断与回归用 `python -m pytest -q scripts/`；测试中任何 `subprocess.run(..., text=True)` 都要加 `encoding="utf8"`，否则中文输出在 cp1252 本地化下会触发 UnicodeDecodeError。
 

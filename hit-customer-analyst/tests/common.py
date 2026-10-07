@@ -14,6 +14,13 @@ SKILL_ROOT = Path(__file__).resolve().parents[1]
 SCRIPTS = SKILL_ROOT / "scripts"
 CONFIG = SKILL_ROOT / "config" / "business-modes.json"
 
+# scripts/ use bare sibling imports (e.g. `import init_workspace as init`), which
+# only resolve when the interpreter is started as `python scripts/<script>.py`.
+# Registering the directory here keeps the suite loadable by any collector
+# (pytest from another cwd, CI) without an externally supplied PYTHONPATH.
+if str(SCRIPTS) not in sys.path:
+    sys.path.insert(0, str(SCRIPTS))
+
 
 def load_module(name: str, path: Path) -> ModuleType:
     spec = importlib.util.spec_from_file_location(name, path)

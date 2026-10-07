@@ -20,7 +20,7 @@ from run_contract import (
     record_run_artifact,
     record_stage,
 )
-from supplement_agent import FetchResult, assemble_result, build_agent_context
+from supplement_agent import FetchResult, assemble_result, build_agent_context, preflight_launch
 
 
 class ArticleResponse:
@@ -310,6 +310,40 @@ class SupplementAgentTests(unittest.TestCase):
                 with self.assertRaisesRegex(RunContractError, "infrastructure.*initialization.*zero.*evidence"):
                     assemble_result(self.request_path, "technology", dynamic)
                 self.assertEqual(draft_path.read_bytes(), before)
+
+    def test_launch_binding_preserves_registered_draft_and_rejects_runtime_save(self):
+        draft = Path(self.request["execution_packets"][0]["output_paths"]["draft"])
+        draft.write_text('{"status":"draft"}', encoding="utf-8")
+        before = draft.read_bytes()
+        options = {"agent": "delegate", "output": False, "context": "fresh"}
+        result = preflight_launch(self.request_path, "technology", options)
+        self.assertEqual(result["launch_options"], options)
+        self.assertEqual(result["draft_path"], str(draft))
+        self.assertFalse(result["launch_performed"])
+        for unsafe in ({}, {"output": True}, {"output": str(draft)}):
+            with self.subTest(options=unsafe):
+                with self.assertRaisesRegex(RunContractError, "explicitly false"):
+                    preflight_launch(self.request_path, "technology", unsafe)
+        self.assertEqual(draft.read_bytes(), before)
+        import subprocess
+        import sys
+
+        launch_file = self.request_path.parent / "launch_options.json"
+        command = [
+            sys.executable, "-B", "-X", "utf8",
+            str(Path(__file__).with_name("supplement_agent.py")), "preflight",
+            "--request", str(self.request_path), "--gap-id", "technology",
+            "--launch-options", str(launch_file),
+        ]
+        for actual, expected_code in ((options, 0), ({"output": str(draft)}, 2)):
+            launch_file.write_text(json.dumps(actual), encoding="utf-8")
+            probe = subprocess.run(command, capture_output=True, text=True, encoding="utf8", timeout=10)
+            self.assertEqual(probe.returncode, expected_code, probe.stderr)
+            if expected_code == 0:
+                self.assertEqual(json.loads(probe.stdout)["launch_options"], options)
+            else:
+                self.assertIn("explicitly false", probe.stderr)
+        self.assertEqual(draft.read_bytes(), before)
 
     def test_context_is_compact_and_hides_unassigned_packet_details(self):
         context = build_agent_context(self.request_path, "technology")

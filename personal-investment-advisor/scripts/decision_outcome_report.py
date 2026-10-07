@@ -370,7 +370,7 @@ def build_report(journal_path: str | None = None) -> str:
                     }
                 )
             )
-            or "research_only"
+            or "advisory"
         ),
         f"- 总样本数: {len(entries)}",
         f"- 所有正式合格样本数: {calibration['eligible_count']}",

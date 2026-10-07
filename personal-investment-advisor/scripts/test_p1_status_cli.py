@@ -114,6 +114,23 @@ class StatusContractTests(unittest.TestCase):
             STATUS_INSUFFICIENT_EVIDENCE,
         )
 
+    def test_nested_stage_exit_codes_fail_closed(self):
+        for code, status in ((1, "complete"), (2, "complete"),
+                             (2, "incomplete"), (3, "incomplete"),
+                             ("1", "complete"), (True, "complete")):
+            with self.subTest(code=code, status=status):
+                self.assertEqual(
+                    status_from_payload({"status": "complete", "stages": [
+                        {"status": "complete", "stages": [
+                            {"status": status, "exit_code": code}]}]}, 0),
+                    STATUS_FAILED,
+                )
+        self.assertEqual(
+            status_from_payload({"status": "complete", "stages": [
+                {"status": "incomplete", "exit_code": 1}]}, 0),
+            STATUS_INCOMPLETE,
+        )
+
     def test_invalid_flag_has_priority_over_noncomplete_top_status(self):
         for top_status in ("incomplete", "insufficient_evidence"):
             with self.subTest(top_status=top_status):
@@ -163,6 +180,104 @@ class StableRouterTests(unittest.TestCase):
 
     def _parse(self, *argv):
         return pia._build_parser().parse_args(list(argv))
+
+    def test_decision_scope_defaults_to_advisory_on_public_routes(self):
+        routes = (
+            ("edgar-fundamentals", "FREE", "--as-of", "2023-06-30"),
+            ("daily-sync", "--positions-file", "positions.json", "--quotes-file", "quotes.json"),
+            ("daily-run", "--positions-file", "positions.json", "--task-dir", "task"),
+        )
+        for route in routes:
+            with self.subTest(route=route[0]):
+                self.assertEqual(self._parse(*route).decision_scope, "advisory")
+                self.assertEqual(self._parse(*route, "--decision-scope", "research_only").decision_scope,
+                                 "research_only")
+
+    @mock.patch.object(pia.subprocess, "Popen", side_effect=AssertionError("router mock boundary drift"))
+    @mock.patch.object(pia, "_execute_child")
+    def test_actionability_route_reports_a_closed_market_as_insufficient_evidence(self, run, spawn_guard):
+        self.addCleanup(spawn_guard.assert_not_called)
+        run.return_value = self._completed(
+            {"status": "market_closed", "actionability": "not_actionable"}, returncode=2
+        )
+        envelope, code = pia._dispatch(self._parse(
+            "actionability-gate", "--assessment", "terms.json",
+            "--holiday-calendar-file", "closures.json"))
+        self.assertEqual(Path(run.call_args.args[0][1]).name, "cn_actionability_gate.py")
+        self.assertEqual(run.call_args.args[0][2:],
+                         [str(Path("terms.json").resolve()),
+                          "--holiday-calendar-file", str(Path("closures.json").resolve())])
+        self.assertEqual(envelope["status"], STATUS_INSUFFICIENT_EVIDENCE)
+        self.assertEqual(envelope["detail_status"], "market_closed")
+        self.assertEqual(code, 2)
+        self.assertIn("never submits an order", " ".join(envelope["limitations"]))
+
+    @mock.patch.object(pia.subprocess, "Popen", side_effect=AssertionError("router mock boundary drift"))
+    @mock.patch.object(pia, "_execute_child")
+    def test_actionability_route_keeps_a_feasible_verdict_complete(self, run, spawn_guard):
+        self.addCleanup(spawn_guard.assert_not_called)
+        run.return_value = self._completed({
+            "status": "complete", "detail_status": "input_terms_feasible_under_supplied_snapshots",
+            "actionability": "human_review_required_no_order",
+        })
+        envelope, code = pia._dispatch(self._parse("actionability-gate", "--assessment", "terms.json"))
+        self.assertEqual(envelope["status"], STATUS_COMPLETE)
+        self.assertEqual(envelope["detail_status"], "input_terms_feasible_under_supplied_snapshots")
+        self.assertEqual(code, 0)
+        self.assertEqual(envelope["completion_scope"], "cn_terms_feasibility_snapshot")
+        self.assertEqual(envelope["result"]["actionability"], "human_review_required_no_order")
+
+    @mock.patch.object(pia.subprocess, "Popen", side_effect=AssertionError("router mock boundary drift"))
+    @mock.patch.object(pia, "_execute_child")
+    def test_actionability_route_fails_closed_on_an_unknown_verdict(self, run, spawn_guard):
+        self.addCleanup(spawn_guard.assert_not_called)
+        run.return_value = self._completed({"status": "probably_fine"}, returncode=0)
+        envelope, code = pia._dispatch(self._parse("actionability-gate", "--assessment", "terms.json"))
+        self.assertEqual(envelope["status"], STATUS_FAILED)
+        self.assertEqual(code, 3)
+
+    @mock.patch.object(pia.subprocess, "Popen", side_effect=AssertionError("router mock boundary drift"))
+    @mock.patch.object(pia, "_execute_child")
+    def test_readiness_route_maps_a_ready_rollup_to_complete(self, run, spawn_guard):
+        self.addCleanup(spawn_guard.assert_not_called)
+        run.return_value = self._completed({
+            "status": "ready_for_human_review",
+            "detail_status": "machine_prerequisites_verified_human_gates_pending",
+            "human_gates": ["账户规则与成本模型已由一手来源核验"],
+        })
+        envelope, code = pia._dispatch(self._parse("readiness", "--run-dir", "run3"))
+        self.assertEqual(Path(run.call_args.args[0][1]).name, "pia_readiness.py")
+        self.assertEqual(run.call_args.args[0][2:],
+                         ["--run-dir", str(Path("run3").resolve())])
+        self.assertEqual(envelope["status"], STATUS_COMPLETE)
+        self.assertEqual(envelope["completion_scope"], "actionable_readiness_rollup")
+        self.assertEqual(envelope["detail_status"],
+                         "machine_prerequisites_verified_human_gates_pending")
+        self.assertEqual(code, 0)
+        self.assertIn("not an order", " ".join(envelope["limitations"]))
+
+    @mock.patch.object(pia.subprocess, "Popen", side_effect=AssertionError("router mock boundary drift"))
+    @mock.patch.object(pia, "_execute_child")
+    def test_readiness_route_reports_unmet_prerequisites_as_insufficient_evidence(self, run, spawn_guard):
+        self.addCleanup(spawn_guard.assert_not_called)
+        run.return_value = self._completed({
+            "status": "not_ready",
+            "detail_status": "actionable_prerequisites_unmet",
+            "blockers": ["run status is 'incomplete', not 'complete'"],
+        }, returncode=2)
+        envelope, code = pia._dispatch(self._parse("readiness", "--run-dir", "run3"))
+        self.assertEqual(envelope["status"], STATUS_INSUFFICIENT_EVIDENCE)
+        self.assertEqual(envelope["detail_status"], "actionable_prerequisites_unmet")
+        self.assertEqual(code, 2)
+
+    @mock.patch.object(pia.subprocess, "Popen", side_effect=AssertionError("router mock boundary drift"))
+    @mock.patch.object(pia, "_execute_child")
+    def test_readiness_route_fails_closed_on_an_unknown_verdict(self, run, spawn_guard):
+        self.addCleanup(spawn_guard.assert_not_called)
+        run.return_value = self._completed({"status": "looks_fine_to_me"}, returncode=0)
+        envelope, code = pia._dispatch(self._parse("readiness", "--run-dir", "run3"))
+        self.assertEqual(envelope["status"], STATUS_FAILED)
+        self.assertEqual(code, 3)
 
     @mock.patch.object(pia.subprocess, "Popen", side_effect=AssertionError("router mock boundary drift"))
     @mock.patch.object(pia, "_execute_child")
@@ -449,6 +564,70 @@ class StableRouterTests(unittest.TestCase):
         self.assertEqual(completed.returncode, 3)
         self.assertEqual(payload["status"], STATUS_FAILED)
         self.assertEqual(payload["result"]["status"], "data_error")
+
+    @mock.patch.object(pia.subprocess, "Popen", side_effect=AssertionError("router mock boundary drift"))
+    @mock.patch.object(pia, "_execute_child")
+    def test_history_route_treats_a_declared_partial_diff_as_success(self, run, spawn_guard):
+        self.addCleanup(spawn_guard.assert_not_called)
+        run.return_value = self._completed({
+            "status": "complete_with_warnings",
+            "detail_status": "diff_computed_with_warnings",
+            "warnings": ["boundaries section skipped: absent on to"],
+            "boundary_transitions": None,
+        })
+        envelope, code = pia._dispatch(self._parse(
+            "history", "diff", "--task-root", "runs", "--sections", "weights", "--strict"))
+        self.assertEqual(run.call_args.args[0][2:], [
+            "diff", "--task-root", str(Path("runs").resolve()),
+            "--sections", "weights", "--strict"])
+        self.assertEqual(envelope["status"], STATUS_COMPLETE)
+        self.assertEqual(envelope["detail_status"], "diff_computed_with_warnings")
+        self.assertEqual(code, 0)
+        # The warning survives into the envelope: a softened diff must still show why.
+        self.assertEqual(envelope["result"]["warnings"],
+                         ["boundaries section skipped: absent on to"])
+        self.assertIsNone(envelope["result"]["boundary_transitions"])
+
+    @mock.patch.object(pia.subprocess, "Popen", side_effect=AssertionError("router mock boundary drift"))
+    @mock.patch.object(pia, "_execute_child")
+    def test_history_route_keeps_a_partial_diff_out_of_complete(self, run, spawn_guard):
+        self.addCleanup(spawn_guard.assert_not_called)
+        run.return_value = self._completed({
+            "status": "insufficient_data", "detail_status": "diff_partial",
+            "gaps": ["weights section not comparable"],
+        }, returncode=2)
+        envelope, code = pia._dispatch(self._parse("history", "diff", "--task-root", "runs"))
+        self.assertEqual(envelope["status"], STATUS_INSUFFICIENT_EVIDENCE)
+        self.assertEqual(envelope["detail_status"], "diff_partial")
+        self.assertEqual(code, 2)
+
+    @mock.patch.object(pia.subprocess, "Popen", side_effect=AssertionError("router mock boundary drift"))
+    @mock.patch.object(pia, "_execute_child")
+    def test_history_route_fails_closed_on_an_unknown_verdict(self, run, spawn_guard):
+        self.addCleanup(spawn_guard.assert_not_called)
+        run.return_value = self._completed({"status": "mostly_fine", "detail_status": "x"})
+        envelope, code = pia._dispatch(self._parse("history", "diff", "--task-root", "runs"))
+        self.assertEqual(envelope["status"], STATUS_FAILED)
+        self.assertEqual(code, 3)
+
+    @mock.patch.object(pia.subprocess, "Popen", side_effect=AssertionError("router mock boundary drift"))
+    @mock.patch.object(pia, "_execute_child")
+    def test_history_route_does_not_read_a_warning_verdict_as_success_on_a_failed_exit(self, run, spawn_guard):
+        self.addCleanup(spawn_guard.assert_not_called)
+        run.return_value = self._completed(
+            {"status": "complete_with_warnings", "detail_status": "diff_computed_with_warnings"},
+            returncode=2)
+        envelope, code = pia._dispatch(self._parse("history", "diff", "--task-root", "runs"))
+        self.assertEqual(envelope["status"], STATUS_FAILED)
+        self.assertEqual(code, 3)
+
+    @mock.patch.object(pia.subprocess, "Popen", side_effect=AssertionError("router mock boundary drift"))
+    @mock.patch.object(pia, "_execute_child")
+    def test_history_index_route_stays_complete(self, run, spawn_guard):
+        self.addCleanup(spawn_guard.assert_not_called)
+        run.return_value = self._completed({"status": "complete", "detail_status": "ok"})
+        envelope, _code = pia._dispatch(self._parse("history", "index", "--task-root", "runs"))
+        self.assertEqual(envelope["status"], STATUS_COMPLETE)
 
     def test_cli_usage_error_is_json_and_failed(self):
         completed = subprocess.run(

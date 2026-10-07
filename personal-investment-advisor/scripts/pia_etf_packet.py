@@ -31,7 +31,7 @@ if str(SCRIPT_DIR) not in sys.path:
 from history_integrity_gate import evaluate_history_integrity  # noqa: E402
 
 SCHEMA_VERSION = "pia_etf_packet_build_receipt_v1"
-DECISION_SCOPE = "research_only"
+DECISION_SCOPE = "advisory"
 REQUIRED_EVENT_FIELDS = ("event_type", "effective_date", "factor")
 
 

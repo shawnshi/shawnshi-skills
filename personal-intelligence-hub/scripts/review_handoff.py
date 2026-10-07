@@ -140,12 +140,18 @@ def bindings(request, packet, manifest):
     require(packet["validation_command"] == helper["finalize_command"], "finalizer binding changed")
 
 
-def preflight_red_team(request_path):
-    from run_contract import load_manifest, validate_semantic_draft, file_sha256
+def preflight_red_team(request_path, launch_options=None):
+    from run_contract import (
+        load_manifest, validate_semantic_draft, file_sha256,
+        validate_subagent_output_options,
+    )
     request, request_sha = load(request_path)
     require(request.get("review_kind") == "red_team" and request.get("reviewer_id") == "RedTeam"
             and request.get("deterministic_fast_path") is False, "independent red-team request required")
     packet = request["execution_packet"]
+    options = validate_subagent_output_options(
+        packet, packet.get("subagent_options") if launch_options is None else launch_options
+    )
     manifest = load_manifest(packet["run_manifest_path"])
     run = Path(manifest["run_dir"]).resolve()
     record = manifest["artifacts"]["red_team_request"]
@@ -168,13 +174,18 @@ def preflight_red_team(request_path):
     return {"stage": "red_team", "status": "preflight_valid", "run_id": request["run_id"],
             "invocation_id": request["invocation_id"], "request_sha256": request_sha,
             "remaining_seconds": remaining, "registered_timeout_ms": packet["timeout_ms"],
-            "usage_budget": packet["usage_budget"], "launch_performed": False}
+            "usage_budget": packet["usage_budget"], "launch_options": options,
+            "launch_options_checked": launch_options is not None, "launch_performed": False}
 
 
-def preflight(request_path):
+def preflight(request_path, launch_options=None):
+    from run_contract import validate_subagent_output_options
     if load(request_path)[0].get("review_kind") == "red_team":
-        return preflight_red_team(request_path)
+        return preflight_red_team(request_path, launch_options)
     request, packet, manifest, sha = registered(request_path)
+    options = validate_subagent_output_options(
+        packet, packet.get("subagent_options") if launch_options is None else launch_options
+    )
     live(request, packet, manifest, sha, utcnow())
     bindings(request, packet, manifest)
     # Binding reads consume the same registered clock. No launch approval token
@@ -185,6 +196,7 @@ def preflight(request_path):
             "request_sha256": sha, "deadline": deadline(request, packet).isoformat(),
             "remaining_seconds": remaining, "registered_timeout_ms": packet["timeout_ms"],
             "usage_budget": packet["usage_budget"], "tool_budget": packet["tool_budget"],
+            "launch_options": options, "launch_options_checked": launch_options is not None,
             "launch_performed": False}
 
 
@@ -282,10 +294,14 @@ def main():
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("operation", choices=("preflight", "consume", "context", "finalize"))
     parser.add_argument("--request", required=True, type=Path)
+    parser.add_argument("--launch-options", type=Path)
     args = parser.parse_args()
     try:
         if args.operation == "preflight":
-            result = preflight(args.request)
+            require(args.launch_options is not None,
+                    "preflight requires --launch-options containing actual child options")
+            options, _ = load(args.launch_options)
+            result = preflight(args.request, options)
         elif args.operation == "consume":
             result = consume(args.request)
         else:

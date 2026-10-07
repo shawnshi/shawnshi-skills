@@ -41,12 +41,11 @@ def ensure_runtime_dirs() -> None:
 
 
 def load_json(path: Path, default):
-    if not path.exists():
-        return default
     try:
-        return json.loads(path.read_text(encoding="utf-8"))
-    except (json.JSONDecodeError, OSError):
+        text = path.read_text(encoding="utf-8")
+    except FileNotFoundError:
         return default
+    return json.loads(text)
 
 
 def dump_json(path: Path, data) -> None:

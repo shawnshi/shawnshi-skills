@@ -28,7 +28,7 @@
 - 内部材料在证据分层中仍是“用户材料”或“厂商自述”，**不因来自内部而抬高等级**，也不能替代独立公开来源。
 - 只检索当前决策所需的域。个人域（健康、持仓、个人洞察、隐私）不得进入战略任务。
 - 内部来源的 `event_or_data_period` 用材料自身日期，`accessed_at` 记访问日期；历史资料不当作当前事实。内部来源的 `locator` 记录原件引用或决策节点标识，便于复核时回到原件。
-- 取证工具：评级与客户归属用 `lan-mcp-1441_query_ratings`；原件用 `lan-mcp-1441_search_knowledge` 与 `get_source_excerpt`，对外引用链接用 `get_premind_link`；既往方案与已登记决策节点用 `vector-lake-mcp_search_vector_lake`。
+- 取证工具：评级与客户归属用 `premind-winning-mcp_query_ratings`；原件用 `premind-winning-mcp_search_knowledge` 与 `get_source_excerpt`，对外引用链接用 `get_premind_link`；既往方案与已登记决策节点用 `mentat-mind-mcp_search_vector_lake`。
 - 内部来源不可用时报告缺口并降级，**不得写成“无数据”**，也不得用外部结论冒充内部事实。
 
 ## 统一证据记录

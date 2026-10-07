@@ -7,7 +7,7 @@ import os
 import subprocess
 import sys
 from copy import deepcopy
-from datetime import datetime, timezone
+from datetime import datetime, timedelta, timezone
 from pathlib import Path
 
 import article_broker as broker
@@ -49,7 +49,8 @@ def test_native_builder_defaults_and_over_limit(new_run, duration):
     assert grace == 900
     worker = request["launch_plan"][0]["workers"][0]
     assert worker["timeout_ms"] == (expected["max_duration_seconds"] + grace) * 1000
-    assert packet["tool_budget"]["hard"] == worker["tool_budget"]["hard"] == 12
+    assert packet["tool_budget"]["hard"] == worker["tool_budget"]["hard"] == 28
+
     assert packet["usage_budget"]["tokens"] == worker["token_budget"] == 150000
     assert rc._normalized_supplement_budget({}) == {
         "max_queries": 3,
@@ -165,6 +166,9 @@ def reserve(request, gap="tech", url=URL, **changes):
 
 ARXIV_URL = "https://arxiv.org/abs/2609.09356"
 ARXIV_V1 = r"**\[v1\]** Tue, 8 Sep 2026 18:45:01 UTC (221 KB)"
+# The readable arXiv gate also requires the stamped v1 year-month to match the id's
+# 20YYMM, so a window-relative stamp must stay inside 2026-09 for this fixture.
+ARXIV_ID_MONTH = ARXIV_URL.rsplit("/", 1)[-1][:4]
 
 
 def arxiv_text(version="v1", history=ARXIV_V1):
@@ -482,12 +486,24 @@ def window_relative_arxiv_text(manifest_path):
     """Same synthetic arXiv layout, dated inside this run window.
 
     ARXIV_V1 pins 2026-09-08, which falls outside a run whose window is derived from
-    the current report date; the submission-history weekday must stay consistent with
-    the date or the readable-date gate rejects the body.
+    the current report date. The stamped weekday must stay consistent with the date, and
+    the v1 year-month must still equal the fixture id's 20YYMM (2609), so this picks the
+    last in-window day that matches the id instead of the window end. Returns None when
+    the window contains no matching day: the year-month gate cannot be satisfied then,
+    and the caller skips that parametrization rather than asserting a false failure.
     """
     window = rc.load_manifest(manifest_path)["window"]
+    start = datetime.fromisoformat(str(window["start"])).date()
     end = datetime.fromisoformat(str(window["end"])).date()
-    stamp = f"{end:%a}, {end.day} {end:%b %Y} 18:45:01 UTC"
+    day = None
+    cursor = start
+    while cursor <= end:
+        if f"{cursor:%y%m}" == ARXIV_ID_MONTH:
+            day = cursor
+        cursor += timedelta(days=1)
+    if day is None:
+        return None
+    stamp = f"{day:%a}, {day.day} {day:%b %Y} 18:45:01 UTC"
     return arxiv_text(history=ARXIV_V1.replace("Tue, 8 Sep 2026 18:45:01 UTC", stamp))
 
 
@@ -497,11 +513,14 @@ def test_native_receipt_seal_exact_proof_and_mutation(new_run, monkeypatch, arxi
     monkeypatch.setattr("supplement_agent._fetch_url", forbid)
     request, _ = setup(new_run, bound=False)
     url = ARXIV_URL if arxiv else URL
+    body = window_relative_arxiv_text(new_run[0]) if arxiv else text()
+    if body is None:
+        pytest.skip(f"no in-window day matches fixture id year-month {ARXIV_ID_MONTH}")
     search(request, url=url)
     data, receipt = reserve(
         request,
         url=url,
-        text=window_relative_arxiv_text(new_run[0]) if arxiv else text(),
+        text=body,
     )
     compact = _compact_broker_cli_evidence(request, "tech", data)
     assert compact["fetch_reservations"][-1]["arguments"] == {
@@ -544,6 +563,56 @@ def test_native_receipt_seal_exact_proof_and_mutation(new_run, monkeypatch, arxi
     atomic_dump_json(path, stored)
     with pytest.raises(rc.RunContractError, match="changed"):
         rc.load_manifest(new_run[0])
+
+
+def test_query_provider_is_recorded_bound_and_delivered(new_run):
+    """AUD-03/04: provider and literal evidence stay bound and visible downstream."""
+    from query_proof import build_query_proof
+    request, _ = setup(new_run, bound=False)
+    data = broker.operate(
+        request, "tech", "reserve-query", query="provider probe", provider="openai"
+    )
+    reservation = data["query_reservations"][-1]
+    assert reservation["arguments"]["provider"] == "openai"
+
+    base = {
+        "request_sha256": data["request_sha256"],
+        "gap_id": "tech",
+        "reservation_id": reservation["id"],
+        "tool": "web_search",
+        "query": "provider probe",
+        "responseId": "tech:provider probe",
+        "outcome": "empty",
+        "error": None,
+        "results": [],
+        "proof_subset": build_query_proof(
+            "offline actual returned search fixture"
+        ),
+        "parent_attestation": "actual_public_tool_receipt",
+    }
+    with pytest.raises(rc.RunContractError, match="foreign"):
+        broker.operate(request, "tech", "record-query", receipt=deepcopy(base))
+    with pytest.raises(rc.RunContractError, match="foreign"):
+        broker.operate(
+            request,
+            "tech",
+            "record-query",
+            receipt={**deepcopy(base), "provider": "gemini"},
+        )
+    tampered = {**deepcopy(base), "provider": "openai"}
+    tampered["proof_subset"]["text"] = "parent paraphrase"
+    with pytest.raises(rc.RunContractError, match="exact response prefix"):
+        broker.operate(request, "tech", "record-query", receipt=tampered)
+    recorded = broker.operate(
+        request,
+        "tech",
+        "record-query",
+        receipt={**deepcopy(base), "provider": "openai"},
+    )
+    assert recorded["query_receipts"][-1]["provider"] == "openai"
+    compact = _compact_broker_cli_evidence(request, "tech", recorded)
+    assert compact["query_receipts"][-1]["provider"] == "openai"
+    assert "proof_subset" not in compact["query_receipts"][-1]
 
 
 def _undated_article_text():
@@ -718,6 +787,27 @@ def test_parent_finalize_fills_omitted_parent_derived_keys_on_a_sealed_ledger(ne
     assert result == json.loads(canonical)
     assert result["candidates"][0]["candidate_id"].startswith("cand-")
     assert result["candidates"][0]["candidate_object_sha256"]
+    # AUD-F01: a parent-authored draft is visible in the frozen aggregate and cannot be
+    # reported as a clean completion, and it reaches the delivered coverage reasons.
+    assert aggregate["child_delivery"] == {
+        "gap_count": 1,
+        "child_authored_gaps": [],
+        "parent_authored_gaps": ["tech"],
+        "parent_authored_count": 1,
+    }
+    assert aggregate["status"] == "degraded"
+    stage = rc.load_manifest(new_run[0])["stages"]["supplemental"]
+    assert stage["status"] == "degraded"
+    assert stage["metadata"]["child_delivery"]["parent_authored_gaps"] == ["tech"]
+    from semantic_agent import _delivery_diagnostics
+
+    manifest = rc.load_manifest(new_run[0])
+    reasons = _delivery_diagnostics(
+        manifest, manifest["article_broker_evidence"]
+    )
+    assert any(
+        "diagnostic/parent-finalized-drafts: tech" in reason for reason in reasons
+    )
 
 
 @pytest.mark.parametrize(

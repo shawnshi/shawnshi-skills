@@ -30,7 +30,7 @@ from pathlib import Path
 from typing import Any
 
 SCHEMA_VERSION = "pia_build_receipt_v1"
-DECISION_SCOPE = "research_only"
+DECISION_SCOPE = "advisory"
 TASK_PREFIX = "dataset://pia/tasks"
 
 

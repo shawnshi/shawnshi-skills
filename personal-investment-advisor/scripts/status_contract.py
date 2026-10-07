@@ -131,6 +131,14 @@ def _payload_status(payload: Any, depth: int = 0) -> str:
         return STATUS_FAILED
     if isinstance(payload, dict):
         candidates = [normalize_status(payload.get("status"))]
+        if "exit_code" in payload:
+            code = payload["exit_code"]
+            if type(code) is not int or code < 0 or code >= exit_code_for(STATUS_FAILED):
+                candidates.append(STATUS_FAILED)
+            elif code == 1 and candidates[0] == STATUS_COMPLETE:
+                candidates.append(STATUS_FAILED)
+            elif code == 2 and candidates[0] in {STATUS_COMPLETE, STATUS_INCOMPLETE}:
+                candidates.append(STATUS_FAILED)
         if payload.get("valid") is False:
             candidates.append(STATUS_FAILED)
         errors = payload.get("errors")
@@ -164,6 +172,27 @@ def _payload_status(payload: Any, depth: int = 0) -> str:
             for item in payload
         )
     return STATUS_FAILED
+
+
+def status_rank(value: Any) -> int:
+    """Severity rank; a parent may be stricter than its stages, never softer."""
+
+    return _STATUS_PRIORITY[normalize_status(value)]
+
+
+def status_from_stages(stages: Any) -> str:
+    """Aggregate stage envelopes exactly as a parent payload would.
+
+    Unlike :func:`status_from_payload` this takes no parent status, so a caller can
+    compare a declared parent status against what its stages actually support.
+    """
+
+    if not isinstance(stages, list) or not stages:
+        return STATUS_FAILED
+    return aggregate_status(
+        _payload_status(stage) if isinstance(stage, dict) else STATUS_FAILED
+        for stage in stages
+    )
 
 
 def status_from_payload(payload: Any, child_exit_code: int) -> str:

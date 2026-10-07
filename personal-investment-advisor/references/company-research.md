@@ -76,7 +76,7 @@ ETF 三情景方法固定 `nav_index_currency_stress`，币种等于 Brief；`en
 
 ### 双门与保存
 
-按 `dashboard_schema.json` 生成带显式 `decision_scope` 标注的 Dashboard（未声明时默认 `research_only`），并依次运行：
+按 `dashboard_schema.json` 生成带显式 `decision_scope` 标注的 Dashboard（未声明时默认 `advisory`，可按 SKILL.md 给买卖倾向及具体价格、数量或目标仓位方案，但不改实际持仓；证据不足时降低结论强度或明确参数待核验，不伪造方向或就绪判断），并依次运行：
 
 1. `dashboard_gate.py <dashboard.json> --strict-current-contract`
 2. `dashboard_math_gate.py <dashboard.json>`
@@ -87,7 +87,7 @@ Dashboard 必须绑定已通过门禁的同代码 Research Brief，且证据层�
 
 `freshness_flags` 使用由证据覆盖派生的状态，不再使用四个自报布尔值。行情证据闭合时为 `fresh`；历史披露保持 `historical`；没有新闻扫描时为 `not_assessed`；没有持仓上下文时为 `not_applicable`。声明状态与证据、日期或持仓输入不一致时，Dashboard 门禁失败关闭。
 
-只有用户另行批准持久化，才运行 `save_dashboard.py`。JSON 是规范输入，Markdown 只供阅读。发布必须使用不可变 generation 和带 SHA-256 的索引提交点；索引失败、latest 未前进或输入身份变化时命令失败，不得让未索引文件进入 Daily Sync。
+当前明确授权已覆盖 Dashboard 保存或更新时，直接运行 `save_dashboard.py`，`advisory` 可执行该本地维护，无需为持久化重复确认；授权未覆盖时先补足。JSON 是规范输入，Markdown 只供阅读。发布必须使用不可变 generation 和带 SHA-256 的索引提交点；索引失败、latest 未前进或输入身份变化时命令失败，不得让未索引文件进入 Daily Sync。
 
 ## 6. Dashboard 7.2 显式新契约（不迁移旧原件）
 

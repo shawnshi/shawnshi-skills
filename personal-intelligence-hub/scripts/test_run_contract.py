@@ -6,12 +6,14 @@ import unittest
 from concurrent.futures import ThreadPoolExecutor
 from contextlib import redirect_stdout
 from copy import deepcopy
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, timezone
 from io import StringIO
 from pathlib import Path
 from threading import Event
 from unittest.mock import patch
 from zoneinfo import ZoneInfo
+
+import article_broker as broker
 
 from briefing_gate import validate_briefing_data
 from history_manager import generate_event_id
@@ -691,8 +693,9 @@ class RunContractTests(unittest.TestCase):
         )
         return receipt_path
 
-    def prepare_supplement_run(self, run_id, gap_ids, lane_by_gap=None):
+    def prepare_supplement_run(self, run_id, gap_ids, lane_by_gap=None, broker_gap_ids=()):
         lane_by_gap = lane_by_gap or {}
+        brokered = set(broker_gap_ids)
         manifest_path, _ = create_run(
             runtime_dir=self.runtime_dir,
             skill_path=self.skill_file,
@@ -718,6 +721,7 @@ class RunContractTests(unittest.TestCase):
                     "gap_id": gap_id,
                     "lane": lane_by_gap.get(gap_id, "TechRadar"),
                     "query_scope": gap_id,
+                    **({"article_broker": True} if gap_id in brokered else {}),
                 }
                 for gap_id in gap_ids
             ],
@@ -1762,6 +1766,7 @@ class RunContractTests(unittest.TestCase):
         self.assertEqual(bound["focus_config"]["sha256"], file_sha256(focus))
         packet = request["execution_packet"]
         self.assertTrue(packet["self_contained"])
+        self.assertEqual(packet["subagent_options"], {"output": False})
         self.assertEqual(
             packet["agent_contract"]["role"],
             "语义评估",
@@ -1928,7 +1933,8 @@ class RunContractTests(unittest.TestCase):
         )
         self.assertEqual(
             packet["tool_budget"],
-            {"soft": 8, "hard": 12, "block": "*"},
+            {"soft": 20, "hard": 28, "block": "*"},
+
         )
         self.assertTrue(Path(packet["agent_helper"]["path"]).is_file())
         self.assertEqual(
@@ -1988,6 +1994,10 @@ class RunContractTests(unittest.TestCase):
         for wave in request["launch_plan"]:
             for worker in wave["workers"]:
                 packet = request["execution_packets"][worker["packet_index"]]
+                self.assertEqual(worker["subagent_options"], {"output": False})
+                self.assertEqual(worker["subagent_options"], packet["subagent_options"])
+                self.assertEqual(worker["draft_path"], packet["output_paths"]["draft"])
+                self.assertNotEqual(worker["draft_path"], packet["output_paths"]["result"])
                 self.assertEqual(worker["timeout_ms"], 1000 * (
                     packet["execution_budget"]["max_duration_seconds"] + packet["finalization"]["grace_seconds"]))
         self.assertEqual(
@@ -2012,7 +2022,8 @@ class RunContractTests(unittest.TestCase):
                     ]["grace_seconds"]
                 )
                 and worker["tool_budget"]
-                == {"soft": 8, "hard": 12, "block": "*"}
+                == {"soft": 20, "hard": 28, "block": "*"}
+
                 and worker["token_budget"] == 150_000
                 and worker["cost_budget_usd"] == 0.5
                 for wave in request["launch_plan"]
@@ -2096,6 +2107,119 @@ class RunContractTests(unittest.TestCase):
 
     def _supplement_bytes(self, manifest):
         return {str(p): p.read_bytes() for p in manifest.parent.iterdir() if p.is_file()}
+
+    def _broker_terminal_canary_fixture(self, run_id):
+        """AUD-F02: a brokered canary whose source clock expired with no draft and no state."""
+        manifest, request_path, request = self.prepare_supplement_run(
+            run_id, ["canary", "downstream"], broker_gap_ids=["canary"]
+        )
+        broker.operate(request_path, "canary", "checkpoint")
+
+        class ExpiredClock(datetime):
+            @classmethod
+            def now(cls, tz=None):
+                return datetime.now(timezone.utc) + timedelta(seconds=600)
+
+        with patch.object(broker, "datetime", ExpiredClock):
+            broker.operate(request_path, "canary", "terminal")
+        ledger = load_manifest(manifest)["article_broker_evidence"]["canary"]
+        self.assertEqual(ledger["terminal"]["stop_reason"], "source_clock_expired")
+        return manifest, request_path, request
+
+    def test_reconcile_settles_a_gap_from_the_registered_broker_terminal_decision(self):
+        """AUD-F02: an expired source clock must not strand the run at supplemental=running."""
+        manifest, request_path, request = self._broker_terminal_canary_fixture(
+            "broker-terminal"
+        )
+        # The decision settles only the canary: an undeclared downstream gap is still refused.
+        with self.assertRaisesRegex(RunContractError, "neither result nor terminal"):
+            reconcile_supplement_progress(manifest, request_path, [], [], now=self.now)
+        _, aggregate = reconcile_supplement_progress(
+            manifest,
+            request_path,
+            [],
+            [],
+            unstarted_gap_ids=["downstream"],
+            now=self.now,
+        )
+        self.assertEqual(aggregate["status"], "degraded")
+        canary = next(r for r in aggregate["results"] if r["gap_id"] == "canary")
+        self.assertEqual(canary["status"], "failed")
+        self.assertEqual(canary["failure_kind"], "infrastructure")
+        self.assertIn("broker_terminal:source_clock_expired", canary["failure_reason"])
+        self.assertIn("broker_terminal_sha256=", canary["failure_reason"])
+        self.assertIn("unattempted_urls=", canary["failure_reason"])
+        self.assertEqual(canary["candidates"], [])
+        self.assertEqual(canary["coverage"], {"attempted": 0, "succeeded": 0, "failed": 0})
+        downstream = next(r for r in aggregate["results"] if r["gap_id"] == "downstream")
+        self.assertIn(
+            "not_started_after_canary_failure; canary_gap_id=canary",
+            downstream["failure_reason"],
+        )
+        self.assertIn("canary_broker_terminal_sha256=", downstream["failure_reason"])
+        self.assertTrue(
+            all(
+                Path(p["output_paths"]["result"]).with_suffix(".failure.json").is_file()
+                for p in request["execution_packets"]
+            )
+        )
+        registered = load_manifest(manifest)
+        self.assertEqual(registered["stages"]["supplemental"]["status"], "degraded")
+        self.assertNotEqual(registered["stages"]["supplemental"]["status"], "running")
+        # No clock is reopened and the journaled decision is not rewritten.
+        ledger = registered["article_broker_evidence"]["canary"]
+        self.assertEqual(ledger["terminal"]["stop_reason"], "source_clock_expired")
+        self.assertEqual([e["kind"] for e in ledger["events"]], ["checkpoint"])
+
+    def test_reconcile_never_overrides_a_live_progress_state_with_a_broker_decision(self):
+        """A broker decision settles only a gap with no progress state of its own."""
+        manifest, request_path, _ = self._broker_terminal_canary_fixture("broker-live")
+        packet = json.loads(request_path.read_text(encoding="utf-8"))[
+            "execution_packets"
+        ][0]
+        Path(packet["progress"]["state_path"]).write_text(
+            json.dumps({"progress_id": "canary", "terminal_status": "running"}),
+            encoding="utf-8",
+        )
+        with self.assertRaisesRegex(RunContractError, "progress state is not terminal"):
+            reconcile_supplement_progress(manifest, request_path, [], [], now=self.now)
+
+    def test_reconcile_refuses_a_malformed_registered_terminal_decision(self):
+        """Junk must not settle a gap, and the refusal is not a duplicate gate.
+
+        `load_manifest` owns the ledger shape through `article_broker.validate_ledgers`, and
+        the reconciler deliberately re-implements none of it. This pins the refusal to that
+        single owner so the gate cannot grow an unreachable second validator.
+        """
+        for mutation in ("missing_field", "not_terminal", "bad_clock"):
+            with self.subTest(mutation=mutation):
+                manifest, request_path, _ = self._broker_terminal_canary_fixture(
+                    "broker-bad-" + mutation
+                )
+                data = json.loads(manifest.read_text(encoding="utf-8"))
+                stages_before = deepcopy(data["stages"])
+                terminal = data["article_broker_evidence"]["canary"]["terminal"]
+                if mutation == "missing_field":
+                    terminal.pop("remaining_queries")
+                elif mutation == "not_terminal":
+                    terminal["action"] = "seal"
+                else:
+                    terminal["at"] = "not-a-clock"
+                manifest.write_text(json.dumps(data), encoding="utf-8")
+                with self.assertRaises(RunContractError) as raised:
+                    reconcile_supplement_progress(
+                        manifest,
+                        request_path,
+                        [],
+                        [],
+                        unstarted_gap_ids=["downstream"],
+                        now=self.now,
+                    )
+                self.assertIn("terminal", str(raised.exception))
+                # Nothing was settled: no stage advanced and no aggregate was published.
+                after = json.loads(manifest.read_text(encoding="utf-8"))
+                self.assertEqual(after["stages"], stages_before)
+                self.assertNotIn("supplement_results", after.get("artifacts", {}))
 
     def test_reconcile_missing_downstream_preserves_all_evidence(self):
         manifest, request_path, _, draft = self._failed_canary_fixture("missing-downstream")
@@ -3178,6 +3302,18 @@ class RunContractTests(unittest.TestCase):
             }
         )
         item = refined_payload["top_10"][0]
+        item.update(
+            intelligence_level="L3", confidence="high", major_signal=True,
+            major_signal_reason="synthetic fixture tests the independent-review gate",
+            near_term_decision_impact=True,
+            decision_impact_reason="synthetic deployment-condition fixture",
+            fact="医院发布 3 项临床 AI 评估。",
+            claim_grounding={
+                "basis": "synthetic source fixture; not a production finding",
+                "claims": [{"kind": "number", "statement": "发布 3 项评估", "status": "grounded",
+                            "value": "3", "evidence": "synthetic excerpt: 医院发布 3 项临床 AI 评估。"}],
+            },
+        )
         candidate = {
             "candidate_id": item["candidate_refs"][0],
             "event_id": item["event_id"],
@@ -3259,6 +3395,9 @@ class RunContractTests(unittest.TestCase):
         self.assertEqual(request["execution_packet"]["usage_budget"]["cost_usd"], 0.5)
         core_draft = Path(request["execution_packet"]["draft_paths"]["refined_core"])
         decision = Path(request["execution_packet"]["draft_paths"]["decision"])
+        refined_payload["top_10"], refined_payload["mix"] = select_candidates_with_mix(
+            refined_payload["top_10"], 10, refined_payload["mix"]
+        )
         core_draft.write_text(json.dumps(refined_payload), encoding="utf-8")
         decision.write_text(
             json.dumps(
@@ -3347,6 +3486,14 @@ class RunContractTests(unittest.TestCase):
         )
         self.assertFalse(core_draft.exists())
         self.assertFalse(decision.exists())
+        published_core = json.loads(refined_path.read_text(encoding="utf-8"))
+        self.assertEqual(published_core["top_10"][0]["claim_grounding"], item["claim_grounding"])
+        self.assertEqual(review_scope(published_core)["review_mode"], "targeted_review")
+        _, red_request = build_review_request(
+            manifest_path, refined_path, "red_team", semantic_receipt_path=receipt_path, now=self.now
+        )
+        self.assertEqual(red_request["review_mode"], "targeted_review")
+        self.assertEqual(red_request["major_signal_item_hashes"], [item_hash(item)])
 
     def test_review_registration_binds_semantic_and_red_team_receipts(self):
         manifest_path, _ = self.new_run()
@@ -3749,6 +3896,7 @@ class RunContractTests(unittest.TestCase):
         self.assertEqual(red_request["reviewer_kind"], "deterministic_gate")
         self.assertEqual(red_request["reviewer_id"], "NoL4Gate")
         self.assertEqual(red_request["execution_packet"]["timeout_ms"], 0)
+        self.assertEqual(red_request["execution_packet"]["subagent_options"], {"output": False})
         self.assertEqual(red_request["network_policy"], "forbidden")
         red_team = Path(
             red_request["execution_packet"]["output_paths"]["review_receipt"]

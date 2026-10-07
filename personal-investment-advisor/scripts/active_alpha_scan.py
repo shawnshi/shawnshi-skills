@@ -165,7 +165,7 @@ def run_active_scan(
         row["actionability"] = "research_candidate_only"
     report = base_report(
         SCHEMA_VERSION,
-        decision_scope=str(policy.get("decision_scope") or "research_only"),
+        decision_scope=str(policy.get("decision_scope") or "advisory"),
     )
     report.update(
         {
