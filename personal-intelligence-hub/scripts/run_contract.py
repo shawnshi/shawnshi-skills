@@ -1342,6 +1342,9 @@ def review_input_bundle_sha256(manifest: dict[str, Any]) -> str:
         "window": manifest.get("window"),
         "mix_request": manifest.get("mix_request"),
     }
+    for key in ("claim_grounding_version", "runtime_environment"):
+        if key in manifest:
+            values[key] = deepcopy(manifest[key])
     if "source_adoption" in manifest:
         from recovery_lifecycle import validated_source
         validated_source(manifest)
@@ -1458,7 +1461,11 @@ def create_run(
     now: datetime | None = None,
     run_id: str | None = None,
     linked_from_run_id: str | None = None,
+    claim_grounding_version: int = 1,
 ) -> tuple[Path, dict[str, Any]]:
+    if type(claim_grounding_version) is not int or claim_grounding_version not in {1, 2}:
+        raise RunContractError("unsupported claim grounding policy")
+    from hub_utils import runtime_environment
     current = _aware_now(timezone_name, now)
     report_day = report_date or current.date().isoformat()
     window = calendar_window(report_day, window_days, timezone_name)
@@ -1527,6 +1534,8 @@ def create_run(
         }
     manifest: dict[str, Any] = {
         "contract_version": CONTRACT_VERSION,
+        "claim_grounding_version": claim_grounding_version,
+        "runtime_environment": runtime_environment(),
         "run_id": identifier,
         "skill_sha256": file_sha256(effective_skill),
         "skill_bundle_sha256": effective_bundle_sha256,
@@ -2317,13 +2326,84 @@ def validate_subagent_output_options(
     return deepcopy(options)
 
 
+def bind_subagent_launch_options(
+    packet: dict[str, Any], options: dict[str, Any]
+) -> dict[str, Any]:
+    """Bind one native Pi child; never approve a composite or management request."""
+    bound = validate_subagent_output_options(packet, options)
+    # Closed rather than a mode blacklist: future launch modes must be reviewed
+    # before they can receive the registered single-writer authorization.
+    allowed = {
+        "agent", "task", "model", "cwd", "async", "context", "output",
+        "outputMode", "timeoutMs", "toolBudget", "usageBudget", "artifacts",
+        "includeProgress", "chatProgress",
+    }
+    unsupported = set(bound) - allowed
+    if unsupported:
+        raise RunContractError(
+            "single-child launch options contain unsupported fields: "
+            + ", ".join(sorted(unsupported))
+            + "; use only timeoutMs, not maxRuntimeMs or snake_case aliases"
+        )
+    for key in ("agent", "task", "model", "cwd"):
+        if key in bound and (not isinstance(bound[key], str) or not bound[key].strip()):
+            raise RunContractError(f"subagent {key} must be a nonempty string")
+    for key in ("async", "artifacts", "includeProgress"):
+        if key in bound and type(bound[key]) is not bool:
+            raise RunContractError(f"subagent {key} must be a boolean")
+    if "outputMode" in bound and bound["outputMode"] != "inline":
+        raise RunContractError("single-child launch outputMode must be inline")
+    if "chatProgress" in bound and (
+        not isinstance(bound["chatProgress"], str)
+        or bound["chatProgress"] not in {"auto", "off"}
+    ):
+        raise RunContractError("async single-child chatProgress must be auto or off")
+    if "execution_budget" in packet:
+        timeout = (
+            int(packet["execution_budget"]["max_duration_seconds"])
+            + int(packet["finalization"]["grace_seconds"])
+        ) * 1000
+    else:
+        timeout = packet.get("timeout_ms")
+    if type(timeout) is not int or timeout <= 0:
+        raise RunContractError("launch packet must bind a positive timeout")
+    usage = packet.get("usage_budget", {})
+    tokens = usage.get("tokens")
+    cost = usage.get("cost_usd")
+    if type(tokens) is not int or tokens <= 0 or type(cost) not in {int, float} or cost <= 0:
+        raise RunContractError("launch packet must bind positive token and cost reservations")
+    expected = {
+        "async": True,
+        "context": "fresh",
+        "timeoutMs": timeout,
+        "usageBudget": {"tokens": {"hard": tokens}, "costUsd": {"hard": cost}},
+    }
+    if "tool_budget" in packet:
+        budget = packet["tool_budget"]
+        if (
+            not isinstance(budget, dict)
+            or type(budget.get("hard")) is not int
+            or budget["hard"] <= 0
+            or budget.get("block") != "*"
+            or type(budget.get("soft", budget["hard"])) is not int
+            or not 0 < budget.get("soft", budget["hard"]) <= budget["hard"]
+        ):
+            raise RunContractError("registered tool budget must explicitly block all tools")
+        expected["toolBudget"] = deepcopy(budget)
+    for key, value in expected.items():
+        if key in bound and bound[key] != value:
+            raise RunContractError(f"subagent {key} differs from the registered launch contract")
+        bound[key] = value
+    return bound
+
+
 def _build_supplement_launch_plan(
     execution_packets: list[dict[str, Any]],
     *,
     max_workers: int,
 ) -> list[dict[str, Any]]:
-    if not 1 <= max_workers <= 8:
-        raise RunContractError("max_supplement_workers must be between 1 and 8")
+    if max_workers != 1:
+        raise RunContractError("supplement draft writers must be serialized; isolated fanout is not implemented")
     plan: list[dict[str, Any]] = []
     wave_ranges = (
         [(0, 1)]
@@ -2351,6 +2431,9 @@ def _build_supplement_launch_plan(
                         packet, packet["subagent_options"]
                     ),
                     "draft_path": str(packet["output_paths"]["draft"]),
+                    "launch_options": bind_subagent_launch_options(
+                        packet, packet["subagent_options"]
+                    ),
                     "timeout_ms": (
                         int(packet["execution_budget"]["max_duration_seconds"])
                         + int(packet["finalization"]["grace_seconds"])
@@ -2823,7 +2906,11 @@ def build_supplement_request(
                 f'scripts/supplement_agent.py context --request "{request_path.resolve()}" '
                 f'--gap-id "{gap["gap_id"]}". '
                 "Follow its hash-bound compact context and draft_schema. Do not repeat context "
-                "after success. Immediately contact_supervisor for the parent-only broker sequence. "
+                "after success. If that output was truncated or replaced, recover only the frozen "
+                f'write contract once: python -B -X utf8 scripts/broker_handoff.py --request "{request_path.resolve()}" '
+                f'--gap-id "{gap["gap_id"]}" --draft-contract. '
+                "This read-only projection adds no evidence, clock, retry, or tool budget. "
+                "Immediately contact_supervisor for the parent-only broker sequence. "
                 "No worker public tools or redundant full-file reads. Write only the registered "
                 "business draft; the runtime output option is false."
             )
@@ -2836,7 +2923,7 @@ def build_supplement_request(
     max_workers = _integer(
         prompt_config.get("execution_policy", {})
         .get("parallelism", {})
-        .get("max_supplement_workers", 3),
+        .get("max_supplement_workers", 1),
         "max_supplement_workers",
         minimum=1,
     )
@@ -5983,6 +6070,10 @@ def validate_semantic_draft(
     items = refined.get("top_10")
     if not isinstance(items, list):
         raise RunContractError("semantic draft top_10 must be a list")
+    from semantic_agent import validate_item_grounding
+    for item in items:
+        if isinstance(item, dict):
+            validate_item_grounding(item, item, manifest)
     item_hashes = [item_hash(item) for item in items]
     l4_hashes = [
         item_hash(item)

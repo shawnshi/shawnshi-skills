@@ -107,7 +107,7 @@ def _normalized_metadata(metadata: dict[str, str]) -> dict[str, Any]:
     return normalized
 
 
-def _previous_hashes(path: Path) -> tuple[dict[str, str], list[str]]:
+def _previous_state(path: Path) -> tuple[dict[str, str], list[str], dict[str, Any]]:
     reject_symlink_path(path)
     try:
         payload = json.loads(path.read_text(encoding="utf-8-sig"))
@@ -136,15 +136,34 @@ def _previous_hashes(path: Path) -> tuple[dict[str, str], list[str]]:
             raise SafeWriteError("E_PREVIOUS_SCHEMA", "Previous bundle contains an invalid content hash.", path=str(path), slide_id=slide_id)
         hashes[slide_id] = content_hash
         order.append(slide_id)
-    return hashes, order
+    context: dict[str, Any] = {}
+    for field in ("metadata", "style_instructions"):
+        if field in payload and not isinstance(payload[field], dict):
+            raise SafeWriteError("E_PREVIOUS_SCHEMA", "Previous bundle contains invalid global context.", path=str(path), field=field)
+        context[field] = payload.get(field)
+    return hashes, order, context
 
 
-def _changed_slide_ids(slides: list[dict[str, Any]], previous: Path) -> tuple[list[str], list[str]]:
-    old_hashes, old_order = _previous_hashes(previous)
-    new_hashes = {slide["slide_id"]: slide["content_hash"] for slide in slides}
-    changed = [slide["slide_id"] for slide in slides if old_hashes.get(slide["slide_id"]) != slide["content_hash"]]
-    removed = [slide_id for slide_id in old_order if slide_id not in new_hashes]
-    return changed, removed
+def _changed_slide_ids(
+    slides: list[dict[str, Any]], previous: Path, metadata: dict[str, Any], style: dict[str, str]
+) -> tuple[list[str], list[str], list[str]]:
+    old_hashes, old_order, old_context = _previous_state(previous)
+    old_metadata = old_context["metadata"]
+    if old_metadata is not None:
+        old_metadata = _normalized_metadata(old_metadata)
+    global_changes = []
+    if old_metadata != metadata:
+        global_changes.append("metadata")
+    if old_context["style_instructions"] != style:
+        global_changes.append("style_instructions")
+    # A global directive can affect every rendered page; incomplete old context is not evidence of no change.
+    changed = [
+        slide["slide_id"] for slide in slides
+        if global_changes or old_hashes.get(slide["slide_id"]) != slide["content_hash"]
+    ]
+    new_ids = {slide["slide_id"] for slide in slides}
+    removed = [slide_id for slide_id in old_order if slide_id not in new_ids]
+    return changed, removed, global_changes
 
 
 def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
@@ -204,9 +223,10 @@ def main(argv: list[str] | None = None) -> int:
 
         changed: list[str] | None = None
         removed: list[str] = []
+        global_changes: list[str] = []
         if args.previous:
             previous = args.previous if args.previous.is_absolute() else base_dir / args.previous
-            changed, removed = _changed_slide_ids(slides, previous)
+            changed, removed, global_changes = _changed_slide_ids(slides, previous, metadata, document["style_instructions"])
 
         bundle: dict[str, Any] = {
             "schema_version": SCHEMA_VERSION,
@@ -222,7 +242,12 @@ def main(argv: list[str] | None = None) -> int:
             "validation": {"status": report["status"], "warnings": report["warnings"], "review": report["review"]},
         }
         if changed is not None:
-            bundle["change_set"] = {"changed_slide_ids": changed, "removed_slide_ids": removed}
+            bundle["change_set"] = {
+                "changed_slide_ids": changed,
+                "removed_slide_ids": removed,
+                "global_changed_sections": global_changes,
+                "requires_full_rebuild": bool(global_changes),
+            }
 
         atomic_write_text(output_path, json.dumps(bundle, ensure_ascii=False, indent=2) + "\n", force=args.force)
         result: dict[str, Any] = {
@@ -240,6 +265,8 @@ def main(argv: list[str] | None = None) -> int:
         if changed is not None:
             result["changed_slide_ids"] = changed
             result["removed_slide_ids"] = removed
+            result["global_changed_sections"] = global_changes
+            result["requires_full_rebuild"] = bool(global_changes)
         print(json.dumps(result, ensure_ascii=False, indent=2))
         return 0
     except SafeWriteError as exc:

@@ -39,7 +39,6 @@ $DeprecatedPatterns = [ordered]@{
     write_to_file = '(?i)\bwrite_to_file\b'
     view_file = '(?i)\bview_file\b'
     ask_question = '(?i)\bask_question\b'
-    generate_image = '(?i)\bgenerate_image\b'
     mcp_vector_lake = '(?i)\bmcp_vector-lake\b'
     vector_lake_mcp = '(?i)\bvector-lake-mcp\b'
     mentat_mind_mcp = '(?i)\bmentat-mind-mcp\b'
@@ -51,7 +50,6 @@ $ForeignRuntimePatterns = [ordered]@{
     kimi_path = '(?i)(?:/app/\.kimi|\.kimi[\\/])'
     app_data_macro = '(?i)<appDataDir>'
     conversation_brain = '(?i)brain[\\/]<(?:conversation-)?id>'
-    antigravity = '(?i)Antigravity'
     v11_runtime = '(?i)\bV11(?:\.\d+)?\b'
     ir_native = '(?i)IR Native'
     fable_runtime = '(?i)Fable\s*5'
@@ -122,7 +120,7 @@ function Invoke-PythonJsonValidator {
             Parsed = $false
             ExitCode = $exitCode
             Payload = $null
-            Error = 'validator returned invalid JSON'
+            Error = "validator returned invalid JSON (exit $exitCode): $($_.Exception.Message); output: $(($output -join "`n").Substring(0, [math]::Min(2000, ($output -join "`n").Length)))"
         }
     }
 }
@@ -268,7 +266,7 @@ function Get-SkillTextCorpus {
     param([string]$SkillDirectory)
 
     $extensions = @('.md', '.txt', '.py', '.ps1', '.js', '.ts', '.mjs', '.json', '.yaml', '.yml', '.html', '.css', '.toml')
-    $parts = foreach ($file in Get-ChildItem -LiteralPath $SkillDirectory -Recurse -File -ErrorAction SilentlyContinue) {
+    $parts = foreach ($file in Get-ChildItem -LiteralPath $SkillDirectory -Recurse -File -ErrorAction Stop) {
         $relativePath = [IO.Path]::GetRelativePath($SkillDirectory, $file.FullName)
         $pathSegments = $relativePath -split '[\\/]'
         if (@($pathSegments | Where-Object { $IgnoredCorpusDirectories.Contains($_) }).Count -gt 0) {
@@ -281,64 +279,12 @@ function Get-SkillTextCorpus {
             continue
         }
         try {
-            [IO.File]::ReadAllText($file.FullName)
+            [Text.UTF8Encoding]::new($false, $true).GetString([IO.File]::ReadAllBytes($file.FullName))
         } catch {
-            continue
+            throw "Cannot read skill resource '$relativePath': $($_.Exception.Message)"
         }
     }
     $parts -join "`n"
-}
-
-function Get-FrontmatterStatus {
-    param(
-        [string[]]$Lines,
-        [string]$DirectoryName
-    )
-
-    $endIndex = -1
-    if ($Lines.Count -gt 1 -and $Lines[0] -eq '---') {
-        for ($i = 1; $i -lt $Lines.Count; $i++) {
-            if ($Lines[$i] -eq '---') {
-                $endIndex = $i
-                break
-            }
-        }
-    }
-
-    $keys = @()
-    $name = ''
-    $description = ''
-    if ($endIndex -gt 0) {
-        foreach ($line in $Lines[1..($endIndex - 1)]) {
-            if ($line -match '^(?<key>[A-Za-z][A-Za-z0-9_-]*):\s*(?<value>.*)$') {
-                $key = $Matches.key
-                $value = $Matches.value.Trim().Trim([char]39).Trim([char]34)
-                $keys += $key
-                if ($key -eq 'name') { $name = $value }
-                if ($key -eq 'description') { $description = $value }
-            }
-        }
-    }
-
-    $allowedFrontmatterKeys = @('name', 'description', 'license', 'compatibility', 'metadata', 'allowed-tools', 'disable-model-invocation')
-    $unexpected = @($keys | Where-Object { $_ -notin $allowedFrontmatterKeys } | Sort-Object -Unique)
-    $duplicate = @($keys | Group-Object | Where-Object Count -gt 1 | ForEach-Object Name)
-    $nameValid = $name -match '^[a-z0-9]+(?:-[a-z0-9]+)*$' -and $name.Length -le 64 -and $name -eq $DirectoryName
-    $descriptionValid = $description.Length -ge 1 -and $description.Length -le 1024
-    $hasTriggerContext = $description -match '(\u5F53|\u7528\u4E8E|\u9002\u5408|\u7528\u6237.{0,12}(?:\u8981\u6C42|\u9700\u8981)|Use when|Use this skill|when Codex)'
-
-    [PSCustomObject]@{
-        Starts = $Lines.Count -gt 0 -and $Lines[0] -eq '---'
-        Ends = $endIndex -gt 0
-        Name = $name
-        Description = $description
-        Keys = $keys
-        UnexpectedKeys = $unexpected
-        DuplicateKeys = $duplicate
-        NameValid = $nameValid
-        DescriptionValid = $descriptionValid
-        HasTriggerContext = $hasTriggerContext
-    }
 }
 
 function Get-ManifestStatus {
@@ -471,12 +417,64 @@ $skillDirectories = @(
             $_.Name -notin $requestedExcludeSkills
         }
 )
+$validatorScopeArguments = [System.Collections.Generic.List[string]]::new()
+$validatorScopeArguments.Add('--root')
+$validatorScopeArguments.Add($Root)
+$validatorScopeArguments.Add('--json')
+foreach ($skillName in $requestedIncludeSkills) {
+    $validatorScopeArguments.Add('--include-skill')
+    $validatorScopeArguments.Add($skillName)
+}
+foreach ($skillName in $requestedExcludeSkills) {
+    $validatorScopeArguments.Add('--exclude-skill')
+    $validatorScopeArguments.Add($skillName)
+}
+
+$frontmatterValidation = Invoke-PythonJsonValidator `
+    -ScriptPath (Join-Path $PSScriptRoot 'validate_openai_yaml.py') `
+    -Arguments (@($validatorScopeArguments) + @('--frontmatter-only'))
+$frontmatterBySkill = @{}
+$frontmatterProtocolValid = $frontmatterValidation.Parsed -and
+    $null -ne $frontmatterValidation.Payload.PSObject.Properties['records']
+if ($frontmatterProtocolValid) {
+    foreach ($record in @($frontmatterValidation.Payload.records)) {
+        if ($null -eq $record -or
+            $record.PSObject.Properties.Name -notcontains 'skill' -or
+            $record.PSObject.Properties.Name -notcontains 'valid' -or
+            $record.valid -isnot [bool] -or
+            $record.PSObject.Properties.Name -notcontains 'keys' -or
+            $record.PSObject.Properties.Name -notcontains 'unexpected_keys' -or
+            $record.PSObject.Properties.Name -notcontains 'name' -or
+            $record.PSObject.Properties.Name -notcontains 'description_has_trigger_context' -or
+            $record.skill -notin $skillDirectories.Name -or
+            $frontmatterBySkill.ContainsKey($record.skill)) {
+            $frontmatterProtocolValid = $false
+            continue
+        }
+        $frontmatterBySkill[$record.skill] = $record
+    }
+}
+$frontmatterChecked = Get-NonNegativeIntegerProperty -Object $frontmatterValidation.Payload -Name 'checked'
+$frontmatterFailures = Get-NonNegativeIntegerProperty -Object $frontmatterValidation.Payload -Name 'failures'
+$frontmatterExitConsistent = (
+    ($frontmatterValidation.ExitCode -eq 0 -and $frontmatterFailures -eq 0) -or
+    ($frontmatterValidation.ExitCode -eq 1 -and $null -ne $frontmatterFailures -and $frontmatterFailures -gt 0)
+)
+$frontmatterValidatorIntegrationFailure = -not (
+    $frontmatterProtocolValid -and $frontmatterBySkill.Count -eq $skillDirectories.Count -and
+    $frontmatterChecked -eq $skillDirectories.Count -and $null -ne $frontmatterFailures -and
+    $frontmatterExitConsistent
+)
 $records = @(foreach ($directory in $skillDirectories) {
     $skillPath = Join-Path $directory.FullName 'SKILL.md'
     $lines = @(Get-Content -LiteralPath $skillPath -Encoding UTF8)
     $text = $lines -join "`n"
     $corpus = Get-SkillTextCorpus -SkillDirectory $directory.FullName
-    $frontmatter = Get-FrontmatterStatus -Lines $lines -DirectoryName $directory.Name
+    $frontmatter = if ($frontmatterBySkill.ContainsKey($directory.Name)) {
+        $frontmatterBySkill[$directory.Name]
+    } else {
+        [PSCustomObject]@{ valid = $false; keys = @(); unexpected_keys = @(); name = ''; description_has_trigger_context = $null }
+    }
     $manifest = Get-ManifestStatus -SkillDirectory $directory.FullName
 
     [PSCustomObject]@{
@@ -485,21 +483,11 @@ $records = @(foreach ($directory in $skillDirectories) {
         LineCount = $lines.Count
         CharCount = $text.Length
         EstimatedTokens = Get-EstimatedTokenCount -Text $text
-        FrontmatterValid = (
-            $frontmatter.Starts -and
-            $frontmatter.Ends -and
-            $frontmatter.NameValid -and
-            $frontmatter.DescriptionValid -and
-            $frontmatter.HasTriggerContext -and
-            $frontmatter.UnexpectedKeys.Count -eq 0 -and
-            $frontmatter.DuplicateKeys.Count -eq 0 -and
-            ($frontmatter.Keys -contains 'name') -and
-            ($frontmatter.Keys -contains 'description')
-        )
-        FrontmatterKeys = @($frontmatter.Keys)
-        UnexpectedFrontmatterKeys = @($frontmatter.UnexpectedKeys)
-        Name = $frontmatter.Name
-        DescriptionHasTriggerContext = $frontmatter.HasTriggerContext
+        FrontmatterValid = $frontmatter.valid
+        FrontmatterKeys = @($frontmatter.keys)
+        UnexpectedFrontmatterKeys = @($frontmatter.unexpected_keys)
+        Name = $frontmatter.name
+        DescriptionHasTriggerContext = $frontmatter.description_has_trigger_context
         HasResourceManifest = $manifest.Exists
         ManifestIssues = @($manifest.Missing)
         DeprecatedTokens = @(Get-PatternHits -Text $corpus -Patterns $DeprecatedPatterns)
@@ -652,19 +640,6 @@ $triggerStatus = Get-TriggerOwnershipStatus `
     -SelectedSkills $selectedSkillNames `
     -Scoped $isScoped
 
-$validatorScopeArguments = [System.Collections.Generic.List[string]]::new()
-$validatorScopeArguments.Add('--root')
-$validatorScopeArguments.Add($Root)
-$validatorScopeArguments.Add('--json')
-foreach ($skillName in $requestedIncludeSkills) {
-    $validatorScopeArguments.Add('--include-skill')
-    $validatorScopeArguments.Add($skillName)
-}
-foreach ($skillName in $requestedExcludeSkills) {
-    $validatorScopeArguments.Add('--exclude-skill')
-    $validatorScopeArguments.Add($skillName)
-}
-
 $resourceManifestValidation = Invoke-PythonJsonValidator `
     -ScriptPath (Join-Path $PSScriptRoot 'resource_manifest.py') `
     -Arguments (@('check') + @($validatorScopeArguments))
@@ -710,7 +685,7 @@ $metadataValidatorIntegrationFailure = -not (
     $metadataExitConsistent
 )
 $openAiMetadataFailures = if ($null -ne $metadataFailures) { $metadataFailures } else { 0 }
-$validatorIntegrationFailures = [int]$resourceValidatorIntegrationFailure + [int]$metadataValidatorIntegrationFailure
+$validatorIntegrationFailures = [int]$frontmatterValidatorIntegrationFailure + [int]$resourceValidatorIntegrationFailure + [int]$metadataValidatorIntegrationFailure
 
 $summary = [PSCustomObject]@{
     Root = $Root
@@ -770,12 +745,6 @@ foreach ($entry in @(
     @{ Name = 'invalid_resource_manifests'; Value = $summary.InvalidResourceManifests },
     @{ Name = 'openai_metadata_failures'; Value = $summary.OpenAiMetadataFailures },
     @{ Name = 'validator_integration_failures'; Value = $summary.ValidatorIntegrationFailures },
-    @{ Name = 'deprecated_tool_skills'; Value = $summary.DeprecatedToolSkills },
-    @{ Name = 'foreign_runtime_skills'; Value = $summary.ForeignRuntimeSkills },
-    @{ Name = 'reasoning_directive_skills'; Value = $summary.ReasoningDirectiveSkills },
-    @{ Name = 'hardcoded_model_skills'; Value = $summary.HardcodedModelSkills },
-    @{ Name = 'mandatory_subagent_skills'; Value = $summary.MandatorySubagentSkills },
-    @{ Name = 'mandatory_persistence_skills'; Value = $summary.MandatoryPersistenceSkills },
     @{ Name = 'undeclared_automatic_persistence_skills'; Value = $summary.UndeclaredAutomaticPersistenceSkills },
     @{ Name = 'stale_automatic_persistence_exceptions'; Value = $summary.StaleAutomaticPersistenceExceptions },
     @{ Name = 'unknown_automatic_persistence_exceptions'; Value = $summary.UnknownAutomaticPersistenceExceptions },
@@ -793,6 +762,26 @@ foreach ($entry in @(
 }
 
 $summary | Format-List
+# Corpus matches cannot establish whether a quoted, negated or host-specific
+# example is an instruction. The semantic review remains separate from this gate.
+foreach ($record in $records) {
+    $hits = @($record.DeprecatedTokens) + @($record.ForeignRuntime) +
+        @($record.ReasoningDirectives) + @($record.HardcodedModels)
+    if ($record.MandatorySubagent) { $hits += 'mandatory_subagent' }
+    if ($record.MandatoryPersistence) { $hits += 'mandatory_persistence' }
+    if ($hits.Count -gt 0) {
+        Write-Warning "$($record.Skill): heuristic matches [$($hits -join ', ')]; semantic review required."
+    }
+}
+foreach ($validation in @($frontmatterValidation, $resourceManifestValidation, $openAiMetadataValidation)) {
+    if (-not $validation.Parsed) {
+        Write-Warning $validation.Error
+    } elseif ($validation.ExitCode -ne 0 -and $validation.Payload.PSObject.Properties.Name -contains 'issues') {
+        foreach ($issue in @($validation.Payload.issues)) {
+            Write-Warning "$($issue.skill): $($issue.code): $($issue.detail)"
+        }
+    }
+}
 # Invocation-policy warnings are surfaced but never block: choosing the missing
 # side changes which hosts may auto-trigger a skill, so it stays a decision.
 foreach ($warning in $metadataWarnings) {
@@ -810,6 +799,7 @@ if ($Mode -eq 'Report') {
         Summary = $summary
         Records = $records
         TriggerOwnership = $triggerStatus
+        FrontmatterValidation = $frontmatterValidation.Payload
         ResourceManifestValidation = $resourceManifestValidation.Payload
         OpenAiMetadataValidation = $openAiMetadataValidation.Payload
     } | ConvertTo-Json -Depth 7 | Set-Content -LiteralPath (Join-Path $ReportDir 'skills-audit.json') -Encoding UTF8

@@ -1,18 +1,18 @@
 {
   "schema_version": 3,
   "skill": "tool-slide-architect",
-  "generated_at": "2026-09-24T09:41:51+08:00",
+  "generated_at": "2026-10-09T10:57:51+08:00",
   "hash_algorithm": "SHA-256",
   "text_hash_normalization": "LF",
   "skill_md": "SKILL.md",
-  "skill_md_sha256": "585ac2261f355b976a7484ecee35ab64271c065d221eb2c0fa0692cc3c5d8cc1",
+  "skill_md_sha256": "90e31f5b488f7f10e62e465e8530a0c4c188a2240e52148c27aa342d466cb326",
   "top_level_files": [
     "SKILL.md"
   ],
   "top_level_file_hashes": [
     {
       "path": "SKILL.md",
-      "sha256": "585ac2261f355b976a7484ecee35ab64271c065d221eb2c0fa0692cc3c5d8cc1"
+      "sha256": "90e31f5b488f7f10e62e465e8530a0c4c188a2240e52148c27aa342d466cb326"
     }
   ],
   "top_level_directories": [
@@ -25,7 +25,7 @@
   "resource_directories": [
     {
       "name": "scripts",
-      "file_count": 8
+      "file_count": 9
     },
     {
       "name": "references",
@@ -51,7 +51,7 @@
     },
     {
       "path": "evals/evals.json",
-      "sha256": "739b2f9f09145919ef8688c52b70abf76a5f96057a131df1eeeb98c29712eb54"
+      "sha256": "abe850f19fa3c820c13273ff4774f40ea1ccc188c56055105738b26c844ec90c"
     },
     {
       "path": "evals/single-slide-outline.md",
@@ -67,19 +67,19 @@
     },
     {
       "path": "references/blueprint-template.md",
-      "sha256": "c08099d67fb19185c537b9b49e1201597cd95c7de7a57ae2e8dd2ff20d26947e"
+      "sha256": "52cc56b30593abce538f06ac1f8677303c2c5827a9cc12bdfb251d822a0d6e41"
     },
     {
       "path": "references/cli-reference.md",
-      "sha256": "3addcfae381ac80311a7c4235e74cae903687792e3010b0df2fd2d4b2f2aa467"
+      "sha256": "fdc959734960f88e0b94c206694e56e37f6c1355713fb5c0d475593b16e15986"
     },
     {
       "path": "references/content-rules.md",
-      "sha256": "1fdbfbc9bb69349747bff45293dd1520d755aa85c73be5d51319ebc7d1198acb"
+      "sha256": "2dab56f1fd38d01b9d973da39dd6393269809ebae031b0ad9994146a20233231"
     },
     {
       "path": "references/design-guidelines.md",
-      "sha256": "f8b741a088babd2533f16dbe7727b8ae55afb15848a4bfa759f6c3b3ee15f2a7"
+      "sha256": "afa70cb7e09ad65bd8df553d4d9964208297c92c8a035f92b9828222f5b4a0ff"
     },
     {
       "path": "references/dimensions/density.md",
@@ -107,15 +107,15 @@
     },
     {
       "path": "references/modification-guide.md",
-      "sha256": "62a303b0fdac35eea4958a856451852a2f363da437998907afa370589b7bd957"
+      "sha256": "5f11279630980c5690f371884ffc1982b7391c1cd165f874454da24eb500250a"
     },
     {
       "path": "references/outline-template.md",
-      "sha256": "fd3c2b614f7c8350a6b784b131afebabc554f3f0e2d47f33b6d914dfba785d85"
+      "sha256": "210ebd09562f2582f49db3c9c8999c762dffc8379df06ce56c68103a8dd13dd6"
     },
     {
       "path": "references/pptx-handoff.md",
-      "sha256": "e5d770fe547dddfd355f2809f2dc768c09aa6aa548107917372d09804ee1e6e5"
+      "sha256": "1c9d8b76df61c959771f52957a598c0b378a57ee1645dd364b8510c3e3b411b0"
     },
     {
       "path": "references/styles/anti-gravity.md",
@@ -203,11 +203,11 @@
     },
     {
       "path": "scripts/build-deck.py",
-      "sha256": "9d88484d494421b27854a80cbe44f6c09fdfde4db0a01d9a5869e9345def11f8"
+      "sha256": "cd95afb8cdb7ac2872872deea4022f1cc9a662ae00e1396637341bc0bd1638dc"
     },
     {
       "path": "scripts/migrate_v1.py",
-      "sha256": "8a609d73c826ea050f967e728ee589ee0f5317b28f3953698a08bd649734daac"
+      "sha256": "e99efac654ea5897a081d3fb8cd9934fd88ef26a2676e6e26ad410e0f16d0c05"
     },
     {
       "path": "scripts/renumber.py",
@@ -219,7 +219,11 @@
     },
     {
       "path": "scripts/scaffold.py",
-      "sha256": "76d7222afa8a0da7fe70290aba902190b6c69943885055f984801a8e0e50cacb"
+      "sha256": "19765cd38c840f1a3ea6fe429558305c1c1c1f29c26fd6fb2408f2e6d6308ca1"
+    },
+    {
+      "path": "scripts/test_audit_regressions.py",
+      "sha256": "5b63eae4cf810a1beac63fdf8ae7fb5f4bebb2907ef3dfcd0101a0ccfe0507f5"
     },
     {
       "path": "scripts/test_tools.py",
@@ -231,7 +235,7 @@
     },
     {
       "path": "scripts/validator.py",
-      "sha256": "2945e621d2f790b78e97193c5befbe8f1448acb9ea9f244417322c0bae8cd216"
+      "sha256": "c2d5ca75022f1e4e226a04f4a7f62b35f9cfbcec6c6c62d648855e5f10861b7b"
     }
   ],
   "declared_local_dependencies": [
@@ -245,25 +249,25 @@
       "path": "references/blueprint-template.md",
       "exists": true,
       "resolved_path": "tool-slide-architect/references/blueprint-template.md",
-      "sha256": "c08099d67fb19185c537b9b49e1201597cd95c7de7a57ae2e8dd2ff20d26947e"
+      "sha256": "52cc56b30593abce538f06ac1f8677303c2c5827a9cc12bdfb251d822a0d6e41"
     },
     {
       "path": "references/cli-reference.md",
       "exists": true,
       "resolved_path": "tool-slide-architect/references/cli-reference.md",
-      "sha256": "3addcfae381ac80311a7c4235e74cae903687792e3010b0df2fd2d4b2f2aa467"
+      "sha256": "fdc959734960f88e0b94c206694e56e37f6c1355713fb5c0d475593b16e15986"
     },
     {
       "path": "references/content-rules.md",
       "exists": true,
       "resolved_path": "tool-slide-architect/references/content-rules.md",
-      "sha256": "1fdbfbc9bb69349747bff45293dd1520d755aa85c73be5d51319ebc7d1198acb"
+      "sha256": "2dab56f1fd38d01b9d973da39dd6393269809ebae031b0ad9994146a20233231"
     },
     {
       "path": "references/design-guidelines.md",
       "exists": true,
       "resolved_path": "tool-slide-architect/references/design-guidelines.md",
-      "sha256": "f8b741a088babd2533f16dbe7727b8ae55afb15848a4bfa759f6c3b3ee15f2a7"
+      "sha256": "afa70cb7e09ad65bd8df553d4d9964208297c92c8a035f92b9828222f5b4a0ff"
     },
     {
       "path": "references/layouts.md",
@@ -275,19 +279,19 @@
       "path": "references/modification-guide.md",
       "exists": true,
       "resolved_path": "tool-slide-architect/references/modification-guide.md",
-      "sha256": "62a303b0fdac35eea4958a856451852a2f363da437998907afa370589b7bd957"
+      "sha256": "5f11279630980c5690f371884ffc1982b7391c1cd165f874454da24eb500250a"
     },
     {
       "path": "references/outline-template.md",
       "exists": true,
       "resolved_path": "tool-slide-architect/references/outline-template.md",
-      "sha256": "fd3c2b614f7c8350a6b784b131afebabc554f3f0e2d47f33b6d914dfba785d85"
+      "sha256": "210ebd09562f2582f49db3c9c8999c762dffc8379df06ce56c68103a8dd13dd6"
     },
     {
       "path": "references/pptx-handoff.md",
       "exists": true,
       "resolved_path": "tool-slide-architect/references/pptx-handoff.md",
-      "sha256": "e5d770fe547dddfd355f2809f2dc768c09aa6aa548107917372d09804ee1e6e5"
+      "sha256": "1c9d8b76df61c959771f52957a598c0b378a57ee1645dd364b8510c3e3b411b0"
     },
     {
       "path": "references/styles/index.json",
@@ -305,13 +309,13 @@
       "path": "scripts/build-deck.py",
       "exists": true,
       "resolved_path": "tool-slide-architect/scripts/build-deck.py",
-      "sha256": "9d88484d494421b27854a80cbe44f6c09fdfde4db0a01d9a5869e9345def11f8"
+      "sha256": "cd95afb8cdb7ac2872872deea4022f1cc9a662ae00e1396637341bc0bd1638dc"
     },
     {
       "path": "scripts/migrate_v1.py",
       "exists": true,
       "resolved_path": "tool-slide-architect/scripts/migrate_v1.py",
-      "sha256": "8a609d73c826ea050f967e728ee589ee0f5317b28f3953698a08bd649734daac"
+      "sha256": "e99efac654ea5897a081d3fb8cd9934fd88ef26a2676e6e26ad410e0f16d0c05"
     },
     {
       "path": "scripts/renumber.py",
@@ -323,13 +327,13 @@
       "path": "scripts/scaffold.py",
       "exists": true,
       "resolved_path": "tool-slide-architect/scripts/scaffold.py",
-      "sha256": "76d7222afa8a0da7fe70290aba902190b6c69943885055f984801a8e0e50cacb"
+      "sha256": "19765cd38c840f1a3ea6fe429558305c1c1c1f29c26fd6fb2408f2e6d6308ca1"
     },
     {
       "path": "scripts/validator.py",
       "exists": true,
       "resolved_path": "tool-slide-architect/scripts/validator.py",
-      "sha256": "2945e621d2f790b78e97193c5befbe8f1448acb9ea9f244417322c0bae8cd216"
+      "sha256": "c2d5ca75022f1e4e226a04f4a7f62b35f9cfbcec6c6c62d648855e5f10861b7b"
     }
   ],
   "missing_declared_dependencies": []

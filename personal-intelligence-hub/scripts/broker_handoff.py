@@ -9,6 +9,7 @@ from pathlib import Path
 
 import article_broker as broker
 import run_contract as rc
+from supplement_agent import build_agent_context
 
 
 def publication_options(proof, lane):
@@ -84,11 +85,39 @@ def compact_packet(snapshot, lane, *, preview_chars=2400):
     }
 
 
+def draft_contract(request_path, gap_id):
+    """Recover only the frozen write contract when large context output is unavailable."""
+    context = build_agent_context(request_path, gap_id, candidate_limit=1)
+    fields = (
+        "contract_version", "run_id", "request_path", "request_sha256", "lane",
+        "window", "draft_path", "draft_dynamic_fields", "draft_parent_derived_fields",
+        "draft_schema", "required_bound_candidate_ids", "finalize_command",
+    )
+    recovered = {key: deepcopy(context[key]) for key in fields}
+    required_ids = set(context["required_bound_candidate_ids"])
+    recovered["required_bound_candidates"] = [
+        {"candidate_id": candidate["candidate_ref"], "url": candidate["url"]}
+        for candidate in context["bound_candidates"]
+        if candidate["candidate_ref"] in required_ids
+    ]
+    recovered["turns_used_rule"] = (
+        "Count actual completed evidence-checking rounds, not supervisor messages or URL/tool calls. "
+        "One bound-check plus broker discovery/fetch sequence is one round; zero is only valid "
+        "for initialization failure before any evidence. Never exceed the registered max_turns."
+    )
+    recovered["max_turns"] = context["gap"]["max_turns"]
+    return recovered
+
+
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--request", type=Path, required=True)
     parser.add_argument("--gap-id", required=True)
+    parser.add_argument("--draft-contract", action="store_true", help="Read-only frozen schema recovery; no evidence acquisition or clock change")
     args = parser.parse_args()
+    if args.draft_contract:
+        print(json.dumps(draft_contract(args.request, args.gap_id), ensure_ascii=False))
+        return
     _, _, packet, _, lane, _ = broker._bound(args.request, args.gap_id)
     snapshot = broker.evidence(args.request, args.gap_id)
     ledger = rc.load_manifest(packet["run_manifest_path"])["article_broker_evidence"][args.gap_id]

@@ -3,7 +3,7 @@ import { existsSync } from 'node:fs';
 import { readFile } from 'node:fs/promises';
 import { dirname, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
-import { assertTargetOs, inspectBrowserRuntime, readDeckExecutionConfig } from './lib/browser-runtime.mjs';
+import { assertTargetOs, inspectBrowserRuntime, normalizeTargetBrowser, normalizeTargetOs, readDeckExecutionConfig } from './lib/browser-runtime.mjs';
 
 function localReference(value) {
   return value && !/^(?:https?:|data:|blob:|mailto:|tel:|#|\/\/)/i.test(value);
@@ -18,8 +18,8 @@ function extractReferences(html) {
   return references;
 }
 
-export function browserGateSeverity(deliveryProfile = 'standard-client', requireBrowser = false) {
-  return requireBrowser || deliveryProfile === 'high-assurance' ? 'error' : 'warning';
+export function browserGateSeverity(deliveryProfile = 'standard-client', requireBrowser = false, draft = false) {
+  return !draft || requireBrowser || deliveryProfile === 'high-assurance' ? 'error' : 'warning';
 }
 
 export async function runPreflight(options = {}) {
@@ -32,8 +32,8 @@ export async function runPreflight(options = {}) {
 
   let htmlPath = null;
   let executionConfig = {
-    targetBrowser: 'chromium',
-    targetOs: 'current',
+    targetBrowser: normalizeTargetBrowser(options.targetBrowser || 'chromium'),
+    targetOs: normalizeTargetOs(options.targetOs || 'current'),
     deliveryProfile: 'standard-client',
     requiredGates: { static: true, visual: 'layouts', pdf: 'optional' },
     offlineRequired: false
@@ -43,6 +43,10 @@ export async function runPreflight(options = {}) {
     if (existsSync(htmlPath)) {
       try {
         executionConfig = await readDeckExecutionConfig(htmlPath);
+        if ((options.targetBrowser && normalizeTargetBrowser(options.targetBrowser) !== executionConfig.targetBrowser)
+            || (options.targetOs && normalizeTargetOs(options.targetOs) !== executionConfig.targetOs)) {
+          throw new Error('Preflight target overrides cannot contradict the existing deck target.');
+        }
         const osGate = assertTargetOs(executionConfig.targetOs);
         checks.push({ name: 'execution-target', ok: true, detail: { ...executionConfig, ...osGate } });
       } catch (error) {
@@ -52,8 +56,16 @@ export async function runPreflight(options = {}) {
     }
   }
 
+  if (!options.htmlPath) {
+    try {
+      checks.push({ name: 'execution-target', ok: true, detail: assertTargetOs(executionConfig.targetOs) });
+    } catch (error) {
+      checks.push({ name: 'execution-target', ok: false, detail: error.message });
+      errors.push(error.message);
+    }
+  }
   const browser = await inspectBrowserRuntime({ targetBrowser: executionConfig.targetBrowser });
-  const browserSeverity = browserGateSeverity(executionConfig.deliveryProfile, options.requireBrowser === true);
+  const browserSeverity = browserGateSeverity(executionConfig.deliveryProfile, options.requireBrowser === true, options.draft === true);
   checks.push({ name: 'browser-runtime', ok: browser.ok, severity: browserSeverity, detail: browser });
   if (!browser.ok) {
     const message = `${browser.error} Browser rendering is ${browserSeverity === 'error' ? 'required' : 'recommended'} for deliveryProfile=${executionConfig.deliveryProfile}.`;
@@ -91,7 +103,7 @@ export async function runPreflight(options = {}) {
     }
   }
 
-  return { ok: errors.length === 0, executionConfig, checks, errors, warnings };
+  return { ok: errors.length === 0, purpose: options.draft === true ? 'draft' : 'delivery', executionConfig, checks, errors, warnings };
 }
 
 function printResult(result) {
@@ -101,23 +113,35 @@ function printResult(result) {
   }
   result.warnings.forEach(message => console.warn(`WARN ${message}`));
   result.errors.forEach(message => console.error(`ERROR ${message}`));
-  console.log(result.ok ? 'Preflight passed.' : 'Preflight failed.');
+  console.log(result.ok
+    ? result.purpose === 'draft' ? 'Draft preflight passed; browser delivery remains unverified.' : 'Delivery prerequisites passed; actual rendering still requires QA.'
+    : 'Preflight failed.');
 }
 
 const isMain = process.argv[1] && resolve(process.argv[1]) === fileURLToPath(import.meta.url);
 if (isMain) {
   if (process.argv.includes('--help') || process.argv.includes('-h')) {
-    console.log('Usage: node scripts/preflight.mjs [--require-browser] [index.html]');
+    console.log('Usage: node scripts/preflight.mjs [--draft | --require-browser] [--target-browser chromium|chrome|edge] [--target-os current|linux|macos|windows] [index.html]');
     process.exit(0);
   }
   try {
     const raw = process.argv.slice(2);
-    const requireBrowser = raw.includes('--require-browser');
-    const unknown = raw.filter(argument => argument.startsWith('-') && argument !== '--require-browser');
-    if (unknown.length) throw new Error(`Unknown option: ${unknown[0]}`);
-    const positional = raw.filter(argument => !argument.startsWith('-'));
+    const options = {};
+    const positional = [];
+    for (let index = 0; index < raw.length; index++) {
+      const argument = raw[index];
+      if (argument === '--require-browser') options.requireBrowser = true;
+      else if (argument === '--draft') options.draft = true;
+      else if (['--target-browser', '--target-os'].includes(argument)) {
+        const value = raw[++index];
+        if (!value || value.startsWith('-')) throw new Error(`Missing value for ${argument}`);
+        options[argument === '--target-browser' ? 'targetBrowser' : 'targetOs'] = value;
+      } else if (argument.startsWith('-')) throw new Error(`Unknown option: ${argument}`);
+      else positional.push(argument);
+    }
+    if (options.draft && options.requireBrowser) throw new Error('--draft and --require-browser are mutually exclusive.');
     if (positional.length > 1) throw new Error(`Unexpected argument: ${positional[1]}`);
-    const result = await runPreflight({ htmlPath: positional[0], requireBrowser });
+    const result = await runPreflight({ ...options, htmlPath: positional[0] });
     printResult(result);
     process.exitCode = result.ok ? 0 : 1;
   } catch (error) {

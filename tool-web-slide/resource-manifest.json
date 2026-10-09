@@ -1,26 +1,18 @@
 {
   "schema_version": 3,
   "skill": "tool-web-slide",
-  "generated_at": "2026-09-24T09:41:51+08:00",
+  "generated_at": "2026-10-09T04:06:19.156Z",
   "hash_algorithm": "SHA-256",
   "text_hash_normalization": "LF",
   "skill_md": "SKILL.md",
-  "skill_md_sha256": "4bc43baa24d838adc3c32267a1bae10cb0214dce79de01562d4d09b0a6fa8d0a",
+  "skill_md_sha256": "b6afd27925b1354cae270ab838f7a037b7913c96c12dd41d3bba58b8be16080d",
   "top_level_files": [
-    "SKILL.md",
-    "THIRD_PARTY_NOTICES.md",
     "package-lock.json",
-    "package.json"
+    "package.json",
+    "SKILL.md",
+    "THIRD_PARTY_NOTICES.md"
   ],
   "top_level_file_hashes": [
-    {
-      "path": "SKILL.md",
-      "sha256": "4bc43baa24d838adc3c32267a1bae10cb0214dce79de01562d4d09b0a6fa8d0a"
-    },
-    {
-      "path": "THIRD_PARTY_NOTICES.md",
-      "sha256": "2ced3b954a2a7d04e62c6294885053ba093117c0206565e1c215aad308b29f3b"
-    },
     {
       "path": "package-lock.json",
       "sha256": "ac9f6ea486e96f1d75b5f9736f5d8d1c43bac12253c53ad0de536f62b0fabaa7"
@@ -28,10 +20,17 @@
     {
       "path": "package.json",
       "sha256": "3eb621af1691f2ae10d381aa12cb96ebc1fe783a0628a1ff7a4d43dcc57406a6"
+    },
+    {
+      "path": "SKILL.md",
+      "sha256": "b6afd27925b1354cae270ab838f7a037b7913c96c12dd41d3bba58b8be16080d"
+    },
+    {
+      "path": "THIRD_PARTY_NOTICES.md",
+      "sha256": "2ced3b954a2a7d04e62c6294885053ba093117c0206565e1c215aad308b29f3b"
     }
   ],
   "top_level_directories": [
-    "agents",
     "assets",
     "built-in-skills",
     "references",
@@ -41,38 +40,38 @@
   ],
   "resource_directories": [
     {
-      "name": "scripts",
-      "file_count": 14
+      "name": "assets",
+      "file_count": 6
+    },
+    {
+      "name": "built-in-skills",
+      "file_count": 4
     },
     {
       "name": "references",
       "file_count": 4
     },
     {
-      "name": "assets",
-      "file_count": 7
+      "name": "scripts",
+      "file_count": 15
     },
     {
-      "name": "agents",
+      "name": "starter-components",
       "file_count": 1
+    },
+    {
+      "name": "tests",
+      "file_count": 6
     }
   ],
   "resource_file_hashes": [
     {
-      "path": "agents/openai.yaml",
-      "sha256": "d74e5cc4b842e19fc288222e052f4b506c0f73b23cf61b5ba9e709bef3f67af1"
-    },
-    {
       "path": "assets/core.css",
-      "sha256": "79727488305754f6167cb1f6b8e737c0f72031c9a87fe3b4fc2fccfe7ae6fe3c"
+      "sha256": "d27fa34f55efb366f5f0e54f3946d9e42333d969d240a86638370e050da0fb7a"
     },
     {
       "path": "assets/icon-runtime.js",
       "sha256": "22bdc6f362356bd399bae786462f54e4e623c0c93ab65f8718defe8d1fa9ed96"
-    },
-    {
-      "path": "assets/icon.svg",
-      "sha256": "49315dda7125ec5fc77ef5f2b96126d8b2121c6e72944b4702972e90f321d3ee"
     },
     {
       "path": "assets/magazine.css",
@@ -84,11 +83,11 @@
     },
     {
       "path": "assets/slide-engine.js",
-      "sha256": "679c83ead695b46e6d9d7d88f9279224cc8b800fc75a777def1c6fc4f2e97479"
+      "sha256": "694274befe5740a60e4f713ae44fea124b0a3e5d70474655c49bedfb8f72706f"
     },
     {
       "path": "assets/winning.css",
-      "sha256": "4207fd0d9179ccd47d04424640ec11f88a52a1fa6e882a2113139fe6d7f806a7"
+      "sha256": "5ab355811bbb2df25064f93055dd5575413ac009739cb423bc4520b5eaa7d932"
     },
     {
       "path": "built-in-skills/style-magazine.md",
@@ -100,7 +99,7 @@
     },
     {
       "path": "built-in-skills/style-winning-clinical.md",
-      "sha256": "5185d16b48dd701d5018520acc997900df71900d585f6db6ba04f1be3fe154e1"
+      "sha256": "d3da296a30d39d453700aeee74ff4b5ffc7de3c5f985b44f9ecbb1c6946ec71c"
     },
     {
       "path": "built-in-skills/use-design-system.md",
@@ -112,7 +111,7 @@
     },
     {
       "path": "references/delivery-contract.md",
-      "sha256": "1d24f372e55063d6ffa9adf6c470cea9823887efa444a841b57fb58d1aceffca"
+      "sha256": "53305f8d28502dd24b233f35f7cfe397b1b2e647aeb14a76aee88c8cea185538"
     },
     {
       "path": "references/layout-patterns.md",
@@ -128,7 +127,7 @@
     },
     {
       "path": "scripts/export-pdf.mjs",
-      "sha256": "571ddc25df69d2ca71e14aafeee88bf1fd0832075d541a5365a84161dd9636c2"
+      "sha256": "3d0dcda9829974c452af4a6d1be6d223540b0b219fd7c342a0735ce7203c7c5b"
     },
     {
       "path": "scripts/html_quality_checker.mjs",
@@ -140,15 +139,19 @@
     },
     {
       "path": "scripts/lib/browser-runtime.mjs",
-      "sha256": "ed738fd9247438dd19c65ab9048982becc626e925ed417c9ac5657bc0010a526"
+      "sha256": "18a2415dce10e61fdac6a20a3e3c14251b1011857c29f3cce5cb38d11ae762fd"
     },
     {
       "path": "scripts/lib/deck-validator.mjs",
-      "sha256": "01cd9c787565956514a0bef5d7ae08ca19f7bd601bc25d4faf803f69d1903bae"
+      "sha256": "6cf8e6a6c09ad13c11a5440b9f7200773e5977ee5f50fe3594087fb7b30040ab"
     },
     {
       "path": "scripts/lib/delivery-contract.mjs",
       "sha256": "de8a1add19df5e00f8b12283f01d4658cf1e72ddee582723e16a507fc25d56e6"
+    },
+    {
+      "path": "scripts/lib/qa-artifacts.mjs",
+      "sha256": "c1c90d4b80ac6a37dc5c1cbd589827790060d8cf5402523fc6ee1296d2ffd6f0"
     },
     {
       "path": "scripts/lib/static-server.mjs",
@@ -156,7 +159,7 @@
     },
     {
       "path": "scripts/preflight.mjs",
-      "sha256": "15817f4b9800f698b4e74b5da2aed9fb685d3072e6e406d4b165cc9d91a6b4ec"
+      "sha256": "5b01bafea8410640a9db0a6bbb508cbffdce982f22057c49ab401b328100897c"
     },
     {
       "path": "scripts/qa-deck.mjs",
@@ -164,7 +167,7 @@
     },
     {
       "path": "scripts/update-manifest.mjs",
-      "sha256": "65cd9800d66d8787d870ec478bbbb859d041ddf2bc17e9f9c1c512d0973cf83c"
+      "sha256": "8f456f3a627d6047dac45fe4c3f92302114f8632c7d121beaae82005591425f4"
     },
     {
       "path": "scripts/validate-deck.mjs",
@@ -172,11 +175,11 @@
     },
     {
       "path": "scripts/verify-delivery.mjs",
-      "sha256": "a19119d2e4871ccccbe5140724462623a61df8c08dc357ba6879d8577d60cf18"
+      "sha256": "6d1a4d552dbb7ef1b9e55677d864bc0e5579674fa71d323799c08773e5e2b192"
     },
     {
       "path": "scripts/visual-qa.mjs",
-      "sha256": "bda65a1736d951030183b96322acb69fba7f63e2d2762a4df63bbc91fe9f29b3"
+      "sha256": "d7fe2e58c04d4f5ad96c933089b19ff3ebb27f98c0cd23853aabe65139bfa3c9"
     },
     {
       "path": "starter-components/index-skeleton.html",
@@ -191,15 +194,47 @@
       "sha256": "dc16317425c48fdbaf7e3ab4e20631ab120503903b381cd78ff556cf4d705bc8"
     },
     {
+      "path": "tests/maintenance-regression.test.mjs",
+      "sha256": "0140070ca4c106595199e24910f1eb0e57f491cb72a0edc64f6193edd1115396"
+    },
+    {
+      "path": "tests/qa-artifacts.test.mjs",
+      "sha256": "c8d4c17231cfa1c9de7cc63e7100fa88eecc0987e730b58b389df010221c0581"
+    },
+    {
       "path": "tests/qa-regression.test.mjs",
-      "sha256": "7234aa7cd6a4639243c3d40a67652eb2e1afa8d7a1a69b67c8f5605320c89ead"
+      "sha256": "891a802afd90ace0f7d7b3530a057156c4dc7a01e27c1bce6ab55c7470e4a2d4"
     },
     {
       "path": "tests/runtime-static.test.mjs",
-      "sha256": "b8bdf7188f12a30b19a62d94a111a89cf3e5faf1bf26ede24e8f4586e82e8cc8"
+      "sha256": "bb92e2656409c0b0fa8ee94e7735e6fd97b0e09657d6bb6c1445509a59abf8af"
     }
   ],
   "declared_local_dependencies": [
+    {
+      "path": "built-in-skills/style-magazine.md",
+      "exists": true,
+      "resolved_path": "tool-web-slide/built-in-skills/style-magazine.md",
+      "sha256": "8d2f7506bccbcd1c69a7c43db23d600e5e4072f31d6a1a75f677b7c06521e563"
+    },
+    {
+      "path": "built-in-skills/style-swiss.md",
+      "exists": true,
+      "resolved_path": "tool-web-slide/built-in-skills/style-swiss.md",
+      "sha256": "abc7574913efe9c44bdef307060924e783178179ffd4450ae992989d308b519d"
+    },
+    {
+      "path": "built-in-skills/style-winning-clinical.md",
+      "exists": true,
+      "resolved_path": "tool-web-slide/built-in-skills/style-winning-clinical.md",
+      "sha256": "d3da296a30d39d453700aeee74ff4b5ffc7de3c5f985b44f9ecbb1c6946ec71c"
+    },
+    {
+      "path": "built-in-skills/use-design-system.md",
+      "exists": true,
+      "resolved_path": "tool-web-slide/built-in-skills/use-design-system.md",
+      "sha256": "a76188fb29d0942c01410ecb997d5e9223ef00248c65da8b52a5a318977c0a68"
+    },
     {
       "path": "references/components.json",
       "exists": true,
@@ -210,7 +245,7 @@
       "path": "references/delivery-contract.md",
       "exists": true,
       "resolved_path": "tool-web-slide/references/delivery-contract.md",
-      "sha256": "1d24f372e55063d6ffa9adf6c470cea9823887efa444a841b57fb58d1aceffca"
+      "sha256": "53305f8d28502dd24b233f35f7cfe397b1b2e647aeb14a76aee88c8cea185538"
     },
     {
       "path": "references/layout-patterns.md",

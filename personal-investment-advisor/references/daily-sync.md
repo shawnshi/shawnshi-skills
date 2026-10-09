@@ -6,12 +6,24 @@ Daily Sync 计算命令核验持仓身份、行情覆盖、时效和已确认观
 
 ## 运行步骤
 
-1. 用 `portfolio_loader.py` 的契约验证组合，列出所有 `quantity > 0` 的非现金标的。
+1. 用 `portfolio_loader.py` 验证已授权输入，按当次请求选择范围。完整清单用 `--analysis-scope all`，拆分 `quantity > 0` 实仓轨与 `quantity=0` 未购轨；仅实仓用 `held_only` 并列出范围外零股，不把实仓完成标为全部清单完成。单一证券或文档摘要不启动全清单流程。
 2. 运行 `yf.py <代码...> --daily-sync --positions-file <portfolio.json> --cache-dir <task-dir>/yfinance-cache`，把标准输出保存到本任务隔离目录中的 `quotes.json`。该模式只取当前报价与身份字段，不计算历史技术指标或新闻，并默认以 1 个工作线程串行拉取独立标的；可用 `--daily-sync-workers 1..4` 调整。每个协调线程等待可终止的隔离提供方进程，单标的元数据操作默认 30 秒、最多 3 次进程尝试；启动、退避计入预算，终止与强杀分别最多追加 1 秒等待，结果按首次输入顺序排列。独立标的超时不阻塞其他有效结果。完整限制与迁移见 [free-data-policy.md](free-data-policy.md#provider-稳定性与迁移stage3a)。同一批次同时输出 `provider_receipt`（`provider`、`operation`、`outcomes`/`outcome_counts`、`transport_failures`、`circuit_breaker_signature` 与声明）；`error`、`no_data`、`skipped_circuit_open` 互相区分，熔断跳过与传输错误都不得读成“该标的无报价”。**备用报价（默认开启，`--no-fallback-source` 关闭）**：仅当某标的的主源结果为 `error` 或 `skipped_circuit_open` 时，才尝试已标注的备用源（CN/US，Tencent 公开行情接口）；主源已给出 `ok`/`no_data` 的标的绝不替换。成功时该记录带 `quote_provenance`（`tier=secondary`、`source`、`source_locator=fallback:tencent:<symbol>`、`primary_outcome`、`unverifiable`），并注入仅由源回印字段构成的元数据（价格、币种、回印场所、市场状态、观测时间）；`quoteType` 等源未提供字段为空，由报价契约记为 `unverifiable.secondary_source.*` **警告**而非不匹配。主源失败原因仍保留在 `outcomes` 中，收据新增 `fallback`（`policy`、`trigger_outcomes`、`attempted`、`used`、`outcomes`、`sources`、`coverage_tier`）；备用源自身失败同样逐笔记录，不留沉默。重放端：声明为 secondary 的记录必须在 `data_sources` 与 `quote_provenance` 中指向同一来源定位符，否则仍以 `identity_mismatch` 失败关闭；通过时列入 `secondary_quote_symbols` 与阶段警告，但**不计入主源匹配数**，可执行性就绪表的 provider 行保持**未核验**。重放端原样携带为 `supplied_provider_receipt`。确定性的 TLS、证书、协议、缓存权限或 SQLite 打开错误不做同参数重试；在尚无成功结果时，同批次连续出现相同系统性传输错误会熔断尚未提交的标的，并为每个标的保留显式失败记录，熔断不得计作行情成功。批次审计必须携带活动持仓规范化摘要，字段固定为 `symbol`、`quantity`、`currency`、`market`、`asset_type`，并以 SHA-256 绑定。未显式提供缓存目录时，Daily Sync 使用当前工作目录下的 `tmp/pia-yfinance-cache`，并在首个请求前做实际写入探针，避免不可写的 SQLite 缓存触发整批重试。
 3. 行情包必须是一个对象，顶层只含本批次的 `records` 与单一 `portfolio_batch_audit`。列表根、每条记录内嵌审计、部分结果、重复代码、遗漏、额外代码、行情错误或身份冲突均失败关闭。
 4. 运行 `daily_sync.py --positions-file <portfolio.json> --quotes-file <quotes.json> [--holiday-calendar-file <同一交易所休市表>] [--thesis-evidence-file <evidence.json>]` 做独立离线重放。若采集端使用了休市日历放宽，重放端必须显式指定同一受原件校验的表并重新计算报价年龄；只凭采集包自报的 `holiday_extension` 不能判定为新鲜。未提供或表被改写时该长假报价保持失败关闭。当前输出契约为 `pia_daily_sync_offline_v3`，同时绑定持仓快照、输入行情包、派生 `quote_snapshot` 以及可选事件证据包；缺少行情绑定的旧报告只能作为档案查看，不能供当前权重或历史重放计算使用。
 
 `yf.py` 批次审计与重放结果的 `completeness.complete` 必须同时为真。请求数、返回数、有效报价数、身份匹配数和预期活动持仓数必须相等，所有缺失、额外、重复、失败、陈旧和未匹配清单必须为空。
+
+授权数据源分别传入：`--dashboard-root <authorized-root>`、`--risk-bounds-policy <authorized-policy>`。不再从持仓父目录、默认政策文件或 `PIA_RISK_BOUNDS_POLICY` 隐式读取。没有 Dashboard 根时记录 `dashboard_root_not_authorized`；限定任务可显式 `--skip-watchlist`，不称边界已核验。风险政策未提供不派生限制；显式提供但文件缺失不能通过。
+
+## 未购研究轨（自动纳入，不虚构实仓）
+
+`pia.py daily-run --analysis-scope all` 对清单中的零持股证券执行 `unpurchased_analysis`，不受实仓 FX/权重上游失败连带排除；`held_only` 不启动未购采集，输出显式范围与排除项。行情以普通 `yf.py --json --info-only` 采集，仅发送公开证券代码，其独立 `research_binding` 绑定未购清单及实仓快照，不假设一股、不混入原持仓批次审计。
+
+- 在 `all` 范围输出 `out/unpurchased_quotes.json`、`out/unpurchased_analysis.json`，统计实仓＋未购＝本次完整清单。`held_only` 明示未购范围外，不读取旧未购制品补齐当前范围；缺少行情、正式估值、Dashboard、Thesis 或边界时列出不足。
+- 数量、市值、已投入成本为零，持仓浮盈亏不适用。EPS比值只在正EPS、同币种股票且行情通过时作指示性计算；亏损、币种缺失/不匹配或ETF不套股票PE。正式估值比较只使用索引验证且数学一致的同币种场景。
+- 可用 `--unpurchased-quotes-file <本轨带绑定包>` 离线复核，`--reuse-artifacts` 对本轨仍重新核验绑定与行情时效，不洗掉陈旧或失败数据。缺失/错绑定不能静默改成新绑定。
+- 本轨Thesis另用 `--unpurchased-thesis-evidence-file <包>`；`pia.py build thesis-pack --research-universe --quotes-file <out/unpurchased_quotes.json> ...` 生成 `inputs/unpurchased_thesis_evidence_pack.json`。仍遵守原证据Schema、真实发布时间和覆盖要求，不影响 `inputs/thesis_evidence_pack.json` 或实仓报价。
+- 全部非现金证券未购时只运行研究轨；证券实仓及现金权重均明确未计算，不虚构证券分母，也不把现有现金说成不存在。请求不适用于无已购证券的附加阶段会明确列为未执行。
 
 ## 行情与观察边界
 

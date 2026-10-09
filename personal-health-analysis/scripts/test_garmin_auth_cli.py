@@ -4,6 +4,7 @@ import io
 import json
 import os
 import tempfile
+import types
 import unittest
 from pathlib import Path
 from unittest.mock import patch
@@ -199,7 +200,7 @@ class GarminAuthCliTests(unittest.TestCase):
     def test_auth_failure_output_does_not_echo_identity_or_exception_message(self):
         class FakeGarmin:
             def __init__(self, *_args, **_kwargs):
-                pass
+                self.client = types.SimpleNamespace(configure=unittest.mock.Mock())
 
             def login(self, **_kwargs):
                 raise RuntimeError("private@example.com C:/secret/token.json")
@@ -232,7 +233,7 @@ class GarminAuthCliTests(unittest.TestCase):
     def test_successful_login_does_not_probe_daily_health_summary(self):
         class FakeGarmin:
             def __init__(self, *_args, **_kwargs):
-                pass
+                self.client = types.SimpleNamespace(configure=unittest.mock.Mock())
 
             def login(self, **_kwargs):
                 return None
@@ -275,7 +276,7 @@ class GarminAuthCliTests(unittest.TestCase):
     def test_login_routes_garmin_hosts_around_the_configured_proxy(self):
         class FakeGarmin:
             def __init__(self, *_args, **_kwargs):
-                pass
+                self.client = types.SimpleNamespace(configure=unittest.mock.Mock())
 
             def login(self, **_kwargs):
                 return None

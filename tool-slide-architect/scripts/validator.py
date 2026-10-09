@@ -512,10 +512,31 @@ def _validate_records(slide: dict[str, Any], index: int, errors: list[dict[str, 
 
 
 def _placeholder_instances(payload: str) -> list[dict[str, str]]:
+    literal_keyword = re.compile(r"(?i)(?<!`)`(?:TODO|TBD|待补|待确认|待核验)`(?!`)")
+    text_fields = {"Goal", "Title", "Takeaway", "Body", "Action", "Visual Description", "Chart", "Speaker Notes", "Delivery Notes"}
+    block: str | None = None
+    field: str | None = None
+    literal_lines: list[str] = []
+    for line in payload.splitlines(keepends=True):
+        marker = line.strip()
+        if marker in BLOCK_MARKERS:
+            block, field = marker, None
+        elif marker == END_MARKER:
+            block, field = None, None
+        field_match = re.match(r"^\[([^\]]+)\]:", line)
+        if field_match and block and field_match.group(1) in BLOCK_FIELDS[block]:
+            field = field_match.group(1)
+        # Only exact keyword literals in slide prose are exempt; records, metadata and templates stay checked.
+        if block != "// EVIDENCE" and field in text_fields:
+            line = literal_keyword.sub(lambda match: " " * len(match.group(0)), line)
+        literal_lines.append(line)
+    keyword_payload = "".join(literal_lines)
+
     found: list[dict[str, str]] = []
     seen: set[tuple[str, str]] = set()
     for kind, pattern in PLACEHOLDER_PATTERNS:
-        for match in pattern.finditer(payload):
+        checked = keyword_payload if kind in {"todo", "tbd", "chinese"} else payload
+        for match in pattern.finditer(checked):
             value = match.group(0)
             key = (kind, value)
             if key not in seen:

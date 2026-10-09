@@ -575,6 +575,51 @@ def render(run_dir: Path, artifacts: dict[str, dict[str, Any] | None],
         lines.append("缺口：缺少 out/daily_run_summary.json 的 stages（无法渲染阶段表）")
     lines.append("")
     _render_run_inventory(lines, summary)
+    research_scope = (summary or {}).get("analysis_scope")
+    held_only = (summary or {}).get("analysis_selection") == "held_only"
+    if held_only:
+        excluded = (research_scope or {}).get("excluded_unpurchased_symbols") or []
+        lines.extend(["## 本次分析范围", "", "仅实仓（held_only）；未购标的为范围外，不称其已评估。",
+                      "范围外未购标的：" + (", ".join(map(str, excluded)) or "无"), ""])
+    research_stage = next((row for row in stages if row.get("stage") == "unpurchased_analysis"), None)
+    if research_stage and held_only:
+        lines.extend(["缺口：实仓限定范围与未购阶段声明冲突，不采用未购制品。", ""])
+    if research_stage and not held_only:
+        lines.extend(["", "## 未购证券：独立研究与计算", "",
+                      "未购数量、市值及已投入成本为零；参考成本不计算浮盈亏，不加入实仓分母。"])
+        if isinstance(research_scope, dict):
+            lines.append("分析范围：实仓 {held} + 未购 {unheld} = {total} 个非现金证券。".format(
+                held=research_scope.get("held_non_cash_count", "—"),
+                unheld=research_scope.get("unpurchased_count", "—"),
+                total=research_scope.get("analysis_non_cash_count", "—")))
+        path = run_dir / "out" / "unpurchased_analysis.json"
+        if research_stage.get("status") == "failed":
+            lines.append("缺口：未购研究阶段失败；不能读取旧制品冒充本轮结果。")
+            lines.append("预期证券：" + ", ".join(research_stage.get("expected_symbols") or []))
+        elif not path.is_file():
+            lines.append("缺口：未购研究制品缺失，未评估不等于未触发。")
+        else:
+            try:
+                research = json.loads(path.read_text(encoding="utf-8"))
+            except (OSError, UnicodeError, ValueError) as exc:
+                lines.append(f"缺口：未购制品读取失败（{type(exc).__name__}）。")
+            else:
+                if not isinstance(research, dict) or research.get("evaluation_epoch") != epoch:
+                    lines.append("缺口：未购制品不是本轮评估时点，不能沿用旧结果。")
+                else:
+                    lines.extend(["| 标的 | 行情 | 指示性PE | 相对基准估值% | Thesis | 观察边界 |",
+                                  "|---|---|---|---|---|---|"])
+                    for row in research.get("rows") or []:
+                        valuation = row.get("valuation") or {}
+                        boundary = row.get("observation_boundaries") or {}
+                        lines.append("| {} | {} | {} | {} | {} | {} |".format(
+                            fmt(" ".join(str(value) for value in (row.get("symbol"), row.get("name")) if value)),
+                            fmt(row.get("quote_status")),
+                            fmt(valuation.get("price_to_trailing_eps") if valuation.get("price_to_trailing_eps") is not None
+                                else valuation.get("pe_reason")),
+                            fmt(valuation.get("price_vs_base_value_pct")),
+                            fmt(row.get("thesis_status")), fmt(boundary.get("detail_status") or boundary.get("status"))))
+                    lines.append("第三方EPS/PE只作筛查；已计算行情或倍数不证明完整Thesis安全，也不产生买入指令。")
 
     lines.append("## 行情覆盖与时效" + tag("quotes"))
     lines.append("")
@@ -802,6 +847,15 @@ def main(argv: list[str] | None = None) -> int:
         artifacts[key] = load_json(path)
         if path.is_file():
             hashes[key] = hashlib.sha256(path.read_bytes()).hexdigest()
+    summary = artifacts.get("daily_run_summary") or {}
+    selection = summary.get("analysis_selection")
+    if (selection not in (None, "all", "held_only") or
+            selection == "held_only" and any(
+                row.get("stage") == "unpurchased_analysis" for row in summary.get("stages") or [])):
+        print(json.dumps({"status": "failed", "detail_status": "analysis_scope_conflict",
+                          "errors": ["invalid analysis selection or unpurchased stage in held_only run"]},
+                         ensure_ascii=False, indent=2))
+        return 3
     declared = declared_scopes(artifacts)
     problems = scope_conflict(declared)
     if problems:

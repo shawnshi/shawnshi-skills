@@ -1,30 +1,87 @@
 {
   "schema_version": 3,
   "skill": "personal-musicbee-dj",
-  "generated_at": "2026-09-24T09:41:51+08:00",
+  "generated_at": "2026-10-09T12:49:18+08:00",
   "hash_algorithm": "SHA-256",
   "text_hash_normalization": "LF",
   "skill_md": "SKILL.md",
-  "skill_md_sha256": "617300b961a0a4512f98058bcf6a2be16da91e528f2bf36e70c92ff068240637",
+  "skill_md_sha256": "dba8f613a91d9d5cad9c89d271018436c0fe04f5ef559e3c913a27be73b2c95a",
   "top_level_files": [
     "SKILL.md",
-    "config.yaml"
+    "config.yaml",
+    "MUSICBEE_SETUP.md",
+    "AUDIO_PREVIEW.md",
+    "requirements-audio-win313.lock",
+    "CLASSIFIER_PREVIEW.md",
+    "classifier-models.json",
+    "classifier-prompts.json",
+    "requirements-classifier-win313.lock",
+    "RUNTIME.md",
+    "runtime-manifest.json",
+    "requirements-runtime-win313.lock"
   ],
   "top_level_file_hashes": [
     {
       "path": "SKILL.md",
-      "sha256": "617300b961a0a4512f98058bcf6a2be16da91e528f2bf36e70c92ff068240637"
+      "sha256": "dba8f613a91d9d5cad9c89d271018436c0fe04f5ef559e3c913a27be73b2c95a"
     },
     {
       "path": "config.yaml",
-      "sha256": "76d00ea17e1b0de282140afad199aefedd8f67405a5f5738388fc0f3cb85e661"
+      "sha256": "2b23d3acf0a21a42ae9c296d6c3fa5ebb9d2b089d97f875ceca4c93c0a876bdc"
+    },
+    {
+      "path": "MUSICBEE_SETUP.md",
+      "sha256": "07392e2b17b7477f449a1c9cef71e881c775bb0ce89a1b593ed34f61c9556107"
+    },
+    {
+      "path": "AUDIO_PREVIEW.md",
+      "sha256": "1ef54ea748112770a37d5f94feb30fb56c76e3260df399497949e93d803adcd5"
+    },
+    {
+      "path": "requirements-audio-win313.lock",
+      "sha256": "6bb6f8c25ea6cc9a690d6d9d40983c89a45111cd4375e924352073cb11a51431"
+    },
+    {
+      "path": "CLASSIFIER_PREVIEW.md",
+      "sha256": "c3d613322dd986ec035c1ac673dc4d171be38bcc9edcc649ea64c8152e61d5dd"
+    },
+    {
+      "path": "classifier-models.json",
+      "sha256": "47fde4de8be0618aa3dbc8e387c8df82d5b9b6041020847fbe095c3523862fcd"
+    },
+    {
+      "path": "classifier-prompts.json",
+      "sha256": "f578f760ff1880bae648a8ea20045335870d068e180c2bc759af3daf60a34401"
+    },
+    {
+      "path": "requirements-classifier-win313.lock",
+      "sha256": "4f7cceb4eb4ffaa4ea2e3985e15ba54db6c9873c823ce81edb95773bd77b8b56"
+    },
+    {
+      "path": "RUNTIME.md",
+      "sha256": "7ab94b243559e0d43b965bde320bea695c6ef7f98d5409935e7dcb87b35561ad"
+    },
+    {
+      "path": "runtime-manifest.json",
+      "sha256": "ec13ef0c57a64ba025fba0591583b368275c4bbf6419d693620c050da0890cac"
+    },
+    {
+      "path": "requirements-runtime-win313.lock",
+      "sha256": "0072df3aeebd9c2f0da95cbdcf7f44d413593237f7c57ae94afca5bf3c98934c"
     }
   ],
   "top_level_directories": [
     "src",
-    "tests"
+    "tests",
+    "references",
+    "vendor-tag-metadata",
+    "templates"
   ],
-  "resource_directories": [],
+  "resource_directories": [
+    "references",
+    "vendor-tag-metadata",
+    "templates"
+  ],
   "resource_file_hashes": [
     {
       "path": "src/__init__.py",
@@ -32,7 +89,7 @@
     },
     {
       "path": "src/cli.py",
-      "sha256": "349b305087ad3bb475a019be83a155cd817858bfacaa9b2417e3ae360db6f4dc"
+      "sha256": "2cbff09f3a01767663e94643b474a324094b6a5dce1b16304db0a72438e41cd6"
     },
     {
       "path": "src/core/__init__.py",
@@ -40,15 +97,19 @@
     },
     {
       "path": "src/core/curator.py",
-      "sha256": "9a4e6c74ed5eda803bd5b8e15e3b1f1efcc370f2952f042e02b2bfedd14b242a"
+      "sha256": "89ff1c388588e6facc192d69df7d7e51b018a643aa9ccae415534701085a1117"
     },
     {
       "path": "src/core/models.py",
-      "sha256": "3a2dd03a70c36f648155593b2eb1a08d2284c008ea47e8a6571c25823209d028"
+      "sha256": "d2aaced6ab855a19cbd0e97d535f40a73c7576fa9a4bd3d99ef6592fdb725463"
     },
     {
       "path": "src/core/parser.py",
-      "sha256": "29878e784f80686fa3c4b81e7d705b3e1296a77499dcdf56093fc19c17ac071d"
+      "sha256": "2b9c6dbbc3a2c5ef8d0c3a07eeb3fa4404381b821f1df3cffbae084d7b0e6745"
+    },
+    {
+      "path": "src/pilot.py",
+      "sha256": "c890ee0ae15b8f65da0f62eab6605d4b15d922a5cdb3fd90fc586e3a6c9ba919"
     },
     {
       "path": "src/utils/logger.py",
@@ -56,9 +117,174 @@
     },
     {
       "path": "tests/test_cli_launch.py",
-      "sha256": "63f645b661f5b347b7852ef92702ea3e35bc92c217e72a6ddcc2743765657a38"
+      "sha256": "976daca60f52bc8e3f9892fd3c4ef98074e61b1f171c6c5ba853d0a1875f9e21"
+    },
+    {
+      "path": "tests/test_dj_policy.py",
+      "sha256": "b53b4b8ee619e4c1957e5375b6cabca409eb975f629e0ab61ae155322cfa3fe3"
+    },
+    {
+      "path": "tests/test_export_contract.py",
+      "sha256": "4912dd6ac0b53f6dc02bad6784be7d6db00e1418c0394bad933c9f783c192698"
+    },
+    {
+      "path": "tests/test_pilot.py",
+      "sha256": "8bb1702d44090093411533665da952b8164bd539a6824c1bcf7f49716aa7965e"
+    },
+    {
+      "path": "tests/test_runtime.py",
+      "sha256": "19477e6affb27ef1ec498754344d03bdee9f29954ed4bf6bed554f9e13edca5e"
+    },
+    {
+      "path": "tests/test_dj_attributes.py",
+      "sha256": "d8f289747082c2a60b031b2866e5e38ffa95525953b88f422a5fcd2fe7bd5149"
+    },
+    {
+      "path": "src/tag_preview.py",
+      "sha256": "55858b7e51d794b920e064fc219d0b4b6a94adfe6395a524751f9073ec97ee17"
+    },
+    {
+      "path": "tests/test_tag_preview.py",
+      "sha256": "b891d7d195c35ffa5fa1dc9d279ca4255781f51f42edc5a7163477321bbb56e3"
+    },
+    {
+      "path": "src/audio_preview.py",
+      "sha256": "2b1b03434d651096d7f5bdd2c8d83adf2d2e4b1c80dd79c74287e25a8c125ca1"
+    },
+    {
+      "path": "src/core/audio_analysis.py",
+      "sha256": "3553033ce77cc1ed907202b2c2477f0a9373c7bd9ae40e5bbf6c5681cc788bc3"
+    },
+    {
+      "path": "tests/test_audio_preview.py",
+      "sha256": "9b6687b86f7f8318b4e30cd821391e90f1c77579a1663063647410b777824cbb"
+    },
+    {
+      "path": "src/core/attributes.py",
+      "sha256": "3152f5bbff5fb0d033ffe9cc201f15b192dc6746c55809baa29682a3baf30e08"
+    },
+    {
+      "path": "tests/test_selection_evidence.py",
+      "sha256": "443b97d3da915f84ee9c02f62621666dfe88ec29cc6c52d292f76093a07b037b"
+    },
+    {
+      "path": "src/classifier_preview.py",
+      "sha256": "b6958a58b82b2038afb5b117a13bd3bf824f3ef03ea192fa5b56a7cfdb96dbe0"
+    },
+    {
+      "path": "src/calibrate_classifier.py",
+      "sha256": "40766c8b6b8cc325ec5bdffb1533c39f09f7313a894cdfc1ad712df1e14b6ceb"
+    },
+    {
+      "path": "src/core/audio_classifier.py",
+      "sha256": "af91f3cbc3e7a26c919e1f6b28a0b9bfdc2378cc3725f8aad5e98dec394f2d37"
+    },
+    {
+      "path": "tests/test_classifier_preview.py",
+      "sha256": "144db7e9bba42830b929605635fc64680bc026acbc34641a07514ae6ca74d8a3"
+    },
+    {
+      "path": "tests/test_preview_remediations.py",
+      "sha256": "81eabe8383bb063d165d8f30a2db5f03e555b5a258d31e8a9905bdf30268883e"
+    },
+    {
+      "path": "src/core/local_paths.py",
+      "sha256": "168fe5167530b081199b578fe0531b8447fe84b17171377a951f2669bc52f3c0"
+    },
+    {
+      "path": "src/core/runtime_support.py",
+      "sha256": "de017ab78a745b22db5bff4452eb10a4ac7fdf9498d483e46221cc04f247db6d"
+    },
+    {
+      "path": "tests/test_coverage_and_paths.py",
+      "sha256": "28450b5afa6d3c985d9b98cb08b41fa239eba9fe5664be94aaab15fe16f54c2c"
+    },
+    {
+      "path": "tests/test_runtime_support.py",
+      "sha256": "7791cf9b961670a5a01f0c29f4d5034014a0208ca616fad33d0fb3c6bd6f69a8"
+    },
+    {
+      "path": "tests/test_full_mode_limits.py",
+      "sha256": "be7f15c15e829f5f13c8a256684789a1855489684189d3cbb7758737e83a5ab0"
+    },
+    {
+      "path": "src/core/tag_inventory.py",
+      "sha256": "e9691c1ffcb94d5f488a0a769f14a10585e0906b9a39bf675ee5dec9cb6b63b1"
+    },
+    {
+      "path": "src/core/tag_writer.py",
+      "sha256": "25358fd30c938d505399a58eb5afe6373ae547faccd73a297c7f3b38996186d1"
+    },
+    {
+      "path": "src/core/tag_preflight.py",
+      "sha256": "a831272da5a1bf5cbe10a2ab6abdbebedf45555fd3ac043312bacdb990f24bf4"
+    },
+    {
+      "path": "src/tag_completion.py",
+      "sha256": "a5bcfbb528ef917856ea423402bbe81a7faf489cec4ec21d514cdc7c54108d03"
+    },
+    {
+      "path": "src/research_wave.js",
+      "sha256": "264351108b86fcbf2e8bc5935bf3f0e169d093ce5e8262f7134aa3f206387351"
+    },
+    {
+      "path": "tests/test_tag_completion.py",
+      "sha256": "bbb629c4c2e5d8f17b3c385ed1152ab25ceb228565efd235ca28fad320fd90bc"
+    },
+    {
+      "path": "references/tag-completion.md",
+      "sha256": "9431e7ac386b633f925cf22dc9f85f5f759cf1e5d3b9b6a1ac0ffea6116a4a13"
+    },
+    {
+      "path": "vendor-tag-metadata/vendor-manifest.json",
+      "sha256": "d5ba341aa6a489758fbe86cd5c66b2a16ded331f2eb43b1abd9d351b617dd5f4"
+    },
+    {
+      "path": "vendor-tag-metadata/osv-audit.json",
+      "sha256": "44136fa355b3678a1146ad16f7e8649e94fb4fc21fe77e8310c060f61caaff8a"
+    },
+    {
+      "path": "tests/test_audit_remediations.py",
+      "sha256": "d756f212aab5a05d194f6ec47f3488cd873e4196af9191b646b2285e53a4cb7d"
+    },
+    {
+      "path": "templates/musicbee-tags.md",
+      "sha256": "94d62b9dc5bb0658ff26f6a148248728a6be2299e7b7e6c07c5f0a9e3e9d4eff"
+    },
+    {
+      "path": "references/MUSICBEE_SETUP.md",
+      "sha256": "2bb415ae110c579af721f7d6e31ea26f7eeca78e3c14ebc2b129c7b585cd4991"
+    },
+    {
+      "path": "references/evaluation.md",
+      "sha256": "204f194c508f6dd56c7fab14886ed9eb8bfeaaa3867992e2ad194cd3039a5497"
     }
   ],
-  "declared_local_dependencies": [],
-  "missing_declared_dependencies": []
+  "declared_local_dependencies": [{"name": "mutagen", "version": "1.48.1", "scope": "vendor-tag-metadata", "integrity_manifest": "vendor-tag-metadata/vendor-manifest.json", "global_install": false, "license": "GPL-2.0-or-later"}],
+  "missing_declared_dependencies": [],
+  "missing_resource_files": [
+    "MUSICBEE_SETUP.md",
+    "AUDIO_PREVIEW.md",
+    "requirements-audio-win313.lock",
+    "CLASSIFIER_PREVIEW.md",
+    "classifier-models.json",
+    "classifier-prompts.json",
+    "requirements-classifier-win313.lock",
+    "RUNTIME.md",
+    "requirements-runtime-win313.lock"
+  ],
+  "maintenance_note": "Audit MB-01..12: supported playlist/tag lane updated and regression-checked; original missing resources are preserved as explicit unsupported or superseded entries. No real-library writes, model-effectiveness or player validation claimed.",
+  "unsupported_resource_files": [
+    "AUDIO_PREVIEW.md",
+    "requirements-audio-win313.lock",
+    "CLASSIFIER_PREVIEW.md",
+    "classifier-models.json",
+    "classifier-prompts.json",
+    "requirements-classifier-win313.lock",
+    "RUNTIME.md",
+    "requirements-runtime-win313.lock"
+  ],
+  "superseded_resources": {
+    "MUSICBEE_SETUP.md": "references/MUSICBEE_SETUP.md"
+  }
 }

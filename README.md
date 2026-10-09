@@ -82,7 +82,7 @@ description: 说明技能做什么，以及用户在什么场景下应使用它�
 
 ## 4. Resource and dependency rules
 
-- 优先使用现有脚本；新增脚本必须实际运行代表性测试。
+- 优先使用现有脚本。技能专属脚本按当前任务和实际风险选择检查；共享门禁或实际数据/外部操作按上位合同执行必要的正向、负向与恢复验证。
 - 外部命令、操作系统、浏览器、桌面应用、Python/Node 包和凭据要求必须在正文的依赖或边界部分写明。
 - 不提交 `node_modules`、缓存、日志、临时下载、测试输出或生成音频。
 - 不把同一说明同时复制到 `SKILL.md` 和 `references/`。
@@ -200,12 +200,16 @@ Pi 手动入口：`mentat-skill-creator`（显式治理）使用 `disable-model-
 
 ## 7. Gate
 
-跨平台单一入口（缺 `pwsh` 或 Python 3 + PyYAML 时失败关闭）：
+跨平台单一入口（缺 PowerShell 7 或 Python 3.10+ + PyYAML 时失败关闭，不自动安装）：
 
 ```sh
-sh scripts/gate.sh                    # 全库
-sh scripts/gate.sh <skill-name> ...   # 按技能作用域
+sh scripts/gate.sh                    # 全库确定性检查，不运行测试或写清单
+sh scripts/gate.sh <skill-name> ...   # 按技能作用域，同上
+sh scripts/gate.sh --tests            # 显式全库测试，另需 pytest；允许受控临时写入
+sh scripts/gate.sh --refresh-manifests <skill-name> # 仅在该清单更新已获授权时使用
 ```
+
+默认 Gate 不需要 pytest，并禁用 Python 字节码写入。测试与清单生成不是零写入审计；若测试预计超过单次执行预算，按用例分组直接运行，不盲目拉长超时。
 
 刷新资源索引：
 
@@ -237,7 +241,8 @@ pwsh -NoProfile -ExecutionPolicy Bypass -File scripts/repair_skills.ps1 -Mode Ga
 - 每个用户技能存在 schema v3 `resource-manifest.json`；清单字段、规范化哈希、全部受管资源、声明依赖和可移植路径与磁盘一致。
 - 可选 `agents/openai.yaml` 必须能安全解析，界面字段、精确 `$skill-name` 默认提示、图标路径、颜色、调用策略和 MCP 依赖类型有效。
 - 可选 `agents/openai.yaml` 必须能安全解析，界面字段、精确 `$skill-name` 默认提示、图标路径、颜色、调用策略和 MCP 依赖类型有效；调用策略与 `SKILL.md` 的 `disable-model-invocation` 不得互相矛盾。仅声明一侧时以 `OpenAiPolicyWarnings` 非阻断警告报告，不代替技能所有者决定路由。
-- 对 `SKILL.md`、脚本、参考资料、配置和界面元数据执行一致检查；不存在旧运行时工具令牌、外部运行时路径、思维稿指令、硬编码模型版本、强制子代理或强制持久化。
+- 对 `SKILL.md`、脚本、参考资料、配置和界面元数据执行一致检查，读取或解码失败必须保留诊断并阻断，不能静默跳过。
+- 旧工具、外来宿主、推理词汇、模型版本、强制子代理和持久化的正则计数属于非阻断候选告警，须按上下文、真实工具和授权做语义审查；不能用匹配数证明违规或用零匹配证明安全。否定句、合法工具名和兼容性说明不应为消除告警被删除。上位的隐私、授权和禁止披露内部推理规则仍然有效。
 - `_runtime`、`.venv`、`node_modules`、`__pycache__` 与构建输出目录属于用户运行产物或依赖副本，不进入源码一致性扫描，也不得被当作技能资源或业务事实。因此技能内自带虚拟环境不会产生误判。
 - 触发所有权矩阵不存在未知技能和重复信号。
 
@@ -245,12 +250,13 @@ pwsh -NoProfile -ExecutionPolicy Bypass -File scripts/repair_skills.ps1 -Mode Ga
 
 ## 8. Maintenance sequence
 
-1. 读取目标技能及其直接引用资源。
-2. 以小批次修改 `SKILL.md` 和必要资源。
-3. 运行代表性脚本或静态验证。
-4. 先用 `scripts/generate_resource_manifests.ps1 -Check` 检查资源索引；`scripts/gate.sh` 封装了同一组检查及下列步骤。
-5. 对修改过的脚本运行语法检查、代表性正向测试和相关单元测试。改动 `scripts/` 下门禁脚本本身会使 `mentat-skill-creator/resource-manifest.json` 过期（它记录了所声明依赖的脚本哈希），所以顺序是先改脚本、最后重新生成该 manifest、再跑门禁。
-6. 只有验证结果真实变化时，才同步本 README 的库存和基线数字。
+1. 读取目标技能及其直接引用资源，区分本地技能维护与共享门禁、全局治理或实际数据/外部操作。
+2. 本地技能正文、配套资料、模板及专属脚本适用上位维护豁免，不统一要求基线、Diff 制品、测试或 Gate；按当前任务和实际风险选择工程措施。豁免不覆盖共享门禁、全局治理或实际数据/外部操作。
+3. 只补丁式修改授权范围。必要脚本检查使用有意义的正向与负向用例，零写入审计不运行会写临时文件的测试。
+4. 只有清单检查或更新属于当前任务时才选用 `scripts/generate_resource_manifests.ps1 -Check`；默认 `scripts/gate.sh` 只封装确定性检查，测试另用显式 `--tests`。
+5. 共享脚本变更先核对语义，再按授权更新受影响的选中清单并复检。封闭写集或其他技能清单未获授权时，不顺带刷新；分别披露依赖漂移和未闭环项。
+6. 编辑后的 Pi 加载验收使用 `/reload` 或新加载器/会话探针；区分磁盘检查、实际加载和模型行为，不以任一层替代其他层。必要检查通过后停止，不机械扩大测试。
+7. 只有验证结果真实变化且更新获授权时，才同步本 README 的库存和基线数字；旧基线保留其日期，不改写成当前验证。
 
 
 

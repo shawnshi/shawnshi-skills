@@ -14,6 +14,7 @@ import os
 import re
 import sqlite3
 import subprocess
+import time
 import tempfile
 from contextlib import contextmanager
 from datetime import date, datetime, timedelta, timezone
@@ -52,7 +53,8 @@ SYNC_DATABASE_NAMES = ("garmin.db", "garmin_monitoring.db", "garmin_activities.d
 SYNC_OPERATION = "garmindb_sync"
 SYNC_PLAN_VERSION = 4
 SYNC_BASE_GATES = ("network", "sync")
-SYNC_OPTIONAL_GATES = ("download",)
+SYNC_OPTIONAL_GATES = ()
+MAX_SYNC_TIMEOUT_SECONDS = 180
 SYNC_GATE_NAMES = (*SYNC_BASE_GATES, *SYNC_OPTIONAL_GATES)
 DEFAULT_PLAN_TTL_SECONDS = 300
 MAX_PLAN_TTL_SECONDS = 900
@@ -217,7 +219,7 @@ def build_parser() -> argparse.ArgumentParser:
         "--allow-download",
         action="store_true",
         help=(
-            "Explicitly authorize activity trace download and import for this "
+            "Unsupported for date-window sync; use the separate activity-ID download for this "
             "invocation; without it no activity data is touched"
         ),
     )
@@ -262,7 +264,8 @@ def build_parser() -> argparse.ArgumentParser:
         ),
     )
     sync_parser.add_argument(
-        "--timeout-seconds", type=int, default=900, help="Maximum runner duration"
+        "--timeout-seconds", type=int, default=180,
+        help="Total sync budget, capped at 180 seconds across all stages"
     )
     return parser
 
@@ -1090,30 +1093,6 @@ def build_garmindb_commands(
     return download, import_window
 
 
-def build_activities_commands(
-    python_executable: Path,
-    cli_path: Path,
-    config_dir: Path,
-) -> tuple[list[str], list[str]]:
-    """Build the activity download and import commands for the bound runner.
-
-    Activities are selected upstream by count, not by a date window, so these
-    commands invoke the upstream CLI directly and intentionally bypass the
-    date-window adapter that guards the daily-metric statistics.
-    """
-    base = [
-        str(python_executable),
-        "-I",
-        "-B",
-        str(cli_path),
-        "-f",
-        str(config_dir),
-    ]
-    download = [*base, "--download", "--activities", "--latest"]
-    import_activities = [*base, "--import", "--activities"]
-    return download, import_activities
-
-
 def _sanitized_runner_environment() -> dict[str, str]:
     """Build a small inherited environment without Python or pip injection hooks."""
     allowed = {
@@ -1323,11 +1302,30 @@ def execute_sync(
     plan_file: Path | None = None,
     config_dir: Path | None = None,
     garmindb_python: Path | None = None,
-    timeout_seconds: int = 900,
+    timeout_seconds: int = MAX_SYNC_TIMEOUT_SECONDS,
     runner=None,
     post_sync_verifier=None,
 ) -> tuple[int, dict]:
     requested_window = {"start": start.isoformat(), "end": end.isoformat()}
+    if timeout_seconds <= 0:
+        return EXIT_USAGE, {
+            "ok": False, "status": "usage_error", "error": "timeout_must_be_positive",
+            "requested_window": requested_window,
+        }
+    budget_seconds = min(timeout_seconds, MAX_SYNC_TIMEOUT_SECONDS)
+    deadline = time.monotonic() + budget_seconds
+
+    def remaining_budget() -> float:
+        remaining = deadline - time.monotonic()
+        if remaining <= 0:
+            raise subprocess.TimeoutExpired("garmindb_sync", budget_seconds)
+        return remaining
+
+    if download_capability is not None:
+        return EXIT_AUTHORIZATION, {
+            "ok": False, "status": "activity_date_window_unsupported",
+            "requested_window": requested_window,
+        }
     try:
         parse_window(start.isoformat(), end.isoformat())
     except WindowError as exc:
@@ -1360,20 +1358,6 @@ def execute_sync(
             "status": "sync_authorization_required",
             "requested_window": requested_window,
         }
-    if download_capability is not None:
-        try:
-            require_capability(
-                download_capability,
-                scope="download",
-                operation=SYNC_OPERATION,
-                request=capability_request,
-            )
-        except CapabilityError:
-            return EXIT_AUTHORIZATION, {
-                "ok": False,
-                "status": "download_authorization_required",
-                "requested_window": requested_window,
-            }
     if plan_file is None:
         return EXIT_AUTHORIZATION, {
             "ok": False,
@@ -1391,20 +1375,6 @@ def execute_sync(
             "ok": False,
             "status": "sync_plan_invalid",
             "error": str(exc),
-            "requested_window": requested_window,
-        }
-    activities_authorized = "download" in tuple(plan.get("gates") or ())
-    if activities_authorized != (download_capability is not None):
-        return EXIT_AUTHORIZATION, {
-            "ok": False,
-            "status": "download_authorization_mismatch",
-            "requested_window": requested_window,
-        }
-    if timeout_seconds <= 0:
-        return EXIT_USAGE, {
-            "ok": False,
-            "status": "usage_error",
-            "error": "timeout_must_be_positive",
             "requested_window": requested_window,
         }
     if config_dir is None:
@@ -1454,7 +1424,9 @@ def execute_sync(
     verifier = _verify_post_sync_state if post_sync_verifier is None else post_sync_verifier
     current_stage = "preflight"
     try:
+        remaining_budget()
         before_fingerprint = _sync_database_fingerprint(Path(config_dir))
+        remaining_budget()
         with prepare_windowed_config(
             Path(config_dir),
             start,
@@ -1510,16 +1482,6 @@ def execute_sync(
             stages = list(
                 zip(("download", "import"), commands, strict=True)
             )
-            if activities_authorized:
-                stages.extend(
-                    zip(
-                        ("activities_download", "activities_import"),
-                        build_activities_commands(
-                            python_executable, cli_path, temp_config_dir
-                        ),
-                        strict=True,
-                    )
-                )
             consume_capability(
                 network_capability,
                 scope="network",
@@ -1532,13 +1494,6 @@ def execute_sync(
                 operation=SYNC_OPERATION,
                 request=capability_request,
             )
-            if activities_authorized:
-                consume_capability(
-                    download_capability,
-                    scope="download",
-                    operation=SYNC_OPERATION,
-                    request=capability_request,
-                )
             for current_stage, command in stages:
                 load_and_validate_sync_plan(
                     Path(plan_file), expected_start=start, expected_end=end,
@@ -1566,9 +1521,10 @@ def execute_sync(
                     text=True,
                     encoding="utf-8",
                     errors="replace",
-                    timeout=timeout_seconds,
+                    timeout=remaining_budget(),
                     check=False,
                 )
+                remaining_budget()
                 exit_code, payload = classify_process_result(
                     completed.returncode, completed.stdout or ""
                 )
@@ -1578,12 +1534,15 @@ def execute_sync(
             else:
                 if plan["bindings"]["config"] != build_config_binding(Path(config_dir)):
                     raise SyncConfigurationError("bound_config_changed_after_sync")
+                current_stage = "verification"
+                remaining_budget()
                 verification = verifier(
                     Path(config_dir),
                     start,
                     end,
                     before_fingerprint,
                 )
+                remaining_budget()
                 stale_components = verification.get("stale_components") or []
                 if stale_components:
                     exit_code = EXIT_SYNC_FAILURE
@@ -1634,6 +1593,7 @@ def execute_sync(
             "error_type": type(exc).__name__,
         }
     payload["requested_window"] = requested_window
+    payload["timeout_budget_seconds"] = budget_seconds
     return exit_code, payload
 
 
@@ -1650,9 +1610,13 @@ def main(argv: Sequence[str] | None = None) -> int:
         return EXIT_USAGE
 
     requested_window = {"start": start.isoformat(), "end": end.isoformat()}
-    requested_gates = list(SYNC_BASE_GATES)
     if args.allow_download:
-        requested_gates.append("download")
+        emit({
+            "ok": False, "status": "activity_date_window_unsupported",
+            "requested_window": requested_window,
+        })
+        return EXIT_AUTHORIZATION
+    requested_gates = list(SYNC_BASE_GATES)
 
     config_dir_val = args.config_dir
     garmindb_python_val = args.garmindb_python
@@ -1777,21 +1741,11 @@ def main(argv: Sequence[str] | None = None) -> int:
         operation=SYNC_OPERATION,
         request={"window": requested_window},
     )
-    download_capability = (
-        issue_capability(
-            scope="download",
-            operation=SYNC_OPERATION,
-            request={"window": requested_window},
-        )
-        if args.allow_download
-        else None
-    )
     exit_code, payload = execute_sync(
         start,
         end,
         network_capability=network_capability,
         sync_capability=sync_capability,
-        download_capability=download_capability,
         plan_file=Path(args.plan_file).expanduser(),
         config_dir=Path(config_dir_val).expanduser() if config_dir_val else None,
         garmindb_python=(

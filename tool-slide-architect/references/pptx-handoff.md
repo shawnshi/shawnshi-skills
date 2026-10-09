@@ -22,6 +22,8 @@ Handoff 应保留：
 - Claim、Evidence、Open Item、Risk、Decision 和 Asset 状态；
 - 结构校验结果及 `validation_scope: structural`。
 
+增量包的 `change_set` 保留原有 `changed_slide_ids` / `removed_slide_ids`，另含 `global_changed_sections` 与 `requires_full_rebuild`。metadata 或 style instructions 变化、或旧包缺少全局上下文时，所有现存页进入变化集；这是保守的全量重建要求，不能仅凭逐页 content_hash 未变而复用旧渲染。仅个别页面内容变化且全局信息相同时，仍按该页集合更新；变更后逐页对照完整蓝图。
+
 ## Web handoff（人工映射契约）
 
 用户选择 HTML 时，按 [Web 交付契约](../../tool-web-slide/references/delivery-contract.md) 人工构建；`build-deck.py` 只生成蓝图 JSON，没有已实现的自动 Web 适配器。
@@ -33,7 +35,7 @@ Handoff 应保留：
 
 ## Build the PPTX
 
-将 JSON handoff 与已授权模板/资产交给当前确实可用的演示文稿能力；仅在本地已具备且可验证时使用 officecli 或其他 PPTX 工具，不假定存在名为 `Presentations` 的能力。缺少构建能力时交付蓝图并明确未完成步骤，不把 JSON/HTML 改名伪装成 PPTX。仅缺渲染能力，且用户明确要求草稿或已接受该降级范围时，可以生成并检查可编辑 PPTX，标明未完成渲染 QA；否则只交付蓝图和能力缺口，不自行把最终交付降为草稿。构建时：
+将 JSON handoff 与已授权模板/资产交给当前确实可用的演示文稿能力；仅在本地已具备且可验证时使用 officecli 或其他 PPTX 工具，不假定存在名为 `Presentations` 的能力。采用 officecli 时先读取 [Office 技能](../../officecli/SKILL.md) 并核对实际版本、所需 Schema 与渲染能力；不要仅凭命令存在就宣称构建/渲染链路可用。缺少构建能力时交付蓝图并明确未完成步骤，不把 JSON/HTML 改名伪装成 PPTX。仅缺渲染能力，且用户明确要求草稿或已接受该降级范围时，可以生成并检查可编辑 PPTX，标明未完成渲染 QA；否则只交付蓝图和能力缺口，不自行把最终交付降为草稿。构建时：
 
 1. 映射 `Slide_ID` 到实际页，不用页码作为稳定标识。
 2. 保持页面可见内容与 Claim 状态一致；不要在构建时擅自强化结论。
@@ -44,13 +46,15 @@ Handoff 应保留：
 
 ## Physical QA loop
 
-1. 最终 PPT 必须在保存 `.pptx` 后渲染所有页面为 PNG 或 PDF；获准的未渲染草稿只执行当前可完成的结构、内容和包完整性检查，明确列出尚未验证的视觉项，不声称物理 QA 通过。
+1. 最终 PPT 必须在保存 `.pptx` 后渲染所有页面为 PNG 或 PDF；有驻留编辑器时先按其合同 flush/save，确认渲染读取的是实际落盘版本。获准的未渲染草稿只执行当前可完成的结构、内容和包完整性检查，明确列出尚未验证的视觉项，不声称物理 QA 通过。
 2. 逐页检查标题断行、文本溢出、对象重叠、边缘裁切、字体替换和图像分辨率。
 3. 检查图表数据、轴、单位、图例、直接标签、引用和来源定位。
 4. 检查保密标记、页码、Logo、模板一致性和 CJK/非拉丁字形。
 5. 检查所有截图与资产的权利、脱敏和可识别信息。
 6. 对照 JSON 检查页面遗漏、顺序、`Slide_ID`、Decision、Risk 和 Open Items。
-7. 修复后重新渲染；重复到无阻断问题。
+7. 按 [设计 QA](design-guidelines.md#physical-qa) 执行确定性色对检查和实际尺寸下的非颜色编码检查；记录实际色值/背景、比值、门槛、元素/状态、渲染尺寸与可回查输出，注明未测范围。局部通过不是完整无障碍认证。
+8. 记录内容/合规人工复核的实际主体、范围及尚未完成项；模型自审不得称人工或独立复核。
+9. 修复后重新渲染，复核受影响项；重复到无阻断问题。
 
 ## Completion language
 

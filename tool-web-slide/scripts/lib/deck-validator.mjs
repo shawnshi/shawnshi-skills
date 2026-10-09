@@ -1,11 +1,9 @@
 import {
   existsSync,
   lstatSync,
-  mkdirSync,
   readFileSync,
   realpathSync,
   statSync,
-  writeFileSync,
 } from 'node:fs';
 import { createHash } from 'node:crypto';
 import { dirname, isAbsolute, join, normalize, relative, resolve } from 'node:path';
@@ -19,6 +17,8 @@ import {
   requiredGatesFor,
   standaloneEngineSource,
 } from './delivery-contract.mjs';
+
+import { publishQaArtifacts } from './qa-artifacts.mjs';
 
 export const REPORT_SCHEMA_VERSION = '1.0.0';
 export const VALIDATOR_VERSION = '1.0.0';
@@ -1243,7 +1243,10 @@ export function validateDeck(inputFile, options = {}) {
     if (!descendants(slide, (node) => /^h[1-3]$/.test(node.tagName)).length) issues.push(issueFor(slide, 'error', 'SLIDE_HEADING_MISSING', `Slide ${slideId || ordinal} needs at least one h1, h2, or h3 heading.`));
     const evidence = getAttr(slide, 'data-evidence');
     if (!['none', 'required'].includes(evidence)) issues.push(issueFor(slide, 'error', 'EVIDENCE_DECLARATION_MISSING', `Slide ${slideId || ordinal} must set data-evidence="none|required".`));
-    if (evidencePolicy === 'required' && evidence === 'none') issues.push(issueFor(slide, 'error', 'EVIDENCE_POLICY_VIOLATION', `Slide ${slideId || ordinal} cannot use data-evidence="none" under required evidence policy.`));
+    const pageRole = getAttr(slide, 'data-page-role');
+    const evidenceExempt = ['cover', 'section'].includes(pageRole);
+    if (pageRole !== undefined && !['cover', 'section', 'content'].includes(pageRole)) issues.push(issueFor(slide, 'error', 'PAGE_ROLE_INVALID', 'data-page-role must be cover, section, or content.'));
+    if (evidencePolicy === 'required' && evidence === 'none' && !evidenceExempt) issues.push(issueFor(slide, 'error', 'EVIDENCE_POLICY_VIOLATION', `Slide ${slideId || ordinal} needs evidence; only explicitly declared claim-free cover/section pages are exempt.`));
     const sourceNotes = descendants(slide, (node) => hasClass(node, 'source-note'));
     for (const note of sourceNotes) {
       if (!validSource(getAttr(note, 'data-source')) || !validSourceDate(getAttr(note, 'data-source-date'))) {
@@ -1325,8 +1328,7 @@ export function validateDeck(inputFile, options = {}) {
   if (options.writeReport !== false) {
     const reportPath = resolve(options.reportPath ?? join(deckRoot, 'qa-report', 'qa-report.json'));
     try {
-      mkdirSync(dirname(reportPath), { recursive: true });
-      writeFileSync(reportPath, `${JSON.stringify(report, null, 2)}\n`, 'utf8');
+      publishQaArtifacts(deckRoot, new Map([[reportPath, `${JSON.stringify(report, null, 2)}\n`]]));
       report.reportPath = reportPath;
     } catch (error) {
       throw new DeckEnvironmentError(`Unable to write QA report ${reportPath}: ${error.message}`, 'REPORT_WRITE_FAILED');
@@ -1390,7 +1392,6 @@ export function validateComponentContracts(options = {}) {
 
 export function writeJsonReport(report, reportPath) {
   const output = resolve(reportPath);
-  mkdirSync(dirname(output), { recursive: true });
-  writeFileSync(output, `${JSON.stringify(report, null, 2)}\n`, 'utf8');
+  publishQaArtifacts(report.deckRoot || dirname(report.input), new Map([[output, `${JSON.stringify(report, null, 2)}\n`]]));
   return output;
 }

@@ -37,7 +37,7 @@ IGNORED_DIRECTORIES = frozenset(
 )
 IGNORED_FILE_NAMES = frozenset({"garmin_tokens.json"})
 LOCAL_REFERENCE_RE = re.compile(
-    r"""(?P<path>(?<![A-Za-z])(?:(?:scripts|references|resources|assets|examples|prompts|agents)[\\/][^\s`"'<>]+|[A-Za-z0-9._-]+[\\/](?:SKILL\.md|skill\.json|(?:scripts|references|resources|assets|examples|prompts|agents)[\\/][^\s`"'<>]+)))"""
+    r"""(?P<path>(?<![A-Za-z])(?:\.\.[\\/])*(?:(?:scripts|references|resources|assets|examples|prompts|agents)[\\/][^\s`"'<>]+|[A-Za-z0-9._-]+[\\/](?:SKILL\.md|skill\.json|(?:scripts|references|resources|assets|examples|prompts|agents)[\\/][^\s`"'<>]+)))"""
 )
 KNOWN_SUFFIX_RE = re.compile(
     r"(?P<stable>.*?(?:SKILL\.md|\.md|\.json|\.py|\.ps1|\.sh|\.csx|\.cs|\.svg|\.png|\.jpg|\.jpeg|\.gif|\.pptx|\.docx|\.pdf|\.txt|\.yaml|\.yml|\.toml|\.csv|\.tsv|\.html|\.css|\.js|\.ts|\.tsx|\.jsx))",
@@ -108,8 +108,7 @@ def _ignore_reference(value: str) -> bool:
 
 
 def _validate_declared_path(value: str) -> None:
-    parts = Path(value.replace("\\", "/")).parts
-    if PureWindowsPath(value).is_absolute() or value.startswith(("/", "\\")) or ".." in parts:
+    if PureWindowsPath(value).is_absolute() or value.startswith(("/", "\\")):
         raise ManifestContractError(f"non-portable dependency path: {value}")
 
 
@@ -117,15 +116,21 @@ def _resolve_reference(root: Path, skill_dir: Path, value: str) -> dict[str, obj
     _validate_declared_path(value)
     relative = Path(*value.split("/"))
     resolved: Path | None = None
-    for candidate in (skill_dir / relative, root / relative):
+    # Explicit parent references follow Pi's skill-relative rule, without the
+    # historical library-root fallback retained for existing schema-v3 indexes.
+    candidates = (skill_dir / relative,) if ".." in relative.parts else (skill_dir / relative, root / relative)
+    for candidate in candidates:
+        candidate_resolved = candidate.resolve()
+        if not _is_within(candidate_resolved, root.resolve()):
+            raise ManifestContractError(f"dependency escapes root: {value}")
         if candidate.is_file():
-            candidate_resolved = candidate.resolve()
-            if not _is_within(candidate_resolved, root.resolve()):
-                raise ManifestContractError(f"dependency escapes root: {value}")
             resolved = candidate_resolved
             break
+    # Schema v3 stores portable index paths, not verbatim source spelling.
+    # Canonicalising parent refs preserves existing shared-resource indexes.
+    declared_path = _portable_relative(skill_dir / relative, root) if ".." in relative.parts else value
     return {
-        "path": value,
+        "path": declared_path,
         "exists": resolved is not None,
         "resolved_path": _portable_relative(resolved, root) if resolved else None,
         "sha256": canonical_sha256(resolved) if resolved else None,
@@ -134,13 +139,17 @@ def _resolve_reference(root: Path, skill_dir: Path, value: str) -> dict[str, obj
 
 def declared_dependencies(root: Path, skill_dir: Path, text: str) -> list[dict[str, object]]:
     dependencies: list[dict[str, object]] = []
-    seen: set[str] = set()
+    seen: set[tuple[object, object]] = set()
     for match in LOCAL_REFERENCE_RE.finditer(text):
         value = _normalize_reference(match.group("path"))
-        if _ignore_reference(value) or value in seen:
+        if _ignore_reference(value):
             continue
-        seen.add(value)
-        dependencies.append(_resolve_reference(root, skill_dir, value))
+        dependency = _resolve_reference(root, skill_dir, value)
+        identity = (dependency["path"], dependency["resolved_path"])
+        if identity in seen:
+            continue
+        seen.add(identity)
+        dependencies.append(dependency)
     return sorted(dependencies, key=lambda item: str(item["path"]).lower())
 
 

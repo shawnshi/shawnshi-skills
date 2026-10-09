@@ -143,13 +143,13 @@ def bindings(request, packet, manifest):
 def preflight_red_team(request_path, launch_options=None):
     from run_contract import (
         load_manifest, validate_semantic_draft, file_sha256,
-        validate_subagent_output_options,
+        bind_subagent_launch_options,
     )
     request, request_sha = load(request_path)
     require(request.get("review_kind") == "red_team" and request.get("reviewer_id") == "RedTeam"
             and request.get("deterministic_fast_path") is False, "independent red-team request required")
     packet = request["execution_packet"]
-    options = validate_subagent_output_options(
+    options = bind_subagent_launch_options(
         packet, packet.get("subagent_options") if launch_options is None else launch_options
     )
     manifest = load_manifest(packet["run_manifest_path"])
@@ -179,11 +179,11 @@ def preflight_red_team(request_path, launch_options=None):
 
 
 def preflight(request_path, launch_options=None):
-    from run_contract import validate_subagent_output_options
+    from run_contract import bind_subagent_launch_options
     if load(request_path)[0].get("review_kind") == "red_team":
         return preflight_red_team(request_path, launch_options)
     request, packet, manifest, sha = registered(request_path)
-    options = validate_subagent_output_options(
+    options = bind_subagent_launch_options(
         packet, packet.get("subagent_options") if launch_options is None else launch_options
     )
     live(request, packet, manifest, sha, utcnow())

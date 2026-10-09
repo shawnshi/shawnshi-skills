@@ -174,6 +174,63 @@ class OpenAiYamlValidationTests(unittest.TestCase):
 
         self.assertEqual(result, {"checked": 0, "failures": 0, "issues": [], "warnings": []})
 
+    def test_frontmatter_accepts_yaml_blocks_quotes_and_comments(self):
+        path = self.skill_dir / "SKILL.md"
+        for description in (
+            'description: >\n  Review skill governance: routes and resources.',
+            'description: "Review skill governance: routes and resources."',
+        ):
+            with self.subTest(description=description):
+                path.write_text(
+                    f"---\nname: example-skill\n{description}\n"
+                    "disable-model-invocation: true # manual entry\n"
+                    "metadata:\n  version: '1'\n---\n",
+                    encoding="utf-8",
+                )
+                result = validator.validate_frontmatter_root(self.root)
+                self.assertEqual(result["checked"], 1)
+                self.assertEqual(result["failures"], 0, result["issues"])
+                self.assertIsNone(result["records"][0]["description_has_trigger_context"])
+                self.assertIs(validator.frontmatter_disable_model_invocation(self.skill_dir), True)
+
+    def test_frontmatter_rejects_malformed_or_duplicate_yaml(self):
+        for extra in ("metadata: [", "name: override", "? [a, b]\n: value"):
+            with self.subTest(extra=extra):
+                (self.skill_dir / "SKILL.md").write_text(
+                    "---\nname: example-skill\ndescription: Review skill governance.\n"
+                    f"{extra}\n---\n",
+                    encoding="utf-8",
+                )
+                result = validator.validate_frontmatter_root(self.root)
+                self.assertFalse(result["records"][0]["valid"])
+                self.assertEqual(result["issues"][0]["code"], "frontmatter_parse_error")
+
+    def test_frontmatter_rejects_invalid_types_and_unknown_fields(self):
+        for extra in (
+            'disable-model-invocation: "false"',
+            "disable-model-invocation: on",
+            "disable-model-invocation: yes",
+            "metadata: [not, a, mapping]",
+            "compatibility: false",
+            "unknown-field: value",
+        ):
+            with self.subTest(extra=extra):
+                (self.skill_dir / "SKILL.md").write_text(
+                    "---\nname: example-skill\ndescription: Review skill governance.\n"
+                    f"{extra}\n---\n",
+                    encoding="utf-8",
+                )
+                result = validator.validate_frontmatter_root(self.root)
+                self.assertGreater(result["failures"], 0)
+                self.assertFalse(result["records"][0]["valid"])
+
+    def test_frontmatter_read_failure_is_not_missing_policy(self):
+        (self.skill_dir / "SKILL.md").write_bytes(b"\xff\xfe\xfd")
+        result = validator.validate_frontmatter_root(self.root)
+        self.assertEqual(result["issues"][0]["code"], "frontmatter_parse_error")
+        with self.assertRaises(UnicodeError):
+            validator.frontmatter_disable_model_invocation(self.skill_dir)
+
 
 if __name__ == "__main__":
     unittest.main()

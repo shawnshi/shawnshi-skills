@@ -50,7 +50,8 @@ def skill_contract_text() -> str:
     relative = "references/workflow_contract.md"
     if f"({relative}#" not in entry:
         raise AssertionError("SKILL.md must route to the execution contract")
-    return entry + "\n" + (SKILL_ROOT / relative).read_text(encoding="utf-8")
+    branch_paths = [relative, "references/sync_contract.md", "references/runtime_compatibility.md"]
+    return entry + "\n" + "\n".join((SKILL_ROOT / path).read_text(encoding="utf-8") for path in branch_paths)
 
 
 class SkillContractTests(unittest.TestCase):
@@ -111,6 +112,8 @@ class SkillContractTests(unittest.TestCase):
         documents = [
             SKILL_ROOT / "SKILL.md",
             SKILL_ROOT / "references" / "workflow_contract.md",
+            SKILL_ROOT / "references" / "sync_contract.md",
+            SKILL_ROOT / "references" / "runtime_compatibility.md",
             SKILL_ROOT / "references" / "api.md",
             SKILL_ROOT / "references" / "advanced_tools.md",
             SKILL_ROOT / "references" / "external_acceptance.md",
@@ -128,8 +131,10 @@ class SkillContractTests(unittest.TestCase):
         for flag in ("--allow-health-data", "--allow-token-write", "--allow-download"):
             self.assertIn(flag, combined)
 
-    def test_skill_commands_preserve_cli_permission_and_no_implicit_trigger(self):
+    def test_skill_commands_preserve_cli_permission_and_runtime_specific_selection(self):
         skill_text = skill_contract_text()
+        self.assertIn("disable-model-invocation: false", skill_text)
+        self.assertIn("不是网络沙盒", skill_text)
         metadata = (SKILL_ROOT / "agents" / "openai.yaml").read_text(encoding="utf-8")
         self.assertIn("RUNTIME_DEPENDENCY_UNAVAILABLE", skill_text)
         for script_name in (
@@ -218,9 +223,9 @@ class SkillContractTests(unittest.TestCase):
         self.assertIn("trusted_garmindb_python_required", sync_source)
         self.assertIn("SYNC_PLAN_VERSION = 4", sync_source)
         self.assertIn("--allow-download", sync_source)
-        self.assertIn("download_authorization_required", sync_source)
-        self.assertIn("download_authorization_mismatch", sync_source)
-        self.assertIn("build_activities_commands", sync_source)
+        self.assertIn("activity_date_window_unsupported", sync_source)
+        self.assertIn("SYNC_OPTIONAL_GATES = ()", sync_source)
+        self.assertNotIn("build_activities_commands", sync_source)
         self.assertIn('"garmindb": "3.9.0"', sync_source)
         self.assertIn('"garminconnect": "0.3.17"', sync_source)
         self.assertIn("site_packages_tree_sha256", sync_source)

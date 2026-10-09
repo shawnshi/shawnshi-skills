@@ -21,7 +21,10 @@ def cli(monkeypatch, tmp_path):
     exe.touch()
     monkeypatch.setattr(module, 'load_config', lambda _: {'musicbee': {'exe_path': str(exe)}})
     monkeypatch.setattr(module, 'resolve_config_paths', lambda config, _: config)
-    monkeypatch.setattr(sys, 'argv', ['cli.py', '--type', 'playlist', '--value', 'A "quoted" & named playlist'])
+    playlist = tmp_path / 'A & named playlist.m3u'
+    playlist.write_text('#EXTM3U\n', encoding='utf-8')
+    monkeypatch.setattr(module, 'musicbee_running', lambda: False)
+    monkeypatch.setattr(sys, 'argv', ['cli.py', '--type', 'playlist', '--value', str(playlist)])
     monkeypatch.setattr(module.subprocess, 'run', Mock(side_effect=AssertionError('no shell/WMI')))
     return module, exe
 
@@ -31,7 +34,8 @@ def test_launch_uses_literal_arguments_and_reports_only_request(cli, monkeypatch
     launch = Mock(return_value=SimpleNamespace(pid=321, poll=lambda: None))
     monkeypatch.setattr(module.subprocess, 'Popen', launch)
     module.main()
-    launch.assert_called_once_with([str(exe), 'A "quoted" & named playlist'], shell=False)
+    playlist = exe.parent / 'A & named playlist.m3u'
+    launch.assert_called_once_with([str(exe), '/Play', str(playlist)], shell=False)
     messages = str(module.log.info.call_args_list)
     assert 'request submitted' in messages and 'not confirmed' in messages
 

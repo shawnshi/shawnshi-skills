@@ -17,6 +17,11 @@ import sys
 from datetime import datetime, timedelta
 from pathlib import Path
 
+from garmin_auth import SavedSessionError, get_client, _require_network_authorization
+from garmin_capabilities import issue_capability
+
+BOUNDED_LIVE_OPERATION = "bounded_insight_live"
+
 sys.dont_write_bytecode = True
 
 pd = None
@@ -362,28 +367,21 @@ def _live_token_path():
     raise FileNotFoundError("No Garmin token store is available.")
 
 
-def _load_live_client():
-    """Load tokens into memory without profile/settings reads or token persistence."""
-    try:
-        from garminconnect import Garmin
-    except ImportError:
-        raise
-
-    token_path = _live_token_path()
-    token_text = token_path.read_text(encoding="utf-8")
-    # One attempt caps a failing endpoint at the provider's request timeout;
-    # orchestration below returns partial data for independent lane failures.
-    client = Garmin(retry_attempts=0)
-    client.client._tokenstore_path = None
-    try:
-        client.client.loads(token_text)
-    except Exception as exc:
-        raise LiveAuthenticationError("Garmin token store is invalid.") from exc
-
-    # Refreshes may happen in memory, but loads() must not bind persistence.
-    if client.client._tokenstore_path is not None:
-        raise RuntimeError("Garmin client unexpectedly bound a persistent token store.")
-    return client
+def _load_live_client(*, network_capability=None, request=None):
+    """Reuse canonical token checks and egress without reading profile/settings."""
+    _require_network_authorization(
+        network_capability=network_capability,
+        operation=BOUNDED_LIVE_OPERATION,
+        request=request,
+    )
+    return get_client(
+        network_capability=network_capability,
+        operation=BOUNDED_LIVE_OPERATION,
+        request=request,
+        token_file=_live_token_path(),
+        in_memory=True,
+        raise_on_error=True,
+    )
 
 
 def _pick(record, *keys):
@@ -480,12 +478,14 @@ def _stress_record(date_string, payload):
     }
 
 
-def fetch_live_summary(days):
+def fetch_live_summary(days, *, network_capability=None):
     """Read an exact live window without profile/settings reads or persistence."""
     if not isinstance(days, int) or days < 1:
         raise ValueError("days must be a positive integer")
 
-    client = _load_live_client()
+    client = _load_live_client(
+        network_capability=network_capability, request={"days": days}
+    )
     end = datetime.now().date()
     start = end - timedelta(days=days - 1)
     start_string = start.isoformat()
@@ -1601,7 +1601,7 @@ def _print_json(payload, stream=None):
     print(json.dumps(_json_safe(payload), indent=2, ensure_ascii=False, allow_nan=False), file=stream)
 
 
-def main(argv=None):
+def main(argv=None, *, state_writer=None):
     parser = argparse.ArgumentParser(description="Advanced Health Intelligence")
     parser.add_argument("analysis", choices=["flu_risk", "readiness", "insight_cn", "audit", "long_term_load", "env_stress", "device_audit"], help="Analysis type")
     parser.add_argument("--days", type=int, default=7, help="Context window in days")
@@ -1691,15 +1691,28 @@ def main(argv=None):
 
     try:
         summary_data = (
-            fetch_live_summary(days)
+            fetch_live_summary(
+                days,
+                network_capability=issue_capability(
+                    scope="network", operation=BOUNDED_LIVE_OPERATION,
+                    request={"days": days},
+                ),
+            )
             if args.source == "live"
             else fetch_local_summary(days)
         )
+    except SavedSessionError as exc:
+        _print_json({
+            "status": exc.status, "data_status": "read_error",
+            "error_code": exc.status, "error_type": exc.error_type,
+            "http_status": exc.http_status, "source": "live", "requested_days": days,
+        })
+        return 6
     except LiveAuthenticationError as exc:
         _print_json(
             {
                 "status": "authentication_required",
-                "data_status": "no_data",
+                "data_status": "read_error",
                 "error_code": "LIVE_SESSION_INVALID",
                 "source": "live",
                 "requested_days": days,
@@ -1720,7 +1733,7 @@ def main(argv=None):
         _print_json(
             {
                 "status": "rate_limited",
-                "data_status": "no_data",
+                "data_status": "read_error",
                 "error_code": "LIVE_RATE_LIMITED",
                 "source": "live",
                 "requested_days": days,
@@ -1742,7 +1755,7 @@ def main(argv=None):
             _print_json(
                 {
                     "status": "authentication_required",
-                    "data_status": "no_data",
+                    "data_status": "read_error",
                     "error_code": "LIVE_TOKEN_MISSING",
                     "source": "live",
                     "requested_days": days,
@@ -1892,6 +1905,16 @@ def main(argv=None):
         "memory_context_accessed": bool(args.allow_memory_context),
         "persisted": False,
     }
+    if state_writer is not None:
+        try:
+            state_writer(result)
+            result["provenance"]["state_persisted"] = True
+        except FileExistsError:
+            _print_json({"status": "STATE_OUTPUT_EXISTS", "overwrite_attempted": False}, sys.stderr)
+            return 3
+        except OSError as exc:
+            _print_json({"status": "STATE_WRITE_FAILED", "error_type": type(exc).__name__}, sys.stderr)
+            return 1
     _print_json(result)
     return 0
 

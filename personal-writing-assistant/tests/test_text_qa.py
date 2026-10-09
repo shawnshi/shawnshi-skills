@@ -12,7 +12,7 @@ SCRIPT = Path(__file__).resolve().parents[1] / "scripts" / "text_qa.py"
 
 
 class TextQaCliTests(unittest.TestCase):
-    def run_cli(self, text, suffix=".md", extra=(), raw=None):
+    def run_cli(self, text, suffix=".md", extra=(), raw=None, json_output=True):
         with tempfile.TemporaryDirectory(prefix="text-qa-test-") as directory:
             path = Path(directory) / ("draft" + suffix)
             path.write_bytes(raw if raw is not None else text.encode("utf-8"))
@@ -24,7 +24,7 @@ class TextQaCliTests(unittest.TestCase):
                     str(path),
                     "--mode",
                     "publish",
-                    "--json",
+                    *(["--json"] if json_output else []),
                     *extra,
                 ],
                 capture_output=True,
@@ -43,11 +43,50 @@ class TextQaCliTests(unittest.TestCase):
         report = json.loads(result.stdout)
         self.assertEqual(report["exit_code"], expected_exit)
         self.assertEqual(report["status"], "blocked" if expected_exit else "pass")
+        self.assertEqual(report["version"], "1.1.0")
+        self.assertEqual(report["check_scope"], "mechanical_text_only")
+        self.assertEqual(report["publication_readiness"], "not_assessed")
         if code:
             finding = next(item for item in report["findings"] if item["code"] == code)
             if line is not None:
                 self.assertIn(line, [item["line"] for item in finding["examples"]])
         return report
+
+    def test_mechanical_pass_does_not_assess_publication(self):
+        for mode in ("light", "research", "publish"):
+            for text in (
+                "摘要：覆盖12个科室。\n\n正文：覆盖15个科室。",
+                "金额为待定。",
+                "医院AI系统在2026年上线。",
+            ):
+                with self.subTest(mode=mode, text=text):
+                    self.check_report(text, 0, extra=("--mode", mode))
+
+    def test_literal_placeholder_preserves_raw_blocker(self):
+        self.check_report(
+            "原文写道：“TODO 是代码中的待办标记。”", 2, "UNRESOLVED_PLACEHOLDER", 1
+        )
+        report = self.check_report(
+            "原文写道：“TODO 是代码中的待办标记。”\n项目成效【待核实】。",
+            2,
+            "EXPLICIT_PENDING_VERIFICATION",
+            2,
+        )
+        self.assertEqual(report["summary"]["blocker_categories"], 2)
+
+    def test_human_output_limits_result_to_mechanical_scan(self):
+        for text, expected_exit, label in (
+            ("正文", 0, "无阻断"),
+            ("众所周知", 0, "无阻断（有警告）"),
+            ("TODO", 2, "阻塞"),
+        ):
+            with self.subTest(text=text):
+                result = self.run_cli(text, json_output=False)
+                self.assertEqual(result.returncode, expected_exit)
+                self.assertEqual(result.stderr, "")
+                self.assertIn(f"机械扫描：{label}", result.stdout)
+                self.assertIn("发布就绪：未评估", result.stdout)
+                self.assertNotIn("状态：通过", result.stdout)
 
     def test_original_six_audit_cases(self):
         cases = [

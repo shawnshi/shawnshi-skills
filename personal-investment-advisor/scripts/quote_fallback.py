@@ -22,6 +22,7 @@ from __future__ import annotations
 
 import hashlib
 import json
+import math
 import time
 from datetime import datetime, time as dtime, timezone
 from pathlib import Path
@@ -272,11 +273,15 @@ class FallbackFetcher:
                  cache_dir: Path | str | None = None, ttl_seconds: float = 120.0,
                  now: Callable[[], float] | None = None,
                  timeout_seconds: float = 20.0):
-        self._http_get = http_get or _requests_get
+        self._http_get = http_get
         self._cache_dir = Path(cache_dir) if cache_dir else None
         self._ttl = float(ttl_seconds)
         self._now = now or time.time
         self._timeout = float(timeout_seconds)
+        if not math.isfinite(self._ttl) or self._ttl < 0:
+            raise ValueError("ttl_seconds must be finite and non-negative")
+        if not math.isfinite(self._timeout) or self._timeout <= 0:
+            raise ValueError("timeout_seconds must be finite and positive")
         self.bypass_cache = False
 
     def _cache_path(self, url: str) -> Path | None:
@@ -291,36 +296,45 @@ class FallbackFetcher:
             return None, None, None
         try:
             payload = json.loads(path.read_text(encoding="utf-8"))
-            age = self._now() - float(payload["stored_epoch"])
+            stored_epoch = float(payload["stored_epoch"])
+            age = self._now() - stored_epoch
+            text, status_code = payload["text"], payload["status_code"]
+            if (payload.get("url") != url or not isinstance(text, str)
+                    or type(status_code) is not int or not 100 <= status_code <= 599):
+                return None, None, None
         except (OSError, UnicodeError, ValueError, KeyError, TypeError):
             return None, None, None
-        if age > self._ttl:
+        if not math.isfinite(stored_epoch) or not math.isfinite(age) or not 0 <= age <= self._ttl:
             return None, None, None
-        return payload.get("text"), payload.get("status_code"), age
+        return text, status_code, stored_epoch
 
-    def _write_cache(self, url: str, text: str, status_code: int | None) -> None:
+    def _write_cache(self, url: str, text: str, status_code: int | None,
+                     retrieved_epoch: float) -> None:
         path = self._cache_path(url)
         if path is None:
             return
         try:
             path.parent.mkdir(parents=True, exist_ok=True)
             path.write_text(json.dumps({"url": url, "status_code": status_code,
-                                        "text": text, "stored_epoch": self._now()},
+                                        "text": text, "stored_epoch": retrieved_epoch},
                                        ensure_ascii=False), encoding="utf-8")
         except OSError:
             return
 
-    def _fetch_text(self, url: str, headers: dict[str, str]) -> tuple[int | None, str, str]:
-        text, status_code, _age = self._read_cache(url)
-        if text is not None:
-            return status_code, text, "cache"
+    def _fetch_text(self, url: str, headers: dict[str, str]) -> tuple[int | None, str, str, float]:
+        text, status_code, retrieved_epoch = self._read_cache(url)
+        if text is not None and retrieved_epoch is not None:
+            return status_code, text, "cache", retrieved_epoch
         try:
-            status_code, text = self._http_get(url, headers)
+            status_code, text = (
+                self._http_get(url, headers) if self._http_get is not None else
+                _requests_get(url, headers, timeout_seconds=self._timeout))
         except Exception as exc:  # a transport failure is data, not an exception
-            return None, f"{type(exc).__name__}: {exc}", "error"
+            return None, f"{type(exc).__name__}: {exc}", "error", self._now()
+        retrieved_epoch = self._now()
         text = text if isinstance(text, str) else str(text)
-        self._write_cache(url, text, status_code)
-        return status_code, text, "network"
+        self._write_cache(url, text, status_code, retrieved_epoch)
+        return status_code, text, "network", retrieved_epoch
 
     def fetch(self, symbol: str, *, market: str | None = None,
               primary_outcome: str | None = None) -> dict[str, Any]:
@@ -334,7 +348,7 @@ class FallbackFetcher:
                     "fetched_via": None, "market": resolved_market}
         url = source_url(symbol)
         headers = {"User-Agent": "Mozilla/5.0", "Referer": "https://gu.qq.com/"}
-        status_code, text, via = self._fetch_text(url, headers)
+        status_code, text, via, retrieved_epoch = self._fetch_text(url, headers)
         health = classify(text, status_code, key=key)
         if health != HEALTH_OK:
             return {"health": health, "record": None,
@@ -346,8 +360,10 @@ class FallbackFetcher:
             return {"health": HEALTH_BROKEN, "record": None,
                     "error": f"secondary_parse_failed:{exc}", "url": url,
                     "fetched_via": via, "market": resolved_market}
-        record = build_record(symbol, parsed, url=url, retrieved_at=_iso(self._now()),
+        record = build_record(symbol, parsed, url=url, retrieved_at=_iso(retrieved_epoch),
                               primary_outcome=str(primary_outcome or "error"))
+        if via == "cache":
+            record["cache_read_at"] = _iso(self._now())
         return {"health": HEALTH_OK, "record": record, "error": None, "url": url,
                 "fetched_via": via, "market": resolved_market}
 
@@ -365,9 +381,10 @@ def _iso(epoch: float) -> str:
     return datetime.fromtimestamp(float(epoch), tz=timezone.utc).isoformat()
 
 
-def _requests_get(url: str, headers: dict[str, str]) -> tuple[int, str]:
+def _requests_get(url: str, headers: dict[str, str], *,
+                  timeout_seconds: float = 20.0) -> tuple[int, str]:
     import requests  # local import keeps the module importable without the dependency
 
-    response = requests.get(url, headers=headers, timeout=20.0)
+    response = requests.get(url, headers=headers, timeout=timeout_seconds)
     response.encoding = "gbk"
     return response.status_code, response.text

@@ -50,7 +50,7 @@
 | `assumption` | 为方案或测算暂时采用的条件 | 明确可验证方式和失效影响 |
 | `recommendation` | 面向行动的建议 | 说明依据、取舍和责任边界 |
 
-`verified / partial / unverified` 描述核验状态，不描述主张重要性。最终稿可以保留结构化 `unverified` 主张和 Open Items，但必须在页面可见内容或讲稿中准确呈现其不确定性，不能把它们写成已证实事实。一个 Claim 可引用多个 Evidence ID；禁止悬空引用。
+`verified / partial / unverified` 描述核验状态，不描述主张重要性，也不决定类型。缺证的事实性陈述仍可是 `fact / unverified`，须说明缺口并建立 Open Item；只有真实的推导、假设或建议才使用对应 kind，不为过校验或弱化证据责任而改标签。最终稿可以保留结构化 `unverified` 主张和 Open Items，但必须在页面可见内容或讲稿中准确呈现其不确定性，不能把它们写成已证实事实。一个 Claim 可引用多个 Evidence ID；禁止悬空引用。
 
 Evidence 的 `locator` 应让复核者找到原文，例如页码、表名、URL、文档章节、工作底稿单元格或会议纪要条目。`undated` 只表示来源没有日期，不替代定位信息。
 

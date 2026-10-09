@@ -24,7 +24,7 @@ from garmin_sqlite_adapter import GARMIN_DB, MONITORING_DB, fingerprint_database
 SCHEMA = "garmin-auto-sync-status.v1"
 COMPONENTS = ("sleep", "hrv", "body_battery", "heart_rate", "stress")
 PLAN_TIMEOUT_SECONDS = 150
-TOTAL_TIMEOUT_SECONDS = 900
+TOTAL_TIMEOUT_SECONDS = 180
 SAFE_ERROR_CODE = re.compile(r"^[a-z0-9_]{1,80}$")
 
 
@@ -91,7 +91,10 @@ def _run_bounded(
     remaining = int(deadline - time.monotonic())
     if remaining <= 0:
         raise subprocess.TimeoutExpired(command, 0)
-    return runner(command, min(requested_timeout, remaining))
+    result = runner(command, min(requested_timeout, remaining))
+    if time.monotonic() >= deadline:
+        raise subprocess.TimeoutExpired(command, requested_timeout)
+    return result
 
 
 def _database_fingerprint() -> str:
@@ -230,8 +233,9 @@ def run_scheduled_sync(
 ) -> tuple[int, dict]:
     if not (args.allow_network and args.allow_sync and args.allow_health_data):
         return 2, {"schema": SCHEMA, "status": "capability_denied"}
-    if not 1 <= args.timeout_seconds <= 600 or not 60 <= args.total_timeout_seconds <= TOTAL_TIMEOUT_SECONDS:
+    if not 1 <= args.timeout_seconds <= 600 or args.total_timeout_seconds < 60:
         return 2, {"schema": SCHEMA, "status": "invalid_timeout_budget"}
+    deadline = time.monotonic() + min(args.total_timeout_seconds, TOTAL_TIMEOUT_SECONDS)
 
     python = Path(sys.executable).resolve()
     garmindb_python = Path(args.garmindb_python).resolve()
@@ -249,7 +253,6 @@ def run_scheduled_sync(
     start, end = compute_window(end_date, args.days)
     started_at = datetime.now(timezone.utc).isoformat()
     state = _base_state(start, end, started_at)
-    deadline = time.monotonic() + min(args.total_timeout_seconds, TOTAL_TIMEOUT_SECONDS)
     script_dir = Path(__file__).resolve().parent
     sync_script = script_dir / "sync_health_data.py"
     preflight_script = script_dir / "runtime_preflight.py"
@@ -296,6 +299,8 @@ def run_scheduled_sync(
             stage = "sync_execution"
             state.update({"stage": stage, "updated_at": datetime.now(timezone.utc).isoformat()})
             _atomic_json(state_output, state)
+            # Leave time for child cleanup before the parent command deadline.
+            sync_timeout = min(args.timeout_seconds, max(1, int(deadline - time.monotonic()) - 10))
             sync_result = _run_bounded(
                 runner,
                 [
@@ -305,9 +310,9 @@ def run_scheduled_sync(
                     "--config-dir", str(config_dir),
                     "--garmindb-python", str(garmindb_python),
                     "--plan-file", str(plan_path),
-                    "--timeout-seconds", str(args.timeout_seconds),
+                    "--timeout-seconds", str(sync_timeout),
                 ],
-                args.timeout_seconds + 30,
+                sync_timeout + 10,
                 deadline,
             )
             if sync_result.get("status") != "sync_completed":
@@ -349,6 +354,8 @@ def run_scheduled_sync(
                 state["stale_components"] = stale_components
                 raise RuntimeError("terminal_coverage_stale")
 
+            if time.monotonic() >= deadline:
+                raise subprocess.TimeoutExpired("garmin_auto_sync", TOTAL_TIMEOUT_SECONDS)
             state.update(
                 {
                     "status": "success",
@@ -388,8 +395,8 @@ def build_parser() -> argparse.ArgumentParser:
     parser.add_argument("--scratch-dir", required=True)
     parser.add_argument("--state-output", required=True)
     parser.add_argument("--authority-config", help=argparse.SUPPRESS)  # legacy option; no source-hash gate
-    parser.add_argument("--timeout-seconds", type=int, default=600)
-    parser.add_argument("--total-timeout-seconds", type=int, default=900)
+    parser.add_argument("--timeout-seconds", type=int, default=150)
+    parser.add_argument("--total-timeout-seconds", type=int, default=TOTAL_TIMEOUT_SECONDS)
     parser.add_argument("--allow-network", action="store_true")
     parser.add_argument("--allow-sync", action="store_true")
     parser.add_argument("--allow-health-data", action="store_true")

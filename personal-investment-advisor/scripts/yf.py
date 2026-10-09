@@ -89,7 +89,7 @@ INFO_KEYS_DEFAULT = [
     "quoteType", "exchangeTimezoneName",
     "marketState", "tradeable",
     "marketCap", "sector", "industry",
-    "trailingPE", "forwardPE", "dividendYield",
+    "trailingPE", "forwardPE", "dividendYield", "trailingEps", "financialCurrency",
     "priceToBook", "returnOnEquity", "operatingMargins",
     "debtToEquity", "beta", "pegRatio", "enterpriseToEbitda",
     "fiftyTwoWeekHigh", "fiftyTwoWeekLow",

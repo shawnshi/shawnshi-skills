@@ -1,3 +1,4 @@
+# Other-host metadata only. Pi loads SKILL.md; invoke /skill:personal-investment-advisor.
 interface:
   display_name: "Personal Investment Advisor"
   short_description: "以免费公开数据开展投资研究、具体参数建议与受控本地维护"

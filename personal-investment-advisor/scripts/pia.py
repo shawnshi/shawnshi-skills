@@ -671,9 +671,13 @@ def _build_parser() -> JsonArgumentParser:
     daily_run.add_argument("--task-dir", required=True, type=_path_argument)
     daily_run.add_argument("--cache-dir", type=_path_argument)
     daily_run.add_argument("--thesis-evidence-file", type=_path_argument)
+    daily_run.add_argument("--unpurchased-quotes-file", type=_path_argument)
+    daily_run.add_argument("--unpurchased-thesis-evidence-file", type=_path_argument)
     daily_run.add_argument("--scenario-assumptions", type=_path_argument)
     daily_run.add_argument("--scenario-portfolio", type=_path_argument)
     daily_run.add_argument("--dashboard-root", type=_path_argument)
+    daily_run.add_argument("--risk-bounds-policy", type=_path_argument)
+    daily_run.add_argument("--analysis-scope", choices=("all", "held_only"), default="all")
     daily_run.add_argument(
         "--decision-scope",
         choices=("research_only", "advisory", "actionable"),
@@ -725,6 +729,8 @@ def _build_parser() -> JsonArgumentParser:
     build.add_argument("--positions-file", type=_path_argument)
     build.add_argument("--volatilities-file", type=_path_argument)
     build.add_argument("--quotes-file", type=_path_argument)
+    build.add_argument("--research-universe", action="store_true",
+                       help="thesis-pack only: bind the separate zero-quantity research universe.")
     build.add_argument("--evidence-file", type=_path_argument)
     build.add_argument("--assessments-file", type=_path_argument)
     build.add_argument("--scope-coverage-file", type=_path_argument)
@@ -986,9 +992,13 @@ def _dispatch(args: argparse.Namespace) -> tuple[dict[str, Any], int]:
         for flag, value in (
             ("--cache-dir", args.cache_dir),
             ("--thesis-evidence-file", args.thesis_evidence_file),
+            ("--unpurchased-quotes-file", args.unpurchased_quotes_file),
+            ("--unpurchased-thesis-evidence-file", args.unpurchased_thesis_evidence_file),
             ("--scenario-assumptions", args.scenario_assumptions),
             ("--scenario-portfolio", args.scenario_portfolio),
             ("--dashboard-root", args.dashboard_root),
+            ("--risk-bounds-policy", args.risk_bounds_policy),
+            ("--analysis-scope", args.analysis_scope),
             ("--holiday-calendar-file", args.holiday_calendar_file),
             ("--coverage-probe-file", args.coverage_probe_file),
             ("--now-epoch", args.now_epoch),
@@ -1245,6 +1255,8 @@ def _dispatch(args: argparse.Namespace) -> tuple[dict[str, Any], int]:
 
     if args.command == "build":
         child = [args.kind, "--task-dir", args.task_dir]
+        if args.research_universe:
+            child.append("--research-universe")
         for flag, value in (
             ("--weights-file", args.weights_file),
             ("--confirmed-policy", args.confirmed_policy),

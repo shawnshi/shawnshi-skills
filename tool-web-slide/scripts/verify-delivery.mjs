@@ -1,7 +1,7 @@
 #!/usr/bin/env node
-import { createHash, randomUUID } from 'node:crypto';
+import { createHash } from 'node:crypto';
 import { existsSync } from 'node:fs';
-import { lstat, mkdir, readFile, readdir, realpath, rename, unlink, writeFile } from 'node:fs/promises';
+import { lstat, mkdir, readFile, readdir, realpath } from 'node:fs/promises';
 import { dirname, extname, isAbsolute, join, relative, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import {
@@ -12,6 +12,7 @@ import {
 } from './lib/delivery-contract.mjs';
 import { assertDeliverySnapshotStable, captureDeliverySnapshot } from './lib/browser-runtime.mjs';
 import { countPdfPages } from './export-pdf.mjs';
+import { inspectQaArtifacts, publishQaArtifacts } from './lib/qa-artifacts.mjs';
 
 function sha256(value) {
   return createHash('sha256').update(value).digest('hex');
@@ -337,13 +338,6 @@ async function validatePdfReport(report, context, deckRoot, deckRootReal) {
   return errors;
 }
 
-async function writeJsonAtomic(filePath, value) {
-  const temporaryPath = join(dirname(filePath), `.${randomUUID()}.delivery.tmp`);
-  await writeFile(temporaryPath, `${JSON.stringify(value, null, 2)}\n`, 'utf8');
-  try { await rename(temporaryPath, filePath); }
-  finally { await unlink(temporaryPath).catch(error => { if (error.code !== 'ENOENT') throw error; }); }
-}
-
 export async function verifyDelivery(options = {}) {
   if (!options.htmlPath) throw new Error('HTML input is required.');
   const htmlPath = resolve(options.htmlPath);
@@ -357,6 +351,7 @@ export async function verifyDelivery(options = {}) {
   const deckRootReal = await realpath(deckRoot);
   await ensureSafeDirectory(deckRoot, deckRootReal, reportDir, 'QA report directory');
   await ensureSafeWriteTarget(deckRoot, deckRootReal, reportPath, 'Delivery report path');
+  inspectQaArtifacts(deckRoot, [reportPath]);
   const startedAt = new Date().toISOString();
   const errors = [];
   let deliverySnapshot = null;
@@ -432,7 +427,8 @@ export async function verifyDelivery(options = {}) {
   const gates = {
     static: makeGate(requiredGates.static, staticPath, deckRoot),
     visual: makeGate(requiredGates.visual, visualPath, deckRoot),
-    pdf: makeGate(requiredGates.pdf, pdfPath, deckRoot)
+    pdf: makeGate(requiredGates.pdf, pdfPath, deckRoot),
+    review: makeGate(false, join(reportDir, 'review.json'), deckRoot)
   };
 
   const staticReport = await readJsonReport(staticPath, 'Static QA report', gates.static.errors, deckRoot, deckRootReal, gates.static);
@@ -459,6 +455,21 @@ export async function verifyDelivery(options = {}) {
   if (pdfReport) gates.pdf.errors.push(...await validatePdfReport(pdfReport, context, deckRoot, deckRootReal));
   gates.pdf.ok = gates.pdf.errors.length === 0 && (gates.pdf.present || !gates.pdf.required);
 
+  const review = await readJsonReport(join(reportDir, 'review.json'), 'Human review record', gates.review.errors, deckRoot, deckRootReal, gates.review);
+  if (review) {
+    if (review.schemaVersion !== '1.0.0' || review.kind !== 'human-review') gates.review.errors.push('unrecognized human review record');
+    if (review.inputSha256 !== inputSha256 || review.manifestSha256 !== manifestSha256) gates.review.errors.push('human review hashes are stale');
+    if (typeof review.reviewer !== 'string' || !review.reviewer.trim() || !Number.isFinite(Date.parse(review.reviewedAt))) gates.review.errors.push('reviewer and reviewedAt are required');
+    for (const [field, requiredIds] of [['visualSlideIds', visualReport?.coverage?.selectedSlideIds || []], ['semanticSlideIds', slideIds]]) {
+      const ids = review[field];
+      if (!Array.isArray(ids) || new Set(ids).size !== ids.length || ids.some(id => !slideIds.includes(id)) || requiredIds.some(id => !ids.includes(id))) gates.review.errors.push(`${field} coverage is incomplete or invalid`);
+    }
+    if (review.visual !== 'complete' || review.semantic !== 'complete') gates.review.errors.push('visual and semantic review are incomplete');
+    if (requiredGates.pdf === 'required' && review.pdf !== 'complete') gates.review.errors.push('required PDF review is incomplete');
+    if (!Array.isArray(review.issues) || review.issues.some(issue => issue?.resolved !== true)) gates.review.errors.push('human review has unresolved issues');
+  }
+  gates.review.ok = gates.review.errors.length === 0;
+
   for (const [name, gate] of Object.entries(gates)) {
     for (const error of gate.errors) errors.push(`${name}: ${error}`);
   }
@@ -472,6 +483,7 @@ export async function verifyDelivery(options = {}) {
   const report = {
     schemaVersion: '1.0.0',
     kind: 'delivery-verification',
+    humanReviewRecord: review ? gates.review.ok ? 'present-valid' : 'present-invalid' : 'not-recorded',
     ok: errors.length === 0,
     inputFile: portablePath(deckRoot, htmlPath),
     inputSha256,
@@ -489,7 +501,7 @@ export async function verifyDelivery(options = {}) {
     gates,
     errors
   };
-  await writeJsonAtomic(reportPath, report);
+  publishQaArtifacts(deckRoot, new Map([[reportPath, `${JSON.stringify(report, null, 2)}\n`]]));
   return { ...report, reportPath };
 }
 

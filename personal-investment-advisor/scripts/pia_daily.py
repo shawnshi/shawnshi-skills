@@ -18,7 +18,6 @@ from __future__ import annotations
 
 import argparse
 import contextlib
-import os
 
 import instrument_labels
 import datetime
@@ -37,6 +36,8 @@ if str(SCRIPT_DIR) not in sys.path:
 import pia_readiness  # noqa: E402
 import pia_refresh  # noqa: E402
 import pia_risk_diagnostic  # noqa: E402
+from portfolio_loader import load_positions, unpurchased_positions  # noqa: E402
+from market_calendar import load_table  # noqa: E402
 from quote_evidence_contract import (  # noqa: E402
     MAX_QUOTE_AGE_SECONDS,
     QUOTE_FRESHNESS_POLICY_VERSION,
@@ -249,6 +250,8 @@ def finalize_run_summary(
     stages: list[dict[str, Any]],
     evaluation_epoch: float,
     skip_watchlist: bool = False,
+    analysis_selection: str | None = None,
+    analysis_scope: dict[str, Any] | None = None,
 ) -> dict[str, Any]:
     """Attach scope, freshness and unrun-stage inventory to every exit path.
 
@@ -257,16 +260,23 @@ def finalize_run_summary(
     """
     summary.setdefault("decision_scope", DECISION_SCOPE)
     summary.setdefault("evaluation_epoch", evaluation_epoch)
+    if analysis_selection is not None:
+        summary["analysis_selection"] = analysis_selection
+    if analysis_scope is not None:
+        summary["analysis_scope"] = analysis_scope
     summary["stages"] = stages
     for stage in stages:
         stage["status"] = status_from_payload(stage, 0)
     summary["status"] = status_from_payload(summary, 0)
+    flag_skipped = {"watchlist": "--skip-watchlist"} if skip_watchlist else {}
+    if summary.get("analysis_selection") == "held_only":
+        flag_skipped["unpurchased_analysis"] = "--analysis-scope held_only"
     summary["run_inventory"] = build_run_inventory(
         plan=plan,
         stages=stages,
         decision_scope=summary["decision_scope"],
         evaluation_epoch=evaluation_epoch,
-        flag_skipped={"watchlist": "--skip-watchlist"} if skip_watchlist else {},
+        flag_skipped=flag_skipped,
     )
     # The parent may be stricter than its stages (an explicit business verdict such
     # as ``insufficient_evidence`` outranks plain incompleteness), but a parent that
@@ -495,6 +505,25 @@ def write_run_summary(task_dir: Path, summary: dict[str, Any],
 
     if previous_run is not None:
         summary["previous_run"] = previous_run
+    research_path = task_dir / "out" / "unpurchased_analysis.json"
+    research_stage = next((row for row in summary.get("stages", [])
+                           if row.get("stage") == "unpurchased_analysis"), None)
+    if research_stage:
+        summary["analysis_scope"] = research_stage.get("coverage")
+        summary["unpurchased_analysis"] = {
+            "status": research_stage.get("status"),
+            "expected_symbols": research_stage.get("expected_symbols"),
+            "artifact": str(research_path) if research_stage.get("status") != "failed" else None,
+        }
+    if research_stage and research_stage.get("status") != "failed" and research_path.is_file():
+        research = json.loads(research_path.read_text(encoding="utf-8"))
+        if research.get("evaluation_epoch") == summary.get("evaluation_epoch"):
+            summary["analysis_scope"] = research.get("coverage")
+            summary["unpurchased_analysis"] = {
+                "status": research.get("status"),
+                "expected_symbols": research.get("expected_symbols"),
+                "artifact": str(research_path),
+            }
     path = task_dir / "out" / "daily_run_summary.json"
     path.parent.mkdir(parents=True, exist_ok=True)
     path.write_text(json.dumps(summary, ensure_ascii=False, indent=2), encoding="utf-8")
@@ -510,13 +539,18 @@ def main(argv: list[str] | None = None) -> int:
     parser.add_argument("--thesis-evidence-file")
     parser.add_argument("--scenario-assumptions")
     parser.add_argument("--scenario-portfolio")
-    parser.add_argument("--dashboard-root")
+    parser.add_argument("--dashboard-root", help="Explicitly authorized Dashboard root; no sibling-directory discovery.")
     parser.add_argument(
         "--risk-bounds-policy",
-        help=("User-confirmed risk bounds policy (pia_risk_bounds_policy_v1). "
-              "Defaults to <dashboard-root>/risk_bounds_policy.json or PIA_RISK_BOUNDS_POLICY."),
+        help="Explicitly authorized user-confirmed risk bounds policy (pia_risk_bounds_policy_v1).",
     )
     parser.add_argument("--skip-watchlist", action="store_true")
+    parser.add_argument("--analysis-scope", choices=("all", "held_only"), default="all",
+                        help="all includes unpurchased research; held_only explicitly excludes zero-quantity securities.")
+    parser.add_argument("--unpurchased-quotes-file", type=Path,
+                        help="Bound offline research quote packet for zero-quantity securities.")
+    parser.add_argument("--unpurchased-thesis-evidence-file", type=Path,
+                        help="Separate primary-source Thesis pack bound to the unpurchased universe.")
     parser.add_argument("--holiday-calendar-file")
     parser.add_argument("--coverage-probe-file")
     parser.add_argument("--risk-history", action="append", default=[],
@@ -598,8 +632,33 @@ def main(argv: list[str] | None = None) -> int:
                              ensure_ascii=False, indent=2))
             return 3
 
-    plan = ["refresh", "quotes", "daily_sync", "weights"]
-    if not args.skip_watchlist:
+    dashboard_root = (Path(args.dashboard_root).expanduser().resolve()
+                      if args.dashboard_root else None)
+    research_load_error = None
+    try:
+        research_positions = load_positions(str(positions_path)) if positions_path.is_file() else None
+    except (OSError, ValueError) as exc:
+        research_positions = None
+        research_load_error = f"{type(exc).__name__}: {exc}"
+    all_research_rows = (unpurchased_positions(research_positions)
+                         if research_positions and research_positions.get("_status") == "ok" else [])
+    research_rows = all_research_rows if args.analysis_scope == "all" else []
+    selected_scope = ({
+        "held_non_cash_count": len(active_symbols(research_positions)),
+        "unpurchased_count": len(research_rows),
+        "analysis_non_cash_count": len(active_symbols(research_positions)) + len(research_rows),
+        "unpurchased_symbols": [row["symbol"] for row in research_rows],
+        "excluded_unpurchased_symbols": [row["symbol"] for row in all_research_rows]
+                                        if args.analysis_scope == "held_only" else [],
+    } if research_positions and research_positions.get("_status") == "ok" else None)
+    research_only_universe = bool(research_rows and not active_symbols(research_positions))
+    no_held_selection = bool(args.analysis_scope == "held_only" and selected_scope is not None
+                             and not selected_scope["held_non_cash_count"])
+    plan = (["analysis_selection"] if no_held_selection else [] if research_only_universe
+            else ["refresh", "quotes", "daily_sync", "weights"])
+    if research_rows:
+        plan.insert(0, "unpurchased_analysis")
+    if not args.skip_watchlist and not research_only_universe and not no_held_selection:
         plan.append("watchlist")
     if coverage_probes:
         plan.append("coverage-probe")
@@ -610,14 +669,22 @@ def main(argv: list[str] | None = None) -> int:
     if args.scenario_assumptions and args.scenario_portfolio:
         plan.append("scenario")
     if args.actionability_assessment:
-        plan.append("actionability-gate")
+        plan.extend(["actionability-gate", "readiness"])
+    if args.record:
+        plan.append("ledger")
     if args.plan_only:
+        if research_load_error:
+            print(json.dumps({"status": "failed", "detail_status": "analysis_universe_unreadable",
+                              "decision_scope": DECISION_SCOPE, "errors": [research_load_error]}))
+            return 3
         print(json.dumps({
             "status": "complete",
             "detail_status": "plan_only",
             "decision_scope": DECISION_SCOPE,
             "evaluation_epoch": evaluation_epoch,
             "plan": plan,
+            "analysis_selection": args.analysis_scope,
+            "analysis_scope": selected_scope,
         }, ensure_ascii=False, indent=2))
         return 0
 
@@ -636,9 +703,79 @@ def main(argv: list[str] | None = None) -> int:
             "exit_code": code,
             "artifacts": artifacts or [],
             "errors": payload.get("errors") or [],
-            **{key: payload[key] for key in ("valid", "completeness") if key in payload},
+            **{key: payload[key] for key in ("valid", "completeness", "coverage", "expected_symbols") if key in payload},
         })
         return stages[-1]["status"] == "complete"
+
+    if research_load_error:
+        record("refresh", 3, {"status": "failed", "detail_status": "positions_validation_failed",
+                              "errors": [research_load_error]})
+        summary = finalize_run_summary(
+            {"status": "failed", "detail_status": "refresh_stage_failed",
+             "decision_scope": DECISION_SCOPE, "evaluation_epoch": evaluation_epoch,
+             "errors": [research_load_error]}, plan=plan, stages=stages,
+            evaluation_epoch=evaluation_epoch, skip_watchlist=bool(args.skip_watchlist),
+            analysis_selection=args.analysis_scope, analysis_scope=selected_scope)
+        write_run_summary(task_dir, summary, previous_run_pending)
+        print(json.dumps(summary, ensure_ascii=False, indent=2))
+        return 3
+
+    if no_held_selection:
+        record("analysis_selection", 2, {
+            "status": "insufficient_evidence", "detail_status": "no_held_non_cash_securities"})
+        summary = finalize_run_summary(
+            {"status": "insufficient_evidence", "detail_status": "no_held_non_cash_securities",
+             "analysis_selection": args.analysis_scope, "analysis_scope": selected_scope,
+             "actual_holdings_weights": None, "decision_scope": DECISION_SCOPE},
+            plan=plan, stages=stages, evaluation_epoch=evaluation_epoch,
+            skip_watchlist=bool(args.skip_watchlist),
+            analysis_selection=args.analysis_scope, analysis_scope=selected_scope)
+        write_run_summary(task_dir, summary, previous_run_pending)
+        print(json.dumps(summary, ensure_ascii=False, indent=2))
+        return exit_code_for(summary["status"])
+
+    # Unpurchased research is independent of actual-holdings FX/weights. Missing
+    # evidence remains visible and cannot silently disappear from run status.
+    if research_rows:
+        import unpurchased_analysis
+        try:
+            calendar = (load_table(Path(args.holiday_calendar_file))
+                        if args.holiday_calendar_file else None)
+            research = unpurchased_analysis.run(
+                research_positions, task_dir=task_dir, cache_dir=cache_dir,
+                evaluation_epoch=evaluation_epoch, dashboard_root=dashboard_root,
+                quotes_file=args.unpurchased_quotes_file,
+                thesis_file=args.unpurchased_thesis_evidence_file,
+                holiday_table=calendar, decision_scope=DECISION_SCOPE,
+                reuse=bool(args.reuse_artifacts))
+            record("unpurchased_analysis", exit_code_for(research["status"]), research,
+                   [str(task_dir / "out" / "unpurchased_analysis.json"),
+                    str(task_dir / "out" / "unpurchased_quotes.json")])
+        except (OSError, ValueError, subprocess.SubprocessError) as exc:
+            record("unpurchased_analysis", 3,
+                   {"status": "failed", "detail_status": "unpurchased_analysis_failed",
+                    "expected_symbols": [row["symbol"] for row in research_rows],
+                    "coverage": {"held_non_cash_count": len(active_symbols(research_positions)),
+                                 "unpurchased_count": len(research_rows),
+                                 "analysis_non_cash_count": len(active_symbols(research_positions)) + len(research_rows),
+                                 "quote_coverage_complete": False},
+                    "errors": [f"{type(exc).__name__}: {exc}"]})
+        if research_only_universe:
+            unrun_requests = [name for name in plan if name != "unpurchased_analysis"]
+            summary = finalize_run_summary(
+                {"status": "insufficient_evidence" if unrun_requests else status_from_stages(stages),
+                 "detail_status": "requested_stages_not_applicable_to_unpurchased_only" if unrun_requests else "unpurchased_only_run",
+                 "not_executed_requested_stages": unrun_requests,
+                 "decision_scope": DECISION_SCOPE, "evaluation_epoch": evaluation_epoch,
+                 "actual_holdings_weights": None,
+                 "actual_holdings_status": "not_computed_no_held_non_cash_securities",
+                 "cash_weights_status": "not_computed"},
+                plan=plan, stages=stages,
+                evaluation_epoch=evaluation_epoch, skip_watchlist=bool(args.skip_watchlist),
+                analysis_selection=args.analysis_scope, analysis_scope=selected_scope)
+            write_run_summary(task_dir, summary, previous_run_pending)
+            print(json.dumps(summary, ensure_ascii=False, indent=2))
+            return exit_code_for(summary["status"])
 
     # ---- stage 1: isolated FX refresh (writes a derived snapshot) -------------
     # ``--reuse-artifacts`` is opt-in and never silent: a reused stage says so in its
@@ -682,13 +819,29 @@ def main(argv: list[str] | None = None) -> int:
                  "decision_scope": DECISION_SCOPE, "evaluation_epoch": evaluation_epoch,
                  "errors": payload.get("errors") or []},
                 plan=plan, stages=stages, evaluation_epoch=evaluation_epoch,
-                skip_watchlist=bool(args.skip_watchlist))
+                skip_watchlist=bool(args.skip_watchlist),
+                analysis_selection=args.analysis_scope, analysis_scope=selected_scope)
             write_run_summary(task_dir, summary, previous_run_pending)
             previous_run_pending = None
             print(json.dumps(summary, ensure_ascii=False, indent=2))
             return exit_code_for(summary["status"])
 
     positions = json.loads(snapshot_path.read_text(encoding="utf-8"))
+    if research_rows:
+        refreshed_research_positions = load_positions(str(snapshot_path))
+        if (unpurchased_analysis.research_binding(refreshed_research_positions)
+                != unpurchased_analysis.research_binding(research_positions)):
+            stages[0].update(status="failed", detail_status="analysis_universe_changed",
+                             errors=["research/actual holdings identity changed during refresh"], exit_code=3)
+            summary = finalize_run_summary(
+                {"status": "failed", "detail_status": "analysis_universe_changed",
+                 "decision_scope": DECISION_SCOPE, "evaluation_epoch": evaluation_epoch},
+                plan=plan, stages=stages, evaluation_epoch=evaluation_epoch,
+                skip_watchlist=bool(args.skip_watchlist),
+                analysis_selection=args.analysis_scope, analysis_scope=selected_scope)
+            write_run_summary(task_dir, summary, previous_run_pending)
+            print(json.dumps(summary, ensure_ascii=False, indent=2))
+            return 3
     symbols = active_symbols(positions)
 
     # ---- stage 2: quote batch ------------------------------------------------
@@ -705,7 +858,8 @@ def main(argv: list[str] | None = None) -> int:
                  "decision_scope": DECISION_SCOPE, "evaluation_epoch": evaluation_epoch,
                  "errors": ["drop --reuse-artifacts to fetch a fresh quote batch"]},
                 plan=plan, stages=stages, evaluation_epoch=evaluation_epoch,
-                skip_watchlist=bool(args.skip_watchlist))
+                skip_watchlist=bool(args.skip_watchlist),
+                analysis_selection=args.analysis_scope, analysis_scope=selected_scope)
             write_run_summary(task_dir, summary, previous_run_pending)
             previous_run_pending = None
             print(json.dumps(summary, ensure_ascii=False, indent=2))
@@ -734,7 +888,8 @@ def main(argv: list[str] | None = None) -> int:
                 {"status": "insufficient_evidence", "detail_status": "quote_stage_incomplete",
                  "decision_scope": DECISION_SCOPE, "evaluation_epoch": evaluation_epoch},
                 plan=plan, stages=stages, evaluation_epoch=evaluation_epoch,
-                skip_watchlist=bool(args.skip_watchlist))
+                skip_watchlist=bool(args.skip_watchlist),
+                analysis_selection=args.analysis_scope, analysis_scope=selected_scope)
             write_run_summary(task_dir, summary, previous_run_pending)
             previous_run_pending = None
             print(json.dumps(summary, ensure_ascii=False, indent=2))
@@ -760,7 +915,8 @@ def main(argv: list[str] | None = None) -> int:
             {"status": "insufficient_evidence", "detail_status": "replay_stage_incomplete",
              "decision_scope": DECISION_SCOPE, "evaluation_epoch": evaluation_epoch},
             plan=plan, stages=stages, evaluation_epoch=evaluation_epoch,
-            skip_watchlist=bool(args.skip_watchlist))
+            skip_watchlist=bool(args.skip_watchlist),
+            analysis_selection=args.analysis_scope, analysis_scope=selected_scope)
         write_run_summary(task_dir, summary, previous_run_pending)
         previous_run_pending = None
         print(json.dumps(summary, ensure_ascii=False, indent=2))
@@ -791,6 +947,8 @@ def main(argv: list[str] | None = None) -> int:
         "generated_at": datetime.datetime.now(datetime.timezone.utc).isoformat(),
         "evaluation_epoch": evaluation_epoch,
         "positions_input": str(positions_path),
+        "analysis_selection": args.analysis_scope,
+        "analysis_scope": selected_scope,
         "positions_input_sha256": sha256_file(positions_path),
         "derived_snapshot": str(snapshot_path),
         "derived_snapshot_sha256": sha256_file(snapshot_path),
@@ -803,27 +961,39 @@ def main(argv: list[str] | None = None) -> int:
         summary["reused_artifacts"] = reused_artifacts
 
     # ---- optional stage: observation boundaries ------------------------------
-    if weights_ok and not args.skip_watchlist:
+    if weights_ok and not args.skip_watchlist and dashboard_root is None:
+        record("watchlist", 2, {
+            "status": "insufficient_evidence",
+            "detail_status": "dashboard_root_not_authorized",
+            "errors": ["supply an authorized --dashboard-root or explicitly --skip-watchlist"],
+        })
+    elif weights_ok and not args.skip_watchlist:
         import dashboard_catalog  # noqa: E402
         import watchlist_gate  # noqa: E402
-        # Dashboards live under the same holdings root as the positions file
-        # (raw/stocks/<symbol>/generations/...); the caller may override it.
-        dashboard_root = (Path(args.dashboard_root).expanduser().resolve()
-                          if args.dashboard_root else positions_path.parent)
+        # Use the same explicit dashboard root for both research and holdings.
         catalog_argv = ["--root", str(dashboard_root), "--symbols", *symbols]
         code, catalog = run_module(dashboard_catalog.main, catalog_argv)
+        catalog_payload = {
+            "status": "complete" if catalog.get("complete") else "insufficient_data",
+            "errors": catalog.get("errors") or [],
+        }
+        watchlist_children = [{
+            "stage": "dashboard_catalog",
+            "status": status_from_payload(catalog_payload, code),
+            "exit_code": code,
+            "errors": catalog_payload["errors"],
+        }]
         (task_dir / "out" / "dashboard_catalog.json").write_text(
             json.dumps(catalog, ensure_ascii=False, indent=2), encoding="utf-8")
 
         # Policy-derived position limits (user thresholds -> bounds, never hand-typed).
         import position_limits  # noqa: E402
         policy_path = (Path(args.risk_bounds_policy).expanduser().resolve()
-                       if args.risk_bounds_policy
-                       else Path(os.environ.get("PIA_RISK_BOUNDS_POLICY")
-                                 or dashboard_root / "risk_bounds_policy.json"))
+                       if args.risk_bounds_policy else None)
         derived_path = None
-        derived_block: dict[str, Any] = {"status": "not_supplied", "policy": str(policy_path)}
-        if policy_path.is_file():
+        derived_block: dict[str, Any] = {
+            "status": "not_supplied", "policy": str(policy_path) if policy_path else None}
+        if policy_path is not None and policy_path.is_file():
             try:
                 policy = position_limits.load_policy(policy_path)
                 derived_payload = position_limits.build(
@@ -841,6 +1011,9 @@ def main(argv: list[str] | None = None) -> int:
                                  "policy_sha256": derived_payload["generated_from"]["policy_sha256"],
                                  "rules": derived_payload["rules"],
                                  "positions": len(derived_payload["positions"])}
+        elif policy_path is not None:
+            derived_block = {"status": "invalid", "policy": str(policy_path),
+                             "errors": ["authorized risk bounds policy file is missing"]}
         quote_rows = {row["symbol"]: row for row in
                       (payload.get("current_weights") or []) if row.get("symbol")}
         results: dict[str, Any] = {}
@@ -849,8 +1022,13 @@ def main(argv: list[str] | None = None) -> int:
         for entry in catalog.get("entries") or []:
             symbol = entry.get("symbol")
             row = quote_rows.get(symbol)
-            if row is None:
-                results[symbol] = {"status": "insufficient_data", "reason": "quote_missing"}
+            if row is None or not entry.get("json_path"):
+                reason = "quote_missing" if row is None else entry.get("reason") or "dashboard_missing"
+                results[symbol] = {"status": "insufficient_data", "reason": reason}
+                watchlist_children.append({
+                    "stage": str(symbol), "status": "insufficient_evidence",
+                    "exit_code": 2, "detail_status": reason, "errors": [],
+                })
                 continue
             runtime = {"symbol": symbol, "current_price": row.get("current_price"),
                        "currency": row.get("currency"),
@@ -874,12 +1052,21 @@ def main(argv: list[str] | None = None) -> int:
             (task_dir / "out" / f"watchlist_{symbol}.json").write_text(
                 json.dumps(boundary, ensure_ascii=False, indent=2), encoding="utf-8")
             categories = boundary.get("categories") or {}
+            child_status = status_from_payload(boundary, code)
             results[symbol] = {"status": boundary.get("status"),
                                "detail_status": boundary.get("detail_status"),
+                               "exit_code": code, "errors": boundary.get("errors") or [],
+                               "verification_status": child_status,
                                "categories": categories}
-            evaluated.add(symbol)
-            crossed.extend((categories.get("downside_boundary_crossed") or [])
-                           + (categories.get("upside_boundary_crossed") or []))
+            watchlist_children.append({
+                "stage": str(symbol), "status": child_status, "exit_code": code,
+                "detail_status": boundary.get("detail_status"),
+                "errors": boundary.get("errors") or [],
+            })
+            if child_status == "complete":
+                evaluated.add(symbol)
+                crossed.extend((categories.get("downside_boundary_crossed") or [])
+                               + (categories.get("upside_boundary_crossed") or []))
         (task_dir / "out" / "watchlist_results.json").write_text(
             json.dumps(results, ensure_ascii=False, indent=2), encoding="utf-8")
         missing_boundaries = sorted(set(symbols) - evaluated)
@@ -899,6 +1086,7 @@ def main(argv: list[str] | None = None) -> int:
                 else "boundaries_evaluated" if not missing_boundaries
                 else "dashboard_catalog_incomplete"),
             "exit_code": 0,
+            "stages": watchlist_children,
             "artifacts": [str(task_dir / "out" / "watchlist_results.json")]
                          + ([str(derived_path)] if derived_path else []),
             "errors": boundary_errors,
@@ -930,9 +1118,18 @@ def main(argv: list[str] | None = None) -> int:
             out_path.parent.mkdir(parents=True, exist_ok=True)
             out_path.write_bytes(json.dumps(payload, ensure_ascii=False, indent=2).encode("utf-8"))
             artifacts.append(str(out_path))
+            verdict = payload.get("detail_status")
+            child_status = status_from_payload(payload, code)
+            valid_verdict = verdict in {"covered_zero_events", "covered_with_events", "coverage_unproven", "channel_unavailable"}
+            execution_status = (
+                "complete" if valid_verdict and child_status != "failed"
+                and not payload.get("errors") else "failed")
             probe_results.append({"channel": probe["channel"], "target": probe["target"],
                                   "control": probe["control"],
-                                  "verdict": payload.get("detail_status"),
+                                  "status": child_status, "exit_code": code,
+                                  "execution_status": execution_status,
+                                  "errors": payload.get("errors") or [],
+                                  "verdict": verdict,
                                   "target_count": payload.get("target_count"),
                                   "control_count": payload.get("control_count"),
                                   "coverage_basis": payload.get("coverage_basis"),
@@ -940,19 +1137,18 @@ def main(argv: list[str] | None = None) -> int:
                                   "query_quality_notes": payload.get("query_quality_notes") or []})
         unproven = [row for row in probe_results
                     if not str(row.get("verdict") or "").startswith("covered")]
-        # The stage's job is to *probe*: it completes once every probe produced a
-        # verdict.  An unproven verdict is data, not a stage failure — the same shape
-        # the watchlist stage uses when some symbols have undefined thresholds — so it
-        # is recorded as `unproven_probes` rather than as an error, and the envelope's
-        # worst-case aggregation is not needlessly downgraded.
+        # A valid inconclusive verdict is evidence; a crashed probe is not.
+        failed_probes = [row for row in probe_results if row["execution_status"] == "failed"]
         stages.append({
             "stage": "coverage-probe",
-            "status": "complete",
-            "detail_status": ("coverage_proven" if not unproven
-                              else "coverage_partially_unproven"),
-            "exit_code": 0,
+            "status": "failed" if failed_probes else "complete",
+            "detail_status": ("coverage_probe_failed" if failed_probes else
+                              "coverage_proven" if not unproven else "coverage_partially_unproven"),
+            "exit_code": 3 if failed_probes else 0,
             "artifacts": artifacts,
-            "errors": [],
+            "errors": [f"{row['channel']} {row['target']}: "
+                       + "; ".join(map(str, row["errors"] or [row["verdict"] or "probe emitted no valid verdict"]))
+                       for row in failed_probes],
             "probes": probe_results,
             "unproven_probes": [f"{row['channel']} {row['target']}: {row['verdict']}"
                                 for row in unproven],
@@ -1093,7 +1289,8 @@ def main(argv: list[str] | None = None) -> int:
         summary["detail_status"] = "requested_stage_incomplete:" + ",".join(sorted(failed_requested))
     summary = finalize_run_summary(
         summary, plan=plan, stages=stages, evaluation_epoch=evaluation_epoch,
-        skip_watchlist=bool(args.skip_watchlist))
+        skip_watchlist=bool(args.skip_watchlist),
+        analysis_selection=args.analysis_scope, analysis_scope=selected_scope)
     if summary["status"] == "incomplete" and not args.thesis_evidence_file:
         summary["detail_status"] = "thesis_not_assessed"
     elif summary["status"] == "incomplete" and args.thesis_evidence_file:
@@ -1113,6 +1310,18 @@ def main(argv: list[str] | None = None) -> int:
         rollup_path.write_text(json.dumps(rollup, ensure_ascii=False, indent=2),
                                encoding="utf-8")
         summary["readiness"] = rollup
+        readiness_status = (
+            "complete" if rollup.get("status") in {pia_readiness.STATUS_READY, pia_readiness.STATUS_NOT_READY}
+            and not rollup.get("scope_conflicts") and not rollup.get("errors") else "failed")
+        record("readiness", exit_code_for(readiness_status),
+               {"status": readiness_status, "detail_status": rollup.get("detail_status"),
+                "errors": rollup.get("errors") or rollup.get("scope_conflicts") or []},
+               [str(rollup_path)])
+        summary = finalize_run_summary(
+            summary, plan=plan, stages=stages, evaluation_epoch=evaluation_epoch,
+            skip_watchlist=bool(args.skip_watchlist),
+            analysis_selection=args.analysis_scope, analysis_scope=selected_scope)
+        write_run_summary(task_dir, summary)
     if args.record:
         import pia_trigger_ledger  # noqa: E402
         ledger = (Path(args.ledger).expanduser().resolve() if args.ledger
@@ -1127,9 +1336,34 @@ def main(argv: list[str] | None = None) -> int:
             "entry_id": ledger_payload.get("entry_id"),
             "appended": ledger_payload.get("appended"),
             "exit_code": ledger_code,
+            "errors": ledger_payload.get("errors") or [],
         }
+        record("ledger", ledger_code, ledger_payload, [str(ledger)])
     if args.actionability_assessment or args.record:
+        summary = finalize_run_summary(
+            summary, plan=plan, stages=stages, evaluation_epoch=evaluation_epoch,
+            skip_watchlist=bool(args.skip_watchlist),
+            analysis_selection=args.analysis_scope, analysis_scope=selected_scope)
         write_run_summary(task_dir, summary)
+        if (args.actionability_assessment and args.record
+                and status_from_payload(summary["ledger"], ledger_code) != "complete"):
+            # Readiness must describe the final run, not the pre-ledger snapshot.
+            artifacts, assessment = pia_readiness.load_run_artifacts(task_dir)
+            rollup = pia_readiness.build_rollup(task_dir, artifacts, assessment)
+            if rollup["scope_conflicts"]:
+                rollup = {**rollup, "status": pia_readiness.STATUS_FAILED,
+                          "detail_status": "decision_scope_conflict"}
+            summary["readiness"] = rollup
+            rollup_path.write_text(json.dumps(rollup, ensure_ascii=False, indent=2), encoding="utf-8")
+            if rollup.get("status") not in {pia_readiness.STATUS_READY, pia_readiness.STATUS_NOT_READY}:
+                readiness_stage = next(row for row in stages if row["stage"] == "readiness")
+                readiness_stage.update(status="failed", exit_code=3,
+                                       errors=rollup.get("errors") or rollup.get("scope_conflicts") or [])
+            summary = finalize_run_summary(
+                summary, plan=plan, stages=stages, evaluation_epoch=evaluation_epoch,
+                skip_watchlist=bool(args.skip_watchlist),
+                analysis_selection=args.analysis_scope, analysis_scope=selected_scope)
+            write_run_summary(task_dir, summary)
     print(json.dumps(summary, ensure_ascii=False, indent=2))
     return exit_code_for(summary["status"])
 

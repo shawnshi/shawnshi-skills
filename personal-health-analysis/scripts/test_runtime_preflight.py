@@ -7,6 +7,9 @@ import runtime_preflight as gate
 
 
 class RuntimePreflightTests(unittest.TestCase):
+    def setUp(self):
+        self.enterContext(patch.object(gate, "probe_imports", return_value={"ok": True}))
+
     def test_local_mode_accepts_current_interpreter_without_virtual_environment(self):
         with (
             patch.object(gate.metadata, "version", return_value="3.0.6"),

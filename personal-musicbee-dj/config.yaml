@@ -1,14 +1,10 @@
 # MusicBee DJ runtime configuration
 
 musicbee:
-  exe_path: "${MUSICBEE_EXE_PATH}"
-  xml_path: "${MUSICBEE_XML_PATH}"
-
-cache:
-  db_path: "tmp/musicbee_library_cache.json"
+  exe_path: "C:/Program Files (x86)/MusicBee/MusicBee.exe"
+  xml_path: "C:/Users/shich/Music/MusicBee/iTunes Music Library.xml"
 
 playlist:
-  output_m3u: "tmp/musicbee_jit_queue.m3u"
   max_tracks_per_session: 50
   curation:
     anchor_ratio: 0.6
@@ -20,8 +16,17 @@ energy_curves:
   low_intensity_max_bpm: 100
 
 fallback:
-  default_scene: "pop"
   aliases:
+    夜间思考: "focus"
+    night thinking: "focus"
+    思考: "focus"
+    专注: "focus"
+    阅读: "focus"
+    放松: "relax"
+    助眠: "relax"
+    运动: "energy"
+    健身: "energy"
+    家务: "energy"
     study: "focus"
     reading: "focus"
     work: "focus"
@@ -37,17 +42,28 @@ fallback:
 
 scenes:
   focus:
-    genres: ["Classical", "pure music", "Jazz"]
+    intensity: "low"
+    genres: ["Classical", "pure music", "纯音乐", "Ambient", "Jazz"]
+    moods: ["neutral", "introspective"]
   relax:
-    genres: ["Jazz", "Country", "France", "pure music"]
+    intensity: "low"
+    genres: ["Jazz", "Country", "pure music", "纯音乐", "Ambient"]
+    moods: ["warm", "neutral"]
   energy:
-    genres: ["Rock", "Korean", "Jap", "eng"]
+    genres: ["Rock", "EDM", "Dance", "Electronic"]
+    moods: ["joyful"]
   coding:
-    genres: ["pure music", "Classical", "Jap", "eng"]
+    genres: ["pure music", "纯音乐", "Classical", "Ambient", "Jazz"]
   pop:
-    genres: ["chs", "eng", "Jap", "Korean"]
+    genres: ["Pop", "Rock", "R&B", "Soul", "Dance"]
 
 filters:
   high_intensity_exclude: ["ambient", "chill", "intro", "氛围", "纯音乐"]
   low_intensity_exclude: ["metal", "rock", "edm", "金属", "摇滚", "电音"]
-  intro_keywords: ["intro", "prelude", "序曲", "前奏"]
+
+# Capability only, not authorization: the caller must verify explicit task scope.
+# Playlist handoff requires --allow-tag-completion; read-only modes never dispatch.
+tag_completion:
+  enabled: true
+  library_root: "D:/Music"
+  candidate_limit: 100

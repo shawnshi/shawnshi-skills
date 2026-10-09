@@ -128,8 +128,11 @@ class ProbeCliTests(unittest.TestCase):
             return self.response(0, details={"rows_parsed": False})
 
         code, receipt = self.run_cli(fetcher)
-        self.assertEqual(code, 2)
-        self.assertEqual(receipt["detail_status"], "channel_unavailable")
+        self.assertEqual(code, 3)
+        self.assertEqual(receipt["status"], "failed")
+        self.assertEqual(receipt["detail_status"], "channel_probe_failed")
+        self.assertIn("not parseable", receipt["errors"][0])
+        self.assertIsNone(receipt["official_coverage"])
 
     def test_transport_error_is_recorded_per_role(self):
         def fetcher(code, task_dir, window):
@@ -138,8 +141,12 @@ class ProbeCliTests(unittest.TestCase):
             return self.response(4)
 
         code, receipt = self.run_cli(fetcher)
-        self.assertEqual(code, 2)
+        self.assertEqual(code, 3)
+        self.assertEqual(receipt["status"], "failed")
+        self.assertEqual(receipt["detail_status"], "channel_probe_failed")
+        self.assertIn("TimeoutError: no answer", receipt["errors"][0])
         self.assertIn("no answer", json.dumps(receipt["captures"], ensure_ascii=False))
+        self.assertIsNone(receipt["official_coverage"])
 
     def test_code_only_zero_adds_a_quality_note(self):
         def fetcher(code, task_dir, window):

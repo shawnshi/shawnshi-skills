@@ -1,6 +1,8 @@
 from __future__ import annotations
 
 import json
+import importlib.metadata
+import platform
 import os
 import re
 import tempfile
@@ -34,6 +36,21 @@ CANDIDATES_PATH = RUNTIME_DIR / "intelligence_candidates.json"
 
 WINDOWS_REPLACE_RETRY_DELAYS = (0.05, 0.1, 0.2, 0.4)
 WINDOWS_TRANSIENT_REPLACE_ERRORS = {5, 32, 33}
+
+
+def runtime_environment() -> dict:
+    dependencies = {}
+    for name in ("beautifulsoup4", "aiohttp", "feedparser", "jinja2", "tzdata"):
+        try:
+            dependencies[name] = importlib.metadata.version(name)
+        except importlib.metadata.PackageNotFoundError:
+            dependencies[name] = None
+    return {
+        "python": platform.python_version(),
+        "os": platform.system(),
+        "dependencies": dependencies,
+        "reproducibility": "recorded_versions_only; no isolated dependency lock",
+    }
 
 
 def ensure_runtime_dirs() -> None:

@@ -68,6 +68,17 @@ function comparable(manifest) {
   if (!manifest || typeof manifest !== 'object') return manifest;
   const clone = structuredClone(manifest);
   delete clone.generated_at;
+  const byPath = (a, b) => a.path.localeCompare(b.path, 'en');
+  clone.top_level_file_hashes = (clone.top_level_file_hashes ?? []).sort(byPath);
+  clone.top_level_files = clone.top_level_file_hashes.map(file => file.path);
+  clone.resource_file_hashes = (clone.resource_file_hashes ?? [])
+    .filter(file => !PLATFORM_MANAGED_FILES.has(file.path)).sort(byPath);
+  clone.top_level_directories = [...new Set(clone.resource_file_hashes.map(file => file.path.split('/')[0]))].sort();
+  clone.resource_directories = clone.top_level_directories.map(name => ({
+    name, file_count: clone.resource_file_hashes.filter(file => file.path.startsWith(`${name}/`)).length
+  }));
+  clone.declared_local_dependencies = (clone.declared_local_dependencies ?? []).sort(byPath);
+  clone.missing_declared_dependencies = (clone.missing_declared_dependencies ?? []).sort();
   return clone;
 }
 

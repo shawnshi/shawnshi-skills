@@ -100,7 +100,8 @@ class LiveRequestError(RuntimeError):
 def _safe_live_failure(exc: BaseException) -> dict[str, str]:
     return {
         "error": getattr(exc, "code", "live_request_failed"),
-        "error_type": type(exc).__name__,
+        "error_type": getattr(exc, "error_type", type(exc).__name__),
+        "http_status": getattr(exc, "http_status", None),
     }
 
 
@@ -1008,11 +1009,16 @@ def main():
             operation=LIVE_DATA_OPERATION,
             request=request,
         )
-        client = get_client(
-            network_capability=network_capability,
-            operation=LIVE_DATA_OPERATION,
-            request=request,
-        )
+        try:
+            client = get_client(
+                network_capability=network_capability,
+                operation=LIVE_DATA_OPERATION,
+                request=request,
+                raise_on_error=True,
+            )
+        except Exception as exc:
+            print(json.dumps({"status": "read_error", **_safe_live_failure(exc)}))
+            return 1
         if not client:
             print('{"error": "Live Garmin authentication failed"}')
             return 1

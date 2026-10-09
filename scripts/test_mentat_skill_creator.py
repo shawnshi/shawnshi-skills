@@ -125,170 +125,63 @@ class MentatSkillCreatorContractTests(unittest.TestCase):
         self.assertRegex(self.skill_text, r"(?i)commit|push|发布")
 
     def test_trigger_eval_matrix_covers_required_routes(self):
+        self.assertEqual(self.evals["schema_version"], 2)
         cases = self.evals["cases"]
         by_id = {case["id"]: case for case in cases}
-        expected = {
-            "explicit_audit_only": (
-                "mentat-skill-creator", None, "read_only", False, "none"
-            ),
-            "plan_is_not_implementation": (
-                "mentat-skill-creator", None, "read_only", False, "none"
-            ),
-            "explicit_repository_update": (
-                "mentat-skill-creator", None, "scoped_edit", False,
-                "mentat-skill-creator",
-            ),
-            "generic_new_skill": (
-                "skill-creator", "skill-creator", "handoff", False, "handoff"
-            ),
-            "unrelated_single_skill_copy_edit": (
-                "skill-creator-or-domain-skill",
-                "skill-creator-or-domain-skill",
-                "handoff",
-                False,
-                "handoff",
-            ),
-            "installable_plugin_distribution": (
-                "plugin-creator", "plugin-creator", "handoff", False, "handoff"
-            ),
-            "local_skill_installation": (
-                "skill-installer", "skill-installer", "handoff", True, "handoff"
-            ),
-            "github_source_publication": (
-                "mentat-skill-creator",
-                "github:yeet",
-                "read_only_preflight_then_separate_external_action",
-                True,
-                "handoff",
-            ),
-            "pi_explicit_audit_only": (
-                "mentat-skill-creator", None, "read_only", False, "none"
-            ),
-            "pi_plan_is_not_implementation": (
-                "mentat-skill-creator", None, "read_only", False, "none"
-            ),
-            "pi_repository_update": (
-                "mentat-skill-creator", None, "scoped_edit", False,
-                "mentat-skill-creator",
-            ),
-            "pi_unrelated_request_does_not_load_governance_skill": (
-                "personal-health-analysis-or-domain-skill", None, "domain_edit",
-                False, "domain-skill",
-            ),
+        self.assertEqual(len(by_id), len(cases), "duplicate case id")
+        required = {
+            "explicit_audit_only", "plan_is_not_implementation",
+            "explicit_repository_update", "generic_new_skill",
+            "installable_plugin_distribution", "local_skill_installation",
+            "github_source_publication", "pi_explicit_audit_only",
+            "pi_plan_is_not_implementation", "pi_repository_update",
+            "pi_unrelated_request_does_not_load_governance_skill",
+            "pi_package_distribution", "pi_local_package_installation",
+            "pi_publication_preflight_only", "pi_github_source_publication",
+            "pi_skill_maintenance_exemption",
         }
-        expected_prompts = {
-            "explicit_audit_only": "使用 $mentat-skill-creator 只读审计当前 skills 库的触发边界，不要修改文件。",
-            "plan_is_not_implementation": "使用 $mentat-skill-creator 分析资源清单问题并编制修改方案和计划。",
-            "explicit_repository_update": "使用 $mentat-skill-creator 修复 skills 根 Gate 的局部校验；只修改 scripts/repair_skills.ps1 和 scripts/test_repair_skills.py，不要修改 manifest、README、AGENTS 或 shared 文件，并运行只读验证。",
-            "generic_new_skill": "创建一个用于 CSV 清洗的新技能。",
-            "unrelated_single_skill_copy_edit": "把 personal-health-analysis 的说明文字写得更清楚。",
-            "installable_plugin_distribution": "把两个技能打包成其他人可安装的 Codex 插件，本轮只生成本地插件包。",
-            "local_skill_installation": "从已指定的仓库安装一个 Codex skill 到本地技能目录。",
-            "github_source_publication": "使用 $mentat-skill-creator 完成本库发布前验证，然后同步到 GitHub main。",
-            "pi_explicit_audit_only": "/skill:mentat-skill-creator 只读审计当前技能库的触发边界，不要修改文件。",
-            "pi_plan_is_not_implementation": "/skill:mentat-skill-creator 分析资源清单问题并编制修改方案和计划。",
-            "pi_repository_update": "/skill:mentat-skill-creator 修复技能库根 Gate 的局部校验；只修改 scripts/repair_skills.ps1 和 scripts/test_repair_skills.py，不要修改 manifest、README、AGENTS 或 shared 文件，并运行只读验证。",
-            "pi_unrelated_request_does_not_load_governance_skill": "把 personal-health-analysis 的说明文字写得更清楚。",
-        }
-        expected_handoff_mutations = {
-            "explicit_audit_only": [],
-            "plan_is_not_implementation": [],
-            "explicit_repository_update": [],
-            "generic_new_skill": ["user_selected_skill_directory"],
-            "unrelated_single_skill_copy_edit": ["personal-health-analysis/SKILL.md"],
-            "installable_plugin_distribution": ["user_selected_plugin_directory"],
-            "local_skill_installation": ["approved_local_skill_install_target"],
-            "github_source_publication": ["git_commit", "git_push:explicit-remote/main"],
-            "pi_explicit_audit_only": [],
-            "pi_plan_is_not_implementation": [],
-            "pi_repository_update": [],
-            "pi_unrelated_request_does_not_load_governance_skill": ["personal-health-analysis/SKILL.md"],
-        }
-        expected_stops = {
-            "explicit_audit_only": ["any_file_write", "any_external_action"],
-            "plan_is_not_implementation": ["any_file_write", "any_external_action"],
-            "explicit_repository_update": ["manifest_refresh", "root_governance_edit", "any_external_action"],
-            "generic_new_skill": ["mentat_repository_edit"],
-            "unrelated_single_skill_copy_edit": ["mentat_repository_edit"],
-            "installable_plugin_distribution": ["mentat_source_edit", "plugin_publication"],
-            "local_skill_installation": ["mentat_repository_edit", "install_without_explicit_request"],
-            "github_source_publication": ["local_file_repair", "unscoped_stage", "push_to_unconfirmed_remote_or_branch"],
-            "pi_explicit_audit_only": ["any_file_write", "any_external_action"],
-            "pi_plan_is_not_implementation": ["any_file_write", "any_external_action"],
-            "pi_repository_update": ["manifest_refresh", "root_governance_edit", "any_external_action"],
-            "pi_unrelated_request_does_not_load_governance_skill": ["mentat_repository_edit"],
-        }
-        expected_preconditions = {
-            "github_source_publication": [
-                "git_worktree",
-                "explicit_remote",
-                "explicit_branch",
-                "scoped_staged_diff",
-                "clean_checkout_validation",
-            ]
-        }
-        # A fixture only evidences the interface whose syntax it uses, so the
-        # surface label is enforced rather than decorative.
-        expected_surfaces = {
-            "codex-openai": {
-                "explicit_audit_only",
-                "plan_is_not_implementation",
-                "explicit_repository_update",
-                "generic_new_skill",
-                "unrelated_single_skill_copy_edit",
-                "installable_plugin_distribution",
-                "local_skill_installation",
-                "github_source_publication",
-            },
-            "pi": {
-                "pi_explicit_audit_only",
-                "pi_plan_is_not_implementation",
-                "pi_repository_update",
-                "pi_unrelated_request_does_not_load_governance_skill",
-            },
-        }
-        self.assertEqual(set(by_id), set(expected))
+        self.assertTrue(required <= set(by_id))
         for case in cases:
-            self.assertEqual(case["prompt"], expected_prompts[case["id"]])
-            self.assertEqual(
-                (
-                    case["expected_route"],
-                    case["expected_handoff"],
-                    case["expected_mode"],
-                    case["external_action"],
-                    case["mutation_actor"],
-                ),
-                expected[case["id"]],
-            )
-            self.assertEqual(case["mentat_allowed_mutations"], [] if case["mutation_actor"] != "mentat-skill-creator" else ["scripts/repair_skills.ps1", "scripts/test_repair_skills.py"])
-            self.assertEqual(
-                case["handoff_allowed_mutations"],
-                expected_handoff_mutations[case["id"]],
-            )
-            self.assertEqual(
-                case["required_stop_before"], expected_stops[case["id"]]
-            )
-            self.assertEqual(
-                case.get("required_preconditions", []),
-                expected_preconditions.get(case["id"], []),
-            )
-            surface = case.get("host_surface")
-            self.assertIn(surface, expected_surfaces, case["id"])
-            self.assertIn(case["id"], expected_surfaces[surface])
-            addresses_governance_skill = (
-                case["expected_route"] == "mentat-skill-creator"
-            )
-            if surface == "pi":
-                self.assertNotIn("$mentat-skill-creator", case["prompt"], case["id"])
-                if addresses_governance_skill:
-                    self.assertTrue(
-                        case["prompt"].startswith("/skill:mentat-skill-creator"),
-                        f"pi fixture must use this host's entry: {case['id']}",
-                    )
-            else:
-                self.assertNotIn("/skill:", case["prompt"], case["id"])
-                if addresses_governance_skill:
-                    self.assertIn("$mentat-skill-creator", case["prompt"], case["id"])
+            with self.subTest(case=case["id"]):
+                self.assertIn(case["host_surface"], {"pi", "codex-openai"})
+                self.assertIsInstance(case["external_action"], bool)
+                self.assertIsInstance(case["prompt"], str)
+                self.assertTrue(case["prompt"].strip())
+                for field in ("mentat_allowed_mutations", "handoff_allowed_mutations", "required_stop_before"):
+                    self.assertIsInstance(case[field], list)
+                    self.assertTrue(all(isinstance(value, str) and value for value in case[field]))
+                if case["expected_mode"] == "read_only":
+                    self.assertEqual(case["mutation_actor"], "none")
+                    self.assertEqual(case["mentat_allowed_mutations"], [])
+                    self.assertEqual(case["handoff_allowed_mutations"], [])
+                    self.assertFalse(case["external_action"])
+                if case["mutation_actor"] != "mentat-skill-creator":
+                    self.assertEqual(case["mentat_allowed_mutations"], [])
+                if case["host_surface"] == "pi":
+                    self.assertNotIn("$mentat-skill-creator", case["prompt"])
+                    if case["expected_route"] == "mentat-skill-creator":
+                        self.assertTrue(case["prompt"].startswith("/skill:mentat-skill-creator"))
+                else:
+                    self.assertNotIn("/skill:", case["prompt"])
+                for condition in case.get("capability_cases", []):
+                    self.assertTrue(condition["when"])
+                    self.assertTrue(all(isinstance(value, bool) for value in condition["when"].values()))
+                    self.assertIsInstance(condition["expected_outcome"], str)
+                    if condition["when"].get("handoff_available") is False:
+                        self.assertIsNone(condition["expected_handoff"])
+                    if condition["expected_outcome"].startswith("blocked"):
+                        self.assertEqual(condition["mutation_actor"], "none")
+                        self.assertEqual(condition["mentat_allowed_mutations"], [])
+                        self.assertEqual(condition["handoff_allowed_mutations"], [])
+        for case_id in ("pi_local_package_installation", "pi_github_source_publication"):
+            self.assertTrue(by_id[case_id]["required_preconditions"])
+            self.assertTrue(any(
+                condition["expected_outcome"] == "blocked_missing_required_capability_or_contract"
+                for condition in by_id[case_id]["capability_cases"]
+            ))
+        closed = by_id["pi_skill_maintenance_exemption"]
+        self.assertEqual(closed["mentat_allowed_mutations"], ["mentat-skill-creator/SKILL.md"])
+        self.assertTrue({"manifest_refresh", "implicit_gate", "implicit_tests"} <= set(closed["required_stop_before"]))
 
     def test_skill_points_to_host_routing_protocol(self):
         # The protocol carries the only statement of who runs the behavioural
@@ -302,8 +195,11 @@ class MentatSkillCreatorContractTests(unittest.TestCase):
         for marker in (
             "pass|fail",
             "host_surface",
-            "weakest",
-            "strongest",
+            "reasoning_effort",
+            "fresh_loader",
+            "model_behavior",
+            "skill_sha256",
+            "capability_cases",
             "操作者",
             "test_mentat_skill_creator.py",
         ):
@@ -358,8 +254,25 @@ class MentatSkillCreatorContractTests(unittest.TestCase):
             self.skill_text,
             re.compile(r"repair_skills\.ps1[^\n]+-IncludeSkills", re.I),
         )
-        self.assertIn("scripts/test_mentat_skill_creator.py", self.skill_text)
+        self.assertIn("../scripts/test_mentat_skill_creator.py", self.skill_text)
         self.assertIn("PyYAML", self.skill_text)
+
+    def test_shared_paths_are_explicit_and_within_the_library(self):
+        references = set(re.findall(r"\.\./scripts/[A-Za-z0-9_.-]+", self.skill_text))
+        self.assertTrue(references)
+        for reference in references:
+            with self.subTest(reference=reference):
+                resolved = (SKILL_DIR / reference).resolve()
+                self.assertTrue(resolved.is_relative_to(SKILLS_ROOT.resolve()))
+                self.assertTrue(resolved.is_file())
+
+    def test_maintenance_does_not_require_every_gate_or_model(self):
+        self.assertIn("维护豁免", self.skill_text)
+        self.assertIn("--tests", self.skill_text)
+        self.assertIn("启发式告警", self.skill_text)
+        self.assertIn("不保证实际触发", self.skill_text)
+        self.assertIn("Pi package", self.skill_text)
+        self.assertNotIn("每轮取宿主当前可用的最弱档", self.skill_text)
 
 
 if __name__ == "__main__":

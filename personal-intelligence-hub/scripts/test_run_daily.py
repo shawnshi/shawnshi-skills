@@ -320,6 +320,19 @@ class RunDailyTests(unittest.IsolatedAsyncioTestCase):
         self.assertEqual(len(gaps), 4)
         self.assertEqual({gap["lane"] for gap in gaps}, {"TechRadar", "HealthcareRadar", "Sentinel", "Ranger"})
 
+    def test_topic_lanes_are_signal_driven_or_explicitly_required(self):
+        candidates = {"items": [], "metadata": {"coverage": {"source_success_rate": 1.0}}}
+        manifest = {"mix_request": {"requested_ratio": {"technology": 0.6, "healthcare_digital": 0.4}},
+                    "window": {"start": "2026-08-04", "end": "2026-08-10"}, "stages": {}}
+        focus = {"coverage_policy": {"lanes": {"Sentinel": {"keywords": ["policy"]},
+                                             "Ranger": {"keywords": ["risk"]}}}}
+        lanes = lambda: {gap["lane"] for gap in run_daily.assess_supplement_gaps(candidates, manifest, focus)}
+        self.assertEqual(lanes(), {"TechRadar", "HealthcareRadar"})
+        candidates["items"].append({"title": "policy proposal", "url": "https://example.org/policy"})
+        self.assertEqual(lanes(), {"TechRadar", "HealthcareRadar", "Sentinel"})
+        focus["coverage_policy"]["lanes"]["Ranger"]["required"] = True
+        self.assertEqual(lanes(), {"TechRadar", "HealthcareRadar", "Sentinel", "Ranger"})
+
     async def test_prepare_runs_baseline_before_candidates_and_builds_bound_gaps(self):
         with tempfile.TemporaryDirectory() as directory:
             root = Path(directory)
@@ -466,9 +479,12 @@ class RunDailyTests(unittest.IsolatedAsyncioTestCase):
             self.assertEqual(request["run_id"], "daily-test")
             self.assertEqual(
                 {gap["lane"] for gap in request["gaps"]},
-                {"TechRadar", "HealthcareRadar", "Sentinel", "Ranger"},
+                {"TechRadar", "HealthcareRadar"},
             )
             manifest = load_manifest(result.manifest_path)
+            self.assertEqual(manifest["claim_grounding_version"], 2)
+            self.assertIn("python", manifest["runtime_environment"])
+            self.assertIn("aiohttp", manifest["runtime_environment"]["dependencies"])
             expected_default = {"technology": 0.6, "healthcare_digital": 0.4}
             self.assertEqual(
                 manifest["mix_request"]["schema_default_ratio"], expected_default

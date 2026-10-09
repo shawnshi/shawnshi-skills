@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict';
 import { createHash } from 'node:crypto';
-import { cpSync, mkdtempSync, mkdirSync, readFileSync, symlinkSync, writeFileSync } from 'node:fs';
+import { cpSync, mkdtempSync, mkdirSync, readFileSync, rmSync, symlinkSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { dirname, join, resolve } from 'node:path';
 import { spawnSync } from 'node:child_process';
@@ -55,6 +55,20 @@ function validHtml(slides = `
 <body data-theme="swiss" data-delivery-profile="standard-client" data-aspect="16:9" data-deck-width="1920" data-deck-height="1080" data-target-browser="chromium" data-target-os="current"><div id="deck">${slides}</div>
 <script src="./assets/icon-runtime.js"></script><script src="./assets/slide-engine.js"></script></body></html>`;
 }
+
+test('required evidence exempts only explicit claim-free cover and section roles', () => {
+  for (const role of ['cover', 'section', 'content', 'unknown', '']) {
+    const { file, root } = makeDeck({ html: validHtml(`
+      <section class="slide" data-slide-id="intro" data-layout="hero" data-evidence="none" ${role ? `data-page-role="${role}"` : ''}>
+        <div class="canvas-card layout-hero"><h1>Section title</h1></div>
+      </section>`) });
+    try {
+      const report = validate(file, { evidencePolicy: 'required' });
+      assert.equal(codes(report).has('EVIDENCE_POLICY_VIOLATION'), !['cover', 'section'].includes(role), role);
+      assert.equal(codes(report).has('PAGE_ROLE_INVALID'), role === 'unknown', role);
+    } finally { rmSync(root, { recursive: true, force: true }); }
+  }
+});
 
 function codes(report) { return new Set(report.issues.map((issue) => issue.code)); }
 function validate(file, options = {}) { return validateDeck(file, { ...options, writeReport: false }); }

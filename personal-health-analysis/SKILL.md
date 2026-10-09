@@ -1,8 +1,10 @@
 ---
 name: personal-health-analysis
 description: 用于本地优先分析 Garmin 睡眠、HRV、心率、压力与多维健康趋势，生成报告或零外联面板，检查数据质量及按显式请求管理同步。仅提供非诊断信息；登录、同步、轨迹下载等动作需独立授权。
+compatibility: "Python 3.11+ for local analysis; Python 3.12+ and GarminConnect 0.3.17 for live reads. Windows/Linux CLI; GarminDB sync requires a separately verified runner."
+disable-model-invocation: false
 metadata:
-  version: "11.9.2"
+  version: "11.9.3"
 ---
 
 # Garmin 健康数据分析
@@ -16,7 +18,7 @@ metadata:
 - 默认训练负荷只读取日期和负荷数值，不读取活动名称、ID、位置或原始轨迹；缺失日不补零，覆盖、设备时期、有效样本和时区门继续保留。睡眠起止字段只转发来源值，不为缺失时区虚构偏移。当前默认分析回看只适用于本地面板；实时请求和回退仍绑定显式窗口，不自动增加联网或同步范围。
 - 本地优先、只读、失败关闭。SQLite 能力以适配器可导入为准，数据路径由实际只读探针解析，不以默认目录是否存在推断可用性。`insight_cn` 同样返回 `data_integrity` 完整性回执；损坏库、Schema 或组件读取异常不得伪装成数据缺失。本地 `no_data` 后、同窗口、同组件仅有一次受限云只读回退；`partial` 继续本地，数据库变化、Schema 或其他 `read_error` 不得当作无数据回退。不得跳过本地、扩大组件或削弱数据库/WAL/SHM 前后全量哈希门。
 - Garmin 主机默认直连：发起认证或实时请求前把 `garmin.com` 与 `.garmin.com` 幂等加入 `NO_PROXY`/`no_proxy` 并保留已有条目，因为有代理出口会被 Garmin 边缘重置 TLS 或全程 429，五条登录策略链会同时失败；需保留代理时设 `GARMIN_EGRESS_ALLOW_PROXY=1`。两阶段同步的子进程环境是白名单，本就不传递代理变量。
-- `--allow-health-data` 与回退时的 `--allow-network` 是本次命令能力门，不可删除或跨命令/窗口/用途复用。日记/复盘新鲜度与持续自动同步只沿已有授权门，不由分析授权推导。
+- 分析和面板入口以 `--allow-health-data` 授权健康读取，实时或回退还需 `--allow-network`；直接同步使用 `--allow-network` 与 `--allow-sync`，自动同步包装器另外要求 `--allow-health-data`。这些门只限本次命令、窗口和用途，不可跨调用复用。日期同步不接受活动下载，所有同步阶段共用最多 180 秒预算。日记/复盘新鲜度与持续自动同步只沿已有授权门，不由分析授权推导。
 - 数据命令前按[运行前提](references/workflow_contract.md#运行前提)绑定同一解释器并通过对应模式预检；仅 `RUNTIME_READY` 继续，否则 `RUNTIME_DEPENDENCY_UNAVAILABLE`，不安装、不联网补包、不静默切换解释器。清单不是签名，不能替代权限或内容哈希校验。
 
 ## 按请求逐步披露
@@ -29,7 +31,8 @@ metadata:
 | 数据质量、缺失、覆盖或设备时期核验；任何分析结果解释 | [数据质量](references/workflow_contract.md#数据质量)：设备/固件/厂商与分析算法时期、样本资格、缺失不补零、非独立指标与非诊断边界 |
 | 离线 HTML 趋势面板或持久化 Markdown 报告 | [离线可视化与报告](references/workflow_contract.md#离线可视化与报告)及数据质量节；HTML 必须为 `garmin_chart.py` 直接输出且零外联，不用通用渲染器包装或重写 |
 | 本地明确无数据后的回退，或明确要求实时来源 | [受限实时回退](references/workflow_contract.md#受限实时回退)与 [api.md](references/api.md)；扩展指标、点时查询、活动文件才读 [advanced_tools.md](references/advanced_tools.md) |
-| 明确同步、启用自动同步、只读诊断同步状态或已授权新鲜度请求 | [显式同步管理](references/workflow_contract.md#显式同步管理)与 [api.md](references/api.md)；如果用户要求仅诊断、预览、不保存、试运行、不同步、禁用或移除自动同步，则保持只读，不注册或运行任务，也不写入数据库或状态文件 |
+| 明确同步、启用自动同步、只读诊断同步状态或已授权新鲜度请求 | [同步执行合同](references/sync_contract.md)与 [api.md](references/api.md)；如果用户要求仅诊断、预览、不保存、试运行、不同步、禁用或移除自动同步，则保持只读，不注册或运行任务，也不写入数据库或状态文件 |
+| 解释器、依赖、认证出口或 Pi/Codex 调用策略问题 | [运行时兼容性](references/runtime_compatibility.md)；预检成功不等于真实服务或同步链路已验证 |
 | FHIR 研究输出或外部验收 | [研究输出](references/workflow_contract.md#研究输出)、[advanced_tools.md](references/advanced_tools.md) 与 [external_acceptance.md](references/external_acceptance.md)；仅显式本地 JSON、研究确认，不联网、不宣称临床互操作 |
 
 ## 真实完成条件

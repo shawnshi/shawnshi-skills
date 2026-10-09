@@ -55,27 +55,27 @@ def _content_blocks(slide_type: str, ordinal: int) -> str:
         return ""
     decision = ""
     if slide_type == "Decision":
-        decision = "\n[Decision]:\n- D1 | approve | Confirm the decision request and resource boundary | decision owner | unscheduled"
+        decision = "\n[Decision]:\n- D1 | {{DECISION_ACTION}} | {{DECISION_REQUEST}} | {{DECISION_OWNER}} | {{DECISION_DATE}}"
     risk = "none"
     if slide_type == "Risk":
-        risk = "- R1 | delivery | medium | Confirm the principal delivery risk | Define an accountable mitigation owner"
+        risk = "- R1 | {{RISK_CATEGORY}} | {{RISK_SEVERITY}} | {{RISK_DESCRIPTION}} | {{RISK_MITIGATION}}"
     evidence = "none"
     if slide_type in {"Data", "References"}:
-        evidence = "- E1 | {{SOURCE_NAME}} | undated | {{EVIDENCE_SCOPE}} | {{SOURCE_LOCATOR}}"
+        evidence = "- E1 | {{SOURCE_NAME}} | {{SOURCE_DATE}} | {{EVIDENCE_SCOPE}} | {{SOURCE_LOCATOR}}"
     return f"""
 
 // CONTENT
-[Body]: Define the minimum content required to perform slide task {ordinal}.
+[Body]: {{{{SLIDE_{ordinal}_BODY}}}}
 {decision}
-[Action]: Replace the scaffold text with decision-relevant content.
+[Action]: {{{{SLIDE_{ordinal}_ACTION_OR_NONE}}}}
 
 // EVIDENCE
 [Claims]:
-- C1 | assumption | unverified | The slide task and evidence boundary require author confirmation | none
+- C1 | {{{{CLAIM_KIND}}}} | unverified | {{{{SLIDE_{ordinal}_CLAIM}}}} | none
 [Evidence]:
 {evidence}
 [Open Items]:
-- O1 | data | Confirm the evidence, scope, and locator needed for this slide | content owner | unscheduled
+- O1 | data | Complete this slide's claim, evidence and presentation choices | {{{{CONTENT_OWNER}}}} | {{{{PLAN_DATE}}}}
 [Risk Flags]:
 {risk}"""
 
@@ -83,7 +83,7 @@ def _content_blocks(slide_type: str, ordinal: int) -> str:
 def render_scaffold(args: argparse.Namespace) -> str:
     slide_types = _types(args.mode, args.slides)
     seed = args.seed or f"{args.topic}|{args.mode}"
-    duration = args.duration_minutes or max(5, args.slides * 2)
+    duration = args.duration_minutes if args.duration_minutes is not None else "{{DURATION_MINUTES}}"
     lines = [
         "<DECK_METADATA>",
         f"Schema_Version: {SCHEMA_VERSION}",
@@ -99,25 +99,25 @@ def render_scaffold(args: argparse.Namespace) -> str:
         "Status: draft",
         f"Slide_Count: {args.slides}",
         f"Generated: {date.today().isoformat()}",
-        "Source_Cutoff: not-applicable",
+        "Source_Cutoff: {{SOURCE_CUTOFF}}",
         "</DECK_METADATA>",
         "",
         "<STYLE_INSTRUCTIONS>",
         f"Style_ID: {args.style_id}",
-        "Design_Aesthetic: Restrained decision-oriented documentation",
-        "Background: High-contrast neutral background",
-        "Typography: Accessible sans serif with a clear hierarchy",
-        "Color_Palette: Neutral base with one semantic accent",
+        "Design_Aesthetic: {{DESIGN_AESTHETIC}}",
+        "Background: {{BACKGROUND}}",
+        "Typography: {{TYPOGRAPHY}}",
+        "Color_Palette: {{COLOR_PALETTE}}",
         "Density: balanced",
         "Citation_Treatment: visible-footer",
-        "Brand_Rules: Apply only verified brand assets and approved templates",
-        "Accessibility: Maintain readable type, contrast, labels, and non-color cues",
+        "Brand_Rules: {{BRAND_RULES}}",
+        "Accessibility: {{ACCESSIBILITY_PLAN}}",
         "</STYLE_INSTRUCTIONS>",
     ]
 
     for ordinal, slide_type in enumerate(slide_types, 1):
         slide_id = _slide_id(seed, ordinal, slide_type)
-        takeaway = "" if slide_type in {"Cover", "Section", "Closing"} else f"\n[Takeaway]: State the single conclusion for slide task {ordinal}."
+        takeaway = "" if slide_type in {"Cover", "Section", "Closing"} else f"\n[Takeaway]: {{{{SLIDE_{ordinal}_TAKEAWAY}}}}"
         blocks = _content_blocks(slide_type, ordinal)
         lines.extend(
             [
@@ -129,18 +129,18 @@ def render_scaffold(args: argparse.Namespace) -> str:
                 "---",
                 "",
                 "// NARRATIVE",
-                f"[Goal]: Define the communication task for slide {ordinal}.",
-                f"[Title]: Draft title for slide {ordinal}.{takeaway}",
+                f"[Goal]: {{{{SLIDE_{ordinal}_GOAL}}}}",
+                f"[Title]: {{{{SLIDE_{ordinal}_TITLE}}}}{takeaway}",
                 blocks,
                 "",
                 "// VISUAL",
                 f"[Layout]: {LAYOUT_BY_TYPE[slide_type]}",
-                "[Visual Description]: Describe hierarchy, encoding, and required labels before rendering.",
+                f"[Visual Description]: {{{{SLIDE_{ordinal}_VISUAL_DESCRIPTION}}}}",
                 "[Chart]: none",
                 "",
                 "// DELIVERY",
-                "[Speaker Notes]: Explain the claim, evidence boundary, and requested action without adding unsupported facts.",
-                "[Delivery Notes]: Keep the spoken message aligned with the visible slide.",
+                f"[Speaker Notes]: {{{{SLIDE_{ordinal}_SPEAKER_NOTES}}}}",
+                f"[Delivery Notes]: {{{{SLIDE_{ordinal}_DELIVERY_NOTES_OR_NONE}}}}",
                 "",
                 "// END SLIDE",
             ]
@@ -152,12 +152,12 @@ def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
     parser = StructuredArgumentParser(description=__doc__)
     parser.add_argument("--mode", choices=["full", "section", "one_pager"], default="full")
     parser.add_argument("--slides", type=int, default=5)
-    parser.add_argument("--topic", default="Untitled presentation")
-    parser.add_argument("--audience", default="Named decision audience")
-    parser.add_argument("--objective", default="Define the decision or action this deck must enable")
-    parser.add_argument("--occasion", default="Working session")
+    parser.add_argument("--topic", default="{{TOPIC}}")
+    parser.add_argument("--audience", default="{{AUDIENCE}}")
+    parser.add_argument("--objective", default="{{OBJECTIVE}}")
+    parser.add_argument("--occasion", default="{{OCCASION}}")
     parser.add_argument("--duration-minutes", type=int)
-    parser.add_argument("--language", default="English")
+    parser.add_argument("--language", default="{{LANGUAGE}}")
     parser.add_argument("--aspect-ratio", default="16:9")
     parser.add_argument("--confidentiality", choices=["public", "internal", "confidential", "restricted"], default="internal")
     parser.add_argument("--style-id", default="custom")

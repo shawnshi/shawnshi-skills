@@ -687,6 +687,78 @@ description: 用于测试根门禁的示例技能。
                     result.stdout + result.stderr,
                 )
 
+    def test_gate_accepts_folded_yaml_description(self):
+        root = self.build_fixture(declared=False, contract_line="只生成草稿。")
+        path = root / "example-skill" / "SKILL.md"
+        path.write_text(
+            path.read_text(encoding="utf-8").replace(
+                "description: 用于测试根门禁的示例技能。",
+                "description: >\n  Use when checking skill governance.",
+            ),
+            encoding="utf-8",
+        )
+        self.regenerate_manifests(root)
+        result = self.run_gate(root)
+        self.assertEqual(result.returncode, 0, result.stdout + result.stderr)
+
+    def test_gate_rejects_malformed_optional_yaml(self):
+        root = self.build_fixture(declared=False, contract_line="只生成草稿。")
+        path = root / "example-skill" / "SKILL.md"
+        path.write_text(
+            path.read_text(encoding="utf-8").replace(
+                "description: 用于测试根门禁的示例技能。",
+                "description: 用于测试根门禁的示例技能。\nmetadata: [",
+            ),
+            encoding="utf-8",
+        )
+        self.regenerate_manifests(root)
+        result = self.run_gate(root)
+        self.assertNotEqual(result.returncode, 0)
+        self.assertIn("frontmatter_failures=1", result.stderr)
+
+    def test_gate_surfaces_heuristics_without_claiming_semantic_violations(self):
+        root = self.build_fixture(
+            declared=False,
+            has_opt_out=False,
+            contract_line=(
+                "兼容性说明：gpt-6.1-sol 不支持 none reasoning effort。\n"
+                "Do not show chain-of-thought.\n"
+                "旧例中的 invoke_subagent 不是当前调用接口。"
+            ),
+        )
+        result = self.run_gate(root)
+        self.assertEqual(result.returncode, 0, result.stdout + result.stderr)
+        self.assertIn("semantic review", result.stdout + result.stderr)
+
+    def test_gate_accepts_current_image_tool(self):
+        root = self.build_fixture(
+            declared=False,
+            has_opt_out=False,
+            contract_line="使用当前 generate_image 工具提供的 Antigravity 图像生成能力。",
+        )
+        result = self.run_gate(root)
+        self.assertEqual(result.returncode, 0, result.stdout + result.stderr)
+
+    def test_gate_reports_corrupt_resource_instead_of_skipping_it(self):
+        root = self.build_fixture(declared=False, contract_line="只生成草稿。")
+        references = root / "example-skill" / "references"
+        references.mkdir()
+        (references / "corrupt.md").write_bytes(b"\xff\xfe\xfd")
+        result = self.run_gate(root)
+        self.assertNotEqual(result.returncode, 0)
+        self.assertIn("Cannot read skill resource", result.stderr)
+        self.assertIn("corrupt.md", result.stderr)
+
+    def test_gate_preserves_invalid_validator_output(self):
+        root = self.build_fixture(declared=False, contract_line="只生成草稿。")
+        (root / "scripts" / RESOURCE_MANIFEST_SCRIPT.name).write_text(
+            'print("fixture validator diagnostic")\nraise SystemExit(2)\n',
+            encoding="utf-8",
+        )
+        result = self.run_gate(root)
+        self.assertNotEqual(result.returncode, 0)
+        self.assertIn("fixture validator diagnostic", result.stdout + result.stderr)
+
 
 if __name__ == "__main__":
     unittest.main()

@@ -1,7 +1,7 @@
 {
   "schema_version": 3,
   "skill": "hit-solution-architect",
-  "generated_at": "2026-10-07T10:34:35+08:00",
+  "generated_at": "2026-09-24T09:41:50+08:00",
   "hash_algorithm": "SHA-256",
   "text_hash_normalization": "LF",
   "skill_md": "SKILL.md",
@@ -63,7 +63,7 @@
     },
     {
       "path": "references/evidence_governance.md",
-      "sha256": "6a8eab551f7e6cb6082dcb173d01f545745fdb2223a6f25419aab7a469ccc697"
+      "sha256": "2a645c22432047643d495073e2d164ba4fbb3412d7a8616f33b7b48f36adf402"
     },
     {
       "path": "references/maturity_model.md",
@@ -153,7 +153,7 @@
       "path": "references/evidence_governance.md",
       "exists": true,
       "resolved_path": "hit-solution-architect/references/evidence_governance.md",
-      "sha256": "6a8eab551f7e6cb6082dcb173d01f545745fdb2223a6f25419aab7a469ccc697"
+      "sha256": "2a645c22432047643d495073e2d164ba4fbb3412d7a8616f33b7b48f36adf402"
     },
     {
       "path": "references/maturity_model.md",

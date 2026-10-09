@@ -2,6 +2,7 @@
 """对 TXT/Markdown 稿件执行确定性轻量检查。
 
 退出码：无阻断项为 0；存在阻断项或输入错误为 2。
+status 与退出码仅表示机械扫描结果；publication_readiness 始终为 not_assessed。
 脚本只发现可机械识别的风险，不替代事实、隐私或引用核验。
 """
 
@@ -308,7 +309,7 @@ def analyze(path: Path, text: str, args: argparse.Namespace) -> dict[str, object
         findings,
         "UNRESOLVED_PLACEHOLDER",
         "blocker",
-        "正文仍有未解决占位符。",
+        "发现占位符候选；正确引文等误报须逐项裁决，真实待办须修复。",
         PLACEHOLDER_RE,
         masked,
     )
@@ -355,7 +356,9 @@ def analyze(path: Path, text: str, args: argparse.Namespace) -> dict[str, object
     warnings = [item for item in findings if item["severity"] == "warning"]
     return {
         "tool": "text_qa",
-        "version": "1.0.0",
+        "version": "1.1.0",
+        "check_scope": "mechanical_text_only",
+        "publication_readiness": "not_assessed",
         "file": str(path.resolve()),
         "mode": args.mode,
         "status": "blocked" if blockers else "pass",
@@ -386,7 +389,9 @@ def analyze(path: Path, text: str, args: argparse.Namespace) -> dict[str, object
 def fatal(path: Path, mode: str, code: str, message: str) -> dict[str, object]:
     return {
         "tool": "text_qa",
-        "version": "1.0.0",
+        "version": "1.1.0",
+        "check_scope": "mechanical_text_only",
+        "publication_readiness": "not_assessed",
         "file": str(path),
         "mode": mode,
         "status": "blocked",
@@ -408,10 +413,10 @@ def render_human(report: dict[str, object]) -> str:
     summary = report["summary"]
     assert isinstance(summary, dict)
     lines = [
-        "text_qa 1.0.0",
+        "text_qa 1.1.0",
         f"文件：{report['file']}",
         f"模式：{report['mode']}",
-        f"状态：{'阻塞' if report['status'] == 'blocked' else ('通过（有警告）' if summary['warning_categories'] else '通过')}",
+        f"机械扫描：{'阻塞' if report['status'] == 'blocked' else ('无阻断（有警告）' if summary['warning_categories'] else '无阻断')}",
     ]
     stats = report.get("stats")
     if isinstance(stats, dict):
@@ -444,7 +449,13 @@ def render_human(report: dict[str, object]) -> str:
                 lines.append(
                     f"- {item['code']} ×{item['count']}：{item['message']}{suffix}"
                 )
-    lines.extend(["", f"结果：退出码 {report['exit_code']}。"])
+    lines.extend(
+        [
+            "",
+            f"机械扫描退出码：{report['exit_code']}。",
+            "发布就绪：未评估；事实、来源、语义、排版、隐私及授权须另行核验。",
+        ]
+    )
     return "\n".join(lines)
 
 

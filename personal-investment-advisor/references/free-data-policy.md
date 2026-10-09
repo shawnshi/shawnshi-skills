@@ -37,7 +37,10 @@
 - `net_income_to_period_end_equity` 要求净利润与年度期末权益币种相同、期末相同，权益来自年度表单；它不是使用平均权益的标准 ROE。现金流每稀释股要求年度起止日期相同、现金流为货币单位、股数为 `shares`；`derived_units` 标记比率或每股币种。
 - 迁移：`parse_as_of` 对纯日期返回 `date`，对带时区输入返回 `datetime`；JSON `as_of` 不再将纯日期伪装成日末时间。新消费者改读 `net_income_to_period_end_equity`，不得把旧 `roe` 直接当作标准 ROE。历史制品不重写；需要新口径时从授权原始事实重新计算。
 
+备用行情缓存：`quote_fallback.py` 拒绝未来、非有限、过期、URL 不匹配或结构非法的缓存。缓存命中保持原始 `retrieved_at`，适配器另给 `cache_read_at`，不把读取时间当首次获取时间。`timeout_seconds` 实际传给默认 HTTP 请求；自定义传输继续使用二参数接口。此缓存通过不替代报价身份与时效门。
+
 ## Provider 稳定性与迁移（STAGE3A）
+
 
 - `provider_runtime.py` 是 Akshare/Efinance、`yf.py` 与 `quality_screener.py` 的单一进程与重试所有者。每次补充指标调用默认 8 秒；历史、报价元数据、新闻、搜索或财报调用默认 30 秒。沿用原补充接口的 8 秒及搜索接口的 10 秒 × 3 次量级，不代表服务 SLA。Python 调用可传入 `timeout_seconds`；Fetcher 支持 `supplement_seconds` 与 `operation_seconds`。不改第三方内部重试设置。
 - 截止时间使用单调时钟，包含进程启动、导入、调用、子进程序列化和退避；Akshare 的请求间隔等待也扣除预算。超时终止自有进程，`terminate/join` 和必要的 `kill/join` 各最多等待 1 秒。正常操作的壁钟验收为预算加这 2 秒及操作系统调度、临时存储与反序列化开销；不能保证内核故障、进程创建或文件系统卡死时的硬实时上限。清理失败单列错误，不能返回无数据。

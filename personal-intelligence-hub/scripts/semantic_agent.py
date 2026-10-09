@@ -451,6 +451,7 @@ def _eligible_candidates(
 
 def _registered_evidence_excerpt(
     candidate: dict[str, Any], manifest: dict[str, Any],
+    *, start: int = 0, end: int | None = None, quote: str | None = None,
 ) -> dict[str, Any]:
     """Read only the proof authorized by the already validated manifest ledger."""
     if "source_adoption" in manifest:
@@ -511,6 +512,15 @@ def _registered_evidence_excerpt(
         or proof.get("receipt", {}).get("text") != text
     ):
         raise RunContractError("semantic readable evidence text/access binding is invalid")
+    if quote is not None:
+        if not isinstance(quote, str) or not quote.strip() or text.count(quote) != 1:
+            raise RunContractError("evidence quote must occur exactly once in the registered source")
+        start = text.index(quote)
+        end = start + len(quote)
+    if end is None:
+        end = len(text)
+    if type(start) is not int or type(end) is not int or not 0 <= start < end <= len(text):
+        raise RunContractError("registered evidence span is outside the retained source")
     excerpt = {
         "status": "available",
         "evidence_kind": "native_readable",
@@ -518,26 +528,62 @@ def _registered_evidence_excerpt(
         "readable_text_sha256": binding["readable_text_sha256"],
         "excerpt_sha256": "0" * 64,
         "offset_unit": "unicode_code_points",
-        "start": 0,
-        "end": len(text),
+        "start": start,
+        "end": end,
         "readable_text_characters": len(text),
         "readable_text_utf8_bytes": len(text.encode("utf-8")),
         "excerpt_truncated": False,
         "source_truncated": proof["receipt"]["truncated"],
-        "coverage": "prefix_of_registered_readable_text; may_be_abstract_not_full_paper; omitted_details_are_unknown",
+        "coverage": "bounded_span_of_registered_readable_text; may_be_abstract_not_full_paper; omitted_details_are_unknown",
         "text": "",
     }
     overhead = len(json.dumps(excerpt, ensure_ascii=False).encode("utf-8")) - 2
     excerpt_text, truncated = _bounded_json_string_prefix(
-        text, BROKER_CLI_BODY_TEXT_JSON_BYTES - overhead
+        text[start:end], BROKER_CLI_BODY_TEXT_JSON_BYTES - overhead
     )
     excerpt.update(
         text=excerpt_text,
-        end=len(excerpt_text),
+        end=start + len(excerpt_text),
         excerpt_truncated=truncated,
         excerpt_sha256=hashlib.sha256(excerpt_text.encode("utf-8")).hexdigest(),
     )
     return excerpt
+
+
+def validate_item_grounding(
+    item: dict[str, Any], candidate: dict[str, Any], manifest: dict[str, Any]
+) -> None:
+    from claim_grounding import validate_registered_claims
+
+    policy_manifest = manifest
+    if "source_adoption" in manifest:
+        from recovery_lifecycle import validated_source
+        policy_manifest = validated_source(manifest)
+    if max(manifest.get("claim_grounding_version", 1), policy_manifest.get("claim_grounding_version", 1)) < 2:
+        return
+    try:
+        validate_registered_claims(
+            item,
+            lambda start, end: _registered_evidence_excerpt(candidate, manifest, start=start, end=end),
+        )
+    except ValueError as exc:
+        raise RunContractError("registered claim grounding failed: " + str(exc)) from exc
+
+
+def read_agent_evidence(
+    request_path: str | Path, candidate_id: str, start: int | None = None,
+    end: int | None = None, quote: str | None = None,
+) -> dict[str, Any]:
+    _, request, _, manifest = _load_packet(request_path)
+    eligible = _eligible_candidates(request, manifest)
+    candidate = next((item for item in eligible if item["candidate_id"] == candidate_id), None)
+    if candidate is None:
+        raise RunContractError("evidence candidate is not in the registered eligible pool")
+    if quote is not None and (start is not None or end is not None):
+        raise RunContractError("quote and explicit span are mutually exclusive")
+    if quote is None and (start is None or end is None):
+        raise RunContractError("evidence reader requires quote or both start/end")
+    return _registered_evidence_excerpt(candidate, manifest, start=0 if start is None else start, end=end, quote=quote)
 
 
 def build_agent_context(request_path: str | Path) -> dict[str, Any]:
@@ -561,6 +607,12 @@ def build_agent_context(request_path: str | Path) -> dict[str, Any]:
         "requested_ratio": deepcopy(manifest["mix_request"]["requested_ratio"]),
         "max_turns": request["max_turns"],
         "halt_condition": request["halt_condition"],
+        "claim_grounding_version": manifest.get("claim_grounding_version", 1),
+        "evidence_read_command": [
+            "python", "-X", "utf8", str(Path(__file__).resolve()), "evidence",
+            "--request", str(request_file), "--candidate-id", "<eligible candidate_id>",
+            "--quote", "<exact unique original-language quote>",
+        ],
         "eligible_candidates": eligible,
         "eligible_candidate_count": len(eligible),
         "corroboration_policy": {
@@ -578,7 +630,17 @@ def build_agent_context(request_path: str | Path) -> dict[str, Any]:
             "action_lever_required_fields": sorted(ACTION_FIELDS),
             "selected_item_required_fields": sorted(ITEM_FIELDS - OPTIONAL_ITEM_FIELDS),
             "selected_item_optional_fields": sorted(OPTIONAL_ITEM_FIELDS),
+            "registered_claim_grounding_rule": (
+                "Version 2 is a hard gate for L3/L4, major signals and near-term impact. "
+                "Every published claim is grounded with an exact original-language evidence quote "
+                "and evidence_ref={readable_text_sha256,start,end}, using unicode offsets. "
+                "Numbers in critical fact must have number claims supported by the quote. "
+                "Use evidence_read_command to read additional retained spans without network; "
+                "unretained details remain unknown. Hypotheses belong in deduction, not fact. "
+                "Source-byte binding does not replace independent semantic entailment review."
+            ),
             "claim_grounding_rule": (
+                "Legacy version 1 guidance only; version 2 above takes precedence. "
                 "Required on every item with intelligence_level L3/L4 or "
                 "near_term_decision_impact=true; omit it on L1/L2 items. Shape: "
                 "{basis: non-empty string naming the registered excerpts used, claims: "
@@ -984,7 +1046,7 @@ def _validate_claim_grounding(review: dict[str, Any], fact: str, index: int) -> 
         path = f"{label}.claims[{claim_index}]"
         if not isinstance(claim, dict):
             raise RunContractError(path + " must be an object")
-        unknown = set(claim) - {"kind", "statement", "status", "value", "evidence"}
+        unknown = set(claim) - {"kind", "statement", "status", "value", "evidence", "evidence_ref"}
         if unknown:
             raise RunContractError(path + " has unsupported keys: " + ", ".join(sorted(unknown)))
         kind = claim.get("kind")
@@ -1077,6 +1139,7 @@ def assemble_and_finalize(
         decision_reason = _nonempty(review.get("decision_impact_reason"), f"selected_items[{index}].decision_impact_reason")
         fact = _nonempty(review.get("fact"), f"selected_items[{index}].fact")
         _validate_claim_grounding(review, fact, index)
+        validate_item_grounding(review, candidate, manifest)
         item = {
             "event_id": event_id,
             "event_identity": deepcopy(identity),
@@ -1201,12 +1264,22 @@ def main() -> int:
     subparsers = parser.add_subparsers(dest="command", required=True)
     context_parser = subparsers.add_parser("context")
     context_parser.add_argument("--request", type=Path, required=True)
+    evidence_parser = subparsers.add_parser("evidence")
+    evidence_parser.add_argument("--request", type=Path, required=True)
+    evidence_parser.add_argument("--candidate-id", required=True)
+    selector = evidence_parser.add_mutually_exclusive_group(required=True)
+    selector.add_argument("--start", type=int)
+    selector.add_argument("--quote")
+    evidence_parser.add_argument("--end", type=int)
     finalize_parser = subparsers.add_parser("finalize")
     finalize_parser.add_argument("--request", type=Path, required=True)
     args = parser.parse_args()
     try:
         if args.command == "context":
             print(json.dumps(build_agent_context(args.request), ensure_ascii=False, indent=2))
+            return 0
+        if args.command == "evidence":
+            print(json.dumps(read_agent_evidence(args.request, args.candidate_id, args.start, args.end, args.quote), ensure_ascii=False, indent=2))
             return 0
         _, _, packet, _ = _load_packet(args.request)
         dynamic_path = Path(str(packet["draft_paths"]["dynamic"])).resolve()

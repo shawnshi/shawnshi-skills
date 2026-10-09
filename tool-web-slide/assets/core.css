@@ -607,13 +607,16 @@
   .bar-row .bar-value{font-family:var(--sans);font-weight:700;font-size:max(13px,1.05vw);text-align:right;font-feature-settings:"tnum"}
 
   /* ============ 导航 ============ */
-  /* 底部分页导航: 仅保留方块本身,无背景无描边 */
-  #nav{position:fixed;left:50%;bottom:2vh;transform:translateX(-50%);z-index:30;display:flex;gap:10px;padding:0;background:transparent;border:0}
-  #nav .dot{width:6px;height:6px;background:rgba(0,0,0,.28);cursor:pointer;transition:all .25s ease;border:0;padding:0;border-radius:0}
-  #nav .dot:hover{background:rgba(0,0,0,.55)}
-  #nav .dot.active{background:var(--accent);width:18px}
-  body.dark-bg #nav .dot{background:rgba(255,255,255,.32)}
-  body.dark-bg #nav .dot.active{background:var(--accent)}
+  /* The visible marker stays compact while its keyboard/touch target remains usable. */
+  #nav{position:fixed;left:50%;bottom:2vh;transform:translateX(-50%);z-index:30;display:flex;gap:4px;padding:0;background:transparent;border:0}
+  #nav .dot{width:24px;height:24px;position:relative;background:transparent;cursor:pointer;border:0;padding:0;border-radius:0}
+  #nav .dot::after{content:"";position:absolute;left:50%;top:50%;transform:translate(-50%,-50%);width:6px;height:6px;background:rgba(0,0,0,.55);transition:all .25s ease}
+  #nav .dot:hover::after{background:var(--ink)}
+  #nav .dot.active::after{background:var(--accent);width:18px}
+  body.dark-bg #nav .dot::after{background:rgba(255,255,255,.7)}
+  body.dark-bg #nav .dot.active::after{background:var(--accent-bright)}
+  button:focus-visible,a:focus-visible,[tabindex]:focus-visible{outline:2px solid var(--paper);outline-offset:2px;box-shadow:0 0 0 4px var(--ink)}
+  #overview .overview-card{display:block;text-align:left;font:inherit;color:inherit;background:var(--paper)}
 
   #hint{position:fixed;bottom:2.4vh;right:2.5vw;z-index:30;font-family:var(--mono);font-size:10px;letter-spacing:.18em;text-transform:uppercase;opacity:.4;color:var(--ink-tint, currentColor)}
   body.dark-bg #hint{color:var(--paper);opacity:.4}

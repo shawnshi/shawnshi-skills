@@ -376,7 +376,12 @@ def _assert_pipeline_provenance(payload: dict[str, Any], manifest: dict[str, Any
         .get("lineage_bindings", [])
         if isinstance(binding, dict)
     }
+    from semantic_agent import validate_item_grounding
     for index, item in enumerate(payload.get("top_10", [])):
+        try:
+            validate_item_grounding(item, item, manifest)
+        except RunContractError as exc:
+            raise ForgeContractError(f"top_10[{index}]: {exc}") from exc
         if match_history(item, entries=recent_history, now=report_clock).get("redundant"):
             raise ForgeContractError(
                 f"top_10[{index}] duplicates the bound history snapshot"

@@ -1,18 +1,18 @@
 {
   "schema_version": 3,
   "skill": "personal-writing-assistant",
-  "generated_at": "2026-10-07T10:34:36+08:00",
+  "generated_at": "2026-10-09T11:54:45+08:00",
   "hash_algorithm": "SHA-256",
   "text_hash_normalization": "LF",
   "skill_md": "SKILL.md",
-  "skill_md_sha256": "0d5d72cebd59cc88fdf0e1287ee32850016e7b936aad619b52f53c3529e66c7c",
+  "skill_md_sha256": "da2a087c6e78ecf0152806c6e6727bc74dec7dd79b4f953c653d0f197c0eca60",
   "top_level_files": [
     "SKILL.md"
   ],
   "top_level_file_hashes": [
     {
       "path": "SKILL.md",
-      "sha256": "0d5d72cebd59cc88fdf0e1287ee32850016e7b936aad619b52f53c3529e66c7c"
+      "sha256": "da2a087c6e78ecf0152806c6e6727bc74dec7dd79b4f953c653d0f197c0eca60"
     }
   ],
   "top_level_directories": [
@@ -38,6 +38,10 @@
     {
       "name": "agents",
       "file_count": 1
+    },
+    {
+      "name": "tests",
+      "file_count": 2
     }
   ],
   "resource_file_hashes": [
@@ -51,11 +55,11 @@
     },
     {
       "path": "references/deliverable-patterns.md",
-      "sha256": "6414de14b62184f5468fae2528a8d5988bcd9cbbd9d22f5496fca7bf445d71e3"
+      "sha256": "fedf663e7a7ae189c6d78f179da0e6007a90279fefb355284d1cb658ef92b2c7"
     },
     {
       "path": "references/evidence-and-risk.md",
-      "sha256": "b0825fdf163ef513b86528db7e3723d0f1352747ff29744ed4e00fdbe2b3a03b"
+      "sha256": "3c1527bf63e4bebaf9882748d636a9495bafb60164bbea882ba8f255a884e5bc"
     },
     {
       "path": "references/my_voice_samples.md",
@@ -63,11 +67,15 @@
     },
     {
       "path": "scripts/text_qa.py",
-      "sha256": "c3ebd8273988bacdbae94d94e0601b2c810e1aba567bab55e018888ae3abc822"
+      "sha256": "748598abd6c9f42a6f2e254871ebe1c01b45660e2da89ad4bea6d82bd1e88a7e"
     },
     {
       "path": "tests/test_text_qa.py",
-      "sha256": "40944d6ef245b53ea5bce0e9d29b4bd6f29cd6cca9ea2730dde387d8573288f1"
+      "sha256": "277ff734b80589c446eef1d964fc2f9bfb9fb0f5585605b98ee976318867c98f"
+    },
+    {
+      "path": "tests/behavior-cases.md",
+      "sha256": "0c668593305be3f3c8c90c74db8a30dd88e9eaf382913acab92dca287fac0215"
     }
   ],
   "declared_local_dependencies": [
@@ -75,13 +83,13 @@
       "path": "references/deliverable-patterns.md",
       "exists": true,
       "resolved_path": "personal-writing-assistant/references/deliverable-patterns.md",
-      "sha256": "6414de14b62184f5468fae2528a8d5988bcd9cbbd9d22f5496fca7bf445d71e3"
+      "sha256": "fedf663e7a7ae189c6d78f179da0e6007a90279fefb355284d1cb658ef92b2c7"
     },
     {
       "path": "references/evidence-and-risk.md",
       "exists": true,
       "resolved_path": "personal-writing-assistant/references/evidence-and-risk.md",
-      "sha256": "b0825fdf163ef513b86528db7e3723d0f1352747ff29744ed4e00fdbe2b3a03b"
+      "sha256": "3c1527bf63e4bebaf9882748d636a9495bafb60164bbea882ba8f255a884e5bc"
     },
     {
       "path": "references/my_voice_samples.md",
@@ -93,7 +101,13 @@
       "path": "scripts/text_qa.py",
       "exists": true,
       "resolved_path": "personal-writing-assistant/scripts/text_qa.py",
-      "sha256": "c3ebd8273988bacdbae94d94e0601b2c810e1aba567bab55e018888ae3abc822"
+      "sha256": "748598abd6c9f42a6f2e254871ebe1c01b45660e2da89ad4bea6d82bd1e88a7e"
+    },
+    {
+      "path": "tests/behavior-cases.md",
+      "exists": true,
+      "resolved_path": "personal-writing-assistant/tests/behavior-cases.md",
+      "sha256": "0c668593305be3f3c8c90c74db8a30dd88e9eaf382913acab92dca287fac0215"
     }
   ],
   "missing_declared_dependencies": []

@@ -364,6 +364,32 @@ class ResourceManifestTests(unittest.TestCase):
         self.assertEqual(result.returncode, 0, result.stdout + result.stderr)
         self.assertTrue((skill_dir / "resource-manifest.json").is_file())
 
+    def test_explicit_parent_reference_uses_skill_directory(self):
+        scripts = self.root / "scripts"
+        scripts.mkdir()
+        (scripts / "check.py").write_text("print('check')\n", encoding="utf-8")
+        skill = self.create_skill("example-skill", "运行 `../scripts/check.py`。")
+        local_scripts = skill / "scripts"
+        local_scripts.mkdir()
+        (local_scripts / "check.py").write_text("print('local shadow')\n", encoding="utf-8")
+        result = manifest.generate_manifests(self.root)
+        self.assertEqual(result["failed"], 0, result["issues"])
+        document = json.loads((skill / "resource-manifest.json").read_text(encoding="utf-8"))
+        dependency = document["declared_local_dependencies"][0]
+        self.assertEqual(dependency["path"], "scripts/check.py")
+        self.assertEqual(dependency["resolved_path"], "scripts/check.py")
+        self.assertEqual(dependency["sha256"], manifest.canonical_sha256(scripts / "check.py"))
+        self.assertEqual(manifest.check_manifests(self.root)["stale"], 0)
+
+    def test_parent_reference_escape_is_not_reinterpreted_as_root_reference(self):
+        scripts = self.root / "scripts"
+        scripts.mkdir()
+        (scripts / "check.py").write_text("print('check')\n", encoding="utf-8")
+        skill = self.create_skill("example-skill", "运行 `../../scripts/check.py`。")
+        result = manifest.generate_manifests(self.root)
+        self.assertEqual(result["failed"], 1)
+        self.assertFalse((skill / "resource-manifest.json").exists())
+
 
 class ResourceManifestWrapperTests(unittest.TestCase):
     def setUp(self):

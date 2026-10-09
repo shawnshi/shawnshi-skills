@@ -15,7 +15,7 @@
     "date_ownership_rule": "新 request 的 candidate_date_evidence_version=1 由父注册器生成并验证 aggregate.candidate_date_evidence；worker 不写此 envelope。每个 required bound candidate 在 bound_candidate_decisions 中恰好出现一次，registered 必须有本 gap 的实际 enriched candidate 和对应原样 access_log。日期来源是既有登记元数据等级，不是正文认证；unknown/retrieved_at 不合格。同源未解释日期冲突保守排除；新 hash/时间戳不是独立证据。requested URL 仅按现有 normalize_url 与候选 URL 比较，final URL 不给其他候选资格。旧 bundle 冻结，新代码消费 legacy records 不再借全局 URL 访问授权 bare pool。",
     "date_rule": "published_at 必须来自来源明确日期或可靠元数据；进入 core 时固定为严格 YYYY-MM-DD，候选为合法 ISO datetime 时调用 run_daily.py normalize-published-at，按其自带时区取日期后规范化；观察时间不得冒充发布日期；未知日期不得进入正式候选。",
     "stop_rule": "达到请求中的 halt_condition、用完 max_turns，触及 execution_budget 的查询数、URL 数或时限，或连续检索无增量时停止并返回结构化结果。 Broker v2 以 next_action.stop_eligible 为封口必要条件；过期不是成功封口理由，保留证据走失败 reconciliation。",
-    "budget_rule": "只消费 agent_helper 返回的当前 gap 紧凑上下文；每个 gap 最多执行 execution_budget.max_queries 个查询、访问 execution_budget.max_urls 个 URL，并在 max_duration_seconds 内结束来源核验。source_checked 后立即记录 completed_at，随后只能在 finalization.grace_seconds 内写动态 draft 并运行确定性 helper；不得继续检索或读取其他上下文。调用层必须原样传递 launch_plan.tool_budget 与 timeout_ms。",
+    "budget_rule": "只消费 agent_helper 返回的当前 gap 紧凑上下文；每个 gap 最多执行 execution_budget.max_queries 个查询、访问 execution_budget.max_urls 个 URL，并在 max_duration_seconds 内结束来源核验。source_checked 后立即记录 completed_at，随后只能在 finalization.grace_seconds 内写动态 draft 并运行确定性 helper；不得继续检索或读取其他上下文。调用层只分派 preflight 返回的原生 Pi launch_options；登记字段由帮助脚本确定性适配，不直接传 snake_case。",
     "progress_rule": "agent_helper context 成功后可发送 supplement_progress seq=1 phase=input_validated；预留工具调用，在 hard cap 前持久化完整动态 draft，优先于可选 contact_supervisor 消息。来源核验结束时固定 completed_at 并停止研究；supplement_progress seq=2 phase=source_checked 为可选消息；source_checked 不等于 finalized，不要求额外 chat 调用。若有剩余工具调用则运行 agent_helper finalize，否则进入父任务 fallback。所有父任务 fallback 必须先在 terminal 前及原 grace 内运行绑定 finalize --parent，仅成功后再经 finalize-supplement 正式登记。已装配 draft 也必须先通过 finalize --parent 的 guard，只跳过重装配，不跳过 guard，不改字节；缺失、无效、迟到或 terminal 证据保持原字节并 reconciliation。不得增加预算、改时间戳、重启同一请求或发送自由格式心跳。",
     "empty_rule": "无增量时返回 status=no_increment、空 candidates、非空 executed_queries、至少一条 access_log 和真实 coverage，不得用弱信号补数。 Broker v2 例外仅限两次真实成功搜索且无可用未访问替代 URL 的零访问低置信 no_increment，或 exact bound_only_complete 的无查询收口。v3 另允许证据派生 bound_budget_exhausted 的无查询收口：全部 exact required URL 原生访问已结算且耗尽 URL 预算、无查询/未结算/错误回执、时钟有效未过期；保留成功候选与所有失败访问，有失败/日期排除必须 degraded 且非 high，零候选 degraded/low；不绕过日期、来源、lineage、semantic 门禁。查询错误绝非 empty。",
     "coverage_rule": "coverage 必须逐项等于 access_log 中 verified 与 blocked 的实际计数；每条访问记录必须同时记录 requested_url 与跳转后的 final_url；候选 access_check.requested_url 必须匹配候选 url，并逐字段对应 access_log 中的 verified 记录。",
@@ -88,8 +88,8 @@
       "authoritative_packet_field": "agent_helper_context"
     },
     "parallelism": {
-      "max_supplement_workers": 3,
-      "overflow_strategy": "canary_first_then_bounded_fanout",
+      "max_supplement_workers": 1,
+      "overflow_strategy": "canary_first_then_serial_writers",
       "canary_workers": 1,
       "stop_fanout_on_canary_infrastructure_failure": true,
       "one_gap_per_worker": true,
@@ -98,7 +98,7 @@
     "observability": {
       "supplement_token_budget_per_gap": 150000,
       "supplement_finalization_grace_seconds": 900,
-      "parent_finalization_receipt_rule": "New native-v3 requests carry finalization.parent_receipt_version=1. The bound finalize --parent validates within the unchanged 300s grace and atomically journals parent-supplement-finalization/1.0 in run_manifest.parent_supplement_finalizations[gap_id], binding run/request/packet SHA, sealed broker evidence and completed_at, actual finalized_at, original/final draft SHA and exact final bytes. Retry the same CLI after interruption: only the journaled source/final bytes recover, without a new clock. Later finalize-supplement accepts unchanged timely-attested bytes while revalidating semantic/proof/terminal gates. Missing receipts retain strict grace; v2 and old frozen requests are unchanged. Never synthesize receipts for old events or use mtime; no budgets increase.",
+      "parent_finalization_receipt_rule": "New native-v3 requests carry finalization.parent_receipt_version=1. The bound finalize --parent validates within the registered finalization.grace_seconds and atomically journals parent-supplement-finalization/1.0 in run_manifest.parent_supplement_finalizations[gap_id], binding run/request/packet SHA, sealed broker evidence and completed_at, actual finalized_at, original/final draft SHA and exact final bytes. Retry the same CLI after interruption: only the journaled source/final bytes recover, without a new clock. Later finalize-supplement accepts unchanged timely-attested bytes while revalidating semantic/proof/terminal gates. Missing receipts retain strict grace; v2 and old frozen requests are unchanged. Never synthesize receipts for old events or use mtime; no budgets increase.",
       "supplement_tool_budget_soft": 20,
 
       "supplement_tool_budget_hard": 28,

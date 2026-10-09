@@ -1980,6 +1980,7 @@ def _load_summary(
             network_capability=network_capability,
             operation=DASHBOARD_LIVE_OPERATION,
             request=request,
+            raise_on_error=True,
         )
         if not client:
             raise RuntimeError("LIVE_AUTH_UNAVAILABLE")
@@ -2211,7 +2212,9 @@ def main(argv: list[str] | None = None) -> int:
             "LOCAL_DATA_UNAVAILABLE",
             "NETWORK_ACCESS_NOT_AUTHORIZED",
             "HEALTH_DATA_ACCESS_NOT_AUTHORIZED",
-            "LIVE_AUTH_UNAVAILABLE",
+            "LIVE_AUTH_UNAVAILABLE", "tls_error", "rate_limited",
+            "token_store_error", "dependency_error", "connection_error",
+            "authentication_failed", "mfa_required", "auth_unclassified",
             "HEALTH_DATA_LOAD_FAILED",
             "LIVE_SCOPE_INVALID",
         }

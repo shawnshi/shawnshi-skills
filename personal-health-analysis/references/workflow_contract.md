@@ -1,5 +1,15 @@
 # Garmin 分支执行合同
 
+## 导航
+
+- [运行前提](#运行前提)
+- [本地分析](#本地分析)
+- [数据质量](#数据质量)
+- [离线可视化与报告](#离线可视化与报告)
+- [受限实时回退](#受限实时回退)
+- [同步执行合同](sync_contract.md)
+- [研究输出](#研究输出)
+
 本页保留执行细节；按 SKILL.md 所选分支读取对应节，不要求无条件读完整页。各节独立编号，按所选任务执行。指标解释继续复用 health_analysis.md，画像复用 health_profile.md，实时访问复用 api.md，扩展工具与研究验收复用 advanced_tools.md、external_acceptance.md。
 
 ## 运行前提
@@ -34,7 +44,7 @@
 
 4. 将观察值、可能解释和不能判断的事项分开。`baseline_change` 只描述相对个人基线的变化，不对应疾病风险；覆盖不足、日期未对齐、基线少于 21 个同日样本、零方差、`duplicate_conflict`、`cross_epoch`、`manufacturer_algorithm_epoch_unknown`、`analysis_algorithm_epoch_unknown` 或其他 `epoch_unknown` 时不分类。`patterns` 的方向只表示高于、低于、等于或混合于个人历史中位数，不含健康好坏含义。`readiness` 始终不生成复合分数、红黄绿灯或行动等级。任何脚本结果都不得决定训练、补剂、日程或重要决策。
 
-5. 仅在指标多、周期长且任务可独立拆分时使用子代理；传递最小化、去标识的数据。未经用户许可不得把健康数据发送给外部服务。
+5. 指标多、周期长不构成委派授权。仅在当前用户授权覆盖委派、运行时确有能力且必要数据隔离已核验时使用子代理；未经隔离配置的子代理不得接收私人健康事实。最小化或去标识不等于已经匿名化或隔离，缺失条件时由主代理在原授权范围内完成。
 
 ### 描述性模式分析合同
 
@@ -107,15 +117,7 @@
 
 ## 显式同步管理
 
-源码固定哈希门禁已移除。旧 `--authority-config` 参数仅为兼容旧调用而接受，不读取该配置，也不报告哈希通过。`freshness_task_gate.py` 检查已有计划任务时，仍须由调用方提供已批准的 `--expected-arguments-sha256`；没有该指纹则停止，不从实际任务反向信任自身参数。其来源是用户授权注册时 `install_auto_sync_task.ps1` 返回的 `arguments_sha256` 回执字段；调用方保留该批准时点的值，不能以重新查询未经核验的现有任务来补齐。直接同步仍核对 canonical runner 路径、显式能力、日期、单例锁、预检、短期计划、数据库变化与末端覆盖。本次移除不注册、更新或启动任何现有计划任务。
-
-- 用户明确要求启用 Garmin 自动同步时，该请求授权注册或更新一个当前用户、最低权限的计划任务。用户明确启用后，已注册的计划任务会按日自动同步到绑定的 GarminDB 本地数据库，并自动更新单一脱敏运行状态文件；该持续授权仅来自这次明确启用请求。任务动作仍必须显式携带 `--allow-network`、`--allow-sync` 与 `--allow-health-data`，不得把授权扩展到登录、令牌写入、活动轨迹下载、账户设置、代理、证书或其他存储。如果用户要求仅诊断、预览、不保存、试运行、不同步、禁用或移除自动同步，则保持只读，不注册或运行任务，也不写入数据库或状态文件。
-- 活动轨迹属于独立授权面。`sync_health_data.py sync` 仅在显式传入 `--allow-download` 时才追加活动下载与导入；该门与 `--allow-network`、`--allow-sync` 一样绑定精确窗口、在启动前各消费一次，并且必须与该次调用计划中的 `gates` 字段完全一致，不一致即拒绝执行。未传入时行为与不含活动同步时完全相同。活动在上游按最近 N 个选取而非日期窗口，因此不经过日期适配器，并分别作为 `activities_download`、`activities_import` 两个阶段执行。自动同步任务不得隐式获得该门。
-
-1. 只有用户明确要求同步后，才执行两阶段同步：先运行 `<SKILL_PYTHON> scripts/sync_health_data.py sync --start <YYYY-MM-DD> --end <YYYY-MM-DD> --dry-run --config-dir <TRUSTED_CONFIG_DIR> --garmindb-python <TRUSTED_GARMINDB_PYTHON> --plan-output <SESSION_SCRATCH>/sync-plan.json` 生成短期计划；核对范围和绑定摘要后，再在计划有效期内运行 `<SKILL_PYTHON> scripts/sync_health_data.py sync --start <YYYY-MM-DD> --end <YYYY-MM-DD> --allow-network --allow-sync --config-dir <TRUSTED_CONFIG_DIR> --garmindb-python <TRUSTED_GARMINDB_PYTHON> --plan-file <SESSION_SCRATCH>/sync-plan.json`。GarminDB runner 可使用显式指定的全局 Python 或虚拟环境，不要求独立虚拟目录；必须在解释器相邻安装中定位 CLI，并核对固定版本 `garmindb==3.9.0` 与 `garminconnect==0.3.17`。计划同时绑定配置、同目录令牌、解析后的绝对数据根及 `DBs` 目录身份；执行时只把配置与令牌复制到自动删除的临时目录，并把临时配置改写为已绑定的绝对数据根。GarminDB 的配置结束日为开区间，临时配置把用户结束日加一天；3.9.0 CLI 还会用不含当天的天数截断，因此 `sync_health_data.py` 内置有界子进程适配，仅对固定 AST 摘要匹配的 `__get_date_and_days` 非 latest 分支修正当天计数，并核对返回范围与请求完全一致。日期不得在未来，不改变系统时钟或上游安装。v3 短期计划新增适配器所属源文件身份/哈希绑定，旧计划必须重新生成；子进程在执行任何上游代码前核对 CLI 原始字节哈希、方法形状、临时配置摘要、精确窗口与过期时间，失败即停止；运行分成 `download`（精确窗口下载）和 `import`（仅导入本次新增文件）两个子阶段，禁止全历史重复导入。日常补同步不携带 `--analyze`：GarminDB 的 `Analyze.summary()` 会遍历所有存储年份，不受本次窗口限制，不能混入限时补数。回执明确标记 `summary_analysis=not_requested`；既有派生汇总不会被重新计算，不承诺其已更新。需要全历史汇总时另开受控、分批的显式任务，不能直接绕过 canonical 能力与生命周期门。启动前要重新核对计划有效期、配置、令牌、数据根、临时副本和 runner，子进程以 `python -I -B`、清理环境和关闭 stdin 运行；联网与同步能力绑定精确日期窗口并在启动前各消费一次。计划还绑定解释器与 CLI 身份、可选 `pyvenv.cfg`、完整 site-packages 文件树及固定包元数据。不得从全局 `PATH` 寻找 CLI 或切换备用 API。文件哈希不是签名，也不能抵御同一 Windows 用户下可同时改写技能、计划和 runner 的敌对进程；这类要求必须使用独立服务账号、代码签名/WDAC/AppLocker 或不可变镜像作为外部信任根。同步返回成功后必须用目标数据库指纹和请求窗口的本地覆盖复核，不能只看退出码。默认安装不包含 GarminDB。
-
-   - 用户明确要求启用自动同步时，使用 `scripts/install_auto_sync_task.ps1` 注册当前用户计划任务。默认每日 06:30 同步最近 7 个自然日，`StartWhenAvailable=true`、`MultipleInstances=IgnoreNew`、`RunLevel=Limited`、`LogonType=Interactive`；不保存账户密码，也不唤醒设备。调度动作必须指向本目录的 `scripts/garmin_auto_sync.py` 并保留显式能力标志，每次重新生成 900 秒短期计划。运行器总预算必须短于任务的物理执行上限，并在获得单例锁后、每个阶段开始前、成功或失败时原子更新脱敏状态；外部终止后遗留的 `running` 状态必须被下一次读取识别为 `interrupted_or_terminated`，不得误报成功。失败不在同一次运行中重试，等待下一日调度或由获授权的新鲜度门启动一次。日记和复盘需要新鲜度同步时，直接运行两阶段同步：先 `sync_health_data.py sync --dry-run` 生成短期计划，再 `sync_health_data.py sync --allow-network --allow-sync` 执行，沿用 7 个自然日窗口并验证终态起止日期、数据库变化和五组件末端覆盖。不经计划任务触发；授权、身份或覆盖验证失败均失败关闭。
-   - 自动同步状态只允许保存运行 ID、请求窗口、当前阶段、逐组件观测数量和最近观测日期、数据库指纹变化布尔值、错误类型及完成时间；不得保存健康数值、令牌、配置内容、本地路径或子进程原始错误正文。只有能力、解释器预检和同步计划验证通过、数据库指纹发生变化、五个必需组件的最近观测日期均到达请求末日、且同步后本地重读通过，才允许 `status=success`。注册后检查任务动作、最低权限、下次运行时间和状态文件，并手动启动一次任务完成跨表面验证。
+只读诊断、预览与实际同步均先读取 [同步执行合同](sync_contract.md)，不要从分析授权推导同步、令牌写入或活动轨迹权限。同步计划、精确日期边界、总时间预算及 runner 兼容性由该文件统一定义。
 
 ## 研究输出
 

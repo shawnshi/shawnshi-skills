@@ -238,7 +238,7 @@ export function resolveChromiumLaunchArgs(options = {}) {
   if (isRoot && allowNoSandbox) {
     for (const flag of ['--no-sandbox', '--disable-setuid-sandbox']) if (!args.includes(flag)) args.push(flag);
   }
-  return { args, isRoot, noSandbox: isRoot && allowNoSandbox };
+  return { args, isRoot, noSandbox: allowNoSandbox && (isRoot || requestedNoSandbox) };
 }
 
 export async function inspectBrowserRuntime(options = {}) {
@@ -279,6 +279,7 @@ export async function launchChromium(options = {}) {
   const browser = await api.chromium.launch({
     headless: options.headless !== false,
     executablePath: executable.path,
+    chromiumSandbox: !launchPolicy.noSandbox,
     args: launchPolicy.args
   });
   return { browser, executable, playwright: resolved, sandbox: launchPolicy, targetBrowser };

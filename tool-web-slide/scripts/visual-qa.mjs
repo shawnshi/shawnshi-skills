@@ -1,8 +1,8 @@
 #!/usr/bin/env node
-import { createHash, randomUUID } from 'node:crypto';
+import { createHash } from 'node:crypto';
 import { existsSync } from 'node:fs';
-import { lstat, mkdir, readFile, realpath, rename, unlink, writeFile } from 'node:fs/promises';
-import { basename, dirname, isAbsolute, join, relative, resolve } from 'node:path';
+import { lstat, mkdir, realpath } from 'node:fs/promises';
+import { dirname, isAbsolute, join, relative, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import {
   assertTargetOs,
@@ -18,6 +18,7 @@ import {
   waitForDeck
 } from './lib/browser-runtime.mjs';
 import { createStaticServer } from './lib/static-server.mjs';
+import { inspectQaArtifacts, publishQaArtifacts } from './lib/qa-artifacts.mjs';
 
 function pageName(index) {
   return `slide-${String(index + 1).padStart(3, '0')}.png`;
@@ -62,39 +63,6 @@ async function assertSafeOutputFile(outputDir, outputDirReal, filePath, label) {
   const info = await lstat(target);
   if (info.isSymbolicLink() || !info.isFile()) throw new Error(`${label} must not be a symlink or non-file target.`);
   if (!pathInside(outputDirReal, await realpath(target))) throw new Error(`${label} escapes the visual QA output directory.`);
-}
-
-async function trustedPreviousScreenshots(reportPath, outputDir, outputDirReal) {
-  if (!existsSync(reportPath)) return [];
-  await assertSafeOutputFile(outputDir, outputDirReal, reportPath, 'Visual QA report path');
-  let report;
-  try { report = JSON.parse(await readFile(reportPath, 'utf8')); }
-  catch (_) { return []; }
-  if (report?.kind !== 'visual-qa' || !Array.isArray(report.slides)) return [];
-  const trusted = [];
-  for (const slide of report.slides) {
-    const screenshot = slide?.screenshot;
-    if (!screenshot || typeof screenshot.file !== 'string' || !/^slide-\d{3,}\.png$/.test(screenshot.file)
-        || !Number.isInteger(screenshot.bytes) || !/^[a-f0-9]{64}$/.test(screenshot.sha256 || '')) continue;
-    const screenshotPath = resolve(outputDir, screenshot.file);
-    await assertSafeOutputFile(outputDir, outputDirReal, screenshotPath, `Previous screenshot ${screenshot.file}`);
-    if (!existsSync(screenshotPath)) continue;
-    const bytes = await readFile(screenshotPath);
-    if (bytes.length === screenshot.bytes && createHash('sha256').update(bytes).digest('hex') === screenshot.sha256) {
-      trusted.push(screenshotPath);
-    }
-  }
-  return trusted;
-}
-
-async function writeJsonAtomic(filePath, value) {
-  const temporaryPath = join(dirname(filePath), `.${basename(filePath)}.${randomUUID()}.tmp`);
-  await writeFile(temporaryPath, `${JSON.stringify(value, null, 2)}\n`, 'utf8');
-  try {
-    await rename(temporaryPath, filePath);
-  } finally {
-    await unlink(temporaryPath).catch(error => { if (error.code !== 'ENOENT') throw error; });
-  }
 }
 
 function normalizedSlides(slides) {
@@ -213,8 +181,7 @@ export async function runVisualQa(options = {}) {
   const outputDir = preparedOutput.directory;
   const reportPath = join(outputDir, 'report.json');
   await assertSafeOutputFile(outputDir, preparedOutput.directoryReal, reportPath, 'Visual QA report path');
-  const previousScreenshots = await trustedPreviousScreenshots(reportPath, outputDir, preparedOutput.directoryReal);
-  await unlink(reportPath).catch(error => { if (error.code !== 'ENOENT') throw error; });
+  inspectQaArtifacts(deckRoot, [reportPath]);
 
   let server;
   let browser;
@@ -253,7 +220,7 @@ export async function runVisualQa(options = {}) {
     );
 
     const brokenImages = assetReadiness.images.filter(image => !image.ok).map(image => image.src);
-    for (const screenshotPath of previousScreenshots) await unlink(screenshotPath);
+    const artifacts = new Map();
     const slides = [];
     for (const selected of coverage.selectedSlides) {
       const index = selected.index - 1;
@@ -261,8 +228,8 @@ export async function runVisualQa(options = {}) {
       const screenshotFile = pageName(index);
       const screenshotPath = join(outputDir, screenshotFile);
       await assertSafeOutputFile(outputDir, preparedOutput.directoryReal, screenshotPath, `Screenshot ${screenshotFile}`);
-      await page.screenshot({ path: screenshotPath, animations: 'disabled' });
-      const screenshotBytes = await readFile(screenshotPath);
+      const screenshotBytes = await page.screenshot({ animations: 'disabled' });
+      artifacts.set(screenshotPath, screenshotBytes);
       slides.push({
         ...selected,
         ...inspection,
@@ -314,7 +281,8 @@ export async function runVisualQa(options = {}) {
       diagnostics,
       failures
     };
-    await writeJsonAtomic(reportPath, report);
+    artifacts.set(reportPath, `${JSON.stringify(report, null, 2)}\n`);
+    publishQaArtifacts(deckRoot, artifacts);
     return { ...report, reportPath, outputDir };
   } finally {
     await page?.close().catch(() => {});

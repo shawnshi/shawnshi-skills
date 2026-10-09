@@ -1,9 +1,10 @@
 #!/usr/bin/env node
 import { existsSync } from 'node:fs';
 import { createHash, randomUUID } from 'node:crypto';
-import { lstat, mkdir, readFile, realpath, rename, unlink, writeFile } from 'node:fs/promises';
+import { lstat, mkdir, readFile, realpath, unlink } from 'node:fs/promises';
 import { basename, dirname, extname, isAbsolute, join, relative, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
+import { inspectQaArtifacts, publishQaArtifacts } from './lib/qa-artifacts.mjs';
 import { assertDeliverySnapshotStable, assertTargetOs, attachPageDiagnostics, captureDeliverySnapshot, installNetworkPolicy, launchChromium, readDeckConfig, readDeckExecutionConfig, resolveNetworkAccess, waitForDeck } from './lib/browser-runtime.mjs';
 import { createStaticServer } from './lib/static-server.mjs';
 
@@ -110,7 +111,7 @@ export async function exportPdf(options = {}) {
   if (extname(reportPath).toLowerCase() !== '.json') throw new Error('PDF report path must use the .json extension.');
   await ensureSafeOutputPath(deckRoot, outputPath, 'PDF output path');
   await ensureSafeOutputPath(deckRoot, reportPath, 'PDF report path');
-  await unlink(reportPath).catch(error => { if (error.code !== 'ENOENT') throw error; });
+  inspectQaArtifacts(deckRoot, [outputPath, reportPath]);
   const deliverySnapshot = await captureDeliverySnapshot(htmlPath);
   const declared = await readDeckExecutionConfig(htmlPath);
   await assertDeliverySnapshotStable(deliverySnapshot);
@@ -121,7 +122,6 @@ export async function exportPdf(options = {}) {
     deliveryProfile: declared.deliveryProfile
   });
   const temporaryPath = join(dirname(outputPath), `.${basename(outputPath)}.${process.pid}.${randomUUID()}.tmp.pdf`);
-  const temporaryReportPath = join(dirname(reportPath), `.${basename(reportPath)}.${process.pid}.${randomUUID()}.tmp`);
   const startedAt = new Date().toISOString();
   let server, browser, page;
   try {
@@ -155,6 +155,10 @@ export async function exportPdf(options = {}) {
       window.setMode?.('pres');
       document.body.classList.remove('doc-mode');
       document.body.classList.add('pres-mode', 'low-power');
+      document.querySelectorAll('#deck .slide').forEach(slide => {
+        slide.inert = false;
+        slide.removeAttribute('aria-hidden');
+      });
     });
     await page.addStyleTag({ content: printCss(config) });
     await page.emulateMedia({ media: 'print' });
@@ -188,16 +192,16 @@ export async function exportPdf(options = {}) {
       startedAt,
       completedAt: new Date().toISOString()
     });
-    await writeFile(temporaryReportPath, `${JSON.stringify(report, null, 2)}\n`, 'utf8');
-    await rename(temporaryPath, outputPath);
-    await rename(temporaryReportPath, reportPath);
+    publishQaArtifacts(deckRoot, new Map([
+      [outputPath, pdfBuffer],
+      [reportPath, `${JSON.stringify(report, null, 2)}\n`]
+    ]));
     return { ...report, reportPath, outputPath, config, diagnostics };
   } finally {
     await page?.close().catch(() => {});
     await browser?.close().catch(() => {});
     await server?.close().catch(() => {});
     await unlink(temporaryPath).catch(error => { if (error.code !== 'ENOENT') console.warn(`Could not remove temporary PDF: ${error.message}`); });
-    await unlink(temporaryReportPath).catch(error => { if (error.code !== 'ENOENT') console.warn(`Could not remove temporary PDF report: ${error.message}`); });
   }
 }
 

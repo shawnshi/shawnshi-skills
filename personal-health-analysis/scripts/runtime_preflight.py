@@ -6,6 +6,8 @@ from __future__ import annotations
 import argparse
 import importlib.util
 import json
+import os
+import subprocess
 import sys
 from importlib import metadata
 
@@ -22,6 +24,44 @@ MODE_REQUIREMENTS = {
         "gpxpy": ("gpxpy", "1.6.2"),
     },
 }
+
+
+def probe_imports(modules: list[str]) -> dict[str, object]:
+    """Import reviewed modules without initializing clients or ambient Garmin tokens."""
+    code = r'''
+import importlib, json, sys
+apis = {"pandas": ("DataFrame",), "garminconnect": ("Garmin",),
+        "fitparse": ("FitFile",), "gpxpy": ("parse",)}
+try:
+    for name in json.loads(sys.argv[1]):
+        module = importlib.import_module(name)
+        for symbol in apis[name]:
+            if not hasattr(module, symbol):
+                raise AttributeError("required_api_missing")
+    print(json.dumps({"ok": True}))
+except Exception as exc:
+    print(json.dumps({"ok": False, "error_type": type(exc).__name__}))
+    sys.exit(1)
+'''
+    env = {key: value for key, value in os.environ.items()
+           if not key.upper().startswith(("GARTH_", "GARMIN_"))}
+    try:
+        completed = subprocess.run(
+            [sys.executable, "-I", "-B", "-c", code, json.dumps(modules)],
+            env=env, stdin=subprocess.DEVNULL, stdout=subprocess.PIPE,
+            stderr=subprocess.PIPE, encoding="utf-8", timeout=15, check=False,
+        )
+        result = json.loads(completed.stdout)
+        if not isinstance(result, dict) or result.get("ok") is not (completed.returncode == 0):
+            return {"ok": False, "error_type": "InvalidProbeOutput"}
+        error_type = result.get("error_type")
+        if error_type is not None and (not isinstance(error_type, str) or not error_type.isidentifier()):
+            return {"ok": False, "error_type": "InvalidProbeOutput"}
+        return {"ok": completed.returncode == 0, "error_type": error_type}
+    except subprocess.TimeoutExpired:
+        return {"ok": False, "error_type": "ImportTimeout"}
+    except (OSError, ValueError):
+        return {"ok": False, "error_type": "ImportProbeUnavailable"}
 
 
 def verify_runtime(mode: str) -> dict[str, object]:
@@ -61,11 +101,15 @@ def verify_runtime(mode: str) -> dict[str, object]:
             )
             continue
 
-        importable = importlib.util.find_spec(module) is not None
+        try:
+            importable = importlib.util.find_spec(module) is not None
+        except (ImportError, ValueError):
+            importable = False
         requirements[distribution] = {
             "expected": expected,
             "actual": actual,
-            "importable": importable,
+            "located": importable,
+            "importable": None,
         }
         if actual != expected:
             failures.append(
@@ -86,11 +130,20 @@ def verify_runtime(mode: str) -> dict[str, object]:
                 }
             )
 
+    import_probe = None
+    if not failures:
+        import_probe = probe_imports([module for module, _ in MODE_REQUIREMENTS[mode].values()])
+        if not import_probe["ok"]:
+            failures.append({"reason": "import_probe_failed", **import_probe})
+        else:
+            for requirement in requirements.values():
+                requirement["importable"] = True
     ok = not failures
     return {
         "ok": ok,
         "status": "RUNTIME_READY" if ok else "RUNTIME_DEPENDENCY_UNAVAILABLE",
         "mode": mode,
+        "import_probe": import_probe,
         "python_executable": sys.executable,
         "python_version": ".".join(str(part) for part in sys.version_info[:3]),
         "requirements": requirements,

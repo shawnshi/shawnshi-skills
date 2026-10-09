@@ -1,10 +1,13 @@
 """Pure handoff projection and real frozen-launch construction; no network."""
 
 from copy import deepcopy
+import io
+import json
+from unittest.mock import patch
 
 import pytest
 import run_contract as rc
-from broker_handoff import compact_packet, publication_options
+from broker_handoff import compact_packet, draft_contract, publication_options
 from supplement_agent import build_agent_context
 from test_article_broker_contract import new_run, request as build_request
 
@@ -57,6 +60,45 @@ def test_preview_does_not_relabel_full_native_coverage_or_change_source():
         compact_packet(snap, {})
 
 
+def test_draft_contract_recovers_complete_schema_without_full_context_or_writes(new_run):
+    request_path, _ = build_request(new_run)
+    before = new_run[0].read_bytes()
+    full = build_agent_context(request_path, "tech")
+    with patch("broker_handoff.broker.evidence", side_effect=AssertionError("no acquisition")):
+        recovered = draft_contract(request_path, "tech")
+    assert recovered["draft_schema"] == full["draft_schema"]
+    assert recovered["draft_schema"]["candidate_identity_quality_allowed"] == ["semantic"]
+    assert recovered["draft_schema"]["candidate_event_identity_required"] == ["key_version", "primary_domain", "actor", "action", "object", "event_date"]
+    assert "exact registered candidate_id" in recovered["draft_schema"]["candidate_id_rule"]
+    assert recovered["draft_path"] == full["draft_path"]
+    assert recovered["required_bound_candidate_ids"] == full["required_bound_candidate_ids"]
+    expected = [{"candidate_id": c["candidate_ref"], "url": c["url"]} for c in full["bound_candidates"] if c["candidate_ref"] in full["required_bound_candidate_ids"]]
+    assert recovered["required_bound_candidates"] == expected
+    assert recovered["max_turns"] == full["gap"]["max_turns"]
+    assert "not supervisor messages" in recovered["turns_used_rule"]
+    assert recovered["request_sha256"] == rc.file_sha256(request_path)
+    assert not {"rules", "role", "bound_candidates", "article_broker"} & recovered.keys()
+    assert len(json.dumps(recovered, ensure_ascii=False).encode("utf-8")) < 8192
+    assert new_run[0].read_bytes() == before
+
+
+def test_draft_contract_cli_works_without_sealed_evidence(new_run):
+    from broker_handoff import main
+
+    request_path, _ = build_request(new_run)
+    output = io.StringIO()
+    with patch("sys.stdout", output), patch("sys.argv", ["broker_handoff.py", "--request", str(request_path), "--gap-id", "tech", "--draft-contract"]), patch("broker_handoff.broker.evidence", side_effect=AssertionError("no acquisition")):
+        main()
+    assert json.loads(output.getvalue()) == draft_contract(request_path, "tech")
+
+
+def test_draft_contract_rejects_changed_registered_request(new_run):
+    request_path, _ = build_request(new_run)
+    request_path.write_bytes(request_path.read_bytes() + b"\n")
+    with pytest.raises(rc.RunContractError):
+        draft_contract(request_path, "tech")
+
+
 def test_frozen_worker_exchange_write_budget_and_telemetry_binding(new_run):
     request_path, request = build_request(new_run)
     worker = request["launch_plan"][0]["workers"][0]
@@ -64,6 +106,8 @@ def test_frozen_worker_exchange_write_budget_and_telemetry_binding(new_run):
     task = packet["context_instructions"]
     assert len(worker["task_message"]) < len(task) / 4
     assert worker["task_message"] == packet["task_message"]
+    assert "broker_handoff.py" in worker["task_message"]
+    assert "--draft-contract" in worker["task_message"]
     assert "at most 3 requests total, never polling" in task
     assert "at most ONE batched read" in task
     assert "persist the complete dynamic draft by tool call 8" in task

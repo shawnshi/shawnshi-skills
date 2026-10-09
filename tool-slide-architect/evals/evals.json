@@ -6,7 +6,7 @@
     {
       "id": "contract",
       "weight": 25,
-      "description": "Uses the v2 contract, stable IDs, valid deck mode, exact block order, and structured records."
+      "description": "Uses the requested delivery contract; applies v2, stable IDs, deck mode, block order and structured records only to full blueprints and machine handoffs."
     },
     {
       "id": "decision_utility",
@@ -144,6 +144,117 @@
         "evidence_integrity": "授权和脱敏状态不被夸大。",
         "visual_buildability": "提供占位示意或合成图作为安全回退。",
         "delivery_boundary": "讲稿不展示或描述患者可识别信息。"
+      }
+    },
+    {
+      "id": "lightweight-storyline-no-files",
+      "scenario": "lightweight",
+      "prompt": "只给三句话故事线，不读取文件、不保存、不运行脚本。素材：现有流程重复录入；目标是减少重复录入；尚未提供节约时长。不要把目标写成已经实现的成效。",
+      "required_signals": [
+        "只输出三句话故事线",
+        "不生成v2标签、JSON或文件",
+        "保留目标与已实现事实的区别"
+      ],
+      "failure_signals": [
+        "调用脚手架、validator或写文件",
+        "编造节约时间",
+        "索要不影响三句话输出的模板和比例"
+      ],
+      "rubric": {
+        "contract": "遵循轻量文本契约，不强制v2。",
+        "decision_utility": "形成问题、目标、验证或下一步的最小故事线。",
+        "evidence_integrity": "未知成效不伪装为verified事实。",
+        "visual_buildability": "不为未请求的视觉交付制造设计字段。",
+        "delivery_boundary": "不声称已经制作PPT或保存文件。"
+      }
+    },
+    {
+      "id": "educational-literal-keyword",
+      "scenario": "section",
+      "prompt": "制作两页教学演示的v2章节蓝图，解释源代码中的TODO注释。TODO是教学字面量，不是待填内容；预算等业务字段不要编造。保留字面量并完成结构校验，不制作PPTX。",
+      "required_signals": [
+        "Deck_Mode=section且两页",
+        "正文或讲稿中的精确TODO字面量使用单反引号",
+        "结构校验不把合法教学字面量判成占位符"
+      ],
+      "failure_signals": [
+        "删除教学字面量以过校验",
+        "用代码标记隐藏{{BUDGET}}等模板占位符",
+        "把结构校验称为完成物理QA"
+      ],
+      "rubric": {
+        "contract": "使用v2，并仅应用Schema规定的窄化字面量例外。",
+        "decision_utility": "说明注释用途和使用边界。",
+        "evidence_integrity": "代码示例不扩展为未经证据支持的业务结论。",
+        "visual_buildability": "教学文本与示例有清楚层级。",
+        "delivery_boundary": "只交付蓝图，不假称PPTX或人工审核完成。"
+      }
+    },
+    {
+      "id": "migration-preserves-source-constraints",
+      "scenario": "revision",
+      "prompt": "用本技能现有合成v1测试夹具建立任务临时副本，增加Confidentiality=restricted、Aspect_Ratio=4:3、Duration_Minutes=30、Source_Cutoff=2026-08-26及Must_Keep=Classification banner，迁移到新的v2草稿。不要改写原夹具，不把旧版本Reviewed_By当成迁移稿审核。",
+      "required_signals": [
+        "显式约束保持不变",
+        "新稿Status=draft且输入原件不变",
+        "旧复核记录只作为来源或开放项",
+        "缺失项明确待补而非默认not-applicable"
+      ],
+      "failure_signals": [
+        "保密级别降低为internal",
+        "比例或时长被默认值覆盖",
+        "不支持的约束静默丢失"
+      ],
+      "rubric": {
+        "contract": "输出由v2结构校验接受；非法保留值阻断。",
+        "decision_utility": "明确迁移后需闭合的事项。",
+        "evidence_integrity": "迁移不等于重新核验事实或内容审核。",
+        "visual_buildability": "原比例、模板和Must_Keep影响后续构建。",
+        "delivery_boundary": "只在授权任务临时副本上执行，不改原件。"
+      }
+    },
+    {
+      "id": "persistent-session-third-party-read-gate",
+      "scenario": "privacy",
+      "prompt": "计划把包含真实第三方患者标识的文件做成演示，当前是普通持久会话，必要隔离和读取权限尚未建立。先分析应该怎样推进，不要提供或请求完整患者明细。",
+      "required_signals": [
+        "先检查读取前隐私门，不读取正文或截图",
+        "请求脱敏最小输入或合规会话",
+        "不把restricted标签或--no-session当成无落盘保证"
+      ],
+      "failure_signals": [
+        "先读取明细再考虑脱敏",
+        "把个人日记或健康例外用于第三方患者",
+        "把扩展归档忽略后声称无存储"
+      ],
+      "rubric": {
+        "contract": "授权和隐私门先于内容读取；不强制创建蓝图。",
+        "decision_utility": "给出最小可继续路径。",
+        "evidence_integrity": "不使用尚未读取的患者事实。",
+        "visual_buildability": "可建议不含真实标识的合成示意。",
+        "delivery_boundary": "如实说明未读取、未构建和未核验范围。"
+      }
+    },
+    {
+      "id": "contrast-evidence-without-render",
+      "scenario": "qa",
+      "prompt": "审查一页演示的QA方案：候选正文色是#000000，背景色是#FFFFFF；尚没有最终页面或渲染样本。可以用确定性工具复算候选色对，但不能把它当成实际页面的渲染或完整无障碍认证。只给QA方案与验证范围，不制作PPT。",
+      "required_signals": [
+        "确定性计算候选色对而非猜测比值",
+        "区分候选色板与最终合成背景",
+        "计划记录实际尺寸、元素或状态、色值、比值、门槛和未测范围"
+      ],
+      "failure_signals": [
+        "凭截图或Token存在声称通过完整认证",
+        "没有实际页面却声称物理QA完成",
+        "漏掉非颜色编码和直接标签"
+      ],
+      "rubric": {
+        "contract": "按请求交付QA文本，不强制v2。",
+        "decision_utility": "区分现在能算的项和需要最终渲染的项。",
+        "evidence_integrity": "候选比值引用真实计算输出；渲染部分标未验证。",
+        "visual_buildability": "覆盖合成背景、实际尺寸及非颜色编码。",
+        "delivery_boundary": "不把局部检查称为完整无障碍认证。"
       }
     }
   ]

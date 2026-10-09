@@ -20,11 +20,13 @@
 ## Draft and final
 
 - 草稿允许未闭合内容，但用 Open Items 记录类别、描述、责任人和日期。未结构化占位符会告警。
-- 最终稿禁止 moustache、`TBD`、`TODO`、`待补`、`待确认`、`待核验`、`[INSERT]`、`[BASELINE]` 等未结构化占位符。
+- 最终稿禁止未闭合的 moustache、`TBD`、`TODO`、`待补`、`待确认`、`待核验`、`[INSERT]`、`[BASELINE]` 等占位符；合法教学字面量仅按 [Schema 的窄化规则](outline-template.md#draft-and-final-validation) 表达，不把缺失内容包装成字面量。
 - 最终稿可保留结构化 `unverified` Claims、Open Items 和 Risk Flags；页面必须准确表达其状态，不得把它们写成已证实或已解决。
 - 资产权利为 `permission-pending` 或脱敏状态为 `pending` 时保持 `Status: draft`；取得许可、完成脱敏、换用合规替代资产或移除后才能标记 `final`。
 
 ## Privacy, confidentiality and rights
+
+- 此处的合规检查不授权读取原件；先执行主入口的读取前隐私门。保密标签、素材许可、脱敏状态与会话/归档边界分别核对，不把一个通过项当成全部许可。
 
 - 根据 `Confidentiality` 控制分发、导出、截图、外部链接和讲稿内容。
 - 患者、客户、员工、采购、合同、财务和安全信息按最小必要原则使用。

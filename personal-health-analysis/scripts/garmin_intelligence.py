@@ -2111,6 +2111,7 @@ def _load_summary(
         network_capability=network_capability,
         operation=LIVE_SUMMARY_OPERATION,
         request=request,
+        raise_on_error=True,
     )
     if not client:
         raise RuntimeError("LIVE_AUTH_UNAVAILABLE")
@@ -2157,13 +2158,6 @@ def _write_state_output(
 
 def main(argv=None) -> int:
     cli_args = list(sys.argv[1:] if argv is None else argv)
-    if cli_args and cli_args[0] == "insight_cn" and "--source" in cli_args:
-        # The primary insight path uses the newer bounded reader: exact window,
-        # explicit source, in-memory live tokens, and no implicit persistence.
-        from garmin_bounded import main as bounded_main
-
-        return bounded_main(cli_args)
-
     parser = argparse.ArgumentParser(
         description="Non-diagnostic Garmin wearable-data analysis."
     )
@@ -2206,6 +2200,22 @@ def main(argv=None) -> int:
     except (TypeError, ValueError):
         print(json.dumps({"status": "INVALID_PERIOD_SCOPE"}), file=sys.stderr)
         return 2
+    if args.analysis == "insight_cn":
+        from garmin_bounded import main as bounded_main
+
+        if args.overwrite_state and not args.state_output:
+            print(json.dumps({"status": "INVALID_ARGUMENT", "error": "--overwrite-state requires --state-output"}), file=sys.stderr)
+            return 2
+        bounded_args = ["insight_cn", "--days", str(days), "--source", args.source]
+        if args.allow_health_data:
+            bounded_args.append("--allow-health-data")
+        if args.allow_network:
+            bounded_args.append("--allow-network")
+        if args.state_output:
+            def write_insight_state(result):
+                _write_state_output(result, args.state_output, args.overwrite_state, allow_state_write=True)
+            return bounded_main(bounded_args, state_writer=write_insight_state)
+        return bounded_main(bounded_args)
     if args.source == "local" and not args.allow_health_data:
         print(json.dumps({"error_code": "HEALTH_DATA_ACCESS_NOT_AUTHORIZED"}), file=sys.stderr)
         return 2
@@ -2224,7 +2234,9 @@ def main(argv=None) -> int:
             "LIVE_AUTH_UNAVAILABLE",
             "HEALTH_DATA_LOAD_FAILED",
             "LIVE_ANALYSIS_NOT_SUPPORTED",
-            "LIVE_ANALYSIS_SCOPE_INVALID",
+            "LIVE_ANALYSIS_SCOPE_INVALID", "tls_error", "rate_limited",
+            "token_store_error", "dependency_error", "connection_error",
+            "authentication_failed", "mfa_required", "auth_unclassified",
         }
         print(
             json.dumps(
@@ -2242,8 +2254,6 @@ def main(argv=None) -> int:
         result = analyze_baseline_change(summary_data)
     elif args.analysis == "readiness":
         result = analyze_executive_readiness(summary_data)
-    elif args.analysis == "insight_cn":
-        result = generate_chinese_insight(summary_data)
     elif args.analysis == "audit":
         result = perform_bio_metric_audit(summary_data)
     elif args.analysis == "long_term_load":

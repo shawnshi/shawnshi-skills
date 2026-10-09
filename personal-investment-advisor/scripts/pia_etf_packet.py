@@ -613,10 +613,14 @@ def coverage_probe(args: argparse.Namespace) -> int:
             "control_query_count": counts.get("control") or 0,
             "control_query": {"symbol": str(args.control), "channel_scope": args.channel_scope},
         }
+    probe_errors = [f"{capture['role']}: {capture['error']}"
+                    for capture in captures if capture.get("error")]
     receipt = {
         "schema_version": "pia_channel_coverage_probe_v1",
-        "status": "complete" if verdict.startswith("covered") else "insufficient_data",
-        "detail_status": verdict,
+        "status": "failed" if probe_errors else
+                  "complete" if verdict.startswith("covered") else "insufficient_data",
+        "detail_status": "channel_probe_failed" if probe_errors else verdict,
+        "errors": probe_errors,
         "decision_scope": DECISION_SCOPE,
         "channel": channel,
         "target": str(args.target),
@@ -638,7 +642,7 @@ def coverage_probe(args: argparse.Namespace) -> int:
     target.parent.mkdir(parents=True, exist_ok=True)
     target.write_bytes(json.dumps(receipt, ensure_ascii=False, indent=2).encode("utf-8"))
     print(json.dumps(receipt, ensure_ascii=False, indent=2))
-    return 0 if receipt["status"] == "complete" else 2
+    return 3 if probe_errors else 0 if receipt["status"] == "complete" else 2
 
 
 def build_parser() -> argparse.ArgumentParser:

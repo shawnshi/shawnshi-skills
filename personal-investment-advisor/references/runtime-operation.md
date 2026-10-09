@@ -4,7 +4,8 @@
 
 先核对 `pia.py --help`、对应子命令与 `yf.py --help`，复用已有入口，不为一次研究另建同功能流水线：
 
-- 日常组合核验先用 `pia.py daily-run --positions-file <authorized-file> --task-dir <task> --decision-scope <scope> --plan-only` 检查计划；需要执行时移除 `--plan-only`。原生链已包含隔离FX刷新、行情、权重、边界及报告，附加风险历史与情景按实际输入启用。
+- 日常核验先用 `pia.py daily-run --positions-file <authorized-file> --task-dir <task> --analysis-scope all|held_only --decision-scope <scope> --plan-only`；执行时移除 `--plan-only`。完整清单用 `all`，仅实仓用 `held_only`，不扩大单一证券、文档摘要或假设权重任务。双轨细节见 [daily-sync.md](daily-sync.md)。
+- `--dashboard-root` 与 `--risk-bounds-policy` 分别传入已授权数据源，不从持仓目录或环境变量隐式发现。缺少 Dashboard 根时边界阶段未评估；只算实仓等限定任务可显式 `--skip-watchlist`。`readiness` 和 `ledger` 是请求阶段，执行错误参与最终状态；合法“覆盖未证明”与“尚不可执行”不等于程序失败。
 - 复用同一任务的来源快照时使用 `--reuse-artifacts`。只有绑定、身份、完整性及时效仍通过才复用，不重写生成时间、不改时钟、不把旧权重标为当前。
 - 事件采集使用 `pia.py collect-evidence`；每个 macro/sector/regulatory scope 只声明一次。额外原件独立保留，不重复同scope参数。通道broken与真实空结果分开。
 - 研究证据、ETF产品、Thesis、覆盖和准备度使用现有 build、ETF packet、thesis ledger、coverage及readiness入口。先查实际帮助，再选参数；不得自造CLI接口。
@@ -33,3 +34,5 @@ FX刷新优先绑定真实 `info.regularMarketPrice` 与 `info.regularMarketTime
 使用模块方式运行测试，例如在 scripts 目录执行 `python -B -m unittest test_p2_refresh_snapshot test_p2_yf_daily_sync test_p2_daily_run_pipeline`，避免旧测试文件中提前出现的 `unittest.main()` 使直接执行漏跑后续测试类。模块发现不等于覆盖率，测试通过也不代替真实服务验证。
 
 优先检验未来/陈旧观测、缓存权限/并发、绑定漂移、提供方故障、部分覆盖、状态严重度和写入保护。不为导入排序等低风险告警全量重排代码。端到端耗时只能由相同负载的实际回执比较；稳定默认值不宣称必然更快。
+
+模型适配维护可参考 [model-behavior-evaluation.md](model-behavior-evaluation.md)。单次无工具探针不代表正常扩展环境或真实投资工作流已验证，不将其设为每次研究的前置门。

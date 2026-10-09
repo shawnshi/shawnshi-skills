@@ -92,15 +92,19 @@ class GarminRuntimeContractTests(unittest.TestCase):
         inner._tokenstore_path = "unexpected"
         outer = mock.Mock(client=inner)
         fake_garmin = mock.Mock(return_value=outer)
-        fake_module = types.SimpleNamespace(Garmin=fake_garmin)
-        token_path = mock.Mock()
-        token_path.read_text.return_value = '{"fixture":"token"}'
-
+        import garmin_auth
+        token_path = Path("synthetic-token.json")
         with (
-            mock.patch.dict("sys.modules", {"garminconnect": fake_module}),
+            mock.patch.object(garmin_auth, "_load_garmin_api", return_value=fake_garmin),
+            mock.patch.object(garmin_auth, "_read_saved_token_bytes", return_value=b'{"fixture":"token"}'),
             mock.patch.object(garmin, "_live_token_path", return_value=token_path),
         ):
-            result = garmin._load_live_client()
+            result = garmin._load_live_client(
+                network_capability=garmin.issue_capability(
+                    scope="network", operation=garmin.BOUNDED_LIVE_OPERATION,
+                    request={"days": 3},
+                ), request={"days": 3},
+            )
 
         self.assertIs(result, outer)
         fake_garmin.assert_called_once_with(retry_attempts=0)
@@ -199,7 +203,14 @@ class GarminRuntimeContractTests(unittest.TestCase):
             code, stdout, stderr = run_main(without_network + ["--allow-network"])
 
         self.assertEqual(code, 0, stderr)
-        fetch.assert_called_once_with(3)
+        fetch.assert_called_once()
+        self.assertEqual(fetch.call_args.args, (3,))
+        from garmin_capabilities import require_capability
+        require_capability(
+            fetch.call_args.kwargs["network_capability"],
+            scope="network", operation=garmin.BOUNDED_LIVE_OPERATION,
+            request={"days": 3},
+        )
         payload = json.loads(stdout)
         self.assertEqual(payload["provenance"]["source"], "live")
         self.assertTrue(payload["provenance"]["network_accessed"])

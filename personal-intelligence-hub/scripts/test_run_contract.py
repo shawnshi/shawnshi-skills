@@ -1989,13 +1989,17 @@ class RunContractTests(unittest.TestCase):
             ["gap-a", "gap-b", "gap-c", "gap-d"],
         )
 
-        self.assertEqual([len(wave["workers"]) for wave in request["launch_plan"]], [1, 3])
+        self.assertEqual([len(wave["workers"]) for wave in request["launch_plan"]], [1, 1, 1, 1])
         self.assertEqual(request["launch_plan"][0]["mode"], "canary")
         for wave in request["launch_plan"]:
             for worker in wave["workers"]:
                 packet = request["execution_packets"][worker["packet_index"]]
                 self.assertEqual(worker["subagent_options"], {"output": False})
                 self.assertEqual(worker["subagent_options"], packet["subagent_options"])
+                self.assertEqual(worker["launch_options"]["timeoutMs"], worker["timeout_ms"])
+                self.assertEqual(worker["launch_options"]["toolBudget"], packet["tool_budget"])
+                self.assertEqual(worker["launch_options"]["context"], "fresh")
+                self.assertIs(worker["launch_options"]["async"], True)
                 self.assertEqual(worker["draft_path"], packet["output_paths"]["draft"])
                 self.assertNotEqual(worker["draft_path"], packet["output_paths"]["result"])
                 self.assertEqual(worker["timeout_ms"], 1000 * (

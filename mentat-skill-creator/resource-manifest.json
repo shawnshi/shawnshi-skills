@@ -1,18 +1,18 @@
 {
   "schema_version": 3,
   "skill": "mentat-skill-creator",
-  "generated_at": "2026-10-07T10:34:35+08:00",
+  "generated_at": "2026-10-09T11:17:58+08:00",
   "hash_algorithm": "SHA-256",
   "text_hash_normalization": "LF",
   "skill_md": "SKILL.md",
-  "skill_md_sha256": "5df0a2c17ba633aaffb9f601ae79ddca723e50b9043e8ec293d20a58022e187c",
+  "skill_md_sha256": "d93a0a2f2e4fc2ba44b4706fd04e1dfa6f2a758568ac4e78ca9d7ff31afcafbc",
   "top_level_files": [
     "SKILL.md"
   ],
   "top_level_file_hashes": [
     {
       "path": "SKILL.md",
-      "sha256": "5df0a2c17ba633aaffb9f601ae79ddca723e50b9043e8ec293d20a58022e187c"
+      "sha256": "d93a0a2f2e4fc2ba44b4706fd04e1dfa6f2a758568ac4e78ca9d7ff31afcafbc"
     }
   ],
   "top_level_directories": [
@@ -36,11 +36,11 @@
     },
     {
       "path": "references/host-routing-eval.md",
-      "sha256": "ad43c53d9dda158f093e639167ff29d777417907845f5307d0d456797b96ccbc"
+      "sha256": "778290e346162c81b0f592cf2e109ea7e9669e81365c90d9fd36ced12d467555"
     },
     {
       "path": "references/trigger-evals.json",
-      "sha256": "7f405a6d1de91299d8fea2225dc37f7037e536c577b17ae2d28a2e508e33edd7"
+      "sha256": "e607b0474ed53f9e84229c1811c82517b7d7c6ebf4e31ebafdab3227fd5ee8b6"
     }
   ],
   "declared_local_dependencies": [
@@ -54,19 +54,19 @@
       "path": "references/host-routing-eval.md",
       "exists": true,
       "resolved_path": "mentat-skill-creator/references/host-routing-eval.md",
-      "sha256": "ad43c53d9dda158f093e639167ff29d777417907845f5307d0d456797b96ccbc"
+      "sha256": "778290e346162c81b0f592cf2e109ea7e9669e81365c90d9fd36ced12d467555"
     },
     {
       "path": "references/trigger-evals.json",
       "exists": true,
       "resolved_path": "mentat-skill-creator/references/trigger-evals.json",
-      "sha256": "7f405a6d1de91299d8fea2225dc37f7037e536c577b17ae2d28a2e508e33edd7"
+      "sha256": "e607b0474ed53f9e84229c1811c82517b7d7c6ebf4e31ebafdab3227fd5ee8b6"
     },
     {
       "path": "scripts/gate.sh",
       "exists": true,
       "resolved_path": "scripts/gate.sh",
-      "sha256": "c75894ed2758a84e7ab71f7917c8f8a6ec924f9db4bf0b3bf1cd86809e7906ea"
+      "sha256": "1f625ef434ba907751b21378c9911c5545eefaa77172bf6a26a2decae3fbf904"
     },
     {
       "path": "scripts/generate_resource_manifests.ps1",
@@ -78,19 +78,49 @@
       "path": "scripts/repair_skills.ps1",
       "exists": true,
       "resolved_path": "scripts/repair_skills.ps1",
-      "sha256": "62912c3960741065ac7f6c13067b7f83c555a398fb89adc9169dfc03a17dcec3"
+      "sha256": "4ef8542a5bf5e14607acc81b9c277d10d1f7e29a4d2c32c32fea9230b2f827e1"
+    },
+    {
+      "path": "scripts/resource_manifest.py",
+      "exists": true,
+      "resolved_path": "scripts/resource_manifest.py",
+      "sha256": "f2148098b010b672e7747baad5b49226b31dad6a4cae2f508b946ca0499d79cc"
+    },
+    {
+      "path": "scripts/test_gate.py",
+      "exists": true,
+      "resolved_path": "scripts/test_gate.py",
+      "sha256": "b58d256c329a0771e53f3f9d05fcf8efe9f5cc6e12d7cfdd767f73372e3c13ed"
     },
     {
       "path": "scripts/test_mentat_skill_creator.py",
       "exists": true,
       "resolved_path": "scripts/test_mentat_skill_creator.py",
-      "sha256": "692652c1642b563241781ed4a953b19dd8cfb185d5e8e13760d05637212c2a9a"
+      "sha256": "10fbf40444ac35783c03663b8dbdab11cc4f34846d78c5ec342a07f29c2d56e2"
+    },
+    {
+      "path": "scripts/test_repair_skills.py",
+      "exists": true,
+      "resolved_path": "scripts/test_repair_skills.py",
+      "sha256": "07ea65b44835758f5ca43f49de2db2e4f719685a7a3117636ba34840986a2642"
+    },
+    {
+      "path": "scripts/test_resource_manifest.py",
+      "exists": true,
+      "resolved_path": "scripts/test_resource_manifest.py",
+      "sha256": "5b1befcccb5a9c25dd049dd9c48b4bd71d4c3fd6585197f0adda541ed0780908"
+    },
+    {
+      "path": "scripts/test_validate_openai_yaml.py",
+      "exists": true,
+      "resolved_path": "scripts/test_validate_openai_yaml.py",
+      "sha256": "25fe98720ad843e87f0a27c2e064877e07c02b49f1407ade358874d1346c66bf"
     },
     {
       "path": "scripts/validate_openai_yaml.py",
       "exists": true,
       "resolved_path": "scripts/validate_openai_yaml.py",
-      "sha256": "d3c08fdc32475b342f36c1feafa504a3b50c017ca4aef82b8f3284e488f763c7"
+      "sha256": "8eb70e01c8cb3ed1bbf23bf331edfbf45e9c56c1c3fe2112bf08a37644615d1c"
     }
   ],
   "missing_declared_dependencies": []

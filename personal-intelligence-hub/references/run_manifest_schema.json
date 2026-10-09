@@ -1,7 +1,11 @@
 {
   "resource_kind": "personal_intelligence_hub_run_contract",
   "version": "1.0",
-  "parent_supplement_finalization_contract": {"version": "parent-supplement-finalization/1.0", "manifest_field": "parent_supplement_finalizations", "key": "gap_id", "max_raw_draft_bytes": 1048576, "final_draft_base64": {"type": "string", "maxLength": 1398104}, "policy": "New native-v3 requests carry finalization.parent_receipt_version=1. The bound finalize --parent validates within the unchanged 300s grace and atomically journals parent-supplement-finalization/1.0 in run_manifest.parent_supplement_finalizations[gap_id], binding run/request/packet SHA, sealed broker evidence and completed_at, actual finalized_at, original/final draft SHA and exact final bytes. Retry the same CLI after interruption: only the journaled source/final bytes recover, without a new clock. Later finalize-supplement accepts unchanged timely-attested bytes while revalidating semantic/proof/terminal gates. Missing receipts retain strict grace; v2 and old frozen requests are unchanged. Never synthesize receipts for old events or use mtime; no budgets increase."},
+  "optional_runtime_fields": {
+    "claim_grounding_version": "1 for legacy replay; production run_daily prepare always uses 2",
+    "runtime_environment": "Python/OS/critical dependency versions, bound into review input bundle; not an isolated dependency lock"
+  },
+  "parent_supplement_finalization_contract": {"version": "parent-supplement-finalization/1.0", "manifest_field": "parent_supplement_finalizations", "key": "gap_id", "max_raw_draft_bytes": 1048576, "final_draft_base64": {"type": "string", "maxLength": 1398104}, "policy": "New native-v3 requests carry finalization.parent_receipt_version=1. The bound finalize --parent validates within the unchanged registered grace (new broker v3: 900s) and atomically journals parent-supplement-finalization/1.0 in run_manifest.parent_supplement_finalizations[gap_id], binding run/request/packet SHA, sealed broker evidence and completed_at, actual finalized_at, original/final draft SHA and exact final bytes. Retry the same CLI after interruption: only the journaled source/final bytes recover, without a new clock. Later finalize-supplement accepts unchanged timely-attested bytes while revalidating semantic/proof/terminal gates. Missing receipts retain strict grace; v2 and old frozen requests are unchanged. Never synthesize receipts for old events or use mtime; no budgets increase."},
   "immutable_fields": [
     "run_id",
     "skill_sha256",
@@ -77,7 +81,7 @@
     "tool_budget_pass_through_required": true
   },
   "review_execution_contract": {
-    "semantic_timeout_ms": 240000,
+    "semantic_timeout_ms": 900000,
     "semantic_token_budget": 200000,
     "semantic_tool_budget": {
       "soft": 6,
@@ -88,7 +92,7 @@
     "semantic_write_scope": "semantic_dynamic_only",
     "semantic_static_finalization": "scripts/semantic_agent.py",
     "red_team_token_budget": 100000,
-    "red_team_timeout_ms": 120000,
+    "red_team_timeout_ms": 600000,
     "timeout_pass_through_required": true
   }
 }

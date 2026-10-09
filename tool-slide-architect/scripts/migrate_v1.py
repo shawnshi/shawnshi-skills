@@ -6,12 +6,11 @@ import argparse
 import json
 import re
 import uuid
-from datetime import date
 from pathlib import Path
 from typing import Any
 
 from safe_io import SafeWriteError, atomic_write_text, paths_alias, reject_symlink_path
-from validator import LAYOUT_IDS, SCHEMA_VERSION, StructuredArgumentParser, VALIDATION_SCOPE, audit_outline, extract_payload, issue, load_source
+from validator import LAYOUT_IDS, METADATA_FIELDS, SCHEMA_VERSION, StructuredArgumentParser, VALIDATION_SCOPE, audit_outline, extract_payload, issue, load_source
 
 
 V1_SLIDE_RE = re.compile(
@@ -45,7 +44,10 @@ def _key_values(text: str) -> dict[str, str]:
     for line in text.splitlines():
         if ":" in line:
             key, value = line.split(":", 1)
-            values[key.strip()] = value.strip()
+            key = key.strip()
+            if key in values:
+                raise SafeWriteError("E_V1_DUPLICATE_FIELD", "Legacy metadata or style contains a duplicate field.", field=key)
+            values[key] = value.strip()
     return values
 
 
@@ -104,6 +106,52 @@ def _migrated_layout(value: str) -> str:
     return f"custom:{slug or 'legacy-layout'}"
 
 
+def _migration_metadata(source: dict[str, str], mode: str, count: int) -> tuple[dict[str, str], list[tuple[str, str]]]:
+    unknown = sorted(set(source) - set(METADATA_FIELDS))
+    if unknown:
+        raise SafeWriteError("E_V1_METADATA_UNMAPPED", "Map unsupported legacy metadata explicitly before migration.", fields=unknown)
+    empty = [key for key, value in source.items() if not value]
+    if empty:
+        raise SafeWriteError("E_V1_METADATA_EMPTY", "Supplied legacy metadata must not be empty.", fields=empty)
+
+    metadata = {
+        "Schema_Version": str(SCHEMA_VERSION),
+        "Topic": source.get("Topic", "{{TOPIC}}"),
+        "Audience": source.get("Audience", "{{AUDIENCE}}"),
+        "Objective": source.get("Objective", "{{OBJECTIVE}}"),
+        "Occasion": source.get("Occasion", "Migrated legacy blueprint review"),
+        "Deck_Mode": source.get("Deck_Mode", mode),
+        "Duration_Minutes": source.get("Duration_Minutes", "{{DURATION_MINUTES}}"),
+        "Language": source.get("Language", "{{LANGUAGE}}"),
+        "Aspect_Ratio": source.get("Aspect_Ratio", "{{ASPECT_RATIO}}"),
+        "Confidentiality": source.get("Confidentiality", "restricted"),
+        "Status": "draft",
+        "Slide_Count": str(count),
+        "Generated": source.get("Generated", "{{GENERATED_DATE}}"),
+    }
+    for key in ("Template_Ref", "Decision_Owner"):
+        if key in source:
+            metadata[key] = source[key]
+    metadata["Source_Cutoff"] = source.get("Source_Cutoff", "{{SOURCE_CUTOFF}}")
+    for key in ("Must_Keep", "Deck_ID"):
+        if key in source:
+            metadata[key] = source[key]
+    revision = source.get("Revision")
+    metadata["Revision"] = f"{revision}; migrated-from-v1" if revision else "migrated-from-v1"
+
+    open_items: list[tuple[str, str]] = []
+    missing = [key for key, value in metadata.items() if value.startswith("{{") and key not in source]
+    if missing:
+        open_items.append(("data", "Supply missing legacy metadata before finalization: " + ", ".join(missing)))
+    if "Confidentiality" not in source:
+        open_items.append(("compliance", "Confidentiality was absent; retain restricted treatment until the owner establishes the classification"))
+    # A source revision's authorship/review is provenance, not acceptance of this transformed draft.
+    for key in ("Prepared_By", "Reviewed_By"):
+        if key in source:
+            open_items.append(("compliance", f"Prior {key}: {_record_text(source[key])}; record actual authorship and review for the migrated revision"))
+    return metadata, open_items
+
+
 def migrate(content: str) -> str:
     payload = extract_payload(content)
     metadata_v1 = _key_values(_tag(payload, "DECK_METADATA"))
@@ -128,29 +176,11 @@ def migrate(content: str) -> str:
         mode = "full"
     else:
         mode = "section"
-    generated = metadata_v1.get("Generated", "")
-    try:
-        date.fromisoformat(generated)
-    except ValueError:
-        generated = date.today().isoformat()
+    metadata, metadata_open_items = _migration_metadata(metadata_v1, mode, len(parsed_slides))
 
     lines = [
         "<DECK_METADATA>",
-        f"Schema_Version: {SCHEMA_VERSION}",
-        f"Topic: {topic}",
-        f"Audience: {metadata_v1.get('Audience', 'Legacy audience; confirm before use')}",
-        f"Objective: {metadata_v1.get('Objective', 'Review and complete the migrated blueprint')}",
-        "Occasion: Migrated legacy blueprint review",
-        f"Deck_Mode: {mode}",
-        f"Duration_Minutes: {max(5, len(parsed_slides) * 2)}",
-        f"Language: {metadata_v1.get('Language', 'Not specified')}",
-        "Aspect_Ratio: 16:9",
-        "Confidentiality: internal",
-        "Status: draft",
-        f"Slide_Count: {len(parsed_slides)}",
-        f"Generated: {generated}",
-        "Source_Cutoff: not-applicable",
-        "Revision: migrated-from-v1",
+        *(f"{key}: {value}" for key, value in metadata.items()),
         "</DECK_METADATA>",
         "",
         "<STYLE_INSTRUCTIONS>",
@@ -178,6 +208,12 @@ def migrate(content: str) -> str:
         takeaway = "" if slide_type in {"Cover", "Closing"} else f"\n[Takeaway]: {_safe_value(content.get('Key Insight', ''), 'Confirm the migrated slide conclusion')}"
         legacy_layout = _safe_value(slide["visual"].get("Layout", ""), "Legacy layout direction not specified")
         visual_description = _safe_value(slide["visual"].get("Visual Description", ""), "Review legacy visual direction")
+        open_items = [f"- O1 | data | Verify and locate migrated legacy evidence: {evidence_text} | content owner | unscheduled"]
+        if index == 1:
+            open_items.extend(
+                f"- O{ordinal} | {kind} | {description} | migration owner | unscheduled"
+                for ordinal, (kind, description) in enumerate(metadata_open_items, 2)
+            )
         lines += [
             "",
             "---",
@@ -196,11 +232,11 @@ def migrate(content: str) -> str:
             "",
             "// EVIDENCE",
             "[Claims]:",
-            f"- C1 | inference | unverified | Legacy evidence text retained for review: {evidence_text} | none",
+            f"- C1 | fact | unverified | Legacy source text retained for review: {evidence_text} | none",
             "[Evidence]:",
             "none",
             "[Open Items]:",
-            f"- O1 | data | Verify and locate migrated legacy evidence: {evidence_text} | content owner | unscheduled",
+            *open_items,
             "[Risk Flags]:",
             "- R1 | delivery | medium | Legacy evidence was not machine-verifiable | Re-source before changing claim status",
             "",

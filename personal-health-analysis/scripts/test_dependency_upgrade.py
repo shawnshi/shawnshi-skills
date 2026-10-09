@@ -7,6 +7,9 @@ import runtime_preflight as gate
 
 
 class DependencyUpgradeTests(unittest.TestCase):
+    def setUp(self):
+        self.enterContext(patch.object(gate, "probe_imports", return_value={"ok": True}))
+
     def verify_live(self, version, python=(3, 13, 12)) -> dict[str, Any]:
         versions = {"pandas": "3.0.6", "garminconnect": version}
         with (

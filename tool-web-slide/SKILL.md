@@ -35,14 +35,14 @@ description: 将演示内容构建为可在浏览器运行、验证和交付的 
 
 ## 标准流程
 
-1. **依赖预检**：在技能目录运行 `npm run preflight -- <index.html>`（新项目可省略路径；需要提前把浏览器能力作为硬门禁时增加 `--require-browser`）。使用现有依赖；不得自动执行 `npm install`、`npx playwright install`、关闭浏览器沙箱或修改系统。Node 必须为 18 或更高版本；Playwright 只在视觉 QA 和 PDF 导出时需要。快速内部和标准客户缺浏览器时预检给出能力警告，高保障、显式 `--require-browser` 或最终交付验证仍会阻断；应说明缺项和受影响步骤，等待用户授权或交付明确标注未完成的结果。root 环境中的 Chromium 若不能以沙箱启动，应改用非 root 运行环境；不得自动设置 `WEB_SLIDE_ALLOW_NO_SANDBOX=1`，只有用户理解并明确接受风险后才可临时使用。
+1. **依赖预检**：在技能目录运行 `npm run preflight -- <index.html>`；所有交付档位默认把浏览器能力作为硬门禁。新项目可省略路径，并用 `--target-browser <browser> --target-os <os>` 检查已选目标；已有页面不得用参数覆盖其目标。仅生成明确标为未验收的草稿时使用 `--draft`，高保障仍不得降级。使用现有依赖；不得自动执行 `npm install`、`npx playwright install`、关闭浏览器沙箱或修改系统。Node 必须为 18 或更高版本；Playwright 只在视觉 QA 和 PDF 导出时需要，但所有完整交付均要求视觉 QA。依赖按技能目录、当前目录及 Node 标准模块查找规则解析；其他宿主的兼容路径不代表 Pi 的活跃能力。缺项时可完成独立的已授权草稿，明确受阻门禁；安装依赖或修改环境须另有覆盖该动作的授权。root 环境中的 Chromium 若不能以沙箱启动，应改用非 root 运行环境；不得自动设置 `WEB_SLIDE_ALLOW_NO_SANDBOX=1`，只有用户理解并明确接受风险后才可临时使用。
 2. **初始化**：运行 `npm run init -- <projectDir> --title "..." --theme <theme> --aspect <aspect> --mode <bundle|standalone> --profile <profile> --target-browser <browser> --target-os <os> --width <pixels> --height <pixels>`。已有项目只有在目标明确且使用 `--force` 不会覆盖用户文件时才允许覆盖。
-3. **分片设计**：先锁定内容地图、设计令牌、导航和页面契约，再实现页面。只有页面组相互独立时才并行；每个分片必须有唯一文件或页码所有权，公共样式、配置和导航只由主线合并。
+3. **分片设计**：先锁定内容地图、设计令牌、导航和页面契约，再实现页面。默认串行。只有委派已获授权、页面组独立且每个写者使用独立 worktree 或容器，并核验缓存、构建目录及其他共享资源时才并行；唯一文件或页码所有权不替代物理隔离。公共样式、配置和导航只由主线合并，缺少必要隔离能力时保持串行。
 4. **构建**：运行 `npm run build -- <projectDir>`。每页保留一个主要结论，标题、证据、图表和讲稿形成清楚层级；只使用选定主题已实现的组件和规范布局。`bundle` 必须复制全部本地运行资产；`standalone` 不得留下本地文件引用。
 5. **静态 QA**：运行 `npm run check -- <output/index.html>`，生成 `qa-report/qa-report.json`。不得以警告替代阻断性错误。页面身份、画布、布局、标题、资源引用、离线约束和证据标记必须满足交付契约；禁止内联事件处理器及页面片段中的不受信任脚本。`standalone` 只允许内容与技能内 canonical asset 一致、由构建器以 `data-web-slide-asset` 标记并转义的内建运行时脚本。
-6. **视觉 QA**：运行 `npm run visual -- <output/index.html> <output/qa-report>`。脚本按档位自动执行代表页、每类布局或全页覆盖，并为截图和报告记录内容哈希。默认只允许当前本地静态服务器、`data:`、`blob:` 和 `about:` 请求，自动检测部分文字/元素 overflow 并生成截图，不自动证明无遮挡、对比度合格或无裁切。必须另行看图复核遮挡、对比度、裁切、图表与图片，并检查导航、动画、目标分辨率和缩放；记录人工视觉和内容语义复核结果，未执行须标为未完成。只有配置明确为 `offlineRequired:false`、档位不是高保障且用户明确授权联网时，才可增加 `--allow-network`，并记录依赖域名。发现问题后重新构建并重复静态与视觉 QA。
+6. **视觉 QA**：运行 `npm run visual -- <output/index.html> <output/qa-report>`。脚本按档位自动执行代表页、每类布局或全页覆盖，并为截图和报告记录内容哈希。默认只允许当前本地静态服务器、`data:`、`blob:` 和 `about:` 请求，自动检测部分文字/元素 overflow 并生成截图，不自动证明无遮挡、对比度合格或无裁切。必须另行看图复核遮挡、对比度、裁切、图表与图片，并检查导航、动画、目标分辨率和缩放；按交付契约在 `qa-report/review.json` 记录实际人工视觉和内容语义复核，未执行须标为未完成；不得自动生成已完成的复核声明。只有配置明确为 `offlineRequired:false`、档位不是高保障且用户明确授权联网时，才可增加 `--allow-network`，并记录依赖域名。发现问题后重新构建并重复静态与视觉 QA。
 7. **PDF**：用户要求或交付模式规定时，运行 `npm run export -- <output/index.html> <output/deck.pdf>`；成功时同时生成 `qa-report/pdf.json`。联网规则与视觉 QA 相同；`offlineRequired:true` 或高保障档位不得用 `--allow-network` 绕过。确认字体与图片加载完成、页数与 HTML 一致、无空白页、控制栏或裁切，并抽查复杂页。
-8. **最终门禁与交付**：运行 `npm run verify -- <output/index.html>`。该命令把当前 HTML、清单、静态报告、视觉覆盖、截图和 PDF 的哈希、目标环境及网络策略交叉核对，并生成 `qa-report/delivery.json`；退出非零时不得宣称档位验收完成；退出 0 只证明机器凭证门禁通过，不单独证明人工视觉或内容语义复核通过。技能本身发生变化时另运行 `npm test` 和 `npm run manifest -- . --check`。最终链接必须指向实际文件，并明确未通过或未执行的门禁，不能把“脚本已运行”表述成“页面已验收”。
+8. **最终门禁与交付**：运行 `npm run verify -- <output/index.html>`。该命令把当前 HTML、清单、静态报告、视觉覆盖、截图和 PDF 的哈希、目标环境及网络策略交叉核对，并生成 `qa-report/delivery.json`；退出非零时不得宣称档位验收完成；退出 0 只证明机器凭证门禁通过，不单独证明人工视觉或内容语义复核通过。技能维护按任务风险选择定向测试；`npm test` 与 `npm run manifest -- . --check` 是可用的检查命令，不作为所有本地技能编辑的统一强制步骤。QA/PDF 通过交付根的 `.web-slide-qa-manifest.json` 管理生成物；既有未管理或被用户修改的同名文件会阻断，保留原件并使用新的交付目录，不自动接管旧报告。`verify` 会核验已存在的人工复核记录的哈希、覆盖和状态；记录缺失仍不等于人工验收通过。最终链接必须指向实际文件，并明确未通过或未执行的门禁，不能把“脚本已运行”表述成“页面已验收”。
 
 ## 交付物
 

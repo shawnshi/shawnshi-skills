@@ -1,4 +1,4 @@
-"""Validate optional agents/openai.yaml metadata for local skills."""
+"""Validate skill frontmatter or optional agents/openai.yaml metadata."""
 
 from __future__ import annotations
 
@@ -12,6 +12,9 @@ import yaml
 from yaml.constructor import ConstructorError
 
 
+ALLOWED_FRONTMATTER_KEYS = frozenset(
+    {"name", "description", "license", "compatibility", "metadata", "allowed-tools", "disable-model-invocation"}
+)
 ALLOWED_TOP_LEVEL_KEYS = frozenset({"interface", "dependencies", "policy"})
 ALLOWED_INTERFACE_KEYS = frozenset(
     {"display_name", "short_description", "icon_small", "icon_large", "brand_color", "default_prompt"}
@@ -22,13 +25,31 @@ ALLOWED_TOOL_KEYS = frozenset({"type", "value", "description", "transport", "url
 
 
 class UniqueKeyLoader(yaml.SafeLoader):
-    """Safe YAML loader that rejects duplicate mapping keys."""
+    """Safe YAML loader that rejects duplicate keys and uses Pi-compatible booleans."""
+
+
+# PyYAML's YAML 1.1 on/yes coercion would claim manual invocation while Pi's
+# YAML 1.2 loader treats those words as strings.
+UniqueKeyLoader.yaml_implicit_resolvers = {
+    key: [(tag, pattern) for tag, pattern in resolvers if tag != "tag:yaml.org,2002:bool"]
+    for key, resolvers in yaml.SafeLoader.yaml_implicit_resolvers.items()
+}
+UniqueKeyLoader.add_implicit_resolver(
+    "tag:yaml.org,2002:bool", re.compile(r"^(?:true|True|TRUE|false|False|FALSE)$"), list("tTfF")
+)
 
 
 def _construct_unique_mapping(loader, node, deep=False):
     mapping = {}
     for key_node, value_node in node.value:
         key = loader.construct_object(key_node, deep=deep)
+        try:
+            hash(key)
+        except TypeError as exc:
+            raise ConstructorError(
+                "while constructing a mapping", node.start_mark,
+                "found unhashable key", key_node.start_mark,
+            ) from exc
         if key in mapping:
             raise ConstructorError(
                 "while constructing a mapping",
@@ -50,36 +71,64 @@ def _issue(skill: str, code: str, detail: str) -> dict[str, str]:
     return {"skill": skill, "code": code, "detail": detail}
 
 
-def frontmatter_disable_model_invocation(skill_dir: Path) -> bool | None:
-    """Return the declared SKILL.md `disable-model-invocation` flag, or None.
-
-    The Pi host hides a skill from the system prompt when this flag is true and
-    requires an explicit `/skill:<name>` invocation. The OpenAI/plugin surface
-    expresses the same intent as `policy.allow_implicit_invocation`. A skill that
-    declares one side and leaves the other implicit can silently auto-trigger on
-    one host and stay manual on another, so the two must not disagree.
-    """
-    path = skill_dir / "SKILL.md"
+def load_frontmatter(skill_dir: Path) -> dict:
+    lines = (skill_dir / "SKILL.md").read_text(encoding="utf-8").splitlines()
+    if not lines or lines[0] != "---":
+        raise ValueError("SKILL.md must start with YAML frontmatter")
     try:
-        text = path.read_text(encoding="utf-8")
-    except (OSError, UnicodeError):
-        return None
-    if not text.startswith("---"):
-        return None
-    end = text.find("\n---", 3)
-    if end == -1:
-        return None
-    for line in text[3:end].splitlines():
-        key, separator, value = line.partition(":")
-        if not separator or key.strip().lower() != "disable-model-invocation":
-            continue
-        raw = value.strip().strip("'\"").lower()
-        if raw in {"true", "yes", "on"}:
-            return True
-        if raw in {"false", "no", "off"}:
-            return False
-        return None
-    return None
+        end = lines.index("---", 1)
+    except ValueError as exc:
+        raise ValueError("SKILL.md frontmatter is not terminated") from exc
+    document = yaml.load("\n".join(lines[1:end]), Loader=UniqueKeyLoader)
+    if not isinstance(document, dict) or any(not isinstance(key, str) for key in document):
+        raise ValueError("frontmatter must be a mapping with string keys")
+    return document
+
+
+def validate_frontmatter(skill_dir: Path) -> tuple[dict, list[dict[str, str]]]:
+    skill = skill_dir.name
+    record = {
+        "skill": skill, "valid": False, "keys": [], "unexpected_keys": [],
+        "name": "", "description_has_trigger_context": None,
+    }
+    try:
+        document = load_frontmatter(skill_dir)
+    except (OSError, UnicodeError, ValueError, yaml.YAMLError) as exc:
+        return record, [_issue(skill, "frontmatter_parse_error", str(exc))]
+    issues = []
+    record["keys"] = list(document)
+    record["unexpected_keys"] = sorted(set(document) - ALLOWED_FRONTMATTER_KEYS)
+    if record["unexpected_keys"]:
+        issues.append(_issue(skill, "frontmatter_unknown_field", ", ".join(record["unexpected_keys"])))
+    name = document.get("name")
+    if isinstance(name, str):
+        record["name"] = name
+    if not isinstance(name, str) or len(name) > 64 or re.fullmatch(r"[a-z0-9]+(?:-[a-z0-9]+)*", name) is None or name != skill:
+        issues.append(_issue(skill, "frontmatter_name_invalid", "name must be a portable name matching the directory"))
+    description = document.get("description")
+    if not isinstance(description, str) or not description.strip() or len(description) > 1024:
+        issues.append(_issue(skill, "frontmatter_description_invalid", "description must contain 1-1024 characters"))
+    for key in ("license", "allowed-tools", "compatibility"):
+        if key in document and (not isinstance(document[key], str) or not document[key].strip()):
+            issues.append(_issue(skill, "frontmatter_field_invalid", f"{key} must be non-empty text"))
+    if isinstance(document.get("compatibility"), str) and len(document["compatibility"]) > 500:
+        issues.append(_issue(skill, "frontmatter_field_invalid", "compatibility exceeds 500 characters"))
+    if "disable-model-invocation" in document and not isinstance(document["disable-model-invocation"], bool):
+        issues.append(_issue(skill, "frontmatter_field_invalid", "disable-model-invocation must be boolean"))
+    if "metadata" in document:
+        metadata = document["metadata"]
+        if not isinstance(metadata, dict) or any(not isinstance(key, str) or not isinstance(value, str) for key, value in metadata.items()):
+            issues.append(_issue(skill, "frontmatter_field_invalid", "metadata must map strings to strings"))
+    record["valid"] = not issues
+    return record, issues
+
+
+def frontmatter_disable_model_invocation(skill_dir: Path) -> bool | None:
+    document = load_frontmatter(skill_dir)
+    value = document.get("disable-model-invocation")
+    if value is not None and not isinstance(value, bool):
+        raise ValueError("disable-model-invocation must be boolean")
+    return value
 
 
 def _safe_relative_asset(skill_dir: Path, value: object) -> bool:
@@ -162,7 +211,11 @@ def validate_skill_detailed(skill_dir: Path) -> tuple[list[dict[str, str]], list
             if "allow_implicit_invocation" in policy and not isinstance(policy["allow_implicit_invocation"], bool):
                 issues.append(_issue(skill, "openai_policy_invalid", "allow_implicit_invocation must be boolean"))
 
-    declared_disable = frontmatter_disable_model_invocation(skill_dir)
+    try:
+        declared_disable = frontmatter_disable_model_invocation(skill_dir)
+    except (OSError, UnicodeError, ValueError, yaml.YAMLError) as exc:
+        issues.append(_issue(skill, "frontmatter_parse_error", str(exc)))
+        declared_disable = None
     declared_implicit = (
         policy.get("allow_implicit_invocation")
         if isinstance(policy, dict) and isinstance(policy.get("allow_implicit_invocation"), bool)
@@ -193,7 +246,7 @@ def validate_skill_detailed(skill_dir: Path) -> tuple[list[dict[str, str]], list
                 skill,
                 "openai_policy_unpaired",
                 "agents/openai.yaml disables implicit invocation but SKILL.md does not "
-                "declare disable-model-invocation; this host can still auto-trigger it",
+                "declare disable-model-invocation; Pi can still advertise it for automatic selection",
             )
         )
 
@@ -263,14 +316,27 @@ def validate_root(root: Path, include: Iterable[str] = (), exclude: Iterable[str
     }
 
 
+def validate_frontmatter_root(root: Path, include: Iterable[str] = (), exclude: Iterable[str] = ()) -> dict[str, object]:
+    skill_dirs, scope_problems = _skill_dirs(root.resolve(), include, exclude)
+    issues = [_issue("", "scope_error", problem) for problem in scope_problems]
+    records = []
+    for skill_dir in skill_dirs:
+        record, skill_issues = validate_frontmatter(skill_dir)
+        records.append(record)
+        issues.extend(skill_issues)
+    return {"checked": len(skill_dirs), "failures": len(issues), "issues": issues, "warnings": [], "records": records}
+
+
 def main() -> int:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--root", type=Path, required=True)
     parser.add_argument("--include-skill", action="append", default=[])
     parser.add_argument("--exclude-skill", action="append", default=[])
     parser.add_argument("--json", action="store_true")
+    parser.add_argument("--frontmatter-only", action="store_true", help="Validate SKILL.md without requiring OpenAI metadata")
     args = parser.parse_args()
-    result = validate_root(args.root, args.include_skill, args.exclude_skill)
+    validate = validate_frontmatter_root if args.frontmatter_only else validate_root
+    result = validate(args.root, args.include_skill, args.exclude_skill)
     print(
         json.dumps(result, ensure_ascii=False, separators=(",", ":"))
         if args.json else json.dumps(result, ensure_ascii=False, indent=2)

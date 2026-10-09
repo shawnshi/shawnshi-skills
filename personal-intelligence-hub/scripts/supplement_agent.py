@@ -40,7 +40,7 @@ from run_contract import (
     locked_manifest,
     normalize_published_at,
     validate_supplement_failure_kind,
-    validate_subagent_output_options,
+    bind_subagent_launch_options,
 )
 from source_kind import classify_source_type
 
@@ -186,7 +186,7 @@ def preflight_launch(
     request_path: str | Path, gap_id: str, launch_options: dict[str, Any]
 ) -> dict[str, Any]:
     request_file, request, packet, _, _, _ = _load_bound_packet(request_path, gap_id)
-    options = validate_subagent_output_options(packet, launch_options)
+    options = bind_subagent_launch_options(packet, launch_options)
     return {
         "status": "launch_binding_valid",
         "run_id": request["run_id"],
@@ -338,6 +338,12 @@ def build_agent_context(
                 "one entry per required_bound_candidate_id, exactly once, including "
                 "candidates that end up unregistered"
             ),
+            "candidate_id_rule": "For every registered bound candidate, include its exact registered candidate_id and URL so the decision joins before parent hash derivation. Discovered candidate IDs may be parent-derived; never substitute event_id.",
+            "candidate_identity_quality_allowed": ["semantic"],
+            "candidate_event_identity_required": [
+                "key_version", "primary_domain", "actor", "action", "object", "event_date"
+            ],
+            "candidate_event_identity_rule": "Exactly these six non-empty scalar fields; actor is singular, not an actors list. Represent one event per candidate, not multiple unrelated stories from one roundup. If the date is only a publication basis, disclose event_date_source=publication_base/1; do not claim the actual event date was verified.",
             "candidate_source_type_allowed": ["primary", "secondary"],
             "candidate_primary_domain_allowed": ["technology", "healthcare_digital"],
             "candidate_secondary_domains_allowed": ["technology", "healthcare_digital"],

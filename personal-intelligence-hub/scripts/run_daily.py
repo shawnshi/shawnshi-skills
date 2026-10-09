@@ -174,6 +174,14 @@ def assess_supplement_gaps(
         keywords = [
             str(value).lower() for value in policy.get("keywords", []) if str(value)
         ]
+        # Topic hints route verification only; they never certify a fact or access.
+        has_topic_hint = any(
+            isinstance(item, dict)
+            and any(keyword in _candidate_text(item) for keyword in keywords)
+            for item in items
+        )
+        if policy.get("required") is not True and not has_topic_hint:
+            continue
         matching = sum(
             1
             for item in items
@@ -330,6 +338,7 @@ async def prepare_run(
         now=now,
         run_id=run_id,
         linked_from_run_id=linked_from_run_id,
+        claim_grounding_version=2,
     )
     run_dir = Path(manifest["run_dir"])
     record_stage(

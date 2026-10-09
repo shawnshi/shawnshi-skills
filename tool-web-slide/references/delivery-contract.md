@@ -54,7 +54,7 @@ project/
 | `schemaVersion` | 当前为 `1.0.0` |
 | `theme` | 必须存在于 `components.json` 的 `themes` 中 |
 | `aspect` | 正数比例，格式为 `宽:高`，例如 `16:9`、`16:10`、`4:3` |
-| `evidencePolicy` | `advisory` 或 `required`；后者由 QA 禁止使用 `data-evidence="none"` |
+| `evidencePolicy` | `advisory` 或 `required`；后者要求内容页提供证据，明确声明且无事实主张的封面／章节页可豁免 |
 | `offlineRequired` | `true` 时拒绝会在运行时加载的远程资源 |
 | `deliveryProfile` | `quick-internal`、`standard-client` 或 `high-assurance`；旧配置默认 `standard-client` |
 | `target` | 锁定目标浏览器、操作系统和视口；宽高均须为 320–7680 的整数并与 `aspect` 一致 |
@@ -85,7 +85,7 @@ project/
 - 接收 Slide Architect 蓝图时遵循 [Web handoff 人工映射契约](../../tool-slide-architect/references/pptx-handoff.md)：不改源 `Slide_ID`，另存稳定 source → target 对照（`S001` → `s001`），空 ID 或碰撞必须拒绝，不能用页码解决；显式保持页数、顺序、Claims/Evidence、讲稿和 Open Items。当前没有自动蓝图适配器。
 - 为兼容旧片段，构建器会从文件名生成缺失的 ID，并写入产物；应在下一次编辑时把该 ID 补回源文件。
 - 页面必须使用 `data-layout="<canonical-id>"`，ID 以 `references/layouts.json` 为准。
-- `data-evidence` 描述该页证据状态；无事实主张的封面或章节页可使用 `none`，高保障模式除外。
+- `data-evidence` 描述该页证据状态。默认页面是内容页；在任何档位中，无事实、量化或业务结论的封面／章节页可以显式设置 `data-page-role="cover|section"` 与 `data-evidence="none"`。`data-page-role` 只接受 `cover`、`section`、`content`；不得用页面角色逃避事实主张的证据要求。脚本校验声明，内容复核负责核验是否确实无主张。
 - `init --evidence-policy required` 不伪造来源：示例页会生成空的、可见的 source-note 待填项，并返回 `readyForQa:false`。填写真实来源与日期前，QA 应当失败。
 
 ## 主题和资产
@@ -137,6 +137,8 @@ project/
 - 三类 QA 都绑定清单中全部交付文件的字节数和 SHA-256，并在开始与发布凭证前复核同一快照；运行期间发生变更时必须失败，不能把旧分析绑定到新文件。
 - `verify-delivery.mjs` 核对所有必做门禁与当前文件，写入 `qa-report/delivery.json`。可选 PDF 不存在不阻断；一旦存在，其报告也必须有效。任何报告陈旧、文件被修改、覆盖不足、目标环境不符或必做产物缺失都会失败。
 - QA 目录、截图、PDF 与凭证必须位于交付根目录内，不得通过符号链接越界。
+- 静态、视觉、PDF 与最终验证生成物由交付根的 `.web-slide-qa-manifest.json` 记录文件哈希；只覆盖未被修改的自有产物，批量发布时先检查全部目标，并在发布失败时尝试恢复原内容。该清单是文件归属与改动检查，不是权限或防篡改安全边界。
+- 旧交付没有归属清单时，不自动接管旧报告、截图或 PDF；保留旧目录，使用构建器的 `--out` 或 `output.dir` 生成新交付。不会为了通过门禁而删除用户文件。未再选中的旧截图不自动清理。
 
 ## 标准命令
 
@@ -148,5 +150,30 @@ node scripts/visual-qa.mjs <projectDir>/dist/index.html <projectDir>/dist/qa-rep
 node scripts/export-pdf.mjs <projectDir>/dist/index.html <projectDir>/dist/deck.pdf
 node scripts/verify-delivery.mjs <projectDir>/dist/index.html
 ```
+
+## 人工复核记录
+
+实际看图和内容复核后，在交付根内的 `qa-report/review.json` 写入记录；不要在未复核时填 `complete`。示例仅是字段模板：
+
+```json
+{
+  "schemaVersion": "1.0.0",
+  "kind": "human-review",
+  "reviewer": "实际复核者",
+  "reviewedAt": "实际复核时间（ISO 8601）",
+  "inputSha256": "当前 HTML SHA-256",
+  "manifestSha256": "当前 delivery-manifest.json SHA-256",
+  "visual": "not-completed",
+  "visualSlideIds": [],
+  "semantic": "not-completed",
+  "semanticSlideIds": [],
+  "pdf": "not-completed",
+  "issues": []
+}
+```
+
+视觉复核覆盖脚本选定的页面，高保障覆盖全部页面；内容语义复核覆盖全部页面。检查遮挡、裁切、实际色对、数据图、引用、页面角色豁免与讲稿；目标浏览器中还须检查键盘、总览焦点、阅读模式、翻页及减少动态效果。高保障 PDF 也须实际复核。发现问题时记录描述和 `resolved:false`，处理并重验后才能改为 `resolved:true`。
+
+`verify` 对存在的记录检查哈希、覆盖、复核者、时间与完成状态，陈旧或未完成的记录会阻断。记录不存在时，在 `delivery.json` 标记 `humanReviewRecord: "not-recorded"`；这仍不能宣称人工验收完成。`present-valid` 只证明记录结构与当前交付相符，不证明复核确实发生或结论正确。
 
 构建成功不等于视觉验收完成。最终验证返回 0 只表示该档位的机器凭证门禁满足：自动视觉脚本检测部分 overflow、采集截图并记录哈希，不自动证明遮挡、对比度、裁切或语义正确。必须另行看图和复核内容，记录复核人、覆盖页面、问题及处理结果；`verify` 不单独证明人工视觉或语义 review 通过。无法执行的门禁或复核必须明确标为未完成。

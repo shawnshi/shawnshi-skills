@@ -28,10 +28,10 @@ body[data-theme="winning-clinical"] {
   --grey-1:var(--gray-200);
   --grey-2:var(--gray-300);
   --grey-3:var(--gray-600);
-  --accent:var(--warning);
-  --accent-rgb:242,169,0;
-  --accent-on:var(--warning-on);
-  --accent-bright:#ffd166;
+  --accent:var(--primary-600);
+  --accent-rgb:0,94,184;
+  --accent-on:var(--primary-on);
+  --accent-bright:#79c1ff;
   --text-primary:var(--gray-900);
   --text-secondary:var(--gray-600);
   --text-helper:var(--gray-600);
@@ -47,10 +47,32 @@ body[data-theme="winning-clinical"] {
 body[data-theme="winning-clinical"] .slide { background:var(--surface); }
 body[data-theme="winning-clinical"] .slide.grey { background:var(--gray-100); }
 body[data-theme="winning-clinical"] .slide.dark { background:var(--gray-900);color:var(--primary-on); }
-body[data-theme="winning-clinical"] .slide.accent { background:var(--warning);color:var(--warning-on); }
+body[data-theme="winning-clinical"] .slide.accent { background:var(--primary-600);color:var(--primary-on); }
 body[data-theme="winning-clinical"] .canvas-card { background:var(--surface); }
 body[data-theme="winning-clinical"] .slide.dark .canvas-card { background:var(--gray-900);color:var(--primary-on); }
-body[data-theme="winning-clinical"] .slide.accent .canvas-card { background:var(--warning);color:var(--warning-on); }
+body[data-theme="winning-clinical"] .slide.accent .canvas-card { background:var(--primary-600);color:var(--primary-on); }
+body[data-theme="winning-clinical"] .slide:is(.dark,.accent) {
+  --ink:#ffffff;
+  --text-primary:#ffffff;
+  --text-secondary:#cad3dc;
+  --text-helper:#cad3dc;
+  --text-placeholder:#cad3dc;
+  --gray-100:#263541;
+  --gray-200:#304351;
+  --gray-500:#b2c0cd;
+  --gray-600:#cad3dc;
+  --primary-100:#263541;
+  --primary-700:#79c1ff;
+  --surface:#1a232c;
+  --border-subtle:#81909f;
+}
+body[data-theme="winning-clinical"] .slide.accent {
+  --text-secondary:#ffffff;
+  --text-helper:#ffffff;
+  --text-placeholder:#ffffff;
+  --primary-700:#ffffff;
+  --surface:#005eb8;
+}
 
 /* Header and decision narrative */
 .c-header { display:flex;flex-direction:column;gap:1.6vh;margin-bottom:4vh; }
@@ -143,7 +165,7 @@ body[data-theme="winning-clinical"] .slide.accent .canvas-card { background:var(
 /* Before / after comparison */
 .c-comparison-matrix { display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:2vw;width:100%; }
 .c-matrix-col-bad,.c-matrix-col-good { padding:clamp(20px,2.4vw,40px);border-top:5px solid; }
-.c-matrix-col-bad { background:#fdf0ef;color:var(--text-primary);border-color:var(--danger); }
+.c-matrix-col-bad { background:var(--gray-100);color:var(--text-primary);border-color:var(--gray-500); }
 .c-matrix-col-good { background:var(--primary-100);color:var(--text-primary);border-color:var(--primary-600); }
 
 /* Clinical stage x intervention matrix */
@@ -158,7 +180,7 @@ body[data-theme="winning-clinical"] .slide.accent .canvas-card { background:var(
 .cdss-workflow-matrix > [role="columnheader"],.cdss-workflow-matrix > [role="rowheader"] { background:var(--gray-100);font-weight:750; }
 .cdss-workflow-matrix > .is-active { background:var(--primary-100);box-shadow:inset 4px 0 0 var(--primary-600); }
 
-/* EMR maturity radar: actual chart surface, not a placeholder */
+/* Axes are a schematic frame; only a data-bound SVG can encode measured scores. */
 .emr-level5-radar {
   position:relative;display:grid;place-items:center;width:min(52vh,42vw);aspect-ratio:1;
   background:
@@ -167,9 +189,11 @@ body[data-theme="winning-clinical"] .slide.accent .canvas-card { background:var(
     linear-gradient(150deg,transparent 49.6%,var(--gray-300) 49.8% 50.2%,transparent 50.4%);
 }
 .emr-level5-radar::before {
-  content:"";position:absolute;inset:8%;background:var(--primary-100);
-  border:3px solid var(--primary-600);clip-path:polygon(50% 2%,94% 34%,78% 88%,22% 88%,6% 34%);opacity:.82;
+  content:"示意框架（非评分）";position:absolute;bottom:0;
+  color:var(--text-secondary);font-size:.75rem;
 }
+.emr-level5-radar:has(svg)::before { display:none; }
+.emr-level5-radar > svg { width:100%;height:100%; }
 .emr-level5-radar > * { position:relative;z-index:1; }
 
 /* Data-lake convergence funnel */

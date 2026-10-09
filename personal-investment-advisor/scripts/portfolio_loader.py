@@ -340,15 +340,20 @@ def load_positions(
 
     path_str = str(positions_path)
     mtime = positions_path.stat().st_mtime
+    source_bytes = positions_path.read_bytes()
+    source_sha256 = hashlib.sha256(source_bytes).hexdigest()
     cache_key = (
         path_str
         if not quotes_report
         else f"{path_str}#{_quotes_report_cache_component(quotes_report)}"
     )
-    if cache_key in _positions_cache and _positions_cache[cache_key]['mtime'] == mtime:
-        return copy.deepcopy(_positions_cache[cache_key]['payload'])
+    # Files rewritten within the filesystem clock tick can have identical mtimes
+    # (MIN-E01-ZERO-EXCLUSION); quantity changes must still invalidate classification.
+    cached = _positions_cache.get(cache_key)
+    if cached and cached['mtime'] == mtime and cached.get('source_sha256') == source_sha256:
+        return copy.deepcopy(cached['payload'])
 
-    payload = json.loads(positions_path.read_text(encoding="utf-8"))
+    payload = json.loads(source_bytes.decode("utf-8"))
     validation_errors = validate_portfolio_payload(payload)
     if validation_errors:
         raise ValueError("invalid positions file: " + "; ".join(validation_errors))
@@ -406,8 +411,26 @@ def load_positions(
             result, path_str, quotes_report, max_report_age_seconds
         )
 
-    _positions_cache[cache_key] = {'mtime': mtime, 'payload': result}
+    _positions_cache[cache_key] = {'mtime': mtime, 'source_sha256': source_sha256, 'payload': result}
     return copy.deepcopy(result)
+
+
+def analysis_positions(payload: Dict[str, Any]) -> list[Dict[str, Any]]:
+    """Validated non-cash research universe, including zero-quantity securities.
+
+    Does not change ``positions`` or the actual-holdings denominator. Reference
+    costs on unpurchased rows are not paid capital or unrealized returns.
+    """
+    if payload.get("_status") != "ok":
+        raise ValueError("analysis universe requires a validated positions payload")
+    rows = list(payload.get("positions", [])) + list(
+        payload.get("_inactive_positions_dict", {}).values()
+    )
+    return [dict(row) for row in rows if not is_cash_position(row)]
+
+
+def unpurchased_positions(payload: Dict[str, Any]) -> list[Dict[str, Any]]:
+    return [row for row in analysis_positions(payload) if row["quantity"] == 0]
 
 
 def _apply_validated_weight_snapshot(

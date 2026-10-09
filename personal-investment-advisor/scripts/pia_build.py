@@ -497,9 +497,12 @@ def build_thesis_pack(args: argparse.Namespace) -> dict[str, Any]:
     task_dir = Path(args.task_dir).expanduser().resolve()
     quotes_source = Path(args.quotes_file).expanduser().resolve()
     quotes, quotes_sha = read_json(quotes_source, "quotes file")
-    quotes_path = ensure_local_copy(task_dir, "out/quotes.json", quotes_source, args.force)
+    research_universe = bool(getattr(args, "research_universe", False))
+    quotes_relative = "out/unpurchased_quotes.json" if research_universe else "out/quotes.json"
+    quotes_path = ensure_local_copy(task_dir, quotes_relative, quotes_source, args.force)
     audit = quotes.get("portfolio_batch_audit") or {}
-    binding = audit.get("portfolio_snapshot_binding")
+    binding = (quotes.get("research_binding") if research_universe
+               else audit.get("portfolio_snapshot_binding"))
     require(isinstance(binding, dict) and binding.get("sha256"),
             "quotes file has no portfolio_snapshot_binding; run yf.py --daily-sync first")
     evidence, evidence_sha = read_json(Path(args.evidence_file).expanduser().resolve(),
@@ -548,19 +551,25 @@ def build_thesis_pack(args: argparse.Namespace) -> dict[str, Any]:
         "assessments": assessment_list,
         "evidence_items": items,
     }
-    active = [entry["symbol"] for entry in binding.get("active_positions", [])
-              if entry.get("asset_type") != "cash"]
+    bound_rows = binding.get("positions", []) if research_universe else binding.get("active_positions", [])
+    if research_universe:
+        require(binding.get("scope") == "unpurchased_research" and bool(bound_rows)
+                and all(isinstance(row, dict) and type(row.get("quantity")) in (int, float)
+                        and row["quantity"] == 0 and row.get("asset_type") != "cash" for row in bound_rows),
+                "research binding must contain zero-quantity non-cash securities")
+    active = [entry["symbol"] for entry in bound_rows if entry.get("asset_type") != "cash"]
     assessed = {entry.get("symbol") for entry in assessment_list if isinstance(entry, dict)}
     assessed = {entry.get("symbol") for entry in assessment_list if isinstance(entry, dict)}
     missing = sorted(set(active) - assessed)
     require(not missing, f"assessments do not cover: {', '.join(missing)}")
 
-    out_path = task_dir / "inputs" / "thesis_evidence_pack.json"
+    pack_relative = ("inputs/unpurchased_thesis_evidence_pack.json" if research_universe
+                     else "inputs/thesis_evidence_pack.json")
+    out_path = task_dir / pack_relative
     out_sha = write_json(out_path, payload, args.force)
     merge_manifest(task_dir / "inputs" / "dataset_manifest.json", manifest_entries(
         task_dir,
-        [("out/quotes.json", quotes_path),
-         ("inputs/thesis_evidence_pack.json", out_path)],
+        [(quotes_relative, quotes_path), (pack_relative, out_path)],
     ))
     return {
         "status": "complete",
@@ -629,6 +638,8 @@ def main(argv: list[str] | None = None) -> int:
 
     pack = subparsers.add_parser("thesis-pack", help="Build a thesis red-team evidence package.")
     pack.add_argument("--quotes-file", required=True)
+    pack.add_argument("--research-universe", action="store_true",
+                      help="Bind the separate zero-quantity research quote packet; not actual holdings.")
     pack.add_argument("--evidence-file", required=True)
     pack.add_argument("--assessments-file", required=True)
     pack.add_argument("--scope-coverage-file", required=True)

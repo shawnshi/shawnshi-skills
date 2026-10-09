@@ -220,6 +220,8 @@ ID 在各自记录类型内唯一。`Claims` 引用的 Evidence ID 必须存在�
 
 ## Draft and final validation
 
+合法教学字面量只在幻灯片叙事、正文、视觉描述/图表说明和讲稿的非记录文本中使用：单反引号内精确写为 `TODO`、`TBD`、`待补`、`待确认` 或 `待核验` 时，表示被讨论的词而不是待填内容。仅这些精确关键词获豁免；metadata、Evidence/Decision/Asset 等结构化记录不获豁免。`{{...}}`、`[INSERT...]`、`[BASELINE...]` 即使放进代码标记仍阻断 final；`TODO add a budget` 也不是精确字面量。不得借此掩盖真实缺口或未分派责任。
+
 - `draft`：moustache、`TBD`、`TODO`、`待补`、`待确认`、`待核验`、`[INSERT]`、`[BASELINE]` 等占位符产生警告；用 `Open Items` 记录未闭合事项。
 - `final`：上述未结构化占位符全部阻断；允许结构化 `unverified` Claims 和 Open Items。结构化记录中的非法枚举、无效日期、缺失引用或悬空 ID 必须阻断；`permission-pending` 或脱敏 `pending` 的资产也必须先闭合或替换。
 - 内容真实性、法规适用性、资产授权、视觉效果和讲稿质量必须人工复核。

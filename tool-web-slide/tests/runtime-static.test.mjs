@@ -250,11 +250,12 @@ test('visual QA rejects an output directory symlink that escapes the delivery ro
   }
 });
 
-test('preflight browser gate is advisory except for high assurance or explicit enforcement', () => {
-  assert.equal(browserGateSeverity('quick-internal'), 'warning');
-  assert.equal(browserGateSeverity('standard-client'), 'warning');
-  assert.equal(browserGateSeverity('high-assurance'), 'error');
-  assert.equal(browserGateSeverity('quick-internal', true), 'error');
+test('delivery preflight requires browsers; only explicit non-high-assurance drafts may warn', () => {
+  assert.equal(browserGateSeverity('quick-internal'), 'error');
+  assert.equal(browserGateSeverity('standard-client'), 'error');
+  assert.equal(browserGateSeverity('standard-client', false, true), 'warning');
+  assert.equal(browserGateSeverity('high-assurance', false, true), 'error');
+  assert.equal(browserGateSeverity('quick-internal', true, true), 'error');
 });
 
 test('PDF report schema records integrity, target, profile, network, and time', () => {
@@ -346,6 +347,26 @@ test('delivery verifier accepts fresh required evidence and rejects stale or inv
     assert.equal(passed.ok, true, passed.errors.join('\n'));
     assert.equal(passed.gates.pdf.ok, true);
     assert.equal(passed.gates.pdf.present, false);
+    assert.equal(passed.humanReviewRecord, 'not-recorded');
+    const review = {
+      schemaVersion: '1.0.0', kind: 'human-review', reviewer: 'test fixture',
+      reviewedAt: '2026-01-01T00:00:00.000Z', inputSha256, manifestSha256,
+      visual: 'complete', visualSlideIds: selectedSlideIds,
+      semantic: 'complete', semanticSlideIds: slideIds, pdf: 'not-completed', issues: []
+    };
+    await writeFile(join(qa, 'review.json'), JSON.stringify(review));
+    const reviewed = await verifyDelivery({ htmlPath });
+    assert.equal(reviewed.ok, true, reviewed.errors.join('\n'));
+    assert.equal(reviewed.humanReviewRecord, 'present-valid');
+    await writeFile(join(qa, 'review.json'), JSON.stringify({ ...review, inputSha256: 'stale' }));
+    const staleReview = await verifyDelivery({ htmlPath });
+    assert.equal(staleReview.ok, false);
+    assert.ok(staleReview.gates.review.errors.some(error => /stale/.test(error)));
+    await writeFile(join(qa, 'review.json'), JSON.stringify({ ...review, issues: [{ description: 'test issue', resolved: false }] }));
+    const unresolvedReview = await verifyDelivery({ htmlPath });
+    assert.equal(unresolvedReview.ok, false);
+    assert.ok(unresolvedReview.gates.review.errors.some(error => /unresolved/.test(error)));
+    await rm(join(qa, 'review.json'));
 
     await writeFile(join(directory, 'assets', 'core.css'), 'body{background:#000}');
     const tamperedAsset = await verifyDelivery({ htmlPath });

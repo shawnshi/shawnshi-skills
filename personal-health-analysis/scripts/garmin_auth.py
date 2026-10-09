@@ -148,7 +148,33 @@ _AUTH_MARKERS = (
     "locked",
     "account error",
 )
-_LAST_FAILURE: dict[str, str] = {}
+_LAST_FAILURE: dict[str, object] = {}
+
+
+class SavedSessionError(RuntimeError):
+    """A sanitized restoration failure with transport metadata, never token text."""
+
+    def __init__(self, exc: BaseException):
+        self.status = _classify_auth_failure(exc)
+        self.code = self.status
+        self.error_type = type(exc).__name__
+        self.http_status = _http_status(exc)
+        super().__init__(self.status)
+
+
+def _http_status(exc: BaseException) -> int | None:
+    for _ in range(5):
+        response = getattr(exc, "response", None)
+        value = getattr(response, "status_code", None)
+        if value is None:
+            value = getattr(exc, "status_code", None)
+        if isinstance(value, int) and not isinstance(value, bool) and 100 <= value <= 599:
+            return value
+        cause = exc.__cause__
+        if cause is None:
+            break
+        exc = cause
+    return None
 
 
 def _classify_auth_failure(exc: BaseException) -> str:
@@ -161,6 +187,13 @@ def _classify_auth_failure(exc: BaseException) -> str:
     compact_name = name.replace(" ", "")
     message = str(exc).casefold()
     haystack = f"{name} {message}"
+    status_code = _http_status(exc)
+    if status_code == 429:
+        return "rate_limited"
+    if status_code in (401, 403):
+        return "authentication_failed"
+    if status_code == 408 or (status_code is not None and status_code >= 500):
+        return "connection_error"
     if isinstance(exc, EOFError) or "mfarequired" in compact_name:
         return "mfa_required"
     curl_code = _CURL_CODE_PATTERN.search(message)
@@ -193,15 +226,10 @@ def _emit_safe_failure(status: str, exc: BaseException) -> None:
             "error_type": type(exc).__name__,
         }
     )
-    _emit(
-        {
-            "ok": False,
-            "status": category,
-            "base_status": status,
-            "error_type": type(exc).__name__,
-        },
-        stream=sys.stderr,
-    )
+    http_status = _http_status(exc)
+    if http_status is not None:
+        _LAST_FAILURE["http_status"] = http_status
+    _emit({"ok": False, **_LAST_FAILURE}, stream=sys.stderr)
 
 
 def _load_garmin_api():
@@ -245,12 +273,11 @@ def _reject_unsafe_token_path(path: Path) -> None:
             raise RuntimeError("token_store_reparse_point_forbidden")
 
 
-def _restore_client_without_persistent_token_write(Garmin):
-    """Restore from an ephemeral copy so refresh cannot mutate the saved tokens."""
-    token_file = _token_file_path()
+def _read_saved_token_bytes(token_file: Path) -> bytes | None:
+    """Read one bounded, stable token snapshot without persisting credentials."""
+    _reject_unsafe_token_path(token_file)
     if not token_file.is_file():
         return None
-    _reject_unsafe_token_path(token_file)
     try:
         with token_file.open("rb") as source:
             before = os.fstat(source.fileno())
@@ -266,6 +293,30 @@ def _restore_client_without_persistent_token_write(Garmin):
     identity_current = (current.st_dev, current.st_ino, current.st_size, current.st_mtime_ns)
     if identity_before != identity_after or identity_after != identity_current:
         raise RuntimeError("token_store_changed_during_read")
+    return token_bytes
+
+
+def _new_live_client(Garmin, *args, **kwargs):
+    # The caller owns retries; neither SDK nor HTTP transport may replay a read.
+    client = Garmin(*args, retry_attempts=0, **kwargs)
+    client.client.configure(retries=0)
+    return client
+
+
+def _restore_client_without_persistent_token_write(
+    Garmin, *, token_file: Path | None = None, in_memory: bool = False
+):
+    """Keep profile-free insight restoration separate from profile-based APIs."""
+    token_bytes = _read_saved_token_bytes(token_file or _token_file_path())
+    if token_bytes is None:
+        return None
+    if in_memory:
+        client = _new_live_client(Garmin)
+        client.client._tokenstore_path = None
+        client.client.loads(token_bytes.decode("utf-8"))
+        if client.client._tokenstore_path is not None:
+            raise RuntimeError("token_store_persistence_forbidden")
+        return client
     with TemporaryDirectory(prefix="garmin-token-read-") as temporary_dir:
         temporary_file = Path(temporary_dir) / "garmin_tokens.json"
         with temporary_file.open("xb") as handle:
@@ -276,7 +327,7 @@ def _restore_client_without_persistent_token_write(Garmin):
             temporary_file.chmod(0o600)
         except OSError as exc:
             raise RuntimeError("temporary_token_security_setup_failed") from exc
-        client = Garmin()
+        client = _new_live_client(Garmin)
         client.login(tokenstore=temporary_dir)
         return client
 
@@ -308,7 +359,7 @@ def login(
         def get_mfa() -> str:
             return input("Garmin MFA code: ")
 
-        client = Garmin(email, password, prompt_mfa=get_mfa)
+        client = _new_live_client(Garmin, email, password, prompt_mfa=get_mfa)
         client.login(tokenstore=str(TOKEN_DIR))
         return True
     except Exception as exc:
@@ -321,6 +372,9 @@ def get_client(
     network_capability: object = None,
     operation: str = AUTH_OPERATION,
     request: dict[str, object] | None = None,
+    token_file: Path | None = None,
+    in_memory: bool = False,
+    raise_on_error: bool = False,
 ):
     """Restore a saved session without persisting token refresh side effects."""
     _require_network_authorization(
@@ -328,14 +382,20 @@ def get_client(
         operation=operation,
         request=request,
     )
-    if not TOKEN_DIR.exists():
-        return None
+    _LAST_FAILURE.clear()
     try:
         Garmin = _load_garmin_api()
         _force_direct_garmin_egress(os.environ)
-        return _restore_client_without_persistent_token_write(Garmin)
+        client = _restore_client_without_persistent_token_write(
+            Garmin, token_file=token_file, in_memory=in_memory
+        )
+        if client is None and raise_on_error:
+            raise FileNotFoundError("token_store_missing")
+        return client
     except Exception as exc:
-        _emit_safe_failure("saved_session_invalid", exc)
+        if raise_on_error:
+            raise SavedSessionError(exc) from exc
+        _emit_safe_failure("saved_session_restore_failed", exc)
         return None
 
 

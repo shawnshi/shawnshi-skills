@@ -36,15 +36,15 @@ $arguments = @(
     '--garmindb-python', ('"{0}"' -f $python),
     '--scratch-dir', ('"{0}"' -f $scratch),
     '--state-output', ('"{0}"' -f $stateFile),
-    '--timeout-seconds', '480',
-    '--total-timeout-seconds', '900',
+    '--timeout-seconds', '150',
+    '--total-timeout-seconds', '180',
     '--allow-network', '--allow-sync', '--allow-health-data'
 ) -join ' '
 
 $at = [datetime]::ParseExact($DailyAt, 'HH:mm', [Globalization.CultureInfo]::InvariantCulture)
 $action = New-ScheduledTaskAction -Execute $python -Argument $arguments -WorkingDirectory (Split-Path -Parent $runner)
 $trigger = New-ScheduledTaskTrigger -Daily -At $at
-$settings = New-ScheduledTaskSettingsSet -StartWhenAvailable -MultipleInstances IgnoreNew -ExecutionTimeLimit (New-TimeSpan -Minutes 18) -AllowStartIfOnBatteries -DontStopIfGoingOnBatteries
+$settings = New-ScheduledTaskSettingsSet -StartWhenAvailable -MultipleInstances IgnoreNew -ExecutionTimeLimit (New-TimeSpan -Minutes 3) -AllowStartIfOnBatteries -DontStopIfGoingOnBatteries
 $identity = [Security.Principal.WindowsIdentity]::GetCurrent().Name
 $principal = New-ScheduledTaskPrincipal -UserId $identity -LogonType Interactive -RunLevel Limited
 

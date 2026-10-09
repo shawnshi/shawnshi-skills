@@ -163,7 +163,7 @@ class GarminAutoSyncTests(unittest.TestCase):
             "-StartWhenAvailable",
             "-MultipleInstances IgnoreNew",
             "--allow-network', '--allow-sync', '--allow-health-data",
-            "-ExecutionTimeLimit (New-TimeSpan -Minutes 18)",
+            "-ExecutionTimeLimit (New-TimeSpan -Minutes 3)",
         ):
             with self.subTest(marker=marker):
                 self.assertIn(marker, installer)

@@ -101,10 +101,10 @@ class PromptContractTests(unittest.TestCase):
                 "task_message",
             }.issubset(set(policy["context_transfer"]["required_fields"]))
         )
-        self.assertEqual(policy["parallelism"]["max_supplement_workers"], 3)
+        self.assertEqual(policy["parallelism"]["max_supplement_workers"], 1)
         self.assertEqual(
             policy["parallelism"]["overflow_strategy"],
-            "canary_first_then_bounded_fanout",
+            "canary_first_then_serial_writers",
         )
         self.assertTrue(policy["parallelism"]["one_gap_per_worker"])
         self.assertIsNone(policy["observability"]["normal_run_token_ceiling"])

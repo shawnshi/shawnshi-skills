@@ -28,6 +28,10 @@
 
 未知或无效发布日期进入隔离池，不得进入正式 Top。观察时间、检索时间、网页更新时间不得冒充发布日期。
 
+### 新运行的主张绑定门
+
+生产 prepare 登记 `claim_grounding_version=2`。L3/L4、重大资讯或近期决策影响条目必须提供主张 ledger；grounded 主张的原文引句和 `evidence_ref`（正文哈希、Unicode start/end）必须与同一条目的登记正文精确匹配，关键 fact 中的数字逐项绑定。语义 helper 支持只读补取已有正文区间或定位唯一原文引句，不开放联网或新候选。缺证据时删除主张、降级或拒绝，不能靠非空任意文字通过。来源字节匹配不证明因果或语义蕴含，独立评审仍须检查。未登记新策略的旧运行继续旧规则，恢复新策略来源不能降级该来源的证据门。
+
 ## 3. 来源与事件卫生
 
 1. 原始来源优先；二手来源只在存在多个独立佐证时才可作为正式条目；当本轮 focus config 的 `corroboration_policy.single_secondary_allowed` 为 true 时（2026-09-14 授权，可在配置中关闭），单一独立二手来源可作为 `corroboration_status=single_secondary` 入选，但其可信度不得高于 `single_primary` 或 `multi_independent`，且同一事件不得重复计数。

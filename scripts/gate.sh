@@ -7,25 +7,43 @@
 # the gate has one command that a third party can reproduce from a checkout.
 #
 # Usage:
-#   scripts/gate.sh                     # whole library, read-only checks
-#   scripts/gate.sh skill-a skill-b     # scoped to selected skills
-#   scripts/gate.sh --refresh-manifests # rewrite manifests, then check
+#   scripts/gate.sh                     # whole library, no tests or writes
+#   scripts/gate.sh skill-a skill-b     # scoped deterministic checks
+#   scripts/gate.sh --tests             # explicit library tests (temporary writes)
+#   scripts/gate.sh --refresh-manifests skill-a # authorized scoped refresh
+# Flags precede skill names. Tests always cover the library test suite.
 #
-# Exit codes: 0 pass, 1 gate failure, 127 missing runtime dependency.
+# Exit codes: 0 deterministic checks pass, 1 failure, 2 usage, 127 missing dependency.
 
 set -eu
+export PYTHONDONTWRITEBYTECODE=1
+
+refresh=0
+tests=0
+while [ "$#" -gt 0 ]; do
+    case "$1" in
+        --refresh-manifests) refresh=1; shift ;;
+        --tests) tests=1; shift ;;
+        --help) echo 'Usage: gate.sh [--tests] [--refresh-manifests] [skill-name ...]'; exit 0 ;;
+        --*) echo "gate: unknown option: $1" >&2; exit 2 ;;
+        *) break ;;
+    esac
+done
 
 root=$(CDPATH= cd -- "$(dirname -- "$0")/.." && pwd)
 cd "$root"
 
-refresh=0
-if [ "${1:-}" = "--refresh-manifests" ]; then
-    refresh=1
-    shift
-fi
-
 if ! command -v python >/dev/null 2>&1; then
     echo "gate: python 3 with PyYAML is required." >&2
+    exit 127
+fi
+
+if ! python -B -X utf8 -c 'import sys; assert sys.version_info >= (3, 10); import yaml'; then
+    echo "gate: Python 3.10+ with PyYAML is required; no dependency was installed." >&2
+    exit 127
+fi
+if [ "$tests" -eq 1 ] && ! python -B -X utf8 -c 'import pytest'; then
+    echo "gate: --tests requires pytest; deterministic checks do not." >&2
     exit 127
 fi
 
@@ -44,7 +62,7 @@ esac
 run_scope() {
     for skill in "$@"; do
         echo "== $skill =="
-        python -B -X utf8 scripts/validate_openai_yaml.py --root . --json --include-skill "$skill" >/dev/null
+        python -B -X utf8 scripts/validate_openai_yaml.py --root . --json --include-skill "$skill"
         if [ "$refresh" -eq 1 ]; then
             # shellcheck disable=SC2086
             pwsh $pwsh_flags -File scripts/generate_resource_manifests.ps1 -Root . -IncludeSkills "$skill"
@@ -58,9 +76,7 @@ run_scope() {
 
 run_repository() {
     echo "== openai.yaml metadata =="
-    python -B -X utf8 scripts/validate_openai_yaml.py --root . --json >/dev/null
-    echo "== unit tests =="
-    python -B -X utf8 -m pytest scripts -q
+    python -B -X utf8 scripts/validate_openai_yaml.py --root . --json
     if [ "$refresh" -eq 1 ]; then
         # shellcheck disable=SC2086
         pwsh $pwsh_flags -File scripts/generate_resource_manifests.ps1 -Root .
@@ -73,10 +89,15 @@ run_repository() {
     pwsh $pwsh_flags -File scripts/repair_skills.ps1 -Mode Gate -Root .
 }
 
+if [ "$tests" -eq 1 ]; then
+    echo "== authorized library tests (temporary writes) =="
+    python -B -X utf8 -m pytest scripts -q -p no:cacheprovider
+fi
+
 if [ "$#" -gt 0 ]; then
     run_scope "$@"
 else
     run_repository
 fi
 
-echo "gate: passed"
+echo "gate: deterministic checks passed; semantic review and host behaviour are separate."
