@@ -1,4 +1,13 @@
+# Skills
+
 工具是人类意志的延伸。
+
+当前包含 51 个一级用户技能，覆盖学术与认知研究、医疗数字化、视觉与系统流程、个人工作流及文档工具。本目录是 Pi 的本地安装库，不是独立 Git 工作树。
+
+- [技能目录](#5-skill-inventory)：按交付物查找入口，点击技能名查看 `SKILL.md`。
+- [触发分工](#6-trigger-ownership)：区分相近入口，避免重复启动流程。
+- [检查与维护](#7-gate)：按任务范围选择检查；历史通过记录不代表当前全库已验证。
+- 源码仓库：[shawnshi/shawnshi-skills](https://github.com/shawnshi/shawnshi-skills)。
 
 
 ## 1. Runtime contract
@@ -74,7 +83,7 @@ description: 说明技能做什么，以及用户在什么场景下应使用它�
 | `personal-cognitive-auditor` | 生成当前自然周、月或季度的精确 canonical 个人日志审计请求 | `personal-diary-writer` 权威入口返回的 canonical 季度个人日志内同周期审计区块 | 草稿、预览、只读、不保存、日度、年度、自定义路径或第二处存储 |
 | `personal-diary-writer` | 生成通过受保护 `personal-diary-request-v1` 与内容门的完整个人日记，承接 `mentat-insight-diary` 的 canonical Mentat 请求，或承接 `personal-cognitive-auditor` 的当前自然周、月、季度审计请求 | 对应权威入口返回的 canonical 季度个人日志或 canonical Mentat 季度档案 | 草稿、预览、只读、不保存、跨日期复用、自定义路径或第二处存储 |
 | `personal-health-analysis` | 明确启用 Garmin 自动同步 | 绑定的 GarminDB 本地数据库、一个当前用户计划任务及单一脱敏运行状态文件 | 仅诊断、预览、试运行、不同步、禁用、移除自动同步或自定义第二处存储 |
-| `personal-intelligence-hub` | 生成正式日简报 | 正式新闻文件及新闻目录内的去重索引 | 预览或明确不保存 |
+| `personal-intelligence-hub` | 生成正式日简报 | 正式新闻文件及新闻目录内的去重索引 | 预览或明确不保存时不归档；生产预览仍产生运行中间态 |
 | `hit-weekly-brief` | 生成正式数字健康周报 | DigitalHealthWeeklyBrief 本地归档 | 草稿、预览或明确不保存 |
 | `hit-industry-radar` | 生成正式医疗行业雷达 | HealthcareIndustryRadar 本地归档 | 草稿、预览或明确不保存 |
 | `hit-lectures-scout` | 生成正式医疗数字化文献侦察报告 | DigitalHealthLecturesScout 本地归档 | 草稿、预览或明确不保存 |
@@ -90,83 +99,83 @@ description: 说明技能做什么，以及用户在什么场景下应使用它�
 
 ## 5. Skill inventory
 
-当前库存为 51 个用户技能，不包含 `.system`、`scripts`、`shared` 和 `reports`。以下为功能摘要，完整触发条件、授权范围和退出边界以对应 `SKILL.md` 为准。
+截至 2026-10-09，按一级目录内的 `SKILL.md` 盘点为 51 个用户技能；不计 `.system`、`scripts`、`shared`、缓存及运行产物。以下为入口功能摘要，完整触发条件、授权范围和退出边界以对应 `SKILL.md` 为准。
 
 ### Academic and cognitive research
 
 | Skill | 功能说明 |
 |---|---|
-| `academic-paper-reader` | 深入拆解目标学术论文，核验身份与版本，审查方法、数据、关键数字、证据强度、局限及复现条件，并提供页码、章节和表图证据索引 |
-| `academic-scientific-visualization` | 设计、生成和审查可投稿的科学图表，包括多面板布局、误差棒、显著性标注、防色盲编码、期刊尺寸和矢量导出 |
-| `automate-github-issues` | 审计、设计或配置 GitHub Issue 分析、任务拆分、冲突检测、代理分派和受控合并流程 |
-| `cognitive-book-mirror` | 将书籍或长文重构为“原文主张—个人映射”的伴读分析，在保留作者原意的同时结合用户明确提供并授权使用的个人材料 |
-| `cognitive-ceo-review` | 从创始人或经营负责人视角审计战略、产品、项目和架构计划，检验问题定义、资源配置、风险、扩张空间和退出机制 |
-| `cognitive-deep-reader` | 深度拆解文章和长文，识别原有共识、核心机制、论证承重墙、认知变化与可执行含义 |
-| `cognitive-hv-analysis` | 对公司、产品、技术、政策或社会现象进行纵向演化追踪和横向同期比较，解释关键转折的原因、竞争位置和未来情景 |
-| `cognitive-ideation-brainstorming` | 将模糊创意或产品需求收敛为可验证的问题、范围、方案和设计决策 |
-| `cognitive-logic-adversary` | 对计划、论证和关键决策执行红队压力测试，识别矛盾、脆弱假设、单点故障和激励错位，并重构为更可防守的方案 |
-| `cognitive-morphism-mapper` | 把业务或组织问题抽象为对象、关系和约束，再映射到控制论、生态学、博弈论等成熟领域，借用可验证机制生成跨领域方案 |
-| `cognitive-personal-roundtable` | 对存在真实取舍的复杂议题开展证据化多视角压力测试，识别事实冲突、底层假设、遗漏变量和可执行决策路径；不替代检索与专业审查 |
-| `cognitive-storm-research` | 对复杂、争议或高风险议题开展多来源深度研究，建立事实底座、比较互相冲突的视角、进行红队复核并形成带引用的综合报告 |
-| `industry-strategy-analyst` | 以公开且可追溯的证据开展行业与市场研究，形成市场边界、规模、需求、价值链、竞争格局、供应商比较、情景预测、风险和可执行建议 |
-| `senior-osint-analyst` | 以合法公开来源开展政策、行业、企业、技术、供应链、地区或重大事件的开源情报研究，执行实体与时效核验、交叉验证和替代假设分析 |
+| [`academic-paper-reader`](academic-paper-reader/SKILL.md) | 深入拆解目标学术论文，核验身份与版本，审查方法、数据、关键数字、证据强度、局限及复现条件，并提供页码、章节和表图证据索引 |
+| [`academic-scientific-visualization`](academic-scientific-visualization/SKILL.md) | 设计、生成和审查可投稿的科学图表，包括多面板布局、误差棒、显著性标注、防色盲编码、期刊尺寸和矢量导出 |
+| [`automate-github-issues`](automate-github-issues/SKILL.md) | 审计、设计或配置 GitHub Issue 分析、任务拆分、冲突检测、代理分派和受控合并流程 |
+| [`cognitive-book-mirror`](cognitive-book-mirror/SKILL.md) | 将书籍或长文重构为“原文主张—个人映射”的伴读分析，在保留作者原意的同时结合用户明确提供并授权使用的个人材料 |
+| [`cognitive-ceo-review`](cognitive-ceo-review/SKILL.md) | 审计已有战略、产品或项目计划的经营价值、资源配置、收益路径、范围取舍和退出机制；不自动接管普通技术架构审查或开放式脑暴 |
+| [`cognitive-deep-reader`](cognitive-deep-reader/SKILL.md) | 分析非论文文章的核心机制、因果链、承重前提、反例及适用边界；普通摘要、论文方法审查和视频转录另走对应入口 |
+| [`cognitive-hv-analysis`](cognitive-hv-analysis/SKILL.md) | 结合纵向演化与横向同期比较，解释公司、产品、技术、政策或社会现象的关键转折与当前差异；纯市场规模或供应商选型交行业研究 |
+| [`cognitive-ideation-brainstorming`](cognitive-ideation-brainstorming/SKILL.md) | 将模糊创意或产品需求收敛为可验证的问题、范围、方案和设计决策 |
+| [`cognitive-logic-adversary`](cognitive-logic-adversary/SKILL.md) | 对计划、论证和关键决策执行红队压力测试，识别矛盾、脆弱假设、单点故障和激励错位，并重构为更可防守的方案 |
+| [`cognitive-morphism-mapper`](cognitive-morphism-mapper/SKILL.md) | 把业务或组织问题抽象为对象、关系和约束，再映射到控制论、生态学、博弈论等成熟领域，借用可验证机制生成跨领域方案 |
+| [`cognitive-personal-roundtable`](cognitive-personal-roundtable/SKILL.md) | 对存在真实取舍的复杂议题开展证据化多视角压力测试，识别事实冲突、底层假设、遗漏变量和可执行决策路径；不替代检索与专业审查 |
+| [`cognitive-storm-research`](cognitive-storm-research/SKILL.md) | 对跨证据域、存在实质争议或证据冲突的复杂公开议题开展综合研究，建立证据账本、比较解释与决策选项并给出证伪条件；不用于私人调查或实时监控 |
+| [`industry-strategy-analyst`](industry-strategy-analyst/SKILL.md) | 以公开且可追溯的证据开展行业与市场研究，形成市场边界、规模、需求、价值链、竞争格局、供应商比较、情景预测、风险和可执行建议 |
+| [`senior-osint-analyst`](senior-osint-analyst/SKILL.md) | 使用合法公开来源核验实体身份、任职、实体关系、事件时序和争议事实；不开展私人调查，也不替代市场选型或专业意见 |
 
 ### Healthcare strategy
 
 | Skill | 功能说明 |
 |---|---|
-| `hit-customer-analyst` | 医疗客户研究与拜访准备的 2.6.2 交付候选，仅用于明确指定候选版本的内部试用、验证或修订；提供会前速览、标准拜访包、战略客户包和一封信四种模式。入口要求常规业务继续使用原 `discovery-call`，该入口不在本库库存内 |
-| `hit-digital-strategy-partner` | 为医疗机构或医疗信息化企业开展数字化战略、方案选择、投资排序、可审计 ROI/TCO 和高管决策备忘录；不用于详细技术架构或临床审批 |
-| `hit-industry-radar` | 检索并分析指定周期内的医疗信息化、数字健康、医疗AI、监管政策和竞争厂商动态，生成带来源、事件日期、影响判断和行动建议的行业雷达 |
-| `hit-lectures-scout` | 检索、筛选和解释医疗AI、数字医疗与临床信息学论文及预印本，按研究类型评估证据质量，并将学术信号转化为可验证的研发、产品或市场假设 |
-| `hit-solution-architect` | 设计和评审医疗机构应用、数据、集成、基础设施、安全、容灾、信创迁移及临床 AI 技术方案；业务战略、预算取舍和投资排序转交 `hit-digital-strategy-partner` |
-| `hit-weekly-brief` | 汇总并研判指定周期内的数字健康、医疗政策、医疗AI、医疗信息化技术和行业研究，生成面向管理层的带来源周报 |
+| [`hit-customer-analyst`](hit-customer-analyst/SKILL.md) | 医疗机构或医疗数字化企业的客户研究与拜访准备，提供会前速览、标准拜访包、战略客户包及待审核客户信；当前为 2.6.3 交付候选，实名 RACI 与必要授权不足时仅交付事实简报和阻塞项 |
+| [`hit-digital-strategy-partner`](hit-digital-strategy-partner/SKILL.md) | 为医疗机构或医疗信息化企业开展数字化战略、方案选择、投资排序、可审计 ROI/TCO 和高管决策备忘录；不用于详细技术架构或临床审批 |
+| [`hit-industry-radar`](hit-industry-radar/SKILL.md) | 检索指定周期的医疗 IT 政策、厂商及采购项目阶段事件，提供来源、事件日期与影响判断；正式雷达按声明合同自动归档 |
+| [`hit-lectures-scout`](hit-lectures-scout/SKILL.md) | 检索、筛选和解释医疗AI、数字医疗与临床信息学论文及预印本，按研究类型评估证据质量，并将学术信号转化为可验证的研发、产品或市场假设 |
+| [`hit-solution-architect`](hit-solution-architect/SKILL.md) | 设计或评审医疗机构技术方案，交付系统边界、数据流、接口、NFR、迁移回退与技术验收；投资取舍交战略入口，患者数据、跨境或临床影响须执行安全门 |
+| [`hit-weekly-brief`](hit-weekly-brief/SKILL.md) | 面向中国医疗机构管理层及医疗 IT 经营决策者汇总数字健康、政策、医疗 AI 与信息化动态；正式周报验证后归档，速览及预览不保存 |
 
 ### Image and system workflows
 
 | Skill | 功能说明 |
 |---|---|
-| `image-prompt-gen` | 将简短主题或现有视觉要求转化为原创、可执行的平面设计图像提示词，也可在用户明确要求时直接生成或编辑图片 |
-| `image-studio-architect` | 使用当前图像生成能力创建或编辑海报、封面、插画、概念图、社交媒体图片和其他视觉资产，并根据输入完整度补足构图、色彩、光线、材质与画幅 |
-| `magazine-illustrator` | 为文章、博客、公众号、报告和演示文稿设计并直接生成杂志式位图插画，包括头图、封面、章节插图、系列配图和可复制的图像生成提示词 |
-| `mentat-collaboration-audit` | 基于真实会话记录、日志、工具调用和遥测事件审计系统效率与人机协作摩擦，复算等待、技能载入、错误重试、子代理Token、上下文压缩和写入授权指标，并按需生成Markdown报告和HTML审计面板 |
-| `mentat-skill-creator` | 仅在用户显式调用时维护当前 Pi 本地技能库的根治理合同、资源清单、触发所有权、批量迁移与发布门禁；通用新技能、无关单技能更新及插件打包不触发 |
+| [`image-prompt-gen`](image-prompt-gen/SKILL.md) | 将简短主题或现有视觉要求转化为原创、可执行的平面设计图像提示词，也可在用户明确要求时直接生成或编辑图片 |
+| [`image-studio-architect`](image-studio-architect/SKILL.md) | 使用当前图像生成能力创建或编辑海报、封面、插画、概念图、社交媒体图片和其他视觉资产，并根据输入完整度补足构图、色彩、光线、材质与画幅 |
+| [`magazine-illustrator`](magazine-illustrator/SKILL.md) | 为文章、博客、公众号、报告和演示文稿设计并直接生成杂志式位图插画，包括头图、封面、章节插图、系列配图和可复制的图像生成提示词 |
+| [`mentat-collaboration-audit`](mentat-collaboration-audit/SKILL.md) | 基于真实会话、日志、工具调用和遥测审计执行效率与协作摩擦，按需生成 Markdown 报告或 HTML 面板；默认只读，不自动修改或持久化 |
+| [`mentat-skill-creator`](mentat-skill-creator/SKILL.md) | 仅在用户显式调用时维护当前 Pi 本地技能库的根治理合同、资源清单、触发所有权、批量迁移与发布门禁；通用新技能、无关单技能更新及插件打包不触发 |
 
 ### Personal workflows
 
 | Skill | 功能说明 |
 |---|---|
-| `personal-cognitive-auditor` | 基于授权日志、日历与 Garmin 数据生成日、周、月、季度或年度复盘；个人周、月、季度审计通过校验和结构化请求门后保存到 canonical 季度日志 |
-| `personal-cognitive-prescription` | 从用户提供的近期问题、决策或复盘材料中识别认知盲区，并给出可核验到具体章节的跨领域阅读处方 |
-| `personal-diary-writer` | 完整个人日记通过受保护请求与内容门后自动保存；承接 Mentat 和个人周、月、季度审计的受保护写入；草稿不保存，当前写入器拒绝非 canonical 路径 |
-| `personal-health-analysis` | 以本地优先、失败关闭方式分析用户授权的 Garmin 数据，验证本地数据库读取窗口与设备/固件时期，披露时间范围、缺失和来源，并生成非诊断性报告、离线面板或研究用途 FHIR R4 包装 |
-| `personal-intelligence-hub` | 基线优先生成技术与医疗数字化资讯简报，按缺口补检、事件去重、语义评估和独立红队核验来源；正式日简报按声明合同自动保存 |
-| `personal-investment-advisor` | 默认使用免费公开来源，结合用户明确提供的持仓，执行证券身份核验、财报研究、估值情景、组合风险审计、主动机会验证和研究复盘；固定为 `research_only`，不生成交易指令 |
-| `personal-musicbee-dj` | 在本地 Windows 电脑上根据歌曲、歌单、流派、场景或情绪请求启动并控制 MusicBee 播放，必要时生成临时 M3U 歌单 |
-| `personal-travel-research` | 为城市或地区制作历史、考古、古建筑、博物馆与重点文物的出发前研究资料，并核验当前开放信息 |
-| `personal-write-humanizer` | 在不改变事实、业务含义和作者立场的前提下重写中文文本，减少机器化句式、客服口吻、空泛名词和过度排比，恢复自然母语节奏 |
-| `personal-writing-assistant` | 起草、重构、润色、核验和审校医疗卫生与医疗数字化领域的内参、观点文章、政策解读、案例及白皮书；仅在医疗主题与写作成稿同时成立时使用 |
+| [`personal-cognitive-auditor`](personal-cognitive-auditor/SKILL.md) | 基于授权日志、日历与 Garmin 数据进行日、周、月、季、年事实复盘；受控补齐当前周期健康数据，精确个人周、月、季度请求过门后保存 canonical 日志 |
+| [`personal-cognitive-prescription`](personal-cognitive-prescription/SKILL.md) | 从用户提供的近期问题、决策或复盘材料中识别认知盲区，并给出可核验到具体章节的跨领域阅读处方 |
+| [`personal-diary-writer`](personal-diary-writer/SKILL.md) | 生成并保存个人日记、周期审计或 Mentat 日志；完整日记通过内容门后保存到 canonical 季度日志，周期审计及 Mentat 走受保护请求门，纯当次草稿不读取私人数据、不保存 |
+| [`personal-health-analysis`](personal-health-analysis/SKILL.md) | 本地优先分析 Garmin 睡眠、HRV、心率、压力和健康趋势，生成非诊断报告或零外联面板；登录、同步及轨迹下载需独立授权 |
+| [`personal-intelligence-hub`](personal-intelligence-hub/SKILL.md) | 生成基线优先、跨技术与医疗数字化且带历史去重的日资讯简报；正式简报自动保存，生产预览仍产生运行中间态 |
+| [`personal-investment-advisor`](personal-investment-advisor/SKILL.md) | 开展证券财报与估值研究、授权持仓及未购观察清单审计、Daily Sync、主动研究与判断复盘；默认免费公开来源，支持 `research_only` / `advisory` / `actionable` 产出标注，不下单或执行订单 |
+| [`personal-musicbee-dj`](personal-musicbee-dj/SKILL.md) | 管理本地 MusicBee 歌单与播放；明确标签补全请求使用专用 JSON 研究角色串行研究并受控回写五字段，支持只生成不播放及只读预览，不改播放统计或应用设置 |
+| [`personal-travel-research`](personal-travel-research/SKILL.md) | 为城市或地区制作历史、考古、古建筑、博物馆与重点文物的出发前研究资料，并核验当前开放信息 |
+| [`personal-write-humanizer`](personal-write-humanizer/SKILL.md) | 在不改变事实、业务含义与立场的前提下自然化改写已有中文稿；不伪装身份、规避检测或篡改证据，领域核验交医疗写作入口 |
+| [`personal-writing-assistant`](personal-writing-assistant/SKILL.md) | 起草、重构、核验和审校医疗卫生与医疗数字化专业文章，负责领域主张、证据、政策含义与发布风险；纯自然化和事实定稿后的忠实编辑分别交相邻入口 |
 
 ### Meetings and utility workflows
 
 | Skill | 功能说明 |
 |---|---|
-| `officecli` | 使用 officecli CLI 创建、分析、校对和修改 DOCX、XLSX 与 PPTX 文档，并检查格式、定位问题、添加图表或执行结构化编辑 |
-| `tencent-meeting-mcp` | 通过已安装并授权的腾讯会议 CLI 或本地代理查询会议、成员、录制、转写和智能纪要，并在明确确认后创建、更新或取消会议 |
-| `tool-archive-crawler` | 对用户明确指定的历史文件、旧笔记或档案目录进行只读盘点、文本提取、去重、主题归类和可追溯摘要 |
-| `tool-blogger-publisher` | 将 Markdown 转换为适合 Google Blogger、微信公众号和邮件订阅系统粘贴或导入的内联样式 HTML 片段，并校验结构、链接、图片和基础安全 |
-| `tool-concept-synthesis` | 跨来源梳理概念、实体与关系，形成有证据支撑的体系图和战略长文 |
-| `tool-document-summarizer` | 提取医疗信息化、商业方案、招标材料和政策文件的结构化摘要与标签 |
-| `technical-diagram-renderer` | 将已确认的系统关系或流程描述规范化为结构化 JSON，并生成经过结构与安全校验的静态 SVG 技术图，按需单向导出基础 `.drawio`/mxGraph 文件 |
-| `tool-markdown-converter` | 将 PDF、Office、HTML、富文本和杂乱笔记转换为结构清晰的 Markdown |
-| `tool-slide-architect` | 设计高管汇报、咨询路演和决策型演示文稿的叙事结构、逐页蓝图与讲稿 |
-| `tool-smart-latex` | 将 Markdown 或结构化内容转换为 LaTeX，并在环境允许时编译为 PDF |
-| `tool-text-forger` | 在不改变事实和原意的前提下润色、校对和重组现有文本 |
-| `tool-tts` | 将用户提供的文本合成为语音并在明确要求时播放 |
-| `tool-tuanbiao-downloader` | 仅下载全国团体标准信息平台公开可访问的 kkfileview 图片型标准并合并为 PDF；需显式调用并提供图片查看链接或已核实的路径 ID，不支持其他站点或普通 PDF 链接 |
-| `tool-url-markdown` | 从公开或用户有权访问的网页提取正文并保存为结构清晰的 Markdown |
-| `tool-web-slide` | 将演示内容构建为可在浏览器运行、验证和交付的 HTML 幻灯片、离线演示包或单文件 HTML；不用于原生 PPTX 或仅需故事线的任务 |
-| `tool-youtube-summary` | 从 YouTube 视频、字幕、转录稿或长文中提取论点、证据和结构，并生成摘要、观点矩阵或长文 |
+| [`officecli`](officecli/SKILL.md) | 使用 officecli CLI 创建、分析、校对和修改 DOCX、XLSX 与 PPTX 文档，并检查格式、定位问题、添加图表或执行结构化编辑 |
+| [`tencent-meeting-mcp`](tencent-meeting-mcp/SKILL.md) | 通过已安装并授权的腾讯会议 CLI 或本地代理查询会议、成员、录制、转写和智能纪要，并在明确确认后创建、更新或取消会议 |
+| [`tool-archive-crawler`](tool-archive-crawler/SKILL.md) | 对用户明确指定的历史文件、旧笔记或档案目录进行只读盘点、文本提取、去重、主题归类和可追溯摘要 |
+| [`tool-blogger-publisher`](tool-blogger-publisher/SKILL.md) | 将 Markdown 转为 Blogger、微信公众号或邮件订阅系统适用的内联样式 HTML，检查结构、链接、图片与基础安全；只生成制品，不自动发布 |
+| [`tool-concept-synthesis`](tool-concept-synthesis/SKILL.md) | 跨来源梳理概念、实体与关系，形成有证据支撑的体系图和战略长文 |
+| [`tool-document-summarizer`](tool-document-summarizer/SKILL.md) | 提取医疗信息化、商业方案、招标材料和政策文件的结构化摘要与标签 |
+| [`technical-diagram-renderer`](technical-diagram-renderer/SKILL.md) | 将已确认的系统关系或流程描述规范化为结构化 JSON，并生成经过结构与安全校验的静态 SVG 技术图，按需单向导出基础 `.drawio`/mxGraph 文件 |
+| [`tool-markdown-converter`](tool-markdown-converter/SKILL.md) | 将 PDF、Office、HTML、富文本和杂乱笔记转换为结构清晰的 Markdown |
+| [`tool-slide-architect`](tool-slide-architect/SKILL.md) | 设计、审阅与重构高管汇报、咨询路演、项目提案及培训材料的叙事结构、逐页蓝图和讲稿；为实际 PPTX 制作提供内容交接 |
+| [`tool-smart-latex`](tool-smart-latex/SKILL.md) | 将 Markdown 或结构化内容排版为 LaTeX，依赖可用时编译并视觉验收 PDF；不因一般文档任务强制转 TeX |
+| [`tool-text-forger`](tool-text-forger/SKILL.md) | 对事实定稿的现有文本进行忠实校对、轻度润色、受控重组或压缩，保留立场、限定条件和格式；自然化与领域核验另走对应入口 |
+| [`tool-tts`](tool-tts/SKILL.md) | 将用户提供的文本合成为语音并在明确要求时播放 |
+| [`tool-tuanbiao-downloader`](tool-tuanbiao-downloader/SKILL.md) | 仅下载全国团体标准信息平台公开可访问的 kkfileview 图片型标准并合并为 PDF；需显式调用并提供图片查看链接或已核实的路径 ID，不支持其他站点或普通 PDF 链接 |
+| [`tool-url-markdown`](tool-url-markdown/SKILL.md) | 提取指定网页正文为 Markdown，或按请求总结；仅在要求保存时写文件，普通读取不足才使用获准浏览器会话，不采集其他标签页 |
+| [`tool-web-slide`](tool-web-slide/SKILL.md) | 将演示内容构建为可在浏览器运行、验证和交付的 HTML 幻灯片、离线演示包或单文件 HTML；不用于原生 PPTX 或仅需故事线的任务 |
+| [`tool-youtube-summary`](tool-youtube-summary/SKILL.md) | 从 YouTube 视频、字幕或音视频转录稿提取论点与证据，生成摘要、时间轴、观点矩阵或改写文章；不自动接管普通长文摘要 |
 
 ## 6. Trigger ownership
 
@@ -176,9 +185,11 @@ description: 说明技能做什么，以及用户在什么场景下应使用它�
 - 事实定稿后的忠实校对、轻润色、受控重组与压缩：`tool-text-forger`
 - 明确去 AI 味/更自然且无需领域判断：`personal-write-humanizer`
 - 演示文稿蓝图：`tool-slide-architect`
-- 单页网页演示：`tool-web-slide`
+- 可运行的 HTML 幻灯片与离线演示包：`tool-web-slide`
 - 位图提示词：`image-prompt-gen`
 - 位图生成或编辑：`image-studio-architect`
+- 文章与报告的杂志式插画：`magazine-illustrator`
+- 科研论文图表与成品 QA：`academic-scientific-visualization`
 - 系统结构图：`technical-diagram-renderer`
 - 单篇论文身份、方法与结果（快速问答按需核验）：`academic-paper-reader`
 - 非论文长文论证拆解（非普通摘要/压缩）：`cognitive-deep-reader`
@@ -194,9 +205,9 @@ description: 说明技能做什么，以及用户在什么场景下应使用它�
 
 写作按主任务而非医疗名词分流：纯语言请求不启动完整医疗写作项目；混合请求仅按需组合，不强制串联三个入口。矩阵新增 `faithful_controlled_editing` 表达 S46 的忠实编辑所有权，保留既有类 ID；`secondary_skills` 只表示可选协作，不要求加载。研究入口收窄自动触发，不禁止用户显式要求的合法深研。
 
-Pi 手动入口：`mentat-skill-creator`（显式治理）使用 `disable-model-invocation: true`；`hit-customer-analyst` 现已启用受限自动触发，其 `agents/openai.yaml` 仍声明 `allow_implicit_invocation: true`，两者一致；`image-studio-architect` 原有手动属性不变。其余技能保持原自动/手动属性。
+当前 `SKILL.md` 声明 `disable-model-invocation: true` 的手动入口为：`automate-github-issues`、`image-prompt-gen`、`image-studio-architect`、`mentat-skill-creator`、`personal-travel-research`、`tencent-meeting-mcp`、`tool-blogger-publisher`、`tool-tts`、`tool-tuanbiao-downloader`。此清单只描述 Pi 入口声明，不证明外部消费者的调用策略或实际模型选路。
 
-本次 P2 静态修订同步上述路由与手动说明；合成场景和文档检查不代表真实模型选路、图片生成、编译或业务验收。下列历史 Gate/测试记录保持原样，本次不据此声称重跑通过。
+`hit-customer-analyst` 已启用受限自动触发；当前候选版本为 2.6.3，进入完整流程仍须满足实名 RACI 与授权门。下列历史 Gate 和测试记录保持原日期，不作为当前验证结果。
 
 ## 7. Gate
 
@@ -239,7 +250,6 @@ pwsh -NoProfile -ExecutionPolicy Bypass -File scripts/repair_skills.ps1 -Mode Ga
 - frontmatter 包含 `name` 和 `description`，且可选字段仅使用 Pi 当前支持的集合。
 - 名称、描述、行数、估算 token 和本地引用有效。行数与估算 token 双指标均按 `>0` 即失败：`SKILL.md` 默认不得超过 500 行或 8000 估算 token（`-LineThreshold` / `-TokenThreshold`）。
 - 每个用户技能存在 schema v3 `resource-manifest.json`；清单字段、规范化哈希、全部受管资源、声明依赖和可移植路径与磁盘一致。
-- 可选 `agents/openai.yaml` 必须能安全解析，界面字段、精确 `$skill-name` 默认提示、图标路径、颜色、调用策略和 MCP 依赖类型有效。
 - 可选 `agents/openai.yaml` 必须能安全解析，界面字段、精确 `$skill-name` 默认提示、图标路径、颜色、调用策略和 MCP 依赖类型有效；调用策略与 `SKILL.md` 的 `disable-model-invocation` 不得互相矛盾。仅声明一侧时以 `OpenAiPolicyWarnings` 非阻断警告报告，不代替技能所有者决定路由。
 - 对 `SKILL.md`、脚本、参考资料、配置和界面元数据执行一致检查，读取或解码失败必须保留诊断并阻断，不能静默跳过。
 - 旧工具、外来宿主、推理词汇、模型版本、强制子代理和持久化的正则计数属于非阻断候选告警，须按上下文、真实工具和授权做语义审查；不能用匹配数证明违规或用零匹配证明安全。否定句、合法工具名和兼容性说明不应为消除告警被删除。上位的隐私、授权和禁止披露内部推理规则仍然有效。
@@ -260,7 +270,15 @@ pwsh -NoProfile -ExecutionPolicy Bypass -File scripts/repair_skills.ps1 -Mode Ga
 
 
 
-### 8.1 Current validation (2026-09-24)
+### 8.1 Current documentation snapshot (2026-10-09)
+
+- 依据当前一级目录及 `SKILL.md` 入口元数据更新 51 个技能的目录、功能摘要与手动入口清单。
+- 修正客户研究候选版本、投资研究产出等级、MusicBee 标签回写、网页提取保存边界及资讯预览中间态说明。
+- 此次仅更新根 README；不修改技能入口、脚本、资源清单、触发矩阵或授权门，也不重跑全库 Gate、测试或新会话行为验证。
+- 本地安装目录与 Git 发布副本分离。此前于 2026-10-09 同步至仓库 `main` 的提交为 [`36458502`](https://github.com/shawnshi/shawnshi-skills/commit/36458502f75043da9d5a07788fe214ce6395d9d6)，远端提交已核验；本节 README 更新尚未包含在该提交中。
+- 发布同步排除缓存、临时文件、Cookie 数据库、运行审计记录及编辑状态；不得仅凭 `.gitignore` 假定所有敏感文件均已排除。
+
+### 8.2 Historical validation (2026-09-24)
 
 环境：Windows 主机；`pwsh`（PowerShell Core）；Python 3.13 + PyYAML。
 
@@ -280,7 +298,7 @@ pwsh -NoProfile -ExecutionPolicy Bypass -File scripts/repair_skills.ps1 -Mode Ga
 - 未运行：宿主级路由与档位评测（本宿主未配置上游档位，夹具只证明合同完整）；`scripts/gate.sh` 的 POSIX 分支仅在 Windows Git Bash 下验证，未在 Linux/macOS 实测。
 - 声明：上述结果只证明静态合同、资源一致性与单元测试通过，不代表所有技能已在新会话中端到端验证。
 
-### 8.2 Historical validation (2026-09-09)
+### 8.3 Historical validation (2026-09-09)
 
 - 按本地一级 `SKILL.md` 盘点为 51 个技能；`mentat-dream-cycle`、`mentat-insight-diary` 当前不在本目录，已从库存表移除。
 - 自动持久化例外表保留 7 项现存技能合同；移除缺失技能的独立条目，不改变其他技能入口中已有的受保护写入边界。
@@ -290,7 +308,7 @@ pwsh -NoProfile -ExecutionPolicy Bypass -File scripts/repair_skills.ps1 -Mode Ga
 - 发布副本全库 Gate 通过。测试分别在适用环境运行：本地安装目录根测试 94 项通过；日记测试运行 63 项，跳过 4 项缺少已移除 Mentat 技能的可选集成，其余通过；发布副本资讯测试运行 337 项，跳过 1 项，其余通过。发布副本单独复验日记写入器 36 项，跳过相同 4 项，其余通过。
 - 新增缺失 Mentat 证据门时拒绝写入且不创建目标目录的回归测试，未放宽生产写入门。依赖宿主目录布局的根合同及日记入口测试在本地安装目录验证，不将独立克隆中的路径不匹配写成代码通过。
 
-### 8.3 Historical validation (2026-09-07)
+### 8.4 Historical validation (2026-09-07)
 
 - 本次全库 `repair_skills.ps1 -Mode Gate` 通过：53 个技能，8 项自动持久化例外，19 类触发所有权，阻断项为 0。
 - 资源索引独立检查：53 个技能，过期或缺失清单为 0；界面元数据独立检查：19 份配置，错误为 0。
@@ -298,9 +316,9 @@ pwsh -NoProfile -ExecutionPolicy Bypass -File scripts/repair_skills.ps1 -Mode Ga
 - `hit-customer-analyst` 仍为交付候选；静态门禁通过不改变其限定内部试用状态，真实发布验收以该技能的 `references/release-acceptance.md` 为准。
 - Gate 只证明其覆盖的静态合同与资源一致性，不代表所有技能已在新会话中端到端验证，也不代替发布前的敏感信息检查。
 
-### 8.4 Historical baseline (2026-09-05)
+### 8.5 Historical baseline (2026-09-05)
 
 - 此前记录：全库 Gate 通过，53 个技能、8 项自动持久化例外、19 类触发所有权，阻断项为 0。
 - 此前记录：`mentat-insight-diary/scripts/test_skill_contract.py` 的 14 项测试通过；本次未重跑该回归。
 
-Last updated: 2026-09-24
+Last updated: 2026-10-09
